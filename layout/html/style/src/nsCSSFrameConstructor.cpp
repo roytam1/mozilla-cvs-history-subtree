@@ -7865,6 +7865,18 @@ nsCSSFrameConstructor::AppendFrames(nsIPresContext*  aPresContext,
   return rv;
 }
 
+static nsIFrame*
+GetLastSpecialSibling(nsIFrameManager* aFrameManager, nsIFrame* aFrame)
+{
+  for (nsIFrame *frame = aFrame, *next; ; frame = next) {
+    GetSpecialSibling(aFrameManager, frame, &next);
+    if (!next)
+      return frame;
+  }
+  NS_NOTREACHED("unreachable code");
+  return nsnull;
+}
+
 /**
  * Find the ``rightmost'' frame for the anonymous content immediately
  * preceding aChild, following continuation if necessary.
@@ -7917,6 +7929,14 @@ FindPreviousAnonymousSibling(nsIPresShell* aPresShell,
     nsIFrame* prevSibling;
     aPresShell->GetPrimaryFrameFor(child, &prevSibling);
     if (prevSibling) {
+      // The frame may be a special frame (a split inline frame that
+      // contains a block).  Get the last part of that split.
+      if (IsFrameSpecial(prevSibling)) {
+        nsCOMPtr<nsIFrameManager> fm;
+        aPresShell->GetFrameManager(getter_AddRefs(fm));
+        prevSibling = GetLastSpecialSibling(fm, prevSibling);
+      }
+
       // The frame may have a continuation. If so, we want the
       // last-in-flow as our previous sibling.
       nsIFrame* nextInFlow;
@@ -8096,6 +8116,14 @@ nsCSSFrameConstructor::FindPreviousSibling(nsIPresShell*     aPresShell,
     aPresShell->GetPrimaryFrameFor(nsCOMPtr<nsIContent>(*iter), &prevSibling);
 
     if (prevSibling) {
+      // The frame may be a special frame (a split inline frame that
+      // contains a block).  Get the last part of that split.
+      if (IsFrameSpecial(prevSibling)) {
+        nsCOMPtr<nsIFrameManager> fm;
+        aPresShell->GetFrameManager(getter_AddRefs(fm));
+        prevSibling = GetLastSpecialSibling(fm, prevSibling);
+      }
+
       // The frame may have a continuation. Get the last-in-flow
       nsIFrame* nextInFlow;
       while (1) {

@@ -31,7 +31,6 @@ MODULE		= staticmod
 LIBRARY_NAME	= staticmod
 SHORT_LIBNAME	= statcmod
 endif
-
 IS_COMPONENT	= 1
 
 include $(topsrcdir)/config/config.mk
@@ -45,36 +44,11 @@ endif
 
 LOCAL_INCLUDES	= -I$(srcdir)
 
-#
-# _COMPONENT_BASE is the base name of the meta component library
-# that we are building in the current pass of this makefile
-#
-# mozcomps is a special name used to specify that we want to link all
-# of the non-meta components into this special meta component
-#
 ifdef _COMPONENT_BASE
-ifeq ($(_COMPONENT_BASE),mozcomps)
-_FINAL_COMPONENT_NAMES := $(shell cat $(FINAL_LINK_COMP_NAMES))
-_FINAL_COMPONENT_LIBS := $(shell cat $(FINAL_LINK_COMPS))
-_FINAL_LINK_LIBS := $(shell cat $(FINAL_LINK_LIBS))
-_META_COMPONENT_NAMES := _FINAL_COMPONENT_NAMES
-_META_COMPONENT_LIBS := _FINAL_COMPONENT_LIBS
-_META_DEP_LIBS := _FINAL_LINK_LIBS
-else
-ifeq ($(_COMPONENT_BASE),embed_mozcomps)
-_FINAL_COMPONENT_NAMES := $(shell cat embed-link-comp-names)
-_FINAL_COMPONENT_LIBS := $(shell cat embed-link-comps)
-_FINAL_LINK_LIBS := $(shell cat $(FINAL_LINK_LIBS))
-_META_COMPONENT_NAMES := _FINAL_COMPONENT_NAMES
-_META_COMPONENT_LIBS := _FINAL_COMPONENT_LIBS
-_META_DEP_LIBS := _FINAL_LINK_LIBS
-else
 _META_COMPONENT_NAMES := MOZ_META_COMPONENTS_$(_COMPONENT_BASE)
 _META_COMPONENT_LIBS := MOZ_META_COMPONENTS_$(_COMPONENT_BASE)_comps
 _META_DEP_LIBS := MOZ_META_COMPONENTS_$(_COMPONENT_BASE)_libs
-endif # embed_mozcomps
-endif # mozcomps
-endif # _COMPONENT_BASE
+endif
 
 ifdef MOZ_STATIC_COMPONENTS
 SHARED_LIBRARY_LIBS = \
@@ -82,37 +56,20 @@ SHARED_LIBRARY_LIBS = \
 endif
 
 ifdef _COMPONENT_BASE
-ifneq ($(_COMPONENT_BASE),mozcomps)
 SHARED_LIBRARY_LIBS = $(foreach m,$($(_META_COMPONENT_LIBS)), $(DIST)/lib/components/$(LIB_PREFIX)$(m).$(LIB_SUFFIX))
-EXTRA_DSO_LDOPTS += $(foreach m,$($(_META_DEP_LIBS)), $(DIST)/lib/$(LIB_PREFIX)$(m).$(LIB_SUFFIX))
-endif
+SHARED_LIBRARY_LIBS += $(foreach m,$($(_META_DEP_LIBS)), $(DIST)/lib/$(LIB_PREFIX)$(m).$(LIB_SUFFIX))
 endif
 
-#
-# Create each meta component by calling this makefile recursively
-# and forcing it to built a shared library meta component library
-#
 ifndef NO_RECURSE
-ifneq (,$(filter embed_mozcomps,$(MOZ_META_COMPONENTS)))
-export:: embed-link-comps embed-link-comp-names trim-final-lists
-endif
-
 libs clean distclean clobber realclean clobber_all::
-	+set -e; \
+	set -e; \
 	for f in $(MOZ_META_COMPONENTS); do \
 		$(MAKE) NO_RECURSE=1 BUILD_SHARED_LIBS=1 BUILD_STATIC_LIBS= LIBRARY_NAME=meta_$$f CPPSRCS=nsMetaModule_$$f.cpp _COMPONENT_BASE=$$f $@ ; \
 	done
 endif
 
-ifneq (,$(findstring mozcomps, $(LIBRARY_NAME)))
-include $(topsrcdir)/config/static-config.mk
-endif
 
 include $(topsrcdir)/config/rules.mk
-
-ifneq (,$(findstring mozcomps, $(LIBRARY_NAME)))
-include $(topsrcdir)/config/static-rules.mk
-endif
 
 ifdef MOZ_STATIC_COMPONENTS
 EXTRA_DSO_LDOPTS += \
@@ -128,51 +85,29 @@ ifdef MOZ_META_COMPONENTS
 # Force XPCOM_TRANSLATE_NSGM_ENTRY_POINT to be defined so the macros
 # in nsIGenericFactory.h will come out in the wash.
 DEFINES += -DMETA_MODULE=\"$(LIBRARY_NAME)\" -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT
-
 ifeq ($(LIBRARY_NAME),meta_mail)
 EXTRA_DSO_LDOPTS += \
-	$(LIBS_DIR) \
-	$(call EXPAND_MOZLIBNAME,xpcom_compat gkgfx rdfutil_s) \
-	$(MOZ_UNICHARUTIL_LIBS) \
-	$(MOZ_COMPONENT_LIBS) \
+	$(DIST)/lib/$(LIB_PREFIX)gkgfx.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)rdfutil_s.$(LIB_SUFFIX) \
 	$(NULL)
-endif # meta_mail
-
+endif
 ifeq ($(LIBRARY_NAME),meta_crypto)
 EXTRA_DSO_LDOPTS += \
 	$(MOZ_JS_LIBS) \
 	$(NSS_LIBS) \
-	$(MOZ_UNICHARUTIL_LIBS) \
-	$(MOZ_COMPONENT_LIBS) \
 	$(NULL)
-endif # meta_crypto
-
-#ifeq ($(LIBRARY_NAME),meta_mozcomps)
-ifneq (,$(findstring mozcomps, $(LIBRARY_NAME)))
-
-# We don't want to link mozcomps against NSS if not necessary
-ifneq (,$(findstring crypto,$(MOZ_META_COMPONENTS)))
-STATIC_EXTRA_LIBS := $(filter-out $(NSS_LIBS),$(STATIC_EXTRA_LIBS))
 endif
-
 EXTRA_DSO_LDOPTS += \
-	$(LIBS_DIR) \
-	$(STATIC_EXTRA_DSO_LIBS) \
-	$(STATIC_EXTRA_LIBS) \
-	$(MOZ_JS_LIBS) \
 	$(MOZ_UNICHARUTIL_LIBS) \
 	$(MOZ_COMPONENT_LIBS) \
-	$(TK_LIBS) \
 	$(NULL)
-endif # meta_mozcomps
-
-endif # MOZ_META_COMPONENTS
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 OS_LIBS	+= ole32.lib shell32.lib
 endif
 
-GARBAGE += $(CPPSRCS) embed-link-comps embed-link-comp-names components
+GARBAGE += $(CPPSRCS)
 
 list:
 	echo $(MOZ_STATIC_COMPONENTS)
@@ -184,25 +119,6 @@ else
 _TARGET = $@
 endif
 
-# This is so sick! We'll work backwards from the embedding manifest to
-# produce the set of components that we need to link in to a
-# ``minimal'' embedding harness.
-ifeq ($(OS_ARCH),WINNT)
-EMBED_MANIFEST	= \
-	$(topsrcdir)/embedding/config/basebrowser-win \
-	$(topsrcdir)/embedding/config/basebrowser-win-supp \
-	$(topsrcdir)/embedding/config/gre-win \
-	$(topsrcdir)/embedding/config/gre-win-supp \
-	$(NULL)
-else
-EMBED_MANIFEST	= \
-	$(topsrcdir)/embedding/config/basebrowser-unix \
-	$(NULL)
-endif
-ifeq ($(LIBRARY_NAME),meta_embed_mozcomps)
-_EMBED_DEPS = $(EMBED_MANIFEST) embed-link-comps embed-link-comp-names
-endif
-
 ifdef MOZ_STATIC_COMPONENTS
 nsStaticModule.cpp: nsMetaModule.cpp.in Makefile Makefile.in $(DEPTH)/config/autoconf.mk
 	rm -f $@
@@ -212,55 +128,9 @@ nsStaticModule.cpp: nsMetaModule.cpp.in Makefile Makefile.in $(DEPTH)/config/aut
 	> $(_TARGET)
 endif
 
-nsMetaModule_%.cpp: nsMetaModule.cpp.in Makefile Makefile.in $(topsrcdir)/config/config.mk $(_EMBED_DEPS)
+nsMetaModule_%.cpp: nsMetaModule.cpp.in Makefile Makefile.in $(topsrcdir)/config/config.mk
 	rm -f $@
 	cat $< | \
 	sed -e "s|%DECLARE_SUBMODULE_INFOS%|$(foreach m, $($(_META_COMPONENT_NAMES)), extern nsModuleInfo NSMODULEINFO($(m));)|" | \
 	sed -e "s|%SUBMODULE_INFOS%|$(foreach m, $($(_META_COMPONENT_NAMES)), \\& NSMODULEINFO($(m)),)|" \
 	> $(_TARGET)
-
-# Create a map that we can use to go from library name to component
-# symbol. N.B. that this will break if the $(FINAL_LINK_COMP_NAMES)
-# and $(FINAL_LINK_COMPS) somehow get out-of-sync and aren't in
-# _exactly_ the same order. (Hey, this is a hack!)
-components: $(FINAL_LINK_COMPS) $(FINAL_LINK_COMP_NAMES) Makefile Makefile.in
-	paste $(FINAL_LINK_COMPS) $(FINAL_LINK_COMP_NAMES) | sort -k 1,1 > $@
-
-# Compute the embedding libs by extracting them from the embedding
-# manifest.
-#
-# We start by selecting anything that starts with `components/', as
-# these are the component libraries. We print the `first' field to
-# strip off any crap after the library name. Next, we select for files
-# ending with `.so' so we end up with only the libraries. We then rip
-# off the `components/lib' prefix and the `.so' suffix, leaving just
-# the library name. This list is sorted, and joined with the list of
-# components that were actually _built_ to cull out anything that's
-# included in the manifest, but wasn't built.
-ifeq ($(OS_ARCH),WINNT)
-_FILE_SEP:=\\
-else
-_FILE_SEP:=/
-endif
-embed-link-comps: $(EMBED_MANIFEST) components Makefile Makefile.in
-	awk '{ if (/^components/) { print $$1 } }' \
-		$(filter-out components %Makefile %Makefile.in,$^) | \
-		grep '$(DLL_SUFFIX)$$' | \
-		sed -e 's|^components$(_FILE_SEP)$(LIB_PREFIX)||' -e 's|$(DLL_SUFFIX)$$||' | \
-		sort | \
-		join -o 1.1 - components > $@
-
-# Compute the symbols we'll need for the ``minimal embedding client''
-# by joining the compoent list with the sorted list of embedding
-# components.
-embed-link-comp-names: embed-link-comps components
-	sort embed-link-comps | join -o 2.2 - components > $@
-
-#
-# Remove components that are linked into the embed_mozembed shared lib
-# from the final list of libs
-#
-trim-final-lists: embed-link-comps embed-link-comp-names
-	$(PERL) $(topsrcdir)/config/trim-list.pl $(FINAL_LINK_COMPS) embed-link-comps
-	$(PERL) $(topsrcdir)/config/trim-list.pl $(FINAL_LINK_COMP_NAMES) embed-link-comp-names
-	touch components embed-link-comps embed-link-comp-names

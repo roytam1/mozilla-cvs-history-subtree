@@ -4127,23 +4127,30 @@ nsHTMLEditRules::CreateStyleForInsertText(nsISelection *aSelection, nsIDOMDocume
         PropItem *propItem = (PropItem*)mHTMLEditor->mDefaultStyles[j];
         if (!propItem) 
           return NS_ERROR_NULL_POINTER;
-        PRBool bFirst, bAny, bAll;
+        PRBool bFirst, bAny, bAll, bSkip=PR_FALSE;
 
-        // GetInlineProperty also examine TypeInState.  The only gotcha here is that a cleared
-        // property looks like an unset property.  For now I'm assuming that's not a problem:
-        // that default styles will always be multivalue styles (like font face or size) where
-        // clearing the style means we want to go back to the default.  If we ever wanted a 
-        // "toggle" style like bold for a default, though, I'll have to add code to detect the
-        // difference between unset and explicitly cleared, else user would never be able to
-        // unbold, for instance.
-        nsAutoString curValue;
-        res = mHTMLEditor->GetInlinePropertyBase(propItem->tag, &(propItem->attr), nsnull, 
-                                                 &bFirst, &bAny, &bAll, &curValue, PR_FALSE);
-        if (NS_FAILED(res)) return res;
+        // Check list of override tags for this property.  If we are a descendant of any of 
+        // these tags, skip this property.
+        bSkip = mHTMLEditor->CheckOverrides(propItem, node);
         
-        if (!bAny)  // no style set for this prop/attr
+        if (!bSkip)
         {
-          mHTMLEditor->mTypeInState->SetProp(propItem->tag, propItem->attr, propItem->value);
+          // GetInlineProperty also examine TypeInState.  The only gotcha here is that a cleared
+          // property looks like an unset property.  For now I'm assuming that's not a problem:
+          // that default styles will always be multivalue styles (like font face or size) where
+          // clearing the style means we want to go back to the default.  If we ever wanted a 
+          // "toggle" style like bold for a default, though, I'll have to add code to detect the
+          // difference between unset and explicitly cleared, else user would never be able to
+          // unbold, for instance.
+          nsAutoString curValue;
+          res = mHTMLEditor->GetInlinePropertyBase(propItem->tag, &(propItem->attr), nsnull, 
+                                                   &bFirst, &bAny, &bAll, &curValue, PR_FALSE);
+          if (NS_FAILED(res)) return res;
+          
+          if (!bAny)  // no style set for this prop/attr
+          {
+            mHTMLEditor->mTypeInState->SetProp(propItem->tag, propItem->attr, propItem->value);
+          }
         }
       }
     }
@@ -6210,7 +6217,7 @@ nsHTMLEditRules::ReturnInHeader(nsISelection *aSelection,
   res = mHTMLEditor->SplitNodeDeep( aHeader, selNode, aOffset, &newOffset);
   if (NS_FAILED(res)) return res;
 
-  // if the leftand heading is empty, put a mozbr in it
+  // if the leftand heading is empty, put a br in it
   nsCOMPtr<nsIDOMNode> prevItem;
   mHTMLEditor->GetPriorHTMLSibling(aHeader, address_of(prevItem));
   if (prevItem && nsHTMLEditUtils::IsHeader(prevItem))
@@ -6221,7 +6228,7 @@ nsHTMLEditRules::ReturnInHeader(nsISelection *aSelection,
     if (bIsEmptyNode)
     {
       nsCOMPtr<nsIDOMNode> brNode;
-      res = CreateMozBR(prevItem, 0, address_of(brNode));
+      res = mHTMLEditor->CreateBR(prevItem, 0, address_of(brNode));
       if (NS_FAILED(res)) return res;
     }
   }
@@ -6241,13 +6248,13 @@ nsHTMLEditRules::ReturnInHeader(nsISelection *aSelection,
     if (NS_FAILED(res)) return res;
     if (!sibling || !nsTextEditUtils::IsBreak(sibling))
     {
-      res = CreateMozBR(headerParent, offset+1, address_of(sibling));
+      res = mHTMLEditor->CreateBR(headerParent, offset+1, address_of(sibling));
       if (NS_FAILED(res)) return res;
     }
     res = nsEditor::GetNodeLocation(sibling, address_of(headerParent), &offset);
     if (NS_FAILED(res)) return res;
-    // put selection after break
-    res = aSelection->Collapse(headerParent,offset+1);
+    // put selection after before break
+    res = aSelection->Collapse(headerParent,offset);
   }
   else
   {

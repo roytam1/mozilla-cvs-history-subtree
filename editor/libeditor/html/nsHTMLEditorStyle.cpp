@@ -111,6 +111,7 @@
 
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
 static NS_DEFINE_IID(kSubtreeIteratorCID, NS_SUBTREEITERATOR_CID);
+static NS_DEFINE_CID(kCRangeCID,      NS_RANGE_CID);
 
 #if defined(NS_DEBUG) && defined(DEBUG_buster)
 static PRBool gNoisy = PR_FALSE;
@@ -157,10 +158,61 @@ NS_IMETHODIMP nsHTMLEditor::RemoveAllAlternateProperties()
   return RemoveAllPropertiesImpl(mAlternateStyles);
 }
 
+NS_IMETHODIMP 
+nsHTMLEditor::AddDefaultPropertyOverride(nsIAtom *aProperty, 
+                                         const nsAString & aAttribute,
+                                         nsIAtom *aTag)
+{
+  return TypeInState::AddOverride(mDefaultStyles, aProperty, aAttribute, aTag);
+}
+
+NS_IMETHODIMP 
+nsHTMLEditor::AddAlternatePropertyOverride(nsIAtom *aProperty, 
+                                           const nsAString & aAttribute,
+                                           nsIAtom *aTag)
+{
+  return TypeInState::AddOverride(mAlternateStyles, aProperty, aAttribute, aTag);
+}
+
 NS_IMETHODIMP nsHTMLEditor::SetPastePolicy(PRInt32 aPolicy)
 {
   mPastePolicy = aPolicy;
   return NS_OK;
+}
+
+NS_IMETHODIMP nsHTMLEditor::ApplyStyleToDocument(PRInt32 aPolicy)
+{
+  // if no style desired, we are done
+  if (aPolicy == eNoAddedStyle)
+    return NS_OK;
+  
+  // determine which style list to use: default or alternate 
+  nsVoidArray *array = &mDefaultStyles;
+  if (aPolicy == eAddAlternateStyle)
+    array = &mAlternateStyles;
+  
+  // get the root node of document
+  nsCOMPtr<nsIDOMElement> root;
+  nsresult res = GetRootElement(getter_AddRefs(root)); 
+  NS_ENSURE_SUCCESS(res, res);
+  
+  // create a range over the contents of root node
+  nsCOMPtr<nsIDOMRange> docRange = do_CreateInstance(kCRangeCID);
+  if (!docRange) 
+    return NS_ERROR_NULL_POINTER;
+    
+  res = docRange->SetStart(root, 0);
+  NS_ENSURE_SUCCESS(res, res);
+  
+  PRUint32 rootLen;
+  GetLengthOfDOMNode(root, rootLen);
+  
+  res = docRange->SetEnd(root, rootLen);
+  NS_ENSURE_SUCCESS(res, res);
+  
+  // apply the desired styles to docrange
+  res = ApplyPropertiesToRange(array, docRange);
+  return res;
 }
 
 // Add the CSS style corresponding to the HTML inline style defined
@@ -205,7 +257,7 @@ NS_IMETHODIMP nsHTMLEditor::SetInlineProperty(nsIAtom *aProperty,
   }
   
   nsAutoEditBatch batchIt(this);
-  nsAutoRules beginRulesSniffing(this, kOpInsertElement, nsIEditor::eNext);
+  nsAutoRules beginRulesSniffing(this, kOpSetTextProperty, nsIEditor::eNext);
   nsAutoSelectionReset selectionResetter(selection, this);
   nsAutoTxnsConserveSelection dontSpazMySelection(this);
   
@@ -434,7 +486,8 @@ nsHTMLEditor::SetInlinePropertyOnNode( nsIDOMNode *aNode,
                                        nsIAtom *aProperty, 
                                        const nsAString *aAttribute,
                                        const nsAString *aValue,
-                                       PRBool aDontOverride)
+                                       PRBool aDontOverride,
+                                       PropItem *aPropItem)
 {
   if (!aNode || !aProperty) return NS_ERROR_NULL_POINTER;
 
@@ -461,6 +514,10 @@ nsHTMLEditor::SetInlinePropertyOnNode( nsIDOMNode *aNode,
     IsTextPropertySetByContent(aNode, aProperty, aAttribute, aValue, bHasProp, getter_AddRefs(styleNode));
   }
   if (bHasProp) return NS_OK;
+  
+  // dont need to do anything if this node is on the override list for this property
+  if (aPropItem && CheckOverrides(aPropItem, aNode, PR_FALSE))
+    return NS_OK;
 
   if (useCSS) {
     // we are in CSS mode
@@ -581,7 +638,7 @@ nsHTMLEditor::SetInlinePropertyOnNode( nsIDOMNode *aNode,
       {
         isupports = dont_AddRef(arrayOfNodes->ElementAt(0));
         node = do_QueryInterface(isupports);
-        res = SetInlinePropertyOnNode(node, aProperty, aAttribute, aValue, aDontOverride);
+        res = SetInlinePropertyOnNode(node, aProperty, aAttribute, aValue, aDontOverride, aPropItem);
         if (NS_FAILED(res)) return res;
         arrayOfNodes->RemoveElementAt(0);
       }
@@ -688,17 +745,89 @@ PRBool nsHTMLEditor::NodeIsProperty(nsIDOMNode *aNode)
   return PR_TRUE;
 }
 
+PRBool nsHTMLEditor::CheckOverrides(PropItem* aPropItem, nsIDOMNode *aNode, PRBool aCheckAncestors)
+{
+  if (aNode && aPropItem && aPropItem->overrides)
+  {
+    PRInt32 k, ovrCount = aPropItem->overrides->Count();
+    for (k=0; k<ovrCount; k++)
+    {
+      nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
+      if (content)
+      {
+        nsIAtom *tag;
+        content->GetTag(tag);
+        if ((void*)tag == aPropItem->overrides->ElementAt(k))
+        {
+          return PR_TRUE;
+        }
+      }
+      if (aCheckAncestors && nsHTMLEditUtils::IsDescendantOfTag(aNode, (nsIAtom*)(aPropItem->overrides->ElementAt(k))))
+      {
+        return PR_TRUE;
+      }
+    }
+  }
+  return PR_FALSE;
+}
+
+
 nsresult nsHTMLEditor::ApplyDefaultProperties()
 {
-  nsresult res = NS_OK;
-  PRInt32 j, defcon = mDefaultStyles.Count();
-  for (j=0; j<defcon; j++)
+  // get selection
+  nsCOMPtr<nsISelection>selection;
+  nsresult res = GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(res)) return res;
+  if (!selection) return NS_ERROR_NULL_POINTER;
+  PRBool isCollapsed;
+  selection->GetIsCollapsed(&isCollapsed);
+
+  // for collapsed selection we simply set the corresponding typeinstate
+  if (isCollapsed)
   {
-    PropItem *propItem = (PropItem*)mDefaultStyles[j];
-    if (!propItem) 
-      return NS_ERROR_NULL_POINTER;
-    res = SetInlineProperty(propItem->tag, propItem->attr, propItem->value);
+    PRInt32 offset;
+    nsCOMPtr<nsIDOMNode> startNode;
+    res = GetStartNodeAndOffset(selection, address_of(startNode), &offset);
+    PRInt32 j, defcon = mDefaultStyles.Count();
+    for (j=0; j<defcon; j++)
+    {
+      PropItem *propItem = (PropItem*)mDefaultStyles[j];
+      if (!propItem) 
+        return NS_ERROR_NULL_POINTER;
+
+      if (!CheckOverrides(propItem, startNode))
+      {
+        // if we are not inside an override tag, set the default property on typeinstate
+        mTypeInState->SetProp(propItem->tag, propItem->attr, propItem->value);
+      }
+    }
+  }
+  else  // for non collapsed selections we must iterate over selection ranges
+  {
+    nsCOMPtr<nsISelectionPrivate> selPriv(do_QueryInterface(selection));
+    nsCOMPtr<nsIEnumerator> enumerator;
+    res = selPriv->GetEnumerator(getter_AddRefs(enumerator));
     if (NS_FAILED(res)) return res;
+    if (!enumerator) return NS_ERROR_NULL_POINTER;
+  
+    // loop thru the ranges in the selection
+    enumerator->First(); 
+    nsCOMPtr<nsISupports> currentItem;
+    while ((NS_ENUMERATOR_FALSE == enumerator->IsDone()))
+    {
+      // get current range
+      res = enumerator->CurrentItem(getter_AddRefs(currentItem));
+      if (NS_FAILED(res)) return res;
+      if (!currentItem)   return NS_ERROR_FAILURE;
+      nsCOMPtr<nsIDOMRange> range( do_QueryInterface(currentItem) );
+      
+      // apply default styles to range
+      res = ApplyPropertiesToRange(&mDefaultStyles, range);
+      if (NS_FAILED(res)) return res;
+      
+      // move to next range
+      enumerator->Next();
+    }
   }
   return res;
 }
@@ -713,7 +842,12 @@ nsHTMLEditor::ApplyPropertiesToNode(nsVoidArray *aPropArray, nsIDOMNode *aNode)
   {
     PropItem *propItem = (PropItem*)(aPropArray->ElementAt(j));
     if (!propItem) 
-    return NS_ERROR_NULL_POINTER;
+      return NS_ERROR_NULL_POINTER;
+    
+    // are there overrides?
+    if (CheckOverrides(propItem, aNode))
+      return NS_OK;
+
     PRBool isSet;
     nsAutoString outValue;
     nsCOMPtr<nsIDOMNode> resultNode;
@@ -723,7 +857,7 @@ nsHTMLEditor::ApplyPropertiesToNode(nsVoidArray *aPropArray, nsIDOMNode *aNode)
     
     if (!isSet)  // no style set for this prop/attr, set the requested value.
     {
-      res = SetInlinePropertyOnNode(aNode, propItem->tag, &(propItem->attr), &(propItem->value), PR_TRUE);
+      res = SetInlinePropertyOnNode(aNode, propItem->tag, &(propItem->attr), &(propItem->value), PR_TRUE, propItem);
       if (NS_FAILED(res)) return res;
     }
   }
@@ -744,6 +878,11 @@ nsHTMLEditor::ApplyPropertiesToTextNode(nsVoidArray *aPropArray,
     PropItem *propItem = (PropItem*)(aPropArray->ElementAt(j));
     if (!propItem) 
     return NS_ERROR_NULL_POINTER;
+
+    // are there overrides?
+    if (CheckOverrides(propItem, aTextNode))
+      return NS_OK;
+
     PRBool isSet;
     nsAutoString outValue;
     nsCOMPtr<nsIDOMNode> resultNode, textNode(do_QueryInterface(aTextNode));
@@ -1254,7 +1393,7 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
         {
           // style not set: check to see if we have a default style.
           PRInt32 index;
-          if (TypeInState::FindPropInList(aProperty, *aAttribute, outValue, mDefaultStyles, index))
+          if (TypeInState::FindPropInList(aProperty, *aAttribute, nsnull, mDefaultStyles, index))
           {
             // we have a default style.  There are two possibilities: 
             // 1) the selection is collapsed in visible content that does not have the default style

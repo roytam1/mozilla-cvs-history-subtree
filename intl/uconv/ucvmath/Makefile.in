@@ -66,8 +66,10 @@ CPPSRCS		+= \
 
 EXPORTS		= nsUCvMathCID.h
 
-EXTRA_DSO_LDOPTS += \
+SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)ucvutil_s.$(LIB_SUFFIX) \
-		$(MOZ_COMPONENT_LIBS)
+		$(NULL)
+
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
 
 include $(topsrcdir)/config/rules.mk

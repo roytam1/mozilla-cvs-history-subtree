@@ -334,6 +334,27 @@ nsresult TypeInState::GetTypingState(PRBool &isSet,
   return NS_OK;
 }
 
+nsresult  TypeInState::AddOverride(nsVoidArray &aList, 
+                                   nsIAtom *aProp, 
+                                   const nsAString &aAttr, 
+                                   nsIAtom *aTag)
+{
+  PRInt32 index;
+  PropItem *item;
+  if (FindPropInList(aProp, aAttr, nsnull, aList, index))
+  {
+    item = (PropItem*)aList.ElementAt(index);
+    if (!item->overrides)
+    {
+      // create an override array
+      item->overrides = new nsVoidArray();
+      if (!item->overrides) 
+        return NS_ERROR_NULL_POINTER;
+    }
+    item->overrides->AppendElement((void*)aTag);
+  }
+  return NS_OK;
+}
 
 
 /********************************************************************
@@ -468,9 +489,11 @@ PropItem::PropItem(nsIAtom *aTag, const nsAString &aAttr, const nsAString &aValu
  tag(aTag)
 ,attr(aAttr)
 ,value(aValue)
+,overrides(0)
 {
 }
 
 PropItem::~PropItem()
 {
+  if (overrides) delete overrides;
 }

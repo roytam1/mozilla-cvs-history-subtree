@@ -407,7 +407,7 @@ nsHTMLEditUtils::IsDescendantOf(nsIDOMNode *aNode, nsIDOMNode *aParent, PRInt32 
   {
     res = node->GetParentNode(getter_AddRefs(parent));
     if (NS_FAILED(res)) return PR_FALSE;
-    if (parent.get() == aParent) 
+    if (parent == aParent) 
     {
       if (aOffset)
       {
@@ -419,6 +419,35 @@ nsHTMLEditUtils::IsDescendantOf(nsIDOMNode *aNode, nsIDOMNode *aParent, PRInt32 
         }
       }
       return PR_TRUE;
+    }
+    node = parent;
+  } while (parent);
+  
+  return PR_FALSE;
+}
+
+PRBool 
+nsHTMLEditUtils::IsDescendantOfTag(nsIDOMNode *aNode, nsIAtom *aTag) 
+{
+  if (!aNode && !aTag) return PR_FALSE;
+  
+  nsCOMPtr<nsIDOMNode> parent, node = do_QueryInterface(aNode);
+  nsresult res;
+  
+  do
+  {
+    res = node->GetParentNode(getter_AddRefs(parent));
+    if (NS_FAILED(res)) return PR_FALSE;
+    if (parent) 
+    {
+      nsCOMPtr<nsIContent> pCon(do_QueryInterface(parent));
+      if (pCon)
+      {
+        nsIAtom *tag;
+        pCon->GetTag(tag);
+        if (tag == aTag)
+          return PR_TRUE;
+      }
     }
     node = parent;
   } while (parent);

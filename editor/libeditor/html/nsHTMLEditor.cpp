@@ -518,6 +518,16 @@ NS_IMETHODIMP nsHTMLEditor::InitRules()
   return res;
 }
 
+NS_IMETHODIMP nsHTMLEditor::GetDocumentIsEmpty(PRBool *aDocumentIsEmpty)
+{
+  nsCOMPtr<nsIDOMElement> rootElement; 
+  nsresult res = GetRootElement(getter_AddRefs(rootElement)); 
+  if (NS_FAILED(res)) return res; 
+  if (!rootElement)   return NS_ERROR_NULL_POINTER; 
+  res = IsEmptyNode(rootElement, aDocumentIsEmpty, PR_TRUE, PR_TRUE);
+  return res;
+}
+
 NS_IMETHODIMP nsHTMLEditor::BeginningOfDocument()
 {
   if (!mDocWeak || !mPresShellWeak) { return NS_ERROR_NOT_INITIALIZED; }

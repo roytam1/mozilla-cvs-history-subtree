@@ -27,6 +27,10 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS=webBrowser build chrome
 
+ifdef MOZ_ENABLE_GTK
+DIRS += gtk
+endif
+
 ifdef MOZ_ENABLE_PHOTON
 DIRS += photon
 endif

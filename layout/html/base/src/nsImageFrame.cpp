@@ -93,6 +93,7 @@
 #include "nsIDOMDocument.h"
 #include "nsCSSFrameConstructor.h"
 #include "nsIPref.h"
+#include "nsIDOMRange.h"
 
 #ifdef DEBUG
 #undef NOISY_IMAGE_LOADING
@@ -118,6 +119,8 @@
 #define ICON_PADDING     (3)
 #define ALT_BORDER_WIDTH (1)
 
+//we must add hooks soon
+#define IMAGE_EDITOR_CHECK 1
 
 // Default alignment value (so we can tell an unset value from a set value)
 #define ALIGN_UNSET PRUint8(-1)
@@ -1459,6 +1462,54 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
     return result;
   if (!(displaySelection & nsISelectionDisplay::DISPLAY_IMAGES))
     return NS_OK;//no need to check the blue border, we cannot be drawn selected
+//insert hook here for image selection drawing
+#if IMAGE_EDITOR_CHECK
+  //check to see if this frame is in an editor context
+  //isEditor check. this needs to be changed to have better way to check
+  if (displaySelection == nsISelectionDisplay::DISPLAY_ALL) 
+  {
+    nsCOMPtr<nsISelectionController> selCon;
+    result = GetSelectionController(aPresContext, getter_AddRefs(selCon));
+    if (NS_SUCCEEDED(result) && selCon)
+    {
+      nsCOMPtr<nsISelection> selection;
+      result = selCon->GetSelection(nsISelectionController::SELECTION_NORMAL, getter_AddRefs(selection));
+      if (NS_SUCCEEDED(result) && selection)
+      {
+        PRInt32 rangeCount;
+        selection->GetRangeCount(&rangeCount);
+        if (rangeCount == 1) //if not one then let code drop to nsFrame::Paint
+        {
+          nsCOMPtr<nsIContent> parentContent;
+          mContent->GetParent(*getter_AddRefs(parentContent));
+          if (parentContent)
+          {
+            PRInt32 thisOffset;
+            parentContent->IndexOf(mContent, thisOffset);
+            nsCOMPtr<nsIDOMNode> parentNode = do_QueryInterface(parentContent);
+            nsCOMPtr<nsIDOMNode> rangeNode;
+            PRInt32 rangeOffset;
+            nsCOMPtr<nsIDOMRange> range;
+            selection->GetRangeAt(0,getter_AddRefs(range));
+            if (range)
+            {
+              range->GetStartContainer(getter_AddRefs(rangeNode));
+              range->GetStartOffset(&rangeOffset);
+
+              if (parentNode && rangeNode && (rangeNode == parentNode) && rangeOffset == thisOffset)
+              {
+                range->GetEndContainer(getter_AddRefs(rangeNode));
+                range->GetEndOffset(&rangeOffset);
+                if ((rangeNode == parentNode) && (rangeOffset == (thisOffset +1))) //+1 since that would mean this whole content is selected only
+                  return NS_OK; //do not allow nsFrame do draw any further selection
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+#endif
   
   return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer, nsISelectionDisplay::DISPLAY_IMAGES);
 }

@@ -55,7 +55,7 @@
 MOZ_CO_TAG = ANGELON_MOZ12_BRANCH 
 NSPR_CO_TAG = ANGELON_MOZ12_BRANCH 
 PSM_CO_TAG = ANGELON_MOZ12_BRANCH
-NSS_CO_TAG = NSS_3_7_3_RTM
+NSS_CO_TAG = NSS_3_7_5_RTM
 LDAPCSDK_CO_TAG = ANGELON_MOZ12_BRANCH
 ACCESSIBLE_CO_TAG = ANGELON_MOZ12_BRANCH
 IMGLIB2_CO_TAG = ANGELON_MOZ12_BRANCH
@@ -580,7 +580,6 @@ CONFIG_STATUS_DEPS := \
 	$(wildcard $(TOPSRCDIR)/mailnews/makefiles) \
 	$(CONFIG_STATUS_DEPS_L10N) \
 	$(wildcard $(TOPSRCDIR)/themes/makefiles) \
-	$(wildcard $(TOPSRCDIR)/../config/mozilla.mk) \
 	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without

@@ -338,9 +338,9 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
                                 (nsIDOMNode **)address_of(fragmentAsNode), 
                                 (nsIDOMNode **)address_of(streamStartParent), 
                                 &streamStartOffset,
-                                (nsIDOMNode **)address_of(streamEndParent),
+                                (nsIDOMNode**)address_of(streamEndParent),
                                 &streamEndOffset, 
-                                (nsIDOMNode **)address_of(targetNode), 
+                                (nsIDOMNode**)address_of(targetNode), 
                                 &targetOffset, &doContinue);
 
   NS_ENSURE_SUCCESS(res, res);
@@ -538,9 +538,6 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
     {
       nsCOMPtr<nsISupports> isupports = dont_AddRef(nodeList->ElementAt(j));
       nsCOMPtr<nsIDOMNode> curNode( do_QueryInterface(isupports) );
-
-      nsString namestr;
-      curNode->GetNodeName(namestr);
 
       NS_ENSURE_TRUE(curNode, NS_ERROR_FAILURE);
       NS_ENSURE_TRUE(curNode != fragmentAsNode, NS_ERROR_FAILURE);

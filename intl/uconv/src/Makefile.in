@@ -102,11 +102,9 @@ endif
 endif
 endif
 
-EXTRA_DSO_LDOPTS = \
-		$(MOZ_NECKO_UTIL_LIBS) \
-		$(MOZ_UNICHARUTIL_LIBS) \
-		$(DIST)/lib/$(LIB_PREFIX)ucvutil_s.$(LIB_SUFFIX) \
+EXTRA_DSO_LDOPTS = $(MOZ_NECKO_UTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_UNICHARUTIL_LIBS) \
 		$(NULL)
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
@@ -134,6 +132,7 @@ LOCAL_INCLUDES	= -I$(srcdir)/../util \
 				$(NULL)
 
 SHARED_LIBRARY_LIBS = \
+	$(DIST)/lib/$(LIB_PREFIX)ucvutil_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)ucvlatin_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)ucvibm_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)ucvja_s.$(LIB_SUFFIX) \

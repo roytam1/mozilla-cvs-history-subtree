@@ -89,7 +89,6 @@ EXTRA_DSO_LIBS	= embed_base_s gkgfx mfcEmbedComponents
 
 LIBS		= \
 		$(EXTRA_DSO_LIBS) \
-		$(MOZ_UNICHARUTIL_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

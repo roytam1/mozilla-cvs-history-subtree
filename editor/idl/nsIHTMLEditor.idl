@@ -146,6 +146,34 @@ interface nsIHTMLEditor : nsISupports
   void removeAllAlternateProperties();
   
   /**
+   * AddDefaultPropertyOverride() registers an override for a given default style property
+   *
+   * @param aProperty   the property to apply override to
+   * @param aAttribute  the attribute of the property to apply override to, if applicable.
+   *                    May be null.
+   *                    Example: aProperty="font", aAttribute="color"
+   * @param aTag        the tag of the override.  "Nodes corresponding to type tag will not
+   *                    get the default style applied.
+   */
+  void addDefaultPropertyOverride(in nsIAtom aProperty, 
+                                  in AString aAttribute, 
+                                  in nsIAtom aTag);
+                             
+  /**
+   * AddAlternatePropertyOverride() registers an override for a given alternate style property
+   *
+   * @param aProperty   the property to apply override to
+   * @param aAttribute  the attribute of the property to apply override to, if applicable.
+   *                    May be null.
+   *                    Example: aProperty="font", aAttribute="color"
+   * @param aTag        the tag of the override.  "Nodes corresponding to type tag will not
+   *                    get the alternate style applied.
+   */
+  void addAlternatePropertyOverride(in nsIAtom aProperty, 
+                                    in AString aAttribute, 
+                                    in nsIAtom aTag);
+                                    
+  /**
    * SetPastePolicy() sets the style policy for Paste/Drop/InsertHTML.
    * @param aPolicy   the property to set on the selection
    *                  possible values:   eNoAddedStyle:       add no additional style
