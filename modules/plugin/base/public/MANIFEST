@@ -19,15 +19,15 @@
 # This is a list of local files which get copied to the mozilla:dist directory
 #
 
+nsIEventHandler.h
 nsIFileUtilities.h
 nsIJRILiveConnectPlugin.h
-nsIJRILiveConnectPluginInstancePeer.h
+nsIJRILiveConnectPlugInstPeer.h
 nsILiveConnectPlugin.h
-nsILiveConnectPluginInstancePeer.h
+nsILiveConnectPlugInstPeer.h
 nsIPlugin.h
 nsIPluginInstance.h
 nsIPluginInstancePeer.h
-nsIPluginInstancePeer2.h
 nsIPluginManager.h
 nsIPluginManager2.h
 nsIPluginStream.h
@@ -36,6 +36,7 @@ nsIPluginStreamPeer2.h
 nsIPluginTagInfo.h
 nsIPluginTagInfo2.h
 nsISeekablePluginStreamPeer.h
-nsIWindowlessPluginInstancePeer.h
+nsIWindowlessPlugInstPeer.h
 nsplugin.h
 nsplugindefs.h
+nsINetworkManager.h

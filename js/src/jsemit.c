@@ -462,8 +462,12 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
     delta = lineno - cg->currentLine;
     cg->currentLine = lineno;
     if (delta) {
-    	/* If delta requires too many SRC_NEWLINE notes, use SRC_SETLINE. */
-    	if (delta >= (uintN)(2 + (lineno > SN_2BYTE_OFFSET_MASK))) {
+    	/*
+         * Encode any change in the current source line number by using either
+         * several SRC_NEWLINE notes or one SRC_SETLINE note, whichever
+         * consumes less space.
+         */
+    	if (delta >= (uintN)(2 + ((lineno > SN_3BYTE_OFFSET_MASK) << 1))) {
 	    if (js_NewSrcNote2(cx, cg, SRC_SETLINE, (ptrdiff_t)lineno) < 0)
 		return JS_FALSE;
     	} else {
@@ -479,20 +483,20 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       {
 	JSFunction *fun;
 
+	/* Fold constants and generate code for the function's body. */
+	pn2 = pn->pn_body;
+	if (!js_FoldConstants(cx, pn2))
+	    return JS_FALSE;
 	if (!js_InitCodeGenerator(cx, &cg2, cg->filename,
 				  pn->pn_pos.begin.lineno,
 				  cg->principals)) {
 	    return JS_FALSE;
 	}
-	ok = js_FoldConstants(cx, pn->pn_body);
-	if (ok) {
-	    cg2.treeContext.tryCount = pn->pn_tryCount;
-	    fun = pn->pn_fun;
-	    ok = js_EmitFunctionBody(cx, &cg2, pn->pn_body, fun);
-	}
-	js_ResetCodeGenerator(cx, &cg2);
-	if (!ok)
+	cg2.treeContext.tryCount = pn->pn_tryCount;
+	fun = pn->pn_fun;
+	if (!js_EmitFunctionBody(cx, &cg2, pn2, fun))
 	    return JS_FALSE;
+	js_ResetCodeGenerator(cx, &cg2);
 
 	/* Make the function object a literal in the outer script's pool. */
 	atom = js_AtomizeObject(cx, fun->object, 0);
@@ -1070,7 +1074,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
 #if JS_HAS_EXCEPTIONS
       case TOK_TRY: {
-	ptrdiff_t start, end, catch;
+	ptrdiff_t start, end, catchStart;
+
 #if shaver_finally
 	/* if this try has a finally, push marker onto treeContext */
 	if (pn->pn_kid3)
@@ -1085,7 +1090,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	start = CG_OFFSET(cg);
 	if(!js_EmitTree(cx, cg, pn->pn_kid1))
 	    return JS_FALSE;
-	
+
 	/* emit (hidden) jump over try and/or finally */
 	if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0)
 	    return JS_FALSE;
@@ -1097,9 +1102,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
 	/* if this try has a catch block, emit it */
 	if (pn->pn_kid2) {
-	    catch = CG_OFFSET(cg);
+	    catchStart = end;
 	    if (!js_EmitTree(cx, cg, pn->pn_kid2))
 		return JS_FALSE;
+	} else {
+	    catchStart = 0;
 	}
 
 #if shaver_finally
@@ -1125,13 +1132,13 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	 * Add the try note last, to let post-order give us the right ordering
 	 * (first to last, inner to outer).
 	 */
-	if (!js_NewTryNote(cx, cg, start, end, catch, 0))
+	if (!js_NewTryNote(cx, cg, start, end, catchStart, 0))
 	    return JS_FALSE;
 	break;
       }
 
       case TOK_CATCH:
-	/* 
+	/*
 	 * Catch blocks are very magical.  Mainly, the magic involves
 	 * special generation for the declaration/conditional, and
 	 * mucking with the stack depth counter so that the implicit
@@ -1982,8 +1989,8 @@ js_SrcNoteLength(jssrcnote *sn)
     if (!arity)
 	return 1;
     for (base = sn++; --arity >= 0; sn++) {
-	if (*sn & SN_2BYTE_OFFSET_FLAG)
-	    sn++;
+	if (*sn & SN_3BYTE_OFFSET_FLAG)
+	    sn +=2 ;
     }
     return sn - base;
 }
@@ -1995,11 +2002,11 @@ js_GetSrcNoteOffset(jssrcnote *sn, uintN which)
     PR_ASSERT(SN_TYPE(sn) != SRC_XDELTA);
     PR_ASSERT(which < js_SrcNoteArity[SN_TYPE(sn)]);
     for (sn++; which; sn++, which--) {
-	if (*sn & SN_2BYTE_OFFSET_FLAG)
-	    sn++;
+	if (*sn & SN_3BYTE_OFFSET_FLAG)
+	    sn += 2;
     }
-    if (*sn & SN_2BYTE_OFFSET_FLAG)
-	return (ptrdiff_t)((*sn & SN_2BYTE_OFFSET_MASK) << 8) | sn[1];
+    if (*sn & SN_3BYTE_OFFSET_FLAG)
+	return (ptrdiff_t)((((uint32)(*sn & SN_3BYTE_OFFSET_MASK)) << 16) | (sn[1] << 8) | sn[0]);
     return (ptrdiff_t)*sn;
 }
 
@@ -2010,7 +2017,7 @@ js_SetSrcNoteOffset(JSContext *cx, JSCodeGenerator *cg, uintN index,
     jssrcnote *sn;
     ptrdiff_t diff;
 
-    if ((size_t)offset >= (size_t)(SN_2BYTE_OFFSET_FLAG << 8)) {
+    if (offset >= (((ptrdiff_t)SN_3BYTE_OFFSET_FLAG) << 16)) {
 	ReportStatementTooLarge(cx, cg);
 	return JS_FALSE;
     }
@@ -2020,26 +2027,35 @@ js_SetSrcNoteOffset(JSContext *cx, JSCodeGenerator *cg, uintN index,
     PR_ASSERT(SN_TYPE(sn) != SRC_XDELTA);
     PR_ASSERT(which < js_SrcNoteArity[SN_TYPE(sn)]);
     for (sn++; which; sn++, which--) {
-	if (*sn & SN_2BYTE_OFFSET_FLAG)
-	    sn++;
+	if (*sn & SN_3BYTE_OFFSET_FLAG)
+	    sn += 2;
     }
 
-    /* See if the new offset requires two bytes. */
-    if ((uintN)offset > (uintN)SN_2BYTE_OFFSET_MASK) {
-	/* Maybe this offset was already set to a two-byte value. */
-	if (!(*sn & SN_2BYTE_OFFSET_FLAG)) {
-	    /* Losing, need to insert another byte for this offset. */
+    /* See if the new offset requires three bytes. */
+    if (offset > (ptrdiff_t)SN_3BYTE_OFFSET_MASK) {
+	/* Maybe this offset was already set to a three-byte value. */
+	if (!(*sn & SN_3BYTE_OFFSET_FLAG)) {
+	    /* Losing, need to insert another two bytes for this offset. */
 	    index = sn - cg->notes;
-	    if (cg->noteCount++ % SNINCR == 0) {
+            cg->noteCount += 2;
+
+            /*
+             * Simultaneously test to see if the source note array must grow to
+             * accomodate either the first or second byte of additional storage
+             * required by this 3-byte offset.
+             */
+            if ((cg->noteCount - 1) % SNINCR <= 1) {
 		if (!GrowSrcNotes(cx, cg))
 		    return JS_FALSE;
 		sn = cg->notes + index;
-	    }
-	    diff = cg->noteCount - (index + 2);
+            }
+            diff = cg->noteCount - (index + 3);
+            PR_ASSERT(diff >= 0);
 	    if (diff > 0)
-		memmove(sn + 2, sn + 1, diff * sizeof(jssrcnote));
+		memmove(sn + 3, sn + 1, diff * sizeof(jssrcnote));
 	}
-	*sn++ = (jssrcnote)(SN_2BYTE_OFFSET_FLAG | (offset >> 8));
+	*sn++ = (jssrcnote)(SN_3BYTE_OFFSET_FLAG | (offset >> 16));
+        *sn++ = (jssrcnote)(offset >> 8);
     }
     *sn = (jssrcnote)offset;
     return JS_TRUE;
@@ -2078,18 +2094,17 @@ js_AllocTryNotes(JSContext *cx, JSCodeGenerator *cg)
 
 JS_FRIEND_API(JSTryNote *)
 js_NewTryNote(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t start,
-	      ptrdiff_t end, ptrdiff_t catch, ptrdiff_t finally)
+	      ptrdiff_t end, ptrdiff_t catchStart, ptrdiff_t finallyStart)
 {
-    JSTryNote *cur;
+    JSTryNote *tn;
 
     PR_ASSERT(cg->tryNext < cg->tryLimit);
-    cur = cg->tryNext;
-    cg->tryNext++;
-    cur->start = start;
-    cur->end = end;
-    cur->catch = catch;
-    cur->finally = finally;
-    return cur;
+    tn = cg->tryNext++;
+    tn->start = start;
+    tn->length = end - start;
+    tn->catchStart = catchStart;
+    tn->finallyStart = finallyStart;
+    return tn;
 }
 
 JS_FRIEND_API(JSBool)
@@ -2112,9 +2127,9 @@ js_FinishTakingTryNotes(JSContext *cx, JSCodeGenerator *cg, JSTryNote **tryp)
     }
     memcpy(final, tmp, count * sizeof(JSTryNote));
     final[count].start = 0;
-    final[count].end = 0;
-    final[count].catch = 0;
-    final[count].finally = 0;
+    final[count].length = CG_OFFSET(cg);
+    final[count].catchStart = 0;
+    final[count].finallyStart = 0;
     *tryp = final;
     return JS_TRUE;
 }

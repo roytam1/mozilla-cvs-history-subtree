@@ -983,6 +983,7 @@ struct LO_CommonPluginStruct_struct {
 #ifdef MOCHA
     struct JSObject *mocha_object;
 #endif		
+    int16 sub_type;
 };
 
 struct LO_BuiltinStruct_struct {

@@ -16,6 +16,9 @@
 # 
 
 DEPTH	= ../../..
+ifdef NSJVM
 DIRS	= netscape
+else
+endif
 
 include $(DEPTH)/config/rules.mk
