@@ -20,10 +20,17 @@
  * Contributor(s): 
  * Tom Kneeland, tomk@mitre.org
  *    -- original author.
+ *
  * Keith Visco, kvisco@ziplink.net
  *    -- finished implementation. Too many changes to list here.
+ *
  * Bob Miller, Oblix Inc., kbob@oblix.com
  *    -- fixed assignment to "true" to be MB_TRUE, in ::parse()
+ *
+ * Marina Mechtcheriakova, mmarina@mindspring.com
+ *    -- UNICODE fix in method startElement, changed  casting of 
+ *       char* to DOM_CHAR* to use the proper String constructor, 
+ *       see method startElement
  *
  * $Id$
  */
@@ -128,7 +135,8 @@ void startElement(void *userData, const XML_Char *name, const XML_Char **atts)
   DOM_CHAR* attValue;
   XML_Char** theAtts = (XML_Char**)atts;
 
-  newElement = ps->document->createElement((DOM_CHAR*) name);
+  String nodeName(name);
+  newElement = ps->document->createElement(nodeName);
 
   while (*theAtts)
     {
