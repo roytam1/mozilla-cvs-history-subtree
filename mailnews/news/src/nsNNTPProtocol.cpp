@@ -2053,8 +2053,8 @@ PRInt32 nsNNTPProtocol::BeginArticle()
   {
       m_tempArticleFile.Delete(PR_FALSE);
       m_tempArticleStream = null_nsCOMPtr();
-      nsCOMPtr<nsIURI> aURL(do_QueryInterface(m_runningURL));
-      m_copyStreamListener->OnStartRequest(aURL, "");
+      nsCOMPtr<nsISupports> aURL(do_QueryInterface(m_runningURL));
+      m_copyStreamListener->OnStartRequest(nsnull, aURL);
   }
   else
   {
@@ -2098,7 +2098,7 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
 	if(!line)
 	  return(status);  /* no line yet or error */
 	
-    nsCOMPtr<nsIURI> url = do_QueryInterface(m_runningURL);
+    nsCOMPtr<nsISupports> ctxt = do_QueryInterface(m_runningURL);
 
 	if (m_typeWanted == CANCEL_WANTED && m_responseCode != MK_NNTP_RESPONSE_ARTICLE_HEAD)
 	{
@@ -2118,7 +2118,7 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
 		if (m_tempArticleStream)
 			m_tempArticleStream->Close();
         else if (m_copyStreamListener)
-            m_copyStreamListener->OnStopRequest(url, 0, nsnull);
+            m_copyStreamListener->OnStopRequest(nsnull, ctxt, 0, nsnull);
 
 		if (m_displayConsumer)
 		{
@@ -2193,8 +2193,8 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
                 nsCOMPtr<nsIInputStream> aInputStream =
                     do_QueryInterface(dummyStream);
                 if (aInputStream)
-                    m_copyStreamListener->OnDataAvailable(url,
-                            aInputStream, PL_strlen(outputBuffer));
+                    m_copyStreamListener->OnDataAvailable(nsnull, ctxt,
+                            aInputStream, 0 /* source offset */, PL_strlen(outputBuffer));
             }
 		}
 	}
