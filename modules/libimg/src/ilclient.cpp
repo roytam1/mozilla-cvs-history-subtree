@@ -964,12 +964,14 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, URL_Struct *urls,
 
             /* Emit DocInfo link to URL */
             address = ic->url_address;
-            PL_strcpy(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
-            PL_strcat(buffer, address);
-            PL_strcat(buffer, ">");
+            PL_strcpy(buffer, "<A TARGET=Internal_URL_Info HREF=\"about:");
+            escaped = NET_EscapeDoubleQuote(address);
+            PL_strcat(buffer, escaped);
+            PR_Free(escaped);
+            PL_strcat(buffer, "\">");
             escaped = NET_EscapeHTML(address);
             PL_strcat(buffer, escaped);
-            PR_FREEIF(escaped);
+            PR_Free(escaped);
             PL_strcat(buffer, "</A>");
             ADD_CELL("URL:", buffer);
             
