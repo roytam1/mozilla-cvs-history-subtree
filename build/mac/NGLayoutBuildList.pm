@@ -293,8 +293,9 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-    my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
-    my($security_tag) = "SECURITY_CLIENT_BRANCH"; 
+    my($nsprpub_tag) = "SeaMonkey_M16_BRANCH";
+    my($security_tag) = "SeaMonkey_M16_BRANCH"; 
+    my($seamonkeyall_tag) = "SeaMonkey_M16_BRANCH";
     
     #//
     #// Checkout commands
@@ -303,20 +304,20 @@ sub Checkout()
     {
         $session->checkout("mozilla/nsprpub", $nsprpub_tag)             || print "checkout of nsprpub failed\n";        
         $session->checkout("mozilla/security", $security_tag)           || print "checkout of security failed\n";
-        $session->checkout("SeaMonkeyAll")                              || 
+        $session->checkout("SeaMonkeyAll", $seamonkeyall_tag)                              || 
             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
     {
-        $session->checkout("mozilla/build/mac")                     || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/InterfaceLib")          || print "checkout failure\n";
-        $session->checkout("mozilla/config/mac")                    || print "checkout failure\n";
-        $session->checkout("mozilla/gc")                            || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/NSStartup")             || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/NSStdLib")              || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/NSRuntime")             || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/MoreFiles")             || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/MacMemoryAllocator")    || print "checkout failure\n";
+        $session->checkout("mozilla/build/mac, $seamonkeyall_tag")                     || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/InterfaceLib, $seamonkeyall_tag")          || print "checkout failure\n";
+        $session->checkout("mozilla/config/mac, $seamonkeyall_tag")                    || print "checkout failure\n";
+        $session->checkout("mozilla/gc, $seamonkeyall_tag")                            || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/NSStartup, $seamonkeyall_tag")             || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/NSStdLib, $seamonkeyall_tag")              || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/NSRuntime, $seamonkeyall_tag")             || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/MoreFiles, $seamonkeyall_tag")             || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/MacMemoryAllocator, $seamonkeyall_tag")    || print "checkout failure\n";
         $session->checkout("mozilla/nsprpub", $nsprpub_tag)         || print "checkout failure\n";
     }
 }
