@@ -193,7 +193,7 @@ nsResProtocolHandler::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 NS_IMETHODIMP
 nsResProtocolHandler::GetScheme(char* *result)
 {
-    *result = nsCRT::strdup("res");
+    *result = nsCRT::strdup("resource");
     if (*result == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
@@ -211,7 +211,6 @@ nsResProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                              nsIURI **result)
 {
     nsresult rv;
-
     // Res: URLs (currently) have no additional structure beyond that provided by standard
     // URLs, so there is no "outer" given to CreateInstance 
 
