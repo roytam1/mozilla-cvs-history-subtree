@@ -26,6 +26,9 @@
 
 #include "nsString.h"
 
+#include "gtkmozarea.h"
+#include "gdksuperwin.h"
+
 class nsFont;
 class nsIAppShell;
 
@@ -83,7 +86,12 @@ public:
   // in nsWidget now
   //    virtual  PRBool OnResize(nsSizeEvent &aEvent);
 
+  static void SuperWinFilter(GdkSuperWin *superwin, XEvent *event, gpointer p);
 
+  void HandleXlibExposeEvent(XEvent *event);
+
+  // Return the Gdk window used for rendering
+  virtual GdkWindow * GetRenderWindow(GtkObject * aGtkWidget);
 
 protected:
 
@@ -112,7 +120,7 @@ protected:
   //////////////////////////////////////////////////////////////////////
 
   virtual void InitCallbacks(char * aName = nsnull);
-  NS_IMETHOD CreateNative(GtkWidget *parentWidget);
+  NS_IMETHOD CreateNative(GtkObject *parentWidget);
 
   nsIFontMetrics *mFontMetrics;
   PRBool      mVisible;
@@ -129,7 +137,12 @@ protected:
   PRBool mLowerLeft;
 
   GtkWidget *mShell;  /* used for toplevel windows */
-  
+  // this is used by the toplevel window to contain a superwin
+  GtkWidget *mMozArea;
+  // This is the superwin.  Most nsWindows will just contain this
+  // ( no mozarea )
+  GdkSuperWin *mSuperWin;
+
   nsIMenuBar *mMenuBar;
 private:
   nsresult     SetIcon(GdkPixmap *window_pixmap, 
