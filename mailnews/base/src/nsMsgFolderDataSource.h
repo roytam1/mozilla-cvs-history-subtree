@@ -39,15 +39,13 @@ private:
   
 public:
   
-  NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS_INHERITED
 
   nsMsgFolderDataSource(void);
   virtual ~nsMsgFolderDataSource (void);
-
+  virtual nsresult Init();
 
   // nsIRDFDataSource methods
-  NS_IMETHOD Init(const char* uri);
-
   NS_IMETHOD GetURI(char* *uri);
 
   NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -92,8 +90,6 @@ public:
                           nsISimpleEnumerator** labels); 
 
   NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult);
-
-  NS_IMETHOD Flush();
 
   NS_IMETHOD GetAllCommands(nsIRDFResource* source,
                             nsIEnumerator/*<nsIRDFResource>*/** commands);
@@ -146,6 +142,9 @@ protected:
   nsresult DoDeleteFromFolder(nsIMsgFolder *folder,
 							  nsISupportsArray *arguments, nsITransactionManager *txnMgr);
 
+  nsresult DoCopyToFolder(nsIMsgFolder *dstFolder, nsISupportsArray *arguments,
+						  nsITransactionManager *txnMgr, PRBool isMove);
+
   nsresult DoNewFolder(nsIMsgFolder *folder,
 							  nsISupportsArray *arguments);
 
@@ -172,5 +171,7 @@ protected:
   static nsIRDFResource* kNC_Delete;
   static nsIRDFResource* kNC_NewFolder;
   static nsIRDFResource* kNC_GetNewMessages;
+  static nsIRDFResource* kNC_Copy;
+  static nsIRDFResource* kNC_Move;
 
 };
