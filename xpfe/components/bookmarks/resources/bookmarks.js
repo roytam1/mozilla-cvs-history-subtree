@@ -69,8 +69,8 @@ function Startup()
 
   // XXX - reinit sort
   
-  bookmarksBody.outlinerBoxObject.selection.select(0);
-  bookamrksView.focus();
+  bookmarksView.outlinerBoxObject.selection.select(0);
+  bookmarksView.focus();
 }
 
 function Shutdown ()
