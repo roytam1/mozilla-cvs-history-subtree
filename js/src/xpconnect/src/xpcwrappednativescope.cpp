@@ -392,6 +392,36 @@ GetScopeOfObject(JSContext* cx, JSObject* obj)
 }
 
 
+#ifdef DEBUG
+void DEBUG_CheckForComponentsInScope(XPCCallContext& ccx, JSObject* obj)
+{
+    const char* name = ccx.GetRuntime()->GetStringName(XPCJSRuntime::IDX_COMPONENTS);
+    jsval prop;
+    if(JS_LookupProperty(ccx, obj, name, &prop) && !JSVAL_IS_PRIMITIVE(prop))
+        return;
+
+    static const char msg[] =
+    "\n"
+    "XPConnect is being called on a scope without a 'Components' property!\n"
+    "\n"
+    "This is pretty much always bad. It usually means that native code is\n"
+    "making a callback to an interface implemented in JavaScript, but the\n"
+    "document where the JS object was created has already been cleared and the\n"
+    "global properties of that document's window are *gone*. Generally this\n"
+    "indicates a problem that should be addressed in the design and use of the\n"
+    "callback code."
+    "\n";
+
+#ifdef IM_SO_SMART_THAT_I_NEVER_MAKE_MISTAKES
+    NS_WARNING(msg);
+#else
+    NS_ERROR(msg);
+#endif
+}        
+#else
+#define DEBUG_CheckForComponentsInScope(ccx, obj) ((void)0)
+#endif
+
 // static 
 XPCWrappedNativeScope* 
 XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
@@ -424,7 +454,10 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
         for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
         {
             if(obj == cur->GetGlobalJSObject())
+            {
+                DEBUG_CheckForComponentsInScope(ccx, obj);
                 return cur;
+            }
         }
     }
     NS_ERROR("No scope has this global object!");
