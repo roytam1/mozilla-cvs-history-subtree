@@ -145,3 +145,16 @@ NS_IMETHODIMP nsImageContainer::DrawImage(HDC aDestDC, const nsRect * aSrcRect, 
 
   return NS_REINTERPRET_CAST(nsImageFrame*, img.get())->DrawImage(aDestDC, aSrcRect, aDestPoint);
 }
+
+NS_IMETHODIMP nsImageContainer::DrawScaledImage(HDC aDestDC, const nsRect * aSrcRect, const nsRect * aDestRect)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIImageFrame> img;
+  rv = this->GetCurrentFrame(getter_AddRefs(img));
+
+  if (NS_FAILED(rv))
+    return rv;
+
+  return NS_REINTERPRET_CAST(nsImageFrame*, img.get())->DrawScaledImage(aDestDC, aSrcRect, aDestRect);
+}

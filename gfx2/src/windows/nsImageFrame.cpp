@@ -23,6 +23,8 @@
 
 #include "nsImageFrame.h"
 
+#include "nsTransform2D.h"
+
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
 
@@ -421,6 +423,54 @@ nsresult nsImageFrame::DrawImage(HDC aDestDC, const nsRect * aSrcRect, const nsP
 
 
 //  ::SelectObject(mDC, oldThing)
+
+  delete[] mBHead;
+
+  return NS_OK;
+
+}
+
+
+nsresult nsImageFrame::DrawScaledImage(HDC aDestDC, const nsRect * aSrcRect, const nsRect * aDestRect)
+{
+  LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
+
+  nsTransform2D trans;
+  trans.SetToScale((float(mRect.width) / float(aDestRect->width)), (float(mRect.height) / float(aDestRect->height)));
+
+  nsRect source(*aSrcRect);
+  nsRect dest(*aDestRect);
+
+  trans.TransformCoord(&source.x, &source.y, &source.width, &source.height);
+//  trans.TransformCoord(&dest.x, &dest.y, &dest.width, &dest.height);
+
+  mBHead->biSize = sizeof(BITMAPINFOHEADER);
+	mBHead->biWidth = mRect.width;
+	mBHead->biHeight = -source.height;
+	mBHead->biPlanes = 1;
+	mBHead->biBitCount = 24;
+	mBHead->biCompression = BI_RGB;
+	mBHead->biSizeImage = mImageData.length;
+	mBHead->biXPelsPerMeter = 0;
+	mBHead->biYPelsPerMeter = 0;
+	mBHead->biClrUsed = 0;
+	mBHead->biClrImportant = 0;
+
+  int rop = SRCCOPY;
+  if (mAlphaData && mAlphaData->depth == 1) {
+    MONOBITMAPINFO bmi(mRect.width, -source.height);
+    bmi.bmiHeader.biSizeImage = mAlphaData->length;
+    ::StretchDIBits(aDestDC, (aDestRect->x + aSrcRect->x), (aDestRect->y + aSrcRect->y), dest.width, dest.height,
+                    source.x, 0, mRect.width, source.height,
+                    mAlphaData->data + (source.y * mAlphaData->bytesPerRow), 
+                    (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
+    rop = SRCPAINT;
+  }
+
+  ::StretchDIBits(aDestDC, (aDestRect->x + aSrcRect->x), (aDestRect->y + aSrcRect->y), dest.width, dest.height,
+                  source.x, 0, mRect.width, source.height,
+                  mImageData.data + (source.y * mImageData.bytesPerRow), 
+                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
 
   delete[] mBHead;
 

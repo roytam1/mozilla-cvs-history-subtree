@@ -61,6 +61,7 @@ public:
 
 
   nsresult DrawImage(HDC aDestDC, const nsRect * aSrcRect, const nsPoint * aDestPoint);
+  nsresult DrawScaledImage(HDC aDestDC, const nsRect * aSrcRect, const nsRect * aDestRect);
 
 
 private:

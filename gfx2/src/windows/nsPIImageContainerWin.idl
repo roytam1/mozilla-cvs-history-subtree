@@ -46,4 +46,5 @@ interface nsPIImageContainerWin : nsISupports
   /**
    */
   void drawImage(in HDC aDestDC, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint);
+  void drawScaledImage(in HDC aDestDC, [const] in nsRect aSrcRect, [const] in nsRect aDestRect);
 };
