@@ -715,4 +715,4 @@ static nsModuleComponentInfo components[] = {
     nsFindComponentConstructor}
 };
 
-NS_IMPL_NSGETMODULE("nsFindComponent", components)
+NS_IMPL_NSGETMODULE(nsFindComponentModule, components)

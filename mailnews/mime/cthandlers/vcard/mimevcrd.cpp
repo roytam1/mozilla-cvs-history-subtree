@@ -50,7 +50,7 @@
 
 // String bundles...
 #ifndef XP_MAC
-nsCOMPtr<nsIStringBundle>   stringBundle = nsnull;
+static nsCOMPtr<nsIStringBundle>   stringBundle = nsnull;
 #endif
 
 static int MimeInlineTextVCard_parse_line (char *, PRInt32, MimeObject *);
@@ -1843,45 +1843,6 @@ static int WriteValue (MimeObject *obj, const char *value)
 	return status;
 }
 
-/* Strip CR+LF+<whitespace> runs within (original).
-   Since the string at (original) can only shrink,
-   this conversion is done in place. (original)
-   is returned. */
-extern "C" char *
-MIME_StripContinuations(char *original)
-{
-	char *p1, *p2;
-
-	/* If we were given a null string, return it as is */
-	if (!original) return NULL;
-
-	/* Start source and dest pointers at the beginning */
-	p1 = p2 = original;
-
-	while(*p2)
-	{
-		/* p2 runs ahead at (CR and/or LF) + <space> */
-		if ((p2[0] == nsCRT::CR) || (p2[0] == nsCRT::LF))
-		{
-			/* move past (CR and/or LF) + whitespace following */	
-			do
-			{
-				p2++;
-			}
-			while((*p2 == nsCRT::CR) || (*p2 == nsCRT::LF) || IS_SPACE(*p2));
-
-			if (*p2 == '\0') continue; /* drop out of loop at end of string*/
-		}
-
-		/* Copy the next non-linebreaking char */
-		*p1 = *p2;
-		p1++; p2++;
-	}
-	*p1 = '\0';
-
-	return original;
-}
-
 /*	Very similar to strdup except it free's too
  */
 extern "C" char * 
@@ -1946,7 +1907,7 @@ VCardGetStringByID(PRInt32 aMsgId)
 	nsresult res = NS_OK;
 
 #ifdef XP_MAC
-nsCOMPtr<nsIStringBundle>   stringBundle = nsnull;
+auto nsCOMPtr<nsIStringBundle>   stringBundle = nsnull;
 #endif
 
 	if (!stringBundle)

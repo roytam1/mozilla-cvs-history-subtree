@@ -308,7 +308,7 @@ nsLocaleModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 
 static nsLocaleModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT nsresult NSGetModule_nsLocaleModule(nsIComponentManager *servMgr,
                                           nsIFile* location,
                                           nsIModule** return_cobj)
 {

@@ -346,7 +346,7 @@ nsUConvModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 
 static nsUConvModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT nsresult NSGetModule_nsUConvModule(nsIComponentManager *servMgr,
                              nsIFile* aPath,
                              nsIModule** return_cobj)
 {

@@ -30,11 +30,11 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsUtils.h"
 
-const char *kPromptURL="chrome://global/content/commonDialog.xul";
-const char *kSelectPromptURL="chrome://global/content/selectDialog.xul";
-const char *kQuestionIconClass ="question-icon";
-const char *kAlertIconClass ="alert-icon";
-const char *kWarningIconClass ="message-icon";
+static const char *kPromptURL="chrome://global/content/commonDialog.xul";
+static const char *kSelectPromptURL="chrome://global/content/selectDialog.xul";
+static const char *kQuestionIconClass ="question-icon";
+static const char *kAlertIconClass ="alert-icon";
+static const char *kWarningIconClass ="message-icon";
 
 /****************************************************************
  ************************* ParamBlock ***************************

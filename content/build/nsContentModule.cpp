@@ -67,7 +67,7 @@
 
 static nsContentModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT nsresult NSGetModule_nsContentModule(nsIComponentManager *servMgr,
                                           nsIFile* location,
                                           nsIModule** return_cobj)
 {

@@ -51,9 +51,6 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 #define DECODER_NAME_BASE "Unicode Decoder-"
 #define ENCODER_NAME_BASE "Unicode Encoder-"
 
-PRInt32 g_InstanceCount = 0;
-PRInt32 g_LockCount = 0;
-
 PRUint16 g_utKSC5601Mapping[] = {
 #include "u20kscgl.ut"
 };
@@ -117,5 +114,5 @@ static nsModuleComponentInfo components[] =
   }
 };
 
-NS_IMPL_NSGETMODULE("nsUCvKoModule", components);
+NS_IMPL_NSGETMODULE(nsUCvKoModule, components);
 

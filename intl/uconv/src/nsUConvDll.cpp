@@ -48,9 +48,6 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CI
 static NS_DEFINE_CID(kCharsetMenuCID, NS_CHARSETMENU_CID);
 static NS_DEFINE_CID(kTextToSubURICID, NS_TEXTTOSUBURI_CID);
 
-PRInt32 g_InstanceCount = 0;
-PRInt32 g_LockCount = 0;
-
 //----------------------------------------------------------------------
 // Global functions and data [implementation]
 

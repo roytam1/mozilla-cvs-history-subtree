@@ -68,13 +68,13 @@ const char mozJSSubScriptLoadContractID[] = "@mozilla.org/moz/jssubscript-loader
 
 /* XXX export properly from libxpcom, for now this will let Mac build */
 #ifdef RHAPSODY
-extern const char fileSizeValueName[]; // = "FileSize";
-extern const char lastModValueName[]; // = "LastModTimeStamp";
-extern const char xpcomKeyName[]; // = "Software/Mozilla/XPCOM";
+extern const char JSfileSizeValueName[]; // = "FileSize";
+extern const char JSlastModValueName[]; // = "LastModTimeStamp";
+extern const char JSxpcomKeyName[]; // = "Software/Mozilla/XPCOM";
 #else
-const char fileSizeValueName[] = "FileSize";
-const char lastModValueName[] = "LastModTimeStamp";
-const char xpcomKeyName[] = "software/mozilla/XPCOM/components";
+const char JSfileSizeValueName[] = "FileSize";
+const char JSlastModValueName[] = "LastModTimeStamp";
+const char JSxpcomKeyName[] = "software/mozilla/XPCOM/components";
 #endif
 
 const char kJSRuntimeServiceContractID[] = "@mozilla.org/js/xpc/RuntimeService;1";
@@ -474,7 +474,7 @@ mozJSComponentLoader::Init(nsIComponentManager *aCompMgr, nsISupports *aReg)
     /* initialize registry handles */
     mRegistry = do_QueryInterface(aReg, &rv);
     if (NS_SUCCEEDED(rv)) {
-        rv = mRegistry->GetSubtree(nsIRegistry::Common, xpcomKeyName,
+        rv = mRegistry->GetSubtree(nsIRegistry::Common, JSxpcomKeyName,
                                    &mXPCOMKey);
         if (NS_FAILED(rv))
             /* if we can't get the XPCOM key, just skip all registry ops */
@@ -620,12 +620,12 @@ mozJSComponentLoader::SetRegistryInfo(const char *registryLocation,
     PRInt64 modDate;
 
     if (NS_FAILED(rv = component->GetLastModificationDate(&modDate)) ||
-        NS_FAILED(rv = mRegistry->SetLongLong(key, lastModValueName, &modDate)))
+        NS_FAILED(rv = mRegistry->SetLongLong(key, JSlastModValueName, &modDate)))
         return rv;
 
     PRInt64 fileSize;
     if (NS_FAILED(rv = component->GetFileSize(&fileSize)) ||
-        NS_FAILED(rv = mRegistry->SetLongLong(key, fileSizeValueName, &fileSize)))
+        NS_FAILED(rv = mRegistry->SetLongLong(key, JSfileSizeValueName, &fileSize)))
         return rv;
 
 #ifdef DEBUG_shaver_off
@@ -695,7 +695,7 @@ mozJSComponentLoader::HasChanged(const char *registryLocation,
 
     /* check modification date */
     PRInt64 regTime, lastTime;
-    if (NS_FAILED(mRegistry->GetLongLong(key, lastModValueName, &regTime)))
+    if (NS_FAILED(mRegistry->GetLongLong(key, JSlastModValueName, &regTime)))
         return PR_TRUE;
     
     if (NS_FAILED(component->GetLastModificationDate(&lastTime)) || LL_NE(lastTime, regTime))
@@ -703,7 +703,7 @@ mozJSComponentLoader::HasChanged(const char *registryLocation,
 
     /* check file size */
     PRInt64 regSize;
-    if (NS_FAILED(mRegistry->GetLongLong(key, fileSizeValueName, &regSize)))
+    if (NS_FAILED(mRegistry->GetLongLong(key, JSfileSizeValueName, &regSize)))
         return PR_TRUE;
     PRInt64 size;
     if (NS_FAILED(component->GetFileSize(&size)) || LL_NE(size,regSize) )
@@ -1324,4 +1324,4 @@ static nsModuleComponentInfo components[] = {
 #endif
 };
 
-NS_IMPL_NSGETMODULE("JS component loader", components);
+NS_IMPL_NSGETMODULE(JS_component_loader, components);
