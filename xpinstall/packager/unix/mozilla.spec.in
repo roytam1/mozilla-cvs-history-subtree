@@ -5,13 +5,15 @@ Release:   M12
 Serial:    0
 Copyright: MPL/NPL
 Source0:   mozilla-m12.tar.gz
+Source1:   mozilla.sh
 Buildroot: /var/tmp/mozilla-root
 Prefix:    /usr
 Group:     Mozilla
 
 %description
-This is Mozilla.
 
+Mozilla is an open-source web browser, designed for standards
+compliance, performance and portability.
 
 PACKAGE_LISTING
 
@@ -26,12 +28,18 @@ make
 
 PACKAGE_INSTALL
 
+# Make sure that we overwrite the mozilla installed with ours.
+cp %{SOURCE1} $RPM_BUILD_ROOT/%{prefix}/bin/
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 FILE_LISTING
 
+%files install
 
-
+%{prefix}/lib/mozilla/chrome
+%{prefix}/lib/mozilla/res
+%{prefix}/lib/mozilla/defaults
 
 

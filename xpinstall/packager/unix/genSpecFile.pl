@@ -64,14 +64,14 @@ sub print_package_desc
   
   foreach $this_key (keys %{$modules})
   {
-    $retval .= '%package mozilla-' . $this_key . "\n";
+    $retval .= '%package ' . $this_key . "\n";
     $retval .= 'Summary: mozilla-' . $this_key . "\n";
     $retval .= "Group: Mozilla\n";
   }
 
   foreach $this_key (keys %{$modules})
   {
-    $retval .= '%description mozilla-' . $this_key . "\n";
+    $retval .= '%description ' . $this_key . "\n";
     $retval .= $default_desc->{$this_key} . "\n";
   }
   return $retval;
@@ -87,7 +87,7 @@ sub print_package_list
     my $list = $modules->{$this_key};
     my $len = scalar @{$list};
     my $i;
-    $retval .= '%files mozilla-' . $this_key . "\n";
+    $retval .= '%files ' . $this_key . "\n";
     for ($i = 0; $i < $len; $i++) {
       my $this_item = $list->[$i];
       my $dirname;
@@ -122,18 +122,15 @@ sub print_package_list
       }
       elsif ($dirname = is_res_wildcard($this_item)) {
 	$this_item = strip_bin($this_item);
-	$this_item = strip_res($this_item);
-	$retval .= '%{prefix}/share/mozilla/resources/' . $dirname . "/\n";
+	$retval .= '%{prefix}/share/mozilla/' . $dirname . "/\n";
       }
       elsif (is_res($this_item)) {
 	$this_item = strip_bin($this_item);
-	$this_item = strip_res($this_item);
-	$retval .= '%{prefix}/share/mozilla/resources/' . $this_item . "\n";
+	$retval .= '%{prefix}/share/mozilla/' . $this_item . "\n";
       }
       elsif ($dirname = is_res_file_in_dir($this_item)) {
 	$this_item = strip_bin($this_item);
-	$this_item = strip_res($this_item);
-	$retval .= '%{prefix}/share/mozilla/resources/' . $this_item . "\n";
+	$retval .= '%{prefix}/share/mozilla/' . $this_item . "\n";
       }
       elsif ($dirname = is_dir_wildcard($this_item)) {
 	$this_item = strip_bin($this_item);
@@ -164,13 +161,13 @@ sub print_package_install
 
   $retval .= q(
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/chrome
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/html
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/entityTables
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/rdf
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/throbber
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/toolbar
-mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/xpinstall
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/html
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/entityTables
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/rdf
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/throbber
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/toolbar
+mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/xpinstall
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/defaults
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/defaults/pref
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/share/mozilla/defaults/profile
@@ -178,7 +175,7 @@ mkdir -p $RPM_BUILD_ROOT/%{prefix}/lib/mozilla/components
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/include/mozilla
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/include/mozilla/idl
 ln -s ../../share/mozilla/chrome $RPM_BUILD_ROOT/%{prefix}/lib/mozilla/chrome
-ln -s ../../share/mozilla/resources $RPM_BUILD_ROOT/%{prefix}/lib/mozilla/resources 
+ln -s ../../share/mozilla/res    $RPM_BUILD_ROOT/%{prefix}/lib/mozilla/res
 ln -s ../../share/mozilla/defaults $RPM_BUILD_ROOT/%{prefix}/lib/mozilla/defaults
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/lib
 mkdir -p $RPM_BUILD_ROOT/%{prefix}/bin
@@ -217,13 +214,13 @@ mkdir -p $RPM_BUILD_ROOT/%{prefix}/bin
 	$retval .= "cp -r " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/chrome/' . $dirname . "/" . "\n";
       }
       elsif ($dirname = is_res_wildcard($this_item)) {
-	$retval .= "cp -r " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/' . $dirname . "/" . "\n";
+	$retval .= "cp -r " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/' . $dirname . "/" . "\n";
       }
       elsif (is_res($this_item)) {
-	$retval .= "cp " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/' . "\n";
+	$retval .= "cp " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/' . "\n";
       }
       elsif ($dirname = is_res_file_in_dir($this_item)) {
-	$retval .= "cp " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/resources/' . $dirname . "/" . "\n";
+	$retval .= "cp " . $src . $this_item . ' $RPM_BUILD_ROOT/%{prefix}/share/mozilla/res/' . $dirname . "/" . "\n";
       }
       elsif ($dirname = is_dir_wildcard($this_item)) {
 	$retval .= 'if [ -e ' . $src . $this_item . " ]; then\n\t";
@@ -248,13 +245,6 @@ sub strip_bin
 {
   my $file = shift;
   $file =~ s/^bin\///;
-  return $file;
-}
-
-sub strip_res
-{
-  my $file = shift;
-  $file =~ s/^res\///;
   return $file;
 }
 
