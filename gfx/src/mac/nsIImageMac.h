@@ -54,6 +54,9 @@ public:
     // used for clipboard.  
   NS_IMETHOD ConvertFromPICT ( PicHandle inPicture ) = 0;
   
+    // Get the PixMap for this image
+  NS_IMETHOD GetPixMap ( PixMapHandle* aPixMap ) = 0;
+
 }; // nsIImageMac
 
 

@@ -224,6 +224,18 @@ public:
                   PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight) = 0;
 
   /**
+   * BitBlit the entire (no cropping) nsIImage to another nsImage, the source and dest can be scaled
+   * @update - dwc 2/1/99
+   * @param aDstImage  the nsImage to blit to
+   * @param aDX The destination horizontal location
+   * @param aDY The destination vertical location
+   * @param aDWidth The destination width of the pixelmap
+   * @param aDHeight The destination height of the pixelmap
+   * @return if TRUE, no errors
+   */
+  NS_IMETHOD DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight) = 0;
+								 
+  /**
    * Set the alpha level for the image
    * @update - dwc 2/1/99
    * @param  the alpha level to set for the image, from 0 to 100%

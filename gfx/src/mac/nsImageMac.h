@@ -78,6 +78,7 @@ public:
 	NS_IMETHOD					Draw(nsIRenderingContext &aContext, nsDrawingSurface aSurface,
 															PRInt32 aSX, PRInt32 aSY, PRInt32 aSWidth, PRInt32 aSHeight,
 															PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight);
+    NS_IMETHOD                  DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight);
 
 	virtual void				SetAlphaLevel(PRInt32 aAlphaLevel);
 	virtual PRInt32			GetAlphaLevel();
@@ -90,6 +91,8 @@ public:
     // used for clipboard.
   NS_IMETHOD ConvertToPICT ( PicHandle* outPicture ) ;
   NS_IMETHOD ConvertFromPICT ( PicHandle inPicture ) ;
+  
+  NS_IMETHOD GetPixMap ( PixMapHandle* outPixMap ) ;
   
 protected:
 		

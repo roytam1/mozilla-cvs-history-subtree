@@ -348,6 +348,58 @@ NS_IMETHODIMP nsImageMac :: Draw(nsIRenderingContext &aContext,
  *	See documentation in nsImageMac.h
  *	@update 
  */
+NS_IMETHODIMP nsImageMac :: DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight)
+{
+  Rect srcRect, dstRect, maskRect;
+
+  if (!mImageBitsHandle)
+    return NS_ERROR_FAILURE;
+
+  // lock and set up bits handles
+  StHandleLocker  imageBitsLocker(mImageBitsHandle);
+  StHandleLocker  maskBitsLocker(mMaskBitsHandle);    // ok with nil handle
+
+  mImagePixmap.baseAddr = *mImageBitsHandle;
+  if (mMaskBitsHandle)
+    mMaskPixmap.baseAddr = *mMaskBitsHandle;
+
+  ::SetRect(&srcRect, 0, 0, mWidth, mHeight);
+  maskRect = srcRect;
+  ::SetRect(&dstRect, aDX, aDY, aDX + aDWidth, aDY + aDHeight);
+
+  ::ForeColor(blackColor);
+  ::BackColor(whiteColor);
+	
+  // get the destination pix map
+  aDstImage->LockImagePixels(PR_FALSE);
+  aDstImage->LockImagePixels(PR_TRUE);
+  nsImageMac* dstMacImage = static_cast<nsImageMac*>(aDstImage);
+	
+  PixMapHandle destPixels;
+  dstMacImage->GetPixMap(&destPixels);
+  NS_ASSERTION(destPixels, "No dest pixels!");
+		
+  if (!mMaskBitsHandle)
+  {
+    ::CopyBits((BitMap*)&mImagePixmap, (BitMap*)*destPixels, &srcRect, &dstRect, srcCopy, nsnull);
+  }
+  else
+  {
+    if (mAlphaDepth > 1)
+      ::CopyDeepMask((BitMap*)&mImagePixmap, (BitMap*)&mMaskPixmap, (BitMap*)*destPixels, &srcRect, &maskRect, &dstRect, srcCopy, nsnull);
+    else
+      ::CopyMask((BitMap*)&mImagePixmap, (BitMap*)&mMaskPixmap, (BitMap*)*destPixels, &srcRect, &maskRect, &dstRect);
+  }
+  aDstImage->UnlockImagePixels(PR_FALSE);
+  aDstImage->UnlockImagePixels(PR_TRUE);
+  return NS_OK;
+}
+
+  
+/** ---------------------------------------------------
+ *	See documentation in nsImageMac.h
+ *	@update 
+ */
 nsresult nsImageMac::Optimize(nsIDeviceContext* aContext)
 {
 	return NS_OK;
@@ -740,3 +792,19 @@ nsImageMac :: ConvertFromPICT ( PicHandle inPicture )
   return NS_ERROR_FAILURE;
  
 } // ConvertFromPICT
+
+NS_IMETHODIMP
+nsImageMac::GetPixMap ( PixMapHandle* aPixMap )
+{
+  **aPixMap = &mImagePixmap;
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsImageMac::GetPixMap ( PixMapHandle* aPixMap )
+{
+  **aPixMap = &mImagePixmap;
+  return NS_OK;
+}
+
