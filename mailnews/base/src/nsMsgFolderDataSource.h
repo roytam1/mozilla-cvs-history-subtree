@@ -43,11 +43,9 @@ public:
 
   nsMsgFolderDataSource(void);
   virtual ~nsMsgFolderDataSource (void);
-
+  virtual nsresult Init();
 
   // nsIRDFDataSource methods
-  NS_IMETHOD Init(const char* uri);
-
   NS_IMETHOD GetURI(char* *uri);
 
   NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -92,8 +90,6 @@ public:
                           nsISimpleEnumerator** labels); 
 
   NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult);
-
-  NS_IMETHOD Flush();
 
   NS_IMETHOD GetAllCommands(nsIRDFResource* source,
                             nsIEnumerator/*<nsIRDFResource>*/** commands);

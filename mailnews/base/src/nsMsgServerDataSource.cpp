@@ -28,11 +28,10 @@
 class nsMsgServerDataSource : public nsMsgRDFDataSource
 {
 public:
+  virtual nsresult Init();
+    
   // RDF datasource methods
   
-  /* void Init (in string uri); */
-  NS_IMETHOD Init(const char *uri);
-    
   /* nsIRDFNode GetTarget (in nsIRDFResource source, in nsIRDFResource property, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
                        nsIRDFResource *property,
@@ -79,10 +78,10 @@ DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, child);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Server);
 
 /* void Init (in string uri); */
-NS_IMETHODIMP
-nsMsgServerDataSource::Init(const char *uri)
+nsresult
+nsMsgServerDataSource::Init()
 {
-    nsMsgRDFDataSource::Init(uri);
+    nsMsgRDFDataSource::Init();
     
     if (! kNC_Child) {
         getRDFService()->GetResource(kURINC_child, &kNC_Child);

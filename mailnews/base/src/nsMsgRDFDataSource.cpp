@@ -27,20 +27,44 @@ static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kISupportsIID, NS_ISUPPORTS_IID);
 
 nsMsgRDFDataSource::nsMsgRDFDataSource():
-    mURI(nsnull),
-    mRDFService(nsnull),
-    mObservers(nsnull)
+    mRDFService(nsnull)
 {
     NS_INIT_REFCNT();
+
+    nsresult rv;
+    rv = Init();
+
+    // XXX This call should be moved to a NS_NewMsgFooDataSource()
+    // method that the factory calls, so that failure to construct
+    // will return an error code instead of returning a partially
+    // initialized object.
+    NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, initialization failed");
+    if (NS_FAILED(rv)) return /* rv */;
+
+    return /* NS_OK */;
 }
 
 nsMsgRDFDataSource::~nsMsgRDFDataSource()
 {
-    if (mURI) PL_strfree(mURI);
     if (mRDFService) nsServiceManager::ReleaseService(kRDFServiceCID,
                                                       mRDFService,
                                                       this);
 }
+
+/* void Init (); */
+nsresult
+nsMsgRDFDataSource::Init()
+{
+    nsresult rv=NS_OK;
+    
+    getRDFService();
+    
+    rv = mRDFService->RegisterDataSource(this, PR_FALSE);
+    if (!rv) return rv;
+    
+    return rv;
+}
+
 
 NS_IMPL_ADDREF(nsMsgRDFDataSource)
 NS_IMPL_RELEASE(nsMsgRDFDataSource)
@@ -72,37 +96,12 @@ nsMsgRDFDataSource::QueryInterface(const nsIID& iid, void **result)
 }
 
 
-/* void Init (in string uri); */
-NS_IMETHODIMP
-nsMsgRDFDataSource::Init(const char *uri)
-{
-    nsresult rv=NS_OK;
-    
-    
-    if (!mURI || PL_strcmp(uri, mURI) != 0)
-        mURI = PL_strdup(uri);
-    
-    getRDFService();
-    
-    rv = mRDFService->RegisterDataSource(this, PR_FALSE);
-    if (!rv) return rv;
-    
-    return rv;
-}
-
-
 /* readonly attribute string URI; */
 NS_IMETHODIMP
 nsMsgRDFDataSource::GetURI(char * *aURI)
 {
-    NS_PRECONDITION(aURI != nsnull, "null ptr");
-    if (! aURI)
-        return NS_ERROR_NULL_POINTER;
-    
-    if ((*aURI = nsXPIDLCString::Copy(mURI)) == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    else
-        return NS_OK;
+    NS_NOTREACHED("should be implemented by a subclass");
+    return NS_ERROR_UNEXPECTED;
 }
 
 
@@ -154,6 +153,25 @@ nsMsgRDFDataSource::Unassert(nsIRDFResource *aSource, nsIRDFResource *aProperty,
 }
 
 
+NS_IMETHODIMP
+nsMsgRDFDataSource::Change(nsIRDFResource *aSource,
+                           nsIRDFResource *aProperty,
+                           nsIRDFNode *aOldTarget,
+                           nsIRDFNode *aNewTarget)
+{
+    return NS_RDF_NO_VALUE;
+}
+
+NS_IMETHODIMP
+nsMsgRDFDataSource::Move(nsIRDFResource *aOldSource,
+                         nsIRDFResource *aNewSource,
+                         nsIRDFResource *aProperty,
+                         nsIRDFNode *aTarget)
+{
+    return NS_RDF_NO_VALUE;
+}
+
+
 /* boolean HasAssertion (in nsIRDFResource aSource, in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
 NS_IMETHODIMP
 nsMsgRDFDataSource::HasAssertion(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, PRBool *_retval)
@@ -168,8 +186,9 @@ NS_IMETHODIMP
 nsMsgRDFDataSource::AddObserver(nsIRDFObserver *aObserver)
 {
   if (! mObservers) {
-    if ((mObservers = new nsVoidArray()) == nsnull)
-      return NS_ERROR_OUT_OF_MEMORY;
+    nsresult rv;
+    rv = NS_NewISupportsArray(getter_AddRefs(mObservers));
+    if (NS_FAILED(rv)) return rv;
   }
   mObservers->AppendElement(aObserver);
   return NS_OK;
@@ -206,14 +225,6 @@ nsMsgRDFDataSource::ArcLabelsOut(nsIRDFResource *aSource, nsISimpleEnumerator **
 /* nsISimpleEnumerator GetAllResources (); */
 NS_IMETHODIMP
 nsMsgRDFDataSource::GetAllResources(nsISimpleEnumerator **_retval)
-{
-    return NS_RDF_NO_VALUE;
-}
-
-
-/* void Flush (); */
-NS_IMETHODIMP
-nsMsgRDFDataSource::Flush()
 {
     return NS_RDF_NO_VALUE;
 }
@@ -288,7 +299,7 @@ nsresult nsMsgRDFDataSource::NotifyObservers(nsIRDFResource *subject,
 }
 
 PRBool
-nsMsgRDFDataSource::assertEnumFunc(void *aElement, void *aData)
+nsMsgRDFDataSource::assertEnumFunc(nsISupports *aElement, void *aData)
 {
   nsMsgRDFNotification *note = (nsMsgRDFNotification *)aData;
   nsIRDFObserver* observer = (nsIRDFObserver *)aElement;
@@ -300,7 +311,7 @@ nsMsgRDFDataSource::assertEnumFunc(void *aElement, void *aData)
 }
 
 PRBool
-nsMsgRDFDataSource::unassertEnumFunc(void *aElement, void *aData)
+nsMsgRDFDataSource::unassertEnumFunc(nsISupports *aElement, void *aData)
 {
   nsMsgRDFNotification* note = (nsMsgRDFNotification *)aData;
   nsIRDFObserver* observer = (nsIRDFObserver *)aElement;

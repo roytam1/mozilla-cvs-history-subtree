@@ -61,14 +61,12 @@ public:
     
   nsMsgAccountManagerDataSource();
   virtual ~nsMsgAccountManagerDataSource();
+  virtual nsresult Init();
+
   // service manager shutdown method
 
   // RDF datasource methods
   
-  /* void Init (in string uri); */
-  NS_IMETHOD Init(const char *uri);
-    
-
   /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource property, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
                        nsIRDFResource *property,
@@ -141,9 +139,8 @@ nsMsgAccountManagerDataSource::~nsMsgAccountManagerDataSource()
 }
 /* void Init (in string uri); */
 NS_IMETHODIMP
-nsMsgAccountManagerDataSource::Init(const char *uri)
+nsMsgAccountManagerDataSource::Init()
 {
-    nsMsgRDFDataSource::Init(uri);
     nsresult rv=NS_OK;
 #ifdef DEBUG_amds
     printf("nsMsgAccountManagerDataSource::Init(%s)\n", uri ? uri : "(null)");

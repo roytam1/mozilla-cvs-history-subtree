@@ -102,8 +102,6 @@ nsMsgMessageDataSource::~nsMsgMessageDataSource (void)
 	if(NS_SUCCEEDED(rv))
 		mailSession->RemoveFolderListener(this);
 
-	PL_strfree(mURI);
-
 	nsrefcnt refcnt;
 
 	NS_RELEASE2(kNC_Subject, refcnt);
@@ -120,6 +118,28 @@ nsMsgMessageDataSource::~nsMsgMessageDataSource (void)
 	mRDFService = nsnull;
 }
 
+nsresult nsMsgMessageDataSource::Init()
+{
+  if (mInitialized)
+      return NS_ERROR_ALREADY_INITIALIZED;
+
+  mRDFService->RegisterDataSource(this, PR_FALSE);
+
+  if (! kNC_Subject) {
+    
+	mRDFService->GetResource(NC_RDF_SUBJECT, &kNC_Subject);
+	mRDFService->GetResource(NC_RDF_SENDER, &kNC_Sender);
+    mRDFService->GetResource(NC_RDF_DATE, &kNC_Date);
+    mRDFService->GetResource(NC_RDF_STATUS, &kNC_Status);
+
+    mRDFService->GetResource(NC_RDF_MARKREAD, &kNC_MarkRead);
+    mRDFService->GetResource(NC_RDF_MARKUNREAD, &kNC_MarkUnread);
+    mRDFService->GetResource(NC_RDF_TOGGLEREAD, &kNC_ToggleRead);
+    
+  }
+  mInitialized = PR_TRUE;
+  return NS_OK;
+}
 
 NS_IMPL_ADDREF(nsMsgMessageDataSource)
 NS_IMPL_RELEASE(nsMsgMessageDataSource)
@@ -142,35 +162,9 @@ nsMsgMessageDataSource::QueryInterface(REFNSIID iid, void** result)
 }
 
  // nsIRDFDataSource methods
-NS_IMETHODIMP nsMsgMessageDataSource::Init(const char* uri)
-{
-  if (mInitialized)
-      return NS_ERROR_ALREADY_INITIALIZED;
-
-  if ((mURI = PL_strdup(uri)) == nsnull)
-      return NS_ERROR_OUT_OF_MEMORY;
-
-  mRDFService->RegisterDataSource(this, PR_FALSE);
-
-  if (! kNC_Subject) {
-    
-	mRDFService->GetResource(NC_RDF_SUBJECT, &kNC_Subject);
-	mRDFService->GetResource(NC_RDF_SENDER, &kNC_Sender);
-    mRDFService->GetResource(NC_RDF_DATE, &kNC_Date);
-    mRDFService->GetResource(NC_RDF_STATUS, &kNC_Status);
-
-    mRDFService->GetResource(NC_RDF_MARKREAD, &kNC_MarkRead);
-    mRDFService->GetResource(NC_RDF_MARKUNREAD, &kNC_MarkUnread);
-    mRDFService->GetResource(NC_RDF_TOGGLEREAD, &kNC_ToggleRead);
-    
-  }
-  mInitialized = PR_TRUE;
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsMsgMessageDataSource::GetURI(char* *uri)
 {
-  if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+  if ((*uri = nsXPIDLCString::Copy("rdf:mailnewsmessages")) == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
   else
     return NS_OK;
@@ -361,12 +355,6 @@ NS_IMETHODIMP
 nsMsgMessageDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
   NS_NOTYETIMPLEMENTED("sorry!");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsMsgMessageDataSource::Flush()
-{
-  PR_ASSERT(0);
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 

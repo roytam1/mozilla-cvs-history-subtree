@@ -88,9 +88,6 @@ nsMsgFolderDataSource::~nsMsgFolderDataSource (void)
 	if(NS_SUCCEEDED(rv))
 		mailSession->RemoveFolderListener(this);
 
-  PL_strfree(mURI);
-
-
   nsrefcnt refcnt;
   NS_RELEASE2(kNC_Child, refcnt);
   NS_RELEASE2(kNC_MessageChild, refcnt);
@@ -109,6 +106,33 @@ nsMsgFolderDataSource::~nsMsgFolderDataSource (void)
   nsServiceManager::ReleaseService(kRDFServiceCID, mRDFService); // XXX probably need shutdown listener here
   mRDFService = nsnull;
 }
+
+nsresult nsMsgFolderDataSource::Init()
+{
+  if (mInitialized)
+      return NS_ERROR_ALREADY_INITIALIZED;
+
+  mRDFService->RegisterDataSource(this, PR_FALSE);
+
+  if (! kNC_Child) {
+    mRDFService->GetResource(NC_RDF_CHILD,   &kNC_Child);
+    mRDFService->GetResource(NC_RDF_MESSAGECHILD,   &kNC_MessageChild);
+    mRDFService->GetResource(NC_RDF_FOLDER,  &kNC_Folder);
+    mRDFService->GetResource(NC_RDF_NAME,    &kNC_Name);
+    mRDFService->GetResource(NC_RDF_SPECIALFOLDER, &kNC_SpecialFolder);
+    mRDFService->GetResource(NC_RDF_TOTALMESSAGES, &kNC_TotalMessages);
+    mRDFService->GetResource(NC_RDF_TOTALUNREADMESSAGES, &kNC_TotalUnreadMessages);
+    mRDFService->GetResource(NC_RDF_CHARSET, &kNC_Charset);
+    mRDFService->GetResource(NC_RDF_BIFFSTATE, &kNC_BiffState);
+    
+	mRDFService->GetResource(NC_RDF_DELETE, &kNC_Delete);
+    mRDFService->GetResource(NC_RDF_NEWFOLDER, &kNC_NewFolder);
+    mRDFService->GetResource(NC_RDF_GETNEWMESSAGES, &kNC_GetNewMessages);
+  }
+  mInitialized = PR_TRUE;
+  return NS_OK;
+}
+
 
 
 NS_IMPL_ADDREF(nsMsgFolderDataSource)
@@ -132,38 +156,9 @@ nsMsgFolderDataSource::QueryInterface(REFNSIID iid, void** result)
 }
 
  // nsIRDFDataSource methods
-NS_IMETHODIMP nsMsgFolderDataSource::Init(const char* uri)
-{
-  if (mInitialized)
-      return NS_ERROR_ALREADY_INITIALIZED;
-
-  if ((mURI = PL_strdup(uri)) == nsnull)
-      return NS_ERROR_OUT_OF_MEMORY;
-
-  mRDFService->RegisterDataSource(this, PR_FALSE);
-
-  if (! kNC_Child) {
-    mRDFService->GetResource(NC_RDF_CHILD,   &kNC_Child);
-    mRDFService->GetResource(NC_RDF_MESSAGECHILD,   &kNC_MessageChild);
-    mRDFService->GetResource(NC_RDF_FOLDER,  &kNC_Folder);
-    mRDFService->GetResource(NC_RDF_NAME,    &kNC_Name);
-    mRDFService->GetResource(NC_RDF_SPECIALFOLDER, &kNC_SpecialFolder);
-    mRDFService->GetResource(NC_RDF_TOTALMESSAGES, &kNC_TotalMessages);
-    mRDFService->GetResource(NC_RDF_TOTALUNREADMESSAGES, &kNC_TotalUnreadMessages);
-    mRDFService->GetResource(NC_RDF_CHARSET, &kNC_Charset);
-    mRDFService->GetResource(NC_RDF_BIFFSTATE, &kNC_BiffState);
-    
-	mRDFService->GetResource(NC_RDF_DELETE, &kNC_Delete);
-    mRDFService->GetResource(NC_RDF_NEWFOLDER, &kNC_NewFolder);
-    mRDFService->GetResource(NC_RDF_GETNEWMESSAGES, &kNC_GetNewMessages);
-  }
-  mInitialized = PR_TRUE;
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsMsgFolderDataSource::GetURI(char* *uri)
 {
-  if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+  if ((*uri = nsXPIDLCString::Copy("rdf:mailnewsfolders")) == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
   else
     return NS_OK;
@@ -380,12 +375,6 @@ NS_IMETHODIMP
 nsMsgFolderDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
   NS_NOTYETIMPLEMENTED("sorry!");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsMsgFolderDataSource::Flush()
-{
-  PR_ASSERT(0);
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 

@@ -41,12 +41,11 @@ class nsMsgAccountDataSource : public nsMsgRDFDataSource
 public:
   nsMsgAccountDataSource();
   virtual ~nsMsgAccountDataSource();
+  virtual nsresult Init();
   
   NS_DECL_ISUPPORTS
   
   // RDF datasource methods
-  /* void Init (in string uri); */
-  NS_IMETHOD Init(const char *uri);
 
   /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
@@ -123,6 +122,22 @@ nsMsgAccountDataSource::~nsMsgAccountDataSource()
 {
 }
 
+
+nsresult
+nsMsgAccountDataSource::Init()
+{
+    nsMsgRDFDataSource::Init();
+    
+    if (! kNC_Child) {
+            getRDFService()->GetResource(kURINC_child, &kNC_Child);
+            getRDFService()->GetResource(kURINC_Account, &kNC_Account);
+            getRDFService()->GetResource(kURINC_Server, &kNC_Server);
+            getRDFService()->GetResource(kURINC_Identity, &kNC_Identity);
+    }
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 NS_IMPL_ADDREF(nsMsgAccountDataSource)
 NS_IMPL_RELEASE(nsMsgAccountDataSource)
 
@@ -133,21 +148,6 @@ nsMsgAccountDataSource::QueryInterface(const nsIID& iid, void **result)
   return NS_OK;
 }
 
-
-/* void Init (in string uri); */
-NS_IMETHODIMP
-nsMsgAccountDataSource::Init(const char *uri)
-{
-    nsMsgRDFDataSource::Init(uri);
-    
-    if (! kNC_Child) {
-            getRDFService()->GetResource(kURINC_child, &kNC_Child);
-            getRDFService()->GetResource(kURINC_Account, &kNC_Account);
-            getRDFService()->GetResource(kURINC_Server, &kNC_Server);
-            getRDFService()->GetResource(kURINC_Identity, &kNC_Identity);
-    }
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
 
 /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
 NS_IMETHODIMP
