@@ -104,9 +104,8 @@ build_ldap:
 # remove all source files from the tree and print a report of what was missed
 #
 clobber_all:
-    cd $(MOZ_SRC)\directory\c-sdk\ldap\libraries\msdos\winsock
+    cd $(MOZ_SRC)\mozilla\directory\c-sdk\ldap\libraries\msdos\winsock
     $(NMAKE) -f nsldap.mak clobber_all
-
 
 depend:
     -del /s /q make.dep
