@@ -61,11 +61,14 @@
       <radio id="ie"        label="&importFromIE.label;"        accesskey="&importFromIE.accesskey;"/>
       <radio id="seamonkey" label="&importFromSeamonkey.label;" accesskey="&importFromSeamonkey.accesskey;"/>
       <radio id="netscape4" label="&importFromNetscape4.label;" accesskey="&importFromNetscape4.accesskey;"/>
+<!--      
       <radio id="opera"     label="&importFromOpera.label;"     accesskey="&importFromOpera.accesskey;"/>
+  -->      
     </radiogroup>
   </wizardpage>
 
-  <wizardpage id="selectProfile" pageid="migrating" label="&selectProfile.title;"
+  <wizardpage id="selectProfile" pageid="selectProfile" label="&selectProfile.title;"
+              next="importItems"
               onpageshow="return MigrationWizard.onSelectProfilePageShow();"
               onpageadvanced="return MigrationWizard.onSelectProfilePageAdvanced();">
     <description>&selectProfile.label;</description>
@@ -74,6 +77,8 @@
   </wizardpage>
 
   <wizardpage id="importItems" pageid="importItems" label="&importItems.title;"
+              next="migrating"
+              onpageshow="return MigrationWizard.onImportItemsPageShow();"
               onpageadvanced="return MigrationWizard.onImportItemsPageAdvanced();"> 
     <description>&importItems.label;</description>
     

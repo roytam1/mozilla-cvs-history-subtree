@@ -38,8 +38,12 @@
 #ifndef operaprofilemigrator___h___
 #define operaprofilemigrator___h___
 
-#include "nsIBrowserProfileMigrator.h"
 #include "nsCOMPtr.h"
+#include "nsIBinaryInputStream.h"
+#include "nsIBrowserProfileMigrator.h"
+#include "nsISupportsArray.h"
+#include "nsString.h"
+#include "nsVoidArray.h"
 
 class nsILocalFile;
 
@@ -65,6 +69,39 @@ protected:
 
 private:
   nsCOMPtr<nsILocalFile> mOperaProfile;
+  nsCOMPtr<nsISupportsArray> mProfiles;
+};
+
+class nsOperaCookieMigrator
+{
+public:
+  nsOperaCookieMigrator(nsIBinaryInputStream* aStream);
+  virtual ~nsOperaCookieMigrator() { };
+
+  nsresult Migrate();
+
+  typedef enum { OPEN_DOMAIN  = 0x01, 
+                 DOMAIN_NAME  = 0x1E,
+                 SEGMENT_INFO = 0x03,
+                 COOKIE_ID    = 0x10,
+                 COOKIE_DATA  = 0x11,
+                 EXPIRY_TIME  = 0x12,
+                 LAST_TIME    = 0x13,
+                 TERMINATOR   = 0x9B } TAG;
+
+protected:
+  nsresult ReadHeader();
+
+private:
+  nsCOMPtr<nsIBinaryInputStream> mStream;
+
+  nsVoidArray mDomainStack;
+  nsVoidArray mTagStack;
+
+  PRUint32 mAppVersion;
+  PRUint32 mFileVersion;
+  PRUint8  mTagTypeLength;
+  PRUint16 mPayloadTypeLength;
 };
 
 #endif

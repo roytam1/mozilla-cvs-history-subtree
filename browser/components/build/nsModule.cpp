@@ -42,12 +42,18 @@
 #include "nsBookmarksService.h"
 #include "nsProfileMigrator.h"
 #include "nsOperaProfileMigrator.h"
+#include "nsIEProfileMigrator.h"
+// #include "nsSeamonkeyProfileMigrator.h"
+#include "nsDogbertProfileMigrator.h"
 
 /////////////////////////////////////////////////////////////////////////////
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileMigrator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOperaProfileMigrator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsIEProfileMigrator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDogbertProfileMigrator)
+// NS_GENERIC_FACTORY_CONSTRUCTOR(nsSeamonkeyProfileMigrator)
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -71,7 +77,23 @@ static const nsModuleComponentInfo components[] =
   { "Opera (Windows) Profile Migrator",
     NS_OPERAPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera",
-    nsOperaProfileMigratorConstructor }
+    nsOperaProfileMigratorConstructor },
+
+  { "Internet Explorer (Windows) Profile Migrator",
+    NS_WINIEPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie",
+    nsIEProfileMigratorConstructor },
+/*
+  { "Seamonkey Profile Migrator",
+    NS_OPERAPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey",
+    nsSeamonkeyProfileMigratorConstructor },
+*/
+  { "Netscape 4.x Profile Migrator",
+    NS_DOGBERTPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert",
+    nsDogbertProfileMigratorConstructor }
+
 };
 
 NS_IMPL_NSGETMODULE(nsBrowserCompsModule, components)

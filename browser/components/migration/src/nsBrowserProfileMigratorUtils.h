@@ -34,28 +34,24 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
- 
-#ifndef profilemigrator___h___
-#define profilemigrator___h___
 
-#include "nsIBrowserProfileMigrator.h"
-#include "nsIObserver.h"
-#include "nsIProfileMigrator.h"
+#ifndef browserprofilemigratorutils___h___
+#define browserprofilemigratorutils___h___
 
-class nsProfileMigrator : public nsIProfileMigrator,
-                          public nsIObserver
-{
-public:
-  NS_DECL_NSIOBSERVER
-  NS_DECL_NSIPROFILEMIGRATOR
-  NS_DECL_ISUPPORTS
+#define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
+#define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
+#define MIGRATION_STARTED           "Migration:Started"
+#define MIGRATION_ENDED             "Migration:Ended"
 
-  nsProfileMigrator() { };
-  virtual ~nsProfileMigrator() { };
+#define NOTIFY_OBSERVERS(message, item) \
+  if (sObserverService) \
+    sObserverService->NotifyObservers(nsnull, message, item)
 
-protected:
-  nsresult GetDefaultBrowserMigrator(nsIBrowserProfileMigrator** aResult);
-};
+#define COPY_DATA(func, replace, itemIndex, itemString) \
+  if (NS_SUCCEEDED(rv) && (aItems & itemIndex)) { \
+    NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, itemString); \
+    rv = func(replace); \
+    NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, itemString); \
+  }
 
 #endif
-

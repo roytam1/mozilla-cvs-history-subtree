@@ -16,16 +16,19 @@ var MigrationWizard = {
               new MigrationItem(nsIBPM.DOWNLOADS, "downloads")],
 
   _dataSources: { 
-    "ie":     [0, 1, 2, 3, 4, 5], 
-    "opera":  [0, 1, 2, 5, 6],
+    "ie":       [0, 1, 2, 3, 4, 5], 
+    "opera":    [0, 1, 2, 5, 6],
+    "dogbert":  [0, 1, 5],
+    "seamonkey":[0, 1, 2, 4, 5, 6]
   },
   
   _source: "",
   _itemsFlags: 0,
   _selectedIndices: [],
-  _profiles: [],
   _selectedProfile: null,
   _wiz: null,
+  _migrator: null,
+  _autoMigrate: false,
 
   init: function ()
   {
@@ -34,6 +37,12 @@ var MigrationWizard = {
     os.addObserver(this, "Migration:ItemBeforeMigrate", false);
     os.addObserver(this, "Migration:ItemAfterMigrate", false);
     os.addObserver(this, "Migration:Ended", false);
+    
+    if ("arguments" in window) {
+      this._migrator = window.arguments[0].QueryInterface(Components.interfaces.nsIBrowserProfileMigrator);
+      this._automigrate = true;
+      this._wiz.currentPage = "selectProfile";
+    }
     
     this._wiz = document.documentElement;
   },
@@ -57,31 +66,56 @@ var MigrationWizard = {
   onImportSourcePageAdvanced: function ()
   {
     this._source = document.getElementById("importSourceGroup").selectedItem.id;
-    this._initDataSources();
+
+    // Create the migrator for the selected source.
+    var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=" + this._source;
+    this._migrator = Components.classes[contractID].createInstance(nsIBPM);
 
     if (this._source == "opera") {
       // check for more than one Opera profile
-      var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"].getService(Components.interfaces.nsIProperties);
-      var operaAppData = fileLocator.get("AppData", Components.interfaces.nsILocalFile);
-      operaAppData.append("Opera");
-      
-      var e = operaAppData.directoryEntries;
-      while (e.hasMoreElements()) {
-        var temp = e.getNext().QueryInterface(Components.interfaces.nsILocalFile);
-        if (temp.isDirectory())
-          this._profiles.push(temp.leafName);
-      }
-      
-      this._wiz.goTo((this._profiles.length > 1) ? "selectProfile" : "importItems");
+      this._wiz.currentPage.next = this._migrator.sourceHasMultipleProfiles ? "selectProfile" : "importItems";
     }
     else {
       // Don't show the Select Profile page for sources that don't support
       // multiple profiles
-      this._wiz.goTo("importItems");
+      this._wiz.currentPage.next = "importItems";
     }
   },
   
-  _initDataSources: function ()
+  // 2 - [Profile Selection]
+  onSelectProfilePageShow: function ()
+  {
+    var profiles = document.getElementById("profiles");
+    while (profiles.hasChildNodes()) 
+      profiles.removeChild(profiles.firstChild);
+    
+    var profiles = this._migrator.sourceProfiles;
+    var count = profiles.Count();
+    for (var i = 0; i < count; ++i) {
+      var item = document.createElement("radio");
+      var str = profiles.QueryElementAt(i, Components.interfaces.nsISupportsString);
+      item.id = str.data;
+      item.setAttribute("label", str.data);
+      profiles.appendChild(item);
+    }
+    
+    profiles.selectedItem = profiles.firstChild;
+  },
+  
+  onSelectProfilePageAdvanced: function ()
+  {
+    var profiles = document.getElementById("profiles");
+    this._selectedProfile = profiles.selectedItem.id;
+    
+    // If we're automigrating, don't show the item selection page, just grab everything.
+    if (this._automigrate) {
+      this._params = nsIBPM.ALL;
+      this._wiz.next = "migrating";
+    }
+  },
+  
+  // 3 - ImportItems
+  onImportItemsPageShow: function ()
   {
     var dataSources = document.getElementById("dataSources");
     while (dataSources.hasChildNodes())
@@ -100,30 +134,6 @@ var MigrationWizard = {
     }
   },
 
-  // 2 - [Profile Selection]
-  onSelectProfilePageShow: function ()
-  {
-    var profiles = document.getElementById("profiles");
-    while (profiles.hasChildNodes()) 
-      profiles.removeChild(profiles.firstChild);
-      
-    for (var i = 0; i < this._profiles.length; ++i) {
-      var item = document.createElement("radio");
-      item.id = this._profiles[i];
-      item.setAttribute("label", this._profiles[i]);
-      profiles.appendChild(item);
-    }
-    
-    profiles.selectedItem = profiles.firstChild;
-  },
-  
-  onSelectProfilePageAdvanced: function ()
-  {
-    var profiles = document.getElementById("profiles");
-    this._selectedProfile = profiles.selectedItem.id;
-  },
-  
-  // 3 - ImportItems
   onImportItemsPageAdvanced: function ()
   {
     var dataSources = document.getElementById("dataSources");
@@ -144,12 +154,7 @@ var MigrationWizard = {
   // 4 - Migrating
   onMigratingPageShow: function ()
   {
-    var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=";
-    contractID += this._source;
-    
-    const nsIBPM = Components.interfaces.nsIBrowserProfileMigrator;
-    var bpm = Components.classes[contractID].createInstance(nsIBPM);
-    bpm.migrate(this._itemsFlags, true, this._selectedProfile);
+    this._migrator.migrate(this._itemsFlags, true, this._selectedProfile);
   },
 
   observe: function (aSubject, aTopic, aData)

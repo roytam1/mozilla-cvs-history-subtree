@@ -35,32 +35,61 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsProfileMigrator.h"
-#include "nsIBrowserProfileMigrator.h"
-#include "nsCRT.h"
-#include "nsString.h"
-#include "nsReadableUtils.h"
 #include "nsCOMPtr.h"
+#include "nsCRT.h"
+#include "nsBrowserCompsCID.h"
+#include "nsIBrowserProfileMigrator.h"
+#include "nsIComponentManager.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsIServiceManager.h"
+#include "nsISupportsArray.h"
+#include "nsIWindowWatcher.h"
+#include "nsProfileMigrator.h"
+#include "nsReadableUtils.h"
+#include "nsString.h"
 #ifdef XP_WIN
 #include <windows.h>
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
-// nsBrowserProfileMigrator
+// nsIProfileMigrator
 
-NS_IMPL_ISUPPORTS1(nsProfileMigrator, nsIProfileMigrator)
-
+#define MIGRATION_WIZARD_FE_URL "chrome://browser/content/migration/migration.xul"
+#define MIGRATION_WIZARD_FE_FEATURES "chrome,dialog"
 NS_IMETHODIMP
 nsProfileMigrator::Migrate()
 {
   nsCOMPtr<nsIBrowserProfileMigrator> bpm;
   GetDefaultBrowserMigrator(getter_AddRefs(bpm));
 
-  if (bpm)
-    return bpm->Migrate(nsIBrowserProfileMigrator::ALL, PR_TRUE, NS_LITERAL_STRING("").get());
-  
+  // By opening the Migration FE with a supplied bpm, it will automatically
+  // migrate from it. 
+  nsCOMPtr<nsIWindowWatcher> ww(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
+  nsCOMPtr<nsISupportsArray> params;
+  NS_NewISupportsArray(getter_AddRefs(params));
+  params->AppendElement(bpm);
+  nsCOMPtr<nsIDOMWindow> migrateWizard;
+  return ww->OpenWindow(nsnull, 
+                        MIGRATION_WIZARD_FE_URL,
+                        "_blank",
+                        MIGRATION_WIZARD_FE_FEATURES,
+                        params,
+                        getter_AddRefs(migrateWizard));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsIObserver
+
+NS_IMETHODIMP
+nsProfileMigrator::Observe(nsISupports* aSubject, const char* aTopic, const PRUnichar* aData)
+{
   return NS_OK;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// nsProfileMigrator
+
+NS_IMPL_ISUPPORTS2(nsProfileMigrator, nsIProfileMigrator, nsIObserver)
 
 #ifdef XP_WIN
 typedef struct {
@@ -139,23 +168,21 @@ nsProfileMigrator::GetDefaultBrowserMigrator(nsIBrowserProfileMigrator** aResult
             UINT size;
             ::VerQueryValue(ver, subBlock, (void**)&internalName, &size);
 
-            printf("*** default browser is %s\n", internalName);
-            if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_IEXPLORE)) {
-              printf("*** default browser is %s\n", internalName);
-            }
-            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_SEAMONKEY)) {
-              printf("*** default browser is %s\n", internalName);
-            }
-            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_DOGBERT)) {
-              printf("*** default browser is %s\n", internalName);
-            }
-            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA)) {
-              printf("*** default browser is %s\n", internalName);
-            }
+            nsCOMPtr<nsIBrowserProfileMigrator> bpm;
+            if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_IEXPLORE))
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie");
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_SEAMONKEY))
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_DOGBERT))
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert");
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA))
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera");
+
+            *aResult = bpm;
+            NS_IF_ADDREF(*aResult);
           }
         }
       }
-      printf("***goats\n");
     }
   }
 #endif

@@ -35,24 +35,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsOperaProfileMigrator.h"
-#include "nsIBrowserProfileMigrator.h"
-#include "nsIObserverService.h"
-#include "nsIServiceManager.h"
+#include "nsBrowserProfileMigratorUtils.h"
 #include "nsCRT.h"
-#include "nsString.h"
-#include "nsReadableUtils.h"
 #include "nsDirectoryServiceDefs.h"
-#include "nsIProperties.h"
+#include "nsIBrowserProfileMigrator.h"
+#include "nsIBrowserHistory.h"
+#include "nsIGlobalHistory.h"
+#include "nsIInputStream.h"
+#include "nsILineInputStream.h"
 #include "nsILocalFile.h"
+#include "nsIObserverService.h"
+#include "nsIProperties.h"
+#include "nsIServiceManager.h"
+#include "nsISupportsPrimitives.h"
+#include "nsNetUtil.h"
+#include "nsOperaProfileMigrator.h"
+#include "nsReadableUtils.h"
+#include "nsString.h"
 #ifdef XP_WIN
 #include <windows.h>
 #endif
-
-#define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
-#define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
-#define MIGRATION_STARTED           "Migration:Started"
-#define MIGRATION_ENDED             "Migration:Ended"
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsBrowserProfileMigrator
@@ -71,19 +73,8 @@ nsOperaProfileMigrator::~nsOperaProfileMigrator()
   NS_IF_RELEASE(sObserverService);
 }
 
-#define NOTIFY_OBSERVERS(message, item) \
-  if (sObserverService) \
-    sObserverService->NotifyObservers(nsnull, message, item)
-
-#define COPY_DATA(func, replace, itemIndex, itemString) \
-  if (NS_SUCCEEDED(rv) && (aItems & itemIndex)) { \
-    NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, itemString); \
-    rv = func(replace); \
-    NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, itemString); \
-  }
-
 NS_IMETHODIMP
-nsOperaProfileMigrator::  Migrate(PRUint32 aItems, PRBool aReplace, const PRUnichar* aProfile)
+nsOperaProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnichar* aProfile)
 {
   nsresult rv = NS_OK;
 
@@ -105,6 +96,65 @@ nsOperaProfileMigrator::  Migrate(PRUint32 aItems, PRBool aReplace, const PRUnic
   return rv;
 }
 
+NS_IMETHODIMP
+nsOperaProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
+{
+  nsCOMPtr<nsISupportsArray> profiles;
+  GetSourceProfiles(getter_AddRefs(profiles));
+
+  if (profiles) {
+    PRUint32 count;
+    profiles->Count(&count);
+    *aResult = count > 1;
+  }
+  else
+    *aResult = PR_FALSE;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsOperaProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
+{
+  if (!mProfiles) {
+    nsresult rv = NS_NewISupportsArray(getter_AddRefs(mProfiles));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIProperties> fileLocator(do_GetService("@mozilla.org/file/directory_service;1"));
+    nsCOMPtr<nsILocalFile> file;
+    fileLocator->Get(NS_WIN_APPDATA_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(file));
+
+    // Opera profile lives under %APP_DATA%\Opera\<operaver>\profile 
+    file->Append(NS_LITERAL_STRING("Opera"));
+
+    nsCOMPtr<nsISimpleEnumerator> e;
+    file->GetDirectoryEntries(getter_AddRefs(e));
+
+    PRBool hasMore;
+    e->HasMoreElements(&hasMore);
+    while (hasMore) {
+      nsCOMPtr<nsILocalFile> curr;
+      e->GetNext(getter_AddRefs(curr));
+
+      PRBool isDirectory = PR_FALSE;
+      curr->IsDirectory(&isDirectory);
+      if (isDirectory) {
+        nsCOMPtr<nsISupportsString> string(do_CreateInstance("@mozilla.org/supports-string;1"));
+        nsAutoString leafName;
+        curr->GetLeafName(leafName);
+        string->SetData(leafName);
+        mProfiles->AppendElement(string);
+      }
+
+      e->HasMoreElements(&hasMore);
+    }
+  }
+
+  *aResult = mProfiles;
+  NS_IF_ADDREF(*aResult);
+  return NS_OK;
+}
+
 nsresult
 nsOperaProfileMigrator::CopyPreferences(PRBool aReplace)
 {
@@ -116,14 +166,155 @@ nsresult
 nsOperaProfileMigrator::CopyCookies(PRBool aReplace)
 {
   printf("*** copy opera cookies\n");
+
+  nsCOMPtr<nsIFile> temp;
+  mOperaProfile->Clone(getter_AddRefs(temp));
+  nsCOMPtr<nsILocalFile> historyFile(do_QueryInterface(temp));
+
+  historyFile->Append(NS_LITERAL_STRING("cookies4.dat"));
+
+  nsCOMPtr<nsIInputStream> fileStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), historyFile);
+  if (!fileStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsIBinaryInputStream> binaryStream = do_QueryInterface(fileStream);
+  nsOperaCookieMigrator* ocm = new nsOperaCookieMigrator(binaryStream);
+  if (!ocm)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  ocm->Migrate();
+
   return NS_OK;
+}
+
+nsOperaCookieMigrator::nsOperaCookieMigrator(nsIBinaryInputStream* aStream)
+{
+  mStream = aStream;
+}
+
+nsresult
+nsOperaCookieMigrator::Migrate()
+{
+  if (!mStream)
+    return NS_ERROR_FAILURE;
+
+  nsresult rv = ReadHeader();
+  printf("*** rv = %d\n", rv);
+  if (NS_FAILED(rv))
+    return NS_OK;
+
+  PRUint8 tag;
+  PRUint16 length;
+  char* buf;
+  do {
+    mStream->Read8(&tag);
+    mTagStack.AppendElement((void*)tag);
+    switch (tag) {
+    case OPEN_DOMAIN:
+      mStream->Read16(&length);
+      break;
+    case DOMAIN_NAME:
+      mStream->Read16(&length);
+      
+      buf = (char*)malloc((sizeof(char) * length) + 1);
+      mStream->ReadBytes(length, &buf);
+      buf[length-1] = '\0';
+      printf("*** domain = %s\n", buf);
+      mDomainStack.AppendElement((void*)buf);
+      break;
+    case SEGMENT_INFO:
+
+      break;
+    case COOKIE_ID:
+      break;
+    case COOKIE_DATA:
+      break;
+    case EXPIRY_TIME:
+      break;
+    case LAST_TIME:
+      break;
+    case TERMINATOR:
+      break;
+    }
+  }
+  while (1);
+}
+
+nsresult
+nsOperaCookieMigrator::ReadHeader()
+{
+  mStream->Read32(&mAppVersion);
+  mStream->Read32(&mFileVersion);
+
+  printf("*** app = %d, file = %d\n", mAppVersion, mFileVersion);
+  if (mAppVersion & 0x1000 && mFileVersion & 0x2000) {
+    mStream->Read8(&mTagTypeLength);
+    mStream->Read16(&mPayloadTypeLength);
+
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
 }
 
 nsresult
 nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
 {
   printf("*** copy opera history\n");
-  
+
+  nsCOMPtr<nsIBrowserHistory> hist(do_GetService(NS_GLOBALHISTORY_CONTRACTID));
+
+  nsCOMPtr<nsIFile> temp;
+  mOperaProfile->Clone(getter_AddRefs(temp));
+  nsCOMPtr<nsILocalFile> historyFile(do_QueryInterface(temp));
+
+  historyFile->Append(NS_LITERAL_STRING("global.dat"));
+
+  nsCOMPtr<nsIInputStream> fileStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), historyFile);
+  if (!fileStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream);
+
+  nsAutoString buffer, title, url;
+  PRTime lastVisitDate;
+  PRBool moreData = PR_FALSE;
+
+  enum { TITLE, URL, LASTVISIT } state = TITLE;
+
+  // Format is "title\nurl\nlastvisitdate"
+  do {
+    nsresult rv = lineStream->ReadLine(buffer, &moreData);
+    if (NS_FAILED(rv))
+      return rv;
+
+    switch (state) {
+    case TITLE:
+      title = buffer;
+      state = URL;
+      break;
+    case URL:
+      url = buffer;
+      state = LASTVISIT;
+      break;
+    case LASTVISIT:
+      // Opera time format is a second offset, PRTime is a microsecond offset
+      PRInt32 err;
+      lastVisitDate = buffer.ToInteger(&err);
+      
+      PRInt64 temp, million;
+      LL_I2L(temp, lastVisitDate);
+      LL_I2L(million, PR_USEC_PER_SEC);
+      LL_MUL(lastVisitDate, temp, million);
+
+      nsCAutoString urlStr; urlStr.AssignWithConversion(url);
+      hist->AddPageWithDetails(urlStr.get(), title.get(), lastVisitDate);
+      
+      state = TITLE;
+      break;
+    }
+  }
+  while (moreData);
+
   return NS_OK;
 }
 
@@ -152,6 +343,33 @@ nsresult
 nsOperaProfileMigrator::CopyDownloads(PRBool aReplace)
 {
   printf("*** copy opera downloads\n");
+
+  nsCOMPtr<nsIFile> temp;
+  mOperaProfile->Clone(getter_AddRefs(temp));
+  nsCOMPtr<nsILocalFile> historyFile(do_QueryInterface(temp));
+
+  historyFile->Append(NS_LITERAL_STRING("download.dat"));
+
+  nsCOMPtr<nsIInputStream> fileStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), historyFile);
+  if (!fileStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream);
+
+  nsAutoString buffer;
+  PRBool moreData = PR_FALSE;
+
+  // Format is "title\nurl\nlastvisitdate"
+  do {
+    nsresult rv = lineStream->ReadLine(buffer, &moreData);
+    if (NS_FAILED(rv))
+      return rv;
+
+    printf("*** download = %ws\n", buffer.get());
+  }
+  while (moreData);
+
+
   return NS_OK;
 }
 

@@ -46,9 +46,25 @@ LIBRARY_NAME	= migration_s
 
 REQUIRES	= xpcom \
 		  string \
+		  necko \
+		  history \
+		  browsercomps \
+		  profile \
+		  pref \
+		  rdf \
+		  satchel \
+		  bookmarks \
+		  intl \
+		  unicharutil \
+		  windowwatcher \
+		  dom \
 		  $(NULL)
 
-CPPSRCS		= nsProfileMigrator.cpp nsOperaProfileMigrator.cpp
+CPPSRCS		= nsProfileMigrator.cpp \
+            nsDogbertProfileMigrator.cpp \
+            nsOperaProfileMigrator.cpp \
+            nsIEProfileMigrator.cpp \
+            $(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

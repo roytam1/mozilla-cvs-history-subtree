@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Ben Goodger <ben@bengoodger.com>
+ *  Ben Goodger <ben@bengoodger.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,14 +35,27 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef dogbertprofilemigrator___h___
+#define dogbertprofilemigrator___h___
 
-[scriptable, uuid(5d9c7f6a-4af4-4a3d-be48-da1e70600b9c)]
-interface nsIProfileMigrator : nsISupports 
+#include "nsIBrowserProfileMigrator.h"
+#include "nsString.h"
+
+class nsDogbertProfileMigrator : public nsIBrowserProfileMigrator
 {
-  /**
-   * Copy user profile information to the current active profile.
-   */
-  void migrate();
-};  
+public:
+  NS_DECL_NSIBROWSERPROFILEMIGRATOR
+  NS_DECL_ISUPPORTS
 
+  nsDogbertProfileMigrator();
+  virtual ~nsDogbertProfileMigrator();
+
+protected:
+  nsresult CopyPreferences(PRBool aReplace);
+  nsresult CopyCookies(PRBool aReplace);
+  nsresult CopyBookmarks(PRBool aReplace);
+
+private:
+};
+ 
+#endif
