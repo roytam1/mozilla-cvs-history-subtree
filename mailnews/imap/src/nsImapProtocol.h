@@ -613,6 +613,7 @@ private:
   PRInt32		m_maxChunkSize;
   PRBool		m_fetchByChunks;
   PRBool                m_ignoreExpunges;
+  PRBool    m_useSecAuth;
   PRInt32		m_chunkSize;
   PRInt32		m_chunkThreshold;
   nsMsgImapLineDownloadCache m_downloadLineCache;
