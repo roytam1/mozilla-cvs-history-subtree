@@ -14,8 +14,8 @@ var regName    = "locales/mozilla/" + chromeNode;
 var chromeName = chromeNode + ".jar";
 var localeName = "locale/" + chromeNode + "/";
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall(prettyName, regName, "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall(prettyName, regName, "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 if (platformNode == 'mac')

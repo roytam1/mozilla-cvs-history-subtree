@@ -36,8 +36,8 @@ function registerKeys()
   createRootRegKey(winreg);
 
   subkey = regRootKey;
-  err    = winreg.setValueString(subkey, "Version", "@XPI_UserAgent@");
-  err    = winreg.setValueString(subkey, "BuildID", "@XPI_GreBuildID@");
+  err    = winreg.setValueString(subkey, "Version", "@XPI_USERAGENT@");
+  err    = winreg.setValueString(subkey, "BuildID", "@XPI_GREBUILDID@");
   tmpstr = new String(fProgram);
   err    = winreg.setValueString(subkey, "GreHome", tmpstr.substring(0, tmpstr.length-1));
   err    = winreg.setValueString(subkey, "GreComponentsDir", fProgram + "Components");
@@ -94,7 +94,7 @@ function registerMainKeys(winreg)
   subkey  = regRootKey + "\\Uninstall";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "Uninstall Log Folder", fProgram + "Uninstall");
-  err     = winreg.setValueString(subkey, "Description", "@XPI_ProductName@ (@XPI_UserAgentShort@)");
+  err     = winreg.setValueString(subkey, "Description", "@XPI_PRODUCTNAME@ (@XPI_USERAGENTSHORT@)");
 }
 
 // main
@@ -112,8 +112,8 @@ var regRootKey;
 // So far the only argument passed in is the root path into the Windows registry.
 regRootKey = new String(Install.arguments);
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall("@XPI_ProductName@", "GRE", "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall("@XPI_PRODUCTNAME@", "GRE", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram  = getFolder("Program");
@@ -126,14 +126,6 @@ if(verifyDiskSpace(fProgram, srDest))
   err = addDirectory("",
                      "",
                      "gre",              // dir name in jar to extract 
-                     fProgram,           // Where to put this file (Returned from GetFolder) 
-                     "",                 // subdir name to create relative to fProgram
-                     true);              // Force Flag 
-  logComment("addDirectory() of Program returned: " + err);
-
-  err = addDirectory("",
-                     "",
-                     "Embed",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram
                      true);              // Force Flag 

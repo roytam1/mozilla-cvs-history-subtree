@@ -4,16 +4,16 @@ function registerProgramFolderKey(winreg, fFolderPath)
   var err;
 
   /* set the Program Folder Path in the Mozilla key in the Windows Registry */
-  winreg.createKey("SOFTWARE\\@XPI_CompanyName@","");
+  winreg.createKey("SOFTWARE\\@XPI_COMPANYNAME@","");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@";
   winreg.createKey(subkey,"");
-  err     = winreg.setValueString(subkey, "CurrentVersion", "@XPI_UserAgent@");
+  err     = winreg.setValueString(subkey, "CurrentVersion", "@XPI_USERAGENT@");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@";
   winreg.createKey(subkey,"");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Main";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Main";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "Program Folder Path", fFolderPath);
 }
@@ -55,16 +55,16 @@ function createShortcuts()
   fWindows             = getFolder("Windows");
   fProgram             = getFolder("Program");
   fDefShortcuts        = getFolder("Program","defaults/shortcuts");
-  fTemp                = fProgram + "@XPI_MainExeFile@";
+  fTemp                = fProgram + "@XPI_MAINEXEFILE@";
   fileExe              = getFolder("file:///", fTemp);
   fileReadme           = getFolder("file:///", fProgram + "readme.txt");
   fileLicense          = getFolder("file:///", fProgram + "license.txt");
-  scExeDesc            = "@XPI_ProductName@";
+  scExeDesc            = "@XPI_PRODUCTNAME@";
   scReadmeDesc         = "Readme";
   scLicenseDesc        = "License";
   scProfileDesc        = "Profile Manager";
   scProfileDescParam   = "-ProfileManager";
-  scFolderName         = "@XPI_ProductName@";
+  scFolderName         = "@XPI_PRODUCTNAME@";
   if(winreg != null) 
   {
     /* determine if the script is running under NT or not */
@@ -122,7 +122,7 @@ function createShortcuts()
     }
     logComment("folderQuickLaunchExists: " + folderQuickLaunchExists);
 
-    subkey              = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Main";
+    subkey              = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Main";
     fFolderPathStr      = winreg.getValueString(subkey, "Program Folder Path");
     if((fFolderPathStr == "") || (fFolderPathStr == null))
     {
@@ -181,7 +181,7 @@ function createShortcuts()
 									
     /* remove shortcut from the startup folder */
 
-    basename = "@XPI_MainExeFile@"
+    basename = "@XPI_MAINEXEFILE@"
     fTemp = fFolderPath + basename + ".lnk";
     fFolderPath = getFolder("file:///", fTemp);
     if (File.exists(fFolderPath)) 
@@ -190,7 +190,7 @@ function createShortcuts()
         fileDelete(fFolderPath);
     }
 
-    subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Setup";
+    subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Setup";
     regvalue = winreg.getValueString(subkey, "browserargs");
 
     /* log this so if the user turns on turbo mode in the browser the uninstaller will undo it */
@@ -259,16 +259,16 @@ function registerMainKeys(winreg)
   var data;
   var err;
 
-  winreg.createKey("SOFTWARE\\@XPI_CompanyName@","");
+  winreg.createKey("SOFTWARE\\@XPI_COMPANYNAME@","");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@";
   winreg.createKey(subkey,"");
-  err     = winreg.setValueString(subkey, "CurrentVersion", "@XPI_UserAgent@");
+  err     = winreg.setValueString(subkey, "CurrentVersion", "@XPI_USERAGENT@");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@";
   winreg.createKey(subkey,"");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Main";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Main";
   winreg.createKey(subkey,"");
 
   err     = winreg.setValueString(subkey, "Install Directory", fProgram);
@@ -276,26 +276,26 @@ function registerMainKeys(winreg)
   // The following keys are required to be created to supply information
   // about the location of the Gecko Embedded Client to 3rd party apps.
   // "SOFTWARE\\Mozilla" must not be localized!
-  subkey  = "SOFTWARE\\Mozilla\\@XPI_ProductName@ @XPI_UserAgentShort@";
+  subkey  = "SOFTWARE\\Mozilla\\@XPI_PRODUCTNAME@ @XPI_USERAGENTSHORT@";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "GeckoVer", "1.0.1");
 
-  subkey  = "SOFTWARE\\Mozilla\\@XPI_ProductName@ @XPI_UserAgentShort@\\Extensions";
+  subkey  = "SOFTWARE\\Mozilla\\@XPI_PRODUCTNAME@ @XPI_USERAGENTSHORT@\\Extensions";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "Components", fProgram + "Components");
   err     = winreg.setValueString(subkey, "Plugins", fProgram + "Plugins");
 
-  subkey  = "SOFTWARE\\Mozilla\\@XPI_ProductName@ @XPI_UserAgentShort@\\bin";
+  subkey  = "SOFTWARE\\Mozilla\\@XPI_PRODUCTNAME@ @XPI_USERAGENTSHORT@\\bin";
   winreg.createKey(subkey,"");
-  err     = winreg.setValueString(subkey, "PathToExe", fProgram + "@XPI_MainExeFile@");
+  err     = winreg.setValueString(subkey, "PathToExe", fProgram + "@XPI_MAINEXEFILE@");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Main";
-  err     = winreg.setValueString(subkey, "PathToExe", fProgram + "@XPI_MainExeFile@");
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Main";
+  err     = winreg.setValueString(subkey, "PathToExe", fProgram + "@XPI_MAINEXEFILE@");
 
   // Register as a windows XP internet browser
   if( IsWinnt() )
   {
-    subkey = "Software\\Clients\\StartMenuInternet\\@XPI_MainExeFile@";
+    subkey = "Software\\Clients\\StartMenuInternet\\@XPI_MAINEXEFILE@";
     winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
 
     winreg.createKey(subkey, "");
@@ -304,24 +304,24 @@ function registerMainKeys(winreg)
     winreg.createKey(subkey + "\\shell\\open", "");
     winreg.createKey(subkey + "\\shell\\open\\command", "");
     winreg.createKey(subkey + "\\InstallInfo", "");
-    winreg.setValueString(subkey, "", "@XPI_ProductNameInternal@");
+    winreg.setValueString(subkey, "", "@XPI_PRODUCTNAMEINTERNAL@");
 
     // path does not need to be quoted per MS doc
-    data = fProgram + "@XPI_MainExeFile@,0";
+    data = fProgram + "@XPI_MAINEXEFILE@,0";
     winreg.setValueString(subkey + "\\DefaultIcon", "", data);
 
-    data = "\"" + fProgram + "@XPI_MainExeFile@\"";
+    data = "\"" + fProgram + "@XPI_MAINEXEFILE@\"";
     winreg.setValueString(subkey + "\\shell\\open\\command", "", data);
 
-    data = "\"" + fProgram + "uninstall\\@XPI_UninstallFile@\" /ua \"@XPI_UserAgent@\" /hs browser";
+    data = "\"" + fProgram + "uninstall\\@XPI_UNINSTALLFILE@\" /ua \"@XPI_USERAGENT@\" /hs browser";
     winreg.setValueString(subkey + "\\InstallInfo", "HideIconsCommand", data);
 
     winreg.setValueNumber(subkey + "\\InstallInfo", "IconsVisible", 1);
 
-    data = "\"" + fProgram + "@XPI_MainExeFile@\" -silent -nosplash -setDefaultBrowser ";
+    data = "\"" + fProgram + "@XPI_MAINEXEFILE@\" -silent -nosplash -setDefaultBrowser ";
     winreg.setValueString(subkey + "\\InstallInfo", "ReinstallCommand", data);
 
-    data = "\"" + fProgram + "uninstall\\@XPI_UninstallFile@\" /ua \"@XPI_UserAgent@\" /ss browser";
+    data = "\"" + fProgram + "uninstall\\@XPI_UNINSTALLFILE@\" /ua \"@XPI_USERAGENT@\" /ss browser";
     winreg.setValueString(subkey + "\\InstallInfo", "ShowIconsCommand", data);
   }
 }
@@ -361,9 +361,9 @@ function updateWinReg()
       registerMainKeys(winreg);
 
       // set the App Paths key here
-      subkey  = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\@XPI_MainExeFile@";
+      subkey  = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\@XPI_MAINEXEFILE@";
       winreg.createKey(subkey,"");
-      err     = winreg.setValueString(subkey, "", fProgram + "@XPI_MainExeFile@");
+      err     = winreg.setValueString(subkey, "", fProgram + "@XPI_MAINEXEFILE@");
       err     = winreg.setValueString(subkey, "Path", fProgram);
     }
 
@@ -611,8 +611,8 @@ logComment("args: " + args);
 if(args == "-greLocal")
   gGreLocal = true;
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall("@XPI_ProductName@", "Browser", "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall("@XPI_PRODUCTNAME@", "Browser", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram  = getFolder("Program");
@@ -625,7 +625,7 @@ if(verifyDiskSpace(fProgram, srDest))
 
   upgradeCleanup();
   err = addDirectory("",
-                     "@XPI_Version@",
+                     "@XPI_VERSION@",
                      "bin",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram
@@ -734,7 +734,7 @@ if(verifyDiskSpace(fProgram, srDest))
       if (! ('buildID' in Install))
       {
         logComment("Running Pre-Mozilla 0.9.1");
-        initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "@XPI_Version@");
+        initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "@XPI_VERSION@");
         cleanupUtility = getFolder(fProgram, "xpicleanup.exe");
         err = File.execute(cleanupUtility);
         logComment("execute() returned: " + err);

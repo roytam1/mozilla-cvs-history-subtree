@@ -19,8 +19,8 @@ var chromeName = chromeNode + ".jar";
 var platformName = langcode + "-" + platformNode + ".jar";
 var localeName = "locale/" + chromeNode + "/";
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall(prettyName, regName, "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall(prettyName, regName, "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");

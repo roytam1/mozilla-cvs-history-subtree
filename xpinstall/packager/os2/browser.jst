@@ -43,8 +43,8 @@ var srDest;
 var err;
 var fProgram;
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall("@XPI_ProductName@", "Browser", "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall("@XPI_PRODUCTNAME@", "Browser", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram  = getFolder("Program");
@@ -56,7 +56,7 @@ if(verifyDiskSpace(fProgram, srDest))
 
   upgradeCleanup();
   err = addDirectory("",
-                     "@XPI_Version@",
+                     "@XPI_VERSION@",
                      "bin",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram

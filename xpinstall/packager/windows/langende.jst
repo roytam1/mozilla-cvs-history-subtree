@@ -9,7 +9,7 @@ var regName    = "locales/mozilla/en-DE";
 var chromeName = "en-DE.jar";
 // --- END CHANGABLE STUFF ---
 
-srDest = $SpaceRequired$:bin;
+srDest = @XPI_SPACEREQUIRED@:bin;
 err    = initInstall(prettyName, regName, "$Version$"); 
 logComment("initInstall: " + err);
 

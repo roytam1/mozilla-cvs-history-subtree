@@ -27,16 +27,16 @@ function registerProgramFolderKey(winreg, fFolderPath)
   var err;
 
   /* set the Program Folder Path in the Mozilla key in the Windows Registry */
-  winreg.createKey("SOFTWARE\\@XPI_CompanyName@", "");
+  winreg.createKey("SOFTWARE\\@XPI_COMPANYNAME@", "");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@";
   winreg.createKey(subkey,"");
-  err     = winreg.setValueString(subkey, "CurrentVersion", "@XPI_UserAgent@");
+  err     = winreg.setValueString(subkey, "CurrentVersion", "@XPI_USERAGENT@");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@";
   winreg.createKey(subkey,"");
 
-  subkey  = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Main";
+  subkey  = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Main";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "Program Folder Path", fFolderPath);
 }
@@ -76,7 +76,7 @@ function createShortcuts()
   winreg                    = getWinRegistry();
   fWindows                  = getFolder("Windows");
   fProgram                  = getFolder("Program");
-  fileExe                   = getFolder("Program", "@XPI_MainExeFile@");
+  fileExe                   = getFolder("Program", "@XPI_MAINEXEFILE@");
   filePalmSyncInstallExe    = getFolder("Program", "PalmSyncInstall.exe");
   scDescPalmSyncInstall     = "Address Book Palm Sync Install";
   scDescPalmSyncUninstall   = "Address Book Palm Sync Uninstall";
@@ -85,7 +85,7 @@ function createShortcuts()
   fileMailIcon              = getFolder("Chrome", "icons/default/messengerWindow.ico");
   scExeDesc                 = "Mail";
   scParam                   = "-mail";
-  scFolderName              = "@XPI_ProductName@";
+  scFolderName              = "@XPI_PRODUCTNAME@";
   folderPalmSyncName        = "Palm Tools";
   if(winreg != null) 
   {
@@ -159,7 +159,7 @@ function createShortcuts()
     }
     logComment("folderQuickLaunchExists: " + folderQuickLaunchExists);
 
-    subkey              = "SOFTWARE\\@XPI_CompanyName@\\@XPI_ProductName@\\@XPI_UserAgent@\\Main";
+    subkey              = "SOFTWARE\\@XPI_COMPANYNAME@\\@XPI_PRODUCTNAME@\\@XPI_USERAGENT@\\Main";
     fFolderPathStr      = winreg.getValueString(subkey, "Program Folder Path");
     if((fFolderPathStr == "") || (fFolderPathStr == null))
     {
@@ -235,7 +235,7 @@ function createShortcuts()
     // Register as a windows XP mail application
     if( IsWinnt() )
     {
-      subkey = "Software\\Clients\\Mail\\@XPI_ProductNameInternal@";
+      subkey = "Software\\Clients\\Mail\\@XPI_PRODUCTNAMEINTERNAL@";
       winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
 
       winreg.createKey(subkey,"");
@@ -245,25 +245,25 @@ function createShortcuts()
       winreg.createKey(subkey + "\\shell\\open\\command", "");
       winreg.createKey(subkey + "\\InstallInfo","");
 
-      winreg.setValueString(subkey, "", "@XPI_ProductName@ Mail");
+      winreg.setValueString(subkey, "", "@XPI_PRODUCTNAME@ Mail");
 
       // path does not need to be quoted per MS doc
       data = fProgram + "chrome\\icons\\default\\messengerWindow.ico,0";
       winreg.setValueString(subkey + "\\DefaultIcon", "", data);
 
-      data = "\"" + fProgram + "@XPI_MainExeFile@\" -mail";
+      data = "\"" + fProgram + "@XPI_MAINEXEFILE@\" -mail";
       winreg.setValueString(subkey + "\\shell\\open\\command", "", data);
 
-      data = "\"" + fProgram + "uninstall\\@XPI_UninstallFile@\" /ua \"@XPI_UserAgent@\" /hs mail";
+      data = "\"" + fProgram + "uninstall\\@XPI_UNINSTALLFILE@\" /ua \"@XPI_USERAGENT@\" /hs mail";
       winreg.setValueString(subkey + "\\InstallInfo", "HideIconsCommand", data);
 
       // set this value to 0 because we're not creating the mail shortcuts yet.
       winreg.setValueNumber(subkey + "\\InstallInfo", "IconsVisible", 0);
 
-      data = "\"" + fProgram + "@XPI_MainExeFile@\" -silent -nosplash -setDefaultMail";
+      data = "\"" + fProgram + "@XPI_MAINEXEFILE@\" -silent -nosplash -setDefaultMail";
       winreg.setValueString(subkey + "\\InstallInfo", "ReinstallCommand", data);
 
-      data = "\"" + fProgram + "uninstall\\@XPI_UninstallFile@\" /ua \"@XPI_UserAgent@\" /ss mail";
+      data = "\"" + fProgram + "uninstall\\@XPI_UNINSTALLFILE@\" /ua \"@XPI_USERAGENT@\" /ss mail";
       winreg.setValueString(subkey + "\\InstallInfo", "ShowIconsCommand", data);
     }
   }
@@ -286,12 +286,12 @@ function updateMapi()
   var winsysMapi32File;
   var mapiProxyFile;
   var subkey;
-  var mailDefaultDescription = "@XPI_ProductName@ Mail";
+  var mailDefaultDescription = "@XPI_PRODUCTNAME@ Mail";
 
   winreg = getWinRegistry();
   if(winreg != null) 
   {
-    mainExePath = getFolder("Program", "@XPI_MainExeFile@");
+    mainExePath = getFolder("Program", "@XPI_MAINEXEFILE@");
     programMozMapi32File = getFolder("Program", "mozMapi32.dll");
     winsysMapi32File = getFolder("Win System", "Mapi32.dll");
     winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
@@ -304,13 +304,13 @@ function updateMapi()
     logComment("szMapiBackupDll: " + szMapiBackupDll);
     logComment("szDefaultMailClient: " + szDefaultMailClient);
     if((szMapiBackupDll != null) && (szMapiBackupDll != "") &&
-       (szDefaultMailClient != null) && (szDefaultMailClient == "@XPI_ProductName@"))
+       (szDefaultMailClient != null) && (szDefaultMailClient == "@XPI_PRODUCTNAME@"))
     {
       // We do not want to log this file to be uninstalled because the
       // uninstaller already has a special way to deal with restoring the
       // appropriate previous Mapi32.dll.
       addFile("",
-              "@XPI_Version@",
+              "@XPI_VERSION@",
               "bin/mozMapi32.dll",           // file name in jar to extract 
               getFolder("Win System"),       // Where to put this file (Returned from getFolder) 
               "Mapi32.dll",                  // new name when installed
@@ -320,7 +320,7 @@ function updateMapi()
     sfpProgramMozMapi32File = File.windowsGetShortName(programMozMapi32File);
     sfpMainExePath = File.windowsGetShortName(mainExePath);
 
-    subkey  = "SOFTWARE\\Clients\\Mail\\@XPI_ProductName@";
+    subkey  = "SOFTWARE\\Clients\\Mail\\@XPI_PRODUCTNAME@";
     winreg.createKey(subkey, "");
     winreg.setValueString(subkey, "", mailDefaultDescription);
     winreg.setValueString(subkey, "DLLPath", sfpProgramMozMapi32File);
@@ -375,8 +375,8 @@ var srDest;
 var err;
 var fProgram;
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall("Mozilla Mail", "Mail", "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall("Mozilla Mail", "Mail", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");
@@ -388,7 +388,7 @@ if(verifyDiskSpace(fProgram, srDest))
 
   upgradeCleanup();
   err = addDirectory("",
-                     "@XPI_Version@",
+                     "@XPI_VERSION@",
                      "bin",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram
@@ -427,22 +427,22 @@ if(verifyDiskSpace(fProgram, srDest))
 
     // log comments for uninstalling the registry keys created by mail for setting
     // itself up in WinXP's Start menu
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@ []");
-    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@ []");
-    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@ [DLLPath]");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\DefaultIcon []");
-    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\DefaultIcon []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols\\mailto []");
-    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols\\mailto []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols\\mailto\\shell []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols\\mailto\\shell\\open []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols\\mailto\\shell\\open\\command []");
-    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\protocols\\mailto\\shell\\open\\command []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\shell []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\shell\\open []");
-    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\shell\\open\\command []");
-    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_ProductName@\\shell\\open\\command []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@ []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@ []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@ [DLLPath]");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\DefaultIcon []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\DefaultIcon []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols\\mailto []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols\\mailto []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols\\mailto\\shell []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols\\mailto\\shell\\open []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols\\mailto\\shell\\open\\command []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\protocols\\mailto\\shell\\open\\command []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\shell []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\shell\\open []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\shell\\open\\command []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\@XPI_PRODUCTNAME@\\shell\\open\\command []");
 
     // check return value
     err = getLastError();

@@ -18,8 +18,8 @@ var fileComponentRegStr;
 var fileMsvcrt;
 var fileMsvcirt;
 
-srDest = @XPI_SpaceRequired@:bin;
-err    = initInstall("Mozilla XPCOM", "XPCOM", "@XPI_Version@"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall("Mozilla XPCOM", "XPCOM", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram  = getFolder("Program");
@@ -40,7 +40,7 @@ if(verifyDiskSpace(fProgram, srDest))
 
   upgradeCleanup();
   err = addDirectory("",
-                     "@XPI_Version@",
+                     "@XPI_VERSION@",
                      "bin",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram
@@ -59,7 +59,7 @@ if(verifyDiskSpace(fProgram, srDest))
     {
       logComment("File not found: " + fileMsvcrt);
       addFile("/Microsoft/Shared/msvcrt.dll",
-              "@XPI_Version@",
+              "@XPI_VERSION@",
               "msvcrt.dll",         // dir name in jar to extract 
               fWindowsSystem,       // Where to put this file (Returned from getFolder) 
               "",                   // subdir name to create relative to fProgram
@@ -81,7 +81,7 @@ if(verifyDiskSpace(fProgram, srDest))
     {
       logComment("File not found: " + fileMsvcirt);
       addFile("/Microsoft/Shared/msvcirt.dll",
-              "@XPI_Version@",
+              "@XPI_VERSION@",
               "msvcirt.dll",        // dir name in jar to extract 
               fWindowsSystem,       // Where to put this file (Returned from getFolder) 
               "",                   // subdir name to create relative to fProgram
