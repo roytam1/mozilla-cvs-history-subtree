@@ -25,8 +25,10 @@
 
 #ifndef NSCAP_NO_NEW_CASTS
   #define STATIC_CAST(T,x)  static_cast<T>(x)
+  #define REINTERPRET_CAST(T,x) reinterpret_cast<T>(x)
 #else
   #define STATIC_CAST(T,x)  ((T)(x))
+  #define REINTERPRET_CAST(T,x) ((T)(x))
 #endif
 
 
@@ -191,7 +193,7 @@ set_a_IFoo( nsCOMPtr<IFoo>* result )
     cout << ">>set_a_IFoo()" << endl;
     assert(result);
 
-    nsCOMPtr<IFoo> foop( new IFoo );
+    nsCOMPtr<IFoo> foop( do_QueryInterface(new IFoo) );
     *result = foop;
     cout << "<<set_a_IFoo()" << endl;
   }
@@ -200,7 +202,7 @@ nsCOMPtr<IFoo>
 return_a_IFoo()
   {
     cout << ">>return_a_IFoo()" << endl;
-    nsCOMPtr<IFoo> foop( new IFoo );
+    nsCOMPtr<IFoo> foop( do_QueryInterface(new IFoo) );
     cout << "<<return_a_IFoo()" << endl;
     return foop;
   }
@@ -289,6 +291,87 @@ AVoidPtrPtrContext( void** )
 
 
 
+static
+nsresult
+TestBloat_Raw()
+	{
+		IBar* barP = 0;
+		nsresult result = CreateIBar(REINTERPRET_CAST(void**, &barP));
+
+		if ( barP )
+			{
+				try
+					{
+						IFoo* fooP = 0;
+						if ( NS_SUCCEEDED( result = barP->QueryInterface(IFoo::IID(), REINTERPRET_CAST(void**, &fooP)) ) )
+							{
+								try
+									{
+										fooP->print_totals();
+									}
+								catch( ... )
+									{
+										NS_RELEASE(fooP);
+										throw;
+									}
+
+								NS_RELEASE(fooP);
+							}
+					}
+				catch( ... )
+					{
+						NS_RELEASE(barP);
+						throw;
+					}
+
+				NS_RELEASE(barP);
+			}
+
+		return result;
+	}
+
+
+
+static
+nsresult
+TestBloat_Raw_Unsafe()
+	{
+		IBar* barP = 0;
+		nsresult result = CreateIBar(REINTERPRET_CAST(void**, &barP));
+
+		if ( barP )
+			{
+				IFoo* fooP = 0;
+				if ( NS_SUCCEEDED( result = barP->QueryInterface(IFoo::IID(), REINTERPRET_CAST(void**, &fooP)) ) )
+					{
+						fooP->print_totals();
+						NS_RELEASE(fooP);
+					}
+
+				NS_RELEASE(barP);
+			}
+
+		return result;
+	}
+
+
+static
+nsresult
+TestBloat_Smart()
+	{
+		nsCOMPtr<IBar> barP;
+		nsresult result = CreateIBar( getter_AddRefs(barP) );
+
+		nsCOMPtr<IFoo> fooP( do_QueryInterface(barP, &result) );
+
+		if ( fooP )
+			fooP->print_totals();
+
+		return result;
+	}
+
+
+
 
 nsCOMPtr<IFoo> gFoop;
 
@@ -299,13 +382,17 @@ main()
 
 		cout << "sizeof(nsCOMPtr<IFoo>) --> " << sizeof(nsCOMPtr<IFoo>) << endl;
 
+		TestBloat_Raw();
+		TestBloat_Raw_Unsafe();
+		TestBloat_Smart();
+
 
     {
       cout << endl << "### Test  1: will a |nsCOMPtr| call |AddRef| on a pointer assigned into it?" << endl;
-      nsCOMPtr<IFoo> foop( new IFoo );
+      nsCOMPtr<IFoo> foop( do_QueryInterface(new IFoo) );
 
       cout << endl << "### Test  2: will a |nsCOMPtr| |Release| its old pointer when a new one is assigned in?" << endl;
-      foop = new IFoo;
+      foop = do_QueryInterface(new IFoo);
 
         // [Shouldn't compile] Is it a compile time error to try to |AddRef| by hand?
       //foop->AddRef();
@@ -324,13 +411,13 @@ main()
 
     {
       cout << endl << "### Test  6: will a |nsCOMPtr| call the correct destructor?" << endl;
-      nsCOMPtr<IFoo> foop( new IBar );
+      nsCOMPtr<IFoo> foop( do_QueryInterface(new IBar) );
     }
 
     {
       cout << endl << "### Test  7: can you compare one |nsCOMPtr| with another [!=]?" << endl;
 
-      nsCOMPtr<IFoo> foo1p( new IFoo );
+      nsCOMPtr<IFoo> foo1p( do_QueryInterface(new IFoo) );
 
         // [Shouldn't compile] Is it a compile time error to omit |getter_[doesnt_]AddRef[s]|?
       //AnIFooPtrPtrContext(&foo1p);
@@ -338,7 +425,7 @@ main()
         // [Shouldn't compile] Is it a compile time error to omit |getter_[doesnt_]AddRef[s]|?
       //AVoidPtrPtrContext(&foo1p);
 
-      nsCOMPtr<IFoo> foo2p( new IFoo );
+      nsCOMPtr<IFoo> foo2p( do_QueryInterface(new IFoo) );
 
       if ( foo1p != foo2p )
         cout << "foo1p != foo2p" << endl;
@@ -348,7 +435,7 @@ main()
       IFoo* raw_foo2p = foo2p.get();
 
       cout << endl << "### Test  8: can you compare a |nsCOMPtr| with a raw interface pointer [!=]?" << endl;
-      if ( foo1p != raw_foo2p )
+      if ( foo1p.get() != raw_foo2p )
         cout << "foo1p != raw_foo2p" << endl;
       else
         cout << "foo1p == raw_foo2p" << endl;
@@ -364,10 +451,18 @@ main()
         cout << "foo1p != foo2p" << endl;
 
       cout << endl << "### Test 11: can you compare a |nsCOMPtr| with a raw interface pointer [==]?" << endl;
-      if ( raw_foo2p == foo2p )
+      if ( raw_foo2p == foo2p.get() )
         cout << "raw_foo2p == foo2p" << endl;
       else
         cout << "raw_foo2p != foo2p" << endl;
+
+#if 1
+      cout << endl << "### Test 11.5: can you compare a |nsCOMPtr| with a raw interface pointer [==]?" << endl;
+      if ( nsCOMPtr<IFoo>( dont_QueryInterface(raw_foo2p) ) == foo2p )
+        cout << "raw_foo2p == foo2p" << endl;
+      else
+        cout << "raw_foo2p != foo2p" << endl;
+#endif
 
       cout << endl << "### Test 12: bare pointer test?" << endl;
       if ( foo1p )
@@ -441,14 +536,14 @@ main()
 			nsCOMPtr<IFoo> fooP;
 
 			cout << "### Test 21: is |QueryInterface| called on assigning in a raw pointer?" << endl;
-			fooP = new IFoo;
+			fooP = do_QueryInterface(new IFoo);
 		}
     cout << "### End Test 21" << endl;
 
 		{
     	cout << endl << "### setup for Test 22" << endl;
 			nsCOMPtr<IFoo> fooP;
-			fooP = new IFoo;
+			fooP = do_QueryInterface(new IFoo);
 
 			nsCOMPtr<IFoo> foo2P;
 
@@ -459,11 +554,11 @@ main()
 
 		{
     	cout << endl << "### setup for Test 23" << endl;
-			nsCOMPtr<IBar> barP( new IBar );
+			nsCOMPtr<IBar> barP( do_QueryInterface(new IBar) );
 
 			cout << "### Test 23: is |QueryInterface| called when assigning in a smart-pointer of a different type?" << endl;
 
-			nsCOMPtr<IFoo> fooP( barP );
+			nsCOMPtr<IFoo> fooP( do_QueryInterface(barP) );
 			if ( fooP )
 				cout << "an IBar* is an IFoo*" << endl;
 		}
@@ -482,22 +577,8 @@ main()
     cout << "### End Test 24" << endl;
 
 
-		{
-			cout << endl << "### setup for Test 25" << endl;
-			nsCOMPtr<IFoo> fooP( new IFoo );
-			nsCOMPtr<IBar> barP;
-			
-			cout << "### Test 25: will an assignment fail when the interface is not supported, is the error available?" << endl;
-			barP = fooP;
-			cout << "barP.assignment_error() --> " << barP.assignment_error() << endl;
-			cout << "### cleanup for Test 25" << endl;
-		}
-		cout << "### End Test 25" << endl;
-
-
-
-    cout << endl << "### Test 26: will a static |nsCOMPtr| |Release| before program termination?" << endl;
-    gFoop = new IFoo;
+    cout << endl << "### Test 25: will a static |nsCOMPtr| |Release| before program termination?" << endl;
+    gFoop = do_QueryInterface(new IFoo);
     
     cout << "<<main()" << endl;
     return 0;
