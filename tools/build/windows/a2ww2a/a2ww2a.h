@@ -33,6 +33,7 @@
  */
 #if !defined(__a2ww2a_h__)
 #define __a2ww2a_h__
+
 /*
 **  a2ww2a.h
 **
@@ -56,6 +57,9 @@ extern "C" {
 /*
 **  Import or export.
 */
+#if defined(A2WW2A_API)
+#undef A2WW2A_API
+#endif
 #if defined(BUILD_a2ww2a)
 #define A2WW2A_API __declspec(dllexport)
 #else

@@ -46,6 +46,9 @@ DEPTH= ..\..\..\..
 #//------------------------------------------------------------------------
 EXPORTS= \
     .\a2ww2a.h \
+!if "$(OS_TARGET)" == "WINCE"
+    .\mozgdi.h \
+!endif
     $(NULL)
 
 
@@ -60,6 +63,7 @@ OBJS= \
 	.\$(OBJDIR)\w2a.obj \
 !if "$(OS_TARGET)" == "WINCE"
 	.\$(OBJDIR)\apiA2W.obj \
+	.\$(OBJDIR)\mozgdi.obj \
 !endif
 	$(NULL)
 

@@ -44,6 +44,10 @@
 #include "prmem.h"
 #include "nscrt.h"
 
+#if defined(WINCE)
+#include "mozgdi.h"
+#endif
+
 //#define GFX_DEBUG
 
 #ifdef GFX_DEBUG
