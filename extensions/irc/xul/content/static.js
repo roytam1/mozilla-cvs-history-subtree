@@ -35,7 +35,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre4";
+client.version = "0.8.5-pre5";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -1971,7 +1971,8 @@ function __display(message, msgtype, sourceObj, destObj)
         if (sourceObj != me)
         {
             nick = sourceObj.properNick;
-            nickURL = sourceObj.getURL();
+            if ("getURL" in sourceObj)
+                nickURL = sourceObj.getURL();
             if (toType == "IRCUser") /* msg from user to me */
             {
                 getAttention = true;
@@ -2147,7 +2148,7 @@ function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
         return null;
 
     var matches = client.commands.listNames(word);
-    if (matches.length == 1)
+    if (matches.length == 1 && wordEnd == line.length)
         matches[0] += " ";
 
     return matches;

@@ -536,7 +536,7 @@ CIRCServer.prototype.onDisconnect =
 function serv_disconnect(e)
 {
 
-    if ((this.parent.connecting) ||
+    if (("connecting" in this.parent) ||
         /* fell off while connecting, try again */
         (this.parent.primServ == this) && (this.parent.stayingPower))
     { /* fell off primary server, reconnect to any host in the serverList */

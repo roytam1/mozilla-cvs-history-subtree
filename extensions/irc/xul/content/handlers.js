@@ -1233,7 +1233,7 @@ function clie_ilistnets (e)
     var span = document.createElementNS("http://www.w3.org/1999/xhtml",
                                         "html:span");
     
-    span.appendChild (newInlineText(getMsg("cli_listNetworks.a"));
+    span.appendChild (newInlineText(getMsg("cli_listNetworks.a")));
 
     var netnames = keys(client.networks).sort();
     var lastname = netnames[netnames.length - 1];
