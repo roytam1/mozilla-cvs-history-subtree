@@ -24,11 +24,29 @@
 #ifndef _VR_STUBS_H_
 #define _VR_STUBS_H_
 
+#if defined(XP_CPLUSPLUS)
+# define XP_BEGIN_PROTOS extern "C" {
+# define XP_END_PROTOS }
+#else
+# define XP_BEGIN_PROTOS
+# define XP_END_PROTOS
+#endif
+
+#ifdef XP_PC
+ typedef struct _stat   XP_StatStruct;
+ #define XP_Stat(file,data,type)     _stat((file),(data))
+#else
+ typedef struct stat    XP_StatStruct;
+ #define  XP_Stat(file,data,type)     stat((file),(data))
+#endif
+
+#ifdef STANDALONE_REGISTRY
 #include <errno.h>
 #include <string.h>
 #ifdef XP_MAC
 #include "macstdlibextras.h"  /* For strcasecmp and strncasecmp */
 #endif
+#endif /* STANDALONE_REGISTRY*/
 
 #ifdef XP_MAC
 #include <stat.h>
@@ -46,6 +64,7 @@
 #define TRUE 1
 #endif
 
+#ifdef STANDALONE_REGISTRY
 #define XP_FILE_READ             "r"
 #define XP_FILE_READ_BIN         "rb"
 #define XP_FILE_WRITE            "w"
@@ -75,19 +94,7 @@
 # define XP_IS_CPLUSPLUS 0
 #endif
 
-#if defined(XP_CPLUSPLUS)
-# define XP_BEGIN_PROTOS extern "C" {
-# define XP_END_PROTOS }
-#else
-# define XP_BEGIN_PROTOS
-# define XP_END_PROTOS
-#endif
-
-#ifdef STANDALONE_REGISTRY
 #define XP_ASSERT(x)        ((void)0)
-#else
-#define XP_ASSERT(x)        PR_ASSERT((x))
-#endif
 
 #define XP_STRCAT(a,b)      strcat((a),(b))
 #define XP_ATOI             atoi
@@ -113,7 +120,6 @@
 
 typedef FILE          * XP_File;
 
-#ifdef STANDALONE_REGISTRY /* included from prmon.h otherwise */
 #include "prtypes.h"
 
 #if 0
@@ -142,16 +148,7 @@ typedef unsigned char   uint8;
     typedef char Bool;
     typedef char XP_Bool;
 #endif 
-#endif
-#endif
-
-#ifdef XP_PC
- typedef struct _stat   XP_StatStruct;
- #define XP_Stat(file,data,type)     _stat((file),(data))
-#else
- typedef struct stat    XP_StatStruct;
- #define  XP_Stat(file,data,type)     stat((file),(data))
-#endif
+#endif /* 0 */
 
 #ifndef XP_MAC
  #define nr_RenameFile(from, to)    rename((from), (to))
@@ -173,4 +170,11 @@ extern char * strdup (const char * s);
 
 XP_END_PROTOS
 
+#else
+
+XP_BEGIN_PROTOS
+extern void vr_findGlobalRegName ();
+XP_END_PROTOS
+
+#endif /* STANDALONE_REGISTRY */
 #endif /* _VR_STUBS_H_ */

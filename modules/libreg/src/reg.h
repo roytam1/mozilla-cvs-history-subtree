@@ -22,9 +22,11 @@
 #ifndef _REG_H_
 #define _REG_H_
 
+#ifdef STANDALONE_REGISTRY
 #include "vr_stubs.h"
-
-#ifndef STANDALONE_REGISTRY
+#else
+#include "prio.h"
+#define XP_File PRFileDesc*
 #include "prmon.h"
 #endif
 
