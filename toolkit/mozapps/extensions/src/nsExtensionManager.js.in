@@ -1574,6 +1574,8 @@ nsExtensionManager.prototype = {
     var installProfile = aFlags & nsIExtensionManager.FLAG_INSTALL_PROFILE;
     var tempManifest = getFile(getDirKey(installProfile),
                                [DIR_EXTENSIONS, DIR_TEMP, FILE_INSTALL_MANIFEST]);
+    if (!tempManifest)
+      tempManifest.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
     zipReader.extract(FILE_INSTALL_MANIFEST, tempManifest);
     
     var extensionID = this.installExtensionInternal(tempManifest, installProfile);
