@@ -243,7 +243,8 @@ int strncasecmp(const char *, const char *, size_t);
     defined(UNIXWARE) || defined(SUNOS4) || defined(SNI) || defined(BSDI) || \
     defined(NCR) || defined(OSF1) || defined(NEC) || \
     ( defined(HPUX10) && !defined(_REENTRANT)) || defined(HPUX11) || \
-    defined(UnixWare) || defined(LINUX) || (defined(AIX) && !defined(USE_REENTRANT_LIBC))
+    defined(UnixWare) || defined(LINUX) || defined(NETBSD) || \
+    (defined(AIX) && !defined(USE_REENTRANT_LIBC))
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
 #elif defined(AIX)
 /* Maybe this is for another version of AIX?
@@ -273,7 +274,7 @@ typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #elif defined(HPUX10) && defined(_REENTRANT) && !defined(HPUX11)
 #define CTIME( c, b, l )		nsldapi_compat_ctime_r( c, b, l )
 #elif defined( IRIX6_2 ) || defined( IRIX6_3 ) || defined(UNIXWARE) \
-	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) || defined(hpux) || defined(HPUX11)
+	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) || defined(hpux) || defined(HPUX11) || defined(NETBSD)
 #define CTIME( c, b, l )                ctime_r( c, b )
 #elif defined( OSF1V3 )
 #define CTIME( c, b, l )		(ctime_r( c, b, l ) ? NULL : b)
