@@ -173,10 +173,29 @@ FeedItem.prototype.isStored = function() {
   }
 
   var ds = getItemsDS(server);
-  var itemResource = rdf.GetResource(this.url || ("urn:" + this.id));
+  var itemURI = this.url || ("urn:" + this.id);
+  var itemResource = rdf.GetResource(itemURI);
+
   var downloaded = ds.GetTarget(itemResource, FZ_STORED, true);
   if (!downloaded || downloaded.QueryInterface(Components.interfaces.nsIRDFLiteral).Value == "false") 
   {
+    // HACK ALERT: before we give up, try to work around an entity escaping bug in RDF
+    // See Bug #258465 for more details
+    itemURI = itemURI.replace(/&lt;/g, '<');
+    itemURI = itemURI.replace(/&gt;/g, '>');
+    itemURI = itemURI.replace(/&amp;/g, '&');
+    itemURI = itemURI.replace(/&quot;/g, '"');
+
+    debug('Failed to find item, trying entity replacement version: '  + itemURI);
+    itemResource = rdf.GetResource(itemURI);
+    downloaded = ds.GetTarget(itemResource, FZ_STORED, true);
+
+    if (downloaded)
+    { 
+      debug(this.identity + " not stored");
+      return true;
+    }
+
     debug(this.identity + " not stored");
     return false;
   }
@@ -210,7 +229,7 @@ FeedItem.prototype.markValid = function() {
 FeedItem.prototype.markStored = function() {
     var ds = getItemsDS(this.feed.server);
     var resource = rdf.GetResource(this.url || ("urn:" + this.id));
-    
+   
     if (!ds.HasAssertion(resource, FZ_FEED, rdf.GetResource(this.feed.url), true))
       ds.Assert(resource, FZ_FEED, rdf.GetResource(this.feed.url), true);
     
@@ -219,9 +238,8 @@ FeedItem.prototype.markStored = function() {
       currentValue = ds.GetTarget(resource, FZ_STORED, true);
       ds.Change(resource, FZ_STORED, currentValue, RDF_LITERAL_TRUE);
     }
-    else {
+    else 
       ds.Assert(resource, FZ_STORED, RDF_LITERAL_TRUE, true);
-    }
 }
 
 FeedItem.prototype.download = function() {
