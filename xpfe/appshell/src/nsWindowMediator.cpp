@@ -126,6 +126,7 @@ friend class nsWindowEnumerator;
 public:
 	nsWindowMediator();
 	virtual ~nsWindowMediator();
+  nsresult Init();
 	
 	NS_IMETHOD GetEnumerator( nsString* inType, nsISimpleEnumerator** outEnumerator );
 	NS_IMETHOD GetMostRecentWindow( nsString* inType, nsIDOMWindow** outWindow );
@@ -141,11 +142,17 @@ public:
 
 	// RDF
   // nsIRDFDataSource
-  NS_IMETHOD Init(const char* uri);
-
   NS_IMETHOD GetURI(char* *uri)
   {
-      return mInner->GetURI(uri);
+    NS_PRECONDITION(uri != nsnull, "null ptr");
+    if (! uri)
+      return NS_ERROR_NULL_POINTER;
+
+    *uri = nsXPIDLCString::Copy("rdf:window-mediator");
+    if (! *uri)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    return NS_OK;
   }
 
   NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -189,6 +196,16 @@ public:
                       nsIRDFResource* aProperty,
                       nsIRDFNode* aTarget);
 
+  NS_IMETHOD Change(nsIRDFResource* aSource,
+                    nsIRDFResource* aProperty,
+                    nsIRDFNode* aOldTarget,
+                    nsIRDFNode* aNewTarget);
+
+  NS_IMETHOD Move(nsIRDFResource* aOldSource,
+                  nsIRDFResource* aNewSource,
+                  nsIRDFResource* aProperty,
+                  nsIRDFNode* aTarget);
+
   NS_IMETHOD HasAssertion(nsIRDFResource* source,
                           nsIRDFResource* property,
                           nsIRDFNode* target,
@@ -222,8 +239,6 @@ public:
   {
       return mInner->GetAllResources(aCursor);
   }
-
-  NS_IMETHOD Flush(void);
 
   NS_IMETHOD GetAllCommands(nsIRDFResource* source,
                             nsIEnumerator** commands);
@@ -290,14 +305,9 @@ nsWindowMediator::nsWindowMediator() :
 {
 	 NS_INIT_REFCNT();
 
-	 if (gRefCnt++ == 0)
-	 {
-      nsresult rv = nsServiceManager::GetService( kRDFServiceCID, kIRDFServiceIID, (nsISupports**) &gRDFService );
-
-			gRDFService->GetResource( kURINC_WindowMediatorRoot,   &kNC_WindowMediatorRoot );
-			gRDFService->GetResource (kURINC_Name, &kNC_Name );
-			gRDFService->GetResource( kURINC_URL, &kNC_URL );
-    }
+   nsresult rv;
+   rv = Init();
+   NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, couldn't Init() for some reason");
 }
 
 nsWindowMediator::~nsWindowMediator()
@@ -553,9 +563,18 @@ NS_IMETHODIMP nsWindowMediator::QueryInterface(REFNSIID iid, void **result)
 }
 
 // RDF
-NS_IMETHODIMP nsWindowMediator::Init(const char* uri)
+NS_IMETHODIMP nsWindowMediator::Init()
 {
 	nsresult rv;
+
+	 if (gRefCnt++ == 0)
+	 {
+      rv = nsServiceManager::GetService( kRDFServiceCID, kIRDFServiceIID, (nsISupports**) &gRDFService );
+
+			gRDFService->GetResource( kURINC_WindowMediatorRoot,   &kNC_WindowMediatorRoot );
+			gRDFService->GetResource (kURINC_Name, &kNC_Name );
+			gRDFService->GetResource( kURINC_URL, &kNC_URL );
+    }
 
 	if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
 	                                                nsnull,
@@ -565,12 +584,6 @@ NS_IMETHODIMP nsWindowMediator::Init(const char* uri)
 		return rv;
 	}
 
-	if (NS_FAILED(rv = mInner->Init(uri)))
-	{
-	 	NS_ERROR( "unable to init mInner");
-		return rv;
-	}
-	
 	NS_WITH_SERVICE(nsIRDFContainerUtils, rdfc, kRDFContainerUtilsCID, &rv);
 	if (NS_FAILED(rv))
 		return rv;
@@ -602,10 +615,22 @@ NS_IMETHODIMP nsWindowMediator::Unassert(nsIRDFResource* aSource,
 }
 
 
-NS_IMETHODIMP nsWindowMediator::Flush(void)
+NS_IMETHODIMP nsWindowMediator::Change(nsIRDFResource* aSource,
+                                       nsIRDFResource* aProperty,
+                                       nsIRDFNode* aOldTarget,
+                                       nsIRDFNode* aNewTarget)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+  // XXX TODO: filter out changes we don't care about
+  return mInner->Change(aSource, aProperty, aOldTarget, aNewTarget);
+}
+
+NS_IMETHODIMP nsWindowMediator::Move(nsIRDFResource* aOldSource,
+                                     nsIRDFResource* aNewSource,
+                                     nsIRDFResource* aProperty,
+                                     nsIRDFNode* aTarget)
+{
+  // XXX TODO: filter out changes we don't care about
+  return mInner->Move(aOldSource, aNewSource, aProperty, aTarget);
 }
 
 
