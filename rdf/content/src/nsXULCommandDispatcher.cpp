@@ -161,8 +161,8 @@ nsXULCommandDispatcher::SetFocusedWindow(nsIDOMWindow* aWindow)
 
 NS_IMETHODIMP
 nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
-                                            const nsString& aEvents,
-                                            const nsString& aTargets)
+                                          const nsAReadableString& aEvents,
+                                          const nsAReadableString& aTargets)
 {
     NS_PRECONDITION(aElement != nsnull, "null ptr");
     if (! aElement)
@@ -174,11 +174,12 @@ nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
     while (updater) {
         if (updater->mElement == aElement) {
 
+#ifdef NS_DEBUG
             nsCAutoString eventsC, targetsC, aeventsC, atargetsC; 
             eventsC.AssignWithConversion(updater->mEvents);
             targetsC.AssignWithConversion(updater->mTargets);
-            aeventsC.AssignWithConversion(aEvents);
-            atargetsC.AssignWithConversion(aTargets);
+            aeventsC.Assign(NS_ConvertUCS2toUTF8(aEvents));
+            atargetsC.Assign(NS_ConvertUCS2toUTF8(aTargets));
             PR_LOG(gLog, PR_LOG_ALWAYS,
                    ("xulcmd[%p] replace %p(events=%s targets=%s) with (events=%s targets=%s)",
                     this, aElement,
@@ -186,6 +187,7 @@ nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
                     (const char*) targetsC,
                     (const char*) aeventsC,
                     (const char*) atargetsC));
+#endif
 
             // If the updater was already in the list, then replace
             // (?) the 'events' and 'targets' filters with the new
@@ -198,15 +200,17 @@ nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
         link = &(updater->mNext);
         updater = updater->mNext;
     }
+#ifdef NS_DEBUG
     nsCAutoString aeventsC, atargetsC; 
-    aeventsC.AssignWithConversion(aEvents);
-    atargetsC.AssignWithConversion(aTargets);
+    aeventsC.Assign(NS_ConvertUCS2toUTF8(aEvents));
+    atargetsC.Assign(NS_ConvertUCS2toUTF8(aTargets));
 
     PR_LOG(gLog, PR_LOG_ALWAYS,
            ("xulcmd[%p] add     %p(events=%s targets=%s)",
             this, aElement,
             (const char*) aeventsC,
             (const char*) atargetsC));
+#endif
 
     // If we get here, this is a new updater. Append it to the list.
     updater = new Updater(aElement, aEvents, aTargets);
@@ -229,6 +233,7 @@ nsXULCommandDispatcher::RemoveCommandUpdater(nsIDOMElement* aElement)
 
     while (updater) {
         if (updater->mElement == aElement) {
+#ifdef NS_DEBUG
             nsCAutoString eventsC, targetsC; 
             eventsC.AssignWithConversion(updater->mEvents);
             targetsC.AssignWithConversion(updater->mTargets);
@@ -237,6 +242,7 @@ nsXULCommandDispatcher::RemoveCommandUpdater(nsIDOMElement* aElement)
                     this, aElement,
                     (const char*) eventsC,
                     (const char*) targetsC));
+#endif
 
             *link = updater->mNext;
             delete updater;
@@ -252,7 +258,7 @@ nsXULCommandDispatcher::RemoveCommandUpdater(nsIDOMElement* aElement)
 }
 
 NS_IMETHODIMP
-nsXULCommandDispatcher::UpdateCommands(const nsString& aEventName)
+nsXULCommandDispatcher::UpdateCommands(const nsAReadableString& aEventName)
 {
     nsresult rv;
 
@@ -294,12 +300,14 @@ nsXULCommandDispatcher::UpdateCommands(const nsString& aEventName)
         if (! document)
             continue;
 
+#ifdef NS_DEBUG
         nsCAutoString aeventnameC; 
-        aeventnameC.AssignWithConversion(aEventName);
+        aeventnameC.Assign(NS_ConvertUCS2toUTF8(aEventName));
         PR_LOG(gLog, PR_LOG_ALWAYS,
                ("xulcmd[%p] update %p event=%s",
                 this, updater->mElement,
                 (const char*) aeventnameC));
+#endif
 
         PRInt32 count = document->GetNumberOfShells();
         for (PRInt32 i = 0; i < count; i++) {
@@ -493,9 +501,10 @@ nsXULCommandDispatcher::SetScriptObject(void *aScriptObject)
 
 
 PRBool
-nsXULCommandDispatcher::Matches(const nsString& aList, const nsString& aElement)
+nsXULCommandDispatcher::Matches(const nsString& aList, 
+                                const nsAReadableString& aElement)
 {
-    if (aList.EqualsWithConversion("*"))
+    if (aList.Equals(NS_LITERAL_STRING("*")))
         return PR_TRUE; // match _everything_!
 
     PRInt32 indx = aList.Find(aElement);
@@ -537,8 +546,9 @@ nsXULCommandDispatcher::GetParentWindowFromDocument(nsIDOMDocument* aDocument, n
 }
 
 NS_IMETHODIMP
-nsXULCommandDispatcher::GetControllerForCommand(const nsString& command, nsIController** _retval)
+nsXULCommandDispatcher::GetControllerForCommand(const nsAReadableString& aCommand, nsIController** _retval)
 {
+    nsAutoString command(aCommand);
     *_retval = nsnull;
 
     nsCOMPtr<nsIControllers> controllers;
