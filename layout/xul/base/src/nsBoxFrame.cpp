@@ -1534,15 +1534,7 @@ nsBoxFrame::PaintChildren(nsPresContext*      aPresContext,
         
         // if we have dirty children or we are dirty 
         // place a green border around us.
-        PRBool dirty = PR_FALSE;
-        IsDirty(dirty);
-        PRBool dirtyc = PR_FALSE;
-        HasDirtyChildren(dirtyc);
-
-        if (dirty || dirtyc) {
-           IsDirty(dirty);
-           HasDirtyChildren(dirty);
-
+        if (GetStateBits & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) {
            nsRect dirtyr(inner);
            aRenderingContext.SetColor(NS_RGB(0,255,0));
            aRenderingContext.DrawRect(dirtyr);
@@ -2003,12 +1995,7 @@ nsBoxFrame::PaintDebug(nsIBox*              aBox,
 
         // if we have dirty children or we are dirty 
         // place a green border around us.
-        PRBool dirty = PR_FALSE;
-        IsDirty(dirty);
-        PRBool dirtyc = PR_FALSE;
-        HasDirtyChildren(dirty);
-
-        if (dirty || dirtyc) {
+        if (GetStateBits & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) {
            nsRect dirtyr(inner);
            aRenderingContext.SetColor(NS_RGB(0,255,0));
            aRenderingContext.DrawRect(dirtyr);
@@ -2650,13 +2637,9 @@ nsBoxFrame::LayoutChildAt(nsBoxLayoutState& aState, nsIBox* aBox, const nsRect& 
   nsRect oldRect(aBox->GetRect());
   aBox->SetBounds(aState, aRect);
 
-  PRBool dirty = PR_FALSE;
-  PRBool dirtyChildren = PR_FALSE;
-  aBox->IsDirty(dirty);
-  aBox->HasDirtyChildren(dirtyChildren);
-
   PRBool layout = PR_TRUE;
-  if (!(dirty || dirtyChildren) && aState.LayoutReason() != nsBoxLayoutState::Initial) 
+  if (!(aBox->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) &&
+      aState.LayoutReason() != nsBoxLayoutState::Initial) 
      layout = PR_FALSE;
   
   if (layout || (oldRect.width != aRect.width || oldRect.height != aRect.height))  {

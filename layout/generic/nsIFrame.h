@@ -1404,8 +1404,6 @@ NS_PTR_TO_INT32(frame->GetProperty(nsLayoutAtoms::embeddingLevel))
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect,
                        PRBool aRemoveOverflowArea = PR_FALSE)=0;
   NS_HIDDEN_(nsresult) Layout(nsBoxLayoutState& aBoxLayoutState);
-  nsresult IsDirty(PRBool& aIsDirty) { aIsDirty = (mState & NS_FRAME_IS_DIRTY) != 0; return NS_OK; }
-  nsresult HasDirtyChildren(PRBool& aIsDirty) { aIsDirty = (mState & NS_FRAME_HAS_DIRTY_CHILDREN) != 0; return NS_OK; }
   NS_IMETHOD MarkDirty(nsBoxLayoutState& aState)=0;
   NS_HIDDEN_(nsresult) MarkDirtyChildren(nsBoxLayoutState& aState);
   nsresult GetChildBox(nsIBox** aBox)

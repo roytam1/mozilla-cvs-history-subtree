@@ -344,9 +344,7 @@ nsBox::MarkStyleChange(nsBoxLayoutState& aState)
 PRBool
 nsBox::HasStyleChange()
 {
-  PRBool aDirty = PR_FALSE;
-  IsDirty(aDirty);
-  return aDirty;
+  return (GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
 }
 
 void
@@ -818,9 +816,8 @@ nsBox::SyncLayout(nsBoxLayoutState& aState)
   */
   
 
-  PRBool dirty = PR_FALSE;
-  IsDirty(dirty);
-  if (dirty || aState.LayoutReason() == nsBoxLayoutState::Initial)
+  if ((GetStateBits() & NS_FRAME_IS_DIRTY) ||
+      aState.LayoutReason() == nsBoxLayoutState::Initial)
      Redraw(aState);
 
   RemoveStateBits(NS_FRAME_HAS_DIRTY_CHILDREN | NS_FRAME_IS_DIRTY

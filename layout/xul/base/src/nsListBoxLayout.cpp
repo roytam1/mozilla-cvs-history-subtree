@@ -202,17 +202,12 @@ nsListBoxLayout::LayoutInternal(nsIBox* aBox, nsBoxLayoutState& aState)
   while (box) {
     // If this box is dirty or if it has dirty children, we
     // call layout on it.
-    PRBool dirty = PR_FALSE;           
-    PRBool dirtyChildren = PR_FALSE;           
-    box->IsDirty(dirty);
-    box->HasDirtyChildren(dirtyChildren);
-       
     nsRect childRect(box->GetRect());
     box->GetMargin(margin);
     
     // relayout if we must or we are dirty or some of our children are dirty
     //   or the client area is wider than us
-    if (relayout || dirty || dirtyChildren || childRect.width < clientRect.width) {
+    if (relayout || (box->GetStateBits & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) || childRect.width < clientRect.width) {
       childRect.x = 0;
       childRect.y = yOffset;
       childRect.width = clientRect.width;
