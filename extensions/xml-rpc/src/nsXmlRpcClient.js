@@ -171,11 +171,7 @@ nsXmlRpcClient.prototype = {
             this._inProgress = false;
         }
 
-        if (this._fault)
-            throw Components.Exception('XML-RPC Fault', null, null,
-                this._fault);
-        else
-            return this._result;
+        return this._result;
     },
 
     // Internal copy of the status, so's we can throw it to the syncnronous
