@@ -1288,13 +1288,18 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
   if (NS_FAILED(rv)) {
     // if we got an error, we are probably going to be replaced
 
-    // for a replaced object frame, clear our vertical alignment style info, see bug 36997
-    nsStyleTextReset* text = NS_STATIC_CAST(nsStyleTextReset*,
-      mStyleContext->GetUniqueStyleData(eStyleStruct_TextReset));
-    text->mVerticalAlign.SetNormalValue();
+    if (mContent->Tag() == nsHTMLAtoms::object) {
+      // for a replaced object frame, clear our vertical alignment
+      // style info, see bug 36997
+      nsStyleTextReset* text = NS_STATIC_CAST(nsStyleTextReset*,
+        mStyleContext->GetUniqueStyleData(eStyleStruct_TextReset));
+      text->mVerticalAlign.SetNormalValue();
 
-    //check for alternative content with CantRenderReplacedElement()
-    rv = aPresContext->PresShell()->CantRenderReplacedElement(this);
+      //check for alternative content with CantRenderReplacedElement()
+      rv = aPresContext->PresShell()->CantRenderReplacedElement(this);
+    } else {
+      rv = NS_OK;
+    }
   } else {
     NotifyContentObjectWrapper();
   }
