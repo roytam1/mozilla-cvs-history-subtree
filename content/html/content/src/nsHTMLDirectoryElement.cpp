@@ -66,7 +66,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 };
@@ -199,7 +199,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 {
   if (nsnull != aAttributes) {
     nsHTMLValue value;
-    nsMutableStyleList list(aContext);
+    nsStyleList* list = (nsStyleList*)
+      aContext->GetMutableStyleData(eStyleStruct_List);
 
     // type: enum
     aAttributes->GetAttribute(nsHTMLAtoms::type, value);
@@ -237,10 +238,10 @@ nsHTMLDirectoryElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLDirectoryElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLDirectoryElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                      nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

@@ -1355,19 +1355,18 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
   aAttributes->GetAttribute(nsHTMLAtoms::align, value);
   if (eHTMLUnit_Enumerated == value.GetUnit()) {
+    nsStyleDisplay* display = (nsStyleDisplay*)aContext->GetMutableStyleData(eStyleStruct_Display);
+    nsStyleText* text = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
     switch (value.GetIntValue()) {
     case NS_STYLE_TEXT_ALIGN_LEFT: {
-      nsMutableStyleDisplay display(aContext);
       display->mFloats = NS_STYLE_FLOAT_LEFT;
       break;
       }
     case NS_STYLE_TEXT_ALIGN_RIGHT: {
-      nsMutableStyleDisplay display(aContext);
       display->mFloats = NS_STYLE_FLOAT_RIGHT;
       break;
       }
     default: {
-      nsMutableStyleText text(aContext);
       text->mVerticalAlign.SetIntValue(value.GetIntValue(),
                                        eStyleUnit_Enumerated);
       break;

@@ -36,6 +36,8 @@
 #include "nsIPresContext.h"
 #include "nsHTMLParts.h"
 #include "nsStyleUtil.h"
+#include "nsCSSValue.h"
+#include "nsIRuleNode.h"
 
 /* for collections */
 #include "nsIDOMElement.h"
@@ -73,7 +75,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -1071,66 +1073,62 @@ nsHTMLTableElement::AttributeToString(nsIAtom* aAttribute,
 
 static void 
 MapTableFrameInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext*        aContext,
-                  nsIPresContext*                aPresContext, 
-                  nsStyleBorder*                 aBorder,
+                  nsRuleData*                    aData,
                   PRUint8                        aBorderStyle)
 {
   // set up defaults
-  for (PRInt32 sideX = NS_SIDE_TOP; sideX <= NS_SIDE_LEFT; sideX++) {
-    if (aBorder->GetBorderStyle(sideX) == NS_STYLE_BORDER_STYLE_NONE) {
-      aBorder->SetBorderStyle(sideX, aBorderStyle);
-    }
-  }
+  nsCSSValue styleVal(aBorderStyle, eCSSUnit_Enumerated);
+  if (aData->mMarginData->mBorderStyle->mLeft.GetUnit() == eCSSUnit_Null)
+    aData->mMarginData->mBorderStyle->mLeft = styleVal;
+  if (aData->mMarginData->mBorderStyle->mRight.GetUnit() == eCSSUnit_Null)
+    aData->mMarginData->mBorderStyle->mRight = styleVal;
+  if (aData->mMarginData->mBorderStyle->mTop.GetUnit() == eCSSUnit_Null)
+    aData->mMarginData->mBorderStyle->mTop = styleVal;
+  if (aData->mMarginData->mBorderStyle->mBottom.GetUnit() == eCSSUnit_Null)
+    aData->mMarginData->mBorderStyle->mBottom = styleVal;
 
   nsHTMLValue frameValue;
   // 0 out the sides that we want to hide based on the frame attribute
   aAttributes->GetAttribute(nsHTMLAtoms::frame, frameValue);
 
   if (frameValue.GetUnit() == eHTMLUnit_Enumerated) {
+    nsCSSValue none(NS_STYLE_BORDER_STYLE_NONE, eCSSUnit_Enumerated);
     // adjust the border style based on the value of frame
     switch (frameValue.GetIntValue())
     {
     case NS_STYLE_TABLE_FRAME_NONE:
-      aBorder->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_RIGHT, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_LEFT, NS_STYLE_BORDER_STYLE_NONE);
-
+      aData->mMarginData->mBorderStyle->mLeft = none;
+      aData->mMarginData->mBorderStyle->mRight = none;
+      aData->mMarginData->mBorderStyle->mTop = none;
+      aData->mMarginData->mBorderStyle->mBottom = none;
       break;
     case NS_STYLE_TABLE_FRAME_ABOVE:
-      aBorder->SetBorderStyle(NS_SIDE_RIGHT, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_LEFT, NS_STYLE_BORDER_STYLE_NONE);
-
+      aData->mMarginData->mBorderStyle->mLeft = none;
+      aData->mMarginData->mBorderStyle->mRight = none;
+      aData->mMarginData->mBorderStyle->mBottom = none;
       break;
-    case NS_STYLE_TABLE_FRAME_BELOW:
-      aBorder->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_RIGHT, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_LEFT, NS_STYLE_BORDER_STYLE_NONE);
-
+    case NS_STYLE_TABLE_FRAME_BELOW: 
+      aData->mMarginData->mBorderStyle->mLeft = none;
+      aData->mMarginData->mBorderStyle->mRight = none;
+      aData->mMarginData->mBorderStyle->mTop = none;
       break;
     case NS_STYLE_TABLE_FRAME_HSIDES:
-      aBorder->SetBorderStyle(NS_SIDE_RIGHT, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_LEFT, NS_STYLE_BORDER_STYLE_NONE);
-
+      aData->mMarginData->mBorderStyle->mLeft = none;
+      aData->mMarginData->mBorderStyle->mRight = none;
       break;
     case NS_STYLE_TABLE_FRAME_LEFT:
-      aBorder->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_RIGHT, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-
+      aData->mMarginData->mBorderStyle->mRight = none;
+      aData->mMarginData->mBorderStyle->mTop = none;
+      aData->mMarginData->mBorderStyle->mBottom = none;
       break;
     case NS_STYLE_TABLE_FRAME_RIGHT:
-      aBorder->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_LEFT, NS_STYLE_BORDER_STYLE_NONE);
-
+      aData->mMarginData->mBorderStyle->mLeft = none;
+      aData->mMarginData->mBorderStyle->mTop = none;
+      aData->mMarginData->mBorderStyle->mBottom = none;
       break;
     case NS_STYLE_TABLE_FRAME_VSIDES:
-      aBorder->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-      aBorder->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-
+      aData->mMarginData->mBorderStyle->mTop = none;
+      aData->mMarginData->mBorderStyle->mBottom = none;
       break;
     // BOX and BORDER are ignored, the caller has already set all the border sides
     // any illegal value is also ignored
@@ -1140,13 +1138,9 @@ MapTableFrameInto(const nsIHTMLMappedAttributes* aAttributes,
 
 static void 
 MapTableBorderInto(const nsIHTMLMappedAttributes* aAttributes,
-                   nsIMutableStyleContext*        aContext,
-                   nsIPresContext*                aPresContext,
+                   nsRuleData*                    aData,
                    PRUint8                        aBorderStyle)
 {
-  NS_PRECONDITION(nsnull!=aContext, "bad style context arg");
-  NS_PRECONDITION(nsnull!=aPresContext, "bad presentation context arg");
-
   nsHTMLValue borderValue;
 
   aAttributes->GetAttribute(nsHTMLAtoms::border, borderValue);
@@ -1161,23 +1155,18 @@ MapTableBorderInto(const nsIHTMLMappedAttributes* aAttributes,
   }
 
   if (borderValue.GetUnit() != eHTMLUnit_Null) {
-    nsMutableStyleBorder border(aContext);
-    nsMutableStyleTable tableStyle(aContext);
-    nsStyleCoord twips;
-    float p2t;
-
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-
+    nsStyleTable *tableStyle = (nsStyleTable*)
+      aData->mStyleContext->GetMutableStyleData(eStyleStruct_Table);
+    
     if (borderValue.GetUnit() != eHTMLUnit_Pixel) {
       // empty values of border get rules=all and frame=border
       tableStyle->mRules = NS_STYLE_TABLE_RULES_ALL;  
       tableStyle->mFrame = NS_STYLE_TABLE_FRAME_BORDER;
-      twips.SetCoordValue(NSIntPixelsToTwips(1, p2t));
+      borderValue.SetPixelValue(1);
     }
     else {
       PRInt32 borderThickness = borderValue.GetPixelValue();
-      twips.SetCoordValue(NSIntPixelsToTwips(borderThickness, p2t));
-
+      
       if (0 != borderThickness) {
         // border != 0 implies rules=all and frame=border
         tableStyle->mRules = NS_STYLE_TABLE_RULES_ALL;  
@@ -1190,14 +1179,193 @@ MapTableBorderInto(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
 
+    PRInt32 borderThickness = borderValue.GetPixelValue();
+
     // by default, set all border sides to the specified width
-    border->mBorder.SetTop(twips);
-    border->mBorder.SetRight(twips);
-    border->mBorder.SetBottom(twips);
-    border->mBorder.SetLeft(twips);
-    // then account for the frame attribute
-    MapTableFrameInto(aAttributes, aContext, aPresContext, border.get(),
-                      aBorderStyle);
+    nsCSSValue widthVal((float)borderThickness, eCSSUnit_Pixel);
+    if (aData->mMarginData->mBorderWidth->mLeft.GetUnit() == eCSSUnit_Null)
+      aData->mMarginData->mBorderWidth->mLeft = widthVal;
+    if (aData->mMarginData->mBorderWidth->mRight.GetUnit() == eCSSUnit_Null)
+      aData->mMarginData->mBorderWidth->mRight = widthVal;
+    if (aData->mMarginData->mBorderWidth->mTop.GetUnit() == eCSSUnit_Null)
+      aData->mMarginData->mBorderWidth->mTop = widthVal;
+    if (aData->mMarginData->mBorderWidth->mBottom.GetUnit() == eCSSUnit_Null)
+      aData->mMarginData->mBorderWidth->mBottom = widthVal;
+
+    // now account for the frame attribute
+    MapTableFrameInto(aAttributes, aData, aBorderStyle);
+  }
+}
+
+static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aData)
+    return;
+
+  if (!aAttributes)
+    return;
+
+  if (aData->mSID == eStyleStruct_Margin && aData->mMarginData) {
+    // align; Check for enumerated type (it may be another type if
+    // illegal)
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+
+    if (value.GetUnit() == eHTMLUnit_Enumerated) {
+      if ((NS_STYLE_TEXT_ALIGN_CENTER == value.GetIntValue()) ||
+          (NS_STYLE_TEXT_ALIGN_MOZ_CENTER == value.GetIntValue())) {
+        nsCSSValue autoVal(eCSSUnit_Auto);
+        nsCSSRect* margin = aData->mMarginData->mMargin;
+        if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+          margin->mLeft = autoVal;
+        if (margin->mRight.GetUnit() == eCSSUnit_Null)
+          margin->mRight = autoVal;
+      }
+    }
+
+    // hspace is mapped into left and right margin, 
+    // vspace is mapped into top and bottom margins
+    // - *** Quirks Mode only ***
+    nsCompatibility mode;
+    aData->mPresContext->GetCompatibilityMode(&mode);
+    if (eCompatibility_NavQuirks == mode) {
+      aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
+
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        nsCSSValue hval((float)value.GetPixelValue(), eCSSUnit_Pixel); 
+        nsCSSRect* margin = aData->mMarginData->mMargin;
+        if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+          margin->mLeft = hval;
+        if (margin->mRight.GetUnit() == eCSSUnit_Null)
+          margin->mRight = hval;
+      }
+
+      aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
+
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        nsCSSValue vval((float)value.GetPixelValue(), eCSSUnit_Pixel); 
+        nsCSSRect* margin = aData->mMarginData->mMargin;
+        if (margin->mTop.GetUnit() == eCSSUnit_Null)
+          margin->mTop = vval;
+        if (margin->mBottom.GetUnit() == eCSSUnit_Null)
+          margin->mBottom = vval;
+      }
+    }
+
+  }
+  else if (aData->mSID == eStyleStruct_Padding && aData->mMarginData) {
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+  
+    if (readDisplay &&
+        (readDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL)) {
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::cellpadding, value);
+      if (value.GetUnit() == eHTMLUnit_Null)
+        value.SetPixelValue(2); // Default to 2px padding within cells.
+
+      if (value.GetUnit() == eHTMLUnit_Pixel || value.GetUnit() == eHTMLUnit_Percent) {
+        // We have cellpadding.  This will override our padding values if we don't
+        // have any set.
+        nsCSSValue padVal;
+        if (value.GetUnit() == eHTMLUnit_Pixel)
+          padVal.SetFloatValue((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        else
+          padVal.SetPercentValue(value.GetPercentValue());
+
+        if (aData->mMarginData->mPadding->mLeft.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mPadding->mLeft = padVal;
+        if (aData->mMarginData->mPadding->mRight.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mPadding->mRight = padVal;
+        if (aData->mMarginData->mPadding->mTop.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mPadding->mTop = padVal;
+        if (aData->mMarginData->mPadding->mBottom.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mPadding->mBottom = padVal;
+      }
+    }
+  }
+  else if (aData->mSID == eStyleStruct_Border && aData->mMarginData) {
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+  
+    if (readDisplay &&
+        (readDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL)) {
+      // set the cell's border from the table
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::border, value);
+      if (((value.GetUnit() == eHTMLUnit_Pixel) &&
+           (value.GetPixelValue() > 0)) ||
+          (value.GetUnit() == eHTMLUnit_Empty)) {
+        
+        nsCSSValue widthVal((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        if (aData->mMarginData->mBorderWidth->mLeft.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mLeft = widthVal;
+        if (aData->mMarginData->mBorderWidth->mRight.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mRight = widthVal;
+        if (aData->mMarginData->mBorderWidth->mTop.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mTop = widthVal;
+        if (aData->mMarginData->mBorderWidth->mBottom.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mBottom = widthVal;
+
+        nsCompatibility mode;
+        aData->mPresContext->GetCompatibilityMode(&mode);
+        PRUint8 borderStyle = (eCompatibility_NavQuirks == mode) 
+                              ? NS_STYLE_BORDER_STYLE_BG_INSET : NS_STYLE_BORDER_STYLE_INSET;
+          // BG_INSET results in a border color based on background colors
+          // used for NavQuirks only...
+
+        nsCSSValue styleVal(borderStyle, eCSSUnit_Enumerated);
+        if (aData->mMarginData->mBorderStyle->mLeft.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderStyle->mLeft = styleVal;
+        if (aData->mMarginData->mBorderStyle->mRight.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderStyle->mRight = styleVal;
+        if (aData->mMarginData->mBorderStyle->mTop.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderStyle->mTop = styleVal;
+        if (aData->mMarginData->mBorderStyle->mBottom.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderStyle->mBottom = styleVal;
+      }
+    }
+    else {
+      // default border style is the Nav4.6 extension which uses the
+      // background color as the basis of the outset border. If the
+      // table has a transparent background then it finds the closest
+      // ancestor that has a non-transparent
+      // background. NS_STYLE_BORDER_OUTSET uses the border color of
+      // the table and if that is not set, then it uses the color.
+
+      nsCompatibility mode;
+      aData->mPresContext->GetCompatibilityMode(&mode);
+
+      PRUint8 borderStyle = (eCompatibility_NavQuirks == mode) 
+                            ? NS_STYLE_BORDER_STYLE_BG_OUTSET :
+                              NS_STYLE_BORDER_STYLE_OUTSET;
+
+      // bordercolor
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::bordercolor, value);
+      if ((eHTMLUnit_Color == value.GetUnit()) ||
+          (eHTMLUnit_ColorName == value.GetUnit())) {
+        nscolor color = value.GetColorValue();
+
+        nsCSSValue colorVal;
+        colorVal.SetColorValue(color);
+        if (aData->mMarginData->mBorderColor->mLeft.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderColor->mLeft = colorVal;
+        if (aData->mMarginData->mBorderColor->mRight.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderColor->mRight = colorVal;
+        if (aData->mMarginData->mBorderColor->mTop.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderColor->mTop = colorVal;
+        if (aData->mMarginData->mBorderColor->mBottom.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderColor->mBottom = colorVal;
+
+        borderStyle = NS_STYLE_BORDER_STYLE_OUTSET; // use css outset
+      }
+
+      // border and frame
+      MapTableBorderInto(aAttributes, aData, borderStyle);
+    }
   }
 }
 
@@ -1218,43 +1386,14 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                 aContext->GetStyleData(eStyleStruct_Display);
     if (readDisplay &&
         (readDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL)) {
-      // set the cell's border from the table
-      aAttributes->GetAttribute(nsHTMLAtoms::border, value);
-      if (((value.GetUnit() == eHTMLUnit_Pixel) &&
-           (value.GetPixelValue() > 0)) ||
-          (value.GetUnit() == eHTMLUnit_Empty)) {
-        float p2t;
-        aPresContext->GetPixelsToTwips(&p2t);
-
-        nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-        nsMutableStyleBorder borderStyleData(aContext);
-        nsStyleCoord width;
-        width.SetCoordValue(onePixel);
-
-        borderStyleData->mBorder.SetTop(width);
-        borderStyleData->mBorder.SetLeft(width);
-        borderStyleData->mBorder.SetBottom(width);
-        borderStyleData->mBorder.SetRight(width);
-
-        nsCompatibility mode;
-        aPresContext->GetCompatibilityMode(&mode);
-        PRUint8 borderStyle = (eCompatibility_NavQuirks == mode) 
-                              ? NS_STYLE_BORDER_STYLE_BG_INSET : NS_STYLE_BORDER_STYLE_INSET;
-          // BG_INSET results in a border color based on background colors
-          // used for NavQuirks only...
-
-        borderStyleData->SetBorderStyle(NS_SIDE_TOP,    borderStyle);
-        borderStyleData->SetBorderStyle(NS_SIDE_LEFT,   borderStyle);
-        borderStyleData->SetBorderStyle(NS_SIDE_BOTTOM, borderStyle);
-        borderStyleData->SetBorderStyle(NS_SIDE_RIGHT,  borderStyle);
-      }
     }
     else {  // handle attributes for table
       // width
       aAttributes->GetAttribute(nsHTMLAtoms::width, value);
 
       if (value.GetUnit() != eHTMLUnit_Null) {
-        nsMutableStylePosition position(aContext);
+        nsStylePosition* position = (nsStylePosition*)
+          aContext->GetMutableStyleData(eStyleStruct_Position);
 
         switch (value.GetUnit()) {
         case eHTMLUnit_Percent:
@@ -1280,7 +1419,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       aAttributes->GetAttribute(nsHTMLAtoms::height, value);
 
       if (value.GetUnit() != eHTMLUnit_Null) {
-        nsMutableStylePosition position(aContext);
+        nsStylePosition* position = (nsStylePosition*)
+          aContext->GetMutableStyleData(eStyleStruct_Position);
         switch (value.GetUnit()) {
         case eHTMLUnit_Percent:
           position->mHeight.SetPercentValue(value.GetPercentValue());
@@ -1295,51 +1435,15 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         }
       }
 
-      // default border style is the Nav4.6 extension which uses the
-      // background color as the basis of the outset border. If the
-      // table has a transparant background then it finds the closest
-      // ancestor that has a non transparant
-      // backgound. NS_STYLE_BORDER_OUTSET uses the border color of
-      // the table and if that is not set, then it uses the color.
-
-      nsCompatibility mode;
-      aPresContext->GetCompatibilityMode(&mode);
-
-      PRUint8 borderStyle = (eCompatibility_NavQuirks == mode) 
-                            ? NS_STYLE_BORDER_STYLE_BG_OUTSET :
-                              NS_STYLE_BORDER_STYLE_OUTSET;
-
-      // bordercolor
-      aAttributes->GetAttribute(nsHTMLAtoms::bordercolor, value);
-
-      if ((eHTMLUnit_Color == value.GetUnit()) ||
-          (eHTMLUnit_ColorName == value.GetUnit())) {
-        nscolor color = value.GetColorValue();
-        nsMutableStyleBorder borderStyleData(aContext);
-        borderStyleData->SetBorderColor(0, color);
-        borderStyleData->SetBorderColor(1, color);
-        borderStyleData->SetBorderColor(2, color);
-        borderStyleData->SetBorderColor(3, color);
-        borderStyle = NS_STYLE_BORDER_STYLE_OUTSET; // use css outset
-      }
-
-      // border and frame
-      MapTableBorderInto(aAttributes, aContext, aPresContext, borderStyle);
-
       // align; Check for enumerated type (it may be another type if
       // illegal)
-      nsMutableStyleMargin marginStyleData(aContext);
       aAttributes->GetAttribute(nsHTMLAtoms::align, value);
 
       if (value.GetUnit() == eHTMLUnit_Enumerated) {
-        if ((NS_STYLE_TEXT_ALIGN_CENTER == value.GetIntValue()) ||
-            (NS_STYLE_TEXT_ALIGN_MOZ_CENTER == value.GetIntValue())) {
-          nsStyleCoord otto(eStyleUnit_Auto);
-          marginStyleData->mMargin.SetLeft(otto);
-          marginStyleData->mMargin.SetRight(otto);
-        }
-        else {
-          nsMutableStyleDisplay display(aContext);
+        if ((NS_STYLE_TEXT_ALIGN_CENTER != value.GetIntValue()) &&
+            (NS_STYLE_TEXT_ALIGN_MOZ_CENTER != value.GetIntValue())) {
+          nsStyleDisplay* display = (nsStyleDisplay*)
+            aContext->GetMutableStyleData(eStyleStruct_Display);
 
           switch (value.GetIntValue()) {
           case NS_STYLE_TEXT_ALIGN_LEFT:
@@ -1355,22 +1459,25 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         }
       }
 
-    {
-      nsMutableStyleTable tableStyle(aContext);
-
       // layout
+      nsStyleTable* tableStyle=nsnull;
       aAttributes->GetAttribute(nsHTMLAtoms::layout, value);
 
       if (value.GetUnit() == eHTMLUnit_Enumerated) {
         // it may be another type if illegal
+        tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
         tableStyle->mLayoutStrategy = value.GetIntValue();
       }
 
       // cellpadding
       aAttributes->GetAttribute(nsHTMLAtoms::cellpadding, value);
       if (value.GetUnit() == eHTMLUnit_Pixel) {
+        if (nsnull==tableStyle)
+          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
         tableStyle->mCellPadding.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
       } else if (value.GetUnit() == eHTMLUnit_Percent) {
+        if (!tableStyle)
+          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
         tableStyle->mCellPadding.SetPercentValue(value.GetPercentValue());
       }
 
@@ -1379,6 +1486,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       aAttributes->GetAttribute(nsHTMLAtoms::cellspacing, value);
 
       if (value.GetUnit() == eHTMLUnit_Pixel) {
+        if (nsnull==tableStyle)
+          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
         tableStyle->mBorderSpacingX.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
         tableStyle->mBorderSpacingY.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
       }
@@ -1387,6 +1496,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
 
       if (value.GetUnit() != eHTMLUnit_Null) {
+        if (!tableStyle)
+          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
         if (value.GetUnit() == eHTMLUnit_Integer)
           tableStyle->mCols = value.GetIntValue();
         else // COLS had no value, so it refers to all columns
@@ -1397,33 +1508,10 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       aAttributes->GetAttribute(nsHTMLAtoms::rules, value);
 
       if (value.GetUnit() == eHTMLUnit_Enumerated) {
+        if (nsnull==tableStyle)
+          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
         tableStyle->mRules = value.GetIntValue();
       }
-
-      // hspace is mapped into left and right margin, 
-      // vspace is mapped into top and bottom margins
-      // - *** Quirks Mode only ***
-
-      if (eCompatibility_NavQuirks == mode) {
-        aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
-
-        if (value.GetUnit() == eHTMLUnit_Pixel) {
-          nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), sp2t);
-          nsStyleCoord hspace(twips);
-          marginStyleData->mMargin.SetLeft(hspace);
-          marginStyleData->mMargin.SetRight(hspace);
-        }
-
-        aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
-
-        if (value.GetUnit() == eHTMLUnit_Pixel) {
-          nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), sp2t);
-          nsStyleCoord vspace(twips);
-          marginStyleData->mMargin.SetTop(vspace);
-          marginStyleData->mMargin.SetBottom(vspace);
-        }
-      }
-    }
 
       //background: color
       nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext,
@@ -1467,10 +1555,10 @@ nsHTMLTableElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 }
 
 NS_IMETHODIMP
-nsHTMLTableElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLTableElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                  nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

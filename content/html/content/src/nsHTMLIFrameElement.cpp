@@ -36,7 +36,7 @@
 #include "nsIHTMLAttributes.h"
 #include "nsIChromeEventHandler.h"
 #include "nsDOMError.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLIFrameElement : public nsGenericHTMLContainerElement,
                             public nsIDOMHTMLIFrameElement,
@@ -72,7 +72,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 };
@@ -116,13 +116,11 @@ nsHTMLIFrameElement::~nsHTMLIFrameElement()
 NS_IMPL_ADDREF(nsHTMLIFrameElement);
 NS_IMPL_RELEASE(nsHTMLIFrameElement);
 
-
 // XPConnect interface list for nsHTMLIFrameElement
 NS_CLASSINFO_MAP_BEGIN(HTMLIFrameElement)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLIFrameElement)
   NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
 NS_CLASSINFO_MAP_END
-
 
 // QueryInterface implementation for nsHTMLIFrameElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLIFrameElement,
@@ -131,7 +129,6 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLIFrameElement,
   NS_INTERFACE_MAP_ENTRY(nsIChromeEventHandler)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLIFrameElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
-
 
 nsresult
 nsHTMLIFrameElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
@@ -276,6 +273,38 @@ nsHTMLIFrameElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aData || !aAttributes)
+    return;
+
+  if (aData->mSID == eStyleStruct_Border && aData->mMarginData) {
+    // frameborder: 0 | 1 (| NO | YES in quirks mode)
+    // If frameborder is 0 or No, set border to 0
+    // else leave it as the value set in html.css
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::frameborder, value);
+    if (value.GetUnit() == eHTMLUnit_Enumerated) {
+      PRInt32 frameborder = value.GetIntValue();
+      if (NS_STYLE_FRAME_0 == frameborder ||
+          NS_STYLE_FRAME_NO == frameborder ||
+          NS_STYLE_FRAME_OFF == frameborder) {
+        nsCSSValue widthVal(0.0f, eCSSUnit_Pixel);
+        if (aData->mMarginData->mBorderWidth->mLeft.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mLeft = widthVal;
+        if (aData->mMarginData->mBorderWidth->mRight.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mRight = widthVal;
+        if (aData->mMarginData->mBorderWidth->mTop.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mTop = widthVal;
+        if (aData->mMarginData->mBorderWidth->mBottom.GetUnit() == eCSSUnit_Null)
+          aData->mMarginData->mBorderWidth->mBottom = widthVal;
+      }
+    }
+  }
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
@@ -288,7 +317,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
     float p2t;
     aPresContext->GetScaledPixelsToTwips(&p2t);
-    nsMutableStylePosition pos(aContext);
+    nsStylePosition* pos = (nsStylePosition*)
+      aContext->GetMutableStyleData(eStyleStruct_Position);
 
     // width: value
     aAttributes->GetAttribute(nsHTMLAtoms::width, value);
@@ -308,25 +338,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     }
     else if (value.GetUnit() == eHTMLUnit_Percent) {
       pos->mHeight.SetPercentValue(value.GetPercentValue());
-    }
-
-    // frameborder: 0 | 1 (| NO | YES in quirks mode)
-    // If frameborder is 0 or No, set border to 0
-    // else leave it as the value set in html.css
-    aAttributes->GetAttribute(nsHTMLAtoms::frameborder, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      PRInt32 frameborder = value.GetIntValue();
-      if (NS_STYLE_FRAME_0 == frameborder ||
-          NS_STYLE_FRAME_NO == frameborder ||
-          NS_STYLE_FRAME_OFF == frameborder) {
-	      nsMutableStyleBorder border(aContext);
-        nsStyleCoord coord;
-        coord.SetCoordValue(0);
-        border->mBorder.SetTop(coord);
-        border->mBorder.SetRight(coord);
-        border->mBorder.SetBottom(coord);
-        border->mBorder.SetLeft(coord);
-      }
     }
   }
 
@@ -358,10 +369,10 @@ nsHTMLIFrameElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLIFrameElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLIFrameElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                   nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

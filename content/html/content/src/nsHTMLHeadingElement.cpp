@@ -62,7 +62,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 };
@@ -193,7 +193,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     nsHTMLValue value;
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      nsMutableStyleText text(aContext);
+      nsStyleText* text = (nsStyleText*)
+        aContext->GetMutableStyleData(eStyleStruct_Text);
       text->mTextAlign = value.GetIntValue();
     }
   }
@@ -218,10 +219,10 @@ nsHTMLHeadingElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLHeadingElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLHeadingElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                    nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

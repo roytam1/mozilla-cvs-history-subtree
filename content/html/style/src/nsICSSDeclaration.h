@@ -168,11 +168,11 @@ struct nsCSSText : public nsCSSStruct  {
 
   nsCSSValue mWordSpacing;
   nsCSSValue mLetterSpacing;
-  nsCSSValue mDecoration;
   nsCSSValue mVerticalAlign;
   nsCSSValue mTextTransform;
   nsCSSValue mTextAlign;
   nsCSSValue mTextIndent;
+  nsCSSValue mDecoration;
   nsCSSShadow* mTextShadow; // NEW
   nsCSSValue mUnicodeBidi;  // NEW
   nsCSSValue mLineHeight;

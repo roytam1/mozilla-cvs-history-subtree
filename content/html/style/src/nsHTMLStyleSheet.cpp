@@ -60,6 +60,8 @@
 #include "nsContentCID.h"
 #include "nsLayoutCID.h"
 
+#include "nsIRuleWalker.h"
+
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
 
@@ -82,6 +84,9 @@ public:
 
   NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
   NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
+
+  // The new mapping functions.
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
 
@@ -156,8 +161,18 @@ HTMLColorRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext
 NS_IMETHODIMP
 HTMLColorRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  nsMutableStyleColor styleColor(aContext);
-  styleColor->mColor = mColor;
+  nsStyleColor* styleColor = (nsStyleColor*)(aContext->GetMutableStyleData(eStyleStruct_Color));
+
+  if (nsnull != styleColor) {
+    styleColor->mColor = mColor;
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+HTMLColorRule::MapRuleInfoInto(nsRuleData* aRuleData)
+{
+  // Nothing to do.
   return NS_OK;
 }
 
@@ -219,13 +234,16 @@ HTMLDocumentColorRule::~HTMLDocumentColorRule()
 NS_IMETHODIMP
 HTMLDocumentColorRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  nsMutableStyleColor styleColor(aContext);
-  if (mForegroundSet) {
-    styleColor->mColor = mColor;
-  }
-  if (mBackgroundSet) {
-    styleColor->mBackgroundColor = mBackgroundColor;
-    styleColor->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
+  nsStyleColor* styleColor = (nsStyleColor*)(aContext->GetMutableStyleData(eStyleStruct_Color));
+
+  if (nsnull != styleColor) {
+    if (mForegroundSet) {
+      styleColor->mColor = mColor;
+    }
+    if (mBackgroundSet) {
+      styleColor->mBackgroundColor = mBackgroundColor;
+      styleColor->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
+    }
   }
   return NS_OK;
 }
@@ -287,6 +305,9 @@ public:
   NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
                           nsIPresContext* aPresContext);
 
+  // The new mapping functions.
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
+
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
 
   virtual void SizeOf(nsISizeOfHandler *aSizeofHandler, PRUint32 &aSize);
@@ -345,6 +366,13 @@ GenericTableRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresCont
 NS_IMETHODIMP
 GenericTableRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GenericTableRule::MapRuleInfoInto(nsRuleData* aRuleData)
+{
+  // Nothing to do.
   return NS_OK;
 }
 
@@ -420,7 +448,8 @@ TableBackgroundRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresConte
   nsIStyleContext* parentContext = aContext->GetParent();
 
   if (parentContext) {
-    nsMutableStyleColor styleColor(aContext);
+    nsStyleColor* styleColor;
+    styleColor = (nsStyleColor*)aContext->GetMutableStyleData(eStyleStruct_Color);
 
     const nsStyleColor* parentStyleColor;
     parentStyleColor = (const nsStyleColor*)parentContext->GetStyleData(eStyleStruct_Color);
@@ -467,8 +496,8 @@ TableTHRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPre
   nsIStyleContext* parentContext = aContext->GetParent();
 
   if (parentContext) {
-    nsMutableStyleText styleText(aContext);
-
+    nsStyleText* styleText = 
+      (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
     if (NS_STYLE_TEXT_ALIGN_DEFAULT == styleText->mTextAlign) {
       const nsStyleText* parentStyleText = 
         (const nsStyleText*)parentContext->GetStyleData(eStyleStruct_Text);
@@ -595,7 +624,7 @@ public:
                            nsIAtom* aMedium,
                            nsIContent* aContent,
                            nsIStyleContext* aParentContext,
-                           nsISupportsArray* aResults);
+                           nsIRuleWalker* aRuleWalker);
 
   NS_IMETHOD RulesMatching(nsIPresContext* aPresContext,
                            nsIAtom* aMedium,
@@ -603,7 +632,7 @@ public:
                            nsIAtom* aPseudoTag,
                            nsIStyleContext* aParentContext,
                            nsICSSPseudoComparator* aComparator,
-                           nsISupportsArray* aResults);
+                           nsIRuleWalker* aRuleWalker);
 
   NS_IMETHOD HasStateDependentStyle(nsIPresContext* aPresContext,
                                     nsIAtom*        aMedium,
@@ -827,11 +856,11 @@ HTMLStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
                                   nsIAtom* aMedium,
                                   nsIContent* aContent,
                                   nsIStyleContext* aParentContext,
-                                  nsISupportsArray* aResults)
+                                  nsIRuleWalker* aRuleWalker)
 {
   NS_PRECONDITION(nsnull != aPresContext, "null arg");
   NS_PRECONDITION(nsnull != aContent, "null arg");
-  NS_PRECONDITION(nsnull != aResults, "null arg");
+  NS_PRECONDITION(nsnull != aRuleWalker, "null arg");
 
   nsIStyledContent* styledContent;
   if (NS_SUCCEEDED(aContent->QueryInterface(NS_GET_IID(nsIStyledContent), (void**)&styledContent))) {
@@ -847,14 +876,12 @@ HTMLStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
           if (nsStyleUtil::IsHTMLLink(aContent, tag, aPresContext, &linkState)) {
             switch (linkState) {
               case eLinkState_Unvisited:
-                if (nsnull != mLinkRule) {
-                  aResults->AppendElement(mLinkRule);
-                }
+                if (mLinkRule)
+                  aRuleWalker->Forward(mLinkRule);
                 break;
               case eLinkState_Visited:
-                if (nsnull != mVisitedRule) {
-                  aResults->AppendElement(mVisitedRule);
-                }
+                if (mVisitedRule)
+                  aRuleWalker->Forward(mVisitedRule);
                 break;
               default:
                 break;
@@ -867,9 +894,8 @@ HTMLStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
                   (nsnull != eventStateManager)) {
                 PRInt32 state;
                 if (NS_OK == eventStateManager->GetContentState(aContent, state)) {
-                  if (0 != (state & NS_EVENT_STATE_ACTIVE)) {
-                    aResults->AppendElement(mActiveRule);
-                  }
+                  if (state & NS_EVENT_STATE_ACTIVE)
+                    aRuleWalker->Forward(mActiveRule);
                 }
                 NS_RELEASE(eventStateManager);
               }
@@ -887,27 +913,27 @@ HTMLStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
                (tag == nsHTMLAtoms::tfoot)) {
         // add the rule to handle text-align for a <th>
         if (tag == nsHTMLAtoms::th) {
-          aResults->AppendElement(mTableTHRule);
+          aRuleWalker->Forward(mTableTHRule);
         }
         nsCompatibility mode;
         aPresContext->GetCompatibilityMode(&mode);
         if (eCompatibility_NavQuirks == mode) {
           if (mDocumentColorRule) {
-            aResults->AppendElement(mDocumentColorRule);
+            aRuleWalker->Forward(mDocumentColorRule);
           }
-          aResults->AppendElement(mTableBackgroundRule);
+          aRuleWalker->Forward(mTableBackgroundRule);
         }
       }
       else if (tag == nsHTMLAtoms::html) {
         if (mDocumentColorRule) {
-          aResults->AppendElement(mDocumentColorRule);
+          aRuleWalker->Forward(mDocumentColorRule);
         }
       }
       NS_IF_RELEASE(tag);
     } // end html namespace
 
     // just get the style rules from the content
-    styledContent->GetContentStyleRules(aResults);
+    styledContent->WalkContentStyleRules(aRuleWalker);
 
     NS_RELEASE(styledContent);
   }
@@ -956,7 +982,7 @@ HTMLStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
                                   nsIAtom* aPseudoTag,
                                   nsIStyleContext* aParentContext,
                                   nsICSSPseudoComparator* aComparator,
-                                  nsISupportsArray* aResults)
+                                  nsIRuleWalker* aRuleWalker)
 {
   // no pseudo frame style
   return NS_OK;

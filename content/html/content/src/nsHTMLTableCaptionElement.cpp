@@ -60,7 +60,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -202,7 +202,9 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
       PRUint8 align = value.GetIntValue();
-      nsMutableStyleTable tableStyle(aContext);
+      nsStyleTable* tableStyle = (nsStyleTable*)
+        aContext->GetMutableStyleData(eStyleStruct_Table);
+
       tableStyle->mCaptionSide = align;
     }
   }
@@ -228,10 +230,10 @@ nsHTMLTableCaptionElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLTableCaptionElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLTableCaptionElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                         nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

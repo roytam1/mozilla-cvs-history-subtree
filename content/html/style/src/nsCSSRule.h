@@ -29,6 +29,7 @@ class nsIStyleSheet;
 class nsICSSStyleSheet;
 class nsIMutableStyleContext;
 class nsIPresContext;
+struct nsRuleData;
 
 class nsCSSRule {
 public:
@@ -51,6 +52,9 @@ public:
 
   NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
   NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
+
+  // The new mapping functions.
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
 protected:
   PRUint32 mInHeap : 1;

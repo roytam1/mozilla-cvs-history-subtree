@@ -72,7 +72,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -203,6 +203,16 @@ nsHTMLSpacerElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aData)
+    return;
+
+  nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
@@ -212,8 +222,10 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
   if (aAttributes && aPresContext && aContext) {
     nsHTMLValue value;
-    nsMutableStyleDisplay display(aContext);
-    nsMutableStylePosition position(aContext);
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aContext->GetMutableStyleData(eStyleStruct_Display);
+    nsStylePosition* position = (nsStylePosition*)
+      aContext->GetMutableStyleData(eStyleStruct_Position);
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (eHTMLUnit_Enumerated == value.GetUnit()) {
       switch (value.GetIntValue()) {
@@ -311,10 +323,10 @@ nsHTMLSpacerElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 }
 
 NS_IMETHODIMP
-nsHTMLSpacerElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLSpacerElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                  nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

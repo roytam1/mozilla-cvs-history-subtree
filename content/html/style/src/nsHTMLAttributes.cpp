@@ -36,7 +36,7 @@
 #include "nsCOMPtr.h"
 
 #include "nsIStyleSet.h"
-
+#include "nsIRuleWalker.h"
 
 MOZ_DECL_CTOR_COUNTER(HTMLAttribute)
 
@@ -282,10 +282,10 @@ public:
   NS_DECL_ISUPPORTS
 
   NS_IMETHOD Init(nsIHTMLStyleSheet* aSheet,
-                  nsMapAttributesFunc aFontMapFunc, nsMapAttributesFunc aMapFunc);
+                  nsMapRuleToAttributesFunc aMapRuleFunc, nsMapAttributesFunc aMapFunc);
   NS_IMETHOD Clone(nsHTMLMappedAttributes** aInstancePtrResult) const;
   NS_IMETHOD Reset(void);
-  NS_IMETHOD SetMappingFunctions(nsMapAttributesFunc aFontMapFunc, nsMapAttributesFunc aMapFunc);
+  NS_IMETHOD SetMappingFunctions(nsMapRuleToAttributesFunc aMapRuleFunc, nsMapAttributesFunc aMapFunc);
 
   NS_IMETHOD SetAttribute(nsIAtom* aAttrName, const nsAReadableString& aValue);
   NS_IMETHOD SetAttribute(nsIAtom* aAttrName, const nsHTMLValue& aValue);
@@ -314,8 +314,12 @@ public:
   NS_IMETHOD SetStyleSheet(nsIHTMLStyleSheet* aSheet);
   // Strength is an out-of-band weighting, always 0 here
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
+  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext,
+                              nsIPresContext* aPresContext);
   NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
+
+  // The new mapping functions.
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
 
@@ -325,7 +329,7 @@ public:
   PRInt32             mUseCount;
   PRInt32             mAttrCount;
   HTMLAttribute       mFirst;
-  nsMapAttributesFunc mFontMapper;
+  nsMapRuleToAttributesFunc mRuleMapper;
   nsMapAttributesFunc mMapper;
   PRBool              mUniqued;
 };
@@ -335,7 +339,7 @@ nsHTMLMappedAttributes::nsHTMLMappedAttributes(void)
     mUseCount(0),
     mAttrCount(0),
     mFirst(),
-    mFontMapper(nsnull),
+    mRuleMapper(nsnull),
     mMapper(nsnull),
     mUniqued(PR_FALSE)
 {
@@ -347,7 +351,7 @@ nsHTMLMappedAttributes::nsHTMLMappedAttributes(const nsHTMLMappedAttributes& aCo
     mUseCount(0),
     mAttrCount(aCopy.mAttrCount),
     mFirst(aCopy.mFirst),
-    mFontMapper(aCopy.mFontMapper),
+    mRuleMapper(aCopy.mRuleMapper),
     mMapper(aCopy.mMapper),
     mUniqued(PR_FALSE)
 {
@@ -394,11 +398,11 @@ nsHTMLMappedAttributes::QueryInterface(const nsIID& aIID,
 
 NS_IMETHODIMP
 nsHTMLMappedAttributes::Init(nsIHTMLStyleSheet* aSheet,
-                             nsMapAttributesFunc aFontMapFunc, 
+                             nsMapRuleToAttributesFunc aMapRuleFunc, 
                              nsMapAttributesFunc aMapFunc)
 {
   mSheet = aSheet;
-  mFontMapper = aFontMapFunc;
+  mRuleMapper = aMapRuleFunc;
   mMapper = aMapFunc;
   return NS_OK;
 }
@@ -431,10 +435,10 @@ nsHTMLMappedAttributes::Reset(void)
 }
 
 NS_IMETHODIMP
-nsHTMLMappedAttributes::SetMappingFunctions(nsMapAttributesFunc aFontMapFunc, 
+nsHTMLMappedAttributes::SetMappingFunctions(nsMapRuleToAttributesFunc aMapRuleFunc, 
                                             nsMapAttributesFunc aMapFunc)
 {
-  mFontMapper = aFontMapFunc;
+  mRuleMapper = aMapRuleFunc;
   mMapper = aMapFunc;
   return NS_OK;
 }
@@ -622,7 +626,7 @@ nsHTMLMappedAttributes::Equals(const nsIHTMLMappedAttributes* aOther, PRBool& aR
   }
   else {
     aResult = PR_FALSE;
-    if ((mFontMapper == other->mFontMapper) && (mMapper == other->mMapper) && 
+    if ((mRuleMapper == other->mRuleMapper) && (mMapper == other->mMapper) && 
         (mAttrCount == other->mAttrCount)) {
       const HTMLAttribute* attr = &mFirst;
       const HTMLAttribute* otherAttr = &(other->mFirst);
@@ -644,7 +648,7 @@ nsHTMLMappedAttributes::Equals(const nsIHTMLMappedAttributes* aOther, PRBool& aR
 NS_IMETHODIMP
 nsHTMLMappedAttributes::HashValue(PRUint32& aValue) const
 {
-  aValue = PRUint32(mFontMapper);
+  aValue = PRUint32(mRuleMapper);
   aValue = aValue ^ PRUint32(mMapper);
 
   const HTMLAttribute* attr = &mFirst;
@@ -732,11 +736,11 @@ nsHTMLMappedAttributes::GetStrength(PRInt32& aStrength) const
 }
 
 NS_IMETHODIMP
-nsHTMLMappedAttributes::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
+nsHTMLMappedAttributes::MapRuleInfoInto(nsRuleData* aRuleData)
 {
   if (0 < mAttrCount) {
-    if (mFontMapper) {
-      (*mFontMapper)(this, aContext, aPresContext);
+    if (mRuleMapper) {
+      (*mRuleMapper)(this, aRuleData);
     }
   }
   return NS_OK;
@@ -746,12 +750,19 @@ NS_IMETHODIMP
 nsHTMLMappedAttributes::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
   if (0 < mAttrCount) {
-    NS_ASSERTION(mMapper || mFontMapper, "no mapping function");
+    NS_ASSERTION(mMapper || mRuleMapper, "no mapping function");
     if (mMapper) {
       (*mMapper)(this, aContext, aPresContext);
     }
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLMappedAttributes::MapFontStyleInto(nsIMutableStyleContext* aContext,
+                                         nsIPresContext* aPresContext)
+{
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -849,7 +860,7 @@ public:
 
   NS_IMETHOD SetStyleSheet(nsIHTMLStyleSheet* aSheet);
 
-  NS_IMETHOD GetMappedAttributeStyleRules(nsISupportsArray* aArray) const;
+  NS_IMETHOD WalkMappedAttributeStyleRules(nsIRuleWalker* aRuleWalker) const;
 
 #ifdef UNIQUE_ATTR_SUPPORT
   NS_IMETHOD AddContentRef(void);
@@ -1116,10 +1127,10 @@ HTMLAttributesImpl::EnsureSingleMappedFor(nsIHTMLContent* aContent,
       NS_ADDREF(mMapped);
       mMapped->AddUse();
       if (aContent) {
-        nsMapAttributesFunc fontMapFunc;
+        nsMapRuleToAttributesFunc mapRuleFunc;
         nsMapAttributesFunc mapFunc;
-        aContent->GetAttributeMappingFunctions(fontMapFunc, mapFunc);
-        result = mMapped->Init(aSheet, fontMapFunc, mapFunc);
+        aContent->GetAttributeMappingFunctions(mapRuleFunc, mapFunc);
+        result = mMapped->Init(aSheet, mapRuleFunc, mapFunc);
       }
     }
     else {
@@ -1463,11 +1474,10 @@ HTMLAttributesImpl::SetStyleSheet(nsIHTMLStyleSheet* aSheet)
 }
 
 NS_IMETHODIMP
-HTMLAttributesImpl::GetMappedAttributeStyleRules(nsISupportsArray* aArray) const
+HTMLAttributesImpl::WalkMappedAttributeStyleRules(nsIRuleWalker* aRuleWalker) const
 {
-  if (aArray && mMapped) {
-    aArray->AppendElement((nsIStyleRule*)mMapped);
-  }
+  if (aRuleWalker && mMapped)
+    aRuleWalker->Forward((nsIStyleRule*)mMapped);
   return NS_OK;
 }
 

@@ -1,0 +1,173 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is Mozilla Communicator client code.
+ *
+ * The Initial Developer of the Original Code is Netscape Communications
+ * Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Original Author: David W. Hyatt (hyatt@netscape.com)
+ *
+ * Contributor(s): 
+ */
+
+#ifndef nsRuleNode_h___
+#define nsRuleNode_h___
+
+#include "nsCOMPtr.h"
+#include "nsHashtable.h"
+#include "nsIStyleRule.h"
+#include "nsFixedSizeAllocator.h"
+#include "nsIRuleNode.h"
+#include "nsIStyleContext.h"
+#include "nsIPresContext.h"
+#include "nsICSSDeclaration.h"
+
+class nsRuleNode: public nsIRuleNode {
+public:
+  NS_DECL_ISUPPORTS
+
+  enum RuleDetail {
+    eRuleNone, // No props have been specified at all.
+    eRulePartialMixed,  // At least one prop with a non-inherited val has been specified.  Some props
+                        // may also have been specified with a val of "inherit".  At least one
+                        // prop remains unspecified.
+    eRulePartialInherited,  // Only props with vals of "inherit" have been specified.  At least
+                            // one prop remains unspecified.
+    eRuleFullMixed, // All props have been specified.  At least one has a non-inherited val.
+    eRuleFullInherited // All props have been specified with a val of "inherit"
+  };
+
+private:
+  nsIPresContext* mPresContext; // Our pres context.
+
+  nsRuleNode* mParent; // A pointer to the parent node in the tree.  This enables us to
+                       // walk backwards from the most specific rule matched to the least
+                       // specific rule (which is the optimal order to use for lookups
+                       // of style properties.
+  nsIStyleRule* mRule; // A pointer to our specific rule.  This can be weak, since the sheet owns it.
+
+  nsSupportsHashtable* mChildren; // A hashtable that maps from rules to our RuleNode children.
+                                  // When matching rules, we use this table to transition from
+                                  // node to node (constructing new nodes as needed to flesh out
+                                  // the tree).
+
+  nsCachedStyleData* mStyleData;
+  PRUint32 mInheritBits;          // Used to cache the fact that we can look up cached data under a parent
+                                  // rule.  This is not the same thing as CSS inheritance.  
+
+  static PRUint32 gRefCnt;
+ 
+protected:
+  // The callback function for deleting rule nodes from our rule tree.
+  static PRBool PR_CALLBACK DeleteChildren(nsHashKey *aKey, void *aData, void *closure);
+  
+   // Overloaded new operator. Initializes the memory to 0 and relies on an arena
+  // (which comes from the presShell) to perform the allocation.
+  void* operator new(size_t sz, nsIPresContext* aContext);
+  void Destroy();
+
+  void PropagateBit(PRUint32 aBit, nsRuleNode* aHighestNode);
+  PRBool InheritsFromParentRule(const nsStyleStructID& aSID);
+  
+  const nsStyleStruct* SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext* aMutableContext);
+
+  const nsStyleStruct* WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext, 
+                                    nsIMutableStyleContext* aMutableContext, nsRuleData* aRuleData,
+                                    nsCSSStruct* aSpecificData);
+
+  const nsStyleStruct* ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartStruct, 
+                                        const nsCSSStruct& aStartData, 
+                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                        nsRuleNode* aHighestNode,
+                                        const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData, 
+                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                       nsRuleNode* aHighestNode,
+                                       const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeMarginData(nsStyleMargin* aStartMargin, const nsCSSMargin& aMarginData, 
+                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                         nsRuleNode* aHighestNode,
+                                         const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeBorderData(nsStyleBorder* aStartBorder, const nsCSSMargin& aMarginData, 
+                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                         nsRuleNode* aHighestNode,
+                                         const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputePaddingData(nsStylePadding* aStartPadding, const nsCSSMargin& aMarginData, 
+                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsRuleNode* aHighestNode,
+                                          const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeOutlineData(nsStyleOutline* aStartOutline, const nsCSSMargin& aMarginData, 
+                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsRuleNode* aHighestNode,
+                                          const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeListData(nsStyleList* aStartList, const nsCSSList& aListData, 
+                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                       nsRuleNode* aHighestNode,
+                                       const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputePositionData(nsStylePosition* aStartPosition, const nsCSSPosition& aPositionData, 
+                                           nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                           nsRuleNode* aHighestNode,
+                                           const RuleDetail& aRuleDetail);
+#ifdef INCLUDE_XUL
+  const nsStyleStruct* ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData, 
+                                      nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                      nsRuleNode* aHighestNode,
+                                      const RuleDetail& aRuleDetail);
+#endif
+
+  RuleDetail CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStruct& aCSSStruct);
+  RuleDetail CheckFontProperties(const nsCSSFont& aFont);
+  RuleDetail CheckMarginProperties(const nsCSSMargin& aMargin);
+  RuleDetail CheckBorderProperties(const nsCSSMargin& aMargin);
+  RuleDetail CheckPaddingProperties(const nsCSSMargin& aMargin);
+  RuleDetail CheckOutlineProperties(const nsCSSMargin& aMargin);
+  RuleDetail CheckListProperties(const nsCSSList& aList);
+  RuleDetail CheckPositionProperties(const nsCSSPosition& aPosition);
+#ifdef INCLUDE_XUL
+  RuleDetail CheckXULProperties(const nsCSSXUL& aXUL);
+#endif
+
+  nsCachedStyleData* GetStyleData() { return mStyleData; };
+  const nsStyleStruct* GetParentData(const nsStyleStructID& aSID); 
+  const nsStyleStruct* GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetMarginData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetPaddingData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetOutlineData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetListData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetPositionData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+#ifdef INCLUDE_XUL
+  const nsStyleStruct* GetXULData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+#endif
+
+public:
+  nsRuleNode(nsIPresContext* aPresContext, nsIStyleRule* aRule=nsnull, nsRuleNode* aParent=nsnull);
+  virtual ~nsRuleNode();
+
+  static void CreateRootNode(nsIPresContext* aPresContext, nsIRuleNode** aResult);
+
+  // The nsIRuleNode Interface
+  NS_IMETHOD Transition(nsIStyleRule* aRule, nsIRuleNode** aResult);
+  NS_IMETHOD GetParent(nsIRuleNode** aResult);
+  NS_IMETHOD IsRoot(PRBool* aResult);
+  NS_IMETHOD GetRule(nsIStyleRule** aResult);
+  NS_IMETHOD GetPresContext(nsIPresContext** aResult);
+  const nsStyleStruct* GetStyleData(nsStyleStructID aSID, 
+                                    nsIStyleContext* aContext,
+                                    nsIMutableStyleContext* aMutableContext);
+};
+
+#endif
+

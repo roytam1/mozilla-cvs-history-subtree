@@ -114,3 +114,9 @@ nsCSSRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresC
 {
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsCSSRule::MapRuleInfoInto(nsRuleData* aRuleData)
+{
+  return NS_OK;
+}

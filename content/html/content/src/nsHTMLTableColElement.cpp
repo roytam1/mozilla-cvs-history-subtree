@@ -65,7 +65,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -246,12 +246,15 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
   if (aAttributes) {
     nsHTMLValue value;
+    nsStyleText* textStyle = nsnull;
 
     // width
     aAttributes->GetAttribute(nsHTMLAtoms::width, value);
 
     if (value.GetUnit() != eHTMLUnit_Null) {
-      nsMutableStylePosition position(aContext);
+      nsStylePosition* position = (nsStylePosition*)
+        aContext->GetMutableStyleData(eStyleStruct_Position);
+
       switch (value.GetUnit()) {
       case eHTMLUnit_Percent:
         position->mWidth.SetPercentValue(value.GetPercentValue());
@@ -271,39 +274,26 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
 
-    PRUint8      newTextAlign;
-    nsStyleCoord newVerticalAlign;
-    PRBool       changedTextAlign = PR_FALSE;
-    PRBool       changedVerticalAlign = PR_FALSE;
-
     // align: enum
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      newTextAlign = value.GetIntValue();
-      changedTextAlign = PR_TRUE;
+      textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
+      textStyle->mTextAlign = value.GetIntValue();
     }
     
     // valign: enum
     aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      newVerticalAlign.SetIntValue(value.GetIntValue(), eStyleUnit_Enumerated);
-      changedVerticalAlign = PR_TRUE;
-    }
-
-    if (changedTextAlign || changedVerticalAlign) {
-      nsMutableStyleText text(aContext);
-      if (changedTextAlign) {
-        text->mTextAlign = newTextAlign;
-      }
-      if (changedVerticalAlign) {
-        text->mVerticalAlign = newVerticalAlign;
-      }
+      if (nsnull==textStyle)
+        textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
+      textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(),
+                                            eStyleUnit_Enumerated);
     }
 
     // span: int
     aAttributes->GetAttribute(nsHTMLAtoms::span, value);
     if (value.GetUnit() == eHTMLUnit_Integer) {
-      nsMutableStyleTable tableStyle(aContext);
+      nsStyleTable *tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
       tableStyle->mSpan = value.GetIntValue();
     }
   }
@@ -331,10 +321,10 @@ nsHTMLTableColElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLTableColElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLTableColElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                     nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

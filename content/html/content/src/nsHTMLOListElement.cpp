@@ -60,7 +60,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -236,7 +236,8 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 {
   if (nsnull != aAttributes) {
     nsHTMLValue value;
-    nsMutableStyleList list(aContext);
+    nsStyleList* list = (nsStyleList*)
+      aContext->GetMutableStyleData(eStyleStruct_List);
 
     // type: enum
     aAttributes->GetAttribute(nsHTMLAtoms::type, value);
@@ -274,10 +275,10 @@ nsHTMLOListElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLOListElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLOListElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                  nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

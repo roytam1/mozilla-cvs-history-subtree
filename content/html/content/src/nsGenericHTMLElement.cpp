@@ -93,6 +93,8 @@
 #include "nsIBindingManager.h"
 #include "nsIXBLBinding.h"
 
+#include "nsIRuleWalker.h"
+
 #include "nsIObjectFrame.h"
 #include "nsLayoutAtoms.h"
 #include "xptinfo.h"
@@ -1925,13 +1927,13 @@ nsGenericHTMLElement::HasClass(nsIAtom* aClass) const
 }
 
 nsresult
-nsGenericHTMLElement::GetContentStyleRules(nsISupportsArray* aRules)
+nsGenericHTMLElement::WalkContentStyleRules(nsIRuleWalker* aRuleWalker)
 {
   nsresult result = NS_OK;
 
-  if (aRules) {
+  if (aRuleWalker) {
     if (mAttributes) {
-      result = mAttributes->GetMappedAttributeStyleRules(aRules);
+      result = mAttributes->WalkMappedAttributeStyleRules(aRuleWalker);
     }
   }
   else {
@@ -1941,27 +1943,25 @@ nsGenericHTMLElement::GetContentStyleRules(nsISupportsArray* aRules)
 }
 
 nsresult
-nsGenericHTMLElement::GetInlineStyleRules(nsISupportsArray* aRules)
+nsGenericHTMLElement::WalkInlineStyleRules(nsIRuleWalker* aRuleWalker)
 {
   nsresult result = NS_ERROR_NULL_POINTER;
-  nsIStyleRule* rule = nsnull;
-
-  if (aRules && mAttributes) {
+  nsCOMPtr<nsIStyleRule> rule;
+  
+  if (aRuleWalker && mAttributes) {
     nsHTMLValue value;
     if (NS_CONTENT_ATTR_HAS_VALUE == mAttributes->GetAttribute(nsHTMLAtoms::style, value)) {
       if (eHTMLUnit_ISupports == value.GetUnit()) {
-        nsISupports* supports = value.GetISupportsValue();
-        if (supports) {
-          result = supports->QueryInterface(NS_GET_IID(nsIStyleRule), (void**)&rule);
-        }
-        NS_RELEASE(supports);
+        nsCOMPtr<nsISupports> supports = getter_AddRefs(value.GetISupportsValue());
+        if (supports)
+          rule = do_QueryInterface(supports, &result);
       }
     }
   }
-  if (rule) {
-    aRules->AppendElement(rule);
-    NS_RELEASE(rule);
-  }
+
+  if (rule)
+    aRuleWalker->Forward(rule);
+
   return result;
 }
 
@@ -2231,17 +2231,18 @@ MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
   // Get dir attribute
   aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
   if (eHTMLUnit_Enumerated == value.GetUnit() ) {
-    nsMutableStyleText text(aStyleContext);
+    nsStyleText* text = (nsStyleText*)
+                        aStyleContext->GetMutableStyleData(eStyleStruct_Text);
     text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_OVERRIDE;
   }
 }
 #endif // IBMBIDI
 
 NS_IMETHODIMP
-nsGenericHTMLElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsGenericHTMLElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                    nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
 #ifdef IBMBIDI
   if (mNodeInfo->Equals(nsHTMLAtoms::bdo) )
     aMapFunc = &MapBdoAttributesInto;
@@ -3034,7 +3035,8 @@ nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAt
   nsHTMLValue value;
   aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
   if (value.GetUnit() == eHTMLUnit_Enumerated) {
-    nsMutableStyleDisplay display(aStyleContext);
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aStyleContext->GetMutableStyleData(eStyleStruct_Display);
     display->mDirection = value.GetIntValue();
 #ifdef IBMBIDI
     display->mExplicitDirection = display->mDirection;
@@ -3053,7 +3055,8 @@ nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAt
         return;
       }
     }
-    nsMutableStyleDisplay display(aStyleContext);
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aStyleContext->GetMutableStyleData(eStyleStruct_Display);
     nsAutoString lang;
     value.GetStringValue(lang);
     gLangService->LookupLanguage(lang.GetUnicode(),
@@ -3101,9 +3104,9 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
 
   float p2t;
   aPresContext->GetScaledPixelsToTwips(&p2t);
-  nsMutableStylePosition pos(aContext);
-  nsMutableStyleMargin margin(aContext);
-
+  nsStylePosition* pos = (nsStylePosition*)
+    aContext->GetMutableStyleData(eStyleStruct_Position);
+  
   // width: value
   aAttributes->GetAttribute(nsHTMLAtoms::width, value);
   if (value.GetUnit() == eHTMLUnit_Pixel) {
@@ -3122,34 +3125,6 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
   }
   else if (value.GetUnit() == eHTMLUnit_Percent) {
     pos->mHeight.SetPercentValue(value.GetPercentValue());
-  }
-
-  // hspace: value
-  aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
-  if (value.GetUnit() == eHTMLUnit_Pixel) {
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-    nsStyleCoord c(twips);
-    margin->mMargin.SetLeft(c);
-    margin->mMargin.SetRight(c);
-  }
-  else if (value.GetUnit() == eHTMLUnit_Percent) {
-    nsStyleCoord c(value.GetPercentValue(), eStyleUnit_Percent);
-    margin->mMargin.SetLeft(c);
-    margin->mMargin.SetRight(c);
-  }
-
-  // vspace: value
-  aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
-  if (value.GetUnit() == eHTMLUnit_Pixel) {
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-    nsStyleCoord c(twips);
-    margin->mMargin.SetTop(c);
-    margin->mMargin.SetBottom(c);
-  }
-  else if (value.GetUnit() == eHTMLUnit_Percent) {
-    nsStyleCoord c(value.GetPercentValue(), eStyleUnit_Percent);
-    margin->mMargin.SetTop(c);
-    margin->mMargin.SetBottom(c);
   }
 }
 
@@ -3176,22 +3151,19 @@ nsGenericHTMLElement::MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* 
   aAttributes->GetAttribute(nsHTMLAtoms::align, value);
   if (value.GetUnit() == eHTMLUnit_Enumerated) {
     PRUint8 align = (PRUint8)(value.GetIntValue());
-    nsMutableStyleDisplay display(aContext);
-    nsMutableStyleText text(aContext);
-    nsMutableStyleMargin margin(aContext);
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aContext->GetMutableStyleData(eStyleStruct_Display);
+    nsStyleText* text = (nsStyleText*)
+      aContext->GetMutableStyleData(eStyleStruct_Text);
     float p2t;
     aPresContext->GetScaledPixelsToTwips(&p2t);
     nsStyleCoord three(NSIntPixelsToTwips(3, p2t));
     switch (align) {
       case NS_STYLE_TEXT_ALIGN_LEFT:
         display->mFloats = NS_STYLE_FLOAT_LEFT;
-        margin->mMargin.SetLeft(three);
-        margin->mMargin.SetRight(three);
         break;
       case NS_STYLE_TEXT_ALIGN_RIGHT:
         display->mFloats = NS_STYLE_FLOAT_RIGHT;
-        margin->mMargin.SetLeft(three);
-        margin->mMargin.SetRight(three);
         break;
       default:
         text->mVerticalAlign.SetIntValue(align, eStyleUnit_Enumerated);
@@ -3211,68 +3183,115 @@ nsGenericHTMLElement::GetImageAlignAttributeImpact(const nsIAtom* aAttribute,
   return PR_FALSE;
 }
 
+void
+nsGenericHTMLElement::MapImageMarginAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
+                                                  nsRuleData* aData)
+{
+  if (aData->mSID != eStyleStruct_Margin || !aData->mMarginData)
+    return;
+
+  nsHTMLValue value;
+
+  // hspace: value
+  aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
+  nsCSSValue hval;
+  if (value.GetUnit() == eHTMLUnit_Pixel)
+    hval = nsCSSValue((float)value.GetPixelValue(), eCSSUnit_Pixel);
+  else if (value.GetUnit() == eHTMLUnit_Percent)
+    hval.SetPercentValue(value.GetPercentValue());
+
+  if (hval.GetUnit() != eCSSUnit_Null) {
+    nsCSSRect* margin = aData->mMarginData->mMargin;
+    if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+      margin->mLeft = hval;
+    if (margin->mRight.GetUnit() == eCSSUnit_Null)
+      margin->mRight = hval;
+  }
+
+  // vspace: value
+  aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
+  nsCSSValue vval;
+  if (value.GetUnit() == eHTMLUnit_Pixel)
+    vval = nsCSSValue((float)value.GetPixelValue(), eCSSUnit_Pixel);
+  else if (value.GetUnit() == eHTMLUnit_Percent)
+    vval.SetPercentValue(value.GetPercentValue());
+
+  if (vval.GetUnit() != eCSSUnit_Null) {
+    nsCSSRect* margin = aData->mMarginData->mMargin;
+    if (margin->mTop.GetUnit() == eCSSUnit_Null)
+      margin->mTop = vval;
+    if (margin->mBottom.GetUnit() == eCSSUnit_Null)
+      margin->mBottom = vval;
+  }
+
+  // align of left or right causes us to put in a margin of 3px.
+  // XXX this could be done in ua.css.
+  aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+  if (value.GetUnit() == eHTMLUnit_Enumerated) {
+    PRUint8 align = (PRUint8)(value.GetIntValue());
+    nsCSSValue hval(3.0f, eCSSUnit_Pixel);
+    if (align == NS_STYLE_TEXT_ALIGN_LEFT ||
+        align == NS_STYLE_TEXT_ALIGN_RIGHT) {
+      nsCSSRect* margin = aData->mMarginData->mMargin;
+      if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+        margin->mLeft = hval;
+      if (margin->mRight.GetUnit() == eCSSUnit_Null)
+        margin->mRight = hval;
+    }
+  }
+}
 
 void
 nsGenericHTMLElement::MapImageBorderAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
-                                                  nsIMutableStyleContext* aContext,
-                                                  nsIPresContext* aPresContext,
-                                                  nscolor aBorderColors[4])
+                                                  nsRuleData* aData)
 {
+  if (aData->mSID != eStyleStruct_Border || !aData->mMarginData)
+    return;
+
   nsHTMLValue value;
 
   // border: pixels
   aAttributes->GetAttribute(nsHTMLAtoms::border, value);
-  if (value.GetUnit() == eHTMLUnit_Null) {
-    if (nsnull == aBorderColors) {
-      return;
-    }
-    // If no border is defined and we are forcing a border, force
-    // the size to 2 pixels.
-    value.SetPixelValue(2);
-  }
-  else if (value.GetUnit() != eHTMLUnit_Pixel) {  // something other than pixels
+  if (value.GetUnit() == eHTMLUnit_Null)
+    return;
+  
+  if (value.GetUnit() != eHTMLUnit_Pixel)  // something other than pixels
     value.SetPixelValue(0);
-  }
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+  nscoord val = value.GetPixelValue();
 
-  // Fixup border-padding sums: subtract out the old size and then
-  // add in the new size.
-  nsMutableStyleBorder border(aContext);
+  nsCSSValue widthVal((float)val, eCSSUnit_Pixel);
+  nsCSSRect* borderWidth = aData->mMarginData->mBorderWidth;
+  if (borderWidth->mLeft.GetUnit() == eCSSUnit_Null)
+    borderWidth->mLeft = widthVal;
+  if (borderWidth->mTop.GetUnit() == eCSSUnit_Null)
+    borderWidth->mTop = widthVal;
+  if (borderWidth->mRight.GetUnit() == eCSSUnit_Null)
+    borderWidth->mRight = widthVal;
+  if (borderWidth->mBottom.GetUnit() == eCSSUnit_Null)
+    borderWidth->mBottom = widthVal;
 
-  nsStyleCoord coord;
-  coord.SetCoordValue(twips);
-  border->mBorder.SetTop(coord);
-  border->mBorder.SetRight(coord);
-  border->mBorder.SetBottom(coord);
-  border->mBorder.SetLeft(coord);
+  nsCSSValue styleVal(NS_STYLE_BORDER_STYLE_SOLID, eCSSUnit_Enumerated);
+  nsCSSRect* borderStyle = aData->mMarginData->mBorderStyle;
+  if (borderStyle->mLeft.GetUnit() == eCSSUnit_Null)
+    borderStyle->mLeft = styleVal;
+  if (borderStyle->mTop.GetUnit() == eCSSUnit_Null)
+    borderStyle->mTop = styleVal;
+  if (borderStyle->mRight.GetUnit() == eCSSUnit_Null)
+    borderStyle->mRight = styleVal;
+  if (borderStyle->mBottom.GetUnit() == eCSSUnit_Null)
+    borderStyle->mBottom = styleVal;
 
-	border->SetBorderStyle(0,NS_STYLE_BORDER_STYLE_SOLID);
-	border->SetBorderStyle(1,NS_STYLE_BORDER_STYLE_SOLID);
-	border->SetBorderStyle(2,NS_STYLE_BORDER_STYLE_SOLID);
-	border->SetBorderStyle(3,NS_STYLE_BORDER_STYLE_SOLID);
-
-
-  // Use supplied colors if provided, otherwise use color for border
-  // color
-  if (nsnull != aBorderColors) {
-    border->SetBorderColor(0, aBorderColors[0]);
-  	border->SetBorderColor(1, aBorderColors[1]);
-	  border->SetBorderColor(2, aBorderColors[2]);
-	  border->SetBorderColor(3, aBorderColors[3]);
-  }
-  else {
-    // Color is inherited from "color"
-    const nsStyleColor* styleColor = (const nsStyleColor*)
-      aContext->GetStyleData(eStyleStruct_Color);
-    nscolor color = styleColor->mColor;
-    border->SetBorderColor(0, color);
-    border->SetBorderColor(1, color);
-    border->SetBorderColor(2, color);
-    border->SetBorderColor(3, color);
-  }
+  nsCSSRect* borderColor = aData->mMarginData->mBorderColor;
+  nsCSSValue colorVal(NS_STYLE_COLOR_MOZ_USE_TEXT_COLOR, eCSSUnit_Enumerated);
+  if (borderColor->mLeft.GetUnit() == eCSSUnit_Null)
+    borderColor->mLeft = colorVal;
+  if (borderColor->mTop.GetUnit() == eCSSUnit_Null)
+    borderColor->mTop = colorVal;
+  if (borderColor->mRight.GetUnit() == eCSSUnit_Null)
+    borderColor->mRight = colorVal;
+  if (borderColor->mBottom.GetUnit() == eCSSUnit_Null)
+    borderColor->mBottom = colorVal;
 }
 
 PRBool
@@ -3316,7 +3335,8 @@ nsGenericHTMLElement::MapBackgroundAttributesInto(const nsIHTMLMappedAttributes*
                                              getter_AddRefs(docURL));
             rv = NS_MakeAbsoluteURI(absURLSpec, spec, docURL);
             if (NS_SUCCEEDED(rv)) {
-				      nsMutableStyleColor color(aContext);
+              nsStyleColor* color = (nsStyleColor*)
+                aContext->GetMutableStyleData(eStyleStruct_Color);
               color->mBackgroundImage = absURLSpec;
               color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
               color->mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
@@ -3330,7 +3350,8 @@ nsGenericHTMLElement::MapBackgroundAttributesInto(const nsIHTMLMappedAttributes*
       aPresContext->GetCompatibilityMode(&mode);
       if (eCompatibility_NavQuirks == mode &&
           eHTMLUnit_Empty == value.GetUnit()) {
-	      nsMutableStyleColor color(aContext);
+        nsStyleColor* color;
+        color = (nsStyleColor*)aContext->GetMutableStyleData(eStyleStruct_Color);
         color->mBackgroundImage.Truncate();
         color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
         color->mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
@@ -3342,7 +3363,8 @@ nsGenericHTMLElement::MapBackgroundAttributesInto(const nsIHTMLMappedAttributes*
   if (NS_CONTENT_ATTR_HAS_VALUE == aAttributes->GetAttribute(nsHTMLAtoms::bgcolor, value)) {
     if ((eHTMLUnit_Color == value.GetUnit()) ||
         (eHTMLUnit_ColorName == value.GetUnit())) {
-      nsMutableStyleColor color(aContext);
+      nsStyleColor* color = (nsStyleColor*)
+        aContext->GetMutableStyleData(eStyleStruct_Color);
       color->mBackgroundColor = value.GetColorValue();
       color->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
     }

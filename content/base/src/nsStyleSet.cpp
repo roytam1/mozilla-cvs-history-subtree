@@ -24,6 +24,7 @@
 #include "nsIStyleSheet.h"
 #include "nsIStyleRuleProcessor.h"
 #include "nsIStyleRule.h"
+#include "nsICSSStyleRule.h"
 #include "nsIStyleContext.h"
 #include "nsISupportsArray.h"
 #include "nsIFrame.h"
@@ -37,7 +38,8 @@
 #include "nsICSSStyleSheet.h"
 #include "nsNetUtil.h"
 #include "nsIStyleRuleSupplier.h"
-#include "nsISizeOfHandler.h"
+#include "nsRuleNode.h"
+#include "nsIRuleWalker.h"
 
 #ifdef MOZ_PERF_METRICS
   #include "nsITimeRecorder.h"
@@ -50,7 +52,17 @@
   #define STYLESET_STOP_TIMER(a) ((void)0)
 #endif
 
+#include "nsISizeOfHandler.h"
+
 static NS_DEFINE_IID(kIStyleFrameConstructionIID, NS_ISTYLE_FRAME_CONSTRUCTION_IID);
+
+// - fast cache uses a CRC32 on the style context to quickly find sharing candidates.
+//   Enabling it by defining USE_FAST_CACHE makes style sharing significantly faster
+//   but introduces more code and logic, and is thus potentially more error-prone
+// - Enabled by default: disable to determine if there are problems in the fast-cache
+// NOTE: make sure the define COMPUTE_STYLEDATA_CRC is ON in nsStyleContext.cpp for 
+//       this to be affective...
+#define USE_FAST_CACHE
 
 #ifdef USE_FAST_CACHE
 ///////////////////////////////////////
@@ -69,7 +81,6 @@ static NS_DEFINE_IID(kIStyleFrameConstructionIID, NS_ISTYLE_FRAME_CONSTRUCTION_I
 
 #ifdef USE_FAST_CACHE
 
-#include "nsHashtable.h"
 PRBool PR_CALLBACK HashTableEnumDestroy(nsHashKey *aKey, void *aData, void* closure);
 PRBool PR_CALLBACK HashTableEnumDump(nsHashKey *aKey, void *aData, void* closure);
 PRBool PR_CALLBACK HashTableEnumTickle(nsHashKey *aKey, void *aData, void* closure);
@@ -186,6 +197,8 @@ public:
                                                nsIStyleContext* aParentContext,
                                                PRBool aForceUnique = PR_FALSE);
 
+  NS_IMETHOD ClearRuleTree();
+
   NS_IMETHOD ReParentStyleContext(nsIPresContext* aPresContext,
                                   nsIStyleContext* aStyleContext, 
                                   nsIStyleContext* aNewParentContext,
@@ -270,6 +283,8 @@ public:
   virtual void SizeOf(nsISizeOfHandler *aSizeofHandler, PRUint32 &aSize);
   virtual void ResetUniqueStyleItems(void);
 
+  void AddImportantRules(nsIRuleNode* aRuleNode);
+
 #ifdef SHARE_STYLECONTEXTS
   // add and remove from the cache of all contexts
   NS_IMETHOD AddStyleContext(nsIStyleContext *aNewStyleContext);
@@ -306,6 +321,8 @@ protected:
   PRBool EnsureArray(nsISupportsArray** aArray);
   void RecycleArray(nsISupportsArray** aArray);
   
+  void EnsureRuleWalker(nsIPresContext* aPresContext);
+
   void ClearRuleProcessors(void);
   void ClearOverrideRuleProcessors(void);
   void ClearBackstopRuleProcessors(void);
@@ -313,9 +330,10 @@ protected:
 
   nsresult  GatherRuleProcessors(void);
 
-  nsIStyleContext* GetContext(nsIPresContext* aPresContext, nsIStyleContext* aParentContext, 
-                              nsIAtom* aPseudoTag, nsISupportsArray* aRules, PRBool aForceUnique, 
-                              PRBool& aUsedRules);
+  nsIStyleContext* GetContext(nsIPresContext* aPresContext, 
+                              nsIStyleContext* aParentContext,
+                              nsIAtom* aPseudoTag, 
+                              PRBool aForceUnique);
   void  List(FILE* out, PRInt32 aIndent, nsISupportsArray* aSheets);
   void  ListContexts(nsIStyleContext* aRootContext, FILE* out, PRInt32 aIndent);
 
@@ -333,6 +351,11 @@ protected:
   nsIStyleSheet*    mQuirkStyleSheet; // cached instance for enabling/disabling
 
   nsCOMPtr<nsIStyleRuleSupplier> mStyleRuleSupplier; 
+
+  nsCOMPtr<nsIRuleNode> mRuleTree; // This is the root of our rule tree.  It is a lexicographic tree of
+                                   // matched rules that style contexts use to look up properties.
+  nsCOMPtr<nsIRuleWalker> mRuleWalker; // This is an instance of a rule walker that can be used
+                                       // to navigate through our tree.
 
 #ifdef SHARE_STYLECONTEXTS
 
@@ -384,7 +407,7 @@ StyleSetImpl::StyleSetImpl()
     const char kQuirk_href[] = "resource:/res/quirk.css";
     NS_NewURI (&gQuirkURI, kQuirk_href);
     NS_ASSERTION (gQuirkURI != 0, "Cannot allocate nsStyleSetImpl::gQuirkURI");
-  }  
+  }
 }
 
 StyleSetImpl::~StyleSetImpl()
@@ -807,19 +830,19 @@ struct RulesMatchingData {
                     nsIAtom* aMedium,
                     nsIContent* aContent,
                     nsIStyleContext* aParentContext,
-                    nsISupportsArray* aResults)
+                    nsIRuleWalker* aRuleWalker)
     : mPresContext(aPresContext),
       mMedium(aMedium),
       mContent(aContent),
       mParentContext(aParentContext),
-      mResults(aResults)
+      mRuleWalker(aRuleWalker)
   {
   }
   nsIPresContext*   mPresContext;
   nsIAtom*          mMedium;
   nsIContent*       mContent;
   nsIStyleContext*  mParentContext;
-  nsISupportsArray* mResults;
+  nsCOMPtr<nsIRuleWalker> mRuleWalker;
 };
 
 static PRBool
@@ -829,7 +852,7 @@ EnumRulesMatching(nsISupports* aProcessor, void* aData)
   RulesMatchingData* data = (RulesMatchingData*)aData;
 
   processor->RulesMatching(data->mPresContext, data->mMedium, data->mContent, 
-                           data->mParentContext, data->mResults);
+                           data->mParentContext, data->mRuleWalker);
   return PR_TRUE;
 }
 
@@ -841,23 +864,23 @@ EnumRulesMatching(nsISupports* aProcessor, void* aData)
 #endif
 
 nsIStyleContext* StyleSetImpl::GetContext(nsIPresContext* aPresContext, 
-                                          nsIStyleContext* aParentContext, nsIAtom* aPseudoTag, 
-                                          nsISupportsArray* aRules,
-                                          PRBool aForceUnique, PRBool& aUsedRules)
+                                          nsIStyleContext* aParentContext, 
+                                          nsIAtom* aPseudoTag, 
+                                          PRBool aForceUnique)
 {
   nsIStyleContext* result = nsnull;
-  aUsedRules = PR_FALSE;
-
+  
+  nsCOMPtr<nsIRuleNode> ruleNode;
+  mRuleWalker->GetCurrentNode(getter_AddRefs(ruleNode));
+      
   if ((PR_FALSE == aForceUnique) && (nsnull != aParentContext)) {
-    aParentContext->FindChildWithRules(aPseudoTag, aRules, result);
+    aParentContext->FindChildWithRules(aPseudoTag, ruleNode, result);
   }
 
   if (nsnull == result) {
-    if (NS_SUCCEEDED(NS_NewStyleContext(&result, aParentContext, aPseudoTag, aRules, aPresContext))) {
-      if (PR_TRUE == aForceUnique) {
+    if (NS_SUCCEEDED(NS_NewStyleContext(&result, aParentContext, aPseudoTag, ruleNode, aPresContext))) {
+      if (PR_TRUE == aForceUnique)
         result->ForceUnique();
-      }
-      aUsedRules = PRBool(nsnull != aRules);
     }
 #ifdef NOISY_DEBUG
     fprintf(stdout, "+++ NewSC %d +++\n", ++gNewCount);
@@ -872,30 +895,23 @@ nsIStyleContext* StyleSetImpl::GetContext(nsIPresContext* aPresContext,
   return result;
 }
 
-// XXX for now only works for strength 0 & 1
-static void SortRulesByStrength(nsISupportsArray* aRules)
+void
+StyleSetImpl::AddImportantRules(nsIRuleNode* aCurrNode)
 {
-  PRUint32 cnt;
-  nsresult rv = aRules->Count(&cnt);
-  if (NS_FAILED(rv)) return;    // XXX error?
-  PRInt32 count = (PRInt32)cnt;
+  // XXX Note: this is still incorrect from a cascade standpoint, but
+  // it preserves the existing incorrect cascade behavior.
+  nsCOMPtr<nsIRuleNode> parent;
+  aCurrNode->GetParent(getter_AddRefs(parent));
+  if (parent)
+    AddImportantRules(parent);
 
-  if (1 < count) {
-    PRInt32 index;
-    PRInt32 strength;
-    for (index = 0; index < count; ) {
-      nsIStyleRule* rule = (nsIStyleRule*)aRules->ElementAt(index);
-      rule->GetStrength(strength);
-      if (0 < strength) {
-        aRules->RemoveElementAt(index);
-        aRules->AppendElement(rule);
-        count--;
-      }
-      else {
-        index++;
-      }
-      NS_RELEASE(rule);
-    }
+  nsCOMPtr<nsIStyleRule> rule;;
+  aCurrNode->GetRule(getter_AddRefs(rule));
+  nsCOMPtr<nsICSSStyleRule> cssRule(do_QueryInterface(rule));
+  if (cssRule) {
+    nsCOMPtr<nsIStyleRule> impRule = getter_AddRefs(cssRule->GetImportantRule());
+    if (impRule)
+      mRuleWalker->Forward(impRule);
   }
 }
 
@@ -908,6 +924,15 @@ static void SortRulesByStrength(nsISupportsArray* aRules)
 #else
 #define NS_ASSERT_REFCOUNT(ptr,cnt,msg) {}
 #endif
+
+void StyleSetImpl::EnsureRuleWalker(nsIPresContext* aPresContext)
+{ 
+  if (mRuleWalker)
+    return;
+
+  nsRuleNode::CreateRootNode(aPresContext, getter_AddRefs(mRuleTree));
+  NS_NewRuleWalker(mRuleTree, getter_AddRefs(mRuleWalker));
+}
 
 nsIStyleContext* StyleSetImpl::ResolveStyleFor(nsIPresContext* aPresContext,
                                                nsIContent* aContent,
@@ -925,35 +950,20 @@ nsIStyleContext* StyleSetImpl::ResolveStyleFor(nsIPresContext* aPresContext,
   if (aContent && aPresContext) {
     GatherRuleProcessors();
     if (mBackstopRuleProcessors || mDocRuleProcessors || mOverrideRuleProcessors) {
-      nsISupportsArray*  rules = nsnull;
-      if (EnsureArray(&rules)) {
-        nsIAtom* medium = nsnull;
-        aPresContext->GetMedium(&medium);
-        RulesMatchingData data(aPresContext, medium, aContent, aParentContext, rules);
-        WalkRuleProcessors(EnumRulesMatching, &data, aContent);
-        
-        PRBool usedRules = PR_FALSE;
-        PRUint32 ruleCount = 0;
-        rules->Count(&ruleCount);
-        if (0 < ruleCount) {
-          SortRulesByStrength(rules);
-          result = GetContext(aPresContext, aParentContext, nsnull, rules, aForceUnique, usedRules);
-          if (usedRules) {
-            NS_ASSERT_REFCOUNT(rules, 2, "rules array was used elsewhere");
-            NS_RELEASE(rules);
-          }
-          else {
-            NS_ASSERT_REFCOUNT(rules, 1, "rules array was used elsewhere");
-            RecycleArray(&rules);
-          }
-        }
-        else {
-          NS_ASSERT_REFCOUNT(rules, 1, "rules array was used elsewhere");
-          RecycleArray(&rules);
-          result = GetContext(aPresContext, aParentContext, nsnull, nsnull, aForceUnique, usedRules);
-        }
-        NS_RELEASE(medium);
-      }
+      EnsureRuleWalker(aPresContext);
+      nsCOMPtr<nsIAtom> medium;
+      aPresContext->GetMedium(getter_AddRefs(medium));
+      RulesMatchingData data(aPresContext, medium, aContent, aParentContext, mRuleWalker);
+      WalkRuleProcessors(EnumRulesMatching, &data, aContent);
+      
+      // Walk all of the rules and add in the !important counterparts.
+      nsCOMPtr<nsIRuleNode> ruleNode;
+      mRuleWalker->GetCurrentNode(getter_AddRefs(ruleNode));
+      AddImportantRules(ruleNode);
+      result = GetContext(aPresContext, aParentContext, nsnull, aForceUnique);
+     
+      // Now reset the walker back to the root of the tree.
+      mRuleWalker->Reset();
     }
   }
 
@@ -969,14 +979,14 @@ struct PseudoRulesMatchingData {
                           nsIAtom* aPseudoTag,
                           nsIStyleContext* aParentContext,
                           nsICSSPseudoComparator* aComparator,
-                          nsISupportsArray* aResults)
+                          nsIRuleWalker* aWalker)
     : mPresContext(aPresContext),
       mMedium(aMedium),
       mParentContent(aParentContent),
       mPseudoTag(aPseudoTag),
       mParentContext(aParentContext),
       mComparator(aComparator),
-      mResults(aResults)
+      mRuleWalker(aWalker)
   {
   }
   nsIPresContext*         mPresContext;
@@ -985,7 +995,7 @@ struct PseudoRulesMatchingData {
   nsIAtom*                mPseudoTag;
   nsIStyleContext*        mParentContext;
   nsICSSPseudoComparator* mComparator;
-  nsISupportsArray*       mResults;
+  nsCOMPtr<nsIRuleWalker> mRuleWalker;
 };
 
 static PRBool
@@ -996,7 +1006,7 @@ EnumPseudoRulesMatching(nsISupports* aProcessor, void* aData)
 
   processor->RulesMatching(data->mPresContext, data->mMedium,
                            data->mParentContent, data->mPseudoTag, 
-                           data->mParentContext, data->mComparator, data->mResults);
+                           data->mParentContext, data->mComparator, data->mRuleWalker);
   return PR_TRUE;
 }
 
@@ -1018,37 +1028,21 @@ nsIStyleContext* StyleSetImpl::ResolvePseudoStyleFor(nsIPresContext* aPresContex
   if (aPseudoTag && aPresContext) {
     GatherRuleProcessors();
     if (mBackstopRuleProcessors || mDocRuleProcessors || mOverrideRuleProcessors) {
-      nsISupportsArray*  rules = nsnull;
-      if (EnsureArray(&rules)) {
-        nsIAtom* medium = nsnull;
-        aPresContext->GetMedium(&medium);
-        PseudoRulesMatchingData data(aPresContext, medium, aParentContent, 
-                                     aPseudoTag, aParentContext, aComparator, rules);
-        WalkRuleProcessors(EnumPseudoRulesMatching, &data, aParentContent);
-        
-        PRBool usedRules = PR_FALSE;
-        PRUint32 ruleCount = 0;
-        rules->Count(&ruleCount);
-        if (0 < ruleCount) {
-          SortRulesByStrength(rules);
-          result = GetContext(aPresContext, aParentContext, aPseudoTag, rules, aForceUnique, usedRules);
-          if (usedRules) {
-            NS_ASSERT_REFCOUNT(rules, 2, "rules array was used elsewhere");
-            NS_RELEASE(rules);
-          }
-          else {
-            NS_ASSERT_REFCOUNT(rules, 1, "rules array was used elsewhere");
-            rules->Clear();
-            RecycleArray(&rules);
-          }
-        }
-        else {
-          NS_ASSERT_REFCOUNT(rules, 1, "rules array was used elsewhere");
-          RecycleArray(&rules);
-          result = GetContext(aPresContext, aParentContext, aPseudoTag, nsnull, aForceUnique, usedRules);
-        }
-        NS_IF_RELEASE(medium);
-      }
+      nsCOMPtr<nsIAtom> medium;
+      aPresContext->GetMedium(getter_AddRefs(medium));
+      EnsureRuleWalker(aPresContext);
+      PseudoRulesMatchingData data(aPresContext, medium, aParentContent, 
+                                   aPseudoTag, aParentContext, aComparator, mRuleWalker);
+      WalkRuleProcessors(EnumPseudoRulesMatching, &data, aParentContent);
+      
+      // Walk all of the rules and add in the !important counterparts.
+      nsCOMPtr<nsIRuleNode> ruleNode;
+      mRuleWalker->GetCurrentNode(getter_AddRefs(ruleNode));
+      AddImportantRules(ruleNode);
+      result = GetContext(aPresContext, aParentContext, aPseudoTag, aForceUnique);
+     
+      // Now reset the walker back to the root of the tree.
+      mRuleWalker->Reset();
     }
   }
 
@@ -1074,36 +1068,24 @@ nsIStyleContext* StyleSetImpl::ProbePseudoStyleFor(nsIPresContext* aPresContext,
   if (aPseudoTag && aPresContext) {
     GatherRuleProcessors();
     if (mBackstopRuleProcessors || mDocRuleProcessors || mOverrideRuleProcessors) {
-      nsISupportsArray*  rules = nsnull;
-      if (EnsureArray(&rules)) {
-        nsIAtom* medium = nsnull;
-        aPresContext->GetMedium(&medium);
-        PseudoRulesMatchingData data(aPresContext, medium, aParentContent, 
-                                     aPseudoTag, aParentContext, nsnull, rules);
-        WalkRuleProcessors(EnumPseudoRulesMatching, &data, aParentContent);
-        
-        PRBool usedRules = PR_FALSE;
-        PRUint32 ruleCount;
-        rules->Count(&ruleCount);
-        if (0 < ruleCount) {
-          SortRulesByStrength(rules);
-          result = GetContext(aPresContext, aParentContext, aPseudoTag, rules, aForceUnique, usedRules);
-          if (usedRules) {
-            NS_ASSERT_REFCOUNT(rules, 2, "rules array was used elsewhere");
-            NS_RELEASE(rules);
-          }
-          else {
-            NS_ASSERT_REFCOUNT(rules, 1, "rules array was used elsewhere");
-            rules->Clear();
-            RecycleArray(&rules);
-          }
-        }
-        else {
-          NS_ASSERT_REFCOUNT(rules, 1, "rules array was used elsewhere");
-          RecycleArray(&rules);
-        }
-        NS_IF_RELEASE(medium);
-      }
+      nsCOMPtr<nsIAtom> medium;
+      aPresContext->GetMedium(getter_AddRefs(medium));
+      EnsureRuleWalker(aPresContext);
+      PseudoRulesMatchingData data(aPresContext, medium, aParentContent, 
+                                   aPseudoTag, aParentContext, nsnull, mRuleWalker);
+      WalkRuleProcessors(EnumPseudoRulesMatching, &data, aParentContent);
+    
+      // Walk all of the rules and add in the !important counterparts.
+      nsCOMPtr<nsIRuleNode> ruleNode;
+      mRuleWalker->GetCurrentNode(getter_AddRefs(ruleNode));
+      AddImportantRules(ruleNode);
+      PRBool isAtRoot = PR_FALSE;
+      mRuleWalker->AtRoot(&isAtRoot);
+      if (!isAtRoot)
+        result = GetContext(aPresContext, aParentContext, aPseudoTag, aForceUnique);
+ 
+      // Now reset the walker back to the root of the tree.
+      mRuleWalker->Reset();
     }
   }
   
@@ -1112,6 +1094,13 @@ nsIStyleContext* StyleSetImpl::ProbePseudoStyleFor(nsIPresContext* aPresContext,
   return result;
 }
 
+NS_IMETHODIMP
+StyleSetImpl::ClearRuleTree()
+{
+  mRuleWalker = nsnull; // Drop our ref.  This destroys all rule nodes.
+  mRuleTree = nsnull;
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 StyleSetImpl::ReParentStyleContext(nsIPresContext* aPresContext,
@@ -1137,26 +1126,20 @@ StyleSetImpl::ReParentStyleContext(nsIPresContext* aPresContext,
       nsIStyleContext*  newChild = nsnull;
       nsIAtom*  pseudoTag = nsnull;
       aStyleContext->GetPseudoType(pseudoTag);
-      nsISupportsArray* rules = aStyleContext->GetStyleRules();
+
+      nsCOMPtr<nsIRuleNode> ruleNode;
+      aStyleContext->GetRuleNode(getter_AddRefs(ruleNode));
       if (aNewParentContext) {
-        result = aNewParentContext->FindChildWithRules(pseudoTag, rules, newChild);
+        result = aNewParentContext->FindChildWithRules(pseudoTag, ruleNode, newChild);
       }
       if (newChild) { // new parent already has one
         *aNewStyleContext = newChild;
       }
       else {  // need to make one in the new parent
-        nsISupportsArray*  newRules = nsnull;
-        if (rules) {
-          if (EnsureArray(&newRules)) {
-            newRules->AppendElements(rules);
-          }
-        }
         result = NS_NewStyleContext(aNewStyleContext, aNewParentContext, pseudoTag,
-                                    newRules, aPresContext);
-        NS_IF_RELEASE(newRules);
+                                    ruleNode, aPresContext);
       }
 
-      NS_IF_RELEASE(rules);
       NS_IF_RELEASE(pseudoTag);
     }
 

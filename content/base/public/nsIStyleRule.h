@@ -33,6 +33,7 @@ class nsIStyleSheet;
 class nsIMutableStyleContext;
 class nsIPresContext;
 class nsIContent;
+struct nsRuleData;
 
 // IID for the nsIStyleRule interface {40ae5c90-ad6a-11d1-8031-006008159b5a}
 #define NS_ISTYLE_RULE_IID     \
@@ -51,6 +52,9 @@ public:
   NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext) = 0;
   // Map all non-font info into style context
   NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext) = 0;
+
+  // The new mapping functions.
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData)=0;
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const = 0;
 

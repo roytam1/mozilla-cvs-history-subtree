@@ -116,7 +116,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
                             nsIDOMEvent** aDOMEvent, PRUint32 aFlags,
@@ -514,6 +514,17 @@ nsHTMLImageElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aData)
+    return;
+
+  nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
@@ -523,8 +534,10 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
       PRUint8 align = value.GetIntValue();
-      nsMutableStyleDisplay display(aContext);
-      nsMutableStyleText text(aContext);
+      nsStyleDisplay* display = (nsStyleDisplay*)
+        aContext->GetMutableStyleData(eStyleStruct_Display);
+      nsStyleText* text = (nsStyleText*)
+        aContext->GetMutableStyleData(eStyleStruct_Text);
       switch (align) {
       case NS_STYLE_TEXT_ALIGN_LEFT:
         display->mFloats = NS_STYLE_FLOAT_LEFT;
@@ -541,8 +554,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
   nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext,
                                                aPresContext);
-  nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aContext,
-                                                    aPresContext, nsnull);
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
                                                 aPresContext);
 }
@@ -569,10 +580,10 @@ nsHTMLImageElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLImageElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLImageElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                  nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

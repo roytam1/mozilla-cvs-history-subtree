@@ -85,7 +85,7 @@ public:
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,
                                nsHTMLValue& aResult);
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -483,22 +483,23 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
   aAttributes->GetAttribute(nsHTMLAtoms::align, value);
 
   if (eHTMLUnit_Enumerated == value.GetUnit()) {
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aContext->GetMutableStyleData(eStyleStruct_Display);
+    nsStyleText* text = (nsStyleText*)
+      aContext->GetMutableStyleData(eStyleStruct_Text);
     switch (value.GetIntValue()) {
-    case NS_STYLE_TEXT_ALIGN_LEFT: {
-      nsMutableStyleDisplay display(aContext);
+    case NS_STYLE_TEXT_ALIGN_LEFT:
       display->mFloats = NS_STYLE_FLOAT_LEFT;
+
       break;
-      }
-    case NS_STYLE_TEXT_ALIGN_RIGHT: {
-      nsMutableStyleDisplay display(aContext);
+    case NS_STYLE_TEXT_ALIGN_RIGHT:
       display->mFloats = NS_STYLE_FLOAT_RIGHT;
+
       break;
-      }
-    default: {
-      nsMutableStyleText text(aContext);
-      text->mVerticalAlign.SetIntValue(value.GetIntValue(), eStyleUnit_Enumerated);
+    default:
+      text->mVerticalAlign.SetIntValue(value.GetIntValue(),
+                                       eStyleUnit_Enumerated);
       break;
-      }
     }
   }
 
@@ -527,10 +528,10 @@ nsHTMLTextAreaElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 }
 
 NS_IMETHODIMP
-nsHTMLTextAreaElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLTextAreaElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                     nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = nsnull;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }
