@@ -1217,7 +1217,7 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
         {
             JSString* propValJSStr = JS_NewUCStringCopyZ(cx, NS_REINTERPRET_CAST(const jschar*, pVal.get()));
             jsval propValJSVal = STRING_TO_JSVAL(propValJSStr);
-            JS_SetUCProperty(cx, res, pKey.get(), pKey.Length(), &propValJSVal);
+            JS_SetUCProperty(cx, res, NS_REINTERPRET_CAST(const jschar*, pKey.get()), pKey.Length(), &propValJSVal);
         }
     }
 
