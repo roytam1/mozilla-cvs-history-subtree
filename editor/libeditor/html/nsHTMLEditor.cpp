@@ -321,12 +321,21 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
     if (NS_FAILED(result)) { return result; }
     mHTMLCSSUtils->Init(this);
 
+    // HACK:  Photon doesn't need the following behavior
+    //        since we *do* want link status (bug 609804)
+    //        and we block all navigation inside 
+    //        OnStartURIOpen anyways. 
+    //
+    // TODO:  Replace this when there's a more official 
+    //        Gecko way to get link status notifications.
+#if 0
     // disable links
     nsCOMPtr<nsIPresContext> context;
     aPresShell->GetPresContext(getter_AddRefs(context));
     if (!context) return NS_ERROR_NULL_POINTER;
     if (!(mFlags & eEditorPlaintextMask))
       context->SetLinkHandler(0);  
+#endif
 
     nsCOMPtr<nsIDOMElement> bodyElement;
     result = nsEditor::GetRootElement(getter_AddRefs(bodyElement));
