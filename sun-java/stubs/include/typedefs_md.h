@@ -62,7 +62,7 @@ typedef unsigned int uint_t;
 	#pragma warning_errors reset
 #endif
 
-#if defined(XP_PC)
+#if defined(XP_PC) && !defined(XP_OS2)
 typedef long int32_t;
 #endif
 
