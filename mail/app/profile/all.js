@@ -50,7 +50,7 @@ pref("keyword.enabled", false);
 pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties");
 pref("general.useragent.contentlocale", "chrome://navigator-region/locale/region.properties");
 pref("general.useragent.vendor", "Thunderbird");
-pref("general.useragent.vendorSub", "0.5");
+pref("general.useragent.vendorSub", "M6a");
 
 pref("general.startup.browser",             false);
 pref("general.startup.mail",                false);
