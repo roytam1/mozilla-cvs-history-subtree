@@ -47,6 +47,11 @@ StringExpr::StringExpr(const String& value) {
     this->value.append(value);
 } //-- StringExpr
 
+StringExpr::StringExpr(const char* value) {
+    //-- copy value
+    this->value.append(value);
+} //-- StringExpr
+
 /**
  * Default Destructor
 **/
