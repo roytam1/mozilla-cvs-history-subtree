@@ -79,7 +79,9 @@
 #if defined(MORK_WIN) || defined(MORK_UNIX) || defined(MORK_MAC) || defined(MORK_BEOS)
 #include <stdio.h> 
 #include <ctype.h> 
-#include <errno.h> 
+#if !defined(WINCE)
+#include <errno.h>
+#endif
 #include <string.h> 
 #ifdef HAVE_MEMORY_H
 #include <memory.h> 

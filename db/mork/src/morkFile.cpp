@@ -262,7 +262,11 @@ void
 morkFile::NewFileErrnoError(morkEnv* ev) const
 // call NewFileErrnoError() to convert std C errno into AB fault
 {
+#if !defined(WINCE)
   const char* errnoString = strerror(errno);
+#else
+  const char* errnoString = "morkFile::NewFileErrnoError";  // lame wince support.
+#endif
   ev->NewError(errnoString); // maybe pass value of strerror() instead
 }
 
@@ -756,6 +760,7 @@ morkStdioFile::new_stdio_file_fault(morkEnv* ev) const
 {
   FILE* file = (FILE*) mStdioFile_File;
 
+#if !defined(WINCE)
   int copyErrno = errno; // facilitate seeing error in debugger
   
   //  bunch of stuff not ported here
@@ -764,6 +769,7 @@ morkStdioFile::new_stdio_file_fault(morkEnv* ev) const
     copyErrno = ferror(file);
     errno = copyErrno;
   }
+#endif
 
   this->NewFileErrnoError(ev);
 }
