@@ -138,7 +138,7 @@ void XP_QSORT (
 
     stkptr = 0;                 /* initialize stack */
 
-    lo = base;
+    lo = (char*)base;
     hi = (char *)base + width * (num-1);        /* initialize limits */
 
     /* this entry point is for pseudo-recursion calling: setting
