@@ -3594,6 +3594,7 @@ nsDocShell::Embed(nsIContentViewer * aContentViewer,
     PersistLayoutHistoryState();
 
     nsresult rv = SetupNewViewer(aContentViewer);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
     // XXX What if SetupNewViewer fails?
     if (mLSHE)
@@ -4362,9 +4363,14 @@ nsDocShell::InternalLoad(nsIURI * aURI,
         return rv;
     }
 
-    
-    
-    
+    //
+    // Load is being targetted at this docshell so return an error if the
+    // docshell is in the process of being destroyed.
+    //
+    if (mIsBeingDestroyed) {
+        return NS_ERROR_FAILURE;
+    }
+   
     mURIResultedInDocument = PR_FALSE;  // reset the clock...
     mLSHE = aSHEntry;
     //
