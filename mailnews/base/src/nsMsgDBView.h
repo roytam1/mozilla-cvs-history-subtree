@@ -78,6 +78,7 @@ protected:
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
   nsresult FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString);
+  nsresult FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
 
   // toggles ascending/descending or adds the sort attribute

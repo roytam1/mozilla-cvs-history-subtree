@@ -163,6 +163,26 @@ nsresult nsMsgDBView::FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString)
   return NS_OK;
 }
 
+nsresult nsMsgDBView::FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString)
+{
+  nsAutoString formattedSizeString;
+  PRUint32 msgSize = 0;
+  aHdr->GetMessageSize(&msgSize);
+
+	if(msgSize < 1024)
+		msgSize = 1024;
+	
+  PRUint32 sizeInKB = msgSize/1024;
+  
+  formattedSizeString.AppendInt(sizeInKB);
+  formattedSizeString.Append(NS_LITERAL_STRING("KB"));
+
+  *aSizeString = formattedSizeString.ToNewUnicode();
+
+  return NS_OK;
+}
+
+
 // call this AFTER calling ::Sort.
 nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
 {
@@ -430,6 +450,8 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
       rv = msgHdr->GetMime2DecodedSubject(aValue);
     else if (aColID[1] == 'e') // sender
       rv = FetchAuthor(msgHdr, aValue);
+    else if (aColID[1] == 'i') // size
+      rv = FetchSize(msgHdr, aValue);
     else
       rv = FetchStatus(m_flags[aRow], aValue);
     break;
@@ -440,19 +462,6 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
     break;
   }
 
-  // mscott: to do, we need to use a msgHdrParser to break down the author field and extract just the "pretty name"
-  // but this requires a bunch of string conversions I'd like to avoid on every paint! 
-#if 0
-  if(mHeaderParser)
-	{
-
-		nsXPIDLCString name;
-
-    rv = mHeaderParser->ExtractHeaderAddressName("UTF-8", NS_ConvertUCS2toUTF8(sender), getter_Copies(name));
-    if (NS_SUCCEEDED(rv) && (const char*)name)
-      senderUserName.Assign(NS_ConvertUTF8toUCS2(name));
-	}
-#endif
   return NS_OK;
 }
 
@@ -494,6 +503,11 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     else if (aColID[1] == 'e') // sort by sender
     {
       sortType = nsMsgViewSortType::byAuthor;
+      performSort = PR_TRUE;
+    }
+    else if (aColID[1] == 'i') // size
+    {
+      sortType = nsMsgViewSortType::bySize;
       performSort = PR_TRUE;
     }
     else
