@@ -2418,3 +2418,29 @@ function updateFileUploadItem()
   else
     item.setAttribute('disabled', 'true');
 }
+
+// Do a security check for drag n' drop. Make sure the source document
+// can load the dragged link.
+function DragDropSecurityCheck(aEvent, aDragSession, aUrl)
+{
+  var sourceDoc = aDragSession.sourceDocument;
+
+  if (sourceDoc) {
+    var sourceURI = sourceDoc.documentURI;
+
+    const nsIScriptSecurityManager =
+      Components.interfaces.nsIScriptSecurityManager;
+    var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
+      .getService(nsIScriptSecurityManager);
+
+    try {
+      secMan.checkLoadURIStr(sourceURI, aUrl,
+                             nsIScriptSecurityManager.STANDARD);
+    } catch (e) {
+      // Stop even propagation right here.
+      aEvent.stopPropagation();
+
+      throw "Drop of " + aUrl + " denied.";
+    }
+  }
+}

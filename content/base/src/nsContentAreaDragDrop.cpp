@@ -90,6 +90,7 @@
 #include "nsIURL.h"
 #include "nsIImage.h"
 #include "nsIDocument.h"
+#include "nsIScriptSecurityManager.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIFrame.h"
@@ -435,7 +436,7 @@ nsContentAreaDragDrop::DragDrop(nsIDOMEvent* inMouseEvent)
   nsCOMPtr<nsITransferable> trans(do_CreateInstance("@mozilla.org/widget/transferable;1"));
   if ( !trans )
     return NS_ERROR_FAILURE;
-  
+
   // add the relevant flavors. order is important (highest fidelity to lowest)
   trans->AddDataFlavor(kURLDataMime);
   trans->AddDataFlavor(kURLMime);
@@ -483,8 +484,36 @@ nsContentAreaDragDrop::DragDrop(nsIDOMEvent* inMouseEvent)
       if ( url.IsEmpty() || url.FindChar(' ') >= 0 )
         return NS_OK;
 
+      nsCOMPtr<nsIDOMDocument> sourceDocument;
+      session->GetSourceDocument(getter_AddRefs(sourceDocument));
+
+      nsCOMPtr<nsIDocument> sourceDoc(do_QueryInterface(sourceDocument));
+      if (sourceDoc && sourceDoc->GetPrincipal()) {
+        nsCOMPtr<nsIURI> sourceUri;
+        sourceDoc->GetPrincipal()->GetURI(getter_AddRefs(sourceUri));
+
+        if (sourceUri) {
+          nsCAutoString sourceUriStr;
+          sourceUri->GetSpec(sourceUriStr);
+
+          rv = nsContentUtils::GetSecurityManager()->
+            CheckLoadURIStr(sourceUriStr.get(),
+                            NS_ConvertUTF16toUTF8(url).get(),
+                            nsIScriptSecurityManager::STANDARD);
+
+          if (NS_FAILED(rv)) {
+            // Security check failed, stop even propagation right here
+            // and return the error.
+            inMouseEvent->StopPropagation();
+
+            return rv;
+          }
+        }
+      }
+
       // ok, we have the url, load it.
-      mNavigator->LoadURI(url.get(), nsIWebNavigation::LOAD_FLAGS_NONE, nsnull, nsnull, nsnull);
+      mNavigator->LoadURI(url.get(), nsIWebNavigation::LOAD_FLAGS_NONE, nsnull,
+                          nsnull, nsnull);
     }
   }
   

@@ -1175,6 +1175,8 @@
                 /^\s*(javascript|data):/.test(url))
               return;
 
+            DragDropSecurityCheck(aEvent, aDragSession, url);
+
             var bgLoad = this.mPrefs.getBoolPref("browser.tabs.loadInBackground");
 
             var tab = null;
