@@ -363,7 +363,8 @@ nsDOMClassInfo::Init()
                            WANT_GETPROPERTY |
                            WANT_SETPROPERTY |
                            WANT_NEWRESOLVE |
-                           WANT_PRECREATE);
+                           WANT_PRECREATE |
+                           ALLOW_PROP_MODS_TO_PROTOTYPE);
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsDOMGenericSH::Create,
@@ -1262,19 +1263,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     wrapper->GetNative(getter_AddRefs(native));
     NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
 
-
-    if (str == sLocation_id) {
-      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
-                                 ::JS_GetStringLength(str), JSVAL_VOID, nsnull,
-                                 nsnull, 0)) {
-        return NS_ERROR_FAILURE;
-      }
-
-      *objp = obj;
-
-      return NS_OK;
-    }
-
     const JSObject *o = *objp;
 
     rv = GlobalResolve(wrapper, cx, obj, str, flags, objp, _retval);
@@ -1335,18 +1323,56 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       }
     }
 
-    if (o == *objp && JSVAL_TO_STRING(id) == s_content_id) {
+    if (o == *objp && str == s_content_id) {
       // Map window._content to window.content for backwards
       // compatibility, this should spit out an message on the JS
       // console.
 
-      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(s_content_id),
-                                 ::JS_GetStringLength(s_content_id),
-                                 JSVAL_VOID, nsnull, nsnull, 0)) {
+      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
+      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIDOMWindow> content;
+      nsresult rv = window->GetContent(getter_AddRefs(content));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      jsval v;
+
+      rv = WrapNative(cx, obj, content, NS_GET_IID(nsIDOMWindow), &v);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                 ::JS_GetStringLength(str), v, nsnull,
+                                 nsnull, 0)) {
         return NS_ERROR_FAILURE;
       }
 
       *objp = obj;
+
+      return NS_OK;
+    }
+
+    if (str == sLocation_id) {
+      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
+      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIDOMLocation> location;
+      nsresult rv = window->GetLocation(getter_AddRefs(location));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      jsval v;
+
+      rv = WrapNative(cx, obj, location, NS_GET_IID(nsIDOMLocation), &v);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                 ::JS_GetStringLength(str), v, nsnull,
+                                 nsnull, 0)) {
+        return NS_ERROR_FAILURE;
+      }
+
+      *objp = obj;
+
+      return NS_OK;
     }
   }
 
