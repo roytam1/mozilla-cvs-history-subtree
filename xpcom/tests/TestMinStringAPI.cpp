@@ -48,10 +48,9 @@ static PRBool
 TestACString(nsACString &s)
 {
   const char *ptr;
-  char buf[256];
   PRUint32 len;
 
-  ptr = NS_CStringGetDataPtr(s);
+  NS_CStringGetData(s, &ptr);
   if (ptr == nsnull || *ptr != '\0')
   {
     NS_BREAK();
@@ -59,27 +58,36 @@ TestACString(nsACString &s)
   }
 
   NS_CStringSetData(s, kAsciiData, PR_UINT32_MAX);
-  ptr = NS_CStringGetDataPtr(s);
+  len = NS_CStringGetData(s, &ptr);
   if (ptr == nsnull || strcmp(ptr, kAsciiData) != 0)
   {
     NS_BREAK();
     return PR_FALSE;
   }
-
-  len = NS_CStringGetLength(s);
   if (len != sizeof(kAsciiData)-1)
   {
     NS_BREAK();
     return PR_FALSE;
   }
 
-  NS_CStringGetData(s, buf, sizeof(buf));
-  if (strcmp(buf, kAsciiData) != 0)
+  nsCStringContainer temp;
+  NS_CStringContainerInit(temp);
+  NS_CStringCopy(temp, s);
+
+  len = NS_CStringGetData(temp, &ptr);
+  if (ptr == nsnull || strcmp(ptr, kAsciiData) != 0)
+  {
+    NS_BREAK();
+    return PR_FALSE;
+  }
+  if (len != sizeof(kAsciiData)-1)
   {
     NS_BREAK();
     return PR_FALSE;
   }
 
+  NS_CStringContainerFinish(temp);
+  
   return PR_TRUE;
 }
 
@@ -87,10 +95,9 @@ static PRBool
 TestAString(nsAString &s)
 {
   const PRUnichar *ptr;
-  PRUnichar buf[256];
   PRUint32 len;
 
-  ptr = NS_StringGetDataPtr(s);
+  NS_StringGetData(s, &ptr);
   if (ptr == nsnull || *ptr != '\0')
   {
     NS_BREAK();
@@ -98,26 +105,35 @@ TestAString(nsAString &s)
   }
 
   NS_StringSetData(s, kUnicodeData, PR_UINT32_MAX);
-  ptr = NS_StringGetDataPtr(s);
+  len = NS_StringGetData(s, &ptr);
   if (ptr == nsnull || nsCRT::strcmp(ptr, kUnicodeData) != 0)
   {
     NS_BREAK();
     return PR_FALSE;
   }
-
-  len = NS_StringGetLength(s);
-  if (len != (sizeof(kUnicodeData)-1)/2)
+  if (len != sizeof(kUnicodeData)/2 - 1)
   {
     NS_BREAK();
     return PR_FALSE;
   }
 
-  NS_StringGetData(s, buf, sizeof(buf));
-  if (nsCRT::strcmp(buf, kUnicodeData) != 0)
+  nsStringContainer temp;
+  NS_StringContainerInit(temp);
+  NS_StringCopy(temp, s);
+
+  len = NS_StringGetData(temp, &ptr);
+  if (ptr == nsnull || nsCRT::strcmp(ptr, kUnicodeData) != 0)
   {
     NS_BREAK();
     return PR_FALSE;
   }
+  if (len != sizeof(kUnicodeData)/2 - 1)
+  {
+    NS_BREAK();
+    return PR_FALSE;
+  }
+
+  NS_StringContainerFinish(temp);
 
   return PR_TRUE;
 }

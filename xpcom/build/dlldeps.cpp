@@ -181,17 +181,15 @@ void XXXNeverCalled()
     nsCStringContainer sc1;
     NS_CStringContainerInit(sc1);
     NS_CStringContainerFinish(sc1);
-    NS_CStringGetLength(str2);
-    NS_CStringGetDataPtr(str2);
-    NS_CStringGetData(str2, nsnull, 0);
+    NS_CStringGetData(str2, nsnull, nsnull);
     NS_CStringSetData(str2, nsnull, 0);
-    NS_CStringCopy(str2, str2, 0, 0);
+    NS_CStringSetDataRange(str1, 0, 0, nsnull, 0);
+    NS_CStringCopy(str2, str2);
     nsStringContainer sc2;
     NS_StringContainerInit(sc2);
     NS_StringContainerFinish(sc2);
-    NS_StringGetLength(str1);
-    NS_StringGetDataPtr(str1);
-    NS_StringGetData(str1, nsnull, 0);
+    NS_StringGetData(str1, nsnull, nsnull);
     NS_StringSetData(str1, nsnull, 0);
-    NS_StringCopy(str1, str1, 0, 0);
+    NS_StringSetDataRange(str1, 0, 0, nsnull, 0);
+    NS_StringCopy(str1, str1);
 }

@@ -90,19 +90,17 @@ typedef nsresult (* GetTraceRefcntFunc)(nsITraceRefcnt* *result);
 
 typedef PRBool           (* StringContainerInitFunc)(nsStringContainer&);
 typedef void             (* StringContainerFinishFunc)(nsStringContainer&);
-typedef PRUint32         (* StringGetLengthFunc)(const nsAString&);
-typedef const PRUnichar* (* StringGetDataPtrFunc)(const nsAString&);
-typedef PRUint32         (* StringGetDataFunc)(const nsAString&, PRUnichar*, PRUint32);
+typedef PRUint32         (* StringGetDataFunc)(const nsAString&, const PRUnichar**, PRBool*);
 typedef void             (* StringSetDataFunc)(nsAString&, const PRUnichar*, PRUint32);
-typedef void             (* StringCopyFunc)(nsAString &, const nsAString &, PRUint32, PRUint32);
+typedef void             (* StringSetDataRangeFunc)(nsAString&, PRUint32, PRUint32, const PRUnichar*, PRUint32);
+typedef void             (* StringCopyFunc)(nsAString &, const nsAString &);
 
 typedef PRBool           (* CStringContainerInitFunc)(nsCStringContainer&);
 typedef void             (* CStringContainerFinishFunc)(nsCStringContainer&);
-typedef PRUint32         (* CStringGetLengthFunc)(const nsACString&);
-typedef const char*      (* CStringGetDataPtrFunc)(const nsACString&);
-typedef PRUint32         (* CStringGetDataFunc)(const nsACString&, char*, PRUint32);
+typedef PRUint32         (* CStringGetDataFunc)(const nsACString&, const char**, PRBool*);
 typedef void             (* CStringSetDataFunc)(nsACString&, const char*, PRUint32);
-typedef void             (* CStringCopyFunc)(nsACString &, const nsACString &, PRUint32, PRUint32);
+typedef void             (* CStringSetDataRangeFunc)(nsACString&, PRUint32, PRUint32, const char*, PRUint32);
+typedef void             (* CStringCopyFunc)(nsACString &, const nsACString &);
 
 // PRIVATE
 typedef nsresult (* RegisterXPCOMExitRoutineFunc)(XPCOMExitRoutine exitRoutine, PRUint32 priority);
@@ -128,20 +126,18 @@ typedef struct XPCOMFunctions{
     GetDebugFunc getDebug;
     GetTraceRefcntFunc getTraceRefcnt;
 
-    // Added Post 1.5
+    // Added Post 1.6
     StringContainerInitFunc stringContainerInit;
     StringContainerFinishFunc stringContainerFinish;
-    StringGetLengthFunc stringGetLength;
-    StringGetDataPtrFunc stringGetDataPtr;
     StringGetDataFunc stringGetData;
     StringSetDataFunc stringSetData;
+    StringSetDataRangeFunc stringSetDataRange;
     StringCopyFunc stringCopy;
     CStringContainerInitFunc cstringContainerInit;
     CStringContainerFinishFunc cstringContainerFinish;
-    CStringGetLengthFunc cstringGetLength;
-    CStringGetDataPtrFunc cstringGetDataPtr;
     CStringGetDataFunc cstringGetData;
     CStringSetDataFunc cstringSetData;
+    CStringSetDataRangeFunc cstringSetDataRange;
     CStringCopyFunc cstringCopy;
 
 } XPCOMFunctions;

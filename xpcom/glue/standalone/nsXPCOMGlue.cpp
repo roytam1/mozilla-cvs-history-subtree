@@ -282,27 +282,11 @@ NS_StringContainerFinish(nsStringContainer &aStr)
 }
 
 extern "C" NS_COM PRUint32
-NS_StringGetLength(const nsAString &aStr)
+NS_StringGetData(const nsAString &aStr, const PRUnichar **aBuf, PRBool *aTerm)
 {
     if (!xpcomGlueInit)
         return 0;
-    return xpcomFunctions.stringGetLength(aStr);
-}
-
-extern "C" NS_COM const PRUnichar *
-NS_StringGetDataPtr(const nsAString &aStr)
-{
-    if (!xpcomGlueInit)
-        return nsnull;
-    return xpcomFunctions.stringGetDataPtr(aStr);
-}
-
-extern "C" NS_COM PRUint32
-NS_StringGetData(const nsAString &aStr, PRUnichar *aBuf, PRUint32 aBufLen)
-{
-    if (!xpcomGlueInit)
-        return 0;
-    return xpcomFunctions.stringGetData(aStr, aBuf, aBufLen);
+    return xpcomFunctions.stringGetData(aStr, aBuf, aTerm);
 }
 
 extern "C" NS_COM void
@@ -313,11 +297,18 @@ NS_StringSetData(nsAString &aStr, const PRUnichar *aBuf, PRUint32 aCount)
 }
 
 extern "C" NS_COM void
-NS_StringCopy(nsAString &aDest, const nsAString &aSrc, PRUint32 aOffset,
-              PRUint32 aCount)
+NS_StringSetDataRange(nsAString &aStr, PRUint32 aCutStart, PRUint32 aCutLength,
+                      const PRUnichar *aBuf, PRUint32 aCount)
 {
     if (xpcomGlueInit)
-        xpcomFunctions.stringCopy(aDest, aSrc, aOffset, aCount);
+        xpcomFunctions.stringSetDataRange(aStr, aCutStart, aCutLength, aBuf, aCount);
+}
+
+extern "C" NS_COM void
+NS_StringCopy(nsAString &aDest, const nsAString &aSrc)
+{
+    if (xpcomGlueInit)
+        xpcomFunctions.stringCopy(aDest, aSrc);
 }
 
 
@@ -337,27 +328,11 @@ NS_CStringContainerFinish(nsCStringContainer &aStr)
 }
 
 extern "C" NS_COM PRUint32
-NS_CStringGetLength(const nsACString &aStr)
+NS_CStringGetData(const nsACString &aStr, const char **aBuf, PRBool *aTerm)
 {
     if (!xpcomGlueInit)
         return 0;
-    return xpcomFunctions.cstringGetLength(aStr);
-}
-
-extern "C" NS_COM const char *
-NS_CStringGetDataPtr(const nsACString &aStr)
-{
-    if (!xpcomGlueInit)
-        return nsnull;
-    return xpcomFunctions.cstringGetDataPtr(aStr);
-}
-
-extern "C" NS_COM PRUint32
-NS_CStringGetData(const nsACString &aStr, char *aBuf, PRUint32 aBufLen)
-{
-    if (!xpcomGlueInit)
-        return 0;
-    return xpcomFunctions.cstringGetData(aStr, aBuf, aBufLen);
+    return xpcomFunctions.cstringGetData(aStr, aBuf, aTerm);
 }
 
 extern "C" NS_COM void
@@ -368,11 +343,18 @@ NS_CStringSetData(nsACString &aStr, const char *aBuf, PRUint32 aCount)
 }
 
 extern "C" NS_COM void
-NS_CStringCopy(nsACString &aDest, const nsACString &aSrc, PRUint32 aOffset,
-              PRUint32 aCount)
+NS_CStringSetDataRange(nsACString &aStr, PRUint32 aCutStart, PRUint32 aCutLength,
+                       const char *aBuf, PRUint32 aCount)
 {
     if (xpcomGlueInit)
-        xpcomFunctions.cstringCopy(aDest, aSrc, aOffset, aCount);
+        xpcomFunctions.cstringSetDataRange(aStr, aCutStart, aCutLength, aBuf, aCount);
+}
+
+extern "C" NS_COM void
+NS_CStringCopy(nsACString &aDest, const nsACString &aSrc)
+{
+    if (xpcomGlueInit)
+        xpcomFunctions.cstringCopy(aDest, aSrc);
 }
 
 #endif // #ifndef  XPCOM_GLUE_NO_DYNAMIC_LOADING

@@ -40,7 +40,6 @@ DEFINES		+= -DXPCOM_GLUE
 
 
 REQUIRES	= string \
-		  embedstring \
 		  xpcom \
 		  $(NULL)
 

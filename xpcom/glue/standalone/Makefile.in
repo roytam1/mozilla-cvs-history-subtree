@@ -46,7 +46,6 @@ MODULE		= xpcom
 LIBRARY_NAME	= xpcomglue
 
 REQUIRES	= string \
-		  embedstring \
 		  $(NULL)
 
 LOCAL_INCLUDES	= \
