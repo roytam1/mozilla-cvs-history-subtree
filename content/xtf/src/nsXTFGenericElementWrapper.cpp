@@ -381,6 +381,10 @@ nsXTFGenericElementWrapper::GetElementNode(nsIDOMElement * *aElementNode)
 PRBool
 nsXTFGenericElementWrapper::AggregatesInterface(REFNSIID aIID)
 {
+  // We must ensure that the inner element has a distinct xpconnect
+  // identity, so we mustn't aggregate nsIXPConnectWrappedJS:
+  if (aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS))) return PR_FALSE;
+
   nsCOMPtr<nsISupports> inst;
   mXTFElement->QueryInterface(aIID, getter_AddRefs(inst));
   return (inst!=nsnull);
