@@ -252,13 +252,15 @@ LINKFLAGS_DEBUG= \
 #
 CFLAGS_DEFAULT=\
 !if "$(MOZ_BITS)"=="32"
-    $(CFLAGS_DEBUG)
+    $(CFLAGS_DEBUG) \
+    /I$(DEPTH)\dist\public\js /I$(DEPTH)\dist\public\security /I$(DEPTH)\dist\public\network /I$(DEPTH)\dist\public\htmldlgs /I$(DEPTH)\dist\public\libfont
 !else
     $(CFLAGS_RELEASE) -DFORCE_PR_LOG
 !endif
 
 
 POLICY  = moz40p3
+
 
 
 #
@@ -270,7 +272,7 @@ CFLAGS_LIBIMG_C=        $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/xp.pch" 
 CFLAGS_JTOOLS_C=        $(CFLAGS_DEFAULT)
 CFLAGS_LIBCNV_C=        $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/xp.pch" /YX"xp.h"
 CFLAGS_JPEG_C=          $(CFLAGS_DEFAULT)
-CFLAGS_LAYOUT_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/layoutc.pch" /YX"xp.h"  /I$(DEPTH)\dist\public\js
+CFLAGS_LAYOUT_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/layoutc.pch" /YX"xp.h"
 CFLAGS_LIBSTYLE_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/stylec.pch" /YX"xp.h"
 CFLAGS_LIBJAR_C=        $(CFLAGS_DEFAULT) 
 CFLAGS_LIBLAYER_C=      $(CFLAGS_DEFAULT) 
@@ -289,7 +291,7 @@ CFLAGS_PLUGIN_C=        $(CFLAGS_DEBUG)
 CFLAGS_APPLET_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lj.pch" /YX"lj.h"
 CFLAGS_EDTPLUG_C=       $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/le.pch" /YX"le.h"
 CFLAGS_LIBMOCHA_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lm.pch" /YX"lm.h"
-CFLAGS_LAYOUT_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/editor.pch" /YX"editor.h"  /I$(DEPTH)\dist\public\js  /I$(DEPTH)\dist\public\security
+CFLAGS_LAYOUT_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/editor.pch" /YX"editor.h"
 CFLAGS_PLUGIN_CPP=      $(CFLAGS_DEBUG) /I$(DEPTH)\cmd\winfe /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
 CFLAGS_LIBPREF_C=                 $(CFLAGS_DEBUG)
 CFLAGS_WINFE_C=                 $(CFLAGS_DEBUG)
