@@ -258,7 +258,7 @@ txStylesheetCompiler::endElement()
     NS_ENSURE_SUCCESS(rv, rv);
 
     if(!--mState.mElementContext->mDepth) {
-        delete mState.mElementContext;
+        // this will delete the old object
         mState.mElementContext =
             (txElementContext*)mState.popObject();
     }
@@ -318,15 +318,14 @@ txStylesheetCompiler::ensureNewElementContext()
     if (!mState.mElementContext->mDepth)
         return NS_OK;
     
-    txElementContext* context = new txElementContext(*mState.mElementContext);
+    nsAutoPtr<txElementContext> context =
+        new txElementContext(*mState.mElementContext);
     NS_ENSURE_TRUE(context, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = mState.pushObject(mState.mElementContext);
-    if (NS_FAILED(rv)) {
-        delete context;
-        return rv;
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
 
+    mState.mElementContext.forget();
     mState.mElementContext = context;
 
     return NS_OK;
@@ -342,9 +341,8 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
                                                      txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
       mHandlerTable(nsnull),
-      mElementContext(nsnull),
       mSorter(nsnull),
-      mChooseGotoList(nsnull),
+      mDOE(nsnull),
       mNextInstrPtr(nsnull),
       mToplevelIterator(nsnull)
 {
@@ -375,7 +373,6 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
     mElementContext = new txElementContext(aBaseURI);
     if (!mElementContext || !mElementContext->mMappings) {
         // XXX invalidate
-        delete mElementContext;
         return;
     }
 
@@ -385,15 +382,11 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
         // XXX invalidate
         return;
     }
-
-    mDOE = MB_FALSE;    
 }
 
 
 txStylesheetCompilerState::~txStylesheetCompilerState()
 {
-    delete mElementContext;
-    delete mChooseGotoList;
     while (!mObjectStack.isEmpty()) {
         delete popObject();
     }
@@ -444,6 +437,7 @@ txStylesheetCompilerState::pushChooseGotoList()
     nsresult rv = pushObject(mChooseGotoList);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    mChooseGotoList.forget();
     mChooseGotoList = new txList;
     NS_ENSURE_TRUE(mChooseGotoList, NS_ERROR_OUT_OF_MEMORY);
 
@@ -453,7 +447,7 @@ txStylesheetCompilerState::pushChooseGotoList()
 void
 txStylesheetCompilerState::popChooseGotoList()
 {
-    delete mChooseGotoList;
+    // this will delete the old value
     mChooseGotoList = (txList*)popObject();
 }
 

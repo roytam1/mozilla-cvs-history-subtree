@@ -56,20 +56,27 @@ class txInstructionContainer;
 class txInstruction;
 class txToplevelItem;
 class txPushNewContext;
+class txStylesheetCompiler;
 
-class txInScopeVariable {
+class txElementContext : public TxObject
+{
 public:
-    txInScopeVariable(const txExpandedName& aName) : mName(aName), mLevel(1)
-    {
-    }
-    txExpandedName mName;
-    PRInt32 mLevel;
+    txElementContext(const nsAString& aBaseURI);
+    txElementContext(const txElementContext& aOther);
+
+    PRBool mPreserveWhitespace;
+    PRBool mForwardsCompatibleParsing;
+    nsString mBaseURI;
+    nsRefPtr<txNamespaceMap> mMappings;
+    nsVoidArray mInstructionNamespaces;
+    PRInt32 mDepth;
 };
 
 class txStylesheetCompilerState : public txIParseContext
 {
 public:
-    txStylesheetCompilerState(const nsAString& aBase, txStylesheet* aStylesheet);
+    txStylesheetCompilerState(const nsAString& aBase,
+                              txStylesheet* aStylesheet);
     ~txStylesheetCompilerState();
 
     // Stack functions
@@ -108,9 +115,9 @@ public:
     nsVoidArray mInScopeVariables;
     nsRefPtr<txStylesheet> mStylesheet;
     txHandlerTable* mHandlerTable;
-    txElementContext* mElementContext;
+    nsAutoPtr<txElementContext> mElementContext;
     txPushNewContext* mSorter;
-    txList* mChooseGotoList;
+    nsAutoPtr<txList> mChooseGotoList;
     MBool mDOE;
     
 private:
@@ -158,18 +165,13 @@ private:
     nsString mCharacters;
 };
 
-class txElementContext : public TxObject
-{
+class txInScopeVariable {
 public:
-    txElementContext(const nsAString& aBaseURI);
-    txElementContext(const txElementContext& aOther);
-
-    PRBool mPreserveWhitespace;
-    PRBool mForwardsCompatibleParsing;
-    nsString mBaseURI;
-    nsRefPtr<txNamespaceMap> mMappings;
-    nsVoidArray mInstructionNamespaces;
-    PRInt32 mDepth;
+    txInScopeVariable(const txExpandedName& aName) : mName(aName), mLevel(1)
+    {
+    }
+    txExpandedName mName;
+    PRInt32 mLevel;
 };
 
 #endif
