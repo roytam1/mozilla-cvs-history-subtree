@@ -84,7 +84,7 @@ txLoadedDocumentsHash::~txLoadedDocumentsHash()
 
     txLoadedDocumentEntry* entry = GetEntry(baseURI);
     if (entry) {
-        entry->mDocument.forget();
+        delete entry->mDocument.forget();
     }
 }
 
@@ -166,8 +166,12 @@ txExecutionState::init(const txXPathNode& aNode,
     mOutputHandler->startDocument();
 
     // Set up loaded-documents-hash
-    rv = mLoadedDocuments.init(txXPathNodeUtils::getOwnerDocument(aNode));
+    nsAutoPtr<txXPathNode> document(txXPathNodeUtils::getOwnerDocument(aNode));
+    rv = mLoadedDocuments.init(document);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    // loaded-documents-hash owns this now
+    document.forget();
 
     // Init members
     rv = mKeyHash.init();
