@@ -44,7 +44,7 @@ PM_EnsureProgressManager(MWContext* context);
  * reference count onthe progress manager.
  */
 extern void
-PM_DestroyProgressManager(MWContext* context);
+PM_ReleaseProgressManager(MWContext* context);
 
 /**
  * Notify the progress manager for the specified context that the
