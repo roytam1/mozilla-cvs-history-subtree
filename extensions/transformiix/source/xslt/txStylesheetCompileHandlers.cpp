@@ -889,7 +889,16 @@ txFnEndKey(txStylesheetCompilerState& aState)
 /**
  * Template Handlers
  */
-// LRE
+
+/*
+  LRE
+
+  txStartLREElement
+  txInsertAttrSet        one for each qname in xsl:use-attribute-sets
+  txLREAttribute         one for each attribute
+  [children]
+  txEndElement
+*/
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
              nsIAtom* aLocalName,
@@ -946,7 +955,11 @@ txFnEndLRE(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// "LRE text"
+/*
+  "LRE text"
+
+  txText
+*/
 nsresult
 txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
@@ -1046,7 +1059,13 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:attribute
+/*
+  xsl:attribute
+
+  txPushStringHandler
+  [children]
+  txAttribute
+*/
 nsresult
 txFnStartAttribute(PRInt32 aNamespaceID,
                    nsIAtom* aLocalName,
@@ -1193,7 +1212,13 @@ txFnEndChoose(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:comment
+/*
+  xsl:comment
+
+  txPushStringHandler
+  [children]
+  txComment
+*/
 nsresult
 txFnStartComment(PRInt32 aNamespaceID,
                  nsIAtom* aLocalName,
@@ -1226,10 +1251,11 @@ txFnEndComment(txStylesheetCompilerState& aState)
 /*
   xsl:copy
 
-  txCopy        -+
-  [children]     |
-  txEndElement   |
-               <-+
+  txCopy          -+
+  txInsertAttrSet  |     one for each qname in use-attribute-sets
+  [children]       |
+  txEndElement     |
+                 <-+
 */
 nsresult
 txFnStartCopy(PRInt32 aNamespaceID,
@@ -1306,7 +1332,14 @@ txFnEndCopyOf(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:element
+/*
+  xsl:element
+
+  txStartElement
+  txInsertAttrSet        one for each qname in use-attribute-sets
+  [children]
+  txEndElement
+*/
 nsresult
 txFnStartElement(PRInt32 aNamespaceID,
                  nsIAtom* aLocalName,
@@ -1445,7 +1478,13 @@ txFnTextConinueTemplate(const nsAString& aStr,
     return NS_ERROR_XSLT_GET_NEW_HANDLER;
 }
 
-// xsl:if
+/*
+  xsl:if
+
+  txConditionalGoto  -+
+  [children]          |
+                    <-+
+*/
 nsresult
 txFnStartIf(PRInt32 aNamespaceID,
             nsIAtom* aLocalName,
@@ -1480,7 +1519,13 @@ txFnEndIf(txStylesheetCompilerState& aState)
     return aState.addGotoTarget(&condGoto->mTarget);
 }
 
-// xsl:message
+/*
+  xsl:message
+
+  txPushStringHandler
+  [children]
+  txMessage
+*/
 nsresult
 txFnStartMessage(PRInt32 aNamespaceID,
                  nsIAtom* aLocalName,
@@ -1520,7 +1565,7 @@ txFnEndMessage(txStylesheetCompilerState& aState)
 }
 
 /*
-  xsl:for-each
+  xsl:number
 
   txNumber
 */
@@ -1627,7 +1672,8 @@ txFnEndOtherwise(txStylesheetCompilerState& aState)
     xsl:param
     
     txCheckParam    --+
-    txPushRTFHandler  |   (for RTF-parameters)
+    txPushRTFHandler  |  --- (for RTF-parameters)
+    [children]        |  /
     txSetVariable     |
                     <-+
 */
@@ -1705,7 +1751,13 @@ txFnEndParam(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:processing-instruction
+/*
+  xsl:processing-instruction
+
+  txPushStringHandler
+  [children]
+  txProcessingInstruction
+*/
 nsresult
 txFnStartPI(PRInt32 aNamespaceID,
             nsIAtom* aLocalName,
@@ -1806,7 +1858,11 @@ txFnEndSort(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:text
+/*
+  xsl:text
+
+  [children]     (only txText)
+*/
 nsresult
 txFnStartText(PRInt32 aNamespaceID,
               nsIAtom* aLocalName,
@@ -1849,7 +1905,11 @@ txFnTextText(const nsAString& aStr, txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:value-of
+/*
+  xsl:value-of
+
+  txValueOf
+*/
 nsresult
 txFnStartValueOf(PRInt32 aNamespaceID,
                  nsIAtom* aLocalName,
@@ -1887,7 +1947,14 @@ txFnEndValueOf(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:variable
+/*
+    xsl:variable
+    
+    txPushRTFHandler  |  --- (for RTF-parameters)
+    [children]        |  /
+    txSetVariable     |
+                    <-+
+*/
 nsresult
 txFnStartVariable(PRInt32 aNamespaceID,
                   nsIAtom* aLocalName,
@@ -2041,7 +2108,8 @@ txFnEndWhen(txStylesheetCompilerState& aState)
 /*
     xsl:with-param
     
-    txPushRTFHandler (for RTF-parameters)
+    txPushRTFHandler   -- for RTF-parameters
+    [children]         /
     txSetParam
 */
 nsresult
