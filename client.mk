@@ -124,6 +124,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	content/svg/document/src/nsSVGDocument.cpp            \
 	content/svg/document/src/nsSVGDocument.h              \
 	dom/public/nsIDOMClassInfo.h                          \
+	dom/public/idl/svg/Makefile.in                        \
 	dom/src/base/nsDOMClassInfo.cpp                       \
 	gfx/src/windows/nsDrawingSurfaceWin.cpp               \
 	htmlparser/src/CParserContext.cpp                     \
