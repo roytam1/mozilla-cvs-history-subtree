@@ -364,13 +364,13 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
                                             getStackTrace,      "(Ljava/lang/Throwable;)Ljava/lang/String;",
                                                                                                 njJSUtil);
 
-#ifdef AIX
+#if defined(AIX) && defined(JDKBUG)
 #    define JAVA_STATIC_INITIALIZER_BUG
 #endif
 
 #ifdef JAVA_STATIC_INITIALIZER_BUG
     /* The following is used to work around a bug in AIX JDK1.1.6 (See
-     * #331620), in which static initializers are not run when a
+     * bugsplat bug #331620), in which static initializers are not run when a
      * static field is referenced from native code.  The problem does
      * not manifest itself if the field is accessed from Java code, so
      * we first call some Java code to access the fields of interest

@@ -18,6 +18,9 @@
 
 JDK = /tools/ns
 
+# See jsj.c for AIX workaround for bugsplat bug 331620 
+JDKBUG = 1 
+
 INCLUDES   += -I$(JDK)/include/java -I$(JDK)/include/java/aix
 
 OTHER_LIBS += -L$(JDK)/lib/aix/native_threads -ljava

@@ -33,7 +33,7 @@
 # Change these to the current platform settings!!!
 
 #JDK = /tools/ns
-JDK = /share/builds/components/jdk/1.2beta/AIX
+JDK = /share/builds/components/jdk/1.2.2_01/AIX
 JAVAC = $(JDK)/sh/javac 
 JAR = $(JDK)/sh/jar 
 
