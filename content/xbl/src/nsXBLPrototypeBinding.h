@@ -25,6 +25,7 @@
 #include "nsCOMPtr.h"
 #include "nsIXBLPrototypeBinding.h"
 #include "nsIXBLPrototypeHandler.h"
+#include "nsIXBLPrototypeProperty.h"
 #include "nsICSSStyleSheet.h"
 #include "nsICSSLoaderObserver.h"
 
@@ -66,6 +67,10 @@ class nsXBLPrototypeBinding: public nsIXBLPrototypeBinding, public nsICSSLoaderO
 
   NS_IMETHOD GetPrototypeHandlers(nsIXBLPrototypeHandler** aHandler);
   NS_IMETHOD SetPrototypeHandlers(nsIXBLPrototypeHandler* aHandler);
+  
+  NS_IMETHOD GetPrototypeProperties(nsIXBLPrototypeProperty** aResult);
+  NS_IMETHOD SetProtoTypeProperties(nsIXBLPrototypeProperty* aResult);
+  NS_IMETHOD GetClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject);
   
   NS_IMETHOD AttributeChanged(nsIAtom* aAttribute, PRInt32 aNameSpaceID, PRBool aRemoveFlag, 
                               nsIContent* aChangedElement, nsIContent* aAnonymousContent);
@@ -143,6 +148,7 @@ public:
 
 protected:  
   void ConstructHandlers();
+  void ConstructProperties();
   void ConstructAttributeTable(nsIContent* aElement);
   void ConstructInsertionTable(nsIContent* aElement);
   void ConstructInterfaceTable(nsIContent* aElement);
@@ -182,6 +188,8 @@ protected:
   nsCOMPtr<nsIXBLPrototypeHandler> mConstructor; // Strong.  Our constructor.
   nsCOMPtr<nsIXBLPrototypeHandler> mDestructor; // Strong. Our destructor.
 
+  nsCOMPtr<nsIXBLPrototypeProperty> mPrototypeProperty;
+
   nsCOMPtr<nsIXBLPrototypeBinding> mBaseBinding; // Strong. We own the base binding in our explicit inheritance chain.
   PRPackedBool mInheritStyle;
   PRPackedBool mHasBaseProto;
@@ -206,4 +214,6 @@ protected:
 
   PRInt32 mBaseNameSpaceID;    // If we extend a tagname/namespace, then that information will
   nsCOMPtr<nsIAtom> mBaseTag;  // be stored in here.
+
+  void * mClassObject; // the class object for the binding. We'll use this to pre-compile properties and methods for the binding.
 };

@@ -58,6 +58,8 @@
 #include "nsHTMLAtoms.h"
 #include "nsXULAtoms.h"
 
+#include "nsIScriptContext.h"
+
 #include "nsICSSLoader.h"
 #include "nsIStyleRuleProcessor.h"
 
@@ -264,7 +266,8 @@ nsXBLPrototypeBinding::nsXBLPrototypeBinding(const nsAReadableCString& aID, nsIC
   mAttributeTable(nsnull), 
   mInsertionPointTable(nsnull),
   mInterfaceTable(nsnull),
-  mStyleSheetList(nsnull)
+  mStyleSheetList(nsnull),
+  mClassObject(nsnull)
 {
   NS_INIT_REFCNT();
   
@@ -306,6 +309,7 @@ nsXBLPrototypeBinding::nsXBLPrototypeBinding(const nsAReadableCString& aID, nsIC
   aInfo->GetScriptAccess(&allowScripts);
   if (allowScripts) {
     ConstructHandlers();
+    ConstructProperties();
   }
 
   nsCOMPtr<nsIContent> content;
@@ -614,6 +618,21 @@ NS_IMETHODIMP
 nsXBLPrototypeBinding::SetPrototypeHandlers(nsIXBLPrototypeHandler* aHandler)
 {
   mPrototypeHandler = aHandler;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXBLPrototypeBinding::GetPrototypeProperties(nsIXBLPrototypeProperty ** aResult)
+{
+  *aResult = mPrototypeProperty;
+  NS_IF_ADDREF(*aResult);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXBLPrototypeBinding::SetProtoTypeProperties(nsIXBLPrototypeProperty* aResult)
+{
+  mPrototypeProperty = aResult;
   return NS_OK;
 }
 
@@ -929,6 +948,118 @@ nsXBLPrototypeBinding::GetImmediateChild(nsIAtom* aTag, nsIContent** aResult)
   }
 
   return;
+}
+
+void
+nsXBLPrototypeBinding::ConstructProperties()
+{
+  nsCOMPtr<nsIContent> properties;
+  GetImmediateChild(kImplementationAtom, getter_AddRefs(properties));
+  if (properties && mBinding)
+  {
+    nsXBLService::BuildPropertyChain(this, properties, getter_AddRefs(mPrototypeProperty));
+  }
+}
+
+NS_IMETHODIMP
+nsXBLPrototypeBinding::GetClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject)
+{
+  if (mClassObject) // if we've already created a class object....
+  {
+    *aClassObject = mClassObject;
+    return NS_OK;
+  }
+
+  JSContext* jscontext = (JSContext*)aContext->GetNativeContext();
+  JSObject* global = ::JS_GetGlobalObject(jscontext);
+  JSObject* scriptObject = (JSObject*) aScriptObject;
+
+  // First ensure our JS class is initialized.
+  jsval vp;
+  JSObject* proto;
+
+  if ((! ::JS_LookupProperty(jscontext, global, aClassName, &vp)) || JSVAL_IS_PRIMITIVE(vp)) 
+  {
+    // We need to initialize the class.
+    nsXBLJSClass* c;
+    void* classObject;
+    nsCStringKey key(aClassName);
+    classObject = (nsXBLService::gClassTable)->Get(&key);
+
+    if (classObject) 
+    {
+      c = NS_STATIC_CAST(nsXBLJSClass*, classObject);
+      // If c is on the LRU list (i.e., not linked to itself), remove it now!
+      JSCList* link = NS_STATIC_CAST(JSCList*, c);
+      if (c->next != link) 
+      {
+        JS_REMOVE_AND_INIT_LINK(link);
+        nsXBLService::gClassLRUListLength--;
+      }
+    } 
+    else 
+    {
+      if (JS_CLIST_IS_EMPTY(&nsXBLService::gClassLRUList)) 
+      {
+        // We need to create a struct for this class.
+        c = new nsXBLJSClass(aClassName);
+        if (!c)
+          return NS_ERROR_OUT_OF_MEMORY;
+      } 
+      else 
+      {
+        // Pull the least recently used class struct off the list.
+        JSCList* lru = (nsXBLService::gClassLRUList).next;
+        JS_REMOVE_AND_INIT_LINK(lru);
+        nsXBLService::gClassLRUListLength--;
+
+        // Remove any mapping from the old name to the class struct.
+        c = NS_STATIC_CAST(nsXBLJSClass*, lru);
+        nsCStringKey oldKey(c->name);
+        (nsXBLService::gClassTable)->Remove(&oldKey);
+
+        // Change the class name and we're done.
+        nsMemory::Free((void*) c->name);
+        c->name = aClassName.ToNewCString();
+      }
+
+      // Add c to our table.
+      (nsXBLService::gClassTable)->Put(&key, (void*)c);
+    }
+    
+    // Retrieve the current prototype of the JS object.
+    JSObject* parent_proto = ::JS_GetPrototype(jscontext, scriptObject);
+
+    // Make a new object prototyped by parent_proto and parented by global.
+    proto = ::JS_InitClass(jscontext,           // context
+                           global,              // global object
+                           parent_proto,        // parent proto 
+                           c,                   // JSClass
+                           NULL,                // JSNative ctor
+                           0,                   // ctor args
+                           nsnull,              // proto props
+                           nsnull,              // proto funcs
+                           nsnull,              // ctor props (static)
+                           nsnull);             // ctor funcs (static)
+    if (!proto) 
+    {
+      (nsXBLService::gClassTable)->Remove(&key);
+      delete c;
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    // The prototype holds a strong reference to its class struct.
+    c->Hold();
+    mClassObject = (void *) proto;
+  }
+  else 
+    mClassObject = (void *) JSVAL_TO_OBJECT(vp);
+
+  *aClassObject = mClassObject;
+
+  ::JS_SetPrototype(jscontext, scriptObject, proto);
+
+  return NS_OK;
 }
 
 void
