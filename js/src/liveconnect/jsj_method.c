@@ -1088,13 +1088,16 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
     js_type = compute_jsj_type(cx, js_val);
     rank1 = rank_table[js_type][(int)descriptor1->type - 2];
     rank2 = rank_table[js_type][(int)descriptor2->type - 2];
+        
+    /* Fast path for conversion from most JS types */  
+    if (rank1 < rank2)
+        return JSJPREF_FIRST_ARG;
 
     /*
      * Special logic is required for matching the classes of wrapped
      * Java objects.
      */
-    if (((js_type == JSJTYPE_JAVAOBJECT) || (js_type == JSJTYPE_JAVAARRAY)) &&
-	IS_REFERENCE_TYPE(descriptor2->type)) {
+    if (rank2 == 0) {
         java_class1 = descriptor1->java_class;
         java_class2 = descriptor2->java_class;
         
@@ -1110,7 +1113,7 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
          * For JavaObject arguments, any compatible reference type is preferable
          * to any primitive Java type or to java.lang.String.
          */
-        if (rank2 < rank1)
+        if (rank1 != 0)
             return JSJPREF_SECOND_ARG;
         
         /*
@@ -1126,10 +1129,6 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
         /* This can happen in unusual situations involving interface types. */
         return JSJPREF_AMBIGUOUS;
     }
-    
-    /* Fast path for conversion from most JS types */  
-    if (rank1 < rank2)
-        return JSJPREF_FIRST_ARG;
     
     if (rank1 > rank2)
         return JSJPREF_SECOND_ARG;
