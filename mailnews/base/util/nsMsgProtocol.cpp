@@ -136,7 +136,7 @@ PRInt32 nsMsgProtocol::SendData(nsIURI * aURL, const char * dataBuffer)
 
 // Whenever data arrives from the connection, core netlib notifices the protocol by calling
 // OnDataAvailable. We then read and process the incoming data from the input stream. 
-NS_IMETHODIMP nsMsgProtocol::OnDataAvailable(nsISupports *ctxt, nsIBufferInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
+NS_IMETHODIMP nsMsgProtocol::OnDataAvailable(nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
 {
 	// right now, this really just means turn around and churn through the state machine
 	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt);
