@@ -25,7 +25,11 @@
 #include "AddrBookView.h"
 #include "ABAddrSearchView.h"
 
+#if defined(MOZ_MAIL_NEWS)
+#include "hpane/HPaned.h"
+#else
 #include <Xfe/Pane.h>
+#endif /* MOZ_MAIL_NEWS */
 
 XFE_AB2PaneView::XFE_AB2PaneView(XFE_Component *toplevel_component, 
 								 Widget         parent, 
@@ -51,8 +55,16 @@ XFE_AB2PaneView::XFE_AB2PaneView(XFE_Component *toplevel_component,
 													   xmFormWidgetClass,
 													   parent,
 													   NULL);
-
+#if defined(MOZ_MAIL_NEWS)
+	int    ac = 0;
+	Arg    av[20];
 	
+	Widget hpane;
+	ac = 0;
+	XtSetArg (av[ac], XmNallowResize, True); ac++;
+	hpane = XmCreateHPanedWindow(paneContainerForm,
+								 "hpane", av, ac);
+#else
 	Widget hpane;
 
 	hpane = XtVaCreateWidget("hpane",
@@ -64,6 +76,7 @@ XFE_AB2PaneView::XFE_AB2PaneView(XFE_Component *toplevel_component,
 							 XmNsashShadowThickness,	1,
 							 XmNpaneSashType,			XmPANE_SASH_LIVE,
 							 NULL);
+#endif /* MOZ_MAIL_NEWS */
 
 	// dir list
 	m_dirListView = new XFE_ABDirListView(toplevel_component, 
@@ -296,7 +309,14 @@ XFE_AB2PaneView::isCommandEnabled(CommandType command,
 								  void *calldata,
 								  XFE_CommandInfo* i)
 {
-	if (m_focusedView)
+	if (IS_CONTAINER_PANE_CMD(command))
+		return m_dirListView->isCommandEnabled(command, calldata, i);
+	else if (IS_AB_PANE_CMD(command))
+		return m_entriesListView->isCommandEnabled(command, calldata, i);
+	else if (m_focusedView)
+		/* 
+		 * AB_PropertiesCmd | AB_DeleteCmd | AB_PropertiesCmd | 
+		 */
 		return m_focusedView->isCommandEnabled(command, calldata, i);
 	return FALSE;
 }
@@ -306,7 +326,14 @@ XFE_AB2PaneView::isCommandSelected(CommandType command,
 								   void *calldata,
 								   XFE_CommandInfo* i)
 {
-	if (m_focusedView)
+	if (IS_CONTAINER_PANE_CMD(command))
+		return m_dirListView->isCommandSelected(command, calldata, i);
+	else if (IS_AB_PANE_CMD(command))
+		return m_entriesListView->isCommandSelected(command, calldata, i);
+	else if (m_focusedView)
+		/* 
+		 * AB_PropertiesCmd | AB_DeleteCmd | AB_PropertiesCmd | 
+		 */
 		return m_focusedView->isCommandSelected(command, calldata, i);
 	return FALSE;
 }
@@ -316,7 +343,14 @@ XFE_AB2PaneView::handlesCommand(CommandType command,
 								void *calldata,
 								XFE_CommandInfo* i)
 {
-	if (m_focusedView)
+	if (IS_CONTAINER_PANE_CMD(command))
+		return m_dirListView->handlesCommand(command, calldata, i);
+	else if (IS_AB_PANE_CMD(command))
+		return m_entriesListView->handlesCommand(command, calldata, i);
+	else if (m_focusedView)
+		/* 
+		 * AB_PropertiesCmd | AB_DeleteCmd | AB_PropertiesCmd | 
+		 */
 		return m_focusedView->handlesCommand(command, calldata, i);
 	return FALSE;
 }
@@ -326,7 +360,14 @@ XFE_AB2PaneView::doCommand(CommandType command,
 						   void *calldata,
 						   XFE_CommandInfo* i)
 {
-	if (m_focusedView)
+	if (IS_CONTAINER_PANE_CMD(command))
+		m_dirListView->doCommand(command, calldata, i);
+	else if (IS_AB_PANE_CMD(command))
+		m_entriesListView->doCommand(command, calldata, i);
+	else if (m_focusedView)
+		/* 
+		 * AB_PropertiesCmd | AB_DeleteCmd | AB_PropertiesCmd | 
+		 */
 		m_focusedView->doCommand(command, calldata, i);
 }
 
