@@ -25,6 +25,7 @@
 #include "nsIURL.h"
 #include "nsIURLParser.h"
 #include "nsCRT.h"
+#include "nsIPref.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsIInterfaceRequestor.h"
@@ -38,17 +39,24 @@
 #include "nsNetCID.h"
 
 static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
-
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 ////////////////////////////////////////////////////////////////////////////////
 
 nsFileProtocolHandler::nsFileProtocolHandler()
 {
     NS_INIT_REFCNT();
+    mGenerateHTMLContent = PR_FALSE;
 }
 
 nsresult
 nsFileProtocolHandler::Init()
 {
+    nsresult rv;
+    nsCOMPtr<nsIPref> pPref(do_GetService(kPrefCID, &rv)); 
+    if (NS_SUCCEEDED(rv) || pPref) { 
+        pPref->GetBoolPref("network.dir.generate_html", &mGenerateHTMLContent);
+    }
+
     return NS_OK;
 }
 
@@ -134,7 +142,8 @@ nsFileProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 
     rv = channel->Init(-1,      // ioFlags unspecified
                        -1,      // permissions unspecified
-                       url);
+                       url,
+                       mGenerateHTMLContent);
     if (NS_FAILED(rv)) {
         NS_RELEASE(channel);
         return rv;

@@ -131,6 +131,9 @@ nsIndexedToHTML::Handle201(char* buffer, nsString &pushBuffer)
     if (buffer == nsnull)
         return NS_ERROR_NULL_POINTER;
 
+    // Is the current entry we're dealing with a "FILE"?
+    char *pIsFile = PL_strstr((const char *)buffer, "FILE");
+
     char* bufferOffset = nsnull;
 
     if (*buffer == '\"') {
@@ -161,11 +164,18 @@ nsIndexedToHTML::Handle201(char* buffer, nsString &pushBuffer)
     pushBuffer.AppendWithConversion(filename);
     pushBuffer.AppendWithConversion("\"> ");
 
+    if(pIsFile)
+        pushBuffer.Append(NS_LITERAL_STRING("<img align=absbottom border=0 src=\"internal-gopher-unknown\">"));
+    else //Use the folder icon for DIRECTORY and SYMLINKS
+        pushBuffer.Append(NS_LITERAL_STRING("<img align=absbottom border=0 src=\"internal-gopher-menu\">"));
+
     nsUnescape(NS_CONST_CAST(char*, filename.get()));
     pushBuffer.AppendWithConversion(filename);
     pushBuffer.AppendWithConversion("</a>");
+    pushBuffer.Append(NS_LITERAL_STRING("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"));
     pushBuffer.AppendWithConversion("</td>\n");
 
+    int iCurColNum = 1; // =1 since we just got done with the "filename" column above
     while (*bufferOffset)
     {
         char* bufferStart =  bufferOffset;
@@ -180,14 +190,37 @@ nsIndexedToHTML::Handle201(char* buffer, nsString &pushBuffer)
         if (bufferOffset == nsnull)
             return NS_ERROR_FAILURE;   
         
-        *bufferOffset = '\0';
+        *bufferOffset = '\0'; 
+        iCurColNum++;
         ++bufferOffset;
         nsUnescape(bufferStart);
         nsCString cstring(bufferStart);
-        cstring.ToLowerCase();
 
         pushBuffer.AppendWithConversion(" <td>");
-        pushBuffer.AppendWithConversion(cstring);
+        switch(iCurColNum) {
+           case 2: // We're looking at the "Content-Length" column
+               // Add the "Content-Length" column only for files
+               // Skip for directories etc. so we do not show a zero length
+               if (pIsFile)
+                   pushBuffer.AppendWithConversion(cstring);
+               else
+                   pushBuffer.Append(NS_LITERAL_STRING("&nbsp;"));
+               pushBuffer.Append(NS_LITERAL_STRING("&nbsp;&nbsp;&nbsp;&nbsp;"));
+               break;
+           case 3: // We're looking at the "Last-Modified" column
+               pushBuffer.AppendWithConversion(cstring);
+               pushBuffer.Append(NS_LITERAL_STRING("&nbsp;&nbsp;"));
+               break;
+           case 4: // We're looking at the "File-Type" column
+               cstring.ToLowerCase();//Convert "FILE" etc. -> lowercase 
+               // Uppercase just the first char. So, we have "File" and so on
+               cstring.SetCharAt(nsCRT::ToUpper(GetCharAt(cstring, 0)), 0);
+               pushBuffer.AppendWithConversion(cstring);
+               break;
+           default:
+               pushBuffer.AppendWithConversion(cstring);
+               break;
+        }
         pushBuffer.AppendWithConversion("</td>\n");
     }
 

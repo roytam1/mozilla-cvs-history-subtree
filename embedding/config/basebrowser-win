@@ -285,3 +285,5 @@ res\builtin\selectBindings.xml
 res\builtin\textfields.css
 res\builtin\xbl-forms.css
 res\fonts\fontEncoding.properties
+res\html\gopher-unknown.gif
+res\html\gopher-menu.gif

@@ -189,14 +189,16 @@ nsDirectoryIndexStream::Read(char* aBuf, PRUint32 aCount, PRUint32* aReadCount)
         }
 				
 				 PRInt64 fileSize;
-				 PRInt64 fileInfoModifyTime;
+				 PRInt64 tmpTime, fileInfoModifyTime;
 				 rv = current->GetFileSize( &fileSize );
 				 if (NS_FAILED(rv)) return rv; 
 				 
 				 PROffset32 fileInfoSize;
 				 LL_L2I( fileInfoSize,fileSize );
 				 
-				 rv = current->GetLastModificationDate( &fileInfoModifyTime );	
+				 rv = current->GetLastModificationDate( &tmpTime );	
+				 // Why does nsIFile give this back in milliseconds?
+				 LL_MUL(fileInfoModifyTime, tmpTime, PR_USEC_PER_MSEC);
 				 if (NS_FAILED(rv)) return rv; 
             mBuf += "201: ";
 
