@@ -476,6 +476,8 @@ js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
 	report.uclinebuf = ts->linebuf.base;
 	report.uctokenptr = ts->token.ptr;
 	report.flags = flags;
+        report.errorNumber = 0;
+
 	(*onError)(cx, message, &report);
 #if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
     } else {
@@ -574,8 +576,8 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
     }
     if (lastc == '\n')
 	limit[-1] = lastc;
-    if (message) free(message);
-    if (report.messageArgs) free(report.messageArgs);
+    if (message) JS_free(cx, message);
+    if (report.messageArgs) JS_free(cx, (void *)report.messageArgs);
 }
 
 JSTokenType
@@ -734,12 +736,13 @@ retry:
 	    } else if (JS7_ISDEC(c)) {
 		/*
 		 * We permit 08 and 09 as decimal numbers, which makes our
-		 * behaviour superset of the ECMA numeric grammar.  We might
+		 * behaviour a superset of the ECMA numeric grammar.  We might
 		 * not always be so permissive, so we warn about it.
 		 */
 		if (c > '7' && JSVERSION_IS_ECMA(cx->version)) {
-		    js_ReportCompileError(cx, ts, JSREPORT_WARNING,
-			"0%c is not a legal ECMA-262 numeric constant", c);
+		    js_ReportCompileErrorNumber(cx, ts, JSREPORT_WARNING,
+                                                JSMSG_BAD_OCTAL,
+                                                c == '8' ? "08" : "09");
 		    radix = 10;
 		} else {
 		    radix = 8;
@@ -773,8 +776,8 @@ retry:
 		    c = GetChar(ts);
 		}
 		if (!JS7_ISDEC(c)) {
-		    js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-					  "missing exponent");
+		    js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                                JSMSG_MISSING_EXPONENT);
 		    RETURN(TOK_ERROR);
 		}
 		do {
@@ -790,14 +793,14 @@ retry:
 
 	if (radix == 10) {
 	    if (!js_strtod(cx, ts->tokenbuf.base, &endptr, &dval)) {
-		js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-				      "out of memory");
+		js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                            JSMSG_OUT_OF_MEMORY);
 		RETURN(TOK_ERROR);
 	    }
 	} else {
 	    if (!js_strtointeger(cx, ts->tokenbuf.base, &endptr, radix, &dval)) {
-		js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-				      "out of memory");
+		js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                            JSMSG_OUT_OF_MEMORY);
 		RETURN(TOK_ERROR);
 	    }
 	}
@@ -812,8 +815,8 @@ retry:
 	while ((c = GetChar(ts)) != qc) {
 	    if (c == '\n' || c == EOF) {
 		UngetChar(ts, c);
-		js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-				      "unterminated string literal");
+		js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                            JSMSG_UNTERMINATED_STRING);
 		RETURN(TOK_ERROR);
 	    }
 	    if (c == '\\') {
@@ -1002,13 +1005,13 @@ skipline:
 		if (c == '/' && MatchChar(ts, '*')) {
 		    if (MatchChar(ts, '/'))
 			goto retry;
-		    js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-					  "nested comment");
+		    js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                                JSMSG_NESTED_COMMENT);
 		}
 	    }
 	    if (c == EOF) {
-		js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-				      "unterminated comment");
+		js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                            JSMSG_UNTERMINATED_COMMENT);
 		RETURN(TOK_ERROR);
 	    }
 	    goto retry;
@@ -1023,8 +1026,8 @@ skipline:
 	    while ((c = GetChar(ts)) != '/') {
 		if (c == '\n' || c == EOF) {
 		    UngetChar(ts, c);
-		    js_ReportCompileError(cx, ts,JSREPORT_ERROR,
-			"unterminated regular expression literal");
+		    js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                                JSMSG_UNTERMINATED_REGEXP);
 		    RETURN(TOK_ERROR);
 		}
 		if (c == '\\') {
@@ -1047,8 +1050,8 @@ skipline:
 	    c = PeekChar(ts);
 	    if (JS7_ISLET(c)) {
 		ts->token.ptr = ts->linebuf.ptr - 1;
-		js_ReportCompileError(cx, ts,JSREPORT_ERROR,
-				      "invalid flag after regular expression");
+		js_ReportCompileErrorNumber(cx, ts,JSREPORT_ERROR,
+                                            JSMSG_BAD_REGEXP_FLAG);
 		(void) GetChar(ts);
 		RETURN(TOK_ERROR);
 	    }
@@ -1114,8 +1117,8 @@ skipline:
 		break;
 	    n = 10 * n + JS7_UNDEC(c);
 	    if (n >= ATOM_INDEX_LIMIT) {
-		js_ReportCompileError(cx, ts,JSREPORT_ERROR,
-				      "overlarge sharp variable number");
+		js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                            JSMSG_SHARPVAR_TOO_BIG);
 		RETURN(TOK_ERROR);
 	    }
 	}
@@ -1131,8 +1134,8 @@ skipline:
 #endif /* JS_HAS_SHARP_VARS */
 
       default:
-	js_ReportCompileError(cx, ts, JSREPORT_ERROR,
-			      "illegal character");
+	js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                    JSMSG_ILLEGAL_CHARACTER);
 	RETURN(TOK_ERROR);
     }
 
