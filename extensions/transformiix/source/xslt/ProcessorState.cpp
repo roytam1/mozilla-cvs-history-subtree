@@ -792,7 +792,11 @@ MBool ProcessorState::isStripSpaceAllowed(Node* node) {
             break;
         }
         case Node::TEXT_NODE:
+            if (!XMLUtils::shouldStripTextnode(node->getNodeValue()))
+                return MB_FALSE;
             return isStripSpaceAllowed(node->getParentNode());
+        case Node::DOCUMENT_NODE:
+            return MB_TRUE;
         default:
             break;
     }

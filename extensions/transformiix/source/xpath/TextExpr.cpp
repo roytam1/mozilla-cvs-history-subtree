@@ -74,7 +74,8 @@ short TextExpr::getType() {
 **/
 MBool TextExpr::matches(Node* node, Node* context, ContextState* cs) {
     if ( node ) {
-        return (MBool) (node->getNodeType() == Node::TEXT_NODE);
+        if(node->getNodeType() == Node::TEXT_NODE)
+            return !cs->isStripSpaceAllowed(node);
     }
     return MB_FALSE;
 } //-- matches

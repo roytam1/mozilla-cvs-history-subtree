@@ -930,6 +930,7 @@ private:
   short     axisIdentifier;
 
     void fromDescendants(Node* context, ContextState* cs, NodeSet* nodes);
+    void fromDescendantsRev(Node* context, ContextState* cs, NodeSet* nodes);
 
 }; //-- LocationStep
 

@@ -1295,16 +1295,6 @@ void XSLTProcessor::processAction
                     break;
                 }
                 exprResult->stringValue(value);
-                //-- handle whitespace stripping
-                if ( exprResult->getResultType() == ExprResult::NODESET) {
-                    NodeSet* nodes = (NodeSet*)exprResult;
-                    if ( nodes->size() > 0) {
-                        Node* node = nodes->get(0);
-                        if ( ps->isStripSpaceAllowed(node) && 
-                             XMLUtils::shouldStripTextnode(value))
-                            value.clear();
-                    }
-                }
                 if (value.length()>0)
                     ps->addToResultTree(resultDoc->createTextNode(value));
                 delete exprResult;
