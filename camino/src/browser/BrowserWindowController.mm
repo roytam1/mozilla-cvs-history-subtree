@@ -266,6 +266,8 @@ static NSArray* sToolbarDefaults = nil;
 
 - (void)windowWillClose:(NSNotification *)notification
 {
+  mClosingWindow = YES;
+    
 #if DEBUG
   NSLog(@"Window will close notification.");
 #endif
@@ -1344,8 +1346,13 @@ static NSArray* sToolbarDefaults = nil;
     [mTabBrowser removeTabViewItem:[inBrowser tab]];
   }
   else
-    [[self window] close];
-
+  {
+    // if a window unload handler calls window.close(), we
+    // can get here while the window is already being closed,
+    // so we don't want to close it again (and recurse).
+    if (!mClosingWindow)
+      [[self window] close];
+  }
 }
 
 - (void)createNewTab:(ENewTabContents)contents;

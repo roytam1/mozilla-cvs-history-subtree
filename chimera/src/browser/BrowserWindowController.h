@@ -145,6 +145,7 @@ typedef enum
   BrowserWrapper* mBrowserView;
 
   BOOL mMoveReentrant;
+  BOOL mClosingWindow;
 
   BOOL mShouldAutosave;
   BOOL mShouldLoadHomePage;
