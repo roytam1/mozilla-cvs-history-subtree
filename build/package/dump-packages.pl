@@ -162,7 +162,7 @@ foreach my $package (keys %MozPackages::packages) {
 
 if ($reportUnpackaged) {
     print "Unpackaged files:";
-    $alldist = `find dist/bin -not -type d`;
+    $alldist = `find dist/bin -xtype f`;
     @alldist = split /[\n\r]+/, $alldist;
     foreach $distFile (@alldist) {
         if (!exists(${packaged{$distFile}})
