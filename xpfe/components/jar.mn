@@ -1,5 +1,6 @@
 comm.jar:
     content/communicator/directory/directory.xul                (directory/directory.xul)
+    content/communicator/directory/directory.html               (directory/directory.html)
     content/communicator/directory/directory.js                 (directory/directory.js)
     content/communicator/history/history.xul                    (history/resources/history.xul)	
     content/communicator/history/historyTreeOverlay.xul         (history/resources/historyTreeOverlay.xul)	
@@ -166,6 +167,7 @@ toolkit.jar:
     content/global/downloadProgress.xul                         (xfer/resources/downloadProgress.xul)
     content/global/downloadProgress.js                          (xfer/resources/downloadProgress.js)
     content/global/autocomplete.xml                             (autocomplete/resources/content/autocomplete.xml)
+    content/global/autocomplete.css                             (autocomplete/resources/content/autocomplete.css)
     content/global/filepicker.js				(filepicker/res/content/filepicker.js)
     content/global/filepicker.xul				(filepicker/res/content/filepicker.xul)
     content/global/nsFileView.js                                (filepicker/res/content/nsFileView.js)
