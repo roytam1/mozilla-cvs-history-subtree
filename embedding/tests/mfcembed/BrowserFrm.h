@@ -191,6 +191,7 @@ protected:
 
 public:
 	void SetupFrameChrome();
+  void SetEditor(BOOL isEditor){mIsEditor = isEditor;}
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -215,8 +216,12 @@ protected:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnClose();
 	afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
+	afx_msg void OnNewEditorwindow();
+	afx_msg void OnEditPage();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+private:
+  BOOL mIsEditor;
 };
 
 /////////////////////////////////////////////////////////////////////////////

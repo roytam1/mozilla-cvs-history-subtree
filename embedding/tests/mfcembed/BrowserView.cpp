@@ -84,6 +84,8 @@ static char THIS_FILE[] = __FILE__;
 // Register message for FindDialog communication
 static UINT WM_FINDMSG = ::RegisterWindowMessage(FINDMSGSTRING);
 
+IMPLEMENT_DYNAMIC(CBrowserView, CWnd)
+
 BEGIN_MESSAGE_MAP(CBrowserView, CWnd)
 	//{{AFX_MSG_MAP(CBrowserView)
 	ON_WM_CREATE()

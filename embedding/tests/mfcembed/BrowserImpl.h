@@ -57,6 +57,7 @@ public:
     NS_METHOD Init(PBROWSERFRAMEGLUE pBrowserFrameGlue,
                    nsIWebBrowser* aWebBrowser);
 
+    NS_METHOD MakeEditable();
     NS_DECL_ISUPPORTS
     NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSIWEBBROWSERCHROME

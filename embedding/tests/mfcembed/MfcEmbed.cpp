@@ -89,12 +89,10 @@ static NS_DEFINE_CID(kHelperAppLauncherDialogCID, NS_HELPERAPPLAUNCHERDIALOG_CID
 
 BEGIN_MESSAGE_MAP(CMfcEmbedApp, CWinApp)
 	//{{AFX_MSG_MAP(CMfcEmbedApp)
+	ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
 	ON_COMMAND(ID_NEW_BROWSER, OnNewBrowser)
 	ON_COMMAND(ID_MANAGE_PROFILES, OnManageProfiles)
-	ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
     ON_COMMAND(ID_EDIT_PREFERENCES, OnEditPreferences)
-	// NOTE - the ClassWizard will add and remove mapping macros here.
-	//    DO NOT EDIT what you see in these blocks of generated code!
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -330,9 +328,13 @@ BOOL CMfcEmbedApp::InitInstance()
 CBrowserFrame* CMfcEmbedApp::CreateNewBrowserFrame(PRUint32 chromeMask,
 												   PRInt32 x, PRInt32 y,
 												   PRInt32 cx, PRInt32 cy,
+                           PRBool bIsEditor,
 												   PRBool bShowWindow)
 {
-	// Setup a CRect with the requested window dimensions
+  UINT resId = IDR_MAINFRAME;
+  if (bIsEditor)
+    resId = IDR_EDITOR;
+	// Setup a CRect with the reques ted window dimensions
 	CRect winSize(x, y, cx, cy);
 
 	// Use the Windows default if all are specified as -1
@@ -341,18 +343,19 @@ CBrowserFrame* CMfcEmbedApp::CreateNewBrowserFrame(PRUint32 chromeMask,
 
 	// Load the window title from the string resource table
 	CString strTitle;
-	strTitle.LoadString(IDR_MAINFRAME);
+	strTitle.LoadString(resId);
 
 	// Now, create the browser frame
 	CBrowserFrame* pFrame = new CBrowserFrame(chromeMask);
+  pFrame->SetEditor(bIsEditor);
 	if (!pFrame->Create(NULL, strTitle, WS_OVERLAPPEDWINDOW, 
-					winSize, NULL, MAKEINTRESOURCE(IDR_MAINFRAME), 0L, NULL))
+					winSize, NULL, MAKEINTRESOURCE(resId), 0L, NULL))
 	{
 		return NULL;
 	}
 
 	// load accelerator resource
-	pFrame->LoadAccelTable(MAKEINTRESOURCE(IDR_MAINFRAME));
+	pFrame->LoadAccelTable(MAKEINTRESOURCE(resId));
 
 	// Show the window...
 	if(bShowWindow)
@@ -688,3 +691,4 @@ void CMfcEmbedApp::OnAppAbout()
 	CAboutDlg aboutDlg;
 	aboutDlg.DoModal();
 }
+

@@ -1,10 +1,11 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by mfcembed.rc
+// Used by MfcEmbed.rc
 //
 #define IDD_ABOUTBOX                    100
 #define IDR_MAINFRAME                   128
 #define IDR_MOZEMBTYPE                  129
+#define IDR_EDITOR                      129
 #define IDR_CTXMENU_DOCUMENT            130
 #define IDR_CTXMENU_LINK                131
 #define IDR_CTXMENU_TEXT                132
@@ -69,14 +70,20 @@
 #define ID_COPY_LINK_LOCATION           32786
 #define ID_MANAGE_PROFILES              32787
 #define ID_EDIT_PREFERENCES             32788
+#define ID_NEW_EDITORWINDOW             32790
+#define ID_EDIT_PAGE                    32792
+#define ID_BOLD                         32793
+#define ID_ITALICS                      32794
+#define ID_UNDERLINE                    32795
+#define ID_SAVE                         32796
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        152
-#define _APS_NEXT_COMMAND_VALUE         32789
+#define _APS_NEXT_RESOURCE_VALUE        156
+#define _APS_NEXT_COMMAND_VALUE         32797
 #define _APS_NEXT_CONTROL_VALUE         1022
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

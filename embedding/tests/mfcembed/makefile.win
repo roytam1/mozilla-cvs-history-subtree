@@ -38,6 +38,8 @@ REQUIRES = \
 	gfx \
 	windowwatcher \
 	layout \
+	editor \
+	composer \
 	$(NULL)
 
 DIRS=components \

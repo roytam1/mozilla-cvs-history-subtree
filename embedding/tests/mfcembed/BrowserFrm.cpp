@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- *//* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Netscape Public License
@@ -76,6 +75,7 @@
 #include "stdafx.h"
 #include "MfcEmbed.h"
 #include "BrowserFrm.h"
+#include "BrowserImpl.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -86,6 +86,10 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // CBrowserFrame
 
+#define ABOUT_BLANK "about:blank"
+
+
+
 IMPLEMENT_DYNAMIC(CBrowserFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(CBrowserFrame, CFrameWnd)
@@ -95,6 +99,8 @@ BEGIN_MESSAGE_MAP(CBrowserFrame, CFrameWnd)
 	ON_WM_SIZE()
 	ON_WM_CLOSE()
 	ON_WM_ACTIVATE()
+	ON_COMMAND(ID_NEW_EDITORWINDOW, OnNewEditorwindow)
+	ON_COMMAND(ID_EDIT_PAGE, OnEditPage)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -170,10 +176,14 @@ int CBrowserFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
     // Load the Most Recently Used(MRU) Urls into the UrlBar
     m_wndUrlBar.LoadMRUList();
 
+
+  UINT resID = IDR_MAINFRAME;
+  if (mIsEditor)
+      resID = IDR_EDITOR;
 	// Create the toolbar with Back, Fwd, Stop, etc. buttons..
 	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP
 		| CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) ||
-		!m_wndToolBar.LoadToolBar(IDR_MAINFRAME))
+		!m_wndToolBar.LoadToolBar(resID))
 	{
 		TRACE0("Failed to create toolbar\n");
 		return -1;      // fail to create
@@ -189,7 +199,8 @@ int CBrowserFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	
 	//Add the ToolBar and UrlBar windows to the rebar
 	m_wndReBar.AddBar(&m_wndToolBar);
-	m_wndReBar.AddBar(&m_wndUrlBar, "Enter URL:");
+	if (!mIsEditor)
+     m_wndReBar.AddBar(&m_wndUrlBar, "Enter URL:");
 
 	// Create the status bar with two panes - one pane for actual status
 	// text msgs. and the other for the progress control
@@ -390,4 +401,50 @@ void CMyStatusBar::OnLButtonDown(UINT nFlags, CPoint point)
     }
     	
 	CStatusBar::OnLButtonDown(nFlags, point);
+}
+
+void CBrowserFrame::OnNewEditorwindow() 
+{
+	// TODO: Add your command handler code here
+	// TODO: Add your command handler code here
+		// TODO: Add your command handler code here
+	CMfcEmbedApp *pApp = (CMfcEmbedApp *)AfxGetApp();
+
+  CBrowserFrame *pEditorFrame = pApp->CreateNewBrowserFrame(nsIWebBrowserChrome::CHROME_ALL, 
+                                        -1, -1, -1, -1,
+                                        PR_TRUE,PR_TRUE);
+  if (pEditorFrame)
+  {
+    CString tUrl;
+    m_wndUrlBar.GetEnteredURL(tUrl);
+    pEditorFrame->m_wndBrowserView.OpenURL(ABOUT_BLANK);
+    CBrowserImpl *impl = pEditorFrame->GetBrowserImpl();
+    if (impl)
+    {
+        impl->MakeEditable();
+    }
+  }
+}
+
+
+
+void CBrowserFrame::OnEditPage() 
+{
+	// TODO: Add your command handler code here
+		// TODO: Add your command handler code here
+	CMfcEmbedApp *pApp = (CMfcEmbedApp *)AfxGetApp();
+  CBrowserFrame *pEditorFrame = pApp->CreateNewBrowserFrame(nsIWebBrowserChrome::CHROME_ALL, 
+                                        -1, -1, -1, -1,
+                                        PR_TRUE,PR_TRUE);
+  if (pEditorFrame)
+  {
+    CString tUrl;
+    m_wndUrlBar.GetEnteredURL(tUrl);
+    pEditorFrame->m_wndBrowserView.OpenURL(tUrl);
+    CBrowserImpl *impl = pEditorFrame->GetBrowserImpl();
+    if (impl)
+    {
+        impl->MakeEditable();
+    }
+  }	
 }

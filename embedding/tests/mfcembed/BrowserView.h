@@ -191,6 +191,7 @@ protected:
 	afx_msg void OnUpdatePaste(CCmdUI* pCmdUI);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+	DECLARE_DYNAMIC(CBrowserView)
 };
 
 #endif //_BROWSERVIEW_H

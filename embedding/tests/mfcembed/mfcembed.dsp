@@ -222,6 +222,10 @@ SOURCE=.\res\broken.ico
 # End Source File
 # Begin Source File
 
+SOURCE=.\res\mainfram.bmp
+# End Source File
+# Begin Source File
+
 SOURCE=.\res\mfcembed.ico
 # End Source File
 # Begin Source File

@@ -81,6 +81,11 @@
 #endif
 
 #include "nsIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDocShell.h"
+#include "nsISimpleEnumerator.h"
+#include "nsIEditingSession.h"
+
 #include "BrowserImpl.h"
 
 CBrowserImpl::CBrowserImpl()
@@ -397,3 +402,60 @@ NS_IMETHODIMP CBrowserImpl::SetVisibility(PRBool aVisibility)
 
     return NS_OK;
 }
+
+NS_METHOD
+CBrowserImpl::MakeEditable()
+{
+  nsCOMPtr<nsIDOMWindow>        domWindow;
+  mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+  if (!domWindow)
+    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject = do_QueryInterface(domWindow);
+  if (!scriptGlobalObject)
+      return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDocShell>        docShell;
+  nsresult rv  = scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
+  if (NS_FAILED(rv))
+    return rv;
+  if (!docShell)
+    return NS_ERROR_FAILURE;
+
+
+    
+  nsCOMPtr<nsIEditingSession>   editingSession  = do_GetInterface(docShell);
+  if (!editingSession)
+    return NS_ERROR_FAILURE;
+  
+  rv= editingSession->MakeWindowEditable(domWindow, PR_TRUE);
+  // this can fail for the root (if it's a frameset), but we still want
+  // to make children editable
+  
+  nsCOMPtr<nsISimpleEnumerator> docShellEnumerator;
+  docShell->GetDocShellEnumerator( nsIDocShellTreeItem::typeContent,
+                                    nsIDocShell::ENUMERATE_FORWARDS,
+                                    getter_AddRefs(docShellEnumerator));  
+  if (docShellEnumerator)
+  {
+    PRBool hasMore;
+    while (NS_SUCCEEDED(docShellEnumerator->HasMoreElements(&hasMore)) && hasMore)
+    {
+        nsCOMPtr<nsISupports> curSupports;
+        rv = docShellEnumerator->GetNext(getter_AddRefs(curSupports));
+        if (NS_FAILED(rv)) break;
+
+        nsCOMPtr<nsIDocShell> curShell = do_QueryInterface(curSupports, &rv);
+        if (NS_FAILED(rv)) break;
+
+        nsCOMPtr<nsIDOMWindow> childWindow = do_GetInterface(curShell);
+        if (childWindow)
+          editingSession->MakeWindowEditable(childWindow, PR_FALSE);
+    }
+  }
+  return NS_OK;  
+}
+
+
+//nsIObserver
+
+
+nsIObserver

@@ -59,6 +59,7 @@
 //
 
 class CBrowserFrame;
+class CEditorFrame;
 class CProfileMgr;
 
 class CMfcEmbedApp : public CWinApp,
@@ -75,7 +76,7 @@ public:
 
 	CBrowserFrame* CreateNewBrowserFrame(PRUint32 chromeMask = nsIWebBrowserChrome::CHROME_ALL, 
 							PRInt32 x = -1, PRInt32 y = -1, 
-							PRInt32 cx = -1, PRInt32 cy = -1,
+              PRInt32 cx = -1, PRInt32 cy = -1,PRBool bIsEditor=PR_FALSE,
 							PRBool bShowWindow = PR_TRUE);
 	void RemoveFrameFromList(CBrowserFrame* pFrm, BOOL bCloseAppOnLastFrame = TRUE);
 
@@ -114,8 +115,6 @@ public:
 	afx_msg void OnNewBrowser();
     afx_msg void OnManageProfiles();
     afx_msg void OnEditPreferences();
-		// NOTE - the ClassWizard will add and remove member functions here.
-		//    DO NOT EDIT what you see in these blocks of generated code !
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
