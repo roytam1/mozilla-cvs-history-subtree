@@ -1,19 +1,8 @@
 #include "nsXULAppAPI.h"
-#include "nsBuildID.h"
-
-static const nsXREAppData kAppData =
-{
-  "Mozilla",
-  "Xulrunner",
-  APP_VERSION,
-  BUILD_ID,
-  "Copyright (c) 2004 mozilla.org",
-  PR_FALSE
-};
 
 int main(int argc, char* argv[])
 {
-  return xre_main(argc, argv, &kAppData);
+  return xre_main(argc, argv, NULL);
 }
                                                                                                                                                 
 #if defined( XP_WIN ) && defined( WIN32 ) && !defined(__GNUC__)

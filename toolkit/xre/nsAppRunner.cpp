@@ -383,6 +383,53 @@ CheckArg(const char* aArg, const char **aParam = nsnull)
   return ARG_NONE;
 }
 
+
+static nsXREAppData *LoadAppData()
+{
+  static nsXREAppData data;
+  static char vendor[256], name[256], version[32], buildID[32], copyright[256];
+  
+  const char *app;
+  if (!CheckArg("app", &app))
+    return nsnull;
+
+  nsCOMPtr<nsILocalFile> lf;
+  NS_GetFileFromPath(app, getter_AddRefs(lf));
+  if (!lf)
+    return nsnull;
+  lf->AppendNative(NS_LITERAL_CSTRING("xulapp.ini"));
+
+  nsINIParser parser; 
+  if (NS_FAILED(parser.Init(lf)))
+    return nsnull;
+
+  parser.GetString("Main", "Vendor", vendor, sizeof(vendor));
+  parser.GetString("Main", "Name", name, sizeof(name));
+  parser.GetString("Main", "Version", version, sizeof(version));
+  parser.GetString("Main", "BuildID", buildID, sizeof(buildID));
+  parser.GetString("Main", "Copyright", copyright, sizeof(copyright));
+
+  data.appVendor = vendor;
+  data.appName = name;
+  data.appVersion = version;
+  data.appBuildID = buildID;
+  data.copyright = copyright;
+  data.useStartupPrefs = PR_FALSE;
+
+#ifdef DEBUG
+  printf("---------------------------------------------------------\n");
+  printf("     Vendor %s\n", data.appVendor);
+  printf("       Name %s\n", data.appName);
+  printf("    Version %s\n", data.appVersion);
+  printf("    BuildID %s\n", data.appBuildID);
+  printf("  Copyright %s\n", data.copyright);
+  printf("---------------------------------------------------------\n");
+#endif
+
+  return &data;
+}
+
+
 static nsresult OpenWindow(const nsAFlatCString& aChromeURL,
                            const nsAFlatString& aAppArgs,
                            PRInt32 aWidth, PRInt32 aHeight);
@@ -1679,8 +1726,6 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   fpsetmask(0);
 #endif
 
-  gAppData = aAppData;
-
 #if defined(XP_UNIX) && !defined(XP_MACOSX)
   if (!GetBinaryPath(argv[0]))
     return 1;
@@ -1688,6 +1733,10 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
 
   gArgc = argc;
   gArgv = argv;
+
+  if (!aAppData)
+    aAppData = LoadAppData();  
+  gAppData = aAppData;
 
   gRestartArgc = argc;
   gRestartArgv = (char**) malloc(sizeof(char*) * (argc + 1));
@@ -1722,7 +1771,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   // Initialize XPCOM's module info table
   NSGetStaticModuleInfo = app_getModuleInfo;
 #endif
-
+  
   // Handle -help and -version command line arguments.
   // They should return quickly, so we deal with them here.
   if (CheckArg("h") || CheckArg("help") || CheckArg("?")) {
@@ -1885,7 +1934,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   // profile in different builds the component registry must be
   // re-generated to prevent mysterious component loading failures.
   // 
-  if (!strcmp(version, aAppData->appBuildID)) {
+  if (!strcmp(version, gAppData->appBuildID)) {
     componentsListChanged = ComponentsListChanged(lf);
     if (componentsListChanged) {
       // Remove compreg.dat and xpti.dat, forcing component re-registration,
@@ -2020,7 +2069,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         // if we had no command line arguments, argc == 1.
 
         PRBool windowOpened = PR_FALSE;
-        rv = DoCommandLines(cmdLineArgs, aAppData->useStartupPrefs, &windowOpened);
+        rv = DoCommandLines(cmdLineArgs, gAppData->useStartupPrefs, &windowOpened);
         NS_ENSURE_SUCCESS(rv, 1);
       
         // Make sure there exists at least 1 window.
@@ -2039,7 +2088,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         nsCOMPtr<nsIXRemoteService> remoteService;
         remoteService = do_GetService(NS_IXREMOTESERVICE_CONTRACTID);
         if (remoteService)
-          remoteService->Startup(aAppData->appName);
+          remoteService->Startup(gAppData->appName);
 #endif /* MOZ_ENABLE_XREMOTE */
 
         // enable win32 DDE responses and Mac appleevents responses

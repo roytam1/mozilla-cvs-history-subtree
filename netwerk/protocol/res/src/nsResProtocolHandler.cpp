@@ -161,7 +161,10 @@ nsResProtocolHandler::Init()
     //
     // make resource://gre/ point to the GRE directory
     //
-    return AddSpecialDir(NS_GRE_DIR, NS_LITERAL_CSTRING("gre"));
+    rv = AddSpecialDir(NS_GRE_DIR, NS_LITERAL_CSTRING("gre"));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return AddSpecialDir("AppletD", NS_LITERAL_CSTRING("app"));
 
     //XXXbsmedberg Neil wants a resource://pchrome/ for the profile chrome dir...
     // but once I finish multiple chrome registration I'm not sure that it is needed
