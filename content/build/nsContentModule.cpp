@@ -104,6 +104,7 @@ class nsIDocumentLoaderFactory;
 #include "nsIXULSortService.h"
 #include "nsXULAtoms.h"
 #include "nsXULContentUtils.h"
+#include "nsXULElement.h"
 #endif
 
 #ifdef MOZ_SVG
@@ -211,6 +212,7 @@ Shutdown(nsIModule* aSelf)
 #ifdef MOZ_XUL
   nsXULContentUtils::Finish();
   nsXULAtoms::ReleaseAtoms();
+  nsXULElement::ReleaseGlobals();
 #endif
 
 #ifdef MOZ_SVG
