@@ -64,12 +64,12 @@ private:
     class parseContextImpl : public txIParseContext
     {
     public:
-        parseContextImpl(nsIDOMXPathNSResolver* aResolver)
+        ParseContextImpl(nsIDOMXPathNSResolver* aResolver)
             : mResolver(aResolver), mLastError(NS_OK)
         {
         }
 
-        ~parseContextImpl()
+        ~ParseContextImpl()
         {
         }
 
