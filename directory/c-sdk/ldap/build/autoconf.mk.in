@@ -43,20 +43,9 @@ NO_SECURITY	=
 MOZ_DIST           =  $(ldaptopsrcdir)/../../../dist
 
 
-# we have to cope if nspr was built using autoconf (which we only know is
-# is true if our configure was passed --enable-nspr-autoconf -- which 
-# the top-level configure does automagically, as appropriate).
+# NSPR now uses autoconf by default.
 #
-NSPR_USE_AUTOCONF    = @NSPR_USE_AUTOCONF@
-
-ifeq ($(NSPR_USE_AUTOCONF), 1)
-
 MOD_DEPTH	= $(DEPTH)
 include $(DEPTH)/nsprpub/config/autoconf.mk
 VPATH		= $(srcdir)
 DIST		= $(DEPTH)/dist
-
-else 
-MOD_DEPTH 	= $(NSPR_TREE)
-
-endif

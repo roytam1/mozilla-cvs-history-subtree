@@ -11,8 +11,6 @@
 ac_help=
 ac_default_prefix=/usr/local
 # Any additions from configure.in:
-ac_help="$ac_help
- --enable-nspr-autoconf	  Enable building with an autoconf'ed NSPR tree"
 
 # Initialize some variables set by options.
 # The variables have the same names as the options, with
@@ -524,17 +522,6 @@ fi
 
 
 
-# Check whether --enable-nspr-autoconf or --disable-nspr-autoconf was given.
-if test "${enable_nspr_autoconf+set}" = set; then
-  enableval="$enable_nspr_autoconf"
-  NSPR_USE_AUTOCONF=1
-else
-  NSPR_USE_AUTOCONF=0
-fi
-
-
-
-
 MAKEFILES="
 Makefile
 build/Makefile
@@ -688,7 +675,6 @@ s%@includedir@%$includedir%g
 s%@oldincludedir@%$oldincludedir%g
 s%@infodir@%$infodir%g
 s%@mandir@%$mandir%g
-s%@NSPR_USE_AUTOCONF@%$NSPR_USE_AUTOCONF%g
 
 CEOF
 EOF
