@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -58,6 +58,7 @@ public:
 
 protected:
   nsCOMPtr<nsIURI> mUrl;
+  nsCOMPtr<nsIURI> mOriginalURI;
   nsresult mStatus;
 
   nsresult OpenURL();
@@ -110,12 +111,14 @@ nsExtProtocolChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 
 NS_IMETHODIMP nsExtProtocolChannel::GetOriginalURI(nsIURI* *aURI)
 {
-  *aURI = nsnull;
+  NS_IF_ADDREF(*aURI = mOriginalURI);
   return NS_OK; 
 }
  
 NS_IMETHODIMP nsExtProtocolChannel::SetOriginalURI(nsIURI* aURI)
 {
+  NS_ENSURE_ARG_POINTER(aURI);
+  mOriginalURI = aURI;
   return NS_OK;
 }
  
@@ -352,6 +355,7 @@ NS_IMETHODIMP nsExternalProtocolHandler::NewChannel(nsIURI *aURI, nsIChannel **_
     if (!channel) return NS_ERROR_OUT_OF_MEMORY;
 
     ((nsExtProtocolChannel*) channel.get())->SetURI(aURI);
+    channel->SetOriginalURI(aURI);
 
     if (_retval)
     {
