@@ -1,4 +1,0 @@
-
-   interface CSSStyleRule {
-     readonly attribute wstring type;
-   };
