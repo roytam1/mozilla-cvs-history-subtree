@@ -131,6 +131,7 @@ nsDocumentEncoder::IncludeInContext_HTML(nsIDOMNode *aNode)
   if (tag.get() == nsHTMLAtoms::b ||
       tag.get() == nsHTMLAtoms::i ||
       tag.get() == nsHTMLAtoms::u ||
+      tag.get() == nsHTMLAtoms::pre ||
       tag.get() == nsHTMLAtoms::h1 ||
       tag.get() == nsHTMLAtoms::h2 ||
       tag.get() == nsHTMLAtoms::h3 ||
