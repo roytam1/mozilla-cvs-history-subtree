@@ -191,8 +191,8 @@ class NS_COM nsFastLoadFileReader
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
-    // nsIObjectInputStream methods
-    NS_DECL_NSIOBJECTINPUTSTREAM
+    // overridden nsIObjectInputStream methods
+    NS_IMETHOD ReadObject(PRBool aIsStrongRef, nsISupports* *_retval);
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM
@@ -310,8 +310,12 @@ class NS_COM nsFastLoadFileWriter
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
-    // nsIObjectOutputStream methods
-    NS_DECL_NSIOBJECTOUTPUTSTREAM
+    // overridden nsIObjectOutputStream methods
+    NS_IMETHOD WriteObject(nsISupports* aObject, const nsCID& aCID,
+                           PRBool aIsStrongRef);
+    NS_IMETHOD WriteSingleRefObject(nsISupports* aObject, const nsCID& aCID);
+    NS_IMETHOD WriteAggregatedObject(nsISupports* aObject, const nsCID& aCID,
+                                     const nsIID& aIID, PRBool aIsStrongRef);
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM
