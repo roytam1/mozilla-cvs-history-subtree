@@ -383,7 +383,7 @@ PR_IMPLEMENT(void *)
 PL_HashTableLookupConst(PLHashTable *ht, const void *key)
 {
     PLHashNumber keyHash;
-    PLHashEntry *he, *const *hep;
+    PLHashEntry *he, **hep;
 
     keyHash = (*ht->keyHash)(key);
     hep = PL_HashTableRawLookupConst(ht, keyHash, key);
