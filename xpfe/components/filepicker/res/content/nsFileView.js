@@ -423,11 +423,6 @@ nsFileView.prototype = {
   },
 
   filterFiles: function() {
-    // Tell the outliner that all the old rows are going away
-    //    if (this.mOutliner) {
-    //      this.mOutliner.rowCountChanged(this.mDirList.length, -this.mFilteredFiles.length);
-    //    }
-
     this.mFilteredFiles = [];
 
     for(var i = 0; i < this.mFileList.length; i++) {
