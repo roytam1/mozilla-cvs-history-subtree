@@ -34,7 +34,7 @@ use strict;
 use vars qw($VERSION @ISA %EXPORT_TAGS);
 
 @ISA = qw(Exporter);
-$VERSION = "1.0303";
+$VERSION = "1.0400";
 
 %EXPORT_TAGS = (
 		all => [qw(normalizeDN
