@@ -148,6 +148,10 @@ function UpdateMailToolbar(caller)
 {
   //dump("XXX update mail-toolbar " + caller + "\n");
   document.commandDispatcher.updateCommands('mail-toolbar');
+
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateToolbarItems", null);
 }
 
 function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
@@ -158,7 +162,7 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 
   // hook for extra toolbar items
   var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-  observerService.notifyObservers(window, "mail:updateToolbarItems", uri);
+  observerService.notifyObservers(window, "mail:setupToolbarItems", uri);
 
   var resource = RDF.GetResource(uri);
   var msgfolder =

@@ -228,7 +228,7 @@ function OnLoadMessageWindow()
   
   // hook for extra toolbar items
   var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-  observerService.notifyObservers(window, "mail:updateToolbarItems", uri);
+  observerService.notifyObservers(window, "mail:setupToolbarItems", uri);
      
   setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete; UpdateStandAloneMessageCounts();", 0);
 
