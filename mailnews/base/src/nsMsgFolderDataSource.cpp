@@ -2110,8 +2110,11 @@ nsresult nsMsgFolderDataSource::DoFolderHasAssertion(nsIMsgFolder *folder,
 							&& (childsParent.get() == folderasFolder.get()));
 		}
 	}
+        else if (kNC_Open == property) {
+// in this client, all mail folders are open in the folder pane
+          *hasAssertion = PR_TRUE;
+        }
 	else if ((kNC_Name == property) ||
-           (kNC_Open == property) ||
            (kNC_FolderTreeName == property) ||
            (kNC_FolderTreeSimpleName == property) ||
            (kNC_SpecialFolder == property) ||
