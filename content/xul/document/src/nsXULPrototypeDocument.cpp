@@ -35,6 +35,7 @@
 #include "nsIPrincipal.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"

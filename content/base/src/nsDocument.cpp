@@ -356,7 +356,7 @@ nsDOMImplementation::CreateDocument(const nsAReadableString& aNamespaceURI,
                                     nsIDOMDocumentType* aDoctype, 
                                     nsIDOMDocument** aReturn)
 {  
-  NS_ENSURE_ARG_POINTER(aReturn);    
+  NS_ENSURE_ARG_POINTER(aReturn);
   
   *aReturn = nsnull;
 
@@ -383,7 +383,7 @@ nsDocumentChildNodes::nsDocumentChildNodes(nsIDocument* aDocument)
   // references). We'll be told when the document goes away.
   mDocument = aDocument;
 }
- 
+
 nsDocumentChildNodes::~nsDocumentChildNodes()
 {
   MOZ_COUNT_DTOR(nsDocumentChildNodes);

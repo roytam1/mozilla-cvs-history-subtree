@@ -48,7 +48,7 @@
 #include "nsIXPCScriptable.h"
 #ifndef XPCONNECT_STANDALONE
 #include "nsIScriptSecurityManager.h"
-#include "nsIScriptObjectOwner.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsIURL.h"
 #endif
 #ifndef NO_SUBSCRIPT_LOADER

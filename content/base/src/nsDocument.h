@@ -48,7 +48,7 @@
 #include "nsHashtable.h"
 #include "nsIWordBreakerFactory.h"
 #include "nsILineBreakerFactory.h"
-#include "nsIScriptObjectOwner.h"
+#include "nsIScriptObjectPrincipal.h"
 
 class nsIEventListenerManager;
 class nsDOMStyleSheetList;

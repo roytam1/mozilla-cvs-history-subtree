@@ -46,6 +46,7 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMJSWindow.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsITimer.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsPIDOMWindow.h"

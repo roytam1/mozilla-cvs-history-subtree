@@ -24,7 +24,7 @@
  */
 #include "nsScriptSecurityManager.h"
 #include "nsIServiceManager.h"
-#include "nsIScriptObjectOwner.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsIURL.h"
 #include "nsIJARURI.h"
 #include "nspr.h"

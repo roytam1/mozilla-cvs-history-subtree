@@ -24,7 +24,7 @@
 #include "nsIScriptContextOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
-#include "nsIScriptObjectOwner.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMElement.h"

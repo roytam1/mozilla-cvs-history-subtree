@@ -24,6 +24,7 @@ nsIScriptContext.h
 nsIJSScriptObject.h
 nsIJSNativeInitializer.h
 nsIScriptObjectOwner.h
+nsIScriptObjectPrincipal.h
 nsIScriptGlobalObject.h
 nsIScriptEventListener.h
 nsIDOMScriptObjectFactory.h
