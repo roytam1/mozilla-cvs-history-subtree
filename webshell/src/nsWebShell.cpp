@@ -31,6 +31,7 @@
 #include "nsWidgetsCID.h"
 #include "nsGfxCIID.h"
 #include "plevent.h"
+#include "prprf.h"
 #include "nsIPluginHost.h"
 #include "nsplugin.h"
 #include "nsPluginsCID.h"
@@ -781,14 +782,48 @@ nsWebShell::Forward(void)
   return GoTo(mHistoryIndex + 1);
 }
 
+#define FILE_PROTOCOL "file:///"
+
+static void convertFileToURL(nsString &aIn, nsString &aOut)
+{
+#ifdef XP_PC
+  char szFile[1000];
+  aIn.ToCString(szFile, sizeof(szFile));
+  if (PL_strchr(szFile, '\\')) {
+    PRInt32 len = strlen(szFile);
+    PRInt32 sum = len + sizeof(FILE_PROTOCOL);
+    char* lpszFileURL = new char[sum];
+    
+    // Translate '\' to '/'
+    for (PRInt32 i = 0; i < len; i++) {
+      if (szFile[i] == '\\') {
+        szFile[i] = '/';
+      }
+      if (szFile[i] == ':') {
+        szFile[i] = '|';
+      }
+    }
+    
+    // Build the file URL
+    PR_snprintf(lpszFileURL, sum, "%s%s", FILE_PROTOCOL, szFile);
+    aOut = lpszFileURL;
+  }
+  else
+#endif
+  {
+    aOut = aIn;
+  }
+}
+
 NS_IMETHODIMP
 nsWebShell::LoadURL(const PRUnichar* aURLSpec,
                     nsIPostData* aPostData)
 {
+  nsAutoString urlSpec;
   nsresult rv;
+  convertFileToURL(nsString(aURLSpec), urlSpec);
 
   // Give web-shell-container right of refusal
-  nsAutoString urlSpec(aURLSpec);
   if (nsnull != mContainer) {
     rv = mContainer->WillLoadURL(this, urlSpec);
     if (NS_OK != rv) {
