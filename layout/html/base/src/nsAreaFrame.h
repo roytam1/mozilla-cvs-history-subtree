@@ -58,7 +58,7 @@ public:
   
   // nsIFrame
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   NS_IMETHOD Init(nsIPresContext*  aPresContext,
                   nsIContent*      aContent,
                   nsIFrame*        aParent,
@@ -90,7 +90,7 @@ public:
 protected:
   nsAreaFrame();
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   nsresult RegUnregAccessKey(nsIPresContext* aPresContext,
                              PRBool aDoReg);
 #endif

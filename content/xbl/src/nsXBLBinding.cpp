@@ -60,8 +60,10 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIXMLContent.h"
+#ifdef MOZ_XUL
 #include "nsIXULContent.h"
 #include "nsIXULDocument.h"
+#endif
 #include "nsIXMLContentSink.h"
 #include "nsContentCID.h"
 #include "nsXMLDocument.h"
@@ -314,7 +316,9 @@ nsXBLBinding::InstallAnonymousContent(nsIContent* aAnonParent, nsIContent* aElem
 
   aAnonParent->SetDocument(doc, PR_TRUE, AllowScripts());
 
+#ifdef MOZ_XUL
   nsCOMPtr<nsIXULDocument> xuldoc(do_QueryInterface(doc));
+#endif
 
   // (2) The children's parent back pointer should not be to this synthetic root
   // but should instead point to the enclosing parent element.
@@ -326,11 +330,13 @@ nsXBLBinding::InstallAnonymousContent(nsIContent* aAnonParent, nsIContent* aElem
     child->SetParent(aElement);
     child->SetBindingParent(mBoundElement);
 
+#ifdef MOZ_XUL
     // To make XUL templates work (and other goodies that happen when
     // an element is added to a XUL document), we need to notify the
     // XUL document using its special API.
     if (xuldoc)
       xuldoc->AddSubtreeToDocument(child);
+#endif
   }
 }
 
@@ -1141,6 +1147,7 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
         mInsertionPointTable->Enumerate(ChangeDocumentForDefaultContent,
                                         nsnull);
 
+#ifdef MOZ_XUL
       // To make XUL templates work (and other XUL-specific stuff),
       // we'll need to notify it using its add & remove APIs. Grab the
       // interface now...
@@ -1149,6 +1156,7 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
       anonymous->SetDocument(nsnull, PR_TRUE, PR_TRUE); // Kill it.
       if (xuldoc)
         xuldoc->RemoveSubtreeFromDocument(anonymous);
+#endif
     }
   }
 

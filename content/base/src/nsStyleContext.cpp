@@ -574,7 +574,6 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, nsChangeHint& aHint
       }
     }
 
-#ifdef INCLUDE_XUL
     if (!NS_IsHintSubset(maxHint, aHint)) {
       const nsStyleXUL* xul = (const nsStyleXUL*)PeekStyleData(eStyleStruct_XUL);
       if (xul) {
@@ -584,7 +583,6 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, nsChangeHint& aHint
         }
       }
     }
-#endif
 
     if (!NS_IsHintSubset(maxHint, aHint)) {
       const nsStyleContent* content = (const nsStyleContent*)PeekStyleData(eStyleStruct_Content);
@@ -1119,7 +1117,6 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
     (int)uiReset->mResizer);
 
   // XUL
-#ifdef INCLUDE_XUL
   IndentBy(out,aIndent);
   const nsStyleXUL* xul = (const nsStyleXUL*)GetStyleData(eStyleStruct_XUL);
   fprintf(out, "<xul data=\"%d %d %d %d %d %d",
@@ -1130,7 +1127,6 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
     (int)xul->mBoxPack,
     (int)xul->mBoxOrdinal);
   fprintf(out, "\" />\n");
-#endif
 
   // SVG
 #ifdef MOZ_SVG

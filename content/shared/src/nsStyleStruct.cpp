@@ -713,7 +713,6 @@ nsChangeHint nsStyleList::CalcDifference(const nsStyleList& aOther) const
   return NS_STYLE_HINT_REFLOW;
 }
 
-#ifdef INCLUDE_XUL
 // --------------------
 // nsStyleXUL
 //
@@ -749,8 +748,6 @@ nsChangeHint nsStyleXUL::CalcDifference(const nsStyleXUL& aOther) const
     return NS_STYLE_HINT_FRAMECHANGE;
   return NS_STYLE_HINT_REFLOW;
 }
-
-#endif // INCLUDE_XUL
 
 #ifdef MOZ_SVG
 // --------------------

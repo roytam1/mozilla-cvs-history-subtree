@@ -157,8 +157,10 @@
 #include "nsStyleChangeList.h"
 #include "nsIStyleFrameConstruction.h"
 #include "nsIBindingManager.h"
+#ifdef MOZ_XUL
 #include "nsIMenuFrame.h"
 #include "nsITreeBoxObject.h"
+#endif
 #include "nsIXBLBinding.h"
 #include "nsPlaceholderFrame.h"
 
@@ -5308,6 +5310,7 @@ BuildFramechangeList(nsIFrame *aFrame, void *aClosure)
   return PR_TRUE;
 }
 
+#ifdef MOZ_XUL
 PR_STATIC_CALLBACK(PRBool)
 ReResolveMenusAndTrees(nsIFrame *aFrame, void *aClosure)
 {
@@ -5328,6 +5331,7 @@ ReResolveMenusAndTrees(nsIFrame *aFrame, void *aClosure)
   }
   return PR_TRUE;
 }
+#endif
 
 static void
 WalkFramesThroughPlaceholders(nsIPresContext *aPresContext, nsIFrame *aFrame,
@@ -5414,11 +5418,13 @@ PresShell::ReconstructStyleData(PRBool aRebuildRuleTree)
     set->ReconstructDocElementHierarchy(mPresContext);
   else {
     cssFrameConstructor->ProcessRestyledFrames(changeList, mPresContext);
+#ifdef MOZ_XUL
     if (aRebuildRuleTree) {
       GetRootFrame(&rootFrame);
       WalkFramesThroughPlaceholders(mPresContext, rootFrame,
                                     &ReResolveMenusAndTrees, nsnull);
     }
+#endif
   }
 
   if (aRebuildRuleTree)

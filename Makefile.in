@@ -258,8 +258,9 @@ endif
 ifdef MOZ_PHOENIX
 tier_99_dirs	+= browser
 else
-# We need be able to disable this in cleaner way:
-# tier_99_dirs	+= xpfe/bootstrap
+ifdef MOZ_XUL
+tier_99_dirs	+= xpfe/bootstrap
+endif
 endif
 
 ifdef MOZ_ENABLE_GTK

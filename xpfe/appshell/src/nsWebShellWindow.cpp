@@ -64,7 +64,6 @@
 #include "nsIWebNavigation.h"
 #include "nsIWindowWatcher.h"
 
-#include "nsIXULPopupListener.h"
 #include "nsIDOMXULElement.h"
 
 #include "nsGUIEvent.h"
@@ -156,7 +155,6 @@ static NS_DEFINE_CID(kPrefCID,             NS_PREF_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 static NS_DEFINE_CID(kLayoutDocumentLoaderFactoryCID, NS_LAYOUT_DOCUMENT_LOADER_FACTORY_CID);
-static NS_DEFINE_CID(kXULPopupListenerCID, NS_XULPOPUPLISTENER_CID);
 
 
 #ifdef DEBUG_rods

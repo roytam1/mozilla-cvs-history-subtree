@@ -69,9 +69,7 @@ static NS_DEFINE_IID(kCSSPageSID, NS_CSS_PAGE_SID);
 static NS_DEFINE_IID(kCSSContentSID, NS_CSS_CONTENT_SID);
 static NS_DEFINE_IID(kCSSUserInterfaceSID, NS_CSS_USER_INTERFACE_SID);
 static NS_DEFINE_IID(kCSSAuralSID, NS_CSS_AURAL_SID);
-#ifdef INCLUDE_XUL
 static NS_DEFINE_IID(kCSSXULSID, NS_CSS_XUL_SID);
-#endif
 
 #ifdef MOZ_SVG
 static NS_DEFINE_IID(kCSSSVGSID, NS_CSS_SVG_SID);
@@ -1077,7 +1075,6 @@ void nsCSSAural::List(FILE* out, PRInt32 aIndent) const
 }
 #endif
 
-#ifdef INCLUDE_XUL
 // --- nsCSSXUL -----------------
 
 nsCSSXUL::nsCSSXUL(void)
@@ -1119,8 +1116,6 @@ void nsCSSXUL::List(FILE* out, PRInt32 aIndent) const
   fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
 }
 #endif
-
-#endif // INCLUDE_XUL
 
 #ifdef MOZ_SVG
 // --- nsCSSSVG -----------------
@@ -1251,9 +1246,7 @@ nsCSSDeclaration::nsCSSDeclaration(const nsCSSDeclaration& aCopy)
   DECL_IF_COPY(Content);
   DECL_IF_COPY(UserInterface);
   DECL_IF_COPY(Aural);
-#ifdef INCLUDE_XUL
   DECL_IF_COPY(XUL);
-#endif
 
 #ifdef MOZ_SVG
   DECL_IF_COPY(SVG);
@@ -1300,9 +1293,7 @@ nsCSSDeclaration::~nsCSSDeclaration(void)
   CSS_HAS_DELETE(Content);
   CSS_HAS_DELETE(UserInterface);
   CSS_HAS_DELETE(Aural);
-#ifdef INCLUDE_XUL
   CSS_HAS_DELETE(XUL);
-#endif
 
 #ifdef MOZ_SVG
   CSS_HAS_DELETE(SVG);
@@ -1339,9 +1330,7 @@ nsCSSDeclaration::GetData(const nsID& aSID)
   CSS_IF_GET_ELSE(aSID, Content)
   CSS_IF_GET_ELSE(aSID, UserInterface)
   CSS_IF_GET_ELSE(aSID, Aural)
-#ifdef INCLUDE_XUL
   CSS_IF_GET_ELSE(aSID, XUL)
-#endif
 #ifdef MOZ_SVG
   CSS_IF_GET_ELSE(aSID, SVG)
 #endif
@@ -1964,7 +1953,6 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
       break;
     }
 
-#ifdef INCLUDE_XUL
     // nsCSSXUL
     case eCSSProperty_box_align:
     case eCSSProperty_box_direction:
@@ -1985,7 +1973,6 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
       }
       break;
     }
-#endif
 
 #ifdef MOZ_SVG
     // nsCSSSVG
@@ -2969,7 +2956,6 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
         break;
       }
 
-#ifdef INCLUDE_XUL
       // nsCSSXUL
       case eCSSProperty_box_align:
       case eCSSProperty_box_direction:
@@ -2993,7 +2979,6 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
         }
         break;
       }
-#endif
 
 #ifdef MOZ_SVG
       // nsCSSSVG
@@ -3789,7 +3774,6 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
       break;
     }
 
-#ifdef INCLUDE_XUL
     // nsCSSXUL
     case eCSSProperty_box_align:
     case eCSSProperty_box_direction:
@@ -3810,7 +3794,6 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
       }
       break;
     }
-#endif
 
 #ifdef MOZ_SVG
     // nsCSSSVG
@@ -4670,7 +4653,6 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
       break;
     }
 
-#ifdef INCLUDE_XUL
     // nsCSSXUL
     case eCSSProperty_box_align:
     case eCSSProperty_box_direction:
@@ -4695,7 +4677,6 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
       }
       break;
     }
-#endif
 
 #ifdef MOZ_SVG
     // nsCSSSVG
@@ -6181,12 +6162,10 @@ void nsCSSDeclaration::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
   if(theUserInterface && uniqueItems->AddItem(theUserInterface)){
     aSize += sizeof(*theUserInterface);
   }
-#ifdef INCLUDE_XUL
   CSS_VARONSTACK_GET(XUL);
   if(theXUL && uniqueItems->AddItem(theXUL)){
     aSize += sizeof(*theXUL);
   }
-#endif
 #ifdef MOZ_SVG
   CSS_VARONSTACK_GET(SVG);
   if(theSVG && uniqueItems->AddItem(theSVG)){

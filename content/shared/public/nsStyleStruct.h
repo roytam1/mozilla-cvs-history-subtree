@@ -1091,7 +1091,6 @@ struct nsStyleUserInterface: public nsStyleStruct {
   nsString mCursorImage;          // [inherited] url string
 };
 
-#ifdef INCLUDE_XUL
 struct nsStyleXUL : public nsStyleStruct {
   nsStyleXUL();
   nsStyleXUL(const nsStyleXUL& aSource);
@@ -1118,7 +1117,6 @@ struct nsStyleXUL : public nsStyleStruct {
   PRUint8       mBoxOrient;             // [reset] see nsStyleConsts.h
   PRUint8       mBoxPack;               // [reset] see nsStyleConsts.h
 };
-#endif
 
 #ifdef MOZ_SVG
 enum nsStyleSVGPaintType {

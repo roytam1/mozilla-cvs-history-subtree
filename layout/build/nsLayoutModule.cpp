@@ -126,6 +126,8 @@
 #include "nsIPrintContext.h"
 #include "nsIAutoCopy.h"
 #include "nsIPrintPreviewContext.h"
+#include "nsXULAtoms.h"
+#include "nsLayoutCID.h"
 
 class nsIDocumentLoaderFactory;
 
@@ -146,7 +148,6 @@ class nsIDocumentLoaderFactory;
 #include "nsIXULPrototypeDocument.h"
 #include "nsIXULPrototypeDocument.h"
 #include "nsIXULSortService.h"
-#include "nsXULAtoms.h"
 #include "nsXULContentUtils.h"
 #include "nsXULElement.h"
 
@@ -218,9 +219,9 @@ Initialize(nsIModule* aSelf)
   nsHTMLAtoms::AddRefAtoms();
   nsXBLAtoms::AddRefAtoms();
   nsLayoutAtoms::AddRefAtoms();
+  nsXULAtoms::AddRefAtoms();
 
 #ifdef MOZ_XUL
-  nsXULAtoms::AddRefAtoms();
   nsXULContentUtils::Init();
 #endif
 
@@ -280,16 +281,17 @@ Shutdown(nsIModule* aSelf)
   nsXBLAtoms::ReleaseAtoms();
   nsLayoutAtoms::ReleaseAtoms();
 
+  nsXULAtoms::ReleaseAtoms();
+  nsRepeatService::Shutdown();
+  nsStackLayout::Shutdown();
+  nsBox::Shutdown();
+
 #ifdef MOZ_XUL
   nsXULContentUtils::Finish();
-  nsXULAtoms::ReleaseAtoms();
   nsXULElement::ReleaseGlobals();
   nsXULPrototypeElement::ReleaseGlobals();
   nsXULPrototypeScript::ReleaseGlobals();
-  nsRepeatService::Shutdown();
   nsSprocketLayout::Shutdown();
-  nsStackLayout::Shutdown();
-  nsBox::Shutdown();
 #endif
 
 #ifdef MOZ_MATHML
@@ -319,6 +321,7 @@ extern nsresult NS_NewFrameUtil(nsIFrameUtil** aResult);
 extern nsresult NS_NewLayoutDebugger(nsILayoutDebugger** aResult);
 #endif
 
+#ifdef MOZ_XUL
 extern nsresult NS_NewBoxObject(nsIBoxObject** aResult);
 extern nsresult NS_NewListBoxObject(nsIBoxObject** aResult);
 extern nsresult NS_NewScrollBoxObject(nsIBoxObject** aResult);
@@ -328,6 +331,8 @@ extern nsresult NS_NewPopupBoxObject(nsIBoxObject** aResult);
 extern nsresult NS_NewBrowserBoxObject(nsIBoxObject** aResult);
 extern nsresult NS_NewIFrameBoxObject(nsIBoxObject** aResult);
 extern nsresult NS_NewTreeBoxObject(nsIBoxObject** aResult);
+#endif
+
 extern nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult);
 extern nsresult NS_CreateCSSFrameConstructor(nsICSSFrameConstructor** aResult);
 extern nsresult NS_NewLayoutHistoryState(nsILayoutHistoryState** aResult);
@@ -359,8 +364,8 @@ extern nsresult NS_NewDOMEventGroup(nsIDOMEventGroup** aResult);
 
 #ifdef MOZ_XUL
 extern nsresult NS_NewXULElementFactory(nsIElementFactory** aResult);
-extern NS_IMETHODIMP NS_NewXULControllers(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #endif
+extern NS_IMETHODIMP NS_NewXULControllers(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 
 #ifdef MOZ_MATHML
 extern nsresult NS_NewMathMLElementFactory(nsIElementFactory** aResult);
@@ -399,6 +404,7 @@ MAKE_CTOR(CreateNewPresState,           nsIPresState,           NS_NewPresState)
 MAKE_CTOR(CreateNewGalleyContext,       nsIPresContext,         NS_NewGalleyContext)
 MAKE_CTOR(CreateNewPrintContext,        nsIPrintContext,        NS_NewPrintContext)
 MAKE_CTOR(CreateNewPrintPreviewContext, nsIPrintPreviewContext, NS_NewPrintPreviewContext)
+#ifdef MOZ_XUL
 MAKE_CTOR(CreateNewBoxObject,           nsIBoxObject,           NS_NewBoxObject)
 MAKE_CTOR(CreateNewListBoxObject,       nsIBoxObject,           NS_NewListBoxObject)
 MAKE_CTOR(CreateNewMenuBoxObject,       nsIBoxObject,           NS_NewMenuBoxObject)
@@ -408,6 +414,7 @@ MAKE_CTOR(CreateNewEditorBoxObject,     nsIBoxObject,           NS_NewEditorBoxO
 MAKE_CTOR(CreateNewIFrameBoxObject,     nsIBoxObject,           NS_NewIFrameBoxObject)
 MAKE_CTOR(CreateNewScrollBoxObject,     nsIBoxObject,           NS_NewScrollBoxObject)
 MAKE_CTOR(CreateNewTreeBoxObject,       nsIBoxObject,           NS_NewTreeBoxObject)
+#endif
 MAKE_CTOR(CreateNewAutoCopyService,     nsIAutoCopyService,     NS_NewAutoCopyService)
 MAKE_CTOR(CreateSelectionImageService,  nsISelectionImageService,NS_NewSelectionImageService)
 
@@ -645,6 +652,7 @@ static const nsModuleComponentInfo gComponents[] = {
     CreateNewPrintPreviewContext },
   // XXX end ick
 
+#ifdef MOZ_XUL
   { "XUL Box Object",
     NS_BOXOBJECT_CID,
     "@mozilla.org/layout/xul-boxobject;1",
@@ -689,6 +697,7 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_TREEBOXOBJECT_CID,
     "@mozilla.org/layout/xul-boxobject-tree;1",
     CreateNewTreeBoxObject },
+#endif
 
   { "AutoCopy Service",
     NS_AUTOCOPYSERVICE_CID,
@@ -1006,6 +1015,11 @@ static const nsModuleComponentInfo gComponents[] = {
     "@mozilla.org/DOM/Level2/CSS/computedStyleDeclaration;1",
     CreateComputedDOMStyle },
 
+  { "XUL Controllers",
+    NS_XULCONTROLLERS_CID,
+    "@mozilla.org/xul/xul-controllers;1",
+    NS_NewXULControllers },
+
 #ifdef MOZ_XUL
   { "XUL Sort Service",
     NS_XULSORTSERVICE_CID,
@@ -1037,11 +1051,6 @@ static const nsModuleComponentInfo gComponents[] = {
     "@mozilla.org/xul/xul-popup-listener;1",
     CreateXULPopupListener },
 
-  { "XUL Controllers",
-    NS_XULCONTROLLERS_CID,
-    "@mozilla.org/xul/xul-controllers;1",
-    NS_NewXULControllers },
-
   { "XUL Prototype Cache",
     NS_XULPROTOTYPECACHE_CID,
     "@mozilla.org/xul/xul-prototype-cache;1",
@@ -1056,6 +1065,11 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_XULELEMENTFACTORY_CID,
     NS_ELEMENT_FACTORY_CONTRACTID_PREFIX "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     CreateXULElementFactory },
+#else
+  { "XML Element Factory",
+	NS_XULELEMENTFACTORY_CID,
+    NS_ELEMENT_FACTORY_CONTRACTID_PREFIX "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+    CreateXMLElementFactory },
 #endif
 
 #ifdef MOZ_MATHML

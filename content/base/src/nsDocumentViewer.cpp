@@ -110,7 +110,9 @@
 #include "nsIDOMHTMLLinkElement.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIDOMHTMLFrameSetElement.h"
+#ifdef MOZ_XUL
 #include "nsIXULDocument.h"  // Temporary code for Bug 136185
+#endif
 
 #include "nsIChromeRegistry.h"
 #include "nsIClipboardHelper.h"
@@ -1555,11 +1557,13 @@ DocumentViewerImpl::Hide(void)
     selPrivate->RemoveSelectionListener(mSelectionListener);
   }
 
+#ifdef MOZ_XUL
   nsCOMPtr<nsIXULDocument> xul_doc(do_QueryInterface(mDocument));
 
   if (xul_doc) {
     xul_doc->OnHide();
   }
+#endif
 
   mPresShell->Destroy();
 

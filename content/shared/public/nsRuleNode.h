@@ -257,10 +257,7 @@ struct nsRuleData
   nsRuleDataContent* mContentData;
   nsRuleDataText* mTextData;
   nsRuleDataUserInterface* mUIData;
-
-#ifdef INCLUDE_XUL
   nsRuleDataXUL* mXULData;
-#endif
 
 #ifdef MOZ_SVG
   nsRuleDataSVG* mSVGData;
@@ -273,10 +270,7 @@ struct nsRuleData
      mUIData(nsnull)
   {
     mCanStoreInRuleTree = PR_TRUE;
-
-#ifdef INCLUDE_XUL
     mXULData = nsnull;
-#endif
 #ifdef MOZ_SVG
     mSVGData = nsnull;
 #endif
@@ -482,12 +476,10 @@ protected:
                                           nsIStyleContext* aContext,  
                                           nsRuleNode* aHighestNode,
                                           const RuleDetail& aRuleDetail, PRBool aInherited);
-#ifdef INCLUDE_XUL
   const nsStyleStruct* ComputeXULData(nsStyleStruct* aStartXUL, const nsRuleDataStruct& aXULData, 
                                       nsIStyleContext* aContext,  
                                       nsRuleNode* aHighestNode,
                                       const RuleDetail& aRuleDetail, PRBool aInherited);
-#endif
 
 #ifdef MOZ_SVG
   const nsStyleStruct* ComputeSVGData(nsStyleStruct* aStartSVG, const nsRuleDataStruct& aSVGData, 
@@ -528,9 +520,7 @@ protected:
   const nsStyleStruct* GetTextResetData(nsIStyleContext* aContext, PRBool aComputeData);
   const nsStyleStruct* GetUserInterfaceData(nsIStyleContext* aContext, PRBool aComputeData);
   const nsStyleStruct* GetUIResetData(nsIStyleContext* aContext, PRBool aComputeData);
-#ifdef INCLUDE_XUL
   const nsStyleStruct* GetXULData(nsIStyleContext* aContext, PRBool aComputeData);
-#endif
 #ifdef MOZ_SVG
   const nsStyleStruct* GetSVGData(nsIStyleContext* aContext, PRBool aComputeData);
 #endif

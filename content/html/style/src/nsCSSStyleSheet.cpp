@@ -100,10 +100,6 @@
 #include "nsISizeOfHandler.h"
 #include "nsStyleUtil.h"
 #include "nsQuickSort.h"
-#ifdef MOZ_XUL
-#include "nsIXULContent.h"
-#endif
-
 #include "nsContentUtils.h"
 #include "nsIJSContextStack.h"
 #include "nsIScriptSecurityManager.h"

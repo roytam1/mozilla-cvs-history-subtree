@@ -49,7 +49,6 @@
 #include "nsIDOMDocumentType.h"
 #include "nsITextContent.h"
 #include "nsIWidget.h"
-#include "nsIXULDocument.h"
 #include "nsReadableUtils.h"
 #include "nsWindow.h"
 #include "String.h"

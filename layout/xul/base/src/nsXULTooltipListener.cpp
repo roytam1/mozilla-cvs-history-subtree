@@ -50,7 +50,9 @@
 #include "nsIPrefBranchInternal.h"
 #include "nsIPrefService.h"
 #include "nsIServiceManager.h"
+#ifdef MOZ_XUL
 #include "nsITreeView.h"
+#endif
 #include "nsGUIEvent.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsIPresContext.h"
@@ -70,9 +72,11 @@ nsXULTooltipListener::nsXULTooltipListener()
   , mMouseClientX(0)
   , mMouseClientY(0)
   , mAutoHideTimer(nsnull)
+#ifdef MOZ_XUL
   , mIsSourceTree(PR_FALSE)
   , mNeedTitletip(PR_FALSE)
   , mLastTreeRow(-1)
+#endif
 {
 }
 
@@ -122,8 +126,10 @@ nsXULTooltipListener::MouseOut(nsIDOMEvent* aMouseEvent)
     return NS_OK;
   }
 
+#ifdef MOZ_XUL
   if (mNeedTitletip)
     return NS_OK;
+#endif
 
   // check to see if the mouse left the targetNode, and if so,
   // hide the tooltip
@@ -146,12 +152,13 @@ nsXULTooltipListener::MouseOut(nsIDOMEvent* aMouseEvent)
     // close the tooltip.
     if (tooltipNode == targetNode) {
       HideTooltip();
-
+#ifdef MOZ_XUL
       // reset special tree tracking
       if (mIsSourceTree) {
         mLastTreeRow = -1;
         mLastTreeCol.Truncate();
       }
+#endif
     }
   }
 
@@ -180,8 +187,10 @@ nsXULTooltipListener::MouseMove(nsIDOMEvent* aMouseEvent)
   mMouseClientX = newMouseX;
   mMouseClientY = newMouseY;
 
+#ifdef MOZ_XUL
   if (mIsSourceTree)
     CheckTreeBodyMove(mouseEvent);
+#endif
 
   // as the mouse moves, we want to make sure we reset the timer to show it, 
   // so that the delay is from when the mouse stops moving, not when it enters
@@ -279,11 +288,13 @@ nsXULTooltipListener::Init(nsIContent* aSourceNode, nsIRootBox* aRootBox)
   mSourceNode = aSourceNode;
   AddTooltipSupport(aSourceNode);
   
+#ifdef MOZ_XUL
   // if the target is an treechildren, we may have some special
   // case handling to do
   nsCOMPtr<nsIAtom> tag;
   mSourceNode->GetTag(*getter_AddRefs(tag));
   mIsSourceTree = tag == nsXULAtoms::treechildren;
+#endif
 
   static PRBool prefChangeRegistered = PR_FALSE;
 
@@ -332,6 +343,7 @@ nsXULTooltipListener::RemoveTooltipSupport(nsIContent* aNode)
   return NS_OK;
 }
 
+#ifdef MOZ_XUL
 void
 nsXULTooltipListener::CheckTreeBodyMove(nsIDOMMouseEvent* aMouseEvent)
 {
@@ -368,6 +380,7 @@ nsXULTooltipListener::CheckTreeBodyMove(nsIDOMMouseEvent* aMouseEvent)
     mLastTreeCol.Assign(colId);
   }
 }
+#endif
 
 nsresult
 nsXULTooltipListener::ShowTooltip()
@@ -387,10 +400,12 @@ nsXULTooltipListener::ShowTooltip()
     nsCOMPtr<nsIDocument> targetDoc;
     mSourceNode->GetDocument(*getter_AddRefs(targetDoc));
     if (targetDoc) {
+#ifdef MOZ_XUL
       if (!mIsSourceTree) {
         mLastTreeRow = -1;
         mLastTreeCol.Truncate();
       }
+#endif
 
       nsCOMPtr<nsIDOMNode> targetNode(do_QueryInterface(mTargetNode));
       xulDoc->SetTooltipNode(targetNode);
@@ -432,6 +447,7 @@ nsXULTooltipListener::ShowTooltip()
   return NS_OK;
 }
 
+#ifdef MOZ_XUL
 static void
 GetTreeCellCoords(nsITreeBoxObject* aTreeBox, nsIContent* aSourceNode, 
                   PRInt32 aRow, nsAutoString aCol, PRInt32* aX, PRInt32* aY)
@@ -461,6 +477,7 @@ SetTitletipLabel(nsITreeBoxObject* aTreeBox, nsIContent* aTooltip,
   
   aTooltip->SetAttr(nsnull, nsXULAtoms::label, label, PR_FALSE);
 }
+#endif
 
 nsresult
 nsXULTooltipListener::LaunchTooltip(nsIContent* aTarget, PRInt32 aX, PRInt32 aY)
@@ -480,6 +497,7 @@ nsXULTooltipListener::LaunchTooltip(nsIContent* aTarget, PRInt32 aX, PRInt32 aY)
   if (popupBoxObject) {
     PRInt32 x = aX;
     PRInt32 y = aY;
+#ifdef MOZ_XUL
     if (mNeedTitletip) {
       nsCOMPtr<nsITreeBoxObject> obx;
       GetSourceTreeBoxObject(getter_AddRefs(obx));
@@ -489,6 +507,7 @@ nsXULTooltipListener::LaunchTooltip(nsIContent* aTarget, PRInt32 aX, PRInt32 aY)
       SetTitletipLabel(obx, mCurrentTooltip, mLastTreeRow, mLastTreeCol);
       mCurrentTooltip->SetAttr(nsnull, nsXULAtoms::titletip, NS_LITERAL_STRING("true"), PR_FALSE);
     } else
+#endif
       mCurrentTooltip->UnsetAttr(nsnull, nsXULAtoms::titletip, PR_FALSE);
 
     nsCOMPtr<nsIDOMElement> targetEl(do_QueryInterface(aTarget));
@@ -593,7 +612,9 @@ nsXULTooltipListener::GetTooltipFor(nsIContent* aTarget, nsIContent** aTooltip)
               xulDocument->GetElementById(tooltipId, getter_AddRefs(tooltipEl));
 
               if (tooltipEl) {
+#ifdef MOZ_XUL
                 mNeedTitletip = PR_FALSE;
+#endif
 
                 nsCOMPtr<nsIContent> tooltipContent(do_QueryInterface(tooltipEl));
                 *aTooltip = tooltipContent;
@@ -605,12 +626,14 @@ nsXULTooltipListener::GetTooltipFor(nsIContent* aTarget, nsIContent** aTooltip)
           }
         }
 
+#ifdef MOZ_XUL
         // titletips should just use the default tooltip
         if (mIsSourceTree && mNeedTitletip) {
           mRootBox->GetDefaultTooltip(aTooltip);
           NS_IF_ADDREF(*aTooltip);
           return NS_OK;
         }
+#endif
       }
     }
   }
@@ -696,6 +719,7 @@ nsXULTooltipListener::sAutoHideCallback(nsITimer *aTimer, void* aListener)
     self->HideTooltip();
 }
 
+#ifdef MOZ_XUL
 nsresult
 nsXULTooltipListener::GetSourceTreeBoxObject(nsITreeBoxObject** aBoxObject)
 {
@@ -718,3 +742,4 @@ nsXULTooltipListener::GetSourceTreeBoxObject(nsITreeBoxObject** aBoxObject)
   }
   return NS_ERROR_FAILURE;
 }
+#endif

@@ -58,7 +58,9 @@
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIWebNavigation.h"
+#ifdef MOZ_XUL
 #include "nsIXULDocument.h"
+#endif
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentType.h"
 #include "nsINameSpaceManager.h"
@@ -77,8 +79,10 @@
 #include "nsIScrollableView.h"
 #include "nsIDOMXULSelectCntrlEl.h"
 #include "nsIDOMXULSelectCntrlItemEl.h"
+#ifdef MOZ_XUL
 #include "nsXULTreeAccessible.h"
 #include "nsITreeSelection.h"
+#endif
 #include "nsAccessibilityService.h"
 #include "nsISelectionPrivate.h"
 #include "nsICaret.h"
@@ -475,6 +479,7 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
     if (NS_FAILED(mAccService->GetAccessibleFor(targetNode, getter_AddRefs(accessible))))
       return NS_OK;
 
+#ifdef MOZ_XUL
     // If it's a tree element, need the currently selected item
     PRInt32 treeIndex = -1;
     nsCOMPtr<nsITreeBoxObject> treeBox;
@@ -494,17 +499,20 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
         }
       }
     }
+#endif
 
     nsAutoString eventType;
     aEvent->GetType(eventType);
 
 #ifndef MOZ_ACCESSIBILITY_ATK
+#ifdef MOZ_XUL
     // tree event
     if (treeItemAccessible && 
         (eventType.EqualsIgnoreCase("DOMMenuItemActive") || eventType.EqualsIgnoreCase("select"))) {
       mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, treeItemAccessible, nsnull);
       return NS_OK;
     }
+#endif
 
     if (eventType.EqualsIgnoreCase("focus") || eventType.EqualsIgnoreCase("DOMMenuItemActive")) { 
       if (optionTargetNode &&
@@ -952,15 +960,19 @@ NS_IMETHODIMP nsDocAccessibleMixin::GetMimeType(nsAString& aMimeType)
 
 NS_IMETHODIMP nsDocAccessibleMixin::GetDocType(nsAString& aDocType)
 {
+#ifdef MOZ_XUL
   nsCOMPtr<nsIXULDocument> xulDoc(do_QueryInterface(mDocument));
+#endif
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(mDocument));
   nsCOMPtr<nsIDOMDocumentType> docType;
 
+#ifdef MOZ_XUL
   if (xulDoc) {
     aDocType = NS_LITERAL_STRING("window"); // doctype not implemented for XUL at time of writing - causes assertion
     return NS_OK;
-  }
-  else if (domDoc && NS_SUCCEEDED(domDoc->GetDoctype(getter_AddRefs(docType))) && docType) {
+  } else
+#endif
+  if (domDoc && NS_SUCCEEDED(domDoc->GetDoctype(getter_AddRefs(docType))) && docType) {
     return docType->GetName(aDocType);
   }
 
