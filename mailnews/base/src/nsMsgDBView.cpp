@@ -458,6 +458,18 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   case 'd':  // date
     rv = FetchDate(msgHdr, aValue);
     break;
+  case 't':   // threaded mode (this is temporary...it's how we are faking 
+    if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+    {
+      // if it's an open container, print a '-' sign. If it's a closed container,
+      // print a "+" sign. o.t. do nothing.
+      if (m_flags[aRow] & MSG_FLAG_ELIDED)
+        *aValue = nsCRT::strdup(NS_LITERAL_STRING("+"));
+      else if (m_flags[aRow] & MSG_VIEW_FLAG_HASCHILDREN)
+        *aValue = nsCRT::strdup(NS_LITERAL_STRING("-"));      
+    }
+    break;
+      
   case 'u': // unread button column
     if (m_flags[aRow] & MSG_FLAG_READ)
       *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
@@ -567,7 +579,14 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
     ToggleReadByIndex(row);
     mOutliner->InvalidateRow(row);
    break;
-
+  case 't': // threaded cell
+    if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) && (m_flags [row] & MSG_VIEW_FLAG_HASCHILDREN))
+    {
+      PRUint32 numChanged = 0;
+      ToggleExpansion(row, &numChanged);
+      mOutliner->RowCountChanged(row, numChanged);
+    }
+    break;
   default:
     break;
 
@@ -1098,6 +1117,7 @@ typedef struct tagIdKey {
     PRUint8     key[1];
 } IdKey;
 
+
 typedef struct tagIdPtrKey {
     EntryInfo   info;
     PRUint8     *key;
@@ -1165,7 +1185,6 @@ FnSortIdPRTime(const void *pItem1, const void *pItem2, void *privateData)
     else
         return(-1);
 }
-
 
 // XXX are these still correct? 
 const int kMaxSubjectKey = 160;
