@@ -34,6 +34,14 @@ public:
   enum nsDOMClassInfoID {
     // Base classes
     eWindow_id,
+    eLocation_id,
+    ePlugin_id,
+    ePluginArray_id,
+    eMimeType_id,
+    eMimeTypeArray_id,
+    eBarProp_id,
+    eHistory_id,
+    eScreen_id,
 
     // Core classes
     eDocument_id,
