@@ -1091,10 +1091,24 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
       printf("'\n");
 #endif
 
+      PRUint32 loadStatus;
+#ifdef USE_IMG2
+      mImageRequest->GetImageStatus(&loadStatus);
+      if (loadStatus & nsIImageRequest::STATUS_SIZE_AVAILABLE) {
+        nsCOMPtr<nsIURI> uri;
+        NS_NewURI(getter_AddRefs(uri), newSRC);  // XXX we need the base url
+        nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1"));
+        il->LoadImage(uri, nsnull, getter_AddRefs(mImageRequest));
+
+        mImageRequest->GetImageStatus(&loadStatus);
+        if (loadStatus & nsIImageRequest::STATUS_SIZE_AVAILABLE) {
+
+#else
       if (mImageLoader.IsImageSizeKnown()) {
         mImageLoader.UpdateURLSpec(aPresContext, newSRC);
         PRUint32 loadStatus = mImageLoader.GetLoadStatus();
         if (loadStatus & NS_IMAGE_LOAD_STATUS_IMAGE_READY) {
+#endif
           // Trigger a paint now because image-loader won't if the
           // image is already loaded and ready to go.
           Invalidate(aPresContext, nsRect(0, 0, mRect.width, mRect.height), PR_FALSE);
@@ -1102,12 +1116,23 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
       }
       else {        
         // Stop the earlier image load
+#ifdef USE_IMG2
+        mImageRequest->Cancel(NS_BINDING_ABORT);
+
+        mCanSendLoadEvent = PR_TRUE;
+
+        nsCOMPtr<nsIURI> uri;
+        NS_NewURI(getter_AddRefs(uri), newSRC);  // XXX we need the base url
+        nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1"));
+        il->LoadImage(uri, nsnull, getter_AddRefs(mImageRequest));
+#else
         mImageLoader.StopLoadImage(aPresContext);
 
         mCanSendLoadEvent = PR_TRUE;
 
         // Update the URL and start the new image load
         mImageLoader.UpdateURLSpec(aPresContext, newSRC);
+#endif
       }
     }
   }
@@ -1150,7 +1175,13 @@ NS_IMETHODIMP
 nsImageFrame::IsImageComplete(PRBool* aComplete)
 {
   NS_ENSURE_ARG_POINTER(aComplete);
+#ifdef USE_IMG2
+  PRUint32 status;
+  mImageRequest->GetImageStatus(&status);
+  *aComplete = ((status & nsIImageRequest::STATUS_LOAD_COMPLETE) != 0);
+#else
   *aComplete = ((mImageLoader.GetLoadStatus() & NS_IMAGE_LOAD_STATUS_IMAGE_READY) != 0);
+#endif
   return NS_OK;
 }
 
