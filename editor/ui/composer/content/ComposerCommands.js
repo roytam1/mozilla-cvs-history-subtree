@@ -543,7 +543,7 @@ var nsFindCommand =
 
   doCommand: function(aCommand)
   {
-    window.editorShell.Find();
+    window.editorShell.Replace();
   }
 };
 
@@ -909,6 +909,11 @@ var nsSetSmiley =
       var intElement = editorShell.CreateElementWithDefaults("span");
       if (!intElement)
         return;
+
+	  //just for mailnews, because of the way it removes HTML
+      var smileButMenu = document.getElementById('smileButtonMenu');      
+      if (smileButMenu.getAttribute("padwithspace"))
+         smileyCode = " " + smileyCode + " ";
 
       var txtElement =  document.createTextNode(smileyCode);
       if (!txtElement)

@@ -87,8 +87,8 @@ typedef enum {
    kCharsetFromWeakDocTypeDefault,
    kCharsetFromUserDefault ,
    kCharsetFromDocTypeDefault,
-   kCharsetFromParentFrame,
    kCharsetFromCache,
+   kCharsetFromParentFrame,
    kCharsetFromBookmarks,
    kCharsetFromAutoDetection,
    kCharsetFromMetaTag,
@@ -350,6 +350,8 @@ const PRUnichar kNullCh           = '\0';
 
 #define kHTMLTextContentType  "text/html"
 #define kXMLTextContentType   "text/xml"
+#define kXMLApplicationContentType "application/xml"
+#define kXHTMLApplicationContentType "application/xhtml+xml"
 #define kXULTextContentType   "application/vnd.mozilla.xul+xml"
 #define kRDFTextContentType   "text/rdf"
 #define kXIFTextContentType   "text/xif"

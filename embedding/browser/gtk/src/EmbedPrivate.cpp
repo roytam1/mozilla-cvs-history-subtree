@@ -480,12 +480,8 @@ EmbedPrivate::ContentFinishedLoading(void)
       return;
     }
     
-    // get the private DOM window
-    nsCOMPtr<nsIDOMWindowInternal> domWindowInternal = 
-      do_QueryInterface(domWindow);
-    
     // resize the content
-    domWindowInternal->SizeToContent();
+    domWindow->SizeToContent();
 
     // and since we're done loading show the window, assuming that the
     // visibility flag has been set.
@@ -635,7 +631,7 @@ EmbedPrivate::StartupProfile(void)
     sPrefs = pref.get();
     NS_ADDREF(sPrefs);
     sPrefs->ResetPrefs();
-    sPrefs->ReadUserPrefs();
+    sPrefs->ReadUserPrefs(nsnull);
   }
   return NS_OK;
 }
@@ -645,7 +641,6 @@ void
 EmbedPrivate::ShutdownProfile(void)
 {
   if (sPrefs) {
-    sPrefs->ShutDown();
     NS_RELEASE(sPrefs);
     sPrefs = 0;
   }
