@@ -1417,7 +1417,7 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
   }
   // 2) if position is 'absolute' or 'fixed' then display must be 'block and float must be 'none'
   //    XXX - see note for fixup 1) above...
-  nsStylePosition *pos = (nsStylePosition *)GetMutableStyleData(eStyleStruct_Position);
+  const nsStylePosition *pos = (const nsStylePosition *)GetStyleData(eStyleStruct_Position);
   if (pos) {
     if (pos->IsAbsolutelyPositioned()) {
       if (disp) {
