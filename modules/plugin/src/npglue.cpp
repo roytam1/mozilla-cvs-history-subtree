@@ -2942,7 +2942,7 @@ np_newstream(URL_Struct *urls, np_handle *handle, np_instance *instance)
                 peerStream->SetUserStream(userStream);
                 pstream->pdata = peerStream;
 
-                nsresult err = userStream->GetStreamType((nsStreamType*)&stype);
+                nsresult err = userStream->GetStreamType((nsPluginStreamType*)&stype);
                 PR_ASSERT(err == NS_OK);
             }
             else {

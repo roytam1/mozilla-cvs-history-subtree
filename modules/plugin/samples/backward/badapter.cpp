@@ -644,7 +644,7 @@ NPP_NewStream(NPP instance,
 	return NPERR_OUT_OF_MEMORY_ERROR;
 		
     stream->pdata = (void*) pluginStream;
-    nsresult err = pluginStream->GetStreamType((nsStreamType*)stype);
+    nsresult err = pluginStream->GetStreamType((nsPluginStreamType*)stype);
     assert(err == NS_OK);
 	
     return NPERR_NO_ERROR;

@@ -331,7 +331,7 @@ public:
 
     // (Corresponds to NPP_NewStream's stype return parameter.)
     NS_IMETHOD
-    GetStreamType(nsStreamType *result);
+    GetStreamType(nsPluginStreamType *result);
 
     // (Corresponds to NPP_StreamAsFile.)
     NS_IMETHOD
@@ -850,10 +850,10 @@ SimplePluginStream::Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount)
 /*******************************************************************************/
 
 NS_METHOD
-SimplePluginStream::GetStreamType(nsStreamType *result)
+SimplePluginStream::GetStreamType(nsPluginStreamType *result)
 {
     // XXX these should become subclasses
-    *result = nsStreamType_Normal;
+    *result = nsPluginStreamType_Normal;
     return NS_OK;
 }
 

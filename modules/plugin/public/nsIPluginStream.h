@@ -56,7 +56,7 @@ public:
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    GetStreamType(nsStreamType *result) = 0;
+    GetStreamType(nsPluginStreamType *result) = 0;
 
     /**
      * This operation passes to the plugin the name of the file which

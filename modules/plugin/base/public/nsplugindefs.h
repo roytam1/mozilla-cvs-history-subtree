@@ -192,11 +192,11 @@ enum nsPluginMode {
 };
 
 // XXX this can go away now
-enum nsStreamType {
-    nsStreamType_Normal = 1,
-    nsStreamType_Seek,
-    nsStreamType_AsFile,
-    nsStreamType_AsFileOnly
+enum nsPluginStreamType {
+    nsPluginStreamType_Normal = 1,
+    nsPluginStreamType_Seek,
+    nsPluginStreamType_AsFile,
+    nsPluginStreamType_AsFileOnly
 };
 
 /*
