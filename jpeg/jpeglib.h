@@ -19,6 +19,22 @@
 	extern int MMXAvailable;
 #endif
 
+#ifdef XP_OS2
+/*
+ * On OS/2, the system will have defined RGB_* so we #undef 'em to avoid warnings
+ * from jmorecfg.h.
+ */
+#ifdef RGB_RED
+	#undef RGB_RED
+#endif
+#ifdef RGB_GREEN
+	#undef RGB_GREEN
+#endif
+#ifdef RGB_BLUE
+	#undef RGB_BLUE
+#endif
+#endif
+
 /*
  * First we include the configuration files that record how this
  * installation of the JPEG library is set up.  jconfig.h can be
