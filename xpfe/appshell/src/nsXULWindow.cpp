@@ -941,7 +941,7 @@ PRBool nsXULWindow::LoadSizeFromXUL()
   PRInt32 errorCode;
   PRInt32 temp;
 
-  GetPosition(&currWidth, &currHeight);
+  GetSize(&currWidth, &currHeight);
 
   // Obtain the position and sizing information from the <xul:window> element.
   PRInt32 specWidth = currWidth;
@@ -952,7 +952,7 @@ PRBool nsXULWindow::LoadSizeFromXUL()
   if (NS_SUCCEEDED(rv)) {
     temp = sizeString.ToInteger(&errorCode);
     if (NS_SUCCEEDED(errorCode) && temp > 0) {
-      specWidth = temp;
+      specWidth = temp > 100 ? temp : 100;
       gotSize = PR_TRUE;
     }
   }
@@ -960,7 +960,7 @@ PRBool nsXULWindow::LoadSizeFromXUL()
   if (NS_SUCCEEDED(rv)) {
     temp = sizeString.ToInteger(&errorCode);
     if (NS_SUCCEEDED(errorCode) && temp > 0) {
-      specHeight = temp;
+      specHeight = temp > 100 ? temp : 100;
       gotSize = PR_TRUE;
     }
   }
