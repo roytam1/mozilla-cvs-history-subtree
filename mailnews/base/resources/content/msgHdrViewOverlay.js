@@ -195,6 +195,11 @@ function OnLoadMsgHeaderPane()
   gCollectNewsgroup = pref.GetBoolPref("mail.collect_email_address_newsgroup");
   gShowUserAgent = pref.GetBoolPref("mailnews.headers.showUserAgent");
   initializeHeaderViewTables();
+
+  var toggleHeaderView = document.getElementById("msgHeaderView");
+  var initialCollapsedSetting = toggleHeaderView.getAttribute("state");
+  if (initialCollapsedSetting == "true")
+    gCollapsedHeaderViewMode = true;   
 }
 
 // The messageHeaderSink is the class that gets notified of a message's headers as we display the message
@@ -377,8 +382,9 @@ function updateHeaderViews()
 
 function ToggleHeaderView ()
 {
-  expandedNode = document.getElementById("expandedHeaderView");
-  collapsedNode = document.getElementById("collapsedHeaderView");
+  var expandedNode = document.getElementById("expandedHeaderView");
+  var collapsedNode = document.getElementById("collapsedHeaderView");
+  var toggleHeaderView = document.getElementById("msgHeaderView");
 
   if (gCollapsedHeaderViewMode)
   {          
@@ -404,6 +410,11 @@ function ToggleHeaderView ()
     collapsedNode.removeAttribute("collapsed");
     expandedNode.setAttribute("collapsed", "true");
   }  
+
+  if (gCollapsedHeaderViewMode)
+    toggleHeaderView.setAttribute("state", "true");
+  else
+    toggleHeaderView.setAttribute("state", "false");
 }
 
 // Clear Email Field takes the passed in div and removes all the child nodes!
@@ -777,17 +788,18 @@ function displayAttachmentsForExpandedView()
       // we need to create a tree item, a tree row and a tree cell to insert the attachment
       // into the attachment tree..
 
-		  item = document.createElement("treeitem");
-		  row = document.createElement("treerow");
-		  cell = document.createElement("treecell");
+	  item = document.createElement("treeitem");
+	  row = document.createElement("treerow");
+	  cell = document.createElement("treecell");
 
       cell.setAttribute('class', "treecell-iconic"); 
-     	cell.setAttribute("label", attachment.displayName);
+      cell.setAttribute("label", attachment.displayName);
+      cell.setAttribute("tooltip", "attachmentTreeTooltip");
       item.setAttribute("commandSuffix", generateCommandSuffixForAttachment(attachment)); // set the command suffix on the tree item...
       setApplicationIconForAttachment(attachment, cell);
-		  row.appendChild(cell);
-		  item.appendChild(row);
-		  attachmentList.appendChild(item);
+	  row.appendChild(cell);
+	  item.appendChild(row);
+	  attachmentList.appendChild(item);
     } // for each attachment
     gBuildAttachmentsForCurrentMsg = true;
   }
@@ -819,6 +831,15 @@ function displayAttachmentsForCollapsedView()
   {
     attachmentNode.setAttribute('hide', true);
   }
+}
+
+// Public method called to generate a tooltip over an attachment
+function FillInAttachmentTooltip(cellNode)
+{
+  var attachmentName = cellNode.getAttribute("label");
+  var textNode = document.getElementById("attachmentTreeTooltipText");
+  textNode.setAttribute('value', attachmentName);
+  return true;
 }
 
 // Public method called when we create the attachments file menu
