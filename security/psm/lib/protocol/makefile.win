@@ -82,8 +82,6 @@ LCFLAGS = -DEXPORT_VERSION -DLIB_BUILD
 OBJS=                         \
     .\$(OBJDIR)\newproto.obj  \
     .\$(OBJDIR)\templates.obj \
-    .\$(OBJDIR)\obscure.obj \
-    .\$(OBJDIR)\obspriv.obj \
     .\$(OBJDIR)\protocolshr.obj \
     $(NULL)
 
