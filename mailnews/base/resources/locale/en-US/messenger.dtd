@@ -551,5 +551,17 @@ Rights Reserved.
 <!ENTITY javaScriptConsoleCmd.label                             "JavaScript Console">
 <!ENTITY javaScriptConsoleCmd.accesskey				"S">
 
+<!-- Tasks Menu -->
+
 <!ENTITY tasksMenu.label "Tools">
 <!ENTITY tasksMenu.accesskey "T"> 
+
+<!-- Help Menu -->
+<!ENTITY helpMenu.label "Help">
+<!ENTITY helpMenu.accesskey "H"> 
+<!ENTITY releaseCmd.label "Release Notes">
+<!ENTITY releaseCmd.accesskey "R"> 
+
+
+
+

@@ -315,6 +315,13 @@ Contributor(s):
             <menuitem label="&exportCmd.label;" accesskey="&exportCmd.accesskey;" oncommand="AbExport()"/>
           </menupopup>
         </menu>
+
+        <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
+          <menupopup id="menu_HelpPopup">
+            <menuitem accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
+          </menupopup>
+        </menu>
+
     </menubar>
    </toolbaritem>
   </toolbar>

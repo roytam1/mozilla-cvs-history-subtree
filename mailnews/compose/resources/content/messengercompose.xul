@@ -392,6 +392,12 @@
             <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
           </menupopup>
       </menu>
+      
+      <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
+        <menupopup id="menu_HelpPopup">
+          <menuitem accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
+        </menupopup>
+      </menu>
     </menubar>
    </toolbaritem>
   </toolbar>
