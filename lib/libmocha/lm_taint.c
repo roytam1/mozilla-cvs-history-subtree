@@ -584,26 +584,31 @@ lm_CanCaptureEvent(JSContext *cx, JSFunction *fun, JSEvent *event)
 JSPrincipals *
 lm_GetPrincipalsFromStackFrame(JSContext *cx)
 {
-#ifdef OJI
     /*
      * Get principals from script of innermost interpreted frame.
      */
-    JSStackFrame *fp;
+    JSStackFrame *fp = NULL;
     JSScript *script;
+#ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+#else
+    JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
+    JSStackFrame *pFrameToEndLooking   = NULL;
+#endif
 
     fp = pFrameToStartLooking;
-    while ((fp = JS_FrameIterator(cx, &fp)) != pFrameToEndLooking) {
+    while (fp  != pFrameToEndLooking) {
         script = JS_GetFrameScript(cx, fp);
         if (script) {
             return JS_GetScriptPrincipals(cx, script);
         }
+        fp = JS_FrameIterator(cx, &fp);
     }
-        return JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
-#else
-    return NULL;
+#ifdef OJI
+    return JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
 #endif
+    return NULL;
 }
 
 const char *
@@ -619,10 +624,13 @@ lm_GetSubjectOriginURL(JSContext *cx)
 #ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+#else
+    JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
+    JSStackFrame *pFrameToEndLooking   = NULL;
 #endif
 
-    fp = NULL;
-    while ((fp = JS_FrameIterator(cx, &fp)) != NULL) {
+    fp = pFrameToStartLooking;
+    while (fp  != pFrameToEndLooking) {
         script = JS_GetFrameScript(cx, fp);
         if (script) {
             principals = JS_GetScriptPrincipals(cx, script);
@@ -630,6 +638,7 @@ lm_GetSubjectOriginURL(JSContext *cx)
                 ? principals->codebase
                 : JS_GetScriptFilename(cx, script);
         }
+        fp = JS_FrameIterator(cx, &fp);
     }
 #ifdef OJI
     principals = JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
@@ -1511,6 +1520,8 @@ static char *targetStrings[] = {
     "UniversalPreferencesRead",
     "UniversalPreferencesWrite",
     "AccountSetup",
+    "AllJavaPermission",
+    "AllJavaScriptPermission"
     /* See Target.java for more targets */
 };
 
@@ -1562,7 +1573,11 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
 #ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+#else
+    JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
+    JSStackFrame *pFrameToEndLooking   = NULL;
 #endif
+
     setupJSCapsCallbacks();
 
     /* Map JSTarget to nsTarget */
@@ -1573,12 +1588,14 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
     /* Find annotation */
     annotationRef = NULL;
     principalArray = NULL;
-#ifdef OJI
     fp = pFrameToStartLooking;
-    while ((fp = JS_FrameIterator(cx, &fp)) != pFrameToEndLooking) {
+    while (fp  != pFrameToEndLooking) {
         void *current;
         if (JS_GetFrameScript(cx, fp) == NULL)
-            continue;
+        {
+          fp = JS_FrameIterator(cx, &fp);
+          continue;
+        }
         current = JS_GetFramePrincipalArray(cx, fp);
         if (current == NULL) {
             return JS_FALSE;
@@ -1595,8 +1612,8 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
         principalArray = principalArray
             ? nsCapsIntersectPrincipalArray(principalArray, current)
             : current;
+        fp = JS_FrameIterator(cx, &fp);
     }
-#endif
 
     if (annotationRef) {
         annotation = (struct nsPrivilegeTable *)annotationRef;
@@ -1611,7 +1628,7 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
                * Must check that the principals that signed the Java applet are
                * a subset of the principals that signed this script.
                */
-              void *javaPrincipals = JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
+              void *javaPrincipals = JVM_GetJavaPrincipalsFromStackAsNSVector(pFrameToStartLooking);
 
               if (!canExtendTrust(cx, javaPrincipals, principalArray)) {
                   return JS_FALSE;
