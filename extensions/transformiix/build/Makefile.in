@@ -78,7 +78,9 @@ LOBJS =../source/base/ArrayList.o \
   ../source/xpath/BooleanResult.o \
   ../source/xpath/ElementExpr.o \
   ../source/xpath/ErrorFunctionCall.o \
+  ../source/xpath/Expr.o \
   ../source/xpath/ExprLexer.o \
+  ../source/xpath/ExprLexerChars.o \
   ../source/xpath/ExprParser.o \
   ../source/xpath/ExtensionFunctionCall.o \
   ../source/xpath/FilterExpr.o \
@@ -99,6 +101,7 @@ LOBJS =../source/base/ArrayList.o \
   ../source/xpath/StringFunctionCall.o \
   ../source/xpath/StringResult.o \
   ../source/xpath/TextExpr.o \
+  ../source/xpath/UnaryExpr.o \
   ../source/xpath/UnionExpr.o \
   ../source/xpath/VariableRefExpr.o \
   ../source/xpath/XPathNames.o \

@@ -73,7 +73,9 @@ CPP_OBJS=							\
 	..\source\xpath\$(OBJDIR)\BooleanResult.obj \
 	..\source\xpath\$(OBJDIR)\ElementExpr.obj \
 	..\source\xpath\$(OBJDIR)\ErrorFunctionCall.obj \
+	..\source\xpath\$(OBJDIR)\Expr.obj \
 	..\source\xpath\$(OBJDIR)\ExprLexer.obj \
+	..\source\xpath\$(OBJDIR)\ExprLexerChars.obj \
 	..\source\xpath\$(OBJDIR)\ExprParser.obj \
 	..\source\xpath\$(OBJDIR)\ExtensionFunctionCall.obj \
 	..\source\xpath\$(OBJDIR)\FilterExpr.obj \
@@ -94,6 +96,7 @@ CPP_OBJS=							\
 	..\source\xpath\$(OBJDIR)\StringFunctionCall.obj \
 	..\source\xpath\$(OBJDIR)\StringResult.obj \
 	..\source\xpath\$(OBJDIR)\TextExpr.obj \
+	..\source\xpath\$(OBJDIR)\UnaryExpr.obj \
 	..\source\xpath\$(OBJDIR)\UnionExpr.obj \
 	..\source\xpath\$(OBJDIR)\VariableRefExpr.obj \
 	..\source\xpath\$(OBJDIR)\XPathNames.obj \
