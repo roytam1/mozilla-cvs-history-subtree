@@ -64,7 +64,7 @@ LDFLAGS		+= -SUBSYSTEM:CONSOLE -NODEFAULTLIB:MSVCRTD
 endif
 
 # Tell the $(PROGRAM) target that we need to be recompiled when libxpt changes.
-LIBS		= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
+PROG_LIBS	= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
 EXTRA_DEPS	= $(wildcard $(DIST)/lib/$(LIB_PREFIX)xpt.*)
 
 ifdef CROSS_COMPILE

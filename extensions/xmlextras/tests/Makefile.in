@@ -43,7 +43,7 @@ SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
 include $(topsrcdir)/config/config.mk
 
-LIBS		= \
+PROG_LIBS	= \
 		$(LIBS_DIR) \
 		$(MOZ_JS_LIBS) \
 		$(XPCOM_LIBS) \

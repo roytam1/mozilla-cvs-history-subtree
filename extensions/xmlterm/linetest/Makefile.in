@@ -71,6 +71,7 @@ LIBS = -lncurses -llineterm_s $(PTHREADLIBOPT)
 else
 LIBS = -llineterm_s $(PTHREADLIBOPT)
 endif
+PROG_LIBS = $(LIBS)
 
 include $(topsrcdir)/config/config.mk
 

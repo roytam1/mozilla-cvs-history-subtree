@@ -34,7 +34,7 @@ PROGRAM		= TestTXMgr$(BIN_SUFFIX)
 
 CPPSRCS		= TestTXMgr.cpp
 
-LIBS		= $(MOZ_COMPONENT_LIBS)
+PROG_LIBS	= $(MOZ_COMPONENT_LIBS)
 
 include $(topsrcdir)/config/rules.mk
 

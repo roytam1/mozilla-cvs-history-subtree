@@ -59,7 +59,8 @@ SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
 include $(topsrcdir)/config/config.mk
 
-LIBS		= \
+PROG_LIBS	= \
+		$(LIBS_DIR) \
 		$(EXTRA_DSO_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(XPCOM_LIBS) \
@@ -75,7 +76,7 @@ _RES_FILES = \
 		$(NULL)
 
 libs:: $(_RES_FILES)
-		$(INSTALL) $^ $(DIST)/bin/res
+	$(INSTALL) $^ $(DIST)/bin/res
 
 install:: $(_RES_FILES)
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res

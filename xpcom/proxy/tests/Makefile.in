@@ -36,7 +36,7 @@ XPIDLSRCS	= nsITestProxy.idl
 
 SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX)) 
 
-LIBS		= \
+PROG_LIBS	= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

@@ -33,7 +33,7 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= TestLineBreak.cpp
 
-LIBS		= $(XPCOM_LIBS) $(NSPR_LIBS)
+PROG_LIBS	= $(XPCOM_LIBS) $(NSPR_LIBS)
 
 include $(topsrcdir)/config/rules.mk
 

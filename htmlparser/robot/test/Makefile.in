@@ -40,7 +40,7 @@ else
 EXTRA_DSO_LIBS = DebugRobot
 endif
 
-LIBS		= \
+PROG_LIBS	= \
 		$(EXTRA_DSO_LIBS) \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \

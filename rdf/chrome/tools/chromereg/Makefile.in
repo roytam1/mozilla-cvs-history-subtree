@@ -35,7 +35,7 @@ CPPSRCS		= regchrome.cpp
 
 SIMPLE_PROGRAMS = $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
-LIBS		= \
+PROG_LIBS	= \
 		$(LIBS_DIR) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

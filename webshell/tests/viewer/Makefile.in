@@ -139,7 +139,7 @@ XP_LIBS			= \
 			$(NSPR_LIBS) \
 			$(NULL)
 
-LIBS			= \
+PROG_LIBS		= \
 			$(VIEWER_TK_LIBS) \
 			$(GTK_GLUE) \
 			$(XP_LIBS) \

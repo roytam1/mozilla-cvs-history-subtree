@@ -30,7 +30,7 @@ PROGRAM		= TestPICS
 
 CPPSRCS		= TestPICS.cpp
 
-LIBS		= \
+PROG_LIBS	= \
 		-L../src -lpics \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

@@ -44,7 +44,7 @@ EXPORT_RESOURCE	= \
 		$(srcdir)/strres-test.js \
 		$(NULL)
 
-LIBS		= \
+PROG_LIBS	= \
 		$(MOZ_JS_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

@@ -35,7 +35,7 @@ REQUIRES	= xpcom \
 PROGRAM		= TestCookie$(BIN_SUFFIX)
 CPPSRCS		= TestCookie.cpp
 
-LIBS		= $(XPCOM_LIBS) $(NSPR_LIBS)
+PROG_LIBS	= $(XPCOM_LIBS) $(NSPR_LIBS)
 
 ifeq ($(OS_ARCH),WINNT)
 MAPFILE		= TestCookie.map

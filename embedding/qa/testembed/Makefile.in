@@ -112,7 +112,7 @@ CPPSRCS		= \
 
 EXTRA_DSO_LIBS	= embed_base_s gkgfx testEmbedComponents
 
-LIBS		= \
+PROG_LIBS	= \
 		$(EXTRA_DSO_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

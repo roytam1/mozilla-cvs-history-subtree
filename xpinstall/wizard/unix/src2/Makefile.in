@@ -53,7 +53,7 @@ CPPSRCS		= \
         nsXIEngine.cpp \
         $(NULL)
 
-LIBS        = \
+PROG_LIBS = \
         `$(GTK_CONFIG) --libs` \
         -ljar$(VERSION_NUMBER)_s \
         -lxpnet_s \

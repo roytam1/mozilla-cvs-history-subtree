@@ -53,7 +53,7 @@ INCLUDES	+= \
 		-I$(srcdir)/../util \
 		$(NULL)
 
-LIBS		+= \
+PROG_LIBS	+= \
 		$(LIBS_DIR) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

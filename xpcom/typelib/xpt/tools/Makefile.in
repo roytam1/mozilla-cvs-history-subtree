@@ -50,7 +50,7 @@ ifeq ($(OS_ARCH),WINNT)
 DEFINES		+= -DEXPORT_XPT_API
 endif
 
-LIBS		= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX)
+PROG_LIBS	= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX)
 
 # Tell the $(SIMPLE_PROGRAMS) target that we need to be recompiled
 # when libxpt changes.

@@ -63,14 +63,14 @@ SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
 include $(topsrcdir)/config/config.mk
 
-LIBS		+= \
+PROG_LIBS	+= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
 
 # Needed to resolve __yylex (?)
 ifeq ($(OS_ARCH)$(OS_RELEASE),FreeBSD2)
-LIBS		+= -lpcap
+PROG_LIBS	+= -lpcap
 endif
 
 include $(topsrcdir)/config/rules.mk

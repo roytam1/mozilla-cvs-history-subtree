@@ -42,7 +42,7 @@ CPPSRCS		= \
 #		test_main.cpp \
 
 
-LIBS		+= \
+PROG_LIBS	+= \
 		$(NSPR_LIBS) \
 		$(NULL)
 

@@ -45,7 +45,7 @@ ifdef ENABLE_GNOME
 CPPSRCS	       += TestGtkEmbedMDI.cpp
 endif
 
-LIBS		+= \
+PROG_LIBS	+= \
 		-lgtkembedmoz \
 		-lgtksuperwin \
 		$(NULL)

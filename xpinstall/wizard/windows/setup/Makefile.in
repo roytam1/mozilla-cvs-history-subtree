@@ -56,7 +56,7 @@ CPPSRCS		= \
 		nsEscape.cpp \
 		$(NULL)
 
-LIBS		= $(EXTRA_DSO_LIBS)
+PROG_LIBS	= $(EXTRA_DSO_LIBS)
 
 LOCAL_INCLUDES	= -I$(srcdir)/../uninstall
 

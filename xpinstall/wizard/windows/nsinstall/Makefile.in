@@ -34,7 +34,7 @@ USE_NON_MT_LIBS = 1
 
 CPPSRCS		= nsinstall.cpp 
 
-LIBS		= $(EXTRA_DSO_LIBS)
+PROG_LIBS	= $(EXTRA_DSO_LIBS)
 
 NO_DIST_INSTALL	= 1
 

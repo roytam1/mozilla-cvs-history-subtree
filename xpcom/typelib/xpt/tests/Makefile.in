@@ -33,7 +33,7 @@ SIMPLE_PROGRAMS	= PrimitiveTest$(BIN_SUFFIX) SimpleTypeLib$(BIN_SUFFIX)
 
 CSRCS		= PrimitiveTest.c SimpleTypeLib.c
 
-LIBS		= \
+PROG_LIBS	= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

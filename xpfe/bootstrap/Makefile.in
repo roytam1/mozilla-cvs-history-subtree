@@ -137,10 +137,10 @@ ifdef MOZ_JPROF
 XP_LIBS         += -ljprof
 endif
 
-LIBS		= $(XP_LIBS)
+PROG_LIBS	= $(XP_LIBS)
 
 ifdef GC_LEAK_DETECTOR
-LIBS += -lboehm
+PROG_LIBS += -lboehm
 endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
@@ -151,7 +151,7 @@ endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),photon)
 CPPSRCS += nsNativeAppSupportPh.cpp
-LIBS += -lphexlib -lph
+PROG_LIBS += -lphexlib -lph
 endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
@@ -165,7 +165,7 @@ SPLASH_XPM = $(srcdir)/splash.xpm
 CPPSRCS += nsNativeAppSupportGtk.cpp \
 	   nsNativeAppSupportBase.cpp
 DEFINES += -DSPLASH_XPM=\"$(SPLASH_XPM)\"
-LIBS += $(MOZ_GTK_LDFLAGS)
+PROG_LIBS += $(MOZ_GTK_LDFLAGS)
 endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)

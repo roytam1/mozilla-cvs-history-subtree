@@ -32,7 +32,7 @@ SIMPLE_PROGRAMS	= TestInterfaceInfo$(BIN_SUFFIX)
 
 CPPSRCS		= TestInterfaceInfo.cpp
 
-LIBS		= \
+PROG_LIBS	= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

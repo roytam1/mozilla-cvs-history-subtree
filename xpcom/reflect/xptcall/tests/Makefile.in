@@ -33,7 +33,7 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= TestXPTCInvoke.cpp
 
-LIBS		= \
+PROG_LIBS	= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

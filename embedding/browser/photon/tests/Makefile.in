@@ -58,7 +58,7 @@ CPPSRCS		= \
 
 SIMPLE_PROGRAMS = $(CPPSRCS:.cpp=)
 
-LIBS		= \
+PROG_LIBS	= \
 		$(MOZ_COMPONENT_LIBS) \
 		-lphembedmoz \
   -lgkgfx \

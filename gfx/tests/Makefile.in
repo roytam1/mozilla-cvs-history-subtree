@@ -41,7 +41,7 @@ SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
 EXTRA_DSO_LIBS	= gkgfx
 
-LIBS		= \
+PROG_LIBS	= \
 		$(EXTRA_DSO_LIBS) \
 		$(XPCOM_LIBS) \
 		$(MOZ_JS_LIBS) \

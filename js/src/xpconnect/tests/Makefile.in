@@ -51,7 +51,7 @@ DIRS		= idl components
 
 CPPSRCS		= TestXPC.cpp
 
-LIBS		= \
+PROG_LIBS	= \
 		$(LIBS_DIR) \
 		$(MOZ_JS_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \

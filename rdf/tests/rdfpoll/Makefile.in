@@ -34,7 +34,7 @@ REQUIRES	= xpcom \
 		  necko \
 		  $(NULL)
 
-LIBS		= \
+PROG_LIBS	= \
 		$(LIBS_DIR) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

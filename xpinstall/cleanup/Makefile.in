@@ -54,7 +54,7 @@ endif
 
 EXTRA_DSO_LIBS = mozregsa_s
 
-LIBS        = \
+PROG_LIBS        = \
 	$(EXTRA_DSO_LIBS) \
         $(NULL)
 

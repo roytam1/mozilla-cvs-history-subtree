@@ -38,7 +38,7 @@ CPPSRCS		= \
 		TestStreamConv.cpp \
 		$(NULL)
 
-LIBS		= \
+PROG_LIBS	= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

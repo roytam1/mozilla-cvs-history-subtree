@@ -42,7 +42,7 @@ LOCAL_INCLUDES	= \
 
 EXTRA_DSO_LIBS	= gkbase_s gkgfx
 
-LIBS		+= \
+PROG_LIBS	+= \
 		$(LIBS_DIR) \
 		$(EXTRA_DSO_LIBS) \
 		$(MOZ_UNICHARUTIL_LIBS) \

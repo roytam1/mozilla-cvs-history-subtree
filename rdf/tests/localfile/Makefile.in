@@ -29,7 +29,7 @@ include $(DEPTH)/config/autoconf.mk
 PROGRAM		= localfile
 CPPSRCS		= localfile.cpp
 
-LIBS		= \
+PROG_LIBS	= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)

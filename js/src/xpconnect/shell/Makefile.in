@@ -48,7 +48,7 @@ REQUIRES	= xpconnect \
 
 CPPSRCS		= xpcshell.cpp
 
-LIBS		= \
+PROG_LIBS	= \
 		$(MOZ_JS_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
