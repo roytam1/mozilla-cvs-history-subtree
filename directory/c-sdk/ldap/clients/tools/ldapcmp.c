@@ -34,13 +34,13 @@ static void options_callback( int option, char *optarg );
 static int docompare( LDAP *ld1, LDAP *ld2, char *base );
 static int cmp2(LDAP *ld1, LDAP *ld2, LDAPMessage *e1, int findonly );
 static void notfound(char *base, int dbaseno);
-static ATTR* get_attrs( LDAP *ld, LDAPMessage *e );
-static char* cmp_attrs( ATTR *a1, ATTR *a2 );
+ATTR* get_attrs( LDAP *ld, LDAPMessage *e );
+char* cmp_attrs( ATTR *a1, ATTR *a2 );
 static void attr_free(ATTR *at);
 #if 0 /* these functions are not used */
 static void print_entry( LDAP *ld, LDAPMessage *entry, int attrsonly );
 static void print_dn( LDAP *ld, LDAPMessage *entry );
-static void write_ldif_value( char *type, char *value, unsigned long vallen );
+static int write_ldif_value( char *type, char *value, unsigned long vallen );
 #endif /* 0 */
 
 static void
@@ -212,7 +212,7 @@ docompare( LDAP *ld1, LDAP *ld2, char *base )
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
     if (( rc = ldap_result2error( ld1, res, 0 )) != LDAP_SUCCESS ) {
-        (void)ldaptool_print_lderror( ld1, "ldap_search",
+        ldaptool_print_lderror( ld1, "ldap_search",
 		LDAPTOOL_CHECK4SSL_IF_APPROP );
     }
     ldap_msgfree( res );
@@ -234,7 +234,7 @@ docompare( LDAP *ld1, LDAP *ld2, char *base )
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
     if (( rc = ldap_result2error( ld1, res, 0 )) != LDAP_SUCCESS ) {
-        (void)ldaptool_print_lderror( ld1, "ldap_search",
+        ldaptool_print_lderror( ld1, "ldap_search",
 		LDAPTOOL_CHECK4SSL_IF_APPROP );
     }
     ldap_msgfree( res );
@@ -251,7 +251,7 @@ cmp2( LDAP *ld1, LDAP *ld2, LDAPMessage *e1, int findonly)
 {
     LDAPMessage		*e2, *res;
     char		*dn, *attrcmp;
-    int			found=0, rc;
+    int			found=0, rc, msgid;
     ATTR		*a1, *a2;
 
     dn = ldap_get_dn( ld1, e1 );
@@ -297,7 +297,7 @@ cmp2( LDAP *ld1, LDAP *ld2, LDAPMessage *e1, int findonly)
 }
 
 
-static ATTR*
+ATTR*
 get_attrs( LDAP *ld, LDAPMessage *e )
 {
     char		*a;
@@ -334,7 +334,7 @@ get_attrs( LDAP *ld, LDAPMessage *e )
 }
 
 
-static char*
+char*
 cmp_attrs( ATTR *a1, ATTR *a2 )
 {
     static char result[5000];
@@ -546,9 +546,9 @@ print_entry( ld, entry, attrsonly )
 			    ldaptool_get_tmp_dir(), a );
 		    tmpfp = NULL;
 
-		    if ( LDAPTOOL_MKTEMP( tmpfname ) == NULL ) {
+		    if ( mktemp( tmpfname ) == NULL ) {
 			perror( tmpfname );
-		    } else if (( tmpfp = ldaptool_open_file( tmpfname, mode)) == NULL ) {
+		    } else if (( tmpfp = fopen( tmpfname, mode)) == NULL ) {
 			perror( tmpfname );
 		    } else if ( fwrite( bvals[ i ]->bv_val,
 			    bvals[ i ]->bv_len, 1, tmpfp ) == 0 ) {
@@ -586,17 +586,18 @@ print_entry( ld, entry, attrsonly )
 }
 
 
-static void
+static int
 write_ldif_value( char *type, char *value, unsigned long vallen )
 {
     char	*ldif;
 
-    /* ldif_type_and_value() fails only if malloc() fails. */
     if (( ldif = ldif_type_and_value( type, value, (int)vallen )) == NULL ) {
-	exit( LDAP_NO_MEMORY );
+	return( -1 );
     }
 
     fputs( ldif, stdout );
     free( ldif );
+
+    return( 0 );
 }
 #endif /* 0 */

@@ -37,14 +37,3 @@
 
 #define OTCARBONAPPLICATION TARGET_CARBON
 
-#if 0 /* These are picked up from the MacPrefix file */
-#ifndef macintosh
-#define macintosh
-#endif 
-
-#define XP_MAC
-
-#include "IDE_Options.h"
-// #define NO_USERINTERFACE
-// #define LDAP_DEBUG
-#endif /* 0 */

@@ -277,8 +277,11 @@ sec_pkcs7_decoder_start_digests (SEC_PKCS7DecoderContext *p7dcx, int depth,
 
     /*
      * No algorithms means no work to do.
-     * Just act as if there were no algorithms specified.
+     * This is not expected, so cause an assert.
+     * But if it does happen, just act as if there were
+     * no algorithms specified.
      */
+    PORT_Assert (digcnt != 0);
     if (digcnt == 0)
 	return SECSuccess;
 

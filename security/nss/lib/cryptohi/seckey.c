@@ -37,6 +37,7 @@
  */
 #include "cryptohi.h"
 #include "keyhi.h"
+#include "secrng.h"
 #include "secoid.h"
 #include "secitem.h"
 #include "secder.h"

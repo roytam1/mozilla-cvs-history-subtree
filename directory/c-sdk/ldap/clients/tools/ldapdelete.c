@@ -47,8 +47,7 @@ int
 main( int argc, char **argv )
 {
     char	buf[ 4096 ];
-    int		rc = 0;
-    int		deref, optind;
+    int		rc, deref, optind;
     LDAPControl	*ldctrl;
 
 #ifdef notdef
@@ -90,12 +89,13 @@ main( int argc, char **argv )
 	for ( ; optind < argc; ++optind ) {
             char *conv;
 
-            conv = ldaptool_local2UTF8( argv[ optind ], "DN" );
+            conv = ldaptool_local2UTF8( argv[ optind ] );
 	    rc = dodelete( ld, conv, ldaptool_request_ctrls );
             if( conv != NULL )
                 free( conv );
 	}
     } else {
+	rc = 0;
 	while ((rc == 0 || contoper) &&
 		fgets(buf, sizeof(buf), ldaptool_fp) != NULL) {
 	    buf[ strlen( buf ) - 1 ] = '\0';	/* remove trailing newline */
@@ -110,7 +110,6 @@ main( int argc, char **argv )
     return( rc );
 }
 
-/*ARGSUSED1*/
 static void
 options_callback( int option, char *optarg )
 {

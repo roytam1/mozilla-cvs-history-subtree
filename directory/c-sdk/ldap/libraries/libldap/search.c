@@ -789,7 +789,7 @@ unescape_filterval( char *val )
 	int	escape, firstdigit, ival; 
 	char	*s, *d;
 
-	escape = firstdigit = 0;
+	escape = 0;
 	for ( s = d = val; *s; s++ ) {
 		if ( escape ) {
 			/*

@@ -38,6 +38,7 @@
 #define  _PK11PQG_H_ 1
 
 #include "blapit.h"
+#include "pqgutil.h"
 
 SEC_BEGIN_PROTOS
 

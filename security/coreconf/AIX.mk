@@ -71,6 +71,7 @@ endif
 
 AIX_WRAP	= $(DIST)/lib/aixwrap.o
 AIX_TMP		= $(OBJDIR)/_aix_tmp.o
+OS_LIBS		+= -lsvld
 ifdef MAPFILE
 EXPORT_RULES = -bexport:$(MAPFILE)
 endif

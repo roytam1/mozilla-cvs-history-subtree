@@ -35,6 +35,7 @@ static char copyright[] = "@(#) Copyright (c) 1993 Regents of the University of 
 
 #include "ldap-int.h"
 #include "regex.h"
+#include <stdio.h> /* sprintf */
 
 static int break_into_words( char *str, char *delims, char ***wordsp );
 int nsldapi_next_line_tokens( char **bufp, long *blenp, char ***toksp );
@@ -56,7 +57,7 @@ ldap_init_getfilter( char *fname )
     int 		eof;
     LDAPFiltDesc	*lfdp;
 
-    if (( fp = NSLDAPI_FOPEN( fname, "r" )) == NULL ) {
+    if (( fp = fopen( fname, "r" )) == NULL ) {
 	return( NULL );
     }
 
@@ -101,7 +102,7 @@ ldap_init_getfilter_buf( char *buf, long buflen )
     LDAPFiltDesc	*lfdp;
     LDAPFiltList	*flp, *nextflp;
     LDAPFiltInfo	*fip, *nextfip;
-    char		*errmsg, *tag, **tok;
+    char		*tag, **tok;
     int			tokcnt, i;
 
     if ( (buf == NULL) || (buflen < 0) ||
@@ -133,16 +134,11 @@ ldap_init_getfilter_buf( char *buf, long buflen )
 	    }
 	    nextflp->lfl_tag = nsldapi_strdup( tag );
 	    nextflp->lfl_pattern = tok[ 0 ];
-	    if (( errmsg = re_comp( nextflp->lfl_pattern )) != NULL ) {
-		char    msg[512];
+	    if ( re_comp( nextflp->lfl_pattern ) != NULL ) {
+		char    msg[256];
 		ldap_getfilter_free( lfdp );
-#ifdef HAVE_SNPRINTF
-		snprintf( msg, sizeof(msg),
-#else
-		sprintf( msg,
-#endif
-			"bad regular expression \"%s\" - %s\n",
-			nextflp->lfl_pattern, errmsg );
+		sprintf( msg, "bad regular expresssion %s\n",
+			nextflp->lfl_pattern );
 		ber_err_print( msg );
 		nsldapi_free_strarray( tok );
 		return( NULL );

@@ -95,6 +95,3 @@ $(OBJDEST):
 
 install::  $(LIBLBER)
 	$(INSTALL) -m 444 $(LIBLBER) $(INSTALLDIR)/lib
-
-# test executables
-etest:	$(LIBLBER)

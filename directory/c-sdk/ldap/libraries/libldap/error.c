@@ -143,12 +143,7 @@ ldap_perror( LDAP *ld, const char *s )
 	}
 
 	if ( ld == NULL ) {
-#ifdef HAVE_SNPRINTF
-		snprintf( msg, sizeof(msg),
-#else
-		sprintf( msg,
-#endif
-		    "%s%s%s", s, separator,
+		sprintf( msg, "%s%s%s", s, separator,
 		    nsldapi_safe_strerror( errno ) );
 		ber_err_print( msg );
 		return;
@@ -158,13 +153,8 @@ ldap_perror( LDAP *ld, const char *s )
 	err = LDAP_GET_LDERRNO( ld, &matched, &errmsg );
 	for ( i = 0; ldap_errlist[i].e_code != -1; i++ ) {
 		if ( err == ldap_errlist[i].e_code ) {
-#ifdef HAVE_SNPRINTF
-			snprintf( msg, sizeof(msg),
-#else
-			sprintf( msg,
-#endif
-			    "%s%s%s", s, separator,
-			    ldap_errlist[i].e_reason );
+			sprintf( msg, "%s%s%s", s, separator,
+				    ldap_errlist[i].e_reason );
 			ber_err_print( msg );
 			if ( err == LDAP_CONNECT_ERROR ) {
 				ber_err_print( " - " );
@@ -173,22 +163,12 @@ ldap_perror( LDAP *ld, const char *s )
 			}
 			ber_err_print( "\n" );
 			if ( matched != NULL && *matched != '\0' ) {
-#ifdef HAVE_SNPRINTF
-				snprintf( msg, sizeof(msg),
-#else
-				sprintf( msg,
-#endif
-				    "%s%smatched: %s\n",
+				sprintf( msg, "%s%smatched: %s\n",
 				    s, separator, matched );
 				ber_err_print( msg );
 			}
 			if ( errmsg != NULL && *errmsg != '\0' ) {
-#ifdef HAVE_SNPRINTF
-				snprintf( msg, sizeof(msg),
-#else
-				sprintf( msg,
-#endif
-				    "%s%sadditional info: %s\n",
+				sprintf( msg, "%s%sadditional info: %s\n",
 				    s, separator, errmsg );
 				ber_err_print( msg );
 			}
@@ -196,12 +176,7 @@ ldap_perror( LDAP *ld, const char *s )
 			return;
 		}
 	}
-#ifdef HAVE_SNPRINTF
-	snprintf( msg, sizeof(msg),
-#else
-	sprintf( msg,
-#endif
-	    "%s%sNot an LDAP errno %d\n", s, separator, err );
+	sprintf( msg, "%s%sNot an LDAP errno %d\n", s, separator, err );
 	ber_err_print( msg );
 	LDAP_MUTEX_UNLOCK( ld, LDAP_ERR_LOCK );
 }
@@ -367,8 +342,8 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 {
 	BerElement	ber;
 	unsigned long	len;
-	int		berrc, err, errcode = 0;
-	long		along = 0;
+	int		berrc, err, errcode;
+	long		along;
 	char		*m, *e;
 
 	/*

@@ -253,6 +253,15 @@ rijndael_tables:
 	         $(DEFINES) $(INCLUDES) $(OBJDIR)/libfreebl.a
 	$(OBJDIR)/make_rijndael_tab
 
+ifdef MOZILLA_BSAFE_BUILD
+
+private_export::
+ifeq (,$(filter-out WIN%,$(OS_TARGET)))
+	rm -f $(DIST)/lib/bsafe$(BSAFEVER).lib
+endif
+	$(NSINSTALL) -R $(BSAFEPATH) $(DIST)/lib
+endif
+
 ifdef USE_PURE_32 
 vpath %.h $(FREEBL_PARENT)/mpi:$(FREEBL_PARENT)
 vpath %.c $(FREEBL_PARENT)/mpi:$(FREEBL_PARENT)
@@ -328,12 +337,4 @@ release_md::
 	$(MAKE) FREEBL_RECURSIVE_BUILD=1 USE_HYBRID=1 $@
 	cd $(PURE32DIR) && $(MAKE) FREEBL_RECURSIVE_BUILD=1 USE_PURE_32=1 FREEBL_PARENT=$(CDDIR) CORE_DEPTH=$(CDDIR)/$(CORE_DEPTH) $@
 
-endif
-
-# Bugzilla Bug 209827: disable optimization to work around what appears
-# to be a VACPP optimizer bug.
-ifdef XP_OS2_VACPP
-$(OBJDIR)/alg2268.obj: alg2268.c
-	@$(MAKE_OBJDIR)
-	$(CC) -Fo$@ -c $(filter-out /O+, $(CFLAGS)) $(call abspath,$<)
 endif

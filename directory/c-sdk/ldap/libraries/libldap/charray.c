@@ -184,9 +184,6 @@ ldap_str2charray( char *str, char *brkstr )
 	char	**res;
 	char	*s;
 	int	i;
-#ifdef HAVE_STRTOK_R    /* defined in portable.h */
-	char	*lasts; 
-#endif
 
 	i = 1;
 	for ( s = str; *s; s++ ) {
@@ -200,8 +197,8 @@ ldap_str2charray( char *str, char *brkstr )
 		return NULL;
 	}
 	i = 0;
-	for ( s = STRTOK( str, brkstr, &lasts ); s != NULL; s = STRTOK( NULL,
-	    brkstr, &lasts ) ) {
+	for ( s = strtok( str, brkstr ); s != NULL; s = strtok( NULL,
+	    brkstr ) ) {
 		res[i++] = nsldapi_strdup( s );
 		if ( res[i - 1] == NULL ) {
 			int	j;
