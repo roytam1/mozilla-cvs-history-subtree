@@ -155,7 +155,7 @@ rdf_IsOrdinalProperty(const nsIRDFResource* property)
 }
 
 
-static nsresult
+nsresult
 rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex)
 {
     const char* s;
@@ -192,7 +192,7 @@ rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex)
     return NS_OK;
 }
 
-static nsresult
+nsresult
 rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal)
 {
     NS_PRECONDITION(aIndex > 0, "illegal value");
@@ -1055,9 +1055,6 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
             return rv;
         }
 
-        if (element != nsCOMPtr<nsIRDFNode>(aElement))
-            continue;
-
         // Okay, we've found it.
         nsCOMPtr<nsIRDFResource> ordinal;
         if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
@@ -1070,6 +1067,9 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
             NS_ERROR("unable to convert ordinal resource to index");
             return rv;
         }
+
+        if (element != nsCOMPtr<nsIRDFNode>(aElement))
+            continue;
 
         *aIndex = index;
         return NS_OK;

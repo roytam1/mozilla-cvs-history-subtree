@@ -44,6 +44,18 @@ class nsString;
 PR_EXTERN(PRBool)
 rdf_IsOrdinalProperty(const nsIRDFResource* property);
 
+/**
+ * Converts an ordinal property to an index
+ */
+PR_EXTERN(nsresult)
+rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex);
+
+/**
+ * Converts an index to an ordinal property
+ */
+PR_EXTERN(nsresult)
+rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal);
+
 
 /**
  * Returns PR_TRUE if the resource is a container resource; e.g., an
