@@ -2,12 +2,19 @@
 # This is a list of local files which get copied to the mozilla:dist:network:module directory
 #
 
+nsICoolURL.h
+nsIHTTPHandler.h
+nsHTTPInstance.h
+nsIHeader.h
 nsIHttpURL.h
 nsILoadAttribs.h
 nsIPostToServer.h
+nsIProtocolHandler.h
+nsIProtocolInstance.h
+nsIProxy.h
 nsIStreamListener.h
 nsIStreamObserver.h
-nsIURL.h
 nsITransport.h
-
+nsIURI.h
+nsIURL.h
 
