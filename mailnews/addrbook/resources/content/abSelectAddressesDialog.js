@@ -195,8 +195,8 @@ function AddSelectedAddressesIntoBucket(prefix)
 
   for (var i = 0; i < count; i++) {
     AddCardIntoBucket(prefix, cards[i]);
-      }
-      }
+  }
+}
 
 function AddCardIntoBucket(prefix, card)
 {
@@ -368,7 +368,6 @@ function DropOnBucketPane(event)
     if (!address)
       continue;
 
-    //dump("    Address #" + i + " = " + address + "\n");
     AddAddressIntoBucket(prefixTo + address, address);
   }
 

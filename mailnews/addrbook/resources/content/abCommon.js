@@ -297,8 +297,10 @@ function GetSelectedAddresses()
   var selectedAddresses = "";
 
   var cards = GetSelectedAbCards();
-  var count = cards.length;
+  if (!cards)
+    return selectedAddresses;
 
+  var count = cards.length;
   for (var i = 0; i < count; i++) { 
     var generatedAddress = GenerateAddressFromCard(cards[i]);
 
@@ -501,8 +503,14 @@ function ChangeDirectoryByDOMNode(dirNode)
 
   UpdateSortIndicators(actualSortColumn, sortDirection);
 
-  setTimeout('SelectFirstCard();',0);
-  
+  // only select the first card if there is a first card
+  if (gAbView && gAbView.getCardFromRow(0)) {
+    SelectFirstCard();
+  }
+  else {
+    // the selection changes if we were switching directories.
+    ResultsPaneSelectionChanged()
+  }
   return;
 }
 
