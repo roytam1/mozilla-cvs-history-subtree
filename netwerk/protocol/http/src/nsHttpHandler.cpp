@@ -1,3 +1,26 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is Mozilla.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications.  Portions created by Netscape Communications are
+ * Copyright (C) 2001 by Netscape Communications.  All
+ * Rights Reserved.
+ * 
+ * Contributor(s): 
+ *   Darin Fisher <darin@netscape.com> (original author)
+ */
+
 #include "nsHttp.h"
 #include "nsHttpHandler.h"
 #include "nsHttpChannel.h"
@@ -101,7 +124,6 @@ nsHttpHandler::~nsHttpHandler()
     mGlobalInstance = nsnull;
 }
 
-#if 0
 NS_METHOD
 nsHttpHandler::Create(nsISupports *outer, REFNSIID iid, void **result)
 {
@@ -128,7 +150,6 @@ nsHttpHandler::Create(nsISupports *outer, REFNSIID iid, void **result)
     NS_RELEASE(handler);
     return rv;
 }
-#endif
 
 nsresult
 nsHttpHandler::Init()
@@ -311,14 +332,19 @@ failed:
 }
 
 nsresult
-nsHttpHandler::ReleaseConnection(nsHttpConnection *conn)
+nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
 {
     NS_ENSURE_ARG_POINTER(conn);
+
+    LOG(("nsHttpHandler::ReclaimConnection [conn=%x keep-alive=%d]\n",
+        conn, conn->CanReuse()));
 
     if (conn->CanReuse()) {
         PR_INSERT_AFTER(conn, &mIdleConnections);
         mNumIdleConnections++;
     }
+    else
+        NS_RELEASE(conn);
 
     mNumActiveConnections--;
     if (!PR_CLIST_IS_EMPTY(&mTransactionQ))
@@ -499,6 +525,8 @@ nsresult
 nsHttpHandler::EnqueueTransaction(nsHttpTransaction *trans,
                                   nsHttpConnectionInfo *ci)
 {
+    LOG(("nsHttpHandler::EnqueueTransaction [trans=%x]\n", trans));
+
     nsPendingTransaction *pt = new nsPendingTransaction(trans, ci);
     if (!pt)
         return NS_ERROR_OUT_OF_MEMORY;

@@ -1,3 +1,26 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is Mozilla.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications.  Portions created by Netscape Communications are
+ * Copyright (C) 2001 by Netscape Communications.  All
+ * Rights Reserved.
+ * 
+ * Contributor(s): 
+ *   Darin Fisher <darin@netscape.com> (original author)
+ */
+
 #include "nsHttpChannel.h"
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
@@ -81,7 +104,7 @@ nsHttpChannel::Init(nsIURI *uri,
         return NS_ERROR_OUT_OF_MEMORY;
 
     // Set default request method
-    mRequestHead.SetMethod(nsHttp::GET);
+    mRequestHead.SetMethod(nsHttp::Get);
 
     //
     // Set request headers
@@ -178,10 +201,14 @@ nsHttpChannel::ProcessResponse()
     switch (httpStatus) {
     case 200:
     case 203:
+        // XXX store response headers in cache
+        // XXX install cache tee
         rv = ProcessNormal();
         break;
     case 300:
     case 301:
+        // XXX store response headers in cache
+        // XXX close cache entry
         rv = ProcessRedirection(httpStatus);
         break;
     case 302:
@@ -211,7 +238,6 @@ nsHttpChannel::ProcessResponse()
 nsresult
 nsHttpChannel::ProcessNormal()
 {
-    // XXX install cache listener tee
     // XXX install stream converter(s)
     return mListener->OnStartRequest(this, mListenerContext);
 }
@@ -556,9 +582,9 @@ nsHttpChannel::SetUploadStream(nsIInputStream *stream)
 {
     mUploadStream = stream;
     if (mUploadStream)
-        mRequestHead.SetMethod(nsHttp::POST);
+        mRequestHead.SetMethod(nsHttp::Post);
     else
-        mRequestHead.SetMethod(nsHttp::GET);
+        mRequestHead.SetMethod(nsHttp::Get);
     return NS_OK;
 }
 
@@ -685,8 +711,7 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     // Notify nsIHttpNotify implementations
     nsHttpHandler::get()->OnAsyncExamineResponse(this);
 
-    //return ProcessResponse();
-    return mListener->OnStartRequest(this, mListenerContext);
+    return ProcessResponse();
 }
 
 NS_IMETHODIMP

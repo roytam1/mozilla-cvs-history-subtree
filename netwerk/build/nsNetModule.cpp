@@ -108,7 +108,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsStorageTransport)
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "nsHttpHandler.h"
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHttpHandler, Init)
+//NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHttpHandler, Init)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -815,12 +815,12 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
     { "HTTP Handler",
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http",
-      nsHttpHandlerConstructor },
+      nsHttpHandler::Create },
 
     { "HTTPS Handler",
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "https",
-      nsHttpHandlerConstructor },
+      nsHttpHandler::Create },
 
     // from netwerk/protocol/data:
     { "Data Protocol Handler", 

@@ -97,13 +97,20 @@ HTTP_ATOM(Version,                   "Version")
 HTTP_ATOM(Warning,                   "Warning")
 HTTP_ATOM(WWW_Authenticate,          "WWW-Authenticate")
 HTTP_ATOM(Set_Cookie,                "Set-Cookie")
-HTTP_ATOM(OPTIONS,                   "OPTIONS")
-HTTP_ATOM(HEAD,                      "HEAD")
-HTTP_ATOM(POST,                      "POST")
-HTTP_ATOM(PUT,                       "PUT")
-HTTP_ATOM(GET,                       "GET")
-HTTP_ATOM(INDEX,                     "INDEX")
-HTTP_ATOM(DELETE,                    "DELETE")
-HTTP_ATOM(TRACE,                     "TRACE")
-HTTP_ATOM(CONNECT,                   "CONNECT")
-HTTP_ATOM(M_POST,                    "M-POST")
+
+// methods are atoms too.
+//
+// note: an uppercase DELETE causes compilation problems under msvc6, so we'll
+// just keep the methods mixedcase even though they're normally written all
+// uppercase -- darin
+
+HTTP_ATOM(Options,                   "OPTIONS")
+HTTP_ATOM(Head,                      "HEAD")
+HTTP_ATOM(Post,                      "POST")
+HTTP_ATOM(Put,                       "PUT")
+HTTP_ATOM(Get,                       "GET")
+HTTP_ATOM(Index,                     "INDEX")
+HTTP_ATOM(Delete,                    "DELETE")
+HTTP_ATOM(Trace,                     "TRACE")
+HTTP_ATOM(Connect,                   "CONNECT")
+HTTP_ATOM(M_Post,                    "M-POST")

@@ -1,26 +1,26 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * The contents of this file are subject to the Netscape Public
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
+ * the License at http://www.mozilla.org/MPL/
+ * 
  * Software distributed under the License is distributed on an "AS
  * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
+ * 
+ * The Original Code is Mozilla.
+ * 
  * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Communications.  Portions created by Netscape Communications are
+ * Copyright (C) 2001 by Netscape Communications.  All
  * Rights Reserved.
- *
+ * 
  * Contributor(s): 
- *   Gagan Saksena <gagan@netscape.com> (original author)
- *   Darin Fisher <darin@netscape.com>
+ *   Darin Fisher <darin@netscape.com> (original author)
  */
+
 #include "nsHttp.h"
 #include "nscore.h"
 #include "plhash.h"
@@ -119,8 +119,7 @@ nsHttp::ResolveAtom(const char *str)
     nsHttpAtom atom = { nsnull };
 
     if (gHttpAtomTable)
-        atom._val = (const char *)
-                PL_HashTableLookup(gHttpAtomTable, str);
+        atom._val = (const char *) PL_HashTableLookup(gHttpAtomTable, str);
 
     return atom;
 }
