@@ -357,7 +357,7 @@ static int PR_CALLBACK
 JavaPrefChanged(const char *prefStr, void* data)
 {
     nsJVMManager* mgr = (nsJVMManager*)data;
-    XP_Bool prefBool;
+    PRBool prefBool;
 #if defined(XP_MAC)
     // beard: under Mozilla, no way to enable this right now.
     prefBool = TRUE;
