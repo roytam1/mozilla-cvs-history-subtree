@@ -458,7 +458,7 @@ txExecutionState::getEvalContext()
 const txXPathNode*
 txExecutionState::retrieveDocument(const nsAString& aUri)
 {
-    NS_ASSERTION(aUri.FindChar(PRUnichar('#')) != kNotFound,
+    NS_ASSERTION(aUri.FindChar(PRUnichar('#')) == kNotFound,
                  "Remove the fragment.");
 
     PR_LOG(txLog::xslt, PR_LOG_DEBUG,
