@@ -1349,6 +1349,34 @@ ShowProfileManager(nsIToolkitProfileService* aProfileSvc,
   return LaunchChild(aNative);
 }
 
+static nsresult
+ImportProfiles(nsIToolkitProfileService* aPService,
+               nsINativeAppSupport* aNative)
+{
+  nsresult rv;
+
+  PR_SetEnv("XRE_IMPORT_PROFILES=1");
+
+  // try to import old-style profiles
+  { // scope XPCOM
+    ScopedXPCOMStartup xpcom;
+    rv = xpcom.Initialize();
+    if (NS_SUCCEEDED(rv)) {
+      xpcom.DoAutoreg();
+      xpcom.RegisterProfileService(aPService);
+
+      nsCOMPtr<nsIProfileMigrator> migrator
+        (do_GetService(NS_PROFILEMIGRATOR_CONTRACTID));
+      if (migrator) {
+        migrator->Import();
+      }
+    }
+  }
+
+  aPService->Flush();
+  return LaunchChild(aNative);
+}
+
 // Pick a profile. We need to end up with a profile lock.
 //
 // 1) check for -profile <path>
@@ -1398,6 +1426,15 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
   rv = NS_NewToolkitProfileService(getter_AddRefs(profileSvc));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  PRUint32 count;
+  rv = profileSvc->GetProfileCount(&count);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  arg = PR_GetEnv("XRE_IMPORT_PROFILES");
+  if (!count && (!arg || !*arg)) {
+    return ImportProfiles(profileSvc, aNative);
+  }
+
   ar = CheckArg("p", &arg);
   if (ar == ARG_BAD) {
     PR_fprintf(PR_STDERR, "Error: argument -P requires a profile name\n");
@@ -1420,43 +1457,8 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
     return ShowProfileManager(profileSvc, aNative);
   }
 
-  PRUint32 count;
-  rv = profileSvc->GetProfileCount(&count);
-  NS_ENSURE_SUCCESS(rv, rv);
 
   if (!count) {
-    PRBool didImport = PR_FALSE;
-
-    // try to import old-style profiles
-    { // scope XPCOM
-      ScopedXPCOMStartup xpcom;
-      rv = xpcom.Initialize();
-      if (NS_SUCCEEDED(rv)) {
-        xpcom.DoAutoreg();
-        xpcom.RegisterProfileService(profileSvc);
-
-        nsCOMPtr<nsIProfileMigrator> migrator
-          (do_GetService(NS_PROFILEMIGRATOR_CONTRACTID));
-        if (migrator) {
-          rv = migrator->Import();
-          if (NS_SUCCEEDED(rv)) {
-            nsCOMPtr<nsIToolkitProfile> profile;
-            profileSvc->GetSelectedProfile(getter_AddRefs(profile));
-            if (profile) {
-              rv = profile->Lock(aResult);
-              if (NS_SUCCEEDED(rv))
-                return NS_OK;
-            }
-            // can't call ShowProfileManager here, because we've started XPCOM
-            didImport = PR_TRUE;
-          }
-        }
-      }
-    }
-
-    if (didImport)
-      return ShowProfileManager(profileSvc, aNative);
-
     gDoMigration = PR_TRUE;
 
     // create a default profile
@@ -1736,8 +1738,12 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
 
     nsCOMPtr<nsIExtensionManager> em
       (do_CreateInstance("@mozilla.org/extensions/manager;1"));
-    NS_ENSURE_TRUE(em, 1);
-    em->Start(PR_TRUE);
+    if (em) {
+      em->Start(PR_TRUE);
+    }
+    else {
+      NS_WARNING("Couldn't create the extension manager!");
+    }
   
 #if 0 // needs restart-loving
     nsCOMPtr<nsIExtensionManager> em
