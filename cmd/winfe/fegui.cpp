@@ -3882,3 +3882,19 @@ void FE_GetDocAndWindowPosition(MWContext * context, int32 *pX, int32 *pY,
 		*pX = *pY = *pHeight = *pWidth = 0;
 	}
 }
+
+/* Convert an HTML SIZE param value (1-7) into POINT-SIZE value */
+int16 FE_CalcFontPointSize(MWContext * pMWContext, intn iSize, XP_Bool bFixedWidth)
+{
+    if( pMWContext )
+    {
+	    EncodingInfo *pEncoding = theApp.m_pIntlFont->GetEncodingInfo(pMWContext);
+        int iBaseSize = bFixedWidth ? pEncoding->iFixSize : pEncoding->iPropSize;
+
+        CDCCX *pDC = VOID2CX(pMWContext->fe.cx, CDCCX);
+
+        if( pDC && iSize >= MIN_FONT_SIZE && iSize <= MAX_FONT_SIZE )
+            return (int16)(pDC->CalcFontPointSize(iSize, iBaseSize));
+    }
+    return 0;    
+}
