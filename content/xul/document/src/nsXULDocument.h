@@ -593,9 +593,10 @@ protected:
     nsresult LoadScript(nsXULPrototypeScript *aScriptProto, PRBool* aBlock);
 
     /**
-     * Execute the precompiled script object using the given version of JS.
+     * Execute the precompiled script object scoped by this XUL document's
+     * containing window object, and using its associated script context.
      */
-    nsresult ExecuteScript(JSObject* aScriptObject, const char* aLangVersion);
+    nsresult ExecuteScript(JSObject* aScriptObject);
 
     /**
      * Create a delegate content model element from a prototype.

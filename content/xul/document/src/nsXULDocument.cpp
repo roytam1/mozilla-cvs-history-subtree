@@ -2820,28 +2820,26 @@ nsXULDocument::DeleteProperty(JSContext *aContext, jsval aID, jsval *aVp)
 PRBool
 nsXULDocument::GetProperty(JSContext *aContext, jsval aID, jsval *aVp)
 {
-    PRBool result = PR_TRUE;
+    if (JSVAL_IS_STRING(aID)) {
+        JSString *jsString = JS_ValueToString(aContext, aID);
+        if (!jsString)
+            return PR_FALSE;
 
-    if (JSVAL_IS_STRING(aID) &&
-        PL_strcmp("location", JS_GetStringBytes(JS_ValueToString(aContext, aID))) == 0) {
-        if (nsnull != mScriptContextOwner) {
-            nsIScriptGlobalObject *global;
-            mScriptContextOwner->GetScriptGlobalObject(&global);
-            if (nsnull != global) {
-                nsIJSScriptObject *window;
-                if (NS_OK == global->QueryInterface(NS_GET_IID(nsIJSScriptObject), (void **)&window)) {
-                    result = window->GetProperty(aContext, aID, aVp);
-                    NS_RELEASE(window);
+        if (PL_strcmp("location", JS_GetStringBytes(jsString)) == 0) {
+            if (nsnull != mScriptContextOwner) {
+                nsCOMPtr<nsIScriptGlobalObject> global;
+                mScriptContextOwner->GetScriptGlobalObject(getter_AddRefs(global));
+                if (nsnull != global) {
+                    nsCOMPtr<nsIJSScriptObject> window = do_QueryInterface(global);
+                    if (nsnull != window) {
+                        return window->GetProperty(aContext, aID, aVp);
+                    }
                 }
-                else {
-                    result = PR_FALSE;
-                }
-                NS_RELEASE(global);
             }
         }
     }
 
-    return result;
+    return PR_TRUE;
 }
 
 
@@ -2853,7 +2851,10 @@ nsXULDocument::SetProperty(JSContext *aContext, jsval aID, jsval *aVp)
     if (JSVAL_IS_STRING(aID)) {
         char* s = JS_GetStringBytes(JS_ValueToString(aContext, aID));
         if (PL_strcmp("title", s) == 0) {
-            nsAutoString title("get me out of aVp somehow");
+            JSString* jsString = JS_ValueToString(aContext, *aVp);
+            if (!jsString)
+                return PR_FALSE;
+            nsAutoString title(JS_GetStringChars(jsString));
             for (PRInt32 i = mPresShells.Count() - 1; i >= 0; --i) {
                 nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
                 nsCOMPtr<nsIPresContext> context;
@@ -2925,7 +2926,7 @@ nsXULDocument::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
     nsIScriptGlobalObject *global = aContext->GetGlobalObject();
 
     if (nsnull == mScriptObject) {
-        res = NS_NewScriptXULDocument(aContext, (nsISupports *)(nsIDOMXULDocument *)this, global, (void**)&mScriptObject);
+        res = NS_NewScriptXULDocument(aContext, NS_STATIC_CAST(nsISupports *, NS_STATIC_CAST(nsIDOMXULDocument *, this)), global, (void**)&mScriptObject);
     }
     *aScriptObject = mScriptObject;
 
@@ -4414,8 +4415,7 @@ nsXULDocument::ResumeWalk()
                 }
                 else if (scriptproto->mScriptObject) {
                     // An inline script
-                    rv = ExecuteScript(scriptproto->mScriptObject,
-                                       scriptproto->mLangVersion);
+                    rv = ExecuteScript(scriptproto->mScriptObject);
                     if (NS_FAILED(rv)) return rv;
                 }
             }
@@ -4575,8 +4575,7 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     nsresult rv;
 
     if (aScriptProto->mScriptObject) {
-        rv = ExecuteScript(aScriptProto->mScriptObject,
-                           aScriptProto->mLangVersion);
+        rv = ExecuteScript(aScriptProto->mScriptObject);
 
         // Ignore return value from execution, and don't block
         *aBlock = PR_FALSE;
@@ -4630,8 +4629,7 @@ nsXULDocument::OnUnicharStreamComplete(nsIUnicharStreamLoader* aLoader,
                                           mCurrentScriptProto->mSrcURI, 1,
                                           this);
         if (NS_SUCCEEDED(rv)) {
-            rv = ExecuteScript(mCurrentScriptProto->mScriptObject,
-                               mCurrentScriptProto->mLangVersion);
+            rv = ExecuteScript(mCurrentScriptProto->mScriptObject);
         }
         // ignore any evaluation errors
     }
@@ -4657,7 +4655,7 @@ nsXULDocument::OnUnicharStreamComplete(nsIUnicharStreamLoader* aLoader,
 
 
 nsresult
-nsXULDocument::ExecuteScript(JSObject* aScriptObject, const char* aLangVersion)
+nsXULDocument::ExecuteScript(JSObject* aScriptObject)
 {
     // Execute the precompiled script with the given version
     nsresult rv;
@@ -4671,7 +4669,7 @@ nsXULDocument::ExecuteScript(JSObject* aScriptObject, const char* aLangVersion)
     rv = owner->GetScriptContext(getter_AddRefs(context));
     if (NS_FAILED(rv)) return rv;
 
-    rv = context->ExecuteScript(aScriptObject, nsnull, aLangVersion, nsnull, nsnull);
+    rv = context->ExecuteScript(aScriptObject, nsnull, nsnull, nsnull);
     return rv;
 }
 
