@@ -61,6 +61,7 @@
 #include "nsOutlookStringBundle.h"
 #include "OutlookDebugLog.h"
 #include "nsIPop3IncomingServer.h"
+#include "nsIMessengerMigrator.h"
 
 class OutlookSettings {
 public:
@@ -368,46 +369,82 @@ PRBool OutlookSettings::DoPOP3Server( nsIMsgAccountManager *pMgr, HKEY hKey, cha
 		rv = pMgr->CreateIncomingServer( (const char *)pBytes, pServerName, "pop3", getter_AddRefs( in));
 		if (NS_SUCCEEDED( rv) && in) {
 			rv = in->SetType( "pop3");
-			// rv = in->SetHostName( pServerName);
-			// rv = in->SetUsername( (char *)pBytes);
 
-			IMPORT_LOG2( "Created POP3 server named: %s, userName: %s\n", pServerName, (char *)pBytes);
+        nsCOMPtr<nsIPop3IncomingServer> pop3Server = do_QueryInterface(in);
+        if (pop3Server) {
+            // set local folders as the Inbox to use for this POP3 server
+            nsCOMPtr<nsIMsgIncomingServer> localFoldersServer;
+            pMgr->GetLocalFoldersServer(getter_AddRefs(localFoldersServer));
 
-			nsString	prettyName;
-      if (NS_SUCCEEDED(GetAccountName(hKey, pServerName, prettyName)))
-      {
+            if (!localFoldersServer)
+            {
+                // XXX: We may need to move this local folder creation code to the generic nsImportSettings code
+                // if the other import modules end up needing to do this too.    
+                // if Local Folders does not exist already, create it
+                nsCOMPtr <nsIMessengerMigrator> messengerMigrator = do_GetService(NS_MESSENGERMIGRATOR_CONTRACTID, &rv);
+                if (NS_FAILED(rv)) {
+                    IMPORT_LOG0( "*** Failed to create messenger migrator!\n");
+                    return PR_FALSE;
+                }
+          
+                rv = messengerMigrator->CreateLocalMailAccount(PR_FALSE);
+                if (NS_FAILED(rv)) {
+                    IMPORT_LOG0( "*** Failed to create Local Folders!\n");
+                    return PR_FALSE;
+                }
+    
+                pMgr->GetLocalFoldersServer(getter_AddRefs(localFoldersServer)); 
+            }
+
+            // now get the account for this server
+            nsCOMPtr<nsIMsgAccount> localFoldersAccount;
+            pMgr->FindAccountForServer(localFoldersServer, getter_AddRefs(localFoldersAccount)); 
+            if (localFoldersAccount)
+            {
+                nsXPIDLCString localFoldersAcctKey;
+                localFoldersAccount->GetKey(getter_Copies(localFoldersAcctKey));
+                pop3Server->SetDeferredToAccount(localFoldersAcctKey.get()); 
+                pop3Server->SetDeferGetNewMail(PR_TRUE);
+            }
+        }
+
+		IMPORT_LOG2( "Created POP3 server named: %s, userName: %s\n", pServerName, (char *)pBytes);
+
+        nsString	prettyName;
+        if (NS_SUCCEEDED(GetAccountName(hKey, pServerName, prettyName)))
+        {
 			PRUnichar *pretty = ToNewUnicode(prettyName);
-        if (pretty)
-        {
-			rv = in->SetPrettyName( pretty);
-			nsCRT::free( pretty);
+            if (pretty)
+            {
+			    rv = in->SetPrettyName( pretty);
+			    nsCRT::free( pretty);
+            }
         }
-      }
 			
-			// We have a server, create an account.
-			nsCOMPtr<nsIMsgAccount>	account;
-			rv = pMgr->CreateAccount( getter_AddRefs( account));
-			if (NS_SUCCEEDED( rv) && account) {
-				rv = account->SetIncomingServer( in);
+		// We have a server, create an account.
+		nsCOMPtr<nsIMsgAccount>	account;
+		rv = pMgr->CreateAccount( getter_AddRefs( account));
+		if (NS_SUCCEEDED( rv) && account) {
+		    rv = account->SetIncomingServer( in);
 				
-				IMPORT_LOG0( "Created a new account and set the incoming server to the POP3 server.\n");
+		    IMPORT_LOG0( "Created a new account and set the incoming server to the POP3 server.\n");
 					
-        nsCOMPtr<nsIPop3IncomingServer> pop3Server = do_QueryInterface(in, &rv);
-        NS_ENSURE_SUCCESS(rv,rv);
-        BYTE *pLeaveOnServer = nsOutlookRegUtil::GetValueBytes( hKey, "Leave Mail On Server");
-        if (pLeaveOnServer)
-        {
-          pop3Server->SetLeaveMessagesOnServer(*pLeaveOnServer == 1 ? PR_TRUE : PR_FALSE);
-          nsOutlookRegUtil::FreeValueBytes(pLeaveOnServer);
-        }
+            nsCOMPtr<nsIPop3IncomingServer> pop3Server = do_QueryInterface(in, &rv);
+            NS_ENSURE_SUCCESS(rv,rv);
+            BYTE *pLeaveOnServer = nsOutlookRegUtil::GetValueBytes( hKey, "Leave Mail On Server");
+            if (pLeaveOnServer)
+            {
+                pop3Server->SetLeaveMessagesOnServer(*pLeaveOnServer == 1 ? PR_TRUE : PR_FALSE);
+                nsOutlookRegUtil::FreeValueBytes(pLeaveOnServer);
+            }
 
-        // Fiddle with the identities
-				SetIdentities( pMgr, account, hKey);
-				result = PR_TRUE;
-				if (ppAccount)
-					account->QueryInterface( NS_GET_IID(nsIMsgAccount), (void **)ppAccount);
-			}				
-		}
+            // Fiddle with the identities
+			SetIdentities( pMgr, account, hKey);
+			result = PR_TRUE;
+			if (ppAccount)
+				account->QueryInterface( NS_GET_IID(nsIMsgAccount), (void **)ppAccount);
+		}				
+	}
 	}
 	else
 		result = PR_TRUE;
@@ -416,7 +453,6 @@ PRBool OutlookSettings::DoPOP3Server( nsIMsgAccountManager *pMgr, HKEY hKey, cha
 
 	return( result);
 }
-
 
 PRBool OutlookSettings::IdentityMatches( nsIMsgIdentity *pIdent, const char *pName, const char *pServer, const char *pEmail, const char *pReply, const char *pUserName)
 {
