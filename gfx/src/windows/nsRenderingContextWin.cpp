@@ -3865,12 +3865,9 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 
 //	mBHead->biHeight = -mBHead->biHeight;
 
-  PRInt32 x = GFXCoordToIntFloor(sr.x);
-  PRInt32 y = GFXCoordToIntFloor(sr.y);
-
-  ::StretchDIBits(mDC, pt.x + x, pt.y + y, width, height,
-                  sr.x, 0, width, height,
-                  bits + PRInt32(y * bpr), 
+  ::StretchDIBits(mDC, PRInt32(pt.x + sr.x), PRInt32(pt.y + sr.y), width, height,
+                  GFXCoordToIntFloor(sr.x), 0, width, height,
+                  bits + (GFXCoordToIntFloor(sr.y) * bpr), 
                   (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, SRCAND);
 
 
