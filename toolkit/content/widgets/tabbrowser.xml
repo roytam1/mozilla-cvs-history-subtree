@@ -1502,6 +1502,15 @@
           ]]>
         </body>
       </method>
+      <field name="_keyEventHandler" readonly="true">
+      <![CDATA[({
+        tabbrowser: this,
+        handleEvent: function handleEvent(aEvent) {
+          if (aEvent.ctrlKey && aEvent.keyCode == KeyEvent.DOM_VK_F4 && this.tabbrowser.mTabBox.handleCtrlPageUpDown)
+            this.tabbrowser.removeCurrentTab();
+        }
+      })]]>
+      </field>      
 
       <property name="canFindAgain"
                 onget="return this.mCurrentBrowser.canFindAgain;"
@@ -1519,6 +1528,7 @@
         <![CDATA[
           this.mCurrentBrowser = this.getBrowserAtIndex(0);
           this.mCurrentTab = this.mTabContainer.firstChild;
+          document.addEventListener("keypress", this._keyEventHandler, false);
         ]]>
       </constructor>
 
@@ -1532,18 +1542,12 @@
             this.getBrowserAtIndex(i).removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
           }
           this.mPanelContainer.removeEventListener("DOMLinkAdded", this.onLinkAdded, false);
+          document.removeEventListener("keypress", this._keyEventHandler, false);
         ]]>
       </destructor>
     </implementation>
 
     <handlers>
-      <handler event="keypress" modifiers="control" keycode="VK_F4">
-        <![CDATA[
-          if (this.mTabBox.handleCtrlPageUpDown)
-            this.removeCurrentTab();
-        ]]>
-      </handler>
-
       <handler event="DOMWindowClose">
         <![CDATA[
           const browsers = this.mPanelContainer.childNodes;
