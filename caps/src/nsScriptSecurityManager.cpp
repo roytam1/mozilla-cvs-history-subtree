@@ -1812,12 +1812,12 @@ nsScriptSecurityManager::GetFunctionObjectPrincipal(JSContext *cx,
         if (frameScript && frameScript != funScript) {
             // There is a frame script, and it's different than the
             // function script. In this case we're dealing with either
-            // an eval() or a JS created script object, and in those
-            // cases the principal we want is in the frames script,
-            // not in the functions script. The functions script is
-            // where the code is compiled, not where the code came
-            // from, and we want the principal for where the code came
-            // from.
+            // an eval or a Script object, and in those cases the
+            // principal we want is in the frame's script, not in the
+            // function's script. The function's script is where the
+            // function came from, not where the eval came from, and
+            // we want the principal for the source of the eval
+            // function object or new Script object.
             rv = GetScriptPrincipal(cx, frameScript,
                                     getter_AddRefs(scriptPrincipal));
         }
