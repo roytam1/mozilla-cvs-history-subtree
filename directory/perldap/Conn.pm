@@ -392,15 +392,15 @@ sub add
 #
 sub modifyRDN
 {
-  my ($self, $rdn, $dn, $del) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2], $_[$[ + 3]);
+  my ($self, $rdn, $dn, $del) = ($_[$[], $_[$[ + 1], $_[$[ + 2], $_[$[ + 3]);
   my (@vals);
   my $ret = 1;
 
   $del = 1 if ($del eq "");
   $dn = $self->{"dn"} if ($dn eq "");
 
-  @vals = ldap_explode_dn(lc $dn, 0);
-  if ($vals[$[] ne $rdn)
+  @vals = ldap_explode_dn($dn, 0);
+  if (lc($vals[$[]) ne lc($rdn))
     {
       $ret = ldap_modrdn2_s($self->{"ld"}, $dn, $rdn, $del);
       if ($ret == LDAP_SUCCESS)
