@@ -2694,6 +2694,17 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
     if (flags & PR_RDWR) osflags |= O_RDWR;
     if (flags & PR_APPEND) osflags |= O_APPEND;
     if (flags & PR_TRUNCATE) osflags |= O_TRUNC;
+    if (flags & PR_EXCL) osflags |= O_EXCL;
+    if (flags & PR_SYNC)
+    {
+#if defined(O_SYNC)
+        osflags |= O_SYNC;
+#elif defined(O_FSYNC)
+        osflags |= O_FSYNC;
+#else
+#error "Neither O_SYNC nor O_FSYNC is defined on this platform"
+#endif
+    }
 
     /*
     ** We have to hold the lock across the creation in order to
