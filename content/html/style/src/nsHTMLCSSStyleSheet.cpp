@@ -246,8 +246,6 @@ CSSDisablePropsRule::CommonMapRuleInfoInto(nsRuleData* aData)
     nsCSSValue autovalue(eCSSUnit_Auto);
     nsCSSValue none(eCSSUnit_None);
     aData->mUserInterfaceData->mResizer = autovalue;
-    // XXX |mKeyEquivalent| is a pain, because we have to have our own cursor
-    // structure allocated.
     // Don't bother with '-moz-force-broken-image-icon' since it's only
     // half a property.
     // Don't bother with '-moz-user-select' because there's no way to

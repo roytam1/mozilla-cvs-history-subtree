@@ -1043,7 +1043,6 @@ nsRuleNode::GetUIResetData(nsStyleContext* aContext)
   ruleData.mUserInterfaceData = &uiData;
 
   const nsStyleStruct* res = WalkRuleTree(eStyleStruct_UIReset, aContext, &ruleData, &uiData);
-  uiData.mKeyEquivalent = nsnull;
   return res;
 }
 
@@ -2430,21 +2429,6 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
     ui->mUserSelect = parentUI->mUserSelect;
   }
 
-  // key-equivalent: none, enum XXX, inherit
-  nsCSSValueList*  keyEquiv = uiData.mKeyEquivalent;
-  if (keyEquiv) {
-    // XXX need to deal with multiple values
-    if (eCSSUnit_Enumerated == keyEquiv->mValue.GetUnit()) {
-      ui->mKeyEquivalent = PRUnichar(0);  // XXX To be implemented
-    }
-    else if (eCSSUnit_None == keyEquiv->mValue.GetUnit()) {
-      ui->mKeyEquivalent = PRUnichar(0);
-    }
-    else if (eCSSUnit_Inherit == keyEquiv->mValue.GetUnit()) {
-      inherited = PR_TRUE;
-      ui->mKeyEquivalent = parentUI->mKeyEquivalent;
-    }
-  }
   // resizer: auto, none, enum, inherit
   if (eCSSUnit_Enumerated == uiData.mResizer.GetUnit()) {
     ui->mResizer = uiData.mResizer.GetIntValue();
