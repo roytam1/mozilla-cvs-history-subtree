@@ -907,6 +907,12 @@ function FolderPaneOnClick(event)
     else if (event.detail == 2) {
       FolderPaneDoubleClick(row.value, event);
     }
+    else if (gDBView && gDBView.isSearchView)
+    {
+      if (gSearchInput) gSearchInput.value ="";  //on input does not get fired for some reason
+      onSearchInput(null);
+    }
+    
 }
 
 function FolderPaneDoubleClick(folderIndex, event)

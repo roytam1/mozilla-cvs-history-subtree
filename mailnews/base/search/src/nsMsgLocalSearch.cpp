@@ -304,7 +304,8 @@ nsMsgSearchOfflineMail::nsMsgSearchOfflineMail (nsIMsgSearchScopeTerm *scope, ns
 
 nsMsgSearchOfflineMail::~nsMsgSearchOfflineMail ()
 {
-    // Database should have been closed when the scope term finished. 
+    // Database should have been closed when the scope term finished.
+    CleanUpScope(); 
     NS_ASSERTION(!m_db, "db not closed");
 }
 

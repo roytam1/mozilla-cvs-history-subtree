@@ -17,23 +17,18 @@
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Original Author:
- *   Navin Gupta <naving@netscape.com>
- *
  * Contributor(s):
+ *   Navin Gupta <naving@netscape.com> (Original author)
  * 
  */
 
 var gSearchSession;
-var gSearchTimer = null;
+var gSearchTimer=null;
 var gViewSearchListener;
-var gNumOfSearchHits = 0;
+var gNumOfSearchHits=0;
 var gSearchBundle;
 var gStatusBar = null;
-var gSearchInProgress = false;
-var gSearchCriteria = null;
-var gSearchInput = null;
-var gClearButton = null;
+var gSearchInProgress=false;
 
 // nsIMsgSearchNotify object
 var gSearchNotificationListener =
@@ -80,8 +75,8 @@ function getDocumentElements()
 {
   gSearchBundle = document.getElementById("bundle_search");  
   gStatusBar = document.getElementById('statusbar-icon');
+  gSearchInput = document.getElementById('searchInput');
   gSearchCriteria =document.getElementById('searchCriteria');
-  gClearButton = document.getElementById('clearButton');
 }
 
 function addListeners()
@@ -97,9 +92,9 @@ function removeListeners()
   
 function onEnterInSearchBar()
 {
-   if (!gDBView) 
-     return;
-
+   if (!gDBView) return;
+   ClearThreadPaneSelection();
+   ClearMessagePane();
    if (!gSearchSession)
    {
      getDocumentElements();
@@ -112,31 +107,50 @@ function onEnterInSearchBar()
      if (gSearchInProgress)
      {
        onSearchStop();
-       gSearchInProgress = false;
+       gSearchInProgress =false;
      }
      removeListeners();
    }
-
    if (gSearchInput.value == "") 
    {
      var searchView = gDBView.isSearchView;
      if (searchView)
      {
        statusFeedback.showStatusString("");
-       disableQuickSearchClearButton();
-       gDBView.reloadFolderAfterQuickSearch(); // that should have initialized gDBView
+       gDBView.reloadFolderAfterQuickSearch(); // that should have initialized gDBView, now re-root the thread pane
+       var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+       if (outlinerView)
+       {
+         var outliner = GetThreadOutliner();
+         outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView;
+       }
+       restoreSelection();
      }
      return;
    }
-   else
-     gClearButton.setAttribute("disabled", false); //coming into search enable clear button
-
-
-   ClearThreadPaneSelection();
-   ClearMessagePane();
 
    addListeners();
    onSearch();
+}
+
+function restoreSelection()
+{
+  var msgToSelect = gDBView.currentlyDisplayedMessage
+  if (msgToSelect != nsMsgViewIndex_None)
+  {
+    var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+    var outlinerSelection = outlinerView.selection;
+    outlinerSelection.select(msgToSelect);
+    if (outlinerSelection.isSelected(msgToSelect))
+    {
+      if (outlinerView)
+        outlinerView.selectionChanged();
+      gDBView.reloadMessage();
+
+      EnsureRowInThreadOutlinerIsVisible(msgToSelect);
+      SetFocusThreadPane();
+    }
+  }
 }
 
 function initializeGlobalListeners()
@@ -203,14 +217,14 @@ function onAdvancedSearch()
 
 function onSearchStop() 
 {
-  gSearchSession.interruptSearch();
+    gSearchSession.interruptSearch();
 }
 
 function onSearchInput(event)
 {
   if (gSearchTimer) {
     clearTimeout(gSearchTimer); 
-    gSearchTimer = null;
+    gSearchTimer=null;
   }
 
   if (event && event.keyCode == 13) {
@@ -221,22 +235,3 @@ function onSearchInput(event)
   }
 }
 
-function onClearSearch()
-{
-  if (gSearchInput) 
-    gSearchInput.value ="";  //on input does not get fired for some reason
-  onSearchInput(null);
-}  
-
-function disableQuickSearchClearButton()
-{
- if (gClearButton)
-   gClearButton.setAttribute("disabled", true); //going out of search disable clear button
-}
-
-function searchInputFocus()
-{
-  var searchInput = GetSearchInput();
-  if (searchInput.value)
-    searchInput.select();
-}

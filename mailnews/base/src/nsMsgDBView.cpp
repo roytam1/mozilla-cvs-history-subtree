@@ -80,7 +80,8 @@ NS_INTERFACE_MAP_BEGIN(nsMsgDBView)
    NS_INTERFACE_MAP_ENTRY(nsIMsgDBView)
    NS_INTERFACE_MAP_ENTRY(nsIDBChangeListener)
    NS_INTERFACE_MAP_ENTRY(nsIOutlinerView)
-   NS_INTERFACE_MAP_ENTRY(nsIMsgCopyServiceListener)
+   NS_INTERFACE_MAP_ENTRY(nsIMsgCopyServiceListener)\
+   NS_INTERFACE_MAP_ENTRY(nsIMsgSearchNotify)
 NS_INTERFACE_MAP_END
 
 nsMsgDBView::nsMsgDBView()
@@ -100,6 +101,7 @@ nsMsgDBView::nsMsgDBView()
   mDeleteModel = nsMsgImapDeleteModels::MoveToTrash;
   m_deletingMsgs = PR_FALSE;
   mRemovingRow = PR_FALSE;
+  mIsSearchView = PR_FALSE;
   // initialize any static atoms or unicode strings
   if (gInstanceCount == 0) 
   {
@@ -428,7 +430,7 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
   // turn our message keys into corresponding view indices
   PRInt32 arraySize = aMsgKeyArray->GetSize();
   nsMsgViewIndex	currentViewPosition = nsMsgViewIndex_None;
-  nsMsgViewIndex	newViewPosition;
+  nsMsgViewIndex	newViewPosition = nsMsgViewIndex_None;
 
   // if we are threaded, we need to do a little more work
   // we need to find (and expand) all the threads that contain messages 
@@ -1080,6 +1082,7 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
     NS_ENSURE_SUCCESS(rv,rv);
 	  m_db->AddListener(this);
     m_folder = folder;
+    mIsSearchView = PR_FALSE;
     // save off sort type and order, view type and flags
     folderInfo->SetSortType(sortType);
     folderInfo->SetSortOrder(sortOrder);
@@ -1110,6 +1113,11 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
 #endif
 
 	return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::ReloadFolderAfterQuickSearch()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsMsgDBView::Close()
@@ -1167,6 +1175,19 @@ NS_IMETHODIMP nsMsgDBView::SetSupressMsgDisplay(PRBool aSupressDisplay)
 NS_IMETHODIMP nsMsgDBView::GetSupressMsgDisplay(PRBool * aSupressDisplay)
 {
   *aSupressDisplay = mSupressMsgDisplay;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetIsSearchView(PRBool * aResult)
+{
+  NS_ENSURE_ARG(aResult);
+  *aResult = mIsSearchView;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::SetIsSearchView(PRBool aResult)
+{
+  mIsSearchView = aResult;
   return NS_OK;
 }
 
@@ -4497,4 +4518,21 @@ NS_IMETHODIMP nsMsgDBView::IsSorted(PRBool *_retval)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsMsgDBView::OnSearchHit(nsIMsgDBHdr* aMsgHdr, nsIMsgFolder *folder)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
 
+NS_IMETHODIMP
+nsMsgDBView::OnSearchDone(nsresult status)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+nsMsgDBView::OnNewSearch()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
