@@ -1817,8 +1817,13 @@ PRBool nsTableFrame::ReflowMappedChildren( nsIPresContext*        aPresContext,
           NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == childDisplay->mDisplay ||
           NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == childDisplay->mDisplay )
       {
+        // we don't want to adjust the maxElementSize if this is an initial reflow
+        // it was set by the TableLayoutStrategy and shouldn't be changed.
+        nsSize *requestedMaxElementSize = nsnull;
+        if (eReflowReason_Initial != aState.reflowState.reason)
+          requestedMaxElementSize = aMaxElementSize;
         PlaceChild(aPresContext, aState, kidFrame, kidRect,
-                   aMaxElementSize, kidMaxElementSize);
+                   requestedMaxElementSize, kidMaxElementSize);
         if (bottomMargin < 0) {
           aState.prevMaxNegBottomMargin = -bottomMargin;
         } else {
