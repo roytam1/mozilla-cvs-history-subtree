@@ -228,7 +228,7 @@ WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
      * function, but for now I'll hide behind precedent.
      */
     public static boolean canConvert(Object fromObj, Class to) {
-        int weight = NativeJavaObject.getConversionWeight(fromObj, to);
+        int weight = getConversionWeight(fromObj, to);
 
         return (weight < CONVERSION_NONE);
     }
@@ -257,7 +257,7 @@ WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
      * "preferred method conversions" from Live Connect 3</a>
      */
     public static int getConversionWeight(Object fromObj, Class to) {
-        int fromCode = NativeJavaObject.getJSTypeCode(fromObj);
+        int fromCode = getJSTypeCode(fromObj);
 
         int result = CONVERSION_NONE;
 
@@ -298,7 +298,7 @@ WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
                     result = 1;
                 }
                 else if (to != Boolean.TYPE) {
-                    result = 1 + NativeJavaObject.getSizeRank(to);
+                    result = 1 + getSizeRank(to);
                 }
             }
             else {
@@ -357,7 +357,7 @@ WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
                 result =
                     (fromCode == JSTYPE_JAVA_ARRAY) ?
                     CONVERSION_NONTRIVIAL :
-                    2 + NativeJavaObject.getSizeRank(to);
+                    2 + getSizeRank(to);
             }
             else {
                 Object javaObj = fromObj;
@@ -385,7 +385,7 @@ WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
                 result = 3;
             }
             else if (to.isPrimitive() || to != Boolean.TYPE) {
-                result = 3 + NativeJavaObject.getSizeRank(to);
+                result = 3 + getSizeRank(to);
             }
             break;
         }
@@ -490,7 +490,7 @@ WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
             return value;
         }
 
-        switch (NativeJavaObject.getJSTypeCode(value)) {
+        switch (getJSTypeCode(value)) {
 
         case JSTYPE_NULL:
             // raise error if type.isPrimitive()
