@@ -439,11 +439,14 @@ nsNetDiskCache::GetStorageInUse(PRUint32 *aStorageInUse)
 {
   NS_ASSERTION(m_DB, "no db.") ;
 
-  PRUint32 total_size = m_StorageInUse, len = 0 ;
+  PRUint32 total_size = m_StorageInUse ;
 
+  /*
+  PRUint32 len = 0 ;
   // add the size of the db.
   m_DB->GetDBFilesize(&len) ;
   total_size += len ;
+  */
 
   // we need size in kB
   total_size = total_size >> 10 ;
