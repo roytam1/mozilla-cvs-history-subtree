@@ -73,6 +73,7 @@
 #define _PR_HAVE_POSIX_SEMAPHORES
 #define PR_HAVE_POSIX_NAMED_SHARED_MEMORY
 #define _PR_HAVE_GETIPNODEBYNAME
+#define _PR_ACCEPT_INHERIT_NONBLOCK
 
 #include "prinrval.h"
 NSPR_API(PRIntervalTime) _MD_Solaris_GetInterval(void);
