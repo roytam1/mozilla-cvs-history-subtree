@@ -292,6 +292,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
 	_MDFileDesc * md       = &(secret->md);
 	EndpointRef   endpoint = (EndpointRef)secret->md.osfd;
     PRThread *    thread   = NULL;
+    PRThread *	  pollThread = md->poll.thread;
 	OSStatus      err;
 	OTResult	  resultOT;
     TDiscon		  discon;
@@ -452,7 +453,11 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             return;
     }
 
-	WakeUpNotifiedThread(thread, result);
+	if (pollThread)
+		WakeUpNotifiedThread(pollThread, kOTNoError);
+
+	if (thread && (thread != pollThread))
+		WakeUpNotifiedThread(thread, result);
 }
 
 
@@ -1658,8 +1663,13 @@ PRInt32 _MD_writev(PRFileDesc *fd, const struct PRIOVec *iov, PRInt32 iov_size, 
 static PRBool GetState(PRFileDesc *fd, PRBool *readReady, PRBool *writeReady, PRBool *exceptReady)
 {
     OTResult resultOT;
-    
-	*readReady = fd->secret->md.readReady;
+    // hack to emulate BSD sockets; say that a socket that has disconnected
+    // is still readable.
+    size_t   availableData = 1;
+    if (!fd->secret->md.orderlyDisconnect)
+        OTCountDataBytes((EndpointRef)fd->secret->md.osfd, &availableData);
+
+    *readReady = fd->secret->md.readReady && (availableData > 0);
 	*exceptReady = fd->secret->md.exceptReady;
 
     resultOT = OTGetEndpointState((EndpointRef)fd->secret->md.osfd);
@@ -1680,14 +1690,11 @@ PRInt32 _MD_poll(PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
 {
     PRInt32 ready = 0;
     PRPollDesc *pd, *epd;
-    PRIntervalTime sleepTime, timein;
+    PRThread	*thread = _PR_MD_CURRENT_THREAD();
+    PRIntervalTime timein;
     
-    sleepTime = PR_MillisecondsToInterval(5UL);
     if (PR_INTERVAL_NO_TIMEOUT != timeout)
-    {
-        if (sleepTime > timeout) sleepTime = timeout;
         timein = PR_IntervalNow();
-    }
 
     do
     {
@@ -1724,6 +1731,8 @@ PRInt32 _MD_poll(PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
                 PR_ASSERT(NULL != bottomFD);
                 if ((NULL != bottomFD) && (_PR_FILEDESC_OPEN == bottomFD->secret->state))
                 {
+                    bottomFD->secret->md.poll.thread = thread;
+                	
                     if (GetState(bottomFD, &readReady, &writeReady, &exceptReady))
                     {
                         if (readReady)
@@ -1757,7 +1766,10 @@ PRInt32 _MD_poll(PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
 
         if (ready > 0) return ready;
 
-        (void) PR_Sleep(sleepTime);
+        thread->io_pending       = PR_TRUE;
+        thread->io_fd            = NULL;
+        thread->md.osErrCode     = noErr;
+        WaitOnThisThread(thread, timeout);
 
     } while ((timeout == PR_INTERVAL_NO_TIMEOUT) ||
            (((PRIntervalTime)(PR_IntervalNow() - timein)) < timeout));

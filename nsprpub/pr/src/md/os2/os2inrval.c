@@ -29,7 +29,7 @@ PRInt32 _os2_highMask = 0;
 
 
    
-PR_IMPLEMENT(void)
+void
 _PR_MD_INTERVAL_INIT()
 {
    if (DosTmrQueryFreq(&_os2_ticksPerSec) == NO_ERROR)
@@ -46,7 +46,7 @@ _PR_MD_INTERVAL_INIT()
    PR_ASSERT(_os2_ticksPerSec > PR_INTERVAL_MIN && _os2_ticksPerSec < PR_INTERVAL_MAX);
 }
 
-PR_IMPLEMENT(PRIntervalTime) 
+PRIntervalTime
 _PR_MD_GET_INTERVAL()
 {
    QWORD count;
@@ -69,7 +69,7 @@ _PR_MD_GET_INTERVAL()
     }
 }
 
-PR_IMPLEMENT(PRIntervalTime) 
+PRIntervalTime
 _PR_MD_INTERVAL_PER_SEC()
 {
     if(_os2_ticksPerSec != -1)

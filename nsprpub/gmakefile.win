@@ -54,15 +54,15 @@ all:: build_all
 # Furthermore, shmsdos doesn't support '&&' so there's a chance the
 # 'cd' could fail and configure would be run in the wrong dir
 #
-$(MOZ_OBJDIR)/config.status: check_old configure configure.in
+$(MOZ_OBJDIR)/config.status: configure configure.in
 	@$(MAKE_OBJDIR) 
 	cd $(MOZ_OBJDIR)/ ; \
 		sh $(NSPR_CONFIGURE)
 
-build_all: $(MOZ_OBJDIR)/config.status
+build_all: $(MOZ_OBJDIR)/config.status check_old
 	gmake -C $(MOZ_OBJDIR)
 
-clobber_all: $(MOZ_OBJDIR)/config.status
+clobber_all: $(MOZ_OBJDIR)/config.status check_old
 	gmake -C $(MOZ_OBJDIR) clobber_all
 
 distclean: check_old
