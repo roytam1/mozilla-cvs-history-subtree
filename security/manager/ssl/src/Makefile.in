@@ -97,7 +97,25 @@ REQUIRES	= nspr \
                   pipboot \
 		  $(NULL)
 
-EXTRA_LIBS = $(NSS_LIBS)
+ifeq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
+NSS3_LIB = nss3$(DLL_SUFFIX)
+SMIME3_LIB = smime3$(DLL_SUFFIX)
+SSL3_LIB =  ssl3$(DLL_SUFFIX)
+SOFTOKEN3_LIB = softokn3$(DLL_SUFFIX)
+else
+NSS3_LIB = libnss3$(DLL_SUFFIX)
+SMIME3_LIB = libsmime3$(DLL_SUFFIX)
+SSL3_LIB =  libssl3$(DLL_SUFFIX)
+SOFTOKEN3_LIB = libsoftokn3$(DLL_SUFFIX)
+endif
+
+EXTRA_LIBS = \
+    $(DIST)/lib/libcrmf.$(LIB_SUFFIX) \
+    $(DIST)/lib/$(SMIME3_LIB) \
+    $(DIST)/lib/$(SSL3_LIB) \
+    $(DIST)/lib/$(NSS3_LIB) \
+    $(DIST)/lib/$(SOFTOKEN3_LIB) \
+    $(NULL)
 
 EXTRA_DEPS = $(EXTRA_LIBS)
 

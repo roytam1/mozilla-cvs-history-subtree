@@ -82,20 +82,11 @@ LINCS = $(LINCS)     \
 
 
 SUB_LIBRARIES   = \
-    $(DIST)/lib/smime.lib \
     $(DIST)/lib/crmf.lib \
-    $(DIST)/lib/ssl.lib \
-    $(DIST)/lib/nss.lib \
-    $(DIST)/lib/certhi.lib \
-    $(DIST)/lib/cryptohi.lib \
-    $(DIST)/lib/pk11wrap.lib \
-    $(DIST)/lib/certdb.lib \
-    $(DIST)/lib/softoken.lib \
-    $(DIST)/lib/pkcs12.lib \
-    $(DIST)/lib/pkcs7.lib \
-    $(DIST)/lib/freebl.lib \
-    $(DIST)/lib/secutil.lib \
-    $(DIST)/lib/dbm.lib \
+    $(DIST)/lib/smime3.lib \
+    $(DIST)/lib/ssl3.lib \
+    $(DIST)/lib/nss3.lib \
+    $(DIST)/lib/softokn3.lib \
     $(NULL)
 
 LLIBS   = \
@@ -134,4 +125,8 @@ include <$(DEPTH)\config\rules.mak>
 
 libs:: $(DLL)
     $(MAKE_INSTALL) $(DIST)\lib\nssckbi.dll $(DIST)\bin
+    $(MAKE_INSTALL) $(DIST)\lib\softokn3.dll $(DIST)\bin
+    $(MAKE_INSTALL) $(DIST)\lib\nss3.dll $(DIST)\bin
+    $(MAKE_INSTALL) $(DIST)\lib\smime3.dll $(DIST)\bin
+    $(MAKE_INSTALL) $(DIST)\lib\ssl3.dll $(DIST)\bin
 
