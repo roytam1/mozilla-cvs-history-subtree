@@ -435,8 +435,8 @@ function ShowAccountCentral()
 {
     try {
         var acctCentralPage = pref.getLocalizedUnicharPref("mailnews.account_central_page.url");
-        messagesBox.setAttribute("hidden", "true");
-        accountCentralBox.removeAttribute("hidden");
+        messagesBox.setAttribute("collapsed", "true");
+        accountCentralBox.removeAttribute("collapsed");
         window.frames["accountCentralPane"].location = acctCentralPage;
         gAccountCentralLoaded = true;
     }
@@ -452,8 +452,8 @@ function ShowAccountCentral()
 function HideAccountCentral()
 {
     try {
-        accountCentralBox.setAttribute("hidden", "true");
-        messagesBox.removeAttribute("hidden");
+        accountCentralBox.setAttribute("collapsed", "true");
+        messagesBox.removeAttribute("collapsed");
         gAccountCentralLoaded = false;
     }
     catch (ex) {
