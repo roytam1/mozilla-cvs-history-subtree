@@ -254,9 +254,7 @@
     <key id="key_reload"  key="&reloadCmd.commandkey;" oncommand="BrowserReload();" modifiers="accel"/>
     <key key="&reloadCmd.commandkey;" oncommand="BrowserReloadSkipCache();" modifiers="accel,shift"/>
     <key id="key_viewSource" key="&pageSourceCmd.commandkey;" command="View:PageSource" modifiers="accel"/>
-#ifdef XP_WIN
-    <key id="key_viewInfo"   key="&pageInfoWinCmd.commandkey;"   command="View:PageInfo"   modifiers="accel"/>
-#else
+#ifndef XP_WIN
     <key id="key_viewInfo"   key="&pageInfoCmd.commandkey;"   command="View:PageInfo"   modifiers="accel"/>
 #endif
     <key id="key_find" key="&findOnCmd.commandkey;" command="cmd_find" modifiers="accel"/>
@@ -280,7 +278,7 @@
     <key id="key_gotoHistory"  key="&historySidebarCmd.commandKey;"  command="viewHistorySidebar" modifiers="accel"/>
 #endif
 
-    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel,shift"/>
+    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
 
     <key id="key_newMessage" key="&sendMessage.commandkey;" command="Browser:NewMessage" modifiers="accel"/>
 

@@ -364,8 +364,14 @@
               <menuitem id="javascriptConsole" 
                         label="&javaScriptConsoleCmd.label;" accesskey="&javaScriptConsoleCmd.accesskey;" 
                         oncommand="toJavaScriptConsole();"/>
+#ifdef XP_WIN
+              <menuitem accesskey="&pageInfoCmd.accesskey;" label="&pageInfoCmd.label;"   
+                        command="View:PageInfo"/>
+#else
               <menuitem accesskey="&pageInfoCmd.accesskey;" label="&pageInfoCmd.label;"   
                         key="key_viewInfo" command="View:PageInfo"/>
+#endif
+
 #ifndef XP_UNIX
               <menuseparator id="prefSep"/>
               <menuitem id="menu_preferences"
