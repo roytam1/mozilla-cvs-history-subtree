@@ -59,7 +59,7 @@ include ../../build.mk
 ETCDIR		= $(DIST)/etc
 INCLUDEDIR	= $(XPDIST)/public/ldap
 PRIVATEINCDIR	= $(XPDIST)/public/ldap-private
-NSPRINCDIR	= $(DIST)/ldap-nspr
+NSPRINCDIR	= ../$(DIST)/ldap-nspr
 DELHEADERS	= $(addprefix $(INCLUDEDIR)/, $(HEADERS))
 GENHEADERS	= $(addprefix $(INCLUDEDIR)/, $(GENERATED_HEADERS))
 
