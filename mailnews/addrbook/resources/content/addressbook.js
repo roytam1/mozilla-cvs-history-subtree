@@ -129,7 +129,14 @@ function RemovePrefObservers()
   prefBranch.removeObserver(kPrefMailAddrBookLastNameFirst, gMailAddrBookLastNameFirstObserver);
 }
 
+// we won't show the window until the onload() handler is finished
+// so we do this trick (suggested by hyatt / blaker)
 function OnLoadAddressBook()
+{
+  setTimeout(delayedOnLoadAddressBook, 0); // when debugging, set this to 5000, so you can see what happens after the window comes up.
+}
+
+function delayedOnLoadAddressBook()
 {
   gAddressBookBundle = document.getElementById("bundle_addressBook");
   gSearchInput = document.getElementById("searchInput");
@@ -152,6 +159,7 @@ function OnLoadAddressBook()
   SetupAbCommandUpdateHandlers();
 
   //workaround - add setTimeout to make sure dynamic overlays get loaded first
+  // XXX does this still have to be on a timeout, since the function is on a timeout??
   setTimeout('SelectFirstAddressBook()',0);
 
   // if the pref is locked disable the menuitem New->LDAP directory

@@ -226,7 +226,15 @@ function HandleDeleteOrMoveMsgFailed(folder)
     gCurrentMessageIsDeleted = false;
 }
 
+// we won't show the window until the onload() handler is finished
+// so we do this trick (suggested by hyatt / blaker)
+
 function OnLoadMessageWindow()
+{
+  setTimeout(delayedOnLoadMessageWindow, 0); // when debugging, set this to 5000, so you can see what happens after the window comes up.
+}
+
+function delayedOnLoadMessageWindow()
 {
 	HideMenus();
   AddMailOfflineObserver();
