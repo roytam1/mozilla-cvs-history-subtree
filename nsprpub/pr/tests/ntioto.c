@@ -56,6 +56,7 @@
 #include <nspr.h> 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
 ** Test harness infrastructure
@@ -98,7 +99,8 @@ static void Help( void )
 static void AcceptThread(void *arg)
 {
     PRIntn bytesRead;
-    char dataBuf[100];
+#define DATA_LEN 10
+    char dataBuf[DATA_LEN + 2*sizeof(PRNetAddr) + 32];
     PRFileDesc  *arSock;
     PRNetAddr   *arAddr;
 
@@ -106,7 +108,7 @@ static void AcceptThread(void *arg)
         &arSock,
         &arAddr,
         dataBuf,
-        10,
+        DATA_LEN,
         PR_SecondsToInterval(1));
 
     if ( bytesRead == -1 && PR_GetError() == PR_IO_TIMEOUT_ERROR )
