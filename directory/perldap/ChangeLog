@@ -1,3 +1,10 @@
+1999-08-15  Leif Hedstrom  <leif@netscape.com>
+
+	* API.xs (ldap_mods_free_perl): Modified version of
+	ldap_mods_free(), which uses Perl native free method instead of
+	the things from the LDAP SDK. This fixes some nasty issues with
+	Windows/NT and ActiveState Perl. Woohoo!!!
+
 1999-08-14  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy
 
 	* Entry.pm (setValues): Implemented bug fix for bug id 7131, where
