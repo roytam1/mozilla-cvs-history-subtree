@@ -940,16 +940,24 @@ void CRDFOutliner::OnSelDblClk(int iLine)
 void CRDFOutliner::DisplayURL()
 {
 	char* url = HT_GetNodeURL(m_Node);
-	if (IsExecutableURL(url))
+	CAbstractCX * pCX = FEU_GetLastActiveFrameContext();
+	ASSERT(pCX != NULL);
+	if (pCX == NULL)
+		return;
+
+	// Let HT handle some URLs.
+	if (HT_Launch(m_Node, pCX->GetContext()))
+		return;
+
+	// Shell execute all local file URLs.
+	if (IsLocalFile(url))
 	{
-		// Shell Execute
-#ifdef _WIN32
 		char* pLocalName = NULL;
 		XP_ConvertUrlToLocalFile(url, &pLocalName);
 		pLocalName = NET_UnEscape(pLocalName);
 
 		SHELLEXECUTEINFO    sei;
-	  
+		  
 		// Use ShellExecuteEx to launch
 		sei.cbSize = sizeof(sei);
 		sei.fMask = SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS;
@@ -992,29 +1000,18 @@ void CRDFOutliner::DisplayURL()
 					sprintf(szMsg, szLoadString(IDS_WINEXEC_XX), uSpawn);
 					break;
 			}        
-		
+			
 			CString s;
 			if (s.LoadString( IDS_BOOKMARK_ADDRESSPROPERTIES ))
 			{
 				::MessageBox(GetParentFrame()->m_hWnd, szMsg, s, MB_OK | MB_APPLMODAL);
 			}
 		}
+		
 		if (pLocalName)
 			XP_FREE(pLocalName);
-#endif // _WIN32
 	}
-	else
-	{
-		CAbstractCX * pCX = FEU_GetLastActiveFrameContext();
-		ASSERT(pCX != NULL);
-		if (pCX != NULL)
-		{
-			if (!strncmp(url, "nes:", 4)) 
-			  pCX->NormalGetUrl((LPTSTR)&url[4]);
-			else 
-			  pCX->NormalGetUrl((LPTSTR) url);
-		}
-	}
+	else pCX->NormalGetUrl((LPTSTR) url); // Do a normal fetch.
 }
 
 BOOL CRDFOutliner::TestRowCol(POINT point, int &iRow, int &iCol)
