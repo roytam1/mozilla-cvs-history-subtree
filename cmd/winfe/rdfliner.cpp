@@ -3893,6 +3893,7 @@ CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos,
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	ns->notifyProc = embeddedTreeNotifyProcedure;
+	ns->columnNotifyProc = NULL;
 	ns->data = NULL;
 	
 	// Construct the pane and give it our notification struct

@@ -2225,6 +2225,7 @@ void CRDFToolbarHolder::InitializeRDFData()
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	ns->notifyProc = toolbarNotifyProcedure;
+	ns->columnNotifyProc = NULL;
 	ns->data = this;
 	
 	// Construct the pane and give it our notification struct

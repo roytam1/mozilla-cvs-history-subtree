@@ -624,6 +624,7 @@ void CSelector::PopulatePane()
 	// Construct the notification struct used by HT
 	HT_Notification ns = new HT_NotificationStruct;
 	ns->notifyProc = notifyProcedure;
+	ns->columnNotifyProc = NULL;
 	ns->data = this;
 	m_Notification = ns;
 	

@@ -366,14 +366,18 @@ int CXIcon::DisplayPixmap(NI_Pixmap* image, NI_Pixmap* mask, int32 x, int32 y, i
 	// Copy our bits if we have any.
 	if (m_image->bits)
 	{
-		m_icon->bits = HugeAlloc(m_icon->bmpInfo->bmiHeader.biSizeImage, 1);
-		memcpy( m_icon->bits, m_image->bits, m_icon->bmpInfo->bmiHeader.biSizeImage );
+		FEBitmapInfo* imageInfo = (FEBitmapInfo*) m_image->client_data;
+		BITMAPINFOHEADER* header = (BITMAPINFOHEADER*)imageInfo->bmpInfo;
+		m_icon->bits = HugeAlloc(header->biSizeImage, 1);
+		memcpy( m_icon->bits, m_image->bits, header->biSizeImage );
 	}
 
 	if (mask && m_mask->bits)
 	{
-		m_icon->maskbits = HugeAlloc(m_icon->bmpInfo->bmiHeader.biSizeImage, 1);
-	    memcpy( m_icon->maskbits, m_mask->bits, m_icon->bmpInfo->bmiHeader.biSizeImage );
+		FEBitmapInfo* imageInfo = (FEBitmapInfo*) m_mask->client_data;
+		BITMAPINFOHEADER* header = (BITMAPINFOHEADER*)imageInfo->bmpInfo;
+		m_icon->maskbits = HugeAlloc(header->biSizeImage, 1);
+	    memcpy( m_icon->maskbits, m_mask->bits, header->biSizeImage );
 	}
 		
 	m_icon->CompleteFrameCallback();

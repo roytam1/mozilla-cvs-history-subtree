@@ -298,6 +298,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 			// Construct the notification struct used by HT
 			HT_Notification ns = new HT_NotificationStruct;
 			ns->notifyProc = qfNotifyProcedure;
+			ns->columnNotifyProc = NULL;
 			ns->data = this;
 			m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
 		}
@@ -507,6 +508,7 @@ void CMainFrame::BeginStreamingOfRDFToolbars()
 		// Construct the notification struct used by HT
 		HT_Notification ns = new HT_NotificationStruct;
 		ns->notifyProc = qfNotifyProcedure;
+		ns->columnNotifyProc = NULL;
 		ns->data = this;
 		m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
 	}
