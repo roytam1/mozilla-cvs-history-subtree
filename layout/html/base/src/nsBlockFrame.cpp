@@ -6045,6 +6045,8 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
       }
       else
         break;//time to go nothing was found
+      if (pos.mInlineFrameStop)
+        break;
     }
     //end while loop. if nssucceeded resutl then keep going that means
     //we have successfully hit another block frame and we should keep going.
@@ -6052,8 +6054,6 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
 
     if (resultFrame)
     {
-      const nsStyleDisplay* display;
-      resultFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
       nsCOMPtr<nsIFrameSelection> frameselection;
       shell->GetFrameSelection(getter_AddRefs(frameselection));
       PRBool mouseDown = aEvent->message == NS_MOUSE_MOVE;

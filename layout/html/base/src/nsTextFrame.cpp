@@ -4094,13 +4094,7 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
       PRInt32 start;
       PRBool found = PR_TRUE;
 
-      PRBool selectable;
-      PRUint8 selectStyle;
 
-      IsSelectable(&selectable, &selectStyle);
-      if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
-        return nsFrame::PeekOffset(aPresContext, aPos);
-      else
       {
 
   #ifdef IBMBIDI // Simon - RTL frames reverse meaning of previous and next
@@ -4247,12 +4241,6 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
       PRInt32 wordLen, contentLen;
 
       
-      PRBool selectable;
-      PRUint8 selectStyle;
-      IsSelectable(&selectable, &selectStyle);
-      if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
-        found = PR_FALSE;
-      else
       {
       
 #ifdef IBMBIDI // Simon - RTL frames reverse meaning of previous and next
@@ -4444,6 +4432,11 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
     result = NS_OK;
   }
   aPos->mResultFrame = this;
+  PRBool selectable;
+  PRUint8 selectStyle;
+  IsSelectable(&selectable, &selectStyle);
+  if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
+    return nsFrame::PeekOffset(aPresContext, aPos);
 
   return result;
 }
