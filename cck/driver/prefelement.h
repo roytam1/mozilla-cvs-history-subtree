@@ -26,8 +26,6 @@ public:
   CString GetUIName();
   CString GetPrefValue();
   void SetPrefValue(CString strValue);
-  BOOL IsModified();
-  void SetModified(BOOL bModified);
   CString GetPrefName();
   CString GetPrefType();
   CString GetPrefDescription();

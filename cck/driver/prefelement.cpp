@@ -71,7 +71,7 @@ CString CPrefElement::CreateTreeCtrlLabel()
 
   CString strRetVal;
 
-  strRetVal.Format("%s    [%s]", strLabel, strValue);
+  strRetVal.Format("%s  [%s]", strLabel, strValue);
 
   return strRetVal;
 }
@@ -86,8 +86,6 @@ BOOL CPrefElement::IsLocked()
 // Lock the pref element.
 void CPrefElement::SetLocked(BOOL bLocked)
 {
-  if (bLocked != IsLocked())
-    SetModified(TRUE);
   SetChildElementValue("LOCKED", bLocked? "true": "false");
 }
 
@@ -175,9 +173,6 @@ CString CPrefElement::GetPrefValue()
 // to the correct value.
 void CPrefElement::SetPrefValue(CString strValue)
 {
-  if (GetPrefValue() != strValue)
-    SetModified(TRUE);
-
   if (IsChoose())
   {
     SetChildElementValue("VALUE", GetValueFromChoiceString(strValue));
@@ -189,16 +184,6 @@ void CPrefElement::SetPrefValue(CString strValue)
   }
 }
 
-BOOL CPrefElement::IsModified()
-{
-  CString strVal = GetChildElementValue("MODIFIED");
-  return (strVal.CompareNoCase("true") == 0);
-}
-
-void CPrefElement::SetModified(BOOL bModified)
-{
-  SetChildElementValue("MODIFIED", bModified? "true": "false");
-}
 
 
 // Get the Mozilla name of the pref.
@@ -247,8 +232,7 @@ void CPrefElement::SetPrefFile(CString strPrefFile)
 // Return true if this is a chooser type pref.
 BOOL CPrefElement::IsChoose()
 {
-  CString strVal = GetAttribute("choose");
-  return (strVal.CompareNoCase("true") == 0);
+  return ChildExists("CHOICES");
 }
 
 // Return TRUE if the search string exists in any

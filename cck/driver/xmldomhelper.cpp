@@ -13,6 +13,15 @@ CElementNode::CElementNode(IXMLDOMElementPtr element)
 {
 }
 
+BOOL CElementNode::ChildExists(CString strTag)
+{
+  IXMLDOMNodeListPtr prefValNodes = m_element->getElementsByTagName(strTag.GetBuffer(0));
+  if (prefValNodes)
+    return prefValNodes->Getlength() > 0;
+  else
+    return FALSE;
+}
+
 CString CElementNode::GetChildElementValue(CString strTag)
 {
   _variant_t value;

@@ -23,6 +23,7 @@ public:
   void SetAttribute(CString strAttributeName, CString strAttributeValue);
   CString GetXML();
   IXMLDOMNodePtr AddNode(CString strTag);
+  BOOL ChildExists(CString strTag);
 
 protected:
   IXMLDOMElementPtr m_element;
