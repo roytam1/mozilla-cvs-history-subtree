@@ -22,6 +22,7 @@ include $(DEPTH)/config/config.mk
 MODULE		= xfe2
 
 USE_3PANE 	= 1
+GLUE_COMPO_CONTEXT = 1
 
 LIBRARY_NAME	= xfe2
 
@@ -115,6 +116,7 @@ CPPSRCS		= \
 		  Toolbox.cpp \
 		  ToolboxItem.cpp \
 		  URLBar.cpp \
+		  ViewDashBDlg.cpp \
 		  ViewDialog.cpp \
 		  ViewGlue.cpp \
 		  View.cpp \
@@ -131,6 +133,8 @@ endif
 
 ifdef MOZ_MAIL_NEWS
 CPPSRCS		+= \
+		  ABComplPickerDlg.cpp \
+		  ABComplPickerView.cpp \
 		  ABDirGenTabView.cpp \
 		  ABDirPropertyDlg.cpp \
 		  ABSearchDlg.cpp \
@@ -292,6 +296,10 @@ endif
 
 ifdef USE_ABCOM
 DEFINES		+= -DUSE_ABCOM
+endif
+
+ifdef GLUE_COMPO_CONTEXT
+DEFINES		+= -DGLUE_COMPO_CONTEXT
 endif
 
 ifdef USE_MOTIF_DND
