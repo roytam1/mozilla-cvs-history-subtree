@@ -79,8 +79,6 @@
 #include "nsThread.h"
 #include "nsProcess.h"
 
-#include "nsFileSpecImpl.h"
-#include "nsSpecialSystemDirectory.h"
 #include "nsEmptyEnumerator.h"
 
 #include "nsILocalFile.h"
@@ -109,6 +107,7 @@
 #endif
 #include "nsRecyclingAllocator.h"
 
+#include "SpecialSystemDirectory.h"
 
 // Registry Factory creation function defined in nsRegistry.cpp
 // We hook into this function locally to create and register the registry
@@ -345,8 +344,6 @@ static const nsModuleComponentInfo components[] = {
 #define NS_DIRECTORY_SERVICE_CLASSNAME  "nsIFile Directory Service"
     COMPONENT(DIRECTORY_SERVICE, nsDirectoryService::Create),
     COMPONENT(PROCESS, nsProcessConstructor),
-    COMPONENT(FILESPEC, nsFileSpecImpl::Create),
-    COMPONENT(DIRECTORYITERATOR, nsDirectoryIteratorImpl::Create),
 
     COMPONENT(STRINGINPUTSTREAM, nsStringInputStreamConstructor),
     COMPONENT(MULTIPLEXINPUTSTREAM, nsMultiplexInputStreamConstructor),
@@ -450,14 +447,6 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
                 gDirectoryService->Set(NS_XPCOM_INIT_CURRENT_PROCESS_DIR, binDirectory);
                 binDirectory->Clone(getter_AddRefs(xpcomLib));
             }
-
-            //Since people are still using the nsSpecialSystemDirectory, we should init it.
-            nsCAutoString path;
-            binDirectory->GetNativePath(path);
-            nsFileSpec spec(path.get());
-
-            nsSpecialSystemDirectory::Set(nsSpecialSystemDirectory::Moz_BinDirectory, &spec);
-
         }
         else {
             gDirectoryService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, 

@@ -76,7 +76,7 @@
 #include "nsIIOService.h"
 #include "nsIURL.h"
 #include "nsIChannel.h"
-#include "nsIFileStream.h" // for nsISeekableStream
+#include "nsISeekableStream.h"
 #include "nsNetUtil.h"
 #include "nsIProgressEventSink.h"
 #include "nsIDocument.h"
@@ -124,8 +124,6 @@
 #include "windows.h"
 #include "winbase.h"
 #endif
-
-#include "nsFileSpec.h"
 
 #include "nsPluginDocLoaderFactory.h"
 #include "nsIDocumentLoaderFactory.h"
@@ -2559,45 +2557,15 @@ nsPluginStreamListenerPeer::VisitHeader(const nsACString &header, const nsACStri
 
 /////////////////////////////////////////////////////////////////////////
 
-nsPluginHostImpl::nsPluginHostImpl()
+nsPluginHostImpl::nsPluginHostImpl() :
+  mPluginsLoaded(PR_FALSE),
+  mDontShowBadPluginMessage(PR_FALSE),
+  mIsDestroyed(PR_FALSE),
+  mOverrideInternalTypes(PR_FALSE),
+  mAllowAlienStarHandler(PR_FALSE),
+  mCachedPlugins(nsnull)
 {
-  mPluginsLoaded = PR_FALSE;
-  mDontShowBadPluginMessage = PR_FALSE;
-  mIsDestroyed = PR_FALSE;
-  mOverrideInternalTypes = PR_FALSE;
-  mAllowAlienStarHandler = PR_FALSE;
-  mUnusedLibraries.Clear();
-  
   gActivePluginList = &mActivePluginList;
-
-  // check to see if pref is set at startup to let plugins take over in 
-  // full page mode for certain image mime types that we handle internally
-  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
-  if (prefs) {
-    prefs->GetBoolPref("plugin.override_internal_types", &mOverrideInternalTypes);
-    prefs->GetBoolPref("plugin.allow_alien_star_handler", &mAllowAlienStarHandler);
-  }
-
-  nsCOMPtr<nsIObserverService> obsService = do_GetService("@mozilla.org/observer-service;1");
-  if (obsService)
-  {
-    obsService->AddObserver(this, "quit-application", PR_FALSE);
-    obsService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
-  }
-
-#ifdef PLUGIN_LOGGING
-  nsPluginLogging::gNPNLog = PR_NewLogModule(NPN_LOG_NAME);
-  nsPluginLogging::gNPPLog = PR_NewLogModule(NPP_LOG_NAME);
-  nsPluginLogging::gPluginLog = PR_NewLogModule(PLUGIN_LOG_NAME);
-  
-  PR_LOG(nsPluginLogging::gNPNLog, PLUGIN_LOG_ALWAYS,("NPN Logging Active!\n"));
-  PR_LOG(nsPluginLogging::gPluginLog, PLUGIN_LOG_ALWAYS,("General Plugin Logging Active! (nsPluginHostImpl::ctor)\n"));
-  PR_LOG(nsPluginLogging::gNPPLog, PLUGIN_LOG_ALWAYS,("NPP Logging Active!\n"));
-  
-  PLUGIN_LOG(PLUGIN_LOG_ALWAYS,("nsPluginHostImpl::ctor\n"));
-  PR_LogFlush();
-#endif
-  mCachedPlugins = nsnull;
 }
 
 
@@ -2613,13 +2581,14 @@ nsPluginHostImpl::~nsPluginHostImpl()
 }
 
 ////////////////////////////////////////////////////////////////////////
-NS_IMPL_ISUPPORTS7(nsPluginHostImpl,
+NS_IMPL_ISUPPORTS8(nsPluginHostImpl,
                    nsIPluginManager,
                    nsIPluginManager2,
                    nsIPluginHost,
                    nsIFileUtilities,
                    nsICookieStorage,
                    nsIObserver,
+                   nsISupportsWeakReference,
                    nsPIPluginHost);
 ////////////////////////////////////////////////////////////////////////
 NS_METHOD
@@ -2635,7 +2604,9 @@ nsPluginHostImpl::Create(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 
   nsresult rv;
   NS_ADDREF(host);
-  rv = host->QueryInterface(aIID, aResult);
+  rv = host->Init();
+  if (NS_SUCCEEDED(rv))
+    rv = host->QueryInterface(aIID, aResult);
   NS_RELEASE(host);
   return rv;
 }
@@ -3210,6 +3181,33 @@ NS_IMETHODIMP nsPluginHostImpl::LockFactory(PRBool aLock)
 ////////////////////////////////////////////////////////////////////////
 NS_IMETHODIMP nsPluginHostImpl::Init(void)
 {
+  // check to see if pref is set at startup to let plugins take over in 
+  // full page mode for certain image mime types that we handle internally
+  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
+  if (prefs) {
+    prefs->GetBoolPref("plugin.override_internal_types", &mOverrideInternalTypes);
+    prefs->GetBoolPref("plugin.allow_alien_star_handler", &mAllowAlienStarHandler);
+  }
+
+  nsCOMPtr<nsIObserverService> obsService = do_GetService("@mozilla.org/observer-service;1");
+  if (obsService)
+  {
+    obsService->AddObserver(this, "quit-application", PR_TRUE);
+    obsService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_TRUE);
+  }
+
+#ifdef PLUGIN_LOGGING
+  nsPluginLogging::gNPNLog = PR_NewLogModule(NPN_LOG_NAME);
+  nsPluginLogging::gNPPLog = PR_NewLogModule(NPP_LOG_NAME);
+  nsPluginLogging::gPluginLog = PR_NewLogModule(PLUGIN_LOG_NAME);
+  
+  PR_LOG(nsPluginLogging::gNPNLog, PLUGIN_LOG_ALWAYS,("NPN Logging Active!\n"));
+  PR_LOG(nsPluginLogging::gPluginLog, PLUGIN_LOG_ALWAYS,("General Plugin Logging Active! (nsPluginHostImpl::ctor)\n"));
+  PR_LOG(nsPluginLogging::gNPPLog, PLUGIN_LOG_ALWAYS,("NPP Logging Active!\n"));
+  
+  PLUGIN_LOG(PLUGIN_LOG_ALWAYS,("nsPluginHostImpl::ctor\n"));
+  PR_LogFlush();
+#endif
   return NS_OK;
 }
 
@@ -4262,23 +4260,21 @@ public:
 #endif
     }
 
-    nsFileSpec spec;
+    char *name;
     if (mPluginTag.mFullPath)
     {
 #if !(defined(XP_MAC) || defined(XP_MACOSX))
       NS_ERROR("Only MAC should be using nsPluginTag::mFullPath!");
 #endif
-      spec = mPluginTag.mFullPath;
+      char* spec = mPluginTag.mFullPath;
+      name = spec /*GetLeafName()*/;
     }
     else
     {
-      spec = mPluginTag.mFileName;
+      name = mPluginTag.mFileName;
     }
 
-    char* name = spec.GetLeafName();
     nsresult rv = DoCharsetConversion(mUnicodeDecoder, name, aFilename);
-    if (name)
-      nsCRT::free(name);
     return rv;
   }
 
@@ -4511,12 +4507,13 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
 
     if (nsnull == pluginTag->mLibrary)  // if we haven't done this yet
     {
+      nsCOMPtr<nsILocalFile> file = do_CreateInstance("@mozilla.org/file/local;1");
 #if !(defined(XP_MAC) || defined(XP_MACOSX))
-      nsFileSpec file(pluginTag->mFileName);
+      file->InitWithNativePath(nsDependentCString(pluginTag->mFileName));
 #else
       if (nsnull == pluginTag->mFullPath)
         return NS_ERROR_FAILURE;
-      nsFileSpec file(pluginTag->mFullPath);
+      file->InitWithNativePath(nsDependentCString(pluginTag->mFullPath));
 #endif
       nsPluginFile pluginFile(file);
       PRLibrary* pluginLibrary = NULL;
@@ -4806,12 +4803,8 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
     rv = dirEntry->GetNativePath(filePath);
     if (NS_FAILED(rv))
       continue;
-    
-    nsFileSpec file(filePath.get());
-    PRBool wasSymlink;  
-    file.ResolveSymlink(wasSymlink);
 
-    if (nsPluginsDir::IsPluginFile(file)) {
+    if (nsPluginsDir::IsPluginFile(dirEntry)) {
       pluginFileinDirectory * item = new pluginFileinDirectory();
       if (!item) 
         return NS_ERROR_OUT_OF_MEMORY;
@@ -4821,7 +4814,7 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
       dirEntry->GetLastModifiedTime(&fileModTime);
 
       item->mModTime = fileModTime;
-      item->mFilename.AssignWithConversion(file.GetCString());
+      item->mFilename.AssignWithConversion(filePath.get());
       pluginFilesArray.AppendElement(item);
     }
   } // end round of up of plugin files
@@ -4833,12 +4826,14 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
   // finally, go through the array, looking at each entry and continue processing it
   for (PRInt32 i = 0; i < pluginFilesArray.Count(); i++) {
     pluginFileinDirectory* pfd = NS_STATIC_CAST(pluginFileinDirectory*, pluginFilesArray[i]);
-    nsFileSpec file(pfd->mFilename);
+    nsCOMPtr <nsIFile> file = do_CreateInstance("@mozilla.org/file/local;1");
+    nsCOMPtr <nsILocalFile> localfile = do_QueryInterface(file);
+    localfile->InitWithPath(pfd->mFilename);
     PRInt64 fileModTime = pfd->mModTime;
-    delete pfd;
 
     // Look for it in our cache
-    nsPluginTag *pluginTag = RemoveCachedPluginsInfo(file.GetCString());
+    nsPluginTag *pluginTag = RemoveCachedPluginsInfo(NS_ConvertUCS2toUTF8(pfd->mFilename).get() /*file.GetCString()*/);
+    delete pfd;
 
     if (pluginTag) {
       // If plugin changed, delete cachedPluginTag and dont use cache
@@ -4870,8 +4865,7 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
     if (!aCreatePluginList) {
       if (*aPluginsChanged)
         return NS_OK;
-      else
-        continue;
+      continue;
     }
 
     // if it is not found in cache info list or has been changed, create a new one
@@ -6447,7 +6441,9 @@ nsPluginHostImpl::ScanForRealInComponentsFolder(nsIComponentManager * aCompManag
     return rv;
 
   // now make sure it's a plugin
-  nsFileSpec file(filePath.get());
+  nsCOMPtr<nsIFile> file = do_CreateInstance("@mozilla.org/file/local;1");
+  nsCOMPtr<nsILocalFile> localfile = do_QueryInterface(file);
+  localfile->InitWithNativePath(filePath);
   if (!nsPluginsDir::IsPluginFile(file))
     return rv;
   

@@ -29,6 +29,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= profile
 LIBRARY_NAME	= profile_s
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  mozreg \
 	          string \
 		  chrome \

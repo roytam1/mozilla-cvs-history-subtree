@@ -33,6 +33,7 @@ EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= nsMsgDBModule
 REQUIRES	= xpcom \
+                  xpcom_obsolete \
 		  string \
 		  mailnews \
 		  locale \

@@ -69,6 +69,7 @@
 #include "nsReadableUtils.h"
 #include "nsUnicharUtils.h"
 #include "prmem.h"
+#include "nsIServiceManager.h"
 
 #ifdef NS_DEBUG
 #include "nsLoggingSink.h"
@@ -1398,10 +1399,6 @@ nsresult CNavDTD::HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsC
 
 #ifdef  RICKG_DEBUG
 void WriteTokenToLog(CToken* aToken) {
-
-  static nsFileSpec fileSpec("c:\\temp\\tokenlog.html");
-  static nsOutputFileStream outputStream(fileSpec);
-  aToken->DebugDumpSource(outputStream); //write token without close bracket...
 }
 #endif
  

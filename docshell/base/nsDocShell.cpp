@@ -57,6 +57,7 @@
 #include "nsICanvasFrame.h"
 #include "nsIPluginViewer.h"
 #include "nsContentPolicyUtils.h" // NS_CheckContentLoadPolicy(...)
+#include "nsISeekableStream.h"
 
 // we want to explore making the document own the load group
 // so we can associate the document URI with the load group.
@@ -81,7 +82,6 @@
 #include "nsIWebProgress.h"
 #include "nsILayoutHistoryState.h"
 #include "nsITimer.h"
-#include "nsIFileStream.h"
 #include "nsISHistoryInternal.h"
 #include "nsIPrincipal.h"
 #include "nsIHistoryEntry.h"

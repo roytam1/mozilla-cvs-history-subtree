@@ -590,6 +590,7 @@ xpcom/reflect/xptinfo/Makefile
 xpcom/reflect/xptinfo/public/Makefile
 xpcom/reflect/xptinfo/src/Makefile
 xpcom/reflect/xptinfo/tests/Makefile
+xpcom/obsolete/Makefile
 xpcom/proxy/Makefile
 xpcom/proxy/public/Makefile
 xpcom/proxy/src/Makefile

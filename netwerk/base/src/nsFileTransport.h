@@ -42,7 +42,6 @@
 #include "nsITransport.h"
 #include "nsIRequest.h"
 #include "nsIRunnable.h"
-#include "nsFileSpec.h"
 #include "prlock.h"
 #include "nsIEventQueueService.h"
 #include "nsIPipe.h"

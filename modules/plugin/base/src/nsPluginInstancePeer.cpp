@@ -44,8 +44,6 @@
 #include "prthread.h"
 #include "plstr.h"
 #include "prprf.h"
-#include "nsIFileStream.h"
-#include "nsFileSpec.h"
 #include "nsCOMPtr.h"
 #include "nsIJVMManager.h"
 #include "nsIServiceManager.h"
@@ -55,7 +53,6 @@
 #include "nsIScriptContext.h"
 #include "nsIDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
-#include "nsIFileStreams.h"
 #include "nsNetUtil.h"
 
 #if defined(XP_PC) && !defined(XP_OS2)

@@ -53,10 +53,11 @@
 #include "nsITextToSubURI.h"
 #include "nsIServiceManager.h"
 #include "nsUConvDll.h"
-#include "nsFileSpec.h"
 #include "nsIFile.h"
 #include "nsIScriptableUConv.h"
 #include "nsConverterInputStream.h"
+
+#include "nsCRT.h"
 
 #include "nsUCSupport.h"
 #include "nsCharsetConverterManager.h"

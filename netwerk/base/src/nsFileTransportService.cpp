@@ -44,7 +44,6 @@
 #include "nsIProgressEventSink.h"
 #include "nsIThreadPool.h"
 #include "nsISupportsArray.h"
-#include "nsFileSpec.h"
 #include "nsAutoLock.h"
 #include "nsNetCID.h"
 #include "netCore.h"

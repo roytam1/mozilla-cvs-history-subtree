@@ -43,7 +43,6 @@
 #include "nsMemory.h"
 #include "prefapi.h"
 
-#include "nsIFileSpec.h"
 #include "nsILocalFile.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefLocalizedString.h"
@@ -55,10 +54,13 @@
 #include "nsIModule.h"
 #include "nsIGenericFactory.h"
 
+#include "nsString.h"
+#include "nsCRT.h"
 #include "plstr.h"
 #include "prmem.h"
 #include "prprf.h"
 
+class nsIFileSpec;
 
 class nsPref : public nsIPref,
                public nsIPrefService,
@@ -101,8 +103,10 @@ public:
   NS_IMETHOD GetLocalizedUnicharPref(const char *pref, PRUnichar **_retval);
   NS_IMETHOD GetDefaultLocalizedUnicharPref(const char *pref, PRUnichar **_retval);
 
+  // next two methods are no longer supported.
   NS_IMETHOD GetFilePref(const char *pref, nsIFileSpec **_retval);
   NS_IMETHOD SetFilePref(const char *pref, nsIFileSpec *value, PRBool setDefault);
+
   NS_IMETHOD GetFileXPref(const char *pref, nsILocalFile **_retval);
   NS_IMETHOD SetFileXPref(const char *pref, nsILocalFile *value);
 
@@ -470,29 +474,17 @@ NS_IMETHODIMP nsPref::GetDefaultLocalizedUnicharPref(const char *pref, PRUnichar
   return rv;
 }
 
+
 NS_IMETHODIMP nsPref::GetFilePref(const char *pref, nsIFileSpec **_retval)
 {
-  nsresult rv;
-
-  nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(mPrefService, &rv);
-  if (NS_SUCCEEDED(rv))
-    rv = prefBranch->GetComplexValue(pref, NS_GET_IID(nsIFileSpec), (void **)_retval);
-  return rv;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsPref::SetFilePref(const char *pref, nsIFileSpec *value, PRBool setDefault)
 {
-  nsresult  rv;
-
-  if (setDefault) {
-    rv = mDefaultBranch->SetComplexValue(pref, NS_GET_IID(nsIFileSpec), value);
-  } else {
-    nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(mPrefService, &rv);
-    if (NS_SUCCEEDED(rv))
-      rv = prefBranch->SetComplexValue(pref, NS_GET_IID(nsIFileSpec), value);
-  }
-    return rv;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
+
 
 NS_IMETHODIMP nsPref::GetFileXPref(const char *pref, nsILocalFile **_retval)
 {

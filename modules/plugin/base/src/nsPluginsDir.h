@@ -39,7 +39,7 @@
 #define nsPluginsDir_h___
 
 #include "nsError.h"
-#include "nsFileSpec.h"
+#include "nsIFile.h"
 
 /**
  * nsPluginsDir is nearly obsolete. Directory Service should be used instead.
@@ -48,24 +48,24 @@
 
 class nsPluginsDir {
 public:
-	/**
-	 * Determines whether or not the given file is actually a plugin file.
-	 */
-	static PRBool IsPluginFile(const nsFileSpec& fileSpec);
+  /**
+   * Determines whether or not the given file is actually a plugin file.
+   */
+  static PRBool IsPluginFile(nsIFile* file);
 };
 
 struct PRLibrary;
 
 struct nsPluginInfo {
-	PRUint32 fPluginInfoSize;	// indicates how large the structure is currently.
-	char* fName;				// name of the plugin
-	char* fDescription;			// etc.
-	PRUint32 fVariantCount;
-	char** fMimeTypeArray;
-	char** fMimeDescriptionArray;
-	char** fExtensionArray;
-	char* fFileName;
-	char* fFullPath;
+  PRUint32 fPluginInfoSize; // indicates how large the structure is currently.
+  char* fName;              // name of the plugin
+  char* fDescription;       // etc.
+  PRUint32 fVariantCount;
+  char** fMimeTypeArray;
+  char** fMimeDescriptionArray;
+  char** fExtensionArray;
+  char* fFileName;
+  char* fFullPath;
 #if TARGET_CARBON
   PRBool fBundle;
 #endif
@@ -77,35 +77,36 @@ struct nsPluginInfo {
  * library. Insulates core nsIPluginHost implementations from these
  * details.
  */
-class nsPluginFile : public nsFileSpec {
+class nsPluginFile {
   PRLibrary* pLibrary;
+  nsCOMPtr<nsIFile> mPlugin;
 public:
-	/**
-	 * If spec corresponds to a valid plugin file, constructs a reference
-	 * to a plugin file on disk. Plugins are typically located using the
-	 * nsPluginsDir class.
-	 */
-	nsPluginFile(const nsFileSpec& spec);
-	virtual ~nsPluginFile();
-
-	/**
-	 * Loads the plugin into memory using NSPR's shared-library loading
-	 * mechanism. Handles platform differences in loading shared libraries.
-	 */
-	nsresult LoadPlugin(PRLibrary* &outLibrary);
-
-	/**
-	 * Obtains all of the information currently available for this plugin.
-	 */
-	nsresult GetPluginInfo(nsPluginInfo &outPluginInfo);
+  /**
+   * If spec corresponds to a valid plugin file, constructs a reference
+   * to a plugin file on disk. Plugins are typically located using the
+   * nsPluginsDir class.
+   */
+  nsPluginFile(nsIFile* spec);
+  virtual ~nsPluginFile();
 
   /**
-	 * Should be called after GetPluginInfo to free all allocated stuff
-	 */
-	nsresult FreePluginInfo(nsPluginInfo &PluginInfo);
+   * Loads the plugin into memory using NSPR's shared-library loading
+   * mechanism. Handles platform differences in loading shared libraries.
+   */
+  nsresult LoadPlugin(PRLibrary* &outLibrary);
 
-	// Open the resource fork for the plugin
-	short OpenPluginResource(void);
+  /**
+   * Obtains all of the information currently available for this plugin.
+   */
+  nsresult GetPluginInfo(nsPluginInfo &outPluginInfo);
+
+  /**
+   * Should be called after GetPluginInfo to free all allocated stuff
+   */
+  nsresult FreePluginInfo(nsPluginInfo &PluginInfo);
+
+  // Open the resource fork for the plugin
+  short OpenPluginResource(void);
 };
 
 #endif /* nsPluginsDir_h___ */

@@ -39,6 +39,7 @@ MODULE_NAME	= nsSoftwareUpdate
 GRE_MODULE	= 1
 
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  string \
 		  jar \
 		  caps \
@@ -116,8 +117,11 @@ EXTRA_DSO_LDOPTS = \
 		$(EXTRA_DSO_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_XPCOM_OBSOLETE_LIBS) \
 		$(ZLIB_LIBS) \
 		$(NULL)
+
+#		$(DIST)/lib/libxpcom_obsolete.so \
 
 # Make this a true dynamic component even in static builds because
 # this component is shared by installer

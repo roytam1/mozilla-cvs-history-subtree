@@ -41,10 +41,8 @@
 #include "nsVoidArray.h"
 #include "nsValueArray.h"
 #include "nsIAtom.h"
-#include "nsFileSpec.h"
 //#include "nsIBuffer.h"
-//#include "nsIByteBufferInputStream.h"
-#include "nsFileStream.h"
+#include "nsIByteArrayInputStream.h"
 #include "nsFixedSizeAllocator.h"
 #include "nsRecyclingAllocator.h"
 #include "nsSpecialSystemDirectory.h"
@@ -64,7 +62,6 @@
 #include "nsProxyEventPrivate.h"
 #include "xpt_xdr.h"
 #include "xptcall.h"
-#include "nsIFileSpec.h"
 #include "nsILocalFile.h"
 #include "nsIGenericFactory.h"
 #include "nsHashtableEnumerator.h"
@@ -80,13 +77,13 @@
 #include "nsIBinaryInputStream.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
-#include "nsIByteArrayInputStream.h"
 #include "nsReadableUtils.h"
 #include "nsStaticNameTable.h"
 #include "nsProcess.h"
 #include "nsSlidingString.h"
 #include "nsIInputStreamTee.h"
 #include "nsCheapSets.h"
+#include "nsSegmentedBuffer.h"
 #ifdef DEBUG
 #include "pure.h"
 #endif
@@ -94,8 +91,7 @@
 #include "nsVariant.h"
 
 #ifdef DEBUG
-extern NS_COM void
-TestSegmentedBuffer();
+extern NS_COM void TestSegmentedBuffer();
 #endif
 
 void XXXNeverCalled()
@@ -114,20 +110,15 @@ void XXXNeverCalled()
     nsValueArray(0);
     nsSupportsArray();
     NS_GetNumberOfAtoms();
-    nsFileURL(NULL);
     NS_NewPipe2(NULL, NULL, PR_FALSE, PR_FALSE, 0, 0, NULL);
     NS_NewInputStreamReadyEvent(NULL, NULL, NULL);
     NS_NewOutputStreamReadyEvent(NULL, NULL, NULL);
     NS_AsyncCopy(NULL, NULL, PR_TRUE, PR_TRUE, 0, 0, NULL);
-    nsFileSpec s;
     nsFixedSizeAllocator a;
     nsRecyclingAllocator recyclingAllocator(2);
     a.Init(0, 0, 0, 0, 0);
     a.Alloc(0);
     a.Free(0, 0);
-    NS_NewIOFileStream(NULL, s, 0, 0);
-    nsInputFileStream(s, 0, 0);
-    new nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_DriveDirectory);
     nsIThread::GetCurrent(NULL);
     nsDeque(NULL);
     NS_NewObserver(NULL, NULL);
@@ -144,7 +135,6 @@ void XXXNeverCalled()
     PurePrintf(0);
 #endif
     XPTC_InvokeByIndex(NULL, 0, 0, NULL);
-    NS_NewFileSpec(NULL);
     xptc_dummy();
     xptc_dummy2();
     XPTI_GetInterfaceInfoManager();
@@ -156,9 +146,13 @@ void XXXNeverCalled()
     nsCWeakReferent(0);
     NS_GetWeakReference(NULL);
     nsCOMPtr<nsISupports> dummyFoo(do_GetInterface(nsnull));
+    nsSegmentedBuffer segx;
+    segx.AppendNewSegment();
 #ifdef DEBUG
     TestSegmentedBuffer();
 #endif
+
+    NS_NewByteArrayInputStream(NULL, NULL, 0);
     NS_NewSizeOfHandler(0);
     NS_NewStorageStream(0,0, nsnull);
     nsString foo;
@@ -168,7 +162,6 @@ void XXXNeverCalled()
     NS_NewLocalFile(nsString(), PR_FALSE, NULL);
     NS_NewNativeLocalFile(nsCString(), PR_FALSE, NULL);
     nsProcess();
-    NS_NewByteArrayInputStream (NULL, NULL, 0);
     nsStaticCaseInsensitiveNameTable();
     nsAutoString str1;
     nsCAutoString str2;

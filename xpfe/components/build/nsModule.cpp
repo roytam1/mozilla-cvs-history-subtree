@@ -36,12 +36,9 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIGenericFactory.h"
 #include "nsICategoryManager.h"
-#include "nsBookmarksService.h"
 #include "nsDirectoryViewer.h"
 #include "rdf.h"
 #include "nsTimeBomb.h"
-#include "nsLocalSearchService.h"
-#include "nsInternetSearchService.h"
 #include "nsRelatedLinksHandlerImpl.h"
 #include "nsXPIDLString.h"
 #include "nsCharsetMenu.h"
@@ -69,11 +66,8 @@
 #include "nsCURILoader.h"
 
 // Factory constructors
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHTTPIndex, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDirectoryViewerFactory)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(LocalSearchDataSource, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(InternetSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(RelatedLinksHandlerImpl, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimeBomb)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontPackageHandler)
@@ -152,10 +146,7 @@ UnregisterProc(nsIComponentManager *aCompMgr,
 }
 
 static const nsModuleComponentInfo components[] = {
-    { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_SERVICE_CONTRACTID,
-      nsBookmarksServiceConstructor },
-    { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_DATASOURCE_CONTRACTID,
-      nsBookmarksServiceConstructor },
+
     { "Directory Viewer", NS_DIRECTORYVIEWERFACTORY_CID,
       NS_DOCUMENT_LOADER_FACTORY_CONTRACTID_PREFIX "view;1?type=application/http-index-format",
       nsDirectoryViewerFactoryConstructor, RegisterProc, UnregisterProc  },
@@ -189,14 +180,6 @@ static const nsModuleComponentInfo components[] = {
 	  nsLDAPAutoCompleteSessionConstructor },
 #endif
 #endif
-    { "Local Search", NS_RDFFINDDATASOURCE_CID,
-      NS_LOCALSEARCH_SERVICE_CONTRACTID, LocalSearchDataSourceConstructor },
-    { "Local Search", NS_RDFFINDDATASOURCE_CID,
-      NS_LOCALSEARCH_DATASOURCE_CONTRACTID, LocalSearchDataSourceConstructor },
-    { "Internet Search", NS_RDFSEARCHDATASOURCE_CID,
-      NS_INTERNETSEARCH_SERVICE_CONTRACTID, InternetSearchDataSourceConstructor },
-    { "Internet Search", NS_RDFSEARCHDATASOURCE_CID,
-      NS_INTERNETSEARCH_DATASOURCE_CONTRACTID, InternetSearchDataSourceConstructor },
     { "Related Links Handler", NS_RELATEDLINKSHANDLER_CID, NS_RELATEDLINKSHANDLER_CONTRACTID,
 	  RelatedLinksHandlerImplConstructor},
     { "Netscape TimeBomb", NS_TIMEBOMB_CID, NS_TIMEBOMB_CONTRACTID, nsTimeBombConstructor},

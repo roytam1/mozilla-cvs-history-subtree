@@ -57,6 +57,7 @@ META_COMPONENT  = mail
 MODULE_NAME     = nsComm4xMailImportModule
 
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  string \
 		  intl \
 		  import \

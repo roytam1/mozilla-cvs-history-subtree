@@ -29,7 +29,6 @@
 #include <X11/Xlib.h>
 
 #include "nsCOMPtr.h"
-#include "nsFileSpec.h"
 #include "nsCRT.h"
 #include "nsISupportsArray.h"
 #include "nsXPCOM.h"

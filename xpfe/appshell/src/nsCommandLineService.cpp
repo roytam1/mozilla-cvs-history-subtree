@@ -42,6 +42,7 @@
 #include "nsILocalFile.h"
 #include "nsString.h"
 #include "plstr.h"
+#include "nsCRT.h"
 #include "nsNetUtil.h"
 #ifdef XP_MACOSX
 #include "nsCommandLineServiceMac.h"

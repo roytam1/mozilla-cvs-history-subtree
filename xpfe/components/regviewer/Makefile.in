@@ -34,6 +34,7 @@ IS_COMPONENT	= 1
 MODULE_NAME	= nsRegistryViewerModule
 REQUIRES	= mozreg \
 		  xpcom \
+		  xpcom_obsolete \
 		  string \
 		  rdf \
 		  $(NULL)

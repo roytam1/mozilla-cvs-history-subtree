@@ -33,6 +33,7 @@ IS_COMPONENT	= 1
 MODULE_NAME	= application
 
 REQUIRES	= xpcom \
+	          xpcom_obsolete \
 		  string \
 		  content \
 		  rdf \
@@ -72,11 +73,9 @@ EXTRA_DSO_LIBS	+= mozutil_s
 endif
 
 SHARED_LIBRARY_LIBS = \
-	$(DIST)/lib/$(LIB_PREFIX)bookmarks_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)directory_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)appcompintl_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)related_s.$(LIB_SUFFIX) \
-	$(DIST)/lib/$(LIB_PREFIX)search_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)timebomb_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)windowds_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)mozbrwsr_s.$(LIB_SUFFIX) \

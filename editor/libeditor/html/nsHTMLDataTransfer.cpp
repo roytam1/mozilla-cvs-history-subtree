@@ -84,7 +84,6 @@
 #include "nsISupportsArray.h"
 #include "nsCOMArray.h"
 #include "nsVoidArray.h"
-#include "nsFileSpec.h"
 #include "nsIFile.h"
 #include "nsIURL.h"
 #include "nsIComponentManager.h"

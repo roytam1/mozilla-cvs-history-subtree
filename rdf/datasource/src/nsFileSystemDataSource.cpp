@@ -60,10 +60,7 @@
 #include "prprf.h"
 #include "prio.h"
 #include "rdf.h"
-#include "nsFileSpec.h"
-#include "nsFileStream.h"
 #include "nsIRDFFileSystem.h"
-#include "nsSpecialSystemDirectory.h"
 #include "nsEnumeratorUtils.h"
 #include "nsIURL.h"
 #include "nsIFileURL.h"
@@ -71,6 +68,7 @@
 #include "nsIChannel.h"
 #include "nsIFile.h"
 #include "nsEscape.h"
+#include "nsCRT.h"
 
 #ifdef  XP_WIN
 #include "nsIUnicodeDecoder.h"
@@ -286,28 +284,31 @@ FileSystemDataSource::FileSystemDataSource(void)
         PR_ASSERT(NS_SUCCEEDED(rv));
 
 #ifdef  XP_WIN
-        nsSpecialSystemDirectory    ieFavoritesFolder(nsSpecialSystemDirectory::Win_Favorites);
-        nsFileURL                   ieFavoritesURLSpec(ieFavoritesFolder);
-        const char                  *ieFavoritesURI = ieFavoritesURLSpec.GetAsString();
+        nsCOMPtr<nsIFile> file;
+        NS_GetSpecialDirectory(NS_WIN_FAVORITES_DIR, getter_AddRefs(file));
 
-        if (ieFavoritesURI)
-        {
-            ieFavoritesDir = nsCRT::strdup(ieFavoritesURI);
-        }
+        nsCOMPtr<nsIURI> furi;
+        NS_NewFileURI(getter_AddRefs(furi), file); 
+        lf->GetSpec(ieFavoritesDir);
+        file->GetNativePath(&ieFavoritesDir)
+
         gRDFService->GetResource(NC_NAMESPACE_URI "IEFavorite",       &kNC_IEFavoriteObject);
         gRDFService->GetResource(NC_NAMESPACE_URI "IEFavoriteFolder", &kNC_IEFavoriteFolder);
 #endif
 
 #ifdef XP_BEOS
-        nsSpecialSystemDirectory    netPositiveFolder(nsSpecialSystemDirectory::BeOS_SettingsDirectory);
-        nsFileURL                   netPositiveURLSpec(netPositiveFolder);
 
-        netPositiveURLSpec += "NetPositive/Bookmarks/";
-        const char          *netPositiveURI = netPositiveURLSpec.GetAsString();
-        if (netPositiveURI)
-        {
-            netPositiveDir = nsCRT::strdup(netPositiveURI);
-        }
+        nsCOMPtr<nsIFile> file;
+        NS_GetSpecialDirectory(NS_BEOS_SETTINGS_DIR, getter_AddRefs(file));
+
+        file->Append("NetPositive");
+        file->Append("Bookmarks");
+
+        nsCOMPtr<nsIURI> furi;
+        NS_NewFileURI(getter_AddRefs(furi), file); 
+        lf->GetSpec(ieFavoritesDir);
+        file->GetNativePath(&netPositiveDir)
+
 #endif
 
         gRDFService->GetResource(kURINC_FileSystemRoot,                &kNC_FileSystemRoot);
@@ -362,11 +363,19 @@ FileSystemDataSource::~FileSystemDataSource (void)
 
         if (ieFavoritesDir)
         {
-            nsCRT::free(ieFavoritesDir);
+            nsMemory::Free(ieFavoritesDir);
             ieFavoritesDir = nsnull;
         }
 #endif
 
+#ifdef BEOS
+
+        if (netPositiveDir)
+        {
+            nsMemory::Free(netPositiveDir);
+            netPositiveDir = nsnull;
+        }
+#endif
 #ifdef USE_NC_EXTENSION
         NS_RELEASE(kNC_extension);
 #endif
@@ -1108,8 +1117,18 @@ FileSystemDataSource::GetVolumeList(nsISimpleEnumerator** aResult)
         pb.volumeParam.ioNamePtr = (StringPtr)fname;
         if (PBHGetVInfo(&pb,FALSE) != noErr)
             break;
-        nsFileSpec fss(pb.volumeParam.ioVRefNum, fsRtParID, fname);
-        rv = gRDFService->GetResource(nsFileURL(fss).GetAsString(), getter_AddRefs(vol));
+
+        FSSpec fss(pb.volumeParam.ioVRefNum, fsRtParID, fname);
+        nsCOMPtr<nsILocalFileMac> lf;
+        NS_NewLocalFileWithFSSpec(fss, true, getter_AddRefs(lf));
+
+        nsCOMPtr<nsIURI> furi;
+        NS_NewFileURI(getter_AddRefs(furi), lf); 
+
+        nsXPIDLCString spec;
+        lf->GetSpec(getter_Copies(spec);
+
+        rv = gRDFService->GetResource(spec,, getter_AddRefs(vol));
         if (NS_FAILED(rv)) return rv;
 
         volumes->AppendElement(vol);
@@ -1561,13 +1580,17 @@ FileSystemDataSource::GetName(nsIRDFResource *source, nsIRDFLiteral **aResult)
     // under BEOS, try and get the "META:title" attribute (if its a file)
     if (strncmp(uri, netPositiveDir, strlen(netPositiveDir)) == 0)
     {
-        nsFileURL       url(uri);
-        nsFilePath      path(url);
-        nsFileSpec      spec(path);
-//      if (spec.IsFile() && (!spec.IsHidden()))
-        if (spec.IsFile() || spec.IsDirectory())
+        nsCOMPtr<nsILocalFile> lf;
+        NS_NewLocalFileNative(uri, true, getter_AddRefs(lf));
+
+        PRBool value;
+
+        if ((NS_SUCCEEDED(lf->IsFile(&value) && value) ||
+             (NS_SUCCEEDED(lf->IsDirectory(&value) && value))
         {
-            const char  *nativeURI = spec.GetNativePathCString();
+            nsXPIDLCString nativeURI;
+            lf->GetSpec(getter_Copies(spec);
+
             rv = NS_ERROR_FAILURE;
             if (nativeURI)
             {
@@ -1640,12 +1663,14 @@ nsresult
 FileSystemDataSource::getIEFavoriteURL(nsIRDFResource *source, nsString aFileURL, nsIRDFLiteral **urlLiteral)
 {
     nsresult        rv = NS_OK;
-
+    
     *urlLiteral = nsnull;
 
-    nsFileURL       url(aFileURL);
-    nsFileSpec      uri(url);
-    if (uri.IsDirectory())
+    nsCOMPtr<nsILocalFile> lf;
+    NS_NewLocalFile(aFileURL, true, getter_AddRefs(lf));
+    PRBool value;
+
+    if (NS_SUCCEEDED(lf->IsDirectory(&value) && value)
     {
         if (isValidFolder(source))
             return(NS_RDF_NO_VALUE);
@@ -1662,26 +1687,18 @@ FileSystemDataSource::getIEFavoriteURL(nsIRDFResource *source, nsString aFileURL
         }
     }
 
-    nsInputFileStream   stream(uri);
-
-    if (!stream.is_open())
-        return(NS_RDF_NO_VALUE);
+    nsCOMPtr<nsIInputStream> strm;
+    NS_NewLocalFileInputStream(getter_AddRefs(strm),lf);
+    nsCOMPtr<nsILineInputStream> linereader = do_QueryInterface(strm, &rv);
 
     char        buffer[256];
     nsAutoString    line;
-    while(NS_SUCCEEDED(rv) && (!stream.eof()) && (!stream.failed()))
+    while(NS_SUCCEEDED(rv))
     {
-        PRBool  untruncated = stream.readline(buffer, sizeof(buffer));
+        PRBool  isEOF;
+        rv = linereader.ReadLine(line, &isEOF);
 
-        if (stream.failed())
-        {
-            rv = NS_ERROR_FAILURE;
-            break;
-        }
-
-        line.AppendWithConversion(buffer);
-
-        if (untruncated || stream.eof())
+        if (isEOF)
         {
             if (line.Find("URL=", PR_TRUE) == 0)
             {
@@ -1697,7 +1714,6 @@ FileSystemDataSource::getIEFavoriteURL(nsIRDFResource *source, nsString aFileURL
             }
             line.Truncate();
         }
-
     }
 
     return(rv);
@@ -1766,13 +1782,18 @@ FileSystemDataSource::getNetPositiveURL(nsIRDFResource *source, nsString aFileUR
 
     *urlLiteral = nsnull;
 
-    nsFileURL       url(aFileURL);
-    nsFilePath      path(url);
-    nsFileSpec      uri(path);
-//  if (uri.IsFile() && (!uri.IsHidden()))
-    if (uri.IsFile())
+    nsCOMPtr<nsILocalFile> lf;
+    NS_NewLocalFile(aFileURL, true, getter_AddRefs(lf));
+
+    nsCOMPtr<nsIURI> furi;
+    NS_NewFileURI(getter_AddRefs(furi), lf); 
+
+    nsXPIDLCString nativeURI;
+    lf->GetSpec(getter_Copies(spec);
+
+    PRBool value;
+    if (NS_SUCCEEDED(lf->IsFile(&value) && value)
     {
-        const char  *nativeURI = uri.GetNativePathCString();
         if (nativeURI)
         {
             BFile   bf(nativeURI, B_READ_ONLY);

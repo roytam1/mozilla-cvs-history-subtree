@@ -858,8 +858,6 @@ nsresult nsComponentManagerImpl::Shutdown(void)
     // delete arena for strings and small objects
     PL_FinishArenaPool(&mArena);
 
-    // This is were the nsFileSpec was deleted, so I am 
-    // going to assign zero to 
     mComponentsDir = 0;
 
     mCategoryManager = 0;

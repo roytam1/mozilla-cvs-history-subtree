@@ -129,6 +129,7 @@ tier_2_dirs	+= \
 		string \
 		xpcom \
 		modules/libreg/xpcom \
+		xpcom/obsolete \
 		$(NULL)
 
 ifdef NS_TRACE_MALLOC
