@@ -48,10 +48,6 @@ DIRS		= profile/extensions
 
 PREF_JS_EXPORTS = $(srcdir)/profile/firefox.js
 
-AB_CD = $(MOZ_UI_LOCALE)
-
-DEFINES += -DAB_CD=$(AB_CD)
-
 ifeq ($(USE_SHORT_LIBNAME), 1)
 PROGRAM = firefox$(BIN_SUFFIX)
 else

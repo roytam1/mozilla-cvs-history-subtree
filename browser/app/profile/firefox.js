@@ -121,7 +121,6 @@ pref("xpinstall.whitelist.add", "update.mozilla.org");
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=");
 
-#expand pref("general.useragent.locale", "__AB_CD__");
 pref("general.skins.selectedSkin", "classic/1.0");
 pref("general.useragent.vendor", "Firefox");
 pref("general.useragent.vendorSub", 
