@@ -1157,7 +1157,7 @@ doc_open(JSContext *cx, JSObject *obj, uint argc, jsval *argv, jsval *rval)
     JSString *str, *str2;
     const char *mime_type, *options;
     JSBool replace;
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
 
     if (!JS_InstanceOf(cx, obj, &lm_document_class, argv))
         return JS_FALSE;
@@ -1194,7 +1194,7 @@ doc_open(JSContext *cx, JSObject *obj, uint argc, jsval *argv, jsval *rval)
         }
         lm_ClearDecoderStream(decoder, JS_FALSE);
     }
-    stream = doc_open_stream(cx, decoder, obj, mime_type, replace);
+    stream = NET_CStreamToVoidStream(doc_open_stream(cx, decoder, obj, mime_type, replace));
     if (!stream)
         return JS_FALSE;
     *rval = OBJECT_TO_JSVAL(doc->object);
