@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -217,7 +217,7 @@ namespace JavaScript
             isAttribute,                // True if this token is an attribute
             canFollowAttribute,         // True if this token is an attribute or can follow an attribute
             canFollowReturn,            // True if this token can follow a return without an expression
-            canFollowGet                // True if this token can follow a get or set in a FunctionName
+            isNonreserved               // True if this token is a non-reserved identifier
         };
 
       private:

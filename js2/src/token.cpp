@@ -6,7 +6,7 @@
 * the License at http://www.mozilla.org/NPL/
 *
 * Software distributed under the License is distributed on an "AS
-* IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+* IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
 * implied. See the License for the specific language governing
 * rights and limitations under the License.
 *
@@ -176,7 +176,7 @@ const char *const JS::Token::kindNames[kindsEnd] = {
 static const uchar followRet = 1<<JS::Token::canFollowReturn;
 static const uchar isAttr = 1<<JS::Token::isAttribute | 1<<JS::Token::canFollowAttribute;
 static const uchar followAttr = 1<<JS::Token::canFollowAttribute;
-static const uchar followGet = 1<<JS::Token::canFollowGet;
+static const uchar nonreserved = 1<<JS::Token::isNonreserved;
 
 const uchar JS::Token::kindFlags[kindsEnd] = {
     // Special
@@ -304,13 +304,13 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     0,                    // With
 
     // Non-reserved words
-    isAttr|followGet,     // Eval
-    isAttr|followGet,     // Exclude
-    isAttr|followGet,     // Get
-    isAttr|followGet,     // Include
-    isAttr|followGet,     // Set
+    isAttr|nonreserved,   // Eval
+    isAttr|nonreserved,   // Exclude
+    isAttr|nonreserved,   // Get
+    isAttr|nonreserved,   // Include
+    isAttr|nonreserved,   // Set
 
-    isAttr|followGet      // identifier
+    isAttr|nonreserved    // identifier
 };
 
 
