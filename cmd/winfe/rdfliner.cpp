@@ -237,7 +237,7 @@ int CRDFOutliner::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 void CRDFOutliner::OnSize( UINT nType, int cx, int cy )
 {
-    SqueezeColumns( -1, 0, TRUE );
+    SqueezeColumns( -1, 0, FALSE );
     m_iPaintLines = ( cy / m_itemHeight ) + 1;
     EnableScrollBars ( );
 }
@@ -3646,10 +3646,10 @@ void CRDFOutlinerParent::CreateColumns ( void )
 
 	// Make it so
 	RECT rcClient;
-	GetClientRect(&rcClient);
-	OnSize(0, rcClient.right, rcClient.bottom);
+	m_pOutliner->GetClientRect(&rcClient);
+	((CRDFOutliner*)m_pOutliner)->OnSize(0, rcClient.right, rcClient.bottom);
 
-	GetParent()->Invalidate();
+	Invalidate();
 }
 
 BOOL CRDFOutlinerParent::RenderData( int iColumn, CRect & rect, CDC &dc, LPCTSTR text )
@@ -3856,12 +3856,6 @@ void CRDFContentView::OnSize ( UINT nType, int cx, int cy )
 	{
 		m_pOutlinerParent->MoveWindow ( 0, 0, cx, cy );
 	}
-}
-
-void CRDFContentView::InvalidateOutlinerParent()
-{
-//	COutliner* outliner = m_pOutlinerParent->GetOutliner();
-//	outliner->SqueezeColumns(-1, 0, TRUE);
 }
 
 void CRDFContentView::OnSetFocus ( CWnd * pOldWnd )
