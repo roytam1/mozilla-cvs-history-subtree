@@ -246,6 +246,8 @@ nsHTTPChannel::Cancel(nsresult status)
 {
     nsresult rv;
 
+    LOG(("nsHTTPChannel::Cancel [this=%x status=%x]\n", this, status));
+
     //
     // If this channel is currently waiting for a transport to become available.
     // Notify the HTTPHandler that this request has been cancelled...
@@ -261,6 +263,11 @@ nsHTTPChannel::Cancel(nsresult status)
         nsHTTPFinalListener *fl = NS_STATIC_CAST(nsHTTPFinalListener*, sl);
         fl->FireNotifications();
     }
+
+    // XXX should we be destroying the cache entry on Cancel ??
+    //mResponseDataListener = 0;
+    //CacheAbort(status);
+
     return rv;
 }
 
@@ -1386,9 +1393,12 @@ nsHTTPChannel::CacheReceivedResponse(nsIStreamListener *aListener,
     rv = mCacheTransport->OpenOutputStream(0, ULONG_MAX, 0, getter_AddRefs(out));
     if (NS_FAILED(rv)) return rv;
 
+    // XXX disk cache does not support overlapped i/o yet
+#if 0
     // Mark entry valid inorder to allow simultaneous reading...
     rv = mCacheEntry->MarkValid();
     if (NS_FAILED(rv)) return rv;
+#endif
 
     nsCOMPtr<nsIStreamListenerTee> tee =
         do_CreateInstance(kStreamListenerTeeCID, &rv);
@@ -2374,8 +2384,11 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
     }
 
 #ifdef MOZ_NEW_CACHE
+    if (mCacheEntry && (mCacheAccess & nsICache::ACCESS_WRITE))
+        mCacheEntry->MarkValid();
     mCacheReadRequest = 0;
     mCacheTransport = 0;
+    mCacheAccess = nsICache::ACCESS_NONE;
 #endif
 
     // Release the cache entry as soon as we are done. This helps as it can
