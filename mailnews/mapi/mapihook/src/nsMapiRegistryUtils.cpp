@@ -263,6 +263,35 @@ nsresult saveUserDefaultMailClient()
    return rv;
 }
 
+/**
+ * Check whether it is a smart dll or not. Smart dll is the one installed by
+ * IE5 or Outlook Express which forwards the MAPI calls to the dll based on the 
+ * registry key setttings.
+ * Returns TRUE if is a smart dll.
+ */
+
+typedef HRESULT (FAR PASCAL GetOutlookVersionFunc)(); 
+static PRBool isSmartDll() 
+{ 
+    nsAutoString mapiFilePath; 
+    nsSpecialSystemDirectory sysDir(nsSpecialSystemDirectory::Win_SystemDirectory); 
+    ((nsFileSpec*)&sysDir)->GetNativePathString(mapiFilePath); 
+    mapiFilePath.AppendWithConversion("Mapi32.dll"); 
+
+    HINSTANCE hInst; 
+    GetOutlookVersionFunc *doesExist = nsnull;
+    nsCAutoString filePath;
+    filePath.AssignWithConversion(mapiFilePath.get()); 
+    hInst = LoadLibrary(filePath.get()); 
+    if (hInst == nsnull) 
+        return PR_FALSE;
+        
+    doesExist = (GetOutlookVersionFunc *) GetProcAddress (hInst, "GetOutlookVersion"); 
+    FreeLibrary(hInst); 
+
+    return (doesExist != nsnull); 
+} 
+
 /** Renames Mapi32.dl in system directory to Mapi32_moz_bak.dll
  *  copies the mozMapi32.dll from bin directory to the system directory
  */
@@ -312,6 +341,17 @@ nsresult CopyMozMapiToWinSysDir()
     {
         rv = pCurrentMapiFile->MoveTo(nsnull, "Mapi32_moz_bak.dll");
         if (NS_FAILED(rv)) return rv;
+        nsCAutoString fullFilePath;
+        fullFilePath.AssignWithConversion(mapiFilePath.get());
+        fullFilePath.Append("Mapi32_moz_bak.dll");
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "Mapi_backup_dll", 
+                            (char *)fullFilePath.get());
+        if (NS_FAILED(rv)) {
+             RestoreBackedUpMapiDll();
+             return rv;
+        }
     }
     
     nsAutoString fileName;
@@ -319,15 +359,8 @@ nsresult CopyMozMapiToWinSysDir()
     filePath.Assign(mapiFilePath.get());
     pCurrentMapiFile->InitWithUnicodePath(filePath.get());
     rv = pMozMapiFile->CopyToUnicode(pCurrentMapiFile, fileName.get());
-    if (NS_SUCCEEDED(rv)) {
-        nsCAutoString fullFilePath;
-        fullFilePath.AssignWithConversion(filePath.get());
-        fullFilePath.Append("Mapi32_moz_bak.dll");
-        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                            "Software\\Mozilla\\Desktop", 
-                            "Mapi_backup_dll", 
-                            (char *)fullFilePath.get());
-    }
+    if (NS_FAILED(rv))
+        RestoreBackedUpMapiDll();
     return rv;
 }
 
@@ -359,16 +392,20 @@ nsresult RestoreBackedUpMapiDll()
     pPreviousMapiFile->InitWithPath(previousFileName);
 
     PRBool bExist;
-    rv = pPreviousMapiFile->Exists(&bExist);
-    if (NS_FAILED(rv) || !bExist) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST;
-
     rv = pCurrentMapiFile->Exists(&bExist);
     if (NS_SUCCEEDED(rv) && bExist) {
         rv = pCurrentMapiFile->Remove(PR_FALSE);
         if (NS_FAILED(rv)) return rv;
     }
 
-    rv = pPreviousMapiFile->MoveTo(nsnull, "Mapi32.dll");
+    rv = pPreviousMapiFile->Exists(&bExist);
+    if (NS_SUCCEEDED(rv) && bExist)
+        rv = pPreviousMapiFile->MoveTo(nsnull, "Mapi32.dll");
+    if (NS_SUCCEEDED(rv))
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "Mapi_backup_dll", 
+                            "");
     return rv;
 }
 
@@ -377,8 +414,10 @@ nsresult RestoreBackedUpMapiDll()
 nsresult setDefaultMailClient()
 {
     nsresult rv;
-    if (NS_FAILED(CopyMozMapiToWinSysDir())) return NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
+    if (!isSmartDll()) {
+        if (NS_FAILED(CopyMozMapiToWinSysDir())) return NS_ERROR_FAILURE;
+    }
     rv = saveDefaultMailClient();
     if (NS_FAILED(saveUserDefaultMailClient()) ||
         NS_FAILED(rv)) return NS_ERROR_FAILURE;
@@ -444,8 +483,10 @@ nsresult setDefaultMailClient()
  */
 nsresult unsetDefaultMailClient() {
     nsresult result = NS_OK;
-    if (NS_FAILED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
+    if (!isSmartDll()) {
+        if (NS_FAILED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
+    }
     nsCAutoString name(GetRegistryKey(HKEY_LOCAL_MACHINE, 
                                       "Software\\Mozilla\\Desktop", 
                                       "HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail"));

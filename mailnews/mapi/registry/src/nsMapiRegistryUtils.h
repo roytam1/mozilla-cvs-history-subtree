@@ -51,6 +51,9 @@ static nsCString thisApplication();
 // returns the brandName of the current application
 static nsCString brandName();
 
+// returns TRUE if the Mapi32.dll is smart dll.
+static PRBool isSmartDll();
+
 //Sets the registry key for basekey/keyname valuename.
 nsresult SetRegistryKey(HKEY baseKey, const char * keyName, 
                         const char * valueName, char * value);
