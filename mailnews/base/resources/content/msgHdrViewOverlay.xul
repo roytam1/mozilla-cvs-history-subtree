@@ -30,7 +30,6 @@ Rights Reserved.
 
 <script src="chrome://messenger/content/msgHdrViewAddresses.js"/>
 <script src="chrome://messenger/content/msgHdrViewOverlay.js"/>
-<script src="chrome://messenger-smime/content/msgHdrViewSMIMEOverlay.js"/>
 
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>

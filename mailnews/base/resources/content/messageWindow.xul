@@ -70,6 +70,11 @@ Rights Reserved.
   <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
   <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
   <script type="application/x-javascript" src="chrome://messenger/content/msgViewNavigation.js"/>
+  <script src="chrome://messenger/content/mailCommands.js"/>
+  <script src="chrome://messenger/content/mailWindowOverlay.js"/>
+  <script src="chrome://messenger/content/commandglue.js"/>
+  <script src="chrome://messenger/content/mail-offline.js"/>
+  <script type="application/x-javascript" src="chrome://messenger-smime/content/msgReadSMIMEOverlay.js"/>
 
   <commandset id="mailCommands">
     <commandset id="mailFileMenuItems"/>

@@ -25,3 +25,23 @@ DIRS=public base db local news imap mime compose addrbook import absync mapi ext
 
 include <$(DEPTH)\config\rules.mak>
 
+mailbase::
+  cat base/prefs/resources/content/accountUtils.js > base/resources/content/mailbase.js 
+  cat base/resources/content/commandglue.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/mail-offline.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/mailCommands.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/mailContextMenus.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/mailWindow.js  >> base/resources/content/mailbase.js 
+  cat base/resources/content/mailWindowOverlay.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/msgHdrViewAddresses.js  >> base/resources/content/mailbase.js 
+  cat base/resources/content/msgHdrViewOverlay.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/msgViewNavigation.js  >> base/resources/content/mailbase.js 
+  cat base/resources/content/shareglue.js >> base/resources/content/mailbase.js 
+  cat extensions/smime/resources/content/msgHdrViewSMIMEOverlay.js >> base/resources/content/mailbase.js
+  cat base/resources/content/searchBar.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/msgAccountCentral.js  >> base/resources/content/mailbase.js 
+  cat base/resources/content/messengerdnd.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/threadPane.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/widgetglue.js >> base/resources/content/mailbase.js 
+  cat base/resources/content/msgMail3PaneWindow.js  >> base/resources/content/mailbase.js 
+  cat base/resources/content/mail3PaneWindowCommands.js >> base/resources/content/mailbase.js 
