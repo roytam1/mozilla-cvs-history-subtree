@@ -109,6 +109,10 @@ SOURCE=..\js2runtime.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\jsstring.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\lexer.cpp
 # End Source File
 # Begin Source File
@@ -178,6 +182,10 @@ SOURCE=..\hash.h
 # Begin Source File
 
 SOURCE=..\js2runtime.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\jsstring.h
 # End Source File
 # Begin Source File
 

@@ -47,6 +47,8 @@
 #include "js2runtime.h"
 #include "bytecodegen.h"
 
+#include "jsstring.h"
+
 #include "fdlibm_ns.h"
 
 // this is the IdentifierList passed to the name lookup routines
@@ -1214,6 +1216,11 @@ void ScopeChain::collectNames(StmtNode *p)
             IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
             const StringAtom& name = className->name;
             JSType *thisClass = new JSType(m_cx, name, NULL);
+            if (hasAttribute(classStmt->attributes, FixedKeyWord))
+                thisClass->mIsDynamic = false;
+            if (hasAttribute(classStmt->attributes, DynamicKeyWord))
+                thisClass->mIsDynamic = true;
+
             defineVariable(name, classStmt->attributes, Type_Type, JSValue(thisClass));
             classStmt->mType = thisClass;
         }
@@ -1937,152 +1944,6 @@ JSValue Number_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 a
 }
 
 
-JSValue String_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    if (thisValue->isNull())
-        thisValue = new JSValue(String_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    ASSERT(dynamic_cast<JSStringInstance *>(thisObj));
-    JSStringInstance *strInst = (JSStringInstance *)thisObj;
-
-    if (argc > 0)
-        thisObj->mPrivate = (void *)(new String(*argv[0].toString(cx).string));
-    else
-        thisObj->mPrivate = (void *)(new String(widenCString("")));
-    strInst->mLength = ((String *)(thisObj->mPrivate))->size();
-    return *thisValue;
-}
-
-JSValue String_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    return JSValue((String *)thisObj->mPrivate);
-}
-
-struct MatchResult {
-    bool failure;
-    uint32 endIndex;
-    String **captures;
-};
-
-void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
-{
-    result.failure = true;
-    result.captures = NULL;
-
-    uint32 r = R->size();
-    uint32 s = S->size();
-    if ((q + r) > s)
-        return;
-    for (int i = 0; i < r; i++) {
-        if ((*S)[q + i] != (*R)[i])
-            return;
-    }
-    result.endIndex = q + r;
-    result.failure = false;
-}
-
-
-JSValue String_toLowerCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
-
-    String *result = new String(*S.string);
-    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
-        *i = toLower(*i);
-
-    return JSValue(result);
-}
-
-JSValue String_toUpperCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
-
-    String *result = new String(*S.string);
-    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
-        *i = toUpper(*i);
-
-    return JSValue(result);
-}
-
-JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
-
-    JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
-    JSValue separatorV;
-    JSValue limitV;
-    uint32 lim;
-
-    if (argc > 0)
-        separatorV = argv[0];
-    if (argc > 1)
-        limitV = argv[1];
-    
-    if (limitV.isUndefined())
-        lim = (uint32)two32minus1;
-    else
-        lim = (uint32)(limitV.toUInt32(cx).f64);
-
-    uint32 s = S.string->size();
-    uint32 p = 0;
-
-    // if separatorV.isRegExp() -->
-
-    const String *R = separatorV.toString(cx).string;
-
-    if (lim == 0) 
-        return JSValue(A);
-
-    if (separatorV.isUndefined()) {
-        A->setProperty(cx, widenCString("0"), NULL, S);
-        return JSValue(A);
-    }
-
-    if (s == 0) {
-        MatchResult z;
-        splitMatch(S.string, 0, R, z);
-        if (!z.failure)
-            return JSValue(A);
-        A->setProperty(cx, widenCString("0"), NULL, S);
-        return JSValue(A);
-    }
-    
-    while (true) {
-        uint32 q = p;
-step11:
-        if (q == s) {
-            String *T = new String(*S.string, p, (s - p));
-            JSValue v(T);
-            A->setProperty(cx, *numberToString(A->mLength), NULL, v);
-            return JSValue(A);
-        }
-        MatchResult z;
-        splitMatch(S.string, q, R, z);
-        if (z.failure) {
-            q = q + 1;
-            goto step11;
-        }
-        uint32 e = z.endIndex;
-        if (e == p) {
-            q = q + 1;
-            goto step11;
-        }
-        String *T = new String(*S.string, p, (q - p));
-        JSValue v(T);
-        A->setProperty(cx, *numberToString(A->mLength), NULL, v);
-        if (A->mLength == lim)
-            return JSValue(A);
-        p = e;
-        // step 20 --> 27, handle captures array (we know it's empty for non regexp)    
-    }
-
-}
 
 JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -2549,6 +2410,39 @@ JSValue JSValue::valueToUInt32(Context *cx, JSValue& value)
     return JSValue((float64)d);
 }
 
+JSValue JSValue::valueToUInt16(Context *cx, JSValue& value)
+{
+    float64 d;
+    switch (value.tag) {
+    case f64_tag:
+        d = value.f64;
+        break;
+    case string_tag: 
+        {
+            const char16 *numEnd;
+	    d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+        }
+        break;
+    case boolean_tag:
+        return JSValue((float64)((value.boolean) ? 1 : 0));
+    case object_tag:
+    case undefined_tag:
+        // toNumber(toPrimitive(hint Number))
+        return kUndefinedValue;
+    default:
+        NOT_REACHED("Bad tag");
+        return kUndefinedValue;
+    }
+    if ((d == 0.0) || !JSDOUBLE_IS_FINITE(d))
+        return JSValue((float64)0);
+    bool neg = (d < 0);
+    d = fd::floor(neg ? -d : d);
+    d = neg ? -d : d;
+    d = fd::fmod(d, two16);
+    d = (d >= 0) ? d : d + two16;
+    return JSValue((float64)d);
+}
+
 JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
 {
     JSObject *obj = NULL;
@@ -2593,22 +2487,24 @@ JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
     
 
 
-void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, ProtoFunDef *pdef)
+void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFunctions *pdef)
 {
     mScopeChain->addScope(type);
     type->createStaticComponent(this);
     type->setDefaultConstructor(new JSFunction(this, cdef->defCon, Object_Type));
-    while (pdef && pdef->name) {
-        type->mPrototype->defineVariable(widenCString(pdef->name), 
-                                           NULL, 
-                                           pdef->result, 
-                                           JSValue(new JSFunction(this, pdef->imp, pdef->result)));
-        pdef++;
+    if (pdef) {
+        for (uint32 i = 0; i < pdef->mCount; i++) {
+            type->mPrototype->defineVariable(widenCString(pdef->mDef[i].name), 
+                                               NULL, 
+                                               pdef->mDef[i].result, 
+                                               JSValue(new JSFunction(this, pdef->mDef[i].imp, pdef->mDef[i].result)));
+        }
     }
     type->completeClass(this, mScopeChain, super);
     type->setStaticInitializer(this, NULL);
     mGlobal->defineVariable(widenCString(cdef->name), NULL, Type_Type, JSValue(type));
     mScopeChain->popScope();
+    if (pdef) delete pdef;
 }
 
 #ifndef M_E
@@ -2772,6 +2668,10 @@ void Context::initBuiltins()
     Void_Type    = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
     Unit_Type    = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
 
+
+    String_Type->defineVariable(widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(this, String_fromCharCode, String_Type)));
+
+
     ProtoFunDef objectProtos[] = 
     {
         { "toString", String_Type, Object_toString },
@@ -2784,15 +2684,7 @@ void Context::initBuiltins()
         { "toSource", String_Type, Number_toString },
         { NULL }
     };
-    ProtoFunDef stringProtos[] = 
-    {
-        { "toString",       String_Type, String_toString },
-        { "toSource",       String_Type, String_toString },
-        { "split",          Array_Type,  String_split },
-        { "toUpperCase",    String_Type, String_toUpperCase },
-        { "toLowerCase",    String_Type, String_toLowerCase },
-        { NULL }
-    };
+
     ProtoFunDef arrayProtos[] = 
     {
         { "toString", String_Type, Array_toString },
@@ -2809,11 +2701,11 @@ void Context::initBuiltins()
     };
 
 
-    initClass(Object_Type,  NULL,         &builtInClasses[0], &objectProtos[0]);
-    initClass(Number_Type,  Object_Type,  &builtInClasses[1], &numberProtos[0]);
-    initClass(String_Type,  Object_Type,  &builtInClasses[2], &stringProtos[0]);
-    initClass(Array_Type,   Object_Type,  &builtInClasses[3], &arrayProtos[0]);
-    initClass(Boolean_Type, Object_Type,  &builtInClasses[4], &booleanProtos[0]);
+    initClass(Object_Type,  NULL,         &builtInClasses[0], new PrototypeFunctions(&objectProtos[0]) );
+    initClass(Number_Type,  Object_Type,  &builtInClasses[1], new PrototypeFunctions(&numberProtos[0]) );
+    initClass(String_Type,  Object_Type,  &builtInClasses[2], getStringProtos() );
+    initClass(Array_Type,   Object_Type,  &builtInClasses[3], new PrototypeFunctions(&arrayProtos[0]) );
+    initClass(Boolean_Type, Object_Type,  &builtInClasses[4], new PrototypeFunctions(&booleanProtos[0]) );
     initClass(Void_Type,    Object_Type,  &builtInClasses[5], NULL);
 
 

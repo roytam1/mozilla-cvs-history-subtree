@@ -89,6 +89,7 @@ namespace JS2Runtime {
 
 static const double two32minus1 = 4294967295.0;
 static const double two32 = 4294967296.0;
+static const double two16 = 65536.0;
 static const double two31 = 2147483648.0;
 
 
@@ -179,6 +180,7 @@ static const double two31 = 2147483648.0;
         JSValue toString(Context *cx)             { return (isString() ? *this : valueToString(cx, *this)); }
         JSValue toNumber(Context *cx)             { return (isNumber() ? *this : valueToNumber(cx, *this)); }
         JSValue toUInt32(Context *cx)             { return valueToUInt32(cx, *this); }
+        JSValue toUInt16(Context *cx)             { return valueToUInt16(cx, *this); }
         JSValue toInt32(Context *cx)              { return valueToInt32(cx, *this); }
         JSValue toObject(Context *cx)             { return ((isObject() || isType() || isFunction()) ?
                                                                 *this : valueToObject(cx, *this)); }
@@ -194,6 +196,7 @@ static const double two31 = 2147483648.0;
         static JSValue valueToString(Context *cx, JSValue& value);
         static JSValue valueToObject(Context *cx, JSValue& value);
         static JSValue valueToUInt32(Context *cx, JSValue& value);
+        static JSValue valueToUInt16(Context *cx, JSValue& value);
         static JSValue valueToInt32(Context *cx, JSValue& value);
         static JSValue valueToBoolean(Context *cx, JSValue& value);
         
@@ -1234,6 +1237,8 @@ static const double two31 = 2147483648.0;
               VirtualKeyWord(world.identifiers["virtual"]),
               ConstructorKeyWord(world.identifiers["constructor"]),
               OperatorKeyWord(world.identifiers["operator"]),
+              FixedKeyWord(world.identifiers["fixed"]),
+              DynamicKeyWord(world.identifiers["dynamic"]),
               m_cx(cx)
         {
         }
@@ -1241,6 +1246,8 @@ static const double two31 = 2147483648.0;
         StringAtom& VirtualKeyWord; 
         StringAtom& ConstructorKeyWord; 
         StringAtom& OperatorKeyWord; 
+        StringAtom& FixedKeyWord;
+        StringAtom& DynamicKeyWord;
         Context *m_cx;
 
         std::vector<JSObject *> mScopeStack;
@@ -1454,6 +1461,27 @@ static const double two31 = 2147483648.0;
             JSType *result;
             JSFunction::NativeCode *imp;
         };
+        class PrototypeFunctions {
+        public:
+            PrototypeFunctions(ProtoFunDef *p)
+            {
+                uint32 count = 0;
+                mDef = NULL;
+                if (p) {
+                    while (p[count].name) count++;
+                    mDef = new ProtoFunDef[count];
+                    for (uint32 i = 0; i < count; i++)
+                        mDef[i] = *p++;
+                }
+                mCount = count;
+            }
+            ~PrototypeFunctions()
+            {
+                if (mDef) delete mDef;
+            }
+            ProtoFunDef *mDef;
+            uint32 mCount;
+        };
 
         struct ClassDef {
             char *name;
@@ -1478,7 +1506,7 @@ static const double two31 = 2147483648.0;
         }
 
         void initBuiltins();
-        void initClass(JSType *type, JSType *super, ClassDef *cdef, ProtoFunDef *pdef);
+        void initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFunctions *pdef);
         void initOperators();
         
         void defineOperator(Operator which, JSType *t1, JSType *t2, JSFunction *imp)
