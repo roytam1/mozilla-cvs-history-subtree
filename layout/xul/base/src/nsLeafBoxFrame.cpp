@@ -30,21 +30,17 @@
 #include "nsLeafBoxFrame.h"
 #include "nsBoxFrame.h"
 #include "nsCOMPtr.h"
-#include "nsIDeviceContext.h"
 #include "nsIFontMetrics.h"
 #include "nsHTMLAtoms.h"
 #include "nsXULAtoms.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
 #include "nsIStyleContext.h"
 #include "nsIContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsBoxLayoutState.h"
-#include "nsWidgetsCID.h"
 #include "nsIViewManager.h"
 #include "nsHTMLContainerFrame.h"
-
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
+#include "nsIWindow.h"
 
 //
 // NS_NewToolbarFrame
@@ -105,11 +101,11 @@ nsLeafBoxFrame::Init(nsIPresContext*  aPresContext,
            GetView(aPresContext, &view);
         }
 
-        nsIWidget* widget;
-        view->GetWidget(widget);
+        nsCOMPtr<nsIWindow> widget;
+        view->GetWidget(getter_AddRefs(widget));
 
         if (!widget)
-           view->CreateWidget(kWidgetCID);   
+           view->CreateWidget("@mozilla.org/gfx/window/child;2");
     }
   }
   

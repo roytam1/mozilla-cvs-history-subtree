@@ -539,6 +539,7 @@ nsXULTreeOuterGroupFrame::ScrollbarButtonPressed(PRInt32 aOldIndex, PRInt32 aNew
 NS_IMETHODIMP
 nsXULTreeOuterGroupFrame::PositionChanged(PRInt32 aOldIndex, PRInt32& aNewIndex)
 { 
+  // XXX pav these arn't twips
   PRInt32 oldTwipIndex, newTwipIndex;
   oldTwipIndex = mCurrentIndex*mRowHeight;
   newTwipIndex = (aNewIndex);
