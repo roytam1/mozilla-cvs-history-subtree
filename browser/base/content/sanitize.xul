@@ -45,7 +45,7 @@
   %sanitizeDTD;
 ]>
 
-<prefwindow id="SanitizeDialog" type="child" readonly="true"
+<prefwindow id="SanitizeDialog" type="child"
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             dlgbuttons="accept,cancel"
             title="&sanitizeDialog.title;"
@@ -85,28 +85,76 @@
               s.clearItem(name);
           }
         },
+        
+        sanitizePasswords: function ()
+        {
+          var preference = document.getElementById("privacy.item.passwords");
+          var promptPref = document.getElementById("privacy.sanitize.promptOnSanitize");
+          if (preference.value)
+            promptPref.value = true;
+          promptPref.disabled = preference.value;
+          
+          return this.onReadGeneric();
+        },
+        
+        onReadSanitizePasswords: function ()
+        {
+          return this.sanitizePasswords();
+        },
+        
+        onReadGeneric: function ()
+        {
+          var preferences = document.getElementById("sanitizePreferences");
+          var found = false;
+          for (var i = 0; i < preferences.childNodes.length; ++i) {
+            var preference = preferences.childNodes[i];
+            if (preference.value && !preference.disabled) {
+              found = true;
+              break;
+            }
+          }
+          try {
+            document.documentElement.getButton("accept").disabled = !found;
+          }
+          catch (e) { }
+          return undefined;
+        }
       };
     ]]>
     </script>
 
     <preferences id="sanitizePreferences">
-      <preference id="privacy.item.history"               name="privacy.item.history"               type="bool"/>
-      <preference id="privacy.item.formdata"              name="privacy.item.formdata"              type="bool"/>
-      <preference id="privacy.item.passwords"             name="privacy.item.passwords"             type="bool"/>
-      <preference id="privacy.item.downloads"             name="privacy.item.downloads"             type="bool"/>
-      <preference id="privacy.item.cookies"               name="privacy.item.cookies"               type="bool"/>
-      <preference id="privacy.item.cache"                 name="privacy.item.cache"                 type="bool"/>
+      <preference id="privacy.item.history"               name="privacy.item.history"               type="bool" readonly="true"/>
+      <preference id="privacy.item.formdata"              name="privacy.item.formdata"              type="bool" readonly="true"/>
+      <preference id="privacy.item.passwords"             name="privacy.item.passwords"             type="bool" readonly="true"/>
+      <preference id="privacy.item.downloads"             name="privacy.item.downloads"             type="bool" readonly="true"/>
+      <preference id="privacy.item.cookies"               name="privacy.item.cookies"               type="bool" readonly="true"/>
+      <preference id="privacy.item.cache"                 name="privacy.item.cache"                 type="bool" readonly="true"/>
+    </preferences>
+    <preferences>
+      <preference id="privacy.sanitize.promptOnSanitize"  name="privacy.sanitize.promptOnSanitize"  type="bool" instantApply="true"/>
     </preferences>
 
     <groupbox orient="vertical" align="start">
       <caption label="&sanitizeItems.label;"/>
       
-      <checkbox label="&itemHistory.label;"   preference="privacy.item.history"/>
-      <checkbox label="&itemFormData.label;"  preference="privacy.item.formdata"/>
-      <checkbox label="&itemPasswords.label;" preference="privacy.item.passwords"/>
-      <checkbox label="&itemDownloads.label;" preference="privacy.item.downloads"/>
-      <checkbox label="&itemCookies.label;"   preference="privacy.item.cookies"/>
-      <checkbox label="&itemCache.label;"     preference="privacy.item.cache"/>
+      <checkbox label="&itemHistory.label;"   preference="privacy.item.history"
+                onpreferenceread="return gSanitizePromptDialog.onReadGeneric();"/>
+      <checkbox label="&itemFormData.label;"  preference="privacy.item.formdata"
+                onpreferenceread="return gSanitizePromptDialog.onReadGeneric();"/>
+      <checkbox label="&itemPasswords.label;" preference="privacy.item.passwords"
+                onpreferenceread="return gSanitizePromptDialog.onReadSanitizePasswords();"/>
+      <checkbox label="&itemDownloads.label;" preference="privacy.item.downloads"
+                onpreferenceread="return gSanitizePromptDialog.onReadGeneric();"/>
+      <checkbox label="&itemCookies.label;"   preference="privacy.item.cookies"
+                onpreferenceread="return gSanitizePromptDialog.onReadGeneric();"/>
+      <checkbox label="&itemCache.label;"     preference="privacy.item.cache"
+                onpreferenceread="return gSanitizePromptDialog.onReadGeneric();"/>
+    </groupbox>
+    
+    <groupbox orient="vertical" align="start">
+      <checkbox id="promptOnSanitize" label="&promptOnSanitize.label;"
+                preference="privacy.sanitize.promptOnSanitize"/>
     </groupbox>
   </prefpane>
 </prefwindow>

@@ -69,6 +69,7 @@
 #include "nsIDOM3DocumentEvent.h"
 #include "nsCOMArray.h"
 #include "nsHashtable.h"
+#include "nsInterfaceHashtable.h"
 #include "nsIWordBreakerFactory.h"
 #include "nsILineBreakerFactory.h"
 #include "nsIScriptObjectPrincipal.h"
@@ -591,7 +592,7 @@ protected:
 
   PRUint8 mDefaultElementType;
 
-  nsSupportsHashtable* mBoxObjectTable;
+  nsInterfaceHashtable<nsVoidPtrHashKey, nsIBoxObject>* mBoxObjectTable;
 
   nsSupportsHashtable mContentWrapperHash;
 

@@ -50,13 +50,5 @@ var gSanitizeDialog = {
     this.sanitizePasswords();
     return undefined;
   },
-  
-  onReadPromptOnSanitize: function ()
-  {
-    var promptPref = document.getElementById("privacy.sanitize.promptOnSanitize");
-    if (promptPref.locked)
-      return true;
-    return undefined;
-  },
 };
 

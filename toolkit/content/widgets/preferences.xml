@@ -103,13 +103,13 @@
             .removeObserver(this.name, this.preferences);
       </destructor>
       
-      <property name="instantApply" readonly="true">
+      <property name="instantApply">
         <getter>
-          return document.documentElement.instantApply;
+          return this.getAttribute("instantApply") == "true" || document.documentElement.instantApply;
         </getter>
       </property>
 
-      <property name="preferences" readonly="true" onget="return this.parentNode"/>
+      <property name="preferences" onget="return this.parentNode"/>
       <property name="name" onget="return this.getAttribute('name');"
                             onset="this.setAttribute('name', val); return val;"/>
       <property name="type" onget="return this.getAttribute('type');"
@@ -141,7 +141,7 @@
       </method>
       <property name="value" onget="return this._value" onset="return this._setValue(val, true);"/>
       
-      <property name="locked" readonly="true">
+      <property name="locked">
         <getter>
           return this.preferences.rootBranch.prefIsLocked(this.name);
         </getter>
@@ -172,7 +172,7 @@
         </setter>
       </property>
       
-      <property name="hasUserValue" readonly="true">
+      <property name="hasUserValue">
         <getter>
           return this.preferences.rootBranch.prefHasUserValue(this.name);
         </getter>
@@ -185,7 +185,7 @@
       </method>
 
       <field name="_useDefault">false</field>      
-      <property name="defaultValue" readonly="true">
+      <property name="defaultValue">
         <getter>
         <![CDATA[
           this._useDefault = true;
@@ -196,7 +196,7 @@
         </getter>
       </property>
       
-      <property name="_branch" readonly="true">
+      <property name="_branch">
         <getter>
           return this._useDefault ? this.preferences.defaultBranch : this.preferences.rootBranch;
         </getter>
@@ -472,13 +472,13 @@
 
       <field name="instantApply">false</field>
       
-      <property name="preferencePanes" readonly="true"
+      <property name="preferencePanes"
                 onget="return this.getElementsByTagName('prefpane');"/>
 
-      <property name="type" readonly="true" onget="return this.getAttribute('type');"/>
-      <property name="_paneDeck" readonly="true"
+      <property name="type" onget="return this.getAttribute('type');"/>
+      <property name="_paneDeck"
                 onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'paneDeck');"/>
-      <property name="_selector" readonly="true"
+      <property name="_selector"
                 onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'selector');"/>
       <property name="lastSelected" 
                 onget="return this.getAttribute('lastSelected');">
@@ -626,7 +626,7 @@
         </body>
       </method>
       
-      <property name="_sizeIncrement" readonly="true">
+      <property name="_sizeIncrement">
         <getter>
         <![CDATA[
           var lastSelectedPane = document.getElementById(this.lastSelected);
@@ -859,9 +859,9 @@
                 onget="return this.getAttribute('label');"
                 onset="this.setAttribute('label', val); return val;"/>
       
-      <property name="preferenceElements" readonly="true"
+      <property name="preferenceElements"
                 onget="return this.getElementsByAttribute('preference', '*');"/>
-      <property name="preferences" readonly="true"
+      <property name="preferences"
                 onget="return this.getElementsByTagName('preference');"/>
 
       <field name="_loaded">false</field>
@@ -903,7 +903,7 @@
         </body>
       </method>
       
-      <property name="contentHeight" readonly="true">
+      <property name="contentHeight">
         <getter>
           var targetHeight = parseInt(window.getComputedStyle(this._content, "").height);
           targetHeight += parseInt(window.getComputedStyle(this._content, "").marginTop);

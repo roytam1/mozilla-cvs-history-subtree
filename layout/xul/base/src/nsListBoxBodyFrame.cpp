@@ -292,7 +292,7 @@ nsListBoxBodyFrame::Destroy(nsPresContext* aPresContext)
       nsCOMPtr<nsPIBoxObject> pibox(do_QueryInterface(box));
 
       if (pibox) {
-        pibox->InvalidatePresentationStuff();
+        pibox->InvalidatePresentationStuff(PR_TRUE);
       }
 
       break;

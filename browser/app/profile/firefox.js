@@ -241,7 +241,7 @@ pref("privacy.item.cache",      true);
 pref("privacy.item.siteprefs",  false);
 
 pref("privacy.sanitize.sanitizeOnShutdown", false);
-pref("privacy.sanitize.promptOnSanitize", false);
+pref("privacy.sanitize.promptOnSanitize", true);
 
 pref("network.proxy.share_proxy_settings",  false); // use the same proxy settings for all protocols
 

@@ -62,7 +62,7 @@ public:
     // nsPIBoxObject interface
     NS_IMETHOD Init(nsIContent* aContent, nsIPresShell* aPresShell);
     NS_IMETHOD SetDocument(nsIDocument* aDocument);
-    NS_IMETHOD InvalidatePresentationStuff();
+    NS_IMETHOD InvalidatePresentationStuff(PRBool aUpdateTable);
 };
 
 NS_INTERFACE_MAP_BEGIN(nsCanvasBoxObject)
@@ -104,9 +104,9 @@ nsCanvasBoxObject::SetDocument(nsIDocument* aDocument)
 }
 
 NS_IMETHODIMP
-nsCanvasBoxObject::InvalidatePresentationStuff()
+nsCanvasBoxObject::InvalidatePresentationStuff(PRBool aUpdateTable)
 {
-    return nsBoxObject::InvalidatePresentationStuff();
+    return nsBoxObject::InvalidatePresentationStuff(aUpdateTable);
 }
 
 // nsICanvasBoxObject

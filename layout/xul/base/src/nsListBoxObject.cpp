@@ -58,7 +58,7 @@ public:
 
   nsIListBoxObject* GetListBoxBody();
 
-  NS_IMETHOD InvalidatePresentationStuff();
+  NS_IMETHOD InvalidatePresentationStuff(PRBool aUpdateTable);
   
 protected:
 };
@@ -246,11 +246,11 @@ nsListBoxObject::GetListBoxBody()
 }
 
 NS_IMETHODIMP
-nsListBoxObject::InvalidatePresentationStuff()
+nsListBoxObject::InvalidatePresentationStuff(PRBool aUpdateTable)
 {
   SetPropertyAsSupports(NS_LITERAL_STRING("listboxbody").get(), nsnull);
 
-  return nsBoxObject::InvalidatePresentationStuff();
+  return nsBoxObject::InvalidatePresentationStuff(aUpdateTable);
 }
 
 // Creation Routine ///////////////////////////////////////////////////////////////////////

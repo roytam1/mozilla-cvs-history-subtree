@@ -7,3 +7,5 @@
 <!ENTITY itemCookies.label            "Cookies">
 <!ENTITY itemCache.label              "Cache">
 <!ENTITY itemDownloads.label          "Download History">
+
+<!ENTITY promptOnSanitize.label       "Ask me before Sanitizing &brandShortName;">

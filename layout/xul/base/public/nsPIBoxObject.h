@@ -54,7 +54,7 @@ public:
   NS_IMETHOD Init(nsIContent* aContent, nsIPresShell* aShell) = 0;
   NS_IMETHOD SetDocument(nsIDocument* aDocument) = 0;
 
-  NS_IMETHOD InvalidatePresentationStuff() = 0;
+  NS_IMETHOD InvalidatePresentationStuff(PRBool aUpdateTable) = 0;
 };
 
 #endif

@@ -2867,12 +2867,11 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
   *aResult = nsnull;
 
   if (!mBoxObjectTable) {
-    mBoxObjectTable = new nsSupportsHashtable;
+    mBoxObjectTable = new nsInterfaceHashtable<nsVoidPtrHashKey, nsIBoxObject>;
+    mBoxObjectTable->Init();
   } else {
-    nsISupportsKey key(aElement);
-    nsCOMPtr<nsISupports> supports = dont_AddRef(mBoxObjectTable->Get(&key));
-
-    nsCOMPtr<nsIBoxObject> boxObject(do_QueryInterface(supports));
+    nsCOMPtr<nsIBoxObject> boxObject;
+    mBoxObjectTable->Get(NS_STATIC_CAST(void*, aElement), getter_AddRefs(boxObject));
     if (boxObject) {
       *aResult = boxObject;
       NS_ADDREF(*aResult);
@@ -2944,22 +2943,22 @@ nsDocument::SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject)
   if (!mBoxObjectTable) {
     if (!aBoxObject)
       return NS_OK;
-    mBoxObjectTable = new nsSupportsHashtable(12);
+    mBoxObjectTable = new nsInterfaceHashtable<nsVoidPtrHashKey, nsIBoxObject>;
+    mBoxObjectTable->Init(12);
   }
 
-  nsISupportsKey key(aElement);
-
   if (aBoxObject) {
-    mBoxObjectTable->Put(&key, aBoxObject);
+    mBoxObjectTable->Put(NS_STATIC_CAST(void*, aElement), aBoxObject);
   } else {
-    nsCOMPtr<nsISupports> supp;
-    mBoxObjectTable->Remove(&key, getter_AddRefs(supp));
-    if (supp) {
-      nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(supp));
-      if (boxObject) {
-        boxObject->SetDocument(nsnull);
+    nsCOMPtr<nsIBoxObject> boxObject;
+    mBoxObjectTable->Get(NS_STATIC_CAST(void*, aElement), getter_AddRefs(boxObject));
+    if (boxObject) {
+      nsCOMPtr<nsPIBoxObject> piboxObject(do_QueryInterface(boxObject));
+      if (piboxObject) {
+        piboxObject->SetDocument(nsnull);
       }
     }
+    mBoxObjectTable->Remove(NS_STATIC_CAST(void*, aElement));
   }
 
   return NS_OK;

@@ -771,18 +771,17 @@ nsXULDocument::OnPrototypeLoadDone()
     return ResumeWalk();
 }
 
-
-PR_STATIC_CALLBACK(PRBool)
-ClearPresentationStuff(nsHashKey *aKey, void *aData, void* aClosure)
+PR_STATIC_CALLBACK(PLDHashOperator)
+ClearPresentationStuff(const void *aKey, nsCOMPtr<nsIBoxObject>& aBoxObject, void* aClosure)
 {
-    nsISupports *supp = NS_STATIC_CAST(nsISupports *, aData);
-    nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(supp));
+    nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(aBoxObject));
 
     if (boxObject) {
-        boxObject->InvalidatePresentationStuff();
+        boxObject->InvalidatePresentationStuff(PR_FALSE);
+        boxObject->SetDocument(nsnull);
     }
 
-    return 2;
+    return PL_DHASH_REMOVE;
 }
 
 NS_IMETHODIMP

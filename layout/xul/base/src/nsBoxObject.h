@@ -59,7 +59,7 @@ public:
   // nsPIBoxObject
   NS_IMETHOD Init(nsIContent* aContent, nsIPresShell* aPresShell);
   NS_IMETHOD SetDocument(nsIDocument* aDocument);
-  NS_IMETHOD InvalidatePresentationStuff();
+  NS_IMETHOD InvalidatePresentationStuff(PRBool aUpdateTable);
 
   virtual nsIFrame* GetFrame();
   nsresult GetOffsetRect(nsRect& aRect);

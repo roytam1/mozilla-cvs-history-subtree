@@ -84,8 +84,7 @@
       <checkbox label="&sanitizeOnShutDown.label;"
                 preference="privacy.sanitize.sanitizeOnShutdown"/>
       <checkbox id="promptOnSanitize" label="&promptOnSanitize.label;"
-                preference="privacy.sanitize.promptOnSanitize"
-                onpreferenceread="return gSanitizeDialog.onReadPromptOnSanitize();"/>
+                preference="privacy.sanitize.promptOnSanitize"/>
     </groupbox>
   </prefpane>
 </prefwindow>
