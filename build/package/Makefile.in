@@ -61,7 +61,7 @@ MAPPINGS = dist/bin=bin xpiroot/=
 
 dump-packages:
 	cd $(DEPTH);
-	$(PERL) -I $(srcdir) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) $(PACKAGE_FLAGS)
+	$(PERL) -I $(srcdir) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -u $(PACKAGE_FLAGS)
 
 # This rule will stage any one package. If you need to stage multiple packages or
 # do ^packages (subtraction packages) use the stage-packages rule and set PACKAGES

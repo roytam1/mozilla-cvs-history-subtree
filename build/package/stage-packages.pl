@@ -177,6 +177,7 @@ foreach my $package (@ARGV) {
 my $parser = new MozParser;
 my $xptMerge = 0;
 my $preprocess = 0;
+my $doExec = 0;
 
 HANDLER: foreach my $handler (@handlers) {
     if ($handler eq "xptmerge") {
@@ -203,6 +204,11 @@ HANDLER: foreach my $handler (@handlers) {
         MozParser::Optional::add($parser);
         next HANDLER;
     }
+    if ($handler eq "exec") {
+        MozParser::Exec::add($parser);
+        $doExec = 1;
+        next HANDLER;
+    }
     die("Unrecognized command-handler $handler");
 }
 
@@ -210,13 +216,12 @@ foreach my $mapping (keys %mappings) {
     $parser->addMapping($mapping, $mappings{$mapping});
 }
 
-my $files = $parser->parse($packagesDir, @packages);
+$parser->parse($packagesDir, @packages);
 
-MozStage::stage($files, $stageDir);
+MozStage::stage($parser, $stageDir);
 
 if ($xptMerge) {
-    $xptMergeFile = File::Spec->catfile($stageDir, split('/', $parser->findMapping($xptMergeFile)));
-    MozParser::XPTMerge::mergeTo($parser, $xptMergeFile);
+    MozParser::XPTMerge::mergeTo($parser, MozPackager::joinfile($stageDir, $parser->findMapping($xptMergeFile)));
 }
 
 if ($calcDiskSpace) {
@@ -225,6 +230,10 @@ if ($calcDiskSpace) {
 
 if ($preprocess) {
     MozParser::Preprocess::preprocessTo($parser, $preprocessor, $stageDir);
+}
+
+if ($doExec) {
+    MozParser::Exec::exec($parser, $stageDir);
 }
 
 foreach $packageType (keys %makePackages) {

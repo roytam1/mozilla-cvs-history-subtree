@@ -188,13 +188,13 @@ nsXIEngine::Download(int aCustom, nsComponentList *aComps)
 
                     // URL of the actual file to download
                     qualURL = (char *) malloc(strlen(currURL) + 
-                                       strlen(currComp->GetArchive()) + 1);
+                                       strlen(currComp->GetArchive()) + 2);
                     if (!qualURL)
                     {
                         err = E_MEM;
                         break;
                     }
-                    sprintf(qualURL, "%s%s", currURL, currComp->GetArchive());
+                    sprintf(qualURL, "%s/%s", currURL, currComp->GetArchive());
 
                     conn->SetProxyInfo(qualURL, gCtx->opt->mProxyUser,
                                                 gCtx->opt->mProxyPswd);
@@ -221,13 +221,13 @@ nsXIEngine::Download(int aCustom, nsComponentList *aComps)
                 {
                     // URL of the actual file to download
                     qualURL = (char *) malloc(strlen(currURL) + 
-                                       strlen(currComp->GetArchive()) + 1);
+                                       strlen(currComp->GetArchive()) + 2);
                     if (!qualURL)
                     {
                         err = E_MEM;
                         break;
                     }
-                    sprintf(qualURL, "%s%s", currURL, currComp->GetArchive());
+                    sprintf(qualURL, "%s/%s", currURL, currComp->GetArchive());
 
                     nsHTTPConn *conn = new nsHTTPConn(qualURL, EventPumpCB);
                     if (!conn)
@@ -265,13 +265,13 @@ nsXIEngine::Download(int aCustom, nsComponentList *aComps)
     
                     // path on the remote server
                     srvPath = (char *) malloc(strlen(currPath) +
-                                        strlen(currComp->GetArchive()) + 1);
+                                        strlen(currComp->GetArchive()) + 2);
                     if (!srvPath)
                     {
                         err = E_MEM;
                         break;
                     }
-                    sprintf(srvPath, "%s%s", currPath, currComp->GetArchive());
+                    sprintf(srvPath, "%s/%s", currPath, currComp->GetArchive());
 
                     // closes the old connection if any
 

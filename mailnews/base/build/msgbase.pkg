@@ -2,5 +2,3 @@
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
-!xpt dist/bin/components/msgbase.xpt
-!xpt dist/bin/components/msgsearch.xpt

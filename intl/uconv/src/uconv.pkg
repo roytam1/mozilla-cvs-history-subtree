@@ -3,6 +3,7 @@
 dist/bin/components/@SHARED_LIBRARY@
 #endif
 !xpt dist/bin/components/uconv.xpt
+!xpt dist/bin/components/ucnative.xpt
 dist/bin/res/charsetalias.properties
 dist/bin/res/charsetData.properties
 
@@ -23,5 +24,15 @@ dist/bin/res/unixcharset.properties
 #endif
 #endif
 #endif
+#endif
+#endif
+
+#if ENABLE_TESTS
+#if OS_ARCH==WINNT
+[gecko-tests]
+dist/bin/TestUConv@BINS@
+dist/bin/nsconv@BINS@
+dist/bin/plattest@BINS@
+dist/bin/convperf@BINS@
 #endif
 #endif

@@ -38,8 +38,10 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS        = resources
+MODULE       = venkman
 PACKAGE_FILE = venkman.pkg
+
+DIRS        = resources
 
 EXTRA_COMPONENTS = js/venkman-service.js
 

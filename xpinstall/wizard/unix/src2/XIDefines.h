@@ -83,7 +83,7 @@
 #define ARCHIVE             "Archive"
 #define URLd                "URL%d"
 #define INSTALL_SIZE        "Install Size"
-#define ARCHIVE_SIZE        "Archive Size"
+#define ARCHIVE_SIZE        "Install Size Archive"
 #define DEPENDENCYd         "Dependency%d"
 #define DEPENDEEd           "Dependee%d"
 #define ATTRIBUTES          "Attributes"

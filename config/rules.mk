@@ -1504,7 +1504,6 @@ REGCHROME_INSTALL = $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/add-ch
 # Packaging Manifests
 #############################################################################
 
-ifneq (,$(PACKAGE_FILE))
 $(PACKAGE_DIR)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
 
@@ -1513,6 +1512,9 @@ PACKAGE_VARS +=      \
 	SHARED_LIBRARY		 \
 	OS_ARCH            \
 	MOZ_WIDGET_TOOLKIT \
+	MOZ_DEBUG          \
+	ENABLE_TESTS       \
+	USE_SHORT_LIBNAME  \
 	$(NULL)
 
 # these are shortened to make manifest files readable
@@ -1528,13 +1530,22 @@ PACKAGE_DEFINES +=          \
 
 PACKAGE_DEFINES += $(foreach varname,$(PACKAGE_VARS),-D$(varname)=$($(varname)))
 
-export:: $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
+realpackages: $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
 
-$(PACKAGE_DIR)/%: % $(PACKAGE_DIR) Makefile Makefile.in
+# we need to call build-list.pl whether or not this file has been updated,
+# so this has to be a double-colon rule
+$(PACKAGE_DIR)/%:: % $(PACKAGE_DIR) Makefile Makefile.in
 	$(PERL) $(MOZILLA_DIR)/config/preprocessor.pl -Fsubstitution $(PACKAGE_DEFINES) $< > $@
 
+$(PACKAGE_DIR)/%::
+	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PACKAGE_DIR)/.headerlist $(notdir $@)
+
 GARBAGE += $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
-endif
+
+packages:: realpackages
+	+$(LOOP_OVER_MOZ_DIRS)
+
+export:: realpackages
 
 #############################################################################
 # Dependency system

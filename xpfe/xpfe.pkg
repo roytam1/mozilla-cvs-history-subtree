@@ -2,6 +2,7 @@
 !touch dist/bin/.autoreg
 dist/bin/components/nsCloseAllWindows.js
 dist/bin/chrome/installed-chrome.txt
+dist/bin/chrome/chromelist.txt
 
 # xxxbsmedberg why do we ship the platform jars on all platforms?
 [xpfe-lang-enUS]
@@ -28,7 +29,8 @@ dist/bin/chrome/modern.jar
 dist/bin/chrome/classic.jar
 
 # oh, do I hate this... but I hate wildcards even more
-[xpfe-browser]
+[gecko-tests]
+dist/bin/res/viewer.properties
 dist/bin/res/throbber/anim.gif
 dist/bin/res/throbber/anims00.gif
 dist/bin/res/throbber/anims01.gif

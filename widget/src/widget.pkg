@@ -31,8 +31,15 @@ dist/bin/components/@DLLP@widget_xlib@DLLS@
 #if MOZ_ENABLE_PHOTON
 dist/bin/components/@DLLP@widget_photon@DLLS@
 #endif
+!xpt dist/bin/components/widget.xpt
+
+[xpfe-browser browser mail]
 #if MOZ_ENABLE_XREMOTE
 dist/bin/components/@DLLP@xremote_client@DLLS@
+dist/bin/mozilla-xremote-client
 #endif
 
-!xpt dist/bin/components/widget.xpt
+#if MOZ_ENABLE_GTK
+dist/bin/icons/mozicon50.xpm
+dist/bin/icons/mozicon16.xpm
+#endif

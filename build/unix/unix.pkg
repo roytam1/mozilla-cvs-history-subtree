@@ -4,3 +4,9 @@
 
 [gecko-support]
 dist/bin/run-mozilla.sh
+
+[gecko-devel]
+dist/bin/mozilla-config
+
+[unpackaged-files]
+!optional dist/bin/elf-dynstr-gc

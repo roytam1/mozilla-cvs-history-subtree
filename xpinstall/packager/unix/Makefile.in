@@ -29,8 +29,13 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpinstall
 
+PACKAGE_FILE = installer.pkg
+
+ifdef ARCHIVE_URL
+INSTALLER_FLAGS += -a $(ARCHIVE_URL)
+endif
+
 installer:
-	$(PERL) $(srcdir)/deliver.pl -o $(DEPTH) -s $(topsrcdir)
+	$(PERL) $(srcdir)/makeall.pl -o $(DEPTH) $(INSTALLER_FLAGS)
 
 include $(topsrcdir)/config/rules.mk
-

@@ -35,6 +35,7 @@ MODULE_NAME	= nsPluginModule
 GRE_MODULE	= 1
 
 PACKAGE_FILE = plugin.pkg
+PACKAGE_VARS += MOZ_ENABLE_GTK
 
 REQUIRES	= xpcom \
 		  xpconnect \

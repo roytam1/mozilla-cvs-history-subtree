@@ -2,8 +2,3 @@
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
-
-#if OS_ARCH==WINNT
-!xpt dist/bin/components/msgcompo.xpt
-#else
-!xpt dist/bin/components/msgcompose.xpt

@@ -21,101 +21,216 @@
 # Contributor(s): 
 # Sean Su <ssu@netscape.com>
 # Samir Gehani <sgehani@netscape.com>
+# Benjamin Smedberg <bsmedberg@covad.net>
 # 
 
 #
 # This perl script builds the xpi, config.ini, and js files.
 #
 
-# Make sure there are at least four arguments
-if($#ARGV < 3)
+use Cwd;
+use File::Copy;
+use File::Path;
+use File::Basename;
+use Getopt::Long;
+
+Getopt::Long::Configure ("bundling");
+
+$DEPTH = "../../..";
+$topsrcdir = GetTopSrcDir();
+
+# ensure that Packager.pm is in @INC, since we might not be called from
+# mozilla/xpinstall/packager
+push(@INC, "$topsrcdir/build/package");
+require MozPackager;
+
+GetOptions('help|h|?'              => \&PrintUsage,
+           'objdir|o=s'            => \$topobjdir,
+           'stagepath|s=s'         => \$inStagePath,
+           'archive-uri|aurl|a=s'  => \$inXpiURL,
+           'verbose|v+'            => \$MozPackager::verbosity);
+
+$topobjdir                = "$topsrcdir"                 if !defined($topobjdir);
+$inStagePath              = "$topobjdir/stage"           if !defined($inStagePath);
+$inXpiURL                 = "ftp://not.supplied.invalid" if !defined($inXpiURL);
+
+$topobjdir   = File::Spec->rel2abs($topobjdir);
+$inStagePath = File::Spec->rel2abs($inStagePath);
+
+chdir $topobjdir;
+
+$gStripCmd = 'strip ';
+$gStripCmd .= '-f ' if ($^O eq 'irix');
+$gStripCmd .= '-g ' if ($^O eq 'beos');
+
+$gDefaultProductVersion   = MozPackager::GetProductY2KVersion($topobjdir, $topsrcdir, $topsrcdir);
+
+# $gDefaultProductVersion has the form maj.min.release.bld where maj, min, release
+#   and bld are numerics representing version information.
+# Other variables need to use parts of the version info also so we'll
+#   split out the dot separated values into the array @versionParts
+#   such that:
+#
+#   $versionParts[0] = maj
+#   $versionParts[1] = min
+#   $versionParts[2] = release
+#   $versionParts[3] = bld
+@versionParts = split /\./, $gDefaultProductVersion;
+
+# We allow non-numeric characters to be included as the last 
+#   characters in fields of $gDefaultProductVersion for display purposes (mostly to
+#   show that we have moved past a certain version by adding a '+'
+#   character).  Non-numerics must be stripped out of $gDefaultProductVersion,
+#   however, since this variable is used to identify the the product 
+#   for comparison with other installations, so the values in each field 
+#   must be numeric only:
+$gDefaultProductVersion =~ s/[^0-9.][^.]*//g;
+
+# set environment vars for use by the preprocessor
+if($versionParts[2] eq "0")
 {
-  die "usage: $0 <default version> <URL path> <staging path> <dist install path>
-
-       default version   : julian based date version
-                           ie: 5.0.0.99257
-
-       URL path          : URL path to where the .xpi files will be staged at.
-                           Either ftp:// or http:// can be used.  Nothing will be
-                           copied to there by this script.  It is used for config.ini.
-
-       staging path      : full path to where the components are staged at
-
-       dist install path : full path to target dist area
-
-       \n";
+  $versionMain = "$versionParts[0].$versionParts[1]";
+}
+else
+{
+  $versionMain = "$versionParts[0].$versionParts[1].$versionParts[2]";
 }
 
-$inDefaultVersion = $ARGV[0];
-$inURLPath        = $ARGV[1];
-$inStagePath      = $ARGV[2];
-$inDistPath       = $ARGV[3];
+$versionLanguage               = "en";
 
-# Check for existance of staging path
-if(!(-e "$inStagePath"))
-{
-  die "invalid path: $inStagePath\n";
+MozPackager::_verbosePrint(1, "
+Display version  : $versionMain
+Xpinstall version: $gDefaultProductVersion");
+
+$gDirPackager         = "$topsrcdir/xpinstall/packager";
+$gDirDistProduct      = "$topobjdir/dist/install-seamonkey";
+$gDirStageProduct     = "$inStagePath/seamonkey";
+
+MozPackager::makeDirEmpty($gDirStageProduct);
+MozPackager::makeDirEmpty($gDirDistProduct);
+
+mkdir "$gDirDistProduct/xpi", 0775;
+mkdir "$gDirDistProduct/setup", 0775;
+mkdir "$gDirDistProduct/cd", 0775;
+
+$ENV{XPI_VERSION}              = $gDefaultProductVersion;
+$ENV{XPI_COMPANYNAME}          = "mozilla.org";
+$ENV{XPI_PRODUCTNAME}          = "Mozilla";
+# product name without the version string
+$ENV{XPI_PRODUCTNAMEINTERNAL}  = "Mozilla";
+$ENV{XPI_MAINEXEFILE}          = "Mozilla.exe";
+$ENV{XPI_XPINSTALLVERSION}     = "$gDefaultProductVersion";
+
+# The following variables are for displaying version info in the 
+# the installer.
+$ENV{XPI_USERAGENT}            = "$versionMain ($versionLanguage)";
+$ENV{XPI_USERAGENTSHORT}       = "$versionMain";
+
+# Stage our XPI packages.
+# Since we're not using a GRE yet, include the GRE files
+# in browser stage/XPI
+%gPackages = ('xpfe-browser-xpi gecko ^xpi-bootstrap' => 'browser',
+              'xpfe-lang-enUS-xpi'     => 'langenus',
+              'xpfe-locale-US-xpi'     => 'regus',
+              'xpfe-default-US-xpi'    => 'deflenus',
+              'xpfe-mailnews-xpi'      => 'mail',
+              'psm-xpi'                => 'psm',
+              'venkman-xpi'            => 'venkman',
+              'inspector-xpi'          => 'inspector',
+              'chatzilla-xpi'          => 'chatzilla',
+              'spellcheck-enUS-xpi'    => 'spellcheck',
+              'talkback-xpi'           => 'talkback',
+              'xpi-bootstrap'          => 'xpcom');
+
+$dummyFile = "$gDirStageProduct/dummy.touch";
+unlink $dummyFile if (-e $dummyFile);
+system('touch', $dummyFile);
+MozPackages::parsePackageList("$topsrcdir/build/package/packages.list");
+
+foreach $package (keys %gPackages) {
+  MozPackager::_verbosePrint(1, "Making $gPackages{$package}.xpi");
+  my $packageStageDir = "$gDirStageProduct/$gPackages{$package}";
+  my $packageDistPath = "$gDirDistProduct/xpi/$gPackages{$package}.xpi";
+
+  my $parser = new MozParser;
+  MozParser::XPTMerge::add($parser);
+  MozParser::Touch::add($parser, $dummyFile);
+  MozParser::Preprocess::add($parser);
+  MozParser::Optional::add($parser);
+  MozParser::Exec::add($parser);
+  $parser->addMapping('dist/bin', 'bin');
+  $parser->addMapping('xpiroot/', '');
+  my @packages = map(MozPackages::getPackagesFor($_), split(' ', $package));
+  $parser->parse("$topobjdir/dist/packages", @packages);
+
+  MozStage::stage($parser, $packageStageDir, $gStripCmd, 'so', '');
+  MozParser::XPTMerge::mergeTo($parser, "$packageStageDir/bin/components/$package.xpt");
+  MozPackager::calcDiskSpace($packageStageDir);
+  MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", $packageStageDir);
+  MozParser::Exec::exec($parser, $packageStageDir); 
+  MozStage::makeZIP($packageStageDir, $packageDistPath);
+
+  # We can't remove the stage, because makecfgini needs it to
+  # compute space.
 }
-
-# Make sure inDistPath exists
-if(!(-e "$inDistPath"))
-{
-  system("mkdir $inDistPath");
-}
-
-# Make all xpi files
-MakeXpiFile("xpcom");
-MakeXpiFile("browser");
-MakeXpiFile("psm");
-MakeXpiFile("mail");
-MakeXpiFile("chatzilla");
-MakeXpiFile("talkback");
-MakeXpiFile("deflenus");
-MakeXpiFile("langenus");
-MakeXpiFile("regus");
-MakeXpiFile("venkman");
-MakeXpiFile("inspector");
-MakeXpiFile("spellcheck");
 
 # Make the config.ini file
-MakeConfigFile();
+MozPackager::system("perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/unix/config.it > $gDirDistProduct/config.ini");
 
-print " done!\n";
+$stubStageDir = "$gDirDistProduct/setup";
+$stubDistPath = "$gDirDistProduct/mozilla-stub-installer.tar.gz";
+
+{
+  my $parser = new MozParser;
+  $parser->addMapping('installer/', '');
+  $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor("seamonkey-installer-stub-en"));
+  MozStage::stage($parser, $stubStageDir, $gStripCmd, 'so', '');
+  MozStage::makeTGZ($stubStageDir, $stubDistPath);
+}
+
+$fullStageDir = "$gDirDistProduct/cd";
+$fullDistPath = "$gDirDistProduct/mozilla-installer.tar.gz";
+
+{
+  my $parser = new MozParser;
+  $parser->addMapping('installer/', '');
+  $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor("seamonkey-installer-en"));
+  MozStage::stage($parser, $fullStageDir, $gStripCmd, 'so', '');
+  MozStage::makeTGZ($fullStageDir, $fullDistPath);
+}
 
 # end of script
 exit(0);
 
-sub MakeConfigFile
+sub PrintUsage
 {
-  # Make config.ini file
-  if(system("perl makecfgini.pl config.it $inDefaultVersion $inStagePath $inDistPath $inURLPath") != 0)
-  {
-    exit(1);
-  }
+  die "usage: $0 [options]
+
+       options include:
+
+           -objDir <path>            : path to the objdir.  default is topsrcdir
+
+           -stagePath <staging path> : full path to where the mozilla components are staged at
+                                       Default stage path, if this is not set, is:
+                                         [mozilla]/stage
+
+           -distPath <dist path>     : full path to where the mozilla dist dir is at.
+                                       Default stage path, if this is not set, is:
+                                         [mozilla]/dist
+
+           -aurl <archive url>       : either ftp:// or http:// url to where the
+                                       archives (.xpi, .exe, .zip, etc...) reside
+
+       \n";
 }
 
-sub MakeJsFile
+sub GetTopSrcDir
 {
-  my($componentName) = @_;
+  my($rootDir) = dirname($0) . "/$DEPTH";
+  my($savedCwdDir) = cwd();
 
-  # Make .js file
-  if(system("perl makejs.pl $componentName.jst $inDefaultVersion $inStagePath/$componentName") != 0)
-  {
-    exit(1);
-  }
+  chdir($rootDir);
+  $rootDir = cwd();
+  chdir($savedCwdDir);
+  return($rootDir);
 }
-
-sub MakeXpiFile
-{
-  my($componentName) = @_;
-
-  # Make .js file
-  MakeJsFile($componentName);
-
-  # Make .xpi file
-  if(system("perl makexpi.pl $componentName $inStagePath $inDistPath") != 0)
-  {
-    exit(1);
-  }
-}
-

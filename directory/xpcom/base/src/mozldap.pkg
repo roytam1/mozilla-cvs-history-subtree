@@ -13,3 +13,7 @@ dist/bin/@DLLP@prldap50@DLLS@
 dist/bin/components/@SHARED_LIBRARY@
 #endif
 !xpt dist/bin/components/mozldap.xpt
+
+[unpackaged-files]
+!optional dist/bin/dirver@BINS@
+

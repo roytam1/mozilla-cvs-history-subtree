@@ -4,3 +4,8 @@
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
+dist/bin/regchrome@BINS@
+
+[unpackaged-files]
+!optional dist/bin/chrome/chrome.rdf
+!ignore ^dist/bin/chrome/overlayinfo

@@ -505,9 +505,9 @@ sub ParseArgv
 sub MakeConfigFile
 {
   # Make config.ini file
-  if(system("perl makecfgini.pl config.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inRedirIniURL $inXpiURL"))
+  if(system("perl makecfgini.pl config.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inXpiURL"))
   {
-    print "\n Error: perl makecfgini.pl config.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inRedirIniURL $inXpiURL\n";
+    print "\n Error: perl makecfgini.pl config.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inXpiURL\n";
     return(1);
   }
 

@@ -1,3 +1,6 @@
+# the install.js definitions for chatzilla and venkman are cross-platforms and
+# are contained in their own directories.
+
 # xxxbsmedberg At some point later in life, we should really unify these xpinstall
 # files.
 
@@ -22,6 +25,9 @@
 [gre-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/win_gre/gre.jst
 
+[psm-xpi]
+!error PSM is part of the GRE on win32.
+
 [xpfe-browser-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/browser.jst
 
@@ -40,23 +46,13 @@
 # [xpfe-editor-xpi]
 # !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/editor.jst
 
-[chatzilla-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/chatzilla.jst
-
-[venkman-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/venkman.jst
-
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/spellcheck.jst
 
-# xxxbsmedberg: When I figure out how talkback is actually packaged, a configure flag will control
-# whether this is the "dummy XPI" or the real thing.
+# right now this is the "dummy XPI" but leaf thinks we can integrate talkback
+# more successfully later
 [talkback-xpi]
 @topsrcdir@/xpinstall/packager/windows/talkback.jst xpiroot/install.js
-
-[seamonkey-stub-en-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/mozilla-win32-stub-installer.jst
-dist/install/stub/mozilla-win32-stub-installer.exe xpiroot/mozilla-win32-stub-installer.exe
 
 #else
 #if OS_ARCH==OS2
@@ -83,6 +79,9 @@ dist/install/stub/mozilla-win32-stub-installer.exe xpiroot/mozilla-win32-stub-in
 
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/spellcheck.jst
+
+[psm-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/psm.jst
 
 #else
 #if OS_ARCH==Darwin
@@ -118,6 +117,9 @@ dist/install/stub/mozilla-win32-stub-installer.exe xpiroot/mozilla-win32-stub-in
 [gre-xpi]
 !error GRE not implemented on *nix yet!
 
+[xpi-bootstrap]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/xpcom.jst
+
 [xpfe-browser-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/browser.jst
 
@@ -138,6 +140,14 @@ dist/install/stub/mozilla-win32-stub-installer.exe xpiroot/mozilla-win32-stub-in
 
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/spellcheck.jst
+
+# right now this is the "dummy XPI" but leaf thinks we can integrate talkback
+# more successfully later
+[talkback-xpi]
+@topsrcdir@/xpinstall/packager/unix/talkback.jst xpiroot/install.js
+
+[psm-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/psm.jst
 
 #endif
 #endif

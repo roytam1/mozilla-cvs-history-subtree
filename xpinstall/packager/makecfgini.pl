@@ -44,7 +44,7 @@
 #               Either ftp:// or http:// can be used
 #               ie: ftp://ftp.netscape.com/pub/seamonkey/xpi
 #
-#   ie: perl makecfgini.pl 5.0.0.1999120608 k:\windows\32bit\5.0 d:\builds\mozilla\dist\win32_o.obj\install\xpi ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10 ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10/xpi
+#   ie: perl makecfgini.pl 5.0.0.1999120608 k:\windows\32bit\5.0 d:\builds\mozilla\dist\win32_o.obj\install\xpi ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10/xpi
 #
 #
 
@@ -52,8 +52,8 @@ use Cwd;
 use File::Spec;
 use File::Basename;
 
-# Make sure there are at least two arguments
-if(scalar(@ARGV) != 5)
+# Make sure there are four arguments
+if(scalar(@ARGV) != 4)
 {
   die "usage: $0 <version> <staging path> <.xpi path> <redirect file url> <xpi url>
 
@@ -64,8 +64,6 @@ if(scalar(@ARGV) != 5)
 
        .xpi path     : path to where the .xpi files have been built to
                        ie: d:/builds/mozilla/dist/win32_o.obj/install/xpi
-
-       redirect file : url to where the redirect.ini file will be staged at.
 
        xpi url       : url to where the .xpi files will be staged at.
                        Either ftp:// or http:// can be used
@@ -78,7 +76,7 @@ if(scalar(@ARGV) != 5)
 $inVersion        = $ARGV[0];
 $inStagePath      = $ARGV[1];
 $inXpiPath        = $ARGV[2];
-$inUrl            = $ARGV[4];
+$inUrl            = $ARGV[3];
 
 $DEPTH = "../..";
 $topsrcdir = GetTopSrcDir();
@@ -92,7 +90,7 @@ $xpinstallVersion = $ENV{XPI_XPINSTALLVERSION};
 $nameCompany      = $ENV{XPI_COMPANYNAME};
 $nameProduct      = $ENV{XPI_PRODUCTNAME};
 $nameProductInternal = $ENV{XPI_PRODUCTNAMEINTERNAL};
-$fileMainExe      = $ENV{XPI_MAINFILEEXE};
+$fileMainExe      = $ENV{XPI_MAINEXEFILE};
 $fileUninstall    = $ENV{XPI_UNINSTALLFILE};
 $fileUninstallZip = $ENV{XPI_UNINSTALLFILEZIP};
 $greBuildID       = $ENV{XPI_GREBUILDID};
@@ -105,8 +103,8 @@ while(defined($line = <STDIN>))
   # For each line read, search and replace $InstallSize$ with the calculated size
   if($line =~ /\$InstallSize\$/i)
   {
-    $installSize          = 0;
-    $installSizeSystem    = 0;
+    my $installSize          = 0;
+    my $installSizeSystem    = 0;
 
     # split read line by ":" deliminator
     @colonSplit = split(/:/, $line);
@@ -145,11 +143,17 @@ while(defined($line = <STDIN>))
       {
         $installSizeSystem = OutputInstallSizeSystem($line, "$inStagePath/$componentName");
       }
+      else
+      {
+          # if the line didn't match, go back and try the other matches
+          seek STDIN, 0-length($line), 1;
+      }
     }
 
     $installSize -= $installSizeSystem;
     print STDOUT "Install Size=$installSize\n";
-    print STDOUT "Install Size System=$installSizeSystem\n";
+    print STDOUT "Install Size System=$installSizeSystem\n"
+        if ($installSizeSystem);
   }
   elsif($line =~ /\$InstallSizeArchive\$/i)
   {
@@ -161,7 +165,8 @@ while(defined($line = <STDIN>))
     {
       $componentName = $colonSplit[1];
       chop($componentName);
-      $componentName      =~ s/\$UninstallFileZip\$/$fileUninstallZip/gi;
+      $componentName      =~ s/\$UninstallFileZip\$/$fileUninstallZip/gi
+          if ($fileUninstallZip);
       $installSizeArchive = OutputInstallSizeArchive("$inXpiPath/$componentName");
     }
 
@@ -178,12 +183,12 @@ while(defined($line = <STDIN>))
     $line =~ s/\$CompanyName\$/$nameCompany/gi;
     $line =~ s/\$ProductName\$/$nameProduct/gi;
     $line =~ s/\$ProductNameInternal\$/$nameProductInternal/gi;
-    $line =~ s/\$MainExeFile\$/$fileMainExe/gi;
-    $line =~ s/\$UninstallFile\$/$fileUninstall/gi;
-    $line =~ s/\$UninstallFileZip\$/$fileUninstallZip/gi;
-    $line =~ s/\$GreBuildID\$/$greBuildID/gi;
-    $line =~ s/\$GreFileVersion\$/$greFileVersion/gi;
-    $line =~ s/\$GreUniqueID\$/$greUniqueID/gi;
+    $line =~ s/\$MainExeFile\$/$fileMainExe/gi if ($fileMainExe);
+    $line =~ s/\$UninstallFile\$/$fileUninstall/gi if ($fileUninstall);
+    $line =~ s/\$UninstallFileZip\$/$fileUninstallZip/gi if ($fileUninstallZip);
+    $line =~ s/\$GreBuildID\$/$greBuildID/gi if ($greBuildID);
+    $line =~ s/\$GreFileVersion\$/$greFileVersion/gi if ($greFileVersion);
+    $line =~ s/\$GreUniqueID\$/$greUniqueID/gi if ($greUniqueID);
     print STDOUT $line;
   }
 }

@@ -3,3 +3,8 @@
 dist/bin/components/@SHARED_LIBRARY@
 #endif
 !xpt dist/bin/components/txmgr.xpt
+
+#if ENABLE_TESTS
+[gecko-tests]
+dist/bin/TestTXMgr@BINS@
+#endif

@@ -38,6 +38,9 @@ PROGRAM		= mfcembed$(BIN_SUFFIX)
 RESFILE		= MfcEmbed.res
 
 MODULE = mfcEmbed
+
+PACKAGE_FILE = mfcembed.pkg
+
 REQUIRES = \
 	xpcom_obsolete \
 	xpcom \

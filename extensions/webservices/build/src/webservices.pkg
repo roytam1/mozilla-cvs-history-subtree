@@ -2,4 +2,11 @@
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
+dist/bin/components/nsInterfaceInfoToIDL.js
 !xpt dist/bin/components/websrvcs.xpt
+
+[gecko-tests]
+#if ENABLE_TESTS
+dist/bin/components/@DLLP@wsproxytest@DLLS@
+!xpt dist/bin/components/wsproxytest.xpt
+#endif

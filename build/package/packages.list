@@ -64,12 +64,15 @@ gecko                  : nspr xpcom
 # extras that *ought* to be in the gecko package, but can't be yet for
 # technical reasons). Don't even think about adding more to it.
 gecko-support          :
-# gecko-devel in the future (the SDK)
+
+# This will package the SDK, but it's not done yet
+gecko-devel            :
 
 # the build process builds many test programs and files, most of which
 # don't need to be packaged. But some people might want these files, so
 # we give them a package.
-gecko-tests            :
+xpcom-tests            :
+gecko-tests            : xpcom-tests
 
 nss                    :
 # nss-devel in the future
@@ -100,6 +103,9 @@ xpfe-editor            :
 
 # the XPIs of the above packages contain install.js
 gre-xpi                : gre ^xpi-bootstrap
+# the PSM XPI is for non-GRE platforms. On GRE platforms NSS/PSM are
+# integrated with the GRE.
+psm-xpi                : nss psm
 xpfe-browser-xpi       : xpfe-browser
 xpfe-lang-enUS-xpi     : xpfe-lang-enUS
 xpfe-locale-US-xpi     : xpfe-locale-US
@@ -151,8 +157,17 @@ spellcheck-enUS        :
 
 spellcheck-enUS-xpi    : spellcheck spellcheck-enUS
 
-# seamonkey separate from the GRE
-seamonkey-stub-en-xpi  :
+# COMPLETE INSTALLATION TARGETS
+
+# seamonkey installer packages. Right now these are only useful
+# for the unix installer. win32 & os2 use a specialty tool nsztool
+# and a special makeall.pl script
+seamonkey-installer-stub-en     :
+seamonkey-installer-en          :
+
+# seamonkey "stub installer xpi"
+seamonkey-installer-stub-en-xpi :
+
 seamonkeygre-enUS      : xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla talkback
 # seamonkey with the GRE (nightly tarball)
 seamonkeyall-enUS      : seamonkeygre-enUS gre

@@ -5,6 +5,9 @@ dist/bin/defaults/profile/localstore.rdf
 dist/bin/defaults/profile/search.rdf
 dist/bin/defaults/profile/mimeTypes.rdf
 
+dist/bin/defaults/profile/chrome/userChrome-example.css
+dist/bin/defaults/profile/chrome/userContent-example.css
+
 [xpfe-locale-US]
 dist/bin/defaults/profile/US/bookmarks.html
 dist/bin/defaults/profile/US/panels.rdf

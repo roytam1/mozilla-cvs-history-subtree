@@ -13,3 +13,4 @@ dist/bin/components/@SHARED_LIBRARY@
 !xpt dist/bin/components/uriloader.xpt
 !xpt dist/bin/components/exthandler.xpt
 !xpt dist/bin/components/shistory.xpt
+!xpt dist/bin/components/prefetch.xpt

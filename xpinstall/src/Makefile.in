@@ -45,7 +45,7 @@ REQUIRES	= xpcom \
 		  string \
 		  jar \
 		  caps \
-		  chrome \
+		  content \
 		  necko \
 		  intl \
 		  locale \

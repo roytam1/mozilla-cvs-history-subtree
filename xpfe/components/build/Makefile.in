@@ -35,7 +35,6 @@ MODULE_NAME	= application
 PACKAGE_FILE = appcomps.pkg
 PACKAGE_VARS += MOZ_PHOENIX
 
-
 REQUIRES	= xpcom \
 		  xpcom_obsolete \
 		  string \

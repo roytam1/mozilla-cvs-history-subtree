@@ -27,6 +27,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+MODULE = psm
+
 PACKAGE_FILE = psm.pkg
 PACKAGE_VARS += \
 	NSS3_LIB \
@@ -35,6 +37,7 @@ PACKAGE_VARS += \
 	SOFTOKEN3_LIB \
 	SOFTOKEN3_CHK \
 	LOADABLE_ROOT_MODULE \
+	HAVE_FREEBL_MODULES \
 	$(NULL)
 
 LOADABLE_ROOT_MODULE = $(DLL_PREFIX)nssckbi$(DLL_SUFFIX)

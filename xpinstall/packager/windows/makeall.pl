@@ -33,13 +33,6 @@ use File::Path;
 use File::Basename;
 use Getopt::Long;
 
-GetOptions('help|h|?'              => \&PrintUsage,
-           'objdir|o=s'            => \$topobjdir,
-           'stagepath|s=s'         => \$inStagePath,
-           'distpath|d=s'          => \$inDistPath,
-           'archive-uri|aurl|a=s'  => \$inXpiURL,
-           'redirect-uri|rurl|r=s' => \$inRedirIniURL);
-
 $DEPTH = "../../..";
 $topsrcdir = GetTopSrcDir();
 
@@ -48,8 +41,17 @@ $topsrcdir = GetTopSrcDir();
 push(@INC, "$topsrcdir/build/package");
 require MozPackager;
 
-if(defined($ENV{DEBUG_INSTALLER_BUILD})) {
-  $MozPackager::verbosity++;
+GetOptions('help|h|?'              => \&PrintUsage,
+           'objdir|o=s'            => \$topobjdir,
+           'stagepath|s=s'         => \$inStagePath,
+           'archive-uri|aurl|a=s'  => \$inXpiURL,
+           'verbose|v+'            => \$MozPackager::verbosity);
+
+$verboseFlags = '';
+if ($MozPackager::verbosity) {
+    for(my $i = 0; $i < $MozPackager::verbosity; ++$i) {
+        $verboseFlags .= ' -v ';
+    }
 }
 
 $seiFileNameGeneric       = "nsinstall.exe";
@@ -63,29 +65,23 @@ $seizGreFileNameSpecific  = "gre-win32-installer.zip";
 
 $topobjdir                = "$topsrcdir"                 if !defined($topobjdir);
 $inStagePath              = "$topobjdir/stage"           if !defined($inStagePath);
-$inDistPath               = "$topobjdir/dist"            if !defined($inDistPath);
 $inXpiURL                 = "ftp://not.supplied.invalid" if !defined($inXpiURL);
-$inRedirIniURL            = $inXpiURL                    if !defined($inRedirIniURL);
 
 # because we change directory to stage the XPI packages, make all paths absolute
 $topobjdir   = File::Spec->rel2abs($topobjdir);
 $inStagePath = File::Spec->rel2abs($inStagePath);
-$inDistPath  = File::Spec->rel2abs($inDistPath);
   
-if(defined($ENV{DEBUG_INSTALLER_BUILD}))
-{
-  print " windows/makeall.pl\n";
-  print "   topobjdir  : $topobjdir\n";
-  print "   topsrcdir  : $topsrcdir\n";
-  print "   inStagePath: $inStagePath\n";
-  print "   inDistPath : $inDistPath\n";
-}
+chdir $topobjdir;
+
+MozPackager::_verbosePrint(2,
+"windows/makeall.pl
+topobjdir  : $topobjdir
+topsrcdir  : $topsrcdir
+inStagePath: $inStagePath");
 
 $gDefaultProductVersion   = MozPackager::GetProductY2KVersion($topobjdir, $topsrcdir, $topsrcdir);
 
-print "\n";
-print " Building Mozilla\n";
-print "  Raw version id   : $gDefaultProductVersion\n";
+MozPackager::_verbosePrint(1, "Raw version id: $gDefaultProductVersion");
 
 # $gDefaultProductVersion has the form maj.min.release.bld where maj, min, release
 #   and bld are numerics representing version information.
@@ -120,34 +116,23 @@ else
 
 $versionLanguage               = "en";
 
-print "  Display version  : $versionMain\n";
-print "  Xpinstall version: $gDefaultProductVersion\n";
-print "\n";
+MozPackager::_verbosePrint(2, "
+Display version  : $versionMain
+Xpinstall version: $gDefaultProductVersion");
 
 $gDirPackager         = "$topsrcdir/xpinstall/packager";
-$gDirStageProduct     = "$inStagePath/mozilla";
-$gDirDistInstall      = "$inDistPath/install";
-$gDirDistInstGre      = "$inDistPath/inst_gre";
+$gDirInstall          = "$topobjdir/dist/install";
+$gDirDistProduct      = "$topobjdir/dist/install-seamonkey";
+$gDirDistGre          = "$topobjdir/dist/install-gre";
+$gDirStageProduct     = "$inStagePath/seamonkey";
 
-if (-d $gDirStageProduct) {
-  rmtree($gDirStageProduct) || die("Error removing stage directory $gDirStageProduct.");
-}
-mkdir $gDirStageProduct, 0775;
-
-if (-d "$gDirDistInstall/xpi") {
-  rmtree("$gDirDistInstall/xpi") || die("Error removing XPI directory $gDirDistInstall/xpi");
-}
-mkdir "$gDirDistInstall/xpi", 0775;
+MozPackager::makeDirEmpty($gDirStageProduct);
+MozPackager::makeDirEmpty($gDirDistProduct);
 
 # Build GRE installer package first before building Mozilla!  GRE installer is required by the mozilla installer.
-MozPackager::system("perl -w \"$gDirPackager/win_gre/makeall.pl\" -objDir \"$topobjdir\" -stagePath \"$inStagePath\" -distPath \"$inDistPath\" -aurl $inXpiURL -rurl $inRedirIniURL");
+MozPackager::system("perl -w \"$gDirPackager/win_gre/makeall.pl\" -objDir \"$topobjdir\" -aurl $inXpiURL $verboseFlags");
 
-if(defined($ENV{DEBUG_INSTALLER_BUILD}))
-{
-  print " back in windows/makeall.pl\n";
-  print "   inStagePath: $inStagePath\n";
-  print "   inDistPath : $inDistPath\n";
-}
+MozPackager::_verbosePrint(2, "Done in win_gre/makeall.pl");
 
 $ENV{XPI_VERSION}              = $gDefaultProductVersion;
 $ENV{XPI_COMPANYNAME}          = "mozilla.org";
@@ -157,17 +142,16 @@ $ENV{XPI_PRODUCTNAMEINTERNAL}  = "Mozilla";
 $ENV{XPI_MAINEXEFILE}          = "Mozilla.exe";
 $ENV{XPI_UNINSTALLFILE}        = $seuFileNameSpecific;
 $ENV{XPI_UNINSTALLFILEZIP}     = $seuzFileNameSpecific;
-$ENV{XPI_XPINSTALLVERSION}     = "$gDefaultProductVersion";
+$ENV{XPI_XPINSTALLVERSION}     = $gDefaultProductVersion;
 
 # The following variables are for displaying version info in the 
 # the installer.
 $ENV{XPI_USERAGENT}            = "$versionMain ($versionLanguage)";
 $ENV{XPI_USERAGENTSHORT}       = "$versionMain";
-$ENV{XPI_DISTINSTALLPATH}      = "$gDirDistInstall";
 
 # GetProductBuildID() will return the build id for GRE located here:
 #      NS_BUILD_ID in nsBuildID.h: 2003030610
-$ENV{XPI_GREBUILDID}           = MozPackager::GetProductBuildID("$inDistPath/include/nsBuildID.h", "NS_BUILD_ID");
+$ENV{XPI_GREBUILDID}           = MozPackager::GetProductBuildID("$topobjdir/dist/include/nsBuildID.h", "NS_BUILD_ID");
 
 # GetGreFileVersion() will return the actual version of xpcom.dll used by GRE.
 #  ie:
@@ -184,13 +168,11 @@ $ENV{XPI_GREFILEVERSION}       = MozPackager::GetGreFileVersion($topobjdir, $top
 #      gre special ID would be: 1.4a_2003030610
 $ENV{XPI_GREUNIQUEID}          = MozPackager::GetProductBuildID("$topobjdir/dist/include/nsBuildID.h", "GRE_BUILD_ID");
 
-print "\n";
-print " GRE build id       : $ENV{XPI_GREBUILDID}\n";
-print " GRE file version   : $ENV{XPI_GREFILEVERSION}\n";
-print " GRE special version: $ENV{XPI_GREUNIQUEID}\n";
-print "\n";
-print " Building $ENV{XPI_PRODUCTNAME} $ENV{XPI_USERAGENT}...\n";
-print "\n";
+MozPackager::_verbosePrint(2, "
+GRE build id       : $ENV{XPI_GREBUILDID}
+GRE file version   : $ENV{XPI_GREFILEVERSION}
+GRE special version: $ENV{XPI_GREUNIQUEID}
+Building $ENV{XPI_PRODUCTNAME} $ENV{XPI_USERAGENT}");
 
 # Stage our XPI packages.
 %gPackages = ('xpfe-browser-xpi'       => 'browser',
@@ -205,226 +187,104 @@ print "\n";
               'talkback-xpi'           => 'talkback',
               'xpi-bootstrap'          => 'xpcom');
 
-$savedCwd = cwd();
-chdir $topobjdir;
-
 $dummyFile = "$gDirStageProduct/dummy.touch";
 unlink $dummyFile if (-e $dummyFile);
 system('touch', $dummyFile);
 MozPackages::parsePackageList("$topsrcdir/build/package/packages.list");
 
 foreach $package (keys %gPackages) {
-  print "Making $gPackages{$package}.xpi\n";
+  MozPackager::_verbosePrint(2, "Making $gPackages{$package}.xpi");
   my $packageStageDir = "$gDirStageProduct/$gPackages{$package}";
-  if (-d $packageStageDir) {
-    rmtree($packageStageDir) ||
-        die("Error removing stage directory $packageStageDir.");
-  }
-  my $packageDistPath = "$gDirDistInstall/xpi/$gPackages{$package}.xpi";
+  my $packageDistPath = "$gDirDistProduct/xpi/$gPackages{$package}.xpi";
 
   my $parser = new MozParser;
   MozParser::XPTMerge::add($parser);
   MozParser::Touch::add($parser, $dummyFile);
   MozParser::Preprocess::add($parser);
   MozParser::Optional::add($parser);
+  MozParser::Exec::add($parser);
   $parser->addMapping('dist/bin', 'bin');
   $parser->addMapping('xpiroot/', '');
-  my $files = $parser->parse("$inDistPath/packages", MozPackages::getPackagesFor($package));
-  MozStage::stage($files, $packageStageDir);
+  $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor($package));
+  MozStage::stage($parser, $packageStageDir);
   MozParser::XPTMerge::mergeTo($parser, "$packageStageDir/bin/components/$package.xpt");
   MozPackager::calcDiskSpace($packageStageDir);
   MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", $packageStageDir);
-  MozStage::makeXPI($packageStageDir, $packageDistPath);
+  MozParser::Exec::exec($parser, $packageStageDir);
+  MozStage::makeZIP($packageStageDir, $packageDistPath);
 
   # We can't remove the stage, because makecfgini needs it to
   # compute space.
 }
 
-chdir $savedCwd;
-
 # Copy the GRE installer to the Ns' stage area
-if(!(-e "$gDirDistInstGre/$seiGreFileNameSpecific"))
-{
-  die "\"$gDirDistInstGre/$seiGreFileNameSpecific\": file missing\n";
-}
-mkdir "$gDirStageProduct/gre";
-copy("$gDirDistInstGre/$seiGreFileNameSpecific", "$gDirStageProduct/gre") ||
-  die "copy(\"$gDirDistInstGre/$seiGreFileNameSpecific\", \"$gDirStageProduct/gre\"): $!\n";
+mkdir("$gDirStageProduct/gre", 0775);
+MozPackager::doCopy("$gDirDistGre/$seiGreFileNameSpecific", "$gDirStageProduct/gre");
 
-# Check for existence of staging path
-if(!(-d "$gDirStageProduct"))
-{
-  die "\n Invalid path: $gDirStageProduct\n";
-}
+mkdir("$gDirDistProduct/uninstall");
+mkdir("$gDirDistProduct/setup");
+mkdir("$gDirDistProduct/cd");
 
-# Make sure gDirDistInstall exists
-if(!(-d "$gDirDistInstall"))
-{
-  mkdir ("$gDirDistInstall",0775);
-}
+MakeExeZip($gDirDistGre, $seiGreFileNameSpecific, "$gDirDistProduct/xpi/$seizGreFileNameSpecific");
 
-if(-d "$gDirDistInstall/uninstall")
-{
-  unlink <$gDirDistInstall/uninstall/*>;
-}
-else
-{
-  mkdir ("$gDirDistInstall/uninstall",0775);
-}
+MozPackager::system("perl -w $gDirPackager/makeuninstallini.pl $gDefaultProductVersion < $gDirPackager/windows/uninstall.it > $gDirDistProduct/uninstall/uninstall.ini");
 
-if(-d "$gDirDistInstall/setup")
-{
-  unlink <$gDirDistInstall/setup/*>;
-}
-else
-{
-  mkdir ("$gDirDistInstall/setup",0775);
-}
+MozPackager::doCopy("$gDirPackager/windows/defaults_info.ini", "$gDirDistProduct/uninstall");
+MozPackager::doCopy("$gDirInstall/uninstall.exe", "$gDirDistProduct/uninstall");
 
-if(!(-e "$inDistPath/inst_gre/$seiGreFileNameSpecific"))
-{
-  die "\"$inDistPath/inst_gre/$seiGreFileNameSpecific\": file missing\n";
-}
-MakeExeZip("$inDistPath/inst_gre", $seiGreFileNameSpecific, $seizGreFileNameSpecific);
+# build the self-extracting .exe (uninstaller) file.
+MozPackager::_verbosePrint(1, "Building self-extracting uninstaller ($seuFileNameSpecific)");
+MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirStageProduct/$seuFileNameSpecific");
+MozPackager::system("$gDirInstall/nsztool.exe $gDirStageProduct/$seuFileNameSpecific $gDirDistProduct/uninstall/*.*");
 
-if(MakeUninstall())
-{
-  exit(1);
-}
-if(MakeConfigFile())
-{
-  exit(1);
-}
+MakeExeZip($gDirStageProduct, $seuFileNameSpecific, "$gDirDistProduct/xpi/$seuzFileNameSpecific");
 
-# Copy the setup files to the dist setup directory.
-copy("install.ini", "$gDirDistInstall") || 
-  die "copy install.ini $gDirDistInstall: $!\n";
-copy("install.ini", "$gDirDistInstall/setup") ||
-  die "copy install.ini $gDirDistInstall/setup: $!\n";
-copy("config.ini", "$gDirDistInstall") ||
-  die "copy config.ini $gDirDistInstall: $!\n";
-copy("config.ini", "$gDirDistInstall/setup") ||
-  die "copy config.ini $gDirDistInstall/setup: $!\n";
-copy("$gDirDistInstall/setup.exe", "$gDirDistInstall/setup") ||
-  die "copy $gDirDistInstall/setup.exe $gDirDistInstall/setup: $!\n";
-copy("$gDirDistInstall/setuprsc.dll", "$gDirDistInstall/setup") ||
-  die "copy $gDirDistInstall/setuprsc.dll $gDirDistInstall/setup: $!\n";
+unlink "$gDirStageProduct/$seuFileNameSpecific";
 
-# copy license file for the installer
-copy("$topsrcdir/LICENSE", "$gDirDistInstall/license.txt") ||
-  die "copy $topsrcdir/LICENSE $gDirDistInstall/license.txt: $!\n";
-copy("$topsrcdir/LICENSE", "$gDirDistInstall/setup/license.txt") ||
-  die "copy $topsrcdir/LICENSE $gDirDistInstall/setup/license.txt: $!\n";
+# Make config.ini file
+MozPackager::system("perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/windows/config.it > $gDirDistProduct/setup/config.ini");
 
+# Make install.ini file
+MozPackager::system("perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/windows/install.it > $gDirDistProduct/setup/install.ini");
 
-# copy the lean installer to stub\ dir
-print "\n****************************\n";
-print "*                          *\n";
-print "*  creating Stub files...  *\n";
-print "*                          *\n";
-print "****************************\n";
-print "\n $gDirDistInstall/stub/$seiFileNameSpecificStub\n";
+# copy necessary setup files
+MozPackager::doCopy("$gDirInstall/setup.exe", "$gDirDistProduct/setup");
+MozPackager::doCopy("$gDirInstall/setuprsc.dll", "$gDirDistProduct/setup");
+MozPackager::doCopy("$topsrcdir/LICENSE", "$gDirDistProduct/setup/license.txt");
+
+MozPackager::_verbosePrint(1, "Creating stub installer $gDirDistProduct/$seiFileNameSpecificStub");
 
 # build the self-extracting .exe (installer) file.
-copy("$gDirDistInstall/$seiFileNameGeneric", "$gDirDistInstall/$seiFileNameSpecificStub") ||
-  die "copy $gDirDistInstall/$seiFileNameGeneric $gDirDistInstall/$seiFileNameSpecificStub: $!\n";
+MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistProduct/$seiFileNameSpecificStub");
 
-MozPackager::system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/setup/*.*");
-
-if(-d "$gDirDistInstall/stub")
-{
-  unlink <$gDirDistInstall/stub/*>;
-}
-else
-{
-  mkdir ("$gDirDistInstall/stub",0775);
-}
-copy("$gDirDistInstall/$seiFileNameSpecificStub", "$gDirDistInstall/stub") ||
-  die "copy $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/stub: $!\n";
+MozPackager::system("$gDirInstall/nsztool.exe $gDirDistProduct/$seiFileNameSpecificStub $gDirDistProduct/setup/*.*");
 
 # create the xpi for launching the stub installer
-print "\n************************************\n";
-print "*                                  *\n";
-print "*  creating stub installer xpi...  *\n";
-print "*                                  *\n";
-print "************************************\n";
-print "\n $gDirDistInstall/$seiStubRootName.xpi\n\n";
-
-$savedCwd = cwd();
-chdir $topobjdir;
+MozPackager::_verbosePrint(1, "Creating stub installer XPI $gDirDistProduct/$seiStubRootName.xpi");
 
 $parser = new MozParser;
 MozParser::Preprocess::add($parser);
 $parser->addMapping('xpiroot/', '');
-my $files = $parser->parse("$inDistPath/packages", MozPackages::getPackagesFor('seamonkey-stub-en-xpi'));
-MozStage::stage($files, "$gDirStageProduct/$seiStubRootName");
+$parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor('seamonkey-installer-stub-en-xpi'));
+MozStage::stage($parser, "$gDirStageProduct/$seiStubRootName");
 MozPackager::calcDiskSpace("$gDirStageProduct/$seiStubRootName");
 MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", "$gDirStageProduct/$seiStubRootName");
-MozStage::makeXPI("$gDirStageProduct/$seiStubRootName", "$gDirDistInstall/$seiStubRootName.xpi");
-# rmtree($packageStageDir);
+MozStage::makeZIP("$gDirStageProduct/$seiStubRootName", "$gDirDistProduct/$seiStubRootName.xpi");
 
-chdir $savedCwd;
+MozPackager::_verbosePrint(1, "Staging compact disc files to $gDirDistProduct/cd");
 
-# group files for CD
-print "\n************************************\n";
-print "*                                  *\n";
-print "*  creating Compact Disk files...  *\n";
-print "*                                  *\n";
-print "************************************\n";
-print "\n $gDirDistInstall/cd\n";
+mkdir("$gDirDistProduct/cd", 0775);
 
-if(-d "$gDirDistInstall/cd")
-{
-  unlink <$gDirDistInstall/cd/*>;
-}
-else
-{
-  mkdir ("$gDirDistInstall/cd",0775);
+foreach $file (<$gDirDistProduct/setup/*.*>, <$gDirDistProduct/xpi/*.*>) {
+  MozPackager::doCopy($file, "$gDirDistProduct/cd");
 }
 
-copy("$gDirDistInstall/$seiFileNameSpecificStub", "$gDirDistInstall/cd") ||
-  die "copy $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/cd: $!\n";
+MozPackager::_verbosePrint(1, "Creating full installer $gDirDistProduct/$seiFileNameSpecific");
 
-@packageFiles = (map("$gDirDistInstall/xpi/$_.xpi", values(%gPackages)),
-                 "$gDirDistInstall/xpi/gre-win32-installer.zip",
-                 "$gDirDistInstall/xpi/mozillauninstall.zip");
+MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistProduct/$seiFileNameSpecific");
 
-foreach $packageFile (@packageFiles) {
-  copy($packageFile, "$gDirDistInstall/cd") ||
-    die "copy $packageFile $gDirDistInstall/cd: $!\n";
-}
+MozPackager::system("$gDirInstall/nsztool.exe $gDirDistProduct/$seiFileNameSpecific $gDirDistProduct/setup/*.* $gDirDistProduct/xpi/*.*");
 
-# create the big self extracting .exe installer
-print "\n**************************************************************\n";
-print "*                                                            *\n";
-print "*  creating Self Extracting Executable Full Install file...  *\n";
-print "*                                                            *\n";
-print "**************************************************************\n";
-print "\n $gDirDistInstall/$seiFileNameSpecific\n";
-
-if(-d "$gDirDistInstall/sea")
-{
-  unlink <$gDirDistInstall/sea/*>;
-}
-else
-{
-  mkdir ("$gDirDistInstall/sea",0775);
-}
-copy("$gDirDistInstall/$seiFileNameGeneric", "$gDirDistInstall/$seiFileNameSpecific") ||
-  die "copy $gDirDistInstall/$seiFileNameGeneric $gDirDistInstall/$seiFileNameSpecific: $!\n";
-
-$packageFiles = join(' ', @packageFiles);
-
-MozPackager::system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecific $gDirDistInstall/setup/*.* $packageFiles");
-
-copy("$gDirDistInstall/$seiFileNameSpecific", "$gDirDistInstall/sea") ||
-  die "copy $gDirDistInstall/$seiFileNameSpecific $gDirDistInstall/sea: $!\n";
-
-unlink <$gDirDistInstall/$seiFileNameSpecificStub>;
-
-print " done!\n\n";
-
-# end of script
 exit(0);
 
 sub MakeExeZip
@@ -432,13 +292,11 @@ sub MakeExeZip
   my($aSrcDir, $aExeFile, $aZipFile) = @_;
   my($saveCwdir);
 
+  my $qFlag = ($MozPackager::verbosity > 1) ? '' : '-q';
+
   $saveCwdir = cwd();
   chdir($aSrcDir);
-  if(system("zip $gDirDistInstall/xpi/$aZipFile $aExeFile"))
-  {
-    chdir($saveCwdir);
-    die "\n Error: zip $gDirDistInstall/xpi/$aZipFile $aExeFile";
-  }
+  MozPackager::system("zip -9 $qFlag $aZipFile $aExeFile");
   chdir($saveCwdir);
 }
 
@@ -461,65 +319,8 @@ sub PrintUsage
            -aurl <archive url>       : either ftp:// or http:// url to where the
                                        archives (.xpi, .exe, .zip, etc...) reside
 
-           -rurl <redirect.ini url>  : either ftp:// or http:// url to where the
-                                       redirec.ini resides.  If not supplied, it
-                                       will be assumed to be the same as archive
-                                       url.
+           -v                        : verbose. Will increase message output. May be repeated.
        \n";
-}
-
-sub MakeConfigFile
-{
-  chdir("$gDirPackager/windows");
-  # Make config.ini file
-  MozPackager::system("perl -w makecfgini.pl config.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL");
-
-  # Make install.ini file
-  MozPackager::system("perl makecfgini.pl install.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL");
-
-  return(0);
-}
-
-sub MakeUninstall
-{
-  chdir("$gDirPackager/windows");
-  if(MakeUninstallIniFile())
-  {
-    return(1);
-  }
-
-  # Copy the uninstall files to the dist uninstall directory.
-  copy("uninstall.ini", "$gDirDistInstall") ||
-    die "copy uninstall.ini $gDirDistInstall: $!\n";
-  copy("uninstall.ini", "$gDirDistInstall/uninstall") ||
-    die "copy uninstall.ini $gDirDistInstall/uninstall: $!\n";
-  copy("defaults_info.ini", "$gDirDistInstall") ||
-    die "copy defaults_info.ini $gDirDistInstall: $!\n";
-  copy("defaults_info.ini", "$gDirDistInstall/uninstall") ||
-    die "copy defaults_info.ini $gDirDistInstall/uninstall: $!\n";
-  copy("$gDirDistInstall/uninstall.exe", "$gDirDistInstall/uninstall") ||
-    die "copy $gDirDistInstall/uninstall.exe $gDirDistInstall/uninstall: $!\n";
-
-  # build the self-extracting .exe (uninstaller) file.
-  print "\nbuilding self-extracting uninstaller ($seuFileNameSpecific)...\n";
-  copy("$gDirDistInstall/$seiFileNameGeneric", "$gDirDistInstall/$seuFileNameSpecific") ||
-    die "copy $gDirDistInstall/$seiFileNameGeneric $gDirDistInstall/$seuFileNameSpecific: $!\n";
-  if(system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seuFileNameSpecific $gDirDistInstall/uninstall/*.*"))
-  {
-    print "\n Error: $gDirDistInstall/nsztool.exe $gDirDistInstall/$seuFileNameSpecific $gDirDistInstall/uninstall/*.*\n";
-    return(1);
-  }
-
-  MakeExeZip($gDirDistInstall, $seuFileNameSpecific, $seuzFileNameSpecific);
-  unlink <$gDirDistInstall/$seuFileNameSpecific>;
-  return(0);
-}
-
-sub MakeUninstallIniFile
-{
-  # Make config.ini file
-  MozPackager::system("perl -w makeuninstallini.pl uninstall.it $gDefaultProductVersion");
-  return(0);
 }
 
 sub GetTopSrcDir

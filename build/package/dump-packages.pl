@@ -134,30 +134,37 @@ foreach my $package (keys %MozPackages::packages) {
     MozParser::Touch::add($parser, File::Spec->catfile("dist", "dummy.file"));
     MozParser::Preprocess::add($parser);
     MozParser::Optional::add($parser);
+    MozParser::Ignore::add($parser);
+    $parser->addCommand('error', \&MozParser::Ignore::ignoreFunc);
     $parser->addMapping("dist/bin", "dist/bin");
     $parser->addMapping("dist/lib", "dist/lib");
     $parser->addMapping("dist/include", "dist/include");
     $parser->addMapping("dist/idl", "dist/idl");
     $parser->addMapping("xpiroot", "xpiroot");
-    my $files = $parser->parse($packagesDir, $package);
+    $parser->parse($packagesDir, $package);
 
     print "Files:";
+    my $files = $parser->{'files'};
     foreach my $result (keys %$files) {
         print "$files->{$result}\t$result";
     }
     print "";
 
     if ($reportUnpackaged) {
-        %packaged = (%packaged, map({$_ => 1} values %$files));
+        %packaged = (%packaged,
+                     map({$_ => 1} values(%$files)));
+        push @ignores, MozParser::Ignore::getIgnoreList($parser);
     }
 }
+
 
 if ($reportUnpackaged) {
     print "Unpackaged files:";
     $alldist = `find dist/bin -not -type d`;
     @alldist = split /[\n\r]+/, $alldist;
     foreach $distFile (@alldist) {
-        if (!exists(${packaged{$distFile}})) {
+        if (!exists(${packaged{$distFile}})
+            && grep($distFile =~ /$_/, @ignores) == 0) {
             print $distFile;
         }
     }

@@ -13,3 +13,7 @@ dist/bin/defaults/pref/xpinstall.js
 
 [xpfe-browser-xpi gre-xpi]
 dist/bin/xpicleanup@BINS@
+
+[unpackaged-files]
+!optional dist/bin/TestLibxpnet@BINS@
+!optional dist/bin/mozilla-installer-bin

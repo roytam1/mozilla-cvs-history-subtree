@@ -54,12 +54,19 @@ sub joindir {
     return File::Spec->catdir(map(split('/', $_), @_));
 }
 
+# Performs a copy and dies on failure.
+sub doCopy {
+    my ($from, $to) = @_;
+
+    symCopy($from, $to, 1);
+}
+
 # Executes a system call and dies if the call fails.
 sub system {
     if (scalar(@_) > 1) {
         die("MozPackager::system() called with more than one argument!");
     }
-    CORE::system($_[0]) && die("Error executing '$_[0]': code ". $?<<8);
+    CORE::system($_[0]) && die("Error executing '$_[0]': code ". ($?>>8));
 }
 
 # level 0, no progress
@@ -85,11 +92,23 @@ $MozPackager::forceCopy = 0;
 sub ensureDirs {
     my ($to, $permissions) = @_;
 
+    $permissions = 0775 if (!$permissions);
+
     my ($volume, $dirs, $file) = File::Spec->splitpath($to);
     my @dirs = File::Spec->splitdir($dirs);
-
+    
     my $dirPath = File::Spec->catpath($volume, $dirs, '');
-    mkpath($dirPath, 0, 0775);
+    mkpath($dirPath, 0, $permissions);
+}
+
+sub makeDirEmpty {
+    my ($dir, $permissions) = @_;
+
+    $permissions = 0775 if (!$permissions);
+
+    rmtree($dir) if (-d $dir);
+    unlink($dir) if (-f $dir);
+    mkpath($dir, 0, $permissions);
 }
 
 # copies files in a directory to another location
@@ -121,24 +140,27 @@ sub copyFiles {
 sub symCopy {
     my ($from, $to, $forceCopy) = @_;
 
+    $from = File::Spec->canonpath($from);
+    $to   = File::Spec->canonpath($to);
+
     MozPackager::_verbosePrint(1, "Copying $from\t to $to");
 
     ensureDirs($to);
 
-    if ((!$forceCopy) && (!$MozPackager::forceCopy) && $cansymlink) {
-        # $from is relative to the current (objdir) directory, so we need to
-        # make it relative to $to
-        my ($tovol, $topath, $tofile) = File::Spec->splitpath($to);
-        my $todir = File::Spec->catpath($tovol, $topath, '');
-        my $relfrom = File::Spec->abs2rel($from, $todir);
+    if ((!$MozPackager::forceCopy) && (!$forceCopy) && $cansymlink) {
+        # make $from absolute... apparently abs2rel doesn't work correctly when there are ../
+        # elements of the path
+        my $absfrom = File::Spec->rel2abs($from);
 
-        MozPackager::_verbosePrint(1, "Symlinking $relfrom, $to");
+        MozPackager::_verbosePrint(1, "Symlinking $absfrom, $to");
         
-        symlink($relfrom, $to) ||
-            die("symlink $relfrom, $to failed.");
+        symlink($absfrom, $to) ||
+            die("symlink $absfrom, $to failed, code $!");
     } else {
         copy($from, $to) ||
-            die("copy $from, $to failed.");
+            die("copy $from, $to failed, code $!");
+        my $perms = (stat($from))[2] & 07777;
+        chmod $perms, $to || die("Could not chmod $to");;
     }
 }
 
@@ -146,24 +168,24 @@ sub calcDiskSpace {
     my ($stageDir) = @_;
 
     MozPackager::_verbosePrint(1, "Calculating disk space for XPI package.");
-    $ENV{'XPI_SPACEREQUIRED'} = int(_realDiskSpace($stageDir) / 1024) + 1;
+    $ENV{'XPI_SPACEREQUIRED'} = int(realDiskSpace($stageDir) / 1024) + 1;
     
     opendir(my $dirHandle, $stageDir) ||
         die("Could not open directory $stageDir for listing.");
 
     while (my $dir = readdir($dirHandle)) {
-        if (! ($dir =~ /^\./)) {
+        if ( (! ($dir =~ /^\./)) && -d "$stageDir/$dir") {
             MozPackager::_verbosePrint(1, "Calculating disk space for subdir $dir");
             my $realDir = File::Spec->catdir($stageDir, $dir);
             if (-d $realDir) {
-                $ENV{"XPI_SPACEREQUIRED_\U$dir"} = int(_realDiskSpace($realDir) / 1024) + 1;
+                $ENV{"XPI_SPACEREQUIRED_\U$dir"} = int(realDiskSpace($realDir) / 1024) + 1;
             }
         }
     }
     closedir($dirHandle);
 }
 
-sub _realDiskSpace {
+sub realDiskSpace {
     my ($path) = @_;
 
     my $dsProg = File::Spec->catfile('dist', 'install', 'ds32.exe');
@@ -181,13 +203,12 @@ sub _realDiskSpace {
             die("Could not open directory $path for listing.");
 
         while (my $dir = readdir($dirHandle)) {
-            if (! ($dir =~ /^\./)) {
-                my $realDir = File::Spec->catdir($path, $dir);
-                if (-d $realDir) {
-                    $spaceRequired += _realDiskSpace($realDir);
-                } else {
-                    $spaceRequired += (-s File::Spec->catfile($path, $dir));
-                }
+            next if ($dir eq '.' || $dir eq '..');
+            my $realDir = File::Spec->catdir($path, $dir);
+            if (-d $realDir) {
+                $spaceRequired += realDiskSpace($realDir);
+            } else {
+                $spaceRequired += -s File::Spec->catfile($path, $dir);
             }
         }
         closedir($dirHandle);
@@ -512,7 +533,7 @@ sub addCommand {
 # Parse files in $path to retrieve information about @packages
 #
 sub parse {
-    scalar keys %MozPackages::packages ||
+    scalar %MozPackages::packages ||
         die("Call parsePackageList() before parse()");
 
     my $self = shift;
@@ -526,8 +547,6 @@ sub parse {
 
     # File::Find is not in early perls, so we manually walk the directory tree
     (-d $file) ? $self->_parseDir($file) : $self->_parseFile($self);
-
-    return $self->{'files'};
 }
 
 sub findMapping {
@@ -557,9 +576,10 @@ sub _parseDir {
     @entries = grep(!/^\./, readdir($handle));
     closedir $handle;
     foreach my $filename (@entries) {
-        if (-d "$dir/$filename") {
+        if (-d File::Spec->catdir($dir, $filename)) {
             $self->_parseDir(File::Spec->catdir($dir, $filename));
         } else {
+            next if ($filename eq '.headerlist');
             $self->_parseFile(File::Spec->catfile($dir, $filename));
         }
     }
@@ -609,7 +629,7 @@ sub _parseFile {
         next if (! $process);
 
         # !command args...
-        if ($line =~ /^!(\S+)\s+(.*)$/) {
+        if ($line =~ /^!(\S+)\s*(.*)$/) {
             exists($self->{'commands'}->{$1})
                 || die("In file $file, line $.: command processor $1 not defined");
 
@@ -849,19 +869,120 @@ sub _commandFunc {
     }
 }
 
+package MozParser::Exec;
+
+sub add {
+    my ($parser) = @_;
+
+    $parser->addCommand('exec', \&_commandFunc);
+    $parser->{'execCommands'} = [ ];
+}
+
+sub _commandFunc {
+    my ($parser, $args, $file, $filename) = @_;
+
+    my $command = "";
+    my $readchars;
+
+    while(1) {
+        $args =~ s/\%([^\%]+)\%/'%'. $parser->findMapping($1, $filename). '%'/ge;
+        $command .= $args;
+
+        my $bang;
+        $readchars = read($file, $bang, 2);
+        last if ($readchars != 2 || $bang ne '!=');
+    } continue {
+        $args = <$file>;
+    }
+
+    # reset the filepos back two chars
+    seek($file, 0-$readchars, 1) || die("Couldn't seek backwards!")
+        if $readchars;
+
+    push @{$parser->{'execCommands'}}, $command;
+}
+
+sub exec {
+    my ($parser, $stageDir) = @_;
+
+    foreach my $command (@{$parser->{'execCommands'}}) {
+        $command =~ s/\%([^\%]+)\%/MozPackager::joinfile($stageDir, $1)/ge;
+
+        MozPackager::system($command);
+    }
+}
+
+package MozParser::Ignore;
+
+sub add {
+    my ($parser) = @_;
+
+    $parser->addCommand('ignore', \&_commandFunc);
+    $parser->{'ignorePaths'} = [ ];
+}
+
+sub _commandFunc {
+    my ($parser, $args, $file, $filename) = @_;
+
+    push @{$parser->{'ignorePaths'}}, $args;
+}
+
+sub getIgnoreList {
+    my ($parser) = @_;
+
+    return @{$parser->{'ignorePaths'}};
+}
+
+# as a bonus, this function can be used to ignore any !command
+# dump-packages uses this to ignore !error directives
+sub ignoreFunc {
+}
+
 package MozStage;
 
 use Cwd;
 
+# stage files from a parser into a destination directory.
+# If $stripCommand is defined, files with the appropriate extensions
+# are stripped. The empty extension '' gets special treatment so as
+# not to strip shell scripts.
+
 sub stage {
-    my ($fileHash, $destDir) = @_;
+    my ($parser, $destDir, $stripCommand, @extensions) = @_;
+    my $fileHash = $parser->{'files'};
+
+    my %extensions = map( {$_, 1} @extensions);
 
     MozPackager::_verbosePrint(1, "Staging files to $destDir");
 
     for my $dest (keys %$fileHash) {
         my $from = MozPackager::joinfile($fileHash->{$dest});
         my $to   = MozPackager::joinfile($destDir, $dest);
-        MozPackager::symCopy($from, $to);
+
+        my $strip;
+        if ($stripCommand) {
+            if ($to =~ /\.([[:alpha:]]+)$/) {
+                if (exists($extensions{$1})) {
+                    MozPackager::_verbosePrint(3, "Found extension '$1'");
+                    $strip = 1;
+                }
+            } else {
+                if (exists($extensions{''})) {
+                    MozPackager::_verbosePrint(3, "Found empty extension.");
+                    # if we have a file with no extension, figure out whether it's a shell script or a binary
+                    $strip = 1 if (-B $from && -x $from);
+                }
+            }
+        }
+
+        # if we're going to strip it, force a copy instead of a symlink
+        # so that we don't affect the files in the tree
+        MozPackager::symCopy($from, $to, $strip);
+
+        if ($strip) {
+            MozPackager::_verbosePrint(2, "Stripping $to");
+            MozPackager::system("$stripCommand $to");
+        }
     }
 }
 
@@ -877,10 +998,17 @@ sub makeZIP {
     my $savedCwd = cwd();
     $xpiFile = File::Spec->rel2abs($xpiFile);
 
+    my $qFlag = ($MozPackager::verbosity) ? '' : '-q';
+    $qFlag .= '-v ' if ($MozPackager::verbosity > 1);
+
     chdir $stageDir;
-    MozPackager::system("zip -r -D -9 $xpiFile *");
+    MozPackager::system("zip -r -D -9 $qFlag $xpiFile *");
     chdir $savedCwd;
 }
+
+# xxxbsmedberg - we need a way to configure the tar flags for various
+# platforms... the "easy" way is through the environment, but $^O may
+# be better.
 
 sub makeTGZ {
     my ($stageDir, $tgzFile) = @_;
@@ -893,8 +1021,11 @@ sub makeTGZ {
     my $savedCwd = cwd();
     $tgzFile = File::Spec->rel2abs($tgzFile);
 
+    my $qFlag = ($MozPackager::verbosity) ? '' : '-q';
+    my $vFlag = ($MozPackager::verbosity > 1) ? '-v ' : '';
+
     chdir $stageDir;
-    MozPackager::system("tar -cf - * | gzip -vf9 > $tgzFile");
+    MozPackager::system("tar $vFlag -chf - * | gzip -f9 $qFlag $vFlag > $tgzFile");
     chdir $savedCwd;
 }
 
@@ -909,8 +1040,11 @@ sub makeBZ2 {
     my $savedCwd = cwd();
     $bz2File = File::Spec->rel2abs($bz2File);
 
+    my $qFlag = ($MozPackager::verbosity) ? '' : '-q';
+    my $vFlag = ($MozPackager::verbosity > 1) ? '-v ' : '';
+
     chdir $stageDir;
-    MozPackager::system("tar -cf - * | bzip -vf > $bz2File");
+    MozPackager::system("tar $qFlag -chf - * | bzip2 -f $qFlag $vFlag > $bz2File");
     chdir $savedCwd;
 }
 

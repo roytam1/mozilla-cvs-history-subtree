@@ -1,3 +1,9 @@
 [gtkembed]
-dist/bin/TestGtkEmbed
 dist/bin/@DLLP@gtkembedmoz@DLLS@
+dist/bin/TestGtkEmbed
+
+#if ENABLE_TESTS
+dist/bin/TestGtkEmbedNotebook@BINS@
+dist/bin/TestGtkEmbedSocket@BINS@
+dist/bin/TestGtkEmbedChild@BINS@
+#endif
