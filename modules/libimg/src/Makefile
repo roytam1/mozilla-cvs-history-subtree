@@ -26,7 +26,7 @@ LIBRARY_NAME	= img
 ifdef STANDALONE_IMAGE_LIB
 
 CPPSRCS		= ilNetReader.cpp \
-		  xpcompat.cpp 
+		  xpcompat.cpp \
 		  color.cpp \
 		  colormap.cpp \
 		  dither.cpp \
