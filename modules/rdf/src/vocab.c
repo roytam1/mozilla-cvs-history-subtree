@@ -254,6 +254,7 @@ createWebDataVocab ()
 #ifdef MOZILLA_CLIENT
   gWebData->RDF_URL =  newResource("URL", RDF_URL_STR);
   gWebData->RDF_description = newResource("description", RDF_DESCRIPTION_STR);
+  gWebData->RDF_keyword = newResource("keyword", 0 /* XXX */);
   gWebData->RDF_Container = RDF_GetResource (gCoreDB, "Container", true);
   gWebData->RDF_firstVisitDate = newResource("firstVisitDate", RDF_FIRST_VISIT_STR);
   gWebData->RDF_lastVisitDate = newResource("lastVisitDate", RDF_LAST_VISIT_STR);

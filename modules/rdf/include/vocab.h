@@ -169,6 +169,7 @@ typedef RDF_NCVocabStruct* RDF_NCVocab;
 typedef struct _RDF_WDVocabStruct {
   RDF_Resource RDF_URL;
   RDF_Resource RDF_description;
+  RDF_Resource RDF_keyword;
   RDF_Resource RDF_Container;
   RDF_Resource RDF_firstVisitDate;
   RDF_Resource RDF_lastVisitDate;

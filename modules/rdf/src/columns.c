@@ -147,9 +147,10 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 
 				case	2:	arc = gWebData->RDF_URL;		break;
 				case	3:	arc = gWebData->RDF_description;	break;
-				case	4:	arc = gNavCenter->RDF_bookmarkAddDate;	break;
-				case	5:	arc = gWebData->RDF_lastVisitDate;	break;
-				case	6:	arc = gWebData->RDF_lastModifiedDate;	break;
+				case	4:	arc = gWebData->RDF_keyword;		break;
+				case	5:	arc = gNavCenter->RDF_bookmarkAddDate;	break;
+				case	6:	arc = gWebData->RDF_lastVisitDate;	break;
+				case	7:	arc = gWebData->RDF_lastModifiedDate;	break;
 			}
 		} while ((c->count <= 6) && (arc == NULL));
 		break;
@@ -229,6 +230,7 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 			case	1:	arc = gNavCenter->RDF_URLShortcut;	break;
 			case	2:	arc = gWebData->RDF_URL;		break;
 			case	3:	arc = gWebData->RDF_description;	break;
+			case	4:	arc = gWebData->RDF_keyword;		break;
 		}
 		break;
 

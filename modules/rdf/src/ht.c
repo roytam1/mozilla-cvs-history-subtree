@@ -5042,7 +5042,8 @@ HT_IsNodeDataEditable(HT_Resource node, void *token, uint32 tokenType)
 		if (((token == gCoreVocab->RDF_name) && (!htIsOpLocked(node, gNavCenter->RDF_NameLock))) ||
 		    ((token == gNavCenter->RDF_largeIcon) && (!htIsOpLocked(node, gNavCenter->RDF_IconLock))) ||
 		    ((token == gNavCenter->RDF_smallIcon) && (!htIsOpLocked(node, gNavCenter->RDF_IconLock))) ||
-		    (token == gWebData->RDF_description) || (token == gNavCenter->RDF_URLShortcut) ||
+		    (token == gWebData->RDF_description) || (token == gWebData->RDF_keyword) ||
+		    (token == gNavCenter->RDF_URLShortcut) ||
 		    (token == gNavCenter->RDF_HTMLURL) || (token == gNavCenter->RDF_HTMLHeight) ||
 		    (token == gNavCenter->viewFGColor) || (token == gNavCenter->viewBGColor) ||
 		    (token == gNavCenter->viewBGURL) || (token == gNavCenter->showTreeConnections) ||
@@ -6233,6 +6234,9 @@ HT_Find(char *hint)
 				resourceID(gWebData->RDF_description),
 				RDF_GetResourceName(gNCDB, gWebData->RDF_description));
 	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_keyword),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_keyword));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
 				resourceID(gWebData->RDF_size),
 				RDF_GetResourceName(gNCDB, gWebData->RDF_size));
 	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
@@ -6370,6 +6374,7 @@ HT_Properties (HT_Resource node)
 				dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_URLShortcut, HT_COLUMN_STRING);
 			}
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_description, HT_COLUMN_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_keyword, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_bookmarkAddDate, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastVisitDate, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_STRING);
