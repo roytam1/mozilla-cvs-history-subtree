@@ -140,11 +140,11 @@ HTML2text(nsString& inString, nsString& inType, nsString& outType,
   if (inType != NS_LITERAL_STRING("text/html")
       || outType != NS_LITERAL_STRING("text/plain"))
   {
-    const char* in = inType.ToNewCString();
-    const char* out = outType.ToNewCString();
+    char* in = inType.ToNewCString();
+    char* out = outType.ToNewCString();
     printf("Don't know how to convert from %s to %s\n", in, out);
-    //Recycle(in);
-    //Recycle(out);
+    Recycle(in);
+    Recycle(out);
     return NS_ERROR_FAILURE;
   }
 
