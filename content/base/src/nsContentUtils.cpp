@@ -309,21 +309,20 @@ nsContentUtils::ReleaseOnShutdown(nsISupports **aPointer)
 void
 nsContentUtils::Shutdown()
 {
-  if (!sKungFuDeathGripArray)
-    return;
+  if (sKungFuDeathGripArray) {
+    PRInt32 count = sKungFuDeathGripArray->Count();
 
-  PRInt32 count = sKungFuDeathGripArray->Count();
+    while (count--) {
+      nsISupports **ptr =
+        NS_STATIC_CAST(nsISupports **, sKungFuDeathGripArray->ElementAt(count));
 
-  while (count--) {
-    nsISupports **ptr =
-      NS_STATIC_CAST(nsISupports **, sKungFuDeathGripArray->ElementAt(count));
+      NS_RELEASE(*ptr);
+    }
 
-    NS_RELEASE(*ptr);
+    delete sKungFuDeathGripArray;
+
+    sKungFuDeathGripArray = nsnull;
   }
-
-  delete sKungFuDeathGripArray;
-
-  sKungFuDeathGripArray = nsnull;
 
   NS_IF_RELEASE(sDOMScriptObjectFactory);
 }
