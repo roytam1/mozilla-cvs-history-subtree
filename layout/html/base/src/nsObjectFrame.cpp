@@ -2697,8 +2697,6 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
           mPluginWindow.type = nsPluginWindowType_Window;
 
 #if defined(XP_MAC)
-          DoMacFixUp(&mPluginWindow,mWidget);
-
           // start a periodic timer to provide null events to the plugin instance.
           mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
           if (rv == NS_OK)
