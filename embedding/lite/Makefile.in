@@ -31,8 +31,8 @@ include $(DEPTH)/config/autoconf.mk
 
 REQUIRES	= xpcom \
 		  string \
-		  chrome \
 		  necko \
+		  content \
 		  pref \
 		  history \
 		  $(NULL)
