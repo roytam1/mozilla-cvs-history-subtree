@@ -43,6 +43,7 @@ CPPSRCS = \
     nsInstallFolder.cpp         \
     nsInstallPatch.cpp          \
     nsInstallTrigger.cpp        \
+    nsInstallResources.cpp      \
     nsJSInstall.cpp             \
     nsJSInstallTriggerGlobal.cpp\
     nsSoftwareUpdateRun.cpp     \
@@ -50,6 +51,21 @@ CPPSRCS = \
     ScheduledTasks.cpp          \
     $(NULL)
 
+EXTRA_DSO_LDOPTS = \
+		$(MKSHLIB_FORCE_ALL)	\
+		$(SHARED_LIBRARY_LIBS)	\
+		$(MKSHLIB_UNFORCE_ALL)	\
+		-lmozjs			\
+		-ljsdom			\
+		-lxp			\
+		-lraptorbase		\
+		-lxpcom			\
+		-lreg			\
+        -ljar$(VERSION_NUMBER)\
+		$(NSPR_LIBS)		\
+		-L$(DIST)/bin		\
+		-L$(DIST)/lib		\
+        $(NULL)
 
 INCLUDES += -I$(srcdir)/../public
 

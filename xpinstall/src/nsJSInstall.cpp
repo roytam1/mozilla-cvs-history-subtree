@@ -816,7 +816,6 @@ InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
   return JS_TRUE;
 }
 
-
 //
 // Native method StartInstall
 //

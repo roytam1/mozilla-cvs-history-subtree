@@ -20,6 +20,7 @@
 #include "prmem.h"
 #include "nsInstall.h"
 #include "nsInstallPatch.h"
+#include "nsInstallResources.h"
 #include "nsIDOMInstallVersion.h"
 
 #include "VerReg.h"
@@ -53,7 +54,7 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
      
     nsInstallPatch( inInstall, inVRName, inVInfo, inJarLocation, nsString(tempTargetFile), "null", error);
     
-    delete tempTargetFile;
+    delete [] tempTargetFile;
 }
 
 
@@ -252,8 +253,11 @@ void nsInstallPatch::Abort()
 
 char* nsInstallPatch::toString()
 {
-    //return GetString1(DETAILS_PATCH, targetfile);
-    return nsnull;
+    char* buffer = new char[1024];
+    
+    sprintf( buffer, nsInstallResources::GetPatchFileString(), mPatchedFile->GetCString());
+        
+    return buffer;
 }
 
 
@@ -287,7 +291,7 @@ nsInstallPatch::NativeDeleteFile(nsFileSpec* doomedFile)
            if (doomedFile->Exists())
            {
                 // If file still exists, we need to delete it later!
-                DeleteFileLater(doomedFile->GetCString());
+                DeleteFileLater(*doomedFile);
                 return nsInstall::REBOOT_NEEDED;
            }
         }
@@ -301,13 +305,13 @@ nsInstallPatch::NativeDeleteFile(nsFileSpec* doomedFile)
 }
 
 PRInt32
-nsInstallPatch::NativeReplace(const nsFileSpec& oldfile, nsFileSpec& newFile)
+nsInstallPatch::NativeReplace(nsFileSpec& oldfile, nsFileSpec& newFile)
 {
     
     oldfile.Delete(PR_FALSE);
     if (oldfile.Exists())
     {
-        ReplaceFileLater(newFile.GetCString(), oldfile.GetCString() );
+        ReplaceFileLater(newFile, oldfile);
         return nsInstall::REBOOT_NEEDED;
     }
     else
@@ -344,7 +348,6 @@ nsInstallPatch::HashFilePath(const nsFilePath& aPath)
             // FYI: rv = rv*37 + ch
             rv = ((rv << 5) + (rv << 2) + rv) + ch;
         }
-
         PR_Free(filePath);
     }
     return (void*)rv;

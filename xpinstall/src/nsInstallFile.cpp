@@ -29,6 +29,7 @@
 #include "ScheduledTasks.h"
 #include "nsInstall.h"
 #include "nsInstallVersion.h"
+#include "nsInstallResources.h"
 
 /* Public Methods */
 
@@ -162,7 +163,24 @@ void nsInstallFile::Abort()
 
 char* nsInstallFile::toString()
 {
-    return nsnull;
+    char* buffer = new char[1024];
+    
+    if (mFinalFile == nsnull)
+    {
+        sprintf( buffer, nsInstallResources::GetInstallFileString(), nsnull);
+    }
+    else if (mFinalFile->Exists())
+    {
+        // we are replacing this file.
+
+        sprintf( buffer, nsInstallResources::GetReplaceFileString(), mFinalFile->GetCString());
+    }
+    else
+    {
+        sprintf( buffer, nsInstallResources::GetInstallFileString(), mFinalFile->GetCString());
+    }
+
+    return buffer;
 }
 
 
@@ -213,7 +231,7 @@ PRInt32 nsInstallFile::CompleteFileMove()
             }
             else
             {
-                ReplaceFileLater(mExtracedFile->GetCString(), mFinalFile->GetCString() );
+                ReplaceFileLater(*mExtracedFile, *mFinalFile);
                 result = nsInstall::REBOOT_NEEDED;
             }
         }
@@ -225,33 +243,24 @@ PRInt32 nsInstallFile::CompleteFileMove()
 PRInt32
 nsInstallFile::RegisterInVersionRegistry()
 {
-    PRInt32 err;
     int refCount;
-    int rc;
-    char* tempCString;
-
-    char *final_file  = (char*)mFinalFile->GetCString();  // FIX: mac?  What should we be passing to the version registry: native of unix???
-    char *vr_name     = mVersionRegistryName->ToNewCString();
-      
     nsString regPackageName;
     mInstall->GetRegPackageName(regPackageName);
     
   
     // Register file and log for Uninstall
   
-     // we ignore all registry errors because they're not
-    // important enough to abort an otherwise OK install.
     if (!mChildFile) 
     {
         int found;
         if (regPackageName != "") 
         {
-            tempCString = regPackageName.ToNewCString();
-            found = VR_UninstallFileExistsInList( tempCString , vr_name );
+            found = VR_UninstallFileExistsInList( (char*)(const char*)nsAutoCString(regPackageName) , 
+                                                  (char*)(const char*)nsAutoCString(*mVersionRegistryName));
         } 
         else 
         {
-            found = VR_UninstallFileExistsInList( "", vr_name );
+            found = VR_UninstallFileExistsInList( "", (char*)(const char*)nsAutoCString(*mVersionRegistryName) );
         }
         
         if (found != REGERR_OK)
@@ -259,7 +268,7 @@ nsInstallFile::RegisterInVersionRegistry()
         else
             mUpgradeFile = PR_TRUE;
     } 
-    else if (REGERR_OK == VR_InRegistry(vr_name)) 
+    else if (REGERR_OK == VR_InRegistry( (char*)(const char*)nsAutoCString(*mVersionRegistryName))) 
     {
         mUpgradeFile = PR_TRUE;
     } 
@@ -268,89 +277,52 @@ nsInstallFile::RegisterInVersionRegistry()
         mUpgradeFile = PR_FALSE;
     }
 
-    err = VR_GetRefCount( vr_name, &refCount );
-    if ( err != REGERR_OK ) 
+    if ( REGERR_OK != VR_GetRefCount( (char*)(const char*)nsAutoCString(*mVersionRegistryName), &refCount )) 
     {
         refCount = 0;
     }
+
+    VR_Install( (char*)(const char*)nsAutoCString(*mVersionRegistryName), 
+                (char*)mFinalFile->GetCString(),  // FIX: mac?  What should we be passing to the version registry: native of unix???
+                (char*)(const char*) nsAutoCString(regPackageName), 
+                PR_FALSE );
 
     if (!mUpgradeFile) 
     {
         if (refCount != 0) 
         {
-            rc = 1 + refCount;
-            nsString tempString;
-            mVersionInfo->ToString(tempString);
-            tempCString = regPackageName.ToNewCString();
-            VR_Install( vr_name, final_file, tempCString, PR_FALSE );
-            VR_SetRefCount( vr_name, rc );
+            VR_SetRefCount( (char*)(const char*)nsAutoCString(*mVersionRegistryName), refCount + 1 );
         } 
         else 
         {
             if (mFinalFile->Exists())
-            {
-                nsString tempString;
-                mVersionInfo->ToString(tempString);
-                tempCString = regPackageName.ToNewCString();
-                VR_Install( vr_name, final_file, tempCString, PR_FALSE);
-                VR_SetRefCount( vr_name, 2 );
-            }
+                VR_SetRefCount( (char*)(const char*)nsAutoCString(*mVersionRegistryName), 2 );
             else
-            {
-                nsString tempString;
-                mVersionInfo->ToString(tempString);
-                tempCString = regPackageName.ToNewCString();
-                VR_Install( vr_name, final_file, tempCString, PR_FALSE );
-                VR_SetRefCount( vr_name, 1 );
-            }
+                VR_SetRefCount( (char*)(const char*)nsAutoCString(*mVersionRegistryName), 1 );
         }
     } 
-    else if (mUpgradeFile) 
+    else 
     {
         if (refCount == 0) 
-        {
-            nsString tempString;
-            mVersionInfo->ToString(tempString);
-            tempCString = regPackageName.ToNewCString();
-            VR_Install( vr_name, final_file, tempCString, PR_FALSE );
-            VR_SetRefCount( vr_name, 1 );
-        } 
+            VR_SetRefCount( (char*)(const char*)nsAutoCString(*mVersionRegistryName), 1 );
         else 
-        {
-            nsString tempString;
-            mVersionInfo->ToString(tempString);
-            tempCString = regPackageName.ToNewCString();
-            VR_Install( vr_name, final_file, tempCString, PR_FALSE );
-            VR_SetRefCount( vr_name, 0 );
-        }
+            VR_SetRefCount( (char*)(const char*)nsAutoCString(*mVersionRegistryName), 0 );
     }
     
     if ( !mChildFile && !mUpgradeFile ) 
     {
         if (regPackageName != "") 
-        {
-            if (tempCString == nsnull)
-                tempCString = regPackageName.ToNewCString();
-            
-            VR_UninstallAddFileToList( tempCString, vr_name );
+        { 
+            VR_UninstallAddFileToList( (char*)(const char*)nsAutoCString(regPackageName), 
+                                       (char*)(const char*)nsAutoCString(*mVersionRegistryName));
         } 
         else 
         {
-            VR_UninstallAddFileToList( "", vr_name );
+            VR_UninstallAddFileToList( "", (char*)(const char*)nsAutoCString(*mVersionRegistryName) );
         }
     }
 
-    if (vr_name != nsnull)
-        delete vr_name;
-        
-    if (tempCString != nsnull)
-        delete [] tempCString;
-    
-    if ( err != 0 ) 
-        return nsInstall::UNEXPECTED_ERROR;
-    
     return nsInstall::SUCCESS;
-
 }
 
 /* CanUninstall

@@ -83,12 +83,6 @@ nsInstallFolder::nsInstallFolder(const nsString& aFolderID)
 nsInstallFolder::nsInstallFolder(const nsString& aFolderID, const nsString& aRelativePath)
 {
     mUrlPath = nsnull;
-
-    if ( aFolderID == "null") 
-    {
-        return;
-    }
-
     SetDirectoryPath( aFolderID, aRelativePath);
 }
 
@@ -102,11 +96,14 @@ nsInstallFolder::~nsInstallFolder()
 void 
 nsInstallFolder::GetDirectoryPath(nsString& aDirectoryPath)
 {
-	// We want the a NATIVE path.
 	aDirectoryPath.SetLength(0);
-    aDirectoryPath.Append(mUrlPath->GetCString());
+    
+    if (mUrlPath != nsnull)
+    {
+        // We want the a NATIVE path.
+       aDirectoryPath.Append(mUrlPath->GetCString());
+    }
 }
-
 
 void
 nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRelativePath)
@@ -134,7 +131,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 break;
             
             case 102: ///////////////////////////////////////////////////////////  Communicator
-                // FIX
+                *this = nsSpecialSystemDirectory::OS_CurrentProcessDirectory;  // FIX?
                 break;
 
             case 103: ///////////////////////////////////////////////////////////  User Pick

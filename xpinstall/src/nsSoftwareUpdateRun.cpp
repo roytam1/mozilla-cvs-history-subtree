@@ -146,8 +146,9 @@ GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *
     {
         delete [] buffer;
     }
-    
+
     ZIP_CloseArchive(&hZip);
+    fileStream.close();
     installJSFileSpec.Delete(PR_FALSE);
         
     return rv;   

@@ -31,7 +31,7 @@
 
 #include "VerReg.h"
 #include "nsInstallExecute.h"
-
+#include "nsInstallResources.h"
 #include "ScheduledTasks.h"
 
 #include "nsInstall.h"
@@ -87,7 +87,7 @@ PRInt32 nsInstallExecute::Complete()
 
     PRInt32 result = app.Execute( mArgs );
     
-    DeleteFileLater(app.GetCString());
+    DeleteFileLater(app);
     
     return result;
 }
@@ -102,13 +102,18 @@ void nsInstallExecute::Abort()
     
     if ( mExecutableFile->Exists() )
     {
-        DeleteFileLater(mExecutableFile->GetCString());
+        DeleteFileLater(*mExecutableFile);
     }
 }
 
 char* nsInstallExecute::toString()
 {
-    return nsnull;
+    char* buffer = new char[1024];
+    
+    sprintf( buffer, nsInstallResources::GetExecuteString(), mExecutableFile->GetCString());
+        
+    return buffer;
+
 }
 
 

@@ -188,8 +188,6 @@ class nsInstall
 
         nsInstallVersion*   mVersionInfo;        /* Component version info */
         
-        nsString*           mPackageFolder;
-        
         nsVector*           mInstalledFiles;        
         nsHashtable*        mPatchList;
 

@@ -29,9 +29,10 @@
 
 
 #include "NSReg.h"
+#include "nsFileSpec.h"
 
-REGERR DeleteFileLater(const char * filename);
-REGERR ReplaceFileLater(const char *tmpfile, const char *target );
+REGERR DeleteFileLater(nsFileSpec& filename);
+REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target );
 
 void DeleteScheduledFiles(void);
 void ReplaceScheduledFiles(void);

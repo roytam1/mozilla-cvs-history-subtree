@@ -32,8 +32,10 @@
 #include "nsVector.h"
 #include "nsHashtable.h"
 #include "nsFileSpec.h"
+#include "nsFileStream.h"
 #include "nsSpecialSystemDirectory.h"
 
+#include "prtime.h"
 #include "prmem.h"
 #include "pratom.h"
 #include "prefapi.h"
@@ -394,7 +396,7 @@ nsInstall::AddDirectory(const nsString& aRegName,
             bInstall = PR_TRUE;
         }
         
-        delete fullRegNameCString;
+        delete [] fullRegNameCString;
         
         if (bInstall)
         {
@@ -528,7 +530,7 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
     
     
     if (qualifiedRegNameString != nsnull)
-        delete qualifiedRegNameString;
+        delete [] qualifiedRegNameString;
 
     if (versionNewer) 
     {
@@ -855,15 +857,9 @@ nsInstall::ResetError()
     return NS_OK;
 }
 
-
 PRInt32    
 nsInstall::SetPackageFolder(const nsString& aFolder)
-{
-    if (mPackageFolder != nsnull)
-        delete mPackageFolder;
-
-    mPackageFolder = new nsString(aFolder);
-
+{//fix
     return NS_OK;
 }
 
@@ -945,6 +941,22 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
     {
         mRegistryPackageName = ""; // Reset!
     }
+    
+    nsSpecialSystemDirectory logFile(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+    logFile += "Install.log";
+    
+    nsOutputFileStream logStream(logFile, PR_WRONLY | PR_CREATE_FILE | PR_APPEND, 0744 );
+    // XXX because PR_APPEND is broken
+    logStream.seek(logFile.GetFileSize());
+    
+    logStream << nsEndl;
+    
+    PRTime t = PR_Now();
+	PRExplodedTime et;
+    char line[256];
+    PR_ExplodeTime(t, PR_LocalTimeParameters, &et);
+    PR_FormatTimeUSEnglish(line, sizeof(line), "%m/%d/%Y %H:%M:%S", &et);
+    logStream << "Starting Installation of \"" << nsAutoCString(aUserPackageName) << "\" on " << line << nsEndl;
 
     return NS_OK;
 }
@@ -1022,7 +1034,7 @@ nsInstall::ScheduleForInstall(nsInstallObject* ob)
     // flash current item
     //SetProgressDialogItem( objString );
 
-    PR_FREEIF(objString);
+    delete [] objString;
     
     // do any unpacking or other set-up
     error = ob->Prepare();
