@@ -40,6 +40,7 @@
 
 #include <string.h>
 #include "plstr.h"
+#include "xpcom-config.h"
 #include "ipcList.h"
 
 //-----------------------------------------------------------------------------
