@@ -60,10 +60,10 @@
 #
 # These variables should be modified for each NSPR release.
 #
-FROMTOP=/share/builds/components/nspr20/v4.4
-TOTOP=./v4.4
-NSPRDIR=nspr-4.4
-SOURCETAG=NSPR_4_4_RTM
+FROMTOP=/share/builds/components/nspr20/v4.4.1
+TOTOP=./v4.4.1
+NSPRDIR=nspr-4.4.1
+SOURCETAG=NSPR_4_4_1_RTM
 
 #
 # enumerate Unix object directories on /s/b/c
