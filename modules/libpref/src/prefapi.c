@@ -22,6 +22,7 @@
 
 #include "prefapi.h"
 #include "jsapi.h"
+#include "prenv.h"
 #include "xp_core.h" /* Needed for XP_ defines */
 
 #if defined(XP_MAC)
@@ -119,6 +120,7 @@ PR_STATIC_CALLBACK(JSBool) pref_NativeUnlockPref(JSContext *cx, JSObject *obj, u
 PR_STATIC_CALLBACK(JSBool) pref_NativeSetConfig(JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval);
 PR_STATIC_CALLBACK(JSBool) pref_NativeGetPref(JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval);
 PR_STATIC_CALLBACK(JSBool) pref_NativeGetLDAPAttr(JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval);
+PR_STATIC_CALLBACK(JSBool) pref_GetEnvironment(JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval);
 
 /*----------------------------------------------------------------------------------------*/
 #include "prefapi_private_data.h"
@@ -165,6 +167,7 @@ JSFunctionSpec      autoconf_methods[] = {
                     { "config",             pref_NativeSetConfig,   2,0,0 },
                     { "getPref",            pref_NativeGetPref,     1,0,0 },
                     { "getLDAPAttributes",  pref_NativeGetLDAPAttr, 4,0,0 },
+                    { "getenv",             pref_GetEnvironment,    1,0,0 },
                     { "localPref",          pref_NativeDefaultPref, 1,0,0 },
                     { "localUserPref",      pref_NativeUserPref,    2,0,0 },
                     { "localDefPref",       pref_NativeDefaultPref, 2,0,0 },
@@ -1778,6 +1781,20 @@ PrefResult pref_DoCallback(const char* changed_pref)
 
 
 /* Called from JavaScript */
+JSBool PR_CALLBACK pref_GetEnvironment(JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval)
+{
+   if (JSVAL_IS_STRING(argv[0])){
+        JSString *value,*str;
+        const char *name;
+        str = JS_ValueToString(cx, argv[0]);
+        name = JS_GetStringBytes(str);
+        value = JS_NewStringCopyZ(cx, PR_GetEnv(name));
+        if (!value)
+          return JS_FALSE;
+        *rval = STRING_TO_JSVAL(value);
+   }
+   return JS_TRUE;
+}
 
 JSBool PR_CALLBACK pref_NativeGetLDAPAttr
     (JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval)
