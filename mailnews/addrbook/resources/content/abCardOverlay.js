@@ -299,7 +299,7 @@ function GetCardValues(cardproperty, doc)
 
     doc.getElementById('PrimaryEmail').value = cardproperty.primaryEmail;
     doc.getElementById('SecondEmail').value = cardproperty.secondEmail;
-
+    
     var popup = document.getElementById('PreferMailFormatPopup');
     if ( popup )
       popup.value = cardproperty.preferMailFormat;

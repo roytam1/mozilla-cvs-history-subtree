@@ -147,7 +147,7 @@ typedef struct {
 // We need this structure for mapping our field names to the server
 // field names
 //
-#define       kMaxColumns   38
+#define       kMaxColumns   39
 
 typedef struct {
   const char  *abField;

@@ -53,6 +53,7 @@ interface nsIAbCard : nsISupports {
 	attribute wstring nickName;
 	attribute wstring primaryEmail;
 	attribute wstring secondEmail;
+	attribute wstring defaultEmail;
 	attribute wstring workPhone;
 	attribute wstring homePhone;
 	attribute wstring faxNumber;
@@ -99,8 +100,6 @@ interface nsIAbCard : nsISupports {
 	 * mail list
 	 */
 	attribute string mailListURI;
-
-	attribute unsigned short primary;
 
 	wstring getCardValue(in string name);
 

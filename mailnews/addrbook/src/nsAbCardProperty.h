@@ -78,7 +78,8 @@ protected:
 	nsString m_NickName;
 	nsString m_PrimaryEmail;
 	nsString m_SecondEmail;
-	nsString m_WorkPhone;
+	nsString m_DefaultEmail;
+  nsString m_WorkPhone;
 	nsString m_HomePhone;
 	nsString m_FaxNumber;
 	nsString m_PagerNumber;
@@ -110,9 +111,8 @@ protected:
 	nsString m_Note;
 	PRUint32 m_LastModDate;
 	PRUint32 m_PreferMailFormat;
-
+  
 	PRBool   m_IsMailList;
-  PRInt16  m_Primary;
 	char*    m_MailListURI;
 
 private:

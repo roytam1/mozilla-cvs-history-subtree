@@ -57,6 +57,7 @@
 #define kServerNicknameColumn NS_LITERAL_STRING("screen_name")
 #define kServerPriEmailColumn NS_LITERAL_STRING("email1")
 #define kServer2ndEmailColumn NS_LITERAL_STRING("email2")
+#define kServerDefaultEmailColumn NS_LITERAL_STRING("default_email")
 #define kServerPlainTextColumn NS_LITERAL_STRING("Pref_rich_email")
 #define kServerWorkPhoneColumn NS_LITERAL_STRING("work_phone")
 #define kServerHomePhoneColumn NS_LITERAL_STRING("home_phone")

@@ -120,8 +120,8 @@ public:
 	NS_IMETHOD Add2ndEmail(nsIMdbRow * row, const char * value)
 	{ return AddCharStringColumn(row, m_2ndEmailColumnToken, value); }
 
-	NS_IMETHOD AddPrimary(nsIMdbRow * row, PRUint16 value)
-	{ return AddIntColumn(row, m_PrimaryColumnToken, value); }
+	NS_IMETHOD AddDefaultEmail(nsIMdbRow * row, const char * value)
+	{ return AddCharStringColumn(row, m_DefaultEmailColumnToken, value); }
 
 	NS_IMETHOD AddPreferMailFormat(nsIMdbRow * row, PRUint32 value)
 	{ return AddIntColumn(row, m_MailFormatColumnToken, value); }
@@ -353,7 +353,7 @@ protected:
 	mdb_token			m_NickNameColumnToken;
 	mdb_token			m_PriEmailColumnToken;
 	mdb_token			m_2ndEmailColumnToken;
-  mdb_token			m_PrimaryColumnToken;
+  mdb_token			m_DefaultEmailColumnToken;
 	mdb_token			m_WorkPhoneColumnToken;
 	mdb_token			m_HomePhoneColumnToken;
 	mdb_token			m_FaxColumnToken;

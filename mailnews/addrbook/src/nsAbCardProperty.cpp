@@ -119,10 +119,8 @@ nsAbCardProperty::nsAbCardProperty(void)
 	NS_INIT_ISUPPORTS();
 
 	m_LastModDate = 0;
-
 	m_PreferMailFormat = nsIAbPreferMailFormat::unknown;
 	m_IsMailList = PR_FALSE;
-  m_Primary = 0;
 	m_MailListURI = nsnull;
 }
 
@@ -166,18 +164,6 @@ NS_IMETHODIMP nsAbCardProperty::GetPreferMailFormat(PRUint32 *aFormat)
 NS_IMETHODIMP nsAbCardProperty::SetPreferMailFormat(PRUint32 aFormat)
 {
 	m_PreferMailFormat = aFormat;
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsAbCardProperty::GetPrimary(PRUint16 *aPrimary)
-{
-	*aPrimary = m_Primary;	
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsAbCardProperty::SetPrimary(PRUint16 aPrimary)
-{
-	m_Primary = aPrimary;
 	return NS_OK;
 }
 
@@ -284,6 +270,8 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
     case 'D':
       if (attrname[1] == 'i') 
         rv = GetDisplayName(value);
+      else if (attrname[2] == 'f')
+        rv = GetDefaultEmail(value);
       else 
         rv = GetDepartment(value);
       break;
@@ -491,6 +479,8 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
     case 'D':
       if (attrname[1] == 'i') 
         rv = SetDisplayName(value);
+      else if (attrname[2] == 'f')
+        rv = SetDefaultEmail(value);
       else 
         rv = SetDepartment(value);
       break;
@@ -651,6 +641,10 @@ nsAbCardProperty::GetSecondEmail(PRUnichar * *aSecondEmail)
 { return GetAttributeName(aSecondEmail, m_SecondEmail); }
 
 NS_IMETHODIMP
+nsAbCardProperty::GetDefaultEmail(PRUnichar * *aDefaultEmail)
+{ return GetAttributeName(aDefaultEmail, m_DefaultEmail); }
+
+NS_IMETHODIMP
 nsAbCardProperty::GetWorkPhone(PRUnichar * *aWorkPhone)
 { return GetAttributeName(aWorkPhone, m_WorkPhone); }
 
@@ -799,6 +793,10 @@ nsAbCardProperty::SetSecondEmail(const PRUnichar * aSecondEmail)
 { return SetAttributeName(aSecondEmail, m_SecondEmail); }
 
 NS_IMETHODIMP
+nsAbCardProperty::SetDefaultEmail(const PRUnichar * aDefaultEmail)
+{ return SetAttributeName(aDefaultEmail, m_DefaultEmail); }
+
+NS_IMETHODIMP
 nsAbCardProperty::SetWorkPhone(const PRUnichar * aWorkPhone)
 { return SetAttributeName(aWorkPhone, m_WorkPhone); }
 
@@ -938,6 +936,8 @@ NS_IMETHODIMP nsAbCardProperty::Copy(nsIAbCard* srcCard)
 	SetPrimaryEmail(str);
 	srcCard->GetSecondEmail(getter_Copies(str));
 	SetSecondEmail(str);
+	srcCard->GetDefaultEmail(getter_Copies(str));
+	SetDefaultEmail(str);
 
 	PRUint32 format;
 	srcCard->GetPreferMailFormat(&format);

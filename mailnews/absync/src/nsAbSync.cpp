@@ -260,6 +260,7 @@ nsAbSync::InitSchemaColumns()
   mSchemaMappingList[35].abField = kCustom4Column;
   mSchemaMappingList[36].abField = kNotesColumn;
   mSchemaMappingList[37].abField = kLastModifiedDateColumn;
+  mSchemaMappingList[38].abField = kDefaultEmailColumn;
 
   // Now setup the server fields...
   mSchemaMappingList[0].serverField = kServerFirstNameColumn;
@@ -300,6 +301,7 @@ nsAbSync::InitSchemaColumns()
   mSchemaMappingList[35].serverField = kServerCustom4Column;
   mSchemaMappingList[36].serverField = kServerNotesColumn;
   mSchemaMappingList[37].serverField = kServerLastModifiedDateColumn;
+  mSchemaMappingList[38].serverField = kServerDefaultEmailColumn;
 
   return NS_OK;
 }
@@ -575,7 +577,7 @@ NS_IMETHODIMP nsAbSync::OnStopOperation(PRInt32 aTransactionID, nsresult aStatus
 
   mCurrentState = nsIAbSyncState::nsIAbSyncIdle;
 
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("ABSYNC: OnStopOperation: Status = %d\n", aStatus);
 #endif
   return NS_OK;
@@ -762,7 +764,6 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
   PRUnichar     *aName = nsnull;
   nsString      tProtLine;
   PRInt32       phoneCount = 1;
-  PRInt32       defaultEmail = 0;
   PRBool        foundPhone = PR_FALSE;
   const char    *phoneType;
 
@@ -778,7 +779,7 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
     if (NS_FAILED(dbcard->GetKey(&aKey)))
       return NS_ERROR_FAILURE;
 
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("ABSYNC: GENERATING PROTOCOL FOR CARD - Address Book Card Key: %d\n", aKey);
 #endif
 
@@ -801,14 +802,6 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
                                             nsCaseInsensitiveStringComparator()))
         continue;
 
-      // Remember what type of email address we have.
-      if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kPriEmailColumn, strlen(kPriEmailColumn)))
-        defaultEmail = 1;
-      else
-      if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, k2ndEmailColumn, strlen(k2ndEmailColumn)))
-        if (! defaultEmail)
-          defaultEmail= 2;
-        
       // Reset this flag...
       foundPhone = PR_FALSE;
       // If this is a phone number, we have to special case this because
@@ -873,15 +866,6 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
 
   if (!tProtLine.IsEmpty())
   {
-    // Set default email (1/2 = 1st/2nd "Other email" in the aol Edit Contact dialog.
-    if (defaultEmail != 0)
-    {
-      aName = (defaultEmail == 1) ? ToNewUnicode(NS_LITERAL_STRING("1")) : ToNewUnicode(NS_LITERAL_STRING("2"));
-      tProtLine.Append(NS_LITERAL_STRING("&") + NS_LITERAL_STRING("default_email") + NS_LITERAL_STRING("="));
-      AddValueToProtocolLine(aName, tProtLine);
-      PR_FREEIF(aName);
-    }
-
     // Now, check if this is that flag for the plain text email selection...if so,
     // then tack this information on as well...
     PRUint32 format = nsIAbPreferMailFormat::unknown;
@@ -1181,7 +1165,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
   CleanServerTable(mNewServerTable);
   mCurrentPostRecord = 1;
 
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("ABSYNC: AnalyzeAllRecords:\n");
 #endif
 
@@ -1387,7 +1371,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
           goto GetOut;
         }
 
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("------ Entry #%d --------\n", readCount);
   printf("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].serverID);
   printf("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].localID);
@@ -1463,7 +1447,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
 
           if (mNewSyncMapingTable[workCounter].flags & SYNC_ADD)
           {
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   char *t = ToNewCString(singleProtocolLine);
   printf("ABSYNC: ADDING Card: %s\n", t);
   PR_FREEIF(t);
@@ -1483,7 +1467,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
           }
           else if (mNewSyncMapingTable[workCounter].flags & SYNC_MODIFIED)
           {
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   char *t = ToNewCString(singleProtocolLine);
   printf("ABSYNC: MODIFYING Card: %s\n", t);
   PR_FREEIF(t);
@@ -1524,7 +1508,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
       char *tVal = PR_smprintf("%d", mOldSyncMapingTable[readCount].serverID);
       if (tVal)
       {
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("ABSYNC: DELETING Card: %d\n", mOldSyncMapingTable[readCount].serverID);
 #endif
 
@@ -1627,7 +1611,7 @@ nsAbSync::PatchHistoryTableWithNewID(PRInt32 clientID, PRInt32 serverID, PRInt32
   {
     if (mNewSyncMapingTable[i].localID == (clientID * aMultiplier))
     {
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("ABSYNC: PATCHING History Table - Client: %d - Server: %d\n", clientID, serverID);
 #endif
 
@@ -2692,7 +2676,7 @@ nsAbSync::AddNewUsers()
           PRInt32 errorCode;
           serverID = val->ToInteger(&errorCode);
 
-#ifdef DEBUG_rhp
+#ifdef DEBUG_ABSYNC
   printf("ABSYNC: ADDING Card: %d\n", serverID);
 #endif
         }
@@ -3005,6 +2989,14 @@ nsAbSync::AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTag
     return NS_OK;
   }
 
+#ifdef DEBUG_ABSYNC
+  char *name = ToNewCString(*aTagName);
+  char *value = ToNewCString(*aTagValue);
+  printf("ABSYNC: from server:  %s = %s\n", name,value);
+  PR_FREEIF(name);
+  PR_FREEIF(value);
+#endif
+
   // Ok, we need to figure out what the tag name from the server maps to and assign
   // this value the new nsIAbCard
   //
@@ -3017,16 +3009,11 @@ nsAbSync::AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTag
   else if (aTagName->Equals(kServerNicknameColumn))
     aCard->SetNickName(aTagValue->get());
   else if (aTagName->Equals(kServerPriEmailColumn))
-  {
-#ifdef DEBUG_rhp
-  char *t = ToNewCString(*aTagValue);
-  printf("Email: %s\n", t);
-  PR_FREEIF(t);
-#endif
     aCard->SetPrimaryEmail(aTagValue->get());
-  }
   else if (aTagName->Equals(kServer2ndEmailColumn))
     aCard->SetSecondEmail(aTagValue->get());
+  else if (aTagName->Equals(kServerDefaultEmailColumn))
+    aCard->SetDefaultEmail(aTagValue->get());
   else if (aTagName->Equals(kServerHomeAddressColumn))
     aCard->SetHomeAddress(aTagValue->get());
   else if (aTagName->Equals(kServerHomeAddress2Column))
