@@ -427,8 +427,13 @@ nsEventStatus nsMenuX::MenuItemSelected(const nsMenuEvent & aMenuEvent)
 
   // Determine if this is the correct menu to handle the event. We can't use
   // the HiWord of the command because of MenuSelect bugs in Carbon. Use
-  // the menuID we've been tracking manually instead.
-  // PRInt16 menuID = HiWord(((nsMenuEvent)aMenuEvent).mCommand);
+  // the menuID we've been tracking manually instead. However, we don't get
+  // the carbon events for the apple menu, so if MenuSelect() tells us we've hit
+  // the apple menu (where there are no submenus we care about), it is
+  // actually correct and |gCurrentlyTrackedMenuID| is wrong. Go figure.
+  MenuID probablyWrongMenuID = HiWord(((nsMenuEvent)aMenuEvent).mCommand);
+  if ( probablyWrongMenuID == nsMenuBarX::kAppleMenuID )
+    gCurrentlyTrackedMenuID = nsMenuBarX::kAppleMenuID;
   MenuID menuID = gCurrentlyTrackedMenuID;
 
   if( menuID == nsMenuBarX::kAppleMenuID ) {
