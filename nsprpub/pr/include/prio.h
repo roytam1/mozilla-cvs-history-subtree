@@ -1592,7 +1592,8 @@ NSPR_API(PRInt32) PR_SendFile(
 **    void *buf
 **        A pointer to a buffer to receive data sent by the client.  This 
 **        buffer must be large enough to receive <amount> bytes of data
-**        and two PRNetAddr structures, plus an extra 32 bytes.
+**        and two PRNetAddr structures, plus an extra 32 bytes. See:
+**        PR_ACCEPT_READ_BUF_OVERHEAD.
 **    PRInt32 amount
 **        The number of bytes of client data to receive.  Does not include
 **        the size of the PRNetAddr structures.  If 0, no data will be read
@@ -1615,7 +1616,16 @@ NSPR_API(PRInt32) PR_SendFile(
 **     The number of bytes read from the client or -1 on failure.  The reason 
 **     for the failure is obtained by calling PR_GetError().
 **************************************************************************
-**/
+**/       
+/* define buffer overhead constant. Add this value to the user's 
+** data length when allocating a buffer to accept data.
+**    Example:
+**    #define USER_DATA_SIZE 10
+**    char buf[USER_DATA_SIZE + PR_ACCEPT_READ_BUF_OVERHEAD];
+**    bytesRead = PR_AcceptRead( s, fd, &a, &p, USER_DATA_SIZE, ...);
+*/
+#define PR_ACCEPT_READ_BUF_OVERHEAD (32+(2*sizeof(PRNetAddr)))
+
 NSPR_API(PRInt32) PR_AcceptRead(
     PRFileDesc *listenSock, PRFileDesc **acceptedSock,
     PRNetAddr **peerAddr, void *buf, PRInt32 amount, PRIntervalTime timeout);
