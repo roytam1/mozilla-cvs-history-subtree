@@ -3223,15 +3223,24 @@ nsBrowserAccess.prototype =
       default : // OPEN_CURRENTWINDOW or an illegal value
         try {
           if (aOpener) {
+            newWindow = Components.lookupMethod(aOpener,"top")
+                                  .call(aOpener);
             referrer = Components.classes["@mozilla.org/network/standard-url;1"]
                                  .createInstance(nsCI.nsIURI);
             referrer.spec = Components.lookupMethod(aOpener,"location")
                                       .call(aOpener);
+            newWindow.QueryInterface(nsCI.nsIInterfaceRequestor)
+                     .getInterface(nsIWebNavigation)
+                     .loadURI(url, nsIWebNavigation.LOAD_FLAGS_NONE, referrer,
+                              null, null);
+          } else {
+            newWindow = gBrowser.selectedBrowser.docShell
+                                .QueryInterface(nsCI.nsIInterfaceRequestor)
+                                .getInterface(nsCI.nsIDOMWindow);
+            loadURI(url, null);
           }
-          loadURI(url, referrer);
         } catch(e) {
         }
-        newWindow = window;
     }
     return newWindow;
   }
