@@ -4454,7 +4454,7 @@ PRBool CSSDeclarationImpl::AppendValueToString(nsCSSProperty aProperty, const ns
       }
     }
     else {
-      const nsCString& name = nsCSSProps::LookupPropertyValue(aProperty, aValue.GetIntValue());
+      const nsAFlatCString& name = nsCSSProps::LookupPropertyValue(aProperty, aValue.GetIntValue());
       aResult.Append(NS_ConvertASCIItoUCS2(name));
     }
   }
