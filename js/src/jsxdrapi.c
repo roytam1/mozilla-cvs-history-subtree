@@ -275,8 +275,6 @@ JS_XDRDestroy(JSXDRState *xdr)
         if (xdr->reghash)
             JS_DHashTableDestroy(xdr->reghash);
     }
-    if (xdr->data)
-        JS_free(cx, xdr->data);
     JS_free(cx, xdr);
 }
 
