@@ -4974,6 +4974,7 @@ void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
         dataBuffer[readCount] = 0;
         rv = SendData(dataBuffer);
         totalSize -= readCount;
+        PercentProgressUpdateEvent(nsnull, fileSize - totalSize, fileSize);
         rv = fileSpec->Eof(&eof);
       }
     }
