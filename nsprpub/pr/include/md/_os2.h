@@ -73,6 +73,7 @@ typedef void (*FiberFunc)(void *);
 typedef PRInt32	                PR_CONTEXT_TYPE[PR_NUM_GCREGS];
 #define GC_VMBASE               0x40000000
 #define GC_VMLIMIT              0x00FFFFFF
+typedef int (*FARPROC)();
 
 #define _MD_MAGIC_THREAD	0x22222222
 #define _MD_MAGIC_THREADSTACK	0x33333333
