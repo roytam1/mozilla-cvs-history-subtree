@@ -148,11 +148,13 @@ class nsInstall
         PRInt32    AddDirectory(const nsString& aRegName, const nsString& aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aSubdir, PRBool aForceMode, PRInt32* aReturn);
         PRInt32    AddDirectory(const nsString& aRegName, nsIDOMInstallVersion* aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aSubdir, PRBool aForceMode, PRInt32* aReturn);
         PRInt32    AddDirectory(const nsString& aRegName, const nsString& aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aSubdir, PRInt32* aReturn);
+        PRInt32    AddDirectory(const nsString& aRegName, nsIDOMInstallVersion* aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aSubdir, PRInt32* aReturn);
         PRInt32    AddDirectory(const nsString& aRegName, const nsString& aJarSource, const nsString& aFolder, const nsString& aSubdir, PRInt32* aReturn);
         PRInt32    AddDirectory(const nsString& aJarSource, PRInt32* aReturn);
         PRInt32    AddSubcomponent(const nsString& aRegName, const nsString& aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRBool aForceMode, PRInt32* aReturn);
         PRInt32    AddSubcomponent(const nsString& aRegName, nsIDOMInstallVersion* aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRBool aForceMode, PRInt32* aReturn);
         PRInt32    AddSubcomponent(const nsString& aRegName, const nsString& aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
+        PRInt32    AddSubcomponent(const nsString& aRegName, nsIDOMInstallVersion* aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
         PRInt32    AddSubcomponent(const nsString& aRegName, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
         PRInt32    AddSubcomponent(const nsString& aJarSource, PRInt32* aReturn);
         PRInt32    DeleteComponent(const nsString& aRegistryName, PRInt32* aReturn);
@@ -177,6 +179,7 @@ class nsInstall
         PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn);
         PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, nsIDOMInstallVersion* aVersion, PRInt32 aFlags, PRInt32* aReturn);
         PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn);
+        PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, nsIDOMInstallVersion* aVersion, PRInt32* aReturn);
         PRInt32    Uninstall(const nsString& aPackageName, PRInt32* aReturn);
         
 
