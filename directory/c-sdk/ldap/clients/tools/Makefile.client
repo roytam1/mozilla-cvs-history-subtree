@@ -91,8 +91,8 @@ LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
 			  $(addprefix $(OBJDEST)/, convutf8.o)
 ifeq ($(LDAP_TOOL_ARGPIN),1)
-			  $(addprefix $(OBJDEST)/, argpin.o) \
-			  $(addprefix $(OBJDEST)/, ntuserpin.o)
+LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.o) \
+			   $(addprefix $(OBJDEST)/, ntuserpin.o)
 endif
 
 ifneq ($(OS_ARCH), HP-UX)
