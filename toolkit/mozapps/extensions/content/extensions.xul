@@ -72,12 +72,7 @@
          oncommand="gExtensionsViewController.doCommand('cmd_close');"/>
     <key id="key_about"   key="&cmd.info.commandKey;"     modifiers="accel" command="cmd_about" 
          oncommand="gExtensionsViewController.doCommand('cmd_about');"/>
-    <key id="key_options" modifiers="accel" command="cmd_options" 
-#ifdef XP_WIN
-         key="&cmd.options.commandKey;"  
-#else
-         key="&cmd.optionsUnix.commandKey;"  
-#endif
+    <key id="key_options" key="&cmd.options.commandKey;"  modifiers="accel" command="cmd_options"
          oncommand="gExtensionsViewController.doCommand('cmd_options');"/>
   </keyset>
   
