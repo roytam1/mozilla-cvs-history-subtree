@@ -1264,7 +1264,7 @@ htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx)
 struct	{
 	char		*name;
 	RDF_Resource	r;
-	} matches[5];
+	} matches[9];
 
 	/* Note: if more elements are added, adjust the size of the array above! */
 
@@ -1272,7 +1272,11 @@ struct	{
 	matches[1].name = "keyword";		matches[1].r = gWebData->RDF_keyword;
 	matches[2].name = "smallIcon";		matches[2].r = gNavCenter->RDF_smallIcon;
 	matches[3].name = "largeIcon";		matches[3].r = gNavCenter->RDF_largeIcon;
-	matches[4].name = NULL;			matches[4].r = NULL;
+	matches[4].name = "smallPressedIcon";	matches[4].r = gNavCenter->RDF_smallPressedIcon;
+	matches[5].name = "largePressedIcon";	matches[5].r = gNavCenter->RDF_largePressedIcon;
+	matches[6].name = "smallRolloverIcon";	matches[6].r = gNavCenter->RDF_smallRolloverIcon;
+	matches[7].name = "largeRolloverIcon";	matches[7].r = gNavCenter->RDF_largeRolloverIcon;
+	matches[8].name = NULL;			matches[8].r = NULL;
 
 	if (urls != NULL)
 	{
