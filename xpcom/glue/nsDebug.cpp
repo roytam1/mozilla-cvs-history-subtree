@@ -86,6 +86,7 @@
 #include <windows.h>
 #include <signal.h>
 #elif defined(XP_MAC)
+#include <Processes.h>
 #elif defined(XP_UNIX)
 #include<stdlib.h>
 #endif

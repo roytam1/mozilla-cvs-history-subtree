@@ -641,7 +641,7 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
 #       define BUF_SIZE 1024
         char buf[BUF_SIZE];
         PRUint32 len =
-            PL_snprintf(buf+1, BUF_SIZE-1, "%s", msg);
+            PR_snprintf(buf+1, BUF_SIZE-1, "%s", msg);
         buf[0] = (char) (len > 255 ? 255 : len);
         DebugStr(StringPtr(buf));
     }
@@ -678,7 +678,7 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
       indent:
         // do indentation
         for (PRUint32 i = 0; i < indentLevel; i++) {
-            ::fputs("|  ", mOutput);
+            ::fprintf(mOutput, "|  ");
             mBeginningOfLine = PR_FALSE;
         }
 
@@ -692,7 +692,7 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
                     break;
                 }
                 else {
-                    ::fputs("\n                    ", mOutput);
+                    ::fprintf(mOutput, "\n                    ");
                     mBeginningOfLine = PR_FALSE;
                     goto indent;
                 }
