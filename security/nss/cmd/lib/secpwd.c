@@ -43,10 +43,7 @@
 
 #ifdef XP_UNIX
 #include <termios.h>
-#endif
-
-#if defined(XP_UNIX) || defined(XP_BEOS)
-#include <unistd.h>  /* for isatty() */
+#include <unistd.h>
 #endif
 
 #if( defined(_WINDOWS) && !defined(_WIN32_WCE)) || defined(XP_OS2_VACPP)
