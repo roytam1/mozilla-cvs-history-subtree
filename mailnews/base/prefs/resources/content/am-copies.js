@@ -41,7 +41,7 @@ var tmplFolderPickerId = "msgStationeryFolderPicker";
  */
 function onInit() 
 {
-    onInitCopiesAndFolders
+    onInitCopiesAndFolders();
 }
 
 function onInitCopiesAndFolders()
