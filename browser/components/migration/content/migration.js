@@ -25,8 +25,13 @@ var MigrationWizard = {
       this._migrator = window.arguments[1].QueryInterface(kIMig);
       this._autoMigrate = window.arguments[2].QueryInterface(kIPStartup);
       
-      // Advance past the first page
-      this._wiz.advance();
+      // Show the "nothing" option in the automigrate case to provide an
+      // easily identifiable way to avoid migration and create a new profile.
+      var nothing = document.getElementById("nothing");
+      nothing.hidden = false;
+      
+      var phoenix = document.getElementById("phoenix");
+      phoenix.hidden = false;
     }
   },
   
@@ -48,10 +53,12 @@ var MigrationWizard = {
     var group = document.getElementById("importSourceGroup");
     for (var i = 0; i < group.childNodes.length; ++i) {
       var suffix = group.childNodes[i].id;
-      var contractID = kProfileMigratorContractIDPrefix + suffix;
-      var migrator = Components.classes[contractID].createInstance(kIMig);
-      if (!migrator.sourceExists)
-        group.childNodes[i].disabled = true;
+      if (suffix != "nothing") {
+        var contractID = kProfileMigratorContractIDPrefix + suffix;
+        var migrator = Components.classes[contractID].createInstance(kIMig);
+        if (!migrator.sourceExists)
+          group.childNodes[i].disabled = true;
+      }
     }
     
     var firstNonDisabled = null;
@@ -69,7 +76,12 @@ var MigrationWizard = {
   {
     var newSource = document.getElementById("importSourceGroup").selectedItem.id;
     
-    if (!this._migrator || (!this._autoMigrate && newSource != this._source)) {
+    if (newSource == "nothing") {
+      document.documentElement.cancel();
+      return;
+    }
+    
+    if (!this._migrator || (newSource != this._source)) {
       // Create the migrator for the selected source.
       var contractID = kProfileMigratorContractIDPrefix + newSource;
       this._migrator = Components.classes[contractID].createInstance(kIMig);
@@ -98,8 +110,10 @@ var MigrationWizard = {
   // 2 - [Profile Selection]
   onSelectProfilePageShow: function ()
   {
-    if (this._autoMigrate)
-      document.documentElement.getButton("back").disabled = true;
+    // Disabling this for now, since we ask about import sources in automigration
+    // too and don't want to disable the back button
+    // if (this._autoMigrate)
+    //   document.documentElement.getButton("back").disabled = true;
       
     var profiles = document.getElementById("profiles");
     while (profiles.hasChildNodes()) 
