@@ -51,9 +51,8 @@ var gPrivacyPane = {
     this._inited = true;
     var privacyPrefs = document.getElementById("privacyPrefs");
     var preference = document.getElementById("browser.preferences.privacy.selectedTabIndex");
-    if (preference.valueFromPreferences === null)
-      return;
-    privacyPrefs.selectedIndex = preference.valueFromPreferences;
+    if (preference.value !== null)
+      privacyPrefs.selectedIndex = preference.value;
     
     // Update the clear buttons
     if (!this._sanitizer)

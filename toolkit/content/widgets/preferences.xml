@@ -424,6 +424,7 @@
     <implementation implements="nsITimerCallback">
       <constructor>
       <![CDATA[
+        dump("*** ctor firing\n");
         if (this.type != "child") {
           var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                                .getService(Components.interfaces.nsIPrefBranch);
@@ -519,13 +520,15 @@
               _outer: this,
               observe: function (aSubject, aTopic, aData) 
               {
+                dump("*** observe firing for " + this._pane.id + "\n");
                 this._pane.loaded = true;
                 this._outer._fireEvent("paneload", this._pane);
-                this._outer._selectPane(aPaneElement);
+                this._outer._selectPane(this._pane);
               }
             };
             
             var obs = new OverlayLoadObserver(aPaneElement);
+            dump("*** for some reason, " + aPaneElement.id + " lists itself as not being loaded, so loading again...\n");
             document.loadOverlay(aPaneElement.src, obs);
           }
           else

@@ -158,7 +158,6 @@ var gContentPane = {
     var windowFlipPref = document.getElementById("dom.disable_window_flip");
     var hideStatusPref = document.getElementById("dom.disable_window_open_feature.status");
     var windowStatusPref = document.getElementById("dom.disable_window_status_change");
-    dump("*** rae = " + (!contextMenuPref.value && windowMovePref.value && windowFlipPref.value && hideStatusPref.value && windowStatusPref.value) + "\n");
     return !contextMenuPref.value && windowMovePref.value && 
            windowFlipPref.value && hideStatusPref.value && 
            windowStatusPref.value;
@@ -174,7 +173,6 @@ var gContentPane = {
     
     var disableImages = document.getElementById("disableAnnoyances");
     contextMenuPref.value = !(windowMovePref.value = windowFlipPref.value = hideStatusPref.value = windowStatusPref.value = disableImages.checked);
-    dump("*** W rae = " + (contextMenuPref.value && windowMovePref.value && windowFlipPref.value && hideStatusPref.value && windowStatusPref.value) + "\n");
     return undefined;    
   },
   

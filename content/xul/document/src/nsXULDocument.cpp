@@ -356,7 +356,8 @@ struct BroadcastListener {
 
 nsXULDocument::nsXULDocument(void)
     : mResolutionPhase(nsForwardReference::eStart),
-      mState(eState_Master)
+      mState(eState_Master),
+      mInitialLayoutComplete(PR_FALSE)
 {
 
     // NOTE! nsDocument::operator new() zeroes out all members, so don't
@@ -399,6 +400,8 @@ nsXULDocument::~nsXULDocument()
 
     if (mOverlayLoadObservers.IsInitialized())
         mOverlayLoadObservers.Clear();
+    if (mPendingOverlayLoadNotifications.IsInitialized())
+        mPendingOverlayLoadNotifications.Clear();
 
     if (mLocalStore) {
         nsCOMPtr<nsIRDFRemoteDataSource> remote =
@@ -2803,6 +2806,20 @@ nsXULDocument::LoadOverlay(const nsAString& aURL, nsIObserver* aObserver)
     return NS_OK;
 }
 
+PR_STATIC_CALLBACK(PLDHashOperator)
+FirePendingMergeNotification(nsIURI* aKey, nsCOMPtr<nsIObserver>& aObserver, void* aClosure)
+{
+    if (aObserver)
+        aObserver->Observe(aKey, "xul-overlay-merged", EmptyString().get());
+
+    typedef nsInterfaceHashtable<nsURIHashKey,nsIObserver> table;
+    table* observers = NS_STATIC_CAST(table*, aClosure);
+    if (observers)
+        observers->Remove(aKey);
+
+    return PL_DHASH_REMOVE;
+}
+
 nsresult
 nsXULDocument::ResumeWalk()
 {
@@ -3154,17 +3171,32 @@ nsXULDocument::ResumeWalk()
                 mPlaceHolderRequest = nsnull;
             }
         }
+        mInitialLayoutComplete = PR_TRUE;
+
+        if (mPendingOverlayLoadNotifications.IsInitialized())
+            mPendingOverlayLoadNotifications.Enumerate(FirePendingMergeNotification, (void*)&mOverlayLoadObservers);
     }
     else {
         if (mOverlayLoadObservers.IsInitialized()) {
             nsCOMPtr<nsIURI> overlayURI;
             mCurrentPrototype->GetURI(getter_AddRefs(overlayURI));
-
             nsCOMPtr<nsIObserver> obs;
-            mOverlayLoadObservers.Get(overlayURI, getter_AddRefs(obs));
-            if (obs)
-                obs->Observe(overlayURI, "xul-overlay-merged", EmptyString().get());
-            mOverlayLoadObservers.Remove(overlayURI);
+            if (mInitialLayoutComplete) {
+                mOverlayLoadObservers.Get(overlayURI, getter_AddRefs(obs));
+                if (obs)
+                    obs->Observe(overlayURI, "xul-overlay-merged", EmptyString().get());
+                mOverlayLoadObservers.Remove(overlayURI);
+            }
+            else {
+                if (!mPendingOverlayLoadNotifications.IsInitialized())
+                    mPendingOverlayLoadNotifications.Init();
+                mPendingOverlayLoadNotifications.Get(overlayURI, getter_AddRefs(obs));
+                if (!obs) {
+                    mOverlayLoadObservers.Get(overlayURI, getter_AddRefs(obs));
+                    if (obs)
+                        mPendingOverlayLoadNotifications.Put(overlayURI, obs);
+                }
+            }
         }
     }
 

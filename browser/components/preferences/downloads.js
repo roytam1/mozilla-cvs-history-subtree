@@ -36,10 +36,6 @@
 # ***** END LICENSE BLOCK *****
 
 var gDownloadsPane = {
-  init: function ()
-  {
-  },
-  
   chooseFolder: function ()
   {
     const nsIFilePicker = Components.interfaces.nsIFilePicker;

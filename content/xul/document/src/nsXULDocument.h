@@ -577,6 +577,9 @@ protected:
     PLDHashTable* mBroadcasterMap;
 
     nsInterfaceHashtable<nsURIHashKey,nsIObserver> mOverlayLoadObservers;
+    nsInterfaceHashtable<nsURIHashKey,nsIObserver> mPendingOverlayLoadNotifications;
+
+    PRBool mInitialLayoutComplete;
 private:
     // helpers
 
