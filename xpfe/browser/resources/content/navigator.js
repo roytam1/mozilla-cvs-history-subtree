@@ -184,7 +184,7 @@ const gPopupPrefListener =
         popupIcon.hidden = true;
       }
     } else { // whitelist
-      for (var i = 0; i < browsers.length; i++) {
+      for (i = 0; i < browsers.length; i++) {
         if (browsers[i].popupDomain in hosts) {
           browsers[i].popupDomain = null;
           popupIcon.hidden = true;
@@ -615,16 +615,15 @@ function Startup()
 
 function LoadBookmarksCallback()
 {
-  try {
-    if (!gBookmarksService)
-      gBookmarksService = Components.classes["@mozilla.org/browser/bookmarks-service;1"]
-                                    .getService(Components.interfaces.nsIBookmarksService);
-    gBookmarksService.ReadBookmarks();
-    // tickle personal toolbar to load personal toolbar items
-    var personalToolbar = document.getElementById("NC:PersonalToolbarFolder");
-    personalToolbar.builder.rebuild();
-  } catch (e) {
-  }
+  // loads the services
+  initServices();
+  initBMService();
+  var hasRead = BMSVC.readBookmarks();  
+  var bt = document.getElementById("bookmarks-ptf");
+  if (bt && hasRead) 
+    bt.builder.rebuild();
+  controllers.appendController(BookmarksMenuController);
+
 }
 
 function WindowFocusTimerCallback(element)
@@ -1169,7 +1168,7 @@ function BrowserEditBookmarks()
     if (!gDisableBookmarks) {
       gDisableBookmarks = true;
 
-      open("chrome://communicator/content/bookmarks/bookmarks.xul", "_blank",
+      open("chrome://communicator/content/bookmarks/bookmarksManager.xul", "_blank",
         "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar");
       setTimeout(enableBookmarks, 2000);
     }
@@ -2022,38 +2021,6 @@ function showHideTabbar()
   const visibility = gBrowser.getStripVisibility();
   pref.setBoolPref("browser.tabs.forceHide", visibility);
   gBrowser.setStripVisibilityTo(!visibility);
-}
-
-// Fill in tooltips for personal toolbar
-function FillInPTTooltip(tipElement)
-{
-
-  var title = tipElement.label;
-  var url = tipElement.statusText;
-
-  if (!title && !url) {
-    // bail out early if there is nothing to show
-    return false;
-  }
-
-  var tooltipTitle = document.getElementById("ptTitleText");
-  var tooltipUrl = document.getElementById("ptUrlText"); 
-
-  if (title && title != url) {
-    tooltipTitle.removeAttribute("hidden");
-    tooltipTitle.setAttribute("value", title);
-  } else  {
-    tooltipTitle.setAttribute("hidden", "true");
-  }
-
-  if (url) {
-    tooltipUrl.removeAttribute("hidden");
-    tooltipUrl.setAttribute("value", url);
-  } else {
-    tooltipUrl.setAttribute("hidden", "true");
-  }
-
-  return true; // show tooltip
 }
 
 function BrowserFullScreen()
