@@ -1280,6 +1280,7 @@ extern "C" {
 char*	NP_GetMIMEDescription(void);
 NPError	NP_Initialize(NPNetscapeFuncs*, NPPluginFuncs*);
 NPError	NP_Shutdown(void);
+NPError NP_GetValue(void *future, NPPVariable aVariable, void *aValue);
 
 #ifdef __cplusplus
 }
