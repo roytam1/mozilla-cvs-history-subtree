@@ -20,6 +20,7 @@
  * Contributor(s):
  *   Joe Hewitt (hewitt@netscape.com)
  *   Håkan Waara (hwaara@chello.se)
+ *   Jan Varga (varga@utcru.sk)
  */
 
 /* ===== folderPane.css =================================================
@@ -200,4 +201,14 @@ outlinerbody:-moz-outliner-cell-text(isServer-true) {
 outlinerbody:-moz-outliner-cell-text(noSelect-true) {
   color: gray;
   font-style: italic;
+}
+
+outlinerbody.folderOutlinerBody:-moz-outliner-row
+{
+  height: 18px;
+}
+
+outlinerbody.folderOutlinerBody:-moz-outliner-line
+{
+  visibility: hidden;
 }
