@@ -777,7 +777,7 @@ PRInt32 nsCString::ToInteger(PRInt32* anErrorCode,PRUint32 aRadix) const {
 
     if (done) {
 
-        //integer found
+      //integer found
       *anErrorCode = NS_OK;
 
       if (aRadix!=kAutoDetect) theRadix = aRadix; // override
@@ -1870,8 +1870,22 @@ void nsCString::DebugDump(void) const {
        
 //----------------------------------------------------------------------
 
+#ifdef NEW_STRING_APIS
+NS_ConvertUCS2toUTF8::NS_ConvertUCS2toUTF8( const nsAReadableString& aString )
+  {
+    nsReadingIterator<PRUnichar> start(aString.BeginReading());
+    nsReadingIterator<PRUnichar> end(aString.EndReading());
+    
+    while (start != end) {
+      nsReadableFragment<PRUnichar> frag(start.fragment());
+      Append(frag.mStart, frag.mEnd - frag.mStart);
+      start += start.size_forward();
+    }
+  }
+#endif
+
 void
-NS_ConvertUCS2toUTF8::Init( const PRUnichar* aString, PRUint32 aLength )
+NS_ConvertUCS2toUTF8::Append( const PRUnichar* aString, PRUint32 aLength )
   {
     // Handle null string by just leaving us as a brand-new
     // uninitialized nsCAutoString.
@@ -1895,12 +1909,12 @@ NS_ConvertUCS2toUTF8::Init( const PRUnichar* aString, PRUint32 aLength )
 
     // Make sure our buffer's big enough, so we don't need to do
     // multiple allocations.
-    if(PRUint32(utf8len+1) > sizeof(mBuffer))
-      SetCapacity(utf8len+1);
+    if(mLength+PRUint32(utf8len+1) > sizeof(mBuffer))
+      SetCapacity(mLength+utf8len+1);
     // |SetCapacity| normally doesn't guarantee the use we are putting it to here (see its interface comment in nsAWritableString.h),
     //  we can only use it since our local implementation, |nsCString::SetCapacity|, is known to do what we want
 
-    char* out = mStr;
+    char* out = mStr+mLength;
     PRUint32 ucs4=0;
 
     for (p = aString, count = aLength; 0 != count && 0 != (*p); count--, p++)
@@ -1962,7 +1976,7 @@ NS_ConvertUCS2toUTF8::Init( const PRUnichar* aString, PRUint32 aLength )
       }
 
     *out = '\0'; // null terminate
-    mLength = utf8len;
+    mLength += utf8len;
   }
 
 
@@ -1987,6 +2001,11 @@ nsCAutoString::nsCAutoString( const nsCString& aString ) : nsCString(){
   Append(aString);
 }
 
+nsCAutoString::nsCAutoString( const nsAReadableCString& aString ) : nsCString(){
+  Initialize(*this,mBuffer,sizeof(mBuffer)-1,0,eOneByte,PR_FALSE);
+  AddNullTerminator(*this);
+  Append(aString);
+}
 
 nsCAutoString::nsCAutoString(const char* aCString) : nsCString() {
   Initialize(*this,mBuffer,sizeof(mBuffer)-1,0,eOneByte,PR_FALSE);

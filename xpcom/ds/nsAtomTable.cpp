@@ -98,7 +98,7 @@ void* AtomImpl::operator new(size_t size, const PRUnichar* us, PRInt32 uslen)
 }
 
 NS_IMETHODIMP 
-AtomImpl::ToString(nsString& aBuf) /*FIX: const */
+AtomImpl::ToString(nsAWritableString& aBuf) /*FIX: const */
 {
   aBuf.SetLength(0);
   aBuf.Append(mString, nsCRT::strlen(mString));
@@ -141,9 +141,13 @@ NS_COM nsIAtom* NS_NewAtom(const char* isolatin1)
   return NS_NewAtom(tmp.GetUnicode());
 }
 
-NS_COM nsIAtom* NS_NewAtom(const nsString& aString)
+NS_COM nsIAtom* NS_NewAtom(const nsAReadableString& aString)
 {
-  return NS_NewAtom(aString.GetUnicode());
+  // XXX Only create an atom based on the first fragment
+  // of the string
+
+  nsAutoString fooXXXFIXMEForSure(aString);
+  return NS_NewAtom(fooXXXFIXMEForSure.GetUnicode());
 }
 
 NS_COM nsIAtom* NS_NewAtom(const PRUnichar* us)

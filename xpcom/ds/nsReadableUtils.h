@@ -55,6 +55,12 @@ NS_COM char* ToNewCString( const nsAReadableString& aSource );
    */
 NS_COM char* ToNewCString( const nsAReadableCString& aSource );
 
+  /**
+   * blah blah...
+   */
+
+NS_COM char* ToNewUTF8String( const nsAReadableString& aSource );
+
 
   /**
    * Returns a new |PRUnichar| buffer containing a zero-terminated copy of |aSource|.
@@ -80,6 +86,21 @@ NS_COM PRUnichar* ToNewUnicode( const nsAReadableString& aSource );
    * @return a new |PRUnichar| buffer you must free with |nsMemory::Free|.
    */
 NS_COM PRUnichar* ToNewUnicode( const nsAReadableCString& aSource );
+
+  /**
+   * Copies |aLength| 16-bit characters from the start of |aSource| to the
+   * |PRUnichar| buffer |aDest|.
+   *
+   * After this operation |aDest| is not null terminated.
+   *
+   * @param aSource a 16-bit wide string
+   * @param aDest a |PRUnichar| buffer
+   * @param aLength the number of 16-bit characters to copy
+   * @return pointer to destination buffer - identical to |aDest|
+   */
+NS_COM PRUnichar* CopyUnicodeTo( const nsAReadableString& aSource,
+                                 PRUnichar* aDest,
+                                 PRUint32 aLength );
 
 
   /**

@@ -25,6 +25,7 @@
 
 #include "nsReadableUtils.h"
 #include "nsMemory.h"
+#include "nsString.h"
 
 
 
@@ -93,6 +94,30 @@ ToNewCString( const nsAReadableString& aSource )
 
 NS_COM
 char*
+ToNewUTF8String( const nsAReadableString& aSource )
+  {
+    NS_ConvertUCS2toUTF8 temp(aSource);
+
+    char* result;
+    if (temp.mOwnsBuffer) {
+      // We allocated. Trick the string into not freeing its buffer to
+      // avoid an extra allocation.
+      result = temp.mStr;
+
+      temp.mStr=0;
+      temp.mOwnsBuffer = PR_FALSE;
+    }
+    else {
+      // We didn't allocate a buffer, so we need to copy it out of the
+      // nsCAutoString's storage.
+      result = nsCRT::strdup(temp.mStr);
+    }
+
+    return result;
+  }
+
+NS_COM
+char*
 ToNewCString( const nsAReadableCString& aSource )
   {
     // no conversion needed, just allocate a buffer of the correct length and copy into it
@@ -120,6 +145,21 @@ ToNewUnicode( const nsAReadableCString& aSource )
     PRUnichar* result = AllocateStringCopy(aSource, (PRUnichar*)0);
     copy_string(aSource.BeginReading(), aSource.EndReading(), LossyConvertEncoding<char, PRUnichar>(result)).write_terminator();
     return result;
+  }
+
+NS_COM
+PRUnichar*
+CopyUnicodeTo( const nsAReadableString& aSource,
+               PRUnichar* aDest,
+               PRUint32 aLength )
+  {
+    typedef nsAReadableString::const_iterator iterator;
+
+    iterator done_reading = aSource.BeginReading();
+    done_reading += aLength;
+
+    copy_string(aSource.BeginReading(), done_reading, aDest);
+    return aDest;
   }
 
 NS_COM

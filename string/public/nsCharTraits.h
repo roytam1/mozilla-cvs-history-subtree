@@ -37,6 +37,10 @@
   // for |PRUnichar|
 #endif
 
+#ifndef nsCRT_h___
+#include "nsCRT.h"
+  // for |ToUpper| and |ToLower|
+#endif
 
 #ifdef HAVE_CPP_BOOL
   typedef bool nsCharTraits_bool;
@@ -182,6 +186,26 @@ struct nsCharTraits
           }
 
         return 0;
+      }
+
+    static
+    void
+    toupper( char_type* s, size_t n )
+      {
+        while ( n-- ) {
+          assign(*s, nsCRT::ToUpper(*s));
+          ++s;
+        }
+      }
+
+    static
+    void
+    tolower( char_type* s, size_t n )
+      {
+        while ( n-- ) {
+          assign(*s, nsCRT::ToLower(*s));
+          ++s;
+        }
       }
 
 #if 0

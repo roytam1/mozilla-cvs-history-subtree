@@ -293,8 +293,8 @@ class basic_nsAWritableString
 
 
 
-      // void ToLowerCase();
-      // void ToUpperCase();
+      void ToLowerCase();
+      void ToUpperCase();
 
       // void StripChars( const CharT* aSet );
       // void StripChar( ... );
@@ -321,6 +321,7 @@ class basic_nsAWritableString
       basic_nsAWritableString<CharT>& operator=( const basic_nsAWritableString<CharT>& aWritable )  { Assign(aWritable); return *this; }
 
       basic_nsAWritableString<CharT>& operator=( const basic_nsAReadableString<CharT>& aReadable )  { Assign(aReadable); return *this; }
+      basic_nsAWritableString<CharT>& operator=( const basic_nsAWritableString<CharT>& aWritable )  { Assign(aWritable); return *this; }
       basic_nsAWritableString<CharT>& operator=( const nsPromiseReadable<CharT>& aReadable )        { Assign(aReadable); return *this; }
       basic_nsAWritableString<CharT>& operator=( const CharT* aPtr )                                { Assign(aPtr); return *this; }
       basic_nsAWritableString<CharT>& operator=( CharT aChar )                                      { Assign(aChar); return *this; }
@@ -753,6 +754,39 @@ basic_nsAWritableString<CharT>::do_ReplaceFromReadable( PRUint32 cutStart, PRUin
   }
 
 
+  //
+  // |ToUpperCase()|
+  //
+template <class CharT>
+void
+basic_nsAWritableString<CharT>::ToUpperCase()
+  {
+    nsWritingIterator<CharT> start( BeginWriting() );
+    nsWritingIterator<CharT> end( EndWriting() );
+
+    while ( start != end ) {
+      PRUint32 fraglen = start.size_forward();
+      nsCharTraits<CharT>::toupper(start.get(), fraglen);
+      start += fraglen;
+    }
+  }
+
+  //
+  // |ToLowerCase()|
+  //
+template <class CharT>
+void
+basic_nsAWritableString<CharT>::ToLowerCase()
+  {
+    nsWritingIterator<CharT> start( BeginWriting() );
+    nsWritingIterator<CharT> end( EndWriting() );
+
+    while ( start != end ) {
+      PRUint32 fraglen = start.size_forward();
+      nsCharTraits<CharT>::tolower(start.get(), fraglen);
+      start += fraglen;
+    }
+  }
 
   //
   // Types

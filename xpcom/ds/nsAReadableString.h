@@ -310,7 +310,7 @@ class basic_nsAReadableString
       PRUint32  Right( basic_nsAWritableString<CharT>&, PRUint32 ) const;
 
       // Find( ... ) const;
-      // FindChar( ... ) const;
+      PRInt32 FindChar( CharT, PRUint32 aOffset = 0 ) const;
       // FindCharInSet( ... ) const;
       // RFind( ... ) const;
       // RFindChar( ... ) const;
@@ -625,7 +625,25 @@ basic_nsAReadableString<CharT>::Right( basic_nsAWritableString<CharT>& aResult, 
     return Mid(aResult, myLength-aLengthToCopy, aLengthToCopy);
   }
 
+template <class CharT>
+PRInt32
+basic_nsAReadableString<CharT>::FindChar( CharT aChar, PRUint32 aOffset ) const
+  {
+    nsReadingIterator<CharT> start( BeginReading()+=aOffset );
+    nsReadingIterator<CharT> end( EndReading() );
 
+    PRUint32 pos = 0;
+    while (start != end) {
+      PRUint32 fraglen = start.size_forward();
+      const CharT* findPtr = nsCharTraits<CharT>::find(start.get(), fraglen, aChar);
+      if (findPtr) {
+        return pos + (findPtr-start.get());
+      }
+      pos += fraglen;
+      start += fraglen;
+    }
+    return -1;
+  }
 
 template <class CharT>
 inline
