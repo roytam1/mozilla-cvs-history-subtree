@@ -147,7 +147,6 @@ MBool Double::isNaN() {
 double Double::toDouble(const String& src) {
 
     double dbl = 0.0;
-    double fraction   = 1.0;
     double multiplier = 10.0;
     PRInt32 idx = 0;
 

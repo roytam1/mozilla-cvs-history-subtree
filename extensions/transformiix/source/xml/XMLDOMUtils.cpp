@@ -143,7 +143,6 @@ void XMLDOMUtils::getNodeValue(Node* node, String* target) {
     if (!node) return;
 
     int nodeType = node->getNodeType();
-    Element* element = 0;
 
     switch ( nodeType ) {
         case Node::ATTRIBUTE_NODE :

@@ -67,8 +67,6 @@ ExprResult* ExtensionFunctionCall::evaluate(Node* context, ContextState* cs) {
 
         //copy parameters
         ListIterator* iter = params.iterator();
-        Expr* param = 0;
-
         while (iter->hasNext()) {
            fnCall->addParam( new ExprWrapper( (Expr*) iter->next() ) );
         }
