@@ -44,7 +44,8 @@ else
 ifdef USE_MSVC
 $(LIBRARY): $(LIB_OBJS)
 	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS)\
-	    /out:"$@" /pdb:"$(OBJDIR)/js32.pdb" /implib:"$(OBJDIR)/js32.lib" $?
+	    /out:"$@" /pdb:"$(OBJDIR)/$(@F:.dll=.pdb)" \
+	    /implib:"$(OBJDIR)/$(@F:.dll=.lib)" $?
 else
 $(LIBRARY): $(LIB_OBJS)
 	$(AR) rv $@ $?
