@@ -39,6 +39,7 @@
 
 #import "PreferenceManager.h"
 #import "CHBrowserView.h"
+#import "CHBrowserService.h"
 #import "BookmarksService.h"
 #import "BookmarksDataSource.h"
 #import "BookmarkInfoController.h"
@@ -173,11 +174,7 @@ BookmarksService::RemoveObserver()
      
     gRefCnt--;
     if (gRefCnt == 0) {
-        // Flush Bookmarks before shutting down as some changes are not flushed when
-        // they are performed (folder open/closed) as writing a whole bookmark file for
-        // that type of operation seems excessive. 
-        FlushBookmarks();
-          
+        // we should have already written bookmarks in response to a shutdown notification
         NS_IF_RELEASE(gBookmarks);
         NS_RELEASE(gBookmarkAtom);
         NS_RELEASE(gFolderAtom);
@@ -602,16 +599,20 @@ BookmarksService::FlushBookmarks()
 }
 
 void
-BookmarksService::SaveBookmarksToFile(const nsString& inFileName)
+BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
 {
   nsCOMPtr<nsIFile> bookmarksFile;
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(bookmarksFile));
   bookmarksFile->Append(inFileName);
   
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  if (!domDoc) {
+    NSLog(@"No bookmarks document to save!");
+    return;
+  }
+
   nsCOMPtr<nsIOutputStream> outputStream;
   NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), bookmarksFile);
-
-  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
 
   nsCOMPtr<nsIDOMSerializer> domSerializer(do_CreateInstance(NS_XMLSERIALIZER_CONTRACTID));
   if (domSerializer)
@@ -1470,6 +1471,15 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
                                         name:         SiteIconLoadNotificationName
                                         object:				self];
 
+  [[NSNotificationCenter defaultCenter] addObserver:  self
+                                        selector:     @selector(shutdown:)
+                                        name:         TermEmbeddingNotificationName
+                                        object:       nil];
+}
+
+- (void)shutdown: (NSNotification*)aNotification
+{
+  BookmarksService::FlushBookmarks();
 }
 
 // callback for [[SiteIconProvider sharedFavoriteIconProvider] loadFavoriteIcon]

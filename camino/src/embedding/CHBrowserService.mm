@@ -51,6 +51,9 @@
 #include "nsIDownload.h"
 #include "nsIExternalHelperAppService.h"
 
+NSString* TermEmbeddingNotificationName = @"TermEmbedding";
+NSString* XPCOMShutDownNotificationName = @"XPCOMShutDown";
+
 nsAlertController* CHBrowserService::sController = nsnull;
 CHBrowserService* CHBrowserService::sSingleton = nsnull;
 PRUint32 CHBrowserService::sNumBrowsers = 0;
@@ -143,36 +146,44 @@ CHBrowserService::InitEmbedding()
 void
 CHBrowserService::BrowserClosed()
 {
-    sNumBrowsers--;
-    if (sCanTerminate && sNumBrowsers == 0) {
-        // The app is terminating *and* our count dropped to 0.
-        NS_IF_RELEASE(sSingleton);
-        NS_TermEmbedding();
-#if DEBUG
-        NSLog(@"Shutting down embedding!");
-#endif
-    }
+  sNumBrowsers--;
+  if (sCanTerminate && sNumBrowsers == 0) {
+    // The app is terminating *and* our count dropped to 0.
+    ShutDown();
+  }
 }
 
 /* static */
 void
 CHBrowserService::TermEmbedding()
 {
-    sCanTerminate = PR_TRUE;
-    if (sNumBrowsers == 0) {
-        NS_IF_RELEASE(sSingleton);
-        NS_TermEmbedding();
+  // phase 1 notification (we're trying to terminate)
+  [[NSNotificationCenter defaultCenter] postNotificationName:TermEmbeddingNotificationName object:nil];
+
+  sCanTerminate = PR_TRUE;
+  if (sNumBrowsers == 0) {
+    ShutDown();
+  }
+  else {
 #if DEBUG
-        NSLog(@"Shutting down embedding.");
+  	NSLog(@"Cannot yet shut down embedding.");
 #endif
-    }
-    else {
+    // Otherwise we cannot yet terminate.  We have to let the death of the browser views
+    // induce termination.
+  }
+}
+
+/* static */
+void CHBrowserService::ShutDown()
+{
+  // phase 2 notifcation (we really are about to terminate)
+  [[NSNotificationCenter defaultCenter] postNotificationName:XPCOMShutDownNotificationName object:nil];
+
+  NS_IF_RELEASE(sSingleton);
+  NS_TermEmbedding();
 #if DEBUG
-        NSLog(@"Cannot yet shut down embedding.");
+  NSLog(@"Shutting down embedding.");
 #endif
-        // Otherwise we cannot yet terminate.  We have to let the death of the browser windows
-        // induce termination.
-    }
 }
 
 #define NS_ALERT_NIB_NAME "alert"

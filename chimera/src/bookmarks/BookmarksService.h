@@ -82,7 +82,7 @@ public:
   
   static void ReadBookmarks();
   static void FlushBookmarks();
-  static void SaveBookmarksToFile(const nsString& inFileName);
+  static void SaveBookmarksToFile(const nsAString& inFileName);
 
   static void ConstructBookmarksMenu(NSMenu* aMenu, nsIContent* aContent);
   static void OpenMenuBookmark(BrowserWindowController* aController, id aMenuItem);

@@ -39,6 +39,7 @@
 #import "NSString+Utils.h"
 
 #import "RDFOutlineViewDataSource.h"
+#import "CHBrowserService.h"
 
 #include "nsIRDFDataSource.h"
 #include "nsIRDFService.h"
@@ -54,6 +55,12 @@
 #include "nsXPIDLString.h"
 #include "nsString.h"
 
+@interface RDFOutlineViewDataSource(Private);
+
+- (void)registerForShutdownNotification;
+- (void)cleanup;
+
+@end
 
 
 @implementation RDFOutlineViewDataSource
@@ -80,16 +87,34 @@
 
 - (void) dealloc
 {
-    NS_IF_RELEASE(mContainer);
-    NS_IF_RELEASE(mContainerUtils);
-    NS_IF_RELEASE(mRDFService);
-    
-    NS_IF_RELEASE(mDataSource);
-    NS_IF_RELEASE(mRootResource);
-    
-    [mDictionary release];
-    
-    [super dealloc];
+	[self cleanup];    
+  [super dealloc];
+}
+
+- (void)cleanup
+{
+  NS_IF_RELEASE(mContainer);
+  NS_IF_RELEASE(mContainerUtils);
+  NS_IF_RELEASE(mRDFService);
+  
+  NS_IF_RELEASE(mDataSource);
+  NS_IF_RELEASE(mRootResource);
+  
+  [mDictionary release];
+  mDictionary = nil;
+}
+
+- (void)registerForShutdownNotification
+{
+  [[NSNotificationCenter defaultCenter] addObserver:  self
+                                        selector:     @selector(shutdown:)
+                                        name:         XPCOMShutDownNotificationName
+                                        object:       nil];
+}
+
+- (void)shutdown: (NSNotification*)aNotification
+{
+  [self cleanup];
 }
 
 - (nsIRDFDataSource*) dataSource

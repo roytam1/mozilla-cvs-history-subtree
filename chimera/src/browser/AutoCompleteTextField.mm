@@ -27,6 +27,7 @@
 #import "AutoCompleteTextField.h"
 #import "BrowserWindowController.h"
 #import "PageProxyIcon.h"
+#import "CHBrowserService.h"
 
 #include "nsIServiceManager.h"
 #include "nsMemory.h"
@@ -41,6 +42,7 @@ static const int kFrameMargin = 1;
 @end
 
 @implementation AutoCompleteWindow
+
 - (BOOL)isKeyWindow
 {
   return YES;
@@ -75,6 +77,9 @@ private:
 NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 
 ////////////////////////////////////////////////////////////////////////
+@interface AutoCompleteTextField(Private)
+- (void)cleanup;
+@end
 
 @implementation AutoCompleteTextField
 
@@ -162,6 +167,11 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onUndoOrRedo:)
                                                name:NSUndoManagerDidUndoChangeNotification
                                              object:[[self fieldEditor] undoManager]];
+
+  [[NSNotificationCenter defaultCenter] addObserver:  self
+                                        selector:     @selector(shutdown:)
+                                        name:         XPCOMShutDownNotificationName
+                                        object:       nil];
   
   // read the user default on if we should auto-complete the text field as the user
   // types or make them pick something from a list (a-la mozilla).
@@ -171,18 +181,24 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+  [self cleanup];
+  [super dealloc];
+}
 
-  if (mSearchString)
-    [mSearchString release];
-    
-  [mPopupWin release];
-  [mDataSource release];
+- (void)cleanup
+{
+  [mSearchString release]; mSearchString = nil;
+  [mPopupWin release];     mPopupWin = nil;
+  [mDataSource release];   mDataSource = nil;
 
   NS_IF_RELEASE(mSession);
   NS_IF_RELEASE(mResults);
   NS_IF_RELEASE(mListener);
-  
-  [super dealloc];
+}
+
+- (void)shutdown: (NSNotification*)aNotification
+{
+  [self cleanup];
 }
 
 - (void) setSession:(NSString *)aSession
