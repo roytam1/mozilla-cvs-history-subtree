@@ -198,6 +198,7 @@ struct PRLibrary {
 
 #if defined(XP_MACOSX)
     CFMutableDictionaryRef      wrappers;
+    const struct mach_header*   image;
 #endif /* XP_MACOSX */
 #endif
 
@@ -641,7 +642,18 @@ pr_LoadMachDyldModule(const char *name)
     NSModule h = NULL;
     if (NSCreateObjectFileImageFromFile(name, &ofi)
             == NSObjectFileImageSuccess) {
-        h = NSLinkModule(ofi, name, NSLINKMODULE_OPTION_PRIVATE);
+        h = NSLinkModule(ofi, name, NSLINKMODULE_OPTION_PRIVATE
+                         | NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+        /*
+         * TODO: If NSLinkModule fails, use NSLinkEditError to retrieve
+         * error information.
+         */
+        if (NSDestroyObjectFileImage(ofi) == FALSE) {
+            if (h) {
+                (void)NSUnLinkModule(h, NSUNLINKMODULE_OPTION_NONE);
+                h = NULL;
+            }
+        }
     }
     return h;
 }
@@ -879,7 +891,15 @@ static PRStatus
 pr_LoadViaDyld(const char *name, PRLibrary *lm)
 {
     lm->dlh = pr_LoadMachDyldModule(name);
-    return (lm->dlh != NULL) ? PR_SUCCESS : PR_FAILURE;
+    if (lm->dlh == NULL) {
+        lm->image = NSAddImage(name, NSADDIMAGE_OPTION_RETURN_ON_ERROR
+                               | NSADDIMAGE_OPTION_WITH_SEARCHING);
+        /*
+         * TODO: If NSAddImage fails, use NSLinkEditError to retrieve
+         * error information.
+         */
+    }
+    return (lm->dlh != NULL || lm->image != NULL) ? PR_SUCCESS : PR_FAILURE;
 }
 #endif
 
@@ -1333,7 +1353,7 @@ PR_UnloadLibrary(PRLibrary *lib)
 #elif defined(USE_HPSHL)
     result = shl_unload(lib->dlh);
 #elif defined(USE_MACH_DYLD)
-    result = NSUnLinkModule(lib->dlh, FALSE);
+    result = NSUnLinkModule(lib->dlh, NSUNLINKMODULE_OPTION_NONE) ? 0 : -1;
 #else
 #error Configuration error
 #endif
@@ -1357,6 +1377,7 @@ PR_UnloadLibrary(PRLibrary *lib)
 #if defined(XP_MACOSX)
     if (lib->wrappers)
         CFRelease(lib->wrappers);
+    /* No way to unload an image (lib->image) */
 #endif
 #endif
 
@@ -1394,7 +1415,7 @@ PR_UnloadLibrary(PRLibrary *lib)
     free(lib->name);
     lib->name = NULL;
     PR_DELETE(lib);
-    if (result == -1) {
+    if (result != 0) {
         PR_SetError(PR_UNLOAD_LIBRARY_ERROR, _MD_ERRNO());
         DLLErrorInternal(_MD_ERRNO());
         status = PR_FAILURE;
@@ -1474,6 +1495,18 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
         
         if (f == NULL && strcmp(name + SYM_OFFSET, "main") == 0) f = lm->main;
     }
+#if defined(XP_MACOSX)
+    if (lm->image) {
+        NSSymbol symbol;
+        symbol = NSLookupSymbolInImage(lm->image, name,
+                 NSLOOKUPSYMBOLINIMAGE_OPTION_BIND
+                 | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
+        if (symbol != NULL)
+            f = NSAddressOfSymbol(symbol);
+        else
+            f = NULL;
+    }
+#endif
 #undef SYM_OFFSET
 #endif /* XP_MAC */
 
