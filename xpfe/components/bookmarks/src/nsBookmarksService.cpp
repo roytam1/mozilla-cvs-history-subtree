@@ -3078,10 +3078,18 @@ nsBookmarksService::GetSynthesizedType(nsIRDFResource *aNode, nsIRDFNode **aType
     // (which is either a bookmark or a bookmark folder, since everything
     // else is annotated)
     PRBool isContainer = PR_FALSE;
+    PRBool isBookmarkedFlag = PR_FALSE;
     (void)gRDFC->IsSeq(mInner, aNode, &isContainer);
-
-    *aType = isContainer ? kNC_Folder : kNC_Bookmark;
-      NS_ADDREF(*aType);
+    if (isContainer == PR_TRUE)
+    {
+      *aType = kNC_Folder;
+    }
+    else if (NS_SUCCEEDED(rv = IsBookmarkedInternal(aNode, &isBookmarkedFlag))
+      && (isBookmarkedFlag == PR_TRUE))
+    {
+      *aType = kNC_Bookmark;
+    }
+    NS_IF_ADDREF(*aType);
   }
   return(NS_OK);
 }
