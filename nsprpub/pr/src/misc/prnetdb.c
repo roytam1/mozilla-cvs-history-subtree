@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -50,32 +34,35 @@ extern int h_errno;
 #define _MD_GETHOST_ERRNO() _MD_ERRNO()
 #endif
 
-/*
- * The meaning of the macros related to gethostbyname, gethostbyaddr,
- * and gethostbyname2 is defined below.
- * - _PR_HAVE_THREADSAFE_GETHOST: the gethostbyXXX functions return
- *   the result in thread specific storage.  For example, AIX, HP-UX,
- *   and OSF1.
- * -  _PR_HAVE_GETHOST_R: have the gethostbyXXX_r functions. See next
- *   two macros.
- * - _PR_HAVE_GETHOST_R_INT: the gethostbyXXX_r functions return an
- *   int.  For example, Linux glibc.
- * - _PR_HAVE_GETHOST_R_POINTER: the gethostbyXXX_r functions return
- *   a struct hostent* pointer.  For example, Solaris and IRIX.
- */
-#if defined(_PR_NO_PREEMPT) || defined(_PR_HAVE_GETHOST_R) \
-    || defined(_PR_HAVE_THREADSAFE_GETHOST)
-#define _PR_NO_DNS_LOCK
-#endif
-
-#if defined(_PR_NO_DNS_LOCK)
+#if defined(_PR_NO_PREEMPT)
 #define LOCK_DNS()
 #define UNLOCK_DNS()
 #else
 PRLock *_pr_dnsLock = NULL;
 #define LOCK_DNS() PR_Lock(_pr_dnsLock)
 #define UNLOCK_DNS() PR_Unlock(_pr_dnsLock)
-#endif  /* defined(_PR_NO_DNS_LOCK) */
+#endif  /* defined(_PR_NO_PREEMPT) */
+
+#if defined(XP_UNIX)
+#include <signal.h>
+
+/*
+** Unix's, as a rule, have a bug in their select code: if a timer
+** interrupt occurs and you have SA_RESTART set on your signal, select
+** forgets how much time has elapsed and restarts the system call from
+** the beginning. This can cause a call to select to *never* time out.
+**
+** Because we aren't certain that select is wrapped properly in this code
+** we disable the clock while a dns operation is occuring. This sucks and
+** can be tossed when implement our own dns code that calls our own
+** PR_Poll.
+*/
+
+static sigset_t timer_set;
+#define DISABLECLOCK(_set)    sigprocmask(SIG_BLOCK, &timer_set, _set)
+#define ENABLECLOCK(_set)    sigprocmask(SIG_SETMASK, _set, 0)
+
+#endif /* XP_UNIX */
 
 /*
  * Some platforms have the reentrant getprotobyname_r() and
@@ -167,8 +154,10 @@ void _PR_InitNet(void)
 	 */
 	 (void)setnetconfig();
 #endif
+	sigemptyset(&timer_set);
+	sigaddset(&timer_set, SIGALRM);
 #endif
-#if !defined(_PR_NO_DNS_LOCK)
+#if !defined(_PR_NO_PREEMPT)
 	_pr_dnsLock = PR_NewLock();
 #endif
 #if !defined(_PR_HAVE_GETPROTO_R)
@@ -353,74 +342,26 @@ static PRStatus CopyProtoent(
 }
 #endif /* !defined(_PR_HAVE_GETPROTO_R) */
 
-/*
- * #################################################################
- * NOTE: tmphe, tmpbuf, bufsize, h, and h_err are local variables
- * or arguments of PR_GetHostByName, PR_GetIPNodeByName, and
- * PR_GetHostByAddr.  DO NOT CHANGE THE NAMES OF THESE LOCAL 
- * VARIABLES OR ARGUMENTS.
- * #################################################################
- */
-#if defined(_PR_HAVE_GETHOST_R_INT)
-
-#define GETHOSTBYNAME(name) \
-    (gethostbyname_r(name, &tmphe, tmpbuf, bufsize, &h, &h_err), h)
-#define GETHOSTBYNAME2(name, af) \
-    (gethostbyname2_r(name, af, &tmphe, tmpbuf, bufsize, &h, &h_err), h)
-#define GETHOSTBYADDR(addr, addrlen, af) \
-    (gethostbyaddr_r(addr, addrlen, af, \
-    &tmphe, tmpbuf, bufsize, &h, &h_err), h)
-
-#elif defined(_PR_HAVE_GETHOST_R_POINTER)
-
-#define GETHOSTBYNAME(name) \
-    gethostbyname_r(name, &tmphe, tmpbuf, bufsize, &h_err)
-#define GETHOSTBYNAME2(name, af) \
-    gethostbyname2_r(name, af, &tmphe, tmpbuf, bufsize, &h_err)
-#define GETHOSTBYADDR(addr, addrlen, af) \
-    gethostbyaddr_r(addr, addrlen, af, &tmphe, tmpbuf, bufsize, &h_err)
-
-#else
-
-#define GETHOSTBYNAME(name) gethostbyname(name)
-#define GETHOSTBYNAME2(name, af) gethostbyname2(name, af)
-#define GETHOSTBYADDR(addr, addrlen, af) gethostbyaddr(addr, addrlen, af)
-
-#endif  /* definition of GETHOSTBYXXX */
-
 PR_IMPLEMENT(PRStatus) PR_GetHostByName(
     const char *name, char *buf, PRIntn bufsize, PRHostEnt *hp)
 {
 	struct hostent *h;
 	PRStatus rv = PR_FAILURE;
-#if defined(_PR_HAVE_GETHOST_R)
-    char localbuf[PR_NETDB_BUF_SIZE];
-    char *tmpbuf;
-    struct hostent tmphe;
-    int h_err;
+#ifdef XP_UNIX
+	sigset_t oldset;
 #endif
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-#if defined(_PR_HAVE_GETHOST_R)
-    tmpbuf = localbuf;
-    if (bufsize > sizeof(localbuf))
-    {
-        tmpbuf = PR_Malloc(bufsize);
-        if (NULL == tmpbuf)
-        {
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            return rv;
-        }
-    }
+#ifdef XP_UNIX
+	DISABLECLOCK(&oldset);
 #endif
-
 	LOCK_DNS();
 
 #ifdef XP_OS2_VACPP
-	h = GETHOSTBYNAME((char *)name);
+	h = gethostbyname((char *)name);
 #else
-    h = GETHOSTBYNAME(name);
+    h = gethostbyname(name);
 #endif
     
 	if (NULL == h)
@@ -435,9 +376,8 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
 	}
 	UNLOCK_DNS();
-#if defined(_PR_HAVE_GETHOST_R)
-    if (tmpbuf != localbuf)
-        PR_Free(tmpbuf);
+#ifdef XP_UNIX
+	ENABLECLOCK(&oldset);
 #endif
 	return rv;
 }
@@ -453,57 +393,14 @@ extern void * _pr_getipnodebyaddr_fp;
 extern void * _pr_freehostent_fp;
 #endif
 
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
-/*
-** Append the V4 addresses to the end of the list
-*/
-static PRStatus AppendV4AddrsToHostent(
-    struct hostent *from,
-    char **buf,
-    PRIntn *bufsize,
-    PRHostEnt *to)
-{
-    PRIntn na, na_old;
-    char **ap;
-    char **new_addr_list;
-			
-    /* Count the addresses, then grow storage for the pointers */
-    for (na_old = 0, ap = to->h_addr_list; *ap != 0; na_old++, ap++)
-        {;} /* nothing to execute */
-    for (na = na_old + 1, ap = from->h_addr_list; *ap != 0; na++, ap++)
-        {;} /* nothing to execute */
-    new_addr_list = (char**)Alloc(
-        na * sizeof(char*), buf, bufsize, sizeof(char**));
-    if (!new_addr_list) return PR_FAILURE;
-
-    /* Copy the V6 addresses, one at a time */
-    for (na = 0, ap = to->h_addr_list; *ap != 0; na++, ap++) {
-        new_addr_list[na] = to->h_addr_list[na];
-    }
-    to->h_addr_list = new_addr_list;
-
-    /* Copy the V4 addresses, one at a time */
-    for (ap = from->h_addr_list; *ap != 0; na++, ap++) {
-        to->h_addr_list[na] = Alloc(to->h_length, buf, bufsize, 0);
-        if (!to->h_addr_list[na]) return PR_FAILURE;
-        MakeIPv4MappedAddr(*ap, to->h_addr_list[na]);
-    }
-    to->h_addr_list[na] = 0;
-    return PR_SUCCESS;
-}
-#endif
-
 PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
     const char *name, PRUint16 af, PRIntn flags,
     char *buf, PRIntn bufsize, PRHostEnt *hp)
 {
 	struct hostent *h = 0;
 	PRStatus rv = PR_FAILURE;
-#if defined(_PR_HAVE_GETHOST_R)
-    char localbuf[PR_NETDB_BUF_SIZE];
-    char *tmpbuf;
-    struct hostent tmphe;
-    int h_err;
+#ifdef XP_UNIX
+	sigset_t oldset;
 #endif
 #if defined(_PR_HAVE_GETIPNODEBYNAME)
 	PRUint16 md_af = af;
@@ -512,6 +409,7 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 #endif
 #if defined(_PR_HAVE_GETHOSTBYNAME2)
     PRBool did_af_inet = PR_FALSE;
+    char **new_addr_list;
 #endif
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
@@ -521,6 +419,11 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
         PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
         return PR_FAILURE;
     }
+
+#ifdef XP_UNIX
+	DISABLECLOCK(&oldset);
+#endif
+	LOCK_DNS();
 
 #if defined(_PR_HAVE_GETIPNODEBYNAME)
 	if (flags & PR_AI_V4MAPPED)
@@ -535,39 +438,24 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
     	md_af = af;
 #endif
 
-#if defined(_PR_HAVE_GETHOST_R)
-    tmpbuf = localbuf;
-    if (bufsize > sizeof(localbuf))
-    {
-        tmpbuf = PR_Malloc(bufsize);
-        if (NULL == tmpbuf)
-        {
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            return rv;
-        }
-    }
-#endif
-
-    /* Do not need to lock the DNS lock if getipnodebyname() is called */
 #ifdef _PR_INET6
 #ifdef _PR_HAVE_GETHOSTBYNAME2
-    LOCK_DNS();
     if (af == PR_AF_INET6)
     {
 #ifdef _PR_INET6_PROBE
       if (_pr_ipv6_is_present == PR_TRUE)
 #endif
-        h = GETHOSTBYNAME2(name, AF_INET6); 
+        h = gethostbyname2(name, AF_INET6); 
         if ((NULL == h) && (flags & PR_AI_V4MAPPED))
         {
             did_af_inet = PR_TRUE;
-            h = GETHOSTBYNAME2(name, AF_INET);
+            h = gethostbyname2(name, AF_INET);
         }
     }
     else
     {
         did_af_inet = PR_TRUE;
-        h = GETHOSTBYNAME2(name, af);
+        h = gethostbyname2(name, af);
     }
 #elif defined(_PR_HAVE_GETIPNODEBYNAME)
     h = getipnodebyname(name, md_af, tmp_flags, &error_num);
@@ -577,17 +465,13 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 #elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
     if (_pr_ipv6_is_present == PR_TRUE)
     	h = (*((_pr_getipnodebyname_t)_pr_getipnodebyname_fp))(name, md_af, tmp_flags, &error_num);
-    else
-    {
-        LOCK_DNS();
-    	h = GETHOSTBYNAME(name);
-    }
+	else
+    	h = gethostbyname(name);
 #else /* _PR_INET6 */
-    LOCK_DNS();
 #ifdef XP_OS2_VACPP
-	h = GETHOSTBYNAME((char *)name);
+	h = gethostbyname((char *)name);
 #else
-    h = GETHOSTBYNAME(name);
+    h = gethostbyname(name);
 #endif
 #endif /* _PR_INET6 */
     
@@ -619,33 +503,42 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 			(*((_pr_freehostent_t)_pr_freehostent_fp))(h);
 #endif
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
-		if ((PR_SUCCESS == rv) && (flags & PR_AI_V4MAPPED)
-				&& (flags & (PR_AI_ALL|PR_AI_ADDRCONFIG))
-				&& !did_af_inet && (h = GETHOSTBYNAME2(name, AF_INET)) != 0) {
-			rv = AppendV4AddrsToHostent(h, &buf, &bufsize, hp);
-			if (PR_SUCCESS != rv)
-				PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
+		if ((flags & PR_AI_V4MAPPED) && (flags & (PR_AI_ALL|PR_AI_ADDRCONFIG))
+				&& !did_af_inet && (h = gethostbyname2(name, AF_INET)) != 0) {
+			/* Append the V4 addresses to the end of the list */
+			PRIntn na, na_old;
+			char **ap;
+			
+			/* Count the addresses, then grow storage for the pointers */
+			for (na_old = 0, ap = hp->h_addr_list; *ap != 0; na_old++, ap++)
+					{;} /* nothing to execute */
+			for (na = na_old + 1, ap = h->h_addr_list; *ap != 0; na++, ap++)
+					{;} /* nothing to execute */
+			new_addr_list = (char**)Alloc(
+				na * sizeof(char*), &buf, &bufsize, sizeof(char**));
+			if (!new_addr_list) return PR_FAILURE;
+
+			/* Copy the V6 addresses, one at a time */
+			for (na = 0, ap = hp->h_addr_list; *ap != 0; na++, ap++) {
+				new_addr_list[na] = hp->h_addr_list[na];
+			}
+			hp->h_addr_list = new_addr_list;
+
+			/* Copy the V4 addresses, one at a time */
+			for (ap = h->h_addr_list; *ap != 0; na++, ap++) {
+				hp->h_addr_list[na] = Alloc(hp->h_length, &buf, &bufsize, 0);
+				if (!hp->h_addr_list[na]) return PR_FAILURE;
+				MakeIPv4MappedAddr(*ap, hp->h_addr_list[na]);
+			}
+			hp->h_addr_list[na] = 0;
 		}
 #endif
 	}
 
-    /* Must match the convoluted logic above for LOCK_DNS() */
-#ifdef _PR_INET6
-#ifdef _PR_HAVE_GETHOSTBYNAME2
-    UNLOCK_DNS();
-#endif	/* _PR_HAVE_GETHOSTBYNAME2 */
-#elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
-    if (_pr_ipv6_is_present == PR_FALSE)
-        UNLOCK_DNS();
-#else /* _PR_INET6 */
-    UNLOCK_DNS();
-#endif /* _PR_INET6 */
-
-#if defined(_PR_HAVE_GETHOST_R)
-    if (tmpbuf != localbuf)
-        PR_Free(tmpbuf);
+	UNLOCK_DNS();
+#ifdef XP_UNIX
+	ENABLECLOCK(&oldset);
 #endif
-
 	return rv;
 }
 
@@ -658,11 +551,8 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 	PRUint32 tmp_ip;
 	int addrlen;
 	PRInt32 af;
-#if defined(_PR_HAVE_GETHOST_R)
-    char localbuf[PR_NETDB_BUF_SIZE];
-    char *tmpbuf;
-    struct hostent tmphe;
-    int h_err;
+#ifdef XP_UNIX
+	sigset_t oldset;
 #endif
 #if defined(_PR_HAVE_GETIPNODEBYADDR)
 	int error_num;
@@ -670,6 +560,10 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
+#ifdef XP_UNIX
+	DISABLECLOCK(&oldset);
+#endif
+	LOCK_DNS();
 	if (hostaddr->raw.family == PR_AF_INET6)
 	{
 #if defined(_PR_INET6_PROBE)
@@ -714,20 +608,6 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 		addrlen = sizeof(hostaddr->inet.ip);
 	}
 
-#if defined(_PR_HAVE_GETHOST_R)
-    tmpbuf = localbuf;
-    if (bufsize > sizeof(localbuf))
-    {
-        tmpbuf = PR_Malloc(bufsize);
-        if (NULL == tmpbuf)
-        {
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            return rv;
-        }
-    }
-#endif
-
-    /* Do not need to lock the DNS lock if getipnodebyaddr() is called */
 #if defined(_PR_HAVE_GETIPNODEBYADDR) && defined(_PR_INET6)
 	h = getipnodebyaddr(addr, addrlen, af, &error_num);
 #elif defined(_PR_HAVE_GETIPNODEBYADDR) && defined(_PR_INET6_PROBE)
@@ -735,16 +615,12 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
     	h = (*((_pr_getipnodebyaddr_t)_pr_getipnodebyaddr_fp))(addr, addrlen,
 				af, &error_num);
 	else
-    {
-        LOCK_DNS();
-		h = GETHOSTBYADDR(addr, addrlen, af);
-    }
+		h = gethostbyaddr(addr, addrlen, af);
 #else	/* _PR_HAVE_GETIPNODEBYADDR */
-    LOCK_DNS();
 #ifdef XP_OS2_VACPP
-	h = GETHOSTBYADDR((char *)addr, addrlen, af);
+	h = gethostbyaddr((char *)addr, addrlen, af);
 #else
-	h = GETHOSTBYADDR(addr, addrlen, af);
+	h = gethostbyaddr(addr, addrlen, af);
 #endif
 #endif /* _PR_HAVE_GETIPNODEBYADDR */
 	if (NULL == h)
@@ -785,21 +661,10 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 			(*((_pr_freehostent_t)_pr_freehostent_fp))(h);
 #endif
 	}
-
-    /* Must match the convoluted logic above for LOCK_DNS() */
-#if defined(_PR_HAVE_GETIPNODEBYADDR) && defined(_PR_INET6)
-#elif defined(_PR_HAVE_GETIPNODEBYADDR) && defined(_PR_INET6_PROBE)
-    if (_pr_ipv6_is_present == PR_FALSE)
-        UNLOCK_DNS();
-#else	/* _PR_HAVE_GETIPNODEBYADDR */
-    UNLOCK_DNS();
-#endif /* _PR_HAVE_GETIPNODEBYADDR */
-
-#if defined(_PR_HAVE_GETHOST_R)
-    if (tmpbuf != localbuf)
-        PR_Free(tmpbuf);
+	UNLOCK_DNS();
+#ifdef XP_UNIX
+	ENABLECLOCK(&oldset);
 #endif
-
 	return rv;
 }
 

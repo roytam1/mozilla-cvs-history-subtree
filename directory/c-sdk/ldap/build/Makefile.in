@@ -1,0 +1,33 @@
+DEPTH	= ../../../..
+srcdir	= @srcdir@
+ldaptopsrcdir = @top_srcdir@
+
+CSRCS	= dirver.c
+
+include autoconf.mk
+include $(NSPR_TREE)/config/rules.mk
+
+TARGETS	= $(OBJDIR)/dirver$(BIN_SUFFIX)
+
+GARBAGE	+= $(TARGETS)
+
+ifeq ($(OS_ARCH), OS2)
+$(OBJS) = $(addprefix $(OBJDIR)/, $(CSRCS:.c=.o))
+
+$(TARGETS): $(OBJS) 
+	@$(MAKE_OBJDIR)                                                           
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CC) $(OBJS) -Fe$@ $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
+else
+	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
+endif
+endif
+
+export:: $(TARGETS)
+	$(INSTALL) -m 555 $(TARGETS) $(DIST)/bin
+
+install:: export
+
+clean::
+	rm -rf $(OBJDIR_NAME)
+

@@ -36,7 +36,7 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #include "ldap-int.h"
 
 /*
- * ldap_delete - initiate an ldap (and X.500) delete operation. Parameters:
+ * ldap_delete - initiate an ldap delete operation. Parameters:
  *
  *	ld		LDAP descriptor
  *	dn		DN of the object to delete
