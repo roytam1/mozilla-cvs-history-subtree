@@ -21,6 +21,10 @@
                    handling of form elements.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "g-util.h"
 #include "g-html-view.h"
 #include "gnome-form.h"

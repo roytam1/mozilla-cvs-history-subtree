@@ -32,6 +32,10 @@
   ".netscape/bookmarks.html" under the users home directory.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "QtBookmarksContext.h"
 #include "toolbars.h"
 #include "DialogPool.h"

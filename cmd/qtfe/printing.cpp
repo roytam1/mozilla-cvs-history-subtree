@@ -18,6 +18,10 @@
  * Nord and Paul Olav Tvete.  All Rights Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "QtBrowserContext.h"
 
 #include <fe_proto.h>
@@ -162,7 +166,7 @@ void QtBrowserContext::print( URL_Struct* url, bool print_to_file,
 }
 
 
-#if defined(XP_WIN)
+#ifndef HAVE_RINT
 inline double rint(double v)
 {
     return ( v > 0 ) ? int(v+0.5) : int(v-0.5);

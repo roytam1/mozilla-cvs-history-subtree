@@ -18,6 +18,10 @@
  * Nord and Paul Olav Tvete.  All Rights Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "QtPrefs.h"
 #include "QtContext.h"
 

@@ -20,6 +20,10 @@
  * Tvete.  All Rights Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <qkeycode.h>
 #include <qmenubar.h>
 #include <qpopmenu.h>
@@ -444,7 +448,7 @@ MENUITEM( windowMenu,
 	    SLOT( cmdJavaConsole() ), 0
 	    );
 #endif
-#ifndef NO_SECURITY
+#ifdef MOZ_SECURITY
   MENUITEM( windowMenu,
 	    MENU_WINDOW_SECURITY,
 	    i18n( "&SecurityInfo" ), receiver,

@@ -20,6 +20,10 @@
   Created: Chris Toshok <toshok@hungry.com>, 18-Jul-98.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "g-editor-view.h"
 
 void 

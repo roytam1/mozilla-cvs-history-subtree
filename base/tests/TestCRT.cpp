@@ -16,6 +16,10 @@
  * Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "nsCRT.h"
 #include "nsString.h"
 #include "plstr.h"

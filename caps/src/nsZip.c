@@ -20,23 +20,22 @@
  * Routines for reading classes from a ZIP/JAR file in the class path.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #ifdef XP_MAC
 #include "macstdlibextras.h"  /* for strncasecmp */
-#endif
-#include <fcntl.h>
-#if !(XP_MAC)
-#include <sys/types.h>
-#else
 #include <types.h>
-//#include "NSstring.h"
-#endif
-#if !(XP_MAC)
-#include <sys/stat.h>
-#else
 #include <stat.h>
+//#include "NSstring.h"
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
 #endif
 
 #include "prlog.h"
@@ -55,12 +54,12 @@
 #include "prmem.h"
 #include "prerror.h"
 
-#ifndef max
-#define max(a, b) ((a) > (b) ? (a) : (b))
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-#ifndef min
-#define min(a, b) ((a) < (b) ? (a) : (b))
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
 /*
@@ -326,7 +325,7 @@ nsZipFindEnd(ns_zip_t *zip, char *endbuf)
      * Set limit on how far back we need to search. The END header must be
      * located within the last 64K bytes of the file.
      */
-    mark = max(0, len - 0xffff);
+    mark = MAX(0, len - 0xffff);
     /*
      * Search backwards INBUFSIZ bytes at a time from end of file stopping
      * when the END header signature has been found. Since the signature
@@ -336,7 +335,7 @@ nsZipFindEnd(ns_zip_t *zip, char *endbuf)
      */
     memset(buf, 0, SIGSIZ);
     for (off = len; off > mark; ) {
-	long n = min(off - mark, INBUFSIZ);
+	long n = MIN(off - mark, INBUFSIZ);
 	memcpy(buf + n, buf, SIGSIZ);
 	if (PR_Seek(zip->fd, off -= n, SEEK_SET) == -1) {
 #if !defined(XP_PC) || defined(_WIN32)

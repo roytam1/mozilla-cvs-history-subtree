@@ -20,6 +20,10 @@
   Created: Chris Toshok <toshok@hungry.com>, 13-Apr-98.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "g-commands.h"
 
 void

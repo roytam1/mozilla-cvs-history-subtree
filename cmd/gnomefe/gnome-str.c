@@ -18,6 +18,10 @@
 
 /*   gnomestr.c --- gnome fe handling of string id's */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define RESOURCE_STR
 #include "gnomefe-strings.h"
 

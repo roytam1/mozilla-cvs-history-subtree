@@ -21,6 +21,10 @@
                    (FRAMESET's and FRAME).
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "structs.h"
 #include "ntypes.h"
 #include "xpassert.h"

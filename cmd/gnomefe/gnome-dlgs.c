@@ -21,6 +21,10 @@
                    password, alerts, messages, etc.)
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "gnome.h"
 
 #include "xp_core.h"

@@ -20,4 +20,8 @@
    gnomeenc.c --- encoding stuff specific to the stub fe.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 char **fe_encoding_extensions = 0; /* gag.  used by mkcache.c. */

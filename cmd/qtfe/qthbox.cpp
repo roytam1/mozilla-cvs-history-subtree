@@ -8,6 +8,10 @@
 **
 *****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "qthbox.h"
 #include "qlayout.h"
 #include "qapp.h"

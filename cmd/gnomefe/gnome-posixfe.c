@@ -18,6 +18,10 @@
 
 /*   gnome-posixfe.c --- stuff that should live in posixfe */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "structs.h"
 
 void fe_GetProgramDirectory(char *path, int len)

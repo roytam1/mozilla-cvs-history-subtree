@@ -16,6 +16,10 @@
  * Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "nsPrivilege.h"
 #include "xp.h"
 

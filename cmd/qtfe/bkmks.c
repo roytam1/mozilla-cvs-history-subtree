@@ -20,6 +20,10 @@
  * code segment is too big.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "bkmks.h"
 #include "net.h"
 #include "xp_mcom.h"
@@ -6550,7 +6554,7 @@ static int bm_compare_address_Asc( const void *elem1, const void *elem2 )
    #endif
 }
 
-#ifdef SUNOS4
+#ifndef HAVE_DIFFTIME
 /* difftime() doesn't seem to exist on SunOS anywhere. -mcafee */
 static double difftime(time_t time1, time_t time0)
 {

@@ -18,6 +18,10 @@
 
 /*   gnomesec.c --- gnome fe handling of FE security related stuff. */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "structs.h"
 #include "ntypes.h"
 #include "xpassert.h"

@@ -21,6 +21,10 @@
   Created: Chris Toshok <toshok@hungry.com>, 12-Apr-98.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "g-html-view.h"
 #include "lo_ele.h"
 #include "xpform.h"

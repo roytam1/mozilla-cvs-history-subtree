@@ -15,6 +15,10 @@
  * <mailto:jonas.utterstrom@vittran.norrnod.se>
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "histlistview.h"
 
 HistoryListView::HistoryListView(QWidget *parent, const char* title)

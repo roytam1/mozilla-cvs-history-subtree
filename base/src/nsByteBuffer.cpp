@@ -15,6 +15,11 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "nsIByteBuffer.h"
 #include "nsIInputStream.h"
 #include "nsCRT.h"

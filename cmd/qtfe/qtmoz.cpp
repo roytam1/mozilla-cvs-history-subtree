@@ -20,8 +20,12 @@
  * Tvete.  All Rights Reserved.
  */
 
-// This is a kludge to get around the fact that DEBUG turns on internal QT
-// debugging information that we do not want.
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+// This is a kludge to get around the fact that QT sets DEBUG to turn on 
+// internal QT debugging information that hoses the rest of the compile.
 
 #ifndef DEBUG
 #define debug_off
@@ -102,11 +106,11 @@
 #include <sys/param.h>
 
 #include <sys/utsname.h>
-#include <sys/errno.h>
 #endif // XP_UNIX
 
 #include <sys/types.h>
 #include <fcntl.h>
+#include <errno.h>
 
 
 #ifdef MOZILLA_GPROF
@@ -212,17 +216,6 @@ usage (void)
 
     fprintf (stderr, XP_GetString( QTFE_USAGE_MSG5 ) );
 }
-
-#include <errno.h>
-#if 0
-#if defined(XP_UNIX)
-#if !defined(__FreeBSD__) && !defined(MACLINUX) && !defined(LINUX_GLIBC_2)
-#include <sys/errno.h>
-extern char *sys_errlist[];
-extern int sys_nerr;
-#endif
-#endif
-#endif
 
 void
 fe_perror_2 (const char *message)
@@ -619,8 +612,10 @@ losePrivilege(void)
      as setuid in the first place, but let's be extra special careful...
      Someone might get stupid because of movemail or something.
   */
-#if defined(XP_UNIX)
+#if defined(HAVE_GETGID) && defined(HAVE_SETGID)
   setgid (getgid ());
+#endif
+#if defined(HAVE_GETUID) && defined(HAVE_SETUID)
   setuid (getuid ());
 #endif
   /* Is there anything special we should do if running as root?
@@ -863,7 +858,7 @@ void
 mozilla_main(int argc, char** argv)
 {
     int i;
-#if defined(XP_UNIX)
+#ifdef HAVE_SIGACTION
     struct sigaction act;
 #endif
 
@@ -1181,7 +1176,7 @@ mozilla_main(int argc, char** argv)
 	}
     }
 
-#if defined(XP_UNIX)
+#ifdef HAVE_SIGACTION
     /* Install the default signal handlers */
     act.sa_handler = fe_sigchild_handler;
     act.sa_flags = 0;
@@ -1312,7 +1307,7 @@ mozilla_main(int argc, char** argv)
 		    /* There is a / or end-of-string before so it's a file. */
 		    char cwd [1024];
 		    URL_Struct *url;
-#ifdef SUNOS4
+#if defined(__sun) && !defined(__svr4__)
 		    if (! getwd (cwd))
 #else
 		    if (! getcwd (cwd, sizeof cwd))
@@ -1400,15 +1395,6 @@ rename (const char *source, const char *target)
     }
 }
 #endif /* !HPUX */
-
-#if 0
-#if defined(XP_UNIX)
-#if !defined(__FreeBSD__) && !defined(MACLINUX) && !defined(LINUX_GLIBC_2)
-extern char *sys_errlist[];
-extern int sys_nerr;
-#endif
-#endif
-#endif
 
 static XP_Bool
 fe_ensure_config_dir_exists ()
@@ -1581,7 +1567,7 @@ fe_create_pidlock (const char *name, unsigned long *paddr, pid_t *ppid)
         if (oldact.sa_handler != SIG_IGN)
             sigaction (SIGTERM, &act, NULL);
 
-#ifdef SUNOS4
+#ifdef HAVE_ATEXIT
         /* atexit() is not available in sun4. Use qt's support. */
 	qAddPostRoutine( minimalNoUICleanup );
 #else
@@ -1671,11 +1657,11 @@ fe_expand_working_dir(char *cwdfile)
 {
     char *dirfile = 0;
     char *string;
-#if defined(SUNOS4)||defined(AIX)
+#ifndef HAVE_GETCWD
     char path [MAXPATHLEN];
 #endif
 
-#if defined(SUNOS4)||defined(AIX)
+#ifndef HAVE_GETCWD
     string = getwd (path);
 #else
     string = getcwd(NULL, MAXPATHLEN);
@@ -1686,7 +1672,7 @@ fe_expand_working_dir(char *cwdfile)
     strcpy(dirfile, string);
     strcat(dirfile,"/");
     strcat(dirfile, cwdfile);
-#if !(defined(SUNOS4) || defined(AIX))
+#ifndef HAVE_GETCWD
     XP_FREE(string);
 #endif
     return dirfile;

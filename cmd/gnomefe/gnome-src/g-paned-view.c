@@ -20,6 +20,10 @@
   Created: Chris Toshok <toshok@hungry.com>, 1-Jul-98.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "xp_mem.h"
 #include "g-paned-view.h"
 

@@ -20,6 +20,10 @@
    gnomecxtx.c --- gnome fe handling of MWContext initialization.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "structs.h"
 #include "ntypes.h"
 #include "xpassert.h"

@@ -13,6 +13,10 @@
 ** data.  The C code is written to standard output.
 *****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <qstring.h>
 #include <qfile.h>
 #include <qlist.h>

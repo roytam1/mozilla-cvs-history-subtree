@@ -20,6 +20,10 @@
  * Tvete.  All Rights Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <qtimer.h>
 #include <qapp.h>
 #include "QtBrowserContext.h" // includes QtContext.h

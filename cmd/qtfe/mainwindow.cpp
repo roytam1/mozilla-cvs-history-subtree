@@ -20,6 +20,10 @@
  * Tvete.  All Rights Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "mainwindow.h"
 
 qtfeMainWindow::qtfeMainWindow()

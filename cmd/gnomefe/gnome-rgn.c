@@ -18,6 +18,10 @@
 
 /*   gnomergn.c --- gnome functions dealing with front-end */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "fe_rgn.h"
 #include "xpassert.h"
 

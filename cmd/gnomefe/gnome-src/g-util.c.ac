@@ -3,6 +3,10 @@
   Created: Chris Toshok <toshok@hungry.com>, 9-Apr-98.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "g-tagged.h"
 #include "g-view.h"
 #include "g-util.h"

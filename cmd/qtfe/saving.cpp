@@ -20,6 +20,10 @@
  * Tvete.  All Rights Reserved.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "QtBrowserContext.h"
 #include "DialogPool.h"
 #include "SaveAsDialog.h"

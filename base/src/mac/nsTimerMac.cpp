@@ -20,8 +20,11 @@
 // Mac implementation of the nsITimer interface
 //
 
-// nsMacTimerPeriodical idles, 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
+// nsMacTimerPeriodical idles, 
 
 #include "nsITimer.h"
 #include "nsITimerCallback.h"

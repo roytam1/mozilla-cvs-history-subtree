@@ -35,6 +35,9 @@
       along with optional -DVENDOR_ANIM
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <stdlib.h>
 #include <pwd.h>

@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "xp.h"
 #include "xpgetstr.h"
 
@@ -194,7 +198,7 @@ fe_create_pidlock (const char *name, unsigned long *paddr, pid_t *ppid)
       if (oldact.sa_handler != SIG_IGN)
 	sigaction (SIGTERM, &act, NULL);
 
-#ifndef SUNOS4
+#ifndef HAVE_ATEXIT
       /* atexit() is not available in sun4. We need to find someother
        * mechanism to do this in sun4. Maybe we will get a signal or
        * something.
@@ -204,7 +208,7 @@ fe_create_pidlock (const char *name, unsigned long *paddr, pid_t *ppid)
       /* Register a atexit() handler to remove lock file */
       atexit(fe_atexit_handler);
 #endif
-#endif /* SUNOS4 */
+#endif /* HAVE_ATEXIT */
     }
   free (signature);
   *paddr = addr;

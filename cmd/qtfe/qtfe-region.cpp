@@ -18,8 +18,11 @@
  * Tvete.  All Rights Reserved.
  */
 
-#include "fe_rgn.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
+#include "fe_rgn.h"
 
 #include <qregion.h>
 
