@@ -1781,10 +1781,11 @@ prldap_install_routines(ld, shared)
 	int		shared
 
 int
-prldap_set_session_option(ld, sessionarg, option)
+prldap_set_session_option(ld, sessionarg, option, optdata)
 	LDAP *		ld
-	int		&sessionarg
+	void *		sessionarg
 	int		option
+	int		optdata
 
 #endif
 

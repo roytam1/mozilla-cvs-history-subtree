@@ -111,7 +111,7 @@ if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
 @nsprlib = grep{/^nspr[0-9].*$/} @libs;
 if ($#nsprlib >= 0)
 {
-  print "Support NSPR API versions (default: no)?  ";
+  print "Support NSPR API functionality (default: no)?  ";
   if (!$ldapsdk_pr)
     {
       $silent = 0;
@@ -123,7 +123,6 @@ if ($#nsprlib >= 0)
 if ($ldapsdk_pr =~ /^y/i) {
   $pr_def = "-DPRLDAP"
 } else {
-  @nsprlib = ();
   @prldaplib = ();
 }
 

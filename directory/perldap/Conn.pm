@@ -68,6 +68,11 @@ sub new
       $self->{"usenspr"} = $hash->{"nspr"} if defined($hash->{"nspr"});
       $self->{"callback"} = $hash->{"callback"} if defined($hash->{"callback"});
       $self->{"entryclass"} = $hash->{"entryclass"} || 'Mozilla::LDAP::Entry';
+      if (defined($hash->{"timeout"})) {
+        die "Can only use the timeout option with NSPR enabled connections"
+          unless defined $self->{"usenspr"};
+        $self->{"timeout"} = $hash->{"timeout"};
+      }
     }
   else
     {
@@ -148,12 +153,18 @@ sub init
   if (defined($self->{"usenspr"})) {
     $ret = prldap_install_routines($self->{"ld"}, $self->{"usenspr"});
     return 0 unless ($ret == LDAP_SUCCESS);
+    if (defined($self->{"timeout"})) {
+      $ret = prldap_set_session_option($self->{"ld"}, 0,
+                                       PRLDAP_OPT_IO_MAX_TIMEOUT,
+                                       $self->{"timeout"});
+      return 0 unless ($ret == LDAP_SUCCESS);
+    }
   }
 
   $self->setVersion($self->{"version"});
   if (defined($self->{"callback"}))
     {
-      my $result, $ret;
+      my ($result, $ret);
       my $id = ldap_simple_bind($ld, $self->{"binddn"}, $self->{"bindpasswd"});
 
       $ret = ldap_result($ld, $id, 0, 1, $result);
@@ -953,22 +964,21 @@ sub getSizelimit
 sub installNSPR
 {
   my $arg = shift;
+  my $shared = shift || 0;
   my $ret;
 
   if (ref $arg)
     {
-      my $shared = shift || 0;
-
       $arg->close();
       $arg->{"usenspr"} = $shared;
       $arg->init();
     }
   else
     {
-      $ret = prldap_install_routines(0, $arg || 0);
+      $ret = prldap_install_routines(0, $shared);
     }
 
-  return  ($ret == LDAP_SUCCESS);
+  return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
 
 
@@ -978,12 +988,24 @@ sub installNSPR
 #
 sub setNSPRTimeout
 {
-  my ($self, $timeout) = @_;
+  my $arg = shift;
+  my $timeout = shift || 0;
   my $ret;
 
-  return 0 unless defined($self->{"usenspr"});
-  $ret = prldap_set_session_option($self->{"ld"}, $timeout,
-                                   PRLDAP_OPT_IO_MAX_TIMEOUT);
+  if (ref $arg)
+    {
+      return 0 unless defined($arg->{"usenspr"});
+      $ret = prldap_set_session_option($arg->{"ld"}, 0,
+                                       PRLDAP_OPT_IO_MAX_TIMEOUT,
+                                       $timeout);
+    }
+  else
+    {
+      $ret = prldap_set_session_option(0, 0,
+                                       PRLDAP_OPT_IO_MAX_TIMEOUT,
+                                       $timeout);
+    }
+
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
 
@@ -1121,12 +1143,19 @@ and (not used in the B<new> method)
 New for PerLDAP v1.5 and later are the following:
 
     $ld->{"nspr"}
+    $ld->{"timeout"}
     $ld->{"callback"}
     $ld->{"entryclass"}
 
 The B<nspr> flag (1/0) indicates that we wish to use the NSPR layer for all
 TCP connections. This obviously only works if PerLDAP has been compiled
-with NSPR support and libraries. The default is off.
+with NSPR support and libraries. The default is disabled, and the argument
+is a flag (0 or 1) indicating if the connection is shared (threaded app.
+
+For an NSPR enabled connection, you can also provide an optional timeout
+parameter, which will be used during the lifetime of the connection. This
+includes the initial setup and connection to the LDAP server. You can change
+this parameter later using the B<setNSPRTimeout()> method.
 
 During the bind process, you can provide a callback function to be called
 when the asynchronus bind has completed. The callback should take two
@@ -1605,7 +1634,14 @@ this LDAP * handle from more than one thread.
 =item B<setNSPRTimeout>
 
 Set the TCP timeout value, in millisecond, for the NSPR enabled connection.
-It's an error to call this before calling installNSPR().
+It's an error to call this before calling installNSPR(), unless you
+created the new connection object with the B<nspr> option.
+
+This method can also be invoked as a class method, and it will then apply
+to all new connections created. Like
+
+    Mozilla::LDAP::Conn->installNSPR(1);
+    Mozilla::LDAP::Conn->setNSPRTimeout(1000);
 
 =back
 

@@ -1,3 +1,20 @@
+2005-01-27  Leif Hedstrom  <leif@ogre.com>
+
+	* typemap: Kludgy fix for "void *", used for the prldap options.
+
+	* API.xs: Made it work properly, the arguments were totally wrong.
+
+	* Conn.pm (new): Added support for the timeout (for NSPR enabled
+	connections only!).
+	(init): Honor this timeout option.
+	(setNSPRTimeout): Fix for sending down the timeout options.
+	(installNSPR): The "shared" argument wasn't properly passed down to the
+	API when used on an established connection.
+
+2005-01-05  Leif Hedstrom  <leif@ogre.com>
+
+	* Conn.pm (init): Bad "my" declaration.
+
 2005-01-04  Leif Hedstrom  <leif@ogre.com>
 
 	* LDIF.pm: Changed all calls to new to use the class method directly.
