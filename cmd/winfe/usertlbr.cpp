@@ -99,6 +99,8 @@ CRDFToolbarButton::CRDFToolbarButton()
 	m_uCurBMID = 0;
 
     currentRow = 0;
+
+	m_pTreeView = NULL;
 }
 
 
@@ -366,6 +368,9 @@ void CRDFToolbarButton::DrawButtonText(HDC hDC, CRect rcTxt, CSize sizeTxt, CStr
 				customTextColor = ((CRDFToolbar*)GetParent())->GetForegroundColor();
 				break;
 		}
+
+		if (m_bDepressed)
+			customTextColor = ((CRDFToolbar*)GetParent())->GetPressedColor();
 	}
 
     CToolbarButton::DrawButtonText(hDC, rcTxt, sizeTxt, strTxt);
@@ -868,9 +873,27 @@ void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 	CPoint point(0, GetRequiredButtonSize().cy);
 	MapWindowPoints(frame, &point, 1);
 */
-	CPoint point = RequestMenuPlacement();
-	CNSNavFrame::CreateFramedRDFViewFromResource(NULL, point.x, point.y, 300, 500, m_Node);
-	
+
+	if (!m_bDepressed)
+	{
+		CPoint point = RequestMenuPlacement();
+		m_pTreeView = CNSNavFrame::CreateFramedRDFViewFromResource(NULL, point.x, point.y, 300, 500, m_Node);
+		SetDepressed(TRUE);
+		m_pTreeView->SetRDFButton(this);
+		CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)(GetParent()->GetParent());
+		if (pHolder->GetCurrentButton() != NULL)
+		{
+			pHolder->GetCurrentButton()->m_pTreeView->DeleteNavCenter();
+			pHolder->SetCurrentButton(this);
+		}
+	}
+	else
+	{
+		// Delete NavCenter.
+		m_pTreeView->DeleteNavCenter();
+		m_pTreeView = NULL;
+	}
+
 	/*
 	m_pCachedDropMenu->CreateOverflowMenuItem(ID_HOTLIST_VIEW, CString(szLoadString(IDS_MORE_BOOKMARKS)), NULL, NULL );
 
@@ -979,14 +1002,17 @@ void CRDFToolbarButton::LoadComplete(HT_Resource r)
 
 void CRDFToolbarButton::DrawCustomIcon(HDC hDC, int x, int y)
 {
-	CRDFImage* pCustomImage = DrawArbitraryURL(m_Node, x, y, m_bitmapSize.cx, m_bitmapSize.cy, hDC, 
-					m_bDepressed ? (::GetSysColor(COLOR_BTNSHADOW)) :  (::GetSysColor(COLOR_BTNFACE)), 
-					 this, UseLargeIcons());
-	
-	if (foundOnRDFToolbar() && pCustomImage->FrameSuccessfullyLoaded())
+	if (foundOnRDFToolbar())
 	{
 		CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
-				
+
+		CRDFImage* pCustomImage = DrawArbitraryURL(m_Node, x, y, m_bitmapSize.cx, m_bitmapSize.cy, hDC, 
+					 pToolbar->GetBackgroundColor(), 
+					 this, UseLargeIcons());
+	
+		if (!pCustomImage->FrameSuccessfullyLoaded())
+			return;
+
 		// Adjust the toolbar button's width and height.
 		long width = pCustomImage->bmpInfo->bmiHeader.biWidth;
 		long height = pCustomImage->bmpInfo->bmiHeader.biHeight;
@@ -2397,6 +2423,7 @@ CRDFToolbarHolder::CRDFToolbarHolder(int maxToolbars, CFrameWnd* pParentWindow)
 :CCustToolbar(maxToolbars)
 {
 	m_pCachedParentWindow = pParentWindow;
+	m_pCurrentButton = NULL;
 }
 
 CRDFToolbarHolder::~CRDFToolbarHolder()

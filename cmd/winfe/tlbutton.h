@@ -213,6 +213,8 @@ public:
 	const char *GetToolTipText(void) { return m_pToolTipText; }
 	void SetToolTipText(LPCSTR pToolTipText);
 
+	void SetDepressed(BOOL b) { m_bDepressed = b; }
+
 	void SetStatusText(LPCSTR pStatusText);
 
 	void SetBitmap(HBITMAP hBmpImg, BOOL bParentOwns);

@@ -114,6 +114,7 @@ public:
 	BOOL IsTreeVisible() { return TRUE; } //m_pSelector->IsTreeVisible(); }
 	
 	void SetHTNode(HT_Resource node) { m_Node = node; }
+	void SetRDFButton(CRDFToolbarButton* pButton) { m_pButton = pButton; }
 
 protected:  // control bar embedded members
 	friend class CSelector;
@@ -127,7 +128,8 @@ protected:  // control bar embedded members
 	CDC*		m_pDC;				 // where to draw during drag
 	CDragBar*	m_DragWnd;			// the resize bar, when this frame is docked.
 	HT_Resource m_Node;				// the top node of the view.
-
+	CRDFToolbarButton* m_pButton;	// A pointer to the button this view points to.
+									// NULL if window is floating.
 	// All of these rects are in the Desktop window's coordinates.
 
 	CRect m_rectDrag;				// bounding rect when this frame is floating

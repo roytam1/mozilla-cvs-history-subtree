@@ -72,11 +72,12 @@ END_MESSAGE_MAP()
 
 CNSNavFrame::CNSNavFrame()
 {
-	m_pSelector = 0;
-	m_nsContent= 0;
+	m_pSelector = NULL;
+	m_nsContent= NULL;
 	m_bDragging = FALSE;
-	m_DragWnd = 0;
-	m_Node = 0;
+	m_DragWnd = NULL;
+	m_Node = NULL;
+	m_pButton = NULL;
 }
 
 CNSNavFrame::~CNSNavFrame()
@@ -190,12 +191,22 @@ void CNSNavFrame::DeleteNavCenter()
 	SetParent(NULL);
 	
     // Tell ParentFrame that we are not docked anymore.
-    pLayout->RecalcLayout();
+    if (pLayout)
+		pLayout->RecalcLayout();
 
 	if (m_DragWnd)
 		m_DragWnd->DestroyWindow();
 
 	PostMessage(WM_CLOSE);
+
+	if (m_pButton)
+	{
+		m_pButton->SetDepressed(FALSE);
+		m_pButton->Invalidate();
+		CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)(m_pButton->GetParent()->GetParent());
+		pHolder->SetCurrentButton(NULL);
+		m_pButton = NULL;
+	}
 }
 
 BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
@@ -347,8 +358,15 @@ void CNSNavFrame::StartDrag(CPoint pt, BOOL mapDesktop)
 	if (mapDesktop)
 		MapWindowPoints(NULL, &cursorPt, 1);	// Convert the point to screen coords.
 	
-	if (XP_IsNavCenterDocked(GetHTPane())) 
+	CRDFOutliner* pOutliner = (CRDFOutliner*)(GetContentView()->GetOutlinerParent()->GetOutliner());
+	
+	if (XP_IsNavCenterDocked(GetHTPane()) || pOutliner->IsPopup()) 
 	{
+		pOutliner->SetIsPopup(FALSE);
+		
+		m_pButton->SetDepressed(FALSE);
+		m_pButton = NULL;
+	
 		ForceFloat(FALSE);		
 	}
 	else ShowWindow(SW_HIDE);
@@ -507,7 +525,7 @@ void CNSNavFrame::CalcClientArea(RECT* lpRectClient, CNSGenFrame * pParentFrame)
 void CNSNavFrame::ForceFloat(BOOL show)
 {
 	CFrameWnd *pLayout = GetParentFrame();
-	
+	m_pButton = NULL;
 	nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_CHILD, WS_OVERLAPPEDWINDOW);
 	nsModifyStyle( GetSafeHwnd(), GWL_EXSTYLE, 0, WS_EX_CLIENTEDGE);
 	

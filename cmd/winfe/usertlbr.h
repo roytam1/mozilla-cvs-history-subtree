@@ -62,6 +62,7 @@ protected:
     int currentRow;                 // The row of the personal toolbar this button resides on.
 	CDropMenu* m_pCachedDropMenu;	// A pointer to a drop menu that is tracked across 
 									// node opening (HT) callbacks
+	CNSNavFrame* m_pTreeView;		// A pointer to a tree popup that is tracked.
 	BOOL m_bShouldShowRMMenu;		// Set to TRUE by default.  Quickfile/Breadcrumbs set it to FALSE.
 
 	CRDFCommandMap m_MenuCommandMap;	// Command map for back-end generated right mouse menu commands.
@@ -330,10 +331,14 @@ class CRDFToolbarHolder : public CCustToolbar
 protected:
 	HT_Pane m_ToolbarPane;
 	CFrameWnd* m_pCachedParentWindow;
+	CRDFToolbarButton* m_pCurrentButton;
 
 public:
 	CRDFToolbarHolder(int maxToolbars, CFrameWnd* pParent);
 	virtual ~CRDFToolbarHolder();
+
+	CRDFToolbarButton* GetCurrentButton() { return m_pCurrentButton; }
+	void SetCurrentButton(CRDFToolbarButton* button) { m_pCurrentButton = button; }
 
 	HT_Pane GetHTPane() { return m_ToolbarPane; }
 	void SetHTPane(HT_Pane p) { m_ToolbarPane = p; }
