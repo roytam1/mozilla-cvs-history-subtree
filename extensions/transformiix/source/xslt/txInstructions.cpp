@@ -42,6 +42,7 @@
 #include "ExprResult.h"
 #include "txStylesheet.h"
 #include "txNodeSetContext.h"
+#include "txTextHandler.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -106,6 +107,26 @@ txConditionalGoto::execute(txExecutionState& aEs)
         aEs.gotoInstruction(mTarget);
     }
     delete exprRes;
+
+    return NS_OK;
+}
+
+nsresult
+txCreateComment::execute(txExecutionState& aEs)
+{
+    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    PRUint32 length = handler->mValue.Length();
+    PRInt32 pos = 0;
+    while ((pos = handler->mValue.FindChar('-', (PRUint32)pos)) != kNotFound) {
+        ++pos;
+        if ((PRUint32)pos == length || handler->mValue.CharAt(pos) == '-') {
+            handler->mValue.Insert(PRUnichar(' '), pos++);
+            ++length;
+        }
+    }
+
+    aEs.mResultHandler->comment(handler->mValue);
+    delete handler;
 
     return NS_OK;
 }
@@ -257,6 +278,26 @@ txPushNewContext::execute(txExecutionState& aEs)
         return rv;
     }
     
+    return NS_OK;
+}
+
+txPushStringHandler::txPushStringHandler(PRBool aOnlyText)
+    : mOnlyText(aOnlyText)
+{
+}
+
+nsresult
+txPushStringHandler::execute(txExecutionState& aEs)
+{
+    txXMLEventHandler* handler = new txTextHandler(mOnlyText);
+    NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
+    
+    nsresult rv = aEs.pushResultHandler(handler);
+    if (NS_FAILED(rv)) {
+        delete handler;
+        return rv;
+    }
+
     return NS_OK;
 }
 

@@ -40,11 +40,12 @@
 #define TRANSFRMX_TEXT_HANDLER_H
 
 #include "txXMLEventHandler.h"
+#include "nsString.h"
 
 class txTextHandler : public txXMLEventHandler
 {
 public:
-    txTextHandler(nsAString& aValue, MBool aOnlyText);
+    txTextHandler(MBool aOnlyText);
     virtual ~txTextHandler();
 
     /**
@@ -111,9 +112,10 @@ public:
     void startElement(const nsAString& aName,
                       const PRInt32 aNsID);
 
+    nsString mValue;
+
 private:
     PRUint32 mLevel;
-    nsAString& mValue;
     MBool mOnlyText;
 };
 

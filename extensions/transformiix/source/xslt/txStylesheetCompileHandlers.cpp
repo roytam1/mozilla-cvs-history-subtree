@@ -681,6 +681,36 @@ txFnEndCallTemplate(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:comment
+nsresult
+txFnStartComment(PRInt32 aNamespaceID,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
+                 txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txPushStringHandler(PR_TRUE);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndComment(txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txCreateComment;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
 // xsl:element
 nsresult
 txFnStartElement(PRInt32 aNamespaceID,
@@ -956,6 +986,7 @@ txHandlerTableData gTxTemplateTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
+    { kNameSpaceID_XSLT, "comment", txFnStartComment, txFnEndComment },
     { kNameSpaceID_XSLT, "element", txFnStartElement, txFnEndElement },
     { kNameSpaceID_XSLT, "fallback", txFnStartElementSetIgnore, txFnEndElementSetIgnore },
     { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },

@@ -72,6 +72,8 @@ public:
     void popString(nsAString& aStr);
     nsresult pushInt(PRInt32 aInt);
     PRInt32 popInt();
+    nsresult pushResultHandler(txXMLEventHandler* aHandler);
+    txXMLEventHandler* popResultHandler();
 
     // state-getting functions
     txIEvalContext* getEvalContext();
@@ -102,6 +104,7 @@ private:
     txStack mReturnStack;
     txStack mEvalContextStack;
     txStack mIntStack;
+    txStack mResultHandlerStack;
     nsStringArray mStringStack;
     txInstruction* mNextInstruction;
     

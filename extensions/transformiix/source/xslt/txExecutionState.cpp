@@ -51,6 +51,11 @@ txExecutionState::~txExecutionState()
 {
     delete mEvalContext;
     
+    // XXX ToDo: delete stack of resulthandlers. This is messy since the 
+    // the top resulthandler is the outputhandler, which is refcounted
+    // in module and not in standalone.
+
+
     // XXX ToDo: delete evalcontext-stack. mind the initial evalcontext, it
     // can occur more then once in the evalcontext-stack. If we refcount them
     // this won't be a problem.
@@ -167,6 +172,26 @@ PRInt32
 txExecutionState::popInt()
 {
     return NS_PTR_TO_INT32(mIntStack.pop());
+}
+
+nsresult
+txExecutionState::pushResultHandler(txXMLEventHandler* aHandler)
+{
+    nsresult rv = mResultHandlerStack.push(mResultHandler);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    mResultHandler = aHandler;
+
+    return NS_OK;
+}
+
+txXMLEventHandler*
+txExecutionState::popResultHandler()
+{
+    txXMLEventHandler* oldHandler = mResultHandler;
+    mResultHandler = (txXMLEventHandler*)mResultHandlerStack.pop();
+
+    return oldHandler;
 }
 
 txIEvalContext*

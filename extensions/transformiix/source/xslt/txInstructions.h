@@ -102,6 +102,12 @@ public:
     txInstruction* mTarget;
 };
 
+class txCreateComment : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};
+
 class txEndElement : public txInstruction
 {
 public:
@@ -166,6 +172,16 @@ public:
     //        Expr* aCaseOrderExpr, txIEvalContext* aContext);
 
     Expr* mSelect;
+};
+
+class txPushStringHandler : public txInstruction
+{
+public:
+    txPushStringHandler(PRBool aOnlyText);
+
+    TX_DECL_TXINSTRUCTION
+
+    PRBool mOnlyText;
 };
 
 class txRecursionCheckpointEnd : public txInstruction
