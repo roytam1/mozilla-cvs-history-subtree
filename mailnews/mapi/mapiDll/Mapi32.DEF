@@ -40,5 +40,6 @@ DESCRIPTION     'Mozilla Simple MAPI Support'
 EXPORTS
         MAPILogon
         MAPILogoff
-
+	MAPISendMail
+	MAPISendDocuments
 

@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s): Krishna Mohan Khandrika (kkhandrika@netscape.com)
+ * Contributor(s): Rajiv Dayal (rdayal@netscape.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,6 +46,9 @@
 nsIMapi *pNsMapi = NULL;
 BOOL bUnInitialize = FALSE;
 
+#define MAX_RECIPS  100
+#define MAX_FILES   100
+
 const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5,
                               {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
 const IID IID_nsIMapi = {0x6EDCD38E,0x8861,0x11d5,
@@ -54,6 +58,9 @@ HANDLE hMutex;
 
 BOOL StartMozilla()
 {
+    // tries to get an nsIMapi interface.  if mozilla is not running
+    // tries to start mozilla
+
     HRESULT hRes = 0;
 
     hRes = ::CoInitialize(NULL);
@@ -66,6 +73,8 @@ BOOL StartMozilla()
         SetLastError(hRes);
         return FALSE;
     }
+
+    // initialize the server side stuff
 
     hRes = pNsMapi->Initialize();
     if (hRes != 0)
@@ -81,6 +90,8 @@ BOOL StartMozilla()
 
 void ShutDownMozilla()
 {
+    // releases the interface.
+
     WaitForSingleObject(hMutex, INFINITE);
     if (pNsMapi != NULL)
     {
@@ -95,6 +106,10 @@ void ShutDownMozilla()
 
 BOOL CheckMozilla()
 {
+    // cheks whether the interface is valid or not.
+    // if not tries get a reference to mapi support
+    // in mozilla.
+
     BOOL bRetValue = TRUE;
 
     WaitForSingleObject(hMutex, INFINITE);
@@ -194,6 +209,134 @@ ULONG FAR PASCAL MAPILogoff(LHANDLE aSession, ULONG aUIParam,
         return MAPI_E_INVALID_SESSION;
     }
 
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessage lpMessage,
+                FLAGS flFlags, ULONG ulReserved )
+{
+    HRESULT hr = 0;
+    BOOL bTempSession = FALSE ;
+
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+
+    if (lpMessage->nRecipCount > MAX_RECIPS)
+        return MAPI_E_TOO_MANY_RECIPIENTS ;
+
+    if (lpMessage->nFileCount > MAX_FILES)
+        return MAPI_E_TOO_MANY_FILES ;
+
+    if ( (!(flFlags & MAPI_DIALOG)) && (lpMessage->lpRecips == NULL) )
+        return MAPI_E_UNKNOWN_RECIPIENT ;
+
+    if (!lhSession)
+    {
+        FLAGS LoginFlag ;
+        if ( (flFlags & MAPI_LOGON_UI) && (flFlags & MAPI_NEW_SESSION) )
+            LoginFlag = MAPI_LOGON_UI | MAPI_NEW_SESSION ;
+        else if (flFlags & MAPI_LOGON_UI) 
+            LoginFlag = MAPI_LOGON_UI ;
+
+        hr = MAPILogon (ulUIParam, (LPTSTR) NULL, (LPTSTR) NULL, LoginFlag, 0, &lhSession) ;
+        if (hr != SUCCESS_SUCCESS)
+            return MAPI_E_LOGIN_FAILURE ;
+        bTempSession = TRUE ;
+    }
+
+    hr = pNsMapi->SendMail (lhSession, lpMessage, 
+                            (short) lpMessage->nRecipCount, lpMessage->lpRecips,
+                            (short) lpMessage->nFileCount, lpMessage->lpFiles,
+                            flFlags, ulReserved);
+    
+    if (bTempSession)
+        MAPILogoff (lhSession, ulUIParam, 0,0) ;
+
+    return hr ;
+}
+
+
+ULONG FAR PASCAL MAPISendDocuments(ULONG ulUIParam, LPTSTR lpszDelimChar, LPTSTR lpszFilePaths,
+                                LPTSTR lpszFileNames, ULONG ulReserved)
+{
+    LHANDLE lhSession ;
+    unsigned long result = MAPILogon (ulUIParam, (LPTSTR) NULL, (LPTSTR) NULL, MAPI_LOGON_UI, 0, &lhSession) ;
+    if (result != SUCCESS_SUCCESS)
+        return MAPI_E_LOGIN_FAILURE ;
+
+    HRESULT hr ;
+    hr = pNsMapi->SendDocuments(lhSession, (LPTSTR) lpszDelimChar, (LPTSTR) lpszFilePaths, 
+                                    (LPTSTR) lpszFileNames, ulReserved) ;
+
+    MAPILogoff (lhSession, ulUIParam, 0,0) ;
+
+    return hr ;
+}
+
+ULONG FAR PASCAL MAPIFindNext(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszMessageType,
+                              LPTSTR lpszSeedMessageID, FLAGS flFlags, ULONG ulReserved,
+                              LPTSTR lpszMessageID)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPIReadMail(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszMessageID,
+                              FLAGS flFlags, ULONG ulReserved, lpMapiMessage FAR *lppMessage)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPISaveMail(LHANDLE lhSession, ULONG ulUIParam, lpMapiMessage lpMessage,
+                              FLAGS flFlags, ULONG ulReserved, LPTSTR lpszMessageID)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPIDeleteMail(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszMessageID,
+                                FLAGS flFlags, ULONG ulReserved)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPIAddress(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszCaption,
+                             ULONG nEditFields, LPTSTR lpszLabels, ULONG nRecips,
+                             lpMapiRecipDesc lpRecips, FLAGS flFlags,
+                             ULONG ulReserved, LPULONG lpnNewRecips,
+                             lpMapiRecipDesc FAR *lppNewRecips)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPIDetails(LHANDLE lhSession, ULONG ulUIParam, lpMapiRecipDesc lpRecip,
+                             FLAGS flFlags, ULONG ulReserved)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPIResolveName(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszName,
+                                 FLAGS flFlags, ULONG ulReserved, lpMapiRecipDesc FAR *lppRecip)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
+    return SUCCESS_SUCCESS;
+}
+
+ULONG FAR PASCAL MAPIFreeBuffer(LPVOID pv)
+{
+    if (CheckMozilla() == FALSE)
+        return MAPI_E_FAILURE;
     return SUCCESS_SUCCESS;
 }
 
