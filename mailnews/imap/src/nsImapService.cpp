@@ -560,6 +560,9 @@ NS_IMETHODIMP nsImapService::DisplayMessage(const char* aMessageURI,
       {
         // whenever we are displaying a message, we want to add it to the memory cache..
         imapUrl->SetFetchPartsOnDemand(PR_TRUE);
+        // if we happen to fetch the whole message, note in the url
+        // whether we want to store this message offline.
+        imapUrl->SetShouldStoreMsgOffline(shouldStoreMsgOffline);
         shouldStoreMsgOffline = PR_FALSE; // if we're fetching by parts, don't store offline
         msgurl->SetAddToMemoryCache(PR_FALSE);
       }

@@ -88,6 +88,7 @@ nsImapUrl::nsImapUrl()
   m_allowContentChange = PR_TRUE;	// assume we can do MPOD.
   m_fetchPartsOnDemand = PR_FALSE; // but assume we're not doing it :-)
   m_msgLoadingFromCache = PR_FALSE;
+  m_shouldStoreMsgOffline = PR_FALSE;
   m_externalLinkUrl = PR_TRUE; // we'll start this at true, and set it false in nsImapService::CreateStartOfImapUrl
   m_contentModified = IMAP_CONTENT_NOT_MODIFIED;
   m_validUrl = PR_TRUE;	// assume the best.
@@ -1612,3 +1613,15 @@ NS_IMETHODIMP nsImapUrl::SetCharsetOverRide(const char * aCharacterSet)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsImapUrl::GetShouldStoreMsgOffline(PRBool *aShouldStoreMsgOffline)
+{
+  NS_ENSURE_ARG_POINTER(aShouldStoreMsgOffline);
+  *aShouldStoreMsgOffline = m_shouldStoreMsgOffline;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImapUrl::SetShouldStoreMsgOffline(PRBool aShouldStoreMsgOffline)
+{
+  m_shouldStoreMsgOffline = aShouldStoreMsgOffline;
+  return NS_OK;
+}
