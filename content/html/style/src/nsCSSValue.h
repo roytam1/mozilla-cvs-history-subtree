@@ -34,8 +34,9 @@ enum nsCSSUnit {
   eCSSUnit_Null         = 0,      // (n/a) null unit, value is not specified
   eCSSUnit_Auto         = 1,      // (n/a) value is algorithmic
   eCSSUnit_Inherit      = 2,      // (n/a) value is inherited
-  eCSSUnit_None         = 3,      // (n/a) value is none
-  eCSSUnit_Normal       = 4,      // (n/a) value is normal (algorithmic, different than auto)
+  eCSSUnit_Initial      = 3,      // (n/a) value is default UA value
+  eCSSUnit_None         = 4,      // (n/a) value is none
+  eCSSUnit_Normal       = 5,      // (n/a) value is normal (algorithmic, different than auto)
   eCSSUnit_String       = 10,     // (nsString) a string value
   eCSSUnit_URL          = 11,     // (nsString) a URL value
   eCSSUnit_Attr         = 12,     // (nsString) a attr(string) value
@@ -212,6 +213,7 @@ public:
   void  SetColorValue(nscolor aValue);
   void  SetAutoValue(void);
   void  SetInheritValue(void);
+  void  SetInitialValue(void);
   void  SetNoneValue(void);
   void  SetNormalValue(void);
 

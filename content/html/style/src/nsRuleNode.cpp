@@ -1266,6 +1266,10 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     font->mFlags &= ~(NS_STYLE_FONT_FACE_EXPLICIT | NS_STYLE_FONT_USE_FIXED);
     font->mFlags |= (parentFont->mFlags & (NS_STYLE_FONT_FACE_EXPLICIT | NS_STYLE_FONT_USE_FIXED));
   }
+  else if (eCSSUnit_Initial == aFontData.mFamily.GetUnit()) {
+    font->mFont.name = defaultFont.name;
+    font->mFixedFont.name = defaultFixedFont.name;
+  }
 
   // font-style: enum, normal, inherit
   if (eCSSUnit_Enumerated == aFontData.mStyle.GetUnit()) {
@@ -1285,6 +1289,10 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     font->mFont.style = parentFont->mFont.style;
     font->mFixedFont.style = parentFont->mFixedFont.style;
   }
+  else if (eCSSUnit_Initial == aFontData.mStyle.GetUnit()) {
+    font->mFont.style = defaultFont.style;
+    font->mFixedFont.style = defaultFixedFont.style;
+  }
 
   // font-variant: enum, normal, inherit
   if (eCSSUnit_Enumerated == aFontData.mVariant.GetUnit()) {
@@ -1303,6 +1311,10 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
 
     font->mFont.variant = parentFont->mFont.variant;
     font->mFixedFont.variant = parentFont->mFixedFont.variant;
+  }
+  else if (eCSSUnit_Initial == aFontData.mVariant.GetUnit()) {
+    font->mFont.variant = defaultFont.variant;
+    font->mFixedFont.variant = defaultFixedFont.variant;
   }
 
   // font-weight: int, enum, normal, inherit
@@ -1342,6 +1354,11 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     font->mFont.weight = parentFont->mFont.weight;
     font->mFixedFont.weight = parentFont->mFixedFont.weight;
   }
+  else if (eCSSUnit_Initial == aFontData.mWeight.GetUnit()) {
+    font->mFont.weight = defaultFont.weight;
+    font->mFixedFont.weight = defaultFixedFont.weight;
+  }
+  
 
   // font-size: enum, length, percent, inherit
   if (eCSSUnit_Enumerated == aFontData.mSize.GetUnit()) {
@@ -1407,6 +1424,10 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     font->mFixedFont.size = parentFont->mFixedFont.size;
     font->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
     font->mFlags |= (parentFont->mFlags & NS_STYLE_FONT_SIZE_EXPLICIT);
+  }
+  else if (eCSSUnit_Initial == aFontData.mSize.GetUnit()) {
+    font->mFont.size = defaultFont.size;
+    font->mFixedFont.size = defaultFixedFont.size;
   }
 
   if (font->mFlags & NS_STYLE_FONT_USE_FIXED)

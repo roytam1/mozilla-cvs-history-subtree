@@ -4176,6 +4176,7 @@ PRBool CSSDeclarationImpl::AppendValueToString(nsCSSProperty aProperty, const ns
     case eCSSUnit_Null:         break;
     case eCSSUnit_Auto:         aResult.Append(NS_LITERAL_STRING("auto"));     break;
     case eCSSUnit_Inherit:      aResult.Append(NS_LITERAL_STRING("inherit"));  break;
+    case eCSSUnit_Initial:      aResult.Append(NS_LITERAL_STRING("initial"));  break;
     case eCSSUnit_None:         aResult.Append(NS_LITERAL_STRING("none"));     break;
     case eCSSUnit_Normal:       aResult.Append(NS_LITERAL_STRING("normal"));   break;
 
