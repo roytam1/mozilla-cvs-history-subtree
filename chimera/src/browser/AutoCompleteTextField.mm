@@ -450,9 +450,11 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 - (void) setStringUndoably:(NSString *)aString fromLocation:(unsigned int)aLocation
 {
   NSTextView *fieldEditor = [self fieldEditor];
-  NSRange aRange = NSMakeRange(aLocation,[[fieldEditor string] length] - aLocation);
-  if ([fieldEditor shouldChangeTextInRange:aRange replacementString:aString]) {
-    [[fieldEditor textStorage] replaceCharactersInRange:aRange withString:aString];
+	if ( aLocation > [[fieldEditor string] length] )			// sanity check or AppKit crashes
+    return;
+  NSRange range = NSMakeRange(aLocation,[[fieldEditor string] length] - aLocation);
+  if ([fieldEditor shouldChangeTextInRange:range replacementString:aString]) {
+    [[fieldEditor textStorage] replaceCharactersInRange:range withString:aString];
     // Whenever we send [self didChangeText], we trigger the
     // textDidChange method, which will begin a new search with
     // a new search string (which we just inserted) if the selection
@@ -461,8 +463,10 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
     [fieldEditor setSelectedRange:NSMakeRange(0,0)];    
     [fieldEditor didChangeText];
   }
-  aRange = NSMakeRange(aLocation,[[fieldEditor string] length] - aLocation);
-  [fieldEditor setSelectedRange:aRange];
+	if ( aLocation > [[fieldEditor string] length] )			// sanity check or AppKit crashes
+    return;
+  range = NSMakeRange(aLocation,[[fieldEditor string] length] - aLocation);
+  [fieldEditor setSelectedRange:range];
 }
 
 // selecting rows /////////////////////////////////////////
@@ -540,6 +544,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
   [mTableView deselectAll:self];
   [self clearResults];
 }
+
 
 // NSTextField delegate //////////////////////////////////
 - (void)controlTextDidChange:(NSNotification *)aNote

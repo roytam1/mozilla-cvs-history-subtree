@@ -1303,8 +1303,8 @@ static NSArray* sToolbarDefaults = nil;
 - (void)updateLocationFields:(NSString *)locationString
 {
     if ( [locationString isEqual:@"about:blank"] )
-      locationString = @"";      
-    [mURLBar setStringValue:locationString];
+      locationString = @"";
+    [mURLBar setStringUndoably:locationString fromLocation:0];		// updates autocomplete correctly
     [mLocationSheetURLField setStringValue:locationString];
     
     // don't call [window display] here, no matter how much you might want
