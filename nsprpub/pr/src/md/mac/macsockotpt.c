@@ -51,7 +51,6 @@ static struct {
 	void *      cookie;
 } dnsContext;
 
-static PRBool gOTInitialized;
 
 static pascal void  DNSNotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie);
 static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie);
@@ -106,14 +105,13 @@ void _MD_InitNetAccess()
     errOT = INIT_OPEN_TRANSPORT();
     PR_ASSERT(err == kOTNoError);
 
+	dnsContext.serviceRef = NULL;
 	dnsContext.lock = PR_NewLock();
 	PR_ASSERT(dnsContext.lock != NULL);
 
 	dnsContext.thread = _PR_MD_CURRENT_THREAD();
 	dnsContext.cookie = NULL;
-	
-	gOTInitialized = PR_FALSE;
-	
+		
 /* XXX Does not handle absence of open tpt and tcp yet! */
 }
 
@@ -121,8 +119,15 @@ static void _MD_FinishInitNetAccess()
 {
     OSStatus    errOT;
 
+	if (dnsContext.serviceRef)
+		return;
+		
     dnsContext.serviceRef = OT_OPEN_INTERNET_SERVICES(kDefaultInternetServicesPath, NULL, &errOT);
-    if (errOT != kOTNoError) return;    /* no network -- oh well */
+    if (errOT != kOTNoError) {
+        dnsContext.serviceRef = NULL;
+        return;    /* no network -- oh well */
+    }
+    
     PR_ASSERT((dnsContext.serviceRef != NULL) && (errOT == kOTNoError));
 
     /* Install notify function for DNR Address To String completion */
@@ -132,25 +137,47 @@ static void _MD_FinishInitNetAccess()
     /* Put us into async mode */
     errOT = OTSetAsynchronous(dnsContext.serviceRef);
     PR_ASSERT(errOT == kOTNoError);
-    
-    gOTInitialized = PR_TRUE;
 }
 
 
-static pascal void  DNSNotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie)
+static pascal void  DNSNotifierRoutine(void * contextPtr, OTEventCode otEvent, OTResult result, void * cookie)
 {
 #pragma unused(contextPtr)
     _PRCPU *    cpu    = _PR_MD_CURRENT_CPU(); 
+	OSStatus    errOT;
+
+	dnsContext.thread->md.osErrCode = result;
+	dnsContext.cookie = cookie;
 	
-	if (code == T_DNRSTRINGTOADDRCOMPLETE) {
-		dnsContext.thread->md.osErrCode = result;
-		dnsContext.cookie = cookie;
-		if (_PR_MD_GET_INTSOFF()) {
-			cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
-			dnsContext.thread->md.missedIONotify = PR_TRUE;
-			return;
-		}
-		DoneWaitingOnThisThread(dnsContext.thread);
+	switch (otEvent) {
+		case T_DNRSTRINGTOADDRCOMPLETE:
+				if (_PR_MD_GET_INTSOFF()) {
+					cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
+					dnsContext.thread->md.missedIONotify = PR_TRUE;
+					return;
+				}
+				DoneWaitingOnThisThread(dnsContext.thread);
+				break;
+		
+        case kOTProviderWillClose:
+                errOT = OTSetSynchronous(dnsContext.serviceRef);
+                // fall through to kOTProviderIsClosed case
+		
+        case kOTProviderIsClosed:
+                errOT = OTCloseProvider((ProviderRef)dnsContext.serviceRef);
+                dnsContext.serviceRef = nil;
+
+				if (_PR_MD_GET_INTSOFF()) {
+					cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
+					dnsContext.thread->md.missedIONotify = PR_TRUE;
+					return;
+				}
+				DoneWaitingOnThisThread(dnsContext.thread);
+                break;
+
+        default: // or else we don't handle the event
+	            PR_ASSERT(otEvent==NULL);
+		
 	}
 	// or else we don't handle the event
 }
@@ -470,8 +497,7 @@ PRInt32 _MD_socket(int domain, int type, int protocol)
     OSStatus    err;
     EndpointRef endpoint;
     
-    if (!gOTInitialized)
-    	_MD_FinishInitNetAccess();
+    _MD_FinishInitNetAccess();
 
     // We only deal with internet domain
     if (domain != AF_INET) {
@@ -1863,8 +1889,7 @@ PR_IMPLEMENT(unsigned long) inet_addr(const char *cp)
     OSStatus err;
     InetHost host;    
 
-    if (!gOTInitialized)
-    	_MD_FinishInitNetAccess();
+    _MD_FinishInitNetAccess();
 
     err = OTInetStringToHost((char*) cp, &host);
     if (err != kOTNoError)
@@ -1886,8 +1911,7 @@ PR_IMPLEMENT(struct hostent *) gethostbyname(const char * name)
     PRUint32 index;
     PRThread *me = _PR_MD_CURRENT_THREAD();
 
-    if (!gOTInitialized)
-    	_MD_FinishInitNetAccess();
+    _MD_FinishInitNetAccess();
 
     me->io_pending       = PR_TRUE;
     me->io_fd            = NULL;
@@ -1927,8 +1951,7 @@ PR_IMPLEMENT(struct hostent *) gethostbyaddr(const void *addr, int addrlen, int 
     PR_ASSERT(type == AF_INET);
     PR_ASSERT(addrlen == sizeof(struct in_addr));
 
-    if (!gOTInitialized)
-    	_MD_FinishInitNetAccess();
+    _MD_FinishInitNetAccess();
 
     OTInetHostToString((InetHost)addr, sHostInfo.name);
     
@@ -1938,8 +1961,7 @@ PR_IMPLEMENT(struct hostent *) gethostbyaddr(const void *addr, int addrlen, int 
 
 PR_IMPLEMENT(char *) inet_ntoa(struct in_addr addr)
 {
-    if (!gOTInitialized)
-    	_MD_FinishInitNetAccess();
+    _MD_FinishInitNetAccess();
 
     OTInetHostToString((InetHost)addr.s_addr, sHostInfo.name);
     
@@ -1952,8 +1974,7 @@ PRStatus _MD_gethostname(char *name, int namelen)
     OSStatus err;
     InetInterfaceInfo info;
 
-    if (!gOTInitialized)
-    	_MD_FinishInitNetAccess();
+    _MD_FinishInitNetAccess();
 
     /*
      *    On a Macintosh, we don't have the concept of a local host name.
