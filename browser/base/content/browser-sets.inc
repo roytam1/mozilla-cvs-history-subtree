@@ -35,6 +35,12 @@
 # 
 # ***** END LICENSE BLOCK *****
 
+#ifdef XP_UNIX
+#ifndef XP_MACOSX
+#define XP_GNOME 1
+#endif
+#endif
+
   <stringbundleset id="stringbundleset"> 
     <stringbundle id="bundle_brand" src="chrome://global/locale/brand.properties"/>
     <stringbundle id="bundle_shell" src="chrome://browser/locale/shellservice.properties"/>
@@ -197,8 +203,8 @@
 #
 # Search Command Key Logic works like this:
 # 
-# Unix: Ctrl+J (0.8, 0.9 support)
-#       Ctrl+K (cross platform binding)
+# Unix: Ctrl+K (cross platform binding)
+#       Ctrl+J (in case of emacs Ctrl-K conflict)
 # Mac:  Ctrl+K (cross platform binding)
 # Win:  Ctrl+K (cross platform binding)
 #       Ctrl+E (IE compat)
@@ -212,14 +218,15 @@
 #
 # Do *not* tamper with these values without talking to ben@mozilla.org
 #
-#ifdef XP_UNIX
-#ifndef XP_MACOSX
-    <key id="key_search2" key="&searchFocusUnix.commandkey;" command="Tools:Search" modifiers="accel"/>
-#endif
     <key id="key_search" key="&searchFocus.commandkey;" command="Tools:Search" modifiers="accel"/>
-#else
-    <key id="key_search" key="&searchFocus.commandkey;" command="Tools:Search" modifiers="accel"/>
+#ifdef XP_WIN
     <key id="key_search2" key="&searchFocus.commandkey2;" command="Tools:Search" modifiers="accel"/>
+#endif
+#ifdef XP_GNOME
+    <key id="key_search2" key="&searchFocusUnix.commandkey;" command="Tools:Search" modifiers="accel"/>
+    <key id="key_openDownloads" key="&downloadsUnix.commandkey;" command="Tools:Downloads" modifiers="accel"/>
+#else
+    <key id="key_openDownloads" key="&downloads.commandkey;" command="Tools:Downloads" modifiers="accel"/>
 #endif
     <key id="openFileKb" key="&openFileCmd.commandkey;" command="Browser:OpenFile"  modifiers="accel"/>
     <key id="key_savePage" key="&savePageCmd.commandkey;" command="Browser:SavePage" modifiers="accel"/>
@@ -229,9 +236,11 @@
     <key id="key_undo"
          key="&undoCmd.key;"
          modifiers="accel"/>
-    <key id="key_redo"
-         key="&redoCmd.key;"
-         modifiers="accel"/>
+#ifdef XP_UNIX
+    <key id="key_redo" key="&undoCmd.key;" modifiers="accel,shift"/>
+#else
+    <key id="key_redo" key="&redoCmd.key;" modifiers="accel"/>
+#endif
     <key id="key_cut"
          key="&cutCmd.key;"
          modifiers="accel"/>
@@ -242,6 +251,7 @@
          key="&pasteCmd.key;"
          modifiers="accel"/>
     <key id="key_delete" keycode="VK_DELETE" command="cmd_delete"/>
+    <key id="key_selectAll" key="&selectAllCmd.key;" modifiers="accel"/>
 
 #ifndef XP_MACOSX
     <key keycode="VK_BACK" command="cmd_handleBackspace"/>
@@ -250,13 +260,6 @@
 #ifdef XP_UNIX
     <key key="&goBackCmd.commandKey;" command="Browser:Back" modifiers="accel"/>
     <key key="&goForwardCmd.commandKey;" command="Browser:Forward" modifiers="accel"/>
-#ifdef XP_MACOSX
-    <key id="key_selectAll" key="&selectAllCmd.key;" modifiers="accel"/>
-#else
-    <key id="key_selectAll" key="&selectAllCmd.key;" modifiers="alt"/>
-#endif
-#else
-    <key id="key_selectAll" key="&selectAllCmd.key;" modifiers="accel"/>
 #endif
 #ifdef XP_MACOSX
     <key id="goBackKb"  keycode="VK_LEFT" command="Browser:Back" modifiers="accel"/>
@@ -296,13 +299,6 @@
     <key id="key_gotoHistory"  key="&historySidebarCmd.commandKey;"  command="viewHistorySidebar" modifiers="accel"/>
 #endif
 
-# all platforms except Unix, because Ctrl+J is used for Web Search there
-#ifndef XP_UNIX
-    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
-#endif
-#ifdef XP_MACOSX
-    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
-#endif
     <key id="key_newMessage" key="&sendMessage.commandkey;" command="Browser:NewMessage" modifiers="accel"/>
 
     <key id="key_textZoomReduce"  key="&textZoomReduceCmd.commandkey;"   command="cmd_textZoomReduce"  modifiers="accel"/>
