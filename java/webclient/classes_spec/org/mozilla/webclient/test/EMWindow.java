@@ -310,7 +310,6 @@ private UniversalDialog           uniDialog = null;
                                               "network.cookie.warnAboutCookies",
                                               "This IS the Closure!");
             prefs.setPref("network.cookie.warnAboutCookies", "true");
-            prefs.setPref("browser.cache.disk_cache_size", "0");
      
             // pull out the proxies, and make java aware of them
             Properties prefsProps = prefs.getPrefs();
@@ -416,6 +415,11 @@ public void delete()
     controlPanel = null;
     buttonsPanel = null;
     currentDocument = null;
+}
+
+public BrowserControl getBrowserControl()
+{
+    return browserControl;
 }
 
 
