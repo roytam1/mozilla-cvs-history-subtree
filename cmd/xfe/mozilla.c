@@ -39,7 +39,9 @@
 #include "secrng.h"
 #include "mozjava.h"
 #include "nlsxp.h"
+#ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
+#endif
 #ifdef NSPR20
 #include "private/prpriv.h"	/* for PR_NewNamedMonitor */
 #endif /* NSPR20 */
@@ -144,11 +146,7 @@ extern int XFE_RESOURCES_NOT_INSTALLED_CORRECTLY;
 extern int XFE_USAGE_MSG1;
 extern int XFE_USAGE_MSG2;
 extern int XFE_USAGE_MSG3;
-/* <<<<<<< mozilla.c rb, start conflict */
 #if defined(MOZ_MAIL_NEWS) || defined(EDITOR) || defined(MOZ_TASKBAR)
-/* =======
-#if defined(MOZ_MAIL_NEWS) && defined(EDITOR) && defined(MOZ_TASKBAR)
->>>>>>> 3.4.14.6 end conflict */
 extern int XFE_USAGE_MSG4;
 #endif
 extern int XFE_USAGE_MSG5;
