@@ -201,9 +201,8 @@ public:
     nsrefcnt mRefCnt;
 }; // class nsSplashScreenWin
 
-// Simple Win32 mutex wrapper.
-struct Mutex {
-    Mutex( const char *name )
+// Simple Win32 mutex wrapper implementation.
+    Mutex::Mutex( const char *name )
         : mName( name ),
           mHandle( 0 ),
           mState( -1 ) {
@@ -212,7 +211,7 @@ struct Mutex {
         printf( "CreateMutex error = 0x%08X\n", (int)GetLastError() );
 #endif
     }
-    ~Mutex() {
+    Mutex::~Mutex() {
         if ( mHandle ) {
             // Make sure we release it if we own it.
             Unlock();
@@ -225,10 +224,10 @@ struct Mutex {
 #endif
         }
     }
-    BOOL Lock( DWORD timeout ) {
+    BOOL Mutex::Lock( DWORD timeout ) {
         if ( mHandle ) {
 #if MOZ_DEBUG_DDE
-            printf( "Waiting (%d msec) for DDE mutex...\n", (int)timeout );
+            printf( "Waiting (%d msec) for mutex: %s...\n", (int)timeout, (char*)mName.get() );
 #endif
             mState = WaitForSingleObject( mHandle, timeout );
 #if MOZ_DEBUG_DDE
@@ -239,20 +238,15 @@ struct Mutex {
             return FALSE;
         }
     }
-    void Unlock() {
+    void Mutex::Unlock() {
         if ( mHandle && mState == WAIT_OBJECT_0 ) {
 #if MOZ_DEBUG_DDE
-            printf( "Releasing DDE mutex\n" );
+            printf( "Releasing mutex: %s\n", (char*)mName.get() );
 #endif
             ReleaseMutex( mHandle );
             mState = -1;
         }
     }
-private:
-    nsCString mName;
-    HANDLE    mHandle;
-    DWORD     mState;
-};
 
 /* DDE Notes
  *

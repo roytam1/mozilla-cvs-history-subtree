@@ -48,3 +48,19 @@ nsresult NS_CreateNativeAppSupport( nsINativeAppSupport **aResult );
 // from nsNativeAppSupportWin.cpp.
 nsresult DoCommandLines(nsICmdLineService* cmdLine, PRBool heedGeneralStartupPrefs, PRBool *windowOpened);
 
+#ifdef XP_WIN
+#include <windows.h>
+#include "nsString.h"
+#define MOZ_PREF_FILE_MUTEX_NAME "MozillaPrefFileMutex"
+// Mutex wrapper; this class is implemented in nsNativeAppSupportWin.cpp.
+struct Mutex {
+    Mutex( const char *name );
+    ~Mutex();
+    BOOL Lock( DWORD timeout );
+    void Unlock();
+private:
+    nsCString mName;
+    HANDLE    mHandle;
+    DWORD     mState;
+}; // Mutex
+#endif

@@ -819,8 +819,13 @@ static nsresult DoOnShutdown()
     // scoping this in a block to force release
     nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv));
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get prefs, so unable to save them");
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv)) {
+#ifdef XP_WIN
+      Mutex lock(MOZ_PREF_FILE_MUTEX_NAME);
+      lock.Lock( 15000 ); // Block others from reading prefs while we're writing.
+#endif
       prefs->SavePrefFile(nsnull);
+    }
   }
 
   // at this point, all that is on the clipboard is a proxy object, but that object
@@ -1117,6 +1122,10 @@ static nsresult InitializeProfileService(nsICmdLineService *cmdLineArgs)
     nsresult rv;
     nsCOMPtr<nsIAppShellService> appShellService(do_GetService(kAppShellServiceCID, &rv));
     if (NS_FAILED(rv)) return rv;
+#ifdef XP_WIN
+    Mutex lock(MOZ_PREF_FILE_MUTEX_NAME);
+    lock.Lock( 15000 ); // Make sure nobody else is reading/writing the prefs file.
+#endif
     rv = appShellService->DoProfileStartup(cmdLineArgs, shouldShowUI);
 
     return rv;
