@@ -466,36 +466,13 @@ void CBrowserShell::EventMouseUp(const EventRecord	&inMacEvent)
         dispatcher->UpdateMenus();
 }
 
-#if __PowerPlant__ >= 0x02200000
 void CBrowserShell::AdjustMouseSelf(Point				inPortPt,
                                     const EventRecord&	inMacEvent,
                                     RgnHandle			outMouseRgn)
 {
-    static Point	lastWhere = {0, 0};
-
-    if ((*(long*)&lastWhere != *(long*)&inMacEvent.where))
-    {
-        HandleMouseMoved(inMacEvent);
-        lastWhere = inMacEvent.where;
-    }
     Rect cursorRect = { inPortPt.h, inPortPt.v, inPortPt.h + 1, inPortPt.v + 1 };
     ::RectRgn(outMouseRgn, &cursorRect);
 }
-
-#else
-
-void CBrowserShell::AdjustCursorSelf(Point				/* inPortPt */,
-                                     const EventRecord&	inMacEvent)
-{
-    static Point	lastWhere = {0, 0};
-
-    if ((*(long*)&lastWhere != *(long*)&inMacEvent.where))
-    {
-        HandleMouseMoved(inMacEvent);
-        lastWhere = inMacEvent.where;
-    }
-}
-#endif
 
 //*****************************************************************************
 //***    CBrowserShell: LCommander overrides
@@ -782,18 +759,24 @@ void CBrowserShell::SpendTime(const EventRecord&		inMacEvent)
 {
     switch (inMacEvent.what)
     {
+        case nullEvent:
+            HandleMouseMoved(inMacEvent);
+            break;
+        
         case osEvt:
-        {
-            // The event sink will not set the cursor if we are in the background - which is right.
-            // We have to feed it suspendResumeMessages for it to know
+            {
+                // The event sink will not set the cursor if we are in the background - which is right.
+                // We have to feed it suspendResumeMessages for it to know
 
-            unsigned char eventType = ((inMacEvent.message >> 24) & 0x00ff);
-            if (eventType == suspendResumeMessage) {
-              PRBool handled = PR_FALSE;
-              mEventSink->DispatchEvent(&const_cast<EventRecord&>(inMacEvent), &handled);
+                unsigned char eventType = ((inMacEvent.message >> 24) & 0x00ff);
+                if (eventType == suspendResumeMessage) {
+                    PRBool handled = PR_FALSE;
+                    mEventSink->DispatchEvent(&const_cast<EventRecord&>(inMacEvent), &handled);
+                }
+                else if (eventType == mouseMovedMessage)
+                    HandleMouseMoved(inMacEvent);
             }
-        }
-        break;
+            break;
     }
 }
 
@@ -1298,11 +1281,14 @@ NS_IMETHODIMP CBrowserShell::OnHideTooltip()
 
 void CBrowserShell::HandleMouseMoved(const EventRecord& inMacEvent)
 {
-    if (IsActive())
+    static Point	lastWhere = {0, 0};
+
+    if (IsActive() && (*(long*)&lastWhere != *(long*)&inMacEvent.where))
     {
         FocusDraw();
         PRBool handled = PR_FALSE;
         mEventSink->DispatchEvent(&const_cast<EventRecord&>(inMacEvent), &handled);
+        lastWhere = inMacEvent.where;
     }
 }
 
