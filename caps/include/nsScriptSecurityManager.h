@@ -418,7 +418,7 @@ private:
     GetScriptPrincipal(JSContext* cx, JSScript* script, nsIPrincipal** result);
 
     nsresult
-    GetFunctionObjectPrincipal(JSContext* cx, JSObject* obj, 
+    GetFunctionObjectPrincipal(JSContext* cx, JSObject* obj, JSStackFrame *fp,
                                nsIPrincipal** result);
 
     nsresult
