@@ -731,11 +731,9 @@ ifdef HOST_LIBRARY
 	$(INSTALL) $(IFLAGS1) $(HOST_LIBRARY) $(DIST)/host/lib
 endif
 endif # !NO_DIST_INSTALL
-	+$(LOOP_OVER_DIRS)
 
 ##############################################
 install:: $(SUBMAKEFILES) $(MAKE_DIRS)
-	+$(LOOP_OVER_DIRS)
 
 install:: $(EXPORTS)
 ifndef NO_INSTALL
@@ -1597,10 +1595,6 @@ ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 endif
 endif
-	+$(LOOP_OVER_DIRS)
-
-
-
 
 ifneq ($(SDK_XPIDLSRCS),)
 # export .idl files to $(IDL_DIR) & $(SDK_IDL_DIR)
@@ -1857,6 +1851,15 @@ TAGS:: $(CSRCS) $(CPPSRCS) $(HEADERS)
 	$(ETAGS) $(CSRCS) $(CPPSRCS) $(HEADERS)
 endif
 endif
+
+
+################################################################################
+# Default looping rules. 
+# Process sub-dirs *after* processing the current directory. 
+################################################################################
+install libs export export-idl::
+	+$(LOOP_OVER_DIRS)
+
 
 ################################################################################
 # Special gmake rules.
