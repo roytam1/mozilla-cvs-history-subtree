@@ -1,0 +1,6 @@
+[xpfe-mailnews]
+dist/bin/chrome/messenger.jar
+
+#if MOZ_STATIC_MAIL_BUILD
+dist/bin/components/@DLLP@mail@DLLS@
+#endif
