@@ -357,7 +357,6 @@ nsStreamIOChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 NS_IMETHODIMP
 nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
 {
-    NS_WARNING("nsStreamIOChannel::AsyncWrite -- NOT IMPLEMENTED!!");
     nsresult rv;
 
     NS_ASSERTION(provider, "no provider");
