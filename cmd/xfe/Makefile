@@ -286,10 +286,9 @@ BASIC_LIBS	+= \
 		  $(NULL)
 endif
 
-ifdef MOZ_NEO
+ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libneo.a \
-		  $(DIST)/lib/libaddr.a \
 		  $(NULL)
 endif
 
