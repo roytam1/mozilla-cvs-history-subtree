@@ -402,7 +402,8 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
       // Make sure new document is selected
       if (presShell != startingPresShell) {
         // We are in a new document (because of frames/iframes)
-        selection->CollapseToStart(); // Hide old doc's selection
+        if (selection)
+          selection->CollapseToStart(); // Hide old doc's selection
 
         // Get selection controller and selection for new frame/iframe
         GetSelection(presShell, getter_AddRefs(selectionController), 
@@ -412,9 +413,13 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
       }
 
       // Select the found text
-      selection->RemoveAllRanges();
-      selection->AddRange(returnRange);
-      selectionController->ScrollSelectionIntoView(nsISelectionController::SELECTION_NORMAL, 
+      if (selection) {
+        selection->RemoveAllRanges();
+        selection->AddRange(returnRange);
+      }
+
+      if (selectionController)
+        selectionController->ScrollSelectionIntoView(nsISelectionController::SELECTION_NORMAL, 
                                                    nsISelectionController::SELECTION_FOCUS_REGION, PR_TRUE);
       currentDocShell->SetHasFocus(PR_TRUE);
 
