@@ -21,6 +21,7 @@
 #include "nsIStreamListener.idl"
 
 interface nsIOutputStream;
+interface nsIURI;
 
 %{C++
 // {588595CB-2012-11d3-8EF0-00A024A7D144}
@@ -29,8 +30,10 @@ interface nsIOutputStream;
     { 0x8e, 0xf0, 0x0, 0xa0, 0x24, 0xa7, 0xd1, 0x44 } }
 %}
 
+typedef long nsMimeOutputType;
+
 [scriptable, uuid(7E1C52F7-3594-11d3-988E-001083010E9B)] 
-interface nsMimeOutputType 
+interface nsMimeOutput
 { 
     const long nsMimeMessageSplitDisplay = 0;
     const long nsMimeMessageHeaderDisplay = 1;
@@ -47,8 +50,9 @@ interface nsIStreamConverter : nsIStreamListener {
      * This is the output stream where the stream converter will write processed data after 
      * conversion. 
      */
-    void SetOutputStream(in nsIOutputStream outStream, in string url); 
 
+	void SetOutputStream(in nsIOutputStream aOutStream, in nsIURI aURI, in nsMimeOutputType aType, 
+						 out nsMimeOutputType aOutFormat, out string aOutputContentType);
     /*
      * The output listener can be set to allow for the flexibility of having the stream converter 
      * directly notify the listener of the output stream for any processed/converter data. If 
@@ -61,6 +65,6 @@ interface nsIStreamConverter : nsIStreamListener {
      * This is needed by libmime for MHTML link processing...the url is the URL string associated
      * with this input stream
      */ 
-    void SetStreamURL(in string url); 
+    void SetStreamURI(in nsIURI aURI); 
 };
 
