@@ -1905,9 +1905,20 @@ trackEvent(PRUint32 aTimeval, char aType, PRUint32 aHeapRuntimeCost,
 ** Callback from the tmreader_eventloop function.
 ** Simply tries to sort out what we desire to know.
 */
+
+static const char spinner_chars[] = { '/', '-', '\\', '|' };
+
+#define SPINNER_UPDATE_FREQUENCY 4096
+#define SPINNER_CHAR_COUNT (sizeof(spinner_chars) / sizeof(spinner_chars[0]))
+#define SPINNER_CHAR(_x) spinner_chars[(_x / SPINNER_UPDATE_FREQUENCY) % SPINNER_CHAR_COUNT]
+
 void
 tmEventHandler(tmreader * aReader, tmevent * aEvent)
 {
+    static event_count = 0;     /* for spinner */
+    if ((event_count++ % SPINNER_UPDATE_FREQUENCY) == 0)
+        printf("\rReading... %c", SPINNER_CHAR(event_count));
+    
     if (NULL != aReader && NULL != aEvent) {
         switch (aEvent->type) {
             /*
@@ -5888,16 +5899,24 @@ serverMode(void)
                 REPORT_INFO(message);
                 PR_fprintf(PR_STDOUT, "Peak memory used: %s bytes\n",
                            FormatNumber(globals.mPeakMemoryUsed));
-                PR_fprintf(PR_STDOUT, "Total calls     : %s",
+                PR_fprintf(PR_STDOUT, "Allocations     : %s total\n",
                            FormatNumber(globals.mMallocCount +
                                         globals.mCallocCount +
-                                        globals.mReallocCount));
-                PR_fprintf(PR_STDOUT, " [%s",
+                                        globals.mReallocCount),
+                           FormatNumber(globals.mFreeCount));
+                PR_fprintf(PR_STDOUT, "Breakdown       : %s malloc\n",
                            FormatNumber(globals.mMallocCount));
-                PR_fprintf(PR_STDOUT, " + %s",
+                PR_fprintf(PR_STDOUT, "                  %s calloc\n",
                            FormatNumber(globals.mCallocCount));
-                PR_fprintf(PR_STDOUT, " + %s]\n",
+                PR_fprintf(PR_STDOUT, "                  %s realloc\n",
                            FormatNumber(globals.mReallocCount));
+                PR_fprintf(PR_STDOUT, "                  %s free\n",
+                           FormatNumber(globals.mFreeCount));
+                PR_fprintf(PR_STDOUT, "Leaks           : %s\n",
+                           FormatNumber((globals.mMallocCount +
+                                         globals.mCallocCount +
+                                         globals.mReallocCount) -
+                                        globals.mFreeCount));
                 /*
                  **  Keep accepting until we know otherwise.
                  **
@@ -6086,6 +6105,7 @@ doRun(void)
             tmreader_eventloop(globals.mTMR,
                                globals.mCommandLineOptions.mFileName,
                                tmEventHandler);
+        printf("\rReading... Done.\n");
 #if defined(DEBUG_dp)
         fprintf(stderr,
                 "DEBUG: reading tracemalloc data ends: %dms [%d allocations]\n",
