@@ -21,7 +21,6 @@
  */
 
 #include "nsIDOMCDATASection.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIContent.h"
 #include "nsITextContent.h"
@@ -30,10 +29,10 @@
 #include "nsCRT.h"
 #include "nsLayoutAtoms.h"
 #include "nsIXMLContent.h"
+#include "nsString.h"
 
 
 class nsXMLCDATASection : public nsIDOMCDATASection,
-                          public nsIScriptObjectOwner,
                           public nsITextContent
 {
 public:
@@ -44,16 +43,13 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIDOMNode
-  NS_IMPL_IDOMNODE_USING_GENERIC_DOM_DATA(mInner)
+  NS_IMPL_NSIDOMNODE_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIDOMCharacterData
-  NS_IMPL_IDOMCHARACTERDATA_USING_GENERIC_DOM_DATA(mInner)
+  NS_IMPL_NSIDOMCHARACTERDATA_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIDOMText
-  NS_IMPL_IDOMTEXT_USING_GENERIC_DOM_DATA(mInner)
-
-  // nsIScriptObjectOwner
-  NS_IMPL_ISCRIPTOBJECTOWNER_USING_GENERIC_DOM_DATA(mInner)
+  NS_IMPL_NSIDOMTEXT_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIContent
   NS_IMPL_ICONTENT_USING_GENERIC_DOM_DATA(mInner)

@@ -25,7 +25,6 @@
 #include "nsIDocument.h"
 #include "nsIAtom.h"
 #include "nsIEventListenerManager.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsIWebShell.h"
 #include "nsIEventStateManager.h"
 #include "nsIDOMEvent.h"
@@ -47,7 +46,6 @@
 #include "nsIXBLService.h"
 #include "nsIXBLBinding.h"
 #include "nsIBindingManager.h"
-#include "nsIScriptGlobalObject.h"
 
 
 nsresult
@@ -545,6 +543,7 @@ nsXMLElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   return it->QueryInterface(NS_GET_IID(nsIDOMNode), (void**) aReturn);
 }
 
+#if 0
 NS_IMETHODIMP
 nsXMLElement::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject)
 {
@@ -628,6 +627,7 @@ nsXMLElement::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject)
   *aScriptObject = slots->mScriptObject;
   return res;
 }
+#endif
 
 NS_IMETHODIMP
 nsXMLElement::SetContainingNameSpace(nsINameSpace* aNameSpace)

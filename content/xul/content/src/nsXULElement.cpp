@@ -73,7 +73,6 @@
 #include "nsIDOMEventListener.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMNodeList.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIDOMXULElement.h"
 #include "nsIDocument.h"
@@ -81,7 +80,6 @@
 #include "nsIEventStateManager.h"
 #include "nsIHTMLContentContainer.h"
 #include "nsIHTMLStyleSheet.h"
-#include "nsIJSScriptObject.h"
 #include "nsIMutableStyleContext.h"
 #include "nsINameSpace.h"
 #include "nsINameSpaceManager.h"
@@ -92,7 +90,6 @@
 #include "nsIRDFService.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptGlobalObject.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptGlobalObjectOwner.h"
 #include "nsIServiceManager.h"
 #include "nsIStyleContext.h"
@@ -158,13 +155,11 @@ static NS_DEFINE_IID(kIDOMNodeIID,                NS_IDOMNODE_IID);
 static NS_DEFINE_IID(kIDOMNodeListIID,            NS_IDOMNODELIST_IID);
 static NS_DEFINE_IID(kIDocumentIID,               NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kIEventListenerManagerIID,   NS_IEVENTLISTENERMANAGER_IID);
-static NS_DEFINE_IID(kIJSScriptObjectIID,         NS_IJSSCRIPTOBJECT_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,       NS_INAMESPACEMANAGER_IID);
 static NS_DEFINE_IID(kIPrivateDOMEventIID,        NS_IPRIVATEDOMEVENT_IID);
 static NS_DEFINE_IID(kIRDFCompositeDataSourceIID, NS_IRDFCOMPOSITEDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,            NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,             NS_IRDFSERVICE_IID);
-static NS_DEFINE_IID(kIScriptObjectOwnerIID,      NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kISupportsIID,               NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIXMLContentIID,             NS_IXMLCONTENT_IID);
 
@@ -501,7 +496,6 @@ nsXULElement::nsXULElement()
     : mPrototype(nsnull),
       mDocument(nsnull),
       mParent(nsnull),
-      mScriptObject(nsnull),
       mContentId(0),
       mLazyState(0),
       mBindingParent(nsnull),
@@ -709,9 +703,6 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
              iid.Equals(kIDOMNodeIID)) {
         *result = NS_STATIC_CAST(nsIDOMElement*, this);
     }
-    else if (iid.Equals(kIScriptObjectOwnerIID)) {
-        *result = NS_STATIC_CAST(nsIScriptObjectOwner*, this);
-    }
     else if (iid.Equals(NS_GET_IID(nsIScriptEventHandlerOwner))) {
         *result = NS_STATIC_CAST(nsIScriptEventHandlerOwner*, this);
     }
@@ -720,9 +711,6 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
     }
     else if (iid.Equals(kIDOMEventTargetIID)) {
         *result = NS_STATIC_CAST(nsIDOMEventTarget*, this);
-    }
-    else if (iid.Equals(kIJSScriptObjectIID)) {
-        *result = NS_STATIC_CAST(nsIJSScriptObject*, this);
     }
     else if (iid.Equals(NS_GET_IID(nsIChromeEventHandler))) {
         *result = NS_STATIC_CAST(nsIChromeEventHandler*, this);
@@ -749,12 +737,12 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
       else
         return NS_NOINTERFACE;
     }
-    else if (mScriptObject && mDocument) {
-        nsCOMPtr<nsIBindingManager> manager;
-        mDocument->GetBindingManager(getter_AddRefs(manager));
-        return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this), mScriptObject, 
-                                                 iid, result);
-    }
+//    else if (mDocument) {
+//        nsCOMPtr<nsIBindingManager> manager;
+//        mDocument->GetBindingManager(getter_AddRefs(manager));
+        //        return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this), mScriptObject, 
+        //                                                 iid, result);
+//    }
     else {
         *result = nsnull;
         return NS_NOINTERFACE;
@@ -1854,8 +1842,8 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAReadableString& aV
         rv = GetListenerManager(getter_AddRefs(manager));
         if (NS_FAILED(rv)) return rv;
 
-        rv = manager->AddScriptEventListener(context, this, aName,
-                                             aValue, aIID, PR_TRUE);
+        //        rv = manager->AddScriptEventListener(context, this, aName,
+        //                                             aValue, aIID, PR_TRUE);
     }
 
     return rv;
@@ -2019,7 +2007,8 @@ nsXULElement::HandleEvent(nsIDOMEvent *aEvent)
 //----------------------------------------------------------------------
 // nsIScriptObjectOwner interface
 
-NS_IMETHODIMP 
+#if 0
+NS_IMETHODIMP
 nsXULElement::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject)
 {
     nsresult rv = NS_OK;
@@ -2124,15 +2113,7 @@ nsXULElement::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject)
     
     return rv;
 }
-
-NS_IMETHODIMP 
-nsXULElement::SetScriptObject(void *aScriptObject)
-{
-    // XXX Drop reference to previous object if there was one?
-    mScriptObject = aScriptObject;
-    return NS_OK;
-}
-
+#endif
 
 //----------------------------------------------------------------------
 // nsIScriptEventHandlerOwner interface
@@ -2255,64 +2236,6 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
 
 
 //----------------------------------------------------------------------
-// nsIJSScriptObject interface
-
-PRBool
-nsXULElement::AddProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    return PR_TRUE;
-}
-
-PRBool
-nsXULElement::DeleteProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    return PR_TRUE;
-}
-
-PRBool
-nsXULElement::GetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    return PR_TRUE;
-}
-
-PRBool
-nsXULElement::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    // XXXwaterson do the event handlers here!
-    return PR_TRUE;
-}
-
-PRBool
-nsXULElement::EnumerateProperty(JSContext *aContext, JSObject *aObj)
-{
-    return PR_TRUE;
-}
-
-
-PRBool
-nsXULElement::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                      PRBool *aDidDefineProperty)
-{
-    *aDidDefineProperty = PR_FALSE;
-
-    return PR_TRUE;
-}
-
-
-PRBool
-nsXULElement::Convert(JSContext *aContext, JSObject *aObj, jsval aID)
-{
-    return PR_TRUE;
-}
-
-
-void
-nsXULElement::Finalize(JSContext *aContext, JSObject *aObj)
-{
-}
-
-
-//----------------------------------------------------------------------
 //
 // nsIContent interface
 //
@@ -2335,6 +2258,7 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileE
         if (mDocument) {
             // Release the named reference to the script object so it can
             // be garbage collected.
+            /*
             if (mScriptObject) {
                 nsCOMPtr<nsIScriptGlobalObject> global;
                 mDocument->GetScriptGlobalObject(getter_AddRefs(global));
@@ -2346,6 +2270,9 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileE
                     }
                 }
             }
+            */
+
+            // XXX: Unroot!!!
         }
 
 
@@ -2372,6 +2299,7 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileE
 
         if (mDocument) {
             // Add a named reference to the script object.
+            /*
             if (mScriptObject) {
                 nsCOMPtr<nsIScriptGlobalObject> global;
                 mDocument->GetScriptGlobalObject(getter_AddRefs(global));
@@ -2383,6 +2311,9 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileE
                     }
                 }
             }
+            */
+
+            // XXX: Root!!!
 
             // When we SetDocument(), we're either adding an element
             // into the document that wasn't there before, or we're
@@ -4645,7 +4576,7 @@ nsXULPrototypeScript::nsXULPrototypeScript(PRInt32 aLineNo, const char *aVersion
     : nsXULPrototypeNode(eType_Script, aLineNo),
       mSrcLoading(PR_FALSE),
       mSrcLoadWaiters(nsnull),
-      mScriptObject(nsnull),
+      mJSObject(nsnull),
       mLangVersion(aVersion)
 {
     MOZ_COUNT_CTOR(nsXULPrototypeScript);
@@ -4654,8 +4585,8 @@ nsXULPrototypeScript::nsXULPrototypeScript(PRInt32 aLineNo, const char *aVersion
 
 nsXULPrototypeScript::~nsXULPrototypeScript()
 {
-    if (mScriptObject)
-        RemoveJSGCRoot(&mScriptObject);
+    if (mJSObject)
+        RemoveJSGCRoot(&mJSObject);
     MOZ_COUNT_DTOR(nsXULPrototypeScript);
 }
 
@@ -4727,7 +4658,7 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
                                 urlspec,
                                 PRUint32(aLineNo),
                                 mLangVersion,
-                                (void**) &mScriptObject);
+                                (void**) &mJSObject);
 
     if (NS_FAILED(rv)) return rv;
 
@@ -4736,6 +4667,6 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
     if (!cx)
         return NS_ERROR_UNEXPECTED;
 
-    rv = AddJSGCRoot(cx, &mScriptObject, "nsXULPrototypeScript::mScriptObject");
+    rv = AddJSGCRoot(cx, &mJSObject, "nsXULPrototypeScript::mScriptObject");
     return rv;
 }

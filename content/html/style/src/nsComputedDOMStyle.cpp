@@ -27,7 +27,6 @@
 #include "nsIFrame.h"
 #include "nsIDOMElement.h"
 #include "nsIStyleContext.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsROCSSPrimitiveValue.h"
 
 #include "nsCSSProps.h"
@@ -43,8 +42,7 @@
  * file that is #ifdef'd out placeholders.
  */
 
-class nsComputedDOMStyle : public nsIComputedDOMStyle,
-                           public nsIScriptObjectOwner
+class nsComputedDOMStyle : public nsIComputedDOMStyle
 {
 public:
   NS_DECL_ISUPPORTS
@@ -54,11 +52,7 @@ public:
                   nsIPresShell *aPresShell);
 
   // nsIDOMCSSStyleDeclaration
-  NS_DECL_IDOMCSSSTYLEDECLARATION
-
-  // nsIScriptObjectOwner
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void* aScriptObject);
+  NS_DECL_NSIDOMCSSSTYLEDECLARATION
 
   // nsComputedDOMStyle
   nsComputedDOMStyle();
@@ -81,8 +75,6 @@ private:
   nsString mPseudo;
 
   float mT2P; // For unit conversions
-
-  void* mScriptObject;
 };
 
 
@@ -100,10 +92,8 @@ NS_NewComputedDOMStyle(nsIComputedDOMStyle** aComputedStyle)
 }
 
 
-nsComputedDOMStyle::nsComputedDOMStyle() : mPresShell(nsnull),
-                                           mContent(nsnull),
-                                           mT2P(0.0f),
-                                           mScriptObject(nsnull)
+nsComputedDOMStyle::nsComputedDOMStyle() : mContent(nsnull),
+                                           mT2P(0.0f)
 {
   NS_INIT_REFCNT();
 }
@@ -121,41 +111,13 @@ NS_IMPL_RELEASE(nsComputedDOMStyle);
 NS_INTERFACE_MAP_BEGIN(nsComputedDOMStyle)
    NS_INTERFACE_MAP_ENTRY(nsIComputedDOMStyle)
    NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleDeclaration)
-   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIComputedDOMStyle)
 NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP
-nsComputedDOMStyle::GetScriptObject(nsIScriptContext *aContext, 
-                                  void** aScriptObject)
-{
-  nsresult res = NS_OK;
-
-  if (!mScriptObject) {
-    nsISupports *supports = NS_STATIC_CAST(nsIComputedDOMStyle *, this);
-
-    // XXX Should be done through factory
-    res = NS_NewScriptCSSStyleDeclaration(aContext, supports, mContent,
-                                          &mScriptObject);
-  }
-
-  *aScriptObject = mScriptObject;
-
-  return res;
-}
-
-
-NS_IMETHODIMP
-nsComputedDOMStyle::SetScriptObject(void* aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-
-NS_IMETHODIMP
-nsComputedDOMStyle::Init(nsIDOMElement *aElement, const nsAReadableString& aPseudoElt,
+nsComputedDOMStyle::Init(nsIDOMElement *aElement,
+                         const nsAReadableString& aPseudoElt,
                          nsIPresShell *aPresShell)
 {
   NS_ENSURE_ARG_POINTER(aElement);

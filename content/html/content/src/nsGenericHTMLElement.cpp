@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  */
 #include "nsGenericHTMLElement.h"
 #include "nsCOMPtr.h"
@@ -43,8 +43,6 @@
 #include "nsILink.h"
 #include "nsILinkHandler.h"
 #include "nsPIDOMWindow.h"
-#include "nsIScriptGlobalObject.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsISizeOfHandler.h"
 #include "nsIStyleContext.h"
 #include "nsIMutableStyleContext.h"
@@ -77,7 +75,6 @@
 #include "nsIPrivateDOMEvent.h"
 #include "nsDOMCID.h"
 #include "nsIServiceManager.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsDOMCSSDeclaration.h"
 #include "prprf.h"
@@ -112,6 +109,12 @@ static NS_DEFINE_CID(kPresStateCID,  NS_PRESSTATE_CID);
 // XXX todo: add in missing out-of-memory checks
 
 #include "nsIPref.h" // Used by the temp pref, should be removed!
+
+NS_BEGIN_DOM_CLASSINFO_IMPL(nsGenericHTMLElement)
+  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMHTMLElement)
+  NS_DOM_CLASSINFO_BASECLASS_IIDS(nsGenericElement)
+NS_END_DOM_CLASSINFO_IMPL
+
 
 //----------------------------------------------------------------------
 
@@ -3639,39 +3642,7 @@ nsGenericHTMLContainerFormElement::GetForm(nsIDOMHTMLFormElement** aForm)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsGenericHTMLContainerFormElement::GetScriptObject(nsIScriptContext* aContext,
-                                                   void** aScriptObject)
-{
-  NS_ENSURE_ARG_POINTER(aScriptObject);
-
-  if (mDOMSlots && mDOMSlots->mScriptObject) {
-    *aScriptObject = mDOMSlots->mScriptObject;
-
-    return NS_OK;
-  }
-
-  nsresult rv = nsGenericElement::GetScriptObject(aContext, aScriptObject);
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(*aScriptObject, NS_ERROR_FAILURE);
-
-  // If there's a form associated with this control we set the form as parent
-  // object for this controls script object.
-  nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(mForm));
-
-  if (owner) {
-    JSContext *ctx = (JSContext *)aContext->GetNativeContext();
-    JSObject *parent = nsnull;
-
-    rv = owner->GetScriptObject(aContext, (void **)&parent);
-
-    if (NS_SUCCEEDED(rv) && parent) {
-      ::JS_SetParent(ctx, (JSObject *)*aScriptObject, parent);
-    }
-  }
-
-  return rv;
-}
+// XXX: Script parent of form controls should be the form!
 
 NS_IMETHODIMP
 nsGenericHTMLContainerFormElement::SetParent(nsIContent* aParent)
@@ -3895,40 +3866,6 @@ nsGenericHTMLLeafFormElement::SetDocument(nsIDocument* aDocument,
 }
 
 NS_IMETHODIMP
-nsGenericHTMLLeafFormElement::GetScriptObject(nsIScriptContext* aContext,
-                                              void** aScriptObject)
-{
-  NS_ENSURE_ARG_POINTER(aScriptObject);
-
-  if (mDOMSlots && mDOMSlots->mScriptObject) {
-    *aScriptObject = mDOMSlots->mScriptObject;
-
-    return NS_OK;
-  }
-
-  nsresult rv = nsGenericElement::GetScriptObject(aContext, aScriptObject);
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(*aScriptObject, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(mForm));
-
-  // If there's a form associated with this control we set the form as parent
-  // object for this controls script object.
-  if (owner) {
-    JSContext *ctx = (JSContext *)aContext->GetNativeContext();
-    JSObject *parent = nsnull;
-
-    rv = owner->GetScriptObject(aContext, (void **)&parent);
-
-    if (NS_SUCCEEDED(rv) && parent) {
-      ::JS_SetParent(ctx, (JSObject *)*aScriptObject, parent);
-    }
-  }
-
-  return rv;
-}
-
-NS_IMETHODIMP
 nsGenericHTMLLeafFormElement::SetAttribute(PRInt32 aNameSpaceID,
                                            nsIAtom* aName,
                                            const nsAReadableString& aValue,
@@ -3950,6 +3887,7 @@ nsGenericHTMLLeafFormElement::SetAttribute(PRInt32 aNameSpaceID,
                                             aNotify);
 }
 
+#if 0
 nsresult
 nsGenericHTMLElement::GetPluginInstance(nsIPluginInstance** aPluginInstance)
 {
@@ -4145,3 +4083,4 @@ nsGenericHTMLElement::GetPluginProperty(JSContext *aContext, JSObject *aObj,
   }
   return nsGenericElement::GetProperty(aContext, aObj, aID, aVp);
 }
+#endif

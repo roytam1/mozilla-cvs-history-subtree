@@ -30,7 +30,6 @@
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIFormControl.h"
 #include "nsIForm.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -66,19 +65,19 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLTextAreaElement
-  NS_DECL_IDOMHTMLTEXTAREAELEMENT
+  NS_DECL_NSIDOMHTMLTEXTAREAELEMENT
 
   // nsIDOMNSHTMLTextAreaElement
-  NS_DECL_IDOMNSHTMLTEXTAREAELEMENT
+  NS_DECL_NSIDOMNSHTMLTEXTAREAELEMENT
 
   // nsIFormControl
   NS_IMETHOD GetType(PRInt32* aType);

@@ -20,7 +20,6 @@
  * Contributor(s): 
  */
 #include "nsIDOMHTMLElement.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -32,13 +31,10 @@
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIHTMLAttributes.h"
-#include "nsIJSScriptObject.h"
 #include "nsSize.h"
 #include "nsIDocument.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMDocument.h"
-#include "nsIScriptContext.h"
-#include "nsIScriptGlobalObject.h"
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsIURL.h"
@@ -63,13 +59,13 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLLeafElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLLeafElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLLeafElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLLeafElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLLeafElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLLeafElement::)
 
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,

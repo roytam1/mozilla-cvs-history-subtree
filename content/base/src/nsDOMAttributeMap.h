@@ -23,7 +23,6 @@
 #define nsDOMAttributeMap_h___
 
 #include "nsIDOMNamedNodeMap.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsVoidArray.h"
 #include "nsString.h"
 #include "plhash.h"
@@ -31,17 +30,13 @@
 class nsIContent;
 
 // Helper class that implements the nsIDOMNamedNodeMap interface.
-class nsDOMAttributeMap : public nsIDOMNamedNodeMap,
-                          public nsIScriptObjectOwner
+class nsDOMAttributeMap : public nsIDOMNamedNodeMap
 {
 public:
   nsDOMAttributeMap(nsIContent* aContent);
   virtual ~nsDOMAttributeMap();
 
   NS_DECL_ISUPPORTS
-
-  NS_IMETHOD GetScriptObject(nsIScriptContext* aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void *aScriptObject);
 
   // nsIDOMNamedNodeMap interface
   NS_IMETHOD GetLength(PRUint32* aSize);
@@ -66,7 +61,6 @@ public:
 
 private:
   nsIContent* mContent;
-  void* mScriptObject;
 };
 
 

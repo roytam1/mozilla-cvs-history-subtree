@@ -22,12 +22,10 @@
 
 
 #include "nsIDOMNamedNodeMap.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIContent.h"
 #include "nsGenericDOMDataNode.h"
 #include "nsGenericElement.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsLayoutAtoms.h"
 #include "nsString.h"
 #include "nsIXMLContent.h"
@@ -36,8 +34,7 @@
 #include "nsISupportsArray.h"
 
 
-class nsXMLNamedNodeMap : public nsIDOMNamedNodeMap,
-                          public nsIScriptObjectOwner
+class nsXMLNamedNodeMap : public nsIDOMNamedNodeMap
 {
 public:
   nsXMLNamedNodeMap(nsISupportsArray *aArray);
@@ -60,14 +57,8 @@ public:
                                   const nsAReadableString&aLocalName,
                                   nsIDOMNode** aReturn);
 
-  // nsIScriptObjectOwner interface
-  NS_IMETHOD GetScriptObject(nsIScriptContext* aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void *aScriptObject);
-
 protected:
   nsISupportsArray *mArray;
-
-  void* mScriptObject;
 };
 
 nsresult
@@ -88,7 +79,6 @@ NS_NewXMLNamedNodeMap(nsIDOMNamedNodeMap** aInstancePtrResult,
 nsXMLNamedNodeMap::nsXMLNamedNodeMap(nsISupportsArray *aArray)
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
 
   mArray = aArray;
 
@@ -114,12 +104,6 @@ nsXMLNamedNodeMap::QueryInterface(REFNSIID aIID, void** aInstancePtrResult)
     nsIDOMNamedNodeMap* tmp = this;                                
     nsISupports* tmp2 = tmp;                                
     *aInstancePtrResult = (void*) tmp2;                                  
-    NS_ADDREF_THIS();                                       
-    return NS_OK;                                           
-  }                                                         
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {                 
-    nsIScriptObjectOwner* tmp = this;                      
-    *aInstancePtrResult = (void*) tmp;                                   
     NS_ADDREF_THIS();                                       
     return NS_OK;                                           
   }                                                         
@@ -303,36 +287,3 @@ nsXMLNamedNodeMap::RemoveNamedItemNS(const nsAReadableString& aNamespaceURI,
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-NS_IMETHODIMP 
-nsXMLNamedNodeMap::GetScriptObject(nsIScriptContext* aContext, 
-                                   void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  if (nsnull == mScriptObject) {
-    nsIDOMScriptObjectFactory *factory;
-    
-    res = nsGenericElement::GetScriptObjectFactory(&factory);
-    if (NS_OK != res) {
-      return res;
-    }
-    
-    res = factory->NewScriptNamedNodeMap(aContext, 
-                                         (nsISupports*)(nsIDOMNamedNodeMap*)this,
-                                         nsnull /*mInner.mParent*/, 
-                                         (void**)&mScriptObject);
-
-    NS_RELEASE(factory);
-  }
-  *aScriptObject = mScriptObject;
-  return res;
-}
-
-NS_IMETHODIMP 
-nsXMLNamedNodeMap::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-

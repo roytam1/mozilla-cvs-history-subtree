@@ -23,10 +23,8 @@
 #include "nsContentList.h"
 #include "nsIContent.h"
 #include "nsIDOMNode.h"
-#include "nsIScriptGlobalObject.h"
 #include "nsIDocument.h"
 #include "nsINameSpaceManager.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsGenericElement.h"
 
 #include "nsLayoutAtoms.h"
@@ -35,7 +33,6 @@
 nsContentList::nsContentList(nsIDocument *aDocument)
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
   mFunc = nsnull;
   mMatchAtom = nsnull;
   mDocument = aDocument;
@@ -86,7 +83,6 @@ nsContentList::nsContentList(nsIDocument *aDocument,
 void nsContentList::Init(nsIDocument *aDocument)
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
   // We don't reference count the reference to the document
   // If the document goes away first, we'll be informed and we
   // can drop our reference.
@@ -124,11 +120,6 @@ nsresult nsContentList::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   if (aIID.Equals(NS_GET_IID(nsIDOMHTMLCollection))) {
     *aInstancePtr = (void*)(nsIDOMHTMLCollection*)this;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    *aInstancePtr = (void*)(nsIScriptObjectOwner*)this;
     NS_ADDREF_THIS();
     return NS_OK;
   }
@@ -208,40 +199,6 @@ nsContentList::NamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn)
 }
 
 NS_IMETHODIMP 
-nsContentList::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-
-  if (nsnull == mScriptObject) {
-    nsIDOMScriptObjectFactory *factory;
-    
-    res = nsGenericElement::GetScriptObjectFactory(&factory);
-    if (NS_OK != res) {
-      return res;
-    }
-
-    res = factory->NewScriptHTMLCollection(aContext, 
-                                           (nsISupports*)(nsIDOMHTMLCollection*)this, 
-                                           global, 
-                                           (void**)&mScriptObject);
-    NS_RELEASE(factory);
-  }
-  *aScriptObject = mScriptObject;
-
-  NS_RELEASE(global);
-  return res;
-}
-
-NS_IMETHODIMP 
-nsContentList::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-
-NS_IMETHODIMP
 nsContentList::ContentAppended(nsIDocument *aDocument,
                                nsIContent* aContainer,
                                PRInt32     aNewIndexInContainer)

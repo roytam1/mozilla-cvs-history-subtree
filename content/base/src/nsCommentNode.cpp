@@ -21,7 +21,6 @@
  */
 #include "nsIDOMComment.h"
 #include "nsGenericDOMDataNode.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIContent.h"
 #include "nsLayoutAtoms.h"
@@ -33,7 +32,6 @@
 #include "nsIDOMRange.h"
 
 class nsCommentNode : public nsIDOMComment,
-                      public nsIScriptObjectOwner,
                       public nsITextContent
 {
 public:
@@ -44,15 +42,12 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIDOMNode
-  NS_IMPL_IDOMNODE_USING_GENERIC_DOM_DATA(mInner)
+  NS_IMPL_NSIDOMNODE_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIDOMCharacterData
-  NS_IMPL_IDOMCHARACTERDATA_USING_GENERIC_DOM_DATA(mInner)
+  NS_IMPL_NSIDOMCHARACTERDATA_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIDOMComment
-
-  // nsIScriptObjectOwner
-  NS_IMPL_ISCRIPTOBJECTOWNER_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIContent
   //NS_IMPL_ICONTENT_USING_GENERIC_DOM_DATA(mInner)

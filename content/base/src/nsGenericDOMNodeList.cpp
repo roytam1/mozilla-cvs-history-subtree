@@ -21,13 +21,11 @@
  */
 
 #include "nsGenericDOMNodeList.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsGenericElement.h"
 
 nsGenericDOMNodeList::nsGenericDOMNodeList() 
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
 }
 
 nsGenericDOMNodeList::~nsGenericDOMNodeList()
@@ -45,11 +43,6 @@ nsGenericDOMNodeList::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     AddRef();
     return NS_OK;
   }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    *aInstancePtr = (void*)(nsIScriptObjectOwner*)this;
-    AddRef();
-    return NS_OK;
-  }
   if (aIID.Equals(NS_GET_IID(nsISupports))) {
     *aInstancePtr = (void*)(nsISupports*)(nsIDOMNodeList*)this;
     AddRef();
@@ -60,29 +53,3 @@ nsGenericDOMNodeList::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
 NS_IMPL_ADDREF(nsGenericDOMNodeList)
 NS_IMPL_RELEASE(nsGenericDOMNodeList)
-
-NS_IMETHODIMP
-nsGenericDOMNodeList::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  if (nsnull == mScriptObject) {
-    nsIDOMScriptObjectFactory *factory;
-    
-    res = nsGenericElement::GetScriptObjectFactory(&factory);
-    if (NS_OK != res) {
-      return res;
-    }
-
-    res = factory->NewScriptNodeList(aContext, (nsISupports *)(nsIDOMNodeList *)this, nsnull, (void**)&mScriptObject);
-    NS_RELEASE(factory);
-  }
-  *aScriptObject = mScriptObject;
-  return res;
-}
-
-NS_IMETHODIMP
-nsGenericDOMNodeList::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}

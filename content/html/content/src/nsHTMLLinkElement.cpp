@@ -21,7 +21,6 @@
  */
 #include "nsIDOMHTMLLinkElement.h"
 #include "nsIDOMLinkStyle.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -53,16 +52,16 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLLeafElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLLeafElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLLeafElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLLeafElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLLeafElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLLeafElement::)
 
   // nsIDOMHTMLLinkElement
-  NS_DECL_IDOMHTMLLINKELEMENT
+  NS_DECL_NSIDOMHTMLLINKELEMENT
 
   // nsILink
   NS_IMETHOD    GetLinkState(nsLinkState &aState);
@@ -74,7 +73,7 @@ public:
   NS_IMETHOD GetStyleSheet(nsIStyleSheet*& aStyleSheet);
 
   // nsIDOMLinkStyle
-  NS_DECL_IDOMLINKSTYLE
+  NS_DECL_NSIDOMLINKSTYLE
 
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
                             nsIDOMEvent** aDOMEvent, PRUint32 aFlags,

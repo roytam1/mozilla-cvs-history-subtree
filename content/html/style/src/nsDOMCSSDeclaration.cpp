@@ -32,7 +32,6 @@
 nsDOMCSSDeclaration::nsDOMCSSDeclaration()
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
 }
 
 nsDOMCSSDeclaration::~nsDOMCSSDeclaration()
@@ -64,12 +63,6 @@ nsDOMCSSDeclaration::QueryInterface(REFNSIID aIID,
     *aInstancePtr = (void*) tmp;
     return NS_OK;
   }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    nsIScriptObjectOwner *tmp = this;
-    AddRef();
-    *aInstancePtr = (void*) tmp;
-    return NS_OK;
-  }
   if (aIID.Equals(kISupportsIID)) {
     nsIDOMCSSStyleDeclaration *tmp = this;
     nsISupports *tmp2 = tmp;
@@ -78,37 +71,6 @@ nsDOMCSSDeclaration::QueryInterface(REFNSIID aIID,
     return NS_OK;
   }
   return NS_NOINTERFACE;
-}
-
-NS_IMETHODIMP
-nsDOMCSSDeclaration::GetScriptObject(nsIScriptContext* aContext,
-                                       void** aScriptObject)
-{
-  nsresult res = NS_OK;
-
-  if (nsnull == mScriptObject) {
-    nsCOMPtr<nsISupports> parent;
-
-    res = GetParent(getter_AddRefs(parent));
-    if (NS_OK == res) {
-      nsISupports *supports = (nsISupports *)(nsIDOMCSS2Properties *)this;
-      // XXX Should be done through factory
-      res = NS_NewScriptCSS2Properties(aContext, 
-                                       supports,
-                                       parent, 
-                                       (void**)&mScriptObject);
-    }
-  }
-  *aScriptObject = mScriptObject;
-
-  return res;
-}
-
-NS_IMETHODIMP
-nsDOMCSSDeclaration::SetScriptObject(void* aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
 }
 
 NS_IMETHODIMP

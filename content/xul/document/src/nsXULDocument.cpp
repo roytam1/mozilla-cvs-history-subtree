@@ -422,7 +422,6 @@ PlaceHolderRequest::~PlaceHolderRequest()
 nsXULDocument::nsXULDocument(void)
     : mParentDocument(nsnull),
       mScriptGlobalObject(nsnull),
-      mScriptObject(nsnull),
       mNextSrcLoadWaiter(nsnull),
       mDisplaySelection(PR_FALSE),
       mIsPopup(PR_FALSE),
@@ -612,12 +611,6 @@ nsXULDocument::QueryInterface(REFNSIID iid, void** result)
     }
     else if (iid.Equals(NS_GET_IID(nsIDOMDocumentXBL))) {
         *result = NS_STATIC_CAST(nsIDOMDocumentXBL*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIJSScriptObject))) {
-        *result = NS_STATIC_CAST(nsIJSScriptObject*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-        *result = NS_STATIC_CAST(nsIScriptObjectOwner*, this);
     }
     else if (iid.Equals(NS_GET_IID(nsIHTMLContentContainer))) {
         *result = NS_STATIC_CAST(nsIHTMLContentContainer*, this);
@@ -2884,24 +2877,12 @@ nsXULDocument::GetAnonymousNodes(nsIDOMElement* aElement,
 }
 
 NS_IMETHODIMP    
-nsXULDocument::GetLocation(jsval* aLocation)
+nsXULDocument::GetLocation(nsIDOMLocation** aLocation)
 {
   if (mScriptGlobalObject) {
     nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(mScriptGlobalObject));
     if(window) {
       return window->GetLocation(aLocation);
-    }
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP    
-nsXULDocument::SetLocation(jsval aLocation)
-{
-  if (mScriptGlobalObject) {
-    nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(mScriptGlobalObject));
-    if(window) {
-      return window->SetLocation(aLocation);
     }
   }
   return NS_OK;
@@ -3570,34 +3551,7 @@ nsXULDocument::IsSupported(const nsAReadableString& aFeature,
 }
 
 
-//----------------------------------------------------------------------
-//
-// nsIJSScriptObject interface
-//
-
-PRBool
-nsXULDocument::AddProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    NS_NOTYETIMPLEMENTED("write me");
-    return PR_TRUE;
-}
-
-
-PRBool
-nsXULDocument::DeleteProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    NS_NOTYETIMPLEMENTED("write me");
-    return PR_TRUE;
-}
-
-
-PRBool
-nsXULDocument::GetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    return PR_TRUE;
-}
-
-
+#if 0
 PRBool
 nsXULDocument::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
 {
@@ -3632,86 +3586,7 @@ nsXULDocument::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval
     }
     return PR_TRUE;
 }
-
-
-PRBool
-nsXULDocument::EnumerateProperty(JSContext *aContext, JSObject *aObj)
-{
-    NS_NOTYETIMPLEMENTED("write me");
-    return PR_TRUE;
-}
-
-
-PRBool
-nsXULDocument::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                       PRBool *aDidDefineProperty)
-{
-    *aDidDefineProperty = PR_FALSE;
-
-    return PR_TRUE;
-}
-
-
-PRBool
-nsXULDocument::Convert(JSContext *aContext, JSObject *aObj, jsval aID)
-{
-    NS_NOTYETIMPLEMENTED("write me");
-    return PR_TRUE;
-}
-
-
-void
-nsXULDocument::Finalize(JSContext *aContext, JSObject *aObj)
-{
-    NS_NOTYETIMPLEMENTED("write me");
-}
-
-
-
-//----------------------------------------------------------------------
-//
-// nsIScriptObjectOwner interface
-//
-
-NS_IMETHODIMP
-nsXULDocument::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-    if (! mScriptObject) {
-        // ...we need to instantiate our script object for the first
-        // time.
-
-        // Make sure that we've got our script context owner; this
-        // assertion will fire if we've tried to get the script object
-        // before our scope has been set up.
-        NS_ASSERTION(mScriptGlobalObject != nsnull, "no script object");
-        if (! mScriptGlobalObject)
-            return NS_ERROR_NOT_INITIALIZED;
-
-        nsresult rv;
-
-        // Use the global object from our script context owner (the
-        // window) as the parent of our own script object. (Using the
-        // global object from aContext would make our script object
-        // dynamically scoped in the first context that ever tried to
-        // use us!)
-
-        rv = NS_NewScriptXULDocument(aContext,
-                                     NS_STATIC_CAST(nsISupports*, NS_STATIC_CAST(nsIDOMXULDocument*, this)),
-                                     mScriptGlobalObject, &mScriptObject);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    *aScriptObject = mScriptObject;
-    return NS_OK;
-}
-
-
-NS_IMETHODIMP
-nsXULDocument::SetScriptObject(void *aScriptObject)
-{
-    mScriptObject = aScriptObject;
-    return NS_OK;
-}
+#endif
 
 
 //----------------------------------------------------------------------
@@ -5117,9 +4992,9 @@ nsXULDocument::ResumeWalk()
                     if (blocked)
                         return NS_OK;
                 }
-                else if (scriptproto->mScriptObject) {
+                else if (scriptproto->mJSObject) {
                     // An inline script
-                    rv = ExecuteScript(scriptproto->mScriptObject);
+                    rv = ExecuteScript(scriptproto->mJSObject);
                     if (NS_FAILED(rv)) return rv;
                 }
             }
@@ -5286,8 +5161,8 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     // Load a transcluded script
     nsresult rv;
 
-    if (aScriptProto->mScriptObject) {
-        rv = ExecuteScript(aScriptProto->mScriptObject);
+    if (aScriptProto->mJSObject) {
+        rv = ExecuteScript(aScriptProto->mJSObject);
 
         // Ignore return value from execution, and don't block
         *aBlock = PR_FALSE;
@@ -5383,7 +5258,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
                                   this, mMasterPrototype);
         aStatus = rv;
         if (NS_SUCCEEDED(rv)) {
-            rv = ExecuteScript(scriptProto->mScriptObject);
+            rv = ExecuteScript(scriptProto->mJSObject);
         }
         // ignore any evaluation errors
     }
@@ -5411,7 +5286,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
 
         // Execute only if we loaded and compiled successfully, then resume
         if (NS_SUCCEEDED(aStatus)) {
-            doc->ExecuteScript(scriptProto->mScriptObject);
+            doc->ExecuteScript(scriptProto->mJSObject);
         }
         doc->ResumeWalk();
         NS_RELEASE(doc);

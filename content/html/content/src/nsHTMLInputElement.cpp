@@ -29,7 +29,6 @@
 #include "nsContentCID.h"
 #include "nsIComponentManager.h"
 #include "nsIDOMHTMLFormElement.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -84,7 +83,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLLeafFormElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLLeafFormElement::)
 
   // nsIDOMElement
     // can't use the macro here because input type=text needs to notify up to 
@@ -171,13 +170,13 @@ public:
   }
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLLeafFormElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLLeafFormElement::)
 
   // nsIDOMHTMLInputElement
-  NS_DECL_IDOMHTMLINPUTELEMENT
+  NS_DECL_NSIDOMHTMLINPUTELEMENT
 
   // nsIDOMNSHTMLInputElement
-  NS_DECL_IDOMNSHTMLINPUTELEMENT
+  NS_DECL_NSIDOMNSHTMLINPUTELEMENT
 
   // Overriden nsIFormControl methods
   NS_IMETHOD GetType(PRInt32* aType);

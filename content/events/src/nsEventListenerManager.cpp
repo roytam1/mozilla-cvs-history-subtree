@@ -637,7 +637,7 @@ nsresult nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
   if (nsnull == ls) {
     //If we didn't find a script listener or no listeners existed create and add a new one.
     nsIDOMEventListener* scriptListener;
-    result = NS_NewJSEventListener(&scriptListener, aContext, aOwner);
+    //    result = NS_NewJSEventListener(&scriptListener, aContext, aOwner);
     if (NS_SUCCEEDED(result)) {
       AddEventListenerByIID(scriptListener, aIID, NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
       NS_RELEASE(scriptListener);

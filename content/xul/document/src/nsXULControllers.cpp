@@ -35,6 +35,7 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsXULControllers.h"
+#include "nsString.h"
 
 //----------------------------------------------------------------------
 

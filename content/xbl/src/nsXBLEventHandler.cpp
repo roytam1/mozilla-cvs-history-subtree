@@ -148,14 +148,14 @@ nsXBLEventHandler::RemoveEventHandlers()
 /// Helpers that are relegated to the end of the file /////////////////////////////
 
 nsresult
-nsXBLEventHandler::GetTextData(nsIContent *aParent, nsString& aResult)
+nsXBLEventHandler::GetTextData(nsIContent *aParent, nsAWritableString& aResult)
 {
   aResult.Truncate(0);
 
   nsCOMPtr<nsIContent> textChild;
   PRInt32 textCount;
   aParent->ChildCount(textCount);
-  nsAutoString answer;
+
   for (PRInt32 j = 0; j < textCount; j++) {
     // Get the child.
     aParent->ChildAt(j, *getter_AddRefs(textChild));
@@ -163,7 +163,7 @@ nsXBLEventHandler::GetTextData(nsIContent *aParent, nsString& aResult)
     if (text) {
       nsAutoString data;
       text->GetData(data);
-      aResult += data;
+      aResult.Append(data);
     }
   }
   return NS_OK;

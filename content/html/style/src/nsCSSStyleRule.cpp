@@ -47,8 +47,6 @@
 #include "nsIDOMCSSRule.h"
 #include "nsIDOMCSSStyleRule.h"
 #include "nsIDOMCSSStyleDeclaration.h"
-#include "nsIScriptGlobalObject.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsDOMCSSDeclaration.h"
 #include "nsINameSpaceManager.h"
 #include "nsINameSpace.h"
@@ -573,6 +571,11 @@ void nsCSSSelector::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     mTag->SizeOf(aSizeOfHandler, &localSize);
     aSize += localSize;
   }
+
+
+  // XXX ????
+
+
 
   // a couple of simple atom lists
   if(mIDList && uniqueItems->AddItem(mIDList)){
@@ -1139,8 +1142,8 @@ DOMCSSDeclarationImpl::GetParent(nsISupports **aParent)
 
 class CSSStyleRuleImpl : public nsCSSRule,
                          public nsICSSStyleRule, 
-                         public nsIDOMCSSStyleRule, 
-                         public nsIScriptObjectOwner {
+                         public nsIDOMCSSStyleRule
+{
 public:
   CSSStyleRuleImpl(const nsCSSSelector& aSelector);
   CSSStyleRuleImpl(const CSSStyleRuleImpl& aCopy); 
@@ -1183,14 +1186,10 @@ public:
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize);
 
   // nsIDOMCSSRule interface
-  NS_DECL_IDOMCSSRULE
+  NS_DECL_NSIDOMCSSRULE
 
   // nsIDOMCSSStyleRule interface
-  NS_DECL_IDOMCSSSTYLERULE
-
-  // nsIScriptObjectOwner interface
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void* aScriptObject);
+  NS_DECL_NSIDOMCSSSTYLERULE
 
 private: 
   // These are not supported and are not implemented! 
@@ -1205,7 +1204,6 @@ protected:
   PRInt32                 mWeight;
   CSSImportantRule*       mImportantRule;
   DOMCSSDeclarationImpl*  mDOMDeclaration;                          
-  void*                   mScriptObject;                           
   PRUint32                mLineNumber;
 };
 
@@ -1217,8 +1215,7 @@ CSSStyleRuleImpl::CSSStyleRuleImpl(const nsCSSSelector& aSelector)
   : nsCSSRule(),
     mSelector(aSelector), mDeclaration(nsnull), 
     mWeight(0), mImportantRule(nsnull),
-    mDOMDeclaration(nsnull),
-    mScriptObject(nsnull)
+    mDOMDeclaration(nsnull)
 {
 #ifdef DEBUG_REFS
   gStyleRuleCount++;
@@ -1232,8 +1229,7 @@ CSSStyleRuleImpl::CSSStyleRuleImpl(const CSSStyleRuleImpl& aCopy)
     mDeclaration(nsnull),
     mWeight(aCopy.mWeight),
     mImportantRule(nsnull),
-    mDOMDeclaration(nsnull),
-    mScriptObject(nsnull)
+    mDOMDeclaration(nsnull)
 {
 #ifdef DEBUG_REFS
   gStyleRuleCount++;
@@ -1317,13 +1313,7 @@ nsresult CSSStyleRuleImpl::QueryInterface(const nsIID& aIID,
     NS_ADDREF_THIS();
     return NS_OK;
   }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    nsIScriptObjectOwner *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
+  if (aIID.Equals(NS_GET_IID(nsISupports))) {
     nsICSSStyleRule *tmp = this;
     nsISupports *tmp2 = tmp;
     *aInstancePtrResult = (void*) tmp2;
@@ -3581,34 +3571,6 @@ CSSStyleRuleImpl::GetStyle(nsIDOMCSSStyleDeclaration** aStyle)
   *aStyle = mDOMDeclaration;
   NS_ADDREF(mDOMDeclaration);
   
-  return NS_OK;
-}
-
-NS_IMETHODIMP 
-CSSStyleRuleImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-
-  if (nsnull == mScriptObject) {
-    nsISupports *supports = (nsISupports *)(nsICSSStyleRule *)this;
-    // XXX Parent should be the style sheet
-    // XXX Should be done through factory
-    res = NS_NewScriptCSSStyleRule(aContext, 
-                                   supports,
-                                   (nsISupports *)global, 
-                                   (void**)&mScriptObject);
-  }
-  *aScriptObject = mScriptObject;
-
-  NS_RELEASE(global);
-  return res;
-}
-
-NS_IMETHODIMP 
-CSSStyleRuleImpl::SetScriptObject(void* aScriptObject)
-{
-  mScriptObject = aScriptObject;
   return NS_OK;
 }
 

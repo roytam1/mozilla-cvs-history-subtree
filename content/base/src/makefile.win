@@ -28,21 +28,22 @@ DEFINES = $(DEFINES) -DXP_NEW_SELECTION
 !endif
 
 CPPSRCS =				\
-  nsStyleContext.cpp \
-  nsStyleSet.cpp \
+	nsStyleContext.cpp		\
+	nsStyleSet.cpp			\
 	nsCommentNode.cpp		\
 	nsGenericElement.cpp		\
 	nsGenericDOMDataNode.cpp	\
 	nsGenericDOMNodeList.cpp	\
 	nsContentList.cpp		\
 	nsContentIterator.cpp		\
-	nsContentPolicy.cpp \
+	nsContentPolicy.cpp		\
 	nsDocument.cpp			\
 	nsDocumentEncoder.cpp		\
 	nsDocumentFragment.cpp		\
 	nsDocumentViewer.cpp		\
 	nsDOMAttribute.cpp		\
 	nsDOMAttributeMap.cpp		\
+	nsDOMClassInfo.cpp		\
 	nsDOMDocumentType.cpp		\
 	nsGeneratedIterator.cpp		\
 	nsNameSpaceManager.cpp		\
@@ -57,15 +58,15 @@ CPPSRCS =				\
 	nsHTMLContentSerializer.cpp	\
         nsParserUtils.cpp               \
 	nsPlainTextSerializer.cpp	\
-  nsLayoutAtoms.cpp \
-  nsContentUtils.cpp \
+	nsLayoutAtoms.cpp		\
+	nsContentUtils.cpp		\
 	$(NULL)
 
 MODULE=raptor 
 
 CPP_OBJS=					\
-	.\$(OBJDIR)\nsStyleContext.obj   \
-	.\$(OBJDIR)\nsStyleSet.obj   \
+	.\$(OBJDIR)\nsStyleContext.obj		\
+	.\$(OBJDIR)\nsStyleSet.obj		\
 	.\$(OBJDIR)\nsCommentNode.obj		\
 	.\$(OBJDIR)\nsGenericDOMDataNode.obj	\
 	.\$(OBJDIR)\nsGenericDOMNodeList.obj	\
@@ -79,6 +80,7 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsDocumentViewer.obj	\
 	.\$(OBJDIR)\nsDOMAttribute.obj		\
 	.\$(OBJDIR)\nsDOMAttributeMap.obj	\
+	.\$(OBJDIR)\nsDOMClassInfo.obj		\
 	.\$(OBJDIR)\nsDOMDocumentType.obj	\
 	.\$(OBJDIR)\nsGeneratedIterator.obj 	\
 	.\$(OBJDIR)\nsNameSpaceManager.obj	\
@@ -91,10 +93,10 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsTextNode.obj		\
 	.\$(OBJDIR)\nsXMLContentSerializer.obj	\
 	.\$(OBJDIR)\nsHTMLContentSerializer.obj	\
-        .\$(OBJDIR)\nsParserUtils.obj           \
+	.\$(OBJDIR)\nsParserUtils.obj           \
 	.\$(OBJDIR)\nsPlainTextSerializer.obj   \
-	.\$(OBJDIR)\nsLayoutAtoms.obj   \
-	.\$(OBJDIR)\nsContentUtils.obj   \
+	.\$(OBJDIR)\nsLayoutAtoms.obj		\
+	.\$(OBJDIR)\nsContentUtils.obj		\
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \

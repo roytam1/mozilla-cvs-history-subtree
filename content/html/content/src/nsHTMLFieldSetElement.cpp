@@ -21,7 +21,6 @@
  */
 #include "nsIDOMHTMLFieldSetElement.h"
 #include "nsIDOMHTMLFormElement.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -47,13 +46,13 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerFormElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerFormElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLContainerFormElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLContainerFormElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerFormElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerFormElement::)
 
   // nsIDOMHTMLFieldSetElement
   NS_IMETHOD GetForm(nsIDOMHTMLFormElement** aForm);

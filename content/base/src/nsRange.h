@@ -32,14 +32,12 @@
 #include "nsIDOMDocumentFragment.h"
 #include "nsIContent.h"
 #include "nsIDOMNode.h"
-#include "nsIScriptObjectOwner.h"
 #include "prmon.h"
 
 class nsVoidArray;
 
 class nsRange : public nsIDOMRange,
-                public nsIDOMNSRange,
-                public nsIScriptObjectOwner
+                public nsIDOMNSRange
 {
 public:
   NS_DECL_ISUPPORTS
@@ -115,12 +113,6 @@ public:
   NS_IMETHOD    SetHasGeneratedAfter(PRBool aBool);
   NS_IMETHOD    SetBeforeAndAfter(PRBool aBefore, PRBool aAfter);
 
-/*BEGIN nsIScriptObjectOwner interface implementations*/
-  NS_IMETHOD 		GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD 		SetScriptObject(void *aScriptObject);
-/*END nsIScriptObjectOwner interface implementations*/
-
-
   // nsRange interface extensions
   
   static NS_METHOD    OwnerGone(nsIContent* aParentNode);
@@ -188,7 +180,6 @@ public:
   nsresult      ContentOwnsUs(nsIDOMNode* domNode);
 
   protected:
-  	void*				mScriptObject;
 	PRBool mBeforeGenContent;
 	PRBool mAfterGenContent;
   	

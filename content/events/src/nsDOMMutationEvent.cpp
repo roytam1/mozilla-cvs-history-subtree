@@ -29,8 +29,8 @@ class nsIPresContext;
 
 class nsDOMMutationEvent : public nsIDOMMutationEvent, public nsDOMEvent
 {
-  NS_DECL_IDOMMUTATIONEVENT
-  NS_FORWARD_IDOMEVENT(nsDOMEvent::)
+  NS_DECL_NSIDOMMUTATIONEVENT
+  NS_FORWARD_NSIDOMEVENT(nsDOMEvent::)
   
   NS_DECL_ISUPPORTS_INHERITED
 

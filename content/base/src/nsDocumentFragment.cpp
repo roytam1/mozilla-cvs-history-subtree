@@ -23,14 +23,12 @@
 #include "nsISupports.h"
 #include "nsIContent.h"
 #include "nsIDOMDocumentFragment.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsGenericElement.h"
 #include "nsINameSpaceManager.h"
 #include "nsINodeInfo.h"
 #include "nsNodeInfoManager.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsDOMError.h"
 
 
@@ -101,9 +99,6 @@ public:
                             PRBool* aReturn)
   { return nsGenericContainerElement::IsSupported(aFeature, aVersion,
                                                   aReturn); }
-
-  // interface nsIScriptObjectOwner
-  NS_IMETHOD GetScriptObject(nsIScriptContext* aContext, void** aScriptObject);
 
   NS_IMETHOD SetParent(nsIContent* aParent)
     { return NS_OK; }
@@ -220,7 +215,6 @@ NS_INTERFACE_MAP_BEGIN(nsDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIContent)
-  NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIContent)
 NS_INTERFACE_MAP_END
 
@@ -278,35 +272,4 @@ nsDocumentFragment::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   NS_ADDREF(*aReturn);
 
   return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsDocumentFragment::GetScriptObject(nsIScriptContext* aContext, 
-                                    void** aScriptObject)
-{
-  nsresult res = NS_OK;
-
-  *aScriptObject = nsnull;
-
-  nsDOMSlots *slots = GetDOMSlots();
-
-  if (slots && !mDOMSlots->mScriptObject) {
-    nsCOMPtr<nsIDOMScriptObjectFactory> factory;
-
-    res = GetScriptObjectFactory(getter_AddRefs(factory));
-    if (NS_OK != res) {
-      return res;
-    }
-
-    res = factory->NewScriptDocumentFragment(aContext, 
-                                             NS_STATIC_CAST(nsIDOMDocumentFragment *, this), 
-                                             mOwnerDocument,
-                                             (void**)&slots->mScriptObject);
-  }
-
-  if (slots) {
-    *aScriptObject = slots->mScriptObject;
-  }
-
-  return res;
 }

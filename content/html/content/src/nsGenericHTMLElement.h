@@ -28,7 +28,6 @@
 #include "nsIContent.h"
 #include "nsHTMLValue.h"
 #include "nsVoidArray.h"
-#include "nsIJSScriptObject.h"
 #include "nsINameSpaceManager.h"  // for kNameSpaceID_HTML
 #include "nsIFormControl.h"
 
@@ -46,7 +45,6 @@ class nsIHTMLContent;
 class nsIMutableStyleContext;
 class nsIStyleRule;
 class nsISupportsArray;
-class nsIDOMScriptObjectFactory;
 class nsChildContentList;
 class nsDOMCSSDeclaration;
 class nsIDOMCSSStyleDeclaration;
@@ -337,13 +335,19 @@ public:
   nsIHTMLAttributes* mAttributes;
 
 protected:
+  /*
   nsresult GetPluginInstance(nsIPluginInstance** aPluginInstance);
 
   nsresult GetPluginScriptObject(nsIScriptContext* aContext,
                                  void** aScriptObject);
   PRBool GetPluginProperty(JSContext *aContext, JSObject *aObj, jsval aID,
                            jsval *aVp);
+  */
 };
+
+
+NS_DECL_DOM_CLASSINFO(nsGenericHTMLElement, nsGenericElement);
+
 
 //----------------------------------------------------------------------
 
@@ -498,8 +502,6 @@ public:
     return nsGenericHTMLElement::SetAttribute(aName, aValue);
   }
 
-  NS_IMETHOD GetScriptObject(nsIScriptContext* aContext, void** aScriptObject);
-
 protected:
   nsIForm* mForm;
 };
@@ -531,7 +533,6 @@ public:
   {
     return nsGenericHTMLElement::SetAttribute(aName, aValue);
   }
-  NS_IMETHOD GetScriptObject(nsIScriptContext* aContext, void** aScriptObject);
 
 protected:
   nsIForm* mForm;
@@ -745,5 +746,53 @@ _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)                    \
     nsHTMLValue value(aValue, eHTMLUnit_Integer);                   \
     return NS_STATIC_CAST(nsIHTMLContent *, this)->SetHTMLAttribute(nsHTMLAtoms::_atom, value, PR_TRUE); \
   }
+
+
+/**
+ * QueryInterface() implementation helper macros
+ */
+
+#define NS_HTML_INTERFACE_MAP_BEGIN(_class, _base)                            \
+  NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)    \
+  {                                                                           \
+    NS_ENSURE_ARG_POINTER(aInstancePtr);                                      \
+                                                                              \
+    *aInstancePtr = nsnull;                                                   \
+                                                                              \
+    nsISupports *inst = nsnull;                                               \
+                                                                              \
+    nsresult rv;                                                              \
+                                                                              \
+    rv = _base::QueryInterface(aIID, aInstancePtr);                           \
+                                                                              \
+    if (NS_SUCCEEDED(rv))                                                     \
+      return rv;                                                              \
+                                                                              \
+    rv = DOMQueryInterface(this, aIID, aInstancePtr);                         \
+                                                                              \
+    if (NS_SUCCEEDED(rv))                                                     \
+      return rv;
+
+#define NS_HTML_INTERFACE_MAP_ENTRY(_interface)                               \
+    if (aIID.Equals(NS_GET_IID(_interface))) {                                \
+      inst = NS_STATIC_CAST(_interface *, this);                              \
+    } else
+
+#define NS_HTML_INTERFACE_MAP_CLASSINFO NS_DOM_INTERFACE_MAP_CLASSINFO
+
+
+#define NS_HTML_INTERFACE_MAP_END                                             \
+    {                                                                         \
+      return NS_NOINTERFACE;                                                  \
+    }                                                                         \
+                                                                              \
+    NS_ADDREF(inst);                                                          \
+                                                                              \
+    *aInstancePtr = inst;                                                     \
+                                                                              \
+    return NS_OK;                                                             \
+  }
+
+
 
 #endif /* nsGenericHTMLElement_h___ */

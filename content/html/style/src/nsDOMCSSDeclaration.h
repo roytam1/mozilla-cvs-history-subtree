@@ -24,14 +24,12 @@
 
 #include "nsISupports.h"
 #include "nsIDOMCSS2Properties.h"
-#include "nsIScriptObjectOwner.h"
 
 class nsICSSDeclaration;
 class nsICSSParser;
 class nsIURI;
 
-class nsDOMCSSDeclaration : public nsIDOMCSS2Properties,
-                            public nsIScriptObjectOwner
+class nsDOMCSSDeclaration : public nsIDOMNSCSS2Properties
 {
 public:
   nsDOMCSSDeclaration();
@@ -52,15 +50,13 @@ public:
   NS_IMETHOD    GetPropertyPriority(const nsAReadableString& aPropertyName,
                                     nsAWritableString& aReturn);
   NS_IMETHOD    SetProperty(const nsAReadableString& aPropertyName,
-                            const nsAReadableString& aValue, const nsAReadableString& aPriority);
+                            const nsAReadableString& aValue,
+                            const nsAReadableString& aPriority);
   NS_IMETHOD    Item(PRUint32 aIndex, nsAWritableString& aReturn);
 
 
-  NS_DECL_IDOMCSS2PROPERTIES
-  
-  // nsIScriptObjectOwner interface
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void* aScriptObject);
+  NS_DECL_NSIDOMCSS2PROPERTIES
+  NS_DECL_NSIDOMNSCSS2PROPERTIES
 
   virtual void DropReference() = 0;
   virtual nsresult GetCSSDeclaration(nsICSSDeclaration **aDecl,
@@ -75,8 +71,6 @@ public:
   
 protected:
   virtual ~nsDOMCSSDeclaration();
-
-  void *mScriptObject;
 };
 
 #endif // nsDOMCSSDeclaration_h___

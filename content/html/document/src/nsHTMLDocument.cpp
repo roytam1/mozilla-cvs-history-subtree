@@ -108,9 +108,8 @@
 #include "nsICachedNetData.h"
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
-#include "nsLayoutCID.h"
-#include "nsContentCID.h"
-static NS_DEFINE_CID(kHTMLStyleSheetCID,NS_HTMLSTYLESHEET_CID);
+#include "nsIJSContextStack.h"
+
 
 #define DETECTOR_CONTRACTID_MAX 127
 static char g_detector_contractid[DETECTOR_CONTRACTID_MAX + 1];
@@ -596,35 +595,34 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
     nsCOMPtr<nsIFile> file;
     rv = fileChannel->GetFile(getter_AddRefs(file));
-    if (NS_SUCCEEDED(rv)) 
-    { 
-        // if we failed to get a last modification date, then we don't want to necessarily
-        // fail to create a document for this file. Just don't set the last modified date on it...
-        rv = file->GetLastModificationDate(&modDate);
-        if (NS_SUCCEEDED(rv))
-        {
-          PRExplodedTime prtime;
-          char buf[100];
-          PRInt64 intermediateValue;
+    if (NS_SUCCEEDED(rv)) {
+      // if we failed to get a last modification date, then we don't
+      // want to necessarily fail to create a document for this
+      // file. Just don't set the last modified date on it...
+      rv = file->GetLastModificationDate(&modDate);
+      if (NS_SUCCEEDED(rv)) {
+        PRExplodedTime prtime;
+        char buf[100];
+        PRInt64 intermediateValue;
 
-          LL_I2L(intermediateValue, PR_USEC_PER_MSEC);
-          LL_MUL(usecs, modDate, intermediateValue);
-          PR_ExplodeTime(usecs, PR_LocalTimeParameters, &prtime);
+        LL_I2L(intermediateValue, PR_USEC_PER_MSEC);
+        LL_MUL(usecs, modDate, intermediateValue);
+        PR_ExplodeTime(usecs, PR_LocalTimeParameters, &prtime);
 
-          // Use '%#c' for windows, because '%c' is backward-compatible and
-          // non-y2k with msvc; '%#c' requests that a full year be used in the
-          // result string.  Other OSes just use "%c".
-          PR_FormatTime(buf, sizeof buf,
-    #if defined(XP_PC) && !defined(XP_OS2)
+        // Use '%#c' for windows, because '%c' is backward-compatible and
+        // non-y2k with msvc; '%#c' requests that a full year be used in the
+        // result string.  Other OSes just use "%c".
+        PR_FormatTime(buf, sizeof buf,
+#if defined(XP_PC) && !defined(XP_OS2)
                       "%#c",
-    #else
+#else
                       "%c",
-    #endif
+#endif
                       &prtime);
-          lastModified.AssignWithConversion(buf);
-          SetLastModified(lastModified);
-        }
+        lastModified.AssignWithConversion(buf);
+        SetLastModified(lastModified);
       }
+    }
   }
 
   static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
@@ -2174,30 +2172,32 @@ nsHTMLDocument::OpenCommon(nsIURI* aSourceURL)
 NS_IMETHODIMP    
 nsHTMLDocument::Open()
 {
-  nsresult result = NS_OK;
-  nsIURI* sourceURL;
-
-  // XXX For the non-script Open case, we have to make
-  // up a URL.
-  result = NS_NewURI(&sourceURL, "about:blank");
-
-  if (NS_SUCCEEDED(result)) {
-    result = OpenCommon(sourceURL);
-    NS_RELEASE(sourceURL);
-  }
-
-  return result;
+  nsCOMPtr<nsIDOMDocument> doc;
+  return Open(getter_AddRefs(doc));
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::Open(JSContext *cx, jsval *argv, PRUint32 argc,
-                     nsIDOMDocument** aReturn)
+nsHTMLDocument::Open(nsIDOMDocument** aReturn)
 {
   nsresult result = NS_OK;
   nsIURI* sourceURL;
 
   // XXX The URL of the newly created document will match
   // that of the source document. Is this right?
+
+  // XXX: This service should be cached.
+  nsCOMPtr<nsIJSContextStack>
+    stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1", &result));
+
+  if (NS_FAILED(result))
+    return NS_ERROR_FAILURE;
+
+  JSContext *cx;
+
+  if (NS_FAILED(stack->Peek(&cx)))
+    return NS_ERROR_FAILURE;
+
+
   result = GetSourceDocumentURL(cx, &sourceURL);
   // Recover if we had a problem obtaining the source URL
   if (nsnull == sourceURL) {
@@ -2217,7 +2217,7 @@ nsHTMLDocument::Open(JSContext *cx, jsval *argv, PRUint32 argc,
 #define NS_GENERATE_PARSER_KEY() (void*)((mIsWriting << 31) | (mWriteLevel & 0x7fffffff))
 
 NS_IMETHODIMP    
-nsHTMLDocument::Clear(JSContext* cx, jsval* argv, PRUint32 argc)
+nsHTMLDocument::Clear()
 {
   // This method has been deprecated
   return NS_OK;
@@ -2281,6 +2281,8 @@ nsHTMLDocument::Writeln(const nsAReadableString& aText)
   return WriteCommon(aText, PR_TRUE);
 }
 
+#if 0 // merge this into WriteCommon!!!
+
 nsresult
 nsHTMLDocument::ScriptWriteCommon(JSContext *cx, 
                                   jsval *argv, 
@@ -2330,7 +2332,7 @@ nsHTMLDocument::ScriptWriteCommon(JSContext *cx,
   if (!mParser) {
     nsCOMPtr<nsIDOMDocument> doc;
 
-    result = Open(cx, argv, argc, getter_AddRefs(doc));
+    result = Open(getter_AddRefs(doc));
     if (NS_FAILED(result)) {
       return result;
     }
@@ -2363,18 +2365,7 @@ nsHTMLDocument::ScriptWriteCommon(JSContext *cx,
   
   return result;
 }
-
-NS_IMETHODIMP    
-nsHTMLDocument::Write(JSContext *cx, jsval *argv, PRUint32 argc)
-{
-  return ScriptWriteCommon(cx, argv, argc, PR_FALSE);
-}
-
-NS_IMETHODIMP    
-nsHTMLDocument::Writeln(JSContext *cx, jsval *argv, PRUint32 argc)
-{
-  return ScriptWriteCommon(cx, argv, argc, PR_TRUE);
-}
+#endif
 
 nsIContent *
 nsHTMLDocument::MatchId(nsIContent *aContent, const nsAReadableString& aId)
@@ -3097,10 +3088,11 @@ nsHTMLDocument::FindNamedItem(nsIContent *aContent,
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::NamedItem(JSContext* cx, jsval* argv, PRUint32 argc, 
-                          jsval* aReturn)
+nsHTMLDocument::NamedItem(const nsAReadableString& aName,
+                          nsISupports **_retval)
 {
   nsresult result = NS_OK;
+#if 0
   nsIContent *content = nsnull;
 
   if (argc < 1) 
@@ -3164,52 +3156,11 @@ nsHTMLDocument::NamedItem(JSContext* cx, jsval* argv, PRUint32 argc,
                                                         argv[0], aReturn);
     NS_RELEASE(supports);
   }
+#endif
   return result;
 }
 
-NS_IMETHODIMP
-nsHTMLDocument::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  nsCOMPtr<nsIScriptGlobalObject> global;
-
-  if (nsnull == mScriptObject) {
-    // XXX We make the (possibly erroneous) assumption that the first
-    // presentation shell represents the "primary view" of the document
-    // and that the JS parent chain should incorporate just that view.
-    // This is done for lack of a better model when we have multiple
-    // views.
-    nsIPresShell* shell = (nsIPresShell*) mPresShells.ElementAt(0);
-    if (shell) {
-      nsCOMPtr<nsIPresContext> cx;
-      shell->GetPresContext(getter_AddRefs(cx));
-      nsCOMPtr<nsISupports> container;
-      
-      res = cx->GetContainer(getter_AddRefs(container));
-      if (NS_SUCCEEDED(res) && container) {
-        global = do_GetInterface(container);
-      }
-    }
-    // XXX If we can't find a view, parent to the calling context's
-    // global object. This may not be right either, but we need
-    // something.
-    else {
-      global = getter_AddRefs(aContext->GetGlobalObject());
-    }
-    
-    if (NS_SUCCEEDED(res)) {
-      res = NS_NewScriptHTMLDocument(aContext, 
-                                     (nsISupports *)(nsIDOMHTMLDocument *)this,
-                                     (nsISupports *)global, 
-                                     (void**)&mScriptObject);
-    }
-  }
-  
-  *aScriptObject = mScriptObject;
-
-  return res;
-}
-
+#if 0
 PRBool    
 nsHTMLDocument::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
                         PRBool *aDidDefineProperty)
@@ -3239,6 +3190,7 @@ nsHTMLDocument::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
 
   return ret;
 }
+#endif
 
 //----------------------------
 

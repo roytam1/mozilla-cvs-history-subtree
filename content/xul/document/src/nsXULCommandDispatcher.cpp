@@ -57,7 +57,7 @@ static PRLogModuleInfo* gLog;
 ////////////////////////////////////////////////////////////////////////
 
 nsXULCommandDispatcher::nsXULCommandDispatcher(nsIDocument* aDocument)
-    : mScriptObject(nsnull), mDocument(aDocument), mFocusController(nsnull), mUpdaters(nsnull)
+    : mDocument(aDocument), mFocusController(nsnull), mUpdaters(nsnull)
 {
 	NS_INIT_REFCNT();
 
@@ -89,9 +89,6 @@ nsXULCommandDispatcher::QueryInterface(REFNSIID iid, void** result)
   if (iid.Equals(NS_GET_IID(nsISupports)) ||
       iid.Equals(NS_GET_IID(nsIDOMXULCommandDispatcher))) {
     *result = NS_STATIC_CAST(nsIDOMXULCommandDispatcher*, this);
-  }
-  else if (iid.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    *result = NS_STATIC_CAST(nsIScriptObjectOwner*, this);
   }
   else if (iid.Equals(NS_GET_IID(nsISupportsWeakReference))) {
     *result = NS_STATIC_CAST(nsISupportsWeakReference*, this);
@@ -146,10 +143,15 @@ nsXULCommandDispatcher::GetFocusedElement(nsIDOMElement** aElement)
 }
 
 NS_IMETHODIMP
-nsXULCommandDispatcher::GetFocusedWindow(nsIDOMWindowInternal** aWindow)
+nsXULCommandDispatcher::GetFocusedWindow(nsIDOMWindow** aWindow)
 {
   EnsureFocusController();
-  return mFocusController->GetFocusedWindow(aWindow);
+
+  nsCOMPtr<nsIDOMWindowInternal> window;
+  nsresult rv = mFocusController->GetFocusedWindow(getter_AddRefs(window));
+  NS_ENSURE_TRUE(NS_SUCCEEDED(rv) && window, rv);
+
+  return window->QueryInterface(NS_GET_IID(nsIDOMWindow), (void **)aWindow);
 }
 
 NS_IMETHODIMP
@@ -160,11 +162,15 @@ nsXULCommandDispatcher::SetFocusedElement(nsIDOMElement* aElement)
 }
 
 NS_IMETHODIMP
-nsXULCommandDispatcher::SetFocusedWindow(nsIDOMWindowInternal* aWindow)
+nsXULCommandDispatcher::SetFocusedWindow(nsIDOMWindow* aWindow)
 {
   EnsureFocusController();
-  if (mFocusController)
-    return mFocusController->SetFocusedWindow(aWindow);
+  if (mFocusController) {
+    nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(aWindow));
+
+    return mFocusController->SetFocusedWindow(window);
+  }
+
   return NS_ERROR_FAILURE;
 }
 
@@ -343,33 +349,6 @@ nsXULCommandDispatcher::UpdateCommands(const nsAReadableString& aEventName)
   }
   return NS_OK;
 }
-
-
-////////////////////////////////////////////////////////////////////////
-// nsIScriptObjectOwner interface
-NS_IMETHODIMP
-nsXULCommandDispatcher::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-
-  if (nsnull == mScriptObject) {
-      res = NS_NewScriptXULCommandDispatcher(aContext, (nsISupports *)(nsIDOMXULCommandDispatcher*)this, global, (void**)&mScriptObject);
-  }
-  *aScriptObject = mScriptObject;
-
-  NS_RELEASE(global);
-  return res;
-}
-
-
-NS_IMETHODIMP
-nsXULCommandDispatcher::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
 
 PRBool
 nsXULCommandDispatcher::Matches(const nsString& aList, 

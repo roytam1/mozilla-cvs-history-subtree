@@ -28,8 +28,7 @@
 
 
 nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(nsISupports *aOwner, float aT2P)
-  : mType(CSS_PX), mTwips(0), mString(), mOwner(aOwner), mT2P(aT2P),
-    mScriptObject(nsnull)
+  : mType(CSS_PX), mTwips(0), mString(), mOwner(aOwner), mT2P(aT2P)
 {
   NS_INIT_REFCNT();
 }
@@ -47,41 +46,11 @@ NS_IMPL_RELEASE(nsROCSSPrimitiveValue);
 NS_INTERFACE_MAP_BEGIN(nsROCSSPrimitiveValue)
    NS_INTERFACE_MAP_ENTRY(nsIDOMCSSPrimitiveValue)
    NS_INTERFACE_MAP_ENTRY(nsIDOMCSSValue)
-   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMCSSPrimitiveValue)
 NS_INTERFACE_MAP_END
 
 
-// nsIScriptObjectOwner
-
-NS_IMETHODIMP
-nsROCSSPrimitiveValue::GetScriptObject(nsIScriptContext *aContext, 
-                                       void** aScriptObject)
-{
-  nsresult res = NS_OK;
-
-  if (!mScriptObject) {
-    nsISupports *supports = NS_STATIC_CAST(nsIDOMCSSPrimitiveValue *, this);
-
-    // XXX Should be done through factory
-    res = NS_NewScriptCSSPrimitiveValue(aContext, supports, mOwner,
-                                        &mScriptObject);
-  }
-
-  *aScriptObject = mScriptObject;
-
-  return res;
-}
-
-
 // nsIDOMCSSValue
-
-NS_IMETHODIMP
-nsROCSSPrimitiveValue::SetScriptObject(void* aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
 
 
 NS_IMETHODIMP

@@ -23,7 +23,6 @@
 #include "nsDOMAttribute.h"
 #include "nsGenericElement.h"
 #include "nsIContent.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsITextContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsDOMError.h"
@@ -41,7 +40,6 @@ nsDOMAttribute::nsDOMAttribute(nsIContent* aContent,
   // We don't add a reference to our content. It will tell us
   // to drop our reference when it goes away.
   mContent = aContent;
-  mScriptObject = nsnull;
   mChild = nsnull;
   mChildList = nsnull;
 }
@@ -60,12 +58,6 @@ nsDOMAttribute::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   if (aIID.Equals(NS_GET_IID(nsIDOMAttr))) {
     nsIDOMAttr* tmp = this;
-    *aInstancePtr = (void*)tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    nsIScriptObjectOwner* tmp = this;
     *aInstancePtr = (void*)tmp;
     NS_ADDREF_THIS();
     return NS_OK;
@@ -117,36 +109,6 @@ nsDOMAttribute::GetContent(nsIContent** aContent)
   *aContent = mContent;
   NS_IF_ADDREF(*aContent);
 
-  return NS_OK;
-}
-
-nsresult
-nsDOMAttribute::GetScriptObject(nsIScriptContext *aContext,
-                                void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  if (nsnull == mScriptObject) {
-    nsIDOMScriptObjectFactory *factory;
-    
-    res = nsGenericElement::GetScriptObjectFactory(&factory);
-    if (NS_OK != res) {
-      return res;
-    }
-
-    res = factory->NewScriptAttr(aContext, 
-                                 (nsISupports *)(nsIDOMAttr *)this, 
-                                 (nsISupports *)mContent,
-                                 (void **)&mScriptObject);
-    NS_RELEASE(factory);
-  }
-  *aScriptObject = mScriptObject;
-  return res;
-}
-
-nsresult
-nsDOMAttribute::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
   return NS_OK;
 }
 

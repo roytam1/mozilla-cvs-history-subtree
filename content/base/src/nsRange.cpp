@@ -37,7 +37,6 @@
 #include "nsDOMError.h"
 #include "nsIContentIterator.h"
 #include "nsIDOMNodeList.h"
-#include "nsIScriptGlobalObject.h"
 #include "nsIParser.h"
 #include "nsIComponentManager.h"
 #include "nsParserCIID.h"
@@ -278,8 +277,7 @@ nsRange::nsRange() :
   mStartOffset(0),
   mEndOffset(0),
   mStartParent(),
-  mEndParent(),
-  mScriptObject(nsnull)
+  mEndParent()
 {
   NS_INIT_REFCNT();
 } 
@@ -344,12 +342,6 @@ nsresult nsRange::QueryInterface(const nsIID& aIID,
     *aInstancePtrResult = (void*)(nsIDOMNSRange*)this;
     NS_ADDREF_THIS();
     return NS_OK;    
-  }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    nsIScriptObjectOwner* tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
   }
   return NS_NOINTERFACE;
 }
@@ -2160,31 +2152,6 @@ nsRange::SetBeforeAndAfter(PRBool aBefore, PRBool aAfter)
   mBeforeGenContent = aAfter;
   return NS_OK;
 }
-
-// BEGIN nsIScriptObjectOwner interface implementations
-NS_IMETHODIMP
-nsRange::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  nsIScriptGlobalObject *globalObj = aContext->GetGlobalObject();
-
-  if (!mScriptObject) {
-    res = NS_NewScriptRange(aContext, (nsISupports *)(nsIDOMRange *)this, globalObj, (void**)&mScriptObject);
-  }
-  *aScriptObject = mScriptObject;
-
-  NS_RELEASE(globalObj);
-  return res;
-}
-
-NS_IMETHODIMP
-nsRange::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-// END nsIScriptObjectOwner interface implementations
 
 nsresult
 nsRange::Lock()

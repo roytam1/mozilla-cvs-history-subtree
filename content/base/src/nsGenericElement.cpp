@@ -51,7 +51,6 @@
 #include "nsIPrivateDOMEvent.h"
 #include "nsDOMCID.h"
 #include "nsIServiceManager.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsDOMCSSDeclaration.h"
 #include "nsINameSpaceManager.h"
@@ -77,6 +76,13 @@
 #include "nsIJSContextStack.h"
 
 #include "nsIServiceManager.h"
+
+
+NS_BEGIN_DOM_CLASSINFO_IMPL(nsGenericElement)
+  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMElement)
+NS_END_DOM_CLASSINFO_IMPL
+
+#include "nsIScriptObjectOwner.h"
 
 //----------------------------------------------------------------------
 
@@ -341,36 +347,9 @@ nsCheapVoidArray::SwitchToVector()
 
 //----------------------------------------------------------------------
 
-// XXX Currently, the script object factory is global. The way we
-// obtain it should, at least, be made thread-safe later. Ideally,
-// we'd find a better way.
-nsIDOMScriptObjectFactory* nsGenericElement::gScriptObjectFactory = nsnull;
-
-static NS_DEFINE_IID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
-
-nsresult
-nsGenericElement::GetScriptObjectFactory(nsIDOMScriptObjectFactory **aResult)
-{
-  nsresult result = NS_OK;
-
-  if (nsnull == gScriptObjectFactory) {
-    result = nsServiceManager::GetService(kDOMScriptObjectFactoryCID,
-                                          NS_GET_IID(nsIDOMScriptObjectFactory),
-                                          (nsISupports **)&gScriptObjectFactory);
-    if (result != NS_OK) {
-      return result;
-    }
-  }
-
-  *aResult = gScriptObjectFactory;
-  NS_ADDREF(gScriptObjectFactory);
-  return result;
-}
-
 /* static */ void
 nsGenericElement::Shutdown()
 {
-  NS_IF_RELEASE(gScriptObjectFactory); // assigns null
 }
 
 nsGenericElement::nsGenericElement() : mDocument(nsnull), mParent(nsnull),
@@ -420,7 +399,6 @@ nsGenericElement::GetDOMSlots()
     if (!mDOMSlots)
       return nsnull;
 
-    mDOMSlots->mScriptObject = nsnull;
     mDOMSlots->mChildNodes = nsnull;
     mDOMSlots->mStyle = nsnull;
     mDOMSlots->mAttributeMap = nsnull;
@@ -437,7 +415,6 @@ void
 nsGenericElement::MaybeClearDOMSlots()
 {
   if (mDOMSlots &&
-      !mDOMSlots->mScriptObject &&
       !mDOMSlots->mChildNodes &&
       !mDOMSlots->mStyle &&
       !mDOMSlots->mAttributeMap &&
@@ -1226,14 +1203,15 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
     // If we were part of a document, make sure we get rid of the
     // script context reference to our script object so that our
     // script object can be freed (or collected).
-    if (mDocument && mDOMSlots && mDOMSlots->mScriptObject) {
+    if (mDocument) {
       nsCOMPtr<nsIScriptGlobalObject> globalObject;
       mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
       if (globalObject) {
         nsCOMPtr<nsIScriptContext> context;
         if (NS_OK == globalObject->GetContext(getter_AddRefs(context)) && context) {
-          context->RemoveReference((void *)&mDOMSlots->mScriptObject,
-                                   mDOMSlots->mScriptObject);
+          // XXX: Remove root!
+          //          context->RemoveReference((void *)&mDOMSlots->mScriptObject,
+          //                                   mDOMSlots->mScriptObject);
         }
       }
     }
@@ -1263,15 +1241,16 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
     // to a document, make sure that the script context adds a
     // reference to our script object. This will ensure that it
     // won't be freed (or collected) out from under us.
-    if (mDocument && mDOMSlots && mDOMSlots->mScriptObject) {
+    if (mDocument) {
       nsCOMPtr<nsIScriptGlobalObject> globalObject;
       mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
       if (globalObject) {
         nsCOMPtr<nsIScriptContext> context;
         if (NS_OK == globalObject->GetContext(getter_AddRefs(context)) && context) {
-          context->AddNamedReference((void *)&mDOMSlots->mScriptObject,
-                                     mDOMSlots->mScriptObject,
-                                     "nsGenericElement::mScriptObject");
+          // XXX: Add root!
+          //          context->AddNamedReference((void *)&mDOMSlots->mScriptObject,
+          //                                     mDOMSlots->mScriptObject,
+          //                                     "nsGenericElement::mScriptObject");
         }
       }
     }
@@ -1788,8 +1767,7 @@ nsGenericElement::RenderFrame(nsIPresContext* aPresContext)
 
 //----------------------------------------------------------------------
 
-// nsIScriptObjectOwner implementation
-
+#if 0
 nsresult
 nsGenericElement::GetScriptObject(nsIScriptContext* aContext,
                                   void** aScriptObject)
@@ -1867,7 +1845,9 @@ nsGenericElement::GetScriptObject(nsIScriptContext* aContext,
   *aScriptObject = slots->mScriptObject;
   return res;
 }
+#endif
 
+#if 0
 nsresult
 nsGenericElement::SetScriptObject(void *aScriptObject)
 {
@@ -1884,6 +1864,7 @@ nsGenericElement::SetScriptObject(void *aScriptObject)
 
   return NS_OK;
 }
+#endif
 
 //----------------------------------------------------------------------
 
@@ -1908,29 +1889,7 @@ nsGenericElement::GetListenerManager(nsIEventListenerManager** aResult)
 
 //----------------------------------------------------------------------
 
-// nsIJSScriptObject implementation
-
-PRBool
-nsGenericElement::AddProperty(JSContext *aContext, JSObject *aObj, jsval aID,
-                              jsval *aVp)
-{
-  return PR_TRUE;
-}
-
-PRBool
-nsGenericElement::DeleteProperty(JSContext *aContext, JSObject *aObj,
-                                 jsval aID, jsval *aVp)
-{
-  return PR_TRUE;
-}
-
-PRBool
-nsGenericElement::GetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
-                              jsval *aVp)
-{
-  return PR_TRUE;
-}
-
+#if 0
 PRBool
 nsGenericElement::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
                               jsval *aVp)
@@ -2026,32 +1985,7 @@ nsGenericElement::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
 
   return PR_TRUE;
 }
-
-PRBool
-nsGenericElement::EnumerateProperty(JSContext *aContext, JSObject *aObj)
-{
-  return PR_TRUE;
-}
-
-PRBool
-nsGenericElement::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                          PRBool* aDidDefineProperty)
-{
-  *aDidDefineProperty = PR_FALSE;
-
-  return PR_TRUE;
-}
-
-PRBool
-nsGenericElement::Convert(JSContext *aContext, JSObject *aObj, jsval aID)
-{
-  return PR_TRUE;
-}
-
-void
-nsGenericElement::Finalize(JSContext *aContext, JSObject *aObj)
-{
-}
+#endif
 
 // Generic DOMNode implementations
 
@@ -2539,10 +2473,6 @@ nsGenericElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     }
 
     return NS_NOINTERFACE;
-  } else if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    inst = NS_STATIC_CAST(nsIScriptObjectOwner *, this);
-  } else if (aIID.Equals(NS_GET_IID(nsIJSScriptObject))) {
-    inst = NS_STATIC_CAST(nsIJSScriptObject *, this);
   } else {
     return NS_NOINTERFACE;
   }
@@ -2666,8 +2596,8 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     GetListenerManager(getter_AddRefs(manager));
 
     if (manager) {
-      ret = manager->AddScriptEventListener(context, this, aAttribute, aValue,
-                                            aIID, PR_TRUE);
+      //      ret = manager->AddScriptEventListener(context, this, aAttribute, aValue,
+      //                                            aIID, PR_TRUE);
     }
   }
 

@@ -25,9 +25,8 @@
 #include "nsIFormManager.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMNSHTMLFormElement.h"
-#include "nsIDOMHTMLFormControlList.h"
+#include "nsIDOMNSHTMLFormControlList.h"
 #include "nsIDOMHTMLDocument.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -46,6 +45,17 @@
 #include "nsContentUtils.h"
 #include "nsHashtable.h"
 #include "nsContentList.h"
+
+#include "nsIScriptObjectOwner.h"
+
+
+
+
+
+
+
+#include "jsapi.h"
+
 
 static const int NS_FORM_CONTROL_LIST_HASHTABLE_SIZE = 64;
 
@@ -66,22 +76,19 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLFormElement
-  NS_DECL_IDOMHTMLFORMELEMENT
+  NS_DECL_NSIDOMHTMLFORMELEMENT
 
   // nsIDOMNSHTMLFormElement
-  NS_DECL_IDOMNSHTMLFORMELEMENT  
-
-  virtual PRBool Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                         PRBool *aDidDefineProperty);
+  NS_DECL_NSIDOMNSHTMLFORMELEMENT  
 
   // nsIForm
   NS_IMETHOD AddElement(nsIFormControl* aElement);
@@ -109,8 +116,8 @@ protected:
 };
 
 // nsFormControlList
-class nsFormControlList : public nsIDOMHTMLFormControlList,
-                          public nsIScriptObjectOwner
+class nsFormControlList : public nsIDOMNSHTMLFormControlList,
+                          public nsIDOMHTMLCollection
 {
 public:
   nsFormControlList(nsIDOMHTMLFormElement* aForm);
@@ -121,13 +128,11 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void *aScriptObject);
-  NS_IMETHOD ResetScriptObject();
-
   // nsIDOMHTMLCollection interface
-  NS_DECL_IDOMHTMLCOLLECTION
-  NS_DECL_IDOMHTMLFORMCONTROLLIST
+  NS_DECL_NSIDOMHTMLCOLLECTION
+
+  // nsIDOMNSHTMLFormControlList interface
+  NS_DECL_NSIDOMNSHTMLFORMCONTROLLIST
 
   nsresult GetNamedObject(JSContext* aContext, jsval aID, JSObject** aObj);
 
@@ -140,7 +145,6 @@ public:
   nsresult SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 #endif
 
-  void        *mScriptObject;
   nsVoidArray mElements;  // WEAK - bug 36639
   nsIDOMHTMLFormElement* mForm;  // WEAK - the form owns me
 
@@ -182,6 +186,7 @@ NS_NewHTMLFormElement(nsIHTMLContent** aInstancePtrResult,
 nsHTMLFormElement::nsHTMLFormElement()
 {
   mControls = new nsFormControlList(this);
+
   NS_IF_ADDREF(mControls);
 }
 
@@ -515,9 +520,10 @@ nsHTMLFormElement::GetLength(PRInt32* aLength)
 
 
 NS_IMETHODIMP    
-nsHTMLFormElement::NamedItem(JSContext* cx, jsval* argv, PRUint32 argc,
-                             jsval* aReturn)
+nsHTMLFormElement::NamedItem(const nsAReadableString& aName,
+                             nsISupports **_retval)
 {
+#if 0
   nsresult result = mControls->NamedItem(cx, argv, argc, aReturn);
   if (NS_FAILED(result)) {
     return result;
@@ -576,10 +582,32 @@ nsHTMLFormElement::NamedItem(JSContext* cx, jsval* argv, PRUint32 argc,
       }
     }
   }
+#endif
 
   return NS_OK;
 }
 
+NS_IMETHODIMP    
+nsHTMLFormElement::Item(PRUint32 aIndex,
+                        nsIDOMHTMLElement **_retval)
+{
+  NS_ENSURE_ARG_POINTER(_retval);
+  *_retval = nsnull;
+
+  nsCOMPtr<nsIDOMNode> node;
+
+  nsresult rv = mControls->Item(aIndex, getter_AddRefs(node));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (node) {
+    return node->QueryInterface(NS_GET_IID(nsIDOMHTMLElement),
+                                (void **)_retval);
+  }
+
+  return NS_OK;
+}
+
+#if 0
 PRBool    
 nsHTMLFormElement::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
                            PRBool *aDidDefineProperty)
@@ -679,26 +707,7 @@ nsHTMLFormElement::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
 
   return ret;
 }
-
-NS_IMETHODIMP
-nsHTMLFormElement::Item(PRUint32 aIndex, nsIDOMElement** aReturn)
-{
-  if (mControls) {
-    nsCOMPtr<nsIDOMNode> node;
-    nsresult result = mControls->Item(aIndex, getter_AddRefs(node));
-
-    if (node) {
-      result = node->QueryInterface(NS_GET_IID(nsIDOMElement),
-                                    (void **)aReturn);
-    } else {
-      *aReturn = nsnull;
-    }
-
-    return result;
-  }
-
-  return NS_ERROR_FAILURE;
-}
+#endif
 
 //----------------------------------------------------------------------
 
@@ -709,7 +718,6 @@ nsHTMLFormElement::Item(PRUint32 aIndex, nsIDOMElement** aReturn)
 nsFormControlList::nsFormControlList(nsIDOMHTMLFormElement* aForm) 
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
   mForm = aForm; // WEAK - the form owns me
   mLookupTable = nsnull;
 }
@@ -722,13 +730,6 @@ nsFormControlList::~nsFormControlList()
   }
   mForm = nsnull;
   Clear();
-}
-
-NS_IMETHODIMP
-nsFormControlList::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
 }
 
 void
@@ -751,31 +752,8 @@ NS_IMPL_RELEASE(nsFormControlList)
 
 NS_INTERFACE_MAP_BEGIN(nsFormControlList)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLCollection)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLFormControlList)
-  NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMHTMLCollection)
 NS_INTERFACE_MAP_END
-
-
-nsresult nsFormControlList::GetScriptObject(nsIScriptContext *aContext,
-                                            void** aScriptObject)
-{
-  nsresult res = NS_OK;
-
-  if (!mScriptObject) {
-    res = NS_NewScriptHTMLFormControlList(aContext, (nsISupports *)(nsIDOMHTMLCollection *)this, nsnull, (void**)&mScriptObject);
-  }
-
-  *aScriptObject = mScriptObject;
-
-  return res;
-}
-
-nsresult nsFormControlList::ResetScriptObject()
-{
-  mScriptObject = nsnull;
-  return NS_OK;
-}
 
 
 // nsIDOMHTMLCollection interface
@@ -798,73 +776,6 @@ nsFormControlList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
   }
 
   *aReturn = nsnull;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP    
-nsFormControlList::Item(JSContext* cx, jsval* argv, PRUint32 argc,
-                        jsval* aReturn)
-{
-  nsCOMPtr<nsIDOMNode> element;
-  nsresult result;
-  nsCOMPtr<nsIScriptContext> scriptContext;
-  nsCOMPtr<nsIScriptObjectOwner> owner;
-  PRInt32 index;
-  nsCOMPtr<nsIDocument> document;
-
-  if (argc < 1) {
-    return NS_ERROR_DOM_TOO_FEW_PARAMETERS_ERR;
-  }
-  
-  *aReturn = nsnull;
-  if (!JS_ValueToInt32(cx, argv[0], (int32*)&index)) {
-    return NS_ERROR_FAILURE;
-  }
-
-  if (!mForm) {
-    return NS_OK;
-  }
-  
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mForm));
-  if (content) {
-    result = content->GetDocument(*getter_AddRefs(document));
-    if (NS_FAILED(result)) {
-      return result;
-    }
-  }
-
-  if (document) {
-    nsCOMPtr<nsIScriptGlobalObject> globalObject;
-    document->GetScriptGlobalObject(getter_AddRefs(globalObject));
-    if (globalObject) {
-      result = globalObject->GetContext(getter_AddRefs(scriptContext));
-    }
-  }
-
-  // If we can't get a script context, there's nothing we can do
-  if (!scriptContext) {
-    return NS_ERROR_FAILURE;
-  }
-
-  result = Item((PRUint32)index, getter_AddRefs(element));
-  if (NS_FAILED(result)) {
-    return result;
-  }
-
-  if (element) {
-    owner = do_QueryInterface(element);
-
-    if (owner) {
-      JSObject* obj;
-      result = owner->GetScriptObject(scriptContext, (void**)&obj);
-      if (NS_FAILED(result)) {
-        return result;
-      }
-
-      *aReturn = OBJECT_TO_JSVAL(obj);
-    }
-  }
 
   return NS_OK;
 }
@@ -932,26 +843,6 @@ nsFormControlList::GetNamedObject(JSContext* aContext, jsval aID,
   return owner->GetScriptObject(scriptContext, (void**)aObj);
 }
 
-NS_IMETHODIMP    
-nsFormControlList::NamedItem(JSContext* cx, jsval* argv, PRUint32 argc,
-                             jsval* aReturn)
-{
-  JSObject *obj;
-  nsresult result = NS_OK;
-
-  if (argc > 0) {
-    result = GetNamedObject(cx, argv[0], &obj);
-    if (NS_SUCCEEDED(result) && (nsnull != obj)) {
-      *aReturn = OBJECT_TO_JSVAL(obj);
-    }
-  }
-  else {
-    result = NS_ERROR_DOM_TOO_FEW_PARAMETERS_ERR;
-  }
-
-  return result;
-}
-
 NS_IMETHODIMP 
 nsFormControlList::NamedItem(const nsAReadableString& aName,
                              nsIDOMNode** aReturn)
@@ -959,12 +850,12 @@ nsFormControlList::NamedItem(const nsAReadableString& aName,
   NS_ENSURE_ARG_POINTER(aReturn);
 
   nsresult rv = NS_OK;
-  nsStringKey key(aName);
   nsCOMPtr<nsISupports> supports;
   *aReturn = nsnull;
 
   if (mLookupTable) {
-    supports = dont_AddRef((nsISupports *)mLookupTable->Get(&key));
+    rv = NamedItem(aName, getter_AddRefs(supports));
+    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   if (supports) {
@@ -984,6 +875,24 @@ nsFormControlList::NamedItem(const nsAReadableString& aName,
   }
 
   return rv;
+}
+
+NS_IMETHODIMP 
+nsFormControlList::NamedItem(const nsAReadableString& aName,
+                             nsISupports** aReturn)
+{
+  NS_ENSURE_ARG_POINTER(aReturn);
+
+  nsStringKey key(aName);
+  nsCOMPtr<nsISupports> supports;
+
+  if (mLookupTable) {
+    *aReturn = (nsISupports *)mLookupTable->Get(&key);
+  } else {
+    *aReturn = nsnull;
+  }
+
+  return NS_OK;
 }
 
 nsresult

@@ -30,6 +30,7 @@
 class nsIPresContext;
 class nsIDOMEventListener;
 class nsIScriptObjectOwner;
+class nsIScriptContext;
 class nsIDOMEventTarget;
 
 /*

@@ -116,23 +116,16 @@ public:
   NS_IMETHOD FlushPendingNotifications(PRBool aFlushReflows = PR_TRUE);
 
   // nsIDOMDocument interface
-  NS_DECL_IDOMDOCUMENT
+  NS_DECL_NSIDOMDOCUMENT
 
   // nsIDOMNode interface
-  NS_DECL_IDOMNODE
+  NS_DECL_NSIDOMNODE
 
   // nsIDOMHTMLDocument interface
-  NS_DECL_IDOMHTMLDOCUMENT
-  NS_DECL_IDOMNSHTMLDOCUMENT
+  NS_DECL_NSIDOMHTMLDOCUMENT
+  NS_DECL_NSIDOMNSHTMLDOCUMENT
   // the following is not part of nsIDOMHTMLDOCUMENT but allows the content sink to add forms
   NS_IMETHOD AddForm(nsIDOMHTMLFormElement* aForm);
-
-  // From nsIScriptObjectOwner interface, implemented by nsDocument
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  
-  // From nsJSScriptObject interface, implemented by nsDocument
-  virtual PRBool Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                         PRBool *aDidDefineProperty);
 
   virtual nsresult Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
 
@@ -171,10 +164,6 @@ protected:
 
   nsresult WriteCommon(const nsAReadableString& aText,
                        PRBool aNewlineTerminate);
-  nsresult ScriptWriteCommon(JSContext *cx, 
-                             jsval *argv, 
-                             PRUint32 argc,
-                             PRBool aNewlineTerminate);
   nsresult OpenCommon(nsIURI* aUrl);
 
   nsIHTMLStyleSheet*    mAttrStyleSheet;
@@ -211,7 +200,6 @@ protected:
    * Bug 13871: Frameset spoofing - find out if document.domain was set
    */
   PRBool       mDomainWasSet;
-
 };
 
 #endif /* nsHTMLDocument_h___ */

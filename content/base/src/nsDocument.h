@@ -33,10 +33,8 @@
 #include "nsIDOMDocumentStyle.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDiskDocument.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDOMEventTarget.h"
-#include "nsIJSScriptObject.h"
 #include "nsIContent.h"
 #include "nsGenericDOMNodeList.h"
 #include "nsIPrincipal.h"
@@ -47,6 +45,7 @@
 #include "nsHashtable.h"
 #include "nsIWordBreakerFactory.h"
 #include "nsILineBreakerFactory.h"
+#include "nsIScriptObjectOwner.h"
 
 class nsIEventListenerManager;
 class nsDOMStyleSheetList;
@@ -124,7 +123,6 @@ class nsDocument : public nsIDocument,
                    public nsIDOMDocumentView,
                    public nsIDOMDocumentXBL,
                    public nsIDiskDocument,
-                   public nsIJSScriptObject,
                    public nsSupportsWeakReference,
                    public nsIDOMEventReceiver,
                    public nsIScriptObjectPrincipal
@@ -329,11 +327,6 @@ public:
   NS_IMETHOD StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
                               nsIStyleRule* aStyleRule);
 
-  /**
-    * Finds text in content
-   */
-  NS_IMETHOD FindNext(const nsAReadableString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound);
-
   NS_IMETHOD FlushPendingNotifications(PRBool aFlushReflows = PR_TRUE);
   NS_IMETHOD GetAndIncrementContentID(PRInt32* aID);
   NS_IMETHOD GetBindingManager(nsIBindingManager** aResult);
@@ -341,9 +334,6 @@ public:
 
 public:
   
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void *aScriptObject);
-
   // nsIDOMDocument interface
   NS_IMETHOD    GetDoctype(nsIDOMDocumentType** aDoctype);
   NS_IMETHOD    GetImplementation(nsIDOMDOMImplementation** aImplementation);
@@ -364,25 +354,24 @@ public:
   NS_IMETHOD    ImportNode(nsIDOMNode* aImportedNode,
                            PRBool aDeep,
                            nsIDOMNode** aReturn);
-  NS_IMETHOD    GetLocation(jsval* aLocation);
-  NS_IMETHOD    SetLocation(jsval aLocation);
   NS_IMETHOD    CreateRange(nsIDOMRange** aReturn);
   NS_IMETHOD    Load (const nsAReadableString& aUrl);
   NS_IMETHOD    GetPlugins(nsIDOMPluginArray** aPlugins);
+  NS_IMETHOD    GetLocation(nsIDOMLocation** aLocation);
   NS_IMETHOD    GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult);
   NS_IMETHOD    SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject);
  
   // nsIDOMNode interface
-  NS_DECL_IDOMNODE
+  NS_DECL_NSIDOMNODE
 
   // nsIDOMDocumentView
-  NS_DECL_IDOMDOCUMENTVIEW
+  NS_DECL_NSIDOMDOCUMENTVIEW
 
   // nsIDOMDocumentXBL
-  NS_DECL_IDOMDOCUMENTXBL
+  NS_DECL_NSIDOMDOCUMENTXBL
 
   // nsIDOMDocumentEvent
-  NS_DECL_IDOMDOCUMENTEVENT
+  NS_DECL_NSIDOMDOCUMENTEVENT
 
   // nsIDOMEventReceiver interface
   NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
@@ -408,21 +397,6 @@ public:
                             PRUint32 aFlags,
                             nsEventStatus* aEventStatus);
 
-
-  // nsIJSScriptObject interface
-  virtual PRBool    AddProperty(JSContext *aContext, JSObject *aObj, 
-                                jsval aID, jsval *aVp);
-  virtual PRBool    DeleteProperty(JSContext *aContext, 
-                                JSObject *aObj, jsval aID, jsval *aVp);
-  virtual PRBool    GetProperty(JSContext *aContext, JSObject *aObj, 
-                                jsval aID, jsval *aVp);
-  virtual PRBool    SetProperty(JSContext *aContext, JSObject *aObj, 
-                                jsval aID, jsval *aVp);
-  virtual PRBool    EnumerateProperty(JSContext *aContext, JSObject *aObj);
-  virtual PRBool    Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                            PRBool *aDidDefineProperty);
-  virtual PRBool    Convert(JSContext *aContext, JSObject *aObj, jsval aID);
-  virtual void      Finalize(JSContext *aContext, JSObject *aObj);
 
   virtual nsresult Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
   virtual nsresult SetDocumentURL(nsIURI* aURI);
@@ -457,7 +431,6 @@ protected:
                             // mChildren, or null if no such element exists.
   nsVoidArray mStyleSheets;
   nsVoidArray mObservers;
-  void* mScriptObject;
   nsCOMPtr<nsIScriptGlobalObject> mScriptGlobalObject;
   nsIEventListenerManager* mListenerManager;
   PRBool mInDestructor;

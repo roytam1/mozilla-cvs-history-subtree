@@ -23,7 +23,6 @@
 #include "nsHTMLUtils.h"
 #include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMNSHTMLAnchorElement.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -46,7 +45,6 @@
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
 #include "nsIHTMLAttributes.h"
-#include "prprf.h"
 
 // XXX suppress
 
@@ -66,19 +64,19 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLAnchorElement
-  NS_DECL_IDOMHTMLANCHORELEMENT  
+  NS_DECL_NSIDOMHTMLANCHORELEMENT  
 
   // nsIDOMNSHTMLAnchorElement
-  NS_DECL_IDOMNSHTMLANCHORELEMENT
+  NS_DECL_NSIDOMNSHTMLANCHORELEMENT
 
   // nsILink
   NS_IMETHOD GetLinkState(nsLinkState &aState);
@@ -97,12 +95,23 @@ public:
                             nsEventStatus* aEventStatus);
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 
+  //  NS_DECL_DOM_CLASSINFO(nsGenericHTMLElement)
 protected:
   nsresult RegUnRegAccessKey(PRBool aDoReg);
 
   // The cached visited state
   nsLinkState mLinkState;
+
 };
+
+NS_DECL_DOM_CLASSINFO(nsHTMLAnchorElement, nsGenericHTMLElement);
+
+NS_BEGIN_DOM_CLASSINFO_IMPL(nsHTMLAnchorElement)
+  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMHTMLAnchorElement)
+  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMNSHTMLAnchorElement)
+  NS_DOM_CLASSINFO_BASECLASS_IIDS(nsGenericHTMLElement)
+NS_END_DOM_CLASSINFO_IMPL
+
 
 nsresult
 NS_NewHTMLAnchorElement(nsIHTMLContent** aInstancePtrResult,
@@ -145,9 +154,12 @@ nsHTMLAnchorElement::~nsHTMLAnchorElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLAnchorElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLAnchorElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI3(nsHTMLAnchorElement, nsGenericHTMLContainerElement,
-                        nsIDOMHTMLAnchorElement, nsIDOMNSHTMLAnchorElement,
-                        nsILink)
+NS_HTML_INTERFACE_MAP_BEGIN(nsHTMLAnchorElement, nsGenericHTMLContainerElement)
+  NS_HTML_INTERFACE_MAP_ENTRY(nsIDOMHTMLAnchorElement)
+  NS_HTML_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAnchorElement)
+  NS_HTML_INTERFACE_MAP_ENTRY(nsILink)
+  NS_HTML_INTERFACE_MAP_CLASSINFO(nsHTMLAnchorElement)
+NS_HTML_INTERFACE_MAP_END
 
 
 nsresult

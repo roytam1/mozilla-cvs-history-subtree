@@ -28,7 +28,6 @@
 #include "nsIDOMHTMLCollection.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDocumentObserver.h"
-#include "nsIScriptObjectOwner.h"
 
 typedef PRBool (*nsContentListMatchFunc)(nsIContent* aContent, nsString* aData);
 
@@ -36,7 +35,6 @@ class nsIDocument;
 
 class nsContentList : public nsIDOMNodeList, 
                       public nsIDOMHTMLCollection, 
-                      public nsIScriptObjectOwner, 
                       public nsIDocumentObserver {
 public:
   nsContentList(nsIDocument *aDocument);
@@ -59,10 +57,6 @@ public:
 
   NS_IMETHOD NamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn);
 
-  // nsIScriptObjectOwner
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void *aScriptObject);
-  
   // nsIDocumentObserver
   NS_IMETHOD BeginUpdate(nsIDocument *aDocument) { return NS_OK; }
   NS_IMETHOD EndUpdate(nsIDocument *aDocument) { return NS_OK; }
@@ -139,7 +133,6 @@ protected:
   nsContentListMatchFunc mFunc;
   nsString* mData;
   nsVoidArray mContent;
-  void *mScriptObject;
   nsIDocument* mDocument;
   nsIContent* mRootContent;
   PRBool mMatchAll;

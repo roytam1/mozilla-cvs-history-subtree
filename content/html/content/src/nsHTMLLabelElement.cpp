@@ -22,7 +22,6 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMHTMLLabelElement.h"
 #include "nsIDOMHTMLFormElement.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsGenericHTMLElement.h"
@@ -53,10 +52,10 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerFormElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerFormElement::)
 
   // nsIDOMElement, because of the "htmlFor" attribute handling we can't
-  // use the NS_FORWARD_IDOMHTMLELEMENT macro here...
+  // use the NS_FORWARD_NSIDOMHTMLELEMENT macro here...
   NS_IMETHOD GetTagName(nsAWritableString& aTagName) {
     return nsGenericHTMLContainerFormElement::GetTagName(aTagName);
   }
@@ -149,10 +148,10 @@ public:
   }
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerFormElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerFormElement::)
 
   // nsIDOMHTMLLabelElement
-  NS_DECL_IDOMHTMLLABELELEMENT
+  NS_DECL_NSIDOMHTMLLABELELEMENT
 
   // nsIFormControl
   NS_IMETHOD GetType(PRInt32* aType);

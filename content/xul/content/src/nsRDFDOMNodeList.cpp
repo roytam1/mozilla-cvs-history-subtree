@@ -34,20 +34,9 @@
 
 #include "nsDOMCID.h"
 #include "nsIDOMNode.h"
-#include "nsIDOMScriptObjectFactory.h"
-#include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFDOMNodeList.h"
-
-////////////////////////////////////////////////////////////////////////
-// GUID definitions
-
-static NS_DEFINE_IID(kIDOMNodeIID,                NS_IDOMNODE_IID);
-static NS_DEFINE_IID(kIDOMNodeListIID,            NS_IDOMNODELIST_IID);
-static NS_DEFINE_IID(kIDOMScriptObjectFactoryIID, NS_IDOM_SCRIPT_OBJECT_FACTORY_IID);
-
-static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,  NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 ////////////////////////////////////////////////////////////////////////
 // ctors & dtors
@@ -55,8 +44,7 @@ static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,  NS_DOM_SCRIPT_OBJECT_FACTORY_C
 
 nsRDFDOMNodeList::nsRDFDOMNodeList(void)
     : //mInner(nsnull), Not being used?
-      mElements(nsnull),
-      mScriptObject(nsnull)
+      mElements(nsnull)
 {
     NS_INIT_REFCNT();
 }
@@ -114,22 +102,16 @@ NS_IMPL_RELEASE(nsRDFDOMNodeList);
 nsresult
 nsRDFDOMNodeList::QueryInterface(REFNSIID aIID, void** aResult)
 {
-static NS_DEFINE_IID(kISupportsIID,          NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
-
     NS_PRECONDITION(aResult != nsnull, "null ptr");
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
     if (aIID.Equals(NS_GET_IID(nsIDOMNodeList)) ||
-        aIID.Equals(kISupportsIID)) {
+        aIID.Equals(NS_GET_IID(nsISupports))) {
         *aResult = NS_STATIC_CAST(nsIDOMNodeList*, this);
     }
     else if (aIID.Equals(NS_GET_IID(nsIRDFNodeList))) {
         *aResult = NS_STATIC_CAST(nsIRDFNodeList*, this);
-    }
-    else if (aIID.Equals(kIScriptObjectOwnerIID)) {
-        *aResult = NS_STATIC_CAST(nsIScriptObjectOwner*, this);
     }
     else {
         *aResult = nsnull;
@@ -170,43 +152,6 @@ nsRDFDOMNodeList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 
     // Cast is okay because we're in a closed system.
     *aReturn = (nsIDOMNode*) mElements->ElementAt(aIndex);
-    return NS_OK;
-}
-
-
-////////////////////////////////////////////////////////////////////////
-// nsIScriptObjectOwner interface
-
-NS_IMETHODIMP
-nsRDFDOMNodeList::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-    nsresult rv = NS_OK;
-    nsIScriptGlobalObject* global = aContext->GetGlobalObject();
-
-    if (nsnull == mScriptObject) {
-        nsIDOMScriptObjectFactory *factory;
-    
-        if (NS_SUCCEEDED(rv = nsServiceManager::GetService(kDOMScriptObjectFactoryCID,
-                                                           kIDOMScriptObjectFactoryIID,
-                                                           (nsISupports **)&factory))) {
-            rv = factory->NewScriptNodeList(aContext, 
-                                            (nsISupports*)(nsIDOMNodeList*)this, 
-                                            global, 
-                                            (void**)&mScriptObject);
-
-            nsServiceManager::ReleaseService(kDOMScriptObjectFactoryCID, factory);
-        }
-    }
-    *aScriptObject = mScriptObject;
-
-    NS_RELEASE(global);
-    return rv;
-}
-
-NS_IMETHODIMP
-nsRDFDOMNodeList::SetScriptObject(void* aScriptObject)
-{
-    mScriptObject = aScriptObject;
     return NS_OK;
 }
 

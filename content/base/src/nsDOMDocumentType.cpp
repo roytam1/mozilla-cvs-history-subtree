@@ -23,7 +23,6 @@
 #include "nsDOMDocumentType.h"
 #include "nsDOMAttributeMap.h"
 #include "nsIDOMNamedNodeMap.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsLayoutAtoms.h"
 #include "nsCOMPtr.h"
 
@@ -83,7 +82,6 @@ NS_INTERFACE_MAP_BEGIN(nsDOMDocumentType)
    NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentType)
    NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
    NS_INTERFACE_MAP_ENTRY(nsIContent)
-   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
 NS_INTERFACE_MAP_END_THREADSAFE
 
 NS_IMETHODIMP    

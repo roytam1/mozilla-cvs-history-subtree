@@ -144,7 +144,7 @@ JSClass nsXULPDGlobalObject::gSharedGlobalClass = {
     "nsXULPrototypeScript compilation scope",
     JSCLASS_HAS_PRIVATE,
     JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,  nsJSUtils::nsGenericFinalize
+    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,  nsnull /*nsJSUtils::nsGenericFinalize */
 };
 
 
@@ -491,7 +491,7 @@ nsXULPDGlobalObject::GetContext(nsIScriptContext **aContext)
     // GetContext() will be called before GetScriptObject() is.
     if (! mScriptContext) {
         nsresult rv;
-        rv = NS_CreateScriptContext(this, getter_AddRefs(mScriptContext));
+        //        rv = NS_CreateScriptContext(this, getter_AddRefs(mScriptContext));
         if (NS_FAILED(rv)) return rv;
     }
 

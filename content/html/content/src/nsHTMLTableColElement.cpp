@@ -21,7 +21,6 @@
  */
 #include "nsIDOMHTMLTableColElement.h"
 #include "nsIHTMLTableColElement.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsIHTMLAttributes.h"
@@ -46,16 +45,16 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLTableColElement
-  NS_DECL_IDOMHTMLTABLECOLELEMENT
+  NS_DECL_NSIDOMHTMLTABLECOLELEMENT
 
   // nsIHTMLTableColElement
   NS_IMETHOD GetSpanValue(PRInt32* aSpan);
