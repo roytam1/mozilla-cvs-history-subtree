@@ -1,3 +1,7 @@
+1999-08-12  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (move): Changed name, was rename(), is now move().
+
 1999-08-10  Leif Hedstrom  <leif@netscape.com>
 
 	* Entry.pm (setValues): Renamed, used to be setValue(), which is
