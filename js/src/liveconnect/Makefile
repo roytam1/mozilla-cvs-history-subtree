@@ -22,7 +22,9 @@ DEPTH		= ../../..
 include $(DEPTH)/config/config.mk
 
 ifdef JAVA_OR_OJI
+ifdef REGENERATE
 DIRS		= classes
+endif
 endif
 
 MODULE		= java
@@ -30,7 +32,7 @@ LIBRARY_NAME	= jsj
 
 REQUIRES	= java js applet nspr img util layer
 
-ifdef JAVA_OR_OJI
+ifdef MOZ_OJI
 CSRCS = jsj.c		  \
 	jsj_JSObject.c	  \
 	jsj_JavaArray.c	  \
@@ -51,7 +53,13 @@ CSRCS = \
 	$(NULL)
 endif
 
+ifdef MOZ_OJI
+ifdef REGENERATE
+JNI_GEN		= netscape.javascript.JSObject netscape.javascript.JSException
+endif
+else # MOZ_JAVA
 JRI_GEN		= netscape.javascript.JSObject netscape.javascript.JSException
+endif
 
 ifdef JAVA_OR_OJI
 EXPORTS		= jsjava.h \
@@ -89,3 +97,10 @@ $(OBJDIR)/stubs.o:
 endif
 
 export:: install
+
+ifndef REGENERATE
+
+export:: jsj10.jar
+	$(INSTALL) -m 444 jsj10.jar $(JAVA_DESTPATH)
+
+endif

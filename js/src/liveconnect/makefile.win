@@ -33,7 +33,9 @@ DEPTH= ..\..\..
 include <$(DEPTH)/config/config.mak>
 
 !ifdef JAVA_OR_OJI
+!ifdef REGENERATE
 DIRS = classes
+!endif
 !endif
 
 
@@ -65,7 +67,7 @@ LLIBS=$(LIBNSPR) $(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib
 #// Define the files necessary to build the target (ie. OBJS)
 #//
 #//------------------------------------------------------------------------
-!ifdef JAVA_OR_OJI
+!ifdef MOZ_OJI
 OBJS=                                       \
     .\$(OBJDIR)\jsj.obj                     \
     .\$(OBJDIR)\jsj_JSObject.obj            \
@@ -89,7 +91,7 @@ OBJS=                                       \
     .\$(OBJDIR)\jsjava.obj                  \
     .\$(OBJDIR)\jsStubs.obj                 \
     $(NULL)
-!endif # JAVA_OR_OJI
+!endif # MOZ_OJI
 #
 
 #//------------------------------------------------------------------------
@@ -108,10 +110,14 @@ INSTALL_FILE_LIST=	\
 #//		  
 #//------------------------------------------------------------------------
 
+!ifdef REGENERATE
+
 JNI_GEN=                            \
-    netscape.javascript.JSObject            \
-    netscape.javascript.JSException         \
+        netscape.javascript.JSObject            \
+        netscape.javascript.JSException         \
 	$(NULL)
+
+!endif
 
 MODULE = java
 !ifdef JAVA_OR_OJI
@@ -147,13 +153,23 @@ include <$(DEPTH)/config/rules.mak>
 
 export::  INSTALL_FILES
 
+!ifndef REGENERATE
+
+export:: jsj10.jar
+        $(MAKE_INSTALL) jsj10.jar $(JAVA_DESTPATH)
+
+!endif
+
 libs::  $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 
+!ifdef REGENERATE
+
 clobber::
     $(RM_R) _jni 
 
+!endif
 
 ####
 # this bit of extreme scariness came from the js/src makefile
