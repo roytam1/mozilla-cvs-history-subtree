@@ -39,7 +39,9 @@
 #ifndef __NS_SVGLIBART_FREETYPE_H__
 #define __NS_SVGLIBART_FREETYPE_H__
 
-#include "nsFreeType.h"
+#include "nsIFreeType2.h"
+#include "nsIFontCatalogService.h"
+#include "nsCOMPtr.h"
 
 namespace nsSVGLibartFreetype {
   /**

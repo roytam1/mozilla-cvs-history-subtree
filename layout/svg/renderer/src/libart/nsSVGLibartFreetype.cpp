@@ -39,6 +39,7 @@
 #include "nsSVGLibartFreetype.h"
 #include "nsIServiceManager.h"
 #include "nsArray.h"
+#include "nsString.h"
 
 nsCOMPtr<nsIFreeType2> nsSVGLibartFreetype::ft2;
 nsCOMPtr<nsIFontCatalogService> nsSVGLibartFreetype::fontCatalog;

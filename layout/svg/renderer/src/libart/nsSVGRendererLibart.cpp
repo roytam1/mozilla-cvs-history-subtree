@@ -44,6 +44,7 @@
 #include "nsSVGLibartGlyphGeometryDefault.h"
 #include "nsSVGLibartGlyphMetricsDefault.h"
 #ifdef MOZ_ENABLE_FREETYPE2
+#include "nsString.h"
 #include "nsIServiceManager.h"
 #include "nsSVGLibartFreetype.h"
 #include "nsSVGLibartGlyphGeometryFT.h"

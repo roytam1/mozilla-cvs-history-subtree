@@ -40,7 +40,7 @@
 #define __NS_ISVGLIBART_GLYPHMETRICS_FT_H__
 
 #include "nsISVGRendererGlyphMetrics.h"
-#include "nsFreeType.h"
+#include "nsIFreeType2.h"
 
 // {b74698f5-b016-4423-a742-d2a14e5d8c45}
 #define NS_ISVGLIBARTGLYPHMETRICSFT_IID \
