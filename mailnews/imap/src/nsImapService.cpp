@@ -1213,7 +1213,9 @@ nsImapService::AppendMessageFromFile(nsIEventQueue* aClientEventQueue,
         }
         nsCOMPtr<nsIURI> url = do_QueryInterface(imapUrl, &rv);
         if (NS_SUCCEEDED(rv))
-            rv = url->SetSpec(urlSpec.GetBuffer());
+			// mscott - this cast is OK....bug in idl compiler is preventing
+			// the argument in SetSpec from being expressed as a const char *
+            rv = url->SetSpec((char *) urlSpec.GetBuffer());
         if (NS_SUCCEEDED(rv))
             rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                              aListener, nsnull, aURL);
