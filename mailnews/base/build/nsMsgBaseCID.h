@@ -434,4 +434,18 @@
   {0x2db43d16, 0xe5c8, 0x11d4, \
     {0xa5, 0xb7, 0x00,0x60, 0xb0, 0xfc, 0x04, 0xb7 }}
 
+//
+// nsMsgDBView
+//
+#define NS_MSGDBVIEW_CONTRACTID_PREFIX \
+  "@mozilla.org/messenger/msgdbview;1?type="
+
+#define NS_MSGTHREADEDDBVIEW_CONTRACTID \
+  NS_MSGDBVIEW_CONTRACTID_PREFIX "threaded"
+
+/* 52f860e0-1dd2-11b2-aa72-bb751981bd00 */
+#define NS_MSGTHREADEDDBVIEW_CID \
+  {0x52f860e0, 0x1dd2, 0x11b2, \
+    {0xaa, 0x72, 0xbb,0x75, 0x19, 0x81, 0xbd, 0x00 }}
+
 #endif // nsMessageBaseCID_h__

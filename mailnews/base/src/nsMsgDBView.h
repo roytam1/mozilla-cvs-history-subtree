@@ -25,8 +25,16 @@
 
 #include "nsIMsgDBView.h"
 #include "nsIMsgDatabase.h"
+#include "nsIMsgHdr.h"
 #include "nsMsgLineBuffer.h" // for nsByteArray
 #include "nsMsgKeyArray.h"
+
+enum eFieldType {
+    kString,
+    kU16,
+    kU32,
+    kU64
+};
 
 // I think this will be an abstract implementation class.
 // The classes that implement the outliner support will probably
@@ -43,6 +51,8 @@ public:
 protected:
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
   nsresult ExpandAll();
+  nsresult ReverseSort();
+  nsresult ReverseThreads();
 
 	PRInt32	  GetSize(void) {return(m_keys.GetSize());}
 
@@ -56,6 +66,9 @@ protected:
 	void	NoteEndChange(nsMsgViewIndex firstlineChanged, PRInt32 numChanged, 
 							   nsMsgViewNotificationCodeValue changeType);
 
+  nsresult GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType);
+  nsresult GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, char **result);
+  nsresult GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result);
   
   nsMsgKeyArray m_keys;
   nsUInt32Array m_flags;
@@ -63,9 +76,10 @@ protected:
 
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;
-	nsMsgViewSortTypeValue	m_sortType;
+  nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgDBViewTypeValue m_viewType;
 };
+
 
 #endif

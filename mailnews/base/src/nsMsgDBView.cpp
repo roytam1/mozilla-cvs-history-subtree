@@ -23,7 +23,6 @@
 #include "msgCore.h"
 #include "nsMsgDBView.h"
 #include "nsISupports.h"
-#include "nsIMsgHdr.h"
 
 /* Implementation file */
 
@@ -44,8 +43,7 @@ nsMsgDBView::~nsMsgDBView()
   /* destructor code */
 }
 
-/* void open (in nsIMsgDatabase msgDB, in nsMsgViewSortType viewType); */
-NS_IMETHODIMP nsMsgDBView::Open(nsIMsgDatabase *msgDB, nsMsgViewSortType *viewType, PRInt32 *pCount)
+NS_IMETHODIMP nsMsgDBView::Open(nsIMsgDatabase *msgDB, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -60,14 +58,335 @@ NS_IMETHODIMP nsMsgDBView::Init(PRInt32 *pCount)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortType *sortType, PRInt32 numKeysToAdd)
+NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortType *sortType, nsMsgViewSortOrder *sortOrder)
+nsresult nsMsgDBView::ReverseThreads()
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    printf("XXX same sort type, just different sort order.  just reverse threads\n");
+    return NS_OK;
+}
+
+nsresult nsMsgDBView::ReverseSort()
+{
+    PRUint32 num = GetSize();
+
+    // go up half the array swapping values
+    for (PRUint32 i = 0; i < (num / 2); i++) {
+        // swap flags
+        PRUint32 end = num - i - 1;
+        PRUint32 tempFlags = m_flags.GetAt(i);
+        m_flags.SetAt(i, m_flags.GetAt(end));
+        m_flags.SetAt(end, tempFlags);
+
+        // swap keys
+        nsMsgKey tempKey = m_keys.GetAt(i);
+        m_keys.SetAt(i, m_keys.GetAt(end));
+        m_keys.SetAt(end, tempKey);
+
+        // no need to swap elements in m_levels, 
+        // since we won't call ReverseSort() if we
+        // are in threaded mode, so m_levels are all the same.
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::PopulateView()
+{
+    PRUint32 i;
+    for (i=0;i<10;i++) {
+        m_keys.InsertAt(i,i*100+1);
+        m_flags.InsertAt(i,i);
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::DumpView()
+{
+    PRUint32 i;
+    PRUint32 num = GetSize();
+    printf("#:  (key,flag)\n");
+    for (i = 0; i < num; i++) {
+        printf("%d:  (%d,%d)\n",i,m_keys.GetAt(i),m_flags.GetAt(i));
+    }
+    printf("\n");
+    return NS_OK;
+}
+
+typedef struct entryInfo
+{
+    nsMsgKey    id;
+    PRUint32    bits;
+} EntryInfo;
+
+typedef struct tagIdStr{
+    EntryInfo   info;
+    char        str[1];
+} IdStr;
+
+/* better place for these? */
+const int kMaxSubject = 160;
+const int kMaxAuthor = 160;
+const int kMaxRecipient = 80;
+const int kMaxMsgIdLen = 80;
+const int kMaxReferenceLen = 10 * kMaxMsgIdLen;
+
+nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType)
+{
+    NS_ENSURE_ARG_POINTER(pMaxLen);
+    NS_ENSURE_ARG_POINTER(pFieldType);
+
+    switch (sortType) {
+        case nsMsgViewSortType::bySubject:
+            *pFieldType = kString;
+            *pMaxLen = kMaxSubject;
+            break;
+        case nsMsgViewSortType::byRecipient:
+            *pFieldType = kString;
+            *pMaxLen = kMaxRecipient;
+            break;
+        case nsMsgViewSortType::byAuthor:
+            *pFieldType = kString;
+            *pMaxLen = kMaxAuthor;
+            break;
+        case nsMsgViewSortType::byDate:
+            *pFieldType = kU64;
+            *pMaxLen = sizeof(PRTime);
+            break;
+        case nsMsgViewSortType::byPriority:
+        case nsMsgViewSortType::byThread:
+        case nsMsgViewSortType::byId:
+        case nsMsgViewSortType::bySize:
+        case nsMsgViewSortType::byFlagged:
+        case nsMsgViewSortType::byUnread:
+        case nsMsgViewSortType::byStatus:
+            *pFieldType = kU32;
+            *pMaxLen = sizeof(PRUint32);
+            break;
+        default:
+            return NS_ERROR_UNEXPECTED;
+    }
+
+    return NS_OK;
+}
+
+nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result)
+{
+  NS_ENSURE_ARG_POINTER(msgHdr);
+  NS_ENSURE_ARG_POINTER(result);
+  *result = 1;
+  return NS_OK;
+}
+
+
+nsresult nsMsgDBView::GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, char **result)
+{
+  NS_ENSURE_ARG_POINTER(msgHdr);
+  NS_ENSURE_ARG_POINTER(result);
+#if 0
+  const char *pField;
+
+  switch (sortType) {
+    case nsMsgViewSortType::bySubject:
+        if (msgHdr->GetSubject(string))
+            pField = string;
+        else
+            pField = "";
+        break;
+    case SortByRecipient:
+        msgHdr->GetNameOfRecipient(string, 0, m_messageDB->GetDB());
+        pField = string;
+        break;
+    case SortByAuthor:
+        msgHdr->GetRFC822Author(string);
+        pField = string;
+        break;
+    default:
+//      XP_ASSERT(FALSE);
+        return(0);
+    }
+    return INTL_DecodeMimePartIIAndCreateCollationKey(pField, csid, 0);
+#endif
+    *result = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
+{
+    nsresult rv;
+
+    printf("XXX nsMsgDBView::Sort(%d,%d)\n",(int)sortType,(int)sortOrder);
+    if (m_sortType == sortType && m_sortValid) {
+        if (m_sortOrder == sortOrder) {
+            printf("XXX same as it ever was.  do nothing\n");
+            return NS_OK;
+        }   
+        else {
+            if (m_sortType != nsMsgViewSortType::byThread) {
+                rv = ReverseSort();
+                NS_ENSURE_SUCCESS(rv,rv);
+            }
+            else {
+                rv = ReverseThreads();
+                NS_ENSURE_SUCCESS(rv,rv);
+            }
+
+            m_sortOrder = sortOrder;
+            return NS_OK;
+        }
+    }
+
+    if (sortType == nsMsgViewSortType::byThread) {
+        return NS_OK;
+    }
+
+    // figure out how much memory we'll need, and the malloc it
+    PRUint16 maxLen;
+    eFieldType fieldType;
+
+    rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    PRUint32 arraySize = GetSize();
+    IdStr** pPtrBase = (IdStr**)PR_Malloc(arraySize * sizeof(IdStr*));
+    NS_ASSERTION(pPtrBase, "out of memory, can't sort");
+    if (!pPtrBase) return NS_ERROR_OUT_OF_MEMORY;
+    
+    // build up the beast, so we can sort it.
+    PRUint32 numSoFar = 0;
+    // calc max possible size needed for all the rest
+    PRUint32 maxSize = (PRUint32)(maxLen + sizeof(EntryInfo) + 1) * (PRUint32)(arraySize - numSoFar);
+
+    PRUint32 maxBlockSize = (uint32) 0xf000L;
+    PRUint32 allocSize = MIN(maxBlockSize, maxSize);
+    char *pTemp = (char *) PR_Malloc(allocSize);
+    NS_ASSERTION(pTemp, "out of memory, can't sort");
+    if (!pTemp) {   
+        PR_FREEIF(pPtrBase);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    char * pBase = pTemp;
+    PRBool more = PR_TRUE;
+
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    PRUint32 longValue;
+    while (more && numSoFar < arraySize) {
+      nsMsgKey thisKey = m_keys.GetAt(numSoFar);
+      if (sortType != nsMsgViewSortType::byId) {
+        rv = m_db->GetMsgHdrForKey(thisKey, getter_AddRefs(msgHdr));
+        NS_ASSERTION(NS_SUCCEEDED(rv) && msgHdr, "header not found");
+        if (NS_FAILED(rv) || !msgHdr) {
+          PR_FREEIF(pPtrBase);
+          PR_FREEIF(pTemp);
+          return NS_ERROR_UNEXPECTED;
+        }
+      }
+      else {
+        msgHdr = nsnull;
+      }
+
+      // could be a problem here if the ones that appear here are different than the ones already in the array
+      const char* pField = nsnull;
+      char *intlString = nsnull;
+      PRUint32 paddedFieldLen = 0;
+      PRUint32 actualFieldLen = 0;
+      if (fieldType == kString) {
+        rv = GetStringField(msgHdr, sortType, &intlString);
+        NS_ENSURE_SUCCESS(rv,rv);
+        pField = intlString;
+        //"Re:" might be encoded inside subject field using MIMEII encoding,
+        //It should be stripped before sorting
+        printf("msg_StripRE(&pField, 0);\n");
+        actualFieldLen = (pField) ? nsCRT::strlen(pField) + 1 : 1;
+        paddedFieldLen = actualFieldLen;
+        PRUint32 mod4 = actualFieldLen % 4;
+        if (mod4 > 0) {
+          paddedFieldLen += 4 - mod4;
+        }
+      }
+      else if (fieldType == kU64) {
+        printf("not implemented yet\n");
+      }
+      else {
+        if (sortType == nsMsgViewSortType::byId) {
+            longValue = thisKey;
+        }
+        else {
+            rv = GetLongField(msgHdr, sortType, &longValue);
+            NS_ENSURE_SUCCESS(rv,rv);
+        }
+        pField = (const char *) &longValue;
+        actualFieldLen = paddedFieldLen = maxLen;
+      }
+
+      // check to see if this entry fits into the block we have allocated so far
+      // pTemp - pBase = the space we have used so far
+      // sizeof(EntryInfo) + fieldLen = space we need for this entry
+      // allocSize = size of the current block
+      if ((PRUint32)(pTemp - pBase) + (PRUint32)sizeof(EntryInfo) + (PRUint32)paddedFieldLen >= allocSize) {
+        maxSize = (PRUint32)(maxLen + sizeof(EntryInfo) + 1) * (PRUint32)(arraySize - numSoFar);
+        maxBlockSize = (PRUint32) 0xf000L;
+        allocSize = MIN(maxBlockSize, maxSize);
+        pTemp = (char*)PR_Malloc(allocSize);
+        NS_ASSERTION(pTemp, "out of memory, can't sort");
+        if (!pTemp) {
+          PR_FREEIF(pPtrBase);
+          return NS_ERROR_OUT_OF_MEMORY;
+        }
+        pBase = pTemp;
+      }
+
+      // make sure there aren't more IDs than we allocated space for
+      NS_ASSERTION(numSoFar >= arraySize, "out of memory");
+      if (numSoFar >= arraySize) {
+        PR_FREEIF(pPtrBase);
+        PR_FREEIF(pTemp);
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+
+      // now store this entry away in the allocated memory
+      pPtrBase[numSoFar] = (IdStr*)pTemp;
+      EntryInfo *info = (EntryInfo *)  pTemp;
+      info->id = thisKey;
+      PRUint32 bits= 0;
+      bits = m_flags.GetAt(numSoFar);
+      info->bits = bits;
+      pTemp += sizeof(EntryInfo);
+      PRInt32 bytesLeft = allocSize - (PRInt32)(pTemp - pBase);
+      PRInt32 bytesToCopy = MIN(bytesLeft, (PRInt32)actualFieldLen);
+      if (pField && bytesToCopy > 0) {
+        memcpy((char *)pTemp, pField, bytesToCopy);
+        if (bytesToCopy < (PRInt32)actualFieldLen) {
+          NS_ASSERTION(0, "wow, big block");
+          *(pTemp + bytesToCopy - 1) = '\0';
+        }
+        PR_FREEIF(intlString); // free intl'ized string
+      }
+      else {
+        *pTemp = 0;
+      }
+      pTemp += paddedFieldLen;
+      ++numSoFar;
+    }
+
+    // do the sort
+    // use new array to shuffle m_keys
+
+    m_sortType = sortType;
+    m_sortOrder = sortOrder;
+
+    if (sortOrder == nsMsgViewSortOrder::descending) {
+        rv = ReverseSort();
+        NS_ASSERTION(NS_SUCCEEDED(rv),"failed to reverse sort");
+    }
+
+    // free new array
+
+    return NS_OK;
 }
 
 nsresult nsMsgDBView::ExpandAll()
@@ -84,10 +403,10 @@ nsresult nsMsgDBView::ExpandAll()
 
 nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded)
 {
-	int				numListed;
+	int				numListed = 0;
 	char			flags = m_flags[index];
 	nsMsgKey		firstIdInThread, startMsg = nsMsgKey_None;
-	nsresult			rv;
+	nsresult		rv = NS_OK;
 	nsMsgViewIndex	firstInsertIndex = index + 1;
 	nsMsgViewIndex	insertIndex = firstInsertIndex;
 	uint32			numExpanded = 0;
@@ -99,12 +418,12 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	NS_ASSERTION(flags & MSG_FLAG_ELIDED, "can't expand an already expanded thread");
 	flags &= ~MSG_FLAG_ELIDED;
 
-	if ((int) index > m_keys.GetSize())
+	if ((PRUint32) index > m_keys.GetSize())
 		return NS_MSG_MESSAGE_NOT_FOUND;
 
 	firstIdInThread = m_keys[index];
 	nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  m_db->GetMsgHdrForKey(firstIdInThread, getter_AddRefs(msgHdr));
+    m_db->GetMsgHdrForKey(firstIdInThread, getter_AddRefs(msgHdr));
 	if (msgHdr == nsnull)
 	{
 		NS_ASSERTION(PR_FALSE, "couldn't find message to expand");
@@ -115,11 +434,11 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	do
 	{
 		const int listChunk = 200;
+#ifdef ON_BRANCH_YET
 		nsMsgKey	listIDs[listChunk];
 		char		listFlags[listChunk];
 		char		listLevels[listChunk];
 
-#ifdef ON_BRANCH_YET
 		if (m_viewFlags & kUnreadOnly)
 		{
 			if (flags & MSG_FLAG_READ)

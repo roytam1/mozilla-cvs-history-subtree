@@ -84,6 +84,7 @@
 #include "nsMsgSearchAdapter.h"
 #include "nsMsgSearchDataSource.h"
 #include "nsMsgFolderCompactor.h"
+#include "nsMsgThreadedDBView.h"
 
 // private factory declarations for each component we know how to produce
 
@@ -121,6 +122,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSubscribableServer, Init);
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgPrintEngine, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFolderCompactState)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOfflineStoreCompactState)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgThreadedDBView);
 
 // The list of components we register
 static nsModuleComponentInfo gComponents[] = {
@@ -292,6 +294,10 @@ static nsModuleComponentInfo gComponents[] = {
     { "offline store compactor", NS_MSG_OFFLINESTORECOMPACTOR_CID,
       NS_MSGOFFLINESTORECOMPACTOR_CONTRACTID,
       nsOfflineStoreCompactStateConstructor,
+    },
+    { "threaded db view", NS_MSGTHREADEDDBVIEW_CID,
+      NS_MSGTHREADEDDBVIEW_CONTRACTID,
+      nsMsgThreadedDBViewConstructor,
     }
 };
 
