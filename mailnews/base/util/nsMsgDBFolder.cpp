@@ -74,6 +74,7 @@
 #include "nsIRDFService.h"
 #include "nsTextFormatter.h"
 #include "nsCPasswordManager.h"
+#include "nsMsgDBCID.h"
 
 #include <time.h>
 
@@ -89,6 +90,7 @@ static PRTime gtimeOfLastPurgeCheck;    //variable to know when to check for pur
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
+static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 
 nsIAtom* nsMsgDBFolder::mFolderLoadedAtom=nsnull;
 nsIAtom* nsMsgDBFolder::mDeleteOrMoveMsgCompletedAtom=nsnull;
@@ -249,6 +251,13 @@ NS_IMETHODIMP nsMsgDBFolder::ForceDBClosed()
     {
         mDatabase->ForceClosed();
         mDatabase = nsnull;
+    }
+    else
+    {
+      nsCOMPtr<nsIMsgDatabase> mailDBFactory;
+      nsresult rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), (void **) getter_AddRefs(mailDBFactory));
+      if (NS_SUCCEEDED(rv) && mailDBFactory)
+        mailDBFactory->ForceFolderDBClosed(this);
     }
     return NS_OK;
 }
