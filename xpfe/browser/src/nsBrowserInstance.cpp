@@ -1078,6 +1078,16 @@ static nsModuleComponentInfo components[] = {
   },
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/bmp", 
+    nsBrowserContentHandlerConstructor 
+  },
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/x-icon", 
+    nsBrowserContentHandlerConstructor 
+  },
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/http-index-format", 
     nsBrowserContentHandlerConstructor 
   },

@@ -103,6 +103,7 @@
 #include "nsObjectFrame.h"
 #include "nsRuleNode.h"
 #include "nsIXULDocument.h"
+#include "nsIPrintPreviewContext.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
@@ -3267,10 +3268,12 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
   PRBool isScrollable = IsScrollable(aPresContext, display);
   PRBool isPaginated = PR_FALSE;
   aPresContext->IsPaginated(&isPaginated);
+  nsCOMPtr<nsIPrintPreviewContext> printPreviewContext(do_QueryInterface(aPresContext));
+
   nsIFrame* scrollFrame = nsnull;
 
   // build a scrollframe
-  if (!isPaginated && isScrollable) {
+  if ((!isPaginated || (isPaginated && printPreviewContext)) && isScrollable) {
     nsIFrame* newScrollFrame = nsnull;
     nsCOMPtr<nsIStyleContext> newContext;
 
@@ -3563,6 +3566,8 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
     PRBool isPaginated = PR_FALSE;
     aPresContext->IsPaginated(&isPaginated);
+    nsCOMPtr<nsIPrintPreviewContext> printPreviewContext(do_QueryInterface(aPresContext));
+
     nsIFrame* rootFrame = nsnull;
     nsIAtom* rootPseudo;
         
@@ -3594,13 +3599,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   // for print-preview, but not when printing), then create a scroll frame that
   // will act as the scrolling mechanism for the viewport. 
   // XXX Do we even need a viewport when printing to a printer?
-  PRBool  isScrollable = PR_TRUE;
-  if (aPresContext) {
-    PRBool  isPaginated = PR_FALSE;
-    if (NS_SUCCEEDED(aPresContext->IsPaginated(&isPaginated))) {
-      isScrollable = !isPaginated;
-    }
-  }
+  PRBool isScrollable = PR_TRUE;
 
   //isScrollable = PR_FALSE;
 
@@ -3645,6 +3644,19 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
     }
   }
 
+  if (aPresContext) {
+    PRBool isPaginated = PR_FALSE;
+    if (NS_SUCCEEDED(aPresContext->IsPaginated(&isPaginated))) {
+      if (isPaginated) {
+        if (printPreviewContext) { // print preview
+          aPresContext->GetPaginatedScrolling(&isScrollable);
+        } else {
+          isScrollable = PR_FALSE; // we are printing
+        }
+      }
+    }
+  }
+
   nsIFrame* newFrame = rootFrame;
   nsCOMPtr<nsIStyleContext> rootPseudoStyle;
   // we must create a state because if the scrollbars are GFX it needs the 
@@ -3658,7 +3670,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   nsIFrame* parentFrame = viewportFrame;
 
   // If paginated, make sure we don't put scrollbars in
-  if (isPaginated)
+  if (isPaginated && !printPreviewContext)
     aPresContext->ResolvePseudoStyleContextFor(nsnull, rootPseudo,
                                                viewportPseudoStyle, PR_FALSE,
                                                getter_AddRefs(rootPseudoStyle));
@@ -3755,7 +3767,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
   rootFrame->Init(aPresContext, nsnull, parentFrame, rootPseudoStyle, nsnull);
   
-  if (!isPaginated) {
+  if (!isPaginated || (isPaginated && printPreviewContext)) {
     if (isScrollable) {
       FinishBuildingScrollFrame(aPresContext, 
                                 state,
@@ -3771,7 +3783,9 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
         parentFrame->SetInitialChildList(aPresContext, nsnull, rootFrame);
       }
     }
-  } else { // paginated
+  } 
+  
+  if (isPaginated) { // paginated
     // Create the first page
     nsIFrame* pageFrame;
     NS_NewPageFrame(aPresShell, &pageFrame);
