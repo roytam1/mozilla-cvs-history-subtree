@@ -46,6 +46,7 @@
 #include "nsTextFragment.h"
 #ifdef IBMBIDI
 #include "nsBlockFrame.h"
+#include "nsIFormControlFrame.h"
 
 nsresult
 NS_SetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32 aStart, PRInt32 aEnd);
@@ -971,14 +972,55 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   PRBool bidiEnabled;
   mPresContext->BidiEnabled(bidiEnabled);
-  if ( (bidiEnabled) && (frameType == nsLayoutAtoms::textFrame) ) {
-    aFrame->GetOffsets(start, end);
-    if (start < end) {
-      isBidiFrame = PR_TRUE;
+  PRBool visual;
+  nsIFrame* formFrame = nsnull;
+
+  if (bidiEnabled) {
+    if (frameType == nsLayoutAtoms::textFrame) {
+      aFrame->GetOffsets(start, end);
+      if (start < end) {
+        isBidiFrame = PR_TRUE;
+      }
+    }
+    else if (NS_SUCCEEDED(aFrame->QueryInterface(nsIFormControlFrame::GetIID(),
+                          (void**) &formFrame) )
+        && (formFrame) ) {
+  
+      mPresContext->IsVisualMode(visual);
+
+      nsBidiOptions options;
+    	mPresContext->GetBidi(&options);
+
+      if (IBMBIDI_CONTROLSTEXTMODE_VISUAL == options.mcontrolstextmode) {
+        mPresContext->SetVisualMode(PR_TRUE);
+      }
+      else if (IBMBIDI_CONTROLSTEXTMODE_LOGICAL == options.mcontrolstextmode) {
+        mPresContext->SetVisualMode(PR_FALSE);
+      }
+      else { // IBMBIDI_CONTROLSTEXTMODE_CONTAINER
+        nsILanguageAtom* lang;
+        if (NS_SUCCEEDED(mPresContext->GetLanguage(&lang) ) && lang) {
+          static const PRUnichar buffer[] = 
+            {0x0068, 0x0065, 0x002d, 0x0069, 0x006c, 0x0000}; // he-il
+          PRBool hebrew;
+          lang->LanguageIs(buffer, &hebrew);
+          if (hebrew) {
+            // Ensure logical text type for Hebrew
+            mPresContext->SetVisualMode(PR_FALSE);
+          }
+        }
+        NS_IF_RELEASE(lang);
+      }
     }
   }
 #endif // IBMBIDI
   aFrame->Reflow(mPresContext, metrics, reflowState, aReflowStatus);
+
+#ifdef IBMBIDI
+  if (formFrame) {
+    mPresContext->SetVisualMode(visual);
+  }
+#endif // IBMBIDI
 
   pfd->mJustificationNumSpaces = mTextJustificationNumSpaces;
   pfd->mJustificationNumLetters = mTextJustificationNumLetters;

@@ -84,8 +84,6 @@ void ForceDrawFrame(nsIPresContext* aPresContext, nsFrame * aFrame);
 static void RefreshContentFrames(nsIPresContext* aPresContext, nsIContent * aStartContent, nsIContent * aEndContent);
 #endif
 
-
-
 //----------------------------------------------------------------------
 
 #ifdef NS_DEBUG
@@ -2634,7 +2632,13 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
       nsIView * view; //used for call of get offset from view
       aBlockFrame->GetOffsetFromView(aPresContext, offset,&view);
       nscoord newDesiredX  = aPos->mDesiredX - offset.x;//get desired x into blockframe coordinates!
+#ifdef IBMBIDI
+      PRBool bidiEnabled;
+      aPresContext->BidiEnabled(bidiEnabled);
+      result = it->FindFrameAt(searchingLine, newDesiredX, bidiEnabled, &resultFrame, &isBeforeFirstFrame, &isAfterLastFrame);
+#else
       result = it->FindFrameAt(searchingLine, newDesiredX, &resultFrame, &isBeforeFirstFrame, &isAfterLastFrame);
+#endif // IBMBIDI
       if(NS_FAILED(result))
         continue;
     }
@@ -3274,20 +3278,39 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
   PRInt32 lineFrameCount;
   PRUint32 lineFlags;
 
-  result = it->GetLine(thisLine, &firstFrame, &lineFrameCount,nonUsedRect,
-                       &lineFlags);
+#ifdef IBMBIDI
+  /* Check whether the visual and logical order of the frames are different */
+  PRBool lineIsReordered;
+  nsIFrame *firstVisual;
+  nsIFrame *lastVisual;
+
+  result = it->CheckLineOrder(thisLine, &lineIsReordered, &firstVisual, &lastVisual);
+
   if (NS_FAILED(result))
     return result;
 
-  lastFrame = firstFrame;
-  for (;lineFrameCount > 1;lineFrameCount --){
-    result = lastFrame->GetNextSibling(&lastFrame);
-    if (NS_FAILED(result)){
-      NS_ASSERTION(0,"should not be reached nsFrame\n");
-      return NS_ERROR_FAILURE;
+  if (lineIsReordered) {
+    firstFrame = firstVisual;
+    lastFrame = lastVisual;
+  }
+  else
+#endif
+  {
+    result = it->GetLine(thisLine, &firstFrame, &lineFrameCount,nonUsedRect,
+                         &lineFlags);
+    if (NS_FAILED(result))
+      return result;
+
+    lastFrame = firstFrame;
+    for (;lineFrameCount > 1;lineFrameCount --){
+      result = lastFrame->GetNextSibling(&lastFrame);
+      if (NS_FAILED(result)){
+        NS_ASSERTION(0,"should not be reached nsFrame\n");
+        return NS_ERROR_FAILURE;
+      }
     }
   }
- 
+
   GetFirstLeaf(aPresContext, &firstFrame);
   GetLastLeaf(aPresContext, &lastFrame);
   //END LINE DATA CODE
@@ -3298,7 +3321,16 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
       return NS_ERROR_FAILURE;//we are done. cannot jump lines
     if (aPos->mAmount != eSelectWord)
     {
+#ifdef IBMBIDI // For Bidi we will have to spell this out
+#define HINTRIGHT 1
+#define HINTLEFT 0
+      if (aPos->mDirection == eDirNext)
+        aPos->mPreferLeft = HINTRIGHT;
+      else
+        aPos->mPreferLeft = HINTLEFT;
+#else
       aPos->mPreferLeft = (PRBool)!(aPos->mPreferLeft);//drift to other side
+#endif // IBMBIDI
       aPos->mAmount = eSelectNoAmount;
     }
     else{
@@ -3306,7 +3338,11 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
         return NS_ERROR_FAILURE;
       if (aPos->mDirection == eDirNext)
       {
+#ifdef IBMBIDI // For Bidi we will have to spell this out
+        aPos->mPreferLeft = HINTRIGHT;
+#else
         aPos->mPreferLeft = (PRBool)!(aPos->mPreferLeft);//drift to other side
+#endif // IBMBIDI
         aPos->mAmount = eSelectNoAmount;
       }
     }
@@ -3315,6 +3351,11 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
   if (aPos->mAmount == eSelectDir)
     aPos->mAmount = eSelectNoAmount;//just get to next frame.
   nsCOMPtr<nsIBidirectionalEnumerator> frameTraversal;
+#ifdef IBMBIDI // Simon
+  if (lineIsReordered)
+    result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal),VISUAL, aPresContext, this);
+  else
+#endif
   result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal),LEAF, aPresContext, this);
   if (NS_FAILED(result))
     return result;
@@ -3338,10 +3379,24 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
   newFrame->IsSelectable(&selectable, nsnull);
   if (!selectable)
     return NS_ERROR_FAILURE;
-  if (aPos->mDirection == eDirNext)
-    aPos->mStartOffset = 0;
+#ifdef IBMBIDI // Simon
+  if (aPos->mAmount != eSelectNoAmount)
+  {
+    PRUint8 level;
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+    if (aPos->mDirection == eDirNext)
+      aPos->mStartOffset = (level & 1) ? -1 : 0;
+    else
+      aPos->mStartOffset = (level & 1) ? 0 : -1;
+  }
   else
-    aPos->mStartOffset = -1;
+#endif
+  {
+    if (aPos->mDirection == eDirNext)
+      aPos->mStartOffset = 0;
+    else
+      aPos->mStartOffset = -1;
+  }
   aPos->mResultFrame = newFrame;
   return NS_OK;
 }

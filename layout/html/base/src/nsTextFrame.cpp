@@ -1924,23 +1924,23 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
       }
     }
 //ahmed for visual rtl
-		nsBidiOptions mBidiop;
-		PRBool mIsvisual;
+    nsBidiOptions mBidiop;
+    PRBool mIsvisual;
     aPresContext->IsVisualMode(mIsvisual);
     aPresContext->GetBidi(&mBidiop);
-		nsAutoString charset;
-		if((mIsvisual)&&(mBidiop.mdirection==IBMBIDI_TEXTDIRECTION_RTL)){
-		 	PRUnichar buffer[8192];
-	  	PRInt32 newLen;
-	  	nsresult rv;
-	  	NS_WITH_SERVICE(nsIBidi, bidiEngine, kBidiCID, &rv);
-	  	bidiEngine->writeReverse(text,textLength, buffer,
-                                   UBIDI_REMOVE_BIDI_CONTROLS | UBIDI_DO_MIRRORING,
-                                   &newLen);
+    nsAutoString charset;
+    if((mIsvisual)&&(mBidiop.mdirection==IBMBIDI_TEXTDIRECTION_RTL)){
+      PRUnichar buffer[8192];
+      PRInt32 newLen;
+      nsresult rv;
+      NS_WITH_SERVICE(nsIBidi, bidiEngine, kBidiCID, &rv);
+      bidiEngine->writeReverse(text,textLength, buffer,
+                               UBIDI_REMOVE_BIDI_CONTROLS | UBIDI_DO_MIRRORING,
+                               &newLen);
       for (PRInt32 i = 0; i < newLen; i++) {
-      text[i] = buffer[i];
+        text[i] = buffer[i];
+      }
     }
-	}
 
     if (0 != textLength) { // textLength might change due to the bidi formattimg
 #endif // IBMBIDI
@@ -2991,7 +2991,7 @@ nsTextFrame::GetPosition(nsIPresContext* aCX,
 
 #ifdef IBMBIDI // Simon -- convert the index from the visual text to a content-based index
         if (isOddLevel)
-          indx = textLength - indx - 1;
+          indx = textLength - indx;
 #endif
 
         aContentOffset = indx + mContentOffset;
@@ -3243,22 +3243,6 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
 
   numSpaces = PrepareUnicodeText(tx, &indexBuffer, &paintBuffer, &textLength);
 
-#ifdef IBMBIDI // Simon -- reverse RTL text here
-  PRUint8 level;
-  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
-  if (level & 1) {
-    PRUnichar* text = paintBuffer.mBuffer;
-    PRUnichar *tStart, *tEnd;
-    PRUnichar tSwap;
-    for (tStart = text, tEnd = tStart + textLength - 1; tEnd > tStart; tStart++, tEnd--) {
-      tSwap = *tStart;
-      *tStart = *tEnd;
-      *tEnd = tSwap;
-    }
-    inOffset = textLength - inOffset;
-  }
-#endif // IBMBIDI
-
   ComputeExtraJustificationSpacing(*inRendContext, ts, paintBuffer.mBuffer, textLength, numSpaces);
 
 
@@ -3279,6 +3263,28 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
   }
   else
   {
+#ifdef IBMBIDI
+    PRUint8 level;
+    GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+    if ((level & 1) && (inOffset <= textLength))
+      // if inOffset > textLength, no need for Bidi processing: who cares in which direction we measure the whole content?
+    {
+      PRInt32 bidiOffset = textLength - inOffset;
+      if (ts.mSmallCaps || (0 != ts.mWordSpacing) || (0 != ts.mLetterSpacing) || ts.mJustifying)
+      {
+        GetWidth(*inRendContext, ts,
+                 paintBuffer.mBuffer + inOffset, ip[bidiOffset]-mContentOffset,
+                 &width);
+      }
+      else
+      {
+        if (bidiOffset >=0)
+          inRendContext->GetWidth(paintBuffer.mBuffer + inOffset, ip[bidiOffset]-mContentOffset,width);
+      }
+    }
+    else
+    {
+#endif
     if (ts.mSmallCaps || (0 != ts.mWordSpacing) || (0 != ts.mLetterSpacing) || ts.mJustifying)
     {
       GetWidth(*inRendContext, ts,
@@ -3290,6 +3296,9 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
       if (inOffset >=0)
         inRendContext->GetWidth(paintBuffer.mBuffer, ip[inOffset]-mContentOffset,width);
     }
+#ifdef IBMBIDI
+    }
+#endif
     if (inOffset > textLength && (TEXT_TRIMMED_WS & mState)){
       //
       // Offset must be after a space that has
@@ -3333,8 +3342,19 @@ nsTextFrame::GetChildFrameContainingOffset(PRInt32 inContentOffset,
     {
       return nextInFlow->GetChildFrameContainingOffset(inContentOffset, inHint, outFrameContentOffset, outChildFrame);
     }
-    else if (contentOffset != mContentLength) //that condition was only for when there is a choice
-      return NS_ERROR_FAILURE;
+    else {
+#ifdef IBMBIDI // Simon
+      nsIFrame *nextBidi;
+      GetNextSibling(&nextBidi);
+      if (nextBidi)
+        return nextBidi->GetChildFrameContainingOffset(inContentOffset, inHint, outFrameContentOffset, outChildFrame);
+      else
+#endif // IBMBIDI
+      {
+        if (contentOffset != mContentLength) //that condition was only for when there is a choice
+          return NS_ERROR_FAILURE;
+      }
+    }
   }
 
   if (inContentOffset < mContentOffset) //could happen with floaters!
@@ -3356,6 +3376,16 @@ nsTextFrame::GetChildFrameContainingOffset(PRInt32 inContentOffset,
 NS_IMETHODIMP
 nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos) 
 {
+#ifdef IBMBIDI
+  PRUint8 level;
+  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+  PRBool isOddLevel = (level & 1);
+  if ((eSelectCharacter == aPos->mAmount)
+      || (eSelectWord == aPos->mAmount)
+     // || (eSelectNoAmount == aPos->mAmount)
+     )
+    aPos->mPreferLeft ^= isOddLevel;
+#endif
 
   if (!aPos || !mContent)
     return NS_ERROR_NULL_POINTER;
@@ -3366,6 +3396,12 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
   }
   if (aPos->mStartOffset > (mContentOffset + mContentLength)){
     nsIFrame *nextInFlow;
+#ifdef IBMBIDI
+    if (isOddLevel) {
+      GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, (void**) &nextInFlow);
+    }
+    else
+#endif
     GetNextInFlow(&nextInFlow);
     if (!nextInFlow){
       NS_ASSERTION(PR_FALSE,"nsTextFrame::PeekOffset no more flow \n");
@@ -3441,11 +3477,8 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
       PRInt32 start;
       PRBool found = PR_TRUE;
 #ifdef IBMBIDI // Simon - RTL frames reverse meaning of previous and next
-      PRUint8 level;
-      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
       // so that right arrow always moves to the right on screen
       // and left arrow always moves left
-      PRBool isOddLevel = (level & 1);
       if ( ((aPos->mDirection == eDirPrevious) && !isOddLevel) ||
            ((aPos->mDirection == eDirNext) && isOddLevel) )
 #else
@@ -3529,11 +3562,8 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
       PRBool isWhitespace, wasTransformed;
       PRInt32 wordLen, contentLen;
 #ifdef IBMBIDI // Simon - RTL frames reverse meaning of previous and next
-      PRUint8 level;
-      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
       // so that right arrow always moves to the right on screen
       // and left arrow always moves left
-      PRBool isOddLevel = (level & 1);
       if ( ((aPos->mDirection == eDirPrevious) && !isOddLevel) ||
            ((aPos->mDirection == eDirNext) && isOddLevel) ) {
 #else

@@ -49,6 +49,12 @@
 #include "nsIIndependentSelection.h"
 #include "nsIPref.h"
 
+#ifdef IBMBIDI
+#include "nsFrameTraversal.h"
+#include "nsILineIterator.h"
+#include "nsLayoutAtoms.h"
+#endif // IBMBIDI
+
 #include "nsIDOMText.h"
 
 //included for desired x position;
@@ -307,6 +313,15 @@ public:
   NS_IMETHOD SetDelayedCaretData(nsMouseEvent *aMouseEvent);
   NS_IMETHOD GetDelayedCaretData(nsMouseEvent **aMouseEvent);
   NS_IMETHOD GetLimiter(nsIContent **aLimiterContent);
+#ifdef IBMBIDI
+  NS_IMETHOD GetPrevNextBidiLevels(nsIPresContext *aPresContext,
+                                   nsIContent *aNode,
+                                   PRUint32 aContentOffset,
+                                   nsIFrame **aPrevFrame,
+                                   nsIFrame **aNextFrame,
+                                   PRUint8 *aPrevLevel,
+                                   PRUint8 *aNextLevel);
+#endif
   /*END nsIFrameSelection interfacse*/
 
 
@@ -322,6 +337,15 @@ public:
 private:
   NS_IMETHOD TakeFocus(nsIContent *aNewFocus, PRUint32 aContentOffset, PRUint32 aContentEndOffset, 
                        PRBool aContinueSelection, PRBool aMultipleSelection);
+
+#ifdef IBMBIDI
+  void BidiLevelFromMove(nsIPresContext* aContext,
+                         nsISelectionController* aSelCon,
+                         nsIContent *aNode,
+                         PRUint32 aContentOffset,
+                         PRUint32 aKeycode);
+  void BidiLevelFromClick(nsIContent *aNewFocus, PRUint32 aContentOffset);
+#endif
 
 //post and pop reasons for notifications. we may stack these later
   void  PostReason(short aReason){mReason = aReason;}
@@ -1456,11 +1480,59 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
 #ifdef IBMBIDI
   // Mamdouh : Flage for VK key
   caret->AccessVirtualKey(1);
+
+  // Simon
+  nsCOMPtr<nsISelectionController> selCon;
+  selCon = do_QueryInterface(shell);
 #endif 
   pos.mPreferLeft = mHint;
   if (NS_SUCCEEDED(result) && NS_SUCCEEDED(result = frame->PeekOffset(context, &pos)) && pos.mResultContent)
   {
     mHint = (HINT)pos.mPreferLeft;
+#ifdef IBMBIDI
+    nsIFrame *theFrame;
+    PRInt32 currentOffset, frameStart, frameEnd;
+    PRUint8 level;
+
+    // XXX - I expected to be able to use pos.mResultFrame, but when we move from frame to frame
+    //       and |PeekOffset| is called recursively, pos.mResultFrame on exit is sometimes set to the original
+    //       frame, not the frame that we ended up in, so I need this call to |GetFrameForNodeOffset|.
+    //       I don't know if that could or should be changed or if it would break something else.
+    GetFrameForNodeOffset(pos.mResultContent, pos.mContentOffset, mHint, &theFrame, &currentOffset);
+    theFrame->GetOffsets(frameStart, frameEnd);
+
+    // the hint might have been reversed by an RTL frame, so make sure of it
+    if (nsIDOMKeyEvent::DOM_VK_HOME == aKeycode)
+      pos.mPreferLeft = PR_TRUE;
+    else if (nsIDOMKeyEvent::DOM_VK_END == aKeycode)
+      pos.mPreferLeft = PR_FALSE;
+    mHint = (HINT)pos.mPreferLeft;
+    switch (aKeycode) {
+      case nsIDOMKeyEvent::DOM_VK_HOME:
+      case nsIDOMKeyEvent::DOM_VK_END:
+
+        // force the offset to the logical beginning (for HOME) or end (for END) of the frame
+        // (if it is an RTL frame it will be at the visual beginning or end, which we don't want in this case)
+          if (nsIDOMKeyEvent::DOM_VK_HOME == aKeycode)
+        pos.mContentOffset = frameStart;
+          else
+            pos.mContentOffset = frameEnd;
+
+        // set the cursor Bidi level to the paragraph embedding level
+          theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, (void**) &level);
+          selCon->SetCursorBidiLevel(level);
+          break;
+
+      default:
+        // If the current position is not a frame boundary, it's enough just to take the Bidi level of the current frame
+        if (pos.mContentOffset != frameStart && pos.mContentOffset != frameEnd) {
+          theFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, (void**) &level);
+          selCon->SetCursorBidiLevel(level);
+        }
+        else
+          BidiLevelFromMove(context, selCon, pos.mResultContent, pos.mContentOffset, aKeycode);
+    }
+#endif
     result = TakeFocus(pos.mResultContent, pos.mContentOffset, pos.mContentOffset, aContinue, PR_FALSE);
   }
   else if (NS_FAILED(result))
@@ -1481,6 +1553,9 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
     {
       if (NS_SUCCEEDED(result = frame->PeekOffset(context, &pos)) && pos.mResultContent)
       {
+#ifdef IBMBIDI
+        BidiLevelFromMove(context, selCon, pos.mResultContent, pos.mContentOffset, aKeycode);
+#endif // IBMBIDI
         mHint = (HINT)pos.mPreferLeft;
         PostReason(nsIDOMSelectionListener::MOUSEUP_REASON);//force an update as though we used the mouse.
         result = TakeFocus(pos.mResultContent, pos.mContentOffset, pos.mContentOffset, aContinue, PR_FALSE);
@@ -1603,6 +1678,254 @@ nsDOMSelection::GetHint(PRBool *aHintRight)
   return rv;
 }
 
+#ifdef IBMBIDI
+NS_IMETHODIMP
+   nsSelection::GetPrevNextBidiLevels(nsIPresContext *aPresContext,
+                                      nsIContent *aNode,
+                                      PRUint32 aContentOffset,
+                                      nsIFrame **aPrevFrame,
+                                      nsIFrame **aNextFrame,
+                                      PRUint8 *aPrevLevel,
+                                      PRUint8 *aNextLevel)
+{
+  if (!aPrevFrame || !aNextFrame)
+    return NS_ERROR_NULL_POINTER;
+  // Get the level of the frames on each side
+  nsIFrame    *currentFrame;
+  PRInt32     currentOffset;
+  PRInt32     frameStart, frameEnd;
+  nsDirection direction;
+
+  GetFrameForNodeOffset(aNode, aContentOffset, mHint, &currentFrame, &currentOffset);
+  currentFrame->GetOffsets(frameStart, frameEnd);
+
+  if (frameStart == currentOffset)
+    direction = eDirPrevious;
+  else if (frameEnd == currentOffset)
+    direction = eDirNext;
+  else {
+    // we are neither at the beginning nor at the end of the frame, so we have no worries
+    *aPrevFrame = *aNextFrame = currentFrame;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+    *aPrevLevel = *aNextLevel;
+    return NS_OK;
+  }
+
+  /*
+  we have to find the next or previous *logical* frame.
+
+  Unfortunately |GetFrameFromDirection| has already been munged to return the next/previous *visual* frame, so we can't use that.
+  The following code is taken from there without the Bidi changes.
+
+  XXX is there a simpler way to do this? 
+  */
+
+  nsIFrame *blockFrame = currentFrame;
+  nsIFrame *thisBlock;
+  PRInt32   thisLine;
+  nsCOMPtr<nsILineIteratorNavigator> it; 
+  nsresult result = NS_ERROR_FAILURE;
+  while (NS_FAILED(result) && blockFrame)
+  {
+    thisBlock = blockFrame;
+    result = blockFrame->GetParent(&blockFrame);
+    if (NS_SUCCEEDED(result) && blockFrame){
+      result = blockFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(it));
+    }
+    else
+      blockFrame = nsnull;
+  }
+  if (!blockFrame || !it)
+    return NS_ERROR_FAILURE;
+  result = it->FindLineContaining(thisBlock, &thisLine);
+  if (NS_FAILED(result))
+    return result;
+
+  nsIFrame *firstFrame;
+  nsIFrame *lastFrame;
+  nsRect    nonUsedRect;
+  PRInt32   lineFrameCount;
+  PRUint32  lineFlags;
+
+  result = it->GetLine(thisLine, &firstFrame, &lineFrameCount,nonUsedRect,
+                       &lineFlags);
+  if (NS_FAILED(result))
+    return result;
+
+  lastFrame = firstFrame;
+
+  for (;lineFrameCount > 1;lineFrameCount --) {
+    result = lastFrame->GetNextSibling(&lastFrame);
+
+    if (NS_FAILED(result)){
+      NS_ASSERTION(0,"should not be reached nsFrame\n");
+      return NS_ERROR_FAILURE;
+    }
+  }
+
+  // GetFirstLeaf
+  nsIFrame *lookahead = nsnull;
+  while (1) {
+    result = firstFrame->FirstChild(aPresContext, nsnull, &lookahead);
+    if (NS_FAILED(result) || !lookahead)
+      break; //nothing to do
+    firstFrame = lookahead;
+  }
+
+  // GetLastLeaf
+  lookahead = nsnull;
+  while (1) {
+    result = lastFrame->FirstChild(aPresContext, nsnull, &lookahead);
+    if (NS_FAILED(result) || !lookahead)
+      break; //nothing to do
+    lastFrame = lookahead;
+    while (NS_SUCCEEDED(lastFrame->GetNextSibling(&lookahead)) && lookahead)
+      lastFrame = lookahead;
+  }
+  //END LINE DATA CODE
+
+  if (direction == eDirNext && lastFrame == currentFrame) { // End of line: set aPrevFrame to the current frame
+                                                            //              set aPrevLevel to the embedding level of the current frame
+                                                            //              set aNextFrame to null
+                                                            //              set aNextLevel to the paragraph embedding level
+    *aPrevFrame = currentFrame;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aPrevLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, (void**) aNextLevel);
+    *aNextFrame = nsnull;
+    return NS_OK;
+  }
+
+  if (direction == eDirPrevious && firstFrame == currentFrame) { // Beginning of line: set aPrevFrame to null
+                                                                 //                    set aPrevLevel to the paragraph embedding level
+                                                                 //                    set aNextFrame to the current frame
+                                                                 //                    set aNextLevel to the embedding level of the current frame
+    *aNextFrame = currentFrame;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, (void**) aPrevLevel);
+    *aPrevFrame = nsnull;
+    return NS_OK;
+  }
+
+  // Find the adjacent frame
+
+  nsCOMPtr<nsIBidirectionalEnumerator> frameTraversal;
+  result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal),LEAF, aPresContext, currentFrame);
+  if (NS_FAILED(result))
+    return result;
+  nsISupports *isupports = nsnull;
+  if (direction == eDirNext)
+    result = frameTraversal->Next();
+  else 
+    result = frameTraversal->Prev();
+
+  if (NS_FAILED(result))
+    return result;
+  result = frameTraversal->CurrentItem(&isupports);
+  if (NS_FAILED(result))
+    return result;
+  if (!isupports)
+    return NS_ERROR_NULL_POINTER;
+  //we must CAST here to an nsIFrame. nsIFrame doesnt really follow the rules
+  //for speed reasons
+  nsIFrame *newFrame = (nsIFrame *)isupports;
+
+  if (direction == eDirNext) {
+    *aPrevFrame = currentFrame;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aPrevLevel);
+    *aNextFrame = newFrame;
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+  }
+  else {
+    *aNextFrame = currentFrame;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+    *aPrevFrame = newFrame;
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aPrevLevel);
+  }
+
+  return NS_OK;
+
+}
+
+/** After moving the caret, its Bidi level is set according to the following rules:
+ *
+ *  After moving over a character with left/right arrow, set to the Bidi level of the last moved over character.
+ *  After Home and End, set to the paragraph embedding level.
+ *  After up/down arrow, PageUp/Down, set to the lower level of the 2 surrounding characters.
+ *  After mouse click, set to the level of the current frame.
+ *
+ *  The following two methods use GetPrevNextBidiLevels to determine the new Bidi level.
+ */
+
+void nsSelection::BidiLevelFromMove(nsIPresContext* aContext,
+                                    nsISelectionController* aSelCon,
+                                    nsIContent *aNode,
+                                    PRUint32 aContentOffset,
+                                    PRUint32 aKeycode)
+{
+  PRUint8 firstLevel;
+  PRUint8 secondLevel;
+  PRUint8 currentLevel;
+  nsIFrame* firstFrame=nsnull;
+  nsIFrame* secondFrame=nsnull;
+
+  aSelCon->GetCursorBidiLevel(&currentLevel);
+
+  GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
+
+  switch (aKeycode) {
+
+    // Right and Left: the new cursor Bidi level is the level of the character moved over
+    case nsIDOMKeyEvent::DOM_VK_RIGHT:
+        if (currentLevel & 1)
+      aSelCon->SetCursorBidiLevel(secondLevel);
+        else
+          aSelCon->SetCursorBidiLevel(firstLevel);
+        break;
+
+    case nsIDOMKeyEvent::DOM_VK_LEFT:
+        if (currentLevel & 1)
+      aSelCon->SetCursorBidiLevel(firstLevel);
+        else
+          aSelCon->SetCursorBidiLevel(secondLevel);
+        break;
+
+    // Up and Down: the new cursor Bidi level is the smaller of the two surrounding characters
+    case nsIDOMKeyEvent::DOM_VK_UP:
+    case nsIDOMKeyEvent::DOM_VK_DOWN:
+        aSelCon->SetCursorBidiLevel(PR_MIN(firstLevel, secondLevel));
+    break;
+
+    default:
+      aSelCon->UndefineCursorBidiLevel();
+  }
+}
+
+void nsSelection::BidiLevelFromClick(nsIContent *aNode, PRUint32 aContentOffset)
+{
+  nsCOMPtr<nsIPresContext> context;
+  nsresult result = mTracker->GetPresContext(getter_AddRefs(context));
+  if (NS_FAILED(result) || !context)
+    return;
+
+  nsCOMPtr<nsIPresShell> shell;
+  result = context->GetShell(getter_AddRefs(shell));
+  if (NS_FAILED(result) || !shell)
+    return;
+
+  nsCOMPtr<nsISelectionController> selCon;
+  selCon = do_QueryInterface(shell);
+  if (!selCon)
+    return;
+
+  nsIFrame* clickInFrame=nsnull;
+  PRUint8 frameLevel;
+  PRInt32 OffsetNotUsed;
+
+  GetFrameForNodeOffset(aNode, aContentOffset, mHint, &clickInFrame, &OffsetNotUsed);
+  clickInFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, (void**) &frameLevel);
+  selCon->SetCursorBidiLevel(frameLevel);
+}
+#endif IBMBIDI
 
 NS_IMETHODIMP
 nsSelection::HandleClick(nsIContent *aNewFocus, PRUint32 aContentOffset, 
@@ -1617,6 +1940,9 @@ nsSelection::HandleClick(nsIContent *aNewFocus, PRUint32 aContentOffset,
   // Don't take focus when dragging off of a table
   if (!mSelectingTableCells)
   {
+#ifdef IBMBIDI
+    BidiLevelFromClick(aNewFocus, aContentOffset);
+#endif
     PostReason(nsIDOMSelectionListener::MOUSEDOWN_REASON + nsIDOMSelectionListener::DRAG_REASON);
     return TakeFocus(aNewFocus, aContentOffset, aContentEndOffset, aContinueSelection, aMultipleSelection);
   }

@@ -35,8 +35,12 @@
 #include "nsIReflowCommand.h"
 #include "nsIFrameSelection.h"
 
+#ifdef IBMBIDI
+#include "nsILineIterator.h"
+#endif
+
 /**
- * nsFrame logging constants. We redefine the nspr
+ * nsframe logging constants. We redefine the nspr
  * PRLogModuleInfo.level field to be a bitfield.  Each bit controls a
  * specific type of logging. Each logging operation has associated
  * inline methods defined below.

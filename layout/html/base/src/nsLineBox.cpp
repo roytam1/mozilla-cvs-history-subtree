@@ -654,9 +654,94 @@ nsLineIterator::FindLineAt(nscoord aY,
   return NS_OK;
 }
 
+#ifdef IBMBIDI
+NS_IMETHODIMP
+nsLineIterator::CheckLineOrder(PRInt32                  aLine,
+                               PRBool                   *aIsReordered,
+                               nsIFrame                 **aFirstVisual,
+                               nsIFrame                 **aLastVisual)
+{
+  nsRect    checkRect;
+  PRInt32   testLine;
+  PRInt64   saveOrig, testOrig;
+  nsIFrame  *checkFrame;
+  nsIFrame  *firstFrame;
+  nscoord   minX, maxX;
+  PRInt32   lineFrameCount;
+  PRUint32  lineFlags;
+
+  *aIsReordered = PR_FALSE;
+  
+  nsLineBox* line = mLines[aLine];
+  if (!line)
+    return NS_ERROR_INVALID_ARG;
+  
+  checkFrame = line->mFirstChild;
+
+  checkFrame->GetRect(checkRect);
+  nsresult result = FindLineContaining(checkFrame, &testLine);
+  if (NS_FAILED(result))
+    return result;
+  LL_SHL(saveOrig, testLine, 32);
+  LL_OR2(saveOrig, checkRect.x);
+
+  for (; checkFrame; result = checkFrame->GetNextSibling(&checkFrame)) {
+    if (NS_FAILED(result))
+      break;
+
+    checkFrame->GetRect(checkRect);
+    result = FindLineContaining(checkFrame, &testLine);
+    if (NS_FAILED(result))
+      return result;
+    LL_SHL(testOrig, testLine, 32);
+    LL_OR2(testOrig, checkRect.x);
+    if (LL_CMP(testOrig, <, saveOrig)) { // if the origin of any frame is less than the previous frame, the line is reordered
+      *aIsReordered = PR_TRUE;
+      break;
+    }
+    saveOrig = testOrig;
+  }
+
+  if (*aIsReordered) {
+    nsRect nonUsedRect;
+    result = GetLine(aLine, &firstFrame, &lineFrameCount, nonUsedRect, &lineFlags);
+    if (NS_FAILED(result))
+      return result;
+
+    *aFirstVisual = *aLastVisual = firstFrame;
+    firstFrame->GetRect(checkRect);
+    maxX = checkRect.x;
+    minX = checkRect.x;
+
+    for (;lineFrameCount > 1;lineFrameCount --){
+      result = firstFrame->GetNextSibling(&firstFrame);
+
+      if (NS_FAILED(result)){
+        NS_ASSERTION(0,"should not be reached nsLineBox\n");
+        return NS_ERROR_FAILURE;
+      }
+
+      firstFrame->GetRect(checkRect);
+      if (checkRect.x > maxX) {
+        maxX = checkRect.x;
+        *aLastVisual = firstFrame;
+      }
+      if (checkRect.x < minX) {
+        minX = checkRect.x;
+        *aFirstVisual = firstFrame;
+      }
+    }
+  }
+  return result;
+}
+#endif // IBMBIDI
+
 NS_IMETHODIMP
 nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
                             nscoord aX,
+#ifdef IBMBIDI
+                            PRBool aCouldBeReordered,
+#endif // IBMBIDI
                             nsIFrame** aFrameFound,
                             PRBool* aXIsBeforeFirstFrame,
                             PRBool* aXIsAfterLastFrame)
@@ -710,13 +795,54 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
   // when checking.
   *aXIsBeforeFirstFrame = PR_FALSE;
   *aXIsAfterLastFrame = PR_FALSE;
+#ifdef IBMBIDI
+  PRBool isReordered = PR_FALSE;
+  nsIFrame *firstVisual, *lastVisual;
+  if (aCouldBeReordered)
+    CheckLineOrder(aLineNumber, &isReordered, &firstVisual, &lastVisual);
+#endif
   nsRect r1, r2;
   nsIFrame* frame = line->mFirstChild;
   PRInt32 n = line->GetChildCount();
   if (mRightToLeft) {
+#ifdef IBMBIDI
+    if (isReordered)
+      frame = lastVisual;
+#endif // IBMBIDI
     while (--n >= 0) {
       nsIFrame* nextFrame;
-      frame->GetNextSibling(&nextFrame);
+#ifdef IBMBIDI
+      if (isReordered) {
+        PRInt64 maxOrig, limOrig, testOrig;
+        PRInt32 testLine;
+        nsRect tempRect;
+        nsIFrame* tempFrame;
+
+        maxOrig = LL_MININT;
+        frame->GetRect(tempRect);
+
+        LL_SHL(limOrig, aLineNumber, 32);
+        LL_OR2(limOrig, tempRect.x);
+        tempFrame = line->mFirstChild;
+        nextFrame = nsnull;
+
+        while (tempFrame) {
+          if (NS_SUCCEEDED(FindLineContaining(tempFrame, &testLine))
+              && testLine >= 0) {
+            tempFrame->GetRect(tempRect);
+            LL_SHL(testOrig, testLine, 32);
+            LL_OR2(testOrig, tempRect.x);
+            if (LL_CMP(testOrig, >, maxOrig) && LL_CMP(testOrig, <, limOrig)) { // we are looking for the highest value less than the current one
+              maxOrig = testOrig;
+              nextFrame = tempFrame;
+            }
+          }
+          tempFrame->GetNextSibling(&tempFrame);
+        }
+      }
+      else
+#endif // IBMBIDI
+        frame->GetNextSibling(&nextFrame);
       frame->GetRect(r1);
       if (aX > r1.x) {
         break;
@@ -739,9 +865,44 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
     }
   }
   else {
+#ifdef IBMBIDI
+    if (isReordered)
+      frame = firstVisual;
+#endif // IBMBIDI
     while (--n >= 0) {
       nsIFrame* nextFrame;
-      frame->GetNextSibling(&nextFrame);
+#ifdef IBMBIDI
+      if (isReordered) {
+        nsRect tempRect;
+        nsIFrame* tempFrame;
+        PRInt64 minOrig, limOrig, testOrig;
+        PRInt32 testLine, thisLine;
+
+        minOrig = LL_MAXINT;
+        frame->GetRect(tempRect);
+
+        LL_SHL(limOrig, aLineNumber, 32);
+        LL_OR2(limOrig, tempRect.x);
+        tempFrame = line->mFirstChild;
+        nextFrame = nsnull;
+
+        while (tempFrame) {
+          if (NS_SUCCEEDED(FindLineContaining(tempFrame, &testLine))
+              && testLine >= 0) {
+            tempFrame->GetRect(tempRect);
+            LL_SHL(testOrig, testLine, 32);
+            LL_OR2(testOrig, tempRect.x);
+            if (LL_CMP(testOrig, <, minOrig) && LL_CMP(testOrig, >, limOrig)) { // we are looking for the lowest value greater than the current one
+              minOrig = testOrig;
+              nextFrame = tempFrame;
+            }
+          }
+          tempFrame->GetNextSibling(&tempFrame);
+        }
+      }
+      else
+#endif // IBMBIDI
+        frame->GetNextSibling(&nextFrame);
       frame->GetRect(r1);
       if (aX < r1.XMost()) {
         break;

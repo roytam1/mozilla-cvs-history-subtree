@@ -135,6 +135,9 @@
 #ifdef IBMBIDI
 #include "nsIUBidiUtils.h"
 static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
+#ifdef XP_PC
+#include "windows.h"
+#endif // XP_PC
 #endif // IBMBIDI
 
 // local management of the style watch:
@@ -749,6 +752,9 @@ public:
   NS_IMETHOD CompleteMove(PRBool aForward, PRBool aExtend);
   NS_IMETHOD SelectAll();
   NS_IMETHOD CheckVisibility(nsIDOMNode *node, PRInt16 startOffset, PRInt16 EndOffset, PRBool *_retval);
+  NS_IMETHOD SetCursorBidiLevel(PRUint8 aLevel);
+  NS_IMETHOD GetCursorBidiLevel(PRUint8 *aOutLevel);
+  NS_IMETHOD UndefineCursorBidiLevel();
 
   // nsIDocumentObserver
   NS_IMETHOD BeginUpdate(nsIDocument *aDocument);
@@ -836,6 +842,9 @@ protected:
   PRBool IsDragInProgress ( ) const ;
 
   PRBool	mCaretEnabled;
+#ifdef IBMBIDI
+  PRUint8   mBidiLevel; // The Bidi level of the cursor
+#endif // IBMBIDI
 #ifdef NS_DEBUG
   PRBool VerifyIncrementalReflow();
   PRBool mInVerifyReflow;
@@ -1039,6 +1048,9 @@ PresShell::PresShell():mStackArena(nsnull),
 
 #ifdef MOZ_REFLOW_PERF
   mReflowCountMgr = new ReflowCountMgr();
+#endif
+#ifdef IBMBIDI
+  mBidiLevel = nsISelectionController::BIDI_LEVEL_UNDEFINED;
 #endif
 }
 
@@ -2218,6 +2230,44 @@ PresShell::CheckVisibility(nsIDOMNode *node, PRInt16 startOffset, PRInt16 EndOff
   return NS_OK;//dont worry about other return val
 }
 
+NS_IMETHODIMP
+   PresShell::SetCursorBidiLevel(PRUint8 aLevel)
+{
+#ifdef IBMBIDI
+
+#ifdef XP_PC                                         // XXX - need an XP and Xlang solution for this
+//  PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
+//  if (parityChange)                                  // if so, change the keyboard language
+#define kRTLLanguage 	"0000040d"  //Hebrew
+//#define kRTLLanguage 	"00000c01", //Arabic (Egypt)
+#define kLTRLanguage 	"00000409"  //US English
+  LoadKeyboardLayout((aLevel & 1) ? kRTLLanguage : kLTRLanguage, KLF_ACTIVATE);
+#endif // XP_PC
+
+  mBidiLevel = aLevel;
+#endif // IBMBIDI
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+   PresShell::GetCursorBidiLevel(PRUint8 *aOutLevel)
+{
+#ifdef IBMBIDI
+  if (!aOutLevel) { return NS_ERROR_INVALID_ARG; }
+  *aOutLevel = mBidiLevel;
+#endif
+  return NS_OK;    
+}
+
+NS_IMETHODIMP
+   PresShell::UndefineCursorBidiLevel()
+{
+#ifdef IBMBIDI
+  mBidiLevel |= nsISelectionController::BIDI_LEVEL_UNDEFINED;
+#endif
+  return NS_OK;
+}
+
 //end implementations nsISelectionController
 
 
@@ -2908,7 +2958,7 @@ PresShell::DoCopy()
 
 #ifdef IBMBIDI_NOT
   rv = NS_OK;
-  NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBiDiUtilCID, &rv);
+  NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBidiUtilCID, &rv);
    nsBidiOptions mBidioptions;
     mPresContext->GetBidi(&mBidioptions);
     if (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_LOGICAL){

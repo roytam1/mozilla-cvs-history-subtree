@@ -114,8 +114,7 @@ class nsCaret : public nsICaret,
     nsWeakPtr mDomSelectionWeak;
 #ifdef IBMBIDI
 //---------------------------------------IBMBIDI----------------------------------------------
-        PRInt32 lpx;
-        PRBool startlangflage;
+    nsRect mHookRect;					// directional hook on the caret
 //-------------------------------------END OF IBM BIDI----------------------------------------
 #endif
 };

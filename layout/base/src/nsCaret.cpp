@@ -50,9 +50,9 @@
 #ifdef IBMBIDI
 //-------------------------------IBM BIDI--------------------------------------
 // Mamdouh : Modifiaction of the caret to work with Bidi in the LTR and RTL
-#ifdef XP_WIN
+#ifdef XP_PC
 #include "windows.h"
-#endif // XP_WIN
+#endif // XP_PC
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsViewsCID.h"
@@ -524,12 +524,11 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
 					state |= NS_FRAME_EXTERNAL_REFERENCE;
 					theFrame->SetFrameState(state);
 					
-					mLastCaretFrame = theFrame;
-					mLastContentOffset = theFrameOffset;
 #ifdef IBMBIDI
-// Mamdouh : modification of the caret to work at rtl and ltr with Bidi
+          PRUint8 bidiLevel=0;
+          // Mamdouh : modification of the caret to work at rtl and ltr with Bidi
 					const nsStyleDisplay* display;
-						theFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+					theFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
 					//
 					// Direction Style from this->GetStyleData()
 					// now in (display->mDirection)
@@ -538,33 +537,100 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
 					// NS_STYLE_DIRECTION_RTL
 					// NS_STYLE_DIRECTION_INHERIT
 
-					if(VKaccess)
-					{
-						lpx=mLastContentOffset;
-						VKaccess=0;
-						if (display->mDirection == NS_STYLE_DIRECTION_RTL) // we work in the rtl
-						{
-							if(HomeVKaccess) // this special key(home) in the ltr cause the lang to be eng.
-							{
-#ifdef XP_WIN
-								LoadKeyboardLayout("00000401",KLF_ACTIVATE);
-#endif // XP_WIN
-								HomeVKaccess=0;
-							}
+          nsCOMPtr<nsISelectionController> selCon = do_QueryReferent(mPresShell);
+          if (selCon)
+          {
+            nsCOMPtr<nsIPresContext> presContext;
+            err = presShell->GetPresContext(getter_AddRefs(presContext));
+            
+            PRBool bidiEnabled = PR_FALSE;
+            if (presContext)
+              presContext->BidiEnabled(bidiEnabled);
+            
+            if (bidiEnabled)
+            {
 
-						}// if dir is rtl 
-						else // if (display->mDirection == NS_STYLE_DIRECTION_LTR) // we work in the ltr
-						{
-							if(HomeVKaccess) // this special key(home) in the ltr cause the lang to be eng.
-							{
-#ifdef XP_WIN
-								LoadKeyboardLayout("00000409",KLF_ACTIVATE);
-#endif // XP_WIN
-								HomeVKaccess=0;
-							}
-						} // if dir is ltr
-					}// if virtual key access occur
+              selCon->GetCursorBidiLevel(&bidiLevel);
+              if (bidiLevel & nsISelectionController::BIDI_LEVEL_UNDEFINED)
+              {
+                // There has been a reflow, so we reset the cursor Bidi level to the level of the current frame
+                if (!presContext) // Use the style default
+                  bidiLevel = display->mDirection;
+                else
+                {
+                  theFrame->GetBidiProperty(presContext, nsLayoutAtoms::embeddingLevel, (void**) &bidiLevel);
+                  selCon->SetCursorBidiLevel(bidiLevel);
+                }
+              }
+
+              PRInt32 start;
+              PRInt32 end;
+              nsIFrame* frameBefore;
+              nsIFrame* frameAfter;
+              PRUint8 levelBefore;     // Bidi level of the character before the caret
+              PRUint8 levelAfter;      // Bidi level of the character after the caret
+
+              theFrame->GetOffsets(start, end);
+
+              if (start == theFrameOffset || end == theFrameOffset)
+              {
+                /* Boundary condition, we need to know the Bidi levels of the characters before and after the cursor */
+                if (NS_SUCCEEDED(frameSelection->GetPrevNextBidiLevels(presContext, contentNode, contentOffset,
+                  &frameBefore, &frameAfter,
+                  &levelBefore, &levelAfter)))
+                {
+                  if (levelBefore != levelAfter)
+                  {
+                    bidiLevel = PR_MAX(bidiLevel, PR_MIN(levelBefore, levelAfter));                                 // rule c3
+                    bidiLevel = PR_MIN(bidiLevel, PR_MAX(levelBefore, levelAfter));                                 // rule c4
+                    if (bidiLevel == levelBefore                                                                    // rule c1
+                        || bidiLevel > levelBefore && bidiLevel < levelAfter && !((bidiLevel ^ levelBefore) & 1)    // rule c5
+                        || bidiLevel < levelBefore && bidiLevel > levelAfter && !((bidiLevel ^ levelBefore) & 1))   // rule c9
+                    {
+                      if (theFrame != frameBefore)
+                      {
+                        if (frameBefore) // if there is a frameBefore, move into it, setting HINTLEFT to make sure we stay there
+                        {
+                          theFrame = frameBefore;
+                          theFrame->GetOffsets(start, end);
+                          theFrameOffset = end;
+                          domSelection->SetHint(PR_FALSE);
+                        }
+                        else // if there is no frameBefore, we must be at the beginning of the line
+                          // so we stay with the current frame and just set HINTRIGHT
+                        {
+                          domSelection->SetHint(PR_TRUE);
+                        }
+                      }
+                    }
+                    else if (bidiLevel == levelAfter                                                                   // rule c2
+                             || bidiLevel > levelBefore && bidiLevel < levelAfter && !((bidiLevel ^ levelAfter) & 1)   // rule c6  
+                             || bidiLevel < levelBefore && bidiLevel > levelAfter && !((bidiLevel ^ levelAfter) & 1))  // rule c10
+                    {
+                      if (theFrame != frameAfter)
+                      {
+                        if (frameAfter) // if there is a frameAfter, move into it, setting HINTRIGHT to make sure we stay there
+                        {
+                          theFrame = frameAfter;
+                          theFrame->GetOffsets(start, end);
+                          theFrameOffset = start;
+                          domSelection->SetHint(PR_TRUE);
+                        }
+                        else  // if there is no frameAfter, we must be at the end of the line
+                          // so we stay with the current frame and just set HINTLEFT
+                        {
+                          domSelection->SetHint(PR_FALSE);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
 #endif // IBMBIDI
+          mLastCaretFrame = theFrame;
+          mLastContentOffset = theFrameOffset;
 					return PR_TRUE;
 				}
 			}
@@ -715,151 +781,14 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
 		nsRect		caretRect = frameRect;
 		
 		mLastCaretFrame->GetPointFromOffset(presContext, localRC, mLastContentOffset, &framePos);
-#ifdef IBMBIDI
-// Mamdouh : modification of the caret to work with Bidi lang in the LTR and RTL
-/*
-		nsIFrame*	theFrame = nsnull;
-		PRInt32         theFrameOffset = 0;
-
-		//get frame selection and find out what frame to use...
-		nsCOMPtr<nsIFrameSelection> frameSelection;
-		nsCOMPtr<nsIDOMSelection> domSelection;
-		nsresult err = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(domSelection));
-		if (!NS_SUCCEEDED(err) || !domSelection)
-			return;
-		err = mPresShell->GetFrameSelection(getter_AddRefs(frameSelection));
-		if (NS_FAILED(err) || !frameSelection)
-			return;
-		nsCOMPtr<nsIDOMNode>	focusNode;
-		PRInt32	contentOffset;
-		const nsStyleDisplay* display;
-		
-		if (NS_SUCCEEDED(domSelection->GetFocusNode(getter_AddRefs(focusNode))) && focusNode &&
-				NS_SUCCEEDED(domSelection->GetFocusOffset(&contentOffset)))
-		{
-			nsCOMPtr<nsIContent>contentNode = do_QueryInterface(focusNode);
-
-			err = frameSelection->GetFrameForNodeOffset(contentNode, contentOffset, &theFrame, &theFrameOffset);
-			if (NS_FAILED(err))
-				return;
-		theFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-		}
-		//
-		// Direction Style from this->GetStyleData()
-		// now in (display->mDirection)
-		// ------------------
-		// NS_STYLE_DIRECTION_LTR : LTR or Default
-		// NS_STYLE_DIRECTION_RTL
-		// NS_STYLE_DIRECTION_INHERIT
-
-		if (display->mDirection == NS_STYLE_DIRECTION_RTL)
-			{
-				caretRect.x -=29;
-				caretRect.x +=caretRect.width;
-				if(!IsLangBIDI())  // the lang not arabic or heberow
-					{
-						mLastCaretFrame->GetPointFromOffset(presContext, localRC,lpx, &framePos);
-						caretRect -=framePos;
-					}
-				else
-					{
-						startlangflage=1;
-						caretRect -=framePos;
-					}
-				caretRect.width = mCaretWidth;  // Modifiy if the width
-
-				// Avoid view redraw problems by making sure the
-				// caret doesn't hang outside the right edge of
-				// the frame. This ensures that the caret gets
-				// erased properly if the frame's right edge gets
-				// invalidated.
-
-				//nscoord cX = caretRect.x - caretRect.width;
-				//nscoord fX = frameRect.x - frameRect.width;
-				/*
-				if (caretRect.x <= fX && cX < fX)
-				{
-					caretRect.x += fX - cX;
-					if (caretRect.x < fX)
-						caretRect.x = fX;
-				}// caution of the scroll
-				*/
-
-				if(IsLangBIDI())
-					lpx=mLastContentOffset;  // to save the last caret position in the case of change the layer to arabic
-
-/*			
-			} 
-			else // if(display->mDirection == NS_STYLE_DIRECTION_LTR) // we work in the ltr
-			{
-				
-				if(!IsLangBIDI())  // the lang not arabic or heberow
-					{
-						startlangflage=1;
-						caretRect +=framePos;
-					}
-				else
-					{
-						mLastCaretFrame->GetPointFromOffset(presContext, localRC,lpx, &framePos);
-						caretRect +=framePos;
-					}
-	
-				caretRect.width = mCaretWidth;  // Modifiy if the width
-
-				// Avoid view redraw problems by making sure the
-				// caret doesn't hang outside the right edge of
-				// the frame. This ensures that the caret gets
-				// erased properly if the frame's right edge gets
-				// invalidated.
-				nscoord cX = caretRect.x + caretRect.width;
-				nscoord fX = frameRect.x + frameRect.width;
-				if (caretRect.x <= fX && cX > fX)
-				{
-					caretRect.x -= cX - fX;
-					if (caretRect.x < frameRect.x)
-						caretRect.x = frameRect.x;
-				}// caution of the scroll
-
-
-				if(!IsLangBIDI())
-					lpx=mLastContentOffset;  // to save the last caret position in the case of change the layer to arabic
-
-			} 
-*/
 		caretRect += framePos;
 		
 		//printf("Content offset %ld, frame offset %ld\n", focusOffset, framePos.x);
-		
-		caretRect.width = mCaretPixelsWidth;
-
-		// Avoid view redraw problems by making sure the
-		// caret doesn't hang outside the right edge of
-		// the frame. This ensures that the caret gets
-		// erased properly if the frame's right edge gets
-		// invalidated.
-
-		nscoord cX = caretRect.x + caretRect.width;
-		nscoord fX = frameRect.x + frameRect.width;
-
-		if (caretRect.x <= fX && cX > fX)
-		{
-			caretRect.x -= cX - fX;
-
-			if (caretRect.x < frameRect.x)
-				caretRect.x = frameRect.x;
-		}
-
-#else // IBMBIDI
-
-		caretRect += framePos;
-
-		
-		//printf("Content offset %ld, frame offset %ld\n", focusOffset, framePos.x);
-		if(mCaretTwipsWidth < 0)
+    if(mCaretTwipsWidth < 0)
     {// need to re-compute the pixel width
       mCaretTwipsWidth  = 15 * mCaretPixelsWidth;//uhhhh...
     }
-		caretRect.width = mCaretTwipsWidth;
+    caretRect.width = mCaretTwipsWidth;
 
 		// Avoid view redraw problems by making sure the
 		// caret doesn't hang outside the right edge of
@@ -877,8 +806,29 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
 			if (caretRect.x < frameRect.x)
 				caretRect.x = frameRect.x;
 		}
-#endif // IBMBIDI
+#ifdef IBMBIDI
+    // Simon -- make a hook to draw to the left or right of the caret to show keyboard language direction
+    PRBool bidiEnabled;
+    presContext->BidiEnabled(bidiEnabled);
+    if (bidiEnabled)
+    {
+      nsRect hookRect;
+      PRUint8 bidiLevel;
 
+      nsCOMPtr<nsISelectionController> selCon = do_QueryReferent(mPresShell);
+      if (selCon)
+      {
+        //selCon->GetCursorBidiLevel(&bidiLevel);
+        bidiLevel = IsLangBIDI();
+        // If Bidi level is odd draw the hook to the left; if level is even, to the right
+        hookRect.SetRect(caretRect.x + caretRect.width * ((bidiLevel & 1) ? -1 : 1), 
+                         caretRect.y + caretRect.width,
+                         caretRect.width,
+                         caretRect.width);
+        mHookRect = hookRect;
+      }
+    }
+#endif //IBMBIDI
 		mCaretRect = caretRect;
 	}
 		/*
@@ -888,6 +838,10 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
 	  
 	localRC->SetColor(NS_RGB(255,255,255));
 	localRC->InvertRect(mCaretRect);
+#ifdef IBMBIDI
+  if (!mHookRect.IsEmpty()) // if Bidi support is disabled, the rectangle remains empty and won't be drawn
+    localRC->InvertRect(mHookRect);
+#endif
 	ToggleDrawnStatus();
 
 }
@@ -986,8 +940,8 @@ NS_IMETHODIMP nsCaret::SetCaretWidth(nscoord aPixels)
 //----------------------------------------------------------------------------------
 PRBool nsCaret::IsLangBIDI(void)
 {
-	char CurrentLang[9]="00000000";    // to get keyboar layout name in this array
-	char LangID[17][9]=
+	char currentLang[KL_NAMELENGTH]="00000000";    // to get keyboar layout name in this array
+	char langID[17][KL_NAMELENGTH]=
 	{
 	"00000401", //Arabic (Saudi Arabia)
 	"00000801", //Arabic (Iraq)
@@ -1007,11 +961,11 @@ PRBool nsCaret::IsLangBIDI(void)
 	"00004001", //Arabic (Qatar)
 	"0000040d"  //Hebrew
 	};
-#ifdef XP_WIN
-	GetKeyboardLayoutName(CurrentLang);
-#endif // XP_WIN
+#ifdef XP_PC
+	GetKeyboardLayoutName(currentLang);
+#endif // XP_PC
 	for(int count=0;count<17;count++)
-		if(strcmp(CurrentLang,LangID[count])==0)
+		if(strcmp(currentLang,langID[count])==0)
 			return PR_TRUE;
 	return PR_FALSE;
 }

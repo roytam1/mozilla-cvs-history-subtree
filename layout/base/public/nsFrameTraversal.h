@@ -25,7 +25,11 @@
 #include "nsIEnumerator.h"
 #include "nsIFrame.h"
 
-enum nsTraversalType{LEAF, EXTENSIVE, FASTEST}; 
+enum nsTraversalType{LEAF, EXTENSIVE, FASTEST
+#ifdef IBMBIDI // Simon
+   , VISUAL
+#endif
+}; 
 nsresult NS_NewFrameTraversal(nsIBidirectionalEnumerator **aEnumerator,
                               nsTraversalType aType,
                               nsIPresContext* aPresContext,
