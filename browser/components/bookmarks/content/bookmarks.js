@@ -912,8 +912,8 @@ var BookmarksController = {
         RDFC.Init(BMDS, aSelection.item[i]);
         var children = RDFC.GetElements();
         while (children.hasMoreElements()) {
-          if (BookmarksUtils.resolveType(children.getNext()) == "Bookmark" ||
-              BookmarksUtils.resolveType(children.getNext()) == "LivemarkBookmark")
+          var child = BookmarksUtils.resolveType(children.getNext());
+          if (child == "Bookmark" || child == "LivemarkBookmark")
             return true;
         }
       }
