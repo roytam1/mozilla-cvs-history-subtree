@@ -472,6 +472,18 @@ NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgDBView::ReloadMessage()
+{
+  if (!mSupressMsgDisplay && m_currentlyDisplayedMsgKey != nsMsgKey_None)
+  {
+    nsMsgKey currentMsgToReload = m_currentlyDisplayedMsgKey;
+    m_currentlyDisplayedMsgKey = nsMsgKey_None;
+    LoadMessageByMsgKey(currentMsgToReload);
+  }
+
+  return NS_OK;
+}
+
 // given a URI, we will load the message for it.
 NS_IMETHODIMP nsMsgDBView::LoadMessageByMsgKey(nsMsgKey aMsgKey)
 {
