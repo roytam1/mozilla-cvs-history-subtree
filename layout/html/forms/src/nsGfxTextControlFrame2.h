@@ -167,7 +167,7 @@ public:
                               PRInt32         aModType, 
                               PRInt32         aHint);
 
-  NS_IMETHOD GetText(nsString* aText, PRBool aInitialValue);
+  NS_IMETHOD GetText(nsString* aText);
 
   NS_DECL_ISUPPORTS_INHERITED
 

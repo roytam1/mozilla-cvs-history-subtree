@@ -57,7 +57,6 @@
 #include "nsIDOMNSHTMLOptionCollectn.h" 
 #include "nsIPresShell.h"
 #include "nsIPresState.h"
-#include "nsISupportsArray.h"
 #include "nsIDeviceContext.h"
 #include "nsIView.h"
 #include "nsIScrollableView.h"
@@ -346,7 +345,7 @@ nsComboboxControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     *aInstancePtr = (void*)(nsIFormControlFrame*)this;
     return NS_OK;
   } else if (aIID.Equals(NS_GET_IID(nsIAnonymousContentCreator))) {                                         
-    *aInstancePtr = (void*)(nsIAnonymousContentCreator*)this;                                        
+    *aInstancePtr = (void*)(nsIAnonymousContentCreator*)this;
     return NS_OK;   
   } else if (aIID.Equals(NS_GET_IID(nsISelectControlFrame))) {
     *aInstancePtr = (void *)(nsISelectControlFrame*)this;
@@ -2036,10 +2035,10 @@ nsComboboxControlFrame::GetDummyFrame(nsIFrame** aFrame)
 {
   nsISelectControlFrame* listFrame;
   NS_ASSERTION(mDropdownFrame, "No dropdown frame!");
-  mDropdownFrame->QueryInterface(NS_GET_IID(nsISelectControlFrame),
-                                              (void**)&listFrame);
 
+  CallQueryInterface(mDropdownFrame, &listFrame);
   NS_ASSERTION(listFrame, "No list frame!");
+
   if (listFrame) {
     listFrame->GetDummyFrame(aFrame);
   }
@@ -2052,10 +2051,10 @@ nsComboboxControlFrame::SetDummyFrame(nsIFrame* aFrame)
 {
   nsISelectControlFrame* listFrame;
   NS_ASSERTION(mDropdownFrame, "No dropdown frame!");
-  mDropdownFrame->QueryInterface(NS_GET_IID(nsISelectControlFrame),
-                                              (void**)&listFrame);
 
+  CallQueryInterface(mDropdownFrame, &listFrame);
   NS_ASSERTION(listFrame, "No list frame!");
+
   if (listFrame) {
     listFrame->SetDummyFrame(aFrame);
   }

@@ -65,7 +65,6 @@
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMMouseEvent.h"
 #include "nsIPrivateDOMEvent.h"
-#include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIComponentManager.h"
 #include "nsILookAndFeel.h"
@@ -2032,7 +2031,7 @@ nsListControlFrame::RemoveOption(nsIPresContext* aPresContext, PRInt32 aIndex)
 // Set the option selected in the DOM.  This method is named
 // as it is because it indicates that the frame is the source
 // of this event rather than the receiver.
-NS_IMETHODIMP
+nsresult
 nsListControlFrame::SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
                                                 PRInt32 aEndIndex,
                                                 PRBool aValue,
@@ -2053,7 +2052,7 @@ nsListControlFrame::SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
   return rv;
 }
 
-NS_IMETHODIMP
+nsresult
 nsListControlFrame::ToggleOptionSelectedFromFrame(PRInt32 aIndex)
 {
   nsCOMPtr<nsIDOMHTMLCollection> options(getter_AddRefs(GetOptions(mContent)));
@@ -2477,7 +2476,7 @@ nsListControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
 }
 
 //----------------------------------------------------------------------
-NS_IMETHODIMP 
+nsresult
 nsListControlFrame::IsOptionDisabled(PRInt32 anIndex, PRBool &aIsDisabled)
 {
   nsCOMPtr<nsISelectElement> sel(do_QueryInterface(mContent));
@@ -2692,8 +2691,8 @@ nsListControlFrame::GetScrollableView(nsIScrollableView*& aScrollableView)
 
   nsIView * scrollView;
   GetView(mPresContext, &scrollView);
-  nsresult rv = scrollView->QueryInterface(NS_GET_IID(nsIScrollableView), (void**)&aScrollableView);
-  NS_ASSERTION(NS_SUCCEEDED(rv) && aScrollableView, "We must be able to get a ScrollableView");
+  CallQueryInterface(scrollView, &aScrollableView);
+  NS_ASSERTION(aScrollableView, "We must be able to get a ScrollableView");
 }
 
 //----------------------------------------------------------------------

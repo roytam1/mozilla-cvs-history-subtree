@@ -89,7 +89,7 @@ public:
 
 protected:
 
-  NS_IMETHOD GetSelect(nsISelectElement **aSelectElement);
+  nsresult GetSelect(nsISelectElement **aSelectElement);
 };
 
 nsresult
@@ -222,7 +222,7 @@ nsHTMLOptGroupElement::SizeOf(nsISizeOfHandler* aSizer,
 
 
 // Get the select content element that contains this option
-NS_IMETHODIMP
+nsresult
 nsHTMLOptGroupElement::GetSelect(nsISelectElement **aSelectElement)
 {
   *aSelectElement = nsnull;
@@ -231,9 +231,8 @@ nsHTMLOptGroupElement::GetSelect(nsISelectElement **aSelectElement)
   nsCOMPtr<nsIContent> prevParent;
   GetParent(*getter_AddRefs(parent));
   while (parent) {
-    nsresult rv = parent->QueryInterface(NS_GET_IID(nsISelectElement),
-                                         (void**)aSelectElement);
-    if (NS_SUCCEEDED(rv)) {
+    CallQueryInterface(parent, aSelectElement);
+    if (*aSelectElement) {
       break;
     }
     prevParent = parent;

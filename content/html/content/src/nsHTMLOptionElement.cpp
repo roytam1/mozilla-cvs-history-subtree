@@ -118,7 +118,7 @@ protected:
   // Get the select content element that contains this option, this
   // intentionally does not return nsresult, all we care about is if
   // there's a select associated with this option or not.
-  void GetSelect(nsIDOMHTMLSelectElement *&aSelectElement);
+  void GetSelect(nsIDOMHTMLSelectElement **aSelectElement);
 
   PRBool mIsInitialized;
 };
@@ -229,7 +229,7 @@ nsHTMLOptionElement::GetForm(nsIDOMHTMLFormElement** aForm)
   *aForm = nsnull;
 
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
-  GetSelect(*getter_AddRefs(selectElement));
+  GetSelect(getter_AddRefs(selectElement));
 
   nsCOMPtr<nsIFormControl> selectControl(do_QueryInterface(selectElement));
 
@@ -271,7 +271,7 @@ nsHTMLOptionElement::SetSelectedInternal(PRBool aValue, PRBool aNotify)
   if (aValue) {
     return SetAttr(kNameSpaceID_None,
                    nsLayoutAtoms::optionSelectedPseudo,
-                   nsAutoString(),
+                   NS_LITERAL_STRING(""),
                    aNotify);
   } else {
     return UnsetAttr(kNameSpaceID_None,
@@ -319,7 +319,7 @@ nsHTMLOptionElement::SetSelected(PRBool aValue)
   // Note: The select content obj maintains all the PresState
   // so defer to it to get the answer
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
-  GetSelect(*getter_AddRefs(selectElement));
+  GetSelect(getter_AddRefs(selectElement));
   nsCOMPtr<nsISelectElement> selectInt(do_QueryInterface(selectElement));
   if (selectInt) {
     // This should end up calling SetSelectedInternal
@@ -435,7 +435,7 @@ nsHTMLOptionElement::GetIndex(PRInt32* aIndex)
   // Get our containing select content object.
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
 
-  GetSelect(*getter_AddRefs(selectElement));
+  GetSelect(getter_AddRefs(selectElement));
 
   if (selectElement) {
     // Get the options from the select object.
@@ -630,7 +630,7 @@ nsHTMLOptionElement::GetPrimaryFrame(nsIFormControlFrame *&aIFormControlFrame,
 
   nsresult res = NS_ERROR_FAILURE; // This should be NS_OK;
 
-  GetSelect(*getter_AddRefs(selectElement));
+  GetSelect(getter_AddRefs(selectElement));
 
   if (selectElement) {
     nsCOMPtr<nsIHTMLContent> selectContent(do_QueryInterface(selectElement));
@@ -647,18 +647,17 @@ nsHTMLOptionElement::GetPrimaryFrame(nsIFormControlFrame *&aIFormControlFrame,
 
 // Get the select content element that contains this option
 void
-nsHTMLOptionElement::GetSelect(nsIDOMHTMLSelectElement *&aSelectElement)
+nsHTMLOptionElement::GetSelect(nsIDOMHTMLSelectElement **aSelectElement)
 {
-  aSelectElement = nsnull;
+  *aSelectElement = nsnull;
 
   // Get the containing element (Either a select or an optGroup)
   nsCOMPtr<nsIContent> parent;
   nsCOMPtr<nsIContent> prevParent;
   GetParent(*getter_AddRefs(parent));
   while (parent) {
-    nsresult rv = parent->QueryInterface(NS_GET_IID(nsIDOMHTMLSelectElement),
-                                         (void**)&aSelectElement);
-    if (NS_SUCCEEDED(rv)) {
+    CallQueryInterface(parent, aSelectElement);
+    if (*aSelectElement) {
       break;
     }
     prevParent = parent;

@@ -38,6 +38,7 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLTextAreaElement.h"
 #include "nsIDOMNSHTMLTextAreaElement.h"
+#include "nsITextControlElement.h"
 #include "nsIControllers.h"
 #include "nsIEditorController.h"
 #include "nsContentCID.h"
@@ -66,13 +67,16 @@
 #include "nsIPrivateDOMEvent.h"
 #include "nsGUIEvent.h"
 #include "nsIRuleNode.h"
+#include "nsLinebreakConverter.h"
+#include "nsIPresState.h"
 
 static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 
 
 class nsHTMLTextAreaElement : public nsGenericHTMLContainerFormElement,
                               public nsIDOMHTMLTextAreaElement,
-                              public nsIDOMNSHTMLTextAreaElement
+                              public nsIDOMNSHTMLTextAreaElement,
+                              public nsITextControlElement
 {
 public:
   nsHTMLTextAreaElement();
@@ -105,6 +109,12 @@ public:
                             PRInt32& aNumValues,
                             nsString* aValues,
                             nsString* aNames);
+  NS_IMETHOD SaveState(nsIPresContext* aPresContext, nsIPresState** aState);
+  NS_IMETHOD RestoreState(nsIPresContext* aPresContext, nsIPresState* aState);
+
+  // nsITextControlElement
+  NS_IMETHOD GetValueInternal(nsAWritableString& str);
+  NS_IMETHOD SetValueInternal(nsAReadableString& str);
 
   // nsIContent
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
@@ -173,6 +183,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTextAreaElement,
                                     nsGenericHTMLContainerFormElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLTextAreaElement)
+  NS_INTERFACE_MAP_ENTRY(nsITextControlElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTextAreaElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -381,30 +392,46 @@ nsHTMLTextAreaElement::GetType(nsAWritableString& aType)
   return NS_OK;
 }
 
-NS_IMETHODIMP 
-nsHTMLTextAreaElement::GetValue(nsAWritableString& aValue)
+NS_IMETHODIMP
+nsHTMLTextAreaElement::GetValueInternal(nsAWritableString& aValue)
 {
-  nsIFormControlFrame* formControlFrame = nsnull;
-
-  GetPrimaryFrame(this, formControlFrame);
-
-  if (formControlFrame) {
-    formControlFrame->GetProperty(nsHTMLAtoms::value, aValue);
-
-    return NS_OK;
-  }
-   //XXX: Should this ASSERT instead of getting the default value here?
+  //XXX: Should this ASSERT instead of getting the default value here?
   return nsGenericHTMLContainerFormElement::GetAttr(kNameSpaceID_HTML,
                                                     nsHTMLAtoms::value,
                                                     aValue); 
 }
 
+NS_IMETHODIMP 
+nsHTMLTextAreaElement::GetValue(nsAWritableString& aValue)
+{
+  nsIFormControlFrame* formControlFrame = nsnull;
+  GetPrimaryFrame(this, formControlFrame);
+
+  if (formControlFrame) {
+    formControlFrame->GetProperty(nsHTMLAtoms::value, aValue);
+    return NS_OK;
+  } else {
+    return GetValueInternal(aValue);
+  }
+}
+
+
+NS_IMETHODIMP
+nsHTMLTextAreaElement::SetValueInternal(nsAReadableString& aValue)
+{
+  // Set the attribute in the DOM too, we call SetAttribute with aNotify
+  // false so that we don't generate unnecessary reflows.
+  nsGenericHTMLContainerFormElement::SetAttr(kNameSpaceID_HTML,
+                                             nsHTMLAtoms::value, aValue,
+                                             PR_FALSE);
+
+  return NS_OK;
+}
 
 NS_IMETHODIMP 
 nsHTMLTextAreaElement::SetValue(const nsAReadableString& aValue)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-
   GetPrimaryFrame(this, formControlFrame);
 
   if (formControlFrame) {
@@ -414,11 +441,8 @@ nsHTMLTextAreaElement::SetValue(const nsAReadableString& aValue)
     formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, aValue);
   }
 
-  // Set the attribute in the DOM too, we call SetAttribute with aNotify
-  // false so that we don't generate unnecessary reflows.
-  nsGenericHTMLContainerFormElement::SetAttr(kNameSpaceID_HTML,
-                                             nsHTMLAtoms::value, aValue,
-                                                  PR_FALSE);
+  // Always set the value internally, since it affects layout
+  SetValueInternal(aValue);
 
   return NS_OK;
 }
@@ -451,9 +475,7 @@ nsHTMLTextAreaElement::SetDefaultValue(const nsAReadableString& aDefaultValue)
   nsGenericHTMLContainerFormElement::SetAttr(kNameSpaceID_HTML,
                                              nsHTMLAtoms::defaultvalue,
                                              defaultValue, PR_TRUE);
-  nsGenericHTMLContainerFormElement::SetAttr(kNameSpaceID_HTML,
-                                             nsHTMLAtoms::value,
-                                             defaultValue, PR_TRUE);
+  SetValue(defaultValue);
   return NS_OK;
 }
 
@@ -747,3 +769,39 @@ nsHTMLTextAreaElement::GetNamesValues(PRInt32 aMaxNumValues,
   aNumValues = 1;
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsHTMLTextAreaElement::SaveState(nsIPresContext* aPresContext,
+                                 nsIPresState** aState)
+{
+  nsresult rv = GetPrimaryPresState(this, aState);
+  if (*aState) {
+    nsString value;
+    GetValue(value);
+    // XXX Should use nsAutoString above but ConvertStringLineBreaks requires mOwnsBuffer!
+    rv = nsLinebreakConverter::ConvertStringLineBreaks(
+             value,
+             nsLinebreakConverter::eLinebreakPlatform,
+             nsLinebreakConverter::eLinebreakContent);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Converting linebreaks failed!");
+    rv = (*aState)->SetStateProperty(NS_LITERAL_STRING("value"), value);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "value save failed!");
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsHTMLTextAreaElement::RestoreState(nsIPresContext* aPresContext,
+                                    nsIPresState* aState)
+{
+  nsresult rv = NS_OK;
+
+  nsAutoString value;
+  rv = aState->GetStateProperty(NS_LITERAL_STRING("value"), value);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "value restore failed!");
+  SetValue(value);
+
+  return rv;
+}
+

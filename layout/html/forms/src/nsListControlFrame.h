@@ -319,7 +319,7 @@ public:
 
 protected:
 
-  NS_IMETHOD IsOptionDisabled(PRInt32 anIndex, PRBool &aIsDisabled);
+  nsresult   IsOptionDisabled(PRInt32 anIndex, PRBool &aIsDisabled);
   nsresult   ScrollToFrame(nsIContent * aOptElement);
   nsresult   ScrollToIndex(PRInt32 anIndex);
   PRBool     IsClickingInCombobox(nsIDOMEvent* aMouseEvent);
@@ -359,11 +359,11 @@ protected:
   PRInt32  GetIndexFromContent(nsIContent *aContent);
   void     HandleListSelection(nsIDOMEvent * aDOMEvent, PRInt32 selectedIndex);
   PRBool   IsLeftButton(nsIDOMEvent* aMouseEvent);
-  NS_IMETHOD SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
+  nsresult SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
                                          PRInt32 aEndIndex,
                                          PRBool aValue,
                                          PRBool aClearAll);
-  NS_IMETHOD ToggleOptionSelectedFromFrame(PRInt32 aIndex);
+  nsresult ToggleOptionSelectedFromFrame(PRInt32 aIndex);
   void     GetScrollableView(nsIScrollableView*& aScrollableView);
 
   // Timer Methods
