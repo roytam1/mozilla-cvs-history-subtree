@@ -24,6 +24,8 @@
 #include <prtime.h>
 #include <prclist.h>
 #include <limits.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "schedulr.h"
 
@@ -866,7 +868,7 @@ Sched_FormatEventTime(char *output, int len, SchedulerTime *pTime)
 
 	PR_ExplodeTime(pTime->baseTime, PR_LocalTimeParameters, &exp_time);
 	PR_FormatTime(scratch, 100, "%X on %x", &exp_time);
-	sprintf(returnValue, "%s (+/- %ld seconds)", scratch, pTime->range);
+	sprintf(returnValue, "%s (+/- %ld seconds)", scratch, (long)pTime->range);
 
 	if (pTime->repeating !=0) {
 		sprintf(scratch, "repeating every %d seconds,\n", pTime->repeating);
