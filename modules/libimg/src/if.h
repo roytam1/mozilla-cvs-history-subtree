@@ -62,7 +62,7 @@ typedef struct il_container_struct il_container;
 #include "il.h"
 
 
-#ifdef XP_WIN
+#if defined(XP_WIN) || defined(XP_OS2)
 #define _USD 1              /* scanlines upside-down */ 
 #endif
 
