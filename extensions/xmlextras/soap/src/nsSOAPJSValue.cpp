@@ -215,7 +215,7 @@ nsSOAPJSValue::GetSafeContext()
 {
   // Get the "safe" JSContext: our JSContext of last resort
   nsresult rv;
-  NS_WITH_SERVICE(nsIJSContextStack, stack, "@mozilla.org/js/xpc/ContextStack;1", 
+  nsCOMPtr<nsIJSContextStack> stack = do_GetService("@mozilla.org/js/xpc/ContextStack;1", 
                   &rv);
   if (NS_FAILED(rv))
     return nsnull;
@@ -232,7 +232,7 @@ nsSOAPJSValue::GetCurrentContext()
 {
   // Get JSContext from stack.
   nsresult rv;
-  NS_WITH_SERVICE(nsIJSContextStack, stack, "@mozilla.org/js/xpc/ContextStack;1", 
+  nsCOMPtr<nsIJSContextStack> stack = do_GetService( "@mozilla.org/js/xpc/ContextStack;1", 
                   &rv);
   if (NS_FAILED(rv))
     return nsnull;
@@ -389,7 +389,7 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
 //  Just wrap the value if all else failed.  If it is a DOM node, it will
 //  have everything it needs in the class info.
       nsresult rv;
-      NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
+      nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rv);
       if (NS_FAILED(rv)) return rv;
        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
       JSObject* obj;
@@ -469,7 +469,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
   else if (JSVAL_IS_OBJECT(val)) {
     JSObject* jsobj = JSVAL_TO_OBJECT(val);
     nsresult rc;
-    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc);
+    nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rc);
     if (NS_FAILED(rc)) return NS_ERROR_FAILURE;
 
     if (JS_IsArrayObject(aContext, jsobj)) {

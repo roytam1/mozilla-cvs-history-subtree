@@ -271,7 +271,7 @@ MarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
 //  Unwrap "this" pointer to call original function
 
-  NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc); 
+  nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rc); 
   if (NS_FAILED(rc))
     return JS_FALSE;
   nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
@@ -303,7 +303,7 @@ UnmarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 //  Unwrap "this" pointer to call original function
 
   nsresult rc;
-  NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc); 
+  nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rc); 
   if (NS_FAILED(rc))
     return JS_FALSE;
   nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
