@@ -1342,6 +1342,7 @@ NSGETMODULE_ENTRY_POINT(name) (nsIComponentManager *aCompMgr,  \
                                nsIModule **aResult)
 
 DECL_MODULE(Browser_Embedding_Module);
+DECL_MODULE(DOM_components);
 DECL_MODULE(IMAP_factory);
 DECL_MODULE(JS_component_loader);
 DECL_MODULE(Session_History_Module);
@@ -1418,7 +1419,7 @@ DECL_MODULE(nsUCvTWModule);
 DECL_MODULE(nsURILoaderModule);
 DECL_MODULE(nsUnknownContentTypeHandler);
 DECL_MODULE(nsVCardModule);
-DECL_MODULE(nsViewFactory);
+DECL_MODULE(nsViewModule);
 DECL_MODULE(nsWalletModule);
 DECL_MODULE(nsWalletViewerModule);
 DECL_MODULE(nsWidgetGTKModule);
@@ -1427,6 +1428,7 @@ DECL_MODULE(xpconnect);
 
 static nsStaticModuleInfo StaticModuleInfo[] = {
   MODULE(Browser_Embedding_Module),
+  MODULE(DOM_components),
   MODULE(IMAP_factory),
   MODULE(JS_component_loader),
   MODULE(Session_History_Module),
@@ -1503,7 +1505,7 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
   MODULE(nsURILoaderModule),
   MODULE(nsUnknownContentTypeHandler),
   MODULE(nsVCardModule),
-  MODULE(nsViewFactory),
+  MODULE(nsViewModule),
   MODULE(nsWalletModule),
   MODULE(nsWalletViewerModule),
   MODULE(nsWidgetGTKModule),

@@ -46,7 +46,8 @@ protected:
   void Shutdown();
 
   nsresult RegisterDocumentFactories(nsIComponentManager* aCompMgr,
-                                     nsIFile* aPath);
+                                     nsIFile* aPath, const char *aLocation,
+                                     const char *aType);
 
   void UnregisterDocumentFactories(nsIComponentManager* aCompMgr,
                                    nsIFile* aPath);

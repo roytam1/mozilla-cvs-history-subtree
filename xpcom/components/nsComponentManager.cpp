@@ -1323,6 +1323,11 @@ nsComponentManagerImpl::RegistryLocationForSpec(nsIFile *aSpec,
     if (!mComponentsDir) 
         return NS_ERROR_NOT_INITIALIZED;
 
+    if (!aSpec) {
+        *aRegistryName = nsCRT::strdup("");
+        return NS_OK;
+    }
+
     PRBool containedIn;
     mComponentsDir->Contains(aSpec, PR_TRUE, &containedIn);
 

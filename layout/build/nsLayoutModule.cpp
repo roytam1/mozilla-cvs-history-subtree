@@ -363,8 +363,10 @@ nsLayoutModule::RegisterSelf(nsIComponentManager *aCompMgr,
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
-    rv = aCompMgr->RegisterComponentSpec(cp->mCID, cp->mDescription,
-                                         cp->mContractID, aPath, PR_TRUE, PR_TRUE);
+    rv = aCompMgr->RegisterComponentWithType(cp->mCID, cp->mDescription,
+                                             cp->mContractID, aPath, 
+                                             registryLocation, PR_TRUE, PR_TRUE,
+                                             componentType);
     if (NS_FAILED(rv)) {
 #ifdef DEBUG
       printf("nsLayoutModule: unable to register %s component => %x\n",
@@ -375,7 +377,8 @@ nsLayoutModule::RegisterSelf(nsIComponentManager *aCompMgr,
     cp++;
   }
 
-  rv = RegisterDocumentFactories(aCompMgr, aPath);
+  rv = RegisterDocumentFactories(aCompMgr, aPath, registryLocation,
+                                 componentType);
 
   return rv;
 }

@@ -397,8 +397,10 @@ nsContentModule::RegisterSelf(nsIComponentManager *aCompMgr,
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
-    rv = aCompMgr->RegisterComponentSpec(cp->mCID, cp->mDescription,
-                                         cp->mContractID, aPath, PR_TRUE, PR_TRUE);
+    rv = aCompMgr->RegisterComponentWithType(cp->mCID, cp->mDescription,
+                                             cp->mContractID, aPath,
+                                             registryLocation, PR_TRUE, PR_TRUE,
+                                             componentType);
     if (NS_FAILED(rv)) {
 #ifdef DEBUG
       printf("nsContentModule: unable to register %s component => %x\n",

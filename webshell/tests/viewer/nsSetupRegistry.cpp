@@ -28,7 +28,6 @@
 
 #include "nsIDocumentLoader.h"
 
-#include "nsDOMCID.h"
 #include "nsIProperties.h"
 
 #include "nsIObserverService.h"
@@ -142,8 +141,6 @@ static NS_DEFINE_IID(kCScrollingViewCID, NS_SCROLLING_VIEW_CID);
 static NS_DEFINE_IID(kCScrollPortViewCID, NS_SCROLL_PORT_VIEW_CID);
 
 // DOM
-static NS_DEFINE_IID(kCDOMScriptObjectFactory, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
-static NS_DEFINE_IID(kCScriptNameSetRegistry, NS_SCRIPT_NAMESET_REGISTRY_CID);
 
 extern "C" void
 NS_SetupRegistry()
@@ -240,7 +237,4 @@ NS_SetupRegistry()
   nsComponentManager::RegisterComponentLib(kCScrollingViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponentLib(kCScrollPortViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
 
-  // DOM
-  nsComponentManager::RegisterComponentLib(kCDOMScriptObjectFactory, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponentLib(kCScriptNameSetRegistry, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
 }
