@@ -103,7 +103,6 @@ protected:
 	nsresult GetAbDatabaseFromFile(char* pDbFile, nsIAddrDatabase **db);
 
 private:
-  nsIDocShell        *mDocShell;            // weak reference
   nsresult ExportDirectoryToDelimitedText(nsIAbDirectory *aDirectory, const char *aDelim, PRUint32 aDelimLen, nsILocalFile *aLocalFile);
   nsresult ExportDirectoryToLDIF(nsIAbDirectory *aDirectory, nsILocalFile *aLocalFile);
   nsresult AppendLDIFForMailList(nsIAbCard *aCard, nsACString &aResult);

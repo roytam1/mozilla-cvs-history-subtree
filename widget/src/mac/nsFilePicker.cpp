@@ -57,8 +57,8 @@ OSType nsFilePicker::sCurrentProcessSignature = 0;
 //
 //-------------------------------------------------------------------------
 nsFilePicker::nsFilePicker()
-  : mWasCancelled(PR_FALSE)
-  , mAllFilesDisplayed(PR_TRUE)
+  : mAllFilesDisplayed(PR_TRUE)
+  , mApplicationsDisplayed(PR_FALSE)
   , mSelectedType(0)
   , mTypeOffset(0)
 {
@@ -111,36 +111,13 @@ nsFilePicker::~nsFilePicker()
 
 
 NS_IMETHODIMP
-nsFilePicker::InitNative(nsIWidget *aParent, const PRUnichar *aTitle, PRInt16 aMode)
+nsFilePicker::InitNative(nsIWidget *aParent, const nsAString& aTitle,
+                         PRInt16 aMode)
 {
   mTitle = aTitle;
   mMode = aMode;
-
-  return NS_OK;
 }
 
-
-//-------------------------------------------------------------------------
-//
-// Ok's the dialog
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsFilePicker::OnOk()
-{
-  mWasCancelled  = PR_FALSE;
-  return NS_OK;
-}
-
-//-------------------------------------------------------------------------
-//
-// Cancel the dialog
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsFilePicker::OnCancel()
-{
-  mWasCancelled  = PR_TRUE;
-  return NS_OK;
-}
 
 //-------------------------------------------------------------------------
 //
@@ -861,13 +838,13 @@ NS_IMETHODIMP nsFilePicker::GetFiles(nsISimpleEnumerator **aFiles)
 // Get the file + path
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsFilePicker::SetDefaultString(const PRUnichar *aString)
+NS_IMETHODIMP nsFilePicker::SetDefaultString(const nsAString& aString)
 {
   mDefault = aString;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsFilePicker::GetDefaultString(PRUnichar **aString)
+NS_IMETHODIMP nsFilePicker::GetDefaultString(nsAString& aString)
 {
   return NS_ERROR_FAILURE;
 }
@@ -877,13 +854,13 @@ NS_IMETHODIMP nsFilePicker::GetDefaultString(PRUnichar **aString)
 // The default extension to use for files
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsFilePicker::GetDefaultExtension(PRUnichar **aExtension)
+NS_IMETHODIMP nsFilePicker::GetDefaultExtension(nsAString& aExtension)
 {
-  *aExtension = nsnull;
+   aExtension.Truncate();
   return NS_OK;
 }
 
-NS_IMETHODIMP nsFilePicker::SetDefaultExtension(const PRUnichar *aExtension)
+NS_IMETHODIMP nsFilePicker::SetDefaultExtension(const nsAString& aExtension)
 {
   return NS_OK;
 }
@@ -915,10 +892,10 @@ NS_IMETHODIMP nsFilePicker::GetDisplayDirectory(nsILocalFile **aDirectory)
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 NS_IMETHODIMP
-nsFilePicker::AppendFilter(const PRUnichar *aTitle, const PRUnichar *aFilter)
+nsFilePicker::AppendFilter(const nsAString& aTitle, const nsAString& aFilter)
 {
-  mFilters.AppendString(nsDependentString(aFilter));
-  mTitles.AppendString(nsDependentString(aTitle));
+  mFilters.AppendString(aFilter);
+  mTitles.AppendString(aTitle);
   
   return NS_OK;
 }

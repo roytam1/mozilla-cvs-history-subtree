@@ -7192,8 +7192,17 @@ nsDocShell::SetBaseUrlForWyciwyg(nsIContentViewer * aContentViewer)
 nsresult
 nsDocShell::GetAuthPrompt(PRUint32 aPromptReason, nsIAuthPrompt **aResult)
 {
+    // if this docshell is of type chrome and has a chrome URI, then do not
+    // give out an auth prompt.  NOTE: it is possible to load a non-chrome
+    // URI into a chrome docshell, so this check is important.
+    if (mCurrentURI && mItemType == typeChrome) {
+        PRBool chrome;
+        if (NS_SUCCEEDED(mCurrentURI->SchemeIs("chrome", &chrome)) && chrome)
+            return NS_ERROR_NOT_AVAILABLE;
+    }
+
     // a priority prompt request will override a false mAllowAuth setting
-    PRBool priorityPrompt = (aPromptReason == nsIAuthPromptProvider::PROMPT_PROXY);
+    PRBool priorityPrompt = (aPromptReason == PROMPT_PROXY);
 
     if (!mAllowAuth && !priorityPrompt)
         return NS_ERROR_NOT_AVAILABLE;

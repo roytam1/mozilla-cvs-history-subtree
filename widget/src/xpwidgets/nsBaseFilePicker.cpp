@@ -23,12 +23,14 @@
  */
 
 #include "nsCOMPtr.h"
-#include "nsIDOMWindowInternal.h"
+#include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
+#include "nsIDocShellTreeItem.h"
+#include "nsIInterfaceRequestorUtils.h"
+#include "nsIBaseWindow.h"
 #include "nsIContentViewer.h"
 #include "nsIDocumentViewer.h"
-#include "nsIPresShell.h"
 #include "nsIViewManager.h"
 #include "nsIView.h"
 #include "nsIWidget.h"
@@ -57,50 +59,54 @@ nsBaseFilePicker::~nsBaseFilePicker()
 
 }
 
-/* XXX aaaarrrrrrgh! */
-NS_IMETHODIMP nsBaseFilePicker::DOMWindowToWidget(nsIDOMWindowInternal *dw, nsIWidget **aResult)
+nsIWidget *nsBaseFilePicker::DOMWindowToWidget(nsIDOMWindow *dw)
 {
-  nsresult rv = NS_ERROR_FAILURE;
-  *aResult = nsnull;
+  nsCOMPtr<nsIWidget> widget;
 
   nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface(dw);
   if (sgo) {
-    nsIDocShell *docShell = sgo->GetDocShell();
-    
-    if (docShell) {
+    nsCOMPtr<nsIBaseWindow> baseWin(do_QueryInterface(sgo->GetDocShell()));
 
-      nsCOMPtr<nsIPresShell> presShell;
-      rv = docShell->GetPresShell(getter_AddRefs(presShell));
+    while (!widget && baseWin) {
+      baseWin->GetParentWidget(getter_AddRefs(widget));
+      if (!widget) {
+        nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(baseWin));
+        if (!docShellAsItem)
+          return nsnull;
 
-      if (NS_SUCCEEDED(rv) && presShell) {
-        nsIView *view;
-        rv = presShell->GetViewManager()->GetRootView(view);
-              
-        if (NS_SUCCEEDED(rv)) {
-          *aResult = view->GetWidget();
-          NS_IF_ADDREF(*aResult);
-        }
+        nsCOMPtr<nsIDocShellTreeItem> parent;
+        docShellAsItem->GetSameTypeParent(getter_AddRefs(parent));
+        if (!parent)
+          return nsnull;
+
+        sgo = do_GetInterface(parent);
+        if (!sgo)
+          return nsnull;
+
+        baseWin = do_QueryInterface(sgo->GetDocShell());
       }
     }
   }
-  return rv;
+
+  // This will return a pointer that we're about to release, but
+  // that's ok since the docshell (nsIBaseWindow) holds the widget
+  // alive.
+  return widget.get();
 }
 
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseFilePicker::Init(nsIDOMWindowInternal *aParent,
-                                     const PRUnichar *aTitle,
+NS_IMETHODIMP nsBaseFilePicker::Init(nsIDOMWindow *aParent,
+                                     const nsAString& aTitle,
                                      PRInt16 aMode)
 {
-  nsCOMPtr<nsIWidget> widget;
-  nsresult rv = DOMWindowToWidget(aParent, getter_AddRefs(widget));
+  NS_PRECONDITION(aParent, "Null parent passed to filepicker, no file "
+                  "picker for you!");
+  nsIWidget *widget = DOMWindowToWidget(aParent);
+  NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
 
-  if (NS_SUCCEEDED(rv)) {
-    return InitNative(widget, aTitle, aMode);
-  } else {
-    return InitNative(nsnull, aTitle, aMode);
-  }
+  InitNative(widget, aTitle, aMode);
 
-  return rv;
+  return NS_OK;
 }
 
 
@@ -152,7 +158,7 @@ nsBaseFilePicker::AppendFilters(PRInt32 aFilterMask)
     stringBundle->GetStringFromName(NS_LITERAL_STRING("appsTitle").get(), getter_Copies(title));
     // Pass the magic string "..apps" to the platform filepicker, which it
     // should recognize and do the correct platform behavior for.
-    AppendFilter(title, NS_LITERAL_STRING("..apps").get());
+    AppendFilter(title, NS_LITERAL_STRING("..apps"));
   }
   return NS_OK;
 }

@@ -603,7 +603,7 @@ nsImageBoxFrame::DidSetStyleContext( nsIPresContext* aPresContext )
 {
   // Fetch our subrect.
   const nsStyleList* myList = GetStyleList();
-  mSubRect = myList->mImageRegion;
+  mSubRect = myList->mImageRegion; // before |mSuppressStyleCheck| test!
 
   if (mUseSrcAttr || mSuppressStyleCheck)
     return NS_OK; // No more work required, since the image isn't specified by style.
