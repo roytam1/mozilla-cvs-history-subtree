@@ -203,7 +203,7 @@ void				xmlhtml_complete  (NET_StreamClass *stream);
 void				xmlhtml_complete_int (XMLFile xml);
 void				xmlhtml_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx);
 void				readHTML (char* url, XMLHTMLInclusion ss);
-NET_StreamClass * XML_ConverterInt(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id);
+NET_StreamClass * XML_ConverterInt(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id,int16 fileType);
 
 PUBLIC NET_StreamClass *	XML_XMLConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id);
 PUBLIC NET_StreamClass *	XML_CSSConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id);
