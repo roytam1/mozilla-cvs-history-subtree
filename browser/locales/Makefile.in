@@ -89,7 +89,7 @@ install:: $(addprefix $(AB_CD)/profile/chrome/,$(PROFILE_CHROME))
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile/chrome
 
 SEARCH_PLUGINS = $(shell cat $(srcdir)/$(AB_CD)/searchplugins/list.txt)
-SEARCH_PLUGIN_PREFIX = $(addprefix $(AB_CD)/searchplugins/,$(SEARCH_PLUGINS))
+SEARCH_PLUGIN_PREFIX = $(addprefix $(srcdir)/$(AB_CD)/searchplugins/,$(SEARCH_PLUGINS))
 
 libs realchrome:: $(addsuffix .src,$(SEARCH_PLUGIN_PREFIX)) $(foreach base,$(SEARCH_PLUGIN_PREFIX),$(wildcard $(base).gif)$(wildcard $(base).png))
 	$(INSTALL) $^ $(DIST)/bin/searchplugins
