@@ -2438,7 +2438,7 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
             offset.LowPart = me->md.overlapped.overlapped.Offset;
             offset.HighPart = me->md.overlapped.overlapped.OffsetHigh;
             offset.QuadPart += len;
-            SetFilePointer((HANDLE)f, me->md.blocked_io_bytes, 0, FILE_CURRENT);
+            SetFilePointer((HANDLE)f, offset.LowPart, &offset.HighPart, FILE_BEGIN);
     
             PR_ASSERT(me->io_pending == PR_FALSE);
 
