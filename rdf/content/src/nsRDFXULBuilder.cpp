@@ -323,9 +323,7 @@ NS_NewRDFXULBuilder(nsIRDFContentModelBuilder** result)
 
 
 RDFXULBuilderImpl::RDFXULBuilderImpl(void)
-    : mDB(nsnull),
-      mDocument(nsnull),
-      mRoot(nsnull)
+    : mDocument(nsnull)
 {
     NS_INIT_REFCNT();
 }
@@ -337,7 +335,6 @@ RDFXULBuilderImpl::Init()
     nsresult rv;
 
     if (gRefCnt++ == 0) {
-        nsresult rv;
         rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
                                                 nsnull,
                                                 kINameSpaceManagerIID,
@@ -654,7 +651,7 @@ RDFXULBuilderImpl::CreateContents(nsIContent* aElement)
 
     // If we're the root content, then prepend a special hidden form
     // element.
-    if (aElement == mRoot) {
+    if (aElement == mRoot.get()) {
       // Always insert a hidden form as the very first child of the window.
       // Create a new form element.
       nsCOMPtr<nsIHTMLContent> newElement;
@@ -1193,13 +1190,13 @@ RDFXULBuilderImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             rv = NS_NewRDFContainer(mDB, parent, getter_AddRefs(container));
 
             // Determine the index of the refChild in the container
-            PRInt32 index;
-            rv = container->IndexOf(refChild, &index);
+            PRInt32 i;
+            rv = container->IndexOf(refChild, &i);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to determine index of refChild in container");
             if (NS_FAILED(rv)) return rv;
 
             // ...and insert the newChild before it.
-            rv = container->InsertElementAt(newChild, index, PR_TRUE);
+            rv = container->InsertElementAt(newChild, i, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to insert new element into container");
             if (NS_FAILED(rv)) return rv;
         }
@@ -1262,8 +1259,8 @@ RDFXULBuilderImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             if (NS_FAILED(rv)) return rv;
 
             // Remember the old child's index...
-            PRInt32 index;
-            rv = container->IndexOf(oldChild, &index);
+            PRInt32 i;
+            rv = container->IndexOf(oldChild, &i);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get index of old child in container");
             if (NS_FAILED(rv)) return rv;
 
@@ -1282,7 +1279,7 @@ RDFXULBuilderImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             if (NS_FAILED(rv)) return rv;
 
             // ...and add the new child to the collection at the old child's index
-            rv = container->InsertElementAt(newChild, index, PR_TRUE);
+            rv = container->InsertElementAt(newChild, i, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add new child to container");
             if (NS_FAILED(rv)) return rv;
         }
@@ -2551,7 +2548,7 @@ RDFXULBuilderImpl::CreateBuilder(const nsCID& aBuilderCID, nsIContent* aElement,
         // C-string safely. Sure'd be nice to have this be automagic.
         {
             char buf[256], *p = buf;
-            if (uri.Length() >= sizeof(buf))
+            if (uri.Length() >= PRInt32(sizeof buf))
                 p = new char[uri.Length() + 1];
 
             uri.ToCString(p, uri.Length() + 1);
