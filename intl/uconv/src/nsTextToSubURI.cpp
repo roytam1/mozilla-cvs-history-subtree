@@ -236,8 +236,10 @@ NS_IMETHODIMP  nsTextToSubURI::UnEscapeURIForUI(const nsACString & aCharset,
                                                 const nsACString &aURIFragment, 
                                                 nsAString &_retval)
 {
-  nsCAutoString unescapedSpec(aURIFragment);
-  NS_UnescapeURL(unescapedSpec);
+  nsCAutoString unescapedSpec;
+  // skip control octets (0x00 - 0x1f and 0x7f) when unescaping
+  NS_UnescapeURL(PromiseFlatCString(aURIFragment), 
+                 esc_SkipControl | esc_AlwaysCopy, unescapedSpec);
 
   return convertURItoUnicode(PromiseFlatCString(aCharset), unescapedSpec, PR_TRUE, _retval);
 }
