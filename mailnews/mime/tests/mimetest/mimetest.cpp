@@ -153,7 +153,7 @@ public:
       NS_INIT_REFCNT(); 
       mIndentCount = 0;
       mInClosingTag = PR_FALSE;
-      mOutFormat = nsMimeMessageRaw;
+      mOutFormat = nsMimeOutput::nsMimeMessageRaw;
     }
 
     virtual ~ConsoleOutputStreamImpl(void) {}
@@ -164,9 +164,9 @@ public:
     // nsIBaseStream interface
     NS_IMETHOD Close(void) 
     {
-      if ((mOutFormat == nsMimeMessageSplitDisplay) ||
-          (mOutFormat == nsMimeMessageBodyDisplay) ||
-          (mOutFormat == nsMimeMessageQuoting))
+      if ((mOutFormat == nsMimeOutput::nsMimeMessageSplitDisplay) ||
+          (mOutFormat == nsMimeOutput::nsMimeMessageBodyDisplay) ||
+          (mOutFormat == nsMimeOutput::nsMimeMessageQuoting))
       {
         char *note = "\n<center><hr WIDTH=\"90%\"><br><b>Anything after the above horizontal line is diagnostic output<br>and is not part of the HTML stream!</b></center><pre>\n";
        PR_Write(PR_GetSpecialFD(PR_StandardOutput), note, PL_strlen(note));
@@ -221,7 +221,7 @@ ConsoleOutputStreamImpl::Write(const char* aBuf, PRUint32 aCount, PRUint32 *aWri
   PRUint32 i=0;
 
   // If raw, don't postprocess...
-  if (mOutFormat == nsMimeMessageRaw)
+  if (mOutFormat == nsMimeOutput::nsMimeMessageRaw)
   {
     PR_Write(PR_GetSpecialFD(PR_StandardOutput), aBuf, aCount);
     *aWriteCount = aCount;
@@ -487,7 +487,7 @@ DoRFC822toHTMLConversion(char *filename)
   }
 
   // Set us as the output stream for HTML data from libmime...
-  if (NS_FAILED(mimeParser->SetOutputStream(out, theURI, nsMimeUnknown, &outFormat, &contentType)))
+  if (NS_FAILED(mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeUnknown, &outFormat, &contentType)))
   {
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
     return NS_ERROR_FAILURE;
