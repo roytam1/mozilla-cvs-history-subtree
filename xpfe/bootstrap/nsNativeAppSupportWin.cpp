@@ -76,6 +76,19 @@ GetMostRecentWindow(const PRUnichar* aType, nsIDOMWindowInternal** aWindow) {
     return NS_ERROR_FAILURE;
 }
 
+static char* GetACPString(const nsString& aStr)
+{
+    int acplen = aStr.Length() * 2 + 1;
+    char * acp = new char[ acplen ];
+    if( acp ) {
+        int outlen = ::WideCharToMultiByte( CP_ACP, 0, aStr.get(), aStr.Length(),
+                                            acp, acplen, NULL, NULL );
+        if ( outlen >= 0)
+            acp[ outlen ] = '\0';  // null terminate
+    }
+    return acp;
+}
+
 static
 void
 activateWindow( nsIDOMWindowInternal *win ) {
@@ -1711,7 +1724,21 @@ nsNativeAppSupportWin::SetupSysTrayIcon() {
         // Create menu and add item.
         mTrayIconMenu = ::CreatePopupMenu();
         ::AppendMenuW( mTrayIconMenu, MF_STRING, TURBO_OPEN, openText.get() );
-        ::AppendMenuW( mTrayIconMenu, MF_STRING, TURBO_QUIT, exitText.get() );
+        if ( ::GetLastError() == ERROR_CALL_NOT_IMPLEMENTED ) {
+            char* openACPText = GetACPString( openText );
+            if ( openACPText ) {
+                ::AppendMenu( mTrayIconMenu, MF_STRING, TURBO_OPEN,  openACPText );
+                delete [] openACPText ;
+            }
+            char* exitACPText = GetACPString( exitText );
+            if ( exitACPText ) {
+               ::AppendMenu( mTrayIconMenu, MF_STRING, TURBO_QUIT,  exitACPText );
+               delete [] exitACPText ;
+            }     
+        }
+        else {
+            ::AppendMenuW( mTrayIconMenu, MF_STRING, TURBO_QUIT, exitText.get() );
+        }
 
     }
     
