@@ -159,7 +159,8 @@ jint (* nativeNextElement) (JNIEnv *, jobject, jint, jint);
 jint (* nativeGetChildAt) (JNIEnv *, jobject, jint, jint, jint);
 jint (* nativeGetChildCount) (JNIEnv *, jobject, jint, jint);
 jint (* nativeGetIndex) (JNIEnv *, jobject, jint, jint, jint);
-void (* nativeInsertElementAt) (JNIEnv *, jobject, jint, jint, jint, jint);
+void (* nativeInsertElementAt) (JNIEnv *, jobject, jint, jint, jint, jobject, jint);
+jint (* nativeNewFolder) (JNIEnv *, jobject, jint, jint, jobject);
 jboolean (* nativeIsContainer) (JNIEnv *, jobject, jint, jint);
 jboolean (* nativeIsLeaf) (JNIEnv *, jobject, jint, jint);
 jstring (* nativeToString) (JNIEnv *, jobject, jint, jint);
@@ -237,8 +238,12 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeGetIndex) {
     printf("got dlsym error %s\n", dlerror());
   }
-  nativeInsertElementAt = (void (*) (JNIEnv *, jobject, jint, jint, jint, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeInsertElementAt");
+  nativeInsertElementAt = (void (*) (JNIEnv *, jobject, jint, jint, jint, jobject, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeInsertElementAt");
   if (!nativeInsertElementAt) {
+    printf("got dlsym error %s\n", dlerror());
+  }
+  nativeNewFolder = (jint (*) (JNIEnv *, jobject, jint, jint, jobject)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeNewFolder");
+  if (!nativeNewFolder) {
     printf("got dlsym error %s\n", dlerror());
   }
   nativeIsContainer = (jboolean (*) (JNIEnv *, jobject, jint, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeIsContainer");
@@ -954,10 +959,20 @@ Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeGetIndex
 JNIEXPORT void JNICALL 
 Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeInsertElementAt
 (JNIEnv *env, jobject obj, jint webShellPtr, jint parentRDFNode, 
- jint childRDFNode, jint childIndex) {
+ jint childRDFNode, jobject childProps, jint childIndex) {
   (* nativeInsertElementAt) (env, obj, webShellPtr, parentRDFNode, 
-                             childRDFNode, childIndex);
+                             childRDFNode, childProps, childIndex);
 }
+
+JNIEXPORT jint JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeNewFolder
+(JNIEnv *env, jobject obj, jint webShellPtr, jint parentRDFNode, 
+ jobject childProps)
+{
+    return (* nativeNewFolder) (env, obj, webShellPtr, 
+                                parentRDFNode, childProps);
+}
+
 
 /*
  * Class:     org_mozilla_webclient_wrapper_0005fnative_RDFTreeNode
