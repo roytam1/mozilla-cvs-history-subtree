@@ -45,6 +45,7 @@
 #include "reg.h"
 #include "NSReg.h"
 #include "VerReg.h"
+#include "vr_stubs.h" /* ? jrm */
 
 #include "plstr.h"
 #include "prmem.h"
@@ -669,7 +670,7 @@ VR_INTERFACE(REGERR) VR_CreateRegistry( char *installation, char *programPath, c
 {
 	FILEHANDLE  fh;
 	REGERR      err;
-    struct stat st;
+    XP_StatStruct st;
     char *      regname = "";
 #ifdef XP_UNIX
     char *      regbuf = NULL;
@@ -704,9 +705,9 @@ VR_INTERFACE(REGERR) VR_CreateRegistry( char *installation, char *programPath, c
 
 #ifdef STANDALONE_REGISTRY
     /* standalone registry automatically creates it if not found */
-    fh = PR_Open( regname, PR_RDWR, 00700);
+    fh = vr_fileOpen( regname, XP_FILE_UPDATE_BIN);
 #else
-	if (stat( regname, &st /*,xpRegistry*/ ) == 0)
+	if (XP_Stat( regname, &st /*,xpRegistry*/ ) == 0)
 		fh = PR_Open( regname, PR_RDWR, 00700);
 	else
 		/* create a new empty registry */
@@ -1037,9 +1038,9 @@ VR_INTERFACE(REGERR) VR_ValidateComponent(char *component_path)
     }
 
     {
-        struct stat  statStruct;
+        XP_StatStruct  statStruct;
 
-        if ( stat ( path, &statStruct ) != 0 ) {
+        if ( XP_Stat( path, &statStruct ) != 0 ) {
             err = REGERR_NOFILE;
         }
     }

@@ -34,10 +34,10 @@
 
 #ifdef XP_PC
  typedef struct _stat   XP_StatStruct;
- #define XP_Stat(file,data,type)     _stat((file),(data))
+ #define XP_Stat(file,data)     _stat((file),(data))
 #else
  typedef struct stat    XP_StatStruct;
- #define  XP_Stat(file,data,type)     stat((file),(data))
+ #define  XP_Stat(file,data)     stat((file),(data))
 #endif
 
 #ifdef STANDALONE_REGISTRY
