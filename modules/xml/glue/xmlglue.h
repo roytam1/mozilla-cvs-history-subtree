@@ -20,6 +20,9 @@
 #define	_RDF_XMLGLUE_H_
 
 #include "xmlparse.h"
+#include "lo_ele.h"
+#include "libevent.h"
+#include "libmocha.h"
 
 #ifdef XP_UNIX
 #include <sys/fcntl.h>
@@ -78,9 +81,12 @@ typedef struct _XMLFileStruct {
   void*   stream;
   int8    numOpenStreams;
   void*   urls;
-  void*   mwcontext;
+  MWContext*   mwcontext;
   char*   address;
+  char*   outputBuffer;
   XML_Parser parser;
+  int32   numTransclusions;
+  struct _XMLElementStruct** transclusions;
 } XMLFileStruct;
 
 typedef XMLFileStruct* XMLFile;
@@ -102,6 +108,7 @@ typedef struct _StyleElementStruct {
   char** tagStack;
   char*   style;
   struct _StyleElementStruct* next;
+  int id;   /* Unique identifier among all style elements in all style sheets */
 } StyleElementStruct;
 
 typedef StyleElementStruct* StyleElement;
@@ -111,6 +118,7 @@ typedef struct _XMLElementStruct {
   char*  tag;
   char** attributes;
   char* content;
+  JSObject *mocha_object;
   struct _XMLElementStruct* parent;
   struct _XMLElementStruct* child;
   struct _XMLElementStruct* next;
@@ -168,6 +176,7 @@ int				xmlhtml_write(NET_StreamClass *stream, const char *str, int32 len);
 unsigned int			xmlhtml_write_ready(NET_StreamClass *stream);
 void				xmlhtml_abort(NET_StreamClass *stream, int status);
 void				xmlhtml_complete  (NET_StreamClass *stream);
+void				xmlhtml_complete_int (XMLFile xml);
 void				xmlhtml_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx);
 void				readHTML (char* url, XMLHTMLInclusion ss);
 
