@@ -53,6 +53,7 @@ var kRDFCUIID;
 var RDFCU;
 
 var BMDS;
+var kBMSVCIID;
 var BMSVC;
 
 var kPREFContractID;
@@ -108,8 +109,9 @@ function initServices()
 
 function initBMService()
 {
+  kBMSVCIID = Components.interfaces.nsIBookmarksService;
   BMDS  = RDF.GetDataSource("rdf:bookmarks");
-  BMSVC = BMDS.QueryInterface(Components.interfaces.nsIBookmarksService);
+  BMSVC = BMDS.QueryInterface(kBMSVCIID);
   BookmarkInsertTransaction.prototype.RDFC = RDFC;
   BookmarkInsertTransaction.prototype.BMDS = BMDS;
   BookmarkRemoveTransaction.prototype.RDFC = RDFC;
@@ -568,47 +570,26 @@ var BookmarksCommand = {
       var containerChildren = RDFC.GetElements();
       var tabPanels = browser.mPanelContainer.childNodes;
       var tabCount  = tabPanels.length;
-      var doReplace = PREF.getBoolPref("browser.tabs.loadFolderAndReplace");
-      var index0;
-      if (doReplace)
-        index0 = 0;
-      else {
-        for (index0=tabCount-1; index0>=0; --index0)
-          if (browser.browsers[index0].webNavigation.currentURI.spec != "about:blank")
-            break;
-        ++index0;
-      }
-
-      var index  = index0;
+      var index = 0;
       while (containerChildren.hasMoreElements()) {
         var res = containerChildren.getNext().QueryInterface(kRDFRSCIID);
         var target = BMDS.GetTarget(res, urlArc, true);
         if (target) {
           var uri = target.QueryInterface(kRDFLITIID).Value;
-          if (index < tabCount)
-            tabPanels[index].loadURI(uri);
-          else
-            browser.addTab(uri);
+          browser.addTab(uri);
           ++index;
         }
       }
 
       // If the bookmark group was completely invalid, just bail.
-      if (index == index0)
+      if (index == 0)
         return;
 
-      // Select the first tab in the group.
-      var tabs = browser.mTabContainer.childNodes;
-      browser.selectedTab = tabs[index0];
-
-      // Close any remaining open tabs that are left over.
-      // (Always skipped when we append tabs)
-      for (var i = tabCount-1; i >= index; --i)
-        browser.removeTab(tabs[i]);
-
-      // and focus the content
-      browser.focus();
-
+      // Select the first tab in the group if we aren't loading in the background.
+      if (!PREF.getBoolPref("browser.tabs.loadInBackground")) {
+        var tabs = browser.mTabContainer.childNodes;
+        browser.selectedTab = tabs[index];
+      }
     } else {
       dump("Open Group in new window: not implemented...\n");
     }
@@ -1587,16 +1568,26 @@ var BookmarksUtils = {
       title = url;
     }
 
-    openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
-               "centerscreen,chrome,dialog=yes,resizable=no,dependent", title,
-               url, null, docCharset);
+    this.addBookmark(url, title, docCharset, aShowDialog);
   }, 
 
   // should update the caller, aShowDialog is no more necessary
-  addBookmark: function (aURL, aTitle, aCharSet, aShowDialog)                   
+  addBookmark: function (aURL, aTitle, aCharset, aShowDialog)
   {                                                                             
-    openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "",     
-               "centerscreen,chrome,dialog=yes,resizable=no,dependent", aTitle, aURL, null, aCharSet);
+    if (aCharset === undefined) {
+      var fw = document.commandDispatcher.focusedWindow;
+      aCharset = fw.document.characterSet;
+    }
+
+    if (aShowDialog) {
+      openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "",
+                 "centerscreen,chrome,dialog=yes,resizable=no,dependent", aTitle, aURL, null, aCharset);
+    }
+    else {
+      // User has elected to override the file dialog and always file bookmarks
+      // into the default bookmark folder.
+      BMSVC.addBookmarkImmediately(aURL, aTitle, kBMSVCIID.BOOKMARK_DEFAULT_TYPE, aCharset);
+    }
   },                                                                          
 
   loadBookmarkBrowser: function (aEvent, aTarget, aDS)
