@@ -3453,7 +3453,7 @@ net_AboutCookiesDialogDone(XPDialogState* state, char** argv, int argc,
 		((MWContext *)(state->arg),
 		cookie->path, cookie->host,
 		cookie->name, cookie->cookie,
-		cookie->expires, cookie->secure, cookie->is_domain);
+		cookie->expires, HG78111, cookie->is_domain);
 
 	}
 	return(PR_TRUE);
