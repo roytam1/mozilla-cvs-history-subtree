@@ -17,14 +17,15 @@
  *
  * Please see release.txt distributed with this file for more information.
  *
+ * $Id$
  */
 
 
-#include "DOM.h"
+#include "dom.h"
 #include "String.h"
 #include "baseutils.h"
 #include "NamedMap.h"
-#include <ostream.h>
+#include <iostream.h>
 
 #ifndef MITRE_PRINTERS_H
 #define MITRE_PRINTERS_H
@@ -33,7 +34,8 @@
 /**
  * A class for printing XML nodes.
  * This class was ported from XSL:P Java source
- * @author Keith Visco (kvisco@mitre.org)
+ * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
+ * @version $Revision$ $Date$
 **/
 class XMLPrinter {
 
@@ -229,7 +231,8 @@ private:
 /**
  * A class for printing an XML node as non-well-formed HTML
  * This class was ported from XSL:P Java source
- * @author Keith Visco (kvisco@mitre.org)
+ * @author Keith Visco (kvisco@ziplink.net)
+ * @version $Revision$ $Date$
 **/
 class HTMLPrinter : public XMLPrinter {
 

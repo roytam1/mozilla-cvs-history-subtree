@@ -32,6 +32,10 @@
 #ifndef MITRE_DOM
 #define MITRE_DOM
 
+#ifdef __BORLANDC__
+#include <stdlib.h>
+#endif
+
 #include "String.h"
 #include "baseutils.h"
 #ifndef NULL
