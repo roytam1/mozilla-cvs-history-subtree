@@ -19,6 +19,7 @@
     Content
     <html:input type="checkbox" onclick="setMode('dom', !event.target.checked);"/>
     DOM
+    <html:input type="checkbox" onclick="setMode('frame', !event.target.checked);"/> Frames
     <html:input type="checkbox" onclick="setMode('leaf', !event.target.checked);"/>
     OOB data
   </html:div>

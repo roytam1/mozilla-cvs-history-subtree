@@ -267,7 +267,11 @@ nsRDFDOMDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aPropert
   
   // what node is this?
   if (aSource == kNC_DOMRoot) {
-    rv = getTargetsForKnownObject(mRootFrame, aProperty, PR_TRUE, arcs);
+    nsStringKey frameMode("frame");
+    if (mModeTable.Get(&frameMode))
+      rv = getTargetsForKnownObject(mRootFrame, aProperty, PR_TRUE, arcs);
+    else
+      rv = getTargetsForKnownObject(mDocument, aProperty, PR_TRUE, arcs);
   } else {
     nsCOMPtr<nsIDOMViewerElement> nodeContainer;
     nodeContainer = do_QueryInterface(aSource, &rv);
