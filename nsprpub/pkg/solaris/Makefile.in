@@ -49,15 +49,15 @@ clean clobber::
 $(ROOT):
 	mkdir -p $@
 
-$(ROOT)/usr/lib/mps/sparcv9: $(ROOT)/usr/lib
+$(ROOT)/usr/lib/mps/sparcv9:
 	mkdir -p $@
 	$(CP) -r $(abs_dist64_libdir)/*.so $@
-$(ROOT)/usr/lib/mps: $(ROOT)/usr/lib
+$(ROOT)/usr/lib/mps:
 	mkdir -p $@
 	$(CP) -r $(abs_dist_libdir)/*.so $@
 $(ROOT)/usr/lib/mps/cpu/sparcv8plus:
 	mkdir -p $@
 	$(CP) -r $(abs_dist_libdir)/cpu/sparcv8plus/*.so $@
-$(ROOT)/usr/include/mps: $(ROOT)/usr/include
+$(ROOT)/usr/include/mps:
 	mkdir -p $@
 	$(CP) -r $(abs_dist_includedir)/* $@
