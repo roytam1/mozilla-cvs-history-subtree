@@ -61,7 +61,9 @@ public class PlugletTagInfo2Impl implements PlugletTagInfo2  {
     /* Get the complete text of the HTML tag that was
      * used to instantiate this pluglet
      */
-    public native String getTagText();
+    public String getTagText() {
+	throw(new UnsupportedOperationException("PlugletTagInfo2.getTagText not implemented yet"));
+    }
     public native String getDocumentBase();
     /* Return an encoding whose name is specified in:
      * http://java.sun.com/products/jdk/1.1/docs/guide/intl/intl.doc.html#25303
