@@ -42,7 +42,7 @@ LIBRARY_NAME    = $(MODULE)
 DEFFILE         = Mapi32.def
 
 REQUIRES	= MapiProxy \
-                  nsMapiHook \
+                  msgMapi \
 		  xpcom \
 		  string \
 		  $(NULL)
