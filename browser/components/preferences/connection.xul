@@ -193,7 +193,8 @@
           <textbox id="networkProxyAutoconfigURL" flex="1" preference="network.proxy.autoconfig_url"
                    onpreferencewrite="return gConnectionsDialog.writeAutoconfigURL();"/>
           <button id="autoReload" label="&reload.label;" accesskey="&reload.accesskey;"
-                  oncommand="gConnectionsDialog.reloadPAC();" preference="pref.advanced.proxies.disable_button.reload"/>
+                  oncommand="gConnectionsDialog.reloadPAC();" 
+                  preference="pref.advanced.proxies.disable_button.reload"/>
         </hbox>
       </radiogroup>
     </groupbox>

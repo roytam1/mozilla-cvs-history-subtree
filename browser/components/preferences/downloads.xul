@@ -59,6 +59,9 @@
       <preference id="browser.download.manager.closeWhenDone"
                   name="browser.download.manager.closeWhenDone"
                   type="bool"/>
+      <preference id="pref.downloads.disable_button.edit_actions"
+                  name="pref.downloads.disable_button.edit_actions"
+                  type="bool"/>
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/downloads.js"/>
@@ -80,6 +83,7 @@
                        preference-editable="true"
                        onpreferenceread="return gDownloadsPane.readDownloadDirPref();"/>
             <button id="chooseFolder" oncommand="gDownloadsPane.chooseFolder();"
+                    preference="browser.download.folderList"
 #ifdef XP_MACSOX
                     label="&chooseFolderMac.label;"/>
 #else
@@ -107,7 +111,8 @@
       <separator class="thin"/>
       <hbox>
         <button label="&configureActions.label;" accesskey="&configureActions.accesskey;"
-                oncommand="gDownloadsPane.showFileTypeActions();"/>
+                oncommand="gDownloadsPane.showFileTypeActions();"
+                preference="pref.downloads.disable_button.edit_actions"/>
       </hbox>
     </groupbox>
   </prefpane>

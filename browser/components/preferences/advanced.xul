@@ -69,6 +69,22 @@
       <preference id="browser.preferences.advanced.selectedTabIndex"
                   name="browser.preferences.advanced.selectedTabIndex"
                   type="int"/>
+
+      <preference id="security.disable_button.openCertManager"
+                  name="security.disable_button.openCertManager"
+                  type="bool"/>
+      <preference id="security.OCSP.disable_button.managecrl"
+                  name="security.OCSP.disable_button.managecrl"
+                  type="bool"/>
+      <preference id="security.disable_button.openDeviceManager"
+                  name="security.disable_button.openDeviceManager"
+                  type="bool"/>
+      <preference id="pref.update.disable_button.update_app"
+                  name="pref.update.disable_button.update_app"
+                  type="bool"/>
+      <preference id="pref.update.disable_button.update_addons"
+                  name="pref.update.disable_button.update_addons"
+                  type="bool"/>
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/advanced.js"/>
@@ -151,7 +167,8 @@
                 <separator class="thin"/>
                 <hbox>
                   <button label="&checkNow.label;" accesskey="&appCheckNow.accesskey;"
-                          oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_APP);"/>
+                          oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_APP);"
+                          preference="pref.update.disable_button.update_app"/>
                 </hbox>
               </vbox>
             </vbox>
@@ -166,7 +183,8 @@
               <separator class="thin"/>
               <hbox class="indent">
                 <button label="&checkNow.label;" accesskey="&extensionsCheckNow.accesskey;"
-                        oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_ADDON);"/>
+                        oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_ADDON);"
+                        preference="pref.update.disable_button.update_addons"/>
               </hbox>
             </vbox>
           </vbox>
@@ -218,13 +236,16 @@
             
             <description>
               <button label="&viewCertificates.label;" accesskey="&viewCertificates.accesskey;" 
-                      oncommand="gAdvancedPane.showCertificates();"/>
+                      oncommand="gAdvancedPane.showCertificates();"
+                      preference="security.disable_button.openCertManager"/>
               <button label="&viewCRLs.label;" accesskey="&viewCRLs.accesskey;" 
-                      oncommand="gAdvancedPane.showCRLs();"/>
+                      oncommand="gAdvancedPane.showCRLs();"
+                      preference="security.OCSP.disable_button.managecrl"/>
               <button label="&viewOCSP.label;" accesskey="&viewOCSP.accesskey;" 
                       oncommand="gAdvancedPane.showOCSP();"/>
               <button label="&viewSecurityDevices.label;" accesskey="&viewSecurityDevices.accesskey;" 
-                      oncommand="gAdvancedPane.showSecurityDevices();"/>
+                      oncommand="gAdvancedPane.showSecurityDevices();"
+                      preference="security.disable_button.openDeviceManager"/>
             </description>                              
           </groupbox>
         </tabpanel>

@@ -59,6 +59,27 @@
       <preference id="browser.preferences.privacy.selectedTabIndex"
                   name="browser.preferences.privacy.selectedTabIndex"
                   type="int"/>
+      <preference id="pref.privacy.disable_button.clear_history"
+                  name="pref.privacy.disable_button.clear_history"
+                  type="bool"/>
+      <preference id="pref.privacy.disable_button.clear_formdata"
+                  name="pref.privacy.disable_button.clear_formdata"
+                  type="bool"/>
+      <preference id="pref.privacy.disable_button.cookie_exceptions"
+                  name="pref.privacy.disable_button.cookie_exceptions"
+                  type="bool"/>
+      <preference id="pref.privacy.disable_button.view_cookies"
+                  name="pref.privacy.disable_button.view_cookies"
+                  type="bool"/>
+      <preference id="pref.privacy.disable_button.clear_cookies"
+                  name="pref.privacy.disable_button.clear_cookies"
+                  type="bool"/>
+      <preference id="pref.privacy.disable_button.clear_cache"
+                  name="pref.privacy.disable_button.clear_cache"
+                  type="bool"/>
+      <preference id="pref.privacy.disable_button.view_passwords"
+                  name="pref.privacy.disable_button.view_passwords"
+                  type="bool"/>
     </preferences>
     
     <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
@@ -88,7 +109,8 @@
           <separator flex="1"/>
           <hbox pack="end">
             <button label="&clearHistory.label;" accesskey="&clearHistory.accesskey;"
-                    oncommand="gPrivacyPane.clear(this);" item="history"/>
+                    oncommand="gPrivacyPane.clear(this);" item="history"
+                    preference="pref.privacy.disable_button.clear_history"/>
           </hbox>
         </tabpanel>
         <tabpanel orient="vertical">
@@ -100,7 +122,8 @@
           <separator flex="1"/>
           <hbox pack="end">
             <button label="&clearFormData.label;" accesskey="&clearFormData.accesskey;"
-                    oncommand="gPrivacyPane.clear(this);" item="formdata"/>
+                    oncommand="gPrivacyPane.clear(this);" item="formdata"
+                    preference="pref.privacy.disable_button.clear_formdata"/>
           </hbox>
         </tabpanel>
         <tabpanel orient="vertical">
@@ -116,12 +139,14 @@
             <!-- XXXben - check for keychain access use -->
             <button id="setMasterPassword" 
                     label="&setMasterPassword.label;" accesskey="&setMasterPassword.accesskey;"
-                    oncommand="gPrivacyPane.changeMasterPassword();"/>
+                    oncommand="gPrivacyPane.changeMasterPassword();"
+                    preference="pref.privacy.disable_button.set_master_password"/>
           </hbox>
           <separator flex="1"/>
           <hbox>
             <button label="&viewPasswords.label;" accesskey="&viewPasswords.accesskey;"
-                    oncommand="gPrivacyPane.viewPasswords();"/>
+                    oncommand="gPrivacyPane.viewPasswords();"
+                    preference="pref.privacy.disable_button.view_passwords"/>
           </hbox>
         </tabpanel>
         <tabpanel orient="vertical">
@@ -160,7 +185,8 @@
                         onpreferenceread="return gPrivacyPane.readEnableCookiesPref();"
                         onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
               <button id="cookieExceptions" oncommand="gPrivacyPane.viewCookieExceptions();"
-                      label="&exceptions.label;" accesskey="&cookieExceptions.accesskey;"/>
+                      label="&exceptions.label;" accesskey="&cookieExceptions.accesskey;"
+                      preference="pref.privacy.disable_button.cookie_exceptions"/>
             </hbox>
             <vbox align="start">
               <checkbox id="enableCookiesForOriginating" class="indent"
@@ -192,10 +218,12 @@
           <separator/>
           <hbox>
             <button label="&viewCookies.label;" accesskey="&viewCookies.accesskey;"
-                    oncommand="gPrivacyPane.viewCookies();"/>
+                    oncommand="gPrivacyPane.viewCookies();"
+                    preference="pref.privacy.disable_button.view_cookies"/>
             <spring flex="1"/>
             <button label="&clearCookies.label;" accesskey="&clearCookies.accesskey;"
-                    oncommand="gPrivacyPane.clear(this);" item="cookies"/>
+                    oncommand="gPrivacyPane.clear(this);" item="cookies"
+                    preference="pref.privacy.disable_button.clear_cookies"/>
           </hbox>
         </tabpanel>
         <tabpanel orient="vertical">
@@ -210,7 +238,8 @@
           <separator flex="1"/>
           <hbox pack="end">
             <button label="&clearCache.label;" accesskey="&clearCache.accesskey;"
-                    oncommand="gPrivacyPane.clear(this);" item="cache"/>
+                    oncommand="gPrivacyPane.clear(this);" item="cache"
+                    preference="pref.privacy.disable_button.clear_cache"/>
           </hbox>
         </tabpanel>
       </tabpanels>

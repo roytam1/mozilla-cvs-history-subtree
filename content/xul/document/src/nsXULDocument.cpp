@@ -3173,6 +3173,8 @@ nsXULDocument::ResumeWalk()
         }
         mInitialLayoutComplete = PR_TRUE;
 
+        // Walk the set of pending load notifications and notify any observers.
+        // See below for detail.
         if (mPendingOverlayLoadNotifications.IsInitialized())
             mPendingOverlayLoadNotifications.Enumerate(FirePendingMergeNotification, (void*)&mOverlayLoadObservers);
     }
@@ -3182,12 +3184,27 @@ nsXULDocument::ResumeWalk()
             mCurrentPrototype->GetURI(getter_AddRefs(overlayURI));
             nsCOMPtr<nsIObserver> obs;
             if (mInitialLayoutComplete) {
+                // We have completed initial layout, so just send the notification.
                 mOverlayLoadObservers.Get(overlayURI, getter_AddRefs(obs));
                 if (obs)
                     obs->Observe(overlayURI, "xul-overlay-merged", EmptyString().get());
                 mOverlayLoadObservers.Remove(overlayURI);
             }
             else {
+                // If we have not yet displayed the document for the first time 
+                // (i.e. we came in here as the result of a dynamic overlay load
+                // which was spawned by a binding-attached event caused by 
+                // StartLayout() on the master prototype - we must remember that
+                // this overlay has been merged and tell the listeners after 
+                // StartLayout() is completely finished rather than doing so 
+                // immediately - otherwise we may be executing code that needs to
+                // access XBL Binding implementations on nodes for which frames 
+                // have not yet been constructed because their bindings have not
+                // yet been attached. This can be a race condition because dynamic
+                // overlay loading can take varying amounts of time depending on
+                // whether or not the overlay prototype is in the XUL cache. The
+                // most likely effect of this bug is odd UI initialization due to
+                // methods and properties that do not work.
                 if (!mPendingOverlayLoadNotifications.IsInitialized())
                     mPendingOverlayLoadNotifications.Init();
                 mPendingOverlayLoadNotifications.Get(overlayURI, getter_AddRefs(obs));

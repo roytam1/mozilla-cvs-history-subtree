@@ -20,6 +20,18 @@
       <preference id="browser.shell.checkDefaultBrowser"
                   name="browser.shell.checkDefaultBrowser"
                   type="bool"/>
+      <preference id="pref.browser.homepage.disable_button.current_page"
+                  name="pref.browser.homepage.disable_button.current_page"
+                  type="bool"/>
+      <preference id="pref.browser.homepage.disable_button.bookmark_page"
+                  name="pref.browser.homepage.disable_button.bookmark_page"
+                  type="bool"/>
+      <preference id="pref.browser.homepage.disable_button.blank_page"
+                  name="pref.browser.homepage.disable_button.blank_page"
+                  type="bool"/>
+      <preference id="pref.general.disable_button.default_browser"
+                  name="pref.general.disable_button.default_browser"
+                  type="bool"/>
     </preferences>
     
     <stringbundle id="bundleBrand" src="chrome://global/locale/brand.properties"/>
@@ -58,7 +70,8 @@
                   label="&checkForDefault.label;" accesskey="&checkForDefault.accesskey;"
                   flex="1"/>
         <button label="&checkNow.label;" accesskey="&checkNow.accesskey;"
-                oncommand="gGeneralPane.checkNow()"/>
+                oncommand="gGeneralPane.checkNow()"
+                preference="pref.general.disable_button.default_browser"/>
       </hbox>
     </groupbox>
 #endif

@@ -65,6 +65,9 @@
                   onchange="gContentPane.annoyancesPrefChanged();"/>
       <preference id="font.language.group"            name="font.language.group"            type="wstring"  onchange="gContentPane._rebuildFonts();"/>
       <preference id="font.default"                   name="font.default"                   type="string"   onchange="gContentPane._rebuildFonts();"/>
+      <preference id="pref.advanced.images.disable_button.view_image"
+                  name="pref.advanced.images.disable_button.view_image"
+                  type="bool"/>
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/fontbuilder.js"/>
@@ -114,7 +117,8 @@
             </vbox>
             <vbox>
               <button id="manageImages" label="&exceptions.label;"
-                      oncommand="gContentPane.showExceptions('image');"/>
+                      oncommand="gContentPane.showExceptions('image');"
+                      preference="pref.advanced.images.disable_button.view_image"/>
             </vbox>
           </row>
           <separator class="thin"/>
