@@ -78,7 +78,8 @@ GetEncryptionCert(char ** _retval)
   nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
   if (NS_FAILED(rv)) goto done;
 
-  rv = prefs->GetCharPref("aim.session.certnickname",
+  // XXX Fix this XXX //
+  rv = prefs->GetCharPref("spam.session.certnickname",
                           getter_Copies(nickname));
   if (NS_FAILED(rv)) goto done;
 
