@@ -65,6 +65,17 @@ int				nsldapi_initialized = 0;
 
 #ifdef USE_PTHREADS
 #include <pthread.h>
+#ifdef VMS
+/*
+** pthread_self() is not a routine on OpenVMS; it's inline assembler code. 
+** Since we need a real address which we can stuff away into a table, we need 
+** to make sure that pthread_self maps to the real pthread_self routine (yes,
+** we do have one fortunately).
+*/
+#undef pthread_self
+#define pthread_self PTHREAD_SELF
+extern pthread_t  _PTHREAD_CALL_  pthread_self (void);
+#endif
 static pthread_key_t		nsldapi_key;
 
 struct nsldapi_ldap_error {

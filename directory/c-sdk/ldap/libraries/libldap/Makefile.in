@@ -197,6 +197,11 @@ ifeq ($(OS_ARCH), Darwin)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 endif
 
+ifeq ($(OS_ARCH), OpenVMS)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(OS_LIBS)
+SHARED_LIBRARY_LIBS = $(dist_libdir)/lib$(LBER_LIBNAME).a
+endif
+
 ifeq ($(OS_ARCH), BeOS)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) -lbe
 endif
@@ -255,6 +260,15 @@ $(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS) $(DEF_FILE)
 	@echo ======= making $(DLLLDAP)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
+endif
+ifeq ($(OS_ARCH), OpenVMS)
+	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
+	@if test ! -f VMSuni.opt; then \
+	    echo "Creating universal symbol option file VMSuni.opt"; \
+	    for lib in $(SHARED_LIBRARY_LIBS); do $(AR_EXTRACT) $${lib}; done; \
+	    create_opt_uni $(OBJS) $(SUB_LOBJS); \
+	fi
+	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
 endif
 	$(LINK_DLL) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS) $(DEF_FILE)
 
