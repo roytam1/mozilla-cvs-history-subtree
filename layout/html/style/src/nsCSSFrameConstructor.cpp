@@ -3198,6 +3198,8 @@ nsCSSFrameConstructor::TableProcessChild(nsIPresShell*            aPresShell,
     break;
 
   case NS_STYLE_DISPLAY_NONE:
+    aState.mFrameManager->SetUndisplayedContent(aChildContent,
+                                                childStyleContext);
     break;
 
   default:
