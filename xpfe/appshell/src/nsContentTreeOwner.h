@@ -34,13 +34,16 @@
 #include "nsIWebBrowserChrome.h"
 
 class nsXULWindow;
+class nsSiteWindow;
 
 class nsContentTreeOwner : public nsIDocShellTreeOwner,
                                   public nsIBaseWindow,
                                   public nsIInterfaceRequestor,
                                   public nsIWebBrowserChrome
+
 {
 friend class nsXULWindow;
+friend class nsSiteWindow;
 
 public:
    NS_DECL_ISUPPORTS
@@ -60,14 +63,14 @@ protected:
    NS_IMETHOD ApplyChromeFlags();
 
 protected:
-   nsXULWindow*      mXULWindow;
+   nsXULWindow      *mXULWindow;
+   nsSiteWindow     *mSiteWindow;
    PRBool            mPrimary;
    PRBool            mContentTitleSetting;
    PRUint32          mChromeFlags;
    nsString          mWindowTitleModifier;
    nsString          mTitleSeparator;
    nsString          mTitlePreface;
-
 };
 
 #endif /* nsContentTreeOwner_h__ */

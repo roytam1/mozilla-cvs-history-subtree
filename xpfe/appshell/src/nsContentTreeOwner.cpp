@@ -34,6 +34,7 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMXULElement.h"
+#include "nsIEmbeddingSiteWindow.h"
 #include "nsIPrompt.h"
 #include "nsIAuthPrompt.h"
 #include "nsIWindowMediator.h"
@@ -48,6 +49,62 @@
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 
 //*****************************************************************************
+//*** nsSiteWindow declaration
+//*****************************************************************************
+
+class nsSiteWindow : public nsIEmbeddingSiteWindow
+{
+public:
+  nsSiteWindow(nsContentTreeOwner *aProxy);
+  virtual ~nsSiteWindow();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIEMBEDDINGSITEWINDOW
+
+private:
+  nsContentTreeOwner *mProxy;
+};
+
+//*****************************************************************************
+//***    additions to nsISupports declaration macros for this 0.9.4 patch
+//***    (probably to be added to nsISupportsImpl.h on the trunk)
+//*****************************************************************************
+
+#define NS_IMPL_QUERY_PROXY_BODY(_interface, _proxy)                          \
+  if ( aIID.Equals(NS_GET_IID(_interface)) )                                  \
+    foundInterface = NS_STATIC_CAST(_interface*, _proxy);                     \
+  else
+
+#define NS_IMPL_QUERY_TAIL_PROXYING(_proxy)                                   \
+    foundInterface = 0;                                                       \
+  nsresult status;                                                            \
+  if ( !foundInterface )                                                      \
+    status = _proxy->QueryInterface(aIID, (void**)&foundInterface);           \
+  else                                                                        \
+    {                                                                         \
+      NS_ADDREF(foundInterface);                                              \
+      status = NS_OK;                                                         \
+    }                                                                         \
+  *aInstancePtr = foundInterface;                                             \
+  return status;                                                              \
+}
+
+#define NS_INTERFACE_MAP_ENTRY_PROXY(_interface,_proxy)                       \
+  NS_IMPL_QUERY_PROXY_BODY(_interface, _proxy)
+
+#define NS_INTERFACE_MAP_END_PROXYING(_proxy)                                 \
+  NS_IMPL_QUERY_TAIL_PROXYING(_proxy)
+
+#define NS_IMPL_ADDREF_PROXIED(_class, _proxy)                                \
+NS_IMETHODIMP_(nsrefcnt) _class::AddRef(void)                                 \
+  { return (_proxy)->AddRef(); }
+
+#define NS_IMPL_RELEASE_PROXIED(_class, _proxy)                               \
+NS_IMETHODIMP_(nsrefcnt) _class::Release(void)                                \
+  { return (_proxy)->Release(); }
+
+
+//*****************************************************************************
 //***    nsContentTreeOwner: Object Management
 //*****************************************************************************
 
@@ -55,11 +112,15 @@ nsContentTreeOwner::nsContentTreeOwner(PRBool fPrimary) : mXULWindow(nsnull),
    mPrimary(fPrimary), mContentTitleSetting(PR_FALSE), 
    mChromeFlags(nsIWebBrowserChrome::CHROME_ALL)
 {
-	NS_INIT_REFCNT();
+  NS_INIT_REFCNT();
+
+  // note if this fails, QI on nsIEmbeddingSiteWindow will simply fail
+  mSiteWindow = new nsSiteWindow(this);
 }
 
 nsContentTreeOwner::~nsContentTreeOwner()
 {
+  delete mSiteWindow;
 }
 
 //*****************************************************************************
@@ -75,6 +136,7 @@ NS_INTERFACE_MAP_BEGIN(nsContentTreeOwner)
    NS_INTERFACE_MAP_ENTRY(nsIBaseWindow)
    NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChrome)
    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+   NS_INTERFACE_MAP_ENTRY_PROXY(nsIEmbeddingSiteWindow, mSiteWindow)
 NS_INTERFACE_MAP_END
 
 //*****************************************************************************
@@ -674,3 +736,147 @@ nsXULWindow* nsContentTreeOwner::XULWindow()
    return mXULWindow;
 }
 
+//*****************************************************************************
+//*** nsSiteWindow implementation
+//*****************************************************************************
+
+nsSiteWindow::nsSiteWindow(nsContentTreeOwner *aProxy)
+{
+  NS_INIT_REFCNT();
+  mProxy = aProxy;
+}
+
+nsSiteWindow::~nsSiteWindow()
+{
+}
+
+// nsISupports for this object
+NS_IMPL_ADDREF_PROXIED(nsSiteWindow, mProxy)
+NS_IMPL_RELEASE_PROXIED(nsSiteWindow, mProxy)
+
+NS_INTERFACE_MAP_BEGIN(nsSiteWindow)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIEmbeddingSiteWindow)
+NS_INTERFACE_MAP_END_PROXYING(mProxy)
+
+NS_IMETHODIMP
+nsSiteWindow::SetDimensions(PRUint32 aFlags,
+                    PRInt32 aX, PRInt32 aY, PRInt32 aCX, PRInt32 aCY)
+{
+  // XXX we're ignoring aFlags
+  return mProxy->SetPositionAndSize(aX, aY, aCX, aCY, PR_TRUE);
+}
+
+NS_IMETHODIMP
+nsSiteWindow::GetDimensions(PRUint32 aFlags,
+                    PRInt32 *aX, PRInt32 *aY, PRInt32 *aCX, PRInt32 *aCY)
+{
+  // XXX we're ignoring aFlags
+  return mProxy->GetPositionAndSize(aX, aY, aCX, aCY);
+}
+
+NS_IMETHODIMP
+nsSiteWindow::SetFocus(void)
+{
+  nsXULWindow *window = mProxy->XULWindow();
+  if (window) {
+    nsCOMPtr<nsIDocShell> docshell;
+    window->GetDocShell(getter_AddRefs(docshell));
+    nsCOMPtr<nsIDOMWindowInternal> domWindow(do_GetInterface(docshell));
+    if (domWindow)
+      domWindow->Focus();
+  }
+  return NS_OK;
+}
+
+/* this implementation focuses another window. if there isn't another
+   window to focus, we do nothing. */
+NS_IMETHODIMP
+nsSiteWindow::Blur(void)
+{
+  nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
+  nsCOMPtr<nsIXULWindow> xulWindow;
+  PRBool                        more, foundUs;
+  nsXULWindow                  *ourWindow = mProxy->XULWindow();
+
+  {
+    nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
+    if (windowMediator)
+      // GetZOrderXULWindowEnumerator is unavailable on the 0.9.4 branch
+      windowMediator->GetXULWindowEnumerator(0,
+                        getter_AddRefs(windowEnumerator));
+  }
+
+  if (!windowEnumerator)
+    return NS_ERROR_FAILURE;
+
+  // step through the top-level windows
+  foundUs = PR_FALSE;
+  windowEnumerator->HasMoreElements(&more);
+  while (more) {
+
+    nsCOMPtr<nsISupports> nextWindow;
+    nsCOMPtr<nsIXULWindow> nextXULWindow;
+
+    windowEnumerator->GetNext(getter_AddRefs(nextWindow));
+    nextXULWindow = do_QueryInterface(nextWindow);
+
+    // got it!(?)
+    if (foundUs) {
+      xulWindow = nextXULWindow;
+      break;
+    }
+
+    // remember the very first one, in case we have to wrap
+    if (!xulWindow)
+      xulWindow = nextXULWindow;
+
+    // look for us
+    if (nextXULWindow == ourWindow)
+      foundUs = PR_TRUE;
+
+    windowEnumerator->HasMoreElements(&more);
+  }
+
+  // change focus to the window we just found
+  if (xulWindow) {
+    nsCOMPtr<nsIDocShell> docshell;
+    xulWindow->GetDocShell(getter_AddRefs(docshell));
+    nsCOMPtr<nsIDOMWindowInternal> domWindow(do_GetInterface(docshell));
+    if (domWindow)
+      domWindow->Focus();
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSiteWindow::GetVisibility(PRBool *aVisibility)
+{
+  return mProxy->GetVisibility(aVisibility);
+}
+
+NS_IMETHODIMP
+nsSiteWindow::SetVisibility(PRBool aVisibility)
+{
+  return mProxy->SetVisibility(aVisibility);
+}
+
+NS_IMETHODIMP
+nsSiteWindow::GetTitle(PRUnichar * *aTitle)
+{
+  return mProxy->GetTitle(aTitle);
+}
+
+NS_IMETHODIMP
+nsSiteWindow::SetTitle(const PRUnichar * aTitle)
+{
+  return mProxy->SetTitle(aTitle);
+}
+
+NS_IMETHODIMP
+nsSiteWindow::GetSiteWindow(void **aSiteWindow)
+
+{
+  return mProxy->GetParentNativeWindow(aSiteWindow);
+}
+ 
