@@ -1070,6 +1070,22 @@ void XSLTProcessor::processAction
                 if ( exprResult->getResultType() == ExprResult::NODESET ) {
                     nodeSet = (NodeSet*)exprResult;
 
+				    //-- make sure nodes are in DocumentOrder
+                    ps->sortByDocumentOrder(nodeSet);
+
+                    //-- look for xsl:sort elements
+                    Node* child = actionElement->getFirstChild();
+                    while (child) {
+                        if (child->getNodeType() == Node::ELEMENT_NODE) {
+                            DOMString nodeName = child->getNodeName();
+                            if (getElementType(nodeName, ps) == XSLType::SORT) {
+                                NodeSorter::sort(nodeSet, (Element*)child, node, ps);
+                                break;
+                            }
+                        }
+                        child = child->getNextSibling();
+                    }
+
                     //-- push nodeSet onto context stack
                     ps->getNodeSetStack()->push(nodeSet);
                     for (int i = 0; i < nodeSet->size(); i++) {
