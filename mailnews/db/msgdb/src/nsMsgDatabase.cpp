@@ -142,17 +142,21 @@ nsresult nsMsgDatabase::ClearHdrCache(PRBool reInit)
 {
 	if (m_cachedHeaders)
 	{
-    PL_DHashTableEnumerate(m_cachedHeaders, HeaderEnumerator, nsnull);
+    // save this away in case we renter this code.
+    PLDHashTable  *saveCachedHeaders = m_cachedHeaders;
+    m_cachedHeaders = nsnull;
+    PL_DHashTableEnumerate(saveCachedHeaders, HeaderEnumerator, nsnull);
 
     if (reInit)
     {
-      PL_DHashTableFinish(m_cachedHeaders);
-      PL_DHashTableInit(m_cachedHeaders, &gMsgDBHashTableOps, nsnull, sizeof(struct MsgHdrHashElement), kMaxHdrsInCache);
+      PL_DHashTableFinish(saveCachedHeaders);
+      PL_DHashTableInit(saveCachedHeaders, &gMsgDBHashTableOps, nsnull, sizeof(struct MsgHdrHashElement), kMaxHdrsInCache);
+      m_cachedHeaders = saveCachedHeaders;
+
     }
     else
     {
-      PL_DHashTableDestroy(m_cachedHeaders);
-      m_cachedHeaders = nsnull;
+      PL_DHashTableDestroy(saveCachedHeaders);
     }
 	}
 	return NS_OK;
@@ -501,7 +505,10 @@ nsMsgDatabase::CleanupCache()
 			nsMsgDatabase* pMessageDB = NS_STATIC_CAST(nsMsgDatabase*, GetDBCache()->ElementAt(i));
 			if (pMessageDB)
 			{
+        // hold onto the db until we're finished closing it.
+        nsCOMPtr <nsIMsgDatabase> kungFuGrip = pMessageDB;
 				pMessageDB->ForceClosed();
+        kungFuGrip = nsnull;
         // look for db in cache before deleting, 
         // in case ForceClosed caused the db to go away
         if (FindInCache(pMessageDB) != -1)
