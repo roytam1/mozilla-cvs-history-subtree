@@ -37,6 +37,7 @@ XPIDLSRCS =					\
 	nsIDOMLocation.idl			\
 	nsIDOMMimeType.idl			\
 	nsIDOMMimeTypeArray.idl			\
+	nsIDOMNSHistory.idl			\
 	nsIDOMNSLocation.idl			\
 	nsIDOMNavigator.idl			\
 	nsIDOMPkcs11.idl			\

@@ -31,6 +31,7 @@ interface nsIDOMHistory : nsISupports
 
   void                       back();
   void                       forward();
-  void                       go(/* ... */);
+  void                       goIndex(in long aDelta);
+  void                       goUri(in DOMString aUriSubstring);
   DOMString                  item(in unsigned long index);
 };
