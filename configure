@@ -10586,9 +10586,9 @@ fi
 
 
 . ${srcdir}/allmakefiles.sh
-echo $MAKEFILES | $PERL $srcdir/build/autoconf/acoutput-fast.pl > conftest.sh
-. ./conftest.sh
-rm conftest.sh
+# echo $MAKEFILES | $PERL $srcdir/build/autoconf/acoutput-fast.pl > conftest.sh
+# . ./conftest.sh
+# rm conftest.sh
 
 trap '' 1 2 15
 cat > confcache <<\EOF
