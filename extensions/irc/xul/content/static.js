@@ -46,7 +46,7 @@ else
 
 var client = new Object();
 
-client.version = "0.8.34";
+client.version = "0.9.0";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -822,6 +822,40 @@ function getMessagesContext(cx)
         }
 
         element = element.parentNode;
+    }
+
+    return cx;
+}
+
+function getUserlistContext(cx) 
+{
+    cx = getObjectDetails(client.currentObject, cx);
+    if (!cx.channel)
+        return cx;
+    
+    cx.userList = new Array();
+    cx.nicknameList = new Array();
+    
+    var tree = document.getElementById("user-list");
+
+    var rangeCount = tree.view.selection.getRangeCount();
+    for (var i = 0; i < rangeCount; ++i)
+    {
+        var start = {}, end = {};
+        tree.view.selection.getRangeAt(i, start, end);
+        for (var k = start.value; k <= end.value; ++k)
+        {
+            var item = tree.contentView.getItemAtIndex(k);
+            var cell = item.firstChild.childNodes[2];
+            var user = cx.channel.getUser(cell.getAttribute("label"))
+            cx.userList.push(user);
+            cx.nicknameList.push(user.nick);
+            if (i == 0 && k == start.value)
+            {
+                cx.user = user;
+                cx.nickname = user.nick;
+            }
+        }
     }
 
     return cx;
@@ -3356,49 +3390,6 @@ function gettabmatch_other (line, wordStart, wordEnd, word, cursorpos)
     }
 
     return matches;
-}
-
-/**
- * Retrieves the selected nicks from the user-list
- * tree object. This grabs the tree element's
- * selected items, extracts the appropriate text
- * for the nick, promotes each nick to a CIRCChanUser
- * instance and returns an array of these objects.
- */
-CIRCChannel.prototype.getSelectedUsers =
-function my_getselectedusers () 
-{
-    var tree = document.getElementById("user-list");
-    var cell; /* reference to each selected cell of the tree object */
-    var rv_ary = new Array; /* return value arrray for CIRCChanUser objects */
-
-    var rangeCount = tree.view.selection.getRangeCount();
-    for (var i = 0; i < rangeCount; ++i)
-    {
-        var start = {}, end = {};
-        tree.view.selection.getRangeAt(i, start, end);
-        for (var k = start.value; k <= end.value; ++k)
-        {
-            var item = tree.contentView.getItemAtIndex(k);
-
-            /* First, set the reference to the XUL element. */
-            cell = item.firstChild.childNodes[2];
-            
-            /* Now, create an instance of CIRCChaneUser by passing the text
-          *  of the cell to the getUser function of this CIRCChannel instance.
-          */
-            rv_ary[i] = this.getUser( cell.getAttribute("label") );
-        }
-    }
-
-    /* 
-     *  USAGE NOTE: If the return value is non-null, the caller
-     *  can assume the array is valid, and NOT 
-     *  need to check the length, and vice versa.
-     */
-
-    return rv_ary.length > 0 ? rv_ary : null;
-
 }
 
 CIRCChannel.prototype.getGraphResource =

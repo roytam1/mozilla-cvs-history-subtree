@@ -741,16 +741,21 @@ function cmdMotif(e)
 {
     if (e.motif)
     {
-        var prefName = "motif." + e.motif;
-        if (client.prefManager.isKnownPref(prefName))
+        if (e.motif.search(/\.css$/i) == -1)
         {
-            e.motif = client.prefs[prefName];
-            client.prefs["motif.current"] = e.motif;
+            var prefName = "motif." + e.motif;
+            if (client.prefManager.isKnownPref(prefName))
+            {
+                e.motif = client.prefs[prefName];
+            }
+            else
+            {
+                display(getMsg(MSG_ERR_UNKNOWN_MOTIF, e.motif), MT_ERROR);
+                return;
+            }
         }
-        else
-        {
-            display(getMsg(MSG_ERR_UNKNOWN_MOTIF, e.motif), MT_ERROR);
-        }
+        
+        client.prefs["motif.current"] = e.motif;
     }
     
     display (getMsg(MSG_CURRENT_CSS, client.prefs["motif.current"]));

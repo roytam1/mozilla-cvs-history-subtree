@@ -156,14 +156,15 @@ function initMenus()
     };
 
     client.menuSpecs["context:userlist"] = {
+        getContext: getUserlistContext,
         items:
         [
-         ["op",         {enabledif: "cx.server.me.isOp && !cx.user.isOp"}],
-         ["deop",       {enabledif: "cx.server.me.isOp && cx.user.isOp"}],
-         ["voice",      {enabledif: "cx.server.me.isOp && !cx.user.isVoice"}],
-         ["devoice",    {enabledif: "cx.server.me.isOp && !cx.user.isVoice"}],
+         ["op",         {enabledif: "cx.channel.iAmOp() && !cx.user.isOp"}],
+         ["deop",       {enabledif: "cx.channel.iAmOp() && cx.user.isOp"}],
+         ["voice",      {enabledif: "cx.channel.iAmOp() && !cx.user.isVoice"}],
+         ["devoice",    {enabledif: "cx.channel.iAmOp() && cx.user.isVoice"}],
          ["-"],
-         ["kick",       {enabledif: "cx.server.me.isOp"}],
+         ["kick",       {enabledif: "cx.channel.iAmOp()"}],
          ["whois"],
          ["query"]
         ]

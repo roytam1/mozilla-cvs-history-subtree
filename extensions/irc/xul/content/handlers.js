@@ -100,14 +100,14 @@ function onLoad()
 
 function initHandlers()
 {
-    var obj;
-    obj = document.getElementById("input");
-    obj.addEventListener("keypress", onInputKeyPress, false);
-    obj = document.getElementById("multiline-input");
-    obj.addEventListener("keypress", onMultilineInputKeyPress, false);
-    obj = document.getElementById("channel-topicedit");
-    obj.addEventListener("keypress", onTopicKeyPress, false);
-    obj.active = false;
+    var node;
+    node = document.getElementById("input");
+    node.addEventListener("keypress", onInputKeyPress, false);
+    node = document.getElementById("multiline-input");
+    node.addEventListener("keypress", onMultilineInputKeyPress, false);
+    node = document.getElementById("channel-topicedit");
+    node.addEventListener("keypress", onTopicKeyPress, false);
+    node.active = false;
 
     window.onkeypress = onWindowKeyPress;
 }
@@ -229,119 +229,6 @@ function onPopupHighlight (ruleText)
 
 }
 
-function onToggleMungerEntry(entryName)
-{
-    client.munger.entries[entryName].enabled =
-        !client.munger.entries[entryName].enabled;
-    var item = document.getElementById("menu-munger-" + entryName);
-    item.setAttribute ("checked", client.munger.entries[entryName].enabled);
-}
-
-function onOutputContextMenuCreate(e)
-{
-    function evalIfAttribute (node, attr)
-    {
-        var expr = node.getAttribute(attr);
-        if (!expr)
-            return true;
-        
-        expr = expr.replace (/\Wor\W/gi, " || ");
-        expr = expr.replace (/\Wand\W/gi, " && ");
-        return eval("(" + expr + ")");
-    }
-        
-    var target = document.popupNode;
-    var foundSomethingUseful = false;
-    
-    do
-    {
-        if ("tagName" in target &&
-            (target.tagName == "html:a" || target.tagName == "html:td"))
-            foundSomethingUseful = true;
-        else
-            target = target.parentNode;
-    } while (target && !foundSomethingUseful);
-    
-    var targetType = createPopupContext(e, target);
-    var targetClass = ("targetClass" in client._popupContext) ?
-        client._popupContext.targetClass : "";
-    var viewType = client.currentObject.TYPE;
-    var targetIsOp = "n/a";
-    var targetIsVoice = "n/a";
-    var iAmOp = "n/a";
-    var targetUser = ("user" in client._popupContext) ?
-        String(client._popupContext.user) : "";
-    var details = getObjectDetails(client.currentObject);
-    var targetServer = ("server" in details) ? details.server : "";
-
-    if (targetServer && targetUser == "ME!")
-    {
-        targetUser = targetServer.me.nick;
-    }
-
-    var targetProperNick = targetUser;
-    if (targetServer && targetUser in targetServer.users)
-        targetProperNick = targetServer.users[targetUser].properNick;
-    
-    if (viewType == "IRCChannel" && targetUser)
-    {
-        if (targetUser in client.currentObject.users)
-        {
-            var cuser = client.currentObject.users[targetUser];
-            targetIsOp = cuser.isOp ? "yes" : "no";
-            targetIsVoice = cuser.isVoice ? "yes" : "no";
-        }
-        
-        var server = getObjectDetails(client.currentObject).server;
-        if (server &&
-            server.me.nick in client.currentObject.users &&
-            client.currentObject.users[server.me.nick].isOp)
-        {
-            iAmOp =  "yes";
-        }
-        else
-        {
-            iAmOp = "no";
-        }
-    }
-
-    var popup = document.getElementById ("outputContext");
-    var menuitem = popup.firstChild;
-
-    do
-    {
-        if (evalIfAttribute(menuitem, "visibleif"))
-        {
-            menuitem.setAttribute ("hidden", "false");
-        }
-        else
-        {
-            menuitem.setAttribute ("hidden", "true");
-            continue;
-        }
-        
-        if (menuitem.hasAttribute("checkedif"))
-        {
-            if (evalIfAttribute(menuitem, "checkedif"))
-                menuitem.setAttribute ("checked", "true");
-            else
-                menuitem.setAttribute ("checked", "false");
-        }
-            
-        var format = menuitem.getAttribute("format");
-        if (format)
-        {
-            format = format.replace (/\$nick/gi, targetProperNick);
-            format = format.replace (/\$viewname/gi,
-                                     client.currentObject.unicodeName);
-            menuitem.setAttribute ("label", format);
-        }
-        
-    } while ((menuitem = menuitem.nextSibling));
-
-    return true;
-}
-
 /* popup click in user list */
 function onUserListPopupClick (e)
 {
@@ -365,39 +252,8 @@ function onUserListPopupClick (e)
     client.eventPump.addEvent (ev);
 }
 
-
-function onToggleTraceHook()
-{
-    var h = client.eventPump.getHook ("event-tracer");
-    
-    h.enabled = client.debugMode = !h.enabled;
-    document.getElementById("menu-dmessages").setAttribute ("checked",
-                                                            h.enabled);
-    if (h.enabled)
-        client.currentObject.display (getMsg("debug_on"), "INFO");
-    else
-        client.currentObject.display (getMsg("debug_off"), "INFO");
-}
-
-function onToggleSaveOnExit()
-{
-    client.SAVE_SETTINGS = !client.SAVE_SETTINGS;
-    var m = document.getElementById ("menu-settings-autosave");
-    m.setAttribute ("checked", String(client.SAVE_SETTINGS));
-
-    var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                         .getService(Components.interfaces.nsIPrefBranch);
-    pref.setBoolPref ("extensions.irc.settings.autoSave",
-                      client.SAVE_SETTINGS);
-}
-
-function onToggleVisibility(thing)
-{    
-}
-
 function onDoStyleChange (newStyle)
 {
-
     if (newStyle == "other")
         newStyle = window.prompt (getMsg("onDoStyleChangeMsg"));
 
@@ -406,7 +262,6 @@ function onDoStyleChange (newStyle)
         setOutputStyle (newStyle);
         setCurrentObject(client.currentObject);
     }
-    
 }
 
 function onSortCol(sortColName)
@@ -427,24 +282,6 @@ function onSortCol(sortColName)
     sortUserList(node, sortDirection);
     
     return false;
-}
-
-function onToggleMunger()
-{
-
-    client.munger.enabled = !client.munger.enabled;
-    var item = document.getElementById("menu-munger-global");
-    item.setAttribute ("checked", !client.munger.enabled);
-
-}
-
-function onToggleColors()
-{
-
-    client.enableColors = !client.enableColors;
-    document.getElementById("menu-colors").setAttribute ("checked",
-                                                         client.enableColors);
-
 }
 
 function onMultilineInputKeyPress (e)
