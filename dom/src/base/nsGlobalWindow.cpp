@@ -3047,26 +3047,31 @@ GlobalWindowImpl::CheckForAbusePoint()
 
   PRUint32 abuse = openAllowed; // level of abuse we've detected
 
-  PRInt32 intPref = 0;
-
-  // disallow windows after a user-defined click delay
-  gPrefBranch->GetIntPref("dom.disable_open_click_delay", &intPref);
-  if (intPref != 0) {
-    PRTime now = PR_Now();
-    PRTime ll_delta;
-    PRUint32 delta;
-    LL_SUB(ll_delta, now, mLastMouseButtonAction);
-    LL_L2UI(delta, ll_delta);
-    if (delta/1000 > (PRUint32) intPref)
-      abuse = openOverridden;
-  }
-
-  // is a timer running?
-  if (abuse == openAllowed && mRunningTimeout)
+  // is the document being loaded or unloaded?
+  if (!mIsDocumentLoaded)
     abuse = openAbused;
 
-  // is the document being loaded or unloaded?
-  if (abuse == openAllowed && !mIsDocumentLoaded)
+  /* Disallow windows after a user-defined click delay.
+     This is a consideration secondary to document load because
+     of its stronger response (openOverridden). See bug 247017. */
+  if (abuse == openAllowed) {
+    PRInt32 delay = 0;
+    gPrefBranch->GetIntPref("dom.disable_open_click_delay", &delay);
+    if (delay != 0) {
+      PRTime now = PR_Now();
+      PRTime ll_delta;
+      PRUint32 delta;
+      LL_SUB(ll_delta, now, mLastMouseButtonAction);
+      LL_L2UI(delta, ll_delta);
+      if (delta/1000 > (PRUint32) delay)
+        abuse = openOverridden;
+    }
+  }
+
+  /* Is a timer running?
+     This is a consideration secondary to the user-defined click delay
+     because that seemed the Right Thing. See bug 197919 comment 45. */
+  if (abuse == openAllowed && mRunningTimeout)
     abuse = openAbused;
 
   if (abuse == openAllowed) {
@@ -3203,9 +3208,9 @@ GlobalWindowImpl::CheckForAbusePoint()
 
   // limit the number of simultaneously open popups
   if (abuse == openAbused || abuse == openControlled) {
-    intPref = 0;
-    nsresult gotPref = gPrefBranch->GetIntPref("dom.popup_maximum", &intPref);
-    if (NS_SUCCEEDED(gotPref) && intPref >= 0 && gOpenPopupSpamCount >= intPref)
+    PRInt32 popupMax = 0;
+    gPrefBranch->GetIntPref("dom.popup_maximum", &popupMax);
+    if (popupMax >= 0 && gOpenPopupSpamCount >= popupMax)
       abuse = openOverridden;
   }
 
