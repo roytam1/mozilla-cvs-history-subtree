@@ -191,22 +191,16 @@ nsBulletinBoardLayout::AddOffset(nsBoxLayoutState& aState, nsIBox* aChild, nsSiz
 
         if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::left, value))
         {
-            float p2t;
-            presContext->GetScaledPixelsToTwips(&p2t);
-
             value.Trim("%");
 
-            offset.width = NSIntPixelsToTwips(value.ToInteger(&error), p2t);
+            offset.width = value.ToInteger(&error);
         }
 
         if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::top, value))
         {
-            float p2t;
-            presContext->GetScaledPixelsToTwips(&p2t);
-
             value.Trim("%");
 
-            offset.height = NSIntPixelsToTwips(value.ToInteger(&error), p2t);
+            offset.height = value.ToInteger(&error);
         }
     }
 

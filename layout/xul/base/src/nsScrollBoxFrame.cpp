@@ -28,7 +28,6 @@
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsIReflowCommand.h"
-#include "nsIDeviceContext.h"
 #include "nsPageFrame.h"
 #include "nsViewsCID.h"
 #include "nsIView.h"
@@ -37,7 +36,6 @@
 #include "nsHTMLIIDs.h"
 #include "nsCSSRendering.h"
 #include "nsIScrollableView.h"
-#include "nsWidgetsCID.h"
 #include "nsScrollBoxFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsIBox.h"
@@ -50,7 +48,6 @@
 #include "nsITimerCallback.h"
 #include "nsRepeatService.h"
 
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kScrollBoxViewCID, NS_SCROLL_PORT_VIEW_CID);
 static NS_DEFINE_IID(kViewCID, NS_VIEW_CID);
 
@@ -201,7 +198,7 @@ nsScrollBoxFrame::CreateScrollingViewWidget(nsIView* aView, const nsStylePositio
   nsresult rv = NS_OK;
    // If it's fixed positioned, then create a widget 
   if (NS_STYLE_POSITION_FIXED == aPosition->mPosition) {
-    rv = aView->CreateWidget(kWidgetCID);
+    rv = aView->CreateWidget("@mozilla.org/gfx/window/child;2");
   }
 
   return(rv);
@@ -490,11 +487,11 @@ nsScrollBoxFrame::DoLayout(nsBoxLayoutState& aState)
             child->GetBounds(childRect);
           }
 
-          PRInt32 cx,cy,x,y;
+          gfx_coord cx,cy,x,y;
           scrollingView->GetScrollPosition(cx,cy);
 
-          x = (int)(((float)childRect.width / mRestoreRect.width) * mRestoreRect.x);
-          y = (int)(((float)childRect.height / mRestoreRect.height) * mRestoreRect.y);
+          x = (childRect.width / mRestoreRect.width) * mRestoreRect.x;
+          y = (childRect.height / mRestoreRect.height) * mRestoreRect.y;
 
           // if our position is greater than the scroll position scroll.
           // remember we could be incrementally loading so we may enter and
@@ -518,7 +515,7 @@ nsScrollBoxFrame::PostScrollPortEvent(nsIPresShell* aShell, PRBool aOverflow, ns
 
   nsScrollPortEvent* event = new nsScrollPortEvent();
   event->eventStructType = NS_SCROLLPORT_EVENT;  
-  event->widget = nsnull;
+  event->window = nsnull;
   event->orient = aType;
   event->nativeMsg = nsnull;
   event->message = aOverflow ? NS_SCROLLPORT_OVERFLOW : NS_SCROLLPORT_UNDERFLOW;
@@ -584,9 +581,9 @@ nsScrollBoxFrame::GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 
 NS_IMETHODIMP
 nsScrollBoxFrame::Paint(nsIPresContext*      aPresContext,
-                     nsIRenderingContext& aRenderingContext,
-                     const nsRect&        aDirtyRect,
-                     nsFramePaintLayer    aWhichLayer)
+                        nsIDrawable*         aDrawable,
+                        const nsRect&        aDirtyRect,
+                        nsFramePaintLayer    aWhichLayer)
 {
     if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
     // Only paint the border and background if we're visible
@@ -599,17 +596,17 @@ nsScrollBoxFrame::Paint(nsIPresContext*      aPresContext,
         mStyleContext->GetStyleData(eStyleStruct_Spacing);
 
       nsRect  rect(0, 0, mRect.width, mRect.height);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, 0);
     }
   }
 
   // Paint our children
-  nsresult rv = nsBoxFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+  nsresult rv = nsBoxFrame::Paint(aPresContext, aDrawable, aDirtyRect,
                                  aWhichLayer);
 
   // Call nsFrame::Paint to draw selection border when appropriate
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 PRIntn
@@ -678,7 +675,7 @@ nsScrollBoxFrame::SaveState(nsIPresContext* aPresContext,
   }
 
   nsresult res = NS_OK;
-  PRInt32 x,y;
+  gfx_coord x,y;
   nsIScrollableView* scrollingView;
   nsIView*           view;
   GetView(aPresContext, &view);
@@ -807,7 +804,7 @@ public:
               nsIStyleContext* aContext,
               nsIFrame*        aPrevInFlow);
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
 
   nsIPresContext* mPresContext;
   
@@ -874,10 +871,11 @@ nsAutoRepeatBoxFrame::HandleEvent(nsIPresContext* aPresContext,
   return nsButtonBoxFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 }
 
-NS_IMETHODIMP_(void) 
+NS_IMETHODIMP
 nsAutoRepeatBoxFrame::Notify(nsITimer *timer)
 {
   MouseClicked(mPresContext, nsnull);
+  return NS_OK;
 }
 
 NS_IMETHODIMP

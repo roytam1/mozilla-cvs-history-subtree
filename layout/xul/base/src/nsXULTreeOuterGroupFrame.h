@@ -132,7 +132,7 @@ public:
 
   void ClearRowGroupInfo() { if (mRowGroupInfo) mRowGroupInfo->Clear(); NeedsRecalc(); };
   
-  void SetRowHeight(PRInt32 aRowHeight);
+  void SetRowHeight(nscoord aRowHeight);
   PRBool IsFixedRowSize();
 
   nscoord GetYPosition();

@@ -28,8 +28,6 @@
 //
 
 #include "nsImageBoxFrame.h"
-#include "nsIDeviceContext.h"
-#include "nsIFontMetrics.h"
 #include "nsHTMLAtoms.h"
 #include "nsXULAtoms.h"
 #include "nsIStyleContext.h"
@@ -41,31 +39,23 @@
 
 #include "nsHTMLParts.h"
 #include "nsString.h"
-#include "nsLeafFrame.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresShell.h"
 #include "nsHTMLIIDs.h"
 #include "nsIImage.h"
-#include "nsIWidget.h"
 #include "nsHTMLAtoms.h"
 #include "nsIHTMLAttributes.h"
 #include "nsIDocument.h"
-#include "nsIHTMLDocument.h"
 #include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsImageMap.h"
 #include "nsILinkHandler.h"
 #include "nsIURL.h"
-#include "nsIView.h"
-#include "nsIViewManager.h"
-#include "nsHTMLContainerFrame.h"
 #include "prprf.h"
 #include "nsISizeOfHandler.h"
-#include "nsIFontMetrics.h"
 #include "nsCSSRendering.h"
 #include "nsIDOMHTMLImageElement.h"
-#include "nsIDeviceContext.h"
 #include "nsINameSpaceManager.h"
 #include "nsTextFragment.h"
 #include "nsIDOMHTMLMapElement.h"
@@ -270,7 +260,7 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
 
 NS_IMETHODIMP
 nsImageBoxFrame::Paint(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect,
                                 nsFramePaintLayer aWhichLayer)
 {	
@@ -279,9 +269,9 @@ nsImageBoxFrame::Paint(nsIPresContext* aPresContext,
 	if (!disp->IsVisible())
 		return NS_OK;
 
-  nsresult rv = nsLeafBoxFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  nsresult rv = nsLeafBoxFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
-  PaintImage(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintImage(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
   return rv;
 }
@@ -289,7 +279,7 @@ nsImageBoxFrame::Paint(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect,
                                 nsFramePaintLayer aWhichLayer)
 {
@@ -316,7 +306,10 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
   else {
     // Now render the image into our content area (the area inside the
     // borders and padding)
-    aRenderingContext.DrawImage(image, rect);
+
+
+      // XXX pav
+      //    aDrawable->DrawImage(image, rect);
   }
   
   return NS_OK;
@@ -345,25 +338,22 @@ nsImageBoxFrame::GetImageSize(nsIPresContext* aPresContext)
   nsSize s(0,0);
   nsHTMLReflowMetrics desiredSize(&s);
   const PRInt32 kDefaultSize = 0;
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  const PRInt32 kDefaultSizeInTwips = NSIntPixelsToTwips(kDefaultSize, p2t);
 
 // not calculated? Get the intrinsic size
 	if (mHasImage) {
 	  // get the size of the image and set the desired size
 	  if (mSizeFrozen) {
-			mImageSize.width = kDefaultSizeInTwips;
-			mImageSize.height = kDefaultSizeInTwips;
-      return;
+              mImageSize.width = kDefaultSize;
+              mImageSize.height = kDefaultSize;
+              return;
 	  } else {
       // Ask the image loader for the *intrinsic* image size
       mImageLoader.GetDesiredSize(aPresContext, nsnull, desiredSize);
 
       if (desiredSize.width == 1 || desiredSize.height == 1)
       {
-        mImageSize.width = kDefaultSizeInTwips;
-        mImageSize.height = kDefaultSizeInTwips;
+        mImageSize.width = kDefaultSize;
+        mImageSize.height = kDefaultSize;
         return;
       }
 	  }

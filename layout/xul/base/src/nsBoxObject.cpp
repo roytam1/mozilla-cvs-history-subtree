@@ -207,21 +207,11 @@ nsBoxObject::GetOffsetRect(nsRect& aRect)
           }
         }
 
-        // Get the Presentation Context from the Shell
-        nsCOMPtr<nsIPresContext> context;
-        presShell->GetPresContext(getter_AddRefs(context));
-       
-        if(context) {
-          // Get the scale from that Presentation Context
-          float scale;
-          context->GetTwipsToPixels(&scale);
-              
-          // Convert to pixels using that scale
-          aRect.x = NSTwipsToIntPixels(origin.x, scale);
-          aRect.y = NSTwipsToIntPixels(origin.y, scale);
-          aRect.width = NSTwipsToIntPixels(rcFrame.width, scale);
-          aRect.height = NSTwipsToIntPixels(rcFrame.height, scale);
-        }
+        aRect.x = origin.x;
+        aRect.y = origin.y;
+        aRect.width = rcFrame.width;
+        aRect.height = rcFrame.height;
+
       }
     }
   }
@@ -230,7 +220,7 @@ nsBoxObject::GetOffsetRect(nsRect& aRect)
 }  
 
 NS_IMETHODIMP
-nsBoxObject::GetX(PRInt32* aResult)
+nsBoxObject::GetX(gfx_coord* aResult)
 {
   nsRect rect;
   GetOffsetRect(rect);
@@ -239,7 +229,7 @@ nsBoxObject::GetX(PRInt32* aResult)
 }
 
 NS_IMETHODIMP 
-nsBoxObject::GetY(PRInt32* aResult)
+nsBoxObject::GetY(gfx_coord* aResult)
 {
   nsRect rect;
   GetOffsetRect(rect);
@@ -248,7 +238,7 @@ nsBoxObject::GetY(PRInt32* aResult)
 }
 
 NS_IMETHODIMP
-nsBoxObject::GetWidth(PRInt32* aResult)
+nsBoxObject::GetWidth(gfx_dimension* aResult)
 {
   nsRect rect;
   GetOffsetRect(rect);
@@ -257,7 +247,7 @@ nsBoxObject::GetWidth(PRInt32* aResult)
 }
 
 NS_IMETHODIMP 
-nsBoxObject::GetHeight(PRInt32* aResult)
+nsBoxObject::GetHeight(gfx_dimension* aResult)
 {
   nsRect rect;
   GetOffsetRect(rect);

@@ -119,7 +119,7 @@ protected:
 
   virtual PRBool GetWasCollapsed(nsBoxLayoutState& aState);
   virtual void SetWasCollapsed(nsBoxLayoutState& aState, PRBool aWas);
-  virtual PRBool GetDefaultFlex(PRInt32& aFlex);
+  virtual PRBool GetDefaultFlex(nscoord& aFlex);
   virtual void GetLayoutFlags(PRUint32& aFlags);
 
   NS_IMETHOD BeginLayout(nsBoxLayoutState& aState);

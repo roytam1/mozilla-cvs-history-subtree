@@ -138,7 +138,7 @@ class nsScrollSmoother : public nsITimerCallback
 {
 public:
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
 
   void Start();
   void Stop();
@@ -179,8 +179,8 @@ PRBool nsScrollSmoother::IsRunning()
 void nsScrollSmoother::Start()
 {
   Stop();
-  mRepeatTimer = do_CreateInstance("@mozilla.org/timer;1");
-  mRepeatTimer->Init(this, SMOOTH_INTERVAL);
+  mRepeatTimer = do_CreateInstance("@mozilla.org/gfx/timer;2");
+  mRepeatTimer->Init(this, SMOOTH_INTERVAL, nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_ONE_SHOT);
 }
 
 void nsScrollSmoother::Stop()
@@ -191,7 +191,7 @@ void nsScrollSmoother::Stop()
   }
 }
 
-NS_IMETHODIMP_(void) nsScrollSmoother::Notify(nsITimer *timer)
+NS_IMETHODIMP nsScrollSmoother::Notify(nsITimer *timer)
 {
   //printf("Timer Callback!\n");
 
@@ -311,10 +311,6 @@ nsXULTreeOuterGroupFrame::Init(nsIPresContext* aPresContext, nsIContent* aConten
   
  // mLayingOut = PR_FALSE;
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  mOnePixel = NSIntPixelsToTwips(1, p2t);
-  
   nsIFrame* box;
   aParent->GetParent(&box);
   if (!box)
@@ -406,9 +402,7 @@ nsXULTreeOuterGroupFrame::SetRowHeight(nscoord aRowHeight)
     if (!rows.IsEmpty()) {
       PRInt32 dummy;
       PRInt32 count = rows.ToInteger(&dummy);
-      float t2p;
-      mPresContext->GetTwipsToPixels(&t2p);
-      PRInt32 rowHeight = NSTwipsToIntPixels(aRowHeight, t2p);
+      PRInt32 rowHeight = aRowHeight;
       nsAutoString value;
       value.AppendInt(rowHeight*count);
       parent->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::height, value, PR_FALSE);
@@ -547,7 +541,7 @@ nsXULTreeOuterGroupFrame::PositionChanged(PRInt32 aOldIndex, PRInt32& aNewIndex)
 { 
   PRInt32 oldTwipIndex, newTwipIndex;
   oldTwipIndex = mCurrentIndex*mRowHeight;
-  newTwipIndex = (aNewIndex*mOnePixel);
+  newTwipIndex = (aNewIndex);
   PRInt32 twipDelta = newTwipIndex > oldTwipIndex ? newTwipIndex - oldTwipIndex : oldTwipIndex - newTwipIndex;
 
   PRInt32 rowDelta = twipDelta / mRowHeight;
@@ -1275,15 +1269,15 @@ nsXULTreeOuterGroupFrame::ReflowFinished(nsIPresShell* aPresShell, PRBool* aFlus
 // Overridden to handle the case where we should be drawing the tree as sorted.
 //
 NS_IMETHODIMP
-nsXULTreeOuterGroupFrame :: Paint ( nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext,
+nsXULTreeOuterGroupFrame :: Paint ( nsIPresContext* aPresContext, nsIDrawable* aDrawable,
                                       const nsRect& aDirtyRect, nsFramePaintLayer aWhichLayer)
 {
   nsresult res = NS_OK;
-  res = nsBoxFrame::Paint ( aPresContext, aRenderingContext, aDirtyRect, aWhichLayer );
+  res = nsBoxFrame::Paint ( aPresContext, aDrawable, aDirtyRect, aWhichLayer );
   
   if ( (aWhichLayer == eFramePaintLayer_Content) &&
         (mYDropLoc != nsTreeItemDragCapturer::kNoDropLoc || mDropOnContainer || mTreeIsSorted) )
-    PaintDropFeedback ( aPresContext, aRenderingContext, PR_TRUE );
+    PaintDropFeedback ( aPresContext, aDrawable, PR_TRUE );
 
   return res;
 
@@ -1385,9 +1379,7 @@ nsXULTreeOuterGroupFrame :: IsInDragScrollRegion ( const nsPoint& inPoint, PRBoo
 {
   PRBool isInRegion = PR_FALSE;
 
-  float pixelsToTwips = 0.0;
-  mPresContext->GetPixelsToTwips ( &pixelsToTwips );
-  nsPoint mouseInTwips ( NSToIntRound(inPoint.x * pixelsToTwips), NSToIntRound(inPoint.y * pixelsToTwips) );
+  nsPoint mouseInTwips = inPoint;
   
   // compute the offset to top level in twips and subtract the offset from
   // the mouse coord to put it into our coordinates.
@@ -1403,7 +1395,7 @@ nsXULTreeOuterGroupFrame :: IsInDragScrollRegion ( const nsPoint& inPoint, PRBoo
   } // until we reach the top  
   mouseInTwips.MoveBy ( -frameOffsetX, -frameOffsetY );
 
-  const int kMarginHeight = NSToIntRound ( 12 * pixelsToTwips );
+  const int kMarginHeight = 12;
 
   // scroll if we're inside the bounds of the tree and w/in |kMarginHeight|
   // from the top or bottom of the tree.
@@ -1433,7 +1425,7 @@ nsXULTreeOuterGroupFrame :: IsInDragScrollRegion ( const nsPoint& inPoint, PRBoo
 // Called when the timer fires. Tells the tree that we're ready to scroll if the 
 // mouse is in the right position.
 //
-void
+NS_IMETHODIMP
 nsXULTreeOuterGroupFrame :: Notify ( nsITimer* timer )
 {
 printf("000 FIRE\n");

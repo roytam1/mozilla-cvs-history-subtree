@@ -85,7 +85,7 @@ nsButtonBoxFrame::HandleEvent(nsIPresContext* aPresContext,
     case NS_KEY_PRESS:
       if (NS_KEY_EVENT == aEvent->eventStructType) {
         nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
-        if (NS_VK_SPACE == keyEvent->keyCode || NS_VK_RETURN == keyEvent->keyCode) {
+        if (nsIDOMKeyEvent::DOM_VK_SPACE == keyEvent->keyCode || nsIDOMKeyEvent::DOM_VK_RETURN == keyEvent->keyCode) {
           MouseClicked(aPresContext, aEvent);
         }
       }
@@ -127,7 +127,7 @@ nsButtonBoxFrame::MouseClicked (nsIPresContext* aPresContext, nsGUIEvent* aEvent
     event.isMeta = PR_FALSE;
   }
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
 
   // Have the content handle the event, propagating it according to normal DOM rules.
   nsCOMPtr<nsIPresShell> shell;

@@ -71,7 +71,7 @@ nsScrollBoxObject::~nsScrollBoxObject()
 }
 
 /* void scrollTo (in long x, in long y); */
-NS_IMETHODIMP nsScrollBoxObject::ScrollTo(PRInt32 x, PRInt32 y)
+NS_IMETHODIMP nsScrollBoxObject::ScrollTo(gfx_coord x, gfx_coord y)
 {
   nsIScrollableView* scrollableView = GetScrollableView();
   if (!scrollableView)
@@ -81,7 +81,7 @@ NS_IMETHODIMP nsScrollBoxObject::ScrollTo(PRInt32 x, PRInt32 y)
 }
 
 /* void scrollBy (in long dx, in long dy); */
-NS_IMETHODIMP nsScrollBoxObject::ScrollBy(PRInt32 dx, PRInt32 dy)
+NS_IMETHODIMP nsScrollBoxObject::ScrollBy(gfx_coord dx, gfx_coord dy)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -202,8 +202,8 @@ NS_IMETHODIMP nsScrollBoxObject::ScrollToIndex(PRInt32 index)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* void getPosition (out long x, out long y); */
-NS_IMETHODIMP nsScrollBoxObject::GetPosition(PRInt32 *x, PRInt32 *y)
+/* void getPosition (out gfx_coord x, out gfx_coord y); */
+NS_IMETHODIMP nsScrollBoxObject::GetPosition(gfx_coord *x, gfx_coord *y)
 {
   nsIScrollableView* scrollableView = GetScrollableView();
   if (!scrollableView)

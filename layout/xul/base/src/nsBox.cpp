@@ -41,6 +41,7 @@
 #include "nsIDOMNode.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
+#include "nsIWindow.h"
 
 
 //#define DEBUG_LAYOUT
@@ -733,7 +734,7 @@ nsBox::SizeNeedsRecalc(nsSize& aSize)
 }
 
 void
-nsBox::CoordNeedsRecalc(PRInt32& aFlex)
+nsBox::CoordNeedsRecalc(nscoord& aFlex)
 {
   aFlex = -1;
 }
@@ -808,14 +809,14 @@ nsBox::CollapseChild(nsBoxLayoutState& aState, nsIFrame* aFrame, PRBool aHide)
          //if (v == nsViewVisibility_kHide)
            //return NS_OK;
 
-         nsCOMPtr<nsIWidget> widget;
-         view->GetWidget(*getter_AddRefs(widget));
+         nsCOMPtr<nsIWindow> window;
+         view->GetWidget(getter_AddRefs(window));
          if (aHide) {
              view->SetVisibility(nsViewVisibility_kHide);
          } else {
              view->SetVisibility(nsViewVisibility_kShow);
          }
-         if (widget) {
+         if (window) {
 
            return NS_OK;
          }
@@ -1176,23 +1177,17 @@ nsIBox::AddCSSPrefSize(nsBoxLayoutState& aState, nsIBox* aBox, nsSize& aSize)
 
         if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::width, value))
         {
-            float p2t;
-            presContext->GetScaledPixelsToTwips(&p2t);
-
             value.Trim("%");
 
-            aSize.width = NSIntPixelsToTwips(value.ToInteger(&error), p2t);
+            aSize.width = value.ToInteger(&error);
             widthSet = PR_TRUE;
         }
 
         if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::height, value))
         {
-            float p2t;
-            presContext->GetScaledPixelsToTwips(&p2t);
-
             value.Trim("%");
 
-            aSize.height = NSIntPixelsToTwips(value.ToInteger(&error), p2t);
+            aSize.height = value.ToInteger(&error);
             heightSet = PR_TRUE;
         }
     }
@@ -1475,7 +1470,7 @@ nsBox::GetMouseThrough(PRBool& aMouseThrough)
 }
 
 PRBool
-nsBox::GetDefaultFlex(PRInt32& aFlex) 
+nsBox::GetDefaultFlex(nscoord& aFlex) 
 { 
   aFlex = 0; 
   return PR_TRUE; 

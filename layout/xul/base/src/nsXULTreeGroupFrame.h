@@ -116,11 +116,11 @@ protected:
     // handle drawing the drop feedback
   void PaintDropFeedback ( nsIPresContext* aPresContext, nsIDrawable* aDrawable,
                              PRBool aPaintSorted ) ;
-  void PaintSortedDropFeedback ( nscolor inColor, nsIDrawable* aDrawable, float & inP2T ) ;
+  void PaintSortedDropFeedback ( nscolor inColor, nsIDrawable* aDrawable ) ;
   void PaintOnContainerDropFeedback ( nscolor inColor, nsIDrawable* aDrawable, 
-                                        nsIPresContext* inPresContext, float & inP2T ) ;
+                                        nsIPresContext* inPresContext ) ;
   void PaintInBetweenDropFeedback ( nscolor inColor, nsIDrawable* aDrawable, 
-                                        nsIPresContext* inPresContext, float & inP2T ) ;
+                                        nsIPresContext* inPresContext ) ;
 
     // helpers for drop feedback
   PRInt32 FindIndentation ( nsIPresContext* inPresContext, nsIFrame* inStartFrame ) const ;

@@ -31,8 +31,7 @@
 #include "nsTreeItemDragCapturer.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMElement.h"
-#include "nsIRenderingContext.h"
-#include "nsIDeviceContext.h"
+#include "nsIDrawable.h"
 #include "nsXULAtoms.h"
 #include "nsIViewManager.h"
 #include "nsINameSpaceManager.h"
@@ -747,15 +746,15 @@ nsXULTreeGroupFrame :: AttributeChanged ( nsIPresContext* aPresContext, nsIConte
 // Used to draw the drop feedback based on attributes set by the drag event capturer
 //
 NS_IMETHODIMP
-nsXULTreeGroupFrame :: Paint ( nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext,
+nsXULTreeGroupFrame :: Paint ( nsIPresContext* aPresContext, nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect, nsFramePaintLayer aWhichLayer)
 {
   nsresult res = NS_OK;
-  res = nsBoxFrame::Paint ( aPresContext, aRenderingContext, aDirtyRect, aWhichLayer );
+  res = nsBoxFrame::Paint ( aPresContext, aDrawable, aDirtyRect, aWhichLayer );
   
   if ( (aWhichLayer == eFramePaintLayer_Content) &&
         (mYDropLoc != nsTreeItemDragCapturer::kNoDropLoc || mDropOnContainer) )
-    PaintDropFeedback ( aPresContext, aRenderingContext, PR_FALSE );
+    PaintDropFeedback ( aPresContext, aDrawable, PR_FALSE );
 
   return res;
   
@@ -769,7 +768,7 @@ nsXULTreeGroupFrame :: Paint ( nsIPresContext* aPresContext, nsIRenderingContext
 // drop feedback.
 //
 void
-nsXULTreeGroupFrame :: PaintDropFeedback ( nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext,
+nsXULTreeGroupFrame :: PaintDropFeedback ( nsIPresContext* aPresContext, nsIDrawable* aDrawable,
                                              PRBool aPaintSorted )
 {
   // lookup the drop marker color. default to black if not found.
@@ -777,21 +776,15 @@ nsXULTreeGroupFrame :: PaintDropFeedback ( nsIPresContext* aPresContext, nsIRend
   
   // find the twips-to-pixels conversion. We have decided not to cache this for
   // space reasons.
-  float p2t = 20.0;
-  nsCOMPtr<nsIDeviceContext> dc;
-  aRenderingContext.GetDeviceContext ( *getter_AddRefs(dc) );
-  if ( dc )
-    dc->GetDevUnitsToTwips ( p2t );
-  
   if ( aPaintSorted )
-    PaintSortedDropFeedback ( color, aRenderingContext, p2t );
+    PaintSortedDropFeedback ( color, aDrawable );
   else if ( !mOuterFrame->IsTreeSorted() ) {
     // draw different drop feedback depending on if we are dropping on the 
     // container or above/below it
     if ( !mDropOnContainer )
-      PaintInBetweenDropFeedback ( color, aRenderingContext, aPresContext, p2t );
+      PaintInBetweenDropFeedback ( color, aDrawable, aPresContext );
     else
-      PaintOnContainerDropFeedback ( color, aRenderingContext, aPresContext, p2t );
+      PaintOnContainerDropFeedback ( color, aDrawable, aPresContext );
   } // else tree not sorted
 
 } // PaintDropFeedback
@@ -804,22 +797,21 @@ nsXULTreeGroupFrame :: PaintDropFeedback ( nsIPresContext* aPresContext, nsIRend
 // not appliable.
 //
 void
-nsXULTreeGroupFrame :: PaintSortedDropFeedback ( nscolor inColor, nsIRenderingContext& inRenderingContext,
-                                                   float & inPixelsToTwips )
+nsXULTreeGroupFrame :: PaintSortedDropFeedback ( nscolor inColor, nsIDrawable* aDrawable)
 {
   // two pixels wide
-  const PRInt32 borderWidth = NSToIntRound(2 * inPixelsToTwips);
+  const PRInt32 borderWidth = 2;
   
   nsRect top ( 0, 0, mRect.width, borderWidth );
   nsRect left ( 0, 0, borderWidth, mRect.height );
   nsRect right ( mRect.width - borderWidth, 0, borderWidth, mRect.height );
   nsRect bottom ( 0, mRect.height - borderWidth, mRect.width, borderWidth );
   
-  inRenderingContext.SetColor(inColor);
-  inRenderingContext.FillRect ( top );
-  inRenderingContext.FillRect ( left );
-  inRenderingContext.FillRect ( bottom );
-  inRenderingContext.FillRect ( right );
+  aDrawable->SetForegroundColor(inColor);
+  aDrawable->FillRectangle(top.x, top.y, top.width, top.height);
+  aDrawable->FillRectangle(left.x, left.y, left.width, left.height);
+  aDrawable->FillRectangle(bottom.x, bottom.y, bottom.width, bottom.height);
+  aDrawable->FillRectangle(right.x, right.y, right.width, right.height);
  
 } // PaintSortedDropFeedback
 
@@ -831,8 +823,8 @@ nsXULTreeGroupFrame :: PaintSortedDropFeedback ( nscolor inColor, nsIRenderingCo
 // CSS handle the operation of painting the row bg so it's skinnable.
 //
 void
-nsXULTreeGroupFrame :: PaintOnContainerDropFeedback ( nscolor inColor, nsIRenderingContext& inRenderingContext,
-                                                         nsIPresContext* inPresContext, float & inPixelsToTwips )
+nsXULTreeGroupFrame :: PaintOnContainerDropFeedback ( nscolor inColor, nsIDrawable* aDrawable,
+                                                         nsIPresContext* inPresContext )
 {
   if ( IsOpenContainer() ) {
     PRInt32 horizIndent = 0;
@@ -841,10 +833,10 @@ nsXULTreeGroupFrame :: PaintOnContainerDropFeedback ( nscolor inColor, nsIRender
     if ( firstChild )
       horizIndent = FindIndentation(inPresContext, firstChild);
 
-    inRenderingContext.SetColor(inColor);
-    nsRect dividingLine ( horizIndent, mRect.height - NSToIntRound(2 * inPixelsToTwips), 
-                            NSToIntRound(50 * inPixelsToTwips), NSToIntRound(2 * inPixelsToTwips) );
-    inRenderingContext.DrawRect ( dividingLine );
+    aDrawable->SetForegroundColor(inColor);
+    nsRect dividingLine ( horizIndent, mRect.height - 2,
+                            50, 2);
+    aDrawable->DrawRectangle( dividingLine.x,  dividingLine.y,  dividingLine.width,  dividingLine.height);
   }
 
 } // PaintOnContainerDropFeedback
@@ -857,8 +849,8 @@ nsXULTreeGroupFrame :: PaintOnContainerDropFeedback ( nscolor inColor, nsIRender
 // allows that.
 //
 void
-nsXULTreeGroupFrame :: PaintInBetweenDropFeedback ( nscolor inColor, nsIRenderingContext& inRenderingContext,
-                                                      nsIPresContext* inPresContext, float & inPixelsToTwips )
+nsXULTreeGroupFrame :: PaintInBetweenDropFeedback ( nscolor inColor, nsIDrawable* aDrawable,
+                                                      nsIPresContext* inPresContext )
 {
   if ( mOuterFrame->CanDropBetweenRows() ) {
     // the normal case is that we can just look at this frame to find the indentation we need. However,
@@ -874,10 +866,10 @@ nsXULTreeGroupFrame :: PaintInBetweenDropFeedback ( nscolor inColor, nsIRenderin
     else
       horizIndent = FindIndentation(inPresContext, this);
     
-    inRenderingContext.SetColor(inColor);
+    aDrawable->SetForegroundColor(inColor);
     nsRect dividingLine ( horizIndent, mYDropLoc, 
-                            NSToIntRound(50 * inPixelsToTwips), NSToIntRound(2 * inPixelsToTwips) );
-    inRenderingContext.FillRect(dividingLine);
+                            50, 2);
+    aDrawable->FillRectangle(dividingLine.x, dividingLine.y, dividingLine.width, dividingLine.height);
   }
   
 } // PaintInBetweenDropFeedback

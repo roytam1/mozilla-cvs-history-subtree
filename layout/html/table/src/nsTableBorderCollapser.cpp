@@ -222,16 +222,14 @@ void nsTableBorderCollapser::ComputeLeftBorderForEdgeAt(nsIPresContext* aPresCon
   // now give half the computed border to the table segment, and half to the cell
   // to avoid rounding errors, we convert up to pixels, divide by 2, and 
   // we give the odd pixel to the table border
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  nscoord widthAsPixels = NSToCoordRound((float)(border->mWidth)*t2p);
+  nscoord widthAsPixels = (float)border->mWidth;
   nscoord widthToAdd = 0;
   border->mWidth = widthAsPixels/2;
+
+  // XXX pav ??
   if ((border->mWidth*2)!=widthAsPixels)
-    widthToAdd = NSToCoordCeil(p2t);
-  border->mWidth *= NSToCoordCeil(p2t);
+    widthToAdd = 1; //NSToCoordCeil(p2t);
+  //  border->mWidth *= NSToCoordCeil(p2t);
   border->mLength = rowRect.height;
   // we need to factor in the table's horizontal borders.
   // but we can't compute that length here because we don't know how thick top and bottom borders are
@@ -339,16 +337,13 @@ void nsTableBorderCollapser::ComputeRightBorderForEdgeAt(nsIPresContext* aPresCo
   // (the 2 cells, or the cell and the table)
   // to avoid rounding errors, we convert up to pixels, divide by 2, and 
   // we give the odd pixel to the right cell border
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  nscoord widthAsPixels = NSToCoordRound((float)(border.mWidth)*t2p);
+  nscoord widthAsPixels = (float)border.mWidth;
   nscoord widthToAdd = 0;
   border.mWidth = widthAsPixels/2;
+  // XXX pav
   if ((border.mWidth*2) != widthAsPixels)
-    widthToAdd = NSToCoordCeil(p2t);
-  border.mWidth *= NSToCoordCeil(p2t);
+    widthToAdd = 1; //NSToCoordCeil(p2t);
+  //  border.mWidth *= NSToCoordCeil(p2t);
   border.mLength = rowRect.height;
   if (cellFrame) {
     cellFrame->SetBorderEdge(NS_SIDE_RIGHT, aRowIndex, aColIndex, &border, widthToAdd);
@@ -425,16 +420,12 @@ void nsTableBorderCollapser::ComputeTopBorderForEdgeAt(nsIPresContext* aPresCont
   // now give half the computed border to the table segment, and half to the cell
   // to avoid rounding errors, we convert up to pixels, divide by 2, and 
   // we give the odd pixel to the right border
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  nscoord widthAsPixels = NSToCoordRound((float)(border->mWidth)*t2p);
+  nscoord widthAsPixels = (float)border->mWidth;
   nscoord widthToAdd = 0;
   border->mWidth = widthAsPixels/2;
   if ((border->mWidth*2) != widthAsPixels)
-    widthToAdd = NSToCoordCeil(p2t);
-  border->mWidth *= NSToCoordCeil(p2t);
+    widthToAdd = 1; // NSToCoordCeil(p2t);
+  //  border->mWidth *= NSToCoordCeil(p2t);
   border->mLength = mTableFrame.GetColumnWidth(aColIndex);
   if (cellFrame) {
     border->mInsideNeighbor = cellFrame->mBorderEdges;
@@ -549,16 +540,13 @@ void nsTableBorderCollapser::ComputeBottomBorderForEdgeAt(nsIPresContext* aPresC
   // (the 2 cells, or the cell and the table)
   // to avoid rounding errors, we convert up to pixels, divide by 2, and 
   // we give the odd pixel to the right cell border
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  nscoord widthAsPixels = NSToCoordRound((float)(border.mWidth)*t2p);
+  nscoord widthAsPixels = (float)border.mWidth;
   nscoord widthToAdd = 0;
   border.mWidth = widthAsPixels/2;
+  // XXX pav
   if ((border.mWidth*2) != widthAsPixels)
-    widthToAdd = NSToCoordCeil(p2t);
-  border.mWidth *= NSToCoordCeil(p2t);
+    widthToAdd = 1; // NSToCoordCeil(p2t);
+  //  border.mWidth *= NSToCoordCeil(p2t);
   border.mLength = mTableFrame.GetColumnWidth(aColIndex);
   if (cellFrame) {
     cellFrame->SetBorderEdge(NS_SIDE_BOTTOM, aRowIndex, aColIndex, &border, widthToAdd);

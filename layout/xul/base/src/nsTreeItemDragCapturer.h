@@ -24,7 +24,7 @@
 #define nsTreeItemDragCapturer_h__
 
 #include "nsIDOMDragListener.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 
 
 class nsIPresContext;

@@ -23,6 +23,7 @@
  */
 
 #include "nsISupports.idl"
+#include "gfxtypes.idl"
 #include "nsIBoxLayoutManager.idl"
 #include "nsIBoxPaintManager.idl"
 
@@ -32,10 +33,10 @@ interface nsIBoxObject : nsISupports
   attribute nsIBoxLayoutManager layoutManager;
   attribute nsIBoxPaintManager paintManager;
 
-  readonly attribute long x;
-  readonly attribute long y;
-  readonly attribute long width;
-  readonly attribute long height;
+  readonly attribute gfx_coord x;
+  readonly attribute gfx_coord y;
+  readonly attribute gfx_dimension width;
+  readonly attribute gfx_dimension height;
 
   nsISupports getPropertyAsSupports(in wstring propertyName);
   void setPropertyAsSupports(in wstring propertyName, in nsISupports value);

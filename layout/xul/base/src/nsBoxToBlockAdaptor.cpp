@@ -54,9 +54,7 @@
 #include "nsILineIterator.h"
 #include "nsIFontMetrics.h"
 #include "nsHTMLContainerFrame.h"
-#include "nsWidgetsCID.h"
-
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
+#include "nsIWindow.h"
 
 //#define DEBUG_REFLOW
 //#define DEBUG_GROW
@@ -159,11 +157,11 @@ nsBoxToBlockAdaptor::SetParentBox(nsIBox* aParent)
            mFrame->GetView(context, &view);
         }
 
-        nsIWidget* widget;
-        view->GetWidget(widget);
+        nsCOMPtr<nsIWindow> window;
+        view->GetWidget(getter_AddRefs(window));
 
-        if (!widget)
-           view->CreateWidget(kWidgetCID);   
+        if (!window)
+           view->CreateWidget("@mozilla.org/gfx/window/child;2");   
     }
   }
   
@@ -931,13 +929,12 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
         const nsStyleFont* font;
         firstFrame->GetStyleData(eStyleStruct_Font,
                             (const nsStyleStruct*&) font);
-        nsIRenderingContext& rc = *aReflowState.rendContext;
-        rc.SetFont(font->mFont);
-        nsIFontMetrics* fm;
-        rv = rc.GetFontMetrics(fm);
+        nsIDrawable *drawable = aReflowState.drawable;
+        drawable->SetFont(&font->mFont);
+        nsCOMPtr<nsIFontMetrics> fm;
+        rv = drawable->GetFontMetrics(getter_AddRefs(fm));
         if (NS_SUCCEEDED(rv) && (nsnull != fm)) {
-          fm->GetMaxAscent(aDesiredSize.ascent);
-          NS_RELEASE(fm);
+          fm->GetMaxAscent(&aDesiredSize.ascent);
         }
         rv = NS_OK;
         aDesiredSize.ascent += rect.y;

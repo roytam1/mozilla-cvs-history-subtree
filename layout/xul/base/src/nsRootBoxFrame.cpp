@@ -21,25 +21,18 @@
  */
 #include "nsHTMLParts.h"
 #include "nsContainerFrame.h"
-#include "nsCSSRendering.h"
 #include "nsIDocument.h"
 #include "nsIReflowCommand.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
-#include "nsViewsCID.h"
-#include "nsIView.h"
-#include "nsIViewManager.h"
-#include "nsIWidget.h"
 #include "nsHTMLIIDs.h"
 #include "nsPageFrame.h"
-#include "nsIRenderingContext.h"
 #include "nsGUIEvent.h"
 #include "nsDOMEvent.h"
 #include "nsStyleConsts.h"
 #include "nsIViewManager.h"
 #include "nsHTMLAtoms.h"
 #include "nsIEventStateManager.h"
-#include "nsIDeviceContext.h"
 #include "nsIScrollableView.h"
 #include "nsLayoutAtoms.h"
 #include "nsIPresShell.h"
@@ -47,7 +40,6 @@
 #include "nsStackLayout.h"
 
 // Interface IDs
-static NS_DEFINE_IID(kScrollViewIID, NS_ISCROLLABLEVIEW_IID);
 static NS_DEFINE_IID(kIFrameIID, NS_IFRAME_IID);
 
 //#define DEBUG_REFLOW

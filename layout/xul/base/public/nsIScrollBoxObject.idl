@@ -28,14 +28,14 @@
 [scriptable, uuid(56E2ADA8-4631-11d4-BA11-001083023C1E)]
 interface nsIScrollBoxObject : nsISupports
 {
-  void scrollTo(in long x, in long y);
-  void scrollBy(in long dx, in long dy);
+  void scrollTo(in gfx_coord x, in gfx_coord y);
+  void scrollBy(in gfx_coord dx, in gfx_coord dy);
   void scrollByLine(in long dlines);
   void scrollByIndex(in long dindexes);
   void scrollToLine(in long line);
   void scrollToElement(in nsIDOMElement child);
   void scrollToIndex(in long index);
-  void getPosition(out long x, out long y);
+  void getPosition(out gfx_coord x, out gfx_coord y);
   void getScrolledSize(out long width, out long height);
   void ensureElementIsVisible(in nsIDOMElement child);
   void ensureIndexIsVisible(in long index);

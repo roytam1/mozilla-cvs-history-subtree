@@ -36,7 +36,7 @@ class nsRepeatService : public nsITimerCallback
 {
 public:
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
 
   void Start(nsITimerCallback* aCallback);
   void Stop();
