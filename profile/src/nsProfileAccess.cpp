@@ -139,6 +139,8 @@ nsProfileAccess::Init()
 nsresult
 nsProfileAccess::Init(nsIFile* aRegistryFile)
 {
+    mNewRegFile = aRegistryFile;
+
     // Read the data into internal data structure....
     return FillProfileInfo(aRegistryFile);
 }
