@@ -985,7 +985,7 @@ nsHTMLInputElement::MaybeSubmitForm(nsIPresContext* aPresContext)
     if (submitControl) {
       // Fire the button's onclick handler and let the button handle
       // submitting the form.
-      nsGUIEvent event(NS_MOUSE_LEFT_CLICK);
+      nsMouseEvent event(NS_MOUSE_LEFT_CLICK);
       nsEventStatus status = nsEventStatus_eIgnore;
       shell->HandleDOMEventWithTarget(submitControl, &event, &status);
     } else if (numTextControlsFound == 1) {
