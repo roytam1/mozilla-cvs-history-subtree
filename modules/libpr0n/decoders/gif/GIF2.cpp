@@ -953,8 +953,16 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                     //ILTRACE(2, ("il:gif: %f aspect ratio", aspect));
 #endif
                 }
-            }
-
+            }  
+            
+            // XXX make callback
+            (*gs->GIFCallback_BeginGIF)(
+              gs->clientptr,
+              gs->screen_width, 
+              gs->screen_height,
+              nsnull,
+              nsnull);
+    
             if( q[4] & 0x80 ) /* global map */
             {
                 /* 3 bytes for each entry in the global colormap */

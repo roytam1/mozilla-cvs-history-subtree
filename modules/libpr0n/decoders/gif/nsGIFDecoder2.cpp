@@ -237,20 +237,6 @@ int BeginGIF(
   if (decoder->mObserver)
     decoder->mObserver->OnStartContainer(nsnull, nsnull, decoder->mImageContainer);
 
-  decoder->mImageFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-
-  gfx_format format;
-  if (aTransparencyChromaKey) {
-    format = nsIGFXFormat::RGB_A1;
-  } else {
-    format = nsIGFXFormat::RGB; 
-  }
-#ifdef XP_PC
-  // XXX this works...
-  format += 1; // RGB to BGR
-#endif
-  // XXX do something with transparent and background colors
-
   return 0;
 }
 
@@ -331,11 +317,9 @@ int HaveDecodedRow(
   // How annoying.
   if(! decoder->mImageFrame) {
       gfx_format format = nsIGFXFormat::RGB;
-      //if (aTransparencyChromaKey) {
-      //  format = nsIGFXFormat::RGB_A1;
-      //} else {
-      //  format = nsIGFXFormat::RGB; 
-      //}
+      if (decoder->mGIFStruct.is_transparent)
+        format = nsIGFXFormat::RGB_A1;
+
 #ifdef XP_PC
       // XXX this works...
       format += 1; // RGB to BGR
@@ -380,10 +364,6 @@ int HaveDecodedRow(
     decoder->mImageFrame->GetFormat(&format);
     PRUint8 *aptr, *cptr;
 
-    switch (format) {
-    case nsIGFXFormat::RGB:
-    case nsIGFXFormat::BGR:
-      {
         // XXX map the data into colors
         int cmapsize;
         GIF_RGB* cmap;
@@ -397,7 +377,11 @@ int HaveDecodedRow(
       
         PRUint8* rgbRowIndex = aRGBrowBufPtr;
         PRUint8* rowBufIndex = aRowBufPtr;
-      
+        
+    switch (format) {
+    case nsIGFXFormat::RGB:
+    case nsIGFXFormat::BGR:
+      {
         while(rowBufIndex != decoder->mGIFStruct.rowend) {
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
@@ -412,18 +396,17 @@ int HaveDecodedRow(
     case nsIGFXFormat::RGB_A1:
     case nsIGFXFormat::BGR_A1:
       {
-        cptr = decoder->colorLine;
-        aptr = decoder->alphaLine;
         memset(aptr, 0, abpr);
         for (PRUint32 x=0; x<iwidth; x++) {
-          *cptr++ = *aRowBufPtr++;
-          *cptr++ = *aRowBufPtr++;
-          *cptr++ = *aRowBufPtr++;
-          if (*aRowBufPtr++)
-            aptr[x>>3] |= 1<<(7-x&0x7);
+          if(*rowBufIndex == decoder->mGIFStruct.tpixel) {
+            // set mask bit
+          }
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
         }
         decoder->mImageFrame->SetImageData(decoder->colorLine, bpr, aRowNumber*bpr);
-        decoder->mImageFrame->SetAlphaData(decoder->alphaLine, abpr, aRowNumber*abpr);
+        // decoder->mImageFrame->SetAlphaData(decoder->alphaLine, abpr, aRowNumber*abpr);
       }
       break;
     default:
