@@ -262,6 +262,9 @@ public:
 
     nsresult
     RecycleNode(nsIDOMNode* aElement);
+
+    nsresult
+    GetParentNodeWithHTMLHack(nsIDOMNode* aNode, nsCOMPtr<nsIDOMNode>* aResult);
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -1135,7 +1138,8 @@ RDFXULBuilderImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
     // If there was an old parent for newChild, then make sure to
     // remove that relationship.
     nsCOMPtr<nsIDOMNode> oldParentNode;
-    rv = aNewChild->GetParentNode(getter_AddRefs(oldParentNode));
+    //rv = aNewChild->GetParentNode(getter_AddRefs(oldParentNode));
+    rv = GetParentNodeWithHTMLHack(aNewChild, &oldParentNode);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get new child's parent");
     if (NS_FAILED(rv)) return rv;
 
@@ -1369,7 +1373,8 @@ RDFXULBuilderImpl::OnAppendChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild)
     // If there was an old parent for newChild, then make sure to
     // remove that relationship.
     nsCOMPtr<nsIDOMNode> oldParentNode;
-    rv = aNewChild->GetParentNode(getter_AddRefs(oldParentNode));
+    //rv = aNewChild->GetParentNode(getter_AddRefs(oldParentNode));
+    rv = GetParentNodeWithHTMLHack(aNewChild, &oldParentNode);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get new child's parent");
     if (NS_FAILED(rv)) return rv;
 
@@ -2729,5 +2734,31 @@ RDFXULBuilderImpl::RecycleNode(nsIDOMNode* aNode)
     NS_ASSERTION(mElementRecycler->IndexOf(element) < 0, "Element already in the recycler");
 
     mElementRecycler->AppendElement(element);
+    return NS_OK;
+}
+
+
+nsresult
+RDFXULBuilderImpl::GetParentNodeWithHTMLHack(nsIDOMNode* aNode, nsCOMPtr<nsIDOMNode>* aResult)
+{
+    // Since HTML nodes will return the document as their parent node
+    // when their mParent == nsnull && mDocument != nsnull, we need to
+    // deal. See bug 6917 for details.
+    nsresult rv;
+
+    nsCOMPtr<nsIDOMNode> result;
+
+    rv = aNode->GetParentNode(getter_AddRefs(result));
+    if (NS_FAILED(rv)) return rv;
+
+    if (result) {
+        // If we can QI to nsIDocument, then we've hit the case where
+        // HTML nodes screw us. Make the parent be null.
+        if (nsCOMPtr<nsIDocument>(do_QueryInterface(result))) {
+            result = nsnull;
+        }
+    }
+
+    *aResult = result;
     return NS_OK;
 }
