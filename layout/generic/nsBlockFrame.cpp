@@ -627,10 +627,9 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       if (!floats.IsEmpty()) {
         line->AppendFloats(floats);
 
-        nscoord floats_min = 0,
                 // preferred widths accumulated for floats that have already
                 // been cleared past
-                floats_left_done = 0, floats_right_done = 0,
+        nscoord floats_left_done = 0, floats_right_done = 0,
                 // preferred widths accumulated fol floats that have not yet
                 // been cleared past
                 floats_left_cur = 0, floats_right_cur = 0;
@@ -658,8 +657,9 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
             nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                           floatFrame, nsLayoutUtils::PREF_WIDTH);
 
-          if (float_min > floats_min)
-            floats_min = float_min;
+          if (float_min > line_min)
+            line_min = float_min;
+
           switch (floatDisp->mFloats) {
             case NS_STYLE_FLOAT_LEFT:
               floats_left_cur += float_pref;
@@ -679,7 +679,6 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
           floats_right_done = floats_right_cur;
 
         line_pref += floats_left_done + floats_right_done;
-        line_min += floats_min;
       }
 
       // Mark the line as dirty since we've put in into a fake state.
