@@ -38,8 +38,9 @@
 
 #include "nsIGenericFactory.h"
 
-#include "nsEditorShell.h"		      // for the CID
-#include "nsComposerController.h"		// for the CID
+#include "nsEditorShell.h"
+#include "nsEditingSession.h"
+#include "nsComposerController.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Define the contructor function for the objects
@@ -48,6 +49,7 @@
 //
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsEditorShell)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsEditingSession)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsComposerController)
 
 ////////////////////////////////////////////////////////////////////////
@@ -63,6 +65,8 @@ static nsModuleComponentInfo components[] = {
       "@mozilla.org/editor/editorshell;1", nsEditorShellConstructor, },
     { "Editor Shell Spell Checker", NS_EDITORSHELL_CID,
       "@mozilla.org/editor/editorspellcheck;1", nsEditorShellConstructor, },
+    { "Editing Session", NS_EDITINGSESSION_CID,
+      "@mozilla.org/editor/editingsession;1", nsEditingSessionConstructor, },
 };
 
 ////////////////////////////////////////////////////////////////////////
