@@ -1,3 +1,51 @@
+1999-09-08  Kevin McCarthy  <kevin@perldap.org>
+
+	* API.xs: Misc. - function reordering, prototypes, comments.
+	(berptr2svpv): Added to handle struct berval * typemap.
+	(sv2ldapcontrolptrptr): Added to handle LDAPControl ** typemap.
+	(ldapcontrolptrptr2avref): Ditto.
+	(sv2ldapvirtuallistptr): Added to handle LDAPVirtualList * typemap.
+	(ldap_abandon_ext): Added CLEANUP for LDAPControl **.
+	(ldap_add_ext): Ditto.
+	(ldap_add_ext_s): Ditto.
+	(ldap_compare_ext): Ditto.
+	(ldap_compare_ext_s): Ditto.
+	(ldap_controls_count): Ditto.
+	(ldap_delete_ext): Ditto.
+	(ldap_delete_ext_s): Ditto.
+	(ldap_extended_operation): Ditto.
+	(ldap_modify_ext): Ditto.
+	(ldap_modify_ext_s): Ditto.
+	(ldap_parse_virtuallist_control): Ditto.
+	(ldap_rename): Ditto.
+	(ldap_rename_s): Ditto.
+	(ldap_sasl_bind): Ditto.
+	(ldap_search_ext): Ditto.
+	(ldap_search_ext_s): Ditto.
+	(ldap_create_persistentsearch_control): Fixed parameter ctrlp.
+	(ldap_create_sort_control): Ditto.
+	(ldap_create_virtuallist_control): Fixed parameter ctrlp,
+	   LDAPVirtualList cleanup.
+	(ldap_extended_operation): Fixed parameter retdatap, added CLEANUP.
+	(ldap_free_friendlymap): Fixed parameter map.
+	(ldap_friendly_name): Ditto.
+	(ldap_memcache_get): Fixed parameter cachep.
+	(ldap_memcache_init): Ditto.
+	(ldap_multisort_entries): Fixed parameter chain.
+	(ldap_sort_entries): Ditto.
+	(ldap_next_attribute): Removed ber as output parameter.
+	(ldap_parse_entrychange_control): Added CLEANUP.
+	(ldap_parse_result): Ditto.
+	(ldap_parse_sort_control): Ditto.
+	(ldap_parse_extended_result): Fixed parameter retdatap, added CLEANUP.
+	(ldap_parse_sasl_bind_result): Fixed parameter servercredp.
+	(ldap_parse_sasl_bind_s): Fixed parameter servercredp, added CLEANUP.
+	* typemap: Added typemaps FriendlyMap, LDAPVirtualList *,
+	                          struct berval *, LDAPControl **
+	           Removed typemaps LDAPMessage **, FriendlyMap *,
+	                            struct berval **, LDAPMemCache **
+	           Added comments about the typemaps.
+
 1999-09-07  Leif Hedstrom  <leif@perldap.org>
 
 	* API.xs (avref2charptrptr): Merged in changes from v1.4.1, fixes

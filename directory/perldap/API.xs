@@ -24,6 +24,11 @@
  * DESCRIPTION
  *    This is the XSUB interface for the API.
  *
+ * NOTE:
+ *   Please read the typemap file in this directory.  It contains
+ *   information about the way parameters are mapped and used, and when
+ *   things need to be freed.
+ *
  *****************************************************************************/
 
 #ifdef __cplusplus
@@ -50,7 +55,12 @@ extern "C" {
 /* AUTOLOAD methods for LDAP constants */
 #include "constant.h"
 
-/* Prototypes */
+
+
+ /*************
+ * Prototypes *
+ *************/
+
 static int perldap_init();
 
 static void * perldap_malloc(size_t size);
@@ -61,13 +71,25 @@ static void * perldap_realloc(void *ptr, size_t size);
 
 static void perldap_free(void *ptr);
 
+static int StrCaseCmp(const char *s, const char *t);
+
+static char * StrDup(const char *source);
+
 static char ** avref2charptrptr(SV *avref);
+
+static SV * charptrptr2avref(char **cppval);
 
 static struct berval ** avref2berptrptr(SV *avref);
 
-static SV* charptrptr2avref(char **cppval);
+static SV * berptrptr2avref(struct berval **bval);
 
-static SV* berptrptr2avref(struct berval **bval);
+static SV * berptr2svpv(struct berval *bval);
+
+static LDAPControl ** sv2ldapcontrolptrptr(SV *ldapcontrol_sv);
+
+static SV * ldapcontrolptrptr2avref(LDAPControl **ldapcontrol);
+
+static LDAPVirtualList * sv2ldapvirtuallistptr(SV *virtuallist_sv);
 
 static LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
                 int ldap_add_func,int cont);
@@ -75,10 +97,6 @@ static LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
 static int calc_mod_size(HV *ldap_change);
 
 static LDAPMod **hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func);
-
-static int StrCaseCmp(const char *s, const char *t);
-
-static char * StrDup(const char *source);
 
 static int LDAP_CALL internal_rebind_proc(LDAP *ld,char **dnp,char **pwp,
             int *authmethodp,int freeit,void *arg);
@@ -116,9 +134,14 @@ static int ldap_default_rebind_auth = LDAP_AUTH_SIMPLE;
 	   ldap_value_free_len(bvppvar); }
 
 
-/*
- * Function Definition
- */
+ /***********************
+ * Function Definitions *
+ ***********************/
+
+
+/*****************************
+* memory allocation routines *
+*****************************/
 
 static
 int
@@ -176,7 +199,61 @@ perldap_free(void *ptr)
 }
 
 
-/* Return a char ** when passed a reference to an AV */
+/******************
+* string routines *
+******************/
+
+/*
+ * StrCaseCmp
+ * Replacement for strcasecmp, since it doesn't exist on many
+ * systems, including NT...
+ */
+static
+int
+StrCaseCmp(const char *s, const char *t)
+{
+   while (*s && *t && toupper(*s) == toupper(*t))
+   {
+      s++; t++;
+   }
+   return(toupper(*s) - toupper(*t));
+}
+
+
+/*
+ * StrDup
+ *
+ * Duplicates a string, but uses the Perl memory allocation
+ * routines (so it can be free by the internal routines
+ */
+static
+char *
+StrDup(const char *source)
+{
+   char *dest;
+   STRLEN length;
+
+   if ( source == NULL )
+      return(NULL);
+   length = strlen(source);
+   Newz(1,dest,length+1,char);
+   Copy(source,dest,length+1,char);
+
+   return(dest);
+}
+
+
+/************************
+* T_charptrptr typemaps *
+************************/
+
+/*
+ * avref2charptrptr
+ *
+ * INPUT typemap.
+ * Return a char ** when passed a reference to an AV 
+ * NOTE: This value must be freed using ldap_value_free in CLEANUP.
+ */
 static
 char **
 avref2charptrptr(SV *avref)
@@ -204,7 +281,50 @@ avref2charptrptr(SV *avref)
    return (tmp_cpp);
 }
 
-/* Return a struct berval ** when passed a reference to an AV */
+
+/*
+ * charptrptr2avref
+ *
+ * OUTPUT typemap.
+ * Return an AV reference when given a char **
+ * Frees the char ** and char * for you.
+ */
+static
+SV*
+charptrptr2avref(char **cppval)
+{
+   AV* tmp_av = newAV();
+   SV* tmp_ref = newRV((SV*)tmp_av);
+   int ix;
+
+   if (cppval != NULL)
+   {
+      for (ix = 0; cppval[ix] != NULL; ix++)
+      {
+         SV* SVval = newSVpv(cppval[ix],0);
+         av_push(tmp_av,SVval);
+      }
+      ldap_value_free(cppval);
+   }
+   return(tmp_ref);
+}
+
+
+/**************************
+* T_bervalptrptr typemaps *
+**************************/
+
+/*
+ * avref2berptrptr
+ *
+ * INPUT typemap.
+ * Return a struct berval ** when passed a reference to an AV
+ * This isn't used as a typemap anymore.  It is only called
+ * by parse1mod() to set up the LDAPMod structure for an update/add/delete.
+ * hash2mod calls thie for LDAPMod ** conversions.
+ * The result of this should be free'd using ldap_mod_free(attrs, 1)
+ * in the CLEANUP section.
+ */
 static
 struct berval **
 avref2berptrptr(SV *avref)
@@ -242,32 +362,16 @@ avref2berptrptr(SV *avref)
    return(tmp_ber);
 }
 
-/* Return an AV reference when given a char ** */
-
+/*
+ * berptrptr2avref
+ *
+ * OUTPUT typemap.
+ * Return an AV Reference when given a struct berval **
+ * This is not used anywhere anymore, but is kept around
+ * for completeness in case we need to use the typemap again.
+ */
 static
-SV*
-charptrptr2avref(char **cppval)
-{
-   AV* tmp_av = newAV();
-   SV* tmp_ref = newRV((SV*)tmp_av);
-   int ix;
-
-   if (cppval != NULL)
-   {
-      for (ix = 0; cppval[ix] != NULL; ix++)
-      {
-         SV* SVval = newSVpv(cppval[ix],0);
-         av_push(tmp_av,SVval);
-      }
-      ldap_value_free(cppval);
-   }
-   return(tmp_ref);
-}
-
-/* Return an AV Reference when given a struct berval ** */
-
-static
-SV*
+SV *
 berptrptr2avref(struct berval **bval)
 {
    AV* tmp_av = newAV();
@@ -287,10 +391,252 @@ berptrptr2avref(struct berval **bval)
 }
 
 
-/* parse1mod - Take a single reference, figure out if it is a HASH, */
-/*   ARRAY, or SCALAR, then extract the values and attributes and   */
-/*   return a single LDAPMod pointer to this data.                  */
+/***********************
+* T_bervalptr typemaps *
+***********************/
 
+/*
+ * berptr2svpv
+ *
+ * OUTPUT typemap.
+ * Converts a struct berval * to a SvPv scalar in Perl
+ * Frees the bval for you.
+ */
+static
+SV *
+berptr2svpv(struct berval *bval)
+{
+   SV *SVval;
+
+   SVval = newSVpv(bval->bv_val, bval->bv_len);
+
+   ber_bvfree(bval);
+
+   return(SVval);
+}
+
+
+/*******************************
+* T_ldapcontrolptrptr typemaps *
+*******************************/
+
+/*
+ * sv2ldapcontrolptrptr
+ *
+ * INPUT typemap.
+ * This function converts a SV passed in, into a LDAPControl **
+ * The SV passed in should either be a SV (which is a LDAPControl *)
+ * or it should be a RV to an AV (each of which is a LDAPControl *)
+ *
+ * NOTE: be sure the free the LDAPControl ** before we
+ *       return back, otherwise it will never be freed.
+ */
+static
+LDAPControl **
+sv2ldapcontrolptrptr(SV *ldapcontrol_sv)
+{
+   LDAPControl **ldapcontrol = NULL;
+   AV *ldapcontrol_av;
+   SV **ldapcontrol_av_entry;
+   I32 ldapcontrol_av_index;
+
+   /*
+    * Regular scalar - single entry
+    */
+   if ( ! SvROK(ldapcontrol_sv) )
+   {
+      Newz(1, ldapcontrol, 2, LDAPControl *);
+      ldapcontrol[0] = (LDAPControl *)SvIV(ldapcontrol_sv);
+      ldapcontrol[1] = NULL;
+   }
+   /*
+    * Reference to an array
+    */
+   else if ( SvTYPE(SvRV(ldapcontrol_sv)) == SVt_PVAV )
+   {
+      ldapcontrol_av = (AV *)SvRV(ldapcontrol_sv);
+      /*
+       * av_len + 2 because:
+       *    1) av_len is highest index (base 0), so add 1
+       *    2) adding 1 for the trailing NULL entry
+       */
+      Newz(1, ldapcontrol, (av_len(ldapcontrol_av) + 2), LDAPControl *);
+      for (ldapcontrol_av_index = 0;
+           ldapcontrol_av_index <= av_len(ldapcontrol_av);
+           ldapcontrol_av_index++)
+      {
+         ldapcontrol_av_entry = av_fetch(ldapcontrol_av, ldapcontrol_av_index,
+                                         0);
+         if ( ldapcontrol_av_entry != NULL )
+            ldapcontrol[ldapcontrol_av_index] = (LDAPControl *)SvIV(*ldapcontrol_av_entry);
+      }
+      ldapcontrol[av_len(ldapcontrol_av) + 1] = NULL;
+   }
+   /*
+    * something else - just return NULL
+    */
+
+   return(ldapcontrol);
+}
+
+
+/*
+ * ldapcontrolptrptr2avref
+ *
+ * OUTPUT typemap.
+ * This function converts an LDAPControl ** being returned to
+ * a reference to an AV
+ *
+ * NOTE: This function frees the ldapcontrol ** passed in
+ *       It does _not_ free the ldapcontrol * entries in the array.
+ *       The free is because we are discarding the "container" when
+ *       we convert it to a AV
+ */
+static
+SV *
+ldapcontrolptrptr2avref(LDAPControl **ldapcontrol)
+{
+   AV *ldapcontrol_av;
+   SV *ldapcontrol_avrv;
+   int ldapcontrol_index;
+   SV *ldapcontrol_av_entry;
+
+   ldapcontrol_av = newAV();
+   ldapcontrol_avrv = newRV_inc((SV*)ldapcontrol_av);
+
+   if (ldapcontrol != NULL)
+   {
+      for (ldapcontrol_index = 0;
+           ldapcontrol[ldapcontrol_index] != NULL;
+           ldapcontrol_index++)
+      {
+         ldapcontrol_av_entry = newSViv((IV)ldapcontrol[ldapcontrol_index]);
+         av_push(ldapcontrol_av, ldapcontrol_av_entry);
+      }
+      Safefree(ldapcontrol);
+   }
+
+   return(ldapcontrol_avrv);
+}
+
+
+/********************************
+* T_ldapvirtuallistptr typemaps *
+********************************/
+
+/*
+ * sv2ldapvirtuallistptr
+ *
+ * INPUT typemap.
+ * Converts a SV (RV) passed in into a LDAPVirtualLIst *.
+ * The SV can be either a RvAv with 6 entries
+ * or it can be a RvHv hash with the entries:
+ * ldvlist_before_count, ldvlist_after_count,
+ * ldvlist_attrvalue, ldvlist_index, ldvlist_size,
+ * ldvlist_extradata
+ * The LDAPVirtualList * is malloc()ed in this function.
+ * Therefore it needs to be Safefree() in the CLEANUP section.
+ */
+static
+LDAPVirtualList *
+sv2ldapvirtuallistptr(SV *virtuallist_sv)
+{
+   LDAPVirtualList *virtuallist = NULL;
+   AV *virtuallist_av;
+   HV *virtuallist_hv;
+   SV **virtuallist_entry;
+   STRLEN len;
+   char *before_key = "ldvlist_before_count";
+   char *after_key = "ldvlist_after_count";
+   char *value_key = "ldvlist_attrvalue";
+   char *index_key = "ldvlist_index";
+   char *size_key = "ldvlist_size";
+   char *data_key = "ldvlist_extradata";
+
+   if ( ! SvROK(virtuallist_sv) )
+   {
+      return(NULL);
+   }
+
+   if ( SvTYPE(SvRV(virtuallist_sv)) == SVt_PVAV )
+   {
+      virtuallist_av = (AV *)SvRV(virtuallist_sv);
+      if ( av_len(virtuallist_av) != 5 )
+         return(NULL);
+
+      Newz(1, virtuallist, 1, LDAPVirtualList);
+
+      virtuallist_entry = av_fetch(virtuallist_av, 0, 0);
+      virtuallist->ldvlist_before_count = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = av_fetch(virtuallist_av, 1, 0);
+      virtuallist->ldvlist_after_count = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = av_fetch(virtuallist_av, 2, 0);
+      virtuallist->ldvlist_attrvalue = (char *)
+            (virtuallist_entry ? SvPV(*virtuallist_entry, len) : 0);
+
+      virtuallist_entry = av_fetch(virtuallist_av, 3, 0);
+      virtuallist->ldvlist_index = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = av_fetch(virtuallist_av, 4, 0);
+      virtuallist->ldvlist_size = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = av_fetch(virtuallist_av, 5, 0);
+      virtuallist->ldvlist_extradata = (void *)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+   }
+   else if ( SvTYPE(SvRV(virtuallist_sv)) == SVt_PVHV ) 
+   {
+      virtuallist_hv = (HV *)SvRV(virtuallist_sv);
+      Newz(1, virtuallist, 1, LDAPVirtualList);
+
+      virtuallist_entry = hv_fetch(virtuallist_hv, before_key, strlen(before_key), 0);
+      virtuallist->ldvlist_before_count = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = hv_fetch(virtuallist_hv, after_key, strlen(after_key), 0);
+      virtuallist->ldvlist_after_count = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = hv_fetch(virtuallist_hv, value_key, strlen(value_key), 0);
+      virtuallist->ldvlist_attrvalue = (char *)
+            (virtuallist_entry ? SvPV(*virtuallist_entry, len) : 0);
+
+      virtuallist_entry = hv_fetch(virtuallist_hv, index_key, strlen(index_key), 0);
+      virtuallist->ldvlist_index = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = hv_fetch(virtuallist_hv, size_key, strlen(size_key), 0);
+      virtuallist->ldvlist_size = (unsigned long)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+
+      virtuallist_entry = hv_fetch(virtuallist_hv, data_key, strlen(data_key), 0);
+      virtuallist->ldvlist_extradata = (void *)
+            (virtuallist_entry ? SvIV(*virtuallist_entry) : 0);
+   }
+
+   return(virtuallist);
+}
+
+
+
+
+/**********************
+* LDAPMod ** typemaps *
+**********************/
+
+/*
+ * parse1mod
+ *
+ * Take a single reference, figure out if it is a HASH,
+ * ARRAY, or SCALAR, then extract the values and attributes and
+ * return a single LDAPMod pointer to this data.
+ */
 static
 LDAPMod *
 parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
@@ -394,9 +740,13 @@ parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
    return(ldap_current_mod);
 }
 
-/* calc_mod_size                                                           */
-/* Calculates the number of LDAPMod's buried inside the ldap_change passed */
-/* in.  This is used by hash2mod to calculate the size to allocate in Newz */
+
+/*
+ * calc_mod_size
+ *
+ * Calculates the number of LDAPMod's buried inside the ldap_change passed
+ * in.  This is used by hash2mod to calculate the size to allocate in Newz
+ */
 static
 int
 calc_mod_size(HV *ldap_change)
@@ -433,10 +783,14 @@ calc_mod_size(HV *ldap_change)
 }
 
 
-/* hash2mod - Cycle through all the keys in the hash and properly call */
-/*    the appropriate functions to build a NULL terminated list of     */
-/*    LDAPMod pointers.                                                */
-
+/*
+ * hash2mod
+ *
+ * INPUT typemap.
+ * Cycle through all the keys in the hash and properly call
+ * the appropriate functions to build a NULL terminated list of
+ * LDAPMod pointers.
+ */
 static
 LDAPMod **
 hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func)
@@ -476,44 +830,16 @@ hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func)
    return ldapmod;
 }
 
-/* StrCaseCmp - Replacement for strcasecmp, since it doesn't exist on many
-   systems, including NT...  */
 
-static
-int
-StrCaseCmp(const char *s, const char *t)
-{
-   while (*s && *t && toupper(*s) == toupper(*t))
-   {
-      s++; t++;
-   }
-   return(toupper(*s) - toupper(*t));
-}
+/********************
+* Rebind Procedures *
+********************/
 
 /*
- * StrDup
+ * internal_rebind_proc
  *
- * Duplicates a string, but uses the Perl memory allocation
- * routines (so it can be free by the internal routines
+ * Wrapper to call a PERL rebind process
  */
-static
-char *
-StrDup(const char *source)
-{
-   char *dest;
-   STRLEN length;
-
-   if ( source == NULL )
-      return(NULL);
-   length = strlen(source);
-   Newz(1,dest,length+1,char);
-   Copy(source,dest,length+1,char);
-
-   return(dest);
-}
-
-/* internal_rebind_proc - Wrapper to call a PERL rebind process             */
-
 static
 int
 LDAP_CALL
@@ -553,8 +879,12 @@ internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
    return(LDAP_SUCCESS);
 }
 
-/* NT and internal_rebind_proc hate each other, so they need this... */
 
+/*
+ * ldap_default_rebind_proc
+ *
+ * NT and internal_rebind_proc hate each other, so they need this...
+ */
 static
 int
 LDAP_CALL
@@ -577,6 +907,10 @@ ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
   return LDAP_SUCCESS;
 }
 
+
+ /***************
+ * Begin Module *
+ ***************/
 
 MODULE = Mozilla::LDAP::API		PACKAGE = Mozilla::LDAP::API
 PROTOTYPES: ENABLE
@@ -606,6 +940,11 @@ ldap_abandon_ext(ld,msgid,serverctrls,clientctrls)
 	int		msgid
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -635,6 +974,10 @@ ldap_add_ext(ld,dn,attrs,serverctrls,clientctrls,msgidp)
 	CLEANUP:
 	if (attrs)
 	  ldap_mods_free(attrs, 1);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
@@ -646,6 +989,10 @@ ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
 	CLEANUP:
 	if (attrs)
 	  ldap_mods_free(attrs, 1);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -705,6 +1052,11 @@ ldap_compare_ext(ld,dn,attr,bvalue,serverctrls,clientctrls,msgidp)
 	OUTPUT:
 	RETVAL
 	msgidp
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_compare_ext_s(ld,dn,attr,bvalue,serverctrls,clientctrls)
@@ -714,6 +1066,11 @@ ldap_compare_ext_s(ld,dn,attr,bvalue,serverctrls,clientctrls)
 	struct berval 	&bvalue
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -736,11 +1093,18 @@ ldap_control_free(ctrl)
 int
 ldap_controls_count(ctrls)
 	LDAPControl **	ctrls
+	CLEANUP:
+	if (ctrls)
+	  Safefree(ctrls);
 
 #endif
 
 #ifdef LDAPV3
 
+ #
+ # Note - you don't have to call Safefree(ctrls) b/c
+ # ldap_controls_free does this
+ #
 void
 ldap_controls_free(ctrls)
 	LDAPControl **	ctrls
@@ -789,7 +1153,7 @@ ldap_create_persistentsearch_control(ld,changetypes,changesonly,return_echg_ctrl
 	int		changesonly
 	int		return_echg_ctrls
 	char		ctrl_iscritical
-	LDAPControl **	ctrlp = NO_INIT
+	LDAPControl *	&ctrlp = NO_INIT
 	OUTPUT:
 	RETVAL
 	ctrlp
@@ -799,7 +1163,7 @@ ldap_create_sort_control(ld,sortKeyList,ctrl_iscritical,ctrlp)
 	LDAP *		ld
 	LDAPsortkey **	sortKeyList
 	char		ctrl_iscritical
-	LDAPControl **	ctrlp = NO_INIT
+	LDAPControl *	&ctrlp = NO_INIT
 	OUTPUT:
 	RETVAL
 	ctrlp
@@ -816,10 +1180,13 @@ int
 ldap_create_virtuallist_control(ld,ldvlistp,ctrlp)
 	LDAP *		ld
 	LDAPVirtualList	*ldvlistp
-	LDAPControl **	ctrlp = NO_INIT
+	LDAPControl *	&ctrlp = NO_INIT
 	OUTPUT:
 	RETVAL
 	ctrlp
+	CLEANUP:
+	if (ldvlistp)
+	  Safefree(ldvlistp);
 
 #endif
 
@@ -840,6 +1207,11 @@ ldap_delete_ext(ld,dn,serverctrls,clientctrls,msgidp)
 	OUTPUT:
 	RETVAL
 	msgidp
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_delete_ext_s(ld,dn,serverctrls,clientctrls)
@@ -847,6 +1219,11 @@ ldap_delete_ext_s(ld,dn,serverctrls,clientctrls)
 	const char *	dn
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -896,6 +1273,11 @@ ldap_extended_operation(ld,requestoid,requestdata,serverctrls,clientctrls,msgidp
 	OUTPUT:
 	RETVAL
 	msgidp
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_extended_operation_s(ld,requestoid,requestdata,serverctrls,clientctrls,retoidp,retdatap)
@@ -905,14 +1287,17 @@ ldap_extended_operation_s(ld,requestoid,requestdata,serverctrls,clientctrls,reto
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
 	char *		&retoidp = NO_INIT
-	struct berval **retdatap = NO_INIT
+	struct berval * &retdatap = NO_INIT
 	OUTPUT:
 	RETVAL
 	retoidp
 	retdatap
 	CLEANUP:
-	if (retdatap)
-	  ldap_value_free_len(retdatap);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
+	ldap_memfree(retoidp);
 
 #endif
 
@@ -949,7 +1334,7 @@ ldap_first_reference(ld,res)
 
 void
 ldap_free_friendlymap(map)
-	FriendlyMap *	map
+	FriendlyMap	&map
 
 #ifdef LDAPV3
 
@@ -963,11 +1348,16 @@ void
 ldap_free_urldesc(ludp)
 	LDAPURLDesc *	ludp
 
+ #
+ # Documentation doesn't say you need to free the return value
+ #
 char *
 ldap_friendly_name(filename,name,map)
 	char *		filename
 	char *		name
-	FriendlyMap *	map
+	FriendlyMap	&map
+	OUTPUT:
+	map
 
 char *
 ldap_get_dn(ld,entry)
@@ -1132,7 +1522,7 @@ ldap_memcache_flush(cache,dn,scope)
 int
 ldap_memcache_get(ld,cachep)
 	LDAP *		ld
-	LDAPMemCache **	cachep = NO_INIT
+	LDAPMemCache *	&cachep = NO_INIT
 	OUTPUT:
 	RETVAL
 	cachep
@@ -1142,9 +1532,9 @@ ldap_memcache_init(ttl,size,baseDNs,cachep)
 	unsigned long	ttl
 	unsigned long	size
 	char **		baseDNs
-	LDAPMemCache **	cachep = NO_INIT
+	LDAPMemCache *	&cachep = NO_INIT
 	CODE:
-	RETVAL = ldap_memcache_init(ttl,size,baseDNs,NULL,cachep);
+	RETVAL = ldap_memcache_init(ttl,size,baseDNs,NULL,&cachep);
 	OUTPUT:
 	RETVAL
 	cachep
@@ -1192,6 +1582,10 @@ ldap_modify_ext(ld,dn,mods,serverctrls,clientctrls,msgidp)
 	CLEANUP:
 	if (mods)
 	  ldap_mods_free(mods, 1);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
@@ -1203,6 +1597,10 @@ ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
 	CLEANUP:
 	if (mods)
 	  ldap_mods_free(mods, 1);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -1270,7 +1668,7 @@ ldap_msgtype(lm)
 int
 ldap_multisort_entries(ld,chain,attr)
 	LDAP *		ld
-	LDAPMessage *	chain
+	LDAPMessage *	&chain
 	char **		attr
 	CODE:
 	{
@@ -1290,7 +1688,6 @@ ldap_next_attribute(ld,entry,ber)
 	BerElement *	ber
 	OUTPUT:
 	RETVAL
-	ber
 	CLEANUP:
 	ldap_memfree(RETVAL);
 
@@ -1325,18 +1722,24 @@ ldap_parse_entrychange_control(ld,ctrls,chgtypep,prevdnp,chgnumpresentp,chgnump)
 	prevdnp
 	chgnumpresentp
 	chgnump
+	CLEANUP:
+	if (ctrls)
+	  Safefree(ctrls);
+	ldap_memfree(prevdnp);
 
 int
 ldap_parse_extended_result(ld,res,retoidp,retdatap,freeit)
 	LDAP *		ld
 	LDAPMessage *	res
 	char *		&retoidp = NO_INIT
-	struct berval **retdatap = NO_INIT
+	struct berval * &retdatap = NO_INIT
 	int		freeit
 	OUTPUT:
 	RETVAL
 	retoidp
 	retdatap
+	CLEANUP:
+	ldap_memfree(retoidp);
 
 int
 ldap_parse_reference(ld,ref,referalsp,serverctrlsp,freeit)
@@ -1367,12 +1770,15 @@ ldap_parse_result(ld,res,errcodep,matcheddnp,errmsgp,referralsp,serverctrlsp,fre
 	errmsgp
 	referralsp
 	serverctrlsp
+	CLEANUP:
+	ldap_memfree(matcheddnp);
+	ldap_memfree(errmsgp);
 
 int
 ldap_parse_sasl_bind_result(ld,res,servercredp,freeit)
 	LDAP *		ld
 	LDAPMessage *	res
-	struct berval **servercredp = NO_INIT
+	struct berval * &servercredp = NO_INIT
 	int freeit
 	OUTPUT:
 	RETVAL
@@ -1388,6 +1794,10 @@ ldap_parse_sort_control(ld,ctrls,result,attribute)
 	RETVAL
 	result
 	attribute
+	CLEANUP:
+	if (ctrls)
+	  Safefree(ctrls);
+	ldap_memfree(attribute);
 
 int
 ldap_parse_virtuallist_control(ld,ctrls,target_posp,list_sizep,errcodep)
@@ -1400,6 +1810,9 @@ ldap_parse_virtuallist_control(ld,ctrls,target_posp,list_sizep,errcodep)
 	target_posp
 	list_sizep
 	errcodep
+	CLEANUP:
+	if (ctrls)
+	  Safefree(ctrls);
 
 #endif
 
@@ -1423,6 +1836,11 @@ ldap_rename(ld,dn,newrdn,newparent,deleteoldrdn,serverctrls,clientctrls,msgidp)
 	OUTPUT:
 	RETVAL
 	msgidp
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_rename_s(ld,dn,newrdn,newparent,deleteoldrdn,serverctrls,clientctrls)
@@ -1433,6 +1851,11 @@ ldap_rename_s(ld,dn,newrdn,newparent,deleteoldrdn,serverctrls,clientctrls)
 	int		deleteoldrdn
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -1467,6 +1890,11 @@ ldap_sasl_bind(ld,dn,mechanism,cred,serverctrls,clientctrls,msgidp)
 	OUTPUT:
 	RETVAL
 	msgidp
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_sasl_bind_s(ld,dn,mechanism,cred,serverctrls,clientctrls,servercredp)
@@ -1476,10 +1904,15 @@ ldap_sasl_bind_s(ld,dn,mechanism,cred,serverctrls,clientctrls,servercredp)
 	struct berval 	&cred
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
-	struct berval **servercredp = NO_INIT
+	struct berval * &servercredp = NO_INIT
 	OUTPUT:
 	RETVAL
 	servercredp
+	CLEANUP:
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -1516,6 +1949,10 @@ ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,tim
 	CLEANUP:
 	if (attrs)
 	  ldap_value_free(attrs);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 int
 ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,res)
@@ -1536,6 +1973,10 @@ ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,t
 	CLEANUP:
 	if (attrs)
 	  ldap_value_free(attrs);
+	if (serverctrls)
+	  Safefree(serverctrls);
+	if (clientctrls)
+	  Safefree(clientctrls);
 
 #endif
 
@@ -1650,7 +2091,7 @@ ldap_simple_bind_s(ld,who,passwd)
 int
 ldap_sort_entries(ld,chain,attr)
 	LDAP *		ld
-	LDAPMessage *	chain
+	LDAPMessage *	&chain
 	char *		attr
 	CODE:
 	{

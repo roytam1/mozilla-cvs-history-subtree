@@ -22,6 +22,98 @@
 # DESCRIPTION
 #    Typemap to declare XSUB data types.
 #
+# Notes:
+# These are how the typemaps work within API.xs.   Most are straightforward,
+# but a few require special explanation, so if you hack API.xs you don't
+# cause a memory leak (or can fix one)
+#
+# char *:
+#    OUTPUT:
+#       Most the of functions returning a char * malloc() the char *
+#       and return it.  char * is mapped to a SvPv * on the way out.
+#       This *copies* the data from the char * to a new char *.
+#       These cases need to be freed in the CLEANUP section.
+#       Free the char * by calling ldap_memfree().
+#
+# char **:
+#    INPUT:
+#       When an avref of SvPv's is passed in, this is converted to a
+#       char **.  The char ** as well as all the char * are malloc()ed
+#       inside avref2charptrptr().
+#       Therefore, you need to free this memory in the CLEANUP section.
+#       Do this by calling ldap_value_free().
+#    OUTPUT:
+#       No work is required.  charptrptr2avref calls ldap_value_free for you.
+#
+# LDAPControl **:
+#    INPUT:
+#       When a SV or RV is passed in, the LDAPControl ** is malloc()ed.
+#       The LDAPControl * in the array are _not_ malloc()ed  though - they
+#       are copied from the SvIv entries (which are pointers).
+#       Therefore, you need to free only the LDAPControl ** in the CLEANUP.
+#       Do this by calling Safefree()
+#    OUTPUT:
+#       No work required, the function calls Safefree() for you.
+#
+# struct berval:
+#   NOTE TODO:
+#    The input typemap for this currently uses na, which is a global
+#    variable, to hold the length of the string.  This isn't threadsafe - 
+#    needs to be changed eventually.
+#    INPUT:
+#       struct berval is directly translated to a SvPv variable in Perl.
+#       Although many functions expect a parameter of struct berval *, we
+#       are passing in a struct berval.  It makes no sense to malloc()
+#       a struct berval just to have the parameter type of the XS function
+#       be struct berval *, therefore we use   &var  in the function
+#       declaration.  This is 'cheating' but allows us to avoid malloc()ing
+#       and having to free the struct berval.
+#    OUTPUT:
+#       We do not use this for output.  All functions seem to want
+#       to work with only struct berval *, so that is used for output
+#
+# struct berval *:
+#    INPUT:
+#       Don't use this for type input.  Use struct berval &var  instead.
+#    OUTPUT:
+#       All the functions returning a struct berval * seem take a parameter
+#       of type struct berval ** and modify the pointer.  Therefore we
+#       have to convert this to a SvPv using the function.  This function
+#       takes care of freeing the struct berval * using ber_bvfree().
+#
+# struct berval **:
+#    A few functions return struct berval ** - we don't have typemaps for
+#    those though.  We use the macro RET_BVPP to convert it to an
+#    array of SvPv and return them on the stack.  The original author of
+#    API.xs had some typemaps, but they aren't used so I deleted them.
+#
+# FriendlyMap:
+#    FriendlyMap is a typedef to a pointer.  Therefore we treat it like
+#    a pointer.
+#    The two functions using this are ldap_friendly_name() and
+#    ldap_free_friendlymap().
+#    Both use a parameter of type FriendlyMap * in the API, however
+#    we use type FriendlyMap in API.xs and use "pass by reference" using the
+#    &map.  This is appropriate for ldap_friendly_map() - it returns the
+#    map, but seems wrong for ldap_free_friendlymap().  It is NOT wrong
+#    for ldap_free_friendlymap() though because the Perl variable we are
+#    passing in contains a FriendlyMap, not a FriendlyMap *.
+#
+# LDAPVirtualList *
+#    INPUT:
+#       This converts either a RvAV or a RvHV to a LDAPVirtualList *.
+#       The LDAPVirtualList * is malloc()ed inside the function.
+#       Call Safefree() in the CLEANUP section to free this memory.
+#
+# LDAPMod **
+#    INPUT:
+#       This is _manually_ converted in the API.xs code by calling
+#       hash2mod($arg, 0:1, "$func_name")
+#       The typemap is not used!
+#       Why?  To change the second parameter based on whether this is
+#       an add function or not.
+#       You need to free the return value using ldap_mods_free()
+#
 #############################################################################
 
 const int		T_IV
@@ -30,21 +122,19 @@ const char *		T_PV
 char **			T_charptrptr
 LDAP *			T_PTR
 LDAPMessage *		T_PTR
-LDAPMessage **		T_PTR
 BerElement *		T_PTR
 LDAPControl *		T_PTR
+LDAPControl **		T_ldapcontrolptrptr
 LDAPVersion *		T_PTR
 struct berval 		T_berval
-struct berval **	T_bervalptrptr
-FriendlyMap *		T_PTR
+struct berval *		T_bervalptr
+FriendlyMap		T_PTR
 LDAPsortkey **		T_PTR
-LDAPVirtualList *	T_PTR
+LDAPVirtualList *	T_ldapvirtuallistptr
 LDAPURLDesc *		T_PTR
-LDAPControl **		T_PTR
 LDAPFiltDesc *		T_PTR
 LDAPFiltInfo *		T_PTR
 LDAPMemCache *		T_PTR
-LDAPMemCache **		T_PTR
 struct ldap_thread_fns *	T_PTR
 LDAPMod **		T_PTR
 LDAP_CMP_CALLBACK *	T_PTR
@@ -61,10 +151,14 @@ T_berval
 	$var.bv_len = na
 T_charptrptr
         $var = (char **)avref2charptrptr($arg)
-T_bervalptrptr
-	$var = (struct berval **)avref2berptrptr($arg)
+T_ldapcontrolptrptr
+	$var = sv2ldapcontrolptrptr($arg)
+T_ldapvirtuallistptr
+	$var = sv2ldapvirtuallistptr($arg)
 OUTPUT
 T_charptrptr
 	$arg = charptrptr2avref($var);
-T_bervalptrptr
-	$arg = berptrptr2avref((struct berval **)$var);
+T_bervalptr
+	$arg = berptr2svpv($var);
+T_ldapcontrolptrptr
+	$arg = ldapcontrolptrptr2avref($var);
