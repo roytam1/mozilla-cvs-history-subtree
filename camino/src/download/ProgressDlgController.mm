@@ -449,7 +449,12 @@ static int gNumActiveDownloads = 0;
     [mTimeLeftLabel setStringValue:@""];
     [self setProgressTo:mCurrentProgress ofMax:mCurrentProgress];
     if (!mSaveFileDialogShouldStayOpen || mDoingAutoFileDownload)
-      [[self window] performClose:self];  // close window
+    { // If we call performClose: and the user has the option key down we end up closing all windows
+      // due to the synthetic click in the window close widget performClose: does.  Instead we call
+      // windowShouldClose: as performClose: would and then close the window is appropriate
+      if ([self windowShouldClose:self])
+        [[self window] close];
+    }
     else
       [[self window] update];             // redraw window
   }
