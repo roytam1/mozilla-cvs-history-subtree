@@ -88,13 +88,13 @@ public:
     static istream* getInputStream
         (String& href, String& documentBase, String& errMsg);
 
-	/**
-	 * Returns the document base of the href argument
+    /**
+     * Returns the document base of the href argument
      * The document base will be appended to the given dest String
     **/
     static void getDocumentBase(String& href, String& dest);
 
-	/**
+    /**
      * Resolves the given href argument, using the given documentBase
      * if necessary.
      * The new resolved href will be appended to the given dest String

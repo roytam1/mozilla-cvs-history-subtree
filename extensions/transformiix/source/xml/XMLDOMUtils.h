@@ -43,9 +43,9 @@ public:
    static Node* copyNode(Node* node, Document* owner);
 
     /**
-     *  Appends the value of the given Node to the target DOMString
+     *  Appends the value of the given Node to the target String
     **/
-   static void getNodeValue(Node* node, DOMString* target);
+   static void getNodeValue(Node* node, String* target);
 
 
 }; //-- XMLDOMUtils

@@ -194,7 +194,7 @@ StringList* NamedMap::keys() {
     for (int i = 0; i < numberOfBuckets; i++) {
         BucketItem* item = elements[i];
         while (item) {
-	    list->add(new String(item->key));
+            list->add(new String(item->key));
             item = item->next;
         }
     }

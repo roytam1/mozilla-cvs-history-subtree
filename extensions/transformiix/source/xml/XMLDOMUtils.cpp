@@ -120,7 +120,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner) {
     return newNode;
 } //-- copyNode
 
-void XMLDOMUtils::getNodeValue(Node* node, DOMString* target) {
+void XMLDOMUtils::getNodeValue(Node* node, String* target) {
 
     if (!node) return;
 

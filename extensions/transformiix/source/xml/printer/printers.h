@@ -165,13 +165,13 @@ protected:
      * Print the proper UTF8 characters
      * based on code submitted by Majkel Kretschmar
     **/
-    void printUTF8Chars(const DOMString& data);
+    void printUTF8Chars(const String& data);
 
 
 private:
 
-    static const char CR;
-    static const char LF;
+    static const char TX_CR;
+    static const char TX_LF;
     static const String AMP_ENTITY;
     static const String GT_ENTITY;
     static const String LT_ENTITY;
@@ -229,14 +229,14 @@ private:
      * Replaces any occurances of the special characters with their
      * appropriate entity reference and prints the String
     **/
-    void printWithXMLEntities(const DOMString& data);
+    void printWithXMLEntities(const String& data);
 
     /**
      * Replaces any occurances of -- inside comment data with - -
      * and prints the String
      * @param data the comment data (does not include start and end tags)
     **/
-    void printComment(const DOMString& data);
+    void printComment(const String& data);
 
 }; //-- XMLPrinter
 

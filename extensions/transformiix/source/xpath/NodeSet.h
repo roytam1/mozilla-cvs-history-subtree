@@ -191,7 +191,7 @@ public:
      * Creates a String representation of this ExprResult
      * @param str the destination string to append the String representation to.
     **/
-    virtual void stringValue(DOMString& str);
+    virtual void stringValue(String& str);
 
 private:
 

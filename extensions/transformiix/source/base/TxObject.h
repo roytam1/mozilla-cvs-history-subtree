@@ -39,14 +39,14 @@ class TxObject {
 
     /**
      * Deletes this TxObject
-	**/
+    **/
     virtual ~TxObject() {};
 
     /**
      * Returns the Hashcode for this TxObject
-	**/
+    **/
     virtual Int32 hashCode() {
-	    return (Int32)this;
+        return (Int32)this;
     } //-- hashCode
 
     /**

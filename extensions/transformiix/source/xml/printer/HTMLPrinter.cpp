@@ -158,7 +158,7 @@ MBool HTMLPrinter::print(Node* node, String& currentIndent) {
                     att = (Attr*) attList->item(i);
                     out << SPACE;
                     out << att->getName();
-                    const DOMString& data = att->getValue();
+                    const String& data = att->getValue();
                     if (&data != &NULL_STRING) {
                         out << EQUALS << DOUBLE_QUOTE;
                         out << data;
@@ -220,7 +220,7 @@ MBool HTMLPrinter::print(Node* node, String& currentIndent) {
                     att = (Attr*) attList->item(i);
                     out << SPACE;
                     out << att->getName();
-                    const DOMString& data = att->getValue();
+                    const String& data = att->getValue();
                     if (&data != &NULL_STRING) {
                         out << EQUALS << DOUBLE_QUOTE;
                         out << data;

@@ -83,7 +83,7 @@ void NodeSorter::sort
      // if (avt) lang = avt.evaluate(context, pState);
 
      // Get Order
-     DOMString attValue = xslSort->getAttribute(ORDER_ATTR);
+     String attValue = xslSort->getAttribute(ORDER_ATTR);
      if (attValue.length() > 0) {
          avt = exprParser.createAttributeValueTemplate(attValue);
          exprResult = avt->evaluate(context, ps);
@@ -112,7 +112,7 @@ void NodeSorter::sort
      // Build hash table of sort keys
      for ( ; i < nodes->size(); i++) {
          Node* node = nodes->get(i);
-         DOMString* sortKey = new DOMString();
+         String* sortKey = new String();
          exprResult = selectExpr->evaluate(node, ps);
          if ((!exprResult) || (exprResult->getResultType() != ExprResult::NODESET)) {
              //-- should we flag this as an error?

@@ -63,14 +63,14 @@ class XMLParser
    ~XMLParser();
 
     Document* parse(istream& inputStream);
-    const DOMString& getErrorString();
+    const String& getErrorString();
 
   protected:
 
     Document*  theDocument;
     Element*   currentElement;
     MBool      errorState;
-    DOMString  errorString;
+    String  errorString;
 };
 
 /*-----------------6/18/99 12:43PM------------------
