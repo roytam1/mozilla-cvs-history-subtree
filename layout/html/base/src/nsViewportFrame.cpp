@@ -112,7 +112,8 @@ public:
 
 protected:
   nsresult IncrementalReflow(nsIPresContext*          aPresContext,
-                             const nsHTMLReflowState& aReflowState);
+                             const nsHTMLReflowState& aReflowState,
+                             nsReflowTree::Node::Iterator *aReflowIterator);
 
   nsresult ReflowFixedFrame(nsIPresContext*          aPresContext,
                             const nsHTMLReflowState& aReflowState,
@@ -121,7 +122,8 @@ protected:
                             nsReflowStatus&          aStatus) const;
 
   void ReflowFixedFrames(nsIPresContext*          aPresContext,
-                         const nsHTMLReflowState& aReflowState) const;
+                         const nsHTMLReflowState& aReflowState,
+                         nsReflowTree::Node::Iterator *aReflowIterator) const;
 
   void CalculateFixedContainingBlockSize(nsIPresContext*          aPresContext,
                                          const nsHTMLReflowState& aReflowState,
@@ -423,7 +425,8 @@ ViewportFrame::ReflowFixedFrame(nsIPresContext*          aPresContext,
 // This is only done for 'initial', 'resize', and 'style change' reflow commands
 void
 ViewportFrame::ReflowFixedFrames(nsIPresContext*          aPresContext,
-                                 const nsHTMLReflowState& aReflowState) const
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsReflowTree::Node::Iterator *aReflowIterator) const
 {
   // Calculate how much room is available for the fixed items. That means
   // determining if the viewport is scrollable and whether the vertical and/or
@@ -442,6 +445,11 @@ ViewportFrame::ReflowFixedFrames(nsIPresContext*          aPresContext,
   for (kidFrame = mFixedFrames.FirstChild(); nsnull != kidFrame; kidFrame->GetNextSibling(&kidFrame)) {
     // Reflow the frame using our reflow reason
     nsReflowStatus  kidStatus;
+
+    // make sure we select the correct node in the tree
+    if (aReflowIterator->CurrentNode())
+      reflowState.SetCurrentReflowNode(aReflowIterator->SelectChild(kidFrame));
+
     ReflowFixedFrame(aPresContext, reflowState, kidFrame, PR_FALSE, kidStatus);
   }
 }
@@ -452,7 +460,8 @@ ViewportFrame::ReflowFixedFrames(nsIPresContext*          aPresContext,
  */
 nsresult
 ViewportFrame::IncrementalReflow(nsIPresContext*          aPresContext,
-                                 const nsHTMLReflowState& aReflowState)
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsReflowTree::Node::Iterator *aReflowIterator)
 {
   nsReflowType  type;
 
@@ -461,7 +470,7 @@ ViewportFrame::IncrementalReflow(nsIPresContext*          aPresContext,
 
   // The only type of reflow command we expect is that we have dirty
   // child frames to reflow
-  NS_ASSERTION(eReflowType_ReflowDirty, "unexpected reflow type");
+  NS_ASSERTION(type == eReflowType_ReflowDirty, "unexpected reflow type");
   
   // Calculate how much room is available for the fixed items. That means
   // determining if the viewport is scrollable and whether the vertical and/or
@@ -487,6 +496,10 @@ ViewportFrame::IncrementalReflow(nsIPresContext*          aPresContext,
       // Note: the only reason the frame would be dirty would be if it had
       // just been inserted or appended
       NS_ASSERTION(frameState & NS_FRAME_FIRST_REFLOW, "unexpected frame state");
+      // make sure we select the correct node in the tree
+      if (aReflowIterator->CurrentNode())
+        reflowState.SetCurrentReflowNode(aReflowIterator->SelectChild(f));
+
       ReflowFixedFrame(aPresContext, reflowState, f, PR_TRUE, status);
     }
   }
@@ -521,7 +534,7 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
   }
   if (reflowType == eReflowType_UserDefined) {
     // Reflow the fixed frames to account for changed scrolled area size
-    ReflowFixedFrames(aPresContext, aReflowState);
+    ReflowFixedFrames(aPresContext, aReflowState, &reflowIterator);
     isHandled = PR_TRUE;
 
     // Otherwise check for an incremental reflow
@@ -541,7 +554,7 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
       
       if (isFixedChild) {
         // Handle the incremental reflow command
-        IncrementalReflow(aPresContext, aReflowState);
+        IncrementalReflow(aPresContext, aReflowState, &reflowIterator);
         isHandled = PR_TRUE;
       }
     }
@@ -606,7 +619,7 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
     // If it's a 'initial', 'resize', or 'style change' reflow command (anything
     // but incremental), then reflow all the fixed positioned child frames
     if (eReflowReason_Incremental != aReflowState.reason) {
-      ReflowFixedFrames(aPresContext, aReflowState);
+      ReflowFixedFrames(aPresContext, aReflowState, &reflowIterator);
     }
   }
 
