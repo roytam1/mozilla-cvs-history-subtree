@@ -40,6 +40,7 @@
 #include "nsISVGLibartRegion.h"
 #include "nsSVGLibartRegion.h"
 #include "nsISVGRectangleSink.h"
+#include <math.h>
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGLibartRegion class
@@ -104,13 +105,19 @@ NS_NewSVGLibartRectRegion(nsISVGRendererRegion** result,
                           float x, float y,
                           float width, float height)
 {
-  ArtIRect irect;
-  irect.x0 = (int)x;
-  irect.y0 = (int)y;
-  irect.x1 = (int)(x+width);
-  irect.y1 = (int)(y+height);
+  if (width<=0.0f || height<=0.0f) {
+    *result = new nsSVGLibartRegion((ArtUta*)nsnull);
+  }
+  else {
+    ArtIRect irect;
+    irect.x0 = (int)x; // floor(x)
+    irect.y0 = (int)y; // floor(y)
+    irect.x1 = (int)ceil(x+width);
+    irect.y1 = (int)ceil(y+height);
+    NS_ASSERTION(irect.x0!=irect.x1 && irect.y0!=irect.y1, "empty region");
+    *result = new nsSVGLibartRegion(&irect);
+  }
   
-  *result = new nsSVGLibartRegion(&irect);
   if (!*result) return NS_ERROR_OUT_OF_MEMORY;
   
   NS_ADDREF(*result);
