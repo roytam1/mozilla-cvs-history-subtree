@@ -186,20 +186,17 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
 NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
 {
   nsCOMPtr<nsISupports> ignore;
-  return Marshall(nsSOAPUtils::kEmpty, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, SOAPParameters, getter_AddRefs(ignore));
+  return mTypes->Marshall(this, SOAPParameters, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, getter_AddRefs(ignore));
 }
 
 /* nsISupportsArray unmarshallParameters (); */
 NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
 {
   nsCOMPtr<nsISupports> result;
-  nsAutoString name;
-  nsresult rv = Unmarshall(name, nsSOAPUtils::kEmpty, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, nsnull, getter_AddRefs(result));
-
-  if (NS_SUCCEEDED(rv))
-    return rv;
-
-  return result->QueryInterface(NS_GET_IID(nsISupportsArray), (void**)_retval);
+  nsresult rc = mTypes->Unmarshall(this, mMessage, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, getter_AddRefs(result));
+  if (result)
+    return result->QueryInterface(NS_GET_IID(nsISupportsArray), (void**)_retval);
+  return rc;
 }
 
 /* readonly attribute unsigned long status; */
@@ -236,59 +233,6 @@ NS_IMETHODIMP nsSOAPMessage::SetTypes(nsISOAPTypeRegistry * aTypes)
 {
   mTypes = aTypes;
   return NS_OK;
-}
-
-/* nsISupports marshall (in DOMString aName, in DOMString aEncodingStyleURI, in DOMString aType, in nsISupports aSource); */
-NS_IMETHODIMP nsSOAPMessage::Marshall(const nsAReadableString & aName, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aType, nsISupports *aSource, nsISupports **_retval)
-{
-  nsresult rc;
-  nsCOMPtr<nsISOAPType> type;
-  rc = mTypes->QueryByParameterType(aEncodingStyleURI, aType, getter_AddRefs(type));
-  if (!type)
-  {
-    rc = mDefaultTypes->QueryByParameterType(aEncodingStyleURI, aType, getter_AddRefs(type));
-  }
-  if (!type)
-  {
-    nsAutoString namespaceURI, name;
-    nsCOMPtr<nsISOAPMarshaller> marshaller;
-    nsCOMPtr<nsISupports> configuration;
-    rc = type->GetElementLocalname(name);
-    rc = type->GetElementNamespace(namespaceURI);
-    rc = type->GetMarshallConfiguration(getter_AddRefs(configuration));
-    rc = type->GetMarshaller(getter_AddRefs(marshaller));
-    if (marshaller)
-    {
-      return marshaller->Marshall(aName, aEncodingStyleURI, aType, namespaceURI, name, aSource, this, configuration, _retval);
-    }
-  }
-  return NS_ERROR_FAILURE;
-}
-
-/* nsISupports unmarshall (out DOMString aName, in DOMString aEncodingStyleURI, in DOMString aNamespace, in DOMString aLocalname, in nsISupports aSource); */
-NS_IMETHODIMP nsSOAPMessage::Unmarshall(nsAWritableString & aName, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNamespace, const nsAReadableString & aLocalname, nsISupports *aSource, nsISupports **_retval)
-{
-  nsresult rc;
-  nsCOMPtr<nsISOAPType> type;
-  rc = mTypes->QueryByElementType(aEncodingStyleURI, aNamespace, aLocalname, getter_AddRefs(type));
-  if (!type)
-  {
-    rc = mDefaultTypes->QueryByElementType(aEncodingStyleURI, aNamespace, aLocalname, getter_AddRefs(type));
-  }
-  if (!type)
-  {
-    nsAutoString ptype;
-    nsCOMPtr<nsISOAPUnmarshaller> unmarshaller;
-    nsCOMPtr<nsISupports> configuration;
-    rc = type->GetParameterType(ptype);
-    rc = type->GetUnmarshallConfiguration(getter_AddRefs(configuration));
-    rc = type->GetUnmarshaller(getter_AddRefs(unmarshaller));
-    if (unmarshaller)
-    {
-      return unmarshaller->Unmarshall(aName, aEncodingStyleURI, ptype, aNamespace, aLocalname, aSource, this, configuration, _retval);
-    }
-  }
-  return NS_ERROR_FAILURE;
 }
 
 static const char*kAllAccess = "AllAccess";
