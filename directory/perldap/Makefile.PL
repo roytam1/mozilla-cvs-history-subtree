@@ -160,6 +160,8 @@ push(@extras,
      AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
     if ($] >= 5.005);
 
+push(@extras, POLLUTE => 1) if ($] >= 5.006);
+
 #
 # Ok, let's do it!
 #
