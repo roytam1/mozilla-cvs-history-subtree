@@ -6867,7 +6867,7 @@ HT_CanDropHTRAtPos(HT_Resource dropTarget, HT_Resource obj, PRBool before)
 	{
 		/* workspace reordering */
 
-		if (!htIsOpLocked(obj->parent, gNavCenter->RDF_WorkspacePosLock))
+		if (!htIsOpLocked(obj, gNavCenter->RDF_WorkspacePosLock))
 		{
 			if (before)
 			{
@@ -6896,6 +6896,40 @@ HT_CanDropHTRAtPos(HT_Resource dropTarget, HT_Resource obj, PRBool before)
 						{
 							action = COPY_MOVE_CONTENT;
 						}
+					}
+				}
+			}
+		}
+	}
+	else if ((dropParent == NULL) && (obj->parent != NULL))
+	{
+		/* adding container before/after reordering */
+		if (before)
+		{
+			if (!htIsOpLocked(dropTarget, gNavCenter->RDF_WorkspacePosLock))
+			{
+				action = COPY_MOVE_CONTENT;
+			}
+		}
+		else
+		{
+			if ((pane = HT_GetPane(HT_GetView(dropTarget))) != NULL)
+			{
+				viewList = pane->viewList;
+				while (viewList != NULL)
+				{
+					if (HT_TopNode(viewList) == dropTarget)
+					{
+						viewList = viewList->next;
+						break;
+					}
+					viewList = viewList->next;
+				}
+				if (viewList != NULL)
+				{
+					if (!htIsOpLocked(HT_TopNode(viewList), gNavCenter->RDF_WorkspacePosLock))
+					{
+						action = COPY_MOVE_CONTENT;
 					}
 				}
 			}
