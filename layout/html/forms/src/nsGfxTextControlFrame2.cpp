@@ -291,12 +291,15 @@ nsTextInputListener::KeyPress(nsIDOMEvent* aKeyEvent)
       || nsIDOMKeyEvent::DOM_VK_ENTER==keyCode)
   {
     if (mFrame)
-      mFrame->CallOnChange();
-    if (mFrame)//we must recheck frame since callonchange may cause a deletion of this frame!
     {
       nsAutoString blurValue;
       mFrame->GetText(&blurValue,PR_FALSE);
-      mFocusedValue = blurValue;
+      //we must set the focused value BEFORE we call on change since a blur may happen before we are done.
+      mFocusedValue = blurValue; 
+      mFrame->CallOnChange();
+    }
+    if (mFrame)//we must recheck frame since callonchange may cause a deletion of this frame!
+    {
       mFrame->SubmitAttempt();
     }
   }
