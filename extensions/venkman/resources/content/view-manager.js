@@ -642,10 +642,6 @@ function vmgr_move (parsedLocation, viewId, height, width)
                 (currentContent.nextSibling == beforeNode &&
                  container == currentContent.parentNode))
             {
-                dd (beforeNode == currentContent);
-                dd (currentContent.nextSibling == beforeNode);
-                dd (container == currentContent.parentNode);
-                dd ("TEASE!");
                 /* unless of course we're already where we are supposed to be. */
                 return;
             }   
