@@ -370,7 +370,7 @@ int testURL(const char* i_pURL)
 		return 0;
 	}
 
-    const int tests = 7;
+    const int tests = 8;
     const char* url[tests] = 
     {
         "http://username:password@hostname.com:80/pathname/./more/stuff/../path",
@@ -378,6 +378,7 @@ int testURL(const char* i_pURL)
         "http://gagan/",
         "host:port/netlib", //port should now be 0
         "", //empty string
+        "mailbox:///foo", // No host specified path should be /foo
         "user:pass@hostname.edu:80/pathname", //this is always user:pass and not http:user
         "username:password@hostname:80/pathname"
     };

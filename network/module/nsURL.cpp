@@ -17,6 +17,12 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
+//
+// TODOs for this file-
+//  - Check error states returned from all occurences of ExtractPortFrom
+//  - Grep on other TODOs...
+//
+
 #include "nsURL.h"
 #include <stdlib.h>
 #include "plstr.h"
@@ -94,8 +100,8 @@ nsURL::Extract(const char* *o_OutputString, nsURL::Part i_id) const
 	if (o_OutputString)
 	{
 		*o_OutputString = new char(m_Position[i][1]+1);
-        //if (!*o_OutputString)
-        //    return NS_ERROR; //TODO
+        if (!*o_OutputString)
+            return NS_ERROR_OUT_OF_MEMORY;
 
         char* dest = (char*) *o_OutputString;
         char* src = m_URL + m_Position[i][0];
@@ -107,30 +113,33 @@ nsURL::Extract(const char* *o_OutputString, nsURL::Part i_id) const
         *dest = '\0';
         return NS_OK;
 	}
-    return NS_OK; //TODO error
+    return NS_ERROR_URL_PARSING; 
 }
 
-void
+nsresult
 nsURL::ExtractPortFrom(int start, int length)
 {
     char* port = new char[length +1];
     if (!port)
     {
-        //TODO error.
+        return NS_ERROR_OUT_OF_MEMORY;
     }
     PL_strncpy(port, m_URL+start, length);
     *(port + length) = '\0';
     m_Port = atoi(port);
     delete[] port;
+    return NS_OK;
 }
 
-nsresult nsURL::GetStream(nsIInputStream* *o_InputStream)
+nsresult 
+nsURL::GetStream(nsIInputStream* *o_InputStream)
 {
     NS_PRECONDITION( (0 != m_URL), "GetStream called on empty url!");
 	nsresult result = NS_OK; // change to failure
 	//OpenProtocolInstance and request the input stream
 	nsIProtocolInstance* pi = 0;
 	result = OpenProtocolInstance(&pi);
+   
 	if (NS_OK != result)
 		return result;
  	return pi->GetInputStream(o_InputStream);		
@@ -138,14 +147,29 @@ nsresult nsURL::GetStream(nsIInputStream* *o_InputStream)
 
 nsresult nsURL::OpenProtocolInstance(nsIProtocolInstance* *o_ProtocolInstance)
 {
-    char* scheme =0;
+    const char* scheme =0;
     GetScheme(&scheme);
     if (0 == scheme)
-        return -1; // return error to indicate bad url
-    // Here we should check with the registry/protocol manager for a
-    // protocol instance that can handle this url. 
-    // TODO this is where mscott's code will hook in. 
-    return -1;
+        return NS_ERROR_BAD_URL; 
+    // Here we should check with the repository for a
+    // protocol handler that can handle this scheme. 
+    // Then assuming this is class returned 
+    nsISupports* iFoo= 0;
+
+#if 0 //Turned on with DPs code to check from Repository as above.
+    if (iFoo)
+    {
+        nsIProtocolHandler *pHandler=0;
+        if (NS_OK == iFoo->QueryInterface(nsIProtocolHandler::IID(), (void**)&pHandler)))
+        {
+            return pHandler->GetInstanceFor(this, o_ProtocolInstance);
+        }
+    }
+    else
+        return NS_ERROR_NO_PROTOCOL_FOUND; // ??? This the right error or check with repository for error?
+#endif
+
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 // This code will need thorough testing. A lot of this has to do with 
@@ -156,8 +180,7 @@ nsresult nsURL::Parse(void)
     NS_PRECONDITION( (0 != m_URL), "Parse called on empty url!");
     if (!m_URL)
     {
-        NS_POSTCONDITION(0,"Fix this error return!");
-        return NS_OK; // TODO change to error
+        return NS_ERROR_URL_PARSING;
     }
 
     //Remember to remove leading/trailing spaces, etc. TODO
@@ -326,8 +349,7 @@ nsresult nsURL::Parse(void)
                             return NS_OK;
                             break;
                         case ':' : 
-                            //Return error?
-                            return NS_OK; // TODO
+                            return NS_ERROR_URL_PARSING; 
                             break;
                         case '@' :
                             // This is a special case of user:pass@host... so 
@@ -463,14 +485,14 @@ nsresult
 nsURL::SetHost(const char* i_Host)
 {
     NS_NOTYETIMPLEMENTED("Eeeks!");
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
 nsURL::SetPath(const char* i_Path)
 {
     NS_NOTYETIMPLEMENTED("Eeeks!");
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
@@ -491,21 +513,21 @@ nsURL::SetPort(PRInt32 i_Port)
         }
         Parse();
     }
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
 nsURL::SetPreHost(const char* i_PreHost)
 {
     NS_NOTYETIMPLEMENTED("Eeeks!");
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
 nsURL::SetScheme(const char* i_Scheme)
 {
     NS_NOTYETIMPLEMENTED("Eeeks!");
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 #ifdef DEBUG

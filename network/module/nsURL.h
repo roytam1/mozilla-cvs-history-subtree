@@ -156,7 +156,7 @@ protected:
     char*       m_URL;
     PRInt32     m_Port;
 private:
-    void                ExtractPortFrom(int start, int length);
+    NS_METHOD           ExtractPortFrom(int start, int length);
 };
 
 inline
@@ -201,5 +201,9 @@ nsURL::ToString(const char* *o_URLString) const
     *o_URLString = m_URL;
     return NS_OK;
 }
+
+//Possible bad url passed.
+#define NS_ERROR_URL_PARSING    NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_NETWORK, 100);
+#define NS_ERROR_BAD_URL        NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_NETWORK, 101);
 
 #endif /* _nsURL_h_ */
