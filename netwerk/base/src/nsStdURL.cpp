@@ -27,7 +27,7 @@
 #include "prmem.h"
 #include "prprf.h"
 #include "nsXPIDLString.h"
-#include "nsCOMPtr.h"
+#include "nsILocalFile.h"
 
 static NS_DEFINE_CID(kStdURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kThisStdURLImplementationCID,
@@ -1279,3 +1279,62 @@ nsStdURL::SetFileBaseName(const char *name)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// nsIFileURL methods:
+
+NS_IMETHODIMP
+nsStdURL::GetFile(nsIFile * *aFile)
+{
+    nsresult rv;
+    if (mFile) {
+        *aFile = mFile;
+        NS_ADDREF(*aFile);
+        return NS_OK;
+    }
+
+    // if we didn't have an nsIFile already, then synthesize one and cache it
+
+    if (nsCRT::strcasecmp(mScheme, "file") != 0) {
+        // if this isn't a file: URL, then we can't return an nsIFile
+        return NS_ERROR_FAILURE;
+    }
+
+    NS_ASSERTION(mPreHost == nsnull, "file: with mPreHost");
+
+    nsCAutoString path(mPath);
+#ifdef XP_PC
+    if (path.CharAt(2) == '|') {
+        path.SetCharAt(':', 2);
+        // cut off the leading '/'
+        if (path.CharAt(0) == '/')
+            path.Cut(0, 1);
+    }
+    path.ReplaceChar('/', '\\');
+#elif defined(XP_MAC)
+#error fix up path
+#endif
+    nsCOMPtr<nsILocalFile> localFile;
+    rv = NS_NewLocalFile(path, getter_AddRefs(localFile));
+    mFile = localFile;
+	*aFile = mFile;
+	NS_IF_ADDREF(*aFile);
+    return rv;
+}
+
+NS_IMETHODIMP
+nsStdURL::SetFile(nsIFile * aFile)
+{
+    nsresult rv;
+    mFile = aFile;
+
+    // set up this URL to denote the nsIFile
+    SetScheme("file");
+
+    rv = mFile->GetPath(&mPath);
+    if (NS_FAILED(rv)) return rv;
+
+    return ParsePath();
+}
+
+////////////////////////////////////////////////////////////////////////////////

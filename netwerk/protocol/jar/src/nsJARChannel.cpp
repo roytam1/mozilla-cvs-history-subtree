@@ -20,18 +20,17 @@
 #include "nsNetUtil.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
-#include "nsIFileSpec.h"
 #include "nsSpecialSystemDirectory.h" 
 #include "nsJARChannel.h"
 #include "nsCRT.h"
 #include "nsIFileTransportService.h"
 #include "nsIURL.h"
 #include "nsIMIMEService.h"
+#include "nsIFileStreams.h"
 
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kMIMEServiceCID, NS_MIMESERVICE_CID);
 static NS_DEFINE_CID(kZipReaderCID, NS_ZIPREADER_CID);
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -53,18 +52,18 @@ public:
         if (NS_SUCCEEDED(status)) {
             // after successfully downloading the jar file to the cache,
             // start the extraction process:
-            NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-            if (NS_FAILED(rv)) return rv;
-
             nsCOMPtr<nsIFileChannel> jarCacheFile;
-            rv = serv->NewChannelFromNativePath(mJarCacheFile.GetNativePathCString(), 
-                                                mJARChannel->mLoadGroup,
-                                                mJARChannel->mCallbacks,
-                                                mJARChannel->mLoadAttributes,
-                                                nsnull,
-                                                mJARChannel->mBufferSegmentSize,
-                                                mJARChannel->mBufferMaxSize,
-                                                getter_AddRefs(jarCacheFile));
+            rv = NS_NewFileChannel(mJarCacheFile, 
+                                   PR_RDONLY,
+                                   nsnull,      // XXX content type
+                                   0,           // XXX content length
+                                   mJARChannel->mLoadGroup,
+                                   mJARChannel->mCallbacks,
+                                   mJARChannel->mLoadAttributes,
+                                   nsnull,
+                                   mJARChannel->mBufferSegmentSize,
+                                   mJARChannel->mBufferMaxSize,
+                                   getter_AddRefs(jarCacheFile));
             if (NS_FAILED(rv)) return rv;
 
             rv = mJARChannel->ExtractJARElement(jarCacheFile);
@@ -72,7 +71,7 @@ public:
         return rv;
     }
 
-    nsJARDownloadObserver(nsFileSpec& jarCacheFile, nsJARChannel* jarChannel) {
+    nsJARDownloadObserver(nsIFile* jarCacheFile, nsJARChannel* jarChannel) {
         NS_INIT_REFCNT();
         mJarCacheFile = jarCacheFile;
         mJARChannel = jarChannel;
@@ -84,7 +83,7 @@ public:
     }
 
 protected:
-    nsFileSpec          mJarCacheFile;
+    nsCOMPtr<nsIFile>   mJarCacheFile;
     nsJARChannel*       mJARChannel;
 };
 
@@ -266,8 +265,8 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
     else {
         // otherwise, we need to download the jar file
 
-        nsFileSpec jarCacheFile;
-        rv = GetCacheFile(jarCacheFile);
+        nsCOMPtr<nsIFile> jarCacheFile;
+        rv = GetCacheFile(getter_AddRefs(jarCacheFile));
         if (NS_FAILED(rv)) return rv;
 
         NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
@@ -276,7 +275,7 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
         // use a file transport to serve as a data pump for the download (done
         // on some other thread)
         nsCOMPtr<nsIChannel> jarCacheTransport;
-        rv = fts->CreateTransport(jarCacheFile, mCommand,
+        rv = fts->CreateTransport(jarCacheFile, PR_RDONLY, mCommand,
                                   mBufferSegmentSize, mBufferMaxSize,
                                   getter_AddRefs(jarCacheTransport));
         if (NS_FAILED(rv)) return rv;
@@ -298,16 +297,25 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
 }
 
 nsresult 
-nsJARChannel::GetCacheFile(nsFileSpec& cacheFile)
+nsJARChannel::GetCacheFile(nsIFile* *cacheFile)
 {
     // XXX change later to use the real network cache
     nsresult rv;
 
-    nsSpecialSystemDirectory jarCacheFile(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-    jarCacheFile += "jarCache";
+    nsCOMPtr<nsIFile> jarCacheFile;
+    rv = NS_GetSpecialDirectory("xpcom.currentProcess.componentDirectory",
+                                getter_AddRefs(jarCacheFile));
+    if (NS_FAILED(rv)) return rv;
 
-    if (!jarCacheFile.Exists())
-        jarCacheFile.CreateDirectory();
+    jarCacheFile->Append("jarCache");
+
+    PRBool exists;
+    rv = jarCacheFile->Exists(&exists);
+    if (NS_FAILED(rv)) return rv;
+    if (!exists) {
+        rv = jarCacheFile->Create(nsIFile::DIRECTORY_TYPE, 0664);
+        if (NS_FAILED(rv)) return rv;
+    }
 
     nsCOMPtr<nsIURL> jarBaseURL = do_QueryInterface(mJARBaseURI, &rv);
     if (NS_FAILED(rv)) return rv;
@@ -315,10 +323,11 @@ nsJARChannel::GetCacheFile(nsFileSpec& cacheFile)
     char* jarFileName;
     rv = jarBaseURL->GetFileName(&jarFileName);
     if (NS_FAILED(rv)) return rv;
-    jarCacheFile += jarFileName;
+    jarCacheFile->Append(jarFileName);
     nsCRT::free(jarFileName);
     
-    cacheFile = jarCacheFile;
+    *cacheFile = jarCacheFile;
+    NS_ADDREF(*cacheFile);
     return rv;
 }
 
@@ -518,8 +527,8 @@ nsJARChannel::Open(char* *contentType, PRInt32 *contentLength)
                                             getter_AddRefs(mJAR));
     if (NS_FAILED(rv)) return rv;
 
-    nsFileSpec fs;
-    rv = mJARBaseFile->GetFileSpec(&fs);
+    nsCOMPtr<nsIFile> fs;
+    rv = mJARBaseFile->GetFile(getter_AddRefs(fs));
     if (NS_FAILED(rv)) return rv; 
 
 	rv = mJAR->Init(fs);

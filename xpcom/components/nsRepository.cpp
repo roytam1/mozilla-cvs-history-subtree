@@ -79,7 +79,7 @@ nsComponentManager::CreateInstance(const nsCID &aClass,
     nsresult rv = NS_GetGlobalComponentManager(&cm);
     if (NS_FAILED(rv)) return rv;
     return cm->CreateInstance(aClass, aDelegate, aIID, aResult);
-    }
+}
 
 nsresult
 nsComponentManager::CreateInstance(const char *aProgID,

@@ -23,7 +23,7 @@
 #ifndef nsFileChannel_h__
 #define nsFileChannel_h__
 
-#include "nsIFileChannel.h"
+#include "nsIChannel.h"
 #include "nsIFileProtocolHandler.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsILoadGroup.h"
@@ -32,8 +32,6 @@
 #include "nsFileSpec.h"
 #include "nsIURI.h"
 #include "nsCOMPtr.h"
-
-#include "nsIFileChannel.h"
 #include "nsIRunnable.h"
 #include "nsIThread.h"
 #include "nsFileSpec.h"
@@ -43,6 +41,7 @@
 #include "nsILoadGroup.h"
 #include "nsIStreamListener.h"
 #include "nsCOMPtr.h"
+#include "nsIFileSystem.h"
 
 class nsFileChannel : public nsIFileChannel,
                       public nsIStreamListener
@@ -63,8 +62,7 @@ public:
     static NS_METHOD
     Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     
-    nsresult Init(nsIFileProtocolHandler* handler, 
-                  const char* command, 
+    nsresult Init(const char* command, 
                   nsIURI* uri,
                   nsILoadGroup* aLoadGroup, 
                   nsIInterfaceRequestor* notificationCallbacks, 
@@ -73,18 +71,12 @@ public:
                   PRUint32 bufferSegmentSize, 
                   PRUint32 bufferMaxSize);
 
-    friend class nsDirEnumerator;
-
 protected:
-    nsresult CreateFileChannelFromFileSpec(nsFileSpec& spec, nsIFileChannel** result);
-
-protected:
+    nsCOMPtr<nsIFile>                   mFile;
     nsCOMPtr<nsIURI>                    mOriginalURI;
     nsCOMPtr<nsIURI>                    mURI;
-    nsCOMPtr<nsIFileProtocolHandler>    mHandler;
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
     char*                               mCommand;
-    nsFileSpec                          mSpec;
     nsCOMPtr<nsIChannel>                mFileTransport;
     PRUint32                            mLoadAttributes;
     nsCOMPtr<nsILoadGroup>              mLoadGroup;
