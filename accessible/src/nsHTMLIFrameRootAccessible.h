@@ -32,12 +32,10 @@ class nsIWeakReference;
 
 class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible, 
                                public nsIAccessibleDocument,
-                               public nsIAccessibleDocumentInternal,
                                public nsDocAccessibleMixin
 {
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIACCESSIBLEDOCUMENT
-  NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 
   public:
     nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell, nsIDocument *doc);

@@ -26,6 +26,7 @@
 #include "nsISupports.idl"
 #include "nsIAccessible.idl"
 #include "domstubs.idl"
+interface nsIDocument;
 
 [scriptable, uuid(8781FC88-355F-4439-881F-6504A0A1CEB6)]
 interface nsIAccessibleDocument : nsISupports
@@ -35,4 +36,6 @@ interface nsIAccessibleDocument : nsISupports
   DOMString getMimeType();
   DOMString getDocType();
   DOMString getNameSpaceURIForID(in short nameSpaceID);
+  [noscript] nsIDocument getDocument();
+
 };

@@ -30,7 +30,6 @@
 #include "nsIDOMFormListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDocument.h"
-#include "nsIAccessibleDocumentInternal.h"
 
 class nsDocAccessibleMixin
 {
@@ -40,7 +39,6 @@ class nsDocAccessibleMixin
     virtual ~nsDocAccessibleMixin();
 
     NS_DECL_NSIACCESSIBLEDOCUMENT
-    NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 
   protected:
     nsCOMPtr<nsIDocument> mDocument;
@@ -49,7 +47,6 @@ class nsDocAccessibleMixin
 class nsRootAccessible : public nsAccessible,
                          public nsDocAccessibleMixin,
                          public nsIAccessibleDocument,
-                         public nsIAccessibleDocumentInternal,
                          public nsIAccessibleEventReceiver,
                          public nsIDOMFocusListener,
                          public nsIDOMFormListener
@@ -87,7 +84,6 @@ class nsRootAccessible : public nsAccessible,
     NS_IMETHOD Input(nsIDOMEvent* aEvent);
 
     NS_DECL_NSIACCESSIBLEDOCUMENT
-    NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 
   protected:
     virtual void GetBounds(nsRect& aRect, nsIFrame** aRelativeFrame);

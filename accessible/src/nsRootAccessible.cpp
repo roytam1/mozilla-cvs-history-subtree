@@ -49,7 +49,6 @@
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
-  NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocumentInternal)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleEventReceiver)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFormListener)
@@ -374,11 +373,11 @@ NS_IMETHODIMP nsDocAccessibleMixin::GetURL(nsAWritableString& aURL)
   // mDocument->GetDocumentURL(getter_AddRefs(pURI));
   nsXPIDLCString path;
   pURI->GetSpec(getter_Copies(path));
-  CopyASCIItoUCSn2(nsDependentCString(path), aURL);
+  CopyASCIItoUCS2(nsDependentCString(path), aURL);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocAccessible Mixin::GetTitle(nsAWritableString& aTitle)
+NS_IMETHODIMP nsDocAccessibleMixin::GetTitle(nsAWritableString& aTitle)
 {
   // This doesn't leak - we don't own the const pointer that's returned
   aTitle = *(mDocument->GetDocumentTitle());

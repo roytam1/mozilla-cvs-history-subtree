@@ -21,7 +21,6 @@
  */
 #include "nsIAccessible.h"
 #include "nsIAccessibleDocument.h"
-#include "nsIAccessibleDocumentInternal.h"
 #include "nsIAccessibleSelectable.h"
 #include "nsIAccessibilityService.h"
 #include "Accessible.h"
@@ -640,10 +639,10 @@ IAccessible *Accessible::NewAccessible(nsIAccessible *aNSAcc, nsIDOMNode *aNode,
 {
   IAccessible *retval = nsnull;
   if (aNSAcc) {
-    nsCOMPtr<nsIAccessibleDocumentInternal> nsAccDoc(do_QueryInterface(aNSAcc));
-    if (nsAccDoc) {
+    nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(aNSAcc));
+    if (accDoc) {
       nsCOMPtr<nsIDocument> doc;
-      nsAccDoc->GetDocument(getter_AddRefs(doc));
+      accDoc->GetDocument(getter_AddRefs(doc));
       nsCOMPtr<nsIDOMNode> node(do_QueryInterface(doc));
       retval = new DocAccessible(aNSAcc, node, aWnd);
     }

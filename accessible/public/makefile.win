@@ -27,7 +27,6 @@ XPIDLSRCS =               \
   .\nsIAccessibilityService.idl \
   .\nsIAccessible.idl \
   .\nsIAccessibleDocument.idl \
-  .\nsIAccessibleDocumentInternal.idl \
   .\nsIAccessibleEventReceiver.idl \
   .\nsIAccessibleEventListener.idl \
   .\nsIAccessibleSelectable.idl \
