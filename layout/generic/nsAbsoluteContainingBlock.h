@@ -125,7 +125,6 @@ protected:
                                nscoord                  aContainingBlockWidth,
                                nscoord                  aContainingBlockHeight,
                                nsIFrame*                aKidFrame,
-                               nsReflowReason           aReason,
                                nsReflowStatus&          aStatus);
 
 protected:
