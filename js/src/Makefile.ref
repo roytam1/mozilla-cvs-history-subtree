@@ -205,6 +205,8 @@ $(OBJDIR)/jsautocfg.h: $(OBJDIR)/jscpucfg
 
 $(OBJDIR)/jscpucfg: $(OBJDIR)/jscpucfg.o
 	$(CC) -o $@ $(OBJDIR)/jscpucfg.o
+
+TARGETS += $(OBJDIR)/jsautocfg.h $(OBJDIR)/jscpucfg $(OBJDIR)/jscpucfg.o
 endif
 
 #
