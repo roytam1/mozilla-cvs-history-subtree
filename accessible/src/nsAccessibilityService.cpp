@@ -42,6 +42,7 @@
 #include "nsHTMLImageAccessible.h"
 #include "nsHTMLAreaAccessible.h"
 #include "nsHTMLLinkAccessible.h"
+#include "nsHTMLFrameAccessible.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -330,20 +331,6 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLImageAccessible(nsISupports *aFr
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLAreaAccessible(nsIDOMNode *aDOMNode, nsIAccessible *aAccParent, 
                                                                nsIAccessible **_retval)
 {
-  /*
-  nsIFrame* frame = nsnull;
-  nsCOMPtr<nsIPresShell> shell;
-
-  nsCOMPtr<nsIContent> content(do_QueryInterface(aDOMNode));
-  if (!content)
-    return NS_ERROR_FAILURE;
-  nsCOMPtr<nsIDocument> document;
-  content->GetDocument(*getter_AddRefs(document));
-
-  shell = document->GetShellAt(0);
-  shell->GetPrimaryFrameFor(content, &frame);
-  */
-
   *_retval = new nsHTMLAreaAccessible(aDOMNode, aAccParent);
 
   if (*_retval) {
@@ -440,6 +427,8 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
   return NS_ERROR_FAILURE;
 }
 
+
+//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 nsresult

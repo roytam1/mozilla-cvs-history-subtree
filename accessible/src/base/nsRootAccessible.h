@@ -27,6 +27,7 @@
 #include "nsIAccessibleEventReceiver.h"
 #include "nsIAccessibleEventListener.h"
 #include "nsIDOMFocusListener.h"
+#include "nsIDocument.h"
 
 class nsRootAccessible : public nsAccessible,
                          public nsIAccessibleEventReceiver,
@@ -42,6 +43,7 @@ class nsRootAccessible : public nsAccessible,
 
     /* attribute wstring accName; */
     NS_IMETHOD GetAccName(PRUnichar * *aAccName);
+    NS_IMETHOD GetAccValue(PRUnichar * *aAccValue);
     NS_IMETHOD GetAccParent(nsIAccessible * *aAccParent);
     NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
 
@@ -65,6 +67,7 @@ protected:
   // otherwise we will get into circular referencing problems
   nsIAccessibleEventListener* mListener;
   nsCOMPtr<nsIContent> mCurrentFocus;
+  nsCOMPtr<nsIDocument> mDocument;
 };
 
 

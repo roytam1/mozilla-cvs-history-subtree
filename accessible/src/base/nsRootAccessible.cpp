@@ -34,6 +34,8 @@
 #include "nsILink.h"
 #include "nsHTMLFormControlAccessible.h"
 #include "nsHTMLLinkAccessible.h"
+#include "nsIURI.h"
+#include "nsIDocShellTreeItem.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleEventReceiver)
@@ -48,11 +50,10 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame):nsAccessible(nsnull,nsnull,aShell)
 {
- mListener = nsnull;
- nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
- nsCOMPtr<nsIDocument> document;
- shell->GetDocument(getter_AddRefs(document));
- mDOMNode = do_QueryInterface(document);
+  mListener = nsnull;
+  nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+  shell->GetDocument(getter_AddRefs(mDocument));
+  mDOMNode = do_QueryInterface(mDocument);
 }
 
 //-----------------------------------------------------
@@ -66,7 +67,11 @@ nsRootAccessible::~nsRootAccessible()
   /* attribute wstring accName; */
 NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName) 
 { 
-  *aAccName = ToNewUnicode(NS_LITERAL_STRING("Mozilla Document"));
+  const nsString* docTitle = mDocument->GetDocumentTitle();
+  if (!docTitle->IsEmpty())
+    *aAccName = docTitle->ToNewUnicode();
+  else *aAccName = ToNewUnicode(NS_LITERAL_STRING("Document"));
+  
   return NS_OK;  
 }
 
@@ -106,10 +111,35 @@ NS_IMETHODIMP nsRootAccessible::GetAccParent(nsIAccessible * *aAccParent)
   /* readonly attribute wstring accRole; */
 NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUnichar * *aAccRole) 
 { 
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  nsCOMPtr<nsIPresContext> context; //(do_QueryInterface(shell));
+  shell->GetPresContext(getter_AddRefs(context));
+  nsCOMPtr<nsISupports> container;
+  context->GetContainer(getter_AddRefs(container));
+  if (container) {
+    nsCOMPtr<nsIDocShellTreeItem> parentTreeItem, docTreeItem(do_QueryInterface(container));
+    if (docTreeItem) {
+      docTreeItem->GetSameTypeParent(getter_AddRefs(parentTreeItem));
+      if (parentTreeItem) {
+        *aAccRole = ToNewUnicode(NS_LITERAL_STRING("pane"));
+        return NS_OK;
+      }
+    }
+  }
+
   *aAccRole = ToNewUnicode(NS_LITERAL_STRING("client"));
   return NS_OK;  
 }
 
+
+NS_IMETHODIMP nsRootAccessible::GetAccValue(PRUnichar * *aAccValue)
+{
+  nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
+  char *path;
+  pURI->GetSpec(&path);
+  *aAccValue = ToNewUnicode(nsLiteralCString(path));
+  return NS_OK;
+}
 /* void addAccessibleEventListener (in nsIAccessibleEventListener aListener); */
 NS_IMETHODIMP nsRootAccessible::AddAccessibleEventListener(nsIAccessibleEventListener *aListener)
 {
