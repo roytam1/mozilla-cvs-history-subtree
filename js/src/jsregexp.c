@@ -1714,7 +1714,6 @@ EmitRegExp(CompilerState *state, RENode *ren, JSRegExp *re)
 		    pc[i] = fill;
 		nchars = n * JS_BITS_PER_BYTE;
 	    }
-            pc[0] &= 0xFE;  /* 0 never matches */
 /* Split ops up into statements to keep MSVC1.52 from crashing. */
 #define MATCH_BIT(c)    { i = (c) >> 3; b = (c) & 7; b = 1 << b;              \
 			  if (fill) pc[i] &= ~b; else pc[i] |= b; }
@@ -2145,12 +2144,12 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;
 
           case REOP_WBDRY:
-	    matched = (cp == cpbegin || !JS_ISWORD(cp[-1])) ^ !JS_ISWORD(*cp);
+	    matched = (cp == cpbegin || !JS_ISWORD(cp[-1])) ^ ((cp >= cpend) || !JS_ISWORD(*cp));
 	    matchlen = 0;
 	    break;
 
 	  case REOP_WNONBDRY:
-	    matched = (cp == cpbegin || !JS_ISWORD(cp[-1])) ^ JS_ISWORD(*cp);
+	    matched = (cp == cpbegin || !JS_ISWORD(cp[-1])) ^ ((cp < cpend) || JS_ISWORD(*cp));
 	    matchlen = 0;
 	    break;
 
@@ -2279,93 +2278,99 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 #define NONDOT_SINGLE_CASES                                                   \
 	  case REOP_CCLASS:                                                   \
 	  case REOP_NCCLASS:                                                  \
-	    c = *cp;                                                          \
-	    if (c >= CCLASS_CHARSET_SIZE) {                                   \
-		matched = (op == REOP_NCCLASS);                               \
-	    } else {                                                          \
-		byte = (uintN)c >> 3;                                         \
-		bit = c & 7;                                                  \
-		bit = 1 << bit;                                               \
-		matched = pc[1 + byte] & bit;                                 \
-	    }                                                                 \
-	    matchlen = 1;                                                     \
-	    break;                                                            \
+            matched = (cp != cpend);                                          \
+            if (matched) {                                                    \
+	        c = *cp;                                                      \
+	        if (c >= CCLASS_CHARSET_SIZE) {                               \
+		    matched = (op == REOP_NCCLASS);                           \
+	        } else {                                                      \
+		    byte = (uintN)c >> 3;                                     \
+		    bit = c & 7;                                              \
+		    bit = 1 << bit;                                           \
+		    matched = pc[1 + byte] & bit;                             \
+	        }                                                             \
+	        matchlen = 1;                                                 \
+            }                                                                 \
+            break;                                                            \
 									      \
 	  case REOP_DIGIT:                                                    \
-	    matched = JS_ISDIGIT(*cp);                                        \
+	    matched = (cp != cpend) && JS_ISDIGIT(*cp);                       \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_NONDIGIT:                                                 \
-	    matched = *cp && !JS_ISDIGIT(*cp);                                \
+	    matched = (cp != cpend) && !JS_ISDIGIT(*cp);                      \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_ALNUM:                                                    \
-	    matched = JS_ISWORD(*cp);                                         \
+	    matched = (cp != cpend) && JS_ISWORD(*cp);                        \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_NONALNUM:                                                 \
-	    matched = *cp && !JS_ISWORD(*cp);                                 \
+	    matched = (cp != cpend) && !JS_ISWORD(*cp);                       \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_SPACE:                                                    \
-	    matched = JS_ISSPACE(*cp);                                        \
+	    matched = (cp != cpend) && JS_ISSPACE(*cp);                       \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_NONSPACE:                                                 \
-	    matched = *cp && !JS_ISSPACE(*cp);                                \
+	    matched = (cp != cpend) && !JS_ISSPACE(*cp);                      \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_FLAT1:                                                    \
 	    c  = *cp;                                                         \
 	    c2 = (jschar)pc[1];                                               \
-	    matched = (c == c2);                                              \
+	    matched = (cp != cpend) && (c == c2);                             \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_FLAT1i:                                                   \
 	    c  = *cp;                                                         \
 	    c2 = (jschar)pc[1];                                               \
-	    matched = MATCH_CHARS_IGNORING_CASE(c, c2);                       \
+	    matched = (cp != cpend) && MATCH_CHARS_IGNORING_CASE(c, c2);      \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_UCFLAT1:                                                  \
 	    c  = *cp;                                                         \
 	    c2 = ((pc[1] << 8) | pc[2]);                                      \
-	    matched = (c == c2);                                              \
+	    matched = (cp != cpend) && (c == c2);                             \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_UCFLAT1i:                                                 \
 	    c  = *cp;                                                         \
 	    c2 = ((pc[1] << 8) | pc[2]);                                      \
-	    matched = MATCH_CHARS_IGNORING_CASE(c, c2);                       \
+	    matched = (cp != cpend) && MATCH_CHARS_IGNORING_CASE(c, c2);      \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
 	  case REOP_UCCLASS:                                                  \
 	  case REOP_NUCCLASS:                                                 \
-	    size = (pc[1] << 8) | pc[2];                                      \
-	    oplen += size;                                                    \
-	    c = *cp;                                                          \
-	    byte = (uintN)c >> 3;                                             \
-	    if (byte >= size) {                                               \
-		matched = (op == REOP_NUCCLASS);                              \
-	    } else {                                                          \
-		bit = c & 7;                                                  \
-		bit = 1 << bit;                                               \
-		matched = pc[3 + byte] & bit;                                 \
-	    }                                                                 \
-            if (matched)                                                      \
-                pc2 = pc + size + reopsize[op];                               \
-            matchlen = 1;                                                     \
-	    break;                                                            \
+            matched = (cp != cpend);                                          \
+            if (matched) {                                                    \
+	        size = (pc[1] << 8) | pc[2];                                  \
+	        oplen += size;                                                \
+	        c = *cp;                                                      \
+	        byte = (uintN)c >> 3;                                         \
+	        if (byte >= size) {                                           \
+		    matched = (op == REOP_NUCCLASS);                          \
+	        } else {                                                      \
+		    bit = c & 7;                                              \
+		    bit = 1 << bit;                                           \
+		    matched = pc[3 + byte] & bit;                             \
+	        }                                                             \
+                if (matched)                                                  \
+                    pc2 = pc + size + reopsize[op];                           \
+                matchlen = 1;                                                 \
+            }                                                                 \
+            break;                                                            \
 /* END NONDOT_SINGLE_CASES */
 
 	  /*
