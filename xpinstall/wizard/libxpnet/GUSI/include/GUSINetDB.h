@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                                
+// % $Log$
+// % Revision 1.1  2001/03/11 22:37:15  sgehani%netscape.com
+// % First Checked In.
+// %                                                
 // % Revision 1.10  2000/12/23 06:11:55  neeri                             
 // % Add SSH service                                                       
 // %                                                                       

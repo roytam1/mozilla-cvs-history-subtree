@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                               
+// % $Log$
+// % Revision 1.1  2001/03/11 22:37:27  sgehani%netscape.com
+// % First Checked In.
+// %                                               
 // % Revision 1.11  2001/01/17 08:54:12  neeri                             
 // % Add Clone() implementations                                           
 // %                                                                       

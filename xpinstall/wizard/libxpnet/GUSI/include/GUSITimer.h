@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                                
+// % $Log$
+// % Revision 1.1  2001/03/11 22:38:42  sgehani%netscape.com
+// % First Checked In.
+// %                                                
 // % Revision 1.12  2001/01/17 08:48:04  neeri                             
 // % Introduce Expired(), Reset()                                          
 // %                                                                       

@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                               
+// % $Log$
+// % Revision 1.1  2001/03/11 22:38:04  sgehani%netscape.com
+// % First Checked In.
+// %                                               
 // % Revision 1.7  2000/10/16 04:08:51  neeri                              
 // % Add binary compatibility for CW SIGINT                                
 // %                                                                       

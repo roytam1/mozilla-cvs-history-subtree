@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                              
+// % $Log$
+// % Revision 1.1  2001/03/11 22:37:31  sgehani%netscape.com
+// % First Checked In.
+// %                                              
 // % Revision 1.8  2000/06/12 04:20:59  neeri                              
 // % Introduce GUSI_*printf                                                
 // %                                                                       

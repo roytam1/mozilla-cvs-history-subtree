@@ -5,6 +5,10 @@
 // % Language	:	C++                                                        
 // %                                                                       
 // % $Log$
+// % Revision 1.2  2001/12/23 23:23:41  timeless%mac.com
+// % Bugzilla Bug 106386 rid source of these misspellings: persistant persistance priviledge protocal editting editted targetted targetting
+// % r='s from many people. sr=jst
+// %
 // % Revision 1.1  2001/03/11 22:35:07  sgehani%netscape.com
 // % First Checked In.
 // %                                             

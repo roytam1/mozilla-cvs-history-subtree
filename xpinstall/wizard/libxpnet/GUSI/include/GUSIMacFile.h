@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                              
+// % $Log$
+// % Revision 1.1  2001/03/11 22:35:45  sgehani%netscape.com
+// % First Checked In.
+// %                                              
 // % Revision 1.24  2001/01/17 08:58:06  neeri                             
 // % Releasing 2.1.4                                                       
 // %                                                                       

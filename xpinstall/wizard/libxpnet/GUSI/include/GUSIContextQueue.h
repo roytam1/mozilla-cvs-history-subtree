@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                         
+// % $Log$
+// % Revision 1.1  2001/03/11 22:33:41  sgehani%netscape.com
+// % First Checked In.
+// %                                         
 // % Revision 1.9  2001/01/17 08:45:13  neeri                              
 // % Improve memory allocation safety somewhat                             
 // %                                                                       

@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                              
+// % $Log$
+// % Revision 1.1  2001/03/11 22:39:05  sgehani%netscape.com
+// % First Checked In.
+// %                                              
 // % Revision 1.14  2001/01/17 08:55:16  neeri                             
 // % Detect and return ETIMEDOUT condition                                 
 // %                                                                       

@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                             
+// % $Log$
+// % Revision 1.1  2001/03/11 22:38:39  sgehani%netscape.com
+// % First Checked In.
+// %                                             
 // % Revision 1.9  2000/10/16 04:11:21  neeri                              
 // % Plug memory leak                                                      
 // %                                                                       

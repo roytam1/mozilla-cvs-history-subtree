@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                                
+// % $Log$
+// % Revision 1.1  2001/03/11 22:36:04  sgehani%netscape.com
+// % First Checked In.
+// %                                                
 // % Revision 1.17  2000/10/16 04:01:59  neeri                             
 // % Save A5 in completion routines                                        
 // %                                                                       

@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                               
+// % $Log$
+// % Revision 1.1  2001/03/11 22:33:31  sgehani%netscape.com
+// % First Checked In.
+// %                                               
 // % Revision 1.20  2001/01/17 08:33:14  neeri                             
 // % Need to set fOldBuffer to nil after deleting                          
 // %                                                                       

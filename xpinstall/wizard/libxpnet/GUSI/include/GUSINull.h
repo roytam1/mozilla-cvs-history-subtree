@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                                 
+// % $Log$
+// % Revision 1.1  2001/03/11 22:37:20  sgehani%netscape.com
+// % First Checked In.
+// %                                                 
 // % Revision 1.7  2000/03/06 06:03:29  neeri                              
 // % Check device families for file paths                                  
 // %                                                                       

@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                       
+// % $Log$
+// % Revision 1.1  2001/03/11 22:35:11  sgehani%netscape.com
+// % First Checked In.
+// %                                       
 // % Revision 1.4  2000/12/23 06:10:48  neeri                              
 // % Use kPowerPCCFragArch, NOT GetCurrentArchitecture()                   
 // %                                                                       

@@ -4,7 +4,10 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                                  
+// % $Log$
+// % Revision 1.1  2001/03/11 22:35:53  sgehani%netscape.com
+// % First Checked In.
+// %                                                  
 // % Revision 1.8  2000/10/29 19:17:04  neeri                              
 // % Accommodate MSL's non-compliant fopen signature                       
 // %                                                                       
