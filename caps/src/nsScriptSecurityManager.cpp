@@ -1366,9 +1366,13 @@ nsScriptSecurityManager::ReportError(JSContext* cx, const nsAString& messageTag,
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::CheckLoadURIStr(const char* aSourceURIStr, const char* aTargetURIStr,
+nsScriptSecurityManager::CheckLoadURIStr(const char* aSourceURIStr,
+                                         const char* aTargetURIStr,
                                          PRUint32 aFlags)
 {
+    NS_ENSURE_ARG_POINTER(aSourceURIStr);
+    NS_ENSURE_ARG_POINTER(aTargetURIStr);
+
     nsCOMPtr<nsIURI> source;
     nsresult rv = NS_NewURI(getter_AddRefs(source),
                             nsDependentCString(aSourceURIStr),
