@@ -390,7 +390,7 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
 
     // populate the compose params
     pMsgComposeParams->SetType(nsIMsgCompType::New);
-    pMsgComposeParams->SetFormat(nsIMsgCompFormat::Default);
+    pMsgComposeParams->SetFormat(nsIMsgCompFormat::PlainText);
     pMsgComposeParams->SetIdentity(pMsgId);
     pMsgComposeParams->SetComposeFields(aCompFields); 
     pMsgComposeParams->SetSendListener(sendListener) ;
