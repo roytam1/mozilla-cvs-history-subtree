@@ -18,7 +18,6 @@
 
 #include "xp.h"
 #include "mime.h"
-#include "mkutils.h"
 #include "prefapi.h"
 #include "msgcom.h"
 #include "libi18n.h"
