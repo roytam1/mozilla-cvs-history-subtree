@@ -27,7 +27,6 @@
 //¥#include "CAddressBookViews.h"
 #include "CMailFlexTable.h"
 #include "msgcom.h"
-#include "addbook.h"
 #include "PascalString.h"
 
 //----------------------------------------------------------------------------

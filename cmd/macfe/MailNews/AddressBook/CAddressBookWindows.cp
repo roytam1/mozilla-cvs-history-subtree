@@ -74,7 +74,6 @@ const ResIDT kAddressbookErrorStrings	= 8902;
 // Junk to allow linking. When libaddr is update these should be removed
 #include "abdefn.h"
 #include "addrbook.h"
-#include "addbook.h"
 typedef struct ABook ABook;
 ABook *FE_GetAddressBook(MSG_Pane * /*pane*/) {
 
