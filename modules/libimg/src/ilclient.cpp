@@ -1040,7 +1040,7 @@ il_add_client(IL_GroupContext *img_cx, il_container *ic,
 
 /* Delete an IL_ImageReq from the list of clients for an image container.
    Return TRUE if successful, FALSE otherwise. */
-static PRBool
+PRBool
 il_delete_client(il_container *ic, IL_ImageReq *image_req)
 {
     IL_GroupContext *img_cx;
