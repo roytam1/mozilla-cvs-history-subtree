@@ -54,7 +54,7 @@ extern char * EDT_NEW_DOC_NAME;
 #ifdef MOZ_NGLAYOUT
 #include "nsString.h"
 #include "nsIURL.h"
-#include "nsIWebWidget.h"
+#include "nsIWebShell.h"
 #include "nsIDocument.h"
 #endif
 
@@ -3808,12 +3808,13 @@ int CWinCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLo
 {
 #ifdef MOZ_NGLAYOUT
   // Ask WebWidget to load the URL.
-  nsIWebWidget* ww = GetWebWidget();
+  nsIWebShell* ww = GetWebShell();
   if (!ww) {
     return MK_NO_ACTION;
   }
   nsAutoString str(pUrl->address);
   ww->LoadURL(str,nsnull);
+  NS_RELEASE(ww);
   return MK_DATA_LOADED; // some success code
 
   // Do we need to free pUrl
@@ -4708,10 +4709,13 @@ void CWinCX::SetDocTitle(MWContext *pContext, char *pTitle)
         //  don't have to depend on history
 #ifdef MOZ_NGLAYOUT
         // Ask WebWidget for the curent URL.
+        // Maybe we should go through CNetscapeView::GetWebShell()
+        // instead of looking at the MWContext directly.
         CString csBaseURL;
+#if 0
         MWContext *pDocContext = GetDocumentContext();
-        nsIWebWidget *ww = (nsIWebWidget*)pDocContext->fe.webWidget;
-        if (ww != nsnull) {
+        nsIWebShell *ww = (nsIWebWidget*)pDocContext->fe.webWidget;
+        if (nsnull != ww) {
           nsIDocument *pDoc = ww->GetDocument();
           if (pDoc != nsnull) {
             nsIURL *pURL = pDoc->GetDocumentURL();
@@ -4720,6 +4724,7 @@ void CWinCX::SetDocTitle(MWContext *pContext, char *pTitle)
             }
           }
         }
+#endif
 #else
         CString csBaseURL = LO_GetBaseURL( GetDocumentContext() );
 #endif

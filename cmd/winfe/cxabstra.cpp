@@ -45,7 +45,7 @@
 #endif /* EDITOR */
 #include "mozilla.h"
 #ifdef MOZ_NGLAYOUT
-#include "nsIWebWidget.h"
+#include "nsIWebShell.h"
 #endif
 
 CAbstractCX::CAbstractCX()  {
@@ -434,14 +434,14 @@ CWnd *CAbstractCX::GetDialogOwner() const	{
 }
 
 #ifdef MOZ_NGLAYOUT
-nsIWebWidget *CAbstractCX::GetWebWidget() const {
-  nsIWebWidget *ret = (nsIWebWidget*)m_pXPCX->fe.webWidget;
+nsIWebShell *CAbstractCX::GetWebShell() const {
+  nsIWebShell *ret = (nsIWebShell*)m_pXPCX->fe.webWidget;
   NS_IF_ADDREF(ret);
   return ret;
 } 
 
-void CAbstractCX::SetWebWidget(nsIWebWidget *pWW) {
-  nsIWebWidget *oldWW = (nsIWebWidget*)m_pXPCX->fe.webWidget;
+void CAbstractCX::SetWebShell(nsIWebShell *pWW) {
+  nsIWebShell *oldWW = (nsIWebShell*)m_pXPCX->fe.webWidget;
   NS_IF_RELEASE(oldWW);
   m_pXPCX->fe.webWidget = pWW;
   NS_IF_ADDREF(pWW);

@@ -32,7 +32,7 @@ CPaneCX *wfe_CreateNavCenterHTMLPain(HT_View htView, HWND hParent)
     if(cccGrid.m_pCurrentDoc) {
         CNetscapeView *pNewView = new CNetscapeView();
 #ifdef MOZ_NGLAYOUT
-        pNewView->NoWebWidgetHack();
+        pNewView->NoWebShell();
 #endif
         if(pNewView) {
             CRect crClient(0, 0, 50, 50);

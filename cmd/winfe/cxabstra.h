@@ -72,7 +72,7 @@ typedef enum ContextType    {
 } ContextType;
 
 #ifdef MOZ_NGLAYOUT
-class nsIWebWidget;
+class nsIWebShell;
 #endif
 
 //  The abstract windows context
@@ -209,12 +209,12 @@ public:
 	virtual CFrameGlue *GetFrame() const { return NULL; }
 
 #ifdef MOZ_NGLAYOUT
-    // Get/set WebWidget from MWContext.
-    // This should be the only way to get the WebWidget out of 
+    // Get/set WebShell from MWContext.
+    // This should be the only way to get the WebShell out of 
     // the MWContext.
     // Handles ref counting magic.
-    nsIWebWidget *GetWebWidget() const;
-    void SetWebWidget(nsIWebWidget *pWW);
+    nsIWebShell *GetWebShell() const;
+    void SetWebShell(nsIWebShell *pWW);
 #endif
 
 	//	Named contexts and grid stuff.

@@ -52,9 +52,8 @@ enum FEDragType {
 };
 
 #ifdef MOZ_NGLAYOUT
-#include "nsIWebWidget.h"
-#include "nsIDocumentLoader.h"
-#include "nsIDocumentObserver.h"
+#include "nsString.h"
+#include "nsIWebShell.h"
 #endif /* MOZ_NGLAYOUT */
 
 /////////////////////////////////////////////////////////////////////////////
@@ -111,13 +110,13 @@ BOOL FE_PrepareTempFileUrl(MWContext * pMWContext, URL_Struct *pUrl);
 //
 class CPrintCX;
 #ifdef MOZ_NGLAYOUT
-class CWebWidgetObserver;
+class CWebShellObserver;
 #endif /* MOZ_NGLAYOUT */
 
 class CNetscapeView : public CGenericView
 {
 #ifdef MOZ_NGLAYOUT
-friend class CWebWidgetObserver;
+friend class CWebShellObserver;
 #endif /* MOZ_NGLAYOUT */
 
 //	Properties
@@ -307,69 +306,47 @@ protected:
 
 #ifdef MOZ_NGLAYOUT
 private:
-  void checkCreateWebWidget();
-  BOOL m_bNoWebWidgetHack;
-  // m_pWWObserver has the same lifetime as CNetscapeView, containment.
-  CWebWidgetObserver* m_pWWObserver;
+  void checkCreateWebShell();
+  BOOL m_bNoWebShell;
+  // m_pWWObserver has the same lifetime as CNetscapeView, 
+  // a containment relationship.
+  CWebShellObserver* m_pWWObserver;
 
 public:
-  void NoWebWidgetHack() {m_bNoWebWidgetHack = TRUE;}
-  // Hack to disable it for the RDF window.
+  void NoWebShell() {m_bNoWebShell = TRUE;}
+  // Disable it for the RDF window.
 #endif /* MOZ_NGLAYOUT */
 };
 
 #ifdef MOZ_NGLAYOUT
 // The view uses this to observe all NGLayout related stuff.
 // Don't use the view itself because its not worth the trouble
-// of making it derived from nsISupports.
+// of making it derive from nsISupports.
 //
 // This may or may not be the right thing to do, but the
-// CWebWidgetObserver currently takes responsibility for 
-// creating/freeing the WebWidget pointed to by MWContext.
-class CWebWidgetObserver: public nsIViewerContainer,
-                         public nsIDocumentObserver {
+// CWebShellObserver currently takes responsibility for 
+// freeing the WebShell pointed to by MWContext.
+class CWebShellObserver: public nsIWebShellContainer {
 public:
-  CWebWidgetObserver(CNetscapeView *aView);
-  ~CWebWidgetObserver();
+  CWebShellObserver(CNetscapeView *aView);
+  ~CWebShellObserver();
   
   NS_DECL_ISUPPORTS
 
-  // For nsIViewContainer
-  NS_IMETHOD Embed(nsIDocumentWidget* aDocViewer, 
-                   const char* aCommand,
-                   nsISupports* aExtraInfo);
-  // End nsIViewContainer
-
-  // For nsIDocumentObserver
   NS_IMETHOD SetTitle(const nsString& aTitle);
-  NS_IMETHOD BeginUpdate();
-  NS_IMETHOD EndUpdate();
-  NS_IMETHOD BeginLoad();
-  NS_IMETHOD EndLoad();
-  NS_IMETHOD BeginReflow(nsIPresShell* aShell);
-  NS_IMETHOD EndReflow(nsIPresShell* aShell);
-  NS_IMETHOD ContentChanged(nsIContent* aContent,
-                            nsISupports* aSubContent);
-  NS_IMETHOD ContentAppended(nsIContent* aContainer);
-  NS_IMETHOD ContentInserted(nsIContent* aContainer,
-                             nsIContent* aChild,
-                             PRInt32 aIndexInContainer);
-  NS_IMETHOD ContentReplaced(nsIContent* aContainer,
-                             nsIContent* aOldChild,
-                             nsIContent* aNewChild,
-                             PRInt32 aIndexInContainer);
-  NS_IMETHOD ContentWillBeRemoved(nsIContent* aContainer,
-                                  nsIContent* aChild,
-                                  PRInt32 aIndexInContainer);
-  NS_IMETHOD ContentHasBeenRemoved(nsIContent* aContainer,
-                                   nsIContent* aChild,
-                                   PRInt32 aIndexInContainer);
-  NS_IMETHOD StyleSheetAdded(nsIStyleSheet* aStyleSheet);
-  // End nsIDocumentObserver
 
+  NS_IMETHOD GetTitle(nsString& aResult);
+
+  // History control
+  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const nsString& aURL);
+  NS_IMETHOD BeginLoadURL(nsIWebShell* aShell, const nsString& aURL);
+  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const nsString& aURL);
 
 private:
   CNetscapeView *mView;
+  // Probably shouldn't cache title here.
+  // Only here for now to make GetTitle() work.
+  nsString mTitle;
 };
 #endif /* MOZ_NGLAYOUT */
 

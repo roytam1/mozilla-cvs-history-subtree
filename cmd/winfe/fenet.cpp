@@ -868,16 +868,14 @@ IsNullPlugin(NPFileTypeAssoc* pAssociation)
 //
 char* wfe_ConstructFilterString(int type)
 {
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-  return NULL;
-#else
     NPFileTypeAssoc* pAssociation = NULL;
+#ifndef MOZ_NGLAYOUT
     if (type != HTM_ONLY){
         // get the list of associations for all plugin MIME types
         // ONLY if we are not looking for just HTM/HTML files (used for Editor)
         pAssociation = NPL_GetFileAssociation(NULL);
     }
+#endif /* MOZ_NGLAYOUT */
     
     char filter[256];
     int  iFilterSize;
@@ -968,6 +966,7 @@ char* wfe_ConstructFilterString(int type)
 		// Add the basic template
 		wfe_AppendFilterStringToFilterString(pFilterString, filter);
 
+#ifndef MOZ_NGLAYOUT
 		pAssociation = NPL_GetFileAssociation(NULL);
 	
 		// Add the plugin filters
@@ -998,10 +997,10 @@ char* wfe_ConstructFilterString(int type)
 					(char*)(const char*)strFilterPattern);
 			}
 		}
+#endif /* MOZ_NGLAYOUT */
 	}
 
     return pFilterString;
-#endif
 }
 
 #ifdef XP_WIN16

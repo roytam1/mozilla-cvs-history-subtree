@@ -95,13 +95,16 @@ BOOL bIsGold = FALSE;
 #include "fullsoft.h"
 
 #ifdef MOZ_NGLAYOUT
+#define NS_IMPL_IDS
 #include "nsISupports.h"
 #include "nsRepository.h"
 #include "nsWidgetsCID.h"
 #include "nsGfxCIID.h"
 #include "nsViewsCID.h"
-#include "nsIWebWidget.h"
 #include "nsIDocumentLoader.h"
+#include "nsIThrobber.h"
+#include "nsIPref.h"
+#include "nsIWebShell.h"
 #endif
 
 
@@ -263,9 +266,12 @@ BOOL CNetscapeApp::InitApplication()
 #define GFXWIN_DLL "raptorgfxwin.dll"
 #define VIEW_DLL   "raptorview.dll"
 #define WEB_DLL    "raptorweb.dll"
+#define PREF_DLL   "libpref.so"
 
 
 static void InitializeNGLayout() {
+  // Should probably use NS_SetupRegistry now that it exists.
+
   NS_DEFINE_IID(kCWindowIID, NS_WINDOW_CID);
   NS_DEFINE_IID(kCScrollbarIID, NS_VERTSCROLLBAR_CID);
   NS_DEFINE_IID(kCHScrollbarIID, NS_HORZSCROLLBAR_CID);
@@ -312,10 +318,14 @@ static void InitializeNGLayout() {
   NSRepository::RegisterFactory(kCViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCScrollingViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
 
-  NS_DEFINE_IID(kCWebWidgetCID, NS_WEBWIDGET_CID);
+  NS_DEFINE_IID(kCWebShellCID, NS_WEB_SHELL_CID);
   NS_DEFINE_IID(kCDocumentLoaderCID, NS_DOCUMENTLOADER_CID);
-  NSRepository::RegisterFactory(kCWebWidgetCID, WEB_DLL, PR_FALSE, PR_FALSE);
+  NS_DEFINE_IID(kThrobberCID, NS_THROBBER_CID);
+  NSRepository::RegisterFactory(kCWebShellCID, WEB_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCDocumentLoaderCID, WEB_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kThrobberCID, WEB_DLL, PR_FALSE, PR_FALSE);
+
+  NSRepository::RegisterFactory(kPrefCID, PREF_DLL, PR_FALSE, PR_FALSE);
 }
 #endif /* MOZ_NGLAYOUT */
 

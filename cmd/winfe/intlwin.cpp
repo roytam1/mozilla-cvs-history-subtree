@@ -1031,7 +1031,7 @@ BOOL CIntlWin::ExtTextOut(int16 wincsid, HDC pDC, int x, int y, UINT nOptions, L
 int CIntlWin::DrawTextEx(int16 wincsid, HDC hdc, LPSTR lpchText, int cchText,LPRECT lprc,UINT dwDTFormat,LPDRAWTEXTPARAMS lpDTParams)
 {
 #ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
+//  XP_ASSERT(0);
   return 0;
 #else
 	wincsid = INTL_DocToWinCharSetID(wincsid) & ~ CS_AUTO;
