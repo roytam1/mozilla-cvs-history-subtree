@@ -280,6 +280,10 @@ typedef enum XP_FileType {
 #define PR_PATH_SEPARATOR        PATH_SEPARATOR
 #define PR_PATH_SEPARATOR_STR    PATH_SEPARATOR_STR
 
+#ifdef XP_MAC
+#define MAXPATHLEN 512
+#endif
+
 #define XP_FILE_READ             "r"
 #define XP_FILE_READ_BIN         "rb"
 #define XP_FILE_WRITE            "w"
