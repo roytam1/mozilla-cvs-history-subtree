@@ -356,6 +356,22 @@ nsDOMClassInfo::Init()
                            WANT_SETPROPERTY |
                            WANT_NEWRESOLVE |
                            WANT_PRECREATE);
+  NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(Plugin, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(PluginArray, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(MimeType, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(MimeTypeArray, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(BarProp, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(History, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(Screen, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
 
   // Core classes
   NS_DEFINE_CLASSINFO_DATA(Document, nsDOMGenericSH::Create,

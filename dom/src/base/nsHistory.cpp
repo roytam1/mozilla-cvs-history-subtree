@@ -33,6 +33,7 @@
 #include "nsIHistoryEntry.h"
 #include "nsIURI.h"
 #include "nsXPIDLString.h"
+#include "nsDOMClassInfo.h"
 
 //
 //  History class implementation 
@@ -46,13 +47,24 @@ HistoryImpl::~HistoryImpl()
 {
 }
 
+
+// XPConnect interface list for HistoryImpl
+NS_CLASSINFO_MAP_BEGIN(History)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHistory)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for HistoryImpl
+NS_INTERFACE_MAP_BEGIN(HistoryImpl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHistory)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(History)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(HistoryImpl)
 NS_IMPL_RELEASE(HistoryImpl)
 
-NS_INTERFACE_MAP_BEGIN(HistoryImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMHistory)
-NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP_(void)       
 HistoryImpl::SetDocShell(nsIDocShell *aDocShell)

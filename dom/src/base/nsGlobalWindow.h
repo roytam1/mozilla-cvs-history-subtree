@@ -320,7 +320,8 @@ class nsIURI;
 // LocationImpl: Script "location" object
 //*****************************************************************************
 
-class LocationImpl : public nsIDOMLocation
+class LocationImpl : public nsIDOMLocation,
+                     public nsIDOMNSLocation
 {
 public:
   LocationImpl(nsIDocShell *aDocShell);
@@ -332,6 +333,9 @@ public:
 
   // nsIDOMLocation
   NS_DECL_NSIDOMLOCATION
+
+  // nsIDOMNSLocation
+  NS_DECL_NSIDOMNSLOCATION
 
   // nsIJSScriptObject
   // XXX all these should go away!!!

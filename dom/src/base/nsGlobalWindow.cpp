@@ -2216,20 +2216,7 @@ GlobalWindowImpl::OpenDialog(const nsAReadableString& aUrl,
                              nsISupports* aExtraArgument,
                              nsIDOMWindow** _retval)
 {
-  jsval *argv = nsnull;
-  PRUint32 argc = 0;
-
-  nsresult rv;
-  //  nsresult rv = SupportsArrayTojsvals(&argv, &argc, aArgsArray);
-  //  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = OpenInternal(aUrl, aName, aOptions, PR_TRUE, argv, argc, _retval);
-
-  if (argv) {
-    nsMemory::Free(argv);
-  }
-
-  return rv;
+  return OpenInternal(aUrl, aName, aOptions, PR_TRUE, nsnull, 0, _retval);
 }
 
 NS_IMETHODIMP

@@ -31,6 +31,7 @@
 #include "nsCOMPtr.h"
 #include "nsIDocumentViewer.h"
 #include "nsIDocumentLoader.h"
+#include "nsDOMClassInfo.h"
 
 
 //
@@ -45,13 +46,24 @@ ScreenImpl::~ScreenImpl()
 {
 }
 
+
+// XPConnect interface list for ScreenImpl
+NS_CLASSINFO_MAP_BEGIN(Screen)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMScreen)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for ScreenImpl
+NS_INTERFACE_MAP_BEGIN(ScreenImpl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMScreen)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(Screen)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(ScreenImpl)
 NS_IMPL_RELEASE(ScreenImpl)
 
-NS_INTERFACE_MAP_BEGIN(ScreenImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMScreen)
-NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP ScreenImpl::SetDocShell(nsIDocShell* aDocShell)
 {

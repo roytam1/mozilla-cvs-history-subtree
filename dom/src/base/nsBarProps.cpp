@@ -26,6 +26,7 @@
 #include "nsBarProps.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsDOMClassInfo.h"
 
 //
 //  Basic (virtual) BarProp class implementation
@@ -39,53 +40,65 @@ BarPropImpl::~BarPropImpl()
 {
 }
 
+
+// XPConnect interface list for BarPropImpl
+NS_CLASSINFO_MAP_BEGIN(BarProp)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMBarProp)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for BarPropImpl
+NS_INTERFACE_MAP_BEGIN(BarPropImpl)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMBarProp)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(BarProp)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(BarPropImpl)
 NS_IMPL_RELEASE(BarPropImpl)
 
-NS_INTERFACE_MAP_BEGIN(BarPropImpl)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMBarProp)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMBarProp)
-NS_INTERFACE_MAP_END
 
-NS_IMETHODIMP BarPropImpl::SetWebBrowserChrome(nsIWebBrowserChrome* aBrowserChrome)
+NS_IMETHODIMP
+BarPropImpl::SetWebBrowserChrome(nsIWebBrowserChrome* aBrowserChrome)
 {
-   mBrowserChrome = aBrowserChrome;
-   return NS_OK;
+  mBrowserChrome = aBrowserChrome;
+  return NS_OK;
 }
 
-NS_IMETHODIMP BarPropImpl::GetVisibleByFlag(PRBool *aVisible, 
-   PRUint32 aChromeFlag)
+NS_IMETHODIMP
+BarPropImpl::GetVisibleByFlag(PRBool *aVisible, PRUint32 aChromeFlag)
 {
-   PRUint32 chromeFlags;
-   *aVisible = PR_FALSE;
-   if(mBrowserChrome)
-      {
-      NS_ENSURE_SUCCESS(mBrowserChrome->GetChromeFlags(&chromeFlags),
-         NS_ERROR_FAILURE);
-      if(chromeFlags & aChromeFlag)
-         *aVisible = PR_TRUE;
-      return NS_OK;
-      }
-  return NS_ERROR_FAILURE;
+  NS_ENSURE_TRUE(mBrowserChrome, NS_ERROR_FAILURE);
+
+  PRUint32 chromeFlags;
+  *aVisible = PR_FALSE;
+
+  NS_ENSURE_SUCCESS(mBrowserChrome->GetChromeFlags(&chromeFlags),
+                    NS_ERROR_FAILURE);
+  if(chromeFlags & aChromeFlag)
+    *aVisible = PR_TRUE;
+
+  return NS_OK;
 }
 
-NS_IMETHODIMP BarPropImpl::SetVisibleByFlag(PRBool aVisible,
-   PRUint32 aChromeFlag)
+NS_IMETHODIMP
+BarPropImpl::SetVisibleByFlag(PRBool aVisible, PRUint32 aChromeFlag)
 {
-   PRUint32 chromeFlags;
-   if(mBrowserChrome)
-      {
-      NS_ENSURE_SUCCESS(mBrowserChrome->GetChromeFlags(&chromeFlags),
-         NS_ERROR_FAILURE);
-      if(aVisible)
-         chromeFlags |= aChromeFlag;
-      else
-         chromeFlags &= ~aChromeFlag;
-      NS_ENSURE_SUCCESS(mBrowserChrome->SetChromeFlags(chromeFlags),
-         NS_ERROR_FAILURE);
-      return NS_OK;
-      }
-   return NS_ERROR_FAILURE;
+  NS_ENSURE_TRUE(mBrowserChrome, NS_ERROR_FAILURE);
+
+  PRUint32 chromeFlags;
+
+  NS_ENSURE_SUCCESS(mBrowserChrome->GetChromeFlags(&chromeFlags),
+                    NS_ERROR_FAILURE);
+  if(aVisible)
+    chromeFlags |= aChromeFlag;
+  else
+    chromeFlags &= ~aChromeFlag;
+  NS_ENSURE_SUCCESS(mBrowserChrome->SetChromeFlags(chromeFlags),
+                    NS_ERROR_FAILURE);
+
+  return NS_OK;
 }
 
 //
@@ -100,14 +113,18 @@ MenubarPropImpl::~MenubarPropImpl()
 {
 }
 
-NS_IMETHODIMP MenubarPropImpl::GetVisible(PRBool *aVisible)
+NS_IMETHODIMP
+MenubarPropImpl::GetVisible(PRBool *aVisible)
 {
-   return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_MENUBAR);
+  return BarPropImpl::GetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_MENUBAR);
 }
 
-NS_IMETHODIMP MenubarPropImpl::SetVisible(PRBool aVisible)
+NS_IMETHODIMP
+MenubarPropImpl::SetVisible(PRBool aVisible)
 {
-   return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_MENUBAR);
+  return BarPropImpl::SetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_MENUBAR);
 }
 
 //
@@ -122,14 +139,18 @@ ToolbarPropImpl::~ToolbarPropImpl()
 {
 }
 
-NS_IMETHODIMP ToolbarPropImpl::GetVisible(PRBool *aVisible)
+NS_IMETHODIMP
+ToolbarPropImpl::GetVisible(PRBool *aVisible)
 {
-   return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_TOOLBAR);
+  return BarPropImpl::GetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_TOOLBAR);
 }
 
-NS_IMETHODIMP ToolbarPropImpl::SetVisible(PRBool aVisible) 
+NS_IMETHODIMP
+ToolbarPropImpl::SetVisible(PRBool aVisible) 
 {
-   return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_TOOLBAR);
+  return BarPropImpl::SetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_TOOLBAR);
 }
 
 //
@@ -144,14 +165,16 @@ LocationbarPropImpl::~LocationbarPropImpl()
 {
 }
 
-NS_IMETHODIMP LocationbarPropImpl::GetVisible(PRBool *aVisible) 
+NS_IMETHODIMP
+LocationbarPropImpl::GetVisible(PRBool *aVisible) 
 {
-   return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_LOCATIONBAR);
+  return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_LOCATIONBAR);
 }
 
-NS_IMETHODIMP LocationbarPropImpl::SetVisible(PRBool aVisible) 
+NS_IMETHODIMP
+LocationbarPropImpl::SetVisible(PRBool aVisible) 
 {
-   return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_LOCATIONBAR);
+  return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_LOCATIONBAR);
 }
 
 //
@@ -166,14 +189,16 @@ PersonalbarPropImpl::~PersonalbarPropImpl()
 {
 }
 
-NS_IMETHODIMP PersonalbarPropImpl::GetVisible(PRBool *aVisible) 
+NS_IMETHODIMP
+PersonalbarPropImpl::GetVisible(PRBool *aVisible) 
 {
-   return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR);
+  return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR);
 }
 
-NS_IMETHODIMP PersonalbarPropImpl::SetVisible(PRBool aVisible) 
+NS_IMETHODIMP
+PersonalbarPropImpl::SetVisible(PRBool aVisible) 
 {
-   return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR);
+  return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR);
 }
 
 //
@@ -188,14 +213,18 @@ StatusbarPropImpl::~StatusbarPropImpl()
 {
 }
 
-NS_IMETHODIMP StatusbarPropImpl::GetVisible(PRBool *aVisible) 
+NS_IMETHODIMP
+StatusbarPropImpl::GetVisible(PRBool *aVisible) 
 {
-   return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_STATUSBAR);
+  return BarPropImpl::GetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_STATUSBAR);
 }
 
-NS_IMETHODIMP StatusbarPropImpl::SetVisible(PRBool aVisible) 
+NS_IMETHODIMP
+StatusbarPropImpl::SetVisible(PRBool aVisible) 
 {
-   return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_STATUSBAR);
+  return BarPropImpl::SetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_STATUSBAR);
 }
 
 //
@@ -210,12 +239,16 @@ ScrollbarsPropImpl::~ScrollbarsPropImpl()
 {
 }
 
-NS_IMETHODIMP ScrollbarsPropImpl::GetVisible(PRBool *aVisible) 
+NS_IMETHODIMP
+ScrollbarsPropImpl::GetVisible(PRBool *aVisible) 
 {
-   return BarPropImpl::GetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_SCROLLBARS);
+  return BarPropImpl::GetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_SCROLLBARS);
 }
 
-NS_IMETHODIMP ScrollbarsPropImpl::SetVisible(PRBool aVisible) 
+NS_IMETHODIMP
+ScrollbarsPropImpl::SetVisible(PRBool aVisible) 
 {
-   return BarPropImpl::SetVisibleByFlag(aVisible, nsIWebBrowserChrome::CHROME_SCROLLBARS);
+  return BarPropImpl::SetVisibleByFlag(aVisible,
+                                       nsIWebBrowserChrome::CHROME_SCROLLBARS);
 }

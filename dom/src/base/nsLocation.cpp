@@ -45,6 +45,7 @@
 #include "nsXPIDLString.h"
 #include "nsDOMPropEnums.h"
 #include "nsDOMError.h"
+#include "nsDOMClassInfo.h"
 
 LocationImpl::LocationImpl(nsIDocShell *aDocShell)
 {
@@ -56,13 +57,25 @@ LocationImpl::~LocationImpl()
 {
 }
 
+
+// XPConnect interface list for LocationImpl
+NS_CLASSINFO_MAP_BEGIN(Location)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMLocation)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMNSLocation)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for LocationImpl
+NS_INTERFACE_MAP_BEGIN(LocationImpl)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSLocation)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMLocation)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMLocation)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(Location)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(LocationImpl)
 NS_IMPL_RELEASE(LocationImpl)
-
-NS_INTERFACE_MAP_BEGIN(LocationImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMLocation)
-NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP_(void) LocationImpl::SetDocShell(nsIDocShell *aDocShell)
 {
@@ -673,6 +686,43 @@ LocationImpl::Reload(PRBool aForceget)
                     NS_ERROR_FAILURE);
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+LocationImpl::Reload()
+{
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+  rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!ncc)
+    return NS_ERROR_NOT_AVAILABLE;
+
+  PRBool force_get = PR_FALSE;
+
+  PRUint32 argc;
+
+  ncc->GetArgc(&argc);
+
+  if (argc > 0) {
+    jsval *argv = nsnull;
+    ncc->GetArgvPtr(&argv);
+    NS_ENSURE_TRUE(argv, NS_ERROR_UNEXPECTED);
+
+    JSContext *cx = nsnull;
+
+    rv = ncc->GetJSContext(&cx);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    JS_ValueToBoolean(cx, argv[0], &force_get);
+  }
+
+  return Reload(force_get);
 }
 
 NS_IMETHODIMP

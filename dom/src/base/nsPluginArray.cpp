@@ -29,8 +29,8 @@
 #include "nsIServiceManager.h"
 #include "nsIPluginHost.h"
 #include "nsIDocShell.h"
-
 #include "nsIWebNavigation.h"
+#include "nsDOMClassInfo.h"
 
 static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
 
@@ -64,13 +64,23 @@ PluginArrayImpl::~PluginArrayImpl()
   }
 }
 
+
+// XPConnect interface list for PluginArrayImpl
+NS_CLASSINFO_MAP_BEGIN(PluginArray)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMPluginArray)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for PluginArrayImpl
+NS_INTERFACE_MAP_BEGIN(PluginArrayImpl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMPluginArray)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(PluginArray)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(PluginArrayImpl)
 NS_IMPL_RELEASE(PluginArrayImpl)
-
-NS_INTERFACE_MAP_BEGIN(PluginArrayImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMPluginArray)
-NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP
@@ -222,13 +232,23 @@ PluginElementImpl::~PluginElementImpl()
   }
 }
 
+
+// XPConnect interface list for PluginElementImpl
+NS_CLASSINFO_MAP_BEGIN(Plugin)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMPlugin)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for PluginElementImpl
+NS_INTERFACE_MAP_BEGIN(PluginElementImpl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMPlugin)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(Plugin)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(PluginElementImpl)
 NS_IMPL_RELEASE(PluginElementImpl)
-
-NS_INTERFACE_MAP_BEGIN(PluginElementImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMPlugin)
-NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP

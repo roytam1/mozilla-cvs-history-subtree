@@ -26,6 +26,7 @@
 #include "nsIDOMNavigator.h"
 #include "nsIDOMPluginArray.h"
 #include "nsIDOMPlugin.h"
+#include "nsDOMClassInfo.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
@@ -47,13 +48,23 @@ MimeTypeArrayImpl::~MimeTypeArrayImpl()
 	}
 }
 
+
+// XPConnect interface list for MimeTypeArrayImpl
+NS_CLASSINFO_MAP_BEGIN(MimeTypeArray)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMMimeTypeArray)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for MimeTypeArrayImpl
+NS_INTERFACE_MAP_BEGIN(MimeTypeArrayImpl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMMimeTypeArray)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(MimeTypeArray)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(MimeTypeArrayImpl)
 NS_IMPL_RELEASE(MimeTypeArrayImpl)
-
-NS_INTERFACE_MAP_BEGIN(MimeTypeArrayImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMMimeTypeArray)
-NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP
@@ -122,8 +133,8 @@ nsresult MimeTypeArrayImpl::GetMimeTypes()
 	nsIDOMPluginArray* pluginArray = nsnull;
 	nsresult rv = mNavigator->GetPlugins(&pluginArray);
 	if (rv == NS_OK) {
-		// count up all possible MimeTypes, and collect them here. Later, we'll remove
-		// duplicates.
+		// count up all possible MimeTypes, and collect them here. Later,
+		// we'll remove duplicates.
 		mMimeTypeCount = 0;
 		PRUint32 pluginCount = 0;
 		rv = pluginArray->GetLength(&pluginCount);
@@ -174,13 +185,23 @@ MimeTypeElementImpl::~MimeTypeElementImpl()
 	NS_IF_RELEASE(mMimeType);
 }
 
+
+// XPConnect interface list for MimeTypeElementImpl
+NS_CLASSINFO_MAP_BEGIN(MimeType)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMMimeType)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for MimeTypeElementImpl
+NS_INTERFACE_MAP_BEGIN(MimeTypeElementImpl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMMimeType)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(MimeType)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(MimeTypeElementImpl)
 NS_IMPL_RELEASE(MimeTypeElementImpl)
-
-NS_INTERFACE_MAP_BEGIN(MimeTypeElementImpl)
-   NS_INTERFACE_MAP_ENTRY(nsISupports)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMMimeType)
-NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP
