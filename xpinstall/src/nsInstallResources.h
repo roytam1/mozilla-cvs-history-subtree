@@ -24,19 +24,22 @@
  */
 
 
-#ifndef __SCHEDULEDTASKS_H__
-#define __SCHEDULEDTASKS_H__
+#ifndef __NS_INSTALLRESOURCES_H__
+#define __NS_INSTALLRESOURCES_H__
 
-
-#include "NSReg.h"
-#include "nsFileSpec.h"
-
-
-REGERR DeleteFileLater(nsFileSpec& filename);
-REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target );
-
-
-extern "C" void PerformScheduledTasks(void *data)
+class nsInstallResources
+{
+    public:
+       
+       static char* GetInstallFileString(void);
+       static char* GetReplaceFileString(void);     
+       static char* GetDeleteFileString(void);      
+       static char* GetDeleteComponentString(void); 
+       static char* GetExecuteString(void);         
+       static char* GetExecuteWithArgsString(void); 
+       static char* GetPatchFileString(void);       
+       static char* GetUninstallString(void);       
+};
 
 
 #endif

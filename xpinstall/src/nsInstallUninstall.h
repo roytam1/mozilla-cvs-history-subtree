@@ -24,19 +24,40 @@
  */
 
 
-#ifndef __SCHEDULEDTASKS_H__
-#define __SCHEDULEDTASKS_H__
+#ifndef nsInstallUninstall_h__
+#define nsInstallUninstall_h__
+
+#include "prtypes.h"
+#include "nsString.h"
+#include "nsInstallObject.h"
+#include "nsInstall.h"
+
+class nsInstallUninstall : public nsInstallObject 
+{
+    public:
+          
+        nsInstallUninstall( nsInstall* inInstall,
+                            const nsString& regName,
+                            PRInt32 *error);
 
 
-#include "NSReg.h"
-#include "nsFileSpec.h"
+        virtual ~nsInstallUninstall();
 
+        PRInt32 Prepare();
+        PRInt32 Complete();
+        void  Abort();
+        char* toString();
 
-REGERR DeleteFileLater(nsFileSpec& filename);
-REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target );
+        PRBool CanUninstall();
+        PRBool RegisterPackageNode();
+	  
+  
+    private:
+          
+        nsString mRegName;        // Registry name of package
+        nsString mUIName;         // User name of package
 
+        
+};
 
-extern "C" void PerformScheduledTasks(void *data)
-
-
-#endif
+#endif /* nsInstallUninstall_h__ */

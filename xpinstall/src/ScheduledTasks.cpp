@@ -81,6 +81,16 @@ REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target )
     return result;
 }
 
+void DeleteScheduledFiles(void);
+void ReplaceScheduledFiles(void);
+
+extern "C" void PerformScheduledTasks(void *data)
+{
+    DeleteScheduledFiles();
+    ReplaceScheduledFiles();
+}
+
+
 void DeleteScheduledFiles(void)
 {
     HREG reg;

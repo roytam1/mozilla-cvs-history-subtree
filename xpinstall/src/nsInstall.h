@@ -186,16 +186,19 @@ class nsInstall
         nsString            mRegistryPackageName;   /* Name of the package we are installing */
         nsString            mUIName;                /* User-readable package name */
 
-        nsInstallVersion*   mVersionInfo;        /* Component version info */
+        nsInstallVersion*   mVersionInfo;           /* Component version info */
         
         nsVector*           mInstalledFiles;        
         nsHashtable*        mPatchList;
-
+        
+        nsOutputFileStream  *mLogStream;       
+        
         PRInt32             mLastError;
 
         void        ParseFlags(int flags);
         PRInt32     SanityCheck(void);
-        
+        void        GetTime(nsString &aString);
+
         nsString *  GetQualifiedRegName( const nsString& name );
         nsString*   GetQualifiedPackageName( const nsString& name );
         nsString*   CurrentUserNode();

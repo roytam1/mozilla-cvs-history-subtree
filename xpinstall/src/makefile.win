@@ -80,6 +80,7 @@ OBJS =                                          \
        .\$(OBJDIR)\nsInstallDelete.obj          \
        .\$(OBJDIR)\nsInstallExecute.obj         \
        .\$(OBJDIR)\nsInstallPatch.obj           \
+       .\$(OBJDIR)\nsInstallUninstall.obj       \
        .\$(OBJDIR)\nsInstallResources.obj       \
        .\$(OBJDIR)\ScheduledTasks.obj           \
        $(NULL)
