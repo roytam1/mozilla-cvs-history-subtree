@@ -36,6 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef TRANSFRMX_TXINSTRUCTIONS_H
+#define TRANSFRMX_TXINSTRUCTIONS_H
+
 #include "txError.h"
 #include "txExecutionState.h"
 #include "nsCOMPtr.h"
@@ -146,3 +149,5 @@ class txRecursionCheckpointEnd : public txInstruction
 public:
     TX_DECL_TXINSTRUCTION
 };
+
+#endif //TRANSFRMX_TXINSTRUCTIONS_H
