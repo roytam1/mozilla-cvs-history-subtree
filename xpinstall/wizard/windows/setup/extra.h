@@ -114,7 +114,11 @@ HRESULT           ErrorMsgDiskSpace(ULONGLONG ullDSAvailable, ULONGLONG ullDSReq
 void              SetCustomType(void);
 void              GetAlternateArchiveSearchPath(LPSTR lpszCmdLine);
 BOOL              NeedReboot(void);
-BOOL              LocatePreviousPath(LPSTR szPath, DWORD dwPathSize);
+BOOL              LocatePreviousPath(LPSTR szMainSectionName, LPSTR szPath, DWORD dwPathSize);
+BOOL              LocatePathNscpReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize);
+BOOL              LocatePathWinReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize);
+BOOL              LocatePath(LPSTR szSection, LPSTR szPath, DWORD dwPathSize);
+int               VR_GetPath(char *component_path, unsigned long sizebuf, char *buf);
 
 BOOL              bSDInit;
 
