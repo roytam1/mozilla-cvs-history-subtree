@@ -467,7 +467,7 @@ function DropOnFolderOutliner(event)
         sourceServer = sourceFolder.server;
         try 
         {
-           messenger.CopyFolders(treeDatabase,targetNode,list,(sourceServer == targetServer));
+           messenger.CopyFolders(folderDatasource, targetNode, list, (sourceServer == targetServer));
         }
         catch(ex)
         {
