@@ -92,6 +92,15 @@ var MigrationWizard = {
       }
     }
 
+    if (this._source) {
+      // Somehow the Profile Migrator got confused, and gave us a migrate source
+      // that doesn't actually exist. This could be because of a bogus registry
+      // state. Set the _source property to null so the first visible item in
+      // the list is selected instead. 
+      var source = document.getElementById(this._source);
+      if (source.hidden)
+        this._source = null;
+    }
     group.selectedItem = !this._source ? firstSelectable : document.getElementById(this._source);
   },
   
