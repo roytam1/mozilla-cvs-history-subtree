@@ -195,6 +195,9 @@ sub DistMozilla()
 		#JS
 		InstallFromManifest(":mozilla:js:src:MANIFEST",									":mozilla:dist:js:");
 		
+		#LIVECONNECT
+		InstallFromManifest(":mozilla:js:src:liveconnect:MANIFEST",						":mozilla:dist:liveconnect:");
+		
 		#RDF
 		InstallFromManifest(":mozilla:modules:rdf:include:MANIFEST",					":mozilla:dist:rdf:");
 		
