@@ -25,6 +25,7 @@ MODULE=rdf
 DEPTH=..\..\..
 
 EXPORTS	= \
+        nsILocalStore.h         \
         nsIRDFFileSystem.h      \
 	$(NULL)
 

@@ -25,6 +25,7 @@ LIBRARY_NAME=rdfdatasource_s
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsFileSystemDataSource.obj  \
+        .\$(OBJDIR)\nsLocalStore.obj            \
 	$(NULL)
 
 # XXX Note the dependency on $(DEPTH)\rdf\base\src: we use rdfutil.h over
