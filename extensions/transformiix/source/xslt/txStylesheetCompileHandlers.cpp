@@ -80,34 +80,34 @@ txFnEndLRE(txStylesheetCompilerState& aState);
       }                                                                     \
     } while(0)
 
-txStylesheetAttr*
+
+nsresult
 getStyleAttr(txStylesheetAttr* aAttributes,
              PRInt32 aAttrCount,
              PRInt32 aNamespace,
-             nsIAtom* aName)
+             nsIAtom* aName,
+             PRBool aRequired,
+             txStylesheetAttr** aAttr)
 {
     PRInt32 i;
     for (i = 0; i < aAttrCount; ++i) {
         txStylesheetAttr* attr = aAttributes + i;
         if (attr->mNamespaceID == aNamespace &&
             attr->mLocalName == aName) {
+            *aAttr = attr;
 
-            return attr;
+            return NS_OK;
         }
     }
+    *aAttr = nsnull;
     
-    return nsnull;
+    if (aRequired) {
+        // XXX ErrorReport: missing required attribute
+        return NS_ERROR_XSLT_PARSE_FAILURE;
+    }
+    
+    return NS_OK;
 }
-
-
-txStylesheetAttr*
-getStyleAttr(txStylesheetAttr* aAttributes,
-             PRInt32 aAttrCount,
-             nsIAtom* aName)
-{
-    return getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None, aName);
-}
-
 
 nsresult
 parseUseAttrSets(txStylesheetAttr* aAttributes,
@@ -115,25 +115,26 @@ parseUseAttrSets(txStylesheetAttr* aAttributes,
                  PRBool aInXSLTNS,
                  txStylesheetCompilerState& aState)
 {
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount,
-                                          aInXSLTNS ? kNameSpaceID_XSLT :
+    txStylesheetAttr* attr = nsnull;
+    getStyleAttr(aAttributes, aAttrCount, aInXSLTNS ? kNameSpaceID_XSLT :
                                                       kNameSpaceID_None,
-                                          txXSLTAtoms::useAttributeSets);
-    if (attr) {
-        txTokenizer tok(attr->mValue);
-        while (tok.hasMoreTokens()) {
-            txExpandedName name;
-            nsresult rv = name.init(tok.nextToken(),
-                                    aState.mElementContext->mMappings,
-                                    PR_FALSE);
-            NS_ENSURE_SUCCESS(rv, rv);
+                 txXSLTAtoms::useAttributeSets, PR_FALSE, &attr);
+    if (!attr) {
+        return NS_OK;
+    }
 
-            txInstruction* instr = new txInsertAttrSet(name);
-            NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+    txTokenizer tok(attr->mValue);
+    while (tok.hasMoreTokens()) {
+        txExpandedName name;
+        nsresult rv = name.init(tok.nextToken(),
+                                aState.mElementContext->mMappings, PR_FALSE);
+        NS_ENSURE_SUCCESS(rv, rv);
 
-            rv = aState.addInstruction(instr);
-            NS_ENSURE_SUCCESS(rv, rv);
-        }
+        txInstruction* instr = new txInsertAttrSet(name);
+        NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+        rv = aState.addInstruction(instr);
+        NS_ENSURE_SUCCESS(rv, rv);
     }
     return NS_OK;
 }
@@ -147,25 +148,21 @@ getQNameAttr(txStylesheetAttr* aAttributes,
              txExpandedName& aExpName)
 {
     aExpName.reset();
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount, aName);
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
     if (!attr) {
-        if (aRequired) {
-            // XXX ErrorReport: missing required attribute
-            return NS_ERROR_XSLT_PARSE_FAILURE;
-        }
-
-        return NS_OK;
+        return rv;
     }
 
-
-    nsresult rv = aExpName.init(attr->mValue,
-                                aState.mElementContext->mMappings, PR_FALSE);
+    rv = aExpName.init(attr->mValue, aState.mElementContext->mMappings,
+                       PR_FALSE);
     if (!aRequired && NS_FAILED(rv) && aState.fcp()) {
         aExpName.reset();
         rv = NS_OK;
     }
 
-    return rv;
+    return NS_OK;
 }
 
 nsresult
@@ -177,14 +174,11 @@ getExprAttr(txStylesheetAttr* aAttributes,
             Expr*& aExpr)
 {
     aExpr = nsnull;
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount, aName);
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
     if (!attr) {
-        if (aRequired) {
-            // XXX ErrorReport: missing required attribute
-            return NS_ERROR_XSLT_PARSE_FAILURE;
-        }
-
-        return NS_OK;
+        return rv;
     }
 
     aExpr = ExprParser::createExpr(attr->mValue, &aState);
@@ -205,14 +199,11 @@ getAVTAttr(txStylesheetAttr* aAttributes,
            Expr*& aAVT)
 {
     aAVT = nsnull;
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount, aName);
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
     if (!attr) {
-        if (aRequired) {
-            // XXX ErrorReport: missing required attribute
-            return NS_ERROR_XSLT_PARSE_FAILURE;
-        }
-
-        return NS_OK;
+        return rv;
     }
 
     aAVT = ExprParser::createAttributeValueTemplate(attr->mValue, &aState);
@@ -233,14 +224,11 @@ getPatternAttr(txStylesheetAttr* aAttributes,
                txPattern*& aPattern)
 {
     aPattern = nsnull;
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount, aName);
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
     if (!attr) {
-        if (aRequired) {
-            // XXX ErrorReport: missing required attribute
-            return NS_ERROR_XSLT_PARSE_FAILURE;
-        }
-
-        return NS_OK;
+        return rv;
     }
 
     aPattern = txPatternParser::createPattern(attr->mValue, &aState);
@@ -261,14 +249,11 @@ getNumberAttr(txStylesheetAttr* aAttributes,
               double& aNumber)
 {
     aNumber = Double::NaN;
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount, aName);
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
     if (!attr) {
-        if (aRequired) {
-            // XXX ErrorReport: missing required attribute
-            return NS_ERROR_XSLT_PARSE_FAILURE;
-        }
-
-        return NS_OK;
+        return rv;
     }
 
     aNumber = Double::toDouble(attr->mValue);
@@ -289,14 +274,11 @@ getAtomAttr(txStylesheetAttr* aAttributes,
               nsIAtom** aAtom)
 {
     *aAtom = nsnull;
-    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount, aName);
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
     if (!attr) {
-        if (aRequired) {
-            // XXX ErrorReport: missing required attribute
-            return NS_ERROR_XSLT_PARSE_FAILURE;
-        }
-
-        return NS_OK;
+        return rv;
     }
 
     *aAtom = NS_NewAtom(attr->mValue);
@@ -387,9 +369,10 @@ txFnStartStylesheet(PRInt32 aNamespaceID,
                     PRInt32 aAttrCount,
                     txStylesheetCompilerState& aState)
 {
-    if (!getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::version)) {
-        return NS_ERROR_XSLT_PARSE_FAILURE;
-    }
+    txStylesheetAttr* attr;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               txXSLTAtoms::version, PR_TRUE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxTopHandler);
 }
@@ -409,12 +392,12 @@ txFnStartLREStylesheet(PRInt32 aNamespaceID,
                        PRInt32 aAttrCount,
                        txStylesheetCompilerState& aState)
 {
-    if (!getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_XSLT,
-                      txXSLTAtoms::version)) {
-        return NS_ERROR_XSLT_PARSE_FAILURE;
-    }
+    txStylesheetAttr* attr;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_XSLT,
+                               txXSLTAtoms::version, PR_TRUE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    nsresult rv = aState.pushHandlerTable(gTxTemplateHandler);
+    rv = aState.pushHandlerTable(gTxTemplateHandler);
     NS_ENSURE_SUCCESS(rv, rv);
     
     txExpandedName nullExpr;
