@@ -670,7 +670,7 @@
 
               notifyListeners = (this.childNodes[i] == tabBrowser.mCurrentBrowser);
             }
-            else if ((this.contentDocument != safeGetProperty(event.originalTarget, "ownerDocument")) ||
+            else if ((tabBrowser.mCurrentBrowser.contentDocument != safeGetProperty(event.originalTarget, "ownerDocument")) ||
                      (contentPolicy.shouldLoad(Components.interfaces.nsIContentPolicy.TYPE_IMAGE,
                                                uri, origURI, event.target,
                                                safeGetProperty(event.target, "type"),

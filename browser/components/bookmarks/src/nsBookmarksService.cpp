@@ -3600,6 +3600,11 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
             return rv;
         }
     }
+    else if (aProperty == kNC_Icon)
+    {
+        rv = ProcessCachedBookmarkIcon(aSource, nsnull, aTarget);
+        return rv;
+    }
     else if ((aProperty == kNC_child || aProperty == kRDF_nextVal) &&
              NS_SUCCEEDED(mInner->HasAssertion(aSource, kRDF_type, kNC_Livemark,
                                                PR_TRUE, &isLivemark)) &&
