@@ -52,8 +52,12 @@ nsComposerController::Init(nsISupports *aCommandRefCon)
   if (NS_FAILED(rv)) return rv;  
 
   mCommandRefCon = aCommandRefCon;     // no addref  
+
+#ifdef XP_MAC
+#warning why two command managers?
+#endif
   
-  mCommandManager = do_CreateInstance("@mozilla.org/content/controller-command-manager;1", &rv);
+  mCommandManager = do_CreateInstance("@mozilla.org/embedcomp/controller-command-manager;1", &rv);
   if (NS_FAILED(rv)) return rv;
 
   // register the commands.
@@ -222,7 +226,7 @@ nsresult nsComposerController::GetComposerCommandManager(nsIControllerCommandMan
   if (!cmdManager)
   {
     nsresult rv;
-    cmdManager = do_CreateInstance("@mozilla.org/content/controller-command-manager;1", &rv);
+    cmdManager = do_CreateInstance("@mozilla.org/embedcomp/controller-command-manager;1", &rv);
     if (NS_FAILED(rv)) return rv;
 
     // register the commands. This just happens once per instance
