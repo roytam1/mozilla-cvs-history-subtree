@@ -33,27 +33,24 @@
 #        version
 #             - version to display on the blue background
 #
-#   ie: perl makeuninstallini.pl uninstall.it 6.0.0.1999120608
+#   ie: perl makeuninstallini.pl 6.0.0.1999120608
 #
 #
 
-if($#ARGV < 1)
+if (scalar(@ARGV) != 1)
 {
-  die "usage: $0 <.it file> <version>
-
-       .it file      : input ini template file
+  die "usage: $0 <version>
 
        version       : version to be shown in setup.  Typically the same version
                        as show in mozilla.exe.  This version string will be shown
                        on the title of the main dialog.
 
-                     ie: perl makeuninstallini.pl uninstall.it 6.0.0.1999120608
-                      or perl makeuninstallini.pl uninstall.it 6.0b2
+                     ie: perl makeuninstallini.pl 6.0.0.1999120608
+                      or perl makeuninstallini.pl 6.0b2
        \n";
 }
 
-$inItFile         = $ARGV[0];
-$inVersion        = $ARGV[1];
+$inVersion        = $ARGV[0];
 
 # get environment vars
 $userAgent        = $ENV{XPI_USERAGENT};
@@ -68,21 +65,8 @@ $greBuildID       = $ENV{XPI_GREBUILDID};
 $greFileVersion   = $ENV{XPI_GREFILEVERSION};
 $greUniqueID      = $ENV{XPI_GREUNIQUEID};
 
-# Get the name of the file replacing the .it extension with a .ini extension
-@inItFileSplit    = split(/\./,$inItFile);
-$outIniFile       = $inItFileSplit[0];
-$outIniFile      .= ".ini";
-
-# Open the input file
-open(fpInIt, $inItFile) || die "\ncould not open $ARGV[0]: $!\n";
-
-# Open the output file
-open(fpOutIni, ">$outIniFile") || die "\nCould not open $outIniFile: $!\n";
-
-print "\n Making $outIniFile...\n";
-
 # While loop to read each line from input file
-while($line = <fpInIt>)
+while($line = <STDIN>)
 {
   # For each line read, search and replace $Version$ with the version passed in
   $line =~ s/\$Version\$/$inVersion/gi;
@@ -97,10 +81,8 @@ while($line = <fpInIt>)
   $line =~ s/\$GreBuildID\$/$greBuildID/gi;
   $line =~ s/\$GreFileVersion\$/$greFileVersion/gi;
   $line =~ s/\$GreUniqueID\$/$greUniqueID/gi;
-  print fpOutIni $line;
+  print STDOUT $line;
 }
-
-print " done!\n";
 
 # end of script
 exit(0);
