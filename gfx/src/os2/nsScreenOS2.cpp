@@ -90,7 +90,7 @@ nsScreenOS2 :: GetAvailRect(PRInt32 *outLeft, PRInt32 *outTop, PRInt32 *outWidth
 
   // This height is different based on whether or not 
   // "Show on top of maximed windows" is checked
-  LONG lWorkAreaHeight;
+  LONG lWorkAreaHeight = *outHeight;
 
   if ( !rc && !pfnQueryDesktopWorkArea )
   {
