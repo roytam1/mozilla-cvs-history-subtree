@@ -52,6 +52,13 @@ sub Cleanup
     }
 }
 
+sub zipErrorCheck($)
+{
+    my ($err) = @_;
+    return if ($err == 0 || $err == 12);
+    die ("Error invoking zip: $err\n");
+}
+
 sub JarIt
 {
     my ($destPath, $jarfile, $copyFiles, $args, $overrides) = @_;
@@ -60,7 +67,7 @@ sub JarIt
     if ("$dir/$jarfile" =~ /([\w\d.\-\\\/]+)[\\\/]([\w\d.\-]+)/) {
         $dir = $1;
     }
-    MkDirs($dir, ".", false);
+    MkDirs($dir, ".", 0);
 
     if ($copyFiles eq true) {
         my $indivDir = $jarfile;
@@ -227,9 +234,9 @@ while (<STDIN>) {
 
                 if ( $srcPath ) {  
                     $srcPath = substr($srcPath,1,-1);
-                }
+		}
 
-                EnsureFileInDir($dest, $srcPath, true);
+		EnsureFileInDir($dest, $srcPath, 1);
                 $args = "$args$dest ";
             } elsif (/^\+\s+([\w\d.\-\\\/]+)\s*(\([\w\d.\-\\\/]+\))?$\s*/) {
                 my $dest = $1;
@@ -239,7 +246,7 @@ while (<STDIN>) {
                     $srcPath = substr($srcPath,1,-1);
                 }
 
-                EnsureFileInDir($dest, $srcPath, true);
+                EnsureFileInDir($dest, $srcPath, 1);
                 $overrides = "$overrides$dest ";
             } elsif (/^\s*$/) {
                 # end with blank line
