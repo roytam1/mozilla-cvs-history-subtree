@@ -25,7 +25,9 @@
 #include "nsNetUtil.h"
 #include "nsIComponentManager.h"
 #include "nsILocalFile.h"
+#ifndef MACOSX
 #include "nsILocalFileMac.h"
+#endif
 #include "nsIURL.h"
 #include "nsVoidArray.h"
 #include "nsStringUtil.h"
@@ -148,6 +150,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   // Clean up filter buffers
   delete[] filterBuffer;
 
+#ifndef MACOSX
   if (userClicksOK == returnOK || userClicksOK == returnReplace)
   {
     nsCOMPtr<nsILocalFile>    localFile(do_CreateInstance("@mozilla.org/file/local;1"));
@@ -158,6 +161,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 
     mFile = do_QueryInterface(macFile);
   }
+#endif
   
   *retval = userClicksOK;
   return NS_OK;

@@ -183,6 +183,7 @@ PRBool nsFileWidget::Show()
   // Clean up filter buffers
   delete[] filterBuffer;
 
+#ifndef MACOSX
   if ( userClicksOK ) {
     nsNativeFileSpec fileSpec(theFile);
     nsFilePath filePath(fileSpec);
@@ -190,6 +191,7 @@ PRBool nsFileWidget::Show()
     mFile.AssignWithConversion( NS_STATIC_CAST(const char*, filePath) );
     mFileSpec = fileSpec;
   }
+#endif  
   
   return userClicksOK;
 }

@@ -41,7 +41,9 @@
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "nsPrimitiveHelpers.h"
+#ifndef MACOSX
 #include "nsILocalFileMac.h"
+#endif
 #include "nsWatchTask.h"
 
 // rjc
@@ -501,9 +503,11 @@ printf("looking for data in type %s, mac flavor %ld\n", NS_STATIC_CAST(const cha
 	      // we have a HFSFlavor struct in |dataBuff|. Create an nsLocalFileMac object.
 	      HFSFlavor* fileData = NS_REINTERPRET_CAST(HFSFlavor*, dataBuff);
 	      NS_ASSERTION ( sizeof(HFSFlavor) == dataSize, "Ooops, we realy don't have a HFSFlavor" );
+#ifndef MACOSX
 	      nsCOMPtr<nsILocalFileMac> file;
 	      if ( NS_SUCCEEDED(NS_NewLocalFileWithFSSpec(&fileData->fileSpec, PR_TRUE, getter_AddRefs(file))) )
 	        genericDataWrapper = do_QueryInterface(file);
+#endif
 	    }
 	    else {
           // we probably have some form of text. The DOM only wants LF, so convert k
