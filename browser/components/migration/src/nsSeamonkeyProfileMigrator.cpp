@@ -38,7 +38,9 @@
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsCRT.h"
 #include "nsDirectoryServiceDefs.h"
+#include "nsICookieManager2.h"
 #include "nsIObserverService.h"
+#include "nsIPasswordManagerInternal.h"
 #include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
 #include "nsIProfile.h"
@@ -47,6 +49,9 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
+#include "nsIURL.h"
+#include "nsNetCID.h"
+#include "nsNetUtil.h"
 #include "nsSeamonkeyProfileMigrator.h"
 #include "nsVoidArray.h"
 
@@ -90,17 +95,24 @@ nsSeamonkeyProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUn
 
   NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
-  CreateTemplateProfile(aProfile);
+  if (aReplace)
+    CreateTemplateProfile(aProfile);
+  else {
+    nsCOMPtr<nsIProfileInternal> pmi(do_GetService("@mozilla.org/profile/manager;1"));
+    nsXPIDLString currProfile;
+    pmi->GetCurrentProfile(getter_Copies(currProfile));
+    nsCOMPtr<nsIFile> dir;
+    pmi->GetProfileDir(currProfile.get(), getter_AddRefs(dir));
+    mTargetProfile = do_QueryInterface(dir);
+  }
 
   GetSourceProfile(aProfile);
 
-  if (aReplace) {
-    COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
-    COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
-    COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
-    COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
-    COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
-  }
+  COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
+  COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
+  COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
+  COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
+  COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
   COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
 
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
@@ -508,17 +520,22 @@ nsSeamonkeyProfileMigrator::WriteFontsBranch(nsIPrefService* aPrefService,
 nsresult
 nsSeamonkeyProfileMigrator::CopyPreferences(PRBool aReplace)
 {
-  TransformPreferences(FILE_NAME_PREFS, FILE_NAME_PREFS);
+  nsresult rv = NS_OK;
+  if (!aReplace)
+    return rv;
+
+  rv |= TransformPreferences(FILE_NAME_PREFS, FILE_NAME_PREFS);
 
   // Security Stuff
-  CopyFile(FILE_NAME_CERT8DB, FILE_NAME_CERT8DB);
-  CopyFile(FILE_NAME_KEY3DB, FILE_NAME_KEY3DB);
-  CopyFile(FILE_NAME_SECMODDB, FILE_NAME_SECMODDB);
+  rv |= CopyFile(FILE_NAME_CERT8DB, FILE_NAME_CERT8DB);
+  rv |= CopyFile(FILE_NAME_KEY3DB, FILE_NAME_KEY3DB);
+  rv |= CopyFile(FILE_NAME_SECMODDB, FILE_NAME_SECMODDB);
 
   // User MIME Type overrides
-  CopyFile(FILE_NAME_MIMETYPES, FILE_NAME_MIMETYPES);
+  rv |= CopyFile(FILE_NAME_MIMETYPES, FILE_NAME_MIMETYPES);
 
-  return CopyUserContentSheet();
+  rv |= CopyUserContentSheet();
+  return rv;
 }
 
 nsresult 
@@ -551,13 +568,27 @@ nsSeamonkeyProfileMigrator::CopyUserContentSheet()
 nsresult
 nsSeamonkeyProfileMigrator::CopyCookies(PRBool aReplace)
 {
-  return CopyFile(FILE_NAME_COOKIES, FILE_NAME_COOKIES);
+  nsresult rv;
+  if (aReplace)
+    rv = CopyFile(FILE_NAME_COOKIES, FILE_NAME_COOKIES);
+  else {
+    nsCOMPtr<nsICookieManager2> cookieManager(do_GetService(NS_COOKIEMANAGER_CONTRACTID));
+    if (!cookieManager)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    nsCOMPtr<nsIFile> seamonkeyCookiesFile;
+    mSourceProfile->Clone(getter_AddRefs(seamonkeyCookiesFile));
+    seamonkeyCookiesFile->Append(FILE_NAME_COOKIES);
+
+    rv = cookieManager->ReadCookies(seamonkeyCookiesFile);
+  }
+  return rv;
 }
 
 nsresult
 nsSeamonkeyProfileMigrator::CopyHistory(PRBool aReplace)
 {
-  return CopyFile(FILE_NAME_HISTORY, FILE_NAME_HISTORY);
+  return aReplace ? CopyFile(FILE_NAME_HISTORY, FILE_NAME_HISTORY) : NS_OK;
 }
 
 nsresult
@@ -565,22 +596,78 @@ nsSeamonkeyProfileMigrator::CopyPasswords(PRBool aReplace)
 {
   nsresult rv;
 
-  // Find out what the signons file was called, this is stored in a pref
-  // in Seamonkey.
-  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  psvc->ResetPrefs();
-
-  nsCOMPtr<nsIFile> seamonkeyPrefsFile;
-  mSourceProfile->Clone(getter_AddRefs(seamonkeyPrefsFile));
-  seamonkeyPrefsFile->Append(FILE_NAME_PREFS);
-  psvc->ReadUserPrefs(seamonkeyPrefsFile);
-
   nsXPIDLCString signonsFileName;
-  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
-  rv = branch->GetCharPref("signon.SignonFileName", getter_Copies(signonsFileName));
+  if (aReplace) {
+    // Find out what the signons file was called, this is stored in a pref
+    // in Seamonkey.
+    nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+    psvc->ResetPrefs();
+
+    nsCOMPtr<nsIFile> seamonkeyPrefsFile;
+    mSourceProfile->Clone(getter_AddRefs(seamonkeyPrefsFile));
+    seamonkeyPrefsFile->Append(FILE_NAME_PREFS);
+    psvc->ReadUserPrefs(seamonkeyPrefsFile);
+
+    nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+    rv = branch->GetCharPref("signon.SignonFileName", getter_Copies(signonsFileName));
+  }
+  else 
+    LocateSignonsFile(getter_Copies(signonsFileName));
+
+  if (signonsFileName.IsEmpty())
+    return NS_ERROR_FILE_NOT_FOUND;
 
   nsAutoString fileName; fileName.AssignWithConversion(signonsFileName);
-  return CopyFile(fileName, fileName);
+  if (aReplace)
+    rv = CopyFile(fileName, fileName);
+  else {
+    nsCOMPtr<nsIFile> seamonkeyPasswordsFile;
+    mSourceProfile->Clone(getter_AddRefs(seamonkeyPasswordsFile));
+    seamonkeyPasswordsFile->Append(fileName);
+
+    nsCOMPtr<nsIPasswordManagerInternal> pmi(do_GetService("@mozilla.org/passwordmanager;1"));
+    rv = pmi->ReadPasswords(seamonkeyPasswordsFile);
+  }
+  return rv;
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::LocateSignonsFile(char** aResult)
+{
+  nsCOMPtr<nsISimpleEnumerator> entries;
+  nsresult rv = mSourceProfile->GetDirectoryEntries(getter_AddRefs(entries));
+  if (NS_FAILED(rv)) return rv;
+
+  nsCAutoString fileName;
+  do {
+    PRBool hasMore = PR_FALSE;
+    rv = entries->HasMoreElements(&hasMore);
+    if (NS_FAILED(rv) || !hasMore) break;
+
+    nsCOMPtr<nsISupports> supp;
+    rv = entries->GetNext(getter_AddRefs(supp));
+    if (NS_FAILED(rv)) break;
+
+    nsCOMPtr<nsIFile> currFile(do_QueryInterface(supp));
+
+    nsCOMPtr<nsIURI> uri;
+    rv = NS_NewFileURI(getter_AddRefs(uri), currFile);
+    if (NS_FAILED(rv)) break;
+    nsCOMPtr<nsIURL> url(do_QueryInterface(uri));
+
+    nsCAutoString extn;
+    url->GetFileExtension(extn);
+
+    if (extn.EqualsIgnoreCase("s")) {
+      url->GetFileName(fileName);
+      break;
+    }
+  }
+  while (1);
+
+  *aResult = ToNewCString(fileName);
+
+  return NS_OK;
 }
 
 nsresult
@@ -595,6 +682,6 @@ nsSeamonkeyProfileMigrator::CopyBookmarks(PRBool aReplace)
 nsresult
 nsSeamonkeyProfileMigrator::CopyOtherData(PRBool aReplace)
 {
-  return CopyFile(FILE_NAME_DOWNLOADS, FILE_NAME_DOWNLOADS);
+  return aReplace ? CopyFile(FILE_NAME_DOWNLOADS, FILE_NAME_DOWNLOADS) : NS_OK;
 }
 

@@ -30,9 +30,9 @@ var MigrationWizard = {
     "opera":    { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.BOOKMARKS, nsIBPM.OTHERDATA],    
                    _import: [0, 1, 2, 5, 6] },
     "dogbert":  { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.BOOKMARKS],          
-                   _import: [5] },
+                   _import: [1, 5] },
     "seamonkey":{ _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.PASSWORDS, nsIBPM.BOOKMARKS, nsIBPM.OTHERDATA], 
-                   _import: [5] },
+                   _import: [1, 4, 5] },
   },
   
   _source: "",

@@ -143,7 +143,6 @@ public:
                             nsIAutoCompleteResult** aResult);
 
 protected:
-  void ReadSignonFile();
   void WriteSignonFile();
   void AddSignonData(const nsACString& aRealm, SignonDataEntry* aEntry);
 

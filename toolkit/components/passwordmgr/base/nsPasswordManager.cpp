@@ -274,7 +274,7 @@ nsPasswordManager::Init()
   nsCAutoString path;
   mSignonFile->GetNativePath(path);
 
-  ReadSignonFile();
+  ReadPasswords(mSignonFile);
 
   return NS_OK;
 }
@@ -364,43 +364,6 @@ nsPasswordManager::AddUser(const nsACString& aHost,
   }
 
   SignonDataEntry* entry = new SignonDataEntry();
-  EncryptDataUCS2(aUser, entry->userValue);
-  EncryptDataUCS2(aPassword, entry->passValue);
-
-  AddSignonData(aHost, entry);
-  WriteSignonFile();
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsPasswordManager::AddUserFull(const nsACString& aHost,
-                               const nsAString& aUser,
-                               const nsAString& aPassword,
-                               const nsAString& aUserFieldName,
-                               const nsAString& aPassFieldName)
-{
-  // First check for an existing entry for this host + user
-  if (!aHost.IsEmpty()) {
-    SignonHashEntry *hashEnt;
-    if (mSignonTable.Get(aHost, &hashEnt)) {
-      nsString empty;
-      SignonDataEntry *entry = nsnull;
-      FindPasswordEntryInternal(hashEnt->head, aUser, empty, empty, &entry);
-      if (entry) {
-        // Just change the password
-        EncryptDataUCS2(aPassword, entry->passValue);
-        // ... and update the field names...s
-        entry->userField.Assign(aUserFieldName);
-        entry->passField.Assign(aPassFieldName);
-        return NS_OK;
-      }
-    }
-  }
-
-  SignonDataEntry* entry = new SignonDataEntry();
-  entry->userField.Assign(aUserFieldName);
-  entry->passField.Assign(aPassFieldName);
   EncryptDataUCS2(aUser, entry->userValue);
   EncryptDataUCS2(aPassword, entry->passValue);
 
@@ -604,6 +567,143 @@ nsPasswordManager::FindPasswordEntry(const nsACString& aHostURI,
                            aHostURIFound, aUsernameFound, aPasswordFound);
 
   mSignonTable.EnumerateRead(FindEntryEnumerator, &context);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsPasswordManager::AddUserFull(const nsACString& aHost,
+                               const nsAString& aUser,
+                               const nsAString& aPassword,
+                               const nsAString& aUserFieldName,
+                               const nsAString& aPassFieldName)
+{
+  // First check for an existing entry for this host + user
+  if (!aHost.IsEmpty()) {
+    SignonHashEntry *hashEnt;
+    if (mSignonTable.Get(aHost, &hashEnt)) {
+      nsString empty;
+      SignonDataEntry *entry = nsnull;
+      FindPasswordEntryInternal(hashEnt->head, aUser, empty, empty, &entry);
+      if (entry) {
+        // Just change the password
+        EncryptDataUCS2(aPassword, entry->passValue);
+        // ... and update the field names...s
+        entry->userField.Assign(aUserFieldName);
+        entry->passField.Assign(aPassFieldName);
+        return NS_OK;
+      }
+    }
+  }
+
+  SignonDataEntry* entry = new SignonDataEntry();
+  entry->userField.Assign(aUserFieldName);
+  entry->passField.Assign(aPassFieldName);
+  EncryptDataUCS2(aUser, entry->userValue);
+  EncryptDataUCS2(aPassword, entry->passValue);
+
+  AddSignonData(aHost, entry);
+  WriteSignonFile();
+
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsPasswordManager::ReadPasswords(nsIFile* aPasswordFile)
+{
+  nsCOMPtr<nsIInputStream> fileStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), aPasswordFile);
+  if (!fileStream)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream);
+  NS_ASSERTION(lineStream, "File stream is not an nsILineInputStream");
+
+  // Read the header
+  nsAutoString buffer;
+  PRBool moreData = PR_FALSE;
+  nsresult rv = lineStream->ReadLine(buffer, &moreData);
+  if (NS_FAILED(rv))
+    return NS_OK;
+
+  if (!buffer.Equals(NS_LITERAL_STRING("#2c"))) {
+    NS_ERROR("Unexpected version header in signon file");
+    return NS_OK;
+  }
+
+  enum { STATE_REJECT, STATE_REALM, STATE_USERFIELD, STATE_USERVALUE,
+         STATE_PASSFIELD, STATE_PASSVALUE } state = STATE_REJECT;
+
+  nsCAutoString realm;
+  SignonDataEntry* entry = nsnull;
+
+  do {
+    rv = lineStream->ReadLine(buffer, &moreData);
+    if (NS_FAILED(rv))
+      return NS_OK;
+
+    switch (state) {
+    case STATE_REJECT:
+      if (buffer.Equals(NS_LITERAL_STRING(".")))
+        state = STATE_REALM;
+      else
+        mRejectTable.Put(NS_ConvertUCS2toUTF8(buffer), 1);
+
+      break;
+
+    case STATE_REALM:
+      realm.Assign(NS_ConvertUCS2toUTF8(buffer));
+      state = STATE_USERFIELD;
+      break;
+
+    case STATE_USERFIELD:
+
+      // Commit any completed entry
+      if (entry)
+        AddSignonData(realm, entry);
+
+      // If the line is a ., we've reached the end of this realm's entries.
+      if (buffer.Equals(NS_LITERAL_STRING("."))) {
+        entry = nsnull;
+        state = STATE_REALM;
+      } else {
+        entry = new SignonDataEntry();
+        entry->userField.Assign(buffer);
+        state = STATE_USERVALUE;
+      }
+
+      break;
+
+    case STATE_USERVALUE:
+      NS_ASSERTION(entry, "bad state");
+
+      entry->userValue.Assign(buffer);
+
+      state = STATE_PASSFIELD;
+      break;
+
+    case STATE_PASSFIELD:
+      NS_ASSERTION(entry, "bad state");
+
+      // Strip off the leading "*" character
+      entry->passField.Assign(Substring(buffer, 1, buffer.Length() - 1));
+
+      state = STATE_PASSVALUE;
+      break;
+
+    case STATE_PASSVALUE:
+      NS_ASSERTION(entry, "bad state");
+
+      entry->passValue.Assign(buffer);
+
+      state = STATE_USERFIELD;
+      break;
+    }
+  } while (moreData);
+
+  // Don't leak if the file ended unexpectedly
+  delete entry;
 
   return NS_OK;
 }
@@ -1385,103 +1485,6 @@ Format of the single signon file:
 <EOF>
 
 */
-
-void
-nsPasswordManager::ReadSignonFile()
-{
-  nsCOMPtr<nsIInputStream> fileStream;
-  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), mSignonFile);
-  if (!fileStream)
-    return;
-
-  nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream);
-  NS_ASSERTION(lineStream, "File stream is not an nsILineInputStream");
-
-  // Read the header
-  nsAutoString buffer;
-  PRBool moreData = PR_FALSE;
-  nsresult rv = lineStream->ReadLine(buffer, &moreData);
-  if (NS_FAILED(rv))
-    return;
-
-  if (!buffer.Equals(NS_LITERAL_STRING("#2c"))) {
-    NS_ERROR("Unexpected version header in signon file");
-    return;
-  }
-
-  enum { STATE_REJECT, STATE_REALM, STATE_USERFIELD, STATE_USERVALUE,
-         STATE_PASSFIELD, STATE_PASSVALUE } state = STATE_REJECT;
-
-  nsCAutoString realm;
-  SignonDataEntry* entry = nsnull;
-
-  do {
-    rv = lineStream->ReadLine(buffer, &moreData);
-    if (NS_FAILED(rv))
-      return;
-
-    switch (state) {
-    case STATE_REJECT:
-      if (buffer.Equals(NS_LITERAL_STRING(".")))
-        state = STATE_REALM;
-      else
-        mRejectTable.Put(NS_ConvertUCS2toUTF8(buffer), 1);
-
-      break;
-
-    case STATE_REALM:
-      realm.Assign(NS_ConvertUCS2toUTF8(buffer));
-      state = STATE_USERFIELD;
-      break;
-
-    case STATE_USERFIELD:
-
-      // Commit any completed entry
-      if (entry)
-        AddSignonData(realm, entry);
-
-      // If the line is a ., we've reached the end of this realm's entries.
-      if (buffer.Equals(NS_LITERAL_STRING("."))) {
-        entry = nsnull;
-        state = STATE_REALM;
-      } else {
-        entry = new SignonDataEntry();
-        entry->userField.Assign(buffer);
-        state = STATE_USERVALUE;
-      }
-
-      break;
-
-    case STATE_USERVALUE:
-      NS_ASSERTION(entry, "bad state");
-
-      entry->userValue.Assign(buffer);
-
-      state = STATE_PASSFIELD;
-      break;
-
-    case STATE_PASSFIELD:
-      NS_ASSERTION(entry, "bad state");
-
-      // Strip off the leading "*" character
-      entry->passField.Assign(Substring(buffer, 1, buffer.Length() - 1));
-
-      state = STATE_PASSVALUE;
-      break;
-
-    case STATE_PASSVALUE:
-      NS_ASSERTION(entry, "bad state");
-
-      entry->passValue.Assign(buffer);
-
-      state = STATE_USERFIELD;
-      break;
-    }
-  } while (moreData);
-
-  // Don't leak if the file ended unexpectedly
-  delete entry;
-}
 
 /* static */ PLDHashOperator PR_CALLBACK
 nsPasswordManager::WriteRejectEntryEnumerator(const nsACString& aKey,

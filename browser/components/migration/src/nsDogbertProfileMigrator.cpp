@@ -39,6 +39,7 @@
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsCRT.h"
 #include "nsDogbertProfileMigrator.h"
+#include "nsICookieManager2.h"
 #include "nsIFile.h"
 #include "nsIInputStream.h"
 #include "nsILineInputStream.h"
@@ -52,6 +53,7 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
+#include "nsNetCID.h"
 #include "nsNetUtil.h"
 #include "nsReadableUtils.h"
 #include "prprf.h"
@@ -118,15 +120,22 @@ nsDogbertProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnic
 
   NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
-  CreateTemplateProfile(aProfile);
+  if (aReplace)
+    CreateTemplateProfile(aProfile);
+  else {
+    nsCOMPtr<nsIProfileInternal> pmi(do_GetService("@mozilla.org/profile/manager;1"));
+    nsXPIDLString currProfile;
+    pmi->GetCurrentProfile(getter_Copies(currProfile));
+    nsCOMPtr<nsIFile> dir;
+    pmi->GetProfileDir(currProfile.get(), getter_AddRefs(dir));
+    mTargetProfile = do_QueryInterface(dir);
+  }
 
   nsCOMPtr<nsIProfileInternal> pmi(do_GetService("@mozilla.org/profile/manager;1"));
   pmi->GetOriginalProfileDir(aProfile, getter_AddRefs(mSourceProfile));
 
-  if (aReplace) {
-    COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
-    COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
-  }
+  COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
+  COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
   COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
 
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
@@ -256,6 +265,9 @@ nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
 {
   nsresult rv = NS_OK;
 
+  if (!aReplace)
+    return rv;
+
   // 1) Copy Preferences
   TransformPreferences(PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
 
@@ -296,14 +308,29 @@ nsDogbertProfileMigrator::GetImagePref(void* aTransform, nsIPrefBranch* aBranch)
 nsresult
 nsDogbertProfileMigrator::CopyCookies(PRBool aReplace)
 {
+  nsresult rv;
+  if (aReplace) {
 #ifdef NEED_TO_FIX_4X_COOKIES
-  nsresult rv = CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
-  if (NS_FAILED(rv)) return rv;
+    nsresult rv = CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
+    if (NS_FAILED(rv)) return rv;
 
-  return FixDogbertCookies();
+    rv = FixDogbertCookies();
 #else
-  return CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
+    rv = CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
 #endif
+  }
+  else {
+    nsCOMPtr<nsICookieManager2> cookieManager(do_GetService(NS_COOKIEMANAGER_CONTRACTID));
+    if (!cookieManager)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    nsCOMPtr<nsIFile> dogbertCookiesFile;
+    mSourceProfile->Clone(getter_AddRefs(dogbertCookiesFile));
+    dogbertCookiesFile->Append(COOKIES_FILE_NAME_IN_4x);
+
+    rv = cookieManager->ReadCookies(dogbertCookiesFile);
+  }
+  return rv;
 }
 
 #ifdef NEED_TO_FIX_4X_COOKIES
