@@ -1,3 +1,17 @@
+2000-09-13  Leif Hedstrom  <leif@perldap.org>
+
+	* Utils.pm (askPassword): Oops, stupid typo here, should be
+	"unless $prompt" of course...
+
+2000-09-13  Leif Hedstrom  <leif@perldap.org>
+
+	* Entry.pm (isDeleted): Removed a test which made this function
+	not working at all... :)
+
+2000-09-13  Leif Hedstrom  <leif@perldap.org>
+
+	* Removed an if defined() to avoid warnings with Perl v5.6.
+
 2000-06-24  Wolfram Schmidt  <wschmidt@decefix.iao.fhg.de>
 
 	* Entry.pm (FIRSTKEY): Fix bug for deleting all attributes and calling
@@ -7,6 +21,10 @@
 
 	* Makefile.PL: Added fix so API.xs compiles under Perl 5.6
 	(POLLUTE=>1)
+
+2000-05-30  Leif Hedstrom  <leif@perldap.org>
+
+	* Lots of small fixes...
 
 1999-09-07  Leif Hedstrom  <leif@perldap.org>
 
