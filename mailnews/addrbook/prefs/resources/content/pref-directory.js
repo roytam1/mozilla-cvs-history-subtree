@@ -381,7 +381,6 @@ function editDirectory()
     var cell =  row.firstChild; 
     cell.setAttribute('label', gNewServer); 
     cell.setAttribute('string', gNewServerString);
-    
     // window.opener is either global pref window or 
     // mail/news account settings window.
     // set window.opener.gRefresh to true such that the 
