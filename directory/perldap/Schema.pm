@@ -36,9 +36,53 @@ use overload
 @ISA = ('Tie::StdHash');
 $VERSION = "2.0";
 
+sub new
+{
+
+  # do the search for everything
+  my ($self) = shift;
+  my (%args);
+
+  %args = @_ unless (scalar(@_) % 2);
+  
+  if (! defined($args{"basedn"}))
+    {
+      $args{"base"} = "cn=schema";
+    }
+
+  
+  my $initialReturn = $args{"conn"}->search($args{"base"},
+					    "base",
+					    "objectclass=*");
+
+my @attributeArray = $initialReturn->getValues("attributetypes");
+  foreach (@attributeArray)  {
+    $attr = new Mozilla::LDAP::Schema::Attribute($_);
+  }
+  $objclass = new Mozilla::LDAP::Schema::ObjectClass();
+  
+  
+}
+
 package Mozilla::LDAP::Schema::Attribute;
 
+sub new 
+{
+  
+  $tmp = shift;
+
+  #take off the first and last parentheses
+  chop ($tmp);
+
+  return self;
+}  
+
 package Mozilla::LDAP::Schema::ObjectClass;
+
+sub new
+{
+  return self;
+}
 
 #############################################################################
 # Mandatory TRUE return value.
