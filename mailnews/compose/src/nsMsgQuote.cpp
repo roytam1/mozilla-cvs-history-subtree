@@ -189,7 +189,11 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
     ptr->mMessageService = nsnull;
   }
 
-  if (NS_FAILED(aExitCode))
+  /* mscott - the NS_BINDING_ABORTED is a hack to get around a problem I have
+     with the necko code...it returns this and treats it as an error when
+	 it really isn't an error! I'm trying to get them to change this.
+   */
+  if (NS_FAILED(aExitCode) && aExitCode != NS_BINDING_ABORTED)
   {
     NS_RELEASE(ptr);
     return aExitCode;
