@@ -57,6 +57,8 @@
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsXULDocument.h"
+#include "nsIJSRuntimeService.h"
+#include "jsapi.h"
 
 class nsXULPrototypeCache : public nsIXULPrototypeCache
 {
@@ -94,11 +96,16 @@ protected:
     nsXULPrototypeCache();
     virtual ~nsXULPrototypeCache();
 
+    static PRBool UnlockJSObjectCallback(nsHashKey* aKey, void* aData, void* aClosure);
+    JSRuntime*  GetJSRuntime();
+
     nsSupportsHashtable mPrototypeTable;
     nsSupportsHashtable mStyleSheetTable;
     nsHashtable         mScriptTable;
     nsSupportsHashtable mXBLDocTable;
-    
+
+    JSRuntime*          mJSRuntime;
+
     class nsIURIKey : public nsHashKey {
     protected:
         nsCOMPtr<nsIURI> mKey;
@@ -154,6 +161,7 @@ DisableXULCacheChangedCallback(const char* aPref, void* aClosure)
 
 
 nsXULPrototypeCache::nsXULPrototypeCache()
+    : mJSRuntime(nsnull)
 {
     NS_INIT_REFCNT();
 }
@@ -224,6 +232,17 @@ nsXULPrototypeCache::PutPrototype(nsIXULPrototypeDocument* aDocument)
     return NS_OK;
 }
 
+JSRuntime*
+nsXULPrototypeCache::GetJSRuntime()
+{
+    if (!mJSRuntime) {
+        nsCOMPtr<nsIJSRuntimeService> rtsvc = do_GetService("@mozilla.org/js/xpc/RuntimeService;1");
+        if (rtsvc)
+            rtsvc->GetRuntime(&mJSRuntime);
+    }
+
+    return mJSRuntime;
+}
 
 NS_IMETHODIMP
 nsXULPrototypeCache::FlushPrototypes()
@@ -231,7 +250,7 @@ nsXULPrototypeCache::FlushPrototypes()
     mPrototypeTable.Reset();
 
     // Clear the script cache, as it refers to prototype-owned mJSObjects.
-    mScriptTable.Reset();
+    FlushScripts();
     return NS_OK;
 }
 
@@ -281,14 +300,25 @@ nsXULPrototypeCache::PutScript(nsIURI* aURI, void* aScriptObject)
 {
     nsIURIKey key(aURI);
     mScriptTable.Put(&key, aScriptObject);
+
+    // Lock the object from being gc'd until it is removed from the cache
+    JS_LockGCThingRT(GetJSRuntime(), aScriptObject);
     return NS_OK;
 }
 
+/* static */
+PRBool
+nsXULPrototypeCache::UnlockJSObjectCallback(nsHashKey *aKey, void *aData, void* aClosure)
+{
+    JS_UnlockGCThingRT((JSRuntime*) aClosure, aData);
+    return PR_TRUE;
+}
 
 NS_IMETHODIMP
 nsXULPrototypeCache::FlushScripts()
 {
-    mScriptTable.Reset();
+    // This callback will unlock each object so it can once again be gc'd.
+    mScriptTable.Reset(UnlockJSObjectCallback, (void*) GetJSRuntime());
     return NS_OK;
 }
 
@@ -426,10 +456,9 @@ nsXULPrototypeCache::FlushSkinFiles()
 NS_IMETHODIMP
 nsXULPrototypeCache::Flush()
 {
-    FlushPrototypes();
+    FlushPrototypes();  // flushes the script table as well
     FlushStyleSheets();
     FlushXBLInformation();
-    FlushScripts();
     return NS_OK;
 }
 
