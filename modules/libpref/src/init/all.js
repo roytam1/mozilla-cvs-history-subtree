@@ -499,6 +499,8 @@ pref("network.protocol-handler.external.vbscript", false);
 pref("network.protocol-handler.external.javascript", false);
 pref("network.protocol-handler.external.ms-help", false);
 pref("network.protocol-handler.external.vnd.ms.radio", false);
+pref("network.protocol-handler.external.help", false);
+pref("network.protocol-handler.external.disk", false);
 
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
