@@ -746,6 +746,8 @@ SimplePluginInstance::GetPeer(nsIPluginInstancePeer* *result)
     return NS_OK;
 }
 
+#include "nsIPrefsManager.h"
+
 NS_METHOD
 SimplePluginInstance::Start(void)
 {
@@ -771,11 +773,13 @@ SimplePluginInstance::Start(void)
     }
 
 #ifdef NEW_PLUGIN_STREAM_API
+    nsIServiceManager* servMgr = gPlugin->GetServiceManager();
+    nsresult err;
+
     // Try getting some streams:
     nsIPluginManager* pMgr = NULL;
-    nsIServiceManager* servMgr = gPlugin->GetServiceManager();
-    nsresult err = servMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
-                                       (nsISupports**)&pMgr);
+    err = servMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
+                              (nsISupports**)&pMgr);
     if (err == NS_OK) {
         pMgr->GetURL(this, "http://warp", NULL,
                      new SimplePluginStreamListener(this, "http://warp (Normal)"));
@@ -794,6 +798,22 @@ SimplePluginInstance::Start(void)
 
         servMgr->ReleaseService(kPluginManagerCID, pMgr);
     }
+
+    // Try to access a preference
+    nsIPrefsManager* prefs = NULL;
+    static NS_DEFINE_IID(kIPrefsManagerIID, NS_IPREFSMANAGER_IID);
+    static NS_DEFINE_IID(kPrefsManagerCID, NS_PREFSMANAGER_CID);
+    err = servMgr->GetService(kPrefsManagerCID, kIPrefsManagerIID, 
+                              (nsISupports**)&prefs);
+    if (err == NS_OK) {
+        char home[128];
+        int homeLen = 128;
+        err = prefs->GetCharPref("browser.startup.homepage", home, &homeLen); 
+        home[homeLen] = '\0';
+        DisplayJavaMessage(home, -1);
+        servMgr->ReleaseService(kPrefsManagerCID, prefs);
+    }
+    
 #endif
 
     return NS_OK;
