@@ -40,6 +40,7 @@
 #include "nsMsgSend.h"
 #include "nsMsgCreate.h"
 #include "nsMailHeaders.h"
+#include "nsMsgPrompts.h"
 
 // XXX temporary so we can use the current identity hack -alecf
 #include "nsIMsgMailSession.h"
@@ -366,6 +367,11 @@ nsresult nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode,
 	}
 	
 	rv = _SendMsg(deliverMode, identity, callback);
+	if (NS_FAILED(rv))
+	{
+		ShowWindow(PR_TRUE);
+		nsMsgDisplayMessageByID(rv);
+	}
 	
 	return rv;
 }
@@ -443,6 +449,11 @@ nsMsgCompose::SendMsgEx(MSG_DeliverMode deliverMode,
 	else
 		rv = NS_ERROR_NOT_INITIALIZED;
 
+	if (NS_FAILED(rv))
+	{
+		ShowWindow(PR_TRUE);
+		nsMsgDisplayMessageByID(rv);
+	}
 	return rv;
 }
 
