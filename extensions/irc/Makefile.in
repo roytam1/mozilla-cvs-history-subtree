@@ -35,6 +35,6 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 EXTRA_COMPONENTS = js/lib/chatzilla-service.js
+PACKAGE_FILE = chatzilla.pkg
 
 include $(topsrcdir)/config/rules.mk
-

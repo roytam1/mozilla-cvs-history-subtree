@@ -11,15 +11,14 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is mozilla.org code.
+# The Original Code is Mozilla packaging code.
 #
 # The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2002
+# Benjamin Smedberg <bsmedberg@covad.net>_.
+# Portions created by the Initial Developer are Copyright (C) 2003
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-# Srilatha Moturi <srilatha@netscape.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,89 +34,36 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../../..
+DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= impComm4xMail
-
-ifndef MOZ_STATIC_MAIL_BUILD
-
-LIBRARY_NAME	= impComm4xMail
-
-# don't define SHORT_LIBNAME on WINNT
-# see bug # 141438
-
-ifneq ($(OS_ARCH),WINNT)
-SHORT_LIBNAME	= imp4Mail
-endif
-
-EXPORT_LIBRARY  = 1
-IS_COMPONENT	= 1
-MODULE_NAME     = nsComm4xMailImportModule
-
-else
-
-LIBRARY_NAME   = imp4mail_s
-
-endif
-
-PACKAGE_FILE = importcomm4x.pkg
-
-META_COMPONENT  = mail
-REQUIRES	= xpcom \
-		  xpcom_obsolete \
-		  string \
-		  intl \
-		  import \
-		  necko \
-		  msgbase \
-		  msgbaseutil \
-		  profile \
-		  prefmigr \
-		  unicharutil \
-		  $(NULL)
-
-CPPSRCS		= 	\
-			nsComm4xMailImport.cpp			\
-			nsComm4xMail.cpp				\
-			nsComm4xProfile.cpp				\
-			$(NULL)
-
-
-ifndef MOZ_STATIC_MAIL_BUILD
-
-CPPSRCS	 += nsComm4xMailFactory.cpp 
-
-ifeq ($(USE_SHORT_LIBNAME),1)
-EXTRA_DSO_LIBS += msgbsutl
-else
-EXTRA_DSO_LIBS += msgbaseutil
-endif
-
-EXTRA_DSO_LDOPTS = \
-	$(LIBS_DIR) \
-	$(EXTRA_DSO_LIBS) \
-	$(MOZ_COMPONENT_LIBS) \
-	$(MOZ_XPCOM_OBSOLETE_LIBS) \
-	$(NULL)
-
-else
-
-EXPORTS     = \
-            nsComm4xProfile.h               \
-	    nsComm4xMailStringBundle.h      \
-	    nsComm4xMailImport.h	    \
-	    nsComm4xMail.h		    \
-            $(NULL)
-
-# we don't want the shared lib, but we want to force the creation of a static lib.
-FORCE_STATIC_LIB = 1
-
-endif
+# This makefile doesn't do anything by default. Use one of the special targets
+# below to stage and build packages.
 
 include $(topsrcdir)/config/rules.mk
 
+# override these variables in special situations
+STAGE_DIR = $(DEPTH)/stage
+PACKAGE_LIST = $(srcdir)/packages.list
+PACKAGE_FLAGS = 
+HANDLERS = xptmerge,touch
+MAPPINGS = dist/bin=bin
+VERBOSE = -v
+
+dump-packages:
+	cd $(DEPTH);
+	$(PERL) -I $(srcdir) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST)
+
+ifndef PACKAGES
+stage-packages:
+	@echo "Please set PACKAGES on the makefile command line or environment."
+
+else #PACKAGE
+stage-packages:
+	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m , $(MAPPINGS)) -c $(HANDLERS) -v $(PACKAGES)
+
+endif

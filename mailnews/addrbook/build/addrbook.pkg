@@ -1,0 +1,6 @@
+[xpfe-mailnews]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+dist/bin/components/nsLDAPPrefsService.js
+!xpt dist/bin/components/addrbook.xpt

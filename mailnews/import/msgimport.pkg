@@ -1,0 +1,3 @@
+[xpfe-mailnews]
+dist/bin/components/@DLLP@import@DLLS@
+!xpt dist/bin/components/import.xpt

@@ -47,6 +47,7 @@ add_makefiles "
 Makefile
 build/Makefile
 build/unix/Makefile
+build/package/Makefile
 config/Makefile
 config/autoconf.mk
 config/mkdepend/Makefile

@@ -30,6 +30,9 @@ MODULE		= mailview
 
 DIRS		= public src resources
 
+PACKAGE_FILE = mailviews.pkg
+PACKAGE_VARS += MOZ_STATIC_MAIL_BUILD
+
 ifndef MOZ_STATIC_MAIL_BUILD
 DIRS += build
 endif

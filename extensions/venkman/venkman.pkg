@@ -1,0 +1,3 @@
+[venkman]
+dist/bin/components/venkman-service.js
+dist/bin/chrome/venkman.jar
