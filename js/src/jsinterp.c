@@ -991,6 +991,7 @@ js_Interpret(JSContext *cx, jsval *result)
     JSRuntime *rt;
     JSStackFrame *fp;
     JSScript *script;
+    JSVersion newvers, oldvers;
     JSObject *obj, *obj2, *proto, *parent;
     JSBranchCallback onbranch;
     JSBool ok, cond;
@@ -1051,6 +1052,14 @@ js_Interpret(JSContext *cx, jsval *result)
     fp = cx->fp;
     script = fp->script;
     obj = fp->scopeChain;
+
+    /*
+     * Optimized Get and SetVersion for proper script language versioning.
+     */
+    newvers = script->version;
+    oldvers = cx->version;
+    if (newvers != oldvers)
+        JS_SetVersion(cx, newvers);
 
     /*
      * Prepare to call a user-supplied branch handler, and abort the script
@@ -3015,6 +3024,8 @@ no_catch:
      * Restore the previous frame's execution state.
      */
     js_FreeStack(cx, mark);
+    if (newvers != oldvers)
+        JS_SetVersion(cx, oldvers);
     cx->interpLevel--;
     return ok;
 }

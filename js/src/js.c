@@ -1336,7 +1336,7 @@ static JSFunctionSpec shell_functions[] = {
 
 static char *shell_help_messages[] = {
     "version [number]       Get or set JavaScript version number",
-    "options [option ...]   Get or set JavaScript options",
+    "options [option ...]   Get or toggle JavaScript options",
     "load ['foo.js' ...]    Load files named by string arguments",
     "print [expr ...]       Evaluate and print expressions",
     "help [name ...]        Display usage and help messages",

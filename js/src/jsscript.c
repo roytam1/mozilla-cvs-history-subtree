@@ -330,14 +330,15 @@ JSBool
 js_XDRScript(JSXDRState *xdr, JSScript **scriptp, JSBool *hasMagic)
 {
     JSScript *script;
-    uint32 length, prologLength, lineno, depth, magic, notelen, numtrys;
+    uint32 length, lineno, depth, magic, notelen, numtrys;
+    uint32 prologLength, version;
 
     script = *scriptp;
     numtrys = 0;
 
     /*
-     * Encode prologLength after script->length (_2), but decode both new
-     * (_2) and old, prolog-free (_1) scripts.
+     * Encode prologLength and version after script->length (_2), but decode
+     * both new (_2) and old, prolog&version-free (_1) scripts.
      */
     if (xdr->mode == JSXDR_ENCODE)
         magic = JSXDR_MAGIC_SCRIPT_CURRENT;
@@ -353,6 +354,7 @@ js_XDRScript(JSXDRState *xdr, JSScript **scriptp, JSBool *hasMagic)
         jssrcnote *end = script->notes;
         length = script->length;
         prologLength = script->main - script->code;
+        version = (int32) script->version;
         lineno = (uint32)script->lineno;
         depth = (uint32)script->depth;
 
@@ -371,15 +373,21 @@ js_XDRScript(JSXDRState *xdr, JSScript **scriptp, JSBool *hasMagic)
 
     if (!JS_XDRUint32(xdr, &length))
         return JS_FALSE;
-    if (magic == JSXDR_MAGIC_SCRIPT_2 && !JS_XDRUint32(xdr, &prologLength))
-        return JS_FALSE;
+    if (magic == JSXDR_MAGIC_SCRIPT_2) {
+        if (!JS_XDRUint32(xdr, &prologLength))
+            return JS_FALSE;
+        if (!JS_XDRUint32(xdr, (uint32 *) &version))
+            return JS_FALSE;
+    }
 
     if (xdr->mode == JSXDR_DECODE) {
         script = js_NewScript(xdr->cx, length);
         if (!script)
             return JS_FALSE;
-        if (magic == JSXDR_MAGIC_SCRIPT_2)
+        if (magic == JSXDR_MAGIC_SCRIPT_2) {
             script->main += prologLength;
+            script->version = (JSVersion) version;
+        }
         *scriptp = script;
     }
 
@@ -674,6 +682,7 @@ js_NewScript(JSContext *cx, uint32 length)
     memset(script, 0, sizeof(JSScript));
     script->code = script->main = (jsbytecode *)(script + 1);
     script->length = length;
+    script->version = cx->version;
     return script;
 }
 

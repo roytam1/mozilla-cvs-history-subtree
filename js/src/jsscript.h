@@ -59,6 +59,7 @@ struct JSScript {
     jsbytecode   *code;         /* bytecodes and their immediate operands */
     uint32       length;        /* length of code vector */
     jsbytecode   *main;         /* main entry point, after predef'ing prolog */
+    JSVersion    version;       /* JS version under which script was compiled */
     JSAtomMap    atomMap;       /* maps immediate index to literal struct */
     const char   *filename;     /* source filename or null */
     uintN        lineno;        /* base line number of script */
