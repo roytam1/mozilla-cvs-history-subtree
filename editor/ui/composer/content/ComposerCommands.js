@@ -798,6 +798,7 @@ function GetOutputFlags(aMimeType, aWrapColumn)
 
 // returns number of column where to wrap
 const nsIPlaintextEditor = Components.interfaces.nsIPlaintextEditor;
+const nsIHTMLEditor = Components.interfaces.nsIHTMLEditor;
 function GetWrapColumn()
 {
   var wrapCol = 72;
@@ -945,6 +946,20 @@ var gEditorOutputProgressListener =
         // Do not do any commands after failure
         gCommandAfterPublishing = null;
 
+        // Restore original document to undo image src url adjustments
+        if (gRestoreDocumentSource)
+        {
+          try {
+            var htmlEditor = window.editorShell.editor.QueryInterface(nsIHTMLEditor);
+            htmlEditor.rebuildDocumentFromSource(gRestoreDocumentSource);
+
+            // Clear transaction cache since we just did a potentially 
+            //  very large insert and this will eat up memory
+            window.editorShell.editor.transactionManager.clear();
+          }
+          catch (e) {}
+        }
+
         // Show error in progress dialog and let user close it
         if (gProgressDialog)
         {
@@ -978,9 +993,9 @@ var gEditorOutputProgressListener =
 
           window.editorShell.doAfterSave(true, urlstring);  // we need to update the url before notifying listeners
           var editor = window.editorShell.editor.QueryInterface(Components.interfaces.nsIEditor);
-          editor.resetModificationCount();
           // this should cause notification to listeners that doc has changed
-
+          editor.resetModificationCount();
+          
           // Set UI based on whether we're editing a remote or local url
           SetSaveAndPublishUI(urlstring);
 
@@ -1496,6 +1511,7 @@ function SaveDocument(aSaveAs, aSaveCopy, aMimeType)
 var gPublishData;
 var gProgressDialog;
 var gCommandAfterPublishing = null;
+var gRestoreDocumentSource;
 
 function Publish(publishData)
 {
@@ -1524,8 +1540,7 @@ function Publish(publishData)
     dump("\n *** publishData: PublishUrl="+publishData.publishUrl+", BrowseUrl="+publishData.browseUrl+
       ", Username="+publishData.username+", Dir="+publishData.docDir+
       ", Filename="+publishData.filename+"\n");
-//    dump(" * gPublishData.docURI.spec w/o pass="+StripPassword(gPublishData.docURI.spec)+", PublishOtherFiles="+gPublishData.publishOtherFiles+"\n");
-    dump(" * gPublishData.docURI.spec w/o pass="+gPublishData.docURI.spec+", PublishOtherFiles="+gPublishData.publishOtherFiles+"\n");
+    dump(" * gPublishData.docURI.spec w/o pass="+StripPassword(gPublishData.docURI.spec)+", PublishOtherFiles="+gPublishData.publishOtherFiles+"\n");
   }
 
   // XXX Missing username will make FTP fail 
@@ -1574,9 +1589,24 @@ function Publish(publishData)
 function StartPublishing()
 {
   if (gPublishData && gPublishData.docURI)
+  {
+    gRestoreDocumentSource = null;
+
+    // Save backup document since nsIWebBrowserPersist changes image src urls
+    // but we only need to do this if publishing images and other related files
+    if (gPublishData.otherFilesURI)
+    {
+      try {
+        // (256 = Output encoded entities)
+        gRestoreDocumentSource = 
+          window.editorShell.editor.outputToString(window.editorShell.contentsMIMEType, 256);
+      } catch (e) {}
+    }
+
     OutputFileWithPersistAPI(window.editorShell.editorDocument, 
                              gPublishData.docURI, gPublishData.otherFilesURI, 
                              window.editorShell.contentsMIMEType);
+  }
 }
 
 function CancelPublishing()
@@ -1604,6 +1634,7 @@ function FinishPublishing()
   SetDocumentEditable(true);
   gProgressDialog = null;
   gPublishData = null;
+  gRestoreDocumentSource = null;
 
   if (gCommandAfterPublishing)
   {
