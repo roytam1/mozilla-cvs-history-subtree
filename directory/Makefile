@@ -78,12 +78,6 @@ ifneq ($(HAVE_CCONF), 1)
 	else \
 		echo "No NSS $(NSS_VERSION) directory found"; \
 	fi
-	@if [ -d $(CONFIGDIR)/ ]; then \
-		cd $(CONFIGDIR); \
-		gmake; \
-	else \
-		echo "No $(CONFIGDIR) directory found"; \
-	fi
 else
 	@if [ -d $(CORECONFDIR)/ ]; then \
 		echo "coreconf $(CORECONFDIR) directory found"; \
@@ -104,6 +98,12 @@ else
 		echo "No $(CORECONFDIR) directory found"; \
 	fi
 endif
+	@if [ -d $(CONFIGDIR)/ ]; then \
+		cd $(CONFIGDIR); \
+		gmake; \
+	else \
+		echo "No $(CONFIGDIR) directory found"; \
+	fi
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
 		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) export; \
@@ -139,11 +139,11 @@ ifeq ($(HAVE_CCONF), 1)
 			exit 0; \
 		fi \
 	fi
-	@if [  -d $(CORECONFDIR)/ ]; then \
-		echo "coreconf directory found"; \
+	@if [ -d $(CORECONFDIR)/ ]; then \
+		cd $(CORECONFDIR); \
+		gmake; \
 	else \
-		echo "No coreconf directory found"; \
-		exit 0; \
+		echo "No $(CORECONFDIR) directory found"; \
 	fi
 ifeq ($(OS_ARCH), WINNT)
 	cd $(CORECONFDIR)/dbm; \
