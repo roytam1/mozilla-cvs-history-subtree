@@ -38,10 +38,10 @@ import java.io.FileNotFoundException;
 
 /**
  *
- *  <p><B>BrowserControlFactory</B> uses the discovery algorithm below
- *  to find an implementation of {@link WebclientFactory}.  All of the
- *  public static methods in this class simply call through to this
- *  implemenatation instance.</p>
+ *  <p><B>BrowserControlFactory</B> uses {@link
+ *  Utilities#getImplFromServices} to find an implementation of {@link
+ *  WebclientFactory}.  All of the public static methods in this class
+ *  simply call through to this implemenatation instance.</p>
  *
  *
  * @version $Id$

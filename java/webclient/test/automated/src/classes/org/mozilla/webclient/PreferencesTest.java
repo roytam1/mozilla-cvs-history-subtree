@@ -104,6 +104,8 @@ public class PreferencesTest extends WebclientTestCase {
 	// test that our pref-change callback has not been called.
 	assertFalse(System.getProperty(PREFNAME).equals(CLOSURE));
 	
+	// clear the preference
+	prefs.setPref(PREFNAME, null);
 
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
 	BrowserControlFactory.appTerminate();
