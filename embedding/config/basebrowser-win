@@ -31,6 +31,13 @@ nspr4.dll
 plc4.dll       
 plds4.dll  
 
+;
+; Java/LiveConnect
+;
+;components\oji.dll
+;components\oji.xpt
+;jsj3250.dll
+
 ; 
 ; Javascript:
 ; 
