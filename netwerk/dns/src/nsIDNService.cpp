@@ -242,6 +242,9 @@ NS_IMETHODIMP nsIDNService::IsACE(const nsACString & input, PRBool *_retval)
 
 NS_IMETHODIMP nsIDNService::Normalize(const nsACString & input, nsACString & output)
 {
+  // protect against bogus input
+  NS_ENSURE_TRUE(IsUTF8(input), NS_ERROR_UNEXPECTED);
+
   nsAutoString outUTF16;
   nsresult rv = stringPrep(NS_ConvertUTF8toUTF16(input), outUTF16);
   if (NS_SUCCEEDED(rv))
