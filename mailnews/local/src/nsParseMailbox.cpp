@@ -52,28 +52,32 @@ NS_IMPL_ISUPPORTS_INHERITED(nsMsgMailboxParser, nsParseMailMessageState, nsIStre
 
 // Whenever data arrives from the connection, core netlib notifices the protocol by calling
 // OnDataAvailable. We then read and process the incoming data from the input stream. 
-NS_IMETHODIMP nsMsgMailboxParser::OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength)
+NS_IMETHODIMP nsMsgMailboxParser::OnDataAvailable(nsISupports *ctxt, nsIInputStream *aIStream, PRUint32 sourceOffset, 
+												  PRUint32 aLength)
 {
 	// right now, this really just means turn around and process the url
-	ProcessMailboxInputStream(aURL, aIStream, aLength);
-	return NS_OK;
+	nsresult rv = NS_OK;
+	nsCOMPtr<nsIURL> url = do_QueryInterface(ctxt, &rv);
+	if (NS_SUCCEEDED(rv))
+		rv = ProcessMailboxInputStream(url, aIStream, aLength);
+	return rv;
 }
 
-NS_IMETHODIMP nsMsgMailboxParser::OnStartBinding(nsIURI* aURL, const char *aContentType)
+NS_IMETHODIMP nsMsgMailboxParser::OnStartBinding(nsISupports *ctxt)
 {
 	// extract the appropriate event sinks from the url and initialize them in our protocol data
 	// the URL should be queried for a nsIMailboxURL. If it doesn't support a mailbox URL interface then
 	// we have an error.
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIMailboxUrl> runningUrl = do_QueryInterface(aURL, &rv);
-	printf("\n+++ nsMsgMailboxParser::OnStartBinding: URL: %p, Content type: %s\n", aURL, aContentType);
+	nsCOMPtr<nsIMailboxUrl> runningUrl = do_QueryInterface(ctxt, &rv);
+	nsCOMPtr<nsIURI> url = do_QueryInterface(ctxt);
 
 	if (NS_SUCCEEDED(rv) && runningUrl)
 	{
 		// okay, now fill in our event sinks...Note that each getter ref counts before
 		// it returns the interface to us...we'll release when we are done
-		const char	*fileName;
-		aURL->GetFile(&fileName);
+		char	*fileName;
+		url->GetPath(&fileName);
 		if (fileName)
 		{
 			nsFilePath dbPath(fileName);
@@ -89,6 +93,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartBinding(nsIURI* aURL, const char *aCont
 			}
 			NS_ASSERTION(m_mailDB, "failed to open mail db parsing folder");
 			printf("url file = %s\n", fileName);
+			nsCRT::free(fileName);
 		}
 	}
 
@@ -99,7 +104,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartBinding(nsIURI* aURL, const char *aCont
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsMsgMailboxParser::OnStopBinding(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsMsgMailboxParser::OnStopBinding(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
 	DoneParsingFolder();
 	// what can we do? we can close the stream?
@@ -131,7 +136,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStopBinding(nsIURI* aURL, nsresult aStatus, 
 				msgHdr->GetMessageKey(&key);
 				msgHdr->GetAuthor(author);
 				msgHdr->GetSubject(subject);
-#ifdef DEBUG
+#ifdef DEBUG_bienvenu
 				// leak nsString return values...
 				printf("hdr key = %d, author = %s subject = %s\n", key, author.GetBuffer(), subject.GetBuffer());
 #endif
