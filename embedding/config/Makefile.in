@@ -76,11 +76,11 @@ endif
 	fi
 	$(NSINSTALL) -t $(srcdir)/installed-chrome.txt $(DIST)/Embed/chrome
 	$(NSINSTALL) -t $(srcdir)/readme.html $(DIST)/Embed
-	$(NSINSTALL) -t $(DEPTH)/embedding/lite/$(LIB_PREFIX)embed_lite$(DLL_SUFFIX) $(DIST)/Embed/components
+	-$(NSINSTALL) -t $(DEPTH)/embedding/lite/$(LIB_PREFIX)embed_lite$(DLL_SUFFIX) $(DIST)/Embed/components
 ifeq ($(OS_ARCH),WINNT)
 ifeq ($(WINAPP),mfcembed)
-	$(NSINSTALL) -t $(DIST)/bin/mfcembed.exe $(DIST)/Embed
-	$(NSINSTALL) -t $(DIST)/bin/mfcEmbedComponents.dll $(DIST)/Embed
+	-$(NSINSTALL) -t $(DIST)/bin/mfcembed.exe $(DIST)/Embed
+	-$(NSINSTALL) -t $(DIST)/bin/mfcEmbedComponents.dll $(DIST)/Embed
 else
 ifeq ($(WINAPP),winembed)
 	$(NSINSTALL) -t $(DIST)/bin/winembed.exe $(DIST)/Embed
