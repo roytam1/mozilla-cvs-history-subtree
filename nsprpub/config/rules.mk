@@ -62,12 +62,10 @@ endif
 
 ifdef USE_AUTOCONF
 ifdef INTERNAL_TOOLS
-ifdef CROSS_COMPILE
 CC=$(HOST_CC)
 CCC=$(HOST_CXX)
 CFLAGS=$(HOST_CFLAGS)
 CXXFLAGS=$(HOST_CXXFLAGS)
-endif
 endif
 endif
 
