@@ -55,7 +55,7 @@ DIRS =						\
 	xbl					\
 	xpath					\
 	ls					\
-	xul
+	xul					\
 	webforms
 
 ifdef MOZ_SVG
