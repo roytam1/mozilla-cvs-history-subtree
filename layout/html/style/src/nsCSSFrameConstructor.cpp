@@ -5182,13 +5182,13 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       } // End of AUTOREPEATBUTTON CONSTRUCTION logic
 
 
-	   // TITLEBAR CONSTRUCTION
-	   else if (aTag == nsXULAtoms::titlebar) {
+      // TITLEBAR CONSTRUCTION
+      else if (aTag == nsXULAtoms::titlebar) {
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewTitleBarFrame(aPresShell, &newFrame);
 
-		  // Boxes can scroll.
+        // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
 
           // set the top to be the newly created scrollframe
@@ -5206,8 +5206,8 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         } 
       } // End of TITLEBAR CONSTRUCTION logic
 
-	   // RESIZER CONSTRUCTION
-	   else if (aTag == nsXULAtoms::resizer) {
+      // RESIZER CONSTRUCTION
+      else if (aTag == nsXULAtoms::resizer) {
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewResizerFrame(aPresShell, &newFrame);
@@ -6489,12 +6489,12 @@ nsCSSFrameConstructor::IsScrollable(nsIPresContext*       aPresContext,
   // For the time being it's scrollable if the overflow property is auto or
   // scroll, regardless of whether the width or height is fixed in size
   switch (aDisplay->mOverflow) {
-  	case NS_STYLE_OVERFLOW_SCROLL:
-  	case NS_STYLE_OVERFLOW_AUTO:
-  	case NS_STYLE_OVERFLOW_SCROLLBARS_NONE:
-  	case NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL:
-  	case NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL:
-	    return PR_TRUE;
+    case NS_STYLE_OVERFLOW_SCROLL:
+    case NS_STYLE_OVERFLOW_AUTO:
+    case NS_STYLE_OVERFLOW_SCROLLBARS_NONE:
+    case NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL:
+    case NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL:
+      return PR_TRUE;
   }
   return PR_FALSE;
 }
