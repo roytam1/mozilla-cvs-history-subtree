@@ -25,6 +25,8 @@ var gDefaultPickerMode = "1";
 
 var gFccFolderWithDelim, gDraftsFolderWithDelim, gTemplatesFolderWithDelim;
 
+var gPrefBranch = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+
 // Picker IDs
 var fccAccountPickerId = "msgFccAccountPicker";
 var fccFolderPickerId = "msgFccFolderPicker";
@@ -61,6 +63,30 @@ function onInit() {
     initBccSelf();
     setupFccItems();
     SetSpecialFolderNamesWithDelims();
+    SetupStoreReadMail();
+}
+
+function SetupStoreReadMail()
+{
+  var groupbox = document.getElementById("store_read_mail_in_pfc");
+
+  var serverId = GetCurrentServerId();
+  var account = parent.getAccountFromServerId(serverId);
+  if (!account) 
+    return;
+
+  var server = account.incomingServer;
+  var prefString = server.type + "." + server.redirectorType + ".showStoreReadMailInPFC";
+
+  try {
+    if (gPrefBranch.getBoolPref(prefString))
+      groupbox.removeAttribute("hidden");
+    else
+      groupbox.setAttribute("hidden","true");
+  }
+  catch (ex) {
+    groupbox.setAttribute("hidden","true");
+  }
 }
 
 // Initialize the picker mode choices (account/folder picker) into global vars

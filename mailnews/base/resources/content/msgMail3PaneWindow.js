@@ -184,6 +184,27 @@ var folderListener = {
            }
          }
        } 
+       else if (eventType == "ImapHdrDownloaded") {
+         if (folder) {
+           var imapFolder = folder.QueryInterface(Components.interfaces.nsIMsgImapMailFolder);
+           if (imapFolder) {
+            var hdrParser = imapFolder.hdrParser;
+            if (hdrParser) {
+              var msgHdr = hdrParser.GetNewMsgHdr();
+              if (msgHdr)
+              {
+                var hdrs = hdrParser.headers;
+                if (hdrs && hdrs.indexOf("X-attachment-size:") > 0) {
+                  msgHdr.OrFlags(0x10000000);  // 0x10000000 is MSG_FLAG_ATTACHMENT
+                }
+                if (hdrs && hdrs.indexOf("X-image-size:") > 0) {
+                  msgHdr.setStringProperty("imageSize", "1");
+                }
+              }
+            }
+           }
+         }
+       }
        else if (eventType == "DeleteOrMoveMsgCompleted") {
          HandleDeleteOrMoveMsgCompleted(folder);
        }     
@@ -195,6 +216,9 @@ var folderListener = {
        }
        else if(eventType == "RenameCompleted") {
          SelectFolder(folder.URI);
+       }
+       else if (eventType == "msgLoaded") {
+        OnMsgLoaded(folder, gCurrentDisplayedMessage);
        }
     }
 }
@@ -269,6 +293,11 @@ function HandleDeleteOrMoveMsgFailed(folder)
 
 function HandleDeleteOrMoveMsgCompleted(folder)
 {
+  // you might not have a db view.  this can happen if
+  // biff fires when the 3 pane is set to account central.
+  if (!gDBView)
+    return;
+
   gDBView.onDeleteCompleted(true);
   if (gNextMessageViewIndexAfterDelete != -2) 
   {
@@ -321,9 +350,15 @@ function HandleDeleteOrMoveMsgCompleted(folder)
         if (treeView)
           treeView.selectionChanged();
 
-
         EnsureRowInThreadTreeIsVisible(gNextMessageViewIndexAfterDelete); 
         gDBView.suppressCommandUpdating = false;
+
+        // hook for extra toolbar items
+        // XXX I think there is a bug in the suppression code above.
+        // what if I have two rows selected, and I hit delete, and so we load the next row.
+        // what if I have commands that only enable where exactly one row is selected?
+        var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+        observerService.notifyObservers(window, "mail:updateToolbarItems", null);
       }
     }
       gNextMessageViewIndexAfterDelete = -2;  
@@ -1080,7 +1115,18 @@ function GetFirstSelectedMessage()
         // Use this instead of gDBView.URIForFirstSelectedMessage, else it
         // will return the currentIndex message instead of the highlighted
         // message.
-        return GetSelectedMessages()[0];
+        //
+        // note, there may not be any selected messages
+        //
+        // XXX todo
+        // this is bad when we've got a lot of messages selected
+        // use gDBView.URIForFirstSelectedMessage or
+        // gDBView.hdrForFirstSelectedMessage
+        var selectedMessages = GetSelectedMessages();
+        if (selectedMessages)
+          return selectedMessages[0];
+        else
+          return null;
     }
     catch (ex) {
         return null;

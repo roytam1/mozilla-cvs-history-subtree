@@ -802,3 +802,13 @@ NS_IMETHODIMP nsMsgMailNewsUrl::SetMimeHeaders(nsIMimeHeaders *mimeHeaders)
     mMimeHeaders = mimeHeaders;
     return NS_OK;
 }
+
+NS_IMETHODIMP nsMsgMailNewsUrl::SetFolder(nsIMsgFolder * /* aFolder */)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::GetFolder(nsIMsgFolder ** /* aFolder */)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}

@@ -148,6 +148,10 @@ function UpdateMailToolbar(caller)
 {
   //dump("XXX update mail-toolbar " + caller + "\n");
   document.commandDispatcher.updateCommands('mail-toolbar');
+
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateToolbarItems", null);
 }
 
 function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
@@ -155,6 +159,11 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
   //dump("In ChangeFolderByURI uri = " + uri + " sortType = " + sortType + "\n");
   if (uri == gCurrentLoadingFolderURI)
     return;
+
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:setupToolbarItems", uri);
+
   var resource = RDF.GetResource(uri);
   var msgfolder =
       resource.QueryInterface(Components.interfaces.nsIMsgFolder);
@@ -205,7 +214,7 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
   gCurrentLoadingFolderViewType = viewType;
   gCurrentLoadingFolderSortType = sortType;
   gCurrentLoadingFolderSortOrder = sortOrder;
-  if(msgfolder.manyHeadersToDownload)
+  if(msgfolder.manyHeadersToDownload || msgfolder.server.redirectorType == "aol")
   {
     gRerootOnFolderLoad = true;
     try
@@ -309,7 +318,12 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   }
 
   SetUpToolbarButtons(uri);
+
   UpdateStatusMessageCounts(newFolder);
+  
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateToolbarItems", null);
 }
 
 function SwitchView(command)

@@ -22,7 +22,6 @@ Rights Reserved.
   xmlns:nc="http://home.netscape.com/NC-rdf#"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<!-- plug in your mail compose window extras here. 
-     see http://www.mozilla.org/mailnews/arch/composewindowextras.html -->
+<!-- plug in your mail compose window extras here. -->
 
 </overlay>

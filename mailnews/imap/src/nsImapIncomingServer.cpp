@@ -92,10 +92,10 @@
 
 #include "nsITimer.h"
 #include "nsMsgUtils.h"
+
 static NS_DEFINE_CID(kCImapHostSessionList, NS_IIMAPHOSTSESSIONLIST_CID);
 static NS_DEFINE_CID(kImapProtocolCID, NS_IMAPPROTOCOL_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kMsgLogonRedirectorServiceCID, NS_MSGLOGONREDIRECTORSERVICE_CID);
 static NS_DEFINE_CID(kImapServiceCID, NS_IMAPSERVICE_CID);
@@ -126,6 +126,7 @@ nsImapIncomingServer::nsImapIncomingServer()
   m_canHaveFilters = PR_TRUE;
   m_userAuthenticated = PR_FALSE;
   m_readPFCName = PR_FALSE;
+  m_readRedirectorType = PR_FALSE;
 }
 
 nsImapIncomingServer::~nsImapIncomingServer()
@@ -1021,48 +1022,17 @@ NS_IMETHODIMP nsImapIncomingServer::GetIsPFC(const char *folderName, PRBool *res
 
 NS_IMETHODIMP nsImapIncomingServer::GetPFC(PRBool createIfMissing, nsIMsgFolder **pfcFolder)
 {
+  nsresult rv;
   nsCOMPtr<nsIFolder> rootFolder;
-  nsresult rv = GetRootFolder(getter_AddRefs(rootFolder));
-  if (NS_SUCCEEDED(rv) && rootFolder)
+  nsCOMPtr<nsIMsgAccountManager> accountManager = 
+           do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv))
   {
-    nsCOMPtr <nsIMsgFolder> rootMsgFolder = do_QueryInterface(rootFolder);
-    nsCOMPtr <nsIMsgFolder> pfcParent;
-    nsXPIDLCString serverUri;
-    rv = GetServerURI(getter_Copies(serverUri));
-    NS_ENSURE_SUCCESS(rv, rv);
-    nsCAutoString folderUri(serverUri);
-    folderUri.ReplaceSubstring("imap://", "mailbox://");
-    folderUri.Append("/");
-    folderUri.Append(GetPFCName());
-
-    rootMsgFolder->GetChildWithURI(folderUri.get(), PR_FALSE, PR_FALSE /*caseInsensitive */, pfcFolder);
-    if (!*pfcFolder && createIfMissing)
+    nsCOMPtr <nsIMsgIncomingServer> server; 
+    rv = accountManager->GetLocalFoldersServer(getter_AddRefs(server)); 
+    if (NS_SUCCEEDED(rv) && server)
     {
-			// get the URI from the incoming server
-	    nsCOMPtr<nsIRDFResource> res;
-      nsCOMPtr<nsIFileSpec> pfcFileSpec;
-	    nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
-	    rv = rdf->GetResource(folderUri.get(), getter_AddRefs(res));
-	    NS_ENSURE_SUCCESS(rv, rv);
-      nsCOMPtr <nsIMsgFolder> parentToCreate = do_QueryInterface(res, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-      parentToCreate->SetParent(rootFolder);
-      parentToCreate->GetPath(getter_AddRefs(pfcFileSpec));
-
-      nsFileSpec path;
-      pfcFileSpec->GetFileSpec(&path);
-     	nsOutputFileStream outputStream(path, PR_WRONLY | PR_CREATE_FILE, 00600);	
-      // can't call CreateStorageIfMissing because our parent is an imap folder
-      // and that would create an imap folder.
-      // parentToCreate->CreateStorageIfMissing(nsnull);
-      *pfcFolder = parentToCreate;
-      rootFolder->NotifyItemAdded(rootFolder, parentToCreate, "folderView");
-      nsCOMPtr <nsISupports> supports = do_QueryInterface(parentToCreate);
-      NS_ASSERTION(supports, "couldn't get isupports from imap folder");
-      if (supports)
-        rootFolder->AppendElement(supports);
-
-      NS_IF_ADDREF(*pfcFolder);
+      return server->GetRootMsgFolder(pfcFolder);
     }
   }
   return rv;
@@ -1086,7 +1056,7 @@ nsresult nsImapIncomingServer::GetPFCForStringId(PRBool createIfMissing, PRInt32
   nsCAutoString pfcMailUri(pfcURI);
 //  pfcMailUri.Append(".sbd");
   pfcMailUri.Append("/");
-  pfcMailUri.AppendWithConversion(pfcName.get());
+  pfcMailUri.Append(NS_ConvertUCS2toUTF8(pfcName).get());
   pfcParent->GetChildWithURI(pfcMailUri.get(), PR_FALSE, PR_FALSE /* caseInsensitive*/, aFolder);
   if (!*aFolder && createIfMissing)
   {
@@ -1347,6 +1317,10 @@ NS_IMETHODIMP nsImapIncomingServer::PossibleImapMailbox(const char *folderPath, 
 
         if (NS_SUCCEEDED(rv))
           child->SetPrettyName(convertedName);
+        if (onlineName.Equals("RECYCLE"))
+          child->SetFlag(MSG_FOLDER_FLAG_TRASH);
+        else if (onlineName.Equals("Sent Items"))
+          child->SetFlag(MSG_FOLDER_FLAG_SENTMAIL);
       }
     }
   }
@@ -1415,18 +1389,59 @@ NS_IMETHODIMP nsImapIncomingServer::RefreshFolderRights(const char *folderPath)
 
 NS_IMETHODIMP nsImapIncomingServer::GetRedirectorType(char **redirectorType)
 {
+  if (m_readRedirectorType)
+  {
+    *redirectorType = ToNewCString(m_redirectorType);
+    return NS_OK;
+  }
   nsresult rv;
   
   // Differentiate 'aol' and non-aol redirector type.
   rv = GetCharValue("redirector_type", redirectorType);
-  if (*redirectorType && !nsCRT::strcasecmp(*redirectorType, "aol"))
-      {
-    nsXPIDLCString hostName;
-    GetHostName(getter_Copies(hostName));
+  m_redirectorType = *redirectorType;
+  m_readRedirectorType = PR_TRUE;
+  if (*redirectorType)  
+  {
+    // we used to use "aol" as the redirector type  
+    // for both aol mail and webmail
+    // this code migrates webmail accounts to use "netscape" as the
+    // redirectory type
+    if (!nsCRT::strcasecmp(*redirectorType, "aol"))  
+    {
+      nsXPIDLCString hostName;
+      GetHostName(getter_Copies(hostName));
 
-    // Change redirector_type from "aol" to "netscape" if necessary
-    if (hostName.get() && !nsCRT::strcasecmp(hostName, "imap.mail.netcenter.com"))
-      SetRedirectorType("netscape");
+      if (hostName.get() && !nsCRT::strcasecmp(hostName, "imap.mail.netcenter.com"))
+        SetRedirectorType("netscape");
+    }
+  }
+  else
+  {
+    // for people who have migrated from 4.x or outlook, or mistakenly
+    // created redirected accounts as regular imap accounts, 
+    // they won't have redirector type set properly
+    // this fixes the redirector type for them automatically
+    nsCAutoString prefName;
+    rv = CreateHostSpecificPrefName("default_redirector_type", prefName);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsXPIDLCString defaultRedirectorType;
+    
+    nsCOMPtr <nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIPrefBranch> prefBranch; 
+    rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch)); 
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = prefBranch->GetCharPref(prefName.get(), getter_Copies(defaultRedirectorType));
+    if (NS_SUCCEEDED(rv) && !defaultRedirectorType.IsEmpty()) 
+    {
+      // only set redirectory type in memory
+      // if we call SetRedirectorType() that sets it in prefs
+      // which makes this automatic redirector type repair permanent
+      m_redirectorType = defaultRedirectorType.get();
+    }
   }
 
   return NS_OK;
@@ -1434,6 +1449,7 @@ NS_IMETHODIMP nsImapIncomingServer::GetRedirectorType(char **redirectorType)
 
 NS_IMETHODIMP nsImapIncomingServer::SetRedirectorType(const char *redirectorType)
 {
+  m_redirectorType = redirectorType;
   return (SetCharValue("redirector_type", redirectorType));
 }
 
@@ -2398,7 +2414,6 @@ NS_IMETHODIMP nsImapIncomingServer::PromptForPassword(char ** aPassword,
 
     GetRealHostName(getter_Copies(hostName));
     GetRealUsername(getter_Copies(userName));
-
     passwordText = nsTextFormatter::smprintf(passwordTemplate, (const char *) userName, (const char *) hostName);
     nsresult rv =  GetPasswordWithUI(passwordText, passwordTitle, aMsgWindow,
                                      &okayValue, aPassword);
@@ -3335,7 +3350,7 @@ nsImapIncomingServer::GetCanCreateFoldersOnServer(PRBool *aCanCreateFoldersOnSer
     // Initialize aCanCreateFoldersOnServer true, a default value for IMAP
     *aCanCreateFoldersOnServer = PR_TRUE;
 
-    GetPrefForServerAttribute("aCanCreateFoldersOnServer", aCanCreateFoldersOnServer);
+    GetPrefForServerAttribute("canCreateFoldersOnServer", aCanCreateFoldersOnServer);
 
     return NS_OK;
 }
@@ -3524,7 +3539,7 @@ nsImapIncomingServer::GetCanFileMessagesOnServer(PRBool *aCanFileMessagesOnServe
     // Initialize aCanFileMessagesOnServer true, a default value for IMAP
     *aCanFileMessagesOnServer = PR_TRUE;
 
-    GetPrefForServerAttribute("aCanFileMessagesOnServer", aCanFileMessagesOnServer);
+    GetPrefForServerAttribute("canFileMessages", aCanFileMessagesOnServer);
 
     return NS_OK;
 }
@@ -3613,14 +3628,14 @@ nsImapIncomingServer::GetNewMessagesAllFolders(nsIMsgFolder *aRootFolder, nsIMsg
 }
 
 NS_IMETHODIMP 
-nsImapIncomingServer::GetShouldDownloadArbitraryHeaders(PRBool *aResult)
+nsImapIncomingServer::GetShouldDownloadAllHeaders(PRBool *aResult)
 {
   nsresult rv = NS_OK;      //for now checking for filters is enough
   nsCOMPtr <nsIMsgFilterList> filterList;  //later on we might have to check for MDN                              ;
   if (!mFilterList)       
     GetFilterList(nsnull, getter_AddRefs(filterList));
   if (mFilterList)
-    rv = mFilterList->GetShouldDownloadArbitraryHeaders(aResult);
+    rv = mFilterList->GetShouldDownloadAllHeaders(aResult);
   else
     *aResult = PR_FALSE;
   return rv;

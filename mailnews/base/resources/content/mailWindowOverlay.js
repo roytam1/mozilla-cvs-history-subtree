@@ -303,6 +303,12 @@ function IsNewsMessage(messageUri)
     return (messageUri.substring(0,14) == "news-message:/")
 }
 
+function IsImapMessage(messageUri)
+{
+    if (!messageUri) return false;
+    return (messageUri.substring(0,14) == "imap-message:/")
+}
+
 function SetMenuItemLabel(menuItemId, customLabel)
 {
     var menuItem = document.getElementById(menuItemId);
@@ -1309,8 +1315,7 @@ var gMarkButton = null;
 
 function SetUpToolbarButtons(uri)
 {
-    // dump("SetUpToolbarButtons("+uri+")\n");
-
+    ///dump("XXX SetUpToolbarButtons("+uri+")\n");
     // eventually, we might want to set up the toolbar differently for imap,
     // pop, and news.  for now, just tweak it based on if it is news or not.
     var forNews = isNewsURI(uri);
@@ -1530,6 +1535,11 @@ function CommandUpdate_UndoRedo()
 function SetupUndoRedoCommand(command)
 {
     var loadedFolder = GetLoadedMsgFolder();
+    // if we have selected a server, and are viewing account central
+    // there is no loaded folder
+    if (!loadedFolder)
+      return false;
+
     var server = loadedFolder.server;
     if (!(server.canUndoDeleteOnServer))
       return false;
@@ -1572,5 +1582,52 @@ function SetupUndoRedoCommand(command)
         goSetMenuValue(command, 'valueDefault');
     }
     return canUndoOrRedo;
+}
+
+function OnMsgLoaded(folder, msgURI)
+{
+    var currentMsgFolder = folder.QueryInterface(Components.interfaces.nsIMsgFolder);
+    if (!IsImapMessage(msgURI))
+      return;
+    var imapServer = currentMsgFolder.server.QueryInterface(Components.interfaces.nsIImapIncomingServer);
+    var storeReadMailInPFC = imapServer.storeReadMailInPFC;
+    if (storeReadMailInPFC)
+    {
+      var messageID;
+
+      var copyToOfflineFolder = true;
+
+      // look in read mail PFC for msg with same msg id - if we find one,
+      // don't put this message in the read mail pfc.
+      var outputPFC = imapServer.GetReadMailPFC(true);
+      var messageURI = GetLoadedMessage();
+      if (messageURI != msgURI)
+      {
+        dump("not loading msg into this window - loaded message = " + messageURI + "loading " + msgURI + "\n");
+//        return;
+      }
+      var msgHdr = messenger.messageServiceFromURI(messageURI).messageURIToMsgHdr(messageURI);
+      if (msgHdr)
+      {
+        messageID = msgHdr.messageId;
+        if (messageID.length > 0)
+        {
+          var readMailDB = outputPFC.getMsgDatabase(msgWindow);
+          if (readMailDB)
+          {
+            var hdrInDestDB = readMailDB.getMsgHdrForMessageID(messageID);
+            if (hdrInDestDB)
+              copyToOfflineFolder = false;
+          }
+        }
+      }
+      if (copyToOfflineFolder)
+      {
+		    var messages = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
+        messages.AppendElement(msgHdr);
+
+        res = outputPFC.copyMessages(currentMsgFolder, messages, false /*isMove*/, msgWindow /* nsIMsgWindow */, null /* listener */, false /* isFolder */, false /*allowUndo*/ );
+      }
+     }
 }
 

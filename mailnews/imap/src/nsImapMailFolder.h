@@ -283,8 +283,6 @@ public:
   NS_IMETHOD DownloadMessagesForOffline(nsISupportsArray *messages, nsIMsgWindow *msgWindow);
 
   NS_IMETHOD DownloadAllForOffline(nsIUrlListener *listener, nsIMsgWindow *msgWindow);
-  NS_IMETHOD ShouldStoreMsgOffline(nsMsgKey msgKey, PRBool *result);
-  NS_IMETHOD GetOfflineStoreOutputStream(nsIOutputStream **outputStream);
   NS_IMETHOD GetCanFileMessages(PRBool *aCanFileMessages);
     // nsIMsgImapMailFolder methods
 	NS_DECL_NSIMSGIMAPMAILFOLDER
@@ -469,6 +467,8 @@ protected:
   nsMsgIMAPFolderACL *m_folderACL;
 
   nsCOMPtr<nsISupports> mSupportsToRelease;
+
+  static nsIAtom* mImapHdrDownloadedAtom;
 
   // offline imap support
   PRBool m_downloadMessageForOfflineUse;
