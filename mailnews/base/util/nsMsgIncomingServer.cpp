@@ -1162,8 +1162,23 @@ NS_IMETHODIMP nsMsgIncomingServer::GetRetentionSettings(nsIMsgRetentionSettings 
 
 NS_IMETHODIMP nsMsgIncomingServer::SetRetentionSettings(nsIMsgRetentionSettings *settings)
 {
+  nsMsgRetainByPreference retainByPreference;
+  PRUint32 daysToKeepHdrs = 0;
+  PRUint32 numHeadersToKeep = 0;
+  PRBool keepUnreadMessagesOnly = PR_FALSE;
+  PRUint32 daysToKeepBodies = 0;
   m_retentionSettings = settings;
-  return NS_OK;
+  m_retentionSettings->GetRetainByPreference(&retainByPreference);
+  m_retentionSettings->GetNumHeadersToKeep(&numHeadersToKeep);
+  m_retentionSettings->GetKeepUnreadMessagesOnly(&keepUnreadMessagesOnly);
+  m_retentionSettings->GetDaysToKeepBodies(&daysToKeepBodies);
+  m_retentionSettings->GetDaysToKeepHdrs(&daysToKeepHdrs);
+  nsresult rv = SetBoolValue("keepUnreadOnly", keepUnreadMessagesOnly);
+  rv = SetIntValue("retainBy", retainByPreference);
+  rv = SetIntValue("numHdrsToKeep", numHeadersToKeep);
+  rv = SetIntValue("daysToKeepHdrs", daysToKeepHdrs);
+  rv = SetIntValue("daysToKeepBodies", daysToKeepBodies);
+  return rv;
 }
 
 NS_IMETHODIMP nsMsgIncomingServer::GetDownloadSettings(nsIMsgDownloadSettings **settings)
@@ -1197,7 +1212,17 @@ NS_IMETHODIMP nsMsgIncomingServer::GetDownloadSettings(nsIMsgDownloadSettings **
 NS_IMETHODIMP nsMsgIncomingServer::SetDownloadSettings(nsIMsgDownloadSettings *settings)
 {
   m_downloadSettings = settings;
-  return NS_OK;
+  PRBool downloadUnreadOnly = PR_FALSE;
+  PRBool downloadByDate = PR_FALSE;
+  PRUint32 ageLimitOfMsgsToDownload = 0;
+  m_downloadSettings->GetDownloadUnreadOnly(&downloadUnreadOnly);
+  m_downloadSettings->GetDownloadByDate(&downloadByDate);
+  m_downloadSettings->GetAgeLimitOfMsgsToDownload(&ageLimitOfMsgsToDownload);
+  nsresult rv = SetBoolValue("downloadUnreadOnly", downloadUnreadOnly);
+  rv = SetBoolValue("downloadByDate", downloadByDate);
+  rv = SetIntValue("ageLimit", ageLimitOfMsgsToDownload);
+
+  return rv;
 }
 
 
