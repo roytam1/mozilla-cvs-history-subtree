@@ -46,7 +46,6 @@
 #include "nsIDOMWindow.h"
 #include "nsPIDOMWindow.h"
 #include "nsIFocusController.h"
-#include "nsICommandController.h"
 
 #include "nsSupportsArray.h"
 
