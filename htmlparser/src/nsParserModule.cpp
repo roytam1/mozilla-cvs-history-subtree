@@ -147,6 +147,7 @@ static NS_DEFINE_CID(kWellFormedDTDCID, NS_WELLFORMEDDTD_CID);
 static NS_DEFINE_CID(kNavDTDCID, NS_CNAVDTD_CID);
 static NS_DEFINE_CID(kXIFDTDCID, NS_XIF_DTD_CID);
 static NS_DEFINE_CID(kCOtherDTDCID, NS_COTHER_DTD_CID);
+static NS_DEFINE_CID(kCTransitionalDTDCID, NS_CTRANSITIONAL_DTD_CID);
 static NS_DEFINE_CID(kViewSourceDTDCID, NS_VIEWSOURCE_DTD_CID);
 static NS_DEFINE_CID(kRtfDTDCID, NS_CRTF_DTD_CID);
 static NS_DEFINE_CID(kHTMLContentSinkStreamCID, NS_HTMLCONTENTSINKSTREAM_CID);
@@ -166,6 +167,7 @@ static Components gComponents[] = {
   { "Navigator HTML DTD", &kNavDTDCID },
   { "XIF DTD", &kXIFDTDCID },
   { "OTHER DTD", &kCOtherDTDCID },
+  { "Transitional DTD", &kCTransitionalDTDCID },
   { "ViewSource DTD", &kViewSourceDTDCID },
   { "Rtf DTD", &kRtfDTDCID },
   { "HTML Content Sink Stream", &kHTMLContentSinkStreamCID },
@@ -182,6 +184,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(CWellFormedDTD)
 NS_GENERIC_FACTORY_CONSTRUCTOR(CNavDTD)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXIFDTD)
 NS_GENERIC_FACTORY_CONSTRUCTOR(COtherDTD)
+NS_GENERIC_FACTORY_CONSTRUCTOR(CTransitionalDTD)
 NS_GENERIC_FACTORY_CONSTRUCTOR(CViewSourceHTML)
 NS_GENERIC_FACTORY_CONSTRUCTOR(CRtfDTD)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTMLContentSinkStream)
@@ -212,6 +215,7 @@ protected:
   nsCOMPtr<nsIGenericFactory> mNavHTMLDTDFactory;
   nsCOMPtr<nsIGenericFactory> mXIFDTDFactory;
   nsCOMPtr<nsIGenericFactory> mOtherHTMLDTDFactory;
+  nsCOMPtr<nsIGenericFactory> mTransitionalHTMLDTDFactory;
   nsCOMPtr<nsIGenericFactory> mViewSourceHTMLDTDFactory;
   nsCOMPtr<nsIGenericFactory> mRtfHTMLDTDFactory;
   nsCOMPtr<nsIGenericFactory> mHTMLContentSinkStreamFactory;
@@ -325,6 +329,13 @@ nsParserModule::GetClassObject(nsIComponentManager *aCompMgr,
                                 &COtherDTDConstructor);
     }
     fact = mOtherHTMLDTDFactory;
+  }
+  else if (aClass.Equals(kCTransitionalDTDCID)) {
+    if (!mTransitionalHTMLDTDFactory) {
+      rv = NS_NewGenericFactory(getter_AddRefs(mTransitionalHTMLDTDFactory), 
+                                &CTransitionalDTDConstructor);
+    }
+    fact = mTransitionalHTMLDTDFactory;
   }
   else if (aClass.Equals(kViewSourceDTDCID)) {
     if (!mViewSourceHTMLDTDFactory) {
