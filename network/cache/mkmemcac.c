@@ -36,7 +36,7 @@
 #include "xp_mcom.h"
 #include "client.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "cstream.h"
 #include "extcache.h"
 #include "mkmemcac.h"
 #include "libimg.h"             /* Image Lib public API. */

@@ -35,7 +35,7 @@
 #include "xp_hash.h"
 #include "xp_mcom.h"
 #include "client.h"
-#include "mkstream.h"
+#include "cstream.h"
 #include "secnav.h"
 #include "mcom_db.h"
 #include "prclist.h"

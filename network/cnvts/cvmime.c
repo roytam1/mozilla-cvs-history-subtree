@@ -28,7 +28,7 @@
 #ifdef MOZILLA_CLIENT
 
 
-#include "mkstream.h"
+#include "cstream.h"
 #include "cvextcon.h"
 #include "mkformat.h"
 #include "il_strm.h"            /* Image Library stream converters. */

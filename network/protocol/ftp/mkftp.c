@@ -98,14 +98,16 @@ extern int XP_TITLE_DIRECTORY_OF_ETC;
 extern int XP_UPTO_HIGHER_LEVEL_DIRECTORY ;
 
 
-#define PUTSTRING(s)           (*cd->stream->put_block) \
+#define PUTSTRING(s)           NET_StreamPutBlock \
                                  (cd->stream, s, PL_strlen(s))
-#define PUTBLOCK(b,l)         (*cd->stream->put_block) \
+#define PUTBLOCK(b,l)         NET_StreamPutBlock \
                                 (cd->stream, b, l)
-#define COMPLETE_STREAM   (*cd->stream->complete) \
+#define COMPLETE_STREAM   NET_StreamComplete \
                                  (cd->stream)
-#define ABORT_STREAM(s)   (*cd->stream->abort) \
+#define ABORT_STREAM(s)   NET_StreamAbort \
                                  (cd->stream, s)
+#define FREE_STREAM   	  NET_StreamFree \
+                                 (cd->stream)
 
 
 #define FTP_GENERIC_TYPE     0
@@ -216,7 +218,7 @@ typedef struct _FTPConData {
     FTPStates     next_state;        /* the next state of the machine */
     Bool          pause_for_read;    /* should we pause (return) for read? */
 
-    NET_StreamClass *stream;         /* the outgoing data stream */
+    NET_VoidStreamClass *stream;         /* the outgoing data stream */
 
     FTPConnection   *cc;  /* information about the control connection */
 
@@ -338,7 +340,7 @@ NET_SendEmailAddressAsFTPPassword(Bool do_it)
 }
 #endif
 
-PRIVATE NET_StreamClass *
+PRIVATE NET_VoidStreamClass *
 net_ftp_make_stream(FO_Present_Types format_out, 
 					URL_Struct *URL_s, 
 					MWContext *window_id)
@@ -383,7 +385,7 @@ net_ftp_make_stream(FO_Present_Types format_out,
 		stream_context = window_id;
 	  }
 
-	return(NET_StreamBuilder(format_out, URL_s, stream_context));
+	return(NET_VoidStreamBuilder(format_out, URL_s, stream_context));
 
 }
 
@@ -609,7 +611,8 @@ net_send_username_response(ActiveEntry * ce)
 			else
                 ABORT_STREAM(ce->status);
 
-			PR_Free(cd->stream);
+			FREE_STREAM;
+
 			cd->stream = NULL;
 		  }
 		
@@ -2598,7 +2601,7 @@ net_ftp_push_partial_cache_file(ActiveEntry * ce)
 
     int32 write_ready, status;
 
-    write_ready = (*cd->stream->is_write_ready)(cd->stream);
+    write_ready = NET_StreamIsWriteReady(cd->stream);
 
     if( 0 == write_ready )
       {
@@ -2637,7 +2640,7 @@ net_ftp_push_partial_cache_file(ActiveEntry * ce)
         ce->bytes_received += status;
         FE_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, status, ce->URL_s->real_content_length);
         FE_SetProgressBarPercent(ce->window_id, (long)(((double)ce->bytes_received*100) / (double)(uint32)ce->URL_s->real_content_length) );
-        status = (*cd->stream->put_block)(cd->stream, NET_Socket_Buffer, status);
+        status = NET_StreamPutBlock(cd->stream, NET_Socket_Buffer, status);
         cd->pause_for_read = TRUE;
         return status;
     }
@@ -2694,7 +2697,7 @@ net_ftp_read_file(ActiveEntry * ce)
 
     /* check to see if the stream is ready for writing
      */
-    write_ready = (*cd->stream->is_write_ready)(cd->stream);
+    write_ready = NET_StreamIsWriteReady(cd->stream);
 
     if(!write_ready)
       {
@@ -2889,7 +2892,7 @@ net_ftp_read_dir(ActiveEntry * ce)
       }
     else if(ce->status < 0)
 	  {
-		if(cd->stream && (*cd->stream->is_write_ready)(cd->stream))
+		if(cd->stream && NET_StreamIsWriteReady(cd->stream))
 			NET_PrintDirectory(&cd->sort_base, cd->stream, cd->path, ce->URL_s);
 
 		ce->URL_s->error_msg = NET_ExplainErrorDetails(MK_TCP_READ_ERROR, ce->status);
@@ -2946,7 +2949,7 @@ net_ftp_print_dir(ActiveEntry * ce)
     }
 
 	if(cd->stream 
-	   && (ce->status = (*cd->stream->is_write_ready)(cd->stream)) != 0)
+	   && (ce->status = NET_StreamIsWriteReady(cd->stream)) != 0)
 	{
     	ce->status = NET_PrintDirectory(&cd->sort_base, cd->stream, cd->path, ce->URL_s);
 
@@ -4441,7 +4444,11 @@ net_ProcessFTP(ActiveEntry * ce)
 
           case FTP_DONE:
 			if(cd->stream)
+			{
             	COMPLETE_STREAM;
+				FREE_STREAM;
+				cd->stream = NULL;
+			}
 
             /* Make sure that any previous cache entry is not locked anymore */
             NET_ChangeCacheFileLock(ce->URL_s, FALSE);
@@ -4501,15 +4508,15 @@ net_ProcessFTP(ActiveEntry * ce)
               {
                  /* we have to do this to get it free'd
                   */
-		 if(cd->stream && (*cd->stream->is_write_ready)(cd->stream))
+		 if(cd->stream && NET_StreamIsWriteReady(cd->stream))
                  	NET_PrintDirectory(&cd->sort_base, cd->stream, cd->path, ce->URL_s);
               }
 
-            if(cd->stream && cd->stream->data_object)
+            if(cd->stream)
             {
                 ABORT_STREAM(ce->status);
-                /* (ABORT_STREAM frees cd->stream->data_object:) */
-                cd->stream->data_object = NULL;
+                FREE_STREAM;
+                cd->stream = NULL;
             }
 
             /* lock the object in cache if we can restart it */
@@ -4626,7 +4633,7 @@ net_ProcessFTP(ActiveEntry * ce)
                 PR_FREEIF(cd->path);
                 PR_FREEIF(cd->username);
                 PR_FREEIF(cd->password);
-                PR_FREEIF(cd->stream);  /* don't forget the stream */
+                NET_StreamFree(cd->stream);  /* don't forget the stream */
 				PR_FREEIF(cd->output_buffer);
             	if(cd->tcp_con_data)
                 	NET_FreeTCPConData(cd->tcp_con_data);
