@@ -51,7 +51,7 @@
 #include "prlog.h"
 
 // The XUL interfaces implemented by the RDF content node.
-#include "nsIDOMXULNode.h"
+#include "nsIDOMXULElement.h"
 // End of XUL interface includes
 
 ////////////////////////////////////////////////////////////////////////
@@ -78,8 +78,7 @@ struct XULBroadcastListener
 
 ////////////////////////////////////////////////////////////////////////
 
-class RDFGenericElementImpl : public nsIDOMXULNode,
-							  public nsIDOMElement,
+class RDFGenericElementImpl : public nsIDOMXULElement,
                               public nsIDOMEventReceiver,
                               public nsIScriptObjectOwner,
                               public nsIJSScriptObject,
@@ -161,7 +160,7 @@ public:
     virtual PRBool Convert(JSContext *aContext, jsval aID);
     virtual void   Finalize(JSContext *aContext);
 
-	// nsIDOMXULNode
+	// nsIDOMXULElement
 	NS_IMETHOD DoCommand();
 
 	NS_IMETHOD AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
@@ -1290,7 +1289,9 @@ RDFGenericElementImpl::GetRangeList(nsVoidArray*& aResult) const
     return NS_OK;
 }
 
-// nsIDOMXULNode
+////////////////////////////////////////////////////////////////////////
+// nsIDOMXULElement interface
+
 NS_IMETHODIMP
 RDFGenericElementImpl::DoCommand()
 {

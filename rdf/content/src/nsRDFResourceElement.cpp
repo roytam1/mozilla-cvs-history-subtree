@@ -53,7 +53,7 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMNodeObserver.h"
 #include "nsIDOMScriptObjectFactory.h"
-#include "nsIDOMXULNode.h"
+#include "nsIDOMXULElement.h"
 #include "nsIDocument.h"
 #include "nsIEventListenerManager.h"
 #include "nsIEventStateManager.h"
@@ -352,7 +352,8 @@ RDFResourceElementImpl::QueryInterface(REFNSIID iid, void** result)
         iid.Equals(kISupportsIID)) {
         *result = NS_STATIC_CAST(nsIRDFContent*, this);
     }
-    else if (iid.Equals(kIDOMElementIID) ||
+    else if (iid.Equals(nsIDOMXULElement::IID()) ||
+             iid.Equals(kIDOMElementIID) ||
              iid.Equals(kIDOMNodeIID)) {
         *result = NS_STATIC_CAST(nsIDOMElement*, this);
     }
@@ -820,7 +821,11 @@ RDFResourceElementImpl::GetScriptObject(nsIScriptContext* aContext, void** aScri
 
     if (! mScriptObject) {
         nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-        rv = NS_NewScriptXULNode(aContext, (nsISupports*)(nsIDOMXULNode*) this, global, (void**) &mScriptObject);
+        rv = NS_NewScriptXULElement(aContext,
+                                    (nsISupports*)(nsIDOMXULElement*) this,
+                                    global,
+                                    (void**) &mScriptObject);
+
         NS_RELEASE(global);
     }
 

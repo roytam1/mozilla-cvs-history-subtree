@@ -27,6 +27,8 @@ include $(topsrcdir)/config/config.mk
 LIBRARY_NAME = rdfcontent_s
 
 CPPSRCS =				\
+	nsJSXULDocument.cpp		\
+	nsJSXULElement.cpp		\
 	nsRDFContentUtils.cpp           \
 	nsRDFDOMNodeList.cpp		\
 	nsRDFGenericElement.cpp         \
@@ -35,7 +37,6 @@ CPPSRCS =				\
 	nsRDFTreeBuilder.cpp		\
 	nsRDFXULBuilder.cpp		\
 	nsXULDocument.cpp               \
-	nsJSXULNode.cpp	\
 	$(NULL)
 
 EXPORTS = \
