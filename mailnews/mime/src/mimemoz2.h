@@ -93,9 +93,8 @@ struct _nsMIMESession {
 struct mime_stream_data {           /* This struct is the state we pass around
                                        amongst the various stream functions
                                        used by MIME_MessageConverter(). */
-// RICHIE_URL  URL_Struct          *url;         /* The URL this is all coming from. */
   char                *url_name;
-  int                 format_out;
+  nsMimeOutputType    format_out;
   MWContext           *context;     /* Must REMOVE this entry. */
   void                *pluginObj2;  /* The new XP-COM stream converter object */
   nsMIMESession       *istream;     /* Holdover - new stream we're writing out image data-if any. */
