@@ -136,6 +136,7 @@ public:
     NS_IMETHOD SetParser(nsIParser* aParser);  
     NS_IMETHOD FlushPendingNotifications() { return NS_OK; }
     NS_IMETHOD SetDocumentCharset(nsACString& aCharset);
+    virtual nsISupports *GetTarget();
 
     // nsIXULContentSink
     NS_IMETHOD Init(nsIDocument* aDocument, nsIXULPrototypeDocument* aPrototype);
@@ -564,6 +565,13 @@ XULContentSinkImpl::SetDocumentCharset(nsACString& aCharset)
     }
   
     return NS_OK;
+}
+
+nsISupports *
+XULContentSinkImpl::GetTarget()
+{
+    nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
+    return doc;    
 }
 
 //----------------------------------------------------------------------

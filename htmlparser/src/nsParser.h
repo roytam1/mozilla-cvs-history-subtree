@@ -88,6 +88,8 @@
 #include "nsIEventQueue.h"
 #include "nsIContentSink.h"
 #include "nsIParserFilter.h"
+#include "nsCOMArray.h"
+#include "nsIUnicharStreamListener.h"
 
 class nsIDTD;
 class nsScanner;
@@ -104,7 +106,15 @@ class nsParser : public nsIParser,
   
   public:
     friend class CTokenHandler;
-    static void FreeSharedObjects(void);
+    /**
+     * Called on module init
+     */
+    static nsresult Init();
+
+    /**
+     * Called on module shutdown
+     */
+    static void Shutdown();
 
     NS_DECL_ISUPPORTS
 
@@ -372,6 +382,14 @@ class nsParser : public nsIParser,
      *  @update  kmcclusk 5/18/98
      */
     void HandleParserContinueEvent(void);
+
+    /**
+     * Called by top-level scanners when data from necko is added to
+     * the scanner.
+     */
+    nsresult DataAdded(const nsSubstring& aData);
+
+    static nsCOMArray<nsIUnicharStreamListener> *sParserDataListeners;
 
 protected:
 
