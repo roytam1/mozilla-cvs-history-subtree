@@ -496,7 +496,7 @@ JS_YieldRequest(JSContext *cx)
     JSRuntime *rt;
 
     CHECK_REQUEST(cx);
-
+	rt = cx->runtime;
     JS_ASSERT(rt->requestCount > 0);
     rt->requestCount--;
     JS_NOTIFY_REQUEST_DONE(rt);
