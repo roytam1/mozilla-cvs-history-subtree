@@ -84,20 +84,19 @@
 } 
 
 #spellingButton {
-  list-style-image: url("chrome://editor/skin/icons/btn1.gif");
-  -moz-image-region: rect(101px 23px 122px 0);
+  -moz-image-region: rect(378px 23px 399px 0px);
 }
 
 #spellingButton:hover {
-  -moz-image-region: rect(101px 46px 122px 23px);
+  -moz-image-region: rect(378px 46px 399px 23px);
 }
 
 #spellingButton:hover:active {
-  -moz-image-region: rect(122px 23px 143px 0);
+  -moz-image-region: rect(378px 69px 399px 46px);
 }
 
 #spellingButton[disabled="true"] {
-  -moz-image-region: rect(122px 46px 143px 23px) !important;
+  -moz-image-region: rect(378px 92px 399px 69px) !important;
 }
 
 #button-save {
@@ -148,22 +147,22 @@
 
 /* ::::: autocomplete icons ::::: */
 
-treechildren:-moz-tree-cell-text(default-match) {
+treechildren::-moz-tree-cell-text(default-match) {
   margin: 2px -3px 2px 15px;
   border: none;
 }
 
-treechildren:-moz-tree-image(local-abook) {
+treechildren::-moz-tree-image(local-abook) {
   margin: 2px -1px 2px 4px;
   list-style-image: url("chrome://messenger/skin/addressbook/icons/addrbook.gif");
 }
 
-treechildren:-moz-tree-image(remote-abook) {
+treechildren::-moz-tree-image(remote-abook) {
   margin: 2px -3px 2px 2px;
   list-style-image: url("chrome://messenger/skin/addressbook/icons/remote-addrbook.gif");
 }
 
-treechildren:-moz-tree-image(remote-err) {
+treechildren::-moz-tree-image(remote-err) {
   margin: 2px -3px 2px 2px;
   list-style-image: url("chrome://messenger/skin/addressbook/icons/remote-addrbook-error.gif");
 }
