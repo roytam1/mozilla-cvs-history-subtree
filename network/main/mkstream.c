@@ -54,6 +54,24 @@ NET_VoidStreamBuilder  (FO_Present_Types format_out,
 	return rv;
 }
 
+PUBLIC NET_VoidStreamClass * 
+NET_CStreamToVoidStream(void *cstream)
+{
+	NET_VoidStreamClass *rv;
+
+	if(!cstream)
+		return NULL;
+
+	rv = PR_NEW(NET_VoidStreamClass);
+
+	if(rv)
+	{
+		rv->cstream = (NET_StreamClass*)cstream;
+	}
+
+	return rv;
+}
+
 PUBLIC uint32
 NET_StreamIsWriteReady(NET_VoidStreamClass *stream)
 {
