@@ -27,7 +27,6 @@
 */
 
 
-
 ////////////////////////////////////////////////////////////////////////////
 // UI
 ////////////////////////////////////////////////////////////////////////////
@@ -59,47 +58,15 @@ function GetStringWithFile(stringname, filename)
   return GetString(stringname).replace(/%file%/, filename);
 }
 
-/* Returns a human-readable name for a profile file, e.g.
-   "abook.mab" -> "Personal Addressbook"
-   Will look for a stringbundle match
-   - for filename
-   - if failing that, for id
-   - if failing that, use the raw id
-   - if failing that, use the raw filename
-   @param filename  string
-   @param id  in case the filename is changing for a certain profile file
-              (e.g. in the case of password files), optionally pass an ID
-              for the file here, as used in filedescr.properties.
-              May be null.
-   @return string  Description for file
-*/
-var gStringBundleFiledescr;
-function GetFileDescription(filename, id)
-{
-  if (!gStringBundleFiledescr)
-  {
-    try {
-      gStringBundleFiledescr =
-                Components.classes["@mozilla.org/intl/stringbundle;1"]
-                .getService(Components.interfaces.nsIStringBundleService)
-                .createBundle("chrome://sroaming/locale/filedescr.properties");
-    } catch (e) {
-      return null;
-    }
-  }
-  try {
-    return gStringBundleFiledescr.GetStringFromName(filename);
-  } catch (e) {
-    try {
-      return gStringBundleFiledescr.GetStringFromName(id);
-    } catch (e) {
-      if (id)
-        return id;
-      return filename;
-    }
-  }
-}
+// See also GetFileDescription() below
 
+function GetPromptService()
+{
+  // no caching, not worth it
+  // throw errors into caller
+  return Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                   .getService(Components.interfaces.nsIPromptService);
+}
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -498,4 +465,52 @@ function dumpObject(obj, name, maxDepth, curDepth)
 function dumpError(text)
 {
   dump(text + "\n");
+}
+
+
+
+///////////////////////////////////////////////////////////////////////
+// Profile-related stuff
+// Only makes sense for roaming
+///////////////////////////////////////////////////////////////////////
+
+/* Returns a human-readable name for a profile file, e.g.
+   "abook.mab" -> "Personal Addressbook"
+   Will look for a stringbundle match
+   - for filename
+   - if failing that, for id
+   - if failing that, use the raw id
+   - if failing that, use the raw filename
+   @param filename  string
+   @param id  in case the filename is changing for a certain profile file
+              (e.g. in the case of password files), optionally pass an ID
+              for the file here, as used in filedescr.properties.
+              May be null.
+   @return string  Description for file
+*/
+var gStringBundleFiledescr;
+function GetFileDescription(filename, id)
+{
+  if (!gStringBundleFiledescr)
+  {
+    try {
+      gStringBundleFiledescr =
+                Components.classes["@mozilla.org/intl/stringbundle;1"]
+                .getService(Components.interfaces.nsIStringBundleService)
+                .createBundle("chrome://sroaming/locale/filedescr.properties");
+    } catch (e) {
+      return null;
+    }
+  }
+  try {
+    return gStringBundleFiledescr.GetStringFromName(filename);
+  } catch (e) {
+    try {
+      return gStringBundleFiledescr.GetStringFromName(id);
+    } catch (e) {
+      if (id)
+        return id;
+      return filename;
+    }
+  }
 }

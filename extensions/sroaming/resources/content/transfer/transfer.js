@@ -1373,14 +1373,6 @@ TransferProgressListener.prototype =
 
 
 
-function GetPromptService()
-{
-  // no caching, not worth it
-  // throw errors into caller
-  return Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                   .getService(Components.interfaces.nsIPromptService);
-}
-
 var gIOService;
 function GetIOService()
 {

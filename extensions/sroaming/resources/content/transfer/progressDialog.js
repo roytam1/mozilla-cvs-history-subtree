@@ -48,7 +48,6 @@ function Startup()
   ddump("In sroaming/transfer/progressDialog::Startup()");
 
   gDialog.FileList           = document.getElementById("FileList");
-  gDialog.FinalStatusMessage = document.getElementById("FinalStatusMessage");
   gDialog.StatusMessage      = document.getElementById("StatusMessage");
   gDialog.ListingProgress    = document.getElementById("ListingProgress");
   gDialog.Close              = document.documentElement.getButton("cancel");
@@ -63,7 +62,7 @@ function Startup()
     /* All kinds of exceptions should end up here, esp. from init, meaning
        this is the main last backstop for unexpected or fatal errors,
        esp. those not related to a certain file. */
-    SetGlobalStatusMessage(ErrorMessageForException(e));
+    GlobalError(ErrorMessageForException(e));
     return;
   }
 
@@ -247,7 +246,7 @@ function SetProgressStatus(filenr)
     gDialog.FileList.appendChild(listitem);
   }
 
-  CheckDone(false);
+  // CheckDone(false); -- already called from conflictCheck.js
 
   return found;
 }
@@ -347,13 +346,12 @@ function CleanUpDialog()
     clearTimeout(gTimerID);
     gTimerID = null;
   }
-  if (!gFinished)
+  if (!gFinished && gTransfer)
   {
     gTransfer.cancel();
   }
   PassBackParams();
 }
-
 
 // UI stuff
 
@@ -363,14 +361,15 @@ function SetStatusMessage(message)
   if (!message)
     message = "";
   if (!gTransferFailed)
-    gDialog.FinalStatusMessage.value = message;
+    gDialog.StatusMessage.value = message;
 }
 
 // For fatal errors like unexpected exceptions. Bail and go home.
 function GlobalError(message)
 {
-  alert(message); // XXX
-  CloseDialog(); // XXX
+  GetPromptService().alert(window, GetString("FatalError"),
+                           message);
+  CloseDialog();
 }
 
 /*
@@ -387,7 +386,8 @@ function addFileStatus(file)
 //XXX hack
 function showErrors()
 {
-  alert(gResults);
+  GetPromptService().alert(window, GetString("TransferErrorsTitle"),
+                           gResults);
 }
 
 // set to on, if a listing.xml file is being transferred (and off afterwards)

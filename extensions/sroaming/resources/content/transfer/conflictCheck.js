@@ -299,7 +299,7 @@ function download(transfer, remoteListing)
 
         // avoid conflicts for files which don't exist on server or locally
         var conflicts = substractFiles(comparisonStep2aa.mismatches,
-                                       missingRemote.concat(missingLocal));
+                                       addFiles(missingRemote, missingLocal));
 
         if (conflicts.length > 0)
         {
@@ -315,7 +315,7 @@ function download(transfer, remoteListing)
             onCancel();
             return;
           }
-          keepLocalVersionFiles = keepLocalVersionFiles.concat(answer.local);
+          keepLocalVersionFiles =addFiles(keepLocalVersionFiles, answer.local);
         }
       }
     }
@@ -398,7 +398,7 @@ function upload(transfer, remoteListing)
 
         // avoid conflicts for files which don't exist on server or locally
         var conflicts = substractFiles(comparisonStep2a.mismatches,
-                                       missingRemote.concat(missingLocal));
+                                       addFiles(missingRemote, missingLocal));
 
         if (conflicts.length == 0)
         {
@@ -423,7 +423,7 @@ function upload(transfer, remoteListing)
             return;
           }
           uploadStep4(transfer, localFiles, remoteListing,
-                      missingLocal.concat(answer.server));
+                      addFiles(missingLocal, answer.server));
         }
       }, false);
     }
@@ -444,7 +444,8 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
     ddump("Step 5: Generating listing file based on facts");
     var filesDone = extractFiles(transfer.filesWithStatus("done"),
                                  localFiles);
-    createListingFile(filesDone.concat(substractFiles(remoteFiles, filesDone)),
+    createListingFile(addFiles(filesDone,
+                               substractFiles(remoteFiles, filesDone)),
                       kListingTransferFilename);
 
     ddump("Step 6: Uploading listing file to server");
@@ -530,7 +531,7 @@ function compareFiles(filesList, files1, files2)
     var matches = (f1 && f2
                    && f1.size == f2.size
                    && f1.lastModified == f2.lastModified);
-    //if (!f1 && !f2) needed? Would break current conflict logic
+    //if (!f1 && !f2) needed? Would break current conflict logic (|missing*|)
     //  matches = true;
 
     ddump(filename + (matches ? " matches" : " doesn't match"));
@@ -596,6 +597,20 @@ function substractFiles(files1, filesList)
   }
 
   return result;
+}
+
+/*
+  Returns files1 + files2, i.e. returns all entries of files1 and
+  all entries of files2. It is *not* garanteed that every entry appears
+  only once in the result.
+
+  @param files1  FilesList
+  @param files2  FilesList
+  @result  FilesStats  Superset of files1 and files2
+*/
+function addFiles(files1, files2)
+{
+  return files1.concat(files2);
 }
 
 

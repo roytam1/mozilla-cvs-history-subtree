@@ -3,7 +3,7 @@ todo:
 - license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
-- alert() -> nsiprompt or dialog
+- experimental warning
 - remove printfs
 - XXXs
 - firebird/thunderbird extension
@@ -18,8 +18,14 @@ don't care (for now):
   - problem: cancel by user in progress dialog: xpconnect errors
     solution: prevent dialog closure (even if cancel pressed) until we're done.
 - listing progressmeter doesn't work
+- If one file is missing on both server and client and we didn't upload, but
+  there is no conflict, we still show one. That's due to that commented-out
+  check in compareFiles(). Mind the warning there and fix it.
+- no preselection in conflict dialog
+- not using statusText for FTP errors (file not readable in this case)
 
 Enhance
+- better error dialog
 - protocols
   - HTTPS
   - LDAP (already done by Sun?)
