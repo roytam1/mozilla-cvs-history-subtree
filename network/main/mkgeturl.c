@@ -61,7 +61,7 @@
 #include "mkautocf.h"
 #include "mkabook.h"
 #include "mkhelp.h"
-#include HG87326
+#include "ssl.h"
 
 #ifdef MOZ_LDAP
 #include "mkldap.h"
@@ -73,7 +73,7 @@
 
 #include "mktcp.h"  /* for NET_InGetHostByName semaphore */
 #ifdef MOZILLA_CLIENT
-#include HG45245
+#include "secnav.h"
 #include "libevent.h"
 #include "jscompat.h"
 #include "jspubtd.h"
@@ -100,7 +100,7 @@
 #endif
 #endif /* NSPR20 */
 
-#include HG63250
+#include "sslerr.h"
 #include "merrors.h"
 #include "prefetch.h"
 
@@ -2229,7 +2229,7 @@ NET_GetURL (URL_Struct *URL_s,
 					   && type != HTML_PANEL_HANDLER_TYPE_URL
 					    && type != MAILTO_TYPE_URL)
 		  {
-				    continue_loading_url = HG52528
+				    continue_loading_url = (Bool)SECNAV_SecurityDialog(window_id, SD_INSECURE_POST_FROM_INSECURE_DOC);
 		  }
 		      }
 
@@ -4404,6 +4404,7 @@ PRIVATE void
 NET_InitTotallyRandomStuffPeopleAddedProtocols(void)
 {
 	HG00484
+	net_reg_random_protocol(net_SeclibURLLoad, INTERNAL_SECLIB_TYPE_URL);
 	net_reg_random_protocol(net_HTMLPanelLoad, HTML_PANEL_HANDLER_TYPE_URL);
 	net_reg_random_protocol(net_HTMLDialogLoad, HTML_DIALOG_HANDLER_TYPE_URL);
 	net_reg_random_protocol(net_WysiwygLoad, WYSIWYG_TYPE_URL);

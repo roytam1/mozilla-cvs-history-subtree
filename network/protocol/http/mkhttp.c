@@ -2686,7 +2686,37 @@ net_setup_http_stream(ActiveEntry * ce)
 	  }
 
 #ifdef MOZILLA_CLIENT
-    HG22087
+
+
+	/*  */
+
+	/* check to see if we just now entered a secure space */ 
+    /* don't do if this is coming from history */ 
+    /* don't do this if about to redirect */ 
+    if( HG22087
+		(CE_FORMAT_OUT == FO_CACHE_AND_PRESENT || CE_FORMAT_OUT == FO_PRESENT) 
+        && !CE_URL_S->history_num) 
+      { 
+        History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
+		XP_Bool warn = FALSE;
+	
+		if (h == NULL) {
+			/* Deal with frames.  If the window doesn't have history, */
+			 /* then it is a new window or a new frame cell. */
+			 if ( ce->window_id->grid_parent != NULL ) {
+				h = SHIST_GetCurrent(&ce->window_id->grid_parent->hist);
+				HG22088
+			} else {
+				/* no parent frame - this is a top level window */
+				warn = TRUE;
+			}
+		} else if (HG22089) {
+			warn = TRUE;
+		}
+		if ( warn ) {
+			SECNAV_SecurityDialog(CE_WINDOW_ID, SD_ENTERING_SECURE_SPACE);
+		}
+      }
 #endif /* MOZILLA_CLIENT */
 
     /* set a default content type if one wasn't given 
