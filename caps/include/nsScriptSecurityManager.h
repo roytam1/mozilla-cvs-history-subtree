@@ -105,6 +105,7 @@ public:
     JSContext* GetCurrentContextQuick();
 
 private:
+
     static PRBool IsDOMClass(nsIClassInfo* aClassInfo);
 
     nsresult
@@ -125,8 +126,9 @@ private:
                             const char* aProperty, void** aPolicy);
 
     nsresult
-    CheckSameOriginDOMProp(JSContext* aCx, nsIPrincipal* aSubject, 
-                           nsIPrincipal* aObject, PRUint32 aAction);
+    CheckSameOriginInternal(nsIPrincipal* aSubject, 
+                            nsIPrincipal* aObject, PRUint32 aAction,
+                            PRBool checkForPrivileges);
     
     PRInt32 
     GetSecurityLevel(nsIPrincipal *principal,

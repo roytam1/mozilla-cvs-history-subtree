@@ -224,75 +224,25 @@ nsScriptSecurityManager::CheckSameOrigin(JSContext* cx,
     if (NS_FAILED(rv))
         return rv;
 
-    if (!sourcePrincipal)
-    {
-        NS_WARNING("CheckSameOrigin called on script w/o principals; should this happen?");
+    PRBool equals;
+    if (!sourcePrincipal ||
+        NS_SUCCEEDED(sourcePrincipal->Equals(mSystemPrincipal, &equals))
+                     && equals)
+        // We have native code or the system principal, so allow access
         return NS_OK;
-    }
 
-    PRBool equals = PR_FALSE;
-    rv = sourcePrincipal->Equals(mSystemPrincipal, &equals);
-    if (NS_SUCCEEDED(rv) && equals)
-    {
-        // This is a system (chrome) script, so allow access
-        return NS_OK;
-    }
-
-    // Get the original URI from the source principal.
-    // This has the effect of ignoring any change to document.domain
-    // which must be done to avoid DNS spoofing (bug 154930)
-    nsCOMPtr<nsIAggregatePrincipal> sourceAgg(do_QueryInterface(sourcePrincipal, &rv));
-    NS_ENSURE_SUCCESS(rv, rv); // If it's not a system principal, it must be an aggregate
-    nsCOMPtr<nsIPrincipal> sourceOriginal;
-    rv = sourceAgg->GetOriginalCodebase(getter_AddRefs(sourceOriginal));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // Create a principal for the target URI
+    // Create a principal from the target URI
+    // XXX factor out the Equals function so this isn't necessary
     nsCOMPtr<nsIPrincipal> targetPrincipal;
     rv = GetCodebasePrincipal(aTargetURI, getter_AddRefs(targetPrincipal));
     if (NS_FAILED(rv))
         return rv;
 
     // Compare origins
-    PRBool sameOrigin = PR_FALSE;
-    rv = sourceOriginal->Equals(targetPrincipal, &sameOrigin);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (!sameOrigin)
-        return NS_ERROR_DOM_BAD_URI;
-
-    return NS_OK;
+    return CheckSameOriginInternal(sourcePrincipal, targetPrincipal,
+                                   0, PR_FALSE /* do not check for privileges */);
 }
 
-NS_IMETHODIMP
-nsScriptSecurityManager::CheckSameOriginURI(nsIURI* aSourceURI,
-                                            nsIURI* aTargetURI)
-{
-    nsresult rv;
-
-    // Create a principal for the source URI
-    nsCOMPtr<nsIPrincipal> sourcePrincipal;
-    rv = GetCodebasePrincipal(aSourceURI, getter_AddRefs(sourcePrincipal));
-    if (NS_FAILED(rv))
-        return rv;
-
-    // Create a principal for the target URI
-    nsCOMPtr<nsIPrincipal> targetPrincipal;
-    rv = GetCodebasePrincipal(aTargetURI, getter_AddRefs(targetPrincipal));
-    if (NS_FAILED(rv))
-        return rv;
-
-
-
-    PRBool sameOrigin = PR_FALSE;
-    rv = sourcePrincipal->Equals(targetPrincipal, &sameOrigin);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (!sameOrigin)
-        return NS_ERROR_DOM_BAD_URI;
-
-    return NS_OK;
-}
 
 nsresult
 nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
@@ -406,8 +356,8 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
                 rv = NS_ERROR_DOM_SECURITY_ERR;
                 break;
             }
-            rv = CheckSameOriginDOMProp(aJSContext, subjectPrincipal, objectPrincipal,
-                                 aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
+            rv = CheckSameOriginInternal(subjectPrincipal, objectPrincipal,
+                                         aAction, PR_TRUE /* check for privileges */);
 
             break;
         }
@@ -539,12 +489,11 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
 }
 
 nsresult
-nsScriptSecurityManager::CheckSameOriginDOMProp(JSContext *aCx,
-                                                nsIPrincipal* aSubject,
-                                                nsIPrincipal* aObject,
-                                                PRUint32 aAction)
+nsScriptSecurityManager::CheckSameOriginInternal(nsIPrincipal* aSubject,
+                                                 nsIPrincipal* aObject,
+                                                 PRUint32 aAction,
+                                                 PRBool checkForPrivileges)
 {
-    nsresult rv;
     /*
     ** Get origin of subject and object and compare.
     */
@@ -556,25 +505,7 @@ nsScriptSecurityManager::CheckSameOriginDOMProp(JSContext *aCx,
         return NS_ERROR_FAILURE;
 
     if (isSameOrigin)
-    {   // If either the subject or the object has changed its principal by
-        // explicitly setting document.domain then the other must also have
-        // done so in order to be considered the same origin. This prevents
-        // DNS spoofing based on document.domain (154930)
-        nsCOMPtr<nsIAggregatePrincipal> subjectAgg(do_QueryInterface(aSubject, &rv));
-        NS_ENSURE_SUCCESS(rv, rv);
-        PRBool subjectSetDomain = PR_FALSE;
-        subjectAgg->WasCodebaseChanged(&subjectSetDomain);
-
-        nsCOMPtr<nsIAggregatePrincipal> objectAgg(do_QueryInterface(aObject, &rv));
-        NS_ENSURE_SUCCESS(rv, rv);
-        PRBool objectSetDomain = PR_FALSE;
-        objectAgg->WasCodebaseChanged(&objectSetDomain);
-
-        // If both or neither explicitly set their domain, allow the access
-        if (!(subjectSetDomain || objectSetDomain) ||
-            (subjectSetDomain && objectSetDomain))
-            return NS_OK;
-    }
+        return NS_OK;
 
     // Allow access to about:blank
     nsCOMPtr<nsICodebasePrincipal> objectCodebase(do_QueryInterface(aObject));
@@ -587,18 +518,21 @@ nsScriptSecurityManager::CheckSameOriginDOMProp(JSContext *aCx,
             return NS_OK;
     }
 
-    /*
-    ** If we failed the origin tests it still might be the case that we
-    ** are a signed script and have permissions to do this operation.
-    ** Check for that here
-    */
-    PRBool capabilityEnabled = PR_FALSE;
-    const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
-                      "UniversalBrowserWrite" : "UniversalBrowserRead";
-    if (NS_FAILED(IsCapabilityEnabled(cap, &capabilityEnabled)))
-        return NS_ERROR_FAILURE;
-    if (capabilityEnabled)
-        return NS_OK;
+    if (checkForPrivileges)
+    {
+        /*
+        ** If we failed the origin tests it still might be the case that we
+        ** are a signed script and have permissions to do this operation.
+        ** Check for that here
+        */
+        PRBool capabilityEnabled = PR_FALSE;
+        const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
+                          "UniversalBrowserWrite" : "UniversalBrowserRead";
+        if (NS_FAILED(IsCapabilityEnabled(cap, &capabilityEnabled)))
+            return NS_ERROR_FAILURE;
+        if (capabilityEnabled)
+            return NS_OK;
+        }
     /*
     ** Access tests failed, so now report error.
     */
