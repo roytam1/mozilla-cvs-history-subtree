@@ -1100,6 +1100,12 @@ nsInstall::StartInstall(const nsString& aPackageName, const nsIDOMInstallVersion
 }
 
 PRInt32    
+nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
 nsInstall::Uninstall(const nsString& aPackageName, PRInt32* aReturn)
 {
     PRInt32 result = SanityCheck();
