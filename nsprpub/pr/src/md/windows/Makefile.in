@@ -42,6 +42,10 @@ include $(MOD_DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
+ifdef USE_AUTOCONF
+OS_TARGET=$(MOZ_TARGET)
+endif
+
 ifeq ($(OS_TARGET), WIN16)
 CSRCS = \
 	w16null.c \
@@ -61,18 +65,17 @@ else
 ifeq ($(OS_TARGET), WIN95)
 CSRCS =          \
     ntmisc.c \
-    ntsec.c   \
     ntsem.c   \
     ntinrval.c \
     ntgc.c \
 	w95thred.c \
 	w95io.c \
 	w95cv.c \
-	w32rng.c \
 	w95sock.c \
 	win32_errors.c \
     w32ipcsem.c \
     w32poll.c \
+    w32rng.c \
     w32shm.c \
     w95dllmain.c \
     $(NULL)
@@ -80,7 +83,6 @@ else
 CSRCS =          \
     ntdllmn.c \
     ntmisc.c \
-    ntsec.c   \
     ntsem.c   \
     ntinrval.c \
     ntgc.c \
@@ -97,7 +99,7 @@ endif
 
 TARGETS	= $(OBJS)
 
-INCLUDES = -I$(dist_includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
+INCLUDES = -I$(DIST)/include -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
 DEFINES += -D_NSPR_BUILD_
 
@@ -105,3 +107,4 @@ include $(topsrcdir)/config/rules.mk
 
 export:: $(TARGETS)
 
+install:: export
