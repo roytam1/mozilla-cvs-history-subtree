@@ -53,7 +53,7 @@ nsTSubstring_CharT::MutatePrep( size_type capacity, char_type** oldData, PRUint3
 
     size_type curCapacity = Capacity();
 
-    if (capacity <= curCapacity)
+    if (IsMutable() && capacity <= curCapacity)
       return PR_TRUE;
 
     if (curCapacity > 0)

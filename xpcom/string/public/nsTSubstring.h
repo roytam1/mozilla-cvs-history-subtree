@@ -347,6 +347,11 @@ class nsTSubstring_CharT : public nsTAString_CharT
           return mFlags & F_FIXED;
         }
 
+      PRBool IsMutable() const
+        {
+          return mFlags & (F_SHARED | F_OWNED | F_FIXED);
+        }
+
     public:
 
       // mFlags is a bitwise combination of the following flags
