@@ -115,8 +115,8 @@ var gPrivacyPane = {
   enableCookiesChanged: function ()
   {
     var preference = document.getElementById("network.cookie.cookieBehavior");
-    var denyPref = document.getElementById("network.cookie.denyRemovedCookies");
-    denyPref.disabled = preference.value == 2;
+    var blockFutureCookies = document.getElementById("network.cookie.blockFutureCookies");
+    blockFutureCookies.disabled = preference.value == 2;
     var lifetimePref = document.getElementById("network.cookie.lifetimePolicy");
     lifetimePref.disabled = preference.value == 2;
   },

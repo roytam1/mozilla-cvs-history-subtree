@@ -41,6 +41,7 @@
 <!ENTITY  acceptForSession.label      "until I close &brandShortName;">
 <!ENTITY  askAboutCookies.label       "ask me every time">
 <!ENTITY  viewCookies.label           "View Cookies">
+<!ENTITY  viewCookies.accesskey       "C">
 <!ENTITY  clearCookies.label          "Clear Cookies Now">
 
 <!ENTITY  itemCache.label             "Cache">

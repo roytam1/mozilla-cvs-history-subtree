@@ -109,7 +109,7 @@
       </template>
 
       <treecols>
-        <treecol id="fileExtension"
+        <treecol id="fileExtension" ignoreincolumnpicker="true" fiex="true"
                  class="sortDirectionIndicator" persist="width"
                  sort="rdf:http://home.netscape.com/NC-rdf#FileExtension"
                  sortActive="true" sortDirection="none"

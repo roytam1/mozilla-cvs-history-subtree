@@ -208,7 +208,7 @@ var gPermissionManager = {
   
   observe: function (aSubject, aTopic, aData)
   {
-    if (aTopic == "perm-changed") ;
+    if (aTopic == "perm-changed") dump("*** permission changed - WRITEME\n"); ;
   },
   
   onPermissionSelected: function ()

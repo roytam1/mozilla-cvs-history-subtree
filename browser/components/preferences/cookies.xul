@@ -46,6 +46,7 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         style="width: 30em;"
         onload="gCookiesWindow.init();"
+        onunload="gCookiesWindow.uninit();"
         persist="screenX screenY width height">
 
   <script src="chrome://browser/content/preferences/permissionsutils.js"/>
@@ -60,18 +61,19 @@
            
   <vbox flex="1" class="contentPane">
     <label value="&cookiesonsystem.label;"/>
-    <tree id="cookiesTree" flex="1" style="height: 10em;"
+    <separator class="thin"/>
+    <tree id="cookiesList" flex="1" style="height: 10em;"
           onkeypress="gCookiesWindow.onCookieKeyPress(event)"
           onselect="gCookiesWindow.onCookieSelected();"
           hidecolumnpicker="true">
       <treecols>
-        <treecol id="domainCol" label="&cookiedomain.label;" flex="2"
-                 onclick="gCookiesWindow.sort('rawHost');" persist="width"/>
+        <treecol id="domainCol" label="&cookiedomain.label;" flex="2" primary="true"
+                 class="treecol-image" persist="width" onclick="gCookiesWindow.sort('rawHost');" />
         <splitter class="tree-splitter"/>
         <treecol id="nameCol" label="&cookiename.label;" flex="1"
-                 onclick="gCookiesWindow.sort('name');" persist="width"/>
+                 persist="width" onclick="gCookiesWindow.sort('name');"/>
       </treecols>
-      <treechildren/>
+      <treechildren id="cookiesChildren"/>
     </tree>
     <groupbox>
       <grid flex="1">
@@ -82,27 +84,27 @@
         <rows>
           <row align="center">
             <hbox pack="end"><label value="&props.name.label;"/></hbox>
-            <textbox id="ifl_name" readonly="true" class="plain"/>
+            <textbox id="name" readonly="true" class="plain"/>
           </row>
           <row align="center">
             <hbox pack="end"><label value="&props.value.label;"/></hbox>
-            <textbox id="ifl_value" readonly="true" class="plain"/>
+            <textbox id="value" readonly="true" class="plain"/>
           </row>
           <row align="center">
-            <hbox pack="end"><label id="ifl_isDomain" value="&props.domain.label;"/></hbox>
-            <textbox id="ifl_host" readonly="true" class="plain"/>
+            <hbox pack="end"><label id="isDomain" value="&props.domain.label;"/></hbox>
+            <textbox id="host" readonly="true" class="plain"/>
           </row>
           <row align="center">
             <hbox pack="end"><label value="&props.path.label;"/></hbox>
-            <textbox id="ifl_path" readonly="true" class="plain"/>
+            <textbox id="path" readonly="true" class="plain"/>
           </row>
           <row align="center">
             <hbox pack="end"><label value="&props.secure.label;"/></hbox>
-            <textbox id="ifl_isSecure" readonly="true" class="plain"/>
+            <textbox id="isSecure" readonly="true" class="plain"/>
           </row>
           <row align="center">
             <hbox pack="end"><label value="&props.expires.label;"/></hbox>
-            <textbox id="ifl_expires" readonly="true" class="plain"/>
+            <textbox id="expires" readonly="true" class="plain"/>
           </row>
         </rows>
       </grid>
@@ -111,9 +113,9 @@
   <hbox align="end">
     <hbox class="actionButtons" flex="1">
       <button id="removeCookie" disabled="true" label="&button.removecookie.label;"
-              oncommand="gCookiesWindow.delete();"/>
+              oncommand="gCookiesWindow.deleteCookie();"/>
       <button id="removeAllCookies" label="&button.removeallcookies.label;"
-              oncommand="gCookiesWindow.deleteAll();"/>
+              oncommand="gCookiesWindow.deleteAllCookies();"/>
     </hbox>
     <resizer dir="bottomright"/>
   </hbox>

@@ -53,7 +53,7 @@
       <preference id="signon.rememberSignons"             name="signon.rememberSignons"             type="bool"/>
       <preference id="browser.download.manager.retention" name="browser.download.manager.retention" type="int"/>
       <preference id="network.cookie.cookieBehavior"      name="network.cookie.cookieBehavior"      type="int" onchange="gPrivacyPane.enableCookiesChanged();"/>
-      <preference id="network.cookie.denyRemovedCookies"  name="network.cookie.denyRemovedCookies"  type="bool"/>
+      <preference id="network.cookie.blockFutureCookies"  name="network.cookie.blockFutureCookies"  type="bool"/>
       <preference id="network.cookie.lifetimePolicy"      name="network.cookie.lifetimePolicy"      type="int"/>
       <preference id="browser.cache.disk.capacity"        name="browser.cache.disk.capacity"        type="int"/>
     </preferences>
@@ -163,7 +163,7 @@
                         onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
               <checkbox id="enableCookiesNotRemoved" class="indent"
                         label="&enableCookiesNotRemoved.label;"
-                        preference="network.cookie.denyRemovedCookies"/>
+                        preference="network.cookie.blockFutureCookies"/>
               <separator class="thin"/>
               <hbox align="center" class="indent">
                 <label preference="network.cookie.lifetimePolicy">&keepCookies.label;</label>
@@ -181,7 +181,8 @@
           <separator flex="1"/>
           <separator/>
           <hbox>
-            <button label="&viewCookies.label;" oncommand="gPrivacyPane.viewCookies();"/>
+            <button label="&viewCookies.label;" accesskey="&viewCookies.accesskey;"
+                    oncommand="gPrivacyPane.viewCookies();"/>
             <spring flex="1"/>
             <button label="&clearCookies.label;" oncommand="gPrivacyPane.clear(this);"
                     item="cookies"/>
