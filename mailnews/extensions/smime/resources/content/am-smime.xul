@@ -34,7 +34,7 @@ Contributors:
         onload="parent.onPanelLoaded('am-smime.xul');"
         orient="vertical">
  
-  <stringbundle id="bundle_prefs" src="chrome://messenger/locale/prefs.properties"/> 
+  <stringbundle id="bundle_smime" src="chrome://messenger/locale/am-smime.properties"/> 
   <script type="application/x-javascript" src="chrome://messenger/content/AccountManager.js"/>
   <script type="application/x-javascript" src="chrome://messenger/content/am-smime.js"/>
     

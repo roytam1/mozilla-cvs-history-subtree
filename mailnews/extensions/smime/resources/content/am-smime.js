@@ -99,7 +99,6 @@ function smimeSelectCert(smime_cert)
   var canceled = new Object;
   var x509cert = 0;
   var certUsage;
-  var prefBundle = document.getElementById("bundle_prefs");
 
   if (smime_cert == "encryption.certificateName") {
     certUsage = 5;
@@ -108,9 +107,10 @@ function smimeSelectCert(smime_cert)
   }
 
   try {
+    var smimeBundle = document.getElementById("bundle_smime");
     x509cert = picker.pickByUsage(window,
-      "X",
-      "Y",
+      smimeBundle.getString("prefPanel-smime"),
+      smimeBundle.getString("smimeCertPrompt"),
       certUsage, // this is from enum SECCertUsage
       false, false, canceled);
   } catch(e) {
