@@ -33,11 +33,6 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 #endif
 
-#ifdef HPUX
-#define FD_SETSIZE    30000
-#undef	NSLDAPI_HAVE_POLL
-#endif
-
 /*
  * On platforms where poll() does not exist, we use select().
  * Therefore, we should increase the number of file descriptors
@@ -57,6 +52,11 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #include "ldap-int.h"
 #ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #include <signal.h>
+#endif
+
+#ifdef HPUX
+#define FD_SETSIZE    30000
+#undef	NSLDAPI_HAVE_POLL
 #endif
 
 #ifdef NSLDAPI_HAVE_POLL
