@@ -72,6 +72,8 @@ void nsMailboxProtocol::Initialize(nsIURI * aURL)
 		nsresult rv = aURL->QueryInterface(nsIMailboxUrl::GetIID(), (void **) getter_AddRefs(m_runningUrl));
 		if (NS_SUCCEEDED(rv) && m_runningUrl)
 		{
+			rv = m_runningUrl->GetMailboxAction(&m_mailboxAction);
+
 			nsFileSpec * fileSpec = nsnull;
 			m_runningUrl->GetFilePath(&fileSpec);
 			if (m_mailboxAction == nsIMailboxUrl::ActionParseMailbox)
