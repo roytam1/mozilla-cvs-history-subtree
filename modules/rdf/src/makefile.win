@@ -35,10 +35,13 @@ C_OBJS=.\$(OBJDIR)\vocab.obj \
 
 CPP_OBJS=\
 	.\$(OBJDIR)\comwrap.obj \
+        .\$(OBJDIR)\netglue.obj \
 	$(NULL)
 
 LINCS=-I$(XPDIST)\public\xpcom
-LINCS= $(LINCS) -I$(PUBLIC)\rdf
+LINCS=$(LINCS) -I$(PUBLIC)\rdf 
+LINCS=$(LINCS) -I$(PUBLIC)\netlib -I$(PUBLIC)\raptor
+
 include <$(DEPTH)\config\rules.mak>
 
 libs:: $(LIBRARY)

@@ -24,7 +24,6 @@
    
 #include "remstore.h"
 
-
 	/* globals */
 
 extern char *profileDirURL;

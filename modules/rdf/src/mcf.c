@@ -40,9 +40,12 @@ getTranslator (char* url)
 {
   RDFT ans = PL_HashTableLookup(dataSourceHash, url);
   if (ans) return ans;
+#ifdef XPCOM_XXX
   if (startsWith(url, "rdf:localStore")) {
     ans = MakeLocalStore(url);
-  } else if (startsWith(url, "rdf:remoteStore")) {
+  } else
+#endif
+  if (startsWith(url, "rdf:remoteStore")) {
     ans =  MakeRemoteStore(url);
   } else if (startsWith(url, "rdf:bookmarks")) {
     ans = MakeBMKStore(url);

@@ -192,7 +192,6 @@ rdfDatabaseWrapper::rdfDatabaseWrapper(RDF r) : mRDF(r)
   if( !mpObserverMap ) // XXX just like 'new' failing on this object?
     throw bad_alloc("rdf: unable to allocate observer map" );
 #endif
-
 }
 
 rdfDatabaseWrapper::~rdfDatabaseWrapper()

@@ -408,10 +408,17 @@ beginReadingRDFFile (RDFFile file)
       rdf_complete(&stream);
 #else
 
+   /*
+     XXX this is the pre-raptor world
+
 	url = file->url;
 	if (file->fileType == ES_RT)	method = URL_INDEX_METHOD;
 	rdf_GetURL (gRDFMWContext(file->db), method, NULL, file);
+   */
 
+   rdfStreamListener* pListener = new rdfStreamListener;
+   pListener->AddRef(); // XXX is this evil?  Can't see any reason to use factories but...
+   
 #endif
 }
 
