@@ -635,11 +635,9 @@ find_jsjava_thread(JNIEnv *jEnv)
 
     /* Move a found thread to head of list for faster search next time. */
     if (jsj_env && p != &thread_list) {
-        /* First, check to make sure list hasn't mutated since we searched */
-        if (*p == jsj_env) {
-            *p = jsj_env->next;
-            thread_list = jsj_env;
-        }
+        *p = jsj_env->next;
+        jsj_env->next = thread_list;
+        thread_list = jsj_env;
     }
     
 #ifdef JSJ_THREADSAFE
@@ -785,6 +783,8 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
             break;
         }
     }
+
+    JS_ASSERT(e);
 
 #ifdef JSJ_THREADSAFE
     PR_ExitMonitor(thread_list_monitor);
