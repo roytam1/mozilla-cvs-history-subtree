@@ -693,7 +693,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
 
   // we have to use the old way.. for 256 color mode and printing.. slow, but will always work.
   if ((mAlphaDepth>1) || (canRaster==DT_RASPRINTER) || (256==mNumPaletteColors)
-      || (tileWidth>MAX_BUFFER_WIDTH) || (tileHeight>MAX_BUFFER_HEIGHT)){
+      || (aWidth>MAX_BUFFER_WIDTH) || (aHeight>MAX_BUFFER_HEIGHT)){
     for(y=aY0;y<aY1;y+=aHeight){
       for(x=aX0;x<aX1;x+=aWidth){
       Draw(aContext, aSurface,
