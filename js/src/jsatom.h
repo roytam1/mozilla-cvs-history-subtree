@@ -100,8 +100,8 @@ struct JSAtomList {
 
 #define ATOM_LIST_SEARCH(_ale,_al,_atom)                                      \
     JS_BEGIN_MACRO                                                            \
-        JSHashEntry **hep;                                                    \
-        ATOM_LIST_LOOKUP(_ale, hep, _al, _atom);                              \
+        JSHashEntry **_hep;                                                   \
+        ATOM_LIST_LOOKUP(_ale, _hep, _al, _atom);                             \
     JS_END_MACRO
 
 #define ATOM_LIST_LOOKUP(_ale,_hep,_al,_atom)                                 \
@@ -120,7 +120,7 @@ struct JSAtomList {
                     (_al)->list = _ale;                                       \
                     break;                                                    \
                 }                                                             \
-                _alep = &ALE_NEXT(_ale);                                      \
+                _alep = (JSAtomListElement **)&_ale->entry.next;              \
             }                                                                 \
         }                                                                     \
     JS_END_MACRO
