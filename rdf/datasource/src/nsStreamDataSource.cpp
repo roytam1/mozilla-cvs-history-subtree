@@ -18,12 +18,26 @@
 
 /*
 
-  A data source that can read itself from and write itself to a stream.
+  A data source that can read itself from and write itself to an
+  RDF/XML stream.
+
+  TO DO
+  -----
+
+  1) Right now, the only kind of stream data sources that are writable
+     are "file:" URIs. (In fact, <em>all</em> "file:" URIs are
+     writable, modulo flie system permissions; this may lead to some
+     surprising behavior.) Eventually, it'd be great if we could open
+     an arbitrary nsIOutputStream on *any* URL, and Netlib could just
+     do the magic.
 
  */
 
+#include "nsFileSpec.h"
+#include "nsFileStream.h"
 #include "nsIDTD.h"
 #include "nsINameSpaceManager.h"
+#include "nsIOutputStream.h"
 #include "nsIParser.h"
 #include "nsIRDFContentSink.h"
 #include "nsIRDFCursor.h"
@@ -35,11 +49,13 @@
 #include "nsParserCIID.h"
 #include "nsRDFCID.h"
 #include "plstr.h"
+#include "prio.h"
 
 ////////////////////////////////////////////////////////////////////////
 
 static NS_DEFINE_IID(kIDTDIID,               NS_IDTD_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,  NS_INAMESPACEMANAGER_IID);
+static NS_DEFINE_IID(kIOutputStreamIID,      NS_IOUTPUTSTREAM_IID);
 static NS_DEFINE_IID(kIParserIID,            NS_IPARSER_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,     NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,    NS_IRDFCONTENTSINK_IID);
@@ -54,6 +70,53 @@ static NS_DEFINE_CID(kRDFSimpleContentSinkCID,  NS_RDFSIMPLECONTENTSINK_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,         NS_WELLFORMEDDTD_CID);
 
 ////////////////////////////////////////////////////////////////////////
+// FileOutputStreamImpl
+
+class FileOutputStreamImpl : public nsIOutputStream
+{
+private:
+    nsOutputFileStream mStream;
+
+public:
+    FileOutputStreamImpl(const nsFilePath& path)
+        : mStream(path) {}
+
+    virtual ~FileOutputStreamImpl(void) {
+        Close();
+    }
+
+    // nsISupports interface
+    NS_DECL_ISUPPORTS
+
+    // nsIBaseStream interface
+    NS_IMETHOD Close(void) {
+        mStream.close();
+        return NS_OK;
+    }
+
+    // nsIOutputStream interface
+    NS_IMETHOD Write(const char* aBuf,
+                     PRUint32 aOffset,
+                     PRUint32 aCount,
+                     PRUint32 *aWriteCount)
+    {
+        PRInt32 written = mStream.write(aBuf + aOffset, aCount);
+        if (written == -1) {
+            *aWriteCount = 0;
+            return NS_ERROR_FAILURE; // XXX right error code?
+        }
+        else {
+            *aWriteCount = written;
+            return NS_OK;
+        }
+    }
+};
+
+NS_IMPL_ISUPPORTS(FileOutputStreamImpl, kIOutputStreamIID);
+
+
+////////////////////////////////////////////////////////////////////////
+// StreamDataSourceImpl
 
 class StreamDataSourceImpl : public nsIRDFDataSource,
                              public nsIRDFXMLSource
@@ -196,6 +259,8 @@ StreamDataSourceImpl::Init(const char* uri)
 {
     nsresult rv;
 
+    // XXX this is a hack: any "file:" URI is considered writable. All
+    // others are considered read-only.
     if (PL_strncmp(uri, kFileURIPrefix, kFileURIPrefixLen) == 0)
         mIsWritable = PR_TRUE;
 
@@ -312,7 +377,20 @@ StreamDataSourceImpl::Flush(void)
     if (!mIsWritable || !mIsDirty)
         return NS_OK;
 
-    // er, write the data source out _here_.
+    nsresult rv;
+
+    const char* uri;
+    if (NS_FAILED(rv = mInner->GetURI(&uri)))
+        return rv;
+
+    nsFileURL url(uri);
+    nsFilePath path(url);
+
+    FileOutputStreamImpl out(path);
+    if (NS_FAILED(rv = Serialize(&out)))
+        return rv;
+
+    mIsDirty = PR_FALSE;
     return NS_OK;
 }
 
