@@ -120,7 +120,7 @@
 
 static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 
-#define DEFAULT_SCRIPTABLE_FLAGS_BASE                                         \
+#define DEFAULT_SCRIPTABLE_FLAGS                                              \
   nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY |                              \
   nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY |                              \
   nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY |                              \
@@ -130,7 +130,7 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   nsIXPCScriptable::DONT_REFLECT_INTERFACE_NAMES
 
 #define DOM_DEFAULT_SCRIPTABLE_FLAGS                                          \
-  DEFAULT_SCRIPTABLE_FLAGS_BASE |                                             \
+  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE |                               \
   nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY
 
@@ -154,8 +154,6 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   DOM_DEFAULT_SCRIPTABLE_FLAGS |                                              \
   nsIXPCScriptable::WANT_GETPROPERTY
 
-#define BOXOBJECT_SCRIPTABLE_FLAGS                                            \
-  DEFAULT_SCRIPTABLE_FLAGS_BASE
 
 typedef nsIClassInfo* (*nsDOMClassInfoConstructorFnc)
   (nsDOMClassInfo::nsDOMClassInfoID aID);
@@ -446,8 +444,10 @@ nsDOMClassInfoData sClassInfoData[] = {
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(XULControllers, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(BoxObject, nsDOMGenericSH::Create,
-                           BOXOBJECT_SCRIPTABLE_FLAGS)
+                           DEFAULT_SCRIPTABLE_FLAGS)
 
   // Crypto classes
   NS_DEFINE_CLASSINFO_DATA(Crypto, nsDOMGenericSH::Create,

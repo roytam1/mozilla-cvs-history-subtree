@@ -158,6 +158,7 @@ public:
     eXULNodeList_id,
     eXULNamedNodeMap_id,
     eXULAttr_id,
+    eXULControllers_id,
     eBoxObject_id,
 
     // Crypto classes
