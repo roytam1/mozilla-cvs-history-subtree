@@ -100,6 +100,7 @@ const String MODE_ATTR               = "mode";
 const String NAME_ATTR               = "name";
 const String NAMESPACE_ATTR          = "namespace";
 const String OMIT_XMLDECL_ATTR       = "omit-xml-declaration";
+const String ORDER_ATTR              = "order";
 const String PRIORITY_ATTR           = "priority";
 const String SELECT_ATTR             = "select";
 const String STANDALONE              = "standalone";

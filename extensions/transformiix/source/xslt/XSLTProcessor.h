@@ -59,7 +59,7 @@
 #include "List.h"
 #include "VariableBinding.h"
 #include "Numbering.h"
-
+#include "NodeSorter.h"
 
 #ifdef MOZILLA
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
@@ -362,7 +362,7 @@ private:
 class XSLType : public MITREObject {
 
 public:
-    enum _XSLType {
+    enum types {
         APPLY_IMPORTS =  1,
         APPLY_TEMPLATES,
         ATTRIBUTE,
@@ -383,6 +383,7 @@ public:
         PARAM,
         PI,
         PRESERVE_SPACE,
+        SORT,
         STRIP_SPACE,
         TEMPLATE,
         TEXT,
