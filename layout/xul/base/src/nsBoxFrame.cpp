@@ -166,7 +166,7 @@ nsBoxFrame::nsBoxFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* a
 
   SetLayoutManager(layout);
 
-#error "This used to be a NeedsRecalc call."
+  MarkIntrinsicWidthsDirty();
 }
 
 nsBoxFrame::~nsBoxFrame()
@@ -1040,7 +1040,7 @@ nsBoxFrame::SetDebug(nsBoxLayoutState& aState, PRBool aDebug)
  
      SetDebugOnChildList(aState, mFirstChild, aDebug);
 
-#error "This used to be a NeedsRecalc call."
+    MarkIntrinsicWidthsDirty();
   }
 
   return NS_OK;
