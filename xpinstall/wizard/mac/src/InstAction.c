@@ -460,7 +460,7 @@ GenerateIDIFromOpt(Str255 idiName, long dirID, short vRefNum, FSSpec *idiSpec)
 	long 	count, compsDone, i, j, k, len;
 	char 	ch, siteDomain[255];
 	Ptr 	buf, keybuf, fnum;
-	Str255	pfnum, pkeybuf;
+	Str255	pkeybuf;
 	FSSpec	fsExists;
 	StringPtr	pcurrArchive = 0;
 	
@@ -513,9 +513,9 @@ GenerateIDIFromOpt(Str255 idiName, long dirID, short vRefNum, FSSpec *idiSpec)
 				if (err == fnfErr)
 				{
 // XXX shouldn't this be #endif /* MOZILLA == 1 */
-					// get file number from STR# resource
-					GetIndString(pfnum, rIndices, compsDone+1);
-					fnum = PascalToC(pfnum);
+                        
+					// get file number 
+					fnum = ltoa(compsDone);
 				
 					// construct through concatenation [File<num>]\r
 					GetIndString(pkeybuf, rIDIKeys, sFile);
@@ -625,7 +625,7 @@ GenerateIDIFromOpt(Str255 idiName, long dirID, short vRefNum, FSSpec *idiSpec)
 						strncat(buf, &ch, 1);
 					}
 					if (fnum)
-						DisposePtr(fnum);
+						free(fnum);
 					compsDone++;
 // XXX shouldn't this be #if MOZILLA == 1
 				}
