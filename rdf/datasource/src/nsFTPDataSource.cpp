@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4; c-file-style: "stroustrup" -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -95,8 +95,6 @@ public:
 class FTPDataSource : public nsIRDFFTPDataSource
 {
 private:
-	char			*mURI;
-
 	static PRInt32		gRefCnt;
 
     // pseudo-constants
@@ -118,14 +116,15 @@ public:
 
 	NS_DECL_ISUPPORTS
 
-			FTPDataSource(void);
+                FTPDataSource(void);
 	virtual		~FTPDataSource(void);
+
+    nsresult Init();
 
 //friend	class		FTPDataSourceCallback;
 
 	// nsIRDFDataSource methods
 
-	NS_IMETHOD	Init(const char *uri);
 	NS_IMETHOD	GetURI(char **uri);
 	NS_IMETHOD	GetSource(nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -150,6 +149,14 @@ public:
 	NS_IMETHOD	Unassert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target);
+	NS_IMETHOD	Change(nsIRDFResource* aSource,
+				nsIRDFResource* aProperty,
+				nsIRDFNode* aOldTarget,
+				nsIRDFNode* aNewTarget);
+	NS_IMETHOD	Move(nsIRDFResource* aOldSource,
+				nsIRDFResource* aNewSource,
+				nsIRDFResource* aProperty,
+				nsIRDFNode* aTarget);
 	NS_IMETHOD	HasAssertion(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -162,7 +169,6 @@ public:
 	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
-	NS_IMETHOD	Flush();
 	NS_IMETHOD	GetAllCommands(nsIRDFResource* source,
 				nsIEnumerator/*<nsIRDFResource>*/** commands);
 	NS_IMETHOD	IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
@@ -235,7 +241,6 @@ isFTPDirectory(nsIRDFResource *r)
 
 
 FTPDataSource::FTPDataSource(void)
-	: mURI(nsnull)
 {
 	NS_INIT_REFCNT();
 
@@ -264,8 +269,6 @@ FTPDataSource::~FTPDataSource (void)
 {
 	gRDFService->UnregisterDataSource(this);
 
-	PL_strfree(mURI);
-
 	if (--gRefCnt == 0)
 	{
 		NS_RELEASE(kNC_Child);
@@ -289,23 +292,19 @@ NS_IMPL_ISUPPORTS(FTPDataSource, nsIRDFDataSource::GetIID());
 
 
 
-NS_IMETHODIMP
-FTPDataSource::Init(const char *uri)
+nsresult
+FTPDataSource::Init()
 {
 	nsresult	rv = NS_ERROR_OUT_OF_MEMORY;
 
 	if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
 				nsnull, nsIRDFDataSource::GetIID(), (void **)&mInner)))
 		return rv;
-	if (NS_FAILED(rv = mInner->Init(uri)))
-		return rv;
-
-	if ((mURI = PL_strdup(uri)) == nsnull)
-		return rv;
 
 	// register this as a named data source with the service manager
 	if (NS_FAILED(rv = gRDFService->RegisterDataSource(this, PR_FALSE)))
 		return rv;
+
 	return NS_OK;
 }
 
@@ -314,10 +313,10 @@ FTPDataSource::Init(const char *uri)
 NS_IMETHODIMP
 FTPDataSource::GetURI(char **uri)
 {
-	if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+	if ((*uri = nsXPIDLCString::Copy("rdf:ftp")) == nsnull)
 		return NS_ERROR_OUT_OF_MEMORY;
-	else
-		return NS_OK;
+
+    return NS_OK;
 }
 
 
@@ -773,7 +772,6 @@ FTPDataSource::Assert(nsIRDFResource *source,
                        nsIRDFNode *target,
                        PRBool tv)
 {
-//	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -784,7 +782,26 @@ FTPDataSource::Unassert(nsIRDFResource *source,
                          nsIRDFResource *property,
                          nsIRDFNode *target)
 {
-//	PR_ASSERT(0);
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+FTPDataSource::Change(nsIRDFResource* aSource,
+                      nsIRDFResource* aProperty,
+                      nsIRDFNode* aOldTarget,
+                      nsIRDFNode* aNewTarget)
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+FTPDataSource::Move(nsIRDFResource* aOldSource,
+                    nsIRDFResource* aNewSource,
+                    nsIRDFResource* aProperty,
+                    nsIRDFNode* aTarget)
+{
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -862,15 +879,6 @@ FTPDataSource::RemoveObserver(nsIRDFObserver *n)
 }
 
 
-
-NS_IMETHODIMP
-FTPDataSource::Flush()
-{
-	return mInner->Flush();
-}
-
-
-
 NS_IMETHODIMP
 FTPDataSource::GetAllCommands(nsIRDFResource* source,nsIEnumerator/*<nsIRDFResource>*/** commands)
 {
@@ -916,6 +924,14 @@ NS_NewRDFFTPDataSource(nsIRDFDataSource **result)
 		{
 			return NS_ERROR_OUT_OF_MEMORY;
 		}
+
+        nsresult rv;
+        rv = gFTPDataSource->Init();
+        if (NS_FAILED(rv)) {
+            delete gFTPDataSource;
+            gFTPDataSource = nsnull;
+            return rv;
+        }
 	}
 	NS_ADDREF(gFTPDataSource);
 	*result = gFTPDataSource;
