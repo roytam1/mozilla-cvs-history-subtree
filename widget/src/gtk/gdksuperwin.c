@@ -136,7 +136,7 @@ gdk_superwin_new (GdkWindow *parent_window,
   /* XXX should we make this Always? */
   xattr.backing_store = WhenMapped;
   xattr_mask = CWBackingStore;
-  XChangeWindowAttributes(xdisplay, bin_xwindow, xattr_mask, &xattr);
+  /* XChangeWindowAttributes(xdisplay, bin_xwindow, xattr_mask, &xattr); */
 
   gdk_window_show (superwin->bin_window);
 
