@@ -36,7 +36,7 @@
 # All DTD information is stored in a separate file so that it can be shared by
 # hiddenWindow.xul.
 #include browser-doctype.inc
-
+ 
 <window id="main-window"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
