@@ -330,7 +330,11 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 	  ber_struct_copy[BER_STRUCT_TAG].ldapiov_base = &(ber->ber_tag_contents[0]);
 	  ber_struct_copy[BER_STRUCT_LEN].ldapiov_base = &(ber->ber_len_contents[0]);
 	  ber_struct_copy[BER_STRUCT_PRE].ldapiov_base = &(ber->ber_pre_contents[0]);
-	  ber_struct_copy[BER_STRUCT_VAL].ldapiov_base = ber->ber_buf;	  
+	  if (ber->ber_rwptr > ber->ber_buf) {
+	    ber_struct_copy[BER_STRUCT_VAL].ldapiov_base = ber->ber_rwptr;
+	  } else {
+	    ber_struct_copy[BER_STRUCT_VAL].ldapiov_base = ber->ber_buf;
+	  }
 	  ber_struct_copy[BER_STRUCT_VAL].ldapiov_len = ber->ber_ptr - ber->ber_rwptr;
 	  
 	  /* add the sizes of the different buffers to write with writev */
@@ -343,10 +347,11 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 	  while (1) {
 	    if ((rc = sb->sb_ext_io_fns.lbextiofn_writev
 		(sb->sb_sd, ber_struct_copy, BER_ARRAY_QUANTITY, 
-		sb->sb_ext_io_fns.lbextiofn_socket_arg)) <= 0) {
-	      return(-1);
-	    }
-	    else {
+		sb->sb_ext_io_fns.lbextiofn_socket_arg)) == 0) {
+	      return(towrite);
+	    } else if (rc < 0) {
+	      return(rc);
+	    } else {
 	      towrite -= rc;
 	      if (towrite > 0) {
 		nwritten = towrite;
@@ -367,6 +372,7 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 		}
 	      }
 	      else {
+		ber->ber_rwptr = NULL;
 		if( freeit ) {
 		  ber_free( ber, 1 );
 		}
@@ -599,6 +605,7 @@ get_tag( Sockbuf *sb, BerElement *ber)
         }
 
 	ber->ber_tag_contents[0] = xbyte;
+	ber->ber_struct[BER_STRUCT_TAG].ldapiov_len = 1;
 	return((unsigned long)xbyte);
 }
 
@@ -750,6 +757,7 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 		
 	ber->ber_rwptr = NULL;
 	*len = newlen;
+	ber->ber_struct[BER_STRUCT_VAL].ldapiov_len = newlen;
 	return(tag);
 }
 
