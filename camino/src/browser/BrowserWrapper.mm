@@ -301,11 +301,15 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
   mIsBusy = NO;
 
-  if (mIsBookmarksImport) {
+  // need to check succeeded here because for a charset-induced reload,
+  // this can get called initially with a failure code.
+  if (mIsBookmarksImport && succeeded)
+  {
     nsCOMPtr<nsIDOMWindow> domWindow;
     nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([mBrowserView getWebBrowser]);
     webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-    if (domWindow) {
+    if (domWindow)
+    {
       nsCOMPtr<nsIDOMDocument> domDocument;
       domWindow->GetDocument(getter_AddRefs(domDocument));
       nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(domDocument));
