@@ -148,7 +148,7 @@ usage(char *prog) {
    exit(1);
 }
 	
-int main(int argc, char ** argv)
+main(int argc, char ** argv)
 {
 
     FORTSignedSWFile * swfile;
@@ -166,6 +166,7 @@ int main(int argc, char ** argv)
     char * pass;
     SECStatus rv;
     int i;
+    SECMODModule *module;
     int64 now; /* XXXX */
     char *issuer;
     char *transport_pass = NULL;

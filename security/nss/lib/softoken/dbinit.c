@@ -52,8 +52,6 @@ pk11_certdb_name_cb(void *arg, int dbVersion)
 {
     const char *configdir = (const char *)arg;
     const char *dbver;
-    char *smpname = NULL;
-    char *dbname = NULL;
 
     switch (dbVersion) {
       case 7:
@@ -71,14 +69,7 @@ pk11_certdb_name_cb(void *arg, int dbVersion)
 	break;
     }
 
-    /* make sure we return something allocated with PORT_ so we have properly
-     * matched frees at the end */
-    smpname = PR_smprintf(CERT_DB_FMT, configdir, dbver);
-    if (smpname) {
-	dbname = PORT_Strdup(smpname);
-	PR_smprintf_free(smpname);
-    }
-    return dbname;
+    return PR_smprintf(CERT_DB_FMT, configdir, dbver);
 }
     
 static char *
@@ -86,8 +77,6 @@ pk11_keydb_name_cb(void *arg, int dbVersion)
 {
     const char *configdir = (const char *)arg;
     const char *dbver;
-    char *smpname = NULL;
-    char *dbname = NULL;
     
     switch (dbVersion) {
       case 4:
@@ -105,12 +94,7 @@ pk11_keydb_name_cb(void *arg, int dbVersion)
 	break;
     }
 
-    smpname = PR_smprintf(KEY_DB_FMT, configdir, dbver);
-    if (smpname) {
-	dbname = PORT_Strdup(smpname);
-	PR_smprintf_free(smpname);
-    }
-    return dbname;
+    return PR_smprintf(KEY_DB_FMT, configdir, dbver);
 }
 
 /* for now... we need to define vendor specific codes here.
@@ -174,7 +158,7 @@ pk11_OpenCertDB(const char * configdir, const char *prefix, PRBool readOnly,
     }
 loser: 
     if (certdb) PR_Free(certdb);
-    if (name) PR_smprintf_free(name);
+    if (name) PORT_Free(name);
     if (appName) PORT_Free(appName);
     return crv;
 }
@@ -197,7 +181,7 @@ pk11_OpenKeyDB(const char * configdir, const char *prefix, PRBool readOnly,
 	return SECFailure;
     keydb = nsslowkey_OpenKeyDB(readOnly, appName, prefix, 
 					pk11_keydb_name_cb, (void *)name);
-    PR_smprintf_free(name);
+    PORT_Free(name);
     if (appName) PORT_Free(appName);
     if (keydb == NULL)
 	return CKR_KEYDB_FAILED;
@@ -271,7 +255,6 @@ pk11_DBShutdown(NSSLOWCERTCertDBHandle *certHandle,
     }
 }
 
-static int rdbmapflags(int flags);
 static rdbfunc pk11_rdbfunc;
 
 /* NOTE: SHLIB_SUFFIX is defined on the command line */
@@ -284,7 +267,7 @@ DB * rdbopen(const char *appName, const char *prefix,
     DB *db;
 
     if (pk11_rdbfunc) {
-	db = (*pk11_rdbfunc)(appName,prefix,type,rdbmapflags(flags));
+	db = (*pk11_rdbfunc)(appName,prefix,type,flags);
 	return db;
     }
 
@@ -300,74 +283,13 @@ DB * rdbopen(const char *appName, const char *prefix,
     /* get the entry point */
     pk11_rdbfunc = (rdbfunc) PR_FindSymbol(lib,"rdbopen");
     if (pk11_rdbfunc) {
-	db = (*pk11_rdbfunc)(appName,prefix,type,rdbmapflags(flags));
-	return db;
+	return (*pk11_rdbfunc)(appName,prefix,type,flags);
     }
 
     /* couldn't find the entry point, unload the library and fail */
     PR_UnloadLibrary(lib);
     return NULL;
 }
-
-/*
- * the following data structures are from rdb.h.
- */
-struct RDBStr {
-    DB	db;
-    int (*xactstart)(DB *db);
-    int (*xactdone)(DB *db, PRBool abort);
-};
-
-#define DB_RDB ((DBTYPE) 0xff)
-#define RDB_RDONLY	1
-#define RDB_RDWR 	2
-#define RDB_CREATE      4
-
-static int
-rdbmapflags(int flags) {
-   switch (flags) {
-   case NO_RDONLY:
-	return RDB_RDONLY;
-   case NO_RDWR:
-	return RDB_RDWR;
-   case NO_CREATE:
-	return RDB_CREATE;
-   default:
-	break;
-   }
-   return 0;
-}
-
-
-PRBool
-db_IsRDB(DB *db)
-{
-    return (PRBool) db->type == DB_RDB;
-}
-
-int
-db_BeginTransaction(DB *db)
-{
-    struct RDBStr *rdb = (struct RDBStr *)db;
-    if (db->type != DB_RDB) {
-	return 0;
-    }
-
-    return rdb->xactstart(db);
-}
-
-int
-db_FinishTransaction(DB *db, PRBool abort)
-{
-    struct RDBStr *rdb = (struct RDBStr *)db;
-    if (db->type != DB_RDB) {
-	return 0;
-    }
-
-    return rdb->xactdone(db, abort);
-}
-
-
 
 SECStatus
 db_Copy(DB *dest,DB *src)
@@ -386,4 +308,3 @@ db_Copy(DB *dest,DB *src)
 
     return SECSuccess;
 }
-

@@ -222,10 +222,6 @@ CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer, SECItem *sn,
 			SECItem *key)
 {
     key->len = sn->len + issuer->len;
-
-    if ((sn->data == NULL) || (issuer->data == NULL)) {
-	goto loser;
-    }
     
     key->data = (unsigned char*)PORT_ArenaAlloc(arena, key->len);
     if ( !key->data ) {
@@ -263,14 +259,14 @@ CERT_NameFromDERCert(SECItem *derCert, SECItem *derName)
     }
    
     PORT_Memset(&sd, 0, sizeof(CERTSignedData));
-    rv = SEC_QuickDERDecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
+    rv = SEC_ASN1DecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
     
     if ( rv ) {
 	goto loser;
     }
     
     PORT_Memset(derName, 0, sizeof(SECItem));
-    rv = SEC_QuickDERDecodeItem(arena, derName, SEC_CertSubjectTemplate, &sd.data);
+    rv = SEC_ASN1DecodeItem(arena, derName, SEC_CertSubjectTemplate, &sd.data);
 
     if ( rv ) {
 	goto loser;
@@ -307,14 +303,14 @@ CERT_IssuerNameFromDERCert(SECItem *derCert, SECItem *derName)
     }
    
     PORT_Memset(&sd, 0, sizeof(CERTSignedData));
-    rv = SEC_QuickDERDecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
+    rv = SEC_ASN1DecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
     
     if ( rv ) {
 	goto loser;
     }
     
     PORT_Memset(derName, 0, sizeof(SECItem));
-    rv = SEC_QuickDERDecodeItem(arena, derName, SEC_CertIssuerTemplate, &sd.data);
+    rv = SEC_ASN1DecodeItem(arena, derName, SEC_CertIssuerTemplate, &sd.data);
 
     if ( rv ) {
 	goto loser;
@@ -351,14 +347,14 @@ CERT_SerialNumberFromDERCert(SECItem *derCert, SECItem *derName)
     }
    
     PORT_Memset(&sd, 0, sizeof(CERTSignedData));
-    rv = SEC_QuickDERDecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
+    rv = SEC_ASN1DecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
     
     if ( rv ) {
 	goto loser;
     }
     
     PORT_Memset(derName, 0, sizeof(SECItem));
-    rv = SEC_QuickDERDecodeItem(arena, derName, SEC_CertSerialNumberTemplate, &sd.data);
+    rv = SEC_ASN1DecodeItem(arena, derName, SEC_CertSerialNumberTemplate, &sd.data);
 
     if ( rv ) {
 	goto loser;
@@ -390,6 +386,9 @@ CERT_KeyFromDERCert(PRArenaPool *arena, SECItem *derCert, SECItem *key)
     int rv;
     CERTSignedData sd;
     CERTCertKey certkey;
+
+    PORT_Memset(&sd, 0, sizeof(CERTSignedData));    
+    PORT_Memset(&certkey, 0, sizeof(CERTCertKey));    
 
     PORT_Memset(&sd, 0, sizeof(CERTSignedData));
     rv = SEC_ASN1DecodeItem(arena, &sd, CERT_SignedDataTemplate, derCert);
@@ -770,7 +769,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     }
 
     /* decode the certificate info */
-    rv = SEC_QuickDERDecodeItem(arena, cert, SEC_SignedCertificateTemplate,
+    rv = SEC_ASN1DecodeItem(arena, cert, SEC_SignedCertificateTemplate,
 		    &cert->derCert);
 
     if ( rv ) {
@@ -783,8 +782,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     }
 
     /* generate and save the database key for the cert */
-    rv = CERT_KeyFromIssuerAndSN(arena, &cert->derIssuer, &cert->serialNumber,
-			&cert->certKey);
+    rv = CERT_KeyFromDERCert(arena, &cert->derCert, &cert->certKey);
     if ( rv ) {
 	goto loser;
     }
@@ -926,7 +924,7 @@ CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
     
     LL_I2L(llPendingSlop, pendingSlop);
     /* convert to micro seconds */
-    LL_UI2L(tmp1, PR_USEC_PER_SEC);
+    LL_I2L(tmp1, PR_USEC_PER_SEC);
     LL_MUL(llPendingSlop, llPendingSlop, tmp1);
     LL_SUB(notBefore, notBefore, llPendingSlop);
     if ( LL_CMP( t, <, notBefore ) ) {
@@ -1345,7 +1343,8 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 		    if (!cn)
 			goto finish;
 		}
-		PORT_Memcpy(cn, current->name.other.data, cnLen);
+		PORT_Memcpy(cn, current->name.other.data, 
+		                current->name.other.len);
 		cn[cnLen] = 0;
 		rv = cert_TestHostName(cn ,hn);
 		if (rv == SECSuccess)
@@ -1898,7 +1897,7 @@ CERT_FixupEmailAddr(char *emailAddr)
 SECStatus
 CERT_DecodeTrustString(CERTCertTrust *trust, char *trusts)
 {
-    unsigned int i;
+    int i;
     unsigned int *pflags;
     
     trust->sslFlags = 0;
@@ -2139,10 +2138,10 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 		 CERTCertificate ***retCerts, PRBool keepCerts,
 		 PRBool caOnly, char *nickname)
 {
-    unsigned int i;
+    int i;
     CERTCertificate **certs = NULL;
     SECStatus rv;
-    unsigned int fcerts = 0;
+    int fcerts = 0;
 
     if ( ncerts ) {
 	certs = (CERTCertificate**)PORT_ZAlloc(sizeof(CERTCertificate *) * ncerts );

@@ -720,6 +720,8 @@ ssl_CreateSecurityInfo(sslSocket *ss)
 SECStatus
 ssl_CopySecurityInfo(sslSocket *ss, sslSocket *os)
 {
+    int rv;
+
     ss->sec.send 		= os->sec.send;
     ss->sec.isServer 		= os->sec.isServer;
     ss->sec.keyBits    		= os->sec.keyBits;
@@ -1062,6 +1064,7 @@ SECStatus
 SSL_BadCertHook(PRFileDesc *fd, SSLBadCertHandler f, void *arg)
 {
     sslSocket *ss;
+    SECStatus rv;
     
     ss = ssl_FindSocket(fd);
     if (!ss) {

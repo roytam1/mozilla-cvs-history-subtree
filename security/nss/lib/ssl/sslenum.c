@@ -81,7 +81,6 @@ const PRUint16 SSL_ImplementedCiphers[] = {
 
     /* ciphersuites with no encryption */
     SSL_FORTEZZA_DMS_WITH_NULL_SHA,
-    SSL_RSA_WITH_NULL_SHA,
     SSL_RSA_WITH_NULL_MD5,
 
     /* SSL2 cipher suites. */

@@ -57,7 +57,7 @@ EXPORTS =	   \
 	nssckt.h   \
 	$(NULL)
 
-MODULE = nss
+MODULE = security
 
 CSRCS =		   \
 	find.c	   \
@@ -74,6 +74,6 @@ CSRCS =		   \
 	mechanism.c \
 	$(NULL)
 
-REQUIRES = nspr
+REQUIRES = security nspr
 
 LIBRARY_NAME = nssckfw

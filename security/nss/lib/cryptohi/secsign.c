@@ -246,7 +246,6 @@ SGN_End(SGNContext *cx, SECItem *result)
     if (rv != SECSuccess) {
 	PORT_Free(sigitem.data);
 	sigitem.data = NULL;
-	goto loser;
     }
 
     if (cx->signalg == SEC_OID_ANSIX9_DSA_SIGNATURE) {

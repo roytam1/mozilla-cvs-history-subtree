@@ -737,7 +737,7 @@ pk11_mkRootFlags(PRBool hasRootCerts, PRBool hasRootTrust)
 static char *
 pk11_mkSlotString(unsigned long slotID, unsigned long defaultFlags,
 		  unsigned long timeout, unsigned char askpw_in,
-		  PRBool hasRootCerts, PRBool hasRootTrust) {
+		  unsigned char hasRootCerts, unsigned char hasRootTrust) {
     char *askpw,*flags,*rootFlags,*slotString;
     char *flagPair,*rootFlagsPair;
 	

@@ -34,7 +34,7 @@
 CORE_DEPTH	= ../../..
 
 # MODULE public and private header directories are implicitly REQUIREd.
-MODULE = nss 
+MODULE = security 
 
 # This next line is used by .mk files
 # and gets translated into $LINCS in manifest.mnw

@@ -261,9 +261,9 @@ sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
 		 * on to the next state in case this is a member of a
 		 * SEQUENCE OF
 		 */
-		state->tag_modifiers = (unsigned char)encode_kind & SEC_ASN1_TAG_MASK
+		state->tag_modifiers = encode_kind & SEC_ASN1_TAG_MASK
 					& ~SEC_ASN1_TAGNUM_MASK;
-		state->tag_number = (unsigned char)encode_kind & SEC_ASN1_TAGNUM_MASK;
+		state->tag_number = encode_kind & SEC_ASN1_TAGNUM_MASK;
 		
 		state->place = afterImplicit;
 		state->optional = optional;
@@ -320,7 +320,7 @@ sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
 	tag_number = 0;
 	is_string = PR_TRUE;
     } else {
-	tag_modifiers = (unsigned char)encode_kind & SEC_ASN1_TAG_MASK & ~SEC_ASN1_TAGNUM_MASK;
+	tag_modifiers = encode_kind & SEC_ASN1_TAG_MASK & ~SEC_ASN1_TAGNUM_MASK;
 	/*
 	 * XXX This assumes only single-octet identifiers.  To handle
 	 * the HIGH TAG form we would need to do some more work, especially
@@ -362,7 +362,7 @@ sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
     }
 
     state->tag_modifiers = tag_modifiers;
-    state->tag_number = (unsigned char)tag_number;
+    state->tag_number = tag_number;
     state->underlying_kind = under_kind;
     state->explicit = explicit;
     state->may_stream = may_stream;
@@ -466,7 +466,7 @@ sec_asn1e_which_choice
 )
 {
   int rv;
-  unsigned int which = *(unsigned int *)((char *)src + theTemplate->offset);
+  int which = *(int *)((char *)src + theTemplate->offset);
 
   for( rv = 1, theTemplate++; theTemplate->kind != 0; rv++, theTemplate++ ) {
     if( which == theTemplate->size ) {
@@ -813,7 +813,7 @@ sec_asn1e_write_header (sec_asn1e_state *state)
 	contents_length = 0;
     }
 
-    sec_asn1e_write_identifier_bytes (state, (unsigned char)(tag_number | tag_modifiers));
+    sec_asn1e_write_identifier_bytes (state, tag_number | tag_modifiers);
     sec_asn1e_write_length_bytes (state, contents_length, state->indefinite);
 
     if (contents_length == 0 && !state->indefinite) {
@@ -929,7 +929,7 @@ sec_asn1e_write_contents (sec_asn1e_state *state,
 	     * implicitly encoded field.  In that case, the underlying
 	     * substrings *are* encoded with their real tag.
 	     */
-	    identifier = (unsigned char)state->underlying_kind & SEC_ASN1_TAG_MASK;
+	    identifier = state->underlying_kind & SEC_ASN1_TAG_MASK;
 	    /*
 	     * The underlying kind should just be a simple string; there
 	     * should be no bits like CONTEXT_SPECIFIC or CONSTRUCTED set.
@@ -976,7 +976,7 @@ sec_asn1e_write_contents (sec_asn1e_state *state,
 
 		item = (SECItem *)state->src;
 		len = (item->len + 7) >> 3;
-		rem = (unsigned char)((len << 3) - item->len);	/* remaining bits */
+		rem = (len << 3) - item->len;	/* remaining bits */
 		sec_asn1e_write_contents_bytes (state, &rem, 1);
 		sec_asn1e_write_contents_bytes (state, (char *) item->data,
 						len);
@@ -1460,7 +1460,6 @@ sec_asn1e_allocate_item (PRArenaPool *poolp, SECItem *dest, unsigned long len)
 	if (dest == NULL)
 	    dest = (SECItem*)PORT_Alloc (sizeof(SECItem));
 	if (dest != NULL) {
-	    dest->type = siBuffer;
 	    dest->data = (unsigned char*)PORT_Alloc (len);
 	    if (dest->data == NULL) {
 		if (indest == NULL)
@@ -1520,7 +1519,7 @@ sec_asn1e_integer(PRArenaPool *poolp, SECItem *dest, unsigned long value,
     copy = value;
     do {
 	len++;
-	sign = (unsigned char)(copy & 0x80);
+	sign = copy & 0x80;
 	copy >>= 8;
     } while (copy);
 
@@ -1544,7 +1543,7 @@ sec_asn1e_integer(PRArenaPool *poolp, SECItem *dest, unsigned long value,
      */
     dest->len = len;
     while (len) {
-	dest->data[--len] = (unsigned char)value;
+	dest->data[--len] = value;
 	value >>= 8;
     }
     PORT_Assert (value == 0);

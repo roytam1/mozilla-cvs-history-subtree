@@ -48,7 +48,8 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #endif
 
 NSS_IMPLEMENT nssPKIObject *
-nssPKIObject_Create (
+nssPKIObject_Create
+(
   NSSArena *arenaOpt,
   nssCryptokiObject *instanceOpt,
   NSSTrustDomain *td,
@@ -98,7 +99,8 @@ loser:
 }
 
 NSS_IMPLEMENT PRBool
-nssPKIObject_Destroy (
+nssPKIObject_Destroy
+(
   nssPKIObject *object
 )
 {
@@ -117,7 +119,8 @@ nssPKIObject_Destroy (
 }
 
 NSS_IMPLEMENT nssPKIObject *
-nssPKIObject_AddRef (
+nssPKIObject_AddRef
+(
   nssPKIObject *object
 )
 {
@@ -126,7 +129,8 @@ nssPKIObject_AddRef (
 }
 
 NSS_IMPLEMENT PRStatus
-nssPKIObject_AddInstance (
+nssPKIObject_AddInstance
+(
   nssPKIObject *object,
   nssCryptokiObject *instance
 )
@@ -176,7 +180,8 @@ nssPKIObject_AddInstance (
 }
 
 NSS_IMPLEMENT PRBool
-nssPKIObject_HasInstance (
+nssPKIObject_HasInstance
+(
   nssPKIObject *object,
   nssCryptokiObject *instance
 )
@@ -195,7 +200,8 @@ nssPKIObject_HasInstance (
 }
 
 NSS_IMPLEMENT PRStatus
-nssPKIObject_RemoveInstanceForToken (
+nssPKIObject_RemoveInstanceForToken
+(
   nssPKIObject *object,
   NSSToken *token
 )
@@ -235,7 +241,8 @@ nssPKIObject_RemoveInstanceForToken (
  * instances
  */
 NSS_IMPLEMENT PRStatus
-nssPKIObject_DeleteStoredObject (
+nssPKIObject_DeleteStoredObject
+(
   nssPKIObject *object,
   NSSCallback *uhh,
   PRBool isFriendly
@@ -288,7 +295,8 @@ nssPKIObject_DeleteStoredObject (
 }
 
 NSS_IMPLEMENT NSSToken **
-nssPKIObject_GetTokens (
+nssPKIObject_GetTokens
+(
   nssPKIObject *object,
   PRStatus *statusOpt
 )
@@ -310,7 +318,8 @@ nssPKIObject_GetTokens (
 }
 
 NSS_IMPLEMENT NSSUTF8 *
-nssPKIObject_GetNicknameForToken (
+nssPKIObject_GetNicknameForToken
+(
   nssPKIObject *object,
   NSSToken *tokenOpt
 )
@@ -333,7 +342,8 @@ nssPKIObject_GetNicknameForToken (
 
 #ifdef NSS_3_4_CODE
 NSS_IMPLEMENT nssCryptokiObject **
-nssPKIObject_GetInstances (
+nssPKIObject_GetInstances
+(
   nssPKIObject *object
 )
 {
@@ -356,7 +366,8 @@ nssPKIObject_GetInstances (
 #endif
 
 NSS_IMPLEMENT void
-nssCertificateArray_Destroy (
+nssCertificateArray_Destroy
+(
   NSSCertificate **certs
 )
 {
@@ -379,7 +390,8 @@ nssCertificateArray_Destroy (
 }
 
 NSS_IMPLEMENT void
-NSSCertificateArray_Destroy (
+NSSCertificateArray_Destroy
+(
   NSSCertificate **certs
 )
 {
@@ -387,7 +399,8 @@ NSSCertificateArray_Destroy (
 }
 
 NSS_IMPLEMENT NSSCertificate **
-nssCertificateArray_Join (
+nssCertificateArray_Join
+(
   NSSCertificate **certs1,
   NSSCertificate **certs2
 )
@@ -420,7 +433,8 @@ nssCertificateArray_Join (
 }
 
 NSS_IMPLEMENT NSSCertificate * 
-nssCertificateArray_FindBestCertificate (
+nssCertificateArray_FindBestCertificate
+(
   NSSCertificate **certs, 
   NSSTime *timeOpt,
   NSSUsage *usage,
@@ -499,7 +513,8 @@ nssCertificateArray_FindBestCertificate (
 }
 
 NSS_IMPLEMENT PRStatus
-nssCertificateArray_Traverse (
+nssCertificateArray_Traverse
+(
   NSSCertificate **certs,
   PRStatus (* callback)(NSSCertificate *c, void *arg),
   void *arg
@@ -520,7 +535,8 @@ nssCertificateArray_Traverse (
 
 
 NSS_IMPLEMENT void
-nssCRLArray_Destroy (
+nssCRLArray_Destroy
+(
   NSSCRL **crls
 )
 {
@@ -591,7 +607,8 @@ struct nssPKIObjectCollectionStr
 };
 
 static nssPKIObjectCollection *
-nssPKIObjectCollection_Create (
+nssPKIObjectCollection_Create
+(
   NSSTrustDomain *td,
   NSSCryptoContext *ccOpt
 )
@@ -617,7 +634,8 @@ loser:
 }
 
 NSS_IMPLEMENT void
-nssPKIObjectCollection_Destroy (
+nssPKIObjectCollection_Destroy
+(
   nssPKIObjectCollection *collection
 )
 {
@@ -641,7 +659,8 @@ nssPKIObjectCollection_Destroy (
 }
 
 NSS_IMPLEMENT PRUint32
-nssPKIObjectCollection_Count (
+nssPKIObjectCollection_Count
+(
   nssPKIObjectCollection *collection
 )
 {
@@ -649,7 +668,8 @@ nssPKIObjectCollection_Count (
 }
 
 NSS_IMPLEMENT PRStatus
-nssPKIObjectCollection_AddObject (
+nssPKIObjectCollection_AddObject
+(
   nssPKIObjectCollection *collection,
   nssPKIObject *object
 )
@@ -669,7 +689,8 @@ nssPKIObjectCollection_AddObject (
 }
 
 static pkiObjectCollectionNode *
-find_instance_in_collection (
+find_instance_in_collection
+(
   nssPKIObjectCollection *collection,
   nssCryptokiObject *instance
 )
@@ -688,7 +709,8 @@ find_instance_in_collection (
 }
 
 static pkiObjectCollectionNode *
-find_object_in_collection (
+find_object_in_collection
+(
   nssPKIObjectCollection *collection,
   NSSItem *uid
 )
@@ -714,7 +736,8 @@ find_object_in_collection (
 }
 
 static pkiObjectCollectionNode *
-add_object_instance (
+add_object_instance
+(
   nssPKIObjectCollection *collection,
   nssCryptokiObject *instance
 )
@@ -786,7 +809,8 @@ loser:
 }
 
 NSS_IMPLEMENT PRStatus
-nssPKIObjectCollection_AddInstances (
+nssPKIObjectCollection_AddInstances
+(
   nssPKIObjectCollection *collection,
   nssCryptokiObject **instances,
   PRUint32 numInstances
@@ -819,7 +843,8 @@ loser:
 }
 
 static void
-nssPKIObjectCollection_RemoveNode (
+nssPKIObjectCollection_RemoveNode
+(
    nssPKIObjectCollection *collection,
    pkiObjectCollectionNode *node
 )
@@ -829,7 +854,8 @@ nssPKIObjectCollection_RemoveNode (
 }
 
 static PRStatus
-nssPKIObjectCollection_GetObjects (
+nssPKIObjectCollection_GetObjects
+(
   nssPKIObjectCollection *collection,
   nssPKIObject **rvObjects,
   PRUint32 rvSize
@@ -858,7 +884,8 @@ nssPKIObjectCollection_GetObjects (
 }
 
 NSS_IMPLEMENT PRStatus
-nssPKIObjectCollection_Traverse (
+nssPKIObjectCollection_Traverse
+(
   nssPKIObjectCollection *collection,
   nssPKIObjectCallback *callback
 )
@@ -902,7 +929,8 @@ nssPKIObjectCollection_Traverse (
 }
 
 NSS_IMPLEMENT PRStatus
-nssPKIObjectCollection_AddInstanceAsObject (
+nssPKIObjectCollection_AddInstanceAsObject
+(
   nssPKIObjectCollection *collection,
   nssCryptokiObject *instance
 )
@@ -965,11 +993,8 @@ cert_getUIDFromObject(nssPKIObject *o, NSSItem *uid)
      */
     NSSDER *derCert;
     derCert = nssCertificate_GetEncoding(c);
-    uid[0].data = NULL; uid[0].size = 0;
+    uid[0] = *derCert;
     uid[1].data = NULL; uid[1].size = 0;
-    if (derCert != NULL) {
-	uid[0] = *derCert;
-    }
 #else
     NSSDER *issuer, *serial;
     issuer = nssCertificate_GetIssuer(c);
@@ -1020,10 +1045,10 @@ cert_createObject(nssPKIObject *o)
     NSSCertificate *cert;
     cert = nssCertificate_Create(o);
 #ifdef NSS_3_4_CODE
-/*    if (STAN_GetCERTCertificate(cert) == NULL) {
+    if (STAN_GetCERTCertificate(cert) == NULL) {
 	nssCertificate_Destroy(cert);
 	return (nssPKIObject *)NULL;
-    } */
+    }
     /* In 3.4, have to maintain uniqueness of cert pointers by caching all
      * certs.  Cache the cert here, before returning.  If it is already
      * cached, take the cached entry.
@@ -1037,7 +1062,8 @@ cert_createObject(nssPKIObject *o)
 }
 
 NSS_IMPLEMENT nssPKIObjectCollection *
-nssCertificateCollection_Create (
+nssCertificateCollection_Create
+(
   NSSTrustDomain *td,
   NSSCertificate **certsOpt
 )
@@ -1060,7 +1086,8 @@ nssCertificateCollection_Create (
 }
 
 NSS_IMPLEMENT NSSCertificate **
-nssPKIObjectCollection_GetCertificates (
+nssPKIObjectCollection_GetCertificates
+(
   nssPKIObjectCollection *collection,
   NSSCertificate **rvOpt,
   PRUint32 maximumOpt,
@@ -1127,8 +1154,6 @@ crl_getUIDFromInstance(nssCryptokiObject *instance, NSSItem *uid,
                                         NULL,    /* XXX sessionOpt */
                                         arena,   /* arena    */
                                         &uid[0], /* encoding */
-                                        NULL,    /* subject  */
-                                        NULL,    /* class    */
                                         NULL,    /* url      */
                                         NULL);   /* isKRL    */
 }
@@ -1140,7 +1165,8 @@ crl_createObject(nssPKIObject *o)
 }
 
 NSS_IMPLEMENT nssPKIObjectCollection *
-nssCRLCollection_Create (
+nssCRLCollection_Create
+(
   NSSTrustDomain *td,
   NSSCRL **crlsOpt
 )
@@ -1163,7 +1189,8 @@ nssCRLCollection_Create (
 }
 
 NSS_IMPLEMENT NSSCRL **
-nssPKIObjectCollection_GetCRLs (
+nssPKIObjectCollection_GetCRLs
+(
   nssPKIObjectCollection *collection,
   NSSCRL **rvOpt,
   PRUint32 maximumOpt,
@@ -1242,7 +1269,8 @@ privkey_createObject(nssPKIObject *o)
 }
 
 NSS_IMPLEMENT nssPKIObjectCollection *
-nssPrivateKeyCollection_Create (
+nssPrivateKeyCollection_Create
+(
   NSSTrustDomain *td,
   NSSPrivateKey **pvkOpt
 )
@@ -1265,7 +1293,8 @@ nssPrivateKeyCollection_Create (
 }
 
 NSS_IMPLEMENT NSSPrivateKey **
-nssPKIObjectCollection_GetPrivateKeys (
+nssPKIObjectCollection_GetPrivateKeys
+(
   nssPKIObjectCollection *collection,
   NSSPrivateKey **rvOpt,
   PRUint32 maximumOpt,
@@ -1343,7 +1372,8 @@ pubkey_createObject(nssPKIObject *o)
 }
 
 NSS_IMPLEMENT nssPKIObjectCollection *
-nssPublicKeyCollection_Create (
+nssPublicKeyCollection_Create
+(
   NSSTrustDomain *td,
   NSSPublicKey **pubkOpt
 )
@@ -1366,7 +1396,8 @@ nssPublicKeyCollection_Create (
 }
 
 NSS_IMPLEMENT NSSPublicKey **
-nssPKIObjectCollection_GetPublicKeys (
+nssPKIObjectCollection_GetPublicKeys
+(
   nssPKIObjectCollection *collection,
   NSSPublicKey **rvOpt,
   PRUint32 maximumOpt,
@@ -1408,7 +1439,8 @@ nssPKIObjectCollection_GetPublicKeys (
  * this was called?  would avoid repeated allocs...
  */
 NSS_IMPLEMENT NSSTime *
-NSSTime_Now (
+NSSTime_Now
+(
   NSSTime *timeOpt
 )
 {
@@ -1416,7 +1448,8 @@ NSSTime_Now (
 }
 
 NSS_IMPLEMENT NSSTime *
-NSSTime_SetPRTime (
+NSSTime_SetPRTime
+(
   NSSTime *timeOpt,
   PRTime prTime
 )
@@ -1428,7 +1461,8 @@ NSSTime_SetPRTime (
 }
 
 NSS_IMPLEMENT PRTime
-NSSTime_GetPRTime (
+NSSTime_GetPRTime
+(
   NSSTime *time
 )
 {

@@ -40,14 +40,14 @@ EXPORTS = \
 	nss.h \
 	$(NULL)
 
-MODULE = nss
+MODULE = security
 
 CSRCS = \
 	nssinit.c \
 	nssver.c \
 	$(NULL)
 
-REQUIRES = dbm
+REQUIRES = security dbm
 
 MAPFILE = $(OBJDIR)/nss.def
 

@@ -45,5 +45,5 @@ EXPORTS		= cmdutil.h \
 CSRCS		= cmdline.c \
 		$(NULL)
 
-REQUIRES	= nss nspr dbm
+REQUIRES	= security nspr dbm
 

@@ -1047,23 +1047,6 @@ get_token_crls_for_cache
     return status;
 }
 
-static CK_ATTRIBUTE_PTR
-find_attribute_in_object
-(
-  nssCryptokiObjectAndAttributes *obj,
-  CK_ATTRIBUTE_TYPE attrType
-)
-{
-    PRUint32 j;
-    for (j=0; j<obj->numAttributes; j++) {
-	if (attrType == obj->attributes[j].type) {
-	    return &obj->attributes[j];
-	}
-    }
-    return (CK_ATTRIBUTE_PTR)NULL;
-}
-
-/* Find all objects in the array that match the supplied template */
 static nssCryptokiObject **
 find_objects_in_array
 (
@@ -1073,15 +1056,14 @@ find_objects_in_array
   PRUint32 maximumOpt
 )
 {
-    PRIntn oi = 0;
-    PRUint32 i;
+    PRIntn oi;
+    PRUint32 i, j;
+    PRBool match;
     NSSArena *arena;
     PRUint32 size = 8;
     PRUint32 numMatches = 0;
     nssCryptokiObject **objects = NULL;
     nssCryptokiObjectAndAttributes **matches = NULL;
-    CK_ATTRIBUTE_PTR attr;
-
     if (!objArray) {
 	return (nssCryptokiObject **)NULL;
     }
@@ -1094,31 +1076,28 @@ find_objects_in_array
 	goto loser;
     }
     if (maximumOpt == 0) maximumOpt = ~0;
-    /* loop over the cached objects */
     for (; *objArray && numMatches < maximumOpt; objArray++) {
 	nssCryptokiObjectAndAttributes *obj = *objArray;
-	/* loop over the test template */
 	for (i=0; i<otlen; i++) {
-	    /* see if the object has the attribute */
-	    attr = find_attribute_in_object(obj, ot[i].type);
-	    if (!attr) {
-		/* nope, match failed */
-		break;
+	    for (j=0; j<obj->numAttributes; j++) {
+		if (ot[i].type == obj->attributes[j].type) {
+		    if (ot[i].ulValueLen == obj->attributes[j].ulValueLen &&
+		        nsslibc_memequal(ot[i].pValue, 
+			                 obj->attributes[j].pValue,
+			                 ot[i].ulValueLen, NULL))
+		    {
+			match = PR_TRUE;
+		    } else {
+			match = PR_FALSE;
+		    }
+		    break;
+		}
 	    }
-	    /* compare the attribute against the test value */
-	    if (ot[i].ulValueLen != attr->ulValueLen ||
-	        !nsslibc_memequal(ot[i].pValue, 
-	                          attr->pValue,
-	                          attr->ulValueLen, NULL))
-	    {
-		/* nope, match failed */
+	    if (j == obj->numAttributes || !match) {
 		break;
 	    }
 	}
-	if (i == otlen) {
-	    /* all of the attributes in the test template were found
-	     * in the object's template, and they all matched
-	     */
+	if (match) {
 	    matches[numMatches++] = obj;
 	    if (numMatches == size) {
 		size *= 2;

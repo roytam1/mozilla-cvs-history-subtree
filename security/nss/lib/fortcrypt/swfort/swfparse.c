@@ -320,7 +320,6 @@ FORT_GetSWFile(SECItem *initBits)
     PRArenaPool *arena = NULL;
     SECStatus rv;
     int i, count;
-    SECItem newInitBits;
 
     /* get the local arena... be sure to free this at the end */
 
@@ -332,15 +331,8 @@ FORT_GetSWFile(SECItem *initBits)
 		PORT_ArenaZAlloc(arena,sizeof(FORTSignedSWFile));
     if (sw_init_file == NULL) goto fail;
 
-    /* copy the DER into the arena, since Quick DER returns data that points
-       into the DER input, which may get freed by the caller */
-    rv = SECITEM_CopyItem(arena, &newInitBits, initBits);
-    if ( rv != SECSuccess ) {
-        goto fail;
-    }
-
     /* ANS1 decode the complete init file */
-    rv = SEC_QuickDERDecodeItem(arena,sw_init_file,fortSwFortezzaInitFile,&newInitBits);
+    rv = SEC_ASN1DecodeItem(arena,sw_init_file,fortSwFortezzaInitFile,initBits);
     if (rv != SECSuccess) {
 	goto fail;
     }

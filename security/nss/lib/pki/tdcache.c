@@ -165,7 +165,8 @@ static PRIntn subject_list_sort(void *v1, void *v2)
  * types/functions static
  */
 NSS_IMPLEMENT PRStatus
-nssTrustDomain_InitializeCache (
+nssTrustDomain_InitializeCache
+(
   NSSTrustDomain *td,
   PRUint32 cacheSize
 )
@@ -235,7 +236,8 @@ loser:
  */
 
 NSS_IMPLEMENT PRStatus
-nssTrustDomain_DestroyCache (
+nssTrustDomain_DestroyCache
+(
   NSSTrustDomain *td
 )
 {
@@ -256,7 +258,8 @@ nssTrustDomain_DestroyCache (
 }
 
 static PRStatus
-remove_issuer_and_serial_entry (
+remove_issuer_and_serial_entry
+(
   nssTDCertificateCache *cache,
   NSSCertificate *cert
 )
@@ -270,7 +273,8 @@ remove_issuer_and_serial_entry (
 }
 
 static PRStatus
-remove_subject_entry (
+remove_subject_entry
+(
   nssTDCertificateCache *cache,
   NSSCertificate *cert,
   nssList **subjectList,
@@ -302,7 +306,8 @@ remove_subject_entry (
 }
 
 static PRStatus
-remove_nickname_entry (
+remove_nickname_entry
+(
   nssTDCertificateCache *cache,
   NSSUTF8 *nickname,
   nssList *subjectList
@@ -322,7 +327,8 @@ remove_nickname_entry (
 }
 
 static PRStatus
-remove_email_entry (
+remove_email_entry
+(
   nssTDCertificateCache *cache,
   NSSCertificate *cert,
   nssList *subjectList
@@ -362,7 +368,8 @@ remove_email_entry (
 }
 
 NSS_IMPLEMENT void
-nssTrustDomain_RemoveCertFromCache (
+nssTrustDomain_RemoveCertFromCache
+(
   NSSTrustDomain *td,
   NSSCertificate *cert
 )
@@ -434,7 +441,8 @@ loser:
  * and when the last request was.
  */
 NSS_IMPLEMENT void
-nssTrustDomain_FlushCache (
+nssTrustDomain_FlushCache
+(
   NSSTrustDomain *td,
   PRFloat64 threshold
 )
@@ -481,7 +489,8 @@ remove_token_certs(const void *k, void *v, void *a)
  * needed if the token is removed. 
  */
 NSS_IMPLEMENT PRStatus
-nssTrustDomain_RemoveTokenCertsFromCache (
+nssTrustDomain_RemoveTokenCertsFromCache
+(
   NSSTrustDomain *td,
   NSSToken *token
 )
@@ -514,7 +523,8 @@ nssTrustDomain_RemoveTokenCertsFromCache (
 }
 
 NSS_IMPLEMENT PRStatus
-nssTrustDomain_UpdateCachedTokenCerts (
+nssTrustDomain_UpdateCachedTokenCerts
+(
   NSSTrustDomain *td,
   NSSToken *token
 )
@@ -555,7 +565,8 @@ nssTrustDomain_UpdateCachedTokenCerts (
 }
 
 static PRStatus
-add_issuer_and_serial_entry (
+add_issuer_and_serial_entry
+(
   NSSArena *arena,
   nssTDCertificateCache *cache, 
   NSSCertificate *cert
@@ -570,7 +581,8 @@ add_issuer_and_serial_entry (
 }
 
 static PRStatus
-add_subject_entry (
+add_subject_entry
+(
   NSSArena *arena,
   nssTDCertificateCache *cache, 
   NSSCertificate *cert,
@@ -629,7 +641,8 @@ add_subject_entry (
 }
 
 static PRStatus
-add_nickname_entry (
+add_nickname_entry
+(
   NSSArena *arena,
   nssTDCertificateCache *cache, 
   NSSUTF8 *certNickname,
@@ -664,7 +677,8 @@ add_nickname_entry (
 }
 
 static PRStatus
-add_email_entry (
+add_email_entry
+(
   nssTDCertificateCache *cache, 
   NSSCertificate *cert,
   nssList *subjectList
@@ -728,7 +742,8 @@ add_email_entry (
 extern const NSSError NSS_ERROR_CERTIFICATE_IN_CACHE;
 
 static NSSCertificate *
-add_cert_to_cache (
+add_cert_to_cache
+(
   NSSTrustDomain *td, 
   NSSCertificate *cert
 )
@@ -839,7 +854,8 @@ loser:
 }
 
 NSS_IMPLEMENT PRStatus
-nssTrustDomain_AddCertsToCache (
+nssTrustDomain_AddCertsToCache
+(
   NSSTrustDomain *td,
   NSSCertificate **certs,
   PRUint32 numCerts
@@ -859,7 +875,8 @@ nssTrustDomain_AddCertsToCache (
 }
 
 static NSSCertificate **
-collect_subject_certs (
+collect_subject_certs
+(
   nssList *subjectList,
   nssList *rvCertListOpt
 )
@@ -892,7 +909,8 @@ collect_subject_certs (
  * Find all cached certs with this subject.
  */
 NSS_IMPLEMENT NSSCertificate **
-nssTrustDomain_GetCertsForSubjectFromCache (
+nssTrustDomain_GetCertsForSubjectFromCache
+(
   NSSTrustDomain *td,
   NSSDER *subject,
   nssList *certListOpt
@@ -921,7 +939,8 @@ nssTrustDomain_GetCertsForSubjectFromCache (
  * Find all cached certs with this label.
  */
 NSS_IMPLEMENT NSSCertificate **
-nssTrustDomain_GetCertsForNicknameFromCache (
+nssTrustDomain_GetCertsForNicknameFromCache
+(
   NSSTrustDomain *td,
   NSSUTF8 *nickname,
   nssList *certListOpt
@@ -950,7 +969,8 @@ nssTrustDomain_GetCertsForNicknameFromCache (
  * Find all cached certs with this email address.
  */
 NSS_IMPLEMENT NSSCertificate **
-nssTrustDomain_GetCertsForEmailAddressFromCache (
+nssTrustDomain_GetCertsForEmailAddressFromCache
+(
   NSSTrustDomain *td,
   NSSASCII7 *email,
   nssList *certListOpt
@@ -1014,7 +1034,8 @@ nssTrustDomain_GetCertsForEmailAddressFromCache (
  * Look for a specific cert in the cache
  */
 NSS_IMPLEMENT NSSCertificate *
-nssTrustDomain_GetCertForIssuerAndSNFromCache (
+nssTrustDomain_GetCertForIssuerAndSNFromCache
+(
   NSSTrustDomain *td,
   NSSDER *issuer,
   NSSDER *serial
@@ -1047,7 +1068,8 @@ nssTrustDomain_GetCertForIssuerAndSNFromCache (
 
 #ifdef NSS_3_4_CODE
 static PRStatus
-issuer_and_serial_from_encoding (
+issuer_and_serial_from_encoding
+(
   NSSBER *encoding, 
   NSSDER *issuer, 
   NSSDER *serial
@@ -1077,7 +1099,8 @@ issuer_and_serial_from_encoding (
  * Look for a specific cert in the cache
  */
 NSS_IMPLEMENT NSSCertificate *
-nssTrustDomain_GetCertByDERFromCache (
+nssTrustDomain_GetCertByDERFromCache
+(
   NSSTrustDomain *td,
   NSSDER *der
 )
@@ -1111,7 +1134,8 @@ static void cert_iter(const void *k, void *v, void *a)
 }
 
 NSS_EXTERN NSSCertificate **
-nssTrustDomain_GetCertsFromCache (
+nssTrustDomain_GetCertsFromCache
+(
   NSSTrustDomain *td,
   nssList *certListOpt
 )
@@ -1137,7 +1161,8 @@ nssTrustDomain_GetCertsFromCache (
 }
 
 NSS_IMPLEMENT void
-nssTrustDomain_DumpCacheInfo (
+nssTrustDomain_DumpCacheInfo
+(
   NSSTrustDomain *td,
   void (* cert_dump_iter)(const void *, void *, void *),
   void *arg

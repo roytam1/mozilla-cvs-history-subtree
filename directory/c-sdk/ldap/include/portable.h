@@ -185,20 +185,10 @@
  * for connect() -- must we block signals when calling connect()?  This
  * is necessary on some buggy UNIXes.
  */
-#if !defined(NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED) && \
+#if !defined(LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED) && \
 	( defined(AIX) || defined(IRIX) || defined(HPUX) || defined(SUNOS4) \
 	|| defined(SOLARIS) || defined(OSF1) ||defined(freebsd)) 
-#define NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
-#endif
-
-/*
- * On most platforms, sigprocmask() works fine even in multithreaded code.
- * But not everywhere.
- */
-#ifdef AIX
-#define NSLDAPI_MT_SAFE_SIGPROCMASK(h,s,o)	sigthreadmask(h,s,o)
-#else
-#define NSLDAPI_MT_SAFE_SIGPROCMASK(h,s,o)	sigprocmask(h,s,o)
+#define LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #endif
 
 
@@ -282,19 +272,12 @@ int strncasecmp(const char *, const char *, size_t);
 #define STRTOK( s1, s2, l )		strtok_r( s1, s2, l )
 #define HAVE_STRTOK_R
 #else /* UNIX */
-#if (defined(AIX) && defined(_THREAD_SAFE)) || defined(OSF1)
-#define NSLDAPI_NETDB_BUF_SIZE	 sizeof(struct protoent_data) 
-#else
-#define NSLDAPI_NETDB_BUF_SIZE	1024
-#endif
-
-#if defined(sgi) || defined(HPUX9) || defined(SCOOS) || \
+#if defined(sgi) || defined(HPUX9) || defined(LINUX1_2) || defined(SCOOS) || \
     defined(UNIXWARE) || defined(SUNOS4) || defined(SNI) || defined(BSDI) || \
     defined(NCR) || defined(OSF1) || defined(NEC) || defined(VMS) || \
     ( defined(HPUX10) && !defined(_REENTRANT)) || defined(HPUX11) || \
-    defined(UnixWare) || defined(NETBSD) || \
+    defined(UnixWare) || defined(LINUX) || defined(NETBSD) || \
     defined(FREEBSD) || defined(OPENBSD) || \
-    (defined(LINUX) && __GLIBC__ < 2) || \
     (defined(AIX) && !defined(USE_REENTRANT_LIBC))
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
 #elif defined(AIX)
@@ -303,20 +286,16 @@ int strncasecmp(const char *, const char *, size_t);
    Replaced with following to lines, stolen from the #else below
 #define GETHOSTBYNAME_BUF_T struct hostent_data
 */
-typedef char GETHOSTBYNAME_buf_t [NSLDAPI_NETDB_BUF_SIZE];
+typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #define GETHOSTBYNAME_BUF_T GETHOSTBYNAME_buf_t
 #define GETHOSTBYNAME( n, r, b, l, e ) \
 	(memset (&b, 0, l), gethostbyname_r (n, r, &b) ? NULL : r)
 #elif defined(HPUX10)
 #define GETHOSTBYNAME_BUF_T struct hostent_data
 #define GETHOSTBYNAME( n, r, b, l, e )	nsldapi_compat_gethostbyname_r( n, r, (char *)&b, l, e )
-#elif defined(LINUX)
-typedef char GETHOSTBYNAME_buf_t [NSLDAPI_NETDB_BUF_SIZE];
-#define GETHOSTBYNAME_BUF_T GETHOSTBYNAME_buf_t
-#define GETHOSTBYNAME( n, r, b, l, rp, e )  gethostbyname_r( n, r, b, l, rp, e )
-#define GETHOSTBYNAME_R_RETURNS_INT
 #else
-typedef char GETHOSTBYNAME_buf_t [NSLDAPI_NETDB_BUF_SIZE];
+#include <stdio.h> /* BUFSIZ */
+typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #define GETHOSTBYNAME_BUF_T GETHOSTBYNAME_buf_t
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname_r( n, r, b, l, e )
 #endif
@@ -339,16 +318,13 @@ typedef char GETHOSTBYNAME_buf_t [NSLDAPI_NETDB_BUF_SIZE];
 #else
 #define NSLDAPI_CTIME( c, b, l )	ctime_r( c, b, l )
 #endif
-#if defined(hpux9) || defined(SUNOS4) || defined(SNI) || \
+#if defined(hpux9) || defined(LINUX1_2) || defined(SUNOS4) || defined(SNI) || \
     defined(SCOOS) || defined(BSDI) || defined(NCR) || defined(VMS) || \
-    defined(NEC) || (defined(LINUX) && __GNU_LIBRARY__ != 6) || \
-    (defined(AIX) && !defined(USE_REENTRANT_LIBC))
+    defined(NEC) || defined(LINUX) || (defined(AIX) && !defined(USE_REENTRANT_LIBC))
 #define STRTOK( s1, s2, l )		strtok( s1, s2 )
 #else
 #define HAVE_STRTOK_R
-#ifndef strtok_r
 char *strtok_r(char *, const char *, char **);
-#endif
 #define STRTOK( s1, s2, l )		(char *)strtok_r( s1, s2, l )
 #endif /* STRTOK */
 #endif /* UNIX */
@@ -451,11 +427,5 @@ int select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
 
 #endif /* XP_OS2 */
 
-/* Define a macro to support large files */
-#ifdef _LARGEFILE64_SOURCE
-#define NSLDAPI_FOPEN( filename, mode )	fopen64( filename, mode )
-#else
-#define NSLDAPI_FOPEN( filename, mode )	fopen( filename, mode )
-#endif
 
 #endif /* _PORTABLE_H */

@@ -40,8 +40,6 @@
 #include "blapit.h"
 #include "pqgutil.h"
 
-SEC_BEGIN_PROTOS
-
 /* Generate PQGParams and PQGVerify structs.
  * Length of seed and length of h both equal length of P. 
  * All lengths are specified by "j", according to the table above.
@@ -147,7 +145,5 @@ extern SECStatus PK11_PQG_GetSeedFromVerify(const PQGVerify *verify,
  * Contents can be freed by calling SECITEM_FreeItem(h, PR_FALSE);	
  **************************************************************************/
 extern SECStatus PK11_PQG_GetHFromVerify(const PQGVerify *verify, SECItem * h);
-
-SEC_END_PROTOS
 
 #endif
