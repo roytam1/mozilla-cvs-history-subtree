@@ -45,3 +45,8 @@ locale/XXXX/pippki, XXXX/locale/XXXX/pippki
 
 # Wallet stuff
 locale/XXXX/communicator/wallet, XXXX/locale/XXXX/communicator/wallet
+
+# Marquee stuff
+content/xbl-marquee, comm/content/xbl-marquee
+
+
