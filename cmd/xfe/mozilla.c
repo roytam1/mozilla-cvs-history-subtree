@@ -38,7 +38,9 @@
 #include "secnav.h"
 #include "secrng.h"
 #include "mozjava.h"
+#ifdef MOZ_MAIL_NEWS
 #include "nlsxp.h"
+#endif
 #ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
 #endif
