@@ -547,6 +547,8 @@ nsresult nsWindow::StandardWindowCreate(nsIWidget *aParent,
 				mView->MoveTo(0, 0);
 				mView->ResizeTo(w->Bounds().Width(), w->Bounds().Height());
 				mView->SetResizingMode(B_FOLLOW_ALL);
+				w->Hide();
+				w->Show();
 			}
 		} // if eWindowType_Child
 
@@ -1058,6 +1060,10 @@ NS_METHOD nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 			
 		if(mustunlock)
 			mView->UnlockLooper();
+		//No feedback from BView/BWindow in this case.
+		//Informing xp layer directly
+		if(!mIsVisible || !mView->Window()->IsActive())
+			OnResize(mBounds);
 	}
 	else
 	{
@@ -1793,6 +1799,15 @@ bool nsWindow::CallMethod(MethodInfo *info)
 
 	case nsWindow::ONWHEEL :
 		{
+			BPoint cursor(0,0);
+			uint32 buttons;
+			if(mView && mView->LockLooper())
+				{
+					mView->GetMouse(&cursor, &buttons, false);
+					mView->UnlockLooper();
+				}
+			else
+				return false;
 			NS_ASSERTION(info->nArgs == 1, "Wrong number of arguments to CallMethod");
 
 			nsMouseScrollEvent scrollEvent(NS_MOUSE_SCROLL, this);
@@ -1803,9 +1818,8 @@ bool nsWindow::CallMethod(MethodInfo *info)
 
 			scrollEvent.time      = PR_IntervalNow();
 
-			// XXX implement these items?
-			scrollEvent.point.x = 100;
-			scrollEvent.point.y = 100;
+			scrollEvent.point.x = cursor.x;
+			scrollEvent.point.y = cursor.y;
 
 			// we don't use the mIsXDown bools because
 			// they get reset on Gecko reload (makes it harder

@@ -108,6 +108,7 @@ NS_IMETHODIMP nsRenderingContextBeOS::Init(nsIDeviceContext *aContext, nsDrawing
 	mContext = aContext;
 	NS_IF_ADDREF(mContext);
 	mSurface = (nsDrawingSurfaceBeOS *)aSurface;
+	mOffscreenSurface = mSurface;
 	NS_ADDREF(mSurface);
 	return (CommonInit());
 }
