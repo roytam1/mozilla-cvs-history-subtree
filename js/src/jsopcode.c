@@ -428,7 +428,7 @@ struct JSPrinter {
     Sprinter        sprinter;       /* base class state */
     JSArenaPool     pool;           /* string allocation pool */
     uintN           indent;         /* indentation in spaces */
-    JSBool          pretty;         /* pretty-print, indent, add newlines */
+    JSBool          pretty;         /* pretty-print: indent, use newlines */
     JSScript        *script;        /* script being printed */
     JSScope         *scope;         /* script function scope */
 };
@@ -793,7 +793,7 @@ static JSBool
 Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 {
     JSContext *cx;
-    JSPrinter *jp;
+    JSPrinter *jp, *jp2;
     jsbytecode *endpc, *done, *forelem2_done;
     ptrdiff_t len, todo, oplen, cond, next, tail;
     JSOp op, lastop, saveop;
@@ -803,6 +803,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     jsint i, argc;
     char **argv;
     JSAtom *atom;
+    JSObject *obj;
+    JSFunction *fun;
     JSString *str;
     JSBool ok;
     jsval key;
@@ -995,14 +997,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		    len = 0;
 		    break;
 
-		  case SRC_FUNCDEF: {
-		    JSPrinter *jp2;
-		    JSObject *obj;
-		    JSFunction *fun;
-
+		  case SRC_FUNCDEF:
 		    atom = js_GetAtom(cx, &jp->script->atomMap,
 				      (jsatomid) js_GetSrcNoteOffset(sn, 0));
 		    JS_ASSERT(ATOM_IS_OBJECT(atom));
+                  do_function:
 		    obj = ATOM_TO_OBJECT(atom);
 		    fun = JS_GetPrivate(cx, obj);
 		    jp2 = js_NewPrinter(cx, JS_GetFunctionName(fun),
@@ -1017,7 +1016,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		    }
 		    js_DestroyPrinter(jp2);
 		    break;
-		  }
+
 		  default:;
 		}
 		break;
@@ -1706,8 +1705,26 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		    todo = Sprint(&ss->sprinter, "%s", rval);
 		} else if (JSVAL_IS_OBJECT(key)) {
 #if JS_HAS_LEXICAL_CLOSURE
-		    if (JSVAL_IS_FUNCTION(cx, key))
-			goto do_closure;
+		    if (JSVAL_IS_FUNCTION(cx, key)) {
+                        obj = ATOM_TO_OBJECT(atom);
+                        fun = JS_GetPrivate(cx, obj);
+                        jp2 = js_NewPrinter(cx, JS_GetFunctionName(fun),
+                                            jp->indent, JS_FALSE);
+                        if (!jp2)
+                            return JS_FALSE;
+                        jp2->scope = jp->scope;
+                        todo = -1;
+                        if (js_DecompileFunction(jp2, fun)) {
+                            str = js_GetPrinterOutput(jp2);
+                            if (str) {
+                                todo = SprintPut(&ss->sprinter,
+                                                 JS_GetStringBytes(str),
+                                                 str->length);
+                            }
+                        }
+                        js_DestroyPrinter(jp2);
+                        break;
+                    }
 #endif
 		    str = js_ValueToString(cx, key);
 		    if (!str)
@@ -1905,33 +1922,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
 #if JS_HAS_LEXICAL_CLOSURE
 	      case JSOP_CLOSURE:
-	      {
-		JSObject *obj;
-		JSFunction *fun;
-		JSPrinter *jp2;
-
 		atom = GET_ATOM(cx, jp->script, pc);
 		JS_ASSERT(ATOM_IS_OBJECT(atom));
-	      do_closure:
-		obj = ATOM_TO_OBJECT(atom);
-		fun = JS_GetPrivate(cx, obj);
-		jp2 = js_NewPrinter(cx, JS_GetFunctionName(fun), jp->indent,
-                                    JS_FALSE);
-		if (!jp2)
-		    return JS_FALSE;
-		jp2->scope = jp->scope;
-		todo = -1;
-		if (js_DecompileFunction(jp2, fun)) {
-		    str = js_GetPrinterOutput(jp2);
-		    if (str) {
-			todo = SprintPut(&ss->sprinter,
-					 JS_GetStringBytes(str),
-					 str->length);
-		    }
-		}
-		js_DestroyPrinter(jp2);
-		break;
-	      }
+                goto do_function;
 #endif /* JS_HAS_LEXICAL_CLOSURE */
 
 #if JS_HAS_EXPORT_IMPORT
@@ -2182,7 +2175,7 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun)
     intN i;
 
     if (jp->pretty) {
-	js_puts(jp, "\n");
+        js_puts(jp, "\n");
 	js_printf(jp, "\t");
     }
     if (fun->flags & JSFUN_GETTER)

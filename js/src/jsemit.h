@@ -84,16 +84,18 @@ struct JSTreeContext {              /* tree context for semantic checks */
     uint32          flags;          /* statement state flags, see below */
     uint32          tryCount;       /* total count of try statements parsed */
     JSStmtInfo      *topStmt;       /* top of statement info stack */
-    JSAtomList      decls;          /* const and var declaration atom list */
+    JSAtomList      decls;          /* function, const, and var declarations */
 };
 
-#define TCF_IN_FUNCTION 0x01        /* parsing inside function body */
-#define TCF_RETURN_EXPR 0x02        /* function has 'return expr;' */
-#define TCF_RETURN_VOID 0x04        /* function has 'return;' */
-#define TCF_IN_FOR_INIT 0x08        /* parsing init expr of for; exclude 'in' */
+#define TCF_TOP_LEVEL   0x01        /* at TL of program or function body */
+#define TCF_IN_FUNCTION 0x02        /* parsing inside function body */
+#define TCF_RETURN_EXPR 0x04        /* function has 'return expr;' */
+#define TCF_RETURN_VOID 0x08        /* function has 'return;' */
+#define TCF_IN_FOR_INIT 0x10        /* parsing init expr of for; exclude 'in' */
+#define TCF_FUN_VS_VAR  0x20        /* function and var with same name */
 
 #define TREE_CONTEXT_INIT(tc)                                                 \
-    ((tc)->flags = 0, (tc)->tryCount = 0, (tc)->topStmt = NULL,               \
+    ((tc)->flags = TCF_TOP_LEVEL, (tc)->tryCount = 0, (tc)->topStmt = NULL,   \
      ATOM_LIST_INIT(&(tc)->decls))
 
 #define TREE_CONTEXT_FREE(tc)                                                 \
