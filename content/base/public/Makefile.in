@@ -70,6 +70,7 @@ SDK_XPIDLSRCS   = \
 
 XPIDLSRCS	= \
 		nsIContentPolicy.idl        \
+		nsIChromeRegistry.idl       \
 		nsISelectionController.idl  \
 		nsISelectionDisplay.idl  \
 		nsISelectionListener.idl  \
