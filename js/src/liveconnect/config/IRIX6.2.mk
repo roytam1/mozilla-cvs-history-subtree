@@ -19,14 +19,3 @@ JDK = /usr/java
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/irix
 
 OTHER_LIBS += -L$(JDK)/lib/sgi/native_threads -ljava
-
-ifdef JS_STATIC
-ifeq ($(CC),gcc)
-OTHER_LIBS += -Wl,-Bstatic -L../$(OBJDIR) -ljs
-else
-OTHER_LIBS += -Bstatic -L../$(OBJDIR) -ljs
-endif
-else
-OTHER_LIBS += -L../$(OBJDIR) -ljs -L$(JDK)/lib/sgi/native_threads -ljava
-endif
-

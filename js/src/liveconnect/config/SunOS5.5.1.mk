@@ -21,14 +21,3 @@ JDK = /u/rchinta/util/java/jdk1.1.5
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/solaris
 
 OTHER_LIBS += -L$(JDK)/lib/sparc/native_threads -ljava
-
-ifdef JS_STATIC
-ifeq ($(CC),gcc)
-OTHER_LIBS += -Wl,-Bstatic -L../$(OBJDIR) -ljs 
-else
-OTHER_LIBS += -Bstatic -L../$(OBJDIR) -ljs
-endif
-else
-OTHER_LIBS += -L../$(OBJDIR) -ljs
-endif
-

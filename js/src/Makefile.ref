@@ -24,12 +24,11 @@ include config.mk
 
 #NS_USE_NATIVE = 1
 
-ifdef USE_NSPR
+ifdef JS_THREADSAFE
 DEFINES += -DJS_THREADSAFE
-NSPR_LIBRARY = -L../../dist/$(OBJDIR)/lib -lnspr21
+OTHER_LIBS += -L../../dist/$(OBJDIR)/lib -lnspr21
 INCLUDES += -I../../dist/$(OBJDIR)/include
 else
-NSPR_LIBRARY =
 # Look in OBJDIR to find prcpucfg.h
 INCLUDES   += -I$(OBJDIR)
 endif
@@ -171,11 +170,11 @@ nsinstall-target:
 	cd ../../config; $(MAKE) OBJDIR=$(OBJDIR) OBJDIR_NAME=$(OBJDIR)
 
 $(PROGRAM): $(PROG_OBJS) $(LIBRARY)
-	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(NSPR_LIBRARY)
+	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
 
 $(PROGRAM).pure: $(PROG_OBJS) $(LIBRARY)
 	purify $(PUREFLAGS) \
-	    $(CC) -o $@ $(PURE_OS_CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS)
+	    $(CC) -o $@ $(PURE_OS_CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
 
 $(HFILES) $(CFILES): $(OBJDIR)/jscpucfg.h
 

@@ -21,9 +21,3 @@ JDK = /tools/ns
 INCLUDES   += -I$(JDK)/include/java -I$(JDK)/include/java/aix
 
 OTHER_LIBS += -L$(JDK)/lib/aix/native_threads -ljava
-
-ifdef JS_STATIC
-OTHER_LIBS += -L../$(OBJDIR) -ljs
-else
-OTHER_LIBS += ../$(OBJDIR)/libjs.so
-endif

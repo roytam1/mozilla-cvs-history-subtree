@@ -20,7 +20,7 @@
 
 DEPTH = ..
 
-ifdef USE_NSPR
+ifdef JS_THREADSAFE
 OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
 endif
 
@@ -91,4 +91,4 @@ $(OBJDIR)/$(PROG_FILE).o: ../$(PROG_FILE).c
 
 $(PROGRAM): $(OBJDIR)/$(PROG_FILE).o
 	@$(MAKE_OBJDIR)
-	$(CC) -o $@ $(CFLAGS) $+ $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
+	$(CC) -o $@ $(CFLAGS) $+ $(LIBRARY) ../$(OBJDIR)/libjs.a $(LDFLAGS) $(OTHER_LIBS)
