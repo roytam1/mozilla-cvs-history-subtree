@@ -21,6 +21,7 @@
 + locale/@AB_CD@/messenger/pref-advanced.dtd                            (@AB_CD@/chrome/messenger/pref-advanced.dtd)
 + locale/@AB_CD@/messenger/pref-masterpass.dtd                          (@AB_CD@/chrome/messenger/pref-masterpass.dtd)
   locale/@AB_CD@/messenger/pref-connection.dtd                          (@AB_CD@/chrome/messenger/pref-connection.dtd)
++ locale/@AB_CD@/messenger/am-smime.dtd                                 (@AB_CD@/chrome/messenger/am-smime.dtd)
 + locale/@AB_CD@/messenger/addressbook/abMainWindow.dtd                 (@AB_CD@/chrome/messenger/addressbook/abMainWindow.dtd)
 + locale/@AB_CD@/messenger/addressbook/abNewCardDialog.dtd              (@AB_CD@/chrome/messenger/addressbook/abNewCardDialog.dtd)
   locale/@AB_CD@/messenger/addressbook/abContactsPanel.dtd              (@AB_CD@/chrome/messenger/addressbook/abContactsPanel.dtd)
