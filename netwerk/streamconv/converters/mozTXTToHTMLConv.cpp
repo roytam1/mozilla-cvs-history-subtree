@@ -49,6 +49,13 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 const PRFloat64 growthRate = 1.2;
 
+// Bug 183111, editor now replaces multiple spaces with leading
+// 0xA0's and a single ending space, so need to treat 0xA0's as spaces.
+static inline PRBool IsSpace(const PRUnichar aChar)
+{
+  return (nsCRT::IsAsciiSpace(aChar) || aChar == 0xA0);
+}
+
 // Escape Char will take ch, escape it and append the result to 
 // aStringToAppendTo
 void
@@ -238,7 +245,7 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
              && aInString[PRUint32(i)] != '{' && aInString[PRUint32(i)] != '['
              && aInString[PRUint32(i)] != '(' && aInString[PRUint32(i)] != '|'
              && aInString[PRUint32(i)] != '\\'
-             && !nsCRT::IsAsciiSpace(aInString[PRUint32(i)])
+             && !IsSpace(aInString[PRUint32(i)])
          ; i--)
       ;
     if
@@ -293,7 +300,7 @@ mozTXTToHTMLConv::FindURLEnd(const PRUnichar * aInString, PRInt32 aInStringLengt
              && aInString[i] != '`'
              && aInString[i] != '}' && aInString[i] != ']'
              && aInString[i] != ')' && aInString[i] != '|'
-             && !nsCRT::IsAsciiSpace(aInString[i])
+             && !IsSpace(aInString[i])
          ; i++)
       ;
     while (--i > pos && (
@@ -632,11 +639,11 @@ mozTXTToHTMLConv::SmilyHit(const PRUnichar * aInString, PRInt32 aLength, PRBool 
   PRUint32 delim = (col0 ? 0 : 1) + tagLen;
   if
     (
-      (col0 || nsCRT::IsAsciiSpace(aInString[0]))
+      (col0 || IsSpace(aInString[0]))
         &&
         (
           aLength <= PRInt32(delim) ||
-          nsCRT::IsAsciiSpace(aInString[delim]) ||
+          IsSpace(aInString[delim]) ||
           aLength > PRInt32(delim + 1)
             &&
             (
@@ -646,7 +653,7 @@ mozTXTToHTMLConv::SmilyHit(const PRUnichar * aInString, PRInt32 aLength, PRBool 
               aInString[delim] == '!' ||
               aInString[delim] == '?'
             )
-            && nsCRT::IsAsciiSpace(aInString[delim + 1])
+            && IsSpace(aInString[delim + 1])
         )
         && ItMatchesDelimited(aInString, aLength, tagTXT, aTagTxtLength, 
                               col0 ? LT_IGNORE : LT_DELIMITER, LT_IGNORE)
@@ -955,7 +962,7 @@ mozTXTToHTMLConv::CiteLevelTXT(const PRUnichar *line,
     PRUint32 i = logLineStart;
 
 #ifdef QUOTE_RECOGNITION_AGGRESSIVE
-    for (; PRInt32(i) < lineLength && nsCRT::IsAsciiSpace(line[i]); i++)
+    for (; PRInt32(i) < lineLength && IsSpace(line[i]); i++)
       ;
     for (; PRInt32(i) < lineLength && nsCRT::IsAsciiAlpha(line[i])
                                    && nsCRT::IsUpper(line[i])   ; i++)

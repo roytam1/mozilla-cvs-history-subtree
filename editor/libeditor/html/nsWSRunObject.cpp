@@ -229,7 +229,7 @@ nsWSRunObject::InsertBreak(nsCOMPtr<nsIDOMNode> *aInOutParent,
     {
       // dont need to do anything.  just insert break.  ws wont change.
     }
-    else if (afterRun->mType == eLeadingWS)
+    else if (afterRun->mType & eLeadingWS)
     {
       // delete the leading ws that is after insertion point.  We don't
       // have to (it would still not be significant after br), but it's 
@@ -265,7 +265,7 @@ nsWSRunObject::InsertBreak(nsCOMPtr<nsIDOMNode> *aInOutParent,
     {
       // dont need to do anything.  just insert break.  ws wont change.
     }
-    else if (beforeRun->mType == eTrailingWS)
+    else if (beforeRun->mType & eTrailingWS)
     {
       // need to delete the trailing ws that is before insertion point, because it 
       // would become significant after break inserted.
@@ -324,7 +324,7 @@ nsWSRunObject::InsertText(const nsAString& aStringToInsert,
     {
       // dont need to do anything.  just insert text.  ws wont change.
     }
-    else if (afterRun->mType == eLeadingWS)
+    else if (afterRun->mType & eLeadingWS)
     {
       // delete the leading ws that is after insertion point, because it 
       // would become significant after text inserted.
@@ -347,7 +347,7 @@ nsWSRunObject::InsertText(const nsAString& aStringToInsert,
     {
       // dont need to do anything.  just insert text.  ws wont change.
     }
-    else if (beforeRun->mType == eTrailingWS)
+    else if (beforeRun->mType & eTrailingWS)
     {
       // need to delete the trailing ws that is before insertion point, because it 
       // would become significant after text inserted.
@@ -1416,7 +1416,7 @@ nsWSRunObject::PrepareToDeleteRangePriv(nsWSRunObject* aEndObject)
   NS_ENSURE_SUCCESS(res, res);
   
   // trim after run of any leading ws
-  if (afterRun && (afterRun->mType == eLeadingWS))
+  if (afterRun && (afterRun->mType & eLeadingWS))
   {
     res = aEndObject->DeleteChars(aEndObject->mNode, aEndObject->mOffset, afterRun->mEndNode, afterRun->mEndOffset);
     NS_ENSURE_SUCCESS(res, res);
@@ -1424,7 +1424,7 @@ nsWSRunObject::PrepareToDeleteRangePriv(nsWSRunObject* aEndObject)
   // adjust normal ws in afterRun if needed
   if (afterRun && (afterRun->mType == eNormalWS) && !aEndObject->mPRE)
   {
-    if ( (beforeRun && (beforeRun->mType == eLeadingWS)) ||
+    if ( (beforeRun && (beforeRun->mType & eLeadingWS)) ||
          (!beforeRun && ((mStartReason & eBlock) || (mStartReason == eBreak))) )
     {
       // make sure leading char of following ws is an nbsp, so that it will show up
@@ -1438,14 +1438,14 @@ nsWSRunObject::PrepareToDeleteRangePriv(nsWSRunObject* aEndObject)
     }
   }
   // trim before run of any trailing ws
-  if (beforeRun && (beforeRun->mType == eTrailingWS))
+  if (beforeRun && (beforeRun->mType & eTrailingWS))
   {
     res = DeleteChars(beforeRun->mStartNode, beforeRun->mStartOffset, mNode, mOffset);
     NS_ENSURE_SUCCESS(res, res);
   }
   else if (beforeRun && (beforeRun->mType == eNormalWS) && !mPRE)
   {
-    if ( (afterRun && (afterRun->mType == eTrailingWS)) ||
+    if ( (afterRun && (afterRun->mType & eTrailingWS)) ||
          (afterRun && (afterRun->mType == eNormalWS))   ||
          (!afterRun && ((aEndObject->mEndReason & eBlock))) )
     {

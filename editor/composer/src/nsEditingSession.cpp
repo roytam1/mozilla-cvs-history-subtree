@@ -78,7 +78,7 @@
 
 ----------------------------------------------------------------------------*/
 nsEditingSession::nsEditingSession()
-: mDoneSetup(PR_FALSE), mEditorClassString(nsnull)
+: mDoneSetup(PR_FALSE), mStateMaintainer(nsnull), mEditorClassString(nsnull)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -125,6 +125,9 @@ nsEditingSession::Init(nsIDOMWindow *aWindow)
 NS_IMETHODIMP
 nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow, const char *aEditorType, PRBool inDoAfterUriLoad)
 {
+  // Always remove existing editor
+  TearDownEditorOnWindow(aWindow);
+
   PRBool htmlController = PR_FALSE;
   mEditorClassString = nsnull;
   mEditorFlags = 0;
@@ -256,7 +259,7 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   nsCOMPtr<nsISelectionPrivate> selPriv = do_QueryInterface(selection);
 	if (!selPriv) return NS_ERROR_FAILURE;
 
-  rv = selPriv->AddSelectionListener(mStateMaintainer);
+  rv = selPriv->AddSelectionListener(NS_STATIC_CAST(nsISelectionListener*, mStateMaintainer));
   if (NS_FAILED(rv)) return rv;
 
   // and set it up as a doc state listener
@@ -286,17 +289,51 @@ nsEditingSession::TearDownEditorOnWindow(nsIDOMWindow *aWindow)
 {
   nsresult rv;
   
-  // null out the editor on the controller
-  rv = SetEditorOnControllers(aWindow, nsnull);
-  if (NS_FAILED(rv)) return rv;  
-  
   nsCOMPtr<nsIEditorDocShell> editorDocShell;
   rv = GetEditorDocShellFromWindow(aWindow, getter_AddRefs(editorDocShell));
   if (NS_FAILED(rv)) return rv;  
   
+  nsCOMPtr<nsIEditor> editor;
+  rv = editorDocShell->GetEditor(getter_AddRefs(editor));
+  if (NS_FAILED(rv)) return rv;
+
   // null out the editor on the docShell
   rv = editorDocShell->SetEditor(nsnull);
   if (NS_FAILED(rv)) return rv;
+
+  if (mStateMaintainer && editor)
+  {
+    // If we had an editor -- we are loading a new URL into the existing
+    // window or creating a different editor on the same document.
+
+    // Remove all the listeners
+    nsCOMPtr<nsISelection>    selection;
+    editor->GetSelection(getter_AddRefs(selection));
+    nsCOMPtr<nsISelectionPrivate> selPriv = do_QueryInterface(selection);
+    if (selPriv)
+    {
+      rv = selPriv->RemoveSelectionListener(NS_STATIC_CAST(nsISelectionListener*, mStateMaintainer));
+      if (NS_FAILED(rv)) return rv;
+    }
+
+    rv = editor->RemoveDocumentStateListener(NS_STATIC_CAST(nsIDocumentStateListener*, mStateMaintainer));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsITransactionManager> txnMgr;
+    editor->GetTransactionManager(getter_AddRefs(txnMgr));
+    if (txnMgr)
+    {
+      rv = txnMgr->RemoveListener(NS_STATIC_CAST(nsITransactionListener*, mStateMaintainer));
+      if (NS_FAILED(rv)) return rv;
+    }
+
+    // null out the editor on the controllers
+    rv = SetEditorOnControllers(aWindow, nsnull);
+    if (NS_FAILED(rv)) return rv;
+
+    mStateMaintainer->Release();
+    mStateMaintainer = nsnull;
+  }
   
   return NS_OK;
 }

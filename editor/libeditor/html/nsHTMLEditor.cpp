@@ -134,6 +134,11 @@
 #include "nsParserCIID.h"
 #include "nsITextContent.h"
 #include "nsWSRunObject.h"
+#include "nsHTMLObjectResizer.h"
+
+#include "nsIFrame.h"
+#include "nsIView.h"
+#include "nsIWidget.h"
 
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
 static NS_DEFINE_IID(kSubtreeIteratorCID, NS_SUBTREEITERATOR_CID);
@@ -154,6 +159,9 @@ static char hrefText[] = "href";
 static char anchorTxt[] = "anchor";
 static char namedanchorText[] = "namedanchor";
 
+#define kBaseEditorStyleSheet NS_LITERAL_STRING("chrome://editor/content/EditorOverride.css")
+#define kNormalStyleSheet NS_LITERAL_STRING("chrome://editor/content/EditorContent.css")
+
 nsCOMPtr<nsIParserService> nsHTMLEditor::sParserService;
 PRInt32 nsHTMLEditor::sInstanceCount = 0;
 
@@ -170,6 +178,10 @@ nsHTMLEditor::nsHTMLEditor()
 , mTypeInState(nsnull)
 , mSelectedCellIndex(0)
 , mHTMLCSSUtils(nsnull)
+, mIsImageResizingEnabled(PR_TRUE) // this can be overriden
+, mIsShowingResizeHandles(PR_FALSE)
+, mIsResizing(PR_FALSE)
+, mResizedObject(nsnull)
 {
 // Done in nsEditor
 // NS_INIT_ISUPPORTS();
@@ -201,9 +213,14 @@ nsHTMLEditor::~nsHTMLEditor()
     if (listener) {
       selPriv->RemoveSelectionListener(listener); 
     }
+    listener = do_QueryInterface(mSelectionListenerP);
+    if (listener) {
+      selPriv->RemoveSelectionListener(listener); 
+    }
   }
 
   NS_IF_RELEASE(mTypeInState);
+  mSelectionListenerP = nsnull;
 
   if (--sInstanceCount == 0 && sParserService)
     sParserService = 0;
@@ -230,6 +247,11 @@ NS_IMETHODIMP nsHTMLEditor::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   if (aIID.Equals(NS_GET_IID(nsIHTMLEditor))) {
     *aInstancePtr = NS_STATIC_CAST(nsIHTMLEditor*, this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(NS_GET_IID(nsIHTMLObjectResizer))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIHTMLObjectResizer*, this);
     NS_ADDREF_THIS();
     return NS_OK;
   }
@@ -299,6 +321,16 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
     if (NS_FAILED(result)) { return result; }
     mHTMLCSSUtils->Init(this);
 
+    // HACK:  Photon doesn't need the following behavior
+    //        since we *do* want link status (bug 609804)
+    //        and we block all navigation inside 
+    //        OnStartURIOpen anyways. 
+    //
+    // Unfortunately leaving the link handler in place can
+    // cause problems such as intercepting key events so
+    // no text is inserted.  Rather than risk unknown bugs
+    // we are setting the link handler to null in the editor. 
+
     // disable links
     nsCOMPtr<nsIPresContext> context;
     aPresShell->GetPresContext(getter_AddRefs(context));
@@ -316,6 +348,10 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
     if (!mTypeInState) {return NS_ERROR_NULL_POINTER;}
     NS_ADDREF(mTypeInState);
 
+    // init the selection listener for image resizing
+    mSelectionListenerP = new ResizerSelectionListener(this);
+    if (!mSelectionListenerP) {return NS_ERROR_NULL_POINTER;}
+
     nsCOMPtr<nsISelection>selection;
     result = GetSelection(getter_AddRefs(selection));
     if (NS_FAILED(result)) { return result; }
@@ -327,10 +363,15 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
       if (listener) {
         selPriv->AddSelectionListener(listener); 
       }
+      listener = do_QueryInterface(mSelectionListenerP);
+      if (listener) {
+        selPriv->AddSelectionListener(listener); 
+      }
     }
   }
 
   if (NS_FAILED(rulesRes)) return rulesRes;
+
   return result;
 }
 
@@ -349,6 +390,8 @@ nsHTMLEditor::InstallEventListeners()
 {
   NS_ASSERTION(mDocWeak, "no document set on this editor");
   if (!mDocWeak) return NS_ERROR_NOT_INITIALIZED;
+  
+  if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
 
   nsresult result;
   // get a key listener
@@ -386,7 +429,8 @@ printf("nsTextEditor.cpp: failed to get TextEvent Listener\n");
   }
 
   // get a drag listener
-  result = NS_NewEditorDragListener(getter_AddRefs(mDragListenerP), this);
+  nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShellWeak);
+  result = NS_NewEditorDragListener(getter_AddRefs(mDragListenerP), presShell, this);
   if (NS_FAILED(result)) {
     HandleEventListenerError();
     return result;
@@ -4184,7 +4228,8 @@ nsHTMLEditor::SetCompositionString(const nsAString& aCompositionString, nsIPriva
     mIMEBufferLength = aCompositionString.Length();
 
     ps->GetCaret(getter_AddRefs(caretP));
-    caretP->SetCaretDOMSelection(selection);
+    if (caretP)
+      caretP->SetCaretDOMSelection(selection);
 
     // second part of 23558 fix:
     if (aCompositionString.IsEmpty()) 
@@ -5985,3 +6030,56 @@ nsHTMLEditor::CopyLastEditableChildStyles(nsIDOMNode * aPreviousBlock, nsIDOMNod
   }
   return NS_OK;
 }
+
+nsresult
+nsHTMLEditor::GetElementOrigin(nsIDOMElement * aElement, PRInt32 & aX, PRInt32 & aY)
+{
+  // we are going to need the PresShell
+  if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
+  nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+  if (!ps) return NS_ERROR_NOT_INITIALIZED;
+
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
+  nsIFrame *frame = 0; // not ref-counted
+  ps->GetPrimaryFrameFor(content, &frame);
+
+  float t2p;
+  nsCOMPtr<nsIPresContext> pcontext;
+  ps->GetPresContext(getter_AddRefs(pcontext));
+  pcontext->GetTwipsToPixels(&t2p);
+
+
+  if (NodeIsType(aElement, NS_LITERAL_STRING("hr"))) {
+    nsIFrame* childFrame;
+    //frame->FirstChild(pcontext, nsnull, &childFrame);
+    frame->GetNextSibling(&childFrame);
+    frame = childFrame;
+  }
+  PRInt32 offsetX = 0, offsetY = 0;
+  nsCOMPtr<nsIWidget> widget;
+  nsresult rv;
+  while (frame) {
+    // Look for a widget so we can get screen coordinates
+    nsIView* view = nsnull;
+    rv = frame->GetView(pcontext, &view);
+    if (NS_SUCCEEDED(rv) && view) {
+      rv = view->GetWidget(*getter_AddRefs(widget));
+      if (widget)
+        break;
+    }
+    
+    // No widget yet, so count up the coordinates of the frame 
+    nsPoint origin;
+    frame->GetOrigin(origin);
+    offsetX += origin.x;
+    offsetY += origin.y;
+
+    frame->GetParent(&frame);
+  }
+
+  aX = NSTwipsToIntPixels(offsetX , t2p);
+  aY = NSTwipsToIntPixels(offsetY , t2p);
+
+  return NS_OK;
+}
+

@@ -138,47 +138,47 @@ pref("font.name.cursive.zh-TW", "XXX.cursive");
 pref("font.name.fantasy.zh-TW", "XXX.fantasy");
 
 pref("font.default", "serif");
-pref("font.size.variable.ar", 16);
+pref("font.size.variable.ar", 14);
 pref("font.size.fixed.ar", 13);
 
-pref("font.size.variable.el", 16);
+pref("font.size.variable.el", 14);
 pref("font.size.fixed.el", 13);
 
-pref("font.size.variable.he", 16);
+pref("font.size.variable.he", 14);
 pref("font.size.fixed.he", 13);
 
 pref("font.size.variable.ja", 14);
 pref("font.size.fixed.ja", 14);
 
-pref("font.size.variable.ko", 16);
-pref("font.size.fixed.ko", 16);
+pref("font.size.variable.ko", 14);
+pref("font.size.fixed.ko", 14);
 
-pref("font.size.variable.th", 16);
+pref("font.size.variable.th", 14);
 pref("font.size.fixed.th", 13);
 
-pref("font.size.variable.tr", 16);
+pref("font.size.variable.tr", 14);
 pref("font.size.fixed.tr", 13);
 
-pref("font.size.variable.x-baltic", 16);
+pref("font.size.variable.x-baltic", 14);
 pref("font.size.fixed.x-baltic", 13);
 
-pref("font.size.variable.x-central-euro", 16);
+pref("font.size.variable.x-central-euro", 14);
 pref("font.size.fixed.x-central-euro", 13);
 
-pref("font.size.variable.x-cyrillic", 16);
+pref("font.size.variable.x-cyriPllic", 14);
 pref("font.size.fixed.x-cyrillic", 13);
 
-pref("font.size.variable.x-unicode", 16);
+pref("font.size.variable.x-unicode", 14);
 pref("font.size.fixed.x-unicode", 13);
 
-pref("font.size.variable.x-western", 16);
+pref("font.size.variable.x-western", 14);
 pref("font.size.fixed.x-western", 13);
 
-pref("font.size.variable.zh-CN", 15);
-pref("font.size.fixed.zh-CN", 16);
+pref("font.size.variable.zh-CN", 14);
+pref("font.size.fixed.zh-CN", 14);
 
-pref("font.size.variable.zh-TW", 15);
-pref("font.size.fixed.zh-TW", 16);
+pref("font.size.variable.zh-TW", 14);
+pref("font.size.fixed.zh-TW", 14);
 
 // Tab focus model bit field:
 // 1 focuses text controls, 2 focuses other form elements, 4 adds links.

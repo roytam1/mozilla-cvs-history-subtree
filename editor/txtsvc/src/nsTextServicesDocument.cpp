@@ -635,8 +635,16 @@ nsTextServicesDocument::ExpandRangeToWordBoundaries(nsIDOMRange *aRange)
 
   NS_ENSURE_SUCCESS(result, result);
 
-  rngEndNode = wordEndNode;
-  rngEndOffset = wordEndOffset;
+  // To prevent expanding the range too much, we only change
+  // rngEndNode and rngEndOffset if it isn't already at the start of the
+  // word and isn't equivalent to rngStartNode and rngStartOffset.
+
+  if (rngEndNode != wordStartNode || rngEndOffset != wordStartOffset ||
+     (rngEndNode == rngStartNode  && rngEndOffset == rngStartOffset))
+  {
+    rngEndNode = wordEndNode;
+    rngEndOffset = wordEndOffset;
+  }
 
   // Now adjust the range so that it uses our new
   // end points.

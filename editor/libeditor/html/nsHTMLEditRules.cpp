@@ -330,10 +330,6 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
       nsrange->NSDetach();  // ditto for mUtilRange.  
     }
     
-    // turn off caret
-    nsCOMPtr<nsISelectionController> selCon;
-    mHTMLEditor->GetSelectionController(getter_AddRefs(selCon));
-    if (selCon) selCon->SetCaretEnabled(PR_FALSE);
     // check that selection is in subtree defined by body node
     ConfirmSelectionInBody();
     // let rules remember the top level action
@@ -361,10 +357,6 @@ nsHTMLEditRules::AfterEdit(PRInt32 action, nsIEditor::EDirection aDirection)
     // free up selectionState range item
     (mHTMLEditor->mRangeUpdater).DropRangeItem(&mRangeItem);
 
-    // turn on caret
-    nsCOMPtr<nsISelectionController> selCon;
-    mHTMLEditor->GetSelectionController(getter_AddRefs(selCon));
-    if (selCon) selCon->SetCaretEnabled(PR_TRUE);
 #ifdef IBMBIDI
     /* After inserting text the cursor Bidi level must be set to the level of the inserted text.
      * This is difficult, because we cannot know what the level is until after the Bidi algorithm
@@ -4098,7 +4090,7 @@ nsHTMLEditRules::WillAlign(nsISelection *aSelection,
     if (nsHTMLEditUtils::SupportsAlignAttr(curNode))
     {
       nsCOMPtr<nsIDOMElement> curElem = do_QueryInterface(curNode);
-      res = AlignBlock(curElem, alignType, PR_FALSE);
+      res = AlignBlock(curElem, alignType, PR_TRUE);
       if (NS_FAILED(res)) return res;
       // clear out curDiv so that we don't put nodes after this one into it
       curDiv = 0;

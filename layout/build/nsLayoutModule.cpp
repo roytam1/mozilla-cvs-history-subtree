@@ -52,6 +52,7 @@
 #include "nsIPrintContext.h"
 #include "nsIPrintPreviewContext.h"
 #include "nsTextTransformer.h"
+#include "nsICaret.h"
 
 #include "nsXBLAtoms.h"     // to addref/release table
 #include "nsHTMLAtoms.h"    // to addref/release table
@@ -190,6 +191,7 @@ extern nsresult NS_CreateCSSFrameConstructor(nsICSSFrameConstructor** aResult);
 extern nsresult NS_NewLayoutHistoryState(nsILayoutHistoryState** aResult);
 extern nsresult NS_NewAutoCopyService(nsIAutoCopyService** aResult);
 extern nsresult NS_NewSelectionImageService(nsISelectionImageService** aResult);
+extern nsresult NS_NewCaret(nsICaret** aInstancePtrResult);
 
 #define MAKE_CTOR(ctor_, iface_, func_)                   \
 static NS_IMETHODIMP                                      \
@@ -231,6 +233,7 @@ MAKE_CTOR(CreateNewScrollBoxObject,     nsIBoxObject,           NS_NewScrollBoxO
 MAKE_CTOR(CreateNewTreeBoxObject,       nsIBoxObject,           NS_NewTreeBoxObject)
 MAKE_CTOR(CreateNewAutoCopyService,     nsIAutoCopyService,     NS_NewAutoCopyService)
 MAKE_CTOR(CreateSelectionImageService,  nsISelectionImageService,NS_NewSelectionImageService)
+MAKE_CTOR(CreateCaret,                  nsICaret,               NS_NewCaret)
 
 // The list of components we register
 static const nsModuleComponentInfo gComponents[] = {
@@ -264,7 +267,12 @@ static const nsModuleComponentInfo gComponents[] = {
   { "selection image storage",
     NS_SELECTIONIMAGESERVICE_CID,
     nsnull,
-    CreateSelectionImageService},
+    CreateSelectionImageService },
+
+  { "caret",
+    NS_CARET_CID,
+    "@mozilla.org/layout/caret;1",
+    CreateCaret },
 
   // XXX ick
   { "Presentation shell",

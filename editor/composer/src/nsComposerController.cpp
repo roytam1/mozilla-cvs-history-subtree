@@ -201,6 +201,7 @@ nsresult nsComposerController::RegisterComposerCommands(nsIControllerCommandMana
   // format stuff
   NS_REGISTER_ONE_COMMAND(nsParagraphStateCommand,       "cmd_paragraphState");
   NS_REGISTER_ONE_COMMAND(nsFontFaceStateCommand,        "cmd_fontFace");
+  NS_REGISTER_ONE_COMMAND(nsFontSizeStateCommand,        "cmd_fontSize");
   NS_REGISTER_ONE_COMMAND(nsFontColorStateCommand,       "cmd_fontColor");
   NS_REGISTER_ONE_COMMAND(nsBackgroundColorStateCommand, "cmd_backgroundColor");
   NS_REGISTER_ONE_COMMAND(nsHighlightColorStateCommand,  "cmd_highlight");

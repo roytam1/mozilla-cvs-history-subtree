@@ -5,4 +5,5 @@
 nsISpellChecker.h
 nsITextService.h
 nsITextServicesDocument.h
+nsITextServicesFilter.idl
 nsTextServicesCID.h
