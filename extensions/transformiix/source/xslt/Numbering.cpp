@@ -31,8 +31,10 @@
 #include "Numbering.h"
 #include "Names.h"
 #include "txAtoms.h"
+#include "XMLUtils.h"
 
-void Numbering::doNumbering(Element* xslNumber, String& dest, Node* context,
+void Numbering::doNumbering(Element* xslNumber, String& dest,
+                            txIEvalContext* aContext,
                             ProcessorState* ps)
 {
     if (!xslNumber)
@@ -41,30 +43,25 @@ void Numbering::doNumbering(Element* xslNumber, String& dest, Node* context,
     int* counts = 0;
     int nbrOfCounts = 0;
 
-    String valueAttr;
-    xslNumber->getAttr(txXSLTAtoms::value, kNameSpaceID_None,
-                       valueAttr);
+    Expr* expr = ps->getExpr(xslNumber, ProcessorState::ValueAttr);
     //-- check for expr
-    if (!valueAttr.isEmpty()) {
-        Expr* expr = ps->getExpr(xslNumber, ProcessorState::ValueAttr);
-        if (!expr)
-            return;
+    if (expr) {
         nbrOfCounts = 1;
         counts = new int[1];
-        ExprResult* result = expr->evaluate(context, ps);
+        ExprResult* result = expr->evaluate(aContext);
         double dbl = result->numberValue();
         delete result;
         counts[0] = (int)dbl;
     }
-    else if (context) {
+    else {
+        Node* context = aContext->getContextNode();
 
-        //-- create count expression
-
+        // create count pattern
         String countAttr;
         xslNumber->getAttr(txXSLTAtoms::count, kNameSpaceID_None,
                            countAttr);
 
-        Pattern* countPattern;
+        txPattern* countPattern = 0;
         MBool ownsPattern;
         
         if (!countAttr.isEmpty()) {
@@ -73,31 +70,44 @@ void Numbering::doNumbering(Element* xslNumber, String& dest, Node* context,
             ownsPattern = MB_FALSE;
         }
         else {
-            // Actually, this code should probobly use NodeTests instead
+            LocationStep::LocationStepType axis = LocationStep::CHILD_AXIS;
+            Node::NodeType type = Node::ELEMENT_NODE;
+            txNodeTypeTest::NodeType nodetype;
             switch(context->getNodeType()) {
                 case Node::ATTRIBUTE_NODE:
-                    countAttr.append('@');
-                    countAttr.append(context->getNodeName());
-                    break;
+                    axis = LocationStep::ATTRIBUTE_AXIS;
+                    type = Node::ATTRIBUTE_NODE;
                 case Node::ELEMENT_NODE:
-                    countAttr.append(context->getNodeName());
+                    {
+                        const String& name = context->getNodeName();
+                        String prefix, lname;
+                        XMLUtils::getPrefix(name, prefix);
+                        XMLUtils::getLocalPart(name, lname);
+                        PRInt32 NSid = context->getNamespaceID();
+                        txNameTest* nt = new txNameTest(prefix, lname, NSid,
+                                                        type);
+                        countPattern = new LocationStep(nt, axis);
+                    }
                     break;
                 case Node::CDATA_SECTION_NODE :
                 case Node::TEXT_NODE :
-                    countAttr.append("text()");
+                    nodetype = txNodeTypeTest::TEXT_TYPE;
                     break;
                 case Node::COMMENT_NODE :
-                    countAttr.append("comment()");
+                    nodetype = txNodeTypeTest::COMMENT_TYPE;
                     break;
                 case Node::PROCESSING_INSTRUCTION_NODE :
-                    countAttr.append("processing-instruction()");
+                    nodetype = txNodeTypeTest::PI_TYPE;
                     break;
                 default:
-                    countAttr.append("node()[false()]"); //-- for now
-                    break;
+                    NS_ASSERTION(0, "Unexpected Node type");
+                    delete counts;
+                    return;
             }
-            ExprParser parser;
-            countPattern = parser.createPattern(countAttr);
+            if (!countPattern) {
+                // not a nametest
+                countPattern  = new txNodeTypeTest(nodetype);
+            }
             ownsPattern = MB_TRUE;
         }
         if (!countPattern) {
@@ -114,7 +124,7 @@ void Numbering::doNumbering(Element* xslNumber, String& dest, Node* context,
         String fromAttr;
         xslNumber->getAttr(txXSLTAtoms::from, kNameSpaceID_None,
                            fromAttr);
-        PatternExpr* from = 0;
+        txPattern* from = 0;
 
         if (MULTIPLE_VALUE.isEqual(level))
             nodes = getAncestorsOrSelf(countPattern,
@@ -150,7 +160,7 @@ void Numbering::doNumbering(Element* xslNumber, String& dest, Node* context,
 } //-- doNumbering
 
 int Numbering::countPreceedingSiblings
-    (PatternExpr* patternExpr, Node* context, ProcessorState* ps)
+    (txPattern* patternExpr, Node* context, ProcessorState* ps)
 {
     int count = 1;
 
@@ -158,15 +168,15 @@ int Numbering::countPreceedingSiblings
 
     Node* sibling = context;
     while ((sibling = sibling->getPreviousSibling())) {
-        if (patternExpr->matches(sibling, sibling, ps))
+        if (patternExpr->matches(sibling, ps))
             ++count;
     }
     return count;
 } //-- countPreceedingSiblings
 
 NodeSet* Numbering::getAncestorsOrSelf
-    ( PatternExpr* countExpr,
-      PatternExpr* from,
+    ( txPattern* countExpr,
+      txPattern* from,
       Node* context,
       ProcessorState* ps,
       MBool findNearest)
@@ -175,9 +185,10 @@ NodeSet* Numbering::getAncestorsOrSelf
     Node* parent = context;
     while ((parent)  && (parent->getNodeType() == Node::ELEMENT_NODE))
     {
-        if ((from) && from->matches(parent, parent->getParentNode(), ps)) break;
+        if ((from) && from->matches(parent, ps))
+            break;
 
-        if (countExpr->matches(parent, parent->getParentNode(), ps)) {
+        if (countExpr->matches(parent, ps)) {
             nodeSet->append(parent);
             if (findNearest) break;
         }

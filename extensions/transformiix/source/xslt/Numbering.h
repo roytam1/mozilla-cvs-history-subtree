@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -41,16 +42,16 @@ class Numbering {
 
 public:
 
-    static void doNumbering
-        (Element* xslNumber, String& dest, Node* context, ProcessorState* ps);
+    static void doNumbering (Element* xslNumber, String& dest,
+                             txIEvalContext* aContext, ProcessorState* ps);
 
 private:
     static int countPreceedingSiblings
-        (PatternExpr* patternExpr, Node* context, ProcessorState* ps);
+        (txPattern* patternExpr, Node* context, ProcessorState* ps);
 
     static NodeSet* getAncestorsOrSelf
-        ( PatternExpr* countExpr,
-          PatternExpr* from,
+        ( txPattern* countExpr,
+          txPattern* from,
           Node* context,
           ProcessorState* ps,
           MBool findNearest );
