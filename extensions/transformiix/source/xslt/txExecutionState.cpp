@@ -576,12 +576,12 @@ txExecutionState::removeVariable(const txExpandedName& aName)
 }
 
 nsresult
-txExecutionState::pushParamMap()
+txExecutionState::pushParamMap(txExpandedNameMap* aParams)
 {
     nsresult rv = mParamStack.push(mTemplateParams);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mTemplateParams = nsnull;
+    mTemplateParams = aParams;
     
     return NS_OK;
 }

@@ -1198,6 +1198,45 @@ txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 }
 
 /*
+  xsl:apply-imports
+
+  txApplyImportsStart
+  txApplyImportsEnd
+*/
+nsresult
+txFnStartApplyImports(PRInt32 aNamespaceID,
+                      nsIAtom* aLocalName,
+                      nsIAtom* aPrefix,
+                      txStylesheetAttr* aAttributes,
+                      PRInt32 aAttrCount,
+                      txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    nsAutoPtr<txInstruction> instr(new txApplyImportsStart);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    instr = new txApplyImportsEnd;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndApplyImports(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
+
+/*
   xsl:apply-templates
 
   txPushParams
@@ -2557,7 +2596,8 @@ txHandlerTableData gTxTopTableData = {
 
 txHandlerTableData gTxTemplateTableData = {
   // Handlers
-  { { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
+  { { kNameSpaceID_XSLT, "apply-imports", txFnStartApplyImports, txFnEndApplyImports },
+    { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
     { kNameSpaceID_XSLT, "attribute", txFnStartAttribute, txFnEndAttribute },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
     { kNameSpaceID_XSLT, "choose", txFnStartChoose, txFnEndChoose },

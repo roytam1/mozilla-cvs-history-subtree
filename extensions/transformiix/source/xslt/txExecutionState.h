@@ -120,7 +120,7 @@ public:
                               const txExpandedName& aMode,
                               txExpandedNameMap* aParams);
     void popTemplateRule();
-    nsresult pushParamMap();
+    nsresult pushParamMap(txExpandedNameMap* aParams);
     txExpandedNameMap* popParamMap();
 
     // state-getting functions

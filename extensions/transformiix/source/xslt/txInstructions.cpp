@@ -52,6 +52,39 @@
 #include "txXSLTNumber.h"
 #include "txExecutionState.h"
 
+nsresult
+txApplyImportsEnd::execute(txExecutionState& aEs)
+{
+    aEs.popTemplateRule();
+    aEs.popParamMap();
+    
+    return NS_OK;
+}
+
+nsresult
+txApplyImportsStart::execute(txExecutionState& aEs)
+{
+    txExecutionState::TemplateRule* rule = aEs.getCurrentTemplateRule();
+    if (!rule) {
+        // XXX ErrorReport: apply-imports instantiated without a current rule
+        return NS_ERROR_XSLT_EXECUTION_FAILURE;
+    }
+
+    nsresult rv = aEs.pushParamMap(rule->mParams);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txStylesheet::ImportFrame* frame = 0;
+    txExpandedName mode(rule->mModeNsId, rule->mModeLocalName);
+    txInstruction* templ =
+        aEs.mStylesheet->findTemplate(aEs.getEvalContext()->getContextNode(),
+                                      mode, &aEs, rule->mFrame, &frame);
+
+    rv = aEs.pushTemplateRule(frame, mode, rule->mParams);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aEs.runTemplate(templ);
+}
+
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
 {
@@ -726,7 +759,7 @@ txPushNullTemplateRule::execute(txExecutionState& aEs)
 nsresult
 txPushParams::execute(txExecutionState& aEs)
 {
-    return aEs.pushParamMap();
+    return aEs.pushParamMap(nsnull);
 }
 
 nsresult
