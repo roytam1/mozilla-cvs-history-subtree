@@ -22,26 +22,10 @@
   An implementation for an NGLayout-style content sink that knows how
   to build an RDF content model from XUL.
 
-  For more information on RDF, see http://www.w3.org/TR/WDf-rdf-syntax.
+  For each container tag, an RDF Sequence object is created that
+  contains the order set of children of that container.
+
   For more information on XUL, see http://www.mozilla.org/xpfe
-
-  This code is based on the working draft "last call", which was
-  published on Oct 8, 1998.
-
-  Open Issues ------------------
-
-  1) factoring code with nsXMLContentSink - There's some amount of
-     common code between this and the HTML content sink. This will
-     increase as we support more and more HTML elements. How can code
-     from XML/HTML be factored?
-
-  TO DO ------------------------
-
-  1) Make sure all shortcut syntax works right.
-
-  2) Implement default namespaces. Take a look at how nsIXMLDocument
-     does namespaces: should we storing tag/namespace pairs instead of
-     the entire URI in the elements?
 
 */
 
@@ -87,7 +71,16 @@ static const char kXULID[] = "id";
 
 #include "rdf.h"
 DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child); // Used to indicate the containment relationship.
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, instanceOf);
 DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, type); 
+
+
+// XXX This is sure to change. Copied from mozilla/layout/xul/content/src/nsXULAtoms.cpp
+#define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
+
+#define XUL_NAMESPACE_URI_PREFIX XUL_NAMESPACE_URI "#"
+DEFINE_RDF_VOCAB(XUL_NAMESPACE_URI_PREFIX, XUL, element);
 
 ////////////////////////////////////////////////////////////////////////
 // XPCOM IIDs
@@ -156,8 +149,12 @@ protected:
     static nsIRDFService*       gRDFService;
 
     // pseudo-constants
+    PRInt32 kNameSpaceID_XUL; // XXX per-instance member variable
+
     static nsIRDFResource* kRDF_child; // XXX needs to be NC:child (or something else)
+    static nsIRDFResource* kRDF_instanceOf;
     static nsIRDFResource* kRDF_type;
+    static nsIRDFResource* kXUL_element;
 
     nsresult
     MakeResourceFromQualifiedTag(PRInt32 aNameSpaceID,
@@ -245,8 +242,10 @@ protected:
 nsrefcnt             XULContentSinkImpl::gRefCnt = 0;
 nsIRDFService*       XULContentSinkImpl::gRDFService = nsnull;
 
-nsIRDFResource*      XULContentSinkImpl::kRDF_child  = nsnull;
-nsIRDFResource*      XULContentSinkImpl::kRDF_type   = nsnull;
+nsIRDFResource*      XULContentSinkImpl::kRDF_child;
+nsIRDFResource*      XULContentSinkImpl::kRDF_instanceOf;
+nsIRDFResource*      XULContentSinkImpl::kRDF_type;
+nsIRDFResource*      XULContentSinkImpl::kXUL_element;
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -277,7 +276,13 @@ XULContentSinkImpl::XULContentSinkImpl()
         NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_child, &kRDF_child)),
                   "unalbe to get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_type,  &kRDF_type)),
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_instanceOf, &kRDF_instanceOf)),
+                  "unalbe to get resource");
+
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_type, &kRDF_type)),
+                  "unalbe to get resource");
+
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIXUL_element, &kXUL_element)),
                   "unalbe to get resource");
     }
 }
@@ -324,7 +329,9 @@ XULContentSinkImpl::~XULContentSinkImpl()
     if (--gRefCnt == 0) {
         nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
         NS_IF_RELEASE(kRDF_child);
+        NS_IF_RELEASE(kRDF_instanceOf);
         NS_IF_RELEASE(kRDF_type);
+        NS_IF_RELEASE(kXUL_element);
     }
 }
 
@@ -826,8 +833,6 @@ XULContentSinkImpl::AddEntityReference(const nsIParserNode& aNode)
 ////////////////////////////////////////////////////////////////////////
 // nsIRDFContentSink interface
 
-static PRInt32 kNameSpaceID_XUL;
-
 NS_IMETHODIMP
 XULContentSinkImpl::Init(nsIDocument* aDocument, nsIWebShell* aWebShell, nsIRDFDataSource* aDataSource)
 {
@@ -856,10 +861,6 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsIWebShell* aWebShell, nsIRDFD
         NS_ERROR("unable to get document namespace manager");
         return rv;
     }
-
-// XXX This is sure to change. Copied from mozilla/layout/xul/content/src/nsXULAtoms.cpp
-static const char kXULNameSpaceURI[]
-    = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
     rv = mNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register XUL namespace");
@@ -924,8 +925,8 @@ XULContentSinkImpl::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
         return rv;
     }
 
-    if (NS_FAILED(rv = mDataSource->Assert(GetTopResource(), kRDF_child, literal, PR_TRUE))) {
-        NS_ERROR("unable to make assertion");
+    if (NS_FAILED(rv = rdf_ContainerAppendElement(mDataSource, GetTopResource(), literal))) {
+        NS_ERROR("unable to add text to container");
         return rv;
     }
 
@@ -1066,8 +1067,20 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
     nsresult rv;
 
     nsCOMPtr<nsIRDFResource> rdfResource;
-    if (NS_FAILED(rv = GetXULIDAttribute(aNode, getter_AddRefs(rdfResource))))
+    if (NS_FAILED(rv = GetXULIDAttribute(aNode, getter_AddRefs(rdfResource)))) {
+        NS_ERROR("unable to parser XUL ID from tag");
         return rv;
+    }
+
+    if (NS_FAILED(rv = rdf_MakeSeq(mDataSource, rdfResource))) {
+        NS_ERROR("unable to create sequence for tag");
+        return rv;
+    }
+
+    if (NS_FAILED(rv = rdf_Assert(mDataSource, rdfResource, kRDF_instanceOf, kXUL_element))) {
+        NS_ERROR("unable to mark resource as XUL element");
+        return rv;
+    }
 
     // Convert the container's namespace/tag pair to a fully qualified
     // URI so that we can specify it as an RDF resource.
@@ -1077,7 +1090,7 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
         return rv;
     }
 
-    if (NS_FAILED(rv = mDataSource->Assert(rdfResource, kRDF_type, tagResource, PR_TRUE))) {
+    if (NS_FAILED(rv = rdf_Assert(mDataSource, rdfResource, kRDF_type, tagResource))) {
         NS_ERROR("unable to assert tag type");
         return rv;
     }
@@ -1106,11 +1119,10 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
     else {
         // We now have an RDF node for the container.  Hook it up to
         // its parent container with a "child" relationship.
-		if (NS_FAILED(rv = mDataSource->Assert(GetTopResource(),
-                                               kRDF_child,
-                                               rdfResource,
-                                               PR_TRUE))) {
-            NS_ERROR("unable to assert child");
+        if (NS_FAILED(rv = rdf_ContainerAppendElement(mDataSource,
+                                                   GetTopResource(),
+                                                   rdfResource))) {
+            NS_ERROR("unable to add child to container");
             return rv;
         }
     }
