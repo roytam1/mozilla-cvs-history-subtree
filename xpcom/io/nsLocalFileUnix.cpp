@@ -38,7 +38,6 @@
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
 #include "nsIAllocator.h"
-#include "nsIDirectoryEnumerator.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 #include "nsLocalFileUnix.h"
@@ -151,7 +150,7 @@ nsDirEnumeratorUnix::GetNext(nsISupports **_retval)
         return NS_ERROR_OUT_OF_MEMORY;
 
     if (NS_FAILED(rv = file->InitWithPath(mParentPath)) ||
-        NS_FAILED(rv = file->AppendPath(mEntry->d_name))) {
+        NS_FAILED(rv = file->SetLeafName(mEntry->d_name))) {
         NS_RELEASE(file);
         return rv;
     }
@@ -432,10 +431,10 @@ nsLocalFile::SetLeafName(const char *aLeafName)
     CHECK_mPath();
 
     nsresult rv;
-    const char *leafName;
-    if (NS_FAILED(rv = GetLeafNameRaw(&leafName)))
+    char *leafName;
+    if (NS_FAILED(rv = GetLeafNameRaw((const char**)&leafName)))
 	return rv;
-    
+    char* newPath;
     *leafName = 0;
     
     strcpy(newPath, mPath);
