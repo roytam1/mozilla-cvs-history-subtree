@@ -27,6 +27,8 @@
 #include "nsIXPCScriptable.h"
 #include "jsapi.h"
 
+class nsIPluginInstance;
+
 
 struct nsDOMClassInfoData;
 typedef void (*GetDOMClassIIDsFnc)(nsVoidArray& aArray);
@@ -436,6 +438,36 @@ public:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsHTMLFormElementSH(aID);
+  }
+};
+
+
+// HTMLEmbed/ObjectElement helper
+
+class nsHTMLPluginObjElementSH : public nsElementSH
+{
+protected:
+  nsHTMLPluginObjElementSH(nsDOMClassInfoID aID) : nsElementSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLPluginObjElementSH()
+  {
+  }
+
+  nsresult GetPluginInstance(nsIXPConnectWrappedNative *aWrapper,
+                             nsIPluginInstance **aResult);
+
+public:
+  NS_IMETHOD Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                    JSObject *obj);
+  NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, PRUint32 flags,
+                        JSObject **objp, PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLPluginObjElementSH(aID);
   }
 };
 

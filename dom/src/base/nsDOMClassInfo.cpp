@@ -76,6 +76,11 @@
 #include "nsIDOMHTMLCollection.h"
 #include "nsIHTMLDocument.h"
 
+// HTMLEmbed/Object helper includes
+#include "nsIPluginInstance.h"
+#include "nsIObjectFrame.h"
+#include "nsIScriptablePlugin.h"
+
 // HTMLOptionCollection includes
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMNSHTMLOptionCollectn.h"
@@ -1572,7 +1577,7 @@ nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     jschar *s = ::JS_GetStringChars(jsstr);
 #endif
 
-    // Use GetOwnerDocument here!
+    // XXX: Use GetOwnerDocument here!
     content->GetDocument(*getter_AddRefs(doc));
 
     if (doc) {
@@ -1707,6 +1712,14 @@ nsEventRecieverSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
   return NS_OK;
 }
 
+/*
+NS_IMETHODIMP
+nsEventRecieverSH::OnFinalize(...)
+{
+  clear event handlers in mListener...
+}
+*/
+
 
 // Element helper
 
@@ -1714,8 +1727,6 @@ NS_IMETHODIMP
 nsElementSH::Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                     JSObject *obj)
 {
-  // XXX: Root???  aContext->AddNamedReference((void *)&slots->mScriptObject, slots->mScriptObject, "nsGenericElement::mScriptObject");
-
   nsCOMPtr<nsISupports> native;
 
   wrapper->GetNative(getter_AddRefs(native));
@@ -2116,6 +2127,278 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
   return nsElementSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
+
+
+// HTMLObject/EmbedElement helper
+
+// This resolve hook makes embed.nsIFoo work as if QueryInterface()
+// was called on the plugin instance, the result of calling QI,
+// assuming it's successful, will be defined on the embed element as a
+// nsIFoo property.
+
+NS_IMETHODIMP
+nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                                     JSContext *cx, JSObject *obj, jsval id,
+                                     PRUint32 flags, JSObject **objp,
+                                     PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    // This code resolves embed.nsIFoo to the nsIFoo wrapper of the
+    // plugin/applet instance
+
+    JSString *str = JSVAL_TO_STRING(id);
+
+    char* cstring = JS_GetStringBytes(str);
+
+    nsCOMPtr<nsIInterfaceInfoManager> iim = 
+      dont_AddRef(XPTI_GetInterfaceInfoManager());
+    NS_ENSURE_TRUE(iim, NS_ERROR_UNEXPECTED);
+
+    nsIID* iid;
+
+    nsresult rv = iim->GetIIDForName(cstring, &iid);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (iid) {
+      nsCOMPtr<nsIPluginInstance> pi;
+
+      GetPluginInstance(wrapper, getter_AddRefs(pi));
+
+      if (pi) {
+        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+        rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), pi, *iid,
+                                    getter_AddRefs(holder));
+
+        if (NS_SUCCEEDED(rv)) {
+          JSObject* ifaceObj;
+
+          rv = holder->GetJSObject(&ifaceObj);
+
+          if (NS_SUCCEEDED(rv)) {
+            nsMemory::Free(iid);
+
+            *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                             ::JS_GetStringLength(str),
+                                             OBJECT_TO_JSVAL(ifaceObj), nsnull,
+                                             nsnull, JSPROP_ENUMERATE);
+
+            *objp = obj;
+
+            return *_retval ? NS_OK : NS_ERROR_FAILURE;
+          }
+        }
+      }
+
+      nsMemory::Free(iid);        
+    }
+  }
+
+  return nsElementSH::NewResolve(wrapper, cx, obj, id, flags, objp, _retval);
+}
+
+nsresult
+nsHTMLPluginObjElementSH::GetPluginInstance(nsIXPConnectWrappedNative *wrapper,
+                                            nsIPluginInstance **_result)
+{
+  *_result = nsnull;
+
+  nsCOMPtr<nsISupports> native;
+
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIContent> content(do_QueryInterface(native));
+  NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIDocument> doc;
+
+  content->GetDocument(*getter_AddRefs(doc));
+
+  if (!doc) {
+    // No document, no plugin.
+
+    return NS_OK;
+  }
+
+  doc->FlushPendingNotifications();
+
+  // See if we have a frame.
+  nsCOMPtr<nsIPresShell> shell(getter_AddRefs(doc->GetShellAt(0)));
+
+  if (!shell) {
+    return NS_OK;
+  }
+
+  nsIFrame* frame = nsnull;
+  shell->GetPrimaryFrameFor(content, &frame);
+
+  if (!frame) {
+    // No frame, no plugin
+
+    return NS_OK;
+  }
+
+  nsIObjectFrame* objectFrame = nsnull;
+  CallQueryInterface(frame, &objectFrame);
+  NS_ENSURE_TRUE(objectFrame, NS_ERROR_UNEXPECTED);
+
+  return objectFrame->GetPluginInstance(*_result);
+}
+
+// Note that this Create() method is not called only by XPConnect when
+// it creates wrappers, nsObjectFrame also calls this method when a
+// plugin is loaded if the embed/object element is already wrapped to
+// get the scriptable plugin inserted into the embed/object's proto
+// chain.
+
+NS_IMETHODIMP
+nsHTMLPluginObjElementSH::Create(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext *cx, JSObject *obj)
+{
+  nsresult rv = nsElementSH::Create(wrapper, cx, obj);
+  NS_ENSURE_TRUE(rv, rv);
+
+  nsCOMPtr<nsIPluginInstance> pi;
+
+  rv = GetPluginInstance(wrapper, getter_AddRefs(pi));
+  NS_ENSURE_TRUE(rv, rv);
+
+  if (!pi) {
+    // No plugin around for this object.
+
+    return NS_OK;
+  }
+
+  // Check if the plugin object has the nsIScriptablePlugin interface,
+  // describing how to expose it to JavaScript. Given this interface,
+  // use it to get the scriptable peer object (possibly the plugin
+  // object itself) and the scriptable interface to expose it with.
+
+  nsIID scriptableIID;
+  nsCOMPtr<nsISupports> scriptablePeer;
+
+  nsCOMPtr<nsIScriptablePlugin> spi(do_QueryInterface(pi));
+
+  if (spi) {
+    nsIID *scriptableInterfacePtr = nsnull;
+    spi->GetScriptableInterface(&scriptableInterfacePtr);
+
+    if (scriptableInterfacePtr) {
+      spi->GetScriptablePeer(getter_AddRefs(scriptablePeer));
+
+      scriptableIID = *scriptableInterfacePtr;
+
+      nsMemory::Free(scriptableInterfacePtr);
+    }
+  }
+
+  if (!scriptablePeer) {
+    // This plugin doesn't wanto be scriptable.
+
+    return NS_OK;
+  }
+
+  // Check if the plugin can be safely scriptable, the plugin wrapper
+  // must not have a shared prototype for this to work since we'll end
+  // up setting it's prototype here, and we want this change to affect
+  // this plugin object only.
+
+  nsCOMPtr<nsIClassInfo> ci(do_QueryInterface(pi));
+
+  if (ci) {
+    // If we have class info we must make sure that the "share my
+    // proto" flag is *not* set
+
+    PRUint32 flags;
+    ci->GetFlags(&flags);
+
+    // XXX: that code goes here
+#if 0
+    if (flags & SHARE_MY_PROTO) {
+      // The plugin has a shared proto, can't do this prototype setup then.
+
+      return NS_OK;
+    }
+#endif
+  }
+
+  // Wrap it.
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+  rv = sXPConnect->WrapNative(cx, ::JS_GetParent(cx, obj), scriptablePeer,
+                              scriptableIID, getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // QI holder to nsIXPConnectWrappedNative so that we can reliably
+  // access it's prototype
+  nsCOMPtr<nsIXPConnectWrappedNative> pi_wrapper(do_QueryInterface(holder));
+  NS_ENSURE_TRUE(pi_wrapper, NS_ERROR_UNEXPECTED);
+
+  JSObject *pi_obj = nsnull; // XPConnect-wrapped peer object, when we get it.
+  rv = pi_wrapper->GetJSObject(&pi_obj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject *pi_proto = nsnull;
+
+  // Get 'pi.__proto__'
+  rv = pi_wrapper->GetJSObjectPrototype(&pi_proto);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // If we got an xpconnect-wrapped plugin object, set obj's
+  // prototype's prototype to the scriptable plugin.
+
+  JSObject *my_proto = nsnull;
+
+  // Get 'this.__proto__'
+  rv = wrapper->GetJSObjectPrototype(&my_proto);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Set 'this.__proto__' to pi
+  if (!JS_SetPrototype(cx, obj, pi_obj)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  // Set 'pi.__proto__.__proto__' to the original 'this.__proto__'
+  if (!JS_SetPrototype(cx, pi_proto, my_proto)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  // Before this proto dance the objects involved looked like this:
+  //
+  // this.__proto__.__proto__
+  //   ^      ^         ^
+  //   |      |         |__ Object
+  //   |      |
+  //   |      |__ xpc embed wrapper proto (shared)
+  //   |
+  //   |__ xpc wrapped native embed node
+  // 
+  // pi.__proto__.__proto__
+  // ^      ^         ^
+  // |      |         |__ Object
+  // |      |
+  // |      |__ xpc plugin wrapper proto (not shared)
+  // |
+  // |__ xpc wrapped native pi (plugin instance)
+  // 
+  // Now, after the above prototype setup the prototype chanin should
+  // look like this:
+  //
+  // this.__proto__.__proto__.__proto__.__proto__
+  //   ^      ^         ^         ^         ^
+  //   |      |         |         |         |__ Object
+  //   |      |         |         |
+  //   |      |         |         |__ xpc embed wrapper proto (shared)
+  //   |      |         |
+  //   |      |         |__ xpc plugin wrapper proto (not shared)
+  //   |      |
+  //   |      |__ xpc wrapped native pi
+  //   |
+  //   |__ xpc wrapped native embed node
+  //
+
+  return NS_OK;
+}
+
 
 // HTMLOptionCollection helper
 
