@@ -188,7 +188,7 @@ nsXmlRpcClient.prototype = {
     }, // Do exactly nada.
 
     // End of the request
-    onStopRequest: function(channel, ctxt, status, errorMsg) {
+    onStopRequest: function(channel, ctxt, status) {
         debug('Stop Request');
         if (!this._inProgress) return; // No longer interested.
 
@@ -196,11 +196,13 @@ nsXmlRpcClient.prototype = {
         this._parser = null;
         
         if (status) {
-            debug('Non-zero status: (' + status.toString(16) + ') ' + errorMsg);
+            debug('Non-zero status: (' + status.toString(16) + ') ');
             this._status = status;
             this._errorMsg = errorMsg;
-            try { this._listener.onError(this, ctxt, status, errorMsg); }
-            catch (ex) {
+            try {
+                this._listener.onError(this, ctxt, status,
+                                       status.toString(16));
+            } catch (ex) {
                 debug('Exception in listener.onError: ' + ex);
             }
             return;
