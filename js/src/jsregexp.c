@@ -907,7 +907,7 @@ ParseAtom(CompilerState *state)
 	if (!ren)
 	    return NULL;
 
-        while ((c = *++cp) != ']') {
+        do {
 	    if (cp == state->cpend) {
                 js_ReportCompileErrorNumber(state->context, state->tokenStream,
                                             NULL,
@@ -915,9 +915,11 @@ ParseAtom(CompilerState *state)
                                             JSMSG_UNTERM_CLASS, ocp);
 		return NULL;
 	    }
+            if ((c = *++cp) == ']')
+                break;
 	    if (c == '\\' && (cp+1 != state->cpend))
 		cp++;
-	}
+        } while (JS_TRUE);
 	ren->u.kid2 = (void *)cp++;
 
         ren->u.ucclass.bitmap = NULL;
