@@ -176,6 +176,18 @@ js_NewStringCopyZ(JSContext *cx, const jschar *s, uintN gcflag);
 extern void
 js_FinalizeString(JSContext *cx, JSString *str);
 
+/* String finalize observer callbacks are called like so: cb(cx, str, arg). */
+typedef void
+(* CRT_CALL JSStringFinalizeCallback)(JSContext *cx, JSString *str, void *arg);
+
+extern JS_FRIEND_API(JSBool)
+js_AddStringFinalizeObserver(JSContext *cx, const JSString *str,
+                             JSStringFinalizeCallback cb, void *arg);
+
+extern JS_FRIEND_API(void)
+js_RemoveStringFinalizeObserver(JSContext *cx, const JSString *str,
+                                JSStringFinalizeCallback cb, void *arg);
+
 /* Wrap a string value in a String object. */
 extern JSObject *
 js_StringToObject(JSContext *cx, JSString *str);
@@ -272,7 +284,7 @@ js_GetStringBytes(JSString *str);
 char*
 js_escape(JSContext *cx, JSObject *obj, char *str);
 
-
+/* XXX exported to jsfile.c, but without js_* namespace prefix! */
 JSBool
 str_escape(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
