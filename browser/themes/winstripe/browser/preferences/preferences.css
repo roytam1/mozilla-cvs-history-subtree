@@ -146,6 +146,22 @@ filefield[disabled="true"] .fileFieldIcon {
   -moz-image-region: rect(16px, 32px, 32px, 16px);
 }
 
+#cookieInfoBox {
+  border: 1px solid ThreeDShadow;
+  -moz-border-radius: 0px;
+  margin: 4px;
+  padding: 0px;
+}
+
+#cookieInfoBox textbox {
+  background-color: transparent;
+}
+
+#backgroundBox {
+  background-color: #FFFFFF; 
+  opacity: 0.5;
+}
+
 /* Download Actions Manager */
 #fileExtension {
   width: 5em; 

@@ -2,7 +2,9 @@
 <!ENTITY     cookiename.label               "Cookie Name">
 <!ENTITY     cookiedomain.label             "Site"> 
 <!ENTITY     button.removecookie.label      "Remove Cookie">
+<!ENTITY     button.removecookie.accesskey  "R">
 <!ENTITY     button.removeallcookies.label  "Remove All Cookies">
+<!ENTITY     button.removeallcookies.accesskey "A">
 
 <!ENTITY     props.name.label               "Name:">
 <!ENTITY     props.value.label              "Content:">
@@ -13,3 +15,8 @@
 
 <!ENTITY     window.title                   "Cookies">
 <!ENTITY     windowClose.key                "w">
+
+<!ENTITY     filter.label                   "Search:">
+<!ENTITY     clear.label                    "Clear">
+<!ENTITY     clear.accesskey                "C">
+

@@ -62,59 +62,71 @@
   <vbox flex="1" class="contentPane">
     <label value="&cookiesonsystem.label;"/>
     <separator class="thin"/>
+    <hbox align="center">
+      <label>&filter.label;</label>
+      <textbox id="filter" flex="1" oninput="gCookiesWindow.onFilterInput();"/>
+      <button label="&clear.label;" accesskey="&clear.accesskey;" oncommand="gCookiesWindow.clearFilter();"/>
+    </hbox>
+    <separator class="thin"/>
     <tree id="cookiesList" flex="1" style="height: 10em;"
           onkeypress="gCookiesWindow.onCookieKeyPress(event)"
           onselect="gCookiesWindow.onCookieSelected();"
           hidecolumnpicker="true">
       <treecols>
         <treecol id="domainCol" label="&cookiedomain.label;" flex="2" primary="true"
-                 class="treecol-image" persist="width" onclick="gCookiesWindow.sort('rawHost');" />
+                 class="sortDirectionIndicator" persist="width" onclick="gCookiesWindow.sort('rawHost');" />
         <splitter class="tree-splitter"/>
         <treecol id="nameCol" label="&cookiename.label;" flex="1"
-                 persist="width" onclick="gCookiesWindow.sort('name');"/>
+                 class="sortDirectionIndicator" persist="width" 
+                 onclick="gCookiesWindow.sort('name');"/>
       </treecols>
       <treechildren id="cookiesChildren"/>
     </tree>
-    <groupbox>
-      <grid flex="1">
-        <columns>
-          <column/>
-          <column flex="1"/>
-        </columns>
-        <rows>
-          <row align="center">
-            <hbox pack="end"><label value="&props.name.label;"/></hbox>
-            <textbox id="name" readonly="true" class="plain"/>
-          </row>
-          <row align="center">
-            <hbox pack="end"><label value="&props.value.label;"/></hbox>
-            <textbox id="value" readonly="true" class="plain"/>
-          </row>
-          <row align="center">
-            <hbox pack="end"><label id="isDomain" value="&props.domain.label;"/></hbox>
-            <textbox id="host" readonly="true" class="plain"/>
-          </row>
-          <row align="center">
-            <hbox pack="end"><label value="&props.path.label;"/></hbox>
-            <textbox id="path" readonly="true" class="plain"/>
-          </row>
-          <row align="center">
-            <hbox pack="end"><label value="&props.secure.label;"/></hbox>
-            <textbox id="isSecure" readonly="true" class="plain"/>
-          </row>
-          <row align="center">
-            <hbox pack="end"><label value="&props.expires.label;"/></hbox>
-            <textbox id="expires" readonly="true" class="plain"/>
-          </row>
-        </rows>
-      </grid>
-    </groupbox>
+    <hbox id="cookieInfoBox">
+      <stack flex="1">
+        <hbox id="backgroundBox" flex="1"/>
+        <grid flex="1">
+          <columns>
+            <column/>
+            <column flex="1"/>
+          </columns>
+          <rows>
+            <row align="center">
+              <hbox pack="end"><label id="nameLabel" value="&props.name.label;"/></hbox>
+              <textbox id="name" readonly="true" class="plain"/>
+            </row>
+            <row align="center">
+              <hbox pack="end"><label id="valueLabel" value="&props.value.label;"/></hbox>
+              <textbox id="value" readonly="true" class="plain"/>
+            </row>
+            <row align="center">
+              <hbox pack="end"><label id="isDomain" value="&props.domain.label;"/></hbox>
+              <textbox id="host" readonly="true" class="plain"/>
+            </row>
+            <row align="center">
+              <hbox pack="end"><label id="pathLabel" value="&props.path.label;"/></hbox>
+              <textbox id="path" readonly="true" class="plain"/>
+            </row>
+            <row align="center">
+              <hbox pack="end"><label id="isSecureLabel" value="&props.secure.label;"/></hbox>
+              <textbox id="isSecure" readonly="true" class="plain"/>
+            </row>
+            <row align="center">
+              <hbox pack="end"><label id="expiresLabel" value="&props.expires.label;"/></hbox>
+              <textbox id="expires" readonly="true" class="plain"/>
+            </row>
+          </rows>
+        </grid>
+      </stack>
+    </hbox>
   </vbox>
   <hbox align="end">
     <hbox class="actionButtons" flex="1">
-      <button id="removeCookie" disabled="true" label="&button.removecookie.label;"
+      <button id="removeCookie" disabled="true" 
+              label="&button.removecookie.label;" accesskey="&button.removecookie.accesskey;"
               oncommand="gCookiesWindow.deleteCookie();"/>
-      <button id="removeAllCookies" label="&button.removeallcookies.label;"
+      <button id="removeAllCookies" 
+              label="&button.removeallcookies.label;" accesskey="&button.removeallcookies.accesskey;"
               oncommand="gCookiesWindow.deleteAllCookies();"/>
     </hbox>
     <resizer dir="bottomright"/>

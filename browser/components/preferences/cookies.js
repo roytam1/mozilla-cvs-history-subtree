@@ -69,18 +69,13 @@ var gCookiesWindow = {
   },
 
   _view: {
-    _outer: this,
-    _filtered: false,
-    _rowCount: 0,
+    _filtered : false,
+    _filterSet: [],
+    _rowCount : 0,
     get rowCount() 
     { 
+      dump("*** thisrc = " + this._rowCount + "\n");
       return this._rowCount; 
-    },
-    
-    _dumpIf: function (aIndex, aRequiredIndex, aDump)
-    {
-      if (aIndex == aRequiredIndex)
-        dump(aDump + "\n");
     },
     
     _getItemAtIndex: function (aIndex)
@@ -128,6 +123,12 @@ var gCookiesWindow = {
           return item.rawHost;
         else if (aColumn.id == "nameCol")
           return item.name;
+      }
+      else {
+        if (aColumn.id == "domainCol")
+          return this._filterSet[aIndex].rawHost;
+        else if (aColumn.id == "nameCol")
+          return this._filterSet[aIndex].name;
       }
       return "";
     },
@@ -181,6 +182,12 @@ var gCookiesWindow = {
     hasNextSibling: function (aParentIndex, aIndex) 
     { 
       if (!this._filtered) {
+        // |aParentIndex| appears to be bogus, but we can get the real
+        // parent index by getting the entry for |aIndex| and reading the
+        // parentIndex field. 
+        // The index of the last item in this host collection is the 
+        // index of the parent + the size of the host collection, and
+        // aIndex has a next sibling if it is less than this value.
         var cookie = this._getItemAtIndex(aIndex);
         if (!cookie) return false;
         var parent = this._getItemAtIndex(cookie.parentIndex);
@@ -288,26 +295,30 @@ var gCookiesWindow = {
   
   onCookieSelected: function () 
   {
-    var ci = this._tree.view.selection.currentIndex;
-    if (ci == -1 || this._cookies.length == 0) {
-      var properties = ["name", "value", "host", "path", "expires", "isDomain", "isSecure"];
-      for (var i = 0; i < properties.length; ++i) 
-        document.getElementById(properties[i]).value = "";
-      return;
-    }
-
-    properties = { 
-      name      : this._cookies[ci].name,
-      value     : this._cookies[ci].value,
-      host      : this._cookies[ci].host,
-      path      : this._cookies[ci].path,
-      expires   : this._cookies[ci].expires,
-      isDomain  : this._cookies[ci].isDomain ? this._bundle.getString("domainColon")
-                                             : this._bundle.getString("hostColon"),
-      isSecure  : this._cookies[ci].isSecure ? this._bundle.getString("forSecureOnly")
-                                             : this._bundle.getString("forAnyConnection"),
-    };
+    var properties;
+    var item = this._view._getItemAtIndex(this._tree.view.selection.currentIndex);
     
+    var ids = ["nameLabel", "name", "valueLabel", "value", "isDomain", "host", 
+               "pathLabel", "path", "isSecureLabel", "isSecure", "expiresLabel", 
+               "expires"];
+    if (item && !("cookies" in item)) {
+      properties = { name: item.name, value: item.value, host: item.host,
+                     path: item.path, expires: item.expires, 
+                     isDomain: item.isDomain ? this._bundle.getString("domainColon")
+                                             : this._bundle.getString("hostColon"),
+                     isSecure: item.isSecure ? this._bundle.getString("forSecureOnly")
+                                             : this._bundle.getString("forAnyConnection") };
+      for (var i = 0; i < ids.length; ++i)
+        document.getElementById(ids[i]).disabled = false;
+    }
+    else {
+      var noneSelected = this._bundle.getString("noCookieSelected");
+      properties = { name: noneSelected, value: noneSelected, host: noneSelected,
+                     path: noneSelected, expires: noneSelected, 
+                     isSecure: noneSelected };
+      for (var i = 0; i < ids.length; ++i)
+        document.getElementById(ids[i]).disabled = true;
+    }
     for (var property in properties)
       document.getElementById(property).value = properties[property];
   },
@@ -358,6 +369,72 @@ var gCookiesWindow = {
                                                     this._lastCookieSortColumn,
                                                     this._lastCookieSortAscending);
     this._lastCookieSortColumn = aColumn;
-  }
+  },
+  
+  clearFilter: function ()
+  {
+    dump("*** clearFilter\n");
+    // Clear the Filter and the Tree Display
+    document.getElementById("filter").value = "";
+    this._view._filtered = false;
+    this._view._rowCount = 0;
+    this._tree.treeBoxObject.rowCountChanged(0, -this._view._filterSet.length);
+    this._view._filterSet = [];
+        
+    // Restore the previous Row Count so |invalidate| works properly
+    this._view._rowCount = this._lastRowCount;
+    this._lastRowCount = -1;
+    this._tree.treeBoxObject.rowCountChanged(0, view.rowCount);    
+  },
+  
+  _filterCookies: function (aFilterValue)
+  {
+    var cookies = [];
+    for (var host in gCookiesWindow._hosts) {
+      var currHost = gCookiesWindow._hosts[host];
+      for (var i = 0; i < currHost.cookies.length; ++i) {
+        var cookie = currHost.cookies[i];
+        if (cookie.rawHost.indexOf(aFilterValue) != -1 ||
+            cookie.name.indexOf(aFilterValue) != -1 || 
+            cookie.value.indexOf(aFilterValue) != -1)
+          cookies.push(cookie);
+      }
+    }
+    return cookies;
+  },
+  
+  _filterTimeout: -1,
+  _lastRowCount: -1,
+  onFilterInput: function ()
+  {
+    if (this._filterTimeout != -1)
+      clearTimeout(this._filterTimeout);
+   
+    function filterCookies()
+    {
+      var filter = document.getElementById("filter").value;
+      if (filter == "") {
+        gCookiesWindow.clearFilter();
+        return;
+      }        
+      var view = gCookiesWindow._view;
+      view._filterSet = gCookiesWindow._filterCookies(filter);
+      if (!view._filtered) {
+        // Save Display Info for the Non-Filtered mode when we first
+        // enter Filtered mode. 
+        view._filtered = true;
+        this._lastRowCount = view.rowCount;
+      }      
+      // Clear the display
+      view._rowCount = 0;
+      gCookiesWindow._tree.treeBoxObject.rowCountChanged(0, -view.rowCount);
+      // Set up the filtered display
+      view._rowCount = view._filterSet.length;
+      dump("*** vrc = " + view.rowCount + "\n");
+      gCookiesWindow._tree.treeBoxObject.rowCountChanged(0, view.rowCount);
+    }
+    window.filterCookies = filterCookies;
+    this._filterTimeout = setTimeout("filterCookies();", 500);
+  },
 };
 
