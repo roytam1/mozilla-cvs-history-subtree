@@ -772,8 +772,11 @@ nsSVGElement::GetOwnerSVGElement(nsIDOMSVGSVGElement * *aOwnerSVGElement)
 
   // are _we_ the outermost SVG element? If yes, return nsnull, but don't fail
   nsCOMPtr<nsIDOMSVGSVGElement> SVGSVGElement = do_QueryInterface((nsIDOMSVGElement*)this);
-  NS_ENSURE_TRUE(SVGSVGElement, NS_ERROR_FAILURE);
-  return NS_OK; 
+  if (SVGSVGElement) return NS_OK;
+  
+  // no owner found and we aren't the outermost SVG element either.
+  // this situation can e.g. occur during content tree teardown. 
+  return NS_ERROR_FAILURE;
 }
 
 /* readonly attribute nsIDOMSVGElement viewportElement; */
