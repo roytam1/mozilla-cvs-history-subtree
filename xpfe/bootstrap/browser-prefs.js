@@ -99,7 +99,6 @@ pref("browser.search.last_search_category", "NC:SearchCategory?category=urn:sear
 pref("browser.search.mode", 0);
 pref("browser.search.powermode", 0);
 
-pref("browser.search.param.Google.1.name", "chrome://navigator/content/searchconfig.properties");
 pref("browser.search.param.Google.1.custom", "chrome://navigator/content/searchconfig.properties");
 pref("browser.search.param.Google.1.default", "chrome://navigator/content/searchconfig.properties");
 

@@ -140,7 +140,11 @@ pref("browser.shell.checkDefaultBrowser", true);
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 // XXXBlake Remove this stupid pref
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",	        "chrome://browser-region/locale/region.properties");
+pref("browser.startup.homepage",	          "chrome://browser/content/browserconfig.properties");
+
+// These values are deliberately non-localizable for official builds.
+pref("browser.startup.homepage_reset",      "chrome://browser/content/browserconfig.properties");
+pref("browser.update.resetHomepage",        false);
 // "browser.startup.homepage_override" was for 4.x
 pref("browser.startup.homepage_override.1", false);
 
@@ -165,13 +169,18 @@ pref("browser.download.manager.focusWhenStarting", false);
 pref("browser.download.manager.flashCount", 2);
 
 // pointer to the default engine name
-pref("browser.search.defaultenginename", "chrome://browser-region/locale/region.properties");
+pref("browser.search.defaultenginename",      "chrome://browser-region/locale/region.properties");
 // pointer to the Web Search url (content area context menu)
-pref("browser.search.defaulturl", "chrome://browser-region/locale/region.properties");
+pref("browser.search.defaulturl",             "chrome://browser-region/locale/region.properties");
+// Ordering of Search Engines in the Engine list. 
+pref("browser.search.order.1",                "chrome://browser-region/locale/region.properties");
+pref("browser.search.order.2",                "chrome://browser-region/locale/region.properties");
 
-pref("browser.search.param.Google.1.name", "chrome://browser/content/searchconfig.properties");
-pref("browser.search.param.Google.1.custom", "chrome://browser/content/searchconfig.properties");
 pref("browser.search.param.Google.1.default", "chrome://browser/content/searchconfig.properties");
+pref("browser.search.param.Google.1.custom",  "chrome://browser/content/searchconfig.properties");
+pref("browser.search.order.Yahoo.1",          "chrome://browser/content/searchconfig.properties");
+pref("browser.search.order.Yahoo.2",          "chrome://browser/content/searchconfig.properties");
+pref("browser.search.order.Yahoo",            "chrome://browser/content/searchconfig.properties");
 
 // basic search popup constraint: minimum sherlock plugin version displayed
 // (note: must be a string representation of a float or it'll default to 0.0)

@@ -73,6 +73,10 @@ var gUpdateWizard = {
   remainingExtensionUpdateCount: 0,
   
   succeeded: true,
+  
+#ifdef MOZ_PHOENIX
+  offeredResetHomepage: false,
+#endif
 
   appComps: {
     upgraded: { 
@@ -114,11 +118,10 @@ var gUpdateWizard = {
   
   onWizardFinish: function ()
   {
-    if (this.shouldSuggestAutoChecking) {
-      var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                           .getService(Components.interfaces.nsIPrefBranch);
+    var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                         .getService(Components.interfaces.nsIPrefBranch);
+    if (this.shouldSuggestAutoChecking)
       pref.setBoolPref("update.extensions.enabled", this.shouldAutoCheck); 
-    }
     
     if (this.succeeded) {
       if (this.updatingApp) {
@@ -132,6 +135,13 @@ var gUpdateWizard = {
         this.clearExtensionUpdatePrefs();
       }
     }
+
+#ifdef MOZ_PHOENIX
+    if (this.offeredResetHomepage) {
+      pref.setBoolPref("browser.update.resetHomepage", 
+                       document.getElementById("resetHomepage").checked); 
+    }
+#endif
     
     // Send an event to refresh any FE notification components. 
     var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -764,7 +774,7 @@ var gOptionalPage = {
       optionalItemsList.appendChild(checkbox);
     }
     
-    document.documentElement.getButton("accept").focus(); 
+    document.documentElement.getButton("next").focus(); 
   },
   
   onCommand: function (aEvent)
@@ -966,6 +976,12 @@ var gRestartPage = {
     gUpdateWizard.setButtonLabels(null, true, null, true, null, true);
     
     // XXXben - we should really have a way to restart the app now from here!
+    
+#ifdef MOZ_PHOENIX
+    gUpdateWizard.offeredResetHomepage = true;
+#endif
+
+    document.documentElement.getButton("finish").focus();
   }
 };
 

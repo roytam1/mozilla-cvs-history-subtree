@@ -48,7 +48,7 @@
 <!ENTITY  noupdates.enableChecking.label  "Allow &brandShortName; to check for updates.">
 
 <!ENTITY  finished.title                  "Update Complete">
-<!ENTITY  finished.updated.label          "&brandShortName; has installed the available updates.">
+<!ENTITY  finished.updated.label          "&brandShortName; has installed the available updates. You will have to restart &brandShortName; for some updates to take effect.">
 <!ENTITY  finished.remaining.label        "Some incompatible components could not be updated, perhaps
                                            because compatible versions are not available at this time.
                                            &brandShortName; will check periodically and inform you
@@ -81,4 +81,7 @@
 
 <!ENTITY  restart.title                   "Upgrade Complete">
 <!ENTITY  restart.updated.label           "&brandShortName; successfully downloaded and installed updates. You will have to restart &brandShortName; to complete the update.">
+
+<!ENTITY  resetHomepage.label             "Use &brandShortName; Start as my Home Page">
+<!ENTITY  resetHomepage.accesskey         "H">
 

@@ -67,6 +67,10 @@ protected:
                       const char* aValue, PRBool aBackup, HKEY aBackupKey,
                       PRBool aReplaceExisting, PRBool aForAllUsers);
   DWORD     DeleteRegKey(HKEY baseKey, const char *keyName);
+
+  nsresult  RegisterDDESupport();
+  nsresult  UnregisterDDESupport();
+
 private:
   PRBool    mCheckedThisSession;
 };

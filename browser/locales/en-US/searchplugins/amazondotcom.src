@@ -12,7 +12,7 @@
 
 <input name="field-keywords" user>
 <input name="mode" value="blended">
-<input name="tag" value="kurona-20">
+<input name="tag" value="mozilla-20">
 <input  name="sourceid" value="Mozilla-search">
 
 </search>
