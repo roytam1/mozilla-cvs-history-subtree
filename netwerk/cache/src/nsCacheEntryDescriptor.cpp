@@ -373,11 +373,14 @@ nsCacheEntryDescriptor::GetMetaDataElement(const char *key, char ** result)
 
     // XXX not thread safe    
     nsresult rv = mCacheEntry->GetMetaDataElement(nsLiteralCString(key), &value);
-    if (NS_SUCCEEDED(rv) && (value)) {
-        *result = ToNewCString(*value);
-        if (!*result) rv = NS_ERROR_OUT_OF_MEMORY;
-    }
-    return rv;
+    if (NS_FAILED(rv)) return rv;
+
+    if (!value) return NS_ERROR_NOT_AVAILABLE;
+
+    *result = ToNewCString(*value);
+    if (!*result) return NS_ERROR_OUT_OF_MEMORY;
+
+    return NS_OK;
 }
 
 
