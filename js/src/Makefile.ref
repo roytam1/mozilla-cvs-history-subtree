@@ -196,12 +196,9 @@ $(PROGRAM).pure: $(PROG_OBJS) $(LIBRARY)
 	purify $(PUREFLAGS) \
 	    $(CC) -o $@ $(PURE_OS_CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
 
+ifndef PREBUILT_CPUCFG
 $(HFILES) $(CFILES): $(OBJDIR)/jsautocfg.h
 
-ifdef PREBUILT_CPUCFG
-$(OBJDIR)/jsautocfg.h: jscpucfg.h
-	cp jscpucfg.h $(OBJDIR)/jsautocfg.h
-else
 $(OBJDIR)/jsautocfg.h: $(OBJDIR)/jscpucfg
 	rm -f $@
 	$(OBJDIR)/jscpucfg > $@
