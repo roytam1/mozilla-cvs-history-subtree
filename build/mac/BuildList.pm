@@ -141,7 +141,7 @@ sub BuildMozilla()
 				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
 				
 			}
-		else if ( $main::MOZ_MEDIUM == 1 )
+		elsif ( $main::MOZ_MEDIUM == 1 )
 			{
 			
 				BuildProject(":cmd:macfe:Composer:build:Composer.mcp",						"Composer$D.o");
