@@ -35,9 +35,12 @@ REQUIRES	= js \
 		  windowwatcher \
 		  jsconsole \
 		  find \
+		  commandhandler \
 		  embed_base \
 		  dom \
 		  txtsvc \
+		  content \
+		  content_xul \
 		  $(NULL)
 
 CPPSRCS		= nsModule.cpp
