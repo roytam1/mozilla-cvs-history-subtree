@@ -1065,7 +1065,7 @@
               aNode = aNode.substring(0, tabIndex);
             }
             var rCurrent = ksRDF.GetResource(aNode);
-            if (!rType && && names[i])
+            if (!rType && names[i])
             {
                 const krName = ksRDF.GetResource(names[i]);
                 const krNameProperty = ksRDF.GetResource("http://home.netscape.com/NC-rdf#Name");
