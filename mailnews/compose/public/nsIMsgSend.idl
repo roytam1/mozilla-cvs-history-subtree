@@ -183,14 +183,6 @@ interface nsIMsgSend : nsISupports
                          in nsIMsgSendListener   aListenerArray,
                          in unsigned long listeners); 
 
-    void SendWebPage(in nsIMsgIdentity         aUserIdentity,
-                     in nsIMsgCompFields       fields,
-                     in nsIURI                 url,
-                     in nsMsgDeliverMode       mode,
-                     [array, size_is(listeners)]
-                     in nsIMsgSendListener     aListenerArray,
-                     in unsigned long          listeners);
-    
     void AddListener(in nsIMsgSendListener aListener);
     void RemoveListener(in nsIMsgSendListener aListener);
     void SetGUINotificationState(in PRBool aEnableFlag);

@@ -3604,57 +3604,6 @@ BuildURLAttachmentData(nsIURI *url)
   return attachments;
 }
 
-nsresult
-nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity               *aUserIndentity,
-                                 nsIMsgCompFields             *fields,
-                                 nsIURI                       *url,
-                                 nsMsgDeliverMode              mode,
-                                 nsIMsgSendListener           **aListenerArray,
-                                 PRUint32 aListeners)
-{
-  nsresult            rv;
-  nsMsgAttachmentData *tmpPageData = nsnull;
-  
-  //
-  // First check to see if the fields are valid...
-  //
-  if ((!fields) || (!url) )
-    return NS_ERROR_INVALID_ARG;
-
-  tmpPageData = BuildURLAttachmentData(url);
-
-  // Setup the listeners...
-  SetListenerArray(aListenerArray, aListeners);
-
-  /* string GetBody(); */
-  PRInt32       bodyLen;
-  const char    *msgBody = ((nsMsgCompFields*)fields)->GetBody();
-  nsXPIDLCString body;
-  if (!msgBody)
-  {
-    url->GetSpec(getter_Copies(body));
-    msgBody = (const char *)body;
-  }
-
-  bodyLen = PL_strlen(msgBody);
-  rv = CreateAndSendMessage(
-              nsnull,    // no MHTML in this case...
-              aUserIndentity,
- 						  fields, //nsIMsgCompFields                  *fields,
-						  PR_FALSE, //PRBool                            digest_p,
-						  PR_FALSE, //PRBool                            dont_deliver_p,
-						  mode,   //nsMsgDeliverMode                  mode,
-              nsnull, //  nsIMsgDBHdr                    *msgToReplace,
-						  TEXT_PLAIN, //const char                        *attachment1_type,
-              msgBody, //const char                        *attachment1_body,
-						  bodyLen, // PRUint32                          attachment1_body_length,
-						  tmpPageData, // const nsMsgAttachmentData  *attachments,
-						  nsnull,  // const nsMsgAttachedFile    *preloaded_attachments,
-						  nsnull, // void                              *relatedPart,
-              aListenerArray, aListeners);  
-  return rv;
-}
-
 //
 // Send the message to the magic folder, and runs the completion/failure
 // callback.
