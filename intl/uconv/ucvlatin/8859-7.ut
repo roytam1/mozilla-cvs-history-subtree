@@ -52,7 +52,7 @@ Begin of Item 0003
   srcEnd = 00BD
   mappingOffset = 0000
  Mapping  = 
-  00A0 2018 2019 00A3 20AC 20AF 00A6 00A7 
+  00A0 20BD 20BC 00A3 20AC 20AF 00A6 00A7 
   00A8 00A9 037A 00AB 00AC 00AD FFFD 2015 
   00B0 00B1 00B2 00B3 0384 0385 0386 00B7 
   0388 0389 038A 00BB 038C 00BD 
@@ -87,7 +87,7 @@ End of Item 0003
 /*-------------------------------------------------------*/
 /*       Offset=0x0012   Start of MappingTable */ 
 
-/* 0000 */    0x00A0, 0x2018, 0x2019, 0x00A3, 0x20AC, 0x20AF, 0x00A6, 0x00A7, 
+/* 0000 */    0x00A0, 0x20BD, 0x20BC, 0x00A3, 0x20AC, 0x20AF, 0x00A6, 0x00A7, 
 /* 0008 */    0x00A8, 0x00A9, 0x037A, 0x00AB, 0x00AC, 0x00AD, 0xFFFD, 0x2015, 
 /* 0010 */    0x00B0, 0x00B1, 0x00B2, 0x00B3, 0x0384, 0x0385, 0x0386, 0x00B7, 
 /* 0018 */    0x0388, 0x0389, 0x038A, 0x00BB, 0x038C, 0x00BD, 
