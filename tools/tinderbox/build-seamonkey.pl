@@ -848,7 +848,7 @@ $CVS           = 'cvs -q';
 $CVSCO         = 'checkout -P';
 
 #- Set these proper values for your tinderbox server
-$Tinderbox_server = 'tinderbox-daemon@cvs-mirror.mozilla.org';
+$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
 #-
 #- The rest should not need to be changed
