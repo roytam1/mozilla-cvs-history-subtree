@@ -98,7 +98,7 @@
                 	customizeable="true" label="&sidebarBtn.label;"
                 	command="Help:ToggleSidebar"/>
                 <toolbarbutton id="help-back-button" type="menu-button"
-                        class="toolbarbutton-1" label="&backButton.label;"
+                        class="browserButton" label="&backButton.label;"
                         oncommand="if (event.target==this) goBack(); else gotoHistoryIndex(event);"
                         observes="canGoBack" context="backMenu"
                         tooltiptext="&backButton.tooltip;">
@@ -106,7 +106,7 @@
                         onpopupshowing="createBackMenu(event);"/>
                 </toolbarbutton>
                 <toolbarbutton id="help-forward-button" type="menu-button"
-                        class="toolbarbutton-1"
+                        class="browserButton"
                         label="&forwardButton.label;"
                         oncommand="if (event.target==this) goForward(); else gotoHistoryIndex(event);"
                         tooltiptext="&forwardButton.tooltip;"
@@ -115,7 +115,7 @@
                         onpopupshowing="createForwardMenu(event);"/>
                 </toolbarbutton>
                 <toolbarbutton id="help-home-button"
-                    class="toolbarbutton-1" label="&homeButton.label;"
+                    class="browserButton" label="&homeButton.label;"
                     command="Help:Home"/>
                 <toolbarbutton id="help-find-button"
                     class="toolbarbutton-1" label="&findBtn.label;"
@@ -126,7 +126,7 @@
                 <toolbarbutton id="help-zoom-large-button"
                     class="toolbarbutton-1" label="&textZoomEnlargeBtn.label;"
                     command="cmd_textZoomEnlarge"/>    
-                <toolbarbutton id="help-print-button" class="toolbarbutton-1"
+                <toolbarbutton id="help-print-button" class="browserButton"
                     label="&printButton.label;"
                     oncommand="print();"
                     tooltiptext="&printButton.tooltip;"/>
