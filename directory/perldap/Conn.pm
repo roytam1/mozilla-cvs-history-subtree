@@ -36,7 +36,7 @@ use Mozilla::LDAP::Entry 1.4 ();
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "1.4";
+$VERSION = "1.41";
 
 
 #############################################################################
@@ -50,9 +50,8 @@ sub new
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash);
+      my ($hash) = $_[$[];
 
-      $hash = $_[$[];
       $self->{"host"} = $hash->{"host"} if defined($hash->{"host"});
       $self->{"port"} = $hash->{"port"} if defined($hash->{"port"});
       $self->{"binddn"} = $hash->{"bind"} if defined($hash->{"bind"});
@@ -230,8 +229,6 @@ sub printError
 sub search
 {
   my ($self, $basedn, $scope, $filter, $attrsonly, @attrs) = @_;
-  my ($resv, $entry);
-  my ($res) = \$resv;
 
   $scope = Mozilla::LDAP::Utils::str2Scope($scope);
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
@@ -241,13 +238,15 @@ sub search
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+  $self->{"ldres"} = 0;
+
   if (ldap_is_ldap_url($filter))
     {
-      if (! ldap_url_search_s($self->{"ld"}, $filter, $attrsonly, $res))
+      if (! ldap_url_search_s($self->{"ld"}, $filter, $attrsonly,
+			      $self->{"ldres"}))
 	{
-	  $self->{"ldres"} = $res;
 	  $self->{"ldfe"} = 1;
-	  $entry = $self->nextEntry();
+	  return $self->nextEntry();
 	}
     }
   else
@@ -255,15 +254,14 @@ sub search
       if (! ldap_search_s($self->{"ld"}, $basedn, $scope, $filter,
 			  defined(\@attrs) ? \@attrs : 0,
 			  defined($attrsonly) ? $attrsonly : 0,
-			  defined($res) ? $res : 0))
+			  $self->{"ldres"}))
 	{
-	  $self->{"ldres"} = $res;
 	  $self->{"ldfe"} = 1;
-	  $entry = $self->nextEntry();
+	  return $self->nextEntry();
 	}
     }
 
-  return $entry;
+  return "";
 }
 
 
@@ -273,8 +271,6 @@ sub search
 sub searchURL
 {
   my ($self, $url, $attrsonly) = @_;
-  my ($resv, $entry);
-  my ($res) = \$resv;
 
   if (defined($self->{"ldres"}))
     {
@@ -282,16 +278,16 @@ sub searchURL
       undef $self->{"ldres"};
     }
       
+  $self->{"ldres"} = 0;
   if (! ldap_url_search_s($self->{"ld"}, $url,
 			  defined($attrsonly) ? $attrsonly : 0,
-			  defined($res) ? $res : 0))
+			  $self->{"ldres"}))
     {
-      $self->{"ldres"} = $res;
       $self->{"ldfe"} = 1;
-      $entry = $self->nextEntry();
+      return $self->nextEntry();
     }
 
-  return $entry;
+  return "";
 }
 
 
@@ -308,7 +304,7 @@ sub browse
   $scope = Mozilla::LDAP::Utils::str2Scope("BASE");
   $filter = "(objectclass=*)" ;
 
-  return  $self->search($basedn, $scope, $filter, 0, @attrs);
+  return $self->search($basedn, $scope, $filter, 0, @attrs);
 }
 
 
