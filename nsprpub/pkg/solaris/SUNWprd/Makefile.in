@@ -7,16 +7,16 @@
 
 MOD_DEPTH = ../../..
 topsrcdir   = @top_srcdir@
-srcdir	    = @srcdir@
-VPATH	    = @srcdir@
+srcdir      = @srcdir@
+VPATH       = @srcdir@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
-include $(srcdir)/../Makefile.com
+include $(srcdir)/../Makefile-devl.com
 
 DATAFILES += 
 
 all:: $(FILES)
 publish:: all pkg
 
-include $(srcdir)/../Makefile.targ
+include $(srcdir)/../Makefile-devl.targ
