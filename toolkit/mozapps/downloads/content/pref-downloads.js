@@ -160,6 +160,8 @@ function Startup()
   showFolder.parentNode.insertBefore(downloadFolderList, showFolder);
   downloadFolderList.hidden = false;
   
+  toggleDMPrefUI(document.getElementById("showWhenStarting"));
+  
   setTimeout("postStart()", 0);
 }
 
@@ -421,5 +423,13 @@ function editFileHandler()
 function showPlugins()
 {
   openDialog("chrome://browser/content/pref/plugins.xul", "", "modal=yes");
+}
+
+function toggleDMPrefUI(aCheckbox)
+{
+  if (aCheckbox.checked) 
+    document.getElementById("closeWhenDone").removeAttribute("disabled");
+  else
+    document.getElementById("closeWhenDone").setAttribute("disabled", "true");
 }
 
