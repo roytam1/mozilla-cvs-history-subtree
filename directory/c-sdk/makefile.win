@@ -28,6 +28,7 @@ depend:
 
 export libs install: depend
     cd $(MOZ_SRC)\mozilla\directory\c-sdk\ldap\libraries\msdos\winsock
+    $(NMAKE) -f nsldap.mak DEPEND=1
     $(NMAKE) -f nsldap.mak
     $(NMAKE) -f nsldap.mak static 
     $(NMAKE) -f nsldap.mak dynamic
