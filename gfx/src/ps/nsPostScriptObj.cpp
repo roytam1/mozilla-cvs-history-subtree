@@ -60,10 +60,10 @@
 
 #include <locale.h>
 #include <limits.h>
+#include "prprf.h"
 
 #ifdef VMS
 #include <stdlib.h>
-#include "prprf.h"
 #endif
 
 /* This is deprecated but we still need it until all platforms set the paper name in nsIPrintSettings... */
