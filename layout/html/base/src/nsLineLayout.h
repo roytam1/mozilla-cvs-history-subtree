@@ -219,9 +219,14 @@ public:
     SetFlag(LL_LINEENDSINBR, aOn); 
   }
 
-  PRBool InStrictMode()
+  PRBool InStrictMode() const
   {
     return mCompatMode != eCompatibility_NavQuirks;
+  }
+
+  nsCompatibility GetCompatMode() const
+  {
+    return mCompatMode;
   }
 
   //----------------------------------------
