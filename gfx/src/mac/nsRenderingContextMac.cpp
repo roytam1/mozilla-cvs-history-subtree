@@ -508,7 +508,11 @@ NS_IMETHODIMP nsRenderingContextMac::CreateDrawingSurface(nsRect *aBounds, PRUin
 	if (mContext)
 		mContext->GetDepth(depth);
 
-	// get rect
+  if
+    (aSurfFlags & NS_CREATEDRAWINGSURFACE_24BIT)
+    depth = 24;
+
+  // get rect
 	Rect macRect;
 	if (aBounds != nsnull) {
   		// fyi, aBounds->x and aBounds->y are always 0 here

@@ -160,6 +160,11 @@ public:
 //tiling, grouting etc.
 #define NS_CREATEDRAWINGSURFACE_SHORTLIVED        0x0002
 
+//if this flag is set, the color format of the created surface will be
+//24bits RGB, independent of the color format of the device. Might not
+//be supported on all devices.
+#define NS_CREATEDRAWINGSURFACE_24BIT             0x0004
+
 //when locking a drawing surface, use these flags to
 //control how the data in the surface should be accessed
 #define NS_LOCK_SURFACE_READ_ONLY       0x0001

@@ -403,7 +403,10 @@ NS_IMETHODIMP nsDrawingSurfaceWin :: Init(HDC aDC, PRUint32 aWidth,
         BITMAPINFO  *binfo;
         int         depth;
 
-        depth = ::GetDeviceCaps(aDC, BITSPIXEL);
+        if (aFlags & NS_CREATEDRAWINGSURFACE_24BIT)
+          depth = 24;
+        else
+          depth = ::GetDeviceCaps(aDC, BITSPIXEL);
 
         binfo = CreateBitmapInfo(aWidth, aHeight, depth);
 
