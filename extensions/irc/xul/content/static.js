@@ -34,7 +34,7 @@
  *  Samuel Sieb, samuel@sieb.net, MIRC color codes, munger menu, and various
  */
 
-const __cz_version   = "0.9.19";
+const __cz_version   = "0.9.20";
 const __cz_condition = "yellow";
 
 var warn;
@@ -209,7 +209,7 @@ function initNetworks()
     client.addNetwork("slashnet", [{name: "irc.slashnet.org", port:6667}]);
     client.addNetwork("dalnet", [{name: "irc.dal.net", port:6667}]);
     client.addNetwork("undernet", [{name: "irc.undernet.org", port:6667}]);
-    client.addNetwork("webbnet", [{name: "irc.webbnet.org", port:6667}]);
+    client.addNetwork("webbnet", [{name: "irc.webbnet.info", port:6667}]);
     client.addNetwork("quakenet", [{name: "irc.quakenet.org", port:6667}]);
     client.addNetwork("freenode", [{name: "irc.freenode.net", port:6667}]);
     client.addNetwork("efnet",
