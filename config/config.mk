@@ -443,6 +443,10 @@ ifdef MOZ_JAVA
 DEFINES		+= -DJAVA
 endif
 
+ifdef MOZ_OJI
+DEFINES		+= -DOJI
+endif
+
 ifndef NO_MOCHA
 DEFINES		+= -DMOCHA
 endif

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -206,7 +206,7 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
         np_data* ndata = (np_data*) app->np_data;
         nsresult result =
             JVMInstancePeer::Create((nsISupports*)this, kISupportsIID, (void**)&fJVMInstancePeer,
-                                    cx, (struct LO_JavaAppStruct_struct*)ndata->lo_struct); // XXX wrong kind of LO_Struct!
+                                    cx, (LO_ObjectStruct*)ndata->lo_struct); // XXX wrong kind of LO_Struct!
         if (result != NS_OK) return result;
     }
 #endif
@@ -362,19 +362,19 @@ nsPluginInstancePeer::ForceRedraw(void)
 NS_METHOD_(void)
 nsPluginInstancePeer::RegisterWindow(void* window)
 {
-	npn_registerwindow(npp, window);
+    npn_registerwindow(npp, window);
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::UnregisterWindow(void* window)
 {
-	npn_unregisterwindow(npp, window);
+    npn_unregisterwindow(npp, window);
 }
 
 NS_METHOD_(PRInt16)
 nsPluginInstancePeer::AllocateMenuID(PRBool isSubmenu)
 {
-	return npn_allocateMenuID(npp, isSubmenu);
+    return npn_allocateMenuID(npp, isSubmenu);
 }
 
 NS_METHOD_(jref)
@@ -396,6 +396,8 @@ nsPluginManagerStream::nsPluginManagerStream(NPP npp, NPStream* pstr)
 
 nsPluginManagerStream::~nsPluginManagerStream(void)
 {
+    NPError err = npn_destroystream(npp, pstream, NPPluginReason_Done);
+    PR_ASSERT(err == NPPluginError_NoError);
 }
 
 NS_METHOD_(PRInt32)
@@ -407,9 +409,9 @@ nsPluginManagerStream::WriteReady(void)
 }
 
 NS_METHOD_(PRInt32)
-nsPluginManagerStream::Write(PRInt32 len, void* buffer)
+nsPluginManagerStream::Write(PRInt32 len, const char* buffer)
 {
-    return npn_write(npp, pstream, len, buffer);
+    return npn_write(npp, pstream, len, (void*)buffer);
 }
 
 NS_METHOD_(const char*)
@@ -453,6 +455,34 @@ nsPluginStreamPeer::nsPluginStreamPeer(URL_Struct *urls, np_stream *stream)
 
 nsPluginStreamPeer::~nsPluginStreamPeer(void)
 {
+#if 0
+    NPError err = npn_destroystream(stream->instance->npp, stream->pstream, reason);
+    PR_ASSERT(err == NPPluginError_NoError);
+#endif
+}
+
+NS_METHOD_(const char*)
+nsPluginStreamPeer::GetURL(void)
+{
+    return stream->pstream->url;
+}
+
+NS_METHOD_(PRUint32)
+nsPluginStreamPeer::GetEnd(void)
+{
+    return stream->pstream->end;
+}
+
+NS_METHOD_(PRUint32)
+nsPluginStreamPeer::GetLastModified(void)
+{
+    return stream->pstream->lastmodified;
+}
+
+NS_METHOD_(void*)
+nsPluginStreamPeer::GetNotifyData(void)
+{
+    return stream->pstream->notifyData;
 }
 
 NS_METHOD_(NPPluginReason)

@@ -97,7 +97,7 @@ CONFIG_OBJ_INC=1
         -Fd$(PDBFILE)
         -Fo.\$(OBJDIR)\
         $(CURDIR)$(*B).cpp
-<<
+<<KEEP
 
 {.\_jmc\}.cpp{.\$(OBJDIR)\}.obj:
     @$(CC) @<<$(CFGFILE)
@@ -203,6 +203,33 @@ CONFIG_OBJ_INC=1
         -Fd$(PDBFILE)
         -Fo.\$(OBJDIR)\
         $(CURDIR)$(*B).c
+<<KEEP
+
+.cpp.i:
+    @$(CC) @<<$(CFGFILE)
+        /P -c 
+        $(OPTIMIZER)
+        $(CFLAGS) 
+        $(LCFLAGS)
+        $(LINCS) 
+        $(LINCS_1) 
+        $(INCS)
+        -Fd$(PDBFILE)
+        $(CURDIR)$(*B).cpp
+<<KEEP
+
+.cpp{.\$(OBJDIR)\}.i:
+    @$(CC) @<<$(CFGFILE)
+        /P -c 
+        $(OPTIMIZER)
+        $(CFLAGS) 
+        $(LCFLAGS)
+        $(LINCS) 
+        $(LINCS_1) 
+        $(INCS)
+        -Fd$(PDBFILE)
+        -Fo.\$(OBJDIR)\
+        $(CURDIR)$(*B).cpp
 <<KEEP
 
 

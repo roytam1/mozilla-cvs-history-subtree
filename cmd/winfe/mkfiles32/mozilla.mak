@@ -348,6 +348,9 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libapplet32.lib \
 !endif
+!ifdef MOZ_OJI
+    $(DIST)\lib\oji32.lib \
+!endif
     $(DIST)\lib\hook.lib \
 #!if defined(EDITOR)
 !ifdef MOZ_JAVA
@@ -540,6 +543,7 @@ CDISTINCLUDES= \
     /I$(XPDIST)\public\dbm \
     /I$(XPDIST)\public\java \
     /I$(XPDIST)\public\applet \
+    /I$(XPDIST)\public\oji \
     /I$(XPDIST)\public\libreg \
     /I$(XPDIST)\public\hook \
     /I$(XPDIST)\public\pref \
@@ -602,6 +606,9 @@ CDEFINES=/DXP_PC /Dx386 /D_WINDOWS /D_X86_ \
 !if defined(MOZ_JAVA)
     /DJAVA \
 !endif
+!if defined(MOZ_OJI)
+    /DOJI \
+!endif
     /DMOZILLA_CLIENT
 
 
@@ -614,6 +621,9 @@ CDEFINES=$(CDEFINES) $(MOZ_LITENESS_FLAGS)
 RCDEFINES=/DRESOURCE_STR /D_WINDOWS \
 !if defined(MOZ_JAVA)
      /DJAVA \
+!endif
+!if defined(MOZ_OJI)
+     /DOJI \
 !endif
 !if "$(MOZ_BITS)" == "32"
     /DXP_PC /Dx386 /D_X86_ \
@@ -2626,6 +2636,7 @@ exports:
     -xcopy $(XPDIST)\public\security\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_JAVA)
     -xcopy $(XPDIST)\public\applet\*.h $(EXPORTINC) $(XCF)
+    -xcopy $(XPDIST)\public\oji\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\libreg\*.h $(EXPORTINC) $(XCF)
 !endif
     -xcopy $(XPDIST)\public\hook\*.h $(EXPORTINC) $(XCF)

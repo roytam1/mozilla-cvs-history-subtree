@@ -2318,6 +2318,8 @@ lo_CreateEmbeddedObjectLayer(MWContext *context,
  * Java Applet layer code
  *
  **********************/
+
+#ifdef TRANSPARENT_APPLET
 #ifdef JAVA
 
 #include "java.h"
@@ -2386,7 +2388,8 @@ LO_SetJavaAppTransparent(LO_JavaAppStruct *javaData)
     CL_SetLayerBbox(layer, &bbox);
 }
 
-#endif
+#endif /* JAVA */
+#endif /* TRANSPARENT_APPLET */
 
 /**********************
  *

@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -452,7 +452,7 @@ public:
 
     // (Corresponds to NPP_Write and NPN_Write.)
     NS_IMETHOD_(PRInt32)
-    Write(PRInt32 len, void* buffer);
+    Write(PRInt32 len, const char* buffer);
 
     ////////////////////////////////////////////////////////////////////////////
     // from NPIPluginManagerStream:
@@ -504,6 +504,22 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from NPIPluginStreamPeer:
 
+    // (Corresponds to NPStream's url field.)
+    NS_IMETHOD_(const char*)
+    GetURL(void);
+
+    // (Corresponds to NPStream's end field.)
+    NS_IMETHOD_(PRUint32)
+    GetEnd(void);
+
+    // (Corresponds to NPStream's lastmodified field.)
+    NS_IMETHOD_(PRUint32)
+    GetLastModified(void);
+
+    // (Corresponds to NPStream's notifyData field.)
+    NS_IMETHOD_(void*)
+    GetNotifyData(void);
+
     // (Corresponds to NPP_DestroyStream's reason argument.)
     NS_IMETHOD_(NPPluginReason)
     GetReason(void);
@@ -514,31 +530,7 @@ public:
 
     NS_IMETHOD_(PRUint32)
     GetContentLength(void);
-#if 0
-    NS_IMETHOD_(const char*)
-    GetContentEncoding(void);
 
-    NS_IMETHOD_(const char*)
-    GetCharSet(void);
-
-    NS_IMETHOD_(const char*)
-    GetBoundary(void);
-
-    NS_IMETHOD_(const char*)
-    GetContentName(void);
-
-    NS_IMETHOD_(time_t)
-    GetExpires(void);
-
-    NS_IMETHOD_(time_t)
-    GetLastModified(void);
-
-    NS_IMETHOD_(time_t)
-    GetServerDate(void);
-
-    NS_IMETHOD_(NPServerStatus)
-    GetServerStatus(void);
-#endif
     NS_IMETHOD_(PRUint32)
     GetHeaderFieldCount(void);
 

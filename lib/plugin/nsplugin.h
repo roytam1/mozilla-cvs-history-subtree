@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -190,7 +190,8 @@ enum NPPluginVariable {
     NPPluginVariable_WindowBool,        // XXX go away
     NPPluginVariable_TransparentBool,   // XXX go away?
     NPPluginVariable_JavaClass,         // XXX go away
-    NPPluginVariable_WindowSize
+    NPPluginVariable_WindowSize,
+    NPPluginVariable_TimerInterval
     // XXX add MIMEDescription (for unix) (but GetValue is on the instance, not the class)
 };
 
@@ -419,7 +420,7 @@ public:
 
     // (Corresponds to NPP_Write and NPN_Write.)
     NS_IMETHOD_(PRInt32)
-    Write(PRInt32 len, void* buffer) = 0;
+    Write(PRInt32 len, const char* buffer) = 0;
 
 };
 
@@ -461,13 +462,9 @@ public:
     NS_IMETHOD_(NPPluginError)
     NewInstance(NPIPluginInstancePeer* peer, NPIPluginInstance* *result) = 0;
 
-#ifdef XP_UNIX  // XXX why can't this be XP?
-
     // (Corresponds to NPP_GetMIMEDescription.)
     NS_IMETHOD_(const char*)
     GetMIMEDescription(void) = 0;
-
-#endif /* XP_UNIX */
 
 };
 
@@ -770,6 +767,7 @@ public:
 
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu) = 0;
+
 };
 
 #define NP_IPLUGININSTANCEPEER_IID                   \
@@ -845,6 +843,22 @@ public:
 class NPIPluginStreamPeer : public nsISupports {
 public:
 
+    // (Corresponds to NPStream's url field.)
+    NS_IMETHOD_(const char*)
+    GetURL(void) = 0;
+
+    // (Corresponds to NPStream's end field.)
+    NS_IMETHOD_(PRUint32)
+    GetEnd(void) = 0;
+
+    // (Corresponds to NPStream's lastmodified field.)
+    NS_IMETHOD_(PRUint32)
+    GetLastModified(void) = 0;
+
+    // (Corresponds to NPStream's notifyData field.)
+    NS_IMETHOD_(void*)
+    GetNotifyData(void) = 0;
+
     // (Corresponds to NPP_DestroyStream's reason argument.)
     NS_IMETHOD_(NPPluginReason)
     GetReason(void) = 0;
@@ -855,31 +869,7 @@ public:
 
     NS_IMETHOD_(PRUint32)
     GetContentLength(void) = 0;
-#if 0
-    NS_IMETHOD_(const char*)
-    GetContentEncoding(void) = 0;
 
-    NS_IMETHOD_(const char*)
-    GetCharSet(void) = 0;
-
-    NS_IMETHOD_(const char*)
-    GetBoundary(void) = 0;
-
-    NS_IMETHOD_(const char*)
-    GetContentName(void) = 0;
-
-    NS_IMETHOD_(time_t)
-    GetExpires(void) = 0;
-
-    NS_IMETHOD_(time_t)
-    GetLastModified(void) = 0;
-
-    NS_IMETHOD_(time_t)
-    GetServerDate(void) = 0;
-
-    NS_IMETHOD_(NPServerStatus)
-    GetServerStatus(void) = 0;
-#endif
     NS_IMETHOD_(PRUint32)
     GetHeaderFieldCount(void) = 0;
 

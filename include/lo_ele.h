@@ -977,6 +977,7 @@ struct LO_EmbedStruct_struct {
 
 		int32 percent_width; /* needed for relayout. */
 		int32 percent_height; /* needed for relayout. */
+		PA_Block base_url;
 };
 
 #define LO_JAVA_SELECTOR_APPLET             0

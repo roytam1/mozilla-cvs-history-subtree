@@ -59,15 +59,15 @@ DIRS=                   \
 !if ("$(MOZ_BITS)" == "16")
 	libmem          \
 !endif
-	coreincl       \
+	coreincl        \
 !ifdef MOZ_LOC_INDEP
 	li		\
 !endif
 !ifdef MOZ_SPELLCHK
 	spellchk        \
 !endif
-	rdf				\
-    schedulr	\
+	rdf		\
+	schedulr	\
 	xml
 
 #//------------------------------------------------------------------------
