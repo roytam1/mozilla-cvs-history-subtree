@@ -5132,6 +5132,9 @@ PRBool nsMsgIMAPFolderACL::SetFolderRightsForUser(const char *userName, const ch
 
 const char *nsMsgIMAPFolderACL::GetRightsStringForUser(const char *inUserName)
 {
+  if (!inUserName)
+    return nsnull;
+
   nsXPIDLCString userName;
   userName.Assign(inUserName);
   if (!userName.Length())
