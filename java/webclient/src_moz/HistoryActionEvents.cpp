@@ -162,9 +162,8 @@ wsGoToEvent::handleEvent ()
     void *result = nsnull;
     nsresult rv = nsnull;
     if (mWebNavigation) {
-      //PENDING (Ashu) : GoTo Functionality seems to be missing in M15
-      //        nsresult rv = mHistory->Goto(mHistoryIndex, mWebShell, PR_TRUE);
-      result = (void *) rv;
+        nsresult rv = mWebNavigation->GotoIndex(mHistoryIndex);
+        result = (void *) rv;
     }
     return result;
 } // handleEvent()

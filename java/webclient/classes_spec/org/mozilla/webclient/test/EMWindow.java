@@ -85,6 +85,10 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 	private Panel			buttonsPanel;
     private FindDialog           findDialog = null;
     private MenuBar             menuBar;
+    private Menu                historyMenu;
+    private MenuItem backMenuItem;
+    private MenuItem forwardMenuItem;
+    private HistoryActionListener historyActionListener = null;
     private Label          statusLabel;
     private String currentURL;
 
@@ -146,6 +150,16 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
        		findItem.addActionListener(this);
        		searchMenu.add(findNextItem);
        		findNextItem.addActionListener(this);
+
+        historyMenu = new Menu("History");
+          backMenuItem = new MenuItem("Back");
+          backMenuItem.addActionListener(this);
+          historyMenu.add(backMenuItem);
+          forwardMenuItem = new MenuItem("Forward");
+          forwardMenuItem.addActionListener(this);
+          historyMenu.add(forwardMenuItem);
+          menuBar.add(historyMenu);
+
 		viewMenu.add(sourceItem);
 		sourceItem.addActionListener(this);
        		viewMenu.add(pageInfoItem);
@@ -366,48 +380,44 @@ public void actionPerformed (ActionEvent evt)
     
     try {
         
-        // deal with the menu item commands
-        if (evt.getSource() instanceof MenuItem) {
-            if (command.equals("New Window")) {
-                creator.CreateEMWindow();
+        if (command.equals("New Window")) {
+            creator.CreateEMWindow();
+        }
+        else if (command.equals("Close")) {
+            System.out.println("Got windowClosing");
+            System.out.println("destroying the BrowserControl");
+            EMWindow.this.delete();
+            // should close the BrowserControlCanvas
+            creator.DestroyEMWindow(winNum);
+        }
+        else if (command.equals("Find")) {
+            if (null == findDialog) {
+                Frame f = new Frame();
+                f.setSize(350,150);
+                findDialog = new FindDialog(this, this, 
+                                            "Find in Page", "Find  ", 
+                                            "", 20, false);
+                findDialog.setModal(false);
             }
-            else if (command.equals("Close")) {
-                System.out.println("Got windowClosing");
-                System.out.println("destroying the BrowserControl");
-                EMWindow.this.delete();
-				// should close the BrowserControlCanvas
-                creator.DestroyEMWindow(winNum);
-            }
-            else if (command.equals("Find")) {
-				if (null == findDialog) {
-                    Frame f = new Frame();
-                    f.setSize(350,150);
-                    findDialog = new FindDialog(this, this, 
-                                                "Find in Page", "Find  ", 
-                                                "", 20, false);
-                    findDialog.setModal(false);
-	       		}
-				findDialog.setVisible(true);
-                //		currentPage.findInPage("Sun", true, true);
-            }
-            else if (command.equals("Find Next")) {
-                currentPage.findNextInPage();
-            }
-            else if (command.equals("View Page Source")) {
-                currentPage.getSourceBytes(viewMode);
-                viewMode = !viewMode;
-            }
-            else if (command.equals("View Page Info")) {
-                currentPage.getPageInfo();
-            }
-            else if (command.equals("Select All")) {
-                currentPage.selectAll();
-            }
-            else if (command.equals("Copy")) {
-                currentPage.copyCurrentSelectionToSystemClipboard();
-            }
-	    }
-        // deal with the button bar commands
+            findDialog.setVisible(true);
+            //		currentPage.findInPage("Sun", true, true);
+        }
+        else if (command.equals("Find Next")) {
+            currentPage.findNextInPage();
+        }
+        else if (command.equals("View Page Source")) {
+            currentPage.getSourceBytes(viewMode);
+            viewMode = !viewMode;
+        }
+        else if (command.equals("View Page Info")) {
+            currentPage.getPageInfo();
+        }
+        else if (command.equals("Select All")) {
+            currentPage.selectAll();
+        }
+        else if (command.equals("Copy")) {
+            currentPage.copyCurrentSelectionToSystemClipboard();
+        }
 	    else if(command.equals("Stop")) {
             navigation.stop();
         }
@@ -433,7 +443,7 @@ public void actionPerformed (ActionEvent evt)
             fileDialog.show();
             String file = fileDialog.getFile();
             String directory = fileDialog.getDirectory();
-
+            
             if ((null != file) && (null != directory) &&
                 (0 < file.length()) && (0 < directory.length())) {
                 String absPath = directory + file;
@@ -590,7 +600,10 @@ public void eventDispatched(WebclientEvent event)
         case ((int) DocumentLoadEvent.END_DOCUMENT_LOAD_EVENT_MASK):
             stopButton.setEnabled(false);
             backButton.setEnabled(history.canBack());
+            backMenuItem.setEnabled(history.canBack());
             forwardButton.setEnabled(history.canForward());
+            forwardMenuItem.setEnabled(history.canForward());
+            populateHistoryMenu();
             statusLabel.setText("Done.");
             currentDocument = currentPage.getDOM();
             // add the new document to the domViewer
@@ -600,6 +613,55 @@ public void eventDispatched(WebclientEvent event)
 
             break;
         }
+    }
+}
+
+/**
+
+ * This method exercises the rest of the history API that isn't
+ * exercised elsewhere in the browser.
+
+ */
+
+private void populateHistoryMenu()
+{
+    int i = 0;
+    int histLen = 0;
+    int curIndex = 0;
+    String curUrl;
+    MenuItem curItem;
+    historyMenu.removeAll();
+
+    if (null == historyActionListener) {
+        historyActionListener = new HistoryActionListener();
+        if (null == historyActionListener) {
+            return;
+        }
+    }
+
+    // add back these MenuItems
+    historyMenu.add(backMenuItem);
+    historyMenu.add(forwardMenuItem);
+
+    // now populate the menu with history items
+    histLen = history.getHistoryLength();
+    curIndex = history.getCurrentHistoryIndex();
+    for (i = 0; i < histLen; i++) {
+        // PENDING(put in code to truncate unruly long URLs)
+        curUrl = history.getURLForIndex(i);
+
+        // It's important that we prepend the index.  This is used in
+        // the actionListener to load by index.
+
+        if (i == curIndex) {
+            curUrl = Integer.toString(i) + " * " + curUrl;
+        }
+        else {
+            curUrl = Integer.toString(i) + " " + curUrl;
+        }
+        curItem = new MenuItem(curUrl);
+        curItem.addActionListener(historyActionListener);
+        historyMenu.add(curItem);
     }
 }
 
@@ -671,6 +733,31 @@ public void mousePressed(java.awt.event.MouseEvent e)
 
 public void mouseReleased(java.awt.event.MouseEvent e)
 {
+}
+
+class HistoryActionListener implements ActionListener
+{
+
+public void actionPerformed(ActionEvent event)
+{
+    String command = event.getActionCommand();
+
+    if (null == command) {
+        return;
+    }
+
+    // pull out the leading integer
+    Integer index;
+    int space = command.indexOf((int)' ');
+    if (-1 == space) {
+        return;
+    }
+
+    index = new Integer(command.substring(0, space));
+
+    EMWindow.this.history.setCurrentHistoryIndex(index.intValue());
+}
+
 }
 
 class PopupActionListener implements ActionListener {
