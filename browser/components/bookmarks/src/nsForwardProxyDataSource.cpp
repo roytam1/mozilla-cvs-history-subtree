@@ -63,7 +63,7 @@ nsForwardProxyDataSource::Init(void)
     nsresult rv;
 
     // do we need to initialize our globals?
-    nsCOMPtr<nsIRDFService> rdf = do_GetService(NS_GET_IID(nsIRDFService));
+    nsCOMPtr<nsIRDFService> rdf = do_GetService(kRDFServiceCID);
     if (!rdf) {
         NS_WARNING ("unable to get RDF service");
         return NS_ERROR_FAILURE;
@@ -599,7 +599,7 @@ nsForwardProxyDataSource::OnAssert(nsIRDFDataSource* aDataSource,
     }
 
     nsCOMPtr<nsIRDFResource> realSourceResource;
-    if (GetRealSource(aSource, getter_AddRefs(realSourceResource)) != NS_OK) {
+    if (GetRealSource(aSource, getter_AddRefs(realSourceResource)) == NS_OK) {
         for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
             mObservers[i]->OnAssert(this, realSourceResource, aProperty, aTarget);
         }

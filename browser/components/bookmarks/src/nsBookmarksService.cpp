@@ -1376,27 +1376,8 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
                 NS_ASSERTION(NS_SUCCEEDED(rv), "unable to parse bookmarks");
             }
         } else {
-            // add a ForwardProxy pointing to our URL
-            // this code ought to be shared with nsBookmarksService::UpdateBookmarkForwardProxy
-            do {
-                nsCOMPtr<nsIRDFNode> urlNode;
-                rv = mDataSource->GetTarget(bookmark, kNC_URL, PR_TRUE, getter_AddRefs(urlNode));
-                if (NS_FAILED(rv)) return rv;
-
-                // unfortunately, urlNode is a Literal; we need it to be a Resource
-                nsCOMPtr<nsIRDFLiteral> urlLiteral = do_QueryInterface(urlNode);
-                const PRUnichar *urlstr;
-                rv = urlLiteral->GetValueConst(&urlstr);
-                if (NS_FAILED(rv)) return rv;
-
-                nsDependentString url(urlstr);
-                nsCOMPtr<nsIRDFResource> urlRsrc;
-                rv = gRDF->GetUnicodeResource(url, getter_AddRefs(urlRsrc));
-                if (NS_FAILED(rv)) return rv;
-                
-                rv = mDataSource->Assert(bookmark, kForwardProxy, urlRsrc, PR_TRUE);
-            } while (0);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create forward proxy resource");
+            // update the kForwardProxy property, based on the URL, if any
+            nsBookmarksService::UpdateBookmarkForwardProxy(mDataSource, bookmark);
         }
 
         // prevent duplicates                                                       
@@ -3791,22 +3772,22 @@ nsBookmarksService::AnnotateBookmarkSchedule(nsIRDFResource* aSource, PRBool sch
 }
 
 nsresult
-nsBookmarksService::UpdateBookmarkForwardProxy(nsIRDFResource* aBookmarkResource)
+nsBookmarksService::UpdateBookmarkForwardProxy(nsIRDFDataSource* aDS, nsIRDFResource* aBookmarkResource)
 {
     nsresult rv;
 
     nsCOMPtr<nsIRDFNode> oldForwardProxy;
-    rv = mInner->GetTarget(aBookmarkResource, kForwardProxy, PR_TRUE, getter_AddRefs(oldForwardProxy));
+    rv = aDS->GetTarget(aBookmarkResource, kForwardProxy, PR_TRUE, getter_AddRefs(oldForwardProxy));
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIRDFNode> urlNode;
-    rv = mInner->GetTarget(aBookmarkResource, kNC_URL, PR_TRUE, getter_AddRefs(urlNode));
+    rv = aDS->GetTarget(aBookmarkResource, kNC_URL, PR_TRUE, getter_AddRefs(urlNode));
     if (NS_FAILED(rv)) return rv;
 
     if (rv == NS_RDF_NO_VALUE) {
         rv = NS_OK;
         if (oldForwardProxy)
-            rv = mInner->Unassert(aBookmarkResource, kForwardProxy, oldForwardProxy);
+            rv = aDS->Unassert(aBookmarkResource, kForwardProxy, oldForwardProxy);
         return rv;
     }
 
@@ -3822,9 +3803,9 @@ nsBookmarksService::UpdateBookmarkForwardProxy(nsIRDFResource* aBookmarkResource
     if (NS_FAILED(rv)) return rv;
 
     if (oldForwardProxy)
-        rv = mInner->Change(aBookmarkResource, kForwardProxy, oldForwardProxy, urlRsrc);
+        rv = aDS->Change(aBookmarkResource, kForwardProxy, oldForwardProxy, urlRsrc);
     else
-        rv = mInner->Assert(aBookmarkResource, kForwardProxy, urlRsrc, PR_TRUE);
+        rv = aDS->Assert(aBookmarkResource, kForwardProxy, urlRsrc, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -3849,7 +3830,7 @@ nsBookmarksService::Assert(nsIRDFResource* aSource,
         if (aProperty == kWEB_Schedule) {
             AnnotateBookmarkSchedule(aSource, PR_TRUE);
         } else if (aProperty == kNC_URL) {
-            UpdateBookmarkForwardProxy(aSource);
+            UpdateBookmarkForwardProxy(mInner, aSource);
         } else if (aProperty == kNC_FeedURL) {
             /* Reload feed URL - also allow only one LivemarkExpiration */
             nsCOMPtr<nsIRDFNode> oldExpiration;
@@ -3883,7 +3864,7 @@ nsBookmarksService::Unassert(nsIRDFResource* aSource,
         if (aProperty == kWEB_Schedule) {
             AnnotateBookmarkSchedule(aSource, PR_FALSE);
         } else if (aProperty == kNC_URL) {
-            UpdateBookmarkForwardProxy(aSource);
+            UpdateBookmarkForwardProxy(mInner, aSource);
         } else if (aProperty == kRDF_type && aTarget == kNC_Livemark) {
             rv = nsBMSVCUnmakeSeq(mInner, aSource);
         } else if (aProperty == kNC_LivemarkExpiration) {
@@ -3915,7 +3896,7 @@ nsBookmarksService::Change(nsIRDFResource* aSource,
         if (aProperty == kWEB_Schedule) {
             AnnotateBookmarkSchedule(aSource, PR_TRUE);
         } else if (aProperty == kNC_URL) {
-            UpdateBookmarkForwardProxy(aSource);
+            UpdateBookmarkForwardProxy(mInner, aSource);
         } else if (aProperty == kNC_FeedURL) {
             /* Reload feed data */
             nsCOMPtr<nsIRDFNode> oldExpiration;
@@ -3957,8 +3938,8 @@ nsBookmarksService::Move(nsIRDFResource* aOldSource,
             // our observers might get odd-looking notifications
             // for this; we really should just give them an
             // OnMove with kForwardProxy
-            UpdateBookmarkForwardProxy(aOldSource);
-            UpdateBookmarkForwardProxy(aNewSource);
+            UpdateBookmarkForwardProxy(mInner, aOldSource);
+            UpdateBookmarkForwardProxy(mInner, aNewSource);
         }
     }
     return rv;
