@@ -509,9 +509,9 @@ QTFE_GetFormElementInfo(MWContext* context, LO_FormElementStruct *form)
 extern "C"
 void
 QTFE_GetFormElementValue(MWContext* context, LO_FormElementStruct *form,
-						 XP_Bool delete_p)
+					XP_Bool delete_p, XP_Bool submit_p)
 {
-    QtContext::qt(context)->getFormElementValue(form, delete_p);
+    QtContext::qt(context)->getFormElementValue(form, delete_p, submit_p);
 }
 
 

@@ -154,7 +154,7 @@ public:
     void getFormElementInfo(LO_FormElementStruct *form);
 
     virtual void getFormElementValue(LO_FormElementStruct *form,
-						 bool delete_p);
+						 bool delete_p, bool submit_p);
 
     void resetFormElement(LO_FormElementStruct *form);
 

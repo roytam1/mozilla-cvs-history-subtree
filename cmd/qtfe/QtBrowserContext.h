@@ -78,7 +78,7 @@ public:
     virtual void displayFormElement(int iLocation,
 				       LO_FormElementStruct *form);
     virtual void getFormElementValue(LO_FormElementStruct *form,
-						 bool delete_p);
+						 bool delete_p, bool submit_p);
 
 public slots:
     virtual void cmdOpenBrowser();
