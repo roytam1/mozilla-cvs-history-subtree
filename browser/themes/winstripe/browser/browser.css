@@ -152,6 +152,14 @@ menuitem.bookmark-item {
   list-style-image: url("chrome://browser/skin/livemark-item.png") !important;
 }
 
+.bookmark-item[type="menu"][livemark="true"] { 
+  -moz-image-region: rect(0px, 48px, 16px, 32px) !important;
+}
+
+.bookmark-item[type="menu"][livemark="true"][open="true"] { 
+  -moz-image-region: rect(16px, 48px, 32px, 32px) !important;
+}
+
 /* ::::: primary toolbar buttons ::::: */
 
 .toolbarbutton-1 {
