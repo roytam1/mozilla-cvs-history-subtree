@@ -19,6 +19,9 @@
 // genframe.cpp : implementation file
 //
 
+#ifdef PRIVACY_POLICIES
+#include "privacy.h"
+#endif
 #include "stdafx.h"
 #include "confhook.h"
 #ifdef MOZ_MAIL_NEWS
