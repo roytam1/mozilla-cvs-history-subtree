@@ -124,7 +124,6 @@ ifdef GRE_BUILD
 LIBS += \
 		 $(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) \
 		 $(DIST)/lib/$(LIB_PREFIX)string_s.$(LIB_SUFFIX) \
-		 $(DIST)/lib/$(LIB_PREFIX)string_obsolete_s.$(LIB_SUFFIX) \
 		 $(DIST)/lib/$(LIB_PREFIX)string_minapi_s.$(LIB_SUFFIX) \
 		 $(NULL)
 else
