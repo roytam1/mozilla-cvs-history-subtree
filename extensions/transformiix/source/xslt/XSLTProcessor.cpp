@@ -1605,17 +1605,17 @@ XSLTProcessor::TransformDocument(nsIDOMElement* aSourceDOM,
     nsCOMPtr<nsIDOMDocument> styleDOMDocument;
 
     aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
-    Document sourceDocument(sourceDOMDocument);
-    Node sourceNode(aSourceDOM, &sourceDocument);
+    Document* sourceDocument = new Document(sourceDOMDocument);
+    Node sourceNode(aSourceDOM, sourceDocument);
 
     aStyleDOM->GetOwnerDocument(getter_AddRefs(styleDOMDocument));
-    Document xslDocument(styleDOMDocument);
-    Element styleElement(aStyleDOM, &xslDocument);
+    Document* xslDocument = new Document(styleDOMDocument);
+    Element styleElement(aStyleDOM, xslDocument);
     
-    Document resultDocument(aOutputDoc);
+    Document* resultDocument = new Document(aOutputDoc);
 
     //-- create a new ProcessorState
-    ProcessorState ps(xslDocument, resultDocument);
+    ProcessorState* ps = new ProcessorState(*xslDocument, *resultDocument);
 
     nsCOMPtr<nsIDocument> sourceNsDocument = do_QueryInterface(sourceDOMDocument);
     nsCOMPtr<nsIURI> docURL;
@@ -1627,11 +1627,11 @@ XSLTProcessor::TransformDocument(nsIDOMElement* aSourceDOM,
         docURL->GetSpec(&urlString);
         DOMString documentBase(urlString);
 //cout << "documentbase: " << documentBase << endl;
-        ps.setDocumentBase(documentBase);
+        ps->setDocumentBase(documentBase);
         nsCRT::free(urlString);
     }
     else
-        ps.setDocumentBase("");
+        ps->setDocumentBase("");
     
 
     //-- add error observers
@@ -1640,12 +1640,12 @@ XSLTProcessor::TransformDocument(nsIDOMElement* aSourceDOM,
      //- index templates and process top level xsl elements -/
     //------------------------------------------------------/
 
-    processTopLevel(&styleElement, &ps);
+    processTopLevel(&styleElement, ps);
 
       //---------------------------------------/
      //- Process root of XML source document -/
     //---------------------------------------/
-    process(&sourceNode, &sourceNode, &ps);
+    process(&sourceNode, &sourceNode, ps);
  
 /*
     Uncomment and add #include "printers.h" to see the output document
@@ -1658,7 +1658,15 @@ XSLTProcessor::TransformDocument(nsIDOMElement* aSourceDOM,
     outputprinter.print(&resultDocument);
     cout << endl;
 */
-    
+
+	/* XXX HACK (pvdb)
+	   This is leaking! But otherwise we crash on Mac (and others?).
+	   This workaround can be removed once we figure out what's going on.
+	*/
+	delete ps;
+//    delete resultDocument;
+//    delete xslDocument;
+    delete sourceDocument;
     return NS_OK;
 }
 #endif
