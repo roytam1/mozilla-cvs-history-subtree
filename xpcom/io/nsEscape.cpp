@@ -73,16 +73,7 @@ const int netCharType[256] =
 #define HEX_ESCAPE '%'
 
 //----------------------------------------------------------------------------------------
-NS_COM char* nsEscape(const char * str, nsEscapeMask mask)
-//----------------------------------------------------------------------------------------
-{
-    if(!str)
-        return NULL;
-    return nsEscapeCount(str, (PRInt32)strlen(str), mask, NULL);
-}
-
-//----------------------------------------------------------------------------------------
-NS_COM char* nsEscapeCount(
+static char* nsEscapeCount(
     const char * str,
     PRInt32 len,
     nsEscapeMask mask,
@@ -145,6 +136,15 @@ NS_COM char* nsEscapeCount(
 	if(out_len)
 		*out_len = dst - (unsigned char *) result;
     return result;
+}
+
+//----------------------------------------------------------------------------------------
+NS_COM char* nsEscape(const char * str, nsEscapeMask mask)
+//----------------------------------------------------------------------------------------
+{
+    if(!str)
+        return NULL;
+    return nsEscapeCount(str, (PRInt32)strlen(str), mask, NULL);
 }
 
 //----------------------------------------------------------------------------------------
