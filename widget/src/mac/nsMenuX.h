@@ -32,6 +32,8 @@
 
 #include <Menus.h>
 #include <UnicodeConverter.h>
+#include <CarbonEvents.h>
+
 
 class nsIMenuBar;
 class nsIMenuListener;
@@ -141,6 +143,8 @@ protected:
     PRPackedBool                mNeedsRebuild;
     PRPackedBool                mConstructed;
     PRPackedBool                mVisible;               // are we visible to the user?
+    
+    EventHandlerRef             mHandler;               // our event handler
 };
 
 #endif // nsMenuX_h__
