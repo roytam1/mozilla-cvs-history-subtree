@@ -72,7 +72,7 @@ static PyObject *DoPyRead_Buffer(nsIInputStream *pI, PyObject *obBuffer, PRUint3
 
 static PyObject *DoPyRead_Size(nsIInputStream *pI, PRUint32 n)
 {
-	if (n==-1) {
+	if (n==(PRUint32)-1) {
 		nsresult r;
 		Py_BEGIN_ALLOW_THREADS;
 		r = pI->Available(&n);
