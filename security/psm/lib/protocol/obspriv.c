@@ -34,6 +34,7 @@
 #include "newproto.h"
 #include <assert.h>
 #include <time.h>
+#include <memory.h>
 
 /* 
    Originally this code was used to obscure the control messages
