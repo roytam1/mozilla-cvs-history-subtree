@@ -100,6 +100,26 @@ else
 endif
 
 #
+# create macro to expand library names into a form usable for linking
+#
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+_LIBNAME_RELATIVE_PATHS=1
+else
+ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
+_NO_AUTO_VARS=1
+_LIBNAME_RELATIVE_PATHS=1
+endif
+endif
+
+ifdef _LIBNAME_RELATIVE_PATHS
+EXPAND_LIBNAME = $(addsuffix .$(LIB_SUFFIX),$(addprefix $(DIST)/lib/$(LIB_PREFIX),$(1)))
+else
+EXPAND_LIBNAME = $(addprefix -l,$(1))
+endif
+
+EXTRA_DSO_LIBS := $(call EXPAND_LIBNAME,$(EXTRA_DSO_LIBS))
+
+#
 # Library rules
 #
 # If BUILD_SHARED_LIBS or FORCE_SHARED_LIB is set and 
@@ -108,24 +128,6 @@ endif
 # If BUILD_STATIC_LIBS or FORCE_STATIC_LIB is set, 
 #	the static library will  be built.
 #
-
-ifeq ($(MOZ_OS2_TOOLS),VACPP)
-_EXTRA_DSO_RELATIVE_PATHS=1
-else
-ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
-_NO_AUTO_VARS=1
-_EXTRA_DSO_RELATIVE_PATHS=1
-endif
-endif
-
-ifdef _EXTRA_DSO_RELATIVE_PATHS
-EXTRA_DSO_LIBS		:= $(addsuffix .$(LIB_SUFFIX),$(addprefix $(DIST)/lib/$(LIB_PREFIX),$(EXTRA_DSO_LIBS)))
-EXTRA_DSO_LIBS		:= $(filter-out %/bin %/lib,$(EXTRA_DSO_LIBS))
-EXTRA_DSO_LDOPTS    := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_DSO_LDOPTS))
-LIBS                := $(patsubst -l%,$(DIST)/lib/$(LIB_PREFIX)%.$(LIB_SUFFIX),$(LIBS))
-else
-EXTRA_DSO_LIBS		:= $(addprefix -l,$(EXTRA_DSO_LIBS))
-endif
 
 ifndef LIBRARY
 ifdef LIBRARY_NAME
