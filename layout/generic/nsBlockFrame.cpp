@@ -623,10 +623,64 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       // In the intrinsic width pass, we put all floats into
       // mBelowCurrentLineFloats (simply because the code to do so is
       // simpler).
-      aLine->AppendFloats(iro->brs.mBelowCurrentLineFloats);
+      nsFloatCacheFreeList &floats = iro->brs.mBelowCurrentLineFloats;
+      if (!floats.IsEmpty()) {
+        line->AppendFloats(floats);
 
-#error "Handle floats"
-      // XXX Don't forget floats.  They're the hard part.
+        nscoord floats_min = 0,
+                // preferred widths accumulated for floats that have already
+                // been cleared past
+                floats_left_done = 0, floats_right_done = 0,
+                // preferred widths accumulated fol floats that have not yet
+                // been cleared past
+                floats_left_cur = 0, floats_right_cur = 0;
+
+        for (nsFloatCache *fc = floats.Head(); fc; fc = fc->Next()) {
+          nsIFrame *floatFrame = fc->mPlaceholder->GetOutOfFlowFrame();
+          const nsStyleDisplay *floatDisp = floatFrame->GetStyleDisplay();
+          if (floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT ||
+              floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT_AND_RIGHT) {
+            if (floats_left_cur > floats_left_done)
+              floats_left_done = floats_left_cur;
+            floats_left_cur = 0;
+          }
+          if (floatDisp->mBreakType == NS_STYLE_CLEAR_RIGHT ||
+              floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT_AND_RIGHT) {
+            if (floats_right_cur > floats_right_done)
+              floats_right_done = floats_right_cur;
+            floats_right_cur = 0;
+          }
+
+          nscoord float_min =
+            nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                         floatFrame, nsLayoutUtils::MIN_WIDTH);
+          nscoord float_pref =
+            nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                          floatFrame, nsLayoutUtils::PREF_WIDTH);
+
+          if (float_min > floats_min)
+            floats_min = float_min;
+          switch (floatDisp->mFloats) {
+            case NS_STYLE_FLOAT_LEFT:
+              floats_left_cur += float_pref;
+              break;
+            case NS_STYLE_FLOAT_RIGHT:
+              floats_right_cur += float_pref;
+              break;
+            default:
+              NS_NOTREACHED("float must be right or left");
+              break;
+          }
+        }
+
+        if (floats_left_cur > floats_left_done)
+          floats_left_done = floats_left_cur;
+        if (floats_right_cur > floats_right_done)
+          floats_right_done = floats_right_cur;
+
+        line_pref += floats_left_done + floats_right_done;
+        line_min += floats_min;
+      }
 
       // Mark the line as dirty since we've put in into a fake state.
       // The FrameNeedsReflow call should usually (always?) be a no-op.
