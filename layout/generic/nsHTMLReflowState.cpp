@@ -542,6 +542,7 @@ nsHTMLReflowState::CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWid
 
     // We have to compute the left and right values
     if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
+      // XXX FIXME (or does CalculateBlockSideMargins do this?)
       margin.left = 0;  // just ignore
     } else {
       ComputeHorizontalValue(aContainingBlockWidth,
@@ -550,6 +551,7 @@ nsHTMLReflowState::CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWid
                              margin.left);
     }
     if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
+      // XXX FIXME (or does CalculateBlockSideMargins do this?)
       margin.right = 0;  // just ignore
     } else {
       ComputeHorizontalValue(aContainingBlockWidth,
@@ -1768,9 +1770,11 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                    (nsLayoutAtoms::tableCaptionFrame == fType)) {
           mComputedWidth = NS_SHRINKWRAPWIDTH;
           if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
+            // XXX FIXME (or does CalculateBlockSideMargins do this?)
             mComputedMargin.left = NS_AUTOMARGIN;
           }
           if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
+            // XXX FIXME (or does CalculateBlockSideMargins do this?)
             mComputedMargin.right = NS_AUTOMARGIN;
           }
         } else {
