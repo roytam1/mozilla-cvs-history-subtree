@@ -30,7 +30,6 @@ MODULE=layout
 CPPSRCS =				\
 	nsCaret.cpp			\
 	nsCaretProperties_$(MOZ_TOOLKIT).cpp \
-	nsGenericCaretProperties.cpp    \
 	nsCommentNode.cpp		\
 	nsContentIterator.cpp		\
 	nsContentList.cpp		\
