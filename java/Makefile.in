@@ -25,6 +25,9 @@ srcdir		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# PENDING(edburns): make it so it's possible to just build
+# webclient and javadom
+
 DIRS=   util		\
 	dom		\
 	plugins		\
