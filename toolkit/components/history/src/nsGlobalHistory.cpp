@@ -3439,7 +3439,7 @@ nsGlobalHistory::NotifyFindAssertions(nsIRDFResource *aSource,
   query.groupBy = 0;            // create Hostname=<host>
   query.terms.AppendElement((void *)&hostterm);
   GetFindUriPrefix(query, PR_FALSE, findUri);
-  findUri.Append(hostname);     // append <host>
+  // findUri.Append(hostname);     // append <host>
   gRDFService->GetResource(findUri, getter_AddRefs(childFindResource));
   
   NotifyAssert(parentFindResource, kNC_child, childFindResource);
