@@ -26,8 +26,8 @@ include $(DEPTH)/config/autoconf.mk
 # nglayout test program. The order is important.
 DIRS =				\
   config			\
+  build				\
   $(NULL)
-#  build				\
 
 ifndef MOZ_NATIVE_NSPR
 DIRS += nsprpub
