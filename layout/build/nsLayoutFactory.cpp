@@ -32,6 +32,7 @@
 
 static NS_DEFINE_IID(kCHTMLDocumentCID, NS_HTMLDOCUMENT_CID);
 static NS_DEFINE_IID(kCXMLDocumentCID, NS_XMLDOCUMENT_CID);
+static NS_DEFINE_IID(kCRDFDocumentCID, NS_RDFDOCUMENT_CID);
 static NS_DEFINE_IID(kCImageDocumentCID, NS_IMAGEDOCUMENT_CID);
 static NS_DEFINE_IID(kCHTMLImageElementFactoryCID, NS_HTMLIMAGEELEMENTFACTORY_CID);
 static NS_DEFINE_IID(kIDOMHTMLImageElementFactoryIID, NS_IDOMHTMLIMAGEELEMENTFACTORY_IID);
@@ -182,6 +183,13 @@ nsresult nsLayoutFactory::CreateInstance(nsISupports *aOuter,
   }
   if (mClassID.Equals(kCXMLDocumentCID)) {
     res = NS_NewXMLDocument((nsIDocument **)&inst);
+    if (res != NS_OK) {
+      return res;
+    }
+    refCounted = PR_TRUE;
+  }
+  if (mClassID.Equals(kCRDFDocumentCID)) {
+    res = NS_NewRDFDocument((nsIDocument **)&inst);
     if (res != NS_OK) {
       return res;
     }
