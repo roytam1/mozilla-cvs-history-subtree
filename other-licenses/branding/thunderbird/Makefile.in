@@ -22,7 +22,8 @@ MAIL_CONTENT_FILES = \
 	$(NULL)
 
 export::
-	cp $(addprefix $(srcdir)/, $(MAIL_APP_FILES)) $(DEPTH)/mail/app/
+	$(NSINSTALL) -D $(DIST)/branding
+	cp $(addprefix $(srcdir)/, $(MAIL_APP_FILES)) $(DIST)/branding/
 	if [ ! -d $(DEPTH)/mail/base/content ] ; then \
 		mkdir $(DEPTH)/mail/base/content; \
 	fi
@@ -31,15 +32,14 @@ export::
 		mkdir $(DEPTH)/mail/base/locale; \
 	fi
 	cp $(addprefix $(srcdir)/, thunderbird-watermark.png) $(DEPTH)/mail/base/locale
-	if [ ! -d $(DEPTH)/mail/app/macbuild ] ; then \
-		mkdir $(DEPTH)/mail/app/macbuild; \
-	fi
 	if [ ! -d $(DEPTH)/mail/app/icons/windows ] ; then \
 		mkdir $(DEPTH)/mail/app/icons/windows; \
 	fi
 	cp $(srcdir)/thunderbird.ico  $(DEPTH)/mail/app/icons/windows/messengerWindow.ico
-	cp $(srcdir)/thunderbird.icns $(DEPTH)/mail/app/macbuild/thunderbird.icns
-	cp $(srcdir)/thunderbird.ico $(DEPTH)/toolkit/mozapps/installer/windows/wizard/setuprsc/mail.ico
-	cp $(srcdir)/Header.bmp $(DEPTH)/toolkit/mozapps/installer/windows/wizard/setuprsc/Header.bmp
-	cp $(srcdir)/Watermrk.bmp $(DEPTH)/toolkit/mozapps/installer/windows/wizard/setuprsc/Watermrk.bmp
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+	cp $(srcdir)/thunderbird.icns  $(DIST)/branding/thunderbird.icns
+endif
+	cp $(srcdir)/thunderbird.ico  $(DIST)/branding/app.ico
+	cp $(srcdir)/Header.bmp   $(DIST)/branding/Header.bmp
+	cp $(srcdir)/Watermrk.bmp $(DIST)/branding/Watermrk.bmp
 
