@@ -188,6 +188,9 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
             goto out;
         }
     } else {
+        /* beard: if an exception occurred, shouldn't this clear it? */
+	     if ((*jEnv)->ExceptionOccurred(jEnv))
+            (*jEnv)->ExceptionClear(jEnv);
 
         /*
          * If there's no class of the given name, then we must be referring to
