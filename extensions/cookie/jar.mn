@@ -21,6 +21,7 @@ classic.jar:
     skin/classic/communicator/cookie/taskbar-cookie.gif         (resources/skin/classic/taskbar-cookie.gif)
     skin/classic/communicator/cookie/status-cookie.gif          (resources/skin/classic/status-cookie.gif)
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
 *   locale/en-US/cookie/contents.rdf               (resources/locale/en-US/contents.rdf)
     locale/en-US/cookie/cookieTasksOverlay.dtd     (resources/locale/en-US/cookieTasksOverlay.dtd)
@@ -34,3 +35,4 @@ en-US.jar:
     locale/en-US/cookie/cookie.properties          (resources/locale/en-US/cookie.properties)
     locale/en-US/cookie/cookieAcceptDialog.properties  (resources/locale/en-US/cookieAcceptDialog.properties)
     locale/en-US/cookie/cookieAcceptDialog.dtd     (resources/locale/en-US/cookieAcceptDialog.dtd)
+#endif
