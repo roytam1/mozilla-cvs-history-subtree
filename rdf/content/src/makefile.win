@@ -25,8 +25,8 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsRDFDocument.obj             \
         .\$(OBJDIR)\nsRDFDocumentContentSink.obj  \
         .\$(OBJDIR)\nsRDFGenericElement.obj       \
-        .\$(OBJDIR)\nsRDFResourceElement.obj      \
         .\$(OBJDIR)\nsRDFHTMLBuilder.obj          \
+        .\$(OBJDIR)\nsRDFResourceElement.obj      \
         .\$(OBJDIR)\nsRDFSimpleContentSink.obj    \
         .\$(OBJDIR)\nsRDFTreeBuilder.obj          \
 	$(NULL)
