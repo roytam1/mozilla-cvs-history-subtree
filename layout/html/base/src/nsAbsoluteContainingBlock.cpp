@@ -306,6 +306,8 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
     aReflowState.SetCurrentReflowNode(nsnull);
 
     // It's targeted at us. See if it's for the positioned child frames
+    // XXX double-check that this is ok, or if we need to avoid merging
+    // XXX reflows with different childlistnames (probably)
     aReflowState.reflowCommand->GetChildListName(listName);
     isAbsoluteChild = nsLayoutAtoms::absoluteList == listName;
     NS_IF_RELEASE(listName);
