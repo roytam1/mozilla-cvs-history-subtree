@@ -61,8 +61,10 @@ XPIDLSRCS	= \
 		$(NULL)
 
 EXPORTS		= \
+		nsColor.h \
 		nsGUIEvent.h \
 		nsMargin.h \
+		nsFont.h \
 		nsPoint.h \
 		nsRect.h \
 		nsSize.h \

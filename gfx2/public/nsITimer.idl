@@ -28,7 +28,7 @@ interface nsITimer;
 interface nsITimerCallback;
 
 /// Signature of timer callback function
-native nsTimerCallbackFunc(voidPtr);
+native nsTimerCallbackFunc(nsTimerCallbackFunc);
   
 /*! @verbatim */
 %{C++
@@ -57,11 +57,11 @@ interface nsITimer : nsISupports
    * @name timer_priorities Timer Priorities
    */
   //@{
-  const unsigned long NS_PRIORITY_HIGHEST = 10;
-  const unsigned long NS_PRIORITY_HIGH    =  8;
-  const unsigned long NS_PRIORITY_NORMAL  =  5;
-  const unsigned long NS_PRIORITY_LOW     =  2;
-  const unsigned long NS_PRIORITY_LOWEST  =  0;
+  const long NS_PRIORITY_HIGHEST = 10;
+  const long NS_PRIORITY_HIGH    =  8;
+  const long NS_PRIORITY_NORMAL  =  5;
+  const long NS_PRIORITY_LOW     =  2;
+  const long NS_PRIORITY_LOWEST  =  0;
   //@}
 
 
@@ -117,7 +117,7 @@ interface nsITimer : nsISupports
   void init(in nsITimerCallback aCallback,
             in unsigned long aDelay,
             in unsigned long aPriority,
-            in unsigned long aType);
+            in long aType);
 
   /**
    * Initialize a timer to fire after the given millisecond interval.
@@ -141,7 +141,7 @@ interface nsITimer : nsISupports
                           in voidPtr aClosure,
                           in unsigned long aDelay,
                           in unsigned long aPriority,
-                          in unsigned long aType);
+                          in long aType);
 
   /// Cancels the timeout
   void cancel();

@@ -59,7 +59,7 @@ interface nsIChildWindow : nsISupports
             in gfx_dimension aWidth,
             in gfx_dimension aHeight);
 
-
+  void takeFocus();
 
   void moveZOrderAboveSibling(in nsIChildWindow aSibling);
   void moveZOrderBelowSibling(in nsIChildWindow aSibling);
