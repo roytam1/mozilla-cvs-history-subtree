@@ -48,6 +48,16 @@ typedef void * nsNativeDeviceContext;
 //a cross platform way of specifying a native palette handle
 typedef void * nsPalette;
 
+
+//structure used to return information about a device's palette capabilities
+struct nsPaletteInfo {
+  PRPackedBool  isPaletteDevice;
+  PRUint16      sizePalette;  // number of entries in the palette
+  PRUint16      numReserved;  // number of reserved palette entries
+  nsPalette     palette;      // native palette handle
+};
+
+
 /**
  *
  *
@@ -308,6 +318,11 @@ public:
    * Return the bit depth of the device.
    */
   NS_IMETHOD GetDepth(PRUint32& aDepth) = 0;
+
+  /**
+   * Returns information about the device's palette capabilities.
+   */
+  NS_IMETHOD GetPaletteInfo(nsPaletteInfo& aPaletteInfo) = 0;
 
   /**
    * Returns Platform specific pixel value for an RGB value

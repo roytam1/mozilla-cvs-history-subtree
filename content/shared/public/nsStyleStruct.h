@@ -22,6 +22,10 @@
 #ifndef nsStyleStruct_h___
 #define nsStyleStruct_h___
 
+#ifdef XP_WIN
+#pragma pack(push, r1, 8)
+#endif
+
 #include "nsColor.h"
 #include "nsCoord.h"
 #include "nsMargin.h"
@@ -1031,6 +1035,8 @@ inline nsBorderEdges::nsBorderEdges()
   mOutsideEdge = PR_TRUE;
 };
 
-
+#ifdef XP_WIN
+#pragma pack(pop, r1)
+#endif
 #endif /* nsStyleStruct_h___ */
 

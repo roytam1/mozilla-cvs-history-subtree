@@ -109,6 +109,8 @@ public:
 
   NS_IMETHOD GetDepth(PRUint32& aDepth);
 
+  NS_IMETHOD GetPaletteInfo(nsPaletteInfo& aPaletteInfo);
+
   static nsresult GetLocalizedString(nsIStringBundle* aStrBundle, const char* aKey, nsString& oVal);
   static nsresult GetLocalizedBundle(const char * aPropFileName, nsIStringBundle** aStrBundle);
 

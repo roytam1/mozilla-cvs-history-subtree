@@ -2939,6 +2939,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
     static PRBool getWheelInfo = PR_TRUE;
     *aRetValue = 0;
     PRBool isMozWindowTakingFocus = PR_TRUE;
+    nsPaletteInfo palInfo;
 
     // Uncomment this to see all windows messages
     // first param showss all events 
@@ -3372,7 +3373,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         ::GetClassName((HWND)wParam, className, 19);
         if(strcmp(className, WindowClass()))
           isMozWindowTakingFocus = PR_FALSE;
-
         if(gJustGotDeactivate) {
           gJustGotDeactivate = PR_FALSE;
           result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
@@ -3489,7 +3489,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // fall thru...
 
         case WM_QUERYNEWPALETTE:      // this window is about to become active
-#if 0
             mContext->GetPaletteInfo(palInfo);
             if (palInfo.isPaletteDevice && palInfo.palette) {
                 HDC hDC = ::GetDC(mWnd);
@@ -3508,7 +3507,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                 *aRetValue = TRUE;
             }
             result = PR_TRUE;
-#endif
             break;
 
 				case WM_INPUTLANGCHANGEREQUEST:
