@@ -539,6 +539,10 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:modules:libimg:public:MANIFEST",                 "$distdirectory:libimg:");
     InstallFromManifest(":mozilla:modules:libimg:public_com:MANIFEST",             "$distdirectory:libimg:");
 
+    #GFX2
+    InstallFromManifest(":mozilla:gfx2:public:MANIFEST",                            "$distdirectory:gfx2:");
+    InstallFromManifest(":mozilla:gfx2:public:MANIFEST_IDL",                        "$distdirectory:idl:");
+    
     #LIBIMG2
     InstallFromManifest(":mozilla:modules:libpr0n:public:MANIFEST_IDL",            "$distdirectory:libimg2:");
     
@@ -590,10 +594,6 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:webshell:public:MANIFEST_IDL",                   "$distdirectory:idl:");
     InstallFromManifest(":mozilla:webshell:tests:viewer:public:MANIFEST",          "$distdirectory:webshell:");
 
-    #GFX2
-    InstallFromManifest(":mozilla:gfx2:public:MANIFEST",                            "$distdirectory:gfx2:");
-    InstallFromManifest(":mozilla:gfx2:public:MANIFEST_IDL",                        "$distdirectory:idl:");
-    
     #LAYOUT
     InstallFromManifest(":mozilla:layout:build:MANIFEST",                          "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:base:public:MANIFEST",                    "$distdirectory:layout:");
@@ -917,9 +917,9 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:modules:libutil:macbuild:libutilIDL.mcp",             "libutil");
     BuildIDLProject(":mozilla:modules:libjar:macbuild:libjarIDL.mcp",               "libjar");
     
-    BuildIDLProject(":mozilla:gfx2:macbuild:gfx2IDL.mcp",                           "gfx2");
-        
+    BuildIDLProject(":mozilla:gfx2:macbuild:gfx2IDL.mcp",                           "gfx2");      
     BuildIDLProject(":mozilla:modules:libpr0n:macbuild:libimg2IDL.mcp",             "libimg2");
+    
     BuildIDLProject(":mozilla:modules:plugin:macbuild:pluginIDL.mcp",               "plugin");
     BuildIDLProject(":mozilla:modules:oji:macbuild:ojiIDL.mcp",                     "oji");
     BuildIDLProject(":mozilla:js:macbuild:XPConnectIDL.mcp",                        "xpconnect");
@@ -1180,21 +1180,23 @@ sub BuildImglibProjects()
 #// Build libimg2 projects
 #//--------------------------------------------------------------------------------------------------
 
-sub Buildlibimg2Projects()
+sub BuildImglib2Projects()
 {
-    unless( $main::build{libpr0n} ) { return; }
+    #unless( $main::build{libimg2} ) { return; }
 
     # $D becomes a suffix to target names for selecting either the debug or non-debug target of a project
     my($D) = $main::DEBUG ? "Debug" : "";
 
-    StartBuildModule("libpr0n");
-    BuildOneProject(":mozilla:gfx2:macbuild:gfx2.mcp",                          "gfx2$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    StartBuildModule("libimg2");
+    
+    BuildOneProject(":mozilla:gfx2:macbuild:gfx2.mcp",                          "gfx2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:modules:libpr0n:macbuild:libimg2.mcp",             "libimg2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:modules:libpr0n:macbuild:pngdecoder2.mcp",         "pngdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     
     #BuildOneProject(":mozilla:jpeg:macbuild:JPEG.mcp",                          "JPEG$D.o", 0, 0, 0);
     #BuildOneProject(":mozilla:modules:libimg:macbuild:png.mcp",                 "png$D.o", 0, 0, 0);
-    BuildOneProject(":mozilla:modules:libpr0n:macbuild:libimg2.mcp",             "libimg2$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    
     #BuildOneProject(":mozilla:modules:libpr0n:macbuild:gifdecoder2.mcp",        "gifdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProject(":mozilla:modules:libpr0n:macbuild:pngdecoder2.mcp",         "pngdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     #BuildOneProject(":mozilla:modules:libpr0n:macbuild:jpgdecoder2.mcp",        "jpgdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
 
     # MNG
@@ -1204,7 +1206,7 @@ sub Buildlibimg2Projects()
         #BuildOneProject(":mozilla:modules:libimg:macbuild:mngdecoder.mcp",          "mngdecoder$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     }
 
-    EndBuildModule("libpr0n");
+    EndBuildModule("libimg2");
 } # imglib
     
 #//--------------------------------------------------------------------------------------------------
@@ -1752,7 +1754,7 @@ sub BuildProjects()
     BuildRuntimeProjects();
     BuildCommonProjects();
     BuildImglibProjects();
-    Buildlibimg2Projects();
+    BuildImglib2Projects();
     BuildNeckoProjects();
     BuildSecurityProjects();
     BuildBrowserUtilsProjects();        
