@@ -1751,7 +1751,6 @@ int CMailNewsSplitter::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	//create invert slider brush 
 	HDC hDC = ::GetDC(GetSafeHwnd());
-	HDC hDC = ::GetDC(GetSafeHwnd());
 	WORD sliderBits[8] = {43690,21845,43690,21845,43690,21845,43690,21845};
 	HBITMAP sliderBitmap = CreateBitmap(8, 8, 1, 1, &sliderBits);
 	if (sliderBitmap != NULL)
