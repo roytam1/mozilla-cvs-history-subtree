@@ -96,6 +96,7 @@ public:
         , mStartTime(PR_IntervalNow())
 #endif
     { NS_INIT_REFCNT(); }
+
     virtual ~nsDNSRequest() {}
 
     nsresult Init(nsDNSLookup* lookup,
@@ -103,6 +104,31 @@ public:
                   nsISupports* userContext);
     nsresult FireStart();
     nsresult FireStop(nsresult status);
+
+#ifdef XP_UNIX
+    nsresult AppendRequest(nsIRequest *req) {
+        NS_ENSURE_ARG_POINTER(req);
+        if (mNextRequest)
+            return ((nsDNSRequest *) mNextRequest.get())->AppendRequest(req);
+        else {
+            mNextRequest = req;
+            return NS_OK;
+        }
+    }
+    nsresult GetNextRequest(nsIRequest **req) {
+        NS_ENSURE_ARG_POINTER(req);
+        *req = mNextRequest.get();
+        NS_IF_ADDREF(*req);
+        return NS_OK;
+    }
+    nsresult ClearNextRequest() {
+        mNextRequest = 0;
+        return NS_OK;
+    }
+protected:
+    nsCOMPtr<nsIRequest>        mNextRequest;
+    friend class nsDNSService;
+#endif
 
 protected:
     nsCOMPtr<nsIDNSListener>    mUserListener;
@@ -112,10 +138,6 @@ protected:
     nsresult                    mStatus;
 #ifdef DNS_TIMING
     PRIntervalTime              mStartTime;
-#endif
-
-#ifdef XP_UNIX
-    nsCOMPtr<nsIRequest>        mNextRequest;
 #endif
 };
 
@@ -148,11 +170,11 @@ public:
 
         PR_ExplodeTime(mExpires, PR_LocalTimeParameters, &et);
         PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        fprintf(stderr, "\nDNS %s expires %s\n", mHostName, buf);
+        fprintf(stderr, "\nDNS %s expires %s\n", mHostName, buf);fflush(stderr);
 
         PR_ExplodeTime(nsTime(), PR_LocalTimeParameters, &et);
         PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        fprintf(stderr, "now %s ==> %s\n", buf,
+        fprintf(stderr, "now %s ==> %s\n", buf,fflush(stderr);
                 mExpires < nsTime()
                 ? "expired" : "valid");
         fflush(stderr);
@@ -185,6 +207,10 @@ protected:
     friend static LRESULT CALLBACK nsDNSEventProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     HANDLE                      mLookupHandle;
     PRUint32                    mMsgID;
+#endif
+
+#if defined(XP_UNIX)
+    nsresult DoSyncLookup();
 #endif
 };
 
@@ -278,7 +304,7 @@ nsDNSRequest::FireStop(nsresult status)
         nsDNSService::gService->mSquaredTimes += duration * duration;
         fprintf(nsDNSService::gService->mOut, "DNS time #%d: %u us for %s\n", 
                 (PRInt32)nsDNSService::gService->mCount,
-                (PRInt32)duration, mLookup->HostName());
+                (PRInt32)duration, mLookup->HostName());fflush(stderr);
     }
 #endif
     return NS_OK;
@@ -590,7 +616,21 @@ nsDNSLookup::InitiateLookup(void)
     }
 #endif /* XP_WIN */
 
-#if defined(XP_UNIX) || defined(XP_BEOS)
+#if defined(XP_UNIX)
+    //
+    // Add to request queue
+    //
+    {
+        nsAutoCMonitor mon(this); // protect mRequests
+        nsIRequest *req = NS_STATIC_CAST(nsIRequest *, mRequests->ElementAt(0));
+        if (req) {
+            nsDNSService::gService->EnqueueRequest((nsDNSRequest *) req);
+            NS_RELEASE(req);
+        }
+    }
+#endif
+
+#if defined(XP_BEOS)
     // temporary SYNC version
     status = PR_GetIPNodeByName(mHostName, 
                                 PR_AF_INET6,
@@ -832,7 +872,74 @@ nsDNSEventProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 #endif /* XP_WIN */
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX)
+
+nsresult
+nsDNSLookup::DoSyncLookup()
+{
+    nsresult status, rv = NS_OK;
+
+    //
+    // Synchronous DNS lookup
+    //
+    status = PR_GetIPNodeByName(mHostName,
+                                PR_AF_INET6,
+                                PR_AI_DEFAULT,
+                                mHostEntry.buffer,
+                                PR_NETDB_BUF_SIZE,
+                                &(mHostEntry.hostEnt));
+    if (PR_SUCCESS != status)
+        rv = NS_ERROR_UNKNOWN_HOST;
+
+    rv = CompleteLookup(rv);
+
+    // XXX remove from hashtable and release - for now
+    nsCStringKey key(mHostName);
+    nsDNSService::gService->mLookups.Remove(&key);
+
+    return rv;
+}
+
+nsresult
+nsDNSService::EnqueueRequest(nsDNSRequest *req)
+{
+    NS_ENSURE_ARG_POINTER(req);
+
+    nsAutoMonitor mon(mRequestQMon);
+
+    // Place the request at the end of the queue.
+    if (mRequestQ)
+        mRequestQ->AppendRequest(req);
+    else {
+        mRequestQ = req;
+        NS_ADDREF(req);
+    }
+
+    // Notify the worker thread that a request has been queued.
+    mon.Notify();
+    return NS_OK;
+}
+
+nsresult
+nsDNSService::DequeueRequest(nsDNSRequest **req)
+{
+    NS_ENSURE_ARG_POINTER(req);
+
+    nsAutoMonitor mon(mRequestQMon);
+
+    // Wait for notification of a queued request.
+    if (!mRequestQ)
+        mon.Wait();
+
+    // Got a request!!
+    if (mRequestQ) {
+        *req = mRequestQ;
+        mRequestQ->GetNextRequest((nsIRequest **) &mRequestQ);
+        (*req)->ClearNextRequest();
+    }
+    return NS_OK;
+}
+
 
 #endif /* XP_UNIX */
 
@@ -881,6 +988,10 @@ nsDNSService::nsDNSService()
 		mMsgIDBitVector[i] = 0;
 #endif
 
+#if defined(XP_UNIX)
+    mRequestQ = nsnull;
+#endif
+
 #ifdef DNS_TIMING
     if (getenv("DNS_TIMING")) {
         mOut = fopen("dns-timing.txt", "a");
@@ -890,7 +1001,7 @@ nsDNSService::nsDNSService()
             PR_ExplodeTime(now, PR_LocalTimeParameters, &time);
             char buf[128];
             PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &time);
-            fprintf(mOut, "############### DNS starting new run: %s\n", buf);
+            fprintf(mOut, "############### DNS starting new run: %s\n", buf);fflush(stderr);
         }
     }
 #endif
@@ -923,7 +1034,13 @@ nsDNSService::Init()
     nsAutoMonitor mon(mMonitor);
 #endif
 
-#if defined(XP_MAC) || defined(XP_WIN)
+#if defined(XP_UNIX)
+    mRequestQMon = nsAutoMonitor::NewMonitor("nsDNSService::mRequestQ");
+    if (!mRequestQMon)
+        return NS_ERROR_OUT_OF_MEMORY;
+#endif
+
+#if defined(XP_MAC) || defined(XP_WIN) || defined(XP_UNIX)
     // create DNS thread
     NS_ASSERTION(mThread == nsnull, "nsDNSService not shut down");
     rv = NS_NewThread(getter_AddRefs(mThread), this, 0, PR_JOINABLE_THREAD);
@@ -979,6 +1096,11 @@ nsDNSService::~nsDNSService()
     NS_ASSERTION(mThread == nsnull, "DNS shutdown failed");
     NS_ASSERTION(mLookups.Count() == 0, "didn't clean up lookups");
 
+#if defined(XP_UNIX)
+    NS_ASSERTION(mRequestQ == nsnull, "DNS request queue not cleared");
+    NS_ASSERTION(mRequestQMon == nsnull, "DNS request queue monitor not destroyed");
+#endif
+
     if (mMonitor) {
         nsAutoMonitor::DestroyMonitor(mMonitor);
     }
@@ -992,7 +1114,7 @@ nsDNSService::~nsDNSService()
         double stddev;
         NS_MeanAndStdDev(mCount, mTimes, mSquaredTimes, &mean, &stddev);
         fprintf(mOut, "DNS lookup time: %.2f +/- %.2f us (%d lookups)\n",
-                mean, stddev, (PRInt32)mCount);
+                mean, stddev, (PRInt32)mCount);fflush(stderr);
         fclose(mOut);
         mOut = nsnull;
     }
@@ -1114,6 +1236,22 @@ nsDNSService::Run(void)
 	}
 #endif /* XP_MAC */
 
+#if defined(XP_UNIX)
+    while (1) {
+        nsDNSRequest *req;
+        DequeueRequest(&req);
+        if (req) {
+            //
+            // Got a request!!
+            //
+            req->mLookup->DoSyncLookup();
+            NS_RELEASE(req);
+        } else
+            // Woken up without a request --> shutdown
+            break;
+    }
+#endif
+
     return rv;
 }
     
@@ -1141,7 +1279,7 @@ nsDNSService::Lookup(const char*     hostName,
         }
     }
 
-#if !defined(XP_UNIX) && !defined(XP_OS2) && !defined(XP_BEOS)
+#if !defined(XP_OS2) && !defined(XP_BEOS)
     if (mThread == nsnull)
         return NS_ERROR_OFFLINE;
 #endif
@@ -1343,7 +1481,7 @@ nsDNSService::Shutdown()
 {
     nsresult rv = NS_OK;
 
-#if !defined(XP_UNIX) && !defined(XP_OS2) && !defined(XP_BEOS)
+#if !defined(XP_OS2) && !defined(XP_BEOS)
     if (mThread == nsnull) return rv;
 #endif
 
@@ -1378,7 +1516,25 @@ nsDNSService::Shutdown()
         rv = mThread->Join();
 
 #elif defined(XP_UNIX)
-        // XXXX - ?
+        {
+            // 
+            // Clear the request queue and wake up the worker thread.
+            //
+            nsAutoMonitor mon2(mRequestQMon);
+            if (mRequestQ) {
+                mRequestQ->ClearNextRequest();
+                NS_RELEASE(mRequestQ);
+                mRequestQ = nsnull;
+            }
+            mon2.Notify();
+        }
+        // Wait for the worker thread to finish.
+        rv = mThread->Join();
+
+        if (mRequestQMon) {
+            nsAutoMonitor::DestroyMonitor(mRequestQMon);
+            mRequestQMon = nsnull;
+        }
 #endif
     }
 

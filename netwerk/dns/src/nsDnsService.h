@@ -45,6 +45,7 @@
 
 class nsIDNSListener;
 class nsDNSLookup;
+class nsDNSRequest;
 
 class nsDNSService : public nsIDNSService,
                      public nsIRunnable
@@ -99,21 +100,18 @@ protected:
 #endif /* XP_WIN */
 
 #if defined(XP_UNIX)
-    // The request queue 
-    nsCOMPtr<nsIRequest> mRequestQ;
+    // The request queue: a linked list of requests 
+    nsDNSRequest *mRequestQ;
 
     // The DNS thread waits on this monitor for requests to process.
-    PRMonitor *mRequestQMonitor;
-
-    // Returns TRUE if there are requests in the queue.
-    PRBool RequestsPending();
+    PRMonitor *mRequestQMon;
 
     // Puts a request on the queue and signals the DNS thread.
-    nsresult EnqueueRequest(nsIRequest *);
+    nsresult EnqueueRequest(nsDNSRequest *);
 
     // Called by the DNS thread to get the next request to process.
     // Blocks until a request is available.
-    nsresult DequeueRequest(nsIRequest **);
+    nsresult DequeueRequest(nsDNSRequest **);
 #endif
 
 #ifdef DNS_TIMING
