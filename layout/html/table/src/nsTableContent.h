@@ -87,7 +87,7 @@ public:
 
 
   /** @see nsITableContent::IsImplicit */
-  virtual PRBool IsImplicit () const;
+  NS_IMETHOD IsSynthetic(PRBool& aResult);
 
   /** @see nsITableContent::SkipSelfForSaving */
   virtual PRBool SkipSelfForSaving ();
