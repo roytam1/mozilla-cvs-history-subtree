@@ -47,6 +47,23 @@ public:
      * Construct an RDF literal from a Unicode string.
      */
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal) = 0;
+
+    /**
+     * Get the data source corresponding to the uri
+     */ 
+    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource);
+
+    /**
+     * Get the database corresponding to the uri sequence
+     */ 
+    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase);
+
+    /**
+     * Get the database aggregating all the stuff that Navigator sees as a default,
+     * including a per window store.
+     */ 
+    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase);
+
 };
 
 // {BFD05261-834C-11d2-8EAC-00805F29F370}

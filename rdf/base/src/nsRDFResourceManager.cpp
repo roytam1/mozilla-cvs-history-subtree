@@ -51,8 +51,21 @@ public:
     NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
     NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
-
     void ReleaseNode(const ResourceImpl* resource);
+
+    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+
+    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+
+    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase)  {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+
+
 };
 
 
