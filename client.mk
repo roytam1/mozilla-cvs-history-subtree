@@ -443,7 +443,7 @@ else
 FASTUPDATE_MODULES := fast_update $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(MOZ_MODULE_LIST)
 CHECKOUT_MODULES   := $(foreach module,$(MOZ_MODULE_LIST),cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(module);)
 
-CHECKOUT_MODULES   := $(subst SeaMonkeyAll, SeaMonkeyAll \!mozilla/layout, $(CHECKOUT_MODULES))
+CHECKOUT_MODULES   := $(subst SeaMonkeyAll, SeaMonkeyAll \!mozilla/layout \!mozilla/client.mk, $(CHECKOUT_MODULES))
 endif
 ifeq (,$(NOSUBDIRS_MODULE))
 FASTUPDATE_MODULES_NS := true
@@ -542,9 +542,10 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
         cd $(ROOTDIR) && \
 	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
+	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)' && \
 	$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
