@@ -820,7 +820,7 @@ nsOperaProfileMigrator::CopySmartKeywords(nsIBookmarksService* aBMS,
 
   PRInt32 sectionIndex = 1;
   char section[35];
-  char *name = nsnull, *url = nsnull, *keyword = nsnull;
+  char *name = nsnull, *url = nsnull, *keyword = nsnull, *isPost = nsnull;
   PRInt32 keyValueLength = 0;
   do {
     sprintf(section, "Search Engine %d", sectionIndex++);
@@ -834,8 +834,36 @@ nsOperaProfileMigrator::CopySmartKeywords(nsIBookmarksService* aBMS,
     err = parser->GetStringAlloc(section, "Key", &keyword, &keyValueLength);
     if (err != nsINIParser::OK)
       continue;
+    err = parser->GetStringAlloc(section, "Is post", &isPost, &keyValueLength);
+    if (err != nsINIParser::OK)
+      continue;
 
-    nsAutoString nameStr(NS_ConvertUTF8toUCS2(name));
+    if (nsDependentCString(url).IsEmpty() || 
+        nsDependentCString(keyword).IsEmpty() ||
+        nsDependentCString(name).IsEmpty())
+      continue;
+
+    PRInt32 stringErr;
+    PRInt32 post = nsCAutoString(isPost).ToInteger(&stringErr);
+    if (post) 
+      continue;
+
+    nsAutoString nameStr; nameStr.Assign(NS_ConvertUTF8toUCS2(name));
+    PRUint32 length = nameStr.Length();
+    PRInt32 index = 0; 
+    do {
+      index = nameStr.FindChar('&', index);
+      if (index >= length - 2)
+        break;
+
+      if (nameStr.CharAt(index + 1) == '&')
+        continue;
+
+      nameStr.Cut(index, 1);
+      break;
+    }
+    while (1);
+
     nsCOMPtr<nsIRDFResource> itemRes;
 
     nsCOMPtr<nsIURI> uri;
@@ -851,7 +879,7 @@ nsOperaProfileMigrator::CopySmartKeywords(nsIBookmarksService* aBMS,
     aBundle->FormatStringFromName(NS_LITERAL_STRING("importedSearchUrlDesc").get(),
                                   descStrings, 2, getter_Copies(keywordDesc));
 
-    rv = aBMS->CreateBookmarkInContainer(NS_ConvertUTF8toUCS2(name).get(), 
+    rv = aBMS->CreateBookmarkInContainer(nameStr.get(), 
                                          url, 
                                          NS_ConvertUTF8toUCS2(keyword).get(), 
                                          keywordDesc.get(), 
