@@ -137,6 +137,9 @@
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 #include "nsContentUtils.h"
+#include "nsIFastLoadService.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 
 
 //----------------------------------------------------------------------
@@ -1530,21 +1533,22 @@ nsXULDocument::EndLoad()
    
     // Walk the sheets and add them to the prototype. Also put them into the document.
     if (sheets) {
-      nsCOMPtr<nsICSSStyleSheet> sheet;
-      PRUint32 count;
-      sheets->Count(&count);
-      for (PRUint32 i = 0; i < count; i++) {
-        sheets->QueryElementAt(i, NS_GET_IID(nsICSSStyleSheet), getter_AddRefs(sheet));
-        if (sheet) {
-          nsCOMPtr<nsIURI> sheetURL;
-          sheet->GetURL(*getter_AddRefs(sheetURL));
+        nsCOMPtr<nsICSSStyleSheet> sheet;
+        PRUint32 count;
+        sheets->Count(&count);
+        for (PRUint32 i = 0; i < count; i++) {
+            sheets->QueryElementAt(i, NS_GET_IID(nsICSSStyleSheet),
+                                   getter_AddRefs(sheet));
+            if (sheet) {
+                nsCOMPtr<nsIURI> sheetURL;
+                sheet->GetURL(*getter_AddRefs(sheetURL));
 
-          if (useXULCache && IsChromeURI(sheetURL)) {
-              mCurrentPrototype->AddStyleSheetReference(sheetURL);
-          }
-          AddStyleSheet(sheet);
+                if (useXULCache && IsChromeURI(sheetURL)) {
+                    mCurrentPrototype->AddStyleSheetReference(sheetURL);
+                }
+                AddStyleSheet(sheet);
+            }
         }
-      }
     }
 
     if (useXULCache && IsChromeURI(mDocumentURL)) {
@@ -4274,10 +4278,37 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
     rv = NS_NewXULPrototypeDocument(nsnull, NS_GET_IID(nsIXULPrototypeDocument), getter_AddRefs(mCurrentPrototype));
     if (NS_FAILED(rv)) return rv;
 
-    // Bootstrap the master document prototype
+    // Bootstrap the master document prototype.
+    //
+    // Also try to open an object output stream in order to save a FastLoad
+    // file.  We open this stream early to allow file including code to add
+    // makefile-like dependencies to it via nsIFastLoadService.
     if (! mMasterPrototype) {
         mMasterPrototype = mCurrentPrototype;
         mMasterPrototype->SetDocumentPrincipal(aDocumentPrincipal);
+
+        nsCOMPtr<nsIFastLoadService>
+            fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
+        if (fastLoadService) {
+            nsCOMPtr<nsIURL> url(do_QueryInterface(aURI));
+            nsXPIDLCString name;
+            url->GetFileBaseName(getter_Copies(name));
+            nsCOMPtr<nsIFile> file;
+            fastLoadService->NewFastLoadFile(name, getter_AddRefs(file));
+            if (file) {
+                nsCOMPtr<nsIOutputStream> fileStream;
+                NS_NewLocalFileOutputStream(getter_AddRefs(fileStream), file);
+                if (fileStream) {
+                    nsCOMPtr<nsIObjectOutputStream> objStream;
+                    fastLoadService->NewOutputStream(fileStream,
+                                                     getter_AddRefs(objStream));
+                    if (objStream) {
+                        fastLoadService->SetCurrentOutputStream(objStream);
+                        mObjectOutputStream = objStream;
+                    }
+                }
+            }
+        }
     }
 
     rv = mCurrentPrototype->SetURI(aURI);
@@ -4982,6 +5013,19 @@ nsXULDocument::ResumeWalk()
     // certain that we've been embedded in a presentation shell.
 
     StartLayout();
+
+    // Since we've bothered to load and parse all this fancy XUL, let's try to
+    // save a condensed serialization of it for faster loading next time.
+    if (mObjectOutputStream) {
+        mObjectOutputStream->WriteObject(mMasterPrototype, PR_TRUE);
+        mObjectOutputStream->Close();
+        mObjectOutputStream = nsnull;
+
+        nsCOMPtr<nsIFastLoadService>
+            fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
+        if (fastLoadService)
+            fastLoadService->SetCurrentOutputStream(nsnull);
+    }
 
     for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];

@@ -38,6 +38,8 @@
 #include "nsILocalFile.h"
 #include "nsEscape.h"
 #include "nsNetCID.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 
 #if defined(XP_WIN)
 #include <windows.h>
@@ -262,22 +264,140 @@ nsStdURL::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 NS_IMETHODIMP
 nsStdURL::Read(nsIObjectInputStream* aStream)
 {
-    NS_NOTREACHED("nsStdURL::Read");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    PRUint32 urlType;
+    rv = aStream->Read32(&urlType);
+    if (NS_FAILED(rv)) return rv;
+    switch (urlType) {
+      case nsIStandardURL::URLTYPE_STANDARD:
+        mURLParser = gStdURLParser;
+        break;
+      case nsIStandardURL::URLTYPE_AUTHORITY:
+        mURLParser = gAuthURLParser;
+        break;
+      case nsIStandardURL::URLTYPE_NO_AUTHORITY:
+        mURLParser = gNoAuthURLParser;
+        break;
+      default:
+        NS_NOTREACHED("bad urlType");
+        return NS_ERROR_FAILURE;
+    }
+
+    CRTFREEIF(mScheme);
+    rv = NS_ReadOptionalStringZ(aStream, &mScheme);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mUsername);
+    rv = NS_ReadOptionalStringZ(aStream, &mUsername);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mPassword);
+    rv = NS_ReadOptionalStringZ(aStream, &mPassword);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mHost);
+    rv = NS_ReadOptionalStringZ(aStream, &mHost);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mDirectory);
+    rv = NS_ReadOptionalStringZ(aStream, &mDirectory);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mFileBaseName);
+    rv = NS_ReadOptionalStringZ(aStream, &mFileBaseName);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mFileExtension);
+    rv = NS_ReadOptionalStringZ(aStream, &mFileExtension);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mParam);
+    rv = NS_ReadOptionalStringZ(aStream, &mParam);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mQuery);
+    rv = NS_ReadOptionalStringZ(aStream, &mQuery);
+    if (NS_FAILED(rv)) return rv;
+
+    CRTFREEIF(mRef);
+    rv = NS_ReadOptionalStringZ(aStream, &mRef);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aStream->Read32((PRUint32*) &mPort);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aStream->Read32((PRUint32*) &mDefaultPort);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsStdURL::Write(nsIObjectOutputStream* aStream)
 {
-    NS_NOTREACHED("nsStdURL::Write");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    PRUint32 urlType;
+    if (mURLParser == gStdURLParser)
+        urlType = nsIStandardURL::URLTYPE_STANDARD;
+    else if (mURLParser == gAuthURLParser)
+        urlType = nsIStandardURL::URLTYPE_AUTHORITY;
+    else if (mURLParser == gNoAuthURLParser)
+        urlType = nsIStandardURL::URLTYPE_NO_AUTHORITY;
+    else {
+        NS_NOTREACHED("bad mURLParser");
+        return NS_ERROR_FAILURE;
+    }
+    rv = aStream->Write32(urlType);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mScheme);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mUsername);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mPassword);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mHost);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mDirectory);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mFileBaseName);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mFileExtension);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mParam);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mQuery);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_WriteOptionalStringZ(aStream, mRef);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aStream->Write32(PRUint32(mPort));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aStream->Write32(PRUint32(mDefaultPort));
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsStdURL::GetCID(nsCID *aResult)
 {
-    NS_NOTREACHED("nsStdURL::GetCID");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsCID myCID = NS_STANDARDURL_CID;
+
+    *aResult = myCID;
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -70,6 +70,36 @@ interface nsIBinaryInputStream : nsIInputStream {
 };
 
 %{C++
+
 NS_COM nsresult
 NS_NewBinaryInputStream(nsIBinaryInputStream* *aResult, nsIInputStream* aSrcStream);
+
+inline nsresult
+NS_ReadOptionalStringZ(nsIBinaryInputStream* aStream, char* *aResult)
+{
+    PRBool nonnull;
+    nsresult rv = aStream->ReadBoolean(&nonnull);
+    if (NS_SUCCEEDED(rv)) {
+        if (nonnull)
+            rv = aStream->ReadStringZ(aResult);
+        else
+            *aResult = nsnull;
+    }
+    return rv;
+}
+
+inline nsresult
+NS_ReadOptionalWStringZ(nsIBinaryInputStream* aStream, PRUnichar* *aResult)
+{
+    PRBool nonnull;
+    nsresult rv = aStream->ReadBoolean(&nonnull);
+    if (NS_SUCCEEDED(rv)) {
+        if (nonnull)
+            rv = aStream->ReadWStringZ(aResult);
+        else
+            *aResult = nsnull;
+    }
+    return rv;
+}
+
 %}

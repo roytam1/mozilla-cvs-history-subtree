@@ -68,6 +68,7 @@ EXPORTS		= \
 		nsDirectoryServiceDefs.h \
 		nsEscape.h \
 		nsFastLoadPtr.h \
+		nsFastLoadService.h \
 		nsFileSpec.h \
 		nsFileSpecStreaming.h \
 		nsFileStream.h \

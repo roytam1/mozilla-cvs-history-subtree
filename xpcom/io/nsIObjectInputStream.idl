@@ -52,7 +52,24 @@ interface nsIObjectInputStream : nsIBinaryInputStream
 };
 
 %{C++
+
 NS_COM nsresult
 NS_NewObjectInputStream(nsIObjectInputStream* *aResult,
                         nsIInputStream* aSrcStream);
+
+inline nsresult
+NS_ReadOptionalObject(nsIObjectInputStream* aStream, PRBool aIsStrongRef,
+                      nsISupports* *aResult)
+{
+    PRBool nonnull;
+    nsresult rv = aStream->ReadBoolean(&nonnull);
+    if (NS_SUCCEEDED(rv)) {
+        if (nonnull)
+            rv = aStream->ReadObject(aIsStrongRef, aResult);
+        else
+            *aResult = nsnull;
+    }
+    return rv;
+}
+
 %}

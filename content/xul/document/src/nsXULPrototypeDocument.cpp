@@ -97,6 +97,9 @@ protected:
     static JSClass gSharedGlobalClass;
 };
 
+#define NS_XUL_PROTOTYPE_DOCUMENT_CID \
+    {0xa08101ae,0xc0e8,0x4464,{0x99,0x9e,0xe5,0xa4,0xd7,0x09,0xa9,0x28}}
+
 class nsXULPrototypeDocument : public nsIXULPrototypeDocument,
                                public nsIScriptGlobalObjectOwner
 {
@@ -132,6 +135,7 @@ public:
     // nsIScriptGlobalObjectOwner methods
     NS_DECL_NSISCRIPTGLOBALOBJECTOWNER
 
+    NS_DEFINE_STATIC_CID_ACCESSOR(NS_XUL_PROTOTYPE_DOCUMENT_CID);
 
 protected:
     nsCOMPtr<nsIURI> mURI;
@@ -273,7 +277,7 @@ nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
 {
     nsresult rv;
 
-    rv = aStream->WriteObject(mURI, PR_TRUE);
+    rv = aStream->WriteCompoundObject(mURI, NS_GET_IID(nsIURI), PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIScriptContext> scriptContext;
@@ -297,8 +301,8 @@ nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
 NS_IMETHODIMP
 nsXULPrototypeDocument::GetCID(nsCID* aResult)
 {
-    NS_NOTREACHED("nsXULPrototypeDocument::GetCID");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aResult = GetCID();
+    return NS_OK;
 }
 
 

@@ -23,6 +23,7 @@
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
 
+interface nsIFile;
 interface nsIInputStream;
 interface nsIOutputStream;
 interface nsIObjectInputStream;
@@ -31,14 +32,14 @@ interface nsIObjectOutputStream;
 [scriptable, uuid(759e475e-0c23-4dbf-b1b8-78c9369e3072)]
 interface nsIFastLoadService : nsISupports
 {
-    void init();
+    nsIFile newFastLoadFile(in string aBaseName);
 
     nsIObjectInputStream  newInputStream(in nsIInputStream aSrcStream,
                                          out PRUint32 aChecksum);
     nsIObjectOutputStream newOutputStream(in nsIOutputStream aDestStream);
 
-    nsIObjectInputStream  setInputStream(in nsIObjectInputStream aSrcStream);
-    nsIObjectOutputStream setOutputStream(in nsIObjectOutputStream aDestStream);
+    attribute nsIObjectInputStream  currentInputStream;
+    attribute nsIObjectOutputStream currentOutputStream;
 
     void   appendDependency(in string aFileName);
     PRTime maxDependencyModifiedTime();
@@ -53,9 +54,29 @@ interface nsIFastLoadService : nsISupports
 };
 
 %{C++
+#define NS_FAST_LOAD_SERVICE_CLASSNAME "Mozilla FastLoad Service"
+
 #define NS_FAST_LOAD_SERVICE_CID \
     {0xc943093c,0xac94,0x4bee,{0x84,0x0b,0x8b,0x5a,0x6e,0x31,0x4f,0xa7}}
 
 #define NS_FAST_LOAD_SERVICE_CONTRACTID \
     "@mozilla.org/fast-load-service;1"
+
+#ifndef nsCOMPtr_h___
+# include "nsCOMPtr.h"
+#endif
+#ifndef nsIServiceManager_h___
+# include "nsIServiceManager.h"
+#endif
+
+inline nsresult
+NS_AppendFastLoadDependency(const char* aFileName)
+{
+    nsCOMPtr<nsIFastLoadService>
+        fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
+    if (!fastLoadService)
+        return NS_OK;
+    return fastLoadService->AppendDependency(aFileName);
+}
+
 %}

@@ -665,11 +665,12 @@ nsFastLoadFileWriter::WriteFooter()
     if (NS_FAILED(rv)) return rv;
 
     // Enumerate mObjectMap into a vector indexed by mOID and write it.
+    length = mObjectMap.entryCount;
     nsFastLoadSharpObjectInfo* infovec = new nsFastLoadSharpObjectInfo[length];
     if (!infovec)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    count = PL_DHashTableEnumerate(&mIDMap, ObjectMapEnumerate, infovec);
+    count = PL_DHashTableEnumerate(&mObjectMap, ObjectMapEnumerate, infovec);
     NS_ASSERTION(count == length, "bad mObjectMap enumeration!");
 
     rv = Write32(length);

@@ -31,7 +31,7 @@
 #include "nsXPIDLString.h"
 
 
-NS_IMPL_QUERY_INTERFACE1(nsSystemPrincipal, nsIPrincipal)
+NS_IMPL_QUERY_INTERFACE2(nsSystemPrincipal, nsIPrincipal, nsISerializable)
 
 NSBASEPRINCIPALS_ADDREF(nsSystemPrincipal);
 NSBASEPRINCIPALS_RELEASE(nsSystemPrincipal);

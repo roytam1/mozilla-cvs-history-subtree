@@ -33,7 +33,10 @@
 #include "nsIPref.h"
 #include "nsXPIDLString.h"
 
-NS_IMPL_QUERY_INTERFACE2(nsCodebasePrincipal, nsICodebasePrincipal, nsIPrincipal)
+NS_IMPL_QUERY_INTERFACE3(nsCodebasePrincipal,
+                         nsICodebasePrincipal,
+                         nsIPrincipal,
+                         nsISerializable)
 
 NSBASEPRINCIPALS_ADDREF(nsCodebasePrincipal);
 NSBASEPRINCIPALS_RELEASE(nsCodebasePrincipal);

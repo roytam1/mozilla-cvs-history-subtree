@@ -370,16 +370,10 @@ nsAggregatePrincipal::Read(nsIObjectInputStream* aStream)
     rv = nsBasePrincipal::Read(aStream);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasCertificate;
-    rv = aStream->ReadBoolean(&hasCertificate);
-    if (NS_SUCCEEDED(rv) && hasCertificate)
-        rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(mCertificate));
+    rv = NS_ReadOptionalObject(aStream, PR_TRUE, getter_AddRefs(mCertificate));
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasCodebase;
-    rv = aStream->ReadBoolean(&hasCodebase);
-    if (NS_SUCCEEDED(rv) && hasCodebase)
-        rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(mCodebase));
+    rv = NS_ReadOptionalObject(aStream, PR_TRUE, getter_AddRefs(mCodebase));
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -393,16 +387,10 @@ nsAggregatePrincipal::Write(nsIObjectOutputStream* aStream)
     rv = nsBasePrincipal::Write(aStream);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasCertificate = (mCertificate != nsnull);
-    rv = aStream->WriteBoolean(hasCertificate);
-    if (NS_SUCCEEDED(rv) && hasCertificate)
-        rv = aStream->WriteObject(mCertificate, PR_TRUE);
+    rv = NS_WriteOptionalObject(aStream, mCertificate, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasCodebase = (mCodebase != nsnull);
-    rv = aStream->WriteBoolean(hasCodebase);
-    if (NS_SUCCEEDED(rv) && hasCodebase)
-        rv = aStream->WriteObject(mCodebase, PR_TRUE);
+    rv = NS_WriteOptionalObject(aStream, mCodebase, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;

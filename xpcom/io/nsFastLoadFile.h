@@ -182,6 +182,7 @@ class NS_COM nsFastLoadFileReader
   public:
     nsFastLoadFileReader(nsIInputStream *aStream)
       : nsBinaryInputStream(aStream) {
+        NS_INIT_REFCNT();
     }
 
     virtual ~nsFastLoadFileReader() { }
@@ -288,6 +289,7 @@ class NS_COM nsFastLoadFileWriter
   public:
     nsFastLoadFileWriter(nsIOutputStream *aStream)
       : nsBinaryOutputStream(aStream) {
+        NS_INIT_REFCNT();
         mIDMap.ops = mObjectMap.ops = nsnull;
     }
 

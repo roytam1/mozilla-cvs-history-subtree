@@ -25,36 +25,22 @@
 #include "prtime.h"
 #include "pldhash.h"
 
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsAutoLock.h"
 #include "nsCOMPtr.h"
-#include "nsCRT.h"
 #include "nsFastLoadFile.h"
 #include "nsFastLoadPtr.h"
+#include "nsFastLoadService.h"
+#include "nsString.h"
 
 #include "nsIComponentManager.h"
-#include "nsIFastLoadService.h"
+#include "nsIFile.h"
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
 #include "nsISeekableStream.h"
+#include "nsISupports.h"
 
 PR_IMPLEMENT_DATA(nsIFastLoadService*) gFastLoadService_ = nsnull;
-
-class NS_COM nsFastLoadService : public nsIFastLoadService
-{
-  public:
-    nsFastLoadService();
-    virtual ~nsFastLoadService();
-
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIFASTLOADSERVICE
-
-  private:
-    PRLock*             mLock;
-    PLDHashTable*       mFastLoadPtrMap;
-
-    nsCOMPtr<nsIObjectInputStream>  mObjectInputStream;
-    nsCOMPtr<nsIObjectOutputStream> mObjectOutputStream;
-};
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsFastLoadService, nsIFastLoadService)
 
@@ -77,11 +63,52 @@ nsFastLoadService::~nsFastLoadService()
 }
 
 NS_IMETHODIMP
-nsFastLoadService::Init()
+nsFastLoadService::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
-    mLock = PR_NewLock();
-    if (!mLock)
+    *aResult = nsnull;
+    if (aOuter)
+        return NS_ERROR_NO_AGGREGATION;
+
+    nsFastLoadService* fastLoadService = new nsFastLoadService();
+    if (!fastLoadService)
         return NS_ERROR_OUT_OF_MEMORY;
+
+    fastLoadService->mLock = PR_NewLock();
+    if (!fastLoadService->mLock) {
+        delete fastLoadService;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    NS_ADDREF(fastLoadService);
+    nsresult rv = fastLoadService->QueryInterface(aIID, aResult);
+    NS_RELEASE(fastLoadService);
+    return rv;
+}
+
+#if defined XP_MAC
+# define PLATFORM_FASL_SUFFIX    " FastLoad File"
+#elif defined XP_UNIX
+# define PLATFORM_FASL_SUFFIX    ".mfasl"
+#elif defined XP_WIN
+# define PLATFORM_FASL_SUFFIX    ".mfl"
+#endif
+
+nsresult
+nsFastLoadService::NewFastLoadFile(const char* aBaseName, nsIFile* *aResult)
+{
+    nsresult rv;
+    nsCOMPtr<nsIFile> file;
+
+    rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR,
+                                getter_AddRefs(file));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCAutoString name(aBaseName);
+    name += PLATFORM_FASL_SUFFIX;
+    rv = file->Append(name);
+    if (NS_FAILED(rv)) return rv;
+
+    NS_ADDREF(*aResult = file);
     return NS_OK;
 }
 
@@ -116,24 +143,30 @@ nsFastLoadService::NewOutputStream(nsIOutputStream* aDestStream,
 }
 
 NS_IMETHODIMP
-nsFastLoadService::SetInputStream(nsIObjectInputStream* aSrcStream,
-                                  nsIObjectInputStream* *aResult)
+nsFastLoadService::GetCurrentInputStream(nsIObjectInputStream* *aResult)
 {
-    nsCOMPtr<nsIObjectInputStream> oldStream = mObjectInputStream;
-
-    mObjectInputStream = aSrcStream;
-    NS_IF_ADDREF(*aResult = oldStream);
+    NS_IF_ADDREF(*aResult = mObjectInputStream);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsFastLoadService::SetOutputStream(nsIObjectOutputStream* aDestStream,
-                                   nsIObjectOutputStream* *aResult)
+nsFastLoadService::SetCurrentInputStream(nsIObjectInputStream* aStream)
 {
-    nsCOMPtr<nsIObjectOutputStream> oldStream = mObjectOutputStream;
+    mObjectInputStream = aStream;
+    return NS_OK;
+}
 
-    mObjectOutputStream = aDestStream;
-    NS_IF_ADDREF(*aResult = oldStream);
+NS_IMETHODIMP
+nsFastLoadService::GetCurrentOutputStream(nsIObjectOutputStream* *aResult)
+{
+    NS_IF_ADDREF(*aResult = mObjectOutputStream);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::SetCurrentOutputStream(nsIObjectOutputStream* aStream)
+{
+    mObjectOutputStream = aStream;
     return NS_OK;
 }
 

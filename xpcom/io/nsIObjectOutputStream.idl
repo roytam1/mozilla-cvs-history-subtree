@@ -74,7 +74,44 @@ interface nsIObjectOutputStream : nsIBinaryOutputStream
 };
 
 %{C++
+
 NS_COM nsresult
 NS_NewObjectOutputStream(nsIObjectOutputStream* *aResult,
                          nsIInputStream* aDestStream);
+
+inline nsresult
+NS_WriteOptionalObject(nsIObjectOutputStream* aStream, nsISupports* aObject,
+                       PRBool aIsStrongRef)
+{
+    PRBool nonnull = (aObject != nsnull);
+    nsresult rv = aStream->WriteBoolean(nonnull);
+    if (NS_SUCCEEDED(rv) && nonnull)
+        rv = aStream->WriteObject(aObject, aIsStrongRef);
+    return rv;
+}
+
+inline nsresult
+NS_WriteOptionalSingleRefObject(nsIObjectOutputStream* aStream,
+                                nsISupports* aObject)
+{
+    PRBool nonnull = (aObject != nsnull);
+    nsresult rv = aStream->WriteBoolean(nonnull);
+    if (NS_SUCCEEDED(rv) && nonnull)
+        rv = aStream->WriteSingleRefObject(aObject);
+    return rv;
+}
+
+inline nsresult
+NS_WriteOptionalCompoundObject(nsIObjectOutputStream* aStream,
+                               nsISupports* aObject,
+                               const nsIID& aIID,
+                               PRBool aIsStrongRef)
+{
+    PRBool nonnull = (aObject != nsnull);
+    nsresult rv = aStream->WriteBoolean(nonnull);
+    if (NS_SUCCEEDED(rv) && nonnull)
+        rv = aStream->WriteCompoundObject(aObject, aIID, aIsStrongRef);
+    return rv;
+}
+
 %}

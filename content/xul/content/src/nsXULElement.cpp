@@ -4816,7 +4816,8 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mJSObject,
                  "script source still loading when serializing?!");
     
-    rv = aStream->WriteSingleRefObject(mSrcURI.get());
+    rv = NS_WriteOptionalCompoundObject(aStream, mSrcURI, NS_GET_IID(nsIURI),
+                                        PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
@@ -4874,7 +4875,7 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mJSObject,
                  "prototype script not well-initialized when deserializing?!");
     
-    rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(mSrcURI));
+    rv = NS_ReadOptionalObject(aStream, PR_TRUE, getter_AddRefs(mSrcURI));
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 size;

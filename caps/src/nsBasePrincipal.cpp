@@ -380,10 +380,7 @@ nsBasePrincipal::Read(nsIObjectInputStream* aStream)
     }
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasPrefName;
-    rv = aStream->ReadBoolean(&hasPrefName);
-    if (NS_SUCCEEDED(rv) && hasPrefName)
-        rv = aStream->ReadStringZ(&mPrefName);
+    rv = NS_ReadOptionalStringZ(aStream, &mPrefName);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -413,15 +410,12 @@ nsBasePrincipal::Write(nsIObjectOutputStream* aStream)
     }
 
     PRBool hasCapabilities = (mCapabilities != nsnull);
-    rv = aStream->Write32(hasCapabilities);
+    rv = aStream->WriteBoolean(hasCapabilities);
     if (NS_SUCCEEDED(rv) && hasCapabilities)
         rv = mCapabilities->Write(aStream, WriteScalarValue);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasPrefName = (mPrefName != nsnull);
-    rv = aStream->WriteBoolean(hasPrefName);
-    if (NS_SUCCEEDED(rv) && hasPrefName)
-        rv = aStream->WriteStringZ(mPrefName);
+    rv = NS_WriteOptionalStringZ(aStream, mPrefName);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;

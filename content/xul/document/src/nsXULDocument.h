@@ -632,12 +632,12 @@ protected:
      */
     nsXULPrototypeScript* mCurrentScriptProto;
 
-	/**
-	 * A "dummy" channel that is used as a placeholder to signal document load
-	 * completion.
-	 */
-	nsCOMPtr<nsIRequest> mPlaceHolderRequest;
-	
+    /**
+     * A "dummy" channel that is used as a placeholder to signal document load
+     * completion.
+     */
+    nsCOMPtr<nsIRequest> mPlaceHolderRequest;
+        
     /**
      * Create a XUL template builder on the specified node if a 'datasources'
      * attribute is present.
@@ -798,6 +798,8 @@ private:
 
     nsresult GetFocusController(nsIFocusController** aController);
 
+    nsCOMPtr<nsIObjectOutputStream> mObjectInputStream;
+    nsCOMPtr<nsIObjectOutputStream> mObjectOutputStream;
 };
 
 

@@ -71,6 +71,28 @@ interface nsIBinaryOutputStream : nsIOutputStream {
 };
 
 %{C++
+
 NS_COM nsresult
 NS_NewBinaryOutputStream(nsIBinaryOutputStream* *aResult, nsIOutputStream* aDestStream);
+
+inline nsresult
+NS_WriteOptionalStringZ(nsIBinaryOutputStream* aStream, const char* aString)
+{
+    PRBool nonnull = (aString != nsnull);
+    nsresult rv = aStream->WriteBoolean(nonnull);
+    if (NS_SUCCEEDED(rv) && nonnull)
+        rv = aStream->WriteStringZ(aString);
+    return rv;
+}
+
+inline nsresult
+NS_WriteOptionalWStringZ(nsIBinaryOutputStream* aStream, const PRUnichar* aString)
+{
+    PRBool nonnull = (aString != nsnull);
+    nsresult rv = aStream->WriteBoolean(nonnull);
+    if (NS_SUCCEEDED(rv) && nonnull)
+        rv = aStream->WriteWStringZ(aString);
+    return rv;
+}
+
 %}

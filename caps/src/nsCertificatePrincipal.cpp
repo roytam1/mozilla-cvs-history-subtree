@@ -29,7 +29,10 @@
 
 static NS_DEFINE_IID(kICertificatePrincipalIID, NS_ICERTIFICATEPRINCIPAL_IID);
 
-NS_IMPL_QUERY_INTERFACE2(nsCertificatePrincipal, nsICertificatePrincipal, nsIPrincipal)
+NS_IMPL_QUERY_INTERFACE3(nsCertificatePrincipal,
+                         nsICertificatePrincipal,
+                         nsIPrincipal,
+                         nsISerializable)
 
 NSBASEPRINCIPALS_ADDREF(nsCertificatePrincipal);
 NSBASEPRINCIPALS_RELEASE(nsCertificatePrincipal);
@@ -153,10 +156,7 @@ nsCertificatePrincipal::Read(nsIObjectInputStream* aStream)
     rv = aStream->ReadStringZ(&mCertificateID);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasCommonName;
-    rv = aStream->ReadBoolean(&hasCommonName);
-    if (NS_SUCCEEDED(rv) && hasCommonName)
-        rv = aStream->ReadStringZ(&mCommonName);
+    rv = NS_ReadOptionalStringZ(aStream, &mCommonName);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -173,10 +173,7 @@ nsCertificatePrincipal::Write(nsIObjectOutputStream* aStream)
     rv = aStream->WriteStringZ(mCertificateID);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool hasCommonName = (mCommonName != nsnull);
-    rv = aStream->WriteBoolean(hasCommonName);
-    if (NS_SUCCEEDED(rv) && hasCommonName)
-        rv = aStream->WriteStringZ(mCommonName);
+    rv = NS_WriteOptionalStringZ(aStream, mCommonName);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
