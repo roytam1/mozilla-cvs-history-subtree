@@ -127,17 +127,23 @@ static NS_DEFINE_CID(kNameSpaceManagerCID,  NS_NAMESPACEMANAGER_CID);
 nsresult nsXPathEvaluator::ParseContextImpl::resolveNamespacePrefix
     (txAtom* aPrefix, PRInt32& aID)
 {
-    String prefix;
+    nsAutoString prefix;
     if (aPrefix) {
-        TX_GET_ATOM_STRING(aPrefix, prefix);
+        aPrefix->ToString(prefix);
     }
     nsAutoString ns;
-    nsresult rv = mResolver->LookupNamespaceURI(prefix.getConstNSString(),
-                                                ns);
-    NS_ENSURE_SUCCESS(rv, rv);
+    nsresult rv = NS_OK;
+    if (mResolver) {
+        mResolver->LookupNamespaceURI(prefix, ns);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
 
     aID = kNameSpaceID_None;
     if (ns.IsEmpty()) {
+        return NS_OK;
+    }
+    if (!mResolver) {
+        aID = kNameSpaceID_Unknown;
         return NS_OK;
     }
 
