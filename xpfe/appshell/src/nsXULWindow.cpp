@@ -1754,6 +1754,18 @@ PRBool nsXULWindow::ConstrainToZLevel(
 
   if (NS_SUCCEEDED(mediator->CalculateZPosition(us, position, aReqBelow,
                                &newPosition, aActualBelow, &altered))) {
+
+    /* If we were asked to move to the top but constrained to remain
+       below one of our other windows, first move all windows in that
+       window's layer and above to the top. This allows the user to
+       click a window which can't be topmost and still bring mozilla
+       to the foreground. */
+    if (altered &&
+        (position == nsIWindowMediator::zLevelTop ||
+          position == nsIWindowMediator::zLevelBelow && aReqBelow == 0))
+
+      PlaceWindowLayersBehind(mZlevel+1, nsIXULWindow::highestZ, 0);
+
     if (altered || aImmediate) {
       if (newPosition == nsIWindowMediator::zLevelTop)
         *aPlacement = nsWindowZTop;
@@ -1791,6 +1803,68 @@ PRBool nsXULWindow::ConstrainToZLevel(
   }
 
   return altered;
+}
+
+/* Re-z-position all windows in the layers from aLowLevel to aHighLevel,
+   inclusive, to be behind aBehind. aBehind of null means on top.
+   Note this method actually does nothing to our relative window positions.
+   (And therefore there's no need to inform WindowMediator we're moving
+   things, because we aren't.) This method is useful for, say, moving
+   a range of layers of our own windows relative to windows belonging to
+   external applications.
+*/
+void nsXULWindow::PlaceWindowLayersBehind(PRUint32 aLowLevel,
+                                          PRUint32 aHighLevel,
+                                          nsIXULWindow *aBehind) {
+
+  // step through windows in z-order from top to bottommost window
+
+  nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
+  nsCOMPtr<nsIWindowMediator> mediator(do_GetService(kWindowMediatorCID));
+  if(!mediator)
+    return;
+
+  mediator->GetZOrderXULWindowEnumerator(0, PR_TRUE,
+              getter_AddRefs(windowEnumerator));
+  if (!windowEnumerator)
+    return;
+
+  // each window will be moved behind previousHighWidget, itself
+  // a moving target. initialize it.
+  nsCOMPtr<nsIWidget> previousHighWidget;
+  if (aBehind) {
+    nsCOMPtr<nsIBaseWindow> highBase(do_QueryInterface(aBehind));
+    if (highBase)
+      highBase->GetMainWidget(getter_AddRefs(previousHighWidget));
+  }
+
+  // get next lower window
+  PRBool more = PR_FALSE;
+  windowEnumerator->HasMoreElements(&more);
+  while (more) {
+    PRUint32 nextZ; // z-level of nextWindow
+    nsCOMPtr<nsISupports> nextWindow;
+    windowEnumerator->GetNext(getter_AddRefs(nextWindow));
+    nsCOMPtr<nsIXULWindow> nextXULWindow(do_QueryInterface(nextWindow));
+    if (!nextWindow)
+      break; // unexpected error
+
+    nextXULWindow->GetZlevel(&nextZ);
+    if (nextZ < aLowLevel)
+      break;
+    
+    // move it just above its next higher window
+    nsCOMPtr<nsIBaseWindow> nextBase(do_QueryInterface(nextXULWindow));
+    if (nextBase) {
+      nsCOMPtr<nsIWidget> nextWidget;
+      nextBase->GetMainWidget(getter_AddRefs(nextWidget));
+      if (nextZ <= aHighLevel)
+        nextWidget->PlaceBehind(previousHighWidget, PR_FALSE);
+      previousHighWidget = nextWidget;
+    }
+
+    windowEnumerator->HasMoreElements(&more);
+  }
 }
 
 void nsXULWindow::SetContentScrollbarVisibility(PRBool aVisible) {
