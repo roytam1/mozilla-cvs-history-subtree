@@ -169,32 +169,30 @@ MBool XMLUtils::isWhitespace(const String& text) {
 /**
  * Normalizes the value of a XML processing instruction
 **/
-void XMLUtils::normalizePIValue(String& piValue) {
-    PRInt32 size = piValue.length();
-    //-- make copy of chars
-    UNICODE_CHAR* chars = piValue.toUnicode();
-    //-- clear attValue
+void XMLUtils::normalizePIValue(String& piValue)
+{
+    String origValue(piValue);
+    PRUint32 origLength = origValue.length();
+    PRUint32 conversionLoop = 0;
+    UNICODE_CHAR prevCh = 0;
     piValue.clear();
 
-    PRInt32 cc = 0;
-    UNICODE_CHAR prevCh = 0x0000;
-    while ( cc < size) {
-        UNICODE_CHAR ch = chars[cc++];
+    while (conversionLoop < origLength) {
+        UNICODE_CHAR ch = origValue.charAt(conversionLoop);
         switch (ch) {
             case '>':
-                if ( prevCh == '?' ) {
+                if (prevCh == '?') {
                     piValue.append(' ');
                 }
-                piValue.append(ch);
-                break;
+                // Fall through
             default:
                 piValue.append(ch);
                 break;
         }
         prevCh = ch;
+        ++conversionLoop;
     }
-    delete chars;
-} //-- noramlizePIValue
+}
 
 /**
  * Is this a whitespace string to be stripped?
