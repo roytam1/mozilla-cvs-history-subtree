@@ -58,7 +58,12 @@
 
   <deck id="modes" flex="1">
     <vbox flex="1" id="clientBox">
-#expand <label id="version" value="&aboutVersion; __MOZ_APP_VERSION__"/>
+      <!-- XXXben - this is a hack to deal with our strange and confusing
+                    non-decimal version numbering. We display the human-readable
+                    version here - hard coded for JUST this release. We will
+                    remove this line and replace with the #expand one for 1.0 -->
+      <label id="version" value="&aboutVersion; 1.0 Preview Release (NF)"/>
+      <!-- #expand <label id="version" value="&aboutVersion; __MOZ_APP_VERSION__"/> -->
       <description id="copyright">&copyrightText;</description>
       <vbox id="detailsBox" align="center" flex="1">
         <spacer flex="1"/>

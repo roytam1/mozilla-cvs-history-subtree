@@ -124,7 +124,7 @@ pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UT
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 pref("general.useragent.contentlocale", "chrome://browser-region/locale/region.properties");
 pref("general.useragent.vendor", "Firefox");
-pref("general.useragent.vendorSub", "1.0 PR (NOT FINAL)");
+pref("general.useragent.vendorSub", "0.10");
 
 pref("general.smoothScroll", false);
 #ifdef XP_UNIX
