@@ -31,6 +31,7 @@
 #include "nsIProxyObjectManager.h"
 #include "nsINetModuleMgr.h"
 #include "nsIProxy.h"
+#include "nsIStreamConverterService.h"
 #include "nsXPIDLString.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
@@ -110,6 +111,7 @@ public:
     // provides the following helper routines for accessing those services:
     //
     nsresult GetProxyObjectManager(nsIProxyObjectManager **);
+    nsresult GetStreamConverterService(nsIStreamConverterService **);
 
     // Called by the channel before writing a request
     nsresult OnModifyRequest(nsIHttpChannel *);
@@ -167,9 +169,10 @@ private:
     static nsHttpHandler *mGlobalInstance;
 
     // cached services
-    nsCOMPtr<nsIPref>                 mPrefs;
-    nsCOMPtr<nsIProxyObjectManager>   mProxyMgr;
-    nsCOMPtr<nsINetModuleMgr>         mNetModuleMgr;
+    nsCOMPtr<nsIPref>                   mPrefs;
+    nsCOMPtr<nsIProxyObjectManager>     mProxyMgr;
+    nsCOMPtr<nsINetModuleMgr>           mNetModuleMgr;
+    nsCOMPtr<nsIStreamConverterService> mStreamConvSvc;
 
     // the authentication credentials cache
     nsHttpAuthCache                  *mAuthCache;

@@ -31,6 +31,7 @@
 #include "nsIHttpAuthenticator.h"
 #include "nsIAuthPrompt.h"
 #include "nsIStringBundle.h"
+#include "nsIStreamConverterService.h"
 #include "nsNetUtil.h"
 #include "nsString2.h"
 #include "nsReadableUtils.h"
@@ -198,8 +199,6 @@ nsHttpChannel::SetupTransaction()
 nsresult
 nsHttpChannel::ProcessResponse()
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_INITIALIZED);
-
     nsresult rv = NS_OK;
     PRUint32 httpStatus = mResponseHead->Status();
 
@@ -252,7 +251,29 @@ nsHttpChannel::ProcessResponse()
 nsresult
 nsHttpChannel::ProcessNormal()
 {
-    // XXX install stream converter(s)
+    // install stream converter(s) if required
+    if (mApplyConversion) {
+        const char *val = mResponseHead->PeekHeader(nsHttp::Content_Encoding);
+        if (val) {
+            nsCOMPtr<nsIStreamConverterService> serv;
+            nsresult rv = nsHttpHandler::get()->
+                    GetStreamConverterService(getter_AddRefs(serv));
+            // we won't fail to load the page just because we couldn't load the
+            // stream converter service.. carry on..
+            if (NS_SUCCEEDED(rv)) {
+                nsCOMPtr<nsIStreamListener> converter;
+                nsAutoString from = NS_ConvertASCIItoUCS2(val);
+                rv = serv->AsyncConvertData(from.get(),
+                                            NS_LITERAL_STRING("uncompressed").get(),
+                                            mListener,
+                                            mListenerContext,
+                                            getter_AddRefs(converter));
+                if (NS_SUCCEEDED(rv))
+                    mListener = converter;
+            }
+        }
+    }
+
     return mListener->OnStartRequest(this, mListenerContext);
 }
 
@@ -1231,6 +1252,10 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     // Notify nsIHttpNotify implementations
     if (mResponseHead)
         nsHttpHandler::get()->OnExamineResponse(this);
+    else {
+        // there won't be a response head if we've been cancelled
+        return mListener->OnStartRequest(this, mListenerContext);
+    }
 
     return ProcessResponse();
 }

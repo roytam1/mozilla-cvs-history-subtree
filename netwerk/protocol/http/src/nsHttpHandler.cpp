@@ -57,6 +57,7 @@ static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kCategoryManagerCID, NS_CATEGORYMANAGER_CID);
 static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
+static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 
 #define UA_PREF_PREFIX "general.useragent."
 #define UA_APPNAME "Mozilla"
@@ -395,10 +396,23 @@ nsHttpHandler::GetProxyObjectManager(nsIProxyObjectManager **result)
 {
     if (!mProxyMgr) {
         nsresult rv;
-        mProxyMgr = do_GetService("@mozilla.org/xpcomproxy;1", &rv);
+        mProxyMgr = do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
         if (NS_FAILED(rv)) return rv;
     }
     *result = mProxyMgr;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
+
+nsresult
+nsHttpHandler::GetStreamConverterService(nsIStreamConverterService **result)
+{
+    if (!mStreamConvSvc) {
+        nsresult rv;
+        mStreamConvSvc = do_GetService(kStreamConverterServiceCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+    }
+    *result = mStreamConvSvc;
     NS_ADDREF(*result);
     return NS_OK;
 }
