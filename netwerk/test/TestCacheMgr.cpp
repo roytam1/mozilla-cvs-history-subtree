@@ -24,6 +24,7 @@
 #include "nsIEventQueue.h"
 #include "nsIEventQueueService.h"
 #include "nsITransport.h"
+#include "nsIChannel.h"
 #include "nsCOMPtr.h"
 
 #include "nsINetDataCache.h"
@@ -280,11 +281,11 @@ nsresult
 TestReadStream(nsICachedNetData *cacheEntry, nsITestDataStream *testDataStream,
                PRUint32 expectedStreamLength)
 {
-    nsCOMPtr<nsITransport> transport;
+    nsCOMPtr<nsIChannel> channel;
     nsresult rv;
     PRUint32 actualContentLength;
 
-    rv = cacheEntry->NewTransport(0, getter_AddRefs(transport));
+    rv = cacheEntry->NewChannel(0, getter_AddRefs(channel));
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
 
     rv = cacheEntry->GetStoredContentLength(&actualContentLength);
@@ -297,8 +298,7 @@ TestReadStream(nsICachedNetData *cacheEntry, nsITestDataStream *testDataStream,
     rv = reader->Init(testDataStream, expectedStreamLength);
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
     
-    nsCOMPtr<nsIRequest> request;
-    rv = transport->AsyncRead(0, reader, 0, -1, 0, getter_AddRefs(request));
+    rv = channel->AsyncOpen(0, reader);
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
     reader->Release();
 
@@ -424,7 +424,7 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags, PRUint32 aCacheCapaci
     nsresult rv;
     PRBool inCache;
     nsCOMPtr<nsICachedNetData> cacheEntry;
-    nsCOMPtr<nsITransport> transport;
+    nsCOMPtr<nsIChannel> channel;
     nsCOMPtr<nsIOutputStream> outStream;
     nsCOMPtr<nsINetDataCache> containingCache;
     char buf[1000];
@@ -488,13 +488,14 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags, PRUint32 aCacheCapaci
         // Cache manager complains if expiration set without setting last-modified time
         rv = cacheEntry->SetLastModifiedTime(expirationTime);
 
-        rv = cacheEntry->NewTransport(0, getter_AddRefs(transport));
+        rv = cacheEntry->NewChannel(0, getter_AddRefs(channel));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
 
         rv = cacheEntry->GetCache(getter_AddRefs(containingCache));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
 
-        rv = transport->OpenOutputStream(0, -1, 0,getter_AddRefs(outStream));
+        nsCOMPtr<nsITransport> trans(do_QueryInterface(channel));
+        rv = trans->OpenOutputStream(0, -1, 0,getter_AddRefs(outStream));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
         
         int streamLength = randomStream->Next() % MAX_CONTENT_LENGTH;
