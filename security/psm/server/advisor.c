@@ -147,8 +147,8 @@ SSMSecurityAdvisorContext_Create(SSMControlConnection *ctrl,
     if (info) {
         ct->infoContext = info->infoContext;
         ct->resID = info->resID;
-        ct->hostname = info->hostname ? strdup(info->hostname) : NULL;
-		ct->senderAddr = info->senderAddr ? strdup(info->senderAddr) : NULL;
+        ct->hostname = info->hostname ? PL_strdup(info->hostname) : NULL;
+		ct->senderAddr = info->senderAddr ? PL_strdup(info->senderAddr) : NULL;
 		ct->encryptedP7CInfo = info->encryptedP7CInfo;
 		ct->signedP7CInfo = info->signedP7CInfo;
 		ct->decodeError = info->decodeError;
@@ -265,7 +265,14 @@ SSMSecurityAdvisorContext_Destroy(SSMResource *res, PRBool doFree)
         if (ct->socketStatus) {
             SSM_FreeResource(&ct->socketStatus->super);
         }
-
+        PR_FREEIF(ct->hostname);
+        PR_FREEIF(ct->senderAddr);
+        if (ct->recipients) {
+            for (i=0; i<ct->numRecipients; i++) {
+                PR_FREEIF(ct->recipients[i]);
+            }
+            PR_FREEIF(ct->recipients);
+        }
         /* Free if asked */
         if (doFree)
             PR_Free(ct);
@@ -1862,7 +1869,7 @@ sa_get_algorithm_string(SEC_PKCS7ContentInfo *cinfo)
 		return PR_smprintf("%d-bits %s",
 			       key_size, alg_name);
 	else
-		return strdup(alg_name);
+		return PL_strdup(alg_name);
 }
 
 PRBool
@@ -2421,7 +2428,7 @@ SSMStatus sa_compose(SSMTextGenContext *cx)
 						for (i=0,numErrCerts=0; i<res->numRecipients; i++) {
 							cert = CERT_FindCertByEmailAddr(target->m_connection->m_certdb, res->recipients[i]);
 							if (!cert) {
-								errCerts[numErrCerts++] = strdup(res->recipients[i]);
+								errCerts[numErrCerts++] = PL_strdup(res->recipients[i]);
 								continue;
 							}
 							if (CERT_VerifyCertNow(target->m_connection->m_certdb,
@@ -2429,7 +2436,7 @@ SSMStatus sa_compose(SSMTextGenContext *cx)
 									   PR_TRUE,
 									   certUsageEmailRecipient,
 									   target->m_connection) == SECFailure) {
-								errCerts[numErrCerts++] = strdup(res->recipients[i]);
+								errCerts[numErrCerts++] = PL_strdup(res->recipients[i]);
 								continue;
 							}
 							CERT_DestroyCertificate(cert);
@@ -3297,11 +3304,14 @@ SSM_ListCRLs(SSMTextGenContext *cx)
 }
 
 SSMStatus
-ssm_getStringForAbleAgent(SSMTextGenContext *cx, const char *agents[],
-                          const char *key)
+ssm_getStringForAbleAgent(SSMTextGenContext *cx, const char *agents[])
 {
     int i;
     SSMStatus rv;
+    char *key;
+    
+    key = SSM_At(cx->m_params, 0);
+
 
     for (i=0; agents[i] != NULL; i++) {
         if (PL_strstr(cx->m_request->agent, agents[i]) != NULL) {
@@ -3318,16 +3328,15 @@ ssm_getStringForAbleAgent(SSMTextGenContext *cx, const char *agents[],
 
 SSMStatus SSM_LayoutSMIMETab(SSMTextGenContext *cx)
 {
-    return ssm_getStringForAbleAgent(cx, kSMimeApps, "app_does_smime");
+    return ssm_getStringForAbleAgent(cx, kSMimeApps);
 }
 
 SSMStatus SSM_LayoutJavaJSTab(SSMTextGenContext *cx)
 {
-    return ssm_getStringForAbleAgent(cx, kJavaJSApps, "app_does_javajs");
+    return ssm_getStringForAbleAgent(cx, kJavaJSApps);
 }
 
 SSMStatus SSM_LayoutOthersTab(SSMTextGenContext *cx)
 {
-    return ssm_getStringForAbleAgent(cx, kSMimeApps, "app_uses_others");
+    return ssm_getStringForAbleAgent(cx, kSMimeApps);
 }
-

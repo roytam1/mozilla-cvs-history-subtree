@@ -221,7 +221,7 @@ XPCOM_LIBS = \
 ifeq ($(OS_ARCH), SunOS)
 NSPR_LINK_LIBS = -L$(DIST)/lib -Bdynamic -lnspr4 -lplc4 -lplds4
 XPCOM_LINK_LIBS = -lxpcom
-XPCOM_LIBS += $(DIST)/lib/libzlib.$(DLL_SUFFIX)
+XPCOM_LIBS += $(DIST)/lib/libz.$(DLL_SUFFIX)
 else
 NSPR_LINK_LIBS = $(NSPR_LIBS)
 XPCOM_LINK_LIBS	= $(XPCOM_LIBS)
@@ -264,8 +264,8 @@ endif
 
 release_md::
 	$(NSINSTALL) -m 644 $(NSPR_LIBS) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)
-	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/ui 
-	$(NSINSTALL) -m 644 ../doc/*.htm ../doc/*.html ../doc/*.gif $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/doc
+	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/psmdata/ui
+	$(NSINSTALL) -m 644 ../doc/*.htm ../doc/*.html ../doc/*.gif $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/psmdata/doc
 	$(NSINSTALL) -m 644 $(XPCOM_LIBS) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)
 	$(NSINSTALL) -m 644 $(I18N_COMPONENTS) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/components
 ifneq ($(OS_ARCH), WINNT)
@@ -274,8 +274,8 @@ endif
 
 
 install::
-	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(PLATFORM)/ui
-	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm $(PLATFORM)/doc
+	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(PLATFORM)/psmdata/ui
+	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm $(PLATFORM)/psmdata/doc
 	$(NSINSTALL) -m 644 $(XPCOM_LIBS) $(PLATFORM)
 	$(NSINSTALL) -m 644 $(I18N_COMPONENTS) $(PLATFORM)/components
 	$(NSINSTALL) -m 644 $(NSPR_LIBS) $(PLATFORM)
@@ -304,11 +304,8 @@ patch: $(PROGRAM)
 #   - subdirectories (ui, do)
 
 build_xpi: $(PROGRAM)
-	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties xpi/psm/ui
-	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm xpi/psm/doc
-	$(NSINSTALL) -m 644 $(XPCOM_LIBS) xpi/psm
-	$(NSINSTALL) -m 644 $(I18N_COMPONENTS) xpi/psm/components
-	$(NSINSTALL) -m 644 $(NSPR_LIBS) xpi/psm
+	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties xpi/psm/psmdata/ui
+	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm xpi/psm/psmdata/doc
 ifneq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) -m 775 start-psm xpi/psm
 endif
