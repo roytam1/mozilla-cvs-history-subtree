@@ -26,8 +26,6 @@
 #include "prclist.h"
 #include "plhash.h"
 #include "prmem.h"
-#include "seccomon.h"
-#include "secstubt.h"
 #include "shist.h"
 #include "jsapi.h"
 #include "jsdbgapi.h"
