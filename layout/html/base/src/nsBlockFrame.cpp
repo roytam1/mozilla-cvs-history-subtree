@@ -3687,7 +3687,8 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   // count can change during the loop!
   for (i = 0; i < aLine->GetChildCount(); i++) { 
     // Set the command's current reflow node correctly for this child frame
-    aState.mReflowState.SetCurrentReflowNode(aState.mReflowIterator->SelectChild(frame));
+    aState.mReflowState.SetCurrentReflowNode(aState.mReflowIterator ?
+                       aState.mReflowIterator->SelectChild(frame) : nsnull);
     // make sure aState matches reflowiterator
     if (aState.mReflowState.GetCurrentReflowNode())
       aState.mNextRCFrame = frame;
