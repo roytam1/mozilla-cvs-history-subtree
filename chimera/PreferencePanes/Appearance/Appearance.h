@@ -19,24 +19,38 @@
   IBOutlet NSColorWell 	*colorwellUnvisitedLinks;
   IBOutlet NSColorWell 	*colorwellVisitedLinks;  
 
-  IBOutlet NSMatrix		 	*matrixChooseFont;
-  IBOutlet NSTableView 	*tableViewFontRegion;
+  IBOutlet NSMatrix		 	 *matrixChooseFont;
+  IBOutlet NSPopUpButton *popupFontRegion;
 
-  IBOutlet NSTextField	*fontSampleSerif;
-  IBOutlet NSTextField	*fontSampleSansSerif;
+  IBOutlet NSTextField	*fontSampleProportional;
   IBOutlet NSTextField	*fontSampleMonospace;
-  IBOutlet NSTextField	*fontSampleCursive;
 
+  IBOutlet NSTextField	*proportionalSampleLabel;
+
+  // advanced panel stuff
+  IBOutlet NSPanel       *advancedFontsDialog;
+  IBOutlet NSPopUpButton *serifFontPopup;
+  IBOutlet NSPopUpButton *sansSerifFontPopup;
+  IBOutlet NSPopUpButton *cursiveFontPopup;
+  IBOutlet NSPopUpButton *fantasyFontPopup;
+
+  IBOutlet NSTextField   *advancedFontsLabel;
+
+  IBOutlet NSMatrix      *defaultFontMatrix;
+  
   NSArray								*regionMappingTable;
+  NSString              *defaultFontType;
 }
 
-- (void) mainViewDidLoad;
+- (void)mainViewDidLoad;
 
 - (IBAction)buttonClicked:(id)sender; 
 - (IBAction)colorChanged:(id)sender;
 
 - (IBAction)fontChoiceButtonClicked:(id)sender;
-- (IBAction)fontRegionListClicked:(id)sender;
+- (IBAction)fontRegionPopupClicked:(id)sender;
 
+- (IBAction)showAdvancedFontsDialog:(id)sender;
+- (IBAction)advancedFontsDone:(id)sender;
 
 @end
