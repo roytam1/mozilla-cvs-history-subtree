@@ -108,6 +108,7 @@ typedef enum {
     NSCP_MAPIAddress,
     NSCP_MAPIDetails,
     NSCP_MAPIResolveName,
+    NSCP_MAPI_NSCP_SynchronizeClient,
     NSCP_MAPIEndRequestID       // Note: this is a marker for MAPI IPC requests
 } NSCP_IPC_REQUEST;
 
@@ -330,5 +331,11 @@ typedef struct {
   //      String x: LPSTR lpszAddress;  // Recipient N address (optional)             
   //
 } MAPIAddressType;
+
+typedef struct {
+  LHANDLE   lhSession;
+  ULONG     ulUIParam;
+  DWORD     ipcWorked;      // Necessary for IPC check with Communicator
+} MAPI_NSCP_SynchronizeClientType;
 
 #endif    // _NSCPMAPI
