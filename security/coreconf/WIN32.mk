@@ -136,8 +136,7 @@ else # !NS_USE_GCC
 	USERNAME   := $(subst -,_,$(USERNAME))
 	DEFINES    += -DDEBUG -D_DEBUG -UNDEBUG -DDEBUG_$(USERNAME)
 	DLLFLAGS   += -DEBUG -DEBUGTYPE:CV -OUT:"$@"
-	# Purify requires /FIXED:NO when linking EXEs.
-	LDFLAGS    += -DEBUG -DEBUGTYPE:CV -PDB:NONE /FIXED:NO
+	LDFLAGS    += -DEBUG -DEBUGTYPE:CV -PDB:NONE
     endif
 endif # NS_USE_GCC
 

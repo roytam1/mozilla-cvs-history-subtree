@@ -217,11 +217,12 @@ nssPKIObject_RemoveInstanceForToken (
 	}
     }
     if (--object->numInstances > 0) {
-	nssCryptokiObject **instances = nss_ZREALLOCARRAY(object->instances,
+	object->instances = nss_ZREALLOCARRAY(object->instances,
 	                                      nssCryptokiObject *,
 	                                      object->numInstances);
-	if (instances) {
-	    object->instances = instances;
+	if (!object->instances) {
+	    PZ_Unlock(object->lock);
+	    return PR_FAILURE;
 	}
     } else {
 	nss_ZFreeIf(object->instances);
@@ -243,12 +244,10 @@ nssPKIObject_DeleteStoredObject (
 {
     PRUint32 i, numNotDestroyed;
     PRStatus status = PR_SUCCESS;
-#ifndef NSS_3_4_CODE
     NSSTrustDomain *td = object->trustDomain;
     NSSCallback *pwcb = uhh ?  /* is this optional? */
                         uhh : 
                         nssTrustDomain_GetDefaultCallback(td, NULL);
-#endif
     numNotDestroyed = 0;
     PZ_Lock(object->lock);
     for (i=0; i<object->numInstances; i++) {
