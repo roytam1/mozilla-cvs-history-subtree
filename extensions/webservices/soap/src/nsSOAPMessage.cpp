@@ -321,7 +321,7 @@ nsSOAPMessage::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   JSString *str = JSVAL_TO_STRING(id);
-  nsLiteralString name(JS_GetStringChars(str));
+  nsDependentString name(JS_GetStringChars(str));
   if (name.Equals(marshallparameters)) {
     JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
                                         MarshallJSParameters, 0, JSPROP_READONLY);

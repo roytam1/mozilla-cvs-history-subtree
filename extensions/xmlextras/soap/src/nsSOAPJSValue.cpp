@@ -166,7 +166,7 @@ NS_IMETHODIMP nsSOAPJSStructEnumerator::CurrentItem(nsISupports **aItem)
     JSString* str = JS_ValueToString(context, idval);       
     if (str) {
       nsCOMPtr<nsISOAPParameter> param;
-      nsresult rc = mStruct->GetMember(nsLiteralString(JS_GetStringChars(str)), getter_AddRefs(param));
+      nsresult rc = mStruct->GetMember(nsDependentString(JS_GetStringChars(str)), getter_AddRefs(param));
       *aItem = param;
       NS_IF_ADDREF(*aItem);
       return rc;
