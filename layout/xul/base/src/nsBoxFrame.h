@@ -113,7 +113,6 @@ public:
 #endif
   NS_IMETHOD GetVAlign(Valignment& aAlign);
   NS_IMETHOD GetHAlign(Halignment& aAlign);
-  virtual void MarkIntrinsicWidthsDirty();
   NS_IMETHOD DoLayout(nsBoxLayoutState& aBoxLayoutState);
 
   NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough);
@@ -143,6 +142,9 @@ public:
                               nsIAtom*        aAttribute,
                               PRInt32         aModType);
 
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,

@@ -693,6 +693,24 @@ static void printSize(char * aDesc, nscoord aSize)
 }
 #endif
 
+/* virtual */ nscoord
+nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize minSize(0,0);
+  GetMinSize(state, minSize);
+  return minSize.width;
+}
+
+/* virtual */ nscoord
+nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize prefSize(0,0);
+  GetPrefSize(state, prefSize);
+  return prefSize.width;
+}
+
 NS_IMETHODIMP
 nsBoxFrame::Reflow(nsPresContext*          aPresContext,
                    nsHTMLReflowMetrics&     aDesiredSize,

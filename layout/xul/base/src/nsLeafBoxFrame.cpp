@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -212,6 +212,23 @@ nsLeafBoxFrame::DidReflow(nsPresContext*           aPresContext,
   return rv;
 }
 
+/* virtual */ nscoord
+nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize minSize(0,0);
+  GetMinSize(state, minSize);
+  return minSize.width;
+}
+
+/* virtual */ nscoord
+nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize prefSize(0,0);
+  GetPrefSize(state, prefSize);
+  return prefSize.width;
+}
 
 NS_IMETHODIMP
 nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
@@ -417,7 +434,7 @@ nsLeafBoxFrame::GetAscent(nsBoxLayoutState& aState, nscoord& aAscent)
 /* virtual */ void
 nsLeafBoxFrame::MarkIntrinsicWidthsDirty()
 {
-    return;
+  return;
 }
 
 NS_IMETHODIMP
