@@ -25,7 +25,7 @@
 #include "nsIString.h"
 
 #include "nsString2.h"
-#include "nsIEventQueue.h"
+#include "plevent.h"
 
 #include "time.h" // XXX should probably be using PRTime stuff
 
@@ -110,7 +110,7 @@ class nsFtpConnectionThread : public nsIRunnable {
 public:
     NS_DECL_ISUPPORTS
 
-	nsFtpConnectionThread(nsIEventQueue* aEventQ, nsIStreamListener *aListener);
+	nsFtpConnectionThread(PLEventQueue* aEventQ, nsIStreamListener *aListener);
 	virtual ~nsFtpConnectionThread();
 	
 	// nsIRunnable method
@@ -132,7 +132,7 @@ private:
 
     // Private members
 
-	nsIEventQueue*		mEventQueue;        // used to communicate outside this thread
+	PLEventQueue*		mEventQueue;        // used to communicate outside this thread
     nsIUrl*             mUrl;
 
     FTP_STATE			mState;             // the current state

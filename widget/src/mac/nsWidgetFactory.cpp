@@ -37,13 +37,13 @@
 #include "nsMenuBar.h"
 #include "nsMenu.h"
 #include "nsMenuItem.h"
+#include "nsContextMenu.h"
 #include "nsImageButton.h"
 #include "nsMenuButton.h"
 
 #include "nsClipboard.h"
 #include "nsTransferable.h"
 #include "nsXIFFormatConverter.h"
-#include "nsDataFlavor.h"
 #include "nsDragService.h"
 
 #include "nsTextAreaWidget.h"
@@ -51,6 +51,9 @@
 #include "nsComboBox.h"
 #include "nsLookAndFeel.h"
 
+#include "nsIComponentManager.h"
+
+// NOTE the following does not match MAC_STATIC actually used below in this file!
 #define MACSTATIC
 
 static NS_DEFINE_IID(kCWindow,        NS_WINDOW_CID);
@@ -75,6 +78,7 @@ static NS_DEFINE_IID(kCLabel,         NS_LABEL_CID);
 static NS_DEFINE_IID(kCMenuBar,       NS_MENUBAR_CID);
 static NS_DEFINE_IID(kCMenu,          NS_MENU_CID);
 static NS_DEFINE_IID(kCMenuItem,      NS_MENUITEM_CID);
+static NS_DEFINE_IID(kCContextMenu,   NS_CONTEXTMENU_CID);
 static NS_DEFINE_IID(kCImageButton,   NS_IMAGEBUTTON_CID);
 static NS_DEFINE_IID(kCPopUpMenu,     NS_POPUPMENU_CID);
 static NS_DEFINE_IID(kCMenuButton,     NS_MENUBUTTON_CID);
@@ -85,7 +89,7 @@ static NS_DEFINE_IID(kIFactoryIID,    NS_IFACTORY_IID);
 // Drag and Drop/Clipboard
 static NS_DEFINE_IID(kCDataFlavor,    NS_DATAFLAVOR_CID);
 static NS_DEFINE_IID(kCClipboard,     NS_CLIPBOARD_CID);
-static NS_DEFINE_IID(kCGenericTransferable,  NS_GENERICTRANSFERABLE_CID);
+static NS_DEFINE_IID(kCTransferable,  NS_TRANSFERABLE_CID);
 static NS_DEFINE_IID(kCXIFFormatConverter,  NS_XIFFORMATCONVERTER_CID);
 static NS_DEFINE_IID(kCDragService,   NS_DRAGSERVICE_CID);
 
@@ -247,6 +251,9 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports *aOuter,
     else if (mClassID.Equals(kCMenuItem)) {
         inst = (nsISupports*)(nsIMenuItem*) new nsMenuItem();
     }
+    else if (mClassID.Equals(kCContextMenu)) {
+        inst = (nsISupports*)(nsIContextMenu*) new nsContextMenu();
+    }
     else if (mClassID.Equals(kCImageButton)) {
         inst = (nsISupports*)(nsWindow*)new nsImageButton();
     }
@@ -257,11 +264,8 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports *aOuter,
  //       inst = (nsISupports*)new nsPopUpMenu();
 					NS_NOTYETIMPLEMENTED("nsPopUpMenu");
     }
-    else if (mClassID.Equals(kCDataFlavor)) {
-        inst = (nsISupports*)new nsDataFlavor();
-    }
-    else if (mClassID.Equals(kCGenericTransferable)) {
-        inst = (nsISupports*)(nsIGenericTransferable *)new nsTransferable();
+    else if (mClassID.Equals(kCTransferable)) {
+        inst = (nsISupports*)new nsTransferable();
     }
     else if (mClassID.Equals(kCXIFFormatConverter)) {
         inst = (nsISupports*)new nsXIFFormatConverter();

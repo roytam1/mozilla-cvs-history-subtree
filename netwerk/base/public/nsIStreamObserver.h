@@ -20,7 +20,7 @@
 #define nsIStreamObserver_h___
 
 #include "nsISupports.h"
-#include "nsIEventQueue.h"
+#include "plevent.h"
 
 class nsIUrl;
 class nsIString;
@@ -70,7 +70,7 @@ public:
 // the notifications on the other thread.
 extern nsresult
 NS_NewAsyncStreamObserver(nsIStreamObserver* *result,
-                          nsIEventQueue* eventQueue,
+                          PLEventQueue* eventQueue,
                           nsIStreamObserver* receiver);
 
 // Generic status codes for OnStopBinding:

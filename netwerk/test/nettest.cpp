@@ -19,12 +19,12 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef WIN32
+#ifdef XP_PC
 #include <windows.h>
 #endif
 
 #include "plstr.h"
-#include "nsIEventQueue.h"
+#include "plevent.h"
 
 #include "nsIProtocolConnection.h"
 #include "nsIStreamListener.h"
@@ -46,13 +46,13 @@ PRBool bLoadAsync;
 #include "nsINetService.h"
 
 #ifdef XP_PC
-#define NETLIB_DLL "netwerk.dll"
+#define NETLIB_DLL "netlib.dll"
 #define XPCOM_DLL  "xpcom32.dll"
 #else
 #ifdef XP_MAC
 #include "nsMacRepository.h"
 #else
-#define NETLIB_DLL "libnetwerk.so"
+#define NETLIB_DLL "libnetlib.so"
 #define XPCOM_DLL  "libxpcom.so"
 #endif
 #endif

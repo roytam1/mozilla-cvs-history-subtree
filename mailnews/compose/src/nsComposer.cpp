@@ -76,11 +76,6 @@ nsComposerBootstrap::Initialize(nsIAppShellService*,
   return rv;
 }
 
-nsresult
-nsComposerBootstrap::Shutdown()
-{
-  return NS_OK;
-}
 
 nsresult
 NS_NewComposerBootstrap(const nsIID &aIID, void **msgboot,

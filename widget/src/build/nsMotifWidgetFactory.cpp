@@ -44,10 +44,6 @@
 
 #include "nsImageButton.h"
 #include "nsMenuButton.h"
-#include "nsToolbar.h"
-#include "nsToolbarManager.h"
-#include "nsToolbarItemHolder.h"
-
 
 
 static NS_DEFINE_IID(kCWindow,        NS_WINDOW_CID);
@@ -82,9 +78,6 @@ static NS_DEFINE_IID(kCMenuItem,      NS_MENUITEM_CID);
 static NS_DEFINE_IID(kCPopUpMenu,     NS_POPUPMENU_CID);
 
 static NS_DEFINE_IID(kCImageButton,   NS_IMAGEBUTTON_CID);
-static NS_DEFINE_IID(kCToolBar,       NS_TOOLBAR_CID);
-static NS_DEFINE_IID(kCToolBarManager,  NS_TOOLBARMANAGER_CID);
-static NS_DEFINE_IID(kCToolBarItemHolder,  NS_TOOLBARITEMHOLDER_CID);
 static NS_DEFINE_IID(kCMenuButton,     NS_MENUBUTTON_CID);
 
 static NS_DEFINE_IID(kISupportsIID,   NS_ISUPPORTS_IID);
@@ -221,16 +214,6 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports *aOuter,
     else if (mClassID.Equals(kCMenuButton)) {
         inst = (nsISupports*)(nsWindow*)new nsMenuButton();
     }
-    else if (mClassID.Equals(kCToolBar)) {
-       inst = (nsISupports*)(nsWindow*)new nsToolbar();
-    }
-    else if (mClassID.Equals(kCToolBarManager)) {
-        inst = (nsISupports*)(nsWindow*)new nsToolbarManager();
-    }
-    else if (mClassID.Equals(kCToolBarItemHolder)) {
-        inst = (nsISupports*)(nsIToolbarItemHolder *) new nsToolbarItemHolder();
-    }
-
     else if (mClassID.Equals(kCPopUpMenu)) {
         inst = (nsISupports*)new nsPopUpMenu();
     }

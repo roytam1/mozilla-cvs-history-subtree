@@ -41,7 +41,7 @@ public:
                       nsIUrl* *result);
     NS_IMETHOD NewConnection(nsIUrl* url,
                              nsISupports* eventSink,
-                             nsIEventQueue* eventQueue,
+                             PLEventQueue* eventQueue,
                              nsIProtocolConnection* *result);
 
     // nsFtpProtocolHandler methods:

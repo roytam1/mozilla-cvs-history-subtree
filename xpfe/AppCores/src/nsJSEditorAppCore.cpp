@@ -60,8 +60,7 @@ enum EditorAppCore_slots {
   EDITORAPPCORE_CONTENTSASHTML = -2,
   EDITORAPPCORE_EDITORDOCUMENT = -3,
   EDITORAPPCORE_EDITORSELECTION = -4,
-  EDITORAPPCORE_PARAGRAPHFORMAT = -5,
-  EDITORAPPCORE_WRAPCOLUMN = -6
+  EDITORAPPCORE_PARAGRAPHFORMAT = -5
 };
 
 /***********************************************************************/
@@ -137,17 +136,6 @@ GetEditorAppCoreProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         }
         break;
       }
-      case EDITORAPPCORE_WRAPCOLUMN:
-      {
-        PRInt32 prop;
-        if (NS_OK == a->GetWrapColumn(&prop)) {
-          *vp = INT_TO_JSVAL(prop);
-        }
-        else {
-          return JS_FALSE;
-        }
-        break;
-      }
       default:
         return nsJSUtils::nsCallJSScriptObjectGetProperty(a, cx, id, vp);
     }
@@ -175,22 +163,7 @@ SetEditorAppCoreProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
   if (JSVAL_IS_INT(id)) {
     switch(JSVAL_TO_INT(id)) {
-      case EDITORAPPCORE_WRAPCOLUMN:
-      {
-        PRInt32 prop;
-        int32 temp;
-        if (JSVAL_IS_NUMBER(*vp) && JS_ValueToInt32(cx, *vp, &temp)) {
-          prop = (PRInt32)temp;
-        }
-        else {
-          JS_ReportError(cx, "Parameter must be a number");
-          return JS_FALSE;
-        }
-      
-        a->SetWrapColumn(prop);
-        
-        break;
-      }
+      case 0:
       default:
         return nsJSUtils::nsCallJSScriptObjectSetProperty(a, cx, id, vp);
     }
@@ -1434,7 +1407,6 @@ static JSPropertySpec EditorAppCoreProperties[] =
   {"editorDocument",    EDITORAPPCORE_EDITORDOCUMENT,    JSPROP_ENUMERATE | JSPROP_READONLY},
   {"editorSelection",    EDITORAPPCORE_EDITORSELECTION,    JSPROP_ENUMERATE | JSPROP_READONLY},
   {"ParagraphFormat",    EDITORAPPCORE_PARAGRAPHFORMAT,    JSPROP_ENUMERATE | JSPROP_READONLY},
-  {"wrapColumn",    EDITORAPPCORE_WRAPCOLUMN,    JSPROP_ENUMERATE},
   {0}
 };
 

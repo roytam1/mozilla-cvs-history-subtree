@@ -25,6 +25,8 @@
 #include "nsWindow.h"
 #include <Navigation.h>
 
+#define	kMaxTypeListCount	10
+#define kMaxTypesPerFilter	9
 
 /**
  * Native Mac FileSelector wrapper
@@ -60,7 +62,7 @@ class nsFileWidget : public nsWindow, public nsIFileWidget
 
     // nsIFileWidget interface
 		NS_IMETHOD					   Create(nsIWidget *aParent,
-							                      nsString& aTitle,
+							                      const nsString& aTitle,
 							                      nsFileDlgMode aMode,
 							                      nsIDeviceContext *aContext = nsnull,
 							                      nsIAppShell *aAppShell = nsnull,
@@ -68,29 +70,28 @@ class nsFileWidget : public nsWindow, public nsIFileWidget
 							                      void *aInitData = nsnull);
 
     virtual PRBool      	Show();
-    NS_IMETHOD            GetFile(nsString& aFile);
     NS_IMETHOD            GetFile(nsFileSpec& aFile);
-    NS_IMETHOD            SetDefaultString(nsString& aString);
+    NS_IMETHOD            SetDefaultString(const nsString& aString);
     NS_IMETHOD           	SetFilterList(PRUint32 aNumberOfFilters,
                                           const nsString aTitles[],
                                           const nsString aFilters[]);
    
-    NS_IMETHOD            GetDisplayDirectory(nsString& aDirectory);
-    NS_IMETHOD            SetDisplayDirectory(nsString& aDirectory);
+    NS_IMETHOD            GetDisplayDirectory(nsFileSpec& aDirectory);
+    NS_IMETHOD            SetDisplayDirectory(const nsFileSpec& aDirectory);
 
 	  virtual nsFileDlgResults GetFile(
 	    nsIWidget        * aParent,
-	    nsString         & promptString,    // Window title for the dialog
+	    const nsString   & promptString,    // Window title for the dialog
 	    nsFileSpec       & theFileSpec);     // Populate with initial path for file dialog
 	    
 	  virtual nsFileDlgResults GetFolder(
 	    nsIWidget        * aParent,
-	    nsString         & promptString,    // Window title for the dialog
+	    const nsString   & promptString,    // Window title for the dialog
 	    nsFileSpec       & theFileSpec);     // Populate with initial path for file dialog 
 	    
 	  virtual nsFileDlgResults PutFile(
 	    nsIWidget        * aParent,
-	    nsString         & promptString,    // Window title for the dialog
+	    const nsString   & promptString,    // Window title for the dialog
 	    nsFileSpec       & theFileSpec);     // Populate with initial path for file dialog 
 
 
@@ -113,11 +114,13 @@ class nsFileWidget : public nsWindow, public nsIFileWidget
      const nsString*        mTitles;
      const nsString*        mFilters;
      nsString               mDefault;
-     nsString               mDisplayDirectory;
+     nsFileSpec             mDisplayDirectory;
      nsFileSpec				mFileSpec;
      nsFileDlgResults		mSelectResult;
 
      void GetFilterListArray(nsString& aFilterList);
+     
+     NavTypeListPtr			mTypeLists[kMaxTypeListCount];
           
 };
 

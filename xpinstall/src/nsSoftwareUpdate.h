@@ -14,43 +14,42 @@
 class nsInstallInfo;
 
 #include "nsIScriptExternalNameSet.h"
+#include "nsIAppShellComponent.h"
+#include "nsIXPInstallProgressNotifier.h"
+#include "nsTopProgressNotifier.h"
 
-class nsSoftwareUpdate: public nsISoftwareUpdate
+class nsSoftwareUpdate:  public nsIAppShellComponent, public nsISoftwareUpdate
 {
     public:
-        static const nsIID& IID() { static nsIID iid = NS_SoftwareUpdateInstall_CID; return iid; }
+        
+        NS_DEFINE_STATIC_CID_ACCESSOR( NS_SoftwareUpdate_CID );
 
         nsSoftwareUpdate();
-        ~nsSoftwareUpdate();
-        
-        static nsSoftwareUpdate *GetInstance();
-        
+        virtual ~nsSoftwareUpdate();
+
         NS_DECL_ISUPPORTS
+        NS_DECL_IAPPSHELLCOMPONENT
+        
+        NS_IMETHOD InstallJar(const nsString& fromURL,
+                              const nsString& localFile, 
+                              long flags);  
 
-            NS_IMETHOD InstallJar(nsInstallInfo *installInfo);
-            NS_IMETHOD InstallJar(const nsString& fromURL, 
-                                  const nsString& flags, 
-                                  const nsString& args);  
+        NS_IMETHOD RegisterNotifier(nsIXPInstallProgressNotifier *notifier);
+        
+        NS_IMETHOD InstallPending(void);
 
-            
-            
-            NS_IMETHOD RunNextInstall();
-            NS_IMETHOD InstallJarCallBack();
+        NS_IMETHOD InstallJarCallBack();
+        NS_IMETHOD GetTopLevelNotifier(nsIXPInstallProgressNotifier **notifier);
 
 
     private:
-        nsresult Startup();
-        nsresult Shutdown();
         
+        nsresult RunNextInstall();
         nsresult DeleteScheduledNodes();
         
         PRBool            mInstalling;
         nsVector*         mJarInstallQueue;
-
-        static nsSoftwareUpdate* mInstance;
-        
-        
-
+        nsTopProgressNotifier   *mTopLevelObserver;
 };
 
 
@@ -58,7 +57,7 @@ class nsSoftwareUpdateNameSet : public nsIScriptExternalNameSet
 {
     public:
         nsSoftwareUpdateNameSet();
-        ~nsSoftwareUpdateNameSet();
+        virtual ~nsSoftwareUpdateNameSet();
 
         NS_DECL_ISUPPORTS
             NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext);

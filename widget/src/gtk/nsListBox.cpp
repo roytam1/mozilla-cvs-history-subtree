@@ -48,6 +48,27 @@ nsListBox::~nsListBox()
 {
 }
 
+void nsListBox::InitCallbacks(char * aName)
+{
+  InstallButtonPressSignal(mCList);
+  InstallButtonReleaseSignal(mCList);
+
+  InstallEnterNotifySignal(mCList);
+  InstallLeaveNotifySignal(mCList);
+
+  // These are needed so that the events will go to us and not our parent.
+  AddToEventMask(mCList,
+                 GDK_BUTTON_PRESS_MASK |
+                 GDK_BUTTON_RELEASE_MASK |
+                 GDK_ENTER_NOTIFY_MASK |
+                 GDK_EXPOSURE_MASK |
+                 GDK_FOCUS_CHANGE_MASK |
+                 GDK_KEY_PRESS_MASK |
+                 GDK_KEY_RELEASE_MASK |
+                 GDK_LEAVE_NOTIFY_MASK |
+                 GDK_POINTER_MOTION_MASK);
+}
+
 //-------------------------------------------------------------------------
 //
 // Query interface implementation
@@ -126,14 +147,14 @@ NS_METHOD nsListBox::AddItemAt(nsString &aItem, PRInt32 aPosition)
 //-------------------------------------------------------------------------
 PRInt32  nsListBox::FindItem(nsString &aItem, PRInt32 aStartPos)
 {
-  int index = -1;
+  int i = -1;
   if (mCList) {
-    index = gtk_clist_find_row_from_data(GTK_CLIST(mCList), (gpointer)&aItem);
-    if (index < aStartPos) {
-      index = -1;
+    i = gtk_clist_find_row_from_data(GTK_CLIST(mCList), (gpointer)&aItem);
+    if (i < aStartPos) {
+      i = -1;
     }
   }
-  return index;
+  return i;
 }
 
 //-------------------------------------------------------------------------
@@ -193,11 +214,11 @@ NS_METHOD nsListBox::GetSelectedItem(nsString& aItem)
 {
   aItem.Truncate();
   if (mCList) {
-    PRInt32 i=0, index=-1;
+    PRInt32 i=0, idx=-1;
     GtkCList *clist = GTK_CLIST(mCList);
     GList *list = clist->row_list;
 
-    for (i=0; i < clist->rows && index == -1; i++, list = list->next) {
+    for (i=0; i < clist->rows && idx == -1; i++, list = list->next) {
       if (GTK_CLIST_ROW (list)->state == GTK_STATE_SELECTED) {
         char *text = nsnull;
         gtk_clist_get_text(GTK_CLIST(mCList),i,0,&text);
@@ -218,22 +239,22 @@ NS_METHOD nsListBox::GetSelectedItem(nsString& aItem)
 //-------------------------------------------------------------------------
 PRInt32 nsListBox::GetSelectedIndex()
 {
-  PRInt32 i=0, index=-1;
+  PRInt32 i=0, idx=-1;
   if (mCList) {
     if (!mMultiSelect) {
       GtkCList *clist = GTK_CLIST(mCList);
       GList *list = clist->row_list;
 
-      for (i=0; i < clist->rows && index == -1; i++, list = list->next) {
+      for (i=0; i < clist->rows && idx == -1; i++, list = list->next) {
         if (GTK_CLIST_ROW (list)->state == GTK_STATE_SELECTED) {
-          index = i;
+          idx = i;
         }
       }
     } else {
       NS_ASSERTION(PR_FALSE, "Multi selection list box does not support GetSelectedIndex()");
     }
   }
-  return index;
+  return idx;
 }
 
 //-------------------------------------------------------------------------
@@ -347,6 +368,7 @@ NS_METHOD nsListBox::CreateNative(GtkWidget *parentWindow)
   // to handle scrolling
   mWidget = gtk_scrolled_window_new (nsnull, nsnull);
   gtk_widget_set_name(mWidget, "nsListBox");
+  gtk_container_set_border_width(GTK_CONTAINER(mWidget), 0);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (mWidget),
                                   GTK_POLICY_NEVER,
                                   GTK_POLICY_AUTOMATIC);
@@ -376,29 +398,4 @@ nsListBox::OnDestroySignal(GtkWidget* aGtkWidget)
   else {
     nsWidget::OnDestroySignal(aGtkWidget);
   }
-}
-
-//-------------------------------------------------------------------------
-//
-// move, paint, resizes message - ignore
-//
-//-------------------------------------------------------------------------
-PRBool nsListBox::OnMove(PRInt32, PRInt32)
-{
-  return PR_FALSE;
-}
-
-//-------------------------------------------------------------------------
-//
-// paint message. Don't send the paint out
-//
-//-------------------------------------------------------------------------
-PRBool nsListBox::OnPaint(nsPaintEvent &aEvent)
-{
-  return PR_FALSE;
-}
-
-PRBool nsListBox::OnResize(nsSizeEvent &aEvent)
-{
-    return PR_FALSE;
 }

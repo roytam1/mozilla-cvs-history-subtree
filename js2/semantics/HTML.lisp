@@ -86,14 +86,6 @@
 
 
 ;;; ------------------------------------------------------------------------------------------------------
-;;; ATTRIBUTES
-
-;;; The following element attributes require their values to always be in quotes.
-(dolist (attribute '(alt href name))
-  (setf (get attribute 'quoted-attribute) t))
-
-
-;;; ------------------------------------------------------------------------------------------------------
 ;;; ENTITIES
 
 (defvar *html-entities-list*
@@ -129,7 +121,7 @@
       (nreverse html-sources))))
 
 
-; Escape all content strings in the html-source, while interpreting :nowrap, :wrap, and :none pseudo-tags.
+; Escape all content strings in the html-source, while interpreting :nowrap pseudo-tags.
 ; Return a freshly consed list of html-sources.
 (defun escape-html-source (html-source space)
   (cond
@@ -140,16 +132,14 @@
    ((consp html-source)
     (let ((tag (first html-source))
           (contents (rest html-source)))
-      (case tag
-        (:none (mapcan #'(lambda (html-source) (escape-html-source html-source space)) contents))
-        (:nowrap (mapcan #'(lambda (html-source) (escape-html-source html-source 'nbsp)) contents))
-        (:wrap (mapcan #'(lambda (html-source) (escape-html-source html-source 'space)) contents))
-        (t (list (cons tag
-                       (mapcan #'(lambda (html-source) (escape-html-source html-source space)) contents)))))))
+      (if (eq tag ':nowrap)
+        (mapcan #'(lambda (html-source) (escape-html-source html-source 'nbsp)) contents)
+        (list (cons tag
+                    (mapcan #'(lambda (html-source) (escape-html-source html-source space)) contents))))))
    (t (error "Bad html-source: ~S" html-source))))
 
 
-; Escape all content strings in the html-source, while interpreting :nowrap, :wrap, and :none pseudo-tags.
+; Escape all content strings in the html-source, while interpreting :nowrap pseudo-tags.
 (defun escape-html (html-source)
   (let ((results (escape-html-source html-source 'space)))
     (assert-true (= (length results) 1))
@@ -171,8 +161,6 @@
 ;;   <symbol>                                                  ;Tag with no attributes
 ;;   (<symbol> <attribute> ... <attribute>)                    ;Tag with attributes
 ;;   :nowrap                                                   ;Pseudo-tag indicating that spaces in contents should be non-breaking
-;;   :wrap                                                     ;Pseudo-tag indicating that spaces in contents should be breaking
-;;   :none                                                     ;Pseudo-tag indicating no tag -- the contents should be inlined
 ;;
 ;; <attribute> has one of the following formats:
 ;;   (<symbol> <string>)                                       ;Attribute name and value
@@ -253,14 +241,7 @@
           (write-html-source stream (if *allow-line-breaks-in-tags* 'space #\space))
           (write-html-string stream (string-downcase (symbol-name name)))
           (when value
-            (write-html-string
-             stream
-             (format nil
-                     (if (or (attribute-value-needs-quotes value)
-                             (get name 'quoted-attribute))
-                       "=\"~A\""
-                       "=~A")
-                     value)))))
+            (write-html-string stream (format nil (if (attribute-value-needs-quotes value) "=\"~A\"" "=~A") value)))))
       (write-html-string stream ">")
       (emit-html-newlines-and-indent stream (html-element-newlines-begin element))
       (dolist (html-source contents)
@@ -353,7 +334,6 @@
     (:spc nbsp)
     (:tab2 nbsp nbsp)
     (:tab3 nbsp nbsp nbsp)
-    (:nbhy "-")             ;Non-breaking hyphen
     
     ;Symbols (-10 suffix means 10-point, etc.)
     ((:bullet 1) (:script "document.write(U_bull)"))                    ;#x2022
@@ -373,11 +353,11 @@
     ((:function-arrow-10 2) (:script "document.write(U_rarr)"))         ;#x2192
     ((:cartesian-product-10 2) (:script "document.write(U_times)"))     ;#x00D7
     ((:identical-10 2) (:script "document.write(U_equiv)"))             ;#x2261
-    ((:circle-plus-10 2) (:script "document.write(U_oplus)"))           ;#x2295
     ((:member-10 2) (:script "document.write(U_isin)"))                 ;#x2208
     ((:derives-10 2) (:script "document.write(U_rArr)"))                ;#x21D2
     ((:left-triangle-bracket-10 1) (:script "document.write(U_lang)"))  ;#x2329
     ((:right-triangle-bracket-10 1) (:script "document.write(U_rang)")) ;#x232A
+    ((:big-plus-10 2) (:script "document.write(U_oplus)"))              ;#x2295
     
     ((:alpha 1) (:symbol "a"))
     ((:beta 1) (:symbol "b"))
@@ -435,7 +415,6 @@
     (:global-variable (span (class "global-variable")))
     (:local-variable (span (class "local-variable")))
     (:action-name (span (class "action-name")))
-    (:text :wrap)
     
     ;Specials
     (:invisible del)
@@ -448,7 +427,7 @@
     ((:vector-begin 1) (b "["))
     ((:vector-end 1) (b "]"))
     ((:empty-vector 2) (b "[]"))
-    ((:vector-append 2) :circle-plus-10)
+    ((:vector-append 2) :big-plus-10)
     ((:tuple-begin 1) (b :left-triangle-bracket-10))
     ((:tuple-end 1) (b :right-triangle-bracket-10))
     ((:unit 4) (:global-variable "unit"))
@@ -461,11 +440,9 @@
 ;;; HTML STREAMS
 
 (defstruct (html-stream (:include markup-stream)
-                        (:constructor allocate-html-stream (env head tail level logical-position anchors))
+                        (:constructor allocate-html-stream (env head tail level logical-position))
                         (:copier nil)
-                        (:predicate html-stream?))
-  (anchors nil :type list :read-only t))  ;A mutable cons cell for accumulating anchors at the beginning of a paragraph
-;                                         ;or nil if not inside a paragraph.
+                        (:predicate html-stream?)))
 
 
 (defmethod print-object ((html-stream html-stream) stream)
@@ -474,18 +451,18 @@
 
 
 ; Make a new, empty, open html-stream with the given definitions for its markup-env.
-(defun make-html-stream (markup-env level logical-position anchors)
+(defun make-html-stream (markup-env level &optional logical-position)
   (let ((head (list nil)))
-    (allocate-html-stream markup-env head head level logical-position anchors)))
+    (allocate-html-stream markup-env head head level logical-position)))
 
 
 ; Make a new, empty, open, top-level html-stream with the given definitions
-; for its markup-env.  If links is true, allow links.
-(defun make-top-level-html-stream (html-definitions links)
+; for its markup-env.
+(defun make-top-level-html-stream (html-definitions)
   (let ((head (list nil))
-        (markup-env (make-markup-env links)))
+        (markup-env (make-markup-env)))
     (markup-env-define-alist markup-env html-definitions)
-    (allocate-html-stream markup-env head head *markup-stream-top-level* nil nil)))
+    (allocate-html-stream markup-env head head *markup-stream-top-level* nil)))
 
 
 ; Return the approximate width of the html item; return t if it is a line break.
@@ -498,19 +475,17 @@
 
 ; Create a top-level html-stream and call emitter to emit its contents.
 ; emitter takes one argument -- an html-stream to which it should emit paragraphs.
-; Return the top-level html-stream.  If links is true, allow links.
-(defun depict-html-top-level (title links emitter)
-  (let ((html-stream (make-top-level-html-stream *html-definitions* links)))
+; Return the top-level html-stream.
+(defun depict-html-top-level (emitter title)
+  (let ((html-stream (make-top-level-html-stream *html-definitions*)))
     (markup-stream-append1 html-stream 'html)
     (depict-block-style (html-stream 'head)
       (depict-block-style (html-stream 'title)
         (markup-stream-append1 html-stream title))
-      (markup-stream-append1 html-stream '((link (rel "stylesheet") (href "../styles.css"))))
-      (markup-stream-append1 html-stream '((script (type "text/javascript") (language "JavaScript1.2") (src "../unicodeCompatibility.js")))))
+      (markup-stream-append1 html-stream '((link (rel "stylesheet") (href "styles.css"))))
+      (markup-stream-append1 html-stream '((script (type "text/javascript") (language "JavaScript1.2") (src "unicodeCompatibility.js")))))
     (depict-block-style (html-stream 'body)
       (funcall emitter html-stream))
-    (let ((links (markup-env-links (html-stream-env html-stream))))
-      (warn-missing-links links))
     html-stream))
 
 
@@ -518,28 +493,23 @@
 ; emitter takes one argument -- an html-stream to which it should emit paragraphs.
 ; Write the resulting html to the text file with the given name (relative to the
 ; local directory).
-; If links is true, allow links.  If external-link-base is also provided, emit links for
-; predefined items and assume that they are located on the page specified by the
-; external-link-base string.
-(defun depict-html-to-local-file (filename title links emitter &key external-link-base)
-  (let* ((*external-link-base* external-link-base)
-         (top-html-stream (depict-html-top-level title links emitter)))
-    (write-html-to-local-file filename (markup-stream-output top-html-stream)))
-  filename)
+(defun depict-html-to-local-file (filename emitter title)
+  (let ((top-html-stream (depict-html-top-level emitter title)))
+    (write-html-to-local-file filename (markup-stream-output top-html-stream))))
 
 
 ; Return the markup accumulated in the markup-stream after expanding all of its macros.
 ; The markup-stream is closed after this function is called.
 (defmethod markup-stream-output ((html-stream html-stream))
   (unnest-html-source
-   (markup-env-expand (markup-stream-env html-stream) (markup-stream-unexpanded-output html-stream) '(:none :nowrap :wrap :nest))))
+   (markup-env-expand (markup-stream-env html-stream) (markup-stream-unexpanded-output html-stream) '(:nowrap :nest))))
 
 
 
 (defmethod depict-block-style-f ((html-stream html-stream) block-style emitter)
   (assert-true (<= (markup-stream-level html-stream) *markup-stream-paragraph-level*))
   (assert-true (and block-style (symbolp block-style)))
-  (let ((inner-html-stream (make-html-stream (markup-stream-env html-stream) *markup-stream-paragraph-level* nil nil)))
+  (let ((inner-html-stream (make-html-stream (markup-stream-env html-stream) *markup-stream-paragraph-level* nil)))
     (markup-stream-append1 inner-html-stream block-style)
     (prog1
       (funcall emitter inner-html-stream)
@@ -549,53 +519,21 @@
 (defmethod depict-paragraph-f ((html-stream html-stream) paragraph-style emitter)
   (assert-true (= (markup-stream-level html-stream) *markup-stream-paragraph-level*))
   (assert-true (and paragraph-style (symbolp paragraph-style)))
-  (let* ((anchors (list 'anchors))
-         (inner-html-stream (make-html-stream (markup-stream-env html-stream)
-                                              *markup-stream-content-level*
-                                              (make-logical-position)
-                                              anchors)))
-    (prog1
-      (funcall emitter inner-html-stream)
-      (markup-stream-append1 html-stream (cons paragraph-style
-                                               (nreconc (cdr anchors)
-                                                        (markup-stream-unexpanded-output inner-html-stream)))))))
-
-
-(defmethod depict-char-style-f ((html-stream html-stream) char-style emitter)
-  (assert-true (>= (markup-stream-level html-stream) *markup-stream-content-level*))
-  (assert-true (and char-style (symbolp char-style)))
-  (let ((inner-html-stream (make-html-stream (markup-stream-env html-stream)
-                                             *markup-stream-content-level*
-                                             (markup-stream-logical-position html-stream)
-                                             (html-stream-anchors html-stream))))
-    (markup-stream-append1 inner-html-stream char-style)
+  (let ((inner-html-stream (make-html-stream (markup-stream-env html-stream) *markup-stream-content-level* (make-logical-position))))
+    (markup-stream-append1 inner-html-stream paragraph-style)
     (prog1
       (funcall emitter inner-html-stream)
       (markup-stream-append1 html-stream (markup-stream-unexpanded-output inner-html-stream)))))
 
 
-(defmethod depict-anchor ((html-stream html-stream) link-prefix link-name duplicate)
-  (assert-true (= (markup-stream-level html-stream) *markup-stream-content-level*))
-  (let* ((links (markup-env-links (html-stream-env html-stream)))
-         (name (record-link-definition links link-prefix link-name duplicate)))
-    (when name
-      (push (list (list 'a (list 'name name))) (cdr (html-stream-anchors html-stream))))))
-
-
-(defmethod depict-link-reference-f ((html-stream html-stream) link-prefix link-name external emitter)
-  (assert-true (= (markup-stream-level html-stream) *markup-stream-content-level*))
-  (let* ((links (markup-env-links (html-stream-env html-stream)))
-         (href (record-link-reference links link-prefix link-name external)))
-    (if href
-      (let ((inner-html-stream (make-html-stream (markup-stream-env html-stream)
-                                                 *markup-stream-content-level*
-                                                 (markup-stream-logical-position html-stream)
-                                                 (html-stream-anchors html-stream))))
-        (markup-stream-append1 inner-html-stream (list 'a (list 'href href)))
-        (prog1
-          (funcall emitter inner-html-stream)
-          (markup-stream-append1 html-stream (markup-stream-unexpanded-output inner-html-stream))))
-      (funcall emitter html-stream))))
+(defmethod depict-char-style-f ((html-stream html-stream) char-style emitter)
+  (assert-true (>= (markup-stream-level html-stream) *markup-stream-content-level*))
+  (assert-true (and char-style (symbolp char-style)))
+  (let ((inner-html-stream (make-html-stream (markup-stream-env html-stream) *markup-stream-content-level* (markup-stream-logical-position html-stream))))
+    (markup-stream-append1 inner-html-stream char-style)
+    (prog1
+      (funcall emitter inner-html-stream)
+      (markup-stream-append1 html-stream (markup-stream-unexpanded-output inner-html-stream)))))
 
 
 #|

@@ -66,11 +66,11 @@ public:
 
   // nsITransport methods:
   NS_IMETHOD AsyncRead(nsISupports* context,
-                       nsIEventQueue* appEventQueue,
+                       PLEventQueue* appEventQueue,
                        nsIStreamListener* listener);
   NS_IMETHOD AsyncWrite(nsIInputStream* fromStream,
                         nsISupports* context,
-                        nsIEventQueue* appEventQueue,
+                        PLEventQueue* appEventQueue,
                         nsIStreamObserver* observer);
   NS_IMETHOD OpenInputStream(nsIInputStream* *result);
   NS_IMETHOD OpenOutputStream(nsIOutputStream* *result);

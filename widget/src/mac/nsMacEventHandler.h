@@ -23,20 +23,23 @@
 #include "nsDeleteObserver.h"
 #include "nsCOMPtr.h"
 #include "nsGUIEvent.h"
+#include "prtypes.h"
+
 
 class nsWindow;
+class nsMacWindow;
 
 class nsMacEventHandler : public nsDeleteObserver
 {
 public:
-		nsMacEventHandler(nsWindow* aTopLevelWidget);
+		nsMacEventHandler(nsMacWindow* aTopLevelWidget);
 		virtual ~nsMacEventHandler();
 
 		virtual PRBool	HandleOSEvent(EventRecord& aOSEvent);
 		virtual PRBool	HandleMenuCommand(EventRecord& aOSEvent, long aMenuResult);
 		
-		// Tell Gecko that a drop has occurred
-		virtual PRBool	DropOccurred ( Point aMouseGlobal, UInt16 aKeyModifiers ) ;
+		// Tell Gecko that a drag event has occurred and should go into Gecko
+		virtual PRBool	DragEvent ( unsigned int aMessage, Point aMouseGlobal, UInt16 aKeyModifiers ) ;
 		//virtual PRBool	TrackDrag ( Point aMouseGlobal, UInt32 aKeyModifiers ) ;
 
 protected:
@@ -46,7 +49,6 @@ protected:
 		virtual PRBool	HandleMouseDownEvent(EventRecord& aOSEvent);
 		virtual PRBool	HandleMouseUpEvent(EventRecord& aOSEvent);
 		virtual PRBool	HandleMouseMoveEvent(EventRecord& aOSEvent);
-		virtual PRBool	HandleDiskEvent(const EventRecord& anEvent);
 
 		virtual void	ConvertOSEventToMouseEvent(
 									EventRecord&	aOSEvent,
@@ -57,7 +59,7 @@ public:
 	virtual void	NotifyDelete(void* aDeletedObject);
 
 protected:
-	nsWindow*			mTopLevelWidget;
+	nsMacWindow*	mTopLevelWidget;
 	nsWindow*			mLastWidgetHit;
 	PRBool				mMouseInWidgetHit;
 	nsWindow*			mLastWidgetPointed;

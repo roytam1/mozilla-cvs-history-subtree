@@ -23,7 +23,7 @@
 #include "nsVector.h"
 
 #include "nsISupports.h"
-#include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
 
 #include "nsIURL.h"
 #include "nsINetlibURL.h"
@@ -51,12 +51,11 @@ nsSoftwareUpdateListener::nsSoftwareUpdateListener(nsInstallInfo *nextInstall)
         mResult = -1;
     };
 
-    mResult = nsComponentManager::CreateInstance(  kSoftwareUpdateCID, 
-                                                   nsnull,
-                                                   kISoftwareUpdateIID,
-                                                   (void**) &mSoftwareUpdate);
+    mResult = nsServiceManager::GetService(  kSoftwareUpdateCID, 
+                                             kISoftwareUpdateIID,
+                                             (nsISupports**)&mSoftwareUpdate);
     
-    if (mResult != NS_OK)
+    if (NS_FAILED(mResult))
         return;
 
     nsIURL  *pURL  = nsnull;
@@ -70,6 +69,7 @@ nsSoftwareUpdateListener::nsSoftwareUpdateListener(nsInstallInfo *nextInstall)
 
 nsSoftwareUpdateListener::~nsSoftwareUpdateListener()
 {    
+    delete mInstallInfo;
     mSoftwareUpdate->Release();
 }
 
@@ -114,8 +114,12 @@ nsSoftwareUpdateListener::OnStopBinding(nsIURL* aURL,
 
         case NS_BINDING_SUCCEEDED:
                 PR_Close(mOutFileDesc);
-                // Add to the XPInstall Queue
-                mSoftwareUpdate->InstallJar(mInstallInfo);
+                // Add to the XPInstall Queue.  Yes this is a bit redunant.  I be you are asking, why I have a nsInstallInfo, am 
+                // creating a new one.  well, if I pull this out into its own dll, I would not want to pass a class around.  
+
+                mSoftwareUpdate->InstallJar(mInstallInfo->GetFromURL(),
+                                            mInstallInfo->GetLocalFile(),
+                                            mInstallInfo->GetFlags() );
             break;
 
         case NS_BINDING_FAILED:
@@ -144,7 +148,7 @@ nsSoftwareUpdateListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream
     {
         err = pIStream->Read(buffer, BUF_SIZE, &len);
         
-        if (err == 0)
+        if (mResult == 0 && err == 0)
         {
             if ( PR_Write(mOutFileDesc, buffer, len) == -1 )
             {

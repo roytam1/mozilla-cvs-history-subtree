@@ -21,10 +21,9 @@
 #include "nsIServiceManager.h"
 #include "nsIInputStream.h"
 #include "nsIThread.h"
-#include "nsIEventQueue.h"
-#include "nsIEventQueueService.h"
+#include "plevent.h"
 #include "prinrval.h"
-#include "prmon.h"
+#include "prcmon.h"
 #include "prio.h"
 #include "nsIFileStream.h"
 #include "nsFileSpec.h"
@@ -34,21 +33,8 @@
 #include "nsITransport.h"
 #include <stdio.h>
 
-#ifdef XP_PC
-#define XPCOM_DLL  "xpcom32.dll"
-#define NETLIB_DLL  "netwerk.dll"
-#else
-#ifdef XP_MAC
-#include "nsMacRepository.h"
-#else
-#define XPCOM_DLL  "libxpcom.so"
-#define NETLIB_DLL  "libnetwerk.so"
-#endif
-#endif
-
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUE_CID);
 
 PRIntervalTime gDuration = 0;
 PRUint32 gVolume = 0;
@@ -58,23 +44,15 @@ public:
     NS_DECL_ISUPPORTS
 
     NS_IMETHOD Run() {
-        printf("waiting\n");
-        if (!mMonitor)
-            return NS_ERROR_OUT_OF_MEMORY;
-        PR_EnterMonitor(mMonitor);
+//        printf("waiting\n");
+        PR_CEnterMonitor(this);
         if (mEventQueue == nsnull)
             PR_CWait(this, PR_INTERVAL_NO_TIMEOUT);
-        PR_ExitMonitor(mMonitor);
+        PR_CExitMonitor(this);
 
-        printf("running\n");
-
-        // event loop
-        mEventQueue->EventLoop();
-
-        while (PR_TRUE) {
-
-        }
-        printf("quitting\n");
+//        printf("running\n");
+        PL_EventLoop(mEventQueue);
+//        printf("quitting\n");
         return NS_OK;
     }
 
@@ -82,60 +60,51 @@ public:
         : mEventQueue(nsnull), mStartTime(0), mThread(nsnull)
     {
         NS_INIT_REFCNT();
-        mMonitor = PR_NewMonitor();
     }
 
     virtual ~nsReader() {
         NS_IF_RELEASE(mThread);
-        NS_IF_RELEASE(mEventQueue);
-        PR_DestroyMonitor(mMonitor);
     }
 
     nsresult Init(nsIThread* thread) {
-        nsresult rv;
         mThread = thread;
         NS_ADDREF(mThread);
         PRThread* prthread;
         thread->GetPRThread(&prthread);
-        PR_EnterMonitor(mMonitor);
-        NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueServiceCID, &rv);
-        if (NS_SUCCEEDED(rv)) {
-          rv = eventQService->GetThreadEventQueue(PR_CurrentThread(), &mEventQueue);
-        }
-        if (NS_FAILED(rv)) return rv;
-
+        PR_CEnterMonitor(this);
+        mEventQueue = PL_CreateEventQueue("runner event loop",
+                                          prthread);
         // wake up event loop
-        PR_Notify(mMonitor);
-        PR_ExitMonitor(mMonitor);
+        PR_CNotify(this);
+        PR_CExitMonitor(this);
         
         return NS_OK;
     }
 
-    nsIEventQueue* GetEventQueue() { return mEventQueue; }
+    PLEventQueue* GetEventQueue() { return mEventQueue; }
 
     NS_IMETHOD OnStartBinding(nsISupports* context) {
-        PR_EnterMonitor(mMonitor);
-        printf("start binding\n"); 
+        PR_CEnterMonitor(this);
+//        printf("start binding\n"); 
         mStartTime = PR_IntervalNow();
-        PR_ExitMonitor(mMonitor);
+        PR_CExitMonitor(this);
         return NS_OK;
     }
 
     NS_IMETHOD OnDataAvailable(nsISupports* context,
                                nsIInputStream *aIStream, 
-                               PRUint32 aSourceOffset,
                                PRUint32 aLength) {
-        PR_EnterMonitor(mMonitor);
+        PR_CEnterMonitor(this);
         char buf[1025];
         while (aLength > 0) {
             PRUint32 amt;
             nsresult rv = aIStream->Read(buf, 1024, &amt);
-            buf[amt] = '\0';
-            printf(buf);
+//            buf[amt] = '\0';
+//            printf(buf);
             aLength -= amt;
             gVolume += amt;
         }
-        PR_ExitMonitor(mMonitor);
+        PR_CExitMonitor(this);
         return NS_OK;
     }
 
@@ -143,7 +112,7 @@ public:
                              nsresult aStatus,
                              nsIString* aMsg) {
         nsresult rv;
-        PR_EnterMonitor(mMonitor);
+        PR_CEnterMonitor(this);
         if (aStatus == NS_OK) {
             PRIntervalTime endTime = PR_IntervalNow();
             gDuration += (endTime - mStartTime);
@@ -151,7 +120,7 @@ public:
         else {
             printf("stop binding, %d\n", aStatus);
         }
-        PR_ExitMonitor(mMonitor);
+        PR_CExitMonitor(this);
 
         // get me out of my event loop
         rv = mThread->Interrupt();
@@ -161,12 +130,9 @@ public:
     }
 
 protected:
-    nsIEventQueue*       mEventQueue;
+    PLEventQueue*       mEventQueue;
     PRIntervalTime      mStartTime;
     nsIThread*          mThread;
-
-private:
-    PRMonitor*          mMonitor;
 };
 
 NS_IMPL_ADDREF(nsReader);
@@ -205,7 +171,6 @@ Simulated_nsFileTransport_Run(nsReader* reader, const char* path)
     nsIInputStream* fileStr = nsnull;
     nsIByteBufferInputStream* bufStr = nsnull;
     nsFileSpec spec(path);
-    PRUint32 sourceOffset = 0;
 
     rv = reader->OnStartBinding(nsnull);
     if (NS_FAILED(rv)) goto done;       // XXX should this abort the transfer?
@@ -229,10 +194,8 @@ Simulated_nsFileTransport_Run(nsReader* reader, const char* path)
         }
         if (NS_FAILED(rv)) break;
 
-        rv = reader->OnDataAvailable(nsnull, bufStr, sourceOffset, amt);
+        rv = reader->OnDataAvailable(nsnull, bufStr, amt);
         if (NS_FAILED(rv)) break;
-
-        sourceOffset += amt;
     }
 
   done:
@@ -377,14 +340,13 @@ main(int argc, char* argv[])
     char* dirName = argv[1];
 
     // XXX why do I have to do this?!
-    nsComponentManager::RegisterComponent(kFileTransportServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
-    nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
     rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup,
                                           "components");
     if (NS_FAILED(rv)) return rv;
 
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
+
     SerialReadTest(dirName);
     ParallelReadTest(dirName, fts);
 
@@ -397,3 +359,4 @@ main(int argc, char* argv[])
 
     return 0;
 }
+

@@ -21,7 +21,8 @@
 // Mike Pinkerton
 // Netscape Communications
 //
-// The MacOS native implementation of  nsIDragService.
+// The MacOS native implementation of nsIDragService, nsIDragSession, and
+// nsIDragSessionMac.
 //
 
 
@@ -30,35 +31,46 @@
 
 
 #include "nsBaseDragService.h"
+#include "nsIDragSessionMac.h"
 #include <Drag.h>
 
 
 class  nsNativeDragTarget;
 
 
-//
-// Native MacOS DragService/DragSession implementation
-//
-class nsDragService : public nsBaseDragService
+class nsDragService : public nsBaseDragService, public nsIDragSessionMac
 {
 public:
   nsDragService();
   virtual ~nsDragService();
 
   //nsISupports
-  //NS_DECL_ISUPPORTS_INHERITED
-  
+  NS_DECL_ISUPPORTS_INHERITED
+
   //nsIDragService
   NS_IMETHOD InvokeDragSession (nsISupportsArray * anArrayTransferables, nsIRegion * aRegion, PRUint32 aActionType);
   //NS_IMETHOD InvokeDragSessionSingle (nsITransferable * aTransferable,  nsIRegion * aRegion, PRUint32 aActionType);
 
   //nsIDragSession
   NS_IMETHOD GetData (nsITransferable * aTransferable);
-  NS_IMETHOD IsDataFlavorSupported(nsIDataFlavor * aDataFlavor);
+  NS_IMETHOD IsDataFlavorSupported(nsString * aDataFlavor);
+
+  //nsIDragSessionMac
+  NS_IMETHOD SetDragReference ( DragReference aDragRef ) ;  
 
 private:
 
-  DragReference mDragRef;    // reference to _the_ drag. There can be only one.
+  void RegisterDragItemsAndFlavors ( nsISupportsArray * inArray ) ;
+
+    // callback for the MacOS DragManager when a drop site asks for data
+  static pascal OSErr DragSendDataProc ( FlavorType inFlavor, void* inRefCon,
+  										 ItemReference theItemRef, DragReference inDragRef ) ;
+
+  static DragSendDataUPP sDragSendDataUPP;
+  DragReference mDragRef;        // reference to _the_ drag. There can be only one.
+  nsISupportsArray* mDataItems;  // cached here for when we start the drag so the 
+                                 // DragSendDataProc has access to them. 
+                                 // ONLY VALID DURING A DRAG STARTED WITHIN THIS APP.
 
 }; // class nsDragService
 

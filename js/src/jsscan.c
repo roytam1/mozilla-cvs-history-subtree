@@ -24,10 +24,9 @@
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
-#ifdef HAVE_MEMORY_H
 #include <memory.h>
-#endif
 #include <stdarg.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"

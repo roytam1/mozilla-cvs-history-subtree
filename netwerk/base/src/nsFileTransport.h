@@ -21,8 +21,7 @@
 
 #include "nsITransport.h"
 #include "nsIThread.h"
-#include "nsIEventQueue.h"
-#include "prmon.h"
+#include "plevent.h"
 
 class nsFileTransportService;
 class nsIBaseStream;
@@ -42,11 +41,11 @@ public:
 
     // nsITransport methods:
     NS_IMETHOD AsyncRead(nsISupports* context,
-                         nsIEventQueue* appEventQueue,
+                         PLEventQueue* appEventQueue,
                          nsIStreamListener* listener);
     NS_IMETHOD AsyncWrite(nsIInputStream* fromStream,
                           nsISupports* context,
-                          nsIEventQueue* appEventQueue,
+                          PLEventQueue* appEventQueue,
                           nsIStreamObserver* observer);
     NS_IMETHOD OpenInputStream(nsIInputStream* *result);
     NS_IMETHOD OpenOutputStream(nsIOutputStream* *result);
@@ -88,9 +87,6 @@ protected:
     nsIInputStream*             mBufferStream;
     nsresult                    mStatus;
     PRUint32                    mSourceOffset;
-
-private:
-    PRMonitor*                  mMonitor;
 };
 
 #define NS_FILE_TRANSPORT_BUFFER_SIZE   (4*1024)

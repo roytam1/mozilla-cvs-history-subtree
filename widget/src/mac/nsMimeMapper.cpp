@@ -25,9 +25,8 @@
 
 
 #include "nsMimeMapper.h"
-
+#include "nsITransferable.h"
 #include "nsString.h"
-#include "nsIDataFlavor.h"
 
 //
 // MapMimeTypeToMacOSType
@@ -65,3 +64,26 @@ nsMimeMapperMac :: MapMimeTypeToMacOSType ( const nsString & aMimeStr )
   return format;
   
 } // MapMimeTypeToMacOSType
+
+
+//
+// MapMacOSTypeToMimeType
+//
+// Given a MacOS flavor, map this back into the Mozilla mimetype. 
+//
+void
+nsMimeMapperMac :: MapMacOSTypeToMimeType ( ResType inMacType, nsString & outMimeStr )
+{
+  switch ( inMacType ) {
+  
+    case 'TEXT': outMimeStr = kTextMime; break;
+    case 'XIF ': outMimeStr = kXIFMime; break;
+    case 'HTML': outMimeStr = kHTMLMime; break;
+    
+    default:
+      outMimeStr = "unknown";
+      //еее need to un-hash here.
+  
+  } // case of which flavor
+
+} // MapMacOSTypeToMimeType
