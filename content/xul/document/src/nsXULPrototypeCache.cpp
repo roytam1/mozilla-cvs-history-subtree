@@ -147,7 +147,7 @@ protected:
     nsSupportsHashtable mFastLoadURITable;
 
     static nsIFastLoadService*    gFastLoadService;
-    static nsIFile*               sFastLoadFile;
+    static nsIFile*               gFastLoadFile;
 
     // Bootstrap FastLoad Service
     nsresult StartFastLoad(nsIURI* aDocumentURI);
@@ -183,7 +183,7 @@ DisableXULCacheChangedCallback(const char* aPref, void* aClosure)
 
 
 nsIFastLoadService*   nsXULPrototypeCache::gFastLoadService = nsnull;
-nsIFile*              nsXULPrototypeCache::sFastLoadFile = nsnull;
+nsIFile*              nsXULPrototypeCache::gFastLoadFile = nsnull;
 
 nsXULPrototypeCache::nsXULPrototypeCache()
 {
@@ -196,7 +196,7 @@ nsXULPrototypeCache::~nsXULPrototypeCache()
     FlushScripts();
 
     NS_IF_RELEASE(gFastLoadService); // don't need ReleaseService nowadays!
-    NS_IF_RELEASE(sFastLoadFile);
+    NS_IF_RELEASE(gFastLoadFile);
 }
 
 
@@ -519,6 +519,12 @@ nsXULPrototypeCache::GetFastLoadService(nsIFastLoadService** aResult)
     return NS_OK;
 }
 
+static PRBool gDisableXULFastLoad = PR_FALSE;           // enabled by default
+static PRBool gChecksumXULFastLoadFile = PR_TRUE;       // XXXbe too paranoid
+
+static const char kDisableXULFastLoadPref[] = "nglayout.debug.disable_xul_fastload";
+static const char kChecksumXULFastLoadFilePref[] = "nglayout.debug.checksum_xul_fastload_file";
+
 
 NS_IMETHODIMP
 nsXULPrototypeCache::AbortFastLoads()
@@ -529,7 +535,7 @@ nsXULPrototypeCache::AbortFastLoads()
 
     // Save a strong ref to the FastLoad file, so we can remove it after we
     // close open streams to it.
-    nsCOMPtr<nsIFile> file = sFastLoadFile;
+    nsCOMPtr<nsIFile> file = gFastLoadFile;
 
     // Now rename or remove the file.
     if (file) {
@@ -544,6 +550,39 @@ nsXULPrototypeCache::AbortFastLoads()
     // script, somehow.
     Flush();
 
+    // Clear the FastLoad set
+    mFastLoadURITable.Reset();
+
+    if (! gFastLoadService) 
+        return NS_OK;
+
+    // Fetch the current input (if FastLoad file existed) or output (if we're
+    // creating the FastLoad file during this app startup) stream.
+    nsCOMPtr<nsIObjectInputStream> objectInput;
+    nsCOMPtr<nsIObjectOutputStream> objectOutput;
+    gFastLoadService->GetInputStream(getter_AddRefs(objectInput));
+    gFastLoadService->GetOutputStream(getter_AddRefs(objectOutput));
+
+    if (objectOutput) {
+        gFastLoadService->SetOutputStream(nsnull);
+        
+        if (NS_SUCCEEDED(objectOutput->Close()) && gChecksumXULFastLoadFile)
+            gFastLoadService->CacheChecksum(gFastLoadFile,
+                                            objectOutput);
+    }
+
+    if (objectInput) {
+        // If this is the last of one or more XUL master documents loaded
+        // together at app startup, close the FastLoad service's singleton
+        // input stream now.
+        gFastLoadService->SetInputStream(nsnull);
+        objectInput->Close();
+    }
+
+    // If the list is empty now, the FastLoad process is done.
+    NS_RELEASE(gFastLoadService);
+    NS_RELEASE(gFastLoadFile);
+
     return NS_OK;
 }
 
@@ -556,12 +595,6 @@ nsXULPrototypeCache::RemoveFromFastLoadSet(nsIURI* aURI)
 
     return NS_OK;
 }
-
-static PRBool gDisableXULFastLoad = PR_FALSE;           // enabled by default
-static PRBool gChecksumXULFastLoadFile = PR_TRUE;       // XXXbe too paranoid
-
-static const char kDisableXULFastLoadPref[] = "nglayout.debug.disable_xul_fastload";
-static const char kChecksumXULFastLoadFilePref[] = "nglayout.debug.checksum_xul_fastload_file";
 
 NS_IMETHODIMP
 nsXULPrototypeCache::WritePrototype(nsIXULPrototypeDocument* aPrototypeDocument)
@@ -618,7 +651,7 @@ nsXULPrototypeCache::WritePrototype(nsIXULPrototypeDocument* aPrototypeDocument)
             rv = objectOutput->Close();
 
             if (NS_SUCCEEDED(rv) && gChecksumXULFastLoadFile) {
-                rv = gFastLoadService->CacheChecksum(sFastLoadFile,
+                rv = gFastLoadService->CacheChecksum(gFastLoadFile,
                                                      objectOutput);
             }
         }
@@ -637,7 +670,7 @@ nsXULPrototypeCache::WritePrototype(nsIXULPrototypeDocument* aPrototypeDocument)
     // If the list is empty now, the FastLoad process is done.
     if (count == 0) {
         NS_RELEASE(gFastLoadService);
-        NS_RELEASE(sFastLoadFile);
+        NS_RELEASE(gFastLoadFile);
     }
 
     return NS_FAILED(rv) ? rv : rv2;
@@ -779,14 +812,14 @@ nsXULPrototypeCache::StartFastLoad(nsIURI* aURI)
     //
     // XXXbe we do not yet use nsFastLoadPtrs, but once we do, we must keep
     // the FastLoad input stream open for the life of the app.
-    if (gFastLoadService && sFastLoadFile) {
+    if (gFastLoadService && gFastLoadFile) {
         mFastLoadURITable.Put(&key, aURI);
 
         return NS_OK;
     }
 
     // Use a local to refer to the service till we're sure we succeeded, then
-    // commit to gFastLoadService.  Same for sFastLoadFile, which is used to
+    // commit to gFastLoadService.  Same for gFastLoadFile, which is used to
     // delete the FastLoad file on abort.
     nsCOMPtr<nsIFastLoadService> fastLoadService(do_GetFastLoadService());
     if (! fastLoadService)
@@ -948,7 +981,7 @@ nsXULPrototypeCache::StartFastLoad(nsIURI* aURI)
     mFastLoadURITable.Put(&key, aURI);
 
     NS_ADDREF(gFastLoadService = fastLoadService);
-    NS_ADDREF(sFastLoadFile = file);
+    NS_ADDREF(gFastLoadFile = file);
     return NS_OK;
 }
 
