@@ -63,8 +63,13 @@ nsresult nsSOAPEncodingRegistry::GetStyle(const nsAString& aStyleURI, PRBool aCr
   *aEncoding = (nsISOAPEncoding*)mEncodings->Get(&styleKey);
   if (!*aEncoding)
   {
-    if (aCreateIf) {
-      *aEncoding = new nsSOAPEncoding(aStyleURI, this);
+    nsCOMPtr<nsISOAPEncoding> defaultEncoding;
+    nsCAutoString encodingContractid;
+    encodingContractid.Assign(NS_SOAPENCODING_CONTRACTID_PREFIX);
+    encodingContractid.Append(NS_ConvertUCS2toUTF8(aStyleURI));
+    defaultEncoding = do_GetService(encodingContractid.get());
+    if (defaultEncoding || aCreateIf) {
+      *aEncoding = new nsSOAPEncoding(aStyleURI, this, defaultEncoding);
       mEncodings->Put(&styleKey, *aEncoding);
     }
   }
@@ -165,14 +170,11 @@ nsSOAPEncoding::nsSOAPEncoding(): mEncoders(new nsSupportsHashtable),
   /* member initializers and constructor code */
 
   mStyleURI.Assign(nsSOAPUtils::kSOAPEncodingURI);
-  nsCAutoString encodingContractid;
-  encodingContractid.Assign(NS_SOAPENCODING_CONTRACTID_PREFIX);
-  encodingContractid.Append(NS_ConvertUCS2toUTF8(mStyleURI));
-  mDefaultEncoding = do_CreateInstance(encodingContractid.get());
+  mDefaultEncoding = do_GetService(NS_DEFAULTSOAPENCODER_CONTRACTID);
   mRegistry = new nsSOAPEncodingRegistry(this);
 }
 
-nsSOAPEncoding::nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistry* aRegistry)
+nsSOAPEncoding::nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistry* aRegistry, nsISOAPEncoding* aDefaultEncoding)
 	: mEncoders(new nsSupportsHashtable), mDecoders(new nsSupportsHashtable)
 {
   NS_INIT_ISUPPORTS();
@@ -180,13 +182,8 @@ nsSOAPEncoding::nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistr
   /* member initializers and constructor code */
 
   mStyleURI.Assign(aStyleURI);
-  if (aRegistry) {
-    nsCAutoString encodingContractid;
-    encodingContractid.Assign(NS_SOAPENCODING_CONTRACTID_PREFIX);
-    encodingContractid.Append(NS_ConvertUCS2toUTF8(mStyleURI));
-    mDefaultEncoding = do_CreateInstance(encodingContractid.get());
-    mRegistry = aRegistry;
-  }
+  mRegistry = aRegistry;
+  mDefaultEncoding = aDefaultEncoding;
 }
 
 nsSOAPEncoding::~nsSOAPEncoding()

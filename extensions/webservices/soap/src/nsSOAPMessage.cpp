@@ -27,7 +27,7 @@
 #include "nsSOAPMessage.h"
 #include "nsSOAPParameter.h"
 #include "nsSOAPHeaderBlock.h"
-#include "nsISOAPEncoding.h"
+#include "nsSOAPEncoding.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMParser.h"
 #include "nsIDOMElement.h"
@@ -419,7 +419,7 @@ NS_IMETHODIMP nsSOAPMessage::GetEncoding(nsISOAPEncoding* * aEncoding)
   NS_ENSURE_ARG_POINTER(aEncoding);
   if (!mEncoding) {
     nsresult rv;
-    mEncoding = do_CreateInstance(NS_SOAPENCODING_CONTRACTID, &rv);
+    mEncoding = new nsSOAPEncoding();
     if (NS_FAILED(rv))
       return rv;
   }

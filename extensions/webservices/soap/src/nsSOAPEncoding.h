@@ -61,7 +61,7 @@ public:
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
   nsSOAPEncoding();
-  nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistry * aRegistry);
+  nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistry * aRegistry, nsISOAPEncoding* aDefaultEncoding);
   virtual ~nsSOAPEncoding();
   /* additional members */
 

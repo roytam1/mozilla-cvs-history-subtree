@@ -152,7 +152,7 @@ DECLARE_ENCODER(UnsignedByte)
   SetDecoder(kSchemaDatatypesNamespaceURI, k##name##SchemaType, handler); \
 }
 
-nsDefaultSOAPEncoder::nsDefaultSOAPEncoder(): nsSOAPEncoding(nsSOAPUtils::kSOAPEncodingURI, nsnull) 
+nsDefaultSOAPEncoder::nsDefaultSOAPEncoder(): nsSOAPEncoding(nsSOAPUtils::kSOAPEncodingURI, nsnull, nsnull) 
 {
   {
     nsDefaultEncoder *handler = new nsDefaultEncoder();
