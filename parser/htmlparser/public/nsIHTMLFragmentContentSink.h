@@ -41,6 +41,9 @@
 #include "nsIHTMLContentSink.h"
 
 #define NS_HTMLFRAGMENTSINK_CONTRACTID "@mozilla.org/layout/htmlfragmentsink;1"
+#define NS_HTMLFRAGMENTSINK2_CONTRACTID "@mozilla.org/layout/htmlfragmentsink;2"
+#define NS_FRAGMENTSINK_CONTRACTID "@mozilla.org/layout/htmlfragmentsink;1"
+
 
 class nsIDOMDocumentFragment;
 

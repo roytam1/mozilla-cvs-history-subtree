@@ -40,12 +40,12 @@
 
 nsComposerCommandsUpdater::nsComposerCommandsUpdater()
 :  mEditor(nsnull)
-,	 mDocShell(nsnull)
+,    mDocShell(nsnull)
 ,  mDirtyState(eStateUninitialized)
 ,  mSelectionCollapsed(eStateUninitialized)
 ,  mFirstDoOfFirstUndo(PR_TRUE)
 {
-	NS_INIT_ISUPPORTS();
+    NS_INIT_ISUPPORTS();
 }
 
 nsComposerCommandsUpdater::~nsComposerCommandsUpdater()
@@ -111,7 +111,7 @@ NS_IMETHODIMP nsComposerCommandsUpdater::DidDo(nsITransactionManager *aManager,
       CallUpdateCommands(NS_LITERAL_STRING("undo"));
     mFirstDoOfFirstUndo = PR_FALSE;
   }
-	
+    
   return NS_OK;
 }
 
@@ -191,7 +191,7 @@ NS_IMETHODIMP nsComposerCommandsUpdater::DidMerge(nsITransactionManager *aManage
 nsresult
 nsComposerCommandsUpdater::SetEditor(nsIEditor* aEditor)
 {
-  mEditor = aEditor;		// no addreffing here
+  mEditor = aEditor;        // no addreffing here
   return NS_OK;
 }
 
@@ -245,7 +245,7 @@ nsComposerCommandsUpdater::UpdateDirtyState(PRBool aNowDirty)
 }
 
 nsresult
-nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommand)
+nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
 {
   if (!mDocShell)
   {
@@ -262,21 +262,66 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommand)
     nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject;
     theDoc->GetScriptGlobalObject(getter_AddRefs(scriptGlobalObject));
 
-		nsCOMPtr<nsIDocShell>	docShell;
-		scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
-		mDocShell = docShell.get();		
+    if (scriptGlobalObject) {
+        nsCOMPtr<nsIDocShell>   docShell;
+        scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
+        mDocShell = docShell.get();     
+    }
   }
 
   if (!mDocShell) return NS_ERROR_FAILURE;
   
-  nsCOMPtr<nsICommandManager>  	commandManager = do_GetInterface(mDocShell);
-  nsCOMPtr<nsPICommandUpdater>	commandUpdater = do_QueryInterface(commandManager);
+  nsCOMPtr<nsICommandManager>   commandManager = do_GetInterface(mDocShell);
+  nsCOMPtr<nsPICommandUpdater>  commandUpdater = do_QueryInterface(commandManager);
   if (!commandUpdater) return NS_ERROR_FAILURE;
   
   commandUpdater->CommandStatusChanged("cmd_bold");
   commandUpdater->CommandStatusChanged("cmd_italic");
   commandUpdater->CommandStatusChanged("cmd_underline");
-  
+
+  // this hardcoded list of commands in temporary. This code should
+  // use nsICommandGroup.
+  if (aCommandGroup.Equals(NS_LITERAL_STRING("undo")))
+  {
+    commandUpdater->CommandStatusChanged("cmd_undo");
+    commandUpdater->CommandStatusChanged("cmd_redo");
+  }
+  else if (aCommandGroup.Equals(NS_LITERAL_STRING("select")) ||
+           aCommandGroup.Equals(NS_LITERAL_STRING("style")))
+  {
+    commandUpdater->CommandStatusChanged("cmd_bold");
+    commandUpdater->CommandStatusChanged("cmd_italic");
+    commandUpdater->CommandStatusChanged("cmd_underline");
+    commandUpdater->CommandStatusChanged("cmd_tt");
+
+    commandUpdater->CommandStatusChanged("cmd_strikethrough");
+    commandUpdater->CommandStatusChanged("cmd_superscript");
+    commandUpdater->CommandStatusChanged("cmd_subscript");
+    commandUpdater->CommandStatusChanged("cmd_nobreak");
+
+    commandUpdater->CommandStatusChanged("cmd_em");
+    commandUpdater->CommandStatusChanged("cmd_strong");
+    commandUpdater->CommandStatusChanged("cmd_cite");
+    commandUpdater->CommandStatusChanged("cmd_abbr");
+    commandUpdater->CommandStatusChanged("cmd_acronym");
+    commandUpdater->CommandStatusChanged("cmd_code");
+    commandUpdater->CommandStatusChanged("cmd_samp");
+    commandUpdater->CommandStatusChanged("cmd_var");
+
+    commandUpdater->CommandStatusChanged("cmd_increaseFont");
+    commandUpdater->CommandStatusChanged("cmd_decreaseFont");
+
+    commandUpdater->CommandStatusChanged("cmd_paragraphState");
+    commandUpdater->CommandStatusChanged("cmd_fontFace");
+    commandUpdater->CommandStatusChanged("cmd_fontColor");
+    commandUpdater->CommandStatusChanged("cmd_backgroundColor");
+    commandUpdater->CommandStatusChanged("cmd_highlight");
+  }  
+  else if (aCommandGroup.Equals(NS_LITERAL_STRING("save")))
+  {
+    // save commands (none in C++)
+  }
+    
   return NS_OK;  
 }
 
