@@ -987,15 +987,6 @@ extern int NET_CleanupCacheDirectory(char * dir_name, const char * prefix);
  */
 extern Bool NET_ChangeCacheFileLock(URL_Struct *URL_s, Bool set);
 
-/* Find an actively-loading cache file for URL_s in context, and copy the first
- * nbytes of it to a new cache file.  Return a cache converter stream by which
- * the caller can append to the cloned cache file.
- */
-extern NET_StreamClass *
-NET_CloneWysiwygCacheFile(MWContext *context, URL_Struct *URL_s, 
-			  uint32 nbytes, const char * wysiwyg_url,
-			  const char * base_href);
-
 /* returns TRUE if the url is in the disk cache
  */
 extern Bool NET_IsURLInDiskCache(URL_Struct *URL_s);
