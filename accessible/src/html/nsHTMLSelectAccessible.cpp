@@ -176,16 +176,9 @@ nsHTMLSelectAccessible::nsHTMLSelectAccessible(nsIDOMNode* aDOMNode,
                                        nsIWeakReference* aShell)
                                                :nsAccessible(aDOMNode, aShell)
 {
-  NS_INIT_REFCNT();
 }
 
-NS_INTERFACE_MAP_BEGIN(nsHTMLSelectAccessible)
-  NS_INTERFACE_MAP_ENTRY(nsIAccessibleSelectable)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIAccessibleSelectable)
-NS_INTERFACE_MAP_END_INHERITING(nsAccessible)
-
-NS_IMPL_ADDREF_INHERITED(nsHTMLSelectAccessible, nsGenericAccessible);
-NS_IMPL_RELEASE_INHERITED(nsHTMLSelectAccessible, nsGenericAccessible);
+NS_IMPL_ISUPPORTS_INHERITED1(nsHTMLSelectAccessible, nsAccessible, nsIAccessibleSelectable)
 
 NS_IMETHODIMP nsHTMLSelectAccessible::GetAccValue(PRUnichar **_retval)
 {

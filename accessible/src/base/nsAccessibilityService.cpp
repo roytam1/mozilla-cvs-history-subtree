@@ -374,9 +374,11 @@ nsAccessibilityService::CreateAccessible(nsIDOMNode* node, nsISupports* document
   nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(d->GetShellAt(0))));
 
   *_retval = new nsAccessible(node, wr);
-  NS_IF_ADDREF(*_retval);
-
-  return NS_OK;  
+  if ( *_retval ) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  }
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP 
@@ -396,9 +398,11 @@ nsAccessibilityService::CreateHTMLBlockAccessible(nsIDOMNode* node, nsISupports*
   nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(d->GetShellAt(0))));
 
   *_retval = new nsAccessible(node, wr);
-  NS_IF_ADDREF(*_retval);
-
-  return NS_OK;
+  if ( *_retval ) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  }
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP 
@@ -435,10 +439,16 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
             ps->GetDocument(getter_AddRefs(innerDoc)); 
             if (innerDoc) {
               nsCOMPtr<nsIAccessible> root = new nsHTMLIFrameRootAccessible(node, wr);
-              nsHTMLIFrameAccessible *frameAcc = new nsHTMLIFrameAccessible(node, root, weakRef, innerDoc);
-              *_retval = NS_STATIC_CAST(nsIAccessible*, frameAcc);
-              NS_ADDREF(*_retval);
-              return NS_OK;
+              if ( root ) {
+                nsHTMLIFrameAccessible* frameAcc = new nsHTMLIFrameAccessible(node, root, weakRef, innerDoc);
+                if ( frameAcc != nsnull ) {
+                  *_retval = NS_STATIC_CAST(nsIAccessible*, frameAcc);
+                  if ( *_retval ) {
+                    NS_ADDREF(*_retval);
+                    return NS_OK;
+                  }
+                }
+              }
             }
           }
         }
@@ -582,9 +592,7 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessibleFor(nsIWeakReference *aPresSh
     // is it a link?
     nsCOMPtr<nsILink> link(do_QueryInterface(aNode));
     if (link) {
-      *_retval = new nsHTMLLinkAccessible(aNode, aPresShell);
-      NS_IF_ADDREF(*_retval);
-      return NS_OK;
+      newAcc = new nsHTMLLinkAccessible(aNode, aPresShell);
     }
   }
 
