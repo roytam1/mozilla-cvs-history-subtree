@@ -24,6 +24,7 @@ CPPSRCS		= nsDebug.cpp \
 		  nsID.cpp \
 		  nsSupportsArray.cpp \
 		  nsRepository.cpp \
+		  nsMalloc.cpp \
 		  $(NULL)
 
 EXPORTS		= nsCom.h \

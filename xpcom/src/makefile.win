@@ -49,6 +49,7 @@ CPP_OBJS = \
 	.\$(OBJDIR)\nsID.obj		\
 	.\$(OBJDIR)\nsSupportsArray.obj	\
 	.\$(OBJDIR)\nsRepository.obj	\
+	.\$(OBJDIR)\nsMalloc.obj	\
 
 EXPORTS = \
 	nsAgg.h			\
@@ -67,6 +68,8 @@ EXPORTS = \
 	nsIInputStream.h	\
 	nsIOutputStream.h	\
 	nscore.h        	\
+	nsIMalloc.h		\
+	nsMalloc.h		\
 	nsVector.h		\
 	$(NULL)			
 
