@@ -183,6 +183,15 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
   png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
                &interlace_type, &compression_type, &filter_type);
 
+  /* limit image dimensions (bug #251381) */
+#define MOZ_PNG_MAX_DIMENSION 1000000L
+  if (width > MOZ_PNG_MAX_DIMENSION || height > MOZ_PNG_MAX_DIMENSION) {
+    nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*,
+                                           png_get_progressive_ptr(png_ptr));
+    longjmp(decoder->mPNG->jmpbuf, 1);
+  }
+#undef MOZ_PNG_MAX_DIMENSION
+
   if (color_type == PNG_COLOR_TYPE_PALETTE)
     png_set_expand(png_ptr);
 
