@@ -268,7 +268,7 @@ private:
      * Looks up the given XSLType with the given name
      * The ProcessorState is used to get the current XSLT namespace
     **/
-    short getElementType(String& name, ProcessorState* ps);
+    short getElementType(const String& name, ProcessorState* ps);
 
 
     /**
