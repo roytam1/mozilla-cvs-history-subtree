@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /*
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #ifndef nsError_h
@@ -66,7 +70,7 @@ typedef PRUint32 nsresult;
 #define NS_ERROR_MODULE_REG        12
 #define NS_ERROR_MODULE_FILES      13
 #define NS_ERROR_MODULE_DOM        14
-
+#define NS_ERROR_MODULE_IMGLIB     15
 #define NS_ERROR_MODULE_MAILNEWS   16
 #define NS_ERROR_MODULE_EDITOR     17
 #define NS_ERROR_MODULE_XPCONNECT  18
@@ -167,6 +171,9 @@ typedef PRUint32 nsresult;
 
 /* Returned when a class is not registered */
 #define NS_ERROR_FACTORY_NOT_REGISTERED    ((nsresult) 0x80040154L)
+
+/* Returned when a class cannot be registered, but may be tried again later */
+#define NS_ERROR_FACTORY_REGISTER_AGAIN    ((nsresult) 0x80040155L)
 
 /* Returned when a dynamically loaded factory couldn't be found */
 #define NS_ERROR_FACTORY_NOT_LOADED        ((nsresult) 0x800401f8L)
