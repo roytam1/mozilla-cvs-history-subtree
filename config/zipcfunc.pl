@@ -77,7 +77,7 @@ sub ZipChrome()
   # Make sure $inTargetPath exists
   if(!(-e "$inTargetPath"))
   {
-    mkdir("$inTargetPath", 775);
+    mkdir("$inTargetPath", 0775);
   }
 
   # Call CreateArchive() on locales, packages, and skins
@@ -113,7 +113,7 @@ sub CreateArchive()
   # Make sure $inDest exists
   if(!(-e "$inDest"))
   {
-    mkdir("$inDest", 775);
+    mkdir("$inDest", 0775);
   }
 
   # Check for extension, if none is passed, use .jar as default
