@@ -383,6 +383,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardService) 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardStreamListener) 
 
 ////////////////////////////////////////////////////////////////////////////////
 // bayesian spam filter factories
@@ -825,6 +826,7 @@ static const nsModuleComponentInfo gComponents[] = {
     { "The addbook Protocol Handler", NS_ADDBOOK_HANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "addbook", nsAddbookProtocolHandlerConstructor },
     { "add vCard content handler", NS_ADDRESSBOOK_CID, NS_CONTENT_HANDLER_CONTRACTID_PREFIX"x-application-addvcard", nsAddressBookConstructor },
+    { "add vCard content handler", NS_ADDRESSBOOK_CID, NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/x-vcard", nsAddressBookConstructor },
 
     { "The directory factory service interface", NS_ABDIRFACTORYSERVICE_CID,
       NS_ABDIRFACTORYSERVICE_CONTRACTID, nsAbDirFactoryServiceConstructor },
@@ -871,7 +873,12 @@ static const nsModuleComponentInfo gComponents[] = {
     { "The directory query proxy interface", NS_ABDIRECTORYQUERYPROXY_CID,
       NS_ABDIRECTORYQUERYPROXY_CONTRACTID, nsAbDirectoryQueryProxyConstructor},
     { "addressbook view", NS_ABVIEW_CID, NS_ABVIEW_CONTRACTID, nsAbViewConstructor},
-    { "vcard helper service", NS_MSGVCARDSERVICE_CID, NS_MSGVCARDSERVICE_CONTRACTID, nsMsgVCardServiceConstructor },
+    { "vcard helper service", NS_MSGVCARDSERVICE_CID, NS_MSGVCARDSERVICE_CONTRACTID, 
+       nsMsgVCardServiceConstructor },
+    { "vcard stream listener", NS_MSGVCARDSTREAMLISTENER_CID, NS_MSGVCARDSTREAMLISTENER_CONTRACTID, 
+      nsMsgVCardStreamListenerConstructor },
+
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // bayesian spam filter components
