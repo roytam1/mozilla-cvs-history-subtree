@@ -52,14 +52,13 @@ REQUIRES	= xpcom \
 		  msgcompose \
 		  appcomps \
 		  intl \
+		  layout_xul \
 		  $(NULL)
 
 CPPSRCS		= \
 		nsAddressBook.cpp \
 		nsAddrBookSession.cpp \
 		nsAbRDFDataSource.cpp \
-		nsAbMDBRDFResource.cpp \
-		nsCardDataSource.cpp \
 		nsDirectoryDataSource.cpp \
 		nsAbCardProperty.cpp \
 		nsDirPrefs.cpp \
@@ -89,8 +88,6 @@ EXPORTS		= \
 		nsAddressBook.h \
 		nsAddrBookSession.h \
 		nsAbRDFDataSource.h \
-		nsAbMDBRDFResource.h \
-		nsCardDataSource.h \
 		nsDirectoryDataSource.h \
 		nsAbCardProperty.h \
 		nsDirPrefs.h \
@@ -112,6 +109,7 @@ EXPORTS		= \
                 nsAbDirSearchListener.h \
 		nsAbBooleanExpression.h \
                 nsAbDirectoryRDFResource.h \
+                nsAbView.h \
 		$(NULL)
 
 ifdef MOZ_LDAP_XPCOM
