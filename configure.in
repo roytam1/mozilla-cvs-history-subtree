@@ -93,7 +93,7 @@ MAKE_VERSION=3.78
 WINDRES_VERSION=2.14.90
 W32API_VERSION=2.4
 GNOMEVFS_VERSION=2.0
-GNOMEUI_VERSION=2.0
+GNOMEUI_VERSION=2.2.0
 
 dnl Set various checks
 dnl ========================================================
@@ -1164,8 +1164,8 @@ case "$target" in
         MKSHLIB_FORCE_ALL=
         MKSHLIB_UNFORCE_ALL=
         DSO_LDOPTS=/SUBSYSTEM:WINDOWS
-        CFLAGS="$CFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
-        CXXFLAGS="$CXXFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
+        CFLAGS="$CFLAGS -W3 -Gy -Fd\$(PDBFILE)"
+        CXXFLAGS="$CXXFLAGS -W3 -Gy -Fd\$(PDBFILE)"
         LIBS="$LIBS kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib"
         MOZ_DEBUG_FLAGS='-Zi'
         MOZ_DEBUG_LDFLAGS='/DEBUG /DEBUGTYPE:CV'
@@ -1525,7 +1525,7 @@ dnl the qsort routine under solaris is faulty
        NS_USE_NATIVE=1
        AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
        CFLAGS="$CFLAGS -xstrconst -xbuiltin=%all"
-       CXXFLAGS="$CXXFLAGS -xbuiltin=%all"
+       CXXFLAGS="$CXXFLAGS -xbuiltin=%all -features=tmplife"
        LDFLAGS="-xildoff -zlazyload -zcombreloc $LDFLAGS"
        MOZ_OPTIMIZE_FLAGS="-xO4"
        MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_FLAGS) $(DSO_LDOPTS) -o $@'
@@ -3528,7 +3528,7 @@ then
     then
         PKG_CHECK_MODULES(MOZ_GNOMEUI, libgnomeui-2.0 >= $GNOMEUI_VERSION,
         [MOZ_ENABLE_GNOMEUI=1], [
-            if test "$MOZ_ENABLE_GNOMEUI" == "force"
+            if test "$MOZ_ENABLE_GNOMEUI" = "force"
             then
                 AC_MSG_ERROR([* * * Could not find libgnomeui-2.0 >= $GNOMEUI_VERSION])
             fi
@@ -3752,7 +3752,7 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs negotiateauth"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs negotiateauth sroaming"
 
 MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview layout-debug tasks sql"
 
@@ -4843,6 +4843,36 @@ if test "$_PEDANTIC"; then
         AC_MSG_WARN([Cannot test -pedantic long long bug when cross-compiling.])
         ;;
     esac
+fi
+
+dnl ========================================================
+dnl Test for correct temporary object destruction order
+dnl ========================================================
+dnl We want to make sure the compiler follows the C++ spec here as 
+dnl xpcom and the string classes depend on it (bug 235381).
+AC_MSG_CHECKING([for correct temporary object destruction order])
+AC_TRY_RUN([ class A {
+             public:  A(int& x) : mValue(x) {}
+                      ~A() { mValue--; }
+                      operator char**() { return 0; }
+             private:  int& mValue;
+             };
+             void func(char **arg) {}
+             int m=2;
+             void test() {
+                  func(A(m));
+                  if (m==1) m = 0;
+             }
+             int main() {
+                 test();
+                 return(m);
+             }
+             ],
+     result="yes", result="no", result="maybe")
+AC_MSG_RESULT([$result])
+
+if test "$result" = "no"; then
+    AC_MSG_ERROR([Your compiler does not follow the C++ specification for temporary object destruction order.])
 fi
 
 dnl ========================================================
