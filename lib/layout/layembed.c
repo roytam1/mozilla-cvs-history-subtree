@@ -1024,7 +1024,11 @@ LO_CopySavedEmbedData(MWContext *context, SHIST_SavedData *saved_data)
 void
 LO_AddEmbedData(MWContext *context, LO_EmbedStruct* embed, void *session_data)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	lo_AddEmbedData(context, session_data, NPL_DeleteSessionData, embed->embed_index);
+#endif
 }
 
 

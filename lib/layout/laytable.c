@@ -2435,7 +2435,11 @@ lo_relayout_recycle(MWContext *context, lo_DocState *state, LO_Element *elist)
 			 */
 			if (eptr->type == LO_EMBED)
 			{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 				NPL_SameElement((LO_EmbedStruct*)eptr);
+#endif
 			}
 			lo_RecycleElements(context, state, eptr);
 		}

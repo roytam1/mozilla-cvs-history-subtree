@@ -2569,7 +2569,11 @@ typedef struct {
 PR_STATIC_CALLBACK(void*)
 et_HandleEvent_RefreshPlugins(MozillaEvent_RefreshPlugins* e)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     return ((void*) NPL_RefreshPluginList(e->refreshInstances));
+#endif
 }
 
 int32

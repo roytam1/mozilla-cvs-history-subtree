@@ -1689,7 +1689,11 @@ et_PutMochaDecoder(MWContext *pContext, MochaDecoder *decoder)
  PR_STATIC_CALLBACK(void)
  et_SetPluginWindow_handler(SetPluginWindowEvent * e)
  {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
      NPL_SetPluginWindow(e->app);
+#endif
  }
  
  void

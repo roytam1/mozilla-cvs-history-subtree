@@ -267,7 +267,13 @@ mimetype_create_self(JSContext *cx, MochaDecoder* decoder,
      * plug-in object will be created if it doesn't already exist).
      */
     if (type) {
-	char* pluginName = NPL_FindPluginEnabledForType(type);
+	char* pluginName = 
+#ifdef MOZ_NGLAYOUT
+    NULL;
+  XP_ASSERT(0);
+#else
+    NPL_FindPluginEnabledForType(type);
+#endif
 	if (pluginName)
 	{
 	    /* Look up the global plugin list object */
@@ -440,11 +446,15 @@ plugin_create_self(JSContext *cx, MochaDecoder* decoder, char* name,
 	return NULL;
 
     /* Count how many MIME types we have */
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     {
         NPReference typeref = NPRefFromStart;
         while (NPL_IteratePluginTypes(&typeref, plugref, NULL, NULL, NULL, NULL))
         	plugin->length++;
     }
+#endif
 
     return plugin;
 }
@@ -464,6 +474,9 @@ plugin_create_mimetype(JSContext* cx, JSPlugin* plugin, XP_Bool byName,
     XP_Bool found = FALSE;
 
 	/* Search for the type (by type name or slot number) */
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     while (NPL_IteratePluginTypes(&typeref, plugin->plugref, &type,
     				  &suffixes, &description, &fileType))
 	{
@@ -477,6 +490,7 @@ plugin_create_mimetype(JSContext* cx, JSPlugin* plugin, XP_Bool byName,
 
         slot++;
 	}
+#endif
 
     /* Found the mime type, so create an object and property */
     if (found) {
@@ -704,12 +718,16 @@ pluginlist_create_self(JSContext *cx, MochaDecoder* decoder, JSObject* parent_ob
     pluginlist->decoder = HOLD_BACK_COUNT(decoder);
     pluginlist->obj = obj;
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     {
         /* Compute total number of plug-ins (potential slots) */
         NPReference ref = NPRefFromStart;
         while (NPL_IteratePluginFiles(&ref, NULL, NULL, NULL))
             pluginlist->length++;
     }
+#endif
 
     return pluginlist;
 }
@@ -728,6 +746,9 @@ pluginlist_create_plugin(JSContext *cx, JSPluginList *pluginlist, XP_Bool byName
     XP_Bool found = FALSE;
 
 	/* Search for the plug-in (by name or slot number) */
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     while (NPL_IteratePluginFiles(&plugref, &plugname, &filename, &description)) {
     	if (byName)
 	    found = (plugname && (XP_STRCMP(targetName, plugname) == 0));
@@ -739,6 +760,7 @@ pluginlist_create_plugin(JSContext *cx, JSPluginList *pluginlist, XP_Bool byName
 
         slot++;
     }
+#endif
 
 	/* Found the plug-in, so create an object and property */
     if (found) {
