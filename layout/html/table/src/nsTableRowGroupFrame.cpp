@@ -396,7 +396,8 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
   nsresult  rv = NS_OK;
   nsIFrame*  kidFrame;
   if (nsnull==aStartFrame) {
-    kidFrame = mFrames.FirstChild();
+    kidFrame = GetFirstFrame(aPresContext);
+    //kidFrame = mFrames.FirstChild();
     ReflowBeforeRowLayout(aPresContext, aDesiredSize, aReflowState, aStatus, aReason);
   }
   else
@@ -407,11 +408,14 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
   for ( ; nsnull != kidFrame; ) 
   {
     if (ExcludeFrameFromReflow(kidFrame)) {
+      // The tree widget has some frames that aren't reflowed by
+      // the normal row group reflow.
       if (PR_FALSE==aDoSiblings)
         break;
 
       // Get the next child
-      kidFrame->GetNextSibling(&kidFrame);
+      GetNextFrame(aPresContext, kidFrame, &kidFrame);
+      //kidFrame->GetNextSibling(&kidFrame);
       continue;
     }
 
@@ -489,7 +493,8 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
       break;
 
     // Get the next child
-    kidFrame->GetNextSibling(&kidFrame);
+    GetNextFrame(aPresContext, kidFrame, &kidFrame);
+    //kidFrame->GetNextSibling(&kidFrame);
   }
 
   return rv;
@@ -1004,7 +1009,7 @@ nsTableRowGroupFrame::Reflow(nsIPresContext&          aPresContext,
     // reflowing the frames we have, the problem is we don't know if we have
     // room left until after we call CalculateRowHeights()...
     PullUpAllRowFrames(aPresContext);
-    if (nsnull != mFrames.FirstChild()) {
+    if (nsnull != GetFirstFrame(aPresContext)) {
       rv = ReflowMappedChildren(aPresContext, aDesiredSize, state, aStatus,
                                 nsnull, aReflowState.reason, PR_TRUE);
     }

@@ -21,6 +21,7 @@
 #include "nsVoidArray.h"
 
 class nsTreeFrame;
+class nsIStyleFrameConstruction;
 
 class nsTreeRowGroupFrame : public nsTableRowGroupFrame
 {
@@ -29,8 +30,12 @@ public:
 
   virtual PRBool ExcludeFrameFromReflow(nsIFrame* aFrame);
 
-  void SetScrollbarFrame(nsIFrame* aFrame) { mScrollbar = aFrame; };
-  
+  void SetScrollbarFrame(nsIFrame* aFrame) { mIsLazy = PR_TRUE; mScrollbar = aFrame; };
+  void SetFrameConstructor(nsIStyleFrameConstruction* aFrameConstructor) { mFrameConstructor = aFrameConstructor; };
+
+  void MakeLazy() { mIsLazy = PR_TRUE; };
+  PRBool IsLazy() { return mIsLazy; };
+
 protected:
   nsTreeRowGroupFrame();
   virtual ~nsTreeRowGroupFrame();
@@ -43,7 +48,25 @@ protected:
                                       nsReflowStatus&      aStatus,
                                       nsReflowReason       aReason);
 
-protected: // Data Members
-  nsIFrame* mScrollbar;
+  virtual nsIFrame* GetFirstFrame(nsIPresContext& aPresContext);
+  virtual void GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult);
 
+  void LocateFrame(nsIFrame* aStartFrame, nsIFrame** aResult);
+
+  NS_IMETHOD  AppendFrames(nsIPresContext& aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aFrameList);
+
+  NS_IMETHOD  InsertFrames(nsIPresContext& aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aPrevFrame,
+                           nsIFrame*       aFrameList);
+
+protected: // Data Members
+  nsIFrame* mTopFrame; // The current topmost frame in the view.
+  PRBool mIsLazy; // Whether or not we're a lazily instantiated beast
+  nsIFrame* mScrollbar; // Our scrollbar.
+  nsIStyleFrameConstruction* mFrameConstructor; // We don't own this. (No addref/release allowed, punk.)
 }; // class nsTreeRowGroupFrame

@@ -293,7 +293,9 @@ protected:
                                       nsReflowStatus&      aStatus,
                                       nsReflowReason       aReason) { return NS_OK; };
 
-  virtual PRBool ExcludeFrameFromReflow(nsIFrame* aFrame) { return PR_FALSE; }
+  virtual PRBool ExcludeFrameFromReflow(nsIFrame* aFrame) { return PR_FALSE; };
+  virtual nsIFrame* GetFirstFrame(nsIPresContext& aPresContext) { return mFrames.FirstChild(); };
+  virtual void GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult) { aFrame->GetNextSibling(aResult); };
 
 private:
   nsIAtom *mType;

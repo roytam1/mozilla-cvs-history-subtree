@@ -2747,6 +2747,18 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresContext*          aPresContext,
       rv = ConstructTableGroupFrame(aPresContext, aState, aContent, aParentFrame, aStyleContext,
                                     PR_TRUE, newTopFrame, newFrame, treeCreator, nsnull);
       aFrameItems.AddChild(newFrame);
+      const nsStyleDisplay* styleDisplay = (const nsStyleDisplay*)
+           aStyleContext->GetStyleData(eStyleStruct_Display);
+      
+      if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == styleDisplay->mDisplay) {
+        // We're the child of another row group. If it's lazy, we're lazy.
+        nsTreeRowGroupFrame* treeFrame = (nsTreeRowGroupFrame*)aParentFrame;
+        if (treeFrame->IsLazy()) {
+          ((nsTreeRowGroupFrame*)newFrame)->MakeLazy();
+          ((nsTreeRowGroupFrame*)newFrame)->SetFrameConstructor(this);
+        }
+      }
+
       return rv;
     }
     else if (aTag == nsXULAtoms::tree)
@@ -2999,7 +3011,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
       ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
 
       ((nsTreeRowGroupFrame*)aParentFrame)->SetScrollbarFrame(aChildItems.lastChild);
-
+      ((nsTreeRowGroupFrame*)aParentFrame)->SetFrameConstructor(this);
     }
   }
 

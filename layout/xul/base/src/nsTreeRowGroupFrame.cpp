@@ -17,10 +17,14 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
+#include "nsCOMPtr.h"
 #include "nsIFrameReflow.h"
 #include "nsTreeFrame.h"
+#include "nsIPresContext.h"
+#include "nsIPresShell.h"
 #include "nsTreeRowGroupFrame.h"
 #include "nsIStyleContext.h"
+#include "nsIStyleFrameConstruction.h"
 #include "nsIContent.h"
 #include "nsCSSRendering.h"
 #include "nsTreeCellFrame.h"
@@ -50,7 +54,9 @@ NS_NewTreeRowGroupFrame (nsIFrame** aNewFrame)
 
 // Constructor
 nsTreeRowGroupFrame::nsTreeRowGroupFrame()
-:nsTableRowGroupFrame(), mScrollbar(nsnull) { }
+:nsTableRowGroupFrame(), mScrollbar(nsnull), mFrameConstructor(nsnull),
+ mTopFrame(nsnull), mIsLazy(PR_FALSE)
+{ }
 
 // Destructor
 nsTreeRowGroupFrame::~nsTreeRowGroupFrame()
@@ -110,4 +116,122 @@ PRBool nsTreeRowGroupFrame::ExcludeFrameFromReflow(nsIFrame* aFrame)
   if (aFrame == mScrollbar)
     return PR_TRUE;
   else return PR_FALSE;
+}
+
+void nsTreeRowGroupFrame::LocateFrame(nsIFrame* aStartFrame, nsIFrame** aResult)
+{
+  if (aStartFrame == nsnull)
+  {
+    aStartFrame = mFrames.FirstChild();
+  }
+  else aStartFrame->GetNextSibling(&aStartFrame);
+
+  if (!aStartFrame) {
+    *aResult = nsnull;
+  } else if (aStartFrame != mScrollbar) {
+    *aResult = aStartFrame;
+  } else {
+    aStartFrame->GetNextSibling(&aStartFrame);
+    *aResult = aStartFrame;
+  }
+}
+      
+nsIFrame* 
+nsTreeRowGroupFrame::GetFirstFrame(nsIPresContext& aPresContext) 
+{ 
+  // We may just be a normal row group.
+  if (!mIsLazy)
+    return mFrames.FirstChild();
+
+  // See if we have any frame whatsoever.
+  LocateFrame(nsnull, &mTopFrame);
+
+  if (mTopFrame)
+    return mTopFrame;
+
+  // We don't have a top frame instantiated. Let's
+  // try to make one.
+  PRInt32 count;
+  mContent->ChildCount(count);
+  nsCOMPtr<nsIContent> childContent;
+  nsCOMPtr<nsIContent> scrollbarContent;
+  if (mScrollbar)
+    mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
+  for (PRInt32 i = 0; i < count; i++) {
+    mContent->ChildAt(i, *getter_AddRefs(childContent));
+    if (childContent != scrollbarContent) {
+      mFrameConstructor->ContentInserted(&aPresContext, mContent, childContent, i);
+      return nsnull;
+    }
+  }
+  
+  return nsnull;
+}
+  
+void 
+nsTreeRowGroupFrame::GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult) 
+{ 
+  if (mIsLazy) {
+    // We're ultra-cool. We build our frames on the fly.
+    LocateFrame(aFrame, aResult);
+    if (!*aResult) {
+      // No result found. See if there's a content node that wants a frame.
+      PRInt32 i, childCount;
+      nsCOMPtr<nsIContent> prevContent;
+      aFrame->GetContent(getter_AddRefs(prevContent));
+      nsCOMPtr<nsIContent> parentContent;
+      mContent->IndexOf(prevContent, i);
+      mContent->ChildCount(childCount);
+      nsCOMPtr<nsIContent> scrollbarContent;
+      if (mScrollbar)
+        mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
+      if (i+1 < childCount) {
+        // There is a content node that wants a frame.
+        nsCOMPtr<nsIContent> nextContent;
+        mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
+        if (nextContent == scrollbarContent) {
+          if (i+2 >= childCount) {
+            *aResult = nsnull;
+            return;
+          } else {
+            i++;
+            mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
+          }
+        }
+        mFrameConstructor->ContentInserted(&aPresContext, mContent, nextContent, i+1);
+        *aResult = nsnull;
+        return;
+      }
+    }
+  }
+  
+  // Ho-hum. Move along, nothing to see here.
+  aFrame->GetNextSibling(aResult);
+}
+
+NS_IMETHODIMP
+nsTreeRowGroupFrame::InsertFrames(nsIPresContext& aPresContext,
+                            nsIPresShell& aPresShell,
+                            nsIAtom* aListName,
+                            nsIFrame* aPrevFrame,
+                            nsIFrame* aFrameList)
+{
+  //mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
+  //if (mScrollbar)
+  //  return NS_OK;
+  //else 
+    return nsTableRowGroupFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList); 
+}
+
+NS_IMETHODIMP
+nsTreeRowGroupFrame::AppendFrames(nsIPresContext& aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aFrameList)
+{
+  //mFrames.AppendFrames(nsnull, aFrameList); 
+   //if (mScrollbar)
+   // return NS_OK;
+   //else
+     return nsTableRowGroupFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 
 }
