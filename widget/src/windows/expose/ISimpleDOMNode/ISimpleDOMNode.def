@@ -1,4 +1,4 @@
-LIBRARY        ISimpleDOMNodeMarshall.dll
+LIBRARY        ISimpleDOMNodeMarshal.dll
 DESCRIPTION    'ISimpleDOMNode proxy/stub DLL - enables cross-process communication'
 EXPORTS        DllGetClassObject      @1 PRIVATE
                DllCanUnloadNow        @2 PRIVATE
