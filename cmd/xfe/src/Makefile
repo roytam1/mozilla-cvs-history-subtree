@@ -218,19 +218,6 @@ CPPSRCS		+= \
 		  $(NULL)
 endif
 
-ifdef MOZ_LDAP
-CPPSRCS		+= \
-		  PrefsLdapProp.cpp \
-		  PrefsMserverMore.cpp \
-		  $(NULL)
-endif
-
-ifdef MOZ_MAIL_NEWS
-CPPSRCS		+= \
-		  PrefsMsgMore.cpp \
-		  $(NULL)
-endif
-
 ifdef MOZ_MAIL_NEWS
 CPPSRCS		+= \
 		  PropertySheetDialog.cpp \
@@ -292,7 +279,7 @@ include $(DEPTH)/config/rules.mk
 
 INCLUDES	+= -I$(OBJDIR) -I.. -I../DtWidgets -I$(DEPTH)/modules/libreg/include
 
-#ifndef MOZ_LITE
+#ifdef MOZ_MAIL_NEWS
 #CFLAGS		+= -DEDITOR
 #endif
 
