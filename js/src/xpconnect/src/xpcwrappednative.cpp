@@ -1984,29 +1984,61 @@ static JSBool InterfacesAreRelated(XPCNativeInterface* iface1,
     nsIInterfaceInfo* info1 = iface1->GetInterfaceInfo();
     nsIInterfaceInfo* info2 = iface2->GetInterfaceInfo();
 
-    if(info1 == info2)
-        return JS_TRUE;
+    NS_ASSERTION(info1 != info2, "should not have different iface!");
 
-    nsCOMPtr<nsIInterfaceInfo> current;
-    nsCOMPtr<nsIInterfaceInfo> parent;
+    PRBool match;
 
-    current = info1;
-    while(NS_SUCCEEDED(current->GetParent(getter_AddRefs(parent))) && parent)
+    return 
+        (NS_SUCCEEDED(info1->HasAncestor(iface2->GetIID(), &match)) && match) ||
+        (NS_SUCCEEDED(info2->HasAncestor(iface1->GetIID(), &match)) && match);
+}
+
+static JSBool MembersAreTheSame(XPCNativeInterface* iface1,
+                                PRUint16 memberIndex1,
+                                XPCNativeInterface* iface2,
+                                PRUint16 memberIndex2)
+{
+    nsIInterfaceInfo* info1 = iface1->GetInterfaceInfo();
+    nsIInterfaceInfo* info2 = iface2->GetInterfaceInfo();
+
+    XPCNativeMember* member1 = iface1->GetMemberAt(memberIndex1);
+    XPCNativeMember* member2 = iface2->GetMemberAt(memberIndex2);
+
+    PRUint16 index1 = member1->GetIndex();
+    PRUint16 index2 = member2->GetIndex();
+
+    // If they are both constants, then we'll just be sure that are equivelent.
+
+    if(member1->IsConstant())
     {
-        current = parent;
-        if(current == info2)
-            return JS_TRUE;
+        if(!member2->IsConstant())
+            return JS_FALSE;    
+    
+        const nsXPTConstant* constant1;
+        const nsXPTConstant* constant2;
+
+        return NS_SUCCEEDED(info1->GetConstant(index1, &constant1)) &&
+               NS_SUCCEEDED(info2->GetConstant(index2, &constant2)) &&
+               constant1->GetType() == constant2->GetType() &&
+               constant1->GetValue() == constant2->GetValue();
+    }
+    
+    // Else we make sure they are of the same 'type' and return true only if
+    // they are inherited from the same interface.
+        
+    if(member1->IsMethod() != member2->IsMethod() ||
+       member1->IsWritableAttribute() != member2->IsWritableAttribute() ||
+       member1->IsReadOnlyAttribute() != member2->IsReadOnlyAttribute())
+    {
+        return JS_FALSE;    
     }
 
-    current = info2;
-    while(NS_SUCCEEDED(current->GetParent(getter_AddRefs(parent))) && parent)
-    {
-        current = parent;
-        if(current == info1)
-            return JS_TRUE;
-    }
+    const nsXPTMethodInfo* mi1;
+    const nsXPTMethodInfo* mi2;
 
-    return JS_FALSE;
+    return NS_SUCCEEDED(info1->GetMethodInfo(index1, &mi1)) &&
+           NS_SUCCEEDED(info2->GetMethodInfo(index2, &mi2)) &&
+           mi1 == mi2;
 }
 
 void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
@@ -2133,7 +2165,9 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
                     if(memberInnerName == QIName)
                         continue;
 
-                    if(memberOuterName == memberInnerName)
+                    if(memberOuterName == memberInnerName &&
+                       !MembersAreTheSame(ifaceOuter, j, ifaceInner, m))
+
                     {
                         ShowHeader(&printedHeader, header, set, proto);
                         ShowOneShadow(ifaceOuterName, memberOuterName,
