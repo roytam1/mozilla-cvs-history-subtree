@@ -27,26 +27,21 @@
   is initialized, it reads in the list of accounts and their folders.
   The summary file for a folder is read in on demand (either when the
   folder is asked for its children or when one of the properties of
-  a mail message is queried).  
+  a mail message is queried). 
 
-  Each mail account,  mail folder and message is represented as 
-   an nsIRDFResource.
+  Mail Accounts, folders and messages are represented by
+  nsIMailAccount, nsIMailFolder and nsIMailMessage, which 
+  are subclasses of nsIRDFResource. 
 
-  For the sake of compactness, the standard attributes of a mail message,
-  account and folder are represented by using a C++ object --- corresponding
-  to the message/account/folder. This is in contrast to the default InMemoryDataSource
-  which uses a C++ object for each Assertion. The MailDataSource can store information
-  about  and answer queries pertaining to the standard mail related properties of
+  The implementations of these interfaces provided here assume certain
+  standard fields for each of these kinds of objects. 
+
+  The MailDataSource can only store information  about  and answer 
+  queries pertaining to the standard mail related properties of
   mail objects. Other properties of mail objects and properties about non-mail
   objects which might be in mail folders are taken care off by other data sources
   (such as the default local store). 
 
-  There is a hash table (mResourceToMOTable) that keeps the mapping from
-  nsIRDFResource(s) to MailObject(s). This is kind of kludgy --- it would
-  be nice if MailObject and its subclasses could directly implement nsIRDFResource,
-  but given the global namespace requirements for Resources, that causes
-  some problems. Maybe nsIRDFResource shouldn't be an interface. It should
-  be a class.
   
  */
 

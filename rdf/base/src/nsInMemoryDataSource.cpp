@@ -388,6 +388,7 @@ InMemoryDataSource::InMemoryDataSource(void)
                             PL_CompareValues,
                             nsnull,
                             nsnull);
+     NS_INIT_REFCNT();
 }
 
 InMemoryDataSource::~InMemoryDataSource(void)
@@ -572,10 +573,11 @@ InMemoryDataSource::Assert(nsIRDFResource* source, nsIRDFResource* property,
         }
 
         prev = next;
-        next = as->mNext;
+        next = next->mNext;
     }
 
     as = new Assertion;
+	as->mNext = as->mInvNext = 0;
     if (! as)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -652,7 +654,7 @@ InMemoryDataSource::Unassert(nsIRDFResource* source,
         }
 
         prev = next;
-        next = as->mNext;
+        next = next->mNext;
     }
 
     // We don't even have the assertion, so just bail.
@@ -670,7 +672,7 @@ InMemoryDataSource::Unassert(nsIRDFResource* source,
             break;
         }
         prev = next;
-        next = as->mInvNext;
+        next = next->mInvNext;
     }
 
     // XXX delete the assertion struct & release resources?

@@ -90,6 +90,7 @@ public:
     NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
     NS_IMETHOD GetObject(nsIRDFNode** aObject);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
+    NS_IMETHOD GetValue(nsIRDFNode** aValue);
 };
 
 ContainerCursorImpl::ContainerCursorImpl(nsIRDFDataSource* ds,
@@ -248,6 +249,22 @@ ContainerCursorImpl::GetPredicate(nsIRDFResource** aPredicate)
 
 NS_IMETHODIMP
 ContainerCursorImpl::GetObject(nsIRDFNode** aObject)
+{
+    NS_PRECONDITION(aObject != nsnull, "null ptr");
+    if (! aObject)
+        return NS_ERROR_NULL_POINTER;
+
+    if (! mNext)
+        return NS_ERROR_UNEXPECTED;
+
+    NS_ADDREF(mNext);
+    *aObject = mNext;
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+ContainerCursorImpl::GetValue(nsIRDFNode** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
