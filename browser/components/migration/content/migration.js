@@ -38,13 +38,13 @@ var MigrationWizard = {
     os.addObserver(this, "Migration:ItemAfterMigrate", false);
     os.addObserver(this, "Migration:Ended", false);
     
+    this._wiz = document.documentElement;
+
     if ("arguments" in window) {
       this._migrator = window.arguments[0].QueryInterface(Components.interfaces.nsIBrowserProfileMigrator);
       this._automigrate = true;
-      this._wiz.currentPage = "selectProfile";
+      this._wiz.goTo(this._migrator.sourceHasMultipleProfiles ? "selectProfile" : "migrating");
     }
-    
-    this._wiz = document.documentElement;
   },
   
   uninit: function ()

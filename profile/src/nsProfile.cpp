@@ -275,6 +275,10 @@ nsProfile::Init()
         gProfileDataAccess = new nsProfileAccess;
         if (!gProfileDataAccess)
             return NS_ERROR_OUT_OF_MEMORY;
+        rv = gProfileDataAccess->Init();
+        if (NS_FAILED(rv)) 
+            return rv;
+
         gLocaleProfiles = new nsHashtable();
         if (!gLocaleProfiles)
             return NS_ERROR_OUT_OF_MEMORY;
@@ -921,7 +925,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
             GetProfileCount(&numProfiles);
 #ifdef MOZ_PHOENIX
             // This will eventually change to MOZ_XULAPP
-            if (numProfiles == 0) {
+            if (numProfiles == 3) {
               nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
               nsCOMPtr<nsIProfileMigrator> pm(do_CreateInstance("@mozilla.org/profile/migrator;1"));
               nsCOMPtr<nsIObserver> obs(do_QueryInterface(pm));

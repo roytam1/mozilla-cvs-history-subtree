@@ -55,26 +55,29 @@
 // nsIProfileMigrator
 
 #define MIGRATION_WIZARD_FE_URL "chrome://browser/content/migration/migration.xul"
-#define MIGRATION_WIZARD_FE_FEATURES "chrome,dialog"
+#define MIGRATION_WIZARD_FE_FEATURES "chrome,dialog,modal"
 NS_IMETHODIMP
 nsProfileMigrator::Migrate()
 {
   nsCOMPtr<nsIBrowserProfileMigrator> bpm;
   GetDefaultBrowserMigrator(getter_AddRefs(bpm));
 
-  // By opening the Migration FE with a supplied bpm, it will automatically
-  // migrate from it. 
-  nsCOMPtr<nsIWindowWatcher> ww(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
-  nsCOMPtr<nsISupportsArray> params;
-  NS_NewISupportsArray(getter_AddRefs(params));
-  params->AppendElement(bpm);
-  nsCOMPtr<nsIDOMWindow> migrateWizard;
-  return ww->OpenWindow(nsnull, 
-                        MIGRATION_WIZARD_FE_URL,
-                        "_blank",
-                        MIGRATION_WIZARD_FE_FEATURES,
-                        params,
-                        getter_AddRefs(migrateWizard));
+  if (bpm) {
+    // By opening the Migration FE with a supplied bpm, it will automatically
+    // migrate from it. 
+    nsCOMPtr<nsIWindowWatcher> ww(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
+    nsCOMPtr<nsISupportsArray> params;
+    NS_NewISupportsArray(getter_AddRefs(params));
+    params->AppendElement(bpm);
+    nsCOMPtr<nsIDOMWindow> migrateWizard;
+    return ww->OpenWindow(nsnull, 
+                          MIGRATION_WIZARD_FE_URL,
+                          "_blank",
+                          MIGRATION_WIZARD_FE_FEATURES,
+                          params,
+                          getter_AddRefs(migrateWizard));
+  }
+  return NS_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -39,6 +39,7 @@
 #define dogbertprofilemigrator___h___
 
 #include "nsIBrowserProfileMigrator.h"
+#include "nsISupportsArray.h"
 #include "nsString.h"
 
 class nsDogbertProfileMigrator : public nsIBrowserProfileMigrator
@@ -56,6 +57,7 @@ protected:
   nsresult CopyBookmarks(PRBool aReplace);
 
 private:
+  nsCOMPtr<nsISupportsArray> mProfiles;
 };
  
 #endif

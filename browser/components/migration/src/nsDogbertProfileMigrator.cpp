@@ -39,8 +39,10 @@
 #include "nsDogbertProfileMigrator.h"
 #include "nsIObserverService.h"
 #include "nsIProfile.h"
+#include "nsIProfileInternal.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
+#include "nsISupportsPrimitives.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsDogbertProfileMigrator
@@ -67,17 +69,6 @@ nsDogbertProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnic
 {
   nsresult rv = NS_OK;
 
-  nsCOMPtr<nsIProfile> pm(do_GetService(NS_PROFILE_CONTRACTID));
-  nsXPIDLString currentProfile;
-  pm->GetCurrentProfile(getter_Copies(currentProfile));
-
-  if (currentProfile.IsEmpty()) {
-    // We're before profile startup, this must be a migrate, not an import. Create a new profile, 
-    // and then use that to copy settings to. 
-
-
-  }
-
   NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
   if (aReplace) {
@@ -94,16 +85,47 @@ nsDogbertProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnic
 NS_IMETHODIMP
 nsDogbertProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
 {
-  *aResult = PR_FALSE;
+  nsCOMPtr<nsISupportsArray> profiles;
+  GetSourceProfiles(getter_AddRefs(profiles));
+
+  if (profiles) {
+    PRUint32 count;
+    profiles->Count(&count);
+    *aResult = count > 1;
+  }
+  else
+    *aResult = PR_FALSE;
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 {
-  *aResult = nsnull;
+  if (!mProfiles) {
+    nsresult rv = NS_NewISupportsArray(getter_AddRefs(mProfiles));
+    if (NS_FAILED(rv)) return rv;
+
+    // Our profile manager stores information about the set of Dogbert Profiles we have.
+    nsCOMPtr<nsIProfileInternal> pmi(do_CreateInstance("@mozilla.org/profile/manager;1"));
+    PRUnichar** profileNames = nsnull;
+    PRUint32 profileCount = 0;
+    rv = pmi->GetProfileListX(nsIProfileInternal::LIST_FOR_IMPORT, &profileCount, &profileNames);
+    if (NS_FAILED(rv)) return rv;
+
+    for (PRUint32 i = 0; i < profileCount; ++i) {
+      nsCOMPtr<nsISupportsString> string(do_CreateInstance("@mozilla.org/supports-string;1"));
+      string->SetData(nsDependentString(profileNames[i]));
+      mProfiles->AppendElement(string);
+    }
+  }
+  
+  *aResult = mProfiles;
   return NS_OK;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// nsDogbertProfileMigrator
 
 nsresult
 nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)

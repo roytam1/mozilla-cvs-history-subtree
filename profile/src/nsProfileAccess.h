@@ -128,9 +128,11 @@ public:
     PRBool        mForgetProfileCalled;
 
 public:
-
     nsProfileAccess();
     virtual ~nsProfileAccess();
+
+    nsresult Init();
+    nsresult Init(nsIFile* aRegistryFile);
 
     void GetNumProfiles(PRInt32 *numProfiles);
     void GetNum4xProfiles(PRInt32 *numProfiles);
