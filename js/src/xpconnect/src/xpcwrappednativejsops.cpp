@@ -259,9 +259,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     JSBool found;
     const char* name;
     jsid id;
-#ifdef XPC_IDISPATCH_SUPPORT
-    IDispatchInterface::Member * IDispatchMember = 0;
-#endif
     if(set)
     {
         if(iface)
@@ -381,33 +378,19 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
 #ifdef XPC_IDISPATCH_SUPPORT
         // Check to see if there's an IDispatch tearoff     
-        if(nsXPConnect::GetXPConnect()->IsIDispatchSupported() &&
-                wrapperToReflectInterfaceNames && 
-                (iface = XPCNativeInterface::GetNewOrUsed(ccx, "IDispatch")) != nsnull &&
-                (to = wrapperToReflectInterfaceNames->FindTearOff(ccx,
-                                                                 iface,
-                                                                 JS_TRUE)) != nsnull &&
-                (jso = to->GetJSObject()) != nsnull)
-        {
-            IDispatchInterface * pInfo = to->GetIDispatchInfo();
-            IDispatchMember = pInfo->FindMember(idval);
-        }
-        else
-        {
+        if(nsXPConnect::IsIDispatchSupported() &&
+                wrapperToReflectInterfaceNames &&
+                nsXPConnect::GetIDispatchExtension()->DefineProperty(ccx, obj, 
+                    idval, wrapperToReflectInterfaceNames, propFlags, resolved))
+            return JS_TRUE;
 #endif
+        else
             if(resolved)
                 *resolved = JS_FALSE;
-            return JS_TRUE;
-#ifdef XPC_IDISPATCH_SUPPORT
-        }
-#endif
+        return JS_TRUE;
     }
 
-    if(!member 
-#ifdef XPC_IDISPATCH_SUPPORT
-        && !IDispatchMember
-#endif
-      )
+    if(!member)
     {
         if(wrapperToReflectInterfaceNames)
         {
@@ -457,13 +440,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         if(!member->GetValue(ccx, iface, &funval))
             return JS_FALSE;
     }
-#ifdef XPC_IDISPATCH_SUPPORT
-    else
-    {
-        if(!IDispatchMember->GetValue(ccx, iface, &funval))
-            return JS_FALSE;
-    }
-#endif
     JSObject* funobj = JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval), obj);
     if(!funobj)
         return JS_FALSE;
@@ -476,11 +452,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     }
 #endif
 
-    if((member && member->IsMethod()) 
-#ifdef XPC_IDISPATCH_SUPPORT
-        || (IDispatchMember && IDispatchMember->IsFunction())
-#endif
-      )
+    if(member && member->IsMethod())
     {
         AutoResolveName arn(ccx, idval);
         if(resolved)
@@ -493,15 +465,8 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     // else...
 
     NS_ASSERTION(!member || member->IsAttribute(), "way broken!");
-#ifdef XPC_IDISPATCH_SUPPORT
-    NS_ASSERTION(!IDispatchMember || IDispatchMember->IsProperty(), "way broken!");
-#endif
     propFlags |= JSPROP_GETTER | JSPROP_SHARED;
-    if((member && member->IsWritableAttribute()) 
-#ifdef XPC_IDISPATCH_SUPPORT
-        || (IDispatchMember && IDispatchMember->IsSetter())
-#endif
-      )
+    if(member && member->IsWritableAttribute())
     {
         propFlags |= JSPROP_SETTER;
         propFlags &= ~JSPROP_READONLY;
@@ -651,23 +616,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 #ifdef XPC_IDISPATCH_SUPPORT
     if(nsXPConnect::GetXPConnect()->IsIDispatchSupported())
     {
-        XPCNativeInterface* iface = XPCNativeInterface::GetNewOrUsed(ccx, &NSID_IDISPATCH);
-        if(iface)
-        {
-            XPCWrappedNativeTearOff* tearoff = wrapper->FindTearOff(ccx, iface);
-            if(tearoff)
-            {
-                IDispatchInterface* pInfo = tearoff->GetIDispatchInfo();
-                PRUint32 members = pInfo->GetMemberCount();
-                for(PRUint32 index = 0; index < members; ++index)
-                {
-                    IDispatchInterface::Member & member = pInfo->GetMember(index);
-                    jsval name = member.GetName();
-                    if(!xpc_ForcePropertyResolve(cx, obj, name))
-                        return JS_FALSE;
-                }
-            }
-        }
+        return nsXPConnect::GetIDispatchExtension()->Enumerate(ccx, obj, wrapper);
     }
 #endif
     return JS_TRUE;

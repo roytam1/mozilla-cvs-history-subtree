@@ -1057,7 +1057,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
         nsresult rv;
 #ifdef XPC_IDISPATCH_SUPPORT
         if(iid->Equals(NSID_IDISPATCH))
-            rv = XPCWrappedNative::IDispatchGetNewOrUsed(ccx, src, xpcscope,
+            rv = XPCWrappedNative::IDispatchGetNewOrUsed(ccx, NS_REINTERPRET_CAST(IDispatch*,src), xpcscope,
                                                         iface, &wrapper);
         else
 #endif

@@ -43,6 +43,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPConnect,nsIXPConnect,nsISupportsWeakReference)
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool       nsXPConnect::gOnceAliveNowDead = JS_FALSE;
 PRThread*    nsXPConnect::gMainThread = nsnull;
+nsXPConnect::XPCIDispatchExtension* nsXPConnect::mIDispatchExtension = nsnull;
 
 const char XPC_CONTEXT_STACK_CONTRACTID[] = "@mozilla.org/js/xpc/ContextStack;1";
 const char XPC_RUNTIME_CONTRACTID[]       = "@mozilla.org/js/xpc/RuntimeService;1";
@@ -61,9 +62,6 @@ nsXPConnect::nsXPConnect()
         mDefaultSecurityManager(nsnull),
         mDefaultSecurityManagerFlags(0),
         mShuttingDown(JS_FALSE)
-#ifdef XPC_IDISPATCH_SUPPORT
-        ,mIsIDispatchSupported(JS_TRUE)
-#endif
 {
     NS_INIT_ISUPPORTS();
 
@@ -394,8 +392,6 @@ static nsresult FindInfo(InfoTester tester, const void* data,
     return NS_ERROR_NO_INTERFACE;
 }    
 
-static const char* IDISPATCH_NAME = "IDispatch";
-
 nsresult
 nsXPConnect::GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info)
 {
@@ -405,15 +401,7 @@ nsXPConnect::GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info)
 #ifdef XPC_IDISPATCH_SUPPORT
     if(NS_FAILED(rv))
     {
-        if(aIID->Equals(NSID_IDISPATCH))
-        {
-            *info = new IDispatchInfo();
-            if(*info)
-            {
-                NS_ADDREF(*info);
-                rv = NS_OK;
-            }
-        }
+        return mIDispatchExtension->GetInfoForIID(*aIID, info);
     }
 #endif
     return rv;
@@ -428,15 +416,7 @@ nsXPConnect::GetInfoForName(const char * name, nsIInterfaceInfo** info)
 #ifdef XPC_IDISPATCH_SUPPORT
     if(NS_FAILED(rv))
     {
-        if(strcmp(name, IDISPATCH_NAME) == 0)
-        {
-            *info = new IDispatchInfo();
-            if(*info)
-            {
-                NS_ADDREF(*info);
-                rv = NS_OK;
-            }
-        }
+        return mIDispatchExtension->GetInfoForName(name, info);
     }
 #endif
     return rv;
@@ -482,10 +462,13 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
 
 #ifdef XPC_IDISPATCH_SUPPORT
     // Add IDispatch support objects
-    if(IsIDispatchSupported())
+    if(!mIDispatchExtension)
     {
-        IDispObject::IDispatchRegisterCOMObject(ccx, aGlobalJSObj);
+        mIDispatchExtension = new XPCIDispatchExtension;
+        if (!mIDispatchExtension)
+            return NS_ERROR_OUT_OF_MEMORY;
     }
+    mIDispatchExtension->Initialize(ccx, aGlobalJSObj);
 #endif
     return NS_OK;
 }

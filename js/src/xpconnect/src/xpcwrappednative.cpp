@@ -196,62 +196,58 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
 /***************************************************************************/
 
 // static
-nsresult
-XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
-                               nsISupports* Object,
-                               XPCWrappedNativeScope* Scope,
-                               XPCNativeInterface* Interface,
-                               XPCWrappedNative** resultWrapper)
+nsresult XPCWrappedNative::FindWrapper(XPCCallContext& ccx,
+                     nsISupports* Object,
+                     XPCWrappedNativeScope* Scope,
+                     XPCNativeInterface* Interface,
+                     Native2WrappedNativeMap * Map,
+                     XPCWrappedNative** result)
 {
-    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
-    if(!identity)
-    {
-        NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
-        return NS_ERROR_FAILURE;
+    XPCWrappedNative* wrapper;
+
+    {   // scoped lock
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
+        wrapper = Map->Find(Object);
+        if(!wrapper)
+        {
+            *result = nsnull;
+            return NS_OK;
+        }
+        NS_ADDREF(wrapper);
     }
-#ifdef XPC_IDISPATCH_SUPPORT
-    return IDispatchGetNewOrUsed(ccx, Object, Scope, Interface, resultWrapper);
+
+    nsresult rv;
+    if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
+    {
+        NS_RELEASE(wrapper);
+        NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+        return rv;
+    }
+
+    *result = wrapper;
+    return NS_OK;
 }
 
-// TODO: Better factor this out so we're not doing XPCOM only stuff on 
-// IDispatch
+// static
 nsresult
-XPCWrappedNative::IDispatchGetNewOrUsed(XPCCallContext& ccx,
+XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
                                nsISupports* Object,
                                XPCWrappedNativeScope* Scope,
                                XPCNativeInterface* Interface,
                                XPCWrappedNative** resultWrapper)
 {
-    nsresult rv;
-#endif
     XPCLock* mapLock = Scope->GetRuntime()->GetMapLock();
     
     // We use an AutoMarkingPtr here because it is possible for JS gc to happen
     // after we have Init'd the wrapper but *before* we add it to the hashtable.
     // This would cause the mSet to get collected and we'd later crash. I've
     // *seen* this happen.
-    AutoMarkingWrappedNativePtr wrapper(ccx);
-
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
-    {   // scoped lock
-        XPCAutoLock lock(mapLock);
-        wrapper = map->Find(Object);
-        if(wrapper)
-            wrapper->AddRef();
-    }
+    nsresult rv = FindWrapper(ccx, Object, Scope, Interface, map, resultWrapper);
+    if (NS_FAILED(rv) || *resultWrapper)
+        return rv;
 
-    if(wrapper)
-    {
-        if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
-        {
-            NS_RELEASE(wrapper);
-            NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
-            return rv;
-        }
-        DEBUG_CheckWrapperThreadSafety(wrapper);
-        *resultWrapper = wrapper;
-        return NS_OK;
-    }
+    AutoMarkingWrappedNativePtr wrapper(ccx);
 
     // There is a chance that the object wants to have the self-same JSObject
     // reflection regardless of the scope into which we are reflecting it.
@@ -415,44 +411,6 @@ XPCWrappedNative::IDispatchGetNewOrUsed(XPCCallContext& ccx,
         return NS_ERROR_FAILURE;
 
     DEBUG_CheckClassInfoClaims(wrapper);
-    *resultWrapper = wrapper;
-    return NS_OK;
-}
-
-// static
-nsresult
-XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
-                              nsISupports* Object,
-                              XPCWrappedNativeScope* Scope,
-                              XPCNativeInterface* Interface,
-                              XPCWrappedNative** resultWrapper)
-{
-    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
-    if(!identity)
-        return NS_ERROR_FAILURE;
-
-    XPCWrappedNative* wrapper;
-    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
-
-    {   // scoped lock
-        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
-        wrapper = map->Find(identity);
-        if(!wrapper)
-        {
-            *resultWrapper = nsnull;
-            return NS_OK;
-        }
-        NS_ADDREF(wrapper);
-    }
-
-    nsresult rv;
-    if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
-    {
-        NS_RELEASE(wrapper);
-        NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
-        return rv;
-    }
-
     *resultWrapper = wrapper;
     return NS_OK;
 }

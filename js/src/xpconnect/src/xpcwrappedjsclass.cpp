@@ -459,17 +459,9 @@ nsXPCWrappedJSClass::DelegatedQueryInterface(nsXPCWrappedJS* self,
     }
 
 #ifdef XPC_IDISPATCH_SUPPORT
-    else if(nsXPConnect::GetXPConnect()->IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
+    else if(nsXPConnect::IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
     {
-        nsXPCWrappedJS* root = self->GetRootWrapper();
-
-        if(!root->IsValid())
-        {
-            *aInstancePtr = nsnull;
-            return NS_NOINTERFACE;
-        }
-        *aInstancePtr = NS_STATIC_CAST(IDispatchTearOff*, new IDispatchTearOff(root));
-        return NS_OK;
+        return IDispatchQIWrappedJS(self, aInstancePtr);
     }
 #endif
     if(aIID.Equals(NS_GET_IID(nsIPropertyBag)))

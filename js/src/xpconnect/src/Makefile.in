@@ -84,15 +84,16 @@ CPPSRCS		= \
 		xpcwrappednativeproto.cpp \
 		xpcwrappednativescope.cpp
 ifdef XPC_IDISPATCH_SUPPORT
-CPPSRCS +=	idispobject.cpp	\
-		idispatchinfo.cpp	\
-		idispatchinterface.cpp	\
-		idispconvert.cpp \
-		idisptypeinfo.cpp	\
-		idispidarray.cpp \
-		idispthrower.cpp \
-		idispcallcontext.cpp \
-		idispatchtearoff.cpp
+CPPSRCS +=	IDispObject.cpp	\
+		IDispatchInfo.cpp	\
+		IDispatchInterface.cpp	\
+		IDispConvert.cpp \
+		IDispTypeInfo.cpp	\
+		IDispIDArray.cpp \
+		IDispThrower.cpp \
+		IDispCallContext.cpp \
+		IDispatchTearOff.cpp \
+		XPCIDispatchExtension.cpp
 endif
 CPPSRCS += $(NULL)
 

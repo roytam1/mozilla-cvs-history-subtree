@@ -351,6 +351,7 @@ private:
     static void operator delete(void* /*memory*/) {}
 };
 
+
 /***************************************************************************
 ****************************************************************************
 *
@@ -414,12 +415,6 @@ public:
     nsresult GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info);
     nsresult GetInfoForName(const char * name, nsIInterfaceInfo** info);
 
-#ifdef XPC_IDISPATCH_SUPPORT
-    JSBool IsIDispatchSupported() const { return mIsIDispatchSupported; }
-    void SetIDispatchSupport(JSBool supported) { mIsIDispatchSupported = supported; }
-private:
-    JSBool                   mIsIDispatchSupported;
-#endif
 protected:
     nsXPConnect();
 
@@ -431,19 +426,28 @@ private:
 
 private:
     // Singleton instance
-    static nsXPConnect*      gSelf;
-    static JSBool            gOnceAliveNowDead;
-    static PRThread*         gMainThread;
+    static nsXPConnect* gSelf;
+    static JSBool       gOnceAliveNowDead;
+    static PRThread*    gMainThread;
 
-    XPCJSRuntime*            mRuntime;
-    nsIInterfaceInfoSuperManager* mInterfaceInfoManager;
-    nsIThreadJSContextStack* mContextStack;
-    nsIXPCSecurityManager*   mDefaultSecurityManager;
-    PRUint16                 mDefaultSecurityManagerFlags;
-    JSBool                   mShuttingDown;
+    XPCJSRuntime*                   mRuntime;
+    nsIInterfaceInfoSuperManager*   mInterfaceInfoManager;
+    nsIThreadJSContextStack*        mContextStack;
+    nsIXPCSecurityManager*          mDefaultSecurityManager;
+    PRUint16                        mDefaultSecurityManagerFlags;
+    JSBool                          mShuttingDown;
 #ifdef XPC_TOOLS_SUPPORT
-    nsCOMPtr<nsIXPCToolsProfiler> mProfiler;
-    nsCOMPtr<nsILocalFile>        mProfilerOutputFile;
+    nsCOMPtr<nsIXPCToolsProfiler>   mProfiler;
+    nsCOMPtr<nsILocalFile>          mProfilerOutputFile;
+#endif
+
+#ifdef XPC_IDISPATCH_SUPPORT
+    public:
+#include "XPCIDispatchExtension.h"
+        static JSBool IsIDispatchSupported() { return mIDispatchExtension != nsnull; }
+        static XPCIDispatchExtension* GetIDispatchExtension() { return mIDispatchExtension; }
+    private:
+    static XPCIDispatchExtension*        mIDispatchExtension;
 #endif
 };
 
@@ -1623,8 +1627,9 @@ private:
 };
 
 #ifdef XPC_IDISPATCH_SUPPORT
-class IDispatchInterface;
 class IDispTypeInfo;
+class IDispatchInterface;
+struct IDispatch;
 #endif
 
 /***********************************************/
@@ -1634,16 +1639,6 @@ class IDispTypeInfo;
 class XPCWrappedNativeTearOff
 {
 public:
-    enum
-    {
-        MARK_BIT = 1,
-#ifdef XPC_IDISPATCH_SUPPORT
-        IDISPATCH_BIT = 2,
-        BIT_MASK = 3
-#else
-        BIT_MASK = 1
-#endif
-    };
     JSBool IsAvailable() const {return mInterface == nsnull;}
     JSBool IsReserved()  const {return mInterface == (XPCNativeInterface*)1;}
     JSBool IsValid()     const {return !IsAvailable() && !IsReserved();}
@@ -1651,37 +1646,56 @@ public:
 
     XPCNativeInterface* GetInterface() const {return mInterface;}
     nsISupports*        GetNative()    const {return mNative;}
-    JSObject*           GetJSObject()  const;
+    class XPCJSObjectExt;
+    XPCJSObjectExt const &     GetJSObject()  const;
     void SetInterface(XPCNativeInterface*  Interface) {mInterface = Interface;}
     void SetNative(nsISupports*  Native)              {mNative = Native;}
     void SetJSObject(JSObject*  JSObj);
 
-    void JSObjectFinalized() {mJSObject = nsnull;}
+    void JSObjectFinalized() { mJSObject.Set(nsnull);}
 
     XPCWrappedNativeTearOff()
-        : mInterface(nsnull), mNative(nsnull), mJSObject(nsnull) {}
+        : mInterface(nsnull), mNative(nsnull) {}
     ~XPCWrappedNativeTearOff()
         {NS_ASSERTION(!(GetInterface()||GetNative()||GetJSObject()), "tearoff not empty in dtor");}
 
-    void Mark()       {mJSObject = (JSObject*)(((jsword)mJSObject) | MARK_BIT);}
-    void Unmark()     {mJSObject = (JSObject*)(((jsword)mJSObject) & ~ MARK_BIT);}
-    JSBool IsMarked() const {return (JSBool)(((jsword)mJSObject) & MARK_BIT);}
-#ifdef XPC_IDISPATCH_SUPPORT
-    IDispatchInterface*   GetIDispatchInfo() const;
-    JSBool IsIDispatch() const { return (JSBool)(((jsword)mJSObject) & IDISPATCH_BIT);}
-    void SetIDispatch(JSContext* cx);
-    JSObject* GetIDispatchJSObject() const;
-    void SetIDispatchJSObject(JSObject* jsobj);
-#endif
-
+    void Mark()       { mJSObject.Mark(); }
+    void Unmark()     { mJSObject.Unmark(); }
+    JSBool IsMarked() const { return mJSObject.IsMarked(); }
 private:
     XPCWrappedNativeTearOff(const XPCWrappedNativeTearOff& r); // not implemented
     XPCWrappedNativeTearOff& operator= (const XPCWrappedNativeTearOff& r); // not implemented
 
+public:
+#ifdef XPC_IDISPATCH_SUPPORT
+#include "IDispJSObjectExt.h"
+friend class XPCJSObjectExt;
+
+#else
+    class XPCJSObjectExt
+    {
+    public:
+        enum
+        {
+            MARK_BIT = 1,
+            BIT_MASK = 1
+        };
+        JSObjectExt() : mJSObject(nsnull) {}
+        void Set(JSObject *JSObj) { mJSObject = JSObj; }
+        JSObject* Get() { return mJSObject; }
+        void Mark()       {mJSObject = (JSObject*)(((jsword)mJSObject) | MARK_BIT);}
+        void Unmark()     {mJSObject = (JSObject*)(((jsword)mJSObject) & ~ MARK_BIT);}
+        JSBool IsMarked() const {return (JSBool)(((jsword)mJSObject) & MARK_BIT);}
+        operator JSObject*() const { return Get(); }
+    private:
+        JSObject* mJSObject
+    };
+#endif
+
 private:
     XPCNativeInterface* mInterface;
     nsISupports*        mNative;
-    JSObject*           mJSObject;
+    XPCJSObjectExt      mJSObject;
 };
 
 /***********************************************/
@@ -1802,10 +1816,25 @@ public:
 #ifdef XPC_IDISPATCH_SUPPORT
     static nsresult
     IDispatchGetNewOrUsed(XPCCallContext& ccx,
-                          nsISupports* Object,
+                          IDispatch* Object,
                           XPCWrappedNativeScope* Scope,
                           XPCNativeInterface* Interface,
                           XPCWrappedNative** resultWrapper);
+    static nsresult
+    IDispatchGetUsedOnly(XPCCallContext& ccx,
+                IDispatch* Object,
+                XPCWrappedNativeScope* Scope,
+                XPCNativeInterface* Interface,
+                XPCWrappedNative** wrapper);
+private:
+static
+nsresult XPCWrappedNative::FindWrapper(XPCCallContext& ccx,
+                     nsISupports* Object,
+                     XPCWrappedNativeScope* Scope,
+                     XPCNativeInterface* Interface,
+                     Native2WrappedNativeMap * Map,
+                     XPCWrappedNative** result);
+public:
 #endif
     static nsresult
     GetUsedOnly(XPCCallContext& ccx,
@@ -1938,6 +1967,12 @@ private:
                         XPCNativeScriptableCreateInfo* sciProto,
                         XPCNativeScriptableCreateInfo* sciWrapper);
 
+    static nsresult
+    GetNewOrUsedImpl(XPCCallContext& ccx,
+                 nsISupports* Object,
+                 XPCWrappedNativeScope* Scope,
+                 XPCNativeInterface* Interface,
+                 XPCWrappedNative** wrapper);
 private:
     union
     {
@@ -2235,7 +2270,12 @@ public:
                                            nsISupports* src,
                                            const nsID* iid,
                                            JSObject* scope, nsresult* pErr);
-
+#ifdef XPC_IDISPATCH_SUPPORT
+    static JSBool NativeInterface2JSObject(XPCCallContext& ccx,
+                                           nsIXPConnectJSObjectHolder** dest,
+                                           IDispatch* src,
+                                           JSObject* scope, nsresult* pErr);
+#endif
     static JSBool JSObject2NativeInterface(XPCCallContext& ccx,
                                            void** dest, JSObject* src,
                                            const nsID* iid,
@@ -3212,7 +3252,7 @@ inline JSBool
 xpc_ForcePropertyResolve(JSContext* cx, JSObject* obj, jsval idval);
 
 #ifdef XPC_IDISPATCH_SUPPORT
-#include "idispprivate.h"
+#include "IDispPrivate.h"
 #endif
 
 /***************************************************************************/

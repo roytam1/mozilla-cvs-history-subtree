@@ -563,30 +563,16 @@ inline void XPCNativeSet::ASSERT_NotMarked()
 /***************************************************************************/
 
 inline
-JSObject* XPCWrappedNativeTearOff::GetJSObject()  const 
+XPCWrappedNativeTearOff::XPCJSObjectExt const &
+XPCWrappedNativeTearOff::GetJSObject() const 
 {
-    return 
-#ifdef XPC_IDISPATCH_SUPPORT
-        IsIDispatch() ? GetIDispatchJSObject() : 
-#endif
-        mJSObject;
+    return mJSObject;
 }
 
 inline
 void XPCWrappedNativeTearOff::SetJSObject(JSObject*  JSObj)                
 {
-#ifdef XPC_IDISPATCH_SUPPORT
-    if(IsIDispatch())
-    {
-        SetIDispatchJSObject(JSObj);
-    }
-    else
-    {
-        mJSObject = JSObj;
-    }
-#else
-    mJSObject = JSObj;
-#endif
+    mJSObject.Set(JSObj);
 }
 
 /***************************************************************************/
@@ -632,6 +618,42 @@ XPCWrappedNative::SweepTearOffs()
         }
     }
 }
+
+inline
+nsresult
+XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
+                               nsISupports* Object,
+                               XPCWrappedNativeScope* Scope,
+                               XPCNativeInterface* Interface,
+                               XPCWrappedNative** resultWrapper)
+{
+    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
+    if(!identity)
+    {
+        NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
+        return NS_ERROR_FAILURE;
+    }
+    return GetNewOrUsedImpl(ccx, Object, Scope, Interface, resultWrapper);
+}
+
+// static
+inline
+nsresult
+XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
+                              nsISupports* Object,
+                              XPCWrappedNativeScope* Scope,
+                              XPCNativeInterface* Interface,
+                              XPCWrappedNative** resultWrapper)
+{
+    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
+    if(!identity)
+        return NS_ERROR_FAILURE;
+
+    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
+
+    return FindWrapper(ccx, Object, Scope, Interface, map, resultWrapper);
+}
+
 
 /***************************************************************************/
 
