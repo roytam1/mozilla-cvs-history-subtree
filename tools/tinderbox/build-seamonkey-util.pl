@@ -107,9 +107,6 @@ sub ParseArgs {
         }
     }
 
-	# Set up tag stuff.
-	$Settings::CVSCO .= " -r $Settings::BuildTag"
-      unless not defined($Settings::BuildTag) or $Settings::BuildTag eq '';
 
 
     return $args;
@@ -523,6 +520,11 @@ sub BuildIt {
     # Bypass profile at startup.
     $ENV{MOZ_BYPASS_PROFILE_AT_STARTUP} = 1;
     
+	# Set up tag stuff.
+    # Only one tag per file, so -r will override any -D settings.
+	$Settings::CVSCO .= " -r $Settings::BuildTag"
+      unless not defined($Settings::BuildTag) or $Settings::BuildTag eq '';
+
     print "Starting dir is : $build_dir\n";
     
     while (not $exit_early) {
