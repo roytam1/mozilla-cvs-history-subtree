@@ -52,14 +52,14 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = MOZILLA_0_9_2_BRANCH
-NSPR_CO_TAG = MOZILLA_0_9_2_BRANCH
-PSM_CO_TAG = MOZILLA_0_9_2_BRANCH
-NSS_CO_TAG = MOZILLA_0_9_2_BRANCH
-LDAPCSDK_CO_TAG = MOZILLA_0_9_2_BRANCH
-ACCESSIBLE_CO_TAG = MOZILLA_0_9_2_BRANCH
-GFX2_CO_TAG = MOZILLA_0_9_2_BRANCH
-IMGLIB2_CO_TAG = MOZILLA_0_9_2_BRANCH
+MOZ_CO_TAG = Netscape61_RELEASE
+NSPR_CO_TAG = Netscape61_RELEASE 
+PSM_CO_TAG = Netscape61_RELEASE 
+NSS_CO_TAG = Netscape61_RELEASE
+LDAPCSDK_CO_TAG = Netscape61_RELEASE
+ACCESSIBLE_CO_TAG = Netscape61_RELEASE 
+GFX2_CO_TAG = Netscape61_RELEASE 
+IMGLIB2_CO_TAG = Netscape61_RELEASE 
 BUILD_MODULES = all
 
 #######################################################################
