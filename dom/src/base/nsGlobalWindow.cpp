@@ -663,8 +663,10 @@ GlobalWindowImpl::OnFinalize(JSObject *aJSObject)
 {
   if (aJSObject == mJSObject) {
     mJSObject = nsnull;
-  } else {
+  } else if (mJSObject) {
     NS_ERROR("Huh? XPConnect created more than one wrapper for this global!");
+  } else {
+    NS_WARNING("Weird, we're finalized with a null mJSObject?");
   }
 
   return NS_OK;
