@@ -54,3 +54,10 @@ Rights Reserved.
 <!-- LOCALIZATION NOTE : (emoticonsAndStructs.label) 'Emoticons' are also known as 'Smileys', e.g. :-)   -->
 <!ENTITY convertEmoticons.label           "Display emoticons as graphics">
 <!ENTITY convertEmoticons.accesskey       "d">
+<!ENTITY htmlColors.label                 "HTML Messages">
+<!ENTITY overrideSender.label             "When displaying HTML messages, ignore the sender's settings and use the following:">
+<!ENTITY overrideSender.accesskey         "e"> 
+<!ENTITY  textColor.label                 "Text Color:">
+<!ENTITY  textColor.accesskey             "T">
+<!ENTITY  backgroundColor.label           "Background Color:">
+<!ENTITY  backgroundColor.accesskey       "b">

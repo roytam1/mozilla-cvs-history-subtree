@@ -11,13 +11,13 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor"];
-    var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-    observerService.notifyObservers(null, "charsetmenu-selected", "other");
+    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor", "foregroundText", "background", "browserUseDocumentColors"];
 
     function Startup()
     {
       getColorFromPickerAndSetWell('citationmenu', 'mailCitationColor');
+      getColorFromWellAndSetValue('foregroundtextmenu');
+      getColorFromWellAndSetValue('backgroundmenu');
     }
 
     function getColorFromPickerAndSetWell(menuID, colorfield)
@@ -34,7 +34,16 @@
       var colorRef = aPicker.nextSibling; 
       colorRef.setAttribute("value", aPicker.color );
     }
-  ]]>
+
+    function getColorFromWellAndSetValue(aPickerId)
+    {
+      var picker = document.getElementById(aPickerId);
+      var colorRef  = picker.nextSibling;
+      var color = colorRef.getAttribute("value");
+      picker.color = color;
+      return color;
+    }     
+    ]]>
   </script>
 
   <groupbox>
@@ -83,7 +92,21 @@
       <colorpicker type="button" id="citationmenu" palettename="standard" onchange="setColorWell(this);"/>
       <broadcaster id="mailCitationColor" pref="true" preftype="color" prefstring="mail.citation_color" prefattribute="value" wsm_attributes="value"/>
     </hbox>    
-
-
   </groupbox>  
+
+  <groupbox>
+    <caption label="&htmlColors.label;"/>
+      <checkbox id="browserUseDocumentColors" label="&overrideSender.label;" preftype="bool" 
+                checked="false" prefstring="browser.display.use_system_colors" accesskey="&overrideSender.accesskey;"/>
+      <hbox align="center">
+        <label value="&textColor.label;" accesskey="&textColor.accesskey;" control="foregroundtextmenu"/>
+
+        <colorpicker type="button" id="foregroundtextmenu" palettename="standard" onchange="setColorWell(this)"/> 
+        <data id="foregroundText" preftype="color" prefstring="browser.display.foreground_color" prefattribute="value" wsm_attributes="value"/>
+
+        <label value="&backgroundColor.label;" accesskey="&backgroundColor.accesskey;" control="backgroundmenu"/>
+        <colorpicker type="button" id="backgroundmenu" palettename="standard" onchange="setColorWell(this)"/> 
+        <data id="background" preftype="color" prefstring="browser.display.background_color" prefattribute="value" wsm_attributes="value"/>
+      </hbox>
+  </groupbox>
 </page>
