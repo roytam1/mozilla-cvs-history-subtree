@@ -332,7 +332,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
     NS_ENSURE_ARG_POINTER(ci);
 
     if ((mActiveConnections.Count() == mMaxConnections) || 
-        (CountActiveConnections(ci) == mMaxConnectionsPerServer)) {
+        (CountActiveConnections(ci) == PRUint32(mMaxConnectionsPerServer))) {
         LOG(("unable to perform the transaction at this time [trans=%x]\n", trans));
         if (failIfBusy) return NS_ERROR_FAILURE;
         return EnqueueTransaction(trans, ci);

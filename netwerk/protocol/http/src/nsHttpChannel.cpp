@@ -277,21 +277,27 @@ nsHttpChannel::SetupTransaction()
                                             NS_HTTP_BUFFER_SIZE);
     if (NS_FAILED(rv)) return rv;
 
-    // Create the transaction object
+    // create the transaction object
     mTransaction = new nsHttpTransaction(listenerProxy, this);
     if (!mTransaction)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(mTransaction);
 
-    // Use the URI path if not proxying
-    nsXPIDLCString path;
+    // use the URI path if not proxying
+    nsXPIDLCString requestURI;
     if (mConnectionInfo->ProxyHost() == nsnull) {
-        rv = mURI->GetPath(getter_Copies(path));
+        rv = mURI->GetPath(getter_Copies(requestURI));
         if (NS_FAILED(rv)) return rv;
     }
+    else
+        requestURI = mSpec.get();
+
+    // trim off the #ref portion if any...
+    char *p = PL_strrchr(requestURI.get(), '#');
+    if (p) *p = 0;
 
     mRequestHead.SetVersion(nsHttpHandler::get()->DefaultVersion());
-    mRequestHead.SetRequestURI(path ? path : mSpec);
+    mRequestHead.SetRequestURI(requestURI);
 
     // set the request time for cache expiration calculations
     mRequestTime = NowInSeconds();
