@@ -52,41 +52,36 @@ CPPSRCS		=				\
 		$(NULL)
 
 EXPORTS		=				\
-		nsAFlatString.h			\
-		nsAlgorithm.h			\
-		nsASingleFragmentString.h	\
-		nsAString.h			\
-		nsAStringGenerator.h		\
-		nsBufferHandle.h		\
-		nsBufferHandleUtils.h		\
-		nsCharTraits.h			\
-		nsDependentConcatenation.h	\
-		nsDependentString.h		\
-		nsDependentSubstring.h		\
-		nsFragmentedString.h		\
-		nsLiteralString.h		\
-		nsPrintfCString.h		\
-		nsPromiseFlatString.h		\
-		nsReadableUtils.h		\
-		nsSharableString.h		\
-		nsSharedBufferList.h		\
-		nsSlidingString.h		\
-		nsStringDefines.h		\
-		nsStringFragment.h		\
-		nsStringFwd.h			\
-		nsStringIterator.h		\
-		nsStringIteratorUtils.h		\
-		nsStringTraits.h		\
-		nsXPIDLString.h			\
-		$(NULL)			
-
-EXPORTS	:= $(addprefix public/, $(EXPORTS))
-
-EXPORTS += \
+		public/nsAFlatString.h			\
+		public/nsAlgorithm.h			\
+		public/nsASingleFragmentString.h	\
+		public/nsAString.h			\
+		public/nsAStringGenerator.h		\
+		public/nsBufferHandle.h			\
+		public/nsBufferHandleUtils.h		\
+		public/nsCharTraits.h			\
+		public/nsDependentConcatenation.h	\
+		public/nsDependentString.h		\
+		public/nsDependentSubstring.h		\
+		public/nsFragmentedString.h		\
+		public/nsLiteralString.h		\
+		public/nsPrintfCString.h		\
+		public/nsPromiseFlatString.h		\
+		public/nsReadableUtils.h		\
+		public/nsSharableString.h		\
+		public/nsSharedBufferList.h		\
+		public/nsSlidingString.h		\
+		public/nsStringDefines.h		\
+		public/nsStringFragment.h		\
+		public/nsStringFwd.h			\
+		public/nsStringIterator.h		\
+		public/nsStringIteratorUtils.h		\
+		public/nsStringTraits.h			\
+		public/nsXPIDLString.h			\
 		obsolete/nsStr.h			\
-		obsolete/nsStrShared.h           \
-		obsolete/nsString.h		\
-		obsolete/nsString2.h		\
+		obsolete/nsStrShared.h           	\
+		obsolete/nsString.h			\
+		obsolete/nsString2.h			\
 		$(NULL)			
 
 # we don't want the shared lib, but we want to force the creation of a
@@ -99,8 +94,5 @@ FORCE_USE_PIC	= 1
 MAKE_DIRS	= $(PWD)/src $(PWD)/obsolete
 
 include $(topsrcdir)/config/rules.mk
-
-$(PWD)/src $(PWD)/obsolete:
-	@$(MAKE_OBJDIR)
 
 DEFINES		+= -D_IMPL_NS_COM
