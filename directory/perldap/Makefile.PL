@@ -83,6 +83,16 @@ if ($osname =~ /mswin/i)
    }
 }
 
+$v3_def = "-DLDAPV3";
+
+if ($osname =~ /mswin/i)
+{
+   $myextlib = "$lib_ldap\\$ldap_lib.lib";
+} else {
+   $myextlib = "";
+}
+
+
 WriteMakefile(
 	'NAME'		=> 	'Mozilla::LDAP::API',
 	'VERSION_FROM'	=> 	'API.pm',
@@ -92,5 +102,6 @@ WriteMakefile(
 	'INC'		=> 	"",
 	)),
 	'LIBS'		=> 	["-L$lib_ldap -l$ldap_lib"],
-	'DEFINE'	=> 	"$ssl_def",
+	'MYEXTLIB'	=>	$myextlib,
+	'DEFINE'	=> 	"$v3_def $ssl_def",
 );
