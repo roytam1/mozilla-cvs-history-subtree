@@ -60,13 +60,15 @@ PluginArrayImpl::~PluginArrayImpl()
 // XPConnect interface list for PluginArrayImpl
 NS_CLASSINFO_MAP_BEGIN(PluginArray)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMPluginArray)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMJSPluginArray)
 NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for PluginArrayImpl
 NS_INTERFACE_MAP_BEGIN(PluginArrayImpl)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMPluginArray)
   NS_INTERFACE_MAP_ENTRY(nsIDOMPluginArray)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMJSPluginArray)
   NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(PluginArray)
 NS_INTERFACE_MAP_END
 
@@ -178,13 +180,13 @@ PluginArrayImpl::Refresh(PRBool aReloadDocuments)
   if (!mPluginHost) {
     mPluginHost = do_GetService(kPluginManagerCID, &res);
   }
-  
+
   if(NS_FAILED(res)) {
     return res;
   }
 
   nsCOMPtr<nsIPluginManager> pm(do_QueryInterface(mPluginHost));
-  
+
   if(pm)
     pm->ReloadPlugins(aReloadDocuments);
 
@@ -196,6 +198,44 @@ PluginArrayImpl::Refresh(PRBool aReloadDocuments)
   }
 
   return res;
+}
+
+NS_IMETHODIMP
+PluginArrayImpl::Refresh()
+{
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+  rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!ncc)
+    return NS_ERROR_NOT_AVAILABLE;
+
+  PRBool reload_doc = PR_FALSE;
+
+  PRUint32 argc;
+
+  ncc->GetArgc(&argc);
+
+  if (argc > 0) {
+    jsval *argv = nsnull;
+
+    ncc->GetArgvPtr(&argv);
+    NS_ENSURE_TRUE(argv, NS_ERROR_UNEXPECTED);
+
+    JSContext *cx = nsnull;
+
+    rv = ncc->GetJSContext(&cx);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    JS_ValueToBoolean(cx, argv[0], &reload_doc);
+  }
+
+  return Refresh(reload_doc);
 }
 
 nsresult

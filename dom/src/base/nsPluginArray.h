@@ -32,7 +32,8 @@ class nsIDOMNavigator;
 class nsIDocShell;
 struct nsIPluginHost;
 
-class PluginArrayImpl : public nsIDOMPluginArray
+class PluginArrayImpl : public nsIDOMPluginArray,
+                        public nsIDOMJSPluginArray
 {
 public:
   PluginArrayImpl(nsIDOMNavigator* navigator, nsIDocShell *aDocShell);
@@ -40,10 +41,11 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD GetLength(PRUint32* aLength);
-  NS_IMETHOD Item(PRUint32 aIndex, nsIDOMPlugin** aReturn);
-  NS_IMETHOD NamedItem(const nsAReadableString& aName, nsIDOMPlugin** aReturn);
-  NS_IMETHOD Refresh(PRBool aReloadDocuments);
+  // nsIDOMPluginArray
+  NS_DECL_NSIDOMPLUGINARRAY
+
+  // nsIDOMJSPluginArray
+  NS_DECL_NSIDOMJSPLUGINARRAY
 
   nsresult GetPluginHost(nsIPluginHost** aPluginHost);
 
