@@ -434,11 +434,11 @@ nsresult rv;
     printf("*** XPInstall is being unregistered\n");
 #endif
     
-    rv = compMgr->UnregisterFactory(kSoftwareUpdate_CID, path);
+    rv = compMgr->UnregisterComponent(kSoftwareUpdate_CID, path);
     if (NS_FAILED(rv)) goto done;
-    rv = compMgr->UnregisterFactory(kInstallTrigger_CID, path);
+    rv = compMgr->UnregisterComponent(kInstallTrigger_CID, path);
     if (NS_FAILED(rv)) goto done;
-    rv = compMgr->UnregisterFactory(kInstallVersion_CID, path);
+    rv = compMgr->UnregisterComponent(kInstallVersion_CID, path);
 
   done:
     (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
