@@ -1344,10 +1344,15 @@ case "$target" in
     esac
 
     if test "$OS_TARGET" = "WINCE"; then
+        AC_DEFINE(UNICODE)
+        AC_DEFINE(_UNICODE)
+	AC_DEFINE(_WIN32_WCE, 300)
+	AC_DEFINE(UNDER_CE, 300)
         case "$TARGETCPU" in
         X86)
 	        AC_DEFINE(_X86_)
 	        AC_DEFINE(x86)
+	        AC_DEFINE(_WIN32_WCE_CEPC)
             ;;
         ARM)
 	        AC_DEFINE(_ARM_)
@@ -1355,7 +1360,6 @@ case "$target" in
             ;;
         *)
 	        AC_DEFINE(_CPU_ARCH_NOT_DEFINED_)
-	        AC_DEFINE(CPU_ARCH_NOT_DEFINED)
             ;;
         esac
     else
