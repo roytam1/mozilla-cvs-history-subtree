@@ -203,7 +203,6 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/public/nsISVGGlyphGeometrySource.idl \
 	layout/svg/renderer/public/nsISVGGlyphMetricsSource.idl \
 	layout/svg/renderer/public/nsISVGPathGeometrySource.idl \
-	layout/svg/renderer/public/nsISVGPosGlyphGeometrySrc.idl \
 	layout/svg/renderer/public/nsISVGRectangleSink.idl    \
 	layout/svg/renderer/public/nsISVGRenderer.idl         \
 	layout/svg/renderer/public/nsISVGRendererCanvas.idl   \
