@@ -326,7 +326,7 @@ Show Dialog=TRUE
 ;*** LOCALIZE ME BABY ***
 Title=$ProductName$ Setup - Quick Launch
 ;*** LOCALIZE ME BABY ***
-Message0=Quick Launch starts Mozilla faster by keeping portions of the program in computer memory.
+Message0=Quick Launch starts Communicator faster by keeping portions of the program in computer memory.
 ;*** LOCALIZE ME BABY ***
 Message1=You can access Quick Launch through the icon on the Windows taskbar tray.
 ;*** LOCALIZE ME BABY ***
