@@ -1,4 +1,0 @@
-#include "nsISupports.idl"
-
-#define axIUnknown nsISupports
-
