@@ -126,6 +126,9 @@ SVG_BRANCH_MODIFIED_FILES = \
 	dom/public/nsIDOMClassInfo.h                          \
 	dom/public/idl/svg/Makefile.in                        \
 	dom/src/base/nsDOMClassInfo.cpp                       \
+	gfx/idl/nsIFreeType2.idl                              \
+	gfx/src/freetype/nsFreeType.cpp                       \
+	gfx/src/freetype/nsFreeType.h                         \
 	gfx/src/windows/nsDrawingSurfaceWin.cpp               \
 	htmlparser/src/CParserContext.cpp                     \
 	htmlparser/src/CNavDTD.cpp                            \
@@ -329,10 +332,14 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.h \
 	layout/svg/renderer/src/libart/nsSVGLibartCanvas.cpp \
 	layout/svg/renderer/src/libart/nsSVGLibartCanvas.h \
-	layout/svg/renderer/src/libart/nsSVGLibartGlyphGeometry.cpp \
-	layout/svg/renderer/src/libart/nsSVGLibartGlyphGeometry.h \
-	layout/svg/renderer/src/libart/nsSVGLibartGlyphMetrics.cpp \
-	layout/svg/renderer/src/libart/nsSVGLibartGlyphMetrics.h \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphGeometryDefault.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphGeometryDefault.h \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphGeometryFT.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphGeometryFT.h \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphMetricsDefault.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphMetricsDefault.h \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphMetricsFT.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartGlyphMetricsFT.h \
 	layout/svg/renderer/src/libart/nsSVGLibartPathGeometry.cpp \
 	layout/svg/renderer/src/libart/nsSVGLibartPathGeometry.h \
 	layout/svg/renderer/src/libart/nsSVGLibartRegion.cpp \
