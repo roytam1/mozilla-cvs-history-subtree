@@ -27,7 +27,7 @@ CSRCS		= \
 EXPORTS= abouturl.h
 
 REQUIRES	= netcache network nspr2 dbm util pref js java fileurl \
-	security layer img httpurl jtools lay style
+	security layer img httpurl jtools lay style cstream
 
 include $(DEPTH)/config/rules.mk
 
