@@ -522,6 +522,7 @@ dnl Default platform specific options
 dnl ========================================================
 OBJ_SUFFIX=o
 LIB_SUFFIX=a
+LIB_PREFIX=lib
 DLL_SUFFIX=so
 ASM_SUFFIX=s
 MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
@@ -1206,6 +1207,7 @@ case "$target" in
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
+	    LIB_PREFIX=
 	    DLL_SUFFIX=dll
         PROG_SUFFIX=.exe
         
@@ -1707,6 +1709,7 @@ mips-sony-newsos*)
     AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     OBJ_SUFFIX=obj
     LIB_SUFFIX=lib
+    LIB_PREFIX=
     DLL_SUFFIX=dll
     ASM_SUFFIX=asm
     DLLTOOL=''
@@ -2257,6 +2260,7 @@ AC_SUBST(CPU_ARCH)
 
 AC_SUBST(OBJ_SUFFIX)
 AC_SUBST(LIB_SUFFIX)
+AC_SUBST(LIB_PREFIX)
 AC_SUBST(DLL_SUFFIX)
 AC_SUBST(ASM_SUFFIX)
 AC_SUBST(PROG_SUFFIX)

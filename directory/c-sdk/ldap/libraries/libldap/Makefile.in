@@ -91,14 +91,9 @@ OBJS		= $(addprefix $(OBJDIR_NAME)/, $(REALOBJS))
 DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
-ifeq ($(OS_ARCH), WINNT)
-LIBLDAP		= $(addprefix $(OBJDIR_NAME)/, $(LDAP_LIBNAME).$(LIB_SUFFIX))
-DLLLDAP		= $(addprefix $(OBJDIR_NAME)/, $(LDAP_LIBNAME).$(DLL_SUFFIX)) 
-else
-LIBLDAP		= $(addprefix $(OBJDIR_NAME)/, lib$(LDAP_LIBNAME).$(LIB_SUFFIX))
-DLLLDAP		= $(addprefix $(OBJDIR_NAME)/, lib$(LDAP_LIBNAME).$(DLL_SUFFIX))
+LIBLDAP		= $(addprefix $(OBJDIR_NAME)/, $(LIB_PREFIX)$(LDAP_LIBNAME).$(LIB_SUFFIX))
+DLLLDAP		= $(addprefix $(OBJDIR_NAME)/, $(LIB_PREFIX)$(LDAP_LIBNAME).$(DLL_SUFFIX))
 
-endif
 INSTALLDIR	= $(DIST)/$(OBJDIR_NAME)
 
 include $(topsrcdir)/config/rules.mk
@@ -106,6 +101,10 @@ include $(topsrcdir)/config/rules.mk
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/public
 DEFINES		+= $(DEFS) -UMOZILLA_CLIENT
+
+ifdef USE_PTHREADS
+DEFINES   += -DUSE_PTHREADS
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 PLATFORMCFLAGS	= -DNEEDPROTOS
@@ -173,6 +172,12 @@ EXTRA_LIBS += $(dist_libdir)/$(LDIF_LIBNAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
 endif
 
+ifeq ($(OS_ARCH),OS2)
+EXTRA_LIBS = $(dist_libdir)/$(LDIF_LIBNAME).lib
+EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
+EXTRA_LIBS += $(OS_LIBS)
+endif
+
 ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 EXTRA_LIBS += -L/usr/lib -lcxx -lpthread -lrt -lmach -lexc
@@ -190,6 +195,10 @@ endif
 
 ifeq ($(OS_ARCH), Darwin)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
+endif
+
+ifeq ($(OS_ARCH), BeOS)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) -lbe
 endif
 
 ###########################################################################
@@ -225,19 +234,29 @@ $(LIBLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-ifneq (,$(filter AIX Linux HP-UX Darwin, $(OS_ARCH)))
+ifneq (,$(filter AIX Linux HP-UX Darwin BeOS, $(OS_ARCH)))
 	$(LINK_LIB) ../liblber/$(OBJDIR_NAME)/*.a
 else
 	$(LINK_LIB) $(EXTRA_LIBS)
 endif
 
+ifeq ($(OS_ARCH),OS2)
+DEF_FILE = $(LDAP_LIBNAME).def
+$(DEF_FILE):
+	echo LIBRARY $(LDAP_LIBNAME) INITINSTANCE TERMINSTANCE > $@
+	echo PROTMODE >> $@
+	echo CODE    LOADONCALL MOVEABLE DISCARDABLE >> $@
+	echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $@
+	echo EXPORTS >> $@
+	$(FILTER) $(LIBLDAP) | grep -v _DLL_InitTerm >> $@
+endif
 
-$(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
+$(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS) $(DEF_FILE)
 	@echo ======= making $(DLLLDAP)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-	$(LINK_DLL) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
+	$(LINK_DLL) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS) $(DEF_FILE)
 
 veryclean:: clean
 

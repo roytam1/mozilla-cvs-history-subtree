@@ -42,12 +42,9 @@ OBJS		= $(addprefix $(IUTILOBJDEST)/, $(REALOBJS))
 DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
-ifeq ($(OS_ARCH), WINNT)
-LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, $(IUTIL_LIBNAME).$(LIB_SUFFIX))
-else
 LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, \
-		  lib$(IUTIL_LIBNAME).$(LIB_SUFFIX))
-endif
+		  $(LIB_PREFIX)$(IUTIL_LIBNAME).$(LIB_SUFFIX))
+
 INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
 include $(topsrcdir)/config/rules.mk

@@ -34,11 +34,7 @@ OBJS		= $(addprefix $(OBJDIR_NAME)/, $(REALOBJS))
 
 HDIR		= $(topsrcdir)/ldap/include
 
-ifeq ($(OS_ARCH), WINNT)
-LIBLDIF		= $(addprefix $(OBJDIR_NAME)/, $(LDIF_LIBNAME).$(LIB_SUFFIX))
-else
-LIBLDIF		= $(addprefix $(OBJDIR_NAME)/, lib$(LDIF_LIBNAME).$(LIB_SUFFIX))
-endif
+LIBLDIF		= $(addprefix $(OBJDIR_NAME)/, $(LIB_PREFIX)$(LDIF_LIBNAME).$(LIB_SUFFIX))
 
 INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 

@@ -39,13 +39,8 @@ OBJS		= $(addprefix $(SSLOBJDEST)/, $(REALOBJS))
 DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
-ifeq ($(OS_ARCH), WINNT)
-LIBSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(SSLDAP_LIBNAME).$(DLL_SUFFIX))
-DLLSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(SSLDAP_LIBNAME).$(LIB_SUFFIX))
-else
-LIBSSLDAP	= $(addprefix $(SSLOBJDEST)/, \
-			lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX))
-endif
+LIBSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(LIB_PREFIX)$(SSLDAP_LIBNAME).$(LIB_SUFFIX))
+DLLSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(LIB_PREFIX)$(SSLDAP_LIBNAME).$(DLL_SUFFIX))
 
 INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
@@ -143,6 +138,16 @@ EXTRA_LIBS += $(DYNAMICNSPR)
 EXTRA_LIBS += $(OS_LIBS)
 endif
 
+ifeq ($(OS_ARCH), BeOS)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME) -l$(PRLDAP_LIBNAME)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += -l$(SOFTOKN_LIBNAME)
+endif
+EXTRA_LIBS += -l$(SSL_LIBNAME) -l$(NSS_LIBNAME)
+EXTRA_LIBS += $(DYNAMICNSPR) 
+EXTRA_LIBS += $(OS_LIBS)
+endif
+
 OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################
@@ -165,13 +170,20 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBSSLDAP)
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(DLLSSLDAP)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
 
 $(LIBSSLDAP): $(OBJS) $(LIBDIR) $(SSLDAP_EXPORT_DEFS)
 	@echo ======= making $(LIBSSLDAP)
+ ifdef SO_FILES_TO_REMOVE
+	-$(RM) $(SO_FILES_TO_REMOVE)
+ endif
+	$(LINK_LIB) $(EXTRA_LIBS)
+
+$(DLLSSLDAP): $(OBJS) $(LIBDIR) $(SSLDAP_EXPORT_DEFS)
+	@echo ======= making $(DLLSSLDAP)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
@@ -182,11 +194,12 @@ veryclean:: clean
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install:: $(LIBSSLDAP)
+install:: $(DLLSSLDAP)
 ifeq ($(OS_ARCH), WINNT)
 	$(INSTALL) -m 555 $(LIBSSLDAP) $(dist_libdir)
 	$(INSTALL) -m 555 $(DLLSSLDAP) $(dist_libdir)
 endif
 ifdef MKSHLIB
-	$(INSTALL) -m 555 $(LIBSSLDAP) $(dist_libdir)
+	$(INSTALL) -m 555 $(DLLSSLDAP) $(dist_libdir)
+	$(INSTALL) -m 444 $(DLLSSLDAP) $(dist_bindir)
 endif
