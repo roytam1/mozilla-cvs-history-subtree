@@ -360,6 +360,10 @@ sub SetupEnv {
     if ($Settings::ReleaseBuild) {
         $ENV{BUILD_OFFICIAL}   = 1;
         $ENV{MOZILLA_OFFICIAL} = 1;
+      if ($Settings::OS =~ /^WIN/) {
+          $ENV{MOZ_PROFILE}      = 1;
+          $ENV{PDBFILE}      = "NONE";
+      }
     }
 
     if ($Settings::ObjDir ne '') {
