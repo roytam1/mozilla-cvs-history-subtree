@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * 
+/* 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -85,13 +84,12 @@ public void loadURL(String absoluteURL)
     final int bc = getNativeBrowserControl();
     final String url = new String(absoluteURL);
     Assert.assert_it(-1 != bc);
-
-    Runnable loadURL = new Runnable() {
-      public void run() {
-          NavigationImpl.this.nativeLoadURL(bc, url);
-      }
-    };
-    getNativeEventThread().pushRunnable(loadURL);
+    
+    NativeEventThread.instance.pushRunnable(new Runnable() {
+	    public void run() {
+		NavigationImpl.this.nativeLoadURL(bc, url);
+	    }
+	});
 }
 
 public void loadFromStream(InputStream stream, String uri,

@@ -81,7 +81,7 @@ public EventRegistrationImpl(WrapperFactory yourFactory,
     super(yourFactory, yourBrowserControl);
     
     // pull out the NativeEventThread from the WrapperFactory
-    nativeEventThread = getNativeEventThread();
+    nativeEventThread = NativeEventThread.instance;
 }
 
 public void delete()
