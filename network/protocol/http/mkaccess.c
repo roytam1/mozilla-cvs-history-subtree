@@ -149,13 +149,13 @@ HG10828
 
 
 typedef struct _net_AuthStruct {
-    net_AuthType        auth_type;
-    char *                      path;                   /* For normal authentication only */
-	char *                  proxy_addr;             /* For proxy authentication only */
-	char *                  username;               /* Obvious */
-	char *                  password;               /* Not too cryptic either */
-	char *                  auth_string;    /* Storage for latest Authorization str */
-	char *                  realm;                  /* For all auth schemes */
+    net_AuthType	auth_type;
+    char *			path;			/* For normal authentication only */
+	char *			proxy_addr;		/* For proxy authentication only */
+	char *			username;		/* Obvious */
+	char *			password;		/* Not too cryptic either */
+	char *			auth_string;	/* Storage for latest Authorization str */
+	char *			realm;			/* For all auth schemes */
 #ifdef SIMPLE_MD5
     HG82727
 #endif
@@ -241,7 +241,7 @@ NET_BuildAuthString(MWContext * context, URL_Struct *URL_s)
 #endif
 	else
 	  {
-		static char * auth_header = 0;
+	  	static char * auth_header = 0;
 		
 		if(auth_header)
 			PR_Free(auth_header);
@@ -259,14 +259,14 @@ net_ScanForHostnameRealmMatch(char * address, char * realm)
 
     while((auth_s = (net_AuthStruct *) XP_ListNextObject(list_ptr))!=0)
       {
-	/* shorter strings always come last so there can be no
-	 * ambiquity
-	 */
-	if(!PL_strncasecmp(proto_host, auth_s->path, PL_strlen(proto_host))
+        /* shorter strings always come last so there can be no
+         * ambiquity
+         */
+        if(!PL_strncasecmp(proto_host, auth_s->path, PL_strlen(proto_host))
 			&& !PL_strcasecmp(realm, auth_s->realm))
 		{
 			PR_Free(proto_host);
-	    return(auth_s);
+            return(auth_s);
 		}
       }
 	PR_Free(proto_host);
@@ -315,10 +315,10 @@ net_remove_exact_auth_match_on_cancel(net_AuthStruct *prev_auth, char *cur_path)
 
 	if(!PL_strcmp(prev_auth->path, cur_path))
       {
-	/* if the paths are exact and the user cancels
-	 * remove the mapping
-	 */
-	XP_ListRemoveObject(net_auth_list, prev_auth);
+        /* if the paths are exact and the user cancels
+         * remove the mapping
+         */
+        XP_ListRemoveObject(net_auth_list, prev_auth);
 		net_free_auth_struct(prev_auth);
 	  }
 }
@@ -370,8 +370,8 @@ net_store_http_password(char *address, char *realm, char *username, char *passwo
 	if(!array)
 		return;
 
-	PC_AddToNameValueArray(array, HTTP_PW_NAME_TOKEN, username);    
-	PC_AddToNameValueArray(array, HTTP_PW_PASSWORD_TOKEN, password);        
+	PC_AddToNameValueArray(array, HTTP_PW_NAME_TOKEN, username);	
+	PC_AddToNameValueArray(array, HTTP_PW_PASSWORD_TOKEN, password);	
 
 	key = gen_http_key(address, realm);
 
@@ -392,13 +392,13 @@ net_remove_stored_http_password(char *url)
 
 MODULE_PRIVATE void
 net_http_password_data_interp(
-	char *module,
-	char *key,
-	char *data, int32 data_len,
-	char *type_buffer, int32 type_buffer_size,
-	char *url_buffer, int32 url_buffer_size,
-	char *username_buffer, int32 username_buffer_size,
-	char *password_buffer, int32 password_buffer_size)
+        char *module,
+        char *key,
+        char *data, int32 data_len,
+        char *type_buffer, int32 type_buffer_size,
+        char *url_buffer, int32 url_buffer_size,
+        char *username_buffer, int32 username_buffer_size,
+        char *password_buffer, int32 password_buffer_size)
 {
 	PCNameValueArray * array;
 	char *username, *password;
@@ -439,7 +439,7 @@ net_initialize_http_access(void)
 {
 	/* register PW cache interp function */
 	
-	PC_RegisterDataInterpretFunc(HTTP_PW_MODULE_NAME,       
+	PC_RegisterDataInterpretFunc(HTTP_PW_MODULE_NAME, 	
 				     net_http_password_data_interp);
 	HG21522
 }
@@ -485,8 +485,8 @@ NET_AskForAuthString(MWContext *context,
 	if(authenticate)
 	  {
 		/* check for the compuserve Remote-Passphrase type of
-		 * authentication
-		 */
+	 	 * authentication
+	 	 */
 		authenticate_header_value = XP_StripLine(authenticate);
 		HG03937
 
@@ -495,17 +495,17 @@ NET_AskForAuthString(MWContext *context,
 		if(!PL_strncasecmp(authenticate_header_value, 
 					 COMPUSERVE_HEADER_NAME, 
 					 sizeof(COMPUSERVE_HEADER_NAME) - 1))
-		{
-			/* This is a compuserv style header 
-			*/
+	  	{
+	  		/* This is a compuserv style header 
+	  	 	*/
 
 		PR_FREEIF(host);
 #if defined(XP_WIN) && defined(MOZILLA_CLIENT)
 		return(WFE_DoCompuserveAuthenticate(context, URL_s, authenticate_header_value));
 #else
-		return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);               
-#endif  
-		}                        
+		return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);		
+#endif	
+	  	}			 
 #define HTTP_BASIC_AUTH_TOKEN "BASIC"
 		else if(PL_strncasecmp(authenticate_header_value, 
 					 HTTP_BASIC_AUTH_TOKEN, 
@@ -513,11 +513,11 @@ NET_AskForAuthString(MWContext *context,
 		{
 			HG21632
 			/* unsupported auth type */
-			return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);               
+			return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);		
 		}
 	  }
 
-	new_address = NET_ParseURL(address,     GET_PROTOCOL_PART | GET_HOST_PART | GET_PATH_PART);
+	new_address = NET_ParseURL(address,	GET_PROTOCOL_PART | GET_HOST_PART | GET_PATH_PART);
 	if(!new_address) {
 		PR_FREEIF(host);
 		return NET_AUTH_FAILED_DISPLAY_DOCUMENT;
@@ -578,7 +578,7 @@ NET_AskForAuthString(MWContext *context,
 		else
 	      {
 		    realm = "unknown";
-		  }
+	 	  }
 		
     }
 
@@ -605,9 +605,9 @@ NET_AskForAuthString(MWContext *context,
       {
 		/* we sent the authorization string and it was wrong
 		 */
-	if(!FE_Confirm(context, XP_GetString(XP_CONFIRM_AUTHORIZATION_FAIL)))
+        if(!FE_Confirm(context, XP_GetString(XP_CONFIRM_AUTHORIZATION_FAIL)))
 		  {
-		TRACEMSG(("User canceled login!!!"));
+        	TRACEMSG(("User canceled login!!!"));
 
 			if(!PL_strcmp(prev_auth->path, new_address))
 			  {
@@ -619,7 +619,7 @@ NET_AskForAuthString(MWContext *context,
 				PR_FREEIF(new_address);
 				PR_FREEIF(username);
 				PR_FREEIF(password);
-		return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);
+            	return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);
 			  }
 		  }
 		
@@ -633,15 +633,15 @@ NET_AskForAuthString(MWContext *context,
 	  {
 		char *ptr1, *ptr2;
 
-	/* scan all the authorization strings to see if we
-	 * can find a hostname and realm match.  If we find
-	 * a match then reduce the authorization path to include
-	 * the current path as well.
-	 */
-	prev_auth = net_ScanForHostnameRealmMatch(address, realm);
+        /* scan all the authorization strings to see if we
+         * can find a hostname and realm match.  If we find
+         * a match then reduce the authorization path to include
+         * the current path as well.
+         */
+        prev_auth = net_ScanForHostnameRealmMatch(address, realm);
     
-	if(prev_auth)
-	  {
+        if(prev_auth)
+          {
 		char *tmp;
 		int skipProtoHost;
 
@@ -655,17 +655,17 @@ NET_AskForAuthString(MWContext *context,
 			skipProtoHost));
 		PR_Free(tmp);
 
-	    /* compare the two url paths until they deviate
-	     * once they deviate truncate.
-	     * skip ptr1, ptr2 past the host names 
-	     * which we have already compared
-	     */
-	    for(ptr1 = prev_auth->path + skipProtoHost, ptr2 = new_address + skipProtoHost; *ptr1 && *ptr2; ptr1++, ptr2++)
+            /* compare the two url paths until they deviate
+             * once they deviate truncate.
+             * skip ptr1, ptr2 past the host names 
+             * which we have already compared
+             */
+            for(ptr1 = prev_auth->path + skipProtoHost, ptr2 = new_address + skipProtoHost; *ptr1 && *ptr2; ptr1++, ptr2++)
 			  {
-		if(*ptr1 != *ptr2)
-		  {
+                if(*ptr1 != *ptr2)
+                  {
 					break;        /* end for */
-		  }
+                  }
 			  }
 			/* truncate at *ptr1 now since the new address may
 			 * be just a subpath of the original address and
@@ -685,7 +685,7 @@ NET_AskForAuthString(MWContext *context,
 			tmp = NET_ParseURL(prev_auth->path, GET_PATH_PART);
 			if(!*tmp)
 				StrAllocCat(prev_auth->path, "/");
-			PR_Free(tmp);                           
+			PR_Free(tmp);				
 
 			TRACEMSG(("Truncated new auth path to be: %s", prev_auth->path));
 
@@ -694,7 +694,7 @@ NET_AskForAuthString(MWContext *context,
 			PR_Free(host);
 			PR_Free(new_address);
 			return(NET_RETRY_WITH_AUTH);
-	  }
+          }
 	  }
 					 
 	/* Use username and/or password specified in URL_struct if exists. */
@@ -731,7 +731,7 @@ NET_AskForAuthString(MWContext *context,
 	if(!password || re_authorize)
 	  {
 		XP_Bool remember_password;
-		host = NET_ParseURL(address, GET_HOST_PART);
+	   	host = NET_ParseURL(address, GET_HOST_PART);
 
 		/* malloc memory here to prevent buffer overflow */
 		len = PL_strlen(XP_GetString(XP_ACCESS_ENTER_USERNAME));
@@ -820,11 +820,11 @@ NET_AskForAuthString(MWContext *context,
 	if(prev_auth)
 	  {
 	    PR_FREEIF(prev_auth->auth_string);
-	prev_auth->auth_string = auth_string;
+        prev_auth->auth_string = auth_string;
 		PR_FREEIF(prev_auth->username);
 		prev_auth->username = username;
-	PR_FREEIF(prev_auth->password);
-	prev_auth->password = password;
+        PR_FREEIF(prev_auth->password);
+        prev_auth->password = password;
 	  }
 	else
 	  {
@@ -844,9 +844,9 @@ NET_AskForAuthString(MWContext *context,
 		    return(NET_RETRY_WITH_AUTH);
 		  }
 		
-	prev_auth->auth_string = auth_string;
+        prev_auth->auth_string = auth_string;
 		prev_auth->username = username;
-	prev_auth->password = password;
+        prev_auth->password = password;
 		prev_auth->path = 0;
 		StrAllocCopy(prev_auth->path, new_address);
 		prev_auth->realm = 0;
@@ -857,11 +857,11 @@ NET_AskForAuthString(MWContext *context,
 			net_auth_list = XP_ListNew();
 		    if(!net_auth_list)
 			  {
-	  /* Maybe should free prev_auth here. */
-				PR_Free(new_address);
+          /* Maybe should free prev_auth here. */
+		   		PR_Free(new_address);
 				return(NET_RETRY_WITH_AUTH);
 			  }
-		  }             
+		  }		
 
 		/* add it to the list so that it is before any strings of
 		 * smaller length
@@ -872,11 +872,11 @@ NET_AskForAuthString(MWContext *context,
 			if(new_len > PL_strlen(tmp_auth_ptr->path))
 			  {
 				XP_ListInsertObject(net_auth_list, tmp_auth_ptr, prev_auth);
-				PR_Free(new_address);
+		   		PR_Free(new_address);
 				return(NET_RETRY_WITH_AUTH);
 			  }
 		  }
-		/* no shorter strings found in list */  
+		/* no shorter strings found in list */	
 		XP_ListAddObjectToEnd(net_auth_list, prev_auth);
 	  }
 
@@ -979,7 +979,7 @@ net_lock_cookie_permission_list(void)
 {
     if(!cookie_permission_lock_monitor)
 	cookie_permission_lock_monitor =
-	    PR_NewNamedMonitor("cookie_permission-lock");
+            PR_NewNamedMonitor("cookie_permission-lock");
 
     PR_EnterMonitor(cookie_permission_lock_monitor);
 
@@ -1107,11 +1107,11 @@ NET_DeleteCookie(char* cookieURL)
     net_lock_cookie_list();
     list_ptr = net_cookie_list;
     while((cookie = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0) {
-	StrAllocCopy(cookieURL2, "cookie:");
+        StrAllocCopy(cookieURL2, "cookie:");
 	StrAllocCat(cookieURL2, cookie->host);
-	StrAllocCat(cookieURL2, "!");
+        StrAllocCat(cookieURL2, "!");
 	StrAllocCat(cookieURL2, cookie->path);
-	StrAllocCat(cookieURL2, "!");
+        StrAllocCat(cookieURL2, "!");
 	StrAllocCat(cookieURL2, cookie->name);
 	if (PL_strcmp(cookieURL, cookieURL2)==0) {
 	    net_FreeCookie(cookie);
@@ -1126,11 +1126,15 @@ NET_DeleteCookie(char* cookieURL)
 /* blows away all cookies currently in the list, then blows away the list itself
  * nulling it after it's free'd
  */
-PRIVATE void
-net_RemoveAllCookies()
+PUBLIC void
+NET_RemoveAllCookies()
 {
 	net_CookieStruct * victim;
 	XP_List * cookieList;
+
+#if defined(CookieManagement)
+	net_RemoveAllCookiePermissions();
+#endif
 
 	/* check for NULL or empty list */
 	net_lock_cookie_list();
@@ -1147,16 +1151,6 @@ net_RemoveAllCookies()
 	XP_ListDestroy(net_cookie_list);
 	net_cookie_list = NULL;
 	net_unlock_cookie_list();
-}
-
-PUBLIC void
-NET_RemoveAllCookies()
-{
-
-#if defined(CookieManagement)
-	net_RemoveAllCookiePermissions();
-#endif
-	net_RemoveAllCookies();
 }
 
 PRIVATE void
@@ -1220,44 +1214,6 @@ net_remove_expired_cookies(void)
 	  }
 }
 
-PRIVATE XP_List * net_dormant_cookie_list=0;
-Bool net_anonymous = FALSE;
-Bool net_supressNextReferer = FALSE;
-
-PUBLIC void
-NET_AnonymizeCookies()
-{
-    if (!net_anonymous) {
-	net_lock_cookie_list();
-	net_dormant_cookie_list = net_cookie_list;
-	net_cookie_list = XP_ListNew();
-	net_unlock_cookie_list();
-	net_anonymous = TRUE;
-	net_supressNextReferer = TRUE;
-    }
-}
-
-PUBLIC void
-NET_UnanonymizeCookies()
-{
-    if (net_anonymous) {
-	net_RemoveAllCookies();
-	net_lock_cookie_list();
-	net_cookie_list = net_dormant_cookie_list;
-	net_unlock_cookie_list();
-	net_dormant_cookie_list = 0;
-	net_anonymous = FALSE;
-	net_supressNextReferer = TRUE;
-    }
-}
-
-PUBLIC Bool
-NET_SupressRefererForAnonymity() {
-   Bool result = net_supressNextReferer;
-   net_supressNextReferer = FALSE;
-   return result;
-}
-
 /* checks to see if the maximum number of cookies per host
  * is being exceeded and deletes the oldest one in that
  * case
@@ -1272,7 +1228,7 @@ net_CheckForMaxCookiesFromHost(const char * cur_host)
 	int cookie_count = 0;
 
     if(XP_ListIsEmpty(list_ptr))
-	return;
+        return;
 
     while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0)
       {
@@ -1281,14 +1237,14 @@ net_CheckForMaxCookiesFromHost(const char * cur_host)
 			cookie_count++;
 			if(!oldest_cookie 
 				|| oldest_cookie->last_accessed > cookie_s->last_accessed)
-		oldest_cookie = cookie_s;
+                oldest_cookie = cookie_s;
 		  }
       }
 
 	if(cookie_count >= MAX_COOKIES_PER_SERVER && oldest_cookie)
 	  {
 		TRACEMSG(("Freeing cookie because max cookies per server has been exceeded"));
-	net_FreeCookie(oldest_cookie);
+        net_FreeCookie(oldest_cookie);
 	  }
 }
 
@@ -1298,8 +1254,8 @@ net_CheckForMaxCookiesFromHost(const char * cur_host)
 */
 PRIVATE net_CookieStruct *
 net_CheckForPrevCookie(char * path,
-		   char * hostname,
-		   char * name)
+                   char * hostname,
+                   char * name)
 {
 
     XP_List * list_ptr = net_cookie_list;
@@ -1312,10 +1268,10 @@ net_CheckForPrevCookie(char * path,
 				&& cookie_s->path
 				   && cookie_s->host
 					  && cookie_s->name
-						 && !PL_strcmp(name, cookie_s->name)
+					 	 && !PL_strcmp(name, cookie_s->name)
 							&& !PL_strcmp(path, cookie_s->path)
 								&& !PL_strcasecmp(hostname, cookie_s->host))
-		return(cookie_s);
+                return(cookie_s);
 			
       }
 
@@ -1332,13 +1288,16 @@ NET_SetCookieBehaviorPref(NET_CookieBehaviorEnum x)
 	if(net_CookieBehavior == NET_DontUse)
 		XP_FileRemove("", xpHTTPCookie);
 #if defined(CookieManagement)
-	    XP_FileRemove("", xpHTTPCookiePermission);
+            XP_FileRemove("", xpHTTPCookiePermission);
 #endif
 }
 
 PRIVATE void
 NET_SetCookieWarningPref(Bool x)
 {
+/* morse start -- temporary until preference bug is fixed */
+   /* x = TRUE; */
+/* morse end */
 	net_WarnAboutCookies = x;
 }
 
@@ -1373,7 +1332,7 @@ NET_GetCookieScriptPref(void)
 MODULE_PRIVATE int PR_CALLBACK
 NET_CookieBehaviorPrefChanged(const char * newpref, void * data)
 {
-	int32   n;
+	int32	n;
 	PREF_GetIntPref(pref_cookieBehavior, &n);
 	NET_SetCookieBehaviorPref((NET_CookieBehaviorEnum)n);
 	return PREF_NOERROR;
@@ -1382,7 +1341,7 @@ NET_CookieBehaviorPrefChanged(const char * newpref, void * data)
 MODULE_PRIVATE int PR_CALLBACK
 NET_CookieWarningPrefChanged(const char * newpref, void * data)
 {
-	Bool    x;
+	Bool	x;
 	PREF_GetBoolPref(pref_warnAboutCookies, &x);
 	NET_SetCookieWarningPref(x);
 	return PREF_NOERROR;
@@ -1415,7 +1374,7 @@ net_CheckForCookiePermission(char * hostname) {
 		&& !PL_strcmp(hostname, cookie_s->host)) {
 	    net_unlock_cookie_permission_list();
 	    return(cookie_s);
-	}
+        }
     }
     net_unlock_cookie_permission_list();
     return(NULL);
@@ -1427,8 +1386,8 @@ net_CheckForCookiePermission(char * hostname) {
 PUBLIC void
 NET_RegisterCookiePrefCallbacks(void)
 {
-	int32   n;
-	Bool    x;
+	int32	n;
+	Bool	x;
     char    s[64];
     int len = sizeof(s);
 
@@ -1519,13 +1478,13 @@ NET_GetCookie(MWContext * context, char * address)
 			continue;
 		  }
 
-	/* shorter strings always come last so there can be no
-	 * ambiquity
-	 */
-	if(cookie_s->path && !PL_strncmp(path,
-					 cookie_s->path,
-					 PL_strlen(cookie_s->path)))
-	  {
+        /* shorter strings always come last so there can be no
+         * ambiquity
+         */
+        if(cookie_s->path && !PL_strncmp(path,
+                                         cookie_s->path,
+                                         PL_strlen(cookie_s->path)))
+          {
 
 			/* if the cookie is secure and the path isn't
 			 * dont send it
@@ -1538,7 +1497,7 @@ NET_GetCookie(MWContext * context, char * address)
 			  {
 				/* expire and remove the cookie 
 				 */
-				net_FreeCookie(cookie_s);
+		   		net_FreeCookie(cookie_s);
 
 				/* start the list parsing over :(
 				 * we must also start the string over
@@ -1558,28 +1517,28 @@ NET_GetCookie(MWContext * context, char * address)
 			if(cookie_s->name && *cookie_s->name != '\0')
 			  {
 				cookie_s->last_accessed = cur_time;
-		StrAllocCopy(name, cookie_s->name);
-		StrAllocCat(name, "=");
+            	StrAllocCopy(name, cookie_s->name);
+            	StrAllocCat(name, "=");
 
 #ifdef PREVENT_DUPLICATE_NAMES
 				/* make sure we don't have a previous
 				 * name mapping already in the string
 				 */
 				if(!rv || !PL_strstr(rv, name))
-			      { 
-		    StrAllocCat(rv, name);
-		    StrAllocCat(rv, cookie_s->cookie);
+			      {	
+            	    StrAllocCat(rv, name);
+            	    StrAllocCat(rv, cookie_s->cookie);
 				  }
 #else
-		StrAllocCat(rv, name);
-		StrAllocCat(rv, cookie_s->cookie);
+            	StrAllocCat(rv, name);
+                StrAllocCat(rv, cookie_s->cookie);
 #endif /* PREVENT_DUPLICATE_NAMES */
 			  }
 			else
 			  {
-		StrAllocCat(rv, cookie_s->cookie);
+            	StrAllocCat(rv, cookie_s->cookie);
 			  }
-	  }
+          }
 	  }
 
 	  net_unlock_cookie_list();
@@ -1651,8 +1610,8 @@ net_AddCookiePermission
 	    net_SaveCookiePermissions(NULL);
 	}
 
-    //  RDF_AddCookiePermissionResource (
-    //      cookie_permission->host, cookie_permission->permission);
+    //	RDF_AddCookiePermissionResource (
+    //	    cookie_permission->host, cookie_permission->permission);
     }
 }
 #endif
@@ -1676,10 +1635,7 @@ XP_Bool FE_CheckConfirm (
 /* Java script is calling NET_SetCookieString, netlib is calling 
 ** this via NET_SetCookieStringFromHttp.
 */
-
-PR_PUBLIC_API(void) RDF_AddCookieResource(char* name, char* path, char* host,
-					  char* expires, char* value,
-					  PRBool isDomain, PRBool secure) ;
+PR_PUBLIC_API(void) RDF_AddCookieResource(char* name, char* path, char* host, char* expires) ;
 
 PRIVATE void
 net_IntSetCookieString(MWContext * context, 
@@ -1731,7 +1687,7 @@ net_IntSetCookieString(MWContext * context,
 		}
 
 	/* parse path and expires attributes from header if
-	 * present
+ 	 * present
 	 */
 	semi_colon = PL_strchr(set_cookie_header, ';');
 
@@ -1768,37 +1724,37 @@ net_IntSetCookieString(MWContext * context,
 		 */
 
 		/* look for a domain */
-	ptr = PL_strcasestr(semi_colon, "domain=");
+        ptr = PL_strcasestr(semi_colon, "domain=");
 
-	if(ptr) {
+        if(ptr) {
 			char *domain_from_header=NULL;
 			char *dot, *colon;
 			int domain_length, cur_host_length;
 
-	    /* allocate more than we need */
+            /* allocate more than we need */
 			StrAllocCopy(domain_from_header, XP_StripLine(ptr+7));
 
-	    /* terminate at first space or semi-colon
-	     */
-	    for(ptr=domain_from_header; *ptr != '\0'; ptr++)
-		if(NET_IS_SPACE(*ptr) || *ptr == ';' || *ptr == ',') {
-		    *ptr = '\0';
-		    break;
-		  }
+            /* terminate at first space or semi-colon
+             */
+            for(ptr=domain_from_header; *ptr != '\0'; ptr++)
+                if(NET_IS_SPACE(*ptr) || *ptr == ';' || *ptr == ',') {
+                    *ptr = '\0';
+                    break;
+                  }
 
-	    /* verify that this host has the authority to set for
-	     * this domain.   We do this by making sure that the
-	     * host is in the domain
-	     * We also require that a domain have at least two
-	     * periods to prevent domains of the form ".com"
-	     * and ".edu"
+            /* verify that this host has the authority to set for
+             * this domain.   We do this by making sure that the
+             * host is in the domain
+             * We also require that a domain have at least two
+             * periods to prevent domains of the form ".com"
+             * and ".edu"
 			 *
 			 * Also make sure that there is more stuff after
 			 * the second dot to prevent ".com."
-	     */
-	    dot = PL_strchr(domain_from_header, '.');
+             */
+            dot = PL_strchr(domain_from_header, '.');
 			if(dot)
-		dot = PL_strchr(dot+1, '.');
+                dot = PL_strchr(dot+1, '.');
 
 			if(!dot || *(dot+1) == '\0') {
 				/* did not pass two dot test. FAIL
@@ -1832,7 +1788,7 @@ net_IntSetCookieString(MWContext * context,
 				PR_Free(cur_path);
 				PR_Free(cur_host);
 				return;
-	      }
+              }
 
 			/* all tests passed, copy in domain to hostname field
 			 */
@@ -1842,7 +1798,7 @@ net_IntSetCookieString(MWContext * context,
 			TRACEMSG(("Accepted domain: %s", host_from_header));
 
 			PR_Free(domain_from_header);
-	  }
+          }
 
 		/* now search for the expires header 
 		 * NOTE: that this part of the parsing
@@ -1869,12 +1825,12 @@ net_IntSetCookieString(MWContext * context,
 	  }
 
 	if(!path_from_header) {
-	/* strip down everything after the last slash
-	 * to get the path.
-	 */
-	char * slash = PL_strrchr(cur_path, '/');
-	if(slash)
-	    *slash = '\0';
+        /* strip down everything after the last slash
+         * to get the path.
+         */
+        char * slash = PL_strrchr(cur_path, '/');
+        if(slash)
+            *slash = '\0';
 
 		path_from_header = cur_path;
 	  } else {
@@ -1906,31 +1862,31 @@ net_IntSetCookieString(MWContext * context,
     /* If there's a script, call it now */
     script_name = NET_GetCookieScriptPref();
     if( (const char *)0 != script_name ) {
-	JSCFCookieData *cd;
-	Bool changed = FALSE;
-	JSCFResult result;
+        JSCFCookieData *cd;
+        Bool changed = FALSE;
+        JSCFResult result;
 
-	cd = PR_NEWZAP(JSCFCookieData);
-	if( (JSCFCookieData *)0 == cd ) {
-	    PR_FREEIF(path_from_header);
-	    PR_FREEIF(host_from_header);
-	    PR_FREEIF(name_from_header);
-	    PR_FREEIF(cookie_from_header);
-	    /* FREEIF(cur_path); */
-	    /* FREEIF(cur_host); */
-	    return;
-	}
+        cd = PR_NEWZAP(JSCFCookieData);
+        if( (JSCFCookieData *)0 == cd ) {
+            PR_FREEIF(path_from_header);
+            PR_FREEIF(host_from_header);
+            PR_FREEIF(name_from_header);
+            PR_FREEIF(cookie_from_header);
+            /* FREEIF(cur_path); */
+            /* FREEIF(cur_host); */
+            return;
+        }
 
-	cd->path_from_header = path_from_header;
-	cd->host_from_header = host_from_header;
-	cd->name_from_header = name_from_header;
-	cd->cookie_from_header = cookie_from_header;
-	cd->expires = expires;
-	cd->url = cur_url;
-	HG84777
-	cd->domain = is_domain;
-	cd->prompt = NET_GetCookieWarningPref();
-	cd->preference = NET_GetCookieBehaviorPref();
+        cd->path_from_header = path_from_header;
+        cd->host_from_header = host_from_header;
+        cd->name_from_header = name_from_header;
+        cd->cookie_from_header = cookie_from_header;
+        cd->expires = expires;
+        cd->url = cur_url;
+        HG84777
+        cd->domain = is_domain;
+        cd->prompt = NET_GetCookieWarningPref();
+        cd->preference = NET_GetCookieBehaviorPref();
 
 	/*
 	 * This probably is only safe to do from the mozilla thread
@@ -1938,7 +1894,7 @@ net_IntSetCookieString(MWContext * context,
 	 *   global context + objects
 	 * XXX chouck
 	 */
-	result = JSCF_Execute(context, script_name, cd, &changed);
+        result = JSCF_Execute(context, script_name, cd, &changed);
 		if( result != JSCF_error) {
 			if( changed ) {
 				if( cd->path_from_header != path_from_header ) {
@@ -1997,7 +1953,7 @@ net_IntSetCookieString(MWContext * context,
 		return;
 	    } else {
 		accept = TRUE;
-	    }
+            }
 	}
 #endif
     }
@@ -2033,22 +1989,22 @@ net_IntSetCookieString(MWContext * context,
 		if (count>1) {
 		    new_string = PR_smprintf(
 			XP_GetString(MK_ACCESS_COOKIES_WISHESN),
-			tmp_host ? tmp_host : "",
+                        tmp_host ? tmp_host : "",
 			count);
 		} else if (count==1){
 		    new_string = PR_smprintf(
 			XP_GetString(MK_ACCESS_COOKIES_WISHES1),
-			tmp_host ? tmp_host : "");
+                        tmp_host ? tmp_host : "");
 		} else {
 		    new_string = PR_smprintf(
 			XP_GetString(MK_ACCESS_COOKIES_WISHES0),
-			tmp_host ? tmp_host : "");
+                        tmp_host ? tmp_host : "");
 		}
 		PR_Free(tmp_host);
 #else
-	StrAllocCopy(new_string, XP_GetString(MK_ACCESS_COOKIES_THE_SERVER));
-	StrAllocCat(new_string, tmp_host ? tmp_host : "");
-	StrAllocCat(new_string, XP_GetString(MK_ACCESS_COOKIES_WISHES));
+        StrAllocCopy(new_string, XP_GetString(MK_ACCESS_COOKIES_THE_SERVER));
+        StrAllocCat(new_string, tmp_host ? tmp_host : "");
+        StrAllocCat(new_string, XP_GetString(MK_ACCESS_COOKIES_WISHES));
 
 		StrAllocCopy(new_string, XP_GetString(MK_ACCESS_COOKIES_THE_SERVER));
 		StrAllocCat(new_string, tmp_host ? tmp_host : "");
@@ -2136,48 +2092,48 @@ net_IntSetCookieString(MWContext * context,
 
 
     prev_cookie = net_CheckForPrevCookie(path_from_header, 
-										 host_from_header, 
-										 name_from_header);
+								   		 host_from_header, 
+								   		 name_from_header);
 
     if(prev_cookie) {
-	prev_cookie->expires = expires;
-	PR_FREEIF(prev_cookie->cookie);
-	PR_FREEIF(prev_cookie->path);
-	PR_FREEIF(prev_cookie->host);
-	PR_FREEIF(prev_cookie->name);
-	prev_cookie->cookie = cookie_from_header;
-	prev_cookie->path = path_from_header;
-	prev_cookie->host = host_from_header;
-	prev_cookie->name = name_from_header;
-	HG83263
-	prev_cookie->is_domain = is_domain;
+        prev_cookie->expires = expires;
+        PR_FREEIF(prev_cookie->cookie);
+        PR_FREEIF(prev_cookie->path);
+        PR_FREEIF(prev_cookie->host);
+        PR_FREEIF(prev_cookie->name);
+        prev_cookie->cookie = cookie_from_header;
+        prev_cookie->path = path_from_header;
+        prev_cookie->host = host_from_header;
+        prev_cookie->name = name_from_header;
+        HG83263
+        prev_cookie->is_domain = is_domain;
 		prev_cookie->last_accessed = time(NULL);
-      } else {
+      }	else {
 		XP_List * list_ptr = net_cookie_list;
 		net_CookieStruct * tmp_cookie_ptr;
 		size_t new_len;
 
-	/* construct a new cookie_struct
-	 */
-	prev_cookie = PR_NEW(net_CookieStruct);
-	if(!prev_cookie) {
+        /* construct a new cookie_struct
+         */
+        prev_cookie = PR_NEW(net_CookieStruct);
+        if(!prev_cookie) {
 			PR_FREEIF(path_from_header);
 			PR_FREEIF(host_from_header);
 			PR_FREEIF(name_from_header);
 			PR_FREEIF(cookie_from_header);
 			net_unlock_cookie_list();
-	    return;
-	  }
+            return;
+          }
     
-	/* copy
-	 */
-	prev_cookie->cookie  = cookie_from_header;
-	prev_cookie->name    = name_from_header;
-	prev_cookie->path    = path_from_header;
-	prev_cookie->host    = host_from_header;
-	prev_cookie->expires = expires;
-	HG22730
-	prev_cookie->is_domain = is_domain;
+        /* copy
+         */
+        prev_cookie->cookie  = cookie_from_header;
+        prev_cookie->name    = name_from_header;
+        prev_cookie->path    = path_from_header;
+        prev_cookie->host    = host_from_header;
+        prev_cookie->expires = expires;
+        HG22730
+        prev_cookie->is_domain = is_domain;
 		prev_cookie->last_accessed = time(NULL);
 
 		if(!net_cookie_list) {
@@ -2191,7 +2147,7 @@ net_IntSetCookieString(MWContext * context,
 				net_unlock_cookie_list();
 				return;
 			  }
-		  }             
+		  }		
 
 		/* add it to the list so that it is before any strings of
 		 * smaller length
@@ -2203,10 +2159,7 @@ net_IntSetCookieString(MWContext * context,
 				    (prev_cookie->name,
 				    prev_cookie->path,
 				    prev_cookie->host,
-				    ctime(&(prev_cookie->expires)),
-				    prev_cookie->cookie,
-				    prev_cookie->is_domain,
-				    FALSE); //@@@prev_cookie->secure);
+				    ctime(&(prev_cookie->expires)));
 				XP_ListInsertObject(net_cookie_list, tmp_cookie_ptr, prev_cookie);
 				cookies_changed = TRUE;
 				NET_SaveCookies(NULL);
@@ -2219,10 +2172,7 @@ net_IntSetCookieString(MWContext * context,
 		    (prev_cookie->name,
 		     prev_cookie->path,
 		     prev_cookie->host,
-		     ctime(&(prev_cookie->expires)),
-		     prev_cookie->cookie,
-		     prev_cookie->is_domain,
-		     FALSE); //@@@prev_cookie->secure);
+		     ctime(&(prev_cookie->expires)));
 		XP_ListAddObjectToEnd(net_cookie_list, prev_cookie);
 	  }
 
@@ -2332,11 +2282,11 @@ NET_SetCookieStringFromHttp(FO_Present_Types outputFormat,
 			/* if it's foreign, get out of here after a little clean up */
 			if(!NET_SameDomain(curHost, curSessionHistHost))
 			{
-				PR_FREEIF(curHost);     
+				PR_FREEIF(curHost);	
 				PR_FREEIF(curSessionHistHost);
 				return;
 			}
-			PR_FREEIF(curHost);     
+			PR_FREEIF(curHost);	
 			PR_FREEIF(curSessionHistHost);
 		}
 	}
@@ -2364,10 +2314,9 @@ NET_SetCookieStringFromHttp(FO_Present_Types outputFormat,
 	}
 	if( URL_s->server_date && expires )
 	{
-		/* If the cookie has expired, don't waste any more time. */
 		if( expires < URL_s->server_date )
 		{
-			return;
+			gmtCookieExpires=1;
 		}
 		else
 		{
@@ -2415,8 +2364,8 @@ net_SaveCookiePermissions(char * filename)
 	return(-1);
     }
     len = XP_FileWrite("# Netscape HTTP Cookie Permission File" LINEBREAK
-		 "# http://www.netscape.com/newsref/std/cookie_spec.html"
-		  LINEBREAK "# This is a generated file!  Do not edit."
+                 "# http://www.netscape.com/newsref/std/cookie_spec.html"
+                  LINEBREAK "# This is a generated file!  Do not edit."
 		  LINEBREAK LINEBREAK, -1, fp);
 
     if (len < 0) {
@@ -2437,12 +2386,12 @@ net_SaveCookiePermissions(char * filename)
 	    return -1;
 	}
 
-	XP_FileWrite("\t", 1, fp);
+        XP_FileWrite("\t", 1, fp);
 
 	if(cookie_permission_s->permission) {
-	    XP_FileWrite("TRUE", -1, fp);
+            XP_FileWrite("TRUE", -1, fp);
 	} else {
-	    XP_FileWrite("FALSE", -1, fp);
+            XP_FileWrite("FALSE", -1, fp);
 	}
 
 	len = XP_FileWrite(LINEBREAK, -1, fp);
@@ -2457,11 +2406,10 @@ net_SaveCookiePermissions(char * filename)
     XP_FileWrite("@@@@", -1, fp);
     XP_FileWrite("\t", 1, fp);
     if (cookie_remember_checked) {
-	XP_FileWrite("TRUE", -1, fp);
+        XP_FileWrite("TRUE", -1, fp);
     } else {
-	XP_FileWrite("FALSE", -1, fp);
+        XP_FileWrite("FALSE", -1, fp);
     }
-    XP_FileWrite(LINEBREAK, -1, fp);
 
     cookie_permissions_changed = FALSE;
     XP_FileClose(fp);
@@ -2494,27 +2442,27 @@ net_ReadCookiePermissions(char * filename)
 
     net_lock_cookie_permission_list();
     while(XP_FileReadLine(buffer, PERMISSION_LINE_BUFFER_SIZE, fp)) {
-	if (*buffer == '#' || *buffer == CR || *buffer == LF || *buffer == 0) {
+        if (*buffer == '#' || *buffer == CR || *buffer == LF || *buffer == 0) {
 	    continue;
 	}
 
 	host = buffer;
 
-	if( !(permission = PL_strchr(host, '\t')) ) {
+        if( !(permission = PL_strchr(host, '\t')) ) {
 	    continue;
 	}
-	*permission++ = '\0';
+        *permission++ = '\0';
 	if(*permission == CR || *permission == LF || *permission == 0) {
 	    continue;
 	}
-	XP_StripLine(permission); /* remove '\n' from end of permission */
+        XP_StripLine(permission); /* remove '\n' from end of permission */
 
 	/*
-	 * a host value of "@@@@" is a special code designating the
-	 * state of the cookie nag-box's checkmark
+         * a host value of "@@@@" is a special code designating the
+         * state of the cookie nag-box's checkmark
 	 */
-	permission_value = (!PL_strcmp(permission, "TRUE"));
-	if (!PL_strcmp(host, "@@@@")) {
+        permission_value = (!PL_strcmp(permission, "TRUE"));
+        if (!PL_strcmp(host, "@@@@")) {
 	    cookie_remember_checked = permission_value;
 	} else {
 	    net_AddCookiePermission(host, permission_value, FALSE);
@@ -2551,10 +2499,6 @@ NET_SaveCookies(char * filename)
 	if(!cookies_changed)
 	  return(-1);
 
-	if(net_anonymous) {
-	    return(-1);
-	}
-
 	net_lock_cookie_list();
 	list_ptr = net_cookie_list;
 	if(XP_ListIsEmpty(list_ptr)) {
@@ -2580,7 +2524,7 @@ NET_SaveCookies(char * filename)
 	}
 
 	/* format shall be:
-	 *
+ 	 *
 	 * host \t is_domain \t path \t secure \t expires \t name \t cookie
 	 *
 	 * is_domain is TRUE or FALSE
@@ -2625,7 +2569,7 @@ NET_SaveCookies(char * filename)
 		XP_FileWrite("\t", 1, fp);
 
 		XP_FileWrite(cookie_s->cookie, -1, fp);
-		len = XP_FileWrite(LINEBREAK, -1, fp);
+ 		len = XP_FileWrite(LINEBREAK, -1, fp);
 		if (len < 0)
 		{
 			XP_FileClose(fp);
@@ -2651,10 +2595,7 @@ NET_InitRDFCookieResources (void) {
       (item->name,
       item->path,
       item->host,
-      ctime(&(item->expires)),
-      item->cookie,
-      item->is_domain,
-      FALSE); //@@@item->secure);
+      "" /* item->expires */) ;
   }
   net_unlock_cookie_list();
 }
@@ -2685,7 +2626,7 @@ NET_ReadCookies(char * filename)
 #endif
 
     if(!(fp = XP_FileOpen(filename, xpHTTPCookie, XP_FILE_READ)))
-	return(-1);
+        return(-1);
 
 	net_lock_cookie_list();
 	list_ptr = net_cookie_list;
@@ -2695,7 +2636,7 @@ NET_ReadCookies(char * filename)
      * host \t is_domain \t path \t xxx \t expires \t name \t cookie
      *
 	 * if this format isn't respected we move onto the next line in the file.
-     * is_domain is TRUE or FALSE       -- defaulting to FALSE
+     * is_domain is TRUE or FALSE	-- defaulting to FALSE
      * xxx is TRUE or FALSE   -- should default to TRUE
      * expires is a time_t integer
      * cookie can have tabs
@@ -2733,13 +2674,13 @@ NET_ReadCookies(char * filename)
 		if(*expires == CR || *expires == LF || *expires == 0)
 			continue;
 
-	if( !(name = PL_strchr(expires, '\t')) )
+        if( !(name = PL_strchr(expires, '\t')) )
 			continue;
 		*name++ = '\0';
 		if(*name == CR || *name == LF || *name == 0)
 			continue;
 
-	if( !(cookie = PL_strchr(name, '\t')) )
+        if( !(cookie = PL_strchr(name, '\t')) )
 			continue;
 		*cookie++ = '\0';
 		if(*cookie == CR || *cookie == LF || *cookie == 0)
@@ -2748,31 +2689,31 @@ NET_ReadCookies(char * filename)
 		/* remove the '\n' from the end of the cookie */
 		XP_StripLine(cookie);
 
-	/* construct a new cookie_struct
-	 */
-	new_cookie = PR_NEW(net_CookieStruct);
-	if(!new_cookie)
-	  {
+        /* construct a new cookie_struct
+         */
+        new_cookie = PR_NEW(net_CookieStruct);
+        if(!new_cookie)
+          {
 			net_unlock_cookie_list();
-	    return(-1);
-	  }
+            return(-1);
+          }
 
 		memset(new_cookie, 0, sizeof(net_CookieStruct));
     
-	/* copy
-	 */
-	StrAllocCopy(new_cookie->cookie, cookie);
-	StrAllocCopy(new_cookie->name, name);
-	StrAllocCopy(new_cookie->path, path);
-	StrAllocCopy(new_cookie->host, host);
-	new_cookie->expires = atol(expires);
+        /* copy
+         */
+        StrAllocCopy(new_cookie->cookie, cookie);
+        StrAllocCopy(new_cookie->name, name);
+        StrAllocCopy(new_cookie->path, path);
+        StrAllocCopy(new_cookie->host, host);
+        new_cookie->expires = atol(expires);
 
 		HG87365
 
-	if(!PL_strcmp(is_domain, "TRUE"))
-		new_cookie->is_domain = TRUE;
-	else
-		new_cookie->is_domain = FALSE;
+        if(!PL_strcmp(is_domain, "TRUE"))
+        	new_cookie->is_domain = TRUE;
+        else
+        	new_cookie->is_domain = FALSE;
 
 		if(!net_cookie_list)
 		  {
@@ -2782,7 +2723,7 @@ NET_ReadCookies(char * filename)
 				net_unlock_cookie_list();
 				return(-1);
 			  }
-		  }             
+		  }		
 
 		/* add it to the list so that it is before any strings of
 		 * smaller length
@@ -2798,7 +2739,7 @@ NET_ReadCookies(char * filename)
 			  }
 		  }
 
-		/* no shorter strings found in list */  
+		/* no shorter strings found in list */	
 		if(!added_to_list)
 		    XP_ListAddObjectToEnd(net_cookie_list, new_cookie);
 	  }
@@ -2817,7 +2758,7 @@ NET_ReadCookies(char * filename)
 /*
  * Figure out the authentication scheme used; currently supported:
  *
- *              * Basic
+ *		* Basic
  *
  */
  HG73632
@@ -2993,7 +2934,7 @@ PRIVATE void do_md5(unsigned char *stuff, unsigned char digest[16])
 
 	MD5_Begin(cx);
 	MD5_Update(cx, stuff, strlen((char*)stuff));
-	MD5_End(cx, digest, &len, 16);  /* len had better be 16 when returned! */
+	MD5_End(cx, digest, &len, 16);	/* len had better be 16 when returned! */
 
 	MD5_DestroyContext(cx, (DSBool)TRUE);
 }
@@ -3002,7 +2943,7 @@ PRIVATE void do_md5(unsigned char *stuff, unsigned char digest[16])
 /*
  * Generate a response for a SimpleMD5 challenge.
  *
- *      HEX( MD5("challenge password method url"))
+ *	HEX( MD5("challenge password method url"))
  *
  */
 char *net_generate_md5_challenge_response(char *challenge,
@@ -3110,8 +3051,8 @@ char *net_generate_auth_string(URL_Struct *url_s,
 		break;
 #endif /* SIMPLE_MD5 */
 		/* Handle the FORTEZZA case        */
-		case AUTH_FORTEZZA:
-			HG26251
+	        case AUTH_FORTEZZA:
+	       		HG26251
 		  break;
 		/* Done Handling the FORTEZZA case */
     }
@@ -3261,14 +3202,8 @@ NET_AskForProxyAuth(MWContext * context,
 		PR_snprintf(buf, len*sizeof(char), XP_GetString( XP_PROXY_AUTH_REQUIRED_FOR ), prev->realm, proxy_addr);
 
 		NET_Progress(context, XP_GetString( XP_CONNECT_PLEASE_ENTER_PASSWORD_FOR_PROXY ) );
-#if defined(SingleSignon)
-		/* prefill prompt with previous username/passwords if any */
-		len = SI_PromptUsernameAndPassword
-		    (context, buf, &username, &password, proxy_addr);
-#else
-		len = FE_PromptUsernameAndPassword
-		    (context, buf, &username, &password);
-#endif
+		len = FE_PromptUsernameAndPassword(context, buf, 
+									       &username, &password);
 		PR_Free(buf);
 	  }
 	else
@@ -3287,7 +3222,7 @@ NET_AskForProxyAuth(MWContext * context,
 	  }
 
 	PR_FREEIF(prev->auth_string);
-	prev->auth_string = NULL;               /* Generate a new one */
+	prev->auth_string = NULL;		/* Generate a new one */
 	PR_FREEIF(prev->username);
 	prev->username = username;
 	PR_FREEIF(prev->password);
@@ -3319,10 +3254,10 @@ extern int SA_REMOVE_BUTTON_LABEL;
 
 #define BUFLEN 5000
 
-#define FLUSH_BUFFER                    \
-    if (buffer) {                       \
-	StrAllocCat(buffer2, buffer);   \
-	g = 0;                          \
+#define FLUSH_BUFFER			\
+    if (buffer) {			\
+	StrAllocCat(buffer2, buffer);	\
+	g = 0;				\
     }
 
 MODULE_PRIVATE void 
@@ -3350,41 +3285,41 @@ net_DisplayCookieDetailsAsHTML(MWContext *context,
     /* Write out cookie details */
 
     g += PR_snprintf(buffer+g, BUFLEN-g,
-	"<TABLE>");
+        "<TABLE>");
 
     g += PR_snprintf(buffer+g, BUFLEN-g,
-	"<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+        "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	XP_GetString(MK_ACCESS_NAME), cookie_name);
     FLUSH_BUFFER
 
     g += PR_snprintf(buffer+g, BUFLEN-g,
-	"<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+        "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	XP_GetString(MK_ACCESS_VALUE), cookie_cookie);
     FLUSH_BUFFER
 
     if (cookie_is_domain) {
 	g += PR_snprintf(buffer+g, BUFLEN-g,
-	    "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+            "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	    XP_GetString(MK_ACCESS_DOMAIN), cookie_host);
     } else {
 	g += PR_snprintf(buffer+g, BUFLEN-g,
-	    "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+            "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	    XP_GetString(MK_ACCESS_HOST), cookie_host);
     }
     FLUSH_BUFFER
 
     g += PR_snprintf(buffer+g, BUFLEN-g,
-	"<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+        "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	XP_GetString(MK_ACCESS_PATH), cookie_path);
     FLUSH_BUFFER
 
     if(cookie_secure) {
 	g += PR_snprintf(buffer+g, BUFLEN-g,
-	    "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+            "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	    XP_GetString(MK_ACCESS_SECURE), XP_GetString(MK_ACCESS_YES));
     } else {
 	g += PR_snprintf(buffer+g, BUFLEN-g,
-	    "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+            "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	    XP_GetString(MK_ACCESS_SECURE), XP_GetString(MK_ACCESS_NO));
     }
     FLUSH_BUFFER
@@ -3393,16 +3328,16 @@ net_DisplayCookieDetailsAsHTML(MWContext *context,
 	expireDate=ctime(&(cookie_expires));
 	if (expireDate) {
 	    g += PR_snprintf(buffer+g, BUFLEN-g,
-		"<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+                "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 		XP_GetString(MK_ACCESS_EXPIRES), expireDate);
 	} else {
 	    g += PR_snprintf(buffer+g, BUFLEN-g,
-		"<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
-		XP_GetString(MK_ACCESS_EXPIRES), "");
+                "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+                XP_GetString(MK_ACCESS_EXPIRES), "");
 	}
     } else {
 	g += PR_snprintf(buffer+g, BUFLEN-g,
-	    "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
+            "<TR><TD><b>%s</b></TD> <TD>%s</TD></TR>",
 	    XP_GetString(MK_ACCESS_EXPIRES),
 	    XP_GetString(MK_ACCESS_END_OF_SESSION));
     }
@@ -3450,25 +3385,25 @@ Bool net_InSequence(char* sequence, int number) {
     for (ptr = sequence ; ptr ; ptr = endptr) {
 
 	/* get to next comma */
-	endptr = PL_strchr(ptr, ',');
+        endptr = PL_strchr(ptr, ',');
 
 	/* if comma found, set it to null */
 	if (endptr) {
 
 	    /* restore last comma-to-null back to comma */
 	    if (undo) {
-		*undo = ',';
+                *undo = ',';
 	    }
 	    undo = endptr;
-	    *endptr++ = '\0';
+            *endptr++ = '\0';
 	}
 
-	/* if there is a number before the comma, compare it with "number" */
+        /* if there is a number before the comma, compare it with "number" */
 	if (*ptr) {
 	    i = atoi(ptr);
 	    if (i == number) {
 
-		/* "number" was in the sequence so return TRUE */
+                /* "number" was in the sequence so return TRUE */
 		retval = TRUE;
 		break;
 	    }
@@ -3476,7 +3411,7 @@ Bool net_InSequence(char* sequence, int number) {
     }
 
     if (undo) {
-	*undo = ',';
+        *undo = ',';
     }
     return retval;
 }
@@ -3501,29 +3436,25 @@ net_AboutCookiesDialogDone(XPDialogState* state, char** argv, int argc,
 
 	/* view button was pressed */
 
-	/* get "selname" value in argv list */
-	if ((cookieNumberAsString = XP_FindValueInArgs("selname", argv, argc))) {
+        /* get "selname" value in argv list */
+        if (cookieNumberAsString = XP_FindValueInArgs("selname", argv, argc)) {
 
-	    /* convert "selname" value from string to an integer */
+            /* convert "selname" value from string to an integer */
 	    cookieNumber = atoi(cookieNumberAsString);
 
 	    /* get the cookie corresponding to that integer */
 	    list=net_cookie_list;
-
 	    while (cookieNumber-- >= 0) {
-		if (!(cookie=(net_CookieStruct *) XP_ListNextObject(list))) {
-		    break;
-		}
+		cookie=(net_CookieStruct *) XP_ListNextObject(list);
 	    }
 
 	    /* display the details for that cookie */
-	    if (cookie) {
-		net_DisplayCookieDetailsAsHTML
-		    ((MWContext *)(state->arg),
-		    cookie->path, cookie->host,
-		    cookie->name, cookie->cookie,
-		    cookie->expires, HG78111, cookie->is_domain);
-	    }
+	    net_DisplayCookieDetailsAsHTML
+		((MWContext *)(state->arg),
+		cookie->path, cookie->host,
+		cookie->name, cookie->cookie,
+		cookie->expires, HG78111, cookie->is_domain);
+
 	}
 	return(PR_TRUE);
     }
@@ -3602,8 +3533,8 @@ net_AboutCookiesDialogDone(XPDialogState* state, char** argv, int argc,
     return PR_FALSE;
 }
 
-PUBLIC void
-NET_DisplayCookieInfoAsHTML(MWContext *context)
+MODULE_PRIVATE void
+NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry)
 {
     char *buffer = (char*)PR_Malloc(BUFLEN);
     char *buffer2 = 0;
@@ -3612,6 +3543,7 @@ NET_DisplayCookieInfoAsHTML(MWContext *context)
     XP_List *cookie_permission_list=net_cookie_permission_list;
     net_CookieStruct *cookie;
     net_CookiePermissionStruct *cookperm;
+    MWContext *context = cur_entry->window_id;
 
     static XPDialogInfo dialogInfo = {
 	XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON,
@@ -3626,23 +3558,18 @@ NET_DisplayCookieInfoAsHTML(MWContext *context)
     /* Write out the javascript */
     g += PR_snprintf(buffer+g, BUFLEN-g,
 "<script>\n"
-
 "function DeleteCookieSelected() {\n"
 "  selname = document.theform.selname;\n"
 "  goneC = document.theform.goneC;\n"
 "  var p;\n"
 "  var i;\n"
-"  for (i=selname.options.length; i>0; i--) {\n"
-"    if (selname.options[i-1].selected) {\n"
-"      selname.options[i-1].selected = 0;\n"
-"      goneC.value = goneC.value + \",\" + selname.options[i-1].value;\n"
-//"    temp = selname.options[i-1];\n"
+"  for (i=selname.options.length-1 ; i>=0 ; i--) {\n"
+"    if (selname.options[i].selected) {\n"
+"      selname.options[i].selected = 0;\n"
+"      goneC.value = goneC.value + \",\" + selname.options[i].value;\n"
 "      for (j=i ; j<selname.options.length ; j++) {\n"
-"        selname.options[j-1] = selname.options[j];\n"
+"        selname.options[j] = selname.options[j+1];\n"
 "      }\n"
-"      selname.options[selname.options.length-1] = null;\n"
-//"    selname.options[selname.options.length-1] = temp;\n"
-//"    selname.options.length = selname.options.length-1;\n"
 "    }\n"
 "  }\n"
 "}\n"
@@ -3651,14 +3578,13 @@ NET_DisplayCookieInfoAsHTML(MWContext *context)
 "  goneP = document.theform.goneP;\n"
 "  var p;\n"
 "  var i;\n"
-"  for (i=selname2.options.length; i>0; i--) {\n"
-"    if (selname2.options[i-1].selected) {\n"
-"      selname2.options[i-1].selected = 0;\n"
-"      goneP.value = goneP.value + \",\" + selname2.options[i-1].value;\n"
+"  for (i=selname2.options.length-1 ; i>=0 ; i--) {\n"
+"    if (selname2.options[i].selected) {\n"
+"      selname2.options[i].selected = 0;\n"
+"      goneP.value = goneP.value + \",\" + selname2.options[i].value;\n"
 "      for (j=i ; j<selname2.options.length ; j++) {\n"
-"        selname2.options[j-1] = selname2.options[j];\n"
+"        selname2.options[j] = selname2.options[j+1];\n"
 "      }\n"
-"      selname2.options[selname2.options.length-1] = null;\n"
 "    }\n"
 "  }\n"
 "}\n"
@@ -3730,7 +3656,6 @@ after_stats:
 	FLUSH_BUFFER
 	cookieNum++;
     }
-
     g += PR_snprintf(buffer+g, BUFLEN-g,
 "</SELECT></CENTER>\n"
 	);
@@ -3756,14 +3681,13 @@ after_stats:
     cookieNum = 0;
     while ( (cookperm=(net_CookiePermissionStruct *)
 		      XP_ListNextObject(cookie_permission_list)) ) {
-	char permit = cookperm->permission ? '+' : '-';
+        char permit = cookperm->permission ? '+' : '-';
 	g += PR_snprintf(buffer+g, BUFLEN-g,
 "<OPTION VALUE=%d>%c %s</OPTION>",
 	    cookieNum, permit, cookperm->host);
 	FLUSH_BUFFER
 	cookieNum++;
     }
-
     g += PR_snprintf(buffer+g, BUFLEN-g,
 "</SELECT></CENTER>\n"
 	);
@@ -3804,7 +3728,7 @@ after_stats:
 }
 
 #else
-PUBLIC void
+MODULE_PRIVATE void
 NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry)
 {
 }
