@@ -948,7 +948,7 @@ nssToken_GetTrustOrder
 );
 
 NSS_EXTERN PRStatus
-nssToken_NotifyCertsNotVisible
+nssToken_NofifyCertsNotVisible
 (
   NSSToken *tok
 );
@@ -962,15 +962,6 @@ nssToken_TraverseCertificates
   PRStatus (* callback)(nssCryptokiObject *instance, void *arg),
   void *arg
 );
-
-NSS_EXTERN PRBool
-nssToken_IsPrivateKeyAvailable
-(
-  NSSToken *token,
-  NSSCertificate *c,
-  nssCryptokiObject *instance
-);
-
 
 #endif
 

@@ -49,10 +49,10 @@ SEC_BEGIN_PROTOS
  * The format of the version string should be
  *     "<major version>.<minor version>[.<patch level>] [<Beta>]"
  */
-#define NSS_VERSION  "3.6 Beta"
+#define NSS_VERSION  "3.5.1 Beta"
 #define NSS_VMAJOR   3
-#define NSS_VMINOR   6
-#define NSS_VPATCH   0
+#define NSS_VMINOR   5
+#define NSS_VPATCH   1
 #define NSS_BETA     PR_TRUE
 
 
@@ -110,7 +110,6 @@ extern SECStatus NSS_InitReadWrite(const char *configdir);
  * 			databases cannot be opened.
  *      NSS_INIT_NOROOTINIT - Don't try to look for the root certs module
  *			automatically.
- *      NSS_INIT_OPTIMIZESPACE - Use smaller tables and caches.
  *
  * Also NOTE: This is not the recommended method for initializing NSS. 
  * The prefered method is NSS_init().
@@ -120,7 +119,6 @@ extern SECStatus NSS_InitReadWrite(const char *configdir);
 #define NSS_INIT_NOMODDB	0x4
 #define NSS_INIT_FORCEOPEN	0x8
 #define NSS_INIT_NOROOTINIT     0x10
-#define NSS_INIT_OPTIMIZESPACE  0x20
 
 extern SECStatus NSS_Initialize(const char *configdir, 
 	const char *certPrefix, const char *keyPrefix, 

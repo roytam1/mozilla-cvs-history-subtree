@@ -669,20 +669,8 @@ NSSCertificate_IsPrivateKeyAvailable
   PRStatus *statusOpt
 )
 {
-    PRBool isUser = PR_FALSE;
-    nssCryptokiObject **ip;
-    nssCryptokiObject **instances = nssPKIObject_GetInstances(&c->object);
-    if (!instances) {
-	return PR_FALSE;
-    }
-    for (ip = instances; *ip; ip++) {
-	nssCryptokiObject *instance = *ip;
-	if (nssToken_IsPrivateKeyAvailable(instance->token, c, instance)) {
-	    isUser = PR_TRUE;
-	}
-    }
-    nssCryptokiObjectArray_Destroy(instances);
-    return isUser;
+    nss_SetError(NSS_ERROR_NOT_FOUND);
+    return PR_FALSE;
 }
 
 NSS_IMPLEMENT PRBool
@@ -1124,3 +1112,4 @@ nssCRL_GetEncoding
 	return (NSSDER *)NULL;
     }
 }
+

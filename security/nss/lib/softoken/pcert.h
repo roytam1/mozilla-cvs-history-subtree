@@ -49,8 +49,6 @@ SEC_BEGIN_PROTOS
 SECStatus nsslowcert_AddPermCert(NSSLOWCERTCertDBHandle *handle, 
 			NSSLOWCERTCertificate *cert,
 				char *nickname, NSSLOWCERTCertTrust *trust);
-SECStatus nsslowcert_AddPermNickname(NSSLOWCERTCertDBHandle *dbhandle,
-				NSSLOWCERTCertificate *cert, char *nickname);
 
 SECStatus nsslowcert_DeletePermCertificate(NSSLOWCERTCertificate *cert);
 
@@ -90,7 +88,6 @@ nsslowcert_NewTempCertificate(NSSLOWCERTCertDBHandle *handle, SECItem *derCert,
 NSSLOWCERTCertificate *
 nsslowcert_DupCertificate(NSSLOWCERTCertificate *cert);
 void nsslowcert_DestroyCertificate(NSSLOWCERTCertificate *cert);
-void nsslowcert_DestroyTrust(NSSLOWCERTTrust *Trust);
 
 /*
  * Lookup a certificate in the databases without locking
@@ -103,30 +100,12 @@ NSSLOWCERTCertificate *
 nsslowcert_FindCertByKey(NSSLOWCERTCertDBHandle *handle, SECItem *certKey);
 
 /*
- * Lookup trust for a certificate in the databases without locking
- *	"certKey" is the database key to look for
- *
- * XXX - this should be internal, but pkcs 11 needs to call it during a
- * traversal.
- */
-NSSLOWCERTTrust *
-nsslowcert_FindTrustByKey(NSSLOWCERTCertDBHandle *handle, SECItem *certKey);
-
-/*
 ** Generate a certificate key from the issuer and serialnumber, then look it
 ** up in the database.  Return the cert if found.
 **	"issuerAndSN" is the issuer and serial number to look for
 */
 extern NSSLOWCERTCertificate *
 nsslowcert_FindCertByIssuerAndSN (NSSLOWCERTCertDBHandle *handle, NSSLOWCERTIssuerAndSN *issuerAndSN);
-
-/*
-** Generate a certificate key from the issuer and serialnumber, then look it
-** up in the database.  Return the cert if found.
-**	"issuerAndSN" is the issuer and serial number to look for
-*/
-extern NSSLOWCERTTrust *
-nsslowcert_FindTrustByIssuerAndSN (NSSLOWCERTCertDBHandle *handle, NSSLOWCERTIssuerAndSN *issuerAndSN);
 
 /*
 ** Find a certificate in the database by a DER encoded certificate
@@ -147,7 +126,7 @@ char *nsslowcert_FixupEmailAddr(char *emailAddr);
 **              then a temporary nickname is generated.
 */
 extern NSSLOWCERTCertificate *
-nsslowcert_DecodeDERCertificate (SECItem *derSignedCert, char *nickname);
+nsslowcert_DecodeDERCertificate (SECItem *derSignedCert, PRBool copyDER, char *nickname);
 
 SECStatus
 nsslowcert_KeyFromDERCert(PRArenaPool *arena, SECItem *derCert, SECItem *key);
@@ -210,25 +189,11 @@ nsslowcert_ChangeCertTrust(NSSLOWCERTCertDBHandle *handle,
 	  	NSSLOWCERTCertificate *cert, NSSLOWCERTCertTrust *trust);
 
 PRBool
-nsslowcert_hasTrust(NSSLOWCERTCertTrust *trust);
+nsslowcert_hasTrust(NSSLOWCERTCertificate *cert);
 
 void
 nsslowcert_DestroyGlobalLocks(void);
 
-void
-pkcs11_freeNickname(char *nickname, char *space);
-
-char *
-pkcs11_copyNickname(char *nickname, char *space, int spaceLen);
-
-void
-pkcs11_freeStaticData(unsigned char *data, unsigned char *space);
-
-unsigned char *
-pkcs11_copyStaticData(unsigned char *data, int datalen, unsigned char *space,
-						int spaceLen);
-NSSLOWCERTCertificate *
-nsslowcert_CreateCert(void);
 SEC_END_PROTOS
 
  #endif /* _PCERTDB_H_ */

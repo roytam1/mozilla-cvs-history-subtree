@@ -625,17 +625,17 @@ ListCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
     SECStatus rv;
 
     if (slot == NULL) {
-	CERTCertList *list;
-	CERTCertListNode *node;
+	PK11SlotList *list;
+	PK11SlotListElement *le;
 
-	list = PK11_ListCerts(PK11CertListUnique, pwdata);
-	for (node = CERT_LIST_HEAD(list); !CERT_LIST_END(node, list);
-	     node = CERT_LIST_NEXT(node)) 
-	{
-	    SECU_PrintCertNickname(node->cert, stdout);
+	list= PK11_GetAllTokens(CKM_INVALID_MECHANISM,
+						PR_FALSE,PR_FALSE,pwdata);
+	if (list) {
+	    for (le = list->head; le; le = le->next) {
+		rv = listCerts(handle,name,le->slot,raw,ascii,outfile,pwdata);
+	    }
+	    PK11_FreeSlotList(list);
 	}
-	CERT_DestroyCertList(list);
-	return SECSuccess;
     } else {
 	rv = listCerts(handle,name,slot,raw,ascii,outfile,pwdata);
     }
@@ -1494,7 +1494,7 @@ AddExtKeyUsage (void *extHandle)
     fprintf(stdout, "%-25s 2 - Code Signing\n", "");
     fprintf(stdout, "%-25s 3 - Email Protection\n", "");
     fprintf(stdout, "%-25s 4 - Timestamp\n", "");
-    fprintf(stdout, "%-25s 5 - OCSP Responder\n", "");
+    fprintf(stdout, "%-25s 5 - OSCP Responder\n", "");
 #ifdef DEBUG_NSSTEAM_ONLY
     fprintf(stdout, "%-25s 6 - Step-up\n", "");
 #endif /* DEBUG_NSSTEAM_ONLY */

@@ -1716,13 +1716,6 @@ struct PRFilePrivate {
     PRBool  appendMode;                             
 #endif
     _MDFileDesc md;
-#ifdef _PR_STRICT_ADDR_LEN
-    PRUint16 af;        /* If the platform requires passing the exact
-                         * length of the sockaddr structure for the
-                         * address family of the socket to socket
-                         * functions like accept(), we need to save
-                         * the address family of the socket. */
-#endif
 };
 
 struct PRDir {

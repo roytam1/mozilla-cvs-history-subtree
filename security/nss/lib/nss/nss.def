@@ -680,23 +680,3 @@ SECMOD_CanDeleteInternalModule;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.6 { 	# cert creation APIs used by certutil
-;+    global:
-PK11_GetPBEIV;
-PK11_SaveContextAlloc;
-CERT_VerifyCertChain;
-CERT_DestroyOCSPRequest;
-CERT_EncodeOCSPRequest;
-CERT_AddOCSPAcceptableResponses;
-CERT_CreateOCSPRequest;
-CERT_GetOCSPStatusForCertID;
-CERT_DecodeOCSPResponse;
-CERT_VerifyOCSPResponseSignature;
-CERT_GetOCSPResponseStatus;
-CERT_DestroyOCSPCertID;
-CERT_CreateOCSPCertID;
-CERT_VerifyCertificate;
-CERT_VerifyCertificateNow;
-;+    local:
-;+       *;
-;+};
