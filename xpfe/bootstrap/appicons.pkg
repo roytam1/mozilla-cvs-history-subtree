@@ -15,7 +15,7 @@ dist/bin/chrome/icons/default/addressbookWindow@ICON_SUFFIX@
 dist/bin/chrome/icons/default/messengerWindow@ICON_SUFFIX@
 dist/bin/chrome/icons/default/msgcomposeWindow@ICON_SUFFIX@
 
-[xpfe-calendar]
+[calendar]
 dist/bin/chrome/icons/default/calendar-window@ICON_SUFFIX@
 
 [chatzilla]
@@ -46,7 +46,7 @@ dist/bin/chrome/icons/default/addressbookWindow16@ICON_SUFFIX@
 dist/bin/chrome/icons/default/messengerWindow16@ICON_SUFFIX@
 dist/bin/chrome/icons/default/msgcomposeWindow16@ICON_SUFFIX@
 
-[xpfe-calendar]
+[calendar]
 dist/bin/chrome/icons/default/calendar-window16@ICON_SUFFIX@
 
 [chatzilla]
