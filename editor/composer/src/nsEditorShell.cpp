@@ -49,6 +49,7 @@
 #include "nsIContent.h"
 #include "nsIHTMLContentContainer.h"
 #include "nsIURI.h"
+#include "nsCURILoader.h"
 #include "nsNetUtil.h"
 
 #include "nsIScriptGlobalObject.h"
@@ -93,6 +94,8 @@
 #include "nsIPref.h"
 
 #include "nsILookAndFeel.h"
+
+#include "nsIChromeRegistry.h"
 
 ///////////////////////////////////////
 // Editor Includes
@@ -140,6 +143,7 @@ static NS_DEFINE_CID(kCStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kCommonDialogsCID,         NS_CommonDialog_CID );
 static NS_DEFINE_CID(kDialogParamBlockCID,      NS_DialogParamBlock_CID);
 static NS_DEFINE_CID(kPrefServiceCID,           NS_PREF_CID);
+static NS_DEFINE_CID(kChromeRegistryCID,        NS_CHROMEREGISTRY_CID);
 
 /* Define Interface IDs */
 static NS_DEFINE_IID(kISupportsIID,             NS_ISUPPORTS_IID);
@@ -249,6 +253,7 @@ nsEditorShell::nsEditorShell()
 ,  mEditorController(nsnull)
 ,  mDocShell(nsnull)
 ,  mContentAreaDocShell(nsnull)
+,  mInitted(PR_FALSE)
 ,  mCloseWindowWhenLoaded(PR_FALSE)
 ,  mCantEditReason(eCantEditNoReason)
 ,  mEditorType(eUninitializedEditorType)
@@ -302,13 +307,23 @@ nsEditorShell::QueryInterface(REFNSIID aIID,void** aInstancePtr)
      AddRef();
     return NS_OK;
   }
+  else if (aIID.Equals(NS_GET_IID(nsIURIContentListener))) {
+    *aInstancePtr = (void*) ((nsIURIContentListener*)this);
+     AddRef();
+    return NS_OK;
+  }
  
   return NS_ERROR_NO_INTERFACE;
 }
 
+
 NS_IMETHODIMP    
 nsEditorShell::Init()
-{  
+{
+  NS_ASSERTION(!mInitted, "Double init of nsEditorShell detected");
+  if (mInitted)
+    return NS_OK;
+  
   nsAutoString    editorType; editorType.AssignWithConversion("html");      // default to creating HTML editor
   mEditorTypeString = editorType;
   mEditorTypeString.ToLowerCase();
@@ -325,7 +340,8 @@ nsEditorShell::Init()
 
   // XXX: why are we returning NS_OK here rather than res?
   // is it ok to fail to get a string bundle?  if so, it should be documented.
-
+  mInitted = PR_TRUE;
+  
   return NS_OK;
 }
 
@@ -333,6 +349,16 @@ NS_IMETHODIMP
 nsEditorShell::Shutdown()
 {
   nsresult rv = NS_OK;
+  
+  nsCOMPtr<nsIEditor> editor(do_QueryInterface(mEditor));
+  if (editor)
+  {
+    editor->PreDestroy();
+  }
+
+  if (mDocShell)
+    mDocShell->SetParentURIContentListener(nsnull);
+
   // Remove our document mouse event listener
   if (mMouseListenerP)
   {
@@ -418,7 +444,7 @@ nsEditorShell::ResetEditingState()
   {
     mEditorController->SetCommandRefCon(nsnull);
   }
-  
+    
   mEditorType = eUninitializedEditorType;
   mEditor = 0;  // clear out the nsCOMPtr
 
@@ -809,6 +835,10 @@ nsEditorShell::SetWebShellWindow(nsIDOMWindowInternal* aWin)
     return NS_ERROR_NOT_INITIALIZED;
 
   mDocShell = docShell;
+
+  // register as a content listener, so that we can fend off URL
+  // loads from sidebar
+  rv = mDocShell->SetParentURIContentListener(this);
 
 /*
 #ifdef APP_DEBUG
@@ -4570,6 +4600,45 @@ nsEditorShell::InitSpellChecker()
     if (NS_FAILED(result))
       return result;
 
+    // Tell the spellchecker what dictionary to use:
+
+    PRUnichar *dictName = nsnull;
+
+    NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &result);
+
+    if (NS_SUCCEEDED(result) && prefs)
+      result = prefs->CopyUnicharPref("spellchecker.dictionary", &dictName);
+
+    if (! dictName || ! *dictName)
+    {
+      // Prefs didn't give us a dictionary name, so just get the current
+      // locale and use that as the default dictionary name!
+
+      if (dictName)
+      {
+        nsMemory::Free(dictName);
+        dictName = nsnull;
+      }
+
+      nsCOMPtr<nsIChromeRegistry> chromeRegistry = do_GetService(kChromeRegistryCID, &result);
+
+      if (NS_SUCCEEDED(result) && chromeRegistry)
+        result = chromeRegistry->GetSelectedLocale(NS_LITERAL_STRING("navigator"), &dictName);
+    }
+
+    if (NS_SUCCEEDED(result) && dictName && *dictName)
+      result = SetCurrentDictionary(dictName);
+
+    if (dictName)
+      nsMemory::Free(dictName);
+
+    // If an error was thrown while checking the dictionary pref, just
+    // fail silently so that the spellchecker dialog is allowed to come
+    // up. The user can manually reset the language to their choice on
+    // the dialog if it is wrong.
+
+    result = NS_OK;
+
     DeleteSuggestedWordList();
   }
 
@@ -4821,6 +4890,22 @@ nsEditorShell::UninitSpellChecker()
    // We can spell check with any editor type
   if (mEditor)
   {
+    // Save the last used dictionary to the user's preferences.
+    NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &result);
+
+    if (NS_SUCCEEDED(result) && prefs)
+    {
+      PRUnichar *dictName = nsnull;
+
+      result = GetCurrentDictionary(&dictName);
+
+      if (NS_SUCCEEDED(result) && dictName && *dictName)
+        result = prefs->SetUnicharPref("spellchecker.dictionary", dictName);
+
+      if (dictName)
+        nsMemory::Free(dictName);
+    }
+
     // Cleanup - kill the spell checker
     DeleteSuggestedWordList();
     mDictionaryList.Clear();
@@ -4842,6 +4927,79 @@ nsEditorShell::DeleteSuggestedWordList()
 #ifdef XP_MAC
 #pragma mark -
 #endif
+
+/* void onStartURIOpen (in nsIURI aURI, in string aWindowTarget, out boolean aAbortOpen); */
+NS_IMETHODIMP nsEditorShell::OnStartURIOpen(nsIURI *aURI, const char *aWindowTarget, PRBool *aAbortOpen)
+{
+  return NS_OK;
+}
+
+/* void getProtocolHandler (in nsIURI aURI, out nsIProtocolHandler aProtocolHandler); */
+NS_IMETHODIMP nsEditorShell::GetProtocolHandler(nsIURI *aURI, nsIProtocolHandler **aProtocolHandler)
+{
+  NS_ENSURE_ARG_POINTER(aProtocolHandler);
+  *aProtocolHandler = nsnull;
+  return NS_OK;
+}
+
+/* void doContent (in string aContentType, in nsURILoadCommand aCommand, in string aWindowTarget, in nsIChannel aOpenedChannel, out nsIStreamListener aContentHandler, out boolean aAbortProcess); */
+NS_IMETHODIMP nsEditorShell::DoContent(const char *aContentType, nsURILoadCommand aCommand, const char *aWindowTarget, nsIChannel *aOpenedChannel, nsIStreamListener **aContentHandler, PRBool *aAbortProcess)
+{
+  NS_ENSURE_ARG_POINTER(aContentHandler);
+  NS_ENSURE_ARG_POINTER(aAbortProcess);
+  *aContentHandler = nsnull;
+  *aAbortProcess = PR_FALSE;
+  return NS_OK;
+}
+
+/* boolean isPreferred (in string aContentType, in nsURILoadCommand aCommand, in string aWindowTarget, out string aDesiredContentType); */
+NS_IMETHODIMP nsEditorShell::IsPreferred(const char *aContentType, nsURILoadCommand aCommand, const char *aWindowTarget, char **aDesiredContentType, PRBool *_retval)
+{
+  NS_ENSURE_ARG_POINTER(aDesiredContentType);
+  NS_ENSURE_ARG_POINTER(_retval);
+  *aDesiredContentType = nsnull;
+  *_retval = PR_FALSE;
+  return NS_OK;
+}
+
+/* boolean canHandleContent (in string aContentType, in nsURILoadCommand aCommand, in string aWindowTarget, out string aDesiredContentType); */
+NS_IMETHODIMP nsEditorShell::CanHandleContent(const char *aContentType, nsURILoadCommand aCommand, const char *aWindowTarget, char **aDesiredContentType, PRBool *_retval)
+{
+  NS_ENSURE_ARG_POINTER(aDesiredContentType);
+  NS_ENSURE_ARG_POINTER(_retval);
+  *aDesiredContentType = nsnull;
+  *_retval = PR_FALSE;
+  return NS_OK;
+}
+
+/* attribute nsISupports loadCookie; */
+NS_IMETHODIMP nsEditorShell::GetLoadCookie(nsISupports * *aLoadCookie)
+{
+  NS_ENSURE_ARG_POINTER(aLoadCookie);
+  *aLoadCookie = nsnull;
+  return NS_OK;
+}
+NS_IMETHODIMP nsEditorShell::SetLoadCookie(nsISupports * aLoadCookie)
+{
+  return NS_OK;
+}
+
+/* attribute nsIURIContentListener parentContentListener; */
+NS_IMETHODIMP nsEditorShell::GetParentContentListener(nsIURIContentListener * *aParentContentListener)
+{
+  NS_ENSURE_ARG_POINTER(aParentContentListener);
+  *aParentContentListener = nsnull;
+  return NS_OK;
+}
+NS_IMETHODIMP nsEditorShell::SetParentContentListener(nsIURIContentListener * aParentContentListener)
+{
+  return NS_OK;
+}
+
+#ifdef XP_MAC
+#pragma mark -
+#endif
+
 
 NS_IMETHODIMP
 nsEditorShell::BeginBatchChanges()

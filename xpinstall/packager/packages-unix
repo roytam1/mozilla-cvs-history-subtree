@@ -22,6 +22,7 @@ bin/defaults/profile/bookmarks.html
 bin/defaults/profile/panels.rdf
 bin/defaults/profile/localstore.rdf
 bin/defaults/profile/search.rdf
+bin/defaults/profile/mimeTypes.rdf
 
 [xpcom]
 bin/libjsdom.so
@@ -84,6 +85,7 @@ bin/components/libgfx_gtk.so
 bin/components/libgfxps.so
 bin/components/libjsurl.so
 bin/components/liblwbrk.so
+bin/components/libmork.so
 bin/components/libmozbrwsr.so
 bin/components/libmozfind.so
 bin/components/libmozucth.so
@@ -191,7 +193,6 @@ bin/chrome/toolkit.jar
 bin/chrome/comm.jar
 bin/chrome/modern.jar
 bin/chrome/classic.jar
-bin/chrome/blue.jar
 ;-bin/chrome/comm/content/editor/EditorInitPage.html
 ;-bin/chrome/comm/content/editor/content/EditorInitPagePlain.html
 ;Include this for "debug" testing - remove for actual beta release:
@@ -241,7 +242,6 @@ bin/components/liblocalmail.so
 bin/components/libmailnews.so
 bin/components/libmime.so
 bin/components/libmimeemitter.so
-bin/components/libmork.so
 bin/components/libmsgcompose.so
 bin/components/libmsgdb.so
 bin/components/libmsgimap.so

@@ -393,3 +393,4 @@ function helpMenuCreate()
 	relItem.setAttribute("oncommand", relCommand);
 }
 
+

@@ -859,6 +859,8 @@ nsTableFrame::CreateAnonymousColFrames(nsIPresContext&       aPresContext,
     if ((aColType == eColAnonymousCol) && aPrevFrameIn) {
       // a col due to a span in a previous col uses the style context of the col
       aPrevFrameIn->GetStyleContext(getter_AddRefs(styleContext)); 
+      // fix for bugzilla bug 54454: get the content from the prevFrame 
+      aPrevFrameIn->GetContent(getter_AddRefs(iContent));
     }
     else {
       // all other anonymous cols use a pseudo style context of the col group
@@ -867,6 +869,9 @@ nsTableFrame::CreateAnonymousColFrames(nsIPresContext&       aPresContext,
       aPresContext.ResolvePseudoStyleContextFor(iContent, nsHTMLAtoms::tableColPseudo,
                                                 parentStyleContext, PR_FALSE, getter_AddRefs(styleContext));
     }
+    // ASSERTION to check for bug 54454 sneaking back in...
+    NS_ASSERTION(iContent, "null content in CreateAnonymousColFrames");
+
     // create the new col frame
     nsIFrame* colFrame;
     nsCOMPtr<nsIPresShell> presShell;
@@ -1742,13 +1747,20 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext* aPresContext,
     
     // See if the pass1 maximum width is no longer valid because one of the
     // cell maximum widths changed
-    if (!IsMaximumWidthValid()) {
+    if (mPrevInFlow) {
+      // a next in flow just uses the preferred width of the 1st in flow.
+      nsTableFrame* firstInFlow = (nsTableFrame*)GetFirstInFlow();
+      if (firstInFlow) {
+        aDesiredSize.mMaximumWidth = firstInFlow->GetPreferredWidth();
+      }
+    }
+    else if (!IsMaximumWidthValid()) {
       // Initialize the strategy and have it compute the natural size of
       // the table
       mTableLayoutStrategy->Initialize(aPresContext, nsnull, NS_UNCONSTRAINEDSIZE, aReflowState);
 
       // Ask the strategy for the natural width of the content area 
-      aDesiredSize.mMaximumWidth = mTableLayoutStrategy->GetTableMaxWidth();
+      aDesiredSize.mMaximumWidth = mTableLayoutStrategy->GetTableMaxWidth(aReflowState);
      
       // Add in space for border
       nsMargin border;
@@ -2896,7 +2908,7 @@ nscoord nsTableFrame::ComputeDesiredWidth(const nsHTMLReflowState& aReflowState)
       nsTableFrame* table = (nsTableFrame*)GetFirstInFlow();
       tableLayoutStrategy = table->mTableLayoutStrategy;
     }
-    desiredWidth = tableLayoutStrategy->GetTableMaxWidth();
+    desiredWidth = tableLayoutStrategy->GetTableMaxWidth(aReflowState);
   }
   return desiredWidth;
 }
@@ -3065,9 +3077,8 @@ NS_METHOD nsTableFrame::ReflowMappedChildren(nsIPresContext*        aPresContext
   nsVoidArray rowGroups;
   PRUint32 numRowGroups;
   OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection);
-  PRUint32 numChildren = rowGroups.Count();
 
-  for (PRUint32 childX = 0; childX < numChildren; childX++) {
+  for (PRUint32 childX = 0; ((PRInt32)childX) < rowGroups.Count(); childX++) {
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
     nsSize              kidAvailSize(aReflowState.availSize);
     nsHTMLReflowMetrics desiredSize(pKidMaxElementSize);
@@ -3112,6 +3123,11 @@ NS_METHOD nsTableFrame::ReflowMappedChildren(nsIPresContext*        aPresContext
         }
       }
 
+      // record the next in flow in case it gets destroyed and the row group array
+      // needs to be recomputed.
+      nsIFrame* kidNextInFlow;
+      kidFrame->GetNextInFlow(&kidNextInFlow);
+
       rv = ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState,
                        x, y, 0, aStatus);
       // Did the child fit?
@@ -3138,9 +3154,7 @@ NS_METHOD nsTableFrame::ReflowMappedChildren(nsIPresContext*        aPresContext
       prevKidFrame = kidFrame;
 
       // Special handling for incomplete children
-      if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
-        nsIFrame* kidNextInFlow;
-         
+      if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {         
         kidFrame->GetNextInFlow(&kidNextInFlow);
         if (nsnull == kidNextInFlow) {
           // The child doesn't have a next-in-flow so create a continuing
@@ -3171,6 +3185,12 @@ NS_METHOD nsTableFrame::ReflowMappedChildren(nsIPresContext*        aPresContext
           PushChildren(aPresContext, nextSibling, kidFrame);
         }
         break;
+      }
+      else if (kidNextInFlow) {
+        // during printing, the unfortunate situation arises where a next in flow can be a
+        // next sibling and the next sibling can get destroyed during the reflow. By reordering
+        // the row groups, the rowGroups array can be kept in sync.
+        OrderRowGroups(rowGroups, numRowGroups, nsnull);
       }
     }
     else {// it's an unknown frame type, give it a generic reflow and ignore the results
@@ -4022,9 +4042,11 @@ void nsTableFrame::GetTableBorderForRowGroup(nsTableRowGroupFrame* aRowGroupFram
 
 PRUint8 nsTableFrame::GetBorderCollapseStyle()
 {
+  /* the following has been commented out to turn off collapsing borders
   const nsStyleTable* tableStyle;
   GetStyleData(eStyleStruct_Table, (const nsStyleStruct *&)tableStyle);
-  return tableStyle->mBorderCollapse;
+  return tableStyle->mBorderCollapse;*/
+  return NS_STYLE_BORDER_SEPARATE;
 }
 
 
@@ -4226,7 +4248,7 @@ nscoord nsTableFrame::GetMaxTableWidth(const nsHTMLReflowState& aState)
       result = PR_MAX(aState.mComputedWidth, mTableLayoutStrategy->GetTableMinWidth());
     }
     else {
-      result = mTableLayoutStrategy->GetTableMaxWidth();
+      result = mTableLayoutStrategy->GetTableMaxWidth(aState);
     }
   }
   return result;

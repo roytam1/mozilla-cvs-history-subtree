@@ -19,7 +19,6 @@
  */
 
 @import url(chrome://communicator/skin/);
-@import url(chrome://communicator/skin/sidebar/sidebar.css);
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"); /* set default namespace to HTML */
 @namespace html url("http://www.w3.org/1999/xhtml"); /* namespace for HTML elements */
@@ -43,23 +42,6 @@ box.padded {
 
 /* Header toolbar */
 
-#MsgHeadersToolbar {
-	background-color	: #394B6E;
-	border-top			: 2px solid #4C6484;
-	border-bottom		: 0px;
-	border-left			: 1px solid #48607E;
-	border-right		: 2px solid #4D6685;
-}
-
-#MsgHeadersToolbar > toolbargrippy {
-	border-top			: 1px solid #B6CADF;
-	margin-left			: 0px;
-}
-
-#msgheaderstoolbar-box {
-	border-top			: 1px solid #B6CADF;
-}
-
 /* Text labels only for this window */
 
 .label {
@@ -72,14 +54,35 @@ box.padded {
 #addressingWidgetTree {
   height : 80px;
   width : 0px;
+  -moz-user-focus: ignore !important;
 }  
 
-tree[class="addressingWidget"] treeitem > treerow  > treecell > box > image {
+#addressingWidgetTree > treechildren > treeitem > treerow,
+#addressingWidgetTree > treechildren > treeitem[selected="true"] > treerow {
+  border: none;
+  background-color: transparent;
+  color: buttontext;
+}
+
+.treecell-addressingWidget {
 	vertical-align: middle;
-	padding:2px;
-	border:none;
+}
+
+tree.addressingWidget > treechildren > treeitem > treerow  > treecell > image {
+  margin : 0px 3px 0px 0px;
+	border: none;
 	list-style-image: url("chrome://messenger/skin/addressbook/person.gif");
 	-moz-user-focus: ignore;
+}
+
+#listcol-addressingWidget {
+  width: 110px;
+}
+
+.menulist-compact {
+  -moz-user-focus: ignore;
+  margin: 3px;
+  border: none;
 }
 
 /*
@@ -333,3 +336,12 @@ tree#attachmentBucket {
 #convertDefault {
 	list-style-image:url("chrome://global/skin/question-icon.gif");
 } /* Workaround for bug 50217. Please remove this rule, when this bug is fixed. */
+
+#compose-toolbar-sizer {
+  border-top: none;
+}
+
+#navprintplus {
+  display: none !important;                                                    
+}
+ 

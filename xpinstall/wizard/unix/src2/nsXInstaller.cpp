@@ -44,15 +44,23 @@ nsXInstaller::ParseConfig()
 {
     int err = OK;
     nsINIParser *parser = NULL; 
+    char *cfg = NULL;
 
     XI_ERR_BAIL(InitContext());
     err = gCtx->LoadResources();
     if (err != OK)
         return err;
 
-    parser = new nsINIParser( CONFIG_INI );
+    cfg = nsINIParser::ResolveName(CONFIG);
+    if (!cfg)
+        return E_INVALID_PTR;
+
+    parser = new nsINIParser(cfg);
     if (!parser)
-        return E_MEM;    
+    {
+        err = E_MEM;    
+        goto BAIL;
+    }
 
     err = parser->GetError();
     if (err != nsINIParser::OK)
@@ -65,9 +73,8 @@ nsXInstaller::ParseConfig()
     XI_ERR_BAIL(gCtx->sdlg->Parse(parser));
     XI_ERR_BAIL(gCtx->idlg->Parse(parser));
 
-    return OK;
-
 BAIL:
+    XI_IF_FREE(cfg);
     return err;
 }
 
@@ -116,6 +123,7 @@ nsXInstaller::RunWizard(int argc, char **argv)
     XI_VERIFY(gCtx);
 
     // create the dialog window
+    gtk_set_locale();
     gtk_init(&argc, &argv);
     gdk_rgb_init();
 
@@ -260,7 +268,7 @@ nsXInstaller::DrawNavButtons()
 
     gtk_table_attach(GTK_TABLE(navbtntable), gCtx->back, 4, 5, 0, 1, 
         static_cast<GtkAttachOptions>(GTK_FILL | GTK_EXPAND),
-		static_cast<GtkAttachOptions>( GTK_FILL | GTK_EXPAND),
+		static_cast<GtkAttachOptions>(GTK_FILL | GTK_EXPAND),
 		5, 5);
     gtk_table_attach(GTK_TABLE(navbtntable), gCtx->next, 5, 6, 0, 1,
         static_cast<GtkAttachOptions>(GTK_FILL | GTK_EXPAND),

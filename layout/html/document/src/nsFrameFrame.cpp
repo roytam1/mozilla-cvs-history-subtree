@@ -543,6 +543,13 @@ PRInt32 nsHTMLFrameInnerFrame::GetScrolling(nsIContent* aContent, PRBool aStanda
         }
       }      
     }
+
+    // Check style for overflow
+    const nsStyleDisplay* display;
+    GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
+    if (display->mOverflow)
+      returnValue = display->mOverflow;
+
   }
   return returnValue;
 }
@@ -880,10 +887,9 @@ static PRBool CheckForBrowser(nsIContent* aContent, nsIBaseWindow* aShell)
             nsCOMPtr<nsIWebNavigation> histNav(do_QueryInterface(hist));
             histNav->Reload(0);
             boxObject->RemoveProperty(NS_LITERAL_STRING("history"));
+            return PR_FALSE;
           }
         }
-          
-        return PR_FALSE;
       }
     }
   }

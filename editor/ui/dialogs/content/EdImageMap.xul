@@ -40,18 +40,14 @@
     xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
     xmlns:html="http://www.w3.org/1999/xhtml"
     onload = "Startup()"
-    onunload="//finishMap();"
     orient="vertical"
     width="640" height="480"
    >
-<!--
-	screenX="10" screenY="10"
-	persist="screenX screenY width height"
--->
 
   <!-- Methods common to all editor dialogs -->
   <script language="JavaScript" src="chrome://editor/content/EdDialogCommon.js" />
   <script language="JavaScript" src="chrome://global/content/dialogOverlay.js" />
+  <script language="JavaScript" src="chrome://global/content/globalOverlay.js"/>
 
   <!-- Methods for Image Map only -->
   <script language="JavaScript" src="chrome://editor/content/EdImageMap.js" />
@@ -183,13 +179,6 @@
 
   <box orient="horizontal">
 
-    <!-- Cheap hack until I get key events hooked up
-    <button 
-    class   = "push dialog"
-    id	    = "DelButton"
-    value="&delSpotCmd.label;" 
-    onclick="deleteElement(currentElement)"/> -->
-    
     <spring flex="1"/>
 
     <!-- from global dialogOverlay -->

@@ -22,6 +22,7 @@ bin\defaults\profile\bookmarks.html
 bin\defaults\profile\panels.rdf
 bin\defaults\profile\localstore.rdf
 bin\defaults\profile\search.rdf
+bin\defaults\profile\mimeTypes.rdf
 
 [xpcom]
 ; files required to initialize xpinstall for Install Wizard
@@ -62,7 +63,7 @@ bin\components\related.xpt
 bin\components\search.xpt
 bin\components\timebomb.xpt
 bin\components\urlbarhistory.xpt
-bin\components\urlwidget.xpt
+bin\components\urlwidgt.xpt
 bin\components\caps.dll
 bin\components\caps.xpt
 bin\components\chardet.dll
@@ -92,6 +93,7 @@ bin\components\layout_base.xpt
 bin\components\layout_xul.xpt
 bin\components\locale.xpt
 bin\components\lwbrk.dll
+bin\components\mork.dll
 bin\components\mozbrwsr.dll
 bin\components\mozbrwsr.xpt
 bin\components\mozcomps.xpt
@@ -161,6 +163,7 @@ bin\components\wallet.dll
 bin\components\wallet.xpt
 bin\components\walleteditor.xpt
 bin\components\walletpreview.xpt
+bin\components\webbrwsr.dll
 bin\components\webshell_idls.xpt
 bin\components\widget.xpt
 bin\components\wlltvwrs.dll
@@ -237,7 +240,6 @@ bin\components\emitter.dll
 bin\components\mailnewspublic.xpt
 bin\components\mime.dll
 bin\components\mime.xpt
-bin\components\mork.dll
 bin\components\msgbase.dll
 bin\components\msgbase.xpt
 bin\components\msgcompo.dll

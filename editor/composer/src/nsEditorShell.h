@@ -39,6 +39,7 @@
 #include "nsIStreamObserver.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMEventListener.h"
+#include "nsIURIContentListener.h"
 #include "nsVoidArray.h"
 #include "nsTextServicesCID.h"
 #include "nsIEditorSpellCheck.h"
@@ -76,7 +77,8 @@ class nsIStyleSheet;
 
 class nsEditorShell :   public nsIEditorShell,
                         public nsIEditorSpellCheck,
-                        public nsIDocumentLoaderObserver
+                        public nsIDocumentLoaderObserver,
+                        public nsIURIContentListener
 {
   public:
 
@@ -98,6 +100,9 @@ class nsEditorShell :   public nsIEditorShell,
     // nsIDocumentLoaderObserver
     NS_DECL_NSIDOCUMENTLOADEROBSERVER
 
+    // nsIURIContentListener
+    NS_DECL_NSIURICONTENTLISTENER
+    
   protected:
 
     typedef enum {
@@ -212,6 +217,7 @@ class nsEditorShell :   public nsIEditorShell,
     // if we are in a frameset, this assumption is false.
     nsIDocShell         *mContentAreaDocShell;  // weak reference
 
+    PRPackedBool        mInitted;
     PRPackedBool        mCloseWindowWhenLoaded; // error on load. Close window when loaded
     ECantEditReason     mCantEditReason;
     

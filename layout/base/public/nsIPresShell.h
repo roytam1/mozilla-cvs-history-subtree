@@ -275,6 +275,7 @@ public:
                                  nsAttributeChangeType aType) = 0;
 
   NS_IMETHOD PostReflowCallback(nsIReflowCallback* aCallback) = 0;
+  NS_IMETHOD CancelReflowCallback(nsIReflowCallback* aCallback) = 0;
 
  /**
    * Reflow batching

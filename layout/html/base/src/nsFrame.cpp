@@ -63,6 +63,8 @@
 #include "nsITableCellLayout.h"//  "
 #include "nsIGfxTextControlFrame.h"
 #include "nsINameSpaceManager.h"
+#include "nsIHTMLContentSink.h"   //to pick up MAX_REFLOW_DEPTH
+
 
 // For triple-click pref
 #include "nsIPref.h"
@@ -2108,7 +2110,7 @@ nsFrame::Invalidate(nsIPresContext* aPresContext,
   NS_IF_RELEASE(viewManager);
 }
 
-#define MAX_REFLOW_DEPTH 500
+//#define MAX_REFLOW_DEPTH 500  use the #define found in nsIHTMLContentSink.h; bug 55095.
 
 PRBool
 nsFrame::IsFrameTreeTooDeep(const nsHTMLReflowState& aReflowState,

@@ -131,9 +131,9 @@
     <!-- tasks menu filled from tasksOverlay -->
     <menu id="tasksMenu" accesskey="t"/>
 
-    <!-- DEBUG only -->
+    <!-- DEBUG only, removed for rtm
     <menu id="debugMenu" />
-    <!-- end DEBUG only -->
+    end DEBUG only -->
   
     <!-- help menu filled from globalOverlay -->
     <menu id="menu_Help"/>

@@ -77,9 +77,9 @@
         ]]>
         </property>
 
-        <property name="lastKeyPressed">  <![CDATA[ 0; ]]> </property>
-        <property name="noDirectMatch">   <![CDATA[ 0; ]]> </property>
-        <property name="menuOpen">        <![CDATA[ 0; ]]> </property>
+       <property name="lastKeyPressed">  <![CDATA[ 0; ]]> </property>
+       <property name="noDirectMatch">   <![CDATA[ 0; ]]> </property>
+       <property name="menuOpen">        <![CDATA[ 0; ]]> </property>
 
         <property name="autoCompleteListener">
         <![CDATA[
@@ -103,9 +103,9 @@
                 if (result.defaultItemIndex > result.items.Count())
                     result.defaultItemIndex = 0;
                 
-                /* Do not alter the user input when deleting characters */
-                if (me.lastKeyPressed == 8 /*vk_back*/ || me.lastKeyPressed == 46 /*vk_delete*/)
-                    result.defaultItemIndex = -1;
+               /* Do not alter the user input when deleting characters */
+               if (me.lastKeyPressed == 8 /*vk_back*/ || me.lastKeyPressed == 46 /*vk_delete*/)
+                   result.defaultItemIndex = -1;
 
                 var inputElement = document.getAnonymousNodes(me)[0].firstChild;
                 
@@ -183,23 +183,20 @@
         ({
 
             onMenuCommand: function(me, popupSetElem) {
-				var inputElement = document.getAnonymousNodes(me)[0].firstChild;
-				var popupElem = popupSetElem.firstChild;
-				for (var i = 0; i < popupElem.childNodes.length; i ++)
-				{
-					var menuitem = popupElem.childNodes[i];
-					if (menuitem.getAttribute("menuactive") == "true")
-					{
-            me.ignoreInputEvent = true;
-						inputElement.value = menuitem.getAttribute("value");
-						inputElement = document.getAnonymousNodes(me)[0].firstChild;
-                        inputElement.setSelectionRange(inputElement.value.length, inputElement.value.length);
-						needToAutocomplete = false;
-						me.privatefunc.selectedItemIndex = i;
-            me.ignoreInputEvent = false;
-						return;
-					}
-				}
+                var inputElement = document.getAnonymousNodes(me)[0].firstChild;
+                var popupElem = popupSetElem.firstChild;
+
+                me.ignoreInputEvent = true;
+
+                inputElement.value = popupElem.activeChild.getAttribute("value");
+                inputElement.setSelectionRange(inputElement.value.length, inputElement.value.length);
+
+                needToAutocomplete = false;
+                me.privatefunc.selectedItemIndex = popupElem.activeChild.getAttribute("data");
+
+                me.ignoreInputEvent = false;
+
+                return;
             },
 
 			callListener: function(me, action) {
@@ -363,7 +360,7 @@
 					popup = null;
 
         me.lastKeyPressed = event.keyCode;
-				switch (event.keyCode)
+ 				switch (event.keyCode)
 				{
           case 9: /*vk_tab*/
 						if (popup)

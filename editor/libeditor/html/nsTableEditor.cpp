@@ -2110,8 +2110,8 @@ nsHTMLEditor::JoinTableCells(PRBool aMergeNonContiguousContents)
                             startRowIndex2, startColIndex2, rowSpan2, colSpan2, 
                             actualRowSpan2, actualColSpan2, isSelected2);
         if (NS_FAILED(res)) return res;
-
-        // If this is 0, we are past last cell in row, so exit the loop
+        
+        // If this is 0, we are past last cell in row, so just exit from loop
         if (actualColSpan2 == 0)
           break;
           

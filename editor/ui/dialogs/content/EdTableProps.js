@@ -361,7 +361,7 @@ function InitCellPanel()
       previousValue != dialog.CellAlignCharInput.value;
 
     previousIndex = dialog.CellStyleList.selectedIndex;
-    dialog.CellStyleList.selectedIndex = (globalCellElement.nodeName.toLowerCase == "th") ? 1 : 0;
+    dialog.CellStyleList.selectedIndex = (globalCellElement.nodeName.toLowerCase() == "th") ? 1 : 0;
     dialog.CellStyleCheckbox.checked = AdvancedEditUsed && previousIndex != dialog.CellStyleList.selectedIndex;
 
     previousIndex = dialog.TextWrapList.selectedIndex;
@@ -754,9 +754,16 @@ function SetSelectionButtons()
 function SetSpanEnable()
 {
   // If entire row is selected, don't allow changing colspan...
-  dialog.RowSpanInput.setAttribute("disabled", (SelectedCellsType == SELECT_COLUMN) ? "true" : "false");
+  if ( SelectedCellsType == SELECT_COLUMN )
+    dialog.RowSpanInput.setAttribute("disabled", "true");
+  else
+    dialog.RowSpanInput.removeAttribute("disabled");
+
   // ...and similarly:
-  dialog.ColSpanInput.setAttribute("disabled", (SelectedCellsType == SELECT_ROW) ? "true" : "false");
+  if ( SelectedCellsType == SELECT_ROW )
+    dialog.ColSpanInput.setAttribute("disabled", "true");
+  else
+    dialog.ColSpanInput.removeAttribute("disabled");
 }
 
 function SwitchPanel(newPanel)
@@ -928,8 +935,6 @@ function ValidateCellData()
       globalCellElement.setAttribute("align", hAlign);
     }
   }
-
-  SetAlign("CellVAlignList", defVAlign, globalCellElement, "valign");
 
   if (dialog.CellVAlignCheckbox.checked)
     SetAlign("CellVAlignList", defVAlign, globalCellElement, "valign");
@@ -1236,6 +1241,17 @@ function ApplyCellAttributes()
     // When only one cell is selected, simply clone entire element,
     //  thus CSS and JS from Advanced edit is copied    
     editorShell.CloneAttributes(selectedCell, globalCellElement);
+
+    if (dialog.CellStyleCheckbox.checked)
+    {
+      var currentStyleIndex = (selectedCell.nodeName.toLowerCase() == "th") ? 1 : 0;
+      if (dialog.CellStyleList.selectedIndex != currentStyleIndex)
+      {
+        // Switch cell types 
+        // (replaces with new cell and copies attributes and contents)
+        selectedCell = editorShell.SwitchTableCellHeaderType(selectedCell);
+      }
+    }
   }
   else 
   {
@@ -1286,7 +1302,6 @@ function ApplyAttributesToOneCell(destElement)
       // Switch cell types 
       // (replaces with new cell and copies attributes and contents)
       destElement = editorShell.SwitchTableCellHeaderType(destElement);
-      CurrentStyleIndex = newStyleIndex;
     }
   }
 

@@ -843,7 +843,7 @@ nsresult CNavDTD::DidHandleStartTag(nsCParserNode& aNode,eHTMLTags aChildTag){
     case eHTMLTag_counter:
       {
         PRInt32   theCount=mBodyContext->GetCount();
-        eHTMLTags theGrandParentTag=mBodyContext->TagAt(theCount-2);
+        eHTMLTags theGrandParentTag=mBodyContext->TagAt(theCount-1);
         
         nsAutoString  theNumber;
         
@@ -891,7 +891,7 @@ nsresult CNavDTD::DidHandleStartTag(nsCParserNode& aNode,eHTMLTags aChildTag){
 
     //handle <empty/> tags by generating a close tag...
     //added this to fix bug 48351, which contains XHTML and uses empty tags.
-  if(nsHTMLElement::IsContainer(aChildTag)) {
+  if(nsHTMLElement::IsContainer(aChildTag) && aNode.mToken) {  //nullptr test fixes bug 56085
     CStartToken *theToken=NS_STATIC_CAST(CStartToken*,aNode.mToken);
     if(theToken->IsEmpty()){
 
@@ -980,23 +980,47 @@ PRBool CanBeContained(eHTMLTags aChildTag,nsDTDContext& aContext) {
   //Note: This method is going away. First we need to get the elementtable to do closures right, and
   //      therefore we must get residual style handling to work.
 
-  PRBool result=PR_TRUE;
-  if(aContext.GetCount()){
+  //the changes to this method were added to fix bug 54651...
+
+  PRBool  result=PR_TRUE;
+  PRInt32 theCount=aContext.GetCount();
+
+  if(0<theCount){
     TagList* theRootTags=gHTMLElements[aChildTag].GetRootTags();
     TagList* theSpecialParents=gHTMLElements[aChildTag].GetSpecialParents();
     if(theRootTags) {
       PRInt32 theRootIndex=LastOf(aContext,*theRootTags);
       PRInt32 theSPIndex=(theSpecialParents) ? LastOf(aContext,*theSpecialParents) : kNotFound;  
       PRInt32 theChildIndex=GetIndexOfChildOrSynonym(aContext,aChildTag);
-      PRInt32 theBaseIndex=(theRootIndex>theSPIndex) ? theRootIndex : theSPIndex;
+      PRInt32 theTargetIndex=(theRootIndex>theSPIndex) ? theRootIndex : theSPIndex;
 
-      if((theBaseIndex==theChildIndex) && (gHTMLElements[aChildTag].CanContainSelf()))
+      if((theTargetIndex==theCount-1) ||
+        ((theTargetIndex==theChildIndex) && gHTMLElements[aChildTag].CanContainSelf())) {
         result=PR_TRUE;
-      else result=PRBool(theBaseIndex>theChildIndex);
+      }
+      else {
+        
+        result=PR_FALSE;
+
+        PRInt32 theIndex=theCount-1;
+        while(theChildIndex<theIndex) {
+          eHTMLTags theParentTag=aContext.TagAt(theIndex--);
+          if (gHTMLElements[theParentTag].IsMemberOf(kBlockEntity)  || 
+              gHTMLElements[theParentTag].IsMemberOf(kHeading)      || 
+              gHTMLElements[theParentTag].IsMemberOf(kPreformatted) || 
+              gHTMLElements[theParentTag].IsMemberOf(kList)) {
+            if(!HasOptionalEndTag(theParentTag)) {
+              result=PR_TRUE;
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
   return result;
+
 }
 
 enum eProcessRule {eNormalOp,eLetInlineContainBlock};
@@ -1041,7 +1065,7 @@ nsresult CNavDTD::HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsI
        (nsHTMLElement::IsResidualStyleTag(theParentTag)) &&
        (IsBlockElement(aChildTag,theParentTag))) {
 
-      if(eHTMLTag_table!=aChildTag) {
+      if((eHTMLTag_table!=aChildTag) && (eHTMLTag_li!=aChildTag)) {
         nsCParserNode* theParentNode= NS_STATIC_CAST(nsCParserNode*, mBodyContext->PeekNode());
         if(theParentNode->mToken->IsWellFormed()) {
           theRule=eLetInlineContainBlock;
@@ -1189,15 +1213,12 @@ nsresult CNavDTD::WillHandleStartTag(CToken* aToken,eHTMLTags aTag,nsCParserNode
     /**************************************************************************************
      *
      * Now a little code to deal with bug #49687 (crash when layout stack gets too deep)
+     * I've also opened this up to any container (not just inlines): re bug 55095
      *
      **************************************************************************************/
 
   if(MAX_REFLOW_DEPTH<mBodyContext->GetCount()) {
-    if(gHTMLElements[aTag].IsMemberOf(kInlineEntity)) {
-      if(!gHTMLElements[aTag].IsMemberOf(kFormControl)) {
-        return kHierarchyTooDeep;
-      }
-    }
+    return kHierarchyTooDeep;  
   }
 
   STOP_TIMER()
@@ -1307,7 +1328,6 @@ nsresult CNavDTD::HandleOmittedTag(CToken* aToken,eHTMLTags aChildTag,eHTMLTags 
   //of another section. If it is, the cache it for later.
   //  1. Get the root node for the child. See if the ultimate node is the BODY, FRAMESET, HEAD or HTML
   PRInt32   theTagCount = mBodyContext->GetCount();
-  CToken*   theToken    = aToken;
 
   if(aToken) {
     // Note: The node for a misplaced skipped content is not yet created ( for optimization ) and hence
@@ -1327,18 +1347,21 @@ nsresult CNavDTD::HandleOmittedTag(CToken* aToken,eHTMLTags aChildTag,eHTMLTags 
         }
       }
 
-      PRBool done=PR_FALSE;
       if(theIndex>kNotFound) {
         // Avoid TD and TH getting into misplaced content stack
         // because they are legal table elements. -- Ref: Bug# 20797
         static eHTMLTags gLegalElements[]={eHTMLTag_td,eHTMLTag_th};
-        while(!done){
-          mMisplacedContent.Push(theToken);  
+                  
+        mMisplacedContent.Push(aToken);  
 
-          // If the token is attributed then save those attributes too.
-          if(attrCount > 0) PushMisplacedAttributes(*aNode,mMisplacedContent,attrCount);
+        IF_HOLD(aToken);  // Hold on to this token for later use.
+
+        // If the token is attributed then save those attributes too.    
+        if(attrCount > 0) PushMisplacedAttributes(*aNode,mMisplacedContent,attrCount);
+
+        while(1){
          
-          theToken=mTokenizer->PeekToken();
+          CToken* theToken=mTokenizer->PeekToken();
           
           if(theToken) {
             theTag=(eHTMLTags)theToken->GetTypeID();
@@ -1347,12 +1370,15 @@ nsresult CNavDTD::HandleOmittedTag(CToken* aToken,eHTMLTags aChildTag,eHTMLTags 
                  (FindTagInSet(theTag,gLegalElements,sizeof(gLegalElements)/sizeof(theTag))) ||
                  (gHTMLElements[theTag].HasSpecialProperty(kBadContentWatch))                ||
                  (gHTMLElements[aParent].CanContain(theTag))) {
-                  done=PR_TRUE;
+                  break;
               }            
             }
-            if(!done) theToken=mTokenizer->PopToken();
+              
+            theToken=mTokenizer->PopToken();
+            mMisplacedContent.Push(theToken);
+
           }
-          else done=PR_TRUE;
+          else break;
         }//while
         if(result==NS_OK) {
           result=HandleSavedTokens(mBodyContext->mContextTopIndex=theIndex);
@@ -1362,6 +1388,9 @@ nsresult CNavDTD::HandleOmittedTag(CToken* aToken,eHTMLTags aChildTag,eHTMLTags 
     }//if
 
     if((aChildTag!=aParent) && (gHTMLElements[aParent].HasSpecialProperty(kSaveMisplaced))) {
+      
+      IF_HOLD(aToken);  // Hold on to this token for later use. Ref Bug. 53695
+      
       mMisplacedContent.Push(aToken);
       // If the token is attributed then save those attributes too.
        if(attrCount > 0) PushMisplacedAttributes(*aNode,mMisplacedContent,attrCount);
@@ -1632,7 +1661,8 @@ eHTMLTags FindAutoCloseTargetForEndTag(eHTMLTags aCurrentTag,nsDTDContext& aCont
     PRInt32 theChildIndex=GetIndexOfChildOrSynonym(aContext,aCurrentTag);
     
     if(kNotFound<theChildIndex) {
-      if(thePrevTag==aContext[theChildIndex]){
+      if((thePrevTag==aContext[theChildIndex]) || 
+         (eHTMLTag_noscript==aCurrentTag)){  //bug 54571
         return aContext[theChildIndex];
       } 
     
@@ -1893,9 +1923,8 @@ nsresult CNavDTD::HandleSavedTokens(PRInt32 anIndex) {
           mTempContext->Push((nsCParserNode*)mBodyContext->Pop(theChildStyleStack));
         }
      
-        PRInt32 theIndex=kNotFound;
         // Now flush out all the bad contents.
-        while(theBadTokenCount > 0){
+        while(theBadTokenCount-- > 0){
           theToken=(CToken*)mMisplacedContent.PopFront();
           if(theToken) {
             theTag       = (eHTMLTags)theToken->GetTypeID();
@@ -1906,17 +1935,24 @@ nsresult CNavDTD::HandleSavedTokens(PRInt32 anIndex) {
               if(theAttrToken) {
                 mTokenizer->PushTokenFront(theAttrToken);
               }
+              theBadTokenCount--;
             }
             
-            // Make sure that the BeginContext() is ended only by the call to
-            // EndContext(). Ref: Bug 25202
-            if(eToken_end==theToken->GetTokenType()) theIndex=mBodyContext->LastOf(theTag);
+            if(eToken_end==theToken->GetTokenType()) {
+              // Ref: Bug 25202
+              // Make sure that the BeginContext() is ended only by the call to
+              // EndContext(). Ex: <center><table><a></center>.
+              // In the Ex. above </center> should not close <center> above table.
+              // Doing so will cause the current context to get closed prematurely. 
+              PRInt32 theIndex=mBodyContext->LastOf(theTag);
               
-            if(!(theIndex!=kNotFound && theIndex<=mBodyContext->mContextTopIndex))
-              result=HandleToken(theToken,mParser);
-            else IF_FREE(theToken);
+              if(theIndex!=kNotFound && theIndex<=mBodyContext->mContextTopIndex) {
+                IF_FREE(theToken);
+                continue;
+              }
+            }
+            result=HandleToken(theToken,mParser);
           }
-          theBadTokenCount--;
         }//while
         if(theTopIndex != mBodyContext->GetCount()) {
            CloseContainersTo(theTopIndex,mBodyContext->TagAt(theTopIndex),PR_TRUE);

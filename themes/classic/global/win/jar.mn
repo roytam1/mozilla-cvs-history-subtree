@@ -1,5 +1,4 @@
 classic.jar:
-    skin/classic/global/contents.rdf                                     
     skin/classic/global/preview.png                                      (../../preview/win/preview.png)
     skin/classic/global/box.css
     skin/classic/global/button.css
@@ -32,3 +31,5 @@ classic.jar:
     skin/classic/global/question-icon.gif
     skin/classic/global/alert-icon.gif
     skin/classic/global/dialogOverlay.css
+    skin/classic/global/contents.rdf
+

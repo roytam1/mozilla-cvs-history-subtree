@@ -305,8 +305,14 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
     return NS_OK;
   }
 
-  SetStatus(nsString());
-  SetDefaultStatus(nsString());
+  /* No mDocShell means we've already been partially closed down.
+     When that happens, setting status isn't a big requirement,
+     so don't. (Doesn't happen under normal circumstances, but
+     bug 49615 describes a case.) */
+  if (mDocShell) {
+    SetStatus(nsString());
+    SetDefaultStatus(nsString());
+  }
 
   if (mDocument) {
     nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
@@ -486,9 +492,12 @@ NS_IMETHODIMP GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
   // Capturing stage
   if ((NS_EVENT_FLAG_BUBBLE != aFlags) && mChromeEventHandler) {
     // Check chrome document capture here.
-    mChromeEventHandler->HandleChromeEvent(aPresContext, aEvent, aDOMEvent,
-                                           NS_EVENT_FLAG_CAPTURE,
-                                           aEventStatus);
+    // XXX The chrome can not handle this, see bug 51211
+    if (aEvent->message != NS_IMAGE_LOAD) {
+      mChromeEventHandler->HandleChromeEvent(aPresContext, aEvent, aDOMEvent,
+                                             NS_EVENT_FLAG_CAPTURE,
+                                             aEventStatus);
+    }
   }
 
   // Local handling stage

@@ -46,7 +46,7 @@ function clicked(event, target)
 	if (target.getAttribute("container") == "true")
 		return(false);
 
-	OpenBookmarkURL(event, target, document.getElementById('bookmarksTree').database);
+	sidebarOpenURL(event, target, document.getElementById('bookmarksTree').database);
 	return(true);
 }
 
@@ -119,4 +119,62 @@ function OpenBookmarkURL(event, node, datasources)
             window._content.location = url;
 		}
   	}
+}
+
+
+function sidebarOpenURL(event, treeitem, root)
+{
+ 
+	if (treeitem.getAttribute("container") == "true")
+		return(false);
+
+	if (treeitem.getAttribute("type") == "http://home.netscape.com/NC-rdf#BookmarkSeparator")
+		return(false);
+
+	var id = treeitem.id;
+	if (!id)
+		return(false);
+
+	// rjc: add support for anonymous resources; if the node has
+	// a "#URL" property, use it, otherwise default to using the id
+	try
+	{
+		var theRootNode = document.getElementById(root);
+		var ds = null;
+		if (rootNode)
+		{
+			ds = theRootNode.database;
+		}
+    
+    var rdf = nsJSComponentManager.getService(RDFSERVICE_CONTRACTID, "nsIRDFService");
+		if (rdf)
+		{
+			if (ds)
+			{
+				var src = rdf.GetResource(id, true);
+				var prop = rdf.GetResource("http://home.netscape.com/NC-rdf#URL", true);
+				var target = ds.GetTarget(src, prop, true);
+				if (target)	target = target.QueryInterface(nsIRDFLiteral);
+				if (target)	target = target.Value;
+				if (target)	id = target;
+			}
+		}
+	}
+	catch(ex)
+	{
+	}
+    // Ignore "NC:" urls.
+	if (id.substring(0, 3) == "NC:")
+	{
+		return(false);
+	}	
+	if (event.metaKey) 
+	  {
+	  // if metaKey is down, open in a new browser window
+  		window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", id ); 
+	  } 
+	  else 
+	  {
+		openTopWin(id);
+	  }
 }

@@ -168,7 +168,7 @@
 	      <menuitem accesskey="&editPageCmd.accesskey;" key="key_editPage" observes="Browser:EditPage" />
 	      <menuseparator/>
 	      <menuitem accesskey="&printSetupCmd.accesskey;" observes="Browser:PrintSetup"/>
-	      <menuitem accesskey="&printPreviewCmd.accesskey;" observes="Browser:PrintPreview"/>
+<!--	      <menuitem accesskey="&printPreviewCmd.accesskey;" observes="Browser:PrintPreview"/> -->
 	      <menuitem id="printMenuItem" accesskey="&printCmd.accesskey;" key="printKb" observes="Browser:Print"/>
 	      <menuseparator />
 	      <menuitem id="offlineGoOfflineCmd"/>
@@ -206,7 +206,7 @@
 	</menu>   
       <menuseparator />
 
-      <menu id="menu_TextZoom" accesskey="&textZoomMenu.accesskey;">
+      <menu id="menu_TextZoom" accesskey="&textZoomMenu.accesskey;" hidden="true">
         <menupopup id="textZoomPopup" oncreate="initTextZoomMenu()">
           <menuitem key="key_textZoomReduce" accesskey="&textZoomReduceCmd.accesskey;" observes="cmd_viewTextZoomReduce"/>
           <menuitem key="key_textZoomEnlarge" accesskey="&textZoomEnlargeCmd.accesskey;" observes="cmd_viewTextZoomEnlarge"/>

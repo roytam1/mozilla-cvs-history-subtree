@@ -82,8 +82,6 @@
 #include "nsIParser.h"
 #include "nsParserCIID.h"
 #include "nsHTMLContentSinkStream.h"
-#include "nsHTMLToTXTSinkStream.h"
-#include "nsXIFDTD.h"
 #include "nsIFrameSelection.h"
 #include "nsIDOMNSHTMLInputElement.h" //optimization for ::DoXXX commands
 #include "nsIDOMNSHTMLTextAreaElement.h"
@@ -128,6 +126,7 @@
 #include "nsIScrollableFrame.h"
 #include "prtime.h"
 #include "prlong.h"
+#include "nsIDocumentEncoder.h"
 #include "nsIDragService.h"
 
 // Dummy layout request
@@ -150,6 +149,10 @@ static nsresult CtlStyleWatch(PRUint32 aCtlValue, nsIStyleSet *aStyleSet);
 #define kStyleWatchStop    16
 #define kStyleWatchReset   32
 
+// private clipboard data flavors for html copy, used by editor when pasting
+#define kHTMLContext   "text/_moz_htmlcontext"
+#define kHTMLInfo      "text/_moz_htmlinfo"
+
 // Class ID's
 static NS_DEFINE_CID(kFrameSelectionCID, NS_FRAMESELECTION_CID);
 static NS_DEFINE_CID(kCRangeCID, NS_RANGE_CID);
@@ -160,7 +163,7 @@ static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 // Drag & Drop, Clipboard Support
 static NS_DEFINE_CID(kCClipboardCID,           NS_CLIPBOARD_CID);
 static NS_DEFINE_CID(kCTransferableCID,        NS_TRANSFERABLE_CID);
-static NS_DEFINE_CID(kCXIFConverterCID,        NS_XIFFORMATCONVERTER_CID);
+static NS_DEFINE_CID(kHTMLConverterCID,        NS_HTMLFORMATCONVERTER_CID);
 
 #undef NOISY
 
@@ -803,6 +806,7 @@ public:
    * Post a callback that should be handled after reflow has finished.
    */
   NS_IMETHOD PostReflowCallback(nsIReflowCallback* aCallback);
+  NS_IMETHOD CancelReflowCallback(nsIReflowCallback* aCallback);
 
   /**
    * Reflow batching
@@ -1795,7 +1799,6 @@ GetRootScrollFrame(nsIPresContext* aPresContext, nsIFrame* aRootFrame, nsIFrame*
       // If child is scrollframe keep it (native)
       aRootFrame->FirstChild(aPresContext, nsnull, &theFrame);
       if (theFrame) {
-        nsCOMPtr<nsIAtom> fType;
         theFrame->GetFrameType(getter_AddRefs(fType));
         if (nsLayoutAtoms::scrollFrame == fType.get()) {
           *aScrollFrame = theFrame;
@@ -1803,7 +1806,6 @@ GetRootScrollFrame(nsIPresContext* aPresContext, nsIFrame* aRootFrame, nsIFrame*
           // If the first child of that is scrollframe, use it instead (gfx)
           theFrame->FirstChild(aPresContext, nsnull, &theFrame);
           if (theFrame) {
-            nsCOMPtr<nsIAtom> fType;
             theFrame->GetFrameType(getter_AddRefs(fType));
             if (nsLayoutAtoms::scrollFrame == fType.get()) {
               *aScrollFrame = theFrame;
@@ -2882,27 +2884,87 @@ PresShell::CantRenderReplacedElement(nsIPresContext* aPresContext,
 NS_IMETHODIMP
 PresShell::GoToAnchor(const nsString& aAnchorName) const
 {
-  nsCOMPtr<nsIDOMDocument> doc;
-  nsresult                     rv = NS_OK;
-  nsCOMPtr<nsIContent>  content;
+  nsCOMPtr<nsIDOMDocument> doc = do_QueryInterface(mDocument);
+  nsCOMPtr<nsIDOMHTMLDocument> htmlDoc = do_QueryInterface(mDocument);
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIContent> content;
 
-  if (NS_SUCCEEDED(mDocument->QueryInterface(NS_GET_IID(nsIDOMDocument),
-                                             getter_AddRefs(doc)))) {    
+  // Search for an element with a matching "id" attribute
+  if (doc) {    
     nsCOMPtr<nsIDOMElement> element;
-
-    // Find the element with the specified id
     rv = doc->GetElementById(aAnchorName, getter_AddRefs(element));
     if (NS_SUCCEEDED(rv) && element) {
       // Get the nsIContent interface, because that's what we need to
       // get the primary frame
-      rv = element->QueryInterface(NS_GET_IID(nsIContent),
-                                   getter_AddRefs(content));
+      content = do_QueryInterface(element);
     }
   }
 
-  if (NS_SUCCEEDED(rv) && content) {
+  // Search for an anchor element with a matching "name" attribute
+  if (!content && htmlDoc) {
+    nsCOMPtr<nsIDOMNodeList> list;
+    // Find a matching list of named nodes
+    rv = htmlDoc->GetElementsByName(aAnchorName, getter_AddRefs(list));
+    if (NS_SUCCEEDED(rv) && list) {
+      PRUint32 count;
+      PRUint32 i;
+      list->GetLength(&count);
+      // Loop through the named nodes looking for the first anchor
+      for (i = 0; i < count; i++) {
+        nsCOMPtr<nsIDOMNode> node;
+        rv = list->Item(i, getter_AddRefs(node));
+        if (NS_FAILED(rv)) {
+          break;
+        }
+        // Ensure it's an anchor element
+        nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
+        nsAutoString tagName;
+        if (element && NS_SUCCEEDED(element->GetTagName(tagName))) {
+          tagName.ToLowerCase();
+          if (tagName.EqualsWithConversion("a")) {
+            content = do_QueryInterface(element);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Search for anchor in the HTML namespace with a matching name
+  if (!content && !htmlDoc)
+  {
+    nsCOMPtr<nsIDOMNodeList> list;
+    NS_NAMED_LITERAL_STRING(nameSpace, "http://www.w3.org/1999/xhtml");
+    // Get the list of anchor elements
+    rv = doc->GetElementsByTagNameNS(nameSpace, NS_LITERAL_STRING("a"), getter_AddRefs(list));
+    if (NS_SUCCEEDED(rv) && list) {
+      PRUint32 count;
+      PRUint32 i;
+      list->GetLength(&count);
+      // Loop through the named nodes looking for the first anchor
+      for (i = 0; i < count; i++) {
+        nsCOMPtr<nsIDOMNode> node;
+        rv = list->Item(i, getter_AddRefs(node));
+        if (NS_FAILED(rv)) {
+          break;
+        }
+        // Compare the name attribute
+        nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
+        nsAutoString value;
+        if (element && NS_SUCCEEDED(element->GetAttribute(NS_LITERAL_STRING("name"), value))) {
+          if (value.EqualsWithConversion(aAnchorName)) {
+            content = do_QueryInterface(element);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+
+  if (content) {
     nsIFrame* frame;
-    
+
     // Get the primary frame
     if (NS_SUCCEEDED(GetPrimaryFrameFor(content, &frame))) {
       rv = ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_TOP,
@@ -3096,7 +3158,6 @@ PresShell::DoCopy()
   GetDocument(getter_AddRefs(doc));
   if (!doc) return NS_ERROR_FAILURE;
   
-  nsString buffer;
   nsresult rv;
 
   nsCOMPtr<nsISelection> sel;
@@ -3138,54 +3199,71 @@ PresShell::DoCopy()
   if (isCollapsed)
     return NS_OK;
 
-  doc->CreateXIF(buffer,sel);
+  nsCOMPtr<nsIDocumentEncoder> docEncoder;
 
+  docEncoder = do_CreateInstance(NS_HTMLCOPY_ENCODER_CONTRACTID);
+  NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
+
+  docEncoder->Init(doc, NS_LITERAL_STRING("text/html"), 0);
+  docEncoder->SetSelection(sel);
+
+  nsAutoString buffer, parents, info;
+  
+  rv = docEncoder->EncodeToStringWithContext(buffer, parents, info);
+  if (NS_FAILED(rv)) 
+    return rv;
+  
   // Get the Clipboard
   NS_WITH_SERVICE(nsIClipboard, clipboard, kCClipboardCID, &rv);
   if (NS_FAILED(rv)) 
     return rv;
 
-  if ( clipboard ) {
+  if ( clipboard ) 
+  {
     // Create a transferable for putting data on the Clipboard
     nsCOMPtr<nsITransferable> trans;
     rv = nsComponentManager::CreateInstance(kCTransferableCID, nsnull, 
                                             NS_GET_IID(nsITransferable), 
                                             getter_AddRefs(trans));
-    if ( trans ) {
-      // The data on the clipboard will be in "XIF" format
-      // so give the clipboard transferable a "XIFConverter" for 
-      // converting from XIF to other formats
-      nsCOMPtr<nsIFormatConverter> xifConverter;
-      rv = nsComponentManager::CreateInstance(kCXIFConverterCID, nsnull, 
-                                              NS_GET_IID(nsIFormatConverter),
-                                              getter_AddRefs(xifConverter));
-      if ( xifConverter ) {
-        // Add the XIF DataFlavor to the transferable
-        // this tells the transferable that it can handle receiving the XIF format
-        trans->AddDataFlavor(kXIFMime);
+    if ( trans ) 
+    {
+      // set up the data converter
+      nsCOMPtr<nsIFormatConverter> htmlConverter = do_CreateInstance(kHTMLConverterCID);
+      NS_ENSURE_TRUE(htmlConverter, NS_ERROR_FAILURE);
+      trans->SetConverter(htmlConverter);
+      
+      // Add the html DataFlavor to the transferable
+      trans->AddDataFlavor(kHTMLMime);
+      // Add the htmlcontext DataFlavor to the transferable
+      trans->AddDataFlavor(kHTMLContext);
+      // Add the htmlinfo DataFlavor to the transferable
+      trans->AddDataFlavor(kHTMLInfo);
+      
+      // get wStrings to hold clip data
+      nsCOMPtr<nsISupportsWString> dataWrapper, contextWrapper, infoWrapper;
+      dataWrapper = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+      NS_ENSURE_TRUE(dataWrapper, NS_ERROR_FAILURE);
+      contextWrapper = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+      NS_ENSURE_TRUE(contextWrapper, NS_ERROR_FAILURE);
+      infoWrapper = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+      NS_ENSURE_TRUE(infoWrapper, NS_ERROR_FAILURE);
 
-        // Add the converter for going from XIF to other formats
-        trans->SetConverter(xifConverter);
+      // populate the strings
+      dataWrapper->SetData ( NS_CONST_CAST(PRUnichar*,buffer.GetUnicode()) );
+      contextWrapper->SetData ( NS_CONST_CAST(PRUnichar*,parents.GetUnicode()) );
+      infoWrapper->SetData ( NS_CONST_CAST(PRUnichar*,info.GetUnicode()) );
+      
+      // QI the data object an |nsISupports| so that when the transferable holds
+      // onto it, it will addref the correct interface.
+      nsCOMPtr<nsISupports> genericDataObj ( do_QueryInterface(dataWrapper) );
+      trans->SetTransferData(kHTMLMime, genericDataObj, buffer.Length()*2);
+      genericDataObj = do_QueryInterface(contextWrapper);
+      trans->SetTransferData(kHTMLContext, genericDataObj, parents.Length()*2);
+      genericDataObj = do_QueryInterface(infoWrapper);
+      trans->SetTransferData(kHTMLInfo, genericDataObj, info.Length()*2);
 
-        // Now add the XIF data to the transferable, placing it into a nsISupportsWString object.
-        // the transferable wants the number bytes for the data and since it is double byte
-        // we multiply by 2. 
-        nsCOMPtr<nsISupportsWString> dataWrapper;
-        rv = nsComponentManager::CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID,
-                                                nsnull, 
-                                                NS_GET_IID(nsISupportsWString),
-                                                getter_AddRefs(dataWrapper));
-        if ( dataWrapper ) {
-          dataWrapper->SetData ( NS_CONST_CAST(PRUnichar*,buffer.GetUnicode()) );
-          // QI the data object an |nsISupports| so that when the transferable holds
-          // onto it, it will addref the correct interface.
-          nsCOMPtr<nsISupports> genericDataObj ( do_QueryInterface(dataWrapper) );
-          trans->SetTransferData(kXIFMime, genericDataObj, buffer.Length()*2);
-        }
-        
-        // put the transferable on the clipboard
-        clipboard->SetData(trans, nsnull, nsIClipboard::kGlobalClipboard);
-      }
+      // put the transferable on the clipboard
+      clipboard->SetData(trans, nsnull, nsIClipboard::kGlobalClipboard);
     }
   }
   
@@ -3519,6 +3597,38 @@ PresShell::PostReflowCallback(nsIReflowCallback* aCallback)
   }
  
   return NS_OK;
+}
+
+NS_IMETHODIMP
+PresShell::CancelReflowCallback(nsIReflowCallback* aCallback)
+{
+   nsCallbackEventRequest* before = nsnull;
+   nsCallbackEventRequest* node = mFirstCallbackEventRequest;
+   while(node)
+   {
+      nsIReflowCallback* callback = node->callback;
+
+      if (callback == aCallback) 
+      {
+        nsCallbackEventRequest* toFree = node;
+        if (node == mFirstCallbackEventRequest) {
+           mFirstCallbackEventRequest = node->next;
+           node = mFirstCallbackEventRequest;
+           before = nsnull;
+        } else {
+           node = node->next;
+           before->next = node;
+        }
+
+        FreeFrame(sizeof(nsCallbackEventRequest), toFree);
+        NS_RELEASE(callback);
+      } else {
+        before = node;
+        node = node->next;
+      }
+   }
+
+   return NS_OK;
 }
 
 /**
@@ -4455,7 +4565,7 @@ struct ReflowEvent : public PLEvent {
     if (presShell) {
 #ifdef DEBUG
       if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-         printf("\n*** Handling reflow event: PresShell=%p, event=%p\n", presShell, this);
+         printf("\n*** Handling reflow event: PresShell=%p, event=%p\n", presShell.get(), this);
       }
 #endif
       // XXX Statically cast the pres shell pointer so that we can call

@@ -45,7 +45,7 @@
 #include "nsXPIDLString.h"
 #include "nsIFileLocator.h"
 #include "nsFileLocations.h"
-
+#include "nsIStringBundle.h"
 #include "nsProxiedService.h"
 
 #include "nsNetUtil.h"
@@ -60,6 +60,11 @@
 #include "nsIWebBrowserChrome.h"
 #include "nsIWebBrowserChrome.h"
 
+#if defined(XP_MAC) && !defined(DEBUG)
+//lower silly optimization level which takes an age for this file.
+#pragma optimization_level 1
+#endif
+
 #ifdef DEBUG_seth
 #define DEBUG_UTF8_CONVERSION 1
 #endif 
@@ -70,6 +75,7 @@
 #undef NS_IMPL_IDS
 
 #define CHROME_STYLE nsIWebBrowserChrome::CHROME_ALL | nsIWebBrowserChrome::CHROME_CENTER_SCREEN
+#define MIGRATION_PROPERTIES_URL "chrome://communicator/locale/profile/migration.properties"
 
 /* Network */
 
@@ -230,6 +236,7 @@ static NS_DEFINE_CID(kDialogParamBlockCID, NS_DialogParamBlock_CID);
 static NS_DEFINE_CID(kFileLocatorCID,       NS_FILELOCATOR_CID);
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 nsPrefMigration* nsPrefMigration::mInstance = nsnull;
 
@@ -364,8 +371,7 @@ extern "C" void ProfileMigrationController(void *data)
         if (NS_FAILED(rv))
         {
           migrator->mErrorCode = rv;
-	        printf("failed to migrate properly.  err=%d\n",rv);
-          return;
+          printf("failed to migrate properly.  err=%d\n",rv);
         }
     }
     else
@@ -708,11 +714,7 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
     
     rv = GetDirFromPref(oldProfilePath,newProfilePath,NEW_MAIL_DIR_NAME, PREF_MAIL_DIRECTORY, newPOPMailPath, oldPOPMailPath);
     if (NS_FAILED(rv)) {
-      /* use the default locations */
-      rv = oldPOPMailPath->FromFileSpec(oldProfilePath);
-      if (NS_FAILED(rv)) return rv;
-            
-      rv = oldPOPMailPath->AppendRelativeUnixPath(OLD_MAIL_DIR_NAME);
+      rv = DetermineOldPath(oldProfilePath, OLD_MAIL_DIR_NAME, "mailDirName", oldPOPMailPath);
       if (NS_FAILED(rv)) return rv;
 
       rv = SetPremigratedFilePref(PREF_MAIL_DIRECTORY, oldPOPMailPath);
@@ -737,16 +739,12 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
     /* First get the actual 4.x "Local Mail" files location */
     rv = GetDirFromPref(oldProfilePath,newProfilePath, NEW_MAIL_DIR_NAME, PREF_MAIL_DIRECTORY, newIMAPLocalMailPath, oldIMAPLocalMailPath);
     if (NS_FAILED(rv)) {
-      /* default paths */
-      rv = oldIMAPLocalMailPath->FromFileSpec(oldProfilePath);
+      rv = DetermineOldPath(oldProfilePath, OLD_MAIL_DIR_NAME, "mailDirName", oldIMAPLocalMailPath);
       if (NS_FAILED(rv)) return rv;
-      
-      rv = oldIMAPLocalMailPath->AppendRelativeUnixPath(OLD_MAIL_DIR_NAME);
-      if (NS_FAILED(rv)) return rv;
-    
+
       rv = SetPremigratedFilePref(PREF_MAIL_DIRECTORY, oldIMAPLocalMailPath);
       if (NS_FAILED(rv)) return rv;
-     
+
       rv = newIMAPLocalMailPath->FromFileSpec(newProfilePath);
       if (NS_FAILED(rv)) return rv;
       
@@ -766,10 +764,10 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
 
     rv = GetDirFromPref(oldProfilePath,newProfilePath, NEW_IMAPMAIL_DIR_NAME, PREF_MAIL_IMAP_ROOT_DIR,newIMAPMailPath,oldIMAPMailPath);
     if (NS_FAILED(rv)) {
-      /* default paths */
       rv = oldIMAPMailPath->FromFileSpec(oldProfilePath);
       if (NS_FAILED(rv)) return rv;
         
+      /* we didn't over localize "ImapMail" in 4.x, so this is all we have to do */
       rv = oldIMAPMailPath->AppendRelativeUnixPath(OLD_IMAPMAIL_DIR_NAME);
       if (NS_FAILED(rv)) return rv;
 
@@ -802,10 +800,10 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
     
     rv = GetDirFromPref(oldProfilePath,newProfilePath,NEW_MAIL_DIR_NAME, PREF_MAIL_DIRECTORY, newMOVEMAILMailPath, oldMOVEMAILMailPath);
     if (NS_FAILED(rv)) {
-      /* use the default locations */
       rv = oldMOVEMAILMailPath->FromFileSpec(oldProfilePath);
       if (NS_FAILED(rv)) return rv;
 
+      /* we didn't over localize this in 4.x, so this is all we have to do */
       rv = oldMOVEMAILMailPath->AppendRelativeUnixPath(OLD_MAIL_DIR_NAME);
       if (NS_FAILED(rv)) return rv;
       
@@ -836,17 +834,14 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
     
     rv = GetDirFromPref(oldProfilePath,newProfilePath, NEW_NEWS_DIR_NAME, PREF_NEWS_DIRECTORY, newNewsPath,oldNewsPath);
     if (NS_FAILED(rv)) {
-      /* default paths */
-      rv = oldNewsPath->FromFileSpec(oldProfilePath);
-      if (NS_FAILED(rv)) return rv;
-      rv = oldNewsPath->AppendRelativeUnixPath(OLD_NEWS_DIR_NAME);
-      if (NS_FAILED(rv)) return rv;
-      
-      rv = newNewsPath->FromFileSpec(newProfilePath);
+      rv = DetermineOldPath(oldProfilePath, OLD_NEWS_DIR_NAME, "newsDirName", oldNewsPath);
       if (NS_FAILED(rv)) return rv;
 
       rv = SetPremigratedFilePref(PREF_NEWS_DIRECTORY, oldNewsPath);
       if (NS_FAILED(rv)) return rv; 
+
+      rv = newNewsPath->FromFileSpec(newProfilePath);
+      if (NS_FAILED(rv)) return rv;
 
       newsDriveDefault = PR_TRUE;
     }
@@ -1442,42 +1437,6 @@ nsPrefMigration::GetSizes(nsFileSpec inputPath, PRBool readSubdirs, PRUint32 *si
   return NS_OK;
 }
 
-
-/*--------------------------------------------------------------------------
- * GetStringFromSpec gets the drive letter (on Windows) or the volume name (on Mac)
- *
- * INPUT: an nsFileSpec path
- * 
- * OUTPUT: the drive letter or volume name
- * 
- * RETURNS: NS_OK if found
- *          NS_ERROR_FAILURE if some error occurs while iterating through the
- *                           parent nodes.
- *
- *--------------------------------------------------------------------------*/
-
-static
-nsresult GetStringFromSpec(nsFileSpec inSpec, char **string)
-{
-	nsresult rv;
-        nsCOMPtr<nsIFileSpec> spec;
-        rv = NS_NewFileSpecWithSpec(inSpec, getter_AddRefs(spec));
-        if (NS_SUCCEEDED(rv)) {
-        		rv = spec->GetPersistentDescriptorString(string);
-                if (NS_SUCCEEDED(rv)) {
-                        return NS_OK;
-                }
-                else {
-                        PR_FREEIF(*string);
-                        return rv;
-                }
-        }
-        else {
-                *string = nsnull;
-                return rv;
-        }
-}                       
-
 /*---------------------------------------------------------------------------*
  * ComputeSpaceRequirments
  *
@@ -1701,6 +1660,9 @@ Fix4xCookies(nsIFileSpec * profilePath) {
   /* open input file */
   nsFileSpec oldCookies(profileDirectory);
   oldCookies += COOKIES_FILE_NAME_IN_4x;
+  
+  /* it is possible that the 4.x cookies file does not exist.  just return normally.  see #55444 */
+  if (!oldCookies.Exists()) return NS_OK;
   
   nsInputFileStream inStream(oldCookies);
   if (!inStream.is_open()) {
@@ -2050,8 +2012,66 @@ nsPrefMigration::SetPremigratedFilePref(const char *pref_name, nsIFileSpec *path
   rv = NS_FileSpecToIFile(&pathSpec, getter_AddRefs(pathFile));
   if (NS_FAILED(rv)) return rv;
   
+  PRBool exists = PR_FALSE;
+  pathFile->Exists(&exists);
+  
+  NS_ASSERTION(exists, "the path does not exist.  see bug #55444");
+  if (!exists) return NS_OK;
+  
 	rv = m_prefs->SetFileXPref((const char *)premigration_pref, pathFile);
 	return rv;
+}
+
+nsresult 
+nsPrefMigration::DetermineOldPath(nsIFileSpec *profilePath, const char *oldPathName, const char *oldPathEntityName, nsIFileSpec *oldPath)
+{
+	nsresult rv;
+
+  	/* set oldLocalFile to profilePath.  need to convert nsIFileSpec->nsILocalFile */
+	nsCOMPtr<nsILocalFile> oldLocalFile;
+	nsFileSpec pathSpec;
+	profilePath->GetFileSpec(&pathSpec);
+	rv = NS_FileSpecToIFile(&pathSpec, getter_AddRefs(oldLocalFile));
+	if (NS_FAILED(rv)) return rv;
+	
+	/* get the string bundle, and get the appropriate localized string out of it */
+	nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
+	if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIStringBundle> bundle;
+    rv = bundleService->CreateBundle(MIGRATION_PROPERTIES_URL, nsnull, getter_AddRefs(bundle));
+	if (NS_FAILED(rv)) return rv;
+
+	nsXPIDLString localizedDirName;
+	nsAutoString entityName;
+	entityName.AssignWithConversion(oldPathEntityName);
+	rv = bundle->GetStringFromName(entityName.GetUnicode(), getter_Copies(localizedDirName));
+	if (NS_FAILED(rv)) return rv;
+
+	rv = oldLocalFile->AppendRelativeUnicodePath((const PRUnichar *)localizedDirName);
+	if (NS_FAILED(rv)) return rv;
+
+	PRBool exists = PR_FALSE;
+	rv = oldLocalFile->Exists(&exists);
+	if (!exists) {
+		/* if the localized name doesn't exist, use the english name */
+		rv = oldPath->FromFileSpec(profilePath);
+		if (NS_FAILED(rv)) return rv;
+		
+		rv = oldPath->AppendRelativeUnixPath(oldPathName);
+		if (NS_FAILED(rv)) return rv;
+		
+		return NS_OK;
+	}
+
+	/* at this point, the folder with the localized name exists, so use it */
+	nsXPIDLCString persistentDescriptor;
+	rv = oldLocalFile->GetPersistentDescriptor(getter_Copies(persistentDescriptor));
+	if (NS_FAILED(rv)) return rv;
+	rv = oldPath->SetPersistentDescriptorString((const char *)persistentDescriptor);
+	if (NS_FAILED(rv)) return rv;
+
+	return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -2062,32 +2082,23 @@ nsPrefMigration::SetPremigratedFilePref(const char *pref_name, nsIFileSpec *path
   these are the prefs we know we need to convert to utf8.
   we'll also be converting:
 
+  Please make sure that any pref that contains native characters
+  in it's value is not included in this list as we do not want to 
+  convert them into UTF-8 format. Prefs are being get and set in a 
+  unicode format (FileXPref) now and there is no need for 
+  conversion of those prefs. 
+
  "ldap_2.server.*.description"
  "intl.font*.fixed_font"
  "intl.font*.prop_font"
  */
 
 static const char *prefsToConvert[] = {
-      "browser.cache.directory",
       "custtoolbar.personal_toolbar_folder",
-      "editor.image_editor",
-      "editor.html_editor",
       "editor.author",
-      "helpers.private_mailcap_file",
-      "helpers.private_mime_types_file",
       "li.server.ldap.userbase",
-      "mail.default_drafts",
-      "mail.default_fcc",
-      "mail.default_templates",
-      "mail.directory",
       "mail.identity.organization",
       "mail.identity.username",
-      "mail.imap.root_dir",
-      "mail.signature_file",
-      "news.default_fcc",
-      "news.directory",
-      "premigration.mail.directory",
-      "premigration.news.directory",
       nsnull
 };
 
@@ -2295,4 +2306,5 @@ nsPrefConverter::GetPlatformCharset(nsAutoString& aCharset)
  
   return rv;
 }
+
 

@@ -333,13 +333,13 @@ PRInt32 ReplaceFileNowOrSchedule(nsIFile* replacementFile, nsIFile* doomedFile )
                                                   REG_REPLACE_SRCFILE,
                                                   REGTYPE_ENTRY_BYTES, 
                                                   (void*)fsrc, 
-                                                  strlen(fsrc));
+                                                  strlen(fsrc)+sizeof('\0'));
 
                             err2 = NR_RegSetEntry(reg, filekey,
                                                   REG_REPLACE_DESTFILE,
                                                   REGTYPE_ENTRY_BYTES,
                                                   (void*)fdest,
-                                                  strlen(fdest));
+                                                  strlen(fdest)+sizeof('\0'));
 
                             if ( err == REGERR_OK && err2 == REGERR_OK )
                                 result = nsInstall::REBOOT_NEEDED;

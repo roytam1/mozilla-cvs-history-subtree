@@ -180,9 +180,9 @@ nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, PRBool quoteHeaders, nsIStream
   if (! bAutoQuote) /* We don't need to quote the message body but we still need to extract the headers */
     modifiedUrlSpec += "?header=only";
   else if (quoteHeaders)
-      modifiedUrlSpec += "?header=quote";
+    modifiedUrlSpec += "?header=quote";
   else
-      modifiedUrlSpec += "?header=quotebody";
+    modifiedUrlSpec += "?header=quotebody";
 
   aURL->SetSpec((const char *) modifiedUrlSpec);
 

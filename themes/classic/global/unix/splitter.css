@@ -5,6 +5,8 @@ splitter
     cursor                : e-resize;
     background-color      : threedface;
     vertical-align        : middle;
+    text-align            : center;
+    
   }
 
 grippy, grippy[collapse="before"]

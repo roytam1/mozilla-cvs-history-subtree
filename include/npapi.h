@@ -33,6 +33,15 @@
 #pragma pack(1)
 #endif
 
+/* 
+ * NO_NSPR_10_SUPPORT disables the inclusion 
+ * of obsolete/protypes.h, whose int16, uint16, 
+ * int32, and uint32 typedefs conflict with those 
+ * in this file. 
+ */ 
+#ifndef NO_NSPR_10_SUPPORT
+#define NO_NSPR_10_SUPPORT
+#endif
 #include "jri.h"                /* Java Runtime Interface */
 
 #if defined (__OS2__ ) || defined (OS2)
@@ -146,6 +155,10 @@ typedef unsigned long uint32;
 #    endif /* __alpha */
 #endif
 
+/*
+ * AIX defines these in sys/inttypes.h included from sys/types.h
+ */
+#ifndef AIX
 #ifndef _INT16
 typedef short int16;
 #endif
@@ -156,6 +169,7 @@ typedef int int32;
 #    else  /* __alpha */
 typedef long int32;
 #    endif /* __alpha */
+#endif
 #endif
 
 #ifndef FALSE

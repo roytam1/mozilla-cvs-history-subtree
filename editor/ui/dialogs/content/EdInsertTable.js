@@ -217,7 +217,7 @@ function onOK()
       }
     }
     // Detect when entire cells are selected:
-      // Get number of cells selected
+    // Get number of cells selected
     var tagNameObj = new Object;
     var countObj = new Object;
     tagNameObj.value = "";
@@ -236,7 +236,7 @@ function onOK()
         if (countObj.value > 1)
         {
           // Assume user wants to replace a block of
-          //  contiguous cells with a tabl, so
+          //  contiguous cells with a table, so
           //  join the selected cells
           editorShell.JoinTableCells(false);
           
@@ -246,7 +246,6 @@ function onOK()
           // Collapse selection into just that cell
           editorShell.editorSelection.collapse(element,0);
         }
-
         if (element)
         {
           // Empty just the contents of the cell
@@ -259,7 +258,6 @@ function onOK()
         }
       }
     }
-
     try {
       // false means don't delete selected text when inserting
       editorShell.InsertElementAtSelection(tableElement, false);

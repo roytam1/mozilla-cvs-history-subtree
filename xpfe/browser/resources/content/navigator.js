@@ -93,6 +93,25 @@ function savePage( url )
   }
 }
 
+/**
+ * We can avoid adding multiple load event listeners and save some time by adding
+ * one listener that calls all real handlers.
+ */
+function loadEventHandlers(event) {
+
+	// Filter out events that are not about the document load we are interested in
+	if (event.target == window._content.document) {
+		UpdateBookmarksLastVisitedDate(event);
+		UpdateInternetSearchResults(event);
+		checkForDirectoryListing();
+		getContentAreaFrameCount();
+		postURLToNativeWidget();
+
+	}
+
+}
+
+
 /** 
  * Determine whether or not the content area is displaying a page with frames,
  * and if so, toggle the display of the 'save frame as' menu item.
@@ -161,18 +180,20 @@ function UpdateInternetSearchResults(event)
 	if ((window._content.location.href) && (window._content.location.href != ""))
 	{
 		var	searchInProgressFlag = false;
+		var autoOpenSearchPanel = false;
 
 		try
 		{
 			var search = Components.classes["@mozilla.org/rdf/datasource;1?name=internetsearch"].getService();
 			if (search)	search = search.QueryInterface(Components.interfaces.nsIInternetSearchService);
 			if (search)	searchInProgressFlag = search.FindInternetSearchResults(window._content.location.href);
+			autoOpenSearchPanel = pref.GetBoolPref("browser.search.opensidebarsearchpanel");
 		}
 		catch(ex)
 		{
 		}
 
-		if (searchInProgressFlag == true)
+		if (searchInProgressFlag == true && autoOpenSearchPanel == true)
 		{
 			RevealSearchPanel();
 		}
@@ -226,6 +247,10 @@ nsXULBrowserWindow.prototype =
     else
       jsStatus = status;
     UpdateStatusField();
+    // Status is now on status bar; don't use it next time.
+    // This will cause us to revert to defaultStatus/jsDefaultStatus when the
+    // user leaves the link (e.g., if the script set window.status in onmouseover).
+    jsStatus = null;
   },
   setJSDefaultStatus : function(status)
   {
@@ -324,9 +349,6 @@ nsXULBrowserWindow.prototype =
         msg = msg.replace(/%elapsed%/, elapsed);
         defaultStatus = msg;
         UpdateStatusField();
-        //window.XULBrowserWindow.setDefaultStatus(msg);
-        //this.setDefaultStatus(msg);
-        this.setOverLink(msg);
         // Turn progress meter off.
         statusMeter.setAttribute("mode","normal");
         statusMeter.value = 0;  // be sure to clear the progress bar
@@ -421,12 +443,8 @@ function Startup()
     var contentArea = document.getElementById("appcontent");
     if (contentArea)
     {
-	    contentArea.addEventListener("load", UpdateBookmarksLastVisitedDate, true);
-	    contentArea.addEventListener("load", UpdateInternetSearchResults, true);
-      contentArea.addEventListener("load", checkForDirectoryListing, true);
-      contentArea.addEventListener("load", getContentAreaFrameCount, true);
+	  contentArea.addEventListener("load", loadEventHandlers, true);
       contentArea.addEventListener("focus", contentAreaFrameFocus, true);
-      contentArea.addEventListener("load",postURLToNativeWidget, true);
     }
 
     dump("*** Pulling out the charset\n");
@@ -471,6 +489,9 @@ function Startup()
       setTooltipText("homebutton", homepage);
 
     initConsoleListener();
+
+    // Perform default browser checking.
+    checkForDefaultBrowser();
   }
 
   
@@ -733,25 +754,19 @@ function OpenSearch(tabName, forceDialogFlag, searchStr)
 	dump("This is before the search " + searchStr + "\n");
 	if ((window._content.location.href == searchStr) || (searchStr == '')) 
 	{
-		if (!(defaultSearchURL == fallbackDefaultSearchURL)) {
 		//	window._content.location.href = defaultSearchURL;
 		// Call in to BrowserAppCore instead of replacing 
 		// the url in the content area so that B/F buttons work right
-		    if (appCore)
-			  appCore.loadUrl(defaultSearchURL);
-			else
-			  dump("BrowserAppCore is not initialised\n");
-		}
-		else
-		{
-			//window._content.location.href = "http://search.netscape.com/"
-			// Call in to BrowserAppCore instead of replacing 
-		    // the url in the content area so that B/F buttons work right
-			if (appCore)
-			   appCore.loadUrl("http://search.netscape.com/");
-			else
-			   dump("BrowserAppCore is not initialised\n");
-		}
+
+		// There used to be an 'if' case to see if defaultSearchURL == fallbackDefaultSearchURL
+		// and if so, call appCore.loadUrl("http://search.netscape.com/").
+		// Removed 'if' case, set fallbackDefaultSearchURL to "http://search.netscape.com/" and
+		// always use defaultSearchURL. I assert that this new way of handling things is
+		// functionally equivalent to the old way.
+    if (appCore)
+	    appCore.loadUrl(defaultSearchURL);
+    else
+      dump("BrowserAppCore is not initialised\n");
 	}
 	else
 	{
@@ -1031,7 +1046,17 @@ function BrowserEditBookmarks()
 
   function initViewMenu()
   {
-    updateTextSizeMenuLabel();
+    var viewPopup = document.getElementById("menu_View_Popup");
+    if (navigator.platform.indexOf("Mac") != -1) {
+      // only need to test once
+      viewPopup.removeAttribute("oncreate");
+    } else {
+      var textZoomMenu = document.getElementById("menu_TextZoom");
+      textZoomMenu.removeAttribute("hidden");
+      // next time, oncreate skips this check
+      viewPopup.setAttribute("oncreate", "updateTextSizeMenuLabel();");
+      updateTextSizeMenuLabel();
+    }
   }
 
   {
@@ -2106,6 +2131,15 @@ function stylesheetSwitch(forDocument, title) {
 
 function applyTheme(themeName)
 {
+//XXX should fix this the right way
+var commonDialogs = nsJSComponentManager.getService("@mozilla.org/appshell/commonDialogs;1","nsICommonDialogs");
+var bundle = srGetStrBundle("chrome://communicator/locale/pref/prefutilities.properties");
+var dialogTitle = bundle.GetStringFromName("applythemetitle");
+var msg = bundle.GetStringFromName("applytheme");
+
+if (!commonDialogs.Confirm(window, dialogTitle, msg))
+  return false;
+
 try {
   var chromeRegistry = Components.classes["@mozilla.org/chrome/chrome-registry;1"].getService();
   if ( chromeRegistry )
@@ -2139,4 +2173,16 @@ function URLBarBlurHandler(aEvent)
     var URLBar = aEvent.target;
     URLBar.setSelectionRange(0, 0);
   }
+}
+
+// This function gets the "windows hooks" service and has it check its setting
+// This will do nothing on platforms other than Windows.
+function checkForDefaultBrowser() {
+    try {
+        Components
+            .classes[ "@mozilla.org/winhooks;1"]
+                .getService( Components.interfaces.nsIWindowsHooks )
+                    .checkSettings( window );
+    } catch(e) {
+    }
 }

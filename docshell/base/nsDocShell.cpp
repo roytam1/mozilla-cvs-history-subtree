@@ -260,6 +260,81 @@ NS_IMETHODIMP nsDocShell::GetInterface(const nsIID& aIID, void** aSink)
    return NS_OK;   
 }
 
+PRUint32 nsDocShell::ConvertDocShellLoadInfoToLoadType(nsDocShellInfoLoadType aDocShellLoadType)
+{
+  PRUint32 loadType = LOAD_NORMAL;
+
+  switch (aDocShellLoadType)
+  {
+  case nsIDocShellLoadInfo::loadNormal:
+      loadType = LOAD_NORMAL;
+      break;
+  case nsIDocShellLoadInfo::loadNormalReplace:
+      loadType = LOAD_NORMAL_REPLACE;
+      break;
+  case nsIDocShellLoadInfo::loadHistory:
+      loadType = LOAD_HISTORY;
+      break;
+  case nsIDocShellLoadInfo::loadReloadNormal:
+      loadType = LOAD_RELOAD_NORMAL;
+      break;
+  case nsIDocShellLoadInfo::loadReloadBypassCache:
+      loadType = LOAD_RELOAD_BYPASS_CACHE;
+      break;
+  case nsIDocShellLoadInfo::loadReloadBypassProxy:
+      loadType = LOAD_RELOAD_BYPASS_PROXY;
+      break;
+  case nsIDocShellLoadInfo::loadReloadBypassProxyAndCache:
+      loadType = LOAD_RELOAD_BYPASS_PROXY_AND_CACHE;
+      break;
+  case nsIDocShellLoadInfo::loadLink:
+      loadType = LOAD_LINK;
+      break;
+  case nsIDocShellLoadInfo::loadRefresh:
+      loadType = LOAD_REFRESH;
+      break;
+  }
+
+  return loadType;
+}
+
+nsDocShellInfoLoadType nsDocShell::ConvertLoadTypeToDocShellLoadInfo(PRUint32 aLoadType)
+{
+  nsDocShellInfoLoadType docShellLoadType = nsIDocShellLoadInfo::loadNormal;
+  switch (aLoadType)
+  {
+  case LOAD_NORMAL:
+    docShellLoadType = nsIDocShellLoadInfo::loadNormal;
+    break;
+  case LOAD_NORMAL_REPLACE:
+    docShellLoadType = nsIDocShellLoadInfo::loadNormalReplace;
+    break;
+  case LOAD_HISTORY:
+    docShellLoadType = nsIDocShellLoadInfo::loadHistory;
+    break;
+  case LOAD_RELOAD_NORMAL:
+    docShellLoadType = nsIDocShellLoadInfo::loadReloadNormal;
+    break;
+  case LOAD_RELOAD_BYPASS_CACHE:
+    docShellLoadType = nsIDocShellLoadInfo::loadReloadBypassCache;
+    break;
+  case LOAD_RELOAD_BYPASS_PROXY:
+    docShellLoadType = nsIDocShellLoadInfo::loadReloadBypassProxy;
+    break;
+  case LOAD_RELOAD_BYPASS_PROXY_AND_CACHE:
+    docShellLoadType = nsIDocShellLoadInfo::loadReloadBypassProxyAndCache;
+    break;
+  case LOAD_LINK:
+    docShellLoadType = nsIDocShellLoadInfo::loadLink;
+    break;
+  case LOAD_REFRESH:
+    docShellLoadType = nsIDocShellLoadInfo::loadRefresh;
+    break;
+  }
+
+  return docShellLoadType;
+}
+
 //*****************************************************************************
 // nsDocShell::nsIDocShell
 //*****************************************************************************   
@@ -2905,9 +2980,7 @@ NS_IMETHODIMP nsDocShell::InternalLoad(nsIURI* aURI, nsIURI* aReferrer,
 	   LSHE = aSHEntry;
 #endif
 
-    nsURILoadCommand  loadCmd = nsIURILoader::viewNormal;
-    if(LOAD_LINK == aLoadType)
-        loadCmd = nsIURILoader::viewUserClick;
+    nsDocShellInfoLoadType loadCmd = ConvertLoadTypeToDocShellLoadInfo(mLoadType);
     NS_ENSURE_SUCCESS(DoURILoad(aURI, aReferrer, aOwner, aInheritOwner,
                                 loadCmd, aWindowTarget, 
                                 aPostData, aHeadersData), NS_ERROR_FAILURE);
@@ -3466,46 +3539,52 @@ NS_IMETHODIMP nsDocShell::DoChannelLoad(nsIChannel *aChannel, nsURILoadCommand a
    (void)aChannel->GetLoadAttributes(&loadAttribs);
    loadAttribs |= nsIChannel::LOAD_DOCUMENT_URI;
   
-  	switch ( mLoadType )
-  	{
-  	 case LOAD_HISTORY:
-  	 		loadAttribs |= nsIChannel::VALIDATE_NEVER;
-  	 		break;
-  	 		
-  	 case LOAD_RELOAD_NORMAL:
-  	 			loadAttribs |= nsIChannel::FORCE_VALIDATION;
-  	 		break;
-  	 		
-  	 case LOAD_RELOAD_BYPASS_PROXY_AND_CACHE:
-  	 		loadAttribs |= nsIChannel::FORCE_RELOAD;
-  	 		break;
-  	 case LOAD_REFRESH:
-  	 		loadAttribs |= nsIChannel::FORCE_RELOAD;
-  	 		break;
-     case LOAD_NORMAL:
-     case LOAD_LINK:
-		   // Set cache checking flags
-		   if ( mPrefs )
-		   {
-		   		PRInt32 prefSetting;
-		   		if ( NS_SUCCEEDED( 	mPrefs->GetIntPref( "browser.cache.check_doc_frequency" , &prefSetting) ) )
-		   		{
-		   			switch ( prefSetting )
-		   			{
-		   				case 0:
-		   					loadAttribs |= nsIChannel::VALIDATE_ONCE_PER_SESSION;
-		   					break;
-		   				case 1:
-		   					loadAttribs |= nsIChannel::VALIDATE_ALWAYS;
-		   					break;
-		   				case 2:
-		   					loadAttribs |= nsIChannel::VALIDATE_NEVER;
-		   					break;
-		   			}
-		   		}
-			   }
-			break;
-   }
+    // "View source" always wants VALIDATE_NEVER.
+    if ( mViewMode == viewSource ) {
+        loadAttribs |= nsIChannel::VALIDATE_NEVER;
+    } else {
+        // Load attributes depend on load type...
+      	switch ( mLoadType )
+      	{
+      	 case LOAD_HISTORY:
+      	 		loadAttribs |= nsIChannel::VALIDATE_NEVER;
+      	 		break;
+      	 		
+      	 case LOAD_RELOAD_NORMAL:
+      	 			loadAttribs |= nsIChannel::FORCE_VALIDATION;
+      	 		break;
+      	 		
+      	 case LOAD_RELOAD_BYPASS_PROXY_AND_CACHE:
+      	 		loadAttribs |= nsIChannel::FORCE_RELOAD;
+      	 		break;
+      	 case LOAD_REFRESH:
+      	 		loadAttribs |= nsIChannel::FORCE_RELOAD;
+      	 		break;
+         case LOAD_NORMAL:
+         case LOAD_LINK:
+    		   // Set cache checking flags
+    		   if ( mPrefs )
+    		   {
+    		   		PRInt32 prefSetting;
+    		   		if ( NS_SUCCEEDED( 	mPrefs->GetIntPref( "browser.cache.check_doc_frequency" , &prefSetting) ) )
+    		   		{
+    		   			switch ( prefSetting )
+    		   			{
+    		   				case 0:
+    		   					loadAttribs |= nsIChannel::VALIDATE_ONCE_PER_SESSION;
+    		   					break;
+    		   				case 1:
+    		   					loadAttribs |= nsIChannel::VALIDATE_ALWAYS;
+    		   					break;
+    		   				case 2:
+    		   					loadAttribs |= nsIChannel::VALIDATE_NEVER;
+    		   					break;
+    		   			}
+    		   		}
+    			   }
+    			break;
+       }
+    }
    
    (void) aChannel->SetLoadAttributes(loadAttribs);
 
@@ -4096,8 +4175,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 //    NS_ENSURE_ARG_POINTER(dest, NS_ERROR_FAILURE);
 //	static  PRBool firstTime = PR_TRUE;
 //	static nsISHEntry * rootSHEntry = nsnull;
-    nsISHEntry * dest = *resultEntry;
-	dest = (nsISHEntry *) nsnull;
+    nsISHEntry * dest = (nsISHEntry *) nsnull;
 
 	if (src == cloneRef) {
 		// release the original object before assigning a new one.
@@ -4133,8 +4211,6 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 	dest->SetParent(parent);
 	*resultEntry = dest;
 	
-	}
-	*resultEntry = dest;
 	/*
 	if (firstTime) {
 		// Save the root of the hierarchy in the result parameter
@@ -4167,6 +4243,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 			return result;
 	}
 
+	}
     
 	return result;
 

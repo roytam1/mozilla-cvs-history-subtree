@@ -70,8 +70,8 @@ TagList  gContainsOpts={3,{eHTMLTag_option,eHTMLTag_optgroup,eHTMLTag_script}};
 TagList  gContainsParam={1,{eHTMLTag_param}};
 TagList  gColgroupKids={1,{eHTMLTag_col}}; 
 TagList  gAddressKids={1,{eHTMLTag_p}};
-TagList  gBodyKids={8, {eHTMLTag_dd,eHTMLTag_del,eHTMLTag_dt,eHTMLTag_ins,
-                        eHTMLTag_noscript,eHTMLTag_nolayer,eHTMLTag_script,eHTMLTag_li}};
+TagList  gBodyKids={9, {eHTMLTag_dd,eHTMLTag_del,eHTMLTag_dt,eHTMLTag_ins,
+                        eHTMLTag_noscript,eHTMLTag_nolayer,eHTMLTag_script,eHTMLTag_li,eHTMLTag_param}}; // Added PARAM for bug 54448
 TagList  gButtonKids={2,{eHTMLTag_caption,eHTMLTag_legend}};
 TagList  gDLKids={2,{eHTMLTag_dd,eHTMLTag_dt}};
 TagList  gDTKids={1,{eHTMLTag_dt}};
@@ -1163,7 +1163,7 @@ void InitializeElementTable(void) {
 
     Initialize( 
       /*tag*/                             eHTMLTag_thead,
-      /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
+      /*req-parent excl-parent*/          eHTMLTag_table,eHTMLTag_unknown, //fix bug 54840...
 	    /*rootnodes,endrootnodes*/          &gInTable,&gInTable,		
       /*autoclose starttags and endtags*/ &gTBodyAutoClose,0,0,0,
       /*parent,incl,exclgroups*/          kNone, kNone, kSelf,	
@@ -1379,8 +1379,20 @@ PRBool nsHTMLElement::IsContainer(eHTMLTags aChild) {
  * @return
  */
 PRBool nsHTMLElement::IsMemberOf(PRInt32 aSet) const{
-  PRBool result=TestBits(aSet,mParentBits);
-  return result;
+  return TestBits(aSet,mParentBits);
+}
+
+/**
+ * This tests whether all the bits in the parentbits
+ * are included in the given set. It may be too 
+ * broad a question for most cases.
+ *
+ * @update	gess12/13/98
+ * @param 
+ * @return
+ */
+PRBool nsHTMLElement::ContainsSet(PRInt32 aSet) const{
+  return TestBits(mParentBits,aSet);
 }
 
 /** 
@@ -1906,7 +1918,7 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
         }
 
         //phrasal elements can close other phrasals, along with fontstyle and special tags...
-        if(!gHTMLElements[theTag].IsMemberOf(kSpecial|kFontStyle|kPhrase)) {
+        if(!gHTMLElements[theTag].ContainsSet(kSpecial|kFontStyle|kPhrase)) {
           break; //it's not something I can close
         }
       }
@@ -1949,7 +1961,7 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
     }
   }
 
-  else if(IsMemberOf(kFormControl|kExtensions|kPreformatted)){
+  else if(IsMemberOf(kFormControl|kExtensions|kPreformatted)){  //bug54834...
 
     while((--theIndex>=anIndex) && (eHTMLTag_unknown==result)){
       eHTMLTags theTag=aContext.TagAt(theIndex);

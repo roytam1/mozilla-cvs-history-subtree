@@ -919,9 +919,6 @@ nsEditor::nsEditor()
 
 nsEditor::~nsEditor()
 {
-  // not sure if this needs to be called earlier.
-  NotifyDocumentListeners(eDocumentToBeDestroyed);
-
   delete mEditorObservers;   // no need to release observers; we didn't addref them
   mEditorObservers = 0;
   
@@ -1037,6 +1034,15 @@ nsEditor::PostCreate()
   // Call ResetInputState() for initialization
   ForceCompositionEnd();
 
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsEditor::PreDestroy()
+{
+  // tell our listeners that the doc is going away
+  NotifyDocumentListeners(eDocumentToBeDestroyed);
   return NS_OK;
 }
 
@@ -1598,7 +1604,7 @@ nsEditor::SaveFile(nsFileSpec *aFileSpec, PRBool aReplaceExisting,
     return NS_ERROR_NO_INTERFACE;
 
   // Should we prettyprint?
-  PRUint32 flags = 0;
+  PRUint32 flags = nsIDocumentEncoder::OutputEncodeEntities;
   NS_WITH_SERVICE(nsIPref, prefService, kPrefServiceCID, &rv);
   if (NS_SUCCEEDED(rv) && prefService)
   {
@@ -2795,8 +2801,11 @@ nsEditor::CloneAttributes(nsIDOMNode *aDestNode, nsIDOMNode *aSourceNode)
         if (NS_SUCCEEDED(sourceAttribute->GetName(sourceAttrName)))
         {
           nsAutoString sourceAttrValue;
-          if (NS_SUCCEEDED(sourceAttribute->GetValue(sourceAttrValue)) &&
-              !sourceAttrValue.IsEmpty())
+          /*
+          Presence of an attribute in the named node map indicates that it was set on the 
+          element even if it has no value.
+          */
+          if (NS_SUCCEEDED(sourceAttribute->GetValue(sourceAttrValue)))
           {
             if (destInBody)
               SetAttribute(destElement, sourceAttrName, sourceAttrValue);

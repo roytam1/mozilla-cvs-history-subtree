@@ -432,10 +432,11 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-    my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
-    my($nss_tab) = "NSS_30_BRANCH";
-    my($psm_tag) = "SECURITY_MAC_BRANCH";
-    my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH";
+    my($nsprpub_tag) = "Netscape_20000922_BRANCH";
+    my($nss_tab) = "Netscape_20000922_SECURITY_MAC_BRANCH";
+    my($psm_tag) = "Netscape_20000922_SECURITY_MAC_BRANCH";
+    my($ldapsdk_tag) = "Netscape_20000922_BRANCH";
+    my($sma_tag) = "Netscape_20000922_BRANCH";
     
     #//
     #// Checkout commands
@@ -450,7 +451,7 @@ sub Checkout()
         # we need this jar.mn file on the jar branch
         # $session->checkout("mozilla/security/base/res/jar.mn", $jars_branch_tag) || print "checkout of jar.mn failed\n";
 
-        $session->checkout("SeaMonkeyAll")           || 
+        $session->checkout("SeaMonkeyAll", $sma_tag)           || 
             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
@@ -902,6 +903,11 @@ sub InstallNonChromeResources()
     my($domds_dir) = "$samples_dir" . "rdf:";
     _InstallResources(":mozilla:rdf:tests:domds:resources:MANIFEST",                    "$domds_dir");
 
+    # Search - make copies (not aliases) of the various search files
+    my($searchPlugins) = "${dist_dir}Search Plugins";
+    print("--- Starting Search Plugins copying: $searchPlugins\n");
+    _InstallResources(":mozilla:xpfe:components:search:datasets:MANIFEST",              "$searchPlugins", 1);
+
     # QA Menu
     _InstallResources(":mozilla:intl:strres:tests:MANIFEST",            "$resource_dir");
 
@@ -1335,7 +1341,9 @@ sub ProcessJarManifests()
     MozJar::CreateJarFromManifest(":mozilla:themes:classic:jar.mn", $chrome_dir, \%jars);
     MozJar::CreateJarFromManifest(":mozilla:themes:classic:navigator:mac:jar.mn", $chrome_dir, \%jars);
     MozJar::CreateJarFromManifest(":mozilla:themes:classic:messenger:mac:jar.mn", $chrome_dir, \%jars);
+    MozJar::CreateJarFromManifest(":mozilla:themes:classic:messenger:addressbook:mac:jar.mn", $chrome_dir, \%jars);
     MozJar::CreateJarFromManifest(":mozilla:themes:classic:editor:mac:jar.mn", $chrome_dir, \%jars);
+    MozJar::CreateJarFromManifest(":mozilla:themes:classic:preview:mac:jar.mn", $chrome_dir, \%jars);
     MozJar::CreateJarFromManifest(":mozilla:themes:modern:jar.mn", $chrome_dir, \%jars);
     MozJar::CreateJarFromManifest(":mozilla:xpcom:base:jar.mn", $chrome_dir, \%jars);
     MozJar::CreateJarFromManifest(":mozilla:xpfe:browser:jar.mn", $chrome_dir, \%jars);

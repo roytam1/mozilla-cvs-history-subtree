@@ -75,6 +75,7 @@ typedef struct nsLookupElement {
 	nsDNSLookup *    lookup;    // weak reference
 	
 } nsLookupElement;
+
 #endif /* XP_MAC */
 
 // UNIX
@@ -723,22 +724,43 @@ pascal void
 nsDnsServiceNotifierRoutine(void * contextPtr, OTEventCode code, 
                             OTResult result, void * cookie)
 {
-    if (code == T_DNRSTRINGTOADDRCOMPLETE) {
-        nsDNSService *  dnsService = (nsDNSService *)contextPtr;
-        nsDNSLookup *   dnsLookup = ((nsInetHostInfo *)cookie)->lookup;
-        PRThread *      thread;
-        
-        if (result != kOTNoError)
-            dnsLookup->mStatus = NS_ERROR_UNKNOWN_HOST;
-        
-        // queue result & wake up dns service thread
-        Enqueue((QElem *)&dnsLookup->mLookupElement, &dnsService->mCompletionQueue);
+	OSStatus        errOT;
+    nsDNSService *  dnsService = (nsDNSService *)contextPtr;
+    nsDNSLookup *   dnsLookup = ((nsInetHostInfo *)cookie)->lookup;
+    PRThread *      thread;
 
-        dnsService->mThread->GetPRThread(&thread);
-        if (thread)
-            PR_Mac_PostAsyncNotify(thread);
+    dnsService->mThread->GetPRThread(&thread);
+	
+    switch (code) {
+
+    	case T_DNRSTRINGTOADDRCOMPLETE:
+            
+            if (result != kOTNoError)
+                dnsLookup->mStatus = NS_ERROR_UNKNOWN_HOST;
+            
+            // queue result & wake up dns service thread
+            Enqueue((QElem *)&dnsLookup->mLookupElement, &dnsService->mCompletionQueue);
+
+            if (thread)
+                PR_Mac_PostAsyncNotify(thread);
+            break;
+        
+        case kOTProviderWillClose:
+                errOT = OTSetSynchronous(dnsService->mServiceRef);
+                // fall through to case kOTProviderIsClosed
+
+        case kOTProviderIsClosed:
+                 errOT = OTCloseProvider((ProviderRef)dnsService->mServiceRef);
+                 dnsService->mServiceRef = nsnull;
+                 nsDNSService::gNeedLateInitialization = PR_TRUE;
+                 // set flag to iterate outstanding lookups and cancel
+                 break;
+
+#if DEBUG
+        default: // or else we don't handle the event
+	        DebugStr("\punknown OT event in nsDnsServiceNotifier!");
+#endif
     }
-    // or else we don't handle the event
 }
 #endif /* XP_MAC */
 
@@ -889,6 +911,17 @@ nsDNSService::Init()
     if (mMonitor == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
 
+#if defined(XP_MAC)
+    OSStatus errOT = INIT_OPEN_TRANSPORT();
+    NS_ASSERTION(errOT == kOTNoError, "InitOpenTransport failed.");
+    if (errOT != kOTNoError)
+        return NS_ERROR_UNEXPECTED;
+
+    nsDnsServiceNotifierRoutineUPP	=  NewOTNotifyUPP(nsDnsServiceNotifierRoutine);
+    if (nsDnsServiceNotifierRoutineUPP == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+#endif
+
 #if defined(XP_PC) && !defined(XP_OS2)
     // sync with DNS thread to allow it to create the DNS window
     nsAutoMonitor mon(mMonitor);
@@ -914,27 +947,27 @@ nsDNSService::LateInit()
 //    create Open Transport Service Provider for DNS Lookups
     OSStatus    errOT;
 
-    nsDnsServiceNotifierRoutineUPP	=  NewOTNotifyUPP(nsDnsServiceNotifierRoutine);
+	if (!mServiceRef) {
+        mServiceRef = OT_OPEN_INTERNET_SERVICES(kDefaultInternetServicesPath, NULL, &errOT);
+        if (errOT != kOTNoError) return NS_ERROR_UNEXPECTED;    /* no network -- oh well */
+        NS_ASSERTION((mServiceRef != nsnull) && (errOT == kOTNoError), "error opening OT service.");
 
-    errOT = INIT_OPEN_TRANSPORT();
-    NS_ASSERTION(errOT == kOTNoError, "InitOpenTransport failed.");
+        /* Install notify function for DNR Address To String completion */
+        errOT = OTInstallNotifier(mServiceRef, nsDnsServiceNotifierRoutineUPP, this);
+        NS_ASSERTION(errOT == kOTNoError, "error installing dns notification routine.");
 
-    mServiceRef = OT_OPEN_INTERNET_SERVICES(kDefaultInternetServicesPath, NULL, &errOT);
-    if (errOT != kOTNoError) return NS_ERROR_UNEXPECTED;    /* no network -- oh well */
-    NS_ASSERTION((mServiceRef != NULL) && (errOT == kOTNoError), "error opening OT service.");
-
-    /* Install notify function for DNR Address To String completion */
-    errOT = OTInstallNotifier(mServiceRef, nsDnsServiceNotifierRoutineUPP, this);
-    NS_ASSERTION(errOT == kOTNoError, "error installing dns notification routine.");
-
-    /* Put us into async mode */
-    if (errOT == kOTNoError) {
-        errOT = OTSetAsynchronous(mServiceRef);
-        NS_ASSERTION(errOT == kOTNoError, "error setting service to async mode.");
-    } else {
-        // if either of the two previous calls failed then dealloc service ref and return NS_ERROR_UNEXPECTED
-        OSStatus status = OTCloseProvider((ProviderRef)mServiceRef);
-        return NS_ERROR_UNEXPECTED;
+        /* Put us into async mode */
+        if (errOT == kOTNoError) {
+            errOT = OTSetAsynchronous(mServiceRef);
+            NS_ASSERTION(errOT == kOTNoError, "error setting service to async mode.");
+        }
+    
+        if (errOT != kOTNoError) {
+            // if either of the two previous calls failed then dealloc service ref and return NS_ERROR_UNEXPECTED
+            OSStatus status = OTCloseProvider((ProviderRef)mServiceRef);
+            mServiceRef = nsnull;
+            return NS_ERROR_UNEXPECTED;
+        }
     }
 #endif
 
@@ -1269,7 +1302,7 @@ nsDNSService::Resolve(const char *i_hostname, char **o_ip)
 
 // a helper function to convert an IP address to long value. 
 // used by nsDNSService::IsInNet
-unsigned long convert_addr(const char* ip) 
+static unsigned long convert_addr(const char* ip)
 {
     char *p, *q, *buf = 0;
     int i;
@@ -1336,8 +1369,14 @@ nsDNSService::Shutdown()
         mThreadRunning = PR_FALSE;
 
 		// let's shutdown Open Transport so outstanding lookups won't complete while we're cleaning them up
-        (void) OTCloseProvider((ProviderRef)mServiceRef);
+        if (mServiceRef) {
+	        (void) OTCloseProvider((ProviderRef)mServiceRef);
+	        mServiceRef = nsnull;
+	        gNeedLateInitialization = PR_TRUE;
+	    }
         CLOSE_OPEN_TRANSPORT();           // terminate routine should check flag and do this if Shutdown() is bypassed somehow
+        DisposeOTNotifyUPP(nsDnsServiceNotifierRoutineUPP);
+
 
         PRThread* dnsServiceThread;
         rv = mThread->GetPRThread(&dnsServiceThread);

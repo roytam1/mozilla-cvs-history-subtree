@@ -466,7 +466,7 @@ nsMsgAttachmentHandler::SnarfMsgAttachment(nsMsgCompFields *compFields)
         rv = NS_ERROR_FAILURE;
         goto done;
     }
-    mOutFile = new nsOutputFileStream(*mFileSpec, PR_WRONLY | PR_CREATE_FILE);
+    mOutFile = new nsOutputFileStream(*mFileSpec, PR_WRONLY | PR_CREATE_FILE, 00600);
     if (!mOutFile)
     {
         rv =  NS_MSG_UNABLE_TO_OPEN_TMP_FILE;
@@ -524,6 +524,11 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
     return SnarfMsgAttachment(compFields);
 
   tempName = GenerateFileNameFromURI(mURL); // Make it a sane name
+#ifdef XP_MAC
+  if (tempName && PL_strlen(tempName) >= 31)
+    PR_DELETE(tempName)
+#endif
+
   mCompFields = compFields;
 
   // First, get as file spec and create the stream for the
@@ -542,7 +547,7 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
   if (! mFileSpec )
   	return (NS_ERROR_FAILURE);
 
-  mOutFile = new nsOutputFileStream(*mFileSpec, PR_WRONLY | PR_CREATE_FILE);
+  mOutFile = new nsOutputFileStream(*mFileSpec, PR_WRONLY | PR_CREATE_FILE, 00600);
   if (!mOutFile)
   {
     delete mFileSpec;

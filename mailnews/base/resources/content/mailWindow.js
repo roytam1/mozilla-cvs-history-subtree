@@ -215,6 +215,7 @@ nsMsgStatusFeedback.prototype =
 		if(iid.equals(Components.interfaces.nsIMsgStatusFeedback))
 			return this;
 		throw Components.results.NS_NOINTERFACE;
+        return null;
 		},
 	ShowStatusString : function(statusText)
 		{
@@ -298,6 +299,7 @@ nsMsgWindowCommands.prototype =
 		if(iid.equals(Components.interfaces.nsIMsgWindowCommands))
 			return this;
 		throw Components.results.NS_NOINTERFACE;
+        return null;
 	},
 	SelectFolder: function(folderUri)
 	{
@@ -321,7 +323,7 @@ function loadStartPage() {
 		var startpageenabled= pref.GetBoolPref("mailnews.start_page.enabled");
         
 		if (startpageenabled) {
-			var startpage = pref.CopyCharPref("mailnews.start_page.url");
+			var startpage = pref.getLocalizedUnicharPref("mailnews.start_page.url");
             if (startpage != "") {
                 window.frames["messagepane"].location = startpage;
                 dump("start message pane with: " + startpage + "\n");

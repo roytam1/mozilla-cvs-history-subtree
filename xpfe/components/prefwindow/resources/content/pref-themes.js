@@ -24,6 +24,12 @@ function Startup()
 
 function applySkin()
 {
+  //XXX should fix this the right way
+  var commonDialogs = nsJSComponentManager.getService("@mozilla.org/appshell/commonDialogs;1","nsICommonDialogs");
+  var dialogTitle = bundle.GetStringFromName("applythemetitle");
+  var msg = bundle.GetStringFromName("applytheme");
+  if (!commonDialogs.Confirm(window, dialogTitle, msg))
+    return false;
   var tree = document.getElementById( "skinsTree" );
   var selectedSkinItem = tree.selectedItems[0];
   var skinName = selectedSkinItem.getAttribute( "name" );

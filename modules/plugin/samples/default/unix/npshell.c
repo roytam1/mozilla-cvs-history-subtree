@@ -39,14 +39,6 @@
  *
  */
 
-
-/* need to define these in order to avoid conflict with those 
-   defined in obsolete/prototypes.h (included from prtypes.h), see npapi.h */
-#define _UINT16
-#define _UINT32
-#define _INT16
-#define _INT32
-
 #include <stdio.h>
 #include <string.h>
 #include "npapi.h"
@@ -301,6 +293,18 @@ void
 NPP_StreamAsFile(NPP instance, NPStream *stream, const char* fname)
 {
     /***** Insert NPP_StreamAsFile code here *****\
+    PluginInstance* This;
+    if (instance != NULL)
+        This = (PluginInstance*) instance->pdata;
+    \*********************************************/
+}
+
+
+void
+NPP_URLNotify(NPP instance, const char* url,
+                NPReason reason, void* notifyData)
+{
+    /***** Insert NPP_URLNotify code here *****\
     PluginInstance* This;
     if (instance != NULL)
         This = (PluginInstance*) instance->pdata;

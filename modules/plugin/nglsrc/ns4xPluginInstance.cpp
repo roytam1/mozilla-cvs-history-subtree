@@ -29,9 +29,9 @@
 #include "nscore.h"
 
 #if defined(MOZ_WIDGET_GTK)
+#include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 #include "gtkxtbin.h"
-#include "gdksuperwin.h"
-#include "gtkmozbox.h"
 #endif
 
 #include "nsPluginSafety.h"

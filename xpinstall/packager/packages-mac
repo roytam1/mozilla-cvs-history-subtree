@@ -22,6 +22,7 @@ viewer:defaults:profile:bookmarks.html
 viewer:defaults:profile:panels.rdf
 viewer:defaults:profile:localstore.rdf
 viewer:defaults:profile:search.rdf
+viewer:defaults:profile:mimeTypes.rdf
 
 [xpcom]
 viewer:Components:libjar.shlb 
@@ -99,6 +100,7 @@ viewer:Components:libpref.xpt
 viewer:Components:libutil.xpt
 viewer:Components:lwbrk.shlb 
 viewer:Components:mngdecoder.shlb
+viewer:Components:Mork.shlb 
 viewer:Components:mozBrowser.shlb 
 viewer:Components:mozBrowser.xpt 
 viewer:Components:mozcomps.xpt 
@@ -168,7 +170,6 @@ viewer:chrome:comm.jar
 viewer:chrome:toolkit.jar
 viewer:chrome:modern.jar
 viewer:chrome:classic.jar
-viewer:chrome:blue.jar
 -viewer:chrome:comm:content:editor:EditorInitPage.html
 -viewer:chrome:comm:content:editor:EditorInitPagePlain.html
 ;Include this for "debug" testing - remove for actual beta release:
@@ -246,7 +247,6 @@ viewer:Components:mailnews.shlb
 viewer:Components:mailnews.xpt 
 viewer:Components:Mime.shlb 
 viewer:Components:Mime.xpt 
-viewer:Components:Mork.shlb 
 viewer:Components:MsgCompose.shlb 
 viewer:Components:MsgCompose.xpt 
 viewer:Components:MsgDB.shlb 
