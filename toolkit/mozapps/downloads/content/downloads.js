@@ -30,7 +30,6 @@ const dlObserver = {
 
 function onDownloadCancel(aEvent)
 {
-  dump("*** DL = " + aEvent.target.id + "\n");
   gDownloadManager.cancelDownload(aEvent.target.id);
 }
 
@@ -283,15 +282,18 @@ function buildContextMenu()
     
 function cleanUpDownloads()
 {
+  gDownloadManager.startBatchUpdate();
+
   var downloadView = document.getElementById("downloadView");
   for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
     var currItem = downloadView.childNodes[i];
-    if (currItem.getAttribute("state") != "0" || 
-        currItem.getAttribute("state") != "-1") {
-      dump("*** removing item at " + i + "\n");
+    if (currItem.getAttribute("state") == "1" ||
+        currItem.getAttribute("state") == "2" ||
+        currItem.getAttribute("state") == "3" )
       gDownloadManager.removeDownload(currItem.id);
-    }
   }
+  
+  gDownloadManager.endBatchUpdate();
 }
 
 
