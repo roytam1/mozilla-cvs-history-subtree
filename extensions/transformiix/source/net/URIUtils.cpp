@@ -25,6 +25,10 @@
  *     -- moved initialization of constant shorts and chars from 
  *        URIUtils.cpp to here
  *
+ * Peter Van der Beken
+ *   -- 20000326
+ *     -- added Mozilla integration code
+ * 
  * $Id$
  */
 
@@ -115,6 +119,28 @@ istream* URIUtils::getInputStream
 **/
 void URIUtils::getDocumentBase(String& href, String& dest) {
 
+#ifdef MOZILLA
+    String docBase("");
+    nsCOMPtr<nsIURI> pURL;
+    nsresult result = NS_OK;
+
+    NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &result);
+    if (NS_SUCCEEDED(result)) {
+        // XXX This is ugly, there must be an easier (cleaner way).
+        char *uriStr = (((MozillaString)href).getConstNSString()).ToNewCString();
+        result = pService->NewURI(uriStr, nsnull, getter_AddRefs(pURL));
+        nsCRT::free(uriStr);
+        if (NS_SUCCEEDED(result)) {
+            nsCOMPtr<nsIURL> tURL = do_QueryInterface(pURL);
+            nsXPIDLCString temp;
+
+            tURL->SetFileName("");
+            tURL->GetSpec(getter_Copies(temp));
+            docBase = (const char *)temp;
+        }
+    }
+    dest.append(docBase);
+#else
     //-- use temp str so the subString method doesn't destroy dest
     String docBase("");
 
@@ -138,6 +164,7 @@ void URIUtils::getDocumentBase(String& href, String& dest) {
         delete uri;
     }
     dest.append(docBase);
+#endif
 
 } //-- getDocumentBase
 
@@ -149,6 +176,29 @@ void URIUtils::getDocumentBase(String& href, String& dest) {
 void URIUtils::resolveHref(String& href, String& documentBase, String& dest) {
 
 
+#ifdef MOZILLA
+    nsCOMPtr<nsIURI> pURL;
+    nsresult result = NS_OK;
+
+    NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &result);
+    if (NS_SUCCEEDED(result)) {
+        // XXX This is ugly, there must be an easier (cleaner way).
+        char *baseStr = (((MozillaString)documentBase).getConstNSString()).ToNewCString();
+        result = pService->NewURI(baseStr, nsnull, getter_AddRefs(pURL));
+        nsCRT::free(baseStr);
+        if (NS_SUCCEEDED(result)) {
+            nsXPIDLCString newURL;
+
+            // XXX This is ugly, there must be an easier (cleaner way).
+            char *hrefStr = (((MozillaString)documentBase).getConstNSString()).ToNewCString();
+            result = pURL->Resolve(hrefStr, getter_Copies(newURL));
+            nsCRT::free(hrefStr);
+            if (NS_SUCCEEDED(result)) {
+                dest = (const char *)newURL;
+            }
+        }
+    }
+#else
     //-- check for URL
     ParsedURI* uri = parseURI(href);
     if ( !uri->isMalformed ) {
@@ -183,6 +233,7 @@ void URIUtils::resolveHref(String& href, String& documentBase, String& dest) {
     }
     delete uri;
     delete newUri;
+#endif
 
 } //-- resolveHref
 
