@@ -1464,16 +1464,17 @@ NamedMap* XSLTProcessor::processParameters(Element* xslAction, Node* context, Pr
                 else {
                     ExprResult* exprResult = processVariable(context, action, ps);
                     if (params->get(name)) {
-                    //-- error cannot rebind parameters
-                    String err("value for parameter '");
-                    err.append(name);
-                    err.append("' specified more than once.");
-                    notifyError(err);
-                }
-                else {
-                    VariableBinding* binding = new VariableBinding(name, exprResult);
-                    params->put((const String&)name, binding);
-                }
+                        //-- error cannot rebind parameters
+                        String err("value for parameter '");
+                        err.append(name);
+                        err.append("' specified more than once.");
+                        notifyError(err);
+                    }
+                    else {
+                        VariableBinding* binding = new VariableBinding(name, exprResult);
+                        params->put((const String&)name, binding);
+                    }
+				}
             }
         }
     }
