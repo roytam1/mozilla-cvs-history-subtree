@@ -51,6 +51,7 @@ REQUIRES	=\
 			rdf \
 			xpcom \
 			msg \
+			progress \
 			plug
 
 CPPSRCS		= \
@@ -213,6 +214,14 @@ CPPSRCS		+= \
 		  NewsServerPropDialog.cpp \
 		  NewsgroupPropDialog.cpp \
 		  OptionFolderView.cpp \
+		  PrefsDialogMServer.cpp \
+		  PrefsDialogNServer.cpp \
+		  PrefsMailFolderDlg.cpp \
+		  PrefsPageAddress.cpp \
+		  PrefsPageMessages.cpp \
+		  PrefsPageNServer.cpp \
+		  Progress.cpp \
+		  SubUpgradeDialog.cpp \
 		  $(NULL)
 endif
 
@@ -294,8 +303,10 @@ ifdef USE_3PANE
 DEFINES		+= -DUSE_3PANE
 endif
 
+ifdef MOZ_MAIL_NEWS
 ifdef USE_ABCOM
 DEFINES		+= -DUSE_ABCOM
+endif
 endif
 
 ifdef GLUE_COMPO_CONTEXT
@@ -305,7 +316,6 @@ endif
 ifdef USE_MOTIF_DND
 DEFINES		+= -DUSE_MOTIF_DND
 endif
-
 
 $(LIBRARY): $(OBJS)
 
