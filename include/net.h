@@ -1029,13 +1029,13 @@ extern void NET_RegisterCookiePrefCallbacks(void);
 extern int NET_SaveCookies(char *filename);
 
 /* Start an anonymous list of cookies */
-extern void NET_AnonymizeCookies();
+extern void NET_AnonymizeCookies(void);
 
 /* Restore original list of cookies */
-extern void NET_UnanonymizeCookies();
+extern void NET_UnanonymizeCookies(void);
 
 /* Should referer by supressed for anonymity sake */
-extern Bool NET_SupressRefererForAnonymity();
+extern Bool NET_SupressRefererForAnonymity(MWContext *context);
 
 #if defined(CookieManagement)
 extern void NET_DisplayCookieInfoAsHTML(MWContext *context);
