@@ -146,7 +146,7 @@
 */
 
 enum {
-    kMyMaxV = 108,
+    kMyMaxV = 216,
     kMyMaxH = 478
 };
 
