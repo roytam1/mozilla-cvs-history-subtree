@@ -151,6 +151,7 @@
 		};
 		20286C29FDCF999611CA2CEA = {
 			children = (
+				79537A89044723F200202892,
 				20286C2AFDCF999611CA2CEA,
 				20286C2CFDCF999611CA2CEA,
 				20286C32FDCF999611CA2CEA,
@@ -245,7 +246,7 @@
 				FRAMEWORK_SEARCH_PATHS = ../../../lib/mac/PowerPlant/build;
 				HEADER_SEARCH_PATHS = "../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/include/string ../../../dist/include/necko ../../../dist/include/dom ../../../dist/include/pref ../../../dist/include/windowwatcher ../../../dist/include/embed_base ../../../dist/include/docshell ../../../dist/include/webshell ../../../dist/include/webbrwsr ../../../dist/include/webbrowserpersist ../../../dist/include/gfx ../../../dist/include/widget ../../../dist/include/uriloader ../../../dist/include/exthandler ../../../dist/include/helperAppDlg ../../../dist/include/profile ../../../dist/include/profilesharingsetup ../../../dist/include/profdirserviceprovider ../../../dist/include/content ../../../dist/include/wallet ../../../dist/include/shistory ../../../dist/include/find ../../../dist/include/mimetype ../../../ ../../../lib/mac/PowerPlant/build/PowerPlant.framework/Versions/A/Headers \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
 				INSTALL_PATH = /;
-				LIBRARY_SEARCH_PATHS = "../../../dist/Embed ../../../dist/Embed/components ../../../dist/lib /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/ipc/build /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/transactionmngr/build /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/transactionmngr/module";
+				LIBRARY_SEARCH_PATHS = "../../../dist/Embed ../../../dist/Embed/components ../../../dist/lib";
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "\"-DOSTYPE=\\\"Darwin6.2\\\"\" \"-DOSARCH=\\\"Darwin\\\"\" -D__dest_os=__mac_os -D_STD=std -D_CSTD=std -fpascal-strings -fshort-wchar";
 				OTHER_LDFLAGS = "";
@@ -375,6 +376,59 @@
 //792
 //793
 //794
+		79537A89044723F200202892 = {
+			children = (
+				79537A8A0447243C00202892,
+				79537A8B0447243C00202892,
+				79537A8C0447243C00202892,
+				7957DD82044F4CA100202892,
+			);
+			isa = PBXGroup;
+			name = mozilla;
+			path = ../../..;
+			refType = 2;
+		};
+		79537A8A0447243C00202892 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = nsPrefService.cpp;
+			path = modules/libpref/src/nsPrefService.cpp;
+			refType = 4;
+		};
+		79537A8B0447243C00202892 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = nsSharedPrefHandler.cpp;
+			path = modules/libpref/src/nsSharedPrefHandler.cpp;
+			refType = 4;
+		};
+		79537A8C0447243C00202892 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = prefapi.cpp;
+			path = modules/libpref/src/prefapi.cpp;
+			refType = 4;
+		};
+		79537AAA044A658D00202892 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = "non-shared.txt";
+			path = "../../../modules/libpref/src/init/non-shared.txt";
+			refType = 2;
+		};
+		79537AAB044A65DB00202892 = {
+			fileRef = 79537AAA044A658D00202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		7957DD82044F4CA100202892 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			name = nsProfileDirServiceProvider.cpp;
+			path = profile/dirserviceprovider/src/nsProfileDirServiceProvider.cpp;
+			refType = 4;
+		};
 		7964A6AC03E9CA6700202892 = {
 			buildActionMask = 2147483647;
 			dstPath = "";
@@ -427,8 +481,9 @@
 		};
 		F538BDF603CF6D3401202892 = {
 			isa = PBXFileReference;
-			path = libembed_lite.dylib;
-			refType = 4;
+			name = libembed_lite.dylib;
+			path = ../../../dist/Embed/components/libembed_lite.dylib;
+			refType = 2;
 		};
 		F538BDF803CF6D9B01202892 = {
 			fileRef = F538BDF603CF6D3401202892;
@@ -764,8 +819,8 @@
 			);
 			isa = PBXGroup;
 			name = Gecko;
-			path = ../../../../dist/Embed;
-			refType = 3;
+			path = ../../../dist/Embed;
+			refType = 2;
 		};
 		F5A63F7F03A53D5501202892 = {
 			children = (
@@ -896,13 +951,11 @@
 				F5A63FD503A5C05D01202892,
 				F5A63FD603A5C05D01202892,
 				F5A63FD803A5C05D01202892,
-				F5A63FD903A5C05D01202892,
 				F5A63FDA03A5C05D01202892,
 				F5A63FDB03A5C05D01202892,
 				F5A63FDC03A5C05D01202892,
 				F5A63FDD03A5C05D01202892,
 				F5A63FDE03A5C05D01202892,
-				F5A63FDF03A5C05D01202892,
 				F5A63FE003A5C05D01202892,
 				F5A63FE103A5C05D01202892,
 				F5A63FE203A5C05D01202892,
@@ -911,9 +964,7 @@
 				F5A63FE503A5C05D01202892,
 				F5A63FE603A5C05D01202892,
 				F5A63FE703A5C05D01202892,
-				F5A63FE803A5C05D01202892,
 				F5A63FE903A5C05D01202892,
-				F5A63FEA03A5C05D01202892,
 				F5A63FEB03A5C05D01202892,
 				F5A63FEC03A5C05D01202892,
 				F5A63FED03A5C05D01202892,
@@ -954,8 +1005,9 @@
 				F5A6400F03A5C05D01202892,
 			);
 			isa = PBXGroup;
-			path = components;
-			refType = 4;
+			name = components;
+			path = ../../../dist/bin/components;
+			refType = 2;
 		};
 		F5A63FB803A5C05D01202892 = {
 			isa = PBXFileReference;
@@ -1117,11 +1169,6 @@
 			path = libgklayout.dylib;
 			refType = 4;
 		};
-		F5A63FD903A5C05D01202892 = {
-			isa = PBXFileReference;
-			path = libgkview.dylib;
-			refType = 4;
-		};
 		F5A63FDA03A5C05D01202892 = {
 			isa = PBXFileReference;
 			path = libhtmlpars.dylib;
@@ -1145,11 +1192,6 @@
 		F5A63FDE03A5C05D01202892 = {
 			isa = PBXFileReference;
 			path = libjsdom.dylib;
-			refType = 4;
-		};
-		F5A63FDF03A5C05D01202892 = {
-			isa = PBXFileReference;
-			path = libjsurl.dylib;
 			refType = 4;
 		};
 		F5A63FE003A5C05D01202892 = {
@@ -1192,19 +1234,9 @@
 			path = librdf.dylib;
 			refType = 4;
 		};
-		F5A63FE803A5C05D01202892 = {
-			isa = PBXFileReference;
-			path = libshistory.dylib;
-			refType = 4;
-		};
 		F5A63FE903A5C05D01202892 = {
 			isa = PBXFileReference;
 			path = libuconv.dylib;
-			refType = 4;
-		};
-		F5A63FEA03A5C05D01202892 = {
-			isa = PBXFileReference;
-			path = liburiloader.dylib;
 			refType = 4;
 		};
 		F5A63FEB03A5C05D01202892 = {
@@ -1432,13 +1464,11 @@
 				F5A6408603A5C15B01202892,
 				F5A6408703A5C15B01202892,
 				F5A6408903A5C15B01202892,
-				F5A6408A03A5C15B01202892,
 				F5A6408B03A5C15B01202892,
 				F5A6408C03A5C15B01202892,
 				F5A6408D03A5C15B01202892,
 				F5A6408E03A5C15B01202892,
 				F5A6408F03A5C15B01202892,
-				F5A6409003A5C15B01202892,
 				F5A6409103A5C15B01202892,
 				F5A6409203A5C15B01202892,
 				F5A6409303A5C15B01202892,
@@ -1447,9 +1477,7 @@
 				F5A6409603A5C15B01202892,
 				F5A6409703A5C15B01202892,
 				F5A6409803A5C15B01202892,
-				F5A6409903A5C15B01202892,
 				F5A6409A03A5C15B01202892,
-				F5A6409B03A5C15B01202892,
 				F5A6409C03A5C15B01202892,
 				F5A6409D03A5C15B01202892,
 				F5A6409E03A5C15B01202892,
@@ -1684,12 +1712,6 @@
 			settings = {
 			};
 		};
-		F5A6408A03A5C15B01202892 = {
-			fileRef = F5A63FD903A5C05D01202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F5A6408B03A5C15B01202892 = {
 			fileRef = F5A63FDA03A5C05D01202892;
 			isa = PBXBuildFile;
@@ -1716,12 +1738,6 @@
 		};
 		F5A6408F03A5C15B01202892 = {
 			fileRef = F5A63FDE03A5C05D01202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A6409003A5C15B01202892 = {
-			fileRef = F5A63FDF03A5C05D01202892;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -1774,20 +1790,8 @@
 			settings = {
 			};
 		};
-		F5A6409903A5C15B01202892 = {
-			fileRef = F5A63FE803A5C05D01202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F5A6409A03A5C15B01202892 = {
 			fileRef = F5A63FE903A5C05D01202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A6409B03A5C15B01202892 = {
-			fileRef = F5A63FEA03A5C05D01202892;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -2110,6 +2114,7 @@
 				F5A6410503A63FDE01202892,
 				F5A6410603A63FDE01202892,
 				F5A6410703A63FDE01202892,
+				79537AAA044A658D00202892,
 			);
 			isa = PBXGroup;
 			path = pref;
@@ -2138,6 +2143,7 @@
 				F5A6410C03A6403101202892,
 				F5A6410D03A6403101202892,
 				F5A6410E03A6403101202892,
+				79537AAB044A65DB00202892,
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
