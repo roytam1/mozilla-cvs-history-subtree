@@ -64,8 +64,9 @@ Element::~Element()
  * @param aName the name of the attribute you want to set
  * @param aValue the value you want to set the attribute to
  */
-void Element::setAttributeNS(const String& aNamespaceURI, const String& aName,
-                             const String& aValue)
+void Element::setAttributeNS(const nsAString& aNamespaceURI,
+                             const nsAString& aName,
+                             const nsAString& aValue)
 {
     NSI_FROM_TX(Element);
     nsElement->SetAttributeNS(aNamespaceURI, aName, aValue);
@@ -74,13 +75,13 @@ void Element::setAttributeNS(const String& aNamespaceURI, const String& aName,
 /**
  * Call nsIContent::GetAttr for the localname and nsID.
  */
-MBool Element::getAttr(txAtom* aLocalName, PRInt32 aNSID,
-                       String& aValue)
+MBool Element::getAttr(nsIAtom* aLocalName, PRInt32 aNSID,
+                       nsAString& aValue)
 {
     nsCOMPtr<nsIContent> cont(do_QueryInterface(mMozObject));
     NS_ASSERTION(cont, "Element doesn't implement nsIContent");
     if (!cont || !cont->HasAttr(aNSID, aLocalName)) {
-        aValue.clear();
+        aValue.Truncate();
         return MB_FALSE;
     }
     nsresult rv;
@@ -92,7 +93,7 @@ MBool Element::getAttr(txAtom* aLocalName, PRInt32 aNSID,
 /**
  * Call nsIContent::GetAttr for the localname and nsID.
  */
-MBool Element::hasAttr(txAtom* aLocalName, PRInt32 aNSID)
+MBool Element::hasAttr(nsIAtom* aLocalName, PRInt32 aNSID)
 {
     nsCOMPtr<nsIContent> cont(do_QueryInterface(mMozObject));
     NS_ASSERTION(cont, "Element doesn't implement nsIContent");
@@ -107,7 +108,7 @@ MBool Element::hasAttr(txAtom* aLocalName, PRInt32 aNSID)
  *
  * @return the node's localname atom
  */
-MBool Element::getLocalName(txAtom** aLocalName)
+MBool Element::getLocalName(nsIAtom** aLocalName)
 {
     NS_ENSURE_TRUE(aLocalName, MB_FALSE);
     nsCOMPtr<nsIContent> cont(do_QueryInterface(mMozObject));

@@ -26,9 +26,9 @@ ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
     return new NodeSet;
 }
 
-nsresult CurrentFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult CurrentFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     *aAtom = txXSLTAtoms::current;
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }

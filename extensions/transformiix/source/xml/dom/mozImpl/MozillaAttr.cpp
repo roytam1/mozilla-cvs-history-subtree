@@ -31,6 +31,7 @@
 #include "mozilladom.h"
 #include "nsIDOMAttr.h"
 #include "nsIDOMElement.h"
+#include "nsString.h"
 
 /**
  * Construct a wrapper with the specified Mozilla object and document owner.
@@ -87,13 +88,13 @@ Node* Attr::getXPathParent()
  *
  * @return the node's localname atom
  */
-MBool Attr::getLocalName(txAtom** aLocalName)
+MBool Attr::getLocalName(nsIAtom** aLocalName)
 {
     if (!aLocalName) {
         return MB_FALSE;
     }
     *aLocalName = mLocalName;
     NS_ENSURE_TRUE(*aLocalName, MB_FALSE);
-    TX_ADDREF_ATOM(*aLocalName);
+    NS_ADDREF(*aLocalName);
     return MB_TRUE;
 }

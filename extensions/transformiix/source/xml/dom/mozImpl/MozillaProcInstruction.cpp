@@ -31,6 +31,7 @@
 
 #include "mozilladom.h"
 #include "nsIDOMProcessingInstruction.h"
+#include "nsString.h"
 
 /**
  * Construct a wrapper with the specified Mozilla object and document owner.
@@ -53,37 +54,11 @@ ProcessingInstruction::~ProcessingInstruction()
 }
 
 /**
- * Call nsIDOMProcessingInstruction::GetTarget to retrieve the target of the
- * processing instruction.
- *
- * @return the target of the processing instruction
- */
-const String& ProcessingInstruction::getTarget()
-{
-    NSI_FROM_TX(ProcessingInstruction);
-    nsProcessingInstruction->GetTarget(mTarget);
-    return mTarget;
-}
-
-/**
- * Call nsIDOMProcessingInstruction::GetData to retrieve the data of the
- * processing instruction.
- *
- * @return the data of the processing instruction
- */
-const String& ProcessingInstruction::getData()
-{
-    NSI_FROM_TX(ProcessingInstruction);
-    nsProcessingInstruction->GetData(mData);
-    return mData;
-}
-
-/**
  * Returns the local name atomized
  *
  * @return the node's localname atom
  */
-MBool ProcessingInstruction::getLocalName(txAtom** aLocalName)
+MBool ProcessingInstruction::getLocalName(nsIAtom** aLocalName)
 {
     if (!aLocalName) {
         return MB_FALSE;
