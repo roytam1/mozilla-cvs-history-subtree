@@ -106,7 +106,8 @@ static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 
 #ifdef MOZ_STATIC_COMPONENT_LIBS
 #include "nsStaticComponent.h"
-static NSGetModuleInfoFunc getModuleInfo;
+static nsresult
+getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
 
 #if defined(XP_UNIX)
@@ -1288,7 +1289,7 @@ int main(int argc, char* argv[])
 
 #ifdef MOZ_STATIC_COMPONENT_LIBS
   // Initialize XPCOM's module info table
-  NSGetModuleInfo = getModuleInfo;
+  NSGetStaticModuleInfo = getModuleInfo;
 #endif
 
   rv = NS_InitXPCOM(NULL, NULL);
@@ -1506,7 +1507,7 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
   MODULE(xpconnect),
 };
 
-extern "C" static nsresult
+static nsresult
 getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count)
 {
   *info = StaticModuleInfo;
