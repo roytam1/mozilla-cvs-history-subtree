@@ -108,11 +108,6 @@ function onAccountWizardLoad() {
 
     checkForInvalidAccounts();
 
-    if (gCurrentAccount) {
-        // Set the page index to identity page.
-        document.documentElement.pageIndex = 1;
-    }
-
     try {
         gDefaultAccount = am.defaultAccount;
     }
@@ -763,6 +758,10 @@ function checkForInvalidAccounts()
         AccountDataToPageData(accountData, pageData);
 
         gCurrentAccountData = accountData;
+
+        setupWizardPanels();
+        // Set the page index to identity page.
+        document.documentElement.pageIndex = 1;
     }
 }
 
