@@ -71,7 +71,7 @@ or revised. This service is offered free of charge; please provide us with your
 mailing address.
 */
 
-#include "imgIDecoder.h"
+#include "prtypes.h"
 #include "prmem.h"
 #include "prlog.h"
 #include "GIF2.h"
@@ -82,16 +82,6 @@ mailing address.
 // Global gif allocator
 nsGifAllocator *gGifAllocator = nsnull;
 
-#define HOWMANY(x, r)     (((x) + ((r) - 1)) / (r))
-#define ROUNDUP(x, r)     (HOWMANY(x, r) * (r))
-
-//PRLogModuleInfo *il_log_module = NULL;
-
-#ifndef MAX
-#    define MAX(x, y)   (((x) > (y)) ? (x) : (y))
-#endif
-
-
 #define MAX_HOLD 768        /* for now must be big enough for a cmap */
 
 #define MAX_LZW_BITS          12
@@ -100,9 +90,12 @@ nsGifAllocator *gGifAllocator = nsnull;
 
 
 /* Gather n characters from the input stream and then enter state s. */
-#define GETN(n,s)                                                             \
-do {gs->state=gif_gather; gs->gather_request_size = (n);                      \
-    gs->post_gather_state = s;} while (0)
+#define GETN(n,s)                      \
+    NSPR_BEGIN_MACRO                   \
+      gs->state = gif_gather;          \
+      gs->gather_request_size = (n);   \
+      gs->post_gather_state = s;       \
+    NSPR_END_MACRO
 
 /* Get a 16-bit value stored in little-endian format */
 #define GETINT16(p)   ((p)[1]<<8|(p)[0])
@@ -123,31 +116,30 @@ il_BACat (char **destination,
           const char *source, 
           size_t source_length)
 {
-    if (source) 
-      {
-        if (*destination) 
-          {
+    if (source) {
+        if (*destination) {
             *destination = (char *) PR_REALLOC (*destination, destination_length + source_length);
             if (*destination == NULL) 
               return(NULL);
 
             nsCRT::memmove(*destination + destination_length, source, source_length);
 
-          } 
-        else 
-          {
+        } 
+        else {
             *destination = (char *) PR_MALLOC (source_length);
             if (*destination == NULL) 
               return(NULL);
 
             memcpy(*destination, source, source_length);
-          }
+        }
     }
 
   return *destination;
 }
+
 #undef BlockAllocCat
-#define BlockAllocCat(dest, dest_length, src, src_length)  il_BACat(&(dest), dest_length, src, src_length)
+#define BlockAllocCat(dest, dest_length, src, src_length) \
+    il_BACat(&(dest), dest_length, src, src_length)
 
 //******************************************************************************
 // Send the data to the display front-end.
@@ -213,23 +205,23 @@ output_row(gif_struct *gs)
             width = gs->width;
 
         if (width > 0)
-          if(gs->GIFCallback_HaveDecodedRow) {
-            /* Decoded data available callback */
-            int result = (gs->GIFCallback_HaveDecodedRow)(
-              gs->clientptr,
-              gs->rowbuf,                /* Pointer to single scanline temporary buffer */
-              gs->x_offset,              /* x offset with respect to GIF logical screen origin */
-              width,                     /* Length of the row */
-              drow_start,                /* Row number */
-              drow_end - drow_start + 1, /* Number of times to duplicate the row? */
-              drawmode,                  /* il_draw_mode */
-              gs->ipass);                /* interlace pass (1-4) */
-          }
+            if (gs->GIFCallback_HaveDecodedRow) {
+                /* Decoded data available callback */
+                int result = (gs->GIFCallback_HaveDecodedRow)(
+                    gs->clientptr,
+                    gs->rowbuf,                /* Pointer to single scanline temporary buffer */
+                    gs->x_offset,              /* x offset with respect to GIF logical screen origin */
+                    width,                     /* Length of the row */
+                    drow_start,                /* Row number */
+                    drow_end - drow_start + 1, /* Number of times to duplicate the row? */
+                    drawmode,                  /* il_draw_mode */
+                    gs->ipass);                /* interlace pass (1-4) */
+            }
     }
 
     gs->rowp = gs->rowbuf;
 
-    if(!gs->interlaced)
+    if (!gs->interlaced)
     {
         gs->irow++;
     }
@@ -240,7 +232,7 @@ output_row(gif_struct *gs)
             {
                 case 1:
                     gs->irow += 8;
-                    if(gs->irow >= gs->height)
+                    if (gs->irow >= gs->height)
                     {
                         gs->ipass++;
                         gs->irow = 4;
@@ -249,7 +241,7 @@ output_row(gif_struct *gs)
 
                 case 2:
                     gs->irow += 8;
-                    if(gs->irow >= gs->height)
+                    if (gs->irow >= gs->height)
                     {
                         gs->ipass++;
                         gs->irow = 2;
@@ -258,7 +250,7 @@ output_row(gif_struct *gs)
 
                 case 3:
                     gs->irow += 4;
-                    if(gs->irow >= gs->height)
+                    if (gs->irow >= gs->height)
                     {
                         gs->ipass++;
                         gs->irow = 1;
@@ -267,7 +259,7 @@ output_row(gif_struct *gs)
 
                 case 4:
                     gs->irow += 2;
-                    if(gs->irow >= gs->height){
+                    if (gs->irow >= gs->height){
                         gs->ipass++;
                         gs->irow = 0;
                     }
@@ -302,7 +294,7 @@ do_lzw(gif_struct *gs, const PRUint8 *q)
     int oldcode     = gs->oldcode;
     int clear_code  = gs->clear_code;
     PRUint8 firstchar = gs->firstchar;
-    int32 datum     = gs->datum;
+    PRInt32 datum     = gs->datum;
     PRUint16 *prefix  = gs->prefix;
     PRUint8 *stackp   = gs->stackp;
     PRUint8 *suffix   = gs->suffix;
@@ -379,13 +371,13 @@ do_lzw(gif_struct *gs, const PRUint8 *q)
             while(code > clear_code)
             {     
                 code2 = code;
-                if(code == prefix[code])
+                if (code == prefix[code])
                     return -1;
 
                 *stackp++ = suffix[code];
                 code = prefix[code];
                 
-                if(code2 == prefix[code])
+                if (code2 == prefix[code])
                     return -1;
             }
 
@@ -394,23 +386,23 @@ do_lzw(gif_struct *gs, const PRUint8 *q)
             /* Define a new codeword in the dictionary. */            
             if (avail < 4096)
             {
-              prefix[avail] = oldcode;
-              suffix[avail] = firstchar;
-              avail++;
+                prefix[avail] = oldcode;
+                suffix[avail] = firstchar;
+                avail++;
 
-              /* If we've used up all the codewords of a given length
-               * increase the length of codewords by one bit, but don't
-               * exceed the specified maximum codeword size of 12 bits.
-               */
-              if (((avail & codemask) == 0) && (avail < 4096)) 
-              {
-                codesize++;
-                codemask += avail;
-              }
+                /* If we've used up all the codewords of a given length
+                 * increase the length of codewords by one bit, but don't
+                 * exceed the specified maximum codeword size of 12 bits.
+                 */
+                if (((avail & codemask) == 0) && (avail < 4096)) 
+                {
+                    codesize++;
+                    codemask += avail;
+                }
             }
             oldcode = incode;
             
-            /* Copy the decoded data out to the scanline buffer. */
+              /* Copy the decoded data out to the scanline buffer. */
             do {
                 *rowp++ = *--stackp;
                 if (rowp == rowend) {
@@ -440,16 +432,16 @@ do_lzw(gif_struct *gs, const PRUint8 *q)
 
 PRBool gif_create(gif_struct **gs)
 {
-  gif_struct *ret;
+    gif_struct *ret;
 
-  ret = PR_NEWZAP(gif_struct);
+    ret = PR_NEWZAP(gif_struct);
 
-  if (!ret)
-    return PR_FALSE;
+    if (!ret)
+      return PR_FALSE;
 
-  *gs = ret;
+    *gs = ret;
 
-  return PR_TRUE;
+    return PR_TRUE;
 }
 
 /*******************************************************************************
@@ -610,78 +602,78 @@ gif_free(void *ptr)
  * setup for gif_struct decoding
  */
 PRBool GIFInit(
-  gif_struct* gs,
-  void* aClientData,
-
-  int (*PR_CALLBACK GIFCallback_NewPixmap)(),
-  
-  int (*PR_CALLBACK GIFCallback_BeginGIF)(
+    gif_struct* gs,
     void* aClientData,
-    PRUint32 aLogicalScreenWidth, 
-    PRUint32 aLogicalScreenHeight,
-    PRUint8  aBackgroundRGBIndex),
+
+    int (*PR_CALLBACK GIFCallback_NewPixmap)(),
+  
+    int (*PR_CALLBACK GIFCallback_BeginGIF)(
+        void* aClientData,
+        PRUint32 aLogicalScreenWidth, 
+        PRUint32 aLogicalScreenHeight,
+        PRUint8  aBackgroundRGBIndex),
     
-  int (*PR_CALLBACK GIFCallback_EndGIF)(
+    int (*PR_CALLBACK GIFCallback_EndGIF)(
         void*    aClientData,
         int      aAnimationLoopCount),
   
-  int (*PR_CALLBACK GIFCallback_BeginImageFrame)(
-    void*    aClientData,
-    PRUint32 aFrameNumber,   /* Frame number, 1-n */
-    PRUint32 aFrameXOffset,  /* X offset in logical screen */
-    PRUint32 aFrameYOffset,  /* Y offset in logical screen */
-    PRUint32 aFrameWidth,    
-    PRUint32 aFrameHeight,   
-    GIF_RGB* aTransparencyChromaKey),
+    int (*PR_CALLBACK GIFCallback_BeginImageFrame)(
+        void*    aClientData,
+        PRUint32 aFrameNumber,   /* Frame number, 1-n */
+        PRUint32 aFrameXOffset,  /* X offset in logical screen */
+        PRUint32 aFrameYOffset,  /* Y offset in logical screen */
+        PRUint32 aFrameWidth,    
+        PRUint32 aFrameHeight,   
+        GIF_RGB* aTransparencyChromaKey),
   
-  int (*PR_CALLBACK GIFCallback_EndImageFrame)(
-    void* aClientData,
-    PRUint32 aFrameNumber,
-    PRUint32 aDelayTimeout,
-    PRUint32 aDisposal),
+    int (*PR_CALLBACK GIFCallback_EndImageFrame)(
+        void* aClientData,
+        PRUint32 aFrameNumber,
+        PRUint32 aDelayTimeout,
+        PRUint32 aDisposal),
   
-  int (*PR_CALLBACK GIFCallback_SetupColorspaceConverter)(),
+    int (*PR_CALLBACK GIFCallback_SetupColorspaceConverter)(),
   
-  int (*PR_CALLBACK GIFCallback_ResetPalette)(),
+    int (*PR_CALLBACK GIFCallback_ResetPalette)(),
   
-  int (*PR_CALLBACK GIFCallback_InitTransparentPixel)(),
+    int (*PR_CALLBACK GIFCallback_InitTransparentPixel)(),
   
-  int (*PR_CALLBACK GIFCallback_DestroyTransparentPixel)(),
+    int (*PR_CALLBACK GIFCallback_DestroyTransparentPixel)(),
   
-  int (*PR_CALLBACK GIFCallback_HaveDecodedRow)(
-    void* aClientData,
-    PRUint8* aRowBufPtr,   /* Pointer to single scanline temporary buffer */
-    int aXOffset,          /* With respect to GIF logical screen origin */
-    int aLength,           /* Length of the row? */
-    int aRow,              /* Row number? */
-    int aDuplicateCount,   /* Number of times to duplicate the row? */
-    PRUint8 aDrawMode,     /* il_draw_mode */
-    int aInterlacePass),
+    int (*PR_CALLBACK GIFCallback_HaveDecodedRow)(
+        void* aClientData,
+        PRUint8* aRowBufPtr,   /* Pointer to single scanline temporary buffer */
+        int aXOffset,          /* With respect to GIF logical screen origin */
+        int aLength,           /* Length of the row? */
+        int aRow,              /* Row number? */
+        int aDuplicateCount,   /* Number of times to duplicate the row? */
+        PRUint8 aDrawMode,     /* il_draw_mode */
+        int aInterlacePass),
     
-  int (*PR_CALLBACK GIFCallback_HaveImageAll)(
-    void* aClientData)
+      int (*PR_CALLBACK GIFCallback_HaveImageAll)(void* aClientData)
+      
   )
-{
-  PR_ASSERT(gs);
+  {
+    PR_ASSERT(gs);
 
-  gs->clientptr = aClientData;
-  gs->GIFCallback_NewPixmap = GIFCallback_NewPixmap;
-  gs->GIFCallback_BeginGIF = GIFCallback_BeginGIF;
-  gs->GIFCallback_EndGIF = GIFCallback_EndGIF;
-  gs->GIFCallback_BeginImageFrame = GIFCallback_BeginImageFrame;
-  gs->GIFCallback_EndImageFrame = GIFCallback_EndImageFrame;
-  gs->GIFCallback_SetupColorspaceConverter = GIFCallback_SetupColorspaceConverter;
-  gs->GIFCallback_ResetPalette = GIFCallback_ResetPalette;
-  gs->GIFCallback_InitTransparentPixel = GIFCallback_InitTransparentPixel;
-  gs->GIFCallback_DestroyTransparentPixel = GIFCallback_DestroyTransparentPixel;
-  gs->GIFCallback_HaveDecodedRow = GIFCallback_HaveDecodedRow;
-  gs->GIFCallback_HaveImageAll = GIFCallback_HaveImageAll;
+    gs->clientptr = aClientData;
+    gs->GIFCallback_NewPixmap = GIFCallback_NewPixmap;
+    gs->GIFCallback_BeginGIF = GIFCallback_BeginGIF;
+    gs->GIFCallback_EndGIF = GIFCallback_EndGIF;
+    gs->GIFCallback_BeginImageFrame = GIFCallback_BeginImageFrame;
+    gs->GIFCallback_EndImageFrame = GIFCallback_EndImageFrame;
+    gs->GIFCallback_SetupColorspaceConverter = GIFCallback_SetupColorspaceConverter;
+    gs->GIFCallback_ResetPalette = GIFCallback_ResetPalette;
+    gs->GIFCallback_InitTransparentPixel = GIFCallback_InitTransparentPixel;
+    gs->GIFCallback_DestroyTransparentPixel = GIFCallback_DestroyTransparentPixel;
+    gs->GIFCallback_HaveDecodedRow = GIFCallback_HaveDecodedRow;
+    gs->GIFCallback_HaveImageAll = GIFCallback_HaveImageAll;
   
-  gs->state = gif_init;
-  gs->post_gather_state = gif_error;
-  gs->gathered = 0;
+    gs->state = gif_init;
+    gs->post_gather_state = gif_error;
+    gs->gathered = 0;
 
-  return (gs != 0);
+    return (gs != 0);
 }
 
 /******************************************************************************/
@@ -699,7 +691,7 @@ gif_init_transparency(gif_struct* gs, int index)
 
         /* Initialize the destination image's transparent pixel. */
         // XXX: do the new callback
-        //if(ic->imgdcb)
+        //if (ic->imgdcb)
         //  ic->imgdcb->ImgDCBInitTransparentPixel();
         // all this does is set the transparent pixel in the old imglib header
 
@@ -730,35 +722,6 @@ gif_destroy_transparency(gif_struct* gs)
     }
 }
 
-//******************************************************************************
-#if 0
-int
-il_gif_compute_percentage_complete(il_container *ic, int row)
-{
-    PRUintn percent_height;
-    int percent_done = 0;
-    
-    percent_height = (PRUintn)(row * (PRUint32)100 / ic->image->header.height);
-    switch(ic->pass) {
-    case 0: percent_done = percent_height; /* non-interlaced GIF */
-        break;
-    case 1: percent_done =      percent_height / 8;
-        break;
-    case 2: percent_done = 12 + percent_height / 8;
-        break;
-    case 3: percent_done = 25 + percent_height / 4;
-        break;
-    case 4: percent_done = 50 + percent_height / 2;
-        break;
-    default:
-        ILTRACE(0,("Illegal interlace pass"));
-        break;
-    }
-
-    return percent_done;
-}
-#endif
-
 /* Maximum # of bytes to read ahead while waiting for delay_time to expire.
    We no longer limit this number to remain within WIN16 malloc limitations
    of 0xffff */
@@ -766,92 +729,18 @@ il_gif_compute_percentage_complete(il_container *ic, int row)
 #define MAX_READ_AHEAD  (0xFFFFFFL)
 
 //******************************************************************************
-PRUint8
+PRBool
 gif_write_ready(gif_struct* gs)
 {    
     if (!gs)
-        return 1;               /* Let imglib generic code decide */
+        return PR_TRUE;         /* Let imglib generic code decide */
         
-    PRInt32 max = MAX(MAX_READ_AHEAD, gs->requested_buffer_fullness);
+    PRInt32 max = PR_MAX(MAX_READ_AHEAD, gs->requested_buffer_fullness);
     if (gs->gathered < max)
-        return 1;               /* Let imglib generic code decide */
+        return PR_TRUE;         /* Let imglib generic code decide */
     else
-        return 0;               /* No more data until timeout expires */
+        return PR_FALSE;        /* No more data until timeout expires */
 }
-
-/******************************************************************************/
-static void
-process_buffered_gif_input_data(gif_struct* gs)
-{
-    gstate state;
-    PRUint8 err = 0;
-
-    /* Force any data we've buffered up to be processed. */
-    err = gif_write(gs, (PRUint8 *) "", 0);
-
-    /* The stream has already finished delivering data and the stream
-       completion routine has been called sometime in the past. Now that
-       we're actually done handling all of that data, call the stream
-       completion routine again, but this time for real. */
-    state = gs->state;
-
-    /* test, stop loopers if error */
-    if( state == gif_error){
-            gs->destroy_pending = PR_TRUE;
-    }
-    if (gs->destroy_pending &&
-        ((state == gif_done) || (state == gif_error) || (state == gif_oom))) {
-
-      // don't call gif_destroy() here.  that is up to the person that created the decoder
-        //gif_abort(gs);
-
-        //if(ic->imgdcb)
-        //  ic->imgdcb->ImgDCBHaveImageAll();
-        // XXX: Do Have all callback
-    }
-}
-
-/******************************************************************************/
-// XXX: this isn't how we work anymore. We don't delay decoding of subsequent
-// frames. The gfxIImageContainer is notified of the delay times and it manages
-// the frame display. This means it must wait for a new frame's FrameEnd callback
-// before displaying it, and wait for the GIFEnd callback before starting the 
-// second animation loop.
-#if 0
-void
-gif_delay_time_callback(void *closure)
-{
-  il_container *ic = (il_container*)closure;
-  gif_struct *gs = NULL;
-  
-  if((ic)&&(ic->ds))
-     gs = (gif_struct *)ic->ds;
-  else
-     return;   //error
-
-
-  PR_ASSERT(gs->state == gif_delay);
-  gs->delay_timeout = NULL;
-
-  if(gs->ic){
-     if(gs->ic->type == NULL)
-        gs->ic->type = nsCRT::strdup("image/gif"); //mime string
-  }
-  else
-      return;  //error
-
-  if (gs->ic->state == IC_ABORT_PENDING)
-        return;
-    
-    gs->delay_time = 0;         /* Reset for next image */
-
-    if (gs->state == gif_delay) {
-        GETN(1, gif_image_start);
-        process_buffered_gif_input_data(gs);
-    }
-    return;
-}
-#endif
 
 //******************************************************************************
 /*
@@ -940,15 +829,15 @@ gif_clear_screen(gif_struct *gs)
 // XXX pav this code doesn't actually get called does it ?
 
         if (erase_width > 0) {
-          // XXX: make fake row callback to draw into the 
-          //if(gs->ic->imgdcb)
-          //  gs->ic->imgdcb->ImgDCBHaveRow(gs->rowbuf, gs->rgbrow,
-          //          erase_x_offset, erase_width,
-          //          erase_y_offset,erase_height, ilErase, 2);
+            // XXX: make fake row callback to draw into the 
+            //if (gs->ic->imgdcb)
+            //  gs->ic->imgdcb->ImgDCBHaveRow(gs->rowbuf, gs->rgbrow,
+            //          erase_x_offset, erase_width,
+            //          erase_y_offset,erase_height, ilErase, 2);
            
-        /* Reset the source image's transparent pixel to its former state. */
+            /* Reset the source image's transparent pixel to its former state. */
             gif_destroy_transparency(gs);
-        //src_header->transparent_pixel = saved_src_trans_pixel;
+            //src_header->transparent_pixel = saved_src_trans_pixel;
             gs->transparent_pixel = saved_gs_trans_pixel;
         }
     }
@@ -962,10 +851,10 @@ gif_clear_screen(gif_struct *gs)
  
 int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 {
-  int status;
-  /* NI_PixmapHeader *src_header = ic->src_header; */
-  /* GIF_ColorMap *cmap = &src_header->color_space->cmap; */
-  const PRUint8 *q, *p=buf,*ep=buf+len;
+    int status;
+    /* NI_PixmapHeader *src_header = ic->src_header; */
+    /* GIF_ColorMap *cmap = &src_header->color_space->cmap; */
+    const PRUint8 *q, *p=buf,*ep=buf+len;
 
 
     /* If this assert fires, chances are the netlib flubbed and
@@ -981,7 +870,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
     /* If this assert fires, some upstream data provider ignored the
        zero return value from il_gif_write_ready() which says not to
        send any more data to this stream until the delay timeout fires. */
-  //  PR_ASSERT ((len == 0) || (gs->gathered < MAX_READ_AHEAD));
+    //  PR_ASSERT ((len == 0) || (gs->gathered < MAX_READ_AHEAD));
     if (!((len == 0) || (gs->gathered < MAX_READ_AHEAD)))
         return NS_ERROR_FAILURE;
     
@@ -1016,9 +905,9 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             /* Now we know how many colors are in our colormap. */
             if (gs->is_local_colormap_defined || (gs->images_decoded == 0)){
                 // XXX: callback for setting up the colorspace converter
-                //if(ic->imgdcb){
+                //if (ic->imgdcb){
                 //nsresult rv = ic->imgdcb->ImgDCBSetupColorspaceConverter(); 
-                //if(NS_FAILED(rv))
+                //if (NS_FAILED(rv))
                 //    return MK_IMAGE_LOSSAGE;
                 //}
             }
@@ -1029,7 +918,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
             /* Initialize LZW parser/decoder */
             gs->datasize = *q;
-            if(gs->datasize > MAX_LZW_BITS)
+            if (gs->datasize > MAX_LZW_BITS)
             {
                 gs->state=gif_error;
                 break;
@@ -1048,7 +937,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 gs->suffix = ( PRUint8 *)gif_calloc(sizeof(PRUint8),  MAX_BITS);
             if (!gs->stack)
                 gs->stack  = ( PRUint8 *)gif_calloc(sizeof(PRUint8),  MAX_BITS);
-            if( !gs->prefix || !gs->suffix || !gs->stack)
+            if ( !gs->prefix || !gs->suffix || !gs->stack)
             {
                 /* complete from abort will free prefix & suffix */
                 // ILTRACE(0,("il:gif: MEM stack"));
@@ -1056,7 +945,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 break;
             }
 
-            if(gs->clear_code >= MAX_BITS)
+            if (gs->clear_code >= MAX_BITS)
             {
                 gs->state=gif_error;
                 break;
@@ -1085,7 +974,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             if (strncmp((char*)q,"GIF",3))
             {
                 // ILTRACE(2,("il:gif: not a GIF file"));
-                gs->state=gif_error;
+                gs->state = gif_error;
                 break;
             }
             GETN(3,gif_version);
@@ -1094,22 +983,14 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_version:
         {
-            if(!strncmp((char*)q,"89a",3))
-            {
-                gs->version=89;
-            }
-            else
-            {
-                if(!strncmp((char*)q,"87a",3))
-                {
-                    gs->version=87;
-                }
-                else
-                {
-                    // ILTRACE(2,("il:gif: unrecognized GIF version number"));
-                    gs->state=gif_error;
-                    break;
-                }
+            if (!strncmp((char*)q,"89a",3)) {
+                gs->version = 89;
+            } else if (!strncmp((char*)q,"87a",3)) {
+                gs->version = 87;
+            } else {
+                // ILTRACE(2,("il:gif: unrecognized GIF version number"));
+                gs->state = gif_error;
+                break;
             }
             // ILTRACE(2,("il:gif: %d gif", gs->version));
             GETN(7,gif_global_header);
@@ -1142,10 +1023,10 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             //cmap->num_colors = (q[4]&0x07);
             //cmap->map = NULL;
 
-            if(q[6])
+            if (q[6])
             {
                 /* should assert gif89 */
-                if(q[6] != 49)
+                if (q[6] != 49)
                 {
 #ifdef DEBUG
                     float aspect = (float)((q[6] + 15) / 64.0);
@@ -1161,7 +1042,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
               gs->screen_height,
               gs->screen_bgcolor);
     
-            if( q[4] & 0x80 ) /* global map */
+            if ( q[4] & 0x80 ) /* global map */
             {
                 /* 3 bytes for each entry in the global colormap */
                 GETN(gs->global_colormap_size*3, gif_global_colormap);
@@ -1182,7 +1063,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                    gs->global_colormap_size, sizeof(GIF_RGB));
 #endif
 
-            if(!(map = (GIF_RGB*)PR_Calloc(gs->global_colormap_size,
+            if (!(map = (GIF_RGB*)PR_Calloc(gs->global_colormap_size,
                                           sizeof(GIF_RGB))))
             {
                 //ILTRACE(0,("il:gif: MEM map"));
@@ -1191,7 +1072,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             }
            
             // XXX: do reset palette callback
-            //if(ic->imgdcb)
+            //if (ic->imgdcb)
             //   ic->imgdcb->ImgDCBResetPalette();
             gs->global_colormap = map;
 
@@ -1213,19 +1094,19 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_image_start:
         {
-            if(*q==';') /* terminator */
+            if (*q==';') /* terminator */
             {
                 gs->state = gif_done;
                 break;
             }
 
-            if(*q=='!') /* extension */
+            if (*q=='!') /* extension */
             {
                 GETN(2,gif_extension);
                 break;
             }
                         
-            if(*q!=',') /* invalid start character */
+            if (*q!=',') /* invalid start character */
             {
                 //ILTRACE(2,("il:gif: bogus start character 0x%02x",
                 //           (int)*q));
@@ -1273,7 +1154,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_consume_block:
         {
-            if(!*q)
+            if (!*q)
             {
                 GETN(1, gif_image_start);
             }
@@ -1290,7 +1171,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_control_extension:
         {
-            if(*q & 0x1)
+            if (*q & 0x1)
             {
                 gs->tpixel = *(q+3);
                 //ILTRACE(2,("il:gif: transparent pixel %d", gs->tpixel));
@@ -1355,7 +1236,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             /* Loop entire animation specified # of times.  Only read the
                loop count during the first iteration. */
             if (netscape_extension == 1) {
-              gs->loop_count = GETINT16(q + 1);
+                gs->loop_count = GETINT16(q + 1);
 
               /* Zero loop count is infinite animation loop request */
               if (gs->loop_count == 0)
@@ -1439,42 +1320,17 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
                 gs->rowbuf = (PRUint8*)PR_REALLOC(gs->rowbuf, width);
 
-                if(!gs->rowbuf){
-                  gs->state = gif_oom;
-                  break;
+                if (!gs->rowbuf){
+                    gs->state = gif_oom;
+                    break;
                 }
             
                 gs->screen_width = width;
-                if(gs->screen_height < gs->height )
+                if (gs->screen_height < gs->height )
                     gs->screen_height = gs->height;
 
-                // XXX: do callback notification for the image header info. letting
-                // The client know that this totoally deviant case has occured!
-                //if(ic->imgdcb){
-                //  nsresult rv = ic->imgdcb->ImgDCBImageSize();
-
-                
-                 
-                //  if(NS_FAILED(rv)){
-                //      gs->state = gif_error;
-                //      break;
-                //  }
-                //}
-                //else{    //no callback is an error too.
-                //    gs->state = gif_error;
-                //    break;
-                //}
-
-                // XXX: create image pixmap
-                //ic->img_cx->img_cb->NewPixmap(ic->img_cx->dpy_cx, ic->dest_width,
-                //            ic->dest_height, ic->image, ic->mask);
-    
-                //if((!ic->scalerow)||(!ic->image->bits)||(ic->mask && !ic->mask->bits)){
-                //    gs->state=gif_oom;
-                //    break;
-                //}
         }
-        else{
+        else {
             if (!gs->rowbuf)
                 gs->rowbuf = (PRUint8*)PR_MALLOC(gs->screen_width);
         }
@@ -1493,10 +1349,10 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
             if (gs->images_decoded == 0) {
                 // XXX: do image size callback
-                //if(ic->imgdcb){
+                //if (ic->imgdcb){
                 //    nsresult rv = ic->imgdcb->ImgDCBImageSize();
                 // 
-                //    if(NS_FAILED(rv)){
+                //    if (NS_FAILED(rv)){
                 //        gs->state = gif_error;
                 //        break;
                 //    }
@@ -1559,7 +1415,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
                 /* Switch to the new local palette after it loads */
                 // XXX: do pallete reset callback
-                //if(ic->imgdcb)
+                //if (ic->imgdcb)
                 //   ic->imgdcb->ImgDCBResetPalette();
 
                 gs->is_local_colormap_defined = PR_TRUE;
@@ -1570,7 +1426,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 /* Switch back to the global palette */
                 if (gs->is_local_colormap_defined){
                   // XXX: do pallete reset callback
-                  //if(ic->imgdcb)
+                  //if (ic->imgdcb)
                   //  ic->imgdcb->ImgDCBResetPalette();
                 }
                 gs->is_local_colormap_defined = PR_FALSE;
@@ -1582,7 +1438,6 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
         case gif_image_colormap:
         {
             GIF_RGB* map;
-            int i;
 
             //ILTRACE(2,("il:gif: local colormap"));
                     
@@ -1592,7 +1447,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 map = gs->local_colormap = (GIF_RGB*)PR_Calloc(
                     gs->local_colormap_size, sizeof(GIF_RGB));
 
-                if(!map)
+                if (!map)
                 {
                     //ILTRACE(0,("il:gif: MEM map"));
                     gs->state=gif_oom;
@@ -1606,7 +1461,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 #endif
 #endif /* M12N */
 
-            for (i=0; i < gs->local_colormap_size; i++, map++) 
+            for (int i=0; i < gs->local_colormap_size; i++, map++) 
             {
                 map->red   = *q++;
                 map->green = *q++;
@@ -1642,7 +1497,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 /* Flush the image data unconditionally, so that we can
                    notify observers that the current frame has completed. */
                 // XXX: do appropriate callbacks to complete this frame
-                //if(ic->imgdcb){
+                //if (ic->imgdcb){
                 //     ic->imgdcb->ImgDCBFlushImage();
                 //     ic->imgdcb->ImgDCBHaveImageFrame();
                 //}
@@ -1664,7 +1519,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 // Unless this is a memory saving thing, I think we 
                 // should decode the whole thing. You never know when
                 // the user will want the animation as a whole.
-                //if(ic->animate_request == eImageAnimation_None){
+                //if (ic->animate_request == eImageAnimation_None){
                 //    /* This is not really an error, but a mechanism
                 //    to stop decoding of subsequent frames. Only the
                 //   first frame is displayed for eImageAnimation_None.
@@ -1675,17 +1530,10 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
                 /* An image can specify a delay time before which to display
                    subsequent images. */
-                if(gs->delay_time < MINIMUM_DELAY_TIME )
+                if (gs->delay_time < MINIMUM_DELAY_TIME )
                     gs->delay_time = MINIMUM_DELAY_TIME;
 
                 if (gs->delay_time){
-                    //if(ic->imgdcb){
-                       //gs->delay_timeout = (void *)
-                       // XXX: make callback informing the frame of the delay time till next frame
-                       // Currently this is a parameter on the EndFrame callback
-                       //ic->imgdcb->ImgDCBSetTimeout(gif_delay_time_callback, gs->ic, gs->delay_time);
-                    //}
-                    
                     // XXX: we don't freeze decoder anymore, as it now hands the responsibility
                     // of doing the animation to the client image container, as it should be.
                     /* Essentially, tell the decoder state machine to wait
@@ -1703,8 +1551,8 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
         break;
 
         case gif_done:  
-            if(gs->GIFCallback_EndGIF) {
-              int result = (gs->GIFCallback_EndGIF)(gs->clientptr, gs->loop_count);
+            if (gs->GIFCallback_EndGIF) {
+                int result = (gs->GIFCallback_EndGIF)(gs->clientptr, gs->loop_count);
             }    
             return 0;
             break;
@@ -1712,8 +1560,8 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
         case gif_delay:
         case gif_gather:    
         {
-            int32 gather_remaining;
-            int32 request_size = gs->gather_request_size;
+            PRInt32 gather_remaining;
+            PRInt32 request_size = gs->gather_request_size;
             
             {
                 gather_remaining = request_size - gs->gathered;
@@ -1741,7 +1589,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                    the current request ? */
                 if ((ep - p) >= gather_remaining)
                 {
-                    if(gs->gathered)
+                    if (gs->gathered)
                     { /* finish a prior gather */
                         char *hold = (char*)gs->hold;
                         BlockAllocCat(hold, gs->gathered, (char*)p, gather_remaining);
@@ -1776,7 +1624,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_error: 
             // ILTRACE(2,("il:gif: reached error state"));
-            if(gs->GIFCallback_EndGIF) {
+            if (gs->GIFCallback_EndGIF) {
               int result = (gs->GIFCallback_EndGIF)(gs->clientptr, gs->loop_count);
             }    
             return NS_ERROR_FAILURE; // XXX should be image lossage
@@ -1797,77 +1645,45 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 }
 
 //******************************************************************************
-void
-il_gif_complete(gif_struct* gs)
-{
-  if (gs)
-  {
-    /* No more data in the stream, but we may still have work to do,
-       so don't actually free any of the data structures. */
-#if 0 // We don't do things this way with delaying the decoder
-    if (gs->delay_timeout) {
-      /* We will free the data structures when image display completes. */
-      gs->destroy_pending = PR_TRUE;
-      return;
-    } else 
-#endif
-    if (gs->requested_buffer_fullness) {
-      /* We will free the data structures when image display completes. */
-      gs->destroy_pending = PR_TRUE;
-      process_buffered_gif_input_data(gs);
-      return;
-    }
-    
-    // Notify the client that we're done
-    // XXX
-    // if (gs->GIFCallback_HaveImageAll)
-    //   (gs->GIFCallback_HaveImageAll)();
-    //else
-    //   gif_abort(gs);   
-    
-  }
-}
-
-//******************************************************************************
 /* Free up all the data structures associated with decoding a GIF */
 void
 gif_destroy(gif_struct *gs)
 {
-  if (!gs)
-    return;
+    if (!gs)
+        return;
 
-  /* Clear any pending timeouts */
-  if (gs->delay_time) {
-    //ic->imgdcb->ImgDCBClearTimeout(gs->delay_timeout);
-    gs->delay_time = NULL;
-  }
-
-  gif_destroy_transparency(gs);
-
-  PR_FREEIF(gs->rowbuf);
-  gif_free(gs->prefix);
-  gif_free(gs->suffix);
-  gif_free(gs->stack);
-  gif_free(gs->hold);
-
-  /* Free the colormap that is not in use.  The other one, if
-   * present, will be freed when the image container is
-   * destroyed.
-   */
-  if (gs->is_local_colormap_defined) {
-    if (gs->local_colormap) {
-      PR_FREEIF(gs->local_colormap);
-      gs->local_colormap = NULL;
-      //ic->src_header->color_space->cmap.map = NULL;
+    /* Clear any pending timeouts */
+    if (gs->delay_time) {
+        //ic->imgdcb->ImgDCBClearTimeout(gs->delay_timeout);
+        gs->delay_time = NULL;
     }
-  }
 
-  if (gs->global_colormap) {
-    PR_FREEIF(gs->global_colormap);
-    gs->global_colormap = NULL;
-    //ic->src_header->color_space->cmap.map = NULL;
-  }
+    gif_destroy_transparency(gs);
 
-  PR_FREEIF(gs);
+    PR_FREEIF(gs->rowbuf);
+    gif_free(gs->prefix);
+    gif_free(gs->suffix);
+    gif_free(gs->stack);
+    gif_free(gs->hold);
+
+    /* Free the colormap that is not in use.  The other one, if
+     * present, will be freed when the image container is
+     * destroyed.
+     */
+    if (gs->is_local_colormap_defined) {
+        if (gs->local_colormap) {
+            PR_FREEIF(gs->local_colormap);
+            gs->local_colormap = NULL;
+            //ic->src_header->color_space->cmap.map = NULL;
+        }
+    }
+
+    if (gs->global_colormap) {
+        PR_FREEIF(gs->global_colormap);
+        gs->global_colormap = NULL;
+        //ic->src_header->color_space->cmap.map = NULL;
+    }
+
+    PR_FREEIF(gs);
 }
 
