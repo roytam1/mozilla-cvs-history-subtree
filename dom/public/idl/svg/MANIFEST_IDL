@@ -1,7 +1,7 @@
 nsIDOMSVGAnimatedLength.idl
 nsIDOMSVGAnimatedPathData.idl
 nsIDOMSVGAnimatedPoints.idl
-nsIDOMSVGAnimPreserveAspRatio.idl
+nsIDOMSVGAnimPresAspRatio.idl
 nsIDOMSVGAnimatedRect.idl
 nsIDOMSVGAnimTransformList.idl
 nsIDOMSVGCircleElement.idl

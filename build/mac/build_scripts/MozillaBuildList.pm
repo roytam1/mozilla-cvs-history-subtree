@@ -704,10 +704,10 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:layout:html:base:src:MANIFEST",                  "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:forms:public:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:table:public:MANIFEST",              "$distdirectory:layout:");
-    if ($main::options{svg})
-    {
-        InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
-    }
+    #if ($main::options{svg})
+    #{
+    #    InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
+    #}
     InstallFromManifest(":mozilla:layout:xul:base:public:Manifest",                "$distdirectory:layout:");
 
     #GFX
@@ -730,6 +730,12 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:public:idl:views:MANIFEST_IDL",              "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xbl:MANIFEST_IDL",                "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xul:MANIFEST_IDL",                "$distdirectory:idl:");
+        
+	# SVG
+	if ($main::options{svg}) {
+		InstallFromManifest(":mozilla:dom:public:idl:svg:MANIFEST_IDL",				"$distdirectory:idl:");
+	}
+    
     InstallFromManifest(":mozilla:dom:public:MANIFEST",                            "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:base:MANIFEST",                       "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:coreEvents:MANIFEST",                 "$distdirectory:dom:");
@@ -896,6 +902,11 @@ sub BuildClientDist()
         InstallFromManifest(":mozilla:js:jsd:idl:MANIFEST_IDL", "$distdirectory:idl:");
         InstallFromManifest(":mozilla:js:jsd:MANIFEST", "$distdirectory:jsdebug:");
     }
+
+	# SVG
+	if ($main::options{svg}) {
+		InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST", "$distdirectory:include:");
+	}
 
     print("--- Client Dist export complete ----\n");
 }
@@ -1082,6 +1093,10 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:dom:macbuild:dom_viewsIDL.mcp",                       "dom_views");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.mcp",                         "dom_xbl");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.mcp",                         "dom_xul");
+
+	if ($main::options{svg}) {
+		BuildIDLProject(":mozilla:dom:macbuild:dom_svgIDL.mcp",                         "dom_svg");
+	}
 
     BuildIDLProject(":mozilla:dom:src:jsurl:macbuild:JSUrlDL.mcp",                  "jsurl");
     
@@ -1578,8 +1593,19 @@ sub BuildLayoutProjects()
     BuildOneProject(":mozilla:modules:plugin:macbuild:plugin.mcp",              "plugin$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
 
     # Static library shared between different content- and layout-related libraries
+    
     BuildOneProject(":mozilla:content:macbuild:contentshared.mcp",              "contentshared$D.o", 0, 0, 0);
     MakeAlias(":mozilla:content:macbuild:contentshared$D.o",                    ":mozilla:dist:content:");
+
+	if ($main::options{svg})
+    {
+    	BuildOneProject(":mozilla:content:macbuild:contentsharedsvg.mcp",             "contentsharedsvg$D.o", 0, 0, 0);
+        BuildOneProject(":mozilla:content:macbuild:contentSVG.mcp",                   "contentSVG$D.o", 0, 0, 0);
+    }
+    else
+    {
+        BuildOneProject(":mozilla:content:macbuild:contentSVG.mcp",                   "contentSVG$D.o stub", 0, 0, 0);
+    }
 
     BuildOneProject(":mozilla:content:macbuild:content.mcp",                    "content$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     if ($main::options{mathml})
@@ -1592,6 +1618,9 @@ sub BuildLayoutProjects()
     }
     if ($main::options{svg})
     {
+    	BuildOneProject(":mozilla:modules:libart_lgpl:macbuild:libart.mcp",			"libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    	copy(":mozilla:modules:libart_lgpl:macbuild:libart$D.shlb",$dist_dir."Essential Files:libart$D.shlb");
+    	
         BuildOneProject(":mozilla:layout:macbuild:layoutsvg.mcp",                   "layoutsvg$D.o", 0, 0, 0);
     }
     else

@@ -225,17 +225,22 @@ ArtRender* nsSVGRenderingContext::NewRender()
   mBuffer->GetPixelFormat(&format);
   PRInt32 bbp = format.mRedCount + format.mGreenCount + format.mBlueCount + format.mAlphaCount;
 
+#ifndef XP_MAC	// Mac doesn't implement this yet, <sigh>
   NS_ASSERTION(bbp == 24,
                "The SVG rendering backend currenly only supports 24bit color depths...\n"
                "Try compiling nsSVGRenderingContext.cpp with SVG_USE_SURFACE unset!");
 
   if (bbp != 24) return nsnull;
+#endif
     
   render = art_render_new(mDirtyRect.x, mDirtyRect.y,
                           mDirtyRect.x+ mDirtyRect.width,
                           mDirtyRect.y+ mDirtyRect.height,
                           buf,
-                          stride, 
+                          stride,
+                    #ifdef XP_MAC
+                    	1,		// pixel padding parameter
+                    #endif	    
                           3, // channels 
                           8, // bits per channel
                           ART_ALPHA_NONE, // alpha

@@ -354,6 +354,7 @@ SVG_BRANCH_FILES := \
 	aclocal.m4 \
 	allmakefiles.sh \
 	build/autoconf/libart.m4 \
+	build/mac/build_scripts/MozillaBuildList.pm \
 	client.mk \
 	client.mak \
 	config/autoconf.mk.in \
@@ -377,6 +378,7 @@ SVG_BRANCH_FILES := \
 	content/html/style/src/nsRuleNode.cpp \
 	content/html/style/src/nsRuleNode.h \
 	content/makefile.win \
+	content/shared/public/MANIFEST \
 	content/shared/public/Makefile.in \
 	content/shared/public/makefile.win \
 	content/shared/public/nsCSSPropList.h \
