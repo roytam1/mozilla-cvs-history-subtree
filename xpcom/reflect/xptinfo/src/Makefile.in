@@ -22,7 +22,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpcom
-LIBRARY_NAME	= xpcomxptinfo
+LIBRARY_NAME	= xptinfo
 
 CSRCS		= $(NULL)
 
@@ -32,7 +32,7 @@ CPPSRCS		= nsInterfaceInfo.cpp           \
 		  nsInterfaceRecord.cpp		\
 		  $(NULL)
 
-REQUIRES	= $(MODULE)
+REQUIRES	= xpcom
 
 # export:: libs
 

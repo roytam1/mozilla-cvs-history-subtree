@@ -22,7 +22,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpcom
-LIBRARY_NAME	= xpcomxptcall
+LIBRARY_NAME	= xptcall
 
 DIRS = md
 
@@ -31,7 +31,7 @@ CFLAGS	+= -DEXPORT_XPTC_API
 CPPSRCS		= xptcall.cpp 	\
 		  $(NULL)
 
-REQUIRES	= $(MODULE)
+REQUIRES	= xpcom
 
 # export:: libs
 
