@@ -484,6 +484,9 @@ BookmarksService::DeleteBookmark(nsIDOMElement* aBookmark)
 static PRBool
 CheckXMLDocumentParseSuccessful(nsIDOMDocument* inDOMDoc)
 {
+  if (!inDOMDoc)
+    return PR_FALSE;
+  
   nsCOMPtr<nsIDOMElement> docElement;
   inDOMDoc->GetDocumentElement(getter_AddRefs(docElement));
   if (!docElement)
@@ -523,8 +526,7 @@ ValidateXMLDocument(nsIDOMDocument* inDOMDoc)
 
   nsCOMPtr<nsIDOMDocument> newDomDoc;
   domParser->ParseFromString(encodedDocStr.get(), "text/xml", getter_AddRefs(newDomDoc));
-  if (newDomDoc)
-   	return CheckXMLDocumentParseSuccessful(newDomDoc);
+  return CheckXMLDocumentParseSuccessful(newDomDoc);
   
   return PR_FALSE;
 }
