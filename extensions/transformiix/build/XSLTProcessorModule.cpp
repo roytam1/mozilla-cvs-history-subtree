@@ -150,16 +150,6 @@ RegisterTransformiix(nsIComponentManager *aCompMgr,
                                   PR_TRUE, PR_TRUE, getter_Copies(previous));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    char* iidString = NS_GET_IID(nsIDocumentTransformer).ToString();
-    if (!iidString)
-      return NS_ERROR_OUT_OF_MEMORY;
-    rv = catman->AddCategoryEntry(JAVASCRIPT_DOM_INTERFACE,
-                                  "nsIDocumentTransformer",
-                                  iidString,
-                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
-    nsCRT::free(iidString);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     iidString = NS_GET_IID(nsIXSLTProcessor).ToString();
     if (!iidString)
       return NS_ERROR_OUT_OF_MEMORY;
