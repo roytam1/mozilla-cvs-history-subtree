@@ -20,7 +20,7 @@
 DEPTH=..\..\..\..
 MODULE=vixen
 LIBRARY_NAME=vixen
-COMPONENT_NAME=nsVixenModule
+MODULE_NAME=nsVixenModule
 
 ################################################################################
 ## library

@@ -30,7 +30,7 @@
 
 MODULE=img 
 LIBRARY_NAME=nspng
-COMPONENT_NAME=nsPNGModule
+MODULE_NAME=nsPNGModule
 
 DEPTH=..\..\.. 
 

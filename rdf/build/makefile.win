@@ -23,7 +23,7 @@ DEPTH=..\..
 include <$(DEPTH)/config/config.mak>
 MODULE=rdf
 LIBRARY_NAME=rdf
-COMPONENT_NAME=nsRDFModule
+MODULE_NAME=nsRDFModule
 
 EXPORTS=\
         nsRDFCID.h                      \

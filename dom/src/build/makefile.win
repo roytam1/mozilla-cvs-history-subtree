@@ -34,7 +34,7 @@ CPP_OBJS = .\$(OBJDIR)\nsDOMFactory.obj			\
 
 MODULE=dom
 LIBRARY_NAME=jsdom
-COMPONENT_NAME=DOM_components
+MODULE_NAME=DOM_components
 
 LCFLAGS = \
         $(DEFINES) \

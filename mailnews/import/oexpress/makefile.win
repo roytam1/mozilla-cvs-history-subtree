@@ -26,7 +26,7 @@ DIRS=resources
 MODULE          = importOE
 LIBRARY_NAME    = $(MODULE)
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsOEImport
+MODULE_NAME  = nsOEImport
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsOEImport.obj         	\

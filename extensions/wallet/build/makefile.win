@@ -24,7 +24,7 @@
 DEPTH=..\..\..
 MODULE = walletviewers
 LIBRARY_NAME = wlltvwrs
-COMPONENT_NAME = nsWalletViewerModule
+MODULE_NAME = nsWalletViewerModule
 
 LINCS = \
         -I..\editor             \

@@ -50,7 +50,7 @@ CPP_OBJS= \
 
 MODULE=lwbrk
 LIBRARY_NAME=lwbrk
-COMPONENT_NAME=nsLWBrkModule
+MODULE_NAME=nsLWBrkModule
 
 INCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\lwbrk -I$(PUBLIC)\raptor
 

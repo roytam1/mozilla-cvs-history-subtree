@@ -22,7 +22,7 @@ MODULE=absyncsv
 LIBRARY_NAME=absyncsv
 IS_COMPONENT=1
 META_COMPONENT=mail
-COMPONENT_NAME=nsAbSyncModule
+MODULE_NAME=nsAbSyncModule
 
 ################################################################################
 ## exports

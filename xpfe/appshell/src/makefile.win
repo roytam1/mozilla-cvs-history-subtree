@@ -24,7 +24,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=appshell
 LIBRARY_NAME=appshell
-COMPONENT_NAME=appshell
+MODULE_NAME=appshell
 
 DEFINES=-D_IMPL_NS_APPSHELL -DWIN32_LEAN_AND_MEAN
 

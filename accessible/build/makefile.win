@@ -22,7 +22,7 @@
 DEPTH=..\..
 MODULE=accessibility
 LIBRARY_NAME=accessibility
-COMPONENT_NAME=nsAccessibilityModule
+MODULE_NAME=nsAccessibilityModule
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsAccessibilityFactory.obj    \

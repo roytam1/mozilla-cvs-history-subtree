@@ -38,7 +38,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=		mozucth
 LIBRARY_NAME	= mozucth
-COMPONENT_NAME	= nsUnknownContentTypeHandler
+MODULE_NAME	= nsUnknownContentTypeHandler
 
 LINCS = \
 	-I$(PUBLIC)/xpcom \

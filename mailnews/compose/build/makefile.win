@@ -21,7 +21,7 @@ DEPTH=..\..\..
 MODULE          = msgcompo 
 LIBRARY_NAME    = msgcompo
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsMsgComposeModule
+MODULE_NAME  = nsMsgComposeModule
 
 ################################################################################
 ## exports

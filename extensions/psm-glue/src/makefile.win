@@ -29,7 +29,7 @@ IGNORE_MANIFEST=1
 
 MODULE         = psmglue
 LIBRARY_NAME   = psmglue
-COMPONENT_NAME = PSMComponent
+MODULE_NAME = PSMComponent
 
 include <$(DEPTH)/config/config.mak>
 

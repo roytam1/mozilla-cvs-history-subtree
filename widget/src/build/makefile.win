@@ -24,7 +24,7 @@ DEPTH=..\..\..
 
 MODULE         = gkwidget
 LIBRARY_NAME   = gkwidget
-COMPONENT_NAME = nsWidgetModule
+MODULE_NAME = nsWidgetModule
 
 RESFILE = widget.res
 

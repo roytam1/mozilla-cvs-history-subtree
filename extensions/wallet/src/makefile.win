@@ -24,7 +24,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=wallet
 LIBRARY_NAME=wallet
-COMPONENT_NAME=nsWalletModule
+MODULE_NAME=nsWalletModule
 
 CPP_OBJS= .\$(OBJDIR)\wallet.obj		\
 	.\$(OBJDIR)\singsign.obj		\

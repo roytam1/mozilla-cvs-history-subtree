@@ -20,7 +20,7 @@
 DEPTH=..\..
 MODULE		= uriloader
 LIBRARY_NAME	= urildr
-COMPONENT_NAME	= nsURILoaderModule
+MODULE_NAME	= nsURILoaderModule
 
 ################################################################################
 ## library

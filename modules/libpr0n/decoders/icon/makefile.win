@@ -29,7 +29,7 @@ DIRS=win
 MODULE		= imgicon
 LIBRARY_NAME	= imgicon
 XPIDL_MODULE	= imgicon
-COMPONENT_NAME	= nsIconDecoderModule
+MODULE_NAME	= nsIconDecoderModule
 
 XPIDLSRCS	= \
 		.\nsIIconURI.idl \

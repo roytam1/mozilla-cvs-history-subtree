@@ -23,7 +23,7 @@ DEPTH=..\..\..
 MODULE          = msglocal 
 LIBRARY_NAME    = msglocal
 META_COMPONENT  = mail
-COMPONENT_NAME  = local_mail_services
+MODULE_NAME  = local_mail_services
 
 ################################################################################
 ## exports

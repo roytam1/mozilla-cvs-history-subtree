@@ -42,7 +42,7 @@ CPP_OBJS =					\
 
 MODULE=txmgr 
 LIBRARY_NAME=txmgr
-COMPONENT_NAME=nsTransactionManagerModule
+MODULE_NAME=nsTransactionManagerModule
 
 LINCS=-I$(PUBLIC)\xpcom \
       -I$(PUBLIC)\txmgr \

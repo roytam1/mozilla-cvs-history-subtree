@@ -29,7 +29,7 @@ DEPTH=..\..\..
 MODULE         = accessproxy
 XPIDL_MODULE   = accessproxy
 LIBRARY_NAME   = accessproxy
-COMPONENT_NAME = nsAccessProxy
+MODULE_NAME = nsAccessProxy
 
 XPIDLSRCS= .\nsIAccessProxy.idl \
   $(NULL)

@@ -21,7 +21,7 @@
 DEPTH=..\..\..\..
 MODULE=shistory
 LIBRARY_NAME=shistory
-COMPONENT_NAME=Session_History_Module
+MODULE_NAME=Session_History_Module
 
 CPPSRCS=                                \
  nsSHEntry.obj                          \

@@ -20,7 +20,7 @@
 DEPTH=..\..\..\..
 MODULE=inspector
 LIBRARY_NAME=inspector
-COMPONENT_NAME=nsInspectorModule
+MODULE_NAME=nsInspectorModule
 
 ################################################################################
 ## library

@@ -22,7 +22,7 @@
 DEPTH=..\..\..
 MODULE=appcomps
 LIBRARY_NAME=appcomps
-COMPONENT_NAME=application
+MODULE_NAME=application
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN
 

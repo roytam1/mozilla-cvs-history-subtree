@@ -61,7 +61,7 @@ CPP_OBJS= \
 
 MODULE=unicharutil
 LIBRARY_NAME=ucharuti
-COMPONENT_NAME=UcharUtil
+MODULE_NAME=UcharUtil
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\unicharutil -I$(PUBLIC)\raptor
 

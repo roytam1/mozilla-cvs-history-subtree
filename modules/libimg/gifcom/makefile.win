@@ -30,7 +30,7 @@
 
 MODULE=img 
 LIBRARY_NAME=nsgif
-COMPONENT_NAME=nsGIFModule
+MODULE_NAME=nsGIFModule
 
 DEPTH=..\..\.. 
 

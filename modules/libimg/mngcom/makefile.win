@@ -30,7 +30,7 @@
 
 MODULE=img 
 LIBRARY_NAME=nsmng
-COMPONENT_NAME=nsMNGModule
+MODULE_NAME=nsMNGModule
 
 DEPTH=..\..\.. 
 

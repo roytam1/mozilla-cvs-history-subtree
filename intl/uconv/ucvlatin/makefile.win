@@ -25,7 +25,7 @@ DEFINES=-D_IMPL_NS_INTL -DWIN32_LEAN_AND_MEAN
 
 MODULE=uconv
 LIBRARY_NAME=ucvlatin
-COMPONENT_NAME=nsUCvLatinModule
+MODULE_NAME=nsUCvLatinModule
 
 CPPSRCS =				\
 	nsUEscapeToUnicode.cpp		\

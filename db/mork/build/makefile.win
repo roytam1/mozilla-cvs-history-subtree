@@ -22,7 +22,7 @@
 DEPTH=..\..\..
 MODULE          = mork
 LIBRARY_NAME    = mork
-COMPONENT_NAME  = nsMorkModule
+MODULE_NAME  = nsMorkModule
 
 ################################################################################
 ## exports

@@ -38,7 +38,7 @@ CHROME_L10N = \
 
 MODULE=regviewer
 LIBRARY_NAME=regviewr
-COMPONENT_NAME=nsRegistryViewerModule
+MODULE_NAME=nsRegistryViewerModule
 
 XPIDLSRCS =                             \
         .\nsIRegistryDataSource.idl     \

@@ -36,7 +36,7 @@ DEPTH=..\..\..\..
 
 MODULE=xpconnect
 LIBRARY_NAME=xpc$(MOZ_BITS)$(VERSION_NUMBER)
-COMPONENT_NAME=xpconnect
+MODULE_NAME=xpconnect
 
 #PDBFILE		= $(DLLNAME).pdb
 #MAPFILE		= $(DLLNAME).map

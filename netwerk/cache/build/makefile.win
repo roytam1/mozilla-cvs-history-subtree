@@ -21,7 +21,7 @@
 DEPTH=..\..\..
 MODULE		= nkcache
 LIBRARY_NAME	= nkcache
-COMPONENT_NAME	= Network_Data_Cache
+MODULE_NAME	= Network_Data_Cache
 
 CPP_OBJS=                                    \
         .\$(OBJDIR)\nsNetDataCacheModule.obj \

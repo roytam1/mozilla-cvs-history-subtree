@@ -26,7 +26,7 @@ include <$(DEPTH)\config\config.mak>
 
 MODULE=webbrwsr 
 LIBRARY_NAME=webbrwsr
-COMPONENT_NAME=Browser_Embedding_Module
+MODULE_NAME=Browser_Embedding_Module
 
 LINCS=-I..\webBrowser
 

@@ -21,7 +21,7 @@ DEPTH=..\..\..
 MODULE          = mime
 LIBRARY_NAME    = mime
 META_COMPONENT  = mail
-COMPONENT_NAME  = mime_services
+MODULE_NAME  = mime_services
 
 EXPORTS=								\
 			nsMsgMimeCID.h				\

@@ -24,7 +24,7 @@ MODULE=chrome
 
 MODULE		= chrome
 LIBRARY_NAME	= chrome
-COMPONENT_NAME	= nsChromeModule
+MODULE_NAME	= nsChromeModule
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsChromeFactory.obj    \

@@ -24,7 +24,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE		= nkcache
 LIBRARY_NAME	= nkcache
-COMPONENT_NAME	= cacheservice
+MODULE_NAME	= cacheservice
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 

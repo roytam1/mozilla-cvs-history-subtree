@@ -21,7 +21,7 @@ DEPTH=..\..\..
 MODULE          = msgnews 
 LIBRARY_NAME    = msgnews
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsMsgNewsModule
+MODULE_NAME  = nsMsgNewsModule
 
 ################################################################################
 ## exports

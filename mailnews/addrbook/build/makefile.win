@@ -23,7 +23,7 @@ DEPTH=..\..\..
 MODULE=addrbook 
 LIBRARY_NAME=addrbook
 META_COMPONENT=mail
-COMPONENT_NAME=nsAbModule
+MODULE_NAME=nsAbModule
 
 ################################################################################
 ## exports

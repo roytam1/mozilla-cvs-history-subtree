@@ -23,7 +23,7 @@ DEPTH=..\..\..\..
 MODULE          = msgdb 
 LIBRARY_NAME    = msgdb
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsMsgDBModule
+MODULE_NAME  = nsMsgDBModule
 
 ################################################################################
 ## exports

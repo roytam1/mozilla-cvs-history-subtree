@@ -39,7 +39,7 @@ include <$(DEPTH)\config\config.mak>
 
 MODULE		= profile
 LIBRARY_NAME	= profile
-COMPONENT_NAME	= nsProfileModule
+MODULE_NAME	= nsProfileModule
 
 LINCS = -I$(PUBLIC)/js \
     -I$(PUBLIC)/profile \

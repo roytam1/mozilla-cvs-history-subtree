@@ -26,7 +26,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE		= imgpng
 LIBRARY_NAME	= imgpng
-COMPONENT_NAME	= nsPNGDecoderModule
+MODULE_NAME	= nsPNGDecoderModule
 
 OBJS	= \
 		.\$(OBJDIR)\nsPNGDecoder.obj \

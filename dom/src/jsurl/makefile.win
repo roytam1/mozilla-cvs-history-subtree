@@ -25,7 +25,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=jsurl
 LIBRARY_NAME=jsurl
-COMPONENT_NAME= javascript__protocol
+MODULE_NAME= javascript__protocol
 
 #------------------------------------------------------------------------
 #

@@ -36,7 +36,7 @@ EXPORTS=nsContentCID.h
 
 MODULE=layout
 LIBRARY_NAME=gkcontent
-COMPONENT_NAME=nsContentModule
+MODULE_NAME=nsContentModule
 
 LCFLAGS = \
         $(LCFLAGS) \

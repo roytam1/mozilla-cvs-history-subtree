@@ -28,7 +28,7 @@ DIRS=standalone
 
 MODULE=jar 
 LIBRARY_NAME=jar$(VERSION_NUMBER)
-COMPONENT_NAME=nsJarModule
+MODULE_NAME=nsJarModule
 
 DEPTH=..\..
 

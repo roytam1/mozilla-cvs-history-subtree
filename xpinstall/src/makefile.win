@@ -29,7 +29,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE		= xpinstall
 LIBRARY_NAME	= xpinstal
-COMPONENT_NAME	= nsSoftwareUpdate
+MODULE_NAME	= nsSoftwareUpdate
 
 DEFINES=-D_IMPL_NS_DOM -DWIN32_LEAN_AND_MEAN
 

@@ -23,7 +23,7 @@
 DEPTH=..\..\..\..
 MODULE		= xpcom_eventloop_windows
 LIBRARY_NAME	= evntloop
-COMPONENT_NAME	= nsNativeAppModule
+MODULE_NAME	= nsNativeAppModule
 
 XPIDLSRCS=									\
 		.\nsIWinEvent.idl					\

@@ -27,7 +27,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=gfx2
 LIBRARY_NAME=gfx2
-COMPONENT_NAME=nsGfx2Module
+MODULE_NAME=nsGfx2Module
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN
 

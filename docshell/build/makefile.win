@@ -24,7 +24,7 @@ include <$(DEPTH)\config\config.mak>
 
 MODULE=docshell
 LIBRARY_NAME=docshell
-COMPONENT_NAME=docshell_provider
+MODULE_NAME=docshell_provider
 
 LINCS=-I..\base
 

@@ -39,7 +39,7 @@ include <$(DEPTH)/config/config.mak>
 MODULE		= appcomps
 XPIDL_MODULE	= mozfind
 LIBRARY_NAME	= mozfind
-COMPONENT_NAME	= nsFindComponent
+MODULE_NAME	= nsFindComponent
 
 LINCS = \
 	-I$(PUBLIC)/xpcom \

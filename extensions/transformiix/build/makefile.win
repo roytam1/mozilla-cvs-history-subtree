@@ -24,7 +24,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=transformiix
 LIBRARY_NAME=transformiix
-COMPONENT_NAME=TransformiixModule
+MODULE_NAME=TransformiixModule
 
 CPPSRCS=						\
 	XSLTProcessorModule.cpp		\

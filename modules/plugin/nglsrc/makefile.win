@@ -30,7 +30,7 @@ EXPORTS =	\
 
 MODULE		= gkplugin
 LIBRARY_NAME	= gkplugin
-COMPONENT_NAME	= nsPluginModule
+MODULE_NAME	= nsPluginModule
 
 DEFINES =-D_IMPL_NS_PLUGIN -DWIN32_LEAN_AND_MEAN
 

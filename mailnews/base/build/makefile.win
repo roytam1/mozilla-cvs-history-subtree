@@ -21,7 +21,7 @@ DEPTH=..\..\..
 MODULE=msgbase 
 LIBRARY_NAME=msgbase
 META_COMPONENT=mail
-COMPONENT_NAME=nsMsgBaseModule
+MODULE_NAME=nsMsgBaseModule
 
 ################################################################################
 ## exports

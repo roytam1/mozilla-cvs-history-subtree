@@ -18,7 +18,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=ojiimpl
 LIBRARY_NAME=oji
-COMPONENT_NAME=nsCJVMManagerModule
+MODULE_NAME=nsCJVMManagerModule
 
 !ifdef MOZ_OJI
 

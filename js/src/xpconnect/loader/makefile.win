@@ -55,7 +55,7 @@ DEPTH= ..\..\..\..
 
 MODULE=jsloader
 LIBRARY_NAME=jsloader
-COMPONENT_NAME=JS_component_loader
+MODULE_NAME=JS_component_loader
 
 #//------------------------------------------------------------------------
 #// 

@@ -20,7 +20,7 @@ DEPTH=..\..\..\..
 MODULE          = impText
 LIBRARY_NAME    = $(MODULE)
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsTextImportModule
+MODULE_NAME  = nsTextImportModule
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsTextFactory.obj			\

@@ -24,7 +24,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE		= necko
 LIBRARY_NAME	= necko
-COMPONENT_NAME	= necko_core_and_primary_protocols
+MODULE_NAME	= necko_core_and_primary_protocols
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 

@@ -43,7 +43,7 @@ DEPTH= ..\..
 
 MODULE=caps
 LIBRARY_NAME=caps
-COMPONENT_NAME=nsSecurityManagerModule
+MODULE_NAME=nsSecurityManagerModule
 
 #//------------------------------------------------------------------------
 #// 

@@ -44,7 +44,7 @@ CPP_OBJS= \
 
 MODULE=chardetc
 LIBRARY_NAME=chardetc
-COMPONENT_NAME=nsCharDetModuleClassic
+MODULE_NAME=nsCharDetModuleClassic
 
 WIN_LIBS= ole32.lib
 

@@ -37,7 +37,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE		= mozxfer
 LIBRARY_NAME	= mozxfer
-COMPONENT_NAME	= nsStreamTransferModule
+MODULE_NAME	= nsStreamTransferModule
 
 LINCS = \
 	-I$(PUBLIC)/xpcom \

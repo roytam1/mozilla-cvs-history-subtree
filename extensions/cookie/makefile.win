@@ -25,7 +25,7 @@ include <$(DEPTH)/config/config.mak>
 DEFINES=-D_IMPL_NS_COOKIE -DWIN32_LEAN_AND_MEAN
 MODULE=cookie 
 LIBRARY_NAME=cookie
-COMPONENT_NAME=nsCookieModule
+MODULE_NAME=nsCookieModule
 
 EXPORTS = nsCookieHTTPNotify.h
 

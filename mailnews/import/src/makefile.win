@@ -23,7 +23,7 @@ DEPTH=..\..\..
 MODULE          = import
 LIBRARY_NAME    = $(MODULE)
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsImportServiceModule
+MODULE_NAME  = nsImportServiceModule
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsImportFactory.obj  	\

@@ -26,7 +26,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE		= imggif
 LIBRARY_NAME	= imggif
-COMPONENT_NAME	= nsGIFModule2
+MODULE_NAME	= nsGIFModule2
 
 OBJS	= \
 		.\$(OBJDIR)\nsGIFDecoder2.obj \

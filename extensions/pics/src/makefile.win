@@ -26,7 +26,7 @@ include <$(DEPTH)/config/config.mak>
 DEFINES=-D_IMPL_NS_PICS -DWIN32_LEAN_AND_MEAN
 MODULE=pics 
 LIBRARY_NAME=pics
-COMPONENT_NAME=nsPICSModule
+MODULE_NAME=nsPICSModule
 
 CSRCS=				\
  cslabel.c	\

@@ -37,7 +37,7 @@ CPP_OBJS =					\
 
 MODULE=intl
 LIBRARY_NAME=strres
-COMPONENT_NAME=nsStringBundleModule
+MODULE_NAME=nsStringBundleModule
 
 LINCS=\
     -I$(PUBLIC)\xpcom \

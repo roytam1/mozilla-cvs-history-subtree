@@ -24,7 +24,7 @@ include <$(DEPTH)/config/config.mak>
 
 MODULE=gfx
 LIBRARY_NAME=gkgfxwin
-COMPONENT_NAME=nsGfxModule
+MODULE_NAME=nsGfxModule
 
 DEFINES=-DWIN32_LEAN_AND_MEAN -DSTRICT
 

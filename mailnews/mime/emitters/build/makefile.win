@@ -29,7 +29,7 @@ DEPTH=..\..\..\..
 MODULE          = emitter
 LIBRARY_NAME    = emitter
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsMimeEmitterModule
+MODULE_NAME  = nsMimeEmitterModule
 
 ################################################################################
 ## exports

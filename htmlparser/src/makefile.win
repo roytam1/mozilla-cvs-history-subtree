@@ -28,7 +28,7 @@ DEFINES=-D_IMPL_NS_HTMLPARS -DWIN32_LEAN_AND_MEAN -DXML_DTD
 
 MODULE         = htmlparser
 LIBRARY_NAME   = gkparser
-COMPONENT_NAME = nsParserModule
+MODULE_NAME = nsParserModule
 
 CPPSRCS=					\
 	nsDTDUtils.cpp				\

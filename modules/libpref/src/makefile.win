@@ -39,7 +39,7 @@ DEPTH = ..\..\..
 
 MODULE		= pref
 LIBRARY_NAME	= xppref$(MOZ_BITS)
-COMPONENT_NAME	= nsPrefModule
+MODULE_NAME	= nsPrefModule
 
 LINCS = -I$(PUBLIC)/js \
 	-I$(PUBLIC)/pref \

@@ -20,7 +20,7 @@
 DEPTH=..\..\..\..
 MODULE=xmlextras
 LIBRARY_NAME=xmlextras
-COMPONENT_NAME=nsXMLExtrasModule
+MODULE_NAME=nsXMLExtrasModule
 
 ################################################################################
 ## library

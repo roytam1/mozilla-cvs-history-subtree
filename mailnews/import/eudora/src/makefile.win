@@ -20,7 +20,7 @@ DEPTH=..\..\..\..
 MODULE          = impEudra
 LIBRARY_NAME    = $(MODULE)
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsEudoraImportModule
+MODULE_NAME  = nsEudoraImportModule
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsEudoraFactory.obj			\

@@ -24,7 +24,7 @@ include <$(DEPTH)\config\config.mak>
 
 MODULE=embedcomponents
 LIBRARY_NAME=embedcomponents
-COMPONENT_NAME=embedcomponents
+MODULE_NAME=embedcomponents
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN
 

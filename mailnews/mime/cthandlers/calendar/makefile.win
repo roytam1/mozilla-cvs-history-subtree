@@ -41,7 +41,7 @@ DEPTH=..\..\..\..
 MODULE          = calendar
 LIBRARY_NAME    = calendar
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsCalendarModule
+MODULE_NAME  = nsCalendarModule
 
 #EXPORTS =
 # Exported headers here!!!               	

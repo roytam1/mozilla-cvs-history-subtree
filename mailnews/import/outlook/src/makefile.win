@@ -24,7 +24,7 @@ DEPTH=..\..\..\..
 MODULE          = impOutlk
 LIBRARY_NAME    = $(MODULE)
 META_COMPONENT  = mail
-COMPONENT_NAME  = nsOutlookImport
+MODULE_NAME  = nsOutlookImport
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsOutlookFactory.obj  		\

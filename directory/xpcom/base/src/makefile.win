@@ -21,7 +21,7 @@ include <$(DEPTH)\config\config.mak>
 
 MODULE=mozldap
 LIBRARY_NAME=mozldap
-COMPONENT_NAME=nsLDAPProtocolModule
+MODULE_NAME=nsLDAPProtocolModule
 
 LLIBS = $(LIBNSPR) \
 	$(DIST)\lib\xpcom.lib \

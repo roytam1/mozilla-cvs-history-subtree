@@ -42,7 +42,7 @@ IGNORE_MANIFEST=1
 LIBRARY_NAME   = pipnss
 PDBFILE        = $(LIBRARY_NAME).pdb
 MAPFILE        = $(LIBRARY_NAME).map
-COMPONENT_NAME = NSS
+MODULE_NAME = NSS
 META_COMPONENT = crypto
 
 include <$(DEPTH)/config/config.mak>
