@@ -853,6 +853,33 @@ NS_IMETHODIMP nsImapMailFolder::GetRememberedPassword(char ** password)
 }
 
 
+NS_IMETHODIMP
+nsImapMailFolder::MarkMessagesRead(nsISupportsArray *messages, PRBool markRead)
+{
+	nsresult rv;
+	nsMsgKeyArray keysToMarkRead;
+
+	// tell the folder to do it, which will mark them read in the db.
+	rv = nsMsgFolder::MarkMessagesRead(messages, markRead);
+	if (NS_SUCCEEDED(rv))
+	{
+		nsCString messageIds;
+		nsMsgKeyArray srcKeyArray;
+		rv = BuildIdsAndKeyArray(messages, messageIds, keysToMarkRead);
+		if (NS_FAILED(rv)) return rv;
+
+		rv = StoreImapFlags(kImapMsgSeenFlag, markRead,  keysToMarkRead);
+	}
+	return rv;
+}
+
+NS_IMETHODIMP
+nsImapMailFolder::MarkAllMessagesRead(void)
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 NS_IMETHODIMP nsImapMailFolder::Adopt(nsIMsgFolder *srcFolder, 
                                       PRUint32 *outPos)
 {
@@ -890,7 +917,7 @@ nsresult nsImapMailFolder::GetDBFolderInfoAndDB(
 
 nsresult
 nsImapMailFolder::BuildIdsAndKeyArray(nsISupportsArray* messages,
-                                      nsString2& msgIds,
+                                      nsCString& msgIds,
                                       nsMsgKeyArray& keyArray)
 {
     nsresult rv = NS_ERROR_NULL_POINTER;
@@ -903,7 +930,8 @@ nsImapMailFolder::BuildIdsAndKeyArray(nsISupportsArray* messages,
 
     rv = messages->Count(&count);
     if (NS_FAILED(rv)) return rv;
-    
+
+    // build up message keys.
     for (i = 0; i < count; i++)
     {
         msgSupports = getter_AddRefs(messages->ElementAt(i));
@@ -913,15 +941,54 @@ nsImapMailFolder::BuildIdsAndKeyArray(nsISupportsArray* messages,
             nsMsgKey key;
             rv = message->GetMessageKey(&key);
             if (NS_SUCCEEDED(rv))
-            {
-                if (msgIds.Length() > 0)
-                    msgIds.Append(',');
-                msgIds.Append((PRInt32)key);
                 keyArray.Add(key);
-            }
         }
     }
     
+	return AllocateUidStringFromKeyArray(keyArray, msgIds);
+}
+
+nsresult
+nsImapMailFolder::AllocateUidStringFromKeyArray(nsMsgKeyArray &keyArray, nsCString &msgIds)
+{
+    nsresult rv = NS_OK;
+	PRInt32 startSequence = (keyArray.GetSize() > 0) ? keyArray[0] : -1;
+	PRInt32 curSequenceEnd = startSequence;
+	PRUint32 total = keyArray.GetSize();
+	// sort keys and then generate ranges instead of singletons!
+	keyArray.QuickSort();
+    for (PRUint32 keyIndex = 0; keyIndex < total; keyIndex++)
+	{
+		PRUint32 curKey = keyArray[keyIndex];
+		PRUint32 nextKey = (keyIndex + 1 < total) ? keyArray[keyIndex + 1] : 0xFFFFFFFF;
+		PRBool lastKey = (nextKey == 0xFFFFFFFF);
+
+		if (lastKey)
+			curSequenceEnd = curKey;
+		if (nextKey == (PRUint32) curSequenceEnd + 1 && !lastKey)
+		{
+			curSequenceEnd = nextKey;
+			continue;
+		}
+		else if (curSequenceEnd > startSequence)
+		{
+			msgIds.Append(startSequence, 10);
+			msgIds += ':';
+			msgIds.Append(curSequenceEnd, 10);
+			if (!lastKey)
+				msgIds += ',';
+			startSequence = nextKey;
+			curSequenceEnd = startSequence;
+		}
+		else
+		{
+			startSequence = nextKey;
+			curSequenceEnd = startSequence;
+			msgIds.Append(keyArray[keyIndex], 10);
+			if (!lastKey)
+				msgIds += ',';
+		}
+	}
     return rv;
 }
 
@@ -1001,7 +1068,7 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
         if (NS_SUCCEEDED(rv))
             srcSupport = do_QueryInterface(srcFolder, &rv);
 
-        nsString2 messageIds("", eOneByte);
+        nsCString messageIds;
         nsMsgKeyArray srcKeyArray;
         rv = BuildIdsAndKeyArray(messages, messageIds, srcKeyArray);
         if (NS_FAILED(rv)) return rv;
@@ -1814,6 +1881,21 @@ nsresult nsImapMailFolder::StoreImapFlags(imapMessageFlagsType flags, PRBool add
 	nsresult rv = NS_OK;
 	if (PR_TRUE/* !NET_IsOffline() */)
 	{
+	    NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
+		if (addFlags)
+		{
+			nsCString msgIds;
+
+			AllocateUidStringFromKeyArray(keysToFlag, msgIds);
+			imapService->AddMessageFlags(m_eventQueue, this, nsnull, nsnull, msgIds, flags, PR_TRUE);
+		}
+		else
+		{
+			nsCString msgIds;
+
+			AllocateUidStringFromKeyArray(keysToFlag, msgIds);
+			imapService->SubtractMessageFlags(m_eventQueue, this, nsnull, nsnull, msgIds, flags, PR_TRUE);
+		}
 		// If we are not offline, we want to add the flag changes to the server
 		// use the imap service to add or remove flags.
 	}
@@ -2945,7 +3027,7 @@ nsImapMailFolder::CopyMessages2(nsIMsgFolder* srcFolder,
     m_copyState->m_streamCopy = PR_TRUE;
 
     // ** jt - needs to create server to server move/copy undo msg txn
-    nsString2 messageIds("", eOneByte);
+    nsCString messageIds;
     nsMsgKeyArray srcKeyArray;
     nsCOMPtr<nsIUrlListener> urlListener;
 
@@ -2987,7 +3069,7 @@ nsImapMailFolder::CopyMessages(nsIMsgFolder* srcFolder,
     char *hostname1 = nsnull, *hostname2 = nsnull, *username1 = nsnull,
         *username2 = nsnull;
     nsAutoString protocolType;
-    nsString2 messageIds("", eOneByte);
+    nsCString messageIds;
     nsMsgKeyArray srcKeyArray;
     nsCOMPtr<nsIUrlListener> urlListener;
     nsCOMPtr<nsISupports> srcSupport;
