@@ -729,7 +729,6 @@ case "$target" in
     AC_DEFINE(_POSIX_SOURCE)
     AC_DEFINE(_SVID_SOURCE)
     TARGET_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
-    DSO_LDOPTS="$DSO_LDOPTS -Wl,-Bsymbolic"
     LIBS="$LIBS -lc"
 
     case "${host_cpu}" in
@@ -3255,6 +3254,21 @@ then
     case "$target" in
     *-*-os2_vacpp)
         MOZ_DEBUG_FLAGS="/Ti+"
+        ;;
+    *-irix*)
+        if test "$GNU_CC"; then
+            GCC_VERSION=`$CC -v 2>&1 | awk '/version/ { print $3 }'`
+            case "$GCC_VERSION" in
+            2.95.*)
+                MOZ_DEBUG_FLAGS=""
+                ;;
+            *)
+                MOZ_DEBUG_FLAGS="-g"
+                ;;
+            esac
+        else
+            MOZ_DEBUG_FLAGS="-g"
+        fi
         ;;
     *)
     	MOZ_DEBUG_FLAGS="-g"

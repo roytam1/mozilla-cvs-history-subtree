@@ -80,8 +80,8 @@ ldap_abandon_ext( LDAP *ld, int msgid, LDAPControl **serverctrls,
 		return( LDAP_PARAM_ERROR );
 	}
 
-	LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
 	LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
+	LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
 	rc = do_abandon( ld, msgid, msgid, serverctrls, clientctrls );
 
 	/*
@@ -89,8 +89,8 @@ ldap_abandon_ext( LDAP *ld, int msgid, LDAPControl **serverctrls,
 	 */
 	ldap_memcache_abandon( ld, msgid );
 
-	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 	LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
+	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
 	return( rc );
 }

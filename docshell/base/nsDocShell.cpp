@@ -178,7 +178,6 @@ nsDocShell::nsDocShell():
     mItemType(typeContent),
     mCurrentScrollbarPref(-1, -1),
     mDefaultScrollbarPref(-1, -1),
-    mInitialPageLoad(PR_TRUE),
     mAllowPlugins(PR_TRUE),
     mAllowJavascript(PR_TRUE),
     mAllowMetaRedirects(PR_TRUE),
@@ -259,7 +258,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
 //*****************************************************************************   
 NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
 {
-    NS_ENSURE_ARG_POINTER(aSink);
+   NS_ENSURE_ARG_POINTER(aSink);
 
     if (aIID.Equals(NS_GET_IID(nsIURIContentListener)) &&
         NS_SUCCEEDED(EnsureContentListener())) {
@@ -684,6 +683,17 @@ nsDocShell::StopLoad()
     return NS_OK;
 }
 
+
+/*
+ * Reset state to a new content model within the current document and the document
+ * viewer.  Called by the document before initiating an out of band document.write().
+ */
+NS_IMETHODIMP
+nsDocShell::PrepareForNewContentModel()
+{
+  mEODForCurrentDocument = PR_FALSE;
+  return NS_OK;
+}
 
 //
 // Bug 13871: Prevent frameset spoofing
@@ -2359,6 +2369,7 @@ nsDocShell::Destroy()
 
     if (mScriptGlobal) {
         mScriptGlobal->SetDocShell(nsnull);
+        mScriptGlobal->SetGlobalObjectOwner(nsnull);
         mScriptGlobal = nsnull;
     }
     if (mScriptContext) {
@@ -2618,99 +2629,93 @@ NS_IMETHODIMP
 nsDocShell::SetFocus()
 {
 #ifdef DEBUG_DOCSHELL_FOCUS
-    printf("nsDocShell::SetFocus %p\n", (nsIDocShell*)this);
+  printf("nsDocShell::SetFocus %p\n", (nsIDocShell*)this);
 #endif
 
-    nsCOMPtr<nsIPresShell> presShell;
-    nsCOMPtr<nsIDocument> document;
-    GetPresShell(getter_AddRefs(presShell));
-    if (!presShell)
-        return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIPresShell> presShell;
+  GetPresShell(getter_AddRefs(presShell));
+  if (!presShell)
+    return NS_ERROR_FAILURE;
 
-    nsCOMPtr<nsIPresContext> presContext;
-    GetPresContext(getter_AddRefs(presContext));
-    if (!presContext)
-        return NS_ERROR_FAILURE;
-
-    /* Check to make sure the root frame for this document
-       is not collapsed. */
-    nsIFrame* rootFrame;
-    presShell->GetRootFrame(&rootFrame);
-    if (!rootFrame)
-        return NS_ERROR_FAILURE;
-
+  /* Check to make sure the root frame for this document
+     is not collapsed. */
+  nsIFrame* rootFrame;
+  presShell->GetRootFrame(&rootFrame);
+  if (rootFrame) {
     nsRect frameRect;
     rootFrame->GetRect(frameRect);
     if (frameRect.IsEmpty()) {
 #ifdef DEBUG_bryner
-        printf("SetFocus: empty frame rect, not accepting focus\n");
+      printf("SetFocus: empty frame rect, not accepting focus\n");
 #endif
-        return NS_ERROR_FAILURE;
+      return NS_ERROR_FAILURE;
     }
+  }
 
-    nsCOMPtr<nsIEventStateManager> esm;
+  nsCOMPtr<nsIDocument> document;
+  presShell->GetDocument(getter_AddRefs(document));
+
+  // Figure out what type of document this is
+  // if parent doc is content then set focus to document itself
+  // and set the "special" flag so it knows we are at the beginning
+  // of the document
+  PRBool doFocusDoc = PR_FALSE;
+  nsIDocShellTreeItem* treeItem = NS_STATIC_CAST(nsIDocShellTreeItem *, this);
+  nsCOMPtr<nsIDocShellTreeItem> parentItem;
+  treeItem->GetParent(getter_AddRefs(parentItem));
+  if (parentItem) {
+    PRInt32 type;
+    parentItem->GetItemType(&type);
+    doFocusDoc = type == nsIDocShellTreeItem::typeContent;
+  }
+
+  // Tell itself (and the DocShellFocusController) who has focus
+  // this way focus gets removed from the currently focused DocShell
+  SetHasFocus(PR_TRUE);
+
+  nsCOMPtr<nsIContent> focusContent;
+
+  nsCOMPtr<nsIEventStateManager> esm;
+
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(getter_AddRefs(presContext));
+  if (presContext) {
     presContext->GetEventStateManager(getter_AddRefs(esm));
-    if (!esm)
-        return NS_ERROR_FAILURE;
-
-    presShell->GetDocument(getter_AddRefs(document));
-    nsCOMPtr<nsIContent>
-        rootContent(getter_AddRefs(document->GetRootContent()));
-    if (!rootContent)
-        return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsIContent> focusContent;
-
-    // Figure out what type of document this is
-    // if parent doc is content then set focus to document itself
-    // and set the "special" flag so it knows we are at the beginning
-    // of the document
-    PRBool doFocusDoc = PR_FALSE;
-    nsIDocShellTreeItem* treeItem = NS_STATIC_CAST(nsIDocShellTreeItem *, this);
-    nsCOMPtr<nsIDocShellTreeItem> parentItem;
-    treeItem->GetParent(getter_AddRefs(parentItem));
-    if (parentItem) {
-      PRInt32 type;
-      parentItem->GetItemType(&type);
-      doFocusDoc = type == nsIDocShellTreeItem::typeContent;
-    }
-
-    // Tell itself (and the DocShellFocusController) who has focus
-    // this way focus gets removed from the currently focused DocShell
-    SetHasFocus(PR_TRUE);
-
-    // Either focus the document or the "first" piece of content
-    if (doFocusDoc) {
-      esm->SetContentState(nsnull, NS_EVENT_STATE_FOCUS);
-      esm->SetSpecialTopOfDoc(PR_TRUE);
-    } else {
-      nsCOMPtr<nsIContent> content;
-      esm->GetNextTabbableIndexContent(rootContent, PR_TRUE, PR_TRUE, getter_AddRefs(content));
-      if (!content) {
-        esm->GetNextTabbableContent(rootContent, nsnull, PR_TRUE,
-                                    getter_AddRefs(focusContent));
+    nsCOMPtr<nsIContent> rootContent(getter_AddRefs(document->GetRootContent()));
+    if (esm && rootContent) {
+      // Either focus the document or the "first" piece of content
+      if (doFocusDoc) {
+        esm->SetContentState(nsnull, NS_EVENT_STATE_FOCUS);
+        esm->SetSpecialTopOfDoc(PR_TRUE);
       } else {
-        focusContent = content;
+        nsCOMPtr<nsIContent> content;
+        esm->GetNextTabbableIndexContent(rootContent, PR_TRUE, PR_TRUE, getter_AddRefs(content));
+        if (!content) {
+          esm->GetNextTabbableContent(rootContent, nsnull, PR_TRUE,
+                                      getter_AddRefs(focusContent));
+        } else {
+          focusContent = content;
+        }
       }
     }
+  }
 
-    if (focusContent) {
-        nsIFrame *focusFrame = nsnull;
-        presShell->GetPrimaryFrameFor(focusContent, &focusFrame);
-        esm->ChangeFocus(focusContent, focusFrame, PR_TRUE);
-        SetCanvasHasFocus(PR_FALSE);
-    } else {
-        nsCOMPtr<nsIScriptGlobalObject> sgo;
-        document->GetScriptGlobalObject(getter_AddRefs(sgo));
-        if (sgo) {
-            nsCOMPtr<nsIDOMWindowInternal> domwin(do_QueryInterface(sgo));
-            if (domwin) {
-                domwin->Focus();
-            }
-        }
+  if (focusContent) {
+    nsIFrame *focusFrame = nsnull;
+    presShell->GetPrimaryFrameFor(focusContent, &focusFrame);
+    esm->ChangeFocus(focusContent, focusFrame, PR_TRUE);
+    SetCanvasHasFocus(PR_FALSE);
+  } else {
+    nsCOMPtr<nsIScriptGlobalObject> sgo;
+    document->GetScriptGlobalObject(getter_AddRefs(sgo));
+    if (sgo) {
+      nsCOMPtr<nsIDOMWindowInternal> domwin(do_QueryInterface(sgo));
+      if (domwin)
+        domwin->Focus();
     }
+  }
 
-    return NS_OK;
+  return NS_OK;
 }
 
 //-------------------------------------------------
@@ -3732,12 +3737,16 @@ nsDocShell::CreateContentViewer(const char *aContentType,
         if (currentLoadGroup)
             currentLoadGroup->RemoveRequest(request, nsnull, NS_OK);
 
+        // Update the notification callbacks, so that progress and
+        // status information are sent to the right docshell...
+        aOpenedChannel->SetNotificationCallbacks(this);
     }
 
     NS_ENSURE_SUCCESS(Embed(viewer, "", (nsISupports *) nsnull),
                       NS_ERROR_FAILURE);
 
-    mEODForCurrentDocument = PR_FALSE;  // clear the current flag
+    mEODForCurrentDocument = PR_FALSE;
+
     return NS_OK;
 }
 
@@ -3903,6 +3912,8 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
             // Suppress the command dispatcher.
             focusController->SetSuppressFocus(PR_TRUE,
                                               "Win32-Only Link Traversal Issue");
+            // Remove focus from the element that has it
+            focusController->SetFocusedElement(nsnull);
         }
     }
 
@@ -3915,6 +3926,28 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
         // Stop any activity that may be happening in the old document before
         // releasing it...
         mContentViewer->Stop();
+
+        // Try to extract the default background color from the old
+        // view manager, so we can use it for the next document.
+        nsCOMPtr<nsIDocumentViewer> docviewer =
+        do_QueryInterface(mContentViewer);
+
+        if (docviewer) {
+            nsCOMPtr<nsIPresShell> shell;
+            docviewer->GetPresShell(*getter_AddRefs(shell));
+
+            if (shell) {
+                nsCOMPtr<nsIViewManager> vm;
+                shell->GetViewManager(getter_AddRefs(vm));
+
+                if (vm) {
+                    vm->GetDefaultBackgroundColor(&bgcolor);
+                    // If the background color is not known, don't propagate it.
+                    bgSet = NS_GET_A(bgcolor) != 0;
+                }
+            }
+        }
+
         mContentViewer->Destroy();
         aNewViewer->SetPreviousViewer(mContentViewer);
         mContentViewer = nsnull;
@@ -4849,7 +4882,6 @@ nsDocShell::OnNewURI(nsIURI * aURI, nsIChannel * aChannel,
     // will set it up for us. 
     SetupRefreshURI(aChannel);
 
-    mInitialPageLoad = PR_FALSE;
     return NS_OK;
 }
 
@@ -5083,12 +5115,44 @@ void
 nsDocShell::SetCurrentURI(nsIURI * aURI)
 {
     mCurrentURI = aURI;         //This assignment addrefs
+    PRBool isRoot = PR_FALSE;   // Is this the root docshell
+    PRBool  isSubFrame=PR_FALSE;  // Is this a subframe navigation?
 
-    nsCOMPtr<nsIDocumentLoader> loader(do_GetInterface(mLoadCookie));
+    if (!mLoadCookie)
+      return; 
+
+    nsCOMPtr<nsIDocumentLoader> loader(do_GetInterface(mLoadCookie)); 
+    nsCOMPtr<nsIWebProgress> webProgress(do_QueryInterface(mLoadCookie));
+    nsCOMPtr<nsIDocShellTreeItem> root;
+
+    GetSameTypeRootTreeItem(getter_AddRefs(root));
+    if (root.get() == NS_STATIC_CAST(nsIDocShellTreeItem *, this)) 
+    {
+        // This is the root docshell
+        isRoot = PR_TRUE;
+    }
+    if (LSHE) {
+      nsCOMPtr<nsIHistoryEntry> historyEntry(do_QueryInterface(LSHE));
+      
+      // Check if this is a subframe navigation
+      if (historyEntry) {
+        historyEntry->GetIsSubFrame(&isSubFrame);
+      }
+    }
+ 
+    if (!isSubFrame && !isRoot) {
+      /* 
+       * We don't want to send OnLocationChange notifications when
+       * a subframe is being loaded for the first time, while
+       * visiting a frameset page
+       */
+      return;
+    }
+    
 
     NS_ASSERTION(loader, "No document loader");
     if (loader) {
-        loader->FireOnLocationChange(nsnull, nsnull, aURI);
+        loader->FireOnLocationChange(webProgress, nsnull, aURI);
     }
 }
 
