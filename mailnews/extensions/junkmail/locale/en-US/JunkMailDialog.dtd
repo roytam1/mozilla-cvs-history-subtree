@@ -6,7 +6,7 @@
 
 <!ENTITY sliderDescription.label "Choose a level of control below.  A high level will identify more junk mail but may identify some valid messages as junk, while a low level will identify less junk mail, but is less likely to identify some valid messages as junk.">
 
-<!ENTITY junkFolder.label "When messages are identified as &quot;junk&quot;, move them to a folder: ">
+<!ENTITY useJunkFolder.label "When messages are identified as &quot;junk&quot;, move them to the &quot;Junk Mail&quot; folder on this server">
 
 <!ENTITY off.label "Off">
 <!ENTITY lowest.label "Lowest">

@@ -2,6 +2,8 @@ messenger.jar:
     content/messenger-junkmail/contents.rdf
     content/messenger-junkmail/JunkMailDialog.xul
     content/messenger-junkmail/JunkMailDialog.js
+    content/messenger-junkmail/JunkMailPane.xul
+    content/messenger-junkmail/JunkMailPane.js
 
 en-US.jar:
     locale/en-US/messenger-junkmail/contents.rdf (locale/en-US/contents.rdf)

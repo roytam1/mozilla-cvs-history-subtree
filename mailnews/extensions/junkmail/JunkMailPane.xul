@@ -37,63 +37,71 @@
    - ***** END LICENSE BLOCK ***** -->
 
 <?xml-stylesheet href="chrome://messenger/skin/" type="text/css"?> 
+<?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
 
 <?xul-overlay href="chrome://messenger/content/msgFolderPickerOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://messenger-junkmail/locale/JunkMailDialog.dtd">
 
-<dialog id="JunkMailDialog"
-	xmlns:nc="http://home.netscape.com/NC-rdf#"
-	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-	title="&window.title;"
-	onload="Startup();"
-	ondialogaccept="return hPrefWindow.onOK(event);"
-	ondialogcancel="return hPrefWindow.onCancel(event);"
-	ondialoghelp="return doHelpButton(event);"
-	persist="width height screenX screenY"
-	buttons="accept,cancel,help">
+<page id="JunkMailDialog"
+      xmlns:nc="http://home.netscape.com/NC-rdf#"
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      title="&window.title;"
+      onload="onLoad();"
+      ondialogaccept="return onOk();"
+      ondialogcancel="return onCancel();"
+      ondialoghelp="return doHelpButton();"
+      persist="width height screenX screenY"
+      buttons="accept,cancel,help">
 
-  <!-- We want these two for the automagic prefs glue and the ok/cancel
+  <!-- XXX what does this do? -->
+  <keyset id="dialogKeys"/>
+
+  <script type="application/x-javascript"
+	  src="chrome://messenger-junkmail/content/JunkMailPane.js"/>
+
+  <!-- We want these for the automagic prefs glue and the ok/cancel
        semantics -->
   <script type="application/x-javascript" 
 	  src="chrome://global/content/nsWidgetStateManager.js"/>
   <script type="application/x-javascript"
 	  src="chrome://communicator/content/pref/nsPrefWindow.js"/>
 
-  <script type="application/x-javascript"
-	  src="chrome://messenger-junkmail/content/JunkMailDialog.js"/>
+  <!-- The performant way to use the widgetStateManager persistance stuff
+       (as opposed to wsm_persist, which is slow) -->
+  <script type="application/x-javascript">
+  <![CDATA[
+    var _elementIDs = ["useJunkFolder"];
+  ]]>
+  </script>  
 
-  <!-- nsPrefWindow.js wants this -->
-  <stringbundle id="bundle_prefutilities"
-		src=
-		"chrome://communicator/locale/pref/prefutilities.properties"/>
-
-  <hbox align="center">
-    <label value="&account.label;" accesskey="&account.accesskey;"
-           control="serverMenu"/>
-      <menulist oncommand="onServerClick(event);" id="serverMenu">
-        <menupopup datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
-                   containment="http://home.netscape.com/NC-rdf#child"
-		   ref="msgaccounts:/">
-          <template>
-            <rule nc:SupportsFilters="true">
-              <menuitem uri="..." value="..."
-                 class="folderMenuItem menuitem-iconic"
-                 IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
-                 IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
-                 ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"
-                 label="rdf:http://home.netscape.com/NC-rdf#Name"/>
-            </rule>
-          </template>
-        </menupopup>
-      </menulist>
-  </hbox>
+  <description>&description.label;</description>
 
   <spacer flex="1"/>
 
-  <!-- This is where the pane data gets loaded -->
-  <iframe id="junkMailFrame" name="junkMailFrame" style="width: 0px" flex="10"
-	  src="chrome://messenger-junkmail/content/JunkMailPane.xul"/>
+  <description>&sliderDescription.label;</description>
 
-</dialog>
+  <spacer flex="1"/>
+
+  <radiogroup id="threshhold" align="center">
+      <hbox>
+          <radio value="255.0" label="&off.label;"/>
+          <radio value="6.0" label="&lowest.label;"/>
+          <radio value="5.0" label="&low.label;"/>
+          <radio value="4.0" label="&medium.label;"/>
+          <radio value="3.0" label="&high.label;"/>
+          <radio value="2.0" label="&highest.label;"/>
+      </hbox>
+  </radiogroup>
+
+  <spacer flex="2"/>
+
+  <hbox>
+      <checkbox id="useJunkFolder" label="&useJunkFolder.label;"
+		prefstring="mail.%serverkey%.junkmail.move"/>
+  </hbox>
+
+  <spacer flex="6"/>
+
+</page>
 

@@ -14,90 +14,76 @@
  *
  * The Initial Developer of the Original Code is Netscape
  * Communications Corporation. Portions created by Netscape are
- * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Copyright (C) 1998-2002 Netscape Communications Corporation. All
  * Rights Reserved.
  */
 
-var rdf;
+var gRdfService;
+var gSelectedServer;
 
-var gPromptService;
-var gFilterListMsgWindow = null;
+var hPrefWindow = null;
 
-function onLoad()
+/** General startup routine for preferences dialog. 
+ *  Place all necessary modifications to pref tree here. 
+ */
+function Startup()
 {
-    rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+    hPrefWindow = new nsPrefWindow('junkMailFrame');  
+      
+    if( !hPrefWindow )
+        throw "failed to create prefwindow";
 
-    var gPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
-    gPromptService = gPromptService.QueryInterface(Components.interfaces.nsIPromptService);
+    hPrefWindow.init();
 
-    var msgWindowContractID = "@mozilla.org/messenger/msgwindow;1";
-    var nsIMsgWindow = Components.interfaces.nsIMsgWindow;
-    gFilterListMsgWindow = Components.classes[msgWindowContractID].createInstance(nsIMsgWindow);
-    gFilterListMsgWindow.SetDOMWindow(window); 
+    // If this call worked, we could center the window here:
+    // centerWindowOnScreen();
 
+    gRdfService = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+        .getService(Components.interfaces.nsIRDFService);
+
+    // XXX why do we care about this?
+    //
     moveToAlertPosition();
 
     // get the selected server if it can have filters.
-    var firstItem = getSelectedServerForFilters();
+    //
+    gSelectedServer = getSelectedServerForFilters();
 
     // if the selected server cannot have filters, get the default server
     // failing that, check all accounts and get a server that can have filters.
     //
-    if (!firstItem) {
-        firstItem = getServerThatCanHaveFilters();
+    if (!gSelectedServer) {
+        gSelectedServer = getServerThatCanHaveFilters();
     }
 
-    if (firstItem) {
-        selectServer(firstItem);
+    if (gSelectedServer) {
+        selectServer(gSelectedServer);
     }
 }
 
 function onOk()
 {
-  window.close();
+    window.close();
 }
 
 function onCancel()
 {
-    var firstItem = getSelectedServerForFilters();
-    if (!firstItem)
-        firstItem = getServerThatCanHaveFilters();
-    
-    if (firstItem) {
-        var resource = rdf.GetResource(firstItem);
-        var msgFolder = resource.QueryInterface(Components.interfaces.nsIMsgFolder);
-        if (msgFolder)
-        {
-           msgFolder.ReleaseDelegate("filter");
-           msgFolder.setFilterList(null);
-           try
-           {
-              //now find Inbox
-              var outNumFolders = new Object();
-              var inboxFolder = msgFolder.getFoldersWithFlag(0x1000, 1, outNumFolders);
-              inboxFolder.setFilterList(null);
-           }
-           catch(ex)
-           {
-             dump ("ex " +ex + "\n");
-           }
-        }
-    }
-    window.close();
 }
 
 function onServerClick(event)
 {
     var item = event.target;
 
+    // XXX what does this do?
+    //
     // don't check this in.
     setTimeout("setServer(\"" + item.id + "\");", 0);
-}
 
-// roots the tree at the specified server
-function setServer(uri)
-{
-    // XXX
+    // switch to the same page, but with a different tag (in this case, 
+    // the mail server URI).
+    //
+    hPrefWindow.switchPage(
+        "chrome://messenger-junkmail/content/JunkMailPane.xul", item.id);
 }
 
 // sets up the menulist and the gFilterTree
@@ -107,7 +93,6 @@ function selectServer(uri)
     var serverMenu = document.getElementById("serverMenu");
     var menuitems = serverMenu.getElementsByAttribute("id", uri);
     serverMenu.selectedItem = menuitems[0];
-    setServer(uri);
 }
 
 /**
@@ -121,7 +106,8 @@ function getSelectedServerForFilters()
 
     if (args && args[0] && selectedFolder)
     {
-        var msgFolder = selectedFolder.QueryInterface(Components.interfaces.nsIMsgFolder);
+        var msgFolder = selectedFolder.QueryInterface(
+            Components.interfaces.nsIMsgFolder);
         try
         {
             var rootFolder = msgFolder.rootFolder;
@@ -143,10 +129,11 @@ function getSelectedServerForFilters()
     return firstItem;
 }
 
-/** if the selected server cannot have filters, get the default server
-  * if the default server cannot have filters, check all accounts
-  * and get a server that can have filters.
-  */
+/** 
+ * if the selected server cannot have filters, get the default server
+ * if the default server cannot have filters, check all accounts
+ * and get a server that can.
+ */
 function getServerThatCanHaveFilters()
 {
     var firstItem = null;
@@ -171,8 +158,8 @@ function getServerThatCanHaveFilters()
         var index = 0;
         for (index = 0; index < numServers; index++)
         {
-            var currentServer
-            = allServers.GetElementAt(index).QueryInterface(Components.interfaces.nsIMsgIncomingServer);
+            var currentServer = allServers.GetElementAt(index)
+                .QueryInterface(Components.interfaces.nsIMsgIncomingServer);
 
             if (currentServer.canHaveFilters)
             {
@@ -189,4 +176,3 @@ function doHelpButton()
 {
   openHelp("spam-filters");
 }
-
