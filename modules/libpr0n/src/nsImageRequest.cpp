@@ -40,10 +40,11 @@
 
 #include "nspr.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(nsImageRequest, nsIImageRequest, nsIRequest,
+NS_IMPL_THREADSAFE_ISUPPORTS6(nsImageRequest, nsIImageRequest, nsPIImageRequest,
                               nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver, nsIRunnable)
 
-nsImageRequest::nsImageRequest()
+nsImageRequest::nsImageRequest() : 
+  mObservers(0)
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
@@ -57,24 +58,51 @@ nsImageRequest::~nsImageRequest()
 }
 
 
+/** nsPIImageRequest methods **/
 
-/* void init (in nsIChannel aChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
-NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel, nsIImageDecoderObserver *aObserver, nsISupports *cx)
+/* void init (in nsIChannel aChannel); */
+NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel)
 {
+  // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
+
   if (mImage)
     return NS_ERROR_FAILURE; // XXX
 
   mChannel = aChannel;
 
-  mObserver = aObserver;
-  // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
-
-  mContext = cx;
-
   // XXX do not init the image here.  this has to be done from the image decoder.
   mImage = do_CreateInstance("@mozilla.org/gfx/image;2");
 
   return NS_OK;
+}
+
+/* void addObserver(in nsIImageDecoderObserver observer); */
+NS_IMETHODIMP nsImageRequest::AddObserver(nsIImageDecoderObserver *observer)
+{
+  mObservers.AppendElement(NS_STATIC_CAST(void*, observer));
+  return NS_OK;
+}
+
+/* void removeObserver(in nsIImageDecoderObserver observer, in nsresult status); */
+NS_IMETHODIMP nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, nsresult status)
+{
+  mObservers.RemoveElement(NS_STATIC_CAST(void*, observer));
+
+  if (mObservers.Count() == 0)
+    mChannel->Cancel(status);
+
+  return NS_OK;
+}
+
+
+
+/** nsIImageRequest methods **/
+
+
+/* void cancel (in nsresult status); */
+NS_IMETHODIMP nsImageRequest::Cancel(nsresult status)
+{
+  return mChannel->Cancel(status);
 }
 
 /* readonly attribute nsIImage image; */
@@ -96,47 +124,6 @@ NS_IMETHODIMP nsImageRequest::GetImageStatus(PRUint32 *aStatus)
 
 
 
-/** nsIRequest methods **/
-
-/* readonly attribute wstring name; */
-NS_IMETHODIMP nsImageRequest::GetName(PRUnichar * *aName)
-{
-  return mChannel->GetName(aName);
-}
-
-/* boolean isPending (); */
-NS_IMETHODIMP nsImageRequest::IsPending(PRBool *_retval)
-{
-  return mChannel->IsPending(_retval);
-}
-
-/* readonly attribute nsresult status; */
-NS_IMETHODIMP nsImageRequest::GetStatus(nsresult *aStatus)
-{
-  return mChannel->GetStatus(aStatus);
-}
-
-/* void cancel (in nsresult status); */
-NS_IMETHODIMP nsImageRequest::Cancel(nsresult status)
-{
-  return mChannel->Cancel(status);
-}
-
-/* void suspend (); */
-NS_IMETHODIMP nsImageRequest::Suspend()
-{
-  return mChannel->Suspend();
-}
-
-/* void resume (); */
-NS_IMETHODIMP nsImageRequest::Resume()
-{
-  return mChannel->Resume();
-}
-
-
-
-
 
 
 /** nsIImageDecoderObserver methods **/
@@ -144,8 +131,13 @@ NS_IMETHODIMP nsImageRequest::Resume()
 /* void onStartDecode (in nsIImageRequest request, in nsISupports cx); */
 NS_IMETHODIMP nsImageRequest::OnStartDecode(nsIImageRequest *request, nsISupports *cx)
 {
-  if (mObserver)
-    mObserver->OnStartDecode(this, mContext);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnStartDecode(request, cx);
+  }
 
   return NS_OK;
 }
@@ -155,8 +147,13 @@ NS_IMETHODIMP nsImageRequest::OnStartContainer(nsIImageRequest *request, nsISupp
 {
   mStatus |= nsIImageRequest::STATUS_SIZE_AVAILABLE;
 
-  if (mObserver)
-    mObserver->OnStartContainer(this, mContext, image);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnStartContainer(request, cx, image);
+  }
 
   return NS_OK;
 }
@@ -164,8 +161,13 @@ NS_IMETHODIMP nsImageRequest::OnStartContainer(nsIImageRequest *request, nsISupp
 /* void onStartFrame (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame); */
 NS_IMETHODIMP nsImageRequest::OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
-  if (mObserver)
-    mObserver->OnStartFrame(this, mContext, frame);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnStartFrame(request, cx, frame);
+  }
 
   return NS_OK;
 }
@@ -173,8 +175,13 @@ NS_IMETHODIMP nsImageRequest::OnStartFrame(nsIImageRequest *request, nsISupports
 /* [noscript] void onDataAvailable (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame, [const] in nsRect rect); */
 NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect * rect)
 {
-  if (mObserver)
-    mObserver->OnDataAvailable(this, mContext, frame, rect);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnDataAvailable(request, cx, frame, rect);
+  }
 
   return NS_OK;
 }
@@ -182,8 +189,13 @@ NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsISuppo
 /* void onStopFrame (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame); */
 NS_IMETHODIMP nsImageRequest::OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
-  if (mObserver)
-    mObserver->OnStopFrame(this, mContext, frame);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnStopFrame(request, cx, frame);
+  }
 
   return NS_OK;
 }
@@ -191,8 +203,13 @@ NS_IMETHODIMP nsImageRequest::OnStopFrame(nsIImageRequest *request, nsISupports 
 /* void onStopContainer (in nsIImageRequest request, in nsISupports cx, in nsIImageContainer image); */
 NS_IMETHODIMP nsImageRequest::OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
 {
-  if (mObserver)
-    mObserver->OnStopContainer(this, mContext, image);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnStopContainer(request, cx, image);
+  }
 
   return NS_OK;
 }
@@ -200,12 +217,16 @@ NS_IMETHODIMP nsImageRequest::OnStopContainer(nsIImageRequest *request, nsISuppo
 /* void onStopDecode (in nsIImageRequest request, in nsISupports cx, in nsresult status, in wstring statusArg); */
 NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
 {
-
   if (NS_FAILED(status))
     mStatus = nsIImageRequest::STATUS_ERROR;
 
-  if (mObserver)
-    mObserver->OnStopDecode(this, mContext, status, statusArg);
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
+    ob->OnStopDecode(request, cx, status, statusArg);
+  }
 
   return NS_OK;
 }

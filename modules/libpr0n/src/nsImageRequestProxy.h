@@ -22,53 +22,39 @@
  */
 
 #include "nsIImageRequest2.h"
+#include "nsPIImageRequestProxy.h"
+#include "nsIImageDecoderObserver.h"
 
-#include "nsPIImageRequest.h"
-
-#include "nsIRunnable.h"
-
-#include "nsIChannel.h"
 #include "nsIImageContainer.h"
 #include "nsIImageDecoder.h"
-#include "nsIImageDecoderObserver.h"
-#include "nsIStreamListener.h"
 #include "nsCOMPtr.h"
 
-#include "nsVoidArray.h"
-
-#define NS_IMAGEREQUEST_CID \
-{ /* 9f733dd6-1dd1-11b2-8cdf-effb70d1ea71 */         \
-     0x9f733dd6,                                     \
-     0x1dd1,                                         \
+#define NS_IMAGEREQUESTPROXY_CID \
+{ /* 20557898-1dd2-11b2-8f65-9c462ee2bc95 */         \
+     0x20557898,                                     \
+     0x1dd2,                                         \
      0x11b2,                                         \
-    {0x8c, 0xdf, 0xef, 0xfb, 0x70, 0xd1, 0xea, 0x71} \
+    {0x8f, 0x65, 0x9c, 0x46, 0x2e, 0xe2, 0xbc, 0x95} \
 }
 
-class nsImageRequest : public nsIImageRequest,
-                       public nsPIImageRequest,
-                       public nsIImageDecoderObserver, 
-                       public nsIStreamListener, public nsIRunnable
+class nsImageRequestProxy : public nsIImageRequest,
+                            public nsPIImageRequestProxy,
+                            public nsIImageDecoderObserver
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGEREQUEST
-  NS_DECL_NSPIIMAGEREQUEST
+  NS_DECL_NSPIIMAGEREQUESTPROXY
   NS_DECL_NSIIMAGEDECODEROBSERVER
-  NS_DECL_NSISTREAMLISTENER
-  NS_DECL_NSISTREAMOBSERVER
-  NS_DECL_NSIRUNNABLE
 
-  nsImageRequest();
-  virtual ~nsImageRequest();
+  nsImageRequestProxy();
+  virtual ~nsImageRequestProxy();
   /* additional members */
 
 private:
-  nsCOMPtr<nsIChannel> mChannel;
-  nsCOMPtr<nsIImageContainer> mImage;
-  nsCOMPtr<nsIImageDecoder> mDecoder;
+  nsCOMPtr<nsIImageDecoderObserver> mObserver;
 
-  nsVoidArray mObservers;
+  nsCOMPtr<nsISupports> mContext;
 
-  PRBool mProcessing;
-  PRUint32 mStatus;
+  nsCOMPtr<nsIImageRequest> mOwner;
 };

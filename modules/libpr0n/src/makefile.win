@@ -29,9 +29,17 @@ LIBRARY_NAME	= imglib2
 DLL			= $(OBJDIR)\$(LIBRARY_NAME).dll
 MAKE_OBJ_TYPE	= DLL
 
+XPIDL_MODULE	= imglib2pr
+
+XPIDLSRCS	= \
+		.\nsPIImageRequest.idl \
+		.\nsPIImageRequestProxy.idl \
+		$(NULL)
+
 OBJS	= \
 		.\$(OBJDIR)\nsImageLoader.obj \
 		.\$(OBJDIR)\nsImageRequest.obj \
+		.\$(OBJDIR)\nsImageRequestProxy.obj \
 		.\$(OBJDIR)\nsImageFactory.obj \
 		$(NULL)
 

@@ -23,41 +23,28 @@
 
 #include "nsISupports.idl"
 
-interface nsIImageContainer;
+interface nsIChannel;
+interface nsPIImageRequest;
+interface nsIImageDecoderObserver;
 
 /**
- * nsIImageRequest interface
+ * nsPIImageRequestProxy interface
  *
  * @author Stuart Parmenter <pavlov@netscape.com>
  * @version 0.1
  * @see imagelib2
  */
-[scriptable, uuid(ccf705f6-1dd1-11b2-82ef-e18eccf7f7ec)]
-interface nsIImageRequest : nsISupports
+[scriptable, uuid(f975cbb0-1dd1-11b2-a8fe-d08243e09262)]
+interface nsPIImageRequestProxy : nsISupports
 {
-  void cancel(in nsresult status);
-
   /**
-   * the image container...
-   * @return the image object associated with the request.
+   * Initalize the image request proxy
+   * @param aChannel The channel created by the nsIImageLoader
+   * @param aObserver The observer that the request should send notifications to.
+   * @param cx Data to be passed through to \a aObserver.
+   *
    * @attention NEED DOCS
    */
-  readonly attribute nsIImageContainer image;
+  void init(in nsPIImageRequest request, in nsIImageDecoderObserver aObserver, in nsISupports cx);
 
-  /**
-   * Bits set in the return value from imageStatus
-   * @name statusflags
-   */
-  //@{
-  const long STATUS_NONE             = 0x0;
-  const long STATUS_SIZE_AVAILABLE   = 0x1;
-  const long STATUS_LOAD_COMPLETE    = 0x2;
-  const long STATUS_ERROR            = 0x4;
-  //@}
-
-  /**
-   * something
-   * @attention NEED DOCS
-   */
-  readonly attribute unsigned long imageStatus;
 };

@@ -33,6 +33,9 @@
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
 
+#include "nsPIImageRequest.h"
+#include "nsPIImageRequestProxy.h"
+
 NS_IMPL_ISUPPORTS1(nsImageLoader, nsIImageLoader)
 
 nsImageLoader::nsImageLoader()
@@ -72,8 +75,13 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
   newChannel->SetOwner(this); // the channel is now holding a strong ref to 'this'
 
   // XXX look at the progid
-  nsCOMPtr<nsIImageRequest> imgRequest(do_CreateInstance("@mozilla.org/image/request;1"));
-  imgRequest->Init(newChannel, aObserver, cx);
+  nsCOMPtr<nsPIImageRequest> imgRequest(do_CreateInstance("@mozilla.org/image/request/real;1"));
+  imgRequest->Init(newChannel);
+
+
+  nsCOMPtr<nsPIImageRequestProxy> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
+  proxyRequest->Init(imgRequest, aObserver, cx); // init adds itself to imgRequest's list of observers
+
 
 #ifdef IMAGE_THREADPOOL
   nsCOMPtr<nsIRunnable> run(do_QueryInterface(imgRequest));
@@ -83,7 +91,8 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
   newChannel->AsyncRead(streamList, cx);
 #endif
 
-  *_retval = imgRequest;
+  nsCOMPtr<nsIImageRequest> ret(do_QueryInterface(proxyRequest));
+  *_retval = ret;
   NS_ADDREF(*_retval);
 
   return NS_OK;
