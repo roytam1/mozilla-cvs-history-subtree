@@ -261,7 +261,7 @@ CharsToPRInt64(const char* aBuf, PRUint32 aCount, PRInt64* aResult)
 static PRTime
 NormalizeTime(PRInt64 aTime)
 {
-  // normalize both now and date to midnight of the day they occur on
+  // normalize both now and date to 00:00 of the day they occur on (rounding down)
   PRExplodedTime explodedTime;
   PR_ExplodeTime(aTime, PR_LocalTimeParameters, &explodedTime);
 
@@ -347,7 +347,7 @@ matchAgeInDaysCallback(nsIMdbRow *row, void *aClosure)
   if (!matchSearchTerm->haveClosure) {
     PRInt32 err;
     matchSearchTerm->intValue = term->text.ToInteger(&err);
-    matchSearchTerm->now = NormalizeTime(PR_Now());
+    //matchSearchTerm->now = NormalizeTime(PR_Now());   // we call this before use now, to be able to use GetNow().
     if (err != 0) return PR_FALSE;
     matchSearchTerm->haveClosure = PR_TRUE;
   }
@@ -3688,7 +3688,7 @@ nsGlobalHistory::RowMatches(nsIMdbRow *aRow,
     if (term->match) {
       // queue up some values just in case callback needs it
       // (how would we do this dynamically?)
-      matchSearchTerm_t matchSearchTerm = { mEnv, mStore, term , PR_FALSE};
+      matchSearchTerm_t matchSearchTerm = { mEnv, mStore, term, PR_FALSE, NormalizeTime(GetNow()), 0 };
       
       if (!term->match(aRow, (void *)&matchSearchTerm))
         return PR_FALSE;
@@ -3697,7 +3697,6 @@ nsGlobalHistory::RowMatches(nsIMdbRow *aRow,
 
       mdb_column property_column;
       nsCAutoString property_name(term->property);
-      property_name.Append(char(0));
       
       err = mStore->QueryToken(mEnv, property_name.get(), &property_column);
       if (err != 0) {
