@@ -70,7 +70,6 @@ DIRS = lib  \
  swfort  \
  symkeyutil \
  tstclnt  \
- vfychain \
  vfyserv \
  modutil \
  $(NULL)

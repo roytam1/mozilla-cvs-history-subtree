@@ -1,40 +1,24 @@
 # 
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
-# http://www.mozilla.org/MPL/
-# 
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-# 
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#  
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#  
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
 # 
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 # 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-# 
-# ***** END LICENSE BLOCK ***** 
+# Contributor(s): 
+#
 
 # some vendors may wish to override COMPVERSIONDIR from the command-line
 #
@@ -177,9 +161,14 @@ NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
-LIBNLS_INCLUDES_LOC = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+ifdef RELEASE_TREE
+LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+else
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
 
+endif
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
 ifeq ($(COMPONENT_PULL_METHOD), FTP)
 LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
@@ -296,7 +285,7 @@ endif
 RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
 
 ifeq ($(OS_ARCH), SunOS)
-# include $ORIGIN in run time library path (works on Solaris 8 10/01 and later)
+# include $ORIGIN in run time library path (work on Solaris 8 10/01 and later
 RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
 
 # flag to pass to cc when linking to set runtime shared library search path
@@ -386,12 +375,12 @@ ifeq ($(BUILD_OPT), 1)
 endif
 
 SUBSYSTEM=CONSOLE
-LINK_EXE        = link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
+LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
     /NODEFAULTLIB:MSVCRTD /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
     $(EXTRA_LIBS) $(PLATFORMLIBS) $(OBJS)
-LINK_LIB        = lib -OUT:"$@"  $(OBJS)
-LINK_DLL        = link $(DEBUG_LINK_OPT) /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
+LINK_LIB        = $(CYGWIN_WRAPPER) lib -OUT:"$@"  $(OBJS)
+LINK_DLL        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
         $(ML_DEBUG) /SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) /out:"$@" $(OBJS)
 endif # NS_USE_GCC
@@ -400,8 +389,14 @@ else # WINNT
 # UNIX link commands
 #
 ifeq ($(OS_ARCH),OS2)
-LINK_LIB        = $(AR) $(AR_FLAGS) $(OBJS) && $(RANLIB) $@
+LINK_LIB        = -$(RM) $@ && $(AR) $(AR_FLAGS) $(OBJS) && $(RANLIB) $@
+LINK_LIB2       = -$(RM) $@ && $(AR) $@ $(OBJS2) && $(RANLIB) $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
 LINK_DLL        = $(LD) $(OS_DLLFLAGS) $(DLLFLAGS) $(OBJS)
+else
+LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
+                        -o $@ $(OBJS)
+endif
 
 else
 
@@ -425,14 +420,6 @@ endif
 
 ifneq (,$(filter BeOS Darwin NetBSD,$(OS_ARCH)))
 LINK_DLL	= $(MKSHLIB) $(OBJS)
-endif
-
-ifeq ($(OS_ARCH),OpenVMS)
-AR_EXTRACT = ar x
-AR_LIST = ar t
-SUB_LOBJS = $(shell for lib in $(SHARED_LIBRARY_LIBS); do $(AR_LIST) $${lib}; done;)
-LINK_DLL        = $(MKSHLIB) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) \
-		  $(DLL_EXPORT_FLAGS) -o $@ $(OBJS) VMSuni.opt
 endif
 
 ifeq ($(OS_ARCH), HP-UX)
@@ -487,10 +474,7 @@ endif
 endif
 
 
-ifndef PERL
-PERL = perl
-endif
-
+PERL ?= perl
 #
 # shared library symbol export definitions
 #

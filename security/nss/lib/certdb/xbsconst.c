@@ -142,9 +142,7 @@ SECStatus CERT_DecodeBasicConstraintValue
 	if (rv == SECFailure)
 	    break;
 	
-	value->isCA = decodeContext.isCA.data 
-	              ? (PRBool)(decodeContext.isCA.data[0] != 0)
-		      : PR_FALSE;
+	value->isCA = (PRBool)(*decodeContext.isCA.data);
 	if (decodeContext.pathLenConstraint.data == NULL) {
 	    /* if the pathLenConstraint is not encoded, and the current setting
 	      is CA, then the pathLenConstraint should be set to a negative number
@@ -152,14 +150,10 @@ SECStatus CERT_DecodeBasicConstraintValue
 	     */
 	    if (value->isCA)
 		value->pathLenConstraint = CERT_UNLIMITED_PATH_CONSTRAINT;
-	} else if (value->isCA) {
-	    long len = DER_GetInteger (&decodeContext.pathLenConstraint);
-	    if (len < 0 || len == LONG_MAX) {
-		PORT_SetError (SEC_ERROR_BAD_DER);
-		GEN_BREAK (SECFailure);
-	    }
-	    value->pathLenConstraint = len;
-	} else {
+	}
+	else if (value->isCA)
+	    value->pathLenConstraint = DER_GetUInteger (&decodeContext.pathLenConstraint);
+	else {
 	    /* here we get an error where the subject is not a CA, but
 	       the pathLenConstraint is set */
 	    PORT_SetError (SEC_ERROR_BAD_DER);

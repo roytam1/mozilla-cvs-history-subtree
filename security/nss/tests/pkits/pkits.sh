@@ -107,8 +107,7 @@ pkits_init()
   echo "certs" $certs
   echo "crls" $crls
 
-  echo nss > ${PKITSdb}/pw
-  certutil -N -d ${PKITSdb} -f ${PKITSdb}/pw
+  certutil -N -d ${PKITSdb}
   certutil -A -n TrustAnchorRootCertificate -t "C,C,C" -i \
       $certs/TrustAnchorRootCertificate.crt -d $PKITSdb
   certutil -A -n GoodCACert -t ",," -i $certs/GoodCACert.crt -d $PKITSdb
@@ -133,10 +132,9 @@ pkits_log()
 pkits()
 {
   echo "$SCRIPTNAME: ${VFY_ACTION} --------------------------"
-  echo "vfychain -d PKITSdb -u 4 $*"
-  vfychain -d $PKITSdb -u 4 $* >  ${PKITSDIR}/cmdout.txt 2>&1
-  RET=$(grep -c ERROR ${PKITSDIR}/cmdout.txt)
-  cat ${PKITSDIR}/cmdout.txt
+  echo "vfychain -d PKITSdb $*"
+  vfychain -d $PKITSdb $*
+  RET=$?
 
   if [ "$RET" -ne 0 ]; then
       html_failed "<TR><TD>${VFY_ACTION} ($RET) "
@@ -157,12 +155,11 @@ pkits()
 pkitsn()
 {
   echo "$SCRIPTNAME: ${VFY_ACTION} --------------------------"
-  echo "vfychain -d PKITSdb -u 4 $*"
-  vfychain -d $PKITSdb -u 4 $* >  ${PKITSDIR}/cmdout.txt 2>&1
-  RET=$(grep -c ERROR ${PKITSDIR}/cmdout.txt)
-  cat ${PKITSDIR}/cmdout.txt
+  echo "vfychain -d PKITSdb $*"
+  vfychain -d $PKITSdb $*
+  RET=$?
 
-  if [ "$RET" -eq 0 ]; then
+  if [ "$RET" -e 0 ]; then
       html_failed "<TR><TD>${VFY_ACTION} ($RET) "
       pkits_log "ERROR: ${VFY_ACTION} failed $RET"
   else
@@ -199,7 +196,6 @@ pkits_SignatureVerification()
 
   VFY_ACTION="Valid DSA Parameter Inheritance Test5"
   pkits $certs/ValidDSAParameterInheritanceTest5EE.crt \
-      $certs/DSAParametersInheritedCACert.crt \
       $certs/DSACACert.crt $certs/TrustAnchorRootCertificate.crt
 
   VFY_ACTION="Invalid DSA Signature Test6"
@@ -611,8 +607,8 @@ pkits_NameConstraints()
       $certs/TrustAnchorRootCertificate.crt
 
   VFY_ACTION="Valid RFC822 nameConstraints Test25"
-  pkits $certs/ValidRFC822nameConstraintsTest25EE.crt \
-      $certs/nameConstraintsRFC822CA3Cert.crt \
+  pkits $certs/InvalidRFC822nameConstraintsTest24EE.crt \
+      $certs/nameConstraintsRFC822CA2Cert.crt \
       $certs/TrustAnchorRootCertificate.crt
 
   VFY_ACTION="Invalid RFC822 nameConstraints Test26"

@@ -17,7 +17,6 @@
  * Rights Reserved.
  * 
  * Contributor(s):
- *  John Gardiner Myers <jgmyers@speakeasy.net>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -604,7 +603,8 @@ CERT_DecodeAVAValue(const SECItem *derAVAValue)
 {
           SECItem          *retItem; 
     const SEC_ASN1Template *theTemplate       = NULL;
-          enum { conv_none, conv_ucs4, conv_ucs2, conv_iso88591 } convert = conv_none;
+          PRBool            convertUCS4toUTF8 = PR_FALSE;
+          PRBool            convertUCS2toUTF8 = PR_FALSE;
           SECItem           avaValue          = {siBuffer, 0}; 
           PLArenaPool      *newarena          = NULL;
 
@@ -614,7 +614,7 @@ CERT_DecodeAVAValue(const SECItem *derAVAValue)
 
     switch(derAVAValue->data[0]) {
 	case SEC_ASN1_UNIVERSAL_STRING:
-	    convert = conv_ucs4;
+	    convertUCS4toUTF8 = PR_TRUE;
 	    theTemplate = SEC_UniversalStringTemplate;
 	    break;
 	case SEC_ASN1_IA5_STRING:
@@ -624,15 +624,10 @@ CERT_DecodeAVAValue(const SECItem *derAVAValue)
 	    theTemplate = SEC_PrintableStringTemplate;
 	    break;
 	case SEC_ASN1_T61_STRING:
-	    /*
-	     * Per common practice, we're not decoding actual T.61, but instead
-	     * treating T61-labeled strings as containing ISO-8859-1.
-	     */
-	    convert = conv_iso88591;
 	    theTemplate = SEC_T61StringTemplate;
 	    break;
 	case SEC_ASN1_BMP_STRING:
-	    convert = conv_ucs2;
+	    convertUCS2toUTF8 = PR_TRUE;
 	    theTemplate = SEC_BMPStringTemplate;
 	    break;
 	case SEC_ASN1_UTF8_STRING:
@@ -654,43 +649,36 @@ CERT_DecodeAVAValue(const SECItem *derAVAValue)
 	return NULL;
     }
 
-    if (convert != conv_none) {
+    if (convertUCS4toUTF8) {
 	unsigned int   utf8ValLen = avaValue.len * 3;
 	unsigned char *utf8Val    = (unsigned char*)
 				    PORT_ArenaZAlloc(newarena, utf8ValLen);
 
-        switch (convert) {
-        case conv_ucs4:
-           if(avaValue.len % 4 != 0 ||
-              !PORT_UCS4_UTF8Conversion(PR_FALSE, avaValue.data, avaValue.len,
-					utf8Val, utf8ValLen, &utf8ValLen)) {
-                PORT_FreeArena(newarena, PR_FALSE);
-                PORT_SetError(SEC_ERROR_INVALID_AVA);
-		return NULL;
-	   }
-	   break;
-	case conv_ucs2:
-           if(avaValue.len % 2 != 0 ||
-              !PORT_UCS2_UTF8Conversion(PR_FALSE, avaValue.data, avaValue.len,
-					utf8Val, utf8ValLen, &utf8ValLen)) {
-                PORT_FreeArena(newarena, PR_FALSE);
-                PORT_SetError(SEC_ERROR_INVALID_AVA);
-		return NULL;
-	   }
-	   break;
-	case conv_iso88591:
-           if(!PORT_ISO88591_UTF8Conversion(avaValue.data, avaValue.len,
-					utf8Val, utf8ValLen, &utf8ValLen)) {
-                PORT_FreeArena(newarena, PR_FALSE);
-                PORT_SetError(SEC_ERROR_INVALID_AVA);
-		return NULL;
-	   }
-	   break;
-	case conv_none:
-	   PORT_Assert(0); /* not reached */
-	   break;
+	if(avaValue.len % 4 != 0 ||
+	   !PORT_UCS4_UTF8Conversion(PR_FALSE, avaValue.data, avaValue.len,
+				     utf8Val, utf8ValLen, &utf8ValLen)) {
+            PORT_FreeArena(newarena, PR_FALSE);
+	    PORT_SetError(SEC_ERROR_INVALID_AVA);
+	    return NULL;
 	}
-	  
+
+	avaValue.data = utf8Val;
+	avaValue.len = utf8ValLen;
+
+    } else if (convertUCS2toUTF8) {
+
+	unsigned int   utf8ValLen = avaValue.len * 3;
+	unsigned char *utf8Val    = (unsigned char*)
+				    PORT_ArenaZAlloc(newarena, utf8ValLen);
+
+	if(avaValue.len % 2 != 0 ||
+	   !PORT_UCS2_UTF8Conversion(PR_FALSE, avaValue.data, avaValue.len,
+				     utf8Val, utf8ValLen, &utf8ValLen)) {
+            PORT_FreeArena(newarena, PR_FALSE);
+	    PORT_SetError(SEC_ERROR_INVALID_AVA);
+	    return NULL;
+	}
+
 	avaValue.data = utf8Val;
 	avaValue.len = utf8ValLen;
     }
