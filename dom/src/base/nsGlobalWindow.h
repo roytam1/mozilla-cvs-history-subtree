@@ -161,7 +161,9 @@ public:
 
    NS_IMETHOD GetRootCommandDispatcher(nsIDOMXULCommandDispatcher ** aDispatcher);
 
-	
+   NS_IMETHOD HasMutationListeners(PRUint32 aMutationEventType, PRBool* aResult);
+	 NS_IMETHOD SetMutationListeners(PRUint32 aEventType);
+
   NS_IMETHOD SetPositionAndSize(PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy, PRBool fRepaint);
   NS_IMETHOD GetPositionAndSize(PRInt32 *x, PRInt32 *y, PRInt32 *cx, PRInt32 *cy);
 
@@ -253,6 +255,7 @@ protected:
    nsIScriptGlobalObjectOwner*   mGlobalObjectOwner; // Weak Reference
    nsIDocShell*                  mDocShell;  // Weak Reference
    nsIChromeEventHandler*        mChromeEventHandler; // Weak Reference
+   PRUint32                      mMutationBits;
    nsCOMPtr<nsIDOMCrypto>        mCrypto;
    nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
    nsCOMPtr<nsIPrincipal>        mDocumentPrincipal;

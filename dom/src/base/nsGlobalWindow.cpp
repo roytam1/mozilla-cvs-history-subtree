@@ -134,7 +134,7 @@ GlobalWindowImpl::GlobalWindowImpl() :
   mTimeouts(nsnull), mTimeoutInsertionPoint(&mTimeouts), mRunningTimeout(nsnull),
   mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
   mFirstDocumentLoad(PR_TRUE), mGlobalObjectOwner(nsnull), mDocShell(nsnull),
-  mChromeEventHandler(nsnull)
+  mChromeEventHandler(nsnull), mMutationBits(0)
 {
   NS_INIT_REFCNT();
 }
@@ -368,6 +368,9 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
 
   if (mDocument && mContext)
     mContext->InitContext(this);
+
+  // Clear our mutation bitfield.
+  mMutationBits = 0;
 
   return NS_OK;
 }
@@ -2793,7 +2796,19 @@ GlobalWindowImpl::GetRootCommandDispatcher(nsIDOMXULCommandDispatcher **
   return NS_OK;
 }
 
+NS_IMETHODIMP
+GlobalWindowImpl::HasMutationListeners(PRUint32 aMutationEventType, PRBool* aResult)
+{
+  *aResult = (mMutationBits & aMutationEventType) != 0;
+  return NS_OK;
+}
 
+NS_IMETHODIMP
+GlobalWindowImpl::SetMutationListeners(PRUint32 aType)
+{
+  mMutationBits |= aType;
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 GlobalWindowImpl::SetPositionAndSize(PRInt32 x, PRInt32 y, PRInt32 cx,
