@@ -208,70 +208,68 @@ Contributor(s): ______________________________________. -->
 <!-- Menu -->
 <menubar id="main-menubar"/>
 
-<!-- sidebar/toolbar/content/status -->
-<box id="sidebar-parent" align="horizontal" flex="100%">
-  <!-- toolbar/content/status -->
- 
-  <box id="sidebar-box" chromeclass="extrachrome"/>
-  <splitter id="sidebar-splitter" chromeclass="extrachrome" />
-  
-  <box id="appcontent" align="vertical" flex="100%">
-
+<!-- Toolbox -->
 <toolbox id="main-toolbox">
   
   <toolbar id="PersonalToolbar" class="main-bar" chromeclass="toolbar" persist="collapsed">
 
 	<!-- button area of personal toolbar -->
-	<box align="horizontal"
-	     flex="100%"
-	     style="overflow: hidden"
-	     datasources="rdf:bookmarks"
-	     ref="NC:PersonalToolbarFolder"
-	     ondraggesture="return BeginDragPersonalToolbar(event);"
-	     ondragdrop="return DropPersonalToolbar(event);"
-	     ondragover="return DragOverPersonalToolbar(event);">
+	<box align="horizontal" flex="1" style="min-width: 1px">
+		<box align="horizontal"
+		     flex="1"
+		     style="min-width: 1px; overflow: hidden"
+		     datasources="rdf:bookmarks"
+		     ref="NC:PersonalToolbarFolder"
+		     ondraggesture="return BeginDragPersonalToolbar(event);"
+		     ondragdrop="return DropPersonalToolbar(event);"
+		     ondragover="return DragOverPersonalToolbar(event);">
 
-	    <!-- This template builds content from the bookmarks datasource -->
-	    <template>
-	      <!-- Rules for content hanging _directly_ off the toolbar -->
-	      <rule parent="box" iscontainer="true">
-	        <menu uri="...">
-	          <titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name"
-	                        onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"
-	                        align="left" />
-	          <menupopup/>
-	        </menu>
-	      </rule>
-	      <rule parent="box">
-	        <titledbutton uri="..." align="left" 
-	          value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
-	      </rule>
+		    <!-- This template builds content from the bookmarks datasource -->
+		    <template>
+		      <!-- Rules for content hanging _directly_ off the toolbar -->
+		      <rule parent="box" iscontainer="true">
+		        <menu uri="...">
+		          <titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name"
+		                        onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"
+		                        align="left" />
+		          <menupopup/>
+		        </menu>
+		      </rule>
+		      <rule parent="box">
+		        <titledbutton uri="..." align="left" 
+		          value="rdf:http://home.netscape.com/NC-rdf#Name" crop="right" onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
+		        <spring class="personaltoolbarspacer" flex="1"/>
+		      </rule>
 
-	      <!-- Recursive rules for nested folders -->
-	      <rule iscontainer="true">
-	        <menupopup>
-	          <menu uri="..." crop="right" flex="1" align="left"
-	            value="rdf:http://home.netscape.com/NC-rdf#Name" >
-	            <menupopup />
-	          </menu>
-	        </menupopup>
-	      </rule>
-	      <rule>
-	        <menupopup>
-	          <menuitem align="left" uri="..." 
-	            value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
-	        </menupopup>
-	      </rule>
-	    </template>
-	     
-	    <titledbutton id="home-button" align="left"
-	      value="&homeButton.label;" 
-	      defaultURL="&defaultHomepage.url;"
-	      onclick="BrowserHome(); event.preventBubble();"/>
-	    <titledbutton id="netscape-button" crop="right" align="left"
-	      value="&netscapeButton.label;" 
-	      onclick="window.content.location.href='&myNetscape.url;'; event.preventBubble();"/>
-    
+		      <!-- Recursive rules for nested folders -->
+		      <rule iscontainer="true">
+		        <menupopup>
+		          <menu uri="..." crop="right" flex="1" align="left"
+		            value="rdf:http://home.netscape.com/NC-rdf#Name" >
+		            <menupopup />
+		          </menu>
+		        </menupopup>
+		      </rule>
+		      <rule>
+		        <menupopup>
+		          <menuitem align="left" uri="..." 
+		            value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
+		        </menupopup>
+		      </rule>
+		    </template>
+		     
+		    <titledbutton id="home-button" align="left"
+		      value="&homeButton.label;" 
+		      defaultURL="&defaultHomepage.url;"
+		      onclick="BrowserHome(); event.preventBubble();"/>
+		    <spring class="personaltoolbarspacer" flex="1"/>
+		    <titledbutton id="netscape-button" align="left"
+		      value="&netscapeButton.label;" 
+		      onclick="window.content.location.href='&myNetscape.url;'; event.preventBubble();"/>
+		    <spring class="personaltoolbarspacer" flex="1"/>
+	    
+	    </box>
+	    <spring flex="9999999"/>
     </box>
 	
 	<!-- throbber area of personal toolbar -->
@@ -355,15 +353,24 @@ Contributor(s): ______________________________________. -->
 
 </toolbox>
 
+<!-- sidebar/toolbar/content/status -->
+<box id="sidebar-parent" align="horizontal" flex="100%">
+  <!-- toolbar/content/status -->
+ 
+  <box id="sidebar-box" chromeclass="extrachrome"/>
+  <splitter id="sidebar-splitter" chromeclass="extrachrome" />
+  
+  <box id="appcontent" align="vertical" flex="100%">
+
+
     <!-- type attribute is used by frame construction to locate iframes
          intended to hold (html) content -->
     <!-- id's use is a mystery -->
     <box context="context" flex="100%">
     <html:iframe type="content-primary" id="content" src="about:blank" flex="100%"/>
     </box>
-      <box align="horizontal" id="status-bar" chromeclass="status">
-        <titledbutton value="&notifCom.label;" onclick="doTests()"/>
-        <box id="state-box" align="horizontal" flex="100%">
+      <box id="status-bar" chromeclass="status">
+        <box id="state-box" align="horizontal" flex="100%" style="min-width: 1px">
           <box align="vertical" style="width:100px">
           <spring flex="100%"/>
           <progressmeter id="statusbar-icon" mode="normal"
@@ -375,14 +382,12 @@ Contributor(s): ______________________________________. -->
           <spring flex="100%"/>
         </box>
         <titledbutton id="statusText" align="left" flex="100%" 
-          value="&statusText.label;"
-          style="font-family:sans-serif;font-size:2.5mm">
+          value="&statusText.label;"  style="min-width: 1px">
           <observes element="Browser:Status" attribute="value"
             onbroadcast="onStatus()"/>         
         </titledbutton>
     
-        <titledbutton align="left" value="&buildId.label;" 
-          style="font-family:sans-serif;font-size:2.5mm;"/>
+        <titledbutton align="left" value="&buildId.label;"/>
        
         <titledbutton id="protocol-icon" class="borderless" uri="..." 
           src="" align="left" onclick="onProtocolClick()">     

@@ -19,7 +19,7 @@
  */
 window { 
   background-color: white;
-  font: 9pt arial,helvetica,sans-serif;
+  font: 3mm arial,helvetica,sans-serif;
   padding: 0px;
 }
 
@@ -111,18 +111,16 @@ html|iframe {
 /******* ToolBox & ToolBar *******/
 
 toolbox { 
-      background-color: #003366;
+      background-color: #999999;
 }
 
 :toolbox-normal {
 	background-color: transparent;
-	background-image: url("chrome://global/skin/toolbar-begincap.gif");
-	background-repeat: no-repeat;
 	border: none;
 }
 
 :toolbox-rollover {
-	background-color: #99CCFF;
+	background-color: #99CCCC;
 	background-image: none;
 	border: none;
 }
@@ -267,9 +265,8 @@ toolbar.standard #toolbar_throbber_box{
 	background-position: 100% 0%;
 }
 
-toolbar,menubar {
-    background-color: #CCCCDD;
-    border-bottom: 1px solid #9999cc;
+toolbar {
+    background-color: #CCCCCC;
 }
 
 toolbar titledbutton {
@@ -310,6 +307,48 @@ toolbar titledbutton[disabled="true"]:hover {
 toolbar titledbutton[disabled="true"]:active {
 	border: 1px solid transparent;
 	padding: 2px;
+}
+
+/**
+ * status-bar
+ */
+box#status-bar {
+	min-width: 1em;
+	background-color: #CCCCCC;
+}
+
+box#status-bar titledbutton {
+	border: none;
+	padding: 0px;
+	margin: 0px;
+	min-width: 3em;
+}
+
+box#status-bar titledbutton:hover {
+     text-decoration: none;
+}
+
+#status-bar-leftcap {
+	min-width: 8px;
+	max-width: 8px;
+	background-image: url("chrome://global/skin/gray-bottomleft.gif");
+	background-position: 0% 100%;
+	background-repeat: no-repeat;
+}
+
+#status-bar-rightcap {
+	min-width: 8px;
+	max-width: 8px;
+	background-image: url("chrome://global/skin/gray-bottomright.gif");
+	background-position: 100% 100%;
+	background-repeat: no-repeat;
+}
+
+/* removing margin and padding from normal mousedown titledbutton behavior */
+box#status-bar titledbutton:active {
+	border: none;
+	padding: 0px;
+	margin: 0px;
 }
 
 /******* Splitters *******/
@@ -406,12 +445,12 @@ splitter.gray-horizontal-splitter #endcap {
 /****** Progress Meter ********/
 
 progressmeter[align="horizontal"] {
-	height: 1em;        
+	height: 1em;
 }
 
 progressmeter {
 	color : #9999CC; 
-	background-color: #CCCCDD;        
+	background-color: #CCCCCC;        
 }
 
 :progressmeter-stripe {
@@ -438,7 +477,7 @@ menuitem[disabled="true"] {
 }
 
 menupopup, popup {
-  background-color: #CCCCDD;
+  background-color: #CCCCCC;
   border: 1px white outset;
 }
 
@@ -519,22 +558,22 @@ menubar > menu[menuactive="true"][open="true"] {
 }
 
 menupopup > menu[menuactive="true"] {
-  background-color: #666699;
+  background-color: #003366;
   color: white;
 }
 
 popup > menu[menuactive="true"] {
-  background-color: #666699;
+  background-color: #003366;
   color: white;
 }
 
 menupopup > menuitem[menuactive="true"] {
-  background-color: #666699;
+  background-color: #003366;
   color: white;
 }
 
 popup > menuitem[menuactive="true"] {
-  background-color: #666699;
+  background-color: #003366;
   color: white;
 }
 
@@ -615,14 +654,14 @@ titledbutton[class~=popup] {
 
 titledbutton:hover {
   border: 1px outset white;
-	color:#333366;
+	color:#003366;
 	text-decoration:underline;
   padding: 2px;
 }
  
 titledbutton:hover:-moz-outline {
    border : 1px solid black;
-   color:#666699;
+   color:#003366;
    padding: 2px;
 }
  
@@ -690,37 +729,34 @@ titledbutton[disabled="true"]:active {
 
 /* special class for plain titledbuttons */
 
-titledbutton[class~=plain] {
-  border: 1px solid transparent;
-  padding: 2px;
-  font: inherit;
+titledbutton[class~="plain"] {
+	border: 1px solid transparent;
+	padding: 2px;
 }
 
-titledbutton[class~=plain]:hover {
-  border: 1px solid transparent;
-  padding: 2px;
-  text-decoration: none;
-  color: inherit;
+titledbutton[class~="plain"]:hover {
+	border: 1px solid transparent;
+	padding: 2px;
+	text-decoration: none;
 }
  
-titledbutton[class~=plain]:active {
-  border: 1px solid transparent;
-  padding: 2px;
-   text-decoration: none;
-  color: inherit;
+titledbutton[class~="plain"]:active {
+	border: 1px solid transparent;
+	padding: 2px;
+	text-decoration: none;
 }
 
-titledbutton[class~=plain][disabled] {
+titledbutton[class~="plain"][disabled] {
 	border: 1px solid transparent;
 	padding: 2px;
 }
 
-titledbutton[class~=plain][disabled]:hover {
+titledbutton[class~="plain"][disabled]:hover {
 	border: 1px solid transparent;
 	padding: 2px;
 }
 
-titledbutton[class~=plain][disabled]:active {
+titledbutton[class~="plain"][disabled]:active {
 	border: 1px solid transparent;
 	padding: 2px;
 }
@@ -729,38 +765,38 @@ titledbutton[class~=plain][disabled]:active {
 /* special class for borderless buttons */
 /* titled button on toolbars are automatically set to be borderless (see below) */
 
-titledbutton[class~=borderless] {
+titledbutton[class~="borderless"] {
   border: 1px solid transparent;
 }
  
-titledbutton[class~=borderless]:hover {
+titledbutton[class~="borderless"]:hover {
   border: 1px outset white;
   color:#333366;
   text-decoration: underline;
 }
   
-titledbutton[class~=borderless]:hover:-moz-outline {
+titledbutton[class~="borderless"]:hover:-moz-outline {
   border : 1px solid black;
 }
 
-titledbutton[class~=borderless]:active {
+titledbutton[class~="borderless"]:active {
   text-decoration:none;
   border: 1px inset;
 }
  
-titledbutton[class~=borderless]:active:-moz-outline {
+titledbutton[class~="borderless"]:active:-moz-outline {
   border : 1px solid black;
 }
  
-titledbutton[class~=borderless][disabled] {
+titledbutton[class~="borderless"][disabled] {
   border: 1px solid transparent;
 }
 
-titledbutton[class~=borderless][disabled]:hover {
+titledbutton[class~="borderless"][disabled]:hover {
   border: 1px solid transparent;
 }
 
-titledbutton[class~=borderless][disabled]:active {
+titledbutton[class~="borderless"][disabled]:active {
   border: 1px solid transparent;
   padding: 2px;
 }
@@ -776,7 +812,7 @@ tree {
 
 treeitem[selected="true"] > treerow { 
  color: white;
- background-color: #666699;
+ background-color: #003366;
 }
 
 treecell { 
@@ -968,7 +1004,7 @@ tabcontrol {
 thumb {
    background-color: rgb(206, 207, 206);
    border: 1px outset white;
-   list-style-image: url(chrome://global/skin/scroll-thumb-horiz.gif)
+   list-style-image: url("chrome://global/skin/scroll-thumb-horiz.gif")
 }
 
 /*
@@ -979,11 +1015,11 @@ thumb:hover {
 */
 
 thumb[disabled="true"] {
-   list-style-image: url(chrome://global/skin/scroll-thumb-horiz-disabled.gif);
+   list-style-image: url("chrome://global/skin/scroll-thumb-horiz-disabled.gif");
 }
 
 slider[align="vertical"] thumb {
-   list-style-image: url(chrome://global/skin/scroll-thumb-vert.gif)
+   list-style-image: url("chrome://global/skin/scroll-thumb-vert.gif")
 }
 
 /*
@@ -995,7 +1031,7 @@ slider[align="vertical"] thumb:hover {
 */
 
 slider[align="vertical"] thumb[disabled="true"] {
-   list-style-image: url(chrome://global/skin/scroll-thumb-vert-disabled.gif);
+   list-style-image: url("chrome://global/skin/scroll-thumb-vert-disabled.gif");
 }
 
 thumb:active {
@@ -1008,9 +1044,7 @@ slider[align="vertical"] thumb:active {
 
 
 slider {
-   display: block;
-   border: 1px solid black;
-   background-color: rgb(240,240,240);
+   background-color: #999999;
 }
 
 scrollbarbutton {

@@ -38,8 +38,8 @@ Rights Reserved.
 		onload="OnLoadMessenger()"
 		onunload="OnUnloadMessenger()"
 		align="vertical"
-        width="640"
-        height="480"
+        width="750"
+        height="500"
         persist="width height x y"
 		windowtype="mail:3pane">
 
@@ -468,19 +468,6 @@ Rights Reserved.
 	<spring flex="100%"/>
   </menubar>
 
-  <!-- The main mail three pane frame -->
-
-
-        <box align="horizontal" style="height:100px" flex="1">
-          
-          <box id="sidebar-box" class="extra_panel">
-            <html:div id="folder-panel"/>
-          </box>
-          
-          <splitter id="sidebar-splitter" collapse="before" persist="state"/>
-          
-          <box align="vertical" flex="1">
-     
       <toolbox>
         <toolbar id="msgToolbar" class="standard" persist="collapsed">
           <box id="toolbar_button_box">
@@ -500,6 +487,19 @@ Rights Reserved.
 		</toolbar>
       </toolbox>
 
+  <!-- The main mail three pane frame -->
+
+
+        <box align="horizontal" style="height:100px" flex="1">
+          
+          <box id="sidebar-box" class="extra_panel">
+            <html:div id="folder-panel"/>
+          </box>
+          
+          <splitter id="sidebar-splitter" collapse="before" persist="state"/>
+          
+          <box align="vertical" flex="1">
+     
 
 		<html:div id="results_box" style="width:100px;height:0px" flex="2" >
 		  <tree id="threadTree"/>
@@ -509,10 +509,8 @@ Rights Reserved.
 			
     	<!-- message view -->
 		  <html:iframe flex="3" style="height:0px" name="messagepane" src="about:blank"/>
-		<!-- Ripped off from navigator.xul; this should be a XUL fragment! -->
-		<box align="horizontal" id="status-bar">
- 
-          <titledbutton value="[Notification Component]" onclick="doTests()"/>
+
+		<box id="status-bar">
 		  <box align="vertical" style="width:100px">
 		    <spring flex="100%"/>
 			<progressmeter id="statusbar-icon" mode="normal" value="0" onclick="dumpProgress()">

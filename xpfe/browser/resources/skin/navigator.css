@@ -78,42 +78,8 @@ box#url-bar-box {
 /*end urlbar stuff*/
 
 
-box#status-bar titledbutton {
-     border: none;
-	 padding: none;
-     margin: none;
-     font: inherit;
-     min-width: 3em;
-}
-
-box#status-bar titledbutton:hover {
-     text-decoration: none;
-	 color: inherit;
-}
-
-box#status-bar titledbutton:active {
-     border: none;
-     padding: none;
-     margin: none;
-	 color: inherit;
-}
-
-box#status-bar {
-   min-width: 1em;
-}
-
 toolbox#main-toolbox {
    min-width: 10px;
-}
-
-toolbox#taskbox {
-   min-width: 10px;
-}
-
-toolbar.main-bar {
-}
-
-window#main-window {
 }
 
 iframe#content-frame {
@@ -129,9 +95,13 @@ input[type="text"]#urlbar {
 /**
  * PersonalToolbar
  */
+toolbox#main-toolbox {
+	background-color: #CCCCCC;
+}
+
 toolbar#PersonalToolbar {
 	overflow: hidden;
-	min-width: 10px;
+	min-width: 1px;
     color: white;
     background-color: #003366;
     padding: 0px;
@@ -142,7 +112,6 @@ toolbar#PersonalToolbar {
 
 toolbar#PersonalToolbar titledbutton {
    margin: 0px;
-   margin-right: 1em;
    max-width: 8em;
    font: inherit;
    font-size: smaller;
@@ -175,6 +144,12 @@ toolbar#PersonalToolbar #personaltoolbar-endcap {
 	background-image: url("chrome://navigator/skin/n-box-persbar.gif");
 	background-repeat: no-repeat;
 	background-position: 100% 0%;
+}
+
+spring.personaltoolbarspacer {
+   max-width: 1em; 
+   min-width: 0.3em;
+   width: 1em;
 }
 
 

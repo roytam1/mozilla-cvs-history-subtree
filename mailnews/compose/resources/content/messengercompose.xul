@@ -402,19 +402,14 @@ ACTUALLY, EVERY TIME YOU TYPE ANY OF THE KEY DEFINED HERE AFTER WITHOUT ANY OF T
     <!-- The main mail three pane frame -->
     <html:iframe type="content-primary" id="content-frame" src="about:blank" name="browser.message.body" flex="100%"/>
 
-    <!-- Ripped off from navigator.xul; this should be a XUL fragment! -->
-    <box align="horizontal" id="status-bar">
- 
-    <titledbutton value="[Notification Component]" onclick="doTests()"/>
-	<box align="vertical" style="width:100px">
-		<spring flex="100%"/>
-		<progressmeter mode="normal" value="0">
-		</progressmeter>
-		<spring flex="100%"/>
-	</box>
-
-	<titledbutton id="statusText" align="right" flex="100%" value="Document: Done" style="font-family:sans-serif;font-size:2.5mm">
-	</titledbutton>
+    <box id="status-bar">
+		<box align="vertical" style="width:100px">
+			<spring flex="100%"/>
+			<progressmeter mode="normal" value="0">
+			</progressmeter>
+			<spring flex="100%"/>
+		</box>
+		<titledbutton id="statusText" align="right" flex="100%" value="Document: Done"/>
     </box>
 
 <!-- /box -->

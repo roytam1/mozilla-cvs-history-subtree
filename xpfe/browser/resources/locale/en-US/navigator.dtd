@@ -290,7 +290,6 @@
 <!ENTITY  tinderboxButton.label "Tinderbox">
 
 <!-- Statusbar -->
-<!ENTITY  notifCom.label "[Context Menu Proxy]">
 <!ENTITY  statusText.label "Document: Done">
 <!ENTITY  buildId.label "Build ID: 1999082316">
 

@@ -1,9 +1,10 @@
 splitter#sidebar-splitter {
 	margin-right: 2px;
+	margin-top: 2px;
 	min-width: 8px;
 	max-width: 8px;
 	padding: 0px;
-	border:none;
+	border: none;
 	background-color: #003366;
 }
 
@@ -42,13 +43,13 @@ splitter#sidebar-splitter grippy:active {
 
 box#sidebar-box
 {
+  margin-top: 2px;
   width: 200px;
   min-height: 0px;
   min-width: 10px;
   max-width: 400px;
   border: none;
   border-bottom: 8px solid #003366;
-  padding-bottom: 1px;
 }
 
 box#sidebar-box[class="extra_panel"]
