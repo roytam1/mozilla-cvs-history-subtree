@@ -63,11 +63,20 @@ function APP_URI(aType)
 function ArrayEnumerator(aItems)
 {
   this._index = 0;
+  
+  if (aItems) {
+    for (var i = 0; i < aItems.length; ++i) {    
+      if (!aItems[i])
+        aItems.splice(i, 1);      
+    }
+  }
+  
   this._contents = aItems || [];
 
   this.push = function (aElement) 
   {
-    this._contents.push(aElement);
+    if (aElement)
+      this._contents.push(aElement);
   };
   
   this.hasMoreElements = function ()
@@ -77,7 +86,7 @@ function ArrayEnumerator(aItems)
   
   this.getNext = function ()
   {
-    return this._contents[this._index++];
+    return this._contents[this._index++];      
   };
 };
 
