@@ -494,7 +494,7 @@
 <!ENTITY printToolbarCmd.tooltip "Print this page">
 <!ENTITY findToolbarCmd.label "Find">
 <!ENTITY findToolbarCmd.tooltip "Find text in page">
-<!ENTITY spellToolbarCmd.label "Spell">
+<!ENTITY spellToolbarCmd.label "Check Spelling">
 <!ENTITY spellToolbarCmd.tooltip "Check spelling of selection or entire page">
 <!ENTITY imageToolbarCmd.label "Image">
 <!ENTITY imageToolbarCmd.tooltip "Insert new image or edit selected image's properties">

@@ -621,6 +621,7 @@ nsMessenger::OpenURL(const char * url)
 {
   if (url)
   {
+    printf("nsMessenger::OpenURL(%s)\n",url);
 #ifdef DEBUG_MESSENGER
     printf("nsMessenger::OpenURL(%s)\n",url);
 #endif    

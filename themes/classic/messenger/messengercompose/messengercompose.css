@@ -176,3 +176,20 @@ treechildren:-moz-tree-image(remote-err) {
   font-style: italic;
   color: GrayText;
 }
+
+#button-more {
+  -moz-image-region: rect(63px 23px 84px 0px);
+}
+
+#button-more:hover {
+  -moz-image-region: rect(63px 46px 84px 23px);
+}
+
+#button-more:hover:active,
+#button-more[open] {
+  -moz-image-region: rect(63px 69px 84px 46px);
+}
+
+#button-more[disabled] {
+  -moz-image-region: rect(63px 92px 84px 69px) !important;
+}
