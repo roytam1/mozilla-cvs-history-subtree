@@ -58,7 +58,7 @@ public:
 
 protected:
     nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel):
-	mCacheEntry(aCacheEntry), nsChannelProxy(aChannel) {}
+        nsChannelProxy(aChannel), mCacheEntry(aCacheEntry) {}
     ~nsCacheEntryChannel() {};
 
     friend class nsCachedNetData;

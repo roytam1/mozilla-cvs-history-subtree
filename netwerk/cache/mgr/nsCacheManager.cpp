@@ -132,14 +132,13 @@ nsCacheManager::Init()
 }
 
 NS_IMETHODIMP
-nsCacheManager::GetCachedNetData(nsIURI *aURI, const char *aSecondaryKey,
+nsCacheManager::GetCachedNetData(const char *aUriSpec, const char *aSecondaryKey,
                                  PRUint32 aSecondaryKeyLength,
                                  PRUint32 aFlags, nsICachedNetData* *aResult)
 {
     nsCOMPtr<nsINetDataCacheRecord> record;
     nsCachedNetData *cachedData;
     nsresult rv;
-    char *uriSpec;
     nsINetDataCache *cache;
     nsReplacementPolicy *spaceManager;
 
@@ -155,10 +154,7 @@ nsCacheManager::GetCachedNetData(nsIURI *aURI, const char *aSecondaryKey,
     }
 
     // Construct the cache key by appending the secondary key to the URI spec
-    rv = aURI->GetSpec(&uriSpec);
-    if (NS_FAILED(rv)) return rv;
-    nsCAutoString cacheKey(uriSpec);
-    nsAllocator::Free(uriSpec);
+    nsCAutoString cacheKey(aUriSpec);
 
     // Insert NUL at end of URI spec
     cacheKey += '\0';
@@ -208,11 +204,10 @@ nsCacheManager::NoteDormant(nsCachedNetData* aEntry)
 }
 
 NS_IMETHODIMP
-nsCacheManager::Contains(nsIURI *aURI, const char *aSecondaryKey, PRUint32 aSecondaryKeyLength,
+nsCacheManager::Contains(const char *aUriSpec, const char *aSecondaryKey,
+                         PRUint32 aSecondaryKeyLength,
                          PRUint32 aFlags, PRBool *aResult)
 {
-    nsresult rv;
-    char *uriSpec;
     nsINetDataCache *cache;
     nsReplacementPolicy *spaceManager;
 
@@ -228,10 +223,7 @@ nsCacheManager::Contains(nsIURI *aURI, const char *aSecondaryKey, PRUint32 aSeco
     }
 
     // Construct the cache key by appending the secondary key to the URI spec
-    rv = aURI->GetSpec(&uriSpec);
-    if (NS_FAILED(rv)) return rv;
-    nsCAutoString cacheKey(uriSpec);
-    nsAllocator::Free(uriSpec);
+    nsCAutoString cacheKey(aUriSpec);
 
     // Insert NUL at end of URI spec
     cacheKey += '\0';

@@ -489,20 +489,20 @@ nsCachedNetData::SetStaleTime(PRTime aStaleTime)
 }
 
 NS_IMETHODIMP
-nsCachedNetData::GetNumberAccesses(PRUint16 *aNumberAccesses)
-{
-    CHECK_AVAILABILITY();
-    NS_ENSURE_ARG_POINTER(aNumberAccesses);
-    *aNumberAccesses = mNumAccesses;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 nsCachedNetData::GetLastAccessTime(PRTime *aLastAccessTime)
 {
     CHECK_AVAILABILITY();
     NS_ENSURE_ARG_POINTER(aLastAccessTime);
     *aLastAccessTime = convertSecondsToPRTime(mAccessTime[0]);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsCachedNetData::GetNumberAccesses(PRUint16 *aNumberAccesses)
+{
+    CHECK_AVAILABILITY();
+    NS_ENSURE_ARG_POINTER(aNumberAccesses);
+    *aNumberAccesses = mNumAccesses;
     return NS_OK;
 }
 
@@ -636,7 +636,7 @@ nsCachedNetData::RemoveObserver(nsIStreamAsFileObserver *aObserver)
     if (!mObservers)
         return NS_ERROR_FAILURE;
     
-    for (closurep = &mObservers; closure = *closurep; closurep = &(*closurep)->mNext) {
+    for (closurep = &mObservers; (closure = *closurep); closurep = &(*closurep)->mNext) {
         if (closure->mObserver == aObserver) {
             *closurep = closure->mNext;
             closure->mNext = 0;
@@ -738,6 +738,16 @@ nsCachedNetData::Evict(PRUint32 aTruncatedContentLength)
 }
 
 NS_IMETHODIMP
+nsCachedNetData::GetCache(nsINetDataCache* *aCache)
+{
+    NS_ENSURE_ARG_POINTER(aCache);
+    
+    *aCache = mCache;
+    NS_ADDREF(mCache);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsCachedNetData::NewChannel(nsILoadGroup* loadGroup, nsIChannel* *aChannel)
 {
     nsresult rv;
@@ -760,3 +770,11 @@ nsCachedNetData::GetFileSpec(nsIFileSpec* *aFileSpec)
     NS_ENSURE_ARG_POINTER(aFileSpec);
     return mRecord->GetFilename(aFileSpec);
 }
+
+NS_IMETHODIMP
+nsCachedNetData::InterceptAsyncRead(nsIStreamListener *aOriginalListener,
+                                    nsIStreamListener **aResult)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+

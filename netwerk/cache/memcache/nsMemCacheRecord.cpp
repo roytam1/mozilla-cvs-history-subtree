@@ -126,6 +126,7 @@ nsMemCacheRecord::SetStoredContentLength(PRUint32 aStoredContentLength)
     PRUint32 before, after;
     mStorageStream->GetLength(&before);
     nsresult rv = mStorageStream->SetLength(aStoredContentLength);
+    if (NS_FAILED(rv)) return rv;
     mStorageStream->GetLength(&after);
     mCache->mOccupancy -= (before - after);
     return NS_OK;

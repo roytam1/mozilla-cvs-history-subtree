@@ -37,7 +37,7 @@
 PRInt32 nsMemCache::gRecordSerialNumber = 0;
 
 nsMemCache::nsMemCache()
-    : mNumEntries(0), mEnabled(PR_TRUE), mCapacity(0), mOccupancy(0),
+    : mNumEntries(0), mCapacity(0), mOccupancy(0), mEnabled(PR_TRUE),
       mHashTable(0)
 {
     NS_INIT_REFCNT();

@@ -46,8 +46,8 @@ nsMemCacheChannel::NotifyStorageInUse(PRInt32 aBytesUsed)
 class AsyncReadStreamAdaptor : public nsIInputStream {
 public:
     AsyncReadStreamAdaptor(nsIChannel* aChannel, nsIInputStream *aSyncStream):
-        mChannel(aChannel), mSyncStream(aSyncStream), mLogicalCursor(0),
-        mAborted(false), mSuspended(false), mRemaining(0)
+        mSyncStream(aSyncStream), mLogicalCursor(0),
+        mRemaining(0), mChannel(aChannel), mAborted(false), mSuspended(false)
         { NS_INIT_REFCNT(); }
     
     NS_DECL_ISUPPORTS
@@ -183,7 +183,7 @@ NS_IMPL_ISUPPORTS(AsyncReadStreamAdaptor,  NS_GET_IID(nsIInputStream))
 class MemCacheWriteStreamWrapper : public nsIOutputStream {
 public:
     MemCacheWriteStreamWrapper(nsMemCacheChannel* aChannel, nsIOutputStream *aBaseStream):
-        mChannel(aChannel), mBaseStream(aBaseStream)
+        mBaseStream(aBaseStream), mChannel(aChannel)
         { NS_INIT_REFCNT(); }
     
     static nsresult

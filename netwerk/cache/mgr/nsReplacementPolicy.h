@@ -52,9 +52,9 @@ protected:
 
     nsresult Init(PRUint32 aMaxCacheEntries);
     nsresult AddCache(nsINetDataCache *aCache);
-    nsresult nsReplacementPolicy::AddCacheRecord(nsINetDataCacheRecord *aRecord,
-						 nsINetDataCache* aCache,
-						 nsCachedNetData** aResult);
+    nsresult AddCacheRecord(nsINetDataCacheRecord *aRecord,
+                            nsINetDataCache* aCache,
+                            nsCachedNetData** aResult);
     nsresult GetStorageInUse(PRUint32* aNumKBytes);
 
     friend class nsCacheManager;
