@@ -47,11 +47,10 @@ nsDataChannel::nsDataChannel() {
 nsDataChannel::~nsDataChannel() {
 }
 
-NS_IMPL_ISUPPORTS4(nsDataChannel,
+NS_IMPL_ISUPPORTS3(nsDataChannel,
                    nsIDataChannel,
                    nsIChannel,
-                   nsIRequest,
-                   nsIStreamContentInfo)
+                   nsIRequest)
 
 nsresult
 nsDataChannel::Init(nsIURI* uri)
@@ -270,17 +269,6 @@ nsDataChannel::Resume(void)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsDataChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsDataChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChannel methods:
 
@@ -317,27 +305,15 @@ nsDataChannel::SetURI(nsIURI* aURI)
 // This class 
 
 NS_IMETHODIMP
-nsDataChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval)
+nsDataChannel::Open(nsIInputStream **_retval)
 {
-    // XXX we should honor the startPosition and count passed in.
-
-    *_retval = mDataStream;
-    NS_ADDREF(*_retval);
-    
+    NS_ENSURE_ARG_POINTER(_retval);
+    NS_ADDREF(*_retval = mDataStream);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsDataChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
-{
-    // you can't write to a data url
-    NS_NOTREACHED("nsDataChannel::OpenOutputStream");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsDataChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *ctxt,
-                         PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsDataChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
 {
     nsresult rv;
     nsCOMPtr<nsIEventQueue> eventQ;
@@ -365,22 +341,7 @@ nsDataChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *ctxt,
     if (NS_FAILED(rv)) return rv;
 
     rv = listener->OnStopRequest(this, ctxt, NS_OK, nsnull);
-    
-    NS_ADDREF(*_retval = this);
     return rv;
-}
-
-NS_IMETHODIMP
-nsDataChannel::AsyncWrite(nsIStreamProvider *provider,
-                          nsISupports *ctxt,
-                          PRUint32 transferOffset, 
-                          PRUint32 transferCount, 
-                          nsIRequest **_retval)
-
-{
-    // you can't write to a data url
-    NS_NOTREACHED("nsDataChannel::AsyncWrite");
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -476,12 +437,5 @@ NS_IMETHODIMP
 nsDataChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
 {
     mCallbacks = aNotificationCallbacks;
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsDataChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
-{
-    *aSecurityInfo = nsnull;
     return NS_OK;
 }

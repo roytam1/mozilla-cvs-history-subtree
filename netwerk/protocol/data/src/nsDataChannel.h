@@ -34,13 +34,11 @@
 #include "nsIInputStream.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsCOMPtr.h"
-#include "nsIStreamContentInfo.h"
 
-class nsDataChannel : public nsIDataChannel, public nsIRequest, public nsIStreamContentInfo{
+class nsDataChannel : public nsIDataChannel {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
-    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIDATACHANNEL
 
