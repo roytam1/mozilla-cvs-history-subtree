@@ -42,7 +42,7 @@
 
         <menupopup id="taskPopup">
           <menuitem label="&navigatorCmd.label;" accesskey="&navigatorCmd.accesskey;" key="key_navigator" command="Tasks:Navigator"/>
-          <menuitem label="&editorCmd.label;" accesskey="&editorCmd.accesskey;" key="key_editor" command="Tasks:Editor" />
+          <menuitem id="editorTask" label="&editorCmd.label;" accesskey="&editorCmd.accesskey;" key="key_editor" command="Tasks:Editor" />
 
           <!-- Overlays get stuffed in here. -->
 
