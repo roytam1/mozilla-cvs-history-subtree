@@ -121,7 +121,6 @@ extern "C" {
 #endif
 
 #define DEF_FONTSIZE    3
-#define MAX_FONTSIZE    7
 #define DEFAULT_HR_THICKNESS    2
 
 #define EDT_IS_LIVEWIRE_MACRO(s) ( (s) && (s)[0] == '`' )
@@ -714,8 +713,9 @@ public:
 
     virtual EEditElementType GetElementType();
 
-    // Get parent table of any element
+    // Get parent table or cell of any element
     CEditTableElement* GetParentTable();
+    CEditTableCellElement* GetParentTableCell();
 
     virtual XP_Bool Reduce( CEditBuffer *pBuffer );
 
@@ -1132,12 +1132,17 @@ public:
     // Use resultCell->pGetNextCellInLogicalRow() to walk through cells in row
     CEditTableCellElement *GetFirstCell();
 
+    void SetFillNewCellWithSpace(XP_Bool bFill) { m_bFillNewCellWithSpace = bFill; }
+
 private:
     ED_Color m_backgroundColor;
     char* m_pBackgroundImage;
     // Total number of "physical" columns in row
     //  (i.e., includes effect of COLSPAN and ROWSPAN)
     intn m_iColumns;
+    
+    // Used during creation of new rows
+    XP_Bool m_bFillNewCellWithSpace;
 
 public:
     intn m_iBackgroundSaveIndex;
@@ -1232,6 +1237,13 @@ public:
     // Test if cell contains only 1 container with 
     //  just the empty text field every new cell has
     XP_Bool IsEmpty();
+    
+    // Call this instead of FinishedLoad when creating new cell
+    // It sets state to check if space is needed for initial text element
+    void FinishedLoadNewCell(CEditBuffer *pBuffer = NULL);
+    
+    // Get flag to check if initial text in a new cell should be a sap
+    XP_Bool FillNewCellWithSpace() { return m_bFillNewCellWithSpace; }
 
     // Keep these in synch when selecting so
     //  we don't always have to rely on LO_Elements
@@ -1382,6 +1394,8 @@ private:
     // This marks cells to be skipped over on successive recursions.
     // Must call CEditTable::ResetDeletedCells() to clear these flags when done
     XP_Bool      m_bDeleted;
+
+    XP_Bool      m_bFillNewCellWithSpace;
 
 public:
     intn m_iBackgroundSaveIndex;
@@ -1703,7 +1717,9 @@ public:
 
     void SetColor( ED_Color iColor );
     ED_Color GetColor(){ return m_color; }
-    void SetFontSize( int iSize );
+
+    // If bRelative is TRUE, the iSize changes relative to existing size (usually -1 or +1)
+    void SetFontSize(int iSize, XP_Bool bRelative = FALSE);
     int GetFontSize();
     void SetFontFace(char* face);
     char* GetFontFace();
@@ -3050,7 +3066,7 @@ public:
     CPrintState printState;
     CEditLinkManager linkManager;
     TXP_GrowableArray_EDT_MetaData m_metaData;
-    
+
     // Get time and save in m_FileSaveTime
     // Public so CEditFileSave can call it
     void  GetFileWriteTime();
@@ -3121,7 +3137,7 @@ private:
 #endif
 
 public:
-    CEditBuffer( MWContext* pContext );
+    CEditBuffer( MWContext* pContext, XP_Bool bImportText );
     ~CEditBuffer();
     CEditElement* CreateElement(PA_Tag* pTag, CEditElement *pParent);
     CEditElement* CreateFontElement(PA_Tag* pTag, CEditElement *pParent);
@@ -3139,6 +3155,7 @@ public:
     void FinishedLoad();
     void FinishedLoad2();
     void DummyCharacterAddedDuringLoad();
+    void ConvertCurrentDocToNewDoc();
 
     XP_Bool IsComposeWindow(){ return m_pContext->bIsComposeWindow; }
 
@@ -3295,6 +3312,9 @@ public:
     // Use result to paste into spreadsheets like Excel
     char *GetTabDelimitedTextFromSelectedCells();
 
+    // Test if there's a selection, and the beginning and end are not split across a cell boundary
+    XP_Bool CanConvertTextToTable();
+
     // Convert Selected text into a table (put each paragraph in separate cell)
     // Number of rows is automatic - creates as many as needed
     void ConvertTextToTable(intn iColumns);
@@ -3336,14 +3356,19 @@ public:
     ED_TextFormat GetCharacterFormatting();
     TagType GetParagraphFormatting();
     TagType GetParagraphFormattingSelection(CEditSelection& selection);
+    
     int GetFontSize();
-    void SetFontSize(int n);
-    void SetFontSizeSelection(int n, CEditSelection& selection, XP_Bool bRelayout);
+    // If bRelative is TRUE, the iSize changes relative to existing size (usually -1 or +1)
+    void SetFontSize(int iSize, XP_Bool bRelative);
+    void SetFontSizeSelection(int n, XP_Bool bRelative, CEditSelection& selection, XP_Bool bRelayout);
+
     int GetFontPointSize();
     void SetFontPointSize(int pointSize);
     ED_Color GetFontColor();
     void SetFontColor(ED_Color n);
     void SetFontColorSelection(ED_Color n, CEditSelection& selection, XP_Bool bRelayout);
+    ED_ElementType GetBackgroundColor(LO_Color *pColor);
+    void SetBackgroundColor(LO_Color *pColor);
     void InsertLeaf(CEditLeafElement *pLeaf);
     void InsertNonLeaf( CEditElement* pNonLeaf);
     EDT_ImageData* GetImageData();
@@ -3535,7 +3560,7 @@ public:
                 CEditLeafElement*& pEndElement, ElementOffset& iEndOffset, XP_Bool& bFromStart );
     
     // Use data from supplied selection, or get from current selection if supplied is empty
-    // Used were above used to be used -- allows using "selected" cell data
+    // Used where above used to be used when you want to work on selected cell contents
     void GetSelection( CEditSelection& selection, CEditLeafElement*& pStartElement, ElementOffset& iStartOffset,
                 CEditLeafElement*& pEndElement, ElementOffset& iEndOffset, XP_Bool& bFromStart );
 
@@ -3853,7 +3878,7 @@ public:
     XP_Bool IsTableSelected() {return m_pSelectedEdTable != NULL; }
     XP_Bool IsTableOrCellSelected() { return (XP_Bool)(m_pSelectedEdTable ? TRUE : m_SelectedEdCells.Size()); }
     int     GetSelectedCellCount() { return m_SelectedEdCells.Size(); }
-
+    XP_Bool NewCellHasSpace() { return m_bNewCellHasSpace; }
 
     // For special cell highlighting during drag and drop
     // pLoElement can be the table or any cell that is starting cell,
@@ -3936,8 +3961,10 @@ private:
     int16 m_originalWinCSID;
     XP_Bool m_bForceDocCSID;
     int16 m_forceDocCSID;
+    XP_Bool m_bImportText;
 
 //preference information
+    static XP_Bool m_bNewCellHasSpace; //New cells we create have an &nbsp in them so border displays
     static XP_Bool m_bMoveCursor; //true = move cursor when pageup/down false, just move scrollbar
     static XP_Bool m_bEdtBufPrefInitialized; //are the preferences initialized
     static int PrefCallback(const char *,void *);//callback for preferences
