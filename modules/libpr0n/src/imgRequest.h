@@ -47,6 +47,9 @@
 class nsICacheEntryDescriptor;
 #endif
 
+#include "nsITimer.h"
+#include "nsITimerCallback.h"
+
 #define NS_IMGREQUEST_CID \
 { /* 9f733dd6-1dd1-11b2-8cdf-effb70d1ea71 */         \
      0x9f733dd6,                                     \
@@ -66,7 +69,8 @@ enum {
 class imgRequest : public imgIRequest,
                    public imgIDecoderObserver, 
                    public nsIStreamListener,
-                   public nsSupportsWeakReference
+                   public nsSupportsWeakReference,
+                   public nsITimerCallback
 {
 public:
   imgRequest();
@@ -80,6 +84,9 @@ public:
   PRBool RemoveFromCache();
 
   void SniffMimeType(const char *buf, PRUint32 len);
+
+  NS_IMETHOD_(void) Notify(nsITimer *timer);
+
 
   NS_DECL_ISUPPORTS
   NS_DECL_IMGIREQUEST
@@ -108,6 +115,8 @@ private:
 #ifdef MOZ_NEW_CACHE
   nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry; /* we hold on to this to this so long as we have observers */
 #endif
+
+  nsCOMPtr<nsITimer> mTimer;
 };
 
 #endif
