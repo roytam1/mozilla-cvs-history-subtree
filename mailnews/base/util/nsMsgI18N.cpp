@@ -580,7 +580,8 @@ nsMsgI18NParseMetaCharset(nsFileSpec* fileSpec)
       token = nsCRT::strtok(cp, seps, &newStr); 
       if (token != NULL) 
       { 
-        PL_strcpy(charset, token); 
+        PL_strncpy(charset, token, sizeof(charset));
+        charset[sizeof(charset)-1] = '\0';
       } 
     } 
   } 
@@ -717,6 +718,7 @@ nsMsgI18NGetAcceptLanguage(void)
 	  if (NS_SUCCEEDED(res) && prefValue) 
     {
       PL_strncpy(lang, NS_ConvertUCS2toUTF8(prefValue).get(), sizeof(lang));
+      lang[sizeof(lang)-1] = '\0';
     }
 	  else 
 		  PL_strcpy(lang, "en");
@@ -728,7 +730,7 @@ nsMsgI18NGetAcceptLanguage(void)
 }
 
 
-// taken from nsFileSpec::GetNativePAthString()
+// taken from nsFileSpec::GetNativePathString()
 void
 nsMsgGetNativePathString(const char *aPath, nsString& aResult)
 {
