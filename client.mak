@@ -102,7 +102,7 @@ pull_netlib:
 # Pull some specific netlib files.
 repull_ngl_integration:
 	@cd $(MOZ_SRC)
-#	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/include $(MOZ_TOP)/cmd $(MOZ_TOP)/lib $(MOZ_TOP)/modules
+	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/include $(MOZ_TOP)/cmd $(MOZ_TOP)/lib $(MOZ_TOP)/modules
 	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/network/cnvts/cvmime.c $(MOZ_TOP)/network/main/mkgeturl.c $(MOZ_TOP)/network/cache/mkmemcac.c $(MOZ_TOP)/network/protocol/about/mkabout.c $(MOZ_TOP)/network/protocol/file/mkfile.c
 	@cd $(MOZ_SRC)/$(MOZ_TOP)
 
