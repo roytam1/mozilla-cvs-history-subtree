@@ -96,13 +96,11 @@ PRLock* _getproto_lock = NULL;
 #endif
 
 #if defined(_PR_INET6)
-PRBool _pr_ipv6_enabled = PR_FALSE;
-#if defined(AIX)
 const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
 const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 #define _PR_IN6_IS_ADDR_V4MAPPED	IN6_IS_ADDR_V4MAPPED
 #define _PR_IN6_IS_ADDR_V4COMPAT	IN6_IS_ADDR_V4COMPAT
-#endif /* AIX */
+
 #else  /* _PR_INET6 */
 
 /*
@@ -148,21 +146,6 @@ void _PR_InitNet(void)
 #endif
 	_pr_init_ipv6();
 }
-
-PR_IMPLEMENT(PRStatus) PR_SetIPv6Enable(PRBool itIs)
-{
-#if defined(XP_MAC)
-#pragma unused (itIs)
-#endif
-
-#if defined(_PR_INET6)
-    _pr_ipv6_enabled = itIs;
-    return PR_SUCCESS;
-#else /* defined(_PR_INET6) */
-    PR_SetError(PR_PROTOCOL_NOT_SUPPORTED_ERROR, 0);
-    return PR_FAILURE;
-#endif /* defined(_PR_INET6) */
-}  /* PR_SetIPv6Enable */
 
 PR_IMPLEMENT(PRStatus) PR_GetHostName(char *name, PRUint32 namelen)
 {
@@ -367,36 +350,11 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 #endif
 	LOCK_DNS();
 
-#ifdef _PR_INET6
-    if (_pr_ipv6_enabled)
-    {
-#ifdef _PR_HAVE_GETHOSTBYNAME2
-        h = gethostbyname2(name, AF_INET6);
-        if (NULL == h)
-        {
-            h = gethostbyname2(name, AF_INET);
-        }
-#elif defined(_PR_HAVE_GETIPNODEBYNAME)
-        h = getipnodebyname(name, AF_INET6, AI_DEFAULT, &error_num);
-#else
-#error "Unknown name-to-address translation function"
-#endif
-    }
-    else
-    {
-#ifdef XP_OS2_VACPP
-	    h = gethostbyname((char *)name);
-#else
-        h = gethostbyname(name);
-#endif
-    }
-#else
 #ifdef XP_OS2_VACPP
 	h = gethostbyname((char *)name);
 #else
     h = gethostbyname(name);
 #endif
-#endif /* _PR_INET6 */
     
 	if (NULL == h)
 	{
@@ -409,10 +367,6 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 	else
 	{
 		_PRIPAddrConversion conversion = _PRIPAddrNoConversion;
-#if defined(_PR_INET6)
-		if (_pr_ipv6_enabled)
-			conversion = _PRIPAddrIPv4Mapped;
-#endif
 		rv = CopyHostent(h, &buf, &bufsize, conversion, hp);
 		if (PR_SUCCESS != rv)
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
@@ -882,46 +836,22 @@ PR_IMPLEMENT(PRStatus) PR_InitializeNetAddr(
     PRStatus rv = PR_SUCCESS;
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-#if defined(_PR_INET6)
-    if (_pr_ipv6_enabled)
-    {
-        addr->ipv6.family = PR_AF_INET6;
-        addr->ipv6.port = htons(port);
-        switch (val)
-        {
-        case PR_IpAddrNull:
-            break;  /* don't overwrite the address */
-        case PR_IpAddrAny:
-            addr->ipv6.ip = in6addr_any;
-            break;
-        case PR_IpAddrLoopback:
-            addr->ipv6.ip = in6addr_loopback;
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-            rv = PR_FAILURE;
-        }
-    }
-    else
-#endif  /* defined(_PR_INET6) */
-    {
-        addr->inet.family = AF_INET;
-        addr->inet.port = htons(port);
-        switch (val)
-        {
-        case PR_IpAddrNull:
-            break;  /* don't overwrite the address */
-        case PR_IpAddrAny:
-            addr->inet.ip = htonl(INADDR_ANY);
-            break;
-        case PR_IpAddrLoopback:
-            addr->inet.ip = htonl(INADDR_LOOPBACK);
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-            rv = PR_FAILURE;
-        }
-    }
+	addr->inet.family = AF_INET;
+	addr->inet.port = htons(port);
+	switch (val)
+	{
+	case PR_IpAddrNull:
+		break;  /* don't overwrite the address */
+	case PR_IpAddrAny:
+		addr->inet.ip = htonl(INADDR_ANY);
+		break;
+	case PR_IpAddrLoopback:
+		addr->inet.ip = htonl(INADDR_LOOPBACK);
+		break;
+	default:
+		PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+		rv = PR_FAILURE;
+	}
     return rv;
 }  /* PR_InitializeNetAddr */
 
@@ -1212,12 +1142,3 @@ PR_IMPLEMENT(PRUint64) PR_htonll(PRUint64 n)
     LL_ADD(n, n, tmp);
     return n;
 }  /* htonll */
-
-PR_IMPLEMENT(PRUint16) PR_FamilyInet(void)
-{
-#ifdef _PR_INET6
-    return (_pr_ipv6_enabled ? AF_INET6 : AF_INET);
-#else
-    return AF_INET;
-#endif
-}

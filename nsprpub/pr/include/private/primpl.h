@@ -1642,10 +1642,6 @@ extern PRFileDesc *_pr_stdin;
 extern PRFileDesc *_pr_stdout;
 extern PRFileDesc *_pr_stderr;
 
-#if defined(_PR_INET6)
-extern PRBool _pr_ipv6_enabled;  /* defined in prnetdb.c */
-#endif
-
 /* Overriding malloc, free, etc. */
 #if !defined(_PR_NO_PREEMPT) && defined(XP_UNIX) \
         && !defined(_PR_PTHREADS) && !defined(_PR_GLOBAL_THREADS_ONLY) \

@@ -3227,10 +3227,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_NewUDPSocket()
 {
     PRIntn domain = PF_INET;
 
-#if defined(_PR_INET6)
-    if (_pr_ipv6_enabled)
-        domain = PF_INET6;
-#endif
     return PR_Socket(domain, SOCK_DGRAM, 0);
 }  /* PR_NewUDPSocket */
 
@@ -3238,10 +3234,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_NewTCPSocket()
 {
     PRIntn domain = PF_INET;
 
-#if defined(_PR_INET6)
-    if (_pr_ipv6_enabled)
-        domain = PF_INET6;
-#endif
     return PR_Socket(domain, SOCK_STREAM, 0);
 }  /* PR_NewTCPSocket */
 

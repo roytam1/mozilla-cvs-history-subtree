@@ -811,6 +811,10 @@ PRIntervalTime timeout)
 		} else {
 			(*nd)->secret->md.io_model_committed = PR_TRUE;
 			(*nd)->secret->md.accepted_socket = PR_TRUE;
+#ifdef _PR_INET6
+			if (AF_INET6 == *raddr->raw.family)
+        		*raddr->raw.family = PR_AF_INET6;
+#endif
 			memcpy(&(*nd)->secret->md.peer_addr, *raddr,
 				PR_NETADDR_SIZE(*raddr));
 		}
@@ -1286,11 +1290,6 @@ PR_IMPLEMENT(PRFileDesc *) PR_NewTCPSocket(void)
 {
 	PRInt32 domain = AF_INET;
 
-#if defined(_PR_INET6)
-	if (_pr_ipv6_enabled) {
-		domain = AF_INET6;
-	}
-#endif
 	return PR_Socket(domain, SOCK_STREAM, 0);
 }
 
@@ -1298,11 +1297,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_NewUDPSocket(void)
 {
 	PRInt32 domain = AF_INET;
 
-#if defined(_PR_INET6)
-	if (_pr_ipv6_enabled) {
-		domain = AF_INET6;
-	}
-#endif
 	return PR_Socket(domain, SOCK_DGRAM, 0);
 }
 

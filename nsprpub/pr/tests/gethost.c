@@ -35,7 +35,7 @@
 
 static void Help(void)
 {
-    fprintf(stderr, "Usage: gethost [-6h] [hostname]\n");
+    fprintf(stderr, "Usage: gethost [-h] [hostname]\n");
     fprintf(stderr, "\t-h          help\n");
     fprintf(stderr, "\thostname    Name of host    (default: %s)\n",
             DEFAULT_HOST_NAME);

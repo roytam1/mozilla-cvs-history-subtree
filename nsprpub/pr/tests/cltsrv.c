@@ -954,7 +954,6 @@ PRIntn main(PRIntn argc, char** argv)
             break;
         case '6':  /* Use IPv6 */
             domain = PR_AF_INET6;
-            PR_SetIPv6Enable(PR_TRUE);
             break;
         case 'a':  /* the value for accepting */
             accepting = atoi(opt->value);

@@ -915,11 +915,6 @@ _md_get_recycled_socket()
     }
     _MD_UNLOCK(&_pr_recycle_lock);
 
-#ifdef _PR_INET6
-    if (_pr_ipv6_enabled) {
-        af = AF_INET6;
-    }
-#endif
     rv = _PR_MD_SOCKET(af, SOCK_STREAM, 0);
     if (rv != INVALID_SOCKET && _md_Associate((HANDLE)rv) == 0) {
         closesocket(rv);
