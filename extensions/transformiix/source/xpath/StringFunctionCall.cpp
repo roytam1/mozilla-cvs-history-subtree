@@ -121,7 +121,7 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
             break;
         case STRING_LENGTH:
             if ( requireParams(0, 1, cs) ) {
-                String resultStr;
+                DOMString resultStr;
                 if ( argc == 1) {
                     evaluateToString((Expr*)iter->next(),context, cs, resultStr);
                 }
@@ -225,7 +225,7 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                     evaluateToString((Expr*)iter->next(),context, cs, resultStr);
                 }
                 else {
-                    String temp;
+                    DOMString temp;
                     XMLDOMUtils::getNodeValue(context, &temp);
                     if ( cs->isStripSpaceAllowed(context) ) {
                         XMLUtils::stripSpace(temp, resultStr);

@@ -41,11 +41,11 @@
 #else
 #include "CommandLineUtils.h"
 #include "printers.h"
-#include "URIUtils.h"
-#include "XMLParser.h"
 #include "XMLDOMUtils.h"
 #endif
 
+#include "URIUtils.h"
+#include "XMLParser.h"
 #include "dom.h"
 #include "ExprParser.h"
 #include "MITREObject.h"
@@ -295,7 +295,7 @@ private:
      * their value. If this value is true, the allowOnlyTextNodes flag is ignored.
     **/
     MBool getText
-        (DocumentFragment* dfrag, String& dest, MBool deep, MBool allowOnlyTextNodes);
+        (DocumentFragment* dfrag, DOMString& dest, MBool deep, MBool allowOnlyTextNodes);
 
     /**
      * Notifies all registered ErrorObservers of the given error

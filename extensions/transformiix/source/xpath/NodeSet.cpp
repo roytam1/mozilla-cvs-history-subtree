@@ -344,7 +344,7 @@ double NodeSet::numberValue() {
  * Creates a String representation of this ExprResult
  * @param str the destination string to append the String representation to.
 **/
-void NodeSet::stringValue(String& str) {
+void NodeSet::stringValue(DOMString& str) {
     if ( size()>0) {
         XMLDOMUtils::getNodeValue(get(0), &str);
     }
