@@ -113,10 +113,17 @@ sub IsLibPath {
 }
 
 # FilterUnwantedPrefix() returns 1st argument
-# if its prefix doesn't match any of those 
-# defined in @unwanted_prefixes
-
+# if 
+#   its prefix doesn't match any of those 
+#   defined in @unwanted_prefixes
+# and
+#   it contains at least at least 1 upper-case letter or 
+#   an underscore.
 sub FilterUnwantedPrefix {
+	if ($_[0] !~ m/[A-Z_]/) {
+		print ("Warning: $_[0] is probably a system symbol, and so filtered.\n") if $debug > 1;
+		return "";
+	}
         foreach $prefix (@unwanted_prefixes) {
                 if ($_[0] =~ m/^$prefix/) {
                         return "";
