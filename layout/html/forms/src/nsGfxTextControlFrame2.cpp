@@ -2049,7 +2049,7 @@ nsGfxTextControlFrame2::CreateAnonymousContent(nsIPresContext* aPresContext,
   // Use async reflow and painting for text widgets to improve
   // performance.
 
-  editorFlags |= nsIPlaintextEditor::eEditorUseAsyncUpdatesMask;
+  // editorFlags |= nsIPlaintextEditor::eEditorUseAsyncUpdatesMask;
 
   // Now initialize the editor.
   //
