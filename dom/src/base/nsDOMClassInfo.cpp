@@ -934,6 +934,9 @@ jsval nsDOMClassInfo::sOnblur_id          = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnsubmit_id        = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnreset_id         = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnchange_id        = JSVAL_VOID;
+jsval nsDOMClassInfo::sOninput_id         = JSVAL_VOID;
+jsval nsDOMClassInfo::sOnformchange_id    = JSVAL_VOID;
+jsval nsDOMClassInfo::sOnforminput_id     = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnselect_id        = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnload_id          = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnbeforeunload_id  = JSVAL_VOID;
@@ -1039,6 +1042,9 @@ nsDOMClassInfo::DefineStaticJSVals(JSContext *cx)
   SET_JSVAL_TO_STRING(sOnsubmit_id,        cx, "onsubmit");
   SET_JSVAL_TO_STRING(sOnreset_id,         cx, "onreset");
   SET_JSVAL_TO_STRING(sOnchange_id,        cx, "onchange");
+  SET_JSVAL_TO_STRING(sOninput_id,         cx, "oninput");
+  SET_JSVAL_TO_STRING(sOnformchange_id,    cx, "onformchange");
+  SET_JSVAL_TO_STRING(sOnforminput_id,     cx, "onforminput");
   SET_JSVAL_TO_STRING(sOnselect_id,        cx, "onselect");
   SET_JSVAL_TO_STRING(sOnload_id,          cx, "onload");
   SET_JSVAL_TO_STRING(sOnbeforeunload_id,  cx, "onbeforeunload");
@@ -2944,6 +2950,9 @@ nsDOMClassInfo::ShutDown()
   sOnsubmit_id        = JSVAL_VOID;
   sOnreset_id         = JSVAL_VOID;
   sOnchange_id        = JSVAL_VOID;
+  sOninput_id         = JSVAL_VOID;
+  sOnformchange_id    = JSVAL_VOID;
+  sOnforminput_id     = JSVAL_VOID;
   sOnselect_id        = JSVAL_VOID;
   sOnload_id          = JSVAL_VOID;
   sOnbeforeunload_id  = JSVAL_VOID;
@@ -4635,7 +4644,9 @@ nsEventReceiverSH::ReallyIsEventName(jsval id, jschar aFirstChar)
   case 'e' :
     return id == sOnerror_id;
   case 'f' :
-    return id == sOnfocus_id;
+    return (id == sOnfocus_id        ||
+            id == sOnformchange_id   ||
+            id == sOnforminput_id);
   case 'c' :
     return (id == sOnchange_id       ||
             id == sOnclick_id        ||
