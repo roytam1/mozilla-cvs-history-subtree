@@ -324,7 +324,8 @@ public:
                      const nsRect&        aTextRect,
                      nsIPresContext*      aPresContext,
                      nsIRenderingContext& aRenderingContext,
-                     const nsRect&        aDirtyRect);
+                     const nsRect&        aDirtyRect,
+                     nscoord&             aCurrX);
 
   // This method paints the checkbox inside a particular cell of the tree.
   nsresult PaintCheckbox(PRInt32              aRowIndex, 

@@ -164,8 +164,6 @@ protected:
                                        const PRUnichar *iconURL,
                                        nsIRDFNode** aTarget);
 
-    nsresult getResourceFromLiteralNode(nsIRDFNode *node, nsIRDFResource **res);
-
     void AnnotateBookmarkSchedule(nsIRDFResource* aSource,
                                   PRBool scheduleFlag);
 
@@ -174,8 +172,6 @@ protected:
 
     nsresult InsertResource(nsIRDFResource* aResource,
                             nsIRDFResource* aParentFolder, PRInt32 aIndex);
-
-    nsresult ChangeURL(nsIRDFResource* aOldURL, nsIRDFResource* aNewURL);
 
     nsresult getLocaleString(const char *key, nsString &str);
 

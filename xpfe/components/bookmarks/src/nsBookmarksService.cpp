@@ -510,18 +510,6 @@ public:
                          nsString &description, PRBool &inDescription, PRBool &isActiveFlag);
     nsresult Parse(nsIRDFResource* aContainer, nsIRDFResource *nodeType);
 
-    nsresult AddBookmark(nsCOMPtr<nsIRDFContainer> aContainer,
-                         const char*      aURL,
-                         const PRUnichar* aOptionalTitle,
-                         PRInt32          aAddDate,
-                         PRInt32          aLastVisitDate,
-                         PRInt32          aLastModifiedDate,
-                         const char*      aShortcutURL,
-                         nsIRDFResource*  aNodeType,
-                         nsIRDFResource** bookmarkNode,
-                         const PRUnichar* aCharset,
-                         PRInt32          aIndex);
-
     nsresult SetIEFavoritesRoot(const nsCString& IEFavoritesRootURL)
     {
         mIEFavoritesRoot = IEFavoritesRootURL;
@@ -554,7 +542,7 @@ static const char kCloseAnchor[]   = "</A>";
 static const char kOpenHeading[]   = "<H";
 static const char kCloseHeading[]  = "</H";
 
-static const char kSeparator[]     = "<HR>";
+static const char kSeparator[]     = "<HR";
 
 static const char kOpenUL[]        = "<UL>";
 static const char kCloseUL[]       = "</UL>";
@@ -573,6 +561,7 @@ static const char kNewBookmarkFolderEquals[]      = "NEW_BOOKMARK_FOLDER=\"";
 static const char kNewSearchFolderEquals[]        = "NEW_SEARCH_FOLDER=\"";
 static const char kPersonalToolbarFolderEquals[]  = "PERSONAL_TOOLBAR_FOLDER=\"";
 
+static const char kNameEquals[]            = "NAME=\"";
 static const char kHREFEquals[]            = "HREF=\"";
 static const char kTargetEquals[]          = "TARGET=\"";
 static const char kAddDateEquals[]         = "ADD_DATE=\"";
@@ -1079,8 +1068,9 @@ BookmarkParser::ParseMetaTag(const nsString &aLine, nsIUnicodeDecoder **decoder)
 BookmarkParser::BookmarkField
 BookmarkParser::gBookmarkFieldTable[] =
 {
-  // Note: the first entry MUST be the URL/resource of the bookmark
-  { kHREFEquals,            NC_NAMESPACE_URI  "URL",               nsnull,  BookmarkParser::ParseResource,  nsnull },
+  // Note: the first entry MUST be the ID/resource of the bookmark
+  { kIDEquals,              NC_NAMESPACE_URI  "ID",                nsnull,  BookmarkParser::ParseResource,  nsnull },
+  { kHREFEquals,            NC_NAMESPACE_URI  "URL",               nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kAddDateEquals,         NC_NAMESPACE_URI  "BookmarkAddDate",   nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kLastVisitEquals,       WEB_NAMESPACE_URI "LastVisitDate",     nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kLastModifiedEquals,    WEB_NAMESPACE_URI "LastModifiedDate",  nsnull,  BookmarkParser::ParseDate,      nsnull },
@@ -1100,8 +1090,8 @@ BookmarkParser::gBookmarkFieldTable[] =
 BookmarkParser::BookmarkField
 BookmarkParser::gBookmarkHeaderFieldTable[] =
 {
-  // Note: the first entry MUST be the URL/resource of the bookmark
-  { kIDEquals,                    NC_NAMESPACE_URI  "URL",               nsnull,  BookmarkParser::ParseResource,  nsnull },
+  // Note: the first entry MUST be the ID/resource of the bookmark
+  { kIDEquals,                    NC_NAMESPACE_URI  "ID",                nsnull,  BookmarkParser::ParseResource,  nsnull },
   { kAddDateEquals,               NC_NAMESPACE_URI  "BookmarkAddDate",   nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kLastModifiedEquals,          WEB_NAMESPACE_URI "LastModifiedDate",  nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kFolderGroupEquals,           NC_NAMESPACE_URI  "FolderGroup",       nsnull,  BookmarkParser::ParseLiteral,   nsnull },
@@ -1208,11 +1198,11 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
 
     nsresult    rv;
 
-    // Note: the first entry MUST be the URL/resource of the bookmark
+    // Note: the first entry MUST be the ID/resource of the bookmark
     nsCOMPtr<nsIRDFResource> bookmark = do_QueryInterface(fields[0].mValue);
-    if ((!bookmark) && (isBookmarkFlag == PR_FALSE))
+    if (!bookmark)
     {
-        // We've never seen this folder before. Assign it an anonymous ID
+        // We've never seen this bookmark/folder before. Assign it an anonymous ID
         rv = CreateAnonymousResource(getter_AddRefs(bookmark));
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create anonymous resource for folder");
     }
@@ -1471,143 +1461,53 @@ BookmarkParser::updateAtom(nsIRDFDataSource *db, nsIRDFResource *src,
 }
 
 nsresult
-BookmarkParser::AddBookmark(nsCOMPtr<nsIRDFContainer> aContainer,
-                            const char*      aURL,
-                            const PRUnichar* aOptionalTitle,
-                            PRInt32          aAddDate,
-                            PRInt32          aLastVisitDate,
-                            PRInt32          aLastModifiedDate,
-                            const char*      aShortcutURL,
-                            nsIRDFResource*  aNodeType,
-                            nsIRDFResource** bookmarkNode,
-                            const PRUnichar* aCharset,
-                            PRInt32          aIndex)
-{
-    nsresult    rv;
-    nsCAutoString fullurlC(aURL);
-
-    // hack fix for bug # 21175:
-    // if we don't have a protocol scheme, add "http://" as a default scheme
-    if (fullurlC.FindChar(':') < 0)
-    {
-        fullurlC.Insert(NS_LITERAL_CSTRING("http://"), 0);
-    }
-
-    nsCOMPtr<nsIRDFResource> bookmark;
-    if (NS_FAILED(rv = gRDF->GetResource(fullurlC, getter_AddRefs(bookmark) )))
-    {
-        NS_ERROR("unable to get bookmark resource");
-        return rv;
-    }
-    if (bookmarkNode)
-    {
-        *bookmarkNode = bookmark;
-        NS_ADDREF(*bookmarkNode);
-    }
-
-    PRBool      isIEFavoriteRoot = PR_FALSE;
-
-    if (!mIEFavoritesRoot.IsEmpty())
-    {
-        if (mIEFavoritesRoot.EqualsIgnoreCase(aURL))
-        {
-            mFoundIEFavoritesRoot = PR_TRUE;
-            isIEFavoriteRoot = PR_TRUE;
-        }
-    }
-
-    if (isIEFavoriteRoot == PR_TRUE)
-    {
-        rv = mDataSource->Assert(bookmark, kRDF_type, kNC_IEFavoriteFolder, PR_TRUE);
-    }
-    else if (aNodeType == kNC_BookmarkSeparator ||
-             aNodeType == kNC_IEFavorite ||
-             aNodeType == kNC_IEFavoriteFolder)
-    {
-        rv = mDataSource->Assert(bookmark, kRDF_type, aNodeType, PR_TRUE);
-    }
-
-    if (rv != NS_RDF_ASSERTION_ACCEPTED)
-    {
-        NS_ERROR("unable to add bookmark to data source");
-        return rv;
-    }
-
-    if ((nsnull != aOptionalTitle) && (*aOptionalTitle != PRUnichar('\0')))
-    {
-        nsCOMPtr<nsIRDFLiteral> titleLiteral;
-        if (NS_SUCCEEDED(rv = gRDF->GetLiteral(aOptionalTitle, getter_AddRefs(titleLiteral))))
-        {
-            updateAtom(mDataSource, bookmark, kNC_Name, titleLiteral, nsnull);
-        }
-        else
-        {
-            NS_ERROR("unable to create literal for bookmark name");
-        }
-    }
-
-    AssertTime(bookmark, kNC_BookmarkAddDate, aAddDate);
-    AssertTime(bookmark, kWEB_LastVisitDate, aLastVisitDate);
-    AssertTime(bookmark, kWEB_LastModifiedDate, aLastModifiedDate);
-
-    if ((nsnull != aCharset) && (*aCharset != PRUnichar('\0')))
-    {
-        nsCOMPtr<nsIRDFLiteral> charsetliteral;
-        if (NS_SUCCEEDED(rv = gRDF->GetLiteral(aCharset, getter_AddRefs(charsetliteral))))
-        {
-            updateAtom(mDataSource, bookmark, kWEB_LastCharset, charsetliteral, nsnull);
-        }
-        else
-        {
-            NS_ERROR("unable to create literal for bookmark document charset");
-        }
-    }
-
-    if ((nsnull != aShortcutURL) && (*aShortcutURL != '\0'))
-    {
-        nsCOMPtr<nsIRDFLiteral> shortcutLiteral;
-        if (NS_SUCCEEDED(rv = gRDF->GetLiteral(NS_ConvertASCIItoUCS2(aShortcutURL).get(),
-                            getter_AddRefs(shortcutLiteral))))
-        {
-            updateAtom(mDataSource, bookmark, kNC_ShortcutURL, shortcutLiteral, nsnull);
-        }
-        else
-        {
-            NS_ERROR("unable to get literal for bookmark shortcut URL");
-        }
-    }
-
-    // The last thing we do is add the bookmark to the container. This ensures the minimal amount of reflow.
-    if (aIndex < 0)
-        rv = aContainer->AppendElement(bookmark);
-    else
-        rv = aContainer->InsertElementAt(bookmark, aIndex, PR_TRUE);
-
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add bookmark to container");
-    return rv;
-}
-
-nsresult
 BookmarkParser::ParseBookmarkSeparator(const nsString &aLine, const nsCOMPtr<nsIRDFContainer> &aContainer)
 {
-    nsresult                  rv;
     nsCOMPtr<nsIRDFResource>  separator;
+    nsresult rv = CreateAnonymousResource(getter_AddRefs(separator));
+    if (NS_FAILED(rv))
+        return rv;
 
-    if (NS_SUCCEEDED(rv = CreateAnonymousResource(getter_AddRefs(separator))))
-    {
-        nsCOMPtr<nsIRDFLiteral> nameLiteral;
-        if (NS_SUCCEEDED(rv = gRDF->GetLiteral(NS_LITERAL_STRING("-----").get(), getter_AddRefs(nameLiteral))))
-        {
-            if (NS_SUCCEEDED(rv = mDataSource->Assert(separator, kNC_Name, nameLiteral, PR_TRUE)))
-            {
+    PRInt32 lineLen = aLine.Length();
+
+    PRInt32 attrStart = 0;
+    attrStart = aLine.Find(kSeparator, PR_TRUE, attrStart);
+    if (attrStart < 0)
+        return NS_ERROR_UNEXPECTED;
+    attrStart += sizeof(kSeparator)-1;
+
+    while((attrStart < lineLen) && (aLine[attrStart] != '>')) {
+        while(nsCRT::IsAsciiSpace(aLine[attrStart]))
+            ++attrStart;
+
+        if (aLine.Find(kNameEquals, PR_TRUE, attrStart, 1) == attrStart) {
+            attrStart += strlen(kNameEquals);
+
+            // skip to terminating quote of string
+            PRInt32 termQuote = aLine.FindChar(PRUnichar('\"'), attrStart);
+            if (termQuote > attrStart) {
+                nsAutoString name;
+                aLine.Mid(name, attrStart, termQuote - attrStart);
+                attrStart = termQuote + 1;
+                if (name.Length() > 0) {
+                    nsCOMPtr<nsIRDFLiteral> nameLiteral;
+                    rv = gRDF->GetLiteral(name.get(), getter_AddRefs(nameLiteral));
+                    if (NS_FAILED(rv))
+                        return rv;
+                    rv = mDataSource->Assert(separator, kNC_Name, nameLiteral, PR_TRUE);
+                    if (NS_FAILED(rv))
+                        return rv;
+                }
             }
         }
-        if (NS_SUCCEEDED(rv = mDataSource->Assert(separator, kRDF_type, kNC_BookmarkSeparator, PR_TRUE)))
-        {
-            rv = aContainer->AppendElement(separator);
-            if (NS_FAILED(rv)) return rv;
-        }
     }
+
+    rv = mDataSource->Assert(separator, kRDF_type, kNC_BookmarkSeparator, PR_TRUE);
+    if (NS_FAILED(rv))
+        return rv;
+
+    rv = aContainer->AppendElement(separator);
+
     return rv;
 }
 
@@ -2742,11 +2642,10 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName,
                                    const PRUnichar* aDocCharSet, 
                                    nsIRDFResource** aResult)
 {
-    nsresult rv;
-
     // Resource: Bookmark ID
     nsCOMPtr<nsIRDFResource> bookmarkResource;
-    rv = gRDF->GetResource(nsDependentCString(aURL), getter_AddRefs(bookmarkResource));
+    nsresult rv = BookmarkParser::CreateAnonymousResource(getter_AddRefs(bookmarkResource));
+
     if (NS_FAILED(rv)) 
         return rv;
 
@@ -2773,7 +2672,13 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName,
         return rv;
 
     // Resource: URL
-    rv = mInner->Assert(bookmarkResource, kNC_URL, bookmarkResource, PR_TRUE);
+    nsAutoString url;
+    url.AssignWithConversion(aURL);
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    rv = gRDF->GetLiteral(url.get(), getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv)) 
+        return rv;
+    rv = mInner->Assert(bookmarkResource, kNC_URL, urlLiteral, PR_TRUE);
     if (NS_FAILED(rv)) 
         return rv;
 
@@ -3445,7 +3350,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
     nsresult    rv;
 
     // If they want the URL...
-    if (aTruthValue && aProperty == kNC_URL)
+/*    if (aTruthValue && aProperty == kNC_URL)
     {
         // ... and it is in fact a bookmark for which we want to show a URL ...
 
@@ -3480,7 +3385,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
         }
         return NS_RDF_NO_VALUE;
     }
-    else if (aTruthValue && (aProperty == kRDF_type))
+    else */ if (aTruthValue && (aProperty == kRDF_type))
     {
         rv = GetSynthesizedType(aSource, aTarget);
         return rv;
@@ -3682,32 +3587,25 @@ nsBookmarksService::AnnotateBookmarkSchedule(nsIRDFResource* aSource, PRBool sch
 
 NS_IMETHODIMP
 nsBookmarksService::Assert(nsIRDFResource* aSource,
-               nsIRDFResource* aProperty,
-               nsIRDFNode* aTarget,
-               PRBool aTruthValue)
+                           nsIRDFResource* aProperty,
+                           nsIRDFNode* aTarget,
+                           PRBool aTruthValue)
 {
-    nsresult    rv = NS_RDF_ASSERTION_REJECTED;
+    nsresult rv = NS_RDF_ASSERTION_REJECTED;
 
     if (CanAccept(aSource, aProperty, aTarget))
     {
-        if (aProperty == kNC_URL)
-        {
-            nsCOMPtr<nsIRDFResource> newURL;
-            rv = getResourceFromLiteralNode(aTarget, getter_AddRefs(newURL));
-            if (NS_FAILED(rv)) return rv;
+        rv = mInner->Assert(aSource, aProperty, aTarget, aTruthValue);
+        if (NS_FAILED(rv))
+            return rv;
+
+        UpdateBookmarkLastModifiedDate(aSource);
             
-            rv = ChangeURL(aSource, newURL);
-        }
-        else if (NS_SUCCEEDED(rv = mInner->Assert(aSource, aProperty, aTarget, aTruthValue)))
-        {
-            UpdateBookmarkLastModifiedDate(aSource);
-            
-            if (aProperty == kWEB_Schedule)
-            {
+        if (aProperty == kWEB_Schedule) {
               AnnotateBookmarkSchedule(aSource, PR_TRUE);
-            }
         }
     }
+
     return rv;
 }
 
@@ -3716,241 +3614,66 @@ nsBookmarksService::Unassert(nsIRDFResource* aSource,
                              nsIRDFResource* aProperty,
                              nsIRDFNode* aTarget)
 {
-    nsresult    rv = NS_RDF_ASSERTION_REJECTED;
+    nsresult rv = NS_RDF_ASSERTION_REJECTED;
 
     if (aProperty == kNC_URL) {
         // We can't accept somebody trying to remove a URL. Sorry!
     }
     else if (CanAccept(aSource, aProperty, aTarget))
     {
-        if (NS_SUCCEEDED(rv = mInner->Unassert(aSource, aProperty, aTarget)))
-        {
-            UpdateBookmarkLastModifiedDate(aSource);
+        rv = mInner->Unassert(aSource, aProperty, aTarget);
+        if (NS_FAILED(rv))
+            return rv;
 
-            if (aProperty == kWEB_Schedule)
-            {
-                AnnotateBookmarkSchedule(aSource, PR_FALSE);
-            }
+        UpdateBookmarkLastModifiedDate(aSource);
+
+        if (aProperty == kWEB_Schedule) {
+            AnnotateBookmarkSchedule(aSource, PR_FALSE);
         }
     }
+
     return rv;
-}
-
-nsresult
-nsBookmarksService::getResourceFromLiteralNode(nsIRDFNode *node, nsIRDFResource **res)
-{
-    nsresult    rv;
-
-    nsCOMPtr<nsIRDFResource>    newURLRes = do_QueryInterface(node);
-    if (newURLRes)
-    {
-        *res = newURLRes;
-        NS_IF_ADDREF(*res);
-        return NS_OK;
-    }
-
-    nsCOMPtr<nsIRDFLiteral>     newURLLit = do_QueryInterface(node);
-    if (!newURLLit)
-    {
-        return NS_ERROR_INVALID_ARG;
-    }
-    const PRUnichar         *newURL = nsnull;
-    newURLLit->GetValueConst(&newURL);
-    if (!newURL)
-    {
-        return NS_ERROR_NULL_POINTER;
-    }
-    rv = gRDF->GetUnicodeResource(nsDependentString(newURL), res);
-    return rv;
-}
-
-nsresult
-nsBookmarksService::ChangeURL(nsIRDFResource* aOldURL,
-                  nsIRDFResource* aNewURL)
-{
-    nsresult rv;
-
-    // Make all arcs coming out of aOldURL also come out of
-    // aNewURL.  Wallop any previous values.
-    
-    nsCOMPtr<nsISimpleEnumerator>   arcsOut;
-    rv = mInner->ArcLabelsOut(aOldURL, getter_AddRefs(arcsOut));
-    if (NS_FAILED(rv)) return rv;
-
-    while (1)
-    {
-        PRBool hasMoreArcsOut;
-        rv = arcsOut->HasMoreElements(&hasMoreArcsOut);
-        if (NS_FAILED(rv)) return rv;
-
-        if (! hasMoreArcsOut)
-            break;
-
-        nsCOMPtr<nsISupports> arc;
-        rv = arcsOut->GetNext(getter_AddRefs(arc));
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsIRDFResource> property = do_QueryInterface(arc);
-        NS_ASSERTION(property != nsnull, "arc is not a property");
-        if (!property)
-            return NS_ERROR_UNEXPECTED;
-
-        // don't copy URL property as it is special
-        if (property.get() == kNC_URL)
-            continue;
-
-        // XXX What if more than one target?
-        nsCOMPtr<nsIRDFNode> oldvalue;
-        rv = mInner->GetTarget(aNewURL, property, PR_TRUE, getter_AddRefs(oldvalue));
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsIRDFNode> newvalue;
-        rv = mInner->GetTarget(aOldURL, property, PR_TRUE, getter_AddRefs(newvalue));
-        if (NS_FAILED(rv)) return rv;
-
-        if (oldvalue) {
-            if (newvalue) {
-                rv = mInner->Change(aNewURL, property, oldvalue, newvalue);
-            }
-            else {
-                rv = mInner->Unassert(aNewURL, property, oldvalue);
-            }
-        }
-        else if (newvalue) {
-            rv = mInner->Assert(aNewURL, property, newvalue, PR_TRUE);
-        }
-        else {
-            // do nothing
-            rv = NS_OK;
-        }
-
-        if (NS_FAILED(rv)) return rv;
-    }
-    
-    // Make all arcs pointing to aOldURL now point to aNewURL
-    nsCOMPtr<nsISimpleEnumerator> arcsIn;
-    rv = mInner->ArcLabelsIn(aOldURL, getter_AddRefs(arcsIn));
-    if (NS_FAILED(rv)) return rv;
-
-    while (1)
-    {
-        PRBool hasMoreArcsIn;
-        rv = arcsIn->HasMoreElements(&hasMoreArcsIn);
-        if (NS_FAILED(rv)) return rv;
-
-        if (! hasMoreArcsIn)
-            break;
-        
-        nsCOMPtr<nsIRDFResource> property;
-
-        {
-            nsCOMPtr<nsISupports> isupports;
-            rv = arcsIn->GetNext(getter_AddRefs(isupports));
-            if (NS_FAILED(rv)) return rv;
-
-            property = do_QueryInterface(isupports);
-            NS_ASSERTION(property != nsnull, "arc is not a property");
-            if (! property)
-                return NS_ERROR_UNEXPECTED;
-        }
-
-        nsCOMPtr<nsISimpleEnumerator> sources;
-        rv = GetSources(property, aOldURL, PR_TRUE, getter_AddRefs(sources));
-        if (NS_FAILED(rv)) return rv;
-        
-        while (1)
-        {
-            PRBool hasMoreSrcs;
-            rv = sources->HasMoreElements(&hasMoreSrcs);
-            if (NS_FAILED(rv)) return rv;
-
-            if (! hasMoreSrcs)
-                break;
-
-            nsCOMPtr<nsISupports> isupports;
-            rv = sources->GetNext(getter_AddRefs(isupports));
-            if (NS_FAILED(rv)) return rv;
-
-            nsCOMPtr<nsIRDFResource> source = do_QueryInterface(isupports);
-            NS_ASSERTION(source != nsnull, "source is not a resource");
-            if (! source)
-                return NS_ERROR_UNEXPECTED;
-
-            rv = mInner->Change(source, property, aOldURL, aNewURL);
-            if (NS_FAILED(rv)) return rv;
-        }
-    }
-
-    // Set a notification that the URL property changed, so that
-    // anyone observing it'll update correctly.
-    {
-        const char* uri;
-        rv = aNewURL->GetValueConst(&uri);
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsIRDFLiteral> literal;
-        rv = gRDF->GetLiteral(NS_ConvertASCIItoUCS2(uri).get(), getter_AddRefs(literal));
-        if (NS_FAILED(rv)) return rv;
-
-        // XXX rjc: was just aNewURL. Don't both aOldURL as well as aNewURL need to be pinged?
-        rv = OnAssert(this, aOldURL, kNC_URL, literal);
-        if (NS_FAILED(rv)) return rv;
-        rv = OnAssert(this, aNewURL, kNC_URL, literal);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsBookmarksService::Change(nsIRDFResource* aSource,
-               nsIRDFResource* aProperty,
-               nsIRDFNode* aOldTarget,
-               nsIRDFNode* aNewTarget)
+                           nsIRDFResource* aProperty,
+                           nsIRDFNode* aOldTarget,
+                           nsIRDFNode* aNewTarget)
 {
-    nsresult    rv = NS_RDF_ASSERTION_REJECTED;
+    nsresult rv = NS_RDF_ASSERTION_REJECTED;
 
-    if (CanAccept(aSource, aProperty, aNewTarget))
-    {
-        if (aProperty == kNC_URL)
-        {
-            // It should be the case that aOldTarget
-            // points to a literal whose value is the same
-            // as aSource's URI.
-            nsCOMPtr<nsIRDFResource> newURL;
-            rv = getResourceFromLiteralNode(aNewTarget, getter_AddRefs(newURL));
-            if (NS_FAILED(rv)) return rv;
-            
-            rv = ChangeURL(aSource, newURL);
-        }
-        else if (NS_SUCCEEDED(rv = mInner->Change(aSource, aProperty, aOldTarget, aNewTarget)))
-        {
-            UpdateBookmarkLastModifiedDate(aSource);
+    if (CanAccept(aSource, aProperty, aNewTarget)) {
+        rv = mInner->Change(aSource, aProperty, aOldTarget, aNewTarget);
+        if (NS_FAILED(rv))
+            return rv;
 
-            if (aProperty == kWEB_Schedule)
-            {
-              AnnotateBookmarkSchedule(aSource, PR_TRUE);
-            }
+        UpdateBookmarkLastModifiedDate(aSource);
+
+        if (aProperty == kWEB_Schedule) {
+            AnnotateBookmarkSchedule(aSource, PR_TRUE);
         }
     }
+
     return rv;
 }
 
 NS_IMETHODIMP
 nsBookmarksService::Move(nsIRDFResource* aOldSource,
-             nsIRDFResource* aNewSource,
-             nsIRDFResource* aProperty,
-             nsIRDFNode* aTarget)
+                         nsIRDFResource* aNewSource,
+                         nsIRDFResource* aProperty,
+                         nsIRDFNode* aTarget)
 {
     nsresult    rv = NS_RDF_ASSERTION_REJECTED;
 
     if (CanAccept(aNewSource, aProperty, aTarget))
     {
-        if (NS_SUCCEEDED(rv = mInner->Move(aOldSource, aNewSource, aProperty, aTarget)))
-        {
-            UpdateBookmarkLastModifiedDate(aOldSource);
-            UpdateBookmarkLastModifiedDate(aNewSource);
-        }
+        rv = mInner->Move(aOldSource, aNewSource, aProperty, aTarget);
+        if (NS_FAILED(rv))
+            return rv;
+
+        UpdateBookmarkLastModifiedDate(aOldSource);
+        UpdateBookmarkLastModifiedDate(aNewSource);
     }
     return rv;
 }
@@ -5296,25 +5019,20 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds, nsOutputFileSt
                             (isBookmarkSeparator == PR_TRUE) )
                         {
                             // its a separator
-                            strm << "<HR>\n";
+                            strm << "<HR";
+
+                            // output NAME
+                            WriteBookmarkProperties(ds, strm, child, kNC_Name, kNameEquals, PR_FALSE);
+
+                            strm << ">\n";
                         }
                         else
                         {
-                            // output URL
-                            strm << "<DT><A HREF=\"";
-
-                            // Now do properly replace %22's; this is particularly important for javascript: URLs
-                            static const char kEscape22[] = "%22";
-                            PRInt32 offset;
-                            while ((offset = uri.FindChar('\"')) >= 0)
-                            {
-                                uri.Cut(offset, 1);
-                                uri.Insert(kEscape22, offset);
-                            }
-
-                            strm << uri.get();
-                            strm << "\"";
+                            strm << "<DT><A";
                                 
+                            // output URL
+                            WriteBookmarkProperties(ds, strm, child, kNC_URL, kHREFEquals, PR_FALSE);
+
                             // output ADD_DATE
                             WriteBookmarkProperties(ds, strm, child, kNC_BookmarkAddDate, kAddDateEquals, PR_FALSE);
 
@@ -5351,7 +5069,16 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds, nsOutputFileSt
                             // output PING_STATUS
                             WriteBookmarkProperties(ds, strm, child, kWEB_Status, kPingStatusEquals, PR_FALSE);
 
+                            // output ID
+                            const char  *id = nsnull;
+                            rv = child->GetValueConst(&id);
+                            if (NS_SUCCEEDED(rv) && (id))
+                            {
+                                strm << " " << kIDEquals << (const char *) id << "\"";
+                            }
+
                             strm << ">";
+
                             // output title
                             if (!name.IsEmpty())
                             {
@@ -5365,6 +5092,7 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds, nsOutputFileSt
                                     escapedAttrib = nsnull;
                                 }
                             }
+
                             strm << "</A>\n";
                             
                             // output description (if one exists)
@@ -5552,7 +5280,7 @@ nsBookmarksService::CanAccept(nsIRDFResource* aSource,
     PRBool      isBookmarkedFlag = PR_FALSE, canAcceptFlag = PR_FALSE, isOrdinal;
 
     if (
-#ifndef MOZ_PHOENIX
+#if 0
         NS_SUCCEEDED(rv = IsBookmarkedInternal(aSource, &isBookmarkedFlag)) &&
         (isBookmarkedFlag == PR_TRUE) &&
 #endif

@@ -851,7 +851,7 @@
               <treechildren>
                 <treeitem uri="rdf:*">
                   <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator">
-                    <treecell properties="separator"/>
+                    <treecell properties="separator" label="rdf:http://home.netscape.com/NC-rdf#Name"/>
                   </treerow>
                 </treeitem>
               </treechildren>
@@ -961,7 +961,7 @@
             <treechildren>
               <treeitem uri="rdf:*">
                 <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator">
-                  <treecell properties="separator"/>
+                  <treecell properties="separator" label="rdf:http://home.netscape.com/NC-rdf#Name"/>
                 </treerow>
               </treeitem>
             </treechildren>
