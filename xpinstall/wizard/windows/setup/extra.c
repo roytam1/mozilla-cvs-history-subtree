@@ -75,7 +75,7 @@ typedef struct structVer
 } verBlock;
 
 void AddGeneralUrlToIdiFile(siC *siCObject, char *szSection, char *szUrl, DWORD szUrlBufSize,
-                            int idiIndex, char *szFileIdiGetArchives)
+                            int idiIndex, char *szFileIdiGetArchives);
 void  TranslateVersionStr(LPSTR szVersion, verBlock *vbVersion);
 BOOL  GetFileVersion(LPSTR szFile, verBlock *vbVersion);
 int   CompareVersion(verBlock vbVersionOld, verBlock vbVersionNew);
