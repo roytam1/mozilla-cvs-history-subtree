@@ -23,12 +23,12 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef WIN32
+#ifdef XP_PC
 #include <windows.h>
 #endif
 
 #include "plstr.h"
-#include "nsIEventQueue.h"
+#include "plevent.h"
 
 #include "nsIComponentManager.h"
 

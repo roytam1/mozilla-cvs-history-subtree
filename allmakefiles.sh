@@ -114,6 +114,9 @@ htmlparser/tests/grabpage/Makefile
 htmlparser/tests/logparse/Makefile
 include/Makefile
 intl/Makefile
+intl/chardet/Makefile
+intl/chardet/public/Makefile
+intl/chardet/src/Makefile
 intl/uconv/Makefile
 intl/uconv/public/Makefile
 intl/uconv/src/Makefile
@@ -151,6 +154,7 @@ js/src/liveconnect/classes/Makefile
 # js/src/xpcom/Makefile
 js/src/xpconnect/Makefile
 js/src/xpconnect/public/Makefile
+js/src/xpconnect/idl/Makefile
 js/src/xpconnect/shell/Makefile
 js/src/xpconnect/src/Makefile
 js/src/xpconnect/tests/Makefile
@@ -385,10 +389,18 @@ xpfe/browser/samples/Makefile
 xpfe/browser/samples/sampleimages/Makefile
 xpfe/components/Makefile
 xpfe/components/public/Makefile
+xpfe/components/sample/Makefile
+xpfe/components/sample/public/Makefile
+xpfe/components/sample/src/Makefile
+xpfe/components/sample/resources/Makefile
 xpfe/components/find/Makefile
 xpfe/components/find/public/Makefile
 xpfe/components/find/src/Makefile
 xpfe/components/find/resources/Makefile
+xpfe/components/history/Makefile
+xpfe/components/history/src/Makefile
+xpfe/components/history/public/Makefile
+xpfe/components/history/resources/Makefile
 xpfe/components/xfer/Makefile
 xpfe/components/xfer/public/Makefile
 xpfe/components/xfer/src/Makefile

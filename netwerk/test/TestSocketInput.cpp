@@ -16,10 +16,7 @@
  * Reserved.
  */
 #include "stdio.h"
-
-#ifdef WIN32
 #include <windows.h>
-#endif
 
 #include "nscore.h"
 #include "nsXPComCIID.h"
@@ -32,13 +29,11 @@
 
 #ifdef XP_PC
 #define XPCOM_DLL  "xpcom32.dll"
-#define NETLIB_DLL  "netwerk.dll"
 #else
 #ifdef XP_MAC
 #include "nsMacRepository.h"
 #else
 #define XPCOM_DLL  "libxpcom.so"
-#define NETLIB_DLL  "libnetwerk.so"
 #endif
 #endif
 
@@ -144,7 +139,6 @@ main(int argc, char* argv[])
   port = 13;
 
   // XXX why do I have to do this?!
-  nsComponentManager::RegisterComponent(kSocketTransportServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
   rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup,
                                         "components");
@@ -154,7 +148,7 @@ main(int argc, char* argv[])
   NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
 
-  nsIEventQueue* eventQ;
+  PLEventQueue* eventQ;
   rv = eventQService->CreateThreadEventQueue();
   if (NS_FAILED(rv)) return rv;
 
@@ -174,7 +168,7 @@ main(int argc, char* argv[])
 
   // Enter the message pump to allow the URL load to proceed.
   while ( gKeepRunning ) {
-#ifdef WIN32
+#ifdef XP_PC
     MSG msg;
 
     if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -190,3 +184,4 @@ main(int argc, char* argv[])
 
   return 0;
 }
+

@@ -23,12 +23,10 @@
 #include "nsIServiceManager.h"
 #include "nsIByteBufferInputStream.h"
 #include "nsFtpConnectionThread.h"
-#include "nsIEventQueueService.h"
 
 #include "prprf.h" // PR_sscanf
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUE_CID);
 
 // There are actually two transport connections established for an 
 // ftp connection. One is used for the command channel , and
@@ -41,22 +39,13 @@ static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUE_CID);
 nsFtpProtocolConnection::nsFtpProtocolConnection()
     : mUrl(nsnull), mConnected(PR_FALSE), mListener(nsnull) {
 
-    nsresult rv;
-
-    NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueService, &rv);
-    if (NS_SUCCEEDED(rv)) {
-        rv = eventQService->GetThreadEventQueue(PR_CurrentThread(), &mEventQueue);
-    }
-    if (NS_FAILED(rv))
-        mEventQueue = nsnull;    
-    
+    mEventQueue = PL_CreateEventQueue("FTP Event Queue", PR_CurrentThread());
     NS_INIT_REFCNT();
 }
 
 nsFtpProtocolConnection::~nsFtpProtocolConnection() {
     NS_IF_RELEASE(mUrl);
     NS_IF_RELEASE(mListener);
-    NS_IF_RELEASE(mEventQueue);
 }
 
 NS_IMPL_ADDREF(nsFtpProtocolConnection);
@@ -82,7 +71,7 @@ nsFtpProtocolConnection::QueryInterface(const nsIID& aIID, void** aInstancePtr) 
 }
 
 nsresult 
-nsFtpProtocolConnection::Init(nsIUrl* aUrl, nsISupports* aEventSink, nsIEventQueue* aEventQueue) {
+nsFtpProtocolConnection::Init(nsIUrl* aUrl, nsISupports* aEventSink, PLEventQueue* aEventQueue) {
  
     if (mConnected)
         return NS_ERROR_NOT_IMPLEMENTED;
@@ -91,7 +80,6 @@ nsFtpProtocolConnection::Init(nsIUrl* aUrl, nsISupports* aEventSink, nsIEventQue
     NS_ADDREF(mUrl);
 
     mEventQueue = aEventQueue;
-    NS_IF_ADDREF(mEventQueue);
 
     return NS_OK;
 }

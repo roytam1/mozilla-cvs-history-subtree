@@ -22,13 +22,14 @@ DEFINES=-D_IMPL_NS_UI
 MODULE=raptor 
 
 EXPORTS=nsui.h \
+  nsIFontSizeIterator.h \
+  nsIFontNameIterator.h \
+  nsIFontRetrieverService.h \
   nsIFileListTransferable.h \
   nsIFormatConverter.h \
   nsIClipboardOwner.h \
   nsIClipboard.h \
-  nsIDataFlavor.h \
   nsITransferable.h \
-  nsIGenericTransferable.h \
   nsIDragService.h \
   nsIDragSession.h \
   nsIWidget.h \
@@ -60,6 +61,7 @@ EXPORTS=nsui.h \
   nsIMenuBar.h \
   nsIMenu.h \
   nsIMenuItem.h \
+  nsIContextMenu.h \
   nsIImageButton.h \
   nsIPopUpMenu.h \
   nsIMenuButton.h \

@@ -20,7 +20,7 @@
 
 #include "nsIStreamListener.h"
 
-#include "nsIEventQueue.h"
+#include "plevent.h"
 #include "nscore.h"
 #include "nsString.h"
 
@@ -30,7 +30,7 @@ public:
     nsFtpStreamListenerEvent(nsIStreamListener* listener, nsISupports* context);
     virtual ~nsFtpStreamListenerEvent();
 
-    nsresult Fire(nsIEventQueue* aEventQ);
+    nsresult Fire(PLEventQueue* aEventQ);
 
     NS_IMETHOD HandleEvent() = 0;
 

@@ -20,7 +20,7 @@
 #define nsIStreamListener_h___
 
 #include "nsIStreamObserver.h"
-#include "nsIEventQueue.h"
+#include "plevent.h"
 
 class nsIInputStream;
 
@@ -59,7 +59,7 @@ public:
 // the data on the other thread.
 extern nsresult
 NS_NewAsyncStreamListener(nsIStreamListener* *result,
-                          nsIEventQueue* eventQueue,
+                          PLEventQueue* eventQueue,
                           nsIStreamListener* receiver);
 
 // A synchronous stream listener pushes data through a pipe that ends up
@@ -67,4 +67,5 @@ NS_NewAsyncStreamListener(nsIStreamListener* *result,
 extern nsresult
 NS_NewSyncStreamListener(nsIStreamListener* *listener,
                          nsIInputStream* *inStream);
+
 #endif /* nsIIStreamListener_h___ */

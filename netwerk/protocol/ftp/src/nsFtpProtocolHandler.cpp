@@ -108,7 +108,7 @@ nsFtpProtocolHandler::NewUrl(const char* aSpec,
 NS_IMETHODIMP
 nsFtpProtocolHandler::NewConnection(nsIUrl* url,
                                     nsISupports* eventSink,
-                                    nsIEventQueue* eventQueue,
+                                    PLEventQueue* eventQueue,
                                     nsIProtocolConnection* *result)
 {
     nsresult rv;

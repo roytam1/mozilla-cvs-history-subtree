@@ -34,12 +34,10 @@ public:
                              nsIString* aMsg);
 
     // nsAsyncStreamObserver methods:
-    nsAsyncStreamObserver(nsIEventQueue* aEventQ) 
-      : mReceiver(nsnull), mStatus(NS_OK) 
+    nsAsyncStreamObserver(PLEventQueue* aEventQ) 
+      : mEventQueue(aEventQ), mReceiver(nsnull), mStatus(NS_OK) 
     { 
       NS_INIT_REFCNT();
-      mEventQueue = aEventQ;
-      NS_IF_ADDREF(mEventQueue);
     }
     
     virtual ~nsAsyncStreamObserver();
@@ -54,7 +52,7 @@ public:
     void SetStatus(nsresult value)  { mStatus = value; }
 
 protected:
-    nsIEventQueue*       mEventQueue;
+    PLEventQueue*       mEventQueue;
     nsIStreamObserver*  mReceiver;
     nsresult            mStatus;
 };
@@ -85,7 +83,7 @@ public:
                                PRUint32 aLength);
 
     // nsAsyncStreamListener methods:
-    nsAsyncStreamListener(nsIEventQueue* aEventQ) 
+    nsAsyncStreamListener(PLEventQueue* aEventQ) 
       : nsAsyncStreamObserver(aEventQ) {}
 
     void Init(nsIStreamListener* aListener) {
@@ -103,7 +101,7 @@ public:
                           nsISupports* context);
     virtual ~nsStreamListenerEvent();
 
-    nsresult Fire(nsIEventQueue* aEventQ);
+    nsresult Fire(PLEventQueue* aEventQ);
 
     NS_IMETHOD HandleEvent() = 0;
 
@@ -151,15 +149,15 @@ void PR_CALLBACK nsStreamListenerEvent::DestroyPLEvent(PLEvent* aEvent)
 }
 
 nsresult
-nsStreamListenerEvent::Fire(nsIEventQueue* aEventQueue) 
+nsStreamListenerEvent::Fire(PLEventQueue* aEventQueue) 
 {
-    NS_PRECONDITION(nsnull != aEventQueue, "nsIEventQueue for thread is null");
+    NS_PRECONDITION(nsnull != aEventQueue, "PLEventQueue for thread is null");
 
     PL_InitEvent(this, nsnull,
                  (PLHandleEventProc)  nsStreamListenerEvent::HandlePLEvent,
                  (PLDestroyEventProc) nsStreamListenerEvent::DestroyPLEvent);
 
-    PRStatus status = aEventQueue->PostEvent(this);
+    PRStatus status = PL_PostEvent(aEventQueue, this);
     return status == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE;
 }
 
@@ -168,7 +166,6 @@ nsStreamListenerEvent::Fire(nsIEventQueue* aEventQueue)
 nsAsyncStreamObserver::~nsAsyncStreamObserver()
 {
   NS_RELEASE(mReceiver);
-  NS_IF_RELEASE(mEventQueue);
 }
 
 NS_IMPL_ISUPPORTS(nsAsyncStreamObserver, nsIStreamObserver::GetIID());
@@ -375,7 +372,7 @@ nsAsyncStreamObserver::OnStopBinding(nsISupports* context,
 
 nsresult
 NS_NewAsyncStreamObserver(nsIStreamObserver* *result,
-                          nsIEventQueue* eventQueue,
+                          PLEventQueue* eventQueue,
                           nsIStreamObserver* receiver)
 {
     nsAsyncStreamObserver* l =
@@ -390,7 +387,7 @@ NS_NewAsyncStreamObserver(nsIStreamObserver* *result,
 
 nsresult
 NS_NewAsyncStreamListener(nsIStreamListener* *result,
-                          nsIEventQueue* eventQueue,
+                          PLEventQueue* eventQueue,
                           nsIStreamListener* receiver)
 {
     nsAsyncStreamListener* l =

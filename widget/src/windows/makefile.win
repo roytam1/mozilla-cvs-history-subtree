@@ -23,6 +23,8 @@ REQUIRES=xpcom gfxwin raptor dom network netlib
 DEFINES =-D_IMPL_NS_WIDGET
 
 CPPSRCS =              \
+	nsFontRetrieverService.cpp      \
+	nsFontSizeIterator.cpp      \
 	nsNativeDragTarget.cpp      \
 	nsNativeDragSource.cpp      \
 	nsDragService.cpp      \
@@ -33,6 +35,7 @@ CPPSRCS =              \
 	nsMenuBar.cpp        \
 	nsMenu.cpp           \
 	nsMenuItem.cpp       \
+	nsContextMenu.cpp    \
 	nsWindow.cpp         \
 	nsButton.cpp         \
 	nsCheckButton.cpp    \
@@ -56,6 +59,8 @@ CPPSRCS =              \
 MODULE=raptor 
 
 OBJS =                             \
+	.\$(OBJDIR)\nsFontRetrieverService.obj  \
+	.\$(OBJDIR)\nsFontSizeIterator.obj  \
 	.\$(OBJDIR)\nsNativeDragTarget.obj  \
 	.\$(OBJDIR)\nsNativeDragSource.obj  \
 	.\$(OBJDIR)\nsDragService.obj  \
@@ -66,6 +71,7 @@ OBJS =                             \
 	.\$(OBJDIR)\nsMenuBar.obj  \
 	.\$(OBJDIR)\nsMenu.obj  \
 	.\$(OBJDIR)\nsMenuItem.obj  \
+	.\$(OBJDIR)\nsContextMenu.obj    \
 	.\$(OBJDIR)\nsWindow.obj         \
 	.\$(OBJDIR)\nsButton.obj         \
 	.\$(OBJDIR)\nsCheckButton.obj    \

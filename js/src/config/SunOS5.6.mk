@@ -62,6 +62,3 @@ endif
 endif
 
 MKSHLIB = $(LD) -G
-
-# Use the editline library to provide line-editing support.
-JS_EDITLINE = 1

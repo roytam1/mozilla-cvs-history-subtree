@@ -24,6 +24,7 @@
 #include "nsIFileStream.h"
 #include "nsFileSpec.h"
 #include "nsIBuffer.h"
+#include "prcmon.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
@@ -36,13 +37,11 @@ nsFileTransport::nsFileTransport()
       mBufferStream(nsnull), mStatus(NS_OK), mService(nsnull), mSourceOffset(0)
 {
     NS_INIT_REFCNT();
-    mMonitor = PR_NewMonitor();    
 }
 
 nsFileTransport::~nsFileTransport()
 {
     if (mPath) nsCRT::free(mPath);
-    PR_DestroyMonitor(mMonitor);
     NS_IF_RELEASE(mListener);
     NS_IF_RELEASE(mContext);
     NS_IF_RELEASE(mService);
@@ -71,9 +70,7 @@ nsFileTransport::Init(nsISupports* context,
                       State state)
 {
     nsresult rv = NS_OK;
-    if (!mMonitor)
-        return NS_ERROR_OUT_OF_MEMORY;
-    PR_EnterMonitor(mMonitor);
+    PR_CEnterMonitor(this);
 
     if (mState != ENDED)
         rv = NS_ERROR_FAILURE;
@@ -86,7 +83,7 @@ nsFileTransport::Init(nsISupports* context,
 
         mState = state;
     }
-    PR_ExitMonitor(mMonitor);
+    PR_CExitMonitor(this);
     return rv;
 }
 
@@ -121,15 +118,13 @@ NS_IMETHODIMP
 nsFileTransport::Cancel(void)
 {
     nsresult rv = NS_OK;
-    if (!mMonitor)
-        return NS_ERROR_OUT_OF_MEMORY;
-    PR_EnterMonitor(mMonitor);
+    PR_CEnterMonitor(this);
     mStatus = NS_BINDING_ABORTED;
     if (mSuspended) {
         Resume();
     }
     mState = ENDING;
-    PR_ExitMonitor(mMonitor);
+    PR_CExitMonitor(this);
     return rv;
 }
 
@@ -137,15 +132,13 @@ NS_IMETHODIMP
 nsFileTransport::Suspend(void)
 {
     nsresult rv = NS_OK;
-    if (!mMonitor)
-        return NS_ERROR_OUT_OF_MEMORY;
-    PR_EnterMonitor(mMonitor);
+    PR_CEnterMonitor(this);
     if (!mSuspended) {
         // XXX close the stream here?
         mStatus = mService->Suspend(this);
         mSuspended = PR_TRUE;
     }
-    PR_ExitMonitor(mMonitor);
+    PR_CExitMonitor(this);
     return rv;
 }
 
@@ -153,15 +146,13 @@ NS_IMETHODIMP
 nsFileTransport::Resume(void)
 {
     nsresult rv = NS_OK;
-    if (!mMonitor)
-        return NS_ERROR_OUT_OF_MEMORY;
-    PR_EnterMonitor(mMonitor);
+    PR_CEnterMonitor(this);
     if (!mSuspended) {
         // XXX re-open the stream and seek here?
         mStatus = mService->Resume(this);
         mSuspended = PR_FALSE;
     }
-    PR_ExitMonitor(mMonitor);
+    PR_CExitMonitor(this);
     return rv;
 }
 
@@ -170,7 +161,7 @@ nsFileTransport::Resume(void)
 
 NS_IMETHODIMP
 nsFileTransport::AsyncRead(nsISupports* context,
-                           nsIEventQueue* appEventQueue,
+                           PLEventQueue* appEventQueue,
                            nsIStreamListener* listener)
 {
     nsresult rv;
@@ -191,7 +182,7 @@ nsFileTransport::AsyncRead(nsISupports* context,
 NS_IMETHODIMP
 nsFileTransport::AsyncWrite(nsIInputStream* fromStream,
                             nsISupports* context,
-                            nsIEventQueue* appEventQueue,
+                            PLEventQueue* appEventQueue,
                             nsIStreamObserver* observer)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -235,11 +226,7 @@ nsFileTransport::OpenOutputStream(nsIOutputStream* *result)
 void
 nsFileTransport::Process(void)
 {
-    if (!mMonitor) {
-        mState = ENDING;
-        return;
-    }
-    PR_EnterMonitor(mMonitor);
+    PR_CEnterMonitor(this);
     switch (mState) {
       case START_READ: {
           nsISupports* fs;
@@ -327,12 +314,12 @@ nsFileTransport::Process(void)
           break;
       }
     }
-    PR_ExitMonitor(mMonitor);
+    PR_CExitMonitor(this);
     return;
 
   error:
     mState = ENDING;
-    PR_ExitMonitor(mMonitor);
+    PR_CExitMonitor(this);
     return;
 }
 
