@@ -116,6 +116,7 @@ jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 jmethodID njJSException_JSException;    /* netscape.javascript.JSexception constructor */
 jmethodID njJSException_JSException_wrap;/*netscape.javascript.JSexception constructor */
 jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
+jmethodID njJSUtil_workAroundAIXJavaBug;/* netscape.javascript.JSUtil.workAroundAIXJavaBug() */
 jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
 jfieldID njJSException_lineno;          /* netscape.javascript.JSException.lineno */
@@ -337,6 +338,22 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_STATIC_METHOD(netscape.javascript.JSUtil,
                                             getStackTrace,      "(Ljava/lang/Throwable;)Ljava/lang/String;",
                                                                                                 njJSUtil);
+#ifdef AIX
+#    define JAVA_STATIC_INITIALIZER_BUG
+#endif
+
+#ifdef JAVA_STATIC_INITIALIZER_BUG
+    /* The following is used to work around a bug in AIX JDK1.1.6 (See
+     * #331620), in which static initializers are not run when a
+     * static field is referenced from native code.  The problem does
+     * not manifest itself if the field is accessed from Java code, so
+     * we first call some Java code to access the fields of interest
+     * before attempting to read them from native code.
+     */
+    LOAD_STATIC_METHOD(netscape.javascript.JSUtil,
+                                            workAroundAIXJavaBug,"()V",                         njJSUtil);
+    (*jEnv)->CallStaticObjectMethod(jEnv, njJSUtil, njJSUtil_workAroundAIXJavaBug);
+#endif /* JAVA_STATIC_INITIALIZER_BUG */
 
     return JS_TRUE;
 }
@@ -396,13 +413,6 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
     jsjava_vm->java_vm = java_vm;
     jsjava_vm->main_thread_env = jEnv;
     
-    /* Load the Java classes, and the method and field descriptors required for
-       Java reflection. */
-    if (!init_java_VM_reflection(jsjava_vm, jEnv)) {
-        JSJ_DisconnectFromJavaVM(jsjava_vm);
-        return NULL;
-    }
-
     /*
      * JVM initialization for netscape.javascript.JSObject is performed
      * independently of the other classes that are initialized in
@@ -411,6 +421,13 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
      * from JS to Java and not vice-versa.
      */
     init_netscape_java_classes(jsjava_vm, jEnv);
+
+    /* Load the Java classes, and the method and field descriptors required for
+       Java reflection. */
+    if (!init_java_VM_reflection(jsjava_vm, jEnv)) {
+        JSJ_DisconnectFromJavaVM(jsjava_vm);
+        return NULL;
+    }
 
     /* Put this VM on the list of all created VMs */
     jsjava_vm->next = jsjava_vm_list;
