@@ -34,6 +34,7 @@
 #include "nsLayoutCID.h" // for NS_NAMESPACEMANAGER_CID.
 #include "nsParserCIID.h"
 #include "nsRDFCID.h"
+#include "plstr.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -58,8 +59,9 @@ class StreamDataSourceImpl : public nsIRDFDataSource,
                              public nsIRDFXMLSource
 {
 protected:
-    nsIURL* mURL;
     nsIRDFDataSource* mInner;
+    PRBool            mIsWritable;
+    PRBool            mIsDirty;
 
 public:
     StreamDataSourceImpl(void);
@@ -70,6 +72,10 @@ public:
 
     // nsIRDFDataSource
     NS_IMETHOD Init(const char* uri);
+
+    NS_IMETHOD GetURI(const char* *uri) const {
+        return mInner->GetURI(uri);
+    }
 
     NS_IMETHOD GetSource(nsIRDFResource* property,
                          nsIRDFNode* target,
@@ -102,15 +108,11 @@ public:
     NS_IMETHOD Assert(nsIRDFResource* source, 
                       nsIRDFResource* property, 
                       nsIRDFNode* target,
-                      PRBool tv) {
-        return mInner->Assert(source, property, target, tv);
-    }
+                      PRBool tv);
 
     NS_IMETHOD Unassert(nsIRDFResource* source,
                         nsIRDFResource* property,
-                        nsIRDFNode* target) {
-        return mInner->Unassert(source, property, target);
-    }
+                        nsIRDFNode* target);
 
     NS_IMETHOD HasAssertion(nsIRDFResource* source,
                             nsIRDFResource* property,
@@ -149,14 +151,14 @@ public:
 
 
 StreamDataSourceImpl::StreamDataSourceImpl(void)
-    : mURL(nsnull)
+    : mIsWritable(PR_FALSE)
 {
 }
 
 
 StreamDataSourceImpl::~StreamDataSourceImpl(void)
 {
-    NS_IF_RELEASE(mURL);
+    Flush();
 }
 
 
@@ -186,19 +188,26 @@ StreamDataSourceImpl::QueryInterface(REFNSIID iid, void** result)
     }
 }
 
+const char* kFileURIPrefix = "file:";
+const PRInt32 kFileURIPrefixLen = 5;
+
 NS_IMETHODIMP
 StreamDataSourceImpl::Init(const char* uri)
 {
     nsresult rv;
 
-    if (NS_FAILED(rv = NS_NewURL(&mURL, uri)))
-        return rv;
+    if (PL_strncmp(uri, kFileURIPrefix, kFileURIPrefixLen) == 0)
+        mIsWritable = PR_TRUE;
 
     nsINameSpaceManager* ns = nsnull;
     nsIRDFContentSink* sink = nsnull;
     nsIParser* parser       = nsnull;
     nsIDTD* dtd             = nsnull;
     nsIStreamListener* lsnr = nsnull;
+    nsIURL* url             = nsnull;
+
+    if (NS_FAILED(rv = NS_NewURL(&url, uri)))
+        goto done;
 
     if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
                                                     nsnull,
@@ -221,10 +230,12 @@ StreamDataSourceImpl::Init(const char* uri)
                                                     (void**) &sink)))
         goto done;
 
-    if (NS_FAILED(sink->Init(mURL, ns)))
+    if (NS_FAILED(sink->Init(url, ns)))
         goto done;
 
-    if (NS_FAILED(rv = sink->SetDataSource(this)))
+    // We set the content sink's data source directly to our in-memory
+    // store. We _always_ fail asserts because they're not allowed.
+    if (NS_FAILED(rv = sink->SetDataSource(mInner)))
         goto done;
 
     if (NS_FAILED(rv = nsRepository::CreateInstance(kParserCID,
@@ -246,10 +257,10 @@ StreamDataSourceImpl::Init(const char* uri)
     if (NS_FAILED(rv = parser->QueryInterface(kIStreamListenerIID, (void**) &lsnr)))
         goto done;
 
-    if (NS_FAILED(parser->Parse(mURL)))
+    if (NS_FAILED(parser->Parse(url)))
         goto done;
 
-    if (NS_FAILED(NS_OpenURL(mURL, lsnr)))
+    if (NS_FAILED(NS_OpenURL(url, lsnr)))
         goto done;
 
 done:
@@ -257,6 +268,40 @@ done:
     NS_IF_RELEASE(dtd);
     NS_IF_RELEASE(parser);
     NS_IF_RELEASE(sink);
+    NS_IF_RELEASE(url);
+    return rv;
+}
+
+
+NS_IMETHODIMP
+StreamDataSourceImpl::Assert(nsIRDFResource* source, 
+                             nsIRDFResource* property, 
+                             nsIRDFNode* target,
+                             PRBool tv)
+{
+    if (! mIsWritable)
+        return NS_ERROR_FAILURE; // XXX right error code?
+
+    nsresult rv;
+    if (NS_SUCCEEDED(rv = mInner->Assert(source, property, target, tv)))
+        mIsDirty = PR_TRUE;
+
+    return rv;
+}
+
+
+NS_IMETHODIMP
+StreamDataSourceImpl::Unassert(nsIRDFResource* source, 
+                               nsIRDFResource* property, 
+                               nsIRDFNode* target)
+{
+    if (! mIsWritable)
+        return NS_ERROR_FAILURE; // XXX right error code?
+
+    nsresult rv;
+    if (NS_SUCCEEDED(rv = mInner->Unassert(source, property, target)))
+        mIsDirty = PR_TRUE;
+
     return rv;
 }
 
@@ -264,8 +309,10 @@ done:
 NS_IMETHODIMP
 StreamDataSourceImpl::Flush(void)
 {
-    // XXX walk through all the resources, writing <RDF:Description>
-    // elements with properties for each.
+    if (!mIsWritable || !mIsDirty)
+        return NS_OK;
+
+    // er, write the data source out _here_.
     return NS_OK;
 }
 

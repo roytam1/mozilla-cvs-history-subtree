@@ -221,6 +221,11 @@ public:
         return NS_OK;
     }
 
+    NS_IMETHOD GetURI(const char* *uri) const {
+        *uri = mURI;
+        return NS_OK;
+    }
+
     PRBool peq (nsIRDFResource* r1, nsIRDFResource* r2) {
         PRBool result;
         if ((NS_OK == r1->EqualsResource(r2, &result)) && result) {

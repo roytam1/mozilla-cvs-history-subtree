@@ -130,6 +130,8 @@ public:
     // nsIRDFDataSource methods
     NS_IMETHOD Init(const char* uri);
 
+    NS_IMETHOD GetURI(const char* *uri) const;
+
     NS_IMETHOD GetSource(nsIRDFResource* property,
                          nsIRDFNode* target,
                          PRBool tv,
@@ -744,6 +746,17 @@ InMemoryDataSource::Init(const char* uri)
     if ((mURL = PL_strdup(uri)) == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
 
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+InMemoryDataSource::GetURI(const char* *uri) const
+{
+    NS_PRECONDITION(uri != nsnull, "null ptr");
+    if (! uri)
+        return NS_ERROR_NULL_POINTER;
+
+    *uri = mURL;
     return NS_OK;
 }
 

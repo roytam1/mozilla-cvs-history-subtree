@@ -484,6 +484,10 @@ public:
     // nsIRDFDataSource
     NS_IMETHOD Init(const char* uri);
 
+    NS_IMETHOD GetURI(const char* *uri) const {
+        return mInner->GetURI(uri);
+    }
+
     NS_IMETHOD GetSource(nsIRDFResource* property,
                          nsIRDFNode* target,
                          PRBool tv,

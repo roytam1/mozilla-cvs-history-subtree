@@ -75,6 +75,8 @@ public:
     // nsIRDFDataSource interface
     NS_IMETHOD Init(const char* uri);
 
+    NS_IMETHOD GetURI(const char* *uri) const;
+
     NS_IMETHOD GetSource(nsIRDFResource* property,
                          nsIRDFNode* target,
                          PRBool tv,
@@ -457,7 +459,14 @@ NS_IMETHODIMP
 DataBase::Init(const char* uri)
 {
     PR_ASSERT(0);
-    return NS_ERROR_UNEXPECTED;
+    return NS_ERROR_UNEXPECTED; // XXX database doesn't have a URI?
+}
+
+NS_IMETHODIMP
+DataBase::GetURI(const char* *uri) const
+{
+    PR_ASSERT(0);
+    return NS_ERROR_UNEXPECTED; // XXX database doesn't have a URI?
 }
 
 NS_IMETHODIMP
