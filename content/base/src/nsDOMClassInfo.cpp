@@ -996,10 +996,10 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
 // HTMLFormElement scriptable helper
 
-class nsHTMLFormElementSH : public nsNodeSH
+class nsHTMLFormElementSH : public nsElementSH
 {
 private:
-  nsHTMLFormElementSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
+  nsHTMLFormElementSH(nsDOMClassInfoID aID) : nsElementSH(aID)
   {
   }
 
