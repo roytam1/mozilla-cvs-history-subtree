@@ -98,6 +98,8 @@ nsIAtom * nsMsgMessageDataSource::kStatusAtom   = nsnull;
 
 nsMsgMessageDataSource::nsMsgMessageDataSource()
 {
+  NS_ASSERTION(0, "heh, this data source isn't supposed to be here anymore...investigate whose trying to load it");
+
 	mStringBundle = nsnull;
 
   mHeaderParser = do_CreateInstance(kMsgHeaderParserCID);
