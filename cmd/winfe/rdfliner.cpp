@@ -1740,6 +1740,10 @@ void CRDFOutliner::OnPaint()
 		WFE_ParseColor((char*)data, &m_SortBackgroundColor);
 	else m_SortBackgroundColor = RGB(224,224,224);
 
+	// Compute the shadow/highlight colors for sorting and for normal modes.
+	Compute3DColors(m_SortBackgroundColor, m_SortHighlightColor, m_SortShadowColor);
+	Compute3DColors(m_BackgroundColor, m_HighlightColor, m_ShadowColor);
+
 	// Selection foreground color
 	HT_GetNodeData(top, gNavCenter->selectionFGColor, HT_COLUMN_STRING, &data);
 	if (data)
@@ -2230,21 +2234,37 @@ void CRDFOutliner::PaintColumn(int iLineNo, int iColumn, LPRECT lpColumnRect,
 		{
 			BOOL hasFocus = FALSE;
 		
-			if (theNode && HT_IsSeparator(theNode))
+			CRect WinRect;
+			GetClientRect(&WinRect);
+			
+			if (theNode && HT_IsSeparator(theNode) && lpColumnRect->right != WinRect.right)
 			{
 				// Draw the horizontal line.
-				CPen separatorPen;
-				if (iColumn == GetSortColumn())
-				  separatorPen.CreatePen(PS_SOLID, 1, m_SortForegroundColor);
-				else separatorPen.CreatePen(PS_SOLID, 1, m_ForegroundColor);
-				
-				HPEN sepPen = (HPEN)separatorPen.GetSafeHandle();
-				
-				HPEN usePen = IsSelected(iLineNo) ? hHighlightPen : sepPen;
+				CPen separatorHighlightPen;
+				CPen separatorShadowPen;
 
-				HPEN pOldPen = (HPEN)(::SelectObject(hdc, usePen));
+				if (iColumn == GetSortColumn())
+				{
+					separatorHighlightPen.CreatePen(PS_SOLID, 1, m_SortHighlightColor);
+					separatorShadowPen.CreatePen(PS_SOLID, 1, m_SortShadowColor);
+				}
+				else 
+				{
+					separatorHighlightPen.CreatePen(PS_SOLID, 1, m_HighlightColor);
+					separatorShadowPen.CreatePen(PS_SOLID, 1, m_ShadowColor);
+				}
+
+				//HPEN sepPen = (HPEN)separatorPen.GetSafeHandle();
+				//HPEN usePen = IsSelected(iLineNo) ? hHighlightPen : sepPen;
+
+				HPEN pOldPen = (HPEN)(::SelectObject(hdc, (HPEN)separatorShadowPen.GetSafeHandle()));
 				::MoveToEx(hdc, lpColumnRect->left, lpColumnRect->top+m_itemHeight/2, NULL);
 				::LineTo(hdc, lpColumnRect->right, lpColumnRect->top+m_itemHeight/2);
+
+				::SelectObject(hdc, (HPEN)separatorHighlightPen.GetSafeHandle());
+				::MoveToEx(hdc, lpColumnRect->left, lpColumnRect->top+m_itemHeight/2+1, NULL);
+				::LineTo(hdc, lpColumnRect->right, lpColumnRect->top+m_itemHeight/2+1);
+
 				::SelectObject(hdc, pOldPen);
 			}
 
@@ -3610,7 +3630,7 @@ void CRDFOutlinerParent::CreateColumns ( void )
 		// We have retrieved a new column.  Contruct a front end column object
 		CRDFColumn* newColumn = new CRDFColumn(columnName, columnWidth, token, tokenType);
 		index = (UINT)columnMap.AddCommand(newColumn);
-		m_pOutliner->AddColumn(columnName, index, 5000, 10000, ColumnVariable, 3000);
+		m_pOutliner->AddColumn(columnName, index, 0);
 	}
 	HT_DeleteColumnCursor(columnCursor);
 	m_pOutliner->SetVisibleColumns(1); // For now... TODO: Get visible/invisible info!

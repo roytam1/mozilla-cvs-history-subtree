@@ -111,30 +111,9 @@ IMPLEMENT_DYNCREATE(CGenericFrame, CNSGenFrame)
 #define new DEBUG_NEW
 #endif
 
-// The Event Handler
-static void qfNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
-{
-	if (whatHappened == HT_EVENT_NODE_OPENCLOSE_CHANGED)
-	{
-		// The node was opened.
-		PRBool openState;
-		HT_GetOpenState(n, &openState);
-		if (openState)
-		{
-			CGenericFrame* pFrame = (CGenericFrame*)ns->data;
-			pFrame->FinishMenuExpansion(n);
-		}
-	}
-}
-
 CGenericFrame::CGenericFrame()
 {
-	// Construct the notification struct used by HT
-	HT_Notification ns = new HT_NotificationStruct;
-	ns->notifyProc = qfNotifyProcedure;
-	ns->data = this;
-
-	m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
+	m_BookmarkMenuPane = NULL;
 	m_nBookmarkItems = 0;
 	m_nFileBookmarkItems = 0;
     m_pHotlistMenuMap = new CMapWordToPtr();

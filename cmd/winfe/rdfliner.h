@@ -113,6 +113,14 @@ private:
 	COLORREF m_SelectionForegroundColor;	// Foreground color of the selection
 	COLORREF m_SelectionBackgroundColor;	// Background color of the selection
 
+	COLORREF m_ShadowColor;					// Shadow color of the tree (used for drawing separators).
+	COLORREF m_HighlightColor;				// Highlight color of the tree (used for drawing separators).
+
+	COLORREF m_SortShadowColor;				// Shadow color of the sorted tree (used for drawing separators).
+	COLORREF m_SortHighlightColor;			// Highlight color of the sorted tree (used for drawing separators).
+
+	COLORREF m_RolloverColor;				// Rollover color of the tree.
+
 	COLORREF m_DividerColor;				// Color of the dividers drawn between lines
 	BOOL	 m_bDrawDividers;				// Whether or not dividers should be drawn
 
