@@ -32,6 +32,7 @@
 #include "gui.h"
 #include "msgprefs.h"
 #include "mkutils.h"
+#include "mktcp.h"
 #include "netutils.h"
 
 extern "C"

@@ -39,7 +39,7 @@
 #include "msgprefs.h"
 #include "msgmast.h"
 #include "msgcpane.h"
-#ifdef MOZ_SECURITY
+#ifndef NO_SECURITY
 #include  HG02902
 #endif
 #include "grpinfo.h"
