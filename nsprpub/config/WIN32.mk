@@ -93,7 +93,7 @@ else
 # (RTL) in the debug build
 #
 ifeq ($(OS_TARGET),WINCE)
-OPTIMIZER = -Od -O1 -Zi
+OPTIMIZER = -Od -Zi
 OS_CFLAGS += -Zl -GR- -GX- -Gi- -Gm-
 else
 OPTIMIZER = -Od -Z7

@@ -59,6 +59,14 @@
 #include <io.h>
 #include <fcntl.h>
 
+
+#ifdef _BUILD_STATIC_BIN
+#include "nsStaticComponent.h"
+nsresult PR_CALLBACK
+app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
+#endif
+
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -312,6 +320,11 @@ BOOL CMfcEmbedApp::InitInstance()
 #if !defined(WINCE)
 	Enable3dControls();
 #endif /* WINCE */
+
+#ifdef _BUILD_STATIC_BIN
+	// Initialize XPCOM's module info table
+	NSGetStaticModuleInfo = app_getModuleInfo;
+#endif
 
 	//
 	// 1. Determine the name of the dir from which the MRE based app is being run
