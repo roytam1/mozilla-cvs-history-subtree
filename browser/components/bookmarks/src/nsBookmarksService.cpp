@@ -4970,7 +4970,7 @@ nsBookmarksService::WriteBookmarks(nsIFile* aBookmarksFile,
     nsCOMPtr<nsIOutputStream> out;
     nsresult rv = NS_NewSafeLocalFileOutputStream(getter_AddRefs(out),
                                                   aBookmarksFile,
-                                                  PR_WRONLY,
+                                                  PR_WRONLY | PR_CREATE_FILE,
                                                   /*octal*/ 0600,
                                                   0);
     if (NS_FAILED(rv)) return rv;
