@@ -539,14 +539,46 @@ NS_IMETHODIMP nsMsgDBView::IsContainerEmpty(PRInt32 index, PRBool *_retval)
 
 NS_IMETHODIMP nsMsgDBView::GetParentIndex(PRInt32 rowIndex, PRInt32 *_retval)
 {  
-  // implementation coming soon...
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *_retval = -1;
+
+  PRInt32 rowIndexLevel;
+  GetLevel(rowIndex, &rowIndexLevel);
+
+  PRInt32 i;
+  for(i = rowIndex; i >= 0; i--) {
+    PRInt32 l;
+    GetLevel(i, &l);
+    if (l < rowIndexLevel) {
+      *_retval = i;
+      break;
+    }
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::HasNextSibling(PRInt32 rowIndex, PRInt32 afterIndex, PRBool *_retval)
 {
-  // implementation coming soon...
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *_retval = PR_FALSE;
+
+  PRInt32 rowIndexLevel;
+  GetLevel(rowIndex, &rowIndexLevel);
+
+  PRInt32 i;
+  PRInt32 count;
+  GetRowCount(&count);
+  for(i = afterIndex + 1; i < count - 1; i++) {
+    PRInt32 l;
+    GetLevel(i, &l);
+    if (l < rowIndexLevel)
+      break;
+    if (l == rowIndexLevel) {
+      *_retval = PR_TRUE;
+      break;
+    }
+  }                                                                       
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
