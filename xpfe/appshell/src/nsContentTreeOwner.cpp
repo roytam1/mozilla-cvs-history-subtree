@@ -388,7 +388,7 @@ nsContentTreeOwner::GetPersistence(PRBool* aPersistX, PRBool* aPersistY,
 //*****************************************************************************   
 
 NS_IMETHODIMP nsContentTreeOwner::InitWindow(nativeWindow aParentNativeWindow,
-   nsIWidget* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
+   nsIWindow* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
 {
    // Ignore wigdet parents for now.  Don't think those are a vaild thing to call.
    NS_ENSURE_SUCCESS(SetPositionAndSize(x, y, cx, cy, PR_FALSE), NS_ERROR_FAILURE);
@@ -444,23 +444,12 @@ NS_IMETHODIMP nsContentTreeOwner::Repaint(PRBool aForce)
    return mXULWindow->Repaint(aForce);
 }
 
-NS_IMETHODIMP nsContentTreeOwner::GetParentWidget(nsIWidget** aParentWidget)
+NS_IMETHODIMP nsContentTreeOwner::GetParentWidget(nsIWindow** aParentWidget)
 {
    return mXULWindow->GetParentWidget(aParentWidget);
 }
 
-NS_IMETHODIMP nsContentTreeOwner::SetParentWidget(nsIWidget* aParentWidget)
-{
-   NS_ASSERTION(PR_FALSE, "You can't call this");
-   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsContentTreeOwner::GetParentNativeWindow(nativeWindow* aParentNativeWindow)
-{
-   return mXULWindow->GetParentNativeWindow(aParentNativeWindow);
-}
-
-NS_IMETHODIMP nsContentTreeOwner::SetParentNativeWindow(nativeWindow aParentNativeWindow)
+NS_IMETHODIMP nsContentTreeOwner::SetParentWidget(nsIWindow* aParentWidget)
 {
    NS_ASSERTION(PR_FALSE, "You can't call this");
    return NS_ERROR_NOT_IMPLEMENTED;
@@ -476,7 +465,7 @@ NS_IMETHODIMP nsContentTreeOwner::SetVisibility(PRBool aVisibility)
    return mXULWindow->SetVisibility(aVisibility);
 }
 
-NS_IMETHODIMP nsContentTreeOwner::GetMainWidget(nsIWidget** aMainWidget)
+NS_IMETHODIMP nsContentTreeOwner::GetMainWindow(nsIWindow** aMainWidget)
 {
    NS_ENSURE_ARG_POINTER(aMainWidget);
 
@@ -553,10 +542,13 @@ NS_IMETHODIMP nsContentTreeOwner::ApplyChromeFlags()
    nsCOMPtr<nsIDOMElement> window;
    mXULWindow->GetWindowDOMElement(getter_AddRefs(window));
    NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
-   
+
+   // XXX pav
+#if 0   
    mXULWindow->mWindow->ShowMenuBar(mChromeFlags & 
                                     nsIWebBrowserChrome::CHROME_MENUBAR ? 
                                     PR_TRUE : PR_FALSE);
+#endif
 
    // Construct the new value for the 'chromehidden' attribute that
    // we'll whack onto the window. We've got style rules in

@@ -40,8 +40,8 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIEventQueueService.h"
 #include "nsIInterfaceRequestor.h"
-#include "nsIWidget.h"
 #include "nsIXULWindow.h"
+#include "nsIWindow.h"
 
 // nsXULWindow
 
@@ -91,13 +91,14 @@ protected:
    void EnableParent(PRBool aEnable);
    void ActivateParent();
    PRBool ConstrainToZLevel(PRBool aImmediate, nsWindowZ *aPlacement,
-            nsIWidget *aReqBelow, nsIWidget **aActualBelow);
+                            nsIWindow *aReqBelow, nsIWindow **aActualBelow);
+
    void                    KillContentScrollbars();
 
    nsChromeTreeOwner*      mChromeTreeOwner;
    nsContentTreeOwner*     mContentTreeOwner;
    nsContentTreeOwner*     mPrimaryContentTreeOwner;
-   nsCOMPtr<nsIWidget>     mWindow;
+   nsCOMPtr<nsIWindow>     mWindow;
    nsCOMPtr<nsIDocShell>   mDocShell;
    nsCOMPtr<nsIDOMWindowInternal>  mDOMWindow;
    nsCOMPtr<nsIWeakReference> mParentWindow;

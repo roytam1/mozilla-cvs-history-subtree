@@ -30,7 +30,6 @@
 #include "nsIDocumentLoaderObserver.h"
 #include "nsIDocumentObserver.h"
 #include "nsVoidArray.h"
-#include "nsIMenu.h"
 #include "nsITimer.h"
 
 #include "nsIPrompt.h"
@@ -92,9 +91,8 @@ public:
   nsresult Initialize(nsIXULWindow * aParent, nsIAppShell* aShell, nsIURI* aUrl,
                       PRBool aCreatedVisible, PRBool aLoadDefaultPage,
                       PRBool aContentScrollbars, PRUint32 aZlevel,
-                      PRInt32 aInitialWidth, PRInt32 aInitialHeight,
-                      nsWidgetInitData& widgetInitData);
-  nsIWidget* GetWidget(void) { return mWindow; }
+                      PRInt32 aInitialWidth, PRInt32 aInitialHeight);
+  nsIWindow* GetWidget(void) { return mWindow; }
 
   void DoContextMenu(
 	  nsMenuEvent * aMenuEvent,

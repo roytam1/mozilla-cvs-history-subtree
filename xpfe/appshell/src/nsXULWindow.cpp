@@ -27,11 +27,9 @@
 // Helper classes
 #include "nsAppShellCIDs.h"
 #include "nsString.h"
-#include "nsWidgetsCID.h"
 #include "prprf.h"
 
 //Interfaces needed to be included
-#include "nsIAppShell.h"
 #include "nsIAppShellService.h"
 #include "nsIServiceManager.h"
 #include "nsIDocumentViewer.h"
@@ -53,13 +51,15 @@
 
 #include "nsStyleConsts.h"
 
+#include "nsITopLevelWindow.h"
+#include "nsIChildWindow.h"
+
 // XXX Get rid of this
 #pragma message("WARNING: XXX bad include, remove it.")
 #include "nsIWebShellWindow.h"
 #include "nsWebShellWindow.h" // get rid of this one, too...
 
 // CIDs
-static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -203,13 +203,14 @@ NS_IMETHODIMP nsXULWindow::GetContentShellById(const PRUnichar* aID,
 
 NS_IMETHODIMP nsXULWindow::ShowModal()
 {
+#if 0
    nsCOMPtr<nsIAppShell> appShell(do_CreateInstance(kAppShellCID));
    NS_ENSURE_TRUE(appShell, NS_ERROR_FAILURE);
 
    appShell->Create(0, nsnull);
    appShell->Spinup();
    // Store locally so it doesn't die on us
-   nsCOMPtr<nsIWidget> window = mWindow;
+   nsCOMPtr<nsIWindow> window = mWindow;
    nsCOMPtr<nsIXULWindow> tempRef = this;  
                                           
 
@@ -248,6 +249,9 @@ NS_IMETHODIMP nsXULWindow::ShowModal()
    appShell->Spindown();
 
    return mModalStatus;
+#else
+   return NS_OK;
+#endif
 }
 
 //*****************************************************************************
@@ -255,7 +259,7 @@ NS_IMETHODIMP nsXULWindow::ShowModal()
 //*****************************************************************************   
 
 NS_IMETHODIMP nsXULWindow::InitWindow(nativeWindow aParentNativeWindow,
-   nsIWidget* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
+   nsIWindow* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
 {
    //XXX First Check In
    NS_ASSERTION(PR_FALSE, "Not Yet Implemented");
@@ -316,7 +320,7 @@ NS_IMETHODIMP nsXULWindow::Destroy()
    // in a stack of modal windows is destroyed first. It happens.
    ExitModalLoop(NS_OK);
    if (mWindow)
-     mWindow->Show(PR_FALSE);
+     mWindow->Show();
 
    mDOMWindow = nsnull;
    if(mDocShell) {
@@ -380,10 +384,10 @@ NS_IMETHODIMP nsXULWindow::GetSize(PRInt32* aCX, PRInt32* aCY)
 }
 
 NS_IMETHODIMP nsXULWindow::SetPositionAndSize(PRInt32 aX, PRInt32 aY, 
-   PRInt32 aCX, PRInt32 aCY, PRBool aRepaint)
+                                              PRInt32 aCX, PRInt32 aCY, PRBool aRepaint)
 {
    mIntrinsicallySized = PR_FALSE;
-   NS_ENSURE_SUCCESS(mWindow->Resize(aX, aY, aCX, aCY, aRepaint), NS_ERROR_FAILURE);
+   NS_ENSURE_SUCCESS(mWindow->MoveResize(aX, aY, aCX, aCY, aRepaint), NS_ERROR_FAILURE);
    PersistPositionAndSize(PR_TRUE, PR_TRUE, PR_FALSE);
    return NS_OK;
 }
@@ -423,7 +427,7 @@ NS_IMETHODIMP nsXULWindow::Center(nsIXULWindow *aRelative, PRBool aScreen, PRBoo
   if (!aScreen && !aRelative)
     return NS_ERROR_INVALID_ARG;
 
-  nsCOMPtr<nsIScreenManager> screenmgr = do_GetService("@mozilla.org/gfx/screenmanager;1", &result);
+  nsCOMPtr<nsIScreenManager> screenmgr = do_GetService("@mozilla.org/gfx/screenmanager;2", &result);
   if (NS_FAILED(result))
     return result;
 
@@ -457,35 +461,16 @@ NS_IMETHODIMP nsXULWindow::Repaint(PRBool aForce)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsXULWindow::GetParentWidget(nsIWidget** aParentWidget)
+NS_IMETHODIMP nsXULWindow::GetParentWidget(nsIWindow** aParentWidget)
 {
    NS_ENSURE_ARG_POINTER(aParentWidget);
    NS_ENSURE_STATE(mWindow);
 
-   *aParentWidget = mWindow->GetParent();
+   mWindow->GetParent(aParentWidget);
    return NS_OK;
 }
 
-NS_IMETHODIMP nsXULWindow::SetParentWidget(nsIWidget* aParentWidget)
-{
-   //XXX First Check In
-   NS_ASSERTION(PR_FALSE, "Not Yet Implemented");
-   return NS_OK;
-}
-
-NS_IMETHODIMP nsXULWindow::GetParentNativeWindow(nativeWindow* aParentNativeWindow)
-{
-   NS_ENSURE_ARG_POINTER(aParentNativeWindow);
-
-   nsCOMPtr<nsIWidget> parentWidget;
-   NS_ENSURE_SUCCESS(GetParentWidget(getter_AddRefs(parentWidget)), NS_ERROR_FAILURE);
-
-   *aParentNativeWindow = parentWidget->GetNativeData(NS_NATIVE_WIDGET);
-   
-   return NS_OK;
-}
-
-NS_IMETHODIMP nsXULWindow::SetParentNativeWindow(nativeWindow aParentNativeWindow)
+NS_IMETHODIMP nsXULWindow::SetParentWidget(nsIWindow* aParentWidget)
 {
    //XXX First Check In
    NS_ASSERTION(PR_FALSE, "Not Yet Implemented");
@@ -517,7 +502,10 @@ NS_IMETHODIMP nsXULWindow::SetVisibility(PRBool aVisibility)
    // the window good enough?
    nsCOMPtr<nsIBaseWindow> shellAsWin(do_QueryInterface(mDocShell));
    shellAsWin->SetVisibility(aVisibility);
-   mWindow->Show(aVisibility);
+   if (aVisibility)
+     mWindow->Show();
+   else
+     mWindow->Hide();
 
    nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
    if(windowMediator)
@@ -536,7 +524,7 @@ NS_IMETHODIMP nsXULWindow::SetVisibility(PRBool aVisibility)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsXULWindow::GetMainWidget(nsIWidget** aMainWidget)
+NS_IMETHODIMP nsXULWindow::GetMainWindow(nsIWindow** aMainWidget)
 {
    NS_ENSURE_ARG_POINTER(aMainWidget);
    
@@ -571,9 +559,13 @@ NS_IMETHODIMP nsXULWindow::SetTitle(const PRUnichar* aTitle)
 {
    NS_ENSURE_STATE(mWindow);
 
-   nsAutoString title(aTitle);
+   nsresult rv;
 
-   NS_ENSURE_SUCCESS(mWindow->SetTitle(title), NS_ERROR_FAILURE);
+   nsCOMPtr<nsITopLevelWindow> tw(do_QueryInterface(mWindow, &rv));
+   if (NS_FAILED(rv))
+     return rv;
+
+   NS_ENSURE_SUCCESS(tw->SetTitle(aTitle), NS_ERROR_FAILURE);
 
    // Tell the window mediator that a title has changed
    nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
@@ -1085,6 +1077,10 @@ NS_IMETHODIMP nsXULWindow::CreateNewContentWindow(PRInt32 aChromeFlags,
    if(browserChrome)
       browserChrome->SetChromeFlags(aChromeFlags);
 
+
+
+   // XXX pav
+#if 0
    nsCOMPtr<nsIAppShell> subShell(do_CreateInstance(kAppShellCID));
    NS_ENSURE_TRUE(subShell, NS_ERROR_FAILURE);
 
@@ -1119,6 +1115,7 @@ NS_IMETHODIMP nsXULWindow::CreateNewContentWindow(PRInt32 aChromeFlags,
       }
 
    subShell->Spindown();
+#endif
 
    // We're out of the nested loop.
    // During the layout of the new window, all content shells were located and placed
@@ -1156,11 +1153,11 @@ NS_IMETHODIMP nsXULWindow::NotifyObservers(const PRUnichar* aTopic,
 void nsXULWindow::EnableParent(PRBool aEnable)
 {
   nsCOMPtr<nsIBaseWindow> parentWindow;
-  nsCOMPtr<nsIWidget>     parentWidget;
+  nsCOMPtr<nsIWindow>     parentWidget;
 
   parentWindow = do_QueryReferent(mParentWindow);
   if (parentWindow)
-    parentWindow->GetMainWidget(getter_AddRefs(parentWidget));
+    parentWindow->GetMainWindow(getter_AddRefs(parentWidget));
   if (parentWidget)
     parentWidget->Enable(aEnable);
 }
@@ -1205,8 +1202,8 @@ void nsXULWindow::ActivateParent() {
   }
 
   // alright already. bring our parent to the top.
-  nsCOMPtr<nsIWidget> parentWidget;
-  parent->GetMainWidget(getter_AddRefs(parentWidget));
+  nsCOMPtr<nsIWindow> parentWidget;
+  parent->GetMainWindow(getter_AddRefs(parentWidget));
   if (parentWidget)
     parentWidget->PlaceBehind(0, PR_TRUE);
 }
@@ -1215,8 +1212,8 @@ void nsXULWindow::ActivateParent() {
 PRBool nsXULWindow::ConstrainToZLevel(
                       PRBool      aImmediate,
                       nsWindowZ  *aPlacement,
-                      nsIWidget  *aReqBelow,
-                      nsIWidget **aActualBelow) {
+                      nsIWindow  *aReqBelow,
+                      nsIWindow **aActualBelow) {
 
 #if 0
   /* Do we have a parent window? This means our z-order is already constrained,
@@ -1259,8 +1256,8 @@ PRBool nsXULWindow::ConstrainToZLevel(
       if (aImmediate) {
         nsCOMPtr<nsIBaseWindow> ourBase = do_QueryInterface(NS_STATIC_CAST(nsIXULWindow *,this));
         if (ourBase) {
-          nsCOMPtr<nsIWidget> ourWidget;
-          ourBase->GetMainWidget(getter_AddRefs(ourWidget));
+          nsCOMPtr<nsIWindow> ourWidget;
+          ourBase->GetMainWindow(getter_AddRefs(ourWidget));
           ourWidget->PlaceBehind(*aActualBelow, PR_FALSE);
         }
       }

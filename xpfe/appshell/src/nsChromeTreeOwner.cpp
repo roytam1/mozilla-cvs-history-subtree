@@ -197,7 +197,7 @@ NS_IMETHODIMP nsChromeTreeOwner::GetNewWindow(PRInt32 aChromeFlags,
 //*****************************************************************************   
 
 NS_IMETHODIMP nsChromeTreeOwner::InitWindow(nativeWindow aParentNativeWindow,
-   nsIWidget* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
+   nsIWindow* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
 {
    // Ignore wigdet parents for now.  Don't think those are a vaild thing to call.
    NS_ENSURE_SUCCESS(SetPositionAndSize(x, y, cx, cy, PR_FALSE), NS_ERROR_FAILURE);
@@ -253,23 +253,12 @@ NS_IMETHODIMP nsChromeTreeOwner::Repaint(PRBool aForce)
    return mXULWindow->Repaint(aForce);
 }
 
-NS_IMETHODIMP nsChromeTreeOwner::GetParentWidget(nsIWidget** aParentWidget)
+NS_IMETHODIMP nsChromeTreeOwner::GetParentWidget(nsIWindow** aParentWidget)
 {
    return mXULWindow->GetParentWidget(aParentWidget);
 }
 
-NS_IMETHODIMP nsChromeTreeOwner::SetParentWidget(nsIWidget* aParentWidget)
-{
-   NS_ASSERTION(PR_FALSE, "You can't call this");
-   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsChromeTreeOwner::GetParentNativeWindow(nativeWindow* aParentNativeWindow)
-{
-   return mXULWindow->GetParentNativeWindow(aParentNativeWindow);
-}
-
-NS_IMETHODIMP nsChromeTreeOwner::SetParentNativeWindow(nativeWindow aParentNativeWindow)
+NS_IMETHODIMP nsChromeTreeOwner::SetParentWidget(nsIWindow* aParentWidget)
 {
    NS_ASSERTION(PR_FALSE, "You can't call this");
    return NS_ERROR_NOT_IMPLEMENTED;
@@ -285,7 +274,7 @@ NS_IMETHODIMP nsChromeTreeOwner::SetVisibility(PRBool aVisibility)
    return mXULWindow->SetVisibility(aVisibility);
 }
 
-NS_IMETHODIMP nsChromeTreeOwner::GetMainWidget(nsIWidget** aMainWidget)
+NS_IMETHODIMP nsChromeTreeOwner::GetMainWindow(nsIWindow** aMainWidget)
 {
    NS_ENSURE_ARG_POINTER(aMainWidget);
 
