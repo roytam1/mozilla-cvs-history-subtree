@@ -468,7 +468,7 @@ nsTransportWrapper::GetSecurityInfo(nsISupports ** securityInfo)
 
 
 NS_IMETHODIMP nsCacheEntryDescriptor::
-nsTransportWrapper::GetNotificationCallbacks(nsIInterfaceRequestor **result)
+nsTransportWrapper::GetNotificationCallbacks(nsIInterfaceRequestor ** result)
 {
     NS_ENSURE_ARG_POINTER(result);
     // if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
