@@ -206,3 +206,9 @@ outlinerbody:-moz-outliner-cell-text(folderNameCol, noSelect-true) {
 .tree-folder-checkbox {
   list-style-image: none;
 }
+
+#folderNameCol {
+  min-height: 0px;
+  height: 0px;
+  max-height: 0px;
+}
