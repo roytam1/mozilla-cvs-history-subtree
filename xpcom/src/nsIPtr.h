@@ -109,6 +109,10 @@ public:                                                                       \
     { if(0 != mPtr) mPtr->Release(); mPtr = 0;  return &mPtr; }               \
   void** Query(void)                                                          \
     { if(0 != mPtr) mPtr->Release(); mPtr = 0;  return (void**)&mPtr; }       \
+  PRBool  IsNull() const                                                      \
+    { return PRBool(0 == mPtr); }                                             \
+  PRBool  IsNotNull() const                                                   \
+    { return PRBool(0 != mPtr); }                                             \
   PRBool  operator==(const cls##Ptr& aCopy) const                             \
     { return PRBool(mPtr == aCopy.mPtr);  }                                   \
   PRBool  operator==(cls* aInterface) const                                   \
