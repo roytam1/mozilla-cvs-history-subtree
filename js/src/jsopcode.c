@@ -323,6 +323,7 @@ jschar js_EscapeMap[] = {
     '\v', 'v',
     '"',  '"',
     '\'', '\'',
+    '\\', '\\',
     0
 };
 
@@ -346,7 +347,7 @@ QuoteString(Sprinter *sp, JSString *str, jschar quote)
     for (t = s; t < z; s = ++t) {
 	/* Move t forward from s past un-quote-worthy characters. */
 	c = *t;
-	while (JS_ISPRINT(c) && c != quote && !(c >> 8)) {
+	while (JS_ISPRINT(c) && c != quote && c != '\\' && !(c >> 8)) {
 	    c = *++t;
 	    if (t == z)
 		break;
