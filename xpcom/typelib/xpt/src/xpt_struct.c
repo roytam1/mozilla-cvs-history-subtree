@@ -53,6 +53,18 @@ static PRBool
 DoInterfaceDescriptor(XPTCursor *outer, XPTInterfaceDescriptor **idp);
 
 static PRBool
+DoTypeDescriptor(XPTCursor *cursor, XPTTypeDescriptor *td);
+
+static PRBool
+DoTypeDef(XPTCursor *cursor, TypeDef *type_def);
+
+static PRBool
+DoEnumTypeExtras(XPTCursor *cursor, EnumTypeExtras *enum_extras);
+
+static PRBool
+DoEnumValue(XPTCursor *cursor, EnumValue *enum_value);
+
+static PRBool
 DoTypeDescriptorPrefix(XPTCursor *cursor, XPTTypeDescriptorPrefix *tdp);
 
 static PRBool
@@ -60,7 +72,6 @@ DoTypeDescriptor(XPTCursor *cursor, XPTTypeDescriptor *td);
 
 static PRBool
 DoParamDescriptor(XPTCursor *cursor, XPTParamDescriptor *pd);
-
 
 #define CURS_POOL_OFFSET_RAW(cursor)                                          \
   ((cursor)->pool == XPT_HEADER                                               \
@@ -370,6 +381,13 @@ XPT_SizeOfTypeDescriptor(XPTTypeDescriptor *td)
         size += 2; /* interface_index */
     else if (XPT_TDP_TAG(td->prefix) == TD_INTERFACE_IS_TYPE)
         size += 1; /* arg_num */
+    else if (XPT_TDP_TAG(td->prefix) == TD_OPAQUE_TYPE)
+        size += 4; /* type_name */
+    else if (XPT_TDP_TAG(td->prefix) == TD_NAMED_TYPE)
+        size += 4; /* type */
+    else if (XPT_TDP_TAG(td->prefix) == TD_ENUM_TYPE)
+        size += 4; /* enum_extras */
+
     return size;
 }
 
@@ -673,16 +691,120 @@ DoTypeDescriptor(XPTCursor *cursor, XPTTypeDescriptor *td)
     if (XPT_TDP_TAG(td->prefix) == TD_INTERFACE_TYPE) {
         if (!XPT_Do16(cursor, &td->type.interface))
             goto error;
-    } else {
-        if (XPT_TDP_TAG(td->prefix) == TD_INTERFACE_IS_TYPE) {
-            if (!XPT_Do8(cursor, &td->type.argnum))
-                goto error;
-        }
-    }
-   
+    } else if (XPT_TDP_TAG(td->prefix) == TD_INTERFACE_IS_TYPE) {
+        if (!XPT_Do8(cursor, &td->type.argnum))
+            goto error;
+    } else if (XPT_TDP_TAG(td->prefix) == TD_OPAQUE_TYPE) {
+        if (!XPT_DoCString(cursor, &td->type.type_name))
+            goto error;
+    } else if (XPT_TDP_TAG(td->prefix) == TD_NAMED_TYPE) {
+        if (!DoTypeDef(cursor, td->type.type_def))
+            goto error;
+    } else if (XPT_TDP_TAG(td->prefix) == TD_ENUM_TYPE) {
+        if (!DoEnumTypeExtras(cursor, td->type.enum_extras))
+            goto error;        
+    }   
+
     return PR_TRUE;
     
     XPT_ERROR_HANDLE(td);    
+}
+
+PRBool
+DoTypeDef(XPTCursor *cursor, TypeDef *type_def) 
+{
+    XPTMode mode = cursor->state->mode;
+    uint16 index;
+
+    if (!XPT_DoCString(cursor, &type_def->name))
+        goto error;
+    if (!XPT_DoCString(cursor, &type_def->name_space))
+        goto error;    
+
+    if (mode == XPT_ENCODE) {
+        /* XXX index zero is legal, so how do I detect an error? */
+        if (&type_def->type) {
+            index = XPT_GetOffsetForAddr(cursor, &type_def->type);
+            if (!index)
+                return PR_FALSE;
+        } else {
+            index = 0;          /* no interface */
+        } 
+    }
+ 
+    if (!XPT_Do16(cursor, &index))
+        return PR_FALSE;
+
+    if (mode == XPT_DECODE) {
+        if (index) {
+            type_def->type = XPT_GetAddrForOffset(cursor, index);
+            if (!type_def->type)
+                return PR_FALSE;
+        } else {
+            type_def->type = NULL;
+        }
+    }
+
+    return PR_TRUE;
+
+    XPT_ERROR_HANDLE(type_def);        
+}
+
+PRBool
+DoEnumTypeExtras(XPTCursor *cursor, EnumTypeExtras *enum_extras) 
+{
+    XPTMode mode = cursor->state->mode;
+    uint16 index;
+    uint32 i;
+
+    if (mode == XPT_ENCODE) {
+        /* XXX index zero is legal, so how do I detect an error? */
+        if (&enum_extras->type) {
+            index = XPT_GetOffsetForAddr(cursor, &enum_extras->type);
+            if (!index)
+                return PR_FALSE;
+        } else {
+            index = 0;          /* no interface */
+        } 
+    }
+ 
+    if (!XPT_Do16(cursor, &index))
+        return PR_FALSE;
+
+    if (mode == XPT_DECODE) {
+        if (index) {
+            enum_extras->type = XPT_GetAddrForOffset(cursor, index);
+            if (!enum_extras->type)
+                return PR_FALSE;
+        } else {
+            enum_extras->type = NULL;
+        }
+    }
+
+    if (!XPT_Do16(cursor, &enum_extras->num_values))
+        goto error;
+
+    for (i = 0; i < enum_extras->num_values; i++) {
+        if (!DoEnumValue(cursor, &enum_extras->enum_values[i]))
+            goto error;   
+    }
+
+    return PR_TRUE;
+
+    XPT_ERROR_HANDLE(enum_extras);        
+}
+
+PRBool
+DoEnumValue(XPTCursor *cursor, EnumValue *enum_value) 
+{
+    if (!XPT_DoCString(cursor, &enum_value->name))
+        goto error;
+    if (!XPT_DoCString(cursor, &enum_value->value))
+        goto error;    
+
+    return PR_TRUE;
+
+    XPT_ERROR_HANDLE(enum_value);        
 }
 
 XPT_PUBLIC_API(XPTAnnotation *)

@@ -68,6 +68,9 @@ typedef struct XPTMethodDescriptor XPTMethodDescriptor;
 typedef struct XPTParamDescriptor XPTParamDescriptor;
 typedef struct XPTTypeDescriptor XPTTypeDescriptor;
 typedef struct XPTTypeDescriptorPrefix XPTTypeDescriptorPrefix;
+typedef struct EnumValue EnumValue;
+typedef struct EnumTypeExtras EnumTypeExtras;
+typedef struct TypeDef TypeDef;
 typedef struct XPTString XPTString;
 typedef struct XPTAnnotation XPTAnnotation;
 #ifndef nsID_h__
@@ -206,17 +209,23 @@ XPT_NewStringZ(char *bytes);
  * A TypeDescriptor is a variable-size record used to identify the type of a 
  * method argument or return value. 
  *
- * There are three types of TypeDescriptors:
+ * There are six types of TypeDescriptors:
  *
  * SimpleTypeDescriptor
  * InterfaceTypeDescriptor
  * InterfaceIsTypeDescriptor
+ * OpaqueTypeDescriptor
+ * NamedTypeDescriptor
  *
  * The tag field in the prefix indicates which of the variant TypeDescriptor 
  * records is being used, and hence the way any remaining fields should be 
- * parsed. Values from 0 to 17 refer to SimpleTypeDescriptors. The value 18 
- * designates an InterfaceTypeDescriptor, while 19 represents an 
- * InterfaceIsTypeDescriptor.
+ * parsed. 
+ * 0-17 = SimpleTypeDescriptors. 
+ * 18   = InterfaceTypeDescriptor 
+ * 19   = InterfaceIsTypeDescriptor
+ * 20   = OpaqueTypeDescriptor
+ * 21   = NamedTypeDescriptor
+ * 22   = EnumTypeDescriptor
  */
 
 /* XXX why bother with a struct? */
@@ -260,7 +269,10 @@ enum XPTTypeDescriptorTags {
     TD_PSTRING           = 16,
     TD_PWSTRING          = 17,
     TD_INTERFACE_TYPE    = 18,
-    TD_INTERFACE_IS_TYPE = 19
+    TD_INTERFACE_IS_TYPE = 19,
+    TD_OPAQUE_TYPE       = 20,
+    TD_NAMED_TYPE        = 21,
+    TD_ENUM_TYPE         = 22
 };
 
 struct XPTTypeDescriptor {
@@ -268,14 +280,46 @@ struct XPTTypeDescriptor {
     union {
         PRUint16 interface;
         PRUint8  argnum;
+        char           *type_name;
+        TypeDef        *type_def;
+        EnumTypeExtras *enum_extras;
     } type;
 };
 
-#define XPT_TYPEDESCRIPTOR_SIZE (1 + 2)
+#define XPT_TYPEDESCRIPTOR_SIZE (1 + 4)
 
 #define XPT_COPY_TYPE(to, from)                                               \
   (to).prefix.flags = (from).prefix.flags;                                    \
-  (to).type.interface = (from).type.interface;
+  (to).type.enum_extras = (from).type.enum_extras;
+
+/*
+ * An EnumTypeDescriptor is used to define an enumeration, i.e. a type 
+ * that in C++ would be expressed using an enum declaration. The related 
+ * EnumValue record specifies a mapping between a single human-readable 
+ * name and a single value in the enumeration. 
+ */
+struct EnumTypeExtras {
+    XPTTypeDescriptor *type;
+    uint16            num_values;
+    EnumValue         *enum_values;
+};  
+
+struct EnumValue {
+    char *name;
+    char *value;
+};
+
+/*
+ * A TypeDef record associates a human-readable name with a module-wide 
+ * XPCOM type. TypeDef records and TypeDescriptor records are mutually 
+ * recursive so as to allow descriptions of complex type. That is 
+ * TypeDefs can both point to and be pointed at by TypeDescriptor records.
+ */
+struct TypeDef {
+    char *name;
+    char *name_space;
+    XPTTypeDescriptor *type;
+};
 
 /*
  * A ConstDescriptor is a variable-size record that records the name and 

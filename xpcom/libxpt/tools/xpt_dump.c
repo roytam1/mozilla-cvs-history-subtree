@@ -41,19 +41,21 @@ static char *type_array[18] = {"int8", "int16", "int32", "int64",
                                "wchar_t", "void", "reserved", "reserved",
                                "reserved", "reserved"};
 
-static char *ptype_array[20] = {"int8 *", "int16 *", "int32 *", "int64 *",
+static char *ptype_array[23] = {"int8 *", "int16 *", "int32 *", "int64 *",
                                 "uint8 *", "uint16 *", "uint32 *", "uint64 *",
                                 "float *", "double *", "boolean *", "char *",
                                 "wchar_t *", "void *", "nsIID *", "bstr",
                                 "string", "wstring", "Interface *", 
-                                "InterfaceIs *"};
+                                "InterfaceIs *", "Opaque *", "Named *",
+                                "Enum *"};
 
-static char *rtype_array[20] = {"int8 &", "int16 &", "int32 &", "int64 &",
+static char *rtype_array[23] = {"int8 &", "int16 &", "int32 &", "int64 &",
                                 "uint8 &", "uint16 &", "uint32 &", "uint64 &",
                                 "float &", "double &", "boolean &", "char &",
                                 "wchar_t &", "void &", "nsIID &", "bstr",
                                 "string", "wstring", "Interface &", 
-                                "InterfaceIs &"};
+                                "InterfaceIs &", "Opaque &", "Named &",
+                                "Enum &"};
 
 
 PRBool param_problems = PR_FALSE;
@@ -92,8 +94,20 @@ XPT_DumpParamDescriptor(XPTHeader *header, XPTParamDescriptor *pd,
                         PRBool is_result);
 
 PRBool
-XPT_DumpTypeDescriptor(XPTTypeDescriptor *td, int indent, 
-                       PRBool verbose_mode);
+XPT_DumpTypeDescriptor(XPTHeader *header, XPTTypeDescriptor *td, 
+                       int indent, PRBool verbose_mode);
+
+PRBool
+XPT_DumpTypeDef(XPTHeader *header, TypeDef *type_def, const int indent,
+                PRBool verbose_mode);
+
+PRBool
+XPT_DumpEnumTypeExtras(XPTHeader *header, EnumTypeExtras *enum_extras, 
+                       const int indent, PRBool verbose_mode);
+
+PRBool
+XPT_DumpEnumValue(XPTHeader *header, EnumValue *enum_val, 
+                  const int indent, PRBool verbose_mode);
 
 PRBool
 XPT_DumpConstDescriptor(XPTHeader *header, XPTConstDescriptor *cd,
@@ -428,8 +442,7 @@ XPT_DumpInterfaceDescriptor(XPTCursor *cursor, XPTInterfaceDescriptor *id,
                     indent, " ", id->parent_interface);
             
         }
-    } else {
-    }   
+    } 
 
     if (id->num_methods > 0) {
         if (verbose_mode) {
@@ -692,14 +705,15 @@ XPT_DumpParamDescriptor(XPTHeader *header, XPTParamDescriptor *pd,
         fprintf(stdout, "FALSE\n");
 
     fprintf(stdout, "%*sType Descriptor:\n", indent, " ");
-    if (!XPT_DumpTypeDescriptor(&pd->type, new_indent, verbose_mode))
+    if (!XPT_DumpTypeDescriptor(header, &pd->type, new_indent, verbose_mode))
         return PR_FALSE;
     
     return PR_TRUE;
 }
 
 PRBool
-XPT_DumpTypeDescriptor(XPTTypeDescriptor *td, int indent, PRBool verbose_mode)
+XPT_DumpTypeDescriptor(XPTHeader *header, XPTTypeDescriptor *td, 
+                       int indent, PRBool verbose_mode)
 {
     int new_indent = indent + BASE_INDENT;
 
@@ -736,6 +750,82 @@ XPT_DumpTypeDescriptor(XPTTypeDescriptor *td, int indent, PRBool verbose_mode)
                 td->type.argnum);        
     }
 
+    if (XPT_TDP_TAG(td->prefix) == TD_OPAQUE_TYPE) {
+        fprintf(stdout, "%*sOpaqueTypeDescriptor:\n", indent, " "); 
+        fprintf(stdout, "%*sType Name:             %s\n", new_indent, " ", 
+                td->type.type_name);
+    }
+
+    if (XPT_TDP_TAG(td->prefix) == TD_NAMED_TYPE) {
+        fprintf(stdout, "%*sNamedTypeDescriptor: \n", indent, " "); 
+        if (!XPT_DumpTypeDef(header, td->type.type_def, indent, 
+                             verbose_mode)) {
+            return PR_FALSE;
+        }        
+    }
+    
+    if (XPT_TDP_TAG(td->prefix) == TD_ENUM_TYPE) {
+        fprintf(stdout, "%*sEnumTypeDescriptor:\n", indent, " "); 
+        if (!XPT_DumpEnumTypeExtras(header, td->type.enum_extras, indent, 
+                                    verbose_mode)) {
+            return PR_FALSE;
+        }
+    }
+
+    return PR_TRUE;
+}
+
+PRBool
+XPT_DumpTypeDef(XPTHeader *header, TypeDef *type_def, const int indent,
+                PRBool verbose_mode)
+{
+    char *type_string;
+    
+    fprintf(stdout, "%*sNamespace::Name: %s::%s\n", indent, " ", 
+            type_def->name_space ? 
+            type_def->name_space : "", 
+            type_def->name);
+    if (!XPT_GetStringForType(header, type_def->type, &type_string)) {
+        return PR_FALSE;
+    }
+    fprintf(stdout, "%*sType:            %s\n", indent, " ", 
+            type_string);    
+    
+    return PR_TRUE;
+}
+
+PRBool
+XPT_DumpEnumTypeExtras(XPTHeader *header, EnumTypeExtras *enum_extras, 
+                       const int indent, PRBool verbose_mode)
+{
+    int new_indent = indent + BASE_INDENT;
+    char *type_string;
+    uint32 i;
+    
+    if (!XPT_GetStringForType(header, enum_extras->type, &type_string)) {
+        return PR_FALSE;
+    }
+    fprintf(stdout, "%*sType:             %s\n", indent, " ", 
+            type_string);
+    fprintf(stdout, "%*sNumber of values: %d\n", indent, " ", 
+            enum_extras->num_values);
+    fprintf(stdout, "%*sEnum Values:\n", indent, " ");
+    for (i=0; i<enum_extras->num_values; i++) {
+        if (!XPT_DumpEnumValue(header, &enum_extras->enum_values[i], 
+                               new_indent, verbose_mode)) {
+            return PR_FALSE;
+        }
+    }
+    
+    return PR_TRUE;
+}
+
+PRBool
+XPT_DumpEnumValue(XPTHeader *header, EnumValue *enum_val, 
+                  const int indent, PRBool verbose_mode)
+{
+    fprintf(stdout, "%*s%s = %s\n", indent, " ", 
+            enum_val->name, enum_val->value);    
     return PR_TRUE;
 }
 
@@ -749,7 +839,8 @@ XPT_DumpConstDescriptor(XPTHeader *header, XPTConstDescriptor *cd,
     if (verbose_mode) {
         fprintf(stdout, "%*sName:   %s\n", indent, " ", cd->name);
         fprintf(stdout, "%*sType Descriptor: \n", indent, " ");
-        if (!XPT_DumpTypeDescriptor(&cd->type, new_indent, verbose_mode))
+        if (!XPT_DumpTypeDescriptor(header, &cd->type, new_indent, 
+                                    verbose_mode))
             return PR_FALSE;
         fprintf(stdout, "%*sValue:  ", indent, " ");
     } else {
