@@ -155,7 +155,7 @@ crawl_unescape (char *str, char *reserved, int numReserved)
     return (int)(dst - str);
 }
 
-#define CHAR_CMP(x, y) ((x == y) || (XP_TO_LOWER(x) == XP_TO_LOWER(y)))
+#define CHAR_CMP(x, y) ((x == y) || (NET_TO_LOWER(x) == NET_TO_LOWER(y)))
 
 PRBool crawl_startsWith (char *pattern, char *uuid) {
   short l1 = strlen(pattern);

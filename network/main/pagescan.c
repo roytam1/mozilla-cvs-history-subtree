@@ -382,7 +382,7 @@ void crawl_destroyPage(CRAWL_PageInfo page) {
 */
 static CRAWL_TagError 
 crawl_processURL(CRAWL_PageInfo page, char *url, CRAWL_LinkContext context) {
-	/* XP_TO_LOWER(url); */
+	/* NET_TO_LOWER(url); */
 	if (crawl_startsWith("mailto:", url)) return(CRAWL_TAG_NO_ERR);
 	else if (crawl_startsWith("mailbox:", url)) return(CRAWL_TAG_NO_ERR);
 	else if (crawl_startsWith("news:", url)) return(CRAWL_TAG_NO_ERR);
