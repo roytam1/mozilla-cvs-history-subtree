@@ -48,4 +48,5 @@ interface nsIDOMWindow : nsISupports
   nsISelection              getSelection();
   void                      scrollByLines(in long numLines);
   void                      scrollByPages(in long numPages);
+  void                      sizeToContent();
 };

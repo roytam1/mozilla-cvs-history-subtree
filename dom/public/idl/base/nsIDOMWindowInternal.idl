@@ -113,7 +113,6 @@ interface nsIDOMWindowInternal : nsIDOMWindow
   void                      moveBy(in long xDif, in long yDif);
   void                      resizeTo(in long width, in long height);
   void                      resizeBy(in long widthDif, in long heightDif);
-  void                      sizeToContent();
   void                      GetAttention();
   void                      scroll(in long xScroll, in long yScroll);
 
