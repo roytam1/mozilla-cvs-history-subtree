@@ -1424,8 +1424,9 @@ nsXPCWrappedJSClass::DebugDump(PRInt16 depth)
         if(name)
             nsMemory::Free(name);
         char * iid = mIID.ToString();
-        XPC_LOG_ALWAYS(("IID number is %s", iid));
-        delete iid;
+        XPC_LOG_ALWAYS(("IID number is %s", iid ? iid : "invalid"));
+        if(iid) 
+            PR_Free(iid);
         XPC_LOG_ALWAYS(("InterfaceInfo @ %x", mInfo));
         uint16 methodCount = 0;
         if(depth)

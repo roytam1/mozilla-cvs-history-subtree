@@ -930,7 +930,7 @@ xpc_NewIDObject(JSContext *cx, JSObject* jsobj, const nsID& aID)
     {
         nsCOMPtr<nsIJSID> iid =
             dont_AddRef(NS_STATIC_CAST(nsIJSID*, nsJSID::NewID(idString)));
-        nsCRT::free(idString);
+        PR_Free(idString);
         if(iid)
         {
             nsXPConnect* xpc = nsXPConnect::GetXPConnect();

@@ -23,7 +23,6 @@
     ? look into optional hashtable in interface sets
 
 - CODE MAINTAINABILITY
-    - reorg xpcprivate.h
     - more code comments
 
 - CODE INSTRUMENTATION
