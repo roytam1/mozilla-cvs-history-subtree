@@ -144,7 +144,7 @@
 #ifdef _WIN32
 #   define JS_INLINE __inline
 #elif defined(__GNUC__)
-#   define JS_INLINE inline
+#   define JS_INLINE
 #else
 #   define JS_INLINE
 #endif
