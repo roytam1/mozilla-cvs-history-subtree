@@ -1176,6 +1176,8 @@ PushbackInputStream.prototype = {
 /* nsXmlRpcClient Module (for XPCOM registration) */
 var nsXmlRpcClientModule = {
     registerSelf: function(compMgr, fileSpec, location, type) {
+        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentManagerObsolete);
+
         compMgr.registerComponentWithType(XMLRPCCLIENT_CID, 
             'XML-RPC Client JS component', XMLRPCCLIENT_CONTRACTID, fileSpec,
             location, true, true, type);

@@ -83,6 +83,7 @@ nsDictionary.prototype= {
 /* nsDictionary Module (for XPCOM registration) */
 var nsDictionaryModule = {
     registerSelf: function(compMgr, fileSpec, location, type) {
+        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentManagerObsolete);
         compMgr.registerComponentWithType(DICTIONARY_CID, 
             "nsDictionary JS component", DICTIONARY_CONTRACTID, fileSpec, location,
             true, true, type);
