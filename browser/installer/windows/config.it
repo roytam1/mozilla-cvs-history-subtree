@@ -668,18 +668,6 @@ FileCount=$FileCount$
 [Component Uninstaller-Destination Path0]
 Path=[WINDIR]
 
-[Component US English Profile Defaults]
-Description Short=US English Defaults
-;*** LOCALIZE ME BABY ***
-Description Long=US English Default Profile Data
-Archive=deflenus.xpi
-$InstallSize$:deflenus
-$InstallSizeSystem$
-$InstallSizeArchive$:deflenus.xpi
-Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
-Force Upgrade File0=[SETUP PATH]\defaults\profile\bookmarks.html
-FileCount=$FileCount$
-
 [Component En US lang pack]
 ;*** LOCALIZE ME BABY ***
 Description Short=English (US) Language Pack
@@ -691,19 +679,6 @@ $InstallSizeSystem$
 $InstallSizeArchive$:langenus.xpi
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\chrome\en-US.jar
-FileCount=$FileCount$
-
-[Component US region pack]
-;*** LOCALIZE ME BABY ***
-Description Short=US Region Pack
-;*** LOCALIZE ME BABY ***
-Description Long=Regional content for US users
-Archive=regus.xpi
-$InstallSize$:regus
-$InstallSizeSystem$
-$InstallSizeArchive$:regus.xpi
-Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
-Force Upgrade File0=[SETUP PATH]\chrome\US.jar
 FileCount=$FileCount$
 
 [Component QFA]

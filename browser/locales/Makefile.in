@@ -46,6 +46,8 @@ include $(DEPTH)/config/autoconf.mk
 # We need a way to make a localized build and a langpack-extension from the
 # same jar.mn
 
-DEFINES += -DAB_CD=en-US
+APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
+
+DEFINES += -DAB_CD=en-US -DAPP_VERSION=$(APP_VERSION)
 
 include $(topsrcdir)/config/rules.mk

@@ -3,7 +3,12 @@ var srDest;
 var err;
 var fProgram;
 var platformNode;
+var searchPlugins = "searchplugins";
 
+if (platformNode == 'mac')
+{
+  searchPlugins = "Search Plugins";
+}
 platformNode = getPlatform();
 logComment("initInstall: platformNode=" + platformNode);
 // end
@@ -29,6 +34,8 @@ logComment("fProgram: " + fProgram);
 if(verifyDiskSpace(fProgram, srDest))
 {
   var chromeType = LOCALE;
+  var fTarget;
+
   err = addDirectory("",
                      "bin",     // dir name in jar to extract 
                      fProgram,  // Where to put this file (Returned from GetFolder) 
@@ -51,12 +58,29 @@ if(verifyDiskSpace(fProgram, srDest))
   // check return value
   if (err == SUCCESS)
   {
+    fTarget = getFolder("Program", "defaults");
+    logComment("fTarget: " + fTarget);
+    err = addDirectory("",
+                       "bin/defaults", // dir name in jar to extract 
+                       fTarget,        // Where to put this file (Returned from GetFolder) 
+                       "");            // subdir name to create relative to fProgram 
+    logComment("addDirectory() returned: " + err);
+
+    fTarget = getFolder("Program", searchPlugins);
+    logComment("fTarget: " + fTarget);
+    err = addDirectory("",
+                       "bin/searchplugins", // dir name in jar to extract 
+                       fTarget,          // Where to put this file (Returned from GetFolder) 
+                       "");                 // subdir name to create relative to fProgram 
+    logComment("addDirectory() returned: " + err);
+
     // register chrome
     var cf = getFolder(fProgram, "chrome/"+chromeName);
     var pf = getFolder(fProgram, "chrome/"+platformName);
 
     registerChrome(chromeType, cf, "locale/global/");
     registerChrome(chromeType, pf, localeName + "global-platform/");
+    registerChrome(chromeType, cf, "locale/global-region/");
 
     registerChrome(chromeType, cf, "locale/browser/");
     registerChrome(chromeType, cf, "locale/browser-region/");
