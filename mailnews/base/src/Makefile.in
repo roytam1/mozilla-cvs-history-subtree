@@ -63,6 +63,7 @@ CPPSRCS		= \
 		nsStatusBarBiffManager.cpp \
 		nsMsgDBView.cpp \
 		nsMsgThreadedDBView.cpp \
+		nsMsgSpecialViews.cpp \
 		$(NULL)
 
 EXPORTS		= \
@@ -93,8 +94,6 @@ EXPORTS		= \
 		nsSubscribableServer.h \
 		nsMsgPrintEngine.h \
 		nsStatusBarBiffManager.h \
-		nsMsgDBView.h \
-		nsMsgThreadedDBView.h \
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.

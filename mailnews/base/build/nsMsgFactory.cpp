@@ -85,7 +85,7 @@
 #include "nsMsgSearchDataSource.h"
 #include "nsMsgFolderCompactor.h"
 #include "nsMsgThreadedDBView.h"
-
+#include "nsMsgSpecialViews.h"
 // private factory declarations for each component we know how to produce
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessengerBootstrap)
@@ -123,6 +123,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgPrintEngine, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFolderCompactState)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOfflineStoreCompactState)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgThreadedDBView);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgThreadsWithUnreadDBView);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgWatchedThreadsWithUnreadDBView);
 
 // The list of components we register
 static nsModuleComponentInfo gComponents[] = {
@@ -298,6 +300,14 @@ static nsModuleComponentInfo gComponents[] = {
     { "threaded db view", NS_MSGTHREADEDDBVIEW_CID,
       NS_MSGTHREADEDDBVIEW_CONTRACTID,
       nsMsgThreadedDBViewConstructor,
+    },
+    { "threads with unread db view", NS_MSGTHREADSWITHUNREADDBVIEW_CID,
+      NS_MSGTHREADSWITHUNREADDBVIEW_CONTRACTID,
+      nsMsgThreadsWithUnreadDBViewConstructor,
+    },
+    { "watched threads with unread db view", NS_MSGWATCHEDTHREADSWITHUNREADDBVIEW_CID,
+      NS_MSGWATCHEDTHREADSWITHUNREADDBVIEW_CONTRACTID,
+      nsMsgWatchedThreadsWithUnreadDBViewConstructor,
     }
 };
 

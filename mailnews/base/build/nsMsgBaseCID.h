@@ -443,9 +443,25 @@
 #define NS_MSGTHREADEDDBVIEW_CONTRACTID \
   NS_MSGDBVIEW_CONTRACTID_PREFIX "threaded"
 
+#define NS_MSGTHREADSWITHUNREADDBVIEW_CONTRACTID \
+  NS_MSGDBVIEW_CONTRACTID_PREFIX "threadswithunread"
+
+#define NS_MSGWATCHEDTHREADSWITHUNREADDBVIEW_CONTRACTID \
+  NS_MSGDBVIEW_CONTRACTID_PREFIX "watchedthreadswithunread"
+
 /* 52f860e0-1dd2-11b2-aa72-bb751981bd00 */
 #define NS_MSGTHREADEDDBVIEW_CID \
   {0x52f860e0, 0x1dd2, 0x11b2, \
-    {0xaa, 0x72, 0xbb,0x75, 0x19, 0x81, 0xbd, 0x00 }}
+    {0xaa, 0x72, 0xbb, 0x75, 0x19, 0x81, 0xbd, 0x00 }}
+
+/* ca79a00e-010d-11d5-a5be-0060b0fc04b7 */
+#define NS_MSGTHREADSWITHUNREADDBVIEW_CID \
+  {0xca79a00e, 0x010d, 0x11d5, \
+    {0xa5, 0xbe, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7 }}
+
+/* 597e1ffe-0123-11d5-a5be-0060b0fc04b7 */
+#define NS_MSGWATCHEDTHREADSWITHUNREADDBVIEW_CID \
+  {0x597e1ffe, 0x0123, 0x11d5, \
+    {0xa5, 0xbe, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7 }}
 
 #endif // nsMessageBaseCID_h__

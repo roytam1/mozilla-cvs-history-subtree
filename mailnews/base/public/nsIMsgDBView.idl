@@ -143,6 +143,12 @@ interface nsMsgViewCommandType
   const nsMsgViewCommandTypeValue unflagMessages = 4;
   const nsMsgViewCommandTypeValue toggleThreadKilled = 5;
   const nsMsgViewCommandTypeValue toggleThreadWatched = 6;
+
+  const nsMsgViewCommandTypeValue deleteMsg = 7;
+  const nsMsgViewCommandTypeValue deleteNoTrash = 8;
+  const nsMsgViewCommandTypeValue markThreadRead = 9;
+  const nsMsgViewCommandTypeValue markAllRead = 10;
+
 };
 
 [scriptable, uuid(4063bcf8-fd19-11d4-a5be-0060b0fc04b7)]

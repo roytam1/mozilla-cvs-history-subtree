@@ -58,6 +58,7 @@ EXPORTS=						\
 	nsStatusBarBiffManager.h \
 	nsMsgDBView.h \
 	nsMsgThreadedDBView.h \
+	nsMsgSpecialViews.h \
 	$(NULL)
 
 
@@ -98,6 +99,7 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsStatusBarBiffManager.obj \
 	.\$(OBJDIR)\nsMsgDBView.obj \
 	.\$(OBJDIR)\nsMsgThreadedDBView.obj \
+	.\$(OBJDIR)\nsMsgSpecialViews.obj \
 	$(NULL)
 
 
