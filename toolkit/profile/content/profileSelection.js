@@ -117,6 +117,8 @@ function acceptDialog()
   gProfileService.startWithLastProfile = autoSelectLastProfile.checked;
   gProfileService.selectedProfile = selectedProfile.profile;
 
+  gProfileService.startOffline = document.getElementById("offlineState").checked;
+
   gDialogParams.SetInt(0, 1);
 
   return true;

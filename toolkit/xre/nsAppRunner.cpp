@@ -66,6 +66,7 @@
 #include "nsIDOMWindow.h"
 #include "nsIEventQueueService.h"
 #include "nsIExtensionManager.h"
+#include "nsIIOService.h"
 #include "nsILocaleService.h"
 #include "nsIObserverService.h"
 #include "nsINativeAppSupport.h"
@@ -1361,6 +1362,12 @@ ShowProfileManager(nsIToolkitProfileService* aProfileSvc,
   sprintf(kEnvVar, "XRE_PROFILE_PATH=%s", path.get());
   PR_SetEnv(kEnvVar);
 
+  PRBool offline = PR_FALSE;
+  aProfileSvc->GetStartOffline(&offline);
+  if (offline) {
+    PR_SetEnv("XRE_START_OFFLINE=1");
+  }
+
   return LaunchChild(aNative);
 }
 
@@ -1404,12 +1411,18 @@ ImportProfiles(nsIToolkitProfileService* aPService,
 static PRBool gDoMigration = PR_FALSE;
 
 static nsresult
-SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
+SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative,
+              PRBool* aStartOffline)
 {
   nsresult rv;
   ArgResult ar;
   const char* arg;
   *aResult = nsnull;
+  *aStartOffline = PR_FALSE;
+
+  arg = PR_GetEnv("XRE_START_OFFLINE");
+  if ((arg && *arg) || CheckArg("offline"))
+    *aStartOffline = PR_TRUE;
 
   arg = PR_GetEnv("XRE_PROFILE_PATH");
   if (arg && *arg) {
@@ -1770,7 +1783,9 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
 #endif
 
   nsCOMPtr<nsIProfileLock> profileLock;
-  rv = SelectProfile(getter_AddRefs(profileLock), nativeApp);
+  PRBool startOffline = PR_FALSE;
+
+  rv = SelectProfile(getter_AddRefs(profileLock), nativeApp, &startOffline);
   if (rv == NS_ERROR_LAUNCHED_CHILD_PROCESS ||
       rv == NS_ERROR_ABORT) return 0;
   if (NS_FAILED(rv)) return 1;
@@ -1852,6 +1867,12 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
     NS_ENSURE_SUCCESS(rv, 1);
 
     {
+      if (startOffline) {
+        nsCOMPtr<nsIIOService> io (do_GetService("@mozilla.org/network/io-service;1"));
+        NS_ENSURE_TRUE(io, 1);
+        io->SetOffline(PR_TRUE);
+      }
+
       {
         NS_TIMELINE_ENTER("startupNotifier");
         nsCOMPtr<nsIObserver> startupNotifier

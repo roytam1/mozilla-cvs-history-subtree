@@ -180,7 +180,7 @@ nsXREDirProvider::SetProfileDir(nsIFile* aDir)
   NS_ASSERTION(aDir, "We don't support no-profile apps yet!");
 
 #ifdef DEBUG_bsmedberg
-  nsDependentCString path;
+  nsCAutoString path;
   aDir->GetNativePath(path);
   printf("nsXREDirProvider::SetProfileDir('%s')\n", path.get());
 #endif

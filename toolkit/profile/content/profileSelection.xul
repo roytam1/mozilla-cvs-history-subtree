@@ -78,7 +78,7 @@
                onkeypress="onProfilesKey(event);">
       </listbox>
 
-      <checkbox id="offlineState" disabled="true" label="&offlineState.label;" accesskey="&offlineState.accesskey;"/> 
+      <checkbox id="offlineState" label="&offlineState.label;" accesskey="&offlineState.accesskey;"/> 
 
       <checkbox id="autoSelectLastProfile" label="&autoSelect.label;"
                 accesskey="&autoSelect.accesskey;"/> 

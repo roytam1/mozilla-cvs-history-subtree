@@ -131,7 +131,8 @@ private:
 
     nsToolkitProfileService() :
         mDirty(PR_FALSE),
-        mStartWithLast(PR_TRUE)
+        mStartWithLast(PR_TRUE),
+        mStartOffline(PR_FALSE)
     {
         gService = this;
     }
@@ -148,6 +149,7 @@ private:
     nsCOMPtr<nsILocalFile>     mListFile;
     PRBool mDirty;
     PRBool mStartWithLast;
+    PRBool mStartOffline;
 
     static nsToolkitProfileService *gService;
 
@@ -430,6 +432,19 @@ nsToolkitProfileService::GetStartWithLastProfile(PRBool *aResult)
 {
     *aResult = mStartWithLast;
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsToolkitProfileService::GetStartOffline(PRBool *aResult)
+{
+    *aResult = mStartOffline;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsToolkitProfileService::SetStartOffline(PRBool aValue)
+{
+    mStartOffline = aValue;
 }
 
 NS_IMETHODIMP

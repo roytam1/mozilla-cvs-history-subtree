@@ -46,6 +46,7 @@ interface nsIProfileLock;
 interface nsIToolkitProfileService : nsISupports
 {
     attribute boolean startWithLastProfile;
+    attribute boolean startOffline;
 
     readonly attribute nsISimpleEnumerator /*nsIToolkitProfile*/ profiles;
 
