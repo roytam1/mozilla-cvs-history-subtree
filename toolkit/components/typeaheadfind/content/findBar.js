@@ -277,16 +277,17 @@ function openFindBar()
     gWrappedToBottomStr = bundle.getString("WrappedToBottom");
   }
 
-  var statusIcon = document.getElementById("find-status-icon");
-  var statusText = document.getElementById("find-status");
-  var findField = document.getElementById("find-field");
-  findField.removeAttribute("status");
-  statusIcon.removeAttribute("status");
-  statusText.value = "";
-  
   var findToolbar = document.getElementById("FindToolbar");
   if (findToolbar.hidden) {
     findToolbar.hidden = false;
+  
+    var statusIcon = document.getElementById("find-status-icon");
+    var statusText = document.getElementById("find-status");
+    var findField = document.getElementById("find-field");
+    findField.removeAttribute("status");
+    statusIcon.removeAttribute("status");
+    statusText.value = "";
+
     return true;
   }
   return false;
