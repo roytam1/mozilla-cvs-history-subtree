@@ -107,12 +107,13 @@ function cleanUpOnComplete(aDownload)
   }
 }
 
-function autoClose()
+function autoClose(aDownload)
 {
   var allDownloadsComplete = true;
   for (var i = 0; i < gDownloadsView.childNodes.length; ++i) {
     var currItem = gDownloadsView.childNodes[i];
-    if (gDownloadManager.getDownload(currItem.id))
+    var dlForItem = gDownloadManager.getDownload(currItem.id);
+    if (dlForItem && dlForItem != aDownload)
       allDownloadsComplete = false;
   }
   
@@ -126,7 +127,7 @@ function autoClose()
     var pref = Components.classes["@mozilla.org/preferences-service;1"]
                         .getService(Components.interfaces.nsIPrefBranch);
     var autoClose = pref.getBoolPref("browser.download.closeWhenDone")
-    if (autoClose && window.opener.location.href == window.location.href)
+    if (autoClose && (!window.opener || window.opener.location.href == window.location.href))
       window.close();
   }
 }
@@ -139,13 +140,15 @@ var gDownloadObserver = {
     case "dl-done":
       cleanUpOnComplete(dl);
       
-      autoClose();      
+      autoClose(dl);      
       break;
     case "dl-failed":
     case "dl-cancel":
       cleanUpOnComplete(dl);
       break;
     case "dl-start":
+      dump("*** starting + " + aSubject + "\n");
+      
       // Add this download to the percentage average tally
       gDownloadPercentages[dl.target.persistentDescriptor] = true;
       ++gDownloadPercentagesMeta.count;

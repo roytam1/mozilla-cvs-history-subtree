@@ -42,7 +42,7 @@
 /* nsIAlertsListener --> when a consumer asks the alerts service to put up an alert, they have the option
    of passing in an alert listener as well. The alert listener gets notified when the alert has gone away.
 */ 
-[scriptable, uuid(e33e3adc-3631-4383-ac27-b89c29c34e70)]
+[scriptable, uuid(A840623B-5B87-4e99-A74A-9EF0886C11DD)]
 interface nsIAlertListener : nsISupports
 {
   void onAlertFinished(in wstring aAlertCookie);

@@ -35,7 +35,7 @@
 # 
 # ***** END LICENSE BLOCK *****
 
-var _elementIDs = ["askOnSave", "downloadFolderList", "downloadFolder"];
+var _elementIDs = ["askOnSave", "downloadFolderList", "downloadFolder", "showWhenStarting", "closeWhenDone"];
 
 #if 0
   , "showWhenStarting", "closeWhenDone"
