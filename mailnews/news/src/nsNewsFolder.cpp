@@ -569,7 +569,7 @@ NS_IMETHODIMP nsMsgNewsFolder::Delete()
 
 	if(NS_SUCCEEDED(rv)) {
 		mDatabase->ForceClosed();
-		mDatabase = null_nsCOMPtr();
+		mDatabase = nsnull;
 	}
 
 	nsCOMPtr<nsIFileSpec> pathSpec;

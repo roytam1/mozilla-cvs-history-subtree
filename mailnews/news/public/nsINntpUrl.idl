@@ -46,13 +46,6 @@ interface nsINntpUrl : nsISupports {
   attribute nsNewsAction newsAction;
   attribute boolean getOldMessages;
 
-  /** 
-   * we use this for cancel.  we turn the original message URI into
-   * a messageID url, but we'll need the original message URI
-   * to remove it from the db when we are done.
-   */
-  attribute string originalMessageURI;
-
   /* these are nsMailboxActions */
   const long ActionGetNewNews = 0;
   const long ActionDisplayArticle = 1;

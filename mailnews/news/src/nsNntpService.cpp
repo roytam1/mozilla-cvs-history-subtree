@@ -169,14 +169,20 @@ nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayCon
     nsCOMPtr<nsINntpUrl> nntpUrl = do_QueryInterface(url,&rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    // set this, for nsNNTPProtocol::ParseURL()
-    nntpUrl->SetOriginalMessageURI((const char *)aMessageURI);
+    rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIMsgMessageUrl> messageUrl = do_QueryInterface(url, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    // we'll use this later in nsNNTPProtocol::ParseURL()
+    rv = messageUrl->SetOriginalSpec(aMessageURI);
+    NS_ENSURE_SUCCESS(rv,rv);
 
     nsCOMPtr<nsIMsgMailNewsUrl> msgUrl = do_QueryInterface(nntpUrl,&rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
     msgUrl->SetMsgWindow(aMsgWindow);
-    nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
 
     nsCOMPtr<nsIMsgI18NUrl> i18nurl = do_QueryInterface(msgUrl,&rv);
     NS_ENSURE_SUCCESS(rv,rv);
@@ -267,14 +273,20 @@ nsNntpService::FetchMessage(nsIMsgFolder *newsFolder, nsMsgKey key, nsIMsgWindow
     nsCOMPtr<nsINntpUrl> nntpUrl = do_QueryInterface(url, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // later used by nsNNTPProtocol::ParseURL()
-    rv = nntpUrl->SetOriginalMessageURI((const char *)uri);
+    rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIMsgMessageUrl> messageUrl = do_QueryInterface(url, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    // we'll use this later in nsNNTPProtocol::ParseURL()
+    rv = messageUrl->SetOriginalSpec((const char *)uri);
+    NS_ENSURE_SUCCESS(rv,rv);
 
     nsCOMPtr<nsIMsgMailNewsUrl> msgUrl = do_QueryInterface(nntpUrl, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
+
     msgUrl->SetMsgWindow(aMsgWindow);
-    nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
 
     rv = RunNewsUrl(url, aMsgWindow, aConsumer);
   }
@@ -1045,10 +1057,15 @@ nsNntpService::CancelMessage(const char *cancelURL, const char *messageURI, nsIS
   rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionCancelArticle);
   NS_ENSURE_SUCCESS(rv,rv);
    
-  // later used by nsNNTPProtocol::ParseURL()
-  rv = nntpUrl->SetOriginalMessageURI(messageURI);
+  nsCOMPtr<nsIMsgMessageUrl> messageUrl = do_QueryInterface(url, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
- 
+
+  // we'll use this later in nsNNTPProtocol::ParseURL()
+  // we need to know the news folder and the article key, in order to remove the cancelled message
+  // from the db (and thread pane)
+  rv = messageUrl->SetOriginalSpec(messageURI);
+  NS_ENSURE_SUCCESS(rv,rv);
+
   rv = RunNewsUrl(url, aMsgWindow, aConsumer);  
   NS_ENSURE_SUCCESS(rv,rv);
 

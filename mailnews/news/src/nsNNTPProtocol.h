@@ -228,6 +228,7 @@ private:
 
 	PRInt32	  m_numArticlesLoaded;	/* How many articles we got XOVER lines for. */
 	PRInt32	  m_numArticlesWanted; /* How many articles we wanted to get XOVER lines for. */
+    PRInt32   m_maxArticles;        /* max articles to get during an XOVER */
 
 	// Cancelation specific state. In particular, the headers that should be 
 	// used for the cancelation message. 

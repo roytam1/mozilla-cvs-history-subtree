@@ -80,8 +80,6 @@
 
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 
-extern PRInt32 net_NewsChunkSize;
-
 nsNNTPNewsgroupList::nsNNTPNewsgroupList()
 {
     NS_INIT_REFCNT();
@@ -377,9 +375,8 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow *aMsgWindow,
 					m_maxArticles = 0;
 
                     rv = nntpServer->GetMaxArticles(&m_maxArticles); 
-					if (NS_FAILED(rv)) m_maxArticles = 0; 
+                    NS_ENSURE_SUCCESS(rv,rv);
                     
-                    net_NewsChunkSize = m_maxArticles;
 					maxextra = m_maxArticles;
 					if (!m_downloadAll)
 					{

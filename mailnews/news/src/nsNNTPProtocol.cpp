@@ -92,7 +92,6 @@
 
 #define PREF_NEWS_CANCEL_CONFIRM	"news.cancel.confirm"
 #define PREF_NEWS_CANCEL_ALERT_ON_SUCCESS "news.cancel.alert_on_success"
-#define DEFAULT_NEWS_CHUNK_SIZE -1
 #define READ_NEWS_LIST_COUNT_MAX 500 /* number of groups to process at a time when reading the list from the server */
 #define READ_NEWS_LIST_TIMEOUT 50	/* uSec to wait until doing more */
 #define RATE_STR_BUF_LEN 32
@@ -299,30 +298,6 @@ char *stateLabels[] = {
  */
 #define NEWGROUPS_TIME_OFFSET 60L*60L*12L   /* 12 hours */
 
-/* Allow the user to open at most this many connections to one news host*/
-#define kMaxConnectionsPerHost 3
-
-/* Keep this many connections cached. The cache is global, not per host */
-#define kMaxCachedConnections 2
-
-/* globals */
-/* mscott: I wonder if we still need these? I'd like to abstract them out into a NNTP protocol manager
-   (the object that is going to manage the NNTP connections. it would keep track of the connection list.)
-*/
-/* PRIVATE XP_List * nntp_connection_list=0; */
-PRInt32 net_NewsChunkSize=DEFAULT_NEWS_CHUNK_SIZE; 
-/* PRIVATE PRInt32 net_news_timeout = 170; */
-/* seconds that an idle NNTP conn can live */
-
-#if 0
-static char * last_password = 0;
-static char * last_password_hostname = 0;
-static char * last_username=0;
-static char * last_username_hostname=0;
-#endif /* 0 */
-/* end of globals I'd like to move somewhere else */
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 // TEMPORARY HARD CODED FUNCTIONS 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -475,7 +450,7 @@ nsNNTPProtocol::nsNNTPProtocol(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
   m_connectionBusy = PR_FALSE;
   m_fromCache = PR_FALSE;
     PR_LOG(NNTP,PR_LOG_ALWAYS,("creating a new nsNNTPProtocol(%x)",(int)this));
-    PR_LOG(NNTP,PR_LOG_ALWAYS,("initialize m_currentGroup to null"));
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("initializing, so unset m_currentGroup"));
 	m_currentGroup = "";
   LL_I2L(m_lastActiveTimeStamp, 0);
 }
@@ -499,7 +474,6 @@ nsNNTPProtocol::~nsNNTPProtocol()
 NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
 {
     nsresult rv = NS_OK;
-    net_NewsChunkSize = DEFAULT_NEWS_CHUNK_SIZE;
     PRBool isSecure = PR_FALSE;
 
     if (aMsgWindow) {
@@ -529,11 +503,8 @@ NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow
     NS_ENSURE_SUCCESS(rv, NS_MSG_INVALID_OR_MISSING_SERVER);
     if (!m_nntpServer) return NS_MSG_INVALID_OR_MISSING_SERVER;
 
-	PRInt32 max_articles;
-	rv = m_nntpServer->GetMaxArticles(&max_articles);
-	if (NS_SUCCEEDED(rv)) {
-		net_NewsChunkSize = max_articles;
-	}
+	rv = m_nntpServer->GetMaxArticles(&m_maxArticles);
+    NS_ENSURE_SUCCESS(rv,rv);
 
     rv = server->GetIsSecure(&isSecure);
     NS_ENSURE_SUCCESS(rv,rv);
@@ -1095,24 +1066,16 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
 NS_IMETHODIMP nsNNTPProtocol::OnStopRequest(nsIChannel * aChannel, nsISupports * aContext, nsresult aStatus, const PRUnichar* aMsg)
 {
-		nsMsgProtocol::OnStopRequest(aChannel, aContext, aStatus, aMsg);
+    nsMsgProtocol::OnStopRequest(aChannel, aContext, aStatus, aMsg);
 
     // nsMsgProtocol::OnStopRequest() has called m_channelListener. There is
     // no need to be called again in CloseSocket(). Let's clear it here.
-    if (m_channelListener)
-        m_channelListener = null_nsCOMPtr();
+    if (m_channelListener) {
+        m_channelListener = nsnull;
+    }
 
 	// okay, we've been told that the send is done and the connection is going away. So 
 	// we need to release all of our state
-
-#if 0
-    // cancel any outstanding udpate timer
-    if (mUpdateTimer) {
-      mUpdateTimer->Cancel();
-	  mUpdateTimer = nsnull;
-	}
-#endif
-
 	return CloseSocket();
 }
 
@@ -1187,31 +1150,34 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
     nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    nsXPIDLCString uri;
-    rv = m_runningURL->GetOriginalMessageURI(getter_Copies(uri));
+    nsCOMPtr<nsIMsgMessageUrl> msgUrl = do_QueryInterface(m_runningURL, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsXPIDLCString spec;
+    rv = msgUrl->GetOriginalSpec(getter_Copies(spec));
     NS_ENSURE_SUCCESS(rv,rv);
 
     // if we are running the news_message:/ url from compose
-    // (for quoting, when doing reply) the OriginalMessageURI
+    // (for quoting, when doing reply) the original spec
     // will not be set.  check the scheme to see if this is a 
     // news_message:/ url.  if so, treat it like one.
-    if (*((const char *)uri) == '\0') {
+    if (*((const char *)spec) == '\0') {
         nsXPIDLCString scheme;
 	    rv = aURL->GetScheme(getter_Copies(scheme));
         NS_ENSURE_SUCCESS(rv,rv);
         
         if (!nsCRT::strcmp((const char *)scheme, "news_message")) {
-            rv = aURL->GetSpec(getter_Copies(uri));
+            rv = aURL->GetSpec(getter_Copies(spec));
             NS_ENSURE_SUCCESS(rv,rv);
         }
     }
 
-    // if the original message uri is non empty, then use it
-    if (*((const char *)uri) != '\0') {
-        PR_LOG(NNTP,PR_LOG_ALWAYS,("original message uri = %s",(const char *)uri));
+    // if the spec is non empty, then use it.  
+    if (*((const char *)spec) != '\0') {
+        PR_LOG(NNTP,PR_LOG_ALWAYS,("original message spec = %s",(const char *)spec));
 
         nsCOMPtr <nsIMsgFolder> folder;
-        rv = nntpService->DecomposeNewsURI((const char *)uri, getter_AddRefs(folder), &m_key);
+        rv = nntpService->DecomposeNewsURI((const char *)spec, getter_AddRefs(folder), &m_key);
         NS_ENSURE_SUCCESS(rv,rv);
 
         // since we are reading a message in this folder, we can set m_newsFolder
@@ -1227,6 +1193,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
     else {
         // clear this, we'll set it later.
         m_newsFolder = nsnull;
+        m_currentGroup = "";
     }
 
 	// get the file path part and store it as the group...
@@ -1450,15 +1417,17 @@ PRInt32 nsNNTPProtocol::LoginResponse()
 
 PRInt32 nsNNTPProtocol::SendModeReader()
 {  
-	nsresult status = NS_OK;
-	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(m_runningURL);
-    NS_ASSERTION(mailnewsurl, "no mailnews url");
-	if (mailnewsurl)
-		status = SendData(mailnewsurl, NNTP_CMD_MODE_READER); 
+	nsresult rv = NS_OK;
+	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(m_runningURL,&rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+	rv = SendData(mailnewsurl, NNTP_CMD_MODE_READER); 
     m_nextState = NNTP_RESPONSE;
     m_nextStateAfterResponse = NNTP_SEND_MODE_READER_RESPONSE;
     SetFlag(NNTP_PAUSE_FOR_READ); 
-    return(status);
+
+    NS_ENSURE_SUCCESS(rv,rv);
+    return rv;
 }
 
 PRInt32 nsNNTPProtocol::SendModeReaderResponse()
@@ -2011,13 +1980,19 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
 	}
     else  /* article or cancel */
 	{
-		if (m_typeWanted == CANCEL_WANTED)
+		if (m_typeWanted == CANCEL_WANTED) {
 			NET_SACopy(&command, "HEAD ");
-		else
+        }
+		else {
+            NS_ASSERTION(m_typeWanted == ARTICLE_WANTED, "not cancel, and not article");
 			NET_SACopy(&command, "ARTICLE ");
+        }
 		if (m_path && *m_path != '<')
 			NET_SACat(&command,"<");
+
+        NS_ASSERTION(m_path, "no path");
 		NET_SACat(&command, m_path);
+
 		if (PL_strchr(command+8, '>')==0) 
 			NET_SACat(&command,">");
 	}
@@ -2069,7 +2044,7 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommandResponse()
 
 		if (m_responseCode == MK_NNTP_RESPONSE_GROUP_NO_GROUP &&
             m_typeWanted == GROUP_WANTED) {
-            PR_LOG(NNTP,PR_LOG_ALWAYS,("group (%s) not found, so set m_currentGroup to null",(const char *)group_name));
+            PR_LOG(NNTP,PR_LOG_ALWAYS,("group (%s) not found, so unset m_currentGroup",(const char *)group_name));
             m_currentGroup = "";
 
             m_nntpServer->GroupNotFound((const char *)group_name, PR_TRUE /* opening */);
@@ -2192,7 +2167,10 @@ nsNNTPProtocol::SetCurrentGroup()
   nsresult rv;
   nsXPIDLCString groupname;
   NS_ASSERTION(m_newsFolder, "no news folder");
-  if (!m_newsFolder) return NS_ERROR_UNEXPECTED;
+  if (!m_newsFolder) {
+    m_currentGroup = "";
+    return NS_ERROR_UNEXPECTED;
+  }
 
   rv = m_newsFolder->GetAsciiName(getter_Copies(groupname));
   NS_ASSERTION(NS_SUCCEEDED(rv) && (const char *)groupname && nsCRT::strlen((const char *)groupname), "no group name");
@@ -3156,6 +3134,8 @@ nsNNTPProtocol::Notify(nsITimer *timer)
 
 void nsNNTPProtocol::TimerCallback()
 {
+    printf("XXX TimerCallback()\n");
+
 	m_nextState = NNTP_READ_LIST;
 	ProcessProtocolState(nsnull, mInputStream, 0,0); 
 #if 0
@@ -3201,7 +3181,9 @@ PRInt32 nsNNTPProtocol::BeginReadXover()
     if (NS_FAILED(rv)) return -1;
 
 	m_numArticlesLoaded = 0;
-	m_numArticlesWanted = net_NewsChunkSize > 0 ? net_NewsChunkSize : 1L << 30;
+
+    // if the user sets max_articles to a bogus value, get them everything
+	m_numArticlesWanted = m_maxArticles > 0 ? m_maxArticles : 1L << 30; 
 
 	m_nextState = NNTP_FIGURE_NEXT_CHUNK;
 	ClearFlag(NNTP_PAUSE_FOR_READ);
@@ -3929,7 +3911,7 @@ PRInt32 nsNNTPProtocol::DisplayNewsRCResponse()
             m_nntpServer->GroupNotFound((const char *)name, PR_FALSE);
           }
 
-          PR_LOG(NNTP,PR_LOG_ALWAYS,("NO_GROUP, so set m_currentGroup to null"));
+          PR_LOG(NNTP,PR_LOG_ALWAYS,("NO_GROUP, so unset m_currentGroup"));
           m_currentGroup = "";
 	  }
 	  /* it turns out subscribe ui depends on getting this displaysubscribedgroup call,
@@ -3944,7 +3926,7 @@ PRInt32 nsNNTPProtocol::DisplayNewsRCResponse()
 #endif
         rv = m_nntpServer->DisplaySubscribedGroup(m_newsFolder, 0, 0, 0);
 		NS_ASSERTION(NS_SUCCEEDED(rv),"DisplaySubscribedGroup() failed");
-        PR_LOG(NNTP,PR_LOG_ALWAYS,("error, so set m_currentGroup to null"));
+        PR_LOG(NNTP,PR_LOG_ALWAYS,("error, so unset m_currentGroup"));
         m_currentGroup = "";
 	  }
 
@@ -5103,6 +5085,7 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
 				m_nextState = NEWS_FREE;
 	            break;
 	        case NNTP_ERROR:
+#if 0
                 /* check if this connection came from the cache or if it was
                  * a new connection.  If it was not new lets start it over
 				 * again.  But only if we didn't have any successful protocol
@@ -5110,7 +5093,7 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
                  */
                 if (m_nntpServer)
                     m_nntpServer->RemoveConnection(this);
-
+#endif
 				m_nextState = NEWS_FREE;
 				break;
             case NEWS_FREE:

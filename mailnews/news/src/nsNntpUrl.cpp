@@ -211,12 +211,12 @@ NS_IMETHODIMP nsNntpUrl::GetMessageHeader(nsIMsgDBHdr ** aMsgHdr)
   nsCOMPtr <nsIMsgMessageService> msgService = do_QueryInterface(nntpService, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  if (mOriginalMessageURI.IsEmpty()) {
+  if (mOriginalSpec.IsEmpty()) {
     // this can happen when viewing a news://host/message-id url
     return NS_ERROR_FAILURE;
   }
 
-  rv = msgService->MessageURIToMsgHdr(mOriginalMessageURI.get(), aMsgHdr);
+  rv = msgService->MessageURIToMsgHdr(mOriginalSpec.get(), aMsgHdr);
   NS_ENSURE_SUCCESS(rv,rv);
   
   return NS_OK;
@@ -242,20 +242,24 @@ NS_IMETHODIMP nsNntpUrl::IsUrlType(PRUint32 type, PRBool *isType)
 NS_IMETHODIMP
 nsNntpUrl::GetOriginalSpec(char **aSpec)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aSpec);
+    *aSpec = nsCRT::strdup((const char *)mOriginalSpec);
+    if (!*aSpec) return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsNntpUrl::SetOriginalSpec(const char *aSpec)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    mOriginalSpec = aSpec;
+    return NS_OK;
 }
 
 nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
 {
    nsresult rv;
 
-   if (mOriginalMessageURI.IsEmpty()) {
+   if (mOriginalSpec.IsEmpty()) {
     // this could be a autosubscribe url (news://host/group)
     // or a message id url (news://host/message-id)
     // either way, we won't have a msgFolder for you
@@ -263,15 +267,15 @@ nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
    }
 
 #ifdef DEBUG_seth
-   printf("XXX mOriginalMessageURI = %s\n", mOriginalMessageURI.get());
-   // find first "?" and cut?
+   printf("XXX mOriginalSpec = %s\n", mOriginalSpec.get());
+   // should we find first "?" and cut?
 #endif
 
    nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
    NS_ENSURE_SUCCESS(rv,rv);
 
    nsMsgKey msgKey;
-   rv = nntpService->DecomposeNewsURI(mOriginalMessageURI.get(), msgFolder, &msgKey);
+   rv = nntpService->DecomposeNewsURI(mOriginalSpec.get(), msgFolder, &msgKey);
    NS_ENSURE_SUCCESS(rv,rv);
    return NS_OK;
 }
@@ -316,18 +320,3 @@ NS_IMETHODIMP nsNntpUrl::SetCharsetOverRide(const PRUnichar * aCharacterSet)
   mCharsetOverride = aCharacterSet;
   return NS_OK;
 }
-
-NS_IMETHODIMP nsNntpUrl::SetOriginalMessageURI(const char *uri)
-{
-    mOriginalMessageURI = uri;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsNntpUrl::GetOriginalMessageURI(char **uri)
-{
-    NS_ENSURE_ARG_POINTER(uri);
-    *uri = nsCRT::strdup((const char *)mOriginalMessageURI);
-    if (!*uri) return NS_ERROR_OUT_OF_MEMORY;
-    return NS_OK;
-}
-

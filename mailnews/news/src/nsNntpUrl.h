@@ -63,7 +63,7 @@ protected:
   nsCString mURI; // the RDF URI associated with this url.
   nsString mCharsetOverride; // used by nsIMsgI18NUrl...
 	PRBool				m_getOldMessages;
-    nsCString mOriginalMessageURI;
+    nsCString mOriginalSpec;
 };
 
 #endif // nsNntpUrl_h__

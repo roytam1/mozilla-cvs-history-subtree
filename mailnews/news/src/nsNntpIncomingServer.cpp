@@ -403,12 +403,12 @@ nsNntpIncomingServer::GetNewsrcHasChanged(PRBool *aNewsrcHasChanged)
 NS_IMETHODIMP
 nsNntpIncomingServer::CloseCachedConnections()
 {
-	nsresult rv;
-	// iterate through the connection cache for a connection that can handle this url.
-	PRUint32 cnt;
+  nsresult rv;
+  PRUint32 cnt;
   nsCOMPtr<nsISupports> aSupport;
   nsCOMPtr<nsINNTPProtocol> connection;
 
+  // iterate through the connection cache and close the connections.
   if (m_connectionCache)
   {
     rv = m_connectionCache->Count(&cnt);
@@ -486,6 +486,8 @@ nsNntpIncomingServer::CreateProtocolInstance(nsINNTPProtocol ** aNntpConnection,
 	return rv;
 }
 
+/* By default, allow the user to open at most this many connections to one news host */
+#define kMaxConnectionsPerHost 2
 
 NS_IMETHODIMP
 nsNntpIncomingServer::GetNntpConnection(nsIURI * aUri, nsIMsgWindow *aMsgWindow,
@@ -497,11 +499,11 @@ nsNntpIncomingServer::GetNntpConnection(nsIURI * aUri, nsIMsgWindow *aMsgWindow,
   PRBool isBusy = PR_TRUE;
 
 
-  PRInt32 maxConnections = 2; // default to be 2
+  PRInt32 maxConnections = kMaxConnectionsPerHost; 
   rv = GetMaximumConnectionsNumber(&maxConnections);
   if (NS_FAILED(rv) || maxConnections == 0)
   {
-    maxConnections = 2;
+    maxConnections = kMaxConnectionsPerHost;
     rv = SetMaximumConnectionsNumber(maxConnections);
   }
   else if (maxConnections < 1)
@@ -525,7 +527,7 @@ nsNntpIncomingServer::GetNntpConnection(nsIURI * aUri, nsIMsgWindow *aMsgWindow,
     	rv = connection->IsBusy(&isBusy);
     if (NS_FAILED(rv)) 
     {
-        connection = null_nsCOMPtr();
+        connection = nsnull;
         continue;
     }
     if (!freeConnection && !isBusy && connection)
@@ -535,7 +537,7 @@ nsNntpIncomingServer::GetNntpConnection(nsIURI * aUri, nsIMsgWindow *aMsgWindow,
 	}
     
   if (ConnectionTimeOut(freeConnection))
-      freeConnection = null_nsCOMPtr();
+      freeConnection = nsnull;
 
 	// if we got here and we have a connection, then we should return it!
 	if (!isBusy && freeConnection)
