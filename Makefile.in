@@ -63,6 +63,8 @@ ifdef MOZ_CALENDAR
 	$(MAKE) tier_98
 endif
 	$(MAKE) tier_99
+	$(MAKE) -C embedding/config
+	$(MAKE) -C chimera
 
 # Make sure that the existing rulesets work
 DIRS = \
@@ -314,6 +316,7 @@ endif
 ifdef MOZ_LDAP_XPCOM
 	$(MAKE) -C directory/c-sdk $@
 endif
+	$(MAKE) -C chimera clean
 endif
 
 tier_%: 
@@ -364,6 +367,10 @@ export::
 
 export::
 	@$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/include
+
+libs::
+	$(MAKE) -C embedding/config
+	$(MAKE) -C chimera
 
 distclean::
 	cat unallmakefiles | $(XARGS) rm -f
