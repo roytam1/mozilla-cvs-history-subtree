@@ -154,9 +154,12 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
     rv = output->Write((char*)&header, sizeof(header), &count);
     if (count != sizeof(header)) return NS_ERROR_FAILURE;
     if (NS_FAILED(rv)) return rv;
-
-    // seek to beginning of first bucket.
-    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, sizeof(nsDiskCacheBucket));
+    
+    // pad the rest of the header to sizeof(nsDiskCacheBucket).
+    char padding[sizeof(nsDiskCacheBucket) - sizeof(nsDiskCacheHeader)];
+    ::memset(padding, 0, sizeof(padding));
+    rv = output->Write(padding, sizeof(padding), &count);
+    if (count != sizeof(padding)) return NS_ERROR_FAILURE;
     if (NS_FAILED(rv)) return rv;
 
     // swap all of the active records.
