@@ -915,6 +915,10 @@ nsImageWin::CleanUpDIB()
     mImageBits = nsnull;
   }
 
+  if (mAlphaBits != nsnull) {
+    delete [] mAlphaBits;
+    mAlphaBits = nsnull;
+  }
 	// Should be an ISupports, so we can release
   if (mColorMap != nsnull){
     delete [] mColorMap->Index;
