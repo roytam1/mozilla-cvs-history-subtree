@@ -1511,18 +1511,17 @@ PACKAGE_VARS +=      \
 	SHARED_LIBRARY		 \
 	OS_ARCH            \
 	MOZ_WIDGET_TOOLKIT \
-	topsrcdir          \
-	srcdir             \
 	$(NULL)
 
 # these are shortened to make manifest files readable
 # for consistency's sake, add the extra . to LIB_SUFFIX
-PACKAGE_DEFINES +=      \
-	-DDLLP=$(DLL_PREFIX)  \
-	-DDLLS=$(DLL_SUFFIX)  \
-	-DLIBP=$(LIB_PREFIX)  \
-	-DLIBS=.$(LIB_SUFFIX) \
-	-DBINS=$(BIN_SUFFIX)  \
+PACKAGE_DEFINES +=          \
+	-DDLLP=$(DLL_PREFIX)      \
+	-DDLLS=$(DLL_SUFFIX)      \
+	-DLIBP=$(LIB_PREFIX)      \
+	-DLIBS=.$(LIB_SUFFIX)     \
+	-DBINS=$(BIN_SUFFIX)      \
+	-Dtopsrcdir=$(MOZ_SRCDIR) \
 	$(NULL)
 
 PACKAGE_DEFINES += $(foreach varname,$(PACKAGE_VARS),-D$(varname)=$($(varname)))
