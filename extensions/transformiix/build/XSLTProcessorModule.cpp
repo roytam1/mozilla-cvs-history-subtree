@@ -32,6 +32,7 @@
 #include "XPathProcessor.h"
 #include "nsSyncLoader.h"
 #include "nsIScriptNameSpaceManager.h"
+#include "nsXPIDLString.h"
 
 // Factory Constructor
 NS_GENERIC_FACTORY_CONSTRUCTOR(XSLTProcessor)
@@ -55,13 +56,13 @@ RegisterTransformiix(nsIComponentManager *aCompMgr,
 
   nsXPIDLCString previous;
   rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
-				"XSLTProcessor",
+                                "XSLTProcessor",
                                 TRANSFORMIIX_XSLT_PROCESSOR_CONTRACTID,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
-				"XPathProcessor",
+                                "XPathProcessor",
                                 TRANSFORMIIX_XPATH_PROCESSOR_CONTRACTID,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
 
