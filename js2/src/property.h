@@ -35,10 +35,12 @@
 #ifndef property_h___
 #define property_h___
 
+#include <map>
 
 namespace JavaScript {
 
-    struct IdentifierList;
+    struct ExprList;
+    typedef ExprList AttributeList;
 
 namespace JS2Runtime {
 
@@ -99,7 +101,7 @@ namespace JS2Runtime {
     Formatter& operator<<(Formatter& f, const Property& prop);
    
 
-    typedef std::pair<Property, IdentifierList *> AttributedProperty;
+    typedef std::pair<Property, AttributeList *> AttributedProperty;
 
     typedef std::multimap<String, AttributedProperty, std::less<const String> > PropertyMap;
     typedef PropertyMap::iterator PropertyIterator;

@@ -108,8 +108,8 @@ static const double two31 = 2147483648.0;
     extern JSArrayType *Array_Type;
     extern JSType *Unit_Type;
 
-    bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind);
-    bool hasAttribute(const IdentifierList* identifiers, const StringAtom &name);
+    bool hasAttribute(AttributeList* identifiers, Token::Kind tokenKind);
+    bool hasAttribute(AttributeList* identifiers, const StringAtom &name);
 
     String *numberToString(float64 number);
     float64 stringToNumber(const String *string);
@@ -284,7 +284,7 @@ static const double two31 = 2147483648.0;
         virtual void emitTypeOf(ByteCodeGen *bcg);
     };
 
-    // a getter/setter function from an activation
+    // a getter/setter function from an activation (XXX is this even legal?)
     // the function is known directly
     class AccessorReference : public Reference {
     public:
@@ -513,17 +513,22 @@ static const double two31 = 2147483648.0;
             return (i != mProperties.end());
         }
 */
-        PropertyIterator findAttributedProperty(const String &name, IdentifierList *attr)
+        PropertyIterator findAttributedProperty(const String &name, AttributeList *attr)
         {
             for (PropertyIterator i = mProperties.lower_bound(name), 
                             end = mProperties.upper_bound(name); (i != end); i++) {
                 if (attr) {
-                    IdentifierList *propAttr = PROPERTY_ATTRLIST(i);
+                    AttributeList *propAttr = PROPERTY_ATTRLIST(i);
                     if (propAttr == NULL)
                         return i;
                     while (attr) {
-                        if (hasAttribute(propAttr, attr->name))
-                            return i;
+                        if (attr->expr->getKind() == ExprNode::identifier) {
+                            const StringAtom& name = (static_cast<IdentifierExprNode *>(attr->expr))->name;
+                            if (hasAttribute(propAttr, name))
+                                return i;
+                        }
+                        else
+                            ASSERT(false);  // XXX NYI
                         attr = attr->next;
                     }
                 }
@@ -533,14 +538,14 @@ static const double two31 = 2147483648.0;
             return mProperties.end();
         }
 
-        void deleteProperty(const String &name, IdentifierList *attr)
+        void deleteProperty(const String &name, AttributeList *attr)
         {
             PropertyIterator i = findAttributedProperty(name, attr);
             mProperties.erase(i);
         }
 
         // see if the property exists by a specific kind of access
-        bool hasOwnProperty(const String &name, IdentifierList *attr, Access acc, PropertyIterator *p)
+        bool hasOwnProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
         {
             *p = findAttributedProperty(name, attr);
             if (*p != mProperties.end()) {
@@ -559,7 +564,7 @@ static const double two31 = 2147483648.0;
                 return false;
         }
 
-        bool hasProperty(const String &name, IdentifierList *attr, Access acc, PropertyIterator *p)
+        bool hasProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
         {
             if (hasOwnProperty(name, attr, acc, p))
                 return true;
@@ -579,45 +584,45 @@ static const double two31 = 2147483648.0;
             return *prop.mData.vp;
         }
 
-        virtual bool getProperty(Context *cx, const String &name, IdentifierList *attr);
+        virtual bool getProperty(Context *cx, const String &name, AttributeList *attr);
 
-        virtual bool setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v);
+        virtual bool setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v);
 
 
 
         // add a property
-        virtual PropertyIterator defineVariable(const String &name, IdentifierList *attr, JSType *type)
+        virtual PropertyIterator defineVariable(const String &name, AttributeList *attr, JSType *type)
         {
             const PropertyMap::value_type e(name, AttributedProperty(Property(new JSValue(), type), attr));
             PropertyIterator r = mProperties.insert(e);
             return r;
         }
-        virtual PropertyIterator defineStaticVariable(const String &name, IdentifierList *attr, JSType *type)
+        virtual PropertyIterator defineStaticVariable(const String &name, AttributeList *attr, JSType *type)
         {
             return defineVariable(name, attr, type);    // XXX or error?
         }
         // add a method property
-        virtual void defineMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             defineVariable(name, attr, type, JSValue(f));
         }
-        virtual void defineStaticMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineStaticMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             defineVariable(name, attr, type, JSValue(f));    // XXX or error?
         }
-        virtual void defineConstructor(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineConstructor(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             defineVariable(name, attr, type, JSValue(f));    // XXX or error?
         }
-        virtual void defineStaticGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineStaticGetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             defineGetterMethod(name, attr, type, f);    // XXX or error?
         }
-        virtual void defineStaticSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineStaticSetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             defineSetterMethod(name, attr, type, f);    // XXX or error?
         }
-        virtual void defineGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineGetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, Write, &i)) {
@@ -630,7 +635,7 @@ static const double two31 = 2147483648.0;
                 mProperties.insert(e);
             }
         }
-        virtual void defineSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        virtual void defineSetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, Read, &i)) {
@@ -645,14 +650,14 @@ static const double two31 = 2147483648.0;
         }
 
         // add a property (with a value)
-        virtual PropertyIterator defineVariable(const String &name, IdentifierList *attr, JSType *type, JSValue v)
+        virtual PropertyIterator defineVariable(const String &name, AttributeList *attr, JSType *type, JSValue v)
         {
             const PropertyMap::value_type e(name, AttributedProperty(Property(new JSValue(v), type), attr));
             PropertyIterator r = mProperties.insert(e);
             return r;
         }
 
-        virtual Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
+        virtual Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, acc, &i)) {
@@ -728,8 +733,8 @@ static const double two31 = 2147483648.0;
 
         void initInstance(Context *cx, JSType *type);
 
-        bool getProperty(Context *cx, const String &name, IdentifierList *attr);
-        bool setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v);
+        bool getProperty(Context *cx, const String &name, AttributeList *attr);
+        bool setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v);
 
         JSValue getField(uint32 index)
         {
@@ -801,7 +806,7 @@ static const double two31 = 2147483648.0;
         
         // static helpers
 
-        void defineConstructor(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineConstructor(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             ASSERT(mStatics);
             uint32 vTableIndex = mStatics->mMethods.size();
@@ -811,38 +816,38 @@ static const double two31 = 2147483648.0;
             mStatics->mProperties.insert(e);
         }
 
-        void defineStaticMethod(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineStaticMethod(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             ASSERT(mStatics);
             mStatics->defineMethod(name, attr, type, f);
         }
 
-        PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type, JSValue v)
+        PropertyIterator defineStaticVariable(const String& name, AttributeList *attr, JSType *type, JSValue v)
         {
             ASSERT(mStatics);
             return mStatics->defineVariable(name, attr, type, v);
         }
 
-        PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type)
+        PropertyIterator defineStaticVariable(const String& name, AttributeList *attr, JSType *type)
         {
             ASSERT(mStatics);
             return mStatics->defineVariable(name, attr, type);
         }
 
-        bool hasStatic(const String& name, IdentifierList *attr, Access acc)
+        bool hasStatic(const String& name, AttributeList *attr, Access acc)
         {
             ASSERT(mStatics);
             PropertyIterator i;
             return mStatics->hasProperty(name, attr, acc, &i);
         }
         
-        void defineStaticGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineStaticGetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             ASSERT(mStatics);
             mStatics->defineGetterMethod(name, attr, type, f);
         }
         
-        void defineStaticSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineStaticSetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             ASSERT(mStatics);
             mStatics->defineSetterMethod(name, attr, type, f);
@@ -851,19 +856,19 @@ static const double two31 = 2147483648.0;
         //
 
 
-        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type)
+        PropertyIterator defineVariable(const String& name, AttributeList *attr, JSType *type)
         {
             const PropertyMap::value_type e(name, AttributedProperty(Property(mVariableCount++, type, Slot), attr));
             PropertyIterator r = mProperties.insert(e);
             return r;
         }
 
-        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type, JSValue v)
+        PropertyIterator defineVariable(const String& name, AttributeList *attr, JSType *type, JSValue v)
         {   // XXX why doesn't the virtual function in JSObject get found?
             return JSObject::defineVariable(name, attr, type, v);
         }
 
-        void defineMethod(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineMethod(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             uint32 vTableIndex = mMethods.size();
             mMethods.push_back(f);
@@ -872,7 +877,7 @@ static const double two31 = 2147483648.0;
             mProperties.insert(e);
         }
         
-        void defineGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineGetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             PropertyIterator i;
             uint32 vTableIndex = mMethods.size();
@@ -889,7 +894,7 @@ static const double two31 = 2147483648.0;
             }
         }
 
-        void defineSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineSetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             PropertyIterator i;
             uint32 vTableIndex = mMethods.size();
@@ -921,8 +926,8 @@ static const double two31 = 2147483648.0;
             defineConstructor(mClassName, NULL, Object_Type, f);    // XXX attr?
         }
 
-        void addMethod(const String &name, IdentifierList *attr, JSFunction *f);
-        void addStaticMethod(const String &name, IdentifierList *attr, JSFunction *f);
+        void addMethod(const String &name, AttributeList *attr, JSFunction *f);
+        void addStaticMethod(const String &name, AttributeList *attr, JSFunction *f);
 
         // return true if 'other' is on the chain of supertypes
         bool derivesFrom(JSType *other)
@@ -949,7 +954,7 @@ static const double two31 = 2147483648.0;
             }
         }
 
-        virtual Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
+        virtual Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, acc, &i)) {
@@ -1042,8 +1047,8 @@ static const double two31 = 2147483648.0;
         JSArrayInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
 
         // XXX maybe could have implemented length as a getter/setter pair?
-        bool setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v);
-        bool getProperty(Context *cx, const String &name, IdentifierList *attr);
+        bool setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v);
+        bool getProperty(Context *cx, const String &name, AttributeList *attr);
 
 
         uint32 mLength;
@@ -1065,7 +1070,7 @@ static const double two31 = 2147483648.0;
     public:
         JSStringInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
 
-        bool getProperty(Context *cx, const String &name, IdentifierList *attr);
+        bool getProperty(Context *cx, const String &name, AttributeList *attr);
 
 
         uint32 mLength;
@@ -1095,7 +1100,7 @@ static const double two31 = 2147483648.0;
         {
         }
 
-        Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
+        Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, acc, &i)) {
@@ -1130,19 +1135,33 @@ static const double two31 = 2147483648.0;
         Activation(Context *cx) 
                     : JSType(cx, NULL), 
                         mLocals(NULL), 
+                        mStack(NULL),
+                        mStackTop(0),
                         mPC(0), 
                         mModule(NULL), 
                         mArgCount(0) { }
 
-        Activation(Context *cx, JSValue *locals, 
+        Activation(Context *cx, JSValue *locals, JSValue *stack, uint32 stackTop,
                         uint32 argBase, JSValue curThis,
                         uint8 *pc, 
                         ByteCodeModule *module, 
-                        uint32 argCount);
+                        uint32 argCount)
+                    : JSType(cx, NULL), 
+                        mLocals(locals), 
+                        mStack(stack), 
+                        mStackTop(stackTop),
+                        mArgumentBase(argBase), 
+                        mThis(curThis), 
+                        mPC(pc), 
+                        mModule(module), 
+                        mArgCount(argCount) { }
+
 
         
         // saved values from a previous execution
         JSValue *mLocals;
+        JSValue *mStack;
+        uint32 mStackTop;
         uint32 mArgumentBase;
         JSValue mThis;
         uint8 *mPC;
@@ -1160,7 +1179,7 @@ static const double two31 = 2147483648.0;
             mVariableCount++;
         }
 
-        Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
+        Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, acc, &i)) {
@@ -1262,56 +1281,56 @@ static const double two31 = 2147483648.0;
         }
 
         // add a new name to the current scope
-        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type)
+        PropertyIterator defineVariable(const String& name, AttributeList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
             return top->defineVariable(name, attr, type);
         }
-        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type, JSValue v)
+        PropertyIterator defineVariable(const String& name, AttributeList *attr, JSType *type, JSValue v)
         {
             JSObject *top = mScopeStack.back();
             return top->defineVariable(name, attr, type, v);
         }
-        PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type)
+        PropertyIterator defineStaticVariable(const String& name, AttributeList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
             return top->defineStaticVariable(name, attr, type);
         }
-        void defineMethod(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineMethod(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             top->defineMethod(name, attr, type, f);
         }   
-        void defineStaticMethod(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineStaticMethod(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
             top->defineStaticMethod(name, attr, type, f);
         }   
-        void defineConstructor(const String& name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineConstructor(const String& name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
             top->defineConstructor(name, attr, type, f);
         }   
-        void defineGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineGetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             top->defineGetterMethod(name, attr, type, f);
         }
-        void defineSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineSetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             top->defineSetterMethod(name, attr, type, f);
         }
-        void defineStaticGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineStaticGetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
             top->defineStaticGetterMethod(name, attr, type, f);
         }
-        void defineStaticSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        void defineStaticSetterMethod(const String &name, AttributeList *attr, JSType *type, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
@@ -1325,14 +1344,14 @@ static const double two31 = 2147483648.0;
         }
 
         // see if the current scope contains a name already
-        bool hasProperty(const String& name, IdentifierList *attr, Access acc, PropertyIterator *p)
+        bool hasProperty(const String& name, AttributeList *attr, Access acc, PropertyIterator *p)
         {
             JSObject *top = mScopeStack.back();
             return top->hasProperty(name, attr, acc, p);
         }
 
         // generate a reference to the given name
-        Reference *getName(const String& name, IdentifierList *attr, Access acc)
+        Reference *getName(const String& name, AttributeList *attr, Access acc)
         {
             uint32 depth = 0;
             for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
@@ -1348,7 +1367,7 @@ static const double two31 = 2147483648.0;
             return NULL;
         }
 
-        bool hasNameValue(const String& name, IdentifierList *attr)
+        bool hasNameValue(const String& name, AttributeList *attr)
         {
             uint32 depth = 0;
             for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
@@ -1360,7 +1379,7 @@ static const double two31 = 2147483648.0;
             return false;
         }
 
-        bool getNameValue(const String& name, IdentifierList *attr, Context *cx);
+        bool getNameValue(const String& name, AttributeList *attr, Context *cx);
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
@@ -1379,7 +1398,7 @@ static const double two31 = 2147483648.0;
 
         // a compile time request to get the value for a name
         // (i.e. we're accessing a constant value)
-        JSValue getCompileTimeValue(const String& name, IdentifierList *attr)
+        JSValue getCompileTimeValue(const String& name, AttributeList *attr)
         {
             uint32 depth = 0;
             for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
@@ -1393,7 +1412,7 @@ static const double two31 = 2147483648.0;
 
 
 
-        bool setNameValue(const String& name, IdentifierList *attr, Context *cx);
+        bool setNameValue(const String& name, AttributeList *attr, Context *cx);
 
         // return the number of local vars used by all the 
         // Activations on the top of the chain
@@ -1545,7 +1564,55 @@ static const double two31 = 2147483648.0;
         JSValue mThis;
 
         // this is the execution stack (for the current function)
-        std::vector<JSValue> mStack;
+        JSValue *mStack;
+        uint32 mStackTop;
+        uint32 mStackMax;
+
+        void pushValue(JSValue v)
+        {
+            ASSERT(mStackTop < mStackMax);
+            mStack[mStackTop++] = v;
+        }
+
+        JSValue popValue()
+        {
+            ASSERT(mStackTop > 0);
+            return mStack[--mStackTop];
+        }
+
+        JSValue topValue()
+        {
+            return mStack[mStackTop - 1];
+        }
+
+        void resizeStack(uint32 n)
+        {
+            ASSERT(n < mStackMax);
+            mStackTop = n;
+        }
+
+        uint32 stackSize()
+        {
+            return mStackTop;
+        }
+
+        JSValue getValue(uint32 n)
+        {
+            ASSERT(n < mStackTop);
+            return mStack[n];
+        }
+/*
+        void setValue(uint32 n, JSValue v)
+        {
+            ASSERT(n < mStackTop);
+            mStack[n] = v;
+        }
+*/
+        JSValue *getBase(uint32 n)
+        {
+            ASSERT(n <= mStackTop);     // s'ok to point beyond the end
+            return &mStack[n];
+        }
 
         // the activation stack
         std::stack<Activation *> mActivationStack;
@@ -1600,6 +1667,37 @@ static const double two31 = 2147483648.0;
 
     };
 
+    class ContextStackReplacement {
+    public:
+        enum { ReplacementStackSize = 4 };
+        ContextStackReplacement(Context *cx) 
+        { 
+            m_cx = cx;
+            mOldStack = cx->mStack; 
+            mOldStackTop = cx->mStackTop; 
+            mOldStackMax = cx->mStackMax; 
+            cx->mStack = &mStack[0];
+            cx->mStackTop = 0;
+            cx->mStackMax = ReplacementStackSize;
+        }
+
+        ~ContextStackReplacement()
+        {
+            m_cx->mStack = mOldStack;
+            m_cx->mStackTop = mOldStackTop;
+            m_cx->mStackMax = mOldStackMax;
+        }
+
+        JSValue mStack[ReplacementStackSize];
+
+        Context *m_cx;
+
+        JSValue *mOldStack;
+        uint32 mOldStackTop;
+        uint32 mOldStackMax;
+
+    };
+
     inline AccessorReference::AccessorReference(JSFunction *f)
         : Reference(f->mResultType), mFunction(f) 
     {
@@ -1622,32 +1720,32 @@ static const double two31 = 2147483648.0;
     inline bool LocalVarReference::getValue(Context *cx)
     {
         NOT_REACHED("need this?");
-        cx->mStack.push_back(cx->mLocals[mIndex]);
+        cx->pushValue(cx->mLocals[mIndex]);
         return false;
     }
 
     inline bool LocalVarReference::setValue(Context *cx)
     {
         NOT_REACHED("need this?");
-        cx->mLocals[mIndex] = cx->mStack.back();
+        cx->mLocals[mIndex] = cx->topValue();
         return false;
     }
   
-    inline bool JSObject::getProperty(Context *cx, const String &name, IdentifierList *attr)
+    inline bool JSObject::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Read, &i)) {
             Property &prop = PROPERTY(i);
             switch (prop.mFlag) {
             case ValuePointer:
-                cx->mStack.push_back(*prop.mData.vp);
+                cx->pushValue(*prop.mData.vp);
                 return false;
             case FunctionPair:
                 cx->switchToFunction(prop.mData.fPair.getterF);
                 return true;
             case Constructor:
             case Method:
-                cx->mStack.push_back(JSValue(mType->mMethods[prop.mData.index]));
+                cx->pushValue(JSValue(mType->mMethods[prop.mData.index]));
                 return false;
             default:
                 ASSERT(false);  // XXX more to implement
@@ -1659,24 +1757,24 @@ static const double two31 = 2147483648.0;
         return false;
     }
 
-    inline bool JSInstance::getProperty(Context *cx, const String &name, IdentifierList *attr)
+    inline bool JSInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Read, &i)) {
             Property &prop = PROPERTY(i);
             switch (prop.mFlag) {
             case Slot:
-                cx->mStack.push_back(mInstanceValues[prop.mData.index]);
+                cx->pushValue(mInstanceValues[prop.mData.index]);
                 return false;
             case ValuePointer:
-                cx->mStack.push_back(*prop.mData.vp);
+                cx->pushValue(*prop.mData.vp);
                 return false;
             case FunctionPair:
                 cx->switchToFunction(prop.mData.fPair.getterF);
                 return true;
             case Constructor:
             case Method:
-                cx->mStack.push_back(JSValue(mType->mMethods[prop.mData.index]));
+                cx->pushValue(JSValue(mType->mMethods[prop.mData.index]));
                 return false;
             default:
                 ASSERT(false);  // XXX more to implement
@@ -1684,13 +1782,13 @@ static const double two31 = 2147483648.0;
             }
         }
         else {
-            cx->mStack.push_back(kUndefinedValue);
+            cx->pushValue(kUndefinedValue);
             // XXX prototype chain walking?
         }
         return false;
     }
 
-    inline bool JSObject::setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v)
+    inline bool JSObject::setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Write, &i)) {
@@ -1700,7 +1798,7 @@ static const double two31 = 2147483648.0;
                 *prop.mData.vp = v;
                 return false;
             case FunctionPair:
-                cx->mStack.push_back(v);
+                cx->pushValue(v);
                 cx->switchToFunction(prop.mData.fPair.setterF);
                 return true;
             default:
@@ -1714,7 +1812,7 @@ static const double two31 = 2147483648.0;
         }
     }
 
-    inline bool JSInstance::setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v)
+    inline bool JSInstance::setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Write, &i)) {
@@ -1727,7 +1825,7 @@ static const double two31 = 2147483648.0;
                 *prop.mData.vp = v;
                 return false;
             case FunctionPair:
-                cx->mStack.push_back(v);
+                cx->pushValue(v);
                 cx->switchToFunction(prop.mData.fPair.setterF);
                 return true;
             default:
@@ -1741,17 +1839,17 @@ static const double two31 = 2147483648.0;
         }
     }
 
-    inline bool JSArrayInstance::getProperty(Context *cx, const String &name, IdentifierList *attr)
+    inline bool JSArrayInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         if (name.compare(widenCString("length")) == 0) {
-            cx->mStack.push_back(JSValue((float64)mLength));
+            cx->pushValue(JSValue((float64)mLength));
             return true;
         }
         else
             return JSInstance::getProperty(cx, name, attr);
     }
 
-    inline bool JSArrayInstance::setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v)
+    inline bool JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v)
     {
         if (name.compare(widenCString("length")) == 0) {
             uint32 newLength = (uint32)(v.toUInt32(cx).f64);
@@ -1782,10 +1880,10 @@ static const double two31 = 2147483648.0;
         return false;
     }
 
-    inline bool JSStringInstance::getProperty(Context *cx, const String &name, IdentifierList *attr)
+    inline bool JSStringInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         if (name.compare(widenCString("length")) == 0) {
-            cx->mStack.push_back(JSValue((float64)mLength));
+            cx->pushValue(JSValue((float64)mLength));
             return true;
         }
         else
@@ -1808,12 +1906,12 @@ static const double two31 = 2147483648.0;
     {
     }
 
-    inline void JSType::addStaticMethod(const String &name, IdentifierList *attr, JSFunction *f)
+    inline void JSType::addStaticMethod(const String &name, AttributeList *attr, JSFunction *f)
     {
         defineStaticMethod(name, attr, f->mResultType, f);
     }
 
-    inline void JSType::addMethod(const String &name, IdentifierList *attr, JSFunction *f)
+    inline void JSType::addMethod(const String &name, AttributeList *attr, JSFunction *f)
     {
         defineMethod(name, attr, f->mResultType, f);
     }
@@ -1902,7 +2000,7 @@ static const double two31 = 2147483648.0;
         return result;
     }
 
-    inline bool ScopeChain::setNameValue(const String& name, IdentifierList *attr, Context *cx)
+    inline bool ScopeChain::setNameValue(const String& name, AttributeList *attr, Context *cx)
     {
         PropertyIterator i;
         JSObject *top = *mScopeStack.rbegin();
@@ -1914,13 +2012,13 @@ static const double two31 = 2147483648.0;
             return result;
         }
         else {
-            JSValue v = cx->mStack.back();
+            JSValue v = cx->topValue();
             top->defineVariable(name, attr, Object_Type, v);
             return false;
         }
     }
 
-    inline bool ScopeChain::getNameValue(const String& name, IdentifierList *attr, Context *cx)
+    inline bool ScopeChain::getNameValue(const String& name, AttributeList *attr, Context *cx)
     {
         uint32 depth = 0;
         for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
@@ -1929,7 +2027,7 @@ static const double two31 = 2147483648.0;
             if ((*s)->hasProperty(name, attr, Read, &i)) {
                 
                 if (PROPERTY_KIND(i) == ValuePointer) {
-                    cx->mStack.push_back(*PROPERTY_VALUEPOINTER(i));
+                    cx->pushValue(*PROPERTY_VALUEPOINTER(i));
                     return false;
                 }
                 else

@@ -42,6 +42,9 @@
 #include "numerics.h"
 #include "js2runtime.h"
 
+// this is the IdentifierList passed to the name lookup routines
+#define CURRENT_ATTR    (NULL)
+
 #include "jsarray.h"
 
 namespace JavaScript {    
@@ -73,12 +76,15 @@ JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32
     return *thisValue;
 }
 
+
 JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
     JSObject *thisObj = thisValue->object;
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
+
+    ContextStackReplacement csr(cx);
 
     if (arrInst->mLength == 0)
         return JSValue(new String(widenCString("")));
@@ -87,8 +93,7 @@ JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
         for (uint32 i = 0; i < arrInst->mLength; i++) {
             String *id = numberToString(i);
             arrInst->getProperty(cx, *id, NULL);
-            JSValue result = cx->mStack.back();
-            cx->mStack.pop_back();
+            JSValue result = cx->popValue();
             s->append(*result.toString(cx).string);
             if (i < (arrInst->mLength - 1))
                 s->append(widenCString(","));
@@ -105,6 +110,8 @@ JSValue Array_toSource(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
 
+    ContextStackReplacement csr(cx);
+
     if (arrInst->mLength == 0)
         return JSValue(new String(widenCString("[]")));
     else {
@@ -112,8 +119,7 @@ JSValue Array_toSource(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
         for (uint32 i = 0; i < arrInst->mLength; i++) {
             String *id = numberToString(i);
             arrInst->getProperty(cx, *id, NULL);
-            JSValue result = cx->mStack.back();
-            cx->mStack.pop_back();
+            JSValue result = cx->popValue();
             if (!result.isUndefined())
                 s->append(*result.toString(cx).string);
             if (i < (arrInst->mLength - 1))
@@ -148,11 +154,12 @@ JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
 
+    ContextStackReplacement csr(cx);
+
     if (arrInst->mLength > 0) {
         String *id = numberToString(arrInst->mLength - 1);
         arrInst->getProperty(cx, *id, NULL);
-        JSValue result = cx->mStack.back();
-        cx->mStack.pop_back();
+        JSValue result = cx->popValue();
         arrInst->deleteProperty(*id, NULL);
         --arrInst->mLength;
         delete id;
@@ -162,14 +169,48 @@ JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
         return kUndefinedValue;
 }
 
+JSValue Array_concat(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    JSValue E = *thisValue;
+
+    JSArrayInstance *A = (JSArrayInstance *)(Array_Type->newInstance(cx));
+    uint32 n = 0;
+    uint32 i = 0;
+
+    ContextStackReplacement csr(cx);
+
+    do {
+        if (E.getType() != Array_Type) {
+            String *id = numberToString(n++);
+            A->setProperty(cx, *id, CURRENT_ATTR, E);            
+        }
+        else {
+            ASSERT(E.isObject() && dynamic_cast<JSArrayInstance *>(E.object));
+            JSArrayInstance *arrInst = (JSArrayInstance *)(E.object);
+            for (uint32 k = 0; k < arrInst->mLength; k++) {
+                String *id = numberToString(k);
+                arrInst->getProperty(cx, *id, NULL);
+                JSValue result = cx->popValue();
+                id = numberToString(n++);
+                A->setProperty(cx, *id, CURRENT_ATTR, result);            
+            }
+        }
+        E = argv[i++];
+    } while (i <= argc);
+    
+    return JSValue(A);
+}
+
 Context::PrototypeFunctions *getArrayProtos()
 {
     Context::ProtoFunDef arrayProtos[] = 
     {
-        { "toString", String_Type, 0, Array_toString },
-        { "toSource", String_Type, 0, Array_toSource },
-        { "push",     Number_Type, 1, Array_push },
-        { "pop",      Object_Type, 0, Array_pop },
+        { "toString",           String_Type, 0, Array_toString },
+        { "toLocaleString",     String_Type, 0, Array_toString },       // XXX 
+        { "toSource",           String_Type, 0, Array_toSource },
+        { "push",               Number_Type, 1, Array_push },
+        { "pop",                Object_Type, 0, Array_pop },
+        { "concat",             Array_Type,  1, Array_concat },
         { NULL }
     };
     return new Context::PrototypeFunctions(&arrayProtos[0]);

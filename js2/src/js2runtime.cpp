@@ -53,7 +53,7 @@
 
 #include "fdlibm_ns.h"
 
-// this is the IdentifierList passed to the name lookup routines
+// this is the AttributeList passed to the name lookup routines
 #define CURRENT_ATTR    (NULL)
 
 namespace JavaScript {    
@@ -73,25 +73,35 @@ JSType *Void_Type;
 JSType *Unit_Type;
 JSArrayType *Array_Type;
 
-bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind)
+bool hasAttribute(AttributeList* identifiers, Token::Kind tokenKind)
 {
     while (identifiers) {
-        if (identifiers->name.tokenKind == tokenKind)
-            return true;
+        if (identifiers->expr->getKind() == ExprNode::identifier) {
+            const StringAtom& name = (static_cast<IdentifierExprNode *>(identifiers->expr))->name;
+            if (name.tokenKind == tokenKind)
+                return true;
+        }
+        else
+            ASSERT(false);  // XXX NYI
         identifiers = identifiers->next;
     }
     return false;
 }
 
-bool hasAttribute(const IdentifierList* identifiers, const StringAtom &name)
+bool hasAttribute(AttributeList* identifiers, const StringAtom &name)
 {
     while (identifiers) {
-        if (identifiers->name == name)
-            return true;
+        if (identifiers->expr->getKind() == ExprNode::identifier) {
+            const StringAtom& idname = (static_cast<IdentifierExprNode *>(identifiers->expr))->name;
+            if (idname == name)
+                return true;
+            //  else
+                // look up the name in the scopechain to see if it's a const definition
+                // whose value we can access.
+                // 
+        }
         else
-            // look up the name in the scopechain to see if it's a const definition
-            // whose value we can access.
-            // 
+            ASSERT(false);  // XXX NYI
         identifiers = identifiers->next;
     }
     return false;
@@ -180,8 +190,7 @@ JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &n
         
     case Token::openBracket:
         {
-            const Token &t2 = operatorLexer.get(false);
-            ASSERT(t2.getKind() == Token::closeBracket);
+            operatorLexer.get(false);   // the closeBracket
             const Token &t3 = operatorLexer.get(false);
             if (t3.getKind() == Token::equal)
                 return JS2Runtime::IndexEqual;
@@ -320,18 +329,19 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     JSFunction *target = (*candidate)->mImp;
 
     if (target->isNative()) {
-        JSValue result = target->mCode(this, NULL, mStack.end() - 2, 2);
-        mStack.pop_back();      // XXX
-        mStack.pop_back();
-        mStack.push_back(result);
+        JSValue result = target->mCode(this, NULL, getBase(stackSize() - 2), 2);
+        popValue();      // XXX
+        popValue();
+        pushValue(result);
         return false;
     }
     else {
         // have to lie about the argCount since the Return sequence expects to 
         // consume the arguments AND the target pointer from the stack.
-        mActivationStack.push(new Activation(this, mLocals, mArgumentBase, mThis, mPC, mCurModule, 1));
+        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+                                                mArgumentBase, mThis, mPC, mCurModule, 1));
         mCurModule = target->mByteCode;
-        mArgumentBase = mStack.size() - 2;
+        mArgumentBase = stackSize() - 2;
         return true;
     }
 }
@@ -341,14 +351,25 @@ JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, JSValue *thisValue, 
     uint8 *pc = bcm->mCodeBase;
     uint8 *endPC = bcm->mCodeBase + bcm->mLength;
 
-    mCurModule = bcm;
+    JSValue *oldLocals = mLocals;
+    JSValue *oldStack = mStack;
+    uint32 oldStackTop = mStackTop;
+    uint32 oldStackMax = mStackMax;
+    JS2Runtime::ByteCodeModule *oldCurModule = mCurModule;
+    uint32 oldArgumentBase = mArgumentBase;
+
 
     mScopeChain->addScope(mGlobal);
 
-    mArgumentBase = mStack.size();
+    mCurModule = bcm;
     mLocals = new JSValue[bcm->mLocalsCount];
+    mStack = new JSValue[bcm->mStackDepth];
+    mStackMax = bcm->mStackDepth;
+    mStackTop = 0;
+    mArgumentBase = stackSize();
+
     for (uint32 i = 0; i < argc; i++)
-        mStack.push_back(argv[0]);
+        pushValue(argv[i]);
     if (thisValue)
         mThis = *thisValue;
     else
@@ -356,11 +377,16 @@ JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, JSValue *thisValue, 
 
     JSValue result = interpret(pc, endPC);
     
-    // clean off the arguments to keep the stack balanced
-    mStack.resize(mArgumentBase);
-
     mScopeChain->popScope();
 
+    
+    mLocals = oldLocals;
+    mStack = oldStack;
+    mStackTop = oldStackTop;
+    mStackMax = oldStackMax;
+    mCurModule = oldCurModule;
+    mArgumentBase = oldArgumentBase;
+    
     return result;
 }
 
@@ -370,82 +396,74 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
     while (pc != endPC) {
         try {
             if (mDebugFlag) {
-                printFormat(stdOut, "                                  %d        ", mStack.size());
+                printFormat(stdOut, "                                  %d        ", stackSize());
                 printInstruction(stdOut, (pc - mCurModule->mCodeBase), *mCurModule);
             }
             switch ((ByteCodeOp)(*pc++)) {
             case PopOp:
                 {
-                    result = mStack.back(); // XXX debug only?
-                    mStack.pop_back();
+                    result = popValue(); // XXX debug only? - just decrement top
                 }
                 break;
             case DupOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.push_back(v);
+                    JSValue v = topValue();
+                    pushValue(v);
                 }
                 break;
             case DupInsertOp:   // XXX something more efficient than pop/push?
                 {
-                    JSValue v1 = mStack.back();
-                    mStack.pop_back();
-                    JSValue v2 = mStack.back();
-                    mStack.pop_back();
-                    mStack.push_back(v1);
-                    mStack.push_back(v2);
-                    mStack.push_back(v1);
+                    JSValue v1 = popValue();
+                    JSValue v2 = popValue();
+                    pushValue(v1);
+                    pushValue(v2);
+                    pushValue(v1);
                 }
                 break;
             case SwapOp:   // XXX something more efficient than pop/push?
                 {
-                    JSValue v1 = mStack.back();
-                    mStack.pop_back();
-                    JSValue v2 = mStack.back();
-                    mStack.pop_back();
-                    mStack.push_back(v1);
-                    mStack.push_back(v2);
+                    JSValue v1 = popValue();
+                    JSValue v2 = popValue();
+                    pushValue(v1);
+                    pushValue(v2);
                 }
                 break;
             case LogicalXorOp:
                 {
-                    JSValue v2 = mStack.back();
-                    mStack.pop_back();
+                    JSValue v2 = popValue();
                     ASSERT(v2.isBool());
-                    JSValue v1 = mStack.back();
-                    mStack.pop_back();
+                    JSValue v1 = popValue();
                     ASSERT(v1.isBool());
 
                     if (v1.boolean) {
                         if (v2.boolean) {
-                            mStack.pop_back();
-                            mStack.pop_back();
-                            mStack.push_back(kFalseValue);
+                            popValue();
+                            popValue();
+                            pushValue(kFalseValue);
                         }
                         else
-                            mStack.pop_back();
+                            popValue();
                     }
                     else {
                         if (v1.boolean) {
-                            mStack.pop_back();
-                            mStack.pop_back();
-                            mStack.push_back(kFalseValue);
+                            popValue();
+                            popValue();
+                            pushValue(kFalseValue);
                         }
                         else {
-                            JSValue t = mStack.back();
-                            mStack.pop_back();
-                            mStack.pop_back();
-                            mStack.push_back(t);
+                            JSValue t = topValue();
+                            popValue();
+                            popValue();
+                            pushValue(t);
                         }
                     }
                 }
                 break;
             case LogicalNotOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
                     ASSERT(v.isBool());
-                    mStack.push_back(JSValue(!v.boolean));
+                    pushValue(JSValue(!v.boolean));
                 }
                 break;
             case JumpOp:
@@ -456,15 +474,13 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case ToBooleanOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
-                    mStack.push_back(v.toBoolean(this));
+                    JSValue v = popValue();
+                    pushValue(v.toBoolean(this));
                 }
                 break;
             case JumpFalseOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
                     ASSERT(v.isBool());
                     if (!v.boolean) {
                         uint32 offset = *((uint32 *)pc);
@@ -476,8 +492,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case JumpTrueOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
                     ASSERT(v.isBool());
                     if (v.boolean) {
                         uint32 offset = *((uint32 *)pc);
@@ -490,20 +505,12 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             case InvokeOp:
                 {
                     uint32 argCount = *((uint32 *)pc); 
+                    uint32 cleanUp = argCount;
                     pc += sizeof(uint32);
                     ThisFlag thisFlag = (ThisFlag)(*pc++);
                     
-                    JSValue *targetValue = mStack.end() - (argCount + 1);
-                    if (!targetValue->isFunction())
-                        throw Exception(Exception::referenceError, "Not a function");
-                    JSFunction *target = targetValue->function;
-                    uint32 argBase = 0;
-                    uint32 cleanUp = argCount;
-
-                    if (mStack.size() > argCount)
-                        argBase = mStack.size() - argCount;
-
-                    // get this  (, man)
+                    JSValue *targetValue = getBase(stackSize() - (argCount + 1));
+                    JSFunction *target;
                     JSValue oldThis = mThis;
                     switch (thisFlag) {
                     case NoThis:
@@ -513,30 +520,52 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         mThis = target->getThisValue(); 
                         break;
                     case Explicit:
-                        mThis = *(mStack.end() - (argCount + 2));
+                        mThis = getValue(stackSize() - (argCount + 2));
                         cleanUp++;
                         break;
                     }
 
+                    if (!targetValue->isFunction()) {
+                        if (targetValue->isType()) {
+                            // "  Type()  "
+                            // - it's a cast expression, we call the
+                            // default constructor, overriding the supplied 'this'.
+                            //
+                            target = targetValue->type->getDefaultConstructor();
+                            mThis = kNullValue;
+                        }
+                        else
+                            throw Exception(Exception::referenceError, "Not a function");
+                    }
+                    else
+                        target = targetValue->function;
+                    
+                    uint32 argBase = 0;
+                    if (stackSize() > argCount)
+                        argBase = stackSize() - argCount;
+
                     if (target->mByteCode) {
                         for (uint32 i = argCount; i < target->mExpectedArgs; i++) {
-                            mStack.push_back(kUndefinedValue);
+                            pushValue(kUndefinedValue);
                             cleanUp++;
                         }
-                        mActivationStack.push(new Activation(this, mLocals, mArgumentBase, oldThis,
+                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+                                                                    mArgumentBase, oldThis,
                                                                     pc, mCurModule, cleanUp));
                         mCurModule = target->mByteCode;
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
                         mArgumentBase = argBase;
-                        delete[] mLocals;
                         mLocals = new JSValue[mCurModule->mLocalsCount];
+                        mStack = new JSValue[mCurModule->mStackDepth];
+                        mStackMax = mCurModule->mStackDepth;
+                        mStackTop = 0;
                     }
                     else {
-                        JSValue result = (target->mCode)(this, &mThis, &mStack[argBase], argCount);
+                        JSValue result = (target->mCode)(this, &mThis, getBase(argBase), argCount);
                         mThis = oldThis;
-                        mStack.resize(mStack.size() - (cleanUp + 1));
-                        mStack.push_back(result);
+                        resizeStack(stackSize() - (cleanUp + 1));
+                        pushValue(result);
                     }
 
                 }
@@ -549,17 +578,18 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mCurModule = prev->mModule;
                     pc = prev->mPC;
                     endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                    mLocals = new JSValue[mCurModule->mLocalsCount];
-                    memcpy(mLocals, prev->mLocals, sizeof(JSValue) * mCurModule->mLocalsCount);
+                    mStack = prev->mStack;
+                    mStackTop = prev->mStackTop;
+                    mStackMax = mCurModule->mStackDepth;
+                    mLocals = prev->mLocals;
                     mArgumentBase = prev->mArgumentBase;
                     mThis = prev->mThis;
-                    mStack.resize(mStack.size() - (prev->mArgCount + 1));
+                    resizeStack(stackSize() - (prev->mArgCount + 1));
                 }
                 break;
             case ReturnOp:
                 {
-                    JSValue result = mStack.back();
-                    mStack.pop_back();
+                    JSValue result = popValue();
 
                     Activation *prev = mActivationStack.top();
                     mActivationStack.pop();
@@ -567,91 +597,90 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mCurModule = prev->mModule;
                     pc = prev->mPC;
                     endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                    mLocals = new JSValue[mCurModule->mLocalsCount];
-                    memcpy(mLocals, prev->mLocals, sizeof(JSValue) * mCurModule->mLocalsCount);
+                    mStack = prev->mStack;
+                    mStackTop = prev->mStackTop;
+                    mStackMax = mCurModule->mStackDepth;
+                    mLocals = prev->mLocals;
                     mArgumentBase = prev->mArgumentBase;
                     mThis = prev->mThis;
-                    mStack.resize(mStack.size() - (prev->mArgCount + 1));
-                    mStack.push_back(result);
+                    resizeStack(stackSize() - (prev->mArgCount + 1));
+                    pushValue(result);
                 }
                 break;
             case LoadTypeOp:
                 {
                     JSType *t = *((JSType **)pc);
                     pc += sizeof(JSType *);
-                    mStack.push_back(JSValue(t));
+                    pushValue(JSValue(t));
                 }
                 break;
             case LoadFunctionOp:
                 {
                     JSFunction *f = *((JSFunction **)pc);
                     pc += sizeof(JSFunction *);
-                    mStack.push_back(JSValue(f));
+                    pushValue(JSValue(f));
                 }
                 break;
             case LoadConstantStringOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(JSValue(mCurModule->getString(index)));
+                    pushValue(JSValue(mCurModule->getString(index)));
                 }
                 break;
             case LoadConstantNumberOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(JSValue(mCurModule->getNumber(index)));
+                    pushValue(JSValue(mCurModule->getNumber(index)));
                 }
                 break;
             case LoadConstantUndefinedOp:
-                mStack.push_back(kUndefinedValue);
+                pushValue(kUndefinedValue);
                 break;
             case LoadConstantTrueOp:
-                mStack.push_back(kTrueValue);
+                pushValue(kTrueValue);
                 break;
             case LoadConstantFalseOp:
-                mStack.push_back(kFalseValue);
+                pushValue(kFalseValue);
                 break;
             case LoadConstantNullOp:
-                mStack.push_back(kNullValue);
+                pushValue(kNullValue);
                 break;
             case TypeOfOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
                     if (v.isUndefined())
-                        mStack.push_back(JSValue(new String(widenCString("undefined"))));
+                        pushValue(JSValue(new String(widenCString("undefined"))));
                     else
                     if (v.isNull())
-                        mStack.push_back(JSValue(new String(widenCString("object"))));
+                        pushValue(JSValue(new String(widenCString("object"))));
                     else
                     if (v.isBool())
-                        mStack.push_back(JSValue(new String(widenCString("boolean"))));
+                        pushValue(JSValue(new String(widenCString("boolean"))));
                     else
                     if (v.isNumber())
-                        mStack.push_back(JSValue(new String(widenCString("number"))));
+                        pushValue(JSValue(new String(widenCString("number"))));
                     else
                     if (v.isString())
-                        mStack.push_back(JSValue(new String(widenCString("string"))));
+                        pushValue(JSValue(new String(widenCString("string"))));
                     else
                     if (v.isFunction())
-                        mStack.push_back(JSValue(new String(widenCString("function"))));
+                        pushValue(JSValue(new String(widenCString("function"))));
                     else
-                        mStack.push_back(JSValue(new String(widenCString("object"))));
+                        pushValue(JSValue(new String(widenCString("object"))));
                 }
                 break;
             case AtOp:
                 {
-                    JSValue t = mStack.back();
-                    mStack.pop_back();
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue t = popValue();
+                    JSValue v = popValue();
                     if (t.isType()) {
                         if (v.isObject() 
                                 && (v.object->getType() == t.type))
-                            mStack.push_back(v);
+                            pushValue(v);
                         else
-                            mStack.push_back(kNullValue);   // XXX or throw an exception if 
+                            pushValue(kNullValue);   // XXX or throw an exception if 
                                                             // NULL is not a member of type t
                     }
                     else
@@ -660,28 +689,26 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case InstanceOfOp:
                 {
-                    JSValue t = mStack.back();
-                    mStack.pop_back();
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue t = popValue();
+                    JSValue v = popValue();
                     if (t.isType()) {
                         if (v.isNull())
                             if (t.type == Object_Type)
-                                mStack.push_back(kTrueValue);
+                                pushValue(kTrueValue);
                             else
-                                mStack.push_back(kFalseValue);
+                                pushValue(kFalseValue);
                         else
                             if (v.isObject() 
                                     && ((v.object->getType() == t.type)
                                         || (v.object->getType()->derivesFrom(t.type))))
-                                mStack.push_back(kTrueValue);
+                                pushValue(kTrueValue);
                             else
-                                mStack.push_back(kFalseValue);
+                                pushValue(kFalseValue);
                     }
                     else {
                         if (t.isObject() && t.isFunction()) {                            
                             // XXX prove that t->function["prototype"] is on t.object->mPrototype chain
-                            mStack.push_back(kTrueValue);
+                            pushValue(kTrueValue);
                         }
                         else
                             throw Exception(Exception::typeError, "InstanceOf needs object");
@@ -709,7 +736,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         }
                     }
                     else
-                        mStack.push_back(kUndefinedValue);
+                        pushValue(kUndefinedValue);
                 }
                 break;
             case SetNameOp:
@@ -724,10 +751,8 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case GetElementOp:
                 {
-                    JSValue index = mStack.back();
-                    mStack.pop_back();
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue index = popValue();
+                    JSValue base = popValue();
                     JSObject *obj = NULL;
                     if (!base.isObject() && !base.isType())
                         obj = base.toObject(this).object;
@@ -741,12 +766,9 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case SetElementOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
-                    JSValue index = mStack.back();
-                    mStack.pop_back();
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
+                    JSValue index = popValue();
+                    JSValue base = popValue();
                     JSObject *obj = NULL;
                     if (!base.isObject() && !base.isType())
                         obj = base.toObject(this).object;
@@ -757,13 +779,12 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         // need to invoke
                     }
                     else
-                        mStack.push_back(v);
+                        pushValue(v);
                 }
                 break;
             case GetPropertyOp:
                 {
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue base = popValue();
                     JSObject *obj = NULL;
                     if (!base.isObject() && !base.isType())
                         obj = base.toObject(this).object;
@@ -779,21 +800,20 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case GetInvokePropertyOp:
                 {
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue base = popValue();
                     JSObject *obj = NULL;
                     if (!base.isObject() && !base.isType())
                         obj = base.toObject(this).object;
                     else
                         obj = base.object;
-                    mStack.push_back(JSValue(obj)); // want the "toObject'd" version of base
+                    pushValue(JSValue(obj)); // want the "toObject'd" version of base
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     
                     const String &name = *mCurModule->getString(index);
 
 //                    const String &name = *mCurModule->getIdentifierString(index);
-//                    IdentifierList *attr = mCurModule->getIdentifierAttr(index);
+//                    AttributeList *attr = mCurModule->getIdentifierAttr(index);
 //                    attr->next = CURRENT_ATTR;
 
                     if (obj->getProperty(this, name, CURRENT_ATTR) ) {
@@ -803,10 +823,8 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case SetPropertyOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
+                    JSValue base = popValue();
                     JSObject *obj = NULL;
                     if (!base.isObject() && !base.isType())
                         obj = base.toObject(this).object;
@@ -819,7 +837,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         // need to invoke
                     }
                     else
-                        mStack.push_back(v);// ok to have this here, because the semantics for
+                        pushValue(v);// ok to have this here, because the semantics for
                                             // the routine to be invoked require it to leave
                                             // the set value on the top of the stack
                 }
@@ -827,28 +845,31 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             case DoUnaryOp:
                 {
                     Operator op = (Operator)(*pc++);
-                    JSValue v = mStack.back();
+                    JSValue v = topValue();
                     JSFunction *target;
                     if (v.isObject() && (target = v.object->getType()->getUnaryOperator(op)) )
                     {                    
-                        uint32 argBase = mStack.size() - 1;
+                        uint32 argBase = stackSize() - 1;
                         if (target->mByteCode) {
                             // lie about argCount to the activation since it
                             // would normally expect to clean the function pointer
                             // off the stack as well.
-                            mActivationStack.push(new Activation(this, mLocals, mArgumentBase, 
-                                                                   mThis, pc, mCurModule, 0));
+                            mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+                                                                    mArgumentBase, mThis,
+                                                                    pc, mCurModule, 0));
                             mCurModule = target->mByteCode;
                             pc = mCurModule->mCodeBase;
                             endPC = mCurModule->mCodeBase + mCurModule->mLength;
                             mArgumentBase = argBase;
-                            delete mLocals;
                             mLocals = new JSValue[mCurModule->mLocalsCount];
+                            mStack = new JSValue[mCurModule->mStackDepth];
+                            mStackMax = mCurModule->mStackDepth;
+                            mStackTop = 0;
                         }
                         else {
-                            JSValue result = (target->mCode)(this, NULL, &mStack[argBase], 0);
-                            mStack.erase(&mStack[argBase], mStack.end());
-                            mStack.push_back(result);
+                            JSValue result = (target->mCode)(this, NULL, getBase(argBase), 0);
+                            resizeStack(stackSize() -  1);
+                            pushValue(result);
                         }
                         break;
                     }                    
@@ -858,7 +879,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         NOT_REACHED("bad unary op");
                     case Increment: // defined in terms of '+'
                         {
-                            mStack.push_back(JSValue(1.0));
+                            pushValue(JSValue(1.0));
                             mPC = pc;
                             if (executeOperator(Plus, v.getType(), Number_Type)) {
                                 // need to invoke
@@ -871,7 +892,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         break;
                     case Decrement: // defined in terms of '-'
                         {
-                            mStack.push_back(JSValue(1.0));
+                            pushValue(JSValue(1.0));
                             mPC = pc;
                             if (executeOperator(Minus, v.getType(), Number_Type)) {
                                 // need to invoke
@@ -884,26 +905,26 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         break;
                     case Negate:
                         {
-                            mStack.pop_back();
+                            popValue();
                             JSValue n = v.toNumber(this);
                             if (n.isNaN())
-                                mStack.push_back(n);
+                                pushValue(n);
                             else
-                                mStack.push_back(JSValue(-n.f64));
+                                pushValue(JSValue(-n.f64));
                         }
                         break;
                     case Posate:
                         {
-                            mStack.pop_back();
+                            popValue();
                             JSValue n = v.toNumber(this);
-                            mStack.push_back(n);
+                            pushValue(n);
                         }
                         break;
                     case Complement:
                         {
-                            mStack.pop_back();
+                            popValue();
                             JSValue n = v.toInt32(this);
-                            mStack.push_back(JSValue((float64)(~(int32)(n.f64))));
+                            pushValue(JSValue((float64)(~(int32)(n.f64))));
                         }
                         break;
                     }
@@ -912,24 +933,25 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             case DoOperatorOp:
                 {
                     Operator op = (Operator)(*pc++);
-                    JSValue v1 = *(mStack.end() - 2);
-                    JSValue v2 = *(mStack.end() - 1);
+                    JSValue v1 = getValue(stackSize() - 2);
+                    JSValue v2 = getValue(stackSize() - 1);
                     mPC = pc;
                     if (executeOperator(op, v1.getType(), v2.getType())) {
                         // need to invoke
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                        delete mLocals;
                         mLocals = new JSValue[mCurModule->mLocalsCount];
+                        mStack = new JSValue[mCurModule->mStackDepth];
+                        mStackMax = mCurModule->mStackDepth;
+                        mStackTop = 0;
                     }
                 }
                 break;
             case GetConstructorOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
                     ASSERT(v.isType());
-                    mStack.push_back(JSValue(v.type->getDefaultConstructor()));
+                    pushValue(JSValue(v.type->getDefaultConstructor()));
                 }
                 break;
             case NewInstanceOp:
@@ -937,13 +959,13 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 argCount = *((uint32 *)pc); 
                     pc += sizeof(uint32);
                     uint32 argBase = 0;
-                    if (mStack.size() > argCount)
-                        argBase = mStack.size() - argCount;
+                    if (stackSize() > argCount)
+                        argBase = stackSize() - argCount;
                     JSValue oldThis = mThis;
                     uint32 cleanUp = argCount;
 
                     
-                    JSValue *typeValue = mStack.end() - (argCount + 1);
+                    JSValue *typeValue = getBase(stackSize() - (argCount + 1));
                     if (!typeValue->isType())
                         throw Exception(Exception::referenceError, "Not a type");
                         // XXX yes, but what about 1.5 style constructor functions
@@ -961,30 +983,32 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     
                     if (target->mByteCode) {
                         for (uint32 i = argCount; i < target->mExpectedArgs; i++) {
-                            mStack.push_back(kUndefinedValue);
+                            pushValue(kUndefinedValue);
                             cleanUp++;
                         }
-                        mActivationStack.push(new Activation(this, mLocals, mArgumentBase, oldThis,
+                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop,
+                                                                    mArgumentBase, oldThis,
                                                                     pc, mCurModule, cleanUp));
                         mCurModule = target->mByteCode;
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
                         mArgumentBase = argBase;
-                        delete[] mLocals;
                         mLocals = new JSValue[mCurModule->mLocalsCount];
+                        mStack = new JSValue[mCurModule->mStackDepth];
+                        mStackMax = mCurModule->mStackDepth;
+                        mStackTop = 0;
                     }
                     else {
-                        JSValue result = (target->mCode)(this, &mThis, &mStack[argBase], argCount);
+                        JSValue result = (target->mCode)(this, &mThis, getBase(argBase), argCount);
                         mThis = oldThis;
-                        mStack.resize(mStack.size() - (cleanUp + 1));
-                        mStack.push_back(result);
+                        resizeStack(stackSize() - (cleanUp + 1));
+                        pushValue(result);
                     }
                  }
                 break;
             case NewThisOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
                     if (mThis.isNull()) {
                         ASSERT(v.isType());
                         mThis = JSValue(v.type->newInstance(this));
@@ -993,117 +1017,111 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case NewObjectOp:
                 {
-                    mStack.push_back(JSValue(Object_Type->newInstance(this)));
+                    pushValue(JSValue(Object_Type->newInstance(this)));
                 }
                 break;
             case GetLocalVarOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(mLocals[index]);
+                    pushValue(mLocals[index]);
                 }
                 break;
             case SetLocalVarOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mLocals[index] = mStack.back();
+                    mLocals[index] = topValue();
                 }
                 break;
             case LoadThisOp:
                 {
-                    mStack.push_back(mThis);
+                    pushValue(mThis);
                 }
                 break;
             case GetArgOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(mStack[mArgumentBase + index]);
+                    Activation *prev = mActivationStack.top();
+                    pushValue(prev->mStack[mArgumentBase + index]);
                 }
                 break;
             case SetArgOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack[mArgumentBase + index] = mStack.back();
+                    Activation *prev = mActivationStack.top();
+                    prev->mStack[mArgumentBase + index] = topValue();
                 }
                 break;
             case GetMethodOp:
                 {
-                    JSValue base = mStack.back();
+                    JSValue base = topValue();
                     ASSERT(dynamic_cast<JSInstance *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(JSValue(base.object->mType->mMethods[index]));
+                    pushValue(JSValue(base.object->mType->mMethods[index]));
                 }
                 break;
             case GetStaticMethodOp:
                 {
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue base = popValue();
                     ASSERT(dynamic_cast<JSType *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     JSType *classP = (JSType *)(base.object);
                     ASSERT(classP->mStatics);
-                    mStack.push_back(JSValue(classP->mStatics->mMethods[index]));
+                    pushValue(JSValue(classP->mStatics->mMethods[index]));
                 }
                 break;
             case GetFieldOp:
                 {
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue base = popValue();
                     ASSERT(dynamic_cast<JSInstance *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(((JSInstance *)(base.object))->mInstanceValues[index]);
+                    pushValue(((JSInstance *)(base.object))->mInstanceValues[index]);
                 }
                 break;
             case SetFieldOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
+                    JSValue base = popValue();
                     ASSERT(dynamic_cast<JSInstance *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     ((JSInstance *)(base.object))->mInstanceValues[index] = v;
-                    mStack.push_back(v);
+                    pushValue(v);
                 }
                 break;
             case GetStaticFieldOp:
                 {
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue base = popValue();
                     ASSERT(dynamic_cast<JSType *>(base.object));
                     JSType *classP = (JSType *)(base.object);
                     ASSERT(classP->mStatics);
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(classP->mStatics->mInstanceValues[index]);
+                    pushValue(classP->mStatics->mInstanceValues[index]);
                 }
                 break;
             case SetStaticFieldOp:
                 {
-                    JSValue v = mStack.back();
-                    mStack.pop_back();
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue v = popValue();
+                    JSValue base = popValue();
                     ASSERT(dynamic_cast<JSType *>(base.object));
                     JSType *classP = (JSType *)(base.object);
                     ASSERT(classP->mStatics);
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     classP->mStatics->mInstanceValues[index] = v;
-                    mStack.push_back(v);
+                    pushValue(v);
                 }
                 break;
             case WithinOp:
                 {
-                    JSValue base = mStack.back();
-                    mStack.pop_back();
+                    JSValue base = popValue();
                     mScopeChain->addScope(base.toObject(this).object);
                 }
                 break;
@@ -1126,7 +1144,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case LoadGlobalObjectOp:
                 {
-                    mStack.push_back(JSValue(mGlobal));
+                    pushValue(JSValue(mGlobal));
                 }
                 break;
             case JsrOp:
@@ -1148,11 +1166,11 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     Activation *curAct = (mActivationStack.size() > 0) ? mActivationStack.top() : NULL;
                     uint32 handler = *((uint32 *)pc);
                     if (handler != -1)
-                        mTryStack.push(new HandlerData(pc + handler, mStack.size(), curAct));
+                        mTryStack.push(new HandlerData(pc + handler, stackSize(), curAct));
                     pc += sizeof(uint32);
                     handler = *((uint32 *)pc);
                     if (handler != -1)
-                        mTryStack.push(new HandlerData(pc + handler, mStack.size(), curAct));
+                        mTryStack.push(new HandlerData(pc + handler, stackSize(), curAct));
                     pc += sizeof(uint32);
                 }
                 break;
@@ -1165,7 +1183,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case ThrowOp:
                 {   
-                    JSValue x = mStack.back();
+                    JSValue x = topValue();
                     if (mTryStack.size() > 0) {
                         HandlerData *hndlr = (HandlerData *)mTryStack.top();
                         Activation *curAct = (mActivationStack.size() > 0) ? mActivationStack.top() : NULL;
@@ -1177,15 +1195,17 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             } while (hndlr->mActivation != curAct);
                             mCurModule = prev->mModule;
                             endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                            mLocals = new JSValue[mCurModule->mLocalsCount];
-                            memcpy(mLocals, prev->mLocals, sizeof(JSValue) * mCurModule->mLocalsCount);
+                            mLocals = prev->mLocals;
+                            mStack = prev->mStack;
+                            mStackTop = 1;          // just the exception object remains
+                            mStackMax = mCurModule->mStackDepth;
                             mArgumentBase = prev->mArgumentBase;
                             mThis = prev->mThis;
                         }
 
-                        mStack.resize(hndlr->mStackSize);
+                        resizeStack(hndlr->mStackSize);
                         pc = hndlr->mPC;
-                        mStack.push_back(x);
+                        pushValue(x);
                     }
                     else
                         throw Exception(Exception::uncaughtError, "No handler for throw");
@@ -1408,16 +1428,17 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
         ByteCodeGen bcg(cx, scopeChain);
 
         if (mSuperType && mSuperType->getDefaultConstructor()) {
-            bcg.addByte(LoadThisOp);
-            bcg.addByte(LoadFunctionOp);
+            bcg.addOp(LoadThisOp);
+            bcg.addOp(LoadFunctionOp);
             bcg.addPointer(mSuperType->getDefaultConstructor());
-            bcg.addByte(InvokeOp);
+            bcg.addOpAdjustDepth(InvokeOp, -1);
             bcg.addLong(0);
             bcg.addByte(Explicit);
-            bcg.addByte(PopOp);
+            bcg.addOp(PopOp);
         }
-        bcg.addByte(LoadThisOp);
-        bcg.addByte(ReturnOp);
+        bcg.addOp(LoadThisOp);
+        ASSERT(bcg.mStackTop == 1);
+        bcg.addOpSetDepth(ReturnOp, 0);
         fnc->mByteCode = new JS2Runtime::ByteCodeModule(&bcg);        
 
         scopeChain->defineConstructor(mClassName, NULL, NULL, fnc);   // XXX attributes?

@@ -111,7 +111,7 @@ SetFieldOp,             // <slot>                   <base> <object> --> <object>
 GetStaticFieldOp,       // <slot>                   <base> --> <object>
 SetStaticFieldOp,       // <slot>                   <base> <object> --> <object>
 // for instance methods
-GetMethodOp,            // <slot>                   <base> --> >base> <function>
+GetMethodOp,            // <slot>                   <base> --> <base> <function>
 GetMethodRefOp,         // <slot>                   <base> --> <bound function> 
 // for static methods
 GetStaticMethodOp,      // <slot>                   <base> --> <function>
@@ -140,8 +140,15 @@ LoadGlobalObjectOp,     //                          --> <object>
 PushScopeOp,            // <pointer>        XXX !!! XXX
 PopScopeOp,             // <pointer>        XXX !!! XXX
 
+OpCodeCount
 
 } ByteCodeOp;
+
+struct ByteCodeData {
+    int8 stackImpact;
+    char *opName;
+};
+extern ByteCodeData gByteCodeData[OpCodeCount];
 
 
     class ByteCodeModule {
@@ -156,6 +163,7 @@ PopScopeOp,             // <pointer>        XXX !!! XXX
 
 
         uint32 mLocalsCount;        // number of local vars to allocate space for
+        uint32 mStackDepth;         // max. depth of execution stack
         
         uint8 *mCodeBase;
         uint32 mLength;
@@ -204,7 +212,13 @@ PopScopeOp,             // <pointer>        XXX !!! XXX
     public:
 
         ByteCodeGen(Context *cx, ScopeChain *scopeChain) 
-            : mBuffer(new CodeBuffer), mScopeChain(scopeChain), m_cx(cx), mNamespaceList(NULL) { }
+            :   mBuffer(new CodeBuffer), 
+                mScopeChain(scopeChain), 
+                m_cx(cx), 
+                mNamespaceList(NULL) ,
+                mStackTop(0),
+                mStackMax(0)
+        { }
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
@@ -227,13 +241,39 @@ PopScopeOp,             // <pointer>        XXX !!! XXX
         std::vector<Label> mLabelList;
         std::vector<uint32> mLabelStack;
 
-        IdentifierList *mNamespaceList;
+        AttributeList *mNamespaceList;
+
+        uint32 mStackTop;
+        uint32 mStackMax;
 
         bool hasContent()
         {
             return (mBuffer->size() > 0);
         }
        
+        void addOp(uint8 op)        
+        { 
+            addByte(op);
+            ASSERT(gByteCodeData[op].stackImpact != -128);
+            mStackTop += gByteCodeData[op].stackImpact;
+            if (mStackTop > mStackMax)
+                mStackMax = mStackTop; 
+        }
+
+        void addOpStretchStack(uint8 op, uint32 n)        
+        {
+            addByte(op);
+            mStackTop += gByteCodeData[op].stackImpact;
+            if ((mStackTop + n) > mStackMax)
+                mStackMax = (mStackTop + n); 
+        }
+
+        // these routines assume the depth is being reduced
+        // i.e. they don't reset mStackMax
+        void addOpAdjustDepth(uint8 op, uint32 depth)        
+                                    { addByte(op); mStackTop += depth; }
+        void addOpSetDepth(uint8 op, uint32 depth)        
+                                    { addByte(op); mStackTop = depth; }
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
         void addPointer(void *v)    { addLong((uint32)v); }
@@ -272,7 +312,7 @@ PopScopeOp,             // <pointer>        XXX !!! XXX
 
         uint32 getTopLabel(Label::LabelKind kind, const StringAtom *name)
         {
-            uint32 result;
+            uint32 result = -1;
             for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
                                 end = mLabelStack.rend();
                                 (i != end); i++)
