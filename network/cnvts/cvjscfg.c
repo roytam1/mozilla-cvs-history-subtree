@@ -20,6 +20,7 @@
 #include "cvsimple.h"
 #include "prefapi.h"
 #include "mkutils.h"
+#include "netutils.h"
 #include "xpgetstr.h"
 #include "jsapi.h"
 #include "fe_proto.h"

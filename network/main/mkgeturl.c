@@ -24,6 +24,7 @@
  * Additions/Changes by Judson Valeski, Gagan Saksena 1997.
  */
 #include "rosetta.h"
+#include "xp_error.h"
 #include "mkutils.h"
 #include "mkgeturl.h"
 #include "shist.h"
