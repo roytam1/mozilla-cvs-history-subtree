@@ -29,23 +29,20 @@ C_OBJS=.\$(OBJDIR)\vocab.obj \
        .\$(OBJDIR)\utils.obj \
        .\$(OBJDIR)\rdfparse.obj \
        .\$(OBJDIR)\bmk2mcf.obj \
-	.\$(OBJDIR)\columns.obj \
+       .\$(OBJDIR)\columns.obj \
        .\$(OBJDIR)\rdfht.obj \
        $(NULL)
 
-       
-LINCS=-I$(XPDIST)\public\nspr
+CPP_OBJS=\
+	.\$(OBJDIR)\comwrap.obj \
+	$(NULL)
+
+LINCS=-I$(XPDIST)\public\xpcom
 LINCS= $(LINCS) -I$(PUBLIC)\rdf
 include <$(DEPTH)\config\rules.mak>
 
 libs:: $(LIBRARY)
     $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
-
-
-	
-
-
-
 
 
 

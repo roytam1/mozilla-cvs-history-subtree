@@ -39,7 +39,7 @@ typedef struct RDF_NotificationStruct* RDF_Notification;
 
 typedef void (*RDF_NotificationProc)(RDF_Event theEvent, void* pdata);
 
-PR_PUBLIC_API(RDF) RDF_GetDB(const char** dbs);
+PR_PUBLIC_API(RDF) RDF_GetDB(const RDF_String* dbs);
 PR_PUBLIC_API(RDF_Error) RDF_ReleaseDB(RDF rdf);
 PR_PUBLIC_API(RDFT) RDF_AddDataSource(RDF rdf, char* dataSource);
 PR_PUBLIC_API(RDF_Error) RDF_ReleaseDataSource(RDF rdf, RDFT dataSource);
@@ -124,3 +124,5 @@ PR_PUBLIC_API(void) RDFUtil_SetDefaultSelectedView(RDF_Resource container);
 /* this stuff is stuck in here for netlib */
 
 NSPR_END_EXTERN_C
+
+#endif /* rdfc_h__ */

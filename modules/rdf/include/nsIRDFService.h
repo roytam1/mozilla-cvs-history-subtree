@@ -33,6 +33,7 @@
 #include "rdf.h"
 
 class nsIRDFDataSource;
+class nsIRDFDataBase;
 
 // 6edf3660-32f0-11d2-9abe-00600866748f
 #define NS_IRDFSERVICE_IID \
@@ -59,7 +60,7 @@ public:
 #endif /* RDF_NOT_IMPLEMENTED */
 
   NS_IMETHOD CreateDatabase(const RDF_String* url_ary,
-                            nsIRDFDatabase **db /* out */) = 0;
+                            nsIRDFDataBase **db /* out */) = 0;
 
 };
 

@@ -35,13 +35,15 @@
     0x11d2, \
   { 0xbc, 0x16, 0x00, 0x80, 0x5f, 0x91, 0x2f, 0xe7 } \
 }
-      
 
-class nsIRDFObserver ; public nsISupports
+class nsIRDFDataSource;      
+
+class nsIRDFObserver : public nsISupports
 {
+public:
 
   NS_IMETHOD HandleEvent(nsIRDFDataSource *source,
-			 RDF_Event event) = 0;
+                         RDF_Event event) = 0;
 
 };
 

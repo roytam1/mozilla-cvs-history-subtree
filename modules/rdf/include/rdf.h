@@ -27,6 +27,8 @@ typedef nsresult RDF_Error;
 
 #define RDF_ERROR_ILLEGAL_ASSERT NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF,1)
 #define RDF_ERROR_ILLEGAL_KILL   NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF,2)
+#define RDF_ERROR_UNABLE_TO_CREATE NS_ERROR_GENERATE_FAILURE( NS_ERROR_MODULE_RDF,3)
+
 #define RDF_ERROR_NO_MEMORY NS_ERROR_OUT_OF_MEMORY /* XXX remove this */
 
 NSPR_BEGIN_EXTERN_C
@@ -36,11 +38,13 @@ typedef struct RDF_CursorStruct* RDF_Cursor;
 typedef struct RDF_DBStruct* RDF;
 typedef struct RDF_TranslatorStruct *RDFT;
 
+typedef char* RDF_String;
+
 typedef enum { 
   RDF_ANY_TYPE,
   RDF_RESOURCE_TYPE,
   RDF_INT_TYPE,
-  RDF_STRING_TYPE.
+  RDF_STRING_TYPE,
 #ifdef RDF_BLOB
   RDF_BLOB_TYPE
 #endif
@@ -65,6 +69,7 @@ typedef struct RDF_NodeStruct {
   } value;
 } *RDF_Node;
 
+typedef PRUint32 RDF_EventType;
 #define RDF_ASSERT_NOTIFY	((RDF_EventType)0x00000001)
 #define RDF_DELETE_NOTIFY	((RDF_EventType)0x00000002)
 #define RDF_KILL_NOTIFY		((RDF_EventType)0x00000004)

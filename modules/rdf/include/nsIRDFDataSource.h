@@ -160,7 +160,7 @@ public:
   NS_IMETHOD HasAssertion(RDF_Resource source,
                           RDF_Resource arcLabel,
                           RDF_Node target,
-                          PRBool truthValue /* in/out */,
+                          PRBool truthValue,
                           PRBool* hasAssertion /* out */) = 0;
 
   /**

@@ -17,18 +17,25 @@
  */
 
 #include "rdf.h"
+#include "nsIRDFDataSource.h"
+#include "nsIRDFDataBase.h"
+#include "nsIRDFObserver.h"
+#include "nsIRDFService.h"
+#include "nsIRDFCursor.h"
+
+#include "nspr.h"
+#include "plhash.h"
 
 PR_BEGIN_EXTERN_C
-PR_PUBLIC_API(void)
-_comwrap_NotificationCB(RDF_Event event, void* pdata);
+PR_PUBLIC_API(void) _comwrap_NotificationCB(RDF_Event event, void* pdata);
 PR_END_EXTERN_C
 
 class rdfDataBaseWrapper;
 class rdfCursorWrapper;
 class rdfServiceWrapper;
+class rdfServiceFactory;
 
-
-class rdfDatabaseWrapper : public nsIRDFDatabase {
+class rdfDatabaseWrapper : public nsIRDFDataBase {
 public:
   NS_DECL_ISUPPORTS
 
@@ -37,79 +44,74 @@ public:
 
   /* nsIRDFDataSource methods:  */
 
-  NS_METHOD GetName(const RDF_String const * name /* out */ );
+  NS_METHOD GetName(const RDF_String* name /* out */ );
 
   NS_METHOD GetSource(RDF_Node target,
-		      RDF_Resource arcLabel,
-		      RDF_Resource *source /* out */);
+                      RDF_Resource arcLabel,
+                      RDF_Resource *source /* out */);
 
   NS_METHOD GetSource(RDF_Node target,
-		      RDF_Resource arcLabel,
-		      PRBool tv,
-		      RDF_Resource *source /* out */);
+                      RDF_Resource arcLabel,
+                      PRBool tv,
+                      RDF_Resource *source /* out */);
 
   NS_METHOD GetSources(RDF_Node target,
-		       RDF_Resource arcLabel,
-		       nsIRDFCursor **sources /* out */);
+                       RDF_Resource arcLabel,
+                       nsIRDFCursor **sources /* out */);
 
   NS_METHOD GetSources(RDF_Node target,
-		       RDF_Resource arcLabel,
-		       PRBool tv,
-		       nsIRDFCursor **sources /* out */);
+                       RDF_Resource arcLabel,
+                       PRBool tv,
+                       nsIRDFCursor **sources /* out */);
 
   NS_METHOD GetTarget(RDF_Resource source,
-		      RDF_Resource arcLabel,
-		      RDF_ValueType targetType,
-		      RDF_NodeStruct& target /* in/out */);
+                      RDF_Resource arcLabel,
+                      RDF_ValueType targetType,
+                      RDF_NodeStruct& target /* in/out */);
 
   NS_METHOD GetTarget(RDF_Resource source,
-		      RDF_Resource arcLabel,
-		      RDF_ValueType targetType,
-		      PRBool tv,
-		      RDF_NodeStruct& target /* in/out */);
+                      RDF_Resource arcLabel,
+                      RDF_ValueType targetType,
+                      PRBool tv,
+                      RDF_NodeStruct& target /* in/out */);
 
   NS_METHOD GetTargets(RDF_Resource source,
-		       RDF_Resource arcLabel,
-		       RDF_ValueType targetType,
-		       nsIRDFCursor **targets /* out */);
+                       RDF_Resource arcLabel,
+                       RDF_ValueType targetType,
+                       nsIRDFCursor **targets /* out */);
 
   NS_METHOD GetTargets(RDF_Resource source,
-		       RDF_Resource arcLabel,
-		       PRBool tv,
-		       RDF_ValueType targetType,
-		       nsIRDFCursor **targets /* out */);
+                       RDF_Resource arcLabel,
+                       PRBool tv,
+                       RDF_ValueType targetType,
+                       nsIRDFCursor **targets /* out */);
 
   NS_METHOD Assert(RDF_Resource source, 
-		   RDF_Resource arcLabel, 
-		   RDF_Node target,
-		   PRBool tv = PR_TRUE);
+                   RDF_Resource arcLabel, 
+                   RDF_Node target,
+                   PRBool tv = PR_TRUE);
 
   NS_METHOD Unassert(RDF_Resource source,
-		     RDF_Resource arcLabel,
-		     RDF_Node target);
+                     RDF_Resource arcLabel,
+                     RDF_Node target);
 
   NS_METHOD HasAssertion(RDF_Resource source,
-			 RDF_Resource arcLabel,
-			 RDF_Node target,
-			 PRBool* hasAssertion /* out */);
-
-  NS_METHOD HasAssertion(RDF_Resource source,
-			 RDF_Resource arcLabel,
-			 RDF_Node target,
-			 PRBool& truthValue,
-			 PRBool* hasAssertion /* out */);
+                         RDF_Resource arcLabel,
+                         RDF_Node target,
+                         PRBool tv,
+                         PRBool* hasAssertion /* out */);
 
   NS_METHOD AddObserver(nsIRDFObserver *n,
-                         RDF_EventMask type = RDF_ANY_NOTIFY);
+                        RDF_EventMask type = RDF_ANY_NOTIFY);
 
   NS_METHOD RemoveObserver(nsIRDFObserver *n,
-			   RDF_EventMask = RDF_ANY_NOTIFY);
+                           RDF_EventMask = RDF_ANY_NOTIFY);
 
   NS_METHOD ArcLabelsIn(RDF_Node node,
-			nsIRDFCursor **labels /* out */);
+                        nsIRDFCursor **labels /* out */);
 
   NS_METHOD ArcLabelsOut(RDF_Resource source,
-			 nsIRDFCursor **labels /* out */);
+                         nsIRDFCursor **labels /* out */);
 
   NS_METHOD Flush();
 
@@ -119,21 +121,21 @@ public:
   NS_METHOD RemoveDataSource(nsIRDFDataSource* dataSource);
 
   NS_METHOD GetDataSource(RDF_String url,
-			  nsIRDFDataSource **source /* out */ );
+                          nsIRDFDataSource **source /* out */ );
 
   NS_METHOD DeleteAllArcs(RDF_Resource resource);
 
 private:
   RDF mRDF;
 
-  PR_HashTable mpObserverMap;
+  PLHashTable* mpObserverMap;
 };
 
 class rdfCursorWrapper : public nsIRDFCursor {
 public:
   NS_DECL_ISUPPORTS
   
-  rdfCursorWrapper(RDF_Cursor*);
+  rdfCursorWrapper(RDF_Cursor c);
   virtual ~rdfCursorWrapper();
 
   NS_METHOD HasElements(PRBool& hasElements);
@@ -148,8 +150,23 @@ class rdfServiceWrapper : public nsIRDFService {
 public:
   NS_DECL_ISUPPORTS
 
-  NS_METHOD CreateDatabase(RDF_String** url,
-			   nsIRDFDatabase** db);
+  NS_METHOD CreateDatabase(const RDF_String* url,
+                           nsIRDFDataBase** db);
+
+};
+
+class rdfServiceFactory : public nsIFactory {
+public:
+  NS_DECL_ISUPPORTS
+
+  rdfServiceFactory();
+  virtual ~rdfServiceFactory();
+
+  NS_METHOD CreateInstance(nsISupports *aOuter,
+                           REFNSIID anIID,
+                           void **aResult);
+
+  NS_METHOD LockFactory(PRBool aLock);
 
 };
 
@@ -161,41 +178,63 @@ public:
 
 NS_IMPL_ISUPPORTS( rdfDatabaseWrapper, NS_IRDFDATABASE_IID )
 
+rdfDatabaseWrapper::rdfDatabaseWrapper(RDF r) : mRDF(r)
+{
+  mpObserverMap = PL_NewHashTable( 100,
+                                   NULL, // XXX isn't there are hash fn for pointers???
+                                   PL_CompareValues,
+                                   PL_CompareValues,
+                                   0,
+                                   0 );
+
+  PR_ASSERT( mpObserverMap );
+#ifdef XXX
+  if( !mpObserverMap ) // XXX just like 'new' failing on this object?
+    throw bad_alloc("rdf: unable to allocate observer map" );
+#endif
+
+}
+
+rdfDatabaseWrapper::~rdfDatabaseWrapper()
+{
+  PL_HashTableDestroy( mpObserverMap );
+}
+
 NS_METHOD
 rdfDatabaseWrapper::GetName(const RDF_String* name /* out */ )
 {
   PR_ASSERT( PR_FALSE );
-  return NS_NOT_IMPLEMENTED; // XXX
+  return NS_ERROR_NOT_IMPLEMENTED; // XXX
 }
 
 NS_METHOD
 rdfDatabaseWrapper::GetSource(RDF_Node target,
-			      RDF_Resource arcLabel,
-			      RDF_Resource *source /* out */)
+                              RDF_Resource arcLabel,
+                              RDF_Resource *source /* out */)
 {
   PR_ASSERT( target && source );
   *source = (RDF_Resource) RDF_GetSlotValue( mRDF,
-					     target,
-					     arcLabel,
-					     RDF_RESOURCE_TYPE, // anything else makes no sense
-					     PR_TRUE,
-					     PR_TRUE );
+                                             target->value.r,
+                                             arcLabel,
+                                             RDF_RESOURCE_TYPE, // anything else makes no sense
+                                             PR_TRUE,
+                                             PR_TRUE );
 
   return NS_OK;
 }
 
 NS_METHOD
 rdfDatabaseWrapper::GetSource(RDF_Node target,
-                       RDF_Resource arcLabel,
-                       PRBool tv,
-                       RDF_Resource *source /* out */)
+                              RDF_Resource arcLabel,
+                              PRBool tv,
+                              RDF_Resource *source /* out */)
 {
   *source = (RDF_Resource) RDF_GetSlotValue( mRDF,
-					     target,
-					     arcLabel,
-					     RDF_RESOURCE_TYPE, // anything else makes no sense
-					     PR_TRUE,
-					     tv );
+                                             target->value.r,
+                                             arcLabel,
+                                             RDF_RESOURCE_TYPE, // anything else makes no sense
+                                             PR_TRUE,
+                                             tv );
 
   return NS_OK;
 }
@@ -214,8 +253,24 @@ rdfDatabaseWrapper::GetSources(RDF_Node target,
                                PRBool tv,
                                nsIRDFCursor **sources /* out */)
 {
-  PR_ASSERT( PR_FALSE ); 
-  return NS_NOT_IMPLEMENTED; // XXX
+  PR_ASSERT( sources );
+  if( 0 == sources )
+    return NS_ERROR_NULL_POINTER;
+
+  *sources = 0;
+
+  RDF_Cursor c = RDF_GetSources( mRDF,
+                                 target->value.r,
+                                 arcLabel,
+                                 RDF_RESOURCE_TYPE, // anything else makes no sense
+                                 tv );
+
+  if( c ) {
+    *sources = new rdfCursorWrapper( c );
+    (*sources)->AddRef();
+  }
+
+  return NS_OK;
 }
 
 NS_METHOD
@@ -237,11 +292,11 @@ rdfDatabaseWrapper::GetTarget(RDF_Resource source,
   PR_ASSERT( targetType != RDF_ANY_TYPE ); // not ready to support this yet
 
   void* value  = RDF_GetSlotValue( mRDF,
-				   target,
-				   arcLabel,
-				   targetType, // anything else makes no sense
-				   PR_FALSE,
-				   tv );
+                                   target.value.r,
+                                   arcLabel,
+                                   targetType, // anything else makes no sense
+                                   PR_FALSE,
+                                   tv );
 
   target.type = targetType;
   target.value.r = (RDF_Resource) value; // reasonable? XXX
@@ -265,18 +320,34 @@ rdfDatabaseWrapper::GetTargets(RDF_Resource source,
                                RDF_ValueType targetType,
                                nsIRDFCursor **targets /* out */)
 {
-  PR_ASSERT( PR_FALSE ); 
-  return NS_NOT_IMPLEMENTED; // XXX
+  PR_ASSERT( targets );
+  if( 0 == targets )
+    return NS_ERROR_NULL_POINTER;
+
+  *targets = 0;
+
+  RDF_Cursor c = RDF_GetTargets( mRDF,
+                                 source,
+                                 arcLabel,
+                                 targetType,
+                                 tv );
+
+  if( c ) {
+    *targets = new rdfCursorWrapper( c );
+    (*targets)->AddRef();
+  }
+
+  return NS_OK;
 }
 
 NS_METHOD
 rdfDatabaseWrapper::Assert(RDF_Resource source, 
                            RDF_Resource arcLabel, 
                            RDF_Node target,
-                           PRBool tv = PR_TRUE)
+                           PRBool tv)
 {
-  PRBool b = tv ? RDF_Assert( mRDF, source, arcLabel, (void*) target->value.r, target->type ) :
-    RDF_AssertFalse( mRDF, sourcem arcLabel, (Void*) target->value.r, target->type );
+  PRBool b = tv ? RDF_Assert( mRDF, source, arcLabel, (void*)target->value.r, target->type ) :
+    RDF_AssertFalse( mRDF, source, arcLabel, (void*)target->value.r, target->type );
 
   // XXX
   return NS_OK;
@@ -288,47 +359,47 @@ rdfDatabaseWrapper::Unassert(RDF_Resource source,
                              RDF_Node target)
 {
   PRBool b = RDF_Unassert( mRDF, 
-			   source, 
-			   arcLabel, 
-			   (void*) target->value.r, 
-			   target->type ); // XXX
+                           source, 
+                           arcLabel, 
+                           target->value.r, 
+                           target->type ); // XXX
 
   return NS_OK;
 }
 
 NS_METHOD
 rdfDatabaseWrapper::HasAssertion(RDF_Resource source,
-				 RDF_Resource arcLabel,
-				 RDF_Node target,
-				 PRBool truthValue,
-				 PRBool* hasAssertion /* out */)
+                                 RDF_Resource arcLabel,
+                                 RDF_Node target,
+                                 PRBool truthValue,
+                                 PRBool* hasAssertion /* out */)
 {
   *hasAssertion = RDF_HasAssertion( mRDF,
-				    source,
-				    arcLabel,
-				    (void*) target->value.r,
-				    target->type,
-				    truthValue );
+                                    source,
+                                    arcLabel,
+                                    target->value.r,
+                                    target->type,
+                                    truthValue );
   
   return NS_OK;
 }
 
 PR_IMPLEMENT(void)
-_comwrap_NotificationCB(RDF_Event event, void* pdata)
+  _comwrap_NotificationCB(RDF_Event event, void* pdata)
 {
   nsIRDFObserver* observer = (nsIRDFObserver*) pdata;
   // XXX QueryInterface & release??
-  observer->HandleEvent( this, event );
+  observer->HandleEvent( (nsIRDFDataSource*)pdata, event );
 }
 
 NS_METHOD
 rdfDatabaseWrapper::AddObserver(nsIRDFObserver *observer,
-                                RDF_EventMask type = RDF_ANY_NOTIFY)
+                                RDF_EventMask type)
 {
   // XXX event masking does not currently work
 
-  RDF_Notification notification = PL_HashTableLookup( mpObserverMap, observer );
-  if( !nofification ) {
+  RDF_Notification notification = (RDF_Notification) PL_HashTableLookup( mpObserverMap, observer );
+  if( !notification ) {
     observer->AddRef();
     notification = RDF_AddNotifiable( mRDF,
                                       _comwrap_NotificationCB,
@@ -343,42 +414,72 @@ rdfDatabaseWrapper::AddObserver(nsIRDFObserver *observer,
 }
 
 NS_METHOD
-rdfDatabaseWrapper::RemoveObserver(nsIRDFObserver *n,
-                            RDF_EventMask = RDF_ANY_NOTIFY)
+rdfDatabaseWrapper::RemoveObserver(nsIRDFObserver *observer,
+                                   RDF_EventMask type)
 {
 
-  RDF_Notification notification = PL_HashTableLookup( mpObserverMap, observer );
+  RDF_Notification notification = (RDF_Notification) PL_HashTableLookup( mpObserverMap, observer );
   if( !notification )
-    return NS_ERROR_INVALILD_PARAMETER;
+    return NS_ERROR_ILLEGAL_VALUE;
   
   RDF_Error err = RDF_DeleteNotifiable( notification );
   PR_ASSERT( !err ); // the current implementation never fails!
   PL_HashTableRemove( mpObserverMap, observer );
-  observer->AddRelease();
+  observer->Release();
     
   return NS_OK; // XXX
 }
 
 NS_METHOD
 rdfDatabaseWrapper::ArcLabelsIn(RDF_Node node,
-                         nsIRDFCursor **labels /* out */)
+                                nsIRDFCursor **labels /* out */)
 {
-  PR_ASSERT( PR_FALSE ); 
-  return NS_NOT_IMPLEMENTED; // XXX
+  PR_ASSERT( labels );
+  if( 0 == labels )
+    return NS_ERROR_NULL_POINTER;
+  *labels = 0;
+
+  RDF_Cursor c = RDF_ArcLabelsIn( mRDF, node->value.r );
+
+  if( c ) {
+    *labels = new rdfCursorWrapper( c );
+    (*labels)->AddRef();
+  }
+
+  return NS_OK;
+
 }
 
 NS_METHOD
 rdfDatabaseWrapper::ArcLabelsOut(RDF_Resource source,
-                          nsIRDFCursor **labels /* out */)
+                                 nsIRDFCursor **labels /* out */)
 {
-  PR_ASSERT( PR_FALSE ); 
-  return NS_NOT_IMPLEMENTED; // XXX
+  PR_ASSERT( labels );
+  if( 0 == labels )
+    return NS_ERROR_NULL_POINTER;
+  *labels = 0;
+
+  RDF_Cursor c = RDF_ArcLabelsOut( mRDF, source );
+
+  if( c ) {
+    *labels = new rdfCursorWrapper( c );
+    (*labels)->AddRef();
+  }
+
+  return NS_OK;
 }
 
 NS_METHOD
 rdfDatabaseWrapper::Flush()
 {
-  return NS_NOT_IMPLEMENTED; // XXX
+  return NS_ERROR_NOT_IMPLEMENTED; // XXX
+}
+
+
+NS_METHOD
+rdfDatabaseWrapper::DeleteAllArcs(RDF_Resource resource)
+{
+  return RDF_DeleteAllArcs( mRDF, resource );
 }
 
 /*
@@ -391,14 +492,24 @@ NS_IMPL_ISUPPORTS( rdfServiceWrapper, NS_IRDFSERVICE_IID )
 
 NS_METHOD
 rdfServiceWrapper::CreateDatabase(const RDF_String* url_ary,
-				  nsIRDFDatabase **db)
+                                  nsIRDFDataBase **db)
 {
-  nsresult r = NS_OK;
-  RDF rdf = RDF_GetDB(url_ary);
-  if( 0 == rdf )
-    r = RDF_ERROR_UNABLE_TO_CREATE_DATASOURCE; // XXX this is too wishy-washy
+  PR_ASSERT( 0 != db );
+  if( 0 == db )
+    return NS_ERROR_NULL_POINTER;
 
-  return r;
+  *db = 0;
+
+  nsresult result = NS_OK;
+  RDF rdf = RDF_GetDB(url_ary);
+
+  if( 0 == rdf ) {
+    result = RDF_ERROR_UNABLE_TO_CREATE; // XXX this is too wishy-washy
+  } else {
+    *db = new rdfDatabaseWrapper(rdf); // XXX
+  }
+
+  return result;
 }
 
 /*
@@ -409,8 +520,56 @@ rdfServiceWrapper::CreateDatabase(const RDF_String* url_ary,
 
 NS_IMPL_ISUPPORTS( rdfCursorWrapper, NS_IRDFCURSOR_IID )
 
+rdfCursorWrapper::rdfCursorWrapper(RDF_Cursor c) : mCursor(c) 
+{ 
+}
+
+rdfCursorWrapper::~rdfCursorWrapper() 
+{ 
+  RDF_DisposeCursor( mCursor ); 
+}
+
 NS_METHOD
 rdfCursorWrapper::Next(RDF_NodeStruct& next)
 {
+  next.type = RDF_CursorValueType( mCursor );
+  next.value.r = (RDF_Resource) RDF_NextValue( mCursor );
 
+  return NS_OK;
+}
+
+/*
+
+  rdfServiceFactory
+
+*/
+
+NS_IMPL_ISUPPORTS( rdfServiceFactory, NS_IFACTORY_IID )
+
+NS_METHOD
+rdfServiceFactory::CreateInstance( nsISupports *aOuter,
+                                   REFNSIID aIID,
+                                   void **aResult )
+{
+  PR_ASSERT( aResult );
+  if( 0 == aResult )
+    return NS_ERROR_NULL_POINTER;
+  *aResult = 0;
+
+  nsISupports* instance = new rdfServiceWrapper();
+    
+  nsresult result = instance->QueryInterface( aIID, aResult );
+  PR_ASSERT( result = NS_OK );
+
+  if( result != NS_OK )
+    delete instance; // wrong interface!
+
+  return result;
+}
+
+NS_METHOD
+rdfServiceFactory::LockFactory(PRBool lock)
+{
+  PR_ASSERT( PR_FALSE );
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -47,6 +47,8 @@ public:
   NS_IMETHOD Initialize(nsIRDFResourceManager* r) = 0;
 #endif
 
+
+#ifdef RDF_NOT_IMPLEMENTED
   /*
     Add a data source for the specified URL to the database.
 
@@ -61,6 +63,7 @@ public:
 
   NS_IMETHOD GetDataSource(RDF_String url,
                            nsIRDFDataSource **source /* out */ ) = 0;
+#endif
 
   // XXX move these to datasource?
   NS_IMETHOD DeleteAllArcs(RDF_Resource resource) = 0;
