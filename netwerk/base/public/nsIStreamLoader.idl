@@ -66,6 +66,10 @@ interface nsIStreamLoader : nsISupports
               in nsIURI referrer,
               in unsigned long refererFlags);
 
+    void initWithChannel(in nsIChannel aChannel,
+              in nsIStreamLoaderObserver aObserver,
+              in nsISupports aContext);
+
     /**
      * Gets the number of bytes read so far.
      */

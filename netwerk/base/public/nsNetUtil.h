@@ -435,6 +435,28 @@ NS_NewStreamLoader(nsIStreamLoader* *result,
 }
 
 inline nsresult
+NS_NewStreamLoader(nsIStreamLoader* *result,
+                   nsIChannel* channel,
+                   nsIStreamLoaderObserver* observer,
+                   nsISupports* context = nsnull)
+{
+    nsresult rv;
+    nsCOMPtr<nsIStreamLoader> loader;
+    static NS_DEFINE_CID(kStreamLoaderCID, NS_STREAMLOADER_CID);
+    rv = nsComponentManager::CreateInstance(kStreamLoaderCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIStreamLoader),
+                                            getter_AddRefs(loader));
+    if (NS_FAILED(rv)) return rv;
+    rv = loader->InitWithChannel(channel, observer, context);
+                      
+    if (NS_FAILED(rv)) return rv;
+    *result = loader;
+    NS_ADDREF(*result);
+    return rv;
+}
+
+inline nsresult
 NS_NewRequestObserverProxy(nsIRequestObserver **aResult,
                            nsIRequestObserver *aObserver,
                            nsIEventQueue *aEventQ=nsnull)
