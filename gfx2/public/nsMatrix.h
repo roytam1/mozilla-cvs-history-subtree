@@ -32,14 +32,22 @@
  *
  * A 2x3 matrices of the form: 
  *
- *      [a c e]
- *      [b d f]
+ * \f$
+\left[ \begin{array}{ccc}
+a & c & e\\
+b & d & f
+\end{array} \right]
+ * \f$
  *
  * which, when expanded into a 3x3 matrix for the purposes of matrix arithmetic, become: 
  *
- *      [a c e]
- *      [b d f]
- *      [0 0 1]
+ * \f$
+\left[ \begin{array}{ccc}
+a & c & e\\
+b & d & f\\
+0 & 0 & 1
+\end{array} \right]
+ * \f$
  *
  * @see nsTransform
  */
@@ -133,14 +141,24 @@ class nsMatrix {
   nsMatrix *RotateFromVector(float x, float y);
 
   /**
-   * Post-multiplies the transformation [-1 0 0 1 0 0] and returns the resulting matrix. 
+   * Post-multiplies the transformation \f$
+\left[ \begin{array}{ccc}
+-1 & 0 & 0\\
+1 & 0 & 0\\
+\end{array} \right]
+   * \f$ and returns the resulting matrix. 
    *
    * @return The resulting matrix.
    */
   nsMatrix *FlipX();
 
   /**
-   * Post-multiplies the transformation [1 0 0 -1 0 0] and returns the resulting matrix. 
+   * Post-multiplies the transformation \f$
+\left[ \begin{array}{ccc}
+1 & 0 & 0\\
+-1 & 0 & 0\\
+\end{array} \right]
+   * \f$ and returns the resulting matrix. 
    *
    * @return The resulting matrix.
    */
