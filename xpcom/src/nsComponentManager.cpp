@@ -352,7 +352,7 @@ nsComponentManagerImpl::PlatformVersionCheck()
 
     // If there is a version mismatch or no version string, we got an old registry.
     // Delete the old repository hierarchies and recreate version string
-    if (err != NS_OK || PL_strcmp(buf, NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING))
+    if (NS_FAILED(err) || PL_strcmp(buf, NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING))
     {
 #ifdef NS_DEBUG
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
@@ -1414,7 +1414,7 @@ nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
 #ifdef NS_DEBUG
     PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
            ("nsComponentManager: ! Factory unregister %s.", 
-            res == NS_OK ? "succeeded" : "failed"));
+            NS_SUCCEEDED(res) ? "succeeded" : "failed"));
 #endif /* NS_DEBUG */
     	
     return res;
@@ -1470,7 +1470,7 @@ nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
 #ifdef NS_DEBUG
     PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
            ("nsComponentManager: ! Factory unregister %s.", 
-            res == NS_OK ? "succeeded" : "failed"));
+            NS_SUCCEEDED(res) ? "succeeded" : "failed"));
 #endif /* NS_DEBUG */
     	
     return res;
@@ -1526,7 +1526,7 @@ nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
 #ifdef NS_DEBUG
     PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
            ("nsComponentManager: ! Factory unregister %s.", 
-            res == NS_OK ? "succeeded" : "failed"));
+            NS_SUCCEEDED(res) ? "succeeded" : "failed"));
 #endif /* NS_DEBUG */
     	
     return res;
