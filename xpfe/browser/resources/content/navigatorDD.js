@@ -274,6 +274,7 @@ var personalToolbarObserver = {
       var flavourSet = new FlavourSet();
       flavourSet.appendFlavour("moz/rdfitem");
       // application/x-moz-file
+      flavourSet.appendFlavour("text/x-moz-url");
       flavourSet.appendFlavour("text/unicode");
       return flavourSet;
     }
