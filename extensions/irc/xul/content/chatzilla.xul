@@ -71,9 +71,7 @@
 
 <commandset id="chatzillaCommands">
   <command id="cmd_reload_ui"
-    oncommand="if (client.getConnectionCount() == 0) window.location.href = window.location.href;"/>
-    <key id="key_reload_ui" observes="cmd_reload_ui" 
-      modifiers="accel alt" key="R"/>
+    oncommand="if (!client || client.getConnectionCount() == 0) window.location.href = window.location.href;"/>
   <command id="cmd_focus_input" oncommand="focusInput();"/>
   <command id="cmd_debug" oncommand="onToggleTraceHook()"/>
   <command id="cmd_toggletabstrip" oncommand="onToggleVisibility('tabstrip');"/>
@@ -111,6 +109,8 @@
 <keyset id="chatzillaKeys">
   <key id="key_focus_input" observes="cmd_focus_input" keycode="VK_ESCAPE"/>
 
+  <key id="key_test" oncommand="onTest();"
+    modifiers="accel alt" key="T"/>
   <key id="key_reload_ui" observes="cmd_reload_ui" 
     modifiers="accel alt" key="R"/>
   <key id="key_debug" observes="cmd_debug"
@@ -179,7 +179,9 @@
         <menu format="&PopupHighlightStyle.label;" 
           accesskey="&PopupHighlightStyle.aKey;"
           showfor="targetUser">
-          <menupopup id="highlightMenu"><menuitem/></menupopup>
+          <menupopup id="highlightMenu">
+            <menuitem/>
+          </menupopup>
         </menu>
 
         <menuseparator

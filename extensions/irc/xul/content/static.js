@@ -29,6 +29,8 @@ else
 
 var client = new Object();
 
+const CSP = getMsg ("commaSpace", [" "]);
+
 client.defaultNick = getMsg( "defaultNick" );
 
 client.version = "0.8.5-pre2";
@@ -264,7 +266,9 @@ function initHost(obj)
     
     obj.networks = new Object();
     obj.eventPump = new CEventPump (200);
-    
+
+    obj.defaultCompletion = client.COMMAND_CHAR + "help ";
+
     obj.networks["efnet"] =
         new CIRCNetwork ("efnet",
                          [{name: "irc.mcs.net", port: 6667},
@@ -686,7 +690,7 @@ function getObjectDetails (obj, rv)
         dd ("** INVALID OBJECT passed to getObjectDetails (" + obj + "). **");
         dd (getStackTrace());
     }
-    
+
     rv.orig = obj;
     rv.parent = ("parent" in obj) ? obj.parent : null;
     
@@ -1717,6 +1721,9 @@ function deleteTab (tb)
 function filterOutput (msg, msgtype)
 {
 
+    if (!("outputFilters" in client))
+        return msg;
+    
     for (var f in client.outputFilters)
         if (client.outputFilters[f].enabled)
             msg = client.outputFilters[f].func(msg, msgtype);
@@ -1801,7 +1808,7 @@ function n_display (message, msgtype, sourceObj, destObj)
 CIRCUser.prototype.display =
 function u_display(message, msgtype, sourceObj, destObj)
 {
-    if (this.messages)
+    if ("messages" in this)
         this.displayHere (message, msgtype, sourceObj, destObj);
     else
     {
@@ -1897,16 +1904,21 @@ function __display(message, msgtype, sourceObj, destObj)
         
         if (sourceObj != me)
         {
+            nick = sourceObj.properNick;
             if (toType == "IRCUser") /* msg from user to me */
             {
                 getAttention = true;
-                nick = sourceObj.properNick;
+                this.defaultCompletion = "/msg " + nick + " ";
             }
             else /* msg from user to channel */
             {
                 if (typeof (message == "string") && me)
+                {
                     isImportant = msgIsImportant (message, nick, me.nick);
-                nick = sourceObj.properNick;
+                    if (isImportant)
+                        this.defaultCompletion = nick +
+                            client.ADDRESSED_NICK_SEP + " ";
+                }
             }
         }
         else if (toType == "IRCUser") /* msg from me to user */
@@ -2042,6 +2054,58 @@ function cli_quit (reason)
     for (var n in client.networks)
         if ("primServ" in client.networks[n])
             client.networks[n].quit (reason);   
+}
+
+/* gets a tab-complete match for the line of text specified by |line|.  wordStart
+ * is the position within |line| that starts the word being matched, wordEnd
+ * marks the end position.  |cursorPos| marks the position of the caret in the
+ * textbox.
+ */
+client.performTabMatch =
+CIRCUser.performTabMatch =
+function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
+{
+    if (wordStart != 1 || line[0] != client.COMMAND_CHAR)
+        return null;
+
+    var matches = client.commands.listNames(word);
+    if (matches.length == 1)
+        matches[0] += " ";
+
+    return matches;
+}
+
+CIRCChannel.prototype.performTabMatch =
+CIRCNetwork.prototype.performTabMatch =
+function gettabmatch_usr (line, wordStart, wordEnd, word, cursorpos)
+{
+    if (wordStart == 1 && line[0] == client.COMMAND_CHAR)
+        return client.performTabMatch (line, wordStart, wordEnd, word, 
+                                       cursorpos);
+    
+    if (!"users" in this)
+        return [];
+    
+    var users = this.users;
+    var nicks = new Array();
+        
+    for (var n in users)
+        nicks.push (users[n].nick);
+        
+    var matches = matchEntry (word, nicks);
+    if (matches.length == 1)
+    {
+        matches[0] = this.users[matches[0]].properNick;
+        if (wordStart == 0)
+            matches[0] += client.ADDRESSED_NICK_SEP;
+        if (wordEnd == line.length)
+        {
+            /* add a space if the word is at the end of the line. */
+            matches[0] += " ";
+        }
+    }
+
+    return matches;
 }
 
 /**

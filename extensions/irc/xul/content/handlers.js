@@ -146,7 +146,8 @@ function onMouseOver (e)
     }
     else
     {
-        client.status = client.defaultStatus;
+        if (client && "defaultStatus" in client)
+            client.status = client.defaultStatus;
     }
 }
     
@@ -664,123 +665,101 @@ function onInputKeyPress (e)
 
 }
 
+function onTest ()
+{
+
+}
+
 function onTabCompleteRequest (e)
 {
     var selStart = e.target.selectionStart;
     var selEnd = e.target.selectionEnd;            
-    var v = e.target.value;
+    var line = e.target.value;
 
+    if (!line)
+    {
+        if ("defaultCompletion" in client.currentObject)
+            e.target.value = client.currentObject.defaultCompletion;
+        return;
+    }
+    
     if (selStart != selEnd) 
     {
         /* text is highlighted, just move caret to end and exit */
-        e.target.selectionStart = e.target.selectionEnd = v.length;
+        e.target.selectionStart = e.target.selectionEnd = line.length;
         return;
     }
 
-    var firstSpace = v.indexOf(" ");
-    if (firstSpace == -1)
-        firstSpace = v.length;
-
-    var pfx;
-    var d;
+    var wordStart = line.substr(0, selStart).search(/\W\w*$/);
+    if (wordStart == -1)
+        wordStart = 0;
+    else
+        ++wordStart;
     
-    if ((v[0] == client.COMMAND_CHAR) && (selStart <= firstSpace))
-    {
-        /* complete a command */                
-        var partialCommand = v.substring(1, firstSpace).toLowerCase();
-        var cmds = client.commands.listNames(partialCommand);
+    var wordEnd = line.substr(selStart).search(/\W/);
+    if (wordEnd == -1)
+        wordEnd = line.length;
+    else
+        wordEnd += selStart;
 
-        if (!cmds)
-        {
-            client.currentObject.display (getMsg("onTabCompleteRequestMsg",
-                                                 partialCommand), "ERROR");
-        }
-        else if (cmds.length == 1)
-        {
-            /* partial matched exactly one command */
-            pfx = client.COMMAND_CHAR + cmds[0];
-            if (firstSpace == v.length)
-                v =  pfx + " ";
-            else
-                v = pfx + v.substr (firstSpace);
-            
-            e.target.value = v;
-            e.target.selectionStart = e.target.selectionEnd = 
-                pfx.length + 1;
-        }
-        else if (cmds.length > 1)
-        {
-            /* partial matched more than one command */
-            d = new Date();
-            if ((d - client.lastTabUp) <= client.DOUBLETAB_TIME)
-                client.currentObject.display
-                    (getMsg("onTabCompleteRequestMsg2",
-                            [partialCommand, cmds.join(", ")]), "INFO");
-            else
-                client.lastTabUp = d;
-            
-            pfx = client.COMMAND_CHAR + getCommonPfx(cmds);
-            if (firstSpace == v.length)
-                v =  pfx;
-            else
-                v = pfx + v.substr (firstSpace);
-            
-            e.target.value = v;
-            e.target.selectionStart = e.target.selectionEnd = pfx.length;
-            
-        }
-                
-    }
-    else if (client.currentObject.users)
+    if ("performTabMatch" in client.currentObject)
     {
-        /* complete a nickname */
-        var users = client.currentObject.users;
-        var nicks = new Array();
-        
-        for (var n in users)
-            nicks.push (users[n].nick);
-        
-        var nickStart = v.lastIndexOf(" ", selStart) + 1;
-        var nickEnd = v.indexOf (" ", selStart);
-        if (nickEnd == -1)
-            nickEnd = v.length;
-        
-        var partialNick = v.substring(nickStart, nickEnd).toLowerCase();
-        
-        var matchingNicks = matchEntry (partialNick, nicks);
-        
-        if (matchingNicks.length > 0)
+        var word = line.substring (wordStart, wordEnd);
+        var matches = client.currentObject.performTabMatch (line, wordStart,
+                                                            wordEnd,
+                                                            word.toLowerCase(),
+                                                            selStart);
+        /* if we get null back, we're supposed to fail silently */
+        if (!matches)
+            return;
+
+        var doubleTab = false;
+        var date = new Date();
+        if ((date - client.lastTabUp) <= client.DOUBLETAB_TIME)
+            doubleTab = true;
+        else
+            client.lastTabUp = date;
+
+        if (doubleTab)
         {
-            var subst;
-            
-            if (matchingNicks.length == 1)
-            {   /* partial matched exactly one nick */
-                subst = 
-                    client.currentObject.users[matchingNicks[0]].properNick;
-                if (nickStart == 0)
-                    subst += client.ADDRESSED_NICK_SEP;
-                else
-                    subst += " ";
+            /* if the user hit tab twice quickly, */
+            if (matches.length > 0)
+            {
+                /* then list possible completions, */
+                client.currentObject.display(getMsg("tabCompleteList",
+                                                    [matches.length, word,
+                                                     matches.join(CSP)]),
+                                             "INFO");
             }
             else
-            {   /* partial matched more than one command */
-                d = new Date();
-                if ((d - client.lastTabUp) <= client.DOUBLETAB_TIME)
-                    client.currentObject.display
-                        (getMsg("onTabCompleteRequestMsg3",
-                                [partialNick, matchingNicks.join(", ")]), 
-                         "INFO");
-                else
-                    client.lastTabUp = d;
-                
-                subst = getCommonPfx(matchingNicks);
+            {
+                /* or display an error if there are none. */
+                client.currentObject.display(getMsg("tabCompleteError", [word]),
+                                             "ERROR");
             }
-            
-            v = v.substr (0, nickStart) + subst + v.substr (nickEnd);
-            e.target.value = v;
-            
         }
-        
+        else if (matches.length >= 1)
+        {
+            var match;
+            if (matches.length == 1)
+                match = matches[0];
+            else
+                match = getCommonPfx(matches);
+            e.target.value = line.substr(0, wordStart) + match + 
+                    line.substr(wordEnd);
+            if (wordEnd < line.length)
+            {
+                /* if the word we completed was in the middle if the line
+                 * then move the cursor to the end of the completed word. */
+                var newpos = wordStart + match.length;
+                if (matches.length == 1)
+                {
+                    /* word was fully completed, move one additional space */
+                    ++newpos;
+                }
+                e.target.selectionEnd = e.target.selectionStart = newpos;
+            }
+        }
     }
 
 }
@@ -3046,7 +3025,7 @@ function my_cprivmsg (e)
 {
     this.display (e.meat, "PRIVMSG", e.user, e.server.me);
     if (client.sound)
-        if (client.BEEP_URL)
+        if ("BEEP_URL" in client)
             client.sound.play (client.BEEP_URL);
         else
             client.sound.beep ();

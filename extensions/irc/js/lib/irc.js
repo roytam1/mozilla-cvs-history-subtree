@@ -807,6 +807,7 @@ function serv_001 (e)
         this.parent.primChan.join();
     }
 
+    this.parent.users = this.users;
     e.destObject = this.parent;
     e.set = "network";
 }
