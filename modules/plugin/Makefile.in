@@ -47,6 +47,10 @@ endif
 ifeq ($(OS_ARCH),OS2)
 DIRS		+= samples/default/os2
 endif
+
+ifeq ($(OS_ARCH),Darwin)
+DIRS		+= samples/default/mac
+endif
  
 include $(topsrcdir)/config/rules.mk
 
