@@ -1145,6 +1145,12 @@ function prepareForStartup()
   // initialize observers and listeners
   // and give C++ access to gBrowser
   window.XULBrowserWindow = new nsBrowserStatusHandler();
+  window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIWebNavigation)
+        .QueryInterface(Components.interfaces.nsIDocShellTreeItem).treeOwner
+        .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIXULWindow)
+        .XULBrowserWindow = window.XULBrowserWindow;
   gBrowser.docShell
           .QueryInterface(nsCI.nsIDocShellTreeItem)
           .rootTreeItem
@@ -1445,6 +1451,12 @@ function Shutdown()
 
   window.XULBrowserWindow.destroy();
   window.XULBrowserWindow = null;
+  window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIWebNavigation)
+        .QueryInterface(Components.interfaces.nsIDocShellTreeItem).treeOwner
+        .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIXULWindow)
+        .XULBrowserWindow = null;
   gBrowser.docShell
           .QueryInterface(nsCI.nsIDocShellTreeItem)
           .rootTreeItem

@@ -46,6 +46,7 @@
 #include "nsIPrompt.h"
 #include "nsIAuthPrompt.h"
 #include "nsGUIEvent.h"
+#include "nsIXULBrowserWindow.h"
 
 // nsXULWindow
 
@@ -124,6 +125,7 @@ protected:
    nsCOMPtr<nsIWeakReference> mParentWindow;
    nsCOMPtr<nsIPrompt>     mPrompter;
    nsCOMPtr<nsIAuthPrompt> mAuthPrompter;
+   nsCOMPtr<nsIXULBrowserWindow> mXULBrowserWindow;
    nsVoidArray             mContentShells;
    nsresult                mModalStatus;
    PRPackedBool            mContinueModalLoop;

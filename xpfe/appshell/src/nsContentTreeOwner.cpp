@@ -40,7 +40,6 @@
 #include "nsIAuthPrompt.h"
 #include "nsIWindowMediator.h"
 #include "nsIXULBrowserWindow.h"
-#include "nsPIDOMWindow.h"
 
 // Needed for nsIDocument::FlushPendingNotifications(...)
 #include "nsIDOMDocument.h"
@@ -338,15 +337,8 @@ nsContentTreeOwner::GetPersistence(PRBool* aPersistPosition,
 
 NS_IMETHODIMP nsContentTreeOwner::SetStatus(PRUint32 aStatusType, const PRUnichar* aStatus)
 {
-   nsCOMPtr<nsIDOMWindowInternal> domWindow;
-   mXULWindow->GetWindowDOMWindow(getter_AddRefs(domWindow));
-   nsCOMPtr<nsPIDOMWindow> piDOMWindow(do_QueryInterface(domWindow));
-   if(!piDOMWindow)
-      return NS_OK;
-
-   nsCOMPtr<nsISupports> xpConnectObj;
-   piDOMWindow->GetObjectProperty(NS_LITERAL_STRING("XULBrowserWindow").get(), getter_AddRefs(xpConnectObj));
-   nsCOMPtr<nsIXULBrowserWindow> xulBrowserWindow(do_QueryInterface(xpConnectObj));
+  nsCOMPtr<nsIXULBrowserWindow> xulBrowserWindow;
+  mXULWindow->GetXULBrowserWindow(getter_AddRefs(xulBrowserWindow));
 
    if (xulBrowserWindow)
    {
@@ -371,9 +363,11 @@ NS_IMETHODIMP nsContentTreeOwner::SetStatus(PRUint32 aStatusType, const PRUnicha
   // XXX: This is nasty because we have to drill down to the nsIDocument to
   //      force the flushing...
   //
+  nsCOMPtr<nsIDOMWindowInternal> domWindow;
   nsCOMPtr<nsIDOMDocument> domDoc;
   nsCOMPtr<nsIDocument> doc;
 
+  mXULWindow->GetWindowDOMWindow(getter_AddRefs(domWindow));
   domWindow->GetDocument(getter_AddRefs(domDoc));
   doc = do_QueryInterface(domDoc);
 
