@@ -3,6 +3,10 @@
 	* Conn.pm: Cleaned up NSPR code, fixed some bugs.
 	(search): Added support for sortattrs, using multisort.
 	(search): Fixed parsing of the attrs.
+	(setOption): Set an "arbitrary" option.
+	(getOption): Getter.
+	(setSizelimit): Set the sizelimit.
+	(getSizelimit): Getter.
 
 2004-10-28  Leif Hedstrom  <leif@ogre.com>
 

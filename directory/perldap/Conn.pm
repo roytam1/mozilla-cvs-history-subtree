@@ -829,6 +829,28 @@ sub simpleAuth
 
 
 #############################################################################
+# Set arbitrary option (this is flaky, can only handle "int" options ...)
+#
+sub setOption
+{
+  my ($self, $option, $value) = @_;
+  my $ret;
+
+  $ret = ldap_set_option($self->{"ld"}, $option, $value);
+  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+}
+
+sub getOption
+{
+  my ($self, $option) = @_;
+  my ($ret, $value);
+
+  $ret = ldap_get_option($self->{"ld"}, $option, $value);
+  return (($ret == LDAP_SUCCESS) ? $value : undef);
+}
+
+
+#############################################################################
 # Set/get LDAP protocol version
 #
 sub setVersion
@@ -861,9 +883,29 @@ sub setVersion
 
 sub getVersion
 {
-  my $self = shift;
+  return $_[0]->{"version"};
+}
 
-  return $self->{"version"};
+
+#############################################################################
+# Set sizelimit, convenience wrapper.
+#
+sub setSizelimit
+{
+  my ($self, $limit) = @_;
+  my $ret;
+
+  $ret = $self->setOption(LDAP_OPT_SIZELIMIT, $limit);
+  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+}
+
+sub getSizelimit
+{
+  my $self = shift;
+  my ($ret, $limit);
+
+  $ret = ldap_get_option($self->{"ld"}, LDAP_OPT_SIZELIMIT, $limit);
+  return (($ret == LDAP_SUCCESS) ? $limit : undef);
 }
 
 
@@ -1474,6 +1516,25 @@ the connection to LDAP v2 if necessary using this function. Example:
 =item B<getVersion>
 
 Return the protocol version currently in used by the connection.
+
+=item B<setSizelimit>
+
+Set the sizelimit on a connection, to limit the maximum number of
+entries that we want to retrieve. For example:
+
+   $conn->setSizelimit(10);
+
+=item B<getSizelimit>
+
+Get the current sizelimit on a connection (if any).
+
+=item B<setOption>
+
+Set an (integer) LDAP option.
+
+=item B<getOption>
+
+Get an (integer) LDAP option.
 
 =item B<installNSPR>
 
