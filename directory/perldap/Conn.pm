@@ -558,6 +558,7 @@ sub update
       if (defined($entry->{"_${key}_deleted_"}))
         {
           $mod{$key} = { "db", [] };
+	  undef @{$entry->{$key}};
         }
       elsif (defined($entry->{"_${key}_modified_"}))
         {
