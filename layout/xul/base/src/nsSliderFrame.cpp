@@ -54,7 +54,6 @@
 #include "nsHTMLAtoms.h"
 #include "nsHTMLParts.h"
 #include "nsIPresShell.h"
-#include "nsStyleChangeList.h"
 #include "nsCSSRendering.h"
 #include "nsHTMLAtoms.h"
 #include "nsIDOMEventReceiver.h"
