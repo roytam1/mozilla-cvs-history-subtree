@@ -164,6 +164,7 @@ Contributor(s): ______________________________________. -->
                  showCommentColumn="true"
                  inputtooltiptext="&locationBar.tooltip;"
                  oninput="window.XULBrowserWindow.userTyped.value=true;"
+                 ondragdrop="window.XULBrowserWindow.userTyped.value=true;alert('foo');"
                  ontextcommand="return handleURLBarCommand(eventParam, domEvent);"
                  ontextrevert="return handleURLBarRevert();"
                  onfocus="URLBarFocusHandler(event);"
@@ -200,7 +201,7 @@ Contributor(s): ______________________________________. -->
 
         <button id="search-button" class="button-toolbar chromeclass-location"
                 label="&searchButton.label;" persist="hidden"
-                oncommand="OpenSearch('internet',false, document.getElementById('urlbar').value);" 
+                oncommand="OpenSearch('internet',false, QualifySearchTerm());" 
                 ondragover="nsDragAndDrop.dragOver(event, searchButtonObserver);"
                 ondragdrop="nsDragAndDrop.drop(event, searchButtonObserver);"
                 ondragexit="nsDragAndDrop.dragExit(event, searchButtonObserver);"
