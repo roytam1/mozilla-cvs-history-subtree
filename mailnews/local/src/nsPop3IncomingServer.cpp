@@ -310,7 +310,9 @@ nsresult nsPop3IncomingServer::GetInbox(nsIMsgWindow *msgWindow, nsIMsgFolder **
       rv = db->GetSummaryValid(&valid);
       if (!valid)
       {
+        (*inbox)->SetMsgDatabase(nsnull);
         (void) localInbox->SetCheckForNewMessagesAfterParsing(PR_TRUE);
+        (*inbox)->GetMsgDatabase(msgWindow, getter_AddRefs(db));
         return NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE;
       }
     }
