@@ -44,7 +44,6 @@
 #include "nsIDocument.h"
 #include "nsIDOMClassInfo.h"
 #include "nsIScriptLoader.h"
-#include "nsNetUtil.h"
 #include "txExecutionState.h"
 #include "txMozillaTextOutput.h"
 #include "txMozillaXMLOutput.h"
@@ -54,12 +53,6 @@
 #include "txUnknownHandler.h"
 #include "txXSLTProcessor.h"
 #include "nsIHTMLDocument.h"
-#include "nsIParser.h"
-#include "nsICharsetAlias.h"
-#include "nsParserCIID.h"
-#include "nsIXMLContentSink.h"
-
-static const char* kLoadAsData = "loadAsData";
 
 /**
  * Output Handler Factories
@@ -260,22 +253,38 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 }
 
 NS_IMETHODIMP
-txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
-                                          nsITransformObserver* aObserver)
+txMozillaXSLTProcessor::SetTransformObserver(nsITransformObserver* aObserver)
 {
-    NS_ENSURE_ARG(aSourceDOM);
+    mObserver = aObserver;
+    return NS_OK;
+}
+
+nsresult
+txMozillaXSLTProcessor::SetSourceContentModel(nsIDOMNode* aSourceDOM)
+{
+    mSource = aSourceDOM;
+    if (mStylesheet) {
+        return DoTransform();
+    }
+    return NS_OK;
+}
+
+nsresult
+txMozillaXSLTProcessor::DoTransform()
+{
+    NS_ENSURE_TRUE(mSource, NS_ERROR_UNEXPECTED);
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_UNEXPECTED);
-    NS_ASSERTION(aObserver, "no observer");
+    NS_ASSERTION(mObserver, "no observer");
 
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
-    aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
+    mSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
     if (!sourceDOMDocument) {
-        sourceDOMDocument = do_QueryInterface(aSourceDOM);
+        sourceDOMDocument = do_QueryInterface(mSource);
     }
     NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
     Document sourceDocument(sourceDOMDocument);
-    Node* sourceNode = sourceDocument.createWrapper(aSourceDOM);
+    Node* sourceNode = sourceDocument.createWrapper(mSource);
     NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
 
     txExecutionState es(mStylesheet);
@@ -283,7 +292,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     // XXX Need to add error observers
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
-                                         aObserver);
+                                         mObserver);
     es.mOutputHandlerFactory = &handlerFactory;
 
     es.init(sourceNode, &mVariables);
@@ -309,7 +318,6 @@ txMozillaXSLTProcessor::ImportStylesheet(nsIDOMNode *aStyle)
                    type == nsIDOMNode::DOCUMENT_NODE,
                    NS_ERROR_INVALID_ARG);
 
-    
     nsresult rv = TX_CompileStylesheet(aStyle, getter_AddRefs(mStylesheet));
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -524,57 +532,19 @@ txMozillaXSLTProcessor::Reset()
 }
 
 NS_IMETHODIMP
-txMozillaXSLTProcessor::LoadStyleSheet(nsITransformMediator* aMediator,
-                                       nsIURI* aUri, nsIChannel* aChannel,
-                                       nsILoadGroup* aLoadGroup)
+txMozillaXSLTProcessor::LoadStyleSheet(nsIURI* aUri, nsILoadGroup* aLoadGroup,
+                                       nsIURI* aReferrerUri)
 {
-    nsCOMPtr<nsIXMLContentSink> sink;
-    nsresult rv = TX_NewStylesheetSink(getter_AddRefs(sink), aMediator, aUri,
-                                       this);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsAutoString charset(NS_LITERAL_STRING("UTF-8"));
-    PRInt32 charsetSource = kCharsetFromDocTypeDefault;
-
-    // check channel's charset...
-    nsCAutoString charsetVal;
-    rv = aChannel->GetContentCharset(charsetVal);
-    if (NS_SUCCEEDED(rv)) {
-        nsCOMPtr<nsICharsetAlias> calias =
-            do_GetService(NS_CHARSETALIAS_CONTRACTID);
-
-        if (calias) {
-            nsAutoString preferred;
-            rv = calias->GetPreferred(NS_ConvertASCIItoUCS2(charsetVal),
-                                      preferred);
-            if (NS_SUCCEEDED(rv)) {            
-                charset = preferred;
-                charsetSource = kCharsetFromChannel;
-             }
-        }
-    }
-
-    static NS_DEFINE_CID(kCParserCID, NS_PARSER_CID);
-    nsCOMPtr<nsIParser> parser = do_CreateInstance(kCParserCID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // Set the parser as the stream listener for the document loader...
-    nsCOMPtr<nsIStreamListener> listener = do_QueryInterface(parser, &rv);
-    NS_ENSURE_TRUE(listener, rv);
-
-    parser->SetDocumentCharset(charset, charsetSource);
-    parser->SetCommand(kLoadAsData);
-    parser->SetContentSink(sink);
-    parser->Parse(aUri);
-
-    return aChannel->AsyncOpen(listener, nsnull);
+    return TX_LoadSheet(aUri, this, aLoadGroup, aReferrerUri);
 }
 
 nsresult
 txMozillaXSLTProcessor::setStylesheet(txStylesheet* aStylesheet)
 {
     mStylesheet = aStylesheet;
-    
+    if (mSource) {
+        return DoTransform();
+    }
     return NS_OK;
 }
 

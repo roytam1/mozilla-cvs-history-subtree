@@ -56,7 +56,6 @@
 #include "txStylesheet.h"
 #include "nsAutoPtr.h"
 
-class nsITransformMediator;
 class nsIURI;
 class nsIXMLContentSink;
 
@@ -65,7 +64,7 @@ class nsIXMLContentSink;
 { 0xbacd8ad0, 0x552f, 0x11d3, {0xa9, 0xf7, 0x00, 0x00, 0x64, 0x65, 0x73, 0x74} }
 
 #define TRANSFORMIIX_XSLT_PROCESSOR_CONTRACTID \
-"@mozilla.org/document-transformer;1?type=text/xsl"
+"@mozilla.org/document-transformer;1?type=text/xslt"
 
 class txVariable : public txIGlobalParameter
 {
@@ -140,22 +139,25 @@ public:
     NS_DECL_NSIXSLTPROCESSOROBSOLETE
 
     // nsIDocumentTransformer interface
-    NS_IMETHOD LoadStyleSheet(nsITransformMediator* aMediator, nsIURI* aUri,
-                              nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
-    NS_IMETHOD TransformDocument(nsIDOMNode *aSourceDOM,
-                                 nsITransformObserver *aObserver);
+    NS_IMETHOD SetTransformObserver(nsITransformObserver* aObserver);
+    NS_IMETHOD LoadStyleSheet(nsIURI* aUri, nsILoadGroup* aLoadGroup,
+                              nsIURI* aReferrerUri);
+    NS_IMETHOD SetSourceContentModel(nsIDOMNode* aSource);
+    NS_IMETHOD CancelLoads() {return NS_OK;};
 
     nsresult setStylesheet(txStylesheet* aStylesheet);
 
 private:
+    nsresult DoTransform();
+
     nsRefPtr<txStylesheet> mStylesheet;
+    nsCOMPtr<nsIDOMNode> mSource;
+    nsCOMPtr<nsITransformObserver> mObserver;
     txExpandedNameMap mVariables;
 };
 
-extern nsresult TX_NewStylesheetSink(nsIXMLContentSink** aResult,
-                                     nsITransformMediator* aMediator,
-                                     nsIURI* aURI,
-                                     txMozillaXSLTProcessor* aProcessor);
+extern nsresult TX_LoadSheet(nsIURI* aUri, txMozillaXSLTProcessor* aProcessor,
+                             nsILoadGroup* aLoadGroup, nsIURI* aReferrerUri);
 
 extern nsresult TX_CompileStylesheet(nsIDOMNode* aNode,
                                      txStylesheet** aStylesheet);

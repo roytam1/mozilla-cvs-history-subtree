@@ -48,6 +48,7 @@
 #include "txPatternParser.h"
 #include "txStringUtils.h"
 #include "XSLTFunctions.h"
+#include "TxLog.h"
 
 txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
                                            txACompileObserver* aObserver)
@@ -599,13 +600,16 @@ txStylesheetCompilerState::popObject()
 nsresult
 txStylesheetCompilerState::pushPtr(void* aPtr)
 {
+    PR_LOG(txLog::xslt, PR_LOG_DEBUG, ("pushPtr: %d\n", aPtr));
     return mOtherStack.push(aPtr);
 }
 
 void*
 txStylesheetCompilerState::popPtr()
 {
-    return mOtherStack.pop();
+    void* value = mOtherStack.pop();
+    PR_LOG(txLog::xslt, PR_LOG_DEBUG, ("popPtr: %d\n", value));
+    return value;
 }
 
 MBool

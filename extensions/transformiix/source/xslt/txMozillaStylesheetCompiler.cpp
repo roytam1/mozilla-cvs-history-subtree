@@ -38,29 +38,32 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsCOMArray.h"
+#include "nsICharsetAlias.h"
 #include "nsIDocument.h"
 #include "nsIExpatSink.h"
+#include "nsILoadGroup.h"
 #include "nsINameSpace.h"
 #include "nsINameSpaceManager.h"
 #include "nsINodeInfo.h"
-#include "nsITransformMediator.h"
+#include "nsIParser.h"
+#include "nsISyncLoadDOMService.h"
 #include "nsIURI.h"
 #include "nsIXMLContentSink.h"
+#include "nsNetUtil.h"
+#include "nsParserCIID.h"
 #include "txAtoms.h"
 #include "txMozillaXSLTProcessor.h"
 #include "txStylesheetCompiler.h"
 #include "XMLUtils.h"
 
+static const char kLoadAsData[] = "loadAsData";
+
 class txStylesheetSink : public nsIXMLContentSink,
                          public nsIExpatSink
 {
 public:
-    txStylesheetSink();
+    txStylesheetSink(txStylesheetCompiler* aCompiler);
     virtual ~txStylesheetSink();
-
-    nsresult Init(nsITransformMediator* aTransformMediator,
-                  nsIURI* aURL,
-                  txMozillaXSLTProcessor* aProcessor);
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIEXPATSINK
@@ -75,32 +78,12 @@ public:
     NS_IMETHOD SetDocumentCharset(nsAString& aCharset) { return NS_OK; }
 
 private:
-    nsCOMPtr<nsITransformMediator> mTransformMediator;
     nsRefPtr<txStylesheetCompiler> mCompiler;
-    txMozillaXSLTProcessor* mProcessor;
     nsCOMArray<nsINameSpace> mNameSpaceStack;
 };
 
-nsresult
-TX_NewStylesheetSink(nsIXMLContentSink** aResult,
-                     nsITransformMediator* aTM,
-                     nsIURI* aURI,
-                     txMozillaXSLTProcessor* aProcessor)
-{
-    NS_ENSURE_ARG(aResult);
-
-    txStylesheetSink* it;
-    NS_NEWXPCOM(it, txStylesheetSink);
-    NS_ENSURE_TRUE(it, NS_ERROR_OUT_OF_MEMORY);
-
-    nsCOMPtr<nsIXMLContentSink> sink = it;
-    nsresult rv = it->Init(aTM, aURI, aProcessor);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return CallQueryInterface(it, aResult);
-}
-
-txStylesheetSink::txStylesheetSink()
+txStylesheetSink::txStylesheetSink(txStylesheetCompiler* aCompiler)
+    : mCompiler(aCompiler)
 {
 }
 
@@ -109,22 +92,6 @@ txStylesheetSink::~txStylesheetSink()
 }
 
 NS_IMPL_ISUPPORTS2(txStylesheetSink, nsIXMLContentSink, nsIExpatSink)
-
-nsresult
-txStylesheetSink::Init(nsITransformMediator* aTransformMediator,
-                       nsIURI* aURL,
-                       txMozillaXSLTProcessor* aProcessor)
-{
-  mTransformMediator = aTransformMediator;
-  mProcessor = aProcessor;
-
-  nsCAutoString uri;
-  aURL->GetSpec(uri);
-  mCompiler = new txStylesheetCompiler(NS_ConvertUTF8toUCS2(uri), nsnull);
-  NS_ENSURE_TRUE(mCompiler, NS_ERROR_OUT_OF_MEMORY);
-
-  return NS_OK;
-}
 
 NS_IMETHODIMP
 txStylesheetSink::HandleStartElement(const PRUnichar *aName,
@@ -195,7 +162,7 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
     nameSpace->FindNameSpaceID(prefix, namespaceID);
 
     PRInt32 attCount;
-    for (attCount = 0; attCount < attTotal; ++attCount) {
+    for (attCount = 0; (PRUint32)attCount < attTotal; ++attCount) {
         if (atts[attCount].mPrefix) {
             nameSpace->FindNameSpaceID(atts[attCount].mPrefix,
                                        atts[attCount].mNamespaceID);
@@ -275,17 +242,170 @@ txStylesheetSink::ReportError(const PRUnichar *aErrorText,
 NS_IMETHODIMP 
 txStylesheetSink::DidBuildModel(PRInt32 aQualityLevel)
 {  
-    nsresult rv = mCompiler->doneLoading();
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = mProcessor->setStylesheet(mCompiler->getStylesheet());
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return mTransformMediator->StyleSheetLoadFinished(NS_OK);
+    return mCompiler->doneLoading();
 }
 
+class txCompileObserver : public txACompileObserver
+{
+public:
+    txCompileObserver(txMozillaXSLTProcessor* aProcessor,
+                      nsILoadGroup* aLoadGroup);
+    virtual ~txCompileObserver();
 
-static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
+    // txACompileObserver
+    nsrefcnt AddRef();
+    nsrefcnt Release();
+
+    virtual nsresult loadURI(const nsAString& aUri,
+                             txStylesheetCompiler* aCompiler);
+    virtual void onDoneCompiling(txStylesheetCompiler* aCompiler,
+                                 nsresult aResult);
+
+    nsresult startLoad(nsIURI* aUri, txStylesheetSink* aSink,
+                       nsIURI* aReferrerUri);
+
+protected:
+    nsAutoRefCnt mRefCnt;
+
+private:
+    nsRefPtr<txMozillaXSLTProcessor> mProcessor;
+    nsCOMPtr<nsILoadGroup> mLoadGroup;
+};
+
+txCompileObserver::txCompileObserver(txMozillaXSLTProcessor* aProcessor,
+                                     nsILoadGroup* aLoadGroup)
+    : mProcessor(aProcessor),
+      mLoadGroup(aLoadGroup)
+{
+}
+
+txCompileObserver::~txCompileObserver()
+{
+}
+
+nsrefcnt
+txCompileObserver::AddRef()
+{
+    return ++mRefCnt;
+}
+
+nsrefcnt
+txCompileObserver::Release()
+{
+    if (--mRefCnt == 0) {
+        mRefCnt = 1; //stabilize
+        delete this;
+        return 0;
+    }
+    return mRefCnt;
+}
+
+nsresult
+txCompileObserver::loadURI(const nsAString& aUri,
+                           txStylesheetCompiler* aCompiler)
+{
+    nsCOMPtr<nsIURI> uri;
+    nsresult rv = NS_NewURI(getter_AddRefs(uri), aUri);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsRefPtr<txStylesheetSink> sink = new txStylesheetSink(aCompiler);
+    NS_ENSURE_TRUE(sink, NS_ERROR_OUT_OF_MEMORY);
+
+    return startLoad(uri, sink, nsnull);
+}
+
+void
+txCompileObserver::onDoneCompiling(txStylesheetCompiler* aCompiler,
+                                   nsresult aResult)
+{
+    mProcessor->setStylesheet(aCompiler->getStylesheet());
+}
+
+nsresult
+txCompileObserver::startLoad(nsIURI* aUri, txStylesheetSink* aSink,
+                             nsIURI* aReferrerUri)
+{
+    nsCOMPtr<nsIChannel> channel;
+    nsresult rv = NS_NewChannel(getter_AddRefs(channel), aUri);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    channel->SetLoadGroup(mLoadGroup);
+
+    nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
+    if (httpChannel) {
+        httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("Accept"),
+                                      NS_LITERAL_CSTRING("text/xml,application/xml,application/xhtml+xml,*/*;q=0.1"),
+                                      PR_FALSE);
+
+        if (aReferrerUri) {
+            httpChannel->SetReferrer(aReferrerUri);
+        }
+    }
+
+    nsAutoString charset(NS_LITERAL_STRING("UTF-8"));
+    PRInt32 charsetSource = kCharsetFromDocTypeDefault;
+
+    // check channel's charset...
+    nsCAutoString charsetVal;
+    rv = channel->GetContentCharset(charsetVal);
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsICharsetAlias> calias =
+            do_GetService(NS_CHARSETALIAS_CONTRACTID);
+
+        if (calias) {
+            nsAutoString preferred;
+            rv = calias->GetPreferred(NS_ConvertASCIItoUCS2(charsetVal),
+                                      preferred);
+            if (NS_SUCCEEDED(rv)) {            
+                charset = preferred;
+                charsetSource = kCharsetFromChannel;
+             }
+        }
+    }
+
+    static NS_DEFINE_CID(kCParserCID, NS_PARSER_CID);
+    nsCOMPtr<nsIParser> parser = do_CreateInstance(kCParserCID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // Set the parser as the stream listener for the document loader...
+    nsCOMPtr<nsIStreamListener> listener = do_QueryInterface(parser, &rv);
+    NS_ENSURE_TRUE(listener, rv);
+
+    parser->SetDocumentCharset(charset, charsetSource);
+    parser->SetCommand(kLoadAsData);
+    parser->SetContentSink(aSink);
+    parser->Parse(aUri);
+
+    return channel->AsyncOpen(listener, nsnull);
+}
+
+nsresult
+TX_LoadSheet(nsIURI* aUri, txMozillaXSLTProcessor* aProcessor,
+             nsILoadGroup* aLoadGroup, nsIURI* aReferrerUri)
+{
+    nsCAutoString uri;
+    aUri->GetSpec(uri);
+
+    nsRefPtr<txCompileObserver> observer =
+        new txCompileObserver(aProcessor, aLoadGroup);
+    NS_ENSURE_TRUE(observer, NS_ERROR_OUT_OF_MEMORY);
+
+    nsRefPtr<txStylesheetCompiler> compiler =
+        new txStylesheetCompiler(NS_ConvertUTF8toUCS2(uri), observer);
+    NS_ENSURE_TRUE(compiler, NS_ERROR_OUT_OF_MEMORY);
+
+    nsRefPtr<txStylesheetSink> sink = new txStylesheetSink(compiler);
+    NS_ENSURE_TRUE(sink, NS_ERROR_OUT_OF_MEMORY);
+
+    return observer->startLoad(aUri, sink, aReferrerUri);
+}
+
+/**
+ * handling DOM->txStylesheet
+ * Observer needs to do synchronous loads.
+ */
+static nsresult
+handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
 {
     PRUint16 nodetype;
     aNode->GetNodeType(&nodetype);
@@ -366,6 +486,96 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
     return NS_OK;
 }
 
+class txSyncCompileObserver : public txACompileObserver
+{
+public:
+    txSyncCompileObserver(nsIURI* aReferrerURI);
+    virtual ~txSyncCompileObserver();
+
+    // txACompileObserver
+    nsrefcnt AddRef();
+    nsrefcnt Release();
+
+    virtual nsresult loadURI(const nsAString& aUri,
+                             txStylesheetCompiler* aCompiler);
+    virtual void onDoneCompiling(txStylesheetCompiler* aCompiler,
+                                 nsresult aResult)
+    {
+        return;
+    }
+
+protected:
+    nsAutoRefCnt mRefCnt;
+
+private:
+    nsCOMPtr<nsISyncLoadDOMService> mLoadService;
+    nsCOMPtr<nsIURI> mReferrer;
+};
+
+txSyncCompileObserver::txSyncCompileObserver(nsIURI* aReferrer)
+    : mReferrer(aReferrer)
+{
+}
+
+txSyncCompileObserver::~txSyncCompileObserver()
+{
+}
+
+nsrefcnt
+txSyncCompileObserver::AddRef()
+{
+    return ++mRefCnt;
+}
+
+nsrefcnt
+txSyncCompileObserver::Release()
+{
+    if (--mRefCnt == 0) {
+        mRefCnt = 1; //stabilize
+        delete this;
+        return 0;
+    }
+    return mRefCnt;
+}
+
+nsresult
+txSyncCompileObserver::loadURI(const nsAString& aUri,
+                               txStylesheetCompiler* aCompiler)
+{
+    if (!mLoadService) {
+        mLoadService =
+            do_GetService("@mozilla.org/content/syncload-dom-service;1");
+        NS_ENSURE_TRUE(mLoadService, NS_ERROR_OUT_OF_MEMORY);
+    }
+    nsCOMPtr<nsIURI> uri;
+    nsresult rv = NS_NewURI(getter_AddRefs(uri), aUri);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIChannel> channel;
+    rv = NS_NewChannel(getter_AddRefs(channel), uri);
+    NS_ENSURE_SUCCESS(rv, rv);
+    // This is probably called by js, a loadGroup for the channeldoesn't
+    // make sense.
+
+    nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
+    if (httpChannel) {
+        httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("Accept"),
+                                      NS_LITERAL_CSTRING("text/xml,application/xml,application/xhtml+xml,*/*;q=0.1"),
+                                      PR_FALSE);
+
+        if (mReferrer) {
+            httpChannel->SetReferrer(mReferrer);
+        }
+    }
+    nsCOMPtr<nsIDOMDocument> document;
+    rv = mLoadService->LoadDocument(channel, mReferrer,
+                                    getter_AddRefs(document));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = handleNode(document, aCompiler);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = aCompiler->doneLoading();
+    return rv;
+}
+
 nsresult
 TX_CompileStylesheet(nsIDOMNode* aNode, txStylesheet** aStylesheet)
 {
@@ -381,8 +591,11 @@ TX_CompileStylesheet(nsIDOMNode* aNode, txStylesheet** aStylesheet)
     nsCAutoString baseURI;
     uri->GetSpec(baseURI);
 
+    nsRefPtr<txSyncCompileObserver> obs = new txSyncCompileObserver(uri);
+    NS_ENSURE_TRUE(obs, NS_ERROR_OUT_OF_MEMORY);
     NS_ConvertUTF8toUCS2 base(baseURI);
-    nsRefPtr<txStylesheetCompiler> compiler = new txStylesheetCompiler(base, nsnull);
+    nsRefPtr<txStylesheetCompiler> compiler =
+        new txStylesheetCompiler(base, obs);
     NS_ENSURE_TRUE(compiler, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = handleNode(document, compiler);
