@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -191,8 +191,8 @@ XPCJSContextStack::SetSafeJSContext(JSContext * aSafeJSContext)
  */
 
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsXPCThreadJSContextStackImpl,
-                              nsIThreadJSContextStack, 
-                              nsIJSContextStack, 
+                              nsIThreadJSContextStack,
+                              nsIJSContextStack,
                               nsISupportsWeakReference)
 
 static nsXPCThreadJSContextStackImpl* gXPCThreadJSContextStack = nsnull;
@@ -226,7 +226,7 @@ void
 nsXPCThreadJSContextStackImpl::FreeSingleton()
 {
     nsXPCThreadJSContextStackImpl* tcs = gXPCThreadJSContextStack;
-    if(tcs) 
+    if(tcs)
     {
         nsrefcnt cnt;
         NS_RELEASE2(tcs, cnt);
@@ -349,7 +349,7 @@ XPCPerThreadData::XPCPerThreadData()
         mExceptionManager(nsnull),
         mException(nsnull),
         mExceptionManagerNotAvailable(JS_FALSE)
-        
+
 {
     if(gLock)
     {
@@ -465,9 +465,9 @@ XPCPerThreadData::GetData()
 void
 XPCPerThreadData::CleanupAllThreads()
 {
-    // I've questioned the sense of cleaning up other threads' data from the 
+    // I've questioned the sense of cleaning up other threads' data from the
     // start. But I got talked into it. Now I see that we *can't* do all the
-    // cleaup while holding this lock. So, we are going to go to the trouble 
+    // cleaup while holding this lock. So, we are going to go to the trouble
     // to copy out the data that needs to be cleaned up *outside* of
     // the lock. Yuk!
 
@@ -478,7 +478,7 @@ XPCPerThreadData::CleanupAllThreads()
     if(gLock)
     {
         nsAutoLock lock(gLock);
-    
+
         for(XPCPerThreadData* cur = gThreads; cur; cur = cur->mNextThread)
             count++;
 
@@ -491,14 +491,14 @@ XPCPerThreadData::CleanupAllThreads()
                 stacks[i++] = cur->mJSContextStack;
                 cur->mJSContextStack = nsnull;
                 cur->Cleanup();
-            }    
+            }
         }
     }
 
     if(stacks)
     {
         for(i = 0; i < count; i++)
-            delete stacks[i];    
+            delete stacks[i];
         delete [] stacks;
     }
 

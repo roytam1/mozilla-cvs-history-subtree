@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -66,7 +66,7 @@ struct JSDyingJSObjectData
     JSContext* cx;
     nsVoidArray* array;
 };
- 
+
 JS_STATIC_DLL_CALLBACK(JSDHashOperator)
 WrappedJSDyingJSObjectFinder(JSDHashTable *table, JSDHashEntryHdr *hdr,
                 uint32 number, void *arg)
@@ -169,12 +169,12 @@ JS_STATIC_DLL_CALLBACK(JSDHashOperator)
 JSClassSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
                uint32 number, void *arg)
 {
-    XPCNativeScriptableShared* shared = 
+    XPCNativeScriptableShared* shared =
         ((XPCNativeScriptableSharedMap::Entry*) hdr)->key;
     if(shared->IsMarked())
     {
 #ifdef off_XPC_REPORT_JSCLASS_FLUSHING
-        printf("+ Marked XPCNativeScriptableShared for: %s @ %x\n", 
+        printf("+ Marked XPCNativeScriptableShared for: %s @ %x\n",
                shared->GetJSClass()->name,
                shared->GetJSClass());
 #endif
@@ -183,7 +183,7 @@ JSClassSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
     }
 
 #ifdef XPC_REPORT_JSCLASS_FLUSHING
-    printf("- Destroying XPCNativeScriptableShared for: %s @ %x\n", 
+    printf("- Destroying XPCNativeScriptableShared for: %s @ %x\n",
            shared->GetJSClass()->name,
            shared->GetJSClass());
 #endif
@@ -196,7 +196,7 @@ JS_STATIC_DLL_CALLBACK(JSDHashOperator)
 DyingProtoKiller(JSDHashTable *table, JSDHashEntryHdr *hdr,
                  uint32 number, void *arg)
 {
-    XPCWrappedNativeProto* proto = 
+    XPCWrappedNativeProto* proto =
         (XPCWrappedNativeProto*)((JSDHashEntryStub*)hdr)->key;
     delete proto;
     return JS_DHASH_REMOVE;
@@ -253,7 +253,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 int ifacesBefore = (int) self->mIID2NativeInterfaceMap->Count();
 #endif
 
-                // We use this occasion to mark and sweep NativeInterfaces, 
+                // We use this occasion to mark and sweep NativeInterfaces,
                 // NativeSets, and the WrappedNativeJSClasses...
 
                 // Do the marking...
@@ -392,11 +392,11 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 // at that point because the ordering of JS finalization is not
                 // deterministic and we did not yet know if any wrappers that
                 // might still be referencing the protos where still yet to be
-                // finalized and destroyed. We *do* know that the protos' 
+                // finalized and destroyed. We *do* know that the protos'
                 // JSObjects would not have been finalized if there were any
                 // wrappers that referenced the proto but where not themselves
                 // slated for finalization in this gc cycle. So... at this point
-                // we know that any and all wrappers that might have been 
+                // we know that any and all wrappers that might have been
                 // referencing the protos in the dying list are themselves dead.
                 // So, we can safely delete all the protos in the list.
 
@@ -587,8 +587,8 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
 {
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-    DEBUG_WrappedNativeHashtable = 
-        JS_NewDHashTable(JS_DHashGetStubOps(), nsnull, 
+    DEBUG_WrappedNativeHashtable =
+        JS_NewDHashTable(JS_DHashGetStubOps(), nsnull,
                          sizeof(JSDHashEntryStub), 128);
 #endif
 
@@ -721,7 +721,7 @@ XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
     {
         if(found)
             tls->SetRecentContext(cx, found);
-        else    
+        else
             tls->ClearRecentContext();
     }
 

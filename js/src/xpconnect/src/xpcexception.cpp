@@ -19,7 +19,8 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
+ *   Mark Hammond <MarkH@ActiveState.com>
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -33,7 +34,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* An implementaion nsIXPCException. */
+/* An implementaion of nsIException. */
 
 #include "xpcprivate.h"
 
@@ -195,7 +196,7 @@ nsXPCException::GetResult(nsresult *aResult)
     return NS_OK;
 }
 
-NS_IMETHODIMP    
+NS_IMETHODIMP
 nsXPCException::GetCode(PRUint32* aCode)
 {
     if(!aCode)
@@ -294,7 +295,7 @@ nsXPCException::GetInner(nsIException* *aException)
 }
 
 /* void initialize (in string aMessage, in nsresult aResult, in string aName, in nsIStackFrame aLocation, in nsISupports aData, in nsIException aInner); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCException::Initialize(const char *aMessage, nsresult aResult, const char *aName, nsIStackFrame *aLocation, nsISupports *aData, nsIException *aInner)
 {
     if(mInitialized)
@@ -419,7 +420,7 @@ nsXPCException::NewException(const char *aMessage,
     // shared factory/classinsance object never gets created and our QI getter
     // for our instance's pointer to our nsIClassInfo will always return null.
     // This is bad because it means that wrapped exceptions will never have a
-    // shared prototype. So... We force one to be created via the factory 
+    // shared prototype. So... We force one to be created via the factory
     // *once* and then go about our business.
     static JSBool everMadeOneFromFactory = JS_FALSE;
     if(!everMadeOneFromFactory)
@@ -463,15 +464,15 @@ nsXPCException::NewException(const char *aMessage,
         }
         // We want to trim off any leading native 'dataless' frames
         if(location)
-            while(1) 
+            while(1)
             {
                 PRUint32 language;
                 PRInt32 lineNumber;
-                if(NS_FAILED(location->GetLanguage(&language)) || 
+                if(NS_FAILED(location->GetLanguage(&language)) ||
                    language == nsIProgrammingLanguage::JAVASCRIPT ||
-                   NS_FAILED(location->GetLineNumber(&lineNumber)) || 
+                   NS_FAILED(location->GetLineNumber(&lineNumber)) ||
                    lineNumber)
-                {    
+                {
                     break;
                 }
                 nsCOMPtr<nsIStackFrame> caller;

@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *   Mike Shaver <shaver@mozilla.org>
  *

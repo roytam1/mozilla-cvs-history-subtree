@@ -19,7 +19,8 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
+ *   Mark Hammond <MarkH@ActiveState.com>
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -40,7 +41,7 @@
 interface nsIXPCException : nsIException
 {
     // inherits methods from nsIException
-    
+
     void initialize(in string           aMessage,
                     in nsresult         aResult,
                     in string           aName,
@@ -49,7 +50,7 @@ interface nsIXPCException : nsIException
                     in nsIException     aInner);
 };
 
-// XXX this is a hack that will be fixed later with integration to 
+// XXX this is a hack that will be fixed later with integration to
 // the nsIErrorService and a scheme to let the DOM make its own
 // exceptions on demand.
 

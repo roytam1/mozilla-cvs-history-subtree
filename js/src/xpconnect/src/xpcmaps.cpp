@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -486,13 +486,13 @@ IID2ThisTranslatorMap::~IID2ThisTranslatorMap()
 
 /***************************************************************************/
 
-JSDHashNumber JS_DLL_CALLBACK 
+JSDHashNumber JS_DLL_CALLBACK
 XPCNativeScriptableSharedMap::Entry::Hash(JSDHashTable *table, const void *key)
 {
     JSDHashNumber h;
     const unsigned char *s;
-    
-    XPCNativeScriptableShared* obj = 
+
+    XPCNativeScriptableShared* obj =
         (XPCNativeScriptableShared*) key;
 
     // hash together the flags and the classname string
@@ -503,15 +503,15 @@ XPCNativeScriptableSharedMap::Entry::Hash(JSDHashTable *table, const void *key)
     return h;
 }
 
-JSBool JS_DLL_CALLBACK 
+JSBool JS_DLL_CALLBACK
 XPCNativeScriptableSharedMap::Entry::Match(JSDHashTable *table,
                                          const JSDHashEntryHdr *entry,
                                          const void *key)
 {
-    XPCNativeScriptableShared* obj1 = 
+    XPCNativeScriptableShared* obj1 =
         ((XPCNativeScriptableSharedMap::Entry*) entry)->key;
 
-    XPCNativeScriptableShared* obj2 = 
+    XPCNativeScriptableShared* obj2 =
         (XPCNativeScriptableShared*) key;
 
     // match the flags and the classname string
@@ -521,7 +521,7 @@ XPCNativeScriptableSharedMap::Entry::Match(JSDHashTable *table,
 
     const char* name1 = obj1->GetJSClass()->name;
     const char* name2 = obj2->GetJSClass()->name;
-    
+
     if(!name1 || !name2)
         return name1 == name2;
 
@@ -544,7 +544,7 @@ struct JSDHashTableOps XPCNativeScriptableSharedMap::Entry::sOps =
 XPCNativeScriptableSharedMap*
 XPCNativeScriptableSharedMap::newMap(int size)
 {
-    XPCNativeScriptableSharedMap* map = 
+    XPCNativeScriptableSharedMap* map =
         new XPCNativeScriptableSharedMap(size);
     if(map && map->mTable)
         return map;
@@ -563,7 +563,7 @@ XPCNativeScriptableSharedMap::~XPCNativeScriptableSharedMap()
         JS_DHashTableDestroy(mTable);
 }
 
-JSBool 
+JSBool
 XPCNativeScriptableSharedMap::GetNewOrUsed(JSUint32 flags,
                                            char* name,
                                            XPCNativeScriptableInfo* si)
@@ -572,7 +572,7 @@ XPCNativeScriptableSharedMap::GetNewOrUsed(JSUint32 flags,
     NS_PRECONDITION(si,"bad param");
 
     XPCNativeScriptableShared key(flags, name);
-    
+
     Entry* entry = (Entry*)
         JS_DHashTableOperate(mTable, &key, JS_DHASH_ADD);
     if(!entry)
@@ -582,7 +582,7 @@ XPCNativeScriptableSharedMap::GetNewOrUsed(JSUint32 flags,
 
     if(!shared)
     {
-        entry->key = shared = 
+        entry->key = shared =
             new XPCNativeScriptableShared(flags, key.TransferNameOwnership());
         if(!shared)
             return JS_FALSE;

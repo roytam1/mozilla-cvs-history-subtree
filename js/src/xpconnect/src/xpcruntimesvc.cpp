@@ -19,6 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
+ *   Mike Shaver <shaver@mozilla.org>
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -50,7 +51,7 @@ nsJSRuntimeServiceImpl::nsJSRuntimeServiceImpl() :
 }
 
 nsJSRuntimeServiceImpl::~nsJSRuntimeServiceImpl() {
-    if(mRuntime) 
+    if(mRuntime)
     {
         JS_DestroyRuntime(mRuntime);
         JS_ShutDown();
@@ -60,7 +61,7 @@ nsJSRuntimeServiceImpl::~nsJSRuntimeServiceImpl() {
     }
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsJSRuntimeServiceImpl, 
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsJSRuntimeServiceImpl,
                               nsIJSRuntimeService,
                               nsISupportsWeakReference);
 
@@ -95,7 +96,7 @@ nsJSRuntimeServiceImpl::GetRuntime(JSRuntime **runtime)
     if(!runtime)
         return NS_ERROR_NULL_POINTER;
 
-    if(!mRuntime) 
+    if(!mRuntime)
     {
         mRuntime = JS_NewRuntime(gGCSize);
         if(!mRuntime)

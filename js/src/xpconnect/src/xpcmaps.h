@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -580,7 +580,7 @@ public:
     {
         XPCNativeScriptableShared* key;
 
-        static JSDHashNumber JS_DLL_CALLBACK 
+        static JSDHashNumber JS_DLL_CALLBACK
         Hash(JSDHashTable *table, const void *key);
 
         static JSBool JS_DLL_CALLBACK

@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -33,7 +33,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* Implements nsIJSStackFrameLocation */
+/* Implements nsIStackFrame. */
 
 #include "xpcprivate.h"
 
@@ -57,7 +57,7 @@ public:
     XPCJSStackFrame();
     virtual ~XPCJSStackFrame();
 
-    JSBool IsJSFrame() const 
+    JSBool IsJSFrame() const
         {return mLanguage == nsIProgrammingLanguage::JAVASCRIPT;}
 
 private:

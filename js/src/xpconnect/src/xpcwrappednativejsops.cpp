@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -299,7 +299,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                 }
 
                 AutoResolveName arn(ccx, idval);
-                if(resolved) 
+                if(resolved)
                     *resolved = JS_TRUE;
                 return OBJ_DEFINE_PROPERTY(ccx, obj, id,
                                            OBJECT_TO_JSVAL(JS_GetFunctionObject(fun)),
@@ -327,7 +327,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
             {
                 AutoResolveName arn(ccx, idval);
-                if(resolved) 
+                if(resolved)
                     *resolved = JS_TRUE;
                 return JS_ValueToId(ccx, idval, &id) &&
                        OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
@@ -364,14 +364,14 @@ DefinePropertyIfFound(XPCCallContext& ccx,
             propFlags &= ~JSPROP_ENUMERATE;
 
             AutoResolveName arn(ccx, idval);
-            if(resolved) 
+            if(resolved)
                 *resolved = JS_TRUE;
             return OBJ_DEFINE_PROPERTY(ccx, obj, id, JSVAL_VOID,
                                        (JSPropertyOp) funobj, nsnull,
                                        propFlags, nsnull);
         }
-        
-        if(resolved) 
+
+        if(resolved)
             *resolved = JS_FALSE;
         return JS_TRUE;
     }
@@ -390,7 +390,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                 return JS_FALSE;
 
             AutoResolveName arn(ccx, idval);
-            if(resolved) 
+            if(resolved)
                 *resolved = JS_TRUE;
             return JS_ValueToId(ccx, idval, &id) &&
                    OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
@@ -398,7 +398,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                        propFlags & ~JSPROP_ENUMERATE,
                                        nsnull);
         }
-        if(resolved) 
+        if(resolved)
             *resolved = JS_FALSE;
         return JS_TRUE;
     }
@@ -407,7 +407,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     {
         jsval val;
         AutoResolveName arn(ccx, idval);
-        if(resolved) 
+        if(resolved)
             *resolved = JS_TRUE;
         return member->GetValue(ccx, iface, &val) &&
                JS_ValueToId(ccx, idval, &id) &&
@@ -415,7 +415,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                    propFlags, nsnull);
     }
 
-    if(scriptableInfo && 
+    if(scriptableInfo &&
        scriptableInfo->GetFlags().DontEnumQueryInterface() &&
        idval == rt->GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE))
         propFlags &= ~JSPROP_ENUMERATE;
@@ -439,7 +439,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     if(member->IsMethod())
     {
         AutoResolveName arn(ccx, idval);
-        if(resolved) 
+        if(resolved)
             *resolved = JS_TRUE;
         return JS_ValueToId(ccx, idval, &id) &&
                OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(funobj),
@@ -458,7 +458,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     }
 
     AutoResolveName arn(ccx, idval);
-    if(resolved) 
+    if(resolved)
         *resolved = JS_TRUE;
     return JS_ValueToId(ccx, idval, &id) &&
            OBJ_DEFINE_PROPERTY(ccx, obj, id, JSVAL_VOID,
@@ -521,7 +521,7 @@ XPC_WN_Shared_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
                 if(!ccx.GetTearOff())
                 {
                     XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
-                    if(si && (si->GetFlags().WantCall() || 
+                    if(si && (si->GetFlags().WantCall() ||
                               si->GetFlags().WantConstruct()))
                     {
                         *vp = OBJECT_TO_JSVAL(obj);
@@ -583,7 +583,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
         return JS_TRUE;
 
     XPCNativeSet* set = wrapper->GetSet();
-    XPCNativeSet* protoSet = wrapper->HasProto() ? 
+    XPCNativeSet* protoSet = wrapper->HasProto() ?
                                 wrapper->GetProto()->GetSet() : nsnull;
     JSProperty* prop;
     JSObject* obj2;
@@ -602,7 +602,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 
             // Skip if this member is going to come from the proto.
             PRUint16 index;
-            if(protoSet && 
+            if(protoSet &&
                protoSet->FindMember(name, nsnull, &index) && index == i)
                 continue;
 
@@ -628,7 +628,7 @@ XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
     p->FlatJSObjectFinalized(cx, obj);
 }
 
-static void 
+static void
 MarkScopeJSObjects(JSContext *cx, XPCWrappedNativeScope* scope, void *arg)
 {
     NS_ASSERTION(scope, "bad scope");
@@ -644,9 +644,9 @@ MarkScopeJSObjects(JSContext *cx, XPCWrappedNativeScope* scope, void *arg)
     {
         JS_MarkGCThing(cx, obj, "XPCWrappedNativeScope::mPrototypeJSObject", arg);
     }
-}        
+}
 
-static void 
+static void
 MarkForValidWrapper(JSContext *cx, XPCWrappedNative* wrapper, void *arg)
 {
     if(wrapper->HasProto())
@@ -656,7 +656,7 @@ MarkForValidWrapper(JSContext *cx, XPCWrappedNative* wrapper, void *arg)
         JS_MarkGCThing(cx, obj, "XPCWrappedNativeProto::mJSProtoObject", arg);
     }
     MarkScopeJSObjects(cx, wrapper->GetScope(), arg);
-}        
+}
 
 JS_STATIC_DLL_CALLBACK(uint32)
 XPC_WN_Shared_Mark(JSContext *cx, JSObject *obj, void *arg)
@@ -915,7 +915,7 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
             // it *might* be in the instance set but not the proto set.
 
             XPCNativeSet* set = wrapper->GetSet();
-            XPCNativeSet* protoSet = wrapper->HasProto() ? 
+            XPCNativeSet* protoSet = wrapper->HasProto() ?
                                         wrapper->GetProto()->GetSet() : nsnull;
             XPCNativeMember* member;
             XPCNativeInterface* iface;
@@ -930,10 +930,10 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
                 if(si)
                     siFlags = si->GetFlags();
 
-                uintN enumFlag = 
+                uintN enumFlag =
                     siFlags.DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
-                
-                XPCWrappedNative* wrapperForInterfaceNames = 
+
+                XPCWrappedNative* wrapperForInterfaceNames =
                     siFlags.DontReflectInterfaceNames() ? nsnull : wrapper;
 
                 JSBool resolved;
@@ -941,12 +941,12 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
                 retval = DefinePropertyIfFound(ccx, obj, idval,
                                                set, iface, member,
                                                wrapper->GetScope(),
-                                               JS_FALSE, 
-                                               wrapperForInterfaceNames, 
+                                               JS_FALSE,
+                                               wrapperForInterfaceNames,
                                                nsnull, si,
                                                enumFlag, &resolved);
                 (void)ccx.SetResolvingWrapper(oldResolvingWrapper);
-                if(retval && resolved) 
+                if(retval && resolved)
                     *objp = obj;
             }
         }
@@ -1091,15 +1091,15 @@ JSBool xpc_InitWrappedNativeJSOps()
 
 /***************************************************************************/
 
-// static 
-XPCNativeScriptableInfo* 
-XPCNativeScriptableInfo::Construct(XPCCallContext& ccx, 
+// static
+XPCNativeScriptableInfo*
+XPCNativeScriptableInfo::Construct(XPCCallContext& ccx,
                                    const XPCNativeScriptableCreateInfo* sci)
 {
     NS_ASSERTION(sci->GetCallback(), "bad param");
     NS_ASSERTION(sci, "bad param");
 
-    XPCNativeScriptableInfo* newObj = 
+    XPCNativeScriptableInfo* newObj =
         new XPCNativeScriptableInfo(sci->GetCallback());
     if(!newObj)
         return nsnull;
@@ -1125,7 +1125,7 @@ XPCNativeScriptableInfo::Construct(XPCCallContext& ccx,
         delete newObj;
         return nsnull;
     }
-    
+
     return newObj;
 }
 
@@ -1381,7 +1381,7 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
         return JS_TRUE;
 
     XPCNativeScriptableInfo* si = self->GetScriptableInfo();
-    uintN enumFlag = (si && si->GetFlags().DontEnumStaticProps()) ? 
+    uintN enumFlag = (si && si->GetFlags().DontEnumStaticProps()) ?
                                                 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval,
@@ -1464,7 +1464,7 @@ XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
         return JS_TRUE;
 
     XPCNativeScriptableInfo* si = self->GetScriptableInfo();
-    uintN enumFlag = (si && si->GetFlags().DontEnumStaticProps()) ? 
+    uintN enumFlag = (si && si->GetFlags().DontEnumStaticProps()) ?
                                                 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval,

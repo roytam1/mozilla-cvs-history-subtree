@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -328,7 +328,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     // If the interface does not have nsISupports in its inheritance chain
     // then we know we can't reflect its methods. However, some interfaces that
     // are used just to reflect constants are declared this way. We need to
-    // go ahead and build the thing. But, we'll ignore whatever methods it may 
+    // go ahead and build the thing. But, we'll ignore whatever methods it may
     // have.
     if(!nsXPConnect::IsISupportsDescendant(aInfo))
         methodCount = 0;

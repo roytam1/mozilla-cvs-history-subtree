@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -117,7 +117,7 @@ static void DEBUG_TrackDeleteWrapper(XPCWrappedNative* wrapper)
     DEBUG_WrappedNativeTearOffChunkCounts[extraChunkCount]++;
 #endif
 }
-static void DEBUG_TrackWrapperCall(XPCWrappedNative* wrapper, 
+static void DEBUG_TrackWrapperCall(XPCWrappedNative* wrapper,
                                    XPCWrappedNative::CallMode mode)
 {
 #ifdef XPC_TRACK_WRAPPER_STATS
@@ -146,25 +146,25 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
     {
         DEBUG_DumpedWrapperStats = PR_TRUE;
         printf("%d WrappedNatives were constructed. "
-               "(%d w/ protos, %d w/o)\n", 
+               "(%d w/ protos, %d w/o)\n",
                DEBUG_TotalWrappedNativeCount,
                DEBUG_WrappedNativeWithProtoCount,
                DEBUG_WrappedNativeNoProtoCount);
-        
+
         printf("%d WrappedNatives max alive at one time. "
-               "(%d w/ protos, %d w/o)\n", 
+               "(%d w/ protos, %d w/o)\n",
                DEBUG_TotalMaxWrappedNativeCount,
                DEBUG_MaxWrappedNativeWithProtoCount,
                DEBUG_MaxWrappedNativeNoProtoCount);
 
-        printf("%d WrappedNatives alive now. " 
-               "(%d w/ protos, %d w/o)\n", 
+        printf("%d WrappedNatives alive now. "
+               "(%d w/ protos, %d w/o)\n",
                DEBUG_TotalLiveWrappedNativeCount,
                DEBUG_LiveWrappedNativeWithProtoCount,
                DEBUG_LiveWrappedNativeNoProtoCount);
 
         printf("%d calls to WrappedNatives. "
-               "(%d methods, %d getters, %d setters)\n", 
+               "(%d methods, %d getters, %d setters)\n",
                DEBUG_WrappedNativeTotalCalls,
                DEBUG_WrappedNativeMethodCalls,
                DEBUG_WrappedNativeGetterCalls,
@@ -175,10 +175,10 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
         int i;
         for(i = 0; i < DEBUG_CHUCKS_TO_COUNT; i++)
         {
-            printf("%d / %d, ", 
+            printf("%d / %d, ",
                    DEBUG_WrappedNativeTearOffChunkCounts[i],
                    (i+1) * XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK);
-        }    
+        }
         printf("%d / more)\n", DEBUG_WrappedNativeTearOffChunkCounts[i]);
     }
 #endif
@@ -302,17 +302,17 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCWrappedNativeProto* proto = nsnull;
 
     // If there is nsIClassInfo then we use a wrapper that needs a prototype.
-    
-    // Note that the security check happens inside FindTearOff - after the 
+
+    // Note that the security check happens inside FindTearOff - after the
     // wrapper is actually created, but before JS code can see it.
 
     if(info)
     {
-        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &sciProto, 
+        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &sciProto,
                                                     isClassInfo);
         if(!proto)
             return NS_ERROR_FAILURE;
-        
+
         wrapper = new XPCWrappedNative(identity, proto);
         if(!wrapper)
             return NS_ERROR_FAILURE;
@@ -321,7 +321,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     {
         XPCNativeSet* set =
             XPCNativeSet::GetNewOrUsed(ccx, nsnull, Interface, 0);
-        
+
         if(!set)
             return NS_ERROR_FAILURE;
 
@@ -479,13 +479,13 @@ XPCWrappedNative::~XPCWrappedNative()
 
     XPCWrappedNativeProto* proto = GetProto();
 
-    if(mScriptableInfo && 
-       (!HasProto() || 
+    if(mScriptableInfo &&
+       (!HasProto() ||
         (proto && proto->GetScriptableInfo() != mScriptableInfo)))
     {
         delete mScriptableInfo;
     }
-    
+
     Native2WrappedNativeMap* map = GetScope()->GetWrappedNativeMap();
     {   // scoped lock
         XPCAutoLock lock(GetRuntime()->GetMapLock());
@@ -552,52 +552,52 @@ XPCWrappedNative::GatherScriptableInfo(
         // A whole series of assertions to catch bad uses of scriptable flags on
         // the siWrapper...
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().WantPreCreate() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().WantPreCreate() &&
                         !sciProto->GetFlags().WantPreCreate()),
                      "Can't set WANT_PRECREATE on an instance scriptable "
                      "without also setting it on the class scriptable");
 
         NS_ASSERTION(!(sciWrapper->GetFlags().DontEnumStaticProps() &&
                         !sciProto->GetFlags().DontEnumStaticProps() &&
-                        sciProto->GetCallback() && 
+                        sciProto->GetCallback() &&
                         !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set DONT_ENUM_STATIC_PROPS on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().DontEnumQueryInterface() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontEnumQueryInterface() &&
                         !sciProto->GetFlags().DontEnumQueryInterface() &&
-                        sciProto->GetCallback() && 
+                        sciProto->GetCallback() &&
                         !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set DONT_ENUM_QUERY_INTERFACE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().DontAskInstanceForScriptable() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontAskInstanceForScriptable() &&
                         !sciProto->GetFlags().DontAskInstanceForScriptable()),
                      "Can't set DONT_ASK_INSTANCE_FOR_SCRIPTABLE on an instance scriptable "
                      "without also setting it on the class scriptable");
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().ClassInfoInterfacesOnly() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().ClassInfoInterfacesOnly() &&
                         !sciProto->GetFlags().ClassInfoInterfacesOnly() &&
-                        sciProto->GetCallback() && 
+                        sciProto->GetCallback() &&
                         !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set CLASSINFO_INTERFACES_ONLY on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().AllowPropModsDuringResolve() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().AllowPropModsDuringResolve() &&
                         !sciProto->GetFlags().AllowPropModsDuringResolve() &&
-                        sciProto->GetCallback() && 
+                        sciProto->GetCallback() &&
                         !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set ALLOW_PROP_MODS_DURING_RESOLVE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().AllowPropModsToPrototype() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().AllowPropModsToPrototype() &&
                         !sciProto->GetFlags().AllowPropModsToPrototype() &&
-                        sciProto->GetCallback() && 
+                        sciProto->GetCallback() &&
                         !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set ALLOW_PROP_MODS_TO_PROTOTYPE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(sciWrapper->GetFlags().DontSharePrototype() && 
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontSharePrototype() &&
                         !sciProto->GetFlags().DontSharePrototype() &&
                         sciProto->GetCallback()),
                      "Can't set DONT_SHARE_PROTOTYPE on an instance scriptable "
@@ -634,9 +634,9 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
         }
         if(!mScriptableInfo)
         {
-            mScriptableInfo = 
+            mScriptableInfo =
                 XPCNativeScriptableInfo::Construct(ccx, sci);
-            
+
             if(!mScriptableInfo)
                 return JS_FALSE;
 
@@ -861,8 +861,8 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     if(HasProto())
         proto->SystemIsBeingShutDown(ccx);
 
-    if(mScriptableInfo && 
-       (!HasProto() || 
+    if(mScriptableInfo &&
+       (!HasProto() ||
         (proto && proto->GetScriptableInfo() != mScriptableInfo)))
     {
         delete mScriptableInfo;
@@ -880,7 +880,7 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
             {
                 JS_SetPrivate(ccx, to->GetJSObject(), nsnull);
                 to->SetJSObject(nsnull);
-                // We leak the tearoff mNative 
+                // We leak the tearoff mNative
                 // (for the same reason we leak mIdentity - see above).
                 to->SetNative(nsnull);
                 to->SetInterface(nsnull);
@@ -988,9 +988,9 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
             if(wrapper->mScriptableInfo &&
                wrapper->mScriptableInfo == oldProto->GetScriptableInfo())
             {
-                // The new proto had better have the same JSClass stuff as the 
+                // The new proto had better have the same JSClass stuff as the
                 // old one! We maintain a runtime wide unique map of this stuff.
-                // So, if these don't match then the caller is doing something 
+                // So, if these don't match then the caller is doing something
                 // bad here.
 
                 NS_ASSERTION(
@@ -1024,7 +1024,7 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
           ((clazz) == &XPC_WN_NoHelper_JSClass ||                             \
            (clazz)->getObjectOps == XPC_WN_GetObjectOpsNoCall ||              \
            (clazz)->getObjectOps == XPC_WN_GetObjectOpsWithCall)
-    
+
 #define IS_TEAROFF_CLASS(clazz)                                               \
           ((clazz) == &XPC_WN_Tearoff_JSClass)
 
@@ -1041,7 +1041,7 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
                                              XPCWrappedNativeTearOff** pTearOff)
 {
     NS_PRECONDITION(obj, "bad param");
-    
+
     JSObject* cur;
 
     XPCWrappedNativeProto* proto = nsnull;
@@ -1054,7 +1054,7 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
         JSObject* funObjParent = JS_GetParent(cx, funobj);
         NS_ASSERTION(funObjParent, "funobj has no parent");
         NS_ASSERTION(JS_GetParent(cx, funObjParent), "funobj's parent is global");
-        
+
         JSClass* funObjParentClass = JS_GET_CLASS(cx, funObjParent);
 
         if(IS_PROTO_CLASS(funObjParentClass))
@@ -1087,7 +1087,7 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
         if(IS_WRAPPER_CLASS(clazz))
         {
 return_wrapper:
-            XPCWrappedNative* wrapper = 
+            XPCWrappedNative* wrapper =
                 (XPCWrappedNative*) JS_GetPrivate(cx, cur);
             if(proto && proto != wrapper->GetProto())
                 continue;
@@ -1099,7 +1099,7 @@ return_wrapper:
         if(IS_TEAROFF_CLASS(clazz))
         {
 return_tearoff:
-            XPCWrappedNative* wrapper = 
+            XPCWrappedNative* wrapper =
                 (XPCWrappedNative*) JS_GetPrivate(cx, JS_GetParent(cx,cur));
             if(proto && proto != wrapper->GetProto())
                 continue;
@@ -1192,10 +1192,10 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
     rv = InitTearOff(ccx, to, aInterface, needJSObject);
     if(NS_FAILED(rv))
         to = nsnull;
-    
+
 return_result:
 
-    if(pError) 
+    if(pError)
         *pError = rv;
     return to;
 }
@@ -1217,19 +1217,19 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
 
     // If the scriptable helper forbids us from reflecting additional
     // interfaces, then don't even try the QI, just fail.
-    if(mScriptableInfo && 
+    if(mScriptableInfo &&
        mScriptableInfo->GetFlags().ClassInfoInterfacesOnly() &&
-       !mSet->HasInterface(aInterface) && 
+       !mSet->HasInterface(aInterface) &&
        !mSet->HasInterfaceWithAncestor(aInterface))
     {
         return NS_ERROR_NO_INTERFACE;
     }
 
-    // We are about to call out to unlock and other code. 
+    // We are about to call out to unlock and other code.
     // So protect our intended tearoff.
-    
+
     aTearOff->SetReserved();
-    
+
     {   // scoped *un*lock
         XPCAutoUnlock unlock(GetLock());
 
@@ -1255,7 +1255,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
            sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
         if(sm && NS_FAILED(sm->
-                    CanCreateWrapper(ccx, *iid, identity, 
+                    CanCreateWrapper(ccx, *iid, identity,
                                      GetClassInfo(), GetSecurityInfoAddr())))
         {
             // the security manager vetoed. It should have set an exception.
@@ -2001,7 +2001,7 @@ done:
 #ifdef DEBUG_stats_jband
     endTime = PR_IntervalNow();
 
-    printf("%s::%s %d ( js->c ) \n", 
+    printf("%s::%s %d ( js->c ) \n",
            ccx.GetInterface()->GetNameString(),
            ccx.GetInterface()->GetMemberName(ccx, ccx.GetMember()),
            PR_IntervalToMilliseconds(endTime-startTime));
@@ -2031,7 +2031,7 @@ NS_IMETHODIMP XPCWrappedNative::GetNative(nsISupports * *aNative)
 /* readonly attribute JSObjectPtr JSObjectPrototype; */
 NS_IMETHODIMP XPCWrappedNative::GetJSObjectPrototype(JSObject * *aJSObjectPrototype)
 {
-    *aJSObjectPrototype = HasProto() ? 
+    *aJSObjectPrototype = HasProto() ?
                 GetProto()->GetJSProtoObject() : GetFlatJSObject();
     return NS_OK;
 }
@@ -2351,10 +2351,10 @@ static void DEBUG_PrintShadowObjectInfo(const char* header,
     nsIClassInfo* clsInfo = proto ? proto->GetClassInfo() : nsnull;
     if(clsInfo)
         clsInfo->GetContractID(&contractID);
-    
-    XPCNativeScriptableInfo* si = wrapper ? 
+
+    XPCNativeScriptableInfo* si = wrapper ?
             wrapper->GetScriptableInfo() :
-            proto->GetScriptableInfo();    
+            proto->GetScriptableInfo();
     if(si)
         si->GetCallback()->GetClassName(&className);
 
@@ -2432,7 +2432,7 @@ static JSBool InterfacesAreRelated(XPCNativeInterface* iface1,
 
     PRBool match;
 
-    return 
+    return
         (NS_SUCCEEDED(info1->HasAncestor(iface2->GetIID(), &match)) && match) ||
         (NS_SUCCEEDED(info2->HasAncestor(iface1->GetIID(), &match)) && match);
 }
@@ -2456,8 +2456,8 @@ static JSBool MembersAreTheSame(XPCNativeInterface* iface1,
     if(member1->IsConstant())
     {
         if(!member2->IsConstant())
-            return JS_FALSE;    
-    
+            return JS_FALSE;
+
         const nsXPTConstant* constant1;
         const nsXPTConstant* constant2;
 
@@ -2466,15 +2466,15 @@ static JSBool MembersAreTheSame(XPCNativeInterface* iface1,
                constant1->GetType() == constant2->GetType() &&
                constant1->GetValue() == constant2->GetValue();
     }
-    
+
     // Else we make sure they are of the same 'type' and return true only if
     // they are inherited from the same interface.
-        
+
     if(member1->IsMethod() != member2->IsMethod() ||
        member1->IsWritableAttribute() != member2->IsWritableAttribute() ||
        member1->IsReadOnlyAttribute() != member2->IsReadOnlyAttribute())
     {
-        return JS_FALSE;    
+        return JS_FALSE;
     }
 
     const nsXPTMethodInfo* mi1;
@@ -2514,7 +2514,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
     int localNext = nextSeenSet+1;
     nextSeenSet = localNext < MAX_SEEN_SETS ? localNext : 0;
 
-    XPCNativeScriptableInfo* si = wrapper ? 
+    XPCNativeScriptableInfo* si = wrapper ?
             wrapper->GetScriptableInfo() :
             proto->GetScriptableInfo();
 
@@ -2528,7 +2528,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
             "Event",
             nsnull
         };
-        
+
         static PRBool warned = JS_FALSE;
         if(!warned)
         {
@@ -2536,7 +2536,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
             for(const char** name = skipClasses; *name; name++)
                 printf("%s %s", name == skipClasses ? "" : ",", *name);
              printf("\n");
-            warned = JS_TRUE;        
+            warned = JS_TRUE;
         }
 
         PRBool quit = JS_FALSE;

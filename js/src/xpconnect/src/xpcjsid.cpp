@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -254,7 +254,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCSCRIPTABLE
     SharedScriptableHelperForJSIID() {NS_INIT_ISUPPORTS();}
-};   
+};
 
 NS_INTERFACE_MAP_BEGIN(SharedScriptableHelperForJSIID)
   NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
@@ -294,20 +294,20 @@ static JSBool gClassObjectsWhereInited = JS_FALSE;
 NS_DECL_CI_INTERFACE_GETTER(nsJSIID)
 static nsIClassInfo* NS_CLASSINFO_NAME(nsJSIID);
 static nsModuleComponentInfo CI_nsJSIID =
-    {"JSIID", 
+    {"JSIID",
      {0x26ecb8d0, 0x35c9, 0x11d5, { 0x90, 0xb2, 0x0, 0x10, 0xa4, 0xe7, 0x3d, 0x9a }},
      nsnull, nsnull, nsnull,nsnull, nsnull,
-     NS_CI_INTERFACE_GETTER_NAME(nsJSIID), 
-     GetSharedScriptableHelperForJSIID, 
+     NS_CI_INTERFACE_GETTER_NAME(nsJSIID),
+     GetSharedScriptableHelperForJSIID,
      &NS_CLASSINFO_NAME(nsJSIID), 0};
 
 NS_DECL_CI_INTERFACE_GETTER(nsJSCID)
 static nsIClassInfo* NS_CLASSINFO_NAME(nsJSCID);
 static nsModuleComponentInfo CI_nsJSCID =
-    {"JSCID", 
+    {"JSCID",
      {0x9255b5b0, 0x35cf, 0x11d5, { 0x90, 0xb2, 0x0, 0x10, 0xa4, 0xe7, 0x3d, 0x9a }},
      nsnull, nsnull, nsnull,nsnull, nsnull,
-     NS_CI_INTERFACE_GETTER_NAME(nsJSCID), nsnull, 
+     NS_CI_INTERFACE_GETTER_NAME(nsJSCID), nsnull,
      &NS_CLASSINFO_NAME(nsJSCID), 0};
 
 JSBool xpc_InitJSxIDClassObjects()
@@ -325,7 +325,7 @@ JSBool xpc_InitJSxIDClassObjects()
         rv = NS_NewGenericFactory(getter_AddRefs(factory), &CI_nsJSIID);
         if(NS_FAILED(rv))
             goto return_failure;
-        rv = factory->QueryInterface(NS_GET_IID(nsIClassInfo), 
+        rv = factory->QueryInterface(NS_GET_IID(nsIClassInfo),
                                      (void**)&NS_CLASSINFO_NAME(nsJSIID));
         if(NS_FAILED(rv))
             goto return_failure;
@@ -337,7 +337,7 @@ JSBool xpc_InitJSxIDClassObjects()
         rv = NS_NewGenericFactory(getter_AddRefs(factory), &CI_nsJSCID);
         if(NS_FAILED(rv))
             goto return_failure;
-        rv = factory->QueryInterface(NS_GET_IID(nsIClassInfo), 
+        rv = factory->QueryInterface(NS_GET_IID(nsIClassInfo),
                                      (void**)&NS_CLASSINFO_NAME(nsJSCID));
         if(NS_FAILED(rv))
             goto return_failure;

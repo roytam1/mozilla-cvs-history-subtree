@@ -19,7 +19,9 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
+ *   Mike Shaver <shaver@mozilla.org>
+ *   Mark Hammond <MarkH@ActiveState.com>
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -396,7 +398,7 @@ public:
 
     nsIXPCSecurityManager* GetDefaultSecurityManager() const
         {return mDefaultSecurityManager;}
-    
+
     PRUint16 GetDefaultSecurityManagerFlags() const
         {return mDefaultSecurityManagerFlags;}
 
@@ -1087,7 +1089,7 @@ protected:
 
     XPCNativeInterface();   // not implemented
     XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
-        : mInfo(aInfo), mName(aName), mMemberCount(0) 
+        : mInfo(aInfo), mName(aName), mMemberCount(0)
                           {MOZ_COUNT_CTOR(XPCNativeInterface);}
     ~XPCNativeInterface() {MOZ_COUNT_DTOR(XPCNativeInterface);}
 
@@ -1236,7 +1238,7 @@ private:
 // XPCNativeScriptableFlags is a wrapper class that holds the flags returned
 // from calls to nsIXPCScriptable::GetScriptableFlags(). It has convenience
 // methods to check for particular bitflags. Since we also use this class as
-// a member of the gc'd class XPCNativeScriptableShared, this class holds the 
+// a member of the gc'd class XPCNativeScriptableShared, this class holds the
 // bit and exposes the inlined methods to support marking.
 
 #define XPC_WN_SJSFLAGS_MARK_FLAG 0x80000000 // only high bit of 32 is set
@@ -1319,7 +1321,7 @@ public:
     JSClass*                        GetJSClass() {return &mJSClass;}
 
     XPCNativeScriptableShared(JSUint32 aFlags = 0, char* aName = nsnull)
-        : mFlags(aFlags) 
+        : mFlags(aFlags)
         {memset(&mJSClass, 0, sizeof(JSClass));
          mJSClass.name = aName;  // take ownership
          MOZ_COUNT_CTOR(XPCNativeScriptableShared);}
@@ -1373,7 +1375,7 @@ public:
 private:
     XPCNativeScriptableInfo(nsIXPCScriptable* scriptable = nsnull,
                             XPCNativeScriptableShared* shared = nsnull)
-        : mCallback(scriptable), mShared(shared) 
+        : mCallback(scriptable), mShared(shared)
                                {MOZ_COUNT_CTOR(XPCNativeScriptableInfo);}
 public:
     ~XPCNativeScriptableInfo() {MOZ_COUNT_DTOR(XPCNativeScriptableInfo);}
@@ -1612,16 +1614,16 @@ public:
 #define XPC_SCOPE_WORD(s) ((jsword)(s))
 
     static inline JSBool
-    IsTaggedScope(XPCWrappedNativeScope* s) 
+    IsTaggedScope(XPCWrappedNativeScope* s)
         {return XPC_SCOPE_WORD(s) & XPC_SCOPE_TAG;}
 
     static inline XPCWrappedNativeScope*
-    TagScope(XPCWrappedNativeScope* s) 
+    TagScope(XPCWrappedNativeScope* s)
         {NS_ASSERTION(!IsTaggedScope(s), "bad pointer!");
          return (XPCWrappedNativeScope*)(XPC_SCOPE_WORD(s) | XPC_SCOPE_TAG);}
 
     static inline XPCWrappedNativeScope*
-    UnTagScope(XPCWrappedNativeScope* s) 
+    UnTagScope(XPCWrappedNativeScope* s)
         {return (XPCWrappedNativeScope*)(XPC_SCOPE_WORD(s) & ~XPC_SCOPE_TAG);}
 
     JSBool
@@ -1631,7 +1633,7 @@ public:
     GetProto() const {return HasProto() ? mMaybeProto : nsnull;}
 
     XPCWrappedNativeScope*
-    GetScope() const { return HasProto() ? 
+    GetScope() const { return HasProto() ?
                            mMaybeProto->GetScope() : UnTagScope(mMaybeScope);}
 
     nsISupports*
@@ -2445,7 +2447,7 @@ public:
     {
         if(EnsureExceptionManager())
             return mExceptionManager->GetCurrentException(aException);
-        
+
         NS_IF_ADDREF(mException);
         *aException = mException;
         return NS_OK;
@@ -2477,7 +2479,7 @@ public:
         if(mExceptionManagerNotAvailable)
             return JS_FALSE;
 
-        nsCOMPtr<nsIExceptionService> xs = 
+        nsCOMPtr<nsIExceptionService> xs =
             do_GetService(NS_EXCEPTIONSERVICE_CONTRACTID);
         if(xs)
             xs->GetCurrentExceptionManager(&mExceptionManager);

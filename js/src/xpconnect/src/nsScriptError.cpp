@@ -18,6 +18,9 @@
  * Rights Reserved.
  *
  * Contributor(s):
+ *   Mike McCabe <mccabe@netscape.com>
+ *   John Bandhauer <jband@netscape.com>
+ *
  */
 
 /*

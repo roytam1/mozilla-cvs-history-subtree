@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -85,7 +85,7 @@ XPCWrappedNativeProto::Init(
 {
     if(scriptableCreateInfo && scriptableCreateInfo->GetCallback())
     {
-        mScriptableInfo = 
+        mScriptableInfo =
             XPCNativeScriptableInfo::Construct(ccx, scriptableCreateInfo);
         if(!mScriptableInfo)
             return JS_FALSE;
@@ -134,7 +134,7 @@ XPCWrappedNativeProto::SystemIsBeingShutDown(XPCCallContext& ccx)
     {
         printf("%d XPCWrappedNativeProto(s) alive at shutdown\n",
                gDEBUG_LiveProtoCount);
-        DEBUG_DumpedStats = PR_TRUE;        
+        DEBUG_DumpedStats = PR_TRUE;
     }
 #endif
 
@@ -171,9 +171,9 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
         NS_ERROR("reserved flag set!");
         ciFlags &= ~XPC_PROTO_DONT_SHARE;
     }
-    
+
     if(ForceNoSharing || (ciFlags & nsIClassInfo::PLUGIN_OBJECT) ||
-       (ScriptableCreateInfo && 
+       (ScriptableCreateInfo &&
         ScriptableCreateInfo->GetFlags().DontSharePrototype()))
     {
         ciFlags |= XPC_PROTO_DONT_SHARE;

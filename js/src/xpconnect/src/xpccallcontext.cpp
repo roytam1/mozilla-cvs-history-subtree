@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -33,7 +33,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* new flattening stuff. */
+/* Call context. */
 
 #include "xpcprivate.h"
 
@@ -113,10 +113,10 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     {
         if(!(mXPCContext = nsXPConnect::GetContext(mJSContext, mXPC)))
             return;
-        
+
         // Fill the cache.
         mThreadData->SetRecentContext(mJSContext, mXPCContext);
-    } 
+    }
 
     mPrevCallerLanguage = mXPCContext->SetCallingLangType(mCallerLanguage);
 
@@ -180,8 +180,8 @@ XPCCallContext::SetName(jsval name)
         mSet = mWrapper->GetSet();
 
         if(mSet->FindMember(name, &mMember, &mInterface,
-                            mWrapper->HasProto() ? 
-                                mWrapper->GetProto()->GetSet() : 
+                            mWrapper->HasProto() ?
+                                mWrapper->GetProto()->GetSet() :
                                 nsnull,
                             &mStaticMemberIsLocal))
         {

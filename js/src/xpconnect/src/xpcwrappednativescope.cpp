@@ -19,7 +19,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *   John Bandhauer <jband@netscape.com>
+ *   John Bandhauer <jband@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -80,7 +80,7 @@ static void DEBUG_TrackScopeShutdown()
         DEBUG_DumpedStats = PR_TRUE;
         printf("%d XPCWrappedNativeScope(s) were constructed.\n",
                DEBUG_TotalScopeCount);
-        
+
         printf("%d XPCWrappedNativeScopes(s) max alive at one time.\n",
                DEBUG_TotalMaxScopeCount);
 
@@ -142,7 +142,7 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
 
     if(aGlobal)
         SetGlobal(ccx, aGlobal);
-    
+
     DEBUG_TrackNewScope(this);
     MOZ_COUNT_CTOR(XPCWrappedNativeScope);
 }
@@ -365,7 +365,7 @@ XPCWrappedNativeScope::KillDyingScopes()
 struct ShutdownData
 {
     ShutdownData(XPCCallContext& accx)
-        : ccx(accx), wrapperCount(0), 
+        : ccx(accx), wrapperCount(0),
           sharedProtoCount(0), nonSharedProtoCount(0) {}
     XPCCallContext& ccx;
     int wrapperCount;
@@ -444,14 +444,14 @@ XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 
 #ifdef XPC_DUMP_AT_SHUTDOWN
     if(data.wrapperCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", 
+        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n",
                data.wrapperCount);
     if(data.sharedProtoCount + data.nonSharedProtoCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos (%d shared)\n", 
-               data.sharedProtoCount + data.nonSharedProtoCount, 
+        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos (%d shared)\n",
+               data.sharedProtoCount + data.nonSharedProtoCount,
                data.sharedProtoCount);
     if(liveScopeCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNativeScopes\n", 
+        printf("deleting nsXPConnect  with %d live XPCWrappedNativeScopes\n",
                liveScopeCount);
 #endif
 }
@@ -574,7 +574,7 @@ JS_STATIC_DLL_CALLBACK(JSDHashOperator)
 WNProtoSecPolicyClearer(JSDHashTable *table, JSDHashEntryHdr *hdr,
                         uint32 number, void *arg)
 {
-    XPCWrappedNativeProto* proto = 
+    XPCWrappedNativeProto* proto =
         ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value;
     *(proto->GetSecurityInfoAddr()) = nsnull;
     return JS_DHASH_NEXT;
@@ -590,7 +590,7 @@ WNSecPolicyClearer(JSDHashTable *table, JSDHashEntryHdr *hdr,
     return JS_DHASH_NEXT;
 }
 
-// static 
+// static
 nsresult
 XPCWrappedNativeScope::ClearAllWrappedNativeSecurityPolicies(XPCCallContext& ccx)
 {
@@ -606,7 +606,7 @@ XPCWrappedNativeScope::ClearAllWrappedNativeSecurityPolicies(XPCCallContext& ccx
     DEBUG_TrackScopeTraversal();
 
     return NS_OK;
-}        
+}
 
 /***************************************************************************/
 
