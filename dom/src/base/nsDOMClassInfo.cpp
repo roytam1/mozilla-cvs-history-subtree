@@ -63,6 +63,7 @@
 #include "nsIForm.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMNSHTMLFormControlList.h"
+#include "nsIDOMHTMLCollection.h"
 #include "nsIHTMLDocument.h"
 
 // HTMLOptionCollection includes
@@ -383,7 +384,7 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(NodeList, nsNodeListSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
@@ -403,7 +404,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,
                            DOCUMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLCollection,
-                           nsNodeListSH::Create, // XXX????
+                           nsArraySH::Create, // XXX????
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY |
                            WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(HTMLOptionCollection,
@@ -569,7 +570,7 @@ nsDOMClassInfo::Init()
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsNodeListSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsArraySH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
@@ -1548,10 +1549,27 @@ nsElementSH::Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
 // NodeList scriptable helper
 
+nsresult
+nsArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper, PRUint32 aIndex,
+                     nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMNodeList> list(do_QueryInterface(native));
+  NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
+
+  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv = list->Item(aIndex, &node);
+
+  *aResult = node;
+
+  return rv;
+}
+
 NS_IMETHODIMP
-nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                          JSObject *obj, jsval id, jsval *vp,
-                          PRBool *_retval)
+nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                       JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
   int32 n = -1;
 
@@ -1560,20 +1578,14 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     if (n < 0) {
       return NS_ERROR_DOM_INDEX_SIZE_ERR;
     }
-      
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
 
-    nsCOMPtr<nsIDOMNodeList> list(do_QueryInterface(native));
-    NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
+    nsCOMPtr<nsISupports> array_item;
 
-    nsCOMPtr<nsIDOMNode> node;
-
-    nsresult rv = list->Item(n, getter_AddRefs(node));
+    nsresult rv = GetItemAt(wrapper, n, getter_AddRefs(array_item));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), node, NS_GET_IID(nsIDOMNode),
-                    vp);
+    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), array_item,
+                    NS_GET_IID(nsIDOMNode), vp);
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
@@ -1582,6 +1594,24 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
 
 // FomrControlList scriptable helper
+
+nsresult
+nsFormControlListSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                               PRUint32 aIndex, nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(native));
+  NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
+
+  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv = collection->Item(aIndex, &node);
+
+  *aResult = node;
+
+  return rv;
+}
 
 NS_IMETHODIMP
 nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
@@ -1613,7 +1643,7 @@ nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     return NS_OK;
   }
 
-  return nsNodeListSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+  return nsArraySH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 

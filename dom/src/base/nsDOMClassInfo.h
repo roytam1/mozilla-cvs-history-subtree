@@ -252,16 +252,19 @@ public:
 
 // NodeList scriptable helper
 
-class nsNodeListSH : public nsDOMClassInfo
+class nsArraySH : public nsDOMClassInfo
 {
 protected:
-  nsNodeListSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  nsArraySH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
   {
   }
 
-  virtual ~nsNodeListSH()
+  virtual ~nsArraySH()
   {
   }
+
+  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                             PRUint32 aIndex, nsISupports **aResult);
 
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
@@ -270,23 +273,28 @@ public:
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
-    return new nsNodeListSH(aID);
+    return new nsArraySH(aID);
   }
 };
 
 
 // FomrControlList scriptable helper
 
-class nsFormControlListSH : public nsNodeListSH
+class nsFormControlListSH : public nsArraySH
 {
 protected:
-  nsFormControlListSH(nsDOMClassInfoID aID) : nsNodeListSH(aID)
+  nsFormControlListSH(nsDOMClassInfoID aID) : nsArraySH(aID)
   {
   }
 
   virtual ~nsFormControlListSH()
   {
   }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                             PRUint32 aIndex, nsISupports **aResult);
 
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
@@ -380,10 +388,10 @@ public:
 
 // HTMLOptionCollection helper
 
-class nsHTMLOptionCollectionSH : public nsNodeListSH
+class nsHTMLOptionCollectionSH : public nsArraySH
 {
 private:
-  nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsNodeListSH(aID)
+  nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsArraySH(aID)
   {
   }
 
