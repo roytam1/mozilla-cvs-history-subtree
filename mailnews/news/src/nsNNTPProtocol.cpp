@@ -899,43 +899,6 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, PRBool * bValP, char ** aGroup,
 	// get the file path part and store it as the group...
 	aURL->GetPath(&group);
 
-	/* If a port was specified, but it was the default port, pretend
-	   it wasn't specified.
-	*/
-  	s = PL_strchr (hostAndPort, ':');
-	if (s && PR_sscanf(s+1, " %u ", &port) == 1 && HG05998)
-		*s = 0;
-
-	// I think the path part is just the file part of the nsIURI interface...
-//	aURL->GetFile(&path_part); 
-	aURL->GetSpec(&url);
-	path_part = PL_strchr (url, ':');
-    PR_ASSERT (path_part);
-    if (!path_part)
-	{
-	  status = -1;
-	  goto FAIL;
-	}
-
-	path_part++;
-	if (path_part[0] == '/' && path_part[1] == '/')
-	{
-	  /* Skip over host name. */
-	  path_part = PL_strchr (path_part + 2, '/');
-	  if (path_part)
-		path_part++;
-	}
-  
-	if (!path_part)
-		path_part = "";
-
-	group = nsCRT::strdup (path_part);
-	if (!group)
-	{
-	  status = MK_OUT_OF_MEMORY;
-	  goto FAIL;
-	}
-
 	nsUnescape (group);
 
     /* "group" now holds the part after the host name:
