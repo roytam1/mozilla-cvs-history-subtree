@@ -548,7 +548,8 @@ NET_InitRDFCookieResources (void) ;
 
 
 PR_PUBLIC_API(void)
-RDF_AddCookieResource(char* name, char* path, char* host, char* expires) {
+RDF_AddCookieResource(char* name, char* path, char* host, char* expires, char* value, 
+                      PRBool isDomain, PRBool secure) {
   char* url = getMem(strlen(name) + strlen(host) + strlen(path) + 10);
   RDF_Resource ru;
   RDF_Resource hostUnit = RDF_GetResource(NULL, host, 0);
@@ -562,6 +563,13 @@ RDF_AddCookieResource(char* name, char* path, char* host, char* expires) {
   sprintf(url, "cookie:%s!%s!%s", host, path,  name);
   ru = RDF_GetResource(NULL, url, 1);
   setResourceType(ru, COOKIE_RT);
+  remoteStoreAdd(gCookieStore, ru, gCoreVocab->RDF_name, name, RDF_STRING_TYPE, 1);
+  remoteStoreAdd(gCookieStore, ru, gNavCenter->cookieDomain, isDomain, RDF_INT_TYPE, 1);
+  remoteStoreAdd(gCookieStore, ru, gNavCenter->cookieValue, value, RDF_STRING_TYPE, 1);
+  remoteStoreAdd(gCookieStore, ru, gNavCenter->cookieHost, host, RDF_STRING_TYPE, 1);
+  remoteStoreAdd(gCookieStore, ru, gNavCenter->cookiePath, path, RDF_STRING_TYPE, 1);
+  remoteStoreAdd(gCookieStore, ru, gNavCenter->cookieSecure, secure, RDF_INT_TYPE, 1);
+  remoteStoreAdd(gCookieStore, ru, gNavCenter->cookieExpires, expires, RDF_STRING_TYPE, 1);
   remoteStoreAdd(gCookieStore, ru, gCoreVocab->RDF_parent, hostUnit, RDF_RESOURCE_TYPE, 1);  
 }
 

@@ -152,6 +152,8 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 		} while ((c->count <= 6) && (arc == NULL));
 		break;
 
+    
+
 		case	HISTORY_RT:
 		switch(c->count)
 		{
@@ -163,6 +165,20 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 			case	5:	arc = gWebData->RDF_numAccesses;	break;
 		}
 		break;
+
+      case   COOKIE_RT:
+      switch(c->count) 
+        {
+			case	0:	arc = gCoreVocab->RDF_name;		break;
+			case	1:	arc = gNavCenter->cookieHost;		break;
+			case	2:	arc = gNavCenter->cookiePath;		break;
+			case	3:	arc = gNavCenter->cookieValue;		break;
+			case	4:	arc = gNavCenter->cookieExpires;		break;
+			case	5:	arc = gNavCenter->cookieDomain;		break;
+			case	6:	arc = gNavCenter->cookieSecure;		break;
+		}
+		break;
+
 
 		case	FTP_RT:
 		case	ES_RT:

@@ -164,6 +164,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_HTMLType = RDF_GetResource (gCoreDB, "HTMLPage", true);
   gNavCenter->RDF_URLShortcut = RDF_GetResource(gCoreDB, "URLShortcut", true);
   gNavCenter->RDF_Cookies = createContainer("NC:Cookies");
+  setResourceType(gNavCenter->RDF_Cookies, COOKIE_RT);
   gNavCenter->RDF_Toolbar = createContainer("NC:Toolbar");
 
   /* Commands */
@@ -205,6 +206,7 @@ createNavCenterVocab () {
 
   /* Toolbar Appearance Styles */
   gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", 0 /* "Toolbar Bitmap Position" */ );
+
   gNavCenter->toolbarButtonsFixedSize = newResource("toolbarButtonsFixedSize", 0 /* "Toolbar Bitmap Position" */ );
   gNavCenter->RDF_smallDisabledIcon = newResource("smallDisabledIcon", 0);
   gNavCenter->RDF_largeDisabledIcon  = newResource("largeDisabledIcon", 0);
@@ -214,9 +216,22 @@ createNavCenterVocab () {
   gNavCenter->RDF_largePressedIcon  = newResource("largePressedIcon", 0);
   gNavCenter->buttonTooltipText = newResource("buttonTooltipText", 0);
   gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0);
+
+
+
+  gNavCenter->cookieDomain = newResource("cookieDomain", 0);
+  gNavCenter->cookieValue = newResource("cookieValue", 0);
+  gNavCenter->cookieHost  = newResource("cookieHost", 0);
+  gNavCenter->cookiePath  = newResource("cookiePath", 0);
+  gNavCenter->cookieSecure = newResource("cookieSecure", 0);
+  gNavCenter->cookieExpires = newResource("cookieExpiration", 0);
+
+
+
   gNavCenter->viewRolloverColor = newResource("viewRolloverColor", 0);
   gNavCenter->viewPressedColor = newResource("viewPressedColor", 0);
   gNavCenter->viewDisabledColor = newResource("viewDisabledColor", 0);
+
 
 #endif /* MOZILLA_CLIENT */
 }

@@ -143,6 +143,16 @@ typedef struct _RDF_NCVocabStruct {
 
   /* Toolbar Appearance Styles */
   RDF_Resource toolbarBitmapPosition; /* Bitmap's position ("side"/"top") */
+
+
+  /* Cookie Stuff */
+  RDF_Resource cookieDomain;
+  RDF_Resource cookieValue;
+  RDF_Resource cookieHost;
+  RDF_Resource cookiePath;
+  RDF_Resource cookieSecure;
+  RDF_Resource cookieExpires;
+
   RDF_Resource toolbarButtonsFixedSize; /* Whether or not the buttons must be the same size ("yes"/"no") */
   RDF_Resource buttonTooltipText;	/* The tooltip text for a button. */
   RDF_Resource buttonStatusbarText;	/* The status bar text for a button. */
@@ -150,6 +160,7 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource viewPressedColor; /* What to display when an item is pressed in a view. */
   RDF_Resource viewDisabledColor; /* Color to use when item is disabled in a view. */
   
+
 } RDF_NCVocabStruct;
 
 typedef RDF_NCVocabStruct* RDF_NCVocab;
