@@ -179,6 +179,8 @@ public:
   NS_IMETHOD    IsDispatchStopped(PRBool* aIsDispatchStopped);
   NS_IMETHOD    GetInternalNSEvent(nsEvent** aNSEvent);
   NS_IMETHOD    HasOriginalTarget(PRBool* aResult);
+  NS_IMETHOD    IsTrustedEvent(PRBool* aResult);
+  NS_IMETHOD    SetTrusted(PRBool aTrusted);
 
   NS_IMETHOD    IsHandled(PRBool* aHandled);
   NS_IMETHOD    SetHandled(PRBool aHandled);
@@ -229,6 +231,7 @@ protected:
   nsIDOMEventTarget* mOriginalTarget;
   nsString*	mText;
   nsIPrivateTextRangeList*	mTextRange;
+  PRPackedBool mEventIsTrusted;
 
   //These are use for internal data for user created events
   PRInt16 mButton;

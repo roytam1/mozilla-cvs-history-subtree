@@ -134,11 +134,13 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
   NS_INIT_REFCNT();
 
   mPresContext = aPresContext;
+  mEventIsTrusted = PR_FALSE;
 
   NS_IF_ADDREF(mPresContext);
 
   if (aEvent) {
     mEventIsInternal = PR_FALSE;
+    mEventIsTrusted = PR_TRUE;
     mEvent = aEvent;
   }
   else {
@@ -344,6 +346,20 @@ NS_IMETHODIMP
 nsDOMEvent::HasOriginalTarget(PRBool* aResult)
 {
   *aResult = (mOriginalTarget != nsnull);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMEvent::IsTrustedEvent(PRBool* aResult)
+{
+  *aResult = mEventIsTrusted;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMEvent::SetTrusted(PRBool aTrusted)
+{
+  mEventIsTrusted = aTrusted;
   return NS_OK;
 }
 

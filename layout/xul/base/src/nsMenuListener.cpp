@@ -37,6 +37,7 @@
 #include "nsWidgetsCID.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
+#include "nsIPrivateDOMEvent.h"
 #include "nsIPresContext.h"
 #include "nsIContent.h"
 #include "nsIDOMNode.h"
@@ -90,6 +91,17 @@ nsMenuListener::KeyDown(nsIDOMEvent* aKeyEvent)
 {
   PRInt32 menuAccessKey = -1;
   
+  //handlers shouldn't be triggered by non-trusted events.
+  if (aKeyEvent) {
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent = do_QueryInterface(aKeyEvent);
+    if (privateEvent) {
+      PRBool trustedEvent;
+      privateEvent->IsTrustedEvent(&trustedEvent);
+      if (!trustedEvent)
+        return NS_OK;
+    }
+  }
+
   nsMenuBarListener::GetMenuAccessKey(&menuAccessKey);
   if (menuAccessKey) {
     PRUint32 theChar;
@@ -162,6 +174,17 @@ nsMenuListener::KeyPress(nsIDOMEvent* aKeyEvent)
       return NS_OK;       // don't consume event
   }
   
+  //handlers shouldn't be triggered by non-trusted events.
+  if (aKeyEvent) {
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent = do_QueryInterface(aKeyEvent);
+    if (privateEvent) {
+      PRBool trustedEvent;
+      privateEvent->IsTrustedEvent(&trustedEvent);
+      if (!trustedEvent)
+        return NS_OK;
+    }
+  }
+
   nsCOMPtr<nsIDOMKeyEvent> keyEvent = do_QueryInterface(aKeyEvent);
   PRUint32 theChar;
 	keyEvent->GetKeyCode(&theChar);
