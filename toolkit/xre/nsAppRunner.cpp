@@ -393,7 +393,7 @@ static nsXREAppData *LoadAppData(const char *appDataFile)
   NS_GetFileFromPath(appDataFile, getter_AddRefs(lf));
   if (!lf)
     return nsnull;
-  lf->AppendNative(NS_LITERAL_CSTRING("xulapp.ini"));
+  //lf->AppendNative(NS_LITERAL_CSTRING("xulapp.ini"));
 
   nsINIParser parser; 
   if (NS_FAILED(parser.Init(lf)))
@@ -1795,9 +1795,10 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   {
     nsCOMPtr<nsILocalFile> lf;
 
-    const char *app;
-    if (CheckArg("app", &app))
-      NS_GetFileFromPath(app, getter_AddRefs(lf));
+    if (appDataFile) {
+      NS_GetFileFromPath(appDataFile, getter_AddRefs(lf));
+      lf->SetNativeLeafName(NS_LITERAL_CSTRING(""));
+    }
 
     rv = dirProvider.Initialize(lf);
     if (NS_FAILED(rv))
