@@ -560,7 +560,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
 
 #ifdef DEBUG
     if (f.name) {
-//      const StringAtom& name = (static_cast<IdentifierExprNode *>(f.name))->name;
+//      const StringAtom& name = checked_cast<IdentifierExprNode *>(f.name)->name;
 //      stdOut << "gencode for " << name << "\n";
     }
 #endif
@@ -581,14 +581,14 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
         BlockStmtNode *b = f.body;
         if (b && b->statements) {
             if (b->statements->getKind() == StmtNode::expression) {
-                ExprStmtNode *e = static_cast<ExprStmtNode *>(b->statements);
+                ExprStmtNode *e = checked_cast<ExprStmtNode *>(b->statements);
                 if (e->expr->getKind() == ExprNode::call) {
-                    InvokeExprNode *i = static_cast<InvokeExprNode *>(e->expr);
+                    InvokeExprNode *i = checked_cast<InvokeExprNode *>(e->expr);
                     if (i->op->getKind() == ExprNode::dot) {
                         // check for 'this.m()'
-                        BinaryExprNode *b = static_cast<BinaryExprNode *>(i->op);
+                        BinaryExprNode *b = checked_cast<BinaryExprNode *>(i->op);
                         if ((b->op1->getKind() == ExprNode::This) && (b->op2->getKind() == ExprNode::identifier)) {
-//                            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
+//                            IdentifierExprNode *i = checked_cast<IdentifierExprNode *>(b->op2);
                             // XXX verify that i->name is a constructor in the superclass
                             foundSuperCall = true;
                         }
@@ -676,7 +676,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     switch (p->getKind()) {
     case StmtNode::Class:
         {
-            ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
+            ClassStmtNode *classStmt = checked_cast<ClassStmtNode *>(p);
             JSType *thisClass = classStmt->mType;
 
             mScopeChain->addScope(thisClass->mStatics);
@@ -712,7 +712,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::Const:
     case StmtNode::Var:
         {
-            VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
+            VariableStmtNode *vs = checked_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
 //            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             bool isStatic = (vs->attributeFlags & Property::Static) == Property::Static;
@@ -759,7 +759,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::Function:
         {
-            FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
+            FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
 //            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
             bool isConstructor = (f->attributeFlags & Property::Constructor) == Property::Constructor;
             JSFunction *fnc = f->mFunction;    
@@ -773,7 +773,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::While:
         {
-            UnaryStmtNode *w = static_cast<UnaryStmtNode *>(p);
+            UnaryStmtNode *w = checked_cast<UnaryStmtNode *>(p);
             addOp(JumpOp);
             uint32 labelAtTestCondition = getLabel(Label::ContinueLabel); 
             addFixup(labelAtTestCondition);
@@ -797,7 +797,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::DoWhile:
         {
-            UnaryStmtNode *d = static_cast<UnaryStmtNode *>(p);
+            UnaryStmtNode *d = checked_cast<UnaryStmtNode *>(p);
             uint32 breakLabel = getLabel(Label::BreakLabel);
             uint32 labelAtTopOfBlock = getLabel();
             uint32 labelAtTestCondition = getLabel(Label::ContinueLabel); 
@@ -819,9 +819,9 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::ForIn:
         {
-            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            ForStmtNode *f = checked_cast<ForStmtNode *>(p);
             if (f->initializer->getKind() == StmtNode::Var) {
-                VariableStmtNode *vs = static_cast<VariableStmtNode *>(f->initializer);
+                VariableStmtNode *vs = checked_cast<VariableStmtNode *>(f->initializer);
                 VariableBinding *v = vs->bindings;
                 Reference *value = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
                 
@@ -927,7 +927,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::For:
         {
-            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            ForStmtNode *f = checked_cast<ForStmtNode *>(p);
             uint32 breakLabel = getLabel(Label::BreakLabel);
             uint32 labelAtTopOfBlock = getLabel();
             uint32 labelAtIncrement = getLabel(Label::ContinueLabel); 
@@ -965,7 +965,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::label:
         {
-            LabelStmtNode *l = static_cast<LabelStmtNode *>(p);
+            LabelStmtNode *l = checked_cast<LabelStmtNode *>(p);
             mLabelStack.push_back(getLabel(l));
             genCodeForStatement(l->stmt, static_cg);
             mLabelStack.pop_back();
@@ -973,7 +973,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::Break:
         {
-            GoStmtNode *g = static_cast<GoStmtNode *>(p);
+            GoStmtNode *g = checked_cast<GoStmtNode *>(p);
             addOp(JumpOp);
             if (g->name)
                 addFixup(getTopLabel(Label::BreakLabel, g->name));
@@ -983,7 +983,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::Continue:
         {
-            GoStmtNode *g = static_cast<GoStmtNode *>(p);
+            GoStmtNode *g = checked_cast<GoStmtNode *>(p);
             addOp(JumpOp);
             if (g->name)
                 addFixup(getTopLabel(Label::ContinueLabel, g->name));
@@ -1029,7 +1029,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             Reference *switchTempReadRef, *switchTempWriteRef;
             mScopeChain->defineTempVariable(switchTempReadRef, switchTempWriteRef, Object_Type);
 
-            SwitchStmtNode *sw = static_cast<SwitchStmtNode *>(p);
+            SwitchStmtNode *sw = checked_cast<SwitchStmtNode *>(p);
             genExpr(sw->expr);
             switchTempWriteRef->emitCodeSequence(this);
             addOp(PopOp);
@@ -1037,7 +1037,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             StmtNode *s = sw->statements;
             while (s) {
                 if (s->getKind() == StmtNode::Case) {
-                    ExprStmtNode *c = static_cast<ExprStmtNode *>(s);
+                    ExprStmtNode *c = checked_cast<ExprStmtNode *>(s);
                     c->label = getLabel();
                     if (c->expr) {
                         switchTempReadRef->emitCodeSequence(this);
@@ -1062,7 +1062,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             mLabelStack.push_back(breakLabel);
             while (s) {
                 if (s->getKind() == StmtNode::Case) {
-                    ExprStmtNode *c = static_cast<ExprStmtNode *>(s);
+                    ExprStmtNode *c = checked_cast<ExprStmtNode *>(s);
                     setLabel(c->label);
                 }
                 else
@@ -1078,7 +1078,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::If:
         {
-            UnaryStmtNode *i = static_cast<UnaryStmtNode *>(p);
+            UnaryStmtNode *i = checked_cast<UnaryStmtNode *>(p);
             genExpr(i->expr);
             addOp(ToBooleanOp);
             addOp(JumpFalseOp);
@@ -1090,7 +1090,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::IfElse:
         {
-            BinaryStmtNode *i = static_cast<BinaryStmtNode *>(p);
+            BinaryStmtNode *i = checked_cast<BinaryStmtNode *>(p);
             genExpr(i->expr);
             addOp(ToBooleanOp);
             addOp(JumpFalseOp);
@@ -1107,7 +1107,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::block:
         {
-            BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
+            BlockStmtNode *b = checked_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
                 addPosition(s->pos);
@@ -1118,7 +1118,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::Return:
         {
-            ExprStmtNode *e = static_cast<ExprStmtNode *>(p);
+            ExprStmtNode *e = checked_cast<ExprStmtNode *>(p);
             if (e->expr) {
                 genExpr(e->expr);
                 ASSERT(mStackTop == 1);
@@ -1133,7 +1133,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::expression:
         {
-            ExprStmtNode *e = static_cast<ExprStmtNode *>(p);
+            ExprStmtNode *e = checked_cast<ExprStmtNode *>(p);
             genExpr(e->expr);
             addOp(PopOp);
         }
@@ -1143,14 +1143,14 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::Throw:
         {
-            ExprStmtNode *e = static_cast<ExprStmtNode *>(p);
+            ExprStmtNode *e = checked_cast<ExprStmtNode *>(p);
             genExpr(e->expr);
             addOpSetDepth(ThrowOp, 0);
         }
         break;
     case StmtNode::With:
         {
-            UnaryStmtNode *w = static_cast<UnaryStmtNode *>(p);
+            UnaryStmtNode *w = checked_cast<UnaryStmtNode *>(p);
             JSType *objType = genExpr(w->expr);
             addOp(WithinOp);
             mScopeChain->addScope(objType);
@@ -1194,7 +1194,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
             finished:
 */
-            TryStmtNode *t = static_cast<TryStmtNode *>(p);
+            TryStmtNode *t = checked_cast<TryStmtNode *>(p);
 
             uint32 catchClauseLabel = (t->catches) ? getLabel() : toUInt32(-1);
             uint32 finallyInvokerLabel = (t->finally) ? getLabel() : toUInt32(-1);
@@ -1263,7 +1263,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         break;
     case StmtNode::Use:
         {
-            UseStmtNode *u = static_cast<UseStmtNode *>(p);
+            UseStmtNode *u = checked_cast<UseStmtNode *>(p);
             ExprList *eList = u->namespaces;
             while (eList) {
                 ExprNode *e = eList->expr;
@@ -1296,7 +1296,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
     switch (p->getKind()) {
     case ExprNode::index:
         {
-            InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            InvokeExprNode *i = checked_cast<InvokeExprNode *>(p);
             genExpr(i->op);
             ExprPairList *p = i->pairs;
             int32 argCount = 0;
@@ -1310,7 +1310,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
         }
     case ExprNode::identifier:
         {
-            const StringAtom &name = static_cast<IdentifierExprNode *>(p)->name;
+            const StringAtom &name = checked_cast<IdentifierExprNode *>(p)->name;
             Reference *ref = mScopeChain->getName(name, CURRENT_ATTR, acc);            
             if (ref == NULL)
                 ref = new NameReference(name, acc);
@@ -1319,7 +1319,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
         }
     case ExprNode::dot:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             
             JSType *lType = NULL;
 
@@ -1335,7 +1335,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             // a class constructor is being invoked (and hence needs
             // a newInstanceOp). 
             if (b->op1->getKind() == ExprNode::identifier) {
-                const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
+                const StringAtom &name = checked_cast<IdentifierExprNode *>(b->op1)->name;
                 JSValue v = mScopeChain->getCompileTimeValue(name, NULL);
                 if (v.isType() && v.type->mStatics) {
                     lType = v.type->mStatics;
@@ -1346,11 +1346,11 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             if (lType == NULL)
                 lType = genExpr(b->op1);    // generate code for leftside of dot
             if (b->op2->getKind() == ExprNode::qualify) {
-                QualifyExprNode *qe = static_cast<QualifyExprNode *>(b->op2);
+                QualifyExprNode *qe = checked_cast<QualifyExprNode *>(b->op2);
                 ASSERT(qe->qualifier->getKind() == ExprNode::identifier);   // XXX handle more complex...
 
-                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
-                const StringAtom &qualifierName = static_cast<IdentifierExprNode *>(qe->qualifier)->name;
+                const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
+                const StringAtom &qualifierName = checked_cast<IdentifierExprNode *>(qe->qualifier)->name;
 
                 NamespaceList *oldNS = mNamespaceList;
                 mNamespaceList = new NamespaceList(&qualifierName, mNamespaceList);
@@ -1366,7 +1366,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             }
             else {
                 ASSERT(b->op2->getKind() == ExprNode::identifier);
-                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
+                const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
                 Reference *ref = lType->genReference(fieldName, CURRENT_ATTR, acc, 0);
                 if (ref == NULL)
                     ref = new PropertyReference(fieldName, acc, Object_Type);
@@ -1387,7 +1387,7 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
     switch (p->getKind()) {
     case ExprNode::identifier:
         {
-            const StringAtom &name = static_cast<IdentifierExprNode *>(p)->name;
+            const StringAtom &name = checked_cast<IdentifierExprNode *>(p)->name;
             readRef = mScopeChain->getName(name, CURRENT_ATTR, Read);            
             if (readRef == NULL)
                 readRef = new NameReference(name, Read);
@@ -1399,7 +1399,7 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
         break;
     case ExprNode::index:
         {
-            InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            InvokeExprNode *i = checked_cast<InvokeExprNode *>(p);
             genExpr(i->op);
             ExprPairList *p = i->pairs;
             int32 argCount = 0;
@@ -1414,12 +1414,12 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
         break;
     case ExprNode::dot:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             
             JSType *lType = NULL;
 
             if (b->op1->getKind() == ExprNode::identifier) {
-                const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
+                const StringAtom &name = checked_cast<IdentifierExprNode *>(b->op1)->name;
                 JSValue v = mScopeChain->getCompileTimeValue(name, NULL);
                 if (v.isType() && v.type->mStatics) {
                     lType = v.type->mStatics;
@@ -1433,7 +1433,7 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
                 // this is where we handle n.q::id
             }
             else {
-                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
+                const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
                 readRef = lType->genReference(fieldName, CURRENT_ATTR, Read, 0);
                 if (readRef == NULL)
                     readRef = new PropertyReference(fieldName, Read, Object_Type);
@@ -1455,18 +1455,18 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
 
     switch (p->getKind()) {
     case ExprNode::boolean:
-        addOp(static_cast<BooleanExprNode *>(p)->value ? LoadConstantTrueOp : LoadConstantFalseOp);
+        addOp(checked_cast<BooleanExprNode *>(p)->value ? LoadConstantTrueOp : LoadConstantFalseOp);
         return Boolean_Type;
     case ExprNode::Null:
         addOp(LoadConstantNullOp);
         return Object_Type;
     case ExprNode::number :
         addOp(LoadConstantNumberOp);
-        addNumberRef((static_cast<NumberExprNode *>(p))->value);
+        addNumberRef(checked_cast<NumberExprNode *>(p)->value);
         return Number_Type;
     case ExprNode::string :
         addOp(LoadConstantStringOp);
-        addStringRef((static_cast<StringExprNode *>(p))->str);
+        addStringRef(checked_cast<StringExprNode *>(p)->str);
         return String_Type;
 
     case ExprNode::add:
@@ -1520,7 +1520,7 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
 
 BinaryOperator:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(DoOperatorOp);
@@ -1530,7 +1530,7 @@ BinaryOperator:
 
     case ExprNode::notEqual:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(DoOperatorOp);
@@ -1540,7 +1540,7 @@ BinaryOperator:
         }
     case ExprNode::greaterThan:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(SwapOp);
@@ -1550,7 +1550,7 @@ BinaryOperator:
         }
     case ExprNode::greaterThanOrEqual:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(SwapOp);
@@ -1560,7 +1560,7 @@ BinaryOperator:
         }
     case ExprNode::notIdentical:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(DoOperatorOp);
@@ -1571,7 +1571,7 @@ BinaryOperator:
 
     case ExprNode::minus:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             genExpr(u->op);
             addOp(DoUnaryOp);
             addByte(Negate);
@@ -1580,7 +1580,7 @@ BinaryOperator:
 
     case ExprNode::plus:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             genExpr(u->op);
             addOp(DoUnaryOp);
             addByte(Posate);
@@ -1589,7 +1589,7 @@ BinaryOperator:
 
     case ExprNode::complement:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             genExpr(u->op);
             addOp(DoUnaryOp);
             addByte(Complement);
@@ -1605,7 +1605,7 @@ BinaryOperator:
 
 PreXcrement:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             Reference *readRef;
             Reference *writeRef;            
             genReferencePair(u->op, readRef, writeRef);
@@ -1642,7 +1642,7 @@ PreXcrement:
 
 PostXcrement:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             Reference *readRef;
             Reference *writeRef;
             genReferencePair(u->op, readRef, writeRef);
@@ -1713,7 +1713,7 @@ PostXcrement:
 
 BinaryOpEquals:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             Reference *readRef;
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
@@ -1750,7 +1750,7 @@ BinaryOpEquals:
 
     case ExprNode::logicalAndEquals:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             Reference *readRef;
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
@@ -1792,7 +1792,7 @@ BinaryOpEquals:
 
     case ExprNode::logicalOrEquals:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             Reference *readRef;
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
@@ -1834,7 +1834,7 @@ BinaryOpEquals:
 
     case ExprNode::logicalXorEquals:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             Reference *readRef;
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
@@ -1870,7 +1870,7 @@ BinaryOpEquals:
 
     case ExprNode::logicalAnd:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             uint32 labelAfterSecondExpr = getLabel();
             genExpr(b->op1);
             addOp(DupOp);
@@ -1884,7 +1884,7 @@ BinaryOpEquals:
         }
     case ExprNode::logicalXor:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             addOp(DupOp);
             addOp(ToBooleanOp);
@@ -1896,7 +1896,7 @@ BinaryOpEquals:
         }
     case ExprNode::logicalOr:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             uint32 labelAfterSecondExpr = getLabel();
             genExpr(b->op1);
             addOp(DupOp);
@@ -1911,7 +1911,7 @@ BinaryOpEquals:
         
     case ExprNode::logicalNot:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             genExpr(u->op);
             addOp(ToBooleanOp);
             addOp(LogicalNotOp);
@@ -1920,7 +1920,7 @@ BinaryOpEquals:
 
     case ExprNode::assignment:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             Reference *ref = genReference(b->op1, Write);
             if (ref == NULL)
                 m_cx->reportError(Exception::semanticError, "incomprehensible assignment designate (and error message)", p->pos);
@@ -1960,7 +1960,7 @@ BinaryOpEquals:
         }
     case ExprNode::Delete:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             Reference *ref = genReference(u->op, Read);
             if (ref == NULL)
                 addOp(LoadConstantTrueOp);
@@ -1972,7 +1972,7 @@ BinaryOpEquals:
         }
     case ExprNode::Typeof:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             Reference *ref = genReference(u->op, Read);
             if (ref == NULL) {
                 genExpr(u->op);
@@ -1986,7 +1986,7 @@ BinaryOpEquals:
         }
     case ExprNode::New:
         {
-            InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            InvokeExprNode *i = checked_cast<InvokeExprNode *>(p);
             JSType *type = genExpr(i->op);
 
             ExprPairList *p = i->pairs;
@@ -2013,7 +2013,7 @@ BinaryOpEquals:
         }
     case ExprNode::call:
         {
-            InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            InvokeExprNode *i = checked_cast<InvokeExprNode *>(p);
             Reference *ref = genReference(i->op, Read);
 
             // if the reference is the name of a type, then this
@@ -2052,7 +2052,7 @@ BinaryOpEquals:
         }
     case ExprNode::parentheses:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             return genExpr(u->op);
         }
     case ExprNode::conditional:
@@ -2060,7 +2060,7 @@ BinaryOpEquals:
             uint32 falseConditionExpression = getLabel();
             uint32 labelAtBottom = getLabel();
 
-            TernaryExprNode *c = static_cast<TernaryExprNode *>(p);
+            TernaryExprNode *c = checked_cast<TernaryExprNode *>(p);
             genExpr(c->op1);
             addOp(ToBooleanOp);
             addOp(JumpFalseOp);
@@ -2078,14 +2078,14 @@ BinaryOpEquals:
     case ExprNode::objectLiteral:
         {
             addOp(NewObjectOp);
-            PairListExprNode *plen = static_cast<PairListExprNode *>(p);
+            PairListExprNode *plen = checked_cast<PairListExprNode *>(p);
             ExprPairList *e = plen->pairs;
             while (e) {
                 if (e->field && e->value && (e->field->getKind() == ExprNode::identifier)) {
                     addOp(DupOp);
                     genExpr(e->value);
                     addOp(SetPropertyOp);
-                    addStringRef((static_cast<IdentifierExprNode *>(e->field))->name);
+                    addStringRef(checked_cast<IdentifierExprNode *>(e->field)->name);
                     addOp(PopOp);
                 }
                 e = e->next;
@@ -2098,7 +2098,7 @@ BinaryOpEquals:
             addPointer(Array_Type);
             addOpAdjustDepth(NewInstanceOp, 1);
             addLong(0);
-            PairListExprNode *plen = static_cast<PairListExprNode *>(p);
+            PairListExprNode *plen = checked_cast<PairListExprNode *>(p);
             ExprPairList *e = plen->pairs;
             int index = 0;
             while (e) {
@@ -2117,7 +2117,7 @@ BinaryOpEquals:
         break;
     case ExprNode::Is:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(IsOp);
@@ -2125,7 +2125,7 @@ BinaryOpEquals:
         break;
     case ExprNode::Instanceof:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(InstanceOfOp);
@@ -2133,7 +2133,7 @@ BinaryOpEquals:
         break;
     case ExprNode::As:
         {
-            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *b = checked_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
             addOp(AsOp);
@@ -2145,7 +2145,7 @@ BinaryOpEquals:
             // Unit package, passing the number literal arguments
             // Requires winding up a new lexer/parser chunk. For
             // now we'll handle single units only
-            NumUnitExprNode *n = static_cast<NumUnitExprNode *>(p);
+            NumUnitExprNode *n = checked_cast<NumUnitExprNode *>(p);
 
             addOp(LoadTypeOp);
             addPointer(Unit_Type);
@@ -2162,7 +2162,7 @@ BinaryOpEquals:
         break;
     case ExprNode::functionLiteral:
         {
-            FunctionExprNode *f = static_cast<FunctionExprNode *>(p);
+            FunctionExprNode *f = checked_cast<FunctionExprNode *>(p);
             JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function), mScopeChain);
             m_cx->buildRuntimeForFunction(f->function, fnc);
             ByteCodeGen bcg(m_cx, mScopeChain);
@@ -2184,7 +2184,7 @@ BinaryOpEquals:
             // we're in a class constructor - turn this into
             // an invocation of the default constructor of the
             // superclass
-            InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            InvokeExprNode *i = checked_cast<InvokeExprNode *>(p);
             JSType *currentClass = mScopeChain->topClass();
             ASSERT(currentClass);
 
@@ -2208,7 +2208,7 @@ BinaryOpEquals:
         break;
     case ExprNode::dotClass:
         {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            UnaryExprNode *u = checked_cast<UnaryExprNode *>(p);
             JSType *uType = genExpr(u->op);
             addByte(ClassOp);
             return uType;
@@ -2216,7 +2216,7 @@ BinaryOpEquals:
         break;
     case ExprNode::juxtapose:
         {
-            BinaryExprNode *j = static_cast<BinaryExprNode *>(p);
+            BinaryExprNode *j = checked_cast<BinaryExprNode *>(p);
             genExpr(j->op1);
             genExpr(j->op2);
             addOp(JuxtaposeOp);

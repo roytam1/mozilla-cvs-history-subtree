@@ -48,45 +48,45 @@ void JS::escapeString(Formatter &f, const char16 *begin, const char16 *end, char
 
     const char16 *chunk = begin;
     while (begin != end) {
-            char16 ch = *begin++;
-            CharInfo ci(ch);
-            if (char16Value(ch) < 0x20 || isLineBreak(ci) || isFormat(ci) || ch == '\\' || ch == quote) {
-                if (begin-1 != chunk)
-                    printString(f, chunk, begin-1);
-                chunk = begin;
+        char16 ch = *begin++;
+        CharInfo ci(ch);
+        if (char16Value(ch) < 0x20 || isLineBreak(ci) || isFormat(ci) || ch == '\\' || ch == quote) {
+            if (begin-1 != chunk)
+                printString(f, chunk, begin-1);
+            chunk = begin;
 
-                f << '\\';
-                switch (ch) {
-                  case 0x0008:
-                  case 0x0009:
-                  case 0x000A:
-                  case 0x000B:
-                  case 0x000C:
-                  case 0x000D:
-                    f << controlCharNames[ch - 0x0008];
+            f << '\\';
+            switch (ch) {
+              case 0x0008:
+              case 0x0009:
+              case 0x000A:
+              case 0x000B:
+              case 0x000C:
+              case 0x000D:
+                f << controlCharNames[ch - 0x0008];
+                break;
+
+              case '\'':
+              case '"':
+              case '\\':
+                f << ch;
+                break;
+
+              case 0x0000:
+                if (begin == end || char16Value(*begin) < '0' || char16Value(*begin) > '9') {
+                    f << '0';
                     break;
-
-                  case '\'':
-                  case '"':
-                  case '\\':
-                    f << ch;
-                    break;
-
-                  case 0x0000:
-                    if (begin == end || char16Value(*begin) < '0' || char16Value(*begin) > '9') {
-                        f << '0';
-                        break;
-                    }
-                  default:
-                    if (char16Value(ch) <= 0xFF) {
-                        f << 'x';
-                        printHex(f, static_cast<uint32>(char16Value(ch)), 2);
-                    } else {
-                        f << 'u';
-                        printHex(f, static_cast<uint32>(char16Value(ch)), 4);
-                    }
+                }
+              default:
+                if (char16Value(ch) <= 0xFF) {
+                    f << 'x';
+                    printHex(f, static_cast<uint32>(char16Value(ch)), 2);
+                } else {
+                    f << 'u';
+                    printHex(f, static_cast<uint32>(char16Value(ch)), 4);
                 }
             }
+        }
     }
     if (begin != chunk)
         printString(f, chunk, begin);
@@ -121,7 +121,7 @@ static void translateLFtoCR(char *begin, char *end)
 size_t JS::printChars(FILE *file, const char *begin, const char *end)
 {
     ASSERT(end >= begin);
-    size_t n = static_cast<size_t>(end - begin);
+    size_t n = toSize_t(end - begin);
     size_t extra = 0;
     char buffer[1024];
 
@@ -164,7 +164,7 @@ int std::fprintf(FILE* file, const char *format, ...)
         va_end(args);
         if (n >= 0 && n < b.size) {
             translateLFtoCR(b.buffer, b.buffer + n);
-            return static_cast<int>(fwrite(b.buffer, 1, static_cast<size_t>(n), file));
+            return static_cast<int>(fwrite(b.buffer, 1, toSize_t(n), file));
         }
         b.expand(b.size*2);
     }
@@ -247,7 +247,7 @@ void JS::printChar(Formatter &f, char ch, int count)
         if (c > printCharBufferSize)
             c = printCharBufferSize;
         count -= c;
-        STD::memset(str, ch, static_cast<size_t>(c));
+        STD::memset(str, ch, toSize_t(c));
         printString(f, str, str+c);
     }
 }
@@ -513,12 +513,12 @@ void JS::PrettyPrinter::outputBreak(bool sameLine, uint32 length)
 
     if (sameLine) {
         outputPos += length;
-            // Exceptions may be thrown below.
+        // Exceptions may be thrown below.
         printChar(outputFormatter, ' ', static_cast<int>(length));
     } else {
         lastBreak = ++lineNum;
         outputPos = margin;
-            // Exceptions may be thrown below.
+        // Exceptions may be thrown below.
         outputFormatter << '\n';
         printChar(outputFormatter, ' ', static_cast<int>(margin));
     }
@@ -846,8 +846,7 @@ void JS::PrettyPrinter::requiredBreak()
 {
     reduceRightActiveItems();
     reduceLeftActiveItems(infiniteLength);
-    ASSERT(!itemStack && !activeItems && !itemText &&
-           leftSerialPos == rightSerialPos);
+    ASSERT(!itemStack && !activeItems && !itemText && leftSerialPos == rightSerialPos);
     outputBreak(false, 0);
 }
 
@@ -877,6 +876,5 @@ void JS::PrettyPrinter::end()
     ASSERT(!topRegion);
     reduceRightActiveItems();
     reduceLeftActiveItems(infiniteLength);
-    ASSERT(!savedBlocks && !itemStack && !activeItems && !itemText &&
-           rightSerialPos == leftSerialPos && !margin);
+    ASSERT(!savedBlocks && !itemStack && !activeItems && !itemText && rightSerialPos == leftSerialPos && !margin);
 }

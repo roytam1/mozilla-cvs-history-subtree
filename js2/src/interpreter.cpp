@@ -89,13 +89,13 @@ ICodeModule* Context::compileFunction(const String &source)
     Parser p(getWorld(), a, source, filename);
     ExprNode* e = p.parseExpression(false);
     ASSERT(e->getKind() == ExprNode::functionLiteral);
-    FunctionExprNode* f = static_cast<FunctionExprNode*>(e);
+    FunctionExprNode* f = checked_cast<FunctionExprNode *>(e);
     ICodeGenerator icg(this, NULL, NULL, ICodeGenerator::kIsTopLevel, extractType(f->function.resultType));
     icg.allocateParameter(getWorld().identifiers["this"], false);   // always parameter #0
     VariableBinding* v = f->function.parameters;
     while (v) {
         if (v->name && (v->name->getKind() == ExprNode::identifier))
-            icg.allocateParameter((static_cast<IdentifierExprNode*>(v->name))->name, false);
+            icg.allocateParameter(checked_cast<IdentifierExprNode *>(v->name)->name, false);
         v = v->next;
     }
     icg.genStmt(f->function.body);
@@ -1893,7 +1893,7 @@ JSType *Context::extractType(ExprNode *t)
 {
     JSType* type = &Object_Type;
     if (t && (t->getKind() == ExprNode::identifier)) {
-        IdentifierExprNode* typeExpr = static_cast<IdentifierExprNode*>(t);
+        IdentifierExprNode* typeExpr = checked_cast<IdentifierExprNode *>(t);
         type = findType(typeExpr->name);
     }
     return type;

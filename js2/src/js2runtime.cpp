@@ -690,7 +690,7 @@ JSType *ScopeChain::extractType(ExprNode *t)
     JSType *type = Object_Type;
     if (t) {
         if (t->getKind() == ExprNode::identifier) {
-            IdentifierExprNode* typeExpr = static_cast<IdentifierExprNode*>(t);
+            IdentifierExprNode* typeExpr = checked_cast<IdentifierExprNode *>(t);
             type = findType(typeExpr->name, t->pos);
         }
         else
@@ -761,7 +761,7 @@ void ScopeChain::collectNames(StmtNode *p)
         // or simply visit the contained blocks and process any references that need to be hoisted
     case StmtNode::Class:
         {
-            ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
+            ClassStmtNode *classStmt = checked_cast<ClassStmtNode *>(p);
             const StringAtom& name = classStmt->name;
             JSType *thisClass = new JSType(m_cx, name, NULL);
 
@@ -778,7 +778,7 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::block:
         {
             // should push a new Activation scope here?
-            BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
+            BlockStmtNode *b = checked_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
                 collectNames(s);
@@ -791,20 +791,20 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::DoWhile:
     case StmtNode::While:
         {
-            UnaryStmtNode *u = static_cast<UnaryStmtNode *>(p);
+            UnaryStmtNode *u = checked_cast<UnaryStmtNode *>(p);
             collectNames(u->stmt);
         }
         break;
     case StmtNode::IfElse:
         {
-            BinaryStmtNode *b = static_cast<BinaryStmtNode *>(p);
+            BinaryStmtNode *b = checked_cast<BinaryStmtNode *>(p);
             collectNames(b->stmt);
             collectNames(b->stmt2);
         }
         break;
     case StmtNode::Try:
         {
-            TryStmtNode *t = static_cast<TryStmtNode *>(p);
+            TryStmtNode *t = checked_cast<TryStmtNode *>(p);
             if (t->catches) {
                 CatchClause *c = t->catches;
                 while (c) {
@@ -817,14 +817,14 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::For:
     case StmtNode::ForIn:
         {
-            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            ForStmtNode *f = checked_cast<ForStmtNode *>(p);
             if (f->initializer) collectNames(f->initializer);
         }
         break;
     case StmtNode::Const:
     case StmtNode::Var:
         {
-            VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
+            VariableStmtNode *vs = checked_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
             m_cx->setAttributeValue(vs);
             bool isStatic = (vs->attributeFlags & Property::Static) == Property::Static;
@@ -841,7 +841,7 @@ void ScopeChain::collectNames(StmtNode *p)
         break;
     case StmtNode::Function:
         {
-            FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
+            FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
             m_cx->setAttributeValue(f);
 
             bool isStatic = (f->attributeFlags & Property::Static) == Property::Static;
@@ -942,7 +942,7 @@ void ScopeChain::collectNames(StmtNode *p)
         break;
     case StmtNode::Namespace:
         {
-            NamespaceStmtNode *n = static_cast<NamespaceStmtNode *>(p);
+            NamespaceStmtNode *n = checked_cast<NamespaceStmtNode *>(p);
             JSInstance *i = Attribute_Type->newInstance(m_cx);
             i->setProperty(m_cx, widenCString("trueFlags"), (NamespaceList *)(NULL), kPositiveZero);
             i->setProperty(m_cx, widenCString("falseFlags"), (NamespaceList *)(NULL), kPositiveZero);
@@ -1315,7 +1315,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
     switch (p->getKind()) {
     case StmtNode::block:
         {
-            BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
+            BlockStmtNode *b = checked_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
                 buildRuntimeForStmt(s);
@@ -1325,7 +1325,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
         break;
     case StmtNode::Try:
         {
-            TryStmtNode *t = static_cast<TryStmtNode *>(p);
+            TryStmtNode *t = checked_cast<TryStmtNode *>(p);
             if (t->catches) {
                 CatchClause *c = t->catches;
                 while (c) {
@@ -1341,13 +1341,13 @@ void Context::buildRuntimeForStmt(StmtNode *p)
     case StmtNode::DoWhile:
     case StmtNode::While:
         {
-            UnaryStmtNode *u = static_cast<UnaryStmtNode *>(p);
+            UnaryStmtNode *u = checked_cast<UnaryStmtNode *>(p);
             buildRuntimeForStmt(u->stmt);
         }
         break;
     case StmtNode::IfElse:
         {
-            BinaryStmtNode *b = static_cast<BinaryStmtNode *>(p);
+            BinaryStmtNode *b = checked_cast<BinaryStmtNode *>(p);
             buildRuntimeForStmt(b->stmt);
             buildRuntimeForStmt(b->stmt2);
         }
@@ -1355,14 +1355,14 @@ void Context::buildRuntimeForStmt(StmtNode *p)
     case StmtNode::For:
     case StmtNode::ForIn:
         {
-            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            ForStmtNode *f = checked_cast<ForStmtNode *>(p);
             if (f->initializer) buildRuntimeForStmt(f->initializer);
         }
         break;
     case StmtNode::Var:
     case StmtNode::Const:
         {
-            VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
+            VariableStmtNode *vs = checked_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
 //            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
@@ -1374,7 +1374,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
         break;
     case StmtNode::Function:
         {
-            FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
+            FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
 //            bool isStatic = hasAttribute(f->attributes, Token::Static);
 //            bool isConstructor = hasAttribute(f->attributes, ConstructorKeyWord);
 //            bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
@@ -1436,11 +1436,11 @@ void Context::buildRuntimeForStmt(StmtNode *p)
         break;
     case StmtNode::Class:
         {     
-            ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
+            ClassStmtNode *classStmt = checked_cast<ClassStmtNode *>(p);
             JSType *superClass = Object_Type;
             if (classStmt->superclass) {
                 ASSERT(classStmt->superclass->getKind() == ExprNode::identifier);   // XXX
-                IdentifierExprNode *superClassExpr = static_cast<IdentifierExprNode*>(classStmt->superclass);
+                IdentifierExprNode *superClassExpr = checked_cast<IdentifierExprNode *>(classStmt->superclass);
                 superClass = mScopeChain->findType(superClassExpr->name, superClassExpr->pos);
             }
             JSType *thisClass = classStmt->mType;

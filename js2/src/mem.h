@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -40,7 +40,7 @@
 
 namespace JavaScript
 {
-    
+
 //
 // Zones
 //
@@ -51,16 +51,15 @@ namespace JavaScript
     // clear method called.
     class Zone {
         union Header {
-            Header *next;  // Next block header in linked list
-            // Padding to ensure following block is fully aligned
-            char padding[basicAlignment];
+            Header *next;               // Next block header in linked list
+            char padding[basicAlignment];// Padding to ensure following block is fully aligned
         };// Block data follows header
-                
-        Header *headers;  // Linked list of allocated blocks
-        char *freeBegin;  // Pointer to free bytes left in current block
-        char *freeEnd;    // Pointer to end of free bytes left in current block
-        size_t blockSize; // Size of individual arena blocks
-                
+
+        Header *headers;                // Linked list of allocated blocks
+        char *freeBegin;                // Pointer to free bytes left in current block
+        char *freeEnd;                  // Pointer to end of free bytes left in current block
+        size_t blockSize;               // Size of individual arena blocks
+
       public:
         explicit Zone(size_t blockSize = 1024);
       private:
@@ -69,7 +68,7 @@ namespace JavaScript
       public:
         void clear();
         ~Zone() {clear();}
-                
+
       private:
         void *newBlock(size_t size);
       public:
@@ -115,34 +114,28 @@ namespace JavaScript
     class Arena: public Zone {
         struct DestructorEntry;
 
-        // Linked list of destructor registrations, ordered from most to
-        // least recently registered
-        DestructorEntry *destructorEntries;
-                
+        DestructorEntry *destructorEntries;// Linked list of destructor registrations, ordered from most to least recently registered
+
       public:
-        explicit Arena(size_t blockSize = 1024):
-            Zone(blockSize), destructorEntries(0) {}
+        explicit Arena(size_t blockSize = 1024): Zone(blockSize), destructorEntries(0) {}
       private:
         void runDestructors();
       public:
         void clear() {runDestructors(); Zone::clear();}
         ~Arena() {runDestructors();}
-                
+
       private:
         void newDestructorEntry(void (*destructor)(void *), void *object);
       public:
-        // Ensure that object's destructor is called at the time the arena is
-        // deallocated or cleared.
+
+        // Ensure that object's destructor is called at the time the arena is deallocated or cleared.
         // The destructors will be called in reverse order of being registered.
-        // registerDestructor might itself runs out of memory, in which case
-        // it immediately
+        // registerDestructor might itself runs out of memory, in which case it immediately
         // calls object's destructor before throwing bad_alloc.
 #ifndef _WIN32
-        template<class T> void registerDestructor(T *object)
-            {newDestructorEntry(&classDestructor<T>, object);}
+        template<class T> void registerDestructor(T *object) {newDestructorEntry(&classDestructor<T>, object);}
 #else
-        template<class T> void registerDestructor(T *object)
-            {newDestructorEntry(&DestructorHolder<T>::destroy, object);}
+        template<class T> void registerDestructor(T *object) {newDestructorEntry(&DestructorHolder<T>::destroy, object);}
 #endif
     };
 
@@ -164,7 +157,7 @@ namespace JavaScript
     // be contained in the Arena passed to the ArenaAllocator's constructor.
     template<class T> class ArenaAllocator {
         Arena &arena;
-        
+
       public:
         typedef T value_type;
         typedef size_t size_type;
@@ -173,28 +166,25 @@ namespace JavaScript
         typedef const T *const_pointer;
         typedef T &reference;
         typedef const T &const_reference;
-        
+
         static pointer address(reference r) {return &r;}
         static const_pointer address(const_reference r) {return &r;}
-        
+
         ArenaAllocator(Arena &arena): arena(arena) {}
-        template<class U> ArenaAllocator(const ArenaAllocator<U> &u):
-            arena(u.arena) {}
-                
-        pointer allocate(size_type n, const void *hint = 0)
-            {return static_cast<pointer>(arena.allocate(n*sizeof(T)));}
+        template<class U> ArenaAllocator(const ArenaAllocator<U> &u): arena(u.arena) {}
+
+        pointer allocate(size_type n, const void *hint = 0) {return static_cast<pointer>(arena.allocate(n*sizeof(T)));}
         static void deallocate(pointer, size_type) {}
-                
+
         static void construct(pointer p, const T &val) {new(p) T(val);}
         static void destroy(pointer p) {p->~T();}
-                
+
 #ifdef __GNUC__ // why doesn't g++ support numeric_limits<T>?
         static size_type max_size() {return size_type(-1) / sizeof(T);}
 #else
-        static size_type max_size()
-            {return std::numeric_limits<size_type>::max() / sizeof(T);}
+        static size_type max_size() {return std::numeric_limits<size_type>::max() / sizeof(T);}
 #endif
-                
+
         template<class U> struct rebind {typedef ArenaAllocator<U> other;};
     };
 
@@ -209,21 +199,18 @@ namespace JavaScript
     // To deallocate a T, use pool.destroy(t), where t has type T*.
     template <typename T> class Pool: public Zone {
         struct FreeList {
-            FreeList *next; // Next item in linked list of freed objects
+            FreeList *next;             // Next item in linked list of freed objects
         };
-        
-        STATIC_CONST(size_t, entrySize = sizeof(T) >= sizeof(FreeList *) ?
-                     sizeof(T) : sizeof(FreeList *));
-                
-        FreeList *freeList; // Head of linked list of freed objects
-                
+
+        STATIC_CONST(size_t, entrySize = sizeof(T) >= sizeof(FreeList *) ? sizeof(T) : sizeof(FreeList *));
+
+        FreeList *freeList;             // Head of linked list of freed objects
+
       public:
         // clumpSize is the number of T's that are allocated at a time.
-        explicit Pool(size_t clumpSize) :
-            Zone(clumpSize * entrySize), freeList(0) {}
+        explicit Pool(size_t clumpSize): Zone(clumpSize * entrySize), freeList(0) {}
 
-        // Allocate memory for a single T.  Use this with a placement new
-        // operator to create a new T.
+        // Allocate memory for a single T.  Use this with a placement new operator to create a new T.
         void *allocate() {
             if (freeList) {
                 FreeList *p = freeList;
@@ -232,6 +219,7 @@ namespace JavaScript
             }
             return allocateUnaligned(entrySize);
         }
+
         void deallocate(void *t) {
             FreeList *p = static_cast<FreeList *>(t);
             p->next = freeList;

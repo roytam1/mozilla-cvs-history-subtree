@@ -56,7 +56,7 @@ namespace JavaScript
 #ifndef XP_MAC_MPW
     inline size_t printChars(FILE *file, const char *begin, const char *end) {
         ASSERT(end >= begin);
-        return STD::fwrite(begin, 1, static_cast<size_t>(end - begin), file);
+        return STD::fwrite(begin, 1, toSize_t(end - begin), file);
     }
 #endif
 
@@ -77,7 +77,7 @@ namespace JavaScript
       public:
 
 #ifdef __GNUC__ // Workaround for gcc pedantry.  No one should be calling delete on a raw Formatter.
-	    virtual ~Formatter() {}
+        virtual ~Formatter() {}
 #endif
 
         Formatter &operator<<(char ch) {printChar8(ch); return *this;}

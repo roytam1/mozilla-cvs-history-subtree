@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -39,7 +39,7 @@
 #include "utilities.h"
 #include "mem.h"
 
-namespace JavaScript 
+namespace JavaScript
 {
     // Special char16s
     namespace uni {
@@ -51,11 +51,9 @@ namespace JavaScript
         const char16 ps = 0x2029;
     }
     const uint16 firstFormatChar = 0x200C;  // Lowest Unicode Cf character
-    
-    inline char16 widen(char ch) {
-        return static_cast<char16>(static_cast<uchar>(ch));
-    }
-    
+
+    inline char16 widen(char ch) {return static_cast<char16>(static_cast<uchar>(ch));}
+
     // Use char16Value to compare char16's for inequality because an
     // implementation may have char16's be either signed or unsigned.
     inline uint16 char16Value(char16 ch) {return static_cast<uint16>(ch);}
@@ -65,9 +63,7 @@ namespace JavaScript
     const char16orEOF char16eof = static_cast<char16orEOF>(-1);
 
     // If c is a char16, return it; if c is char16eof, return the character \uFFFF.
-    inline char16 char16orEOFToChar16(char16orEOF c) {
-        return static_cast<char16>(c);
-    }
+    inline char16 char16orEOFToChar16(char16orEOF c) {return static_cast<char16>(c);}
 
 
 //
@@ -84,7 +80,7 @@ namespace JavaScript
     // standard basic_string.
     typedef std::basic_string<char16> String;
     typedef String string16;
-    typedef string16::const_iterator string16_citer;    
+    typedef string16::const_iterator string16_citer;
     typedef string string8;
     typedef string8::const_iterator string8_citer;
 
@@ -113,14 +109,12 @@ namespace JavaScript
         // Widen and append characters between begin and end to the end of str.
     inline void appendChars(String &str, const char *begin, const char *end) {
         ASSERT(begin <= end);
-        str.append(reinterpret_cast<const uchar *>(begin),
-                   reinterpret_cast<const uchar *>(end));
+        str.append(reinterpret_cast<const uchar *>(begin), reinterpret_cast<const uchar *>(end));
     }
 
     // Widen and insert length characters starting at chars into the given
     // position of str.
-    inline void insertChars(String &str, String::size_type pos,
-                            const char *chars, size_t length) {
+    inline void insertChars(String &str, String::size_type pos, const char *chars, size_t length) {
         ASSERT(pos <= str.size());
         const uchar *uchars = reinterpret_cast<const uchar *>(chars);
         str.insert(str.begin() + pos, uchars, uchars + length);
@@ -131,13 +125,12 @@ namespace JavaScript
     void appendChars(String &str, const char *chars, size_t length);
     inline void appendChars(String &str, const char *begin, const char *end) {
         ASSERT(begin <= end);
-        appendChars(str, begin, static_cast<size_t>(end - begin));
+        appendChars(str, begin, toSize_t(end - begin));
     }
-    
-    void insertChars(String &str, String::size_type pos, const char *chars,
-                     size_t length);
+
+    void insertChars(String &str, String::size_type pos, const char *chars, size_t length);
 #endif
-    
+
     void insertChars(String &str, String::size_type pos, const char *cstr);
 
 
@@ -149,13 +142,13 @@ namespace JavaScript
 
 
     class CharInfo {
-        uint32 info; // Word from table a.
+        uint32 info;                    // Word from table a.
 
         // Unicode character attribute lookup tables
         static const uint8 x[];
         static const uint8 y[];
         static const uint32 a[];
-    
+
       public:
         // Enumerated Unicode general category types
         enum Type {
@@ -206,8 +199,7 @@ namespace JavaScript
         friend Group cGroup(const CharInfo &ci) {return static_cast<Group>(ci.info >> 16 & 7);}
 
         friend bool isAlpha(const CharInfo &ci) {
-            return ((1<<UppercaseLetter | 1<<LowercaseLetter | 1<<TitlecaseLetter | 1<<ModifierLetter | 1<<OtherLetter)
-                    >> cType(ci) & 1) != 0;
+            return ((1<<UppercaseLetter | 1<<LowercaseLetter | 1<<TitlecaseLetter | 1<<ModifierLetter | 1<<OtherLetter) >> cType(ci) & 1) != 0;
         }
 
         friend bool isAlphanumeric(const CharInfo &ci) {
@@ -235,7 +227,7 @@ namespace JavaScript
         friend char16 toUpper(char16 c);
         friend char16 toLower(char16 c);
     };
-    
+
     inline bool isASCIIDecimalDigit(char16 c) {return c >= '0' && c <= '9';}
     bool isASCIIHexDigit(char16 c, uint &digit);
 

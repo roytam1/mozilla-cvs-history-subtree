@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -126,8 +126,8 @@ namespace JavaScript
     // allocating storage from the heap.
     template <typename T, size_t initialSize> class Buffer {
       public:
-        T *buffer;   // Pointer to the current buffer
-        size_t size; // Current size of the buffer
+        T *buffer;                      // Pointer to the current buffer
+        size_t size;                    // Current size of the buffer
       private:
         T initialBuffer[initialSize];   // Initial buffer
       public:
@@ -154,14 +154,13 @@ namespace JavaScript
 
     // See ArrayBuffer below.
     template <typename T> class RawArrayBuffer {
-        T *const cache;  // Pointer to a fixed-size cache for holding the buffer
-                         // if it's small enough
+        T *const cache;                 // Pointer to a fixed-size cache for holding the buffer if it's small enough
       protected:
-        T *buffer;              // Pointer to the current buffer
-        size_t length;          // Logical size of the buffer
-        size_t bufferSize;      // Physical size of the buffer
+        T *buffer;                      // Pointer to the current buffer
+        size_t length;                  // Logical size of the buffer
+        size_t bufferSize;              // Physical size of the buffer
 #ifdef DEBUG
-        size_t maxReservedSize; // Maximum size reserved so far
+        size_t maxReservedSize;         // Maximum size reserved so far
 #endif
 
       public:
@@ -197,10 +196,7 @@ namespace JavaScript
         void fast_push_back(const T &elt);
         void push_back(const T &elt);
         void append(const T *elts, size_t nElts);
-        void append(const T *begin, const T *end) {
-            ASSERT(end >= begin);
-            append(begin, static_cast<size_t>(end - begin));
-        }
+        void append(const T *begin, const T *end) {ASSERT(end >= begin); append(begin, toSize_t(end - begin));}
         
         T &pop_back() {ASSERT(length); return buffer[--length];}
     };
@@ -322,9 +318,8 @@ namespace JavaScript
     template<size_t size> class BitSet {
         STATIC_CONST(size_t, nWords = (size+31)>>5);
         STATIC_CONST(uint32, lastWordMask = (2u<<((size-1)&31)) - 1);
-        // Bitmap of bits.  The first word contains bits 0(LSB)...31(MSB),
-        // the second contains bits 32...63, etc.
-        uint32 words[nWords];
+
+        uint32 words[nWords];   // Bitmap; the first word contains bits 0(LSB)...31(MSB), the second contains bits 32...63, etc.
 
       public:
         void clear() {zero(words, words+nWords);}
@@ -339,10 +334,7 @@ namespace JavaScript
             while (low = *a++, (high = *a++) != 0) setRange(low, high);
         }
                 
-        bool operator[](size_t i) const {
-            ASSERT(i < size);
-            return static_cast<bool>(words[i>>5]>>(i&31) & 1);
-        }
+        bool operator[](size_t i) const {ASSERT(i < size); return static_cast<bool>(words[i>>5]>>(i&31) & 1);}
         bool none() const;
         bool operator==(const BitSet &s) const;
         bool operator!=(const BitSet &s) const;
@@ -464,19 +456,16 @@ namespace JavaScript
 
     // See ArrayQueue below.
     template <typename T> class RawArrayQueue {
-        T *const cache;  // Pointer to a fixed-size cache for holding the buffer
-                         // if it's small enough
+        T *const cache;                 // Pointer to a fixed-size cache for holding the buffer if it's small enough
       protected:
-        T *buffer;       // Pointer to the current buffer
-        T *bufferEnd;    // Pointer to the end of the buffer
-        T *f;            // Front end of the circular buffer, used for reading
-                         // elements; buffer <= f < bufferEnd
-        T *b;            // Back end of the circular buffer, used for writing
-                         // elements; buffer < b <= bufferEnd
-        size_t length;   // Number of elements used in the circular buffer
-        size_t bufferSize;       // Physical size of the buffer
+        T *buffer;                      // Pointer to the current buffer
+        T *bufferEnd;                   // Pointer to the end of the buffer
+        T *f;                           // Front end of the circular buffer, used for reading elements; buffer <= f < bufferEnd
+        T *b;                           // Back end of the circular buffer, used for writing elements; buffer < b <= bufferEnd
+        size_t length;                  // Number of elements used in the circular buffer
+        size_t bufferSize;              // Physical size of the buffer
 #ifdef DEBUG
-        size_t maxReservedSize;  // Maximum size reserved so far
+        size_t maxReservedSize;         // Maximum size reserved so far
 #endif
 
       public:
@@ -506,7 +495,8 @@ namespace JavaScript
         
         T &pop_front() {
             ASSERT(length);
-            --length; T &elt = *f++;
+            --length;
+            T &elt = *f++;
             if (f == bufferEnd)
                 f = buffer;
             return elt;
@@ -535,7 +525,7 @@ namespace JavaScript
         // Does not throw exceptions.  T::operator= must not throw exceptions.
         template <class InputIter>
         void fast_append(InputIter begin, InputIter end) {
-            size_t nElts = static_cast<size_t>(std::distance(begin, end));
+            size_t nElts = toSize_t(std::distance(begin, end));
             ASSERT(length + nElts <= maxReservedSize);
             while (nElts) {
                 size_t nEltsAdvanced;
@@ -552,7 +542,7 @@ namespace JavaScript
         // reserve_back may throw an exception, in which case the queue is left
         // unchanged.
         template <class InputIter> void append(InputIter begin, InputIter end) {
-            size_t nElts = static_cast<size_t>(std::distance(begin, end));
+            size_t nElts = toSize_t(std::distance(begin, end));
             reserve_back(nElts);
             while (nElts) {
                 size_t nEltsAdvanced;
@@ -574,7 +564,7 @@ namespace JavaScript
     size_t RawArrayQueue<T>::pop_front(size_t nElts, T *&begin, T *&end) {
         ASSERT(nElts <= length);
         begin = f;
-        size_t eltsToEnd = static_cast<size_t>(bufferEnd - f);
+        size_t eltsToEnd = toSize_t(bufferEnd - f);
         if (nElts < eltsToEnd) {
             length -= nElts;
             f += nElts;
@@ -598,7 +588,7 @@ namespace JavaScript
         
         auto_ptr<T> newBuffer(new T[newBufferSize]);
         T *oldBuffer = buffer;
-        size_t eltsToEnd = static_cast<size_t>(bufferEnd - f);
+        size_t eltsToEnd = toSize_t(bufferEnd - f);
         if (eltsToEnd <= length)
             std::copy(f, f + eltsToEnd, newBuffer.get());
         else {
@@ -666,7 +656,7 @@ namespace JavaScript
             if (b2 == bufferEnd)
                 b2 = buffer;
             
-            size_t room = static_cast<size_t>(bufferEnd - b2);
+            size_t room = toSize_t(bufferEnd - b2);
             if (nElts > room) {
                 nElts = room;
                 newLength = length + nElts;
