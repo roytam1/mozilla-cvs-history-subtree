@@ -258,6 +258,10 @@ interface nsIMsgDBView : nsISupports
 	attribute boolean supressMsgDisplay;
 };
 
+/* this interface is rapidly morphing from a command updater interface into a more generic
+   FE updater interface to handle changes in the view 
+*/
+
 [scriptable, uuid(65FC9AD5-0912-11d5-9901-001083010E9B)]
 interface nsIMsgDBViewCommandUpdater : nsISupports
 {
@@ -269,4 +273,7 @@ interface nsIMsgDBViewCommandUpdater : nsISupports
 	*/
 
 	void updateCommandStatus();
+
+	/* displayed message has changed */
+	void displayMessageChanged(in nsIMsgFolder aFolder, in wstring aSubject);
 };

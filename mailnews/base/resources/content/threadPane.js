@@ -66,6 +66,11 @@ nsMsgDBViewCommandUpdater.prototype =
 		  document.commandDispatcher.updateCommands('mail-toolbar');
     },
 
+  displayMessageChanged : function(aFolder, aSubject)
+  {
+    setTitleFromFolder(aFolder, aSubject);
+  },
+
   QueryInterface : function(iid)
    {
      if(iid.equals(Components.interfaces.nsIMsgDBViewCommandUpdater))
