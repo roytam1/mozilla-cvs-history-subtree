@@ -910,10 +910,12 @@ nsTreeBodyFrame::UpdateScrollbar()
 nsresult nsTreeBodyFrame::CheckVerticalOverflow(PRBool aInReflow)
 {
   PRBool verticalOverflowChanged = PR_FALSE;
-
+ 
   PRInt32 rowCount;
   mView->GetRowCount(&rowCount);
-  if (!mVerticalOverflow && rowCount > mPageCount) {
+  if (!mVerticalOverflow && rowCount > mPageCount && mPageCount > 2) {
+    // Only show scrollbars if we're more than two rows tall (since
+    // scrollbars are too tall to fit within two rows anyway.
     mVerticalOverflow = PR_TRUE;
     verticalOverflowChanged = PR_TRUE;
   }

@@ -59,7 +59,7 @@ pref("backups.number_of_prefs_copies", 1);
 
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
+pref("browser.startup.homepage",	   "about:blank");
 // "browser.startup.homepage_override" was for 4.x
 pref("browser.startup.homepage_override.1", true);
 pref("browser.startup.autoload_homepage",   true);
@@ -180,6 +180,8 @@ pref("browser.tabs.opentabfor.middleclick", false);
 pref("browser.tabs.opentabfor.urlbar", false);
 pref("browser.tabs.opentabfor.windowopen", false);
 pref("browser.tabs.opentabfor.bookmarks", false);
+// 0 = blank, 1 = home page, 2 = last
+pref("browser.tabs.startPage", 0);
 
 // view source
 pref("view_source.syntax_highlight", true);
@@ -234,7 +236,7 @@ pref("print.print_headerright", "&U");
 pref("print.print_footerleft", "&PT");
 pref("print.print_footercenter", "");
 pref("print.print_footerright", "&D");
-pref("print.show_print_progress", true);
+pref("print.show_print_progress", false);
 
 // When this is set to false it means each window has its PrintSettings
 // and a change in one browser window does not effect the others
@@ -725,6 +727,10 @@ pref("browser.downloadmanager.behavior", 1);
 // if true, allow plug-ins to override internal imglib decoder mime types in full-page mode
 pref("plugin.override_internal_types", false);
 pref("plugin.expose_full_path",false); // if true navigator.plugins reveals full path
+
+// See bug 136985.  Gives embedders a pref to hook into to show
+// a popup blocker if they choose.
+pref("browser.popups.showPopupBlocker", true);
 
 // if true, enable XSLT (if installed)
 pref("xslt.enabled", true);

@@ -203,9 +203,9 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
   aRenderingContext.SetColor(color->mColor);
 
   // Get current checked state through content model.
-  if ( GetCheckboxState() ) {
-    nsFormControlHelper::PaintCheckMark(aRenderingContext, p2t, checkRect);
-  }
+  //if ( GetCheckboxState() ) {
+    //    nsFormControlHelper::PaintCheckMark(aRenderingContext, p2t, checkRect);
+  //}
   
   PRBool clip;
   aRenderingContext.PopState(clip);

@@ -249,8 +249,11 @@ nsNativeScrollbar::SetMaxRange(PRUint32 aEndRange)
 {
   mMaxValue = ((int)aEndRange) > 0 ? aEndRange : 10;
   if ( GetControl() ) {
+    // Update the current value based on the new range. We need to recompute the
+    // float value in case we had to set the value to 0 because gecko cheated
+    // and set the position before it set the max value.
     PRInt32 fullVisibleArea = mVisibleImageSize + mMaxValue;
-    [mView setFloatValue:[mView floatValue] knobProportion:(mVisibleImageSize / (float)fullVisibleArea)];
+    [mView setFloatValue:(mValue / (float)mMaxValue) knobProportion:(mVisibleImageSize / (float)fullVisibleArea)];
   }
   return NS_OK;
 }
@@ -291,7 +294,7 @@ nsNativeScrollbar::SetPosition(PRUint32 aPos)
   //   mValue = ((PRInt32)aPos) > mMaxValue ? mMaxValue : ((int)aPos);
   mValue = aPos;
   if ( mMaxValue )
-    [mView setFloatValue:(aPos / (float)mMaxValue)];
+    [mView setFloatValue:(mValue / (float)mMaxValue)];
   else
     [mView setFloatValue:0.0];
     
@@ -324,8 +327,11 @@ nsNativeScrollbar::SetViewSize(PRUint32 aSize)
 {
   mVisibleImageSize = ((int)aSize) > 0 ? aSize : 1;
   
+  // Update the current value based on the new range. We need to recompute the
+  // float value in case we had to set the value to 0 because gecko cheated
+  // and set the position before it set the max value.
   PRInt32 fullVisibleArea = mVisibleImageSize + mMaxValue;
-  [mView setFloatValue:[mView floatValue] knobProportion:(mVisibleImageSize / (float)fullVisibleArea)];
+  [mView setFloatValue:(mValue / (float)mMaxValue) knobProportion:(mVisibleImageSize / (float)fullVisibleArea)];
   return NS_OK;
 }
 

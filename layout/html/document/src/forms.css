@@ -77,11 +77,13 @@ label {
 
 /* default inputs, text inputs, and selects */
 input {
-  padding: 1px 0 1px 0;
+  -moz-appearance: textfield;
+  padding: 0px;
   border: 2px inset ThreeDFace;
-  background-color: -moz-Field;
+  background-color: transparent;
   color: -moz-FieldText;
-  font: -moz-field;
+  font-family: Lucida Grande;
+  font-size: 11pt;
   text-align: start;
   vertical-align: text-bottom;
   cursor: text;
@@ -91,6 +93,7 @@ input {
 }
 
 textarea {
+  -moz-appearance: textfield;
   margin: 1px 0 1px 0;
   border: 2px inset ThreeDFace;
   background-color: -moz-Field;
@@ -116,11 +119,11 @@ textarea > scrollbar {
 }
 
 select {
-  margin: 0;
+  -moz-appearance: menulist;
+  margin: 1px;
   border-color: ThreeDFace;
-  background-color: -moz-Field;
-  color: -moz-FieldText;
-  font: -moz-list;
+  background-color: transparent !important;
+  color: -moz-FieldText !important;
   white-space: nowrap;
   text-align: start; 
   vertical-align: text-bottom;
@@ -128,33 +131,36 @@ select {
   -moz-box-sizing: border-box;
   -moz-user-select: none;
   -moz-user-focus: normal;
-
   border-width: 2px !important;
   border-style: inset !important;
   -moz-border-radius: 0 !important;
+  font-family: Lucida Grande;
+  font-size: 11pt;
 }
 
 select[size] {
+  margin: 0px;
+  -moz-appearance: none;
+  background-color: -moz-Field !important;
   padding: 1px 0 1px 0;
 }
 select[size="1"] {
+  -moz-appearance: menulist;
+  margin: 1px;
+  background-color: transparent !important;
   padding: 0;
 }
 
 select > input[type="button"] {
-  width: 12px;
-  height: 12px;
+  -moz-appearance: menulist-button;
+  width: 36px !important;
+  height: 36px !important;
   white-space: nowrap;
   -moz-user-focus: none;
-
   position: static !important;
-  background-image: url("arrow.gif") !important;
+ /* background-image: url("arrow.gif") !important;
   background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-select > input[type="button"]:active {
-  background-image: url("arrowd.gif") !important;
+  background-position: center !important;*/
 }
 
 select[size], :-moz-select-scrolled-content {
@@ -238,6 +244,7 @@ input[type="hidden"] {
 
 /* image buttons */
 input[type="image"] {
+  -moz-appearance: none;
   padding: 0;
   border: none;
   background-color: transparent;
@@ -258,6 +265,7 @@ input[type="image"]:focus {
 
 /* file selector */
 input[type="file"] {
+  -moz-appearance: none;
   white-space: nowrap;
   cursor: default;
   -moz-binding: none;
@@ -285,8 +293,9 @@ input[type="file"] > input[type="button"]:-moz-focus-inner
 
 /* radio buttons */
 input[type="radio"] {
-  width: 12px;
-  height: 12px;
+  -moz-appearance: radio;
+  width: 16px;
+  height: 16px;
   margin: 3px 3px 0px 5px;
   padding: 0;
   vertical-align: baseline;
@@ -300,8 +309,9 @@ input[type="radio"] {
 
 /* check boxes */
 input[type="checkbox"] {
-  width: 13px;
-  height: 13px;
+  -moz-appearance: checkbox;
+  width: 16px;
+  height: 16px;
   margin: 3px 3px 3px 4px;
   padding: 0;
   vertical-align: text-bottom;
@@ -343,8 +353,8 @@ input[type="radio"]:hover:active {
 }
 
 *|*:-moz-radio {
-  width: 4px;
-  height: 4px;
+  width: 0px;
+  height: 0px;
   left: 6px;
   top: 6px;
   background-color: -moz-FieldText;
@@ -356,11 +366,14 @@ button,
 input[type="reset"],
 input[type="button"],
 input[type="submit"] { 
+  -moz-appearance: button;
+  margin: 1px;
   padding: 2px 0 2px 0;
   border: 2px outset ButtonFace;
   background-color: ButtonFace;
-  color: ButtonText; 
-  font: -moz-button;
+  color: ButtonText !important; 
+  font-family: Lucida Grande;
+  font-size: 10pt;
   white-space: pre;
   cursor: default;
   -moz-box-sizing: border-box;
@@ -372,14 +385,6 @@ input[type="submit"] {
 *|*:-moz-button-content {
   display: block;
   text-align: center;
-}
-
-button:active:hover,
-input[type="reset"]:active:hover,
-input[type="button"]:active:hover,
-input[type="submit"]:active:hover {
-  padding: 3px 0 1px 0;
-  border-style: inset;
 }
 
 button:-moz-focus-inner,

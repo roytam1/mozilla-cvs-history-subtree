@@ -1361,7 +1361,7 @@ nsresult ProfileStruct::InternalizeLocation(nsIRegistry *aRegistry, nsRegistryKe
         if (NS_FAILED(rv)) return rv;
         regLocationData = profLoc;
 
-#if defined(XP_MAC)
+#if defined(XP_MAC) || defined(XP_MACOSX)
         // 4.x profiles coming from japanese machine are already in unicode.
         // So, there is no need to decode into unicode further.
 
@@ -1395,18 +1395,21 @@ nsresult ProfileStruct::InternalizeLocation(nsIRegistry *aRegistry, nsRegistryKe
             if (NS_FAILED(rv)) return rv;
             regLocationData = regData;
 
-#ifdef XP_MAC
-            // For a brief time, this was a unicode path
-            PRInt32 firstColon = regLocationData.FindChar(PRUnichar(':'));
-            if (firstColon == -1)
+#if defined(XP_MAC) || defined(XP_MACOSX)
+            rv = NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(tempLocal));
+            if (NS_SUCCEEDED(rv))
             {
-                rv = NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(tempLocal));
-                if (NS_SUCCEEDED(rv)) // XXX this only works on XP_MAC because regLocationData is ASCII
-                    rv = tempLocal->SetPersistentDescriptor(NS_ConvertUCS2toUTF8(regLocationData));
+                // Convert the UCS2 regLocationData to a base64 encoded (ASCII) file alias
+                rv = tempLocal->SetPersistentDescriptor(NS_ConvertUCS2toUTF8(regLocationData));
+                if (NS_FAILED(rv)) {
+                  // For a brief time, regLocationData was a Unicode full path.
+                  // If SetPersistentDescriptor fails, try it as a full path.
+                  rv = tempLocal->InitWithPath(regLocationData);
+                }
             }
-            else
-#endif
+#else
             rv = NS_NewLocalFile(regLocationData, PR_TRUE, getter_AddRefs(tempLocal));
+#endif
         }
 
     if (NS_SUCCEEDED(rv) && tempLocal)
@@ -1427,10 +1430,10 @@ nsresult ProfileStruct::ExternalizeLocation(nsIRegistry *aRegistry, nsRegistryKe
     {
         nsAutoString regData;
 
-#if XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
         PRBool leafCreated;
         nsCAutoString descBuf;
-
+        
         // It must exist before we try to use GetPersistentDescriptor
         rv = EnsureDirPathExists(resolvedLocation, &leafCreated);
         if (NS_FAILED(rv)) return rv;
@@ -1476,7 +1479,7 @@ nsresult ProfileStruct::InternalizeMigratedFromLocation(nsIRegistry *aRegistry, 
                                   getter_Copies(regData));
     if (NS_SUCCEEDED(rv))
     {
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
         rv = NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(tempLocal));
         if (NS_SUCCEEDED(rv))
         {
@@ -1501,7 +1504,7 @@ nsresult ProfileStruct::ExternalizeMigratedFromLocation(nsIRegistry *aRegistry, 
     
     if (migratedFrom)
     {
-#if XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
         rv = migratedFrom->GetPersistentDescriptor(regData);
 #else
         nsAutoString path;

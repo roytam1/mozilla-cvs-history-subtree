@@ -41,6 +41,11 @@
 #include "nsOSHelperAppService.h"
 #include "nsExternalProtocolHandler.h"
 
+#if defined(XP_MAC) || defined(XP_MACOSX)
+#include "nsInternetConfigService.h"
+#include "nsMacMIMEDataSource.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 // Define the contructor function for the objects
 //
@@ -50,6 +55,11 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsURILoader)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDocLoaderImpl, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOSHelperAppService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsExternalProtocolHandler)
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacMIMEDataSource)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsInternetConfigService)
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Define a table of CIDs implemented by this module along with other
@@ -68,7 +78,14 @@ static const nsModuleComponentInfo components[] = {
   { "Netscape Mime Mapping Service", NS_EXTERNALHELPERAPPSERVICE_CID, NS_MIMESERVICE_CONTRACTID, 
      nsOSHelperAppServiceConstructor, },
   { "Netscape Default Protocol Handler", NS_EXTERNALPROTOCOLHANDLER_CID, NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX"default", 
-     nsExternalProtocolHandlerConstructor, } 
+     nsExternalProtocolHandlerConstructor, }
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  ,
+  { "MacMIME data source", NS_NATIVEMIMEDATASOURCE_CID, NS_NATIVEMIMEDATASOURCE_CONTRACTID, nsMacMIMEDataSourceConstructor, }, 
+  { "InternetConfig Service", NS_INTERNETCONFIGSERVICE_CID, NS_INTERNETCONFIGSERVICE_CONTRACTID, nsInternetConfigServiceConstructor, }
+#endif
+ 
 };
 
 

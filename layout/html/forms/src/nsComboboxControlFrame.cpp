@@ -2581,16 +2581,16 @@ nsComboboxControlFrame::Paint(nsIPresContext*     aPresContext,
           nscoord onePixel = NSIntPixelsToTwips(1, p2t);
           clipRect.width -= onePixel;
           clipRect.height -= onePixel;
-          aRenderingContext.DrawLine(clipRect.x, clipRect.y, 
-                                     clipRect.x+clipRect.width, clipRect.y);
-          aRenderingContext.DrawLine(clipRect.x+clipRect.width, clipRect.y, 
-                                     clipRect.x+clipRect.width, clipRect.y+clipRect.height);
-          aRenderingContext.DrawLine(clipRect.x+clipRect.width, clipRect.y+clipRect.height, 
-                                     clipRect.x, clipRect.y+clipRect.height);
-          aRenderingContext.DrawLine(clipRect.x, clipRect.y+clipRect.height, 
-                                     clipRect.x, clipRect.y);
-          aRenderingContext.DrawLine(clipRect.x, clipRect.y+clipRect.height, 
-                                     clipRect.x, clipRect.y);
+          //          aRenderingContext.DrawLine(clipRect.x, clipRect.y, 
+          //                         clipRect.x+clipRect.width, clipRect.y);
+          //aRenderingContext.DrawLine(clipRect.x+clipRect.width, clipRect.y, 
+          //                           clipRect.x+clipRect.width, clipRect.y+clipRect.height);
+          //          aRenderingContext.DrawLine(clipRect.x+clipRect.width, clipRect.y+clipRect.height, 
+                                     //                            clipRect.x, clipRect.y+clipRect.height);
+                                     //   aRenderingContext.DrawLine(clipRect.x, clipRect.y+clipRect.height, 
+                                     // clipRect.x, clipRect.y);
+                                     //  aRenderingContext.DrawLine(clipRect.x, clipRect.y+clipRect.height, 
+                                     // clipRect.x, clipRect.y);
         }
       }
       /////////////////////

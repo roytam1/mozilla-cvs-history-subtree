@@ -79,7 +79,9 @@ static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
    we ask for a specific z-order, we don't assume that widget z-ordering actually works.
 */
 
-//#define NO_DOUBLE_BUFFER
+#if defined(MOZ_WIDGET_COCOA)
+#define NO_DOUBLE_BUFFER
+#endif
 
 // if defined widget changes like moves and resizes are defered until and done
 // all in one pass.
@@ -2441,13 +2443,27 @@ NS_IMETHODIMP nsViewManager::SetViewChildClipRegion(nsIView *aView, nsIRegion *a
 
   // XXX Shouldn't we repaint the view here?
 
+  // If the view implements nsIClipView then we ensure a clip rect is set,
+  // and it is set to no more than the bounds of the view.
   if (aRegion != nsnull) {
     nsRect newClip;
     aRegion->GetBoundingBox(&newClip.x, &newClip.y, &newClip.width, &newClip.height);
+    if (IsClipView(view)) {
+      nsRect dims;
+      view->GetDimensions(dims);
+      newClip.IntersectRect(newClip, dims);
+    }
     view->SetViewFlags(view->GetViewFlags() | NS_VIEW_FLAG_CLIPCHILDREN);
     view->SetChildClip(newClip.x, newClip.y, newClip.XMost(), newClip.YMost());
   } else {
-    view->SetViewFlags(view->GetViewFlags() & ~NS_VIEW_FLAG_CLIPCHILDREN);
+    if (IsClipView(view)) {
+      nsRect dims;
+      view->GetDimensions(dims);
+      view->SetViewFlags(view->GetViewFlags() | NS_VIEW_FLAG_CLIPCHILDREN);
+      view->SetChildClip(0, 0, dims.width, dims.height);
+    } else {
+      view->SetViewFlags(view->GetViewFlags() & ~NS_VIEW_FLAG_CLIPCHILDREN);
+    }
   }
  
   return NS_OK;

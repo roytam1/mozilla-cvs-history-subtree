@@ -1033,7 +1033,7 @@ public:
   NS_IMETHOD SetDisplaySelection(PRInt16 aToggle);
   NS_IMETHOD GetDisplaySelection(PRInt16 *aToggle);
   NS_IMETHOD GetSelection(SelectionType aType, nsISelection** aSelection);
-  NS_IMETHOD ScrollSelectionIntoView(SelectionType aType, SelectionRegion aRegion);
+  NS_IMETHOD ScrollSelectionIntoView(SelectionType aType, SelectionRegion aRegion, PRBool aIsSynchronous);
   NS_IMETHOD RepaintSelection(SelectionType aType);
   NS_IMETHOD GetFrameSelection(nsIFrameSelection** aSelection);  
 
@@ -2540,12 +2540,12 @@ PresShell::GetSelection(SelectionType aType, nsISelection **aSelection)
 }
 
 NS_IMETHODIMP
-PresShell::ScrollSelectionIntoView(SelectionType aType, SelectionRegion aRegion)
+PresShell::ScrollSelectionIntoView(SelectionType aType, SelectionRegion aRegion, PRBool aIsSynchronous)
 {
   if (!mSelection)
     return NS_ERROR_NULL_POINTER;
 
-  return mSelection->ScrollSelectionIntoView(aType, aRegion);
+  return mSelection->ScrollSelectionIntoView(aType, aRegion, aIsSynchronous);
 }
 
 NS_IMETHODIMP
@@ -3259,7 +3259,14 @@ PresShell::ScrollLine(PRBool aForward)
     result = viewManager->GetRootScrollableView(&scrollView);
     if (NS_SUCCEEDED(result) && scrollView)
     {
+#ifdef MOZ_WIDGET_COCOA
+      // Emulate the Mac IE behavior of scrolling a minimum of 2 lines
+      // rather than 1.  This vastly improves scrolling speed.
+      scrollView->ScrollByLines(0, aForward ? 2 : -2);
+#else
       scrollView->ScrollByLines(0, aForward ? 1 : -1);
+#endif
+      
 //NEW FOR LINES    
       // force the update to happen now, otherwise multiple scrolls can
       // occur before the update is processed. (bug #7354)
@@ -5167,6 +5174,9 @@ PresShell::EndReflowBatching(PRBool aFlushPendingReflows)
   mBatchReflows = PR_FALSE;
   if (aFlushPendingReflows) {
     rv = FlushPendingNotifications(PR_FALSE);
+  }
+  else {
+    PostReflowEvent();
   }
   return rv;
 }

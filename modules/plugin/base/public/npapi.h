@@ -105,7 +105,7 @@
 #	endif /* XP_PC */
 #endif /* __MWERKS__ */
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
 	#include <Quickdraw.h>
 	#include <Events.h>
 #endif
@@ -376,7 +376,7 @@ typedef struct _NPWindow
   uint32 height;
   NPRect clipRect; /* Clipping rectangle in port coordinates */
                    /* Used by MAC only.			  */
-#ifdef XP_UNIX
+#if defined(XP_UNIX) && !defined(XP_MACOSX)
   void * ws_info; /* Platform-dependent additonal data */
 #endif /* XP_UNIX */
   NPWindowType type; /* Is this a window or a drawable? */
@@ -406,7 +406,7 @@ typedef struct _NPPrint
   } print;
 } NPPrint;
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
 typedef EventRecord	NPEvent;
 #elif defined(XP_WIN)
 typedef struct _NPEvent
@@ -428,7 +428,7 @@ typedef XEvent NPEvent;
 typedef void*			NPEvent;
 #endif /* XP_MAC */
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
 typedef RgnHandle NPRegion;
 #elif defined(XP_WIN)
 typedef HRGN NPRegion;
@@ -438,7 +438,7 @@ typedef Region NPRegion;
 typedef void *NPRegion;
 #endif /* XP_MAC */
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
 /*
  *  Mac-specific structures and definitions.
  */

@@ -144,7 +144,7 @@ NS_IMETHODIMP nsGraphicsImpl::InvertPolygon(PRUint32 count, PRInt32 *points)
 
 NS_IMETHODIMP nsGraphicsImpl::DrawString(const PRUnichar *text, nscoord x, nscoord y)
 {
-  return mRenderer->DrawString(text, nsCRT::strlen(text), x, y);
+  return mRenderer->DrawString(text, 0, nsCRT::strlen(text), x, y);
 }
 
 NS_IMETHODIMP nsGraphicsImpl::SetFont(const PRUnichar *name, nscoord size)

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -574,6 +574,7 @@ ns4xPluginInstance :: ns4xPluginInstance(NPPluginFuncs* callbacks, PRLibrary* aL
 
   fNPP.pdata = NULL;
   fNPP.ndata = this;
+  mWindow = NULL;
 
   fLibrary = aLibrary;
   mWindowless = PR_FALSE;
@@ -1018,6 +1019,8 @@ NS_IMETHODIMP ns4xPluginInstance::SetWindow(nsPluginWindow* window)
     // XXX In the old code, we'd just ignore any errors coming
     // back from the plugin's SetWindow(). Is this the correct
     // behavior?!?
+
+    mWindow = window;
   }
   return NS_OK;
 }
@@ -1117,12 +1120,30 @@ NS_IMETHODIMP ns4xPluginInstance::HandleEvent(nsPluginEvent* event, PRBool* hand
 
   PRInt16 result = 0;
   
-  if (fCallbacks->event)
-    {
-#ifdef XP_MAC
-      result = CallNPP_HandleEventProc(fCallbacks->event,
-                                    &fNPP,
-                                    (void*) event->event);
+  if (fCallbacks->event) {
+#if defined(XP_MAC) || defined(XP_MACOSX)
+#if 0
+    switch(event->event->what) {
+    case updateEvt:
+        if (mWindow) {
+            GrafPtr port;
+            GetPort(&port);
+            if (port != mWindow->window->port) printf("[!!! port isn't set correctly !!!!]\n");
+            RGBColor oldColor;
+            RGBColor green = { 0, 0xFFFF, 0 };
+            GetForeColor(&oldColor);
+            RGBForeColor(&green);
+            PaintRect((Rect*)&mWindow->clipRect);
+            // ::QDFlushPortBuffer(port, NULL);
+            RGBForeColor(&oldColor);
+            // printf("[portx = %d, porty = %d]\n", mWindow->window->portx, mWindow->window->porty);
+        }
+        break;
+    }
+#endif
+    result = CallNPP_HandleEventProc(fCallbacks->event,
+                                     &fNPP,
+                                     (void*) event->event);
 #endif
 
 #if defined(XP_WIN) || defined(XP_OS2)

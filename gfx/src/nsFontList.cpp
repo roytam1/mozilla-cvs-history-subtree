@@ -48,7 +48,7 @@ nsFontList::~nsFontList()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsFontList,nsIFontList)
+NS_IMPL_ISUPPORTS1(nsFontList, nsIFontList)
 
 /* font list enumerator */
 class

@@ -103,9 +103,11 @@ public:
 	void activate(Boolean active);
 	void resume(Boolean inFront);
 
-	void click(const EventRecord* event, MRJFrame* frame);
-	void keyPress(long message, short modifiers);
-	void keyRelease(long message, short modifiers);
+	void mouseClick(const EventRecord* event);
+    void mouseRelease(const EventRecord* event);
+    
+	Boolean keyPress(const EventRecord* event);
+	Boolean keyRelease(const EventRecord* event);
 	
     void scrollingBegins();
     void scrollingEnds();

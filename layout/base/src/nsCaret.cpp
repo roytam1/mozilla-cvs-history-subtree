@@ -933,7 +933,7 @@ void nsCaret::DrawCaret()
   nsRect    clipRect;
   nsIView   *drawingView;
   GetViewForRendering(mLastCaretFrame, eRenderingViewCoordinates, viewOffset, clipRect, drawingView);
-
+  
   if (drawingView == nsnull)
     return;
   
@@ -1088,6 +1088,11 @@ void nsCaret::DrawCaret()
   else
     mRendContext->SetColor(NS_RGB(255,255,255));
   mRendContext->InvertRect(mCaretRect);
+
+  // Ensure the buffer is flushed (Cocoa needs this), since we're drawing
+  // outside the normal painting process.
+  mRendContext->FlushRect(mCaretRect);
+
 #ifdef IBMBIDI
   if (!mHookRect.IsEmpty()) // if Bidi support is disabled, the rectangle remains empty and won't be drawn
     mRendContext->InvertRect(mHookRect);
@@ -1095,7 +1100,7 @@ void nsCaret::DrawCaret()
 
   PRBool emptyClip;   // I know what you're thinking. "Did he fire six shots or only five?"
   mRendContext->PopState(emptyClip);
-
+  
   ToggleDrawnStatus();
 
 #ifdef DONT_REUSE_RENDERING_CONTEXT

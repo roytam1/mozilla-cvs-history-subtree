@@ -140,3 +140,6 @@ private:
   nsCOMPtr<nsIAtom> mInputAtom;
   nsCOMPtr<nsIAtom> mInputCheckedAtom;
 };
+
+// utility function
+PRBool OnMacOSX();

@@ -45,6 +45,7 @@
 #include "nsIEventQueue.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
+#include "nsIPref.h"
 
 #include "nsRepeater.h"
 
@@ -52,6 +53,31 @@
 // component fails to instantiate correctly at runtime.
 #undef DARWIN
 #import <Cocoa/Cocoa.h>
+
+static CFBundleRef getBundle(CFStringRef frameworkPath)
+{
+  CFBundleRef bundle = NULL;
+ 
+  //	Make a CFURLRef from the CFString representation of the bundle's path.
+  //	See the Core Foundation URL Services chapter for details.
+  CFURLRef bundleURL = CFURLCreateWithFileSystemPath(NULL, frameworkPath, kCFURLPOSIXPathStyle, true);
+  if (bundleURL != NULL) {
+    bundle = CFBundleCreate(NULL, bundleURL);
+    if (bundle != NULL)
+      CFBundleLoadExecutable(bundle);
+    CFRelease(bundleURL);
+  }
+
+  return bundle;
+}
+
+static void* getQDFunction(CFStringRef functionName)
+{
+  static CFBundleRef systemBundle = getBundle(CFSTR("/System/Library/Frameworks/ApplicationServices.framework"));
+  if (systemBundle)
+    return CFBundleGetFunctionPointerForName(systemBundle, functionName);
+  return NULL;
+}
 
 
 //
@@ -187,6 +213,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsToolkit, nsIToolkit);
 // assume we begin as the fg app
 bool nsToolkit::sInForeground = true;
 
+static const char* gQuartzRenderingPref = "browser.quartz.enable";
 
 //-------------------------------------------------------------------------
 //
@@ -230,7 +257,67 @@ NS_IMETHODIMP nsToolkit::Init(PRThread */*aThread*/)
   nsWidgetAtoms::AddRefAtoms();
 
   mInited = true;
+
+  SetupQuartzRendering();
+  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
+  if ( prefs )
+    prefs->RegisterCallback(gQuartzRenderingPref, QuartzChangedCallback, nsnull);
+
   return NS_OK;
+}
+
+
+//
+// QuartzChangedCallback
+//
+// The pref changed, reset the app to use quartz rendering as dictated by the pref
+//
+int nsToolkit::QuartzChangedCallback(const char* pref, void* data)
+{
+  SetupQuartzRendering();
+  return NS_OK;
+}
+
+
+//
+// SetupQuartzRendering
+//
+// Use apple's technote for 10.1.5 to turn on quartz rendering with CG metrics. This
+// slows us down about 12% when turned on.
+//
+void nsToolkit::SetupQuartzRendering()
+{
+  // from Apple's technote, yet un-numbered.
+#if UNIVERSAL_INTERFACES_VERSION <= 0x0400
+  enum {
+    kQDDontChangeFlags = 0xFFFFFFFF,         // don't change anything
+    kQDUseDefaultTextRendering = 0,          // bit 0
+    kQDUseTrueTypeScalerGlyphs = (1 << 0),   // bit 1
+    kQDUseCGTextRendering = (1 << 1),        // bit 2
+    kQDUseCGTextMetrics = (1 << 2)
+  };
+#endif
+  const int kFlagsWeUse = kQDUseCGTextRendering | kQDUseCGTextMetrics;
+  
+  // turn on quartz rendering if we find the symbol in the app framework. Just turn
+  // on the bits that we need, don't turn off what someone else might have wanted. If
+  // the pref isn't found, assume we want it on. That way, we have to explicitly put
+  // in a pref to disable it, rather than force everyone who wants it to carry around
+  // an extra pref.
+  typedef UInt32 (*qd_procptr)(UInt32);  
+  static qd_procptr SwapQDTextFlags = (qd_procptr) getQDFunction(CFSTR("SwapQDTextFlags"));
+  if ( SwapQDTextFlags ) {
+    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
+    if (!prefs)
+      return;
+    PRBool enableQuartz = PR_TRUE;
+    nsresult rv = prefs->GetBoolPref(gQuartzRenderingPref, &enableQuartz);
+    UInt32 oldFlags = SwapQDTextFlags(kQDDontChangeFlags);
+    if ( NS_FAILED(rv) || enableQuartz )
+      SwapQDTextFlags(oldFlags | kFlagsWeUse);
+    else 
+      SwapQDTextFlags(oldFlags & !kFlagsWeUse);
+  }
 }
 
 

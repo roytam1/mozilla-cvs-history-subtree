@@ -56,7 +56,7 @@
 #include "nsILookAndFeel.h"
 #include "nsRegionPool.h"
 #include "nsGfxUtils.h"
-
+#include "nsIDOMHTMLInputElement.h"
 
 static void 
 ConvertGeckoToNativeRect(const nsRect& aSrc, Rect& aDst) 
@@ -126,8 +126,7 @@ GetAttribute(nsIFrame* aFrame, nsIAtom* inAttribute, nsCString& outValue)
   nsresult res = content->GetAttr(kNameSpaceID_None, inAttribute, attr);
   outValue = NS_LossyConvertUCS2toASCII(attr).get();
 
-  return ( res != NS_CONTENT_ATTR_NO_VALUE &&
-           !(res != NS_CONTENT_ATTR_NOT_THERE && attr.IsEmpty()));
+  return ( res != NS_CONTENT_ATTR_NOT_THERE );
 }
 
 
@@ -155,11 +154,7 @@ static PRBool
 CheckBooleanAttr(nsIFrame* aFrame, nsIAtom* aAtom)
 {
   nsCAutoString value;
-  GetAttribute(aFrame, aAtom, value);
-  if ( GetAttribute(aFrame, aAtom, value) )
-    return strcmp(value.get(), "true") == 0; // This handles the XUL case.
-  else
-    return PR_TRUE;                          // handles the HTML case where no val is true
+  return GetAttribute(aFrame, aAtom, value);
 }
 
 
@@ -232,9 +227,19 @@ nsNativeThemeMac::IsDefaultButton(nsIFrame* aFrame)
 PRBool
 nsNativeThemeMac::IsChecked(nsIFrame* aFrame, PRBool aIsHTML)
 {
-  return CheckBooleanAttr(aFrame, aIsHTML ? mInputCheckedAtom : mCheckedAtom);
+  if (!aFrame)
+    return PR_FALSE;
+  nsCOMPtr<nsIContent> content;
+  aFrame->GetContent(getter_AddRefs(content));
+  if (!content)
+    return PR_FALSE;
+  nsCOMPtr<nsIDOMHTMLInputElement> inputElt(do_QueryInterface(content));
+  if (!inputElt)
+    return PR_FALSE;
+  PRBool result;
+  inputElt->GetChecked(&result);
+  return result;
 }
-
 
 PRBool
 nsNativeThemeMac::IsSelected(nsIFrame* aFrame)
@@ -686,7 +691,7 @@ nsNativeThemeMac::DrawWidgetBackground(nsIRenderingContext* aContext, nsIFrame* 
       DrawCheckbox ( macRect, IsChecked(aFrame, isHTML), IsDisabled(aFrame), eventState );
       break;    
     case NS_THEME_RADIO:
-      DrawRadio ( macRect, IsSelected(aFrame), IsDisabled(aFrame), eventState );
+      DrawRadio ( macRect, IsChecked(aFrame, isHTML), IsDisabled(aFrame), eventState );
       break;
     case NS_THEME_BUTTON:
       DrawButton ( kThemePushButton, macRect, IsDefaultButton(aFrame), IsDisabled(aFrame), 
@@ -861,8 +866,9 @@ nsNativeThemeMac::GetWidgetBorder(nsIDeviceContext* aContext,
       SInt32 shadow = 0, frameOutset = 0;
       ::GetThemeMetric(kThemeMetricEditTextWhitespace, &shadow);
       ::GetThemeMetric(kThemeMetricEditTextFrameOutset, &frameOutset);
-      aResult->SizeTo(shadow + frameOutset, shadow + frameOutset, shadow + frameOutset,
-                        shadow + frameOutset);
+      aResult->SizeTo(frameOutset, frameOutset, frameOutset,
+                      frameOutset);
+      
       break;
     }
 
@@ -936,11 +942,12 @@ nsNativeThemeMac::GetMinimumWidgetSize(nsIRenderingContext* aContext, nsIFrame* 
       
     case NS_THEME_TEXTFIELD:
     {
+      /*
       // at minimum, we should be tall enough for 9pt text.
       SInt32 shadow = 0, frameOutset = 0;
       ::GetThemeMetric(kThemeMetricEditTextWhitespace, &shadow);
       ::GetThemeMetric(kThemeMetricEditTextFrameOutset, &frameOutset);
-      aResult->SizeTo(0, (shadow + frameOutset) * 2 + 9);      
+      aResult->SizeTo(0, (shadow + frameOutset) * 2 + 9);*/      
       break;
     }
       
@@ -991,6 +998,7 @@ nsNativeThemeMac::GetMinimumWidgetSize(nsIRenderingContext* aContext, nsIFrame* 
       SInt32 scrollbarWidth = 0;
       ::GetThemeMetric(kThemeMetricScrollBarWidth, &scrollbarWidth);
       aResult->SizeTo(scrollbarWidth, scrollbarWidth);
+      *aIsOverridable = PR_FALSE;
       break;
     }
 

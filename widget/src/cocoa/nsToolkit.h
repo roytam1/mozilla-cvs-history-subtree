@@ -94,6 +94,10 @@ public:
   static bool IsAppInForeground ( ) ;
 
 protected:
+
+  static int QuartzChangedCallback(const char* pref, void* data);
+  static void SetupQuartzRendering();
+
   bool          mInited;
   static bool   sInForeground;
 };

@@ -48,9 +48,6 @@
 #include <Memory.h>
 #include <Processes.h>
 #include <Gestalt.h>
-#ifdef XP_MACOSX
-#include "prenv.h"
-#endif
 #elif defined(XP_WIN)
 #include <windows.h>
 #include <shlobj.h>
@@ -61,6 +58,15 @@
 #include <stdlib.h>
 #include <sys/param.h>
 #include "prenv.h"
+#ifdef XP_MACOSX
+#include <CoreServices/CoreServices.h>
+#include <Folders.h>
+#include <Files.h>
+#include <Memory.h>
+#include <Processes.h>
+#include <Gestalt.h>
+#include <CFURL.h>
+#endif
 #elif defined(XP_OS2)
 #define MAX_PATH _MAX_PATH
 #elif defined(XP_BEOS)
@@ -119,6 +125,9 @@ nsresult
 nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
 //----------------------------------------------------------------------------------------
 {
+    NS_ENSURE_ARG_POINTER(aFile);
+    *aFile = nsnull;
+    
    //  Set the component registry location:
     if (!mService)
         return NS_ERROR_FAILURE;
@@ -192,46 +201,43 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
             return NS_OK;
         }
     }
-#if defined(DEBUG) && defined(XP_MACOSX)
-    else
+#elif defined(XP_MACOSX)
+    // Works even if we're not bundled.
+    CFBundleRef appBundle = CFBundleGetMainBundle();
+    if (appBundle != nsnull)
     {
-        // In the absence of a good way to get the executable directory let
-        // us try this for unix:
-        //	- if MOZILLA_FIVE_HOME is defined, that is it
-        char *moz5 = PR_GetEnv("MOZILLA_FIVE_HOME");
-        if (moz5)
+        CFURLRef bundleURL = CFBundleCopyExecutableURL(appBundle);
+        if (bundleURL != nsnull)
         {
-            printf( "nsDirectoryService::MOZILLA_FIVE_HOME is set to %s\n", moz5 );
-            Str255 pascalpath;
-            FSSpec ioSpec;
-            
-            int srcLength = strlen(moz5);
-            pascalpath[0] = srcLength;
-            memcpy(&pascalpath[1], moz5, srcLength);
-            err = ::FSMakeFSSpec(0, 0, pascalpath, &ioSpec);
-            
-            nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface((nsIFile*)localFile);
-            if (localFileMac) 
+            CFURLRef parentURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, bundleURL);
+            if (parentURL)
             {
-                localFileMac->InitWithFSSpec(&ioSpec);
-                *aFile = localFile;
-                return NS_OK;
+                CFStringRef path = CFURLCopyFileSystemPath(parentURL, kCFURLPOSIXPathStyle);
+                if (path)
+                {
+                    char buffer[512];
+                    if (CFStringGetCString(path, buffer, sizeof(buffer), kCFStringEncodingUTF8))
+                    {
+#ifdef DEBUG_conrad
+                        printf("nsDirectoryService - CurrentProcessDir is: %s\n", buffer);
+#endif
+                        rv = localFile->InitWithNativePath(nsDependentCString(buffer));
+                        if (NS_SUCCEEDED(rv))
+                            *aFile = localFile;
+                    }
+                    CFRelease(path);
+                }
+                CFRelease(parentURL);
             }
-        }
-        else
-        {
-            static PRBool firstWarning = PR_TRUE;
-
-            if(firstWarning) {
-                // Warn that MOZILLA_FIVE_HOME not set, once.
-                printf("***Warning: MOZILLA_FIVE_HOME not set.\n");
-                firstWarning = PR_FALSE;
-            }
+            CFRelease(bundleURL);
         }
     }
-#endif /* DEBUG && XP_MACOSX */
+    
+    NS_ASSERTION(*aFile, "nsDirectoryService - Could not determine CurrentProcessDir.\n");  
+    if (*aFile)
+        return NS_OK;
 
-#elif defined(XP_UNIX) || defined(XP_MACOSX)
+#elif defined(XP_UNIX)
 
     // In the absence of a good way to get the executable directory let
     // us try this for unix:

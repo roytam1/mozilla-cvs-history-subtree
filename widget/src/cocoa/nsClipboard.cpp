@@ -46,6 +46,7 @@
 //
 
 #include "nsCOMPtr.h"
+#include "nsCRT.h"
 #include "nsClipboard.h"
 
 #include "nsVoidArray.h"
@@ -60,6 +61,7 @@
 #include "nsPrimitiveHelpers.h"
 #include "nsIImageMac.h"
 #include "nsMemory.h"
+#include "nsLinebreakConverter.h"
 
 #include <Scrap.h>
 
@@ -145,11 +147,21 @@ nsClipboard :: SetNativeClipboardData ( PRInt32 aWhichClipboard )
         nsCOMPtr<nsISupports> genericDataWrapper;
         errCode = mTransferable->GetTransferData ( flavorStr, getter_AddRefs(genericDataWrapper), &dataSize );
         nsPrimitiveHelpers::CreateDataFromPrimitive ( flavorStr, genericDataWrapper, &data, dataSize );
+
+        // Convert unix to mac linebreaks, since mac linebreaks are required for clipboard compatibility.
+        // I'm making the assumption here that the substitution will be entirely in-place, since both
+        // types of line breaks are 1-byte.
+
+        PRUnichar* castedUnicode = NS_REINTERPRET_CAST(PRUnichar*, data);
+        nsLinebreakConverter::ConvertUnicharLineBreaksInSitu(&castedUnicode,
+                                                             nsLinebreakConverter::eLinebreakUnix,
+                                                             nsLinebreakConverter::eLinebreakMac,
+                                                             dataSize, nsnull);
+          
         errCode = PutOnClipboard ( macOSFlavor, data, dataSize );
         if ( NS_SUCCEEDED(errCode) ) {
           // we also need to put it on as 'TEXT' after doing the conversion to the platform charset.
           char* plainTextData = nsnull;
-          PRUnichar* castedUnicode = NS_REINTERPRET_CAST(PRUnichar*, data);
           PRInt32 plainTextLen = 0;
           nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText ( castedUnicode, dataSize / 2, &plainTextData, &plainTextLen );
           if ( plainTextData ) {

@@ -2449,17 +2449,17 @@ nsListControlFrame::CreateScrollingViewWidget(nsIView* aView, const nsStyleDispl
     nsCOMPtr<nsIViewManager> vm;
     aView->GetViewManager(*getter_AddRefs(vm));
     vm->SetViewFloating(aView, PR_TRUE);
-
+    
     nsWidgetInitData widgetData;
     widgetData.mWindowType  = eWindowType_popup;
     widgetData.mBorderStyle = eBorderStyle_default;
     
 #if defined(XP_MAC) || defined(XP_MACOSX)
     static NS_DEFINE_IID(kCPopUpCID,  NS_POPUP_CID);
-    aView->CreateWidget(kCPopUpCID, &widgetData, nsnull);
+    aView->CreateWidget(kCPopUpCID, &widgetData, nsnull, PR_TRUE, PR_FALSE);
 #else
     static NS_DEFINE_IID(kCChildCID,  NS_CHILD_CID);
-    aView->CreateWidget(kCChildCID, &widgetData, nsnull);
+    aView->CreateWidget(kCChildCID, &widgetData, nsnull, PR_TRUE, PR_FALSE);
 #endif   
     return NS_OK;
   } else {

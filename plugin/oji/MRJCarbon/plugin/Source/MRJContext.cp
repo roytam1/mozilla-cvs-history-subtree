@@ -40,7 +40,6 @@
 #include <Gestalt.h>
 #include <TextCommon.h>
 
-#if TARGET_CARBON
 #include <CarbonEvents.h>
 #include <JavaControl.h>
 #include <JavaApplet.h>
@@ -67,8 +66,6 @@ private:
     // cfref(const cfref<RefType>& other) {}
 };
 
-#endif
-
 #include "MRJSession.h"
 #include "MRJContext.h"
 #include "MRJPlugin.h"
@@ -78,10 +75,6 @@ private:
 #include "LocalPort.h"
 #include "StringUtils.h"
 #include "TimedMessage.h"
-#if !TARGET_CARBON
-#include "TopLevelFrame.h"
-#include "EmbeddedFrame.h"
-#endif
 
 #include "nsIPluginManager2.h"
 #include "nsIPluginInstancePeer.h"
@@ -91,6 +84,13 @@ private:
 #include <string>
 
 using namespace std;
+
+#if TARGET_RT_MAC_MACHO
+// ### This is used to hack around a bug in JavaEmbedding inside Cocoa windows. ###
+const SInt32 kTitleBarHeight = 22;
+#else
+const SInt32 kTitleBarHeight = 0;
+#endif
 
 extern nsIPluginManager* thePluginManager;
 extern nsIPluginManager2* thePluginManager2;
@@ -1386,66 +1386,149 @@ void MRJContext::resume(Boolean inFront)
 #endif
 }
 
-void MRJContext::click(const EventRecord* event, MRJFrame* appletFrame)
+void MRJContext::mouseClick(const EventRecord* event)
 {
-#if TARGET_CARBON
     // won't Carbon events just take care of everything?
     LocalPort port(mPluginPort);
     port.Enter();
 
     Point localWhere = event->where;
     ::GlobalToLocal(&localWhere);
+
+    // XXX Adjust the coordinates for Cocoa.
+    localWhere.v -= kTitleBarHeight;
+    
     ::HandleControlClick(mAppletControl, localWhere,
                          event->modifiers, NULL);
 
+    localWhere = event->where;
+    
+    // To fix some major browser problems, just handle tracking right here.
+    MouseTrackingResult trackingResult;
+    do {
+        UInt32 modifiers;
+        Point oldWhere = localWhere;
+        OSStatus status = ::TrackMouseLocationWithOptions(NULL, kTrackMouseLocationOptionDontConsumeMouseUp,
+                                                          kEventDurationForever, &localWhere, &modifiers, &trackingResult);
+        if (trackingResult == kMouseTrackingMouseDragged) {
+            // send appropriate carbon event.
+            EventRef carbonEvent;
+            status = CreateEvent(NULL, kEventClassMouse, kEventMouseDragged,
+                                 ::TickCount(), kEventAttributeNone, &carbonEvent);
+            if (status == noErr) {
+                // -->     kEventParamMouseLocation    typeHIPoint
+                ::LocalToGlobal(&localWhere);
+                HIPoint where = { event->where.h, event->where.v - kTitleBarHeight };
+                SetEventParameter(carbonEvent, kEventParamMouseLocation, typeHIPoint,
+                                  sizeof(where), &where);
+                // -->     kEventParamMouseDelta       typeHIPoint (X Only)
+                HIPoint delta = { localWhere.h - oldWhere.h, localWhere.v - oldWhere.v };
+                SetEventParameter(carbonEvent, kEventParamMouseDelta, typeHIPoint,
+                                  sizeof(delta), &delta);
+                // -->     kEventParamKeyModifiers     typeUInt32
+                SetEventParameter(carbonEvent, kEventParamKeyModifiers, typeUInt32,
+                                  sizeof(modifiers), &modifiers);
+                // -->     kEventParamMouseButton      typeMouseButton
+                EventMouseButton whichButton = kEventMouseButtonPrimary;
+                SetEventParameter(carbonEvent, kEventParamMouseButton, typeMouseButton,
+                                  sizeof(whichButton), &whichButton);
+                // -->     kEventParamClickCount       typeUInt32
+                UInt32 clickCount = 1;
+                SetEventParameter(carbonEvent, kEventParamClickCount, typeUInt32,
+                                  sizeof(clickCount), &clickCount);
+
+                // Need to send this mouse up event to the window the Java control lives in.
+                status = SendEventToWindow(carbonEvent, GetWindowFromPort(mPluginPort));
+                ReleaseEvent(carbonEvent);
+            }
+        }
+    } while (trackingResult != kMouseTrackingMouseUp);
+    
     // the Java control seems to focus itself automatically when clicked in.
     mIsFocused = true;
     
     port.Exit();
-#else
-    nsPluginPort* npPort = mPluginWindow->window;
-    
-    // make the plugin's port current, and move its origin to (0, 0).
-    LocalPort port(GrafPtr(npPort->port));
-    port.Enter();
-
-    // will we always be called in the right coordinate system?
-    Point localWhere = event->where;
-    ::GlobalToLocal(&localWhere);
-    nsPluginRect& clipRect = mCachedClipRect;
-    Rect bounds = { clipRect.top, clipRect.left, clipRect.bottom, clipRect.right };
-    if (PtInRect(localWhere, &bounds)) {
-        localToFrame(&localWhere);
-        appletFrame->click(event, localWhere);
-    }
-    
-    // restore the plugin port's origin, and restore the current port.
-    port.Exit();
-#endif
 }
 
-void MRJContext::keyPress(long message, short modifiers)
+void MRJContext::mouseRelease(const EventRecord* event)
 {
-#if TARGET_CARBON
-    // won't Carbon events just take care of everything?
-#else
-    if (mViewerFrame != NULL) {
-        ::JMFrameKey(mViewerFrame, message & charCodeMask,
-                    (message & keyCodeMask) >> 8, modifiers);
+    EventRef carbonEvent;
+    OSStatus err = CreateEvent(NULL, kEventClassMouse, kEventMouseUp,
+                               event->when, kEventAttributeNone, &carbonEvent);
+    if (err == noErr) {
+        // -->     kEventParamMouseLocation    typeHIPoint
+        HIPoint where = { event->where.h, event->where.v - kTitleBarHeight };
+        SetEventParameter(carbonEvent, kEventParamMouseLocation, typeHIPoint,
+                          sizeof(where), &where);
+        // -->     kEventParamKeyModifiers     typeUInt32
+        UInt32 modifiers = event->modifiers;
+        SetEventParameter(carbonEvent, kEventParamKeyModifiers, typeUInt32,
+                          sizeof(modifiers), &modifiers);
+        // -->     kEventParamMouseButton      typeMouseButton
+        EventMouseButton whichButton = kEventMouseButtonPrimary;
+        SetEventParameter(carbonEvent, kEventParamMouseButton, typeMouseButton,
+                          sizeof(whichButton), &whichButton);
+        // -->     kEventParamClickCount       typeUInt32
+        UInt32 clickCount = 1;
+        SetEventParameter(carbonEvent, kEventParamClickCount, typeUInt32,
+                          sizeof(clickCount), &clickCount);
+
+        // Need to send this mouse up event to the window the Java control lives in.
+        err = SendEventToWindow(carbonEvent, GetWindowFromPort(mPluginPort));
+        ReleaseEvent(carbonEvent);
     }
-#endif
 }
 
-void MRJContext::keyRelease(long message, short modifiers)
+static OSStatus createRawKeyboardEvent(const EventRecord* event, UInt32 kind, EventRef* outEvent)
 {
-#if TARGET_CARBON
-    // won't Carbon events just take care of everything?
-#else
-    if (mViewerFrame != NULL) {
-        ::JMFrameKeyRelease(mViewerFrame, message & charCodeMask,
-                    (message & keyCodeMask) >> 8, modifiers);
+    OSStatus err = CreateEvent(NULL, kEventClassKeyboard, kind,
+                               event->when, kEventAttributeNone, outEvent);
+    if (err == noErr) {
+        char keyChar = (event->message & charCodeMask);
+        SetEventParameter(*outEvent, kEventParamKeyMacCharCodes, typeChar,
+                          sizeof(keyChar), &keyChar);
+        // -->     kEventParamKeyCode          typeUInt32
+        UInt32 keyCode = (event->message & keyCodeMask) >> 8;
+        SetEventParameter(*outEvent, kEventParamKeyCode, typeUInt32,
+                          sizeof(keyCode), &keyCode);
+        // -->     kEventParamKeyModifiers     typeUInt32
+        UInt32 modifiers = event->modifiers;
+        SetEventParameter(*outEvent, kEventParamKeyModifiers, typeUInt32,
+                          sizeof(modifiers), &modifiers);
+        // -->     kEventParamKeyboardType     typeUInt32
+        UInt32 keyboardType = KBGetLayoutType(LMGetKbdType()); // XXX is this correct?
+        SetEventParameter(*outEvent, kEventParamKeyboardType, typeUInt32,
+                          sizeof(keyboardType), &keyboardType);
     }
-#endif
+    return err;
+}
+
+Boolean MRJContext::keyPress(const EventRecord* event)
+{
+    // won't Carbon events just take care of everything?
+    // Evidently not. If we are inside a Cocoa application, we have
+    // to generate all of the Carbon events ourselves.
+    EventRef carbonEvent;
+    OSStatus err = createRawKeyboardEvent(event, kEventRawKeyDown, &carbonEvent);
+    if (err == noErr) {
+        err = SendEventToControl(carbonEvent, mAppletControl);
+        ReleaseEvent(carbonEvent);
+        return (err == noErr);
+    }
+    return false;
+}
+
+Boolean MRJContext::keyRelease(const EventRecord* event)
+{
+    // won't Carbon events just take care of everything?
+    EventRef carbonEvent;
+    OSStatus err = createRawKeyboardEvent(event, kEventRawKeyUp, &carbonEvent);
+    if (err == noErr) {
+        err = SendEventToControl(carbonEvent, mAppletControl);
+        ReleaseEvent(carbonEvent);
+        return (err == noErr);
+    }
+    return false;
 }
 
 void MRJContext::scrollingBegins()
@@ -1481,17 +1564,30 @@ Boolean MRJContext::handleEvent(EventRecord* event)
             
         case keyDown:
             if (mIsFocused) {
+#if TARGET_RT_MAC_MACHO
+                eventHandled = keyPress(event);
+#else
                 ::HandleControlKey(mAppletControl,
                                    (event->message & keyCodeMask) >> 8,
                                    (event->message & charCodeMask),
                                    event->modifiers);
                 eventHandled = true;
+#endif
             }
             break;  
 
+        case keyUp:
+            if (mIsFocused)
+                eventHandled = keyRelease(event);
+            break;
+        
         case mouseDown:
-            click(event, NULL);
+            mouseClick(event);
             eventHandled = mIsFocused;
+            break;
+
+        case mouseUp:
+            mouseRelease(event);
             break;
 
         case nsPluginEventType_GetFocusEvent:
@@ -1503,7 +1599,7 @@ Boolean MRJContext::handleEvent(EventRecord* event)
         
         case nsPluginEventType_LoseFocusEvent:
             ::SetKeyboardFocus(::GetWindowFromPort(mPluginPort), mAppletControl, kControlFocusNoPart);
-            mIsFocused = true;
+            mIsFocused = false;
             break;
 
         case nsPluginEventType_AdjustCursorEvent:
@@ -1719,12 +1815,9 @@ void MRJContext::synchronizeVisibility()
             int clipWidth = (mCachedClipRect.right - mCachedClipRect.left);
             int clipHeight = (mCachedClipRect.bottom - mCachedClipRect.top);
 
-#if TARGET_RT_MAC_MACHO
-            // XXX hack a little bit to make it work...
-            const SInt32 kTitleBarHeight = 22;
+            // XXX Adjust the coordinates for Cocoa.
             posY -= kTitleBarHeight;
             clipY -= kTitleBarHeight;
-#endif
 
             status = ::SizeJavaControl(env, mAppletControl, mPluginWindow->width, mPluginWindow->height);
             status = ::MoveAndClipJavaControl(env, mAppletControl, posX, posY,

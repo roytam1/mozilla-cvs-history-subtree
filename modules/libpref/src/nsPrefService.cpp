@@ -521,11 +521,8 @@ JSBool pref_InitInitialObjects()
 #ifdef NS_DEBUG
       , "debug-developer.js"
 #endif
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
       , "macprefs.js"
-#if defined (TARGET_CARBON)
-      , "macxprefs.js"
-#endif
 #elif defined(XP_WIN)
       , "winpref.js"
 #elif defined(XP_UNIX)

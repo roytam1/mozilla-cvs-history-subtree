@@ -28,25 +28,9 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/rules.mk
 
-_FILES = \
-	button-disabled-left.gif \
-	button-disabled-middle.gif \
-	button-disabled-right.gif \
-	button-normal-left.gif \
-	button-normal-middle.gif \
-	button-normal-right.gif \
-	button-pressed-left.gif \
-	button-pressed-middle.gif \
-	button-pressed-right.gif \
-	buttons.css \
-	platformButtonBindings.xml \
-	xbl-forms.css \
-	$(NULL)
-	
+libs:: $(TARGETS)
+	$(INSTALL) $(srcdir)/platformHTMLBindings.xml $(DIST)/bin/res/builtin
 
-libs:: $(_FILES)
-	$(INSTALL) $^ $(DIST)/bin/res
-
-install:: $(_FILES)
-	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res/builtin
+install:: platformHTMLBindings.xml
+	$(SYSINSTALL) $(IFLAGS1) $< $(DESTDIR)$(mozappdir)/res/builtin
 

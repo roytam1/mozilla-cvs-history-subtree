@@ -202,11 +202,12 @@ components/libucvlatin.dylib
 components/unicharutil.xpt
 components/libchardet.dylib
 ; optional - on english only systems
-; components/libucvja.dylib for japanese
-; components/libucvko.dylib for korean
-; components/libucvcn.dylib for simplified chinese
-; components/libucvtw.dylib for traditional chinese
-; components/libucvtw2.dylib for traditional chinese
+components/libucvja.dylib
+components/libucvko.dylib
+components/libucvcn.dylib
+components/libucvtw.dylib
+components/libucvtw2.dylib
+components/libuniversalchardet.dylib
 ; components/libucvibm.dylib for ibm
 
 
@@ -223,7 +224,7 @@ components/libstrres.dylib
 ; required prefs files
 defaults/pref/all.js
 defaults/pref/initpref.js
-defaults/pref/unix.js
+defaults/pref/macprefs.js
 
 ; uriloader
 components/liburiloader.dylib
@@ -232,6 +233,7 @@ components/uriloader.xpt
 ; widget
 components/libwidget_mac.dylib
 components/widget.xpt
+libwidget.rsrc
 
 ; xpconnect
 components/libxpconnect.dylib
