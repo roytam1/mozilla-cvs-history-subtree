@@ -472,7 +472,7 @@ js_ValueToNumber(JSContext *cx, jsval v, jsdouble *dp)
     } else if (JSVAL_IS_STRING(v)) {
 	str = JSVAL_TO_STRING(v);
 	errno = 0;
-	/* Note that ECMAScript doesn't treat numbers beginning with a zero as octal numbers here.
+	/* Note that ECMAScript doesn't treat numbers beginning with a zero as octal numbers here. 
 	 * This works because all such numbers will be interpreted as decimal by js_strtod and
 	 * will never get passed to js_strtointeger, which would interpret them as octal. */
 	if ((!js_strtod(cx, str->chars, &ep, &d) || js_SkipWhiteSpace(ep) != str->chars + str->length) &&
