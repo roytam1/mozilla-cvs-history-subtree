@@ -121,7 +121,6 @@ CPPSRCS		= \
 		  Toolbox.cpp \
 		  ToolboxItem.cpp \
 		  URLBar.cpp \
-		  ViewDashBDlg.cpp \
 		  ViewDialog.cpp \
 		  ViewGlue.cpp \
 		  View.cpp \
