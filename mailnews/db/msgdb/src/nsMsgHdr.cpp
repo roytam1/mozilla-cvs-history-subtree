@@ -291,6 +291,11 @@ NS_IMETHODIMP nsMsgHdr::SetStringProperty(const char *propertyName, const char *
   return m_mdb->SetProperty(m_mdbRow, propertyName, propertyValue);
 }
 
+NS_IMETHODIMP nsMsgHdr::GetStringProperty(const char *propertyName, char **aPropertyValue)
+{
+  return m_mdb->GetProperty(m_mdbRow, propertyName, aPropertyValue);
+}
+
 NS_IMETHODIMP nsMsgHdr::GetUint32Property(const char *propertyName, PRUint32 *pResult)
 {
   return m_mdb->GetUint32Property(GetMDBRow(), propertyName, pResult);
