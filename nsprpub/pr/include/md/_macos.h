@@ -462,7 +462,6 @@ typedef short PROSFD;
 // Errors not found in the Mac StdCLib
 #define EACCES  		13      	// Permission denied
 #define ENOENT			-43			// No such file or directory
-#define	EMFILE			24			// Too many open files
 #define _OS_INVALID_FD_VALUE -1
 
 #define	STDERR_FILENO	2
