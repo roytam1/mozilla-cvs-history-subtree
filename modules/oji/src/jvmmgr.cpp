@@ -724,10 +724,15 @@ JavaPrefChanged(const char *prefStr, void* data)
 {
     nsJVMMgr* mgr = (nsJVMMgr*)data;
     XP_Bool prefBool;
+#if defined(XP_MAC)
+	// beard: under Mozilla, no way to enable this right now.
+	prefBool = TRUE;
+#else
     PREF_GetBoolPref(prefStr, &prefBool);
+#endif
     mgr->SetJVMEnabled(prefBool);
     return 0;
-} 
+}
 
 void
 nsJVMMgr::SetJVMEnabled(PRBool enabled)
