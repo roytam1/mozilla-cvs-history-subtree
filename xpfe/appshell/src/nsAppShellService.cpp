@@ -1322,6 +1322,7 @@ nsAppShellService::Ensure1Window(nsICmdLineService *aCmdLineService)
 NS_IMETHODIMP
 nsAppShellService::OpenURL(const nsACString &aArgument)
 {
+#ifdef MOZ_THUNDERBIRD
   nsCOMPtr<nsIURILoader> loader;
   loader = do_GetService(NS_URI_LOADER_CONTRACTID);
   if (!loader)
@@ -1353,6 +1354,9 @@ nsAppShellService::OpenURL(const nsACString &aArgument)
 
   // load it
   return loader->OpenURI(channel, PR_TRUE, listenerRef);
+#else
+  return NS_ERROR_NOT_IMPLEMENTED;
+#endif
 }
 
 nsresult
