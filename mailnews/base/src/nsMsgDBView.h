@@ -80,6 +80,8 @@ protected:
 
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
+  PRUint32 mNumSelectedRows; // we cache this to determine when to push command status notifications.
+
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchSubject(nsIMsgHdr * aMsgHdr, PRUint32 aFlags, PRUnichar ** aValue);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
@@ -229,6 +231,7 @@ protected:
   // to phase it out eventually....for now we need it though.
   nsCOMPtr<nsIMessenger> mMessengerInstance;
   nsCOMPtr<nsIMsgWindow> mMsgWindow;
+  nsCOMPtr<nsIMsgDBViewCommandUpdater> mCommandUpdater; // we push command update notifications to the UI from this.
 };
 
 

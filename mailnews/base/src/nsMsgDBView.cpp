@@ -70,6 +70,7 @@ nsMsgDBView::nsMsgDBView()
   m_viewFlags = nsMsgViewFlagsType::kNone;
   m_cachedMsgKey = nsMsgKey_None;
   m_currentlyDisplayedMsgKey = nsMsgKey_None;
+  mNumSelectedRows = 0;
 
   // initialize any static atoms or unicode strings
   if (gInstanceCount == 0) 
@@ -395,8 +396,6 @@ NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
 
 NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 {
-  // outliner seems to be handling selection fine by itself
-#ifdef NEEDED
   // if the currentSelection changed then we have a message to display
   PRInt32 selectionCount; 
   nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
@@ -424,7 +423,27 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
       }
     }
   }
-#endif // NEEDED
+
+  // determine if we need to push command update notifications out to the UI or not.
+  PRUint32 numSelected = 0;
+  GetNumSelected(&numSelected);
+  // we need to push a command update notification iff, one of the following conditions are met
+  // (1) the selection went from 0 to 1
+  // (2) it went from 1 to 0
+  // (3) it went from 1 to many
+  // (4) it went from many to 1 or 0
+
+  if (numSelected == mNumSelectedRows || 
+      (numSelected > 1 && mNumSelectedRows > 1) )
+  {
+
+  }
+  else if (mCommandUpdater) // o.t. push an updated
+  {
+    mCommandUpdater->UpdateCommandStatus();
+  }
+  
+  mNumSelectedRows = numSelected;
   return NS_OK;
 }
 
@@ -949,12 +968,12 @@ NS_IMETHODIMP nsMsgDBView::Close()
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow * aMsgWindow)
+NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow * aMsgWindow, nsIMsgDBViewCommandUpdater *aCmdUpdater)
 {
   mMsgWindow = aMsgWindow;
   mMessengerInstance = aMessengerInstance;
+  mCommandUpdater = aCmdUpdater;
 
-  // what is pCount?
   return NS_OK;
 }
 
@@ -995,6 +1014,9 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
 {
   nsresult rv = NS_OK;
 
+#ifdef DEBUG_mscott
+  printf("inside GetURIsForSelection\n");
+#endif
   NS_ENSURE_ARG_POINTER(length);
   *length = 0;
   NS_ENSURE_ARG_POINTER(uris);
@@ -3638,6 +3660,11 @@ nsMsgDBView::GetURIForFirstSelectedMessage(char **uri)
 {
   NS_ENSURE_ARG_POINTER(uri);
 
+#ifdef DEBUG_mscott
+  printf("inside GetURIForFirstSelectedMessage\n");
+#endif
+
+  if (!mOutlinerSelection) return NS_ERROR_UNEXPECTED;
   nsresult rv;
   nsMsgKey key;
   rv = GetKeyForFirstSelectedMessage(&key);
@@ -3653,7 +3680,6 @@ nsresult
 nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
 {
   NS_ENSURE_ARG_POINTER(key);
-
   PRInt32 currentIndex;
   nsresult rv = mOutlinerSelection->GetCurrentIndex(&currentIndex);
   NS_ENSURE_SUCCESS(rv, rv);
