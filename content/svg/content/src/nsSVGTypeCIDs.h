@@ -16,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is 
  * Crocodile Clips Ltd..
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,38 +36,14 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_ISVGCHILDFRAME_H__
-#define __NS_ISVGCHILDFRAME_H__
+#ifndef __NS_SVGTYPECIDS_H__
+#define __NS_SVGTYPECIDS_H__
 
+// {AAD39B18-B9D3-45E1-B5A6-80C0EB12B23E}
+#define NS_SVGRECT_CID \
+{ 0xaad39b18, 0xb9d3, 0x45e1, { 0xb5, 0xa6, 0x80, 0xc0, 0xeb, 0x12, 0xb2, 0x3e } }
 
-#include "nsISupports.h"
-#include "nsCOMPtr.h"
-#include "nsISVGRendererRegion.h"
+#define NS_SVGRECT_CONTRACTID \
+"@mozilla.org/svg/rect;1"
 
-class nsISVGRendererRenderContext;
-class nsIPresContext;
-class nsIDOMSVGRect;
-
-// {1F23A200-B583-40EC-8564-9E6740C4DD3A}
-#define NS_ISVGCHILDFRAME_IID \
-{ 0x1f23a200, 0xb583, 0x40ec, { 0x85, 0x64, 0x9e, 0x67, 0x40, 0xc4, 0xdd, 0x3a } }
-
-class nsISVGChildFrame : public nsISupports {
-public:
-
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCHILDFRAME_IID)
-
-  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext)=0;
-  NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit)=0;
-  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion()=0;
-  NS_IMETHOD InitialUpdate()=0;
-  NS_IMETHOD NotifyCTMChanged()=0;
-  NS_IMETHOD NotifyRedrawSuspended()=0;
-  NS_IMETHOD NotifyRedrawUnsuspended()=0;
-
-  // XXX move this function into interface nsISVGLocatableMetrics
-  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval)=0; // bbox in local coords
-};
-
-#endif // __NS_ISVGCHILDFRAME_H__
-
+#endif // __NS_SVGTYPECIDS_H__

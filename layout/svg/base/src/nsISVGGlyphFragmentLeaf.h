@@ -54,10 +54,13 @@ public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGGLYPHFRAGMENTLEAF_IID)
 
   NS_IMETHOD_(void) SetGlyphPosition(float x, float y)=0;
+  NS_IMETHOD_(float) GetGlyphPositionX()=0;
+  NS_IMETHOD_(float) GetGlyphPositionY()=0;  
   NS_IMETHOD GetGlyphMetrics(nsISVGRendererGlyphMetrics** metrics)=0;
   NS_IMETHOD_(PRBool) IsStartOfChunk()=0; // == is new absolutely positioned chunk.
   NS_IMETHOD_(void) GetAdjustedPosition(/* inout */ float &x, /* inout */ float &y)=0;
-  
+  NS_IMETHOD_(PRUint32) GetNumberOfChars()=0;
+  NS_IMETHOD_(PRUint32) GetCharNumberOffset()=0;
 };
 
 #endif // __NS_ISVGGLYPHFRAGMENTLEAF_H__

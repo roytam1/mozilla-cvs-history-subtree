@@ -36,38 +36,25 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_ISVGCHILDFRAME_H__
-#define __NS_ISVGCHILDFRAME_H__
-
+#ifndef __NS_ISVGTEXTCONTENTMETRICS_H__
+#define __NS_ISVGTEXTCONTENTMETRICS_H__
 
 #include "nsISupports.h"
-#include "nsCOMPtr.h"
-#include "nsISVGRendererRegion.h"
-
-class nsISVGRendererRenderContext;
-class nsIPresContext;
 class nsIDOMSVGRect;
 
-// {1F23A200-B583-40EC-8564-9E6740C4DD3A}
-#define NS_ISVGCHILDFRAME_IID \
-{ 0x1f23a200, 0xb583, 0x40ec, { 0x85, 0x64, 0x9e, 0x67, 0x40, 0xc4, 0xdd, 0x3a } }
+////////////////////////////////////////////////////////////////////////
+// nsISVGTextContentMetrics
 
-class nsISVGChildFrame : public nsISupports {
+// {351AC4D0-22B3-45F5-BA26-8B8CF21EF1D8}
+#define NS_ISVGTEXTCONTENTMETRICS_IID \
+{ 0x351ac4d0, 0x22b3, 0x45f5, { 0xba, 0x26, 0x8b, 0x8c, 0xf2, 0x1e, 0xf1, 0xd8 } }
+
+class nsISVGTextContentMetrics : public nsISupports
+{
 public:
-
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCHILDFRAME_IID)
-
-  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext)=0;
-  NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit)=0;
-  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion()=0;
-  NS_IMETHOD InitialUpdate()=0;
-  NS_IMETHOD NotifyCTMChanged()=0;
-  NS_IMETHOD NotifyRedrawSuspended()=0;
-  NS_IMETHOD NotifyRedrawUnsuspended()=0;
-
-  // XXX move this function into interface nsISVGLocatableMetrics
-  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval)=0; // bbox in local coords
+  static const nsIID& GetIID() { static nsIID iid = NS_ISVGTEXTCONTENTMETRICS_IID; return iid; }
+  
+  NS_IMETHOD GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)=0;
 };
 
-#endif // __NS_ISVGCHILDFRAME_H__
-
+#endif // __NS_ISVGTEXTCONTENTMETRICS_H__

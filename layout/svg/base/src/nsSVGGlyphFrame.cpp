@@ -107,9 +107,13 @@ public:
 
   // nsISVGGlyphFragmentLeaf interface:
   NS_IMETHOD_(void) SetGlyphPosition(float x, float y);
+  NS_IMETHOD_(float) GetGlyphPositionX();
+  NS_IMETHOD_(float) GetGlyphPositionY();  
   NS_IMETHOD GetGlyphMetrics(nsISVGRendererGlyphMetrics** metrics);
   NS_IMETHOD_(PRBool) IsStartOfChunk(); // == is new absolutely positioned chunk.
   NS_IMETHOD_(void) GetAdjustedPosition(/* inout */ float &x, /* inout */ float &y);
+  NS_IMETHOD_(PRUint32) GetNumberOfChars();
+  NS_IMETHOD_(PRUint32) GetCharNumberOffset();
 
   // nsISVGGlyphFragmentNode interface:
   NS_IMETHOD_(nsISVGGlyphFragmentLeaf *) GetFirstGlyphFragment();
@@ -610,6 +614,19 @@ nsSVGGlyphFrame::SetGlyphPosition(float x, float y)
   UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_POSITIONING);
 }
 
+NS_IMETHODIMP_(float)
+nsSVGGlyphFrame::GetGlyphPositionX()
+{
+  return mX;
+}
+
+NS_IMETHODIMP_(float)
+nsSVGGlyphFrame::GetGlyphPositionY()
+{
+  return mY;
+}
+
+
 NS_IMETHODIMP
 nsSVGGlyphFrame::GetGlyphMetrics(nsISVGRendererGlyphMetrics** metrics)
 {
@@ -633,6 +650,17 @@ nsSVGGlyphFrame::GetAdjustedPosition(/* inout */ float &x, /* inout */ float &y)
 {
 }
 
+NS_IMETHODIMP_(PRUint32)
+nsSVGGlyphFrame::GetNumberOfChars()
+{
+  return mCharacterData.Length();
+}
+
+NS_IMETHODIMP_(PRUint32)
+nsSVGGlyphFrame::GetCharNumberOffset()
+{
+  return mCharOffset;
+}
 
 //----------------------------------------------------------------------
 // nsISVGGlyphFragmentNode interface:

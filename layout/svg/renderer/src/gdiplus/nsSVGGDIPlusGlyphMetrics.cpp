@@ -55,6 +55,45 @@ using namespace Gdiplus;
 #include "nsSVGGDIPlusGlyphMetrics.h"
 #include "float.h"
 #include "nsIDOMSVGMatrix.h"
+#include "nsIDOMSVGRect.h"
+#include "nsSVGTypeCIDs.h"
+#include "nsIComponentManager.h"
+
+////////////////////////////////////////////////////////////////////////
+// nsWindowsDC helper class
+
+class nsWindowsDC {
+public:
+  nsWindowsDC(nsIPresContext* presContext);
+  ~nsWindowsDC();
+  operator HDC() { return mHDC; }
+private:
+  bool isWndDC;
+  HWND mWND;
+  HDC mHDC;
+};
+
+nsWindowsDC::nsWindowsDC(nsIPresContext* presContext)
+{
+  nsCOMPtr<nsIDeviceContext> devicecontext;
+  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
+  NS_ASSERTION(devicecontext, "no device context");
+
+  isWndDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
+  if (isWndDC) {
+    mWND = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
+    NS_ASSERTION(mWND, "no window and no handle in devicecontext (continuing with screen dc)");
+    mHDC = ::GetDC(mWND);
+  }
+  else
+    mHDC = ((nsDeviceContextWin *)(devicecontext.get()))->mDC;
+}
+
+nsWindowsDC::~nsWindowsDC()
+{
+  if (isWndDC)
+    ::ReleaseDC(mWND, mHDC);
+}
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGGDIPlusGlyphMetrics class
@@ -82,14 +121,14 @@ protected:
   void MarkRectForUpdate() { mRectNeedsUpdate = PR_TRUE; }
   void ClearFontInfo() { if (mFont) { delete mFont; mFont = nsnull; }}
   void InitializeFontInfo();
-  float GetFontHeight() { InitializeFontInfo(); return mFontHeight; }
   void GetGlobalTransform(Matrix *matrix);
+  void PrepareGraphics(Graphics &g);
+  float GetPixelScale();
   
 private:
   PRBool mRectNeedsUpdate;
   RectF mRect;
   Font *mFont;
-  float mFontHeight;
   nsCOMPtr<nsISVGGlyphGeometrySource> mSource;
   
 };
@@ -223,6 +262,68 @@ nsSVGGDIPlusGlyphMetrics::GetHeight(float *aHeight)
   return NS_OK;
 }
 
+/* [noscript] nsIDOMSVGRect getExtentOfChar (in unsigned long charnum); */
+NS_IMETHODIMP
+nsSVGGDIPlusGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  
+  
+  nsCOMPtr<nsIPresContext> presContext;
+  mSource->GetPresContext(getter_AddRefs(presContext));
+  if (!presContext) {
+    NS_ERROR("null prescontext");
+    return NS_ERROR_FAILURE;
+  }
+
+  nsWindowsDC devicehandle(presContext);
+  Graphics graphics(devicehandle);
+  PrepareGraphics(graphics);
+  
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+  
+  StringFormat stringFormat(StringFormat::GenericTypographic());
+  stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
+                              StringFormatFlagsMeasureTrailingSpaces);
+  
+  CharacterRange charRange(charnum, 1);
+  stringFormat.SetMeasurableCharacterRanges(1, &charRange);
+  
+  Region region;
+  region.MakeEmpty();
+  
+  // we measure in the transformed coordinate system...
+  GraphicsState state = graphics.Save();
+  
+  Matrix m;
+  GetGlobalTransform(&m);
+  graphics.MultiplyTransform(&m);
+  
+  graphics.MeasureCharacterRanges(PromiseFlatString(text).get(), -1, GetFont(),
+                                  RectF(0.0f, 0.0f, FLT_MAX, FLT_MAX), &stringFormat, 1, &region);
+  
+  graphics.Restore(state);
+  
+  // ... and obtain the bounds in our local coord system
+  RectF bounds;
+  region.GetBounds(&bounds, &graphics);
+
+  nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
+
+  NS_ASSERTION(rect, "could not create rect");
+  if (!rect) return NS_ERROR_FAILURE;
+  
+  rect->SetX(bounds.X);
+  rect->SetY(bounds.Y);
+  rect->SetWidth(bounds.Width);
+  rect->SetHeight(bounds.Height);
+
+  *_retval = rect;
+  NS_ADDREF(*_retval);
+  
+  return NS_OK;
+}
 
 /* boolean update (in unsigned long updatemask); */
 NS_IMETHODIMP
@@ -259,81 +360,39 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
     return &mRect;
   }
 
-  nsCOMPtr<nsIDeviceContext> devicecontext;
-  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
-
-  bool isWinDC;
-  HWND win;
-  HDC devicehandle;
-  {
-    isWinDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
-
-    if (isWinDC) {
-      win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
-      NS_ASSERTION(win, "no window and no handle in devicecontext!");
-      devicehandle = ::GetDC(win);
-    }
-    else
-      devicehandle = ((nsDeviceContextWin *)(devicecontext.get()))->mDC;
-  }
-
-  {
-    // wrap this in a block so that the Graphics-object goes out of
-    // scope before we release the HDC.
-    
-    Graphics graphics(devicehandle);
-    
-    // XXX For some reason we seem to get the wrong dc when printing
-    // (a display dc instead of a printer dc). To get accurate
-    // measurements, we need to scale to what will be device units:
-    graphics.SetPageUnit(UnitPixel);
-    float scale;
-    devicecontext->GetCanonicalPixelScale(scale);
-    graphics.SetPageScale(scale);
-
-    graphics.SetSmoothingMode(SmoothingModeAntiAlias);
-    //graphics.SetPixelOffsetMode(PixelOffsetModeHalf);
-
-    graphics.SetTextRenderingHint(GetTextRenderingHint());
-    
-    nsAutoString text;
-    mSource->GetCharacterData(text);
-
-    //NS_ASSERTION(text.Length(), "zero length string");
-    
-    StringFormat stringFormat(StringFormat::GenericTypographic());
-    stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
-                                StringFormatFlagsMeasureTrailingSpaces);
-    
-//     graphics.MeasureString(PromiseFlatString(text).get(), -1, GetFont(),
-//                            PointF(0.0f, 0.0f),&stringFormat, &mRect);
-    
-    CharacterRange charRange(0, text.Length());
-    stringFormat.SetMeasurableCharacterRanges(1, &charRange);
-
-    Region region;
-    region.MakeEmpty();
-
-    // we measure in the transformed coordinate system...
-    GraphicsState state = graphics.Save();
-    
-    Matrix m;
-    GetGlobalTransform(&m);
-    graphics.MultiplyTransform(&m);
-
-    graphics.MeasureCharacterRanges(PromiseFlatString(text).get(), -1, GetFont(),
-                                    RectF(0.0f, 0.0f, FLT_MAX, FLT_MAX), &stringFormat, 1, &region);
-
-    graphics.Restore(state);
-    
-    // ... and obtain the bounds in our local coord system
-    region.GetBounds(&mRect, &graphics);
-    
-  }
-
-  if (isWinDC)
-    ::ReleaseDC(win, devicehandle);
-
+  nsWindowsDC devicehandle(presContext);
+  Graphics graphics(devicehandle);  
+  PrepareGraphics(graphics);
+  
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+  
+  //NS_ASSERTION(text.Length(), "zero length string");
+  
+  StringFormat stringFormat(StringFormat::GenericTypographic());
+  stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
+                              StringFormatFlagsMeasureTrailingSpaces);
+  
+  CharacterRange charRange(0, text.Length());
+  stringFormat.SetMeasurableCharacterRanges(1, &charRange);
+  
+  Region region;
+  region.MakeEmpty();
+  
+  // we measure in the transformed coordinate system...
+  GraphicsState state = graphics.Save();
+  
+  Matrix m;
+  GetGlobalTransform(&m);
+  graphics.MultiplyTransform(&m);
+  
+  graphics.MeasureCharacterRanges(PromiseFlatString(text).get(), -1, GetFont(),
+                                  RectF(0.0f, 0.0f, FLT_MAX, FLT_MAX), &stringFormat, 1, &region);
+  
+  graphics.Restore(state);
+  
+  // ... and obtain the bounds in our local coord system
+  region.GetBounds(&mRect, &graphics);
   
   return &mRect;
 }
@@ -370,28 +429,7 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     NS_ERROR("null prescontext");
     return;
   }
-
-  nsCOMPtr<nsIDeviceContext> devicecontext;
-  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
-
-  bool isWinDC;
-  HWND win;
-  HDC devicehandle;
-  {
-      isWinDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
-
-    if (isWinDC) {
-      win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
-      NS_ASSERTION(win, "no window and no handle in devicecontext!");
-      devicehandle = ::GetDC(win);
-    }
-    else
-      devicehandle = ((nsDeviceContextWin *)(devicecontext.get()))->mDC;
-  }
-
-
   
-  float scale;
   nsFontHandle fonthandle;
   {
     nsFont font;
@@ -404,10 +442,10 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     // XXX The size of the font is in device units. Since we are going
     // to use the font in a logical pixel coordinate system with dev
     // unit = pixel*scale, we need to devide the size by scale:
-    devicecontext->GetCanonicalPixelScale(scale);
-    font.size/=scale;
+    font.size/=GetPixelScale();
 
     nsCOMPtr<nsIFontMetrics> metrics;
+
     presContext->GetMetricsFor(font, getter_AddRefs(metrics));
     if (!metrics) {
       NS_ERROR("could not get fontmetrics");
@@ -417,33 +455,8 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     metrics->GetFontHandle(fonthandle);
   }
 
-  mFont = new Font(devicehandle, (HFONT)fonthandle);
+  mFont = new Font(nsWindowsDC(presContext), (HFONT)fonthandle);
   NS_ASSERTION(mFont->IsAvailable(),"font not available");
-
-  {
-    // wrap this in a block so that the Graphics-object goes out of
-    // scope before we release the HDC.
-    
-    Graphics graphics(devicehandle);
-
-    // XXX For some reason we seem to get the wrong dc when printing
-    // (a display dc instead of a printer dc). To get accurate
-    // measurements, we need to scale to what will be device units:
-    graphics.SetPageUnit(UnitPixel);
-    graphics.SetPageScale(scale);
-    
-    graphics.SetSmoothingMode(SmoothingModeAntiAlias);
-    //graphics.SetPixelOffsetMode(PixelOffsetModeHalf);
-    graphics.SetTextRenderingHint(GetTextRenderingHint());
-    Matrix m;
-    GetGlobalTransform(&m);
-    graphics.MultiplyTransform(&m);
-
-    mFontHeight = mFont->GetHeight(&graphics);
-  }
-  
-  if (isWinDC)
-    ::ReleaseDC(win, devicehandle);
 }
 
 void
@@ -477,5 +490,33 @@ nsSVGGDIPlusGlyphMetrics::GetGlobalTransform(Matrix *matrix)
 }
 
 
+void
+nsSVGGDIPlusGlyphMetrics::PrepareGraphics(Graphics &g)
+{
+  g.SetPageUnit(UnitPixel);
+  // XXX for some reason the Graphics object that we derive from our
+  // measurement dcs is never correctly scaled for devices like
+  // printers. Hence we scale manually here:
+  g.SetPageScale(GetPixelScale());
+  g.SetSmoothingMode(SmoothingModeAntiAlias);
+  //g.SetPixelOffsetMode(PixelOffsetModeHalf);
+  g.SetTextRenderingHint(GetTextRenderingHint());
+}
 
+float
+nsSVGGDIPlusGlyphMetrics::GetPixelScale()
+{
+  nsCOMPtr<nsIPresContext> presContext;
+  mSource->GetPresContext(getter_AddRefs(presContext));
+  if (!presContext) {
+    NS_ERROR("null prescontext");
+    return 1.0f;
+  }
 
+  nsCOMPtr<nsIDeviceContext> devicecontext;
+  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
+
+  float scale;
+  devicecontext->GetCanonicalPixelScale(scale);
+  return scale;
+}  

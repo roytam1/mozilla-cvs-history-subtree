@@ -303,7 +303,7 @@ nsSVGForeignObjectFrame::Reflow(nsIPresContext*          aPresContext,
                                 nsReflowStatus&          aStatus)
 {
 #ifdef DEBUG
-//  printf("nsSVGForeignObjectFrame(%p)::Reflow\n", this);
+  printf("nsSVGForeignObjectFrame(%p)::Reflow\n", this);
 #endif
   
   float twipsPerPx = GetTwipsPerPx();
@@ -365,6 +365,9 @@ nsSVGForeignObjectFrame::AppendFrames(nsIPresContext* aPresContext,
                                       nsIAtom*        aListName,
                                       nsIFrame*       aFrameList)
 {
+#ifdef DEBUG
+  printf("**nsSVGForeignObjectFrame::AppendFrames()\n");
+#endif
 	nsresult rv;
 	rv = nsSVGForeignObjectFrameBase::AppendFrames(aPresContext, aPresShell,
                                                  aListName, aFrameList);
@@ -379,6 +382,9 @@ nsSVGForeignObjectFrame::InsertFrames(nsIPresContext* aPresContext,
                                      nsIFrame*       aPrevFrame,
                                      nsIFrame*       aFrameList)
 {
+#ifdef DEBUG
+  printf("**nsSVGForeignObjectFrame::InsertFrames()\n");
+#endif
 	nsresult rv;
 	rv = nsSVGForeignObjectFrameBase::InsertFrames(aPresContext, aPresShell,
                                                  aListName, aPrevFrame, aFrameList);
@@ -406,6 +412,9 @@ nsSVGForeignObjectFrame::ReplaceFrame(nsIPresContext* aPresContext,
                                       nsIFrame*       aOldFrame,
                                       nsIFrame*       aNewFrame)
 {
+#ifdef DEBUG
+  printf("**nsSVGForeignObjectFrame::ReplaceFrame()\n");
+#endif
 	nsresult rv;
 	rv = nsSVGForeignObjectFrameBase::ReplaceFrame(aPresContext, aPresShell,
                                                  aListName, aOldFrame, aNewFrame);
@@ -540,7 +549,7 @@ nsSVGForeignObjectFrame::GetCoveredRegion()
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::InitialUpdate()
 {
-  Update();
+//  Update();
   return NS_OK;
 }
 
@@ -601,6 +610,10 @@ nsSVGForeignObjectFrame::GetOuterSVGFrame()
 
 void nsSVGForeignObjectFrame::Update()
 {
+#ifdef DEBUG
+  printf("**nsSVGForeignObjectFrame::Update()\n");
+#endif
+
   mIsDirty = PR_TRUE;
 
   nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
@@ -622,6 +635,9 @@ void nsSVGForeignObjectFrame::Update()
 already_AddRefed<nsISVGRendererRegion>
 nsSVGForeignObjectFrame::DoReflow()
 {
+#ifdef DEBUG
+  printf("**nsSVGForeignObjectFrame::DoReflow()\n");
+#endif
   nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
   if (!outerSVGFrame) {
     NS_ERROR("null outerSVGFrame");

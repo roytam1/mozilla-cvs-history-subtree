@@ -86,11 +86,13 @@ include $(topsrcdir)/config/config.mk
 FORCE_STATIC_LIB = 1
 
 EXPORTS =  			\
-	nsISVGAttribute.h       \
-	nsISVGStyleValue.h      \
-	nsISVGValue.h           \
-	nsISVGValueObserver.h   \
-	nsISVGValueUtils.h      \
+	nsISVGAttribute.h          \
+	nsISVGStyleValue.h         \
+	nsISVGTextContentMetrics.h \
+	nsISVGValue.h              \
+	nsISVGValueObserver.h      \
+	nsISVGValueUtils.h         \
+	nsSVGTypeCIDs.h            \
 	$(NULL)
 
 

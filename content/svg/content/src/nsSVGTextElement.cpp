@@ -45,6 +45,10 @@
 #include "nsISVGSVGElement.h"
 #include "nsISVGViewportAxis.h"
 #include "nsISVGViewportRect.h"
+#include "nsISVGTextContentMetrics.h"
+#include "nsIPresShell.h"
+#include "nsIFrame.h"
+#include "nsIDocument.h"
 
 typedef nsSVGGraphicElement nsSVGTextElementBase;
 
@@ -75,6 +79,8 @@ public:
   
 protected:
   virtual void ParentChainChanged();
+
+  already_AddRefed<nsISVGTextContentMetrics> GetTextContentMetrics();
   
   // nsIDOMSVGTextPositioning properties:
   nsCOMPtr<nsIDOMSVGAnimatedLengthList> mX;
@@ -311,8 +317,12 @@ NS_IMETHODIMP nsSVGTextElement::GetEndPositionOfChar(PRUint32 charnum, nsIDOMSVG
 /* nsIDOMSVGRect getExtentOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTextElement::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  *_retval = nsnull;
+  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
+
+  if (!metrics) return NS_ERROR_FAILURE;
+
+  return metrics->GetExtentOfChar(charnum, _retval);
 }
 
 /* float getRotationOfChar (in unsigned long charnum); */
@@ -382,3 +392,32 @@ void nsSVGTextElement::ParentChainChanged()
     lengthlist->SetContext(ctx);
   }
 }  
+
+already_AddRefed<nsISVGTextContentMetrics>
+nsSVGTextElement::GetTextContentMetrics()
+{
+  if (!mDocument) {
+    NS_ERROR("no document");
+    return nsnull;
+  }
+  
+  nsCOMPtr<nsIPresShell> presShell;
+  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+  if (!presShell) {
+    NS_ERROR("no presshell");
+    return nsnull;
+  }
+
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
+
+  if (!frame) {
+    NS_ERROR("no frame");
+    return nsnull;
+  }
+  
+  nsISVGTextContentMetrics* metrics;
+  frame->QueryInterface(NS_GET_IID(nsISVGTextContentMetrics),(void**)&metrics);
+  NS_ASSERTION(metrics, "wrong frame type");
+  return metrics;
+}

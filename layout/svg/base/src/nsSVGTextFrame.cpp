@@ -59,6 +59,7 @@
 #include "nsISVGRendererGlyphMetrics.h"
 #include "nsISVGOuterSVGFrame.h"
 #include "nsIDOMSVGRect.h"
+#include "nsISVGTextContentMetrics.h"
 
 typedef nsContainerFrame nsSVGTextFrameBase;
 
@@ -67,6 +68,7 @@ class nsSVGTextFrame : public nsSVGTextFrameBase,
                        public nsISVGChildFrame,
                        public nsISVGContainerFrame,
                        public nsISVGValueObserver,
+                       public nsISVGTextContentMetrics,
                        public nsSupportsWeakReference
 {
   friend nsresult
@@ -123,6 +125,9 @@ public:
   NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);
   NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable);
 
+  // nsISVGTextContentMetrics
+  NS_IMETHOD GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval);
+  
   // nsISupportsWeakReference
   // implementation inherited from nsSupportsWeakReference
   
@@ -161,7 +166,8 @@ protected:
   already_AddRefed<nsIDOMSVGLengthList> GetY();
   nsISVGGlyphFragmentNode *GetFirstGlyphFragmentChildNode();
   nsISVGGlyphFragmentNode *GetNextGlyphFragmentChildNode(nsISVGGlyphFragmentNode*node);
-  
+  nsISVGGlyphFragmentLeaf *GetGlyphFragmentAtCharNum(PRUint32 charnum);
+
   enum UpdateState{
     unsuspended,
     suspended,
@@ -262,6 +268,7 @@ NS_INTERFACE_MAP_BEGIN(nsSVGTextFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
+  NS_INTERFACE_MAP_ENTRY(nsISVGTextContentMetrics)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGTextFrameBase)
 
 
@@ -431,6 +438,36 @@ nsSVGTextFrame::DidModifySVGObservable (nsISVGValue* observable)
       SVGFrame->NotifyCTMChanged(); // XXX
     kid->GetNextSibling(&kid);
   }  
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// nsISVGTextContentMetrics
+NS_IMETHODIMP
+nsSVGTextFrame::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  
+  EnsureFragmentTreeUpToDate();
+
+  nsISVGGlyphFragmentLeaf *fragment = GetGlyphFragmentAtCharNum(charnum);
+  if (!fragment) return NS_ERROR_FAILURE; // xxx return some index-out-of-range error
+  
+  // query the renderer metrics for the bounds of the character
+  nsCOMPtr<nsISVGRendererGlyphMetrics> metrics;
+  fragment->GetGlyphMetrics(getter_AddRefs(metrics));
+  NS_ASSERTION(metrics, "null metrics");
+  nsresult rv = metrics->GetExtentOfChar(charnum-fragment->GetCharNumberOffset(),
+                                         _retval);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+  // offset the bounds by the position of the fragment:
+  float x,y;
+  (*_retval)->GetX(&x);
+  (*_retval)->GetY(&y);
+  (*_retval)->SetX(x+fragment->GetGlyphPositionX());
+  (*_retval)->SetY(y+fragment->GetGlyphPositionY());
+
   return NS_OK;
 }
 
@@ -848,7 +885,6 @@ nsSVGTextFrame::EnsureFragmentTreeUpToDate()
   } 
 }
 
-
 void
 nsSVGTextFrame::UpdateFragmentTree()
 {
@@ -879,15 +915,7 @@ nsSVGTextFrame::UpdateGlyphPositioning()
   
   NS_ASSERTION(mMetricsState == unsuspended, "updating during suspension");
 
-  nsISVGGlyphFragmentNode *node = nsnull;
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode),(void**)&node);
-    if (node)
-      break;
-    kid->GetNextSibling(&kid);
-  }
-
+  nsISVGGlyphFragmentNode *node = GetFirstGlyphFragmentChildNode();
   if (!node) return;
 
   nsISVGGlyphFragmentLeaf* fragment;
@@ -1061,4 +1089,26 @@ nsSVGTextFrame::GetNextGlyphFragmentChildNode(nsISVGGlyphFragmentNode*node)
     frame->GetNextSibling(&frame);
   }
   return retval;
+}
+
+nsISVGGlyphFragmentLeaf *
+nsSVGTextFrame::GetGlyphFragmentAtCharNum(PRUint32 charnum)
+{
+  nsISVGGlyphFragmentLeaf *fragment = nsnull;
+  {
+    nsISVGGlyphFragmentNode* node = GetFirstGlyphFragmentChildNode();
+    if (!node) return nsnull; 
+    fragment = node->GetFirstGlyphFragment();
+  }
+  
+  while(fragment) {
+    PRUint32 count = fragment->GetNumberOfChars();
+    if (count>charnum)
+      return fragment;
+    charnum-=count;
+    fragment = fragment->GetNextGlyphFragment();
+  }
+
+  // not found
+  return nsnull;
 }

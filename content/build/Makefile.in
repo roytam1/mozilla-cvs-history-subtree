@@ -134,6 +134,12 @@ LOCAL_INCLUDES	= -I$(srcdir)/../base/src \
 		   -I. \
 		   $(NULL)
 
+ifdef MOZ_SVG
+LOCAL_INCLUDES += \
+		   -I$(srcdir)/../svg/content/src \
+		   $(NULL)
+endif
+
 GARBAGE+=$(BUILD_DATE)
 
 export:: $(BUILD_DATE)

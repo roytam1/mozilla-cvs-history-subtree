@@ -144,6 +144,7 @@ NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
+#include "nsSVGTypeCIDs.h"
 #endif
 
 // jst says, ``we need this to avoid holding on to XPConnect past its
@@ -299,6 +300,7 @@ extern nsresult NS_NewMathMLElementFactory(nsIElementFactory** aResult);
 
 #ifdef MOZ_SVG
 extern nsresult NS_NewSVGElementFactory(nsIElementFactory** aResult);
+#include "nsSVGRect.h"
 #endif
 
 #define MAKE_CTOR(ctor_, iface_, func_)                   \
@@ -379,6 +381,7 @@ MAKE_CTOR(CreateMathMLElementFactory,     nsIElementFactory,           NS_NewMat
 #endif
 #ifdef MOZ_SVG
 MAKE_CTOR(CreateSVGElementFactory,        nsIElementFactory,           NS_NewSVGElementFactory)
+MAKE_CTOR(CreateSVGRect,                  nsIDOMSVGRect,               NS_NewSVGRect)
 #endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentHTTPStartup)
 MAKE_CTOR(CreateContentDLF,               nsIDocumentLoaderFactory,    NS_NewContentDocumentLoaderFactory)
@@ -846,15 +849,15 @@ static const nsModuleComponentInfo gComponents[] = {
 #endif
 
 #ifdef MOZ_SVG
-  { "SVG element factory (deprecated namespace)",
-    NS_SVGELEMENTFACTORY_CID,
-    NS_SVG_DEPRECATED_ELEMENT_FACTORY_CONTRACTID,
-    CreateSVGElementFactory },
-
   { "SVG element factory",
     NS_SVGELEMENTFACTORY_CID,
     NS_SVG_ELEMENT_FACTORY_CONTRACTID,
     CreateSVGElementFactory },
+  
+  { "SVG Rect",
+    NS_SVGRECT_CID,
+    NS_SVGRECT_CONTRACTID,
+    CreateSVGRect },
 #endif
 
   { "Content HTTP Startup Listener",

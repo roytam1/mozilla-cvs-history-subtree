@@ -38,11 +38,15 @@
 
 #include "nsISupports.idl"
 
+interface nsIDOMSVGRect;
+
 [scriptable, uuid(8665f6e9-6ed6-4ff8-b511-46c8068b3960)]
 interface nsISVGRendererGlyphMetrics : nsISupports
 {
   readonly attribute float advance;
   readonly attribute float height;
+
+  [noscript] nsIDOMSVGRect getExtentOfChar(in unsigned long charnum);
   
   // baseline offset indentifiers:
   const unsigned short BASELINE_ALPHABETIC       = 0;

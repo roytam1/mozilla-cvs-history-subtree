@@ -70,8 +70,12 @@ SVG_BRANCH_MODIFIED_FILES =                               \
 	configure.in                                          \
 	configure                                             \
 	config/autoconf.mk.in                                 \
+	content/base/public/nsIElementFactory.h               \
 	content/base/src/nsRuleNode.cpp                       \
 	content/base/src/nsStyleContext.cpp                   \
+	content/build/Makefile.in                             \
+	content/build/nsContentCID.h                          \
+	content/build/nsContentModule.cpp                     \
 	content/html/style/src/nsCSSDeclaration.cpp           \
 	content/html/style/src/nsCSSDeclaration.h             \
 	content/html/style/src/nsCSSParser.cpp                \
@@ -163,6 +167,7 @@ SVG_BRANCH_NEW_FILES = \
 	content/svg/content/src/nsISVGLength.h                \
 	content/svg/content/src/nsISVGLengthList.h            \
 	content/svg/content/src/nsISVGSVGElement.h            \
+	content/svg/content/src/nsISVGTextContentMetrics.h    \
 	content/svg/content/src/nsISVGValueUtils.h            \
 	content/svg/content/src/nsISVGViewportAxis.h          \
 	content/svg/content/src/nsISVGViewportRect.h          \
@@ -174,6 +179,7 @@ SVG_BRANCH_NEW_FILES = \
 	content/svg/content/src/nsSVGNumber.h                 \
 	content/svg/content/src/nsSVGTextElement.cpp          \
 	content/svg/content/src/nsSVGTSpanElement.cpp         \
+	content/svg/content/src/nsSVGTypeCIDs.h               \
 	content/svg/content/src/nsSVGViewportRect.cpp         \
 	layout/svg/base/src/nsISVGChildFrame.h                \
 	layout/svg/base/src/nsISVGContainerFrame.h            \

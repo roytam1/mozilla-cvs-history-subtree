@@ -813,26 +813,6 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
     int fontsc;
     aPresContext->GetFontScaler(&fontsc);
     printf("font scale=%d\n",fontsc);
-
-#ifdef MOZ_SVG_RENDERER_GDIPLUS
-  {
-    HDC devicehandle;
-    // this ctx better be what we think it is...
-    aRenderingContext.RetrieveCurrentNativeGraphicData((PRUint32 *)(&devicehandle));
-  
-    printf("map mode: %d\n",::GetMapMode(devicehandle));
-    SIZE s;
-    POINT p;
-    ::GetWindowExtEx(devicehandle, &s);
-    printf("Window ext: %d %d\n", s.cx, s.cy);
-    ::GetWindowOrgEx(devicehandle, &p);
-    printf("Window org: %d %d\n", p.x, p.y);
-    ::GetViewportExtEx(devicehandle, &s);
-    printf("viewport ext: %d %d\n", s.cx, s.cy);
-    ::GetViewportOrgEx(devicehandle, &p);
-    printf("viewport org: %d %d\n", p.x, p.y);
-  }
-#endif
     printf("]\n");
   }
 #endif

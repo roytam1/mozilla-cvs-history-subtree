@@ -49,6 +49,7 @@ REQUIRES = 	xpcom \
 			string \
 			dom \
 			necko \
+			content \
 			$(NULL)
 
 CPPSRCS = 	\
