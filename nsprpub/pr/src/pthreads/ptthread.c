@@ -129,7 +129,7 @@ static void _PR_InitializeStack(PRThreadStack *ts)
 #else
 #ifdef GC_LEAK_DETECTOR
         ts->stackTop    = GetStackTop();
-        ts->stackBottom = ts->allocTop - ts->stackSize;
+        ts->stackBottom = ts->stackTop - ts->stackSize;
 #else
         ts->stackTop    = ts->allocBase;
         ts->stackBottom = ts->allocBase - ts->stackSize;
