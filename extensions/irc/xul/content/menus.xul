@@ -214,10 +214,7 @@
             </menu>
   
             <menuseparator/>
-  
-            <menuitem id="menu-view-none" label="&NoneCmd.label;" 
-              accesskey="&NoneCmd.aKey;"
-              oncommand="onSimulateCommand('/css none');"/>
+
             <menuitem id="menu-view-default" label="&DefaultCmd.label;" 
               accesskey="&DefaultCmd.aKey;" type="checkbox"
               oncommand="onSimulateCommand('/css default');"/>
@@ -240,9 +237,19 @@
             <menuitem label="&DeleteViewCmd.label;"
               accesskey="&DeleteViewCmd.aKey;"
               observes="cmd_deleteview" key="key_deleteview"/>
+
             <menuseparator/>
+
             <menuitem label="&StatusCmd.label;" accesskey="&StatusCmd.aKey;"
               observes="cmd_status" key="key_status"/>
+
+            <menuseparator/>
+
+            <menuitem id="menu-view-collapse" label="&CollapseCmd.label;" 
+              accesskey="&CollapseCmd.aKey;" type="checkbox"
+              oncommand="onToggleMsgCollapse();"/>  
+
+
           </menupopup>
   
         </menu>

@@ -172,7 +172,7 @@ function onPopupSimulateCommand (line)
     if ("user" in client._popupContext)
     {
         var nick = client._popupContext.user;
-        if (nick == "ME!")
+        if (nick.indexOf("ME!") != -1)
         {
             var details = getObjectDetails(client.currentObject);
             if ("server" in details)
@@ -256,6 +256,8 @@ function createPopupContext(event, target)
             
         case "html:td":            
             client._popupContext.user = target.getAttribute("msg-user");
+            if (client._popupContext.user.indexOf("ME!") != 0)
+                client._popupContext.user = "ME!";
             targetType = target.getAttribute("msg-type");
             break;            
     }
@@ -502,6 +504,7 @@ function onDeleteCurrentView()
         var i = deleteTab (tb);
         if (i != -1)
         {
+            delete client.currentObject.messageCount;
             delete client.currentObject.messages;
 
             if (i >= client.viewsArray.length)
@@ -633,6 +636,18 @@ function onMultilineInputKeyPress (e)
     }
 }
 
+function onToggleMsgCollapse()
+{
+    client.COLLAPSE_MSGS = !client.COLLAPSE_MSGS;
+}
+
+function onToggleConnectAtStartup()
+{
+    var url = client.currentObject.getURL();
+    var ary = client.INITIAL_URLS.split(";");
+    
+}
+
 function onViewMenuShowing ()
 {
     var loc = frames[0].document.location.href;
@@ -646,6 +661,9 @@ function onViewMenuShowing ()
 
     val = (loc == "chrome://chatzilla/skin/output-light.css");
     document.getElementById ("menu-view-light").setAttribute ("checked", val);
+
+    val = client.COLLAPSE_MSGS;
+    document.getElementById ("menu-view-collapse").setAttribute ("checked", val);
     
     return true;
 }

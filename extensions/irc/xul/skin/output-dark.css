@@ -135,8 +135,9 @@ a.chatzilla-link:visited {
 /* important="true" means that the message has text from your /stalk list in
  * it, has your nickname in it, or was spoken by someone in your /stalk list.
  */
-.msg[important="true"] {
-    background: #333333;
+.msg-user[important="true"],
+.msg-data[important="true"] {
+    background: #333333 !important;
 }
 
 .msg-user:before,

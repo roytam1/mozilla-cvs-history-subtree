@@ -55,6 +55,8 @@
  *   +- style   
  *   |  +- default (String) url to default style sheet
  *   +- views
+ *   |  +- collapseMsgs (Boolean) Collapse consecutive messages from same
+ *   |  |                         user
  *   |  +- client
  *   |  |  +- maxlines (Number) max lines to keep in *client* view
  *   |  +- network
@@ -135,6 +137,9 @@ function readIRCPrefs (rootNode)
         getCharPref (pref, rootNode + "style.default",
                      "chrome://chatzilla/skin/output-default.css");
     
+    client.COLLAPSE_MSGS = 
+        getBoolPref (pref, rootNode + "views.collapseMsgs", false);
+
     client.MAX_MESSAGES = 
         getIntPref (pref, rootNode + "views.client.maxlines",
                     client.MAX_MESSAGES);
@@ -193,6 +198,14 @@ function writeIRCPrefs (rootNode)
         }
     }
     pref.SetBoolPref (rootNode + "notify.aggressive", client.FLASH_WINDOW);
+    pref.SetBoolPref (rootNode + "views.collapseMsgs", client.COLLAPSE_MSGS);
+    pref.SetIntPref (rootNode + "views.client.maxlines", client.MAX_MESSAGES);
+    pref.SetIntPref (rootNode + "views.network.maxlines",
+                     CIRCChanUser.prototype.MAX_MESSAGES);
+    pref.SetIntPref (rootNode + "views.channel.maxlines",
+                     CIRCChannel.prototype.MAX_MESSAGES);
+    pref.SetIntPref (rootNode + "views.chanuser.maxlines",
+                     CIRCChanUser.prototype.MAX_MESSAGES);
     
     var h = client.eventPump.getHook ("event-tracer");
     pref.SetBoolPref (rootNode + "debug.tracer", h.enabled);

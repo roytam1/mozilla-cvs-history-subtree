@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre13";
+client.version = "0.8.5-pre14";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -1516,6 +1516,8 @@ function setCurrentObject (obj)
     {
         scrollDown();
         setTimeout ("scrollDown()", 500);
+        setTimeout ("scrollDown()", 1000);
+        setTimeout ("scrollDown()", 2000);
     }
     
     onTopicEditEnd();
@@ -1585,6 +1587,11 @@ function addHistory (source, obj, mergeData, collapseRow)
         
             if (mergeData && sameNick)
             {
+                if (obj.getAttribute("important"))
+                {
+                    nickColumns[nickColumnCount - 1].setAttribute ("important",
+                                                                   true);
+                }
                 /* message is from the same person as last time,
                  * strip the nick first... */
                 obj.removeChild(obj.firstChild);
@@ -1628,6 +1635,7 @@ function addHistory (source, obj, mergeData, collapseRow)
             if (client.PRINT_DIRECTION == 1)
             {
                 tbody.removeChild (tbody.firstChild);
+                --source.messageCount;
                 while (tbody.firstChild &&
                        tbody.firstChild.firstChild.getAttribute("class") ==
                        "msg-data")
@@ -1639,6 +1647,7 @@ function addHistory (source, obj, mergeData, collapseRow)
             else
             {
                 tbody.removeChild (tbody.lastChild);
+                --source.messageCount;
                 while (tbody.lastChild &&
                        tbody.lastChild.firstChild.getAttribute("class") ==
                        "msg-data")
@@ -1654,6 +1663,8 @@ function addHistory (source, obj, mergeData, collapseRow)
     {
         scrollDown();
         setTimeout ("scrollDown()", 500);
+        setTimeout ("scrollDown()", 1000);
+        setTimeout ("scrollDown()", 2000);
     }                    
     
 }
@@ -2132,8 +2143,8 @@ function __display(message, msgtype, sourceObj, destObj)
     var toType = (destObj) ? destObj.TYPE : "unk";
     var toAttr;
     
-    if (destObj == me)
-        toAttr = "ME!";
+    if (destObj && destObj == me)
+        toAttr = me.nick + " ME!";
     else if (toType == "IRCUser")
         toAttr = destObj.nick;
     else if (typeof destObj == "object")
@@ -2222,7 +2233,7 @@ function __display(message, msgtype, sourceObj, destObj)
         }
         msgRow.appendChild (msgSource);
         canMergeData = true;
-        canCollapseRow = true;
+        canCollapseRow = client.COLLAPSE_MSGS;
 
     }
     else

@@ -29,7 +29,7 @@
 <!ENTITY DebugMsgCmd.label      "Debug Mode">
 <!ENTITY DebugMsgCmd.aKey       "D">
 <!ENTITY SaveSetNowCmd.label    "Save Settings Now">
-<!ENTITY SaveSetExitCmd.label   "Save Settings On Exit">
+<!ENTITY SaveSetExitCmd.label   "Save Settings on Exit">
 <!ENTITY ViewCmd.label          "View">
 <!ENTITY ViewCmd.aKey           "V">
 <!ENTITY ShowCmd.label          "Show/Hide">
@@ -37,24 +37,26 @@
 <!ENTITY ShowTabStripCmd.aKey   "T">
 <!ENTITY ShowUserlistCmd.label  "Userlist">
 <!ENTITY ShowUserlistCmd.aKey   "U">
-<!ENTITY ShowHeaderCmd.label "Header">
-<!ENTITY ShowHeaderCmd.aKey  "H">
+<!ENTITY ShowHeaderCmd.label    "Header">
+<!ENTITY ShowHeaderCmd.aKey     "H">
 <!ENTITY ShowStatusbarCmd.label "Status Bar">
 <!ENTITY ShowStatusbarCmd.aKey  "S">
-<!ENTITY NoneCmd.label          "No motif">
+<!ENTITY CollapseCmd.label      "Collapse Consecutive Messages">
+<!ENTITY CollapseCmd.aKey       "N">
+<!ENTITY NoneCmd.label          "No Motif">
 <!ENTITY NoneCmd.aKey           "N">
-<!ENTITY DefaultCmd.label       "Default motif">
+<!ENTITY DefaultCmd.label       "Default Motif">
 <!ENTITY DefaultCmd.aKey        "D">
-<!ENTITY DarkCmd.label          "Dark motif">
+<!ENTITY DarkCmd.label          "Dark Motif">
 <!ENTITY DarkCmd.aKey           "k">
-<!ENTITY LightCmd.label         "Light motif">
+<!ENTITY LightCmd.label         "Light Motif">
 <!ENTITY LightCmd.aKey          "L">
 <!ENTITY HideCmd.label          "Hide">
-<!ENTITY LeaveViewCmd.label     "Leave $viewname">
+<!ENTITY LeaveViewCmd.label     "Leave ``$viewname''">
 <!ENTITY LeaveViewCmd.aKey      "">
-<!ENTITY DeleteViewCmd.label    "Delete this view">
+<!ENTITY DeleteViewCmd.label    "Close View">
 <!ENTITY DeleteViewCmd.aKey     "">
-<!ENTITY ClearViewCmd.label     "Clear this view">
+<!ENTITY ClearViewCmd.label     "Clear View">
 <!ENTITY ClearViewCmd.aKey      "">
 <!ENTITY StatusCmd.label        "Connection Status">
 <!ENTITY StatusCmd.aKey         "C">
@@ -62,24 +64,24 @@
 <!ENTITY CloseCmd.label "Close">
 <!ENTITY CloseCmd.aKey  "C">
 
-<!ENTITY PopupQueryCmd.label         "Private chat with $nick">
+<!ENTITY PopupQueryCmd.label         "Private Chat ``$nick''">
 <!ENTITY PopupQueryCmd.aKey          "P">
-<!ENTITY PopupWhoisCmd.label         "Who is $nick">
+<!ENTITY PopupWhoisCmd.label         "Who Is ``$nick''">
 <!ENTITY PopupWhoisCmd.aKey          "W">
-<!ENTITY PopupPingCmd.label          "Ping time to $nick">
+<!ENTITY PopupPingCmd.label          "Ping ``$nick''">
 <!ENTITY PopupPingCmd.aKey           "I">
-<!ENTITY PopupVersionCmd.label       "Query $nick's IRC client version">
-<!ENTITY PopupVersionCmd.aKey        "C">
+<!ENTITY PopupVersionCmd.label       "Version ``$nick''">
+<!ENTITY PopupVersionCmd.aKey        "V">
 <!ENTITY PopupHighlightStyle.label   "Highlight $nick's messages">
 <!ENTITY PopupHighlightStyle.aKey    "H">
 <!ENTITY PopupHighlightNoStyle.label "None">
-<!ENTITY PopupGiveOp.label           "Grant operator status">
+<!ENTITY PopupGiveOp.label           "Grant Operator Status">
 <!ENTITY PopupGiveOp.aKey            "O">
-<!ENTITY PopupTakeOp.label           "Revoke operator status">
+<!ENTITY PopupTakeOp.label           "Revoke Operator Status">
 <!ENTITY PopupTakeOp.aKey            "O">
-<!ENTITY PopupGiveVoice.label        "Grant voiced status">
+<!ENTITY PopupGiveVoice.label        "Grant Voiced Status">
 <!ENTITY PopupGiveVoice.aKey         "V">
-<!ENTITY PopupTakeVoice.label        "Revoke voiced status">
+<!ENTITY PopupTakeVoice.label        "Revoke Voiced Status">
 <!ENTITY PopupTakeVoice.aKey         "V">
 <!ENTITY PopupKick.label             "Kick">
 <!ENTITY PopupKick.aKey              "K">

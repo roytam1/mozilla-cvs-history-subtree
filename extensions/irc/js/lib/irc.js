@@ -746,6 +746,12 @@ function serv_onParsedData(e)
 {
 
     e.type = e.code.toLowerCase();
+    if (!e.code[0])
+    {
+        dd (dumpObjectTree (e));
+        return false;
+    }
+    
     e.destMethod = "on" + e.code[0].toUpperCase() +
         e.code.substr (1, e.code.length).toLowerCase();
 
@@ -1631,7 +1637,12 @@ CIRCChannel.prototype.topic = "";
 CIRCChannel.prototype.getURL =
 function chan_geturl ()
 {
-    return this.parent.parent.getURL() + escape(this.name);
+    var target;
+    if (this.name[0] == "#")
+        target = this.name.substr(1);
+    else
+        target = escape(this.name);
+    return this.parent.parent.getURL() + target;
 }
 
 CIRCChannel.prototype.addUser = 

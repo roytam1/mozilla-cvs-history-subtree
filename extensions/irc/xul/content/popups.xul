@@ -171,7 +171,7 @@
         <menuseparator/>
   
         <menuitem label="&StatusCmd.label;" accesskey="&StatusCmd.aKey;"
-         observes="cmd_status" key="key_status"/>
+         observes="cmd_status"/>
       </popup>
   
     </popupset>
