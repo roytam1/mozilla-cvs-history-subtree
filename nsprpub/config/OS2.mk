@@ -106,7 +106,7 @@ IMPLIB  		= emximp -o
 
 # Determine which object format to use.  Two choices:
 # a.out and omf.  We default to a.out.
-ifeq($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
+ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
 OMF_FLAG 	= -Zomf
 AR		= emxomfar r $@
 LIB_SUFFIX	= lib
@@ -122,7 +122,7 @@ LIB_SUFFIX 		= lib
 DEFINES += -DXP_OS2_EMX
 
 OS_CFLAGS     		= $(OMF_FLAG) -I. -Wall -Zmt $(DEFINES)
-OS_EXE_CFLAGS 		= $(OS_CFLAGS)
+OS_EXE_CFLAGS 		= $(OMF_FLAG) -I. -Wall -Zmt $(DEFINES)
 OS_DLLFLAGS 		= $(OMF_FLAG) -Zmt -Zdll -Zcrtdll -o $@
 
 ifdef BUILD_OPT
