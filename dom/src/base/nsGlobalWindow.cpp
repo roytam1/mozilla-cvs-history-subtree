@@ -219,6 +219,7 @@ GlobalWindowImpl::GlobalWindowImpl()
     mIsClosed(PR_FALSE),
     mOpenerWasCleared(PR_FALSE),
     mIsPopupSpam(PR_FALSE),
+    mIsHandlingResizeEvent(PR_FALSE),
     mGlobalObjectOwner(nsnull),
     mDocShell(nsnull),
     mCurrentEvent(0),
@@ -439,6 +440,12 @@ PopupControlState
 GlobalWindowImpl::GetPopupControlState() const
 {
   return gPopupControlState;
+}
+
+PRBool
+GlobalWindowImpl::IsHandlingResizeEvent() const
+{
+  return mIsHandlingResizeEvent;
 }
 
 nsresult
@@ -913,6 +920,10 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
     }
   }
 
+  if (aEvent->message == NS_RESIZE_EVENT) {
+    mIsHandlingResizeEvent = PR_TRUE;
+  }
+
   // Local handling stage
   if ((aEvent->message != NS_BLUR_CONTENT || !GetBlurSuppression()) &&
       mListenerManager &&
@@ -923,8 +934,13 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
     aEvent->flags &= ~aFlags;
   }
 
-  if (aEvent->message == NS_PAGE_LOAD)
+  if (aEvent->message == NS_RESIZE_EVENT) {
+    mIsHandlingResizeEvent = PR_FALSE;
+  }
+
+  if (aEvent->message == NS_PAGE_LOAD) {
     mIsDocumentLoaded = PR_TRUE;
+  }
 
   // Bubbling stage
   if ((NS_EVENT_FLAG_BUBBLE & aFlags) && mChromeEventHandler) {

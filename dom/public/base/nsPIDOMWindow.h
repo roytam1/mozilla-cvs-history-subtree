@@ -113,6 +113,8 @@ public:
   virtual PopupControlState PushPopupControlState(PopupControlState aState) const = 0;
   virtual void PopPopupControlState(PopupControlState state) const = 0;
   virtual PopupControlState GetPopupControlState() const = 0;
+
+  virtual PRBool IsHandlingResizeEvent() const = 0;
 };
 
 
