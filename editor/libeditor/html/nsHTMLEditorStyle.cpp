@@ -1393,7 +1393,7 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
         {
           // style not set: check to see if we have a default style.
           PRInt32 index;
-          if (TypeInState::FindPropInList(aProperty, *aAttribute, outValue, mDefaultStyles, index))
+          if (TypeInState::FindPropInList(aProperty, *aAttribute, nsnull, mDefaultStyles, index))
           {
             // we have a default style.  There are two possibilities: 
             // 1) the selection is collapsed in visible content that does not have the default style
