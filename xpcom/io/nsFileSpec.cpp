@@ -1030,6 +1030,25 @@ void nsFileSpec::operator = (const char* inString)
     nsFileSpecHelpers::Canonify(mPath, PR_FALSE /* XXX? */);
     mError = NS_OK;
 }
+
+#if defined(WINCE)
+//----------------------------------------------------------------------------------------
+void nsFileSpec::operator = (LPCWSTR inString)
+//----------------------------------------------------------------------------------------
+{
+    char aPath[MAX_PATH];
+
+    if(0 != w2a_buffer(inString, -1, aPath, sizeof(aPath)))
+    {
+        *this = aPath;
+    }
+    else
+    {
+        mError = NS_FILE_FAILURE;
+    }
+}
+#endif // WINCE
+
 #endif //XP_UNIX,XP_WIN,XP_OS2,XP_BEOS
 
 //----------------------------------------------------------------------------------------

@@ -73,9 +73,11 @@ void nsFileSpecHelpers::Canonify(nsSimpleCharString& ioPath, PRBool inMakeDirs)
     if (ioPath.IsEmpty())
         return;
   
+#if !defined(WINCE)
     NS_ASSERTION(strchr((const char*)ioPath, '/') == 0,
 		"This smells like a Unix path. Native path expected! "
 		"Please fix.");
+#endif /* WINCE */
 	if (inMakeDirs)
     {
         const int mode = 0755;
@@ -83,6 +85,7 @@ void nsFileSpecHelpers::Canonify(nsSimpleCharString& ioPath, PRBool inMakeDirs)
         nsFileSpecHelpers::NativeToUnix(unixStylePath);
         nsFileSpecHelpers::MakeAllDirectories((const char*)unixStylePath, mode);
     }
+#if !defined(WINCE)
     char buffer[_MAX_PATH];
     errno = 0;
     *buffer = '\0';
@@ -95,6 +98,7 @@ void nsFileSpecHelpers::Canonify(nsSimpleCharString& ioPath, PRBool inMakeDirs)
 			return;
 	}
     ioPath = canonicalPath;
+#endif /* WINCE */
 } // nsFileSpecHelpers::Canonify
 
 //----------------------------------------------------------------------------------------
@@ -272,7 +276,7 @@ PRBool nsFileSpec::IsHidden() const
     PRBool hidden = PR_FALSE;
     if (!mPath.IsEmpty())
     {
-        DWORD attr = GetFileAttributes(mPath);
+        DWORD attr = GetFileAttributesA(mPath);
         if (FILE_ATTRIBUTE_HIDDEN & attr)
             hidden = PR_TRUE;
     }
@@ -284,6 +288,7 @@ PRBool nsFileSpec::IsHidden() const
 PRBool nsFileSpec::IsSymlink() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
     HRESULT hres; 
     IShellLink* psl; 
     
@@ -323,6 +328,16 @@ PRBool nsFileSpec::IsSymlink() const
     CoUninitialize();
 
     return isSymlink;
+#else /* WINCE */
+    TCHAR wsz[MAX_PATH];
+    TCHAR wtz[MAX_PATH];
+
+    if(0 != a2w_buffer(mPath, -1, wsz, sizeof(wsz) / sizeof(TCHAR)))
+    {
+        return SHGetShortcutTarget(wsz, wtz, sizeof(wtz) / sizeof(TCHAR));
+    }
+    return FALSE;
+#endif /* WINCE */
 }
 
 
@@ -335,7 +350,7 @@ nsresult nsFileSpec::ResolveSymlink(PRBool& wasSymlink)
 	if (Exists())
 		return NS_OK;
 
-
+#if !defined(WINCE)
     HRESULT hres; 
     IShellLink* psl; 
 
@@ -396,6 +411,27 @@ nsresult nsFileSpec::ResolveSymlink(PRBool& wasSymlink)
 
     if (SUCCEEDED(hres))
         return NS_OK;
+#else /* WINCE */
+    TCHAR wsz[MAX_PATH];
+    
+    if(0 != a2w_buffer(mPath, -1, wsz, sizeof(wsz) / sizeof(TCHAR)))
+    {
+        TCHAR wtz[MAX_PATH];
+        wasSymlink = SHGetShortcutTarget(wsz, wtz, sizeof(wtz) / sizeof(TCHAR));
+        if(FALSE != wasSymlink)
+        {
+            char wcz[MAX_PATH];
+            
+            if(0 != w2a_buffer(wtz, -1, wcz, sizeof(wcz)))
+            {
+                mPath = wcz;
+                mError = NS_OK;
+                
+                return NS_OK;
+            }
+        }
+    }
+#endif /* WINCE */
 
     return NS_FILE_FAILURE;
 }
@@ -520,13 +556,13 @@ nsFileSpec::Truncate(PRInt32 aNewFileLength) const
 
     // Leave it to Microsoft to open an existing file with a function
     // named "CreateFile".
-    hFile = CreateFile(mPath,
-                       GENERIC_WRITE, 
-                       FILE_SHARE_READ, 
-                       NULL, 
-                       OPEN_EXISTING, 
-                       FILE_ATTRIBUTE_NORMAL, 
-                       NULL); 
+    hFile = CreateFileA(mPath,
+        GENERIC_WRITE, 
+        FILE_SHARE_READ, 
+        NULL, 
+        OPEN_EXISTING, 
+        FILE_ATTRIBUTE_NORMAL, 
+        NULL); 
     if (hFile == INVALID_HANDLE_VALUE)
         return NS_FILE_FAILURE;
 
@@ -590,7 +626,7 @@ nsresult nsFileSpec::CopyToDir(const nsFileSpec& inParentDirectory) const
         nsCRT::free(leafname);
         
         // CopyFile returns non-zero if succeeds
-        int copyOK = CopyFile(GetCString(), destPath, PR_TRUE);
+        int copyOK = CopyFileA(GetCString(), destPath, PR_TRUE);
         if (copyOK)
             return NS_OK;
     }
@@ -611,7 +647,7 @@ nsresult nsFileSpec::MoveToDir(const nsFileSpec& inNewParentDirectory)
         nsCRT::free(leafname);
 
         // MoveFile returns non-zero if succeeds
-        int copyOK = MoveFile(GetCString(), destPath);
+        int copyOK = MoveFileA(GetCString(), destPath);
 
         if (copyOK)
         {
@@ -629,11 +665,34 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
 {    
     if (!IsDirectory())
     {
+#if !defined(WINCE)
         nsSimpleCharString fileNameWithArgs = "\"";
         fileNameWithArgs += mPath + "\" " + inArgs;
         int execResult = WinExec( fileNameWithArgs, SW_NORMAL );     
         if (execResult > 31)
             return NS_OK;
+#else /* WINCE */
+        TCHAR wPath[MAX_PATH];
+        if(MultiByteToWideChar(CP_ACP, 0, mPath, -1, wPath, sizeof(wPath) / sizeof(TCHAR)))
+        {
+            TCHAR wArgs[MAX_PATH] = { _T('\0') };
+            if(NULL == inArgs || MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, inArgs, -1, wArgs, sizeof(wArgs) / sizeof(TCHAR)))
+            {
+                SHELLEXECUTEINFO execInfo;
+                
+                memset(&execInfo, 0, sizeof(execInfo));
+                
+                execInfo.cbSize = sizeof(execInfo);
+                execInfo.lpFile = wPath;
+                execInfo.lpParameters = wArgs;
+                execInfo.nShow = SW_SHOWNORMAL;
+                
+                BOOL started = ShellExecuteEx(&execInfo);
+                
+                return FALSE != started ? NS_OK : NS_FILE_FAILURE;
+            }
+        }
+#endif /* WINCE */
     }
     return NS_FILE_FAILURE;
 } // nsFileSpec::Execute
@@ -643,6 +702,7 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
 PRInt64 nsFileSpec::GetDiskSpaceAvailable() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
     PRInt64 int64;
     
     LL_I2L(int64 , LONG_MAX);
@@ -703,6 +763,27 @@ PRInt64 nsFileSpec::GetDiskSpaceAvailable() const
         nBytes = (double)dwFreeClus*(double)dwSecPerClus*(double) dwBytesPerSec;
     }
     return (PRInt64)nBytes;
+#else /* WINCE */
+    ULARGE_INTEGER freeBytesAvailableToCaller;
+    ULARGE_INTEGER totalNumberOfBytes;
+    ULARGE_INTEGER totalNumberOfFreeBytes;
+
+    //
+    // This will only target the object store (NULL path).
+    // There could be UNC paths to memory cards, remote UNC paths, whatever.
+    // May need to be fixed one day.
+    //
+    BOOL gotten = GetDiskFreeSpaceEx(NULL, &freeBytesAvailableToCaller, &totalNumberOfBytes, &totalNumberOfFreeBytes);
+
+    if(FALSE != gotten)
+    {
+        return (PRInt64)freeBytesAvailableToCaller.QuadPart;
+    }
+    else
+    {
+        return 0;
+    }
+#endif /* WINCE */
 }
 
 

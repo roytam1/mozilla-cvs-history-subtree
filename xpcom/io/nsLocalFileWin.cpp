@@ -67,21 +67,26 @@ public:
     nsresult Init();
     nsresult Resolve(const unsigned short* in, char* out);
 
+#if !defined(WINCE)
 private:
     PRLock*       mLock;
     IPersistFile* mPersistFile; 
     IShellLink*   mShellLink;
+#endif /* WINCE */
 };
 
 ShortcutResolver::ShortcutResolver()
 {
+#if !defined(WINCE)
     mLock = nsnull;
     mPersistFile = nsnull;
     mShellLink   = nsnull;
+#endif /* WINCE */
 }
 
 ShortcutResolver::~ShortcutResolver()
 {
+#if !defined(WINCE)
     if (mLock)
         PR_DestroyLock(mLock);
 
@@ -94,11 +99,13 @@ ShortcutResolver::~ShortcutResolver()
         mShellLink->Release();
 
     CoUninitialize();
+#endif /* WINCE */
 }
 
 nsresult
 ShortcutResolver::Init()
 {
+#if !defined(WINCE)
     CoInitialize(NULL);  // FIX: we should probably move somewhere higher up during startup
 
     mLock = PR_NewLock();
@@ -118,6 +125,7 @@ ShortcutResolver::Init()
     
     if (mPersistFile == nsnull || mShellLink == nsnull)
         return NS_ERROR_FAILURE;
+#endif /* WINCE */
 
     return NS_OK;
 }
@@ -126,6 +134,7 @@ ShortcutResolver::Init()
 nsresult 
 ShortcutResolver::Resolve(const unsigned short* in, char* out)
 {
+#if !defined(WINCE)
     nsAutoLock lock(mLock);
     
     // see if we can Load the path.
@@ -146,6 +155,19 @@ ShortcutResolver::Resolve(const unsigned short* in, char* out)
     if (FAILED(hres)) 
         return NS_ERROR_FAILURE;
     return NS_OK;
+#else /* WINCE */
+    TCHAR wtz[MAX_PATH];
+    if(FALSE != SHGetShortcutTarget(in, wtz, sizeof(wtz) / sizeof(TCHAR)))
+    {
+        char defC = '_';
+
+        if(WideCharToMultiByte(CP_ACP, 0, wtz, -1, out, MAX_PATH, &defC, NULL))
+        {
+            return NS_OK;
+        }
+    }
+    return NS_ERROR_FAILURE;
+#endif /* WINCE */
 }
 
 static ShortcutResolver * gResolver = nsnull;

@@ -176,6 +176,7 @@ NS_COM void ShutdownSpecialSystemDirectory()
 
 #if defined (XP_WIN)
 
+#if !defined(WINCE)
 static PRBool gGlobalOSInitialized = PR_FALSE;
 static PRBool gGlobalDBCSEnabledOS = PR_FALSE;
 
@@ -214,6 +215,15 @@ static char* MakeUpperCase(char* aPath)
   }
   return aPath;
 }
+#else /* WINCE */
+//----------------------------------------------------------------------------------------
+static LPTSTR MakeUpperCase(LPTSTR aPath)
+//----------------------------------------------------------------------------------------
+{
+    // Can't really fathom...
+    return aPath;
+}
+#endif /* WINCE */
 
 //----------------------------------------------------------------------------------------
 static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
@@ -228,18 +238,18 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
             return;
 
         // Append the trailing slash
-        int len = PL_strlen(path);
-        if (len>1 && path[len-1] != '\\') 
+        int len = _tcslen(path);
+        if (len>1 && path[len-1] != _T('\\')) 
         {
-            path[len]   = '\\';
-            path[len + 1] = '\0';
+            path[len]   = _T('\\');
+            path[len + 1] = _T('\0');
         }
         outDirectory = path;
         return;
     }
 
     LPMALLOC pMalloc = NULL;
-    LPSTR pBuffer = NULL;
+    LPTSTR pBuffer = NULL;
     LPITEMIDLIST pItemIDList = NULL;
     int len;
  
@@ -248,7 +258,7 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
         return;
 
     // Allocate a buffer
-    if ((pBuffer = (LPSTR) pMalloc->Alloc(MAX_PATH + 2)) == NULL) 
+    if ((pBuffer = (LPTSTR) pMalloc->Alloc((MAX_PATH + 2) * sizeof(TCHAR))) == NULL) 
         return; 
  
     // Get the PIDL for the folder. 
@@ -260,9 +270,9 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
         goto Clean;
 
     // Append the trailing slash
-    len = PL_strlen(pBuffer);
-    pBuffer[len]   = '\\';
-    pBuffer[len + 1] = '\0';
+    len = _tcslen(pBuffer);
+    pBuffer[len]   = _T('\\');
+    pBuffer[len + 1] = _T('\0');
 
     // Assign the directory
     outDirectory = pBuffer;
@@ -294,9 +304,9 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
     TCHAR buf[MAX_PATH];
     if ( ::GetModuleFileName(0, buf, sizeof(buf) / sizeof(TCHAR)) ) {
         // chop of the executable name by finding the rightmost backslash
-        char* lastSlash = PL_strrchr(buf, '\\');
+        LPTSTR lastSlash = _tcsrchr(buf, _T('\\'));
         if (lastSlash)
-            *(lastSlash + 1) = '\0';
+            *(lastSlash + 1) = _T('\0');
 
         aFileSpec = buf;
         return;
@@ -482,6 +492,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         case OS_DriveDirectory:
 #if defined (XP_WIN)
         {
+#if !defined(WINCE)
             char path[_MAX_PATH];
             PRInt32 len = GetWindowsDirectory( path, _MAX_PATH );
             if (len)
@@ -490,6 +501,9 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                     path[3] = 0;
             }
             *this = MakeUpperCase(path);
+#else /* WINCE */
+            *this = _T("\\");
+#endif /* WINCE */
         }
 #elif defined(XP_OS2)
         {
@@ -743,6 +757,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 #if defined (XP_WIN)
         case Win_SystemDirectory:
         {    
+#if !defined(WINCE)
             char path[_MAX_PATH];
             PRInt32 len = GetSystemDirectory( path, _MAX_PATH );
         
@@ -753,12 +768,15 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len+1] = '\0';
 
             *this = MakeUpperCase(path);
-
+#else /* WINCE */
+            *this = _T("\\WINDOWS\\");
+#endif /* WINCE */
             break;
         }
 
         case Win_WindowsDirectory:
         {    
+#if !defined(WINCE)
             char path[_MAX_PATH];
             PRInt32 len = GetWindowsDirectory( path, _MAX_PATH );
             
@@ -770,11 +788,15 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len+1] = '\0';
 
             *this = MakeUpperCase(path);
+#else /* WINCE */
+            *this = _T("\\WINDOWS\\");
+#endif /* WINCE */
             break;
         }
 
         case Win_HomeDirectory:
         {    
+#if !defined(WINCE)
             char path[_MAX_PATH];
             if (GetEnvironmentVariable(TEXT("HOME"), path, _MAX_PATH) > 0)
             {
@@ -808,6 +830,11 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                 *this = MakeUpperCase(path);
                 break;
             }
+
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_PERSONAL, *this);
+#endif /* WINCE */
+            break;
         }
         case Win_Desktop:
         {
@@ -896,32 +923,56 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         }
         case Win_Common_Startmenu:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_STARTMENU, *this);
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_STARTMENU, *this);
+#endif /* WINCE */
             break;
         }
         case Win_Common_Programs:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_PROGRAMS, *this);
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_PROGRAMS, *this);
+#endif /* WINCE */
             break;
         }
         case Win_Common_Startup:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_STARTUP, *this);
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_STARTUP, *this);
+#endif /* WINCE */
             break;
         }
         case Win_Common_Desktopdirectory:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_DESKTOPDIRECTORY, *this);
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_DESKTOPDIRECTORY, *this);
+#endif /* WINCE */
             break;
         }
         case Win_Appdata:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_APPDATA, *this);
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_PERSONAL, *this);
+#endif /* WINCE */
             break;
         }
         case Win_Printhood:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_PRINTHOOD, *this);
+#else /* WINCE */
+            GetWindowsFolder(CSIDL_NETHOOD, *this);
+#endif /* WINCE */
             break;
         }
 #endif  // XP_WIN

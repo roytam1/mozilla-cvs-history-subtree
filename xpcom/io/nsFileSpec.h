@@ -335,6 +335,9 @@ class NS_COM nsFileSpec
 
                                 // These two operands take *native* file paths.
         void                    operator = (const char* inNativePath);
+#if defined(WINCE)
+        void                    operator = (LPCWSTR inNativePath);
+#endif /* WINCE */
 
         void                    operator = (const nsFilePath& inPath);
         void                    operator = (const nsFileURL& inURL);
