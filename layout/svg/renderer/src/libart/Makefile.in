@@ -48,6 +48,7 @@ REQUIRES = \
 	widget  \
 	pref    \
 	gfx     \
+	imglib2 \
 	string  \
 	dom     \
 	content \

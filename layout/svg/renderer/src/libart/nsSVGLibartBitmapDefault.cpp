@@ -45,13 +45,14 @@
 #include "nsRect.h"
 #include "nsIImage.h"
 #include "nsIComponentManager.h"
-#include "nsGfxCIID.h"
-
-static NS_DEFINE_IID(kCImage, NS_IMAGE_CID);
+#include "imgIContainer.h"
+#include "gfxIImageFrame.h"
+#include "nsIInterfaceRequestor.h"
+#include "nsIInterfaceRequestorUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartBitmapDefault: an implementation based on nsIImage that
-// should work on all platforms but doesn't support obtaining
+// nsSVGLibartBitmapDefault: an implementation based on gfxIImageFrame
+// that should work on all platforms but doesn't support obtaining
 // RenderingContexts with Lock/UnlockRenderingContext
 
 class nsSVGLibartBitmapDefault : public nsISVGLibartBitmap
@@ -79,15 +80,22 @@ public:
   NS_IMETHOD_(void) Flush();
   
 private:
+  void LockBuffer();
+  void UnlockBuffer();
+
+  PRBool mLocked;
   nsCOMPtr<nsIRenderingContext> mRenderingContext;
-  nsCOMPtr<nsIImage> mBuffer;
+  nsCOMPtr<imgIContainer> mContainer;
+  nsCOMPtr<gfxIImageFrame> mBuffer;
   nsRect mRectTwips;
+  nsRect mRect;
 };
 
 //----------------------------------------------------------------------
 // implementation:
 
 nsSVGLibartBitmapDefault::nsSVGLibartBitmapDefault()
+    : mLocked(PR_FALSE)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -110,12 +118,14 @@ nsSVGLibartBitmapDefault::Init(nsIRenderingContext* ctx,
   mRectTwips.y = (nscoord)(rect.y*twipsPerPx);
   mRectTwips.width = (nscoord)(rect.width*twipsPerPx);
   mRectTwips.height = (nscoord)(rect.height*twipsPerPx);
-
-  mBuffer = do_CreateInstance(kCImage);
-  mBuffer->Init(rect.width, rect.height, 24,
-                nsMaskRequirements_kNoMask);
+  mRect = rect;
   
-  mBuffer->LockImagePixels(PR_FALSE);
+  mContainer = do_CreateInstance("@mozilla.org/image/container;1");
+  mContainer->Init(rect.width, rect.height, nsnull);
+    
+  mBuffer = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
+  mBuffer->Init(0, 0, rect.width, rect.height, gfxIFormats::RGB, 24);
+  mContainer->AppendFrame(mBuffer);
   
   return NS_OK;
 }
@@ -154,23 +164,43 @@ NS_INTERFACE_MAP_BEGIN(nsSVGLibartBitmapDefault)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
+// Implementation helpers:
+void
+nsSVGLibartBitmapDefault::LockBuffer()
+{
+  if (mLocked) return;
+
+  mBuffer->LockImageData();    
+  mLocked = PR_TRUE;
+}
+
+void
+nsSVGLibartBitmapDefault::UnlockBuffer()
+{
+  if (!mLocked) return;
+
+  mBuffer->UnlockImageData();
+  mLocked = PR_FALSE;
+}
+
+
+//----------------------------------------------------------------------
 // nsISVGLibartBitmap methods:
 
 NS_IMETHODIMP_(PRUint8 *)
 nsSVGLibartBitmapDefault::GetBits()
 {
-  return mBuffer->GetBits();
+  LockBuffer();
+  PRUint8* bits=nsnull;
+  PRUint32 length;
+  mBuffer->GetImageData(&bits, &length);
+  return bits;
 }
 
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapDefault::GetIndexR()
 {
-  // XXX we should have a method on nsIImage to extract the color order
-#ifdef XP_WIN
-  return 2;
-#else
   return 0;
-#endif
 }
 
 NS_IMETHODIMP_(int)
@@ -182,29 +212,27 @@ nsSVGLibartBitmapDefault::GetIndexG()
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapDefault::GetIndexB()
 {
-#ifdef XP_WIN
-  return 0;
-#else
   return 2;
-#endif
 }
 
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapDefault::GetLineStride()
 {
-  return mBuffer->GetLineStride();
+  PRUint32 bytesPerRow=0;
+  mBuffer->GetImageBytesPerRow(&bytesPerRow);
+  return (int) bytesPerRow;
 }
 
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapDefault::GetWidth()
 {
-  return mBuffer->GetWidth();
+  return mRect.width; 
 }
 
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapDefault::GetHeight()
 {
-  return mBuffer->GetHeight();
+  return mRect.height;
 }
 
 NS_IMETHODIMP_(nsIRenderingContext*)
@@ -223,32 +251,37 @@ nsSVGLibartBitmapDefault::UnlockRenderingContext()
 NS_IMETHODIMP_(void)
 nsSVGLibartBitmapDefault::Flush()
 {
-  if (!mBuffer->GetIsRowOrderTopToBottom()) {
-    // XXX we need to flip the image. This is silly. Blt should take
-    // care of it
-    int stride = mBuffer->GetLineStride();
-    int height = mBuffer->GetHeight();
-    PRUint8* bits = mBuffer->GetBits();
-    PRUint8* rowbuf = new PRUint8[stride];
-    for (int row=0; row<height/2; ++row) {
-      memcpy(rowbuf, bits+row*stride, stride);
-      memcpy(bits+row*stride, bits+(height-1-row)*stride, stride);
-      memcpy(bits+(height-1-row)*stride, rowbuf, stride);
-    }
-    delete[] rowbuf;
-  }
+  UnlockBuffer();
 
-  mBuffer->UnlockImagePixels(PR_FALSE);
-
-  mBuffer->SetDecodedRect(0, 0, mBuffer->GetWidth(), mBuffer->GetHeight());
-  mBuffer->SetNaturalWidth(mBuffer->GetWidth());
-  mBuffer->SetNaturalHeight(mBuffer->GetHeight());
   nsCOMPtr<nsIDeviceContext> ctx;
   mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
-  nsRect r(0, 0, mBuffer->GetWidth(), mBuffer->GetHeight());
-  mBuffer->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged, &r);
 
-  mRenderingContext->DrawImage(mBuffer, mRectTwips);
+  nsCOMPtr<nsIInterfaceRequestor> ireq(do_QueryInterface(mBuffer));
+  if (ireq) {
+    nsCOMPtr<nsIImage> img(do_GetInterface(ireq));
 
-  mBuffer->LockImagePixels(PR_FALSE);
+    if (!img->GetIsRowOrderTopToBottom()) {
+      // XXX we need to flip the image. This is silly. Blt should take
+      // care of it
+      int stride = img->GetLineStride();
+      int height = GetHeight();
+      PRUint8* bits = img->GetBits();
+      PRUint8* rowbuf = new PRUint8[stride];
+      for (int row=0; row<height/2; ++row) {
+        memcpy(rowbuf, bits+row*stride, stride);
+        memcpy(bits+row*stride, bits+(height-1-row)*stride, stride);
+        memcpy(bits+(height-1-row)*stride, rowbuf, stride);
+      }
+      delete[] rowbuf;
+    }
+    
+    img->SetDecodedRect(0,0,GetWidth(), GetHeight());
+    img->SetNaturalWidth(GetWidth());
+    img->SetNaturalHeight(GetHeight());
+    nsRect r(0, 0, GetWidth(), GetHeight());
+    img->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged, &r);
+  }
+  
+  mContainer->DecodingComplete();
+  mRenderingContext->DrawTile(mContainer, 0, 0, &mRectTwips);
 }
