@@ -555,8 +555,23 @@ NS_IMETHODIMP nsLocalFile::Remove(PRBool recursive)
   rv = IsDirectory(&isDir);
   if (NS_FAILED(rv))
     return rv;
+    
+  // Since FSRefs can only refer to extant file objects and we're about to become non-extant,
+  // re-specify ourselves as our parent FSRef + current leaf name
+
+  OSErr err;
+  FSCatalogInfo catalogInfo;
+  HFSUniStr255 leafName;
+  FSRef parentRef;
   
-  OSErr err;    
+  err = ::FSGetCatalogInfo(&fsRef, kFSCatInfoNone, &catalogInfo, &leafName, nsnull, &parentRef);
+  if (err != noErr)
+    return MacErrorMapper(err);
+  
+  mFSRef = parentRef;
+  mNonExtantNodes.push_back(nsString(Substring(leafName.unicode, leafName.unicode + leafName.length)));
+  mIdentityDirty = PR_TRUE;
+  
   if (recursive && isDir)
     err = ::FSDeleteContainer(&fsRef);
   else
