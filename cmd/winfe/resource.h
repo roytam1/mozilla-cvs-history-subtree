@@ -2015,11 +2015,9 @@
 #define IDD_NETINST_MULTIINST_WARN      2305
 #define IDD_UNAME_EMAIL_NO_WIZARD       2306
 #define IDC_PROFILENAME_TEXT            2400
-#define IDC_HEADER_HELP                 2500
-<<<<<<< resource.h
 #define IDC_PASTE_TEXT                  2401
 #define IDC_PASTE_IMAGE                 2402
-=======
+#define IDC_HEADER_HELP                 2500
 #define IDC_OFFLINE_SELECT_HELP         2655
 #define IDC_TEMP_OUTLINER_BOX           2656
 #define IDC_LDAP_SERVER                 2659
@@ -2033,7 +2031,6 @@
 #define IDC_LOGINNAME                   2668
 #define IDC_PASSWORD                    2669
 /*Mail and News has reserved resource ID's 10,0000 to 15,000. */
->>>>>>> 3.2.4.6
 #define FIRST_HISTORY_MENU_ID           16384
 #define LAST_HISTORY_MENU_ID            16600
 #define FIRST_HT_MENU_ID                16601
