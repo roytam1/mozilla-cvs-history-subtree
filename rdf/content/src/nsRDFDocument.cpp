@@ -1339,6 +1339,10 @@ RDFDocumentImpl::GetDataBase(nsIRDFDataBase*& result)
 }
 
 
+// XXX It may make sense to factor the implementation of this method
+// into the content model builder: maybe the content model builder can
+// do a more efficient implementation?
+
 NS_IMETHODIMP
 RDFDocumentImpl::CreateChildren(nsIRDFContent* element)
 {
@@ -1360,6 +1364,10 @@ RDFDocumentImpl::CreateChildren(nsIRDFContent* element)
         goto done;
 
     // Create a cursor that'll enumerate all of the outbound arcs
+    //
+    // XXX This is really horrendous and could use a good does of
+    // special casing. For example, we should treat RDF containers
+    // specially and _not_ enumerate each of the arcs.
     if (NS_FAILED(rv = mDB->ArcLabelsOut(resource, &properties)))
         goto done;
 
@@ -1585,9 +1593,13 @@ RDFDocumentImpl::OnUnassert(nsIRDFResource* subject,
         // it's not in the tree: we're done!
         return NS_OK;
 
-    // XXX unimplemented!
-    PR_ASSERT(0);
-
+    PRBool hasLiveKids;
+    if (NS_SUCCEEDED(element->ChildrenHaveBeenGenerated(hasLiveKids)) && hasLiveKids) {
+        // that is, if the children have _already_ been generated,
+        // manually remove this one. Otherwise, just ignore it: it'll
+        // never get generated anyway...
+        mBuilder->OnUnassert(element, predicate, object);
+    }
     return NS_OK;
 }
 
