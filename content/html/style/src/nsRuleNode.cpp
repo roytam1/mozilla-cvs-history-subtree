@@ -2147,6 +2147,10 @@ nsRuleNode::ComputeVisibilityData(nsStyleVisibility* aStartVisibility, const nsC
   // direction: enum, inherit
   if (eCSSUnit_Enumerated == aDisplayData.mDirection.GetUnit()) {
     visibility->mDirection = aDisplayData.mDirection.GetIntValue();
+#ifdef IBMBIDI    
+    if (NS_STYLE_DIRECTION_RTL == visibility->mDirection)
+      mPresContext->SetBidiEnabled(PR_TRUE);
+#endif // IBMBIDI
   }
   else if (eCSSUnit_Inherit == aDisplayData.mDirection.GetUnit()) {
     inherited = PR_TRUE;

@@ -588,9 +588,6 @@ struct nsStyleDisplay : public nsStyleStruct {
 
   PRInt32 CalcDifference(const nsStyleDisplay& aOther) const;
   
-#ifdef IBMBIDI
-  PRUint8 mExplicitDirection ;  // [reset] see nsStyleConsts.h NS_STYLE_DIRECTION_*
-#endif
   PRUint8 mDisplay;             // [reset] see nsStyleConsts.h NS_STYLE_DISPLAY_*
   nsString  mBinding;           // [reset] absolute url string
   PRUint8   mPosition;          // [reset] see nsStyleConsts.h

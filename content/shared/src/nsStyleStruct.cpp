@@ -838,16 +838,10 @@ nsStyleDisplay::nsStyleDisplay()
   mOverflow = NS_STYLE_OVERFLOW_VISIBLE;
   mClipFlags = NS_STYLE_CLIP_AUTO;
   mClip.SetRect(0,0,0,0);
-#ifdef IBMBIDI
-  mExplicitDirection = NS_STYLE_DIRECTION_INHERIT;
-#endif // IBMBIDI
 }
 
 nsStyleDisplay::nsStyleDisplay(const nsStyleDisplay& aSource)
 {
-#ifdef IBMBIDI
-  mExplicitDirection = aSource.mExplicitDirection;
-#endif // IBMBIDI
   mDisplay = aSource.mDisplay;
   mBinding = aSource.mBinding;
   mPosition = aSource.mPosition;

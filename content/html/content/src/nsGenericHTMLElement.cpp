@@ -2209,39 +2209,33 @@ nsGenericHTMLElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
   return NS_OK;
 }
 
-/*
 #ifdef IBMBIDI
 /**
  * Handle attributes on the BDO element
- 
+ */
 static void
 MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                     nsIMuutableStyleContext* aStyleContext,
-                     nsIPresContext* aPresContext)
+                     nsRuleData* aData)
 {
- // XXXdwh Don't forget about this function.
- // nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aStyleContext,
- //                                               aPresContext);
-  nsHTMLValue value;
-  // Get dir attribute
-  aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
-  if (eHTMLUnit_Enumerated == value.GetUnit() ) {
-    nsStyleText* text = (nsStyleText*)
-                        aStyleContext->GetMutableStyleData(eStyleStruct_Text);
-    text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_OVERRIDE;
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+  if (aData->mSID != eStyleStruct_Text || !aData->mTextData)
+    return;
+  if (aData->mTextData->mUnicodeBidi.GetUnit() == eCSSUnit_Null) {
+    // Get dir attribute
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
+    if (eHTMLUnit_Enumerated == value.GetUnit())
+      aData->mTextData->mUnicodeBidi = nsCSSValue(NS_STYLE_UNICODE_BIDI_OVERRIDE, eCSSUnit_Enumerated);
   }
 }
 #endif // IBMBIDI
-*/
 
 NS_IMETHODIMP
 nsGenericHTMLElement::GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const
 {
 #ifdef IBMBIDI
-  if (mNodeInfo->Equals(nsHTMLAtoms::bdo)) {
-    aMapRuleFunc = &MapCommonAttributesInto;
-    // XXXdwh get the BIDI function back in here! aMapFunc = &MapBdoAttributesInto;
-  }
+  if (mNodeInfo->Equals(nsHTMLAtoms::bdo))
+    aMapRuleFunc = &MapBdoAttributesInto;
   else
 #endif // IBMBIDI
   aMapRuleFunc = &MapCommonAttributesInto;

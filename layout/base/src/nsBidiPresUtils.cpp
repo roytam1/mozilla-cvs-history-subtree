@@ -366,14 +366,22 @@ nsBidiPresUtils::InitLogicalArray(nsIPresContext* aPresContext,
       // be ensured by nsBidiPresUtils::FormatUnicodeText (which would reverse "HEBREW"
       // due to inconsistency between its Bidi category (U_RIGHT_TO_LEFT) and the
       // parity of its EL (even).
-      if (NS_STYLE_DIRECTION_RTL == display->mExplicitDirection) {
-        rv = NS_NewDirectionalFrame(&directionalFrame, kRLE);
-      }
-      else if (NS_STYLE_DIRECTION_LTR == display->mExplicitDirection) {
-        rv = NS_NewDirectionalFrame(&directionalFrame, kLRE);
-      }
-      if (NS_SUCCEEDED(rv) ) {
-        mLogicalFrames.AppendElement(directionalFrame);
+      nsCOMPtr<nsIStyleContext> styleContext;
+      frame->GetStyleContext(getter_AddRefs(styleContext));
+      const nsStyleVisibility* vis;
+      frame->GetStyleData(eStyleStruct_Visibility, (const nsStyleStruct*&) vis);
+      PRUint32 bits;
+      styleContext->GetStyleBits(&bits);
+      if (bits & NS_STYLE_INHERIT_VISIBILITY) {
+        if (NS_STYLE_DIRECTION_RTL == vis->mDirection) {
+          rv = NS_NewDirectionalFrame(&directionalFrame, kRLE);
+        }
+        else if (NS_STYLE_DIRECTION_LTR == vis->mDirection) {
+          rv = NS_NewDirectionalFrame(&directionalFrame, kLRE);
+        }
+        if (NS_SUCCEEDED(rv) ) {
+          mLogicalFrames.AppendElement(directionalFrame);
+        }
       }
     } // if (aAddMarkers)
 
