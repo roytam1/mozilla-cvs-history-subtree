@@ -1094,6 +1094,15 @@ NS_IMETHODIMP nsDocShell::GetCanGoBack(PRBool* aCanGoBack)
       return webNav->GetCanGoBack(aCanGoBack);
     }
   }
+  else {
+    nsCOMPtr<nsIDocShellTreeItem> root;
+	GetSameTypeRootTreeItem(getter_AddRefs(root));
+	NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIWebNavigation> rootAsWebnav(do_QueryInterface(root));  
+    if (rootAsWebnav) {
+       rootAsWebnav->GetCanGoBack(aCanGoBack);
+ 	}
+  }
 #endif 
    return NS_OK;
 }
@@ -1124,6 +1133,15 @@ NS_IMETHODIMP nsDocShell::GetCanGoForward(PRBool* aCanGoForward)
     if (webNav) {
       return webNav->GetCanGoForward(aCanGoForward);
     }
+  }
+  else {
+	nsCOMPtr<nsIDocShellTreeItem> root;
+	GetSameTypeRootTreeItem(getter_AddRefs(root));
+	NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIWebNavigation> rootAsWebnav(do_QueryInterface(root));  
+    if (rootAsWebnav) {
+       rootAsWebnav->GetCanGoForward(aCanGoForward);
+ 	}
   }
 #endif 
    return NS_OK;
@@ -1164,6 +1182,15 @@ NS_IMETHODIMP nsDocShell::GoBack()
       return webNav->GoBack();
     }
   }
+  else {
+	  	nsCOMPtr<nsIDocShellTreeItem> root;
+	GetSameTypeRootTreeItem(getter_AddRefs(root));
+	NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIWebNavigation> rootAsWebnav(do_QueryInterface(root));  
+    if (rootAsWebnav) {
+       rootAsWebnav->GoBack();
+ 	}
+  }
 #endif 
    return NS_OK;
 }
@@ -1202,6 +1229,15 @@ NS_IMETHODIMP nsDocShell::GoForward()
       return webNav->GoForward();
     }
   }
+  else {
+	  	nsCOMPtr<nsIDocShellTreeItem> root;
+	GetSameTypeRootTreeItem(getter_AddRefs(root));
+	NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIWebNavigation> rootAsWebnav(do_QueryInterface(root));  
+    if (rootAsWebnav) {
+       rootAsWebnav->GoForward();
+ 	}
+  }
 #endif 
    return NS_OK;
 }
@@ -1209,7 +1245,21 @@ NS_IMETHODIMP nsDocShell::GoForward()
 NS_IMETHODIMP
 nsDocShell::GotoIndex(PRInt32 aIndex)
 {
-   
+  if (mSessionHistory) {
+      nsCOMPtr<nsIWebNavigation>webNav(do_QueryInterface(mSessionHistory));
+      if (webNav) {
+          return webNav->GotoIndex(aIndex);
+	  }
+  }
+  else {
+ 	nsCOMPtr<nsIDocShellTreeItem> root;
+	GetSameTypeRootTreeItem(getter_AddRefs(root));
+	NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIWebNavigation> rootAsWebnav(do_QueryInterface(root));  
+    if (rootAsWebnav) {
+       rootAsWebnav->GotoIndex(aIndex);
+ 	}
+  } 
 	return NS_OK;
 }
 
@@ -1401,9 +1451,19 @@ NS_IMETHODIMP nsDocShell::SetSessionHistory(nsISHistory* aSessionHistory)
 NS_IMETHODIMP nsDocShell::GetSessionHistory(nsISHistory** aSessionHistory)
 {
    NS_ENSURE_ARG_POINTER(aSessionHistory);
-
-   *aSessionHistory = mSessionHistory;
-   NS_IF_ADDREF(*aSessionHistory);
+   if (mSessionHistory) {
+     *aSessionHistory = mSessionHistory;
+     NS_IF_ADDREF(*aSessionHistory);
+   }
+   else {
+	nsCOMPtr<nsIDocShellTreeItem> root;
+	GetSameTypeRootTreeItem(getter_AddRefs(root));
+	NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIWebNavigation> rootAsWebnav(do_QueryInterface(root));  
+    if (rootAsWebnav) {
+       rootAsWebnav->GetSessionHistory(aSessionHistory);
+ 	}
+   }
    return NS_OK;
 }
 //*****************************************************************************
@@ -3372,12 +3432,11 @@ nsresult nsDocShell::AddToSessionHistory(nsIURI *aURI,
   // heirarchy, then AddChildSHEntry(...) will fail and the new entry
   // will be deleted when it loses scope...
   //
-  if (mSessionHistory) {
-	  if (mLoadType != nsIDocShellLoadInfo::loadNormalReplace)
-         rv = mSessionHistory->AddEntry(entry, shouldPersist);
-
-  } else {
-    rv = AddChildSHEntry(nsnull, entry, mChildOffset);
+  if (mLoadType != nsIDocShellLoadInfo::loadNormalReplace) {
+     if (mSessionHistory) 	  
+         rv = mSessionHistory->AddEntry(entry, shouldPersist); 
+	 else
+         rv = AddChildSHEntry(nsnull, entry, mChildOffset);
   }
 
   // Return the new SH entry...
