@@ -40,7 +40,6 @@
 #include "mkstream.h"
 #include "extcache.h"
 #include "mkmemcac.h"
-#include "cert.h" /* for CERT_DupCertificate() */
 #if !defined(B1M)
 #include "libimg.h"             /* Image Lib public API. */
 #endif /* ! B1M */
@@ -993,13 +992,8 @@ NET_MemCacheConverter (FO_Present_Types format_out,
 		goto malloc_failure;  /* skip memory cacheing */
 	  }
     
-	/* copy security info */
-	memory_copy->cache_obj.security_on             = URL_s->security_on;
-    StrAllocCopy(memory_copy->cache_obj.key_cipher,  URL_s->key_cipher);
-	memory_copy->cache_obj.key_size                = URL_s->key_size;
-	memory_copy->cache_obj.key_secret_size         = URL_s->key_secret_size;
-	if (URL_s->certificate)
-		memory_copy->cache_obj.certificate = CERT_DupCertificate(URL_s->certificate);
+    /* copy security info */
+    memory_copy->cache_obj.security_on             = URL_s->security_on;
 
 	/* build the stream object */
     stream = XP_NEW(NET_StreamClass);
@@ -1240,17 +1234,6 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 
 		/* copy security info */
 		URL_s->security_on         = found_cache_obj->cache_obj.security_on;
-		URL_s->key_size            = found_cache_obj->cache_obj.key_size;
-		URL_s->key_secret_size     = found_cache_obj->cache_obj.key_secret_size;
-		StrAllocCopy(URL_s->key_cipher, found_cache_obj->cache_obj.key_cipher);
-
-		/* remove any existing certificate */
-		CERT_DestroyCertificate(URL_s->certificate);
-		URL_s->certificate = NULL;
-		
-		if (found_cache_obj->cache_obj.certificate)
-		  URL_s->certificate =
-			CERT_DupCertificate(found_cache_obj->cache_obj.certificate);
 
 		net_cache_adding_object++; /* semaphore */
 		/* reorder objects so that the list is in last accessed order */

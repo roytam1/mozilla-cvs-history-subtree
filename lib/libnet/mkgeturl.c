@@ -4446,15 +4446,6 @@ net_OutputURLDocInfo(MWContext *ctxt, char *which, char **data, int32 *length)
 
 	if(sec_msg)
 	  {
-<<<<<<< mkgeturl.c
-=======
-		char *extstring;
-		extstring = SECNAV_MakeCertButtonString(URL_s->certificate);
-		if ( extstring ) {
-			StrAllocCat(sec_msg, extstring);
-			PR_Free(extstring);
-		}
->>>>>>> 3.1.10.5
 		ADD_CELL(XP_GetString(XP_CERTIFICATE_), sec_msg);
 		FREE(sec_msg);
 	  }
@@ -4621,11 +4612,7 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		NET_DisplayMemCacheInfoAsHTML(cur_entry);
 		return(-1);
 	  }
-<<<<<<< mkgeturl.c
-	else if(!strcasecomp(which, "logout"))
-=======
 	else if(!PL_strcasecmp(which, "image-cache"))
->>>>>>> 3.1.10.5
 	  {
 		NET_RemoveAllAuthorizations();
 		return(-1);
