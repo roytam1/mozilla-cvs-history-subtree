@@ -90,9 +90,15 @@ function saChangeDirectoryByURI(uri)
 {
 	var tree = frames["browser.selAddrResultPane"].document.getElementById('resultTree');
 	dump("tree = " + tree + "\n");
-	dump("tree.childNodes['cardTreeBody'].id = " + tree.childNodes['cardTreeBody'].getAttribute('id') + "\n");
-	tree.childNodes["cardTreeBody"].setAttribute('id', uri);
-	dump("tree.childNodes['cardTreeBody'].id = " + tree.childNodes['cardTreeBody'].getAttribute('id') + "\n");
+
+	var treechildrenList = tree.getElementsByTagName('treechildren');
+	if ( treechildrenList.length == 1 )
+	{
+		var body = treechildrenList[0];
+		dump("body.id = " + body.getAttribute('id') + "\n");
+		body.setAttribute('id', uri);
+		dump("body.id = " + body.getAttribute('id') + "\n");
+	}
 }
 
 
@@ -329,16 +335,18 @@ function AddAddressIntoBucket(doc, address)
 
 	var body = doc.getElementById("bucketBody");
 	
-	var newitem = doc.createElement('treeitem');
+	var item = doc.createElement('treeitem');
 	//newitem.setAttribute("rowID", num);
 	//newitem.setAttribute("rowName", name);
 
-	var elem = doc.createElement('treecell');
+	var cell = doc.createElement('treecell');
+	var row = doc.createElement('treerow');
 	var text = doc.createTextNode(address);
-	elem.appendChild(text);
-	newitem.appendChild(elem);
-
-	body.appendChild(newitem);
+	
+	cell.appendChild(text);
+	row.appendChild(cell);
+	item.appendChild(row);
+	body.appendChild(item);
 }
 
 function RemoveSelectedFromBucket()
