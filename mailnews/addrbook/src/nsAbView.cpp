@@ -1232,20 +1232,26 @@ NS_IMETHODIMP nsAbView::SwapFirstNameLastName()
           {
             nsXPIDLString dnLnFn;
             nsXPIDLString dnFnLn;
-            const PRUnichar *formatString[2];
+            const PRUnichar *nameString[2];
+            const PRUnichar *formatString;
+
+            // the format should stays the same before/after we swap the names
+            formatString = displayNameLastnamefirst ?
+                              NS_LITERAL_STRING("lastFirstFormat").get() :
+                              NS_LITERAL_STRING("firstLastFormat").get();
 
             // generate both ln/fn and fn/ln combination since we need both later
             // to check to see if the current display name was edited
             // note that fn/ln still hold the values before the swap
-            formatString[0] = ln.get();
-            formatString[1] = fn.get();
-            rv = bundle->FormatStringFromName(NS_LITERAL_STRING("lastFirstFormat").get(),
-                                              formatString, 2, getter_Copies(dnLnFn));
+            nameString[0] = ln.get();
+            nameString[1] = fn.get();
+            rv = bundle->FormatStringFromName(formatString,
+                                              nameString, 2, getter_Copies(dnLnFn));
             NS_ENSURE_SUCCESS(rv, rv);
-            formatString[0] = fn.get();
-            formatString[1] = ln.get();
-            rv = bundle->FormatStringFromName(NS_LITERAL_STRING("firstLastFormat").get(),
-                                              formatString, 2, getter_Copies(dnFnLn));
+            nameString[0] = fn.get();
+            nameString[1] = ln.get();
+            rv = bundle->FormatStringFromName(formatString,
+                                              nameString, 2, getter_Copies(dnFnLn));
             NS_ENSURE_SUCCESS(rv, rv);
 
             // get the current display name
