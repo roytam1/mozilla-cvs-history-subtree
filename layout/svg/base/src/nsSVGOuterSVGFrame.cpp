@@ -102,7 +102,7 @@ public:
                     nsIRenderingContext& aRenderingContext,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer,
-                    PRUint32 aFlags);
+                    PRUint32 aFlags = 0);
 
   // nsISVGFrame interface:
   NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
