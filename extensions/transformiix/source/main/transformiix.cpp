@@ -84,9 +84,10 @@ int main(int argc, char** argv) {
         cerr << copyright << endl;
         //-- print banner line
         PRUint32 fillSize = copyright.length() + 1;
-        String fill;
-        fill.setLength(fillSize, '-');
-        cerr << fill << endl << endl;
+        PRUint32 counter;
+        for (counter = 0; counter < fillSize; ++counter)
+            cerr << '-';
+        cerr << endl << endl;
     }
 
     if (options.get("h")) {
