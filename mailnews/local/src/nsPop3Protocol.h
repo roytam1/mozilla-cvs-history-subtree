@@ -175,10 +175,11 @@ enum Pop3StatesEnum {
 #define KEEP        'k'         /* If we want to keep this item on server. */
 #define DELETE_CHAR 'd'         /* If we want to delete this item. */
 #define TOO_BIG     'b'         /* item left on server because it was too big */
+#define FETCH_BODY  'f'         /* Fetch full body of a partial msg */
 
 typedef struct Pop3UidlEntry { /* information about this message */
     char* uidl;
-    char  status; // KEEP=='k', DELETE='d' TOO_BIG='b'
+    char  status; // KEEP=='k', DELETE='d' TOO_BIG='b' FETCH_BODY='f'
     PRInt32 dateReceived; // time message received, used for aging
 } Pop3UidlEntry;
 
@@ -191,6 +192,7 @@ typedef struct Pop3UidlHost {
 } Pop3UidlHost;
 
 typedef struct Pop3MsgInfo {
+    PRInt32 msgnum;
     PRInt32 size;
     char* uidl;
 } Pop3MsgInfo;
@@ -198,6 +200,8 @@ typedef struct Pop3MsgInfo {
 typedef struct _Pop3ConData {
     PRBool leave_on_server;     /* Whether we're supposed to leave messages
                                    on server. */
+    PRBool headers_only;        /* Whether to just fetch headers on initial
+                                   downloads. */
     PRInt32 size_limit;         /* Leave messages bigger than this on the
                                    server and only download a partial
                                    message. */
@@ -298,13 +302,12 @@ public:
   // for nsMsgLineBuffer
   virtual PRInt32 HandleLine(char *line, PRUint32 line_length);
 
-  static void MarkMsgDeletedInHashTable(PLHashTable *hashTable, const char *uidl, 
-                                  PRBool deleteChar, PRBool *changed);
+  static void MarkMsgInHashTable(PLHashTable *hashTable, const Pop3UidlEntry *uidl, 
+                                  PRBool *changed);
 
-  static nsresult MarkMsgDeletedForHost(const char *hostName, const char *userName,
+  static nsresult MarkMsgForHost(const char *hostName, const char *userName,
                                       nsIFileSpec *mailDirectory, 
-                                      nsCStringArray &UIDLArray, 
-                                      PRBool deleteMsgs);
+                                      nsVoidArray  &UIDLArray);
 private:
   nsCString m_ApopTimestamp;
   nsCOMPtr<nsIMsgStringService> mStringService;
@@ -340,6 +343,8 @@ private:
   void FreeMsgInfo();
   void Abort();
 
+  PRBool m_parsingMultiLineMessageId;
+
   PRBool m_useSecAuth;
   PRBool m_password_already_sent;
 
@@ -350,6 +355,7 @@ private:
   void BackupAuthFlags();
   void RestoreAuthFlags();
   PRInt32 m_origAuthFlags;
+  PRInt32 m_listpos;
 
   //////////////////////////////////////////////////////////////////////////////////////////
       // Begin Pop3 protocol state handlers

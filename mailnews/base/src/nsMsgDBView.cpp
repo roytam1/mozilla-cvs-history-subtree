@@ -715,7 +715,14 @@ nsresult nsMsgDBView::FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString)
   }
   else 
   {
-    aHdr->GetMessageSize(&msgSize);
+    PRUint32 flags = 0;
+
+    aHdr->GetFlags(&flags);
+    if (flags & MSG_FLAG_PARTIAL)
+      aHdr->GetUint32Property("onlineSize", &msgSize);
+
+    if (msgSize == 0)
+      aHdr->GetMessageSize(&msgSize);
     
     if(msgSize < 1024)
       msgSize = 1024;
@@ -1222,7 +1229,9 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   if (flags & MSG_FLAG_NEW)
     properties->AppendElement(kNewMsgAtom);
 
-  if (flags & MSG_FLAG_OFFLINE)
+  nsCOMPtr <nsIMsgLocalMailFolder> localFolder = do_QueryInterface(m_folder);
+
+  if ((flags & MSG_FLAG_OFFLINE) || (localFolder && !(flags & MSG_FLAG_PARTIAL)))
     properties->AppendElement(kOfflineMsgAtom);  
   
   if (flags & MSG_FLAG_ATTACHMENT) 

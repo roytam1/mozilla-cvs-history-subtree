@@ -2047,7 +2047,7 @@ nsMsgAccountManager::findIdentitiesForServer(nsISupports* element, void *aData)
   if (NS_FAILED(rv)) return PR_TRUE;
   nsXPIDLCString serverKey;
 	
-  NS_ASSERTION(thisServer, "thisServer is null");
+//  NS_ASSERTION(thisServer, "thisServer is null");
   NS_ASSERTION(entry, "entry is null");
   NS_ASSERTION(entry->server, "entry->server is null");
   // if this happens, bail.
