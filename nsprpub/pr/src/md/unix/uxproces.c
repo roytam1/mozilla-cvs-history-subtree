@@ -27,8 +27,6 @@
 #include <dlfcn.h>  /* For dlopen, dlsym, dlclose */
 #endif
 
-extern char **environ;
-
 /*
  * HP-UX 9 doesn't have the SA_RESTART flag.
  */
@@ -142,35 +140,11 @@ ForkAndExec(
     const PRProcessAttr *attr)
 {
     PRProcess *process;
-    int nEnv, idx;
-    char *const *childEnvp;
-    char **newEnvp = NULL;
 	
     process = PR_NEW(PRProcess);
     if (!process) {
         PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
         return NULL;
-    }
-
-    childEnvp = envp;
-    if (attr && attr->fdInheritBuffer) {
-        if (NULL == childEnvp) {
-            childEnvp = environ;
-        }
-        for (nEnv = 0; childEnvp[nEnv]; nEnv++) {
-        }
-        newEnvp = (char **) PR_MALLOC((nEnv + 2) * sizeof(char *));
-        if (NULL == newEnvp) {
-            PR_DELETE(process);
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            return NULL;
-        }
-        for (idx = 0; idx < nEnv; idx++) {
-            newEnvp[idx] = childEnvp[idx];
-        }
-        newEnvp[idx++] = attr->fdInheritBuffer;
-        newEnvp[idx] = NULL;
-        childEnvp = newEnvp;
     }
 
 #ifdef AIX
@@ -181,9 +155,6 @@ ForkAndExec(
     if ((pid_t) -1 == process->md.pid) {
         PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, errno);
         PR_DELETE(process);
-        if (newEnvp) {
-            PR_DELETE(newEnvp);
-        }
         return NULL;
     } else if (0 == process->md.pid) {  /* the child process */
         /*
@@ -222,18 +193,14 @@ ForkAndExec(
             }
         }
 
-        if (childEnvp) {
-            (void)execve(path, argv, childEnvp);
+        if (envp) {
+            (void)execve(path, argv, envp);
         } else {
             /* Inherit the environment of the parent. */
             (void)execv(path, argv);
         }
         /* Whoops! It returned. That's a bad sign. */
         _exit(1);
-    }
-
-    if (newEnvp) {
-        PR_DELETE(newEnvp);
     }
 
 #if defined(_PR_NATIVE_THREADS)

@@ -51,36 +51,21 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
             && (addr->raw.family != AF_UNIX)
 #endif
             && (PR_NETADDR_SIZE(addr) != addr_len)) {
-        /*
-         * The accept(), getsockname(), etc. calls on some platforms
-         * do not set the actual socket address length on return.
-         * In this case, we verifiy addr_len is still the value we
-         * passed in (i.e., sizeof(PRNetAddr)).
-         */
-#if defined(QNX)
-        if (sizeof(PRNetAddr) != addr_len) {
-            return PR_FALSE;
-        } else {
-            return PR_TRUE;
-        }
-#else
         return PR_FALSE;
-#endif
     }
     return PR_TRUE;
 }
 
 #endif /* DEBUG */
 
-static PRInt32 PR_CALLBACK SocketWritev(PRFileDesc *fd, const PRIOVec *iov,
-PRInt32 iov_size, PRIntervalTime timeout)
+static PRInt32 PR_CALLBACK SocketWritev(PRFileDesc *fd, PRIOVec *iov, PRInt32 iov_size,
+PRIntervalTime timeout)
 {
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 	int w = 0;
-	const PRIOVec *tmp_iov;
+	PRIOVec *tmp_iov = NULL;
 #define LOCAL_MAXIOV    8
 	PRIOVec local_iov[LOCAL_MAXIOV];
-	PRIOVec *iov_copy = NULL;
 	int tmp_out;
 	int index, iov_cnt;
 	int count=0, sz = 0;    /* 'count' is the return value. */
@@ -132,32 +117,29 @@ PRInt32 iov_size, PRIntervalTime timeout)
 				 * are few enough iov's.
 				 */
 				if (iov_size - index <= LOCAL_MAXIOV)
-					iov_copy = local_iov;
-				else if ((iov_copy = (PRIOVec *) PR_CALLOC((iov_size - index) *
-					sizeof *iov_copy)) == NULL) {
+					tmp_iov = local_iov;
+				else if ((tmp_iov = (PRIOVec *) PR_CALLOC((iov_size - index) *
+					sizeof *tmp_iov)) == NULL) {
 					PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
 					return -1;
 				}
-				tmp_iov = iov_copy;
 			}
 
-			PR_ASSERT(tmp_iov == iov_copy);
-
 			/* fill in the first partial read */
-			iov_copy[0].iov_base = &(((char *)iov[index].iov_base)[tmp_out]);
-			iov_copy[0].iov_len = iov[index].iov_len - tmp_out;
+			tmp_iov[0].iov_base = &(((char *)iov[index].iov_base)[tmp_out]);
+			tmp_iov[0].iov_len = iov[index].iov_len - tmp_out;
 			index++;
 
 			/* copy the remaining vectors */
 			for (iov_cnt=1; index<iov_size; iov_cnt++, index++) {
-				iov_copy[iov_cnt].iov_base = iov[index].iov_base;
-				iov_copy[iov_cnt].iov_len = iov[index].iov_len;
+				tmp_iov[iov_cnt].iov_base = iov[index].iov_base;
+				tmp_iov[iov_cnt].iov_len = iov[index].iov_len;
 			}
 		}
 	}
 
-	if (iov_copy != local_iov)
-		PR_DELETE(iov_copy);
+	if (tmp_iov != iov && tmp_iov != local_iov)
+		PR_DELETE(tmp_iov);
 	return count;
 }
 
@@ -424,11 +406,7 @@ static PRStatus PR_CALLBACK SocketBind(PRFileDesc *fd, const PRNetAddr *addr)
 
 #ifdef HAVE_SOCKET_REUSEADDR
 	if ( setsockopt (fd->secret->md.osfd, (int)SOL_SOCKET, SO_REUSEADDR, 
-#ifdef XP_OS2_VACPP
-	    (char *)&one, sizeof(one) ) < 0) {
-#else
 	    (const void *)&one, sizeof(one) ) < 0) {
-#endif
 		return PR_FAILURE;
 	}
 #endif
@@ -1089,11 +1067,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 	/* "Keep-alive" packets are specific to TCP. */
 	if (domain == AF_INET && type == SOCK_STREAM) {
 		if (setsockopt(osfd, (int)SOL_SOCKET, SO_KEEPALIVE,
-#ifdef XP_OS2_VACPP
-            (char *)&one, sizeof(one) ) < 0) {
-#else
 		    (const void *) &one, sizeof(one) ) < 0) {
-#endif
 			_PR_MD_CLOSE_SOCKET(osfd);
 			return 0;
 		}

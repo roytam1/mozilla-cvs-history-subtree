@@ -15,14 +15,6 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#if defined(XP_OS2)
-#define INCL_DOSEXCEPTIONS
-#define INCL_WIN
-#include <os2.h>
-#define PostMessage   WinPostMsg
-#define DefWindowProc WinDefWindowProc
-typedef MPARAM WPARAM,LPARAM;
-#endif
 #include "plevent.h"
 #include "prmem.h"
 #include "prcmon.h"
@@ -30,7 +22,7 @@ typedef MPARAM WPARAM,LPARAM;
 #if !defined(WIN32)
 #include <errno.h>
 #include <stddef.h>
-#if !defined(XP_OS2)
+#if !defined(OS2)
 #include <unistd.h>
 #endif
 #endif
@@ -60,7 +52,6 @@ struct PLEventQueue {
     PRPackedBool    nativeNotifier;
 	int notifyCount;
 #endif
-    PRBool      processingEvents;
 };
 
 #define PR_EVENT_PTR(_qp) \
@@ -72,16 +63,11 @@ static PRStatus    _pl_NativeNotify(PLEventQueue* self);
 static PRStatus    _pl_AcknowledgeNativeNotify(PLEventQueue* self);
 
 
-#if defined(_WIN32) || defined(WIN16) || defined(XP_OS2)
+#if defined(_WIN32) || defined(WIN16)
 PLEventQueue * _pr_main_event_queue;
-HWND _pr_eventReceiverWindow;
-#if defined(OS2)
-BOOL rc;
-ULONG _pr_PostEventMsgId;
-#else
 UINT _pr_PostEventMsgId;
+HWND _pr_eventReceiverWindow;
 static char *_pr_eventWindowClass = "NSPR:EventWindow";
-#endif
 #endif
 
 /*******************************************************************************
@@ -107,7 +93,6 @@ PL_CreateEventQueue(char* name, PRThread* handlerThread)
     self->name = name;
     self->monitor = mon;
     self->handlerThread = handlerThread;
-    self->processingEvents = PR_FALSE;
     PR_INIT_CLIST(&self->queue);
     err = _pl_SetupNativeNotifier(self);
     if (err) goto error;
@@ -364,18 +349,14 @@ PL_ProcessPendingEvents(PLEventQueue* self)
     if (self == NULL)
     return;
 
-  if (PR_FALSE != self->processingEvents) return;
-
-    self->processingEvents = PR_TRUE;
     while (PR_TRUE) {
     PLEvent* event = PL_GetEvent(self);
-        if (event == NULL) break;
+        if (event == NULL) return;
 
     PR_LOG_BEGIN(event_lm, PR_LOG_DEBUG, ("$$$ processing event"));
     PL_HandleEvent(event);
     PR_LOG_END(event_lm, PR_LOG_DEBUG, ("$$$ done processing event"));
     }
-    self->processingEvents = PR_FALSE;
 }
 
 /*******************************************************************************
@@ -556,32 +537,23 @@ _pl_NativeNotify(PLEventQueue* self)
 	self->notifyCount++;
     return (count == 1) ? PR_SUCCESS : PR_FAILURE;
 
-#elif defined(XP_PC)
+#elif defined(XP_PC) && ( defined(WINNT) || defined(WIN95) || defined(WIN16))
     /*
     ** Post a message to the NSPR window on the main thread requesting 
     ** it to process the pending events. This is only necessary for the
     ** main event queue, since the main thread is waiting for OS events.
     */
-#ifndef XP_OS2
     if (self == _pr_main_event_queue) {
        PostMessage( _pr_eventReceiverWindow, _pr_PostEventMsgId,
                       (WPARAM)0, (LPARAM)self);
     }
     return PR_SUCCESS;
-#else
-    if (self == _pr_main_event_queue) {
-       rc = WinPostMsg(_pr_eventReceiverWindow, _pr_PostEventMsgId,
-                       0, MPFROMP(self));
-    }
-    return (rc == TRUE) ? PR_SUCCESS : PR_FAILURE;
-#endif
-#else
-#if defined(XP_MAC)
+
+#elif defined(XP_MAC)
 
 #pragma unused (self)
     return PR_SUCCESS;    /* XXX can fail? */
 
-#endif
 #endif
 }
 
@@ -678,7 +650,7 @@ BOOL WINAPI DllMain (HINSTANCE hDLL, DWORD dwReason, LPVOID lpReserved)
 #endif
 
 
-#if defined(WIN16) || defined(_WIN32) || defined(XP_OS2)
+#if defined(WIN16) || defined(_WIN32)
 PR_IMPLEMENT(PLEventQueue *)
 PL_GetMainEventQueue()
 {
@@ -686,16 +658,12 @@ PL_GetMainEventQueue()
 
    return _pr_main_event_queue;
 }
-#ifdef XP_OS2
-MRESULT EXPENTRY
-_md_EventReceiverProc(HWND hwnd, ULONG uMsg, MPARAM wParam, MPARAM lParam)
-#else
+
 LRESULT CALLBACK 
 #if defined(WIN16)
 __loadds
 #endif
 _md_EventReceiverProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-#endif
 {
     if (_pr_PostEventMsgId == uMsg )
     {
@@ -705,132 +673,59 @@ _md_EventReceiverProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         if (queue == PL_GetMainEventQueue()) 
         {
             PR_ProcessPendingEvents(queue);
-#ifdef XP_OS2
-            return MRFROMLONG(TRUE);
-#else
             return TRUE;
-#endif
         }
     } 
-#ifdef XP_OS2
-    return WinDefWindowProc(hwnd, uMsg, wParam, lParam);
-#else
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
-#endif
 }
-
-
-static PRBool   isInitialized;
-static PRCallOnceType once;
-static PRLock   *initLock;
-
-/*
-** InitWinEventLib() -- Create the Windows initialization lock
-**
-*/
-static PRStatus InitWinEventLib( void )
-{
-    PR_ASSERT( initLock == NULL );
-    
-    initLock = PR_NewLock();
-    if ( NULL == initLock )
-        return PR_FAILURE;
-    else
-        return PR_SUCCESS;
-} /* end InitWinEventLib() */
-
 
 PR_IMPLEMENT(void)
 PL_InitializeEventsLib(char *name)
 {
-#ifdef XP_OS2
-    PSZ _pr_eventWindowClass;
+    WNDCLASS wc;
 
     _pr_main_event_queue = PL_CreateEventQueue(name, PR_GetCurrentThread());
 
-    WinRegisterClass( WinQueryAnchorBlock( HWND_DESKTOP),
-                      _pr_eventWindowClass,
-                      _md_EventReceiverProc,
-                      0, 0);
+    /* Register the windows message for NSPR Event notification */
+    _pr_PostEventMsgId = RegisterWindowMessage("NSPR_PostEvent");
 
-    _pr_eventReceiverWindow = WinCreateWindow( HWND_DESKTOP,
-                                               _pr_eventWindowClass,
-                                               "", 0,
-                                               0, 0, 0, 0,
-                                               HWND_DESKTOP,
-                                               HWND_TOP,
-                                               0,
-                                               NULL,
-                                               NULL);
-
-    _pr_PostEventMsgId = WinAddAtom(WinQuerySystemAtomTable(),
-                                    "NSPR_PostEvent");
-#else
-    WNDCLASS wc;
-    
-    /*
-    ** If this is the first call to PL_InitializeEventsLib(),
-    ** make the call to InitWinEventLib() to create the initLock.
-    **
-    ** Then lock the initializer lock to insure that
-    ** we have exclusive control over the initialization sequence.
-    **
-    */
-    PR_CallOnce( &once, InitWinEventLib );
-
-    PR_Lock( initLock );
-    if ( isInitialized == PR_FALSE )
-    {
-        isInitialized = PR_TRUE;
-
-        _pr_main_event_queue = PL_CreateEventQueue(name, PR_GetCurrentThread());
-
-        /* Register the windows message for NSPR Event notification */
-        _pr_PostEventMsgId = RegisterWindowMessage("NSPR_PostEvent");
-
-        /* Register the class for the event receiver window */
-        if (!GetClassInfo(_pr_hInstance, _pr_eventWindowClass, &wc)) {
-            wc.style         = 0;
-            wc.lpfnWndProc   = _md_EventReceiverProc;
-            wc.cbClsExtra    = 0;
-            wc.cbWndExtra    = 0;
-            wc.hInstance     = _pr_hInstance;
-            wc.hIcon         = NULL;
-            wc.hCursor       = NULL;
-            wc.hbrBackground = (HBRUSH) NULL;
-            wc.lpszMenuName  = (LPCSTR) NULL;
-            wc.lpszClassName = _pr_eventWindowClass;
-            RegisterClass(&wc);
-            }
+    /* Register the class for the event receiver window */
+    if (!GetClassInfo(_pr_hInstance, _pr_eventWindowClass, &wc)) {
+        wc.style         = 0;
+        wc.lpfnWndProc   = _md_EventReceiverProc;
+        wc.cbClsExtra    = 0;
+        wc.cbWndExtra    = 0;
+        wc.hInstance     = _pr_hInstance;
+        wc.hIcon         = NULL;
+        wc.hCursor       = NULL;
+        wc.hbrBackground = (HBRUSH) NULL;
+        wc.lpszMenuName  = (LPCSTR) NULL;
+        wc.lpszClassName = _pr_eventWindowClass;
+        RegisterClass(&wc);
+        }
         
-        /* Create the event receiver window */
-        _pr_eventReceiverWindow = CreateWindow(_pr_eventWindowClass,
-                                            "NSPR:EventReceiver",
-                                                0, 0, 0, 10, 10,
-                                                NULL, NULL, _pr_hInstance,
-                                                NULL);
-        PR_ASSERT(_pr_eventReceiverWindow);
-
-        PR_LOG(event_lm, PR_LOG_DEBUG,("PL_InitializeeventsLib(). Done!\n"));
-    }
-    PR_Unlock( initLock );
-#endif
-    return;
+    /* Create the event receiver window */
+    _pr_eventReceiverWindow = CreateWindow(_pr_eventWindowClass,
+                                           "NSPR:EventReceiver",
+                                            0, 0, 0, 10, 10,
+                                            NULL, NULL, _pr_hInstance,
+                                            NULL);
+    PR_ASSERT(_pr_eventReceiverWindow);
 }
 #endif
 
-#if defined(_WIN32) || defined(WIN16) || defined(XP_OS2)
+#if defined(_WIN32) || defined(WIN16)
 PR_IMPLEMENT(HWND)
 PR_GetEventReceiverWindow()
 {
-    if(_pr_eventReceiverWindow != 0)
+    if(_pr_eventReceiverWindow != NULL)
     {
 	return _pr_eventReceiverWindow;
     }
 
-    return 0;
+    return NULL;
 
 }
 #endif
 
-/* --- end plevent.c --- */
+/******************************************************************************/

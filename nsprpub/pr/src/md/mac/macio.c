@@ -327,68 +327,64 @@ ErrorExit:
 }
 
 /* File I/O functions called by PR I/O routines */
-PRInt32 _MD_Open(const char *path, PRIntn flags, int mode)
+PRInt32 _MD_Open(const char *path, PRIntn oflag, int mode)
 {
-// Macintosh doesn't really have mode bits, just drop them
+// Macintosh doesn¹t really have mode bits, just drop them
 #pragma unused (mode)
 
 	OSErr 				err;
- 	HParamBlockRec 		hpb;
- 	ParamBlockRec 		pb;
+ 	HParamBlockRec 		pb;
 	char	 			*macFileName = NULL;
 	Str255				pascalName;
 	PRInt8 				perm;
+	PRInt32				flags = oflag;
 
+	if (flags & PR_RDWR) {
+		oflag = O_RDWR;
+	} else if (flags & PR_WRONLY) {
+		oflag = O_WRONLY;
+	} else {
+		oflag = O_RDONLY;
+	}
+
+	if (flags & PR_CREATE_FILE) {
+		oflag |= O_CREAT ;
+	}
+	
     err = ConvertUnixPathToMacPath(path, &macFileName);
 	
 	if (err != noErr)
 		goto ErrorExit;
 
-	hpb.ioParam.ioCompletion	= NULL;
+	pb.ioParam.ioCompletion		= NULL;
 	PStrFromCStr(macFileName, pascalName);
 	PR_DELETE(macFileName);
-	hpb.ioParam.ioNamePtr 		= pascalName;
-	hpb.ioParam.ioVRefNum 		= 0;
-	hpb.ioParam.ioVersNum 		= 0;
+	pb.ioParam.ioNamePtr 		= pascalName;
+	pb.ioParam.ioVRefNum 		= 0;
+	pb.ioParam.ioVersNum 		= 0;
 
-	if (flags & PR_RDWR)
+open:
+	perm =  oflag & 3;
+	if (perm == O_RDWR)
 		perm = fsRdWrPerm;
-	else if (flags & PR_WRONLY)
+	else if (perm == O_WRONLY)
 		perm = fsWrPerm;
 	else
 		perm = fsRdPerm;	
-	hpb.ioParam.ioPermssn 		= perm;
+	pb.ioParam.ioPermssn 		= perm;
 
-	hpb.ioParam.ioMisc			= NULL;
+	pb.ioParam.ioMisc 			= NULL;
 	
-open:
-	err = PBHOpenSync(&hpb);
-	if ((err == fnfErr) && (flags & PR_CREATE_FILE)) {
-		err = PBHCreateSync(&hpb);
-		if (err == noErr)
-			goto open;
-	}
-	if (err != noErr)
+	err = PBHOpenSync(&pb);
+	if (err == noErr)
+		return pb.ioParam.ioRefNum;
+	else if ((err != fnfErr) || ((oflag & O_CREAT) == 0))
 		goto ErrorExit;
-
-	if (flags & PR_TRUNCATE) {
-		pb.ioParam.ioCompletion = NULL;
-		pb.ioParam.ioRefNum = hpb.ioParam.ioRefNum;
-		pb.ioParam.ioMisc = NULL;
-		err = PBSetEOFSync(&pb);
-		if (err != noErr)
-			goto ErrorExit;
-	} else if (flags & PR_APPEND) {
-		pb.ioParam.ioCompletion = NULL;
-		pb.ioParam.ioRefNum = hpb.ioParam.ioRefNum;
-		pb.ioParam.ioPosMode = fsFromLEOF;
-		pb.ioParam.ioPosOffset = 0;
-		err = PBSetFPosSync(&pb);
-		if (err != noErr)
-			goto ErrorExit;
-	}
-	return hpb.ioParam.ioRefNum;
 		
+	err = PBHCreateSync(&pb);
+	if (err == noErr)
+		goto open;
+
 ErrorExit:
 	_PR_MD_CURRENT_THREAD()->md.osErrCode = err;
 	_MD_SetError(err);

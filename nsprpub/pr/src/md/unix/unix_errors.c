@@ -1378,11 +1378,6 @@ void _MD_unix_map_open_error(int err)
 		case ETIMEDOUT:
 			PR_SetError(PR_REMOTE_FILE_ERROR, err);
 			break;
-#ifdef EOVERFLOW
-		case EOVERFLOW:
-			PR_SetError(PR_FILE_TOO_BIG_ERROR, err);
-			break;
-#endif
 		case EROFS:
 			PR_SetError(PR_READ_ONLY_FILESYSTEM_ERROR, err);
 			break;
@@ -1455,7 +1450,7 @@ void _MD_unix_map_select_error(int err)
     }
 }
 
-#if defined(_PR_POLL_AVAILABLE) || defined(_PR_NEED_FAKE_POLL)
+#ifdef _PR_POLL_AVAILABLE
 void _MD_unix_map_poll_error(int err)
 {
     PRErrorCode prerror;
@@ -1488,7 +1483,7 @@ void _MD_unix_map_poll_revents_error(int err)
 	else
 		PR_SetError(PR_UNKNOWN_ERROR, err);
 }
-#endif /* _PR_POLL_AVAILABLE || _PR_NEED_FAKE_POLL */
+#endif /* _PR_POLL_AVAILABLE */
 
 
 void _MD_unix_map_flock_error(int err)

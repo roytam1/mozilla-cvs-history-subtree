@@ -60,9 +60,6 @@ endif
 ifeq ($(OS_ARCH),UNIX_System_V)
 OS_ARCH		:= NEC
 endif
-ifeq ($(OS_ARCH),QNX)
-OS_RELEASE	:= $(shell uname -v | sed 's/^\([0-9]\)\([0-9]*\)$$/\1.\2/')
-endif
 ifeq ($(OS_ARCH),SCO_SV)
 OS_ARCH		:= SCOOS
 OS_RELEASE	:= 5.0
@@ -71,9 +68,6 @@ ifeq ($(OS_ARCH),SINIX-N)
 OS_ARCH		:= SINIX
 endif
 ifeq ($(OS_ARCH),SINIX-Y)
-OS_ARCH		:= SINIX
-endif
-ifeq ($(OS_ARCH),SINIX-Z)
 OS_ARCH		:= SINIX
 endif
 # SINIX changes name to ReliantUNIX with 5.43
@@ -105,15 +99,6 @@ ifeq ($(OS_ARCH)$(OS_RELEASE),OSF1V4.0)
 	ifeq ($(OS_VERSION),878)
 		OS_RELEASE := V4.0D
 	endif
-endif
-
-#
-# Handle uname variants for OS/2.
-#
-
-ifeq ($(OS_ARCH),OS_2)
-	OS_ARCH		:= OS2
-	OS_RELEASE	:= 4.0
 endif
 
 #######################################################################
@@ -150,7 +135,7 @@ ifeq ($(OS_ARCH),Windows_95)
 	OS_ARCH   := Windows_NT
 	OS_TARGET := WIN95
 endif
-ifeq ($(OS_ARCH),OS2)
+ifeq ($(OS_ARCH), OS2)
 	OS_ARCH   := WINNT
 	OS_TARGET := OS2
 endif
@@ -160,11 +145,7 @@ endif
 #
 
 ifeq ($(OS_ARCH), WINNT)
-	ifneq ($(subst /,_,$(shell uname -s)),OS_2)
-		CPU_ARCH := $(shell uname -p)
-	else
-		CPU_ARCH := $(shell uname -m)
-	endif
+	CPU_ARCH := $(shell uname -p)
 	ifeq ($(CPU_ARCH),I386)
 		CPU_ARCH = x86
 	endif

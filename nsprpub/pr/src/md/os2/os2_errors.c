@@ -362,11 +362,9 @@ void _MD_os2_map_read_error(PRInt32 err)
 		case ENOTSOCK:
 			PR_SetError(PR_NOT_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		default:
 			PR_SetError(PR_UNKNOWN_ERROR, err);
 			break;
@@ -413,11 +411,9 @@ void _MD_os2_map_transmitfile_error(PRInt32 err)
 		case ENOTSOCK:
 			PR_SetError(PR_NOT_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		default:
 			PR_SetError(PR_UNKNOWN_ERROR, err);
 			break;
@@ -475,11 +471,9 @@ void _MD_os2_map_write_error(PRInt32 err)
 		case EISCONN:
 			PR_SetError(PR_IS_CONNECTED_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		default:
 			PR_SetError(PR_UNKNOWN_ERROR, err);
 			break;
@@ -574,11 +568,9 @@ void _MD_os2_map_recv_error(PRInt32 err)
 		case ENOTSOCK:
 			PR_SetError(PR_NOT_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ERROR_NETNAME_DELETED:
 			PR_SetError(PR_CONNECT_RESET_ERROR, err);
 			break;
@@ -600,11 +592,9 @@ void _MD_os2_map_recvfrom_error(PRInt32 err)
 		case ENOTSOCK:
 			PR_SetError(PR_NOT_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ERROR_NETNAME_DELETED:
 			PR_SetError(PR_CONNECT_RESET_ERROR, err);
 			break;
@@ -639,11 +629,9 @@ void _MD_os2_map_send_error(PRInt32 err)
 		case EISCONN:
 			PR_SetError(PR_IS_CONNECTED_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ERROR_NETNAME_DELETED:
 			PR_SetError(PR_CONNECT_RESET_ERROR, err);
 			break;
@@ -678,11 +666,9 @@ void _MD_os2_map_sendto_error(PRInt32 err)
 		case EISCONN:
 			PR_SetError(PR_IS_CONNECTED_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ERROR_NETNAME_DELETED:
 			PR_SetError(PR_CONNECT_RESET_ERROR, err);
 			break;
@@ -707,11 +693,9 @@ void _MD_os2_map_accept_error(PRInt32 err)
 		case EOPNOTSUPP:
 			PR_SetError(PR_NOT_TCP_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case EMFILE:
 			PR_SetError(PR_PROC_DESC_TABLE_FULL_ERROR, err);
 			break;
@@ -749,9 +733,7 @@ void _MD_os2_map_connect_error(PRInt32 err)
        case EWOULDBLOCK:
 			PR_SetError(PR_WOULD_BLOCK_ERROR, err);
 			break;
-        case EINPROGRESS:
-			PR_SetError(PR_IN_PROGRESS_ERROR, err);
-			break;
+      case EINPROGRESS:
 		case EALREADY:
 		case EINVAL:
 			PR_SetError(PR_ALREADY_INITIATED_ERROR, err);
@@ -783,11 +765,9 @@ void _MD_os2_map_connect_error(PRInt32 err)
       case EISCONN:
          PR_SetError(PR_IS_CONNECTED_ERROR, err);
          break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		default:
 			PR_SetError(PR_UNKNOWN_ERROR, err);
 			break;
@@ -803,11 +783,9 @@ void _MD_os2_map_bind_error(PRInt32 err)
 		case ENOTSOCK:
 			PR_SetError(PR_NOT_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case EADDRNOTAVAIL:
 			PR_SetError(PR_ADDRESS_NOT_AVAILABLE_ERROR, err);
 			break;
@@ -871,11 +849,9 @@ void _MD_os2_map_getsockname_error(PRInt32 err)
 		case ENOTSOCK:
 			PR_SetError(PR_NOT_SOCKET_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ENOBUFS:
 			PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, err);
 			break;
@@ -898,11 +874,9 @@ void _MD_os2_map_getpeername_error(PRInt32 err)
 		case ENOTCONN:
 			PR_SetError(PR_NOT_CONNECTED_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ENOBUFS:
 			PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, err);
 			break;
@@ -924,11 +898,9 @@ void _MD_os2_map_getsockopt_error(PRInt32 err)
 		case ENOPROTOOPT:
 			PR_SetError(PR_INVALID_ARGUMENT_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case EINVAL:
 			PR_SetError(PR_BUFFER_OVERFLOW_ERROR, err);
 			break;
@@ -950,11 +922,9 @@ void _MD_os2_map_setsockopt_error(PRInt32 err)
 		case ENOPROTOOPT:
 			PR_SetError(PR_INVALID_ARGUMENT_ERROR, err);
 			break;
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case EINVAL:
 			PR_SetError(PR_BUFFER_OVERFLOW_ERROR, err);
 			break;
@@ -1020,11 +990,9 @@ void _MD_os2_map_open_error(PRInt32 err)
 void _MD_os2_map_gethostname_error(PRInt32 err)
 {
     switch (err) {
-#ifdef SOCEFAULT
 		case SOCEFAULT:
 			PR_SetError(PR_ACCESS_FAULT_ERROR, err);
 			break;
-#endif
 		case ENETDOWN:
 		case EINPROGRESS:
 		default:
@@ -1048,11 +1016,9 @@ void _MD_os2_map_select_error(PRInt32 err)
         case EINVAL:
             prerror = PR_INVALID_ARGUMENT_ERROR;
             break;
-#ifdef SOCEFAULT
         case SOCEFAULT:
             prerror = PR_ACCESS_FAULT_ERROR;
             break;
-#endif
         default:
             prerror = PR_UNKNOWN_ERROR;
     }

@@ -22,7 +22,7 @@
 #include <fcntl.h>
 
 #ifdef XP_UNIX
-#if defined(AIX) || defined(QNX)
+#ifdef AIX
 /* To pick up sysconf */
 #include <unistd.h>
 #else
@@ -249,13 +249,13 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
     PRInt32 osfd;
     PRFileDesc *fd = 0;
 
-    if (!_pr_initialized) _PR_ImplicitInitialization();
+	if (!_pr_initialized) _PR_ImplicitInitialization();
 
     /* Map pr open flags and mode to os specific flags */
 
     osfd = _PR_MD_OPEN(name, flags, mode);
     if (osfd != -1) {
-        fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
+	fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
         if (!fd) {
             (void) _PR_MD_CLOSE_FILE(osfd);
         }
@@ -265,7 +265,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
 
 PRInt32 PR_GetSysfdTableMax(void)
 {
-#if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)
+#if defined(XP_UNIX) && !defined(AIX)
     struct rlimit rlim;
 
     if ( getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
@@ -274,7 +274,7 @@ PRInt32 PR_GetSysfdTableMax(void)
     }
 
     return rlim.rlim_max;
-#elif defined(AIX) || defined(NEXTSTEP) || defined(QNX)
+#elif defined(AIX)
     return sysconf(_SC_OPEN_MAX);
 #elif defined(WIN32) || defined(OS2)
     /*
@@ -294,7 +294,7 @@ PRInt32 PR_GetSysfdTableMax(void)
 
 PRInt32 PR_SetSysfdTableSize(int table_size)
 {
-#if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)
+#if defined(XP_UNIX) && !defined(AIX)
     struct rlimit rlim;
     PRInt32 tableMax = PR_GetSysfdTableMax();
 
@@ -318,8 +318,7 @@ PRInt32 PR_SetSysfdTableSize(int table_size)
     }
 
     return rlim.rlim_cur;
-#elif defined(AIX) || defined(NEXTSTEP) || defined(QNX) \
-        || defined(WIN32) || defined(WIN16) || defined(OS2)
+#elif defined(AIX) || defined(WIN32) || defined(WIN16) || defined(OS2)
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return -1;
 #elif defined (XP_MAC)

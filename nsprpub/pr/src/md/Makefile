@@ -21,14 +21,18 @@ MOD_DEPTH = ../../..
 
 include $(MOD_DEPTH)/config/config.mk
 
-ifeq ($(OS_ARCH),WINNT)
-  ifeq ($(OS_TARGET),OS2)
-    DIRS = os2
+ifeq ($(OS_ARCH),MAC)
+DIRS = mac
+else 
+  ifeq ($(OS_ARCH),WINNT)
+    ifeq ($(OS_TARGET),OS2)
+      DIRS = os2
+    else
+      DIRS = windows
+    endif
   else
-    DIRS = windows
+    DIRS = unix
   endif
-else
-  DIRS = unix
 endif
 
 # Disable optimization of the nspr on SunOS4.1.3

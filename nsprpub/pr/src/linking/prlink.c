@@ -32,7 +32,7 @@
 #include <dlfcn.h>
 #elif defined(USE_HPSHL)
 #include <dl.h>
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
 #include <mach-o/dyld.h>
 #endif
 
@@ -45,7 +45,7 @@
 /*
  * On these platforms, symbols have a leading '_'.
  */
-#if defined(SUNOS4) || defined(RHAPSODY) || defined(NEXTSTEP) || defined(WIN16)
+#if defined(SUNOS4) || defined(RHAPSODY) || defined(WIN16)
 #define NEED_LEADING_UNDERSCORE
 #endif
 
@@ -71,7 +71,7 @@ struct PRLibrary {
 #ifdef XP_UNIX
 #if defined(USE_HPSHL)
     shl_t                       dlh;
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     NSModule                    dlh;
 #else
     void*                       dlh;
@@ -170,7 +170,7 @@ void _PR_InitLinker(void)
 #elif defined(USE_HPSHL)
     h = NULL;
     /* don't abort with this NULL */
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     h = NULL; /* XXXX  toshok */
 #else
 #error no dll strategy
@@ -284,7 +284,7 @@ PR_GetLibraryPath()
 #endif
 
 #ifdef XP_UNIX
-#if defined USE_DLFCN || defined USE_MACH_DYLD
+#if defined USE_DLFCN || defined RHAPSODY
     {
     char *home;
     char *local;
@@ -447,9 +447,11 @@ PR_LoadLibrary(const char *name)
 
 #ifdef XP_OS2  /* Why isn't all this stuff in MD code?! */
     {
+        NODL_PROC *pfn;
         HMODULE h;
         UCHAR pszError[_MAX_PATH];
         ULONG ulRc = NO_ERROR;
+        int first_try = 1;
 
         retry:
               ulRc = DosLoadModule(pszError, _MAX_PATH, (PSZ) name, &h);
@@ -534,17 +536,7 @@ PR_LoadLibrary(const char *name)
         
         PStrFromCStr(name, pName);
     
-        /*
-         * beard: NSGetSharedLibrary was so broken that I just decided to
-         * use GetSharedLibrary for now.  This will need to change for
-         * plugins, but those should go in the Extensions folder anyhow.
-         */
-#if 0
         err = NSGetSharedLibrary(pName, &connectionID, &main);
-#else
-        err = GetSharedLibrary(pName, kCompiledCFragArch, kReferenceCFrag,
-                &connectionID, &main, errName);
-#endif
         if (err != noErr)
             goto unlock;    
         
@@ -649,7 +641,7 @@ PR_LoadLibrary(const char *name)
     void *h = dlopen(name, RTLD_LAZY);
 #elif defined(USE_HPSHL)
     shl_t h = shl_load(name, BIND_DEFERRED | DYNAMIC_PATH, 0L);
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     NSObjectFileImage ofi;
     NSModule h = NULL;
     if (NSCreateObjectFileImageFromFile(name, &ofi)
@@ -722,7 +714,7 @@ PR_UnloadLibrary(PRLibrary *lib)
     result = dlclose(lib->dlh);
 #elif defined(USE_HPSHL)
     result = shl_unload(lib->dlh);
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     result = NSUnLinkModule(lib->dlh, FALSE);
 #else
 #error Configuration error
@@ -808,7 +800,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     }
     
 #ifdef XP_OS2
-    DosQueryProcAddr(lm->dlh, 0, (PSZ) name, (PFN *) &f);
+    DosQueryProcAddr(lm->dlh, 0, name, (PFN *) &f);
 #endif  /* XP_OS2 */
 
 #if defined(WIN32) || defined(WIN16)
@@ -835,7 +827,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     if (shl_findsym(&lm->dlh, name, TYPE_PROCEDURE, &f) == -1) {
         f = NULL;
     }
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     f = NSAddressOfSymbol(NSLookupAndBindSymbol(name));
 #endif
 #endif /* HAVE_DLL */

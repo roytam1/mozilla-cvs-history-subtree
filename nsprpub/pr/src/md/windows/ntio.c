@@ -83,7 +83,7 @@ static int _nt_use_async = 1;
 PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr_in *addr, int *len, PRIntervalTime);
 PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
 PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
-PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime);
+PRInt32 _nt_nonblock_writev(PRFileDesc *fd, PRIOVec *iov, int size, PRIntervalTime);
 PRInt32 _nt_nonblock_sendto(PRFileDesc *, const char *, int, const struct sockaddr *, int, PRIntervalTime);
 PRInt32 _nt_nonblock_recvfrom(PRFileDesc *, char *, int, struct sockaddr *, int *, PRIntervalTime);
 
@@ -1615,7 +1615,7 @@ _PR_MD_RECVFROM(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
 
 /* XXXMB - for now this is a sockets call only */
 PRInt32
-_PR_MD_WRITEV(PRFileDesc *fd, const PRIOVec *iov, PRInt32 iov_size, PRIntervalTime timeout)
+_PR_MD_WRITEV(PRFileDesc *fd, PRIOVec *iov, PRInt32 iov_size, PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
     int index;
@@ -1779,7 +1779,7 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode)
 
         if (osflags & PR_CREATE_FILE)
             flags = (0 != (osflags & PR_TRUNCATE)) ? CREATE_ALWAYS : OPEN_ALWAYS;
-        else if (osflags & PR_TRUNCATE) flags = TRUNCATE_EXISTING;
+        else if (osflags & PR_TRUNCATE) flags = CREATE_ALWAYS;
         else flags = OPEN_EXISTING;
         
         flag6 |= FILE_FLAG_OVERLAPPED;
@@ -1818,17 +1818,12 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode)
             access |= GENERIC_READ;
         if (osflags & PR_WRONLY || osflags & PR_RDWR)
             access |= GENERIC_WRITE;
-        if (osflags & PR_CREATE_FILE) {
-            if (osflags & PR_TRUNCATE)
-                flags = CREATE_ALWAYS;
-            else
-                flags = OPEN_ALWAYS;
-        } else {
-            if (osflags & PR_TRUNCATE)
-                flags = TRUNCATE_EXISTING;
-            else
-                flags = OPEN_EXISTING;
-        }
+        if (osflags & PR_CREATE_FILE)
+            flags = OPEN_ALWAYS;
+        else if (osflags & PR_TRUNCATE)
+            flags = CREATE_ALWAYS;
+        else
+            flags = OPEN_EXISTING;
 
         file = CreateFile(name,
                           access,
@@ -2181,22 +2176,6 @@ _PR_MD_CLOSE(PRInt32 osfd, PRBool socket)
 		}
     }
 }
-
-PRStatus
-_PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
-{
-    BOOL rv;
-
-    rv = SetHandleInformation(
-            (HANDLE)fd->secret->md.osfd,
-            HANDLE_FLAG_INHERIT,
-            inheritable ? HANDLE_FLAG_INHERIT : 0);
-    if (0 == rv) {
-        PR_SetError(PR_UNKNOWN_ERROR, GetLastError());
-        return PR_FAILURE;
-    }
-    return PR_SUCCESS;
-} 
 
 
 /* --- DIR IO ------------------------------------------------------------ */
@@ -3265,7 +3244,7 @@ PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime tim
     return bytesSent;
 }
 
-PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_writev(PRFileDesc *fd, PRIOVec *iov, int size, PRIntervalTime timeout)
 {
     int index;
     int sent = 0;

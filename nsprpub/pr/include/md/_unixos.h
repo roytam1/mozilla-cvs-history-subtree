@@ -27,7 +27,7 @@
  * Linux: FD_SETSIZE is defined in /usr/include/sys/select.h and should
  * not be redefined.
  */
-#if !defined(LINUX) && !defined(RHAPSODY) && !defined(NEXTSTEP)
+#if !defined(LINUX) && !defined(RHAPSODY)
 #ifndef FD_SETSIZE
 #define FD_SETSIZE  4096
 #endif
@@ -144,12 +144,7 @@ extern void _MD_unix_init_running_cpu(struct _PRCPU *cpu);
 ** work - it just means that we don't really have a functional
 ** redzone.
 */
-#include <sys/mman.h>
-#ifndef PROT_NONE
-#define PROT_NONE 0x0
-#endif
-
-#if defined(DEBUG) && !defined(RHAPSODY) && !defined(NEXTSTEP)
+#if defined(DEBUG) && !defined(RHAPSODY)
 #if !defined(SOLARIS)	
 #include <string.h>  /* for memset() */
 #define _MD_INIT_STACK(ts,REDZONE)					\
@@ -268,9 +263,6 @@ extern void		_MD_Wakeup_CPUs(void);
 
 /************************************************************************/
 
-extern void		_MD_InitFileDesc(PRFileDesc *fd);
-#define _MD_INIT_FILEDESC			_MD_InitFileDesc
-
 extern void		_MD_MakeNonblock(PRFileDesc *fd);
 #define _MD_MAKE_NONBLOCK			_MD_MakeNonblock		
 
@@ -385,7 +377,7 @@ extern PRInt32 _MD_sendto(PRFileDesc *fd, const void *buf, PRInt32 amount,
 							PRIntn flags, const PRNetAddr *addr, PRUint32 addrlen,
 												PRIntervalTime timeout);
 #define _MD_SENDTO	_MD_sendto
-extern PRInt32		_MD_writev(PRFileDesc *fd, const struct PRIOVec *iov,
+extern PRInt32		_MD_writev(PRFileDesc *fd, struct PRIOVec *iov,
 								PRInt32 iov_size, PRIntervalTime timeout);
 #define _MD_WRITEV	_MD_writev
 
@@ -430,9 +422,6 @@ extern PRStatus _MD_setsockopt(PRFileDesc *fd, PRInt32 level,
 					PRInt32 optname, const char* optval, PRInt32 optlen);
 #define _MD_SETSOCKOPT		_MD_setsockopt
 
-extern PRStatus _MD_set_fd_inheritable(PRFileDesc *fd, PRBool inheritable);
-#define _MD_SET_FD_INHERITABLE _MD_set_fd_inheritable
-
 extern PRStatus _MD_gethostname(char *name, PRUint32 namelen);
 #define _MD_GETHOSTNAME		_MD_gethostname
 
@@ -472,7 +461,7 @@ extern PRStatus _MD_CloseFileMap(struct PRFileMap *fmap);
 #define GETTIMEOFDAY(tp) gettimeofday((tp), NULL)
 #endif
 
-#if defined(_PR_PTHREADS) && !defined(_PR_POLL_AVAILABLE)
+#if defined(LINUX) && defined(_PR_PTHREADS) && !(__GLIBC__ >= 2)
 #define _PR_NEED_FAKE_POLL
 #endif
 
@@ -574,6 +563,7 @@ struct _MD_IOVector
     _MD_Mmap64 _mmap64;
     _MD_Stat64 _stat64;
     _MD_Fstat64 _fstat64;
+    _MD_Lockf64 _lockf64;
     _MD_Lseek64 _lseek64;
 };
 extern struct _MD_IOVector _md_iovector;

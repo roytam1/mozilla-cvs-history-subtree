@@ -576,10 +576,6 @@ static struct tm *MT_safe_localtime(const time_t *clock, struct tm *result)
      * hence, does not recognize negative values of clock as pre-1/1/70.
      * We have to manually check (WIN16 only) for negative value of
      * clock and return NULL.
-     *
-     * With negative values of clock, emx returns the struct tm for
-     * clock plus ULONG_MAX. So we also have to check for the invalid
-     * structs returned for timezones west of Greenwich when clock == 0.
      */
     
 #if defined(XP_MAC)
@@ -588,9 +584,8 @@ static struct tm *MT_safe_localtime(const time_t *clock, struct tm *result)
     tmPtr = localtime(clock);
 #endif
 
-#if defined(WIN16) || defined(XP_OS2_EMX)
-    if ( (PRInt32) *clock < 0 ||
-         ( (PRInt32) *clock == 0 && tmPtr->tm_year != 70))
+#if defined(WIN16)
+    if ( (PRInt32) *clock < 0 )
         result = NULL;
     else
         *result = *tmPtr;
@@ -1567,15 +1562,6 @@ PR_ParseTimeString(
                   secs = mktime(&localTime);
                   if (secs != (time_t) -1)
                     {
-#if defined(XP_MAC)
-                      /*
-                       * The mktime() routine in MetroWerks MSL C
-                       * Runtime library returns seconds since midnight,
-                       * 1 Jan. 1900, not 1970.  So we need to adjust
-                       * its return value to the NSPR epoch.
-                       */
-                      secs -= ((365 * 70UL) + 17) * 24 * 60 * 60;
-#endif
                       LL_I2L(*result, secs);
                       LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
                       LL_MUL(*result, *result, usec_per_sec);
