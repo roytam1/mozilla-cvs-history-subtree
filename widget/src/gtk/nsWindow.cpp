@@ -1060,8 +1060,8 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
   if (bState)
   {
     // show mSuperWin
-    gdk_window_show(mSuperWin->shell_window);
     gdk_window_show(mSuperWin->bin_window);
+    gdk_window_show(mSuperWin->shell_window);
 
     // are we a toplevel window?
     if (mIsToplevel && mShell)
@@ -1200,17 +1200,121 @@ NS_IMETHODIMP nsWindow::CaptureMouse(PRBool aCapture)
 
 NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
 {
+  if (mIsToplevel && mShell)
+  {
+    // do it the way it should be done period.
+    if (!mParent)
+    {
+      // XXX don't move the window if it is toplevel window.. this keeps us from moving the
+      // window's title bar off the screen in some Window managers
+      if (mWindowType != eWindowType_toplevel)
+        gtk_widget_set_uposition(mShell, aX, aY);
+    }
+    else
+    {
+      // *VERY* stupid hack to make gfx combo boxes work
+      nsRect oldrect, newrect;
+      oldrect.x = aX;
+      oldrect.y = aY;
+      mParent->WidgetToScreen(oldrect, newrect);
+      gtk_widget_set_uposition(mShell, newrect.x, newrect.y);
+    }
+  }
+  else if (mSuperWin)
+  {
+    gdk_window_move(mSuperWin->shell_window, aX, aY);
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
-  return NS_OK;
-}
+  PRBool nNeedToShow = PR_FALSE;
 
-NS_IMETHODIMP nsWindow::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
-                               PRInt32 aHeight, PRBool aRepaint)
-{
+#if 0
+  printf("nsWindow::Resize %s (%p) to %d %d\n",
+         (const char *) debug_GetName(mWidget),
+         this,
+         aWidth, aHeight);
+#endif
+
+  mBounds.width  = aWidth;
+  mBounds.height = aHeight;
+
+  // code to keep the window from showing before it has been moved or resized
+
+  // if we are resized to 1x1 or less, we will hide the window.  Show(TRUE) will be ignored until a
+  // larger resize has happened
+  if (aWidth <= 1 || aHeight <= 1)
+  {
+    if (mIsToplevel && mShell)
+    {
+      aWidth = 1;
+      aHeight = 1;
+      mIsTooSmall = PR_TRUE;
+      if (GTK_WIDGET_VISIBLE(mShell))
+      {
+        gtk_widget_hide(mShell);
+        gtk_widget_unmap(mShell);
+      }
+    }
+    else
+    {
+      aWidth = 1;
+      aHeight = 1;
+      mIsTooSmall = PR_TRUE;
+      gtk_widget_hide(mWidget);
+      gtk_widget_unmap(mWidget);
+    }
+  }
+  else
+  {
+    if (mIsTooSmall)
+    {
+      // if we are not shown, we don't want to force a show here, so check and see if Show(TRUE) has been called
+      nNeedToShow = mShown;
+      mIsTooSmall = PR_FALSE;
+    }
+  }
+
+  if (mSuperWin) {
+    // toplevel window?  if so, we should resize it as well.
+    if (mIsToplevel && mShell)
+    {
+      gtk_window_set_default_size(GTK_WINDOW(mShell), aWidth, aHeight);
+    }
+    gdk_superwin_resize(mSuperWin, aWidth, aHeight);
+  }
+
+  // XXX chris
+#if 0
+  // XXX pav
+  // call the size allocation handler directly to avoid code duplication
+  // note, this could be a problem as this will make layout think that it
+  // got the size it requested which could be wrong.
+  // but, we don't use many native widgets anymore, so this shouldn't be a problem
+  // layout's will size to the size you tell them to, which are the only native widgets
+  // we still use after all the xp widgets land
+  GtkAllocation alloc;
+  alloc.width = aWidth;
+  alloc.height = aHeight;
+  alloc.x = 0;
+  alloc.y = 0;
+  handle_size_allocate(mWidget, &alloc, this);
+#endif
+
+  if (nNeedToShow)
+  {
+    if (mIsToplevel && mShell)
+    {
+      gtk_widget_show(mShell);
+    }
+    else
+    {
+      gdk_window_show(mSuperWin->bin_window);
+      gdk_window_show(mSuperWin->shell_window);
+    }
+  }
   return NS_OK;
 }
 
@@ -1354,6 +1458,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
   return NS_OK;
 }
 
+#endif /* USE_SUPERWIN */
 
 NS_IMETHODIMP nsWindow::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
                                PRInt32 aHeight, PRBool aRepaint)
@@ -1363,8 +1468,6 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
   Resize(aWidth,aHeight,aRepaint);
   return NS_OK;
 }
-
-#endif /* USE_SUPERWIN */
 
 /* virtual */ void
 nsWindow::OnRealize(GtkWidget *aWidget)
