@@ -215,8 +215,7 @@ nsXPathResult::AttributeChanged(nsIDocument* aDocument,
                                 nsIContent* aContent,
                                 PRInt32 aNameSpaceID,
                                 nsIAtom* aAttribute,
-                                PRInt32 aModType,
-                                nsChangeHint aHint)
+                                PRInt32 aModType)
 {
     Invalidate();
     return NS_OK;
