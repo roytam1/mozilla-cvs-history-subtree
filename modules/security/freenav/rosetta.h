@@ -79,7 +79,7 @@
 #define HG42420
 #define HG42933
 #define HG52965
-#define HG66663
+#define HG66663 ,XP_Bool,XP_Bool
 #define HG65243
 #define HG00282
 #define HG02872
@@ -120,11 +120,11 @@
 #define HG15448
 #define HG83336
 #define HG63531	0
-#define HG73653
+#define HG73653 0
 #define HG52242
 #define HG42320
 #define HG98379
-#define HG65293
+#define HG65293	0
 #define HG42539
 #define HG72761
 #define HG42490
@@ -137,7 +137,7 @@
 #define HG73891
 #define HG76298
 #define HG87325
-#define HG73896
+#define HG73896	TRUE
 #define HG73684
 #define HG83903
 #define HG32138
@@ -166,12 +166,12 @@
 #define HG42420
 #define HG87237
 #define HG52423
-#define HG76373
+#define HG76373 TRUE
 #define HG72388 FALSE;
 #define HG52223 FALSE;
 #define HG53535
 #define HG52528 FALSE;
-#define HG73277
+#define HG73277 FALSE
 #define HG73738
 #define HG62522
 #define HG62363
@@ -314,3 +314,5 @@
 #define HG75442
 #define HG59731
 #define HG56898
+
+#define HG42421
