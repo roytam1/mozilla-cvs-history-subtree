@@ -75,9 +75,9 @@ function doHelpButton()
   }
 
   if ( helpTag ) 
-  	openHelp(gHelpURL + helpTag);  
+        openHelp(gHelpURL + helpTag);  
   else
-	openHelp(gHelpURL + '?mail'); 
+        openHelp(gHelpURL + '?mail'); 
 }
 
 /**
