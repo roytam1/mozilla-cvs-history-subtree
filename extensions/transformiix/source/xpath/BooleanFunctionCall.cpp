@@ -75,12 +75,11 @@ BooleanFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             txXPathTreeWalker walker(aContext->getContextNode());
 
             nsAutoString lang;
-            PRBool found = walker.getAttr(txXMLAtoms::lang, kNameSpaceID_XML,
-                                           lang);
-            while (!found && walker.moveToParent()) {
+            PRBool found;
+            do {
                 found = walker.getAttr(txXMLAtoms::lang, kNameSpaceID_XML,
                                        lang);
-            }
+            } while (!found && walker.moveToParent());
 
             if (!found) {
                 aContext->recycler()->getBoolResult(PR_FALSE, aResult);

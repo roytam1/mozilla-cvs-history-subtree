@@ -208,8 +208,7 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
     // level = "single"
     if (aLevel == eLevelSingle) {
         txXPathTreeWalker walker(currNode);
-        PRBool hasParent = PR_TRUE;
-        while (hasParent) {
+        do {
             if (aFromPattern && !walker.isOnNode(currNode) &&
                 aFromPattern->matches(walker.getCurrentPosition(), aContext)) {
                 break;
@@ -221,14 +220,13 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
                 break;
             }
 
-            hasParent = walker.moveToParent();
-        }
+        } while (walker.moveToParent());
 
         // Spec says to only match ancestors that are decendants of the
         // ancestor that matches the from-pattern, so keep going to make
         // sure that there is an ancestor that does.
         if (aFromPattern && aValues.getLength()) {
-            hasParent = walker.moveToParent();
+            PRBool hasParent = walker.moveToParent();
             while (hasParent) {
                 if (aFromPattern->matches(walker.getCurrentPosition(), aContext)) {
                     break;

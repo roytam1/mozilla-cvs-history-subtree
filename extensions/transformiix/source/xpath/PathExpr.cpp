@@ -187,8 +187,11 @@ PathExpr::evalDescendants(Expr* aStep, const txXPathNode& aNode,
     MBool filterWS = aContext->isStripSpaceAllowed(aNode);
 
     txXPathTreeWalker walker(aNode);
-    PRBool hasChild = walker.moveToFirstChild();
-    while (hasChild) {
+    if (!walker.moveToFirstChild()) {
+        return NS_OK;
+    }
+
+    do {
         if (!(filterWS &&
               (walker.getNodeType() == txXPathNodeType::TEXT_NODE ||
                walker.getNodeType() == txXPathNodeType::CDATA_SECTION_NODE) &&
@@ -197,9 +200,8 @@ PathExpr::evalDescendants(Expr* aStep, const txXPathNode& aNode,
                                  resNodes);
             NS_ENSURE_SUCCESS(rv, rv);
         }
-        hasChild = walker.moveToNextSibling();
-    }
-    
+    } while (walker.moveToNextSibling());
+
     return NS_OK;
 } //-- evalDescendants
 

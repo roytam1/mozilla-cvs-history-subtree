@@ -271,8 +271,7 @@ MBool XMLUtils::getXMLSpacePreserve(const txXPathNode& aNode)
 {
     nsAutoString value;
     txXPathTreeWalker walker(aNode);
-    PRBool hasParent = PR_TRUE;
-    while (hasParent) {
+    do {
         if (walker.getAttr(txXMLAtoms::space, kNameSpaceID_XML, value)) {
             if (TX_StringEqualsAtom(value, txXMLAtoms::preserve)) {
                 return PR_TRUE;
@@ -281,8 +280,8 @@ MBool XMLUtils::getXMLSpacePreserve(const txXPathNode& aNode)
                 return PR_FALSE;
             }
         }
-        hasParent = walker.moveToParent();
-    }
+    } while (walker.moveToParent());
+
     return PR_FALSE;
 }
 
