@@ -552,24 +552,16 @@ nsresult nsImapMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
     if (NS_SUCCEEDED(rv) && mailDBFactory)
       folderOpen = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
 
+    if(folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING || folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
+      folderOpen = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
+
     if(mDatabase)
     {
       if(mAddListener)
         mDatabase->AddListener(this);
-
-      // if we have to regenerate the folder, run the parser url.
-      if(folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING || folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
-      {
-      }
-      else
-      {
-        //Otherwise we have a valid database so lets extract necessary info.
         UpdateSummaryTotals(PR_TRUE);
       }
     }
-    else
-      folderOpen = rv;
-  }
   return folderOpen;
 }
 
@@ -1074,6 +1066,22 @@ NS_IMETHODIMP nsImapMailFolder::EmptyTrash(nsIMsgWindow *msgWindow,
 
         nsCOMPtr<nsIMsgDatabase> trashDB;
 
+        if (WeAreOffline())
+        {
+          nsCOMPtr <nsIMsgDatabase> trashDB;
+          rv = trashFolder->GetMsgDatabase(nsnull, getter_AddRefs(trashDB));
+          if (NS_SUCCEEDED(rv) && trashDB)
+          {
+            nsMsgKey fakeKey;
+            trashDB->GetNextFakeOfflineMsgKey(&fakeKey);
+    
+            nsCOMPtr <nsIMsgOfflineImapOperation> op;
+            rv = trashDB->GetOfflineOpForKey(fakeKey, PR_TRUE, getter_AddRefs(op));
+            trashFolder->SetFlag(MSG_FOLDER_FLAG_OFFLINEEVENTS);
+            op->SetOperation(nsIMsgOfflineImapOperation::kDeleteAllMsgs);
+          }
+          return rv;
+        }
         rv = trashFolder->Delete(); // delete summary spec
         rv = trashFolder->GetMsgDatabase(msgWindow, getter_AddRefs(trashDB));
 
