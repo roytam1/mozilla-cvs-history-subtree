@@ -28,7 +28,10 @@ LIBRARY_NAME = xpcomio_s
 
 MODULE = xpcom
 
+XPIDL_MODULE = xpcom_io
+
 XPIDLSRCS =			\
+	nsIFileSpec.idl		\
 	$(NULL)
 
 CPPSRCS =			     \
