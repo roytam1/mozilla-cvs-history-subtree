@@ -585,29 +585,28 @@ JSInstance *JSStringType::newInstance(Context *cx)
     return result;
 }
 
+// don't add to instances etc., climb all the way down (likely to the global object)
+// and add the property there.
 void ScopeChain::setNameValue(Context *cx, const String& name, AttributeStmtNode *attr)
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
-    ScopeScanner scopeTop = mScopeStack.rbegin();
-    JSObject *top = *scopeTop;
     JSValue v = cx->topValue();
-    PropertyIterator i;
-    if (top->hasProperty(name, names, Write, &i)) {
-        if (PROPERTY_KIND(i) == ValuePointer) {
-            *PROPERTY_VALUEPOINTER(i) = v;
+    for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++)
+    {
+        PropertyIterator i;
+        if ((*s)->hasProperty(name, names, Write, &i)) {
+            if (PROPERTY_KIND(i) == ValuePointer) {
+                *PROPERTY_VALUEPOINTER(i) = v;
+            }
+            else
+                ASSERT(false);      // what else needs to be implemented ?
         }
-        else
-            ASSERT(false);      // what else needs to be implemented ?
-    }
-    else {
-        // don't add to instances etc., climb all the way down (likely to the global object)
-        // and add the property there.
-        while (top->mType != Object_Type) {
-            scopeTop++;
-            top = *scopeTop;
+        else {
+            if ((*s)->mType == Object_Type) {
+                (*s)->defineVariable(cx, name, attr, Object_Type, v);
+                break;
+            }
         }
-        ASSERT(top);
-        top->defineVariable(cx, name, attr, Object_Type, v);
     }
 }
 
