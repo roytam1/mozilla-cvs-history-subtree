@@ -78,7 +78,7 @@ nsWindow::~nsWindow()
   printf("nsWindow::~nsWindow:%p\n", this);
 #endif
   mIsDestroyingWindow = PR_TRUE;
-  if (nsnull != mShell) {
+  if ((nsnull != mShell) || (nsnull != mSuperWin)) {
     Destroy();
   }
   NS_IF_RELEASE(mMenuBar);
@@ -282,7 +282,7 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
     break;
   }
 
-  gdk_window_set_events(mSuperWin->shell_window, 
+  gdk_window_set_events(mSuperWin->bin_window, 
                         GDK_BUTTON_PRESS_MASK |
                         GDK_BUTTON_RELEASE_MASK |
                         GDK_ENTER_NOTIFY_MASK |
@@ -339,7 +339,7 @@ void nsWindow::InitCallbacks(char * aName)
                      GTK_SIGNAL_FUNC(handle_key_release_event),
                      this);
 #endif
-  gdk_superwin_set_event_func (mSuperWin, handle_xlib_expose_event, this, NULL);
+  gdk_superwin_set_event_func (mSuperWin, handle_xlib_event, this, NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -865,6 +865,47 @@ nsWindow::HandleXlibExposeEvent(XEvent *event)
   OnPaint(pevent);
   Release();
   delete pevent.rect;
+}
+
+void
+nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
+{
+  XEvent    config_event;
+  while (XCheckTypedWindowEvent(event->xany.display, 
+                                event->xany.window, 
+                                ConfigureNotify,
+                                &config_event) == True) {
+    // make sure that we don't get other types of events.  
+    // StructureNotifyMask includes other kinds of events, too.
+    if (config_event.type == ConfigureNotify) 
+      {
+        *event = config_event;
+        
+        g_print("Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+                event->xconfigure.window,
+                event->xconfigure.x, 
+                event->xconfigure.y,
+                event->xconfigure.width, 
+                event->xconfigure.height);
+      }
+  }
+
+  nsSizeEvent sevent;
+  sevent.message = NS_SIZE;
+  sevent.widget = this;
+  sevent.eventStructType = NS_SIZE_EVENT;
+  sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
+                                  event->xconfigure.width, event->xconfigure.height);
+  sevent.point.x = event->xconfigure.x;
+  sevent.point.y = event->xconfigure.y;
+  sevent.mWinWidth = event->xconfigure.width;
+  sevent.mWinHeight = event->xconfigure.height;
+  // XXX fix this
+  sevent.time = 0;
+  AddRef();
+  OnResize(sevent);
+  Release();
+  delete sevent.windowSize;
 }
 
 /* virtual */ GdkWindow *
