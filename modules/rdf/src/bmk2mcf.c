@@ -320,7 +320,7 @@ numericDate(char *url)
 	}
 	if (len > 0)
 	{
-		if (date = getMem(len+1))
+		if ((date = getMem(len+1)))
 		{
 			strncpy(date, url, len);
 		}
@@ -358,7 +358,7 @@ HT_WriteOutAsBookmarks1 (RDF rdf, PRFileDesc *fp, RDF_Resource u, RDF_Resource t
       ht_rjcprintf(fp, "<TITLE>%s</TITLE>\n", (name) ? name:"");
       ht_rjcprintf(fp, "<H1>%s</H1>\n<DL><p>\n", (name) ? name:"");
     }
-    while (next = RDF_NextValue(c)) {
+    while ((next = RDF_NextValue(c))) {
 
       url = resourceID(next);
       if (containerp(next) && (!startsWith("ftp:",url)) && (!startsWith("file:",url))
