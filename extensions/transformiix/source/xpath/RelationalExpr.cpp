@@ -31,12 +31,6 @@
 #include "txNodeSet.h"
 #include "txIXPathContext.h"
 
-RelationalExpr::RelationalExpr(Expr* aLeftExpr, Expr* aRightExpr,
-                               RelationalExprType aOp)
-    : mLeftExpr(aLeftExpr), mRightExpr(aRightExpr), mOp(aOp)
-{
-}
-
 /**
  *  Compares the two ExprResults based on XPath 1.0 Recommendation (section 3.4)
  */

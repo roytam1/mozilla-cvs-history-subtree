@@ -90,10 +90,12 @@ nsXPathEvaluator::CreateExpression(const nsAString & aExpression,
 
     nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
     ParseContextImpl pContext(aResolver, !doc || doc->IsCaseSensitive());
-    Expr* expression = ExprParser::createExpr(PromiseFlatString(aExpression),
-                                              &pContext);
-    if (!expression)
+    Expr* expression;
+    rv = txExprParser::createExpr(PromiseFlatString(aExpression), &pContext,
+                                  &expression);
+    if (NS_FAILED(rv)) {
         return NS_ERROR_DOM_INVALID_EXPRESSION_ERR;
+    }
 
     *aResult = new nsXPathExpression(expression, mRecycler);
     if (!*aResult) {
@@ -180,11 +182,12 @@ nsresult nsXPathEvaluator::ParseContextImpl::resolveNamespacePrefix
     return gTxNameSpaceManager->RegisterNameSpace(ns, aID);
 }
 
-nsresult nsXPathEvaluator::ParseContextImpl::resolveFunctionCall(nsIAtom* aName,
-                                                                 PRInt32 aID,
-                                                                 FunctionCall*& aFn)
+nsresult
+nsXPathEvaluator::ParseContextImpl::resolveFunctionCall(nsIAtom* aName,
+                                                        PRInt32 aID,
+                                                        FunctionCall*& aFn)
 {
-    return NS_ERROR_XPATH_PARSE_FAILURE;
+    return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
 }
 
 PRBool nsXPathEvaluator::ParseContextImpl::caseInsensitiveNameTests()
@@ -192,9 +195,7 @@ PRBool nsXPathEvaluator::ParseContextImpl::caseInsensitiveNameTests()
     return !mIsCaseSensitive;
 }
 
-void nsXPathEvaluator::ParseContextImpl::receiveError(const nsAString& aMsg,
-                                                      nsresult aRes)
+void
+nsXPathEvaluator::ParseContextImpl::SetErrorOffset(PRUint32 aOffset)
 {
-    mLastError = aRes;
-    // forward aMsg to console service?
 }
