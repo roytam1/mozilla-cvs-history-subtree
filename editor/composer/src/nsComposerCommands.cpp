@@ -173,6 +173,13 @@ nsBaseStateUpdatingCommand::UpdateCommandState(const nsAReadableString & aComman
   return rv;
 }
 
+NS_IMETHODIMP
+nsBaseStateUpdatingCommand::GetCommandState(nsICommandParams *aCommandParams,nsISupports *aCommandRefCon)
+{
+    return NS_OK;
+}
+
+
 //--------------------------------------------------------------------------------------------------------------------
 NS_IMETHODIMP
 nsBaseStateUpdatingCommand::GetCommandState(const nsAReadableString & aCommandName, nsISupports *refCon, nsAWritableString & outState)
@@ -326,6 +333,30 @@ nsStyleUpdatingCommand::nsStyleUpdatingCommand(const char* aTagName)
 : nsBaseStateUpdatingCommand(aTagName)
 {
 }
+
+NS_IMETHODIMP
+nsStyleUpdatingCommand::GetCommandState(nsICommandParams *aCommandParams, nsISupports *aCommandRefCon)
+{
+  nsCOMPtr<nsIHTMLEditor> editor = do_QueryInterface(aCommandParams);
+  NS_ASSERTION(editor, "Need editor here");
+  if (!editor)
+    return NS_ERROR_INVALID_PARAM;
+
+  nsresult rv = NS_OK;
+
+  PRBool firstOfSelectionHasProp = PR_FALSE;
+  PRBool anyOfSelectionHasProp = PR_FALSE;
+  PRBool allOfSelectionHasProp = PR_FALSE;
+
+  nsCOMPtr<nsIAtom> styleAtom = getter_AddRefs(NS_NewAtom(mTagName));
+  rv = editor->GetInlineProperty(styleAtom, NS_LITERAL_STRING(""), NS_LITERAL_STRING(""), &firstOfSelectionHasProp, &anyOfSelectionHasProp, &allOfSelectionHasProp);
+  outStyleSet = allOfSelectionHasProp;			// change this to alter the behaviour
+
+  //parse through commandparams
+
+  return rv;
+}
+
 
 nsresult
 nsStyleUpdatingCommand::GetCurrentState(nsIEditor *aEditor, const char* aTagName, PRBool& outStyleSet)
@@ -671,6 +702,12 @@ nsMultiStateCommand::GetCommandState(const nsAReadableString & aCommandName, nsI
   }
   
   return rv;
+}
+
+NS_IMETHODIMP
+nsMultiStateCommand::GetCommandState(nsICommandParams *aCommandParams,nsISupports *aCommandRefCon)
+{
+    return NS_OK;
 }
 
 #ifdef XP_MAC

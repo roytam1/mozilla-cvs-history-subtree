@@ -126,9 +126,12 @@ class nsStyleUpdatingCommand : public nsBaseStateUpdatingCommand
 {
 public:
 
-            nsStyleUpdatingCommand(const char* aTagName);
-           
+  nsStyleUpdatingCommand(const char* aTagName);
+//override this method to  parse the command parameters for this command params.           
+  NS_IMETHOD GetCommandState(nsICommandParams *aCommandParams, nsISupports *aCommandRefCon);
+
 protected:
+  
 
   // get the current state (on or off) for this style or block format
   virtual nsresult  GetCurrentState(nsIEditor *aEditor, const char* aTagName, PRBool& outStateSet);

@@ -40,7 +40,7 @@ nsComposerController::~nsComposerController()
 {
 }
 
-NS_IMPL_ISUPPORTS3(nsComposerController, nsIController, nsIEditorController, nsIInterfaceRequestor);
+NS_IMPL_ISUPPORTS4(nsComposerController, nsIController, nsIEditorController, nsIInterfaceRequestor, nsICommandController);
 
 NS_IMETHODIMP
 nsComposerController::Init(nsISupports *aCommandRefCon)
@@ -242,3 +242,23 @@ nsresult nsComposerController::GetComposerCommandManager(nsIControllerCommandMan
   return NS_OK;
 }
 
+
+//GetCommandState
+/*
+cmd_bold,cmd_italic,cmd_underline ->state commands
+state_start : true,false
+state_end   : true,false
+state_all   : true,false
+state_mixed : true,false
+*/
+/* void getCommandState (in DOMString aCommandName, inout nsICommandParams aCommandParams); */
+NS_IMETHODIMP nsComposerController::GetCommandState(const nsAString & aCommandName, nsICommandParams **aCommandParams)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void doCommand (in DOMString aCommandName, in nsICommandParams aCommandParams); */
+NS_IMETHODIMP nsComposerController::DoCommand(const nsAString & aCommandName, nsICommandParams *aCommandParams)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
