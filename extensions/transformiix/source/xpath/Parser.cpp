@@ -48,7 +48,11 @@ void main(int argc, char** argv) {
     //String pattern("@*|node()");
     //String pattern("FSContext/UserList/User[@id=/FSContext/SessionData/@userref]/@priv = 'admin'");
 
-    String pattern("10/3");
+    //String pattern("10/3");
+	//String pattern("*[1]foo|*[1]/bar|*[1]/baz");
+    
+    //-- Current Test
+    String pattern("(4+5)-(9+9)");
 
     cout <<"Lexically Analyzing: "<<pattern<<endl;
     cout<<endl;
@@ -166,6 +170,8 @@ void main(int argc, char** argv) {
         expr->toString(resultString);
         cout << "result: "<<resultString <<endl;
     }
+
+    cout << endl << "----------------------" << endl << endl;
 
     NumberExpr numberExpr( -24.0 );
     resultString.clear();
