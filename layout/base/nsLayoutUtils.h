@@ -244,6 +244,17 @@ public:
    * its pres-shell
    */
   static PRBool IsInitialContainingBlock(nsIFrame* aFrame);
+
+  /**
+   * Get the contribution of aFrame to its containing block's intrinsic
+   * width.  This considers the child's intrinsic width, its 'width',
+   * 'min-width', and 'max-width' properties, and its padding, border,
+   * and margin.
+   */
+  enum IntrinsicWidthType { MIN_WIDTH, PREF_WIDTH };
+  static nscoord IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
+                                       nsIFrame *aFrame,
+                                       IntrinsicWidthType aType);
 };
 
 #endif // nsLayoutUtils_h__

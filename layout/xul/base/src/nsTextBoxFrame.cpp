@@ -133,8 +133,9 @@ nsTextBoxFrame::AttributeChanged(nsIContent*     aChild,
     UpdateAttributes(presContext, aAttribute, aResize, aRedraw);
 
     if (aResize) {
-        nsBoxLayoutState state(presContext);
-        MarkDirty(state);
+        AddStateBits(NS_FRAME_IS_DIRTY);
+        presContext->PresShell()->
+          FrameNeedsReflow(this, nsIPresShell::eStyleChange);
     } else if (aRedraw) {
         nsBoxLayoutState state(presContext);
         Redraw(state);
@@ -151,7 +152,7 @@ nsTextBoxFrame::AttributeChanged(nsIContent*     aChild,
 nsTextBoxFrame::nsTextBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell), mCropType(CropRight),mAccessKeyInfo(nsnull)
 {
     mState |= NS_STATE_NEED_LAYOUT;
-    NeedsRecalc();
+    MarkIntrinsicWidthsDirty();
 }
 
 nsTextBoxFrame::~nsTextBoxFrame()
@@ -788,11 +789,10 @@ nsTextBoxFrame::DoLayout(nsBoxLayoutState& aBoxLayoutState)
     return nsLeafBoxFrame::DoLayout(aBoxLayoutState);
 }
 
-NS_IMETHODIMP
-nsTextBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsTextBoxFrame::MarkIntrinsicWidthsDirty()
 {
     mNeedsRecalc = PR_TRUE;
-    return NS_OK;
 }
 
 void

@@ -217,7 +217,7 @@ nsRootBoxFrame::Reflow(nsPresContext*          aPresContext,
                        const nsHTMLReflowState& aReflowState,
                        nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsRootBoxFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsRootBoxFrame");
 
 #ifdef DEBUG_REFLOW
   gReflows++;

@@ -124,7 +124,9 @@
 #include "nsStyleSet.h"
 #include "nsImageFrame.h"
 #include "nsILanguageAtomService.h"
+#ifdef HTML_FORMS
 #include "nsTextControlFrame.h"
+#endif
 #include "nsStyleSheetService.h"
 
 // view stuff
@@ -424,7 +426,9 @@ Shutdown()
 
   nsGlobalWindow::ShutDown();
   nsDOMClassInfo::ShutDown();
+#ifdef HTML_FORMS
   nsTextControlFrame::ShutDown();
+#endif
   nsXBLWindowKeyHandler::ShutDown();
   nsAutoCopyListener::Shutdown();
 }

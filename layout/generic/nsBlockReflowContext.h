@@ -57,9 +57,7 @@ struct nsBlockHorizontalAlign;
 class nsBlockReflowContext {
 public:
   nsBlockReflowContext(nsPresContext* aPresContext,
-                       const nsHTMLReflowState& aParentRS,
-                       PRBool aComputeMaxElementWidth,
-                       PRBool aComputeMaximumWidth);
+                       const nsHTMLReflowState& aParentRS);
   ~nsBlockReflowContext() { }
 
   nsresult ReflowBlock(const nsRect&       aSpace,
@@ -79,8 +77,6 @@ public:
                     nsRect&                  aInFlowBounds,
                     nsRect&                  aCombinedRect);
 
-  void AlignBlockHorizontally(nscoord aWidth, nsBlockHorizontalAlign&);
-
   nsCollapsingMargin& GetCarriedOutBottomMargin() {
     return mMetrics.mCarriedOutBottomMargin;
   }
@@ -95,14 +91,6 @@ public:
 
   const nsHTMLReflowMetrics& GetMetrics() const {
     return mMetrics;
-  }
-
-  nscoord GetMaxElementWidth() const {
-    return mMetrics.mMaxElementWidth;
-  }
-  
-  nscoord GetMaximumWidth() const {
-    return mMetrics.mMaximumWidth;
   }
 
   /**
@@ -140,7 +128,6 @@ protected:
   nscoord mX, mY;
   nsHTMLReflowMetrics mMetrics;
   nsCollapsingMargin mTopMargin;
-  PRPackedBool mComputeMaximumWidth;
 };
 
 #endif /* nsBlockReflowContext_h___ */

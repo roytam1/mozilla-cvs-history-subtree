@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -204,19 +204,31 @@ nsLeafBoxFrame::DidReflow(nsPresContext*           aPresContext,
                           const nsHTMLReflowState*  aReflowState,
                           nsDidReflowStatus         aStatus)
 {
-  PRBool isDirty = mState & NS_FRAME_IS_DIRTY;
-  PRBool hasDirtyChildren = mState & NS_FRAME_HAS_DIRTY_CHILDREN;
+#error "Should we really preserve these bits?"
+  nsFrameState preserveBits =
+    GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
   nsresult rv = nsFrame::DidReflow(aPresContext, aReflowState, aStatus);
-  if (isDirty)
-    mState |= NS_FRAME_IS_DIRTY;
-
-  if (hasDirtyChildren)
-    mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
+  AddStateBits(preserveBits);
   return rv;
-
 }
 
+/* virtual */ nscoord
+nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize minSize(0,0);
+  GetMinSize(state, minSize);
+  return minSize.width;
+}
+
+/* virtual */ nscoord
+nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize prefSize(0,0);
+  GetPrefSize(state, prefSize);
+  return prefSize.width;
+}
 
 NS_IMETHODIMP
 nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
@@ -266,9 +278,6 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
   // create the layout state
   nsBoxLayoutState state(aPresContext, aReflowState, aDesiredSize);
 
-  // coelesce reflows if we are root.
-  state.HandleReflow(this);
-  
   nsSize computedSize(aReflowState.mComputedWidth,aReflowState.mComputedHeight);
 
   nsMargin m;
@@ -333,16 +342,7 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
   
   // get the ascent
   nscoord ascent = mRect.height;
-
-  // Only call GetAscent when not doing Initial reflow while in PP
-  // or when it is Initial reflow while in PP and a chrome doc
-  // If called again with initial reflow it crashes because the 
-  // frames are fully constructed (I think).
-  PRBool isChrome;
-  PRBool isInitialPP = nsBoxFrame::IsInitialReflowForPrintPreview(state, isChrome);
-  if (!isInitialPP || (isInitialPP && isChrome)) {
-    GetAscent(state, ascent);
-  }
+  GetAscent(state, ascent);
 
   aDesiredSize.width  = mRect.width;
   aDesiredSize.height = mRect.height;
@@ -356,24 +356,6 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
     aDesiredSize.mOverflowArea = *overflowArea;
   }
 
-  // max sure the max element size reflects
-  // our min width
-  nscoord* maxElementWidth = state.GetMaxElementWidth();
-  if (maxElementWidth)
-  {
-     nsSize minSize(0,0);
-     GetMinSize(state,  minSize);
-
-     if (mRect.width > minSize.width) {
-       if (aReflowState.mComputedWidth == NS_INTRINSICSIZE) {
-         *maxElementWidth = minSize.width;
-       } else {
-         *maxElementWidth = mRect.width;
-       }
-     } else {
-        *maxElementWidth = mRect.width;
-     }
-  }
 #ifdef DO_NOISY_REFLOW
   {
     printf("%p ** nsLBF(done) W:%d H:%d  ", this, aDesiredSize.width, aDesiredSize.height);
@@ -415,7 +397,7 @@ nsLeafBoxFrame::CharacterDataChanged(nsPresContext* aPresContext,
                                      nsIContent*     aChild,
                                      PRBool          aAppend)
 {
-  NeedsRecalc();
+  MarkIntrinsicWidthsDirty();
   return nsLeafFrame::CharacterDataChanged(aPresContext, aChild, aAppend);
 }
 
@@ -449,28 +431,16 @@ nsLeafBoxFrame::GetAscent(nsBoxLayoutState& aState, nscoord& aAscent)
     return nsBox::GetAscent(aState, aAscent);
 }
 
-NS_IMETHODIMP
-nsLeafBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsLeafBoxFrame::MarkIntrinsicWidthsDirty()
 {
-    return nsBox::NeedsRecalc();
+  return;
 }
 
 NS_IMETHODIMP
 nsLeafBoxFrame::DoLayout(nsBoxLayoutState& aState)
 {
     return nsBox::DoLayout(aState);
-}
-
-PRBool
-nsLeafBoxFrame::HasStyleChange()
-{
-    return nsBox::HasStyleChange();
-}
-
-void
-nsLeafBoxFrame::SetStyleChangeFlag(PRBool aDirty)
-{
-    nsBox::SetStyleChangeFlag(aDirty);
 }
 
 PRBool

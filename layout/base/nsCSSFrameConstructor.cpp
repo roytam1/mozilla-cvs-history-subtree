@@ -51,36 +51,40 @@
 #include "nsPresContext.h"
 #include "nsILinkHandler.h"
 #include "nsIDocument.h"
+#ifdef CSS_TABLES
 #include "nsTableFrame.h"
 #include "nsTableColGroupFrame.h"
 #include "nsTableColFrame.h"
+#include "nsTableCellFrame.h" // to get IS_CELL_FRAME
+#include "nsTableOuterFrame.h"
+#include "nsTableRowGroupFrame.h"
+#endif
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMHTMLTableColElement.h"
 #include "nsIDOMHTMLTableCaptionElem.h"
-#include "nsTableCellFrame.h" // to get IS_CELL_FRAME
 #include "nsHTMLParts.h"
 #include "nsIPresShell.h"
 #include "nsStyleSet.h"
 #include "nsIViewManager.h"
 #include "nsIScrollableView.h"
 #include "nsStyleConsts.h"
-#include "nsTableOuterFrame.h"
 #include "nsIDOMXULElement.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsINameSpaceManager.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLLegendElement.h"
+#ifdef HTML_FORMS
 #include "nsIComboboxControlFrame.h"
 #include "nsIListControlFrame.h"
 #include "nsISelectControlFrame.h"
 #include "nsIRadioControlFrame.h"
 #include "nsICheckboxControlFrame.h"
+#endif
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsITextContent.h"
 #include "nsPlaceholderFrame.h"
-#include "nsTableRowGroupFrame.h"
 #include "nsStyleChangeList.h"
 #include "nsIFormControl.h"
 #include "nsCSSAnonBoxes.h"
@@ -1530,6 +1534,7 @@ nsCSSFrameConstructor::CreateInsertionPointChildren(nsFrameConstructorState &aSt
   return NS_OK;
 }
 
+#ifdef CSS_TABLES
 static 
 PRBool IsBorderCollapse(nsIFrame* aFrame)
 {
@@ -1541,6 +1546,7 @@ PRBool IsBorderCollapse(nsIFrame* aFrame)
   NS_ASSERTION(PR_FALSE, "program error");
   return PR_FALSE;
 }
+#endif
 
 // a helper routine that automatically navigates placeholders.
 static nsIFrame*
@@ -1673,6 +1679,7 @@ MoveChildrenTo(nsFrameManager*          aFrameManager,
 
 // -----------------------------------------------------------
 
+#ifdef CSS_TABLES
 // Structure used when creating table frames.
 struct nsTableCreator {
   virtual nsresult CreateTableOuterFrame(nsIFrame** aNewFrame);
@@ -1740,6 +1747,7 @@ nsresult
 nsTableCreator::CreateTableCellInnerFrame(nsIFrame** aNewFrame) {
   return NS_NewTableCellInnerFrame(mPresShell, aNewFrame);
 }
+#endif
 
 //MathML Mod - RBS
 #ifdef MOZ_MATHML
@@ -2259,6 +2267,7 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsFrameConstructorState& aSta
   return PR_FALSE;
 }
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::CreateInputFrame(nsIContent      *aContent,
                                         nsIFrame        **aFrame,
@@ -2311,6 +2320,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsIContent      *aContent,
       return NS_ERROR_INVALID_ARG;
   }
 }
+#endif
 
 static PRBool
 IsOnlyWhitespace(nsIContent* aContent)
@@ -2325,6 +2335,7 @@ IsOnlyWhitespace(nsIContent* aContent)
   return onlyWhiteSpace;
 }
     
+#ifdef CSS_TABLES
 /****************************************************
  **  BEGIN TABLE SECTION
  ****************************************************/
@@ -3808,6 +3819,7 @@ nsCSSFrameConstructor::ConstructTableForeignFrame(nsFrameConstructorState& aStat
 
   return rv;
 }
+#endif
 
 static PRBool 
 NeedFrameFor(nsIFrame*   aParentFrame,
@@ -3821,7 +3833,7 @@ NeedFrameFor(nsIFrame*   aParentFrame,
   return PR_TRUE;
 }
 
-
+#ifdef CSS_TABLES
 nsresult
 nsCSSFrameConstructor::TableProcessChildren(nsFrameConstructorState& aState,
                                             nsIContent*              aContent,
@@ -4056,6 +4068,23 @@ nsCSSFrameConstructor::ConstructDocElementTableFrame(nsIContent*     aDocElement
   return NS_OK;
 }
 
+#else
+inline nsresult 
+ProcessPseudoFrames(nsPresContext* aPresContext,
+                    nsPseudoFrames& aPseudoFrames,
+                    nsFrameItems&   aItems)
+{
+}
+
+inline nsresult 
+ProcessPseudoFrames(nsPresContext* aPresContext,
+                    nsPseudoFrames& aPseudoFrames,
+                    nsIAtom*        aHighestType)
+{
+}
+
+#endif
+
 static PRBool CheckOverflow(nsPresContext* aPresContext,
                             const nsStyleDisplay* aDisplay)
 {
@@ -4282,6 +4311,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
   PRBool docElemIsTable = display->mDisplay == NS_STYLE_DISPLAY_TABLE;
 
   if (docElemIsTable) {
+#ifdef CSS_TABLES
     // if the document is a table then just populate it.
     rv = ConstructDocElementTableFrame(aDocElement, aParentFrame, &contentFrame,
                                        aState);
@@ -4290,6 +4320,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
     }
     styleContext = contentFrame->GetStyleContext();
   } else {
+#endif
     // otherwise build a box or a block
 #ifdef MOZ_XUL
     if (aDocElement->IsContentOfType(nsIContent::eXUL)) {
@@ -4796,6 +4827,7 @@ nsCSSFrameConstructor::CreatePlaceholderFrameFor(nsIPresShell*    aPresShell,
   return rv;
 }
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::ConstructRadioControlFrame(nsIFrame**      aNewFrame,
                                                   nsIContent*     aContent,
@@ -5213,6 +5245,7 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsFrameConstructorState& aState,
 
   return NS_OK;
 }
+#endif
 
 nsresult
 nsCSSFrameConstructor::ConstructTextFrame(nsFrameConstructorState& aState,
@@ -5319,6 +5352,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     }
     rv = NS_NewWBRFrame(mPresShell, &newFrame);
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::input == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -5363,6 +5397,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     isReplaced = PR_TRUE;
     rv = NS_NewObjectFrame(mPresShell, &newFrame);
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::fieldset == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -5391,6 +5426,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     processChildren = PR_TRUE;
     isFloatContainer = PR_TRUE;
   }
+#endif
   else if (nsHTMLAtoms::frameset == aTag) {
     NS_ASSERTION(!display->IsAbsolutelyPositioned() && !display->IsFloating(),
                  "Framesets should not be positioned and should not float");
@@ -5426,6 +5462,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     }
     rv = NS_NewSpacerFrame(mPresShell, &newFrame);
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::button == aTag) {
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -5446,6 +5483,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
     isReplaced = PR_TRUE;
     rv = NS_NewIsIndexFrame(mPresShell, &newFrame);
   }
+#endif
 
   if (NS_FAILED(rv) || !newFrame)
     return rv;
@@ -6493,7 +6531,9 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
 {
   PRBool    primaryFrameSet = PR_FALSE;
   nsIFrame* newFrame = nsnull;  // the frame we construct
+#ifdef CSS_TABLES
   nsTableCreator tableCreator(mPresShell); // Used to make table frames.
+#endif
   PRBool    addToHashTable = PR_TRUE;
   PRBool    addedToFrameList = PR_FALSE;
   nsresult  rv = NS_OK;
@@ -6672,6 +6712,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
 
     // Use the 'display' property to choose a frame type
     switch (aDisplay->mDisplay) {
+#ifdef CSS_TABLES
     case NS_STYLE_DISPLAY_TABLE:
     {
       // XXXbz this isn't quite right, but checking for aHasPseudoParent here
@@ -6763,6 +6804,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
         }
         return rv;
       }
+#endif
   
     default:
       NS_NOTREACHED("How did we get here?");
@@ -7499,16 +7541,20 @@ nsCSSFrameConstructor::PageBreakBefore(nsFrameConstructorState& aState,
 
   // See if page-break-before is set for all elements except row groups, rows, cells 
   // (these are handled internally by tables) and construct a page break frame if so.
+#ifdef CSS_TABLES
   if (NS_STYLE_DISPLAY_NONE != display->mDisplay &&
       (NS_STYLE_DISPLAY_TABLE == display->mDisplay ||
        !IsTableRelated(display->mDisplay, PR_TRUE))) { 
+#endif
     if (display->mBreakBefore) {
       ConstructPageBreakFrame(aState, aContent, aParentFrame, aStyleContext,
                               aFrameItems);
     }
     return display->mBreakAfter;
+#ifdef CSS_TABLES
   }
   return PR_FALSE;
+#endif
 }
 
 nsresult
@@ -7992,6 +8038,7 @@ nsCSSFrameConstructor::AppendFrames(const nsFrameConstructorState& aState,
 
   nsresult rv = NS_OK;
 
+#ifdef CSS_TABLES
   if (nsLayoutAtoms::tableFrame == aParentFrame->GetType()) { 
     nsIAtom* childType = aFrameList->GetType();
     if (nsLayoutAtoms::tableColFrame == childType) {
@@ -8018,9 +8065,12 @@ nsCSSFrameConstructor::AppendFrames(const nsFrameConstructorState& aState,
                                       nsLayoutAtoms::captionList, aFrameList);
     }
     else {
+#endif
       rv = frameManager->AppendFrames(aParentFrame, nsnull, aFrameList);
+#ifdef CSS_TABLES
     }
   }
+#endif
 
   return rv;
 }
@@ -8766,6 +8816,7 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
     }
   }
 
+#ifdef HTML_FORMS
   // Here we have been notified that content has been appended so if
   // the select now has a single item we need to go in and removed
   // the dummy frame.
@@ -8776,6 +8827,7 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
       RemoveDummyFrameFromSelect(aContainer, childContent, sel);
     }
   } 
+#endif
 
 #ifdef DEBUG
   if (gReallyNoisyContentUpdates) {
@@ -8792,6 +8844,7 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
 }
 
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::AddDummyFrameToSelect(nsFrameConstructorState& aState,
                                              nsIFrame*        aListFrame,
@@ -8833,6 +8886,7 @@ nsCSSFrameConstructor::AddDummyFrameToSelect(nsFrameConstructorState& aState,
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 // defined below
 static nsresult
@@ -8841,6 +8895,7 @@ DeletingFrameSubtree(nsPresContext*  aPresContext,
                      nsFrameManager*  aFrameManager,
                      nsIFrame*        aFrame);
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsIContent*     aContainer,
                                                   nsIContent*     aChild,
@@ -8879,6 +8934,7 @@ nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsIContent*     aContainer,
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 // Return TRUE if the insertion of aChild into aParent1,2 should force a reframe. aParent1 is 
 // the special inline container which contains a block. aParentFrame is approximately aParent1's
@@ -9403,12 +9459,14 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
     }
   }
 
+#ifdef HTML_FORMS
   // Here we have been notified that content has been insert
   // so if the select now has a single item 
   // we need to go in and removed the dummy frame
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement = do_QueryInterface(aContainer);
   if (selectElement)
     RemoveDummyFrameFromSelect(aContainer, aChild, selectElement);
+#endif
 
 #ifdef DEBUG
   if (gReallyNoisyContentUpdates && parentFrame) {
@@ -9662,6 +9720,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
     frameManager->ClearUndisplayedContentIn(aChild, aContainer);
   }
 
+#ifdef HTML_FORMS
   // When the last item is removed from a select, 
   // we need to add a pseudo frame so select gets sized as the best it can
   // so here we see if it is a select and then we get the number of options
@@ -9683,6 +9742,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
       }
     } 
   }
+#endif
 
 #ifdef MOZ_XUL
   if (NotifyListBoxBody(presContext, aContainer, aChild, aIndexInContainer, 
@@ -10093,22 +10153,15 @@ nsCSSFrameConstructor::StyleChangeReflow(nsIFrame* aFrame,
   }
 #endif
 
-  // Is it a box? If so we can coelesce.
-  if (aFrame->IsBoxFrame()) {
-    nsBoxLayoutState state(mPresShell->GetPresContext());
-    aFrame->MarkStyleChange(state);
-  }
-  else {
-    // If the frame is part of a split block-in-inline hierarchy, then
-    // target the style-change reflow at the first ``normal'' ancestor
-    // so we're sure that the style change will propagate to any
-    // anonymously created siblings.
-    if (IsFrameSpecial(aFrame))
-      aFrame = GetIBContainingBlockFor(aFrame);
+  // If the frame is part of a split block-in-inline hierarchy, then
+  // target the style-change reflow at the first ``normal'' ancestor
+  // so we're sure that the style change will propagate to any
+  // anonymously created siblings.
+  if (IsFrameSpecial(aFrame))
+    aFrame = GetIBContainingBlockFor(aFrame);
 
-    // Target a style-change reflow at the frame.
-    mPresShell->AppendReflowCommand(aFrame, eReflowType_StyleChanged, nsnull);
-  }
+  aPresContext->PresShell()->
+    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }
@@ -10514,6 +10567,7 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent*    aContent,
   // when the image can not be displayed
   rv = aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::alt, aAltText);
 
+#ifdef HTML_FORMS
   // If there's no "alt" attribute, and aContent is an input    
   // element, then use the value of the "value" attribute
   if ((NS_CONTENT_ATTR_NOT_THERE == rv) && (nsHTMLAtoms::input == aTag)) {
@@ -10527,6 +10581,7 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent*    aContent,
                                          "Submit", aAltText);      
     }
   }
+#endif
 }
 
 // Construct an alternate frame to use when the image can't be rendered
@@ -10717,8 +10772,8 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIFrame* aFrame)
 
         // XXX Work around a bug in the block code where the float won't get
         // reflowed unless the line containing the placeholder frame is reflowed...
-        placeholderFrame->GetParent()->
-          ReflowDirtyChild(mPresShell, placeholderFrame);
+        mPresShell->FrameNeedsReflow(placeholderFrame,
+                                     nsIPresShell::eStyleChange);
       }
     }
 
@@ -10862,6 +10917,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIFrame* aFrame)
   return rv;
 }
 
+#ifdef CSS_TABLES
 nsresult
 nsCSSFrameConstructor::CreateContinuingOuterTableFrame(nsIPresShell*    aPresShell,
                                                        nsPresContext*  aPresContext,
@@ -11002,6 +11058,7 @@ nsCSSFrameConstructor::CreateContinuingTableFrame(nsIPresShell* aPresShell,
   *aContinuingFrame = newFrame;
   return rv;
 }
+#endif
 
 nsresult
 nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
@@ -11073,6 +11130,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     nsIFrame* pageContentFrame;
     rv = ConstructPageFrame(shell, aPresContext, aParentFrame, aFrame,
                             newFrame, pageContentFrame);
+#ifdef CSS_TABLES
   } else if (nsLayoutAtoms::tableOuterFrame == frameType) {
     rv = CreateContinuingOuterTableFrame(shell, aPresContext, aFrame, aParentFrame,
                                          content, styleContext, &newFrame);
@@ -11129,7 +11187,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // Set the table cell's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, continuingAreaFrame);
     }
-  
+#endif
   } else if (nsLayoutAtoms::lineFrame == frameType) {
     rv = NS_NewFirstLineFrame(shell, &newFrame);
     if (NS_SUCCEEDED(rv)) {
@@ -11165,6 +11223,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     if (!newFrame) 
       return NS_ERROR_NULL_POINTER;
     newFrame->Init(aPresContext, content, aParentFrame, styleContext, aFrame);
+#ifdef HTML_FORMS
   } else if (nsLayoutAtoms::fieldSetFrame == frameType) {
     rv = NS_NewFieldSetFrame(aPresContext->PresShell(), &newFrame,
                              NS_BLOCK_SPACE_MGR);
@@ -11184,6 +11243,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // Set the fieldset's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, continuingAreaFrame);
     }
+#endif
   } else {
     NS_ASSERTION(PR_FALSE, "unexpected frame type");
     rv = NS_ERROR_UNEXPECTED;
@@ -11795,6 +11855,7 @@ nsCSSFrameConstructor::ProcessChildren(nsFrameConstructorState& aState,
     }
   }
 
+#ifdef CSS_TABLES
   if (aTableCreator) { // do special table child processing
     // if there is a caption child here, it gets recorded in aState.mPseudoFrames.
     nsIFrame* captionFrame;
@@ -11802,6 +11863,7 @@ nsCSSFrameConstructor::ProcessChildren(nsFrameConstructorState& aState,
                          aFrameItems, captionFrame);
   }
   else {
+#endif
     // save the incoming pseudo frame state 
     nsPseudoFrames priorPseudoFrames; 
     aState.mPseudoFrames.Reset(&priorPseudoFrames);
@@ -11824,7 +11886,9 @@ nsCSSFrameConstructor::ProcessChildren(nsFrameConstructorState& aState,
 
     // restore the incoming pseudo frame state 
     aState.mPseudoFrames = priorPseudoFrames;
+#ifdef CSS_TABLES
   }
+#endif
 
   if (aCanHaveGeneratedContent) {
     // Probe for generated content after

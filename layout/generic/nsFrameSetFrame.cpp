@@ -981,7 +981,7 @@ nsHTMLFramesetFrame::Reflow(nsPresContext*          aPresContext,
                             const nsHTMLReflowState& aReflowState,
                             nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   nsIPresShell *shell = aPresContext->PresShell();
   nsStyleSet *styleSet = shell->StyleSet();
@@ -995,7 +995,7 @@ nsHTMLFramesetFrame::Reflow(nsPresContext*          aPresContext,
   nscoord height = (aDesiredSize.height <= aReflowState.availableHeight)
     ? aDesiredSize.height : aReflowState.availableHeight;
 
-  PRBool firstTime = (eReflowReason_Initial == aReflowState.reason);
+  PRBool firstTime = (GetStateBits() & NS_FRAME_FIRST_REFLOW) != 0;
   if (firstTime) {
     nsContentUtils::RegisterPrefCallback(kFrameResizePref,
                                          FrameResizePrefCallback, this);
@@ -1250,10 +1250,6 @@ nsHTMLFramesetFrame::Reflow(nsPresContext*          aPresContext,
     mChildTypes = nsnull;
     mChildFrameborder = nsnull;
     mChildBorderColors = nsnull;
-  }
-
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
   }
 
   aStatus = NS_FRAME_COMPLETE;
@@ -1622,7 +1618,7 @@ nsHTMLFramesetBorderFrame::Reflow(nsPresContext*          aPresContext,
                                   const nsHTMLReflowState& aReflowState,
                                   nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBorderFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBorderFrame");
   GetDesiredSize(aPresContext, aReflowState, aDesiredSize);
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
@@ -1807,7 +1803,7 @@ nsHTMLFramesetBlankFrame::Reflow(nsPresContext*          aPresContext,
                                  const nsHTMLReflowState& aReflowState,
                                  nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBlankFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetBlankFrame");
   GetDesiredSize(aPresContext, aReflowState, aDesiredSize);
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;

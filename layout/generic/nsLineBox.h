@@ -83,9 +83,6 @@ public:
   // the containing block frame.
   nsRect mCombinedArea;
 
-  // The float's max-element-width.
-  nscoord mMaxElementWidth;
-
 protected:
   nsFloatCache* mNext;
 
@@ -266,15 +263,6 @@ public:
     return mFlags.mImpactedByFloat;
   }
 
-  // mHasPercentageChild bit
-  void SetHasPercentageChild(PRBool aOn) {
-    NS_ASSERTION((PR_FALSE==aOn || PR_TRUE==aOn), "somebody is playing fast and loose with bools and bits!");
-    mFlags.mHasPercentageChild = aOn;
-  }
-  PRBool HasPercentageChild() const {
-    return mFlags.mHasPercentageChild;
-  }
-
   // mLineWrapped bit
   void SetLineWrapped(PRBool aOn) {
     NS_ASSERTION((PR_FALSE==aOn || PR_TRUE==aOn), "somebody is playing fast and loose with bools and bits!");
@@ -284,17 +272,6 @@ public:
     return mFlags.mLineWrapped;
   }
 
-  // mResizeReflowOptimizationDisabled bit
-  void DisableResizeReflowOptimization() {
-    mFlags.mResizeReflowOptimizationDisabled = PR_TRUE;
-  }
-  void EnableResizeReflowOptimization() {
-    mFlags.mResizeReflowOptimizationDisabled = PR_FALSE;
-  }
-  PRBool ResizeReflowOptimizationDisabled() const {
-    return mFlags.mResizeReflowOptimizationDisabled;
-  }
-  
   // mChildCount value
   PRInt32 GetChildCount() const {
     return (PRInt32) mFlags.mChildCount;
@@ -449,8 +426,6 @@ public:
   nsIFrame* mFirstChild;
 
   nsRect mBounds;
-  nscoord mMaxElementWidth;  // width part of max-element-size
-  nscoord mMaximumWidth;     // maximum width (needed for incremental reflow of tables)
 
   struct FlagBits {
     PRUint32 mDirty : 1;
@@ -458,14 +433,12 @@ public:
     PRUint32 mHasClearance : 1;
     PRUint32 mBlock : 1;
     PRUint32 mImpactedByFloat : 1;
-    PRUint32 mHasPercentageChild : 1;
     PRUint32 mLineWrapped: 1;
-    PRUint32 mResizeReflowOptimizationDisabled: 1;  // default 0 = means that the opt potentially applies to this line. 1 = never skip reflowing this line for a resize reflow
     PRUint32 mEmptyCacheValid: 1;
     PRUint32 mEmptyCacheState: 1;
     PRUint32 mBreakType : 4;
 
-    PRUint32 mChildCount : 18;
+    PRUint32 mChildCount : 20;
   };
 
   struct ExtraData {

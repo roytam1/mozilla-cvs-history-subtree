@@ -1390,19 +1390,20 @@ nsGrid::RowChildIsDirty(nsBoxLayoutState& aState, PRInt32 aRowIndex, PRInt32 aCo
   // corresponding nsGridRowGroup around them would never get dirty. So lets just
   // do it manually here.
 
-  if (mRowBox)
-    mRowBox->MarkDirty(aState);
+  if (mRowBox) {
+    mRowBox->AddStateBits(NS_FRAME_IS_DIRTY);
+    aState.PresShell()->FrameNeedsReflow(mRowBox, nsIPresShell::eTreeChange);
+  }
 
-  if (mColumnBox)
-    mColumnBox->MarkDirty(aState);
+  if (mColumnBox) {
+    mColumnBox->AddStateBits(NS_FRAME_IS_DIRTY);
+    aState.PresShell()->FrameNeedsReflow(mColumnBox, nsIPresShell::eTreeChange);
+  }
 
   // dirty just our row and column that we were given
-  nsGridRow* row = GetRowAt(aRowIndex, aIsHorizontal);
-  row->MarkDirty(aState);
+  GetRowAt(aRowIndex, aIsHorizontal)->MarkDirty(aState);
 
-  nsGridRow* column = GetColumnAt(aColumnIndex, aIsHorizontal);
-  column->MarkDirty(aState);
-
+  GetColumnAt(aColumnIndex, aIsHorizontal)->MarkDirty(aState);
 
   mMarkingDirty = PR_FALSE;
   */

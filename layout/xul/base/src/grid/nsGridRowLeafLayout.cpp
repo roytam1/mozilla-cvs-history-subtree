@@ -135,6 +135,7 @@ nsGridRowLeafLayout::GetMaxSize(nsIBox* aBox, nsBoxLayoutState& aState, nsSize& 
 NS_IMETHODIMP
 nsGridRowLeafLayout::ChildBecameDirty(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChild)
 {
+#error "This needs to be rewritten, since virtual function ChildBecameDirty no longer exists."
   nsGrid* grid = nsnull;
   PRInt32 index = 0;
   GetGrid(aBox, &grid, &index);
@@ -152,6 +153,7 @@ nsGridRowLeafLayout::ChildBecameDirty(nsIBox* aBox, nsBoxLayoutState& aState, ns
 NS_IMETHODIMP
 nsGridRowLeafLayout::BecameDirty(nsIBox* aBox, nsBoxLayoutState& aState)
 {
+#error "This needs to be rewritten, since virtual function BecameDirty no longer exists."
   nsGrid* grid = nsnull;
   PRInt32 index = 0;
   GetGrid(aBox, &grid, &index);
@@ -374,7 +376,8 @@ nsGridRowLeafLayout::DirtyRows(nsIBox* aBox, nsBoxLayoutState& aState)
 {
   if (aBox) {
     // mark us dirty
-    aBox->MarkDirty(aState);
+    aBox->AddStateBits(NS_FRAME_IS_DIRTY);
+    aState.PresShell()->FrameNeedsReflow(aBox, nsIPresShell::eTreeChange);
   }
 
   return NS_OK;

@@ -303,12 +303,9 @@ nsMenuFrame::SetInitialChildList(nsPresContext* aPresContext,
 nsIAtom*
 nsMenuFrame::GetAdditionalChildListName(PRInt32 aIndex) const
 {
-  // don't expose the child frame list, it slows things down
-#if 0
   if (NS_MENU_POPUP_LIST_INDEX == aIndex) {
     return nsLayoutAtoms::popupList;
   }
-#endif
 
   return nsnull;
 }
@@ -791,12 +788,11 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
           popupAlign.AssignLiteral("topleft");
       }
 
-      nsBoxLayoutState state(mPresContext);
-
       // if height never set we need to do an initial reflow.
       if (mLastPref.height == -1)
       {
-         menuPopup->MarkDirty(state);
+         menuPopup->AddStateBits(NS_FRAME_IS_DIRTY);
+         aPresShell.FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
 
          mPresContext->PresShell()->FlushPendingNotifications(Flush_OnlyReflow);
       }
@@ -815,7 +811,8 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
       // if the height is different then reflow. It might need scrollbars force a reflow
       if (curRect.height != newHeight || mLastPref.height != newHeight)
       {
-         menuPopup->MarkDirty(state);
+         menuPopup->AddStateBits(NS_FRAME_IS_DIRTY);
+         aPresShell.FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
          mPresContext->PresShell()->FlushPendingNotifications(Flush_OnlyReflow);
       }
 
@@ -1039,24 +1036,7 @@ nsMenuFrame::DoLayout(nsBoxLayoutState& aState)
   return rv;
 }
 
-NS_IMETHODIMP
-nsMenuFrame::MarkChildrenStyleChange()  
-{
-  nsresult rv = nsBoxFrame::MarkChildrenStyleChange();
-  if (NS_FAILED(rv))
-    return rv;
-   
-  nsIFrame* popupChild = mPopupFrames.FirstChild();
-
-  if (popupChild) {
-    NS_ASSERTION(popupChild->IsBoxFrame(), "popupChild is not box!!");
-    return popupChild->MarkChildrenStyleChange();
-  }
-
-  return rv;
-}
-
-#ifdef DEBUG_LAYOUT
+1ifdef DEBUG_LAYOUT
 NS_IMETHODIMP
 nsMenuFrame::SetDebug(nsBoxLayoutState& aState, PRBool aDebug)
 {
@@ -1813,10 +1793,10 @@ nsMenuFrame::RemoveFrame(nsIAtom*        aListName,
 
   if (mPopupFrames.ContainsFrame(aOldFrame)) {
     // Go ahead and remove this frame.
-    nsPresContext* presContext = GetPresContext();
-    mPopupFrames.DestroyFrame(presContext, aOldFrame);
-    nsBoxLayoutState state(presContext);
-    rv = MarkDirtyChildren(state);
+    mPopupFrames.DestroyFrame(aPresContext, aOldFrame);
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    rv = NS_OK;
   } else {
     rv = nsBoxFrame::RemoveFrame(aListName, aOldFrame);
   }
@@ -1836,11 +1816,13 @@ nsMenuFrame::InsertFrames(nsIAtom*        aListName,
     NS_ASSERTION(aFrameList->IsBoxFrame(),"Popup is not a box!!!");
     mPopupFrames.InsertFrames(nsnull, nsnull, aFrameList);
 
-    nsBoxLayoutState state(GetPresContext());
 #ifdef DEBUG_LAYOUT
+    nsBoxLayoutState state(GetPresContext());
     SetDebug(state, aFrameList, mState & NS_STATE_CURRENTLY_IN_DEBUG);
 #endif
-    rv = MarkDirtyChildren(state);
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    rv = NS_OK;
   } else {
     rv = nsBoxFrame::InsertFrames(aListName, aPrevFrame, aFrameList);  
   }
@@ -1862,11 +1844,13 @@ nsMenuFrame::AppendFrames(nsIAtom*        aListName,
     NS_ASSERTION(aFrameList->IsBoxFrame(),"Popup is not a box!!!");
 
     mPopupFrames.AppendFrames(nsnull, aFrameList);
-    nsBoxLayoutState state(GetPresContext());
 #ifdef DEBUG_LAYOUT
+    nsBoxLayoutState state(GetPresContext());
     SetDebug(state, aFrameList, mState & NS_STATE_CURRENTLY_IN_DEBUG);
 #endif
-    rv = MarkDirtyChildren(state);
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    rv = NS_OK;
   } else {
     rv = nsBoxFrame::AppendFrames(aListName, aFrameList); 
   }
