@@ -29,6 +29,8 @@ REQUIRES	= xpcom \
 		  dom \
 		  webBrowser_core \
 		  docshell \
+		  editor \
+		  composer \		  
 		  util \
 		  uriloader \
 		  locale \
