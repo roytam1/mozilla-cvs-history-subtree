@@ -262,8 +262,8 @@ class FrameManager;
 struct CantRenderReplacedElementEvent : public PLEvent {
   CantRenderReplacedElementEvent(FrameManager* aFrameManager, nsIFrame* aFrame, nsIPresShell* aPresShell);
   ~CantRenderReplacedElementEvent();
-  void AddLoadGroupRequest(nsIPresShell* aPresShell);
-  void RemoveLoadGroupRequest();
+  nsresult AddLoadGroupRequest(nsIPresShell* aPresShell);
+  nsresult RemoveLoadGroupRequest();
 
   nsIFrame*  mFrame;                     // the frame that can't be rendered
   CantRenderReplacedElementEvent* mNext; // next event in the list
@@ -1231,7 +1231,7 @@ CantRenderReplacedElementEvent::~CantRenderReplacedElementEvent()
 
 // Add a load group request in order to delay the onLoad handler when we have
 // pending replacements
-CantRenderReplacedElementEvent::AddLoadGroupRequest(nsIPresShell* aPresShell)
+nsresult CantRenderReplacedElementEvent::AddLoadGroupRequest(nsIPresShell* aPresShell)
 {
   nsCOMPtr<nsIDocument> doc;
   aPresShell->GetDocument(getter_AddRefs(doc));
@@ -1254,7 +1254,7 @@ CantRenderReplacedElementEvent::AddLoadGroupRequest(nsIPresShell* aPresShell)
 }
 
 // Remove the load group request added above
-CantRenderReplacedElementEvent::RemoveLoadGroupRequest()
+nsresult CantRenderReplacedElementEvent::RemoveLoadGroupRequest()
 {
   nsresult rv = NS_OK;
 
