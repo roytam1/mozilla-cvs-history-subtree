@@ -1,0 +1,159 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is the Mozilla SVG project.
+ *
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are
+ * Copyright (C) 2001 Crocodile Clips Ltd. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ *    William Cook <william.cook@crocodile-clips.com> (original author)
+ *
+ */
+
+#include "nsSVGGraphicFrame.h"
+#include "nsIDOMSVGAnimatedLength.h"
+#include "nsIDOMSVGLength.h"
+#include "nsIDOMSVGPoint.h"
+#include "nsIDOMSVGLineElement.h"
+#include "nsIDOMSVGElement.h"
+#include "nsIDOMSVGSVGElement.h"
+#include "nsASVGPathBuilder.h"
+
+class nsSVGLineFrame : public nsSVGGraphicFrame
+{
+  friend nsresult
+  NS_NewSVGLineFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+
+  virtual ~nsSVGLineFrame();
+
+  virtual nsresult Init();
+  virtual void ConstructPath(nsASVGPathBuilder* pathBuilder);
+  virtual const nsStyleSVG* GetStyle();
+
+  nsCOMPtr<nsIDOMSVGLength> mX1;
+  nsCOMPtr<nsIDOMSVGLength> mY1;
+  nsCOMPtr<nsIDOMSVGLength> mX2;
+  nsCOMPtr<nsIDOMSVGLength> mY2;
+};
+
+//----------------------------------------------------------------------
+// Implementation
+
+nsresult
+NS_NewSVGLineFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame)
+{
+  *aNewFrame = nsnull;
+
+  nsCOMPtr<nsIDOMSVGLineElement> line = do_QueryInterface(aContent);
+  if (!line) {
+#ifdef DEBUG
+    printf("warning: trying to construct an SVGLineFrame for a content element that doesn't support the right interfaces\n");
+#endif
+    return NS_ERROR_FAILURE;
+  }
+
+  nsSVGLineFrame* it = new (aPresShell) nsSVGLineFrame;
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsSVGLineFrame::~nsSVGLineFrame()
+{
+  nsCOMPtr<nsISVGValue> value;
+  if (mX1 && (value = do_QueryInterface(mX1)))
+      value->RemoveObserver(this);
+  if (mY1 && (value = do_QueryInterface(mY1)))
+      value->RemoveObserver(this);
+  if (mX2 && (value = do_QueryInterface(mX2)))
+      value->RemoveObserver(this);
+  if (mY2 && (value = do_QueryInterface(mY2)))
+      value->RemoveObserver(this);
+}
+
+nsresult nsSVGLineFrame::Init()
+{
+  nsCOMPtr<nsIDOMSVGLineElement> line = do_QueryInterface(mContent);
+  NS_ASSERTION(line,"wrong content element");
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    line->GetX1(getter_AddRefs(length));
+    length->GetBaseVal(getter_AddRefs(mX1));
+    NS_ASSERTION(mX1, "no x1");
+    if (!mX1) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mX1);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    line->GetY1(getter_AddRefs(length));
+    length->GetBaseVal(getter_AddRefs(mY1));
+    NS_ASSERTION(mY1, "no y1");
+    if (!mY1) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mY1);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    line->GetX2(getter_AddRefs(length));
+    length->GetBaseVal(getter_AddRefs(mX2));
+    NS_ASSERTION(mX2, "no x2");
+    if (!mX2) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mX2);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    line->GetY2(getter_AddRefs(length));
+    length->GetBaseVal(getter_AddRefs(mY2));
+    NS_ASSERTION(mY2, "no y2");
+    if (!mY2) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mY2);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  return nsSVGGraphicFrame::Init();
+}
+
+void nsSVGLineFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
+{
+  float x1,y1,x2,y2;
+
+  mX1->GetValue(&x1);
+  mY1->GetValue(&y1);
+  mX2->GetValue(&x2);
+  mY2->GetValue(&y2);
+
+  // move to start coordinates then draw line to end coordinates
+  pathBuilder->Moveto(x1, y1);
+  pathBuilder->Lineto(x2, y2);
+}
+
+const nsStyleSVG* nsSVGLineFrame::GetStyle()
+{
+  // XXX TODO: strip out any fill color as per svg specs
+  return nsSVGGraphicFrame::GetStyle();
+}
