@@ -738,7 +738,6 @@
 				F52D5CE0027D412A01A80166,
 				F5960E9C02BA686001000103,
 				F55A4DF40380705A01A80166,
-				F5461CE303AAC4F401A96660,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3770,12 +3769,6 @@
 			name = libjsloader.dylib;
 			path = ../dist/Embed/components/libjsloader.dylib;
 			refType = 2;
-		};
-		F5461CE303AAC4F401A96660 = {
-			fileRef = F5461CE203AAC4F401A96660;
-			isa = PBXBuildFile;
-			settings = {
-			};
 		};
 		F5461CE403AAC51D01A96660 = {
 			fileRef = F5461CE203AAC4F401A96660;
