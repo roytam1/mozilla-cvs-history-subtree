@@ -52,6 +52,7 @@ DEFINES		+= -DUSE_NSREG
 INCLUDES	+= \
 		-I$(srcdir)/../ucvlatin \
 		-I$(srcdir)/../ucvja \
+		-I$(srcdir)/../util \
 		$(NULL)
 
 LIBS		+= \

@@ -58,7 +58,7 @@
 #include "nsIScriptableUConv.h"
 #include "nsConverterInputStream.h"
 
-#include "nsUCvMinSupport.h"
+#include "nsUCSupport.h"
 #include "nsCharsetConverterManager.h"
 #include "nsUnicodeDecodeHelper.h"
 #include "nsUnicodeEncodeHelper.h"
