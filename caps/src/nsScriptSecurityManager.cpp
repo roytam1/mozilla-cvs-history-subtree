@@ -1578,11 +1578,12 @@ nsScriptSecurityManager::CanAccess(PRUint32 aAction,
             printf("Cached ");
 #endif
             secLevel = (PRInt32)*aPolicy;
-    }
+        }
         else
             secLevel = GetSecurityLevel(aJSContext, subjectPrincipal, aClassInfo, aName,
                                         aAction, capability, aPolicy);
-    } else {
+    } 
+    else {
         secLevel = SCRIPT_SECURITY_NO_ACCESS;
     }
     
