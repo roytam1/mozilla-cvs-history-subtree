@@ -24,6 +24,8 @@
 
 #include "primpl.h"
 #include <direct.h>
+#include <mbstring.h>
+
 
 struct _MDLock               _pr_ioq_lock;
 
@@ -425,12 +427,13 @@ _MD_CloseFile(PRInt32 osfd)
 void FlipSlashes(char *cp, int len)
 {
     while (--len >= 0) {
-    if (cp[0] == '/') {
-        cp[0] = PR_DIRECTORY_SEPARATOR;
+        if (cp[0] == '/') {
+            cp[0] = PR_DIRECTORY_SEPARATOR;
+        }
+        cp = _mbsinc(cp);
     }
-    cp++;
-    }
-}
+} /* end FlipSlashes() */
+
 
 /*
 **
@@ -733,7 +736,7 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
      * FindFirstFile() expands wildcard characters.  So
      * we make sure the pathname contains no wildcard.
      */
-    if (NULL != strpbrk(fn, "?*")) {
+    if (NULL != _mbspbrk(fn, "?*")) {
         PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
         return -1;
     }
@@ -755,7 +758,7 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
          * If the pathname does not contain ., \, and /, it cannot be
          * a root directory or a pathname that ends in a slash.
          */
-        if (NULL == strpbrk(fn, ".\\/")) {
+        if (NULL == _mbspbrk(fn, ".\\/")) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
         } 
