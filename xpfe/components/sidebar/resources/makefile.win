@@ -24,8 +24,12 @@ DEPTH=..\..\..\..
 DIRS=locale
 
 CHROME_DIR          = sidebar
-CHROME_CONTENT_DIR  = content\default
-CHROME_SKIN_DIR     = skin\default
+CHROME_CONTENT_DIR  = content
+CHROME_SKIN_DIR     = skin
+
+
+DISTBROWSER=$(DIST)\bin\chrome\sidebar\locale
+
 
 CHROME_CONTENT = \
         .\customize-panel.js \
@@ -54,14 +58,13 @@ CHROME_SKIN = \
 	.\sidebar-topright-cap.gif \
         $(NULL)
 
-CHROME_L10N = \
-        .\locale\en-US\customize-panel.dtd \
-        .\locale\en-US\customize.dtd \
-	.\locale\en-US\preview.dtd \
-        .\locale\en-US\sidebar-registry-rdf.dtd \
-        .\locale\en-US\sidebar-rdf.dtd \
-        .\locale\en-US\sidebarOverlay.dtd \
-        $(NULL)
-
 include <$(DEPTH)\config\rules.mak>
+
+install:: 
+        $(MAKE_INSTALL) locale\en-US\customize-panel.dtd $(DISTBROWSER)
+        $(MAKE_INSTALL) locale\en-US\customize.dtd $(DISTBROWSER)
+	      $(MAKE_INSTALL) locale\en-US\preview.dtd $(DISTBROWSER)
+        $(MAKE_INSTALL) locale\en-US\sidebar-registry-rdf.dtd $(DISTBROWSER)
+        $(MAKE_INSTALL) locale\en-US\sidebar-rdf.dtd $(DISTBROWSER)
+        $(MAKE_INSTALL) locale\en-US\sidebarOverlay.dtd $(DISTBROWSER)
 

@@ -513,7 +513,7 @@ PRInt32 nsStr::RFindSubstr(const nsStr& aDest,const nsStr& aTarget, PRBool aIgno
   
       PRInt32     aDelta    = (aDest.mCharSize == eOneByte) ? 1 : 2;
       const char* root      = aDest.mStr;
-      const char* destLast  = root+((aDest.mLength-1)*aDelta); //pts to last char in aDest (likely null)
+      const char* destLast  = root+((aDest.mLength)*aDelta); //pts to last char in aDest (likely null)
 
       const char* rightmost = root+(anOffset*aDelta);
       const char* min       = rightmost-((aCount-1)*aDelta);

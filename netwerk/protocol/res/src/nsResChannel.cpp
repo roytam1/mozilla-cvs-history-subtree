@@ -131,7 +131,7 @@ nsResChannel::Substitutions::Init()
 }
 
 nsresult
-nsResChannel::Substitutions::Next(nsIURI* *result)
+nsResChannel::Substitutions::Next(nsIURI* *result, nsIIOService* serv)
 {
     nsresult rv;
     nsResChannel* channel = GET_SUBSTITUTIONS_CHANNEL(this);
@@ -140,14 +140,8 @@ nsResChannel::Substitutions::Next(nsIURI* *result)
     if (str == nsnull) return NS_ERROR_FAILURE;
 
     nsCOMPtr<nsIURI> resolvedURI;
-    rv = nsComponentManager::CreateInstance(kStandardURLCID, nsnull,
-                                            NS_GET_IID(nsIURI),
-                                            getter_AddRefs(resolvedURI));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = resolvedURI->SetSpec(str->GetBuffer());
-    if (NS_FAILED(rv)) return rv;
-
+    rv = serv->NewURI(str->GetBuffer(), nsnull, getter_AddRefs(resolvedURI));
+    
     PRBool ok = mSubstitutions->RemoveCStringAt(0);
     if (!ok) return NS_ERROR_FAILURE;
 
@@ -252,7 +246,7 @@ nsResChannel::OpenInputStream(PRUint32 startPosition, PRInt32 readCount,
     if (NS_FAILED(rv)) return rv;
 
     do {
-        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI));
+        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI), serv);
         if (NS_FAILED(rv)) return rv;
 
         rv = serv->NewChannelFromURI(mCommand, mResolvedURI, mLoadGroup, mCallbacks, 
@@ -284,7 +278,7 @@ nsResChannel::OpenOutputStream(PRUint32 startPosition, nsIOutputStream **result)
     if (NS_FAILED(rv)) return rv;
 
     do {
-        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI));
+        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI), serv);
         if (NS_FAILED(rv)) return rv;
 
         rv = serv->NewChannelFromURI(mCommand, mResolvedURI, mLoadGroup, mCallbacks, 
@@ -331,7 +325,7 @@ nsResChannel::AsyncOpen(nsIStreamObserver *observer, nsISupports* ctxt)
     if (NS_FAILED(rv)) return rv;
 
     do {
-        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI));
+        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI), serv);
         if (NS_FAILED(rv)) break;
 
         rv = serv->NewChannelFromURI(mCommand, mResolvedURI, mLoadGroup, mCallbacks, 
@@ -392,7 +386,7 @@ nsResChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
     if (NS_FAILED(rv)) return rv;
 
     do {
-        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI));
+        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI), serv);
         if (NS_FAILED(rv)) break;
 
         rv = serv->NewChannelFromURI(mCommand, mResolvedURI, mLoadGroup, mCallbacks, 
@@ -455,7 +449,7 @@ nsResChannel::AsyncWrite(nsIInputStream *fromStream,
     if (NS_FAILED(rv)) return rv;
 
     do {
-        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI));
+        rv = mSubstitutions.Next(getter_AddRefs(mResolvedURI), serv);
         if (NS_FAILED(rv)) break;
 
         rv = serv->NewChannelFromURI(mCommand, mResolvedURI, mLoadGroup, mCallbacks, 

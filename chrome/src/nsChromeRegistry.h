@@ -71,11 +71,7 @@ protected:
                                         const PRUnichar *aProviderName);
 
     NS_IMETHOD GetOverlayDataSource(nsIURI *aChromeURL, nsIRDFDataSource **aResult);
-    NS_IMETHOD InitializeDataSource(const nsString &aPackage,
-                                    const nsString &aProvider,
-                                    nsIRDFDataSource **aResult,
-                                    PRBool aUseProfileDirOnly = PR_FALSE);
-
+    
     nsresult GetPackageTypeResource(const nsString& aChromeType, nsIRDFResource** aResult);
     
     NS_IMETHOD RemoveOverlay(nsIRDFDataSource *aDataSource, nsIRDFResource *aResource);
@@ -102,4 +98,11 @@ private:
                           const nsCAutoString& aType,
                           nsISimpleEnumerator** aResult);
 
+    NS_IMETHOD InstallSearchPath(nsCAutoString& aFileName, PRBool aUseProfile);
+    NS_IMETHOD GetEnumerator(nsCAutoString& aFileName, 
+                             nsISimpleEnumerator** aResult, PRBool aUseProfile);
+
+protected:
+    PRBool mInstallInitialized;
+    PRBool mProfileInitialized;
 };

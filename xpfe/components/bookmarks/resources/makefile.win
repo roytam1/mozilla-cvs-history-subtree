@@ -21,11 +21,10 @@
 
 DEPTH=..\..\..\..
 
-DIRS= locale
-
 CHROME_DIR          = bookmarks
-CHROME_CONTENT_DIR  = content/default
-CHROME_SKIN_DIR     = skin/default
+CHROME_CONTENT_DIR  = content
+CHROME_SKIN_DIR     = skin
+CHROME_L10N_DIR     = locale
 CHROME_SOURCE_DIR	= $(srcdir)
 
 CHROME_CONTENT = \

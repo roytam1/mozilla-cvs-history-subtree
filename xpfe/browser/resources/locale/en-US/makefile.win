@@ -23,10 +23,10 @@ DEPTH=..\..\..\..\..
 
 include <$(DEPTH)\config\rules.mak>
 
-DISTBROWSER=$(DIST)\bin\chrome\navigator\locale\en-US
+DISTBROWSER=$(DIST)\bin\chrome\navigator\locale
 
 install::
-    $(MAKE_INSTALL) openLocation.dtd $(DISTBROWSER)
+  $(MAKE_INSTALL) openLocation.dtd $(DISTBROWSER)
 	$(MAKE_INSTALL) viewSource.dtd $(DISTBROWSER)
 	$(MAKE_INSTALL) navigator.dtd $(DISTBROWSER)
 	$(MAKE_INSTALL) NetSupportConfirmCheckYN.dtd $(DISTBROWSER)

@@ -32,6 +32,7 @@
 #include "nsIInputStream.h"
 #include "nsCOMPtr.h"
 #include "nsAutoLock.h"
+#include "nsIIOService.h"
 
 class nsResChannel : public nsIResChannel,
                      public nsIStreamListener
@@ -73,7 +74,7 @@ protected:
         }
 
         nsresult Init();
-        nsresult Next(nsIURI* *result);
+        nsresult Next(nsIURI* *result, nsIIOService* serv);
     protected:
         nsCOMPtr<nsIURI>                mResourceURI;
         nsCStringArray*                 mSubstitutions;
