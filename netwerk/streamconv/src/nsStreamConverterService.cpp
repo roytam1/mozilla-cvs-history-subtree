@@ -170,8 +170,7 @@ nsStreamConverterService::AddAdjacency(const char *aContractID) {
             delete fromKey;
             return rv;
         }
-        data->data.edges = edgeArray.get();
-        NS_ADDREF(data->data.edges);
+        NS_ADDREF(data->data.edges = edgeArray.get());
 
         mAdjacencyList->Put(fromKey, data);
         fromEdges = data;
@@ -198,8 +197,7 @@ nsStreamConverterService::AddAdjacency(const char *aContractID) {
             delete toKey;
             return rv;
         }
-        data->data.edges = edgeArray.get();
-        NS_ADDREF(data->data.edges);
+        NS_ADDREF(data->data.edges = edgeArray.get());
 
         mAdjacencyList->Put(toKey, data);
     } else {
