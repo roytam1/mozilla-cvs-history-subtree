@@ -1,6 +1,18 @@
-1999-08-06  Leif Hedstrom  <leif@netscape.com>
+1999-08-06  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy 
+
+	* Entry.pm (removeValue): Fixed loop bug.
+	(addValue): Dito.
+	(hasValue): Dito.
+	(matchValue): Fixed loop bug, and also missing normalization in
+	half of the case statement.
 
 	* Merged v1.2.3 with v1.3 branch.
+
+1999-08-06  Kevin McCarthy  <kmccarth@perldap.org>
+
+	* Entry.pm (addDNValue): Bug fix, index for norm was wrong.
+
+	* Entry.pm (size): Optimzied for performance.
 
 1999-07-25  Kevin McCarthy  <kmccarth@perldap.org>
 
