@@ -2605,7 +2605,7 @@ lo_image_pixmap_update(MWContext *context, LO_ImageStruct *lo_image,
                        IL_Rect *update_rect)
 {
 #if defined(XP_WIN) || defined(XP_UNIX)
-	IL_ImageReq *image_req = NULL;	// See below at the end of the function.
+	IL_ImageReq *image_req = NULL;	/* See below at the end of the function.*/
 #endif
 
     /* This lo_image cannot correspond to an icon since we are receiving
@@ -2639,14 +2639,17 @@ lo_image_pixmap_update(MWContext *context, LO_ImageStruct *lo_image,
     }
 
 #if defined(XP_WIN) || defined(XP_UNIX)
-	
-	// This is a hack in the update event to allow RDF images to get updates
-	// even though they have no compositors in their contexts.
+    /*
+     * This is a hack in the update event to allow RDF images to get updates
+     * even though they have no compositors in their contexts.
+     */
 	if (context->type == MWContextIcon)
 	{
 		image_req = lo_image->image_req;
-		if (image_req)
-			IL_DisplaySubImage(image_req, 0, 0, 0, 0, 1, 1); // Forces a DisplayPixmap update.
+        if (image_req) {
+            /* Forces a DisplayPixmap update. */
+            IL_DisplaySubImage(image_req, 0, 0, 0, 0, 1, 1);
+        }
 	}
 #endif
 }
