@@ -189,6 +189,7 @@ messenger.jar:
     content/messenger/dateFormat.js                                            (base/resources/content/dateFormat.js)
 
 en-US.jar:
+#ifndef MOZ_XUL_APP
 *   locale/en-US/messenger/contents.rdf                                (base/resources/locale/en-US/contents.rdf)
     locale/en-US/messenger/addressbook/abAddressBookNameDialog.dtd     (addrbook/resources/locale/en-US/abAddressBookNameDialog.dtd)
     locale/en-US/messenger/addressbook/abCardOverlay.dtd               (addrbook/resources/locale/en-US/abCardOverlay.dtd)
@@ -289,9 +290,11 @@ en-US.jar:
     locale/en-US/messenger/vcard.properties                             (mime/cthandlers/resources/vcard.properties)
     locale/en-US/messenger/smime.properties                             (mime/cthandlers/resources/smime.properties)  
     locale/en-US/messenger/markByDate.dtd                               (base/resources/locale/en-US/markByDate.dtd)
+#endif
      locale/en-US/messenger-mapi/pref-mailnewsOverlay.dtd               (mapi/resources/locale/en-US/pref-mailnewsOverlay.dtd)
      locale/en-US/messenger-mapi/mapi.properties                        (mapi/resources/locale/en-US/mapi.properties)
 *    locale/en-US/messenger-mapi/contents.rdf                           (mapi/resources/locale/en-US/contents.rdf)
+
 
 US.jar:
 *   locale/US/messenger-region/contents.rdf                             (base/resources/locale/en-US/contents-region.rdf)

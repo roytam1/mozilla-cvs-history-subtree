@@ -35,7 +35,7 @@ locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/wallet/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/pipnss/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/pippki/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/autoconfig/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/messenger/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-mdn/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-views/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-smime/

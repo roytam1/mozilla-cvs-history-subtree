@@ -11,13 +11,13 @@
 #################################################################################################
 # mail
 #################################################################################################
-locale/en-US/messenger,                                   en-US/locale/en-US/messenger
-locale/en-US/messenger-mdn,                               en-US/locale/en-US/messenger-mdn
-locale/en-US/messenger/addressbook,                       en-US/locale/en-US/messenger/addressbook
-locale/en-US/messenger/messengercompose,                  en-US/locale/en-US/messenger/messengercompose
-locale/en-US/messenger/migration,                         en-US/locale/en-US/messenger/migration
+locale/messenger,                                         en-US/locale/messenger
+locale/messenger/addressbook,                             en-US/locale/messenger/addressbook
+locale/messenger/messengercompose,                        en-US/locale/messenger/messengercompose
+locale/messenger/migration,                               en-US/locale/messenger/migration
 locale/en-US/messenger-smime,                             en-US/locale/en-US/messenger-smime
 locale/en-US/messenger-mapi,                              en-US/locale/en-US/messenger-mapi
+locale/en-US/messenger-mdn,                               en-US/locale/en-US/messenger-mdn
 locale/messenger-offline,                                 en-US/locale/messenger-offline
 locale/messenger-newsblog,                                en-US/locale/messenger-newsblog
 
