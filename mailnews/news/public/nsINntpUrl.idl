@@ -46,11 +46,12 @@ interface nsINntpUrl : nsISupports {
   attribute nsNewsAction newsAction;
   attribute boolean getOldMessages;
 
-  /* these are nsMailboxActions */
-  const long ActionGetNewNews = 0;
-  const long ActionDisplayArticle = 1;
-  const long ActionSaveMessageToDisk = 2;
-  const long ActionCancelArticle = 3;
-  const long ActionPostArticle = 4;
-  const long ActionSearch = 5;
+  const nsNewsAction ActionGetNewNews = 0;
+  const nsNewsAction ActionDisplayArticle = 1;
+  const nsNewsAction ActionSaveMessageToDisk = 2;
+  const nsNewsAction ActionCancelArticle = 3;
+  const nsNewsAction ActionPostArticle = 4;
+  const nsNewsAction ActionSearch = 5;
+  const nsNewsAction ActionUpdateCounts = 6;
+  const nsNewsAction ActionListGroups = 7;
 };

@@ -70,8 +70,9 @@ protected:
   nsresult FindHostFromGroup(nsCString &host, nsCString &groupName);
   nsresult FindServerWithNewsgroup(nsCString &host, nsCString &groupName);
   
-  // a convience routine used to put together news urls.
-  nsresult ConstructNntpUrl(const char * urlString, nsIUrlListener *aUrlListener,  nsIMsgWindow * aMsgWindow, nsIURI ** aUrl);
+  nsresult CreateMessageIDURL(nsIMsgFolder *folder, nsMsgKey key, char **url);
+  // a convience routine used to put together news urls
+  nsresult ConstructNntpUrl(const char * urlString, nsIUrlListener *aUrlListener,  nsIMsgWindow * aMsgWindow, const char *originalMessageUri, PRInt32 action, nsIURI ** aUrl);
   nsresult CreateNewsAccount(const char *username, const char *hostname, PRBool isSecure, PRInt32 port, nsIMsgIncomingServer **server);
   nsresult GetProtocolForUri(nsIURI *aUri, nsIMsgWindow *aMsgWindow, nsINNTPProtocol **aProtocol);
   // a convience routine to run news urls
