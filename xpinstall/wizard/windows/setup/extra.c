@@ -4523,60 +4523,6 @@ void STGetComponents(LPSTR szSection, st *stSetupType, LPSTR szFileIniConfig)
   }
 }
 
-void GetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, LPSTR szReturnValue, DWORD dwReturnValueSize)
-{
-  HKEY  hkResult;
-  DWORD dwErr;
-  DWORD dwSize;
-  char  szBuf[MAX_BUF];
-
-  ZeroMemory(szBuf, sizeof(szBuf));
-  ZeroMemory(szReturnValue, dwReturnValueSize);
-
-  if((dwErr = RegOpenKeyEx(hkRootKey, szKey, 0, KEY_READ, &hkResult)) == ERROR_SUCCESS)
-  {
-    dwSize = sizeof(szBuf);
-    dwErr = RegQueryValueEx(hkResult, szName, 0, NULL, szBuf, &dwSize);
-
-    if((*szBuf != '\0') && (dwErr == ERROR_SUCCESS))
-      ExpandEnvironmentStrings(szBuf, szReturnValue, dwReturnValueSize);
-    else
-      *szReturnValue = '\0';
-
-    RegCloseKey(hkResult);
-  }
-}
-
-void SetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, DWORD dwType, LPSTR szData, DWORD dwSize)
-{
-  HKEY    hkResult;
-  DWORD   dwErr;
-  DWORD   dwDisp;
-  char    szBuf[MAX_BUF];
-
-  memset(szBuf, '\0', MAX_BUF);
-
-  dwErr = RegOpenKeyEx(hkRootKey, szKey, 0, KEY_WRITE, &hkResult);
-  if(dwErr != ERROR_SUCCESS)
-    dwErr = RegCreateKeyEx(hkRootKey, szKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hkResult, &dwDisp);
-
-  if(dwErr == ERROR_SUCCESS)
-  {
-/**
-    dwErr = RegQueryValueEx(hkResult, szName, 0, NULL, szBuf, &dwSize);
-
-    if((*szReturnValue != '\0') && (dwErr == ERROR_SUCCESS))
-      ExpandEnvironmentStrings(szBuf, szReturnValue, MAX_BUF);
-    else
-      *szReturnValue = '\0';
-**/
-
-    dwErr = RegSetValueEx(hkResult, szName, 0, dwType, szData, dwSize);
-
-    RegCloseKey(hkResult);
-  }
-}
-
 HRESULT DecryptVariable(LPSTR szVariable, DWORD dwVariableSize)
 {
   char szBuf[MAX_BUF];

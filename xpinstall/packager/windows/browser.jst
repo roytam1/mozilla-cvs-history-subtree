@@ -17,6 +17,7 @@ function createShortcuts()
   var scProfileDescParam;
   var scFolderName;
   var fFolderPath;
+  var fFolderPathStr;
   var is_winnt;
   var szCurrentVersion;
 
@@ -34,8 +35,8 @@ function createShortcuts()
     winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
     subkey              = "SOFTWARE\\Mozilla\\Mozilla Seamonkey\\$UserAgent$\\Main";
     valname             = "Program Folder Path";
-    fFolderPath         = winreg.getValueString(subkey, valname);
-    if((fFolderPath == "") || (fFolderPath == null))
+    fFolderPathStr      = winreg.getValueString(subkey, valname);
+    if((fFolderPathStr == "") || (fFolderPathStr == null))
     {
       /* determine if the script is running under NT or not */
       winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
@@ -96,12 +97,21 @@ function createShortcuts()
       logComment("Folder FolderDesktop: "     + szFolderDesktop);
       logComment("Folder FolderSendTo: "      + szFolderSendTo);
       logComment("Folder FolderQuickLaunch: " + szFolderQuickLaunch);
-      logComment("FolderPath: "               + fFolderPath);
-      logComment("fileExe: "                  + fileExe);
-      logComment("fFolderPath: "              + fFolderPath);
-      logComment("scExeDesc: "                + scExeDesc);
-      logComment("fCommunicator : "           + fCommunicator);
     }
+    else
+    {
+      /* convert the path string to a path folder object */
+      fFolderPath = getFolder("file:///", fFolderPathStr);
+    }
+
+    logComment("fileExe: "                  + fileExe);
+    logComment("fFolderPath: "              + fFolderPath);
+    logComment("scExeDesc: "                + scExeDesc);
+    logComment("fCommunicator : "           + fCommunicator);
+
+    /* explicitly create the fFolderPath even though the windowsShortcut function creates the folder.
+     * This is so that the folder creation gets logged for uninstall to remove it. */
+    File.dirCreate(fFolderPath);
 
     /* create the shortcuts */
     File.windowsShortcut(fileExe, fFolderPath, scExeDesc,     fCommunicator,  "",                 fileExe, 0);

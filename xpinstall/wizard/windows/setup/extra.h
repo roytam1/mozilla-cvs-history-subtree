@@ -54,8 +54,6 @@ HRESULT           WinSpawn(LPSTR szClientName, LPSTR szParameters, LPSTR szCurre
 HRESULT           ParseConfigIni(LPSTR lpszCmdLine);
 HRESULT           DecryptString(LPSTR szOutputStr, LPSTR szInputStr);
 HRESULT           DecryptVariable(LPSTR szVariable, DWORD dwVariableSize);
-void              GetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, LPSTR szReturnValue, DWORD dwSize);
-void              SetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, DWORD dwType, LPSTR szData, DWORD dwSize);
 HRESULT           InitSetupGeneral(void);
 HRESULT           InitDlgWelcome(diW *diDialog);
 HRESULT           InitDlgLicense(diL *diDialog);

@@ -404,6 +404,19 @@ Target=[SETUP PATH]\mozilla.exe
 Parameters=-installer
 WorkingDir=[SETUP PATH]
 
+[Windows Registry0]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Mozilla\Mozilla Seamonkey\$UserAgent$\Main
+Name=Program Folder Path
+Name Value=[Default Folder]
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=pre smartupdate
+
 ; Values for Show Folder:
 ;   HIDE             Hides the window and activates another window.
 ;   MAXIMIZE         Maximizes the specified window.
@@ -434,21 +447,21 @@ Timing=post smartupdate
 Show Folder=SHOW
 Program Folder=[Default Folder]
 
-[Program Folder0-Shortcut0]
-File=[SETUP PATH]\mozilla.exe
-Arguments=
-Working Dir=[SETUP PATH]
-Description=Mozilla Seamonkey
-Icon Path=[SETUP PATH]\mozilla.exe
-Icon Id=0
+;[Program Folder0-Shortcut0]
+;File=[SETUP PATH]\mozilla.exe
+;Arguments=
+;Working Dir=[SETUP PATH]
+;Description=Mozilla Seamonkey
+;Icon Path=[SETUP PATH]\mozilla.exe
+;Icon Id=0
 
-[Program Folder0-Shortcut1]
-File=[SETUP PATH]\mozilla.exe
-Arguments=-ProfileManager
-Working Dir=[SETUP PATH]
-Description=Profile Manager
-Icon Path=[SETUP PATH]\mozilla.exe
-Icon Id=0
+;[Program Folder0-Shortcut1]
+;File=[SETUP PATH]\mozilla.exe
+;Arguments=-ProfileManager
+;Working Dir=[SETUP PATH]
+;Description=Profile Manager
+;Icon Path=[SETUP PATH]\mozilla.exe
+;Icon Id=0
 
 ;[Program Folder0-Shortcut2]
 ;File=[SETUP PATH]\bin\Net2fone.exe

@@ -104,7 +104,7 @@ exit(0);
 sub MakeConfigFile
 {
   # Make config.ini file
-  if(system("perl makecfgini.pl config.it $inDefaultVersion $inStagePath $inDistPath\\xpi $inRedirIniUrl $inXpiUrl") != 0)
+  if(system("perl makecfgini.pl config.it $inDefaultVersion \"$userAgent\" $inStagePath $inDistPath\\xpi $inRedirIniUrl $inXpiUrl") != 0)
   {
     exit(1);
   }
