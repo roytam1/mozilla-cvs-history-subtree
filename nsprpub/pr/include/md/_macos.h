@@ -468,7 +468,6 @@ typedef short PROSFD;
 #define	STDERR_FILENO	2
 
 #if !defined(MAC_NSPR_STANDALONE)
-#define MAC_PATH_SEPARATOR 				':'
 #define PATH_SEPARATOR 					':'
 #define PATH_SEPARATOR_STR		        ":"
 #define DIRECTORY_SEPARATOR				'/'
