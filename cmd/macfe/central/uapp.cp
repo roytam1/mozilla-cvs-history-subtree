@@ -1902,7 +1902,7 @@ void CFrontApp::OpenLocalURL( FSSpec* inFileSpec ,
 	}
 	
 
-#if MOZ_MAIL_NEWS
+#ifdef MOZ_MAIL_NEWS
 // If we are mailbox file at the root of the local mail hierarchy, we can assume that it's an
 // imported mailbox created by the import module. Then just update the folder tree (the new mailbox
 // will appear in the folder hierarchy).
