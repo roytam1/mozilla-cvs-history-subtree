@@ -66,7 +66,6 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFCID.h"
-#include "nsRDFResourceElement.h"
 
 ////////////////////////////////////////////////////////////////////////
 
