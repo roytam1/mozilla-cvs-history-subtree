@@ -244,6 +244,9 @@ protected:
   // Examples include container, open, selected, and focused.
   void PrefillPropertyArray(PRInt32 aRowIndex, const PRUnichar* aColID);
 
+  // Our internal scroll method, used by all the public scroll methods.
+  nsresult ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar);
+
 protected: // Data Members
   // Our cached pres context.
   nsIPresContext* mPresContext;

@@ -1006,6 +1006,12 @@ NS_IMETHODIMP nsOutlinerBodyFrame::EnsureRowIsVisible(PRInt32 aRow)
 
 NS_IMETHODIMP nsOutlinerBodyFrame::ScrollToRow(PRInt32 aRow)
 {
+  return ScrollInternal(aRow, PR_TRUE);
+}
+
+nsresult
+nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar)
+{
   if (!mView)
     return NS_OK;
 
@@ -1035,6 +1041,19 @@ NS_IMETHODIMP nsOutlinerBodyFrame::ScrollToRow(PRInt32 aRow)
   else if (mOutlinerWidget)
     mOutlinerWidget->Scroll(0, -delta*rowHeightAsPixels, nsnull);
  
+  if (aUpdateScrollbar) {
+    // Update the scrollbar.
+    nsCOMPtr<nsIContent> scrollbarContent;
+    mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
+    float t2p;
+    mPresContext->GetTwipsToPixels(&t2p);
+    nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
+
+    nsAutoString curPos;
+    curPos.AppendInt(mTopRowIndex*rowHeightAsPixels);
+    scrollbarContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::curpos, curPos, PR_TRUE);
+  }
+
   return NS_OK;
 }
 
@@ -1044,18 +1063,6 @@ nsOutlinerBodyFrame::ScrollbarButtonPressed(PRInt32 aOldIndex, PRInt32 aNewIndex
   if (aNewIndex > aOldIndex)
     ScrollToRow(mTopRowIndex+1);
   else ScrollToRow(mTopRowIndex-1);
-
-  // Update the scrollbar.
-  nsCOMPtr<nsIContent> scrollbarContent;
-  mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
-  float t2p;
-  mPresContext->GetTwipsToPixels(&t2p);
-  nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
-
-  nsAutoString curPos;
-  curPos.AppendInt(mTopRowIndex*rowHeightAsPixels);
-  scrollbarContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::curpos, curPos, PR_TRUE);
-
   return NS_OK;
 }
   
@@ -1070,7 +1077,7 @@ nsOutlinerBodyFrame::PositionChanged(PRInt32 aOldIndex, PRInt32& aNewIndex)
   nscoord newrow = aNewIndex/rh;
 
   if (oldrow != newrow)
-    ScrollToRow(newrow);
+    ScrollInternal(newrow, PR_FALSE);
 
   // Go exactly where we're supposed to
   // Update the scrollbar.
