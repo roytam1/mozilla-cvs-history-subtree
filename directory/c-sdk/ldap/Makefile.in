@@ -9,7 +9,9 @@ DIST_GARBAGE = config.cache config.log config.status
 
 include build/autoconf.mk
 
-all:: export install
+all::
+	$(MAKE) export
+	$(MAKE) install
 
 install::
 	+$(LOOP_OVER_DIRS)
