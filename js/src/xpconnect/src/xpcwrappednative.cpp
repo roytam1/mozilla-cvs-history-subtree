@@ -523,7 +523,7 @@ XPCWrappedNative::GatherScriptableInfo(
                 JSUint32 flags;
                 rv = helper->GetScriptableFlags(&flags);
                 if(NS_FAILED(rv))
-                    return rv;
+                    flags = 0;
 
                 sciProto->SetCallback(helper);
                 sciProto->SetFlags(flags);
@@ -544,7 +544,7 @@ XPCWrappedNative::GatherScriptableInfo(
         JSUint32 flags;
         nsresult rv = helper->GetScriptableFlags(&flags);
         if(NS_FAILED(rv))
-            return rv;
+            flags = 0;
 
         sciWrapper->SetCallback(helper);
         sciWrapper->SetFlags(flags);

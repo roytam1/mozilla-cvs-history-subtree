@@ -570,7 +570,15 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
     PRUint32 iidCount = 0;
 
     if(NS_FAILED(classInfo->GetInterfaces(&iidCount, &iidArray)))
-        return nsnull;
+    {
+        // Note: I'm making it OK for this call to fail so that one can add
+        // nsIClassInfo to classes implemented in script without requiring this
+        // method to be implemented.
+
+        // Make sure these are set correctly...
+        iidArray = nsnull;
+        iidCount = 0;
+    }
 
     NS_ASSERTION((iidCount && iidArray) || !(iidCount || iidArray), "GetInterfaces returned bad array");
 
