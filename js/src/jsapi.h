@@ -332,6 +332,9 @@ JS_AddRoot(JSContext *cx, void *rp);
 extern JS_PUBLIC_API(JSBool)
 JS_RemoveRoot(JSContext *cx, void *rp);
 
+JS_PUBLIC_API(JSBool)
+JS_RemoveRootRT(JSRuntime *rt, void *rp);
+
 extern JS_PUBLIC_API(JSBool)
 JS_AddNamedRoot(JSContext *cx, void *rp, const char *name);
 

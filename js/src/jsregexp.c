@@ -2133,7 +2133,7 @@ js_FreeRegExpStatics(JSContext *cx, JSRegExpStatics *res)
 	JS_free(cx, res->moreParens);
 	res->moreParens = NULL;
     }
-    js_RemoveRoot(cx, &res->input);
+    js_RemoveRoot(cx->runtime, &res->input);
 }
 
 static JSBool

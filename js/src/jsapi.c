@@ -790,7 +790,13 @@ JS_PUBLIC_API(JSBool)
 JS_RemoveRoot(JSContext *cx, void *rp)
 {
     CHECK_REQUEST(cx);
-    return js_RemoveRoot(cx, rp);
+    return js_RemoveRoot(cx->runtime, rp);
+}
+
+JS_PUBLIC_API(JSBool)
+JS_RemoveRootRT(JSRuntime *rt, void *rp)
+{
+    return js_RemoveRoot(rt, rp);
 }
 
 JS_PUBLIC_API(JSBool)
