@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0"?> <!-- Mode: SGML -->
 <?xml-stylesheet href="history.css" type="text/css"?>
 
 <!DOCTYPE window
@@ -131,6 +131,7 @@ function doSort(sortColName)
 
 <tree rdf:datasources="rdf:history" ondblclick="return OpenURL(event,event.target.parentNode);">
 
+  <!-- Commented out until new table code and template builder can play nice
   <template>
   	<rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator" rootcontainment="treebody" subcontainment="treechildren">
   		<treeitem uri="...">
@@ -155,6 +156,7 @@ function doSort(sortColName)
 	  	</treeitem>
 	</rule>
   </template>
+  -->
 
   <treecol id="NameColumn" rdf:resource="http://home.netscape.com/NC-rdf#Name"/>
   <treecol id="URLColumn" rdf:resource="http://home.netscape.com/NC-rdf#URL"/>

@@ -85,6 +85,7 @@
        ondblclick="return OpenURL(event,event.target.parentNode);"
        flex="100%">
 
+  <!-- Commented out until new tree content model and template builder can play nice.
   <template>
   	<rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator" rootcontainment="treebody" subcontainment="treechildren">
   		<treeitem uri="...">
@@ -109,6 +110,7 @@
 	  	</treeitem>
 	</rule>
   </template>
+  -->
 
   <treecol id="NameColumn" rdf:resource="http://home.netscape.com/NC-rdf#Name"/>
   <treecol id="URLColumn" rdf:resource="http://home.netscape.com/NC-rdf#URL"/>
