@@ -38,7 +38,7 @@ locale/en-US/navigator/navigator.properties,              en-US/locale/en-US/nav
 # global
 #################################################################################################
 locale/global,                                            en-US/locale/global
-loclae/global/dom,                                        en-US/locale/global/dom
+locale/global/dom,                                        en-US/locale/global/dom
 locale/global/history,                                    en-US/locale/global/history
 locale/global/layout,                                     en-US/locale/global/layout
 locale/global/security,                                   en-US/locale/global/security
