@@ -35,7 +35,7 @@ extern "C" {
 }
 #endif
 
-#include </export/source/ldapsdk/include/ldap.h>
+#include <ldap.h>
 
 static int
 not_here(s)
