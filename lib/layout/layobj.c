@@ -22,6 +22,7 @@
 #include "pa_parse.h"
 #include "layout.h"
 #include "np.h"
+#include "cstream.h"
 #ifdef JAVA
 #include "java.h"
 #endif
