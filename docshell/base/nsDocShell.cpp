@@ -3073,10 +3073,10 @@ nsDocShell::Create()
 NS_IMETHODIMP
 nsDocShell::Destroy()
 {
+    mIsBeingDestroyed = PR_TRUE;
+
     //Fire unload event before we blow anything away.
     (void) FireUnloadNotification();
-
-    mIsBeingDestroyed = PR_TRUE;
 
     // Stop any URLs that are currently being loaded...
     Stop(nsIWebNavigation::STOP_ALL);
@@ -3781,10 +3781,6 @@ nsDocShell::ScrollByPages(PRInt32 numPages)
 NS_IMETHODIMP
 nsDocShell::GetScriptGlobalObject(nsIScriptGlobalObject ** aGlobal)
 {
-    if (mIsBeingDestroyed) {
-        return NS_ERROR_NOT_AVAILABLE;
-    }
-
     NS_ENSURE_ARG_POINTER(aGlobal);
     NS_ENSURE_SUCCESS(EnsureScriptEnvironment(), NS_ERROR_FAILURE);
 
