@@ -446,7 +446,9 @@ void nsDeviceContextSpecWin::SetDriverName(char* aDriverName)
 void nsDeviceContextSpecWin::SetGlobalDevMode(HGLOBAL aHGlobal)
 {
   if (mGlobalDevMode) {
+#if !defined(WINCE)
     ::GlobalFree(mGlobalDevMode);
+#endif
     mGlobalDevMode = NULL;
   }
   mGlobalDevMode = aHGlobal;
@@ -966,7 +968,9 @@ nsDeviceContextSpecWin::GetDevMode(LPDEVMODE &aDevMode)
 {
   if (mIsDEVMODEGlobalHandle) {
     if (mGlobalDevMode) {
+#if !defined(WINCE)
       aDevMode = (DEVMODE *)::GlobalLock(mGlobalDevMode);
+#endif
     } else {
       aDevMode = NULL;
     }
