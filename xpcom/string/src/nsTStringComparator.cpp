@@ -120,7 +120,7 @@ nsCaseInsensitiveCStringComparator::operator()( const char_type* lhs, const char
     return result;
   }
 
-PRBool
+int
 nsCaseInsensitiveCStringComparator::operator()( char lhs, char rhs ) const
   {
     if (lhs == rhs) return 0;
