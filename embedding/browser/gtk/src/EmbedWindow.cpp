@@ -186,7 +186,7 @@ EmbedWindow::CreateBrowserWindow(PRUint32 aChromeFlags,
 						 newEmbed->data);
 
   // set the chrome flag on the new window if it's a chrome open
-  if (aChromeFlags && nsIWebBrowserChrome::CHROME_OPENAS_CHROME)
+  if (aChromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_CHROME)
     newEmbedPrivate->mIsChrome = PR_TRUE;
 
   newEmbedPrivate->mWindow->GetWebBrowser(_retval);
