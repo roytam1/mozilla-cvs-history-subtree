@@ -41,13 +41,29 @@ canvasElement.addProtoObj("childInserted",
     this._svg.appendChild(child.visual);
   });
 
-canvasElement.addProtoObj("XTFXMLVisual$onDestroyed",
+canvasElement.addProtoObj("_XTFXMLVisual$documentChanged",
+                          canvasElement.getProtoObj("documentChanged"));
+canvasElement.addProtoObj("documentChanged",
+  function(doc) {
+    this._XTFXMLVisual$documentChanged(doc);
+    this._dump(" documentFrameElement:"+this._wrapper.documentFrameElement);
+  });
+
+canvasElement.addProtoObj("_XTFXMLVisual$onCreated",
+                          canvasElement.getProtoObj("onCreated"));
+canvasElement.addProtoObj("onCreated",
+  function(wrapper) {
+    this._XTFXMLVisual$onCreated(wrapper);
+    this._dump("elementNode:"+this._wrapper.elementNode+" documentFrameElement:"+this._wrapper.documentFrameElement);
+  });
+
+canvasElement.addProtoObj("_XTFXMLVisual$onDestroyed",
                           canvasElement.getProtoObj("onDestroyed"));
 canvasElement.addProtoObj("onDestroyed",
   function() {
     this._dump("onDestroyed");
     delete this._svg;
-    this.XTFXMLVisual$onDestroyed();
+    this._XTFXMLVisual$onDestroyed();
   });
 
 // canvasElement.addProtoObj("getAttribute",

@@ -42,6 +42,8 @@
 #include "nsString.h"
 #include "nsXTFInterfaceAggregator.h"
 #include "nsIClassInfo.h"
+#include "nsPIDOMWindow.h"
+#include "nsIInterfaceRequestorUtils.h"
 //XXX get rid of this:
 #include "nsSVGAtoms.h"
 
@@ -302,6 +304,30 @@ nsXTFElementWrapper::GetElementNode(nsIDOMElement * *aElementNode)
   return NS_OK;
 }
 
+/* readonly attribute nsIDOMElement documentFrameElement; */
+NS_IMETHODIMP
+nsXTFElementWrapper::GetDocumentFrameElement(nsIDOMElement * *aDocumentFrameElement)
+{
+  *aDocumentFrameElement = nsnull;
+  
+  if (!mDocument) {
+    NS_WARNING("no document");
+    return NS_OK;
+  }
+  nsCOMPtr<nsISupports> container = mDocument->GetContainer();
+  if (!container) {
+    NS_ERROR("no docshell");
+    return NS_ERROR_FAILURE;
+  }
+  nsCOMPtr<nsPIDOMWindow> pidomwin = do_GetInterface(container);
+  if (!pidomwin) {
+    NS_ERROR("no nsPIDOMWindow interface on docshell");
+    return NS_ERROR_FAILURE;
+  }
+  *aDocumentFrameElement = pidomwin->GetFrameElementInternal();
+  NS_IF_ADDREF(*aDocumentFrameElement);
+  return NS_OK;
+}
 
 //----------------------------------------------------------------------
 // implementation helpers:
