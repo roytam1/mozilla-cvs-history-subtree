@@ -107,6 +107,9 @@
 #ifdef XP_OS2
 #include "nsMessengerOS2Integration.h"
 #endif
+#ifdef XP_MACOSX
+#include "nsMessengerOSXIntegration.h"
+#endif
 
 #include "nsCURILoader.h"
 #include "nsMessengerContentHandler.h"
@@ -329,6 +332,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerWinIntegration, Init)
 #ifdef XP_OS2
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerOS2Integration, Init)
 #endif
+#ifdef XP_MACOSX
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerOSXIntegration, Init)
+#endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessengerContentHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgContentPolicy, Init)
 
@@ -372,6 +378,12 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPReplicationQuery)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessReplicationData)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPChangeLogQuery)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessChangeLogData)
+#endif
+#ifdef XP_MACOSX
+    { "OSX OS Integration", NS_MESSENGEROSXINTEGRATION_CID,
+      NS_MESSENGEROSINTEGRATION_CONTRACTID,
+      nsMessengerOSXIntegrationConstructor,
+    },
 #endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
