@@ -23,16 +23,14 @@
 @namespace url(http://www.w3.org/1999/xhtml); /* set default namespace to HTML */
 
 html {
-  background-color: window;
+  background-color: white;
 }
 .viewsource {
-  font-family: monospace;
+  font-family: -moz-fixed;
   font-weight: normal;
-  color: windowtext;
+  font-size: normal;
+  color: black;
   white-space: pre;
-  font-size: 12px;
-  padding-top: 8px; 
-  margin-left: 8px;
 }
 .start-tag {
  color: purple;

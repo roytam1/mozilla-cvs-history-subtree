@@ -1775,11 +1775,9 @@ nsFrame::GetCursor(nsIPresContext* aPresContext,
   const nsStyleColor* styleColor;
   GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)styleColor);
   aCursor = styleColor->mCursor;
-
-  if ((NS_STYLE_CURSOR_AUTO == aCursor) && (nsnull != mParent)) {
-    mParent->GetCursor(aPresContext, aPoint, aCursor);
+  if (NS_STYLE_CURSOR_AUTO == aCursor) {
+    aCursor = NS_STYLE_CURSOR_DEFAULT;
   }
-
   return NS_OK;
 }
 
@@ -2139,6 +2137,19 @@ nsFrame::Invalidate(nsIPresContext* aPresContext,
                     const nsRect&   aDamageRect,
                     PRBool          aImmediate) const
 {
+  if (aPresContext) {
+    // Don't allow invalidates to do anything when
+    // painting is suppressed.
+    nsCOMPtr<nsIPresShell> shell;
+    aPresContext->GetShell(getter_AddRefs(shell));
+    if (shell) {
+      PRBool suppressed = PR_FALSE;
+      shell->IsPaintingSuppressed(&suppressed);
+      if (suppressed)
+        return;
+    }
+  }
+
   nsIViewManager* viewManager = nsnull;
   nsRect damageRect(aDamageRect);
 
