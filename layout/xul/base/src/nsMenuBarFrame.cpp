@@ -94,6 +94,7 @@ mIsActive(PR_FALSE), mTarget(nsnull)
 
 nsMenuBarFrame::~nsMenuBarFrame()
 {
+  SetActive(PR_FALSE);
 }
 
 NS_IMETHODIMP
