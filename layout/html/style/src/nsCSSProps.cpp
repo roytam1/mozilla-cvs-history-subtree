@@ -506,7 +506,8 @@ const PRInt32 nsCSSProps::kPositionKTable[] = {
   eCSSKeyword_static, NS_STYLE_POSITION_NORMAL,
   eCSSKeyword_relative, NS_STYLE_POSITION_RELATIVE,
   eCSSKeyword_absolute, NS_STYLE_POSITION_ABSOLUTE,
-  eCSSKeyword_fixed, NS_STYLE_POSITION_FIXED,
+//  bugs 55104 and 4209: remove fixed positioning from the RTM branch 
+//  eCSSKeyword_fixed, NS_STYLE_POSITION_FIXED,
   -1,-1
 };
 
