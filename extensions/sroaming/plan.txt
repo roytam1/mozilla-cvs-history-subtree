@@ -11,6 +11,7 @@
     - ftp: offline
     - http: not initialized
   - overwriting local files, if login is incorrect?
+  - some files never "finish" (compare feedback below)
 - error handling
   - files deleted on server / server changed. listing-uploaded no longer true
   - (local profile) files missing
@@ -37,8 +38,8 @@ Later:
 
 Enhance
 - protocols
-  - HTTPSvague
-  - LDAP
+  - HTTPS
+  - LDAP (already done by Sun? :-) )
   - IMAP
 - password encrypt
 - no upload at switch profile
@@ -48,6 +49,11 @@ roaming urls
  <http://user@http-server/path/to/dir/>
  Mind the number of slashes.
  Servers used: wu-FTPd and Apache with mod_roaming.
+
+
+Feedback
+- why do I need to implement nsIDocShellTreeItem for a http xml file *download*?
+- onStopRequest (Request: http://ben:pgpben@http.server.bucksch.org/roaming/ben/listing.xml, StatusCode: NS_OK, HTTPResponse 200) called *before*  the file finished.
 
 clipboard
 
@@ -59,8 +65,3 @@ undefined.lineNumber=225
 undefined.columnNumber=4294967295
 
 WARNING: NS_ENSURE_TRUE(!aQualifiedName.IsEmpty()) failed, file ../../../../mozilla/content/base/src/nsNodeInfoManager.cpp, line 287
-
-
-Feedback
-- why do I need to implement nsIDocShellTreeItem for a http xml file *download*?
-- onStopRequest (Request: http://ben:pgpben@http.server.bucksch.org/roaming/ben/listing.xml, StatusCode: NS_OK, HTTPResponse 200) called *before*  the file finished.
