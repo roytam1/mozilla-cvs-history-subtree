@@ -642,7 +642,7 @@ sub run_tests {
     if ($Settings::BloatStats or $Settings::BloatTest
         and $test_result eq 'success') {
         print_log "Running BloatTest ...\n";
-        $test_result = BloatTest($binary, $build_dir);
+        $test_result = BloatTest($binary, $build_dir, $Settings::BloatTestTimeout);
     }
     
     # MailNews test needs this preference set:
@@ -679,7 +679,7 @@ sub run_tests {
         print_log "Running  DomToTextConversionTest ...\n";
         $test_result =
           FileBasedTest("DomToTextConversionTest", $build_dir, $binary_dir,
-                        "perl TestOutSinks.pl", 45,
+                        "perl TestOutSinks.pl", $Settings::DomTestTimeout,
                         "FAILED", 0,
                         0);  # Timeout means failure.
     }
@@ -1018,12 +1018,11 @@ sub FileBasedTest {
 } # FileBasedTest
 
 sub BloatTest {
-    my ($binary, $build_dir) = @_;
+    my ($binary, $build_dir, $timeout_secs) = @_;
     my $binary_basename = File::Basename::basename($binary);
     my $binary_dir = File::Basename::dirname($binary);
     my $binary_log = "$build_dir/bloat-cur.log";
     my $old_binary_log = "$build_dir/bloat-prev.log";
-    my $timeout_secs = 120;
     local $_;
 
     rename($binary_log, $old_binary_log);
