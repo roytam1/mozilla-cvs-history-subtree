@@ -295,7 +295,7 @@ nsJAR::ParseManifest()
   if (more) { rv = NS_ERROR_FILE_CORRUPTED; goto cleanup; } // More than one MF file
   rv = file->GetName(getter_Copies(manifestFilename));
   if (!manifestFilename || NS_FAILED(rv)) return rv;
-  rv = LoadEntry(manifestFilename, (const char**)&manifestBuffer);
+  rv = LoadEntry(manifestFilename, &manifestBuffer);
   if (NS_FAILED(rv)) goto cleanup;
 
   //-- Parse it
@@ -315,7 +315,7 @@ nsJAR::ParseManifest()
   rv = file->GetName(getter_Copies(manifestFilename));
   if (NS_FAILED(rv)) goto cleanup;
   
-  rv = LoadEntry(manifestFilename, (const char**)&manifestBuffer);
+  rv = LoadEntry(manifestFilename, &manifestBuffer);
   if (NS_FAILED(rv)) goto cleanup;
   
   //-- Get its corresponding RSA file
@@ -324,13 +324,13 @@ nsJAR::ParseManifest()
   NS_ASSERTION(extension != 0, "Manifest Parser: Missing file extension.");
   (void)rsaFilename.Cut(extension, 2);
   (void)rsaFilename.Append("rsa");
-  rv = LoadEntry(rsaFilename, (const char**)&rsaBuffer, &rsaLen);
+  rv = LoadEntry(rsaFilename, &rsaBuffer, &rsaLen);
   if (NS_FAILED(rv)) // Try uppercase
   { 
     JAR_NULLFREE(rsaBuffer)
       (void)rsaFilename.Cut(extension, 3);
     (void)rsaFilename.Append("RSA");
-    rv = LoadEntry(rsaFilename, (const char**)&rsaBuffer, &rsaLen);
+    rv = LoadEntry(rsaFilename, &rsaBuffer, &rsaLen);
   }
   if (NS_FAILED(rv)) goto cleanup;
   
@@ -411,7 +411,7 @@ nsJAR::CreateInputStream(const char* aFilename, nsIInputStream **is)
 }
 
 nsresult 
-nsJAR::LoadEntry(const char* aFilename, const char** aBuf, PRUint32* aBufLen)
+nsJAR::LoadEntry(const char* aFilename, char** aBuf, PRUint32* aBufLen)
 {
   //-- Get a stream for reading the manifest file
   nsresult rv;

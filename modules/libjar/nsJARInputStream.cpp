@@ -56,7 +56,7 @@ nsJARInputStream::Read(char* buf, PRUint32 count, PRUint32 *bytesRead)
 
   PRInt32 err = Zip()->Read(mReadInfo, buf, count, bytesRead);
 #ifdef DEBUG_warren
-//  printf("read %d from %s\n", *bytesRead, mEntryName);
+  printf("read %d from %s\n", *bytesRead, mEntryName);
 #endif
   return err == ZIP_OK ? NS_OK : NS_ERROR_FAILURE;
 }
