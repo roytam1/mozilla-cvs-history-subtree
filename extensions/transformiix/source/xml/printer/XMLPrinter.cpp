@@ -366,27 +366,71 @@ MBool XMLPrinter::print(Node* node, String& currentIndent) {
 } //-- print
 
 /**
- * Print the proper UTF8 character
- * based on code submitted by Majkel Kretschmar
+ * Print the proper UTF8 characters (ISO 10646)
 **/
 void XMLPrinter::printUTF8Char(DOM_CHAR ch) const {
     ostream& out = *this->ostreamPtr;
-    if (ch >= 128) {
+
+    // DOM_CHAR is 16-bits so we only need to cover up to 0xFFFF
+
+    //-- 0x0000-0x007F
+    if (ch < 128)
+        out << (char)ch;
+    /*
+    else {
         out << HEX_ENTITY;
-        if ( ch >= 256 ) out << (ch % 256);
-        else out << ch;
+        out << ch;
         out << SEMICOLON;
     }
-    else out << (char)ch;
+    */
+    //-- 0x0080-0x07FF
+    else if (ch < 2048) {
+        out << (192+(ch/64));   // 0xC0 + x/64
+        out << (128+(ch%64));   // 0x80 + x%64
+    }
+    //-- 0x800-0xFFFF
+    else {
+        out << (224+(ch/4096));      // 0xE0 + x/64^2
+        out << (128+((ch/64)%64));   // 0x80 + (x/64)%64
+        out << (128+(ch%64));        // 0x80 + x%64
+    }
 } //-- printUTF8Char
 
 /**
- * Print the proper UTF8 characters
+ * Print the proper UTF8 characters (ISO 10646)
  * based on code submitted by Majkel Kretschmar
 **/
 void XMLPrinter::printUTF8Chars(const String& data) {
+    ostream& out = *this->ostreamPtr;
+
     int i = 0;
-    while(i < data.length()) printUTF8Char(data.charAt(i++));
+    while(i < data.length()) {
+        DOM_CHAR ch = data.charAt(i++);
+        // DOM_CHAR is 16-bits so we only need to cover up to 0xFFFF
+
+        //-- 0x0000-0x007F
+        if (ch < 128)
+            out << (char)ch;
+        /*
+        else {
+            out << HEX_ENTITY;
+            out << ch;
+            out << SEMICOLON;
+        }
+        */
+        //-- 0x0080-0x07FF
+        else if (ch < 2048) {
+            out << (192+(ch/64));   // 0xC0 + x/64
+            out << (128+(ch%64));   // 0x80 + x%64
+        }
+        //-- 0x800-0xFFFF
+        else {
+            out << (224+(ch/4096));      // 0xE0 + x/64^2
+            out << (128+((ch/64)%64));   // 0x80 + (x/64)%64
+            out << (128+(ch%64));        // 0x80 + x%64
+        }
+    }
+
 } //-- printUTF8Chars
 
   //-------------------/
