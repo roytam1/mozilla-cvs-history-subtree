@@ -3947,6 +3947,7 @@
 #define IDS_SYNCHRONIZING               62690
 #define IDS_NEWADDRESSBOOK              62691
 #define IDS_DELETEFROMALL               62692
+#define IDS_POPUP_PROPERTIES            62693
 #define IDC_FIRST_PLACES_MENU_ID        65000
 #define ID_COMMAND_PAGE_FROM_WIZARD     65197
 #define ID_COMMAND_HELPINDEX            65198
