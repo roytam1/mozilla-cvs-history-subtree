@@ -29,6 +29,7 @@
 
 #include "examples.h"
 #include "ldap_ssl.h"
+#include "ldappr.h"
 
 #define MY_CERTDB_PATH		"/u/mhein/.netscape/"
 
@@ -48,8 +49,16 @@ main( int argc, char **argv )
 		return( 1 );
 	}
 
+	/* set the max I/O timeout option to 10 seconds */
+	if ( prldap_set_session_option( NULL, NULL, PRLDAP_OPT_IO_MAX_TIMEOUT,
+	    10000 /* 10 secs */ ) != LDAP_SUCCESS ) {
+		ldap_perror( NULL,
+		    "prldap_set_session_option PRLDAP_OPT_IO_MAX_TIMEOUT" );
+		exit( 1 );
+	}
+
 	/* get a handle to an LDAP connection */
-	if ( (ld = ldapssl_init( MY_HOST, MY_PORT, 1 )) == NULL ) {
+	if ( (ld = ldapssl_init( MY_HOST, MY_SSL_PORT, 1 )) == NULL ) {
 		perror( "ldapssl_init" );
 		return( 1 );
 	}
