@@ -18,11 +18,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -2065,7 +2061,7 @@ ssl2_ClientSetupSessionCypher(sslSocket *ss, PRUint8 *cs, int csLen)
     ss->sec.authAlgorithm = ssl_sign_rsa;
     ss->sec.keaType       = ssl_kea_rsa;
     ss->sec.keaKeyBits    = \
-    ss->sec.authKeyBits   = SECKEY_PublicKeyStrengthInBits(serverKey);
+    ss->sec.authKeyBits   = SECKEY_PublicKeyStrength(serverKey) * BPB;
 
     /* Choose a compatible cipher with the server */
     nc = csLen / 3;
@@ -2342,22 +2338,6 @@ ssl2_HandleRequestCertificate(sslSocket *ss)
 
     if (ret) {
 	goto no_cert_error;
-    }
-
-    /* check what the callback function returned */
-    if ((!cert) || (!key)) {
-        /* we are missing either the key or cert */
-        if (cert) {
-            /* got a cert, but no key - free it */
-            CERT_DestroyCertificate(cert);
-            cert = NULL;
-        }
-        if (key) {
-            /* got a key, but no cert - free it */
-            SECKEY_DestroyPrivateKey(key);
-            key = NULL;
-        }
-        goto no_cert_error;
     }
 
     rv = ssl2_SignResponse(ss, key, &response);

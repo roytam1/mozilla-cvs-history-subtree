@@ -54,6 +54,10 @@
 #include "ipcMessageUtils.h"
 #include "ipcm.h"
 
+#include "ipcIMessageObserver.h"
+#include "ipcIClientObserver.h"
+#include "ipcIClientQueryHandler.h"
+
 //-----------------------------------------------------------------------------
 // helpers
 //-----------------------------------------------------------------------------

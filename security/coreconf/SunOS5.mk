@@ -73,6 +73,8 @@ else
   endif
 endif
 
+LD=/usr/ccs/bin/ld
+
 #
 # The default implementation strategy for Solaris is classic nspr.
 #
@@ -111,8 +113,8 @@ else
 	OS_CFLAGS += $(NOMD_OS_CFLAGS) $(ARCHFLAG)
 	ifndef BUILD_OPT
 		OS_CFLAGS  += -xs
-	else
-		OPTIMIZER = -xO3
+#	else
+#		OPTIMIZER += -fast
 	endif
 
 endif
@@ -130,22 +132,9 @@ endif
 # Purify doesn't like -MDupdate
 NOMD_OS_CFLAGS += $(DSO_CFLAGS) $(OS_DEFINES) $(SOL_CFLAGS)
 
-MKSHLIB  = $(CC) $(DSO_LDOPTS)
-ifdef NS_USE_GCC
-ifeq (GNU,$(findstring GNU,$(shell `$(CC) -print-prog-name=ld` -v 2>&1)))
-	GCC_USE_GNU_LD = 1
-endif
-endif
+MKSHLIB  = $(LD) $(DSO_LDOPTS)
 ifdef MAPFILE
-ifdef NS_USE_GCC
-ifdef GCC_USE_GNU_LD
-    MKSHLIB += -Wl,--version-script,$(MAPFILE)
-else
-    MKSHLIB += -Wl,-M,$(MAPFILE)
-endif
-else
     MKSHLIB += -M $(MAPFILE)
-endif
 endif
 PROCESS_MAP_FILE = grep -v ';-' $(LIBRARY_NAME).def | \
          sed -e 's,;+,,' -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,;,' > $@
@@ -156,14 +145,7 @@ PROCESS_MAP_FILE = grep -v ';-' $(LIBRARY_NAME).def | \
 # ld options:
 # -G: produce a shared object
 # -z defs: no unresolved symbols allowed
-ifdef NS_USE_GCC
-	DSO_LDOPTS += -shared -h $(notdir $@)
-else
-ifeq ($(USE_64), 1)
-	DSO_LDOPTS += -xarch=v9
-endif
-	DSO_LDOPTS += -G -h $(notdir $@)
-endif
+DSO_LDOPTS += -G -h $(notdir $@)
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)

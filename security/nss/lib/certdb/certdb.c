@@ -45,6 +45,7 @@
 #include "secder.h"
 #include "secoid.h"
 #include "secasn1.h"
+#include "blapi.h"		/* for SHA1_HashBuf */
 #include "genname.h"
 #include "keyhi.h"
 #include "secitem.h"
@@ -523,7 +524,7 @@ findOIDinOIDSeqByTagNum(CERTOidSequence *seq, SECOidTag tagnum)
  * fill in nsCertType field of the cert based on the cert extension
  */
 SECStatus
-cert_GetCertType(CERTCertificate *cert)
+CERT_GetCertType(CERTCertificate *cert)
 {
     SECStatus rv;
     SECItem tmpitem;
@@ -531,12 +532,6 @@ cert_GetCertType(CERTCertificate *cert)
     CERTOidSequence *extKeyUsage = NULL;
     PRBool basicConstraintPresent = PR_FALSE;
     CERTBasicConstraints basicConstraint;
-    unsigned int nsCertType = 0;
-
-    if (cert->nsCertType) {
-        /* once set, no need to recalculate */
-        return SECSuccess;
-    }
 
     tmpitem.data = NULL;
     CERT_FindNSCertTypeExtension(cert, &tmpitem);
@@ -551,9 +546,9 @@ cert_GetCertType(CERTCertificate *cert)
     }
     if (tmpitem.data != NULL || extKeyUsage != NULL) {
 	if (tmpitem.data == NULL) {
-	    nsCertType = 0;
+	    cert->nsCertType = 0;
 	} else {
-	    nsCertType = tmpitem.data[0];
+	    cert->nsCertType = tmpitem.data[0];
 	}
 
 	/* free tmpitem data pointer to avoid memory leak */
@@ -564,16 +559,16 @@ cert_GetCertType(CERTCertificate *cert)
 	 * for this release, we will allow SSL certs with an email address
 	 * to be used for email
 	 */
-	if ( ( nsCertType & NS_CERT_TYPE_SSL_CLIENT ) &&
+	if ( ( cert->nsCertType & NS_CERT_TYPE_SSL_CLIENT ) &&
 	    cert->emailAddr ) {
-	    nsCertType |= NS_CERT_TYPE_EMAIL;
+	    cert->nsCertType |= NS_CERT_TYPE_EMAIL;
 	}
 	/*
 	 * for this release, we will allow SSL intermediate CAs to be
 	 * email intermediate CAs too.
 	 */
-	if ( nsCertType & NS_CERT_TYPE_SSL_CA ) {
-	    nsCertType |= NS_CERT_TYPE_EMAIL_CA;
+	if ( cert->nsCertType & NS_CERT_TYPE_SSL_CA ) {
+	    cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
 	}
 	/*
 	 * allow a cert with the extended key usage of EMail Protect
@@ -585,9 +580,9 @@ cert_GetCertType(CERTCertificate *cert)
 	    SECSuccess) {
 	    if (basicConstraintPresent == PR_TRUE &&
 		(basicConstraint.isCA)) {
-		nsCertType |= NS_CERT_TYPE_EMAIL_CA;
+		cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
 	    } else {
-		nsCertType |= NS_CERT_TYPE_EMAIL;
+		cert->nsCertType |= NS_CERT_TYPE_EMAIL;
 	    }
 	}
 	if (findOIDinOIDSeqByTagNum(extKeyUsage, 
@@ -595,9 +590,9 @@ cert_GetCertType(CERTCertificate *cert)
 	    SECSuccess){
 	    if (basicConstraintPresent == PR_TRUE &&
 		(basicConstraint.isCA)) {
-		nsCertType |= NS_CERT_TYPE_SSL_CA;
+		cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
 	    } else {
-		nsCertType |= NS_CERT_TYPE_SSL_SERVER;
+		cert->nsCertType |= NS_CERT_TYPE_SSL_SERVER;
 	    }
 	}
 	if (findOIDinOIDSeqByTagNum(extKeyUsage,
@@ -605,9 +600,9 @@ cert_GetCertType(CERTCertificate *cert)
 	    SECSuccess){
 	    if (basicConstraintPresent == PR_TRUE &&
 		(basicConstraint.isCA)) {
-		nsCertType |= NS_CERT_TYPE_SSL_CA;
+		cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
 	    } else {
-		nsCertType |= NS_CERT_TYPE_SSL_CLIENT;
+		cert->nsCertType |= NS_CERT_TYPE_SSL_CLIENT;
 	    }
 	}
 	if (findOIDinOIDSeqByTagNum(extKeyUsage,
@@ -615,43 +610,43 @@ cert_GetCertType(CERTCertificate *cert)
 	    SECSuccess) {
 	    if (basicConstraintPresent == PR_TRUE &&
 		(basicConstraint.isCA)) {
-		nsCertType |= NS_CERT_TYPE_OBJECT_SIGNING_CA;
+		cert->nsCertType |= NS_CERT_TYPE_OBJECT_SIGNING_CA;
 	    } else {
-		nsCertType |= NS_CERT_TYPE_OBJECT_SIGNING;
+		cert->nsCertType |= NS_CERT_TYPE_OBJECT_SIGNING;
 	    }
 	}
 	if (findOIDinOIDSeqByTagNum(extKeyUsage,
 				    SEC_OID_EXT_KEY_USAGE_TIME_STAMP) ==
 	    SECSuccess) {
-	    nsCertType |= EXT_KEY_USAGE_TIME_STAMP;
+	    cert->nsCertType |= EXT_KEY_USAGE_TIME_STAMP;
 	}
 	if (findOIDinOIDSeqByTagNum(extKeyUsage,
 				    SEC_OID_OCSP_RESPONDER) == 
 	    SECSuccess) {
-	    nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
+	    cert->nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
 	}
     } else {
 	/* if no extension, then allow any ssl or email (no ca or object
 	 * signing)
 	 */
-	nsCertType = NS_CERT_TYPE_SSL_CLIENT | NS_CERT_TYPE_SSL_SERVER |
+	cert->nsCertType = NS_CERT_TYPE_SSL_CLIENT | NS_CERT_TYPE_SSL_SERVER |
 	    NS_CERT_TYPE_EMAIL;
 
 	/* if the basic constraint extension says the cert is a CA, then
 	   allow SSL CA and EMAIL CA and Status Responder */
 	if ((basicConstraintPresent == PR_TRUE)
 	    && (basicConstraint.isCA)) {
-		nsCertType |= NS_CERT_TYPE_SSL_CA;
-		nsCertType |= NS_CERT_TYPE_EMAIL_CA;
-		nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
+		cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
+		cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
+		cert->nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
 	} else if (CERT_IsCACert(cert, NULL) == PR_TRUE) {
-		nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
+		cert->nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
 	}
 
 	/* if the cert is a fortezza CA cert, then allow SSL CA and EMAIL CA */
 	if (fortezzaIsCA(cert)) {
-		nsCertType |= NS_CERT_TYPE_SSL_CA;
-		nsCertType |= NS_CERT_TYPE_EMAIL_CA;
+		cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
+		cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
 	}
     }
 
@@ -659,7 +654,6 @@ cert_GetCertType(CERTCertificate *cert)
 	PORT_Free(encodedExtKeyUsage.data);
 	CERT_DestroyOidSequence(extKeyUsage);
     }
-    PR_AtomicSet(&cert->nsCertType, nsCertType);
     return(SECSuccess);
 }
 
@@ -884,7 +878,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     }
 
     /* initialize the certType */
-    rv = cert_GetCertType(cert);
+    rv = CERT_GetCertType(cert);
     if ( rv != SECSuccess ) {
 	goto loser;
     }
@@ -1207,8 +1201,6 @@ CERT_CheckKeyUsage(CERTCertificate *cert, unsigned int requiredUsage)
      */
     if ( requiredUsage & KU_KEY_AGREEMENT_OR_ENCIPHERMENT ) {
 	key = CERT_ExtractPublicKey(cert);
-	if (!key)
-	    return SECFailure;
 	if ( ( key->keyType == keaKey ) || ( key->keyType == fortezzaKey ) ||
 	     ( key->keyType == dhKey ) ) {
 	    requiredUsage |= KU_KEY_AGREEMENT;
@@ -1866,21 +1858,6 @@ CERT_IsCADERCert(SECItem *derCert, unsigned int *type) {
     isCA = CERT_IsCACert(cert,type);
     CERT_DestroyCertificate (cert);
     return isCA;
-}
-
-PRBool
-CERT_IsRootDERCert(SECItem *derCert)
-{
-    CERTCertificate *cert;
-    PRBool isRoot;
-
-    /* This is okay -- only looks at extensions */
-    cert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
-    if (cert == NULL) return PR_FALSE;
-
-    isRoot = cert->isRoot;
-    CERT_DestroyCertificate (cert);
-    return isRoot;
 }
 
 

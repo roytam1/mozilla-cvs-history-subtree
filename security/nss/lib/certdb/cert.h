@@ -478,10 +478,6 @@ CERT_FindCertByKeyID (CERTCertDBHandle *handle, SECItem *name, SECItem *keyID);
 extern CERTCertificate *
 CERT_FindCertByIssuerAndSN (CERTCertDBHandle *handle, CERTIssuerAndSN *issuerAndSN);
 
-/*
-** Find a certificate in the database by a subject key ID
-**	"subjKeyID" is the subject Key ID to look for
-*/
 extern CERTCertificate *
 CERT_FindCertBySubjectKeyID (CERTCertDBHandle *handle, SECItem *subjKeyID);
 
@@ -1061,9 +1057,6 @@ CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype);
 PRBool
 CERT_IsCADERCert(SECItem *derCert, unsigned int *rettype);
 
-PRBool
-CERT_IsRootDERCert(SECItem *derCert);
-
 SECStatus
 CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
 		      SECItem *profileTime);
@@ -1481,7 +1474,7 @@ CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
 /*
  * fill in nsCertType field of the cert based on the cert extension
  */
-extern SECStatus cert_GetCertType(CERTCertificate *cert);
+extern SECStatus CERT_GetCertType(CERTCertificate *cert);
 
 
 SECStatus CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer,

@@ -237,6 +237,7 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 {
     SECOidTag algtag;
     unsigned int keylen_bits;
+    SECStatus rv = SECSuccess;
     unsigned long c;
 
     algtag = SECOID_GetAlgorithmTag(algid);
@@ -254,7 +255,8 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 	    c = SMIME_RC2_CBC_128;
 	    break;
 	default:
-	    return SECFailure;
+	    rv = SECFailure;
+	    break;
 	}
 	break;
     case SEC_OID_DES_CBC:
@@ -267,10 +269,11 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 	c = SMIME_FORTEZZA;
 	break;
     default:
-	return SECFailure;
+	rv = SECFailure;
     }
-    *cipher = c;
-    return SECSuccess;
+    if (rv == SECSuccess)
+	*cipher = c;
+    return rv;
 }
 
 static PRBool

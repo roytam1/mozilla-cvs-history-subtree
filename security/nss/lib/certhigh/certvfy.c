@@ -1265,7 +1265,7 @@ CERT_VerifyCertificate(CERTCertDBHandle *handle, CERTCertificate *cert,
     }
 
     /* check key usage and netscape cert type */
-    cert_GetCertType(cert);
+    CERT_GetCertType(cert);
     certType = cert->nsCertType;
 
     for (i=1;i<=certificateUsageHighest && !(SECFailure == valid && !returnedUsages) ;) {
@@ -1487,7 +1487,7 @@ CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
     }
 
     /* check key usage and netscape cert type */
-    cert_GetCertType(cert);
+    CERT_GetCertType(cert);
     certType = cert->nsCertType;
     switch ( certUsage ) {
       case certUsageSSLClient:

@@ -42,9 +42,9 @@ VPATH = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE = transmngr
+MODULE = ipcd
 LIBRARY_NAME = transmngr
-MODULE_NAME = transmngr
+MODULE_NAME = ipcd
 
 FORCE_SHARED_LIB	= 1
 NO_DIST_INSTALL	= 1

@@ -18,11 +18,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -190,70 +186,6 @@ extern SECStatus KEA_Derive(SECItem *prime,
  */
 extern PRBool KEA_Verify(SECItem *Y, SECItem *prime, SECItem *subPrime);
 
-/******************************************************
-** Elliptic Curve algorithms
-*/
-
-/* Generates a public and private key, both of which are encoded 
-** in a single ECPrivateKey struct. Params is input, privKey are
-** output.
-*/
-extern SECStatus EC_NewKey(ECParams *          params, 
-                           ECPrivateKey **     privKey);
-
-extern SECStatus EC_NewKeyFromSeed(ECParams *  params, 
-                           ECPrivateKey **     privKey,
-                           const unsigned char* seed,
-                           int                 seedlen);
-
-/* Validates an EC public key as described in Section 5.2.2 of
- * X9.63. Such validation prevents against small subgroup attacks
- * when the ECDH primitive is used with the cofactor.
- */
-extern SECStatus EC_ValidatePublicKey(ECParams * params, 
-                           SECItem *           publicValue);
-
-/* 
-** ECDH_Derive performs a scalar point multiplication of a point
-** representing a (peer's) public key and a large integer representing
-** a private key (its own). Both keys must use the same elliptic curve
-** parameters. If the withCofactor parameter is true, the
-** multiplication also uses the cofactor associated with the curve
-** parameters.  The output of this scheme is the x-coordinate of the
-** resulting point. If successful, derivedSecret->data is set to the
-** address of the newly allocated buffer containing the derived
-** secret, and derivedSecret->len is the size of the secret
-** produced. It is the caller's responsibility to free the allocated
-** buffer containing the derived secret.
-*/
-extern SECStatus ECDH_Derive(SECItem *       publicValue,
-                             ECParams *      params,
-                             SECItem *       privateValue,
-                             PRBool          withCofactor,
-                             SECItem *       derivedSecret);
-
-/* On input,  signature->len == size of buffer to hold signature.
-**            digest->len    == size of digest.
-** On output, signature->len == size of signature in buffer.
-** Uses a random seed.
-*/
-extern SECStatus ECDSA_SignDigest(ECPrivateKey  *key, 
-                                  SECItem       *signature, 
-                                  const SECItem *digest);
-
-/* On input,  signature->len == size of buffer to hold signature.
-**            digest->len    == size of digest.
-*/
-extern SECStatus ECDSA_VerifyDigest(ECPublicKey   *key, 
-                                    const SECItem *signature, 
-                                    const SECItem *digest);
-
-/* Uses the provided seed. */
-extern SECStatus ECDSA_SignDigestWithSeed(ECPrivateKey        *key,
-                                          SECItem             *signature,
-                                          const SECItem       *digest,
-                                          const unsigned char *seed, 
-                                          const int           seedlen);
 
 /******************************************/
 /*
@@ -539,62 +471,6 @@ AES_Decrypt(AESContext *cx, unsigned char *output,
             unsigned int *outputLen, unsigned int maxOutputLen,
             const unsigned char *input, unsigned int inputLen);
 
-/******************************************/
-/*
-** AES key wrap algorithm, RFC 3394
-*/
-
-/*
-** Create a new AES context suitable for AES encryption/decryption.
-** 	"key" raw key data
-**      "iv"  The 8 byte "initial value"
-**      "encrypt", a boolean, true for key wrapping, false for unwrapping.
-** 	"keylen" the number of bytes of key data (16, 24, or 32)
-*/
-extern AESKeyWrapContext *
-AESKeyWrap_CreateContext(const unsigned char *key, const unsigned char *iv, 
-                         int encrypt, unsigned int keylen);
-
-/*
-** Destroy a AES KeyWrap context.
-**	"cx" the context
-**	"freeit" if PR_TRUE then free the object as well as its sub-objects
-*/
-extern void 
-AESKeyWrap_DestroyContext(AESKeyWrapContext *cx, PRBool freeit);
-
-/*
-** Perform AES key wrap.
-**	"cx" the context
-**	"output" the output buffer to store the encrypted data.
-**	"outputLen" how much data is stored in "output". Set by the routine
-**	   after some data is stored in output.
-**	"maxOutputLen" the maximum amount of data that can ever be
-**	   stored in "output"
-**	"input" the input data
-**	"inputLen" the amount of input data
-*/
-extern SECStatus 
-AESKeyWrap_Encrypt(AESKeyWrapContext *cx, unsigned char *output,
-            unsigned int *outputLen, unsigned int maxOutputLen,
-            const unsigned char *input, unsigned int inputLen);
-
-/*
-** Perform AES key unwrap.
-**	"cx" the context
-**	"output" the output buffer to store the decrypted data.
-**	"outputLen" how much data is stored in "output". Set by the routine
-**	   after some data is stored in output.
-**	"maxOutputLen" the maximum amount of data that can ever be
-**	   stored in "output"
-**	"input" the input data
-**	"inputLen" the amount of input data
-*/
-extern SECStatus 
-AESKeyWrap_Decrypt(AESKeyWrapContext *cx, unsigned char *output,
-            unsigned int *outputLen, unsigned int maxOutputLen,
-            const unsigned char *input, unsigned int inputLen);
-
 
 /******************************************/
 /*
@@ -831,58 +707,6 @@ extern SECStatus SHA1_Flatten(SHA1Context *cx,unsigned char *space);
  */
 extern SHA1Context * SHA1_Resurrect(unsigned char *space, void *arg);
 
-/******************************************/
-
-extern SHA256Context *SHA256_NewContext(void);
-extern void SHA256_DestroyContext(SHA256Context *cx, PRBool freeit);
-extern void SHA256_Begin(SHA256Context *cx);
-extern void SHA256_Update(SHA256Context *cx, const unsigned char *input,
-			unsigned int inputLen);
-extern void SHA256_End(SHA256Context *cx, unsigned char *digest,
-		     unsigned int *digestLen, unsigned int maxDigestLen);
-extern SECStatus SHA256_HashBuf(unsigned char *dest, const unsigned char *src,
-			      uint32 src_length);
-extern SECStatus SHA256_Hash(unsigned char *dest, const char *src);
-extern void SHA256_TraceState(SHA256Context *cx);
-extern unsigned int SHA256_FlattenSize(SHA256Context *cx);
-extern SECStatus SHA256_Flatten(SHA256Context *cx,unsigned char *space);
-extern SHA256Context * SHA256_Resurrect(unsigned char *space, void *arg);
-
-/******************************************/
-
-extern SHA512Context *SHA512_NewContext(void);
-extern void SHA512_DestroyContext(SHA512Context *cx, PRBool freeit);
-extern void SHA512_Begin(SHA512Context *cx);
-extern void SHA512_Update(SHA512Context *cx, const unsigned char *input,
-			unsigned int inputLen);
-extern void SHA512_End(SHA512Context *cx, unsigned char *digest,
-		     unsigned int *digestLen, unsigned int maxDigestLen);
-extern SECStatus SHA512_HashBuf(unsigned char *dest, const unsigned char *src,
-			      uint32 src_length);
-extern SECStatus SHA512_Hash(unsigned char *dest, const char *src);
-extern void SHA512_TraceState(SHA512Context *cx);
-extern unsigned int SHA512_FlattenSize(SHA512Context *cx);
-extern SECStatus SHA512_Flatten(SHA512Context *cx,unsigned char *space);
-extern SHA512Context * SHA512_Resurrect(unsigned char *space, void *arg);
-
-/******************************************/
-
-extern SHA384Context *SHA384_NewContext(void);
-extern void SHA384_DestroyContext(SHA384Context *cx, PRBool freeit);
-extern void SHA384_Begin(SHA384Context *cx);
-extern void SHA384_Update(SHA384Context *cx, const unsigned char *input,
-			unsigned int inputLen);
-extern void SHA384_End(SHA384Context *cx, unsigned char *digest,
-		     unsigned int *digestLen, unsigned int maxDigestLen);
-extern SECStatus SHA384_HashBuf(unsigned char *dest, const unsigned char *src,
-			      uint32 src_length);
-extern SECStatus SHA384_Hash(unsigned char *dest, const char *src);
-extern void SHA384_TraceState(SHA384Context *cx);
-extern unsigned int SHA384_FlattenSize(SHA384Context *cx);
-extern SECStatus SHA384_Flatten(SHA384Context *cx,unsigned char *space);
-extern SHA384Context * SHA384_Resurrect(unsigned char *space, void *arg);
-
-/******************************************/
 /*
 ** Pseudo Random Number Generation.  FIPS compliance desirable.
 */
@@ -985,17 +809,6 @@ extern void PQG_DestroyParams(PQGParams *params);
  *  Free the PQGVerify struct and the things it points to.                *
  **************************************************************************/
 extern void PQG_DestroyVerify(PQGVerify *vfy);
-
-
-/**************************************************************************
- *  Verify a given Shared library signature                               *
- **************************************************************************/
-PRBool BLAPI_SHVerify(const char *name, PRFuncPtr addr);
-
-/**************************************************************************
- *  Verify Are Own Shared library signature                               *
- **************************************************************************/
-PRBool BLAPI_VerifySelf(const char *name);
 
 SEC_END_PROTOS
 

@@ -39,7 +39,6 @@
 #include "nsIGenericFactory.h"
 #include "nsICategoryManager.h"
 #include "ipcService.h"
-#include "ipcCID.h"
 #include "ipcConfig.h"
 
 //-----------------------------------------------------------------------------
@@ -103,8 +102,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(ipcSocketProviderUnix)
 // extensions
 
 #include "ipcLockService.h"
-#include "ipcLockCID.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(ipcLockService, Init)
+
+#include "tmTransactionService.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(tmTransactionService)
 
 //-----------------------------------------------------------------------------
 // Define a table of CIDs implemented by this module along with other
@@ -133,6 +134,10 @@ static const nsModuleComponentInfo components[] = {
     IPC_LOCKSERVICE_CID,
     IPC_LOCKSERVICE_CONTRACTID,
     ipcLockServiceConstructor },
+  { IPC_TRANSACTIONSERVICE_CLASSNAME,
+    IPC_TRANSACTIONSERVICE_CID,
+    IPC_TRANSACTIONSERVICE_CONTRACTID,
+    tmTransactionServiceConstructor },
 };
 
 //-----------------------------------------------------------------------------

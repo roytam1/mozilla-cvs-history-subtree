@@ -78,7 +78,7 @@ static size_t CopyLowBits(void *dst, size_t dstlen, void *src, size_t srclen)
 }
 
 #if defined(SCO) || defined(UNIXWARE) || defined(BSDI) || defined(FREEBSD) \
-    || defined(NETBSD) || defined(NTO) || defined(DARWIN) || defined(OPENBSD)
+    || defined(NETBSD) || defined(NTO) || defined(DARWIN)
 #include <sys/times.h>
 
 #define getdtablesize() sysconf(_SC_OPEN_MAX)
@@ -827,14 +827,12 @@ for the small amount of entropy it provides.
      * execution environment of the user and on the platform the program
      * is running on.
      */
-    if (environ != NULL) {
-        cp = environ;
-        while (*cp) {
-	    RNG_RandomUpdate(*cp, strlen(*cp));
-	    cp++;
-        }
-        RNG_RandomUpdate(environ, (char*)cp - (char*)environ);
+    cp = (const char * const *)environ;
+    while (*cp) {
+	RNG_RandomUpdate(*cp, strlen(*cp));
+	cp++;
     }
+    RNG_RandomUpdate(environ, (char*)cp - (char*)environ);
 
     /* Give in system information */
     if (gethostname(buf, sizeof(buf)) > 0) {

@@ -36,10 +36,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "ipcIService.h"
-#include "ipcCID.h"
-
+#include "ipcIMessageObserver.h"
+#include "ipcIClientQueryHandler.h"
 #include "ipcILockService.h"
-#include "ipcLockCID.h"
+#include "ipcILockNotify.h"
 
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"

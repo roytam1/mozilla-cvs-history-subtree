@@ -1,4 +1,4 @@
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -31,21 +31,8 @@
 # GPL.
 #
 
-CORE_DEPTH = ../../..
+#######################################################################
+# Master "Core Components" <platform> tag                             #
+#######################################################################
 
-# MODULE public and private header  directories are implicitly REQUIRED.
-MODULE = nss
-
-# This next line is used by .mk files
-# and gets translated into $LINCS in manifest.mnw
-# The MODULE is always implicitly required.
-# Listing it here in REQUIRES makes it appear twice in the cc command line.
-REQUIRES = seccmd 
-
-# DIRS = 
-
-CSRCS	= vfychain.c  
-DEFINES += -DDLL_PREFIX=\"$(DLL_PREFIX)\" -DDLL_SUFFIX=\"$(DLL_SUFFIX)\"
-
-PROGRAM	= vfychain
-
+PLATFORM = $(OBJDIR_NAME)

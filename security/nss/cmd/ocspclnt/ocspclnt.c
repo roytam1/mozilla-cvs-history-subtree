@@ -1211,9 +1211,7 @@ nssdone:
 	(void) CERT_DisableOCSPChecking (handle);
     }
 
-    if (NSS_Shutdown () != SECSuccess) {
-	exit(1);
-    }
+    NSS_Shutdown ();
 
 prdone:
     PR_Cleanup ();

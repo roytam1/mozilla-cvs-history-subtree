@@ -38,12 +38,13 @@
 #ifndef _tmTransactionService_H_
 #define _tmTransactionService_H_
 
-#include "ipcILockService.h"
 #include "ipcIService.h"
+#include "ipcILockService.h"
+#include "ipcIMessageObserver.h"
+#include "ipcITransactionService.h"
 #include "nsString.h"
 #include "nsVoidArray.h"
 #include "plhash.h"
-#include "tmITransactionService.h"
 #include "tmTransaction.h"
 #include "tmVector.h"
 
@@ -66,7 +67,7 @@ struct tm_queue_mapping;
   *
   *
   */
-class tmTransactionService : public tmITransactionService,
+class tmTransactionService : public ipcITransactionService,
                              public ipcIMessageObserver
 {
 
@@ -74,6 +75,7 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////
   // Constructor & Destructor
+  tmTransactionService() : mObservers(0) {};
 
   /**
     * Reclaim all the memory allocated: PL_hashtable, tmVectors
@@ -85,7 +87,7 @@ public:
 
   // for API docs, see the respective *.idl files
   NS_DECL_ISUPPORTS
-  NS_DECL_TMITRANSACTIONSERVICE
+  NS_DECL_IPCITRANSACTIONSERVICE
   NS_DECL_IPCIMESSAGEOBSERVER
 
 protected:
@@ -180,7 +182,7 @@ protected:
   // Protected Member Variables
 
   nsCString mNamespace;               // limit domains to the namespace
-  PLHashTable *mObservers;            // maps qName -> tmITransactionObserver
+  PLHashTable *mObservers;            // maps qName -> ipcITransactionObserver
 
   tmVector mQueueMaps;                // queue - name - domain mappings
   tmVector mWaitingMessages;          // messages sent before ATTACH_REPLY

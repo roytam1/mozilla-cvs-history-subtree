@@ -204,77 +204,22 @@ interface ipcIService : nsISupports
                      in boolean       aSync);
 };
 
-/**
- * ipcIMessageObserver
- */
-[scriptable, uuid(e40a4a3c-2dc1-470e-ab7f-5675fe1f1384)]
-interface ipcIMessageObserver : nsISupports
-{
-    /**
-     * @param aTarget
-     *        the target of the message, corresponding to the target this
-     *        observer was registered under.  this parameter is passed to allow
-     *        an observer instance to receive messages for more than one target.
-     * @param aData
-     *        the data of the message.
-     * @param aDataLen
-     *        the data length of the message.
-     */
-    void onMessageAvailable(in nsIDRef       aTarget,
-                           [array, const, size_is(aDataLen)]
-                            in octet         aData,
-                            in unsigned long aDataLen);
-};
-
-/**
- * ipcIClientObserver
- */
-[scriptable, uuid(42283079-030c-4b13-b069-a08b7ad5eab2)]
-interface ipcIClientObserver : nsISupports
-{
-    const unsigned long CLIENT_UP   = 1;
-    const unsigned long CLIENT_DOWN = 2;
-    
-    void onClientStatus(in unsigned long aClientID,
-                        in unsigned long aClientStatus);
-};
-
-/**
- * ipcIClientQueryHandler
- *
- * the methods on this interface are called when the result of a client query
- * becomes available.
- */
-[scriptable, uuid(6fefea5c-f747-4bb0-972f-2a7b363a01db)]
-interface ipcIClientQueryHandler : nsISupports
-{
-    /**
-     * called on completion of a client query.
-     *
-     * @param aQueryID
-     *        the return value from one of the "query" methods.
-     * @param aStatus
-     *        the status of the query.  if this is a failure code, then the
-     *        query failed, otherwise the query succeeded.  the value of this
-     *        parameter explains the reason for any failure.
-     * @param aClientID
-     *     ...
-     */
-    void onQueryComplete(in unsigned long aQueryID,
-                         in nsresult aStatus,
-                         in unsigned long aClientID,
-                        [array, size_is(aNameCount)]
-                         in string aClientNames,
-                         in unsigned long aNameCount,
-                        [array, const, size_is(aTargetCount)]
-                         in nsIDPtr aClientTargets,
-                         in unsigned long aTargetCount);
-};
-
 %{C++
+// singleton implementing ipcIService
+#define IPC_SERVICE_CLASSNAME \
+    "ipcService"
+#define IPC_SERVICE_CONTRACTID \
+    "@mozilla.org/ipc/service;1"
+#define IPC_SERVICE_CID                              \
+{ /* 9f12676a-5168-4a08-beb8-edf8a593a1ca */         \
+    0x9f12676a,                                      \
+    0x5168,                                          \
+    0x4a08,                                          \
+    {0xbe, 0xb8, 0xed, 0xf8, 0xa5, 0x93, 0xa1, 0xca} \
+}
+
+// category and observer event defines
 #define IPC_SERVICE_STARTUP_CATEGORY "ipc-startup-category"
 #define IPC_SERVICE_STARTUP_TOPIC    "ipc-startup"
 #define IPC_SERVICE_SHUTDOWN_TOPIC   "ipc-shutdown"
-
-#define IPC_SERVICE_PREF_PRIMARY_CLIENT_NAME "ipc.primary-client-name"
 %}

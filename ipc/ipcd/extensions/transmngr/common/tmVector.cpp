@@ -44,7 +44,6 @@
 // can not be responsible for reclaiming memory pointed to by the void*s in
 //   the collection - how would we reclaim, don't know how they were allocated
 tmVector::~tmVector() {
-  Clear();
   if (mElements)
     free((void*)mElements);
 }

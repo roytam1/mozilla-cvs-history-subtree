@@ -130,7 +130,7 @@ void PrintErrString(char *progName,char *msg) {
     
   PR_fprintf(PR_STDOUT,"%s: ",progName);
   if (s) {
-    if (*s) 
+    if (strlen(s) > 0) 
       PR_fprintf(PR_STDOUT, "%s\n", s);
     else
       PR_fprintf(PR_STDOUT, "\n");
@@ -292,7 +292,7 @@ PRInt32 main(PRInt32 argc,char **argv, char **envp)
   }
   
   if (portnumarg) {
-    if (*portnumarg == 0) {
+    if (PL_strlen(portnumarg) == 0) {
       PR_fprintf(PR_STDOUT,"malformed port number supplied\n");
       return(1);
     }
@@ -609,10 +609,6 @@ PRInt32 main(PRInt32 argc,char **argv, char **envp)
  closedown:
 
   PR_Close(s);
-
-  if (NSS_Shutdown() != SECSuccess) {
-    exit(1);
-  }
 
   return(0);
 

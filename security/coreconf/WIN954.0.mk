@@ -40,9 +40,7 @@
 include $(CORE_DEPTH)/coreconf/WIN32.mk
 
 ifeq ($(CPU_ARCH), x386)
-ifndef NS_USE_GCC
 	OS_CFLAGS += -W3 -nologo
-endif
 	DEFINES += -D_X86_
 else 
 	ifeq ($(CPU_ARCH), MIPS)
@@ -57,7 +55,5 @@ else
 	endif
 endif
 
-ifndef NS_USE_GCC
 OS_DLLFLAGS += -nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE
-endif
 DEFINES += -DWIN95

@@ -16,12 +16,8 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
- * Contributor(s):
+ * Contributor(s): 
  *	Dr Stephen Henson <stephen.henson@gemplus.com>
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -89,15 +85,17 @@
  
 #include "pkcs11f.h"
 
+
+/* forward static declaration. */
+static SECStatus pk11_PRF(const SECItem *secret, const char *label, 
+                          SECItem *seed, SECItem *result, PRBool isFIPS);  
+
+#define PK11_OFFSETOF(str, memb) ((PRPtrdiff)(&(((str *)0)->memb)))
+
 static void pk11_Null(void *data, PRBool freeit)
 {
     return;
 } 
-
-#ifdef NSS_ENABLE_ECC
-extern SECStatus EC_DecodeParams(const SECItem *encodedParams, 
-				 ECParams **ecparams);
-#endif /* NSS_ENABLE_ECC */
 
 /*
  * free routines.... Free local type  allocated data, and convert
@@ -172,6 +170,59 @@ pk11_cdmf2des(unsigned char *cdmfkey, unsigned char *deskey)
 }
 
 
+static CK_RV
+pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
+		 CK_OBJECT_HANDLE hKey, CK_ATTRIBUTE_TYPE etype,
+		 PK11ContextType contextType, PRBool isEncrypt);
+/*
+ * Calculate a Lynx checksum for CKM_LYNX_WRAP mechanism.
+ */
+static CK_RV
+pk11_calcLynxChecksum(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hWrapKey,
+	unsigned char *checksum, unsigned char *key, CK_ULONG len)
+{
+
+    CK_BYTE E[10];
+    CK_ULONG Elen = sizeof (E);
+    CK_BYTE C[8];
+    CK_ULONG Clen = sizeof (C);
+    unsigned short sum1 = 0, sum2 = 0;
+    CK_MECHANISM mech = { CKM_DES_ECB, NULL, 0 };
+    int i;
+    CK_RV crv;
+
+    if (len != 8) return CKR_WRAPPED_KEY_LEN_RANGE;
+    
+    /* zero the parity bits */
+    for (i=0; i < 8; i++) {
+	sum1 = sum1 + key[i];
+	sum2 = sum2 + sum1;
+    }
+
+    /* encrypt with key 1 */
+
+    crv = pk11_CryptInit(hSession,&mech,hWrapKey,CKA_WRAP, PK11_ENCRYPT, 
+								PR_TRUE);
+    if (crv != CKR_OK) return crv;
+
+    crv = NSC_Encrypt(hSession,key,len,E,&Elen);
+    if (crv != CKR_OK) return crv;
+
+    E[8] = (sum2 >> 8) & 0xff;
+    E[9] = sum2 & 0xff;
+
+    crv = pk11_CryptInit(hSession,&mech,hWrapKey,CKA_WRAP, PK11_ENCRYPT, 
+								PR_TRUE);
+    if (crv != CKR_OK) return crv;
+
+    crv = NSC_Encrypt(hSession,&E[2],len,C,&Clen);
+    if (crv != CKR_OK) return crv;
+
+    checksum[0] = C[6];
+    checksum[1] = C[7];
+    
+    return CKR_OK;
+}
 /* NSC_DestroyObject destroys an object. */
 CK_RV
 NSC_DestroyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject)
@@ -399,11 +450,8 @@ pk11_InitGeneric(PK11Session *session,PK11SessionContext **contextPtr,
 }
 
 /* NSC_CryptInit initializes an encryption/Decryption operation. */
-/* This function is used by NSC_EncryptInit, NSC_DecryptInit, 
- *                          NSC_WrapKey, NSC_UnwrapKey, 
- *                          NSC_SignInit, NSC_VerifyInit (via pk11_InitCBCMac),
- * The only difference in their uses is the value of etype.
- */
+/* This function is used by NSC_EncryptInit and NSC_WrapKey. The only difference
+ * in their uses if whether or not etype is CKA_ENCRYPT or CKA_WRAP */
 static CK_RV
 pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 		 CK_OBJECT_HANDLE hKey, CK_ATTRIBUTE_TYPE etype,
@@ -424,10 +472,6 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
     unsigned char newdeskey[8];
     PRBool useNewKey=PR_FALSE;
     int t;
-
-    crv = pk11_MechAllowsOperation(pMechanism->mechanism, etype);
-    if (crv != CKR_OK) 
-    	return crv;
 
     session = pk11_SessionFromHandle(hSession);
     if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
@@ -468,10 +512,10 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	break;
     case CKM_RC2_CBC_PAD:
 	context->doPad = PR_TRUE;
+	context->blockSize = 8;
 	/* fall thru */
     case CKM_RC2_ECB:
     case CKM_RC2_CBC:
-	context->blockSize = 8;
 	if (key_type != CKK_RC2) {
 	    crv = CKR_KEY_TYPE_INCONSISTENT;
 	    break;
@@ -512,7 +556,9 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	    break;
 	}
 	rc5_param = (CK_RC5_CBC_PARAMS *)pMechanism->pParameter;
-	context->blockSize = rc5_param->ulWordsize*2;
+	if (context->doPad) {
+	   context->blockSize = rc5_param->ulWordsize*2;
+	}
 	rc5Key.data = (unsigned char*)att->attrib.pValue;
 	rc5Key.len = att->attrib.ulValueLen;
 	context->cipherInfo = RC5_CreateContext(&rc5Key,rc5_param->ulRounds,
@@ -550,6 +596,7 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	break;
     case CKM_CDMF_CBC_PAD:
 	context->doPad = PR_TRUE;
+	context->blockSize = 8;
 	/* fall thru */
     case CKM_CDMF_ECB:
     case CKM_CDMF_CBC:
@@ -570,6 +617,7 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	goto finish_des;
     case CKM_DES_CBC_PAD:
 	context->doPad = PR_TRUE;
+	context->blockSize = 8;
 	/* fall thru */
     case CKM_DES_CBC:
 	if (key_type != CKK_DES) {
@@ -587,6 +635,7 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	goto finish_des;
     case CKM_DES3_CBC_PAD:
 	context->doPad = PR_TRUE;
+	context->blockSize = 8;
 	/* fall thru */
     case CKM_DES3_CBC:
 	if ((key_type != CKK_DES2) && (key_type != CKK_DES3)) {
@@ -595,7 +644,6 @@ pk11_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	}
 	t = NSS_DES_EDE3_CBC;
 finish_des:
-	context->blockSize = 8;
 	att = pk11_FindAttribute(key,CKA_VALUE);
 	if (att == NULL) {
 	    crv = CKR_KEY_HANDLE_INVALID;
@@ -618,14 +666,14 @@ finish_des:
 	}
 	context->update = (PK11Cipher) (isEncrypt ? DES_Encrypt : DES_Decrypt);
 	context->destroy = (PK11Destroy) DES_DestroyContext;
-	break;
 
+	break;
     case CKM_AES_CBC_PAD:
 	context->doPad = PR_TRUE;
+	context->blockSize = 16;
 	/* fall thru */
     case CKM_AES_ECB:
     case CKM_AES_CBC:
-	context->blockSize = 16;
 	if (key_type != CKK_AES) {
 	    crv = CKR_KEY_TYPE_INCONSISTENT;
 	    break;
@@ -647,37 +695,8 @@ finish_des:
 	}
 	context->update = (PK11Cipher) (isEncrypt ? AES_Encrypt : AES_Decrypt);
 	context->destroy = (PK11Destroy) AES_DestroyContext;
-	break;
 
-    case CKM_NETSCAPE_AES_KEY_WRAP_PAD:
-    	context->doPad = PR_TRUE;
-	/* fall thru */
-    case CKM_NETSCAPE_AES_KEY_WRAP:
-	context->multi = PR_FALSE;
-	context->blockSize = 8;
-	if (key_type != CKK_AES) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	att = pk11_FindAttribute(key,CKA_VALUE);
-	if (att == NULL) {
-	    crv = CKR_KEY_HANDLE_INVALID;
-	    break;
-	}
-	context->cipherInfo = AESKeyWrap_CreateContext(
-	    (unsigned char*)att->attrib.pValue,
-	    (unsigned char*)pMechanism->pParameter,
-	    isEncrypt, att->attrib.ulValueLen);
-	pk11_FreeAttribute(att);
-	if (context->cipherInfo == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->update = (PK11Cipher) (isEncrypt ? AESKeyWrap_Encrypt 
-	                                          : AESKeyWrap_Decrypt);
-	context->destroy = (PK11Destroy) AESKeyWrap_DestroyContext;
 	break;
-
     default:
 	crv = CKR_MECHANISM_INVALID;
 	break;
@@ -735,7 +754,7 @@ CK_RV NSC_EncryptUpdate(CK_SESSION_HANDLE hSession,
 		return CKR_OK;
 	    }
 	    /* encrypt the current padded data */
-    	    rv = (*context->update)(context->cipherInfo, pEncryptedPart, 
+    	    rv = (*context->update)(context->cipherInfo,pEncryptedPart, 
 		&padoutlen, context->blockSize, context->padBuf,
 							context->blockSize);
     	    if (rv != SECSuccess) return CKR_DEVICE_ERROR;
@@ -756,6 +775,7 @@ CK_RV NSC_EncryptUpdate(CK_SESSION_HANDLE hSession,
 	    return CKR_OK;
 	}
     }
+	
 
 
     /* do it: NOTE: this assumes buf size in is >= buf size out! */
@@ -785,7 +805,7 @@ CK_RV NSC_EncryptFinal(CK_SESSION_HANDLE hSession,
     *pulLastEncryptedPartLen = 0;
     if (!pLastEncryptedPart) {
 	/* caller is checking the amount of remaining data */
-	if (context->blockSize > 0 && context->doPad) {
+	if (context->blockSize > 0) {
 	    *pulLastEncryptedPartLen = context->blockSize;
 	    contextFinished = PR_FALSE; /* still have padding to go */
 	}
@@ -816,8 +836,8 @@ finish:
 
 /* NSC_Encrypt encrypts single-part data. */
 CK_RV NSC_Encrypt (CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
-    		   CK_ULONG ulDataLen, CK_BYTE_PTR pEncryptedData,
-		   CK_ULONG_PTR pulEncryptedDataLen)
+    		CK_ULONG ulDataLen, CK_BYTE_PTR pEncryptedData,
+					 CK_ULONG_PTR pulEncryptedDataLen)
 {
     PK11Session *session;
     PK11SessionContext *context;
@@ -826,11 +846,6 @@ CK_RV NSC_Encrypt (CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
     CK_RV crv;
     CK_RV crv2;
     SECStatus rv = SECSuccess;
-    SECItem   pText;
-
-    pText.type = siBuffer;
-    pText.data = pData;
-    pText.len  = ulDataLen;
 
     /* make sure we're legal */
     crv = pk11_GetContext(hSession,&context,PK11_ENCRYPT,PR_FALSE,&session);
@@ -842,56 +857,32 @@ CK_RV NSC_Encrypt (CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
     }
 
     if (context->doPad) {
-	if (context->multi) {
-	    CK_ULONG finalLen;
-	    /* padding is fairly complicated, have the update and final 
-	     * code deal with it */
-	    pk11_FreeSession(session);
-	    crv = NSC_EncryptUpdate(hSession, pData, ulDataLen, pEncryptedData, 
-	                            pulEncryptedDataLen);
-	    if (crv != CKR_OK) 
-	    	*pulEncryptedDataLen = 0;
-	    maxoutlen      -= *pulEncryptedDataLen;
-	    pEncryptedData += *pulEncryptedDataLen;
-	    finalLen = maxoutlen;
-	    crv2 = NSC_EncryptFinal(hSession, pEncryptedData, &finalLen);
-	    if (crv2 == CKR_OK) 
-	    	*pulEncryptedDataLen += finalLen;
-	    return crv == CKR_OK ? crv2 : crv;
-	}
-	/* doPad without multi means that padding must be done on the first
-	** and only update.  There will be no final.
-	*/
-	PORT_Assert(context->blockSize > 1);
-	if (context->blockSize > 1) {
-	    CK_ULONG remainder = ulDataLen % context->blockSize;
-	    CK_ULONG padding   = context->blockSize - remainder;
-	    pText.len += padding;
-	    pText.data = PORT_ZAlloc(pText.len);
-	    if (pText.data) {
-		memcpy(pText.data, pData, ulDataLen);
-		memset(pText.data + ulDataLen, padding, padding);
-	    } else {
-		crv = CKR_HOST_MEMORY;
-		goto fail;
-	    }
-	}
+	CK_ULONG finalLen;
+	/* padding is fairly complicated, have the update and final 
+	 * code deal with it */
+        pk11_FreeSession(session);
+	crv = NSC_EncryptUpdate(hSession,pData,ulDataLen,pEncryptedData,
+							pulEncryptedDataLen);
+	if (crv != CKR_OK) *pulEncryptedDataLen = 0;
+	maxoutlen -= *pulEncryptedDataLen;
+	pEncryptedData += *pulEncryptedDataLen;
+	finalLen = maxoutlen;
+	crv2 = NSC_EncryptFinal(hSession, pEncryptedData, &finalLen);
+	if (crv2 == CKR_OK) { *pulEncryptedDataLen += finalLen; }
+	return crv == CKR_OK ? crv2 :crv;
     }
+	
 
     /* do it: NOTE: this assumes buf size is big enough. */
     rv = (*context->update)(context->cipherInfo, pEncryptedData, 
-			    &outlen, maxoutlen, pText.data, pText.len);
-    crv = (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
+					&outlen, maxoutlen, pData, ulDataLen);
     *pulEncryptedDataLen = (CK_ULONG) outlen;
-    if (pText.data != pData)
-    	PORT_ZFree(pText.data, pText.len);
-fail:
     pk11_SetContextByType(session, PK11_ENCRYPT, NULL);
     pk11_FreeContext(context);
 finish:
     pk11_FreeSession(session);
 
-    return crv;
+    return (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
 }
 
 
@@ -1023,41 +1014,30 @@ CK_RV NSC_Decrypt(CK_SESSION_HANDLE hSession,
 	goto finish;
     }
 
-    if (context->doPad && context->multi) {
+    if (context->doPad) {
 	CK_ULONG finalLen;
 	/* padding is fairly complicated, have the update and final 
 	 * code deal with it */
-	pk11_FreeSession(session);
+        pk11_FreeSession(session);
 	crv = NSC_DecryptUpdate(hSession,pEncryptedData,ulEncryptedDataLen,
 							pData, pulDataLen);
-	if (crv != CKR_OK) 
-	    *pulDataLen = 0;
+	if (crv != CKR_OK) *pulDataLen = 0;
 	maxoutlen -= *pulDataLen;
-	pData     += *pulDataLen;
+	pData += *pulDataLen;
 	finalLen = maxoutlen;
 	crv2 = NSC_DecryptFinal(hSession, pData, &finalLen);
-	if (crv2 == CKR_OK) 
-	    *pulDataLen += finalLen;
-	return crv == CKR_OK ? crv2 : crv;
+	if (crv2 == CKR_OK) { *pulDataLen += finalLen; }
+	return crv == CKR_OK ? crv2 :crv;
     }
 
     rv = (*context->update)(context->cipherInfo, pData, &outlen, maxoutlen, 
 					pEncryptedData, ulEncryptedDataLen);
-    /* XXX need to do MUCH better error mapping than this. */
-    crv = (rv == SECSuccess)  ? CKR_OK : CKR_DEVICE_ERROR;
-    if (rv == SECSuccess && context->doPad) {
-    	CK_ULONG padding = pData[outlen - 1];
-	if (padding > context->blockSize || !padding) {
-	    crv = CKR_ENCRYPTED_DATA_INVALID;
-	} else
-	    outlen -= padding;
-    }
     *pulDataLen = (CK_ULONG) outlen;
     pk11_SetContextByType(session, PK11_DECRYPT, NULL);
     pk11_FreeContext(context);
 finish:
     pk11_FreeSession(session);
-    return crv;
+    return (rv == SECSuccess)  ? CKR_OK : CKR_DEVICE_ERROR;
 }
 
 
@@ -1072,43 +1052,65 @@ CK_RV NSC_DigestInit(CK_SESSION_HANDLE hSession,
 {
     PK11Session *session;
     PK11SessionContext *context;
+    MD2Context *md2_context;
+    MD5Context *md5_context;
+    SHA1Context *sha1_context;
     CK_RV crv = CKR_OK;
 
     session = pk11_SessionFromHandle(hSession);
-    if (session == NULL) 
-    	return CKR_SESSION_HANDLE_INVALID;
+    if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
     crv = pk11_InitGeneric(session,&context,PK11_HASH,NULL,0,NULL, 0, 0);
     if (crv != CKR_OK) {
 	pk11_FreeSession(session);
 	return crv;
     }
 
-
-#define INIT_MECH(mech,mmm) \
-    case mech: { \
-	mmm ## Context * mmm ## _ctx = mmm ## _NewContext(); \
-	context->cipherInfo    = (void *)mmm ## _ctx; \
-	context->cipherInfoLen = mmm ## _FlattenSize(mmm ## _ctx); \
-	context->currentMech   = mech; \
-	context->hashUpdate    = (PK11Hash)    mmm ## _Update; \
-	context->end           = (PK11End)     mmm ## _End; \
-	context->destroy       = (PK11Destroy) mmm ## _DestroyContext; \
-	context->maxLen        = mmm ## _LENGTH; \
-        if (mmm ## _ctx) \
-	    mmm ## _Begin(mmm ## _ctx); \
-	else  \
-	    crv = CKR_HOST_MEMORY; \
-	break; \
-    }
-
     switch(pMechanism->mechanism) {
-    INIT_MECH(CKM_MD2,    MD2)
-    INIT_MECH(CKM_MD5,    MD5)
-    INIT_MECH(CKM_SHA_1,  SHA1)
-    INIT_MECH(CKM_SHA256, SHA256)
-    INIT_MECH(CKM_SHA384, SHA384)
-    INIT_MECH(CKM_SHA512, SHA512)
-
+    case CKM_MD2:
+	md2_context = MD2_NewContext();
+	context->cipherInfo = (void *)md2_context;
+	context->cipherInfoLen = MD2_FlattenSize(md2_context);
+	context->currentMech = CKM_MD2;
+        if (context->cipherInfo == NULL) {
+	    crv= CKR_HOST_MEMORY;
+	    
+	}
+	context->hashUpdate = (PK11Hash) MD2_Update;
+	context->end = (PK11End) MD2_End;
+	context->destroy = (PK11Destroy) MD2_DestroyContext;
+	context->maxLen = MD2_LENGTH;
+	MD2_Begin(md2_context);
+	break;
+    case CKM_MD5:
+	md5_context = MD5_NewContext();
+	context->cipherInfo = (void *)md5_context;
+	context->cipherInfoLen = MD5_FlattenSize(md5_context);
+	context->currentMech = CKM_MD5;
+        if (context->cipherInfo == NULL) {
+	    crv= CKR_HOST_MEMORY;
+	    
+	}
+	context->hashUpdate = (PK11Hash) MD5_Update;
+	context->end = (PK11End) MD5_End;
+	context->destroy = (PK11Destroy) MD5_DestroyContext;
+	context->maxLen = MD5_LENGTH;
+	MD5_Begin(md5_context);
+	break;
+    case CKM_SHA_1:
+	sha1_context = SHA1_NewContext();
+	context->cipherInfo = (void *)sha1_context;
+	context->cipherInfoLen = SHA1_FlattenSize(sha1_context);
+	context->currentMech = CKM_SHA_1;
+        if (context->cipherInfo == NULL) {
+	    crv= CKR_HOST_MEMORY;
+	    break;
+	}
+	context->hashUpdate = (PK11Hash) SHA1_Update;
+	context->end = (PK11End) SHA1_End;
+	context->destroy = (PK11Destroy) SHA1_DestroyContext;
+	SHA1_Begin(sha1_context);
+	context->maxLen = SHA1_LENGTH;
+	break;
     default:
 	crv = CKR_MECHANISM_INVALID;
 	break;
@@ -1203,30 +1205,50 @@ CK_RV NSC_DigestFinal(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pDigest,
 }
 
 /*
- * these helper functions are used by Generic Macing and Signing functions
+ * this helper functions are used by Generic Macing and Signing functions
  * that use hashes as part of their operations. 
  */
-#define DOSUB(mmm) \
-static CK_RV \
-pk11_doSub ## mmm(PK11SessionContext *context) { \
-    mmm ## Context * mmm ## _ctx = mmm ## _NewContext(); \
-    context->hashInfo    = (void *)      mmm ## _ctx; \
-    context->hashUpdate  = (PK11Hash)    mmm ## _Update; \
-    context->end         = (PK11End)     mmm ## _End; \
-    context->hashdestroy = (PK11Destroy) mmm ## _DestroyContext; \
-    if (!context->hashInfo) { \
-	return CKR_HOST_MEMORY; \
-    } \
-    mmm ## _Begin( mmm ## _ctx ); \
-    return CKR_OK; \
+static CK_RV
+pk11_doSubMD2(PK11SessionContext *context) {
+	MD2Context *md2_context = MD2_NewContext();
+	context->hashInfo = (void *)md2_context;
+        if (context->hashInfo == NULL) {
+	    return CKR_HOST_MEMORY;
+	}
+	context->hashUpdate = (PK11Hash) MD2_Update;
+	context->end = (PK11End) MD2_End;
+	context->hashdestroy = (PK11Destroy) MD2_DestroyContext;
+	MD2_Begin(md2_context);
+	return CKR_OK;
 }
 
-DOSUB(MD2)
-DOSUB(MD5)
-DOSUB(SHA1)
-DOSUB(SHA256)
-DOSUB(SHA384)
-DOSUB(SHA512)
+static CK_RV
+pk11_doSubMD5(PK11SessionContext *context) {
+	MD5Context *md5_context = MD5_NewContext();
+	context->hashInfo = (void *)md5_context;
+        if (context->hashInfo == NULL) {
+	    return CKR_HOST_MEMORY;
+	}
+	context->hashUpdate = (PK11Hash) MD5_Update;
+	context->end = (PK11End) MD5_End;
+	context->hashdestroy = (PK11Destroy) MD5_DestroyContext;
+	MD5_Begin(md5_context);
+	return CKR_OK;
+}
+
+static CK_RV
+pk11_doSubSHA1(PK11SessionContext *context) {
+	SHA1Context *sha1_context = SHA1_NewContext();
+	context->hashInfo = (void *)sha1_context;
+        if (context->hashInfo == NULL) {
+	    return CKR_HOST_MEMORY;
+	}
+	context->hashUpdate = (PK11Hash) SHA1_Update;
+	context->end = (PK11End) SHA1_End;
+	context->hashdestroy = (PK11Destroy) SHA1_DestroyContext;
+	SHA1_Begin(sha1_context);
+	return CKR_OK;
+}
 
 /*
  * HMAC General copies only a portion of the result. This update routine likes
@@ -1381,8 +1403,8 @@ pk11_doSSLMACInit(PK11SessionContext *context,SECOidTag oid,
 
     if (oid == SEC_OID_SHA1) {
 	crv = pk11_doSubSHA1(context);
-	if (crv != CKR_OK) return crv;
 	begin = (PK11Begin) SHA1_Begin;
+	if (crv != CKR_OK) return crv;
 	padSize = 40;
     } else {
 	crv = pk11_doSubMD5(context);
@@ -1419,6 +1441,165 @@ pk11_doSSLMACInit(PK11SessionContext *context,SECOidTag oid,
     context->verify = (PK11Verify) pk11_SSLMACVerify;
     context->maxLen = mac_size;
     return CKR_OK;
+}
+
+typedef struct {
+    PRUint32	cxSize;		/* size of allocated block, in bytes.        */
+    PRUint32	cxKeyLen;	/* number of bytes of cxBuf containing key.  */
+    PRUint32	cxDataLen;	/* number of bytes of cxBuf containing data. */
+    SECStatus	cxRv;		/* records failure of void functions.        */
+    PRBool	cxIsFIPS;	/* true if conforming to FIPS 198.           */
+    unsigned char cxBuf[512];	/* actual size may be larger than 512.       */
+} TLSPRFContext;
+
+static void
+pk11_TLSPRFHashUpdate(TLSPRFContext *cx, const unsigned char *data, 
+                        unsigned int data_len)
+{
+    PRUint32 bytesUsed = PK11_OFFSETOF(TLSPRFContext, cxBuf) + 
+                         cx->cxKeyLen + cx->cxDataLen;
+
+    if (cx->cxRv != SECSuccess)	/* function has previously failed. */
+    	return;
+    if (bytesUsed + data_len > cx->cxSize) {
+	/* We don't use realloc here because 
+	** (a) realloc doesn't zero out the old block, and 
+	** (b) if realloc fails, we lose the old block.
+	*/
+	PRUint32 blockSize = bytesUsed + data_len + 512;
+    	TLSPRFContext *new_cx = (TLSPRFContext *)PORT_Alloc(blockSize);
+	if (!new_cx) {
+	   cx->cxRv = SECFailure;
+	   return;
+	}
+	PORT_Memcpy(new_cx, cx, cx->cxSize);
+	new_cx->cxSize = blockSize;
+
+	PORT_ZFree(cx, cx->cxSize);
+	cx = new_cx;
+    }
+    PORT_Memcpy(cx->cxBuf + cx->cxKeyLen + cx->cxDataLen, data, data_len);
+    cx->cxDataLen += data_len;
+}
+
+static void 
+pk11_TLSPRFEnd(TLSPRFContext *ctx, unsigned char *hashout,
+	 unsigned int *pDigestLen, unsigned int maxDigestLen)
+{
+    *pDigestLen = 0; /* tells Verify that no data has been input yet. */
+}
+
+/* Compute the PRF values from the data previously input. */
+static SECStatus
+pk11_TLSPRFUpdate(TLSPRFContext *cx, 
+                  unsigned char *sig,		/* output goes here. */
+		  unsigned int * sigLen, 	/* how much output.  */
+		  unsigned int   maxLen, 	/* output buffer size */
+		  unsigned char *hash, 		/* unused. */
+		  unsigned int   hashLen)	/* unused. */
+{
+    SECStatus rv;
+    SECItem sigItem;
+    SECItem seedItem;
+    SECItem secretItem;
+
+    if (cx->cxRv != SECSuccess)
+    	return cx->cxRv;
+
+    secretItem.data = cx->cxBuf;
+    secretItem.len  = cx->cxKeyLen;
+
+    seedItem.data = cx->cxBuf + cx->cxKeyLen;
+    seedItem.len  = cx->cxDataLen;
+
+    sigItem.data = sig;
+    sigItem.len  = maxLen;
+
+    rv = pk11_PRF(&secretItem, NULL, &seedItem, &sigItem, cx->cxIsFIPS);
+    if (rv == SECSuccess && sigLen != NULL)
+    	*sigLen = sigItem.len;
+    return rv;
+
+}
+
+static SECStatus
+pk11_TLSPRFVerify(TLSPRFContext *cx, 
+                  unsigned char *sig, 		/* input, for comparison. */
+		  unsigned int   sigLen,	/* length of sig.         */
+		  unsigned char *hash, 		/* data to be verified.   */
+		  unsigned int   hashLen)	/* size of hash data.     */
+{
+    unsigned char * tmp    = (unsigned char *)PORT_Alloc(sigLen);
+    unsigned int    tmpLen = sigLen;
+    SECStatus       rv;
+
+    if (!tmp)
+    	return SECFailure;
+    if (hashLen) {
+    	/* hashLen is non-zero when the user does a one-step verify.
+	** In this case, none of the data has been input yet.
+	*/
+    	pk11_TLSPRFHashUpdate(cx, hash, hashLen);
+    }
+    rv = pk11_TLSPRFUpdate(cx, tmp, &tmpLen, sigLen, NULL, 0);
+    if (rv == SECSuccess) {
+    	rv = (SECStatus)(1 - !PORT_Memcmp(tmp, sig, sigLen));
+    }
+    PORT_ZFree(tmp, sigLen);
+    return rv;
+}
+
+static void
+pk11_TLSPRFHashDestroy(TLSPRFContext *cx, PRBool freeit)
+{
+    if (freeit)
+	PORT_ZFree(cx, cx->cxSize);
+}
+
+static CK_RV
+pk11_TLSPRFInit(PK11SessionContext *context, 
+		  PK11Object *        key, 
+		  CK_KEY_TYPE         key_type)
+{
+    PK11Attribute * keyVal;
+    TLSPRFContext * prf_cx;
+    CK_RV           crv = CKR_HOST_MEMORY;
+    PRUint32        keySize;
+    PRUint32        blockSize;
+
+    if (key_type != CKK_GENERIC_SECRET)
+    	return CKR_KEY_TYPE_INCONSISTENT; /* CKR_KEY_FUNCTION_NOT_PERMITTED */
+
+    context->multi = PR_TRUE;
+
+    keyVal = pk11_FindAttribute(key, CKA_VALUE);
+    keySize = (!keyVal) ? 0 : keyVal->attrib.ulValueLen;
+    blockSize = keySize + sizeof(TLSPRFContext);
+    prf_cx = (TLSPRFContext *)PORT_Alloc(blockSize);
+    if (!prf_cx) 
+    	goto done;
+    prf_cx->cxSize    = blockSize;
+    prf_cx->cxKeyLen  = keySize;
+    prf_cx->cxDataLen = 0;
+    prf_cx->cxRv        = SECSuccess;
+    prf_cx->cxIsFIPS  = (key->slot->slotID == FIPS_SLOT_ID);
+    if (keySize)
+	PORT_Memcpy(prf_cx->cxBuf, keyVal->attrib.pValue, keySize);
+
+    context->hashInfo    = (void *) prf_cx;
+    context->cipherInfo  = (void *) prf_cx;
+    context->hashUpdate  = (PK11Hash)    pk11_TLSPRFHashUpdate;
+    context->end         = (PK11End)     pk11_TLSPRFEnd;
+    context->update      = (PK11Cipher)  pk11_TLSPRFUpdate;
+    context->verify      = (PK11Verify)  pk11_TLSPRFVerify;
+    context->destroy     = (PK11Destroy) pk11_Null;
+    context->hashdestroy = (PK11Destroy) pk11_TLSPRFHashDestroy;
+    crv = CKR_OK;
+
+done:
+    if (keyVal) 
+	pk11_FreeAttribute(keyVal);
+    return crv;
 }
 
 /*
@@ -1616,41 +1797,6 @@ nsc_DSA_Sign_Stub(void *ctx, void *sigBuf,
     return rv;
 }
 
-#ifdef NSS_ENABLE_ECC
-static SECStatus
-nsc_ECDSAVerifyStub(void *ctx, void *sigBuf, unsigned int sigLen,
-                    void *dataBuf, unsigned int dataLen)
-{
-    SECItem signature, digest;
-    NSSLOWKEYPublicKey *key = (NSSLOWKEYPublicKey *)ctx;
-
-    signature.data = (unsigned char *)sigBuf;
-    signature.len = sigLen;
-    digest.data = (unsigned char *)dataBuf;
-    digest.len = dataLen;
-    return ECDSA_VerifyDigest(&(key->u.ec), &signature, &digest);
-}
-
-static SECStatus
-nsc_ECDSASignStub(void *ctx, void *sigBuf,
-                  unsigned int *sigLen, unsigned int maxSigLen,
-                  void *dataBuf, unsigned int dataLen)
-{
-    SECItem signature = { 0 }, digest;
-    SECStatus rv;
-    NSSLOWKEYPrivateKey *key = (NSSLOWKEYPrivateKey *)ctx;
-
-    (void)SECITEM_AllocItem(NULL, &signature, maxSigLen);
-    digest.data = (unsigned char *)dataBuf;
-    digest.len = dataLen;
-    rv = ECDSA_SignDigest(&(key->u.ec), &signature, &digest);
-    *sigLen = signature.len;
-    PORT_Memcpy(sigBuf, signature.data, signature.len);
-    SECITEM_FreeItem(&signature, PR_FALSE);
-    return rv;
-}
-#endif /* NSS_ENABLE_ECC */
-
 /* NSC_SignInit setups up the signing operations. There are three basic
  * types of signing:
  *	(1) the tradition single part, where "Raw RSA" or "Raw DSA" is applied
@@ -1700,25 +1846,43 @@ CK_RV NSC_SignInit(CK_SESSION_HANDLE hSession,
 
     context->multi = PR_FALSE;
 
-#define INIT_RSA_SIGN_MECH(mmm) \
-    case CKM_ ## mmm ## _RSA_PKCS: \
-        context->multi = PR_TRUE; \
-	crv = pk11_doSub ## mmm (context); \
-	if (crv != CKR_OK) break; \
-	context->update = (PK11Cipher) pk11_HashSign; \
-	info = PORT_New(PK11HashSignInfo); \
-	if (info == NULL) { crv = CKR_HOST_MEMORY; break; } \
-	info->hashOid = SEC_OID_ ## mmm ; \
-	goto finish_rsa; 
-
     switch(pMechanism->mechanism) {
-    INIT_RSA_SIGN_MECH(MD5)
-    INIT_RSA_SIGN_MECH(MD2)
-    INIT_RSA_SIGN_MECH(SHA1)
-    INIT_RSA_SIGN_MECH(SHA256)
-    INIT_RSA_SIGN_MECH(SHA384)
-    INIT_RSA_SIGN_MECH(SHA512)
-
+    case CKM_MD5_RSA_PKCS:
+        context->multi = PR_TRUE;
+	crv = pk11_doSubMD5(context);
+	if (crv != CKR_OK) break;
+	context->update = (PK11Cipher) pk11_HashSign;
+	info = (PK11HashSignInfo *)PORT_Alloc(sizeof(PK11HashSignInfo));
+	if (info == NULL) {
+	   crv = CKR_HOST_MEMORY;
+	   break;
+	}
+	info->hashOid = SEC_OID_MD5;
+	goto finish_rsa;
+    case CKM_MD2_RSA_PKCS:
+        context->multi = PR_TRUE;
+	crv = pk11_doSubMD2(context);
+	if (crv != CKR_OK) break;
+	context->update = (PK11Cipher) pk11_HashSign;
+	info = (PK11HashSignInfo *)PORT_Alloc(sizeof(PK11HashSignInfo));
+	if (info == NULL) {
+	   crv = CKR_HOST_MEMORY;
+	   break;
+	}
+	info->hashOid = SEC_OID_MD2;
+	goto finish_rsa;
+    case CKM_SHA1_RSA_PKCS:
+        context->multi = PR_TRUE;
+	crv = pk11_doSubSHA1(context);
+	if (crv != CKR_OK) break;
+	context->update = (PK11Cipher) pk11_HashSign;
+	info = (PK11HashSignInfo *)PORT_Alloc(sizeof(PK11HashSignInfo));
+	if (info == NULL) {
+	   crv = CKR_HOST_MEMORY;
+	   break;
+	}
+	info->hashOid = SEC_OID_SHA1;
+	goto finish_rsa;
     case CKM_RSA_PKCS:
 	context->update = (PK11Cipher) RSA_Sign;
 	goto finish_rsa;
@@ -1772,47 +1936,20 @@ finish_rsa:
 	context->maxLen     = DSA_SIGNATURE_LEN;
 
 	break;
-
-#ifdef NSS_ENABLE_ECC
-    case CKM_ECDSA_SHA1:
-	context->multi = PR_TRUE;
-	crv = pk11_doSubSHA1(context);
-	if (crv != CKR_OK) break;
-	/* fall through */
-    case CKM_ECDSA:
-	if (key_type != CKK_EC) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	privKey = pk11_GetPrivKey(key,CKK_EC,&crv);
-	if (privKey == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->cipherInfo = privKey;
-	context->update     = (PK11Cipher) nsc_ECDSASignStub;
-	context->destroy    = (privKey == key->objectInfo) ?
-		(PK11Destroy) pk11_Null:(PK11Destroy)pk11_FreePrivKey;
-	context->maxLen     = MAX_ECKEY_LEN * 2;
-
+    case CKM_MD2_HMAC_GENERAL:
+	crv = pk11_doHMACInit(context,HASH_AlgMD2,key,
+				*(CK_ULONG *)pMechanism->pParameter);
 	break;
-#endif /* NSS_ENABLE_ECC */
-
-#define INIT_HMAC_MECH(mmm) \
-    case CKM_ ## mmm ## _HMAC_GENERAL: \
-	crv = pk11_doHMACInit(context, HASH_Alg ## mmm ,key, \
-				*(CK_ULONG *)pMechanism->pParameter); \
-	break; \
-    case CKM_ ## mmm ## _HMAC: \
-	crv = pk11_doHMACInit(context, HASH_Alg ## mmm ,key, mmm ## _LENGTH); \
-	break; 
-
-    INIT_HMAC_MECH(MD2)
-    INIT_HMAC_MECH(MD5)
-    INIT_HMAC_MECH(SHA256)
-    INIT_HMAC_MECH(SHA384)
-    INIT_HMAC_MECH(SHA512)
-
+    case CKM_MD2_HMAC:
+	crv = pk11_doHMACInit(context,HASH_AlgMD2,key,MD2_LENGTH);
+	break;
+    case CKM_MD5_HMAC_GENERAL:
+	crv = pk11_doHMACInit(context,HASH_AlgMD5,key,
+				*(CK_ULONG *)pMechanism->pParameter);
+	break;
+    case CKM_MD5_HMAC:
+	crv = pk11_doHMACInit(context,HASH_AlgMD5,key,MD5_LENGTH);
+	break;
     case CKM_SHA_1_HMAC_GENERAL:
 	crv = pk11_doHMACInit(context,HASH_AlgSHA1,key,
 				*(CK_ULONG *)pMechanism->pParameter);
@@ -1820,7 +1957,6 @@ finish_rsa:
     case CKM_SHA_1_HMAC:
 	crv = pk11_doHMACInit(context,HASH_AlgSHA1,key,SHA1_LENGTH);
 	break;
-
     case CKM_SSL3_MD5_MAC:
 	crv = pk11_doSSLMACInit(context,SEC_OID_MD5,key,
 					*(CK_ULONG *)pMechanism->pParameter);
@@ -1892,10 +2028,10 @@ pk11_MACUpdate(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pPart,
     /* save the residual */
     context->padDataLength = ulPartLen % context->blockSize;
     if (context->padDataLength) {
-	PORT_Memcpy(context->padBuf,
-		    &pPart[ulPartLen-context->padDataLength],
-		    context->padDataLength);
-	ulPartLen -= context->padDataLength;
+	    PORT_Memcpy(context->padBuf,
+			&pPart[ulPartLen-context->padDataLength],
+							context->padDataLength);
+	    ulPartLen -= context->padDataLength;
     }
 
     /* if we've exhausted our new buffer, we're done */
@@ -2134,25 +2270,43 @@ CK_RV NSC_VerifyInit(CK_SESSION_HANDLE hSession,
 
     context->multi = PR_FALSE;
 
-#define INIT_RSA_VFY_MECH(mmm) \
-    case CKM_ ## mmm ## _RSA_PKCS: \
-        context->multi = PR_TRUE; \
-	crv = pk11_doSub ## mmm (context); \
-	if (crv != CKR_OK) break; \
-	context->verify = (PK11Verify) pk11_hashCheckSign; \
-	info = PORT_New(PK11HashVerifyInfo); \
-	if (info == NULL) { crv = CKR_HOST_MEMORY; break; } \
-	info->hashOid = SEC_OID_ ## mmm ; \
-	goto finish_rsa; 
-
     switch(pMechanism->mechanism) {
-    INIT_RSA_VFY_MECH(MD5) 
-    INIT_RSA_VFY_MECH(MD2) 
-    INIT_RSA_VFY_MECH(SHA1) 
-    INIT_RSA_VFY_MECH(SHA256) 
-    INIT_RSA_VFY_MECH(SHA384) 
-    INIT_RSA_VFY_MECH(SHA512) 
-
+    case CKM_MD5_RSA_PKCS:
+        context->multi = PR_TRUE;
+	crv = pk11_doSubMD5(context);
+	if (crv != CKR_OK) break;
+	context->verify = (PK11Verify) pk11_hashCheckSign;
+	info = (PK11HashVerifyInfo *)PORT_Alloc(sizeof(PK11HashVerifyInfo));
+	if (info == NULL) {
+	   crv = CKR_HOST_MEMORY;
+	   break;
+	}
+	info->hashOid = SEC_OID_MD5;
+	goto finish_rsa;
+    case CKM_MD2_RSA_PKCS:
+        context->multi = PR_TRUE;
+	crv = pk11_doSubMD2(context);
+	if (crv != CKR_OK) break;
+	context->verify = (PK11Verify) pk11_hashCheckSign;
+	info = (PK11HashVerifyInfo *)PORT_Alloc(sizeof(PK11HashVerifyInfo));
+	if (info == NULL) {
+	   crv = CKR_HOST_MEMORY;
+	   break;
+	}
+	info->hashOid = SEC_OID_MD2;
+	goto finish_rsa;
+    case CKM_SHA1_RSA_PKCS:
+        context->multi = PR_TRUE;
+	crv = pk11_doSubSHA1(context);
+	if (crv != CKR_OK) break;
+	context->verify = (PK11Verify) pk11_hashCheckSign;
+	info = (PK11HashVerifyInfo *)PORT_Alloc(sizeof(PK11HashVerifyInfo));
+	if (info == NULL) {
+	   crv = CKR_HOST_MEMORY;
+	   break;
+	}
+	info->hashOid = SEC_OID_SHA1;
+	goto finish_rsa;
     case CKM_RSA_PKCS:
 	context->verify = (PK11Verify) RSA_CheckSign;
 	goto finish_rsa;
@@ -2195,35 +2349,21 @@ finish_rsa:
 	context->verify     = (PK11Verify) nsc_DSA_Verify_Stub;
 	context->destroy    = pk11_Null;
 	break;
-#ifdef NSS_ENABLE_ECC
-    case CKM_ECDSA_SHA1:
-	context->multi = PR_TRUE;
-	crv = pk11_doSubSHA1(context);
-	if (crv != CKR_OK) break;
-	/* fall through */
-    case CKM_ECDSA:
-	if (key_type != CKK_EC) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	context->multi = PR_FALSE;
-	pubKey = pk11_GetPubKey(key,CKK_EC,&crv);
-	if (pubKey == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->cipherInfo = pubKey;
-	context->verify     = (PK11Verify) nsc_ECDSAVerifyStub;
-	context->destroy    = pk11_Null;
+
+    case CKM_MD2_HMAC_GENERAL:
+	crv = pk11_doHMACInit(context,HASH_AlgMD2,key,
+				*(CK_ULONG *)pMechanism->pParameter);
 	break;
-#endif /* NSS_ENABLE_ECC */
-
-    INIT_HMAC_MECH(MD2)
-    INIT_HMAC_MECH(MD5)
-    INIT_HMAC_MECH(SHA256)
-    INIT_HMAC_MECH(SHA384)
-    INIT_HMAC_MECH(SHA512)
-
+    case CKM_MD2_HMAC:
+	crv = pk11_doHMACInit(context,HASH_AlgMD2,key,MD2_LENGTH);
+	break;
+    case CKM_MD5_HMAC_GENERAL:
+	crv = pk11_doHMACInit(context,HASH_AlgMD5,key,
+				*(CK_ULONG *)pMechanism->pParameter);
+	break;
+    case CKM_MD5_HMAC:
+	crv = pk11_doHMACInit(context,HASH_AlgMD5,key,MD5_LENGTH);
+	break;
     case CKM_SHA_1_HMAC_GENERAL:
 	crv = pk11_doHMACInit(context,HASH_AlgSHA1,key,
 				*(CK_ULONG *)pMechanism->pParameter);
@@ -2231,7 +2371,6 @@ finish_rsa:
     case CKM_SHA_1_HMAC:
 	crv = pk11_doHMACInit(context,HASH_AlgSHA1,key,SHA1_LENGTH);
 	break;
-
     case CKM_SSL3_MD5_MAC:
 	crv = pk11_doSSLMACInit(context,SEC_OID_MD5,key,
 					*(CK_ULONG *)pMechanism->pParameter);
@@ -2962,13 +3101,6 @@ CK_RV NSC_GenerateKeyPair (CK_SESSION_HANDLE hSession,
     int 		private_value_bits = 0;
     DHPrivateKey *	dhPriv;
 
-#ifdef NSS_ENABLE_ECC
-    /* Elliptic Curve Cryptography */
-    SECItem  		ecEncodedParams;  /* DER Encoded parameters */
-    ECPrivateKey *	ecPriv;
-    ECParams *          ecParams;
-#endif /* NSS_ENABLE_ECC */
-
     /*
      * now lets create an object to hang the attributes off of
      */
@@ -3220,51 +3352,6 @@ dhgn_done:
 	PORT_FreeArena(dhPriv->arena, PR_TRUE);
 	break;
 
-#ifdef NSS_ENABLE_ECC
-    case CKM_EC_KEY_PAIR_GEN:
-	pk11_DeleteAttributeType(privateKey,CKA_EC_PARAMS);
-	pk11_DeleteAttributeType(privateKey,CKA_VALUE);
-	key_type = CKK_EC;
-
-	/* extract the necessary parameters and copy them to private keys */
-	crv = pk11_Attribute2SSecItem(NULL, &ecEncodedParams, publicKey, 
-				      CKA_EC_PARAMS);
-	if (crv != CKR_OK) break;
-
-	crv = pk11_AddAttributeType(privateKey, CKA_EC_PARAMS, 
-				    pk11_item_expand(&ecEncodedParams));
-	if (crv != CKR_OK) {
-	  PORT_Free(ecEncodedParams.data);
-	  break;
-	}
-
-	/* Decode ec params before calling EC_NewKey */
-	rv = EC_DecodeParams(&ecEncodedParams, &ecParams);
-	PORT_Free(ecEncodedParams.data);
-	if (rv != SECSuccess) {
-	    crv = CKR_DEVICE_ERROR;
-	    break;
-	}
-	rv = EC_NewKey(ecParams, &ecPriv);
-	PORT_FreeArena(ecParams->arena, PR_TRUE);
-	if (rv != SECSuccess) { 
-	  crv = CKR_DEVICE_ERROR;
-	  break;
-	}
-
-	crv = pk11_AddAttributeType(publicKey, CKA_EC_POINT, 
-				pk11_item_expand(&ecPriv->publicValue));
-	if (crv != CKR_OK) goto ecgn_done;
-
-	crv = pk11_AddAttributeType(privateKey, CKA_VALUE, 
-			      pk11_item_expand(&ecPriv->privateValue));
-
-ecgn_done:
-	/* should zeroize, since this function doesn't. */
-	PORT_FreeArena(ecPriv->ecParams.arena, PR_TRUE);
-	break;
-#endif /* NSS_ENABLE_ECC */
-
     default:
 	crv = CKR_MECHANISM_INVALID;
     }
@@ -3381,8 +3468,8 @@ static SECItem *pk11_PackagePrivateKey(PK11Object *key, CK_RV *crvp)
 
     arena = PORT_NewArena(2048); 	/* XXX different size? */
     if(!arena) {
-	*crvp = CKR_HOST_MEMORY;
 	rv = SECFailure;
+	*crvp = CKR_HOST_MEMORY;
 	goto loser;
     }
 
@@ -3466,13 +3553,7 @@ loser:
     
 /* it doesn't matter yet, since we colapse error conditions in the
  * level above, but we really should map those few key error differences */
-CK_RV pk11_mapWrap(CK_RV crv) 
-{ 
-    switch (crv) {
-    case CKR_ENCRYPTED_DATA_INVALID:  crv = CKR_WRAPPED_KEY_INVALID; break;
-    }
-    return crv; 
-}
+CK_RV pk11_mapWrap(CK_RV crv) { return crv; }
 
 /* NSC_WrapKey wraps (i.e., encrypts) a key. */
 CK_RV NSC_WrapKey(CK_SESSION_HANDLE hSession,
@@ -3484,6 +3565,8 @@ CK_RV NSC_WrapKey(CK_SESSION_HANDLE hSession,
     PK11Attribute *attribute;
     PK11Object *key;
     CK_RV crv;
+    PRBool isLynks = PR_FALSE;
+    CK_ULONG len = 0;
 
     session = pk11_SessionFromHandle(hSession);
     if (session == NULL) {
@@ -3498,58 +3581,40 @@ CK_RV NSC_WrapKey(CK_SESSION_HANDLE hSession,
 
     switch(key->objclass) {
 	case CKO_SECRET_KEY:
-	  {
-	    PK11SessionContext *context = NULL;
-	    SECItem pText;
-
 	    attribute = pk11_FindAttribute(key,CKA_VALUE);
 
 	    if (attribute == NULL) {
 		crv = CKR_KEY_TYPE_INCONSISTENT;
 		break;
 	    }
+	    if (pMechanism->mechanism == CKM_KEY_WRAP_LYNKS) {
+		isLynks = PR_TRUE;
+		pMechanism->mechanism = CKM_DES_ECB;
+		len = *pulWrappedKeyLen;
+	    }
+     
 	    crv = pk11_CryptInit(hSession, pMechanism, hWrappingKey, 
 					CKA_WRAP, PK11_ENCRYPT, PR_TRUE);
 	    if (crv != CKR_OK) {
 		pk11_FreeAttribute(attribute);
 		break;
 	    }
+	    crv = NSC_Encrypt(hSession, (CK_BYTE_PTR)attribute->attrib.pValue, 
+		    attribute->attrib.ulValueLen,pWrappedKey,pulWrappedKeyLen);
 
-	    pText.type = siBuffer;
-	    pText.data = (unsigned char *)attribute->attrib.pValue;
-	    pText.len  = attribute->attrib.ulValueLen;
-
-	    /* Find out if this is a block cipher. */
-	    crv = pk11_GetContext(hSession,&context,PK11_ENCRYPT,PR_FALSE,NULL);
-	    if (crv != CKR_OK || !context) 
-	        break;
-	    if (context->blockSize > 1) {
-		unsigned int remainder = pText.len % context->blockSize;
-	        if (!context->doPad && remainder) {
-		    /* When wrapping secret keys with unpadded block ciphers, 
-		    ** the keys are zero padded, if necessary, to fill out 
-		    ** a full block.
-		    */
-		    pText.len += context->blockSize - remainder;
-		    pText.data = PORT_ZAlloc(pText.len);
-		    if (pText.data)
-			memcpy(pText.data, attribute->attrib.pValue,
-			                   attribute->attrib.ulValueLen);
-		    else {
-			crv = CKR_HOST_MEMORY;
-			break;
-		    }
+	    if (isLynks && (crv == CKR_OK)) {
+		unsigned char buf[2];
+		crv = pk11_calcLynxChecksum(hSession,hWrappingKey,buf,
+			(unsigned char*)attribute->attrib.pValue,
+			attribute->attrib.ulValueLen);
+		if (len >= 10) {
+		    pWrappedKey[8] = buf[0];
+		    pWrappedKey[9] = buf[1];
+		    *pulWrappedKeyLen = 10;
 		}
 	    }
-
-	    crv = NSC_Encrypt(hSession, (CK_BYTE_PTR)pText.data, 
-		              pText.len, pWrappedKey, pulWrappedKeyLen);
-
-	    if (pText.data != (unsigned char *)attribute->attrib.pValue) 
-	    	PORT_ZFree(pText.data, pText.len);
 	    pk11_FreeAttribute(attribute);
 	    break;
-	  }
 
 	case CKO_PRIVATE_KEY:
 	    {
@@ -3598,6 +3663,7 @@ pk11_unwrapPrivateKey(PK11Object *key, SECItem *bpki)
     NSSLOWKEYPrivateKeyInfo *pki = NULL;
     SECItem *ck_id = NULL;
     CK_RV crv = CKR_KEY_TYPE_INCONSISTENT;
+    SECItem newBpki;
 
     arena = PORT_NewArena(2048);
     if(!arena) {
@@ -3611,7 +3677,15 @@ pk11_unwrapPrivateKey(PK11Object *key, SECItem *bpki)
 	return SECFailure;
     }
 
-    if(SEC_ASN1DecodeItem(arena, pki, nsslowkey_PrivateKeyInfoTemplate, bpki) 
+    /* copy the DER into the arena, since Quick DER returns data that points
+       into the DER input, which may get freed by the caller */
+    rv = SECITEM_CopyItem(arena, &newBpki, bpki);
+    if ( rv != SECSuccess ) {
+        PORT_FreeArena (arena, PR_FALSE);
+        return SECFailure;
+    }
+
+    if(SEC_QuickDERDecodeItem(arena, pki, nsslowkey_PrivateKeyInfoTemplate, &newBpki) 
 				!= SECSuccess) {
 	PORT_FreeArena(arena, PR_FALSE);
 	return SECFailure;
@@ -3786,6 +3860,7 @@ CK_RV NSC_UnwrapKey(CK_SESSION_HANDLE hSession,
     PK11Slot *slot = pk11_SlotFromSessionHandle(hSession);
     SECItem bpki;
     CK_OBJECT_CLASS target_type = CKO_SECRET_KEY;
+    PRBool isLynks = PR_FALSE;
 
     /*
      * now lets create an object to hang the attributes off of
@@ -3814,6 +3889,13 @@ CK_RV NSC_UnwrapKey(CK_SESSION_HANDLE hSession,
 	return crv;
     }
 
+    /* LYNKS is a special key wrapping mechanism */
+    if (pMechanism->mechanism == CKM_KEY_WRAP_LYNKS) {
+	isLynks = PR_TRUE;
+	pMechanism->mechanism = CKM_DES_ECB;
+	ulWrappedKeyLen -= 2; /* don't decrypt the checksum */
+    }
+
     crv = pk11_CryptInit(hSession,pMechanism,hUnwrappingKey,CKA_UNWRAP,
 							PK11_DECRYPT, PR_FALSE);
     if (crv != CKR_OK) {
@@ -3839,6 +3921,19 @@ CK_RV NSC_UnwrapKey(CK_SESSION_HANDLE hSession,
 	    if (!pk11_hasAttribute(key,CKA_KEY_TYPE)) {
 		crv = CKR_TEMPLATE_INCOMPLETE;
 		break;
+	    }
+
+	    /* verify the Lynx checksum */
+	    if (isLynks) {
+		unsigned char checkSum[2];
+		crv = pk11_calcLynxChecksum(hSession,hUnwrappingKey,checkSum,
+								buf,bsize);
+		if (crv != CKR_OK) break;
+		if ((ulWrappedKeyLen != 8) || (pWrappedKey[8] != checkSum[0]) 
+			|| (pWrappedKey[9] != checkSum[1])) {
+		    crv = CKR_WRAPPED_KEY_INVALID;
+		    break;
+		}
 	    }
 
 	    if(key_length == 0) {
@@ -4050,6 +4145,127 @@ pk11_MapKeySize(CK_KEY_TYPE keyType) {
 	break;
     }
     return 0;
+}
+
+#define PHASH_STATE_MAX_LEN 20
+
+/* TLS P_hash function */
+static SECStatus
+pk11_P_hash(HASH_HashType hashType, const SECItem *secret, const char *label, 
+	SECItem *seed, SECItem *result, PRBool isFIPS)
+{
+    unsigned char state[PHASH_STATE_MAX_LEN];
+    unsigned char outbuf[PHASH_STATE_MAX_LEN];
+    unsigned int state_len = 0, label_len = 0, outbuf_len = 0, chunk_size;
+    unsigned int remaining;
+    unsigned char *res;
+    SECStatus status;
+    HMACContext *cx;
+    SECStatus rv = SECFailure;
+    const SECHashObject *hashObj = &SECRawHashObjects[hashType];
+
+    PORT_Assert((secret != NULL) && (secret->data != NULL || !secret->len));
+    PORT_Assert((seed != NULL) && (seed->data != NULL));
+    PORT_Assert((result != NULL) && (result->data != NULL));
+
+    remaining = result->len;
+    res = result->data;
+
+    if (label != NULL)
+	label_len = PORT_Strlen(label);
+
+    cx = HMAC_Create(hashObj, secret->data, secret->len, isFIPS);
+    if (cx == NULL)
+	goto loser;
+
+    /* initialize the state = A(1) = HMAC_hash(secret, seed) */
+    HMAC_Begin(cx);
+    HMAC_Update(cx, (unsigned char *)label, label_len);
+    HMAC_Update(cx, seed->data, seed->len);
+    status = HMAC_Finish(cx, state, &state_len, PHASH_STATE_MAX_LEN);
+    if (status != SECSuccess)
+	goto loser;
+
+    /* generate a block at a time until we're done */
+    while (remaining > 0) {
+
+	HMAC_Begin(cx);
+	HMAC_Update(cx, state, state_len);
+	if (label_len)
+	    HMAC_Update(cx, (unsigned char *)label, label_len);
+	HMAC_Update(cx, seed->data, seed->len);
+	status = HMAC_Finish(cx, outbuf, &outbuf_len, PHASH_STATE_MAX_LEN);
+	if (status != SECSuccess)
+	    goto loser;
+
+        /* Update the state = A(i) = HMAC_hash(secret, A(i-1)) */
+	HMAC_Begin(cx); 
+	HMAC_Update(cx, state, state_len); 
+	status = HMAC_Finish(cx, state, &state_len, PHASH_STATE_MAX_LEN);
+	if (status != SECSuccess)
+	    goto loser;
+
+	chunk_size = PR_MIN(outbuf_len, remaining);
+	PORT_Memcpy(res, &outbuf, chunk_size);
+	res += chunk_size;
+	remaining -= chunk_size;
+    }
+
+    rv = SECSuccess;
+
+loser:
+    /* if (cx) HMAC_Destroy(cx); */
+    /* clear out state so it's not left on the stack */
+    if (cx) HMAC_Destroy(cx);
+    PORT_Memset(state, 0, sizeof(state));
+    PORT_Memset(outbuf, 0, sizeof(outbuf));
+    return rv;
+}
+
+static SECStatus
+pk11_PRF(const SECItem *secret, const char *label, SECItem *seed, 
+         SECItem *result, PRBool isFIPS)
+{
+    SECStatus rv = SECFailure, status;
+    unsigned int i;
+    SECItem tmp = { siBuffer, NULL, 0};
+    SECItem S1;
+    SECItem S2;
+
+    PORT_Assert((secret != NULL) && (secret->data != NULL || !secret->len));
+    PORT_Assert((seed != NULL) && (seed->data != NULL));
+    PORT_Assert((result != NULL) && (result->data != NULL));
+
+    S1.type = siBuffer;
+    S1.len  = (secret->len / 2) + (secret->len & 1);
+    S1.data = secret->data;
+
+    S2.type = siBuffer;
+    S2.len  = S1.len;
+    S2.data = secret->data + (secret->len - S2.len);
+
+    tmp.data = (unsigned char*)PORT_Alloc(result->len);
+    if (tmp.data == NULL)
+	goto loser;
+    tmp.len = result->len;
+
+    status = pk11_P_hash(HASH_AlgMD5, &S1, label, seed, result, isFIPS);
+    if (status != SECSuccess)
+	goto loser;
+
+    status = pk11_P_hash(HASH_AlgSHA1, &S2, label, seed, &tmp, isFIPS);
+    if (status != SECSuccess)
+	goto loser;
+
+    for (i = 0; i < result->len; i++)
+	result->data[i] ^= tmp.data[i];
+
+    rv = SECSuccess;
+
+loser:
+    if (tmp.data != NULL)
+	PORT_ZFree(tmp.data, tmp.len);
+    return rv;
 }
 
 /*
@@ -4919,103 +5135,6 @@ key_and_mac_derive_fail:
 	    
 	break;
       }
-
-#ifdef NSS_ENABLE_ECC
-    case CKM_ECDH1_DERIVE:
-    case CKM_ECDH1_COFACTOR_DERIVE:
-      {
-	SECItem  ecScalar, ecPoint;
-	SECItem  tmp;
-	ECParams *ecParams;
-	PRBool   withCofactor = PR_FALSE;
-	unsigned char secret_hash[20];
-	unsigned char *secret;
-	int secretlen;
-	CK_ECDH1_DERIVE_PARAMS *mechParams;
-
-	/* get params and value attributes */
-	crv = pk11_Attribute2SecItem(NULL, &tmp, sourceKey, 
-	    CKA_EC_PARAMS); 
-	if (crv != CKR_OK) break;
-	crv = pk11_Attribute2SecItem(NULL, &ecScalar, sourceKey, CKA_VALUE); 
-	if (crv != CKR_OK) {
- 	    PORT_Free(tmp.data);
-	    break;
-	}
-
-	/* Check elliptic curve parameters */
-	rv = EC_DecodeParams(&tmp, &ecParams);
-	PORT_Free(tmp.data);
-	if (rv != SECSuccess) {
-	    crv = CKR_TEMPLATE_INCONSISTENT;
-	    PORT_Free(ecScalar.data);
-	    break;
-	}
-
-	/* Check mechanism parameters */
-	mechParams = (CK_ECDH1_DERIVE_PARAMS *) pMechanism->pParameter;
-	if ((pMechanism->ulParameterLen != sizeof(CK_ECDH1_DERIVE_PARAMS)) ||
-	    ((mechParams->kdf == CKD_NULL) &&
-		((mechParams->ulSharedDataLen != 0) || 
-		    (mechParams->pSharedData != NULL)))) {
-	    crv = CKR_MECHANISM_PARAM_INVALID;
-	    PORT_FreeArena(ecParams->arena, PR_TRUE);
-	    PORT_Free(ecScalar.data);
-	    break;
-	}
-
-	ecPoint.data = mechParams->pPublicData;
-	ecPoint.len  = mechParams->ulPublicDataLen;
-
-	if (pMechanism->mechanism == CKM_ECDH1_COFACTOR_DERIVE) {
-	    withCofactor = PR_TRUE;
-	} else {
-	    /* When not using cofactor derivation, one should
-	     * validate the public key to avoid small subgroup
-	     * attacks.
-	     */
-	    if (EC_ValidatePublicKey(ecParams, &ecPoint) != SECSuccess) {
-		crv = CKR_ARGUMENTS_BAD;
-		PORT_FreeArena(ecParams->arena, PR_TRUE);		
-		PORT_Free(ecScalar.data);
-		break;
-	    }
-	}
-
-	rv = ECDH_Derive(&ecPoint, ecParams, &ecScalar,
-	                 withCofactor, &tmp); 
-	PORT_FreeArena(ecParams->arena, PR_TRUE);
-	PORT_Free(ecScalar.data);
-
-	if (rv != SECSuccess) {
-	    crv = CKR_DEVICE_ERROR;
-	    break;
-	}
-
-	secret = tmp.data;
-	secretlen = tmp.len;
-	if (mechParams->kdf == CKD_SHA1_KDF) {
-	    /* Compute SHA1 hash */
-	    memset(secret_hash, 0, 20);
-	    rv = SHA1_HashBuf(secret_hash, tmp.data, tmp.len);
-	    if (rv != SECSuccess) {
-		PORT_ZFree(tmp.data, tmp.len);
-	    } else {
-		secret = secret_hash;
-		secretlen = 20;
-	    }
-	}
-
-	if (rv == SECSuccess) {
-	    pk11_forceAttribute(key, CKA_VALUE, secret, secretlen);
-	    PORT_ZFree(tmp.data, tmp.len);
-	    memset(secret_hash, 0, 20);
-	} else
-	    crv = CKR_HOST_MEMORY;
-	    
-	break;
-      }
-#endif /* NSS_ENABLE_ECC */
 
     default:
 	crv = CKR_MECHANISM_INVALID;

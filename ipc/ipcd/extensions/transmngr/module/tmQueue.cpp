@@ -124,7 +124,7 @@ tmQueue::DetachClient(PRUint32 aClientID) {
   PRInt32 status = -1;
 
   for (PRUint32 index = 0; index < size; index++) {
-    id = (PRUint32)mListeners[index];
+    id = (PRUint32)NS_PTR_TO_INT32(mListeners[index]);
     if(id == aClientID) {
       mListeners.RemoveAt(index);
       status = NS_OK;
@@ -191,7 +191,7 @@ tmQueue::PostTransaction(tmTransaction *aTrans) {
     PRUint32 size = mListeners.Size();
     PRUint32 id = 0;
     for (PRUint32 index = 0; index < size; index++) {
-      id = (PRUint32)mListeners[index];
+      id = (PRUint32)NS_PTR_TO_INT32(mListeners[index]);
       if (ownerID != id)
         mTM->SendTransaction(id, aTrans);
     }
@@ -216,7 +216,7 @@ tmQueue::IsAttached(PRUint32 aClientID) {
   // is a "hole" in the mListeners vector. - may NEED to store PRUint32*s
   PRUint32 size = mListeners.Size();
   for (PRUint32 index = 0; index < size; index++) {
-    if (aClientID == (PRUint32)mListeners[index])
+    if (aClientID == (PRUint32)NS_PTR_TO_INT32(mListeners[index]))
       return PR_TRUE;
   }
   return PR_FALSE;

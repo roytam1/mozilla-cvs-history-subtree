@@ -39,6 +39,7 @@
 #include "nsIServiceManager.h"
 #include "nsReadableUtils.h"
 #include "plstr.h"
+#include "ipcITransactionObserver.h"
 #include "tmTransaction.h"
 #include "tmTransactionService.h"
 #include "tmUtils.h"
@@ -102,11 +103,11 @@ tmTransactionService::~tmTransactionService() {
 // ISupports
 
 NS_IMPL_ISUPPORTS2(tmTransactionService,
-                   tmITransactionService,
+                   ipcITransactionService,
                    ipcIMessageObserver)
 
 //////////////////////////////////////////////////////////////////////////////
-// tmITransactionService
+// ipcITransactionService
 
 NS_IMETHODIMP
 tmTransactionService::Init(const nsACString & aNamespace) {
@@ -142,7 +143,7 @@ tmTransactionService::Init(const nsACString & aNamespace) {
 
 NS_IMETHODIMP
 tmTransactionService::Attach(const nsACString & aDomainName, 
-                             tmITransactionObserver *aObserver,
+                             ipcITransactionObserver *aObserver,
                              PRBool aLockingCall) {
 
   // if the queue already exists, then someone else is attached to it. must
@@ -349,8 +350,8 @@ tmTransactionService::OnAttachReply(tmTransaction *aTrans) {
   }
 
   // notify the observer we have attached (or didn't)
-  tmITransactionObserver *observer = 
-    (tmITransactionObserver *)PL_HashTableLookup(mObservers, 
+  ipcITransactionObserver *observer = 
+    (ipcITransactionObserver *)PL_HashTableLookup(mObservers, 
                                                  (char*)aTrans->GetMessage());
   if (observer)
     observer->OnAttachReply(aTrans->GetQueueID(), aTrans->GetStatus());
@@ -362,8 +363,8 @@ tmTransactionService::OnDetachReply(tmTransaction *aTrans) {
   tm_queue_mapping *qmap = GetQueueMap(aTrans->GetQueueID());
 
   // get the observer before we release the hashtable entry
-  tmITransactionObserver *observer = 
-    (tmITransactionObserver *)PL_HashTableLookup(mObservers, 
+  ipcITransactionObserver *observer = 
+    (ipcITransactionObserver *)PL_HashTableLookup(mObservers, 
                                                  qmap->joinedQueueName);
 
   // if it was removed, clean up
@@ -386,8 +387,8 @@ tmTransactionService::OnDetachReply(tmTransaction *aTrans) {
 void
 tmTransactionService::OnFlushReply(tmTransaction *aTrans) {
 
-  tmITransactionObserver *observer = 
-    (tmITransactionObserver *)PL_HashTableLookup(mObservers, 
+  ipcITransactionObserver *observer = 
+    (ipcITransactionObserver *)PL_HashTableLookup(mObservers, 
                               GetJoinedQueueName(aTrans->GetQueueID()));
   if (observer)
     observer->OnFlushReply(aTrans->GetQueueID(), aTrans->GetStatus());
@@ -396,8 +397,8 @@ tmTransactionService::OnFlushReply(tmTransaction *aTrans) {
 void
 tmTransactionService::OnPost(tmTransaction *aTrans) {
 
-  tmITransactionObserver *observer = 
-    (tmITransactionObserver*) PL_HashTableLookup(mObservers, 
+  ipcITransactionObserver *observer = 
+    (ipcITransactionObserver*) PL_HashTableLookup(mObservers, 
                               GetJoinedQueueName(aTrans->GetQueueID()));
   if (observer)
     observer->OnTransactionAvailable(aTrans->GetQueueID(), 

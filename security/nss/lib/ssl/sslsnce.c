@@ -220,7 +220,6 @@ struct cacheDescStr {
     struct cacheDescStr *      sharedCache;  /* shared copy of this struct */
     PRFileMap *                cacheMemMap;
     PRThread  *                poller;
-    PRBool shared;
 };
 typedef struct cacheDescStr cacheDesc;
 
@@ -883,7 +882,7 @@ long gettid(void)
 
 static SECStatus
 InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout, 
-          PRUint32 ssl3_timeout, const char *directory, PRBool shared)
+          PRUint32 ssl3_timeout, const char *directory)
 {
     ptrdiff_t     ptr;
     sidCacheLock *pLock;
@@ -1001,28 +1000,16 @@ InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout,
 	goto loser;
     }
 
-    cache->shared = shared;
     /* Create cache */
-    if (PR_TRUE == shared) {
-        cacheMemMap = PR_OpenAnonFileMap(cfn, cache->sharedMemSize, 
+    cacheMemMap = PR_OpenAnonFileMap(cfn, cache->sharedMemSize, 
                                             PR_PROT_READWRITE);
-    } else {
-        cacheMemMap = NULL;
-    }
-
     PR_smprintf_free(cfn);
-    if( (PR_TRUE == shared) && (!cacheMemMap) ) {
+    if(! cacheMemMap) {
 	goto loser;
     }
-
-    if (PR_TRUE == shared) {
-        sharedMem = PR_MemMap(cacheMemMap, 0, cache->sharedMemSize);
-    } else {
-        sharedMem = PORT_Alloc(cache->sharedMemSize);
-    }
-    
+    sharedMem = PR_MemMap(cacheMemMap, 0, cache->sharedMemSize);
     if (! sharedMem) {
-        goto loser;
+	goto loser;
     }
 
     /* Initialize shared memory. This may not be necessary on all platforms */
@@ -1073,16 +1060,10 @@ loser:
 		    sslMutex_Destroy(&pLock->mutex);
 		}
 	    }
-            if (shared) {
-                PR_MemUnmap(cache->sharedMem, cache->sharedMemSize);
-                cache->sharedMem = NULL;
-            }
+	    PR_MemUnmap(cache->sharedMem, cache->sharedMemSize);
+	    cache->sharedMem = NULL;
 	}
-        if (shared) {
-            PR_CloseFileMap(cache->cacheMemMap);
-        } else {
-            PORT_Free(sharedMem);
-        }
+    	PR_CloseFileMap(cache->cacheMemMap);
 	cache->cacheMemMap = NULL;
     }
     return SECFailure;
@@ -1117,7 +1098,7 @@ SSL_ConfigServerSessionIDCacheInstance(	cacheDesc *cache,
                                 int      maxCacheEntries, 
 				PRUint32 ssl2_timeout,
 			       	PRUint32 ssl3_timeout, 
-			  const char *   directory, PRBool shared)
+			  const char *   directory)
 {
     SECStatus rv;
 
@@ -1136,7 +1117,7 @@ SSL_ConfigServerSessionIDCacheInstance(	cacheDesc *cache,
 	directory = DEFAULT_CACHE_DIRECTORY;
     }
     rv = InitCache(cache, maxCacheEntries, ssl2_timeout, ssl3_timeout, 
-                   directory, shared);
+                   directory);
     if (rv) {
 	SET_ERROR_CODE
     	return SECFailure;
@@ -1155,23 +1136,7 @@ SSL_ConfigServerSessionIDCache(	int      maxCacheEntries,
 			  const char *   directory)
 {
     return SSL_ConfigServerSessionIDCacheInstance(&globalCache, 
-    		maxCacheEntries, ssl2_timeout, ssl3_timeout, directory, PR_FALSE);
-}
-
-SECStatus
-SSL_ShutdownServerSessionIDCacheInstance(cacheDesc *cache)
-{
-    /* if single process, close down, clean up.
-    ** if multi-process, TBD.
-    */
-    return SECSuccess;
-}
-
-SECStatus
-SSL_ShutdownServerSessionIDCache(void)
-{
-    SSL3_ShutdownServerCache();
-    return SSL_ShutdownServerSessionIDCacheInstance(&globalCache);
+    		maxCacheEntries, ssl2_timeout, ssl3_timeout, directory);
 }
 
 /* Use this function, instead of SSL_ConfigServerSessionIDCache,
@@ -1195,7 +1160,7 @@ SSL_ConfigMPServerSIDCache(	int      maxCacheEntries,
 
     isMultiProcess = PR_TRUE;
     result = SSL_ConfigServerSessionIDCacheInstance(cache, maxCacheEntries, 
-					ssl2_timeout, ssl3_timeout, directory, PR_TRUE);
+					ssl2_timeout, ssl3_timeout, directory);
     if (result != SECSuccess) 
         return result;
 

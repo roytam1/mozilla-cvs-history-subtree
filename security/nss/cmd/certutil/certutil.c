@@ -346,56 +346,14 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
     return rv;
 }
 
-/* This function belongs in libNSS somewhere. */
-static SECOidTag
-getSignatureOidTag(KeyType keyType, SECOidTag hashAlgTag)
-{
-    SECOidTag sigTag = SEC_OID_UNKNOWN;
-
-    switch (keyType) {
-    case rsaKey:
-	switch (hashAlgTag) {
-	case SEC_OID_MD2:
-	    sigTag = SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION;	break;
-	case SEC_OID_UNKNOWN:	/* default for RSA if not specified */
-	case SEC_OID_MD5:
-	    sigTag = SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION;	break;
-	case SEC_OID_SHA1:
-	    sigTag = SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION;	break;
-	case SEC_OID_SHA256:
-	    sigTag = SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION;	break;
-	case SEC_OID_SHA384:
-	    sigTag = SEC_OID_PKCS1_SHA384_WITH_RSA_ENCRYPTION;	break;
-	case SEC_OID_SHA512:
-	    sigTag = SEC_OID_PKCS1_SHA512_WITH_RSA_ENCRYPTION;	break;
-	default:
-	    break;
-	}
-	break;
-    case dsaKey:
-	switch (hashAlgTag) {
-	case SEC_OID_UNKNOWN:	/* default for DSA if not specified */
-	case SEC_OID_SHA1:
-	    sigTag = SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST; break;
-	default:
-	    break;
-	}
-	break;
-    default:
-    	break;
-    }
-    return sigTag;
-}
-
 static SECStatus
 CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
-        SECOidTag hashAlgTag, CERTName *subject, char *phone, int ascii, 
-	const char *emailAddrs, const char *dnsNames, PRFileDesc *outFile)
+	CERTName *subject, char *phone, int ascii, const char *emailAddrs,
+        PRFileDesc *outFile)
 {
     CERTSubjectPublicKeyInfo *spki;
     CERTCertificateRequest *cr;
     SECItem *encoding;
-    SECOidTag signAlgTag;
     SECItem result;
     SECStatus rv;
     PRArenaPool *arena;
@@ -430,13 +388,20 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
     }
 
     /* Sign the request */
-    signAlgTag = getSignatureOidTag(keyType, hashAlgTag);
-    if (signAlgTag == SEC_OID_UNKNOWN) {
-	SECU_PrintError(progName, "unknown Key or Hash type");
+    switch (keyType) {
+    case rsaKey:
+	rv = SEC_DerSignData(arena, &result, encoding->data, encoding->len, 
+	                     privk, SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION);
+	break;
+    case dsaKey:
+	rv = SEC_DerSignData(arena, &result, encoding->data, encoding->len, 
+	                 privk, SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST);
+	break;
+    default:
+	SECU_PrintError(progName, "Must use rsa or dsa key type");
 	return SECFailure;
     }
-    rv = SEC_DerSignData(arena, &result, encoding->data, encoding->len, 
-			 privk, signAlgTag);
+
     if (rv) {
 	SECU_PrintError(progName, "signing of data failed");
 	return SECFailure;
@@ -606,51 +571,37 @@ listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
     SECItem data;
     PRInt32 numBytes;
     SECStatus rv = SECFailure;
-    CERTCertList *certs;
-    CERTCertListNode *node;
 
     /* List certs on a non-internal slot. */
     if (!PK11_IsFriendly(slot) && PK11_NeedLogin(slot))
 	    PK11_Authenticate(slot, PR_TRUE, pwarg);
     if (name) {
 	CERTCertificate *the_cert;
-	the_cert = CERT_FindCertByNicknameOrEmailAddr(handle, name);
+	the_cert = PK11_FindCertFromNickname(name, NULL);
 	if (!the_cert) {
-	    the_cert = PK11_FindCertFromNickname(name, NULL);
-	    if (!the_cert) {
-		SECU_PrintError(progName, "Could not find: %s\n", name);
-		return SECFailure;
-	    }
+	    SECU_PrintError(progName, "Could not find: %s\n", name);
+	    return SECFailure;
 	}
-	certs = CERT_CreateSubjectCertList(NULL, handle, &the_cert->derSubject,
-		PR_Now(), PR_FALSE);
-	CERT_DestroyCertificate(the_cert);
-
-	for (node = CERT_LIST_HEAD(certs); !CERT_LIST_END(node,certs);
-						node = CERT_LIST_NEXT(node)) {
-	    the_cert = node->cert;
-	    /* now get the subjectList that matches this cert */
-	    data.data = the_cert->derCert.data;
-	    data.len = the_cert->derCert.len;
-	    if (ascii) {
-		PR_fprintf(outfile, "%s\n%s\n%s\n", NS_CERT_HEADER, 
+	data.data = the_cert->derCert.data;
+	data.len = the_cert->derCert.len;
+	if (ascii) {
+	    PR_fprintf(outfile, "%s\n%s\n%s\n", NS_CERT_HEADER, 
 		        BTOA_DataToAscii(data.data, data.len), NS_CERT_TRAILER);
-		rv = SECSuccess;
-	    } else if (raw) {
-		numBytes = PR_Write(outfile, data.data, data.len);
-		if (numBytes != data.len) {
-		   SECU_PrintSystemError(progName, "error writing raw cert");
-		    rv = SECFailure;
-		}
-		rv = SECSuccess;
-	    } else {
-		rv = printCertCB(the_cert, the_cert->trust);
+	    rv = SECSuccess;
+	} else if (raw) {
+	    numBytes = PR_Write(outfile, data.data, data.len);
+	    if (numBytes != data.len) {
+		SECU_PrintSystemError(progName, "error writing raw cert");
+		rv = SECFailure;
 	    }
-	    if (rv != SECSuccess) {
-		break;
-	    }
+	    rv = SECSuccess;
+	} else {
+	    rv = printCertCB(the_cert, the_cert->trust);
 	}
+	CERT_DestroyCertificate(the_cert);
     } else {
+	CERTCertList *certs;
+	CERTCertListNode *node;
 
 	certs = PK11_ListCertsInSlot(slot);
 	if (certs) {
@@ -658,10 +609,10 @@ listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
 						node = CERT_LIST_NEXT(node)) {
 		SECU_PrintCertNickname(node->cert,stdout);
 	    }
+	    CERT_DestroyCertList(certs);
 	    rv = SECSuccess;
 	}
     }
-    CERT_DestroyCertList(certs);
     if (rv) {
 	SECU_PrintError(progName, "problem printing certificate nicknames");
 	return SECFailure;
@@ -963,7 +914,7 @@ Usage(char *progName)
     FPS "\t%s -C [-c issuer-name | -x] -i cert-request-file -o cert-file\n"
 	"\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
         "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5]\n"
-	"\t\t [-6] [-7 emailAddrs] [-8 dns-names]\n",
+	"\t\t [-6] [-7 emailAddrs]\n",
 	progName);
     FPS "\t%s -D -n cert-name [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
@@ -989,8 +940,7 @@ Usage(char *progName)
 	"\t\t [-k key-type] [-h token-name] [-g key-size]\n"
         "\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
 	"\t\t [-f pwfile] [-d certdir] [-P dbprefix]\n"
-        "\t\t [-p phone] [-1] [-2] [-3] [-4] [-5] [-6] [-7 emailAddrs]\n"
-        "\t\t [-8 dns-names]\n",
+        "\t\t [-p phone] [-1] [-2] [-3] [-4] [-5] [-6] [-7 emailAddrs]\n",
 	progName);
     FPS "\t%s -U [-X] [-d certdir] [-P dbprefix]\n", progName);
     exit(1);
@@ -1063,10 +1013,6 @@ static void LongUsage(char *progName)
 	"   -5 ");
     FPS "%-20s Create extended key usage extension\n",
 	"   -6 ");
-    FPS "%-20s Create an email subject alt name extension\n",
-	"   -7 ");
-    FPS "%-20s Create an dns subject alt name extension\n",
-	"   -8 ");
     FPS "\n");
 
     FPS "%-15s Generate a new key pair\n",
@@ -1275,10 +1221,6 @@ static void LongUsage(char *progName)
 	"   -5 ");
     FPS "%-20s Create extended key usage extension\n",
 	"   -6 ");
-    FPS "%-20s Create an email subject alt name extension\n",
-	"   -7 ");
-    FPS "%-20s Create an dns subject alt name extension\n",
-	"   -8 ");
     FPS "\n");
 
     exit(1);
@@ -1599,12 +1541,14 @@ AddNscpCertType (void *extHandle)
 
 }
 
+
 static SECStatus 
-AddSubjectAltNames(void *extHandle, const char *names, CERTGeneralNameType type)
+AddEmailSubjectAlt(void *extHandle, const char *emailAddrs)
 {
     SECItem item = { 0, NULL, 0 };
-    CERTGeneralName *nameList = NULL;
-    CERTGeneralName *current = NULL;
+    void *value;
+    CERTGeneralName *emailList = NULL;
+    CERTGeneralName *current;
     PRCList *prev = NULL;
     PRArenaPool *arena;
     const char *cp;
@@ -1617,10 +1561,10 @@ AddSubjectAltNames(void *extHandle, const char *names, CERTGeneralNameType type)
     }
 	
     /*
-     * walk down the comma separated list of names. NOTE: there is
+     * walk down the comma separated list of email addresses. NOTE: there is
      * no sanity checks to see if the email address look like email addresses.
      */
-    for (cp=names; cp; cp = PORT_Strchr(cp,',')) {
+    for (cp=emailAddrs; cp; cp = PORT_Strchr(cp,',')) {
 	int len;
 	char *end;
 
@@ -1644,9 +1588,8 @@ AddSubjectAltNames(void *extHandle, const char *names, CERTGeneralNameType type)
 	    current->l.prev = prev;
 	    prev->next = &(current->l);
 	} else {
-	    nameList = current;
+	    emailList = current;
 	}
-	current->type = type;
 	current->type = certRFC822Name;
 	current->name.other.data = (unsigned char *)tbuf;
 	current->name.other.len = PORT_Strlen(tbuf);
@@ -1656,14 +1599,14 @@ AddSubjectAltNames(void *extHandle, const char *names, CERTGeneralNameType type)
 	goto loser;
     }
     /* no email address */
-    if (!nameList) {
+    if (!emailList) {
 	/*rv=SECSuccess; We know rv is SECSuccess because of the previous if*/
 	goto done; 
     }
-    nameList->l.prev = prev;
-    current->l.next = &(nameList->l);
+    emailList->l.prev = prev;
+    current->l.next = &(emailList->l);
 
-    CERT_EncodeAltNameExtension(arena, nameList, &item);
+    CERT_EncodeAltNameExtension(arena, emailList, &item);
     rv = CERT_AddExtension (extHandle, SEC_OID_X509_SUBJECT_ALT_NAME, &item, 
 							PR_FALSE, PR_TRUE);
 done:
@@ -1672,19 +1615,6 @@ loser:
     return rv;
 
 }
-
-static SECStatus 
-AddEmailSubjectAlt(void *extHandle, const char *emailAddrs)
-{
-    return AddSubjectAltNames(extHandle, emailAddrs, certRFC822Name);
-}
-
-static SECStatus 
-AddDNSSubjectAlt(void *extHandle, const char *dnsNames)
-{
-    return AddSubjectAltNames(extHandle, dnsNames, certDNSName);
-}
-
 
 typedef SECStatus (* EXTEN_VALUE_ENCODER)
 		(PRArenaPool *extHandle, void *value, SECItem *encodedValue);
@@ -1755,9 +1685,9 @@ AddBasicConstraint(void *extHandle)
 }
 
 static SECItem *
-SignCert(CERTCertDBHandle *handle, CERTCertificate *cert, PRBool selfsign, 
-         SECOidTag hashAlgTag,
-         SECKEYPrivateKey *privKey, char *issuerNickName, void *pwarg)
+SignCert(CERTCertDBHandle *handle, 
+CERTCertificate *cert, PRBool selfsign, 
+SECKEYPrivateKey *privKey, char *issuerNickName, void *pwarg)
 {
     SECItem der;
     SECItem *result = NULL;
@@ -1785,10 +1715,17 @@ SignCert(CERTCertDBHandle *handle, CERTCertificate *cert, PRBool selfsign,
 	
     arena = cert->arena;
 
-    algID = getSignatureOidTag(privKey->keyType, hashAlgTag);
-    if (algID == SEC_OID_UNKNOWN) {
-	fprintf(stderr, "Unknown key or hash type for issuer.");
+    switch(privKey->keyType) {
+      case rsaKey:
+	algID = SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION;
+	break;
+      case dsaKey:
+	algID = SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST;
+	break;
+      default:
+	fprintf(stderr, "Unknown key type for issuer.");
 	goto done;
+	break;
     }
 
     rv = SECOID_SetAlgorithmID(arena, &cert->signature, algID, 0);
@@ -1816,7 +1753,8 @@ SignCert(CERTCertDBHandle *handle, CERTCertificate *cert, PRBool selfsign,
 	goto done;
     }
 
-    rv = SEC_DerSignData(arena, result, der.data, der.len, privKey, algID);
+    rv = SEC_DerSignData (arena, result, der.data, der.len, privKey,
+			  algID);
     if (rv != SECSuccess) {
 	fprintf (stderr, "Could not sign encoded certificate data.\n");
 	PORT_Free(result);
@@ -2011,12 +1949,10 @@ CreateCert(
 	PRFileDesc *outFile, 
 	SECKEYPrivateKey *selfsignprivkey,
 	void 	*pwarg,
-	SECOidTag hashAlgTag,
 	unsigned int serialNumber, 
 	int     warpmonths,
 	int     validitylength,
 	const char *emailAddrs,
-	const char *dnsNames,
 	PRBool  ascii,
 	PRBool  selfsign,
 	PRBool	keyUsage, 
@@ -2104,22 +2040,14 @@ CreateCert(
 		break;
 	}
 
-	if (dnsNames != NULL) {
-	    rv = AddDNSSubjectAlt(extHandle,dnsNames);
-	    if (rv)
-		break;
-	}
-
 	CERT_FinishExtensions(extHandle);
 
-	certDER = SignCert(handle, subjectCert, selfsign, hashAlgTag,
-	                   selfsignprivkey, issuerNickName,pwarg);
+	certDER = SignCert (handle, subjectCert, selfsign, selfsignprivkey, issuerNickName,pwarg);
 
 	if (certDER) {
 	   if (ascii) {
 		PR_fprintf(outFile, "%s\n%s\n%s\n", NS_CERT_HEADER, 
-		           BTOA_DataToAscii(certDER->data, certDER->len), 
-			   NS_CERT_TRAILER);
+		        BTOA_DataToAscii(certDER->data, certDER->len), NS_CERT_TRAILER);
 	   } else {
 		PR_Write(outFile, certDER->data, certDER->len);
 	   }
@@ -2170,7 +2098,6 @@ enum {
     opt_AddNSCertTypeExt,
     opt_AddExtKeyUsageExt,
     opt_ExtendedEmailAddrs,
-    opt_ExtendedDNSNames,
     opt_ASCIIForIO,
     opt_ValidityTime,
     opt_IssuerName,
@@ -2198,8 +2125,7 @@ enum {
     opt_SelfSign,
     opt_RW,
     opt_Exponent,
-    opt_NoiseFile,
-    opt_Hash
+    opt_NoiseFile
 };
 
 static secuCommandFlag certutil_commands[] =
@@ -2235,7 +2161,6 @@ static secuCommandFlag certutil_options[] =
 	{ /* opt_AddNSCertTypeExt    */  '5', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_AddExtKeyUsageExt   */  '6', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_ExtendedEmailAddrs  */  '7', PR_TRUE,  0, PR_FALSE },
-	{ /* opt_ExtendedDNSNames    */  '8', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_ASCIIForIO          */  'a', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_ValidityTime        */  'b', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_IssuerName          */  'c', PR_TRUE,  0, PR_FALSE },
@@ -2263,8 +2188,7 @@ static secuCommandFlag certutil_options[] =
 	{ /* opt_SelfSign            */  'x', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_RW                  */  'X', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_Exponent            */  'y', PR_TRUE,  0, PR_FALSE },
-	{ /* opt_NoiseFile           */  'z', PR_TRUE,  0, PR_FALSE },
-	{ /* opt_Hash                */  'Z', PR_TRUE,  0, PR_FALSE }
+	{ /* opt_NoiseFile           */  'z', PR_TRUE,  0, PR_FALSE }
 };
 
 int 
@@ -2280,8 +2204,9 @@ main(int argc, char **argv)
     char *      slotname        = "internal";
     char *      certPrefix      = "";
     KeyType     keytype         = rsaKey;
+    /*char *	keyslot	        = NULL;*/
+    /*char *      keynickname     = NULL;*/
     char *      name            = NULL;
-    SECOidTag   hashAlgTag      = SEC_OID_UNKNOWN;
     int	        keysize	        = DEFAULT_KEY_BITS;
     int         publicExponent  = 0x010001;
     unsigned int serialNumber   = 0;
@@ -2341,42 +2266,17 @@ main(int argc, char **argv)
 	    slotname = PL_strdup(certutil.options[opt_TokenName].arg);
     }
 
-    /*  -Z hash type  */
-    if (certutil.options[opt_Hash].activated) {
-	char * arg = certutil.options[opt_Hash].arg;
-	if (!PL_strcmp(arg, "MD2")) {
-	    hashAlgTag = SEC_OID_MD2;
-	} else if (!PL_strcmp(arg, "MD4")) {
-	    hashAlgTag = SEC_OID_MD4;
-	} else if (!PL_strcmp(arg, "MD5")) {
-	    hashAlgTag = SEC_OID_MD5;
-	} else if (!PL_strcmp(arg, "SHA1")) {
-	    hashAlgTag = SEC_OID_SHA1;
-	} else if (!PL_strcmp(arg, "SHA256")) {
-	    hashAlgTag = SEC_OID_SHA256;
-	} else if (!PL_strcmp(arg, "SHA384")) {
-	    hashAlgTag = SEC_OID_SHA384;
-	} else if (!PL_strcmp(arg, "SHA512")) {
-	    hashAlgTag = SEC_OID_SHA512;
-	} else {
-	    PR_fprintf(PR_STDERR, "%s -Z:  %s is not a recognized type.\n",
-	               progName, arg);
-	    return 255;
-	}
-    }
-
     /*  -k key type  */
     if (certutil.options[opt_KeyType].activated) {
-	char * arg = certutil.options[opt_KeyType].arg;
-	if (PL_strcmp(arg, "rsa") == 0) {
+	if (PL_strcmp(certutil.options[opt_KeyType].arg, "rsa") == 0) {
 	    keytype = rsaKey;
-	} else if (PL_strcmp(arg, "dsa") == 0) {
+	} else if (PL_strcmp(certutil.options[opt_KeyType].arg, "dsa") == 0) {
 	    keytype = dsaKey;
-	} else if (PL_strcmp(arg, "all") == 0) {
+	} else if (PL_strcmp(certutil.options[opt_KeyType].arg, "all") == 0) {
 	    keytype = nullKey;
 	} else {
 	    PR_fprintf(PR_STDERR, "%s -k:  %s is not a recognized type.\n",
-	               progName, arg);
+	               progName, certutil.options[opt_KeyType].arg);
 	    return 255;
 	}
     }
@@ -2719,7 +2619,7 @@ main(int argc, char **argv)
     if (certutil.commands[cmd_CheckCertValidity].activated) {
 	/* XXX temporary hack for fips - must log in to get priv key */
 	if (certutil.options[opt_VerifySig].activated) {
-	    if (slot && PK11_NeedLogin(slot))
+	    if (PK11_NeedLogin(slot))
 		PK11_Authenticate(slot, PR_TRUE, &pwdata);
 	}
 	rv = ValidateCert(certHandle, name, 
@@ -2769,11 +2669,10 @@ main(int argc, char **argv)
     /*  Make a cert request (-R or -S).  */
     if (certutil.commands[cmd_CreateAndAddCert].activated ||
          certutil.commands[cmd_CertReq].activated) {
-	rv = CertReq(privkey, pubkey, keytype, hashAlgTag, subject,
+	rv = CertReq(privkey, pubkey, keytype, subject,
 	             certutil.options[opt_PhoneNumber].arg,
 	             certutil.options[opt_ASCIIForIO].activated,
 		     certutil.options[opt_ExtendedEmailAddrs].arg,
-		     certutil.options[opt_ExtendedDNSNames].arg,
 		     outFile ? outFile : PR_STDOUT);
 	if (rv) 
 	    goto shutdown;
@@ -2810,10 +2709,9 @@ main(int argc, char **argv)
          certutil.commands[cmd_CreateNewCert].activated) {
 	rv = CreateCert(certHandle, 
 	                certutil.options[opt_IssuerName].arg,
-	                inFile, outFile, privkey, &pwdata, hashAlgTag,
+	                inFile, outFile, privkey, &pwdata,
 	                serialNumber, warpmonths, validitylength,
 		        certutil.options[opt_ExtendedEmailAddrs].arg,
-		        certutil.options[opt_ExtendedDNSNames].arg,
 	                certutil.options[opt_ASCIIForIO].activated,
 	                certutil.options[opt_SelfSign].activated,
 	                certutil.options[opt_AddKeyUsageExt].activated,
@@ -2872,10 +2770,7 @@ shutdown:
     if (pubkey) {
 	SECKEY_DestroyPublicKey(pubkey);
     }
-
-    if (NSS_Shutdown() != SECSuccess) {
-        exit(1);
-    }
+    NSS_Shutdown();
 
     if (rv == SECSuccess) {
 	return 0;

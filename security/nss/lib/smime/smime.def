@@ -230,13 +230,3 @@ NSS_CMSRecipientInfo_UnwrapBulkKey;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.8 {   # NSS 3.8 release
-;+    global:
-NSS_CMSRecipientInfo_CreateNew;
-NSS_CMSRecipientInfo_CreateFromDER;
-NSS_CMSRecipientInfo_Encode;
-NSS_CMSRecipientInfo_GetCertAndKey;
-SEC_PKCS12DecoderSetTargetTokenCAs;
-;+    local:
-;+       *;
-;+};

@@ -78,23 +78,10 @@ ifeq ($(OS_TARGET),OSF1)
 endif
 
 ifeq (,$(filter-out WINNT WIN95,$(OS_TARGET)))  #omits WIN16 and WINCE
-ifdef NS_USE_GCC
-# Ideally, we want to use assembler
-#     ASFILES  = mpi_x86.s
-#     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE \
-#                -DMP_ASSEMBLY_DIV_2DX1D
-# but we haven't figured out how to make it work, so we are not
-# using assembler right now.
-    ASFILES  =
-    DEFINES += -DMP_NO_MP_WORD -DMP_USE_UINT_DIGIT
-else
     ASFILES  = mpi_x86.asm
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
-endif
 ifdef BUILD_OPT
-ifndef NS_USE_GCC
     OPTIMIZER += -Ox  # maximum optimization for freebl
-endif
 endif
 endif
 
@@ -178,11 +165,8 @@ endif
 ifeq ($(SYSV_SPARC),1)
 SOLARIS_AS = /usr/ccs/bin/as
 ifdef NS_USE_GCC
-ifdef GCC_USE_GNU_LD
-MKSHLIB += -Wl,-Bsymbolic,-z,defs,-z,now,-z,text,--version-script,mapfile.Solaris
-else
-MKSHLIB += -Wl,-B,symbolic,-z,defs,-z,now,-z,text,-M,mapfile.Solaris
-endif
+LD = gcc
+DSO_LDOPTS = -B/usr/ccs/bin/ -shared -h,$(notdir $@) -Wl,-B,symbolic,-z,defs,-z,now,-z,text,-M,mapfile.Solaris
 else
 MKSHLIB += -B symbolic -z defs -z now -z text -M mapfile.Solaris
 endif
@@ -280,7 +264,7 @@ endif
 
 DEFINES += -DMP_API_COMPATIBLE
 
-MPI_USERS = dh.c pqg.c dsa.c rsa.c ec.c GFp_ecl.c
+MPI_USERS = dh.c pqg.c dsa.c rsa.c 
 
 MPI_OBJS = $(addprefix $(OBJDIR)/$(PROG_PREFIX), $(MPI_SRCS:.c=$(OBJ_SUFFIX)))
 MPI_OBJS += $(addprefix $(OBJDIR)/$(PROG_PREFIX), $(MPI_USERS:.c=$(OBJ_SUFFIX)))

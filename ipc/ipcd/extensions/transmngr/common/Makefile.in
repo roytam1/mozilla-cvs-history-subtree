@@ -42,11 +42,10 @@ VPATH = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE = transmngr
+MODULE = ipcd
 LIBRARY_NAME = transmngrcom_s
-EXPORT_LIBRARY = 1
 FORCE_STATIC_LIB = 1
-MODULE_NAME	= transmngr
+MODULE_NAME	= ipcd
 
 FORCE_USE_PIC	= 1
 
@@ -57,12 +56,6 @@ REQUIRES = \
 CPPSRCS = \
   tmTransaction.cpp \
   tmVector.cpp \
-  $(NULL)
-
-EXPORTS = \
-  tmTransaction.h \
-  tmUtils.h \
-  tmVector.h \
   $(NULL)
 
 include $(topsrcdir)/config/rules.mk
