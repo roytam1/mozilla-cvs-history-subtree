@@ -38,6 +38,7 @@
  */
 
 #include "cert.h"
+#include "certi.h"
 #include "secder.h"
 #include "secasn1.h"
 #include "secoid.h"
@@ -178,6 +179,46 @@ const SEC_ASN1Template CERT_CrlTemplate[] = {
     { 0 }
 };
 
+const SEC_ASN1Template CERT_CrlTemplateNoEntries[] = {
+    { SEC_ASN1_SEQUENCE,
+	  0, NULL, sizeof(CERTCrl) },
+    { SEC_ASN1_INTEGER | SEC_ASN1_OPTIONAL, offsetof (CERTCrl, version) },
+    { SEC_ASN1_INLINE,
+	  offsetof(CERTCrl,signatureAlg),
+	  SECOID_AlgorithmIDTemplate },
+    { SEC_ASN1_SAVE,
+	  offsetof(CERTCrl,derName) },
+    { SEC_ASN1_INLINE,
+	  offsetof(CERTCrl,name),
+	  CERT_NameTemplate },
+    { SEC_ASN1_UTC_TIME,
+	  offsetof(CERTCrl,lastUpdate) },
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_UTC_TIME,
+	  offsetof(CERTCrl,nextUpdate) },
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_SEQUENCE_OF |
+      SEC_ASN1_SKIP }, /* skip entries */
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC |
+	  SEC_ASN1_EXPLICIT | 0,
+	  offsetof(CERTCrl,extensions),
+	  SEC_CERTExtensionsTemplate },
+    { 0 }
+};
+
+const SEC_ASN1Template CERT_CrlTemplateEntriesOnly[] = {
+    { SEC_ASN1_SEQUENCE,
+	  0, NULL, sizeof(CERTCrl) },
+    { SEC_ASN1_SKIP | SEC_ASN1_INTEGER | SEC_ASN1_OPTIONAL },
+    { SEC_ASN1_SKIP },
+    { SEC_ASN1_SKIP },
+    { SEC_ASN1_SKIP | SEC_ASN1_UTC_TIME },
+    { SEC_ASN1_SKIP | SEC_ASN1_OPTIONAL | SEC_ASN1_UTC_TIME },
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_SEQUENCE_OF,
+	  offsetof(CERTCrl,entries),
+	  cert_CrlEntryTemplate }, /* decode entries */
+    { SEC_ASN1_SKIP_REST },
+    { 0 }
+};
+
 static const SEC_ASN1Template cert_SignedCrlTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(CERTSignedCrl) },
@@ -186,6 +227,22 @@ static const SEC_ASN1Template cert_SignedCrlTemplate[] = {
     { SEC_ASN1_INLINE,
 	  offsetof(CERTSignedCrl,crl),
 	  CERT_CrlTemplate },
+    { SEC_ASN1_INLINE,
+	  offsetof(CERTSignedCrl,signatureWrap.signatureAlgorithm),
+	  SECOID_AlgorithmIDTemplate },
+    { SEC_ASN1_BIT_STRING,
+	  offsetof(CERTSignedCrl,signatureWrap.signature) },
+    { 0 }
+};
+
+static const SEC_ASN1Template cert_SignedCrlTemplateNoEntries[] = {
+    { SEC_ASN1_SEQUENCE,
+	  0, NULL, sizeof(CERTSignedCrl) },
+    { SEC_ASN1_SAVE,
+	  offsetof(CERTSignedCrl,signatureWrap.data) },
+    { SEC_ASN1_INLINE,
+	  offsetof(CERTSignedCrl,crl),
+	  CERT_CrlTemplateNoEntries },
     { SEC_ASN1_INLINE,
 	  offsetof(CERTSignedCrl,signatureWrap.signatureAlgorithm),
 	  SECOID_AlgorithmIDTemplate },
@@ -239,10 +296,6 @@ SECStatus cert_check_crl_version (CERTCrl *crl)
 
 	
     if (crl->entries == NULL) {
-	if (hasCriticalExten == PR_FALSE && version == SEC_CRL_VERSION_2) {
-	    PORT_SetError (SEC_ERROR_BAD_DER);
-	    return (SECFailure);
-	}
         return (SECSuccess);
     }
     /* Look in the crl entry extensions.  If there is a critical extension,
@@ -311,15 +364,50 @@ CERT_KeyFromDERCrl(PRArenaPool *arena, SECItem *derCrl, SECItem *key)
     return(SECSuccess);
 }
 
+SECStatus CERT_CompleteCRLDecodeEntries(CERTSignedCrl* crl)
+{
+    SECStatus rv = SECSuccess;
+    SECItem* crldata = NULL;
+    OpaqueCRLFields* extended = NULL;
+
+    if ( (!crl) ||
+        (!(extended = (OpaqueCRLFields*) crl->opaque))  ) {
+        rv = SECFailure;
+    } else {
+        if (PR_FALSE == extended->partial) {
+            /* the CRL has already been fully decoded */
+            return SECSuccess;
+        }
+        crldata = &crl->signatureWrap.data;
+        if (!crldata) {
+            rv = SECFailure;
+        }
+    }
+
+    if (SECSuccess == rv) {
+        rv = SEC_QuickDERDecodeItem(crl->arena,
+            &crl->crl,
+            CERT_CrlTemplateEntriesOnly,
+            crldata);
+        if (SECSuccess == rv)
+            extended->partial = PR_FALSE;
+    }
+    return rv;
+}
+
 /*
  * take a DER CRL or KRL  and decode it into a CRL structure
+ * allow reusing the input DER without making a copy
  */
 CERTSignedCrl *
-CERT_DecodeDERCrl(PRArenaPool *narena, SECItem *derSignedCrl, int type)
+CERT_DecodeDERCrlEx(PRArenaPool *narena, SECItem *derSignedCrl, int type,
+                          PRInt32 options)
 {
     PRArenaPool *arena;
     CERTSignedCrl *crl;
     SECStatus rv;
+    OpaqueCRLFields* extended = NULL;
+    const SEC_ASN1Template* crlTemplate = cert_SignedCrlTemplate;
 
     /* make a new arena */
     if (narena == NULL) {
@@ -336,26 +424,42 @@ CERT_DecodeDERCrl(PRArenaPool *narena, SECItem *derSignedCrl, int type)
     if ( !crl ) {
 	goto loser;
     }
-    
+
     crl->arena = arena;
 
-    crl->derCrl = (SECItem *)PORT_ArenaZAlloc(arena,sizeof(SECItem));
-    if (crl->derCrl == NULL) {
+    /* allocate opaque fields */
+    crl->opaque = (void*)PORT_ArenaZAlloc(arena, sizeof(OpaqueCRLFields));
+    if ( !crl->opaque ) {
 	goto loser;
     }
-    rv = SECITEM_CopyItem(arena, crl->derCrl, derSignedCrl);
-    if (rv != SECSuccess) {
-	goto loser;
+    extended = (OpaqueCRLFields*) crl->opaque;
+
+    if (options & CRL_DECODE_DONT_COPY_DER) {
+        crl->derCrl = derSignedCrl; /* DER is not copied . The application
+                                       must keep derSignedCrl until it
+                                       destroys the CRL */
+    } else {
+        crl->derCrl = (SECItem *)PORT_ArenaZAlloc(arena,sizeof(SECItem));
+        if (crl->derCrl == NULL) {
+            goto loser;
+        }
+        rv = SECITEM_CopyItem(arena, crl->derCrl, derSignedCrl);
+        if (rv != SECSuccess) {
+            goto loser;
+        }
     }
 
     /* Save the arena in the inner crl for CRL extensions support */
     crl->crl.arena = arena;
+    if (options & CRL_DECODE_SKIP_ENTRIES) {
+        crlTemplate = cert_SignedCrlTemplateNoEntries;
+        extended->partial = PR_TRUE;
+    }
 
     /* decode the CRL info */
     switch (type) {
-    case SEC_CRL_TYPE: 
-	rv = SEC_ASN1DecodeItem
-	     (arena, crl, cert_SignedCrlTemplate, derSignedCrl);
+    case SEC_CRL_TYPE:
+        rv = SEC_QuickDERDecodeItem(arena, crl, crlTemplate, crl->derCrl);
 	if (rv != SECSuccess)
 	    break;
         /* check for critical extentions */
@@ -389,6 +493,15 @@ loser:
 }
 
 /*
+ * take a DER CRL or KRL  and decode it into a CRL structure
+ */
+CERTSignedCrl *
+CERT_DecodeDERCrl(PRArenaPool *narena, SECItem *derSignedCrl, int type)
+{
+    return CERT_DecodeDERCrlEx(narena, derSignedCrl, type, CRL_DECODE_DEFAULT_OPTIONS);
+}
+
+/*
  * Lookup a CRL in the databases. We mirror the same fast caching data base
  *  caching stuff used by certificates....?
  */
@@ -415,9 +528,11 @@ SEC_FindCrlByKeyOnSlot(PK11SlotInfo *slot, SECItem *crlKey, int type)
 	crl->slot = slot;
 	slot = NULL; /* adopt it */
 	crl->pkcs11ID = crlHandle;
+	if (url) {
+	    crl->url = PORT_ArenaStrdup(crl->arena,url);
+	}
     }
     if (url) {
-	crl->url = PORT_ArenaStrdup(crl->arena,url);
 	PORT_Free(url);
     }
 
@@ -441,8 +556,6 @@ crl_storeCRL (PK11SlotInfo *slot,char *url,
     CK_OBJECT_HANDLE crlHandle;
 
     oldCrl = SEC_FindCrlByKeyOnSlot(slot, &newCrl->crl.derName, type);
-
-
 
     /* if there is an old crl, make sure the one we are installing
      * is newer. If not, exit out, otherwise delete the old crl.
@@ -519,36 +632,15 @@ SEC_FindCrlByName(CERTCertDBHandle *handle, SECItem *crlKey, int type)
 CERTSignedCrl *
 SEC_NewCrl(CERTCertDBHandle *handle, char *url, SECItem *derCrl, int type)
 {
-    CERTSignedCrl *newCrl = NULL, *crl = NULL;
-    PK11SlotInfo *slot;
-
-    /* make this decode dates! */
-    newCrl = CERT_DecodeDERCrl(NULL, derCrl, type);
-    if (newCrl == NULL) {
-        if (type == SEC_CRL_TYPE) {
-            PORT_SetError(SEC_ERROR_CRL_INVALID);
-        } else {
-            PORT_SetError(SEC_ERROR_KRL_INVALID);
-        }
-        goto done;
-    }
-
-    slot = PK11_GetInternalKeySlot();
-    crl = crl_storeCRL(slot, url, newCrl, derCrl, type);
+    CERTSignedCrl* retCrl = NULL;
+    PK11SlotInfo* slot = PK11_GetInternalKeySlot();
+    retCrl = PK11_ImportCRL(slot, derCrl, url, type, NULL,
+        CRL_IMPORT_BYPASS_CHECKS, NULL, CRL_DECODE_DEFAULT_OPTIONS);
     PK11_FreeSlot(slot);
 
-
-done:
-    if (crl == NULL) {
-	if (newCrl) {
-	    PORT_FreeArena(newCrl->arena, PR_FALSE);
-	}
-    }
-
-    return crl;
+    return retCrl;
 }
-
-
+    
 CERTSignedCrl *
 SEC_FindCrlByDERCert(CERTCertDBHandle *handle, SECItem *derCrl, int type)
 {

@@ -44,13 +44,11 @@
 #define NSS_3_4_CODE
 #endif
 #include "nsspki.h"
+#include "pki.h"
 #include "pkit.h"
 #include "pkitm.h"
 #include "pki3hack.h"
 
-
-CERTSignedCrl * crl_storeCRL (PK11SlotInfo *slot,char *url,
-                  CERTSignedCrl *newCrl, SECItem *derCrl, int type);
 
 PRBool
 CERT_MatchNickname(char *name1, char *name2) {
@@ -384,59 +382,75 @@ typedef struct stringNode {
 } stringNode;
     
 static SECStatus
-CollectNicknames( CERTCertificate *cert, SECItem *k, void *data)
+CollectNicknames( NSSCertificate *c, void *data)
 {
     CERTCertNicknames *names;
     PRBool saveit = PR_FALSE;
-    CERTCertTrust *trust;
     stringNode *node;
     int len;
+    NSSTrustDomain *td;
+    NSSTrust *trust;
+    char *stanNickname;
+    char *nickname = NULL;
     
     names = (CERTCertNicknames *)data;
+
+    stanNickname = nssCertificate_GetNickname(c,NULL);
     
-    if ( cert->nickname ) {
-	trust = cert->trust;
-	
-	switch(names->what) {
-	  case SEC_CERT_NICKNAMES_ALL:
-	    if ( ( trust->sslFlags & (CERTDB_VALID_CA|CERTDB_VALID_PEER) ) ||
-	      ( trust->emailFlags & (CERTDB_VALID_CA|CERTDB_VALID_PEER) ) ||
-	      ( trust->objectSigningFlags & (CERTDB_VALID_CA|CERTDB_VALID_PEER) ) ) {
-		saveit = PR_TRUE;
-	    }
-	    
-	    break;
-	  case SEC_CERT_NICKNAMES_USER:
-	    if ( ( trust->sslFlags & CERTDB_USER ) ||
-		( trust->emailFlags & CERTDB_USER ) ||
-		( trust->objectSigningFlags & CERTDB_USER ) ) {
-		saveit = PR_TRUE;
-	    }
-	    
-	    break;
-	  case SEC_CERT_NICKNAMES_SERVER:
-	    if ( trust->sslFlags & CERTDB_VALID_PEER ) {
-		saveit = PR_TRUE;
-	    }
-	    
-	    break;
-	  case SEC_CERT_NICKNAMES_CA:
-	    if ( ( ( trust->sslFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
-		( ( trust->emailFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
-		( ( trust->objectSigningFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ) {
-		saveit = PR_TRUE;
-	    }
-	    break;
+    if ( stanNickname ) {
+	if (names->what == SEC_CERT_NICKNAMES_USER) {
+	    saveit = NSSCertificate_IsPrivateKeyAvailable(c, NULL, NULL);
 	}
+#ifdef notdef
+	  else {
+	    td = NSSCertificate_GetTrustDomain(c);
+	    if (!td) {
+		return SECSuccess;
+	    }
+	    trust = nssTrustDomain_FindTrustForCertificate(td,c);
+	
+	    switch(names->what) {
+	     case SEC_CERT_NICKNAMES_ALL:
+		if ((trust->sslFlags & (CERTDB_VALID_CA|CERTDB_VALID_PEER) ) ||
+		 (trust->emailFlags & (CERTDB_VALID_CA|CERTDB_VALID_PEER) ) ||
+		 (trust->objectSigningFlags & 
+					(CERTDB_VALID_CA|CERTDB_VALID_PEER))) {
+		    saveit = PR_TRUE;
+		}
+	    
+		break;
+	     case SEC_CERT_NICKNAMES_SERVER:
+		if ( trust->sslFlags & CERTDB_VALID_PEER ) {
+		    saveit = PR_TRUE;
+		}
+	    
+		break;
+	     case SEC_CERT_NICKNAMES_CA:
+		if (((trust->sslFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA)||
+		 ((trust->emailFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA) ||
+		 ((trust->objectSigningFlags & CERTDB_VALID_CA ) 
+							== CERTDB_VALID_CA)) {
+		    saveit = PR_TRUE;
+		}
+		break;
+	    }
+	}
+#endif
     }
 
     /* traverse the list of collected nicknames and make sure we don't make
      * a duplicate
      */
     if ( saveit ) {
+	nickname = STAN_GetCERTCertificateName(c);
+	/* nickname can only be NULL here if we are having memory 
+	 * alloc problems */
+	if (nickname == NULL) {
+	    return SECFailure;
+	}
 	node = (stringNode *)names->head;
 	while ( node != NULL ) {
-	    if ( PORT_Strcmp(cert->nickname, node->string) == 0 ) { 
+	    if ( PORT_Strcmp(nickname, node->string) == 0 ) { 
 		/* if the string matches, then don't save this one */
 		saveit = PR_FALSE;
 		break;
@@ -454,12 +468,13 @@ CollectNicknames( CERTCertificate *cert, SECItem *k, void *data)
 	}
 
 	/* copy the string */
-	len = PORT_Strlen(cert->nickname) + 1;
+	len = PORT_Strlen(nickname) + 1;
 	node->string = (char*)PORT_ArenaAlloc(names->arena, len);
 	if ( node->string == NULL ) {
+	    if (nickname) PORT_Free(nickname);
 	    return(SECFailure);
 	}
-	PORT_Memcpy(node->string, cert->nickname, len);
+	PORT_Memcpy(node->string, nickname, len);
 
 	/* link it into the list */
 	node->next = (stringNode *)names->head;
@@ -469,6 +484,7 @@ CollectNicknames( CERTCertificate *cert, SECItem *k, void *data)
 	names->numnicknames++;
     }
     
+    if (nickname) PORT_Free(nickname);
     return(SECSuccess);
 }
 
@@ -478,7 +494,6 @@ CERT_GetCertNicknames(CERTCertDBHandle *handle, int what, void *wincx)
     PRArenaPool *arena;
     CERTCertNicknames *names;
     int i;
-    SECStatus rv;
     stringNode *node;
     
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
@@ -498,12 +513,12 @@ CERT_GetCertNicknames(CERTCertDBHandle *handle, int what, void *wincx)
     names->nicknames = NULL;
     names->what = what;
     names->totallen = 0;
-    
-    rv = PK11_TraverseSlotCerts(CollectNicknames, (void *)names, wincx);
-    if ( rv ) {
-	goto loser;
-    }
 
+    /* make sure we are logged in */
+    (void) pk11_TraverseAllSlots(NULL, NULL, wincx);
+   
+    NSSTrustDomain_TraverseCertificates(handle,
+					    CollectNicknames, (void *)names);
     if ( names->numnicknames ) {
 	names->nicknames = (char**)PORT_ArenaAlloc(arena,
 					 names->numnicknames * sizeof(char *));
@@ -767,62 +782,13 @@ CERT_FindCRLDistributionPoints (CERTCertificate *cert)
 CERTSignedCrl * CERT_ImportCRL
    (CERTCertDBHandle *handle, SECItem *derCRL, char *url, int type, void *wincx)
 {
-    CERTCertificate *caCert;
-    CERTSignedCrl *newCrl, *crl;
-    SECStatus rv;
-    PK11SlotInfo *slot;
+    CERTSignedCrl* retCrl = NULL;
+    PK11SlotInfo* slot = PK11_GetInternalKeySlot();
+    retCrl = PK11_ImportCRL(slot, derCRL, url, type, wincx,
+        CRL_IMPORT_DEFAULT_OPTIONS, NULL, CRL_DECODE_DEFAULT_OPTIONS);
+    PK11_FreeSlot(slot);
 
-    newCrl = crl = NULL;
-
-    PORT_Assert (handle != NULL);
-    do {
-
-	newCrl = CERT_DecodeDERCrl(NULL, derCRL, type);
-	if (newCrl == NULL) {
-	    if (type == SEC_CRL_TYPE) {
-		/* only promote error when the error code is too generic */
-		if (PORT_GetError () == SEC_ERROR_BAD_DER)
-			PORT_SetError(SEC_ERROR_CRL_INVALID);
-	    } else {
-		PORT_SetError(SEC_ERROR_KRL_INVALID);
-	    }
-	    break;		
-	}
-    
-	caCert = CERT_FindCertByName (handle, &newCrl->crl.derName);
-	if (caCert == NULL) {
-	    PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);	    
-	    break;
-	}
-
-	/* If caCert is a v3 certificate, make sure that it can be used for
-	   crl signing purpose */
-	rv = CERT_CheckCertUsage (caCert, KU_CRL_SIGN);
-	if (rv != SECSuccess) {
-	    break;
-	}
-
-	rv = CERT_VerifySignedData(&newCrl->signatureWrap, caCert,
-				   PR_Now(), wincx);
-	if (rv != SECSuccess) {
-	    if (type == SEC_CRL_TYPE) {
-		PORT_SetError(SEC_ERROR_CRL_BAD_SIGNATURE);
-	    } else {
-		PORT_SetError(SEC_ERROR_KRL_BAD_SIGNATURE);
-	    }
-	    break;
-	}
-
-	slot = PK11_GetInternalKeySlot();
-	crl = crl_storeCRL(slot, url, newCrl, derCRL, type);
-	PK11_FreeSlot(slot);
-
-    } while (0);
-
-    if (crl == NULL) {
-	SEC_DestroyCrl (newCrl);
-    }
-    return (crl);
+    return retCrl;
 }
 
 /* From certdb.c */
@@ -1135,6 +1101,7 @@ loser:
 	}
 	derCert.len = (unsigned int)stanCert->encoding.size;
 	derCert.data = (unsigned char *)stanCert->encoding.data;
+	derCert.type = siBuffer;
 	SECITEM_CopyItem(arena, &chain->certs[i], &derCert);
 	CERT_DestroyCertificate(cCert);
 	stanCert = stanChain[++i];

@@ -596,6 +596,16 @@ loser:
     return NULL;
 }
 
+SECStatus
+CERT_DestroyOCSPCertID(CERTOCSPCertID* certID)
+{
+    if (certID->poolp) {
+	PORT_FreeArena(certID->poolp, PR_FALSE);
+	return SECSuccess;
+    }
+    return SECFailure;
+}
+
 
 /*
  * Create and fill-in a CertID.  This function fills in the hash values
@@ -717,6 +727,25 @@ loser:
     PORT_ArenaRelease(arena, mark);
     return NULL;
 }
+
+CERTOCSPCertID*
+CERT_CreateOCSPCertID(CERTCertificate *cert, int64 time)
+{
+    PRArenaPool *arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+    CERTOCSPCertID *certID;
+    PORT_Assert(arena != NULL);
+    if (!arena)
+	return NULL;
+    
+    certID = ocsp_CreateCertID(arena, cert, time);
+    if (!certID) {
+	PORT_FreeArena(arena, PR_FALSE);
+	return NULL;
+    }
+    certID->poolp = arena;
+    return certID;
+}
+
 
 
 /*
@@ -2863,6 +2892,11 @@ ocsp_TimeIsRecent(int64 checkTime)
     return PR_TRUE;
 }
 
+#define OCSP_SLOP (5L*60L) /* OCSP responses are allowed to be 5 minutes
+                              in the future by default */
+
+static PRUint32 ocspsloptime = OCSP_SLOP;	/* seconds */
+
 /*
  * Check that this single response is okay.  A return of SECSuccess means:
  *   1. The signer (represented by "signerCert") is authorized to give status
@@ -2893,7 +2927,7 @@ ocsp_VerifySingleResponse(CERTOCSPSingleResponse *single,
 			  int64 producedAt)
 {
     CERTOCSPCertID *certID = single->certID;
-    int64 now, thisUpdate, nextUpdate;
+    int64 now, thisUpdate, nextUpdate, tmstamp, tmp;
     SECStatus rv;
 
     /*
@@ -2926,7 +2960,12 @@ ocsp_VerifySingleResponse(CERTOCSPSingleResponse *single,
      * Now check the time stuff, as described above.
      */
     now = PR_Now();
-    if (LL_CMP(thisUpdate, >, now) || LL_CMP(producedAt, <, thisUpdate)) {
+    /* allow slop time for future response */
+    LL_UI2L(tmstamp, ocspsloptime); /* get slop time in seconds */
+    LL_UI2L(tmp, PR_USEC_PER_SEC);
+    LL_MUL(tmstamp, tmstamp, tmp); /* convert the slop time to PRTime */
+    LL_ADD(tmstamp, tmstamp, now); /* add current time to it */
+    if (LL_CMP(thisUpdate, >, tmstamp) || LL_CMP(producedAt, <, thisUpdate)) {
 	PORT_SetError(SEC_ERROR_OCSP_FUTURE_RESPONSE);
 	return SECFailure;
     }
@@ -3225,10 +3264,7 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
     CERTOCSPResponse *response = NULL;
     CERTCertificate *signerCert = NULL;
     CERTCertificate *issuerCert = NULL;
-    ocspResponseData *responseData;
-    int64 producedAt;
     CERTOCSPCertID *certID;
-    CERTOCSPSingleResponse *single;
     SECStatus rv = SECFailure;
 
 
@@ -3308,29 +3344,7 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
      * Otherwise, we continue to find the actual per-cert status
      * in the response.
      */
-    switch (response->statusValue) {
-      case ocspResponse_successful:
-	break;
-      case ocspResponse_malformedRequest:
-	PORT_SetError(SEC_ERROR_OCSP_MALFORMED_REQUEST);
-	goto loser;
-      case ocspResponse_internalError:
-	PORT_SetError(SEC_ERROR_OCSP_SERVER_ERROR);
-	goto loser;
-      case ocspResponse_tryLater:
-	PORT_SetError(SEC_ERROR_OCSP_TRY_SERVER_LATER);
-	goto loser;
-      case ocspResponse_sigRequired:
-	/* XXX We *should* retry with a signature, if possible. */
-	PORT_SetError(SEC_ERROR_OCSP_REQUEST_NEEDS_SIG);
-	goto loser;
-      case ocspResponse_unauthorized:
-	PORT_SetError(SEC_ERROR_OCSP_UNAUTHORIZED_REQUEST);
-	goto loser;
-      case ocspResponse_other:
-      case ocspResponse_unused:
-      default:
-	PORT_SetError(SEC_ERROR_OCSP_UNKNOWN_RESPONSE_STATUS);
+    if (CERT_GetOCSPResponseStatus(response) != SECSuccess) {
 	goto loser;
     }
 
@@ -3346,6 +3360,54 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
 
     PORT_Assert(signerCert != NULL);	/* internal consistency check */
     /* XXX probably should set error, return failure if signerCert is null */
+
+
+    /*
+     * Again, we are only doing one request for one cert.
+     * XXX When we handle cert chains, the following code will obviously
+     * have to be modified, in coordation with the code above that will
+     * have to determine how to make multiple requests, etc.  It will need
+     * to loop, and for each certID in the request, find the matching
+     * single response and check the status specified by it.
+     *
+     * We are helped here in that we know that the requests are made with
+     * the request list in the same order as the order of the certs we hand
+     * to it.  This is why I can directly access the first member of the
+     * single request array for the one cert I care about.
+     */
+
+    certID = request->tbsRequest->requestList[0]->reqCert;
+    rv = CERT_GetOCSPStatusForCertID(handle, response, certID, 
+                                     signerCert, time);
+loser:
+    if (issuerCert != NULL)
+	CERT_DestroyCertificate(issuerCert);
+    if (signerCert != NULL)
+	CERT_DestroyCertificate(signerCert);
+    if (response != NULL)
+	CERT_DestroyOCSPResponse(response);
+    if (request != NULL)
+	CERT_DestroyOCSPRequest(request);
+    if (encodedResponse != NULL)
+	SECITEM_FreeItem(encodedResponse, PR_TRUE);
+    if (certList != NULL)
+	CERT_DestroyCertList(certList);
+    if (location != NULL)
+	PORT_Free(location);
+    return rv;
+}
+
+SECStatus
+CERT_GetOCSPStatusForCertID(CERTCertDBHandle *handle, 
+                            CERTOCSPResponse *response, 
+                            CERTOCSPCertID   *certID,
+                            CERTCertificate  *signerCert,
+                            int64             time)
+{
+    SECStatus rv;
+    ocspResponseData *responseData;
+    int64 producedAt;
+    CERTOCSPSingleResponse *single;
 
     /*
      * The ResponseData part is the real guts of the response.
@@ -3366,25 +3428,12 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
     if (rv != SECSuccess)
 	goto loser;
 
-    /*
-     * Again, we are only doing one request for one cert.
-     * XXX When we handle cert chains, the following code will obviously
-     * have to be modified, in coordation with the code above that will
-     * have to determine how to make multiple requests, etc.  It will need
-     * to loop, and for each certID in the request, find the matching
-     * single response and check the status specified by it.
-     *
-     * We are helped here in that we know that the requests are made with
-     * the request list in the same order as the order of the certs we hand
-     * to it.  This is why I can directly access the first member of the
-     * single request array for the one cert I care about.
-     */
-
-    certID = request->tbsRequest->requestList[0]->reqCert;
     single = ocsp_GetSingleResponseForCertID(responseData->responses,
 					     handle, certID);
-    if (single == NULL)
+    if (single == NULL) {
+	rv = SECFailure;
 	goto loser;
+    }
 
     rv = ocsp_VerifySingleResponse(single, handle, signerCert, producedAt);
     if (rv != SECSuccess)
@@ -3396,23 +3445,7 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
      */
 
     rv = ocsp_CertHasGoodStatus(single, time);
-
 loser:
-    if (issuerCert != NULL)
-	CERT_DestroyCertificate(issuerCert);
-    if (signerCert != NULL)
-	CERT_DestroyCertificate(signerCert);
-    if (response != NULL)
-	CERT_DestroyOCSPResponse(response);
-    if (request != NULL)
-	CERT_DestroyOCSPRequest(request);
-    if (encodedResponse != NULL)
-	SECITEM_FreeItem(encodedResponse, PR_TRUE);
-    if (certList != NULL)
-	CERT_DestroyCertList(certList);
-    if (location != NULL)
-	PORT_Free(location);
-
     return rv;
 }
 
@@ -3927,4 +3960,35 @@ loser:
     return(NULL);
 }
 
+SECStatus
+CERT_GetOCSPResponseStatus(CERTOCSPResponse *response)
+{
+    PORT_Assert(response);
+    if (response->statusValue == ocspResponse_successful)
+	return SECSuccess;
 
+    switch (response->statusValue) {
+      case ocspResponse_malformedRequest:
+	PORT_SetError(SEC_ERROR_OCSP_MALFORMED_REQUEST);
+	break;
+      case ocspResponse_internalError:
+	PORT_SetError(SEC_ERROR_OCSP_SERVER_ERROR);
+	break;
+      case ocspResponse_tryLater:
+	PORT_SetError(SEC_ERROR_OCSP_TRY_SERVER_LATER);
+	break;
+      case ocspResponse_sigRequired:
+	/* XXX We *should* retry with a signature, if possible. */
+	PORT_SetError(SEC_ERROR_OCSP_REQUEST_NEEDS_SIG);
+	break;
+      case ocspResponse_unauthorized:
+	PORT_SetError(SEC_ERROR_OCSP_UNAUTHORIZED_REQUEST);
+	break;
+      case ocspResponse_other:
+      case ocspResponse_unused:
+      default:
+	PORT_SetError(SEC_ERROR_OCSP_UNKNOWN_RESPONSE_STATUS);
+	break;
+    }
+    return SECFailure;
+}

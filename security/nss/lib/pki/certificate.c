@@ -53,6 +53,8 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 
 #ifdef NSS_3_4_CODE
 #include "pki3hack.h"
+#include "pk11func.h"
+#include "hasht.h"
 #endif
 
 #ifndef BASE_H
@@ -90,6 +92,10 @@ nssCertificate_Create
                                                   &rvCert->subject,
                                                   &rvCert->email);
     if (status != PR_SUCCESS) {
+	return (NSSCertificate *)NULL;
+    }
+    /* all certs need an encoding value */
+    if (rvCert->encoding.data == NULL) {
 	return (NSSCertificate *)NULL;
     }
     return rvCert;
@@ -669,8 +675,20 @@ NSSCertificate_IsPrivateKeyAvailable
   PRStatus *statusOpt
 )
 {
-    nss_SetError(NSS_ERROR_NOT_FOUND);
-    return PR_FALSE;
+    PRBool isUser = PR_FALSE;
+    nssCryptokiObject **ip;
+    nssCryptokiObject **instances = nssPKIObject_GetInstances(&c->object);
+    if (!instances) {
+	return PR_FALSE;
+    }
+    for (ip = instances; *ip; ip++) {
+	nssCryptokiObject *instance = *ip;
+	if (nssToken_IsPrivateKeyAvailable(instance->token, c, instance)) {
+	    isUser = PR_TRUE;
+	}
+    }
+    nssCryptokiObjectArray_Destroy(instances);
+    return isUser;
 }
 
 NSS_IMPLEMENT PRBool
@@ -934,15 +952,20 @@ nssCertificateList_AddReferences
 NSS_IMPLEMENT NSSTrust *
 nssTrust_Create
 (
-  nssPKIObject *object
+  nssPKIObject *object,
+  NSSItem *certData
 )
 {
     PRStatus status;
     PRUint32 i;
     PRUint32 lastTrustOrder, myTrustOrder;
+    unsigned char sha1_hashcmp[SHA1_LENGTH];
+    unsigned char sha1_hashin[SHA1_LENGTH];
+    NSSItem sha1_hash;
     NSSTrust *rvt;
     nssCryptokiObject *instance;
     nssTrustLevel serverAuth, clientAuth, codeSigning, emailProtection;
+    SECStatus rv; /* Should be stan flavor */
     lastTrustOrder = 1<<16; /* just make it big */
     PR_ASSERT(object->instances != NULL && object->numInstances > 0);
     rvt = nss_ZNEW(object->arena, NSSTrust);
@@ -950,17 +973,30 @@ nssTrust_Create
 	return (NSSTrust *)NULL;
     }
     rvt->object = *object;
+
+    /* should be stan flavor of Hashbuf */
+    rv = PK11_HashBuf(SEC_OID_SHA1,sha1_hashcmp,certData->data,certData->size);
+    if (rv != SECSuccess) {
+	return (NSSTrust *)NULL;
+    }
+    sha1_hash.data = sha1_hashin;
+    sha1_hash.size = sizeof (sha1_hashin);
     /* trust has to peek into the base object members */
     PZ_Lock(object->lock);
     for (i=0; i<object->numInstances; i++) {
 	instance = object->instances[i];
 	myTrustOrder = nssToken_GetTrustOrder(instance->token);
 	status = nssCryptokiTrust_GetAttributes(instance, NULL,
+						&sha1_hash,
 	                                        &serverAuth,
 	                                        &clientAuth,
 	                                        &codeSigning,
 	                                        &emailProtection);
 	if (status != PR_SUCCESS) {
+	    PZ_Unlock(object->lock);
+	    return (NSSTrust *)NULL;
+	}
+	if (PORT_Memcmp(sha1_hashin,sha1_hashcmp,SHA1_LENGTH) != 0) {
 	    PZ_Unlock(object->lock);
 	    return (NSSTrust *)NULL;
 	}
@@ -1112,4 +1148,3 @@ nssCRL_GetEncoding
 	return (NSSDER *)NULL;
     }
 }
-
