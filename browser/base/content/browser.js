@@ -5719,6 +5719,9 @@ function AddKeywordForSearchField()
         postData += escape(e.name + "=" + (e == node ? "%s" : e.value)) + "&";
       else if (e.localName.toLowerCase() == "select" && e.selectedIndex >= 0)
         postData += escape(e.name + "=" + e.options[e.selectedIndex].value) + "&";
+      else if ((e.type.toLowerCase() == "checkbox" ||
+	  	e.type.toLowerCase() == "radio") && e.checked)
+	 postData += escape(e.name + "=" + e.value) + "&";
     }
   }
   else {
@@ -5733,6 +5736,9 @@ function AddKeywordForSearchField()
         spec += "&" + escape(e.name) + "=" + escape(e.value);
       else if (e.localName.toLowerCase() == "select" && e.selectedIndex >= 0)
         spec += "&" + escape(e.name) + "=" + escape(e.options[e.selectedIndex].value);
+      else if ((e.type.toLowerCase() == "checkbox" ||
+	  	e.type.toLowerCase() == "radio") && e.checked)
+	 spec += "&" + escape(e.name) + "=" + escape(e.value);
     }
   }
   openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
