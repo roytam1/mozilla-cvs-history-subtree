@@ -425,17 +425,17 @@ sub add
       foreach $key (@{$entry->{"_oc_order_"}})
 	{
 	  next if (($key eq "dn") || ($key =~ /^_.+_$/));
-	  $ent{$key} = $entry->{$key};
+	  $ent{$key} = { "ab" => $entry->{$key} };
 	  $gotcha++;
 	  $entry->attrClean($key);
 	}
     }
-  elsif  ($ref eq "HASH")
+  elsif ($ref eq "HASH")
     {
       foreach $key (keys(%{$entry}))
 	{
 	  next if (($key eq "dn") || ($key =~ /^_.+_$/));
-	  $ent{$key} = $entry->{$key};
+	  $ent{$key} = { "ab" => $entry->{$key} };
 	  $gotcha++;
 	}
     }

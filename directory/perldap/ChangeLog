@@ -1,3 +1,9 @@
+1999-06-22  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (add): Fixed bug 3342, thanks to Kevin McCarthy for
+	debugging this, and providing a patch. This fixes the problem with
+	adding new entries that has binary data.
+
 1999-03-21  Leif Hedstrom  <leif@netscape.com>
 
 	* Checked in v1.2.1(beta).
