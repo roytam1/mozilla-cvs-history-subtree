@@ -1,0 +1,6 @@
+# A list of preferences which are not shared between programs
+# If a preference name contains (not matches) a string listed here,
+# it will not be shared.
+
+signon.SignonFileName
+
