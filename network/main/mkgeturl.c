@@ -1866,21 +1866,6 @@ NET_GetURL (URL_Struct *URL_s,
 	LIBNET_LOCK();
 
 #ifdef XP_WIN
-	aHost=NET_ParseURL(URL_s->address, GET_HOST_PART);
-	if ( *aHost 
-		&& ( !PL_strcasecmp("www.aol.com", aHost) 
-			|| !PL_strcasecmp("aol.com", aHost) ) ) {
-		StrAllocCopy(MKhttp_proxy, "proxy.meer.net:8080");
-		MKproxy_style = PROXY_STYLE_MANUAL;
-	} else {
-		PR_FREEIF(MKhttp_proxy);
-		MKhttp_proxy=NULL;
-		MKproxy_style = PROXY_STYLE_NONE;
-	}
-	PR_Free(aHost);
-#endif
-
-#ifdef XP_WIN
 	/* this runs a timer to periodically call the netlib
 	 * so that we still get events even when OnIdle is never
 	 * called
