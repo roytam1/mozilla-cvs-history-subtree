@@ -23,6 +23,25 @@
 
 static PRBool gUnreg = PR_FALSE;
 
+void print_err(nsresult err)
+{
+  switch (err) {
+  case NS_ERROR_FACTORY_NOT_LOADED:
+    cerr << "Factory not loaded";
+    break;
+  case NS_NOINTERFACE:
+    cerr << "No Interface";
+    break;
+  case NS_ERROR_NULL_POINTER:
+    cerr << "Null pointer";
+    break;
+  case NS_ERROR_OUT_OF_MEMORY:
+    cerr << "Out of memory";
+    break;
+  default:
+    cerr << hex << err << dec;
+  }
+}
 PRLibrary *GetLib(const char *path) {
   return PR_LoadLibrary(path);
 }
@@ -87,14 +106,18 @@ int ProcessArgs(int argc, char *argv[])
         if (NS_SUCCEEDED(res)) {
           cout << "Successfully unregistered: " << argv[i] << "\n";
         } else {
-          cerr << "Unregister failed (" << res << "): " << argv[i] << "\n";
+          cerr << "Unregister failed (";
+          print_err(res);
+          cerr << "): " << argv[i] << "\n";
         }
       } else {
         res = Register(argv[i]);
         if (NS_SUCCEEDED(res)) {
           cout << "Successfully registered: " << argv[i] << "\n";
         } else {
-          cerr << "Register failed (" << res << "): " << argv[i] << "\n";
+          cerr << "Register failed (";
+          print_err(res);
+          cerr << "): " << argv[i] << "\n";
         }
       }
       i++;

@@ -21,16 +21,26 @@
 
 #include "nsDebug.h"
 #include "nsID.h"
+#include "nsError.h"
 
 // An "interface id" which can be used to uniquely identify a given
-// interface. Primarily used as an argument to nsISupports.QueryInterface
-// method.
+// interface.
 
 typedef nsID nsIID;
+
+#define REFNSIID const nsIID&
 
 // Define an IID
 #define NS_DEFINE_IID(_name, _iidspec) \
   const nsIID _name = _iidspec
+
+#ifdef NS_IMPL_IDS
+#define NS_DECLARE_ID(_name,m0,m1,m2,m30,m31,m32,m33,m34,m35,m36,m37) \
+  extern "C" const nsID _name = {m0,m1,m2,{m30,m31,m32,m33,m34,m35,m36,m37}}
+#else
+#define NS_DECLARE_ID(_name,m0,m1,m2,m30,m31,m32,m33,m34,m35,m36,m37) \
+  extern "C" const nsID _name
+#endif
 
 //----------------------------------------------------------------------
 
@@ -40,29 +50,8 @@ typedef nsID nsIID;
 { 0x00000000, 0x0000, 0x0000, \
   {0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46} }
 
-#define NS_FAILED(_nsresult) ((_nsresult) & 0x80000000)
-#define NS_SUCCEEDED(_nsresult) (!((_nsresult) & 0x80000000))
-
-// Standard "it worked" return value
-#define NS_OK 0
-
-#define NS_ERROR_BASE ((nsresult) 0xC1F30000)
-
-// Some standard error codes we use
-#define NS_ERROR_OUT_OF_MEMORY (NS_ERROR_BASE + 0)
-#define NS_ERROR_NO_AGGREGATION (NS_ERROR_BASE + 1)
-#define NS_ERROR_NULL_POINTER (NS_ERROR_BASE + 2)
-#define NS_ERROR_ILLEGAL_VALUE (NS_ERROR_BASE + 3)
-#define NS_ERROR_NOT_INITIALIZED (NS_ERROR_BASE + 4)
-#define NS_ERROR_ALREADY_INITIALIZED (NS_ERROR_BASE + 5)
-#define NS_ERROR_NOT_IMPLEMENTED (NS_ERROR_BASE + 6)
-
 // Generic result data type
 typedef PRUint32 nsresult;
-
-// This is returned by QueryInterface when a given interface is not
-// supported.
-#define NS_NOINTERFACE ((nsresult) 0x80004002L)
 
 // Reference count values
 typedef PRUint32 nsrefcnt;
@@ -73,7 +62,7 @@ typedef PRUint32 nsrefcnt;
 // modelled after the win32 IUnknown API.
 class nsISupports {
 public:
-  NS_IMETHOD QueryInterface(const nsIID& aIID,
+  NS_IMETHOD QueryInterface(REFNSIID aIID,
                             void** aInstancePtr) = 0;
   NS_IMETHOD_(nsrefcnt) AddRef(void) = 0;
   NS_IMETHOD_(nsrefcnt) Release(void) = 0;
@@ -87,7 +76,7 @@ public:
 // AddRef and QueryInterface methods.
 #define NS_DECL_ISUPPORTS                                                   \
 public:                                                                     \
-  NS_IMETHOD QueryInterface(const nsIID& aIID,                              \
+  NS_IMETHOD QueryInterface(REFNSIID aIID,                                  \
                             void** aInstancePtr);                           \
   NS_IMETHOD_(nsrefcnt) AddRef(void);                                       \
   NS_IMETHOD_(nsrefcnt) Release(void);                                      \
@@ -144,7 +133,7 @@ nsrefcnt _class::Release(void)                         \
 // _classiiddef is the name of the #define symbol that defines the IID
 // for the class (e.g. NS_ISUPPORTS_IID)
 #define NS_IMPL_QUERY_INTERFACE(_class,_classiiddef)                     \
-nsresult _class::QueryInterface(const nsIID& aIID, void** aInstancePtr)  \
+nsresult _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
 {                                                                        \
   if (NULL == aInstancePtr) {                                            \
     return NS_ERROR_NULL_POINTER;                                        \

@@ -20,19 +20,20 @@
 #define nsHashtable_h__
 
 #include "plhash.h"
+#include "nsCom.h"
 
 class nsHashKey {
 public:
-  virtual PRUint32 HashValue() = 0;
-  virtual PRBool Equals(nsHashKey *aKey) = 0;
-  virtual nsHashKey *Clone() = 0;
+  virtual PRUint32 HashValue(void) const = 0;
+  virtual PRBool Equals(const nsHashKey *aKey) const = 0;
+  virtual nsHashKey *Clone(void) const = 0;
 };
 
 // Enumerator callback function. Use
 
 typedef PRBool (*nsHashtableEnumFunc)(nsHashKey *aKey, void *aData);
 
-class nsHashtable {
+class NS_COM nsHashtable {
 private:
   // members  
   PLHashTable *hashtable;

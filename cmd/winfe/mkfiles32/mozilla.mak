@@ -318,7 +318,7 @@ BINREL_DIST=$(XPDIST)\WIN954.0_OPT.OBJ
 BINREL_DIST=$(XPDIST)\WIN954.0_DBG.OBJD
 !endif
 !endif
-	
+
 LINK_LIBS= \
 !if "$(MOZ_BITS)"=="32"
 !ifndef NSPR20
@@ -1533,7 +1533,7 @@ $(GENDIR)\tdlogo.rc: $(MOZ_SRC)\ns\lib\xp\tdlogo.gif
 
 AboutImages: $(GENDIR) \
 	$(GENDIR)\flamer.rc
-	
+
 $(GENDIR)\flamer.rc: $(MOZ_SRC)\ns\lib\xp\flamer.gif
 	$(BIN2RC) $(MOZ_SRC)\ns\lib\xp\flamer.gif image/gif > $(GENDIR)\flamer.rc
 !endif
@@ -1547,7 +1547,7 @@ prebuild: $(GENDIR) $(GENDIR)\initpref.rc $(GENDIR)\allpref.rc \
 	$(GENDIR)\allpref2.rc $(GENDIR)\allpref3.rc $(GENDIR)\allpref4.rc\
 	$(GENDIR)\winpref.rc $(GENDIR)\config.rc NavCenterImages \
 	AboutImages
-	
+
 $(GENDIR)\initpref.rc: $(MOZ_SRC)\ns\modules\libpref\src\initpref.js
 	$(TXT2RC) init_prefs $(MOZ_SRC)\ns\modules\libpref\src\initpref.js \
 		$(GENDIR)\initpref.rc
@@ -1658,6 +1658,9 @@ install:    \
 !IF EXIST($(DIST)\bin\sched32.dll)
 	    $(OUTDIR)\sched32.dll    \
 !ENDIF
+!IF EXIST($(DIST)\bin\libreg32.dll)
+	    $(OUTDIR)\libreg32.dll    \
+!ENDIF
 !IF EXIST($(DIST)\bin\jrt32$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\jrt32$(VERSION_NUMBER).dll    \
 !ENDIF
@@ -1665,7 +1668,7 @@ install:    \
 	    $(OUTDIR)\uni3200.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\awt32$(VERSION_NUMBER).dll)
- 	    $(OUTDIR)\java\bin\awt32$(VERSION_NUMBER).dll   \
+	    $(OUTDIR)\java\bin\awt32$(VERSION_NUMBER).dll   \
 !ENDIF
 !if defined(MOZ_TRACKGDI)
 !IF EXIST($(DIST)\bin\trackgdi.dll)
@@ -1762,6 +1765,9 @@ install:    \
 !ENDIF
 !IF EXIST($(DIST)\bin\sched16.dll)
 	    $(OUTDIR)\sched16.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\libreg16.dll)
+	    $(OUTDIR)\libreg16.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\nsinit.exe)
 	    $(OUTDIR)\nsinit.exe    \
@@ -1914,6 +1920,9 @@ $(OUTDIR)\xppref32.dll:   $(DIST)\bin\xppref32.dll
 $(OUTDIR)\sched32.dll:   $(DIST)\bin\sched32.dll
     @IF EXIST $(DIST)\bin\sched32.dll copy $(DIST)\bin\sched32.dll $(OUTDIR)\sched32.dll
 
+$(OUTDIR)\libreg32.dll:   $(DIST)\bin\libreg32.dll
+    @IF EXIST $(DIST)\bin\libreg32.dll copy $(DIST)\bin\libreg32.dll $(OUTDIR)\libreg32.dll
+
 $(OUTDIR)\uni3200.dll:   $(DIST)\bin\uni3200.dll
     @IF EXIST $(DIST)\bin\uni3200.dll copy $(DIST)\bin\uni3200.dll $(OUTDIR)\uni3200.dll
 
@@ -1988,6 +1997,9 @@ $(OUTDIR)\xppref16.dll:   $(DIST)\bin\xppref16.dll
 
 $(OUTDIR)\sched16.dll:   $(DIST)\bin\sched16.dll
     @IF EXIST $(DIST)\bin\sched16.dll copy $(DIST)\bin\sched16.dll $(OUTDIR)\sched16.dll
+
+$(OUTDIR)\libreg16.dll:   $(DIST)\bin\libreg16.dll
+    @IF EXIST $(DIST)\bin\libreg16.dll copy $(DIST)\bin\libreg16.dll $(OUTDIR)\libreg16.dll
 
 $(OUTDIR)\uni1600.dll:   $(DIST)\bin\uni1600.dll
     @IF EXIST $(DIST)\bin\uni1600.dll copy $(DIST)\bin\uni1600.dll $(OUTDIR)\uni1600.dll
@@ -2288,7 +2300,8 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\htmldg16.lib +
     $(DIST)\lib\hook.lib +
     $(DIST)\lib\png.lib +
-	$(DIST)\lib\sched16.lib +
+    $(DIST)\lib\sched16.lib +
+    $(DIST)\lib\libreg16.lib +
     $(DIST)\lib\rdf16.lib +
     $(DIST)\lib\xpstrdll.lib +
 !ifdef MOZ_MAIL_NEWS
@@ -2662,7 +2675,7 @@ symbols:
 	@echo "MOZ_USERNAME = $(MOZ_USERNAME)"  
 	@echo "MOZ_USERDEBUG = $(MOZ_USERDEBUG)"
 !endif
-	
+
 
 ns.zip:
 	cd $(OUTDIR)
@@ -2703,6 +2716,7 @@ ns.zip:
 		edpref32.dll		\
 		editor32.dll		\
 		xppref32.dll		\
-		sched32.dll			\
+		sched32.dll		\
+		libreg32.dll		\
 		netscape.cfg		\
 		moz40p3	

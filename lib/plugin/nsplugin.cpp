@@ -108,7 +108,7 @@ nsPluginManager::MemFlush(PRUint32 size)
 static NS_DEFINE_IID(kPluginManagerIID, NP_IPLUGINMANAGER_IID);
 //static NS_DEFINE_IID(kNPIJVMPluginManagerIID, NP_IJVMPLUGINMANAGER_IID);
 
-NS_METHOD
+NS_IMETHODIMP
 nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
 {
     if (NULL == aInstancePtr) {                                            
@@ -184,7 +184,7 @@ NS_IMPL_AGGREGATED(nsPluginInstancePeer);
 static NS_DEFINE_IID(kLiveConnectPluginInstancePeerIID, NP_ILIVECONNECTPLUGININSTANCEPEER_IID); 
 static NS_DEFINE_IID(kPluginInstancePeerIID, NP_IPLUGININSTANCEPEER_IID); 
 
-NS_METHOD
+NS_IMETHODIMP
 nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
 {
     if (NULL == aInstancePtr) {                                            

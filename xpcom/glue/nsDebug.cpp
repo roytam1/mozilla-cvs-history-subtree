@@ -47,6 +47,20 @@ NS_COM void nsDebug::Abort(const char* aFile, PRIntn aLine)
 #endif
 }
 
+NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
+{
+  InitLog();
+  PR_LOG(gDebugLog, PR_LOG_ERROR,
+         ("Break: at file %s, line %d", aFile, aLine));
+  PR_LogFlush();
+  //XXX this works on win32 only for now. For all the other platforms call Abort
+#if defined(_WIN32)
+  ::DebugBreak();
+#else
+  Abort(aFile, aLine);
+#endif
+}
+
 NS_COM void nsDebug::PreCondition(const char* aStr, const char* aExpr,
                                   const char* aFile, PRIntn aLine)
 {
@@ -54,7 +68,7 @@ NS_COM void nsDebug::PreCondition(const char* aStr, const char* aExpr,
   PR_LOG(gDebugLog, PR_LOG_ERROR,
          ("PreCondition: \"%s\" (%s) at file %s, line %d", aStr, aExpr,
           aFile, aLine));
-  Abort(aFile, aLine);
+  Break(aFile, aLine);
 }
 
 NS_COM void nsDebug::PostCondition(const char* aStr, const char* aExpr,
@@ -64,7 +78,7 @@ NS_COM void nsDebug::PostCondition(const char* aStr, const char* aExpr,
   PR_LOG(gDebugLog, PR_LOG_ERROR,
          ("PostCondition: \"%s\" (%s) at file %s, line %d", aStr, aExpr,
           aFile, aLine));
-  Abort(aFile, aLine);
+  Break(aFile, aLine);
 }
 
 NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
@@ -74,7 +88,7 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
   PR_LOG(gDebugLog, PR_LOG_ERROR,
          ("Assertion: \"%s\" (%s) at file %s, line %d", aStr, aExpr,
           aFile, aLine));
-  Abort(aFile, aLine);
+  Break(aFile, aLine);
 }
 
 NS_COM void nsDebug::NotYetImplemented(const char* aMessage,
@@ -84,7 +98,7 @@ NS_COM void nsDebug::NotYetImplemented(const char* aMessage,
   PR_LOG(gDebugLog, PR_LOG_ERROR,
          ("NotYetImplemented: \"%s\" at file %s, line %d", aMessage,
           aFile, aLine));
-  Abort(aFile, aLine);
+  Break(aFile, aLine);
 }
 
 NS_COM void nsDebug::NotReached(const char* aMessage,
@@ -93,7 +107,7 @@ NS_COM void nsDebug::NotReached(const char* aMessage,
   InitLog();
   PR_LOG(gDebugLog, PR_LOG_ERROR,
          ("NotReached: \"%s\" at file %s, line %d", aMessage, aFile, aLine));
-  Abort(aFile, aLine);
+  Break(aFile, aLine);
 }
 
 NS_COM void nsDebug::Error(const char* aMessage,
@@ -102,7 +116,7 @@ NS_COM void nsDebug::Error(const char* aMessage,
   InitLog();
   PR_LOG(gDebugLog, PR_LOG_ERROR,
          ("Error: \"%s\" at file %s, line %d", aMessage, aFile, aLine));
-  Abort(aFile, aLine);
+  Break(aFile, aLine);
 }
 
 NS_COM void nsDebug::Warning(const char* aMessage,

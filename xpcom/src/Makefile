@@ -22,20 +22,24 @@ LIBRARY_NAME	= xpcom
 CPPSRCS		= nsDebug.cpp \
 		  nsHashtable.cpp \
 		  nsID.cpp \
+		  nsSupportsArray.cpp \
 		  nsRepository.cpp \
 		  $(NULL)
 
-EXPORTS		= nsAgg.h \
-		  nsCom.h \
+EXPORTS		= nsCom.h \
 		  nsDebug.h \
+		  nsError.h \
 		  nsHashtable.h \
 		  nsID.h \
 		  nsIFactory.h \
 		  nsISupports.h \
+		  nsISupportsArray.h \
 		  nsRepository.h \
 		  nsIEnumerator.h \
 		  $(NULL)
 
-DEFINES		= -D_IMPL_NS_COM
+LCFLAGS		= -D_IMPL_NS_COM -DUSE_NSREG
+
+REQUIRES	= libreg
 
 include $(DEPTH)/config/rules.mk

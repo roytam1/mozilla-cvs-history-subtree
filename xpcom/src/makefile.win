@@ -21,38 +21,45 @@ MAKE_OBJ_TYPE	= DLL
 
 DEPTH=..\..
 
+LINCS = \
+	-I$(PUBLIC)\libreg	\
+	$(NULL)
+
 LLIBS = \
 	$(LIBNSPR)			\
 	$(DIST)\lib\libplc21.lib	\
+	$(DIST)\lib\libreg32.lib	\
 	$(NULL)
 
 LIBNAME = .\$(OBJDIR)\xpcom$(MOZ_BITS)
 DLL = $(LIBNAME).dll
 
-LCFLAGS = -D_IMPL_NS_COM
-
-REQUIRES =
+LCFLAGS = -D_IMPL_NS_COM -DUSE_NSREG
 
 CPPSRCS = \
 	nsDebug.cpp		\
 	nsHashtable.cpp		\
 	nsID.cpp		\
 	nsRepository.cpp	\
-	
+	nsSupportsArray.cpp	\
+
 CPP_OBJS = \
 	.\$(OBJDIR)\nsDebug.obj		\
 	.\$(OBJDIR)\nsHashtable.obj	\
 	.\$(OBJDIR)\nsID.obj		\
+	.\$(OBJDIR)\nsSupportsArray.obj	\
 	.\$(OBJDIR)\nsRepository.obj	\
 
 EXPORTS = \
 	nsAgg.h			\
 	nsCom.h			\
 	nsDebug.h		\
+	nsError.h		\
 	nsHashtable.h		\
 	nsID.h			\
 	nsIFactory.h		\
 	nsISupports.h		\
+	nsISupportsArray.h	\
 	nsRepository.h		\
 	nsIEnumerator.h		\
 	$(NULL)			
@@ -62,6 +69,7 @@ MODULE = xpcom
 include <$(DEPTH)\config\rules.mak>
 
 install:: $(DLL)
- 	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
- 	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
+	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+
 
