@@ -538,6 +538,25 @@ NS_LockProfilePath(nsILocalFile* aPath, nsIProfileLock* *aResult)
     return NS_OK;
 }
 
+static const char kTable[] =
+    { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+      'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+      '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
+
+static void SaltProfileName(nsACString& aName)
+{
+    double fpTime;
+    LL_L2D(fpTime, PR_Now());
+
+    // use 1e-6, granularity of PR_Now() on the mac is seconds
+    srand((uint)(fpTime * 1e-6 + 0.5));
+
+    aName.Append('.');
+    int i;
+    for (i = 0; i < 3; ++i)
+        aName.Append(kTable[rand() % NS_ARRAY_LENGTH(kTable)]);
+}
+
 NS_IMETHODIMP
 nsToolkitProfileService::CreateProfile(nsILocalFile* aRootDir,
                                        const nsACString& aName,
@@ -560,7 +579,10 @@ nsToolkitProfileService::CreateProfile(nsILocalFile* aRootDir,
         rootDir = do_QueryInterface(file);
         NS_ENSURE_TRUE(rootDir, NS_ERROR_UNEXPECTED);
 
-        rootDir->AppendNative(aName);
+        nsCAutoString dirName(aName);
+        SaltProfileName(dirName);
+
+        rootDir->AppendNative(dirName);
     }
 
     PRBool exists;
