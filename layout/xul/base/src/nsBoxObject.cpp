@@ -54,7 +54,7 @@ NS_CLASSINFO_MAP_BEGIN(BoxObject)
 NS_CLASSINFO_MAP_END
 
 
-// QueryInterface implementation for nsCrypto
+// QueryInterface implementation for nsBoxObject
 NS_INTERFACE_MAP_BEGIN(nsBoxObject)
   NS_INTERFACE_MAP_ENTRY(nsIBoxObject)
   NS_INTERFACE_MAP_ENTRY(nsPIBoxObject)
