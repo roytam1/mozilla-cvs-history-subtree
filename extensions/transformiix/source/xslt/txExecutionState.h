@@ -47,6 +47,7 @@
 #include "XMLUtils.h"
 #include "nsVoidArray.h"
 #include "txIXPathContext.h"
+#include "txVariableMap.h"
 
 class txInstruction;
 class txIOutputHandlerFactory;
@@ -54,7 +55,6 @@ class ExprResult;
 class txStylesheet;
 class txRecursionCheckpointStart;
 class txExpandedNameMap;
-class txVariableMap;
 
 class txExecutionState : public txIMatchContext
 {
@@ -82,8 +82,9 @@ public:
 
     // state-modification functions
     txInstruction* getNextInstruction();
+    nsresult runTemplate(txInstruction* aInstruction);
     nsresult runTemplate(txInstruction* aInstruction,
-                         txInstruction* aReturnTo = nsnull);
+                         txInstruction* aReturnTo);
     void gotoInstruction(txInstruction* aNext);
     void returnFromTemplate();
     nsresult bindVariable(const txExpandedName& aName,
@@ -114,7 +115,8 @@ private:
     nsStringArray mStringStack;
     txInstruction* mNextInstruction;
     txVariableMap* mLocalVariables;
-    
+    txVariableMap mGlobalVariableValues;
+
     txIEvalContext* mEvalContext;
     txIEvalContext* mInitialEvalContext;
     Document* mRTFDocument;

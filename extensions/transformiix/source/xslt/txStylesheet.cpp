@@ -48,6 +48,7 @@ txStylesheet::txStylesheet()
       mNamedTemplates(PR_FALSE),
       mDecimalFormats(PR_TRUE),
       mAttributeSets(PR_TRUE),
+      mGlobalVariables(PR_TRUE),
       mContainerTemplate(nsnull),
       mCharactersTemplate(nsnull),
       mEmptyTemplate(nsnull)
@@ -238,6 +239,16 @@ txStylesheet::getOutputFormat()
     return &mOutputFormat;
 }
 
+nsresult
+txStylesheet::getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
+                                txInstruction*& aInstr)
+{
+    GlobalVariable* var = (GlobalVariable*)mGlobalVariables.get(aName);
+    NS_ENSURE_TRUE(var, NS_ERROR_FAILURE);
+    
+    aExpr = var->mExpr;
+    aInstr = var->mFirstInstruction;
+}
 
 nsresult
 txStylesheet::doneCompiling()
@@ -251,7 +262,8 @@ txStylesheet::doneCompiling()
     
     // XXX ToDo: traverse tree of importframes and fill mImportFrames
 
-    // Loop through importframes and process all items
+    // Loop through importframes in decreasing-precedence-order and process
+    // all items
     txListIterator frameIter(&mImportFrames);
     ImportFrame* frame;
     while ((frame = (ImportFrame*)frameIter.next())) {
@@ -264,11 +276,13 @@ txStylesheet::doneCompiling()
                 case txToplevelItem::import:
                 {
                     delete item;
+                    break;
                 }
                 case txToplevelItem::output:
                 {
                     mOutputFormat.merge(((txOutputItem*)item)->mFormat);
                     delete item;
+                    break;
                 }
                 case txToplevelItem::templ:
                 {
@@ -276,6 +290,15 @@ txStylesheet::doneCompiling()
                     NS_ENSURE_SUCCESS(rv, rv);
 
                     delete item;
+                    break;
+                }
+                case txToplevelItem::variable:
+                {
+                    rv = addGlobalVariable((txVariableItem*)item);
+                    NS_ENSURE_SUCCESS(rv, rv);
+
+                    delete item;
+                    break;
                 }
             }
             itemIter.remove(); //remove() moves to the previous
@@ -372,6 +395,29 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
 }
 
 nsresult
+txStylesheet::addGlobalVariable(txVariableItem* aVariable)
+{
+    if (mGlobalVariables.get(aVariable->mName)) {
+        return NS_OK;
+    }
+    GlobalVariable* var = new GlobalVariable(aVariable->mValue,
+                                             aVariable->mFirstInstruction);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+    
+    aVariable->mValue = nsnull;
+    aVariable->mFirstInstruction = nsnull;
+    
+    nsresult rv = mGlobalVariables.add(aVariable->mName, var);
+    if (NS_FAILED(rv)) {
+        delete var;
+        return rv;
+    }
+    
+    return NS_OK;
+    
+}
+
+nsresult
 txStylesheet::addKey(const txExpandedName& aName,
                      txPattern* aMatch, Expr* aUse)
 {
@@ -404,4 +450,15 @@ txStylesheet::ImportFrame::~ImportFrame()
     while (tlIter.hasNext()) {
         delete (txToplevelItem*)tlIter.next();
     }
+}
+
+txStylesheet::GlobalVariable::GlobalVariable(Expr* aExpr, txInstruction* aFirstInstruction)
+    : mExpr(aExpr), mFirstInstruction(aFirstInstruction)
+{
+}
+
+txStylesheet::GlobalVariable::~GlobalVariable()
+{
+    delete mExpr;
+    delete mFirstInstruction;
 }

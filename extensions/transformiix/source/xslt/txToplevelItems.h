@@ -61,7 +61,6 @@ public:
         import,
         //namespaceAlias,
         output,
-        param,
         stripSpace, //also used for preserve-space
         templ,
         variable
@@ -137,22 +136,6 @@ public:
     }
 };
 
-// xsl:param at top level
-class txParamItem : public txInstructionContainer
-{
-public:
-    txParamItem(const txExpandedName& aName) : mName(aName)
-    {
-    }
-
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::param;
-    }
-
-    txExpandedName mName;
-};
-
 // xsl:strip-space and xsl:preserve-space
 class txStripSpaceItem : public txToplevelItem
 {
@@ -194,9 +177,8 @@ public:
 class txVariableItem : public txInstructionContainer
 {
 public:
-    txVariableItem(const txExpandedName& aName) : mName(aName)
-    {
-    }
+    txVariableItem(const txExpandedName& aName, Expr* aValue, PRBool aIsParam);
+    ~txVariableItem();
     
     virtual txToplevelItem::type getType()
     {
@@ -204,6 +186,8 @@ public:
     }
 
     txExpandedName mName;
+    Expr* mValue;
+    PRBool mIsParam;
 };
 
 #endif //TRANSFRMX_TXTOPLEVELITEMS_H

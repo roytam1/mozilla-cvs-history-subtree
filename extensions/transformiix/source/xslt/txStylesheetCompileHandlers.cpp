@@ -56,6 +56,7 @@ txHandlerTable* gTxApplyTemplatesHandler = 0;
 txHandlerTable* gTxCallTemplateHandler = 0;
 txHandlerTable* gTxVariableHandler = 0;
 txHandlerTable* gTxForEachHandler = 0;
+txHandlerTable* gTxTopVariableHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -476,6 +477,7 @@ txFnEndOtherTop(txStylesheetCompilerState& aState)
 }
 
 
+// xsl:template
 nsresult
 txFnStartTemplate(PRInt32 aNamespaceID,
                   nsIAtom* aLocalName,
@@ -533,6 +535,101 @@ txFnEndTemplate(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:variable, xsl:param
+nsresult
+txFnStartTopVariable(PRInt32 aNamespaceID,
+                     nsIAtom* aLocalName,
+                     nsIAtom* aPrefix,
+                     txStylesheetAttr* aAttributes,
+                     PRInt32 aAttrCount,
+                     txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* select;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
+                     aState, select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txVariableItem* var =
+        new txVariableItem(name, select, aLocalName == txXSLTAtoms::param);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+
+    aState.openInstructionContainer(var);
+    rv = aState.pushPtr(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (var->mValue) {
+        // XXX should be gTxErrorHandler?
+        rv = aState.pushHandlerTable(gTxIgnoreHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        rv = aState.pushHandlerTable(gTxTopVariableHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    rv = aState.addToplevelItem(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndTopVariable(txStylesheetCompilerState& aState)
+{
+    txHandlerTable* prev = aState.mHandlerTable;
+    aState.popHandlerTable();
+    txVariableItem* var = (txVariableItem*)aState.popPtr();
+
+    if (prev == gTxTopVariableHandler) {
+        // No children were found.
+        NS_ASSERTION(!var->mValue, "There shouldn't be a select-expression here");
+        var->mValue = new StringExpr(NS_LITERAL_STRING(""));
+        NS_ENSURE_TRUE(var->mValue, NS_ERROR_OUT_OF_MEMORY);
+    }
+    else if (!var->mValue) {
+        // If we don't have a select-expression there mush be children.
+        txInstruction* instr = new txReturn();
+        NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+        nsresult rv = aState.addInstruction(instr);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    aState.closeInstructionContainer();
+
+    return NS_OK;
+}
+
+nsresult
+txFnStartElementStartTopVar(PRInt32 aNamespaceID,
+                            nsIAtom* aLocalName,
+                            nsIAtom* aPrefix,
+                            txStylesheetAttr* aAttributes,
+                            PRInt32 aAttrCount,
+                            txStylesheetCompilerState& aState)
+{
+    aState.mHandlerTable = gTxTemplateHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
+}
+
+nsresult
+txFnTextStartTopVar(const nsAString& aStr, txStylesheetCompilerState& aState)
+{
+    TX_RETURN_IF_WHITESPACE(aStr, aState);
+
+    aState.mHandlerTable = gTxTemplateHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
+}
+
+// xsl:key
 nsresult
 txFnStartKey(PRInt32 aNamespaceID,
              nsIAtom* aLocalName,
@@ -1381,6 +1478,8 @@ txHandlerTableData gTxRootTableData = {
 txHandlerTableData gTxTopTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
+    { kNameSpaceID_XSLT, "variable", txFnStartTopVariable, txFnEndTopVariable },
+    { kNameSpaceID_XSLT, "param", txFnStartTopVariable, txFnEndTopVariable },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartOtherTop, txFnEndOtherTop },
@@ -1471,6 +1570,17 @@ txHandlerTableData gTxForEachTableData = {
   txFnTextConinueTemplate
 };
 
+txHandlerTableData gTxTopVariableTableData = {
+  // Handlers
+  { { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementStartTopVar, 0 },
+  // LRE
+  { 0, 0, txFnStartElementStartTopVar, 0 },
+  // Text
+  txFnTextStartTopVar
+};
+
 
 
 /**
@@ -1541,6 +1651,7 @@ txHandlerTable::init()
     INIT_HANDLER(CallTemplate);
     INIT_HANDLER(Variable);
     INIT_HANDLER(ForEach);
+    INIT_HANDLER(TopVariable);
 
     return MB_TRUE;
 }
@@ -1558,4 +1669,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(CallTemplate);
     SHUTDOWN_HANDLER(Variable);
     SHUTDOWN_HANDLER(ForEach);
+    SHUTDOWN_HANDLER(TopVariable);
 }

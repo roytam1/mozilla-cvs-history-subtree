@@ -41,6 +41,8 @@
 #include "txInstructions.h"
 #include "txStylesheet.h"
 #include "txVariableMap.h"
+#include "txRtfHandler.h"
+#include "txXSLTProcessor.h"
 
 #ifndef TX_EXE
 #include "nsIDOMDocument.h"
@@ -119,8 +121,75 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                               ExprResult*& aResult)
 {
     txExpandedName name(aNamespace, aLName);
+
+    // look for a local variable
     aResult = mLocalVariables->getVariable(name);
-    NS_ENSURE_TRUE(aResult, NS_ERROR_FAILURE);
+    if (aResult) {
+        return NS_OK;
+    }
+
+    // look for an evaluated global variable
+    aResult = mGlobalVariableValues.getVariable(name);
+    if (aResult) {
+        return NS_OK;
+    }
+
+    // Is there perchance a global variable not evaluated yet?
+    Expr* expr;
+    txInstruction* instr;
+    nsresult rv = mStylesheet->getGlobalVariable(name, expr, instr);
+    if (NS_FAILED(rv)) {
+        // XXX ErrorReport: variable doesn't exist in this scope
+        return rv;
+    }
+    
+    NS_ASSERTION(expr && !instr || !expr && instr,
+                 "global variable should have either instruction or expression");
+
+    // evaluate the global variable
+    pushEvalContext(mInitialEvalContext);
+    if (expr) {
+        aResult = expr->evaluate(getEvalContext());
+        NS_ENSURE_TRUE(aResult, NS_ERROR_FAILURE);
+    }
+    else {
+        Document* rtfdoc;
+        rv = getRTFDocument(&rtfdoc);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        txRtfHandler* handler = new txRtfHandler(rtfdoc);
+        NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
+
+        rv = pushResultHandler(handler);
+        if (NS_FAILED(rv)) {
+            delete handler;
+            return rv;
+        }
+
+        txInstruction* prevInstr = mNextInstruction;
+        // set return to nsnull to stop execution
+        rv = runTemplate(instr, nsnull);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        // XXX reset current-template-rule
+
+        rv = txXSLTProcessor::execute(*this);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        mNextInstruction = prevInstr;
+        popResultHandler();
+        aResult = handler->mResultTreeFragment;
+        handler->mResultTreeFragment = nsnull;
+        delete handler;
+    }
+    popEvalContext();
+
+    rv = mGlobalVariableValues.bindVariable(name, aResult, PR_TRUE);
+    if (NS_FAILED(rv)) {
+        delete aResult;
+        aResult = nsnull;
+        return rv;
+    }
 
     return NS_OK;
 }
@@ -251,6 +320,12 @@ txExecutionState::getNextInstruction()
 }
 
 nsresult
+txExecutionState::runTemplate(txInstruction* aTemplate)
+{
+    return runTemplate(aTemplate, mNextInstruction);
+}
+
+nsresult
 txExecutionState::runTemplate(txInstruction* aTemplate,
                               txInstruction* aReturnTo)
 {
@@ -260,8 +335,7 @@ txExecutionState::runTemplate(txInstruction* aTemplate,
     mLocalVariables = new txVariableMap;
     NS_ENSURE_TRUE(mLocalVariables, NS_ERROR_OUT_OF_MEMORY);
 
-    txInstruction* ret = aReturnTo ? aReturnTo : mNextInstruction;
-    rv = mReturnStack.push(ret);
+    rv = mReturnStack.push(aReturnTo);
     NS_ENSURE_SUCCESS(rv, rv);
     
     mNextInstruction = aTemplate;

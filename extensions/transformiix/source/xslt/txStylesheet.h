@@ -44,11 +44,12 @@
 #include "List.h"
 #include "Expr.h"
 
+class txInstruction;
 class txToplevelItem;
 class txPattern;
-class txInstruction;
 class txTemplateItem;
 class txDecimalFormat;
+class txVariableItem;
 
 class txStylesheet
 {
@@ -71,6 +72,8 @@ public:
     txInstruction* getAttributeSet(const txExpandedName& aName);
     txInstruction* getNamedTemplate(const txExpandedName& aName);
     txOutputFormat* getOutputFormat();
+    nsresult getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
+                               txInstruction*& aInstr);
 
     /**
      * Called by the stylesheet compiler once all stylesheets has been read.
@@ -117,8 +120,18 @@ private:
         txPattern* mMatch;
         double mPriority;
     };
+    
+    class GlobalVariable : public TxObject {
+    public:
+        GlobalVariable(Expr* aExpr, txInstruction* aFirstInstruction);
+        ~GlobalVariable();
+
+        Expr* mExpr;
+        txInstruction* mFirstInstruction;
+    };
 
     nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);
+    nsresult addGlobalVariable(txVariableItem* aVariable);
 
 
     // List of ImportFrames
@@ -142,6 +155,9 @@ private:
 
     // Map with all named attribute sets
     txExpandedNameMap mAttributeSets;
+    
+    // Map with all global variables and parameters
+    txExpandedNameMap mGlobalVariables;
     
     // Default templates
     txInstruction* mContainerTemplate;

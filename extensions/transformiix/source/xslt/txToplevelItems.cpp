@@ -43,12 +43,7 @@
 
 txInstructionContainer::~txInstructionContainer()
 {
-    txInstruction* instr = mFirstInstruction;
-    while (instr) {
-        txInstruction* next = instr->mNext;
-        delete instr;
-        instr = next;
-    }
+    delete mFirstInstruction;
 }
 
 txStripSpaceItem::~txStripSpaceItem()
@@ -70,3 +65,15 @@ txTemplateItem::~txTemplateItem()
 {
     delete mMatch;
 }
+
+txVariableItem::txVariableItem(const txExpandedName& aName, Expr* aValue,
+                               PRBool aIsParam)
+    : mName(aName), mValue(aValue), mIsParam(aIsParam)
+{
+}
+
+txVariableItem::~txVariableItem()
+{
+    delete mValue;
+}
+
