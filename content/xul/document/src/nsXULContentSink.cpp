@@ -72,6 +72,7 @@
 #include "nsIViewManager.h"
 #include "nsIWebShell.h"
 #include "nsIXMLContent.h"
+#include "nsIXMLElementFactory.h"
 #include "nsIXULChildDocument.h"
 #include "nsIXULContentSink.h"
 #include "nsIXULContentUtils.h"
@@ -105,6 +106,7 @@ static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
 
 
 static NS_DEFINE_CID(kHTMLElementFactoryCID,    NS_HTML_ELEMENT_FACTORY_CID);
+static NS_DEFINE_CID(kXMLElementFactoryCID,     NS_XML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
@@ -156,6 +158,7 @@ protected:
     static nsrefcnt             gRefCnt;
     static nsIRDFService*       gRDFService;
     static nsIHTMLElementFactory* gHTMLElementFactory;
+    static nsIXMLElementFactory*  gXMLElementFactory;
     static nsINameSpaceManager*   gNameSpaceManager;
 
     static nsIAtom* kDataSourcesAtom;
@@ -298,6 +301,7 @@ protected:
 nsrefcnt XULContentSinkImpl::gRefCnt;
 nsIRDFService* XULContentSinkImpl::gRDFService;
 nsIHTMLElementFactory* XULContentSinkImpl::gHTMLElementFactory;
+nsIXMLElementFactory* XULContentSinkImpl::gXMLElementFactory;
 nsINameSpaceManager* XULContentSinkImpl::gNameSpaceManager;
 
 nsIAtom* XULContentSinkImpl::kDataSourcesAtom;
@@ -465,6 +469,12 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
                                                 nsnull,
                                                 NS_GET_IID(nsIHTMLElementFactory),
                                                 (void**) &gHTMLElementFactory);
+        if (NS_FAILED(rv)) return;
+
+        rv = nsComponentManager::CreateInstance(kXMLElementFactoryCID,
+                                                nsnull,
+                                                NS_GET_IID(nsIXMLElementFactory),
+                                                (void**) &gXMLElementFactory);
         if (NS_FAILED(rv)) return;
 
         rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
@@ -1918,40 +1928,20 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
         return OpenScript(aNode);
     }
 
-    // Create a dummy element that we can throw some attribute
-    // onto. We can't create a XUL element because as soon as you
-    // start setting magic attributes, it goes off and starts to cook
-    // you breakfast. We'd really like to use an XML element here, but
-    // we are not sufficiently holy to be able to access _that_ CID.
-    nsCOMPtr<nsIContent> element;
-    rv = CreateHTMLElement(kScriptAtom, &element);
-
-    if (NS_FAILED(rv)) {
-        PR_LOG(gLog, PR_LOG_ALWAYS,
-               ("xul: unable to create element '%s' at line %d",
-                NS_STATIC_CAST(const char*, nsCAutoString(aNode.GetText())),
-                aNode.GetSourceLineNumber()));
-
-        return rv;
-    }
-
-    // Add the attributes
-    rv = AddAttributes(aNode, element);
-    if (NS_FAILED(rv)) return rv;
-
+    // First, see if the element is already in the tree. If so, we can
+    // do _immediate_ hookup.
     nsAutoString id;
-    rv = element->GetAttribute(kNameSpaceID_None, kIdAtom, id);
+    rv = GetXULIDAttribute(aNode, id);
     if (NS_FAILED(rv)) return rv;
 
-    if (rv != NS_CONTENT_ATTR_HAS_VALUE) {
+    if (id.Length() == 0) {
         PR_LOG(gLog, PR_LOG_ALWAYS,
-               ("expected element to have 'id' attribute at line %d",
+               ("xul: overlay element at line %d has no 'id' attribute",
                 aNode.GetSourceLineNumber()));
 
         return NS_OK;
     }
 
-    // See if we can hook this element up into the document
     nsCOMPtr<nsIDOMXULDocument> domxuldoc = do_QueryInterface(mDocument);
     if (! domxuldoc)
         return NS_ERROR_UNEXPECTED;
@@ -1960,22 +1950,42 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
     rv = domxuldoc->GetElementById(id, getter_AddRefs(domparent));
     if (NS_FAILED(rv)) return rv;
 
+    nsCOMPtr<nsIContent> element;
+
     if (domparent) {
         // Great, the element was already in the content model. We'll
         // just hook it up.
-        nsCOMPtr<nsIContent> parent = do_QueryInterface(domparent);
-        if (! parent)
+        element = do_QueryInterface(domparent);
+        NS_ASSERTION(element != nsnull, "element is not an nsIContent");
+        if (! element)
             return NS_ERROR_UNEXPECTED;
-
-        rv = Merge(parent, element);
-        if (NS_FAILED(rv)) return rv;
-
-        // Since we've hit the overlay target, we _really_ want to
-        // push the overlay target onto the context stack, _not_ the
-        // overlay element we just created.
-        element = parent;
     }
     else {
+        // Create a dummy element that we can throw some attributes
+        // and children onto.
+        nsCOMPtr<nsIXMLContent> xml;
+        rv = gXMLElementFactory->CreateInstanceByTag(nsAutoString("overlay"), getter_AddRefs(xml));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create overlay element");
+        if (NS_FAILED(rv)) return rv;
+
+        element = do_QueryInterface(xml);
+        NS_ASSERTION(element != nsnull, "xml element is not an nsIXMLContent");
+        if (! xml)
+            return NS_ERROR_UNEXPECTED;
+
+        // Initialize the overlay element
+        rv = element->SetDocument(mDocument, PR_FALSE);
+        if (NS_FAILED(rv)) return rv;
+            
+        // Set up namespace junk so that subsequent parsing won't
+        // freak out.
+        nsCOMPtr<nsINameSpace> ns;
+        rv = GetTopNameSpace(&ns);
+        if (NS_FAILED(rv)) return rv;
+            
+        rv = xml->SetContainingNameSpace(ns);
+        if (NS_FAILED(rv)) return rv;
+
         OverlayForwardReference* fwdref = new OverlayForwardReference(element);
         if (! fwdref)
             return NS_ERROR_OUT_OF_MEMORY;
@@ -1991,6 +2001,10 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
         // No match, just push the overlay element onto the context
         // stack so we have somewhere to hang its child nodes off'n.
     }
+
+    // Add the attributes
+    rv = AddAttributes(aNode, element);
+    if (NS_FAILED(rv)) return rv;
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
