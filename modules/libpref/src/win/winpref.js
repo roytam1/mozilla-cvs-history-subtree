@@ -129,7 +129,7 @@ pref("font.size.variable.he", 16);
 pref("font.size.fixed.he", 13);
 
 pref("font.size.variable.ja", 16);
-pref("font.size.fixed.ja", 16);
+pref("font.size.fixed.ja", 14);
 
 pref("font.size.variable.ko", 16);
 pref("font.size.fixed.ko", 16);
