@@ -328,6 +328,7 @@ sub PrintUsage
 
            -v                        : verbose. Will increase message output. May be repeated.
        \n";
+  exit;
 }
 
 sub GetTopSrcDir

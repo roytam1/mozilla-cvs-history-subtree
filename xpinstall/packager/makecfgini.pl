@@ -202,7 +202,6 @@ sub OutputInstallSize
   my($installSize);
 
   $installSize    = MozPackager::realDiskSpace($inPath);
-  $installSize   += 32768; # take into account install.js
   $installSize    = int($installSize / 1024);
   $installSize   += 1;
   return($installSize);
@@ -215,7 +214,6 @@ sub OutputInstallSizeArchive
   my($dev, $ino, $mode, $nlink, $uid, $gui, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks);
 
   ($dev, $ino, $mode, $nlink, $uid, $gui, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat $inPath;
-  $installSizeArchive   += 32768; # take into account install.js
   $installSizeArchive    = int($size / 1024);
   $installSizeArchive   += 1;
   return($installSizeArchive);
