@@ -160,8 +160,11 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
       (do_CreateInstance("@mozilla.org/file/local;1"));
     if (!profileFile)
       continue;
-
+#if defined (XP_MACOSX)
+	rv = profileFile->SetPersistentDescriptor(nsDependentCString(profilePath));
+#else
     rv = profileFile->InitWithNativePath(nsDependentCString(profilePath));
+#endif
     if (NS_FAILED(rv)) continue;
 
     nsCOMPtr<nsIToolkitProfile> tprofile;
