@@ -347,7 +347,7 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
     format = nsIGFXFormat::RGB;
   } else if (channels > 3) {
     if (alpha_bits == 8) {
-      format = nsIGFXFormat::RGB_A8;
+      decoder->mImage->GetPreferredAlphaChannelFormat(&format);
     } else if (alpha_bits == 1) {
       format = nsIGFXFormat::RGB_A1;
     }
@@ -483,6 +483,10 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
         decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
         decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
       }
+      break;
+    case nsIGFXFormat::RGBA:
+    case nsIGFXFormat::BGRA:
+      decoder->mFrame->SetImageData(line, bpr, row_num*bpr);
       break;
     }
 
