@@ -532,6 +532,9 @@ retry:
 	    if (ts->flags & TSF_NEWLINES)
 		break;
 	}
+#ifdef XP_OS2
+	else if (c == EOF) break;
+#endif
     } while (JS_ISSPACE(c));
 
     ts->token.ptr = ts->linebuf.ptr - 1;
