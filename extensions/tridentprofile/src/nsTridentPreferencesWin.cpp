@@ -594,7 +594,7 @@ nsTridentPreferencesWin::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray*
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
           char* host = nsnull;
-          if (KeyIsURI(key, host)) {
+          if (KeyIsURI(key, &host)) {
             // This looks like a URL and could be a password. If it has username and password data, then we'll treat
             // it as one and add it to the password manager
             unsigned char* username = NULL;
@@ -621,7 +621,7 @@ nsTridentPreferencesWin::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray*
 }
 
 PRBool
-nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char* aHost)
+nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char** aHost)
 {
   *aHost = nsnull;
 
@@ -636,7 +636,7 @@ nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char* aHost)
     if (validScheme) {
       nsCAutoString host;
       uri->GetHost(host);
-      aHost = nsCRT::strdup(host.get());
+      *aHost = nsCRT::strdup(host.get());
       return validScheme;
     }
   }
@@ -668,7 +668,7 @@ nsTridentPreferencesWin::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray*
           // Assume all keys that are valid URIs are signons, not saved form data, and that 
           // all keys that aren't valid URIs are form field names (containing form data).
           char* host = nsnull;
-          if (!KeyIsURI(key, host)) {
+          if (!KeyIsURI(key, &host)) {
             // Search the data for a username that matches one of the found signons. 
             EnumerateUsernames(key, (PRUnichar*)data, (count/sizeof(PRUnichar)), aSignonsFound);
           }
@@ -676,6 +676,16 @@ nsTridentPreferencesWin::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray*
 
         ::CoTaskMemFree(data);
       }
+    }
+    // Now that we've done resolving signons, we need to walk the signons list, freeing the data buffers 
+    // for each SIGNONDATA entry, since these buffers were allocated by the system back in |GetSignonListFromPStore|
+    // but never freed. 
+    PRInt32 signonCount = aSignonsFound->Count();
+    for (PRInt32 i = 0; i < signonCount; ++i) {
+      SIGNONDATA* sd = (SIGNONDATA*)aSignonsFound->ElementAt(i);
+      ::CoTaskMemFree(sd->user);  // |sd->user| is a pointer to the start of a buffer that also contains sd->pass
+      nsCRT::free(sd->host);
+      delete sd;
     }
   }
   return NS_OK;
@@ -711,17 +721,6 @@ nsTridentPreferencesWin::EnumerateUsernames(const nsAString& aKey, PRUnichar* aD
     cursor += advance; // Advance to next string (length of curr string + 1 PRUnichar for null separator)
     offset += advance;
   } 
-
-  // Now that we've done resolving signons, we need to walk the signons list, freeing the data buffers 
-  // for each SIGNONDATA entry, since these buffers were allocated by the system back in |GetSignonListFromPStore|
-  // but never freed. 
-
-  for (PRInt32 i = 0; i < signonCount; ++i) {
-    SIGNONDATA* sd = (SIGNONDATA*)aSignonsFound->ElementAt(i);
-    ::CoTaskMemFree(sd->user);  // |sd->user| is a pointer to the start of a buffer that also contains sd->pass
-    nsCRT::free(sd->host);
-    delete sd;
-  }
 }
 
 void 
@@ -775,7 +774,7 @@ nsTridentPreferencesWin::CopyFormData(PRBool aReplace)
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
           char* host = nsnull;
-          if (!KeyIsURI(key, host))
+          if (!KeyIsURI(key, &host))
             AddDataToFormHistory(key, (PRUnichar*)data, count);
         }
       }
