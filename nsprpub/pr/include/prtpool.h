@@ -24,6 +24,12 @@
 #include "prio.h"
 #include "prerror.h"
 
+/*
+ * NOTE:
+ *		THIS API IS A PRELIMINARY VERSION IN NSPR 4.0 AND IS SUBJECT TO
+ *		CHANGE
+ */
+
 PR_BEGIN_EXTERN_C
 
 typedef struct PRJobIoDesc {
