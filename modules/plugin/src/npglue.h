@@ -611,8 +611,9 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsIOutputStream:
 
-    NS_IMETHOD
-    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount); 
+    NS_IMETHOD_(PRInt32)
+    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount,
+          nsresult *errorResult);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManagerStream specific methods:
