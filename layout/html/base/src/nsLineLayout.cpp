@@ -2382,6 +2382,9 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
       //XXXrbs -- disable this restriction because it causes text frames
       //          to jam together when 'font-size-adjust' is enabled
       //          and layout is using dynamic font heights (bug 20394)
+      //       -- Note: With this code enabled and with the fact that we are not
+      //          using Em[Ascent|Descent] as nsDimensions for text metrics in
+      //          GFX mean that the discussion in bug 13072 cannot hold.
       if (PR_TRUE) { // was: !pfd->GetFlag(PFD_ISTEXTFRAME)) {
         nscoord yTop, yBottom;
         if (frameSpan) {
