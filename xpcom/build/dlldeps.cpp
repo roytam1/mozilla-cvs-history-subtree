@@ -42,6 +42,8 @@
 #include "xptcall.h"
 #include "nsIFileSpec.h"
 
+extern void xptc_dummy();
+
 void XXXNeverCalled()
 {
     nsVoidArray();
@@ -75,6 +77,5 @@ void XXXNeverCalled()
 #endif
     XPTC_InvokeByIndex(NULL, 0, 0, NULL);
     NS_NewFileSpec(NULL);
-    nsXPTCStubBase* stub = NULL;
-    stub->Stub22();
+    xptc_dummy();
 }
