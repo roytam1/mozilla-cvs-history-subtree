@@ -103,7 +103,6 @@
 #include "nsNetCID.h"
 #include "nsNetError.h"
 #include "nsMsgUtils.h"
-#include "nsIRDFService.h"
 #include "nsIMsgMdnGenerator.h"
 #include "nsISmtpServer.h"
 #include "nsIMsgCompose.h"
@@ -2328,6 +2327,11 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
                     mimeFinder->GetTypeFromExtension(fileExt.get(), &(m_attachments[newLoc].m_type));
                 }
               }
+#if !defined(XP_MAC) && !defined(XP_MACOSX)
+              if (m_attachments[newLoc].m_type && 
+                  !strcmp(m_attachments[newLoc].m_type, "multipart/appledouble"))
+                PR_FREEIF(m_attachments[newLoc].m_type);
+#endif
             }
           }
         }
