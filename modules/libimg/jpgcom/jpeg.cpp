@@ -25,7 +25,8 @@
 
 #include "nsIImgDecoder.h" // include if_struct.h Needs to be first
 #include "nsIImgDCallbk.h"
-#include "dllcompat.h"
+//#include "dllcompat.h"
+#include "nsCRT.h"
 #include "nsJPGDecoder.h"
 #include "jpeg.h"
 #include "merrors.h"
@@ -286,8 +287,8 @@ fill_input_buffer (j_decompress_ptr jd)
 		}
 
 		/* Copy remainder of netlib buffer into backtrack buffer. */
-		XP_BCOPY (src->pub.next_input_byte,
-				  src->backtrack_buffer + src->backtrack_buflen,
+        nsCRT::memmove(src->backtrack_buffer + src->backtrack_buflen,
+                  src->pub.next_input_byte,
 				  src->pub.bytes_in_buffer);
 
 		/* Point to start of data to be rescanned. */
