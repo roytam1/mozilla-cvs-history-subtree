@@ -47,8 +47,10 @@ class nsStringMap
 public:
     nsStringMap();
     ~nsStringMap();
+    PRBool Put(const char *str, PRUint32 slen, void *obj, PRBool copy=PR_FALSE);
     PRBool Put(const char *str, void *obj, PRBool copy=PR_FALSE);
     void*  Get(const char *str);
+    void*  Get(const char *str, PRUint32 slen);
     void   Reset();
     void   Reset(nsStringMapEnumFunc destroyFunc, void *aClosure = 0);
     void   Enumerate(nsStringMapEnumFunc aEnumFunc, void *aClosure = 0);
@@ -57,27 +59,29 @@ public:
         Patricia   *l, *r;
         PRUint32    bit;    // Bit position for l/r comp
         const char *key;
+        PRUint32    len;
         void       *obj;
     };
 
-    // The BitTester class is used to test a particular bit position in a 
-    // 0 terminated string of unknown length.  Bits after the end of the
-    // string are treated as zero
+    // The BitTester class is used to test a particular bit position in an
+    // array of characters.  It does not assign any special meaning to 0
+    // characters.  Bits past the end of the array are treated as 0
     class BitTester {
-        PRUint32    slen;
-        const char *cstr;
+        const PRUint32 slen;
+        const char    *cstr;
     public:
         BitTester(const char *s) : slen(nsCRT::strlen(s)), cstr(s) {}
         BitTester(const char *s, PRUint32 l) : slen(l), cstr(s) {}
 
-        // We dont know how long ostr is, but by including the terminating
-        // 0 character in the comparison we cover the case where str is a
-        // substring of ostr.
-        PRInt32 strcmp(const char *ostr) const {
-            return nsCRT::memcmp((void*)cstr, ostr, slen+1);
+        PRInt32 memcmp(const char *ostr, PRUint32 olen) {
+            if(olen==slen) {
+                return nsCRT::memcmp((void*)cstr, ostr, slen);
+            } else {
+                return olen - slen;
+            }
         }
 
-        PRUint32 strlen() const {return slen;}
+        PRUint32 datalen() const {return slen;}
 
         static PRBool isset_checked(const char *str, PRUint32 idx) {
             return (str[idx/8] & (1<<(idx & 7))) != 0;

@@ -49,9 +49,11 @@
 
     struct nsCRT {
         static int strlen(const char *a) {return ::strlen(a);}
-        static int strcmp(const char *a, const char *b) {return ::strcmp(a,b);}
-        static int memcmp(const char *a, const char *b, int c) {
+        static int memcmp(const void *a, const void *b, PRUint32 c) {
             return ::memcmp(a,b,c);
+        }
+        static void memcpy(const void *a, const void *b, PRUint32 c) {
+            ::memcmp(a,b,c);
         }
     };
 #else
@@ -74,6 +76,7 @@ nsStringMap::nsStringMap() : numEntries(0)
     head.l   = head.r = &head;
     head.bit = ~0;
     head.key = zero_str;
+    head.len = 1;
     head.obj = 0;
 
     // Initialize the arena.  Guess that a 512 byte block size is good
@@ -87,6 +90,7 @@ nsStringMap::Reset()
     head.l   = head.r = &head;
     head.bit = ~0;
     head.key = zero_str;
+    head.len = 1;
     head.obj = 0;
 
     // Reinitialize the Arena
@@ -129,13 +133,27 @@ nsStringMap::searchDown(BitTester &key)
 }
 
 void*
+nsStringMap::Get(const char *str, PRUint32 slen)
+{
+    BitTester key(str, slen);
+
+    Patricia *t = searchDown(key);
+
+    if(!key.memcmp(t->key, t->len)) {
+        return t->obj;
+    }
+
+    return 0;
+}
+
+void*
 nsStringMap::Get(const char *str)
 {
     BitTester key(str);
 
     Patricia *t = searchDown(key);
 
-    if(!key.strcmp(t->key)) {
+    if(!key.memcmp(t->key, t->len)) {
         return t->obj;
     }
 
@@ -146,11 +164,17 @@ PRBool
 nsStringMap::Put(const char *str, void *obj, PRBool copy)
 {
     PRUint32 slen = nsCRT::strlen(str);
+    return Put(str, slen, obj, copy);
+}
 
+PRBool
+nsStringMap::Put(const char *str, PRUint32 slen, void *obj, PRBool copy)
+{
     if(copy) {
-        PRUint32 asize = (1+slen+7) & ~7;
+        PRUint32 mask  = sizeof(double) - 1;
+        PRUint32 asize = (slen+mask) & ~mask;
         char *tstr = (char*) PL_ArenaAllocate(&mPool, asize);
-        nsCRT::memcpy(tstr, str, 1+slen);
+        nsCRT::memcpy(tstr, str, slen);
         str = tstr;
     }
 
@@ -158,7 +182,7 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
 
     Patricia *t = searchDown(key);
 
-    if(!key.strcmp(t->key)) {
+    if(!key.memcmp(t->key, t->len)) {
         t->obj = obj;
         return PR_TRUE;
     }
@@ -166,8 +190,8 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
     // This is somewhat ugly.  We need to find the maximum bit position that
     // differs, but this is complicated by the fact that we have random length
     // data.  Assume that data past the end of the string is 0.
-    const PRUint32 klen = key.strlen();
-    const PRUint32 tlen = nsCRT::strlen(t->key);
+    const PRUint32 klen = key.datalen();
+    const PRUint32 tlen = t->len;
     PRUint32   bpos;
     if(klen>tlen) {
         bpos = 8 * klen - 1;
@@ -194,6 +218,7 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
     }
 
     t->key = str;
+    t->len = key.datalen();
     t->obj = obj;
     t->bit = bpos;
 
@@ -262,10 +287,13 @@ int main()
         map.Put(strings[idx], (void*)(1+idx));
     }
 
+    printf("Lookup Test\n");
     while(--idx>=0) {
         void *ptr = map.Get(strings[idx]);
         printf("%d: %s\n", (long)ptr, strings[idx]);
     }
+
+    printf("\nEnumeration Test\n");
 
     map.Enumerate(etest, 0);
 
