@@ -1,20 +1,19 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public License
- * Version 1.0 (the "MPL"); you may not use this file except in
- * compliance with the MPL.  You may obtain a copy of the MPL at
- * http://www.mozilla.org/MPL/
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License
+ * at http://www.mozilla.org/MPL/
  *
- * Software distributed under the MPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the MPL
- * for the specific language governing rights and limitations under the
- * MPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
  * The Initial Developers of this code under the MPL are Owen Taylor
  * <otaylor@redhat.com> and Christopher Blizzard <blizzard@redhat.com>.
  * Portions created by the Initial Developers are Copyright (C) 1999
- * Owen Taylor and Christopher Blizzard.  All Rights Reserved.
- */
+ * Owen Taylor and Christopher Blizzard.  All Rights Reserved.  */
 
 #ifndef __GDK_SUPERWIN_H__
 #define __GDK_SUPERWIN_H__
