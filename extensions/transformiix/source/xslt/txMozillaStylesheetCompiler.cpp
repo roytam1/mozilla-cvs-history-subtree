@@ -184,6 +184,16 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
 
             nameSpace = child;
         }
+        else if (!atts[attTotal].mPrefix &&
+                 atts[attTotal].mLocalName == txXMLAtoms::xmlns) {
+            nsCOMPtr<nsINameSpace> child;
+            rv = nameSpace->CreateChildNameSpace(nsnull,
+                                                 atts[attTotal].mValue,
+                                                 *getter_AddRefs(child));
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            nameSpace = child;
+        }
 
         ++attTotal;
         aAtts += 2;
@@ -197,8 +207,16 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
 
     PRInt32 attCount;
     for (attCount = 0; attCount < attTotal; ++attCount) {
-        nameSpace->FindNameSpaceID(atts[attCount].mPrefix,
-                                   atts[attCount].mNamespaceID);
+        if (atts[attCount].mPrefix) {
+            nameSpace->FindNameSpaceID(atts[attCount].mPrefix,
+                                       atts[attCount].mNamespaceID);
+        }
+        else if (atts[attCount].mLocalName == txXMLAtoms::xmlns) {
+            atts[attCount].mNamespaceID = kNameSpaceID_XMLNS;
+        }
+        else {
+            atts[attCount].mNamespaceID = kNameSpaceID_None;
+        }
     }
 
     rv = mCompiler->startElement(namespaceID, localname, prefix, atts,
