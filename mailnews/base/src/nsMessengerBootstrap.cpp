@@ -107,8 +107,8 @@ NS_IMETHODIMP
 nsMessengerBootstrap::GetHelpInfo(nsACString& aResult)
 {
   aResult.Assign(NS_LITERAL_CSTRING(
-    "  -mail                  Open the mail folder view.\n"
-    "  -options               Open the options dialog.\n"));
+    "  -mail                Open the mail folder view.\n"
+    "  -options             Open the options dialog.\n"));
 
   return NS_OK;
 }
