@@ -71,6 +71,11 @@ void stub_Alert(MWContext *context,
     }
 }
 
+void FE_Alert(MWContext *context, const char *msg)
+{
+    stub_Alert(context, msg);
+}
+
 XP_Bool stub_Confirm(MWContext *context,
                      const char *msg)
 {

@@ -357,9 +357,9 @@ FE_ConnectToRemoteHost(MWContext * context, int url_type, char *
  */
 
 //      The purpose of FEU_AhAhAhAhStayingAlive is to house the one and only
-//      saturday night fever function; named after Chouck's idol.
+//      saturday night fever function; named after Chouck''s idol.
 //      This function will attempt to do all that is necessary in order
-//      to keep the application's messages flowing and idle loops
+//      to keep the application''s messages flowing and idle loops
 //      going when we need to finish an asynchronous operation
 //      synchronously.
 //      The current cases that cause this are RPC calls into the
@@ -370,7 +370,7 @@ FE_ConnectToRemoteHost(MWContext * context, int url_type, char *
 //      It is too vital that this work, always.
 //
 //      The function only attempts to look at one message at a time, or
-//      propigate one idle call at a time, keeping it's own idle count.
+//      propigate one idle call at a time, keeping its own idle count.
 //      This is not a loop.  YOU must provide the loop which calls this function.
 //
 //      Due to the nature and order of which we process windows messages, this
@@ -857,12 +857,6 @@ char *INTL_ResourceCharSet(void)
  * From ns/cmd/winfe/cfe.cpp
  *---------------------------------------------------------------------------
  */
-
-void FE_Alert(MWContext *pContext, const char *pMsg)
-{
-    MOZ_FUNCTION_STUB;
-}
-
 
 int32 FE_GetContextID(MWContext *pContext)
 {
