@@ -340,12 +340,37 @@ nsJunkmail.prototype = {
         function getHeaderVals(aHeaderName) {
             if (aHeaderName in headersByName) {
                 return headersByName[aHeaderName].join("\n");
+            } else if (aHeaderName == "ToCc") {
+                // This logic is closely cribbed from SpamAssassin's
+                // PerMsgStatus.pm:get_header(), note that it could end
+                // up with a trailing comma (bug?).
+                //
+                // XXX probably shouldn't generate this info dynamically,
+                // should add it to the table when the headers are read
+                // 
+                var toCc = getHeaderVals("To");
+                if (toCc && toCc != '') {
+                    toCc = toCc.slice(0,-1); // throw out the trailing newline
+                    if ( toCc.search(/\S/ != -1) ) {
+                        toCc += ", ";
+                    }
+                    
+                    var cc = getHeaderVals("Cc"); // append the cc list
+                    if (cc) {
+                        toCc += cc;
+                    }
+
+                    if (toCc.length != 0) { // if we've got anything, return it
+                        return toCc;
+                    }
+                }
+		return undefined;
             } else {
                 return undefined;
             }
         }
 
-        // returns all values of a header, joined with \n
+        // returns all values of a header in array form
         //
         function getHeaderValsArray(aHeaderName) {
             if (aHeaderName in headersByName) {
@@ -361,16 +386,14 @@ nsJunkmail.prototype = {
         //
         function executeTest(aTest) {
 
-            // XXX get rid of [0]s, probably
-
             // XXX header names currently case-sensitive, probably an issue
 
             var testResult;
             var headerValues;
 
             switch (aTest.operator) { 
-            case TEST_HEADER_REGEXP_MATCH:
 
+            case TEST_HEADER_REGEXP_MATCH:
                 // get the header we're trying to test, or the default value
                 // for this test, or just skip this test
                 //
@@ -387,7 +410,6 @@ nsJunkmail.prototype = {
                 break;
 
             case TEST_HEADER_REGEXP_NOMATCH:
-
                 // get the header we're trying to test, or the default value
                 // for this test, or just skip this test
                 //
@@ -437,8 +459,80 @@ nsJunkmail.prototype = {
             }
         }
 
-        // these functions are used by evals
+        function buildHeaderTable() {
+
+            // Build an table of arrays of lightly munged headers by
+            // name.  Leading whitespace on the header value has been
+            // eliminated,
+            // and continuations replaced by single space characters.
+            //
+            var headerRE = /^(\S+)\:\s+/g;  // global so lastIndex is set
+
+            for (var headerLine in aHeaders) {
+                if (aHeaders[headerLine] == "") {
+                    continue;   // ignore any empty lines
+                }
+
+                headerRE.lastIndex = 0;     // clear lastIndex
+                var matches = headerRE.exec(aHeaders[headerLine]);
+                try {
+                    var headerName = matches[1];
+                } catch (ex) {
+                    debug("_EXCEPTION_: failed to match '" 
+                          + aHeaders[headerLine] +"'\n");
+                }
+
+                if (! (headerName in headersByName)) {
+                    headersByName[headerName] = new Array();
+                }
+
+                // push header value, with continuations replaced, onto 
+                // the array of like-named headers
+                //
+                headersByName[headerName].push(
+                    aHeaders[headerLine].substring(headerRE.lastIndex)
+                    .replace(/\n\s+/g, " "));
+            }
+
+        }
+
+        buildHeaderTable();
+
+        // write some info about this message to the log
         //
+        var fromVals = getHeaderVals("From");
+        if (fromVals) {
+            var logMsg = "From: " + fromVals + "\n";
+            gLogStream.write(logMsg, logMsg.length);
+        }
+        var subjVals = getHeaderVals("Subject");
+        if (subjVals) {
+            logMsg = "Subject: " + subjVals + "\n";
+            gLogStream.write(logMsg, logMsg.length);
+        }
+
+        // execute all the tests.  at some point, we'll do this in
+        // a sorted order, so that we can bail out as soon as
+        // the msgScore hits a certain threshold.
+        //
+        for ( testName in headerTestsByName )
+        {
+            executeTest(headerTestsByName[testName]);
+        }
+
+        logMsg = "total message score: " + msgScore + "\n\n";
+        gLogStream.write(logMsg, logMsg.length);
+
+        // XXX don't hardcode this
+        //
+        if (msgScore >= 3.1) {
+            aListener.applyFilterHit(df, aMsgWindow);
+        }
+
+        return;
+
+        // all the following functions are used by evals
+
         function check_for_bad_helo() {
 
             // XXX rule out of date
@@ -511,75 +605,50 @@ nsJunkmail.prototype = {
             return 0;
         }
 
+        // XXX the SpamAssasin version of this test expects MIME-decoding
+        // to already have happened.  Need to think about this (not only 
+        // is the code here not ready to do that yet, I'm not even sure
+        // it's the right thing).
+        // 
         function check_subject_for_lotsa_8bit_chars() {
-            return 0;
-        }
 
-        function are_more_high_bits_set(str) {
-
-        }
-
-        // Build an table of arrays of lightly munged headers by
-        // name.  Leading whitespace on the header value has been eliminated,
-        // and continuations replaced by single space characters.
-        //
-        var headerRE = /^(\S+)\:\s+/g;  // global cause we want lastIndex set
-
-        for (var headerLine in aHeaders) {
-
-            if (aHeaders[headerLine] == "") {
-                continue;   // ignore any empty lines
-            }
-
-            headerRE.lastIndex = 0;     // clear lastIndex
-            var matches = headerRE.exec(aHeaders[headerLine]);
-            try {
-                var headerName = matches[1];
-            } catch (ex) {
-                debug("_EXCEPTION_: failed to match '" + aHeaders[headerLine]
-                      +"'\n");
-            }
-
-            if (! (headerName in headersByName)) {
-                headersByName[headerName] = new Array();
-            }
+            var subj = getHeaderVals("Subject");
             
-            // push header value, with continuations replaced, onto 
-            // the array of like-named headers
-            //
-            headersByName[headerName].push(
-                aHeaders[headerLine].substring(headerRE.lastIndex)
-                .replace(/\n\s+/g, " "));
+            if (subj) {
+
+                // cut [ and ] because 8-bit posts to mailing lists may not get
+                // hit otherwise. e.g.: Subject: [ILUG] X�uX .  Also cut
+                // *, since mail that has already gone through spamassassin
+                // multiple times will not be tagged on this second pass
+                // otherwise.
+                //
+                //   s/\[\]\* //g;
+
+                // XXXdmose I haven't included the above code here yet, because
+                // I don't believe the code does what the commentary claims.
+
+
+                if (are_more_high_bits_set(subj)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
-        var fromVals = getHeaderVals("From");
-        if (fromVals) {
-            var logMsg = "From: " + fromVals + "\n";
-            gLogStream.write(logMsg, logMsg.length);
-        }
-        var subjVals = getHeaderVals("Subject");
-        if (subjVals) {
-            logMsg = "Subject: " + subjVals + "\n";
-            gLogStream.write(logMsg, logMsg.length);
-        }
-
-        // execute all the tests.  at some point, we'll do this in
-        // a sorted order, so that we can bail out as soon as
-        // the msgScore hits a certain threshold.
+        // do more chars in the string contain high bits than not?
         //
-        for ( testName in headerTestsByName )
-        {
-            executeTest(headerTestsByName[testName]);
+        function are_more_high_bits_set(aString) {
+            var hiCharArray = aString.match(/[\x80-\xFF]/g);
+
+            if (hiCharArray) {
+                var numHis = hiCharArray.length;
+                var numLos = aString.length - numHis;
+                return (numLos <= numHis) && (numHis > 3);
+            }
+
+            return false;
         }
 
-        logMsg = "total message score: " + msgScore + "\n\n";
-        gLogStream.write(logMsg, logMsg.length);
-
-        // XXX don't hardcode this
-        //
-        if (msgScore >= 3.1) {
-            aListener.applyFilterHit(df, aMsgWindow);
-        }
     }
 }
 
