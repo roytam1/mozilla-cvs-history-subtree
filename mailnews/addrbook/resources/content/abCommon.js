@@ -776,6 +776,9 @@ function GetSelectedAddressBookDirID(abListItem)
   if (!selectedAB && abDirEntries && abDirEntries.localName == "menulist" && abDirEntries.selectedItem)
     selectedAB = abDirEntries.selectedItem.getAttribute("id");
 
+  // if we do not have a selected ab still, use personal addressbook
+  if (!selectedAB)
+    selectedAB = kPersonalAddressbookURI;
   return selectedAB;
 }
 
