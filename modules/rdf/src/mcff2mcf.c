@@ -225,7 +225,6 @@ getFirstToken (char* line, char* nextToken, int16* l)
 }	
 
 
-
 void
 addSlotValue (RDFFile f, RDF_Resource u, RDF_Resource s, void* v,
 		RDF_ValueType type, PRBool tv)
@@ -240,14 +239,16 @@ addSlotValue (RDFFile f, RDF_Resource u, RDF_Resource s, void* v,
    }
    if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE)) {
      f->genlAdded = true; 
-     if (startsWith("http", resourceID(u)) && strstr(resourceID(u), ".rdf")) {
+     if (strstr(resourceID(u), ".rdf") && startsWith("http", resourceID(u))) {
        RDFL rl = f->db->rdf;
        char* dburl = getBaseURL(resourceID(u));
-       while (rl) {
-         RDF_AddDataSource(rl->rdf, dburl);
-         rl = rl->next;
+       if (!startsWith(dburl, resourceID((RDF_Resource)v))) {
+         while (rl) {
+           RDF_AddDataSource(rl->rdf, dburl);
+           rl = rl->next;
+         }
+         freeMem(dburl);
        }
-       freeMem(dburl);
      }
    }
    (*f->assert)(f, f->db, u, s, v, type, tv);
@@ -256,8 +257,6 @@ addSlotValue (RDFFile f, RDF_Resource u, RDF_Resource s, void* v,
    notifySlotValueAdded(u, s, v, type);
 #endif
 }
-
-
 
 void
 assignSlot (RDF_Resource u, char* slot, char* value, RDFFile f)

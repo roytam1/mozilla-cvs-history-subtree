@@ -56,7 +56,7 @@ char *			gNavCenterDataSources1[15] = {
 			"rdf:appletalk",
 #endif
 			"rdf:lfs",  "rdf:ht",
-			"rdf:columns", "rdf:CookieStore", "rdf:find", NULL
+			"rdf:columns",  "rdf:find", NULL
 			};
 
 
@@ -1227,7 +1227,11 @@ HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush, int32 param_count
             *columnList = column;
             columnList = &(column->next);
             column->name = copyString(param_value);
-          }	
+          } else if (strcmp(param_name, "title") == 0) {
+            char* param_value = *(param_values + pn);
+            remoteStoreAdd(db->translators[0], r, gCoreVocab->RDF_name, 
+                           copyString(param_value), RDF_STRING_TYPE, 1);
+          }
           pn++;
         }    
         freeMem(dburl);        

@@ -63,6 +63,7 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_History;
   RDF_Resource RDF_HistoryBySite;
   RDF_Resource RDF_HistoryByDate;
+  RDF_Resource RDF_HistoryMostVisited;
   RDF_Resource RDF_bookmarkAddDate;
   RDF_Resource RDF_PersonalToolbarFolderCategory;
   RDF_Resource RDF_Column;

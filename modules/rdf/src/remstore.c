@@ -28,7 +28,7 @@
 #include "pm2rdf.h"
 #include "rdf-int.h"
 #include "bmk2mcf.h"
-
+#include "plstr.h"
 
 	/* globals */
 
@@ -286,7 +286,7 @@ RDFFilePossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inve
       (startsWith(rdf->url, resourceID(u))) &&
 	 
       (s == gCoreVocab->RDF_parent) && (containerp(u))) {
-    RDFFile newFile = readRDFFile( resourceID(u), u, false, rdf);
+    readRDFFile( resourceID(u), u, false, rdf);
     /*    if(newFile) newFile->lastReadTime = PR_Now(); */
   }
 }
@@ -683,3 +683,82 @@ MakeSCookDB (char* url)
     return ntr;
   } else return NULL;
 }
+
+struct RDFTOutStruct {
+  char* buffer;
+  int32 bufferSize;
+  int32 bufferPos;
+  char* temp;
+  RDFT store;
+};
+
+typedef struct RDFTOutStruct* RDFTOut;
+
+void addToRDFTOut (RDFTOut out) {
+  int32 len = strlen(out->temp);
+  if (len + out->bufferPos < out->bufferSize) {
+    PL_strcat(out->buffer, out->temp);
+    out->bufferPos = out->bufferPos + len;
+    memset(out->temp, '\0', 1000);
+  } else {
+    PR_Realloc(out->buffer, out->bufferSize + 20000);
+    out->bufferSize = out->bufferSize + 20000;
+    addToRDFTOut (out);
+  }
+}
+
+
+
+PRIntn
+RDFSerializerEnumerator (PLHashEntry *he, PRIntn i, void *arg)
+{
+  RDF_Resource u = (RDF_Resource)he->value;
+  RDFTOut out    = (RDFTOut) arg;
+  Assertion as = u->rarg1;
+  PRBool somethingOutp = 0;
+  while (as) {
+    if (as->db == out->store) {
+      if (!somethingOutp) {
+        somethingOutp = 1;
+        sprintf(out->temp, "<RDF:Description href=\"%s\">\n", resourceID(as->u));
+        addToRDFTOut(out);
+      }
+      if (as->type == RDF_RESOURCE_TYPE) {
+        sprintf(out->temp, "       <%s href=\"%s\"/>\n", resourceID(as->s), 
+                resourceID((RDF_Resource)as->value));    
+      } else if (as->type == RDF_INT_TYPE) {
+        sprintf(out->temp, "       <%s dt=\"int\">%i</%s>\n", resourceID(as->s), 
+                (int)as->value, resourceID(as->s));     
+      } else {  
+        sprintf(out->temp, "       <%s>%s</%s>\n", resourceID(as->s), 
+                (char*)as->value, resourceID(as->s));     
+      }
+      addToRDFTOut(out);
+    }
+    as = as->next;
+  }
+  if (somethingOutp) {
+    sprintf(out->temp, "</RDF:Description>\n\n");
+    addToRDFTOut(out);
+  }
+  return  HT_ENUMERATE_NEXT;    
+}
+
+
+char* 
+RDF_SerializeRDFStore (RDFT store) {
+  RDFTOut out = getMem(sizeof(struct RDFTOutStruct));
+  char* ans = out->buffer = getMem(20000);
+  out->bufferSize = 20000;
+  out->temp = getMem(1000);
+  out->store = store;
+  sprintf(out->temp, "<RDF:RDF>\n\n");
+  addToRDFTOut(out);
+  PL_HashTableEnumerateEntries(resourceHash, RDFSerializerEnumerator, out);
+  sprintf(out->temp, "</RDF:RDF>\n\n");
+  addToRDFTOut(out);
+  freeMem(out->temp);
+  freeMem(out);
+  return ans;
+}
+

@@ -134,9 +134,11 @@ createNavCenterVocab () {
   gNavCenter->RDF_History =  createContainer("NC:History");
   gNavCenter->RDF_HistoryBySite = createContainer("NC:HistoryBySite");
   gNavCenter->RDF_HistoryByDate = createContainer("NC:HistoryByDate");
+  gNavCenter->RDF_HistoryMostVisited = createContainer("NC:HistoryMostVisited");
   setResourceType(gNavCenter->RDF_History, HISTORY_RT);
   setResourceType(gNavCenter->RDF_HistoryBySite, HISTORY_RT);
   setResourceType(gNavCenter->RDF_HistoryByDate, HISTORY_RT);
+  setResourceType(gNavCenter->RDF_HistoryMostVisited, HISTORY_RT);
   gNavCenter->RDF_bookmarkAddDate  = newResource("bookmarkAddDate", RDF_ADDED_ON_STR);
   gNavCenter->RDF_PersonalToolbarFolderCategory = 
     RDF_GetResource(gCoreDB, "PersonalToolbarCat", true);

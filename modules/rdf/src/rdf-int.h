@@ -183,6 +183,8 @@ struct RDF_TranslatorStruct {
   arcLabelsInProc   arcLabelsIn;
   arcLabelsInProc   arcLabelsOut;
   accessFileProc    possiblyAccessFile;
+  RDFL dependents;
+  RDFL dependentOn; 
 };
 
 
@@ -398,6 +400,10 @@ RDFT MakeCookieStore (char* url);
 
 char* advertURLOfContainer (RDF r, RDF_Resource u) ;
 RDFT RDFTNamed (RDF rdf, char* name) ;
+
+char*  RDF_SerializeRDFStore (RDFT store) ;
+char * unescapeURL(char *inURL);
+
 
 
 

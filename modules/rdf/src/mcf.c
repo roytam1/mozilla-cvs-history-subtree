@@ -109,8 +109,8 @@ getTranslator (char* url)
 PR_PUBLIC_API(RDF)
 RDF_GetDB (const char** dataSources)
 {
-  uint16 n = 0;
-  uint16 m = 0;
+  int32 n = 0;
+  int32 m = 0;
   char* next ;
   RDF r = (RDF) getMem(sizeof(struct RDF_DBStruct)) ;
   RDFL nrl = (RDFL)getMem(sizeof(struct RDF_ListStruct));
@@ -192,14 +192,14 @@ RDF_ReleaseDataSource(RDF rdf, RDFT dataSource)
   RDFT next;
   while ((next = rdf->translators[n++]) != NULL) {
     if (next != dataSource) {
-      *(temp + m) = (RDFT) next;
+      *(temp + m++) = (RDFT) next;
     }
   }
   memset(rdf->translators, '\0', sizeof(RDFT) * rdf->numTranslators);
   memcpy(rdf->translators, temp, sizeof(RDFT) * (rdf->numTranslators -1));
   rdf->numTranslators--;
   dataSource->rdf = deleteFromRDFList(dataSource->rdf, rdf);
-  if (dataSource->rdf == NULL) {
+  if ((dataSource->rdf == NULL) && (dataSource->destroy != NULL)) {
     (*dataSource->destroy)(dataSource);
   }
   return 0;
@@ -253,7 +253,7 @@ RDF_ReleaseDB(RDF rdf)
 	  RDFL rlx ;
 	  if (rdft) {
 		  rlx =  rdft->rdf; 
-		  (*((RDFT*)rdf->translators + n))->rdf =  deleteFromRDFList(rlx, rdf); 
+		  rdft->rdf =  deleteFromRDFList(rlx, rdf); 
 		  if (rdft->rdf == NULL) callExitRoutine(n, rdf);
 	  }
       n++;
@@ -1108,7 +1108,11 @@ void
 sendNotifications2 (RDFT r, RDF_EventType opType, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv)
 {
   RDFL rl = r->rdf;
-  traceNotify(opTypeToString(opType), u, s, v, type);
+  if ((opType == RDF_ASSERT_NOTIFY) &&
+      (nlocalStoreHasAssertion(gLocalStore, u, s, v, type, !tv))) {
+	  return;
+  }
+
   while (rl) {
     sendNotifications(rl->rdf, opType, u, s, v, type, tv, r->url);
     rl = rl->next;
