@@ -218,6 +218,7 @@
 				F5CA1A1902D3956F01F34900,
 				F5F190BB02D1F81A01026D5D,
 				F5F190BE02D217C201026D5D,
+				F56610A1039474CB01A9666E,
 			);
 			isa = PBXGroup;
 			name = Resources;
@@ -256,6 +257,7 @@
 			buildPhases = (
 				29B97327FDCFA39411CA2CEA,
 				29B97328FDCFA39411CA2CEA,
+				F56610A2039474DC01A9666E,
 				29B9732BFDCFA39411CA2CEA,
 				F6BD639001B30F5301A962F7,
 				F6BD64B701B3167601A962F7,
@@ -4436,6 +4438,38 @@
 			settings = {
 			};
 		};
+		F56610A1039474CB01A9666E = {
+			isa = PBXFileReference;
+			name = ChimeraVersion.r;
+			path = resources/application/ChimeraVersion.r;
+			refType = 4;
+		};
+		F56610A2039474DC01A9666E = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			generatedFileNames = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			neededFileNames = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/Developer/Tools/Rez resources/application/ChimeraVersion.r -o build/Navigator.app/Contents/Resources/English.lproj/Localized.rsrc -useDF";
+		};
+		F56610A3039474F501A9666E = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			generatedFileNames = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			neededFileNames = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/Developer/Tools/Rez resources/application/ChimeraVersion.r -o build/Navigator.app/Contents/Resources/English.lproj/Localized.rsrc -useDF";
+		};
 		F566BD1202EFA9AD01A967F3 = {
 			isa = PBXFileReference;
 			name = CocoaPromptService.h;
@@ -6815,6 +6849,7 @@
 			buildPhases = (
 				F5BAAB1A02AC45D301A967F3,
 				F5BAAB1B02AC45D301A967F3,
+				F56610A3039474F501A9666E,
 				F5BAAB1C02AC45D301A967F3,
 				F5BAABA302AC693C01A967F3,
 				F5BAAC0A02AC69DA01A967F3,
@@ -6830,8 +6865,8 @@
 				F5BAAC3402AC6AA201A967F3,
 				F5BAAC3702AC6AA201A967F3,
 				F5BAAC3B02AC6AA201A967F3,
-				F5BAAB1D02AC45D301A967F3,
 				F55A4DFD03808BB401A80166,
+				F5BAAB1D02AC45D301A967F3,
 			);
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
