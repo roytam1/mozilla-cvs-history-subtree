@@ -146,9 +146,11 @@ nsMsgDBView::nsMsgDBView()
 
   mShowSizeInLines = PR_FALSE;
 
-  /* mCommandsNeedDisablingBecauseOffline - A boolean that tell us if we needed to disable commands because we're offline w/o a downloaded msg select */
+  /* mCommandsNeedDisablingBecauseOfSelection - A boolean that tell us if we needed to disable commands because of what's selected.
+    If we're offline w/o a downloaded msg selected, or a dummy message was selected.
+  */
   
-  mCommandsNeedDisablingBecauseOffline = PR_FALSE;  
+  mCommandsNeedDisablingBecauseOfSelection = PR_FALSE;  
   mRemovingRow = PR_FALSE;
   m_saveRestoreSelectionDepth = 0;
   // initialize any static atoms or unicode strings
@@ -1081,10 +1083,15 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
   nsMsgViewIndex *indices = selection.GetData();
   NS_ASSERTION(numSelected == selection.GetSize(), "selected indices is not equal to num of msg selected!!!");
 
-  PRBool commandsNeedDisablingBecauseOffline = PR_FALSE;
+  PRBool commandsNeedDisablingBecauseOfSelection = PR_FALSE;
 
-  if(WeAreOffline() && indices)
-      commandsNeedDisablingBecauseOffline = !OfflineMsgSelected(indices, numSelected);
+  if(indices)
+  {
+    if (WeAreOffline())
+      commandsNeedDisablingBecauseOfSelection = !OfflineMsgSelected(indices, numSelected);
+    if (!NonDummyMsgSelected(indices, numSelected))
+      commandsNeedDisablingBecauseOfSelection = PR_TRUE;
+  }
   // if only one item is selected then we want to display a message
   if (numSelected == 1)
   {
@@ -1127,7 +1134,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
   // (5) a different msg was selected - perhaps it was offline or not...matters only when we are offline
 
   if ((numSelected == mNumSelectedRows || 
-      (numSelected > 1 && mNumSelectedRows > 1)) && (commandsNeedDisablingBecauseOffline == mCommandsNeedDisablingBecauseOffline))
+      (numSelected > 1 && mNumSelectedRows > 1)) && (commandsNeedDisablingBecauseOfSelection == mCommandsNeedDisablingBecauseOfSelection))
   {
   } 
   // don't update commands if we're suppressing them, or if we're removing rows, unless it was the last row.
@@ -1136,7 +1143,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     mCommandUpdater->UpdateCommandStatus();
   }
   
-  mCommandsNeedDisablingBecauseOffline = commandsNeedDisablingBecauseOffline;
+  mCommandsNeedDisablingBecauseOfSelection = commandsNeedDisablingBecauseOfSelection;
   mNumSelectedRows = numSelected;
   return NS_OK;
 }
@@ -2008,6 +2015,8 @@ NS_IMETHODIMP nsMsgDBView::GetURIForViewIndex(nsMsgViewIndex index, char **resul
     rv = GetFolderForViewIndex(index, getter_AddRefs(folder));
     NS_ENSURE_SUCCESS(rv,rv);
   }
+  if (index == nsMsgViewIndex_None || m_flags[index] & MSG_VIEW_FLAG_DUMMY)
+    return NS_MSG_INVALID_DBVIEW_INDEX;
   return GenerateURIForMsgKey(m_keys[index], folder, result);
 }
 
@@ -2169,9 +2178,13 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
 
   PRBool haveSelection;
   PRInt32 rangeCount;
+  nsUInt32Array selection;
+  GetSelectedIndices(&selection);
+  PRInt32 numIndices = selection.GetSize();
+  nsMsgViewIndex *indices = selection.GetData();
   // if range count is non-zero, we have at least one item selected, so we have a selection
   if (mTreeSelection && NS_SUCCEEDED(mTreeSelection->GetRangeCount(&rangeCount)) && rangeCount > 0)
-    haveSelection = PR_TRUE;
+    haveSelection = NonDummyMsgSelected(indices, numIndices);
   else 
     haveSelection = PR_FALSE;
 
@@ -2229,13 +2242,7 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
     *selectable_p = haveSelection && !mIsNews;  // no junk for news yet
     break;
   case nsMsgViewCommandType::cmdRequiringMsgBody:
-    {
-    nsUInt32Array selection;
-    GetSelectedIndices(&selection);
-    PRInt32 numindices = selection.GetSize();
-    nsMsgViewIndex *indices = selection.GetData();
-    *selectable_p = haveSelection && (!WeAreOffline() || OfflineMsgSelected(indices, numindices));
-    }
+    *selectable_p = haveSelection && (!WeAreOffline() || OfflineMsgSelected(indices, numIndices));
     break;
   case nsMsgViewCommandType::downloadFlaggedForOffline:
   case nsMsgViewCommandType::markAllRead:
@@ -2559,6 +2566,8 @@ nsresult nsMsgDBView::DownloadForOffline(nsIMsgWindow *window, nsMsgViewIndex *i
   NS_NewISupportsArray(getter_AddRefs(messageArray));
   for (nsMsgViewIndex index = 0; index < (nsMsgViewIndex) numIndices; index++)
   {
+    if (m_flags[indices[index]] & MSG_VIEW_FLAG_DUMMY)
+      continue;
     nsMsgKey key = m_keys.GetAt(indices[index]);
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
     rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
@@ -5686,6 +5695,17 @@ PRBool nsMsgDBView::OfflineMsgSelected(nsMsgViewIndex * indices, PRInt32 numIndi
   return PR_FALSE;
 }
 
+PRBool nsMsgDBView::NonDummyMsgSelected(nsMsgViewIndex * indices, PRInt32 numIndices)
+{
+  for (nsMsgViewIndex index = 0; index < (nsMsgViewIndex) numIndices; index++)
+  {
+    PRUint32 flags = m_flags.GetAt(indices[index]);
+    if (!(flags & MSG_VIEW_FLAG_DUMMY))
+      return PR_TRUE;
+  }
+  return PR_FALSE;
+}
+
 NS_IMETHODIMP nsMsgDBView::GetViewIndexForFirstSelectedMsg(nsMsgViewIndex *aViewIndex)
 {
   NS_ENSURE_ARG_POINTER(aViewIndex);
@@ -5731,7 +5751,12 @@ nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
 
   // check that the first index is valid, it may not be if nothing is selected
   if (startRange >= 0 && startRange < GetSize()) 
+  {
+    if (m_flags[startRange] & MSG_VIEW_FLAG_DUMMY)
+      return NS_MSG_INVALID_DBVIEW_INDEX;
+
     *key = m_keys.GetAt(startRange);
+  }
   else 
     return NS_ERROR_UNEXPECTED;
   return NS_OK;
