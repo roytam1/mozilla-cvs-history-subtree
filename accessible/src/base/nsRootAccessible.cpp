@@ -40,6 +40,9 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentType.h"
 #include "nsINameSpaceManager.h"
+#include "nsIDOMNSHTMLSelectElement.h"
+#include "nsIAccessibleSelectable.h"
+#include "nsIDOMHTMLCollection.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
@@ -258,12 +261,14 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
     }
 
     if (a) {
-      nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content)); 
-
       if ( eventType.EqualsIgnoreCase("focus") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, a);
       }
       else if ( eventType.EqualsIgnoreCase("change") ) {
+        nsCOMPtr<nsIDOMNSHTMLSelectElement> select(do_QueryInterface(content));
+        if ( select ) {
+          mListener->HandleEvent(nsIAccessibleEventListener::EVENT_SELECTION, a);
+        }
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
       }
       else if ( eventType.EqualsIgnoreCase("CheckboxStateChange") ) {

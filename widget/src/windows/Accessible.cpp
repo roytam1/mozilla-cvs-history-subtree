@@ -19,10 +19,12 @@
  *
  * Contributor(s): 
  */
-
+//#undef _WINDOWS_
 #include "nsIAccessible.h"
 #include "nsIAccessibleDocument.h"
 #include "nsIAccessibleDocumentInternal.h"
+#include "nsIAccessibleSelectable.h"
+#include "nsIAccessibilityService.h"
 #include "Accessible.h"
 #include "nsIWidget.h"
 #include "nsWindow.h"
@@ -37,6 +39,10 @@
 #include "nsIDOMDocumentType.h"
 #include "nsINameSpaceManager.h"
 #include "String.h"
+
+//#undef _WINDOWS_
+//#include "afxcoll.h"
+//#define _WINDOWS_
 
  /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
@@ -424,6 +430,46 @@ STDMETHODIMP Accessible::get_accSelection(
 {
   pvarChildren->vt = VT_EMPTY;
   return S_OK;
+#if 0   // 
+  nsCOMPtr<nsIAccessibleSelectable> select(do_QueryInterface(mAccessible));
+  if ( select ) {
+    // we have an accessible that can have children selected
+    nsCOMPtr<nsISupportsArray> selectedKids;
+    select->GetSelectedChildren(getter_AddRefs(selectedKids));
+    if ( selectedKids ) {
+      PRUint32 length;
+      selectedKids->Count(&length);
+      // return an IEnumVariant through the Variant
+      // 1) initialize and setup the Variant
+      VariantInit(pvarChildren);
+      pvarChildren->vt = VT_UNKNOWN;
+      // 2) Set up the collection we will get the enumeration from
+      typedef CTypedPtrList<CPtrList, Accessible*> AccessPtrList;
+      AccessPtrList* fooList;
+      // 3) Loop through the ISupportsArray and populate the collection
+      for ( PRUint32 i = 0 ; i < length ; i++ ) {
+        nsCOMPtr<nsISupports> tempOption;
+        selectedKids->GetElementAt(i,getter_AddRefs(tempOption)); // this expects an nsISupports
+        if ( tempOption ) {
+          // tempOption is a selected Option
+          nsCOMPtr<nsIAccessible> tempAccess(do_QueryInterface(tempOption));
+          if ( tempAccess ) {
+            fooList->InsertAfter(0,NewAccessible(tempAccess,nsnull,mWnd));
+          } // end if (tempAccess)
+        } // end if (tempOption)
+      } // end for loop
+      // 4) Get an enumeration from the collection
+      IEnumVARIANT* pvarEnum = fooList->get_NewEnum();
+      // 5) Set the VARIANT to point to the enumeration
+      pvarChildren->ppunkVal = pvarEnum;
+    } // end if (selectedKids)
+  }
+  else {
+    pvarChildren->vt = VT_EMPTY;
+  }
+  return S_OK;
+#endif
+
 }
 
 STDMETHODIMP Accessible::get_accDefaultAction( 

@@ -36,6 +36,11 @@
 #include "nsIDOMMenuListener.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsReadableUtils.h"
+#include "nsIDOMHTMLCollection.h"
+#include "nsISelectElement.h"
+#include "nsIDOMHTMLSelectElement.h"
+#include "nsIAccessibilityService.h"
+#include "nsIServiceManager.h"
 
 /*
  * A class the represents the text field in the Select to the left
@@ -165,31 +170,22 @@ public:
   nsCOMPtr<nsIAccessible> mParent;
 };
 
-/*
- * Each option in the Select. These are in the nsListAccessible
- */
-class nsHTMLSelectListChildAccessible : public nsLeafAccessible
-{
-public:
-  
-  nsHTMLSelectListChildAccessible(nsIAccessible* aParent, nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
-
-  NS_IMETHOD GetAccParent(nsIAccessible **_retval);
-  NS_IMETHOD GetAccRole(PRUint32 *_retval);
-  NS_IMETHOD GetAccNextSibling(nsIAccessible **_retval);
-  NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
-  NS_IMETHOD GetAccName(PRUnichar **_retval);
-
-  nsCOMPtr<nsIAccessible> mParent;
-};
-
 //--------- nsHTMLSelectAccessible -----
  
 nsHTMLSelectAccessible::nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, 
                                        nsIWeakReference* aShell)
                                                :nsAccessible(aDOMNode, aShell)
 {
+  NS_INIT_REFCNT();
 }
+
+NS_INTERFACE_MAP_BEGIN(nsHTMLSelectAccessible)
+  NS_INTERFACE_MAP_ENTRY(nsIAccessibleSelectable)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIAccessibleSelectable)
+NS_INTERFACE_MAP_END_INHERITING(nsAccessible)
+
+NS_IMPL_ADDREF_INHERITED(nsHTMLSelectAccessible, nsGenericAccessible);
+NS_IMPL_RELEASE_INHERITED(nsHTMLSelectAccessible, nsGenericAccessible);
 
 NS_IMETHODIMP nsHTMLSelectAccessible::GetAccValue(PRUnichar **_retval)
 {
@@ -233,6 +229,47 @@ NS_IMETHODIMP nsHTMLSelectAccessible::GetAccChildCount(PRInt32 *_retval)
 {
   // always have 3 children
   *_retval = 3;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsHTMLSelectAccessible::GetSelectedChildren(nsISupportsArray **_retval)
+{
+  nsCOMPtr<nsIDOMHTMLSelectElement> select(do_QueryInterface(mDOMNode));
+  if( select ) {
+    nsCOMPtr<nsISupportsArray> options;
+    select->GetSelectedOptions(getter_AddRefs(options));
+    if ( options ) {
+      PRUint32 length;
+      options->Count(&length);
+      nsCOMPtr<nsIAccessibilityService> accService(do_GetService("@mozilla.org/accessibilityService;1"));
+      nsCOMPtr<nsISupportsArray> access;
+      NS_NewISupportsArray(getter_AddRefs(access));
+      //convert the options to Accessibles
+      for ( PRUint32 i = 0 ; i < length ; i++ ) {
+        nsCOMPtr<nsISupports> tempOption;
+        options->GetElementAt(i,getter_AddRefs(tempOption)); // this expects the nsISupports
+        if ( tempOption ) {
+          nsCOMPtr<nsIDOMNode> tempNode(do_QueryInterface(tempOption));
+          if ( tempNode && accService && access ) {
+            nsCOMPtr<nsIAccessible> tempAccess;
+            nsCOMPtr<nsIPresContext> context;
+            GetPresContext(context);
+            accService->CreateHTMLSelectOptionAccessible(tempNode, this, context, getter_AddRefs(tempAccess));
+            if ( tempAccess )
+              access->InsertElementAt(tempAccess, 0);
+          } // end if (tempNode...)
+        } // end if (tempOption)
+      } // end for loop
+      *_retval = access;
+      NS_IF_ADDREF(*_retval);
+    }
+    else {
+      *_retval = nsnull;
+    }
+  }
+  else {
+    *_retval = nsnull;
+  }
   return NS_OK;
 }
 
@@ -660,7 +697,7 @@ NS_IMETHODIMP nsHTMLSelectListAccessible::GetAccLastChild(nsIAccessible **_retva
   nsCOMPtr<nsIDOMNode> last;
   mDOMNode->GetLastChild(getter_AddRefs(last));
 
-  *_retval = new nsHTMLSelectListChildAccessible(this, last, mPresShell);
+  *_retval = new nsHTMLSelectOptionAccessible(this, last, mPresShell);
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -670,33 +707,33 @@ NS_IMETHODIMP nsHTMLSelectListAccessible::GetAccFirstChild(nsIAccessible **_retv
   nsCOMPtr<nsIDOMNode> first;
   mDOMNode->GetFirstChild(getter_AddRefs(first));
 
-  *_retval = new nsHTMLSelectListChildAccessible(this, first, mPresShell);
+  *_retval = new nsHTMLSelectOptionAccessible(this, first, mPresShell);
   NS_ADDREF(*_retval);
   return NS_OK;
 }
 
 //--------
 
-nsHTMLSelectListChildAccessible::nsHTMLSelectListChildAccessible(nsIAccessible* aParent, nsIDOMNode* aDOMNode, nsIWeakReference* aShell):
+nsHTMLSelectOptionAccessible::nsHTMLSelectOptionAccessible(nsIAccessible* aParent, nsIDOMNode* aDOMNode, nsIWeakReference* aShell):
 nsLeafAccessible(aDOMNode, aShell)
 {
   mParent = aParent;
 }
 
-NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccRole(PRUint32 *_retval)
+NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccRole(PRUint32 *_retval)
 {
   *_retval = ROLE_LISTITEM;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccParent(nsIAccessible **_retval)
+NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccParent(nsIAccessible **_retval)
 {   
     *_retval = mParent;
     NS_IF_ADDREF(*_retval);
     return NS_OK;
 }
 
-NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccNextSibling(nsIAccessible **_retval)
+NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccNextSibling(nsIAccessible **_retval)
 { 
   *_retval = nsnull;
 
@@ -704,14 +741,14 @@ NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccNextSibling(nsIAccessible *
   mDOMNode->GetNextSibling(getter_AddRefs(next));
 
   if (next) {
-    *_retval = new nsHTMLSelectListChildAccessible(mParent, next, mPresShell);
+    *_retval = new nsHTMLSelectOptionAccessible(mParent, next, mPresShell);
     NS_ADDREF(*_retval);
   }
 
   return NS_OK;
 } 
 
-NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccPreviousSibling(nsIAccessible **_retval)
+NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccPreviousSibling(nsIAccessible **_retval)
 { 
   *_retval = nsnull;
 
@@ -719,14 +756,14 @@ NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccPreviousSibling(nsIAccessib
   mDOMNode->GetPreviousSibling(getter_AddRefs(prev));
 
   if (prev) {
-    *_retval = new nsHTMLSelectListChildAccessible(mParent, prev, mPresShell);
+    *_retval = new nsHTMLSelectOptionAccessible(mParent, prev, mPresShell);
     NS_ADDREF(*_retval);
   }
 
   return NS_OK;
 } 
 
-NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccName(PRUnichar **_retval)
 {
   nsAutoString nameString;
 

@@ -27,20 +27,43 @@
 #include "nsAccessible.h"
 #include "nsCOMPtr.h"
 #include "nsIAtom.h"
+#include "nsIAccessibleSelectable.h"
 
-
-class nsHTMLSelectAccessible : public nsAccessible
+class nsHTMLSelectAccessible : public nsAccessible,
+                               public nsIAccessibleSelectable  
 {
 public:
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIACCESSIBLESELECTABLE
   
   nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
+  virtual ~nsHTMLSelectAccessible() {}
+
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccRole(PRUint32 *_retval);
   NS_IMETHOD GetAccValue(PRUnichar **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
 
-  virtual ~nsHTMLSelectAccessible() {}
+};
+
+/*
+ * Each option in the Select. These are in the nsListAccessible
+ */
+class nsHTMLSelectOptionAccessible : public nsLeafAccessible
+{
+public:
+  
+  nsHTMLSelectOptionAccessible(nsIAccessible* aParent, nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
+
+  NS_IMETHOD GetAccParent(nsIAccessible **_retval);
+  NS_IMETHOD GetAccRole(PRUint32 *_retval);
+  NS_IMETHOD GetAccNextSibling(nsIAccessible **_retval);
+  NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
+  NS_IMETHOD GetAccName(PRUnichar **_retval);
+
+  nsCOMPtr<nsIAccessible> mParent;
 };
 
 #endif

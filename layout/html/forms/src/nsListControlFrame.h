@@ -235,6 +235,9 @@ public:
                                              nscoord aCharWidth) const;
   virtual nsresult RequiresWidget(PRBool &aRequiresWidget);
 
+    // for accessibility purposes
+  NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
+
     // nsHTMLContainerFrame
   virtual PRIntn GetSkipSides() const;
 

@@ -117,6 +117,28 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIDOMNode* node, nsISupports
   return NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP 
+nsAccessibilityService::CreateHTMLSelectOptionAccessible(nsIDOMNode* node, nsIAccessible *aAccParent, nsISupports* aPresContext, nsIAccessible **_retval)
+{
+  nsCOMPtr<nsIPresContext> c(do_QueryInterface(aPresContext));
+  NS_ASSERTION(c,"Error non prescontext passed to accessible factory!!!");
+
+  nsCOMPtr<nsIPresShell> s;
+  c->GetShell(getter_AddRefs(s)); 
+
+  nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
+
+  *_retval = new nsHTMLSelectOptionAccessible(aAccParent, node, wr);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+  
+  return NS_ERROR_FAILURE;
+}
+
+
 /* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLCheckboxAccessible(nsISupports *aFrame, nsIAccessible **_retval)
 {
