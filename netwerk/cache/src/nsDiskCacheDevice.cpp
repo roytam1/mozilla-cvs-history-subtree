@@ -972,7 +972,7 @@ nsresult nsDiskCacheDevice::getTransportForFile(nsIFile* file, nsCacheAccessMode
     return gFileTransportService->CreateTransport(file, ioFlags, PR_IRUSR | PR_IWUSR, result);
 }
 
-inline isMetaDataFile(const char* name)
+inline PRBool isMetaDataFile(const char* name)
 {
     return (name[8] == 'm');
 }
