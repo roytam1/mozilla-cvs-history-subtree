@@ -276,8 +276,10 @@ nsCacheService::Shutdown()
 #if DEBUG
         printf("### beging nsCacheService::Shutdown()\n");
 #endif
-        LogCacheStatistics();
 
+#if defined(PR_LOGGING)
+        LogCacheStatistics();
+#endif
         // Clear entries
         ClearDoomList();
         ClearActiveEntries();
@@ -772,11 +774,11 @@ nsCacheService::DoomEntry_Locked(nsCacheEntry * entry)
 {
     if (this == nsnull)  return NS_ERROR_NOT_AVAILABLE;
     if (entry->IsDoomed())  return NS_OK;
-
+    
     nsresult  rv = NS_OK;
     entry->MarkDoomed();
-
-	NS_ASSERTION(!entry->IsBinding(), "Dooming entry while binding device.");
+    
+    NS_ASSERTION(!entry->IsBinding(), "Dooming entry while binding device.");
     nsCacheDevice * device = entry->CacheDevice();
     if (device)  device->DoomEntry(entry);
 
@@ -1068,7 +1070,5 @@ nsCacheService::LogCacheStatistics()
     CACHE_LOG_ALWAYS(("\n"));
     CACHE_LOG_ALWAYS(("    Deactivate Failures         = %d\n", mDeactivateFailures));
     CACHE_LOG_ALWAYS(("    Deactivated Unbound Entries = %d\n", mDeactivatedUnboundEntries));
-    
-
 }
 #endif

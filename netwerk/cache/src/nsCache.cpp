@@ -26,9 +26,6 @@
 #include "nsCache.h"
 #include "nsReadableUtils.h"
 
-#if defined(PR_LOGGING)
-
-#endif
 
 /**
  * Cache Service Utility Functions
@@ -40,6 +37,7 @@ PRLogModuleInfo * gCacheLog = nsnull;
 void
 CacheLogInit()
 {
+    if (gCacheLog) return;
     gCacheLog = PR_NewLogModule("cache");
     NS_ASSERTION(gCacheLog, "\n### failed to allocate cache log.\n");
 }
