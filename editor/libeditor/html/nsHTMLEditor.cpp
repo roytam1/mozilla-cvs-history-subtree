@@ -5197,7 +5197,9 @@ NS_IMETHODIMP nsHTMLEditor::PrepareTransferable(nsITransferable **transferable)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable, PRInt32 aSelectionType)
+NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable, 
+                                                   const nsString& aContextStr,
+                                                   const nsString& aInfoStr)
 {
   nsresult rv = NS_OK;
   char* bestFlavor = nsnull;
@@ -5216,48 +5218,14 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
       nsCOMPtr<nsISupportsWString> textDataObj ( do_QueryInterface(genericDataObj) );
       if (textDataObj && len > 0)
       {
-        nsAutoString contextStr, infoStr;
         PRUnichar* text = nsnull;
 
         textDataObj->ToString ( &text );
         stuffToPaste.Assign ( text, len / 2 );
-
-        // also get additional html copy hints, if present
-        NS_WITH_SERVICE ( nsIClipboard, clipboard, kCClipboardCID, &rv );
-       if ( NS_FAILED(rv) )
-          return rv;
-    
-        nsCOMPtr<nsISupports> contextDataObj, infoDataObj;
-        PRUint32 contextLen, infoLen;
-        
-        nsCOMPtr<nsITransferable> contextTrans = do_CreateInstance(kCTransferableCID);
-        NS_ENSURE_TRUE(contextTrans, NS_ERROR_NULL_POINTER);
-        contextTrans->AddDataFlavor(kHTMLContext);
-        clipboard->GetData(contextTrans, aSelectionType);
-        contextTrans->GetTransferData(kHTMLContext, getter_AddRefs(contextDataObj), &contextLen);
-
-        nsCOMPtr<nsITransferable> infoTrans = do_CreateInstance(kCTransferableCID);
-        NS_ENSURE_TRUE(infoTrans, NS_ERROR_NULL_POINTER);
-        infoTrans->AddDataFlavor(kHTMLInfo);
-        clipboard->GetData(infoTrans, aSelectionType);
-        infoTrans->GetTransferData(kHTMLInfo, getter_AddRefs(infoDataObj), &infoLen);
-        
-        if (contextDataObj)
-        {
-          textDataObj = do_QueryInterface(contextDataObj);
-          textDataObj->ToString ( &text );
-          contextStr.Assign ( text, contextLen / 2 );
-        }
-        
-        if (infoDataObj)
-        {
-          textDataObj = do_QueryInterface(infoDataObj);
-          textDataObj->ToString ( &text );
-          infoStr.Assign ( text, infoLen / 2 );
-        }
-
         nsAutoEditBatch beginBatching(this);
-        rv = InsertHTMLWithContext(stuffToPaste, contextStr, infoStr);
+        rv = InsertHTMLWithContext(stuffToPaste, aContextStr, aInfoStr);
+        if (text)
+          nsMemory::Free(text);
       }
     }
     else if (flavor.EqualsWithConversion(kUnicodeMime))
@@ -5272,6 +5240,8 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         // pasting does not inherit local inline styles
         RemoveAllInlineProperties();
         rv = InsertText(stuffToPaste);
+        if (text)
+          nsMemory::Free(text);
       }
     }
     else if (flavor.EqualsWithConversion(kFileMime))
@@ -5507,7 +5477,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       doPlaceCaret = PR_FALSE;
     }
     
-    rv = InsertFromTransferable(trans);
+    rv = InsertFromTransferable(trans, nsAutoString(), nsAutoString());
   }
 
   return rv;
@@ -5685,7 +5655,44 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
     // Get the Data from the clipboard  
     if (NS_SUCCEEDED(clipboard->GetData(trans, aSelectionType)) && IsModifiable())
     {
-      rv = InsertFromTransferable(trans, aSelectionType);
+      // also get additional html copy hints, if present
+      nsAutoString contextStr, infoStr;
+      nsCOMPtr<nsISupports> contextDataObj, infoDataObj;
+      PRUint32 contextLen, infoLen;
+      nsCOMPtr<nsISupportsWString> textDataObj;
+      
+      nsCOMPtr<nsITransferable> contextTrans = do_CreateInstance(kCTransferableCID);
+      NS_ENSURE_TRUE(contextTrans, NS_ERROR_NULL_POINTER);
+      contextTrans->AddDataFlavor(kHTMLContext);
+      clipboard->GetData(contextTrans, aSelectionType);
+      contextTrans->GetTransferData(kHTMLContext, getter_AddRefs(contextDataObj), &contextLen);
+
+      nsCOMPtr<nsITransferable> infoTrans = do_CreateInstance(kCTransferableCID);
+      NS_ENSURE_TRUE(infoTrans, NS_ERROR_NULL_POINTER);
+      infoTrans->AddDataFlavor(kHTMLInfo);
+      clipboard->GetData(infoTrans, aSelectionType);
+      infoTrans->GetTransferData(kHTMLInfo, getter_AddRefs(infoDataObj), &infoLen);
+      
+      if (contextDataObj)
+      {
+        PRUnichar* text = nsnull;
+        textDataObj = do_QueryInterface(contextDataObj);
+        textDataObj->ToString ( &text );
+        contextStr.Assign ( text, contextLen / 2 );
+        if (text)
+          nsMemory::Free(text);
+      }
+      
+      if (infoDataObj)
+      {
+        PRUnichar* text = nsnull;
+        textDataObj = do_QueryInterface(infoDataObj);
+        textDataObj->ToString ( &text );
+        infoStr.Assign ( text, infoLen / 2 );
+        if (text)
+          nsMemory::Free(text);
+      }
+      rv = InsertFromTransferable(trans, contextStr, infoStr);
     }
   }
 
@@ -5866,6 +5873,8 @@ NS_IMETHODIMP nsHTMLEditor::PasteAsPlaintextQuotation(PRInt32 aSelectionType)
         stuffToPaste.Assign ( text, len / 2 );
         nsAutoEditBatch beginBatching(this);
         rv = InsertAsPlaintextQuotation(stuffToPaste, 0);
+        if (text)
+          nsMemory::Free(text);
       }
     }
     nsCRT::free(flav);
@@ -6633,21 +6642,25 @@ PRBool
 nsHTMLEditor::TagCanContainTag(const nsString &aParentTag, const nsString &aChildTag)
 {
   // COtherDTD gives some unwanted results.  We override them here.
-
-  if ( aParentTag.EqualsWithConversion("ol") ||
-       aParentTag.EqualsWithConversion("ul") )
+  nsAutoString olStr, ulStr, liStr;
+  olStr = NS_LITERAL_STRING("ol");
+  ulStr = NS_LITERAL_STRING("ul");
+  liStr = NS_LITERAL_STRING("li");
+  
+  if ( aParentTag.EqualsIgnoreCase(olStr) ||
+       aParentTag.EqualsIgnoreCase(ulStr) )
   {
     // if parent is a list and tag is also a list, say "yes".
     // This is because the editor does sublists illegally for now. 
-    if (aChildTag.EqualsWithConversion("ol") ||
-        aChildTag.EqualsWithConversion("ul") ) 
+    if (aChildTag.EqualsIgnoreCase(olStr) ||
+        aChildTag.EqualsIgnoreCase(ulStr) ) 
       return PR_TRUE;
   }
 
-  if ( aParentTag.EqualsWithConversion("li") )
+  if ( aParentTag.EqualsIgnoreCase(liStr) )
   {
     // list items cant contain list items
-    if (aChildTag.EqualsWithConversion("li") ) 
+    if (aChildTag.EqualsIgnoreCase(liStr) ) 
       return PR_FALSE;
   }
 
