@@ -73,7 +73,6 @@ public:
 
   // nsIScriptExternalNameSet
   NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext);
-  NS_IMETHOD AddNameSet(nsIScriptContext* aScriptContext);
 };
 
 nsXMLExtrasNameset::nsXMLExtrasNameset()
@@ -100,7 +99,7 @@ nsXMLExtrasNameset::InitializeClasses(nsIScriptContext* aScriptContext)
 
 #define NS_XML_EXTRAS_CONTRACTID "@mozilla.org/xmlextras;1"
 
-class nsXMLExtras : public nsIObserver {
+class nsXMLExtras : public nsISupports {
 public:
   nsXMLExtras();
   virtual ~nsXMLExtras();
@@ -109,9 +108,6 @@ public:
 
   // nsISupports
   NS_DECL_ISUPPORTS
-
-  // nsIObserver
-  NS_DECL_NSIOBSERVER
 };
 
 nsXMLExtras::nsXMLExtras()
@@ -123,7 +119,13 @@ nsXMLExtras::~nsXMLExtras()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsXMLExtras, nsIObserver)
+NS_IMPL_ADDREF(nsXMLExtras)
+NS_IMPL_RELEASE(nsXMLExtras)
+
+NS_INTERFACE_MAP_BEGIN(nsXMLExtras)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXMLExtras)
 
