@@ -20,6 +20,7 @@ locale/en-US/messenger-mapi,                              en-US/locale/en-US/mes
 locale/en-US/messenger-mdn,                               en-US/locale/en-US/messenger-mdn
 locale/messenger-offline,                                 en-US/locale/messenger-offline
 locale/messenger-newsblog,                                en-US/locale/messenger-newsblog
+locale/messenger-region,                                  en-US/locale/messenger-region
 
 #################################################################################################
 # xpfe extensions (ldap, wallet, etc)
@@ -51,6 +52,7 @@ locale/global-platform,                                   en-US/locale/global-pl
 locale/global-platform/win,                               en-US/locale/global-platform/win
 locale/global-platform/mac,                               en-US/locale/global-platform/mac
 locale/global-platform/unix,                              en-US/locale/global-platform/unix
+locale/global-region,                                     en-US/locale/global-region
 
 #################################################################################################
 # communicator
@@ -63,12 +65,6 @@ locale/communicator/wallet,                               en-US/locale/communica
 # editor
 #################################################################################################
 locale/editor,                                            en-US/locale/editor
-
-#################################################################################################
-# US
-#################################################################################################
-locale/en-US/messenger-region,                            US/locale/US/messenger-region
-locale/global-region,                                     en-US/locale/global-region
 
 #################################################################################################
 # crypto
