@@ -19,7 +19,7 @@
 # Config stuff for Compaq OpenVMS
 #
 
-include $(CORE_DEPTH)/coreconf/UNIX.mk
+include $(CORECONF_SOURCE)/UNIX.mk
 
 ifdef INTERNAL_TOOLS
 CC			= c89
@@ -53,4 +53,4 @@ endif
 XCFLAGS                        += $(OPTIMIZER)
 
 # The command to build a shared library in POSIX on OpenVMS.
-MKSHLIB = vmsld_psm OBJDIR=$(OBJDIR) $(OPTIMIZER)
+MKSHLIB = vmsld_psm $(OPTIMIZER)

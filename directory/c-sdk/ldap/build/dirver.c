@@ -26,6 +26,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#ifdef macintosh
+#include <console.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -75,14 +78,18 @@ unsigned _CalcBuildDate(unsigned nYear, unsigned nMonth, unsigned nDay)
 {
     unsigned nBuildDate = 0;
 
-    if(nYear < 100) /* they really mean 19xx */
+    if(nYear < 1900) /* they really mean 1900 + nYear */
         nYear += 1900;
 
     nYear -= 1980;
     nBuildDate = nYear;
+    /*
     nBuildDate <<= 5;
-    nBuildDate += nMonth;
+    */
     nBuildDate <<= 4;
+    nBuildDate += nMonth;
+    /* nBuildDate <<= 4; */
+    nBuildDate <<= 5; 
     nBuildDate += nDay;
     nBuildDate &= 0xFFFF;
     return(nBuildDate);
@@ -101,12 +108,21 @@ unsigned _GenBuildDate(char *szBuildDate)
     if((szBuildDate) && (strchr(szBuildDate, '\\') || strchr(szBuildDate, '/')) && (szToken = strtok(szBuildDate, "\\/")))
     {
         nMonth = atoi(szToken);
+	nMonth--;	/* use months in the range [0..11], as in struct tm */
         if(szToken = strtok(NULL, "\\/"))
         {
             nDay = atoi(szToken);
             if(szToken = strtok(NULL, "\\/"))
             {
                 nYear = atoi(szToken);
+		if(nYear < 70) { /* handle 2 digit years like (20)00 */	
+		    nYear += 100;
+		}
+		else if (nYear < 100) {
+		}
+		else if (nYear > 1900){
+		    nYear -= 1900;
+		}
             }
         }
     }
@@ -152,6 +168,10 @@ main(int nArgc, char **lpArgv)
     unsigned nVersion = 0;
     unsigned nBuildDate = 0;
 
+#ifdef macintosh
+	nArgc = ccommand( &lpArgv );
+#endif
+
     if(nArgc < 2)
     {
         ShowHelp(lpArgv[0]);
@@ -174,11 +194,15 @@ main(int nArgc, char **lpArgv)
 		nVersion = _CalcVersion(nMajor, nMinor, nPatch);
         nBuildDate = _GenBuildDate(szDate);
 
-        if(nArgc >= 4)
-            f = fopen(szOutput, "w");
+        if(nArgc >= 4) {
+            if (( f = fopen(szOutput, "w")) == NULL ) {
+		perror( szOutput );
+		exit( 1 );
+	    }
+	}
 
         fprintf(f, "#define VI_PRODUCTVERSION %u.%u\n", nMajor, nMinor);
-        fprintf(f, "#define PRODUCTTEXT \"%u.%u\"\n", nMajor, nMinor);
+        fprintf(f, "#define PRODUCTTEXT \"%s\"\n", szVersion );
         fprintf(f, "#define VI_FILEVERSION %u, 0, 0,%u\n",
 				nVersion, nBuildDate);
         fprintf(f, "#define VI_FileVersion \"%s Build %u\\0\"\n",

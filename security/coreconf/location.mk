@@ -39,26 +39,25 @@
 # Figure out where the binary code lives.
 #
 
-ifdef BUILD_TREE
-ifdef LIBRARY_NAME
-BUILD         = $(BUILD_TREE)/nss/$(LIBRARY_NAME)
-OBJDIR        = $(BUILD_TREE)/nss/$(LIBRARY_NAME)
-DEPENDENCIES  = $(BUILD_TREE)/nss/$(LIBRARY_NAME)/.md
-else
-BUILD         = $(BUILD_TREE)/nss
-OBJDIR        = $(BUILD_TREE)/nss
-DEPENDENCIES  = $(BUILD_TREE)/nss/.md
-endif
-else
 BUILD         = $(PLATFORM)
-OBJDIR        = $(PLATFORM)
-DEPENDENCIES  = $(PLATFORM)/.md
-endif
+OBJDIR        = .
 
-DIST          = $(SOURCE_PREFIX)/$(PLATFORM)
+DEPENDENCIES  = $(PLATFORM)/.md
+MKDEPEND_DIR = $(MOD_DEPTH)/coreconf/mkdepend
+MKDEPEND_SRCDIR = $(CORECONF_SOURCE)/mkdepend
+MKDEPEND = $(MKDEPEND_DIR)/mkdepend
+MKDEPENDENCIES = depend.mk
+NSINSTALL_DIR = $(MOD_DEPTH)/coreconf/nsinstall
+
+ifeq ($(OS_ARCH),WINNT)
+NSINSTALL	= nsinstall
+MKDEPEND	= $(MKDEPEND_DIR)/mkdepend.exe
+endif
 
 ifdef BUILD_DEBUG_GC
 	DEFINES += -DDEBUG_GC
 endif
 
-GARBAGE += $(DEPENDENCIES) core $(wildcard core.[0-9]*)
+GARBAGE += $(DEPENDENCIES) core $(wildcard core.[0-9]*) vc20.pdb vc40.pdb
+BUILD_TOOLS = $(topsrcdir)/build/unix
+AUTOCONF_TOOLS = $(topsrcdir)/build/autoconf

@@ -217,12 +217,12 @@ char *PORT_Strdup(const char *);
 
 #endif /* XP_STRING_FUNCS */
 
-typedef PRBool (PR_CALLBACK * PORTCharConversionWSwapFunc) (PRBool toUnicode,
+typedef PRBool (* PORTCharConversionWSwapFunc) (PRBool toUnicode,
 			unsigned char *inBuf, unsigned int inBufLen,
 			unsigned char *outBuf, unsigned int maxOutBufLen,
 			unsigned int *outBufLen, PRBool swapBytes);
 
-typedef PRBool (PR_CALLBACK * PORTCharConversionFunc) (PRBool toUnicode,
+typedef PRBool (* PORTCharConversionFunc) (PRBool toUnicode,
 			unsigned char *inBuf, unsigned int inBufLen,
 			unsigned char *outBuf, unsigned int maxOutBufLen,
 			unsigned int *outBufLen);

@@ -312,8 +312,8 @@ SECStatus SEC_OpenPermCertDB(CERTCertDBHandle *handle,
 
 SECStatus SEC_DeletePermCertificate(CERTCertificate *cert);
 
-typedef SECStatus (PR_CALLBACK * PermCertCallback)(CERTCertificate *cert,
-                                                   SECItem *k, void *pdata);
+typedef SECStatus (* PermCertCallback)(CERTCertificate *cert, SECItem *k,
+				      void *pdata);
 /*
 ** Traverse the entire permanent database, and pass the certs off to a
 ** user supplied function.
@@ -339,10 +339,10 @@ PRBool
 SEC_CertDBKeyConflict(SECItem *derCert, CERTCertDBHandle *handle);
 
 SECStatus
-SEC_GetCrlTimes(CERTCrl *dates, PRTime *notBefore, PRTime *notAfter);
+SEC_GetCrlTimes(CERTCrl *dates, int64 *notBefore, int64 *notAfter);
 
 SECCertTimeValidity
-SEC_CheckCrlTimes(CERTCrl *crl, PRTime t);
+SEC_CheckCrlTimes(CERTCrl *crl, int64 t);
 
 PRBool
 SEC_CrlIsNewer(CERTCrl *inNew, CERTCrl *old);

@@ -83,8 +83,7 @@ typedef struct sec_asn1e_state_struct {
 	   indefinite,		/* need end-of-contents */
 	   is_string,		/* encoding a simple string or an ANY */
 	   may_stream,		/* when streaming, do indefinite encoding */
-	   optional,		/* omit field if it has no contents */
-	   ignore_stream;	/* ignore streaming value of sub-template */	
+	   optional;		/* omit field if it has no contents */
 } sec_asn1e_state;
 
 /*
@@ -185,7 +184,7 @@ sec_asn1e_notify_after (SEC_ASN1EncoderContext *cx, void *src, int depth)
 static sec_asn1e_state *
 sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
 {
-    PRBool explicit, is_string, may_stream, optional, universal, ignore_stream;
+    PRBool explicit, is_string, may_stream, optional, universal;
     unsigned char tag_modifiers;
     unsigned long encode_kind, under_kind;
     unsigned long tag_number;
@@ -206,9 +205,6 @@ sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
 
     may_stream = (encode_kind & SEC_ASN1_MAY_STREAM) ? PR_TRUE : PR_FALSE;
     encode_kind &= ~SEC_ASN1_MAY_STREAM;
-
-    ignore_stream = (encode_kind & SEC_ASN1_NO_STREAM) ? PR_TRUE : PR_FALSE;
-    encode_kind &= ~SEC_ASN1_NO_STREAM;
 
     /* Just clear this to get it out of the way; we do not need it here */
     encode_kind &= ~SEC_ASN1_DYNAMIC;
@@ -294,8 +290,7 @@ sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
 
 	under_kind = state->theTemplate->kind;
 	if (under_kind & SEC_ASN1_MAY_STREAM) {
-	    if (!ignore_stream)
-	      may_stream = PR_TRUE;
+	    may_stream = PR_TRUE;
 	    under_kind &= ~SEC_ASN1_MAY_STREAM;
 	}
     } else {
@@ -368,7 +363,6 @@ sec_asn1e_init_state_based_on_template (sec_asn1e_state *state)
     state->may_stream = may_stream;
     state->is_string = is_string;
     state->optional = optional;
-    state->ignore_stream = ignore_stream;
 
     sec_asn1e_scrub_state (state);
 
@@ -479,27 +473,12 @@ sec_asn1e_which_choice
 
 static unsigned long
 sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
-			   PRBool ignoresubstream, PRBool *noheaderp)
+			   PRBool *noheaderp)
 {
     unsigned long encode_kind, underlying_kind;
     PRBool explicit, optional, universal, may_stream;
     unsigned long len;
 
-    /*
-     * This function currently calculates the length in all cases
-     * except the following: when writing out the contents of a 
-     * template that belongs to a state where it was a sub-template
-     * with the SEC_ASN1_MAY_STREAM bit set and it's parent had the
-     * optional bit set.  The information that the parent is optional
-     * and that we should return the length of 0 when that length is 
-     * present since that means the optional field is no longer present.
-     * So we add the ignoresubstream flag which is passed in when
-     * writing the contents, but for all recursive calls to 
-     * sec_asn1e_contents_length, we pass PR_FALSE, because this
-     * function correctly calculates the length for children templates
-     * from that point on.  Confused yet?  At least you didn't have
-     * to figure it out.  ;)  -javi
-     */
     encode_kind = theTemplate->kind;
 
     universal = ((encode_kind & SEC_ASN1_CLASS_MASK) == SEC_ASN1_UNIVERSAL)
@@ -518,7 +497,6 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 
     /* Just clear this to get it out of the way; we do not need it here */
     encode_kind &= ~SEC_ASN1_DYNAMIC;
-    encode_kind &= ~SEC_ASN1_NO_STREAM;
 
     if( encode_kind & SEC_ASN1_CHOICE ) {
       void *src2;
@@ -531,8 +509,7 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 
       src2 = (void *)((char *)src + theTemplate[indx].offset);
 
-      return sec_asn1e_contents_length(&theTemplate[indx], src2, 
-                                       PR_FALSE, noheaderp);
+      return sec_asn1e_contents_length(&theTemplate[indx], src2, noheaderp);
     }
 
     if ((encode_kind & (SEC_ASN1_POINTER | SEC_ASN1_INLINE)) || !universal) {
@@ -567,8 +544,7 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 	src = (char *)src + theTemplate->offset;
 
 	if (explicit) {
-	    len = sec_asn1e_contents_length (theTemplate, src, PR_FALSE,
-                                             noheaderp);
+	    len = sec_asn1e_contents_length (theTemplate, src, noheaderp);
 	    if (len == 0 && optional) {
 		*noheaderp = PR_TRUE;
 	    } else if (*noheaderp) {
@@ -617,8 +593,7 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
       }
 
       src2 = (void *)((char *)src - theTemplate->offset + theTemplate[indx].offset);
-      len = sec_asn1e_contents_length(&theTemplate[indx], src2, PR_FALSE,
-                                      noheaderp);
+      len = sec_asn1e_contents_length(&theTemplate[indx], src2, noheaderp);
     } else
 
     switch (underlying_kind) {
@@ -640,8 +615,7 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 
 	    for (; *group != NULL; group++) {
 		sub_src = (char *)(*group) + tmpt->offset;
-		sub_len = sec_asn1e_contents_length (tmpt, sub_src, PR_FALSE,
-                                                     noheaderp);
+		sub_len = sec_asn1e_contents_length (tmpt, sub_src, noheaderp);
 		len += sub_len;
 		/*
 		 * XXX The 1 below is the presumed length of the identifier;
@@ -663,8 +637,7 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 	    len = 0;
 	    for (tmpt = theTemplate + 1; tmpt->kind; tmpt++) {
 		sub_src = (char *)src + tmpt->offset;
-		sub_len = sec_asn1e_contents_length (tmpt, sub_src, PR_FALSE,
-                                                     noheaderp);
+		sub_len = sec_asn1e_contents_length (tmpt, sub_src, noheaderp);
 		len += sub_len;
 		/*
 		 * XXX The 1 below is the presumed length of the identifier;
@@ -686,7 +659,7 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 
       default:
 	len = ((SECItem *)src)->len;
-	if (may_stream && len == 0 && !ignoresubstream)
+	if (may_stream && len == 0)
 	    len = 1;	/* if we're streaming, we may have a secitem w/len 0 as placeholder */
 	break;
     }
@@ -718,6 +691,7 @@ sec_asn1e_write_header (sec_asn1e_state *state)
     }
 
     if( state->underlying_kind & SEC_ASN1_CHOICE ) {
+      void *src2;
       int indx = sec_asn1e_which_choice(state->src, state->theTemplate);
       if( 0 == indx ) {
         /* XXX set an error? "choice not found" */
@@ -745,9 +719,7 @@ sec_asn1e_write_header (sec_asn1e_state *state)
      * walk the data structure to calculate the entire contents length.
      */
     contents_length = sec_asn1e_contents_length (state->theTemplate,
-						 state->src, 
-                                                 state->ignore_stream,
-                                                 &noheader);
+						 state->src, &noheader);
     /*
      * We might be told explicitly not to put out a header.
      * But it can also be the case, via a pushed subtemplate, that

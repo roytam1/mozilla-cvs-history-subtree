@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -2003,13 +2002,12 @@ nsc_DSA_Verify_Stub(void *ctx, CK_BYTE_PTR pSignature, CK_ULONG ulSignatureLen,
 			    CK_BYTE_PTR pData, CK_ULONG ulDataLen)
 {
     SECItem signature, digest;
-    SECKEYLowPublicKey *key = (SECKEYLowPublicKey *)ctx;
 
     signature.data = pSignature;
     signature.len = ulSignatureLen;
     digest.data = pData;
     digest.len = ulDataLen;
-    return DSA_VerifyDigest(&(key->u.dsa), &signature, &digest);
+    return DSA_VerifyDigest((DSAPublicKey *)ctx, &signature, &digest);
 }
 
 static SECStatus
@@ -2019,12 +2017,11 @@ nsc_DSA_Sign_Stub(void *ctx, CK_BYTE_PTR pSignature,
 {
     SECItem signature = { 0 }, digest;
     SECStatus rv;
-    SECKEYLowPrivateKey *key = (SECKEYLowPrivateKey *)ctx;
 
     (void)SECITEM_AllocItem(NULL, &signature, maxulSignatureLen);
     digest.data = pData;
     digest.len = ulDataLen;
-    rv = DSA_SignDigest(&(key->u.dsa), &signature, &digest);
+    rv = DSA_SignDigest((DSAPrivateKey *)ctx, &signature, &digest);
     *ulSignatureLen = signature.len;
     PORT_Memcpy(pSignature, signature.data, signature.len);
     SECITEM_FreeItem(&signature, PR_FALSE);
@@ -2083,7 +2080,7 @@ CK_RV NSC_SignInit(CK_SESSION_HANDLE hSession,
     switch(pMechanism->mechanism) {
     case CKM_MD5_RSA_PKCS:
         context->multi = PR_TRUE;
-	crv = pk11_doSubMD5(context);
+	crv = pk11_doSubMD2(context);
 	if (crv != CKR_OK) break;
 	context->update = (PK11Cipher) pk11_HashSign;
 	info = (PK11HashSignInfo *)PORT_Alloc(sizeof(PK11HashSignInfo));
@@ -2173,11 +2170,11 @@ finish_rsa:
 	    crv = CKR_HOST_MEMORY;
 	    break;
 	}
-	context->cipherInfo = privKey;
+	context->cipherInfo = &(privKey->u.dsa);
 	context->update     = (PK11Cipher) nsc_DSA_Sign_Stub;
-	context->destroy    = (privKey == key->objectInfo) ?
-		(PK11Destroy) pk11_Null:(PK11Destroy)pk11_FreePrivKey;
+	context->destroy    = pk11_Null;
 
+        if (key->objectInfo != privKey) SECKEY_LowDestroyPrivateKey(privKey);
 	break;
     case CKM_MD2_HMAC_GENERAL:
 	crv = pk11_doHMACInit(context,SEC_OID_MD2,key,
@@ -2579,7 +2576,7 @@ finish_rsa:
 	    crv = CKR_HOST_MEMORY;
 	    break;
 	}
-	context->cipherInfo = pubKey;
+	context->cipherInfo = &(pubKey->u.dsa);
 	context->verify     = (PK11Verify) nsc_DSA_Verify_Stub;
 	context->destroy    = pk11_Null;
 	break;
@@ -2832,40 +2829,6 @@ CK_RV NSC_GenerateRandom(CK_SESSION_HANDLE hSession,
  **************************** Key Functions:  ************************
  */
 
-CK_RV
-pk11_pbe_hmac_key_gen(CK_MECHANISM_PTR pMechanism, char *buf, 
-                      unsigned long *len, PRBool faultyPBE3DES)
-{
-    PBEBitGenContext *pbeCx;
-    SECItem pwd, salt, *key;
-    SECOidTag hashAlg;
-    unsigned long keylenbits;
-    CK_PBE_PARAMS *pbe_params = NULL;
-    pbe_params = (CK_PBE_PARAMS *)pMechanism->pParameter;
-    pwd.data = (unsigned char *)pbe_params->pPassword;
-    pwd.len = (unsigned int)pbe_params->ulPasswordLen;
-    salt.data = (unsigned char *)pbe_params->pSalt;
-    salt.len = (unsigned int)pbe_params->ulSaltLen;
-    switch (pMechanism->mechanism) {
-    case CKM_NETSCAPE_PBE_SHA1_HMAC_KEY_GEN:
-	hashAlg = SEC_OID_SHA1; keylenbits = 160; break;
-    case CKM_NETSCAPE_PBE_MD5_HMAC_KEY_GEN:
-	hashAlg = SEC_OID_MD5;  keylenbits = 128; break;
-    case CKM_NETSCAPE_PBE_MD2_HMAC_KEY_GEN:
-	hashAlg = SEC_OID_MD2;  keylenbits = 128; break;
-    default:
-	return CKR_MECHANISM_INVALID;
-    }
-    pbeCx = PBE_CreateContext(hashAlg, pbeBitGenIntegrityKey, &pwd,
-                              &salt, keylenbits, pbe_params->ulIteration);
-    key = PBE_GenerateBits(pbeCx);
-    PORT_Memcpy(buf, key->data, key->len);
-    *len = key->len;
-    PBE_DestroyContext(pbeCx);
-    SECITEM_ZfreeItem(key, PR_TRUE);
-    return CKR_OK;
-}
-
 /*
  * generate a password based encryption key. This code uses
  * PKCS5 to do the work. Note that it calls PBE_PK11ParamToAlgid, which is
@@ -3075,7 +3038,7 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
     int i;
     PK11Slot *slot = pk11_SlotFromSessionHandle(hSession);
     char buf[MAX_KEY_LEN];
-    enum {pk11_pbe, pk11_pbe_hmac, pk11_ssl, pk11_bulk} key_gen_type;
+    enum {pk11_pbe, pk11_ssl, pk11_bulk} key_gen_type;
     SECOidTag algtag = SEC_OID_UNKNOWN;
     SSL3RSAPreMasterSecret *rsa_pms;
     CK_VERSION *version;
@@ -3140,11 +3103,6 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
 	break;
     case CKM_NETSCAPE_PBE_SHA1_FAULTY_3DES_CBC:
 	faultyPBE3DES = PR_TRUE;
-    case CKM_NETSCAPE_PBE_SHA1_HMAC_KEY_GEN:
-    case CKM_NETSCAPE_PBE_MD5_HMAC_KEY_GEN:
-    case CKM_NETSCAPE_PBE_MD2_HMAC_KEY_GEN:
-	key_gen_type = pk11_pbe_hmac;
-	break;
     case CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC:
     case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC:
     case CKM_NETSCAPE_PBE_SHA1_DES_CBC:
@@ -3181,10 +3139,6 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
      * now to the actual key gen.
      */
     switch (key_gen_type) {
-    case pk11_pbe_hmac:
-	crv = pk11_pbe_hmac_key_gen(pMechanism, buf, &key_length,
-	                            faultyPBE3DES);
-	break;
     case pk11_pbe:
 	crv = pk11_pbe_key_gen(algtag, pMechanism, buf, &key_length,
 			       faultyPBE3DES);
@@ -4459,7 +4413,6 @@ CK_RV NSC_DeriveKey( CK_SESSION_HANDLE hSession,
     CK_OBJECT_CLASS classType	= CKO_SECRET_KEY;
     CK_KEY_DERIVATION_STRING_DATA *stringPtr;
     PRBool          isTLS = PR_FALSE;
-    PRBool          isDH = PR_FALSE;
     SECStatus       rv;
     int             i;
     unsigned int    outLen;
@@ -4540,20 +4493,15 @@ CK_RV NSC_DeriveKey( CK_SESSION_HANDLE hSession,
      * generate the master secret 
      */
     case CKM_TLS_MASTER_KEY_DERIVE:
-    case CKM_TLS_MASTER_KEY_DERIVE_DH:
 	isTLS = PR_TRUE;
 	/* fall thru */
     case CKM_SSL3_MASTER_KEY_DERIVE:
-    case CKM_SSL3_MASTER_KEY_DERIVE_DH:
       {
 	CK_SSL3_MASTER_KEY_DERIVE_PARAMS *ssl3_master;
 	SSL3RSAPreMasterSecret *rsa_pms;
-        if ((pMechanism->mechanism == CKM_SSL3_MASTER_KEY_DERIVE_DH) ||
-            (pMechanism->mechanism == CKM_TLS_MASTER_KEY_DERIVE_DH))
-		isDH = PR_TRUE;
 
-	/* first do the consistancy checks */
-	if (!isDH && (att->attrib.ulValueLen != SSL3_PMS_LENGTH)) {
+	/* first do the consistancy checkes */
+	if (att->attrib.ulValueLen != SSL3_PMS_LENGTH) {
 	    crv = CKR_KEY_TYPE_INCONSISTENT;
 	    break;
 	}
@@ -5517,3 +5465,5 @@ CK_RV NSC_DigestKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)
     pk11_FreeAttribute(att);
     return crv;
 }
+
+

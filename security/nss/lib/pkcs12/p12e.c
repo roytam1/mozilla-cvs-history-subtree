@@ -1660,11 +1660,9 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 
 	/* init password pased integrity mode */
 	if(p12exp->integrityEnabled) {
-	    SECItem  pwd = {siBuffer,NULL, 0};
+	    SECItem  pwd = {siBuffer,NULL, 0}, *key;
 	    SECItem *salt = sec_pkcs12_generate_salt();
-	    PK11SymKey *symKey;
-	    SECItem *params;
-	    CK_MECHANISM_TYPE integrityMech;
+	    PBEBitGenContext *pbeCtxt = NULL;
 
 	    /* zero out macData and set values */
 	    PORT_Memset(&p12enc->mac, 0, sizeof(sec_PKCS12MacData));
@@ -1678,6 +1676,7 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 		PORT_SetError(SEC_ERROR_NO_MEMORY);
 		goto loser;
 	    }   
+	    SECITEM_ZfreeItem(salt, PR_TRUE);
 
 	    /* generate HMAC key */
 	    if(!sec_pkcs12_convert_item_to_unicode(NULL, &pwd, 
@@ -1685,32 +1684,25 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 			PR_TRUE, PR_TRUE)) {
 		goto loser;
 	    }
-
-	    params = PK11_CreatePBEParams(salt, &pwd, 1);
-	    SECITEM_ZfreeItem(salt, PR_TRUE);
+	    pbeCtxt = PBE_CreateContext(p12exp->integrityInfo.pwdInfo.algorithm,
+					pbeBitGenIntegrityKey, &pwd, 
+					&(p12enc->mac.macSalt), 160, 1);
 	    SECITEM_ZfreeItem(&pwd, PR_FALSE);
-
-	    switch (p12exp->integrityInfo.pwdInfo.algorithm) {
-	    case SEC_OID_SHA1:
-		integrityMech = CKM_NETSCAPE_PBE_SHA1_HMAC_KEY_GEN; break;
-	    case SEC_OID_MD5:
-		integrityMech = CKM_NETSCAPE_PBE_MD5_HMAC_KEY_GEN;  break;
-	    case SEC_OID_MD2:
-		integrityMech = CKM_NETSCAPE_PBE_MD2_HMAC_KEY_GEN;  break;
-	    default:
+	    if(!pbeCtxt) {
 		goto loser;
 	    }
-
-	    symKey = PK11_KeyGen(NULL, integrityMech, params, 20, NULL);
-	    PK11_DestroyPBEParams(params);
-	    if(!symKey) {
+	    key = PBE_GenerateBits(pbeCtxt);
+	    PBE_DestroyContext(pbeCtxt);
+	    if(!key) {
 		goto loser;
 	    }
 
 	    /* initialize hmac */
-	    p12enc->hmacCx = PK11_CreateContextBySymKey(
+	    p12enc->hmacCx = PK11_CreateContextByRawKey(NULL, 
 	     sec_pkcs12_algtag_to_mech(p12exp->integrityInfo.pwdInfo.algorithm),
-	                                           CKA_SIGN, symKey, &ignore);
+                                                   PK11_OriginDerive, CKA_SIGN, 
+                                                   key, &ignore, NULL);
+	    SECITEM_ZfreeItem(key, PR_TRUE);
 	    if(!p12enc->hmacCx) {
 		PORT_SetError(SEC_ERROR_NO_MEMORY);
 		goto loser;

@@ -31,11 +31,12 @@
 # GPL.
 #
 
-CORE_DEPTH		= ../../../../..
+MOD_DEPTH		= ../../../..
 
 MODULE		= security
 LIBRARY_NAME	= swft
-#LIBRARY_VERSION	= 32
+PROG_PREFIX	= C_
+MDDEPDIR	:= $(MDDEPDIR)_C
 
 COPIED_CSRCS	= forsock.c  \
 		  fortpk11.c \
@@ -47,15 +48,25 @@ CSRCS		= \
 		  stub.c \
 		  $(NULL)
 
-vpath %.c ../../
-INCLUDES	= -I../..
-
 EXPORTS		= 
 
 REQUIRES	= security dbm
 
+CP_INCLUDES =  \
+	../../cryptint.h \
+	../../fmutex.h \
+	../../fortsock.h \
+	../../fpkcs11.h \
+	../../fpkcs11f.h \
+	../../fpkcs11i.h \
+	../../fpkcs11t.h \
+	../../fpkmem.h \
+	../../fpkstrs.h \
+	../../genci.h \
+	../../maci.h \
+	$(NULL)
 
-DEFINES		= -DSWFORT
+CFLAGS		+= -DSWFORT
 
 GARBAGE		= $(COPIED_CSRCS) cryptint.h fmutex.h fortsock.h fpkcs11.h \
 	fpkcs11f.h fpkcs11i.h fpkcs11t.h fpkmem.h fpkstrs.h genci.h maci.h 

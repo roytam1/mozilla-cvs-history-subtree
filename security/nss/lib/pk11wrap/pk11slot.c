@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -726,7 +725,7 @@ PK11_HandlePasswordCheck(PK11SlotInfo *slot,void *wincx)
     /* timeouts are handled by isLoggedIn */
     if (!PK11_IsLoggedIn(slot,wincx)) {
 	NeedAuth = PR_TRUE;
-    } else if (askpw == -1) {
+    } else if (slot->askpw == -1) {
 	if (!PK11_Global.inTransaction	||
 			 (PK11_Global.transaction != slot->authTransact)) {
     	    PK11_EnterSlotMonitor(slot);
@@ -2681,12 +2680,10 @@ PK11_GetKeyType(CK_MECHANISM_TYPE type,unsigned long len)
     case CKM_SSL3_PRE_MASTER_KEY_GEN:
     case CKM_GENERIC_SECRET_KEY_GEN:
     case CKM_SSL3_MASTER_KEY_DERIVE:
-    case CKM_SSL3_MASTER_KEY_DERIVE_DH:
     case CKM_SSL3_KEY_AND_MAC_DERIVE:
     case CKM_SSL3_SHA1_MAC:
     case CKM_SSL3_MD5_MAC:
     case CKM_TLS_MASTER_KEY_DERIVE:
-    case CKM_TLS_MASTER_KEY_DERIVE_DH:
     case CKM_TLS_KEY_AND_MAC_DERIVE:
     case CKM_SHA_1_HMAC:
     case CKM_SHA_1_HMAC_GENERAL:
@@ -2829,9 +2826,6 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
 	return CKM_GENERIC_SECRET_KEY_GEN;
     case CKM_PBE_MD2_DES_CBC:
     case CKM_PBE_MD5_DES_CBC:
-    case CKM_NETSCAPE_PBE_SHA1_HMAC_KEY_GEN:
-    case CKM_NETSCAPE_PBE_MD5_HMAC_KEY_GEN:
-    case CKM_NETSCAPE_PBE_MD2_HMAC_KEY_GEN:
     case CKM_NETSCAPE_PBE_SHA1_DES_CBC:
     case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC:
     case CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC:

@@ -101,28 +101,12 @@ tools_p12()
   echo "         -w ${R_PWFILE}"
   pk12util -o Alice.p12 -n "Alice" -d ${R_ALICEDIR} -k ${R_PWFILE} \
            -w ${R_PWFILE} 2>&1 
-  ret=$?
-  html_msg $ret 0 "Exporting Alice's email cert & key (pk12util -o)"
-  check_tmpfile
+  html_msg $? 0 "Exporting Alice's email cert & key (pk12util -o)"
 
   echo "$SCRIPTNAME: Importing Alice's email cert & key -----------------"
   echo "pk12util -i Alice.p12 -d ${R_COPYDIR} -k ${R_PWFILE} -w ${R_PWFILE}"
   pk12util -i Alice.p12 -d ${R_COPYDIR} -k ${R_PWFILE} -w ${R_PWFILE} 2>&1
-  ret=$?
-  html_msg $ret 0 "Importing Alice's email cert & key (pk12util -i)"
-  check_tmpfile
-}
-
-############################## tools_sign ##############################
-# local shell function pk12util uses a hardcoded tmp file, if this exists
-# and is owned by another user we don't get reasonable errormessages 
-########################################################################
-check_tmpfile()
-{
-  if [ $ret != "0" -a -f /tmp/Pk12uTemp ] ; then
-      echo "Error: pk12util temp file exists. Please remove this file and"
-      echo "       rerun the test (/tmp/Pk12uTemp) "
-  fi
+  html_msg $? 0 "Importing Alice's email cert & key (pk12util -i)"
 }
 
 ############################## tools_sign ##############################
@@ -150,9 +134,9 @@ SIGNSCRIPT
   html_msg $? 0 "Signing a set of files (signtool -Z)"
 
   echo "$SCRIPTNAME: Listing signed files in jar ----------------------"
-  echo "signtool -v nojs.jar -d ${R_ALICEDIR} -p nss -k objsigner"
-  signtool -v nojs.jar -d ${R_ALICEDIR} -p nss -k objsigner
-  html_msg $? 0 "Listing signed files in jar (signtool -v)"
+  echo "signtool -w nojs.jar -d ${R_ALICEDIR}"
+  signtool -w nojs.jar -d ${R_ALICEDIR}
+  html_msg $? 0 "Listing signed files in jar (signtool -w)"
   
   echo "$SCRIPTNAME: Show who signed jar ------------------------------"
   echo "signtool -w nojs.jar -d ${R_ALICEDIR}"

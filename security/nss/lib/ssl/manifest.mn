@@ -30,7 +30,7 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-CORE_DEPTH = ../../..
+MOD_DEPTH = ../..
 
 # DEFINES = -DTRACE
 
@@ -60,7 +60,6 @@ CSRCS = \
 	sslenum.c \
 	sslerr.c \
 	sslgathr.c \
-	sslmutex.c \
 	sslnonce.c \
 	sslreveal.c \
 	sslsecur.c \

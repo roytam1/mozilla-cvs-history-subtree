@@ -44,7 +44,6 @@
 #include <PPCToolbox.h>
 #include <Processes.h>
 #include <LowMem.h>
-#include <Scrap.h>
 
 /* Static prototypes */
 static size_t CopyLowBits(void *dst, size_t dstlen, void *src, size_t srclen);
@@ -74,9 +73,8 @@ static size_t CopyLowBits(void *dst, size_t dstlen, void *src, size_t srclen)
 
 size_t RNG_GetNoise(void *buf, size_t maxbytes)
 {
-    UnsignedWide microTickCount;
-    Microseconds(&microTickCount);
-    return CopyLowBits(buf, maxbytes,  &microTickCount, sizeof(microTickCount));
+    uint32 c = TickCount();
+    return CopyLowBits(buf, maxbytes,  &c, sizeof(c));
 }
 
 void RNG_FileForRNG(char *filename)
@@ -127,7 +125,6 @@ void RNG_SystemInfoForRNG()
 		ReadLocation(&loc);
 		RNG_RandomUpdate( &loc, sizeof(loc));
 	}
-#if !TARGET_CARBON
 /* User name */
 	{
 		unsigned long userRef;
@@ -136,7 +133,6 @@ void RNG_SystemInfoForRNG()
 		RNG_RandomUpdate( &userRef, sizeof(userRef));
 		RNG_RandomUpdate( userName, sizeof(userName));
 	}
-#endif
 /* Mouse location */
 	{
 		Point mouseLoc;
@@ -159,13 +155,11 @@ void RNG_SystemInfoForRNG()
 		UInt8 volume = LMGetSdVolume();
 		RNG_RandomUpdate( &volume, sizeof(volume));
 	}
-#if !TARGET_CARBON
 /* Current directory */
 	{
 		SInt32 dir = LMGetCurDirStore();
 		RNG_RandomUpdate( &dir, sizeof(dir));
 	}
-#endif
 /* Process information about all the processes in the machine */
 	{
 		ProcessSerialNumber 	process;
@@ -185,21 +179,17 @@ void RNG_SystemInfoForRNG()
 		}
 	}
 	
-#if !TARGET_CARBON
 /* Heap */
 	{
 		THz zone = LMGetTheZone();
 		RNG_RandomUpdate( &zone, sizeof(zone));
 	}
-#endif
 	
 /* Screen */
 	{
-		GDHandle h = GetMainDevice();		/* GDHandle is **GDevice */
+		GDHandle h = LMGetMainDevice();		/* GDHandle is **GDevice */
 		RNG_RandomUpdate( *h, sizeof(GDevice));
 	}
-
-#if !TARGET_CARBON
 /* Scrap size */
 	{
 		SInt32 scrapSize = LMGetScrapSize();
@@ -210,29 +200,6 @@ void RNG_SystemInfoForRNG()
 		SInt16 scrapCount = LMGetScrapCount();
 		RNG_RandomUpdate( &scrapCount, sizeof(scrapCount));
 	}
-#else
-	{
-	    ScrapRef scrap;
-        if (GetCurrentScrap(&scrap) == noErr) {
-            UInt32 flavorCount;
-            if (GetScrapFlavorCount(scrap, &flavorCount) == noErr) {
-                ScrapFlavorInfo* flavorInfo = (ScrapFlavorInfo*) malloc(flavorCount * sizeof(ScrapFlavorInfo));
-                if (flavorInfo != NULL) {
-                    if (GetScrapFlavorInfoList(scrap, &flavorCount, flavorInfo) == noErr) {
-                        UInt32 i;
-                        RNG_RandomUpdate(&flavorCount, sizeof(flavorCount));
-                        for (i = 0; i < flavorCount; ++i) {
-                            Size flavorSize;
-                            if (GetScrapFlavorSize(scrap, flavorInfo[i].flavorType, &flavorSize) == noErr)
-                                RNG_RandomUpdate(&flavorSize, sizeof(flavorSize));
-                        }
-                    }
-                    free(flavorInfo);
-                }
-            }
-        }
-    }
-#endif
 /*  File stuff, last modified, etc. */
 	{
 		HParamBlockRec			pb;
@@ -244,7 +211,6 @@ void RNG_SystemInfoForRNG()
 		PBHGetVolParmsSync(&pb);
 		RNG_RandomUpdate( &volInfo, sizeof(volInfo));
 	}
-#if !TARGET_CARBON
 /* Event queue */
 	{
 		EvQElPtr		eventQ;
@@ -253,7 +219,6 @@ void RNG_SystemInfoForRNG()
 				eventQ = (EvQElPtr)eventQ->qLink)
 			RNG_RandomUpdate( &eventQ->evtQWhat, sizeof(EventRecord));
 	}
-#endif
 	FE_ReadScreen();
 	RNG_FileForRNG(NULL);
 }

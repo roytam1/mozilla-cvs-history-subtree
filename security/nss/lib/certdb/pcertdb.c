@@ -873,14 +873,8 @@ DecodeDBCrlEntry(certDBEntryRevocation *entry, SECItem *dbentry)
     nnlen = ( ( dbentry->data[2] << 8 ) | dbentry->data[3] );
     if ( ( entry->derCrl.len + nnlen + DB_CRL_ENTRY_HEADER_LEN )
 	!= dbentry->len) {
-      /* CRL entry is greater than 64 K. Hack to make this continue to work */
-      if (dbentry->len >= (0xffff - DB_CRL_ENTRY_HEADER_LEN) - nnlen) {
-          entry->derCrl.len = 
-                      (dbentry->len - DB_CRL_ENTRY_HEADER_LEN) - nnlen;
-      } else {
-          PORT_SetError(SEC_ERROR_BAD_DATABASE);
-          goto loser;
-      }    
+	PORT_SetError(SEC_ERROR_BAD_DATABASE);
+	goto loser;
     }
     
     /* copy the dercert */
@@ -7198,15 +7192,12 @@ CERT_SaveImportedCert(CERTCertificate *cert, SECCertUsage usage,
 	    }
 	}
 	break;
-      case certUsageAnyCA:
-	trust.sslFlags = CERTDB_VALID_CA;
-	break;
-      case certUsageSSLCA:
-	trust.sslFlags = CERTDB_VALID_CA | 
-			CERTDB_TRUSTED_CA | CERTDB_TRUSTED_CLIENT_CA;
-	break;
       default:	/* XXX added to quiet warnings; no other cases needed? */
 	break;
+    }
+
+    if ( (trust.sslFlags | trust.emailFlags | trust.objectSigningFlags) == 0 ){
+	saveit = PR_FALSE;
     }
 
     if ( saveit ) {

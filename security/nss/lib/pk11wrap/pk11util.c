@@ -72,35 +72,15 @@ static PRBool secmod_ModuleHasRoots(SECMODModule *module)
  * The following code is an attempt to automagically find the external root
  * module. NOTE: This code should be checked out on the MAC! There must be
  * some cross platform support out there to help out with this?
- * Note: Keep the #if-defined chunks in order. HPUX must select before UNIX.
  */
 
 static char *dllnames[]= {
-#if defined(XP_WIN32)
-	"nssckbi.dll",
-	"roots.dll", 
-	"netckbi.dll",
-	"mozckbi.dll",
-#elif defined(HPUX)
-	"libnssckbi.sl",
-	"libroots.sl",
-	"libnetckbi.sl",
-	"libmozckbi.sl",
-#elif defined(XP_UNIX)
-	"libnssckbi.so",
-	"libroots.so",
-	"libnetckbi.so",
-	"libmozckbi.so",
-#elif defined(XP_MAC)
-	"NSS Builtin Root Certs",
-	"Root Certs",
-	"Netscape Builtin Root Certs",
-	"Mozilla Builtin Root Certs",
-#else
-	#error "Uh! Oh! I don't know about this platform."
-#endif
+	"roots.dll", "libroots.so","libroots.sl","Root Certs",
+	"roots.dll", "libroots.so","libroots.sl","Root Certs",
+	"nssckbi.dll","libnssckbi.so","libnssckbi.sl","NSS Builtin Root Certs",
+	"mozckbi.dll","libmozckbi.so","libmozckbi.sl","Mozilla Builtin Root Certs",
+	"netckbi.dll","libnetckbi.so","libnetckbi.sl","Netscape Builtin Root Certs",
 	0 };
-	
 
 #define MAXDLLNAME 40
 
@@ -232,12 +212,6 @@ SECMOD_GetInternalModule(void) {
 void
 SECMOD_SetInternalModule( SECMODModule *mod) {
    internalModule = SECMOD_ReferenceModule(mod);
-   modules = SECMOD_NewModuleListElement();
-   modules->module = SECMOD_ReferenceModule(mod);
-   modules->next = NULL;
-   if (!moduleLock) {
-       moduleLock = SECMOD_NewListLock();
-   }
 }
 
 /*
@@ -508,7 +482,7 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
                               unsigned long defaultMechanismFlags,
                               unsigned long cipherEnableFlags) {
     SECMODModule *module;
-    SECStatus result = SECFailure;
+    SECStatus result;
     int s,i;
     PK11SlotInfo* slot;
 
@@ -528,8 +502,12 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
 
     if (module->dllName != NULL) {
         if (module->dllName[0] != 0) {
-            result = SECMOD_AddModule(module);
-            if (result == SECSuccess) {
+           SECStatus rv = SECMOD_AddModule(module);
+            if (rv != SECSuccess) {
+                /* SECFailure: failed to add module, corrupt or missing module etc. */
+                /* SECBlock: a module with the same name already exists */
+                return rv;
+            } else { /* successfully added module */
                 /* turn on SSL cipher enable flags */
                 module->ssl[0] = cipherEnableFlags;
 
@@ -566,7 +544,7 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
         }
     }
     SECMOD_DestroyModule(module);
-    return result;
+    return SECFailure;
 }
 
 /* Public & Internal(Security Library)  representation of
