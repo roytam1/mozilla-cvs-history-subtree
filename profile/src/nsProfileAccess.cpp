@@ -1341,17 +1341,15 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
         nsCAutoString unixProfileName( PR_GetEnv(PROFILE_NAME_ENVIRONMENT_VARIABLE) );
         nsCAutoString unixProfileDirectory( PR_GetEnv(PROFILE_HOME_ENVIRONMENT_VARIABLE) );
 
-        if (!unixProfileName || 
-            !unixProfileDirectory || 
-            (PL_strlen(unixProfileName) == 0) || 
-            (PL_strlen(unixProfileDirectory) == 0)) 
+        if ( unixProfileName.IsEmpty() || 
+             unixProfileDirectory.IsEmpty() ) 
         {
             unixProfileDirectory = PR_GetEnv(HOME_ENVIRONMENT_VARIABLE);
             unixProfileName = PR_GetEnv(LOGNAME_ENVIRONMENT_VARIABLE);
-            if ( !unixProfileName || (PL_strlen(unixProfileName) == 0) ) {
+            if ( unixProfileName.IsEmpty() ) {
               unixProfileName = PR_GetEnv(USER_ENVIRONMENT_VARIABLE);
             }
-            if ( !unixProfileName || (PL_strlen(unixProfileName) == 0) ) {
+            if ( unixProfileName.IsEmpty() ) {
               unixProfileName = DEFAULT_UNIX_PROFILE_NAME; 
             }
         }
@@ -1363,7 +1361,7 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
             return NS_OK;
         }
 
-        if (unixProfileName && unixProfileDirectory) {
+        if ( ! unixProfileName.IsEmpty() && ! unixProfileDirectory.IsEmpty() ) {
             nsCAutoString profileLocation(unixProfileDirectory);
             profileLocation += "/.netscape";
             nsCOMPtr<nsIFileSpec> users4xDotNetscapeDirectory;
