@@ -128,7 +128,7 @@ xpi-%: %
 	@$(RM) -rf $(DIST)/install/xpi-$*
 	@$(INSTALL) $(DIST)/bin/chrome/$*.jar $(DIST)/install/xpi-$*/chrome
 	@$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/toolkit/locales/$*/defines.inc -I$(srcdir)/$*/defines.inc $(srcdir)/generic/install.rdf > $(DIST)/install/xpi-$*/install.rdf
-	@cd $(DIST)/install/xpi-$*; $(ZIP) -r9D ../firefox.$(MOZ_APP_VERSION).$*.langpack.xpi install.rdf chrome
+	@cd $(DIST)/install/xpi-$*; $(ZIP) -r9D ../firefox-$(MOZ_APP_VERSION).$*.langpack.xpi install.rdf chrome
 
 clean-l10n:
 	@$(RM) $(DIST)/bin/defaults/pref/firefox-l10n.js
