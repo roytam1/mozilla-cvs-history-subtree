@@ -298,10 +298,10 @@ PRUint32
 NumberOfObjects(void)
 {
     PRUint32 objs = 0;
-    int i = TheManager.Entries();
+    int i = nsCacheManager::GetInstance()->Entries();
     while (i>0)
     {
-        objs += TheManager.GetModule(--i)->Entries();
+        objs += nsCacheManager::GetInstance()->GetModule(--i)->Entries();
     }
     return objs;
 }
