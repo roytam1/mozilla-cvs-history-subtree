@@ -22,7 +22,11 @@
 #include "icalproperty.h"
 #include "icalerror.h"
 #include "icalmemory.h"
+#ifdef XP_MAC
+#include <sys/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <string.h>
 
 #ifdef WIN32
