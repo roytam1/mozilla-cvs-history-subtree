@@ -86,8 +86,8 @@ public:
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
 
-	NS_IMETHOD OnStartRequest(nsISupports *ctxt);
-	NS_IMETHOD OnStopRequest(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg);
+	NS_IMETHOD OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt);
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// End of nsIStreamListenerSupport
