@@ -21,16 +21,19 @@
 # There are N dimensions to a full complement of binaries:
 #
 #	- target architecture
-#	- debug vs optimized
-#	- normal vs "lite"
-#	- normal vs purified
+#	- debug   vs  optimized
+#	- normal  vs  "lite"
+#	- normal  vs  purified
+#   - dynamic vs  statically linked
 #
 # A directory is needed for each of the first two dimensions (target
 # and debug), but executables for all of the others will then be built
 # in the same directory from the same .o files.  The files have names
 # as follows:
 #
-#	mozilla-export
+#   moz-export          (Dynamically linked with libs in 
+#                        ../../dist/<objdir>/bin)
+#	mozilla-export      (Statically linked)
 #	mozilla-nis-export	(SunOS 4 only)
 #	mozilla-export.pure	(SunOS 4 and Solaris only)
 #	 ...etc...
@@ -70,9 +73,10 @@ DIRS		= \
 		  Microline3.0/XmL \
 		  $(NULL)
 
-REQUIRES	= \
-		XfeWidgets \
-		Microline \
+REQUIRES	=\
+			XfeWidgets \
+			XfeBm \
+			Microline \
 		  addr \
 		  applet \
 		  img \
@@ -192,9 +196,9 @@ GARBAGE		+= e_kit_resources.h cxxlink-filter
 
 ICONS_LIB	= $(DIST)/lib/lib$(LITE_PREFIX)xfeicons.a
 
-DTWIDGETS_LIB	= $(DIST)/lib/libDtWidgets.a
-XFE_WIDGETS_LIB	= $(DIST)/lib/libXfeWidgets.a
-COMBOBOX_LIB	= $(DIST)/lib/libComboBox.a
+DTWIDGETS_LIB		= $(DIST)/lib/libDtWidgets.a
+XFE_WIDGETS_LIB		= $(DIST)/lib/libXfeWidgets.a
+XFE_WIDGETS_BM_LIB	= $(DIST)/lib/libXfeBm.a
 
 ifeq ($(OS_ARCH),AIX)
 NSPR_LIB	= 
@@ -222,9 +226,24 @@ BASIC_LIBS	= \
 		  $(MICROLINE_LIB) \
 		  $(ICONS_LIB) \
 		  $(DTWIDGETS_LIB) \
+		  $(XFE_WIDGETS_BM_LIB) \
 		  $(XFE_WIDGETS_LIB) \
 		  $(DIST)/lib/libxlate.a \
-		  $(DIST)/lib/lib$(LITE_PREFIX)net.a \
+		  $(DIST)/lib/libnetcache.a	\
+		  $(DIST)/lib/libnetcnvts.a	\
+		  $(DIST)/lib/libnetwork.a	\
+		  $(DIST)/lib/libnetcnvts.a	\
+		  $(DIST)/lib/libcnetinit.a	\
+		  $(DIST)/lib/libabouturl.a	\
+		  $(DIST)/lib/libdataurl.a	\
+		  $(DIST)/lib/libfileurl.a	\
+		  $(DIST)/lib/libftpurl.a	\
+		  $(DIST)/lib/libgophurl.a	\
+		  $(DIST)/lib/libhttpurl.a	\
+		  $(DIST)/lib/libjsurl.a	\
+		  $(DIST)/lib/libmarimurl.a	\
+		  $(DIST)/lib/libremoturl.a	\
+		  $(DIST)/lib/libnetwork.a	\
 		  $(DIST)/lib/lib$(LITE_PREFIX)rdf.a \
 		  $(DIST)/lib/lib$(LITE_PREFIX)xml.a \
 		  $(DIST)/lib/lib$(LITE_PREFIX)lay.a \
@@ -254,7 +273,10 @@ BASIC_LIBS	+= \
 		  $(DIST)/lib/libreg.a \
 		  $(NULL)
 
-BASIC_LIBS_2	= $(DIST)/lib/lib$(LITE_PREFIX)xp.a $(DIST)/lib/libdbm.a
+BASIC_LIBS_2	= \
+		  $(DIST)/lib/lib$(LITE_PREFIX)xp.a \
+		  $(DIST)/lib/libdbm.a \
+		  $(NULL)
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
@@ -357,6 +379,8 @@ endif
 ifdef MOZ_LDAP
 BASIC_LIBS	+= $(DIST)/lib/libldap.a $(DIST)/lib/liblber.a 
 endif
+
+BASIC_LIBS += $(DIST)/lib/libxpcom.a
 
 LOCALES		= $(LOCALE_MAP) $(MAIL_IM_HACK) $(NEWS_IM_HACK)
 
@@ -575,11 +599,19 @@ endif
 # Linux
 ifeq ($(OS_ARCH),Linux)
 
-# Some linux platforms (there's so many of them) need special defines
-# for different versions of motif.  Right now the only significant 
-# define is NS_MOTIF2_XP_LD_FLAGS (-lXp needed for motif 2.x)
+# If the motif.mk file exists, it might define extra flags needed for
+# specific versions of motif.
 #
-# The file motif.mk holds such defines.
+# Currently there is only 2 flags:
+#
+# MOZILLA_XM_2_1_PRINT_SHELL_FLAGS: X Print Shell Extension available
+# starting with X11R6.3 and needed by motif 2.1.
+#
+# MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS: Needed because of currently
+# broken locale support in motif 2.1 when linked with gnu libc2.
+#
+# Please direct questions about motif and linux to ramiro@netscape.com.
+#
 -include $(DEPTH)/config/motif.mk
 
 XTOOLLIB	= -L/usr/X11R6/lib -lXt -lSM -lICE
@@ -593,22 +625,30 @@ else
 
 MOTIFLIB	=\
 			$(MOTIFPATCH_LIB) \
-			/usr/X11R6/lib/libXm.a \
-			$(NS_MOTIF2_XP_LD_FLAGS)
+			$(MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS) \
+			-L/usr/X11R6/lib -lXm \
+			$(MOZILLA_XM_2_1_PRINT_SHELL_FLAGS)
+
 
 endif
 else
 MOTIFLIB	= /usr/X11R6/lib/libXm.a
 endif
 
-OTHER_LIBS	= $(MOTIFLIB) $(XTOOLLIB) $(XMULIB) $(EXTENSIONLIB) $(XLIB) /usr/lib/libm.a -ldl
+OTHER_LIBS	= $(MOTIFLIB) $(XTOOLLIB) $(XMULIB) $(EXTENSIONLIB) $(XLIB) -lm -ldl
 
 #
 # This assumes there is a libXm.so on the system.  If there isn't, you'll
 # get two identical binaries.
 #
 ifeq ($(OS_RELEASE)$(CPU_ARCH),2.0x86)
-DYN_MOTIFLIB	= $(MOTIFPATCH_LIB) -lXm $(NS_MOTIF2_XP_LD_FLAGS)
+
+DYN_MOTIFLIB		=\
+					$(MOTIFPATCH_LIB) \
+					$(MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS) \
+					-lXm \
+					$(MOZILLA_XM_2_1_PRINT_SHELL_FLAGS)
+
 
 EXTRA_EXPORT_OBJS	= $(OBJDIR)/$(XFE_PROGNAME)-motif-export
 EXTRA_EXPORT_BINARY	= $(EXTRA_EXPORT_OBJS)
@@ -768,14 +808,14 @@ $(MICROLINE_LIB):
 $(ICONS_LIB):
 	cd icons; $(MAKE)
 
-$(COMBOBOX_LIB):
-	cd combobox; $(MAKE)
-
 $(DTWIDGETS_LIB):
 	cd DtWidgets; $(MAKE)
 
 $(XFE_WIDGETS_LIB):
 	cd XfeWidgets/Xfe; $(MAKE)
+
+$(XFE_WIDGETS_BM_LIB):
+	cd XfeWidgets/XfeBm; $(MAKE)
 
 $(XFE2_LIB):
 	cd src; $(MAKE)
@@ -909,7 +949,7 @@ ifeq ($(OS_ARCH)$(OS_RELEASE)$(CPU_ARCH),Linux2.0x86)
 $(OBJDIR)/$(XFE_PROGNAME)-motif-export: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLIBS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-	$(CCLD) -o $@ $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) -L/usr/X11R6/lib $(DYN_MOTIFLIB) -lXt -lSM -lICE $(XMULIB) $(EXTENSIONLIB) $(XLIB) /usr/lib/libm.a -ldl $(NSPR_LIB) $(DNS_LIB) -lc
+	$(CCLD) -o $@ $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) -L/usr/X11R6/lib $(DYN_MOTIFLIB) -lXt -lSM -lICE $(XMULIB) $(EXTENSIONLIB) $(XLIB) -lm -ldl $(NSPR_LIB) $(DNS_LIB) -lc
 	@$(EXTRA_POST_LINK_CMD) $@
 endif
 
