@@ -26,7 +26,7 @@
 #############################################################################
 
 use Getopt::Std;			# To parse command line arguments.
-use Mozilla::LDAP::Connection;		# Main "OO" layer for LDAP
+use Mozilla::LDAP::Conn;		# Main "OO" layer for LDAP
 use Mozilla::LDAP::Utils;		# LULU, utilities.
 
 
@@ -82,8 +82,8 @@ $user=$ARGV[$[];
 #############################################################################
 # Instantiate an LDAP object, which also binds to the LDAP server.
 #
-$conn = new Mozilla::LDAP::Connection($ld{host}, $ld{port}, $ld{bind},
-				      $ld{pswd}, $ld{cert});
+$conn = new Mozilla::LDAP::Conn($ld{host}, $ld{port}, $ld{bind},
+				$ld{pswd}, $ld{cert});
 die "Could't connect to LDAP server $ld{host}" unless $ld{conn};
 
 
