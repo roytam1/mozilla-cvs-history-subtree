@@ -54,6 +54,7 @@
 #include "nsTextFragment.h"
 #include "XMLUtils.h"
 #include "TxLog.h"
+#include "nsUnicharUtils.h"
 
 const PRUint32 kUnknownIndex = PRUint32(-1);
 
@@ -420,22 +421,42 @@ txXPathNodeUtils::getLocalName(const txXPathNode& aNode,
 }
 
 /* static */
-PRBool
+void
 txXPathNodeUtils::getLocalName(const txXPathNode& aNode, nsAString& aLocalName)
 {
     if (aNode.isDocument()) {
-        return PR_TRUE;
+        aLocalName.Truncate();
+
+        return;
     }
 
     if (aNode.isContent()) {
-        nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aNode.mContent);
-        node->GetLocalName(aLocalName);
+        nsINodeInfo* nodeInfo = aNode.mContent->GetNodeInfo();
+        if (nodeInfo) {
+            nodeInfo->GetLocalName(aLocalName);
 
-        return PR_TRUE;
+            // Check for html
+            if (aNode.mContent->IsContentOfType(nsIContent::eHTML) &&
+                nodeInfo->NamespaceEquals(kNameSpaceID_None)) {
+                ToUpperCase(aLocalName);
+            }
+
+            return;
+        }
+
+        if (aNode.mContent->IsContentOfType(nsIContent::ePROCESSING_INSTRUCTION)) {
+            // PIs don't have a nodeinfo but do have a name
+            nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aNode.mContent);
+            node->GetNodeName(aLocalName);
+
+            return;
+        }
+
+        aLocalName.Truncate();
+
+        return;
     }
 
-    // XXX Is this correct?
-    // XXX no, it's not, it won't be uppercase in html
     nsCOMPtr<nsIAtom> prefix, localName;
     PRInt32 namespaceID;
     aNode.mContent->GetAttrNameAt(aNode.mIndex, &namespaceID,
@@ -443,41 +464,70 @@ txXPathNodeUtils::getLocalName(const txXPathNode& aNode, nsAString& aLocalName)
                                   getter_AddRefs(prefix));
     localName->ToString(aLocalName);
 
-    return PR_TRUE;
+    // Check for html
+    if (aNode.mContent->IsContentOfType(nsIContent::eHTML) &&
+        aNode.mContent->GetNodeInfo()->NamespaceEquals(kNameSpaceID_None)) {
+        ToUpperCase(aLocalName);
+    }
 }
 
 /* static */
-PRBool
+void
 txXPathNodeUtils::getNodeName(const txXPathNode& aNode, nsAString& aName)
 {
-    if (aNode.isAttribute()) {
-        nsCOMPtr<nsIAtom> name, prefix;
-        PRInt32 namespaceID;
-        aNode.mContent->GetAttrNameAt(aNode.mIndex, &namespaceID,
-                                      getter_AddRefs(name),
-                                      getter_AddRefs(prefix));
-        if (prefix) {
-          prefix->ToString(aName);
-          aName.Append(PRUnichar(':'));
+    if (aNode.isDocument()) {
+        aName.Truncate();
+
+        return;
+    }
+
+    if (aNode.isContent()) {
+        nsINodeInfo* nodeInfo = aNode.mContent->GetNodeInfo();
+        if (nodeInfo) {
+            nodeInfo->GetQualifiedName(aName);
+
+            // Check for html
+            if (aNode.mContent->IsContentOfType(nsIContent::eHTML) &&
+                nodeInfo->NamespaceEquals(kNameSpaceID_None)) {
+                ToUpperCase(aName);
+            }
+
+            return;
         }
-    
-        nsAutoString localName;
-        name->ToString(localName);
-        aName.Append(localName);
-    
-        return PR_TRUE;
+
+        if (aNode.mContent->IsContentOfType(nsIContent::ePROCESSING_INSTRUCTION)) {
+            // PIs don't have a nodeinfo but do have a name
+            nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aNode.mContent);
+            node->GetNodeName(aName);
+        }
+
+        return;
     }
 
-    nsCOMPtr<nsIDOMNode> node = aNode.isContent() ?
-                                do_QueryInterface(aNode.mContent) :
-                                do_QueryInterface(aNode.mDocument);
-    if (!node) {
-        return PR_FALSE;
+    nsCOMPtr<nsIAtom> name, prefix;
+    PRInt32 namespaceID;
+    aNode.mContent->GetAttrNameAt(aNode.mIndex, &namespaceID,
+                                  getter_AddRefs(name),
+                                  getter_AddRefs(prefix));
+
+
+    if (prefix) {
+        prefix->ToString(aName);
+        aName.Append(PRUnichar(':'));
+    }
+    else {
+        aName.Truncate();
     }
 
-    node->GetNodeName(aName);
+    const char* attrName;
+    name->GetUTF8String(&attrName);
+    AppendUTF8toUTF16(attrName, aName);
 
-    return PR_TRUE;
+    // Check for html
+    if (aNode.mContent->IsContentOfType(nsIContent::eHTML) &&
+        aNode.mContent->GetNodeInfo()->NamespaceEquals(kNameSpaceID_None)) {
+        ToUpperCase(aName);
+    }
 }
 
 /* static */

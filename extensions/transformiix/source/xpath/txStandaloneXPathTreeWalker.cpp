@@ -254,25 +254,21 @@ txXPathNodeUtils::getLocalName(const txXPathNode& aNode,
 }
 
 /* static */
-PRBool
+void
 txXPathNodeUtils::getLocalName(const txXPathNode& aNode, nsAString& aLocalName)
 {
     nsCOMPtr<nsIAtom> localName;
     PRBool hasName = aNode.mInner->getLocalName(getter_AddRefs(localName));
     if (hasName && localName) {
         localName->ToString(aLocalName);
-        return PR_TRUE;
     }
-    return PR_FALSE;
 }
 
 /* static */
-PRBool
+void
 txXPathNodeUtils::getNodeName(const txXPathNode& aNode, nsAString& aName)
 {
-    nsresult rv = aNode.mInner->getNodeName(aName);
-
-    return NS_SUCCEEDED(rv);
+    aNode.mInner->getNodeName(aName);
 }
 
 /* static */

@@ -47,8 +47,7 @@
 class nsAString;
 class nsIAtom;
 
-#ifdef TX_EXE
-#else
+#ifndef TX_EXE
 #include "nsVoidArray.h"
 
 class txUint32Array : public nsVoidArray
@@ -72,7 +71,7 @@ public:
     }
 };
 
-#include "nsIDOMDocument.h"
+class nsIDOMDocument;
 #endif
 
 class txXPathTreeWalker
@@ -87,17 +86,9 @@ public:
     PRInt32 getNamespaceID() const;
     PRUint16 getNodeType() const;
     void getNodeValue(nsAString& aResult) const;
-    PRBool getNodeName(nsAString& aName) const;
+    void getNodeName(nsAString& aName) const;
 
-    PRBool moveTo(const txXPathTreeWalker& aWalker)
-    {
-        setTo(mPosition, aWalker.mPosition);
-#ifndef TX_EXE
-        mCurrentIndex = aWalker.mCurrentIndex;
-        mDescendants.Clear();
-#endif
-        return PR_TRUE;
-    }
+    PRBool moveTo(const txXPathTreeWalker& aWalker);
 
     PRBool moveToDOMParent();
     PRBool moveToParent();
@@ -116,13 +107,12 @@ public:
     static void setTo(txXPathNode& aNode, const txXPathNode& aOtherNode);
 
 private:
-#ifdef TX_EXE
     txXPathNode mPosition;
-#else
+
+#ifndef TX_EXE
     PRBool moveToValidAttribute(PRUint32 aStartIndex);
     PRBool moveToSibling(PRInt32 aDir);
 
-    txXPathNode mPosition;
     PRUint32 mCurrentIndex;
     txUint32Array mDescendants;
 #endif
@@ -135,10 +125,10 @@ public:
                           PRInt32 aNSID, nsAString& aValue);
     static PRBool getLocalName(const txXPathNode& aNode,
                                nsIAtom** aLocalName);
-    static PRBool getLocalName(const txXPathNode& aNode,
-                               nsAString& aLocalName);
-    static PRBool getNodeName(const txXPathNode& aNode,
-                              nsAString& aName);
+    static void getLocalName(const txXPathNode& aNode,
+                             nsAString& aLocalName);
+    static void getNodeName(const txXPathNode& aNode,
+                            nsAString& aName);
     static PRInt32 getNamespaceID(const txXPathNode& aNode);
     static void getNamespaceURI(const txXPathNode& aNode, nsAString& aURI);
     static PRUint16 getNodeType(const txXPathNode& aNode);
@@ -215,10 +205,10 @@ txXPathTreeWalker::getNodeValue(nsAString& aResult) const
     txXPathNodeUtils::getNodeValue(mPosition, aResult);
 }
 
-inline PRBool
+inline void
 txXPathTreeWalker::getNodeName(nsAString& aName) const
 {
-    return txXPathNodeUtils::getNodeName(mPosition, aName);
+    txXPathNodeUtils::getNodeName(mPosition, aName);
 }
 
 inline PRBool
@@ -234,6 +224,18 @@ txXPathTreeWalker::moveToDOMParent()
     }
 
     return moveToParent();
+}
+
+inline PRBool
+txXPathTreeWalker::moveTo(const txXPathTreeWalker& aWalker)
+{
+    setTo(mPosition, aWalker.mPosition);
+#ifndef TX_EXE
+    mCurrentIndex = aWalker.mCurrentIndex;
+    mDescendants.Clear();
+#endif
+
+    return PR_TRUE;
 }
 
 inline PRBool

@@ -244,6 +244,4 @@ private:
     PRPackedBool* mMarks;
 };
 
-typedef txNodeSet NodeSet;
-
 #endif
