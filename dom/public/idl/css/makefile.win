@@ -22,7 +22,8 @@
 DEPTH=..\..\..\..
 
 
-MODULE=dom_css
+MODULE=dom
+XPIDL_MODULE=dom_css
 
 XPIDLSRCS =					\
 	.\nsIDOMCSS2Properties.idl		\

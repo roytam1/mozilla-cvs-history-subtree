@@ -21,7 +21,8 @@
 
 DEPTH=..\..\..\..
 
-MODULE=dom_html
+MODULE=dom
+XPIDL_MODULE=dom_html
 
 XPIDLSRCS =					\
 	.\nsIDOMHTMLAnchorElement.idl		\

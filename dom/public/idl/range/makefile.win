@@ -21,7 +21,8 @@
 
 DEPTH=..\..\..\..
 
-MODULE=dom_range
+MODULE=dom
+XPIDL_MODULE=dom_range
 
 XPIDLSRCS =					\
 	.\nsIDOMDocumentRange.idl		\

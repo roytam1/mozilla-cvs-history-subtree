@@ -21,7 +21,8 @@
 
 DEPTH=..\..\..\..
 
-MODULE=dom_events
+MODULE=dom
+XPIDL_MODULE=dom_events
 
 XPIDLSRCS =					\
 	.\nsIDOMDocumentEvent.idl		\

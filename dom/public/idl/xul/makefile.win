@@ -22,7 +22,8 @@
 DEPTH=..\..\..\..
 
 
-MODULE=dom_xul
+MODULE=dom
+XPIDL_MODULE=dom_xul
 
 XPIDLSRCS =					\
 	.\nsIDOMXULCommandDispatcher.idl	\
