@@ -111,7 +111,9 @@
 #endif
 
 /***************************************************************************/
-// compile time switches for instrumentation and stuff....
+// Compile time switches for instrumentation and stuff....
+
+// Note that one would not normally turn *any* of these on in a non-DEBUG build.
 
 #if defined(DEBUG_jband) || defined(DEBUG_jst) || defined(DEBUG_dbradley) || defined(DEBUG_shaver)
 #define DEBUG_xpc_hacker

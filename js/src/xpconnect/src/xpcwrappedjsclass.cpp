@@ -407,7 +407,7 @@ xpcWrappedJSErrorReporter(JSContext *cx, const char *message,
 
         if(JSREPORT_IS_WARNING(report->flags))
         {
-            // XXX printf the warning.
+            // XXX printf the warning (#ifdef DEBUG only!).
             // XXX send the warning to the console service.
             return;
         }
@@ -1021,6 +1021,7 @@ pre_call_clean_up:
         {
             if(IsReportableErrorCode(e_result))
             {
+#ifdef DEBUG
                 static const char line[] =
                     "************************************************************\n";
                 static const char preamble[] =
@@ -1040,6 +1041,7 @@ pre_call_clean_up:
                 else
                     printf(cant_get_text);
                 printf(line);
+#endif
 
                 // Log the exception to the JS Console, so that users can do
                 // something with it.

@@ -137,11 +137,13 @@ Reporter(JSContext *cx, const char *message, JSErrorReport *rep)
      * If any of the above fails for some reason, fall back to
      * printing to stderr.
      */
+#ifdef DEBUG
     fprintf(stderr, "JS Component Loader: %s %s:%d\n"
             "                     %s\n",
             JSREPORT_IS_WARNING(rep->flags) ? "WARNING" : "ERROR",
             rep->filename, rep->lineno,
             message ? message : "<no message>");
+#endif
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)
@@ -1050,15 +1052,19 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
     JSObject *jsModuleObj;
     if (!JS_ValueToObject(cx, retval, &jsModuleObj)) {
         /* XXX report error properly */
+#ifdef DEBUG
         fprintf(stderr, "mJCL: couldn't convert %s's nsIModule to obj\n",
                 registryLocation);
+#endif
         return nsnull;
     }
 
     if (NS_FAILED(xpc->WrapJS(cx, jsModuleObj, NS_GET_IID(nsIModule),
                               (void **)&module))) {
         /* XXX report error properly */
+#ifdef DEBUG
         fprintf(stderr, "mJCL: couldn't get nsIModule from jsval\n");
+#endif
         return nsnull;
     }
 
