@@ -96,7 +96,6 @@ PRBool nsBlockFrame::gLamePaintMetrics;
 PRBool nsBlockFrame::gLameReflowMetrics;
 PRBool nsBlockFrame::gNoisy;
 PRBool nsBlockFrame::gNoisyDamageRepair;
-PRBool nsBlockFrame::gNoisyMaxElementWidth;
 PRBool nsBlockFrame::gNoisyReflow;
 PRBool nsBlockFrame::gReallyNoisyReflow;
 PRBool nsBlockFrame::gNoisySpaceManager;
@@ -113,7 +112,6 @@ struct BlockDebugFlags {
 static const BlockDebugFlags gFlags[] = {
   { "reflow", &nsBlockFrame::gNoisyReflow },
   { "really-noisy-reflow", &nsBlockFrame::gReallyNoisyReflow },
-  { "max-element-width", &nsBlockFrame::gNoisyMaxElementWidth },
   { "space-manager", &nsBlockFrame::gNoisySpaceManager },
   { "verify-lines", &nsBlockFrame::gVerifyLines },
   { "damage-repair", &nsBlockFrame::gNoisyDamageRepair },
@@ -640,7 +638,7 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
                      const nsHTMLReflowState& aReflowState,
                      nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsBlockFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsBlockFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
 #ifdef DEBUG
   if (gNoisyReflow) {
@@ -952,9 +950,6 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
              aMetrics.mOverflowArea.width,
              aMetrics.mOverflowArea.height);
     }
-    if (aMetrics.mComputeMEW) {
-      printf(" maxElementWidth=%d", aMetrics.mMaxElementWidth);
-    }
     printf("\n");
   }
 
@@ -975,14 +970,6 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
                 ": %lld elapsed (%lld per line) (%d lines; %d new lines)",
                 delta, perLineDelta, numLines, ectc - ctc);
     printf("%s\n", buf);
-  }
-  if (gNoisyMaxElementWidth) {
-    if (aMetrics.mComputeMEW) {
-      IndentBy(stdout, gNoiseIndent);
-      printf("block %p returning with maxElementWidth=%d\n",
-             NS_STATIC_CAST(void*, this),
-             aMetrics.mMaxElementWidth);
-    }
   }
 #endif
 
@@ -3894,14 +3881,6 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
       // We also cache the max element width in the line. This is needed for
       // incremental reflow
       aLine->mMaxElementWidth = maxElementWidth;
-#ifdef DEBUG
-      if (gNoisyMaxElementWidth) {
-        IndentBy(stdout, gNoiseIndent);
-        printf ("nsBlockFrame::PlaceLine: %p setting MEW for line %p to %d\n", 
-                NS_STATIC_CAST(void*, this), NS_STATIC_CAST(void*, aLine.get()),
-                maxElementWidth);
-      }
-#endif
     }
 
   } else {
