@@ -2344,8 +2344,8 @@ nsXULElement::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRBool aNotif
 
 NS_IMETHODIMP
 nsXULElement::GetAttributeNameAt(PRInt32 aIndex,
-                                   PRInt32& aNameSpaceID,
-                                   nsIAtom*& aName) const
+                                 PRInt32& aNameSpaceID,
+                                 nsIAtom*& aName) const
 {
     if (Attributes()) {
         nsXULAttribute* attr = NS_REINTERPRET_CAST(nsXULAttribute*, Attributes()->ElementAt(aIndex));
@@ -2356,6 +2356,16 @@ nsXULElement::GetAttributeNameAt(PRInt32 aIndex,
             return NS_OK;
         }
     }
+    else if (mPrototype) {
+        if (aIndex >= 0 && aIndex < mPrototype->mNumAttributes) {
+            nsXULPrototypeAttribute* attr = &(mPrototype->mAttributes[aIndex]);
+            aNameSpaceID = attr->mNameSpaceID;
+            aName        = attr->mName;
+            NS_IF_ADDREF(aName);
+            return NS_OK;
+        }
+    }
+
     aNameSpaceID = kNameSpaceID_None;
     aName = nsnull;
     return NS_ERROR_ILLEGAL_VALUE;
@@ -2368,8 +2378,8 @@ nsXULElement::GetAttributeCount(PRInt32& aResult) const
     if (Attributes()) {
         aResult = Attributes()->Count();
     }
-    else {
-        aResult = 0;
+    else if (mPrototype) {
+        aResult = mPrototype->mNumAttributes;
     }
 
     return rv;
@@ -2394,7 +2404,9 @@ nsXULElement::List(FILE* out, PRInt32 aIndent) const
             return rv;
 
         rdf_Indent(out, aIndent);
-        fputs("[XUL ", out);
+        fputs("[XUL", out);
+        if (mSlots) fputs("*", out);
+        fputs(" ", out);
         nsAutoString as;
         tag->ToString(as);
         fputs(as, out);
