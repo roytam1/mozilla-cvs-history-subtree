@@ -6282,14 +6282,6 @@ void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
     DR_state->PrettyUC(aMetrics.height, height);
     printf("d=%s,%s ", width, height);
 
-    if (aMetrics.mComputeMEW) {
-      DR_state->PrettyUC(aMetrics.mMaxElementWidth, width);
-      printf("me=%s ", width);
-    }
-    if (aMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-      DR_state->PrettyUC(aMetrics.mMaximumWidth, width);
-      printf("m=%s ", width);
-    }
     if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
       printf("status=0x%x", aStatus);
     }
