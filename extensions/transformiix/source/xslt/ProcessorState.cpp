@@ -400,40 +400,6 @@ Stack* ProcessorState::getDefaultNSURIStack() {
 } //-- getDefaultNSURIStack
 
 /**
- * Returns the global document base for resolving relative URIs within
- * the XSL stylesheets
-**/
-const String& ProcessorState::getDocumentBase() {
-    return documentBase;
-} //-- getDocumentBase
-
-/**
- * Returns the href for the given XSL document by looking in the
- * includes and imports lists
- **/
-void ProcessorState::getDocumentHref
-    (Document* xslDocument, String& documentBase)
-{
-
-  documentBase.clear();
-
-  //-- lookup includes
-  StringList* keys = includes.keys();
-  StringListIterator* iter = keys->iterator();
-  while (iter->hasNext()) {
-      String* key = iter->next();
-      TxObjectWrapper* objWrapper
-          = (TxObjectWrapper*)includes.get(*key);
-      if (xslDocument == objWrapper->object) {
-          documentBase.append(*key);
-          break;
-      }
-  }
-  delete iter;
-  delete keys;
-} //-- getDocumentBase
-
-/**
  * @return the included xsl document that was associated with the
  * given href, or null if no document is found
 **/
@@ -674,10 +640,6 @@ void ProcessorState::setDefaultNameSpaceURIForResult(const String& nsURI) {
 /**
  * Sets the document base for use when resolving relative URIs
 **/
-void ProcessorState::setDocumentBase(const String& documentBase) {
-     this->documentBase = documentBase;
-} //-- setDocumentBase
-
 /**
  * Sets the output method. Valid output method options are,
  * "xml", "html", or "text".

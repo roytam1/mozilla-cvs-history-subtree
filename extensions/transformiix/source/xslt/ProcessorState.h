@@ -128,17 +128,6 @@ public:
     Stack* getDefaultNSURIStack();
 
     /**
-     * Returns the document base for resolving relative URIs
-    **/ 
-    const String& getDocumentBase();
-
-    /**
-     * Returns the href for the given xsl document by returning
-     * it's reference from the include or import list
-    **/
-    void getDocumentHref(Document* xslDocument, String& documentBase);
-
-    /**
      * @return the included xsl document that was associated with the
      * given href, or null if no document is found 
     **/
@@ -241,11 +230,6 @@ public:
      * Sets a new default Namespace URI. This is used for the Result Tree
     **/ 
     void setDefaultNameSpaceURIForResult(const String& nsURI);
-
-    /**
-     * Sets the document base for including and importing stylesheets
-    **/
-    void setDocumentBase(const String& documentBase);
 
     /**
      * Sets the output method. Valid output method options are,
@@ -434,8 +418,6 @@ private:
     //-- default templates
     Element*      dfWildCardTemplate;
     Element*      dfTextTemplate;
-
-    String documentBase;
 
     /**
      * Returns the closest xml:space value for the given node
