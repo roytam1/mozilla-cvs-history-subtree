@@ -623,7 +623,7 @@ RelatedLinksHandlerImpl::~RelatedLinksHandlerImpl()
 	}
 }
 
-NS_IMETHODIMP
+nsresult
 RelatedLinksHandlerImpl::Init()
 {
 	nsresult rv;

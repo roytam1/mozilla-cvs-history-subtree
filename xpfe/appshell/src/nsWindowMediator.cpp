@@ -563,7 +563,8 @@ NS_IMETHODIMP nsWindowMediator::QueryInterface(REFNSIID iid, void **result)
 }
 
 // RDF
-NS_IMETHODIMP nsWindowMediator::Init()
+nsresult
+nsWindowMediator::Init()
 {
 	nsresult rv;
 
