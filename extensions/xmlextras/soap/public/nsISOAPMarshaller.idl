@@ -32,35 +32,29 @@ interface nsISOAPMessage;
 interface nsISOAPMarshaller : nsISupports {
 
 /**
- * Marshall the source object into the specified
- * parent in the output.  Any parameter may be null
- * as long as the marshaller is OK with it.
+ * Marshall the source parameter or object
  *
- * @param aName The name of the parameter
+ * @param aMessage The message receiving the marshalled data
  *
- * @param aType The string identifying the type of the parameter
+ * @param aSource The parameter or object to be marshalled
  *
- * @param aEncodingStyleURI The encoding style for the parameter
+ * @param aEncodingStyleURI The encoding style
  *
- * @param aNamespace The namespace URI of the element
+ * @param aTypeID The type ID of the source parameter or object
  *
- * @param aLocalname The name of the element
- *
- * @param aSource The object to be marshalled, usually a parameter
- *
- * @param aMessage The message receiving the marshalled content
+ * @param aSchemaID The schema ID of the DOM node or data to create
  *
  * @param aConfiguration Configuration object which may specify more
  *   details used by the marshaller.
  *
- * @return The marshalled object, which may be null if the operation
- *   attached objects elsewhere in the message.
+ * @return The marshalled DOM node or data, which may be null if 
+ *   the operation failed or did not return a result.  In case of 
+ *   failure, a more complete status is recorded in the message.
  */
-nsISupports marshall(in DOMString aName,
-    in DOMString aType, in DOMString aEncodingStyleURI,
-    in DOMString aNamespace, in DOMString aLocalname, 
-    in nsISupports aSource, in nsISOAPMessage aMessage, 
-    in nsISupports aConfiguration);
+nsISupports marshall(
+    in nsISOAPMessage aMessage, in nsISupports aSource, 
+    in DOMString aEncodingStyleURI, in DOMString aTypeID, 
+    in DOMString aSchemaID, in nsISupports aConfiguration);
 };
 
 %{ C++

@@ -35,36 +35,29 @@ interface nsISOAPMessage;
 interface nsISOAPUnmarshaller : nsISupports {
 
 /**
- * Unmarshall the source node into the specified
- * object in the output.  Any parameter may be null as
- * long as the unmarshaller is OK with it.
+ * Unmarshall the source DOM node or data
  *
- * @param aName The resulting name of the parameter
+ * @param aMessage The message supplying the data to be unmarshalled
  *
- * @param aType The string identifying the type of the parameter
+ * @param aSource The DOM node or data to be unmarshalled
  *
- * @param aEncodingStyleURI The encoding style for the parameter
+ * @param aEncodingStyleURI The encoding style
  *
- * @param aNamespace The namespace URI of the element
+ * @param aSchemaID The schema ID of the source DOM node or data
  *
- * @param aLocalname The name of the element
- *
- * @param aSource The object to be unmarshalled, usually a DOM node
- *
- * @param aMessage The message supplying the marshalled content
+ * @param aTypeID The type ID of the parameter or object to create
  *
  * @param aConfiguration Configuration object which may specify more
  *   details used by the unmarshaller.
  *
- * @return The unmarshalled object, which is null if operation failed.
- *   In case of failure, a more complete status is recorded in the message.
+ * @return The unmarshalled parameter or object, which is null if 
+ *   the operation failed or did not return a result.  In case of 
+ *   failure, a more complete status is recorded in the message.
  */
 nsISupports unmarshall(
-    out DOMString aName, in DOMString aType, 
-    in DOMString aEncodingStyleURI,
-    in DOMString aNamespace, in DOMString aLocalname, 
-    in nsISupports aSource, in nsISOAPMessage aMessage, 
-    in nsISupports aConfiguration);
+    in nsISOAPMessage aMessage, in nsISupports aSource,
+    in DOMString aEncodingStyleURI, in DOMString aSchemaID, 
+    in DOMString aTypeID, in nsISupports aConfiguration);
 };
 
 %{ C++

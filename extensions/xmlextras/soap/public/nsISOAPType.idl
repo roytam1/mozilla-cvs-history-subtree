@@ -38,27 +38,22 @@ interface nsISOAPType : nsISupports {
   attribute DOMString encodingStyleURI;
 
 /**
- * Type of parameter marshalled / unmarshalled
+ * ID of type of parameter or object
  */
-  attribute DOMString parameterType;
+  attribute DOMString typeID;
 
 /**
- * Namespace URI of the element of encoding, or null if no namespace URI
+ * ID of schema of marshalled DOM node or data
  */
-  attribute DOMString elementNamespace;
+  attribute DOMString schemaID;
 
 /**
- * Local name of the element of encoding, or null if no namespace URI
- */
-  attribute DOMString elementLocalname;
-
-/**
- * Contract ID of service which can marshal this type of object into DOM
+ * Service which can marshal this parameter or object
  */
   attribute nsISOAPMarshaller marshaller;
 
 /**
- * Contract ID of service which can unmarshal this type of object from DOM
+ * Service which can unmarshal this DOM node or data
  */
   attribute nsISOAPUnmarshaller unmarshaller;
 

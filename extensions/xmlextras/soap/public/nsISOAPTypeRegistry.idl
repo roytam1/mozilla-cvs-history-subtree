@@ -24,11 +24,12 @@
 
 interface nsIDOMElement;
 interface nsISOAPType;
+interface nsISOAPMessage;
 
 /**
  * This interface keeps track of all the known types and how
- *   each should be marshalled (by parameter type) or
- *   unmarshalled (by element namespaceURI and localName)
+ *   each should be marshalled (by type) or unmarshalled (by 
+ *   schema)
  */
 
 [scriptable, uuid(9ae49600-1dd1-11b2-877f-e62f620c5e92)]
@@ -57,29 +58,75 @@ interface nsISOAPTypeRegistry : nsISupports {
    * @param aEncodingStyleURI The URI that matches the encoding style of 
    *   the type to be located.
    *
-   * @param aParameterType The string identifying the type to be located.
+   * @param aTypeID The  parameter or object type to be located.
    *
    * @return The type in the registry that matches the encoding and type name
    */
-  nsISOAPType queryByParameterType(
-        in DOMString aEncodingStyleURI, in DOMString aParameterType);
+  nsISOAPType queryByType(
+        in DOMString aEncodingStyleURI, in DOMString aTypeID);
   
   /**
-   * Given an element type, find the type information.
+   * Given a schema type, find the type information.
    *
    * @param encodingStyleURI The URI that matches the encoding style of 
    *   the type to be located.
    *
-   * @param aNamespace the namespace URI of the element.
-   *
-   * @param aName the local name of the element.
+   * @param aSchemaID the namespace URI of the element.
    *
    * @return The type in the registry that matches the encoding and element
    */
-  nsISOAPType queryByElementType(
-        in DOMString aEncodingStyleURI, in DOMString aNamespace,
-        in DOMString aName);
-};
+  nsISOAPType queryBySchemaID(
+        in DOMString aEncodingStyleURI, in DOMString aSchemaID);
+
+
+  /**
+   * Marshall the source object into the specified
+   * parent in the output.  Any parameter may be null
+   * as long as the marshaller is OK with it.
+   *
+   * @param aMessage The message receiving the marshalled content
+   *
+   * @param aSource The parameter or object to be marshalled
+   *
+   * @param aEncodingStyleURI The encoding style
+   *
+   * @param aTypeID The type ID of the source parameter or object
+   *
+   * @param aConfiguration Configuration object which may specify more
+   *   details used by the marshaller.
+   *
+   * @return The marshalled DOM node or data, which may be null if the 
+   *   operation failed or did not return a result.  In case of failure, 
+   *   a more complete status is recorded in the message.
+   */
+  nsISupports marshall(
+      in nsISOAPMessage aMessage, in nsISupports aSource, 
+      in DOMString aEncodingStyleURI, in DOMString aTypeID);
+
+  /**
+   * Unmarshall the source node into the specified
+   * object in the output.  Any argument may be null as
+   * long as the unmarshaller is OK with it.
+   *
+   * @param aMessage The message supplying the marshalled content
+   *
+   * @param aSource The DOM node or data to be unmarshalled
+   *
+   * @param aEncodingStyleURI The encoding style
+   *
+   * @param aSchemaID The schema ID of the source DOM node or data
+   *
+   * @param aConfiguration Configuration object which may specify more
+   *   details used by the unmarshaller.
+   *
+   * @return The unmarshalled parameter or object, which is null if the
+   *   operation failed or did not return a result.  In case of failure, 
+   *   a more complete status is recorded in the message.
+   */
+  nsISupports unmarshall(
+      in nsISOAPMessage aMessage, in nsISupports aSource, 
+      in DOMString aEncodingStyleURI, in DOMString aSchemaID);
+  };
 
 %{ C++
 #define NS_SOAPTYPEREGISTRY_CID                            \
