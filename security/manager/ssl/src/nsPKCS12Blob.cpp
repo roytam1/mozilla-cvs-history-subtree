@@ -102,6 +102,7 @@ nsPKCS12Blob::ImportFromFile(nsILocalFile *file)
   nsresult rv;
   SECStatus srv;
   SEC_PKCS12DecoderContext *dcx = NULL;
+  PK11SlotInfo *slot = PK11_GetInternalKeySlot(); /* XXX fix me! */
   SECItem unicodePw;
   if (!mToken)
     SetToken(NULL); // uses internal slot
@@ -114,7 +115,7 @@ nsPKCS12Blob::ImportFromFile(nsILocalFile *file)
   if (NS_FAILED(rv) || unicodePw.data == NULL) goto finish;
   rv = NS_ERROR_FAILURE;
   // initialize the decoder
-  dcx = SEC_PKCS12DecoderStart(&unicodePw, NULL /*slot*/, NULL,
+  dcx = SEC_PKCS12DecoderStart(&unicodePw, slot, NULL,
                                digest_open, digest_close,
                                digest_read, digest_write,
                                this);
