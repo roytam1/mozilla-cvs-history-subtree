@@ -40,7 +40,7 @@ MOZ_PKG_FORMAT	= TGZ
 endif
 endif
 ifndef MOZ_PKG_APPNAME
-MOZ_PKG_APPNAME = mozilla
+MOZ_PKG_APPNAME = minimo
 endif
 
 MAKE_PACKAGE	= echo "Sorry, don't know how to build a $(MOZ_PKG_FORMAT) file yet...."
@@ -105,9 +105,9 @@ GARBAGE		+= $(DIST)/$(PACKAGE) $(PACKAGE)
 
 OSPACKAGE	= unix
 ifdef USE_SHORT_LIBNAME
-MOZILLA_BIN	= $(DIST)/bin/mozilla$(BIN_SUFFIX)
+MOZILLA_BIN	= $(DIST)/bin/winembed.exe
 else
-MOZILLA_BIN	= $(DIST)/bin/mozilla-bin
+MOZILLA_BIN	= $(DIST)/bin/TestGtkEmbed
 endif
 
 ifeq ($(OS_ARCH),IRIX)
@@ -169,7 +169,7 @@ endif
 			-exec $(STRIP) $(STRIP_FLAGS) {} >/dev/null 2>&1 \;
 ifeq (,$(filter mozilla phoenix,$(MOZ_PKG_APPNAME)))
 	@echo "Creating start script $(MOZ_PKG_APPNAME)..."
-	cd $(DIST)/$(MOZ_PKG_APPNAME); cp mozilla $(MOZ_PKG_APPNAME)
+	cd $(DIST)/$(MOZ_PKG_APPNAME); if [ -f mozilla ]; then cp mozilla $(MOZ_PKG_APPNAME); fi
 endif
 	@echo "Compressing..."
 	cd $(DIST); $(MAKE_PACKAGE)
