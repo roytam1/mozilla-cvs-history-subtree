@@ -3577,7 +3577,7 @@ NS_IMETHODIMP nsMsgDatabase::GetMsgHdrForMessageID(const char *msgID, nsIMsgDBHd
 	  else
 		  rv = CreateMsgHdr(hdrRow, key, &msgHdr);
   }
-  NS_IF_ADDREF(*aHdr = msgHdr);
+  *aHdr = msgHdr; // it's already addreffed
   return NS_OK; // it's not an error not to find a msg hdr.
 }
 
