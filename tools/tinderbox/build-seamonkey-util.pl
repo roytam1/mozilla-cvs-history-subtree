@@ -987,6 +987,18 @@ sub run_all_tests {
 					  $binary . " -P $Settings::MozProfileName \"http://localhost/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=30000&auto=1\"",
 					  $Settings::LayoutPerformanceTestTimeout,
 					  "_x_x_mozilla_page_load", 1, 0);
+
+      # Run the test a second time.  Getting intermittent crashes, these
+      # are expensive to wait, a 2nd run that is successful is still useful.
+      # Sorry for the cut & paste. -mcafee
+      if($test_result eq 'testfailed') {
+        print_log "TinderboxPrint:Tp:[CRASH]\n";
+		$test_result = 
+          FileBasedTest("LayoutPerformanceTest", $build_dir, $binary_dir,
+                        $binary . " -P $Settings::MozProfileName \"http://cowtools/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=30000&auto=1\"",
+                        $Settings::LayoutPerformanceTestTimeout,
+                        "_x_x_mozilla_page_load", 1, 0);
+      }
     }
 
 	# xul window open test.
