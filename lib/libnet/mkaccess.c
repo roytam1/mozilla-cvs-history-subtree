@@ -2065,7 +2065,7 @@ NET_ReadCookies(char * filename)
 	size_t new_len;
     XP_File fp;
 	char buffer[LINE_BUFFER_SIZE];
-	char *host, *is_domain, *path, *xxx *expires, *name, *cookie;
+	char *host, *is_domain, *path, *xxx, *expires, *name, *cookie;
 	Bool added_to_list;
 
     if(!(fp = XP_FileOpen(filename, xpHTTPCookie, XP_FILE_READ)))
