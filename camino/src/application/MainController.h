@@ -52,9 +52,8 @@
 {
     IBOutlet NSApplication* mApplication;
     
-    // The following two items are used by the filter list when saving files.
+    // The following item is added to NSSavePanels as an accessory view
     IBOutlet NSView*        mFilterView;
-    IBOutlet NSPopUpButton* mFilterList;
     
     // IBOutlet NSMenuItem*    mOfflineMenuItem;
     IBOutlet NSMenuItem*    mCloseWindowMenuItem;
@@ -155,7 +154,8 @@
 
 - (void)adjustBookmarksMenuItemsEnabling:(BOOL)inBrowserWindowFrontmost;
 
--(NSWindow*)getFrontmostBrowserWindow;
+- (NSView*)getSavePanelView;
+- (NSWindow*)getFrontmostBrowserWindow;
 
 - (MVPreferencesController *)preferencesController;
 - (void)displayPreferencesWindow:sender;

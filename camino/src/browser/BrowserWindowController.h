@@ -213,9 +213,9 @@ typedef enum
 - (IBAction)viewSource:(id)aSender;			// focussed frame or page
 - (IBAction)viewPageSource:(id)aSender;	// top-level page
 
-- (void)saveDocument:(BOOL)focusedFrame filterView:(NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList;
-- (void)saveURL: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
-            url: (NSString*)aURLSpec suggestedFilename: (NSString*)aFilename;
+- (void)saveDocument:(BOOL)focusedFrame filterView:(NSView*)aFilterView;
+- (void)saveURL:(NSView*)aFilterView url: (NSString*)aURLSpec suggestedFilename: (NSString*)aFilename;
+
 - (IBAction)printDocument:(id)aSender;
 - (IBAction)pageSetup:(id)aSender;
 - (IBAction)performSearch:(id)aSender;

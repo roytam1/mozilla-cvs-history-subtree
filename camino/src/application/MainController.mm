@@ -427,7 +427,7 @@ const int kReuseWindowOnAE = 2;
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController saveDocument:NO filterView:mFilterView filterList: mFilterList];
+    [browserController saveDocument:NO filterView:mFilterView];
 }
 
 -(IBAction) pageSetup:(id)aSender
@@ -582,6 +582,11 @@ const int kReuseWindowOnAE = 2;
   [mAddBookmarkMenuItem 							setEnabled:inBrowserWindowFrontmost];
   [mCreateBookmarksFolderMenuItem 		setEnabled:inBrowserWindowFrontmost];
   [mCreateBookmarksSeparatorMenuItem 	setEnabled:NO];		// separators are not implemented yet
+}
+
+- (NSView*)getSavePanelView
+{
+  return mFilterView;
 }
 
 -(NSWindow*)getFrontmostBrowserWindow
