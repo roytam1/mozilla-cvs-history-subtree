@@ -54,6 +54,7 @@ interface nsIMsgDBHdr;
 interface nsIMsgHdr;
 interface nsIDocShell;
 interface nsIFileSpec;
+interface nsIMsgComposeSecure;
 
 typedef long nsMsgDeliverMode;
 
@@ -247,6 +248,6 @@ interface nsIMsgSend : nsISupports
 
     [noscript] attribute nsresult status;
 
-    [noscript] attribute voidPtr cryptoclosure;
+    [noscript] attribute nsIMsgComposeSecure cryptoclosure;
 
 };
