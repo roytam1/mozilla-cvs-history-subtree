@@ -679,22 +679,6 @@ function ClearMessagePane()
 	}
 }
 
-// this will go away
-function GetSelectedFolder()
-{
-  try {
-	var tree = GetFolderOutliner();
-	var selection = tree.selectedItems;
-	if(selection.length > 0)
-		return selection[0];
-	else
-		return null;
-  }
-  catch (ex) {
-    return null;
-  }
-}
-
 function GetSelectedFolderIndex()
 {
      var start = {};
