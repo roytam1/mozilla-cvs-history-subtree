@@ -1348,6 +1348,7 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
     PRInt32 bytesLeft = amount;
 
     PR_ASSERT(flags == 0);
+    PR_ASSERT(opCode == kSTREAM_SEND || opCode == kSTREAM_RECEIVE);
     
     if (endpoint == NULL) {
         err = kEBADFErr;
@@ -1359,11 +1360,6 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
         goto ErrorExit;
     }
     
-    if (opCode != kSTREAM_SEND && opCode != kSTREAM_RECEIVE) {
-        err = kEINVALErr;
-        goto ErrorExit;
-    }
-        
     while (bytesLeft > 0) {
     
         PrepareForAsyncCompletion(me, fd->secret->md.osfd);    
@@ -1432,6 +1428,10 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
         }
 
 		me->io_pending = PR_FALSE;
+        if (opCode == kSTREAM_SEND)
+            fd->secret->md.write.thread = nil;
+        else
+            fd->secret->md.read.thread  = nil;
 
         if (result > 0) {
             buf = (void *) ( (UInt32) buf + (UInt32)result );
@@ -1469,9 +1469,13 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 		}
     }
 
+    PR_ASSERT(opCode == kSTREAM_SEND ? fd->secret->md.write.thread == nil :
+                                       fd->secret->md.read.thread  == nil);
     return amount;
 
 ErrorExit:
+    PR_ASSERT(opCode == kSTREAM_SEND ? fd->secret->md.write.thread == nil :
+                                       fd->secret->md.read.thread  == nil);
     macsock_map_error(err);
     return -1;
 }                               
