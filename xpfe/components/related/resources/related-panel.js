@@ -29,7 +29,7 @@
 function debug(msg)
 {
 	// uncomment for noise
-	 dump(msg);
+	// dump(msg + "\n");
 }
 
 // get handle to the BrowserAppCore in the content area. 
@@ -135,6 +135,8 @@ function refetchRelatedLinks(Handler, data)
 		}
 	}
 
+    
+		
 	// we can only get related links data on HTTP URLs
 	if (newSite.indexOf("http://") != 0)
 	{
@@ -142,6 +144,19 @@ function refetchRelatedLinks(Handler, data)
 		return(false);
 	}
 	newSite = newSite.substr(7);			// strip off "http://" prefix
+	
+    //Netcenter puts a info.netscape.com for tracking
+    //Check for this then strip it out so only url is left.
+    var infoRedirect = /info.netscape.com/;
+    var checkInfoRedirect = newSite.match(infoRedirect);	
+    if (checkInfoRedirect)
+    {
+       var httpMatch = /http:/;
+       var infoOffset = newSite.search(httpMatch);
+       newSite = newSite.substr(infoOffset);  //strips off info....
+       data = newSite;               //correct data
+       newSite = newSite.substr(7);  //strip off http
+    }
 
 	var portOffset = newSite.indexOf(":");
 	var slashOffset = newSite.indexOf("/");
@@ -162,7 +177,7 @@ function refetchRelatedLinks(Handler, data)
 
 	// only request new related links data if we've got a new web site (hostname change)
 	if (currentSite != newSite)
-	{
+    {		
 		// privacy: don't send anything after a '?'
 		var theSite = "" + data;
 		var questionOffset = theSite.indexOf("?");
@@ -278,7 +293,7 @@ function openURL(event, root)
     }
 	else
     {
-    //fallbackk case (if appCore isn't available)
+    //fallback case (if appCore isn't available)
     ContentWindow.location = id;
     }
 }
