@@ -108,7 +108,7 @@ function ActivationWarning()
       showWarning = prefBranch.getBoolPref("showInitialWarning");
       if (!showWarning)
         return;
-    } catch(e) { ddump("fooo");}
+    } catch(e) {}
 
     var bundle = Components.classes["@mozilla.org/intl/stringbundle;1"]
                  .getService()
