@@ -61,8 +61,6 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIConsoleService.h"
 //#include "nslog.h"
-#include <MacTypes.h>
-#include "ProfilerUtils.h"
 #else
 #include "printers.h"
 #include "TxLog.h"
