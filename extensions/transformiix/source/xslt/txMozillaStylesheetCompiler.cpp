@@ -382,11 +382,15 @@ txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode)
     if (!document) {
         document = do_QueryInterface(aNode);
     }
-    nsCOMPtr<nsIDOM3Node> docNode = do_QueryInterface(document);
-    nsAutoString baseURI;
-    docNode->GetBaseURI(baseURI);
 
-    txStylesheetCompiler compiler(baseURI);
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(document);
+    nsCOMPtr<nsIURI> uri;
+    doc->GetBaseURL(*getter_AddRefs(uri));
+    nsCAutoString baseURI;
+    uri->GetSpec(baseURI);
+
+    txStylesheetCompiler compiler(NS_STATIC_CAST(const nsAString&,
+                                                 NS_ConvertUTF8toUCS2(baseURI)));
 
     handleNode(document, compiler);
     compiler.doneLoading();

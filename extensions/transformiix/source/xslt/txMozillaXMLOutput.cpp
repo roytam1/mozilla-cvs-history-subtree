@@ -88,7 +88,6 @@ txMozillaXMLOutput::txMozillaXMLOutput(const nsAString& aRootName,
       mDontAddCurrent(PR_FALSE),
       mHaveTitleElement(PR_FALSE),
       mHaveBaseElement(PR_FALSE),
-      mDocumentIsHTML(PR_FALSE),
       mCreatingNewDocument(PR_TRUE)
 {
     if (aObserver) {
@@ -748,6 +747,19 @@ txMozillaXMLOutput::createResultDocument(const nsAString& aName, PRInt32 aNsID,
         doc->SetContentType(NS_LITERAL_STRING("text/xml"));
     }
 
+    // Set up script loader of the result document.
+    nsCOMPtr<nsIScriptLoader> loader;
+    doc->GetScriptLoader(getter_AddRefs(loader));
+    if (loader) {
+        if (mNotifier) {
+            loader->AddObserver(mNotifier);
+        }
+        else {
+            // Don't load scripts, we can't notify the caller when they're loaded.
+            loader->SetEnabled(PR_FALSE);
+        }
+    }
+
     if (mNotifier) {
         mNotifier->SetOutputDocument(mDocument);
     }
@@ -871,31 +883,14 @@ txTransformNotifier::SetOutputDocument(nsIDOMDocument* aDocument)
 {
     mDocument = aDocument;
 
-    nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocument);
-
-    // Set up script loader of the result document.
-    nsCOMPtr<nsIScriptLoader> loader;
-    doc->GetScriptLoader(getter_AddRefs(loader));
-    if (loader) {
-        if (mObserver) {
-            loader->AddObserver(this);
-        }
-        else {
-            // Don't load scripts, we can't notify the caller when they're loaded.
-            loader->SetEnabled(PR_FALSE);
-        }
-    }
-
     // Notify the contentsink that the document is created
-    if (mObserver) {
-        mObserver->OnDocumentCreated(mDocument);
-    }
+    mObserver->OnDocumentCreated(mDocument);
 }
 
 void
 txTransformNotifier::SignalTransformEnd()
 {
-    if (mInTransform || !mObserver || mScriptElements.Count() > 0 ||
+    if (mInTransform || mScriptElements.Count() > 0 ||
         mStylesheets.Count() > 0) {
         return;
     }
