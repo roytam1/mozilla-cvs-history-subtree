@@ -52,7 +52,6 @@ struct nsFrameItems;
 struct nsAbsoluteItems;
 struct nsTableCreator;
 class nsStyleContext;
-struct nsTableList;
 struct nsStyleContent;
 struct nsStyleDisplay;
 class nsIPresShell;
@@ -240,12 +239,14 @@ private:
                                     nsIFrame*                aParentFrame,
                                     nsIFrame*&               aNewFrame);
 
+#ifdef CSS_TABLES
   nsresult ConstructDocElementTableFrame(nsIPresShell*          aPresShell, 
                                          nsPresContext*        aPresContext,
                                          nsIContent*            aDocElement,
                                          nsIFrame*              aParentFrame,
                                          nsIFrame*&             aNewTableFrame,
                                          nsFrameConstructorState& aState);
+#endif
 
   nsresult CreateGeneratedFrameFor(nsPresContext*       aPresContext,
                                    nsIDocument*          aDocument,
@@ -272,6 +273,7 @@ private:
                         nsIFrame*        aParentFrame,
                         nsIFrame*        aFrameList);
 
+#ifdef CSS_TABLES
   // BEGIN TABLE SECTION
   /**
    * ConstructTableFrame will construct the outer and inner table frames and
@@ -480,6 +482,7 @@ private:
   const nsStyleDisplay* GetDisplay(nsIFrame* aFrame);
 
   // END TABLE SECTION
+#endif
 
 protected:
   static nsresult CreatePlaceholderFrameFor(nsIPresShell*    aPresShell, 
@@ -814,6 +817,7 @@ private:
                                            nsIContent*     aContent,
                                            nsIAtom*        aAttribute);
 
+#ifdef CSS_TABLES
   nsresult CreateContinuingOuterTableFrame(nsIPresShell*    aPresShell, 
                                            nsPresContext*  aPresContext,
                                            nsIFrame*        aFrame,
@@ -829,6 +833,7 @@ private:
                                       nsIContent*      aContent,
                                       nsStyleContext*  aStyleContext,
                                       nsIFrame**       aContinuingFrame);
+#endif
 
   //----------------------------------------
 
