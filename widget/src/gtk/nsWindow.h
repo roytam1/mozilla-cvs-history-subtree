@@ -88,6 +88,9 @@ public:
 
   void HandleXlibExposeEvent(XEvent *event);
   void HandleXlibConfigureNotifyEvent(XEvent *event);
+  void HandleXlibButtonEvent(XButtonEvent *aButtonEvent);
+  void HandleXlibMotionNotifyEvent(XMotionEvent *aMotionEvent);
+  void HandleXlibCrossingEvent(XCrossingEvent * aCrossingEvent);
 
   // Return the Gdk window used for rendering
   virtual GdkWindow * GetRenderWindow(GtkObject * aGtkWidget);
