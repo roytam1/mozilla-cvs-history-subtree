@@ -1,24 +1,27 @@
 /* -*- Mode: Java; tab-width: 4; insert-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
- * http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS IS"
- * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.  See
- * the License for the specific language governing rights and limitations
- * under the License.
- *
- * The Original Code is Mozilla Communicator client code.
- *
- * The Initial Developer of the Original Code is Netscape Communications
- * Corporation.  Portions created by Netscape are Copyright (C) 1998
- * Netscape Communications Corporation.  All Rights Reserved.
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ * 
  */
 
 // the rdf service
-var RDF = Components.classes['component://netscape/rdf/rdf-service'].getService();
+var RDF = 'component://netscape/rdf/rdf-service'
+RDF = Components.classes[RDF].getService();
 RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService);
 
 var NC = "http://home.netscape.com/NC-rdf#";
@@ -32,22 +35,22 @@ function debug(msg)
 
 function Init()
 {
-    sidebar.db       = window.arguments[0];
-    sidebar.resource = window.arguments[1];
-    debug("sidebar.db = " + sidebar.db + "\n");
-    debug("sidebar.resource = " + sidebar.resource + "\n");
+  sidebar.db       = window.arguments[0];
+  sidebar.resource = window.arguments[1];
+  debug("sidebar.db = " + sidebar.db + "\n");
+  debug("sidebar.resource = " + sidebar.resource + "\n");
 
-    // This will load the datasource, if it isn't already.
-    sidebar.datasource = RDF.GetDataSource(sidebar.db);
+  // This will load the datasource, if it isn't already.
+  sidebar.datasource = RDF.GetDataSource(sidebar.db);
 
-    // Add the necessary datasources to the select list
-    var select_list = document.getElementById('selected-panels');
-    select_list.database.AddDataSource(sidebar.datasource);
+  // Add the necessary datasources to the select list
+  var select_list = document.getElementById('selected-panels');
+  select_list.database.AddDataSource(sidebar.datasource);
 
-    // Root the customize dialog at the correct place.
-    select_list.setAttribute('ref', sidebar.resource);
+  // Root the customize dialog at the correct place.
+  select_list.setAttribute('ref', sidebar.resource);
 
-    enableButtons();
+  enableButtons();
 }
 
 function addOption(registry, service, selectIt)
@@ -63,9 +66,9 @@ function addOption(registry, service, selectIt)
   // Check to see if the panel already exists...
   for (var ii = treeroot.firstChild; ii != null; ii = ii.nextSibling) {
       if (ii.getAttribute('id') == service.Value) {
-	  // we already had the panel installed
-	  tree.selectItem(ii);
-	  return;
+      // we already had the panel installed
+      tree.selectItem(ii);
+      return;
       }
   }
 
@@ -126,7 +129,7 @@ function moveUp() {
 }
    
 function moveDown() {
-  var tree = document.getElementById('selected-panels');	
+  var tree = document.getElementById('selected-panels');
   if (tree.selectedItems.length == 1) {
     var selected = tree.selectedItems[0];
     if (selected.nextSibling) {
@@ -190,7 +193,7 @@ function enableButtons() {
 
 function CustomizePanel() 
 {
-  var tree  = document.getElementById('selected-panels');	
+  var tree  = document.getElementById('selected-panels');
   var index = tree.selectedIndex;
 
   if (index != -1) {
@@ -200,7 +203,7 @@ function CustomizePanel()
     if (!title || !customize_URL) return;
 
     var customize = window.open("chrome://sidebar/content/customize-panel.xul",
-			      "_blank", "chrome");
+                                "_blank", "chrome");
 
     customize.panel_name          = title;
     customize.panel_customize_URL = customize_URL;
@@ -210,7 +213,7 @@ function CustomizePanel()
 
 function RemovePanel()
 {
-  var tree = document.getElementById('selected-panels');	
+  var tree = document.getElementById('selected-panels');
 
   var nextNode = null;
   var numSelected = tree.selectedItems.length
@@ -325,7 +328,7 @@ function PreviewPanel()
     if (!preview_URL || !preview_name) break;
 
     var preview = window.open("chrome://sidebar/content/preview.xul",
-			      "_blank", "chrome");
+                              "_blank", "chrome");
     preview.panel_name = preview_name;
     preview.panel_URL = preview_URL;
   }
