@@ -853,6 +853,7 @@ ParseAtom(CompilerState *state)
         if (cp[1] == '?' && cp[2] == ':') {
             op = REOP_LPARENNON;
             state->cp = cp + 3;
+            num = -1;   /* suppress warning */
         }
         else {
 	    num = state->parenCount++;	/* \1 is numbered 0, etc. */
@@ -2547,7 +2548,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;                                                            \
 									      \
 	  case REOP_NONDIGIT:                                                 \
-	    matched = !JS_ISDIGIT(*cp);                                       \
+	    matched = *cp && !JS_ISDIGIT(*cp);                                \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
@@ -2557,7 +2558,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;                                                            \
 									      \
 	  case REOP_NONALNUM:                                                 \
-	    matched = !JS_ISWORD(*cp);                                        \
+	    matched = *cp && !JS_ISWORD(*cp);                                 \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
@@ -2567,7 +2568,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;                                                            \
 									      \
 	  case REOP_NONSPACE:                                                 \
-	    matched = !JS_ISSPACE(*cp);                                       \
+	    matched = *cp && !JS_ISSPACE(*cp);                                \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
