@@ -120,6 +120,7 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
 NetContextImpl::NetContextImpl(MWContext *aContext, 
 			       NET_ReloadMethod aReloadPolicy)
 {
+    NS_INIT_REFCNT();
     mContext = aContext;
     aReloadPolicy = mReloadPolicy;
 }
@@ -412,10 +413,12 @@ NetContextImpl::GetURL (ilIURL *aURL,
 
 URLImpl::URLImpl()
 {
+    NS_INIT_REFCNT();
 }
 
 URLImpl::URLImpl(URL_Struct *urls)
 {
+    NS_INIT_REFCNT();
     mURLS = urls;
     urls->fe_data = this;
 }
