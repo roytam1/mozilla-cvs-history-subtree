@@ -1332,7 +1332,6 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
 		me->flags &= ~_PR_INTERRUPT;
 		PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
     	_PR_THREAD_UNLOCK(me);
-		closesocket(accept_sock);
 		return -1;
 	}
     me->io_pending = PR_TRUE;
@@ -1351,7 +1350,6 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
 
     if ( (rv == 0) && ((err = GetLastError()) != ERROR_IO_PENDING))  {
         /* Argh! The IO failed */
-		closesocket(accept_sock);
 		_PR_THREAD_LOCK(me);
 		me->io_pending = PR_FALSE;
 		me->state = _PR_RUNNING;
@@ -1371,14 +1369,12 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
         _native_thread_io_nowait(me, rv, bytes);
     } else if (_NT_IO_WAIT(me, timeout) == PR_FAILURE) {
         PR_ASSERT(0);
-        closesocket(accept_sock);
         return -1;
     }
 
     PR_ASSERT(me->io_pending == PR_FALSE || me->io_suspended == PR_TRUE);
 
     if (me->io_suspended) {
-        closesocket(accept_sock);
         if (_PR_PENDING_INTERRUPT(me)) {
             me->flags &= ~_PR_INTERRUPT;
             PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
@@ -1389,7 +1385,6 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
     }
 
     if (me->md.blocked_io_status == 0) {
-		closesocket(accept_sock);
 		_PR_MD_MAP_ACCEPTEX_ERROR(me->md.blocked_io_error);
         return -1;
     }
@@ -1455,7 +1450,6 @@ _PR_MD_FAST_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock, PRNetAddr **raddr,
 		me->flags &= ~_PR_INTERRUPT;
 		PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
     	_PR_THREAD_UNLOCK(me);
-		closesocket(*newSock);
 		return -1;
 	}
     me->io_pending = PR_TRUE;
@@ -1473,7 +1467,6 @@ _PR_MD_FAST_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock, PRNetAddr **raddr,
                   &(me->md.overlapped.overlapped));
 
     if ( (rv == 0) && ((err = GetLastError()) != ERROR_IO_PENDING)) {
-		closesocket(*newSock);
 		_PR_THREAD_LOCK(me);
 		me->io_pending = PR_FALSE;
 		me->state = _PR_RUNNING;
@@ -1493,7 +1486,6 @@ _PR_MD_FAST_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock, PRNetAddr **raddr,
         _native_thread_io_nowait(me, rv, bytes);
     } else if (_NT_IO_WAIT(me, timeout) == PR_FAILURE) {
         PR_ASSERT(0);
-        closesocket(*newSock);
         return -1;
     }
 
@@ -1523,10 +1515,8 @@ retry:
                     callback(callbackArg);
                 madeCallback = PR_TRUE;
                 me->state = _PR_IO_WAIT;
-                if (_NT_ResumeIO(me, timeout) == PR_FAILURE) {
-                    closesocket(*newSock);
+                if (_NT_ResumeIO(me, timeout) == PR_FAILURE)
                     return -1;
-                }
                 goto retry;
             }
 
@@ -1534,10 +1524,8 @@ retry:
                 /* Socket is connected but time not elapsed, RESUME IO */
                 timeout -= elapsed;
                 me->state = _PR_IO_WAIT;
-                if (_NT_ResumeIO(me, timeout) == PR_FAILURE) {
-                    closesocket(*newSock);
+                if (_NT_ResumeIO(me, timeout) == PR_FAILURE)
                     return -1;
-                }
                 goto retry;
             }
         } else {
@@ -1564,7 +1552,6 @@ retry:
             PR_SetError(PR_IO_TIMEOUT_ERROR, 0);
         }
         me->state = _PR_RUNNING;
-        closesocket(*newSock);
         return -1;
     }
 
