@@ -36,9 +36,9 @@ String::String() : mBuffer(0),
 {
 }
 
-String::String(const String& aSource) : mLength(aSource.length()),
-                                        mBufferLength(mLength),
-                                        mBuffer(aSource.toUnicode())
+String::String(const String& aSource) : mBuffer(aSource.toUnicode()),
+                                        mBufferLength(aSource.mLength),
+                                        mLength(aSource.mLength)
 {
 }
 
@@ -57,20 +57,18 @@ void String::append(const UNICODE_CHAR aSource)
 void String::append(const String& aSource)
 {
   ensureCapacity(aSource.mLength);
-  memcpy(mBuffer[mLength], aSource.mBuffer,
+  memcpy(&mBuffer[mLength], aSource.mBuffer,
          aSource.mLength * sizeof(UNICODE_CHAR));
   mLength += aSource.mLength;
 }
 
-void String::insert(const PRInt32 aOffset, const UNICODE_CHAR aSource)
+void String::insert(const PRUint32 aOffset, const UNICODE_CHAR aSource)
 {
-  PRInt32 offset = (aOffset < 0) ? 0 : aOffset;
-
-  if (offset < mLength) {
+  if (aOffset < mLength) {
     ensureCapacity(1);
-    memmove(&mBuffer[offset + 1], &mBuffer[offset],
-            (mLength - offset) * sizeof(UNICODE_CHAR));
-    mBuffer[offset] = aSource;
+    memmove(&mBuffer[aOffset + 1], &mBuffer[aOffset],
+            (mLength - aOffset) * sizeof(UNICODE_CHAR));
+    mBuffer[aOffset] = aSource;
     mLength += 1;
   }
   else {
@@ -78,15 +76,13 @@ void String::insert(const PRInt32 aOffset, const UNICODE_CHAR aSource)
   }
 }
 
-void String::insert(const PRInt32 aOffset, const String& aSource)
+void String::insert(const PRUint32 aOffset, const String& aSource)
 {
-  PRInt32 offset = (aOffset < 0) ? 0 : aOffset;
-
-  if (offset < mLength) {
+  if (aOffset < mLength) {
     ensureCapacity(aSource.mLength);
-    memmove(&mBuffer[offset + aSource.mLength], &mBuffer[offset],
-            (mLength - offset) * sizeof(UNICODE_CHAR));
-    memcpy(&mBuffer[offset], aSource.mBuffer,
+    memmove(&mBuffer[aOffset + aSource.mLength], &mBuffer[aOffset],
+            (mLength - aOffset) * sizeof(UNICODE_CHAR));
+    memcpy(&mBuffer[aOffset], aSource.mBuffer,
            aSource.mLength * sizeof(UNICODE_CHAR));
     mLength += aSource.mLength;
   }
@@ -95,30 +91,26 @@ void String::insert(const PRInt32 aOffset, const String& aSource)
   }
 }
 
-void String::replace(const PRInt32 aOffset, const UNICODE_CHAR aSource)
+void String::replace(const PRUint32 aOffset, const UNICODE_CHAR aSource)
 {
-  PRInt32 offset = (aOffset < 0) ? 0 : aOffset;
-
-  if (offset < mLength) {
-    mBuffer[offset] = aSource;
+  if (aOffset < mLength) {
+    mBuffer[aOffset] = aSource;
   }
   else {
     append(aSource);
   }
 }
 
-void String::replace(PRInt32 aOffset, const String& aSource)
+void String::replace(const PRUint32 aOffset, const String& aSource)
 {
-  PRInt32 offset = (aOffset < 0) ? 0 : aOffset;
-
-  if (offset < mLength) {
-    PRInt32 finalLength = offset + aSource.mLength;
+  if (aOffset < mLength) {
+    PRUint32 finalLength = aOffset + aSource.mLength;
 
     if (finalLength > mLength) {
       ensureCapacity(totalOffset - mLength);
       mLength = finalLength;
     }
-    memcpy(&mBuffer[offset], aSource.mBuffer,
+    memcpy(&mBuffer[aOffset], aSource.mBuffer,
            aSource.mLength * sizeof(UNICODE_CHAR));
   }
   else {
@@ -126,25 +118,24 @@ void String::replace(PRInt32 aOffset, const String& aSource)
   }
 }
 
-void String::deleteChars(PRInt32 aOffset, PRInt32 aCount)
+void String::deleteChars(const PRUint32 aOffset, const PRUint32 aCount)
 {
-  PRInt32 offset = (aOffset < 0) ? 0 : aOffset;
-  PRInt32 cutEnd = offset + count;
+  PRUint32 cutEnd = aOffset + aCount;
 
   if (cutEnd < mLength) {
-    memmove(&mBuffer[offset], &mBuffer[cutEnd],
+    memmove(&mBuffer[aOffset], &mBuffer[cutEnd],
             (mLength - cutEnd) * sizeof(UNICODE_CHAR));
-    mLength -= count;
+    mLength -= aCount;
   }
   else {
-    mLength = offset;
+    mLength = aOffset;
   }
 }
 
-UNICODE_CHAR String::charAt(PRInt32 index) const
+UNICODE_CHAR String::charAt(const PRUint32 aIndex) const
 {
-  if ((index < mLength) && (index >= 0)) {
-    return mBuffer[index];
+  if ((aIndex < mLength) && (aIndex >= 0)) {
+    return mBuffer[aIndex];
   }
   return (UNICODE_CHAR)-1;
 }
@@ -154,9 +145,9 @@ void String::clear()
   mLength = 0;
 }
 
-void String::ensureCapacity(PRInt32 aCapacity)
+void String::ensureCapacity(const PRUint32 aCapacity)
 {
-  PRInt32 freeSpace = mBufferLength - mLength;
+  PRUint32 freeSpace = mBufferLength - mLength;
 
   if (freeSpace >= aCapacity) {
     return;
@@ -170,9 +161,9 @@ void String::ensureCapacity(PRInt32 aCapacity)
   mBuffer = tempBuffer;
 }
 
-PRInt32 String::indexOf(UNICODE_CHAR aData, PRInt32 aOffset) const
+PRInt32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
-  PRInt32 searchIndex = (aOffset < 0) ? 0 : aOffset;
+  PRUint32 searchIndex = aOffset;
 
   while (searchIndex < mLength) {
     if (mBuffer[searchIndex] == data)
@@ -182,10 +173,10 @@ PRInt32 String::indexOf(UNICODE_CHAR aData, PRInt32 aOffset) const
   return NOT_FOUND;
 }
 
-PRInt32 String::indexOf(const String& aData, PRInt32 aOffset) const
+PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
 {
-  PRInt32 searchIndex = (aOffset < 0) ? 0 : aOffset;
-  PRInt32 searchLimit = mLength - aData.mLength;
+  PRUint32 searchIndex = aOffset;
+  PRUint32 searchLimit = mLength - aData.mLength;
 
   while (searchIndex <= searchLimit) {
     if (isEqual(&mBuffer[searchIndex], aData.mBuffer, aData.mLength))
@@ -195,16 +186,15 @@ PRInt32 String::indexOf(const String& aData, PRInt32 aOffset) const
   return NOT_FOUND;
 }
 
-PRInt32 String::lastIndexOf(UNICODE_CHAR aData, PRInt32 aOffset) const
+PRInt32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
-    if ((aOffset < 0) || (aOffset >= mLength))
+    if (aOffset >= mLength)
        return NOT_FOUND;
 
-    PRInt32 searchIndex = aOffset;
-    while (searchIndex >= 0) {
+    PRUint32 searchIndex = aOffset + 1;
+    while (--searchIndex > 0) {
         if (mBuffer[searchIndex] == data)
           return searchIndex;
-        --searchIndex;
     }
     return NOT_FOUND;
 }
@@ -223,7 +213,7 @@ MBool String::isEqualIgnoreCase(const String& aData) const
 
   const UNICODE_CHAR* otherBuffer = aData.mBuffer;
   UNICODE_CHAR thisChar, otherChar;
-  PRInt32 compLoop = 0;
+  PRIint32 compLoop = 0;
   while (compLoop < mLength) {
     thisChar = mBuffer[compLoop];
     if ((thisChar >= 'A') && (thisChar <= 'Z'))
@@ -248,19 +238,20 @@ PRInt32 String::length() const
   return mLength;
 }
 
-void String::setLength(PRInt32 length) {
+void String::setLength(const PRUint32 length)
+{
     setLength(length, '\0');
 }
 
-String& String::subString(PRInt32 aStart, String& aDest) const
+String& String::subString(const PRUint32 aStart, String& aDest) const
 {
   return subString(aStart, mLength, aDest);
 }
 
-String& String::subString(PRInt32 aStart, PRInt32 aEnd, String& aDest) const
+String& String::subString(const PRUint32 aStart, const PRUint32 aEnd, String& aDest) const
 {
-  PRInt32 start = (aStart < 0) ? 0 : aStart;
-  PRInt32 end = (aEnd > mLength) ? mLength : aEnd;
+  PRUint32 start = aStart;
+  PRUint32 end = (aEnd > mLength) ? mLength : aEnd;
 
   aDest.clear();
   if (start < end) {
@@ -286,7 +277,7 @@ const UNICODE_CHAR* String::toUnicode() const
 
 void String::toLowerCase()
 {
-  PRInt32 conversionLoop;
+  PRUint32 conversionLoop;
 
   for (conversionLoop = 0; conversionLoop < mLength; ++conversionLoop) {
     if ((mBuffer[conversionLoop] >= 'A') &&
@@ -297,7 +288,7 @@ void String::toLowerCase()
 
 void String::toUpperCase()
 {
-  PRInt32 conversionLoop;
+  PRUint32 conversionLoop;
 
   for (conversionLoop = 0; conversionLoop < mLength; ++conversionLoop) {
     if ((mBuffer[conversionLoop] >= 'a') &&
@@ -311,7 +302,7 @@ void String::trim()
   // As long as we are not working on an emtpy string, trim from the right
   // first, so we don't have to move useless spaces when we trim from the left.
   MBool done = MB_FALSE;
-  PRInt32 trimLoop = mLength - 1;
+  PRUint32 trimLoop = mLength - 1;
 
   if (mLength > 0)
   {
