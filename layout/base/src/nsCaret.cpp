@@ -555,9 +555,8 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
                 bidiLevel = display->mDirection;
               else
               {
-                void *level;
-                theFrame->GetBidiProperty(presContext, nsLayoutAtoms::embeddingLevel, &level);
-                bidiLevel = (PRUint8)level;
+                theFrame->GetBidiProperty(presContext, nsLayoutAtoms::embeddingLevel,
+                                          (void**)&bidiLevel, sizeof(PRUint8) );
                 presShell->SetCursorBidiLevel(bidiLevel);
               }
             }

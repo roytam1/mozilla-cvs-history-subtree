@@ -155,6 +155,9 @@ public:
   NS_IMETHOD GetBidiUtils(nsBidiPresUtils** aBidiUtils);
   NS_IMETHOD SetBidi(nsBidiOptions Source);
   NS_IMETHOD GetBidi(nsBidiOptions * Dist);
+ //ahmed
+  NS_IMETHOD IsVisRTL(PRBool &aResult);
+  NS_IMETHOD IsArabicEncoding(PRBool &aResult);
 #endif // IBMBIDI
 
 protected:

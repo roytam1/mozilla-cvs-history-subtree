@@ -66,6 +66,16 @@ private:
                                 nsIFrame*       aContainer,
                                 PRInt32&        aMinX,
                                 PRInt32&        aMaxX) const;
+  PRBool EnsureBidiContinuation(nsIPresContext* aPresContext,
+                                nsIContent*     aContent,
+                                nsIFrame*       aFrame,
+                                nsIFrame**      aNewFrame,
+                                PRInt32&        aFrameIndex);
+  PRBool RemoveBidiContinuation(nsIPresContext* aPresContext,
+                                nsIFrame*       aFrame,
+                                nsIFrame*       aNextFrame,
+                                nsIContent*     aContent,
+                                PRInt32&        aFrameIndex) const;
   void CalculateTextClass(PRInt32  aLimit,
                           PRInt32& aOffset,
                           PRUint8& aTextClass,

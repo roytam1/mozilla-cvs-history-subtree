@@ -180,6 +180,12 @@ typedef PRUint32 nsFrameState;
 // results when an inline has been split because of a nested block.
 #define NS_FRAME_IS_SPECIAL 0x00008000
 
+#ifdef IBMBIDI
+// If this bit is set, the frame itself is a bidi continuation,
+// or is incomplete (its next sibling is a bidi continuation)
+#define NS_FRAME_IS_BIDI 0x00010000
+#endif
+
 // The low 16 bits of the frame state word are reserved by this API.
 #define NS_FRAME_RESERVED 0x0000FFFF
 
@@ -1064,7 +1070,8 @@ public:
    */
   NS_IMETHOD GetBidiProperty(nsIPresContext* aPresContext,
                              nsIAtom*        aPropertyName,
-                             void**          aPropertyValue) const = 0;
+                             void**          aPropertyValue,
+                             PRInt32         aSize = sizeof(void*) ) const = 0;
   NS_IMETHOD SetBidiProperty(nsIPresContext* aPresContext,
                              nsIAtom*        aPropertyName,
                              void*           aPropertyValue) const = 0;

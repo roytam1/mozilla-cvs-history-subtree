@@ -331,6 +331,11 @@ public:
   NS_IMETHOD GetBidiUtils(nsBidiPresUtils** aBidiUtils) = 0;
   NS_IMETHOD SetBidi(nsBidiOptions Source) = 0;
   NS_IMETHOD GetBidi(nsBidiOptions * Dist) = 0;
+//ahmed
+  NS_IMETHOD IsVisRTL(PRBool &aResult) = 0;
+  NS_IMETHOD IsArabicEncoding(PRBool &aResult) = 0;
+  nsAutoString mCharset;
+  PRUint32* map;
 #endif // IBMBIDI
 
 #ifdef MOZ_REFLOW_PERF

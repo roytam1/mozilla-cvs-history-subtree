@@ -370,13 +370,13 @@ nsPresContext::SetShell(nsIPresShell* aShell)
                                       getter_AddRefs(mLanguage));
           GetFontPreferences();
 #ifdef IBMBIDI
+          //ahmed
+          mCharset=charset;
           PRBool isVisual = PR_FALSE;
-					nsBidiOptions mBidioptions;
-          GetBidi(&mBidioptions);
-          if (IBMBIDI_TEXTTYPE_VISUAL == mBidioptions.mtexttype) {
+          if (IBMBIDI_TEXTTYPE_VISUAL == this->mBidi.mtexttype) {
             isVisual = PR_TRUE;
           }
-					else if (mBidioptions.mtexttype != IBMBIDI_TEXTTYPE_LOGICAL) {
+          else if (this->mBidi.mtexttype != IBMBIDI_TEXTTYPE_LOGICAL) {
             // XXX shouldn't be hard-coded.
             if ( (charset.EqualsIgnoreCase("visual") )
                 || (charset.EqualsIgnoreCase("ibm864") )           // Arabic//ahmed
@@ -386,7 +386,6 @@ nsPresContext::SetShell(nsIPresShell* aShell)
             }
           }
           SetVisualMode(isVisual);
-					
 #endif // IBMBIDI
         }
       }
@@ -1164,6 +1163,23 @@ nsPresContext::SetDefaultDirection(PRUint8 aDirection)
  *
  *  @lina 07/12/2000
  */
+//ahmed
+NS_IMETHODIMP
+nsPresContext::IsArabicEncoding(PRBool& aResult)
+{
+  aResult=PR_FALSE;
+  if ( (mCharset.EqualsIgnoreCase("ibm864") )||(mCharset.EqualsIgnoreCase("ibm864i") )||(mCharset.EqualsIgnoreCase("windows-1256") )||(mCharset.EqualsIgnoreCase("iso-8859-6") ))
+    aResult=PR_TRUE;
+  return NS_OK;
+}
+NS_IMETHODIMP
+nsPresContext::IsVisRTL(PRBool& aResult)
+{
+  aResult=PR_FALSE;
+  if ( (mIsVisual)&&(mBidi.mdirection ==IBMBIDI_TEXTDIRECTION_RTL) )						
+  aResult=PR_TRUE;
+  return NS_OK;
+}
 NS_IMETHODIMP
 nsPresContext::BidiEnabled(PRBool& aBidiEnabled) const
 {
@@ -1197,8 +1213,7 @@ nsPresContext::SetVisualMode(PRBool aIsVisual)
 {
   mIsVisual = aIsVisual;
 //ahmed
-   mDeviceContext->mIsVisual= aIsVisual;
-
+  mDeviceContext->mIsVisual= aIsVisual;
   return NS_OK;
 }
 
@@ -1238,7 +1253,14 @@ NS_IMETHODIMP   nsPresContext::SetBidi(nsBidiOptions Source)
   this->mBidi.mnumeral          = Source.mnumeral;
   this->mBidi.msupport          = Source.msupport;
   this->mBidi.mcharacterset      = Source.mcharacterset;
-   return NS_OK;
+ //ahmed 
+ PRBool Result=PR_FALSE;
+ IsVisRTL(Result);
+ mDeviceContext->isArabicVisRTL= PR_FALSE;
+ if (Result&&(mCharset.EqualsIgnoreCase("ibm864")) )//to take an action just if arabic charset
+  mDeviceContext->isArabicVisRTL= PR_TRUE;
+ map=mDeviceContext->map;
+ return NS_OK;
 }
 NS_IMETHODIMP   nsPresContext::GetBidi(nsBidiOptions * Dist)
 {

@@ -123,57 +123,7 @@ CreateBidiContinuation(nsIPresContext* aPresContext,
   parent->InsertFrames(aPresContext, *presShell, nsLayoutAtoms::nextBidi,
                        aFrame, *aNewFrame);
 
-  aFrame->SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, *aNewFrame);
-
   return NS_OK;
-}
-
-static PRBool
-RemoveBidiContinuation(nsIPresContext* aPresContext,
-                       nsIFrame*       aFrame,
-                       nsIFrame*       aNextFrame)
-{
-  nsIFrame* frame;
-  PRBool    rv = PR_FALSE;
-
-  if (aFrame && aNextFrame) {
-    nsIFrame* prevInFlow;
-    nsIFrame* parent;
-
-    nsCOMPtr<nsIPresShell>   presShell;
-    aPresContext->GetShell(getter_AddRefs(presShell) );
-
-    nsCOMPtr<nsIFrameManager> frameManager;
-    presShell->GetFrameManager(getter_AddRefs(frameManager) );
-    if (frameManager) {
-      aFrame->GetParent(&parent);
-      for (frame = aNextFrame; frame; frame = aNextFrame) {
-        // find the first next bidi frame, which is not next in flow for its prev bidi
-        do {
-          nsIFrame* nextFrame = aNextFrame;
-          nextFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
-                                     (void**) &aNextFrame);
-          if (!aNextFrame) {
-            break;
-          }
-          aNextFrame->GetPrevInFlow(&prevInFlow);
-        } while (prevInFlow);
-
-      // The list name nsLayoutAtoms::nextBidi would indicate we don't want reflow
-        parent->RemoveFrame(aPresContext, *presShell, nsLayoutAtoms::nextBidi, frame);
-        rv = PR_TRUE;
-      } // for
-      frame = aFrame;
-      // Remove nextBidi property, associated with the current frame
-      // and with all of its prev in flow
-      do {
-        frameManager->RemoveFrameProperty(frame, nsLayoutAtoms::nextBidi);
-        frame->GetPrevInFlow(&frame);
-      } while (frame);
-
-    } // if (frameManager)
-  } // if (frame && aNextFrame)
-  return rv;
 }
 
 static void
@@ -243,23 +193,22 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
   if (NS_FAILED(mSuccess) ) {
     return mSuccess;
   }
-  PRInt32                  runLength = 0;
+  PRInt32                  runLength      = 0;
   PRInt32                  fragmentLength = 0;
   PRInt32                  contentOffset;
   PRInt32                  temp;
-  PRInt32                  frameIndex = 0;
-  PRInt32                  frameCount = mLogicalFrames.Count();
-  PRInt32                  lineOffset = 0;
-  PRInt32                  logicalLimit = 0;
+  PRInt32                  frameIndex     = 0;
+  PRInt32                  frameCount     = mLogicalFrames.Count();
+  PRInt32                  lineOffset     = 0;
+  PRInt32                  logicalLimit   = 0;
   PRInt32                  numRun = 0;
   PRUint8                  textClass;
-  PRUint8                  prevClass = U_LEFT_TO_RIGHT;
+  PRUint8                  prevClass      = U_LEFT_TO_RIGHT;
   PRBool                   hasContinuation;
-  PRBool                   removedContinuation;
   PRBool                   isTextFrame;
-  nsIFrame*                frame;
+  nsIFrame*                frame = nsnull;
   nsIFrame*                nextBidi;
-  nsIFrame*                nextInFlow;
+  nsIFrame*                prevFrame;
   nsCOMPtr<nsIAtom>        frameType;
   nsCOMPtr<nsIContent>     content;
   nsCOMPtr<nsITextContent> textContent;
@@ -269,8 +218,8 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
     if (fragmentLength <= 0) {
       contentOffset = 0;
       hasContinuation = PR_FALSE;
-      removedContinuation = PR_FALSE;
-
+      
+      prevFrame = frame;
       frame = (nsIFrame*) (mLogicalFrames[frameIndex]);
 
       frame->GetFrameType(getter_AddRefs(frameType) );
@@ -318,59 +267,31 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
         PRInt32 limit = PR_MIN(logicalLimit, lineOffset + fragmentLength);
         CalculateTextClass(limit, lineOffset, textClass, prevClass);
         // IBMBIDI - Egypt - Start
-        frame->SetBidiProperty(aPresContext,nsLayoutAtoms::textClass,(void *)textClass);
+        frame->SetBidiProperty(aPresContext,nsLayoutAtoms::textClass,(void*)textClass);
         // IBMBIDI - Egypt - End
 
-        frame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
-                               (void**) &nextBidi);
-
         if ( (runLength > 0) && (runLength < fragmentLength) ) {
-          frame->GetNextInFlow(&nextInFlow);
-          if (nextInFlow && nextInFlow != nextBidi) {
-            nextBidi = nextInFlow;
-            frame->SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
-                                   (void*) nextBidi);
+          hasContinuation = EnsureBidiContinuation(aPresContext, content.get(), frame,
+                                                   &nextBidi, frameIndex);
+          if (!hasContinuation) {
+            break;
           }
-          if (nextBidi) {
-            ++frameIndex;
-          }
-          else {
-            mSuccess = CreateBidiContinuation(aPresContext, content,
-                                              frame, &nextBidi);
-            if (NS_FAILED(mSuccess) ) {
-              break;
-            }
-          }
-          hasContinuation = PR_TRUE;
           NS_SetContentLengthAndOffsetForBidi(frame, contentOffset,
                                               contentOffset + runLength);
+          prevFrame = frame;
           frame = nextBidi;
           contentOffset += runLength;
         } // if (runLength < fragmentLength)
         else {
-          if (hasContinuation) {
+          frame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
+                                 (void**) &nextBidi);
+          if (hasContinuation || nextBidi) {
             NS_SetContentLengthAndOffsetForBidi(frame, contentOffset,
                                                 contentOffset + fragmentLength);
           }
-          else {
-            if (runLength <= 0) {
-              nextBidi = frame;
-              frame = (nsIFrame*) mLogicalFrames[frameIndex - 1];
-            }
-            else if (nextBidi) {
-              NS_SetContentLengthAndOffsetForBidi(frame, contentOffset,
-                                                  contentOffset + fragmentLength);
-            }
-            removedContinuation = RemoveBidiContinuation(aPresContext, frame, nextBidi);
-            if (removedContinuation) {
-              if (runLength <= 0) {
-                break;
-              }
-              frame->GetNextSibling(&frame);
-              if (frame) {
-                frame->FirstChild(aPresContext, nsnull, &frame);
-              }
-            }
+          if (RemoveBidiContinuation(aPresContext, frame,
+                                     nextBidi, content.get(), frameIndex) ) {
+            prevFrame = frame;
           }
         }
       } // isTextFrame
@@ -380,12 +301,6 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
     fragmentLength -= temp;
     if (fragmentLength <= 0) { // not only for text frames
       ++frameIndex;
-      if (removedContinuation) {
-        while ( (frameIndex < frameCount)
-           && (frame != (nsIFrame*)mLogicalFrames[frameIndex]) ) {
-          ++frameIndex;
-        }
-      }
     } // fragmentLength <= runLength
     if (runLength <= 0) {
       ++numRun;
@@ -415,6 +330,18 @@ nsBidiPresUtils::InitLogicalArray(nsIPresContext* aPresContext,
     frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
     
     if ( (aAddMarkers) && (!display->IsBlockLevel() ) ) {
+      // Example: <bdo dir=ltr>latin HEBREW</bdo>
+      // should be displayed as is: latin HEBREW
+      // The entire text frame receives even EL and whouldn't "normally" be split.
+      // Then, if the platform is Bidi, it reverses hebrew characters, which results in
+      // incorrect text order: latin WERBEH
+      // To avoid that, we always insert LRE/RLE. That forces splitting the frame into
+      // uni-directional (from the platform point of view) pieces - with even EL for
+      // "latin" and odd EL for "HEBREW". Unicode override, if any, will be taken into
+      // account in AdjustEmbeddingLevel(). Correct text order on a bidi platform will
+      // be ensured by nsBidiPresUtils::FormatUnicodeText (which would reverse "HEBREW"
+      // due to inconsistency between its Bidi category (U_RIGHT_TO_LEFT) and the
+      // parity of its EL (even).
       if (NS_STYLE_DIRECTION_RTL == display->mExplicitDirection) {
         rv = NS_NewDirectionalFrame(&directionalFrame, kRLE);
       }
@@ -484,7 +411,7 @@ nsBidiPresUtils::CreateBlockBuffer(nsIPresContext* aPresContext)
       if (content.get() == prevContent) {
         continue;
       }
-      prevContent = content;
+      prevContent = content.get();
       textContent = do_QueryInterface(content, &mSuccess);
       if ( (NS_FAILED(mSuccess) ) || (!textContent) ) {
         break;
@@ -572,12 +499,11 @@ nsBidiPresUtils::Reorder(nsIPresContext* aPresContext,
 
   nsIFrame* frame;
   PRInt32   i;
-  void*     level;
 
   for (i = 0; i < count; i++) {
     frame = (nsIFrame*) (mLogicalFrames[i]);
-    frame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
-    mLevels[i] = (PRUint8)level;
+    frame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
+                           (void**)&mLevels[i], sizeof(PRUint8) );
   }
   if (!mIndexMap) {
     mIndexMap = new PRInt32[mArraySize];
@@ -719,6 +645,116 @@ nsBidiPresUtils::RepositionContainerFrame(nsIPresContext* aPresContext,
     frame->MoveTo(aPresContext, origin.x - minX, origin.y);
   }
 }
+
+PRBool
+nsBidiPresUtils::EnsureBidiContinuation(nsIPresContext* aPresContext,
+                                        nsIContent*     aContent,
+                                        nsIFrame*       aFrame,
+                                        nsIFrame**      aNewFrame,
+                                        PRInt32&        aFrameIndex)
+{
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (!aNewFrame) {
+    return PR_FALSE;
+  }
+  *aNewFrame = nsnull;
+
+  if (!aFrame) {
+    return PR_FALSE;
+  }
+  if (aFrameIndex + 1 < mLogicalFrames.Count() ) {
+    nsIFrame* frame = (nsIFrame*)mLogicalFrames[aFrameIndex + 1];
+    nsCOMPtr<nsIContent> content;
+
+    mSuccess = frame->GetContent(getter_AddRefs(content) );
+    if (NS_FAILED(mSuccess) || !content) {
+      return PR_FALSE;
+    }
+    if (content.get() == aContent) {
+      *aNewFrame = frame;
+      ++aFrameIndex;
+    }
+  }
+  if (nsnull == *aNewFrame) {
+    mSuccess = CreateBidiContinuation(aPresContext, aContent, aFrame, aNewFrame);
+    if (NS_FAILED(mSuccess) ) {
+      return PR_FALSE;
+    }
+  }
+  aFrame->SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, 
+                          (void*) *aNewFrame);
+  
+  return PR_TRUE;
+}
+
+PRBool
+nsBidiPresUtils::RemoveBidiContinuation(nsIPresContext* aPresContext,
+                                        nsIFrame*       aFrame,
+                                        nsIFrame*       aNextFrame,
+                                        nsIContent*     aContent,
+                                        PRInt32&        aFrameIndex) const
+{
+  if (!aFrame) {
+    return PR_FALSE;
+  }
+  nsCOMPtr<nsIContent> content;
+  nsIFrame*            frame;
+  PRInt32              count = 0;
+  PRInt32              index;
+  PRInt32              frameCount = mLogicalFrames.Count();
+
+  for (index = aFrameIndex + 1; index < frameCount; index++, count++) {
+    frame = (nsIFrame*) mLogicalFrames[index];
+    frame->GetContent(getter_AddRefs(content) );
+    if (!content || content.get() != aContent) {
+      break;
+    }
+  }
+  if (count <= 0) {
+    return PR_FALSE;
+  }
+  nsIFrame* nextBidi;
+  nsIFrame* parent;
+  aFrame->GetParent(&parent);
+      
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell) );
+
+  for (index--; index > aFrameIndex; index--) {
+    parent->RemoveFrame(aPresContext, *presShell, nsLayoutAtoms::nextBidi,
+                        (nsIFrame*) mLogicalFrames[index] );
+  }
+  if (aNextFrame) {
+    nsCOMPtr<nsIFrameManager> frameManager;
+    presShell->GetFrameManager(getter_AddRefs(frameManager) );
+    if (frameManager) {
+      // Remove nextBidi property, associated with the current frame
+      // and with all of its prev-in-flow.
+      frame = aFrame;
+      do {
+        frameManager->RemoveFrameProperty(frame, nsLayoutAtoms::nextBidi);
+        frame->GetPrevInFlow(&frame);
+        if (!frame) {
+          break;
+        }
+        frame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
+                               (void**) &nextBidi);
+      } while (aNextFrame == nextBidi);
+    } // if (frameManager)
+  } // if (aNextFrame)
+  
+  aFrameIndex += count;
+
+  return PR_TRUE;
+}
+
+/**
+ * Format Unicode text, taking into account bidi capabilities
+ * of the platform. The formatting includes: reordering, Arabic shaping,
+ * symmetric and numeric swapping, removing control characters.
+ *
+ * @lina 06/18/2000
+ */
 
 nsresult
 nsBidiPresUtils::FormatUnicodeText(nsIPresContext* aPresContext,
