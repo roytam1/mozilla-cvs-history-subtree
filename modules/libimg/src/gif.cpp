@@ -61,6 +61,9 @@ mailing address.
 #include "if.h"
 #include "il.h"
 #include "prmem.h"
+/*	ebb - begin */
+#include "icc_profile.h"
+/*	ebb - end */
 
 #include "merrors.h"
 #ifdef STANDALONE_IMAGE_LIB
@@ -113,7 +116,11 @@ typedef enum {
     gif_consume_netscape_extension,
     gif_consume_comment,
     gif_delay,
-    gif_wait_for_buffer_full
+    gif_wait_for_buffer_full,
+/*	ebb - begin (including comma above) */
+    gif_icc_profile_extension_block,
+    gif_gather_icc_profile_extension
+/*	ebb - end */
 } gstate;
 
 /* "Disposal" method indicates how the image should be handled in the
@@ -1112,6 +1119,12 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
                 !strncmp((char*)q, "ANIMEXTS1.0", 11))
                 GETN(1, gif_netscape_extension_block);
             else
+/*	ebb - begin */
+            /* Check for icc profile extension, may have subblocks */
+            if (!strncmp((char*)q, "ICCRGBG1012", 11) )
+                 GETN(1, gif_icc_profile_extension_block);
+/*	ebb - end */
+            else
                 GETN(1, gif_consume_block);
             break;
 
@@ -1158,6 +1171,45 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
 
             break;
         }
+
+/*	ebb - begin */
+        /*
+        	ICC Profile-specific GIF extension: embedded profile.
+        	We have the length of the sub-block in 'q'.
+        */
+        case gif_icc_profile_extension_block:
+            if (*q)
+            {
+                GETN(*q, gif_gather_icc_profile_extension);
+            }
+            else
+            {
+	        	/* Tell the container it's profile data is complete. */
+	        	il_icc_profile_data_notify(ic, NULL, 0, kICCDataBlocksComplete);
+	        	
+	        	/* Go back to gif_image_start. */
+                GETN(1, gif_image_start);
+            }
+            break;
+
+        /*
+        	ICC Profile data.
+        	We have the sub-block in 'q', the length in gather_request_size.
+        */
+        case gif_gather_icc_profile_extension:
+        {
+        	/*
+        		Tell the container to store the data, return to parent state.
+        	*/
+	       	il_icc_profile_data_notify(	ic,
+	       								(unsigned char*)q,
+	       								gs->gather_request_size,
+	       								kNthICCDataBlock );
+
+			GETN(1, gif_icc_profile_extension_block);
+            break;
+        }
+/*	ebb - end */
 
         case gif_wait_for_buffer_full:
             gs->gathered = gs->requested_buffer_fullness;
