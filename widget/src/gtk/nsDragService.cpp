@@ -24,6 +24,7 @@
 #include "nsIRegion.h"
 #include "nsVoidArray.h"
 #include "nsISupportsPrimitives.h"
+#include "nsPrimitiveHelpers.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -438,7 +439,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
 #endif
 
   nsCOMPtr<nsISupports> genericDataWrapper;
-  CreatePrimitiveForData ( foundFlavor, mSelectionData.data, mSelectionData.length, getter_AddRefs(genericDataWrapper) );
+  nsPrimitiveHelpers::CreatePrimitiveForData ( foundFlavor, mSelectionData.data, mSelectionData.length, getter_AddRefs(genericDataWrapper) );
   aTransferable->SetTransferData(foundFlavor,
                                  genericDataWrapper,
                                  mSelectionData.length);
