@@ -64,7 +64,7 @@ nsresult PR_CALLBACK
 app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
 
-extern nsModuleComponentInfo* gAppComponents;     // These are defined in AppComponents.mm
+extern nsModuleComponentInfo* GetAppComponents(unsigned int * outNumComponents);
 
 static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
@@ -129,7 +129,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   [self preferenceManager];
   
   // register our app components with the embed layer
-  CHBrowserService::RegisterAppComponents(gAppComponents, sizeof(gAppComponents) / sizeof(gAppComponents[0]));
+  unsigned int numComps = 0;
+  nsModuleComponentInfo* comps = GetAppComponents(&numComps);
+  CHBrowserService::RegisterAppComponents(comps, numComps);
 
   // don't open a new browser window if we already have one
   // (for example, from an GetURL Apple Event)

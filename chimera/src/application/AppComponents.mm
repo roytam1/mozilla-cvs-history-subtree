@@ -59,7 +59,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(KeychainPrompt);
 // used by MainController to register the components in which we want to override
 // with the Gecko embed layer.
 
-extern const nsModuleComponentInfo gAppComponents[] = {
+static const nsModuleComponentInfo gAppComponents[] = {
   {
     "Bad Cert Handler",
     NS_BADCERTHANDLER_CID,
@@ -79,3 +79,10 @@ extern const nsModuleComponentInfo gAppComponents[] = {
     KeychainPromptConstructor
   }
 };
+
+
+nsModuleComponentInfo* GetAppComponents ( unsigned int * outNumComponents )
+{
+  *outNumComponents = sizeof(gAppComponents) / sizeof(nsModuleComponentInfo);
+  return gAppComponents;
+}
