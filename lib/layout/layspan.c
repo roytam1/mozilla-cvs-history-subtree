@@ -237,9 +237,7 @@ lo_SetFontFamily( MWContext *context,
       return;
     }
 
-  if (ele->lo_any.type == LO_TEXT
-      && (!text_attr->font_face
-          || strcmp(text_attr->font_face, new_face)))
+	if (ele->lo_any.type == LO_TEXT)
     {
       LO_TextInfo text_info;
       LO_TextStruct tmp_text;
@@ -247,12 +245,17 @@ lo_SetFontFamily( MWContext *context,
 
       FE_ReleaseTextAttrFeData(context, text_attr);
 
-      XP_FREE(text_attr->font_face);
+      /* XP_FREE(text_attr->font_face); */
       text_attr->font_face = strdup(new_face);
 
       tmp_text = ele->lo_text;
 
       FE_GetTextInfo(context, &tmp_text, &text_info);
+    }
+	else if (ele->lo_any.type == LO_TEXTBLOCK)      
+    {
+	  /* XP_FREE(text_attr->font_face); */
+      text_attr->font_face = strdup(new_face);
     }
 }
 
@@ -284,8 +287,7 @@ lo_SetFontWeight( MWContext *context,
       return;
     }
 
-  if (ele->lo_any.type == LO_TEXT
-      && text_attr->font_weight != new_weight)
+	if (ele->lo_any.type == LO_TEXT)
     {
       LO_TextInfo text_info;
       LO_TextStruct tmp_text;
@@ -301,6 +303,13 @@ lo_SetFontWeight( MWContext *context,
 
       FE_GetTextInfo(context, &tmp_text, &text_info);
     }
+	else if (ele->lo_any.type == LO_TEXTBLOCK)
+	{
+      text_attr->font_weight = new_weight;
+      if (text_attr->font_weight > 900)
+        text_attr->font_weight = 900;
+	}
+
 }
 
 static void 
@@ -380,8 +389,7 @@ lo_SetFontSize( MWContext *context,
       return;
     }
 
-  if (ele->lo_any.type == LO_TEXT
-      && text_attr->point_size != new_size)
+  	if (ele->lo_any.type == LO_TEXT)
     {
       LO_TextInfo text_info;
       LO_TextStruct tmp_text;
@@ -395,6 +403,11 @@ lo_SetFontSize( MWContext *context,
 
       FE_GetTextInfo(context, &tmp_text, &text_info);
     }
+	else if (ele->lo_any.type == LO_TEXTBLOCK)
+	{
+	  text_attr->point_size = new_size;
+    }
+
 }
 
 #endif

@@ -1274,7 +1274,8 @@ lo_FetchTextAttr(lo_DocState *state, LO_TextAttr *old_attr)
 			(attr_ptr->font_face == old_attr->font_face)&&
 			(attr_ptr->charset == old_attr->charset)&&
 			(attr_ptr->point_size == old_attr->point_size)&&
-			(attr_ptr->font_weight == old_attr->font_weight))
+			(attr_ptr->font_weight == old_attr->font_weight) &&
+			(state->in_span == FALSE)  /* Never reuse text attrs in SPANS */)
 		{
 			break;
 		}
@@ -1284,7 +1285,7 @@ lo_FetchTextAttr(lo_DocState *state, LO_TextAttr *old_attr)
 	{
 		LO_TextAttr *new_attr;
 
-		new_attr = XP_NEW(LO_TextAttr);
+		new_attr = XP_NEW_ZAP(LO_TextAttr);
 		if (new_attr != NULL)
 		{
 			lo_CopyTextAttr(old_attr, new_attr);
@@ -2049,7 +2050,7 @@ lo_NewElement(MWContext *context, lo_DocState *state, intn type,
 	    }
 	    else
 	    {
-            eptr = XP_NEW(LO_Element);
+            eptr = XP_NEW_ZAP(LO_Element);
         }
     }
 #else
