@@ -7,14 +7,25 @@
 }
 
 #downloadViewContainer {
-  -moz-appearance: listbox;
-  margin: 10px;
 }
 
 #downloadView {
-  background-color: Window;
+  -moz-binding: url("chrome://mozapps/skin/downloads/downloads.xml#download-view");
+  margin: 10px;
+  -moz-appearance: listbox;
+}
+
+.downloadViewInner2 {
   background-image: url("chrome://mozapps/skin/downloads/viewFader.png");
   padding: 0px;
+}  
+
+.downloadViewInner1 {
+  background-color: Window;
+  background-image: url("chrome://mozapps/skin/downloads/downloadsBG.png");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-position: bottom right;
 }
 
 #commandBar {
@@ -28,8 +39,8 @@ download {
 }
 
 download[state="0"], download[state="-1"], download[state="4"] {
-  background-color: Window;
-  background-image: none;
+  background-color: transparent;
+  background-image: url("chrome://mozapps/skin/downloads/downloadFader.png");
 }
 
 .downloadContentBox {
