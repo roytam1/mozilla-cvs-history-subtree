@@ -39,6 +39,10 @@ typedef void icaldirset;
 
 icaldirset* icaldirset_new(const char* path);
 
+icaldirset* icaldirset_new_reader(const char* path);
+icaldirset* icaldirset_new_writer(const char* path);
+
+
 void icaldirset_free(icaldirset* store);
 
 const char* icaldirset_path(icaldirset* store);

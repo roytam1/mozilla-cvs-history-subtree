@@ -256,6 +256,90 @@ icaldirset* icaldirset_new(const char* dir)
     return (icaldirset*) impl;
 }
 
+icaldirset* icaldirset_new_writer(const char* dir)
+{
+    struct icaldirset_impl *impl = icaldirset_new_impl();
+    struct stat sbuf;
+
+    if (impl == 0){
+	return 0;
+    }
+
+    icalerror_check_arg_rz( (dir!=0), "dir");
+
+    if (stat(dir,&sbuf) != 0){
+	icalerror_set_errno(ICAL_FILE_ERROR);
+	return 0;
+    }
+    
+    /* dir is not the name of a direectory*/
+    if (!S_ISDIR(sbuf.st_mode)){ 
+	icalerror_set_errno(ICAL_USAGE_ERROR);
+	return 0;
+    }	    
+
+    icaldirset_lock(dir);
+
+    impl = icaldirset_new_impl();
+
+    if (impl ==0){
+	icalerror_set_errno(ICAL_NEWFAILED_ERROR);
+	return 0;
+    }
+    
+    impl->directory = pvl_newlist();
+    impl->directory_iterator = 0;
+    impl->dir = (char*)strdup(dir);
+    impl->gauge = 0;
+    impl->first_component = 0;
+    impl->cluster = 0;
+
+    return (icaldirset*) impl;
+}
+
+icaldirset* icaldirset_new_reader(const char* dir)
+{
+    struct icaldirset_impl *impl = icaldirset_new_impl();
+    struct stat sbuf;
+
+    if (impl == 0){
+	return 0;
+    }
+
+    icalerror_check_arg_rz( (dir!=0), "dir");
+
+    if (stat(dir,&sbuf) != 0){
+	icalerror_set_errno(ICAL_FILE_ERROR);
+	return 0;
+    }
+    
+    /* dir is not the name of a direectory*/
+    if (!S_ISDIR(sbuf.st_mode)){ 
+	icalerror_set_errno(ICAL_USAGE_ERROR);
+	return 0;
+    }	    
+
+    icaldirset_lock(dir);
+
+    impl = icaldirset_new_impl();
+
+    if (impl ==0){
+	icalerror_set_errno(ICAL_NEWFAILED_ERROR);
+	return 0;
+    }
+    
+    impl->directory = pvl_newlist();
+    impl->directory_iterator = 0;
+    impl->dir = (char*)strdup(dir);
+    impl->gauge = 0;
+    impl->first_component = 0;
+    impl->cluster = 0;
+
+    icaldirset_read_directory(impl);
+
+    return (icaldirset*) impl;
+}
+
 void icaldirset_free(icaldirset* s)
 {
     struct icaldirset_impl *impl = (struct icaldirset_impl*)s;

@@ -52,6 +52,9 @@ typedef void icalfileset;
 
 
 icalfileset* icalfileset_new(const char* path);
+icalfileset* icalfileset_new_reader(const char* path);
+icalfileset* icalfileset_new_writer(const char* path);
+
 
 /* Like _new, but takes open() flags for opening the file */
 icalfileset* icalfileset_new_open(const char* path, 

@@ -134,8 +134,14 @@ icalarray_expand		(icalarray	*array,
     if (space_needed > array->increment_size) 
 	new_space_allocated += space_needed;
 
+	/*
     new_data = realloc (array->data,
 			new_space_allocated * array->element_size);
+	*/
+	new_data = malloc(new_space_allocated * array->element_size);
+	memcpy(new_data,array->data,array->element_size*array->space_allocated);
+	free(array->data);
+
     if (new_data) {
 	array->data = new_data;
 	array->space_allocated = new_space_allocated;

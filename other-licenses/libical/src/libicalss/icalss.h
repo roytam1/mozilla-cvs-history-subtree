@@ -29,10 +29,6 @@
 #ifndef ICALGAUGE_H
 #define ICALGAUGE_H
 
-#ifdef WIN32
-#define mode_t int
-#endif
-
 typedef void icalgauge;
 
 icalgauge* icalgauge_new_from_sql(char* sql);
@@ -116,7 +112,13 @@ typedef enum icalset_kind {
 
 /* Create a specific derived type of set */
 icalset* icalset_new_file(const char* path);
+icalset* icalset_new_file_reader(const char* path);
+icalset* icalset_new_file_writer(const char* path);
+
 icalset* icalset_new_dir(const char* path);
+icalset* icalset_new_file_reader(const char* path);
+icalset* icalset_new_file_writer(const char* path);
+
 icalset* icalset_new_heap(void);
 icalset* icalset_new_mysql(const char* path);
 /*icalset* icalset_new_cap(icalcstp* cstp);*/
@@ -197,6 +199,10 @@ icalcomponent* icalset_get_next_component(icalset* set);
 #include <sys/stat.h> /* For open() flags and mode */
 #include <fcntl.h> /* For open() flags and mode */
 
+#ifdef WIN32
+#define mode_t int
+#endif
+
 extern int icalfileset_safe_saves;
 
 typedef void icalfileset;
@@ -209,6 +215,9 @@ typedef void icalfileset;
 
 
 icalfileset* icalfileset_new(const char* path);
+icalfileset* icalfileset_new_reader(const char* path);
+icalfileset* icalfileset_new_writer(const char* path);
+
 
 /* Like _new, but takes open() flags for opening the file */
 icalfileset* icalfileset_new_open(const char* path, 
@@ -303,6 +312,10 @@ typedef void icaldirset;
 
 
 icaldirset* icaldirset_new(const char* path);
+
+icaldirset* icaldirset_new_reader(const char* path);
+icaldirset* icaldirset_new_writer(const char* path);
+
 
 void icaldirset_free(icaldirset* store);
 

@@ -792,17 +792,17 @@ time_t icalcomponent_convert_time(icalproperty *p)
 	
 	{
 #ifdef __sgi
-        tzset();
-        offset = daylight ? altzone : timezone;
+		tzset();
+		offset = daylight ? altzone : timezone;
 #else
 
-   	    struct tm *tmp_tm;
+		struct tm *tmp_tm;
 		time_t t;
 
 		t = time(NULL);
 	 	offset = localtime(&t)->tm_gmtoff;
 #endif
-    }
+	}
 
 	convt += offset;
 
