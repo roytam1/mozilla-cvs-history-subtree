@@ -256,11 +256,7 @@ ifeq ($(HAVE_LIBNLS), 1)
 endif
 else
 ifeq ($(HAVE_LIBNLS), 1)
-	@echo
-	@echo
-	@echo "Libnls stuff still to be done for WINNT"
-	@echo
-	@echo
+	@echo "Pulling libnls......"
 # The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
 # $(NLS_VERSION_FILE)
 	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
