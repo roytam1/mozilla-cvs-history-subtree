@@ -157,7 +157,7 @@ __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
 	stanNick = nssUTF8_Duplicate((NSSUTF8 *)nickname, c->object.arena);
     }
     /* Delete the temp instance */
-    nssCertificateStore_Remove(context->certStore, c);
+    nssCertificateStore_Remove(context->certStore, c, PR_TRUE);
     c->object.cryptoContext = NULL;
     /* Import the perm instance onto the internal token */
     slot = PK11_GetInternalKeySlot();
@@ -607,7 +607,7 @@ CERT_DestroyCertificate(CERTCertificate *cert)
 	    if (refCount == 2) {
 		NSSCryptoContext *cc = tmp->object.cryptoContext;
 		if (cc != NULL) {
-		    nssCertificateStore_Remove(cc->certStore, tmp);
+		    nssCertificateStore_Remove(cc->certStore, tmp, PR_FALSE);
 		} else {
 		    nssTrustDomain_RemoveCertFromCache(td, tmp);
 		}
@@ -747,7 +747,27 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
     NSSCryptoContext *cc;
     nssSMIMEProfile *stanProfile = NULL;
     PRBool freeOldProfile = PR_FALSE;
-    
+
+    if (!cert) {
+        return SECFailure;
+    }
+
+    if (cert->slot &&  !PK11_IsInternal(cert->slot)) {
+        /* this cert comes from an external source, we need to add it
+        to the cert db before creating an S/MIME profile */
+        PK11SlotInfo* internalslot = PK11_GetInternalKeySlot();
+        if (!internalslot) {
+            return SECFailure;
+        }
+        rv = PK11_ImportCert(internalslot, cert,
+            CK_INVALID_HANDLE, NULL, PR_FALSE);
+
+        PK11_FreeSlot(internalslot);
+        if (rv != SECSuccess ) {
+            return SECFailure;
+        }
+    }
+
     emailAddr = cert->emailAddr;
     
     if ( emailAddr == NULL ) {

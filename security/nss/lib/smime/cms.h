@@ -598,6 +598,8 @@ NSS_CMSSignedData_CreateCertsOnly(NSSCMSMessage *cmsg, CERTCertificate *cert, PR
 
 extern NSSCMSSignerInfo *
 NSS_CMSSignerInfo_Create(NSSCMSMessage *cmsg, CERTCertificate *cert, SECOidTag digestalgtag);
+extern NSSCMSSignerInfo *
+NSS_CMSSignerInfo_CreateWithSubjKeyID(NSSCMSMessage *cmsg, SECItem *subjKeyID, SECKEYPublicKey *pubKey, SECKEYPrivateKey *signingKey, SECOidTag digestalgtag);
 
 /*
  * NSS_CMSSignerInfo_Destroy - destroy a SignerInfo data structure
@@ -730,6 +732,16 @@ NSS_CMSSignerInfo_AddSMIMECaps(NSSCMSSignerInfo *signerinfo);
  */
 SECStatus
 NSS_CMSSignerInfo_AddSMIMEEncKeyPrefs(NSSCMSSignerInfo *signerinfo, CERTCertificate *cert, CERTCertDBHandle *certdb);
+
+/*
+ * NSS_CMSSignerInfo_AddMSSMIMEEncKeyPrefs - add a SMIMEEncryptionKeyPreferences attribute to the
+ * authenticated (i.e. signed) attributes of "signerinfo", using the OID prefered by Microsoft.
+ *
+ * This is expected to be included in outgoing signed messages for email (S/MIME),
+ * if compatibility with Microsoft mail clients is wanted.
+ */
+SECStatus
+NSS_CMSSignerInfo_AddMSSMIMEEncKeyPrefs(NSSCMSSignerInfo *signerinfo, CERTCertificate *cert, CERTCertDBHandle *certdb);
 
 /* 
  * NSS_CMSSignerInfo_AddCounterSignature - countersign a signerinfo

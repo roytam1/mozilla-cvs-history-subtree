@@ -240,3 +240,18 @@ nsresult nsEditorController::GetEditorCommandManager(nsIControllerCommandManager
   return NS_OK;
 }
 
+NS_IMETHODIMP nsEditorController::GetCommandState(nsICommandParams *aCommandParams)
+{
+  if (!mCommandRefCon || !mCommandManager)
+    return NS_ERROR_NOT_INITIALIZED;
+  return mCommandManager->GetCommandState(aCommandParams,mCommandRefCon);
+}
+
+/* void doCommand (in DOMString aCommandName, in nsICommandParams aCommandParams); */
+NS_IMETHODIMP nsEditorController::DoCommand(nsICommandParams *aCommandParams)
+{
+  if (!mCommandRefCon || !mCommandManager)
+    return NS_ERROR_NOT_INITIALIZED;
+  return mCommandManager->DoCommandParams(aCommandParams,mCommandRefCon);
+}
+
