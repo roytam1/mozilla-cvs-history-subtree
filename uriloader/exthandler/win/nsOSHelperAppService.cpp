@@ -205,6 +205,9 @@ NS_IMETHODIMP nsOSHelperAppService::LaunchApp(const char *aName)
 {
   LONG r;
 
+  // yes, this is a major hack.
+  // I need to figure out if this is the right place for it (probably not)
+  // and then fix it to get these paths from the registry
   if (strcmp(aName,"browser") == 0)
     r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\mozilla.org\\Mozilla\\mozilla.exe", NULL, NULL, SW_SHOWNORMAL);
   else
