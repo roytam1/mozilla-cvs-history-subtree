@@ -4,7 +4,7 @@ ifndef OBJDIR
   endif
 endif
 
-NSPR_VERSION     = 19980120
+NSPR_VERSION     = v3.0
 NSPR_LOCAL       = $(MOZ_DEPTH)/dist/$(OBJDIR)/nspr
 NSPR_DIST        = $(MOZ_DEPTH)/dist/$(OBJDIR)
 NSPR_OBJDIR      = $(OBJDIR)
