@@ -285,32 +285,37 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     //
     // Enter the ChannelToResume monitor
     //
-    nsAutoMonitor mon(mCMonitor);
+    {
+        nsAutoMonitor mon(mCMonitor);
 
-    // 
-    // If there is data already in the pipe, then suspend the calling
-    // channel.  It will be resumed when the pipe is emptied.  Being
-    // inside the "C" monitor ensures that the resume will follow the
-    // suspend.
-    //
-    PRUint32 bytesWritten=0;
+        // 
+        // Try to copy data into the pipe.
+        //
+        // If the pipe is full, then suspend the calling channel.  It
+        // will be resumed when the pipe is emptied.  Being inside the 
+        // ChannelToResume monitor ensures that the resume will follow
+        // the suspend.
+        //
+        PRUint32 bytesWritten=0;
 
-    PRINTF("Writing to the pipe...\n");FLUSH();
-    rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
+        PRINTF("Writing to the pipe...\n");FLUSH();
+        rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
-    PRINTF("mPipeOut->WriteFrom(aSource) [rv=%x aCount=%u bytesWritten=%u]\n",
-            rv, aCount, bytesWritten);FLUSH();
+        PRINTF("mPipeOut->WriteFrom(aSource) "
+               "[rv=%x aCount=%u bytesWritten=%u]\n",
+                rv, aCount, bytesWritten);FLUSH();
 
-    if (NS_FAILED(rv)) {
-        if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-            PRINTF("Setting channel to resume\n");FLUSH();
-            mChannelToResume = aChannel;
+        if (NS_FAILED(rv)) {
+            if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
+                PRINTF("Setting channel to resume\n");FLUSH();
+                mChannelToResume = aChannel;
+            }
+            return rv;
         }
-        return rv;
-    }
-    else if (bytesWritten == 0) {
-        PRINTF("Copied zero bytes; not posting an event\n");
-        return NS_BASE_STREAM_CLOSED; // there was no more data to read!
+        else if (bytesWritten == 0) {
+            PRINTF("Copied zero bytes; not posting an event\n");
+            return NS_BASE_STREAM_CLOSED; // there was no more data to read!
+        }
     }
 
     //
