@@ -947,7 +947,12 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
   return NS_OK;
 }
 
-/* void doCommand (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices); */
+NS_IMETHODIMP nsMsgDBView::DoCommandWithFolder(nsMsgViewCommandTypeValue command, nsIMsgFolder *destFolder)
+{
+    printf("DoCommandWithFolder(%d)\n", command);
+    return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
 {
   nsUInt32Array selection;

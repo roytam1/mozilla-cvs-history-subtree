@@ -337,26 +337,22 @@ function MsgDeleteMessage(reallyDelete, fromToolbar)
 
 function MsgCopyMessage(destFolder)
 {
-    dump("fix this or remove this\n");
-    // Get the id for the folder we're copying into
+  try {
+    // get the msg folder we're copying into
     destUri = destFolder.getAttribute('id');
+    dump("MsgCopyMessage to " + destUri + "\n");
     destResource = RDF.GetResource(destUri);
     destMsgFolder = destResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-
-    var srcFolder = GetLoadedMsgFolder();
-    if(srcFolder)
-    {
-        var compositeDataSource = GetCompositeDataSource("Copy");
-        var messages = GetSelectedMessages();
-
-        CopyMessages(compositeDataSource, srcFolder, destMsgFolder, messages, false);
-    }    
+    gDBView.doCommandWithFolder(nsMsgViewCommandType.copyMessages, destMsgFolder);
+  }
+  catch (ex) {
+    dump("MsgCopyMessage failed: " + ex + "\n");
+  }
 }
 
 function MsgMoveMessage(destFolder)
 {
-    dump("fix this or remove this\n");
-    // Get the id for the folder we're copying into
+    // get the msg folder we're copying into
     destUri = destFolder.getAttribute('id');
     destResource = RDF.GetResource(destUri);
     destMsgFolder = destResource.QueryInterface(Components.interfaces.nsIMsgFolder);
