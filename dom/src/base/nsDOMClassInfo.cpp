@@ -2279,8 +2279,7 @@ nsDOMClassInfo::GetImplementationLanguage(PRUint32 *aImplLanguage)
 NS_IMETHODIMP
 nsDOMClassInfo::GetFlags(PRUint32 *aFlags)
 {
-  *aFlags = nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::DOM_OBJECT |
-            nsIClassInfo::CHECK_ANONYMOUS;
+  *aFlags = nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::DOM_OBJECT;
 
   return NS_OK;
 }

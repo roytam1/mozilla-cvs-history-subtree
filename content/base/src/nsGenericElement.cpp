@@ -1511,27 +1511,6 @@ nsGenericElement::SetParent(nsIContent* aParent)
   return NS_OK;
 }
 
-NS_IMETHODIMP_(PRBool)
-nsGenericElement::IsAnonymous() const
-{
-  // Use the lower bit of mContentID
-  return mContentID & 1;
-}
-
-NS_IMETHODIMP_(void)
-nsGenericElement::SetAnonymous(PRBool aAnonymous)
-{
-  // Use the lower bit of mContentID
-  if (aAnonymous) {
-    mContentID |= 1;
-  } else {
-    if (mContentID & 1) {
-      // Subtract one to get rid of the lower bit if it is there.
-      mContentID -= 1;
-    }
-  }
-}
-
 nsresult
 nsGenericElement::GetNameSpaceID(PRInt32& aNameSpaceID) const
 {
@@ -1766,8 +1745,7 @@ nsGenericElement::BaseSizeOf(nsISizeOfHandler *aSizer) const
 NS_IMETHODIMP
 nsGenericElement::GetContentID(PRUint32* aID)
 {
-  // Shift content id to store stuff in the lower order bytes
-  *aID = mContentID >> 1;
+  *aID = mContentID;
 
   return NS_OK;
 }
@@ -1775,8 +1753,7 @@ nsGenericElement::GetContentID(PRUint32* aID)
 NS_IMETHODIMP
 nsGenericElement::SetContentID(PRUint32 aID)
 {
-  // Shift content id to store stuff in the lower order bytes
-  mContentID = (aID << 1) | (mContentID & 1);
+  mContentID = aID;
 
   return NS_OK;
 }

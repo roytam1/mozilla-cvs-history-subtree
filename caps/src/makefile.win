@@ -57,7 +57,6 @@ REQUIRES	= xpcom \
 		  intl \
 		  docshell \
 		  windowwatcher \
-		  content \
 		  embedding \
 		  $(NULL)
 

@@ -76,20 +76,6 @@ public:
   NS_IMETHOD SetParent(nsIContent* aParent) = 0;
 
   /**
-   * Get whether this content is anonymous
-   * @see nsIAnonymousContentCreator
-   * @return whether this content is anonymous
-   */
-  NS_IMETHOD_(PRBool) IsAnonymous() const = 0;
-
-  /**
-   * Set whether this content is anonymous
-   * @see nsIAnonymousContentCreator
-   * @param aAnonymous whether this content is anonymous
-   */
-  NS_IMETHOD_(void) SetAnonymous(PRBool aAnonymous) = 0;
-
-  /**
    * Get the namespace that this tag is defined in
    */
   NS_IMETHOD GetNameSpaceID(PRInt32& aResult) const = 0;
