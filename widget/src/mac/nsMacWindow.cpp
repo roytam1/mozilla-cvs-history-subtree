@@ -915,9 +915,11 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool bState)
     }
     else
 #endif
-    ::HideWindow(mWindowPtr);
+    if ( mWindowPtr ) {
+      ::HideWindow(mWindowPtr);
     }
-    return NS_OK;
+  }
+  return NS_OK;
 }
 
 
