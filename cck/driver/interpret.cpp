@@ -874,7 +874,7 @@ BOOL CInterpret::interpret(CString cmds, WIDGET *curWidget)
 						CString outputPath	= rootPath + "Configs\\" + configName + "\\Output";
 						char deletePath[MAX_SIZE];
 						strcpy(deletePath, outputPath);
-						CallDLL("globals", "EraseDirectory", deletePath, w);
+						EraseDirectory(deletePath);
 					}
 			}
 			// change pre-set CD autorun option
@@ -888,7 +888,7 @@ BOOL CInterpret::interpret(CString cmds, WIDGET *curWidget)
 					CString outputPath	= rootPath + "Configs\\" + configName + "\\Output";
 					char deletePath[MAX_SIZE];
 					strcpy(deletePath, outputPath);
-					CallDLL("globals", "EraseDirectory", deletePath, w);
+					EraseDirectory(deletePath);
 				}
 			}
 			else if (strcmp(pcmd, "WriteCache") ==0)

@@ -1418,10 +1418,10 @@ int StartIB(/*CString parms, WIDGET *curWidget*/)
 	int rv = TRUE;
 	char	olddir[1024];
 	componentOrder =0;
-//	rootPath	= GetGlobal("Root");
 	rootPath	= GetModulePath();
-	WIDGET *w	= SetGlobal("Root", rootPath);
+	SetGlobal("Root", rootPath);
 	configName	= GetGlobal("_NewConfigName");
+	SetGlobal("CustomizationList", configName); 
 	configPath  = rootPath + "Configs\\" + configName;
 	outputPath	= configPath + "\\Output";
 	cdPath 		= configPath + "\\Output\\Core";
@@ -1472,13 +1472,10 @@ int StartIB(/*CString parms, WIDGET *curWidget*/)
 			templinuxPath+"\\xpi\\recommended.end", FALSE);
 	}
 
-//Creating necessary directories
-	_mkdir(configPath);
-	_mkdir(outputPath);
-	_mkdir(cdPath);
-	_mkdir(cdshellPath);
+
 
 	iniSrcPath	= nscpxpiPath + "\\config.ini";
+
 //Check for disk space before continuing
 
 	ULARGE_INTEGER nTotalBytes, nTotalFreeBytes, nTotalAvailable;
