@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -1700,14 +1700,10 @@ nsWindowWatcher::GetWindowScriptObject(nsIDOMWindow *inWindow)
   JSObject *object = 0;
 
   nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(inWindow));
-  if (scriptGlobal) {
-    nsCOMPtr<nsIScriptContext> scriptContext;
-    scriptGlobal->GetContext(getter_AddRefs(scriptContext));
-
-    nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(inWindow));
-    if (owner)
-      owner->GetScriptObject(scriptContext, (void **) &object);
+  if (!scriptGlobal) {
+      return nsnull;
   }
-  return object;
+
+  return scriptGlobal->GetGlobalJSObject();
 }
 
