@@ -761,14 +761,12 @@ nsSecureBrowserUIImpl::OnStateChange(nsIWebProgress* aWebProgress,
     
     // if we arrive here, LOAD_DOCUMENT_URI is not set
     
-    PRInt32 aState = nsIWebProgressListener::STATE_IS_INSECURE;
+    PRUint32 reqState = nsIWebProgressListener::STATE_IS_INSECURE;
     
     if (channel) {
-      aState = GetSecurityStateFromChannel(channel);
+      reqState = GetSecurityStateFromChannel(channel);
     }
 
-    PRUint32 reqState = GetSecurityStateFromChannel(channel);
-    
     if (reqState & STATE_IS_SECURE)
     {
       if (reqState & STATE_SECURE_LOW || reqState & STATE_SECURE_MED)
