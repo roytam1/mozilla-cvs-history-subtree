@@ -291,7 +291,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     nsresult rv = TX_CompileStylesheet(aStyleDOM, getter_AddRefs(mStylesheet));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txExecutionState es(mStylesheet);
+    mSource = aSourceDOM;
 
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSourceDOM));
 
@@ -300,6 +300,8 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     if (!sourceDOMDocument) {
         sourceDOMDocument = do_QueryInterface(aSourceDOM);
     }
+
+    txExecutionState es(mStylesheet);
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, aOutputDoc,
                                          nsnull);
@@ -346,8 +348,6 @@ txMozillaXSLTProcessor::DoTransform()
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_UNEXPECTED);
     NS_ASSERTION(mObserver, "no observer");
 
-    txExecutionState es(mStylesheet);
-
     // XXX Need to add error observers
 
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(mSource));
@@ -357,6 +357,8 @@ txMozillaXSLTProcessor::DoTransform()
     if (!sourceDOMDocument) {
         sourceDOMDocument = do_QueryInterface(mSource);
     }
+
+    txExecutionState es(mStylesheet);
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
                                          mObserver);
@@ -432,8 +434,6 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     nsresult rv = ensureStylesheet();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txExecutionState es(mStylesheet);
-
     // XXX Need to add error observers
 
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSource));
@@ -443,6 +443,8 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     if (!sourceDOMDocument) {
         sourceDOMDocument = do_QueryInterface(aSource);
     }
+
+    txExecutionState es(mStylesheet);
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
                                          nsnull);
@@ -482,11 +484,11 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     nsresult rv = ensureStylesheet();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txExecutionState es(mStylesheet);
-
     // XXX Need to add error observers
 
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSource));
+
+    txExecutionState es(mStylesheet);
 
     rv = aOutput->CreateDocumentFragment(aResult);
     NS_ENSURE_SUCCESS(rv, rv);

@@ -28,8 +28,8 @@
 */
 
 #include "Expr.h"
-#include "txNodeSet.h"
 #include "txIXPathContext.h"
+#include "txNodeSet.h"
 
   //-----------------------------/
  //- Virtual methods from Expr -/
@@ -226,8 +226,8 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 }
 
 void LocationStep::fromDescendants(const txXPathNode& aNode,
-                                   txIMatchContext* cs,
-                                   txNodeSet* nodes)
+                                   txIMatchContext* aCs,
+                                   txNodeSet* aNodes)
 {
     txXPathTreeWalker walker(aNode);
     if (!walker.moveToFirstChild()) {
@@ -236,16 +236,16 @@ void LocationStep::fromDescendants(const txXPathNode& aNode,
 
     do {
         const txXPathNode& child = walker.getCurrentPosition();
-        if (mNodeTest->matches(child, cs)) {
-            nodes->append(child);
+        if (mNodeTest->matches(child, aCs)) {
+            aNodes->append(child);
         }
-        fromDescendants(child, cs, nodes);
+        fromDescendants(child, aCs, aNodes);
     } while (walker.moveToNextSibling());
 }
 
 void LocationStep::fromDescendantsRev(const txXPathNode& aNode,
-                                      txIMatchContext* cs,
-                                      txNodeSet* nodes)
+                                      txIMatchContext* aCs,
+                                      txNodeSet* aNodes)
 {
     txXPathTreeWalker walker(aNode);
     if (!walker.moveToLastChild()) {
@@ -254,10 +254,10 @@ void LocationStep::fromDescendantsRev(const txXPathNode& aNode,
 
     do {
         const txXPathNode& child = walker.getCurrentPosition();
-        fromDescendantsRev(child, cs, nodes);
+        fromDescendantsRev(child, aCs, aNodes);
 
-        if (mNodeTest->matches(child, cs)) {
-            nodes->append(child);
+        if (mNodeTest->matches(child, aCs)) {
+            aNodes->append(child);
         }
 
     } while (walker.moveToPreviousSibling());

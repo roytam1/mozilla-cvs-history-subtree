@@ -43,7 +43,6 @@
 #include "baseutils.h"
 #include "List.h"
 #include "nsIAtom.h"
-#include "nsAutoPtr.h"
 #include "txXPathNode.h"
 
 class Element;

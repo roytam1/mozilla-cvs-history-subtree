@@ -57,47 +57,37 @@ GenerateIdFunctionCall::evaluate(txIEvalContext* aContext,
 
     nsresult rv = NS_OK;
     if (params.getLength() != 1) {
-        nsRefPtr<StringResult> strRes;
-        rv = aContext->recycler()->getStringResult(getter_AddRefs(strRes));
+        StringResult* strRes;
+        rv = aContext->recycler()->getStringResult(&strRes);
         NS_ENSURE_SUCCESS(rv, rv);
 
         txXPathNodeUtils::getXSLTId(aContext->getContextNode(),
                                     strRes->mValue);
 
-        NS_ADDREF(*aResult = strRes);
+        *aResult = strRes;
  
         return NS_OK;
     }
 
     txListIterator iter(&params);
-    Expr* param = (Expr*)iter.next();
-
-    nsRefPtr<txAExprResult> exprResult;
-    rv = param->evaluate(aContext, getter_AddRefs(exprResult));
+    nsRefPtr<txNodeSet> nodes;
+    rv = evaluateToNodeSet(NS_STATIC_CAST(Expr*, iter.next()), aContext,
+                           getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (exprResult->getResultType() != txAExprResult::NODESET) {
-        NS_NAMED_LITERAL_STRING(err, "Invalid argument passed to generate-id(), expecting NodeSet");
-        aContext->receiveError(err, NS_ERROR_XSLT_NODESET_EXPECTED);
-        return NS_ERROR_XSLT_NODESET_EXPECTED;
-    }
-
-    txNodeSet* nodes = NS_STATIC_CAST(txNodeSet*,
-                                      NS_STATIC_CAST(txAExprResult*,
-                                                     exprResult));
     if (nodes->isEmpty()) {
         aContext->recycler()->getEmptyStringResult(aResult);
 
         return NS_OK;
     }
     
-    nsRefPtr<StringResult> strRes;
-    rv = aContext->recycler()->getStringResult(getter_AddRefs(strRes));
+    StringResult* strRes;
+    rv = aContext->recycler()->getStringResult(&strRes);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txXPathNodeUtils::getXSLTId(nodes->get(0), strRes->mValue);
 
-    NS_ADDREF(*aResult = strRes);
+    *aResult = strRes;
  
     return NS_OK;
 }

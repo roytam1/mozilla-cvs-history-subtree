@@ -696,18 +696,18 @@ txXPathNodeUtils::getXSLTId(const txXPathNode& aNode,
                             nsAString& aResult)
 {
     if (aNode.isDocument()) {
-        CopyASCIItoUCS2(nsPrintfCString(kFmtSize, gPrintfFmt, aNode.mDocument), aResult);
+        CopyASCIItoUTF16(nsPrintfCString(kFmtSize, gPrintfFmt, aNode.mDocument), aResult);
 
         return NS_OK;
     }
 
     if (aNode.isContent()) {
-        CopyASCIItoUCS2(nsPrintfCString(kFmtSize, gPrintfFmt, aNode.mContent), aResult);
+        CopyASCIItoUTF16(nsPrintfCString(kFmtSize, gPrintfFmt, aNode.mContent), aResult);
 
         return NS_OK;
     }
 
-    CopyASCIItoUCS2(nsPrintfCString(kFmtSizeAttr, gPrintfFmtAttr, aNode.mContent,
+    CopyASCIItoUTF16(nsPrintfCString(kFmtSizeAttr, gPrintfFmtAttr, aNode.mContent,
                                     aNode.mIndex), aResult);
 
     return NS_OK;

@@ -363,10 +363,10 @@ public:
     TX_DECL_EXPR;
 
 private:
-    void fromDescendants(const txXPathNode& aNode, txIMatchContext* cs,
-                         txNodeSet* nodes);
-    void fromDescendantsRev(const txXPathNode& aNode, txIMatchContext* cs,
-                            txNodeSet* nodes);
+    void fromDescendants(const txXPathNode& aNode, txIMatchContext* aCs,
+                         txNodeSet* aNodes);
+    void fromDescendantsRev(const txXPathNode& aNode, txIMatchContext* aCs,
+                            txNodeSet* aNodes);
 
     nsAutoPtr<txNodeTest> mNodeTest;
     LocationStepType mAxisIdentifier;

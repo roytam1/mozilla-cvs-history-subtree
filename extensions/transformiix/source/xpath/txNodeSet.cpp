@@ -73,16 +73,11 @@ txNodeSet::txNodeSet(const txXPathNode& aNode, txResultRecycler* aRecycler)
       mMarks(nsnull)
 {
     if (!ensureGrowSize(1)) {
-        NS_ERROR("out of memory");
         return;
     }
 
-    txXPathNode* temp = new(mStart) txXPathNode(aNode);
-    if (!temp) {
-        mEnd = mStart;
-        NS_ERROR("constructor of txXPathNode failed");
-    }
-	++mEnd;
+    new(mStart) txXPathNode(aNode);
+    ++mEnd;
 }
 
 txNodeSet::txNodeSet(const txNodeSet& aSource, txResultRecycler* aRecycler)
@@ -99,7 +94,6 @@ txNodeSet::txNodeSet(const txNodeSet& aSource, txResultRecycler* aRecycler)
 
 txNodeSet::~txNodeSet()
 {
-    NS_ASSERTION(!mMarks, "should've swept before this is going away");
     delete [] mMarks;
 
     if (mStart) {
@@ -140,16 +134,7 @@ nsresult txNodeSet::add(const txXPathNode& aNode)
         memmove(pos + 1, pos, moveSize * sizeof(txXPathNode));
     }
 
-    txXPathNode* temp = new(pos) txXPathNode(aNode);
-    if (!temp) {
-        if (moveSize > 0) {
-            memmove(pos, pos + 1, moveSize * sizeof(txXPathNode));
-        }
-        NS_ERROR("txXPathNode constructor failed");
-
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-
+    new(pos) txXPathNode(aNode);
     ++mEnd;
 
     return NS_OK;
@@ -332,17 +317,13 @@ txNodeSet::append(const txXPathNode& aNode)
     }
 
     if (mDirection == kForward) {
-        txXPathNode* temp = new(mEnd) txXPathNode(aNode);
-        NS_ENSURE_TRUE(temp, NS_ERROR_FAILURE);
-
+        new(mEnd) txXPathNode(aNode);
         ++mEnd;
 
         return NS_OK;
     }
 
-    --mStart;
-    txXPathNode* temp = new(mStart) txXPathNode(aNode);
-    NS_ENSURE_TRUE(temp, NS_ERROR_FAILURE);
+    new(--mStart) txXPathNode(aNode);
 
     return NS_OK;
 }
@@ -474,8 +455,8 @@ txNodeSet::get(PRInt32 aIndex) const
     if (mDirection == kForward) {
         return mStart[aIndex];
     }
-    ++aIndex;
-    return mEnd[-aIndex];
+
+    return mEnd[-aIndex - 1];
 }
 
 short
@@ -643,11 +624,7 @@ txNodeSet::copyElements(txXPathNode* aDest,
 {
     const txXPathNode* pos = aStart;
     while (pos < aEnd) {
-        txXPathNode* temp = new(aDest) txXPathNode(*pos);
-        if (!temp) {
-            NS_ERROR("txXPathNode constructor failed");
-            break;
-        }
+        new(aDest) txXPathNode(*pos);
         ++aDest;
         ++pos;
     }

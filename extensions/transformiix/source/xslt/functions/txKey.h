@@ -40,9 +40,9 @@
 #define txKey_h__
 
 #include "nsDoubleHashtable.h"
+#include "txNodeSet.h"
 #include "List.h"
 #include "txXSLTPatterns.h"
-#include "txNodeSet.h"
 #include "XMLUtils.h"
 
 class txPattern;
@@ -117,7 +117,7 @@ struct txIndexedKeyHashEntry : public PLDHashEntryHdr
 };
 
 DECL_DHASH_WRAPPER(txIndexedKeyHash, txIndexedKeyHashEntry,
-                   txIndexedKeyHashKey&);
+                   txIndexedKeyHashKey&)
 
 /**
  * Class holding all <xsl:key>s of a particular expanded name in the

@@ -339,6 +339,7 @@ nsresult txXSLKey::indexTree(const txXPathNode& aNode,
     nsresult rv = testNode(aNode, aKey, aKeyValueHash, aEs);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    // check if the node's attributes match
     txXPathTreeWalker walker(aNode);
     if (walker.moveToFirstAttribute()) {
         do {
@@ -349,6 +350,7 @@ nsresult txXSLKey::indexTree(const txXPathNode& aNode,
         walker.moveToParent();
     }
 
+    // check if the node's descendants match
     if (walker.moveToFirstChild()) {
         do {
             rv = indexTree(walker.getCurrentPosition(), aKey, aKeyValueHash,
@@ -394,7 +396,8 @@ nsresult txXSLKey::testNode(const txXPathNode& aNode,
                 txNodeSet* res = NS_STATIC_CAST(txNodeSet*,
                                                 NS_STATIC_CAST(txAExprResult*,
                                                                exprResult));
-                for (int i=0; i<res->size(); i++) {
+                PRInt32 i;
+                for (i = 0; i < res->size(); ++i) {
                     val.Truncate();
                     txXPathNodeUtils::getNodeValue(res->get(i), val);
 

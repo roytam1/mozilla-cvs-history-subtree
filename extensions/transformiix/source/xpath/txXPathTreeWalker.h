@@ -61,10 +61,6 @@ public:
     {
         return RemoveElementsAt(aIndex, 1);
     }
-    PRBool RemoveValuesAt(PRUint32 aIndex, PRInt32 aCount)
-    {
-        return RemoveElementsAt(aIndex, aCount);
-    }
     PRInt32 ValueAt(PRUint32 aIndex) const
     {
         return NS_PTR_TO_INT32(ElementAt(aIndex));
@@ -77,8 +73,8 @@ class nsIDOMDocument;
 class txXPathTreeWalker
 {
 public:
-    txXPathTreeWalker(const txXPathTreeWalker& aOther);
-    txXPathTreeWalker(const txXPathNode& aNode);
+    explicit txXPathTreeWalker(const txXPathTreeWalker& aOther);
+    explicit txXPathTreeWalker(const txXPathNode& aNode);
     ~txXPathTreeWalker();
 
     PRBool getAttr(nsIAtom* aLocalName, PRInt32 aNSID, nsAString& aValue) const;
@@ -90,7 +86,6 @@ public:
 
     PRBool moveTo(const txXPathTreeWalker& aWalker);
 
-    PRBool moveToDOMParent();
     PRBool moveToParent();
     PRBool moveToElementById(const nsAString& aID);
     PRBool moveToFirstAttribute();
@@ -143,6 +138,11 @@ public:
     static void getBaseURI(const txXPathNode& aNode, nsAString& aURI);
     static PRIntn comparePosition(const txXPathNode& aNode,
                                   const txXPathNode& aOtherNode);
+
+#ifdef TX_EXE
+private:
+    static void getNodeValueHelper(NodeDefinition* aNode, nsAString& aResult);
+#endif
 };
 
 #ifdef TX_EXE
@@ -207,21 +207,6 @@ inline void
 txXPathTreeWalker::getNodeName(nsAString& aName) const
 {
     txXPathNodeUtils::getNodeName(mPosition, aName);
-}
-
-inline PRBool
-txXPathTreeWalker::moveToDOMParent()
-{
-#ifdef TX_EXE
-    if (mPosition.mInner->nodeType == Node::DOCUMENT_NODE ||
-        mPosition.mInner->nodeType == Node::ATTRIBUTE_NODE) {
-#else
-    if (mPosition.isDocument() || mPosition.isAttribute()) {
-#endif
-        return PR_FALSE;
-    }
-
-    return moveToParent();
 }
 
 inline PRBool

@@ -414,7 +414,7 @@ txKeyPattern::~txKeyPattern()
 MBool txKeyPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
     txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
-    txXPathNode* contextDoc = txXPathNodeUtils::getOwnerDocument(aNode);
+    nsAutoPtr<txXPathNode> contextDoc(txXPathNodeUtils::getOwnerDocument(aNode));
     nsRefPtr<txNodeSet> nodes;
     nsresult rv = es->getKeyNodes(mName, *contextDoc, mValue, PR_TRUE,
                                   getter_AddRefs(nodes));
@@ -469,9 +469,10 @@ MBool txStepPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext
         return MB_FALSE;
 
     txXPathTreeWalker walker(aNode);
-    // XXX isn't this wrong when mIsAttr is set
-    if (!walker.moveToDOMParent() && !mIsAttr)
+    if ((!mIsAttr && walker.getNodeType() == txXPathNodeType::ATTRIBUTE_NODE) ||
+        !walker.moveToParent()) {
         return MB_FALSE;
+    }
     if (isEmpty()) {
         return MB_TRUE;
     }

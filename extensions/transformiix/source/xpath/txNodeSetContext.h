@@ -40,8 +40,8 @@
 #define __TX_XPATH_SET_CONTEXT
 
 #include "txIXPathContext.h"
-#include "nsAutoPtr.h"
 #include "txNodeSet.h"
+#include "nsAutoPtr.h"
 
 class txNodeSetContext : public txIEvalContext
 {

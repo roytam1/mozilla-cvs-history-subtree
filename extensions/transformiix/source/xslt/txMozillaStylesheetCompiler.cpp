@@ -40,7 +40,6 @@
 #include "nsCOMArray.h"
 #include "nsIAuthPrompt.h"
 #include "nsICharsetAlias.h"
-#include "nsIContent.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"

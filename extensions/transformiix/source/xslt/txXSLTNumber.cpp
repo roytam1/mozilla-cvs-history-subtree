@@ -215,7 +215,7 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
             }
 
             if (countPattern->matches(walker.getCurrentPosition(), aContext)) {
-                aValues.add(NS_INT32_TO_PTR(getSiblingCount(walker.getCurrentPosition(), countPattern,
+                aValues.add(NS_INT32_TO_PTR(getSiblingCount(walker, countPattern,
                                                             aContext)));
                 break;
             }
@@ -244,9 +244,8 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
     else if (aLevel == eLevelMultiple) {
         // find all ancestor-or-selfs that matches count until...
         txXPathTreeWalker walker(currNode);
-        PRBool hasAncestor = PR_TRUE;
         MBool matchedFrom = MB_FALSE;
-        while (hasAncestor) {
+        do {
             if (aFromPattern && !walker.isOnNode(currNode) &&
                 aFromPattern->matches(walker.getCurrentPosition(), aContext)) {
                 //... we find one that matches from
@@ -258,9 +257,7 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
                 aValues.add(NS_INT32_TO_PTR(getSiblingCount(walker, countPattern,
                                                             aContext)));
             }
-
-            hasAncestor = walker.moveToParent();
-        }
+        } while(walker.moveToParent());
 
         // Spec says to only match ancestors that are decendants of the
         // ancestor that matches the from-pattern, so if none did then
@@ -447,12 +444,10 @@ txXSLTNumber::getSiblingCount(const txXPathTreeWalker& aWalker,
     PRInt32 value = 1;
     txXPathTreeWalker walker(aWalker.getCurrentPosition());
 
-    PRBool hasSibling = walker.moveToPreviousSibling();
-    while (hasSibling) {
+    while (walker.moveToPreviousSibling()) {
         if (aCountPattern->matches(walker.getCurrentPosition(), aContext)) {
             ++value;
         }
-        hasSibling = walker.moveToPreviousSibling();
     }
     return value;
 }

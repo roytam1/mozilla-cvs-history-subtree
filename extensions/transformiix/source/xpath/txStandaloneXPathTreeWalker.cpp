@@ -292,37 +292,27 @@ txXPathNodeUtils::getNodeType(const txXPathNode& aNode)
     return aNode.mInner->getNodeType();
 }
 
-/*
-PRBool
-txXPathNodeUtils::isNodeOfType(const txXPathNode& aNode, PRUint16 aType)
+/* static */
+void
+txXPathNodeUtils::getNodeValueHelper(NodeDefinition* aNode, nsAString& aResult)
 {
-    PRBool isType = PR_FALSE;
-    switch (aNode.mInner->nodeType) {
-        case Node::ELEMENT_NODE:
-            isType = !(aFlags & ~txXPathNodeFilter::eELEMENT);
-            break;
-        case Node::ATTRIBUTE_NODE:
-            isType = !(aFlags & ~txXPathNodeFilter::eATTRIBUTE);
-            break;
-        case Node::TEXT_NODE:
-            isType = !(aFlags & ~txXPathNodeFilter::eTEXT);
-            break;
-        case Node::PROCESSING_INSTRUCTION_NODE:
-            isType = !(aFlags & ~txXPathNodeFilter::ePI);
-            break;
-        case Node::COMMENT_NODE:
-            isType = !(aFlags & ~txXPathNodeFilter::eCOMMENT);
-            break;
-        case Node::DOCUMENT_NODE:
-            isType = !(aFlags & ~txXPathNodeFilter::eDOCUMENT);
-            break;
-        case Node::DOCUMENT_FRAGMENT_NODE:
-        default:
-            NS_NOTREACHED("unexpected content in isNodeOfType");
+
+    NodeDefinition* child = NS_STATIC_CAST(NodeDefinition*,
+                                           aNode->getFirstChild());
+    while (child) {
+        switch (child->getNodeType()) {
+            case Node::TEXT_NODE:
+            {
+                aResult.Append(child->nodeValue);
+            }
+            case Node::ELEMENT_NODE:
+            {
+                getNodeValueHelper(child, aResult);
+            }
+        }
+        child = NS_STATIC_CAST(NodeDefinition*, child->getNextSibling());
     }
-    return isType;
 }
-*/
 
 /* static */
 void
@@ -333,9 +323,7 @@ txXPathNodeUtils::getNodeValue(const txXPathNode& aNode, nsAString& aResult)
         type == Node::COMMENT_NODE ||
         type == Node::PROCESSING_INSTRUCTION_NODE ||
         type == Node::TEXT_NODE) {
-        nsAutoString result;
-        aNode.mInner->getNodeValue(result);
-        aResult.Append(result);
+        aResult.Append(aNode.mInner->nodeValue);
 
         return;
     }
@@ -343,18 +331,7 @@ txXPathNodeUtils::getNodeValue(const txXPathNode& aNode, nsAString& aResult)
     NS_ASSERTION(type == Node::ELEMENT_NODE || type == Node::DOCUMENT_NODE,
                  "Element or Document expected");
 
-    txXPathTreeWalker walker(aNode.mInner);
-    if (!walker.moveToFirstDescendant()) {
-        return;
-    }
-    nsAutoString result;
-    do {
-        if (walker.getCurrentPosition().mInner->nodeType ==
-            Node::TEXT_NODE) {
-            walker.getCurrentPosition().mInner->getNodeValue(result);
-            aResult.Append(result);
-        }
-    } while (walker.moveToNextDescendant());
+    getNodeValueHelper(aNode.mInner, aResult);
 }
 
 /* static */
@@ -379,11 +356,9 @@ txXPathNodeUtils::getOwnerDocument(const txXPathNode& aNode)
 
 #ifndef HAVE_64BIT_OS
 #define kFmtSize 13
-#define kFmtSizeAttr 24
 const char gPrintfFmt[] = "id0x%08p";
 #else
 #define kFmtSize 21
-#define kFmtSizeAttr 32
 const char gPrintfFmt[] = "id0x%016p";
 #endif
 
