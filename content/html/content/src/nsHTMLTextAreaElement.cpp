@@ -69,7 +69,6 @@
 #include "nsIDOMText.h"
 #include "nsReadableUtils.h"
 #include "nsITextContent.h"
-#include "nsITextAreaElement.h"
 
 static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 
@@ -77,11 +76,10 @@ static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 class nsHTMLTextAreaElement : public nsGenericHTMLFormElement,
                               public nsIDOMHTMLTextAreaElement,
                               public nsIDOMNSHTMLTextAreaElement,
-                              public nsITextControlElement,
-                              public nsITextAreaElement
+                              public nsITextControlElement
 {
 public:
-  nsHTMLTextAreaElement();
+  nsHTMLTextAreaElement(PRBool aFromParser = PR_FALSE);
   virtual ~nsHTMLTextAreaElement();
 
   // nsISupports
@@ -101,9 +99,6 @@ public:
 
   // nsIDOMNSHTMLTextAreaElement
   NS_DECL_NSIDOMNSHTMLTEXTAREAELEMENT
-
-  // nsITextAreaElement
-  NS_DECL_NSITEXTAREAELEMENT
 
   // nsIFormControl
   NS_IMETHOD_(PRInt32) GetType() { return NS_FORM_TEXTAREA; }
@@ -143,6 +138,9 @@ public:
   virtual nsresult GetInnerHTML(nsAString& aInnerHTML);
   virtual nsresult SetInnerHTML(const nsAString& aInnerHTML);
 
+  virtual void DoneAddingChildren();
+  virtual PRBool IsDoneAddingChildren();
+
 protected:
   nsCOMPtr<nsIControllers> mControllers;
   /** The current value.  This is null if the frame owns the value. */
@@ -151,6 +149,9 @@ protected:
   PRPackedBool             mValueChanged;
   /** Whether or not we are already handling select event. */
   PRPackedBool             mHandlingSelect;
+  /** Whether or not we are done adding children (always PR_TRUE if not
+      created by a parser */
+  PRPackedBool             mDoneAddingChildren;
 
   NS_IMETHOD SelectAll(nsIPresContext* aPresContext);
   /**
@@ -169,11 +170,11 @@ protected:
 
 nsresult
 NS_NewHTMLTextAreaElement(nsIHTMLContent** aInstancePtrResult,
-                          nsINodeInfo *aNodeInfo)
+                          nsINodeInfo *aNodeInfo, PRBool aFromParser)
 {
   NS_ENSURE_ARG_POINTER(aInstancePtrResult);
 
-  nsHTMLTextAreaElement* it = new nsHTMLTextAreaElement();
+  nsHTMLTextAreaElement* it = new nsHTMLTextAreaElement(aFromParser);
 
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
@@ -194,10 +195,11 @@ NS_NewHTMLTextAreaElement(nsIHTMLContent** aInstancePtrResult,
 }
 
 
-nsHTMLTextAreaElement::nsHTMLTextAreaElement()
+nsHTMLTextAreaElement::nsHTMLTextAreaElement(PRBool aFromParser)
   : mValue(nsnull),
     mValueChanged(PR_FALSE),
-    mHandlingSelect(PR_FALSE)
+    mHandlingSelect(PR_FALSE),
+    mDoneAddingChildren(!aFromParser)
 {
 }
 
@@ -219,7 +221,6 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTextAreaElement,
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsITextControlElement)
-  NS_INTERFACE_MAP_ENTRY(nsITextAreaElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTextAreaElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -693,14 +694,18 @@ nsHTMLTextAreaElement::HandleDOMEvent(nsIPresContext* aPresContext,
   return rv;
 }
 
-// nsITextAreaElement
-NS_IMETHODIMP
+void
 nsHTMLTextAreaElement::DoneAddingChildren()
 {
+  mDoneAddingChildren = PR_TRUE;
   RestoreFormControlState(this, this);
-  return NS_OK;
 }
 
+PRBool
+nsHTMLTextAreaElement::IsDoneAddingChildren()
+{
+  return mDoneAddingChildren;
+}
 
 nsresult
 nsHTMLTextAreaElement::GetInnerHTML(nsAString& aInnerHTML)

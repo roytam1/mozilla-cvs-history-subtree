@@ -130,7 +130,7 @@ PRInt32 nsHTMLFrameSetElement::gMaxNumRowColSpecs = 25;
 
 nsresult
 NS_NewHTMLFrameSetElement(nsIHTMLContent** aInstancePtrResult,
-                          nsINodeInfo *aNodeInfo)
+                          nsINodeInfo *aNodeInfo, PRBool aFromParser)
 {
   NS_ENSURE_ARG_POINTER(aInstancePtrResult);
 
