@@ -19,6 +19,7 @@
 #include "xp.h"
 #include "net.h"
 #include "netutils.h"
+#include "mkfe.h"
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
@@ -77,7 +78,7 @@ PRIVATE PRIntn net_AboutComparator(const void *v1, const void *v2)
 {
     char *idx = NULL;
     if (idx = PL_strchr((char *) v2, '*')) {
-        int len = (int)(idx - v2);
+        int len = (int)(idx - (char *) v2);
         return PL_strncasecmp((char *) v1, (char *) v2, len) == 0;
     } else {
         return PL_strcasecmp((char *) v1, (char *) v2) == 0;
@@ -289,7 +290,7 @@ net_PrintContextInfo(ActiveEntry *cur_entry, MWContext *context)
      * extract the URL from it.  That has
      * the top level document URL and the title
      */
-    his = SHIST_GetCurrent (&context->hist);
+    his = SHIST_GetCurrent (NET_GetHistory(context));
    
 	cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
 	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
@@ -466,7 +467,7 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		 * extract the URL from it.  That has
 		 * the top level document URL 
 		 */
-		his = SHIST_GetCurrent (&context->hist);
+		his = SHIST_GetCurrent (NET_GetHistory(context));
 
 		StrAllocCat(data, "<TITLE>");
 		StrAllocCat(data, XP_GetString(XP_DOCUMENT_INFO));

@@ -22,6 +22,7 @@
 #ifdef MOZILLA_CLIENT
 
 #include "xp.h"
+#include "mkfe.h"
 #include "mktrace.h"
 #include "mkcache.h"
 #include "glhist.h"
@@ -179,7 +180,7 @@ net_OpenExtCacheFat(MWContext *ctxt, ExtCacheDBInfo *db_info)
 
 		if(!db_name)
 		  {
-			close_db = !FE_Confirm(ctxt,
+			close_db = !NET_Confirm(ctxt,
 			XP_GetString( XP_DATABASE_CANT_BE_VALIDATED_MISSING_NAME_ENTRY ) );
 		  }
 		else if(PL_strcmp(db_name, db_info->name))
@@ -190,7 +191,7 @@ net_OpenExtCacheFat(MWContext *ctxt, ExtCacheDBInfo *db_info)
 							  XP_GetString( XP_DB_SELECTED_DB_NAMED ),
 							  db_name, db_info->name);
 			
-			close_db = !FE_Confirm(ctxt, buffer);
+			close_db = !NET_Confirm(ctxt, buffer);
 		  }
 
 		if(close_db)
@@ -247,7 +248,7 @@ net_OpenExtCacheFATCallback(MWContext *ctxt, char * filename, void *closure)
 	  }
 	else
 	  {
-		if(FE_Confirm(ctxt, "Unable to open External Cache.  Try again?"))
+		if(NET_Confirm(ctxt, "Unable to open External Cache.  Try again?"))
 		  {
 			/* try and open again */
 
@@ -322,7 +323,7 @@ NET_OpenExtCacheFAT(MWContext *ctxt, char * cache_name, char * instructions)
 			PR_snprintf(buffer, sizeof(buffer), 
 						"Now using external cache: %.900s", 
 					   	db_info->name);
-			if(!FE_Confirm(ctxt, buffer))
+			if(!NET_Confirm(ctxt, buffer))
 				net_CloseExtCacheFat(db_info);
 		  }
 	  }
@@ -334,9 +335,9 @@ NET_OpenExtCacheFAT(MWContext *ctxt, char * cache_name, char * instructions)
 	  {
 
 		if(instructions)
-			done = !FE_Confirm(ctxt, instructions);
+			done = !NET_Confirm(ctxt, instructions);
 		else
-			done = !FE_Confirm(ctxt, XP_GetString( XP_REQUEST_EXTERNAL_CACHE ) );
+			done = !NET_Confirm(ctxt, XP_GetString( XP_REQUEST_EXTERNAL_CACHE ) );
 
 		if(!done)
 			FE_PromptForFileName (ctxt,					/* context */

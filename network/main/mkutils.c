@@ -26,6 +26,7 @@
 
 #include "rosetta.h"
 #include "mkutils.h"
+#include "mkfe.h"
 #include "gui.h"
 #include "mkparse.h"
 #include "mkgeturl.h"
@@ -75,14 +76,6 @@ extern int XP_ERRNO_EALREADY;
 extern int XP_ALERT_URN_USEHTTP;
 extern int XP_ALERT_NFS_USEHTTP;
 extern int MK_NO_WAIS_PROXY;
-
-/* print network progress to the front end
- */
-MODULE_PRIVATE void
-NET_Progress(MWContext *context, char *msg)
-{
-	FE_Progress(context, msg);
-}
 
 /* note:  on the Macintosh local_dir_name will be in the following format: */
 /*              file:///Hard%20Disk/Folder%20Name/File.html                */
@@ -1548,7 +1541,7 @@ NET_ParseMimeHeader(FO_Present_Types outputFormat,
 				 */
 				URL_s->server_can_do_byteranges = TRUE;
 			  }
-            else if(!PL_strncasecmp(name,"REFRESH:",8) && !EDT_IS_EDITOR(context))
+            else if(!PL_strncasecmp(name,"REFRESH:",8) && !NET_IsEditor(context))
               {
                 char *first_arg, *next_arg;
 

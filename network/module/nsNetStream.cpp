@@ -36,13 +36,15 @@ NS_DEFINE_IID(kIInputStreamIID, NS_IINPUTSTREAM_IID);
 
 nsConnectionInfo::nsConnectionInfo(nsIURL *aURL,
                                    nsNetlibStream *aStream, 
-                                   nsIStreamListener *aNotify)
+                                   nsIStreamListener *aNotify,
+                                   nsINetSupport *aSupport)
 {
     NS_INIT_REFCNT();
 
     pURL       = aURL;
     pNetStream = aStream;
     pConsumer  = aNotify;
+    pSupport   = aSupport;
 
     if (NULL != pURL) {
         pURL->AddRef();
@@ -54,7 +56,11 @@ nsConnectionInfo::nsConnectionInfo(nsIURL *aURL,
 
     if (NULL != pConsumer) {
         pConsumer->AddRef();
-}
+    }
+    
+    if (NULL != pSupport) {
+        pSupport->AddRef();
+    }
 }
 
 
@@ -78,9 +84,14 @@ nsConnectionInfo::~nsConnectionInfo()
         pConsumer->Release();
     }
 
+    if (NULL != pSupport) {
+        pSupport->Release();
+    }
+
     pURL       = NULL;
     pNetStream = NULL;
     pConsumer  = NULL;
+    pSupport   = NULL;
 }
 
 

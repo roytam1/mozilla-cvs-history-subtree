@@ -20,6 +20,7 @@
  */
 
 #include "xp.h"
+#include "mkfe.h"
 #include "plstr.h"
 #include "prmem.h"
 #include "netutils.h"
@@ -205,7 +206,7 @@ net_parse_menu (ActiveEntry * cur_entry)
 	if(CE_STATUS > 1)
 	  {
 		CE_BYTES_RECEIVED += CE_STATUS;
-        FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, CE_STATUS, CE_URL_S->content_length);
+        NET_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, CE_STATUS, CE_URL_S->content_length);
 	  }
 
     gopher_type = *line;
@@ -472,7 +473,7 @@ net_parse_cso (ActiveEntry * cur_entry)
     if(CE_STATUS > 1)
       { 
         CE_BYTES_RECEIVED += CE_STATUS;
-        FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, CE_STATUS, CE_URL_S->content_length);
+        NET_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, CE_STATUS, CE_URL_S->content_length);
       }
 
     /* a line beginning with a 2 means the end of data
@@ -599,7 +600,7 @@ net_send_gopher_request (ActiveEntry * cur_entry)
 
 	/* start the graph progress indicator
      */
-    FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
+    NET_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
     CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
     CD_ORIGINAL_CONTENT_LENGTH = CE_URL_S->content_length;
 
@@ -650,7 +651,7 @@ net_pull_gopher_data(ActiveEntry * cur_entry)
     else if(CE_STATUS > 0)
       {
 	    CE_BYTES_RECEIVED += CE_STATUS;
-        FE_GraphProgress(CE_WINDOW_ID, 
+        NET_GraphProgress(CE_WINDOW_ID, 
 						 CE_URL_S, 
 						 CE_BYTES_RECEIVED, 
 						 CE_STATUS, 
@@ -1106,7 +1107,7 @@ net_ProcessGopher(ActiveEntry * cur_entry)
     
         case GOPHER_FREE:
             if(CD_DESTROY_GRAPH_PROGRESS)
-                FE_GraphProgressDestroy(CE_WINDOW_ID,
+               NET_GraphProgressDestroy(CE_WINDOW_ID,
                                         CE_URL_S,
                                         CD_ORIGINAL_CONTENT_LENGTH,
 										CE_BYTES_RECEIVED);

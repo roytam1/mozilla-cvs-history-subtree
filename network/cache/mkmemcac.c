@@ -23,11 +23,12 @@
  */
 
 /* Please leave outside of ifdef for windows precompiled headers */
+#undef OPAQUE_MWCONTEXT
 #include "xp.h"
 
 #ifdef MOZILLA_CLIENT
-
 #include "mkcache.h"
+#include "mkfe.h"
 #include "mkselect.h"
 #include "netutils.h"
 #include "mktcp.h"
@@ -1348,7 +1349,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
     cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
 	
-	FE_EnableClicking(CE_WINDOW_ID);
+	NET_EnableClicking(CE_WINDOW_ID);
 
 #ifdef MOZ_MAIL_NEWS    
     if (cur_entry->format_out == FO_PRESENT)
@@ -1391,7 +1392,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 	  }
 
 	if (!CE_URL_S->load_background)
-        FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
+       NET_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
 
 	/* process one chunk of the
 	 * cache file so that
@@ -1437,7 +1438,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 			NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
 
 			if (!CE_URL_S->load_background)
-				FE_GraphProgressDestroy(CE_WINDOW_ID,
+			   NET_GraphProgressDestroy(CE_WINDOW_ID,
 										CE_URL_S,
 										CE_URL_S->content_length,
 										CE_BYTES_RECEIVED);
@@ -1566,7 +1567,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	    NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
 
         if (!CE_URL_S->load_background)
-            FE_GraphProgressDestroy(CE_WINDOW_ID,
+           NET_GraphProgressDestroy(CE_WINDOW_ID,
                                     CE_URL_S,
                                     CE_URL_S->content_length,
                                     CE_BYTES_RECEIVED);
@@ -1624,7 +1625,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	  }
 
 	if (!CE_URL_S->load_background)
-        FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED,
+       NET_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED,
                          chunk_size, CE_URL_S->content_length);
 
 	if(CE_STATUS < 0)

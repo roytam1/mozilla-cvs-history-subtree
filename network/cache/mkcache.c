@@ -27,6 +27,7 @@
 /* dbm code */
 
 #include "mkcache.h"
+#include "mkfe.h"
 #include "extcache.h"
 #include "mkgeturl.h"
 #include "netutils.h"
@@ -1546,7 +1547,7 @@ NET_CacheConverter (FO_Present_Types format_out,
     
     TRACEMSG(("Setting up cache stream. Have URL: %s\n", URL_s->address));
 
-	FE_EnableClicking(window_id);
+	NET_EnableClicking(window_id);
 
 #ifdef MOZILLA_CLIENT
     /* add this new url to the Global history since we must be getting it now

@@ -25,6 +25,7 @@
 
 #include "rosetta.h"
 #include "xp.h"
+#include "mkfe.h"
 #include "netutils.h"
 #include "mkselect.h"
 #include "mktcp.h"
@@ -349,7 +350,7 @@ net_ftp_make_stream(FO_Present_Types format_out,
 	 * need to generate an HTML dialog to handle
 	 * the message
 	 */
-	if(URL_s->files_to_post && EDT_IS_EDITOR(window_id))
+	if(URL_s->files_to_post && NET_IsEditor(window_id))
 	  {
 		Chrome chrome_struct;
 		memset(&chrome_struct, 0, sizeof(Chrome));
@@ -1484,7 +1485,7 @@ net_get_ftp_file_type(ActiveEntry *ce)
 			/* start the graph progress now since we know the size
 		 	 */
 			ce->URL_s->content_length = cd->total_size_of_files_to_post; 
-	    	FE_GraphProgressInit(ce->window_id, ce->URL_s, ce->URL_s->content_length);
+	    	NET_GraphProgressInit(ce->window_id, ce->URL_s, ce->URL_s->content_length);
 			cd->destroy_graph_progress = TRUE;
 			cd->original_content_length = ce->URL_s->content_length;
 
@@ -2229,7 +2230,7 @@ net_do_put(ActiveEntry * ce)
 
         if(cd->destroy_graph_progress)
 		  {
-            FE_GraphProgressDestroy(ce->window_id, 	
+            NET_GraphProgressDestroy(ce->window_id, 	
 									ce->URL_s, 	
 									cd->original_content_length,
 									ce->bytes_received);
@@ -2278,13 +2279,14 @@ net_do_put(ActiveEntry * ce)
 				cd->next_state_after_response = FTP_FIGURE_OUT_WHAT_TO_DO;
 			  }
       /* Don't want to show a directory when remote editing a FTP page, bug 50942 */
-			else if (!EDT_IS_EDITOR(ce->window_id))
+			else if (!NET_IsEditor(ce->window_id))
 		  	  {
 				/* no more files, figure out if we should
 				 * show an index
 				 */
 #ifdef MOZILLA_CLIENT
-		  		History_entry * his = SHIST_GetCurrent(&ce->window_id->hist);
+		  		History_entry * his = 
+                  SHIST_GetCurrent(NET_GetHistory(ce->window_id));
 #else
             	History_entry * his = NULL;
 #endif /* MOZILLA_CLIENT */
@@ -2300,12 +2302,12 @@ net_do_put(ActiveEntry * ce)
 	else if(ce->status > 0)
 	  {
     	ce->bytes_received += ce->status;
-    	FE_GraphProgress(ce->window_id,
+    	NET_GraphProgress(ce->window_id,
                      	ce->URL_s,
                      	ce->bytes_received,
                      	ce->status,
                      	ce->URL_s->content_length);
-    	FE_SetProgressBarPercent(ce->window_id,
+    	NET_SetProgressBarPercent(ce->window_id,
                              	(long)(((double)ce->bytes_received*100) / (double)(uint32)ce->URL_s->content_length) );
 	  }
 
@@ -2538,7 +2540,7 @@ HG69136
 
 	/* start the graph progress indicator
      */
-    FE_GraphProgressInit(ce->window_id, ce->URL_s, ce->URL_s->real_content_length);
+    NET_GraphProgressInit(ce->window_id, ce->URL_s, ce->URL_s->real_content_length);
 	cd->destroy_graph_progress = TRUE;
 	cd->original_content_length = ce->URL_s->real_content_length;
 
@@ -2640,8 +2642,8 @@ net_ftp_push_partial_cache_file(ActiveEntry * ce)
         /* write the data */
         TRACEMSG(("Transferring %ld bytes from cache file.", status));
         ce->bytes_received += status;
-        FE_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, status, ce->URL_s->real_content_length);
-        FE_SetProgressBarPercent(ce->window_id, (long)(((double)ce->bytes_received*100) / (double)(uint32)ce->URL_s->real_content_length) );
+        NET_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, status, ce->URL_s->real_content_length);
+        NET_SetProgressBarPercent(ce->window_id, (long)(((double)ce->bytes_received*100) / (double)(uint32)ce->URL_s->real_content_length) );
         status = (*cd->stream->put_block)(cd->stream, NET_Socket_Buffer, status);
         cd->pause_for_read = TRUE;
         return status;
@@ -2720,11 +2722,11 @@ net_ftp_read_file(ActiveEntry * ce)
 	if(status > 0) 
 	  { 
 		ce->bytes_received += status; 
-		FE_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, status, ce->URL_s->real_content_length);
+		NET_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, status, ce->URL_s->real_content_length);
 		if (ce->URL_s->real_content_length == 0)
-			FE_SetProgressBarPercent(ce->window_id, 0);
+			NET_SetProgressBarPercent(ce->window_id, 0);
 		else
-    		FE_SetProgressBarPercent(ce->window_id, (long)(((double)ce->bytes_received*100) / (double)(uint32)ce->URL_s->real_content_length) );
+    		NET_SetProgressBarPercent(ce->window_id, (long)(((double)ce->bytes_received*100) / (double)(uint32)ce->URL_s->real_content_length) );
         status = PUTBLOCK(NET_Socket_Buffer, status);
         cd->pause_for_read = TRUE;
       }
@@ -2912,7 +2914,7 @@ net_ftp_read_dir(ActiveEntry * ce)
     if(ce->status > 1)
       {
     	ce->bytes_received += ce->status;
-		FE_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, ce->status, ce->URL_s->content_length);
+		NET_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, ce->status, ce->URL_s->content_length);
 	  }
 
     if(!line)
@@ -4616,7 +4618,7 @@ net_ProcessFTP(ActiveEntry * ce)
 				  }
 
                 if(cd->destroy_graph_progress)
-                    FE_GraphProgressDestroy(ce->window_id, 	
+                   NET_GraphProgressDestroy(ce->window_id, 	
 											ce->URL_s, 	
 											cd->original_content_length,
 											ce->bytes_received);

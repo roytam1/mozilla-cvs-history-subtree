@@ -22,6 +22,7 @@
  * Updated and Documented by Judson Valeski 11/19/1997
  */
 #include "mkutils.h"    /* LF */
+#include "mkfe.h"
 #include "mktcp.h"
 #include "netutils.h"
 #include "prsystem.h"
@@ -271,7 +272,7 @@ PRIVATE Bool confirm2(MWContext *context, char *fmt, char *prm) {
     Bool rv = TRUE;
     char *msg = msg2(fmt, prm);
     if (msg) {
-	rv = FE_Confirm(context, msg);
+	rv = NET_Confirm(context, msg);
 	PR_Free(msg);
     }
     return rv;
@@ -280,7 +281,7 @@ PRIVATE Bool confirm2(MWContext *context, char *fmt, char *prm) {
 PRIVATE void alert2(MWContext *context, char *fmt, char *prm) {
     char *msg = msg2(fmt, prm);
     if (msg) {
-	FE_Alert(context, msg);
+	NET_Alert(context, msg);
 	PR_Free(msg);
     }
 }
@@ -628,7 +629,7 @@ pacf_get_proxy_addr(MWContext *context, char *list, char **ret_proxy_addr,
 	    {
 		return TRUE;
 	    }
-	  else if (!FE_Confirm(context,
+	  else if (!NET_Confirm(context,
 			       !socks_cnt ? XP_GetString(XP_RETRY_AGAIN_PROXY) :
 			       !proxy_cnt ? XP_GetString(XP_RETRY_AGAIN_SOCKS) : XP_GetString(XP_RETRY_AGAIN_PROXY_OR_SOCKS)))
 	    {
@@ -660,7 +661,7 @@ pacf_get_proxy_addr(MWContext *context, char *list, char **ret_proxy_addr,
 	  sm_ptr->retries++;
 	  return TRUE;
       }
-    else if (pacf_do_failover && FE_Confirm(context,
+    else if (pacf_do_failover && NET_Confirm(context,
 			!pacf_direct_cnt ?
 			(!socks_cnt ? XP_GetString(XP_OVERRIDE_PROXY) :
 			 !proxy_cnt ? XP_GetString(XP_OVERRIDE_SOCKS) : XP_GetString(XP_OVERRIDE_MIX)) :
@@ -975,7 +976,7 @@ static void pacf_restart_queued(URL_Struct *URL_s, int status,
 		  NET_GlobalAcLoaded = FALSE;
 	  }
 	else if (status < 0
-		 ? FE_Confirm(window_id, XP_GetString(XP_CONF_LOAD_FAILED_USE_PREV))
+		 ? NET_Confirm(window_id, XP_GetString(XP_CONF_LOAD_FAILED_USE_PREV))
 		 : confirm2(window_id, XP_GetString(XP_BAD_TYPE_USE_PREV), pacf_url))
 	  {
 	      PACF_Object *obj = PR_NEWZAP(PACF_Object);

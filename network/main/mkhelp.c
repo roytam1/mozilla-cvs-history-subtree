@@ -20,6 +20,7 @@
  * Routines to parse HTML help mapping file
  */
 
+#undef OPAQUE_MWCONTEXT
 #include "mkutils.h"
 #include "netutils.h"
 #include "xp.h"
@@ -830,7 +831,7 @@ net_ParseHTMLHelpLoadHelpDoc(HTMLHelpParseObj *obj, MWContext *context)
 
 	memset(URL_s->window_chrome, 0, sizeof(Chrome));
 
-	if(obj->window_name)
+ 	if(obj->window_name)
 		URL_s->window_target = PL_strdup(obj->window_name);
 	else
 		URL_s->window_target = PL_strdup(DEFAULT_HELP_WINDOW_NAME);

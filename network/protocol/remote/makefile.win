@@ -30,6 +30,9 @@ IGNORE_MANIFEST=1
 #   proper JS includes
 #
 LCFLAGS		= $(LCFLAGS)  -DMOZILLA_CLIENT
+!ifdef MODULAR_NETLIB
+LCFLAGS		= $(LCFLAGS)  -DOPAQUE_MWCONTEXT
+!endif
 
 !ifdef BUILD_DEBUG_GC
 LCFLAGS		= $(LCFLAGS) -DDEBUG_GC
@@ -41,7 +44,7 @@ MISCDEP=$(LLIBS)
 OBJS=   \
 	.\$(OBJDIR)\mkremote.obj		\
 	$(NULL)
-	
+
 
 CSRCS =	\
 	mkremote.c	\

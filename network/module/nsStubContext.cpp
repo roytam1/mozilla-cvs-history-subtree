@@ -1,19 +1,20 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License.  You may obtain a copy of the License at
  * http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See 
+ * the License for the specific language governing rights and limitations
+ * under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Original Code is Mozilla Communicator client code.
+ *
+ * The Initial Developer of the Original code is Netscape Communications
+ * Corporation.  Portions created by Netscape are Copyright (C) 1998 
+ * Netscape Communications Corporation.  All Rights Reserved.
  */
 
 
@@ -25,6 +26,7 @@
 
 #include "nsString.h"
 #include "nsIStreamListener.h"
+#include "nsINetSupport.h"
 #include "nsNetStream.h"
 
 /****************************************************************************/
@@ -43,6 +45,95 @@ stub_noop(int x, ...)
 #endif
 /*  DebugBreak(); */
     return 0;
+}
+
+static nsINetSupport *getNetSupport(nsISupports *ais) 
+{
+    if (ais != NULL) {
+        nsINetSupport *ins = NULL;
+        ais->QueryInterface(kINetSupportIID, (void **) &ins);
+        return ins;
+    }
+    return NULL;
+}
+
+void stub_Alert(MWContext *context,
+                const char *msg)
+{
+    nsINetSupport *ins;
+
+    if (ins = getNetSupport(NULL)) {
+        nsString str(msg);
+        ins->Alert(str);
+        ins->Release();
+    } else {
+        PR_LogPrint("Alert: %s", msg);
+    }
+}
+
+XP_Bool stub_Confirm(MWContext *context,
+                     const char *msg)
+{
+    nsINetSupport *ins;
+    
+    if (ins = getNetSupport(NULL)) {
+        XP_Bool res;
+        nsString str(msg);
+        res = ins->Confirm(str);
+        ins->Release();
+        return res;
+    } else {
+        PR_LogPrint("Confirm: %s", msg);
+    }
+    return FALSE;
+}
+
+char *stub_Prompt(MWContext *context,
+                  const char *msg,
+                  const char *def)
+{
+    nsINetSupport *ins;
+    
+    if (ins = getNetSupport(NULL)) {
+        nsString str(msg);
+        nsString defStr(def);
+        nsString res;
+        if (ins->Prompt(msg, defStr, res)) {
+            ins->Release();
+            return res.ToNewCString();
+        }
+        ins->Release();
+    } else {
+        PR_LogPrint("Prompt: %s (default = %s)", msg, def);
+    }
+
+    return NULL;
+}
+
+PRIVATE XP_Bool
+stub_PromptUsernameAndPassword(MWContext *window_id,
+                               const char *msg,
+                               char **username,
+                               char **password)
+{
+    nsINetSupport *ins;
+    
+    if (ins = getNetSupport(NULL)) {
+        nsString str(msg);
+        nsString userStr;
+        nsString pwdStr;
+        if (ins->PasswordPrompt(msg, userStr, pwdStr)) {
+            ins->Release();
+            *username = userStr.ToNewCString();
+            *password = pwdStr.ToNewCString();
+            return TRUE;
+        }
+        ins->Release();
+    } else {
+        PR_LogPrint("Password prompt: %s", msg);
+    }
+
+    return FALSE;
 }
 
 PRIVATE void stub_GraphProgressInit(MWContext  *context, 
@@ -175,7 +266,7 @@ PRIVATE void stub_GraphProgressDestroy(MWContext  *context,
 #define stub_SetProgressBarPercent          (SetProgressBarPercent_t)stub_noop
 #define stub_SetBackgroundColor             (SetBackgroundColor_t)stub_noop
 #define stub_Progress                       (Progress_t)stub_noop
-#define stub_Alert                          (Alert_t)stub_noop
+#define stub_Alert                          (Alert_t)stub_Alert
 #define stub_SetCallNetlibAllTheTime        (SetCallNetlibAllTheTime_t)stub_noop
 #define stub_ClearCallNetlibAllTheTime      (ClearCallNetlibAllTheTime_t)stub_noop
 #define stub_GraphProgressInit              (GraphProgressInit_t)stub_GraphProgressInit
@@ -185,10 +276,10 @@ PRIVATE void stub_GraphProgressDestroy(MWContext  *context,
 #define stub_UseFancyNewsgroupListing       (UseFancyNewsgroupListing_t)stub_noop
 #define stub_FileSortMethod                 (FileSortMethod_t)stub_noop
 #define stub_ShowAllNewsArticles            (ShowAllNewsArticles_t)stub_noop
-#define stub_Confirm                        (Confirm_t)stub_noop
-#define stub_Prompt                         (Prompt_t)stub_noop
+#define stub_Confirm                        (Confirm_t)stub_Confirm
+#define stub_Prompt                         (Prompt_t)stub_Prompt
 #define stub_PromptWithCaption              (PromptWithCaption_t)stub_noop
-#define stub_PromptUsernameAndPassword      (PromptUsernameAndPassword_t)stub_noop
+#define stub_PromptUsernameAndPassword      (PromptUsernameAndPassword_t)stub_PromptUsernameAndPassword
 #define stub_PromptPassword                 (PromptPassword_t)stub_noop
 #define stub_EnableClicking                 (EnableClicking_t)stub_noop
 #define stub_AllConnectionsComplete         (AllConnectionsComplete_t)stub_noop
@@ -409,7 +500,6 @@ unsigned int stub_is_write_ready(NET_StreamClass *stream)
     TRACEMSG(("+++ stream is_write_ready.  Returning %d\n", free_space));
     return free_space;
 }
-
 
 extern "C" {
 

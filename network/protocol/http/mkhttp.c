@@ -23,6 +23,7 @@
  */
 #include "rosetta.h"
 #include "xp.h"
+#include "mkfe.h"
 #include "netutils.h"
 #include "mkselect.h"
 #include "mktcp.h"
@@ -1765,12 +1766,12 @@ net_http_send_post_data (ActiveEntry *ce)
 	  {
 	  	cd->total_amt_written += ce->status;
 
-      	FE_GraphProgress(ce->window_id, 
+      	NET_GraphProgress(ce->window_id, 
 						 ce->URL_s, 
 						 cd->total_amt_written, 
 						 ce->status, 
 						 cd->total_size_of_files_to_post);
-		FE_SetProgressBarPercent(ce->window_id, 
+		NET_SetProgressBarPercent(ce->window_id, 
 				cd->total_amt_written*100/cd->total_size_of_files_to_post);
 	  }
 
@@ -2332,7 +2333,7 @@ net_parse_first_http_line (ActiveEntry *ce)
 								|| CE_FORMAT_OUT == FO_PRESENT)
                             && !CE_URL_S->history_num)
                           {
-                            History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
+                            History_entry * h = SHIST_GetCurrent(NET_GetHistory(CE_WINDOW_ID));
                     
                             if(!h || !h->security_on)
                                 SECNAV_SecurityDialog(CE_WINDOW_ID, 
@@ -2775,15 +2776,15 @@ net_setup_http_stream(ActiveEntry * ce)
 		&& (CE_FORMAT_OUT == FO_CACHE_AND_PRESENT || CE_FORMAT_OUT == FO_PRESENT)
         && !CE_URL_S->history_num)
       {
-        History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
+        History_entry * h = SHIST_GetCurrent(NET_GetHistory(CE_WINDOW_ID));
 		XP_Bool warn = FALSE;
 		
 		if (h == NULL) {
 			/* Deal with frames.  If the window doesn't have history,
 			 * then it is a new window or a new frame cell.
 			 */
-			if ( ce->window_id->grid_parent != NULL ) {
-				h = SHIST_GetCurrent(&ce->window_id->grid_parent->hist);
+			if ( NET_GetParent(ce->window_id) != NULL ) {
+				h = SHIST_GetCurrent(NET_GetHistory(NET_GetParent(ce->window_id)));
 				if ( !h->security_on ) {
 					/* parent frame is not secure */
 					warn = TRUE;
@@ -2820,7 +2821,7 @@ net_setup_http_stream(ActiveEntry * ce)
 		 * need to generate an HTML dialog to handle
 		 * the message
 		 */
-		if(ce->URL_s->files_to_post && EDT_IS_EDITOR(ce->window_id))
+		if(ce->URL_s->files_to_post && NET_IsEditor(ce->window_id))
 		  {
 			Chrome chrome_struct;
 
@@ -2929,7 +2930,7 @@ HG94794
 	  {
 		/* start the graph progress indicator
 	 	 */
-    	FE_GraphProgressInit(CE_WINDOW_ID, 
+    	NET_GraphProgressInit(CE_WINDOW_ID, 
 							 CE_URL_S, 
 							 cd->original_content_length);
 		CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
@@ -2965,7 +2966,7 @@ HG94794
     		(*CD_STREAM->is_write_ready)(CD_STREAM);
         	CE_STATUS = PUTBLOCK(CD_LINE_BUFFER, CD_LINE_BUFFER_SIZE);
 			CE_BYTES_RECEIVED = CD_LINE_BUFFER_SIZE;
-        	FE_GraphProgress(CE_WINDOW_ID, 
+        	NET_GraphProgress(CE_WINDOW_ID, 
 						 	CE_URL_S, 
 						 	CE_BYTES_RECEIVED, 
 						 	CD_LINE_BUFFER_SIZE, 
@@ -3148,7 +3149,7 @@ net_pull_http_data(ActiveEntry * ce)
     if(CE_STATUS > 0)
       {
         CE_BYTES_RECEIVED += CE_STATUS;
-        FE_GraphProgress(CE_WINDOW_ID, 
+        NET_GraphProgress(CE_WINDOW_ID, 
 						 CE_URL_S, 
 						 CE_BYTES_RECEIVED, 
 						 CE_STATUS, 
@@ -3303,7 +3304,7 @@ net_HTTPLoad (ActiveEntry * ce)
 
 		/* start the graph progress indicator
 	 	 */
-    	FE_GraphProgressInit(ce->window_id, 
+    	NET_GraphProgressInit(ce->window_id, 
 							 ce->URL_s, 
 							 cd->total_size_of_files_to_post);
                                                     
@@ -3692,7 +3693,7 @@ HG51096
 			  }
 
 	        if(CD_DESTROY_GRAPH_PROGRESS)
-     		    FE_GraphProgressDestroy(CE_WINDOW_ID, 
+     		    NET_GraphProgressDestroy(CE_WINDOW_ID, 
 										CE_URL_S, 
 										CD_ORIGINAL_CONTENT_LENGTH,
 										CE_BYTES_RECEIVED);

@@ -16,6 +16,7 @@
  * Reserved.
  */
 #include "xp.h"
+#include "mkfe.h"
 #include "plstr.h"
 #include "prmem.h"
 #include "netutils.h"
@@ -460,7 +461,7 @@ CV_MakeMultipleDocumentStream (int         format_out,
 	/* enable clicking since it doesnt go through the cache 
 	 * code
 	 */
-	FE_EnableClicking(window_id);
+	NET_EnableClicking(window_id);
 
 	obj->next_stream = NULL;
 	obj->window_id  = window_id;

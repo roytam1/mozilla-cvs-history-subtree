@@ -33,6 +33,9 @@ IGNORE_MANIFEST=1
 #   proper JS includes
 #
 LCFLAGS		= $(LCFLAGS)  -DMOZILLA_CLIENT
+!ifdef MODULAR_NETLIB
+LCFLAGS		= $(LCFLAGS)  -DOPAQUE_MWCONTEXT
+!endif
 
 !ifdef BUILD_DEBUG_GC
 LCFLAGS		= $(LCFLAGS) -DDEBUG_GC
@@ -47,7 +50,7 @@ OBJS=   \
 	.\$(OBJDIR)\mkextcac.obj		\
 	.\$(OBJDIR)\mkmemcac.obj		\
 	$(NULL)
-	
+
 
 CSRCS =	\
 	cachedump.c	\
@@ -70,7 +73,7 @@ EXPORTS= netcache.h
 
 C_OBJS = \
 	$(NULL)
-	
+
 
 # use LINCS on win32 for now since REQUIRES seems to be broken
 #!if "$(MOZ_BITS)" != "16"

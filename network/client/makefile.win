@@ -49,6 +49,7 @@ OBJS=   \
 
 CSRCS =	\
 	cnetinit.c	\
+	mkfe.c		\
 	$(NULL)
 
 

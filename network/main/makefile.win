@@ -30,6 +30,9 @@ IGNORE_MANIFEST=1
 #   proper JS includes
 #
 LCFLAGS		= $(LCFLAGS)  -DMOZILLA_CLIENT
+!ifdef MODULAR_NETLIB
+LCFLAGS		= $(LCFLAGS)  -DOPAQUE_MWCONTEXT
+!endif
 
 !ifdef BUILD_DEBUG_GC
 LCFLAGS		= $(LCFLAGS) -DDEBUG_GC
@@ -99,6 +102,7 @@ EXTRA_LIBS=
 
 REQUIRES= foo parse jtools java zlib nspr dbm util network js security mimetype
 EXPORTS= mkstream.h \
+	 mkfe.h \
 	 mkparse.h \
 	 mkfsort.h \
 	 mksort.h \

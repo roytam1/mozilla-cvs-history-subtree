@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -23,7 +23,9 @@
  * Designed and originally implemented by Lou Montulli '94
  * Additions/Changes by Judson Valeski, Gagan Saksena 1997.
  */
+#undef OPAQUE_MWCONTEXT
 #include "mkutils.h"
+#include "mkfe.h"
 #include "mkgeturl.h"
 #include "shist.h"
 #include "mkparse.h"
@@ -976,7 +978,7 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
     /* History_entry * his; */
     /* Change all references to "about:editfilenew" into "file:///Untitled" */
     /* Do this for both Browser and Editor windows */
-    if( /* EDT_IS_EDITOR(window_id) && */
+    if( /* NET_IsEditor(window_id) && */
 	URL_s && URL_s->address &&
 	0 == PL_strcmp(URL_s->address, XP_NEW_DOC_URL) )
     {
@@ -1008,7 +1010,7 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
 	 * This flag allows quicker response for often-called 
 	 * status queries at front end
 	*/
-	if ( EDT_IS_EDITOR(window_id) ) {
+	if ( NET_IsEditor(window_id) ) {
 	    EDT_NEW_DOCUMENT(window_id, TRUE);
 	}
     }
@@ -1018,7 +1020,7 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
 #endif /* XP_WIN/MAC/OS2 */
 
 	if (!URL_s->load_background)
-	  FE_EnableClicking(window_id);
+	  NET_EnableClicking(window_id);
 
 #ifdef MOZILLA_CLIENT
 	if(URL_s->refresh_url && status != MK_INTERRUPTED)
@@ -1330,7 +1332,7 @@ net_CheckForWaitingURL(MWContext * window_id, int protocol, Bool was_background)
 			ET_SendLoadEvent(window_id, EVENT_XFER_DONE, 
 					 NULL, NULL, LO_DOCUMENT_LAYER_ID,
 					 FALSE);
-			FE_AllConnectionsComplete(window_id);
+			NET_AllConnectionsComplete(window_id);
 		}
 	  }
 
@@ -1840,7 +1842,7 @@ NET_GetURL (URL_Struct *URL_s,
 		StrAllocCat(confirmstring, XP_GetString(XP_CONFIRM_MAILTO_POST_2));
 		
 		if ( confirmstring ) {
-			confirm = FE_Confirm(window_id, confirmstring);
+			confirm = NET_Confirm(window_id, confirmstring);
 			PR_Free(confirmstring);
 		}
 		
@@ -1885,7 +1887,7 @@ NET_GetURL (URL_Struct *URL_s,
      * All editor GetUrl calls should use FO_CACHE_AND_EDIT
      *   except in the case of the new document URL
     */
-    if( EDT_IS_EDITOR(window_id) && window_id->is_new_document ) {
+    if( NET_IsEditor(window_id) && window_id->is_new_document ) {
         output_format = FO_CACHE_AND_PRESENT;
     }
 #endif
@@ -2146,7 +2148,7 @@ NET_GetURL (URL_Struct *URL_s,
 		 && !URL_s->use_local_copy)
 	  {
 		Bool continue_loading_url = TRUE;
-		History_entry * h = SHIST_GetCurrent(&window_id->hist);
+		History_entry * h = SHIST_GetCurrent(NET_GetHistory(window_id));
 
 		/* this is some protection against the "mail document"
 		 * feature popping up a dialog warning about an insecure
@@ -2666,7 +2668,7 @@ NET_GetURL (URL_Struct *URL_s,
 	  {
 		if(URL_s->force_reload != NET_DONT_RELOAD)
 		  {
-			if(!FE_Confirm(window_id, XP_GetString(XP_CONFIRM_REPOST_FORMDATA)))
+			if(!NET_Confirm(window_id, XP_GetString(XP_CONFIRM_REPOST_FORMDATA)))
 			  {
 				XP_ListRemoveObject(net_EntryList, this_entry);
 				net_CallExitRoutine(exit_routine,
@@ -2883,7 +2885,8 @@ redo_load_switch:   /* come here on file/ftp retry */
 		 */
 		XP_ListRemoveObject(net_EntryList, this_entry);
 		{
-			if (window_id->type != MWContextMail && window_id->type != MWContextMailMsg &&
+			if (NET_GetWindowType(window_id) != MWContextMail && 
+                NET_GetWindowType(window_id) != MWContextMailMsg &&
 				(CLEAR_CACHE_BIT(output_format) != FO_INTERNAL_IMAGE) &&
 				(CLEAR_CACHE_BIT(output_format) != FO_EMBED) &&
 				(CLEAR_CACHE_BIT(output_format) != FO_PLUGIN) &&
@@ -3385,7 +3388,7 @@ net_InterruptActiveStream (ActiveEntry *entry)
 	NET_TotalNumberOfProcessingURLs--;
 
 	if(!NET_AreThereActiveConnectionsForWindow(entry->window_id))
-		FE_AllConnectionsComplete(entry->window_id);
+		NET_AllConnectionsComplete(entry->window_id);
 
 	/* free the no longer active entry */
 	PR_Free(entry);
@@ -3550,7 +3553,7 @@ NET_SetNewContext(URL_Struct *URL_s, MWContext * new_context, Net_GetUrlExitFunc
 			 *      need to call AllConnectionsComplete
 			 */
 		if(!NET_AreThereActiveConnectionsForWindow(old_window_id))
-				FE_AllConnectionsComplete(old_window_id);
+				NET_AllConnectionsComplete(old_window_id);
 
 			LIBNET_UNLOCK();
 	    return(0);
@@ -3643,7 +3646,7 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
 		      }
 			else
 		      {
-				FE_EnableClicking(window_id);
+				NET_EnableClicking(window_id);
 				net_InterruptActiveStream (tmpEntry);
 				number_killed += 1;
 
@@ -3665,13 +3668,13 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
 	 * call_all_connections_complete was already called.
 	 */
 	if (call_all_connections_complete)
-		FE_EnableClicking(window_id);
+		NET_EnableClicking(window_id);
 
 	/* we are sure that all connections are complete
 	 * but only call it if we killed one.
 	 */
 	if(number_killed && call_all_connections_complete)
-	FE_AllConnectionsComplete(window_id);
+	NET_AllConnectionsComplete(window_id);
 
 
     TRACEMSG(("Leaving Interrupt transfer with %d items in list",

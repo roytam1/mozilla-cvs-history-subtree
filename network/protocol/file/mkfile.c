@@ -23,6 +23,7 @@
  */
 
 #include "xp.h"
+#include "mkfe.h"
 #include "plstr.h"
 #include "prmem.h"
 #include "netutils.h"
@@ -231,7 +232,7 @@ net_check_file_type (ActiveEntry * cur_entry)
 			{
 			  char * msg;
 			  msg = PR_smprintf("Overwrite file %s?", CD_FILENAME);
-			  if(FE_Confirm(CE_WINDOW_ID, msg))
+			  if(NET_Confirm(CE_WINDOW_ID, msg))
 				  CD_NEXT_STATE = NET_PUT_FILE;
 			  else
 				  CD_NEXT_STATE = NET_FILE_DONE;
@@ -523,8 +524,8 @@ net_open_file (ActiveEntry * cur_entry)
 	CD_NEXT_STATE = NET_SETUP_FILE_STREAM;
 
     if (!CE_URL_S->load_background) {
-        FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
-        CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
+       NET_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
+       CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
     }
     CD_ORIGINAL_CONTENT_LENGTH = CE_URL_S->content_length;
 
@@ -806,7 +807,7 @@ net_open_directory (ActiveEntry * cur_entry)
 
     CD_IS_DIR = TRUE;
 
-    FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
+    NET_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
     CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
     CD_ORIGINAL_CONTENT_LENGTH = CE_URL_S->content_length;
     NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_READDIR));
@@ -887,7 +888,7 @@ net_read_file_chunk(ActiveEntry * cur_entry)
     CE_STATUS = PUTB(NET_Socket_Buffer, count);
 
     if (!CE_URL_S->load_background)
-        FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, count,
+       NET_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, count,
                          CE_URL_S->content_length);
 
     CD_PAUSE_FOR_READ = TRUE;
@@ -1294,7 +1295,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
 				}
 
 				if(CD_DESTROY_GRAPH_PROGRESS)
-                    FE_GraphProgressDestroy(CE_WINDOW_ID,
+                   NET_GraphProgressDestroy(CE_WINDOW_ID,
                                             CE_URL_S,
                                             CD_ORIGINAL_CONTENT_LENGTH,
 											CE_BYTES_RECEIVED);

@@ -15,3 +15,5 @@ mkautocf.h
 mkutils.h
 mktrace.h
 mkhelp.h
+mkfe.h
+

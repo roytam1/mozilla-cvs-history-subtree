@@ -26,6 +26,7 @@
  */
 #include "xp.h"
 #include "netutils.h"
+#include "mkfe.h"
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
@@ -597,7 +598,7 @@ NET_AskForAuthString(MWContext *context,
       {
 		/* we sent the authorization string and it was wrong
 		 */
-        if(!FE_Confirm(context, XP_GetString(XP_CONFIRM_AUTHORIZATION_FAIL)))
+        if(!NET_Confirm(context, XP_GetString(XP_CONFIRM_AUTHORIZATION_FAIL)))
 		  {
         	TRACEMSG(("User canceled login!!!"));
 
@@ -1653,7 +1654,7 @@ net_IntSetCookieString(MWContext * context,
 	/* Only allow cookies to be set in the listed contexts. We
 	 * don't want cookies being set in html mail. 
 	 */
-	type = context->type;
+	type = NET_GetWindowType(context);
 	if(!( (type == MWContextBrowser)
 		|| (type == MWContextHTMLHelp)
 		|| (type == MWContextPane) )) {
@@ -2251,7 +2252,8 @@ NET_SetCookieStringFromHttp(FO_Present_Types outputFormat,
 			char * curSessionHistHost = 0;
 			char * theColon = 0;
 			char * curHost = NET_ParseURL(cur_url, GET_HOST_PART);
-			History_entry * shistEntry = SHIST_GetCurrent(&context->hist);
+			History_entry * shistEntry = 
+                SHIST_GetCurrent(NET_GetHistory(context));
 			if (shistEntry) {
 			curSessionHistHost = NET_ParseURL(shistEntry->address, GET_HOST_PART);
 			}
@@ -3168,7 +3170,7 @@ NET_AskForProxyAuth(MWContext * context,
 			   * We already sent the authorization string and the
 			   * nonce was expired -- auto-retry.
 			   */
-			  if (!FE_Confirm(context, LOOPING_OLD_NONCES))
+			  if (!NET_Confirm(context, LOOPING_OLD_NONCES))
 				  return FALSE;
 		  }
 #endif /* SIMPLE_MD5 */
@@ -3179,7 +3181,7 @@ NET_AskForProxyAuth(MWContext * context,
 			   * We already sent the authorization string and the
 			   * nonce was expired -- auto-retry.
 			   */
-			  if (!FE_Confirm(context, XP_GetString(XP_CONFIRM_PROXYAUTHOR_FAIL)))
+			  if (!NET_Confirm(context, XP_GetString(XP_CONFIRM_PROXYAUTHOR_FAIL)))
 				  return FALSE;
 		  }
 		else if (prev->auth_type != AUTH_FORTEZZA)
@@ -3187,7 +3189,7 @@ NET_AskForProxyAuth(MWContext * context,
 			  /*
 			   * We already sent the authorization string and it failed.
 			   */
-			  if (!FE_Confirm(context, XP_GetString(XP_CONFIRM_PROXYAUTHOR_FAIL)))
+			  if (!NET_Confirm(context, XP_GetString(XP_CONFIRM_PROXYAUTHOR_FAIL)))
 				  return FALSE;
 		  }
 	}
@@ -3216,7 +3218,7 @@ NET_AskForProxyAuth(MWContext * context,
 		PR_snprintf(buf, len*sizeof(char), XP_GetString( XP_PROXY_AUTH_REQUIRED_FOR ), prev->realm, proxy_addr);
 
 		NET_Progress(context, XP_GetString( XP_CONNECT_PLEASE_ENTER_PASSWORD_FOR_PROXY ) );
-		len = FE_PromptUsernameAndPassword(context, buf, 
+		len = NET_PromptUsernameAndPassword(context, buf, 
 									       &username, &password);
 		PR_Free(buf);
 	  }

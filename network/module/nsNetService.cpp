@@ -112,7 +112,7 @@ nsresult nsNetlibService::OpenStream(nsIURL *aUrl,
     }
 
     /* Create the nsConnectionInfo object... */
-    pConn = new nsConnectionInfo(aUrl, NULL, aConsumer);
+    pConn = new nsConnectionInfo(aUrl, NULL, aConsumer, NULL);
     if (NULL == pConn) {
         return NS_FALSE;
     }
@@ -193,7 +193,7 @@ nsresult nsNetlibService::OpenBlockingStream(nsIURL *aUrl,
         pBlockingStream->AddRef();
 
         /* Create the nsConnectionInfo object... */
-        pConn = new nsConnectionInfo(aUrl, pBlockingStream, aConsumer);
+        pConn = new nsConnectionInfo(aUrl, pBlockingStream, aConsumer, NULL);
         if (NULL == pConn) {
             pBlockingStream->Release();
             goto loser;

@@ -23,7 +23,7 @@
  */
 
 #include "mkutils.h"
-#include "mkutils.h"
+#include "mkfe.h"
 #include "mkparse.h"
 #include "mkgeturl.h"
 #include "cookies.h"
@@ -299,7 +299,7 @@ cookie_confirm(JSContext *cx, JSObject *obj, uint argc, jsval *argv, jsval * rva
     if (!msg)
         return JS_FALSE;
 
-    result = FE_Confirm(context, msg);
+    result = NET_Confirm(context, msg);
     FREEIF(msg);
 
     *rval = BOOLEAN_TO_JSVAL(result);

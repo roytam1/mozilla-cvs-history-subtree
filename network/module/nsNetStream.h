@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -24,6 +24,7 @@
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIStreamListener.h"
+#include "nsINetSupport.h"
 
 
 /* Forward declaration... */
@@ -36,7 +37,8 @@ public:
 
     nsConnectionInfo(nsIURL *aURL, 
                      nsNetlibStream *aStream, 
-                     nsIStreamListener *aNotify);
+                     nsIStreamListener *aNotify,
+                     nsINetSupport *aSupport);
 
 protected:
     virtual ~nsConnectionInfo();
@@ -45,6 +47,7 @@ public:
     nsIURL                *pURL;
     nsNetlibStream        *pNetStream;
     nsIStreamListener     *pConsumer;
+    nsINetSupport         *pSupport;
 };
 
 
