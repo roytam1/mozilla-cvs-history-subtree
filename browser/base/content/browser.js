@@ -5535,11 +5535,22 @@ missingPluginInstaller.prototype.installSinglePlugin = function(aEvent){
   if (missingPluginsArray) {
     window.openDialog("chrome://mozapps/content/plugins/pluginInstallerWizard.xul",
       "PFSWindow", "modal,chrome,resizable=yes", {plugins: missingPluginsArray, tab: tabbrowser.mCurrentTab});
-    }            
+  }            
 
+  aEvent.preventDefault();
 }
+
 missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
-  aEvent.target.addEventListener("mousedown", gMissingPluginInstaller.installSinglePlugin, false);
+  // For broken non-object plugin tags, register a click handler so
+  // that the user can click the plugin replacement to get the new
+  // plugin. Object tags can, and often do, deal with that themselves,
+  // so don't stomp on the page developers toes.
+
+  if (aEvent.target.localName.toLowerCase() != "object") {
+    aEvent.target.addEventListener("click",
+                                   gMissingPluginInstaller.installSinglePlugin,
+                                   false);
+  }
 
   var tabbrowser = getBrowser();
   const browsers = tabbrowser.mPanelContainer.childNodes;
@@ -5588,10 +5599,7 @@ missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
   var buttonString = bundle_browser.getString("missingpluginsMessage.button.label");
 
   tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
-                                    "", "missing-plugin",
-                                    null, "top", true);
-
-  aEvent.preventDefault();
+                         "", "missing-plugin", null, "top", true);
 }
 
 missingPluginInstaller.prototype.clearMissingPlugins = function(aTab){

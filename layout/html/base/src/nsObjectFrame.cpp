@@ -3752,12 +3752,6 @@ nsPluginInstanceOwner::MouseMove(nsIDOMEvent* aMouseEvent)
 nsresult
 nsPluginInstanceOwner::MouseDown(nsIDOMEvent* aMouseEvent)
 {
-  if (mOwner->IsBroken()) {
-    FirePluginNotFoundEvent(mOwner->GetContent());
-
-    return NS_OK;
-  }
-
 #if !(defined(XP_MAC) || defined(XP_MACOSX))
   if (!mPluginWindow || nsPluginWindowType_Window == mPluginWindow->type)
     return aMouseEvent->PreventDefault(); // consume event
@@ -3798,6 +3792,14 @@ nsPluginInstanceOwner::MouseUp(nsIDOMEvent* aMouseEvent)
 nsresult
 nsPluginInstanceOwner::MouseClick(nsIDOMEvent* aMouseEvent)
 {
+  if (mOwner->IsBroken()) {
+    FirePluginNotFoundEvent(mOwner->GetContent());
+
+    aMouseEvent->PreventDefault();
+
+    return NS_OK;
+  }
+
   return DispatchMouseToPlugin(aMouseEvent);
 }
 
