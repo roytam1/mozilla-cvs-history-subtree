@@ -23,8 +23,9 @@
 
 <!DOCTYPE RDF 
 [
-<!ENTITY search.category.mozilla	"Mozilla">
+<!ENTITY search.category.news	        "News">
 <!ENTITY search.category.web		"Web">
+<!ENTITY search.category.special	"Specialized">
 ]
 >
 
@@ -38,8 +39,12 @@
 
   <RDF:Seq about="NC:SearchCategoryRoot">
   	<RDF:li>
+  		<RDF:Description about="urn:search:category:3">
+			<NC:title>&search.category.special;</NC:title>
+  		</RDF:Description>
+
   		<RDF:Description about="urn:search:category:2">
-			<NC:title>&search.category.mozilla;</NC:title>
+			<NC:title>&search.category.news;</NC:title>
   		</RDF:Description>
 
   		<RDF:Description about="urn:search:category:1">
@@ -53,15 +58,18 @@
 
 
   <RDF:Seq about="NC:SearchCategory?category=urn:search:category:1">
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:NetscapeSearch.src" />
-    <RDF:li resource="NC:SearchCategory?engine=urn:search:engine:google.src" />
   	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:dmoz.src" />
+        <RDF:li resource="NC:SearchCategory?engine=urn:search:engine:google.src" />
+        <RDF:li resource="NC:SearchCategory?engine=urn:search:engine:Excite.src" />
+        <RDF:li resource="NC:SearchCategory?engine=urn:search:engine:Lycos.src" />
+        <RDF:li resource="NC:SearchCategory?engine=urn:search:engine:HotBot.src" />
   </RDF:Seq>
-
-  <RDF:Seq about="NC:SearchCategory?category=urn:search:category:2">
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:mozilla.src" />
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:bugzilla.src" />
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:lxrmozilla.src" />
+  <RDF:Seq about="NC:SearchCategory?category=urn:search:category:3">
+  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:ICQ.src" />
+  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:monster.src" />
+  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:eBay.src" />
+  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:dictionary.src" />
+  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:thesaurus.src" />
   </RDF:Seq>
 
 </RDF:RDF>

@@ -118,13 +118,11 @@
 
     <separator id="networkImagesBehaviorSeparator" observes="haveImageBlockingOrMailnews"/>
 
-<!--
-    <vbox align="start">
+    <vbox align="start" hidden="true">
       <checkbox id="networkImageWarnAboutImages" label="&warnAboutImages.label;"
                 accesskey="&warnAboutImages.accesskey;" observes="haveImageBlocking"
                 prefstring="network.image.warnAboutImages"/>
     </vbox>
--->
 
     <separator observes="haveImageBlocking"/>
 

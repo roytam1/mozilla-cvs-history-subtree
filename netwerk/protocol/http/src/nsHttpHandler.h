@@ -90,6 +90,7 @@ public:
     nsHttpVersion  HttpVersion()             { return mHttpVersion; }
     nsHttpVersion  ProxyHttpVersion()        { return mProxyHttpVersion; }
     PRUint8        ReferrerLevel()           { return mReferrerLevel; }
+    PRBool         ReferrerSchemeOverride()  { return mReferrerSchemeOverride; }
     PRBool         SendSecureXSiteReferrer() { return mSendSecureXSiteReferrer; }
     PRUint8        RedirectionLimit()        { return mRedirectionLimit; }
     PRUint16       IdleTimeout()             { return mIdleTimeout; }
@@ -258,10 +259,11 @@ private:
     //
 
     PRUint8  mHttpVersion;
+    PRUint8  mReferrerLevel;
+    PRPackedBool mReferrerSchemeOverride;
     PRUint8  mProxyHttpVersion;
     PRUint8  mCapabilities;
     PRUint8  mProxyCapabilities;
-    PRUint8  mReferrerLevel;
 
     PRUint16 mIdleTimeout;
     PRUint16 mMaxRequestAttempts;

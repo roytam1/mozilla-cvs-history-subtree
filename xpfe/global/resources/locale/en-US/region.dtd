@@ -1,5 +1,12 @@
 <!-- brand.dtd -->
-<!ENTITY  vendorURL             "http://www.mozilla.org/">
-<!ENTITY  releaseURL            "http://www.mozilla.org/releases/">
-<!ENTITY  getNewThemesURL       "http://mozilla.org/themes/download/">
 <!ENTITY  content.version       "1.1">
+<!-- I bet that Mozilla looks here for theme/locale versions, and refuses
+     to use the locale, if we change that. So, keep Mozilla version for
+     compatibility. -->
+<!-- Separate the ever-changing version info to avoid merge conflicts -->
+
+
+<!ENTITY  vendorURL             "http://www.beonex.com">
+<!ENTITY  releaseURL            "http://www.beonex.com/communicator/version/0.9/release-notes">
+<!-- releaseURL is actually release-notes -->
+<!ENTITY  getNewThemesURL       "http://www.beonex.com/communicator/version/0.9/add-ons/themes/">

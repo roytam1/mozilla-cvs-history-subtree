@@ -70,10 +70,11 @@
 #endif
 
 // define default product directory
-#if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
-#define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING("Mozilla")
-#elif defined (XP_UNIX)
-#define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING(".mozilla")
+#if defined(XP_MAC) || defined(XP_OS2)
+// bug 58327
+#define DEFAULT_PRODUCT_DIR "Beonex::Communicator"
+#elif defined (XP_UNIX) || defined(XP_BEOS) || defined(XP_WIN)
+#define DEFAULT_PRODUCT_DIR MOZ_USER_DIR
 #endif
 
 // Locally defined keys used by nsAppDirectoryEnumerator
@@ -375,7 +376,8 @@ NS_METHOD nsAppFileLocationProvider::GetProductDirectory(nsILocalFile **aLocalFi
 #error dont_know_how_to_get_product_dir_on_your_platform
 #endif
 
-    rv = localDir->AppendRelativeNativePath(DEFAULT_PRODUCT_DIR);
+    rv = localDir->AppendRelativeNativePath
+                                    (NS_LITERAL_CSTRING(DEFAULT_PRODUCT_DIR));
     if (NS_FAILED(rv)) return rv;
     rv = localDir->Exists(&exists);
     if (NS_SUCCEEDED(rv) && !exists)

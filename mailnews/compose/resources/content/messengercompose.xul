@@ -368,7 +368,7 @@
           <menuitem label="&attachVCardCmd.label;" disabled="true" accesskey="&attachVCardCmd.accesskey;" oncommand="AttachVCard()"/-->     
         </menupopup>
       </menu>
-      <!--menu id="debugMenu"/-->
+      <!--<menu id="debugMenu"/>-->
       <menu id="tasksMenu"/>
       <menu id="windowMenu"/>
       <menu id="menu_Help"/>
@@ -467,7 +467,7 @@
       <toolbarseparator class="toolbarseparator-standard"/>
       <toolbarbutton id="AlignPopupButton"/>
       <toolbarbutton id="InsertPopupButton"/>
-      <toolbarbutton id="smileButtonMenu" padwithspace="true"/>
+<!--      <toolbarbutton id="smileButtonMenu" padwithspace="true"/>-->
       <spacer flex="1"/>
     </toolbar>
   </toolbox>

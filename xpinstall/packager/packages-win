@@ -15,17 +15,12 @@ bin\chrome\en-US.jar
 bin\chrome\en-mac.jar
 bin\chrome\en-unix.jar
 bin\chrome\en-win.jar
-bin\chrome\en-US\*
-bin\chrome\en-win\*
-bin\chrome\en-unix\*
-bin\chrome\en-mac\*
 
 [regus]
 ;
 ; US
 ; If you add a new directory you must explicitly call addDirectory in regus.jst
 bin\chrome\US.jar
-bin\chrome\US\*
 bin\defaults\profile\US\*
 bin\searchplugins\*
 
@@ -62,7 +57,7 @@ bin\components\gkgfxwin.dll
 bin\components\gkwidget.dll
 bin\jpeg3250.dll
 bin\jsj3250.dll
-bin\mozilla.exe
+bin\beonex-comm.exe
 bin\mozctl.dll
 bin\mozctlx.dll
 bin\regxpcom.exe
@@ -245,15 +240,9 @@ bin\components\xpinstall.xpt
 bin\components\xppref32.dll
 bin\components\autoconfig.dll
 bin\components\autoconfig.xpt
-bin\components\xml-rpc.xpt
 bin\components\nsDictionary.js
 bin\components\nsProxyAutoConfig.js
-bin\components\nsXmlRpcClient.js
 bin\plugins\npnul32.dll
-bin\components\xmlextras.xpt
-bin\components\xmlextras.dll
-bin\components\xmlsoap.xpt
-bin\components\xmlschema.xpt
 bin\components\nsHelperAppDlg.js
 bin\components\helperAppDlg.xpt
 bin\components\nsKillAll.js
@@ -280,10 +269,6 @@ bin\chrome\toolkit.jar
 bin\chrome\forms.jar
 bin\chrome\modern.jar
 bin\chrome\classic.jar
-bin\chrome\comm\*
-bin\chrome\toolkit\*
-bin\chrome\modern\*
-bin\chrome\classic\*
 bin\chrome\chromelist.txt
 bin\chrome\icons\default\bmPropsWindow.ico
 bin\chrome\icons\default\bookmark-window.ico
@@ -343,8 +328,6 @@ bin\res\rdf\folder-closed.gif
 bin\res\rdf\folder-open.gif
 bin\res\rdf\loading.gif
 bin\res\throbber\*
-;debug menus reference samples dir - remove for actual releases:
-bin\res\samples\*
 bin\res\builtin\htmlBindings.xml
 bin\res\builtin\platformHTMLBindings.xml
 
@@ -436,3 +419,9 @@ bin\chrome\icons\default\winInspectorMain.ico
 bin\defaults\pref\inspector.js
 bin\res\inspector\viewer-registry.rdf
 bin\res\inspector\search-registry.rdf
+
+[spellchecker]
+bin/components/libmyspell.dll
+bin/components/libspellchecker.dll
+bin/components/spellchecker.xpt
+bin/components/myspell/*

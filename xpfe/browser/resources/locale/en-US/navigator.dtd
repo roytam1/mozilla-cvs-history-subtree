@@ -11,10 +11,27 @@
 <!ENTITY mainWindow.titlemodifiermenuseparator " - ">
 <!ENTITY viewsourcetitle.preface "Source for: ">
 
+
+
+<!-- Could you please decide, where to place that? Finally? -->
+
+<!-- LOCALIZATION NOTE (mainWindow.title): DONT_TRANSLATE --> 
+<!ENTITY mainWindow.title "&brandShortName;"> 
+<!-- LOCALIZATION NOTE (mainWindow.titlemodifier) : DONT_TRANSLATE --> 
+<!ENTITY mainWindow.titlemodifier "&brandShortName;"> 
+<!-- LOCALIZATION NOTE (mainWindow.titlemodifiermenuseparator): DONT_TRANSLATE -->
+<!ENTITY mainWindow.titlemodifiermenuseparator " - ">
+<!ENTITY viewsourcetitle.preface "Source for: ">
+
+<!-- end removed stuff -->
+
+
+
 <!ENTITY nothingAvailable.label "(Nothing Available)">
 
-<!ENTITY browserCmd.label	"New Navigator Window">
+<!ENTITY browserCmd.label	"New Window">
 <!ENTITY browserCmd.accesskey	"N">
+<!ENTITY newtabCmd.label "New Tab">
 <!ENTITY tabCmd.label "Navigator Tab">
 <!ENTITY tabCmd.accesskey "T">
 <!ENTITY tabCmd.commandkey "t">
@@ -130,7 +147,7 @@
 
 <!ENTITY bookmarksMenu.label "Bookmarks">
 <!ENTITY bookmarksMenu.accesskey "B">
-<!ENTITY addCurPageCmd.label "Bookmark This Page">
+<!ENTITY addCurPageCmd.label "Add to Bookmarks">
 <!ENTITY addCurPageCmd.accesskey "B">
 <!ENTITY addCurPageCmd.commandkey "d">
 <!ENTITY addCurPageAsCmd.label "File Bookmark...">
@@ -165,15 +182,15 @@
 
 <!-- Toolbar items --> 
 <!ENTITY backButton.label             "Back">
-<!ENTITY backButton.tooltip           "Go back one page">
+<!ENTITY backButton.tooltip           "Go back one page in browsing history">
 <!ENTITY forwardButton.label          "Forward">
-<!ENTITY forwardButton.tooltip        "Go forward one page">
+<!ENTITY forwardButton.tooltip        "Go forward one page in browsing history">
 <!ENTITY reloadButton.label           "Reload">
-<!ENTITY reloadButton.tooltip         "Reload current page">
+<!ENTITY reloadButton.tooltip         "Reload current page. Use SHIFT-click to circumvent cache.">
 <!ENTITY stopButton.label             "Stop">
 <!ENTITY stopButton.tooltip           "Stop loading this page">
-<!ENTITY searchButton.label           "Search">
-<!ENTITY searchButton.tooltip         "Type a word in the field to the left, then click Search">
+<!ENTITY searchButton.label           "">
+<!ENTITY searchButton.tooltip         "Type a word in the field to the left, then click this button to search for the word using your favorite search engine">
 <!ENTITY goButton.label               "Go">
 <!ENTITY goButton.tooltip             "Type a location in the field to the left, then click Go">
 <!ENTITY printButton.label            "Print">

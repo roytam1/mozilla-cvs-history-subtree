@@ -89,6 +89,7 @@ var gCollapsedHeaderList = [ {name:"subject", outputFunction:updateHeaderValueIn
 // We also have an expanded header view. This shows many of your more common (and useful) headers.
 var gExpandedHeaderList = [ {name:"subject"}, 
                             {name:"from", outputFunction:OutputEmailAddresses},
+                            {name:"organization"},
                             {name:"reply-to", isEmailAddress:true, outputFunction:OutputEmailAddresses},
                             {name:"date"},
                             {name:"to", useToggle:true, outputFunction:OutputEmailAddresses},

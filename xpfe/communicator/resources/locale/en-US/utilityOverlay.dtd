@@ -57,10 +57,11 @@
 <!ENTITY helpMenu.label					"Help"> 
 <!ENTITY helpMenu.accesskey				"h"> 
 
-<!-- NOTE (whatNewCmd.label): This is not used in Mozilla but is used in Netscape -->
-<!ENTITY whatNewCmd.label				"What's New">  
-
-<!ENTITY releaseCmd.label				"Release Notes">
+<!ENTITY docCommCmd.label			"Documentation">
+<!ENTITY docCommCmd.accesskey	                "d">
+<!ENTITY welcomeCommCmd.label			"Welcome">
+<!ENTITY welcomeCommCmd.accesskey		"w">
+<!ENTITY releaseCmd.label				"Release-Notes">
 <!ENTITY releaseCmd.accesskey				"r">
 <!ENTITY aboutCmd.label					"About &brandShortName;">
 <!ENTITY aboutCmd.accesskey				"A">

@@ -39,7 +39,7 @@ pref("intl.font_charset", "");
 pref("intl.font_spec_list", "");
 pref("mail.signature_date", 0);
 
-pref("font.default", "serif");
+pref("font.default", "sans-serif");
 pref("font.size.variable.ar", 16);
 pref("font.size.fixed.ar", 13);
 

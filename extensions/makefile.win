@@ -24,13 +24,13 @@ include <$(DEPTH)/config/config.mak>
 
 DIRS = wallet \
 	cookie \
-	inspector \
+#	inspector \
 	irc \
 !if !defined(DISABLE_JSD) && !defined(DISABLE_VENKMAN)
     venkman \
 !endif
 	content-packs \
-	help \
+#	help \
 !if defined(MOZ_ENABLE_P3P)
   p3p \
 !endif
@@ -39,11 +39,12 @@ DIRS = wallet \
 	transformiix \
 !endif 
 	universalchardet \
-	xml-rpc \
+#	xml-rpc \
 !if defined(MOZ_ENABLE_IIX)
     interfaceinfo \
 !endif
-	xmlextras \
+#	xmlextras \
+	spellcheck \
 	$(NULL)
 
 

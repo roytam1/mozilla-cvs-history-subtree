@@ -26,7 +26,7 @@
 
   <RDF:Bag about="http://home.netscape.com/NC-rdf#SoftwareUpdateRoot">
     <RDF:li>
-       <RDF:Bag about="http://home.netscape.com/NC-rdf#SoftwarePackages" NC:title="Test Updates" NC:url="http://www.netscape.com/people/dougt">
+       <RDF:Bag about="http://home.netscape.com/NC-rdf#SoftwarePackages" NC:title="Test Updates" NC:url="http://www.beonex.com/communicator/redir/xpupdate">
 
             <RDF:li>
                 <RDF:Description ID="Update344">

@@ -17,7 +17,7 @@ User Agent=$UserAgent$
 ;   WINDISK
 ;   WINDIR
 ;   WINSYSDIR
-Path=[PROGRAMFILESDIR]\$CompanyName$\$ProductName$
+Path=[PROGRAMFILESDIR]\$CompanyName$\Communicator
 
 ; Sub Path, when set will indicate to Setup to create a subfolder from
 ; what is offered to the user to change.  It will not be shown to the user
@@ -180,7 +180,7 @@ C5=Component En US lang pack
 C6=Component US region pack
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C7=Component QFA
+;C7=Component QFA
 
 [Setup Type1]
 ;*** LOCALIZE ME BABY ***
@@ -197,14 +197,15 @@ C2=Component MailNews
 C3=Component PSM
 C4=Component Uninstaller
 C5=Component Chatzilla
-C6=Component Venkman
-C7=Component US English Profile Defaults
-C8=Component En US lang pack
-C9=Component US region pack
+;C6=Component Venkman
+C6=Component US English Profile Defaults
+C7=Component En US lang pack
+C8=Component US region pack
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C10=Component DOM Inspector
-C11=Component QFA
+;C10=Component DOM Inspector
+;C11=Component QFA
+C12=Component Spellcheck
 
 [Setup Type2]
 ;*** LOCALIZE ME BABY ***
@@ -223,14 +224,15 @@ C2=Component MailNews
 C3=Component PSM
 C4=Component Uninstaller
 C5=Component Chatzilla
-C6=Component Venkman
-C7=Component US English Profile Defaults
-C8=Component En US lang pack
-C9=Component US region pack
+;C6=Component Venkman
+C6=Component US English Profile Defaults
+C7=Component En US lang pack
+C8=Component US region pack
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C10=Component DOM Inspector
-C11=Component QFA
+;C10=Component DOM Inspector
+;C11=Component QFA
+C12=Component Spellcheck
 
 
 
@@ -580,6 +582,17 @@ $InstallSizeArchive$:inspector.xpi
 Attributes=SELECTED|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\Chrome\inspector.jar
 
+[Component Spellcheck]
+Description Short=Spellchecker
+;*** LOCALIZE ME BABY ***
+Description Long=to check the spelling of your emails and webpages
+Archive=spellcheck.xpi
+$InstallSize$:spellcheck
+$InstallSizeSystem$
+$InstallSizeArchive$:spellcheck.xpi
+Attributes=SELECTED|FORCE_UPGRADE
+Force Upgrade File0=[SETUP PATH]\components\libspellchecker.dll
+
 [Component US English Profile Defaults]
 Description Short=US English profile defaults
 ;*** LOCALIZE ME BABY ***
@@ -733,7 +746,7 @@ Destination=[SETUP PATH]\Plugins
 ;Delete FileX sections
 [Delete File0]
 Timing=post download
-Destination=[COMMON_PROGRAMS]\Mozilla Seamonkey\Mozilla AppRunner.lnk
+Destination=[COMMON_PROGRAMS]\Beonex Communicator\Mozilla AppRunner.lnk
 
 [Delete File1]
 Timing=post launchapp

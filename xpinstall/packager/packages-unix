@@ -12,9 +12,7 @@
 ;
 ; en-US
 bin/chrome/en-US.jar
-bin/chrome/en-mac.jar
 bin/chrome/en-unix.jar
-bin/chrome/en-win.jar
 
 [regus]
 ;
@@ -31,6 +29,7 @@ bin/defaults/profile/panels.rdf
 bin/defaults/profile/localstore.rdf
 bin/defaults/profile/search.rdf
 bin/defaults/profile/mimeTypes.rdf
+bin/defaults/profile/chrome/*
 
 [xpcom]
 bin/libmozjs.so
@@ -47,6 +46,8 @@ bin/components/libunicharutil.so
 [browser]
 bin/mozilla
 bin/mozilla-bin
+bin/LICENSE
+bin/README
 bin/icons/*
 bin/libgtksuperwin.so
 bin/libgtkxtbin.so
@@ -57,6 +58,9 @@ bin/run-mozilla.sh
 bin/regExport
 bin/regxpcom
 bin/regchrome
+bin/component.reg
+bin/components/xpti.dat
+bin/components/xptitemp.dat
 bin/mozilla-xremote-client
 bin/xpicleanup
 bin/res/cmessage.txt
@@ -226,10 +230,8 @@ bin/components/uconv.xpt
 bin/components/util.xpt
 bin/components/xpcom_components.xpt
 bin/components/xpcom_threads.xpt
-bin/components/xml-rpc.xpt
 bin/components/nsDictionary.js
 bin/components/nsProxyAutoConfig.js
-bin/components/nsXmlRpcClient.js
 bin/components/libxremote_client.so
 bin/components/libxremoteservice.so
 bin/components/xremoteservice.xpt
@@ -237,10 +239,6 @@ bin/components/embed_base.xpt
 bin/components/commandhandler.xpt
 bin/components/webbrowserpersist.xpt
 bin/components/windowwatcher.xpt
-bin/components/xmlextras.xpt
-bin/components/libxmlextras.so
-bin/components/xmlsoap.xpt
-bin/components/xmlschema.xpt
 bin/components/nsHelperAppDlg.js
 bin/components/helperAppDlg.xpt
 bin/components/nsProgressDialog.js
@@ -267,6 +265,15 @@ bin/chrome/modern.jar
 bin/chrome/classic.jar
 bin/chrome/installed-chrome.txt
 bin/chrome/chromelist.txt
+bin/chrome/user-skins.rdf
+bin/chrome/user-locales.rdf
+bin/chrome/all-locales.rdf
+bin/chrome/all-skins.rdf
+bin/chrome/all-packages.rdf
+bin/chrome/overlayinfo/communicator/content/overlays.rdf
+bin/chrome/overlayinfo/navigator/content/overlays.rdf
+bin/chrome/overlayinfo/editor/content/overlays.rdf
+
 ;-bin/chrome/comm/content/editor/EditorInitPage.html
 ;-bin/chrome/comm/content/editor/content/EditorInitPagePlain.html
 ;Include this for "debug" testing - remove for actual beta release:
@@ -327,7 +334,7 @@ bin/res/html/*
 bin/res/fonts/*
 bin/res/dtd/*
 ;debug menus reference samples dir - remove for actual releases:
-bin/res/samples/*
+;bin/res/samples/*
 bin/res/builtin/htmlBindings.xml
 bin/res/builtin/platformHTMLBindings.xml
 
@@ -346,6 +353,7 @@ bin/components/libmsgimap.so
 bin/components/libmsgnews.so
 bin/components/libvcard.so
 bin/components/libsmimestb.so
+;XXX libsigned.so?
 bin/components/libimport.so
 bin/components/libimpText.so
 bin/components/libimpComm4xMail.so
@@ -368,6 +376,7 @@ bin/chrome/messenger.jar
 bin/components/libmsgsmime.so
 bin/components/msgsmime.xpt
 bin/components/smime-service.js
+bin/chrome/overlayinfo/messenger/content/overlays.rdf
 bin/components/libmsgmdn.so
 bin/components/msgmdn.xpt
 bin/components/mdn-service.js
@@ -424,3 +433,9 @@ bin/defaults/pref/inspector.js
 bin/res/inspector/viewer-registry.rdf
 bin/res/inspector/search-registry.rdf
 bin/chrome/icons/default/winInspectorMain*.xpm
+
+[spellchecker]
+bin/components/libmyspell.so
+bin/components/libspellchecker.so
+bin/components/spellchecker.xpt
+bin/components/myspell/*

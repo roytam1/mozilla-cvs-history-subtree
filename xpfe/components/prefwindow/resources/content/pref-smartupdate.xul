@@ -18,28 +18,33 @@
         getService(Components.interfaces.nsIPrefBranch);
       if (!prefs.getBoolPref("update_notifications.enabled"))
       {
-        // disable frequency radiogroup
-        var freqWeekly = document.getElementById("freqWeekly");
-        var freqMonthly = document.getElementById("freqMonthly");
-        freqWeekly.setAttribute("disabled", "true");
-        freqMonthly.setAttribute("disabled", "true");
+        enableFrequency(false);
       }
     }
 
     function toggleFrequency()
     {
       var enabled = document.getElementById("updateNotificationsEnabled");
+      enableFrequency(enabled.getAttribute("checked") == "true");
+    }
+
+    function enableFrequency(enable)
+    {
+      var freqDaily = document.getElementById("freqDaily");
       var freqWeekly = document.getElementById("freqWeekly");
       var freqMonthly = document.getElementById("freqMonthly");
-      if (enabled.getAttribute("checked") == "true")
+
+      if (enable)
       {
         // enable frequency radiogroup
+        freqDaily.removeAttribute("disabled");
         freqWeekly.removeAttribute("disabled");
         freqMonthly.removeAttribute("disabled");
       }
       else
       {
         // disable frequency radiogroup
+        freqDaily.setAttribute("disabled", "true");
         freqWeekly.setAttribute("disabled", "true");
         freqMonthly.setAttribute("disabled", "true");
       }
@@ -60,8 +65,9 @@
               accesskey="&enableUN.accesskey;" oncommand="toggleFrequency();"
               prefstring="update_notifications.enabled"/>
     <radiogroup id="updateFrequency" orient="horizontal" 
-                prefstring="update_notifications.provider.0.frequency"
-                prefdefval="7">
+                prefstring="update_notifications.provider.0.frequency">
+      <radio id="freqDaily" label="&daily.label;" 
+             accesskey="&daily.accesskey;" value="1"/>
       <radio id="freqWeekly" label="&weekly.label;" 
              accesskey="&weekly.accesskey;" value="7"/>
       <radio id="freqMonthly" label="&monthly.label;" 

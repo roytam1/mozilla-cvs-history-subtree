@@ -1,4 +1,13 @@
 <!ENTITY  lang.version          "1.1">
-<!ENTITY  brandShortName        "Mozilla">
-<!ENTITY  vendorShortName       "Mozilla">
+<!-- Mozilla looks here for locale (theme?) versions, and refuses to use
+     the locale, if it doesn't match. -->
+<!-- Separate the ever-changing version info to avoid merge conflicts -->
+
+
+<!-- TODO: Maybe change lang.version later, so that nobody installs a Mozilla
+     langpack in Beonex Communicator. -->
+
+<!ENTITY  brandShortName        "Beonex Communicator">
+<!ENTITY  vendorShortName       "Beonex">
+<!ENTITY  vendorLongName        "Ben Bucksch">
 <!ENTITY  sidebarName           "Sidebar">

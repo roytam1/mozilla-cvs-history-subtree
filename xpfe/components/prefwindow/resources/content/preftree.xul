@@ -119,7 +119,13 @@
       <treerow>
         <treecell url="chrome://communicator/content/pref/pref-security.xul" label="&security.label;" />
       </treerow>
-      <treechildren id="securityChildren"/>
+      <treechildren id="securityChildren">
+        <treeitem>
+          <treerow>
+            <treecell url="chrome://communicator/content/pref/pref-referrer.xul" label="&referrer.label;"/>
+          </treerow>
+        </treeitem>
+      </treechildren>
     </treeitem>
 
     <treeitem container="true" id="advancedItem">
@@ -159,6 +165,9 @@
         </treeitem> 
       </treechildren>
     </treeitem>
+
+<!-- debug stuff
+-->
 
     <treeitem id="offlineItem">
       <treerow>

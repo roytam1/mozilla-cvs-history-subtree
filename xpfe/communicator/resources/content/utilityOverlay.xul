@@ -227,11 +227,15 @@
         label="&helpMenu.label;"
         accesskey="&helpMenu.accesskey;">
     <menupopup id="helpPopup">
+      <menuitem accesskey="&welcomeCommCmd.accesskey;"
+                label="&welcomeCommCmd.label;"
+                oncommand="openTopWin('about:welcome')"/>
       <menuitem accesskey="&releaseCmd.accesskey;"
                 label="&releaseCmd.label;"
                 id="releaseUrl"
                 oncommand="openTopWin('&releaseURL;');"/>
 
+<!--
       <menuseparator id="menu_HelpAboutSeparator"/>
 
       <menuitem class="about"
@@ -239,6 +243,7 @@
                 label="&aboutCommPluginsCmd.label;"
                 id="pluginInfo"
                 oncommand="openTopWin('about:plugins')"/>
+-->
       <menuitem accesskey="&aboutCmd.accesskey;"
                 label="&aboutCmd.label;"
                 id="aboutName"

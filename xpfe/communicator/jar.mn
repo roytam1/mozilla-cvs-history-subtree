@@ -31,6 +31,7 @@ comm.jar:
     content/communicator/printPreviewBindings.xml        (resources/content/printPreviewBindings.xml)
 
 en-US.jar:
+	  		locale/en-US/communicator/welcome.html                      (resources/locale/en-US/welcome.html)
         locale/en-US/communicator/contents.rdf                      (resources/locale/en-US/contents.rdf)
         locale/en-US/communicator/utilityOverlay.dtd                (resources/locale/en-US/utilityOverlay.dtd) 
         locale/en-US/communicator/utilityOverlay.properties         (resources/locale/en-US/utilityOverlay.properties) 

@@ -17,7 +17,7 @@
   <vbox id="contentEnablingBox">
     <checkbox id="javascriptAllowMailNews" position="3"
               label="&enbJsCheckMailNews.label;" accesskey="&enbJsCheckMailNews.accesskey;"
-              prefstring="javascript.allow.mailnews"/>
+              prefstring="javascript.allow.mailnews" hidden="true" />
   </vbox>
     
          

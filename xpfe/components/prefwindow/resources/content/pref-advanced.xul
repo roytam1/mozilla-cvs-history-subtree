@@ -140,7 +140,8 @@
       <checkbox id="advancedJavaAllow" label="&enbJavaCheck.label;" accesskey="&enbJavaCheck.accesskey;"
                 prefstring="security.enable_java"/>
     </vbox>
-    <vbox>
+
+    <vbox hidden="true">
     <vbox align="start">
       <checkbox id="advancedMailFTP" label="&sendAddFtpCheck.label;" accesskey="&sendAddFtpCheck.accesskey;"
                 prefstring="advanced.mailftp"
@@ -152,7 +153,6 @@
                flex="2"/>
     </hbox>
     </vbox>
-    <separator/>
   </groupbox>
   <groupbox id="perfSettings">
     <caption id="perfLabel" label="&perfTitle.label;"/>

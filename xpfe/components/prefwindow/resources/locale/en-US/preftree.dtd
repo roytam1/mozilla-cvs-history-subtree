@@ -21,6 +21,7 @@
 <!ENTITY publish.label "Publish">
 <!ENTITY offline.label "Offline &amp; Disk Space">
 <!ENTITY security.label "Privacy &amp; Security">
+<!ENTITY referrer.label "HTTP Referrer">
 <!ENTITY advance.label "Advanced">
 <!ENTITY down.label "Download">
 <!ENTITY cache.label "Cache">

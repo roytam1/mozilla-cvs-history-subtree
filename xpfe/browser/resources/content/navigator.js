@@ -834,6 +834,8 @@ function OpenSearch(tabName, forceDialogFlag, searchStr, newWindowFlag)
   } catch (ex) {
   }
 
+  debug("Search defaultSearchURL: " + defaultSearchURL + "\n");
+
   // Fallback to a default url (one that we can get sidebar search results for)
   if (!defaultSearchURL)
     defaultSearchURL = fallbackDefaultSearchURL;
@@ -1701,6 +1703,16 @@ function PageProxyDragGesture(aEvent)
     return true;
   }
   return false;
+}
+
+function PageProxyClickHandler(aEvent)
+{
+  if (aEvent.button == 1)
+    // load url/keyword from clipboard
+    return middleMousePaste();
+  else
+    // popup "file bookmark" dialog
+    return BookmarksUtils.addBookmarkForBrowser(getBrowser().webNavigation, true);
 }
 
 function updateComponentBarBroadcaster()

@@ -76,7 +76,7 @@ ParseArgv(@ARGV);
 if($inXpiURL eq "")
 {
   # archive url not supplied, set it to default values
-  $inXpiURL      = "ftp://not.supplied.com";
+  $inXpiURL      = "ftp://not.supplied.domain.invalid";
 }
 if($inRedirIniURL eq "")
 {
@@ -114,6 +114,28 @@ $ENV{WIZ_userAgent}            = "$versionMain ($versionLanguage)";
 $ENV{WIZ_userAgentShort}       = "$versionMain";
 $ENV{WIZ_xpinstallVersion}     = "$versionMain";
 
+
+
+#Shit, we never submitted the LocalOptions function, did we?
+
+$seiFileNameGeneric   = "nsinstall.exe";
+$seiFileNameSpecific  = "beonex-comm-0.9-dev-1-win32-installer.exe";
+$seiFileNameSpecificStub  = "beonex-comm-0.9-dev-1-win32-stub-installer.exe";
+$seuFileNameSpecific  = "BeonexComm09Uninstall.exe";
+$seuzFileNameSpecific = "BeonexComm09Uninstall.zip";
+
+# set environment vars for use by other .pl scripts called from this script.
+$ENV{WIZ_userAgent}            = "0.9 (en)";
+$ENV{WIZ_userAgentShort}       = "0.9";
+$ENV{WIZ_xpinstallVersion}     = "0.9";
+$ENV{WIZ_nameCompany}          = "Beonex";
+$ENV{WIZ_nameProduct}          = "Beonex Communicator";
+$ENV{WIZ_fileMainExe}          = "beonex-comm.exe";
+$ENV{WIZ_fileUninstall}        = $seuFileNameSpecific;
+$ENV{WIZ_fileUninstallZip}     = $seuzFileNameSpecific;
+
+
+
 # Set the location of the local tmp stage directory
 $gLocalTmpStage = $inStagePath;
 
@@ -128,7 +150,6 @@ if(!(-d "$inStagePath"))
                    "browser",
                    "mail",
                    "psm",
-                   "talkback",
                    "chatzilla",
                    "deflenus",
                    "langenus",
@@ -222,6 +243,10 @@ if(system("copy $ENV{MOZ_SRC}\\mozilla\\LICENSE $inDistPath\\setup\\license.txt"
 {
   die "\n Error: copy $ENV{MOZ_SRC}\\mozilla\\LICENSE $inDistPath\\setup\\license.txt\n";
 }
+#if(system("copy $ENV{MOZ_SRC}\\mozilla\\README\\user\\win32.txt $inDistPath\\setup\\readme.txt"))
+#{
+#  die "\n Error: copy $ENV{MOZ_SRC}\\mozilla\\xpfe\\bootstrap\\README-win32.txt $inDistPath\\setup\\readme.txt\n";
+#}
 
 # build the self-extracting .exe (installer) file.
 print "\nbuilding self-extracting stub installer ($seiFileNameSpecificStub)...\n";

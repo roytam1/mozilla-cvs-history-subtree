@@ -2,11 +2,9 @@
 
 <search 
    name="Google"
-   description="Google Search"
+   description="Google - Web Search"
    method="GET"
    action="http://www.google.com/search"
-   update="http://www.google.com/mozilla/google.src"
-   updateCheckDays=1   
 >
 
 <input name="q" user>

@@ -139,6 +139,11 @@ CPPSRCS += nsNativeAppSupportBeOS.cpp
 CPPSRCS += nsNativeAppSupportBase.cpp
 endif
 
+install:: $(topsrcdir)/README/user/unix-tarball.txt $(topsrcdir)/LICENSE
+# Can't use nsinstall, because I want a different filename
+	cp $(topsrcdir)/README/user/unix-tarball.txt $(DIST)/bin/README
+	cp $(topsrcdir)/LICENSE $(DIST)/bin/LICENSE
+
 ifeq ($(MOZ_WIDGET_TOOLKIT),photon)
 CPPSRCS += nsNativeAppSupportPh.cpp
 LIBS += -lphexlib -lph

@@ -1,12 +1,12 @@
 <!-- win -->
 <!-- LOCALIZATION NOTE : FILE Do not translate all the Cmd.key and accesskey --> 
 
-<!ENTITY closeCmd.label			"Close">  
+<!ENTITY closeCmd.label			"Close Window">  
 <!ENTITY closeCmd.key			"W">  
 <!ENTITY closeCmd.accesskey		"c">
 
-<!ENTITY quitApplicationCmd.label	"Exit"> 
-<!ENTITY quitApplicationCmd.key		"Q"> 
+<!ENTITY quitApplicationCmd.label	"Exit Communicator"> 
+<!ENTITY quitApplicationCmd.key		""> 
 <!ENTITY quitApplicationCmd.accesskey	"x">
 
 <!ENTITY redoCmd.label			"Redo">  

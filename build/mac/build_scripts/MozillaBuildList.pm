@@ -705,8 +705,8 @@ EOS
 
     BuildEmbeddingPackage();
 
-    # Set the default skin to be classic
-    SetDefaultSkin("classic/1.0"); 
+    # Set the default skin
+    SetDefaultSkin("modern/1.0");
 
     EndBuildModule("resources");
 }

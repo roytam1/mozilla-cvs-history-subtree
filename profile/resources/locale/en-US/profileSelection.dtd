@@ -41,7 +41,7 @@
 
 <!ENTITY            manageprofiles.label  "Manage Profiles">
 
-<!ENTITY            start.label           "Start &vendorShortName;">
+<!ENTITY            start.label           "Start &brandShortName;">
 <!ENTITY            exit.label            "Exit">
 <!ENTITY            manage.label          "Manage Profiles...">
 

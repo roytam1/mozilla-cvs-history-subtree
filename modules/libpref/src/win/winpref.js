@@ -115,7 +115,7 @@ pref("font.name-list.serif.zh-TW", "MingLiU");
 pref("font.name-list.sans-serif.zh-TW", "MingLiU"); 
 pref("font.name-list.monospace.zh-TW", "MingLiU"); 
 
-pref("font.default", "serif");
+pref("font.default", "sans-serif");
 pref("font.size.variable.ar", 16);
 pref("font.size.fixed.ar", 13);
 

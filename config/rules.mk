@@ -68,6 +68,10 @@ ifndef topsrcdir
 topsrcdir		= $(DEPTH)
 endif
 
+CXX=gcc
+LDFLAGS += -Wl,-Bstatic -Wl,-lstdc++ -Wl,-Bdynamic
+
+
 ifndef MOZILLA_DIR
 MOZILLA_DIR = $(topsrcdir)
 endif

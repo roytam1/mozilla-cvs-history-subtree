@@ -1460,6 +1460,7 @@ Rights Reserved.
       <toolbarbutton class="toolbarbutton-1" id="button-replyall" label="&replyAllButton.label;" tooltiptext="&replyAllButton.tooltip;" observes="button_replyall" oncommand="MsgReplyToAllMessage(event)"/>
       <toolbarbutton class="toolbarbutton-1" id="button-forward" label="&forwardButton.label;" tooltiptext="&forwardButton.tooltip;" observes="button_forward" oncommand="MsgForwardMessage(event)"/>
       <toolbarseparator class="toolbarseparator-primary"/>
+<!--
       <toolbarbutton type="menu" id="button-file" class="toolbarbutton-1" 
                   label="&fileButton.label;" observes="button_file"
                   datasources="rdf:null" 
@@ -1498,11 +1499,8 @@ Rights Reserved.
             </menupopup>
           </rule>
           <rule nc:CanFileMessagesOnServer="false">
-            <!-- don't show servers (nntp & any others) which does not allow message filing -->
-            <!-- File, Move & Copy menus -->
           </rule>
           <rule nc:CanFileMessages="false" iscontainer="true" isempty="false">
-          <!-- note, there is no "file here" -->
             <menupopup>
               <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name"
                SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
@@ -1527,6 +1525,7 @@ Rights Reserved.
         </template>
         <menupopup/>
       </toolbarbutton>
+-->
       <toolbarbutton class="toolbarbutton-1" id="button-next" label="&nextButton.label;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
       <toolbarbutton class="toolbarbutton-1" id="button-delete" label="&deleteButton.label;" tooltiptext="&deleteButton.tooltip;" observes="button_delete" oncommand="goDoCommand('button_delete')"/>
       <toolbarbutton type="menu-button" id="button-mark" class="toolbarbutton-1" label="&markButton.label;" hidden="true" oncommand="goDoCommand('button_mark')"
@@ -1539,7 +1538,7 @@ Rights Reserved.
                 <menuitem type="checkbox" id="markFlaggedToolbarItem" label="&markFlaggedCmd.label;" accesskey="&markFlaggedCmd.accesskey;" observes="cmd_markAsFlagged"/>
             </menupopup>
       </toolbarbutton>
-      <toolbarbutton id="button-print" type="menu-button" class="toolbarbutton-1" label="&printButton.label;" 
+      <toolbarbutton hidden="true" id="button-print" type="menu-button" class="toolbarbutton-1" label="&printButton.label;" 
                   observes="button_print" oncommand="goDoCommand('cmd_print')" tooltiptext="&printButton.tooltip;">  
         <menupopup id="printMenu">
           <menuitem label="&printCmd.label;" accesskey="&printCmd.accesskey;" default="true"/>

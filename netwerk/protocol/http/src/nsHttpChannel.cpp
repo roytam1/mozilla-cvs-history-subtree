@@ -2455,53 +2455,68 @@ nsHttpChannel::SetReferrer(nsIURI *referrer, PRUint32 referrerType)
         "file",
         "mailbox",
         "imap",
+        "imaps",
         "news",
         "snews",
-        "imaps",
         "data",
         nsnull
     };
 
+
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
-    if (nsHttpHandler::get()->ReferrerLevel() < referrerType)
+    // Clear the old referer first.
+    mRequestHead.SetHeader(nsHttp::Referer, NS_LITERAL_CSTRING(""));
+
+    PRUint8 referrerLevel = nsHttpHandler::get()->ReferrerLevel();
+
+    // Maintain compatability with the original (pre 1.0) usage of referrer levels.
+    if (referrerLevel == REFERRER_NONE || (referrerLevel <= REFERRER_NON_HTTP && referrerLevel < referrerType))
         return NS_OK;
 
-    // don't remember this referrer if it's on our black list....
-    if (referrer) {
-        PRBool match = PR_FALSE;
 
+    if (!referrer || !mURI)
+        return NS_ERROR_FAILURE;
+
+    // Don't send the referrer if it has a scheme in the above blacklist.
+    PRBool match = PR_FALSE;
         const char *const *scheme = invalidReferrerSchemes;
         for (; *scheme && !match; ++scheme)
             referrer->SchemeIs(*scheme, &match);
-
-        if (match)
-            return NS_OK; // kick out....
+    if (match) {
+        // If the user has configured the referrer override, force the referrer 
+        // type to send the target URI's pre-path (REFERRER_PREPATH_URI_ALWAYS), 
+        // even for schemes that normally wouldn't be allowed to send referrers.
+        if(nsHttpHandler::get()->ReferrerSchemeOverride())
+            referrerLevel = REFERRER_PREPATH_URI_ALWAYS;
+        else
+            return NS_OK;
     }
 
+
+    nsCAutoString referrerHost, host;
+    nsresult rv;
+
+    rv = referrer->GetAsciiHost(referrerHost);
+    if (NS_FAILED(rv))
+        return rv;
+    rv = mURI->GetAsciiHost(host);
+    if (NS_FAILED(rv)) 
+        return rv;
+
     // Handle secure referrals.
-    // Support referrals from a secure server if this is a secure site
+    // Support referrals from a secure server only if this is a secure site
     // and the host names are the same.
-    if (referrer) {
         PRBool isHTTPS = PR_FALSE;
         referrer->SchemeIs("https", &isHTTPS);
         if (isHTTPS) {
-            nsCAutoString referrerHost;
-            nsCAutoString host;
-
-            referrer->GetAsciiHost(referrerHost);
-            mURI->GetAsciiHost(host);
             mURI->SchemeIs("https", &isHTTPS);
 
-            if (!isHTTPS)
-                return NS_OK;
-
-            if ((nsCRT::strcasecmp(referrerHost.get(), host.get()) != 0) &&
+        if ((!isHTTPS || nsCRT::strcasecmp(referrerHost.get(), host.get()) != 0) &&
                 (!nsHttpHandler::get()->SendSecureXSiteReferrer()))
                 return NS_OK;
-
-        }
     }
+
 
     // save a copy of the referrer so we can return it if requested
     mReferrer = referrer;
@@ -2509,33 +2524,58 @@ nsHttpChannel::SetReferrer(nsIURI *referrer, PRUint32 referrerType)
     // save a copy of the referrer type for redirects
     mReferrerType = (PRUint8) referrerType;
 
-    // clear the old referer first
-    mRequestHead.SetHeader(nsHttp::Referer, NS_LITERAL_CSTRING(""));
 
-    if (referrer) {
-        nsCAutoString spec;
-        referrer->GetAsciiSpec(spec);
-        if (!spec.IsEmpty()) {
-            // strip away any userpass; we don't want to be giving out passwords ;-)
-            nsCAutoString userpass;
-            referrer->GetUserPass(userpass);
-            if (!userpass.IsEmpty()) {
-                // userpass is UTF8 encoded and spec is ASCII, so we might not find
-                // userpass as a substring of spec.
-                nsCOMPtr<nsIURI> clone;
-                nsresult rv = referrer->Clone(getter_AddRefs(clone));
-                if (NS_FAILED(rv)) return rv;
+    nsIURI *refPtr = referrer;
+    PRBool sendURIPath = PR_TRUE;
 
-                rv = clone->SetUserPass(NS_LITERAL_CSTRING(""));
-                if (NS_FAILED(rv)) return rv;
+    switch(referrerLevel) {
+        // Send the referrer only for requests from the same host, otherwise send no referrer. 
+        case REFERRER_SAME_HOST_ONLY:
+            if (nsCRT::strcasecmp(referrerHost.get(), host.get()) == 0)
+                refPtr = referrer;  // Hosts match, so send the real referrer.
+            else 
+                return NS_OK;       // No match, send no referrer.
+        break;
 
-                rv = clone->GetAsciiSpec(spec);
-                if (NS_FAILED(rv)) return rv;
+        // Send the referrer only for requests from the same host, otherwise send target URI's pre-path as the referrer.
+        case REFERRER_3RDPARTY_PREPATH:
+            if (nsCRT::strcasecmp(referrerHost.get(), host.get()) == 0)
+                refPtr = referrer;  // Hosts match, so send the real referrer.
+            else {
+                refPtr = mURI;      // Hosts do not match - send the target URI's pre-path.
+                sendURIPath = PR_FALSE;
             }
+        break;
+
+        // Always send the target URI's pre-path as the referrer.
+        case REFERRER_PREPATH_URI_ALWAYS:
+            refPtr = mURI;
+            sendURIPath = PR_FALSE;
+        break;
+            }
+
+
+    if (!refPtr)
+        return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIURI> theReferrer;  
+    rv = refPtr->Clone(getter_AddRefs(theReferrer));
+    if (NS_FAILED(rv) || !theReferrer)
+        return rv;
+
+    // Never send usernames & passwords!
+    theReferrer->SetUserPass(NS_LITERAL_CSTRING(""));
+
+    if (!sendURIPath)
+        theReferrer->SetPath(NS_LITERAL_CSTRING(""));
+
+    // Set the referrer header.
+    nsCAutoString spec;
+    rv = theReferrer->GetAsciiSpec(spec);
+    if (NS_SUCCEEDED(rv))
             mRequestHead.SetHeader(nsHttp::Referer, spec);
-        }
-    }
-    return NS_OK;
+
+    return rv;
 }
 
 NS_IMETHODIMP
