@@ -43,6 +43,7 @@ CPP_OBJS = \
 	.\$(OBJDIR)\nsCacheService.obj			\
 	.\$(OBJDIR)\nsCacheSession.obj			\
 	.\$(OBJDIR)\nsDiskCacheDevice.obj		\
+	.\$(OBJDIR)\nsDiskCacheEntry.obj		\
 	.\$(OBJDIR)\nsMemoryCacheDevice.obj		\
 	$(NULL)
 
