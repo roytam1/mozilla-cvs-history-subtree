@@ -909,6 +909,10 @@ GetTheValidWindow(void)
       else
         break;
     }
+    else
+    {
+        return NULL;
+    }
 
     FlushIt();
     Sleep(200);
