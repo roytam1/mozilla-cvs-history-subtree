@@ -55,6 +55,7 @@
 #include "nsVoidArray.h"
 #include "prprf.h"
 #include "prmem.h"
+#include "prio.h"
 #include "NSReg.h"
 
 // lots of includes required for the nsPrefMigration.cpp code that we copied:
