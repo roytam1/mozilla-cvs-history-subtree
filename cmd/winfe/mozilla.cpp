@@ -688,10 +688,12 @@ BOOL CNetscapeApp::InitInstance()
 	** Registry startup has to happen before profile stuff because creating a new
 	** profile uses the registry.
 	*/
+    NR_StartupRegistry();
+
 #ifdef MOZ_SMARTUPDATE
     SU_Startup();
 #endif
-    NR_StartupRegistry();
+    
 
     // Initialize the network.
     WORD wVersionRequested;
@@ -2242,10 +2244,12 @@ int CNetscapeApp::ExitInstance()
     fe_CleanupFileFormatTypes();
 
     PREF_SavePrefFile();
-    NR_ShutdownRegistry();
+    
 #ifdef MOZ_SMARTUPDATE
     SU_Shutdown();
 #endif
+    
+    NR_ShutdownRegistry();
 
     //  Save certs and keys early, since if they are lost the user is screwed
     SECNAV_Shutdown();
