@@ -100,6 +100,7 @@ nsIAtom* nsMsgDBFolder::kTotalMessagesAtom=nsnull;
 nsIAtom* nsMsgDBFolder::kFolderSizeAtom=nsnull;
 nsIAtom* nsMsgDBFolder::kBiffStateAtom=nsnull;
 nsIAtom* nsMsgDBFolder::kNewMessagesAtom=nsnull;
+nsIAtom* nsMsgDBFolder::kInVFEditSearchScopeAtom=nsnull;
 nsIAtom* nsMsgDBFolder::kNumNewBiffMessagesAtom=nsnull;
 nsIAtom* nsMsgDBFolder::kTotalUnreadMessagesAtom=nsnull;
 nsIAtom* nsMsgDBFolder::kFlaggedAtom=nsnull;
@@ -136,6 +137,7 @@ const nsStaticAtom nsMsgDBFolder::folder_atoms[] = {
   { "JunkStatusChanged", &nsMsgDBFolder::mJunkStatusChangedAtom },
   { "BiffState", &nsMsgDBFolder::kBiffStateAtom },
   { "NewMessages", &nsMsgDBFolder::kNewMessagesAtom },
+  { "inVFEditSearchScope", &nsMsgDBFolder::kInVFEditSearchScopeAtom },
   { "NumNewBiffMessages", &nsMsgDBFolder::kNumNewBiffMessagesAtom },
   { "Name", &nsMsgDBFolder::kNameAtom },
   { "TotalUnreadMessages", &nsMsgDBFolder::kTotalUnreadMessagesAtom },
@@ -168,6 +170,7 @@ nsMsgDBFolder::nsMsgDBFolder(void)
   mHaveParsedURI(PR_FALSE),
   mIsServerIsValid(PR_FALSE),
   mIsServer(PR_FALSE),
+  mInVFEditSearchScope (PR_FALSE),
   mBaseMessageURI(nsnull)
 {
   NS_NewISupportsArray(getter_AddRefs(mSubFolders));
@@ -4698,3 +4701,16 @@ NS_IMETHODIMP nsMsgDBFolder::CompareSortKeys(nsIMsgFolder *aFolder, PRInt32 *sor
   return rv;
 }
 
+NS_IMETHODIMP nsMsgDBFolder::GetInVFEditSearchScope (PRBool *aInVFEditSearchScope)
+{
+  *aInVFEditSearchScope = mInVFEditSearchScope;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBFolder::SetInVFEditSearchScope (PRBool aInVFEditSearchScope, PRBool aSetOnSubFolders)
+{
+  PRBool oldInVFEditSearchScope = mInVFEditSearchScope;
+  mInVFEditSearchScope = aInVFEditSearchScope;
+  NotifyBoolPropertyChanged(kInVFEditSearchScopeAtom, oldInVFEditSearchScope, mInVFEditSearchScope);
+  return NS_OK;
+}
