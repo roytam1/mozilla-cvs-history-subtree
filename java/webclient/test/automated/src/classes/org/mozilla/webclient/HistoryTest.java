@@ -26,8 +26,6 @@
 
 package org.mozilla.webclient;
 
-import org.mozilla.util.THTTPD;
-
 import junit.framework.TestSuite;
 import junit.framework.TestResult;
 import junit.framework.Test;
@@ -55,29 +53,10 @@ public class HistoryTest extends WebclientTestCase {
     }
 
     public static Test suite() {
-	TestSuite result = new TestSuite() {
-		public void run(TestResult result) {
-		    serverThread = 
-			new THTTPD.ServerThread("LocalHTTPD",
-						new File (getBrowserBinDir() +
-							  "/../../java/webclient/build.test"), -1);
-		    serverThread.start();
-		    serverThread.P();
-		    super.run(result);
-		    try {
-			BrowserControlFactory.appTerminate();
-		    }
-		    catch (Exception e) {
-			fail();
-		    }
-		    serverThread.stopRunning();
-		}
-	    };
+	TestSuite result = createServerTestSuite();
 	result.addTestSuite(HistoryTest.class);
 	return (result);
     }
-
-    static THTTPD.ServerThread serverThread;
 
     static EventRegistration2 eventRegistration;
 
