@@ -106,7 +106,7 @@ extern "C" {
 #define LDAPTOOL_SAFEREALLOC( ptr, size )  ( ptr == NULL ? malloc( size ) : \
 						realloc( ptr, size ))
 /* this defines the max number of control requests for the tools */
-#define CONTROL_REQUESTS 5
+#define CONTROL_REQUESTS 6
 
 /*
  * globals (defined in common.c)
