@@ -313,7 +313,7 @@ nsDOMScriptableHelper::GetScriptableFlags(PRUint32 *aFlags)
 {
   *aFlags = USE_JSSTUB_FOR_ADDPROPERTY | USE_JSSTUB_FOR_DELPROPERTY |
     USE_JSSTUB_FOR_SETPROPERTY | ALLOW_PROP_MODS_DURING_RESOLVE |
-    WANT_GETPROPERTY | WANT_NEWRESOLVE;
+    WANT_GETPROPERTY | WANT_NEWRESOLVE | WANT_PRECREATE;
 
   return NS_OK;
 }
@@ -322,9 +322,41 @@ NS_IMETHODIMP
 nsDOMScriptableHelper::PreCreate(nsISupports *nativeObj, JSContext * cx,
                                  JSObject * globalObj, JSObject * *parentObj)
 {
-  NS_ERROR("Don't call me!");
+  // Normally ::PreCreate() is used to give XPConnect the parent
+  // object for the object that's being wrapped, this parent object is
+  // set as the parent of the wrapper and it's also used to find the
+  // right scope for the object being wrapped. Now, in the case of the
+  // global object the wrapper shouldn't have a parent but we supply
+  // one here anyway (the global object itself) and this will be used
+  // by XPConnect only to find the right scope, once the scope is
+  // found XPConnect will find the existing wrapper (which always
+  // exists since it's created on window construction), since an
+  // existing wrapper is found the parent we supply here is ignored
+  // after the wrapper is found.
 
-  return NS_ERROR_UNEXPECTED;
+  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(nativeObj));
+  NS_WARN_IF_FALSE(sgo, "nativeObj not a node!");
+
+  nsCOMPtr<nsIScriptContext> sctx;
+
+  sgo->GetContext(getter_AddRefs(sctx));
+
+  if (sctx) {
+    // Use the context from nativeObj to find the global JSObject on
+    // that context.
+
+    cx = (JSContext *)sctx->GetNativeContext();
+
+    *parentObj = ::JS_GetGlobalObject(cx);
+  } else {
+    // We're most likely being called when the global object is
+    // created, at that point we won't get a nsIScriptContext but we
+    // know we're called on the correct context so we return globalObj
+
+    *parentObj = globalObj;
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
