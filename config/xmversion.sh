@@ -31,6 +31,23 @@
 ##
 ##############################################################################
 
+
+## This script looks in the space sepeared list of directories (XM_SEARCH_PATH)
+## for motif headers and libraries.
+##
+## It also generates and builds a program 'get_motif_info-OBJECT_NAME'
+## which prints out info on the motif detected on the system.
+##
+## This information is munged into useful strings that can be printed
+## through the various command line flags decribed bellow.  This script
+## can be invoked from Makefiles or other scripts in order to set
+## flags needed to build motif program.
+##
+## The get 'get_motif_info-OBJECT_NAME' program is generated/built only
+## once and reused.  Because of the OBJECT_NAME suffix, it will work on
+## multiple platforms at the same time (same mozilla source tree)
+##
+
 ##
 ## Command Line Flags Supported:
 ##
@@ -55,6 +72,9 @@
 ##  -de | --dynamic-ext:			Set extension used on dynamic libs.
 ##  -se | --static-ext:				Set extension used on static libs.
 ##
+##  -o  | --set-object-name:		Set object name for current system.
+##  -cc | --set-compiler:			Set compiler for building test program.
+##
 
 ##
 ## Look for motif stuff in the following places:
@@ -70,16 +90,15 @@ XM_SEARCH_PATH="\
 ##
 ## Constants
 ##
-XM_PROG=./test_motif
-XM_SRC=test_motif.c
+XM_PROG_PREFIX=./get_motif_info
 
 ##
-## Option defaults
+## Defaults
 ##
 XM_DYNAMIC_EXT=so
 XM_STATIC_EXT=a
 
-XM_IS_LESSTIF=False
+XM_PRINT_IS_LESSTIF=False
 
 XM_PRINT_VERSION=False
 XM_PRINT_REVISION=False
@@ -98,6 +117,9 @@ XM_PRINT_DYNAMIC_FLAGS=False
 
 XM_PRINT_EVERYTHING=False
 
+XM_OBJECT_NAME=`uname`-`uname -r`
+XM_CC=cc
+
 ##
 ## Stuff we need to figure out
 ##
@@ -110,8 +132,6 @@ XM_VERSION_STRING_RESULT=unknown
 XM_IS_LESSTIF_RESULT=unknown
 
 XM_INCLUDE_DIR=unknown
-XM_LIB_DIR=unknown
-
 XM_STATIC_LIB=unknown
 XM_DYNAMIC_LIB=unknown
 
@@ -122,7 +142,7 @@ XM_INCLUDE_FLAGS=unknown
 XM_STATIC_FLAGS=unknown
 XM_DYNAMIC_FLAGS=unknown
 
-function test_motif_usage()
+function xm_usage()
 {
 echo
 echo "Usage:   `basename $0` [options]"
@@ -150,6 +170,11 @@ echo
 echo "  -de, --dynamic-ext:           Set extension used on dynamic libs."
 echo "  -se, --static-ext:            Set extension used on static libs."
 echo
+echo "  -o,  --set-object-name:       Set object name for current system."
+echo "  -cc, --set-compiler:          Set compiler for building test program."
+echo
+echo "  -h,  --help:                  Print this blurb."
+echo
 echo "The default is '-v -r' if no options are given."
 echo
 }
@@ -161,13 +186,13 @@ while [ "$*" ]; do
     case $1 in
         -h | --help)
             shift
-            test_motif_usage
+            xm_usage
 			exit 0
             ;;
 
         -l | --is-lesstif)
             shift
-            XM_IS_LESSTIF=True
+            XM_PRINT_IS_LESSTIF=True
             ;;
 
         -v | --print-version)
@@ -247,14 +272,32 @@ while [ "$*" ]; do
             shift
             ;;
 
+        -o | --set-object-name)
+            shift
+            XM_OBJECT_NAME="$1"
+            shift
+            ;;
+
+        -cc | --set-compiler)
+            shift
+            XM_CC="$1"
+            shift
+            ;;
+
         -*)
             echo "`basename $0`: invalid option '$1'"
             shift
-            test_motif_usage
+            xm_usage
 			exit 0
             ;;
     esac
 done
+
+##
+## Motif info program name
+##
+XM_PROG="$XM_PROG_PREFIX"_"$XM_OBJECT_NAME"
+XM_SRC="$XM_PROG_PREFIX"_"$XM_OBJECT_NAME.c"
 
 ##
 ## The library names
@@ -267,15 +310,14 @@ XM_STATIC_LIB_NAME=libXm.$XM_STATIC_EXT
 ##
 function xm_cleanup()
 {
-	rm -f $XM_PROG
-	rm -f $XM_SRC
+	true
+
+#	rm -f $XM_PROG
+#	rm -f $XM_SRC
+
 }
 
-##
-## Cleanup the dummy test program
-##
-rm -f $XM_PROG
-rm -f $XM_SRC
+xm_cleanup
 
 ##
 ## Look for <Xm/Xm.h>
@@ -303,9 +345,11 @@ then
 fi
 
 ##
-## Generate the dummy test program
+## Generate the dummy test program if needed
 ##
-cat << EOF > test_motif.c
+if [ ! -f $XM_SRC ]
+then
+cat << EOF > $XM_SRC
 #include <stdio.h>
 #include <Xm/Xm.h>
 
@@ -331,6 +375,7 @@ main(int argc,char ** argv)
 	return 0;
 }
 EOF
+fi
 
 ##
 ## Make sure code was created
@@ -338,10 +383,11 @@ EOF
 if [ ! -f $XM_SRC ]
 then
 	echo
-	echo "Could not create test program source $XM_SRC."
+	echo "Could not create or read test program source $XM_SRC."
 	echo
 
 	xm_cleanup
+
 	exit 1
 fi
 
@@ -351,9 +397,12 @@ fi
 XM_INCLUDE_FLAGS=-I$XM_INCLUDE_DIR
 
 ##
-## Compile the dummy test program
+## Compile the dummy test program if needed
 ##
-cc $XM_INCLUDE_FLAGS -o $XM_PROG $XM_SRC
+if [ ! -x $XM_PROG ]
+then
+	$XM_CC $XM_INCLUDE_FLAGS -o $XM_PROG $XM_SRC
+fi
 
 ##
 ## Make sure it compiled
@@ -361,10 +410,11 @@ cc $XM_INCLUDE_FLAGS -o $XM_PROG $XM_SRC
 if [ ! -x $XM_PROG ]
 then
 	echo
-	echo "Could not create test program $XM_PROG."
+	echo "Could not create or execute test program $XM_PROG."
 	echo
 
 	xm_cleanup
+
 	exit 1
 fi
 
@@ -440,11 +490,28 @@ do
 	done
 done
 
+##
+## If the static library directory is different than the dynamic one, it 
+## is possible that the system contains two incompatible installations of
+## motif/lesstif.  For example, lesstif could be installed in /usr/lesstif
+## and the real motif could be installed in /usr/X11R6.  This would cause
+## outofhackage later in the build.
+##
+## Need to handle this one.  Maybe we should just ignore the motif static
+## libs and just use the lesstif ones ?  This is probably what the "user"
+## wants anyway.  For instance, a "user" could be testing whether mozilla
+## works with lesstif without erasing the real motif libs.
+##
+## Also, by default the lesstif build system only creates dynamic libraries.
+## So this problem will always exist when both motif and lesstif are installed
+## in the system.
+
+
 
 ##
 ## -l | --is-lesstif
 ##
-if [ "$XM_IS_LESSTIF" = "True" ]
+if [ "$XM_PRINT_IS_LESSTIF" = "True" ]
 then
 	echo $XM_IS_LESSTIF_RESULT
 
@@ -459,20 +526,26 @@ fi
 if [ "$XM_PRINT_EVERYTHING" = "True" ]
 then
 	echo
-	echo "XM_VERSION:            $XM_VERSION_RESULT"
-	echo "XM_REVISION:           $XM_REVISION_RESULT"
-	echo "XM_UPDATE:             $XM_UPDATE_RESULT"
-	echo "XM_VERSION_STRING:     $XM_VERSION_STRING_RESULT"
-	echo "XM_IS_LESSTIF:         $XM_IS_LESSTIF_RESULT"
-	echo "XM_INCLUDE_DIR:        $XM_INCLUDE_DIR"
-	echo "XM_LIB_DIR:            $XM_LIB_DIR"
-	echo "XM_STATIC_LIB:         $XM_STATIC_LIB"
-	echo "XM_DYNAMIC_LIB:        $XM_DYNAMIC_LIB"
-	echo "XM_STATIC_DIR:         $XM_STATIC_DIR"
-	echo "XM_DYNAMIC_DIR:        $XM_DYNAMIC_DIR"
-	echo "XM_INCLUDE_FLAGS:      $XM_INCLUDE_FLAGS"
-	echo "XM_STATIC_FLAGS:       $XM_STATIC_FLAGS"
-	echo "XM_DYNAMIC_FLAGS:      $XM_DYNAMIC_FLAGS"
+	echo "XmVERSION:          $XM_VERSION_RESULT"
+	echo "XmREVISION:         $XM_REVISION_RESULT"
+	echo "XmUPDATE_LEVEL:     $XM_UPDATE_RESULT"
+	echo "XmVERSION_STRING:   $XM_VERSION_STRING_RESULT"
+	echo
+	echo "Lesstif ?:          $XM_IS_LESSTIF_RESULT"
+	echo
+	echo "Include Dir:        $XM_INCLUDE_DIR"
+	echo "Static Lib Dir:     $XM_STATIC_DIR"
+	echo "Dynamic Lib Dir:    $XM_DYNAMIC_DIR"
+	echo
+	echo "Static Lib:         $XM_STATIC_LIB"
+	echo "Synamic Lib:        $XM_DYNAMIC_LIB"
+	echo
+	echo "Include Flags:      $XM_INCLUDE_FLAGS"
+	echo "Static Flags:       $XM_STATIC_FLAGS"
+	echo "dynamic Flags:      $XM_DYNAMIC_FLAGS"
+	echo
+	echo "OBJECT_NAME:        $XM_OBJECT_NAME"
+	echo "Test Program:       $XM_PROG"
 	echo
 
 	xm_cleanup

@@ -78,9 +78,9 @@ endif
 #
 ifeq ($(OS_ARCH),Linux)
 
-XM_VER_SCRIPT=$(DEPTH)/config/xmversion.sh
+XM_VER_SCRIPT=$(DEPTH)/config/xmversion.sh -o $(OS_CONFIG)$(OS_VERSION)$(PROCESSOR_ARCHITECTURE)
 
-GLIBC_VER_SCRIPT=$(DEPTH)/config/glibcversion.sh
+GLIBC_VER_SCRIPT=$(DEPTH)/config/glibcversion.sh -o $(OS_CONFIG)$(OS_VERSION)$(PROCESSOR_ARCHITECTURE)
 
 export:: motif.mk
 
