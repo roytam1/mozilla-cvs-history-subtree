@@ -55,6 +55,15 @@
         <xul:hbox class="tabbrowser-strip chromeclass-toolbar" collapsed="true" tooltip="_child" context="_child">
           <xul:tooltip onpopupshowing="event.preventBubble(); if (document.tooltipNode.hasAttribute('label')) { this.setAttribute('label', document.tooltipNode.getAttribute('label')); return true; } return false;"/>
           <xul:menupopup onpopupshowing="this.parentNode.parentNode.parentNode.updatePopupMenu(this);">
+            <xul:menuitem label="&closeTab.label;" accesskey="&closeTab.accesskey;"
+                          tbattr="tabbrowser-multiple"
+                          oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
+                                     tabbrowser.removeTab(tabbrowser.mContextTab);"/>
+            <xul:menuitem label="&closeOtherTabs.label;" accesskey="&closeOtherTabs.accesskey;"
+                          tbattr="tabbrowser-multiple"
+                          oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
+                                     tabbrowser.removeAllTabsBut(tabbrowser.mContextTab);"/>
+            <xul:menuseparator/>
             <xul:menuitem label="&newTab.label;" accesskey="&newTab.accesskey;"
                           xbl:inherits="oncommand=onnewtab"/>
             <xul:menuseparator/>
@@ -65,11 +74,6 @@
                           tbattr="tabbrowser-multiple"
                           oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
                                      tabbrowser.reloadAllTabs(tabbrowser.mContextTab);"/>
-            <xul:menuseparator/>
-            <xul:menuitem label="&closeTab.label;" accesskey="&closeTab.accesskey;"
-                          tbattr="tabbrowser-multiple"
-                          oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
-                                     tabbrowser.removeTab(tabbrowser.mContextTab);"/>
           </xul:menupopup>
 
           <xul:tabs class="tabbrowser-tabs" closebutton="true" flex="1"
@@ -592,16 +596,8 @@
         <![CDATA[
           this.mStrip.collapsed = !aShow;
           if (aShow) {
-            // XXXdwh temporary unclean dependency on specific menu items in navigator.xul
-            document.getElementById("menu_closeWindow").hidden = false;
-            document.getElementById("menu_close").setAttribute("label", this.mStringBundle.getString("tabs.closeTab"));
             if (!this.mTabbedMode)
               this.enterTabbedMode();
-          }
-          else {
-            // XXXdwh temporary unclean dependency on specific menu items in navigator.xul
-            document.getElementById("menu_closeWindow").hidden = true;
-            document.getElementById("menu_close").setAttribute("label", this.mStringBundle.getString("tabs.close"));
           }
         ]]>
         </body>
@@ -717,7 +713,25 @@
           ]]>
         </body>
       </method>
-      
+
+      <method name="removeAllTabsBut">
+        <parameter name="aTab"/>
+        <body>
+          <![CDATA[
+            if (aTab.localName != "tab")
+              aTab = this.mCurrentTab;
+            else
+              this.mTabContainer.selectedItem = aTab;
+
+            while (this.mTabContainer.lastChild != aTab)
+              this.removeTab(this.mTabContainer.lastChild);
+
+            while (aTab.previousSibling)
+              this.removeTab(aTab.previousSibling);
+          ]]>
+        </body>
+      </method>
+
       <method name="removeCurrentTab">
         <body>
           <![CDATA[

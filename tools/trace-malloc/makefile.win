@@ -1,0 +1,88 @@
+#!nmake
+#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#
+# The Original Code is mozilla.org code.
+#
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation. All
+# Rights Reserved.
+#
+# Contributor(s): 
+
+DEPTH=..\..
+
+REQUIRES=xpcom
+
+include <$(DEPTH)\config\config.mak>
+
+MAKE_OBJ_TYPE=EXE
+PROG1 = .\$(OBJDIR)\bloatblame.exe
+PROG2 = .\$(OBJDIR)\spacetrace.exe
+PROG3 = .\$(OBJDIR)\leakstats.exe
+
+LIB1 = .\$(OBJDIR)\tmreader.lib
+
+PROGRAMS = $(PROG1) $(PROG2) $(PROG3)
+
+C_OBJS=.\$(OBJDIR)\spacecategory.obj .\$(OBJDIR)\formdata.obj
+CPP_OBJS=.\$(OBJDIR)\tmreader.obj
+
+LINCS= $(LINCS) \
+	-I$(DEPTH)\config\os2 \
+	$(NULL)
+
+LLIBS= $(LLIBS) \
+	$(DIST)\lib\xpcom.lib \
+	$(LIBNSPR) \
+	$(LIB1) \
+	$(NULL)
+
+!if "" != "$(HAVE_BOUTELL_GD)"
+LCFLAGS= $(LCFLAGS) \
+	-DHAVE_BOUTELL_GD \
+	$(NULL)
+
+LLIBS= $(LLIBS) \
+	$(DIST)\lib\zlib_s.lib \
+	$(HAVE_BOUTELL_GD)\gd.lib \
+	$(NULL)
+
+LINCS= $(LINCS) \
+	-I$(HAVE_BOUTELL_GD) \
+	$(NULL)
+!endif
+
+.DEFAULT: install
+
+include <$(DEPTH)\config\rules.mak>
+
+install:: $(PROGRAMS)
+	-for %p in ($(PROGRAMS)) do $(MAKE_INSTALL) %p $(DIST)\bin
+	$(MAKE_INSTALL) rules.txt $(DIST)\bin
+
+clobber::
+	-for %p in ($(PROGRAMS)) do $(RM) %p $(DIST)\bin\%p
+
+$(CPP_OBJS): $(OBJDIR)
+$(C_OBJS): $(OBJDIR)
+
+$(LIB1): $(CPP_OBJS) $(C_OBJS)
+	$(RM) $@
+	lib /nologo /out:$@ $**
+
+$(PROG1): $(LIB1) bloatblame.c
+
+$(PROG2): $(LIB1) spacetrace.c
+
+$(PROG3): $(LIB1) leakstats.c
+
