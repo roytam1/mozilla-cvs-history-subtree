@@ -44,41 +44,41 @@ typedef wchar_t LOGIN_PW_TYPE[256];
 
 typedef struct
 {
-    unsigned long	ulReserved;            /* Reserved for future use (must be 0)     */
-    unsigned long	flFlags;               /* Flags                                   */
-    unsigned long	nPosition_NotUsed;     /* character in text to be replaced by attachment */
-    LPTSTR			lpszPathName;       /* Full path name of attachment file       */
-    LPTSTR			lpszFileName;       /* Original file name (optional)           */
-    unsigned char * lpFileType_NotUsed ;
+    unsigned long     ulReserved;            
+    unsigned long     flFlags;               /* Flags */
+    unsigned long     nPosition_NotUsed;     /* character in text to be replaced by attachment */
+    LPTSTR            lpszPathName;          /* Full path name including file name */
+    LPTSTR            lpszFileName;          /* Real (original) file name */
+    unsigned char *   lpFileType_NotUsed ;
 } nsMapiFileDesc, * lpnsMapiFileDesc;
 
 
 typedef struct
 {
-    unsigned long	ulReserved;           /* Reserved for future use                  */
-    unsigned long	ulRecipClass;         /* Recipient class                          */
-										/* MAPI_TO, MAPI_CC, MAPI_BCC, MAPI_ORIG    */
-    LPTSTR			lpszName;				/* Recipient name                          */
-    LPTSTR			lpszAddress;			/* Recipient address (optional)            */
-    unsigned long	 ulEIDSize_NotUsed;     /* Count in bytes of size of pEntryID      */
-    unsigned char  * lpEntryID_NotUsed ;
+    unsigned long      ulReserved;           
+    unsigned long      ulRecipClass;  /* MAPI_TO, MAPI_CC, MAPI_BCC, MAPI_ORIG    */
+    LPTSTR             lpszName;      /* Recipient name to display */
+    LPTSTR             lpszAddress;   /* Recipient email address */
+    unsigned long      ulEIDSize_NotUsed;     
+    unsigned char  *   lpEntryID_NotUsed ;
 } nsMapiRecipDesc, * lpnsMapiRecipDesc;
 
 typedef struct
 {
-    unsigned long    ulReserved;					/* Reserved for future use (M.B. 0)  */
-    LPTSTR			 lpszSubject;					/* Message Subject                   */
-    LPTSTR			 lpszNoteText;					/* Message Text                      */
-    LPTSTR			 lpszMessageType_NotUsed;		/* Message Class                     */
-    LPTSTR			 lpszDateReceived_notUsed;		/* in YYYY/MM/DD HH:MM format        */
-    LPTSTR			 lpszConversationID_NotUsed;	/* conversation thread ID			 */
-    unsigned long    flFlags;						/* unread,return receipt             */
-    lpnsMapiRecipDesc lpOriginator; /* Originator descriptor                  */
-    unsigned long    nRecipCount;   /* Number of recipients                   */
-    lpnsMapiRecipDesc lpRecips;     /* Recipient descriptors                  */
-    unsigned long    nFileCount;    /* # of file attachments                  */
-    lpnsMapiFileDesc lpFiles;       /* Attachment descriptors                 */
+    unsigned long    ulReserved;					
+    LPTSTR           lpszSubject;  /* Message Subject */
+    LPTSTR           lpszNoteText; /* Message Text */
+    LPTSTR           lpszMessageType_NotUsed;		
+    LPTSTR           lpszDateReceived_notUsed;	 /* in YYYY/MM/DD HH:MM format */
+    LPTSTR           lpszConversationID_NotUsed; /* conversation thread ID */
+    unsigned long    flFlags; /* unread,return receipt */
+    lpnsMapiRecipDesc  lpOriginator;  /* Originator descriptor  */
+    unsigned long      nRecipCount;   /* Number of recipients   */
+    lpnsMapiRecipDesc  lpRecips;      /* Recipient descriptors  */
+    unsigned long      nFileCount;    /* # of file attachments  */
+    lpnsMapiFileDesc   lpFiles;       /* Attachment descriptors */
 } nsMapiMessage, * lpnsMapiMessage;
+
 
 [
     object,
