@@ -458,6 +458,12 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   case 'd':  // date
     rv = FetchDate(msgHdr, aValue);
     break;
+  case 'u': // unread button column
+    if (m_flags[aRow] & MSG_FLAG_READ)
+      *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
+    else
+      *aValue = nsCRT::strdup(NS_LITERAL_STRING("*"));
+    break;
   default:
     break;
   }
@@ -549,6 +555,17 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
 
 NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
 {
+   
+  switch (colID[0])
+  {
+  case 'u': // unread column
+    ToggleReadByIndex(row);
+   break;
+
+  default:
+    break;
+
+  }
   return NS_OK;
 }
 
