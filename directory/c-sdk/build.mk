@@ -323,7 +323,7 @@ RPATHFLAG_PREFIX=-Wl,+s,+b,
 LDRPATHFLAG_PREFIX=+s +b
 
 # we need to link in the rt library to get sem_*()
-PLATFORMLIBS += -lV3 -lrt
+PLATFORMLIBS += -lrt
 PLATFORMCFLAGS= 
 
 endif # HP-UX
