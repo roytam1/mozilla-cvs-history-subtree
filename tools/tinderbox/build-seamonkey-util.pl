@@ -955,7 +955,7 @@ sub run_all_tests {
 			$test_result = 'success';
 
 			print_log "TinderboxPrint:" .
-			  "<a title=\"Avg time to open 10 browser windows\" href=\"http://tegu.mozilla.org/graph/xulwinopen/query.cgi?tbox=" .
+			  "<a title=\"Best nav open time of 9 runs\" href=\"http://tegu.mozilla.org/graph/xulwinopen/query.cgi?tbox=" .
 				::hostname() . "&autoscale=0&days=0\">Txul:$open_time" . "ms</a>\n";
 
 			if($Settings::TestsPhoneHome) {
