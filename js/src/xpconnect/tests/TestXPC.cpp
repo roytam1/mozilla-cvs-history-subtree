@@ -34,7 +34,7 @@
  */
 
 /* API tests for XPConnect - use xpcshell for JS tests. */
-
+/* Branch test*/
 #include <stdio.h>
 
 #include "nsIXPConnect.h"
