@@ -81,18 +81,30 @@
 
     <hbox align="center">
       <checkbox wsm_persist="true" id="identity.bccSelf" before="&bccAccount.label; &lt;" after="&gt;"
-                prefattribute="value"
+                prefattribute="value" flex="1"
                 prefstring="mail.identity.%identitykey%.bcc_self"/>
     </hbox>
-    
+
     <hbox align="center">
       <checkbox wsm_persist="true" id="identity.bccOthers" label="&bccAddress.label;"
                 prefattribute="value"
                 prefstring="mail.identity.%identitykey%.bcc_other"/>
+
       <textbox wsm_persist="true" id="identity.bccList" flex="1"
                prefstring="mail.identity.%identitykey%.bcc_other_list"/>
     </hbox>
 
+  </groupbox>
+
+  <groupbox id="store_read_mail_in_pfc">
+    <caption label="&readingPrefix.label;"/>
+
+    <hbox align="center">
+      <checkbox hidable="true" wsm_persist="true" id="imap.storeReadMailInPFC" 
+                label="&readingMailFolder.label;"
+                prefattribute="value"
+                prefstring="mail.server.%serverkey%.store_read_mail_in_pfc"/>
+    </hbox>
   </groupbox>
   
   <groupbox>

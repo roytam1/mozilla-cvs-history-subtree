@@ -61,8 +61,13 @@
 #include "nsIImageMac.h"
 #include "nsMemory.h"
 #include "nsCRT.h"
+#include "nsMacNativeUnicodeConverter.h"
+#include "nsICharsetConverterManager.h"
+#include "nsStylClipboardUtils.h"
 
 #include <Scrap.h>
+#include <Script.h>
+#include <TextEdit.h>
 
 
 
@@ -152,11 +157,56 @@ nsClipboard :: SetNativeClipboardData ( PRInt32 aWhichClipboard )
           char* plainTextData = nsnull;
           PRUnichar* castedUnicode = NS_REINTERPRET_CAST(PRUnichar*, data);
           PRInt32 plainTextLen = 0;
-          nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText ( castedUnicode, dataSize / 2, &plainTextData, &plainTextLen );
-          if ( plainTextData ) {
+          errCode = nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText ( castedUnicode, dataSize / 2, &plainTextData, &plainTextLen );
+          
+          ScriptCodeRun *scriptCodeRuns = nsnull;
+          PRInt32 scriptRunOutLen;
+          
+          // if characters are not mapped from Unicode then try native API to convert to 
+          // available script
+          if (errCode == NS_ERROR_UENC_NOMAPPING) {
+            if (plainTextData) {
+              nsMemory::Free(plainTextData);
+              plainTextData = nsnull;
+            }
+            errCode = nsMacNativeUnicodeConverter::ConvertUnicodetoScript(castedUnicode, 
+                                                                          dataSize / 2,
+                                                                          &plainTextData, 
+                                                                          &plainTextLen,
+                                                                          &scriptCodeRuns,
+                                                                          &scriptRunOutLen);
+          }
+          else if (NS_SUCCEEDED(errCode)) {
+            // create a single run with the default system script
+            scriptCodeRuns = NS_REINTERPRET_CAST(ScriptCodeRun*,
+                                                 nsMemory::Alloc(sizeof(ScriptCodeRun)));
+            if (scriptCodeRuns) {
+              scriptCodeRuns[0].offset = 0;
+              scriptCodeRuns[0].script = (ScriptCode) ::GetScriptManagerVariable(smSysScript);
+              scriptRunOutLen = 1;
+            }
+          }
+          
+          if ( NS_SUCCEEDED(errCode) && plainTextData ) {
             errCode = PutOnClipboard ( 'TEXT', plainTextData, plainTextLen );
             nsMemory::Free ( plainTextData ); 
+            
+            // create 'styl' from the script runs
+            if (NS_SUCCEEDED(errCode) && scriptCodeRuns) {
+              char *stylData;
+              PRInt32 stylLen;
+              errCode = CreateStylFromScriptRuns(scriptCodeRuns,
+                                                 scriptRunOutLen,
+                                                 &stylData,
+                                                 &stylLen);
+              if (NS_SUCCEEDED(errCode)) {
+                errCode = PutOnClipboard ('styl', stylData, stylLen);
+                nsMemory::Free(stylData);
+              }
+            }
           }
+          if (scriptCodeRuns)
+            nsMemory::Free(scriptCodeRuns);
         }
       } // if unicode
       else if ( strcmp(flavorStr, kPNGImageMime) == 0 || strcmp(flavorStr, kJPEGImageMime) == 0 ||
@@ -289,21 +339,55 @@ nsClipboard :: GetNativeClipboardData ( nsITransferable * aTransferable, PRInt32
         // if we are looking for text/unicode and we fail to find it on the clipboard first,
         // try again with text/plain. If that is present, convert it to unicode.
         if ( strcmp(flavorStr, kUnicodeMime) == 0 ) {
-          loadResult = GetDataOffClipboard ( 'TEXT', &clipboardData, &dataSize );
-          if ( NS_SUCCEEDED(loadResult) && clipboardData ) {
-            const char* castedText = NS_REINTERPRET_CAST(char*, clipboardData);          
-            PRUnichar* convertedText = nsnull;
-            PRInt32 convertedTextLen = 0;
-            nsPrimitiveHelpers::ConvertPlatformPlainTextToUnicode ( castedText, dataSize, 
-                                                                      &convertedText, &convertedTextLen );
-            if ( convertedText ) {
-              // out with the old, in with the new 
-              nsMemory::Free(clipboardData);
-              clipboardData = convertedText;
-              dataSize = convertedTextLen * 2;
-              dataFound = PR_TRUE;
+        
+          // if 'styl' is available, we can get a script of the first run
+          // and use it for converting 'TEXT'
+          loadResult = GetDataOffClipboard ( 'styl', &clipboardData, &dataSize );
+          if (NS_SUCCEEDED(loadResult) && 
+              clipboardData &&
+              (dataSize >= (sizeof(ScrpSTElement) + 2))) {
+            StScrpRec *scrpRecP = (StScrpRec *) clipboardData;
+            ScrpSTElement *styl = scrpRecP->scrpStyleTab;
+            ScriptCode script = styl ? ::FontToScript(styl->scrpFont) : smCurrentScript;
+            
+            // free 'styl' and get 'TEXT'
+            nsMemory::Free(clipboardData);
+            loadResult = GetDataOffClipboard ( 'TEXT', &clipboardData, &dataSize );
+            if ( NS_SUCCEEDED(loadResult) && clipboardData ) {
+              PRUnichar* convertedText = nsnull;
+              PRInt32 convertedTextLen = 0;
+              errCode = nsMacNativeUnicodeConverter::ConvertScripttoUnicode(
+                                                                    script, 
+                                                                    (const char *) clipboardData,
+                                                                    dataSize,
+                                                                    &convertedText,
+                                                                    &convertedTextLen);
+              if (NS_SUCCEEDED(errCode) && convertedText) {
+                nsMemory::Free(clipboardData);
+                clipboardData = convertedText;
+                dataSize = convertedTextLen * sizeof(PRUnichar);
+                dataFound = PR_TRUE;
+              }
             }
-          } // if plain text data on clipboard
+          }          
+          
+          if (!dataFound) {
+            loadResult = GetDataOffClipboard ( 'TEXT', &clipboardData, &dataSize );
+            if ( NS_SUCCEEDED(loadResult) && clipboardData ) {
+              const char* castedText = NS_REINTERPRET_CAST(char*, clipboardData);          
+              PRUnichar* convertedText = nsnull;
+              PRInt32 convertedTextLen = 0;
+              nsPrimitiveHelpers::ConvertPlatformPlainTextToUnicode ( castedText, dataSize, 
+                                                                        &convertedText, &convertedTextLen );
+              if ( convertedText ) {
+                // out with the old, in with the new 
+                nsMemory::Free(clipboardData);
+                clipboardData = convertedText;
+                dataSize = convertedTextLen * 2;
+                dataFound = PR_TRUE;
+              }
+            } // if plain text data on clipboard
+          }
         } // if looking for text/unicode   
       } // else we try one last ditch effort to find our data
       
@@ -323,9 +407,24 @@ nsClipboard :: GetNativeClipboardData ( nsITransferable * aTransferable, PRInt32
           // from MacOS line endings to DOM line endings.
           nsLinebreakHelpers::ConvertPlatformToDOMLinebreaks ( flavorStr, &clipboardData, &dataSize );
           
+          unsigned char *clipboardDataPtr = (unsigned char *) clipboardData;
+#if TARGET_CARBON
+          // skip BOM (Byte Order Mark to distinguish little or big endian) in 'utxt'
+          // 10.2 puts BOM for 'utxt', we need to remove it here
+          // for little endian case, we also need to convert the data to big endian
+          // but we do not do that currently (need this in case 'utxt' is really in little endian)
+          if ( (macOSFlavor == 'utxt') &&
+               (dataSize > 2) &&
+               ((clipboardDataPtr[0] == 0xFE && clipboardDataPtr[1] == 0xFF) ||
+               (clipboardDataPtr[0] == 0xFF && clipboardDataPtr[1] == 0xFE)) ) {
+            dataSize -= sizeof(PRUnichar);
+            clipboardDataPtr += sizeof(PRUnichar);
+          }
+#endif
+
           // put it into the transferable
           nsCOMPtr<nsISupports> genericDataWrapper;
-          nsPrimitiveHelpers::CreatePrimitiveForData ( flavorStr, clipboardData, dataSize, getter_AddRefs(genericDataWrapper) );        
+          nsPrimitiveHelpers::CreatePrimitiveForData ( flavorStr, (void *) clipboardDataPtr, dataSize, getter_AddRefs(genericDataWrapper) );        
           errCode = aTransferable->SetTransferData ( flavorStr, genericDataWrapper, dataSize );
         }
         

@@ -169,6 +169,12 @@ struct nsHTMLReflowState {
   // LineLayout object (only for inline reflow; set to NULL otherwise)
   nsLineLayout*    mLineLayout;
 
+  // The appropriate reflow state for the containing block (for
+  // percentage widths, etc.) of any *children* of this reflow state's
+  // frame.  In other words, this is the nearest containing block reflow
+  // state that is *either* this frame or an ancestor thereof.
+  const nsHTMLReflowState *mCBReflowState;
+
   // The computed width specifies the frame's content area width, and it does
   // not apply to inline non-replaced elements
   //
@@ -256,9 +262,13 @@ struct nsHTMLReflowState {
   static const char* ReasonToString(nsReflowReason aReason);
 #endif
 
-  // Note: The copy constructor is written by the compiler
-  // automatically. You can use that and then override specific values
-  // if you want, or you can call Init as desired...
+  // A simple copy constructor.  (It fixes up |mCBReflowState|, which
+  // can point to |this|, to point to the copy's |this|.)
+  nsHTMLReflowState(const nsHTMLReflowState& aOther);
+
+  // A simple assignment operator.  It does the same fixups as the
+  // copy-consturctor.
+  nsHTMLReflowState& operator=(const nsHTMLReflowState& aOther);
 
   // Initialize a <b>root</b> reflow state with a rendering context to
   // use for measuring things.
@@ -311,14 +321,6 @@ struct nsHTMLReflowState {
             nsMargin*       aBorder = nsnull,
             nsMargin*       aPadding = nsnull);
   /**
-   * Get the containing block reflow state, starting from a frames
-   * <B>parent</B> reflow state (the parent reflow state may or may not end
-   * up being the containing block reflow state)
-   */
-  static const nsHTMLReflowState*
-    GetContainingBlockReflowState(const nsHTMLReflowState* aParentRS);
-
-  /**
    * First find the containing block's reflow state using
    * GetContainingBlockReflowState, then ask the containing block for
    * it's content width using GetContentWidth
@@ -369,6 +371,8 @@ struct nsHTMLReflowState {
 
 
 protected:
+
+  void InitCBReflowState();
 
   void InitConstraints(nsIPresContext* aPresContext,
                        nscoord         aContainingBlockWidth,

@@ -47,13 +47,17 @@ var FolderPaneController =
 
 	isCommandEnabled: function(command)
 	{
-    dump("FolderPaneController isCommandEnabled called\n");
+    //dump("FolderPaneController isCommandEnabled called\n");
     if (IsFakeAccount()) 
       return false;
 
 		switch ( command )
 		{
 			case "cmd_selectAll":
+                                // the folder pane (currently)
+                                // only handles single selection
+                                // so we forward select all to the thread pane
+				return true;  
 			case "cmd_cut":
 			case "cmd_copy":
 			case "cmd_paste":
@@ -112,6 +116,12 @@ var FolderPaneController =
 			case "button_delete":
 				MsgDeleteFolder();
 				break;
+			case "cmd_selectAll":
+                                // the folder pane (currently)
+                                // only handles single selection
+                                // so we forward select all to the thread pane
+                                SendCommandToThreadPane(command);
+                                break;
 		}
 	},
 	
@@ -146,7 +156,7 @@ var ThreadPaneController =
 
 	isCommandEnabled: function(command)
 	{
-    dump("ThreadPaneController isCommandEnabled called\n");
+    //dump("ThreadPaneController isCommandEnabled called\n");
 		switch ( command )
 		{
 			case "cmd_selectAll":
@@ -284,7 +294,7 @@ var DefaultController =
 
   isCommandEnabled: function(command)
   {
-    dump("DefaultController isCommandEnabled called" + command + "\n");
+    //dump("DefaultController isCommandEnabled called" + command + "\n");
     var enabled = new Object();
     enabled.value = false;
     var checkStatus = new Object();
@@ -1103,4 +1113,12 @@ function IsFakeAccount() {
   return false;
 }
 
+function SendCommandToThreadPane(command)
+{
+  ThreadPaneController.doCommand(command);
+ 
+  // if we are sending the command so the thread pane
+  // we should focus the thread pane
+  SetFocusThreadPane();
+}
 

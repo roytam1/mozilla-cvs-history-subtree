@@ -461,11 +461,11 @@ NS_METHOD nsBMPDecoder::ProcessData(const char* aBuffer, PRUint32 aCount)
 void nsBMPDecoder::ProcessFileHeader()
 {
     memset(&mBFH, 0, sizeof(mBFH));
-    DOCOPY(&mBFH.signature, mRawBuf);
-    DOCOPY(&mBFH.filesize, mRawBuf + 2);
-    DOCOPY(&mBFH.reserved, mRawBuf + 6);
-    DOCOPY(&mBFH.dataoffset, mRawBuf + 10);
-    DOCOPY(&mBFH.bihsize, mRawBuf + 14);
+    memcpy(&mBFH.signature, mRawBuf, sizeof(mBFH.signature));
+    memcpy(&mBFH.filesize, mRawBuf + 2, sizeof(mBFH.filesize));
+    memcpy(&mBFH.reserved, mRawBuf + 6, sizeof(mBFH.reserved));
+    memcpy(&mBFH.dataoffset, mRawBuf + 10, sizeof(mBFH.dataoffset));
+    memcpy(&mBFH.bihsize, mRawBuf + 14, sizeof(mBFH.bihsize));
 
     // Now correct the endianness of the header
     mBFH.filesize = LITTLE_TO_NATIVE32(mBFH.filesize);
@@ -479,20 +479,20 @@ void nsBMPDecoder::ProcessInfoHeader()
     if (mBFH.bihsize == 12) { // OS/2 Bitmap
         memcpy(&mBIH.width, mRawBuf, 2);
         memcpy(&mBIH.height, mRawBuf + 2, 2);
-        DOCOPY(&mBIH.planes, mRawBuf + 4);
-        DOCOPY(&mBIH.bpp, mRawBuf + 6);
+        memcpy(&mBIH.planes, mRawBuf + 4, sizeof(mBIH.planes));
+        memcpy(&mBIH.bpp, mRawBuf + 6, sizeof(mBIH.bpp));
     }
     else {
-        DOCOPY(&mBIH.width, mRawBuf);
-        DOCOPY(&mBIH.height, mRawBuf + 4);
-        DOCOPY(&mBIH.planes, mRawBuf + 8);
-        DOCOPY(&mBIH.bpp, mRawBuf + 10);
-        DOCOPY(&mBIH.compression, mRawBuf + 12);
-        DOCOPY(&mBIH.image_size, mRawBuf + 16);
-        DOCOPY(&mBIH.xppm, mRawBuf + 20);
-        DOCOPY(&mBIH.yppm, mRawBuf + 24);
-        DOCOPY(&mBIH.colors, mRawBuf + 28);
-        DOCOPY(&mBIH.important_colors, mRawBuf + 32);
+        memcpy(&mBIH.width, mRawBuf, sizeof(mBIH.width));
+        memcpy(&mBIH.height, mRawBuf + 4, sizeof(mBIH.height));
+        memcpy(&mBIH.planes, mRawBuf + 8, sizeof(mBIH.planes));
+        memcpy(&mBIH.bpp, mRawBuf + 10, sizeof(mBIH.bpp));
+        memcpy(&mBIH.compression, mRawBuf + 12, sizeof(mBIH.compression));
+        memcpy(&mBIH.image_size, mRawBuf + 16, sizeof(mBIH.image_size));
+        memcpy(&mBIH.xppm, mRawBuf + 20, sizeof(mBIH.xppm));
+        memcpy(&mBIH.yppm, mRawBuf + 24, sizeof(mBIH.yppm));
+        memcpy(&mBIH.colors, mRawBuf + 28, sizeof(mBIH.colors));
+        memcpy(&mBIH.important_colors, mRawBuf + 32, sizeof(mBIH.important_colors));
     }
 
     // Convert endianness

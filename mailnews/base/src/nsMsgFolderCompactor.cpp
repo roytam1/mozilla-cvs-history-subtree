@@ -264,6 +264,7 @@ nsFolderCompactState::Init(nsIMsgFolder *folder, const char *baseMsgUri, nsIMsgD
 
   pathSpec->GetFileSpec(&m_fileSpec);
   m_fileSpec.SetLeafName("nstmp");
+  m_fileSpec.MakeUnique();   //make sure we are not crunching existing nstmp file
   m_window = aMsgWindow;
   m_keyArray.RemoveAll();
   InitDB(db);
@@ -328,13 +329,11 @@ nsresult nsFolderCompactState::StartCompacting()
   {
     m_folder->NotifyCompactCompleted();
     m_folder->ThrowAlertMsg("compactFolderDeniedLock", m_window);
+    CleanupTempFilesAfterError();
     if (m_compactAll)
-      CompactNextFolder();
+      return CompactNextFolder();
     else
-    {
-      CleanupTempFilesAfterError();
       return rv;
-    }
   }
   if (m_size > 0)
   {

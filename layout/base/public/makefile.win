@@ -73,6 +73,7 @@ EXPORTS =				\
 
 XPIDLSRCS=					\
 		.\nsIChromeEventHandler.idl	\
+		.\nsISelectionImageService.idl	\
 		$(NULL)
 
 

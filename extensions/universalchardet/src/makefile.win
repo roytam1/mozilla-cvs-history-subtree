@@ -61,6 +61,7 @@ CPP_OBJS= \
         .\$(OBJDIR)\LangGreekModel.obj \
         .\$(OBJDIR)\LangBulgarianModel.obj \
         .\$(OBJDIR)\LangHungarianModel.obj \
+        .\$(OBJDIR)\nsLatin1Prober.obj \
 	$(NULL)
 
 

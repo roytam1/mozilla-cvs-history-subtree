@@ -173,7 +173,7 @@ public:
   static void EscapeUserNamePasswordString(const char *strToEscape, nsCString *resultStr);
 
 	// used to start fetching a message.
-  void GetShouldDownloadArbitraryHeaders(PRBool *aResult);
+  void GetShouldDownloadAllHeaders(PRBool *aResult);
   void GetArbitraryHeadersToDownload(char **aResult);
   virtual void AdjustChunkSize();
   virtual void FetchMessage(const char * messageIds, 
@@ -222,6 +222,7 @@ public:
 	// Used for MIME parts on demand.
 	void	SetContentModified(IMAP_ContentModifiedType modified);
 	PRBool	GetShouldFetchAllParts();
+        PRBool  GetIgnoreExpunges() {return m_ignoreExpunges;}
 
 	// Generic accessors required by the imap parser
 	char * CreateNewLineFromSocket();
@@ -234,7 +235,7 @@ public:
   const char* GetImapServerKey(); // return the user name from the incoming server; 
 	
 	// state set by the imap parser...
-	void NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key);
+	void NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key, const char *keywords);
 	void NotifySearchHit(const char * hitLine);
 
 	// Event handlers for the imap parser. 
@@ -264,6 +265,8 @@ public:
                          PRBool idsAreUids,
                          imapMessageFlagsType flags,
                          PRBool addFlags);
+        void IssueUserDefinedMsgCommand(const char *command, const char * messageList);
+        void FetchMsgAttribute(const char * messageIds, const char *attribute);
 	void Expunge();
   void UidExpunge(const char* messageSet);
 	void Close();
@@ -544,6 +547,7 @@ private:
   PRInt32		m_chunkStartSize;
   PRInt32		m_maxChunkSize;
   PRBool		m_fetchByChunks;
+  PRBool                m_ignoreExpunges;
   PRInt32		m_chunkSize;
   PRInt32		m_chunkThreshold;
   TLineDownloadCache m_downloadLineCache;

@@ -4,7 +4,7 @@
 # is, and we need full pathnames in the file, we create it on the fly.
 
 if test "$ARCH"x = 'winx'; then
- viewer=$MOZ_SRC/mozilla/dist/WIN32_D.OBJ/bin/viewer.exe
+ viewer=$MOZ_SRC/mozilla/dist/bin/viewer.exe
  testsfile="file_list.txt"
 else
  viewer=$MOZ_SRC/mozilla/dist/bin/viewer

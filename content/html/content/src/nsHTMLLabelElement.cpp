@@ -55,6 +55,7 @@
 #include "nsIFormControlFrame.h"
 #include "nsIPresShell.h"
 #include "nsGUIEvent.h"
+#include "nsIEventStateManager.h"
 
 
 class nsHTMLLabelElement : public nsGenericHTMLContainerFormElement,
@@ -176,12 +177,27 @@ public:
                                nsIContent* aSubmitElement);
 
   // nsIContent
+  NS_IMETHOD SetDocument(nsIDocument* aDocument, PRBool aDeep,
+                         PRBool aCompileEventHandlers);
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
                             nsIDOMEvent** aDOMEvent, PRUint32 aFlags,
                             nsEventStatus* aEventStatus);
+  NS_IMETHOD SetFocus(nsIPresContext* aContext);
+  NS_IMETHOD SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                     const nsAString& aValue, PRBool aNotify);
+  NS_IMETHOD SetAttr(nsINodeInfo* aNodeInfo, const nsAString& aValue,
+                     PRBool aNotify);
+  NS_IMETHOD UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
+                       PRBool aNotify);
 #ifdef DEBUG
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 #endif
+
+protected:
+  already_AddRefed<nsIContent> GetForContent();
+
+  // XXX It would be nice if we could use an event flag instead.
+  PRBool mHandlingEvent;
 };
 
 // construction, destruction
@@ -213,6 +229,7 @@ NS_NewHTMLLabelElement(nsIHTMLContent** aInstancePtrResult,
 
 
 nsHTMLLabelElement::nsHTMLLabelElement()
+  : mHandlingEvent(PR_FALSE)
 {
 }
 
@@ -309,6 +326,48 @@ nsHTMLLabelElement::SetHtmlFor(const nsAString& aValue)
 }
 
 NS_IMETHODIMP
+nsHTMLLabelElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
+                                PRBool aCompileEventHandlers)
+{
+  // Unregister the access key for the old document.
+  if (mDocument) {
+    RegUnRegAccessKey(PR_FALSE);
+  }
+
+  nsresult rv = nsGenericHTMLContainerFormElement::SetDocument(aDocument,
+                                                 aDeep, aCompileEventHandlers);
+
+  // Register the access key for the new document.
+  if (mDocument) {
+    RegUnRegAccessKey(PR_TRUE);
+  }
+
+  return rv;
+}
+
+static PRBool
+EventTargetIn(nsIPresContext *aPresContext, nsEvent *aEvent,
+              nsIContent *aChild, nsIContent *aStop)
+{
+  nsCOMPtr<nsIEventStateManager> esm;
+  aPresContext->GetEventStateManager(getter_AddRefs(esm));
+  nsCOMPtr<nsIContent> c;
+  esm->GetEventTargetContent(aEvent, getter_AddRefs(c));
+  while (c) {
+    if (c == aChild) {
+      return PR_TRUE;
+    }
+    if (c == aStop) {
+      break;
+    }
+    nsIContent *parent;
+    c->GetParent(parent);
+    c = dont_AddRef(parent);
+  }
+  return PR_FALSE;
+}
+
+NS_IMETHODIMP
 nsHTMLLabelElement::HandleDOMEvent(nsIPresContext* aPresContext,
                                    nsEvent* aEvent,
                                    nsIDOMEvent** aDOMEvent,
@@ -316,88 +375,68 @@ nsHTMLLabelElement::HandleDOMEvent(nsIPresContext* aPresContext,
                                    nsEventStatus* aEventStatus)
 {
   NS_ENSURE_ARG_POINTER(aEventStatus);
-  nsresult rv;
-  rv = nsGenericHTMLContainerFormElement::HandleDOMEvent(aPresContext,
-                                                         aEvent,
-                                                         aDOMEvent,
-                                                         aFlags,
-                                                         aEventStatus);
 
-  // Now a little special trickery because we are a label:
-  // We need to pass this event on to our child iff it is a focus,
-  // keypress/up/dn, mouseclick/dblclick/up/down.
-  if ((NS_OK == rv) && (NS_EVENT_FLAG_INIT & aFlags) &&
-      ((nsEventStatus_eIgnore == *aEventStatus) ||
-       (nsEventStatus_eConsumeNoDefault == *aEventStatus)) ) {
-    PRBool isFormElement = PR_FALSE;
-    nsCOMPtr<nsIContent> content; // Node we are a label for
+  nsresult rv = nsGenericHTMLContainerFormElement::HandleDOMEvent(aPresContext,
+                                      aEvent, aDOMEvent, aFlags, aEventStatus);
+  if (NS_FAILED(rv))
+    return rv;
+
+  if (mHandlingEvent ||
+      *aEventStatus == nsEventStatus_eConsumeNoDefault ||
+      (aEvent->message != NS_MOUSE_LEFT_CLICK &&
+       aEvent->message != NS_FOCUS_CONTENT) ||
+      aFlags & NS_EVENT_FLAG_CAPTURE)
+    return NS_OK;
+
+  nsCOMPtr<nsIContent> content = GetForContent();
+  if (content && !EventTargetIn(aPresContext, aEvent, content, this)) {
+    mHandlingEvent = PR_TRUE;
     switch (aEvent->message) {
-      case NS_FOCUS_CONTENT:
-
-// Bug 49897: According to the spec, the following should not be passed
-// Bug 7554: Despite the spec, IE passes left click events, so for
-// compatability:
       case NS_MOUSE_LEFT_CLICK:
-//      case NS_MOUSE_LEFT_DOUBLECLICK:
-//      case NS_MOUSE_LEFT_BUTTON_UP:
-//      case NS_MOUSE_LEFT_BUTTON_DOWN:
-//      case NS_MOUSE_MIDDLE_CLICK:
-//      case NS_MOUSE_MIDDLE_DOUBLECLICK:
-//      case NS_MOUSE_MIDDLE_BUTTON_UP:
-//      case NS_MOUSE_MIDDLE_BUTTON_DOWN:
-//      case NS_MOUSE_RIGHT_CLICK:
-//      case NS_MOUSE_RIGHT_DOUBLECLICK:
-//      case NS_MOUSE_RIGHT_BUTTON_UP:
-//      case NS_MOUSE_RIGHT_BUTTON_DOWN:
-//      case NS_KEY_PRESS:
-//      case NS_KEY_UP:
-//      case NS_KEY_DOWN:
-      {
-        // Get the element that this label is for
-        nsAutoString elementId;
-        rv = GetHtmlFor(elementId);
-        if (NS_SUCCEEDED(rv) && !elementId.IsEmpty()) { // --- We have a FOR attr
-          nsCOMPtr<nsIDocument> iDoc;
-          rv = GetDocument(*getter_AddRefs(iDoc));
-          if (NS_SUCCEEDED(rv)) {
-            nsCOMPtr<nsIDOMElement> domElement;
-
-            nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(iDoc));
-
-            if (domDoc) {
-              rv = domDoc->GetElementById(elementId,
-                                          getter_AddRefs(domElement));
-            }
-            content = do_QueryInterface(domElement);
-            isFormElement = content &&
-                content->IsContentOfType(nsIContent::eHTML_FORM_CONTROL);
-          }
-        } else {
-          // --- No FOR attribute, we are a label for our first child
-          // element
-          PRInt32 numNodes;
-          rv = ChildCount(numNodes);
-          if (NS_SUCCEEDED(rv)) {
-            PRInt32 i;
-            for (i = 0; NS_SUCCEEDED(rv) && !isFormElement && (i < numNodes);
-                 i++) {
-              ChildAt(i, *getter_AddRefs(content));
-              isFormElement = content &&
-                  content->IsContentOfType(nsIContent::eHTML_FORM_CONTROL);
-            }
-          }
-        }
-      } // Close should handle
-    } // Close switch
-
-    // If we found an element, pass along the event to it.
-    if (NS_SUCCEEDED(rv) && content && isFormElement) {
-      rv = content->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags,
-                                   aEventStatus);
+        // Focus the for content.
+        rv = content->SetFocus(aPresContext);
+        // This sends the event twice down parts of its path.  Oh well.
+        // This is needed for:
+        //  * Making radio buttons and checkboxes get checked.
+        //  * Triggering user event handlers. (For compatibility with IE,
+        //    we do only left click.  If we wanted to interpret the HTML
+        //    spec very narrowly, we would do nothing.  If we wanted to
+        //    do something sensible, we might send more events through
+        //    like this.)  See bug 7554, bug 49897, and bug 96813.
+        // XXX The event should probably have its target modified.  See
+        // bug 146066.  (But what if |aDOMEvent| is null and it gets
+        // created later?  If we forced the existence of an event and
+        // modified its target, we could replace |mHandlingEvent|.)
+        rv = content->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
+                                     aFlags, aEventStatus);
+        break;
+      case NS_FOCUS_CONTENT:
+        // Since we don't have '-moz-user-focus: normal', the only time
+        // the event type will be NS_FOCUS_CONTENT will be when the accesskey
+        // is activated.  We've already redirected the |SetFocus| call in that
+        // case.
+        // Since focus doesn't bubble, this is basically the second part
+        // of redirecting |SetFocus|.
+        rv = content->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
+                                     aFlags, aEventStatus);
+        break;
     }
-  } // Close trickery
-
+    mHandlingEvent = PR_FALSE;
+  }
   return rv;
+}
+
+NS_IMETHODIMP
+nsHTMLLabelElement::SetFocus(nsIPresContext* aContext)
+{
+  // Since we don't have '-moz-user-focus: normal', the only time
+  // |SetFocus| will be called is when the accesskey is activated.
+  nsCOMPtr<nsIContent> content = GetForContent();
+  if (content)
+    return content->SetFocus(aContext);
+
+  // Do nothing (yes, really)!
+  return NS_OK;
 }
 
 #ifdef DEBUG
@@ -421,4 +460,90 @@ nsHTMLLabelElement::SubmitNamesValues(nsIFormSubmission* aFormSubmission,
                                       nsIContent* aSubmitElement)
 {
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLLabelElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                            const nsAString& aValue, PRBool aNotify)
+{
+  if (aName == nsHTMLAtoms::accesskey &&
+      (kNameSpaceID_None == aNameSpaceID ||
+       kNameSpaceID_HTML == aNameSpaceID)) {
+    RegUnRegAccessKey(PR_FALSE);
+  }
+
+  nsresult rv =
+      nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aValue, aNotify);
+
+  if (aName == nsHTMLAtoms::accesskey &&
+      (kNameSpaceID_None == aNameSpaceID ||
+       kNameSpaceID_HTML == aNameSpaceID) &&
+      !aValue.IsEmpty()) {
+    RegUnRegAccessKey(PR_TRUE);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsHTMLLabelElement::SetAttr(nsINodeInfo* aNodeInfo, const nsAString& aValue,
+                            PRBool aNotify)
+{
+  return nsGenericHTMLElement::SetAttr(aNodeInfo, aValue, aNotify);
+}
+
+NS_IMETHODIMP
+nsHTMLLabelElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
+                              PRBool aNotify)
+{
+  if (aAttribute == nsHTMLAtoms::accesskey &&
+      (kNameSpaceID_None == aNameSpaceID ||
+       kNameSpaceID_HTML == aNameSpaceID)) {
+    RegUnRegAccessKey(PR_FALSE);
+  }
+
+  return nsGenericHTMLElement::UnsetAttr(aNameSpaceID, aAttribute, aNotify);
+}
+
+already_AddRefed<nsIContent>
+nsHTMLLabelElement::GetForContent()
+{
+  nsresult rv;
+
+  // Get the element that this label is for
+  nsAutoString elementId;
+  rv = GetHtmlFor(elementId);
+  if (NS_SUCCEEDED(rv) && !elementId.IsEmpty()) {
+    // We have a FOR attribute.
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    GetOwnerDocument(getter_AddRefs(domDoc));
+    if (domDoc) {
+      nsCOMPtr<nsIDOMElement> domElement;
+      domDoc->GetElementById(elementId, getter_AddRefs(domElement));
+      nsIContent *result = nsnull;
+      if (domElement) {
+        CallQueryInterface(domElement, &result);
+        if (result && !result->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) {
+          NS_RELEASE(result); // assigns null
+        }
+      }
+      return result;
+    }
+  } else {
+    // No FOR attribute, we are a label for our first child element.
+    PRInt32 numNodes;
+    rv = ChildCount(numNodes);
+    if (NS_SUCCEEDED(rv)) {
+      for (PRInt32 i = 0; i < numNodes; i++) {
+        nsIContent *result;
+        ChildAt(i, result);
+        if (result) {
+          if (result->IsContentOfType(nsIContent::eHTML_FORM_CONTROL))
+            return result;
+          NS_RELEASE(result);
+        }
+      }
+    }
+  }
+  return nsnull;
 }

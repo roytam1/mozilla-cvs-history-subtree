@@ -486,6 +486,13 @@ pref("network.protocol-handler.external.dict", true); // dictionary lookup
 pref("network.protocol-handler.useSystemDefaults", false); // this is for url schemes. ask the OS - or don't. a lot of dangerous crap might be there (Windows Help with potential exploits), but some useful stuff as well (RealPlayer). We try to enable the useful stuff explicitly above. Mozilla (currently) doesn't have this pref at all, hardcoded to true.
 pref("network.protocols.useSystemDefaults", false); // *headbang* this is not for protocols or url schemes, but mimetypes.
 
+// Prevent using external protocol handlers for these schemes
+pref("network.protocol-handler.external.hcp", false);
+pref("network.protocol-handler.external.vbscript", false);
+pref("network.protocol-handler.external.javascript", false);
+pref("network.protocol-handler.external.ms-help", false);
+pref("network.protocol-handler.external.vnd.ms.radio", false);
+
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
 
@@ -502,6 +509,10 @@ pref("network.http.proxy.version", "1.1");    // default
 
 // enable caching of http documents
 pref("network.http.use-cache", true);
+
+// this preference can be set to override the socket type used for normal
+// HTTP traffic.  an empty value indicates the normal TCP/IP socket type.
+pref("network.http.default-socket-type", "");
 
 // this preference can be set to override the socket type used for normal
 // HTTP traffic.  an empty value indicates the normal TCP/IP socket type.
@@ -598,6 +609,9 @@ pref("network.ftp.idleConnectionTimeout", 300);
 // directory listing format - constants are defined in nsIDirectoryListing.idl
 // Do not set this to 0...
 pref("network.dir.format", 2);
+
+// enables the prefetch service (i.e., prefetching of <link rel="next"> URLs).
+pref("network.prefetch-next", false);
 
 // enables the prefetch service (i.e., prefetching of <link rel="next"> URLs).
 pref("network.prefetch-next", false);

@@ -64,7 +64,7 @@ interface nsIImapMessageSink : nsISupports {
 //    void UploadMessageFile(UploadMessageInfo* aMsgInfo);
 
     // message flags operation
-    void NotifyMessageFlags(in unsigned long flags, in nsMsgKey messageKey);
+    void NotifyMessageFlags(in unsigned long flags, in nsMsgKey messageKey, in string keywords);
 
     void NotifyMessageDeleted(in string onlineFolderName,in boolean deleteAllMsgs,in string msgIdString);
 

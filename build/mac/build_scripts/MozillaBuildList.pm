@@ -626,10 +626,8 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:content:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:unix:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:xpfe:communicator:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:resources:content:mac:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpinstall:res:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:components:webbrowserpersist:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:components:ui:jar.mn", $chrome_dir, \%jars);
@@ -893,6 +891,8 @@ sub BuildClientDist()
     #URILOADER
     InstallFromManifest(":mozilla:uriloader:base:MANIFEST_IDL",                    "$distdirectory:idl:");
     InstallFromManifest(":mozilla:uriloader:exthandler:MANIFEST_IDL",              "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:uriloader:prefetch:MANIFEST_IDL",                "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:uriloader:prefetch:MANIFEST",                    "$distdirectory:uriloader:");
     
     #NETWERK
     InstallFromManifest(":mozilla:netwerk:build:MANIFEST",                         "$distdirectory:netwerk:");

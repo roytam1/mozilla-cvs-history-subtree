@@ -1559,7 +1559,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
               // be reloaded (from the src= URI, if any) and recompiled.
               // We're better off slow-loading than bailing out due to a
               // FastLoad error.
-              if (NS_SUCCEEDED(rv2))
+              if (NS_SUCCEEDED(rv2) && scriptContext)
                   rv2 = script->Deserialize(objectInput, scriptContext);
 
               if (NS_SUCCEEDED(rv2) && script->mSrcURI) {
@@ -1576,7 +1576,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
               }
 
               if (NS_SUCCEEDED(rv2)) {
-                  if (useXULCache && script->mSrcURI) {
+                  if (useXULCache && script->mSrcURI && script->mJSObject) {
                       PRBool isChrome = PR_FALSE;
                       script->mSrcURI->SchemeIs("chrome", &isChrome);
                       if (isChrome) {

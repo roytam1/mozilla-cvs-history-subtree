@@ -40,38 +40,43 @@
  * Determine whether or not a given focused DOMWindow is in the content
  * area.
  **/
-function isDocumentFrame(aFocusedWindow)
+function isContentFrame(aFocusedWindow)
 {
-  var contentFrames = _content.frames;
-  if (contentFrames.length) {
-    for (var i = 0; i < contentFrames.length; ++i) {
-      if (aFocusedWindow == contentFrames[i])
-        return true;
-    }
-  }
-  return false;
+  if (!aFocusedWindow)
+    return false;
+
+  var focusedTop = Components.lookupMethod(aFocusedWindow, 'top')
+                             .call(aFocusedWindow);
+
+  return (focusedTop == window.content);
 }
 
 function urlSecurityCheck(url, doc) 
 {
   // URL Loading Security Check
   var focusedWindow = doc.commandDispatcher.focusedWindow;
-  var sourceWin = isDocumentFrame(focusedWindow) ? focusedWindow.location.href : focusedWindow._content.location.href;
+  var sourceURL = getContentFrameURI(focusedWindow);
   const nsIScriptSecurityManager = Components.interfaces.nsIScriptSecurityManager;
-  var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"].getService().
-                    QueryInterface(nsIScriptSecurityManager);
+  var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
+                         .getService(nsIScriptSecurityManager);
   try {
-    secMan.checkLoadURIStr(sourceWin, url, nsIScriptSecurityManager.STANDARD);
+    secMan.checkLoadURIStr(sourceURL, url, nsIScriptSecurityManager.STANDARD);
   } catch (e) {
-      throw "Load of " + url + " denied.";
+    throw "Load of " + url + " denied.";
   }
+}
+
+function getContentFrameURI(aFocusedWindow)
+{
+  var contentFrame = isContentFrame(aFocusedWindow) ? aFocusedWindow : window.content;
+  return Components.lookupMethod(contentFrame, 'location').call(contentFrame).href;
 }
 
 function getReferrer(doc)
 {
   var focusedWindow = doc.commandDispatcher.focusedWindow;
-  var sourceURL =
-    isDocumentFrame(focusedWindow) ? focusedWindow.location.href : focusedWindow._content.location.href;
+  var sourceURL = getContentFrameURI(focusedWindow);
+
   try {
     var uri = Components.classes["@mozilla.org/network/standard-url;1"].createInstance(Components.interfaces.nsIURI);
     uri.spec = sourceURL;
@@ -165,7 +170,7 @@ function saveURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache)
 function saveFrameDocument()
 {
   var focusedWindow = document.commandDispatcher.focusedWindow;
-  if (isDocumentFrame(focusedWindow))
+  if (isContentFrame(focusedWindow))
     saveDocument(focusedWindow.document);
 }
 
@@ -653,9 +658,31 @@ function getDefaultFileName(aDefaultFileName, aNameFromHeaders, aDocumentURI, aD
   if (aNameFromHeaders)
     return validateFileName(aNameFromHeaders);  // 1) Use the name suggested by the HTTP headers
 
-  var url = aDocumentURI.QueryInterface(Components.interfaces.nsIURL);
-  if (url.fileName != "")
-    return url.fileName;                        // 2) Use the actual file name, if present
+  try {
+    var url = aDocumentURI.QueryInterface(Components.interfaces.nsIURL);
+    if (url.fileName != "") {
+      // 2) Use the actual file name, if present
+      return unescape(url.fileName);
+    }
+  } catch (e) {
+    try {
+      // the file name might be non ASCII
+      // try unescape again with a characterSet
+      var textToSubURI = Components.classes["@mozilla.org/intl/texttosuburi;1"]
+                                   .getService(Components.interfaces.nsITextToSubURI);
+      var charset;
+      if (aDocument)
+        charset = aDocument.characterSet;
+      else if (document.commandDispatcher.focusedWindow)
+        charset = document.commandDispatcher.focusedWindow.document.characterSet;
+      else
+        charset = window._content.document.characterSet;
+      return textToSubURI.unEscapeURIForUI(charset, url.fileName);
+    } catch (e) {
+      // This is something like a wyciwyg:, data:, and so forth
+      // URI... no usable filename here.
+    }
+  }
   
   if (aDocument && aDocument.title != "") 
     return validateFileName(aDocument.title)    // 3) Use the document title

@@ -45,7 +45,11 @@ DLLSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(LIB_PREFIX)$(SSLDAP_LIBNAME).$(DLL_SUF
 
 INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
+RELEASE_LIBS	= $(DLLSSLDAP)
+
 include $(topsrcdir)/config/rules.mk
+
+GARBAGE 	+= $(LIBSSLDAP) $(DLLSSLDAP)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/include \

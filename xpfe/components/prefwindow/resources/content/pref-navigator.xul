@@ -37,10 +37,9 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["startupPage", "browserStartupHomepage",
-                       "bookmarksButton", "goButton",
-                       "homeButton", "printButton",
-                       "searchButton" ];
+    var _elementIDs = ["startupPage", "bookmarksButton",
+                       "goButton", "homeButton",
+                       "printButton", "searchButton" ];
   ]]>
   </script>
   
@@ -65,15 +64,18 @@
       <hbox align="center">
         <label value="&location.label;" accesskey="&location.accesskey;" control="browserStartupHomepage"/>
         <textbox id="browserStartupHomepage" type="autocomplete" flex="1" 
-                 searchSessions="history" timeout="50" maxrows="6" preftype="localizedstring"
-                 prefstring="browser.startup.homepage"/>  <!-- we may wish to change this to data
-                                                 when we support fancy formatted local filenames -->
+                 searchSessions="history" timeout="50" maxrows="6"
+                 oninput="locationInputHandler();"/>
       </hbox>
       <hbox align="center" pack="end">
         <button label="&useCurrent.label;" accesskey="&useCurrent.accesskey;"
                 oncommand="setHomePageToCurrentPage();"
                 id="browserUseCurrent"
                 prefstring="pref.browser.homepage.disable_button.current_page"/>
+        <button label="&useCurrentGroup.label;" accesskey="&useCurrentGroup.accesskey;"
+                oncommand="setHomePageToCurrentGroup();"
+                id="browserUseCurrentGroup"
+                prefstring="pref.browser.homepage.disable_button.current_group"/>
         <button label="&browseFile.label;" accesskey="&browseFile.accesskey;"
                 oncommand="selectFile();"
                 id="browserChooseFile"

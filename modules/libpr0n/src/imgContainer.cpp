@@ -320,7 +320,9 @@ NS_IMETHODIMP imgContainer::StartAnimation()
       if (timeout > 0) { // -1 means display this frame forever
 
         mAnimating = PR_TRUE;
-        if (!mTimer) mTimer = do_CreateInstance("@mozilla.org/timer;1");
+        mTimer = do_CreateInstance("@mozilla.org/timer;1");
+        if (!mTimer)
+          return NS_ERROR_OUT_OF_MEMORY;
       
         mTimer->Init(NS_STATIC_CAST(nsITimerCallback*, this),
                      timeout, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
@@ -328,7 +330,9 @@ NS_IMETHODIMP imgContainer::StartAnimation()
     } else {
       // XXX hack.. the timer notify code will do the right thing, so just get that started
       mAnimating = PR_TRUE;
-      if (!mTimer) mTimer = do_CreateInstance("@mozilla.org/timer;1");
+      mTimer = do_CreateInstance("@mozilla.org/timer;1");
+      if (!mTimer)
+        return NS_ERROR_OUT_OF_MEMORY;
 
       mTimer->Init(NS_STATIC_CAST(nsITimerCallback*, this),
                    100, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);

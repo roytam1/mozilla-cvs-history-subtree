@@ -414,6 +414,7 @@ private:
                          PRUint32 aContentOffset,
                          PRUint32 aKeycode);
   void BidiLevelFromClick(nsIContent *aNewFocus, PRUint32 aContentOffset);
+#ifdef VISUALSELECTION
   NS_IMETHOD VisualSelectFrames(nsIPresContext* aContext,
                                 nsIFrame* aCurrentFrame,
                                 nsPeekOffsetStruct aPos);
@@ -436,6 +437,7 @@ private:
                          nsIFrame* aCurrentFrame,
                          PRInt32 aCurrentOffset,
                          nsPeekOffsetStruct aPos);
+#endif // VISUALSELECTION
 #endif // IBMBIDI
 
 //post and pop reasons for notifications. we may stack these later
@@ -1721,6 +1723,7 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
               BidiLevelFromMove(context, shell, pos.mResultContent, pos.mContentOffset, aKeycode);
         }
       }
+#ifdef VISUALSELECTION
       // Handle visual selection
       if (aContinue)
       {
@@ -1732,6 +1735,9 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
         result = TakeFocus(pos.mResultContent, pos.mContentOffset, pos.mContentOffset, aContinue, PR_FALSE);
     }
     else
+#else
+    }
+#endif // VISUALSELECTION
 #endif // IBMBIDI
     result = TakeFocus(pos.mResultContent, pos.mContentOffset, pos.mContentOffset, aContinue, PR_FALSE);
   }
@@ -1891,6 +1897,7 @@ nsresult FindLineContaining(nsIFrame* aFrame, nsIFrame** aBlock, PRInt32* aLine)
   return it->FindLineContaining(thisBlock, aLine);  
 }
 
+#ifdef VISUALSELECTION
 NS_IMETHODIMP
 nsSelection::VisualSequence(nsIPresContext *aPresContext,
                             nsIFrame* aSelectFrame,
@@ -2271,6 +2278,7 @@ nsSelection::VisualSelectFrames(nsIPresContext *aPresContext,
   NotifySelectionListeners(nsISelectionController::SELECTION_NORMAL);
   return NS_OK;
 }
+#endif // VISUALSELECTION
 
 NS_IMETHODIMP
 nsSelection::GetPrevNextBidiLevels(nsIPresContext *aPresContext,
@@ -2669,6 +2677,7 @@ nsSelection::HandleDrag(nsIPresContext *aPresContext, nsIFrame *aFrame, nsPoint&
   if (NS_SUCCEEDED(result))
   {
 #ifdef IBMBIDI
+#ifdef VISUALSELECTION
     PRBool bidiEnabled = PR_FALSE;
     aPresContext->GetBidiEnabled(&bidiEnabled);
     if (bidiEnabled) {
@@ -2693,6 +2702,7 @@ nsSelection::HandleDrag(nsIPresContext *aPresContext, nsIFrame *aFrame, nsPoint&
       mHint = saveHint;
     }
     else
+#endif // VISUALSELECTION
 #endif // IBMBIDI
       result = HandleClick(newContent, startPos, contentOffsetEnd, PR_TRUE,
                            PR_FALSE, beginOfContent);

@@ -1875,43 +1875,44 @@ nsWindow::ScrollBits ( Rect & inRectToScroll, PRInt32 inLeftDelta, PRInt32 inTop
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 {
-	if (! mVisible || !ContainerHierarchyIsVisible())
-		return NS_OK;
 
-  nsRect scrollRect;	
+  if (mVisible && ContainerHierarchyIsVisible())  {
 
-	// If the clipping region is non-rectangular, just force a full update, sorry.
-  // XXX ?
-	if (!IsRegionRectangular(mWindowRegion)) {
-		Invalidate(PR_TRUE);
-		goto scrollChildren;
-	}
+    nsRect scrollRect;	
 
-	//--------
-	// Scroll this widget
-	if (aClipRect)
-		scrollRect = *aClipRect;
-	else
-	{
-		scrollRect = mBounds;
-		scrollRect.x = scrollRect.y = 0;
-	}
+	  // If the clipping region is non-rectangular, just force a full update, sorry.
+    // XXX ?
+	  if (!IsRegionRectangular(mWindowRegion)) {
+		  Invalidate(PR_TRUE);
+		  goto scrollChildren;
+	  }
 
-	Rect macRect;
-	nsRectToMacRect(scrollRect, macRect);
+	  //--------
+	  // Scroll this widget
+	  if (aClipRect)
+		  scrollRect = *aClipRect;
+	  else
+	  {
+		  scrollRect = mBounds;
+		  scrollRect.x = scrollRect.y = 0;
+	  }
+
+	  Rect macRect;
+	  nsRectToMacRect(scrollRect, macRect);
 
 
-	StartDraw();
+	  StartDraw();
 
-		// Clip to the windowRegion instead of the visRegion (note: the visRegion
-		// is equal to the windowRegion minus the children). The result is that
-		// ScrollRect() scrolls the visible bits of this widget as well as its children.
-		::SetClip(mWindowRegion);
+		  // Clip to the windowRegion instead of the visRegion (note: the visRegion
+		  // is equal to the windowRegion minus the children). The result is that
+		  // ScrollRect() scrolls the visible bits of this widget as well as its children.
+		  ::SetClip(mWindowRegion);
 
-		// Scroll the bits now. We've rolled our own because ::ScrollRect looks ugly
-		ScrollBits(macRect,aDx,aDy);
+		  // Scroll the bits now. We've rolled our own because ::ScrollRect looks ugly
+		  ScrollBits(macRect,aDx,aDy);
 
-	EndDraw();
+	  EndDraw();
+  }
 
 scrollChildren:
 	//--------
@@ -2165,12 +2166,19 @@ void nsWindow::CalcWindowRegions()
 	{
 		while (parent && (!parent->mIsTopWidgetWindow))
 	{
-		if (parent->mWindowRegion)
-		{
-			::OffsetRgn(parent->mWindowRegion, origin.x, origin.y);
-			::SectRgn(mWindowRegion, parent->mWindowRegion, mWindowRegion);
-			::OffsetRgn(parent->mWindowRegion, -origin.x, -origin.y);
-		}
+    if (parent->mWindowRegion)
+    {
+      // Under 10.2, if we offset a region beyond the coordinate space,
+      // OffsetRgn() will silently fail and restoring it will then cause the
+      // widget to be out of place (visible as 'shearing' when scrolling).
+      // To prevent that, we copy the original region and work on that. (bug 162885)
+      StRegionFromPool parentShiftedWindowRgn;
+      if ( !parentShiftedWindowRgn )
+        return;
+      ::CopyRgn(parent->mWindowRegion, parentShiftedWindowRgn); 
+      ::OffsetRgn(parentShiftedWindowRgn, origin.x, origin.y);
+      ::SectRgn(mWindowRegion, parentShiftedWindowRgn, mWindowRegion);
+    }
 		origin.x -= parent->mBounds.x;
 		origin.y -= parent->mBounds.y;
 		parent = (nsWindow*)parent->mParent;

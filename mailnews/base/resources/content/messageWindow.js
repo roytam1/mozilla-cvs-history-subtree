@@ -62,11 +62,21 @@ var folderListener = {
     else if (event.GetUnicode() == "DeleteOrMoveMsgFailed") {
       HandleDeleteOrMoveMsgFailed(folder);
     }
-  }
+   else if (event.GetUnicode() == "msgLoaded") {
+    OnMsgLoaded(folder, gCurrentMessageUri);
+   }
+ }
 }
 
 function nsMsgDBViewCommandUpdater()
 {}
+
+function UpdateStandAloneMessageCounts()
+{
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateStandAloneMessageCounts", "");
+}
 
 nsMsgDBViewCommandUpdater.prototype = 
 {
@@ -77,10 +87,12 @@ nsMsgDBViewCommandUpdater.prototype =
       UpdateMailToolbar("dbview, std alone window");
     },
 
-  displayMessageChanged : function(aFolder, aSubject)
+  displayMessageChanged : function(aFolder, aSubject, aKeywords)
   {
     setTitleFromFolder(aFolder, aSubject);
     gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
+    UpdateStandAloneMessageCounts();
+    SetKeywords(aKeywords);
   },
 
   QueryInterface : function(iid)
@@ -204,19 +216,26 @@ function OnLoadMessageWindow()
   var msgFolder = GetLoadedMsgFolder();
   CreateBareDBView(msgFolder,viewType, viewFlags, sortType, sortOrder); // create a db view for 
 
-  if (gCurrentMessageUri) {
-    SetUpToolbarButtons(gCurrentMessageUri);
-  }
-  else if (gCurrentFolderUri) {
-    SetUpToolbarButtons(gCurrentFolderUri);
-  }
- 
-  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete;", 0);
+  var uri;
+  if (gCurrentMessageUri)
+    uri = gCurrentMessageUri;
+  else if (gCurrentFolderUri)
+    uri = gCurrentFolderUri;
+  else
+    uri = null;
+
+  SetUpToolbarButtons(uri);
+  
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:setupToolbarItems", uri);
+     
+  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete; UpdateStandAloneMessageCounts();", 0);
 
   SetupCommandUpdateHandlers();
   var messagePaneFrame = top.frames['messagepane'];
-  if(messagePaneFrame)
-	messagePaneFrame.focus();
+  if (messagePaneFrame)
+	  messagePaneFrame.focus();
 }
 
 function extractMsgKeyFromURI()
@@ -398,7 +417,6 @@ function SelectMessage(messageUri)
   var msgHdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri)
   gDBView.loadMessageByMsgKey(msgHdr.messageKey);
 }
- 
 
 function ReloadMessage()
 {
@@ -765,6 +783,8 @@ function performNavigation(type)
   {
     // load the message key
     gDBView.loadMessageByMsgKey(resultId.value);
+    // if we changed folders, the message counts changed.
+    UpdateStandAloneMessageCounts();
     return;
   }
    

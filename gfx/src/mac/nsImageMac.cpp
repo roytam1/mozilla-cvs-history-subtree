@@ -783,16 +783,31 @@ void nsImageMac::CopyBitsWithMask(BitMap* srcBits, BitMap* maskBits, PRInt16 mas
 {
   if (maskBits)
   {
-    StRegionFromPool clipRegion;
+    StRegionFromPool origClipRegion;
     
     if (inDrawingToPort)
     {
-      // we need to pass in the clip region, even if it doesn't intersect the image, to avoid a bug
+      // We need to pass in the clip region, even if it doesn't intersect the image, to avoid a bug
       // on Mac OS X that causes bad image drawing (see bug 137295).
-      ::GetClip(clipRegion);
-     }
-    
-    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, inDrawingToPort ? clipRegion : nsnull);
+      ::GetClip(origClipRegion);
+      
+      // There is a bug in the OS that causes bad image drawing if the clip region in
+      // the destination port is complex (has holes in??), which hits us on pages with iframes.
+      // To work around this, temporarily set the clip to the intersection of the clip 
+      // and this image (which, most of the time, will be rectangular). See bug 137295.
+      
+      StRegionFromPool newClip;
+      ::RectRgn(newClip, &destRect);
+      ::SectRgn(newClip, origClipRegion, newClip);
+      ::SetClip(newClip);
+    }
+
+    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, nsnull);
+
+    if (inDrawingToPort)
+    {
+      ::SetClip(origClipRegion);
+    }    
   }
   else
    ::CopyBits(srcBits, destBits, &srcRect, &destRect, srcCopy, nsnull);
@@ -1563,12 +1578,23 @@ nsresult nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
 	    for (PRInt32 x = aX0; x < aX1; x += mWidth)
   		{
 	  		Rect		imageDestRect = imageRect;
+	  		Rect    imageSrcRect  = imageRect;
 	  		::OffsetRect(&imageDestRect, x, y);
+
+	  		if (x == aX1 - mWidth) {
+	  		  imageDestRect.right = PR_MIN(imageDestRect.right, aX1);
+	  		  imageSrcRect.right = imageRect.left + (imageDestRect.right - imageDestRect.left);
+	  		}
+        
+	  		if (y == aY1 - mHeight) {
+	  		  imageDestRect.bottom = PR_MIN(imageDestRect.bottom, aY1);
+	  		  imageSrcRect.bottom = imageRect.top + (imageDestRect.bottom - imageDestRect.top);
+	  		}
 	  		
 	  		// CopyBits will do the truncation for us at the edges
         CopyBitsWithMask((BitMap*)(&mImagePixmap),
             mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
-            (BitMap*)(*destPixels), imageRect, imageRect, imageDestRect, PR_TRUE);
+            (BitMap*)(*destPixels), imageSrcRect, imageSrcRect, imageDestRect, PR_TRUE);
 	  	}
   	}
   

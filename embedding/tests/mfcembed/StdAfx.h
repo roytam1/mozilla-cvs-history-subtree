@@ -100,7 +100,7 @@
 #include "nsIDocShellTreeItem.h"
 #include "nsIClipboardCommands.h"
 #include "nsIWebBrowserPersist.h"
-#include "nsIContextMenuListener.h"
+#include "nsIContextMenuListener2.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMHTMLImageElement.h"
@@ -116,6 +116,7 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsIProfileChangeStatus.h"
 #include "nsIObserverService.h"
+#include "imgIContainer.h"
 #ifdef MOZ_OLD_CACHE
 #include "nsINetDataCacheManager.h"
 #endif

@@ -464,6 +464,7 @@ public:
                                         nsAString& aHash);
 protected:
   nsresult SetElementFocus(PRBool aDoFocus);
+  nsresult RegUnRegAccessKey(PRBool aDoReg);
 
   nsresult HandleFrameOnloadEvent(nsIDOMEvent* aEvent);
 

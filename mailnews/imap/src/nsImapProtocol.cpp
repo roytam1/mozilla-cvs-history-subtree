@@ -232,6 +232,7 @@ nsImapProtocol::nsImapProtocol() :
   m_flags = 0;
   m_urlInProgress = PR_FALSE;
   m_socketIsOpen = PR_FALSE;
+  m_ignoreExpunges = PR_FALSE;
   m_gotFEEventCompletion = PR_FALSE;
   m_connectionStatus = 0;
   m_hostSessionList = nsnull;
@@ -601,7 +602,12 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
     GetServerStateParser().SetCapabilityFlag(capability);
 
     if (imapServer)
+    {
+      nsXPIDLCString redirectorType;
+      imapServer->GetRedirectorType(getter_Copies(redirectorType));
+      m_ignoreExpunges = redirectorType.Equals("aol");
       imapServer->GetFetchByChunks(&m_fetchByChunks);
+    }
 
     if ( m_runningUrl && !m_channel /* and we don't have a transport yet */)
     {
@@ -949,7 +955,8 @@ nsImapProtocol::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, PRBool *interr
       if (NS_SUCCEEDED(rv) && runningImapURL)
       {
         nsCOMPtr <nsIMsgFolder> runningImapFolder;
-        runningImapURL->GetImapFolder(getter_AddRefs(runningImapFolder));
+        nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(runningImapURL);
+        mailnewsUrl->GetFolder(getter_AddRefs(runningImapFolder));
         if (aImapFolder == runningImapFolder)
         {
           PseudoInterrupt(PR_TRUE);
@@ -1976,6 +1983,26 @@ void nsImapProtocol::ProcessSelectedStateURL()
                 // drop the results on the floor for now
         }
         break;
+      case nsIImapUrl::nsImapUserDefinedMsgCommand:
+        {
+          nsXPIDLCString messageIdString;
+          nsXPIDLCString command;
+    
+          m_runningUrl->GetCommand(getter_Copies(command));
+          m_runningUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
+          IssueUserDefinedMsgCommand(command, messageIdString);
+        }
+        break;
+      case nsIImapUrl::nsImapUserDefinedFetchAttribute:
+        {
+          nsXPIDLCString messageIdString;
+          nsXPIDLCString attribute;
+    
+          m_runningUrl->GetCustomAttributeToFetch(getter_Copies(attribute));
+          m_runningUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
+          FetchMsgAttribute(messageIdString, attribute);
+        }
+        break;
       case nsIImapUrl::nsImapDeleteMsg:
         {
           nsXPIDLCString messageIdString;
@@ -2309,10 +2336,10 @@ nsresult nsImapProtocol::BeginMessageDownLoad(
 }
 
 void
-nsImapProtocol::GetShouldDownloadArbitraryHeaders(PRBool *aResult)
+nsImapProtocol::GetShouldDownloadAllHeaders(PRBool *aResult)
 {
   if (m_imapServerSink)
-    m_imapServerSink->GetShouldDownloadArbitraryHeaders(aResult);
+    m_imapServerSink->GetShouldDownloadAllHeaders(aResult);
 }
 
 void
@@ -2497,7 +2524,23 @@ void nsImapProtocol::PipelinedFetchMessageParts(const char *uid, nsIMAPMessagePa
 }
 
 
-
+void nsImapProtocol::FetchMsgAttribute(const char * messageIds, const char *attribute)
+{
+    IncrementCommandTagNumber();
+    
+    nsCAutoString commandString (GetServerCommandTag());
+    commandString.Append(" UID fetch ");
+    commandString.Append(messageIds);
+    commandString.Append(" (");
+    commandString.Append(attribute);
+    commandString.Append(")"CRLF);
+    nsresult rv = SendData(commandString.get());
+      
+    if (NS_SUCCEEDED(rv))
+       ParseIMAPandCheckForNewMail(commandString.get());
+    GetServerStateParser().SetFetchingFlags(PR_FALSE);
+    GetServerStateParser().SetFetchingEverythingRFC822(PR_FALSE); // always clear this flag after every fetch....
+}
 
 // this routine is used to fetch a message or messages, or headers for a
 // message...
@@ -2582,20 +2625,19 @@ nsImapProtocol::FetchMessage(const char * messageIds,
       {
         PRUint32 server_capabilityFlags = GetServerStateParser().GetCapabilityFlag();
 		    PRBool aolImapServer = ((server_capabilityFlags & kAOLImapCapability) != 0);
-        PRBool useArbitraryHeaders = PR_FALSE;
-        GetShouldDownloadArbitraryHeaders(&useArbitraryHeaders); // checks filter headers, etc.
-        if (/***** Fix me *** gOptimizedHeaders &&  */// preference -- able to turn it off
-          useArbitraryHeaders)  // if it's ok -- no filters on any header, etc.
+        PRBool downloadAllHeaders = PR_FALSE;
+        GetShouldDownloadAllHeaders(&downloadAllHeaders); // checks if we're filtering on "any header"
+        if (!downloadAllHeaders)  // if it's ok -- no filters on any header, etc.
         {
           char *headersToDL = nsnull;
           char *what = nsnull;
           const char *dbHeaders = (gUseEnvelopeCmd) ? IMAP_DB_HEADERS : IMAP_ENV_AND_DB_HEADERS;
           nsXPIDLCString arbitraryHeaders;
           GetArbitraryHeadersToDownload(getter_Copies(arbitraryHeaders));
-          if (arbitraryHeaders)
-            headersToDL = PR_smprintf("%s %s",dbHeaders, arbitraryHeaders.get());
-          else
+          if (arbitraryHeaders.IsEmpty())
             headersToDL = nsCRT::strdup(dbHeaders);
+          else
+            headersToDL = PR_smprintf("%s %s",dbHeaders, arbitraryHeaders.get());
 
           if (aolImapServer)
             what = nsCRT::strdup(" XAOL-ENVELOPE INTERNALDATE)");
@@ -3867,12 +3909,12 @@ nsImapProtocol::SetConnectionStatus(PRInt32 status)
 }
 
 void
-nsImapProtocol::NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key)
+nsImapProtocol::NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key, const char *keywords)
 {
   if (m_imapMessageSink)
   {
     if (m_imapAction != nsIImapUrl::nsImapMsgFetch || (flags & ~kImapMsgRecentFlag) != kImapMsgSeenFlag)
-       m_imapMessageSink->NotifyMessageFlags(flags, key);
+       m_imapMessageSink->NotifyMessageFlags(flags, key, keywords);
   }
 }
 
@@ -4320,6 +4362,38 @@ nsImapProtocol::Store(const char * messageList, const char * messageData,
                   commandTag, // command tag
                   messageList,
                   messageData);
+      
+    nsresult rv = SendData(protocolString);
+    if (NS_SUCCEEDED(rv))
+      ParseIMAPandCheckForNewMail(protocolString);
+    PR_Free(protocolString);
+  }
+  else
+    HandleMemoryFailure();
+}
+
+void
+nsImapProtocol::IssueUserDefinedMsgCommand(const char *command, const char * messageList)
+{
+  IncrementCommandTagNumber();
+    
+  const char *formatString;
+  formatString = "%s uid %s %s\015\012";
+        
+  const char *commandTag = GetServerCommandTag();
+  int protocolStringSize = PL_strlen(formatString) +
+        PL_strlen(messageList) + PL_strlen(command) +
+        PL_strlen(commandTag) + 1;
+  char *protocolString = (char *) PR_CALLOC( protocolStringSize );
+
+  if (protocolString)
+  {
+    PR_snprintf(protocolString, // string to create
+                  protocolStringSize, // max size
+                  formatString, // format string
+                  commandTag, // command tag
+                  command, 
+                  messageList);
       
     nsresult rv = SendData(protocolString);
     if (NS_SUCCEEDED(rv))
@@ -7480,7 +7554,7 @@ PRBool nsImapMockChannel::ReadFromLocalCache()
 
     imapUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
     nsCOMPtr <nsIMsgFolder> folder;
-    rv = imapUrl->GetImapFolder(getter_AddRefs(folder));
+    rv = mailnewsUrl->GetFolder(getter_AddRefs(folder));
     if (folder && NS_SUCCEEDED(rv))
     {
       // we want to create a file channel and read the msg from there.

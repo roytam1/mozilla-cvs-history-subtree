@@ -37,6 +37,7 @@ REQUIRES	= xpcom \
 		  dom \
 		  widget \
 		  content \
+		  appshell \
 		  pref \
 		  intl \
 		  uriloader \
@@ -56,6 +57,7 @@ CPPSRCS		= \
 		nsCookieService.cpp \
 		nsImgManager.cpp \
 		nsPermissionManager.cpp \
+		nsPopupWindowManager.cpp \
 		nsCookies.cpp \
 		nsImages.cpp \
 		nsPermissions.cpp \

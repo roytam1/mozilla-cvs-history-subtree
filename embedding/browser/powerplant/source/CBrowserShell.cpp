@@ -37,6 +37,7 @@
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIWebProgressListener.h"
 #include "nsIServiceManager.h"
+#include "nsIDirectoryService.h"
 #include "nsIClipboardCommands.h"
 #include "nsIWalletService.h"
 #include "nsIDOMWindow.h"
@@ -47,6 +48,7 @@
 #include "nsIDOMHTMLCollection.h"
 #include "nsIDOMHTMLLinkElement.h"
 #include "nsIDOMHTMLAnchorElement.h"
+#include "nsIDOMHTMLImageElement.h"
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMLocation.h"
 #include "nsIWebBrowserFind.h"
@@ -60,11 +62,16 @@
 #include "nsILocalFileMac.h"
 #include "nsWeakReference.h"
 #include "nsIChannel.h"
+#include "nsIHistoryEntry.h"
+#include "nsISHEntry.h"
+#include "nsISHistory.h"
 #include "nsIWidget.h"
 #include "nsIWebBrowserPrint.h"
 #include "nsIMacTextInputEventSink.h"
 #include "nsCRT.h"
 #include "nsNetUtil.h"
+#include "gfxIImageFrame.h"
+#include "nsIImage.h"
 
 // Local
 #include "ApplIDs.h"
@@ -72,6 +79,8 @@
 #include "CBrowserChrome.h"
 #include "CWebBrowserCMAttachment.h"
 #include "UMacUnicode.h"
+#include "CHeaderSniffer.h"
+#include "UCustomNavServicesDialogs.h"
 
 // PowerPlant
 #include <UModalDialogs.h>
@@ -251,7 +260,7 @@ NS_IMETHODIMP CBrowserShellProgressListener::OnSecurityChange(nsIWebProgress *aW
 
 CBrowserShell::CBrowserShell() :
     mChromeFlags(nsIWebBrowserChrome::CHROME_DEFAULT), mIsMainContent(true),
-    mContextMenuContext(nsIContextMenuListener::CONTEXT_NONE), mContextMenuDOMNode(nsnull),
+    mContextMenuFlags(nsIContextMenuListener2::CONTEXT_NONE),
     LDropArea(GetMacWindow())
 {
 	nsresult rv = CommonConstruct();
@@ -266,8 +275,7 @@ CBrowserShell::CBrowserShell(const SPaneInfo	&inPaneInfo,
 						  	 const Boolean      inIsMainContent) :
     LView(inPaneInfo, inViewInfo), LDropArea(GetMacWindow()),
     mChromeFlags(inChromeFlags), mIsMainContent(inIsMainContent),
-    mContextMenuContext(nsIContextMenuListener::CONTEXT_NONE), mContextMenuDOMNode(nsnull)
-    
+    mContextMenuFlags(nsIContextMenuListener2::CONTEXT_NONE)
 {
 	nsresult rv = CommonConstruct();
 	if (rv != NS_OK)
@@ -277,7 +285,7 @@ CBrowserShell::CBrowserShell(const SPaneInfo	&inPaneInfo,
 
 CBrowserShell::CBrowserShell(LStream*	inStream) :
 	LView(inStream), LDropArea(GetMacWindow()),
-    mContextMenuContext(nsIContextMenuListener::CONTEXT_NONE), mContextMenuDOMNode(nsnull)
+    mContextMenuFlags(nsIContextMenuListener2::CONTEXT_NONE)
 {
 	*inStream >> mChromeFlags;
 	*inStream >> mIsMainContent;
@@ -360,13 +368,19 @@ NS_IMETHODIMP CBrowserShell::EnsureTopLevelWidget(nsIWidget **aWidget)
 	// Create it with huge bounds. The actual bounds that matters is that of the
 	// nsIBaseWindow. The bounds of the top level widget clips its children so
 	// we just have to make sure it is big enough to always contain the children.
+	// Under 10.2, if this rect is too large, subwidget offsets can temporarily push the
+	// bounds over 32,727 and OffsetRgn() will silently fail. In order to avoid that, we
+	// err towards a local max of the size of the gray rgn.
     
     nsCOMPtr<nsIWidget> newWidget(do_CreateInstance(kWindowCID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
-	    
-	nsRect r(0, 0, 32000, 32000);
-	rv = newWidget->Create(Compat_GetMacWindow(), r, nsnull, nsnull, nsnull, nsnull, nsnull);
-	NS_ENSURE_SUCCESS(rv, rv);
+	
+    RgnHandle grayRgn = ::GetGrayRgn();
+    Rect grayRect;
+    ::GetRegionBounds(grayRgn, &grayRect);
+    nsRect r(0, 0, grayRect.right - grayRect.left, grayRect.bottom - grayRect.top);
+    rv = newWidget->Create(Compat_GetMacWindow(), r, nsnull, nsnull, nsnull, nsnull, nsnull);
+    NS_ENSURE_SUCCESS(rv, rv);
 
 	widget = newWidget;
     err = ::SetWindowProperty(Compat_GetMacWindow(), 'PPMZ', 'WIDG', sizeof(nsIWidget*), (void*)&widget);
@@ -552,15 +566,10 @@ Boolean CBrowserShell::ObeyCommand(PP_PowerPlant::CommandT inCommand, void* ioPa
             break;
 
         case cmd_SaveAs:
-            rv = SaveCurrentURI();
+            rv = SaveDocument(eSaveFormatHTML);
             ThrowIfError_(rv);
             break;
-            
-        case cmd_SaveAllAs:
-            rv = SaveDocument();
-            ThrowIfError_(rv);
-            break;
-            
+                        
         case cmd_Cut:
             rv = GetClipboardHandler(getter_AddRefs(clipCmd));
             if (NS_SUCCEEDED(rv))
@@ -594,41 +603,24 @@ Boolean CBrowserShell::ObeyCommand(PP_PowerPlant::CommandT inCommand, void* ioPa
 			break;
 
         case cmd_OpenLinkInNewWindow:
+        case cmd_CopyLinkLocation:
             {               
-                // Get the URL from the link
-                ThrowIfNil_(mContextMenuDOMNode);
-                nsCOMPtr<nsIDOMHTMLAnchorElement> linkElement(do_QueryInterface(mContextMenuDOMNode));
-                // If that failed and, if the context of a click was in an image, find the parent
-                // node of the image which CAN be QI'd to an nsIDOMHTMLAnchorElement.
-                if (!linkElement && (mContextMenuContext & nsIContextMenuListener::CONTEXT_IMAGE))
-                {
-                    nsCOMPtr<nsIDOMNode> curr;
-                    mContextMenuDOMNode->GetParentNode(getter_AddRefs(curr));
-                    while (curr)
-                    {
-                        nsCOMPtr<nsIDOMElement> content = do_QueryInterface(curr);
-                        if (!content)
-                            break;
-                        linkElement = do_QueryInterface(content);
-                        if (linkElement)
-                            break;
-
-                        nsCOMPtr<nsIDOMNode> temp = curr;
-                        temp->GetParentNode(getter_AddRefs(curr));
-                    }
-                }
-                ThrowIfNil_(linkElement);
-                
+                 // Get the URL from the link
+                ThrowIfNil_(mContextMenuInfo);
                 nsAutoString temp;
-                rv = linkElement->GetHref(temp);
+                rv = mContextMenuInfo->GetAssociatedLink(temp);
                 ThrowIfError_(rv);
-                
                 nsCAutoString urlSpec = NS_ConvertUCS2toUTF8(temp);
-                nsCAutoString referrer;
-                rv = GetFocusedWindowURL(temp);
-                if (NS_SUCCEEDED(rv))
-                    referrer = NS_ConvertUCS2toUTF8(temp);
-                PostOpenURLEvent(urlSpec, referrer);
+
+                if (inCommand == cmd_OpenLinkInNewWindow) {
+                    nsCAutoString referrer;
+                    rv = GetFocusedWindowURL(temp);
+                    if (NS_SUCCEEDED(rv))
+                        referrer = NS_ConvertUCS2toUTF8(temp);
+                    PostOpenURLEvent(urlSpec, referrer);
+                }
+                else
+                    UScrap::SetData(kScrapFlavorTypeText, urlSpec.get(), urlSpec.Length());
             }
             break;
             
@@ -677,6 +669,71 @@ Boolean CBrowserShell::ObeyCommand(PP_PowerPlant::CommandT inCommand, void* ioPa
             }
             break;
 
+        case cmd_SaveLinkTarget:
+            {
+                // Get the URL from the link
+                ThrowIfNil_(mContextMenuInfo);
+                nsAutoString linkText;
+                rv = mContextMenuInfo->GetAssociatedLink(linkText);
+                ThrowIfError_(rv);
+                
+                nsCOMPtr<nsIURI> linkURI;
+                rv = NS_NewURI(getter_AddRefs(linkURI), NS_ConvertUCS2toUTF8(linkText));
+                ThrowIfError_(rv);
+
+                SaveLink(linkURI);
+            }
+            break;
+            
+        case cmd_SaveImage:
+            {
+                ThrowIfNil_(mContextMenuInfo);
+                nsCOMPtr<nsIURI> imgURI;
+                mContextMenuInfo->GetImageSrc(getter_AddRefs(imgURI));
+                ThrowIfNil_(imgURI);
+                
+                SaveLink(imgURI);
+            }
+            break;
+            
+        case cmd_ViewImage:
+        case cmd_CopyImageLocation:
+            {
+                ThrowIfNil_(mContextMenuInfo);
+                nsCOMPtr<nsIURI> imgURI;
+                mContextMenuInfo->GetImageSrc(getter_AddRefs(imgURI));
+                ThrowIfNil_(imgURI);
+                nsCAutoString temp; 
+                rv = imgURI->GetSpec(temp);
+                ThrowIfError_(rv);
+                if (inCommand == cmd_ViewImage)
+                    PostOpenURLEvent(temp, nsCString());
+                else
+                    UScrap::SetData(kScrapFlavorTypeText, temp.get(), temp.Length());
+            }
+            break;
+        
+        case cmd_ViewBackgroundImage:
+            {
+                ThrowIfNil_(mContextMenuInfo);
+                nsCOMPtr<nsIURI> uri;
+                rv = mContextMenuInfo->GetBackgroundImageSrc(getter_AddRefs(uri));
+                ThrowIfNil_(uri);
+                nsCAutoString temp;
+                rv = uri->GetSpec(temp);
+                ThrowIfError_(rv);
+                PostOpenURLEvent(temp, nsCString());                
+            }
+            break;
+        
+        case cmd_CopyImage:
+            {
+                GetClipboardHandler(getter_AddRefs(clipCmd));
+                if (clipCmd)
+                    clipCmd->CopyImageContents();
+            }
+            break;
+                                        
         default:
             cmdHandled = LCommander::ObeyCommand(inCommand, ioParam);
             break;
@@ -716,7 +773,6 @@ void CBrowserShell::FindCommandStatus(PP_PowerPlant::CommandT inCommand,
             break;
 
         case cmd_SaveAs:
-        case cmd_SaveAllAs:
             outEnabled = haveContent;
             break;
             
@@ -763,7 +819,7 @@ void CBrowserShell::FindCommandStatus(PP_PowerPlant::CommandT inCommand,
 			break;
 
         case cmd_OpenLinkInNewWindow:
-            outEnabled = haveContent && ((mContextMenuContext & nsIContextMenuListener::CONTEXT_LINK) != 0);
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_LINK) != 0);
             break;
             
         case cmd_ViewPageSource:
@@ -771,12 +827,37 @@ void CBrowserShell::FindCommandStatus(PP_PowerPlant::CommandT inCommand,
             break;
             
         case cmd_ViewImage:
-        case cmd_CopyImageLocation:
-            outEnabled = haveContent && ((mContextMenuContext & nsIContextMenuListener::CONTEXT_IMAGE) != 0);
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_IMAGE) != 0);
+            break;
+
+        case cmd_ViewBackgroundImage:
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_BACKGROUND_IMAGE) != 0);
+            break;
+
+        case cmd_CopyImage:
+            if (haveContent) {
+                rv = GetClipboardHandler(getter_AddRefs(clipCmd));
+                if (NS_SUCCEEDED(rv)) {
+                    rv = clipCmd->CanCopyImageContents(&canDo);
+                    outEnabled = NS_SUCCEEDED(rv) && canDo;
+                }
+            }
+            break;
+            
+        case cmd_SaveLinkTarget:
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_LINK) != 0);
+            break;
+        
+        case cmd_SaveImage:
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_IMAGE) != 0);
             break;
             
         case cmd_CopyLinkLocation:
-            outEnabled = haveContent && ((mContextMenuContext & nsIContextMenuListener::CONTEXT_LINK) != 0);
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_LINK) != 0);
+            break;
+        
+        case cmd_CopyImageLocation:
+            outEnabled = haveContent && mContextMenuInfo && ((mContextMenuFlags & nsIContextMenuListener2::CONTEXT_IMAGE) != 0);
             break;
         
 		case cmd_SaveFormData:
@@ -1053,117 +1134,97 @@ NS_METHOD CBrowserShell::GetCurrentURL(nsACString& urlText)
 //***    CBrowserShell: URI Saving
 //*****************************************************************************
 
-NS_METHOD CBrowserShell::SaveDocument()
-{
-    FSSpec      fileSpec;
-    Boolean     isReplacing;
-    nsresult    rv = NS_OK;
-    
-    if (DoSaveFileDialog(fileSpec, isReplacing)) {
-        if (isReplacing) {
-            OSErr err = ::FSpDelete(&fileSpec);
-            if (err) return NS_ERROR_FAILURE;
-        }
-        rv = SaveDocument(fileSpec);
-    }
-    return rv;
-}
-
-NS_METHOD CBrowserShell::SaveCurrentURI()
-{
-    FSSpec      fileSpec;
-    Boolean     isReplacing;
-    nsresult    rv = NS_OK;
-    
-    if (DoSaveFileDialog(fileSpec, isReplacing)) {
-        if (isReplacing) {
-            OSErr err = ::FSpDelete(&fileSpec);
-            if (err) return NS_ERROR_FAILURE;
-        }
-        rv = SaveCurrentURI(fileSpec);
-    }
-    return rv;
-}
-
-NS_METHOD CBrowserShell::SaveDocument(const FSSpec& outSpec)
+// Save All As from menus
+NS_METHOD CBrowserShell::SaveDocument(ESaveFormat inSaveFormat)
 {
     nsresult    rv;
     
-    nsCOMPtr<nsIWebBrowserPersist> wbPersist(do_GetInterface(mWebBrowser, &rv));
-    if (NS_FAILED(rv)) return rv;
-    nsCOMPtr<nsIDOMDocument> domDoc;
-    rv = mWebBrowserAsWebNav->GetDocument(getter_AddRefs(domDoc));
+    nsCOMPtr<nsIDOMDocument> domDocument;
+    rv = mWebBrowserAsWebNav->GetDocument(getter_AddRefs(domDocument));
     if (NS_FAILED(rv)) return rv;
 
-    FSSpec nonConstOutSpec = outSpec;    
-    nsCOMPtr<nsILocalFileMac> localFile;
-    rv = NS_NewLocalFileWithFSSpec(&nonConstOutSpec, PR_FALSE, getter_AddRefs(localFile));
-    if (NS_FAILED(rv)) return rv;
-    nsCOMPtr<nsIFile> parentDir;
-    rv = localFile->GetParent(getter_AddRefs(parentDir));
-    if (NS_FAILED(rv)) return rv;
-    nsCOMPtr<nsILocalFile> parentDirAsLocal(do_QueryInterface(parentDir, &rv));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = wbPersist->SaveDocument(domDoc, localFile, parentDirAsLocal, nsnull, 0, 0);
+    nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(domDocument));
+    if (!nsDoc)
+        return NS_ERROR_FAILURE;
+    nsCOMPtr<nsIDOMLocation> location;
+    nsDoc->GetLocation(getter_AddRefs(location));
+    if (!location)
+        return NS_ERROR_FAILURE;
     
-    return rv;
+    nsAutoString docLocation;
+    rv = location->GetHref(docLocation);
+    if (NS_FAILED(rv))
+      return rv;
+
+    nsCOMPtr<nsIURI> documentURI;
+    rv = NS_NewURI(getter_AddRefs(documentURI), NS_ConvertUCS2toUTF8(docLocation));
+    if (NS_FAILED(rv))
+      return rv;
+
+    return SaveInternal(documentURI, domDocument, nsString(), false, inSaveFormat);     // don't bypass cache
 }
 
-NS_METHOD CBrowserShell::SaveCurrentURI(const FSSpec& outSpec)
+// Save link target
+NS_METHOD CBrowserShell::SaveLink(nsIURI* inURI)
 {
-    nsresult    rv;
-    
-    nsCOMPtr<nsIWebBrowserPersist> wbPersist(do_GetInterface(mWebBrowser, &rv));
-    if (NS_FAILED(rv)) return rv;
-
-    FSSpec nonConstOutSpec = outSpec;    
-    nsCOMPtr<nsILocalFileMac> localFile;
-    rv = NS_NewLocalFileWithFSSpec(&nonConstOutSpec, PR_FALSE, getter_AddRefs(localFile));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = wbPersist->SaveURI(nsnull, nsnull, localFile);
-    
-    return rv;
+    return SaveInternal(inURI, nsnull, nsString(), true, eSaveFormatHTML);     // bypass cache
 }
 
-Boolean CBrowserShell::DoSaveFileDialog(FSSpec& outSpec, Boolean& outIsReplacing)
-{
-	UNavServicesDialogs::LFileDesignator	designator;
+const char* const kPersistContractID = "@mozilla.org/embedding/browser/nsWebBrowserPersist;1";
 
+NS_METHOD CBrowserShell::SaveInternal(nsIURI* inURI, nsIDOMDocument* inDocument,
+  const nsAString& inSuggestedFilename, Boolean inBypassCache, ESaveFormat inSaveFormat)
+{
     nsresult rv;
-    nsAutoString docTitle;
-    Str255       defaultName;
+    // Create our web browser persist object.  This is the object that knows
+    // how to actually perform the saving of the page (and of the images
+    // on the page).
+    nsCOMPtr<nsIWebBrowserPersist> webPersist(do_CreateInstance(kPersistContractID, &rv));
+    if (!webPersist)
+        return rv;
+    
+    // Make a temporary file object that we can save to.
+    nsCOMPtr<nsIProperties> dirService(do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv));
+    if (!dirService)
+        return rv;
+    nsCOMPtr<nsIFile> tmpFile;
+    dirService->Get("TmpD", NS_GET_IID(nsIFile), getter_AddRefs(tmpFile));
+    static short unsigned int tmpRandom = 0;
+    nsAutoString tmpNo; tmpNo.AppendInt(tmpRandom++);
+    nsAutoString saveFile(NS_LITERAL_STRING("-sav"));
+    saveFile += tmpNo;
+    saveFile += NS_LITERAL_STRING("tmp");
+    tmpFile->Append(saveFile); 
+    
+    // Get the post data if we're an HTML doc.
+    nsCOMPtr<nsIInputStream> postData;
+    if (inDocument) {
+      nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mWebBrowser));
+      nsCOMPtr<nsISHistory> sessionHistory;
+      webNav->GetSessionHistory(getter_AddRefs(sessionHistory));
+      nsCOMPtr<nsIHistoryEntry> entry;
+      PRInt32 sindex;
+      sessionHistory->GetIndex(&sindex);
+      sessionHistory->GetEntryAtIndex(sindex, PR_FALSE, getter_AddRefs(entry));
+      nsCOMPtr<nsISHEntry> shEntry(do_QueryInterface(entry));
+      if (shEntry)
+          shEntry->GetPostData(getter_AddRefs(postData));
+    }
 
-    nsCOMPtr<nsIDOMDocument> domDoc;
-    rv = mWebBrowserAsWebNav->GetDocument(getter_AddRefs(domDoc));
-    if (NS_SUCCEEDED(rv)) {
-        nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(domDoc, &rv));
-        if (NS_SUCCEEDED(rv))
-            htmlDoc->GetTitle(docTitle);
-    }
-    
-    // For now, we'll assume that we're saving HTML
-    NS_NAMED_LITERAL_STRING(htmlSuffix, ".html");
-    if (docTitle.IsEmpty())
-        docTitle.Assign(NS_LITERAL_STRING("untitled"));
-    else {
-        if (docTitle.Length() > 31 - htmlSuffix.Length())
-            docTitle.Truncate(31 - htmlSuffix.Length());
-    }
-    docTitle.Append(htmlSuffix);
-    CPlatformUCSConversion::GetInstance()->UCSToPlatform(docTitle, defaultName);
+    // when saving, we first fire off a save with a nsHeaderSniffer as a progress
+    // listener. This allows us to look for the content-disposition header, which
+    // can supply a filename, and maybe has something to do with CGI-generated
+    // content (?)
+    CHeaderSniffer* sniffer = new CHeaderSniffer(webPersist, tmpFile, inURI, inDocument, postData,
+                                        inSuggestedFilename, inBypassCache, inSaveFormat);
+    if (!sniffer)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-    Boolean     result;
+    webPersist->SetProgressListener(sniffer);  // owned
     
-    result = designator.AskDesignateFile(defaultName);
-    if (result) {
-        designator.GetFileSpec(outSpec);
-        outIsReplacing = designator.IsReplacing();
-    }
-    
-    return result;
+    return webPersist->SaveURI(inURI, nsnull, tmpFile);
 }
+
 
 //*****************************************************************************
 //***    CBrowserShell: Text Searching
@@ -1264,8 +1325,7 @@ Boolean CBrowserShell::FindNext()
 
 
 NS_IMETHODIMP CBrowserShell::OnShowContextMenu(PRUint32 aContextFlags,
-                                               nsIDOMEvent *aEvent,
-                                               nsIDOMNode *aNode)
+                                               nsIContextMenuInfo *aInfo)
 {
     // Find our CWebBrowserCMAttachment, if any
     CWebBrowserCMAttachment *aCMAttachment = nsnull;
@@ -1289,11 +1349,11 @@ NS_IMETHODIMP CBrowserShell::OnShowContextMenu(PRUint32 aContextFlags,
     EventRecord macEvent;        
     UEventMgr::GetMouseAndModifiers(macEvent);
     
-    mContextMenuContext = aContextFlags;
-    mContextMenuDOMNode = aNode;
+    mContextMenuFlags = aContextFlags;
+    mContextMenuInfo = aInfo;
     aCMAttachment->DoContextMenuClick(macEvent);
-    mContextMenuContext = 0;
-    mContextMenuDOMNode = nsnull;
+    mContextMenuFlags = 0;
+    mContextMenuInfo = nsnull;
 
     return NS_OK;
 }

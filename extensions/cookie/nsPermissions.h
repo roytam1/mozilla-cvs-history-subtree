@@ -44,7 +44,8 @@
 
 #define COOKIEPERMISSION 0
 #define IMAGEPERMISSION 1
-#define NUMBER_OF_PERMISSIONS 2
+#define WINDOWPERMISSION 2
+#define NUMBER_OF_PERMISSIONS 3
 
 typedef enum {
   PERMISSION_Accept,
@@ -72,6 +73,8 @@ extern PRBool Permission_Check
    PRBool warningPref, PRUnichar * message);
 extern nsresult Permission_AddHost
   (char * host, PRBool permission, PRInt32 type, PRBool save);
+extern nsresult permission_CheckFromList
+  (const char * hostname, PRBool &permission, PRInt32 type);
 //extern void Permission_Free(PRInt32 hostNumber, PRInt32 type, PRBool save);
 extern void Permission_Save();
 

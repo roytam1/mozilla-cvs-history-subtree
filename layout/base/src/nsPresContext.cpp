@@ -77,6 +77,9 @@
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIImageFrame.h"
 
+//needed for resetting of image service color
+#include "nsLayoutCID.h"
+#include "nsISelectionImageService.h"
 
 static nscolor
 MakeColorPref(const char *colstr)
@@ -130,6 +133,8 @@ PR_STATIC_CALLBACK(PRBool) destroy_loads(nsHashKey *aKey, void *aData, void* clo
 static NS_DEFINE_CID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
 #include "nsContentCID.h"
 static NS_DEFINE_CID(kEventStateManagerCID, NS_EVENTSTATEMANAGER_CID);
+static NS_DEFINE_CID(kSelectionImageService, NS_SELECTIONIMAGESERVICE_CID);
+
 
 nsPresContext::nsPresContext()
   : mDefaultVariableFont("serif", NS_FONT_STYLE_NORMAL, NS_FONT_VARIANT_NORMAL,
@@ -161,6 +166,9 @@ nsPresContext::nsPresContext()
   mStopChrome = PR_TRUE;
 
   mShell = nsnull;
+  mLinkHandler = nsnull;
+  mContainer = nsnull;
+
 
   mDefaultColor = NS_RGB(0x00, 0x00, 0x00);
   mDefaultBackgroundColor = NS_RGB(0xFF, 0xFF, 0xFF);
@@ -1414,6 +1422,19 @@ NS_IMETHODIMP
 nsPresContext::GetImageLoadFlags(nsLoadFlags& aLoadFlags)
 {
   aLoadFlags = nsIRequest::LOAD_NORMAL;
+
+  nsCOMPtr<nsIDocument> doc;
+  (void) mShell->GetDocument(getter_AddRefs(doc));
+
+  if (doc) {
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    (void) doc->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+
+    if (loadGroup) {
+      loadGroup->GetLoadFlags(&aLoadFlags);
+    }
+  }
+
   return NS_OK;
 }
 
@@ -1794,6 +1815,13 @@ nsPresContext::SysColorChanged()
     nsCOMPtr<nsIStyleSet> set;
     mShell->GetStyleSet(getter_AddRefs(set));
     set->ClearStyleData(this, nsnull, nsnull);
+  }
+  nsCOMPtr<nsISelectionImageService> imageService;
+  nsresult result;
+  imageService = do_GetService(kSelectionImageService, &result);
+  if (NS_SUCCEEDED(result) && imageService)
+  {
+    imageService->Reset();
   }
   return NS_OK;
 }

@@ -488,21 +488,21 @@ void
 nsICODecoder::ProcessDirEntry()
 {
   memset(&mDirEntry, 0, sizeof(mDirEntry));
-  DOCOPY(&mDirEntry.mWidth, mDirEntryArray);
-  DOCOPY(&mDirEntry.mHeight, mDirEntryArray+1);
-  DOCOPY(&mDirEntry.mColorCount, mDirEntryArray+2);
-  DOCOPY(&mDirEntry.mReserved, mDirEntryArray+3);
+  memcpy(&mDirEntry.mWidth, mDirEntryArray, sizeof(mDirEntry.mWidth));
+  memcpy(&mDirEntry.mHeight, mDirEntryArray+1, sizeof(mDirEntry.mHeight));
+  memcpy(&mDirEntry.mColorCount, mDirEntryArray+2, sizeof(mDirEntry.mColorCount));
+  memcpy(&mDirEntry.mReserved, mDirEntryArray+3, sizeof(mDirEntry.mReserved));
   
-  DOCOPY(&mDirEntry.mPlanes, mDirEntryArray+4);
+  memcpy(&mDirEntry.mPlanes, mDirEntryArray+4, sizeof(mDirEntry.mPlanes));
   mDirEntry.mPlanes = LITTLE_TO_NATIVE16(mDirEntry.mPlanes);
 
-  DOCOPY(&mDirEntry.mBitCount, mDirEntryArray+6);
+  memcpy(&mDirEntry.mBitCount, mDirEntryArray+6, sizeof(mDirEntry.mBitCount));
   mDirEntry.mBitCount = LITTLE_TO_NATIVE16(mDirEntry.mBitCount);
 
-  DOCOPY(&mDirEntry.mBytesInRes, mDirEntryArray+8);
+  memcpy(&mDirEntry.mBytesInRes, mDirEntryArray+8, sizeof(mDirEntry.mBytesInRes));
   mDirEntry.mBytesInRes = LITTLE_TO_NATIVE32(mDirEntry.mBytesInRes);
 
-  DOCOPY(&mDirEntry.mImageOffset, mDirEntryArray+12);
+  memcpy(&mDirEntry.mImageOffset, mDirEntryArray+12, sizeof(mDirEntry.mImageOffset));
   mDirEntry.mImageOffset = LITTLE_TO_NATIVE32(mDirEntry.mImageOffset);
 }
 
@@ -510,16 +510,16 @@ void nsICODecoder::ProcessInfoHeader() {
   memset(&mBIH, 0, sizeof(mBIH));
   // Ignoring the size; it should always be 40 for icons, anyway
 
-  DOCOPY(&mBIH.width, mBIHraw + 4);
-  DOCOPY(&mBIH.height, mBIHraw + 8);
-  DOCOPY(&mBIH.planes, mBIHraw + 12);
-  DOCOPY(&mBIH.bpp, mBIHraw + 14);
-  DOCOPY(&mBIH.compression, mBIHraw + 16);
-  DOCOPY(&mBIH.image_size, mBIHraw + 20);
-  DOCOPY(&mBIH.xppm, mBIHraw + 24);
-  DOCOPY(&mBIH.yppm, mBIHraw + 28);
-  DOCOPY(&mBIH.colors, mBIHraw + 32);
-  DOCOPY(&mBIH.important_colors, mBIHraw + 36);
+  memcpy(&mBIH.width, mBIHraw + 4, sizeof(mBIH.width));
+  memcpy(&mBIH.height, mBIHraw + 8, sizeof(mBIH.height));
+  memcpy(&mBIH.planes, mBIHraw + 12, sizeof(mBIH.planes));
+  memcpy(&mBIH.bpp, mBIHraw + 14, sizeof(mBIH.bpp));
+  memcpy(&mBIH.compression, mBIHraw + 16, sizeof(mBIH.compression));
+  memcpy(&mBIH.image_size, mBIHraw + 20, sizeof(mBIH.image_size));
+  memcpy(&mBIH.xppm, mBIHraw + 24, sizeof(mBIH.xppm));
+  memcpy(&mBIH.yppm, mBIHraw + 28, sizeof(mBIH.yppm));
+  memcpy(&mBIH.colors, mBIHraw + 32, sizeof(mBIH.colors));
+  memcpy(&mBIH.important_colors, mBIHraw + 36, sizeof(mBIH.important_colors));
 
   // Convert endianness
   mBIH.width = LITTLE_TO_NATIVE32(mBIH.width);

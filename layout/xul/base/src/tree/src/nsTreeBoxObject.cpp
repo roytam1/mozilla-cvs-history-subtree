@@ -61,8 +61,6 @@ public:
   //NS_PIBOXOBJECT interfaces
   NS_IMETHOD Init(nsIContent* aContent, nsIPresShell* aPresShell);
   NS_IMETHOD SetDocument(nsIDocument* aDocument);
-
-  nsITreeBoxObject* mTreeBody;
 };
 
 /* Implementation file */
@@ -83,14 +81,11 @@ nsTreeBoxObject::SetDocument(nsIDocument* aDocument)
   if (treeView)
     treeView->SetTree(nsnull); // Break the circular ref between the view and us.
 
-  mTreeBody = nsnull;
-
   return nsBoxObject::SetDocument(aDocument);
 }
 
   
 nsTreeBoxObject::nsTreeBoxObject()
-:mTreeBody(nsnull)
 {
   NS_INIT_ISUPPORTS();
 }

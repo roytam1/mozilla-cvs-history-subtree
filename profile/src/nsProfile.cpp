@@ -2540,6 +2540,61 @@ nsProfile::IsRegStringSet(const PRUnichar *profileName, char **regString)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsProfile::GetRegStrings(const PRUnichar *aProfileName, 
+                        PRUnichar **aRegString, 
+                        PRUnichar **aRegName, 
+                        PRUnichar **aRegEmail, 
+                        PRUnichar **aRegOption)
+{
+    NS_ENSURE_ARG_POINTER(aProfileName);
+    NS_ENSURE_ARG_POINTER(aRegString);
+    NS_ENSURE_ARG_POINTER(aRegName);
+    NS_ENSURE_ARG_POINTER(aRegEmail);
+    NS_ENSURE_ARG_POINTER(aRegOption);
+
+    ProfileStruct*    profileVal;
+
+    nsresult rv = gProfileDataAccess->GetValue(aProfileName, &profileVal);
+    NS_ENSURE_TRUE(profileVal, NS_ERROR_FAILURE);
+    
+    if (!profileVal->NCHavePregInfo.IsEmpty()) {
+        *aRegString = ToNewUnicode(profileVal->NCHavePregInfo);
+        if ( !*aRegString)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
+    else
+        *aRegString = nsnull;
+
+    if (!profileVal->NCProfileName.IsEmpty()) {
+        *aRegName= ToNewUnicode(profileVal->NCProfileName);
+        if ( !*aRegName)
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+     else
+        *aRegName = nsnull;
+
+     if (!profileVal->NCEmailAddress.IsEmpty()) {
+         *aRegEmail = ToNewUnicode(profileVal->NCEmailAddress);
+         if ( !*aRegEmail)
+             return NS_ERROR_OUT_OF_MEMORY;
+     }
+     else
+         *aRegEmail = nsnull;
+
+     if (!profileVal->NCDeniedService.IsEmpty()) {
+         *aRegOption = ToNewUnicode(profileVal->NCDeniedService);
+         if ( !*aRegOption)
+             return NS_ERROR_OUT_OF_MEMORY;
+     }
+     else
+         *aRegOption = nsnull;
+
+     delete profileVal;
+
+     return NS_OK;
+}
+
 /*
  * nsIDirectoryServiceProvider Implementation
  */

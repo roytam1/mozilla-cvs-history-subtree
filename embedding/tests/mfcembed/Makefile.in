@@ -49,6 +49,9 @@ REQUIRES = \
 	webbrowserpersist \
 	composer \
 	commandhandler \
+	imglib2 \
+	gfx2 \
+	webbrwsr \
 	$(NULL)
 
 CPPSRCS		= \

@@ -574,6 +574,7 @@ protected:
   nsIURI* mDocumentURL;
   nsCOMPtr<nsIURI> mDocumentBaseURL;
   nsIPrincipal* mPrincipal;
+  PRUint32 mLoadFlags; // load flags of the document's channel
   nsWeakPtr mDocumentLoadGroup;
   
   nsString mCharacterSet;

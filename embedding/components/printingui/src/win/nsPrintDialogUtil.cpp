@@ -98,11 +98,7 @@ static NS_DEFINE_CID(kStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 // For PrintDlgEx
 // needed because there are unicode/ansi versions of this routine
 // and we need to make sure we get the correct one.
-#ifdef UNICODE
-#define GetPrintDlgExQuoted "PrintDlgExW"
-#else
 #define GetPrintDlgExQuoted "PrintDlgExA"
-#endif
 
 // Default labels for the radio buttons
 static const char* kAsLaidOutOnScreenStr = "As &laid out on the screen";
@@ -760,7 +756,12 @@ static UINT CALLBACK PrintHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM 
 
 //----------------------------------------------------------------------------------
 // Returns a Global Moveable Memory Handle to a DevMode
-// from the Printer byt the name of aPrintName
+// from the Printer by the name of aPrintName
+//
+// NOTE:
+//   This function assumes that aPrintName has already been converted to 
+//   Double Byte chars typically via the GetACPString helper function
+//
 static HGLOBAL CreateGlobalDevModeAndInit(LPTSTR aPrintName, nsIPrintSettings* aPS)
 {
   HGLOBAL hGlobalDevMode = NULL;
@@ -772,13 +773,6 @@ static HGLOBAL CreateGlobalDevModeAndInit(LPTSTR aPrintName, nsIPrintSettings* a
 
     LPDEVMODE   pNewDevMode;
     DWORD       dwNeeded, dwRet;
-
-    nsString prtName;
-#ifdef UNICODE
-    prtName.AppendWithConversion((PRUnichar *)aPrintName);
-#else 
-    prtName.AssignWithConversion((char*)aPrintName);
-#endif
 
     // Get the buffer size
     dwNeeded = ::DocumentProperties(gParentWnd, hPrinter, aPrintName, NULL, NULL, 0);
@@ -878,8 +872,12 @@ ShowNativePrintDialog(HWND              aHWnd,
   pDevNames->wDeviceOffset = sizeof(DEVNAMES);
   pDevNames->wOutputOffset = sizeof(DEVNAMES)+len+1;
   pDevNames->wDefault      = 0;
+
+  char* dbStr = GetACPString(nsString(printerName));
+  NS_ENSURE_TRUE(dbStr, NS_ERROR_FAILURE);
+
   char* device = &(((char*)pDevNames)[pDevNames->wDeviceOffset]);
-  strcpy(device, (char*)NS_ConvertUCS2toUTF8(printerName).get());
+  strcpy(device, dbStr);
   ::GlobalUnlock(hDevNames);
 
   // Create a Moveable Memory Object that holds a new DevMode
@@ -888,11 +886,8 @@ ShowNativePrintDialog(HWND              aHWnd,
   // NOTE: We only need to free hGlobalDevMode when the dialog is cancelled
   // When the user prints, it comes back in the printdlg struct and 
   // is used and cleaned up later
-#ifdef UNICODE
-  hGlobalDevMode = CreateGlobalDevModeAndInit(printerName, aPrintSettings);
-#else 
-  hGlobalDevMode = CreateGlobalDevModeAndInit((char*)NS_ConvertUCS2toUTF8(printerName).get(), aPrintSettings);
-#endif
+  hGlobalDevMode = CreateGlobalDevModeAndInit(dbStr, aPrintSettings);
+  free(dbStr);
 
   // Prepare to Display the Print Dialog
   PRINTDLG  prntdlg;
@@ -1195,11 +1190,10 @@ ShowNativePrintDialogEx(HWND              aHWnd,
   aPrintSettings->GetPrinterName(&printerName);
   HGLOBAL hGlobalDevMode = NULL;
   if (printerName) {
-#ifdef UNICODE
-    hGlobalDevMode = CreateGlobalDevModeAndInit(printerName, aPrintSettings);
-#else 
-    hGlobalDevMode = CreateGlobalDevModeAndInit((char*)NS_ConvertUCS2toUTF8(printerName).get(), aPrintSettings);
-#endif
+    char* dbStr = GetACPString(nsString(printerName));
+    NS_ENSURE_TRUE(dbStr, NS_ERROR_FAILURE);
+    hGlobalDevMode = CreateGlobalDevModeAndInit(dbStr, aPrintSettings);
+    free(dbStr);
   }
 
   // Prepare to Display the Print Dialog

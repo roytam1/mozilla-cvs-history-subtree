@@ -177,8 +177,10 @@
 #include "nsIClassicPluginFactory.h"
 #endif
 
-#if defined(XP_MAC) && TARGET_CARBON
-#include "nsIClassicPluginFactory.h"
+#if defined(XP_MAC) || defined(XP_MACOSX)
+#if TARGET_CARBON
+#include <TextServices.h>  // for ::UseInputWindow()
+#endif
 #endif
 
 // We need this hackery so that we can dynamically register doc
@@ -4696,6 +4698,22 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
       }
     }
 
+#if defined(XP_MAC) || defined(XP_MACOSX)
+#if TARGET_CARBON
+   /* Flash 6.0 r50 and older on Mac has a bug which calls ::UseInputWindow(NULL, true) 
+      which turn off all our inline IME. Turn it back after the plugin 
+      initializtion and hope that future versions will be fixed. See bug 159016
+   */
+    if (pluginTag->mDescription && 
+       !PL_strncasecmp(pluginTag->mDescription, "Shockwave Flash 6.0", 19)) {
+       int ver = atoi(pluginTag->mDescription + 21);
+       if  (ver && ver <= 50) {
+         ::UseInputWindow(NULL, false);
+       }
+    }
+#endif
+#endif
+
     if (plugin != nsnull)
     {
       *aPlugin = plugin;
@@ -5529,7 +5547,8 @@ AddPluginInfoToRegistry(nsIRegistry* registry, nsRegistryKey top,
                              strlen(tag->mMimeDescriptionArray[i]) + 1, 
                              (PRUint8 *)tag->mMimeDescriptionArray[i]);
 
-    registry->SetStringUTF8(mimetypeKey, kPluginsMimeExtKey, tag->mExtensionsArray[i]);
+    if(tag->mExtensionsArray && tag->mExtensionsArray[i])
+      registry->SetStringUTF8(mimetypeKey, kPluginsMimeExtKey, tag->mExtensionsArray[i]);
   }
   if (NS_FAILED(rv))
     rv = registry->RemoveSubtree(top, keyname);

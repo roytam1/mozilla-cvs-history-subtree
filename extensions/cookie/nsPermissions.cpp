@@ -69,6 +69,7 @@ PRIVATE PRBool permission_changed = PR_FALSE;
 
 PRIVATE PRBool cookie_rememberChecked;
 PRIVATE PRBool image_rememberChecked;
+PRIVATE PRBool window_rememberChecked;
 
 PRIVATE nsVoidArray * permission_list=0;
 
@@ -133,15 +134,14 @@ permission_CheckFromList(const char * hostname, PRBool &permission, PRInt32 type
     hostStruct = NS_STATIC_CAST(permission_HostStruct*, permission_list->ElementAt(i));
     if (hostStruct) {
       if(hostname && hostStruct->host && !PL_strcasecmp(hostname, hostStruct->host)) {
-
         /* search for type in the permission list for this host */
         PRInt32 typeCount = hostStruct->permissionList->Count();
         for (PRInt32 typeIndex=0; typeIndex<typeCount; typeIndex++) {
           typeStruct = NS_STATIC_CAST
             (permission_TypeStruct*, hostStruct->permissionList->ElementAt(typeIndex));
           if (typeStruct->type == type) {
-
             /* type found.  Obtain the corresponding permission */
+            
             permission = typeStruct->permission;
             return NS_OK;
           }
@@ -159,13 +159,13 @@ permission_CheckFromList(const char * hostname, PRBool &permission, PRInt32 type
 
 PRBool
 permission_GetRememberChecked(PRInt32 type) {
-  if (type == COOKIEPERMISSION) {
+  if (type == COOKIEPERMISSION)
     return cookie_rememberChecked;
-  } else if (type == IMAGEPERMISSION) {
+  if (type == IMAGEPERMISSION)
     return image_rememberChecked;
-  } else {
-    return PR_FALSE;
-  }
+  if (type == WINDOWPERMISSION)
+    return window_rememberChecked;
+  return PR_FALSE;
 }
 
 void
@@ -174,6 +174,8 @@ permission_SetRememberChecked(PRInt32 type, PRBool value) {
     cookie_rememberChecked = value;
   } else if (type == IMAGEPERMISSION) {
     image_rememberChecked = value;
+  } else if (type == WINDOWPERMISSION) {
+    window_rememberChecked = value;
   }
 }
 
@@ -288,7 +290,6 @@ Permission_AddHost(char * host, PRBool permission, PRInt32 type, PRBool save) {
     typeStruct = NS_STATIC_CAST
       (permission_TypeStruct*, hostStruct->permissionList->ElementAt(typeIndex));
     if (typeStruct->type == type) {
-
       /* type found.  Modify the corresponding permission */
       typeStruct->permission = permission;
       typeFound = PR_TRUE;
@@ -634,7 +635,6 @@ PERMISSION_Remove(const char* host, PRInt32 type) {
         NS_STATIC_CAST(permission_HostStruct*, permission_list->ElementAt(hostCount));
       NS_ASSERTION(hostStruct, "corrupt permission list");
       if ((PL_strcmp(hostStruct->host, host) == 0)) {
-
         /* get to the indicated permission in the list */
         PRInt32 typeCount = hostStruct->permissionList->Count();
         permission_TypeStruct * typeStruct;
@@ -644,11 +644,11 @@ PERMISSION_Remove(const char* host, PRInt32 type) {
             NS_STATIC_CAST
               (permission_TypeStruct*, hostStruct->permissionList->ElementAt(typeCount));
           NS_ASSERTION(typeStruct, "corrupt permission list");
-          if (typeStruct->type == type) {
+          if (typeStruct->type == type) {            
             permission_remove(hostCount, typeCount);
             permission_changed = PR_TRUE;
             Permission_Save();
-            break;
+            break;            
           }
         }
         break;

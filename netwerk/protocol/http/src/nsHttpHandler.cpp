@@ -48,6 +48,8 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranchInternal.h"
 #include "nsIPrefLocalizedString.h"
+#include "nsISocketProviderService.h"
+#include "nsISocketProvider.h"
 #include "nsPrintfCString.h"
 #include "nsCOMPtr.h"
 #include "nsNetCID.h"
@@ -78,6 +80,7 @@ static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kCacheServiceCID, NS_CACHESERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_CID(kSocketProviderServiceCID, NS_SOCKETPROVIDERSERVICE_CID);
 
 #define UA_PREF_PREFIX          "general.useragent."
 #define UA_APPNAME              "Mozilla"
@@ -261,7 +264,7 @@ nsHttpHandler::Init()
     nsCOMPtr<nsIObserverService> observerSvc =
         do_GetService("@mozilla.org/observer-service;1", &rv);
     if (observerSvc) {
-        observerSvc->AddObserver(this, "profile-before-change", PR_TRUE);
+        observerSvc->AddObserver(this, "profile-change-net-teardown", PR_TRUE);
         observerSvc->AddObserver(this, "session-logout", PR_TRUE);
         observerSvc->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_TRUE);
     }
@@ -1471,6 +1474,29 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
         }
     }
 
+    if (PREF_CHANGED(HTTP_PREF("default-socket-type"))) {
+        nsXPIDLCString val;
+        rv = prefs->GetCharPref(HTTP_PREF("default-socket-type"),
+                                getter_Copies(val));
+        if (NS_SUCCEEDED(rv)) {
+            if (val.IsEmpty())
+                mDefaultSocketType.Adopt(0);
+            else {
+                // verify that this socket type is actually valid
+                nsCOMPtr<nsISocketProviderService> sps(
+                        do_GetService(kSocketProviderServiceCID, &rv));
+                if (NS_SUCCEEDED(rv)) {
+                    nsCOMPtr<nsISocketProvider> sp;
+                    rv = sps->GetSocketProvider(val, getter_AddRefs(sp));
+                    if (NS_SUCCEEDED(rv)) {
+                        // OK, this looks like a valid socket provider.
+                        mDefaultSocketType.Assign(val);
+                    }
+                }
+            }
+        }
+    }
+
     //
     // INTL options
     //
@@ -2054,7 +2080,7 @@ nsHttpHandler::Observe(nsISupports *subject,
         if (prefBranch)
             PrefsChanged(prefBranch, NS_ConvertUCS2toUTF8(data).get());
     }
-    else if (!nsCRT::strcmp(topic, "profile-before-change") ||
+    else if (!nsCRT::strcmp(topic, "profile-change-net-teardown") ||
              !nsCRT::strcmp(topic, "session-logout")) {
         // clear cache of all authentication credentials.
         if (mAuthCache)

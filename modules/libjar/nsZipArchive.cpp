@@ -1381,11 +1381,17 @@ PRInt32 nsZipArchive::InflateItem( const nsZipItem* aItem, PRFileDesc* fOut,
       else
       {
         //-- copy inflated buffer to our big buffer
-        // Assertion makes sure we don't overflow bigBuf
-        PR_ASSERT( outpos + ZIP_BUFLEN <= bigBufSize);
+        if ( outpos + ZIP_BUFLEN <= bigBufSize )
+        {
         char* copyStart = bigBuf + outpos;
         memcpy(copyStart, outbuf, ZIP_BUFLEN);
       }  
+        else
+        {
+          status = ZIP_ERR_CORRUPT;
+          break;
+        }
+      }
       
       outpos = zs.total_out;
       zs.next_out  = outbuf;
@@ -1428,9 +1434,13 @@ PRInt32 nsZipArchive::InflateItem( const nsZipItem* aItem, PRFileDesc* fOut,
     }
     else
     {
-      PR_ASSERT( (outpos + chunk) <= bigBufSize );
+      if ( (outpos + chunk) <= bigBufSize )
+      {
         char* copyStart = bigBuf + outpos;
         memcpy(copyStart, outbuf, chunk);
+    }
+      else
+        status = ZIP_ERR_CORRUPT;
     }
   }
 

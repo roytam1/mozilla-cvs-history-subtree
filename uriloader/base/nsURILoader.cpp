@@ -56,7 +56,6 @@
 #include "nsIHttpChannel.h"
 #include "netCore.h"
 #include "nsCRT.h"
-
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDocShellTreeOwner.h"
@@ -804,8 +803,13 @@ NS_IMETHODIMP nsURILoader::DispatchContent(const char * aContentType,
   aContentHandler = do_CreateInstance(handlerContractID.get(), &rv);
   if (NS_SUCCEEDED(rv)) // we did indeed have a content handler for this type!! yippee...
   {
-      rv = aContentHandler->HandleContent(aContentType, "view", aSrcWindowContext, request);
+    rv = aContentHandler->HandleContent(aContentType, "view", aSrcWindowContext, request);
+    if (rv != NS_ERROR_WONT_HANDLE_CONTENT) {
       *aAbortProcess = PR_TRUE;
+    }
+    // If WONT_HANDLE_CONTENT is returned -- do not abort.  Just return the
+    // failure and keep looking for another consumer (ie. the unknown
+    // content handler)...
   }
   
   return rv;

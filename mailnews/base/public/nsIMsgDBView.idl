@@ -194,6 +194,7 @@ interface nsMsgViewCommandType
   const nsMsgViewCommandTypeValue label4 = 25;
   const nsMsgViewCommandTypeValue label5 = 26;
   const nsMsgViewCommandTypeValue lastLabel = 26;
+  const nsMsgViewCommandTypeValue undeleteMsg = 29;
 
 };
 
@@ -322,5 +323,5 @@ interface nsIMsgDBViewCommandUpdater : nsISupports
 	void updateCommandStatus();
 
 	/* displayed message has changed */
-	void displayMessageChanged(in nsIMsgFolder aFolder, in wstring aSubject);
+	void displayMessageChanged(in nsIMsgFolder aFolder, in wstring aSubject, in string aKeywords);
 };

@@ -251,6 +251,10 @@ Essential Files:WidgetSupport.shlb
 Components:widget.shlb
 Components:widget.xpt
 
+; xmlextras
+Components:xmlextras.shlb
+Components:xmlextras.xpt
+
 ; xpconnect
 Components:XPConnect.shlb
 Components:xpconnect.xpt

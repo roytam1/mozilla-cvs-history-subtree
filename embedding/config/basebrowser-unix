@@ -222,6 +222,9 @@ components/libchardet.so
 ; components/libucvtw2.so for traditional chinese
 ; components/libucvibm.so for ibm
 
+; xmlextras
+components/libxmlextras.so
+components/xmlextras.xpt
 
 res/language.properties
 res/langGroups.properties

@@ -52,20 +52,30 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = BEONEX_0_8_BRANCH
-NSPR_CO_TAG = BEONEX_0_8_BRANCH
-PSM_CO_TAG = BEONEX_0_8_BRANCH
-NSS_CO_TAG = BEONEX_0_8_BRANCH
-LDAPCSDK_CO_TAG = BEONEX_0_8_BRANCH
-ACCESSIBLE_CO_TAG = BEONEX_0_8_BRANCH
-GFX2_CO_TAG = BEONEX_0_8_BRANCH
-IMGLIB2_CO_TAG = BEONEX_0_8_BRANCH
+MOZ_CO_TAG = MOZILLA_1_0_BRANCH
+NSPR_CO_TAG = MOZILLA_1_0_BRANCH
+PSM_CO_TAG = MOZILLA_1_0_BRANCH
+NSS_CO_TAG = MOZILLA_1_0_BRANCH
+LDAPCSDK_CO_TAG = MOZILLA_1_0_BRANCH
+ACCESSIBLE_CO_TAG = MOZILLA_1_0_BRANCH
+GFX2_CO_TAG = MOZILLA_1_0_BRANCH
+IMGLIB2_CO_TAG = MOZILLA_1_0_BRANCH
+#MOZ_CO_TAG = BEONEX_0_8_BRANCH
+#NSPR_CO_TAG = BEONEX_0_8_BRANCH
+#PSM_CO_TAG = BEONEX_0_8_BRANCH
+#NSS_CO_TAG = BEONEX_0_8_BRANCH
+#LDAPCSDK_CO_TAG = BEONEX_0_8_BRANCH
+#ACCESSIBLE_CO_TAG = BEONEX_0_8_BRANCH
+#GFX2_CO_TAG = BEONEX_0_8_BRANCH
+#IMGLIB2_CO_TAG = BEONEX_0_8_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
 # Defines
 #
 CVS = cvs
+CVS_REV_PARAM = -j MOZILLA_1_0_1_RELEASE -j
+#CVS_REV_PARAM = -r
 
 CWD := $(shell pwd)
 
@@ -127,7 +137,7 @@ CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ifdef MOZ_CO_TAG
-  CVS_CO_FLAGS := -r $(MOZ_CO_TAG)
+  CVS_CO_FLAGS := $(CVS_REV_PARAM) $(MOZ_CO_TAG)
 endif
 
 ####################################
@@ -167,7 +177,7 @@ endif
 # is to set MOZ_CO_TAG (see above) and commit that change on the tag.
 ifdef MOZ_CO_BRANCH
   $(warning Use MOZ_CO_TAG instead of MOZ_CO_BRANCH)
-  CVS_CO_FLAGS := -r $(MOZ_CO_BRANCH)
+  CVS_CO_FLAGS := $(CVS_REV_PARAM) $(MOZ_CO_BRANCH)
 endif
 
 # MOZ_CO_FLAGS - Anything that we should use on all checkouts
@@ -198,7 +208,7 @@ ifdef MOZ_CO_FLAGS
   PSM_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef PSM_CO_TAG
-  PSM_CO_FLAGS := $(PSM_CO_FLAGS) -r $(PSM_CO_TAG)
+  PSM_CO_FLAGS := $(PSM_CO_FLAGS) $(CVS_REV_PARAM) $(PSM_CO_TAG)
 endif
 CVSCO_PSM = $(CVS) $(CVS_FLAGS) co $(PSM_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(PSM_CO_MODULE)
 
@@ -214,7 +224,7 @@ ifdef MOZ_CO_FLAGS
   NSS_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef NSS_CO_TAG
-   NSS_CO_FLAGS := $(NSS_CO_FLAGS) -r $(NSS_CO_TAG)
+   NSS_CO_FLAGS := $(NSS_CO_FLAGS) $(CVS_REV_PARAM) $(NSS_CO_TAG)
 endif
 # Cannot pull static tags by date
 ifeq ($(NSS_CO_TAG),NSS_CLIENT_TAG)
@@ -232,7 +242,7 @@ ifdef MOZ_CO_FLAGS
   NSPR_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef NSPR_CO_TAG
-  NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) -r $(NSPR_CO_TAG)
+  NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) $(CVS_REV_PARAM) $(NSPR_CO_TAG)
 endif
 # Cannot pull static tags by date
 ifeq ($(NSPR_CO_TAG),NSPRPUB_CLIENT_TAG)
@@ -250,7 +260,7 @@ ifdef MOZ_CO_FLAGS
   LDAPCSDK_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef LDAPCSDK_CO_TAG
-  LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) -r $(LDAPCSDK_CO_TAG)
+  LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) $(CVS_REV_PARAM) $(LDAPCSDK_CO_TAG)
 endif
 CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
 
@@ -263,7 +273,7 @@ ifdef MOZ_CO_FLAGS
   ACCESSIBLE_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef ACCESSIBLE_CO_TAG
-  ACCESSIBLE_CO_FLAGS := $(ACCESSIBLE_CO_FLAGS) -r $(ACCESSIBLE_CO_TAG)
+  ACCESSIBLE_CO_FLAGS := $(ACCESSIBLE_CO_FLAGS) $(CVS_REV_PARAM) $(ACCESSIBLE_CO_TAG)
 endif
 CVSCO_ACCESSIBLE = $(CVS) $(CVS_FLAGS) co $(ACCESSIBLE_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(ACCESSIBLE_CO_MODULE)
 
@@ -276,7 +286,7 @@ ifdef MOZ_CO_FLAGS
   GFX2_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef GFX2_CO_TAG
-  GFX2_CO_FLAGS := $(GFX2_CO_FLAGS) -r $(GFX2_CO_TAG)
+  GFX2_CO_FLAGS := $(GFX2_CO_FLAGS) $(CVS_REV_PARAM) $(GFX2_CO_TAG)
 endif
 CVSCO_GFX2 = $(CVS) $(CVS_FLAGS) co $(GFX2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(GFX2_CO_MODULE)
 
@@ -289,7 +299,7 @@ ifdef MOZ_CO_FLAGS
   IMGLIB2_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 ifdef IMGLIB2_CO_TAG
-  IMGLIB2_CO_FLAGS := $(IMGLIB2_CO_FLAGS) -r $(IMGLIB2_CO_TAG)
+  IMGLIB2_CO_FLAGS := $(IMGLIB2_CO_FLAGS) $(CVS_REV_PARAM) $(IMGLIB2_CO_TAG)
 endif
 CVSCO_IMGLIB2 = $(CVS) $(CVS_FLAGS) co $(IMGLIB2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IMGLIB2_CO_MODULE)
 
@@ -418,9 +428,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
-        cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
+#	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
+#        cd $(ROOTDIR) && \
+#	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 real_checkout:

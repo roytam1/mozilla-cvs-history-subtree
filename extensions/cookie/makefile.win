@@ -30,6 +30,7 @@ REQUIRES	= xpcom \
 		  necko \
 		  dom \
 		  widget \
+		  appshell \
 		  pref \
 		  intl \
 		  uriloader \
@@ -59,6 +60,7 @@ CPP_OBJS=				\
  .\$(OBJDIR)\nsCookieService.obj	\
  .\$(OBJDIR)\nsImgManager.obj	\
  .\$(OBJDIR)\nsPermissionManager.obj	\
+ .\$(OBJDIR)\nsPopupWindowManager.obj	\
  .\$(OBJDIR)\nsCookies.obj	\
  .\$(OBJDIR)\nsImages.obj	\
  .\$(OBJDIR)\nsPermissions.obj	\

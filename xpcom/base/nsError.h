@@ -88,6 +88,7 @@
 #define NS_ERROR_MODULE_SECURITY   21
 #define NS_ERROR_MODULE_DOM_XPATH  22
 #define NS_ERROR_MODULE_DOM_RANGE  23
+#define NS_ERROR_MODULE_URILOADER  24
 // NS_ERROR_MODULE_GENERAL should be used by modules that don't
 // care if return code values overlap. Callers of methods that
 // return such codes should be aware that they are not

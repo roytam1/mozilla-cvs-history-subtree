@@ -2574,7 +2574,9 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           yTop = pfd->mBounds.y - pfd->mMargin.top;
           yBottom = yTop + logicalHeight;
         }
-        if (!preMode && !InStrictMode() && !logicalHeight ) {
+        if (!preMode &&
+            GetCompatMode() != eCompatibility_FullStandards &&
+            !logicalHeight) {
           // Check if it's a BR frame that is not alone on its line (it
           // is given a height of zero to indicate this), and if so reset
           // yTop and yBottom so that BR frames don't influence the line.

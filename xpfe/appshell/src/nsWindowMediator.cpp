@@ -986,6 +986,10 @@ nsWindowMediator::GetTarget(nsIRDFResource* source,
     return(NS_ERROR_NULL_POINTER);
   *target = nsnull;
 
+  // add extra null checking for topcrash bug 146466
+  if (!mContainer) return NS_ERROR_NULL_POINTER;
+  if (!gRDFService) return NS_ERROR_NULL_POINTER;
+
   if (property == kNC_KeyIndex)
   {
     PRInt32  theIndex = 0;

@@ -133,6 +133,8 @@ private:
   PRBool            m_readPFCName;
   PRBool            m_userAuthenticated;
   nsCString         m_pfcName;
+  nsCString         m_redirectorType;
+  PRBool            m_readRedirectorType;
   PRBool						m_waitingForConnectionInfo;
   PRInt32						m_redirectedLogonRetries;
   nsCOMPtr<nsIMsgLogonRedirector> m_logonRedirector;
