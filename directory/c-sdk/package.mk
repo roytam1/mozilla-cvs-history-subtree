@@ -31,6 +31,7 @@ INSTDIR = ../../dist/$(MMDD)/$(OBJDIR_NAME)
 LIBDIR  = ../../dist/$(OBJDIR_NAME)/lib
 INCDIR  = ../../dist/public/ldap
 PRIVATEINCDIR  = ../../dist/public/ldap-private
+NSPRINCDIR  = ../../dist/public/ldap-nspr
 BINDIR  = ../../dist/$(OBJDIR_NAME)/bin
 ETCDIR  = ../../dist/$(OBJDIR_NAME)/etc
 EXPDIR  = ldap/examples
@@ -129,6 +130,10 @@ ifeq ($(PKG_PRIVATE_HDRS),1)
 	$(NSINSTALL) $(PRIVATEINCDIR)/portable.h $(INSTDIR)/include-private
 	$(NSINSTALL) $(PRIVATEINCDIR)/ldaprot.h $(INSTDIR)/include-private
 	$(NSINSTALL) $(PRIVATEINCDIR)/ldaplog.h $(INSTDIR)/include-private
+
+	@echo "Installing nspr header files"
+	$(NSINSTALL) -D $(INSTDIR)/include-nspr
+	cp -r $(NSPRINCDIR)/* $(INSTDIR)/include-nspr
 endif
 
 	@echo "Installing etc files"
