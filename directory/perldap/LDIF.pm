@@ -236,7 +236,9 @@ files from changes made to an entry.
 =head1 DESCRIPTION
 
 The LDIF format is a simple, yet useful, text representation of an LDAP
-database.
+database. The goal of this package is to make it as easy as possible to
+read, parse and use LDIF data, possible generated from other information
+sources.
 
 =head1 EXAMPLES
 
