@@ -470,7 +470,7 @@ nsRuleNode::GetBits(PRInt32 aType, PRUint32* aResult)
 }
 
 nsresult 
-nsRuleNode::Transition(nsIStyleRule* aRule, PRBool aIsInlineStyle, nsRuleNode** aResult)
+nsRuleNode::Transition(nsIStyleRule* aRule, nsRuleNode** aResult)
 {
   nsRuleNode* next = nsnull;
 
@@ -487,7 +487,6 @@ nsRuleNode::Transition(nsIStyleRule* aRule, PRBool aIsInlineStyle, nsRuleNode** 
       ConvertChildrenToHash();
   }
 
-  PRBool createdNode = PR_FALSE;
   if (ChildrenAreHashed()) {
     ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*,
         PL_DHashTableOperate(ChildrenHash(), aRule, PL_DHASH_ADD));
@@ -501,7 +500,6 @@ nsRuleNode::Transition(nsIStyleRule* aRule, PRBool aIsInlineStyle, nsRuleNode** 
         *aResult = nsnull;
         return NS_ERROR_OUT_OF_MEMORY;
       }
-      createdNode = PR_TRUE;
     }
   } else if (!next) {
     // Create the new entry in our list.
@@ -511,23 +509,8 @@ nsRuleNode::Transition(nsIStyleRule* aRule, PRBool aIsInlineStyle, nsRuleNode** 
       return NS_ERROR_OUT_OF_MEMORY;
     }
     SetChildrenList(new (mPresContext) nsRuleList(next, ChildrenList()));
-    createdNode = PR_TRUE;
   }
-    
-  if (aIsInlineStyle && createdNode) {
-    // We just made a new rule node for an inline style rule (e.g., for
-    // the style attribute on an HTML, SVG, or XUL element).  In order to
-    // fix bug 99344, we have to maintain a mapping from inline style rules
-    // to all the rule nodes in a rule tree that correspond to the inline
-    // style rule.  
-    // Obtain our style set and then add this rule node to our mapping.
-    nsCOMPtr<nsIPresShell> shell;
-    mPresContext->GetShell(getter_AddRefs(shell));
-    nsCOMPtr<nsIStyleSet> styleSet;
-    shell->GetStyleSet(getter_AddRefs(styleSet));
-    styleSet->AddRuleNodeMapping(next);
-  }
-
+  
   *aResult = next;
   return NS_OK;
 }
@@ -4812,4 +4795,58 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
   // Nothing is cached.  We'll have to delve further and examine our rules.
   GetStyleDataFn fn = gGetStyleDataFn[aSID];
   return fn ? (this->*fn)(aContext, aComputeData) : nsnull;
+}
+
+void
+nsRuleNode::Mark()
+{
+  for (nsRuleNode *node = this;
+       node && !(node->mDependentBits & NS_RULE_NODE_GC_MARK);
+       node = node->mParent)
+    node->mDependentBits |= NS_RULE_NODE_GC_MARK;
+}
+
+PR_STATIC_CALLBACK(PLDHashOperator)
+SweepRuleNodeChildren(PLDHashTable *table, PLDHashEntryHdr *hdr,
+                      PRUint32 number, void *arg)
+{
+  ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*, hdr);
+  if (entry->mRuleNode->Sweep())
+    return PL_DHASH_REMOVE; // implies NEXT, unless |ed with STOP
+  return PL_DHASH_NEXT;
+}
+
+PRBool
+nsRuleNode::Sweep()
+{
+  // If we're not marked, then we have to delete ourself.
+  if (!(mDependentBits & NS_RULE_NODE_GC_MARK)) {
+    Destroy();
+    return PR_TRUE;
+  }
+
+  // Clear our mark, for the next time around.
+  mDependentBits &= ~NS_RULE_NODE_GC_MARK;
+
+  // Call sweep on the children, since some may not be marked, and
+  // remove any deleted children from the child lists.
+  if (HaveChildren()) {
+    if (ChildrenAreHashed()) {
+      PLDHashTable *children = ChildrenHash();
+      PL_DHashTableEnumerate(children, SweepRuleNodeChildren, nsnull);
+    } else {
+      for (nsRuleList **children = ChildrenListPtr(); *children; ) {
+        if ((*children)->mRuleNode->Sweep()) {
+          // This rule node was destroyed, so remove this entry, and
+          // implicitly advance by making *children point to the next
+          // entry.
+          *children = (*children)->DestroySelf(mPresContext);
+        } else {
+          // Advance.
+          children = &(*children)->mNext;
+        }
+      }
+    }
+  }
+  return PR_FALSE;
 }
