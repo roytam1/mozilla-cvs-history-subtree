@@ -1613,10 +1613,13 @@ static NSArray* sToolbarDefaults = nil;
 
   [newTab setLabel: NSLocalizedString(@"TabLoading", @"")];
 
-  [newView loadURI:aURLSpec referrer:aReferrer flags:NSLoadFlagsNone activate:!aLoadInBG];
-
+  // unless we're told to load this tab in the bg, select the tab
+  // before we load so that it's the primary and will push the url into
+  // the url bar immediately rather than waiting for the server.
   if (!aLoadInBG)
     [mTabBrowser selectTabViewItem: newTab];
+
+  [newView loadURI:aURLSpec referrer:aReferrer flags:NSLoadFlagsNone activate:!aLoadInBG];
 }
 
 - (void)openTabGroup:(NSArray*)urlArray replaceExistingTabs:(BOOL)replaceExisting
