@@ -18,7 +18,7 @@ DEPTH		= ../..
 
 LIBRARY_NAME	= js
 
-ifeq ($(subst /,_,$(shell uname -s)),OS2)
+ifeq ($(subst /,,$(shell uname -s)),OS2)
 EXTRA_LIBS	= $(LIBNSPR)
 MAKE_DLL	= 1
 else
