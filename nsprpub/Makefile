@@ -124,9 +124,9 @@ endif
 
 solarispkg:
 	@echo Making Solaris packages.
-	rm -rf pkg/solaris-$(OBJDIR)
-	cp -r pkg/solaris pkg/solaris-$(OBJDIR)
-	$(MAKE) -C pkg/solaris-$(OBJDIR) publish
+	rm -rf pkg/$(OBJDIR)
+	cp -r pkg/solaris pkg/$(OBJDIR)
+	$(MAKE) -C pkg/$(OBJDIR) publish
 
 depend:
 	@echo "NSPR20 has no dependencies.  Skipped."
