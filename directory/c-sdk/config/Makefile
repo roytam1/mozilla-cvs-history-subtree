@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #! gmake
 # 
 # The contents of this file are subject to the Mozilla Public
@@ -33,22 +34,25 @@
 # 
 
 MOD_DEPTH	= ..
+topsrcdir	= ..
+srcdir		= .
+
+include $(MOD_DEPTH)/config/autoconf.mk
 
 # Indicate that this directory builds build tools.
 INTERNAL_TOOLS	= 1
 
-include $(MOD_DEPTH)/config/config.mk
+# autoconf.mk must be deleted last (from the top-level directory)
+# because it is included by every makefile.
+DIST_GARBAGE	= 
 
-CSRCS	= now.c
+include $(topsrcdir)/config/config.mk
 
-# This version hasn't been ported for us; the one in mozilla/config has
-ifneq ($(OS_ARCH),OS2)
-CSRCS  += nsinstall.c
- 
+CSRCS	= nsinstall.c now.c
+
 PLSRCS	= nfspwd.pl
-endif
 
-ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
+ifneq (,$(filter WINNT OS2,$(OS_ARCH)))
 PROG_SUFFIX = .exe
 else
 PROG_SUFFIX =
@@ -84,14 +88,7 @@ ifeq ($(OS_ARCH), HP-UX)
     endif
 endif
 
-ifeq ($(MOZ_OS2_TOOLS),EMX)
-XCFLAGS = $(OS_EXE_CFLAGS)
-ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT),OMF)
-XLDOPTS = -Zlinker /PM:VIO
-endif
-endif
-
-ifeq ($(MOZ_OS2_TOOLS),PGCC)
+ifdef XP_OS2_EMX
 XCFLAGS = $(OS_EXE_CFLAGS)
 XLDOPTS = -Zlinker /PM:VIO
 endif
@@ -100,11 +97,11 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 OS_CFLAGS = $(OS_EXE_CFLAGS)
 endif
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
 PROGS	= $(OBJDIR)/now$(PROG_SUFFIX)
 
-ifeq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
+ifneq (,$(filter WINNT OS2,$(OS_ARCH)))
 TARGETS = $(PROGS)
 else
 PROGS	+= $(OBJDIR)/nsinstall$(PROG_SUFFIX)
@@ -112,7 +109,7 @@ TARGETS = $(PROGS) $(PLSRCS:.pl=)
 endif
 
 OUTOPTION = -o # end of the line
-ifeq (,$(filter-out WINNT WIN95,$(OS_TARGET)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 OUTOPTION = /Fe
 endif
 
@@ -126,12 +123,7 @@ export:: $(TARGETS)
 $(OBJDIR)/%$(PROG_SUFFIX): $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
-	$(LINK) $(EXEFLAGS) $<
+	$(LD) $(EXEFLAGS) $<
 else
 	$(CC) $(XCFLAGS) $< $(XLDOPTS) $(OUTOPTION)$@
 endif
-
-cleanconfig:	FORCE
-	$(RM) -r $(OBJDIR)
-
-FORCE:
