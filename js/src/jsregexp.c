@@ -1230,7 +1230,7 @@ static const jschar *matchGreedyKid(MatchState *state, RENode *ren,
 
 static const jschar *matchNonGreedyKid(MatchState *state, RENode *ren,
                         int kidCount, int maxKid,
-                        const jschar *cp, const jschar *previousKid)
+                        const jschar *cp)
 {
     const jschar *kidMatch;
     const jschar *match;
@@ -1241,7 +1241,7 @@ static const jschar *matchNonGreedyKid(MatchState *state, RENode *ren,
     if (kidMatch == NULL)
         return NULL;
     else
-        return matchNonGreedyKid(state, ren, kidCount, maxKid, kidMatch, cp);
+        return matchNonGreedyKid(state, ren, kidCount, maxKid, kidMatch);
 }
 
 static void calcBMSize(MatchState *state, RENode *ren)
@@ -1531,7 +1531,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                                                 ren->u.range.max, cp, lastKid);
                         else
                             cp = matchNonGreedyKid(state, ren, num,
-                                                ren->u.range.max, cp, lastKid);
+                                                ren->u.range.max, cp);
                         if (cp == NULL) return NULL;
                     }
                     break;
@@ -1546,7 +1546,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                     if (cp == NULL) return NULL;
                 }
                 else {
-                    cp = matchNonGreedyKid(state, ren, 1, 0, kidMatch, NULL);
+                    cp = matchNonGreedyKid(state, ren, 1, 0, kidMatch);
                     if (cp == NULL) return NULL;
                 }
                 break;
@@ -1556,7 +1556,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                     if (cp == NULL) return NULL;
                 }
                 else {
-                    cp = matchNonGreedyKid(state, ren, 0, 0, cp, NULL);
+                    cp = matchNonGreedyKid(state, ren, 0, 0, cp);
                     if (cp == NULL) return NULL;
                 }
                 break;
