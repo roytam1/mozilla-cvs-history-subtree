@@ -231,7 +231,6 @@ NS_IMPL_ISUPPORTS(FileSpecWorker, NS_GET_IID(nsIRunnable));
 
 #include "nsIIOService.h"
 #include "nsIChannel.h"
-#include "nsIFileProtocolHandler.h"
 
 class FileChannelWorker : public nsIRunnable {
 public:
