@@ -342,15 +342,6 @@ OSErr nsMacMemoryCushion::Init(Size bufferSize, Size reserveSize)
 
 void nsMacMemoryCushion::RepeatAction(const EventRecord &aMacEvent)
 {
-  if (!RecoverMemoryBuffer(kMemoryBufferSize))
-  {
-    // NS_ASSERTION(0, "Failed to recallocate memory buffer. Flushing caches");
-    // until imglib implements nsIMemoryPressureObserver (bug 46337)
-    // manually flush the imglib cache here
-    
-    // XXX imagelib should do this.. or the cache.  certainly shouldn't be here.
-  }
-
   if (!RecoverMemoryReserve(kMemoryReserveSize))
   {
     // NS_ASSERTION(0, "Failed to recallocate memory reserve. Flushing caches");
