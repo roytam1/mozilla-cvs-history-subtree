@@ -61,6 +61,9 @@ treerow > treecell > titledbutton {
  list-style-image: url("chrome://messenger/skin/closedMailFolder.gif");
  color: inherit;
  border: none;
+ padding: 0px;
+ margin: 0px;
+
 }
 
 treeitem[open="true"] > treerow > treecell > titledbutton {

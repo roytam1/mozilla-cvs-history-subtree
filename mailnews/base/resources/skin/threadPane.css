@@ -57,11 +57,13 @@ treeitem[Status="new"] > treerow{
 }
 
 treerow > treecell > titledbutton {
- height: 16px;
- width: 16px;
- //list-style-image: url("chrome://messenger/skin/wink.gif");
+ //list-style-image: url("chrome://messenger/skin/mailMessage.gif");
  color: inherit;
  border: none;
+ padding: 0px;
+ margin: 0px;
+ height: 16px;
+ width: 16px;
 }
 
 treehead treerow treecell { 
