@@ -1492,7 +1492,7 @@ HRESULT CMozillaBrowser::PrintDocument(BOOL promptUser)
 
     PrintListener *listener = new PrintListener;
     nsCOMPtr<nsIWebProgressListener> printListener = do_QueryInterface(listener);
-    if (SUCCEEDED(browserAsPrint->Print(printSettings, printListener)))
+    if (NS_SUCCEEDED(browserAsPrint->Print(printSettings, printListener)))
     {
         listener->WaitForComplete();
     }
@@ -3479,8 +3479,8 @@ void PrintListener::WaitForComplete()
 /* void onStateChange (in nsIWebProgress aWebProgress, in nsIRequest aRequest, in unsigned long aStateFlags, in nsresult aStatus); */
 NS_IMETHODIMP PrintListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 aStateFlags, nsresult aStatus)
 {
-    if (aStatus & nsIWebProgressListener::STATE_STOP &&
-        aStatus & nsIWebProgressListener::STATE_IS_DOCUMENT)
+    if (aStateFlags & nsIWebProgressListener::STATE_STOP &&
+        aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT)
     {
         mComplete = PR_TRUE;
     }
