@@ -918,7 +918,7 @@ dorename( char *dn, char *newrdn, char *newparent, int deleteoldrdn )
 
     printf( "%smodifying RDN of entry %s%s\n",
 	    ldaptool_not ? "!" : "", dn, ( newparent == NULL ) ? "" :
-	    "and/or moving it beneath a new parent\n" );
+	    " and/or moving it beneath a new parent\n" );
 
     if ( !ldaptool_not ) {
 	if (( rc = ldaptool_rename_s( ld, dn, newrdn, newparent, deleteoldrdn,
