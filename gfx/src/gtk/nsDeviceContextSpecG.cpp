@@ -164,7 +164,7 @@ NS_IMETHODIMP nsDeviceContextSpecGTK :: Init(PRBool	aQuiet)
   nsCOMPtr<nsIXULWindow> hiddenWindowXUL;
   rv = appShell->GetHiddenWindow(getter_AddRefs(hiddenWindowXUL));
   NS_ENSURE_SUCCESS(rv, rv);
-  nsCOMPtr<nsIDOMWindowInternalEx> hiddenWindow =
+  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow =
     do_QueryInterface(hiddenWindowXUL);
   NS_ENSURE_SUCCESS(rv, rv);
 
