@@ -284,7 +284,7 @@ ac_help="$ac_help
 ac_help="$ac_help
   --disable-glibtest      Do not try to compile and run a test GLIB program"
 ac_help="$ac_help
-  --disable-xul           Disable XUL (standalone modules only)"
+  --disable-xul           Disable XUL"
 
 # Initialize some variables set by options.
 # The variables have the same names as the options, with
@@ -14489,11 +14489,10 @@ if test "$MOZ_XUL"; then
 #define MOZ_XUL 1
 EOF
 
-  cat >> confdefs.h <<\EOF
-#define INCLUDE_XUL 1
-EOF
-
+else
+    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's/inspector//' -e 's/venkman//' -e 's/irc//'`
 fi
+
 
 
 if test "$OS_ARCH" = "WINNT" -a -z "$GNU_CC"; then
@@ -14533,14 +14532,14 @@ ac_link='${CC-cc} -o conftest${ac_exeext} $CFLAGS $CPPFLAGS $LDFLAGS conftest.$a
 cross_compiling=$ac_cv_prog_cc_cross
 
     cat > conftest.$ac_ext <<EOF
-#line 14537 "configure"
+#line 14536 "configure"
 #include "confdefs.h"
 #include <gmodule.h>
 int main() {
  int x = 1; x++; 
 ; return 0; }
 EOF
-if { (eval echo configure:14544: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:14543: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   :
 else
   echo "configure: failed program was:" >&5

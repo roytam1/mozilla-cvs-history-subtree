@@ -957,7 +957,6 @@ static const PropertyCheckData UIResetCheckProperties[] = {
   CHECKDATA_PROP(nsRuleDataUserInterface, mForceBrokenImageIcon, CHECKDATA_VALUE, PR_FALSE)
 };
 
-#ifdef INCLUDE_XUL
 static const PropertyCheckData XULCheckProperties[] = {
   CHECKDATA_PROP(nsRuleDataXUL, mBoxAlign, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsRuleDataXUL, mBoxDirection, CHECKDATA_VALUE, PR_FALSE),
@@ -966,7 +965,6 @@ static const PropertyCheckData XULCheckProperties[] = {
   CHECKDATA_PROP(nsRuleDataXUL, mBoxPack, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsRuleDataXUL, mBoxOrdinal, CHECKDATA_VALUE, PR_FALSE)
 };
-#endif
 
 #ifdef MOZ_SVG
 static const PropertyCheckData SVGCheckProperties[] = {
@@ -1453,7 +1451,6 @@ nsRuleNode::GetQuotesData(nsStyleContext* aContext, PRBool aComputeData)
   return res;
 }
 
-#ifdef INCLUDE_XUL
 const nsStyleStruct*
 nsRuleNode::GetXULData(nsStyleContext* aContext, PRBool aComputeData)
 {
@@ -1463,7 +1460,6 @@ nsRuleNode::GetXULData(nsStyleContext* aContext, PRBool aComputeData)
 
   return WalkRuleTree(eStyleStruct_XUL, aContext, &ruleData, &xulData, aComputeData);
 }
-#endif
 
 #ifdef MOZ_SVG
 const nsStyleStruct*
@@ -1777,14 +1773,12 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID aSID, nsStyleContext* aContex
       return ui;
     }
 
-#ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
     {
       nsStyleXUL* xul = new (mPresContext) nsStyleXUL();
       aContext->SetStyle(eStyleStruct_XUL, xul);
       return xul;
     }
-#endif
 
 #ifdef MOZ_SVG
     case eStyleStruct_SVG:
@@ -4374,7 +4368,6 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
   return quotes;
 }
 
-#ifdef INCLUDE_XUL
 const nsStyleStruct* 
 nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
                            const nsRuleDataStruct& aData, 
@@ -4469,7 +4462,6 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
 
   return xul;
 }
-#endif
 
 #ifdef MOZ_SVG
 static void

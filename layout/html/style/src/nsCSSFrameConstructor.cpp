@@ -107,7 +107,6 @@
 #include "nsFormControlHelper.h"
 #include "nsObjectFrame.h"
 #include "nsRuleNode.h"
-#include "nsIXULDocument.h"
 #include "nsIPrintPreviewContext.h"
 #include "nsIDOMMutationEvent.h"
 #include "nsChildIterator.h"
@@ -117,6 +116,7 @@
 #include "nsAutoPtr.h"
 #include "nsScrollPortFrame.h"
 #include "nsXULAtoms.h"
+#include "nsBoxFrame.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
@@ -128,10 +128,11 @@ static NS_DEFINE_CID(kAttributeContentCID, NS_ATTRIBUTECONTENT_CID);
 
 #include "nsBox.h"
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
 #include "nsIRootBox.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIDOMXULDocument.h"
+#include "nsIXULDocument.h"
 #endif
 
 #include "nsInlineFrame.h"
@@ -224,9 +225,7 @@ static FrameCtorDebugFlags gFlags[] = {
 #endif
 
 
-#ifdef INCLUDE_XUL
-#include "nsXULAtoms.h"
-
+#ifdef MOZ_XUL
 #include "nsMenuFrame.h"
 #include "nsPopupSetFrame.h"
 #include "nsTreeColFrame.h"
@@ -257,12 +256,6 @@ nsresult
 NS_NewThumbFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
-NS_NewScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
-
-nsresult
-NS_NewGfxScrollFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIDocument* aDocument, PRBool aIsRoot);
-
-nsresult
 NS_NewDeckFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIBoxLayout* aLayoutManager = nsnull);
 
 nsresult
@@ -285,21 +278,6 @@ NS_NewGroupBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
 NS_NewButtonBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame);
-
-nsresult
-NS_NewSliderFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
-
-nsresult
-NS_NewScrollbarFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
-
-nsresult
-NS_NewScrollbarButtonFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
-
-nsresult
-NS_NewScrollbarFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
-
-nsresult
-NS_NewNativeScrollbarFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
 NS_NewGrippyFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
@@ -353,6 +331,25 @@ NS_NewResizerFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
 
 #endif
+
+nsresult
+NS_NewScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+
+nsresult
+NS_NewGfxScrollFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIDocument* aDocument, PRBool aIsRoot);
+
+nsresult
+NS_NewSliderFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+
+nsresult
+NS_NewScrollbarFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+
+nsresult
+NS_NewScrollbarButtonFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+
+nsresult
+NS_NewNativeScrollbarFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+
 
 #ifdef NOISY_FINDFRAME
 static PRInt32 FFWC_totalCount=0;
@@ -1373,10 +1370,8 @@ nsCSSFrameConstructor::Init(nsIDocument* aDocument)
   // This initializes the Prefs booleans
   mGotGfxPrefs = PR_FALSE;
   mGotXBLFormPrefs = PR_FALSE;
-  mHasGfxScrollbars = PR_FALSE;
   mUseXBLForms = PR_FALSE;
 
-  HasGfxScrollbars();
   UseXBLForms();
 
   return NS_OK;
@@ -3339,17 +3334,6 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
   
 
 
----------------Native Scrollbars------
-
-
-
-     ScrollFrame
-
-         ^
-         |
-     AreaFrame or BoxFrame (InitialContainingBlock)
-  
-
 ---------------Gfx Scrollbars ------
 
 
@@ -3479,7 +3463,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 #if defined(MOZ_SVG)
         PRInt32 nameSpaceID;
 #endif
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
         if (aDocElement->IsContentOfType(nsIContent::eXUL)) {
           rv = NS_NewDocElementBoxFrame(aPresShell, &contentFrame);
           if (NS_FAILED(rv)) {
@@ -3606,21 +3590,6 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   
 
 
----------------Native Scrollbars------
-
-
-
-     ViewPortFrame (FixedContainingBlock) <---- RootView
-
-         ^
-         |
-     ScrollFrame <--- RootScrollableView
-
-         ^
-         |
-     RootFrame(DocElementContainingBlock)
-  
-
 ---------------Gfx Scrollbars ------
 
 
@@ -3698,7 +3667,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
     nsIAtom* rootPseudo;
         
     if (!isPaginated) {
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
         if (aDocElement->IsContentOfType(nsIContent::eXUL)) 
         {
           NS_NewRootBoxFrame(aPresShell, &rootFrame);
@@ -3747,7 +3716,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   }
 
   // Never create scrollbars for XUL documents
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   if (isXUL) {
     isScrollable = PR_FALSE;
   } else 
@@ -3907,11 +3876,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
       viewManager->SetRootScrollableView(scrollableView);
       parentFrame = newScrollableFrame;
 
-      // if gfx scrollbars store them
-      if (HasGfxScrollbars())
-        mGfxScrollFrame = newFrame;
-      else
-        mGfxScrollFrame = nsnull;
+      mGfxScrollFrame = newFrame;
 
   } else {
     // If no scrollbars and xul, don't build a scrollframe at all. 
@@ -4236,30 +4201,6 @@ nsCSSFrameConstructor::ConstructTextControlFrame(nsIPresShell*   aPresShell,
     NS_ASSERTION(0, "We longer support native widgets");
   }
   return rv;
-}
-
-PRBool
-nsCSSFrameConstructor::HasGfxScrollbars()
-{
-#ifndef INCLUDE_XUL
-  return PR_FALSE;
-#endif
-  // Get the Prefs
-  if (!mGotGfxPrefs) {
-    nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
-    if (prefBranch) {
-      PRBool hasGfxScroll = PR_FALSE; // use a temp since we have a PRPackedBool
-      prefBranch->GetBoolPref("nglayout.widget.gfxscrollbars", &hasGfxScroll);
-      mHasGfxScrollbars = hasGfxScroll;
-      mGotGfxPrefs = PR_TRUE;
-    } else {
-      mHasGfxScrollbars = PR_FALSE;
-    }
-  }
-
-  // while we don't support native scrollbars for Seamonkey, some embedding
-  // clients demand them (but may still want XUL). Give them that option.
-  return mHasGfxScrollbars;
 }
 
 PRBool
@@ -5280,10 +5221,8 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
       aTag != nsHTMLAtoms::input &&
       aTag != nsHTMLAtoms::textarea &&
       aTag != nsHTMLAtoms::combobox &&
-      aTag != nsHTMLAtoms::isindex
-#ifdef INCLUDE_XUL
-      && aTag != nsXULAtoms::scrollbar
-#endif
+      aTag != nsHTMLAtoms::isindex &&
+      aTag != nsXULAtoms::scrollbar
       )
     return NS_OK;
 
@@ -5352,7 +5291,7 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
       content->SetParent(aParent);
       content->SetDocument(aDocument, PR_TRUE, PR_TRUE);
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
       // Only cut XUL scrollbars off if they're not in a XUL document.  This allows
       // scrollbars to be styled from XUL (although not from XML or HTML).
       nsCOMPtr<nsIAtom> tag;
@@ -5382,7 +5321,6 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
   return NS_OK;
 }
 
-#ifdef INCLUDE_XUL
 static
 PRBool IsXULDisplayType(const nsStyleDisplay* aDisplay)
 {
@@ -5448,6 +5386,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 
     if (isXULNS) {
       // First try creating a frame based on the tag
+#ifdef MOZ_XUL
       // BUTTON CONSTRUCTION
       if (aTag == nsXULAtoms::button || aTag == nsXULAtoms::checkbox || aTag == nsXULAtoms::radio) {
         processChildren = PR_TRUE;
@@ -5636,8 +5575,10 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewProgressMeterFrame(aPresShell, &newFrame);
       }
       // End of PROGRESS METER CONSTRUCTION logic
+      else
+#endif
       // SLIDER CONSTRUCTION
-      else if (aTag == nsXULAtoms::slider) {
+      if (aTag == nsXULAtoms::slider) {
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewSliderFrame(aPresShell, &newFrame);
@@ -5665,6 +5606,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       }
       // End of SCROLLBUTTON CONSTRUCTION logic
 
+#ifdef MOZ_XUL
       // SPLITTER CONSTRUCTION
       else if (aTag == nsXULAtoms::splitter) {
         processChildren = PR_TRUE;
@@ -5680,6 +5622,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewGrippyFrame(aPresShell, &newFrame);
       }
       // End of GRIPPY CONSTRUCTION logic
+#endif
     }
 
     // Display types for XUL start here
@@ -5709,7 +5652,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 
         } 
       } // End of BOX CONSTRUCTION logic
-
+#ifdef MOZ_XUL
       // ------- Begin Grid ---------
       else if ((!aXBLBaseTag && (display->mDisplay == NS_STYLE_DISPLAY_INLINE_GRID ||
                                  display->mDisplay == NS_STYLE_DISPLAY_GRID)) ||
@@ -5901,6 +5844,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         if (!menuFrame)
           isPopup = PR_TRUE;
       } 
+#endif
     }
   }
 
@@ -5990,7 +5934,9 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         aState.mAbsoluteItems.AddChild(newFrame);
       } else if (isFixedPositioned) {
         aState.mFixedItems.AddChild(newFrame);
-      } else if (isPopup) {
+      }
+#ifdef MOZ_XUL
+      else if (isPopup) {
         // Locate the root popup set and add ourselves to the popup set's list
         // of popup frames.
         nsIFrame* rootFrame;
@@ -6011,6 +5957,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
           }
         }
       }
+#endif
 
       // Add the placeholder frame to the flow
       aFrameItems.AddChild(placeholderFrame);
@@ -6020,7 +5967,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       aFrameItems.AddChild(topFrame);
   }
 
-
+#ifdef MOZ_XUL
   // register tooltip support if needed
   nsAutoString value;
   if (aTag == nsXULAtoms::treechildren || // trees always need titletips
@@ -6037,6 +5984,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
     if (rootBox)
       rootBox->AddTooltipSupport(aContent);
   }
+#endif
 
 // addToHashTable:
 
@@ -6053,7 +6001,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 
   return rv;
 }
-#endif
 
 already_AddRefed<nsStyleContext>
 nsCSSFrameConstructor::BeginBuildingScrollFrame(nsIPresShell*            aPresShell, 
@@ -6094,74 +6041,34 @@ nsCSSFrameConstructor::BeginBuildingScrollFrame(nsIPresShell*            aPresSh
 
   nsRefPtr<nsStyleContext> contentStyle = aContentStyle;
 
-  PRBool isGfx = HasGfxScrollbars();
+  if (!gfxScrollFrame) {
+    NS_NewGfxScrollFrame(aPresShell, &gfxScrollFrame, aDocument, aIsRoot);
 
-  if (isGfx) {
-    if (!gfxScrollFrame) {
-      NS_NewGfxScrollFrame(aPresShell, &gfxScrollFrame, aDocument, aIsRoot);
-      
-      InitAndRestoreFrame(aPresContext, aState, aContent, 
-                          aParentFrame, contentStyle, nsnull, gfxScrollFrame);
-      
-      // Create a view
-      nsHTMLContainerFrame::CreateViewForFrame(aPresContext, gfxScrollFrame,
-                                               contentStyle, aContentParentFrame, PR_FALSE);
-    }
-    
-    InitGfxScrollFrame(aPresShell, aPresContext, aState, aContent, aDocument,
-                       aParentFrame, aContentParentFrame, contentStyle,
-                       aIsRoot, gfxScrollFrame, anonymousItems, aScrollPortFrame);
-
-    scrollFrame = anonymousItems.childList; // get the scrollport from the anonymous list
-    parentFrame = gfxScrollFrame;
-    aNewFrame = gfxScrollFrame;
-
-    // we used the style that was passed in. So resolve another one.
-    nsRefPtr<nsStyleContext> scrollPseudoStyle;
-    scrollPseudoStyle = aPresContext->ResolvePseudoStyleContextFor(aContent,
-                                                                   nsCSSAnonBoxes::scrolledContent,
-                                                                   contentStyle);
-
-    contentStyle = scrollPseudoStyle;
     InitAndRestoreFrame(aPresContext, aState, aContent, 
-                        parentFrame, contentStyle, nsnull, scrollFrame);
+                        aParentFrame, contentStyle, nsnull, gfxScrollFrame);
 
-  } else {
-    // native scrollbarss
-    NS_NewScrollFrame(aPresShell, &scrollFrame);
-    aNewFrame = scrollFrame;
-    parentFrame = aParentFrame;
-    InitAndRestoreFrame(aPresContext, aState, aContent, 
-                        parentFrame, contentStyle, nsnull, scrollFrame);
-
-
-    // need to hook up the native scroll window's content parent
-    if (nsnull != aContentParentFrame) {
-      nsIView* view = nsnull;
-      scrollFrame->GetView(aPresContext, &view);
-      if (view) {
-        nsCOMPtr<nsIViewManager> vm;
-        view->GetViewManager(*getter_AddRefs(vm));
-        nsIView* parentView;
-        view->GetParent(parentView);
-
-        nsIView* zParentView = parentView;
-        aContentParentFrame->GetView(aPresContext, &zParentView);
-
-        if (nsnull == zParentView) {
-         nsIFrame* zParentFrame = nsnull;
-          aContentParentFrame->GetParentWithView(aPresContext, &zParentFrame);
-          NS_ASSERTION(zParentFrame, "GetParentWithView failed");
-          zParentFrame->GetView(aPresContext, &zParentView);
-          NS_ASSERTION(zParentView, "no parent with view");
-        }
-
-        if (zParentView != parentView) {
-          vm->InsertZPlaceholder(zParentView, view, nsnull, PR_TRUE);
-        }
-      }
-    }
+    // Create a view
+    nsHTMLContainerFrame::CreateViewForFrame(aPresContext, gfxScrollFrame,
+                                             contentStyle, aContentParentFrame, PR_FALSE);
   }
+
+  InitGfxScrollFrame(aPresShell, aPresContext, aState, aContent, aDocument,
+                     aParentFrame, aContentParentFrame, contentStyle,
+                     aIsRoot, gfxScrollFrame, anonymousItems, aScrollPortFrame);
+
+  scrollFrame = anonymousItems.childList; // get the scrollport from the anonymous list
+  parentFrame = gfxScrollFrame;
+  aNewFrame = gfxScrollFrame;
+
+  // we used the style that was passed in. So resolve another one.
+  nsRefPtr<nsStyleContext> scrollPseudoStyle;
+  scrollPseudoStyle = aPresContext->ResolvePseudoStyleContextFor(aContent,
+                                                                 nsCSSAnonBoxes::scrolledContent,
+                                                                 contentStyle);
+
+  contentStyle = scrollPseudoStyle;
+  InitAndRestoreFrame(aPresContext, aState, aContent, 
+                      parentFrame, contentStyle, nsnull, scrollFrame);
 
   nsStyleContext* aScrolledChildStyle = aPresContext->ResolvePseudoStyleContextFor(aContent,
                                                                                    aScrolledPseudo,
@@ -6345,19 +6252,16 @@ nsCSSFrameConstructor::InitGfxScrollFrame(nsIPresShell*            aPresShell,
                                           nsFrameItems&            aAnonymousFrames,
                                           nsIFrame*                aScrollPortFrame)
 {
-#ifdef INCLUDE_XUL
   if (!aScrollPortFrame)
     NS_NewScrollPortFrame(aPresShell, &aScrollPortFrame);
 
   aAnonymousFrames.AddChild(aScrollPortFrame);
 
-  // if there are any anonymous children for the nsScrollFrame create frames for them.
+  // if there are any anonymous children for the nsGfxScrollFrame create frames for them.
   CreateAnonymousFrames(aPresShell, aPresContext, aState, aContent, aDocument, aNewFrame,
                         PR_FALSE, aAnonymousFrames);
 
   return NS_OK;
-#endif
-  return NS_ERROR_FAILURE;
 } 
 
 nsresult
@@ -7503,7 +7407,6 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
                                    aContent, aParentFrame, aTag,
                                    aNameSpaceID, styleContext, aFrameItems);
 
-#ifdef INCLUDE_XUL
   // Failing to find a matching HTML frame, try creating a specialized
   // XUL frame. This is temporary, pending planned factoring of this
   // whole process into separate, pluggable steps.
@@ -7516,7 +7419,6 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
       return rv;
     }
   } 
-#endif
 
 // MathML Mod - RBS
 #ifdef MOZ_MATHML
@@ -7633,6 +7535,7 @@ nsCSSFrameConstructor::ReconstructDocElementHierarchy(nsIPresContext* aPresConte
         nsIFrame* docParentFrame;
         docElementFrame->GetParent(&docParentFrame);
 
+#ifdef MOZ_XUL
         // If we're in a XUL document, then we need to crawl up to the
         // RootBoxFrame and remove _its_ child.
         nsCOMPtr<nsIXULDocument> xuldoc = do_QueryInterface(mDocument);
@@ -7643,6 +7546,7 @@ nsCSSFrameConstructor::ReconstructDocElementHierarchy(nsIPresContext* aPresConte
             docParentFrame->GetParent(&docParentFrame);
           }
         }
+#endif
 
         NS_ASSERTION(docParentFrame, "should have a parent frame");
         if (docParentFrame) {
@@ -7698,7 +7602,7 @@ nsCSSFrameConstructor::GetFrameFor(nsIPresShell*    aPresShell,
     // Check to see if the content is a select and 
     // then if it has a drop down (thus making it a combobox)
     // The drop down is a ListControlFrame derived from a 
-    // nsScrollFrame then get the area frame and that will be the parent
+    // nsGfxScrollFrame then get the area frame and that will be the parent
     // What is unclear here, is if any of this fails, should it return
     // the nsComboboxControlFrame or null?
     nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
@@ -8399,7 +8303,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   if (aContainer) {
     nsCOMPtr<nsIBindingManager> bindingManager;
     mDocument->GetBindingManager(getter_AddRefs(bindingManager));
@@ -8416,7 +8320,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
       return NS_OK;
 
   }
-#endif // INCLUDE_XUL
+#endif // MOZ_XUL
 
   // Get the frame associated with the content
   nsIFrame* parentFrame = GetFrameFor(shell, aPresContext, aContainer);
@@ -9027,7 +8931,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
   aPresContext->GetShell(getter_AddRefs(shell));
   nsresult rv = NS_OK;
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   if (aContainer) {
     nsCOMPtr<nsIBindingManager> bindingManager;
     mDocument->GetBindingManager(getter_AddRefs(bindingManager));
@@ -9067,7 +8971,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
       return NS_OK;
 
   }
-#endif // INCLUDE_XUL
+#endif // MOZ_XUL
   
   // If we have a null parent, then this must be the document element
   // being inserted
@@ -9627,6 +9531,7 @@ DeletingFrameSubtree(nsIPresContext*  aPresContext,
     for (PRInt32 i = destroyQueue.Count() - 1; i >= 0; --i) {
       nsIFrame* outOfFlowFrame = NS_STATIC_CAST(nsIFrame*, destroyQueue[i]);
 
+#ifdef MOZ_XUL
       const nsStyleDisplay* display;
       outOfFlowFrame->GetStyleData(eStyleStruct_Display,
                                    (const nsStyleStruct*&)display);
@@ -9650,8 +9555,9 @@ DeletingFrameSubtree(nsIPresContext*  aPresContext,
               popupSet->RemovePopupFrame(outOfFlowFrame);
           }
         }
-      }
-      else {
+      } else
+#endif
+      {
         // Get the out-of-flow frame's parent
         nsIFrame* parentFrame;
         outOfFlowFrame->GetParent(&parentFrame);
@@ -9762,7 +9668,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     } 
   }
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   if (aContainer) {
     nsCOMPtr<nsIBindingManager> bindingManager;
     mDocument->GetBindingManager(getter_AddRefs(bindingManager));
@@ -9813,7 +9719,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
       return NS_OK;
 
   }
-#endif // INCLUDE_XUL
+#endif // MOZ_XUL
 
   if (childFrame) {
     // If the frame we are manipulating is a special frame then do
@@ -9936,6 +9842,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
       frameManager->GetRootFrame(&rootFrame);
       if (rootFrame)
         rootFrame->FirstChild(aPresContext, nsnull, &rootFrame);   
+#ifdef MOZ_XUL
       nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
       if (rootBox) {
         nsIFrame* popupSetFrame;
@@ -9946,6 +9853,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
             popupSet->RemovePopupFrame(childFrame);
         }
       }
+#endif
 
       // Remove the placeholder frame first (XXX second for now) (so
       // that it doesn't retain a dangling pointer to memory)
@@ -10685,7 +10593,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   PRBool reframe = (aHint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame)) != 0;
   PRBool restyle = (aHint & ~(nsChangeHint_AttrChange)) != 0;
 
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   // The following listbox widget trap prevents offscreen listbox widget
   // content from being removed and re-inserted (which is what would
   // happen otherwise).
@@ -10717,7 +10625,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     }
   }
 
-#endif // INCLUDE_XUL
+#endif // MOZ_XUL
 
   // See if we have appearance information for a theme.
   if (primaryFrame) {
@@ -13310,7 +13218,7 @@ nsCSSFrameConstructor::CreateListBoxContent(nsIPresContext* aPresContext,
                                             PRBool          aIsScrollbar,
                                             nsILayoutHistoryState* aFrameState)
 {
-#ifdef INCLUDE_XUL
+#ifdef MOZ_XUL
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
   nsresult rv = NS_OK;
