@@ -275,7 +275,7 @@ private:
     /**
      * Processes the xsl:with-param elements of the given xsl action
     **/
-    void processParameters(Element* xslAction, Node* context, ProcessorState* ps);
+    NamedMap* processParameters(Element* xslAction, Node* context, ProcessorState* ps);
 
     /**
      * Looks up the given XSLType with the given name
@@ -339,8 +339,8 @@ private:
     void processAttrValueTemplate
         (const String& attValue, String& result, Node* context, ProcessorState* ps);
 
-    void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps);
-    void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps);
+    void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps, NamedMap* actualParams = NULL);
+    void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps, NamedMap* actualParams);
 
     void processTopLevel(Document* xslDocument, ProcessorState* ps);
     void processTopLevel(Element* stylesheet, ProcessorState* ps);
