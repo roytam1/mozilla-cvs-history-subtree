@@ -34,12 +34,7 @@ var RDF = Components.classes[rdf_uri].getService()
 RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService)
 
 // the default sidebar:
-var defaultsidebar = new Object
-defaultsidebar.db = 'chrome://sidebar/content/default-panels.rdf'
-defaultsidebar.resource = 'urn:sidebar:current-panel-list'
-
-// the current sidebar:
-var sidebar = null
+var sidebar = new Object;
 
 function debug(msg)
 {
@@ -81,102 +76,49 @@ function loadRDFXML(url)
   return datasource
 }
 
-function sidebarOverlayInit(usersidebar)
+function sidebarOverlayInit()
 {
-  // load up user-specified sidebar
-  if (usersidebar) {
-    debug("usersidebar = " + usersidebar + "\n")
-    debug("usersidebar.resource = " + usersidebar.resource + "\n")
-    debug("usersidebar.db = " + usersidebar.db + "\n")
-    sidebar = usersidebar
-  } 
-  else {                  
-    try 
-    {
-      var profileInterface = Components.interfaces.nsIProfile
-      var profileURI = 'component://netscape/profile/manager'
-      var profileService  = Components.classes[profileURI].getService()
-      profileService = profileService.QueryInterface(profileInterface)
-      var sidebar_url = profileService.getCurrentProfileDirFromJS()
-      sidebar_url.URLString += "panels.rdf"
+  // Look in the profile directory to find 'panels.rdf', which is the
+  // database of the user's currently selected panels.
+  var profileInterface = Components.interfaces.nsIProfile;
+  var profileURI = 'component://netscape/profile/manager';
+  var profileService  = Components.classes[profileURI].getService();
+  profileService = profileService.QueryInterface(profileInterface);
+  var sidebar_url = profileService.getCurrentProfileDirFromJS();
+  sidebar_url.URLString += "panels.rdf";
 
-      if (!(sidebar_url.exists())) {
-        debug("using " + defaultsidebar.db + " because " + sidebar_url.URLString + " does not exist\n")
-      } else {
-        debug("sidebar url is " + sidebar_url.URLString + "\n")
-        defaultsidebar.db = sidebar_url.URLString
-      }
-    }
-    catch (ex) 
-    {
-      debug("failed to get sidebar url, using default\n")
-    }
-    sidebar = defaultsidebar
+  if (sidebar_url.exists()) {
+    debug("sidebar url is " + sidebar_url.URLString + "\n");
+    sidebar.db = sidebar_url.URLString;
+  }
+  else {
+    // XXX What we should _really_ do here is copy the default panels
+    // into the profile directory and then try again.
+    sidebar.db = 'chrome://sidebar/content/default-panels.rdf'
+    debug("using " + sidebar.db + " because " + sidebar_url.URLString + " does not exist\n");
   }
 
-  var sidebar_element = document.getElementById('sidebar-box')
+  sidebar.resource = 'urn:sidebar:current-panel-list';
+
+  // Initialize the display
+  var sidebar_element = document.getElementById('sidebar-box');
   if (sidebar_element.getAttribute('hidden') == 'true') {
-    sidebar_element.setAttribute('style', 'display:none')
-    return
-  }
-
-  debug("sidebar = " + sidebar + "\n")
-  debug("sidebar.resource = " + sidebar.resource + "\n")
-  debug("sidebar.db = " + sidebar.db + "\n")
-
-  var db = Components.classes['component://netscape/rdf/datasource?name=composite-datasource']
-  db = db.createInstance()
-  db = db.QueryInterface(Components.interfaces.nsIRDFCompositeDataSource)
-
-  // This is the master sidebar registry that is installed in a shared
-  // directory. We could add more lines that'd load registries from
-  // remote locations, as well.
-  var registry = loadRDFXML('chrome://sidebar/content/local-panels.rdf');
-  db.AddDataSource(registry);
-
-  // This is the pseudo 'master registry' that is supposed to be
-  // loaded from some (*cough*) remote place.
-  var registry2 = loadRDFXML('chrome://sidebar/content/remote-panels.rdf')
-  db.AddDataSource(registry2);
-
-  // And these are the current user's panel choices
-  var currentpanels = loadRDFXML(sidebar.db)
-  db.AddDataSource(currentpanels)
-
-  // Create a 'container' wrapper around the sidebar.resources
-  // resource so we can use some utility routines that make access a
-  // bit easier.
-  var sb_datasource = Components.classes['component://netscape/rdf/container']
-  var container     = Components.interfaces.nsIRDFContainer
-
-  sb_datasource     = sb_datasource.createInstance()
-  sb_datasource     = sb_datasource.QueryInterface(container)
-  sb_datasource.Init(db, RDF.GetResource(sidebar.resource))
-  
-  var mypanelsbox = document.getElementById('sidebar-panels')
-  if (!mypanelsbox) {
-    dump("Unable to find sidebar panels\n")
+    sidebar_element.setAttribute('style', 'display:none');
     return;
   }
 
-  // Now enumerate all of the datasources.
-  var enumerator = null
-  try {
-    enumerator = sb_datasource.GetElements()
-  }
-  catch (ex) {
-    debug("sb_datasource has no elements.\n")
-  }
+  debug("sidebar = " + sidebar + "\n");
+  debug("sidebar.resource = " + sidebar.resource + "\n");
+  debug("sidebar.db = " + sidebar.db + "\n");
 
-  if (!enumerator) return
+  // Add the user's current panel choices to the template builder,
+  // which will aggregate it with the other datasources that describe
+  // the individual panel's title, customize URL, and content URL.
+  var panels = document.getElementById('sidebar-panels');
+  panels.database.AddDataSource(RDF.GetDataSource(sidebar.db));
 
-  while (enumerator.HasMoreElements()) {
-    var service = enumerator.GetNext()
-    service = service.QueryInterface(Components.interfaces.nsIRDFResource)
-
-    var is_last = !enumerator.HasMoreElements()
-    var new_panel = sidebarAddPanel(mypanelsbox, db, service, is_last)
-  }
+  // XXX This is a hack to force re-display
+  panels.setAttribute('ref', 'urn:sidebar:current-panel-list');
 }
 
 function sidebarAddPanel(parent, db, service, is_last) {
@@ -260,7 +202,8 @@ function sidebarReload() {
 }
 
 function sidebarCustomize() {
-  var newWin = window.openDialog('chrome://sidebar/content/customize.xul', 'New','chrome', sidebar.db, sidebar.resource)
+  var newWin = window.openDialog('chrome://sidebar/content/customize.xul', 'New','chrome',
+                                 sidebar.db, sidebar.resource)
   return newWin
 }
 

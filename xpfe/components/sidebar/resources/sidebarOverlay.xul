@@ -1,4 +1,4 @@
-<?xml version="1.0"?> 
+<?xml version="1.0"?> <!-- -*- Mode: SGML; indent-tabs-mode: nil -*- -->
 
 <!DOCTYPE window SYSTEM "chrome://sidebar/locale/sidebarOverlay.dtd">
 
@@ -23,10 +23,11 @@
         onclick="sidebarCustomize();" />
     </splitter>
 
-    <box id="sidebar-panels" align="vertical" flex="100%">
-    <!--
-      datasources="chrome://sidebar/content/sidebar.rdf" 
-      ref="NC:SidebarRoot">
+    <box id="sidebar-panels" align="vertical" flex="100%"
+      datasources="chrome://sidebar/content/local-panels.rdf 
+                   chrome://sidebar/content/remote-panels.rdf"
+
+      ref="urn:sidebar:current-panel-list">
       <template>
         <rule>
           <box uri="rdf:*" align="vertical">
@@ -44,7 +45,6 @@
           </box>
         </rule>
       </template>
-      -->
     </box>
 
     <splitter id="alerts-splitter" class="panel-bar"
