@@ -251,6 +251,9 @@ function toggleCaseSensitivity(aCaseSensitive)
 {
   var fastFind = getBrowser().fastFind;
   fastFind.caseSensitive = aCaseSensitive;
+  
+  if (gFindMode != FIND_NORMAL)
+    setFindCloseTimeout();
 }
   
 function changeSelectionColor(aAttention)
