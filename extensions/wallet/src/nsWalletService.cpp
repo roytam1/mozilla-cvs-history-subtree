@@ -43,6 +43,7 @@
 #include "nsINetSupportDialogService.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIPrompt.h"
+#include "nsIProfileChangeStatus.h"
 
 // for making the leap from nsIDOMWindowInternal -> nsIPresShell
 #include "nsIScriptGlobalObject.h"
@@ -53,9 +54,6 @@ static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 nsWalletlibService::nsWalletlibService()
 {
   NS_INIT_REFCNT();
-  ++mRefCnt; // Stabilization that can't accidentally |Release()| me
-    Init();
-  --mRefCnt;
 }
 
 nsWalletlibService::~nsWalletlibService()
@@ -65,11 +63,12 @@ nsWalletlibService::~nsWalletlibService()
 #endif /* DEBUG_dp */
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS5(nsWalletlibService,
+NS_IMPL_THREADSAFE_ISUPPORTS6(nsWalletlibService,
                               nsIWalletService,
                               nsIObserver,
                               nsIFormSubmitObserver,
                               nsIDocumentLoaderObserver,
+                              nsIObserver,
                               nsISupportsWeakReference)
 
 NS_IMETHODIMP nsWalletlibService::WALLET_PreEdit(nsAutoString& walletList) {
@@ -189,9 +188,12 @@ NS_IMETHODIMP nsWalletlibService::SI_SignonViewerReturn(nsAutoString results){
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWalletlibService::Observe(nsISupports*, const PRUnichar*, const PRUnichar*) 
+NS_IMETHODIMP nsWalletlibService::Observe(nsISupports*, const PRUnichar *aTopic, const PRUnichar*) 
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  if (nsCRT::strcmp(aTopic, PROFILE_DO_CHANGE_TOPIC) == 0) {
+    WLLT_ClearUserData();
+  }
+  return NS_OK;
 }
 
 #define CRLF "\015\012"   
@@ -204,28 +206,27 @@ NS_IMETHODIMP nsWalletlibService::Notify(nsIContent* formNode, nsIDOMWindowInter
   return NS_OK;
 }
 
-void nsWalletlibService::Init() 
+nsresult nsWalletlibService::Init() 
 {
-  nsIObserverService *svc = 0;
-  nsIDocumentLoader *docLoaderService;
+  nsresult rv;
 
-  nsresult rv = nsServiceManager::GetService
-    (NS_OBSERVERSERVICE_CONTRACTID, NS_GET_IID(nsIObserverService), (nsISupports**)&svc );
-  if ( NS_SUCCEEDED( rv ) && svc ) {
+  NS_WITH_SERVICE(nsIObserverService, svc, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv) && svc) {
+    // Register as an observer of form submission
     nsString  topic; topic.AssignWithConversion(NS_FORMSUBMIT_SUBJECT);
-    rv = svc->AddObserver( this, topic.GetUnicode());
-    nsServiceManager::ReleaseService( NS_OBSERVERSERVICE_CONTRACTID, svc );
+    svc->AddObserver(this, topic.GetUnicode());
+    // Register as an observer of profile changes
+    svc->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
   }
 
-  // Get the global document loader service...  
-  rv = nsServiceManager::GetService
-    (kDocLoaderServiceCID, NS_GET_IID(nsIDocumentLoader), (nsISupports **)&docLoaderService);
+  // Get the global document loader service...
+  NS_WITH_SERVICE(nsIDocumentLoader, docLoaderService, kDocLoaderServiceCID, &rv)
   if (NS_SUCCEEDED(rv) && docLoaderService) {
     //Register ourselves as an observer for the new doc loader
     docLoaderService->AddObserver((nsIDocumentLoaderObserver*)this);
-    nsServiceManager::ReleaseService(kDocLoaderServiceCID, docLoaderService );
   }
-
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -27,7 +27,7 @@
 #include "nsWalletService.h"
 
 // Define the constructor function for the nsWalletlibService
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsWalletlibService)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsWalletlibService, Init)
 
 
 // The list of components we register

@@ -39,7 +39,6 @@ class nsWalletlibService : public nsIWalletService,
                            public nsIDocumentLoaderObserver,
                            public nsIPasswordSink,
                            public nsSupportsWeakReference {
-
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIWALLETSERVICE
@@ -49,15 +48,13 @@ public:
   // NS_DECL_NSSUPPORTSWEAKREFERENCE
 
   nsWalletlibService();
+  nsresult Init();
 
   // NS_DECL_NSIFORMSUBMITOBSERVER
   NS_IMETHOD Notify(nsIContent* formNode, nsIDOMWindowInternal* window, nsIURI* actionURL, PRBool* cancelSubmit);
   
 protected:
   virtual ~nsWalletlibService();
-
-private:
-  void    Init();
 };
 
 ////////////////////////////////////////////////////////////////////////////////
