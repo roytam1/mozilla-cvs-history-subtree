@@ -59,6 +59,7 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
                                         PRUint32 stringLen,
                                         const char *string)
 {
+#ifdef DEBUG
   // print a load error on bad status
   if (NS_FAILED(aStatus)) {
     if (aLoader) {
@@ -70,17 +71,15 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
         if (channel) {
             channel->GetURI(getter_AddRefs(uri));
             if (uri) {
-                char* uriSpec;
-                uri->GetSpec(&uriSpec);
-#ifdef DEBUG
+                nsCAutoString uriSpec;
+                uri->GetSpec(uriSpec);
                 printf("Failed to load %s\n", uriSpec ? uriSpec : "");
-#endif
-                CRTFREEIF(uriSpec);
             }
         }
       }
     }
   }
+#endif
 
   if (string && stringLen > 0) {
     // XXX this shouldn't be SYNC, but unless we make a copy of the memory, we can't play it async.

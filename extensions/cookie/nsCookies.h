@@ -55,6 +55,7 @@ class nsIHttpChannel;
 
 extern nsresult COOKIE_Read();
 extern nsresult COOKIE_Write();
+//XXX these should operate on |const char*|
 extern char * COOKIE_GetCookie(char * address, nsIIOService* ioService);
 extern char * COOKIE_GetCookieFromHttp(char * address, char * firstAddress, nsIIOService* ioService);
 extern void COOKIE_SetCookieString(char * cur_url, nsIPrompt *aPrompter, const char * set_cookie_header, nsIIOService* ioService, nsIHttpChannel* aHttpChannel);

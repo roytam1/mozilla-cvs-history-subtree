@@ -209,6 +209,7 @@ NS_NewURI(nsIURI* *result,
           const char* spec, 
           nsIURI* baseURI = nsnull)     // pass in nsIIOService to optimize callers
 {
+#ifdef NOT_BROKEN_BY_DARIN
     nsIIOService* ioService;
     static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
     nsresult rv = theServiceManager->GetService(kIOServiceCID, NS_GET_IID(nsIIOService), (void**)&ioService);
@@ -216,6 +217,8 @@ NS_NewURI(nsIURI* *result,
         rv = ioService->NewURI(spec, baseURI, result);
     NS_RELEASE(ioService);
     return rv;
+#endif 
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 MRJSecurityContext::MRJSecurityContext(const char* location)
@@ -252,12 +255,14 @@ NS_METHOD MRJSecurityContext::Implies(const char* target, const char* action, PR
 NS_METHOD 
 MRJSecurityContext::GetOrigin(char* buf, int len)
 {
+#ifdef NOT_BROKEN_BY_DARIN
     char* origin = nsnull;
     if (mLocation && NS_SUCCEEDED(mLocation->GetPrePath(&origin))) {
         ::strncpy(buf, origin, len);
         delete[] origin;
         return NS_OK;
     }
+#endif
     return NS_ERROR_FAILURE;
 }
 
