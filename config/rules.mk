@@ -148,7 +148,11 @@ ifeq ($(OS_ARCH),WINNT)
 LIB			:= $(addprefix $(OBJDIR)/, $(LIB))
 endif
 endif
+ifneq ($(OS_ARCH),OS2)
 MAKE_OBJDIR		= mkdir $(OBJDIR)
+else
+MAKE_OBJDIR     = if test ! -d $(OBJDIR); then mkdir $(OBJDIR); fi
+endif
 else
 define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); $(NSINSTALL) -D $(@D); fi
