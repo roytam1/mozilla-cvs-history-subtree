@@ -306,6 +306,10 @@ int MozCopyStr(LPSTR szSrc, LPSTR szDest, DWORD dwDestBufSize)
 LPSTR GetFirstNonSpace(LPSTR lpszString)
 {
   char* p = lpszString;
+
+  if(!p)
+    return NULL;
+
   while (*p && isspace(*p))
     p = CharNext(p);
 
@@ -320,6 +324,10 @@ LPSTR GetFirstNonSpace(LPSTR lpszString)
 LPSTR GetFirstSpace(LPSTR lpszString)
 {
   char* p = lpszString;
+
+  if(!p)
+    return NULL;
+
   while (*p && !isspace(*p))
     p = CharNext(p);
 
@@ -334,6 +342,10 @@ LPSTR GetFirstSpace(LPSTR lpszString)
 LPSTR MozStrChar(LPSTR lpszString, char c)
 {
   char* p = lpszString;
+
+  if(!p)
+    return NULL;
+
   while (*p && (*p != c))
     p = CharNext(p);
 
