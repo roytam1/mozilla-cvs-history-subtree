@@ -350,7 +350,7 @@ FE_DestroyWindow
 # FE_DoneMailTo
 # FE_EditPreference
 # FE_EmbedURLExit
-# FE_FileType
+FE_FileType
 # FE_FindCommand
 # FE_FocusInputElement
 # FE_ForEachRectInRegion
@@ -1171,7 +1171,7 @@ NET_GetURL
 # NET_HTTPNetRead
 # NET_HTTPNetWrite
 # NET_HasNetworkActivity
-# NET_HaveConverterForMimeType
+NET_HaveConverterForMimeType
 # NET_HoldURLStruct
 # NET_HostName
 # NET_InGetHostByName
@@ -1790,7 +1790,7 @@ XP_GetDialogStrings
 # XP_GetError
 # XP_GetGlobalContextList
 # XP_GetLastActiveContext
-# XP_GetNavCenterContext
+XP_GetNavCenterContext
 # XP_GetNewsRCFiles
 XP_GetNonGridContext
 # XP_GetObserverListObservable
