@@ -66,6 +66,9 @@ sub new
       $self->{"certdb"} = $certdb;
     }
 
+  $self->{"binddn"} = "" unless defined $self->{"binddn"};
+  $self->{"bindpasswd"} = "" unless defined $self->{"bindpasswd"};
+
   if (!defined($self->{"port"}) || ($self->{"port"} eq ""))
     {
       $self->{"port"} = (($self->{"certdb"} ne "") ? LDAPS_PORT : LDAP_PORT);
@@ -104,7 +107,7 @@ sub init
   my $ret;
   my $ld;
 
-  if ($self->{"certdb"} ne "")
+  if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
     {
       $ret = ldapssl_client_init($self->{"certdb"}, 0);
       return 0 if ($ret < 0);
@@ -143,7 +146,19 @@ sub getLD
 {
   my ($self) = @_;
 
-  return $self->{"ld"} if $self->{"ld"};
+  return $self->{"ld"} if defined($self->{"ld"});
+}
+
+
+#############################################################################
+# Return the actual the current result message, don't use this unless you
+# really have to...
+#
+sub getRes
+{
+  my ($self) = @_;
+
+  return $self->{"ldre"} if defined($self->{"ldres"});
 }
 
 
@@ -506,6 +521,7 @@ sub setDefaultRebindProc
 {
   my ($self, $dn, $pswd, $auth) = @_;
 
+  $auth = LDAP_AUTH_SIMPLE unless defined($auth);
   die "No LDAP connection"
     unless defined($self->{ld});
 
