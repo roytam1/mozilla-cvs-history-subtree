@@ -577,7 +577,6 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
   {
   case 'u': // unread column
     ToggleReadByIndex(row);
-    mOutliner->InvalidateRow(row);
    break;
   case 't': // threaded cell
     if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) && (m_flags [row] & MSG_VIEW_FLAG_HASCHILDREN))
@@ -2287,7 +2286,7 @@ NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags,
 
       // ### what about saving the old view only flags, like IsThread and HasChildren?
       // I think we'll want to save those away.
-      m_flags[index] = aNewFlags || viewOnlyFlags;
+      m_flags[index] = aNewFlags | viewOnlyFlags;
       // tell the view the extra flag changed, so it can
       // update the previous view, if any.
       OnExtraFlagChanged(index, aNewFlags);
@@ -2364,7 +2363,7 @@ void	nsMsgDBView::NoteChange(nsMsgViewIndex firstLineChanged, PRInt32 numChanged
     switch (changeType)
     {
     case nsMsgViewNotificationCode::changed:
-      mOutliner->InvalidateRange(firstLineChanged, numChanged);
+      mOutliner->InvalidateRange(firstLineChanged, firstLineChanged + numChanged);
       break;
     case nsMsgViewNotificationCode::insertOrDelete:
       mOutliner->RowCountChanged(firstLineChanged, numChanged);
