@@ -295,9 +295,10 @@ PRInt32
 EvictForClientID::VisitRecord(nsDiskCacheRecord *  mapRecord)
 {
     // read disk cache entry
-    nsDiskCacheEntry * diskEntry = nsnull;
-    char *             clientID  = nsnull;
-    PRInt32            result    = kVisitNextRecord;
+    nsDiskCacheEntry *   diskEntry = nsnull;
+    nsDiskCacheBinding * binding   = nsnull;
+    char *               clientID  = nsnull;
+    PRInt32              result    = kVisitNextRecord;
 
     if (mClientID) {
          // we're just evicting records for a specific client
@@ -311,7 +312,7 @@ EvictForClientID::VisitRecord(nsDiskCacheRecord *  mapRecord)
         if (nsCRT::strcmp(mClientID, clientID) != 0) goto exit;
     }
     
-    nsDiskCacheBinding * binding = mBindery->FindActiveBinding(mapRecord->HashNumber());
+    binding = mBindery->FindActiveBinding(mapRecord->HashNumber());
     if (binding) {
         // we are currently using this entry, so all we can do is doom it
         
