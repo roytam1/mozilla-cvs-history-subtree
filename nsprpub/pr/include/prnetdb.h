@@ -117,13 +117,11 @@ NSPR_API(PRStatus) PR_GetHostByName(
 **                      for the failure can be retrieved by PR_GetError().
 ***********************************************************************/
 
-/*
- * #define PR_AI_ALL        0x08
- * #define PR_AI_V4MAPPED   0x10
- * #define PR_AI_ADDRCONFIG 0x20
- * #define PR_AI_DEFAULT    (PR_AI_V4MAPPED | PR_AI_ADDRCONFIG)
- */
-#define PR_AI_DEFAULT 0x30
+
+#define PR_AI_ALL        0x08
+#define PR_AI_V4MAPPED   0x10
+#define PR_AI_ADDRCONFIG 0x20
+#define PR_AI_DEFAULT    (PR_AI_V4MAPPED | PR_AI_ADDRCONFIG)
 
 NSPR_API(PRStatus) PR_GetIPNodeByName(
     const char *hostname,

@@ -231,8 +231,8 @@ static void MakeIPv4CompatAddr(const char *v4, char *v6)
 */
 static PRStatus CopyHostent(
     struct hostent *from,
-    char *buf,
-    PRIntn bufsize,
+    char **buf,
+    PRIntn *bufsize,
     _PRIPAddrConversion conversion,
     PRHostEnt *to)
 {
@@ -255,7 +255,7 @@ static PRStatus CopyHostent(
 	/* Copy the official name */
 	if (!from->h_name) return PR_FAILURE;
 	len = strlen(from->h_name) + 1;
-	to->h_name = Alloc(len, &buf, &bufsize, 0);
+	to->h_name = Alloc(len, buf, bufsize, 0);
 	if (!to->h_name) return PR_FAILURE;
 	memcpy(to->h_name, from->h_name, len);
 
@@ -266,7 +266,7 @@ static PRStatus CopyHostent(
 		for (na = 1, ap = from->h_aliases; *ap != 0; na++, ap++){;} /* nothing to execute */
 	}
 	to->h_aliases = (char**)Alloc(
-	    na * sizeof(char*), &buf, &bufsize, sizeof(char**));
+	    na * sizeof(char*), buf, bufsize, sizeof(char**));
 	if (!to->h_aliases) return PR_FAILURE;
 
 	/* Copy the aliases, one at a time */
@@ -275,7 +275,7 @@ static PRStatus CopyHostent(
 	} else {
 		for (na = 0, ap = from->h_aliases; *ap != 0; na++, ap++) {
 			len = strlen(*ap) + 1;
-			to->h_aliases[na] = Alloc(len, &buf, &bufsize, 0);
+			to->h_aliases[na] = Alloc(len, buf, bufsize, 0);
 			if (!to->h_aliases[na]) return PR_FAILURE;
 			memcpy(to->h_aliases[na], *ap, len);
 		}
@@ -285,12 +285,12 @@ static PRStatus CopyHostent(
 	/* Count the addresses, then allocate storage for the pointers */
 	for (na = 1, ap = from->h_addr_list; *ap != 0; na++, ap++){;} /* nothing to execute */
 	to->h_addr_list = (char**)Alloc(
-	    na * sizeof(char*), &buf, &bufsize, sizeof(char**));
+	    na * sizeof(char*), buf, bufsize, sizeof(char**));
 	if (!to->h_addr_list) return PR_FAILURE;
 
 	/* Copy the addresses, one at a time */
 	for (na = 0, ap = from->h_addr_list; *ap != 0; na++, ap++) {
-		to->h_addr_list[na] = Alloc(to->h_length, &buf, &bufsize, 0);
+		to->h_addr_list[na] = Alloc(to->h_length, buf, bufsize, 0);
 		if (!to->h_addr_list[na]) return PR_FAILURE;
 		if (conversion != _PRIPAddrNoConversion
 				&& from->h_addrtype == AF_INET) {
@@ -413,7 +413,7 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 		if (_pr_ipv6_enabled)
 			conversion = _PRIPAddrIPv4Mapped;
 #endif
-		rv = CopyHostent(h, buf, bufsize, conversion, hp);
+		rv = CopyHostent(h, &buf, &bufsize, conversion, hp);
 		if (PR_SUCCESS != rv)
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
@@ -438,21 +438,17 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 #endif
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
 	int error_num;
+	int tmp_flags = 0;
+#endif
+#if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
+    PRBool did_af_inet = PR_FALSE;
+    char **new_addr_list;
 #endif
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
     PR_ASSERT(af == PR_AF_INET || af == PR_AF_INET6);
     if (af != PR_AF_INET && af != PR_AF_INET6) {
-        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-        return PR_FAILURE;
-    }
-
-    /*
-     * Flags other than PR_AI_DEFAULT are not yet supported.
-     */
-    PR_ASSERT(flags == PR_AI_DEFAULT);
-    if (flags != PR_AI_DEFAULT) {
         PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
         return PR_FAILURE;
     }
@@ -467,17 +463,25 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
     if (af == PR_AF_INET6)
     {
         h = gethostbyname2(name, AF_INET6); 
-        if (NULL == h)
+        if ((NULL == h) && (flags & (PR_AI_V4MAPPED|PR_AI_ALL)))
         {
+            did_af_inet = PR_TRUE;
             h = gethostbyname2(name, AF_INET);
         }
     }
     else
     {
+        did_af_inet = PR_TRUE;
         h = gethostbyname2(name, af);
     }
 #elif defined(_PR_HAVE_GETIPNODEBYNAME)
-    h = getipnodebyname(name, af, AI_DEFAULT, &error_num);
+	if (flags & PR_AI_V4MAPPED)
+		tmp_flags |= AI_V4MAPPED;
+	if (flags & PR_AI_ADDRCONFIG)
+		tmp_flags |= AI_ADDRCONFIG;
+	if (flags & PR_AI_ALL)
+		tmp_flags |= AI_ALL;
+    h = getipnodebyname(name, af, tmp_flags, &error_num);
 #else
 #error "Unknown name-to-address translation function"
 #endif
@@ -502,13 +506,45 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 		_PRIPAddrConversion conversion = _PRIPAddrNoConversion;
 
 		if (af == PR_AF_INET6) conversion = _PRIPAddrIPv4Mapped;
-		rv = CopyHostent(h, buf, bufsize, conversion, hp);
+		rv = CopyHostent(h, &buf, &bufsize, conversion, hp);
 		if (PR_SUCCESS != rv)
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
 		freehostent(h);
 #endif
 	}
+#if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
+    if ((flags & PR_AI_ALL) && !did_af_inet &&
+						(h = gethostbyname2(name, AF_INET)) != 0) {
+        /* Append the V4 addresses to the end of the list */
+        PRIntn na, na_old;
+        char **ap;
+        
+        /* Count the addresses, then grow storage for the pointers */
+        for (na_old = 0, ap = hp->h_addr_list; *ap != 0; na_old++, ap++)
+				{;} /* nothing to execute */
+        for (na = na_old + 1, ap = h->h_addr_list; *ap != 0; na++, ap++)
+				{;} /* nothing to execute */
+        new_addr_list = (char**)Alloc(
+            na * sizeof(char*), &buf, &bufsize, sizeof(char**));
+        if (!new_addr_list) return PR_FAILURE;
+
+        /* Copy the V6 addresses, one at a time */
+        for (na = 0, ap = hp->h_addr_list; *ap != 0; na++, ap++) {
+            new_addr_list[na] = hp->h_addr_list[na];
+        }
+        hp->h_addr_list = new_addr_list;
+
+        /* Copy the V4 addresses, one at a time */
+        for (ap = h->h_addr_list; *ap != 0; na++, ap++) {
+            hp->h_addr_list[na] = Alloc(hp->h_length, &buf, &bufsize, 0);
+            if (!hp->h_addr_list[na]) return PR_FAILURE;
+            MakeIPv4MappedAddr(*ap, hp->h_addr_list[na]);
+        }
+        hp->h_addr_list[na] = 0;
+    }
+#endif
+
 	UNLOCK_DNS();
 #ifdef XP_UNIX
 	ENABLECLOCK(&oldset);
@@ -581,7 +617,7 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 			}
 		}
 #endif
-		rv = CopyHostent(h, buf, bufsize, conversion, hostentry);
+		rv = CopyHostent(h, &buf, &bufsize, conversion, hostentry);
 		if (PR_SUCCESS != rv) {
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
 		}
