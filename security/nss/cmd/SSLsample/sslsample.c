@@ -140,7 +140,6 @@ myAuthCertificate(void *arg, PRFileDesc *socket,
 
 	/* If this is a server, we're finished. */
 	if (isServer || secStatus != SECSuccess) {
-		CERT_DestroyCertificate(cert);
 		return secStatus;
 	}
 
@@ -163,7 +162,6 @@ myAuthCertificate(void *arg, PRFileDesc *socket,
 	if (hostName)
 		PR_Free(hostName);
 
-	CERT_DestroyCertificate(cert);
 	return secStatus;
 }
 

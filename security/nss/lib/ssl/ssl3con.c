@@ -1327,7 +1327,6 @@ spec_locked_loser:
 
 	    if (!(flags & ssl_SEND_FLAG_FORCE_INTO_BUFFER)) {
 
-		ss->handshakeBegun = 1;
 		count = ssl_SendSavedWriteData(ss, &ss->pendingBuf,
 		                               &ssl_DefSend);
 		if (count < 0 && PR_GetError() != PR_WOULD_BLOCK_ERROR) {
@@ -1336,7 +1335,6 @@ spec_locked_loser:
 		}
 	    }
 	} else if (write->len > 0) {
-	    ss->handshakeBegun = 1;
 	    count = ssl_DefSend(ss, write->buf, write->len,
 				flags & ~ssl_SEND_FLAG_MASK);
 	    if (count < 0) {
@@ -1457,12 +1455,12 @@ ssl3_HandleNoCertificate(sslSocket *ss)
     /* If the server has required client-auth blindly but doesn't
      * actually look at the certificate it won't know that no
      * certificate was presented so we shutdown the socket to ensure
-     * an error.  We only do this if we haven't already completed the
-     * first handshake because if we're redoing the handshake we 
-     * know the server is paying attention to the certificate.
+     * an error.  We only do this if we aren't connected because
+     * if we're redoing the handshake we know the server is paying
+     * attention to the certificate.
      */
     if ((ss->requireCertificate == 1) ||
-	(!ss->firstHsDone && (ss->requireCertificate > 1))) {
+	(!ss->connected && (ss->requireCertificate > 1))) {
 	PRFileDesc * lower;
 
 	ss->sec->uncache(ss->sec->ci.sid);
@@ -3898,8 +3896,8 @@ loser:
 static SECStatus
 ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 {
-    PRArenaPool *    arena     = NULL;
-    SECKEYPublicKey *peerKey   = NULL;
+    PRArenaPool *    arena;
+    SECKEYPublicKey *peerKey;
     PRBool           isTLS;
     SECStatus        rv;
     int              errCode   = SSL_ERROR_RX_MALFORMED_SERVER_KEY_EXCH;
@@ -3981,9 +3979,8 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	    goto no_memory;
 	}
 
-    	peerKey = PORT_ArenaZNew(arena, SECKEYPublicKey);
+    	ss->sec->peerKey = peerKey = PORT_ArenaZNew(arena, SECKEYPublicKey);
     	if (peerKey == NULL) {
-            PORT_FreeArena(arena, PR_FALSE);
 	    goto no_memory;
 	}
 
@@ -3991,16 +3988,26 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	peerKey->keyType            = rsaKey;
 	peerKey->pkcs11Slot         = NULL;
 	peerKey->pkcs11ID           = CK_INVALID_KEY;
-	if (SECITEM_CopyItem(arena, &peerKey->u.rsa.modulus,        &modulus) ||
-	    SECITEM_CopyItem(arena, &peerKey->u.rsa.publicExponent, &exponent))
-	{
-            PORT_FreeArena(arena, PR_FALSE);
+    	peerKey->u.rsa.modulus.data =
+	    (unsigned char*)PORT_ArenaAlloc(arena, modulus.len);
+	if (peerKey->u.rsa.modulus.data == NULL)
 	    goto no_memory;
-        }
-    	ss->sec->peerKey = peerKey;
-	SECITEM_FreeItem(&modulus,   PR_FALSE);
-	SECITEM_FreeItem(&exponent,  PR_FALSE);
-	SECITEM_FreeItem(&signature, PR_FALSE);
+
+    	PORT_Memcpy(peerKey->u.rsa.modulus.data, modulus.data, modulus.len);
+    	peerKey->u.rsa.modulus.len = modulus.len;
+
+    	peerKey->u.rsa.publicExponent.data =
+	    (unsigned char*)PORT_ArenaAlloc(arena, exponent.len);
+        if (peerKey->u.rsa.publicExponent.data == NULL)
+	    goto no_memory;
+
+    	PORT_Memcpy(peerKey->u.rsa.publicExponent.data,
+		    exponent.data, exponent.len);
+    	peerKey->u.rsa.publicExponent.len = exponent.len;
+
+    	PORT_Free(modulus.data);
+    	PORT_Free(exponent.data);
+	PORT_Free(signature.data);
     	ss->ssl3->hs.ws = wait_cert_request;
     	return SECSuccess;
 
@@ -4609,7 +4616,7 @@ ssl3_HandleClientHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	 */
 	if ((sid->peerCert == NULL) && ss->requestCertificate &&
 	    ((ss->requireCertificate == 1) ||
-	     ((ss->requireCertificate == 2) && !ss->firstHsDone))) {
+	     ((ss->requireCertificate == 2) && !ss->connected))) {
 
 	    ++ssl3stats.hch_sid_cache_not_ok;
 	    ss->sec->uncache(sid);
@@ -6487,9 +6494,9 @@ xmit_loser:
 
     ssl_ReleaseXmitBufLock(ss);	/*************************************/
 
-    /* The first handshake is now completed. */
+    /* we're connected now. */
     ss->handshake           = NULL;
-    ss->firstHsDone         = PR_TRUE;
+    ss->connected           = PR_TRUE;
     ss->gather->writeOffset = 0;
     ss->gather->readOffset  = 0;
 
@@ -7438,8 +7445,7 @@ ssl3_ConstructV2CipherSpecsHack(sslSocket *ss, unsigned char *cs, int *size)
 }
 
 /*
-** If ssl3 socket has completed the first handshake, and is in idle state, 
-** then start a new handshake.
+** If ssl3 socket is connected and in idle state, then start a new handshake.
 ** If flushCache is true, the SID cache will be flushed first, forcing a
 ** "Full" handshake (not a session restart handshake), to be done.
 **
@@ -7454,7 +7460,7 @@ ssl3_RedoHandshake(sslSocket *ss, PRBool flushCache)
 
     PORT_Assert( ssl_HaveSSL3HandshakeLock(ss) );
 
-    if (!ss->firstHsDone ||
+    if (!ss->connected ||
         ((ss->version >= SSL_LIBRARY_VERSION_3_0) &&
 	 ss->ssl3 && (ss->ssl3->hs.ws != idle_handshake))) {
 	PORT_SetError(SSL_ERROR_HANDSHAKE_NOT_COMPLETED);
