@@ -628,7 +628,7 @@ char * TextFrame::CompressWhiteSpace(char            * aBuffer,
       char* s = aBuffer;
       PRInt32 maxLen = end - cp;
       if (maxLen > aBufSize) {
-        s = new char[maxLen];
+        s0 = s = new char[maxLen];
         aShouldDeleteStr = PR_TRUE;
       }
 
