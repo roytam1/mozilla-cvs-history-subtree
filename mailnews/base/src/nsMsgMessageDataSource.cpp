@@ -460,6 +460,7 @@ NS_IMETHODIMP nsMsgMessageDataSource::GetTargets(nsIRDFResource* source,
 	*targets = nsnull;
 	if(kNC_MessageChild == property)
 	{
+#if 0 // this should all go away
 		nsCOMPtr<nsIMessageView> messageView;
 		rv = GetMessageView(getter_AddRefs(messageView));
     if (NS_SUCCEEDED(rv) && messageView) {
@@ -471,6 +472,7 @@ NS_IMETHODIMP nsMsgMessageDataSource::GetTargets(nsIRDFResource* source,
       if(NS_SUCCEEDED(rv) && *targets)
         return rv;
     }
+#endif
   }
 
 	nsCOMPtr<nsIMessage> message(do_QueryInterface(source, &rv));
@@ -541,7 +543,9 @@ nsMsgMessageDataSource::HasArcOut(nsIRDFResource *source, nsIRDFResource *aArc, 
   nsCOMPtr<nsIMessage> message(do_QueryInterface(source, &rv));
   if (NS_SUCCEEDED(rv)) {
     PRBool showThreads;
+#if 0 // this should all go away.
     rv = GetIsThreaded(&showThreads);
+#endif
     // handle this failure gracefully - not all datasources have views.
    
     if (NS_SUCCEEDED(rv) && showThreads) {
@@ -589,9 +593,10 @@ NS_IMETHODIMP nsMsgMessageDataSource::ArcLabelsOut(nsIRDFResource* source,
 	nsCOMPtr<nsIMessage> message(do_QueryInterface(source, &rv));
 	if (NS_SUCCEEDED(rv))
 	{
-
 		PRBool showThreads;
+#if 0
     rv = GetIsThreaded(&showThreads);
+#endif 
     // handle this failure gracefully - not all datasources have views.
     
 		if(NS_SUCCEEDED(rv) && showThreads)
@@ -803,7 +808,9 @@ nsresult nsMsgMessageDataSource::OnItemAddedOrRemovedFromMessage(nsIMessage *par
 		//We only handle threaded views
 
 		PRBool isThreaded, isThreadNotification;
+#if 0
 		GetIsThreaded(&isThreaded);
+#endif
 		isThreadNotification = PL_strcmp(viewString, "threadMessageView") == 0;
 		
 		if((isThreaded && isThreadNotification))
@@ -851,7 +858,9 @@ nsresult nsMsgMessageDataSource::OnItemAddedOrRemovedFromFolder(nsIMsgFolder *pa
 		//a non threaded view only do this if the view passed in is the flat view.
 
 		PRBool isThreaded, isThreadNotification;
+#if 0
 		GetIsThreaded(&isThreaded);
+#endif
 		isThreadNotification = PL_strcmp(viewString, "threadMessageView") == 0;
 		
 		if((isThreaded && isThreadNotification) ||
@@ -956,7 +965,9 @@ nsresult nsMsgMessageDataSource::OnChangeStatus(nsIRDFResource *resource, PRUint
 	{
 		OnChangeIsUnread(resource, oldFlag, newFlag);
 		PRBool showThreads;
+#if 0
 		GetIsThreaded(&showThreads);
+#endif
 		if(showThreads)
 		{
 			nsCOMPtr<nsIMessage> message = do_QueryInterface(resource);
@@ -1496,9 +1507,9 @@ nsMsgMessageDataSource::createMessageThreadStateNode(nsIMessage *message, nsIRDF
 	nsresult rv = NS_OK;
 
 	PRBool showThreads;
-
+#if 0
 	GetIsThreaded(&showThreads);
-
+#endif
 
 	if(showThreads)
 	{
@@ -1758,8 +1769,9 @@ nsresult nsMsgMessageDataSource::createMessageTotalNode(nsIMessage *message, nsI
 	nsAutoString emptyString;
 
 	PRBool showThreads;
+#if 0
   GetIsThreaded(&showThreads);
-
+#endif
 	if(!showThreads)
 		rv = createNode(emptyString, target, getRDFService());
 	else
@@ -1793,7 +1805,9 @@ nsresult nsMsgMessageDataSource::createMessageUnreadNode(nsIMessage *message, ns
 	nsAutoString emptyString;
 
 	PRBool showThreads;
+#if 0
   rv = GetIsThreaded(&showThreads);
+#endif
 	if(NS_FAILED(rv)) return rv;
 
 	if(!showThreads)
@@ -1875,10 +1889,10 @@ nsMsgMessageDataSource::createMessageChildNode(nsIRDFResource *resource, nsIRDFN
 {
   nsresult rv;
   nsCOMPtr<nsIMessageView> messageView;
-
+#if 0
   rv = GetMessageView(getter_AddRefs(messageView));
   NS_ENSURE_SUCCESS(rv,rv);
-
+#endif
   PRBool hasMessages = PR_FALSE;
   rv = messageView->HasMessages(resource, mWindow, &hasMessages);
   NS_ENSURE_SUCCESS(rv,rv);
@@ -2077,8 +2091,9 @@ nsresult nsMsgMessageDataSource::DoMessageHasAssertion(nsIMessage *message, nsIR
 	if(kNC_MessageChild == property)
 	{
 		PRBool isThreaded;
+#if 0
 		GetIsThreaded(&isThreaded);
-
+#endif
 		//We only care if we're in the threaded view.  Otherwise just say we don't have the assertion.
 		if(isThreaded)
 		{
