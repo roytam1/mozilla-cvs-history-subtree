@@ -346,7 +346,7 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
                 aPos = &mCurrentChunk->mKids[0];
             }
         }
-        if ((*aPos)->mFrame == aChildIFrame) {
+        if (*aPos && (*aPos)->mFrame == aChildIFrame) {
             ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
                            ("SelectChild() = %p",(*aPos)->mFrame));
             return *aPos;
