@@ -53,10 +53,6 @@ int32 SU_PatchFile( char* srcfile, XP_FileType srctype,
                     char* patchfile, XP_FileType patchtype,
                     char* targfile, XP_FileType targtype );
 
-int PR_CALLBACK JavaGetBoolPref(char *pref_name);
-int PR_CALLBACK IsJavaSecurityEnabled();
-int PR_CALLBACK IsJavaSecurityDefaultTo30Enabled();
-
 int32 SU_Uninstall(char *regPackageName);
 int32 SU_EnumUninstall(void** context, char* packageName,
                      int32 len1, char*regPackageName, int32 len2);
