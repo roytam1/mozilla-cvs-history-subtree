@@ -44,19 +44,9 @@ class nsISizeOfHandler;
 
 class nsICSSPseudoComparator;
 
-#define SHARE_STYLECONTEXTS
-
-#ifdef SHARE_STYLECONTEXTS
-#include "nsHashtable.h"
-#endif
-
 // IID for the nsIStyleSet interface {e59396b0-b244-11d1-8031-006008159b5a}
 #define NS_ISTYLE_SET_IID     \
 {0xe59396b0, 0xb244, 0x11d1, {0x80, 0x31, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
-
-#ifdef SHARE_STYLECONTEXTS
-typedef PRUint32 scKey; // key for style contexts: it is a CRC32 value actually...
-#endif
 
 class nsIStyleSet : public nsISupports {
 public:
@@ -230,17 +220,6 @@ public:
   // will be PR_FALSE on return.
   NS_IMETHOD AttributeAffectsStyle(nsIAtom *aAttribute, nsIContent *aContent,
                                    PRBool &aAffects) = 0;
-
-#ifdef SHARE_STYLECONTEXTS
-  // add and remove from the cache of all contexts
-  NS_IMETHOD AddStyleContext(nsIStyleContext *aNewStyleContext) = 0;
-  NS_IMETHOD RemoveStyleContext(nsIStyleContext *aNewStyleContext) = 0;
-  // find another context with the same style data
-  // - if an exact match is found, the out-param aMatchingContext is set (AddRef'd)
-  NS_IMETHOD FindMatchingContext(nsIStyleContext *aStyleContextToMatch, 
-                                 nsIStyleContext **aMatchingContext) = 0;
-  NS_IMETHOD UpdateStyleContextKey(scKey aOldKey, scKey aNewKey) = 0;
-#endif
 };
 
 extern NS_LAYOUT nsresult

@@ -46,8 +46,6 @@ class nsISupportsArray;
 class nsIStyleContext;
 class nsIRuleNode;
 
-#define SHARE_STYLECONTEXTS
-
 //----------------------------------------------------------------------
 
 #define NS_ISTYLECONTEXT_IID   \
@@ -85,13 +83,6 @@ public:
 
 #ifdef DEBUG
   virtual void DumpRegressionData(nsIPresContext* aPresContext, FILE* out, PRInt32 aIndent) = 0;
-#endif
-
-#ifdef SHARE_STYLECONTEXTS
-  // sets aMatches to PR_TRUE if the style data of aStyleContextToMatch matches the 
-  // style data of this, PR_FALSE otherwise
-  NS_IMETHOD StyleDataMatches(nsIStyleContext* aStyleContextToMatch, PRBool *aMatches) = 0;
-  NS_IMETHOD GetStyleContextKey(scKey &aKey) const = 0;
 #endif
 
   // -------------------------------------------------------------

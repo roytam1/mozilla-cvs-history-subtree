@@ -327,8 +327,6 @@ struct nsStyleOutline: public nsStyleStruct {
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
@@ -405,8 +403,6 @@ struct nsStyleList : public nsStyleStruct {
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
@@ -428,8 +424,6 @@ struct nsStylePosition : public nsStyleStruct {
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
@@ -771,8 +765,6 @@ struct nsStyleXUL : public nsStyleStruct {
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
     return result;
   }
   void Destroy(nsIPresContext* aContext) {

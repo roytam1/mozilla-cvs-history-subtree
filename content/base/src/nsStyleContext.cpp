@@ -66,33 +66,7 @@
 // - if using external data, get from
 //   the member style data instance
 // - if internal, get the data member
-#ifdef SHARE_STYLECONTEXTS
-#define GETSCDATA(data) mStyleData->m##data
-#else
 #define GETSCDATA(data) m##data
-#endif
-
-#ifdef SHARE_STYLECONTEXTS
-  // define COMPUTE_STYLEDATA_CRC to actually compute a valid CRC32
-  //  - if not defined then the CRC will simply be 0 (see StyleContextData::ComputeCRC)
-  //  - this is to avoid the cost of computing a CRC if it is not being used
-  //    by the style set in caching the style contexts (not using the FAST_CACHE)
-  //    which is the current situation since the CRC can change when GetMutableStyleData
-  //    is used to poke values into the style context data.
-#define COMPUTE_STYLEDATA_CRC
-#endif //SHARE_STYLECONTEXTS
-
-#ifdef COMPUTE_STYLEDATA_CRC
-  // helpers for computing CRC32 on style data
-static void gen_crc_table();
-static PRUint32 AccumulateCRC(PRUint32 crc_accum, const char *data_blk_ptr, int data_blk_size);
-static PRUint32 StyleSideCRC(PRUint32 crc,const nsStyleSides *aStyleSides);
-static PRUint32 StyleCoordCRC(PRUint32 crc, const nsStyleCoord* aCoord);
-static PRUint32 StyleMarginCRC(PRUint32 crc, const nsMargin *aMargin);
-static PRUint32 StyleStringCRC(PRUint32 aCrc, const nsString *aString);
-#define STYLEDATA_NO_CRC (0)
-#define STYLEDATA_DEFAULT_CRC (0xcafebabe)
-#endif // COMPUTE_STYLEDATA_CRC
 
 // EnsureBlockDisplay:
 //  - if the display value (argument) is not a block-type
@@ -112,8 +86,7 @@ struct StyleColorImpl: public nsStyleColor {
   void SetFrom(const nsStyleColor& aSource);
   void CopyTo(nsStyleColor& aDest) const;
   PRInt32 CalcDifference(const StyleColorImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+  
 private:  // These are not allowed
   StyleColorImpl(const StyleColorImpl& aOther);
   StyleColorImpl& operator=(const StyleColorImpl& aOther);
@@ -208,25 +181,6 @@ PRInt32 StyleColorImpl::CalcDifference(const StyleColorImpl& aOther) const
   return NS_STYLE_HINT_VISUAL;
 }
 
-PRUint32 StyleColorImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = AccumulateCRC(crc,(const char *)&mColor,sizeof(mColor));
-  crc = AccumulateCRC(crc,(const char *)&mBackgroundAttachment,sizeof(mBackgroundAttachment));
-  crc = AccumulateCRC(crc,(const char *)&mBackgroundFlags,sizeof(mBackgroundFlags));
-  crc = AccumulateCRC(crc,(const char *)&mBackgroundRepeat,sizeof(mBackgroundRepeat));
-  crc = AccumulateCRC(crc,(const char *)&mBackgroundColor,sizeof(mBackgroundColor));
-  crc = AccumulateCRC(crc,(const char *)&mBackgroundXPosition,sizeof(mBackgroundXPosition));
-  crc = AccumulateCRC(crc,(const char *)&mBackgroundYPosition,sizeof(mBackgroundYPosition));
-  crc = StyleStringCRC(crc,&mBackgroundImage);
-  crc = AccumulateCRC(crc,(const char *)&mCursor,sizeof(mCursor));
-  crc = StyleStringCRC(crc,&mCursorImage);
-  crc = AccumulateCRC(crc,(const char *)&mOpacity,sizeof(mOpacity));
-#endif
-  return crc;
-}
-
 // --------------------
 // nsStyleText
 //
@@ -241,8 +195,7 @@ struct StyleTextImpl: public nsStyleText {
   void SetFrom(const nsStyleText& aSource);
   void CopyTo(nsStyleText& aDest) const;
   PRInt32 CalcDifference(const StyleTextImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+  
 private:  // These are not allowed
   StyleTextImpl(const StyleTextImpl& aOther);
   StyleTextImpl& operator=(const StyleTextImpl& aOther);
@@ -323,29 +276,6 @@ PRInt32 StyleTextImpl::CalcDifference(const StyleTextImpl& aOther) const
   return NS_STYLE_HINT_REFLOW;
 }
 
-PRUint32 StyleTextImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = AccumulateCRC(crc,(const char *)&mTextAlign,sizeof(mTextAlign));
-  crc = AccumulateCRC(crc,(const char *)&mTextTransform,sizeof(mTextTransform));
-  crc = AccumulateCRC(crc,(const char *)&mWhiteSpace,sizeof(mWhiteSpace));
-  crc = StyleCoordCRC(crc,&mLetterSpacing);
-  crc = StyleCoordCRC(crc,&mLineHeight);
-  crc = StyleCoordCRC(crc,&mTextIndent);
-  crc = StyleCoordCRC(crc,&mWordSpacing);
-  crc = StyleCoordCRC(crc,&mVerticalAlign);
-#ifdef IBMBIDI
-  crc = AccumulateCRC(crc,(const char *)&mUnicodeBidi,sizeof(mUnicodeBidi));
-#endif // IBMBIDI
-#endif
-  return crc;
-}
-
-#ifdef XP_MAC
-#pragma mark -
-#endif
 
 // --------------------
 // nsStyleDisplay
@@ -358,8 +288,7 @@ struct StyleDisplayImpl: public nsStyleDisplay {
   void SetFrom(const nsStyleDisplay& aSource);
   void CopyTo(nsStyleDisplay& aDest) const;
   PRInt32 CalcDifference(const StyleDisplayImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+ 
 private:  // These are not allowed
   StyleDisplayImpl(const StyleDisplayImpl& aOther);
   StyleDisplayImpl& operator=(const StyleDisplayImpl& aOther);
@@ -462,31 +391,6 @@ PRInt32 StyleDisplayImpl::CalcDifference(const StyleDisplayImpl& aOther) const
   return NS_STYLE_HINT_FRAMECHANGE;
 }
 
-PRUint32 StyleDisplayImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = AccumulateCRC(crc,(const char *)&mDirection,sizeof(mDirection));
-#ifdef IBMBIDI
-  crc = AccumulateCRC(crc,(const char *)&mExplicitDirection,sizeof(mExplicitDirection));
-#endif // IBMBIDI
-  crc = AccumulateCRC(crc,(const char *)&mDisplay,sizeof(mDisplay));
-  crc = AccumulateCRC(crc,(const char *)&mFloats,sizeof(mFloats));
-  crc = AccumulateCRC(crc,(const char *)&mBreakType,sizeof(mBreakType));
-  crc = AccumulateCRC(crc,(const char *)&mBreakBefore,sizeof(mBreakBefore));
-  crc = AccumulateCRC(crc,(const char *)&mBreakAfter,sizeof(mBreakAfter));
-  crc = AccumulateCRC(crc,(const char *)&mVisible,sizeof(mVisible));
-  crc = AccumulateCRC(crc,(const char *)&mOverflow,sizeof(mOverflow));
-  crc = AccumulateCRC(crc,(const char *)&mClipFlags,sizeof(mClipFlags));
-  // crc = StyleMarginCRC(crc,&mClip);
-#endif
-  return crc;
-}
-
-#ifdef XP_MAC
-#pragma mark -
-#endif
-
 // --------------------
 // nsStyleTable
 //
@@ -501,8 +405,7 @@ struct StyleTableImpl: public nsStyleTable {
   void SetFrom(const nsStyleTable& aSource);
   void CopyTo(nsStyleTable& aDest) const;
   PRInt32 CalcDifference(const StyleTableImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+  
 private:  // These are not allowed
   StyleTableImpl(const StyleTableImpl& aOther);
   StyleTableImpl& operator=(const StyleTableImpl& aOther);
@@ -580,30 +483,6 @@ PRInt32 StyleTableImpl::CalcDifference(const StyleTableImpl& aOther) const
   return NS_STYLE_HINT_REFLOW;
 }
 
-PRUint32 StyleTableImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = AccumulateCRC(crc,(const char *)&mLayoutStrategy,sizeof(mLayoutStrategy));
-  crc = AccumulateCRC(crc,(const char *)&mFrame,sizeof(mFrame));
-  crc = AccumulateCRC(crc,(const char *)&mRules,sizeof(mRules));
-  crc = AccumulateCRC(crc,(const char *)&mBorderCollapse,sizeof(mBorderCollapse));
-  crc = StyleCoordCRC(crc,&mBorderSpacingX);
-  crc = StyleCoordCRC(crc,&mBorderSpacingY);
-  crc = StyleCoordCRC(crc,&mCellPadding);
-  crc = AccumulateCRC(crc,(const char *)&mCaptionSide,sizeof(mCaptionSide));
-  crc = AccumulateCRC(crc,(const char *)&mEmptyCells,sizeof(mEmptyCells));
-  crc = AccumulateCRC(crc,(const char *)&mCols,sizeof(mCols));
-  crc = AccumulateCRC(crc,(const char *)&mSpan,sizeof(mSpan));
-  crc = StyleCoordCRC(crc,&mSpanWidth);
-#endif
-  return crc;
-}
-
-#ifdef XP_MAC
-#pragma mark -
-#endif
-
 //-----------------------
 // nsStyleContent
 //
@@ -637,8 +516,7 @@ struct StyleContentImpl: public nsStyleContent {
   void SetFrom(const nsStyleContent& aSource);
   void CopyTo(nsStyleContent& aDest) const;
   PRInt32 CalcDifference(const StyleContentImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+  
 private:  // These are not allowed
   StyleContentImpl(const StyleContentImpl& aOther);
   StyleContentImpl& operator=(const StyleContentImpl& aOther);
@@ -780,36 +658,6 @@ StyleContentImpl::CalcDifference(const StyleContentImpl& aOther) const
   return NS_STYLE_HINT_FRAMECHANGE;
 }
 
-PRUint32 StyleContentImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = StyleCoordCRC(crc,&mMarkerOffset);
-  crc = AccumulateCRC(crc,(const char *)&mContentCount,sizeof(mContentCount));
-
-  crc = AccumulateCRC(crc,(const char *)&mIncrementCount,sizeof(mIncrementCount));
-  crc = AccumulateCRC(crc,(const char *)&mResetCount,sizeof(mResetCount));
-  crc = AccumulateCRC(crc,(const char *)&mQuotesCount,sizeof(mQuotesCount));
-  if (mContents) {
-    crc = AccumulateCRC(crc,(const char *)&(mContents->mType),sizeof(mContents->mType));
-  }
-  if (mIncrements) {
-    crc = AccumulateCRC(crc,(const char *)&(mIncrements->mValue),sizeof(mIncrements->mValue));
-  }
-  if (mResets) {
-    crc = AccumulateCRC(crc,(const char *)&(mResets->mValue),sizeof(mResets->mValue));
-  }
-  if (mQuotes) {
-    crc = StyleStringCRC(crc,mQuotes);
-  }
-#endif
-  return crc;
-}
-
-#ifdef XP_MAC
-#pragma mark -
-#endif
-
 //-----------------------
 // nsStyleUserInterface
 //
@@ -824,8 +672,7 @@ struct StyleUserInterfaceImpl: public nsStyleUserInterface {
   void SetFrom(const nsStyleUserInterface& aSource);
   void CopyTo(nsStyleUserInterface& aDest) const;
   PRInt32 CalcDifference(const StyleUserInterfaceImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+  
 private:  // These are not allowed
   StyleUserInterfaceImpl(const StyleUserInterfaceImpl& aOther);
   StyleUserInterfaceImpl& operator=(const StyleUserInterfaceImpl& aOther);
@@ -900,27 +747,6 @@ PRInt32 StyleUserInterfaceImpl::CalcDifference(const StyleUserInterfaceImpl& aOt
   return NS_STYLE_HINT_VISUAL;
 }
 
-PRUint32 StyleUserInterfaceImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = AccumulateCRC(crc,(const char *)&mUserInput,sizeof(mUserInput));
-  crc = AccumulateCRC(crc,(const char *)&mUserModify,sizeof(mUserModify));
-  crc = AccumulateCRC(crc,(const char *)&mUserSelect,sizeof(mUserSelect));
-  crc = AccumulateCRC(crc,(const char *)&mUserFocus,sizeof(mUserFocus));
-  crc = AccumulateCRC(crc,(const char *)&mKeyEquivalent,sizeof(mKeyEquivalent));
-  crc = AccumulateCRC(crc,(const char *)&mResizer,sizeof(mResizer));
-  PRUint32 len;
-  len = mBehavior.Length();
-  crc = AccumulateCRC(crc,(const char *)&len,sizeof(len));
-#endif
-  return crc;
-}
-
-#ifdef XP_MAC
-#pragma mark -
-#endif
-
 //-----------------------
 // nsStylePrint
 //
@@ -935,8 +761,7 @@ struct StylePrintImpl: public nsStylePrint {
   void SetFrom(const nsStylePrint& aSource);
   void CopyTo(nsStylePrint& aDest) const;
   PRInt32 CalcDifference(const StylePrintImpl& aOther) const;
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-
+ 
 private:  // These are not allowed
   StylePrintImpl(const StylePrintImpl& aOther);
   StylePrintImpl& operator=(const StylePrintImpl& aOther);
@@ -995,181 +820,6 @@ PRInt32 StylePrintImpl::CalcDifference(const StylePrintImpl& aOther) const
   return NS_STYLE_HINT_REFLOW;
 }
 
-PRUint32 StylePrintImpl::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-#ifdef COMPUTE_STYLEDATA_CRC
-  crc = AccumulateCRC(crc,(const char *)&mPageBreakBefore,sizeof(mPageBreakBefore));
-  crc = AccumulateCRC(crc,(const char *)&mPageBreakAfter,sizeof(mPageBreakAfter));
-  crc = AccumulateCRC(crc,(const char *)&mPageBreakInside,sizeof(mPageBreakInside));
-  PRUint32 len = mPage.Length();
-  crc = AccumulateCRC(crc,(const char *)&len,sizeof(len));
-  crc = AccumulateCRC(crc,(const char *)&mWidows,sizeof(mWidows));
-  crc = AccumulateCRC(crc,(const char *)&mOrphans,sizeof(mOrphans));
-  crc = AccumulateCRC(crc,(const char *)&mMarks,sizeof(mMarks));
-  crc = StyleCoordCRC(crc,&mSizeWidth);
-  crc = StyleCoordCRC(crc,&mSizeHeight);
-#endif
-  return crc;
-}
-
-//----------------------------------------------------------------------
-
-#ifdef SHARE_STYLECONTEXTS
-
-//========================
-
-class nsStyleContextData
-{
-public:
-
-  friend class StyleContextImpl;
-
-  void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize);
-
-private:  // all data and methods private: only friends have access
-
-  static nsStyleContextData *Create(nsIPresContext *aPresContext);
-  
-  nsStyleContextData(nsIPresContext *aPresContext);
-  ~nsStyleContextData(void);
-
-  PRUint32 ComputeCRC32(PRUint32 aCrc) const;
-  void SetCRC32(void) { 
-    mCRC = ComputeCRC32(0); 
-    if (mCRC==STYLEDATA_NO_CRC) 
-      mCRC = STYLEDATA_DEFAULT_CRC; 
-  }
-  PRUint32 GetCRC32(void) const { return mCRC; }
-
-  PRUint32 AddRef(void);
-  PRUint32 Release(void);
-
-  // the style data...
-  // - StyleContextImpl gets friend-access
-  //
-  StyleColorImpl          mColor;
-  StyleTextImpl           mText;
-  StyleDisplayImpl        mDisplay;
-  StyleTableImpl          mTable;
-  StyleContentImpl        mContent;
-  StyleUserInterfaceImpl  mUserInterface;
-	StylePrintImpl					mPrint;
-
-  PRUint32                mRefCnt;
-  PRUint32                mCRC;
-
-#ifdef DEBUG
-  static PRUint32         gInstanceCount;
-#endif
-};
-
-#ifndef DEBUG
-inline
-#endif
-PRUint32 nsStyleContextData::AddRef(void)
-{
-  ++mRefCnt;
-  NS_LOG_ADDREF(this,mRefCnt,"nsStyleContextData",sizeof(*this));
-  return mRefCnt;
-}
-
-#ifndef DEBUG
-inline
-#endif
-PRUint32 nsStyleContextData::Release(void)
-{
-  NS_ASSERTION(mRefCnt > 0, "RefCount error in nsStyleContextData");
-  --mRefCnt;
-  NS_LOG_RELEASE(this,mRefCnt,"nsStyleContextData");
-  if (0 == mRefCnt) {
-#ifdef NOISY_DEBUG
-    printf("deleting nsStyleContextData instance: (%ld)\n", (long)(--gInstanceCount));
-#endif
-    delete this;
-    return 0;
-  }
-  return mRefCnt;
-}
-
-#ifdef DEBUG
-/*static*/ PRUint32 nsStyleContextData::gInstanceCount;
-#endif  // DEBUG
-
-nsStyleContextData *nsStyleContextData::Create(nsIPresContext *aPresContext)
-{
-  NS_ASSERTION(aPresContext != nsnull, "parameter cannot be null");
-  nsStyleContextData *pData = nsnull;
-  if (aPresContext) {
-    pData = new nsStyleContextData(aPresContext);
-    if (pData) {
-      NS_ADDREF(pData);
-#ifdef NOISY_DEBUG
-      printf("new nsStyleContextData instance: (%ld) CRC=%lu\n", 
-             (long)(++gInstanceCount), (unsigned long)pData->ComputeCRC32(0));
-#endif // NOISY_DEBUG
-    }
-  }
-  return pData;
-}
-
-nsStyleContextData::nsStyleContextData(nsIPresContext *aPresContext)
-: mRefCnt(0), mCRC(0)
-{
-}
-
-//=========================================================================================================
-
-
-//=========================================================================================================
-
-nsStyleContextData::~nsStyleContextData(void)
-{
-  NS_ASSERTION(0 == mRefCnt, "RefCount error in ~nsStyleContextData");
-  // debug here...
-}
-
-PRUint32 nsStyleContextData::ComputeCRC32(PRUint32 aCrc) const
-{
-  PRUint32 crc = aCrc;
-
-#ifdef COMPUTE_STYLEDATA_CRC
-  // have each style struct compute its own CRC, propogating the previous value...
-  crc = mColor.ComputeCRC32(crc);
-  crc = mText.ComputeCRC32(crc);
-  crc = mDisplay.ComputeCRC32(crc);
-  crc = mTable.ComputeCRC32(crc);
-  crc = mContent.ComputeCRC32(crc);
-  crc = mUserInterface.ComputeCRC32(crc);
-	crc = mPrint.ComputeCRC32(crc);
-#else
-  crc = 0;
-#endif
-
-  return crc;
-}
-
-void nsStyleContextData::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
-{
-  NS_ASSERTION(aSizeOfHandler, "SizeOfHandler cannot be null in SizeOf");
-
-  // first get the unique items collection
-  UNIQUE_STYLE_ITEMS(uniqueItems);
-
-  if(! uniqueItems->AddItem((void*)this) ){
-    // object has already been accounted for
-    return;
-  }
-  // get or create a tag for this instance
-  nsCOMPtr<nsIAtom> tag;
-  tag = getter_AddRefs(NS_NewAtom("StyleContextData"));
-  // get the size of an empty instance and add to the sizeof handler
-  aSize = sizeof(*this);
-  aSizeOfHandler->AddSize(tag,aSize);
-}
-
-#endif //#ifdef SHARE_STYLECONTEXTS
-
 //----------------------------------------------------------------------
 
 class StyleContextImpl : public nsIStyleContext,
@@ -1209,32 +859,6 @@ public:
   virtual void RecalcAutomaticData(nsIPresContext* aPresContext);
   NS_IMETHOD  CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference = PR_FALSE);
 
-#ifdef SHARE_STYLECONTEXTS
-  // evaluate and execute the style data sharing
-  // - if nothing to share, it leaves the current style data intact,
-  //   otherwise it calls ShareStyleDataFrom to share another context's data
-  //   and releases the old data
-  nsresult ShareStyleData(void);
-
-  // share the style data of the StyleDataDonor
-  // NOTE: the donor instance is cast to a StyleContextImpl to keep the
-  //       interface free of implementation types. This may be invalid in 
-  //       the future
-  // XXX - reconfigure APIs to avoid casting the interface to the impl
-  nsresult ShareStyleDataFrom(nsIStyleContext*aStyleDataDonor);
-  
-  // sets aMatches to PR_TRUE if the style data of aStyleContextToMatch matches the 
-  // style data of this, PR_FALSE otherwise
-  NS_IMETHOD StyleDataMatches(nsIStyleContext* aStyleContextToMatch, PRBool *aMatches);
-
-  // get the key for this context (CRC32 value)
-  NS_IMETHOD GetStyleContextKey(scKey &aKey) const;
-
-  // update the style set cache by adding this context to it
-  // - NOTE: mStyleSet member must be set
-  nsresult UpdateStyleSetCache( void ) const;
-#endif
-
   virtual void  List(FILE* out, PRInt32 aIndent);
 
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize);
@@ -1261,12 +885,6 @@ protected:
 
   PRInt16           mDataCode;
 
-#ifdef SHARE_STYLECONTEXTS
-
-  nsStyleContextData*     mStyleData;
-
-#else
-
   // the style data...
   StyleColorImpl          mColor;
   StyleTextImpl           mText;
@@ -1275,8 +893,6 @@ protected:
   StyleContentImpl        mContent;
   StyleUserInterfaceImpl  mUserInterface;
 	StylePrintImpl					mPrint;
-
-#endif // #ifdef SHARE_STYLECONTEXTS
 
   // make sure we have valid style data
   nsresult EnsureStyleData(nsIPresContext* aPresContext);
@@ -1303,18 +919,13 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mRuleNode(aRuleNode),
     mCachedStyleData(nsnull),
     mDataCode(-1),
-#ifdef SHARE_STYLECONTEXTS
-    mStyleData(nsnull)
-#else
     mColor(),
-    mSpacing(),
     mText(),
     mDisplay(),
     mTable(),
     mContent(),
     mUserInterface(),
     mPrint()
-#endif
 {
   NS_INIT_REFCNT();
   NS_IF_ADDREF(mPseudoTag);
@@ -1325,16 +936,6 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     NS_ADDREF(mParent);
     mParent->AppendChild(this);
   }
-
-#ifdef SHARE_STYLECONTEXTS
-  // remember the style set
-  nsIPresShell* shell = nsnull;
-  aPresContext->GetShell(&shell);
-  if (shell) {
-    shell->GetStyleSet( getter_AddRefs(mStyleSet) );
-    NS_RELEASE( shell );
-  }
-#endif // SHARE_STYLECONTEXTS
 }
 
 StyleContextImpl::~StyleContextImpl()
@@ -1353,17 +954,6 @@ StyleContextImpl::~StyleContextImpl()
   mRuleNode->GetPresContext(getter_AddRefs(presContext));
   if (mCachedStyleData)
     mCachedStyleData->Destroy(presContext);
-
-#ifdef SHARE_STYLECONTEXTS
-  // remove this instance from the style set (remember, the set does not AddRef or Release us)
-  if (mStyleSet) {
-    mStyleSet->RemoveStyleContext((nsIStyleContext *)this);
-  } else {
-    NS_ASSERTION(0, "StyleSet is not optional in a StyleContext's dtor...");
-  }
-  // release the style data so it can be reclaimed when no longer referenced
-  NS_IF_RELEASE(mStyleData);
-#endif // SHARE_STYLECONTEXTS
 }
 
 NS_IMPL_ADDREF(StyleContextImpl)
@@ -1826,7 +1416,7 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
   }
   // 2) if position is 'absolute' or 'fixed' then display must be 'block and float must be 'none'
   //    XXX - see note for fixup 1) above...
-  nsStylePosition *pos = (nsStylePosition *)GetStyleData(eStyleStruct_Position);
+  nsStylePosition *pos = (nsStylePosition *)GetMutableStyleData(eStyleStruct_Position);
   if (pos) {
     if (pos->IsAbsolutelyPositioned()) {
       if (disp) {
@@ -1917,10 +1507,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
   }
 
   RecalcAutomaticData(aPresContext);
-
-#ifdef SHARE_STYLECONTEXTS
-  nsresult result = ShareStyleData();
-#endif
 
   if (aRecurse) {
     if (nsnull != mChild) {
@@ -2108,208 +1694,15 @@ nsresult StyleContextImpl::EnsureStyleData(nsIPresContext* aPresContext)
     return NS_ERROR_FAILURE;
   }
 
-#ifdef SHARE_STYLECONTEXTS
-  // See if we already have data...
-  if (NS_FAILED(HaveStyleData())) {
-    // we were provided a pres context so create a new style data
-    mStyleData = nsStyleContextData::Create(aPresContext);
-    if (nsnull == mStyleData) {
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    }
-  } else {
-    // already have style data - OK!
-    rv = NS_OK;
-  }
-#endif //#ifdef SHARE_STYLECONTEXTS
-
   return rv;
 }
 
 nsresult StyleContextImpl::HaveStyleData(void) const
 {
-#ifdef SHARE_STYLECONTEXTS
-  return (nsnull == mStyleData) ? NS_ERROR_NULL_POINTER : NS_OK;
-#else
-  return NS_OK;
-#endif
-}
-
-
-#ifdef SHARE_STYLECONTEXTS
-
-nsresult StyleContextImpl::ShareStyleData(void)
-{
-  nsresult result = NS_OK;
-
-  // Enable flag: this is TRUE by default, however the env. var. moz_disable_style_sharing
-  // can be set to '1' to disable the sharing before the app is launched
-  static char *disableSharing = PR_GetEnv("moz_disable_style_sharing");
-  static PRBool bEnableSharing = (disableSharing == nsnull) || 
-                                 (*disableSharing != '1');
-#ifdef DEBUG
-  static PRBool bOnce = PR_FALSE;
-  if(!bOnce){
-    printf( "Style Data Sharing is %s\n", bEnableSharing ? "Enabled :)" : "Disabled :(" );
-    bOnce = PR_TRUE;
-  }
-#endif
-
-  PRBool bSharingSupported = PR_TRUE;
-  if (bEnableSharing) {
-    // NOTE: sharing of style data for the GfxScrollFrame is problematic
-    //       and is currently disabled. These pseudos indicate the use of a GfxScrollFrame
-    //       so we check for them and disallow sharing when any are found.
-    //       If you haen;t guessed it, this is a total hack until we can figure out
-    //       why the GfxScrollFrame is not happy having its style data shared... 
-    //       (See bugzilla bug 39618 which also documents this problem)
-    if(mPseudoTag) {
-      if(mPseudoTag == nsLayoutAtoms::viewportPseudo ||
-         mPseudoTag == nsLayoutAtoms::canvasPseudo ||
-         mPseudoTag == nsLayoutAtoms::viewportScrollPseudo ||
-         mPseudoTag == nsLayoutAtoms::scrolledContentPseudo ||
-         mPseudoTag == nsLayoutAtoms::selectScrolledContentPseudo) {
-        bSharingSupported = PR_FALSE;
-      } else {
-        bSharingSupported = PR_TRUE;
-      }
-    }
-  }
-
-  if (bEnableSharing && bSharingSupported) {
-    NS_ASSERTION(mStyleSet, "Expected to have a style set ref...");
-    nsIStyleContext *matchingSC = nsnull;
-
-    // save the old crc before replacing it
-    PRUint32 oldCRC = mStyleData->GetCRC32();
-    
-    // set the CRC based on the new data, and retrieve the new value
-    mStyleData->SetCRC32();
-    PRUint32 newCRC = mStyleData->GetCRC32();
-
-    // if the crc was previously set AND it has changed, notify the styleset
-    if((oldCRC != STYLEDATA_NO_CRC)&&
-       (oldCRC != newCRC)) {
-      result = mStyleSet->UpdateStyleContextKey(oldCRC, newCRC);
-#ifdef NOISY_DEBUG
-      printf("CRC changed on context: updating from %ld to %ld\n", oldCRC, newCRC);
-#endif
-      if(NS_FAILED(result)) {
-        return result;
-      }
-    }
-    // check if there is a matching context...
-    result = mStyleSet->FindMatchingContext(this, &matchingSC);
-    if ((NS_SUCCEEDED(result)) && 
-        (nsnull != matchingSC)) {
-      ShareStyleDataFrom(matchingSC);
-#ifdef NOISY_DEBUG
-      printf("SC Data Shared :)\n");
-#endif
-      NS_IF_RELEASE(matchingSC);
-    } else {
-#ifdef NOISY_DEBUG
-      printf("Unique SC Data - Not Shared :(\n");
-#endif
-    }
-  }
-
-  return result;
-}
-
-nsresult StyleContextImpl::ShareStyleDataFrom(nsIStyleContext*aStyleDataDonor)
-{
-  nsresult rv = NS_OK;
-
-  if (aStyleDataDonor) {
-    // XXX - static cast is nasty, especially if there are multiple 
-    //       nsIStyleContext implementors...
-    StyleContextImpl *donor = NS_STATIC_CAST(StyleContextImpl*,aStyleDataDonor);
-    
-    // get the data from the donor
-    nsStyleContextData *pData = donor->mStyleData;
-    if (pData != nsnull) {
-      NS_ADDREF(pData);
-      NS_IF_RELEASE(mStyleData);
-      mStyleData = pData;
-    }
-  }
-  return rv;
-}
-
-#ifdef DEBUG
-long gFalsePos=0;
-long gScreenedByCRC=0;
-#endif
-
-NS_IMETHODIMP
-StyleContextImpl::StyleDataMatches(nsIStyleContext* aStyleContextToMatch, 
-                                   PRBool *aMatches)
-{
-  NS_ASSERTION((aStyleContextToMatch != nsnull) &&
-               (aStyleContextToMatch != this) &&           
-               (aMatches != nsnull), "invalid parameter");
-
-  nsresult rv = NS_OK;
-
-  // XXX - static cast is nasty, especially if there are multiple 
-  //       nsIStyleContext implementors...
-  StyleContextImpl* other = NS_STATIC_CAST(StyleContextImpl*,aStyleContextToMatch);
-  *aMatches = PR_FALSE;
-/*
-  // check same pointer value
-  if (other->mStyleData != mStyleData) {
-    // check using the crc first: 
-    // this will get past the vast majority which do not match, 
-    // and if it does match then we'll double check with the more complete comparison
-    if (other->mStyleData->GetCRC32() == mStyleData->GetCRC32()) {
-      // Might match: validate using the more comprehensive (and slower) CalcStyleDifference
-      PRInt32 hint = 0;
-      CalcStyleDifference(aStyleContextToMatch, hint, PR_TRUE);
-#ifdef DEBUG
-      if (hint > 0) {
-        gFalsePos++;
-        // printf("CRC match but CalcStyleDifference shows differences: crc is not sufficient?");
-      }
-#endif
-      *aMatches = (0 == hint) ? PR_TRUE : PR_FALSE;
-    }
-#ifdef DEBUG
-    else
-    {
-      // in DEBUG we make sure we are not missing any by getting false-negatives on the CRC
-      // XXX NOTE: this should be removed when we trust the CRC matching
-      //           as this slows it way down
-      gScreenedByCRC++;
-      
-     // PRInt32 hint = 0;
-     // CalcStyleDifference(aStyleContextToMatch, hint, PR_TRUE);
-     // NS_ASSERTION(hint>0,"!!!FALSE-NEGATIVE in StyleMatchesData!!!");
-      
-    }
-    // printf("False-Pos: %ld - Screened: %ld\n", gFalsePos, gScreenedByCRC);
-#endif
-  }
- */
-  return rv;
-}
-
-NS_IMETHODIMP StyleContextImpl::GetStyleContextKey(scKey &aKey) const
-{
-  aKey = mStyleData->GetCRC32();
   return NS_OK;
 }
 
-nsresult StyleContextImpl::UpdateStyleSetCache( void ) const
-{
-  if (mStyleSet) {
-    // add it to the set: the set does NOT addref or release
-    return mStyleSet->AddStyleContext((nsIStyleContext *)this);
-  } else {
-    return NS_ERROR_FAILURE;
-  }
-}
 
-#endif
 
 void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
 {
@@ -2413,13 +1806,6 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     aSize += localSize;
   }
   aSizeOfHandler->AddSize(tag,aSize);
-
-#ifdef SHARE_STYLECONTEXTS
-  // count the style data seperately
-  if (mStyleData) {
-    mStyleData->SizeOf(aSizeOfHandler,localSize);
-  }
-#endif
 
   // now follow up with the child (and empty child) recursion
   if (nsnull != mChild) {
@@ -2640,105 +2026,11 @@ NS_NewStyleContext(nsIStyleContext** aInstancePtrResult,
   nsresult result = context->QueryInterface(NS_GET_IID(nsIStyleContext), (void **) aInstancePtrResult);
   context->RemapStyle(aPresContext);  // remap after initial ref-count is set
 
-#ifdef SHARE_STYLECONTEXTS
-  context->UpdateStyleSetCache();     // add it to the style set cache now that the CRC is set
-#endif
-
   return result;
 }
 
 
 //----------------------------------------------------------
-
-#ifdef COMPUTE_STYLEDATA_CRC
-/*************************************************************************
- *  The table lookup technique was adapted from the algorithm described  *
- *  by Avram Perez, Byte-wise CRC Calculations, IEEE Micro 3, 40 (1983). *
- *************************************************************************/
-
-#define POLYNOMIAL 0x04c11db7L
-
-static PRBool crc_table_initialized;
-static PRUint32 crc_table[256];
-
-void gen_crc_table() {
- /* generate the table of CRC remainders for all possible bytes */
-  int i, j;  
-  PRUint32 crc_accum;
-  for ( i = 0;  i < 256;  i++ ) { 
-    crc_accum = ( (unsigned long) i << 24 );
-    for ( j = 0;  j < 8;  j++ ) { 
-      if ( crc_accum & 0x80000000L )
-        crc_accum = ( crc_accum << 1 ) ^ POLYNOMIAL;
-      else crc_accum = ( crc_accum << 1 ); 
-    }
-    crc_table[i] = crc_accum; 
-  }
-  return; 
-}
-
-PRUint32 AccumulateCRC(PRUint32 crc_accum, const char *data_blk_ptr, int data_blk_size)  {
-  if (!crc_table_initialized) {
-    gen_crc_table();
-    crc_table_initialized = PR_TRUE;
-  }
-
- /* update the CRC on the data block one byte at a time */
-  int i, j;
-  for ( j = 0;  j < data_blk_size;  j++ ) { 
-    i = ( (int) ( crc_accum >> 24) ^ *data_blk_ptr++ ) & 0xff;
-    crc_accum = ( crc_accum << 8 ) ^ crc_table[i]; 
-  }
-  return crc_accum; 
-}
-
-
-PRUint32 StyleSideCRC(PRUint32 aCrc,const nsStyleSides *aStyleSides)
-{
-  PRUint32 crc = aCrc;
-  nsStyleCoord theCoord;
-  aStyleSides->GetLeft(theCoord);
-  crc = StyleCoordCRC(crc,&theCoord);
-  aStyleSides->GetTop(theCoord);
-  crc = StyleCoordCRC(crc,&theCoord);
-  aStyleSides->GetRight(theCoord);
-  crc = StyleCoordCRC(crc,&theCoord);
-  aStyleSides->GetBottom(theCoord);
-  crc = StyleCoordCRC(crc,&theCoord);
-  return crc;
-}
-
-PRUint32 StyleCoordCRC(PRUint32 aCrc, const nsStyleCoord* aCoord)
-{
-  PRUint32 crc = aCrc;
-  crc = AccumulateCRC(crc,(const char *)&aCoord->mUnit,sizeof(aCoord->mUnit));
-  // using the mInt part of the union below (float and PRInt32 should be the same size...)
-  crc = AccumulateCRC(crc,(const char *)&aCoord->mValue.mInt,sizeof(aCoord->mValue.mInt));
-  return crc;
-}
-
-PRUint32 StyleMarginCRC(PRUint32 aCrc, const nsMargin *aMargin)
-{
-  PRUint32 crc = aCrc;
-  crc = AccumulateCRC(crc,(const char *)&aMargin->left,sizeof(aMargin->left));
-  crc = AccumulateCRC(crc,(const char *)&aMargin->top,sizeof(aMargin->top));
-  crc = AccumulateCRC(crc,(const char *)&aMargin->right,sizeof(aMargin->right));
-  crc = AccumulateCRC(crc,(const char *)&aMargin->bottom,sizeof(aMargin->bottom));
-  return crc;
-}
-
-PRUint32 StyleStringCRC(PRUint32 aCrc, const nsString *aString)
-{
-  PRUint32 crc = aCrc;
-  PRUint32 len = aString->Length();
-  const PRUnichar *p = aString->GetUnicode();
-  if (p) {
-    crc = AccumulateCRC(crc,(const char *)p,(len*2));
-  }
-  crc = AccumulateCRC(crc,(const char *)&len,sizeof(len));
-  return crc;
-}
-#endif // #ifdef COMPUTE_STYLEDATA_CRC
 
 void EnsureBlockDisplay(/*in out*/PRUint8 &display)
 {
