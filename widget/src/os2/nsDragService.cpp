@@ -95,79 +95,91 @@ MRESULT EXPENTRY nsDragWindowProc(HWND hWnd, ULONG msg, MPARAM mp1, MPARAM mp2)
 
   switch (msg) {
 
-  // if the user requests the contents of a URL be rendered (vs the URL
-  // itself), change the suggested target name from the URL's title to
-  // the name of the file that will be retrieved
-  case DM_RENDERPREPARE: {
-    pdragtransfer = (PDRAGTRANSFER)mp1;
-    dragservice = (nsDragService*)pdragtransfer->pditem->ulItemID;
-
-    if (pdragtransfer->usOperation == DO_COPY &&
-        !strcmp(dragservice->mMimeType, kURLMime)) {
-      nsCOMPtr<nsIURL> linkURL(do_QueryInterface(dragservice->mSourceData));
-      nsCAutoString filename;
-      linkURL->GetFileName(filename);
-      if (filename.IsEmpty()) {
-        linkURL->GetHost(filename);
-        filename.Append("/file");
-      }
-      DrgDeleteStrHandle(pdragtransfer->pditem->hstrTargetName);
-      pdragtransfer->pditem->hstrTargetName = DrgAddStrHandle(ToNewCString(filename));
-    }
-    return (MRESULT)TRUE;
-  }
-
-  case DM_RENDER: {
-    pdragtransfer = (PDRAGTRANSFER)mp1;
-    dragservice = (nsDragService*)pdragtransfer->pditem->ulItemID;
-    DrgQueryStrName(pdragtransfer->hstrRenderToName, CCHMAXPATH, chPath);
-    BOOL ok = FALSE;
-
-    // if we're dragging a URL, render either the URL itself or the file
-    // it references if the user Ctrl-dropped
-    if (dragservice->mMimeType) {
-      if (!strcmp(dragservice->mMimeType, kURLMime)) {
+    // if the user requests the contents of a URL be rendered (vs the URL
+    // itself), change the suggested target name from the URL's title to
+    // the name of the file that will be retrieved
+    case DM_RENDERPREPARE: {
+      pdragtransfer = (PDRAGTRANSFER)mp1;
+      dragservice = (nsDragService*)pdragtransfer->pditem->ulItemID;
+  
+      if (pdragtransfer->usOperation == DO_COPY &&
+          !strcmp(dragservice->mMimeType, kURLMime)) {
         nsCOMPtr<nsIURL> urlObject(do_QueryInterface(dragservice->mSourceData));
         if (urlObject) {
-          nsCAutoString strUrl;
-          urlObject->GetSpec(strUrl);
-          if (pdragtransfer->usOperation == DO_COPY)
-            dragservice->WriteData(chPath, strUrl.get());
-          else {
-            fp = fopen(chPath, "wb+");
-            fwrite(strUrl.get(), strUrl.Length(), 1, fp);
-            fclose(fp);
-            WriteTypeEA(chPath, "UniformResourceLocator");
+          nsCAutoString filename;
+          urlObject->GetFileName(filename);
+          if (filename.IsEmpty()) {
+            urlObject->GetHost(filename);
+            filename.Append("/file");
           }
-          ok = TRUE;
+          DrgDeleteStrHandle(pdragtransfer->pditem->hstrTargetName);
+          pdragtransfer->pditem->hstrTargetName = DrgAddStrHandle(ToNewCString(filename));
         }
       }
-    else
-    // if we're dragging text, do NLS conversion then write it to file
-      if (!strcmp(dragservice->mMimeType, kUnicodeMime)) {
-        nsCOMPtr<nsISupportsString> strObject(do_QueryInterface(dragservice->mSourceData));
-        if (strObject) {
-          nsAutoString strData;
-          strObject->GetData(strData);
-          char * pText;
-          int cnt = UnicodeToCodepage( strData, &pText);
-          if (cnt) {
+      return (MRESULT)TRUE;
+    }
+  
+    case DM_RENDER: {
+      pdragtransfer = (PDRAGTRANSFER)mp1;
+      dragservice = (nsDragService*)pdragtransfer->pditem->ulItemID;
+      DrgQueryStrName(pdragtransfer->hstrRenderToName, CCHMAXPATH, chPath);
+      BOOL ok = FALSE;
+  
+      // if we're dragging a URL, render either the URL itself or the file
+      // it references if the user Ctrl-dropped;  use the nsIURL interface
+      // to determine if the latter is even possible - if it fails (as it
+      // will for mailto:), drop into the code that uses nsIURI to render
+      // a URL object
+      
+      if (!strcmp(dragservice->mMimeType, kURLMime)) {
+        if (pdragtransfer->usOperation == DO_COPY) {
+          nsCOMPtr<nsIURL> urlObject(do_QueryInterface(dragservice->mSourceData));
+          if (urlObject) {
+            nsCAutoString strUrl;
+            urlObject->GetSpec(strUrl);
+            dragservice->WriteData(chPath, strUrl.get());
+            ok = TRUE;
+          }
+        }
+        if (!ok) {
+          nsCOMPtr<nsIURI> uriObject(do_QueryInterface(dragservice->mSourceData));
+          if (uriObject) {
+            nsCAutoString strUri;
+            uriObject->GetSpec(strUri);
             fp = fopen(chPath, "wb+");
-            fwrite(pText, cnt, 1, fp);
+            fwrite(strUri.get(), strUri.Length(), 1, fp);
             fclose(fp);
+            WriteTypeEA(chPath, "UniformResourceLocator");
             ok = TRUE;
           }
         }
       }
+      else
+        // if we're dragging text, do NLS conversion then write it to file
+        if (!strcmp(dragservice->mMimeType, kUnicodeMime)) {
+          nsCOMPtr<nsISupportsString> strObject(do_QueryInterface(dragservice->mSourceData));
+          if (strObject) {
+            nsAutoString strData;
+            strObject->GetData(strData);
+            char * pText;
+            int cnt = UnicodeToCodepage( strData, &pText);
+            if (cnt) {
+              fp = fopen(chPath, "wb+");
+              fwrite(pText, cnt, 1, fp);
+              fclose(fp);
+              ok = TRUE;
+            }
+          }
+        }
+  
+      DrgPostTransferMsg(pdragtransfer->hwndClient, DM_RENDERCOMPLETE, pdragtransfer,
+                         (ok ? DMFL_RENDEROK : DMFL_RENDERFAIL), 0, TRUE);
+      DrgFreeDragtransfer(pdragtransfer);
+      return (MRESULT)TRUE;
     }
-    DrgPostTransferMsg(pdragtransfer->hwndClient, DM_RENDERCOMPLETE, pdragtransfer,
-                       (ok ? DMFL_RENDEROK : DMFL_RENDERFAIL), 0, TRUE);
-    DrgFreeDragtransfer(pdragtransfer);
-    return (MRESULT)TRUE;
-  }
-
-  default:
-    break;
+  
+    default:
+      break;
   }
 
   return ::WinDefWindowProc(hWnd, msg, mp1, mp2);
