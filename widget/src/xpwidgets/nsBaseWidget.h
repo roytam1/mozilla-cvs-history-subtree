@@ -1,25 +1,31 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 #ifndef nsBaseWidget_h__
 #define nsBaseWidget_h__
 
 #include "nsRect.h"
 #include "nsIWidget.h"
+#include "nsIGenericWindow.h"
+#include "nsIWindow.h"
 #include "nsIEnumerator.h"
 #include "nsIMouseListener.h"
 #include "nsIEventListener.h"
@@ -40,7 +46,7 @@
  * class, but it gives them a head start.)
  */
 
-class nsBaseWidget : public nsIWidget
+class nsBaseWidget : public nsIWidget, public nsIGenericWindow
 {
 
 public:
@@ -49,46 +55,21 @@ public:
   
   NS_DECL_ISUPPORTS
   
+  /* the end of this file has the methods seperated into new and old */
+
   NS_IMETHOD              PreCreateWidget(nsWidgetInitData *aWidgetInitData) { return NS_OK;}
   
   // nsIWidget interface
   NS_IMETHOD              CaptureMouse(PRBool aCapture);
   NS_IMETHOD              InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSynchronous);
-  NS_IMETHOD              GetClientData(void** aClientData);
-  NS_IMETHOD              SetClientData(void* aClientData);
-  NS_IMETHOD              GetParent(nsIWidget **aParent);
-  NS_IMETHOD              GetChildren(nsIEnumerator **aChildren);
-  NS_IMETHOD              AddChild(nsIWidget* aChild);
-  NS_IMETHOD              RemoveChild(nsIWidget* aChild);
+  NS_IMETHOD              Destroy();
 
   NS_IMETHOD              SetZIndex(PRInt32 aZIndex);
   NS_IMETHOD              GetZIndex(PRInt32* aZIndex);
 
-  NS_IMETHOD              GetForegroundColor(nscolor *aColor);
-  NS_IMETHOD              SetForegroundColor(nscolor aColor);
-
-  NS_IMETHOD              GetBackgroundColor(nscolor *aColor);
-  NS_IMETHOD              SetBackgroundColor(nscolor aColor);
-
-  NS_IMETHOD              GetCursor(nsCursor *aCursor);
-  NS_IMETHOD              SetCursor(nsCursor aCursor);
-
-  virtual nsIRenderingContext* GetRenderingContext();
-  virtual nsIDeviceContext* GetDeviceContext();
-  virtual nsIAppShell *   GetAppShell();
-
-  NS_IMETHOD Show(PRBool aShow) { printf("nsIWidget::Show is depriciated.  Call nsIWidget::SetVisibility\n"); return SetVisibility(aShow); }
-
-
-  NS_IMETHOD              GetToolkit(nsIToolkit **aToolkit);
   NS_IMETHOD              SetModal(void); 
-
   NS_IMETHOD              SetWindowType(nsWindowType aWindowType);
-  NS_IMETHOD              GetWindowType(nsWindowType *aWindowType);
-
-  NS_IMETHOD              SetBorderStyle(nsBorderStyle aBorderStyle);
-  NS_IMETHOD              GetBorderStyle(nsBorderStyle *aBorderStyle);
-  
+  NS_IMETHOD              SetBorderStyle(nsBorderStyle aBorderStyle); 
   NS_IMETHOD              AddMouseListener(nsIMouseListener * aListener);
   NS_IMETHOD              AddEventListener(nsIEventListener * aListener);
   NS_IMETHOD              AddMenuListener(nsIMenuListener * aListener);
@@ -96,12 +77,13 @@ public:
   NS_IMETHOD              GetBounds(nsRect &aRect);
   NS_IMETHOD              GetBoundsAppUnits(nsRect &aRect, float aAppUnits);
   NS_IMETHOD              GetClientBounds(nsRect &aRect);
-  NS_IMETHOD              GetBorderSize(PRInt32 *aWidth, PRInt32 *aHeight);
-  NS_IMETHOD              Paint(nsIRenderingContext *aRenderingContext, const nsRect *aDirtyRect);
+  NS_IMETHOD              GetBorderSize(PRInt32 &aWidth, PRInt32 &aHeight);
+  NS_IMETHOD              ScrollRect(nsRect &aRect, PRInt32 aDx, PRInt32 aDy);
 #ifdef LOSER
   NS_IMETHOD              SetVerticalScrollbar(nsIWidget * aScrollbar);
 #endif
   NS_IMETHOD              EnableDragDrop(PRBool aEnable);
+  virtual void            ConvertToDeviceCoordinates(nscoord  &aX,nscoord &aY) {}
   virtual void            FreeNativeData(void * data, PRUint32 aDataType) {}//~~~
 
 protected:
@@ -113,6 +95,7 @@ protected:
   virtual void            DrawScaledLine(nsIRenderingContext& aRenderingContext, 
                                          nscoord aSX, nscoord aSY, nscoord aEX, nscoord aEY, 
                                          float   aScale, float aAppUnits, PRBool aIsHorz);
+  virtual void            OnDestroy();
   virtual void            BaseCreate(nsIWidget *aParent,
                                      const nsRect &aRect,
                                      EVENT_CALLBACK aHandleEventFunction,
@@ -138,6 +121,8 @@ protected:
   PRBool            mIsShiftDown;
   PRBool            mIsControlDown;
   PRBool            mIsAltDown;
+  PRBool            mIsDestroying;
+  PRBool            mOnDestroyCalled;
   nsRect            mBounds;
 #ifdef LOSER
   nsIWidget        *mVScrollbar;
@@ -202,6 +187,98 @@ protected:
 public:
   static void debug_CleanupCrapSoThatBruceAndPurifyAreHappy();
 #endif
+
+
+
+
+
+
+
+
+
+
+
+public:
+  /* new methods */
+  NS_IMETHOD InitWidget(nsIAppShell      *aAppShell,
+                        nsIToolkit       *aToolkit,
+                        nsIDeviceContext *aContext,
+                        EVENT_CALLBACK   aEventFunction);
+  NS_IMETHOD InitWindow(nativeWindow aParentNativeWindow,
+                        nsIWidget *aParentWidget,
+                        PRInt32 aX, PRInt32 aY,
+                        PRInt32 aWidth, PRInt32 aHeight);
+  NS_IMETHOD Create();
+
+  NS_IMETHOD SetVisibility(PRBool aShow);
+  NS_IMETHOD GetVisibility(PRBool *aState);
+  NS_IMETHOD SetPosition(PRInt32 aX, PRInt32 aY);
+  NS_IMETHOD SetSize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint);
+  NS_IMETHOD SetPositionAndSize(PRInt32 aX,
+                                PRInt32 aY,
+                                PRInt32 aWidth,
+                                PRInt32 aHeight,
+                                PRBool  aRepaint);
+  NS_IMETHOD GetForegroundColor(nscolor *aColor);
+  NS_IMETHOD SetForegroundColor(nscolor aColor);
+  NS_IMETHOD GetBackgroundColor(nscolor *aColor);
+  NS_IMETHOD SetBackgroundColor(nscolor aColor);
+  NS_IMETHOD SetFont(nsFont *aFont);
+  NS_IMETHOD GetFont(nsFont **aFont);
+  NS_IMETHOD GetCursor(nsCursor *aCursor);
+  NS_IMETHOD SetCursor(nsCursor aCursor);
+  NS_IMETHOD InvalidateRect(const nsRect *aRect, PRBool aIsSynchronous);
+  NS_IMETHOD GetPreferredSize(PRInt32 *aWidth, PRInt32 *aHeight);
+  NS_IMETHOD GetParentWidget(nsIWidget **aWidget);
+  NS_IMETHOD GetChildren(nsIEnumerator **aChildren);
+  NS_IMETHOD GetNativeData(PRUint32 aDataType, void **aData);
+  NS_IMETHOD GetDeviceContext(nsIDeviceContext **aDeviceContext);
+  NS_IMETHOD GetAppShell(nsIAppShell **aAppShell);
+  NS_IMETHOD GetToolkit(nsIToolkit **aToolkit);
+  NS_IMETHOD GetClientData(void **aData);
+  NS_IMETHOD Paint(nsIRenderingContext *, const nsRect *);
+  NS_IMETHOD ConvertToDeviceCoordinates(nscoord *, nscoord *);
+  NS_IMETHOD SetFocus() { };
+
+public:
+  /* old methods that have the same names as new ones */
+  NS_IMETHOD              GetClientData(void*& aClientData);
+  NS_IMETHOD              SetClientData(void* aClientData);
+  virtual nsIEnumerator*  GetChildren();
+  NS_IMETHOD              AddChild(nsIWidget* aChild);
+  NS_IMETHOD              RemoveChild(nsIWidget* aChild); 
+  virtual nscolor         GetForegroundColor(void);
+  virtual nscolor         GetBackgroundColor(void);
+  virtual nsCursor        GetCursor();
+  NS_IMETHOD              Paint(nsIRenderingContext& aRenderingContext, const nsRect& aDirtyRect);
+  virtual nsIWidget*      GetParent(void);
+
+  /* base widget does not really support these... they are here only to avoid shadowing problems */
+  NS_IMETHOD              SetFont(const nsFont &) = 0;
+  virtual nsIFontMetrics *GetFont() = 0;
+  NS_IMETHOD              GetPreferredSize(PRInt32 &, PRInt32 &) = 0;
+  virtual void *          GetNativeData(unsigned int) = 0;
+  virtual nsIRenderingContext* GetRenderingContext();
+  virtual nsIDeviceContext* GetDeviceContext();
+  virtual nsIAppShell *   GetAppShell();
+  virtual nsIToolkit*     GetToolkit();
+
+
+
+  NS_IMETHOD Create(nsIWidget        *aParent,
+                    const nsRect     &aRect,
+                    EVENT_CALLBACK   aHandleEventFunction,
+                    nsIDeviceContext *aContext,
+                    nsIAppShell      *aAppShell = nsnull,
+                    nsIToolkit       *aToolkit = nsnull,
+                    nsWidgetInitData *aInitData = nsnull) = 0;
+  NS_IMETHOD Create(nsNativeWidget aParent,
+                    const nsRect     &aRect,
+                    EVENT_CALLBACK   aHandleEventFunction,
+                    nsIDeviceContext *aContext,
+                    nsIAppShell      *aAppShell = nsnull,
+                    nsIToolkit       *aToolkit = nsnull,
+                    nsWidgetInitData *aInitData = nsnull) = 0;
 };
 
 #endif // nsBaseWidget_h__

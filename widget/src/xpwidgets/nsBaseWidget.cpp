@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #include "nsBaseWidget.h"
@@ -30,9 +34,12 @@
 #include "nsIPref.h"
 #endif
 
-// nsBaseWidget
-NS_IMPL_ISUPPORTS1(nsBaseWidget, nsIWidget)
+#ifdef NOISY_WIDGET_LEAKS
+static PRInt32 gNumWidgets;
+#endif
 
+// nsBaseWidget
+NS_IMPL_ISUPPORTS2(nsBaseWidget, nsIWidget, nsIGenericWindow)
 
 // nsBaseWidget::Enumerator
 NS_IMPL_ISUPPORTS2(nsBaseWidget::Enumerator, nsIBidirectionalEnumerator, nsIEnumerator)
@@ -43,6 +50,7 @@ NS_IMPL_ISUPPORTS2(nsBaseWidget::Enumerator, nsIBidirectionalEnumerator, nsIEnum
 // nsBaseWidget constructor
 //
 //-------------------------------------------------------------------------
+
 nsBaseWidget::nsBaseWidget()
 :	mClientData(nsnull)
 ,	mEventCallback(nsnull)
@@ -53,16 +61,23 @@ nsBaseWidget::nsBaseWidget()
 ,	mEventListener(nsnull)
 ,	mMenuListener(nsnull)
 ,	mCursor(eCursor_standard)
-,	mBorderStyle(eBorderStyle_none)
+  //,	mBorderStyle(eBorderStyle_none)
 ,	mIsShiftDown(PR_FALSE)
 ,	mIsControlDown(PR_FALSE)
 ,	mIsAltDown(PR_FALSE)
+,	mIsDestroying(PR_FALSE)
+,	mOnDestroyCalled(PR_FALSE)
 ,	mBounds(0,0,0,0)
 #ifdef LOSER
 ,	mVScrollbar(nsnull)
 #endif
 ,   mZIndex(0)
 {
+#ifdef NOISY_WIDGET_LEAKS
+  gNumWidgets++;
+  printf("WIDGETS+ = %d\n", gNumWidgets);
+#endif
+
     NS_NewISupportsArray(getter_AddRefs(mChildren));
     
     NS_INIT_REFCNT();
@@ -76,30 +91,19 @@ nsBaseWidget::nsBaseWidget()
 //-------------------------------------------------------------------------
 nsBaseWidget::~nsBaseWidget()
 {
-  // disconnect listeners.
-  NS_IF_RELEASE(mMouseListener);
-  NS_IF_RELEASE(mEventListener);
-  NS_IF_RELEASE(mMenuListener);
+#ifdef NOISY_WIDGET_LEAKS
+  gNumWidgets--;
+  printf("WIDGETS- = %d\n", gNumWidgets);
+#endif
+
 	NS_IF_RELEASE(mMenuListener);
-
-  // release references to device context, toolkit, and app shell
-  NS_IF_RELEASE(mContext);
-  NS_IF_RELEASE(mToolkit);
-  NS_IF_RELEASE(mAppShell);
-
-  // disconnect from the parent
-  nsIWidget *parent;
-  if (NS_SUCCEEDED(GetParent(&parent)))
-  {
-    parent->RemoveChild(this);
-    NS_RELEASE(parent);
-  }
-
 #ifdef LOSER
 	NS_IF_RELEASE(mVScrollbar);
 #endif
-
+	NS_IF_RELEASE(mToolkit);
+	NS_IF_RELEASE(mContext);
 }
+
 
 //-------------------------------------------------------------------------
 //
@@ -114,30 +118,36 @@ void nsBaseWidget::BaseCreate(nsIWidget *aParent,
                               nsIToolkit *aToolkit,
                               nsWidgetInitData *aInitData)
 {
-  if (!mToolkit) {
-
-    if (aToolkit) {
+  if (nsnull == mToolkit) {
+    if (nsnull != aToolkit) {
       mToolkit = (nsIToolkit*)aToolkit;
       NS_ADDREF(mToolkit);
-    } else {
-      if (aParent && NS_SUCCEEDED(aParent->GetToolkit(&mToolkit))) {
-        // ...
+    }
+    else {
+      if (nsnull != aParent) {
+        mToolkit = (nsIToolkit*)(aParent->GetToolkit()); // the call AddRef's, we don't have to
       }
       // it's some top level window with no toolkit passed in.
       // Create a default toolkit with the current thread
+#if !defined(USE_TLS_FOR_TOOLKIT)
       else {
         static NS_DEFINE_CID(kToolkitCID, NS_TOOLKIT_CID);
         
         nsresult res;
         res = nsComponentManager::CreateInstance(kToolkitCID, nsnull,
                                                  NS_GET_IID(nsIToolkit), (void **)&mToolkit);
-        if (NS_FAILED(res))
-        {
-          NS_ASSERTION(PR_FALSE, "Can not create a toolkit in nsBaseWidget::Create");\
-        }
-        else
+        if (NS_OK != res)
+          NS_ASSERTION(PR_FALSE, "Can not create a toolkit in nsBaseWidget::Create");
+        if (mToolkit)
           mToolkit->Init(PR_GetCurrentThread());
       }
+#else /* USE_TLS_FOR_TOOLKIT */
+      else {
+        nsresult rv;
+
+        rv = NS_GetCurrentToolkit(&mToolkit);
+      }
+#endif /* USE_TLS_FOR_TOOLKIT */
     }
     
   }
@@ -190,9 +200,9 @@ NS_IMETHODIMP nsBaseWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aI
 //
 //-------------------------------------------------------------------------
 
-NS_IMETHODIMP nsBaseWidget::GetClientData(void** aClientData)
+NS_IMETHODIMP nsBaseWidget::GetClientData(void*& aClientData)
 {
-  *aClientData = mClientData;
+  aClientData = mClientData;
   return NS_OK;
 }
 
@@ -204,12 +214,37 @@ NS_IMETHODIMP nsBaseWidget::SetClientData(void* aClientData)
 
 //-------------------------------------------------------------------------
 //
+// Close this nsBaseWidget
+//
+//-------------------------------------------------------------------------
+NS_METHOD nsBaseWidget::Destroy()
+{
+  // disconnect from the parent
+  nsIWidget *parent = GetParent();
+  if (parent) {
+    parent->RemoveChild(this);
+    NS_RELEASE(parent);
+  }
+#ifdef LOSER
+	NS_IF_RELEASE(mVScrollbar);
+#endif
+  // disconnect listeners.
+  NS_IF_RELEASE(mMouseListener);
+  NS_IF_RELEASE(mEventListener);
+  NS_IF_RELEASE(mMenuListener);
+
+  return NS_OK;
+}
+
+
+//-------------------------------------------------------------------------
+//
 // Get this nsBaseWidget parent
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::GetParent(nsIWidget **aParent)
+nsIWidget* nsBaseWidget::GetParent(void)
 {
-  return NS_ERROR_FAILURE;
+  return nsnull;
 }
 
 //-------------------------------------------------------------------------
@@ -217,7 +252,7 @@ NS_IMETHODIMP nsBaseWidget::GetParent(nsIWidget **aParent)
 // Get this nsBaseWidget's list of children
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::GetChildren(nsIEnumerator **aChildren)
+nsIEnumerator* nsBaseWidget::GetChildren()
 {
   nsIEnumerator* children = nsnull;
 
@@ -227,32 +262,8 @@ NS_IMETHODIMP nsBaseWidget::GetChildren(nsIEnumerator **aChildren)
     children = new Enumerator(*this);
     NS_IF_ADDREF(children);
   }
-  *aChildren = children;
-  return NS_OK;
+  return children;
 }
-
-
-//-------------------------------------------------------------------------
-//
-// Add a child to the list of children
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::AddChild(nsIWidget* aChild)
-{
-  return mChildren->AppendElement(aChild);
-}
-
-
-//-------------------------------------------------------------------------
-//
-// Remove a child from the list of children
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::RemoveChild(nsIWidget* aChild)
-{
-  return mChildren->RemoveElement(aChild);
-}
-
 
 //-------------------------------------------------------------------------
 //
@@ -264,10 +275,9 @@ NS_IMETHODIMP nsBaseWidget::SetZIndex(PRInt32 aZIndex)
 	mZIndex = aZIndex;
 
 	// reorder this child in its parent's list.
-	nsBaseWidget* parent;
-  GetParent((nsIWidget**)&parent);
+	nsBaseWidget* parent = NS_STATIC_CAST(nsBaseWidget*, GetParent());
 	if (nsnull != parent) {
-		parent->mChildren->RemoveElement(this);
+		parent->mChildren->RemoveElement(NS_STATIC_CAST(nsIWidget*,this));
 		PRUint32 childCount, index;
 		if (NS_SUCCEEDED(parent->mChildren->Count(&childCount))) {
 			for (index = 0; index < childCount; index++) {
@@ -276,7 +286,7 @@ NS_IMETHODIMP nsBaseWidget::SetZIndex(PRInt32 aZIndex)
 					PRInt32 childZIndex;
 					if (NS_SUCCEEDED(childWidget->GetZIndex(&childZIndex))) {
 						if (aZIndex < childZIndex) {
-							parent->mChildren->InsertElementAt(this, index);
+							parent->mChildren->InsertElementAt(NS_STATIC_CAST(nsIWidget*,this), index);
 							break;
 						}
 					}
@@ -284,7 +294,7 @@ NS_IMETHODIMP nsBaseWidget::SetZIndex(PRInt32 aZIndex)
 			}
 			// were we added to the list?
 			if (index == childCount) {
-				parent->mChildren->AppendElement(this);
+				parent->mChildren->AppendElement(NS_STATIC_CAST(nsIWidget*,this));
 			}
 		}
 		NS_RELEASE(parent);
@@ -308,56 +318,29 @@ NS_IMETHODIMP nsBaseWidget::GetZIndex(PRInt32* aZIndex)
 // Get the foreground color
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::GetForegroundColor(nscolor *aColor)
+nscolor nsBaseWidget::GetForegroundColor(void)
 {
-  *aColor = mForeground;
-  return NS_OK;
+  return mForeground;
 }
 
-    
-//-------------------------------------------------------------------------
-//
-// Set the foreground color
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::SetForegroundColor(nscolor aColor)
-{
-  mForeground = aColor;
-  return NS_OK;
-}
-
-    
 //-------------------------------------------------------------------------
 //
 // Get the background color
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::GetBackgroundColor(nscolor *aColor)
+nscolor nsBaseWidget::GetBackgroundColor(void)
 {
-  *aColor = mBackground;
-  return NS_OK;
+  return mBackground;
 }
 
-//-------------------------------------------------------------------------
-//
-// Set the background color
-//
-//-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::SetBackgroundColor(nscolor aColor)
-{
-  mBackground = aColor;
-  return NS_OK;
-}
-     
 //-------------------------------------------------------------------------
 //
 // Get this component cursor
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::GetCursor(nsCursor *aCursor)
+nsCursor nsBaseWidget::GetCursor()
 {
-  *aCursor = mCursor;
-  return NS_OK;
+  return mCursor;
 }
 
 NS_METHOD nsBaseWidget::SetCursor(nsCursor aCursor)
@@ -395,15 +378,10 @@ nsIRenderingContext* nsBaseWidget::GetRenderingContext()
 // Return the toolkit this widget was created on
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::GetToolkit(nsIToolkit **aToolkit)
+nsIToolkit* nsBaseWidget::GetToolkit()
 {
-  if (!mToolkit)
-    return NS_ERROR_NULL_POINTER;
-
-  NS_ADDREF(mToolkit);
-  *aToolkit = mToolkit;
-
-  return NS_OK;
+  NS_IF_ADDREF(mToolkit);
+  return mToolkit;
 }
 
 
@@ -431,17 +409,26 @@ nsIAppShell *nsBaseWidget::GetAppShell()
 }
 
 
+//-------------------------------------------------------------------------
+//
+// Destroy the window
+//
+//-------------------------------------------------------------------------
+void nsBaseWidget::OnDestroy()
+{
+  // release references to device context, toolkit, and app shell
+  NS_IF_RELEASE(mContext);
+  NS_IF_RELEASE(mToolkit);
+  NS_IF_RELEASE(mAppShell);
+}
+
+
 NS_METHOD nsBaseWidget::SetWindowType(nsWindowType aWindowType) 
 {
   mWindowType = aWindowType;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsBaseWidget::GetWindowType(nsWindowType *aWindowType)
-{
-  *aWindowType = mWindowType;
-  return NS_OK;
-}
 
 NS_METHOD nsBaseWidget::SetBorderStyle(nsBorderStyle aBorderStyle)
 {
@@ -449,11 +436,6 @@ NS_METHOD nsBaseWidget::SetBorderStyle(nsBorderStyle aBorderStyle)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsBaseWidget::GetBorderStyle(nsBorderStyle *aBorderStyle)
-{
-  *aBorderStyle = mBorderStyle;
-  return NS_OK;
-}
 
 /**
 * Processes a mouse pressed event
@@ -550,15 +532,15 @@ NS_METHOD nsBaseWidget::SetBounds(const nsRect &aRect)
 * Calculates the border width and height  
 *
 **/
-NS_METHOD nsBaseWidget::GetBorderSize(PRInt32 *aWidth, PRInt32 *aHeight)
+NS_METHOD nsBaseWidget::GetBorderSize(PRInt32 &aWidth, PRInt32 &aHeight)
 {
   nsRect rectWin;
   nsRect rect;
   GetBounds(rectWin);
   GetClientBounds(rect);
 
-  *aWidth  = (rectWin.width - rect.width) / 2;
-  *aHeight = (rectWin.height - rect.height) / 2;
+  aWidth  = (rectWin.width - rect.width) / 2;
+  aHeight = (rectWin.height - rect.height) / 2;
 
   return NS_OK;
 }
@@ -629,25 +611,30 @@ void nsBaseWidget::DrawScaledLine(nsIRenderingContext& aRenderingContext,
 * Paints default border (XXX - this should be done by CSS)
 *
 **/
-NS_IMETHODIMP nsBaseWidget::Paint(nsIRenderingContext *aRenderingContext,
-                                  const nsRect        *aDirtyRect)
+NS_METHOD nsBaseWidget::Paint(nsIRenderingContext& aRenderingContext,
+                              const nsRect&        aDirtyRect)
 {
   nsRect rect;
   float  appUnits;
   float  scale;
   nsIDeviceContext * context;
-  aRenderingContext->GetDeviceContext(context);
+  aRenderingContext.GetDeviceContext(context);
 
   context->GetCanonicalPixelScale(scale);
   context->GetDevUnitsToAppUnits(appUnits);
 
   GetBoundsAppUnits(rect, appUnits);
-  aRenderingContext->SetColor(NS_RGB(0,0,0));
+  aRenderingContext.SetColor(NS_RGB(0,0,0));
 
-  DrawScaledRect(*aRenderingContext, rect, scale, appUnits);
+  DrawScaledRect(aRenderingContext, rect, scale, appUnits);
 
   NS_RELEASE(context);
   return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::ScrollRect(nsRect &aRect, PRInt32 aDx, PRInt32 aDy)
+{
+  return NS_ERROR_FAILURE;
 }
 
 #ifdef LOSER
@@ -660,7 +647,7 @@ NS_METHOD nsBaseWidget::SetVerticalScrollbar(nsIWidget * aWidget)
 }
 #endif
 
-NS_IMETHODIMP nsBaseWidget::EnableDragDrop(PRBool aEnable)
+NS_METHOD nsBaseWidget::EnableDragDrop(PRBool aEnable)
 {
   return NS_OK;
 }
@@ -1096,7 +1083,438 @@ nsBaseWidget::Enumerator::IsDone()
     return NS_OK;
   }
   else {
-    return NS_COMFALSE;
+    return NS_ENUMERATOR_FALSE;
   }
+  return NS_OK;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if 0
+
+  /* void initWidget (in nsIAppShell aAppShell, in nsIToolkit aToolkit, in nsIDeviceContext aContext, in EVENT_CALLBACK aEventFunction); */
+  NS_IMETHOD InitWidget(nsIAppShell *aAppShell, nsIToolkit *aToolkit, nsIDeviceContext * aContext, EVENT_CALLBACK aEventFunction) = 0;
+
+  /* voidStar getNativeData (in PRUint32 aDataType); */
+  NS_IMETHOD GetNativeData(PRUint32 aDataType, void * *_retval) = 0;
+
+  /* void move (in PRInt32 aX, in PRInt32 aY); */
+  NS_IMETHOD Move(PRInt32 aX, PRInt32 aY) = 0;
+
+  /* void resize (in PRInt32 aWidth, in PRInt32 aHeight, in PRBool aRepaint); */
+  NS_IMETHOD Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint) = 0;
+
+  /* void moveResize (in PRInt32 aX, in PRInt32 aY, in PRInt32 aWidth, in PRInt32 aHeight, in PRBool aRepaint); */
+  NS_IMETHOD MoveResize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint) = 0;
+
+  /* void enable (in PRBool aState); */
+  NS_IMETHOD Enable(PRBool aState) = 0;
+
+  /* void setFocus (); */
+  NS_IMETHOD SetFocus(void) = 0;
+
+  /* void getBounds (in nsRectRef aRect); */
+  NS_IMETHOD GetBounds(nsRect & aRect) = 0;
+
+  /* void getClientBounds (in nsRectRef aRect); */
+  NS_IMETHOD GetClientBounds(nsRect & aRect) = 0;
+
+  /* void getPreferredSize (out PRInt32 aWidth, out PRInt32 aHeight); */
+  NS_IMETHOD GetPreferredSize(PRInt32 *aWidth, PRInt32 *aHeight) = 0;
+
+  /* void setPreferredSize (in PRInt32 aWidth, in PRInt32 aHeight); */
+  NS_IMETHOD SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight) = 0;
+
+  /* void invalidate (in PRBool aIsSynchronous); */
+  NS_IMETHOD Invalidate(PRBool aIsSynchronous) = 0;
+
+  /* void invalidateRect ([const] in nsRect aRect, in PRBool aIsSynchronous); */
+  NS_IMETHOD InvalidateRect(const nsRect * aRect, PRBool aIsSynchronous) = 0;
+
+  /* void invalidateRegion ([const] in nsIRegion aRegion, in PRBool aIsSynchronous); */
+  NS_IMETHOD InvalidateRegion(const nsIRegion * aRegion, PRBool aIsSynchronous) = 0;
+
+  /* void update (); */
+  NS_IMETHOD Update(void) = 0;
+
+  /* void widgetToScreen ([const] in nsRect aOldRect, out nsRect aNewRect); */
+  NS_IMETHOD WidgetToScreen(const nsRect * aOldRect, nsRect * *aNewRect) = 0;
+
+  /* void screenToWidget ([const] in nsRect aOldRect, out nsRect aNewRect); */
+  NS_IMETHOD ScreenToWidget(const nsRect * aOldRect, nsRect * *aNewRect) = 0;
+
+  /* void convertToDeviceCoordinates (inout nscoord aX, inout nscoord aY); */
+  NS_IMETHOD ConvertToDeviceCoordinates(nscoord *aX, nscoord *aY) = 0;
+
+  /* void paint (in nsIRenderingContext aRenderingContext, [const] in nsRect aDirtyRect); */
+  NS_IMETHOD Paint(nsIRenderingContext * aRenderingContext, const nsRect * aDirtyRect) = 0;
+
+  /* void enableDragDrop (in PRBool aEnable); */
+  NS_IMETHOD EnableDragDrop(PRBool aEnable) = 0;
+
+  /* void captureMouse (in PRBool aCapture); */
+  NS_IMETHOD CaptureMouse(PRBool aCapture) = 0;
+
+  /* void captureRollupEvents (in nsIRollupListener aListener, in PRBool aDoCapture, in PRBool aConsumeRollupEvent); */
+  NS_IMETHOD CaptureRollupEvents(nsIRollupListener *aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent) = 0;
+
+  /* void addMouseListener (in nsIMouseListener aListener); */
+  NS_IMETHOD AddMouseListener(nsIMouseListener * aListener) = 0;
+
+  /* void addEventListener (in nsIEventListener aListener); */
+  NS_IMETHOD AddEventListener(nsIEventListener * aListener) = 0;
+
+  /* void addMenuListener (in nsIMenuListener aListener); */
+  NS_IMETHOD AddMenuListener(nsIMenuListener * aListener) = 0;
+
+  /* void dispatchEvent (in nsGUIEvent event, in nsEventStatusRef aStatus); */
+  NS_IMETHOD DispatchEvent(nsGUIEvent * event, nsEventStatus & aStatus) = 0;
+
+  /* void addChild (in nsIWidget aChild); */
+  NS_IMETHOD AddChild(nsIWidget *aChild) = 0;
+
+  /* void removeChild (in nsIWidget aChild); */
+  NS_IMETHOD RemoveChild(nsIWidget *aChild) = 0;
+
+  /* readonly attribute nsIDeviceContext deviceContext; */
+  NS_IMETHOD GetDeviceContext(nsIDeviceContext * *aDeviceContext) = 0;
+
+  /* readonly attribute nsIAppShell appShell; */
+  NS_IMETHOD GetAppShell(nsIAppShell * *aAppShell) = 0;
+
+  /* readonly attribute nsIToolkit toolkit; */
+  NS_IMETHOD GetToolkit(nsIToolkit * *aToolkit) = 0;
+
+  /* [noscript] readonly attribute EVENT_CALLBACK eventFunction; */
+  NS_IMETHOD GetEventFunction(EVENT_CALLBACK *aEventFunction) = 0;
+
+  /* attribute PRInt32 zIndex; */
+  NS_IMETHOD GetZIndex(PRInt32 *aZIndex) = 0;
+  NS_IMETHOD SetZIndex(PRInt32 aZIndex) = 0;
+
+  /* attribute nscolor foregroundColor; */
+  NS_IMETHOD GetForegroundColor(nscolor *aForegroundColor) = 0;
+  NS_IMETHOD SetForegroundColor(nscolor aForegroundColor) = 0;
+
+  /* attribute nscolor backgroundColor; */
+  NS_IMETHOD GetBackgroundColor(nscolor *aBackgroundColor) = 0;
+  NS_IMETHOD SetBackgroundColor(nscolor aBackgroundColor) = 0;
+
+  /* attribute nsFont font; */
+  NS_IMETHOD GetFont(nsFont * *aFont) = 0;
+  NS_IMETHOD SetFont(nsFont * aFont) = 0;
+
+  /* attribute nsCursor cursor; */
+  NS_IMETHOD GetCursor(nsCursor *aCursor) = 0;
+  NS_IMETHOD SetCursor(nsCursor aCursor) = 0;
+
+  /* attribute nsColorMap colorMap; */
+  NS_IMETHOD GetColorMap(nsColorMap * *aColorMap) = 0;
+  NS_IMETHOD SetColorMap(nsColorMap * aColorMap) = 0;
+
+  /* attribute voidStar clientData; */
+  NS_IMETHOD GetClientData(void * *aClientData) = 0;
+  NS_IMETHOD SetClientData(void * aClientData) = 0;
+
+  /* readonly attribute nsIEnumerator children; */
+  NS_IMETHOD GetChildren(nsIEnumerator * *aChildren) = 0;
+
+
+
+  /* [noscript] void initWindow (in nativeWindow parentNativeWindow, in nsIWidget parentWidget, in long x, in long y, in long cx, in long cy); */
+  NS_IMETHOD InitWindow(nativeWindow parentNativeWindow, nsIWidget *parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy) = 0;
+
+  /* void create (); */
+  NS_IMETHOD Create(void) = 0;
+
+  /* void destroy (); */
+  NS_IMETHOD Destroy(void) = 0;
+
+  /* void setPosition (in long x, in long y); */
+  NS_IMETHOD SetPosition(PRInt32 x, PRInt32 y) = 0;
+
+  /* void getPosition (out long x, out long y); */
+  NS_IMETHOD GetPosition(PRInt32 *x, PRInt32 *y) = 0;
+
+  /* void setSize (in long cx, in long cy, in boolean fRepaint); */
+  NS_IMETHOD SetSize(PRInt32 cx, PRInt32 cy, PRBool fRepaint) = 0;
+
+  /* void getSize (out long cx, out long cy); */
+  NS_IMETHOD GetSize(PRInt32 *cx, PRInt32 *cy) = 0;
+
+  /* void setPositionAndSize (in long x, in long y, in long cx, in long cy, in boolean fRepaint); */
+  NS_IMETHOD SetPositionAndSize(PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy, PRBool fRepaint) = 0;
+
+  /* void repaint (in boolean force); */
+  NS_IMETHOD Repaint(PRBool force) = 0;
+
+  /* attribute nsIWidget parentWidget; */
+  NS_IMETHOD GetParentWidget(nsIWidget * *aParentWidget) = 0;
+  NS_IMETHOD SetParentWidget(nsIWidget * aParentWidget) = 0;
+
+  /* attribute nativeWindow parentNativeWindow; */
+  NS_IMETHOD GetParentNativeWindow(nativeWindow *aParentNativeWindow) = 0;
+  NS_IMETHOD SetParentNativeWindow(nativeWindow aParentNativeWindow) = 0;
+
+  /* attribute boolean visibility; */
+  NS_IMETHOD GetVisibility(PRBool *aVisibility) = 0;
+  NS_IMETHOD SetVisibility(PRBool aVisibility) = 0;
+
+  /* readonly attribute nsIWidget mainWidget; */
+  NS_IMETHOD GetMainWidget(nsIWidget * *aMainWidget) = 0;
+
+  /* void setFocus (); */
+  NS_IMETHOD SetFocus(void) = 0;
+
+  /* attribute wstring title; */
+  NS_IMETHOD GetTitle(PRUnichar * *aTitle) = 0;
+  NS_IMETHOD SetTitle(const PRUnichar * aTitle) = 0;
+
+#endif
+
+
+
+
+
+
+
+NS_IMETHODIMP nsBaseWidget::SetVisibility(PRBool aShow)
+{
+  return Show(aShow);
+}
+
+NS_IMETHODIMP nsBaseWidget::GetVisibility(PRBool *aState)
+{
+  return IsVisible(*aState);
+}
+
+NS_IMETHODIMP nsBaseWidget::SetPosition(PRInt32 aX, PRInt32 aY)
+{
+  return Move(aX, aY);
+}
+
+NS_IMETHODIMP nsBaseWidget::SetSize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
+{
+  return Resize(aWidth, aHeight, aRepaint);
+}
+
+NS_IMETHODIMP nsBaseWidget::SetPositionAndSize(PRInt32 aX,
+                                               PRInt32 aY,
+                                               PRInt32 aWidth,
+                                               PRInt32 aHeight,
+                                               PRBool  aRepaint)
+{
+  return Resize(aX, aY, aWidth, aHeight, aRepaint);
+}
+
+NS_IMETHODIMP nsBaseWidget::GetForegroundColor(nscolor *aColor)
+{
+  *aColor = GetForegroundColor();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::SetForegroundColor(nscolor aColor)
+{
+  mForeground = aColor;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetBackgroundColor(nscolor *aColor)
+{
+  *aColor = GetBackgroundColor();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::SetBackgroundColor(nscolor aColor)
+{
+  mBackground = aColor;
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsBaseWidget::SetFont(nsFont *aFont)
+{
+  // XXX ugly cast
+  return SetFont((const nsFont &)*aFont);
+}
+
+NS_IMETHODIMP nsBaseWidget::GetFont(nsFont **aFont)
+{
+  //  nsCOMPtr<nsIFontMetrics> fontMetrics;
+  //  GetFont(getter_AddRefs(fontMetrics));
+  //  return fontMetrics.get();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetCursor(nsCursor *aCursor)
+{
+  *aCursor = GetCursor();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::InvalidateRect(const nsRect *aRect, PRBool aIsSynchronous)
+{
+  return Invalidate((const nsRect &)*aRect, aIsSynchronous);
+}
+
+NS_IMETHODIMP nsBaseWidget::GetPreferredSize(PRInt32 *aWidth, PRInt32 *aHeight)
+{
+  return GetPreferredSize(*aWidth, *aHeight);
+}
+
+NS_IMETHODIMP nsBaseWidget::GetParentWidget(nsIWidget **aWidget)
+{
+  *aWidget = GetParent();
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsBaseWidget::AddChild(nsIWidget *aChild)
+{
+  AddChild(aChild);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::RemoveChild(nsIWidget *aChild)
+{
+  RemoveChild(aChild);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetChildren(nsIEnumerator **aChildren)
+{
+  *aChildren = GetChildren();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetNativeData(PRUint32 aDataType, void **aData)
+{
+  *aData = GetNativeData(aDataType);
+  return NS_OK;
+}
+/*
+  virtual void nsBaseWidget::FreeNativeData(void *data, PRUint32 aDataType)
+  {
+  
+  }
+
+  nsIRenderingContext* nsBaseWidget::GetRenderingContext()
+  {
+    nsCOMPtr<nsIRenderingContext> renderingContext;
+    GetRenderingContext(getter_AddRefs(renderingContext));
+    return renderingContext;
+  }
+*/
+
+NS_IMETHODIMP nsBaseWidget::GetDeviceContext(nsIDeviceContext **aDeviceContext)
+{
+  *aDeviceContext = GetDeviceContext();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetAppShell(nsIAppShell **aAppShell)
+{
+  *aAppShell = GetAppShell();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetToolkit(nsIToolkit **aToolkit)
+{
+  *aToolkit = GetToolkit();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::GetClientData(void **aData)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::Paint(nsIRenderingContext *aContext, const nsRect *aRect)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::ConvertToDeviceCoordinates(nscoord *aX, nscoord *aY)
+{
+  return NS_OK;
+}
+
+
+
+NS_IMETHODIMP nsBaseWidget::InitWidget(nsIAppShell      *aAppShell,
+                                       nsIToolkit       *aToolkit,
+                                       nsIDeviceContext *aContext,
+                                       EVENT_CALLBACK   aEventFunction)
+{
+  // this stuff should all get addref'd by BaseCreate()
+  mAppShell = aAppShell;
+  mToolkit = aToolkit;
+  mContext = aContext;
+  mEventCallback = aEventFunction;
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsBaseWidget::InitWindow(nativeWindow aParentNativeWindow,
+                         nsIWidget *aParentWidget,
+                         PRInt32 aX, PRInt32 aY,
+                         PRInt32 aWidth, PRInt32 aHeight)
+{
+  // this stuff should all get addref'd by BaseCreate();
+  //  mParent = aParentWidget;
+  mBounds.width = aWidth;
+  mBounds.height = aHeight;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBaseWidget::Create()
+{
+  nsRect rect(0, 0, mBounds.width, mBounds.height);
+  //  nsRect(mX, mY, mWidth, mHeight);
+  Create((nsIWidget*)nsnull, rect, mEventCallback, mContext, mAppShell, mToolkit, nsnull);
   return NS_OK;
 }

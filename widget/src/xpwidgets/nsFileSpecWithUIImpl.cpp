@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #include "nsFileSpecWithUIImpl.h"
@@ -79,7 +83,7 @@ nsFileSpecWithUIImpl::~nsFileSpecWithUIImpl()
 NS_IMETHODIMP nsFileSpecWithUIImpl::ChooseOutputFile(
 	const char *windowTitle,
 	const char *suggestedLeafName,
-  nsIFileSpecWithUI::StandardFilterMask outMask)
+    PRUint32 outMask)
 //----------------------------------------------------------------------------------------
 {
     if (!mBaseFileSpec)
@@ -97,12 +101,18 @@ NS_IMETHODIMP nsFileSpecWithUIImpl::ChooseOutputFile(
 
     SetFileWidgetFilterList(fileWidget, outMask, nsnull, nsnull);
 
+    // If there is a filespec specified, then start there.
+    SetFileWidgetStartDir(fileWidget);
+
     nsFileSpec spec;
+    
     nsString winTitle(windowTitle);
 
     nsFileDlgResults result = fileWidget->PutFile(nsnull, winTitle, spec);
     if (result != nsFileDlgResults_OK)
     {
+      if (result == nsFileDlgResults_Cancel)
+        return NS_ERROR_ABORT;
       if (spec.Exists() && result != nsFileDlgResults_Replace)
         return NS_FILE_FAILURE;
     }
@@ -119,7 +129,7 @@ NS_IMETHODIMP nsFileSpecWithUIImpl::ChooseFile(const char *title, char **_retval
 
 // ---------------------------------------------------------------------------
 void nsFileSpecWithUIImpl::SetFileWidgetFilterList(
-  nsIFileWidget* fileWidget, nsIFileSpecWithUI::StandardFilterMask mask,
+  nsIFileWidget* fileWidget, PRUint32 mask,
   const char *inExtraFilterTitle, const char *inExtraFilter)
 {
   if (!fileWidget) return;
@@ -151,7 +161,7 @@ void nsFileSpecWithUIImpl::SetFileWidgetFilterList(
   }
 	if (mask & eHTMLFiles)
 	{
-		*nextTitle++ = "HTML Files (*.hml; *.html)";
+		*nextTitle++ = "HTML Files (*.htm; *.html)";
 		*nextFilter++ = "*.htm; *.html";
 	}
 	if (mask & eXMLFiles)
@@ -190,9 +200,23 @@ Clean:
 }
 
 //----------------------------------------------------------------------------------------
+void nsFileSpecWithUIImpl::SetFileWidgetStartDir( nsIFileWidget *fileWidget ) {
+    // We set the file widget's starting directory to the one specified by this nsIFileSpec.
+    if ( mBaseFileSpec && fileWidget ) {
+        nsFileSpec spec;
+        nsresult rv = mBaseFileSpec->GetFileSpec( &spec );
+        if ( NS_SUCCEEDED( rv ) && spec.Valid() ) {
+            // Set as starting directory in file widget.
+            fileWidget->SetDisplayDirectory( spec );
+        }
+    }
+}
+
+
+//----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecWithUIImpl::ChooseInputFile(
   const char *inTitle,
-  nsIFileSpecWithUI::StandardFilterMask inMask,
+  PRUint32 inMask,
   const char *inExtraFilterTitle, const char *inExtraFilter)
 //----------------------------------------------------------------------------------------
 {
@@ -210,6 +234,7 @@ NS_IMETHODIMP nsFileSpecWithUIImpl::ChooseInputFile(
 
   SetFileWidgetFilterList(fileWidget, inMask, 
                           inExtraFilterTitle, inExtraFilter);
+  SetFileWidgetStartDir(fileWidget);
   nsString winTitle(inTitle);
 	if (fileWidget->GetFile(nsnull, winTitle, spec) != nsFileDlgResults_OK)
 		rv = NS_FILE_FAILURE;
@@ -233,6 +258,7 @@ NS_IMETHODIMP nsFileSpecWithUIImpl::ChooseDirectory(const char *title, char **_r
         (void**)getter_AddRefs(fileWidget));
 	if (NS_FAILED(rv))
 		return rv;
+    SetFileWidgetStartDir(fileWidget);
     nsFileSpec spec;
 	if (fileWidget->GetFolder(nsnull, title, spec) != nsFileDlgResults_OK)
 		rv = NS_FILE_FAILURE;
