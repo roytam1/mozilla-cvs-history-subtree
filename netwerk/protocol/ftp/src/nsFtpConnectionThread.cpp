@@ -257,8 +257,7 @@ nsFtpState::EstablishControlConnection()
         // set stream listener of the control connection to be us.
         (void) mControlConnection->SetStreamListener(NS_STATIC_CAST(nsIStreamListener*, this));
         
-        // read cached variables into us.
-        mControlConnection->GetChannel(getter_AddRefs(mCPipe));
+        // read cached variables into us. 
         mServerType = mControlConnection->mServerType;           
         mCwd        = mControlConnection->mCwd;                  
         mList       = mControlConnection->mList;                 
@@ -294,7 +293,6 @@ nsFtpState::EstablishControlConnection()
 
     NS_ADDREF(mControlConnection);
     mControlConnection->SetStreamListener(NS_STATIC_CAST(nsIStreamListener*, this));
-    mCPipe = channel;
     
     return mControlConnection->Connect();
 }
@@ -1036,7 +1034,6 @@ nsFtpState::R_acct() {
         return FTP_ERROR;
 }
 
-#define PWD_COMM (
 nsresult
 nsFtpState::S_pwd() {
     nsCString pwdString( nsLiteralCString("PWD" CRLF) ); 
@@ -1085,16 +1082,16 @@ nsFtpState::R_pwd() {
 
 nsresult
 nsFtpState::S_mode() {
-    nsresult rv;
-    nsCString iType(nsLiteralCString ("TYPE I" CRLF));
-    nsCString aType(nsLiteralCString ("TYPE A" CRLF));
+    char * string;
 
     if ( mBin )
-        rv = ControlAsyncWrite(iType);
+        string = "TYPE I" CRLF;
     else
-        rv = ControlAsyncWrite(aType);
+        string = "TYPE A" CRLF;
 
-    return rv;
+    nsCString type(string);
+
+    return ControlAsyncWrite(type);
 }
 
 FTP_STATE
@@ -1220,15 +1217,16 @@ nsFtpState::R_mdtm() {
 nsresult
 nsFtpState::S_list() {
     nsresult rv;
-
-    nsCString listString(nsLiteralCString ("LIST" CRLF));
-    nsCString nlstString(nsLiteralCString ("NLST" CRLF));
-
+    char * string;
+    
     if ( mList )
-        rv = ControlAsyncWrite(listString);
+        string = "LIST" CRLF;
     else
-        rv = ControlAsyncWrite(nlstString);
+        string = "NLST" CRLF;
+    
+    nsCString listString(string);
 
+    rv = ControlAsyncWrite(listString);
     if (NS_FAILED(rv)) return rv;
 
 
@@ -1244,8 +1242,10 @@ nsFtpState::S_list() {
     SetDirMIMEType(fromStr);
     nsAutoString toStr; toStr.AssignWithConversion("application/http-index-format");
 
+
     rv = streamConvService->AsyncConvertData(fromStr.GetUnicode(), toStr.GetUnicode(),
                                              mListener, mURL, getter_AddRefs(converterListener));
+
     if (NS_FAILED(rv)){
         PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) streamConvService->AsyncConvertData failed (rv=%d)\n", this, rv));
         return rv;
@@ -1255,8 +1255,9 @@ nsFtpState::S_list() {
 #ifdef FTP_NO_HTTP_INDEX_FORMAT
     return mDPipe->AsyncRead(mListener, nsnull);
 #else
-    return mDPipe->AsyncRead(converterListener, mListenerContext);
+     return mDPipe->AsyncRead(converterListener, mListenerContext);
 #endif
+
 }
 
 FTP_STATE
@@ -1339,8 +1340,6 @@ nsFtpState::R_stor() {
 }
 
 
-#define PASV_COMM ("PASV" CRLF)
-#define EPSV_COMM ("EPSV" CRLF)
 nsresult
 nsFtpState::S_pasv() {
     nsresult rv;
@@ -1349,13 +1348,16 @@ nsFtpState::S_pasv() {
         // Find IPv6 socket address, if server is IPv6
         mIPv6Checked = PR_TRUE;
         PR_ASSERT(mIPv6ServerAddress == 0);
-        nsCOMPtr<nsISocketTransport> sTrans = do_QueryInterface(mCPipe, &rv);
+        nsCOMPtr<nsIChannel> controlSocket;
+        mControlConnection->GetChannel(getter_AddRefs(controlSocket));
+        if (!controlSocket) return FTP_ERROR;
+        nsCOMPtr<nsISocketTransport> sTrans = do_QueryInterface(controlSocket, &rv);
         
-        if (!NS_FAILED(rv)) {
+        if (sTrans) {
             rv = sTrans->GetIPStr(100, &mIPv6ServerAddress);
         }
 
-        if (!NS_FAILED(rv)) {
+        if (NS_SUCCEEDED(rv)) {
             PRNetAddr addr;
             if (PR_StringToNetAddr(mIPv6ServerAddress, &addr) != PR_SUCCESS ||
                 PR_IsNetAddrType(&addr, PR_IpAddrV4Mapped)) {
@@ -1366,15 +1368,15 @@ nsFtpState::S_pasv() {
         }
     }
 
-    nsCString pasvString(nsLiteralCString ("PASV" CRLF));
-    nsCString epsvString(nsLiteralCString ("EPSV" CRLF));
 
+    char * string;
     if (mIPv6ServerAddress)
-        rv = ControlAsyncWrite(epsvString);
+        string = "EPSV" CRLF;
     else
-        rv =  ControlAsyncWrite(pasvString);
-    
-    return rv;
+        string = "PASV" CRLF;
+
+    nsCString pasvString(string);
+    return ControlAsyncWrite(pasvString);
     
 }
 
@@ -1567,9 +1569,12 @@ nsFtpState::IsPending(PRBool *result)
 {
     nsresult rv = NS_OK;
     *result = PR_FALSE;
+    
+    nsCOMPtr<nsIChannel> controlSocket;
+    mControlConnection->GetChannel(getter_AddRefs(controlSocket));
 
-    if (mCPipe) {
-        rv = mCPipe->IsPending(result);
+    if (controlSocket) {
+        rv = controlSocket->IsPending(result);
         if (NS_FAILED(rv)) return rv;
     }
     if (mDPipe) {
@@ -1593,7 +1598,7 @@ nsFtpState::Cancel(nsresult status)
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) nsFtpState::Cancel() rv=%d\n", this, status));
     
     // We want to try to save the control connection during
-    // a cancel.  We do not cancel the mCPipe, but just set 
+    // a cancel.  We do not cancel the control socket, but just set 
     // a flag.  When Process() is called (through OnData() or
     // onStopRequest()), we will check this flag and set the 
     // mState accordingly.  We can't set mState directly because
@@ -1620,8 +1625,11 @@ nsFtpState::Suspend(void)
     // enough.
     if (mSuspendCount < 1) {
         mSuspendCount++;
-        if (mCPipe) {
-            rv = mCPipe->Suspend();
+        nsCOMPtr<nsIChannel> controlSocket;
+        mControlConnection->GetChannel(getter_AddRefs(controlSocket));
+
+        if (controlSocket) {
+            rv = controlSocket->Suspend();
             if (NS_FAILED(rv)) return rv;
         }
         if (mDPipe) {
@@ -1643,8 +1651,11 @@ nsFtpState::Resume(void)
     // go on about it's business.
     if (mSuspendCount) {
         // only a suspended thread can be resumed
-        if (mCPipe) {
-            rv = mCPipe->Resume();
+        nsCOMPtr<nsIChannel> controlSocket;
+        mControlConnection->GetChannel(getter_AddRefs(controlSocket));
+    
+        if (controlSocket) {
+            rv = controlSocket->Resume();
             if (NS_FAILED(rv)) return rv;
         }
         if (mDPipe) {
@@ -1754,9 +1765,6 @@ nsFtpState::KillControlConnnection() {
         if (mCPipe)
             mCPipe->Cancel(NS_BINDING_ABORTED);
 #endif
-
-    // reference to mCPipe is held by the mControlConnection.  
-    mCPipe = 0;
 
     // if the control goes away, the data socket goes away...
     if (mDPipe) {

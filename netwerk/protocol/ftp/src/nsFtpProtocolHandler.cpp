@@ -240,10 +240,10 @@ nsFtpProtocolHandler::RemoveConnection(nsIURI *aKey, nsISupports* *_retval) {
     NS_ASSERTION(_retval, "null pointer");
     NS_ASSERTION(aKey, "null pointer");
     
+    *_retval = nsnull;
+
     if (!mRootConnectionList)
         return NS_ERROR_NULL_POINTER;
-    
-    *_retval = nsnull;
 
     nsXPIDLCString spec;
     aKey->GetPrePath(getter_Copies(spec));

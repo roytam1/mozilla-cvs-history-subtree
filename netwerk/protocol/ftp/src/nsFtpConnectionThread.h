@@ -165,7 +165,6 @@ private:
 
         // ****** channel/transport/stream vars 
     nsFtpControlConnection*         mControlConnection;// cacheable control connection (owns mCPipe)
-    nsCOMPtr<nsIChannel>            mCPipe;            // the control channel transport
     nsCOMPtr<nsIChannel>            mDPipe;            // the data channel transport
 
         // ****** consumer vars
