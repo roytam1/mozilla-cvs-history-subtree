@@ -30,6 +30,7 @@ MMDD	= $(shell date +%m.%d)
 INSTDIR = ../../dist/$(MMDD)/$(OBJDIR_NAME)
 LIBDIR  = ../../dist/$(OBJDIR_NAME)/lib
 INCDIR  = ../../dist/public/ldap
+PRIVATEINCDIR  = ../../dist/public/ldap-private
 BINDIR  = ../../dist/$(OBJDIR_NAME)/bin
 ETCDIR  = ../../dist/$(OBJDIR_NAME)/etc
 EXPDIR  = ldap/examples
@@ -99,7 +100,15 @@ endif
 	$(NSINSTALL) $(INCDIR)/ldap-to-be-deprecated.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap_ssl.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/srchpref.h $(INSTDIR)/include
-		
+
+	@echo "Installing private include files"
+	$(NSINSTALL) -D $(INSTDIR)/include-private
+	$(NSINSTALL) $(PRIVATEINCDIR)/lber-int.h $(INSTDIR)/include-private
+	$(NSINSTALL) $(PRIVATEINCDIR)/ldap-int.h $(INSTDIR)/include-private
+	$(NSINSTALL) $(PRIVATEINCDIR)/portable.h $(INSTDIR)/include-private
+	$(NSINSTALL) $(PRIVATEINCDIR)/ldaprot.h $(INSTDIR)/include-private
+	$(NSINSTALL) $(PRIVATEINCDIR)/ldaplog.h $(INSTDIR)/include-private
+
 	@echo "Installing etc files"
 	$(NSINSTALL) -D $(INSTDIR)/etc
 	$(NSINSTALL) $(ETCDIR)/ldapfilter.conf $(INSTDIR)/etc

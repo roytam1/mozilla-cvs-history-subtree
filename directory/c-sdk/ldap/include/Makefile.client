@@ -44,11 +44,20 @@ HEADERS		= \
 		  srchpref.h \
 		  $(NULL)
 
+PRIVATEHEADERS	= \
+		  ../libraries/libldap/ldap-int.h \
+		  ../libraries/liblber/lber-int.h \
+		  portable.h \
+		  ldaprot.h \
+		  ldaplog.h \
+		  $(NULL)
+
 include $(NSPR_TREE)/config/rules.mk
 include ../../build.mk
 
 ETCDIR		= $(DIST)/etc
 INCLUDEDIR	= $(XPDIST)/public/ldap
+PRIVATEINCDIR	= $(XPDIST)/public/ldap-private
 DELHEADERS	= $(addprefix $(INCLUDEDIR)/, $(HEADERS))
 
 ifeq ($(OS_ARCH), WINNT)
@@ -64,7 +73,9 @@ DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 
 all export::	FORCE
 	$(NSINSTALL) -D $(INCLUDEDIR)
+	$(NSINSTALL) -D $(PRIVATEINCDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
+	$(INSTALL) $(INSTALLFLAGS) -m 644 $(PRIVATEHEADERS) $(PRIVATEINCDIR)
 
 install::	export
 
