@@ -105,8 +105,8 @@ function urlSecurityCheck(url, doc)
 }
 
 function webPanelSecurityCheck(aSourceURL, aDestURL) {
-  var sourceURI = makeURI(aSourceURL);
-  var destURI = makeURI(aDestURL);
+  var sourceURI = makeURL(aSourceURL);
+  var destURI = makeURL(aDestURL);
 
   const nsIScriptSecurityManager = Components.interfaces.nsIScriptSecurityManager;
   var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
