@@ -107,6 +107,18 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsStorageTransport)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#include "nsHttpHandler.h"
+#define NS_HTTPPROTOCOLHANDLER_CID \
+{ /* 4f47e42e-4d23-4dd3-bfda-eb29255e9ea3 */         \
+    0x4f47e42e,                                      \
+    0x4d23,                                          \
+    0x4dd3,                                          \
+    {0xbf, 0xda, 0xeb, 0x29, 0x25, 0x5e, 0x9e, 0xa3} \
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#if 0
 #include "nsIHTTPProtocolHandler.h"
 #include "nsHTTPHandler.h"
 #include "nsHTTPSHandler.h"
@@ -156,6 +168,8 @@ UnregisterBasicAuth(nsIComponentManager *aCompMgr, nsIFile *aPath,
                                            getter_Copies(basicAuth));
     return NS_OK;
 }
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "nsFileChannel.h"
@@ -785,6 +799,7 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       nsFileChannel::Create
     },
     
+#if 0
     // from netwerk/protocol/http:
     { "HTTP Handler",
       NS_IHTTPHANDLER_CID,
@@ -801,6 +816,17 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       RegisterBasicAuth,
       UnregisterBasicAuth
     },
+#endif
+
+    { "Http Handler",
+      NS_HTTPPROTOCOLHANDLER_CID,
+      NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http",
+      nsHttpHandler::Create },
+
+    { "Http Handler",
+      NS_HTTPPROTOCOLHANDLER_CID,
+      NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "https",
+      nsHttpHandler::Create },
 
     // from netwerk/protocol/data:
     { "Data Protocol Handler", 
