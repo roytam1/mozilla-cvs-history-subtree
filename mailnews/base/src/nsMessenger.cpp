@@ -393,7 +393,6 @@ nsMessenger::SetWindow(nsIDOMWindowInternal *aWin, nsIMsgWindow *aMsgWindow)
             {
                 aStatusFeedback->SetDocShell(mDocShell, mWindow);
             }
-            aMsgWindow->GetTransactionManager(getter_AddRefs(mTxnMgr));
 
             // Add pref observer
             if (pbi)
@@ -403,6 +402,9 @@ nsMessenger::SetWindow(nsIDOMWindowInternal *aWin, nsIMsgWindow *aMsgWindow)
     }
   }
 
+  // in just two pane mode, we won't have message pane, but we still want undo / redo.
+  if (aMsgWindow)
+    aMsgWindow->GetTransactionManager(getter_AddRefs(mTxnMgr));
 
   return NS_OK;
 }
