@@ -21,7 +21,13 @@
 #
 
 $DEBUG = 0;
-$MOZ_LITE = 0;		# build moz medium. This will come from a config file at some stage.
+
+	# One of them should be 1. This will come from a config file at some stage.
+	# In the meanwhile, it should match mozilla/config/mac/MacConfig.h
+$MOZ_LITE   = 0;
+$MOZ_MEDIUM = 0;
+$MOZ_DARK   = 1;
+
 
 Moz::OpenErrorLog(":::Mozilla.BuildLog");
 Moz::StopForErrors();
