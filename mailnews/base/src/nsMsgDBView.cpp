@@ -71,6 +71,7 @@ nsMsgDBView::nsMsgDBView()
   m_cachedMsgKey = nsMsgKey_None;
   m_currentlyDisplayedMsgKey = nsMsgKey_None;
   mNumSelectedRows = 0;
+  mSupressMsgDisplay = PR_FALSE;
 
   // initialize any static atoms or unicode strings
   if (gInstanceCount == 0) 
@@ -402,7 +403,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
   NS_ENSURE_SUCCESS(rv, NS_OK); // outliner doesn't care if we failed
 
   // if only one item is selected then we want to display a message
-  if (selectionCount == 1)
+  if (selectionCount == 1 && !mSupressMsgDisplay)
   {
     PRInt32 startRange;
     PRInt32 endRange;
@@ -980,6 +981,18 @@ NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow 
   mMessengerInstance = aMessengerInstance;
   mCommandUpdater = aCmdUpdater;
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::SetSupressMsgDisplay(PRBool aSupressDisplay)
+{
+  mSupressMsgDisplay = aSupressDisplay;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetSupressMsgDisplay(PRBool * aSupressDisplay)
+{
+  *aSupressDisplay = mSupressMsgDisplay;
   return NS_OK;
 }
 

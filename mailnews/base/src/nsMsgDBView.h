@@ -81,6 +81,7 @@ protected:
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
   PRUint32 mNumSelectedRows; // we cache this to determine when to push command status notifications.
+  PRBool   mSupressMsgDisplay; // set when the message pane is collapsed
 
   virtual const char * GetViewName(void) {return "MsgDBView"; }
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
