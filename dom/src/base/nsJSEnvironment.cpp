@@ -250,12 +250,13 @@ nsJSContext::InitClasses()
 
   // Hook up XPConnect
   {
-    NS_WITH_SERVICE(nsIXPConnect, xpc, kXPConnectCID, &res);
+    nsIXPConnect* xpc;
+    res = nsServiceManager::GetService(kXPConnectCID, nsIXPConnect::GetIID(), (nsISupports**) &xpc);
     //NS_ASSERTION(NS_SUCCEEDED(res), "unable to get xpconnect");
     if (NS_SUCCEEDED(res)) {
       res = xpc->AddNewComponentsObject(mContext, JS_GetGlobalObject(mContext));
       NS_ASSERTION(NS_SUCCEEDED(res), "unable to add Components object");
-      NS_RELEASE(xpc);
+      nsServiceManager::ReleaseService(kXPConnectCID, xpc);
     }
     else {
       // silently fail for now
@@ -431,7 +432,8 @@ extern "C" NS_DOM nsresult NS_CreateContext(nsIScriptGlobalObject *aGlobal, nsIS
 
   // Hook up XPConnect
   {
-    NS_WITH_SERVICE(nsIXPConnect, xpc, kXPConnectCID, &rv);
+    nsIXPConnect* xpc;
+    rv = nsServiceManager::GetService(kXPConnectCID, nsIXPConnect::GetIID(), (nsISupports**) &xpc);
     //NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get xpconnect");
     if (NS_SUCCEEDED(rv)) {
       nsIScriptObjectOwner* owner;
@@ -445,6 +447,7 @@ extern "C" NS_DOM nsresult NS_CreateContext(nsIScriptGlobalObject *aGlobal, nsIS
         }
         NS_RELEASE(owner);
       }
+      nsServiceManager::ReleaseService(kXPConnectCID, xpc);
     }
     else {
       // silently fail for now
