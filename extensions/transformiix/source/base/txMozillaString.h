@@ -190,12 +190,12 @@ inline void String::toUpperCase()
   ToUpperCase(mString);
 }
 
-inline nsString& String::getNSString()
+inline String::operator nsAString&()
 {
   return mString;
 }
 
-inline const nsString& String::getConstNSString() const
+inline String::operator const nsAString&() const
 {
   return mString;
 }
@@ -223,9 +223,14 @@ inline MBool String::isEqual(const char* aData) const
   return mString.EqualsWithConversion(aData);
 }
 
-inline char* String::toCharArray() const
+inline nsString& String::getNSString()
 {
-  return ToNewCString(mString);
+  return mString;
+}
+
+inline const nsString& String::getConstNSString() const
+{
+  return mString;
 }
 
 #endif // txMozillaString_h__

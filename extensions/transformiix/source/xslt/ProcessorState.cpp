@@ -469,41 +469,27 @@ Node* ProcessorState::findTemplate(Node* aNode,
     }
 
 #ifdef PR_LOGGING
-    char *nodeBuf = 0, *modeBuf = 0;
     String mode;
     if (aMode.mLocalName) {
         TX_GET_ATOM_STRING(aMode.mLocalName, mode);
     }
     if (matchTemplate) {
-        char *matchBuf = 0, *uriBuf = 0;
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("MatchTemplate, Pattern %s, Mode %s, Stylesheet %s, " \
                 "Node %s\n",
-                (matchBuf = ((Element*)matchTemplate)->getAttribute(String("match")).toCharArray()),
-                (modeBuf = mode.toCharArray()),
-                (uriBuf = matchTemplate->getBaseURI().toCharArray()),
-                (nodeBuf = aNode->getNodeName().toCharArray())));
-#ifdef TX_EXE
-        delete [] matchBuf;
-        delete [] uriBuf;
-#else
-        nsMemory::Free(matchBuf);
-        nsMemory::Free(uriBuf);
-#endif
+                NS_LossyConvertUCS2toASCII(
+                    ((Element*)matchTemplate)->getAttribute(String("match")))
+                    .get(),
+                NS_LossyConvertUCS2toASCII(mode).get(),
+                NS_LossyConvertUCS2toASCII(matchTemplate->getBaseURI()).get(),
+                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get()));
     }
     else {
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("No match, Node %s, Mode %s\n", 
-                (nodeBuf  = aNode->getNodeName().toCharArray()),
-                (modeBuf = mode.toCharArray())));
+                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get(),
+                NS_LossyConvertUCS2toASCII(mode).get()));
     }
-#ifdef TX_EXE
-        delete [] nodeBuf;
-        delete [] modeBuf;
-#else
-        nsMemory::Free(nodeBuf);
-        nsMemory::Free(modeBuf);
-#endif
 #endif
     return matchTemplate;
 }

@@ -1278,15 +1278,11 @@ void XSLTProcessor::processAction(Node* aNode,
         if (NS_SUCCEEDED(rv)) {
             Element* xslTemplate = aPs->getNamedTemplate(templateName);
             if (xslTemplate) {
-#ifdef PR_LOGGING
-                char *nameBuf = 0, *uriBuf = 0;
                 PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                        ("CallTemplate, Name %s, Stylesheet %s\n",
-                        (nameBuf = nameStr.toCharArray()),
-                        (uriBuf = xslTemplate->getBaseURI().toCharArray())));
-                delete nameBuf;
-                delete uriBuf;
-#endif
+                        NS_LossyConvertUCS2toASCII(nameStr).get(),
+                        NS_LossyConvertUCS2toASCII(xslTemplate->getBaseURI())
+                        .get()));
                 NamedMap* actualParams = processParameters(actionElement, aNode, aPs);
                 processTemplate(aNode, xslTemplate, aPs, actualParams);
                 delete actualParams;
@@ -1530,7 +1526,7 @@ void XSLTProcessor::processAction(Node* aNode,
         NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't get console service");
         if (consoleSvc) {
             nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
-            logString.Append(message.getConstNSString());
+            logString.Append(message);
             rv = consoleSvc->LogStringMessage(logString.get());
             NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't log");
         }
