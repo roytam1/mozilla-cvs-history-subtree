@@ -48,10 +48,10 @@ static NS_DEFINE_CID(kCContentIteratorCID,   NS_CONTENTITERATOR_CID);
  *  Constructor/Destructor 
  ********************************************************/
 
-nsTextEditRules::nsTextEditRules()
+nsTextEditRules::nsTextEditRules(PRUint32 aFlags)
+: mEditor(nsnull)
+, mFlags(aFlags)
 {
-  mEditor = nsnull;
-  mFlags=0;
 }
 
 nsTextEditRules::~nsTextEditRules()
@@ -65,12 +65,12 @@ nsTextEditRules::~nsTextEditRules()
  ********************************************************/
 
 NS_IMETHODIMP
-nsTextEditRules::Init(nsIEditor *aEditor)
+nsTextEditRules::Init(nsHTMLEditor *aEditor)
 {
   if (!aEditor) { return NS_ERROR_NULL_POINTER; }
 
 #warning fix me
-  mEditor = (nsHTMLEditor *)aEditor;  // we hold a non-refcounted reference back to our editor
+  mEditor = aEditor;  // we hold a non-refcounted reference back to our editor
   nsCOMPtr<nsIDOMSelection> selection;
   mEditor->GetSelection(getter_AddRefs(selection));
   NS_ASSERTION(selection, "editor cannot get selection");
