@@ -46,7 +46,7 @@ REQUIRES	= xpcom \
 		  $(NULL)
       
 ifdef MOZ_PROFILESHARING
-REQUIRES	+= transaction_manager \
+REQUIRES	+= transmngr \
 		  profilesharingsetup \
 		  $(NULL)
 endif
@@ -94,6 +94,10 @@ endif
 
 ifeq ($(OS_ARCH),OpenVMS)
 PREF_JS_EXPORTS	+= $(srcdir)/unix/openvms.js
+endif
+
+ifdef MOZ_PROFILESHARING
+PREF_JS_EXPORTS	+= $(srcdir)/init/nonshared.txt
 endif
 
 EXTRA_DSO_LDOPTS = \

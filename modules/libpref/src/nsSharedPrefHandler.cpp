@@ -40,6 +40,10 @@
 #include "nsPrefService.h"
 
 #include "nsIServiceManagerUtils.h"
+#include "nsILocalFile.h"
+#include "nsAppDirectoryServiceDefs.h"
+#include "nsReadableUtils.h"
+
 
 #if defined(PR_LOGGING)
 // set NSPR_LOG_MODULES=nsSharedPrefHandler:5
@@ -54,16 +58,32 @@ nsSharedPrefHandler *gSharedPrefHandler = nsnull;
 // Constants
 #define kPrefsTSQueueName NS_LITERAL_CSTRING("prefs")
 
+#define kExceptionListFileName NS_LITERAL_CSTRING("nonshared.txt")
+const char kExceptionListCommentChar = '#';
+
 const PRUint32 kCurrentPrefsTransactionDataVersion = 1;
 
+// Static function prototypes
+static PRBool PR_CALLBACK enumFind(void* aElement, void *aData);
+static PRBool PR_CALLBACK enumFree(void* aElement, void *aData);
+static PRInt32 ReadLine(FILE* inStm, nsACString& destString);
+
+
+//****************************************************************************
+// Transaction Format for kCurrentPrefsTransactionDataVersion
+//****************************************************************************
+
 /*
-PRUint32 dataVersion
-PRUint32 action SET or CLEAR
-PRUint32 prefNameLen
-char prefName[prefNameLen]
-PRUint32 prefValueKind
-PRUint32 prefValueLen
-char prefValue[prefValueLen]
+  NOTE: All string data is null terminated.
+  The data length includes the null character.
+  
+  PRUint32 dataVersion
+  PRUint32 action SET or CLEAR
+  PRUint32 prefNameLen
+  char prefName[prefNameLen]
+  PRUint32 prefValueKind
+  PRUint32 prefValueLen
+  char prefValue[prefValueLen]
 */
 
 //*****************************************************************************
@@ -132,10 +152,13 @@ PRUint32 nsBufferInputStream::GetInt32()
 
 PRInt32 nsBufferInputStream::GetBytes(void* destBuffer, PRInt32 n)
 {
-  PRInt32 copySize = PR_MIN(n, mBufEnd - mBufPtr);
-  memcpy(destBuffer, mBufPtr, copySize);
-  mBufPtr += copySize;
-  return copySize;
+  if (mBufPtr + n <= mBufEnd) {
+    memcpy(destBuffer, mBufPtr, n);
+    mBufPtr += n;
+    return n;
+  }
+  mError = NS_ERROR_FAILURE;
+  return 0;
 }
 
 PRBool nsBufferInputStream::AdvancePtr(PRInt32 n)
@@ -157,8 +180,8 @@ class nsBufferOutputStream
 {
 public:
                   nsBufferOutputStream(PRUint32 initialCapacity) :
-                    mBuf(nsnull), mBufEnd(nsnull),
-                    mBufPtr(nsnull),
+                    mBuf(nsnull),
+                    mBufPtr(nsnull), mBufEnd(nsnull),
                     mCapacity(initialCapacity),
                     mError(NS_OK)
                   {
@@ -181,11 +204,16 @@ public:
                   { return mBufPtr - mBuf; }
   
 private:
-  PRBool					EnsureCapacity(PRInt32 moreBytesNeeded);
+  PRBool          EnsureCapacity(PRInt32 sizeNeeded)
+                  {
+                    return (mBuf && ((mBufPtr + sizeNeeded) <= mBufEnd)) ?
+                      PR_TRUE : GrowCapacity(sizeNeeded);
+                  }
+  PRBool					GrowCapacity(PRInt32 sizeNeeded);
   
 private:
-  PRUint8					*mBuf, *mBufEnd;
-  PRUint8					*mBufPtr;
+  PRUint8					*mBuf;
+  PRUint8					*mBufPtr, *mBufEnd;
   PRInt32					mCapacity;
   nsresult				mError;
 };
@@ -228,22 +256,19 @@ PRUint32 nsBufferOutputStream::PutBytes(const void* src, PRUint32 n)
   return 0;
 }
     
-PRBool nsBufferOutputStream::EnsureCapacity(PRInt32 moreBytesNeeded)
+PRBool nsBufferOutputStream::GrowCapacity(PRInt32 sizeNeeded)
 {
-  if (mBuf && (mBufEnd - mBufPtr) >= moreBytesNeeded)
-    return PR_TRUE;
-    
-  PRInt32 newCapacity = (mBufEnd - mBuf) + moreBytesNeeded;
+  PRInt32 newCapacity = (mBufPtr - mBuf) + sizeNeeded;
   while (newCapacity > mCapacity)
     mCapacity <<= 1;
   
-  PRUint8 *oldBuffer = mBuf;
+  PRInt32 curPos = mBufPtr - mBuf;
   mBuf = NS_STATIC_CAST(PRUint8*, nsMemory::Realloc(mBuf, mCapacity));
   if (!mBuf) {
     mError = NS_ERROR_OUT_OF_MEMORY;
     return PR_FALSE;
   }
-  mBufPtr = mBuf + (mBufPtr - oldBuffer);
+  mBufPtr = mBuf + curPos;
   mBufEnd = mBufPtr + mCapacity;
   return PR_TRUE;
 }
@@ -255,7 +280,7 @@ PRBool nsBufferOutputStream::EnsureCapacity(PRInt32 moreBytesNeeded)
 
 nsSharedPrefHandler::nsSharedPrefHandler() :
   mPrefService(nsnull), mPrefsTSQueueName("prefs"),
-  mPendingFlushReply(PR_FALSE), mProcessingAttachReply(PR_FALSE),
+  mReadingUserPrefs(PR_FALSE),
   mProcessingTransaction(PR_FALSE)
 {
 #if defined(PR_LOGGING)
@@ -266,25 +291,16 @@ nsSharedPrefHandler::nsSharedPrefHandler() :
 
 nsSharedPrefHandler::~nsSharedPrefHandler()
 {
+  mExceptionList.EnumerateForwards(enumFree, nsnull);
 }
-    
-nsresult nsSharedPrefHandler::Init(nsPrefService* aOwner)
-{
-  NS_ENSURE_ARG(aOwner);
-  mPrefService = aOwner;
-  return NS_OK;
-}
-    
+        
 nsresult nsSharedPrefHandler::OnSessionBegin()
 {
-  nsresult rv;
-  nsCOMPtr<tmITransactionService> transServ =
-      do_GetService("@mozilla.org/transaction/service;1", &rv);
-  if (NS_FAILED(rv))
-    return rv;
+  nsresult rv = EnsureTransactionService();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // Attach. When we receive the reply, we'll read the prefs.
-  rv = transServ->Attach(kPrefsTSQueueName, this);
+  rv = mTransService->Attach(kPrefsTSQueueName, this);
   NS_ASSERTION(NS_SUCCEEDED(rv), "tmITransactionService::Attach() failed");
   
   return rv;
@@ -292,74 +308,66 @@ nsresult nsSharedPrefHandler::OnSessionBegin()
 
 nsresult nsSharedPrefHandler::OnSessionEnd()
 {
-  nsresult rv;
-  nsCOMPtr<tmITransactionService> transServ =
-      do_GetService("@mozilla.org/transaction/service;1", &rv);
-  if (NS_FAILED(rv))
-    return rv;
+  nsresult rv = EnsureTransactionService();
+  NS_ENSURE_SUCCESS(rv, rv);
   
-  rv = transServ->Detach(kPrefsTSQueueName);
+  rv = mTransService->Detach(kPrefsTSQueueName);
   NS_ASSERTION(NS_SUCCEEDED(rv), "tmITransactionService::Detach() failed");
 
   return rv;
 }
 
-nsresult nsSharedPrefHandler::EnsurePendingFlush()
+nsresult nsSharedPrefHandler::OnSavePrefs()
 {
-  if (mPendingFlushReply)
-    return NS_OK;
-    
-  nsresult rv;
-  nsCOMPtr<tmITransactionService> transServ =
-      do_GetService("@mozilla.org/transaction/service;1", &rv);
-  if (NS_FAILED(rv))
-    return rv;
-    
-  rv = transServ->Flush(kPrefsTSQueueName);
+  nsresult rv = EnsureTransactionService();
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  // When the reply to this comes (synchronously), we'll actually
+  // write out our data. The transaction service holds a lock on
+  // our data file during our reply.
+  rv = mTransService->Flush(kPrefsTSQueueName);
   NS_ASSERTION(NS_SUCCEEDED(rv), "tmITransactionService::Flush() failed");
-  mPendingFlushReply = PR_TRUE;
 
   return NS_OK;
 }
     
-nsresult nsSharedPrefHandler::OnPrefChanged(PRIntn action,
-                                            const char* prefName,
-                                            const PrefValue& newValue,
-                                            PRIntn prefFlags)
+nsresult nsSharedPrefHandler::OnPrefChanged(PrefAction action, PrefHashEntry* pref)
 {
-  if (mProcessingAttachReply || mProcessingTransaction)
+  if (action != PREF_SETUSER)
+    return NS_OK;
+  if (!IsPrefShared(pref->key))
+    return NS_OK;
+  if (mReadingUserPrefs || mProcessingTransaction)
     return NS_OK;
     
-  nsresult rv;
-  nsCOMPtr<tmITransactionService> transServ =
-      do_GetService("@mozilla.org/transaction/service;1", &rv);
-  if (NS_FAILED(rv))
-    return rv;
+  nsresult rv = EnsureTransactionService();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  PRUint32 valueLen, prefNameLen = strlen(prefName);
+  PRUint32 valueLen, prefNameLen = strlen(pref->key);
   
   nsBufferOutputStream outStm(256);
   outStm.PutInt32(kCurrentPrefsTransactionDataVersion);
   outStm.PutInt32(action);
-  outStm.PutInt32(prefNameLen);
-  outStm.PutBytes(prefName, prefNameLen);
+  outStm.PutInt32(prefNameLen + 1);
+  outStm.PutBytes(pref->key, prefNameLen + 1);
 
-  switch (prefFlags & PREF_VALUETYPE_MASK) {
+  switch (pref->flags & PREF_VALUETYPE_MASK) {
     case PREF_STRING:
       outStm.PutInt32(PREF_STRING);
-      valueLen = strlen(newValue.stringVal);
+      valueLen = strlen(pref->userPref.stringVal) + 1;
       outStm.PutInt32(valueLen);
-      outStm.PutBytes(newValue.stringVal, valueLen);
+      outStm.PutBytes(pref->userPref.stringVal, valueLen);
       break;
     case PREF_INT:
       outStm.PutInt32(PREF_INT);
       outStm.PutInt32(sizeof(PRInt32));
-      outStm.PutInt32(newValue.intVal);
+      outStm.PutInt32(pref->userPref.intVal);
       break;
     case PREF_BOOL:
       outStm.PutInt32(PREF_BOOL);
-      outStm.PutInt32(sizeof(PRBool));
-      outStm.PutInt32(newValue.boolVal);
+      outStm.PutInt32(sizeof(PRInt32));
+      outStm.PutInt32(pref->userPref.boolVal);
+      break;
     default:
       return NS_ERROR_UNEXPECTED;
   }
@@ -367,9 +375,77 @@ nsresult nsSharedPrefHandler::OnPrefChanged(PRIntn action,
   rv = outStm.GetError();
   NS_ASSERTION(NS_SUCCEEDED(rv), "OnPrefChanged: outStm failed");
   if (NS_SUCCEEDED(rv)) {
-    rv = transServ->PostTransaction(kPrefsTSQueueName, outStm.GetBuffer(), outStm.GetSize());
+    rv = mTransService->PostTransaction(kPrefsTSQueueName, outStm.GetBuffer(), outStm.GetSize());
     NS_ASSERTION(NS_SUCCEEDED(rv), "tmITransactionService::PostTransaction() failed");
   }
+  return rv;
+}
+
+PRBool nsSharedPrefHandler::IsPrefShared(const char* prefName)
+{
+  if (!mExceptionList.Count()) // quick check for empty list
+    return PR_TRUE;
+    
+  // returns PR_TRUE if we reached the end without finding it.
+  return mExceptionList.EnumerateForwards(enumFind, NS_CONST_CAST(char*, prefName));
+}
+
+//*****************************************************************************
+// nsSharedPrefHandler Protected Methods
+//*****************************************************************************   
+
+nsresult nsSharedPrefHandler::Init(nsPrefService* aOwner)
+{
+  NS_ENSURE_ARG(aOwner);
+  mPrefService = aOwner;
+  (void)ReadExceptionFile(); 
+  
+  return NS_OK;
+}
+
+nsresult nsSharedPrefHandler::ReadExceptionFile()
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsIProperties> directoryService =
+      do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsILocalFile> exceptionFile;
+    rv = directoryService->Get(NS_APP_PREF_DEFAULTS_50_DIR, NS_GET_IID(nsILocalFile),
+                              getter_AddRefs(exceptionFile));
+    if (NS_SUCCEEDED(rv)) {
+      rv = exceptionFile->AppendNative(kExceptionListFileName);
+      if (NS_SUCCEEDED(rv)) {
+        FILE *inStm;
+        rv = exceptionFile->OpenANSIFileDesc("r", &inStm);
+        if (NS_SUCCEEDED(rv)) {
+          nsCAutoString lineStr;
+          while (ReadLine(inStm, lineStr) != EOF) {
+            lineStr.CompressWhitespace();
+            if (lineStr.IsEmpty() || lineStr.CharAt(0) == kExceptionListCommentChar)
+              continue;
+              
+            char *rawStr = ToNewCString(lineStr);
+            if (!rawStr) {
+              rv = NS_ERROR_OUT_OF_MEMORY;
+              break;
+            }
+            mExceptionList.AppendElement(rawStr);
+          }
+          fclose(inStm);
+        }
+      }
+    }
+  }
+  return rv;
+}
+
+nsresult nsSharedPrefHandler::EnsureTransactionService()
+{
+  if (mTransService)
+    return NS_OK;
+  nsresult rv;
+  mTransService = do_GetService("@mozilla.org/transaction/service;1", &rv);
   return rv;
 }
 
@@ -395,34 +471,33 @@ NS_IMETHODIMP nsSharedPrefHandler::OnTransactionAvailable(PRUint32 aQueueID, con
     dataVersion = inStm.GetInt32();
     NS_ENSURE_TRUE(dataVersion == kCurrentPrefsTransactionDataVersion, NS_ERROR_INVALID_ARG);
     prefAction = inStm.GetInt32();
-    dataLen = inStm.GetInt32();
+    dataLen = inStm.GetInt32(); // includes terminating null
     stringStart = (const char *)inStm.GetPtr();
-    nsDependentSingleFragmentCSubstring prefNameStr(stringStart, stringStart + dataLen);
+    nsDependentCString prefNameStr(stringStart);
     inStm.AdvancePtr(dataLen);
     prefKind = inStm.GetInt32();
     dataLen = inStm.GetInt32();
-
+    
     mProcessingTransaction = PR_TRUE; // Don't generate transactions for these
     switch (prefKind) {
       case PREF_STRING:
         {
         stringStart = (const char *)inStm.GetPtr();
-        nsDependentSingleFragmentCSubstring prefStrValueStr(stringStart, stringStart + dataLen);
+        nsDependentCString prefStrValueStr(stringStart);
         inStm.AdvancePtr(dataLen);
         NS_ENSURE_SUCCESS(inStm.GetError(), inStm.GetError());
-        PREF_SetCharPref(PromiseFlatCString(prefNameStr).get(),
-            PromiseFlatCString(prefStrValueStr).get());
+        PREF_SetCharPref(prefNameStr.get(), prefStrValueStr.get());
         }
         break;
       case PREF_INT:
         tempInt32 = inStm.GetInt32();
         NS_ENSURE_SUCCESS(inStm.GetError(), inStm.GetError());
-        PREF_SetIntPref(PromiseFlatCString(prefNameStr).get(), tempInt32);
+        PREF_SetIntPref(prefNameStr.get(), tempInt32);
         break;
       case PREF_BOOL:
         tempInt32 = inStm.GetInt32();
         NS_ENSURE_SUCCESS(inStm.GetError(), inStm.GetError());
-        PREF_SetBoolPref(PromiseFlatCString(prefNameStr).get(), tempInt32);
+        PREF_SetBoolPref(prefNameStr.get(), tempInt32);
         break;
     }
     mProcessingTransaction = PR_FALSE;
@@ -435,10 +510,8 @@ NS_IMETHODIMP nsSharedPrefHandler::OnAttachReply(PRUint32 aQueueID, PRUint32 aSt
     LOG(("nsSharedPrefHandler::OnAttachReply [%d]\n", aStatus));
 
     // the transaction service holds a lock on the file during this call.
-    mProcessingAttachReply = PR_TRUE;
     mPrefService->ResetUserPrefs();
     mPrefService->ReadUserPrefs(nsnull);
-    mProcessingAttachReply = PR_FALSE;
     
     return NS_OK;
 }
@@ -455,8 +528,58 @@ NS_IMETHODIMP nsSharedPrefHandler::OnFlushReply(PRUint32 aQueueID, PRUint32 aSta
     
     // Call the internal method to write immediately
     mPrefService->SavePrefFileInternal(nsnull);
-    mPendingFlushReply = PR_FALSE;
     return NS_OK;
+}
+
+//*****************************************************************************
+// Static functions
+//*****************************************************************************   
+
+static PRBool PR_CALLBACK enumFind(void* aElement, void *aData)
+{
+  char *elemStr = NS_STATIC_CAST(char*, aElement);
+  char *searchStr = NS_STATIC_CAST(char*, aData);
+  // return PR_FALSE for a match and to stop search
+  return (strncmp(elemStr, searchStr, strlen(elemStr)) != 0);
+}
+
+static PRBool PR_CALLBACK enumFree(void* aElement, void *aData)
+{
+  if (aElement)
+    nsMemory::Free(aElement);
+  return PR_TRUE;
+}
+
+static PRInt32 ReadLine(FILE* inStm, nsACString& destString)
+{
+  char stackBuf[512];
+  PRUint32 charsInBuf = 0;
+  destString.Truncate();
+  int c;
+  
+  while (1) {
+    c = getc(inStm);
+    if (c == EOF)
+      break;
+    else if (c == '\r') {
+      c = getc(inStm);
+      if (c != '\n')
+        ungetc(c, inStm);
+      break;
+    }
+    else if (c == '\n')
+      break;
+    else {
+      if (charsInBuf >= sizeof(stackBuf)) {
+        destString.Append(stackBuf, charsInBuf);
+        charsInBuf = 0;
+      }
+      stackBuf[charsInBuf++] = c;
+    }
+  }
+  if (charsInBuf)
+    destString.Append(stackBuf, charsInBuf);
+  return (c == EOF && destString.IsEmpty()) ? EOF : 1;
 }
 
 //*****************************************************************************

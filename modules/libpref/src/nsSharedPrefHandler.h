@@ -43,7 +43,9 @@
 #include "tmITransactionService.h"
 
 // Includes
+#include "nsCOMPtr.h"
 #include "nsString.h"
+#include "nsVoidArray.h"
 
 // Local includes
 #include "prefapi.h"
@@ -63,26 +65,36 @@ class nsSharedPrefHandler : public tmITransactionObserver
   NS_DECL_TMITRANSACTIONOBSERVER
     
 public:    
-  nsresult OnSessionBegin();
-  nsresult OnSessionEnd();
+  nsresult				OnSessionBegin();
+  nsresult				OnSessionEnd();
 
-  nsresult EnsurePendingFlush();
+  nsresult				OnSavePrefs();
   
-  nsresult OnPrefChanged(PRIntn action, const char* prefName,
-                         const PrefValue& newValue, PRIntn prefFlags);
-    
-protected:
-  nsSharedPrefHandler();
-  virtual ~nsSharedPrefHandler();
+  nsresult				OnPrefChanged(PrefAction action, PrefHashEntry* pref);
 
-  nsresult Init(nsPrefService *aOwner);
+  void						ReadingUserPrefs(PRBool isReading)
+                  { mReadingUserPrefs = isReading; }
+  
+  PRBool					IsPrefShared(const char* prefName);
   
 protected:
-  nsPrefService *mPrefService;
+                  nsSharedPrefHandler();
+  virtual 				~nsSharedPrefHandler();
+
+  nsresult 				Init(nsPrefService *aOwner);
+  nsresult				ReadExceptionFile();
+  nsresult				EnsureTransactionService();
+  
+protected:
+  nsPrefService 	*mPrefService;			// weak ref
+  
+  nsCOMPtr<tmITransactionService> mTransService;
   const nsCString mPrefsTSQueueName;
-  PRPackedBool mPendingFlushReply;
-  PRPackedBool mProcessingAttachReply;
-  PRPackedBool mProcessingTransaction;
+  
+  PRPackedBool 		mReadingUserPrefs;
+  PRPackedBool 		mProcessingTransaction;
+  
+  nsAutoVoidArray mExceptionList;
 };
 
 // --------------------------------------------------------------------------------------

@@ -69,16 +69,14 @@ protected:
   nsresult NotifyServiceObservers(const char *aSubject);
   nsresult UseDefaultPrefFile();
   nsresult UseUserPrefFile();
+  nsresult ReadUserPrefsInternal(nsIFile *aFile, PRBool aIsSharedFile);
   nsresult SavePrefFileInternal(nsIFile* aFile);
   nsresult WritePrefFile(nsIFile* aFile);
 
 private:
   nsCOMPtr<nsIPrefBranch> mRootBranch;
   nsIFile*                mCurrentFile;
-  
-#ifdef MOZ_PROFILESHARING
-  PRBool									IsSharingEnabled();
-#endif
 
+  nsIFile*								mCurrentSharedFile;
 };
 
