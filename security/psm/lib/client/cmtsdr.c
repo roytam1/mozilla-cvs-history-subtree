@@ -44,7 +44,7 @@
 #include "rsrcids.h"
 #include <string.h>
 
-#define PROCESS_LOCALLY
+#undef PROCESS_LOCALLY
 
 /* Encryption result - contains the key id and the resulting data */
 /* An empty key id indicates that NO encryption was performed */
@@ -99,6 +99,11 @@ CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
   request.keyid = CMT_CopyDataToItem(key, keyLen);
   request.data = CMT_CopyDataToItem(data, dataLen);
 
+  reply.item.data = 0;
+  reply.item.len = 0;
+  message.data = 0;
+  message.len = 0;
+
   /* Encode */
   rv = CMT_EncodeMessage(EncryptRequestTemplate, &message, &request);
   if (rv != CMTSuccess) {
@@ -143,6 +148,10 @@ CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen
 
   /* Fill in the request */
   request.item = CMT_CopyDataToItem(data, dataLen);
+  reply.item.data = 0;
+  reply.item.len = 0;
+  message.data = 0;
+  message.len = 0;
 
   /* Encode */
   rv = CMT_EncodeMessage(SingleItemMessageTemplate, &message, &request);
