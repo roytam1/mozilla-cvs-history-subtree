@@ -96,4 +96,12 @@ EXTRA_DSO_LDOPTS += \
 
 include $(topsrcdir)/config/rules.mk
 
+# OS/2 Optimization bug
+# This suppresses optimization for this single compilation unit.
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+jsj_method.obj: jsj_method.c
+	$(REPORT_BUILD)
+	@$(MAKE_DEPS_AUTO)
+	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(filter-out /O+, $(COMPILE_CFLAGS)) $(_VPATH_SRCS)
+endif
 
