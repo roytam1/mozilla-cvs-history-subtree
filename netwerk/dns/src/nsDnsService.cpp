@@ -21,16 +21,22 @@
  */
 
 #include "nsDnsService.h"
+
 #include "nsIDNSListener.h"
 #include "nsIRequest.h"
+#include "nsIObserverService.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefBranchInternal.h"
+#include "nsIRequestObserver.h"
+#include "nsIServiceManager.h"
+#include "nsTime.h"
+
 #include "nsError.h"
 #include "prnetdb.h"
 #include "nsString.h"
-#include "nsIServiceManager.h"
 #include "netCore.h"
 #include "nsAutoLock.h"
-#include "nsIRequestObserver.h"
-#include "nsTime.h"
 #ifdef DNS_TIMING
 #include "prinrval.h"
 #include "prtime.h"
@@ -504,7 +510,6 @@ nsDNSLookup::Create(const char * hostName)
 }
 
 
-#define EXPIRATION_INTERVAL  (5*60*1000000)         // 5 min worth of microseconds
 
 void
 nsDNSLookup::Reset()
@@ -517,7 +522,7 @@ nsDNSLookup::Reset()
 
     mState    = LOOKUP_NEW;
     mStatus   = NS_OK;
-    mExpires  = nsTime() + nsInt64(EXPIRATION_INTERVAL);      // now + 5 minutes
+    mExpires  = nsTime() + nsInt64(nsDNSService::ExpirationInterval() * 1000000);
 
 #if defined(XP_MAC)
     mStringToAddrComplete = PR_FALSE;
@@ -847,6 +852,8 @@ nsDNSService::nsDNSService()
     : mDNSServiceLock(nsnull)
     , mDNSCondVar(nsnull)
     , mEvictionQCount(0)
+    , mMaxCachedLookups(32)
+    , mExpirationInterval(5*60)         // 300 seconds (5 minutes)
     , mMyIPAddress(0)
     , mState(DNS_NOT_INITIALIZED)
 #if defined(XP_MAC)
@@ -955,6 +962,9 @@ nsDNSService::Init()
     status = PR_WaitCondVar(mDNSCondVar, PR_INTERVAL_NO_TIMEOUT);
     NS_ASSERTION(status == PR_SUCCESS, "PR_WaitCondVar failed.");
 #endif
+
+    rv = InstallPrefObserver();
+    if (NS_FAILED(rv))  return rv;
 
     mState = DNS_RUNNING;
     return NS_OK;
@@ -1087,6 +1097,15 @@ nsDNSService::UnlockDNSService()
 }
 
 
+PRInt32
+nsDNSService::ExpirationInterval()
+{
+    if (gService)  return gService->mExpirationInterval;
+    
+    return 0;
+}
+
+
 nsresult
 nsDNSService::InitDNSThread()
 {
@@ -1118,6 +1137,86 @@ nsDNSService::InitDNSThread()
 #endif /* XP_WIN */
 
     return NS_OK;
+}
+
+
+#define NETWORK_DNS_CACHE_ENTRIES       "network.dnsCacheEntries"
+#define NETWORK_DNS_CACHE_EXPIRATION    "network.dnsCacheExpiration"
+
+nsresult
+nsDNSService::InstallPrefObserver()
+{
+    nsresult rv;
+    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv))  return rv;
+    
+    nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv))  return rv;
+    
+    rv  = prefInternal->AddObserver(NETWORK_DNS_CACHE_ENTRIES, this);
+    if (NS_FAILED(rv))  return rv;
+    
+    rv = prefInternal->AddObserver(NETWORK_DNS_CACHE_EXPIRATION, this);
+    if (NS_FAILED(rv))  return rv;
+    
+    // get initial values (if any)
+    nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    PRInt32 prefVal = 0;
+    rv  = prefBranch->GetIntPref(NETWORK_DNS_CACHE_ENTRIES, &prefVal);
+    if (NS_SUCCEEDED(rv))  mMaxCachedLookups = prefVal;
+    
+    rv = prefBranch->GetIntPref(NETWORK_DNS_CACHE_EXPIRATION, &prefVal);
+    if (NS_SUCCEEDED(rv))  mExpirationInterval = prefVal;
+    
+    return NS_OK;
+}
+
+
+nsresult
+nsDNSService::RemovePrefObserver()
+{
+    nsresult rv, rv2;
+    
+    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv))  return rv;
+    
+    nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv))  return rv;
+    
+    rv  = prefInternal->RemoveObserver(NETWORK_DNS_CACHE_ENTRIES, this);
+    rv2 = prefInternal->RemoveObserver(NETWORK_DNS_CACHE_EXPIRATION, this);
+    
+    return NS_FAILED(rv) ? rv : rv2;
+}
+
+
+NS_IMETHODIMP
+nsDNSService::Observe(nsISupports *      subject,
+                      const PRUnichar *  topic,
+                      const PRUnichar *  data)
+{
+    nsresult rv = NS_OK;
+    
+    if (!NS_LITERAL_STRING("nsPref:changed").Equals(topic))  return NS_OK;
+    
+    nsCOMPtr<nsIPrefBranch> prefs = do_QueryInterface(subject, &rv);
+    if (NS_FAILED(rv))  return rv;
+    
+    // which preference changed?
+    if (NS_LITERAL_STRING(NETWORK_DNS_CACHE_ENTRIES).Equals(data)) {
+        rv = prefs->GetIntPref(NETWORK_DNS_CACHE_ENTRIES, &mMaxCachedLookups);
+        if (mMaxCachedLookups < 0)
+            mMaxCachedLookups = 0;
+
+    } else if (NS_LITERAL_STRING(NETWORK_DNS_CACHE_EXPIRATION).Equals(data)) {
+        rv = prefs->GetIntPref(NETWORK_DNS_CACHE_EXPIRATION, &mExpirationInterval);
+        if (mExpirationInterval < 0)
+            mExpirationInterval = 0;
+    }
+    
+    return rv;
 }
 
 
@@ -1348,7 +1447,7 @@ nsDNSService::AddToEvictionQ(nsDNSLookup * lookup)
     PR_APPEND_LINK(lookup, &mEvictionQ);
     ++mEvictionQCount;
     
-    while (mEvictionQCount > kMaxCachedLookups) {
+    while (mEvictionQCount > mMaxCachedLookups) {
         // evict oldest lookup
         PRCList * elem = PR_LIST_HEAD(&mEvictionQ);
         if (elem == &mEvictionQ) {
@@ -1560,6 +1659,9 @@ nsDNSService::Shutdown()
     //   - wait until DNS thread is gone so we don't collide while calling requests
     PR_Lock(mDNSServiceLock);
     AbortLookups();
+
+    rv = RemovePrefObserver();
+    NS_ASSERTION(NS_SUCCEEDED(rv), "failure to remove DNS pref observer");
 
     // reset hashtable
     // XXX assert hashtable is empty

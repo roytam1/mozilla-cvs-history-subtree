@@ -25,6 +25,7 @@
 
 #include "nsIDNSService.h"
 #include "nsIRunnable.h"
+#include "nsIObserver.h"
 #include "nsIThread.h"
 #include "nsISupportsArray.h"
 #if defined(XP_MAC)
@@ -51,13 +52,15 @@ class nsDNSLookup;
  *  nsDNSService
  *****************************************************************************/
 class nsDNSService : public nsIDNSService,
-                     public nsIRunnable
+                     public nsIRunnable,
+                     public nsIObserver
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIRUNNABLE
     NS_DECL_NSIDNSSERVICE
-
+    NS_DECL_NSIOBSERVER
+    
     // nsDNSService methods:
     nsDNSService();
     virtual ~nsDNSService();
@@ -72,21 +75,22 @@ public:
 
     void                    EnqueuePendingQ(nsDNSLookup * lookup);
     nsDNSLookup *           DequeuePendingQ();
+    
+    static PRInt32          ExpirationInterval();
 
     static nsDNSService *   gService;
 
 private:
     nsresult                LateInit();
     nsresult                InitDNSThread();
+    nsresult                InstallPrefObserver();
+    nsresult                RemovePrefObserver();
     nsDNSLookup *           FindOrCreateLookup( const char *  hostName);
-
     void                    EvictLookup( nsDNSLookup * lookup);
     void                    AddToEvictionQ( nsDNSLookup *  lookup);
     void                    AbortLookups();
     
-
-    enum { kMaxCachedLookups = 64 };
-    
+        
     static PRBool           gNeedLateInitialization;
     static PLDHashTableOps  gHashTableOps;
 
@@ -96,6 +100,8 @@ private:
     PRCList                 mPendingQ;
     PRCList                 mEvictionQ;
     PRInt32                 mEvictionQCount;
+    PRInt32                 mMaxCachedLookups;
+    PRInt32                 mExpirationInterval;
     
     char *                  mMyIPAddress;
     nsCOMPtr<nsIThread>     mThread;
