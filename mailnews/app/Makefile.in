@@ -59,6 +59,7 @@ REQUIRES = \
 	string \
 	xpcom \
 	xulapp \
+        appshell \
 	$(NULL)
 
 CPPSRCS = nsMailApp.cpp
