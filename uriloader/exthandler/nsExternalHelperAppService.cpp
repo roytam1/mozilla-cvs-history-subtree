@@ -299,6 +299,7 @@ NS_IMETHODIMP nsExternalHelperAppService::DoContent(const char *aMimeContentType
 {
   nsCOMPtr<nsIMIMEInfo> mimeInfo;
   nsCAutoString fileExtension;
+  nsresult rv;
 
   // Get some stuff we will need later
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(aRequest);
@@ -323,7 +324,19 @@ NS_IMETHODIMP nsExternalHelperAppService::DoContent(const char *aMimeContentType
 
       if (url) {
         nsCAutoString query;
-        url->GetQuery(query);
+
+        // We only care about the query for HTTP and HTTPS URLs
+        PRBool isHTTP, isHTTPS;
+        rv = uri->SchemeIs("http", &isHTTP);
+        if (NS_FAILED(rv))
+          isHTTP = PR_FALSE;
+        rv = uri->SchemeIs("https", &isHTTPS);
+        if (NS_FAILED(rv))
+          isHTTPS = PR_FALSE;
+
+        if (isHTTP || isHTTPS)
+          url->GetQuery(query);
+
         // Only get the extension if the query is empty; if it isn't, then the
         // extension likely belongs to a cgi script and isn't helpful
         if (query.IsEmpty())
@@ -343,7 +356,6 @@ NS_IMETHODIMP nsExternalHelperAppService::DoContent(const char *aMimeContentType
   // and create a new mime info object for it and use it
   if (!mimeInfo)
   {
-    nsresult rv;
     mimeInfo = do_CreateInstance(NS_MIMEINFO_CONTRACTID, &rv);
     // If we still have no mime info, give up.
     if (NS_FAILED(rv))
