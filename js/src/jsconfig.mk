@@ -65,21 +65,21 @@ SHIP_LIBS      = libjs.so
 ifdef JS_LIVECONNECT
   SHIP_LIBS   += jsj.so
 endif
-ifdef JS_THREADSAFE
-  ifeq ($(OS_ARCH), HP-UX)
-    SHIP_LIBS += libnspr21.sl
-  else
-    SHIP_LIBS += libnspr21.so
-  endif
-endif
+# ifdef JS_THREADSAFE
+#   ifeq ($(OS_ARCH), HP-UX)
+#     SHIP_LIBS += libnspr21.sl
+#   else
+#     SHIP_LIBS += libnspr21.so
+#   endif
+# endif
 ifeq ($(OS_ARCH), WINNT)
   SHIP_LIBS    = js32.dll
   ifdef JS_LIVECONNECT
     SHIP_LIBS += jsj.dll
   endif
-  ifdef JS_THREADSAFE
-    SHIP_LIBS += libnspr21.dll
-  endif
+#   ifdef JS_THREADSAFE
+#     SHIP_LIBS += libnspr21.dll
+#   endif
 endif
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
