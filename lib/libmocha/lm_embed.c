@@ -287,7 +287,7 @@ LM_ReflectEmbed(MWContext *context, LO_EmbedStruct *lo_embed,
         }
     }
 #else
-    for (i = 0; i < lo_embed->attributes.n; i++) {
+    for (i = 0; i < lo_embed->attribute_cnt; i++) {
         if (!XP_STRCASECMP(lo_embed->attribute_list[i], "name")) {
             name = strdup(lo_embed->value_list[i]);
             break;
