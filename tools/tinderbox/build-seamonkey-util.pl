@@ -970,7 +970,7 @@ sub run_all_tests {
 	  # load tests instead of hard-coding to localhost.
 	  $test_result =
 		FileBasedTest("LayoutPerformanceTest", $build_dir, $binary_dir,
-					  $binary . " -P $Settings::MozProfileName \"http://localhost/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=30000\"",
+					  $binary . " -P $Settings::MozProfileName \"http://localhost/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=30000&auto=1\"",
 					  $Settings::LayoutPerformanceTestTimeout,
 					  "_x_x_mozilla_page_load", 1, 0);
     }
