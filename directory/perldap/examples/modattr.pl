@@ -76,26 +76,37 @@ while ($entry)
 {
   $changed = 0;
 
-  if ($opt_d && defined $entry->{$attr})
+  if ($opt_d)
     {
-      if ($value)
+      if (defined $entry->{$attr})
 	{
-	  $changed = $entry->removeValue($attr, $value);
-	  if ($changed && $opt_v)
+	  if ($value)
 	    {
-	      print "Removed value from ", $entry->getDN(), "\n" if $opt_v;
+	      $changed = $entry->removeValue($attr, $value);
+	      if ($changed && $opt_v)
+		{
+		  print "Removed value from ", $entry->getDN(), "\n" if $opt_v;
+		}
+	    }
+	  else
+	    {
+	      delete $entry->{$attr};
+	      print "Deleted attribute $attr for ", $entry->getDN(), "\n" if $opt_v;
+	      $changed = 1;
 	    }
 	}
       else
 	{
-	  delete $entry->{$attr};
-	  print "Deleted attribute $attr for ", $entry->getDN(), "\n" if $opt_v;
-	  $changed = 1;
+	  print "No attribute values for: $attr\n";
 	}
     }
   else
     {
-      if ($opt_a)
+      if (!defined($value) || !$value)
+	{
+	  print "No value provided for the attribute $attr\n";
+	}
+      elsif ($opt_a)
 	{
 	  $changed = $entry->addValue($attr, $value);
 	  if ($changed && $opt_v)
