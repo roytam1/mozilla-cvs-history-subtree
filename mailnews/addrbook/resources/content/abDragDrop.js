@@ -84,18 +84,49 @@ var abDirTreeObserver = {
       if (!treeItem)  
         return;
 
-      var targetID = treeItem.getAttribute("id");
-      var directory = GetDirectoryFromURI(targetID);
+      var targetURI = treeItem.getAttribute("id");
+      var directory = GetDirectoryFromURI(targetURI);
 
       var abView = GetAbView();
       
       var rows = xferData[0].split(",");
       var numrows = rows.length;
-      var srcDirectoryURI = GetAbViewURI();
+      var srcURI = GetAbViewURI();
+
+      if (srcURI == targetURI) {
+        dump("XXX should not be here\n");
+        return;
+      }
+
+      var result;
+      var needToCopyCard = true;
+      if (srcURI.length > targetURI.length) {
+        result = srcURI.split(targetURI); 
+        if (result != srcURI) {
+          // src directory is a mailing list on target directory, no need to copy card
+          needToCopyCard = false;
+        }
+      }
+      else {
+        result = targetURI.split(srcURI);
+        if (result != targetURI) {
+          /// target directory is a mailing list on src directory, no need to copy card
+          needToCopyCard = false;
+        }
+      }
+
+      if (needToCopyCard) {
+        var targetArr = targetURI.split("/");
+        var srcArr = srcURI.split("/");
+        dump("targetArr = " + targetArr + "\n");
+        dump("srcArr = " + srcArr + "\n");
+        // check if srcURI and targetURI are lists on same directory
+        // needToCopyCard = false;
+      }
 
       for (var i=0;i<numrows;i++) {
         var card = abView.getCardFromRow(rows[i]);
-        directory.dropCard(srcDirectoryURI, card);
+        directory.dropCard(card, needToCopyCard);
       }
     },
 
@@ -115,18 +146,24 @@ var abDirTreeObserver = {
       if (!treeItem)  
         return false;
 
-      var targetID = treeItem.getAttribute("id");
-      var targetDirectory = GetDirectoryFromURI(targetID);
-      var srcDirectory = GetAbViewDirectory();
+      var targetURI = treeItem.getAttribute("id");
+      var srcURI = GetAbViewURI();
 
       // you can't drop a card onto the directory it comes from
-      if (targetDirectory == srcDirectory) {
+      if (targetURI == srcURI) {
         aDragSession.canDrop = false;
         return false;
       }
 
-      dump("XXX over " + targetID + " mailing list = " + targetDirectory.isMailList + "\n");
-      dump("  from " + GetAbViewURI() + " mailing list = " + srcDirectory.isMailList + "\n");
+      // determine if we dragging from a mailing list on a directory x to the parent (directory x).
+      // if so, don't allow the drop
+      var result = srcURI.split(targetURI);
+      if (result != srcURI) {
+        aDragSession.canDrop = false;
+        return false;
+      }
+ 
+      dump("XXX over " + targetURI + " from " + srcURI + "\n");
       return true;
     },
 

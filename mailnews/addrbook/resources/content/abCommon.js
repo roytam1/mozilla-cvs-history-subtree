@@ -474,14 +474,6 @@ function GetAbView()
     return null;
 }
 
-function GetAbViewDirectory()
-{
-  if (gAbView)
-    return gAbView.directory;
-  else 
-    return null;
-}
-
 function GetAbViewURI()
 {
   if (gAbView)

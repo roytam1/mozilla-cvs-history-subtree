@@ -798,7 +798,7 @@ NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::DropCard(const char *srcDirectoryURI, nsIAbCard* aCard)
+NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard, PRBool needToCopyCard)
 {
   NS_ENSURE_ARG_POINTER(aCard);
 
@@ -821,27 +821,6 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(const char *srcDirectoryURI, nsIAbCard*
 
 	if (NS_FAILED(rv) || !mDatabase)
 		return NS_ERROR_FAILURE;
-
-  PRBool needToCopyCard;
-  if (nsCRT::strcmp(srcDirectoryURI, mURI)) {    
-    PRInt32 destURILen = nsCRT::strlen(mURI);
-    PRInt32 srcURILen = nsCRT::strlen(srcDirectoryURI);
- 
-    if (nsCRT::strncmp(mURI, srcDirectoryURI, PR_MIN(destURILen, srcURILen))) {
-      // we need to copy the card, as the dest and src are different directories
-      needToCopyCard = PR_TRUE;
-    }
-    else {
-      // we are dropping from a mailing list on directory x to directory x
-      // or we are dropping from directory x to a mailing list on directory x
-      // either way, we don't have to copy the card, as it is already on directory x
-      needToCopyCard = PR_FALSE;
-    }
-  }
-  else {
-    NS_ASSERTION(0, "shouldn't get here, you are dropping on yourself");
-    return NS_OK;
-  }
 
   nsCOMPtr<nsIAbCard> newCard;
   nsCOMPtr<nsIAbMDBCard> dbcard;

@@ -390,7 +390,7 @@ NS_IMETHODIMP nsAbOutlookDirectory::AddCard(nsIAbCard *aData)
     return retCode ;
 }
 
-NS_IMETHODIMP nsAbOutlookDirectory::DropCard(const char *srcDirectoryURI, nsIAbCard *aData)
+NS_IMETHODIMP nsAbOutlookDirectory::DropCard(nsIAbCard *aData, PRBool needToCopyCard)
 {
     return AddCard(aData) ;
 }

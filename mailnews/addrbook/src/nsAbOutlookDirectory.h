@@ -69,7 +69,7 @@ public:
   NS_IMETHOD DeleteCards(nsISupportsArray *aCardList) ;
   NS_IMETHOD DeleteDirectory(nsIAbDirectory *aDirectory) ;
   NS_IMETHOD AddCard(nsIAbCard *aData);
-  NS_IMETHOD DropCard(const char *srcDirectoryURI, nsIAbCard *aData) ;
+  NS_IMETHOD DropCard(nsIAbCard *aData, PRBool needToCopyCard);
   NS_IMETHOD AddMailList(nsIAbDirectory *aMailList) ;
   NS_IMETHOD EditMailListToDatabase(const char *aUri, nsIAbCard *listCard) ;
   
