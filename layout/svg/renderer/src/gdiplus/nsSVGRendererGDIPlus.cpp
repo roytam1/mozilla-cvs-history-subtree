@@ -35,9 +35,12 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ----- END LICENSE BLOCK ----- */
-//#undef WIN32_LEAN_AND_MEAN
-//#define _WIN32_WINNT 0x0501
+
 #include <windows.h>
+
+// unknwn.h is needed to build with WIN32_LEAN_AND_MEAN
+#include <unknwn.h>
+
 #include <Gdiplus.h>
 using namespace Gdiplus;
 

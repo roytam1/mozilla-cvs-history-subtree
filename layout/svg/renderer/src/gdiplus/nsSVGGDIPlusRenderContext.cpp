@@ -37,6 +37,10 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include <windows.h>
+
+// unknwn.h is needed to build with WIN32_LEAN_AND_MEAN
+#include <unknwn.h>
+
 #include <Gdiplus.h>
 using namespace Gdiplus;
 
