@@ -28,7 +28,7 @@
 
 */
 
-// Not the ALPHABETICAL ORDER
+// Note the ALPHABETICAL ORDER. Heed it. Or die.
 #include "nsCOMPtr.h"
 #include "nsDebug.h"
 #include "nsIAtom.h"
@@ -95,6 +95,7 @@ static NS_DEFINE_IID(kIRDFServiceIID,             NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,               NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIXULDocumentInfoIID,        NS_IXULDOCUMENTINFO_IID);
 
+static NS_DEFINE_CID(kHTMLElementFactoryCID, NS_HTML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kNameSpaceManagerCID,        NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kRDFCompositeDataSourceCID,  NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
@@ -105,25 +106,13 @@ static NS_DEFINE_CID(kRDFToolbarBuilderCID,       NS_RDFTOOLBARBUILDER_CID);
 static NS_DEFINE_CID(kXULDocumentCID,             NS_XULDOCUMENT_CID);
 static NS_DEFINE_CID(kXULDocumentInfoCID,         NS_XULDOCUMENTINFO_CID);
 
-static NS_DEFINE_CID(kHTMLElementFactoryCID, NS_HTML_ELEMENT_FACTORY_CID);
-static NS_DEFINE_CID(kIHTMLElementFactoryIID, NS_IHTML_ELEMENT_FACTORY_IID);
-
 ////////////////////////////////////////////////////////////////////////
-// standard vocabulary items
 
 static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
-DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, instanceOf);
-DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, nextVal);
-DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, type);
-DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child); // XXX bogus: needs to be NC:child
-
 
 // XXX This is sure to change. Copied from mozilla/layout/xul/content/src/nsXULAtoms.cpp
 #define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
-
-#define XUL_NAMESPACE_URI_PREFIX XUL_NAMESPACE_URI "#"
-DEFINE_RDF_VOCAB(XUL_NAMESPACE_URI_PREFIX, XUL, element);
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog;
@@ -137,10 +126,19 @@ class RDFXULBuilderImpl : public nsIRDFContentModelBuilder,
                           public nsIDOMElementObserver
 {
 private:
-    nsIRDFCompositeDataSource* mDB;
-    nsIRDFDocument*            mDocument;
-    nsIContent*                mRoot;
-    nsIHTMLElementFactory*     mHTMLElementFactory;
+    nsIRDFDocument*                     mDocument; // [WEAK]
+    nsCOMPtr<nsIRDFCompositeDataSource> mDB;
+    nsCOMPtr<nsIContent>                mRoot;
+    nsCOMPtr<nsIHTMLElementFactory>     mHTMLElementFactory;
+
+    // The "element recycler" is used to recycle elements that are
+    // removed from the content model. When a new element is created
+    // via the DOM document.createElement() API, or an element is
+    // removed from the content model using the DOM APIs, the element
+    // is placed in the recycler. This ensures that subsequent
+    // insertion of the node will result in the same object being
+    // re-used, rather than a new element being created.
+    nsCOMPtr<nsISupportsArray> mElementRecycler;
 
     // pseudo-constants
     static PRInt32 gRefCnt;
@@ -169,10 +167,15 @@ private:
     static nsIRDFResource* kRDF_child; // XXX needs to become kNC_child
     static nsIRDFResource* kXUL_element;
 
-public:
     RDFXULBuilderImpl();
+    nsresult Init();
+
     virtual ~RDFXULBuilderImpl();
 
+    friend nsresult
+    NS_NewRDFXULBuilder(nsIRDFContentModelBuilder** aResult);
+
+public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
@@ -183,6 +186,11 @@ public:
     NS_IMETHOD CreateRootContent(nsIRDFResource* aResource);
     NS_IMETHOD SetRootContent(nsIContent* aResource);
     NS_IMETHOD CreateContents(nsIContent* aElement);
+    NS_IMETHOD CreateElement(PRInt32 aNameSpaceID,
+                             nsIAtom* aTagName,
+                             nsIRDFResource* aResource,
+                             nsIContent** aResult);
+
 
     // nsIRDFObserver interface
     NS_IMETHOD OnAssert(nsIRDFResource* aSource, nsIRDFResource* aProperty, nsIRDFNode* aTarget);
@@ -202,13 +210,13 @@ public:
     nsresult RemoveChild(nsIContent* aElement,
                          nsIRDFNode* aValue);
 
-    nsresult CreateElement(nsINameSpace* aContainingNameSpace,
-                           nsIRDFResource* aResource,
-                           nsIContent** aResult);
+    nsresult CreateOrRecycleElement(nsINameSpace* aContainingNameSpace,
+                                    nsIRDFResource* aResource,
+                                    nsIContent** aResult);
 
     nsresult CreateHTMLElement(nsINameSpace* aContainingNameSpace,
                                nsIRDFResource* aResource,
-                               nsIAtom* aTag,
+                               nsIAtom* aTagName,
                                nsIContent** aResult);
 
     nsresult CreateHTMLContents(nsINameSpace* aContainingNameSpace,
@@ -218,7 +226,7 @@ public:
     nsresult CreateXULElement(nsINameSpace* aContainingNameSpace,
                               nsIRDFResource* aResource,
                               PRInt32 aNameSpaceID,
-                              nsIAtom* aTag,
+                              nsIAtom* aTagName,
                               nsIContent** aResult);
 
     nsresult
@@ -245,15 +253,15 @@ public:
     GetGraphNodeForXULElement(nsIDOMNode* aNode, nsIRDFNode** aResult);
 
     nsresult
-    CreateResourceElement(PRInt32 aNameSpaceID,
-                          nsIAtom* aTag,
-                          nsIRDFResource* aResource,
-                          nsIContent** aResult);
-
-    nsresult
     GetResource(PRInt32 aNameSpaceID,
                 nsIAtom* aNameAtom,
                 nsIRDFResource** aResource);
+
+    nsresult
+    MakeProperty(PRInt32 aNameSpaceID, nsIAtom* aTagName, nsIRDFResource** aResult);
+
+    nsresult
+    RecycleNode(nsIDOMNode* aElement);
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -298,6 +306,13 @@ NS_NewRDFXULBuilder(nsIRDFContentModelBuilder** result)
     if (! builder)
         return NS_ERROR_OUT_OF_MEMORY;
 
+    nsresult rv;
+    rv = builder->Init();
+    if (NS_FAILED(rv)) {
+        delete builder;
+        return rv;
+    }
+
     NS_ADDREF(builder);
     *result = builder;
     return NS_OK;
@@ -307,27 +322,32 @@ NS_NewRDFXULBuilder(nsIRDFContentModelBuilder** result)
 RDFXULBuilderImpl::RDFXULBuilderImpl(void)
     : mDB(nsnull),
       mDocument(nsnull),
-      mRoot(nsnull),
-      mHTMLElementFactory(nsnull)
+      mRoot(nsnull)
 {
     NS_INIT_REFCNT();
+}
+
+
+nsresult
+RDFXULBuilderImpl::Init()
+{
+    nsresult rv;
 
     if (gRefCnt++ == 0) {
         nsresult rv;
-        if (NS_SUCCEEDED(rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
-                                                           nsnull,
-                                                           kINameSpaceManagerIID,
-                                                           (void**) &gNameSpaceManager))) {
+        rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
+                                                nsnull,
+                                                kINameSpaceManagerIID,
+                                                (void**) &gNameSpaceManager);
+        if (NS_FAILED(rv)) return rv;
 
-            rv = gNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register XUL namespace");
+        rv = gNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register XUL namespace");
+        if (NS_FAILED(rv)) return rv;
 
-            rv = gNameSpaceManager->RegisterNameSpace(kRDFNameSpaceURI, kNameSpaceID_RDF);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register RDF namespace");
-        }
-        else {
-            NS_ERROR("couldn't create namepsace manager");
-        }
+        rv = gNameSpaceManager->RegisterNameSpace(kRDFNameSpaceURI, kNameSpaceID_RDF);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register RDF namespace");
+        if (NS_FAILED(rv)) return rv;
 
         kContainerAtom            = NS_NewAtom("container");
         kDataSourcesAtom          = NS_NewAtom("datasources");
@@ -346,35 +366,39 @@ RDFXULBuilderImpl::RDFXULBuilderImpl(void)
                                           (nsISupports**) &gRDFService);
 
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF service");
-        if (NS_SUCCEEDED(rv)) {
-            gRDFService->GetResource(kURIRDF_instanceOf, &kRDF_instanceOf);
-            gRDFService->GetResource(kURIRDF_nextVal,    &kRDF_nextVal);
-            gRDFService->GetResource(kURIRDF_type,       &kRDF_type);
-            gRDFService->GetResource(kURIRDF_child,      &kRDF_child);
-            gRDFService->GetResource(kURIXUL_element,    &kXUL_element);
-        }
+        if (NS_FAILED(rv)) return rv;
+
+        gRDFService->GetResource(RDF_NAMESPACE_URI "instanceOf", &kRDF_instanceOf);
+        gRDFService->GetResource(RDF_NAMESPACE_URI "nextVal",    &kRDF_nextVal);
+        gRDFService->GetResource(RDF_NAMESPACE_URI "type",       &kRDF_type);
+        gRDFService->GetResource(RDF_NAMESPACE_URI "child",      &kRDF_child);
+        gRDFService->GetResource(XUL_NAMESPACE_URI "#element",   &kXUL_element);
 
         rv = nsServiceManager::GetService(kRDFContainerUtilsCID,
                                           nsIRDFContainerUtils::GetIID(),
                                           (nsISupports**) &gRDFContainerUtils);
+
+        if (NS_FAILED(rv)) return rv;
     }
+
+    rv = nsComponentManager::CreateInstance(kHTMLElementFactoryCID,
+                                            nsnull,
+                                            nsIHTMLElementFactory::GetIID(),
+                                            getter_AddRefs(mHTMLElementFactory));
+    if (NS_FAILED(rv)) return rv;
 
 #ifdef PR_LOGGING
     if (! gLog)
         gLog = PR_NewLogModule("nsRDFXULBuilder");
 #endif
+
+    return NS_OK;
 }
 
 RDFXULBuilderImpl::~RDFXULBuilderImpl(void)
 {
-    NS_IF_RELEASE(mRoot);
-    if (mDB) {
-        mDB->RemoveObserver(this);
-        NS_RELEASE(mDB);
-    }
+    if (mDB) mDB->RemoveObserver(this);
     // NS_IF_RELEASE(mDocument) not refcounted
-
-    NS_IF_RELEASE(mHTMLElementFactory);
 
     if (--gRefCnt == 0) {
         if (gRDFService) {
@@ -462,8 +486,7 @@ RDFXULBuilderImpl::SetDataBase(nsIRDFCompositeDataSource* aDataBase)
     if (mDB)
         return NS_ERROR_ALREADY_INITIALIZED;
 
-    mDB = aDataBase;
-    NS_ADDREF(mDB);
+    mDB = dont_QueryInterface(aDataBase);
 
     mDB->AddObserver(this);
     return NS_OK;
@@ -477,7 +500,7 @@ RDFXULBuilderImpl::GetDataBase(nsIRDFCompositeDataSource** aDataBase)
         return NS_ERROR_NULL_POINTER;
 
     *aDataBase = mDB;
-    NS_ADDREF(mDB);
+    NS_ADDREF(*aDataBase);
     return NS_OK;
 }
 
@@ -499,25 +522,17 @@ RDFXULBuilderImpl::CreateRootContent(nsIRDFResource* aResource)
     rv = gNameSpaceManager->CreateRootNameSpace(*getter_AddRefs(nameSpace));
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIContent> root;
-    if (NS_FAILED(rv = CreateElement(nameSpace, aResource, getter_AddRefs(root)))) {
-        NS_ERROR("unable to create root element");
-        return rv;
-    }
+    rv = CreateOrRecycleElement(nameSpace, aResource, getter_AddRefs(mRoot));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create root element");
+    if (NS_FAILED(rv)) return rv;
 
     // Now set it as the document's root content
-    nsCOMPtr<nsIDocument> doc;
-    if (NS_FAILED(rv = mDocument->QueryInterface(kIDocumentIID,
-                                                 (void**) getter_AddRefs(doc)))) {
-        NS_ERROR("couldn't get nsIDocument interface");
-        return rv;
-    }
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDocument);
+    NS_ASSERTION(doc, "couldn't get nsIDocument interface");
+    if (! doc)
+        return NS_ERROR_UNEXPECTED;
 
-    doc->SetRootContent(root);
-
-    mRoot = root;
-    NS_ADDREF(mRoot);
-
+    doc->SetRootContent(mRoot);
     return NS_OK;
 }
 
@@ -525,9 +540,7 @@ RDFXULBuilderImpl::CreateRootContent(nsIRDFResource* aResource)
 NS_IMETHODIMP
 RDFXULBuilderImpl::SetRootContent(nsIContent* aElement)
 {
-    NS_IF_RELEASE(mRoot);
-    mRoot = aElement;
-    NS_IF_ADDREF(mRoot);
+    mRoot = dont_QueryInterface(aElement);
     return NS_OK;
 }
 
@@ -641,18 +654,17 @@ RDFXULBuilderImpl::CreateContents(nsIContent* aElement)
     if (aElement == mRoot) {
       // Always insert a hidden form as the very first child of the window.
       // Create a new form element.
-      nsAutoString tag("form");
       nsCOMPtr<nsIHTMLContent> newElement;
       if (!mHTMLElementFactory) {
         rv = nsComponentManager::CreateInstance(kHTMLElementFactoryCID,
                                                 nsnull,
-                                                kIHTMLElementFactoryIID,
+                                                nsIHTMLElementFactory::GetIID(),
                                                 (void**) &mHTMLElementFactory);
         if (NS_FAILED(rv)) {
             return rv;
         }
       }
-      rv = mHTMLElementFactory->CreateInstanceByTag(tag,
+      rv = mHTMLElementFactory->CreateInstanceByTag(nsAutoString("form"),
                                                 getter_AddRefs(newElement));
       NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create HTML element");
       if (NS_FAILED(rv)) return rv;
@@ -758,6 +770,95 @@ RDFXULBuilderImpl::CreateContents(nsIContent* aElement)
     return rv;
 }
 
+
+NS_IMETHODIMP
+RDFXULBuilderImpl::CreateElement(PRInt32 aNameSpaceID,
+                                 nsIAtom* aTagName,
+                                 nsIRDFResource* aResource,
+                                 nsIContent** aResult)
+{
+    // Create a content element. This sets up the underlying document
+    // graph properly. Specifically, it:
+    //
+    // 1) Checks the element recycle bin to see if an element exists
+    //    that can be recycled. XXX NOT IMPLEMENTED!
+    //
+    // 2) If aResource is null, it assigns the element an "anonymous"
+    //    URI as its ID. The URI is relative to the current document's
+    //    URL.
+    //
+    // 3) Marks it as an RDF container, so that children can be
+    //    appended to it.
+    //
+    // 4) Assigns `mDocument' to be the new element's document.
+    //
+
+    nsresult rv;
+
+    nsCOMPtr<nsIRDFResource> resource;
+    if (! aResource) {
+        // This is really a brand new element. Assign it an
+        // "anonymous" identifier so that it can be referred to in the
+        // graph.
+        nsCOMPtr<nsIDocument> document = do_QueryInterface(mDocument);
+        if (! document)
+            return NS_ERROR_UNEXPECTED;
+
+        nsCOMPtr<nsIURL> url = dont_QueryInterface( document->GetDocumentURL() );
+        if (! url)
+            return NS_ERROR_UNEXPECTED;
+
+        const char* context;
+        rv = url->GetSpec(&context);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = rdf_CreateAnonymousResource(context, getter_AddRefs(resource));
+        if (NS_FAILED(rv)) return rv;
+
+        // Set it's RDF:type in the graph s.t. the element's tag can be
+        // constructed from it.
+        nsCOMPtr<nsIRDFResource> type;
+        rv = MakeProperty(aNameSpaceID, aTagName, getter_AddRefs(type));
+        if (NS_FAILED(rv)) return rv;
+
+        rv = mDB->Assert(resource, kRDF_type, type, PR_TRUE);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set element's tag info in graph");
+        if (NS_FAILED(rv)) return rv;
+
+        // Mark it as a XUL element
+        rv = mDB->Assert(resource, kRDF_instanceOf, kXUL_element, PR_TRUE);
+        NS_ASSERTION(rv == NS_OK, "unable to mark as XUL element");
+        if (NS_FAILED(rv)) return rv;
+
+        // ...part of which entails making it a container
+        NS_WITH_SERVICE(nsIRDFContainerUtils, rdfc, kRDFContainerUtilsCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = rdfc->MakeSeq(mDB, resource, nsnull);
+        NS_ASSERTION(rv == NS_OK, "unable to mark as XUL element");
+        if (NS_FAILED(rv)) return rv;
+    }
+    else {
+        resource = dont_QueryInterface(aResource);
+    }
+
+    nsCOMPtr<nsIContent> result;
+    if (aNameSpaceID == kNameSpaceID_HTML) {
+        rv = CreateHTMLElement(nsnull, resource, aTagName, getter_AddRefs(result));
+    }
+    else {
+        rv = CreateXULElement(nsnull, resource, aNameSpaceID, aTagName, getter_AddRefs(result));
+    }
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = result;
+    NS_ADDREF(*aResult);
+    return NS_OK;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+// nsIRDFObserver interface
 
 NS_IMETHODIMP
 RDFXULBuilderImpl::OnAssert(nsIRDFResource* aSource,
@@ -1078,6 +1179,11 @@ RDFXULBuilderImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             NS_ASSERTION(NS_SUCCEEDED(rv), "ref child doesn't have a resource");
             if (NS_FAILED(rv)) return rv;
 
+            // Recycle the new child, so that the node will be re-used
+            // in the content model.
+            rv = RecycleNode(aNewChild);
+            if (NS_FAILED(rv)) return rv;
+
             // Create a container wrapper
             nsCOMPtr<nsIRDFContainer> container;
             rv = NS_NewRDFContainer(mDB, parent, getter_AddRefs(container));
@@ -1162,6 +1268,15 @@ RDFXULBuilderImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to remove old child from container");
             if (NS_FAILED(rv)) return rv;
 
+            // Recycle the old element
+            rv = RecycleNode(aOldChild);
+            if (NS_FAILED(rv)) return rv;
+
+            // ...and the new one, _now_, so that we're sure to get it
+            // when the asserts bubble back up from the graph.
+            rv = RecycleNode(aNewChild);
+            if (NS_FAILED(rv)) return rv;
+
             // ...and add the new child to the collection at the old child's index
             rv = container->InsertElementAt(newChild, index, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add new child to container");
@@ -1216,9 +1331,14 @@ RDFXULBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
             if (NS_FAILED(rv)) return rv;
 
             rv = container->RemoveElement(oldChild, PR_TRUE);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to insert new element into container");
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to remove element from container");
             if (NS_FAILED(rv)) return rv;
         }
+
+        // Recycle the element, so if it is inserted into the content
+        // model again, we re-use the same object.
+        rv = RecycleNode(aOldChild);
+        if (NS_FAILED(rv)) return rv;
     }
 
     return NS_OK;
@@ -1291,6 +1411,11 @@ RDFXULBuilderImpl::OnAppendChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild)
             // ...then append it to the container
             nsCOMPtr<nsIRDFContainer> container;
             rv = NS_NewRDFContainer(mDB, parent, getter_AddRefs(container));
+            if (NS_FAILED(rv)) return rv;
+
+            // Recycle the new element _now_, so that we're sure to
+            // get it when the asserts bubble back up from the graph.
+            rv = RecycleNode(aNewChild);
             if (NS_FAILED(rv)) return rv;
 
             rv = container->AppendElement(newChild);
@@ -1522,10 +1647,9 @@ RDFXULBuilderImpl::AppendChild(nsINameSpace* aNameSpace,
         
         // If it's a resource, then add it as a child container.
         nsCOMPtr<nsIContent> child;
-        if (NS_FAILED(rv = CreateElement(aNameSpace, resource, getter_AddRefs(child)))) {
-            NS_ERROR("unable to create new XUL element");
-            return rv;
-        }
+        rv = CreateOrRecycleElement(aNameSpace, resource, getter_AddRefs(child));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create new XUL element");
+        if (NS_FAILED(rv)) return rv;
 
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
@@ -1649,9 +1773,9 @@ RDFXULBuilderImpl::RemoveChild(nsIContent* aElement, nsIRDFNode* aValue)
 }
 
 nsresult
-RDFXULBuilderImpl::CreateElement(nsINameSpace* aContainingNameSpace,
-                                 nsIRDFResource* aResource,
-                                 nsIContent** aResult)
+RDFXULBuilderImpl::CreateOrRecycleElement(nsINameSpace* aContainingNameSpace,
+                                          nsIRDFResource* aResource,
+                                          nsIContent** aResult)
 {
     nsresult rv;
 
@@ -1660,27 +1784,51 @@ RDFXULBuilderImpl::CreateElement(nsINameSpace* aContainingNameSpace,
 
     // First, we get the node's type so we can create a tag.
     nsCOMPtr<nsIRDFNode> typeNode;
-    if (NS_FAILED(rv = mDB->GetTarget(aResource, kRDF_type, PR_TRUE, getter_AddRefs(typeNode)))) {
-        NS_ERROR("unable to get node's type");
-        return rv;
-    }
+    rv = mDB->GetTarget(aResource, kRDF_type, PR_TRUE, getter_AddRefs(typeNode));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get node's type");
+    if (NS_FAILED(rv)) return rv;
 
     NS_ASSERTION(rv != NS_RDF_NO_VALUE, "no node type");
     if (rv == NS_RDF_NO_VALUE)
         return NS_ERROR_UNEXPECTED;
 
 
-    nsCOMPtr<nsIRDFResource> type;
-    if (NS_FAILED(rv = typeNode->QueryInterface(kIRDFResourceIID, getter_AddRefs(type)))) {
-        NS_ERROR("type wasn't a resource");
-        return rv;
-    }
+    nsCOMPtr<nsIRDFResource> type = do_QueryInterface(typeNode);
+    NS_ASSERTION(type != nsnull, "type wasn't a resource");
+    if (! type)
+        return NS_ERROR_UNEXPECTED;
 
     PRInt32 nameSpaceID;
     nsCOMPtr<nsIAtom> tag;
-    if (NS_FAILED(rv = mDocument->SplitProperty(type, &nameSpaceID, getter_AddRefs(tag)))) {
-        NS_ERROR("unable to split resource into namespace/tag pair");
-        return rv;
+    rv = mDocument->SplitProperty(type, &nameSpaceID, getter_AddRefs(tag));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to split resource into namespace/tag pair");
+    if (NS_FAILED(rv)) return rv;
+
+    // XXX We can make this faster if we need to.
+    if (mElementRecycler) {
+        PRUint32 count;
+        rv = mElementRecycler->Count(&count);
+        if (NS_FAILED(rv)) return rv;
+
+        while (PRInt32(count--) >= 0) {
+            nsCOMPtr<nsIContent> element = 
+                do_QueryInterface( mElementRecycler->ElementAt(count) );
+
+            nsCOMPtr<nsIRDFResource> resource;
+            rv = nsRDFContentUtils::GetElementResource(element, getter_AddRefs(resource));
+            NS_ASSERTION(NS_SUCCEEDED(rv), "an element with out a resource is in the recycle bin");
+            if (NS_FAILED(rv)) continue;
+
+            if (resource.get() != aResource)
+                continue;
+
+            // found it!
+            mElementRecycler->RemoveElementAt(count);
+
+            *aResult = element;
+            NS_ADDREF(*aResult);
+            return NS_OK;
+        }
     }
 
     if (nameSpaceID == kNameSpaceID_HTML) {
@@ -1694,29 +1842,18 @@ RDFXULBuilderImpl::CreateElement(nsINameSpace* aContainingNameSpace,
 nsresult
 RDFXULBuilderImpl::CreateHTMLElement(nsINameSpace* aContainingNameSpace,
                                      nsIRDFResource* aResource,
-                                     nsIAtom* aTag,
+                                     nsIAtom* aTagName,
                                      nsIContent** aResult)
 {
     nsresult rv;
-
-    if (!mHTMLElementFactory) {
-        rv = nsComponentManager::CreateInstance(kHTMLElementFactoryCID,
-                                                nsnull,
-                                                kIHTMLElementFactoryIID,
-                                                (void**) &mHTMLElementFactory);
-        if (NS_FAILED(rv)) {
-            return rv;
-        }
-    }
 
     // XXX This is where we go out and create the HTML content. It's a
     // bit of a hack: a bridge until we get to a more DOM-based
     // solution.
     nsCOMPtr<nsIHTMLContent> element;
-    nsAutoString tag(aTag->GetUnicode());
-    rv = mHTMLElementFactory->CreateInstanceByTag(tag,
+    rv = mHTMLElementFactory->CreateInstanceByTag(aTagName->GetUnicode(),
                                                   getter_AddRefs(element));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create HTML element");
+
     if (NS_FAILED(rv)) return rv;
 
     // XXX This is part of what will be an optimal solution.  To allow
@@ -1965,19 +2102,30 @@ nsresult
 RDFXULBuilderImpl::CreateXULElement(nsINameSpace* aContainingNameSpace,
                                     nsIRDFResource* aResource,
                                     PRInt32 aNameSpaceID,
-                                    nsIAtom* aTag,
+                                    nsIAtom* aTagName,
                                     nsIContent** aResult)
 {
     nsresult rv;
 
+    // Create a new XUL element.
     nsCOMPtr<nsIContent> element;
-    rv = CreateResourceElement(aNameSpaceID,
-                               aTag,
-                               aResource,
-                               getter_AddRefs(element));
-
+    rv = NS_NewRDFElement(aNameSpaceID, aTagName, getter_AddRefs(element));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create new content element");
     if (NS_FAILED(rv)) return rv;
+
+    // Set the element's ID. We do this _before_ we insert the element
+    // into the document so that it gets properly hashed into the
+    // document's resource-to-element map.
+    nsXPIDLCString uri;
+    rv = aResource->GetValue( getter_Copies(uri) );
+    if (NS_FAILED(rv)) return rv;
+
+    rv = element->SetAttribute(kNameSpaceID_None, kIdAtom, (const char*) uri, PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
+
+    // Set the document for this element.
+    nsCOMPtr<nsIDocument> document( do_QueryInterface(mDocument) );
+    element->SetDocument(document, PR_FALSE);
 
     // Initialize the element's containing namespace to that of its
     // parent.
@@ -2069,8 +2217,8 @@ RDFXULBuilderImpl::CreateXULElement(nsINameSpace* aContainingNameSpace,
     }
 
     // There are some tags that we need to pay extra-special attention to...
-    if (aTag == kTreeAtom || aTag == kMenuAtom || aTag == kMenuBarAtom || 
-        aTag == kToolbarAtom) {
+    if (aTagName == kTreeAtom || aTagName == kMenuAtom || aTagName == kMenuBarAtom || 
+        aTagName == kToolbarAtom) {
         nsAutoString dataSources;
         if (NS_CONTENT_ATTR_HAS_VALUE ==
             element->GetAttribute(kNameSpaceID_None,
@@ -2078,11 +2226,11 @@ RDFXULBuilderImpl::CreateXULElement(nsINameSpace* aContainingNameSpace,
                                   dataSources)) {
 
             nsCID builderCID;
-            if (aTag == kTreeAtom)
+            if (aTagName == kTreeAtom)
                 builderCID = kRDFTreeBuilderCID;
-            else if (aTag == kMenuAtom || aTag == kMenuBarAtom)
+            else if (aTagName == kMenuAtom || aTagName == kMenuBarAtom)
                 builderCID = kRDFMenuBuilderCID;
-            else if (aTag == kToolbarAtom)
+            else if (aTagName == kToolbarAtom)
                 builderCID = kRDFToolbarBuilderCID;
 
             rv = CreateBuilder(builderCID, element, dataSources);
@@ -2499,37 +2647,6 @@ RDFXULBuilderImpl::GetGraphNodeForXULElement(nsIDOMNode* aNode, nsIRDFNode** aRe
     return NS_OK;
 }
 
-nsresult
-RDFXULBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
-                                         nsIAtom* aTag,
-                                         nsIRDFResource* aResource,
-                                         nsIContent** aResult)
-{
-    nsresult rv;
-
-    nsCOMPtr<nsIContent> result;
-    if (NS_FAILED(rv = NS_NewRDFElement(aNameSpaceID, aTag, getter_AddRefs(result))))
-        return rv;
-
-    // Set the element's ID. We do this _before_ we insert the element
-    // into the document so that it gets properly hashed into the
-    // document's resource-to-element map.
-    nsXPIDLCString uri;
-    if (NS_FAILED(rv = aResource->GetValue( getter_Copies(uri) )))
-        return rv;
-
-    if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, (const char*) uri, PR_FALSE)))
-        return rv;
-
-    // Set the document for this element.
-    nsCOMPtr<nsIDocument> document( do_QueryInterface(mDocument) );
-    result->SetDocument(document, PR_FALSE);
-
-    *aResult = result;
-    NS_ADDREF(*aResult);
-    return NS_OK;
-}
-
 
 nsresult
 RDFXULBuilderImpl::GetResource(PRInt32 aNameSpaceID,
@@ -2561,3 +2678,56 @@ RDFXULBuilderImpl::GetResource(PRInt32 aNameSpaceID,
     return rv;
 }
 
+
+
+nsresult
+RDFXULBuilderImpl::MakeProperty(PRInt32 aNameSpaceID, nsIAtom* aTagName, nsIRDFResource** aResult)
+{
+    // Using the namespace ID and the tag, construct a fully-qualified
+    // URI and turn it into an RDF property.
+
+    nsCOMPtr<nsIDocument> document = do_QueryInterface(mDocument);
+    if (! document)
+        return NS_ERROR_UNEXPECTED;
+
+    nsresult rv;
+    nsCOMPtr<nsINameSpaceManager> nsmgr;
+    rv = document->GetNameSpaceManager(*getter_AddRefs(nsmgr));
+    if (NS_FAILED(rv)) return rv;
+
+    nsAutoString uri;
+    rv = nsmgr->GetNameSpaceURI(aNameSpaceID, uri);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get URI for namespace");
+    if (NS_FAILED(rv)) return rv;
+
+    if (uri.Last() != PRUnichar('#') && uri.Last() != PRUnichar('/'))
+        uri.Append('#');
+
+    uri.Append(aTagName->GetUnicode());
+
+    rv = gRDFService->GetUnicodeResource(uri.GetUnicode(), aResult);
+    return rv;
+}
+
+
+nsresult
+RDFXULBuilderImpl::RecycleNode(nsIDOMNode* aNode)
+{
+    // Place the specified element in the element recycler so that it
+    // may be re-used.
+    nsresult rv;
+
+    nsCOMPtr<nsIContent> element = do_QueryInterface(aNode);
+    if (! element)
+        return NS_ERROR_UNEXPECTED;
+
+    if (! mElementRecycler) {
+        rv = NS_NewISupportsArray(getter_AddRefs(mElementRecycler));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    NS_ASSERTION(mElementRecycler->IndexOf(element) < 0, "Element already in the recycler");
+
+    mElementRecycler->AppendElement(element);
+    return NS_OK;
+}

@@ -297,20 +297,20 @@ private:
     static nsIAtom*             kTooltipAtom;
     static nsIAtom*             kContextAtom;
 
-    nsIDocument*      mDocument;
-    void*             mScriptObject;
-    nsISupportsArray* mChildren;
-    nsIContent*       mParent;
-    nsINameSpace*     mNameSpace;
-    nsIAtom*          mNameSpacePrefix;
-    PRInt32           mNameSpaceID;
-    nsIAtom*          mTag;
-    nsIEventListenerManager* mListenerManager;
-    nsXULAttributes*  mAttributes;
-    PRBool            mContentsMustBeGenerated;
-    nsVoidArray*		  mBroadcastListeners;
-    nsIDOMXULElement* mBroadcaster;
-    nsXULElement*     mInnerXULElement;
+    nsIDocument*           mDocument;           // [WEAK]
+    void*                  mScriptObject;       // [OWNER]
+    nsISupportsArray*      mChildren;           // [OWNER]
+    nsIContent*            mParent;             // [WEAK]
+    nsCOMPtr<nsINameSpace> mNameSpace;          // [OWNER]
+    nsCOMPtr<nsIAtom>      mNameSpacePrefix;    // [OWNER]
+    PRInt32                mNameSpaceID;
+    nsIAtom*               mTag;                // [OWNER]
+    nsIEventListenerManager* mListenerManager;  // [OWNER]
+    nsXULAttributes*       mAttributes;         // [OWNER]
+    PRBool                 mContentsMustBeGenerated;
+    nsVoidArray*		   mBroadcastListeners; // [WEAK]
+    nsIDOMXULElement*      mBroadcaster;        // [OWNER]
+    nsXULElement*          mInnerXULElement;    // [OWNER]
 
 };
 
@@ -337,8 +337,6 @@ RDFElementImpl::RDFElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag)
       mScriptObject(nsnull),
       mChildren(nsnull),
       mParent(nsnull),
-      mNameSpace(nsnull),
-      mNameSpacePrefix(nsnull),
       mNameSpaceID(aNameSpaceID),
       mTag(aTag),
       mListenerManager(nsnull),
@@ -1022,13 +1020,7 @@ RDFElementImpl::Normalize()
 NS_IMETHODIMP
 RDFElementImpl::SetContainingNameSpace(nsINameSpace* aNameSpace)
 {
-    NS_PRECONDITION(aNameSpace != nsnull, "null ptr");
-    if (! aNameSpace)
-        return NS_ERROR_NULL_POINTER;
-
-    NS_IF_RELEASE(mNameSpace);
-    mNameSpace = aNameSpace;
-    NS_ADDREF(mNameSpace);
+    mNameSpace = dont_QueryInterface(aNameSpace);
     return NS_OK;
 }
 
@@ -1039,8 +1031,8 @@ RDFElementImpl::GetContainingNameSpace(nsINameSpace*& aNameSpace) const
 
     if (mNameSpace) {
         // If we have a namespace, return it.
-        NS_ADDREF(mNameSpace);
         aNameSpace = mNameSpace;
+        NS_ADDREF(aNameSpace);
         return NS_OK;
     }
 
@@ -1079,9 +1071,7 @@ RDFElementImpl::GetContainingNameSpace(nsINameSpace*& aNameSpace) const
 NS_IMETHODIMP
 RDFElementImpl::SetNameSpacePrefix(nsIAtom* aNameSpacePrefix)
 {
-    NS_IF_RELEASE(mNameSpacePrefix);
     mNameSpacePrefix = aNameSpacePrefix;
-    NS_IF_ADDREF(mNameSpacePrefix);
     return NS_OK;
 }
 
@@ -1522,6 +1512,14 @@ RDFElementImpl::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
             return NS_ERROR_OUT_OF_MEMORY;
     }
 
+    // Make sure that we're not trying to insert the same child
+    // twice. If we do, the DOM APIs (e.g., GetNextSibling()), will
+    // freak out.
+    PRInt32 index = mChildren->IndexOf(aKid);
+    NS_ASSERTION(index < 0, "element is already a child");
+    if (index >= 0)
+        return NS_ERROR_FAILURE;
+
     PRBool insertOk = mChildren->InsertElementAt(aKid, aIndex);/* XXX fix up void array api to use nsresult's*/
     if (insertOk) {
         NS_ADDREF(aKid);
@@ -1554,6 +1552,17 @@ RDFElementImpl::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
         return NS_ERROR_NULL_POINTER;
 
     nsIContent* oldKid = (nsIContent *)mChildren->ElementAt(aIndex);
+    if (oldKid == aKid)
+        return NS_OK;
+
+    // Make sure that we're not trying to insert the same child
+    // twice. If we do, the DOM APIs (e.g., GetNextSibling()), will
+    // freak out.
+    PRInt32 index = mChildren->IndexOf(aKid);
+    NS_ASSERTION(index < 0, "element is already a child");
+    if (index >= 0)
+        return NS_ERROR_FAILURE;
+
     PRBool replaceOk = mChildren->ReplaceElementAt(aKid, aIndex);
     if (replaceOk) {
         NS_ADDREF(aKid);
@@ -1587,6 +1596,14 @@ RDFElementImpl::AppendChildTo(nsIContent* aKid, PRBool aNotify)
             return NS_ERROR_OUT_OF_MEMORY;
     }
 
+    // Make sure that we're not trying to insert the same child
+    // twice. If we do, the DOM APIs (e.g., GetNextSibling()), will
+    // freak out.
+    PRInt32 index = mChildren->IndexOf(aKid);
+    NS_ASSERTION(index < 0, "element is already a child");
+    if (index >= 0)
+        return NS_ERROR_FAILURE;
+
     PRBool appendOk = mChildren->AppendElement(aKid);
     if (appendOk) {
         NS_ADDREF(aKid);
@@ -1618,7 +1635,7 @@ RDFElementImpl::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
         return NS_ERROR_ILLEGAL_VALUE;
 
     nsIContent* oldKid = (nsIContent *)mChildren->ElementAt(aIndex);
-    if (nsnull != oldKid ) {
+    if (oldKid) {
         nsIDocument* doc = mDocument;
         PRBool removeOk = mChildren->RemoveElementAt(aIndex);
         //nsRange::OwnerChildRemoved(this, aIndex, oldKid);
