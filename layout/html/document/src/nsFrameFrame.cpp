@@ -251,6 +251,8 @@ protected:
                               const nsHTMLReflowState& aReflowState,
                               nsHTMLReflowMetrics& aDesiredSize);
 
+  nsresult ReloadURL();
+
   nsCOMPtr<nsIFrameLoader> mFrameLoader;
   PRPackedBool mOwnsFrameLoader;
 
@@ -542,15 +544,24 @@ nsHTMLFrameOuterFrame::AttributeChanged(nsIPresContext* aPresContext,
   nsCOMPtr<nsIAtom> type;
   aChild->GetTag(*getter_AddRefs(type));
 
+  if ((type != nsHTMLAtoms::object && aAttribute == nsHTMLAtoms::src) ||
+      (type == nsHTMLAtoms::object && aAttribute == nsHTMLAtoms::data)) {
+    nsHTMLFrameInnerFrame* firstChild =
+      NS_STATIC_CAST(nsHTMLFrameInnerFrame*, mFrames.FirstChild());
+
+    if (firstChild) {
+      firstChild->ReloadURL();
+    }
+  }
   // If the noResize attribute changes, dis/allow frame to be resized
-  if (nsHTMLAtoms::noresize == aAttribute) {
+  else if (aAttribute == nsHTMLAtoms::noresize) {
     nsCOMPtr<nsIContent> parentContent;
     mContent->GetParent(*getter_AddRefs(parentContent));
 
     nsCOMPtr<nsIAtom> parentTag;
     parentContent->GetTag(*getter_AddRefs(parentTag));
 
-    if (nsHTMLAtoms::frameset == parentTag) {
+    if (parentTag == nsHTMLAtoms::frameset) {
       nsIFrame* parentFrame = nsnull;
       GetParent(&parentFrame);
 
@@ -560,6 +571,7 @@ nsHTMLFrameOuterFrame::AttributeChanged(nsIPresContext* aPresContext,
         nsHTMLFramesetFrame* framesetFrame = nsnull;
         parentFrame->QueryInterface(NS_GET_IID(nsHTMLFramesetFrame),
                                     (void **)&framesetFrame);
+
         if (framesetFrame) {
           framesetFrame->RecalculateBorderResize();
         }
@@ -593,13 +605,17 @@ nsHTMLFrameOuterFrame::AttributeChanged(nsIPresContext* aPresContext,
 
         nsCOMPtr<nsIDocShellTreeOwner> parentTreeOwner;
         parentAsItem->GetTreeOwner(getter_AddRefs(parentTreeOwner));
-        if (parentTreeOwner)
+        if (parentTreeOwner) {
+          PRBool is_primary_content =
+            value.EqualsIgnoreCase("content-primary");
+
           parentTreeOwner->ContentShellAdded(docShellAsItem,
-            value.EqualsIgnoreCase("content-primary"),
-            value.get());
+                                             is_primary_content, value.get());
+        }
       }
     }
   }
+
   return NS_OK;
 }
 
@@ -660,7 +676,7 @@ nsHTMLFrameInnerFrame::~nsHTMLFrameInnerFrame()
     }
   }
 
-  if (mOwnsFrameLoader && mFrameLoader) {
+  if (mFrameLoader && mOwnsFrameLoader) {
     mFrameLoader->Destroy();
   }
 }
@@ -1061,15 +1077,10 @@ nsHTMLFrameInnerFrame::ShowDocShell(nsIPresContext* aPresContext)
   if (baseWindow) {
     baseWindow->InitWindow(nsnull, widget, 0, 0, 10, 10);
 
+    // This is kinda whacky, this "Create()" calldoesn't really create
+    // anything, one starts to wonder why this was named "Create"...
 
-
-
-    //  baseWindow->Create();
-
-
-
-
-
+    baseWindow->Create();
 
     baseWindow->SetVisibility(PR_TRUE);
   }
@@ -1208,6 +1219,21 @@ nsHTMLFrameInnerFrame::Reflow(nsIPresContext*          aPresContext,
 
   return rv;
 }
+
+// load a new url
+nsresult
+nsHTMLFrameInnerFrame::ReloadURL()
+{
+  if (!mOwnsFrameLoader || !mFrameLoader) {
+    // If we don't own the frame loader, we're not in charge of what's
+    // loaded into it.
+
+    return NS_OK;
+  }
+
+  return mFrameLoader->LoadFrame();
+}
+
 
 void
 nsHTMLFrameInnerFrame::GetDesiredSize(nsIPresContext* aPresContext,
