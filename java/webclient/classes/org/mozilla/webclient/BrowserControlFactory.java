@@ -153,7 +153,7 @@ public static void setAppData(String absolutePathToNativeBrowserBinDir) throws F
         }
         
         try {
-            BrowserControlMozillaShim.initialize(absolutePathToNativeBrowserBinDir);
+            BrowserControlNativeShim.initialize(absolutePathToNativeBrowserBinDir);
         }
         catch (Exception e) {
             throw new ClassNotFoundException("Can't initialize native browser: " + 

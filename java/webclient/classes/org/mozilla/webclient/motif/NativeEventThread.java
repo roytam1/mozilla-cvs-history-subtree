@@ -23,7 +23,7 @@ package org.mozilla.webclient.motif;
 
 
 /**
- * This is MozillaEventThread. It's job is to process any pending mozilla events
+ * This is NativeEventThread. It's job is to process any pending mozilla events
  * which have been queued up.
  * 
  * It also contains a private static hashtable mapping of GTK window to 
@@ -39,13 +39,13 @@ package org.mozilla.webclient.motif;
  * There will be one of these per BrowserControlCanvas (but hasn't been tested yet)
  *
  * @version $Id$
- * @see	org.mozilla.webclient.motif.MozillaEventThread
+ * @see	org.mozilla.webclient.motif.NativeEventThread
  * 
  */
 
 import java.util.*;
 
-public class MozillaEventThread extends Thread {
+public class NativeEventThread extends Thread {
 
     static private int eventQueueCount = 0;
     // A mapping of gtkWindowID <-> WebShellInitContext structs
@@ -75,7 +75,7 @@ public class MozillaEventThread extends Thread {
         return 0;
     }
 
-    public MozillaEventThread(MotifBrowserControlCanvas canvas) {
+    public NativeEventThread(MotifBrowserControlCanvas canvas) {
         super("Mozilla-Event-Thread-" + eventQueueCount);
 
         this.browserCanvas = canvas;

@@ -132,8 +132,8 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
             
             this.gtkWinID = this.getGTKWinID(gtkWinPtr);
 
-            Thread mozillaEventThread = new MozillaEventThread(this);
-            mozillaEventThread.start();
+            Thread nativeEventThread = new NativeEventThread(this);
+            nativeEventThread.start();
         }
 
 		return this.gtkWinPtr;
