@@ -107,7 +107,7 @@ nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     jsval              js_val;
     int                dummy_cost     = 0;
     JSBool             dummy_bool     = PR_FALSE;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
 
     if(jEnv == NULL)
     {
@@ -131,7 +131,7 @@ nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
                                    &dummy_cost, &member, &dummy_bool);
 
 done:
-    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+    if (!jsj_exit_js(cx, jsj_env, saved_state))
         return NS_ERROR_FAILURE;
     
     *pjobj = member;
@@ -161,7 +161,7 @@ nsCLiveconnect::GetSlot(JNIEnv *jEnv, jsobject obj, jint slot, void* principalsA
     jsval              js_val;
     int                dummy_cost     = 0;
     JSBool             dummy_bool     = PR_FALSE;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
 
     if(jEnv == NULL)
     {
@@ -180,7 +180,7 @@ nsCLiveconnect::GetSlot(JNIEnv *jEnv, jsobject obj, jint slot, void* principalsA
         goto done;
 
 done:
-    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+    if (!jsj_exit_js(cx, jsj_env, saved_state))
        return NS_ERROR_FAILURE;
     
     *pjobj = member;
@@ -206,7 +206,7 @@ nsCLiveconnect::SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
     jsval              js_val;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
 
     if(jEnv == NULL)
     {
@@ -228,7 +228,7 @@ nsCLiveconnect::SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     JS_SetUCProperty(cx, js_obj, name, length, &js_val);
 
 done:
-    jsj_exit_js(cx, jsj_env, &saved_state);
+    jsj_exit_js(cx, jsj_env, saved_state);
    return NS_OK;
 }
 
@@ -252,7 +252,7 @@ nsCLiveconnect::SetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject java_obj,
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
     jsval              js_val;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
 
     if(jEnv == NULL)
     {
@@ -267,7 +267,7 @@ nsCLiveconnect::SetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject java_obj,
     JS_SetElement(cx, js_obj, slot, &js_val);
 
 done:
-    jsj_exit_js(cx, jsj_env, &saved_state);
+    jsj_exit_js(cx, jsj_env, saved_state);
     return NS_OK;
 }
 
@@ -288,7 +288,7 @@ nsCLiveconnect::RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsiz
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
     jsval              js_val;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
 
     if(jEnv == NULL)
     {
@@ -305,7 +305,7 @@ nsCLiveconnect::RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsiz
     JS_DeleteUCProperty2(cx, js_obj, name, length, &js_val);
 
 done:
-    jsj_exit_js(cx, jsj_env, &saved_state);
+    jsj_exit_js(cx, jsj_env, saved_state);
     return NS_OK;
 }
 
@@ -335,7 +335,7 @@ nsCLiveconnect::Call(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length
     jsval              function_val   = 0;
     int                dummy_cost     = 0;
     JSBool             dummy_bool     = PR_FALSE;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
     jobject            result         = NULL;
 
     if(jEnv == NULL)
@@ -390,7 +390,7 @@ cleanup_argv:
     }
 
 done:
-    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+    if (!jsj_exit_js(cx, jsj_env, saved_state))
         return NS_ERROR_FAILURE;
     
     *pjobj = result;
@@ -409,7 +409,7 @@ nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize leng
     jsval              js_val;
     int                dummy_cost     = 0;
     JSBool             dummy_bool     = PR_FALSE;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
     jobject            result         = NULL;
 	   const char		      *codebase       = NULL;
     JSPrincipals      *principals     = NULL;
@@ -447,7 +447,7 @@ nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize leng
                                    &dummy_cost, &result, &dummy_bool);
 
 done:
-    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+    if (!jsj_exit_js(cx, jsj_env, saved_state))
        return NS_ERROR_FAILURE;
     
     *pjobj = result;
@@ -472,7 +472,7 @@ nsCLiveconnect::GetWindow(JNIEnv *jEnv, void *pJavaObject,  void* principalsArra
     char              *err_msg        = NULL;
     JSContext         *cx             = NULL;
     JSObject          *js_obj         = NULL;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
     jobject            java_obj         = NULL;
     JSJavaThreadState *jsj_env        = NULL;
     int                dummy_cost     = 0;
@@ -515,7 +515,7 @@ nsCLiveconnect::GetWindow(JNIEnv *jEnv, void *pJavaObject,  void* principalsArra
        notify Java? */
 #endif
 done:
-    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+    if (!jsj_exit_js(cx, jsj_env, saved_state))
        return NS_ERROR_FAILURE;
 
     return NS_OK;
@@ -550,7 +550,7 @@ nsCLiveconnect::ToString(JNIEnv *jEnv, jsobject obj, jstring *pjstring)
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JavaToJSSavedState saved_state    = {NULL,NULL};
+    JSErrorReporter    saved_state    = NULL;
     jstring            result         = NULL;
     JSString          *jsstr          = NULL;
 
@@ -570,7 +570,7 @@ nsCLiveconnect::ToString(JNIEnv *jEnv, jsobject obj, jstring *pjstring)
     if (!result)
         result = jEnv->NewStringUTF("*JavaObject*");
 
-    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+    if (!jsj_exit_js(cx, jsj_env, saved_state))
         return NULL;
     *pjstring = result;     
     return NS_OK;
