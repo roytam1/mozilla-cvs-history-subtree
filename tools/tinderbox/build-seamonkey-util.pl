@@ -946,7 +946,7 @@ sub run_all_tests {
 											  $build_dir,
 											  $binary,
 											  " -P $Settings::MozProfileName " . $url,
-											  $Settings::XULOpenWindowTestTimeout,
+											  $Settings::XULWindowOpenTestTimeout,
 											  "__xulWinOpenTime",
 											  ":");
 			chomp($open_time);
