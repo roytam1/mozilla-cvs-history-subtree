@@ -21,7 +21,7 @@
  */
 
 #include "nsISupports.idl"
-#include "nsISOAPMessage.idl"
+#include "nsISOAPCall.idl"
 
 interface nsISOAPParameter;
 interface nsISOAPFault;
@@ -42,7 +42,7 @@ interface nsISOAPResponse : nsISOAPMessage {
    *   returns this response.  This must also be set by a call processor
    *   so that the transport can return a response to the correct caller.
    */
-  attribute nsISOAPMessage respondingTo;
+  attribute nsISOAPCall respondingTo;
 
   /**
    * The fault returned in the response, if one was generated. NULL

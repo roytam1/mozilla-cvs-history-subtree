@@ -103,10 +103,10 @@ NS_IMETHODIMP nsSOAPCall::Invoke(nsISOAPResponse **_retval)
   nsCOMPtr<nsISOAPResponse> response;
   response = new nsSOAPResponse();
   if (!response) return NS_ERROR_OUT_OF_MEMORY;
+  rv = response->SetEncoding(mEncoding);
+  if (NS_FAILED(rv)) return rv;
 
-  rv = transport->SyncCall(mTransportURI,
-                           NS_STATIC_CAST(nsSOAPMessage*, this),
-                           response);
+  rv = transport->SyncCall(this, response);
   if (NS_FAILED(rv)) return rv;
 
   return response->QueryInterface(NS_GET_IID(nsISOAPResponse), (void**)_retval);
@@ -128,11 +128,10 @@ NS_IMETHODIMP nsSOAPCall::AsyncInvoke(nsISOAPResponseListener *listener)
   nsCOMPtr<nsISOAPResponse> response;
   response = new nsSOAPResponse();
   if (!response) return NS_ERROR_OUT_OF_MEMORY;
+  rv = response->SetEncoding(mEncoding);
+  if (NS_FAILED(rv)) return rv;
 
-  rv = transport->AsyncCall(mTransportURI,
-                           NS_STATIC_CAST(nsSOAPMessage*, this),
-                           listener,
-                           response);
+  rv = transport->AsyncCall(this, listener, response);
   return rv;
 }
 

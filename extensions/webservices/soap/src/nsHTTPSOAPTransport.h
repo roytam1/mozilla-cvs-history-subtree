@@ -29,8 +29,7 @@
 #include "nsISOAPTransportListener.h"
 #include "nsCOMPtr.h"
 
-class nsHTTPSOAPTransport : public nsISOAPTransport,
-			    public nsIDOMEventListener
+class nsHTTPSOAPTransport : public nsISOAPTransport
 {
 public:
   nsHTTPSOAPTransport();
@@ -40,14 +39,6 @@ public:
 
   // nsISOAPTransport
   NS_DECL_NSISOAPTRANSPORT
-
-  // nsIDOMEventListener
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
-
-protected:
-  PRUint32 mStatus;
-  nsCOMPtr<nsIXMLHttpRequest> mRequest;
-  nsCOMPtr<nsISOAPTransportListener> mListener;
 };
 
 #define NS_HTTPSOAPTRANSPORT_CID                   \

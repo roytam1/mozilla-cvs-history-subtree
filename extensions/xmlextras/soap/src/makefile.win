@@ -28,6 +28,7 @@ DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=					\
 	nsDefaultSOAPEncoder.cpp		        \
+	nsHTTPSOAPTransport.cpp				\
 	nsSOAPCall.cpp				        \
 	nsSOAPEncoding.cpp				\
 	nsSOAPFault.cpp	       				\

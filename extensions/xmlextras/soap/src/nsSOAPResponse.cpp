@@ -36,15 +36,15 @@ nsSOAPResponse::~nsSOAPResponse()
 
 NS_IMPL_ISUPPORTS_INHERITED1(nsSOAPResponse, nsSOAPMessage, nsISOAPResponse)
 
-/* attribute nsISOAPMessage respondingTo; */
-NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPMessage * *aRespondingTo)
+/* attribute nsISOAPCall respondingTo; */
+NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPCall * *aRespondingTo)
 {
   NS_ENSURE_ARG_POINTER(aRespondingTo);
   *aRespondingTo = mRespondingTo;
   NS_IF_ADDREF(*aRespondingTo);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
+NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPCall * aRespondingTo)
 {
   mRespondingTo = aRespondingTo;
   return NS_OK;

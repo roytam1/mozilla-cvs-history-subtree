@@ -24,7 +24,7 @@
 #define nsSOAPResponse_h__
 
 #include "nsString.h"
-#include "nsSOAPMessage.h"
+#include "nsSOAPCall.h"
 #include "nsISOAPResponse.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMDocument.h"
@@ -50,7 +50,7 @@ public:
   virtual ~nsSOAPResponse();
 
 protected:
-  nsCOMPtr<nsISOAPMessage> mRespondingTo;
+  nsCOMPtr<nsISOAPCall> mRespondingTo;
 };
 
 #endif
