@@ -636,6 +636,13 @@ il_delete_container(il_container *ic)
          * stops sending us stuff.  We defer the actual deletion
          * of the container until then.
          */
+        if (ic->state == IC_ABORT_PENDING) {
+#ifdef DEBUG_kipp
+            printf("il_delete_container: bad: can't delete ic=%p '%s'\n",
+                   ic, ic->url_address ? ic->url_address : "(null)");
+#endif
+            return;
+        }
         if (ic->is_url_loading) {
 #ifdef DEBUG_kipp
             printf("il_delete_container: bad: can't delete ic=%p '%s'\n",
