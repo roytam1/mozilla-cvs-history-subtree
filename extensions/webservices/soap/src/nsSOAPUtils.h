@@ -110,8 +110,8 @@ public:
   static const nsString kNullSchemaType;
   static const nsString kVoidSchemaType;
   static const nsString kUnknownSchemaType;
-  static const nsString kXMLSchemaSchemaIDPrefix;
-  static const nsString kXMLNameSchemaIDPrefix;
+  static const nsString kXMLSchemaSchemaTypePrefix;
+  static const nsString kXMLNameSchemaTypePrefix;
   static const nsString kXMLNamespaceNamespaceURI;
   static const nsString kXMLNamespaceURI;
   static const nsString kXMLNamespacePrefix;

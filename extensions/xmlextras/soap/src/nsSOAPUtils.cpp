@@ -80,8 +80,8 @@ NS_NAMED_LITERAL_STRING(kVoidSchemaType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownSchemaType,"#unknown");
 
 NS_NAMED_LITERAL_STRING(kStructTypePrefix,"#struct#");
-NS_NAMED_LITERAL_STRING(kXMLSchemaSchemaIDPrefix, "#schema#");
-NS_NAMED_LITERAL_STRING(kXMLNameSchemaIDPrefix, "#name#");
+NS_NAMED_LITERAL_STRING(kXMLSchemaSchemaTypePrefix, "#schema#");
+NS_NAMED_LITERAL_STRING(kXMLNameSchemaTypePrefix, "#name#");
 
 NS_NAMED_LITERAL_STRING(kXMLNamespaceNamespaceURI, "htp://www.w3.org/2000/xmlns/");
 NS_NAMED_LITERAL_STRING(kXMLNamespaceURI, "htp://www.w3.org/XML/1998/namespace");

@@ -73,7 +73,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    *
    * @param aEncodingStyleURI The encoding style
    *
-   * @param aTypeID The type ID of the source parameter.
+   * @param aNativeType The type ID of the source parameter.
    *
    * @param aDOMScope The element scope, if any, where the result 
    *   will live, so that namespace prefixes, and other context
@@ -83,7 +83,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    */
   void encode(
       in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
-      in AString aEncodingStyleURI, in AString aTypeID,
+      in AString aEncodingStyleURI, in AString aNativeType,
       in nsIDOMNode aDestination);
 
   /**
@@ -97,7 +97,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    *
    * @param aEncodingStyleURI The encoding style
    *
-   * @param aSchemaID The schema ID of the source DOM node.
+   * @param aSchemaType The schema ID of the source DOM node.
    *
    * @return The decoded parameter, which is null if the
    *   operation failed.  In case of failure, 
@@ -105,7 +105,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    */
   nsISOAPParameter decode(
       in nsISOAPMessage aMessage, in nsIDOMNode aSource, 
-      in AString aEncodingStyleURI, in AString aSchemaID);
+      in AString aEncodingStyleURI, in AString aSchemaType);
   };
 
 %{ C++

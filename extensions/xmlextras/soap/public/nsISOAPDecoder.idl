@@ -44,7 +44,7 @@ interface nsISOAPDecoder : nsISupports {
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aSchemaID The schema ID of the source DOM node
+ * @param aSchemaType The schema ID of the source DOM node
  *
  * @return The decoded parameter, which is null if 
  *   the operation failed or did not return a result.  In case of 
@@ -52,5 +52,5 @@ interface nsISOAPDecoder : nsISupports {
  */
 nsISOAPParameter decode(
     in nsISOAPMessage aMessage, in nsIDOMNode aSource,
-    in AString aEncodingStyleURI, in AString aSchemaID);
+    in AString aEncodingStyleURI, in AString aSchemaType);
 };

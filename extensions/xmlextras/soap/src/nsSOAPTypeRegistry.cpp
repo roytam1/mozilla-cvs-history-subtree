@@ -33,8 +33,8 @@
 
 NS_IMPL_ISUPPORTS2(nsSOAPTypeRegistry, nsISOAPTypeRegistry, nsISecurityCheckedComponent)
 
-nsSOAPTypeRegistry::nsSOAPTypeRegistry(): mTypeIDs(new nsSupportsHashtable),
-  mSchemaIDs(new nsSupportsHashtable), mDefault(do_GetService(NS_SOAPDEFAULTTYPEREGISTRY_CONTRACTID))
+nsSOAPTypeRegistry::nsSOAPTypeRegistry(): mNativeTypes(new nsSupportsHashtable),
+  mSchemaTypes(new nsSupportsHashtable), mDefault(do_GetService(NS_SOAPDEFAULTTYPEREGISTRY_CONTRACTID))
 {
   NS_INIT_ISUPPORTS();
 
@@ -54,8 +54,8 @@ nsSOAPDefaultTypeRegistry::nsSOAPDefaultTypeRegistry()
 nsSOAPTypeRegistry::~nsSOAPTypeRegistry()
 {
   /* destructor code */
-  delete mTypeIDs;
-  delete mSchemaIDs;
+  delete mNativeTypes;
+  delete mSchemaTypes;
 }
 
 /* void addNativeType (in AString aType, in nsISOAPEncoder aEncoder); */
@@ -63,12 +63,12 @@ NS_IMETHODIMP nsSOAPTypeRegistry::AddNativeType(nsAReadableString & aEncoding, n
 {
   NS_ENSURE_ARG_POINTER(aEncoder);
   nsStringKey typeKey(aType);
-  if (mTypeIDs->Exists(&typeKey))
+  if (mNativeTypes->Exists(&typeKey))
   {
     return NS_ERROR_ALREADY_INITIALIZED;
   }
   else {
-    mTypeIDs->Put(&typeKey, aEncoder);
+    mNativeTypes->Put(&typeKey, aEncoder);
     return NS_OK;
   }
 }
@@ -78,35 +78,35 @@ NS_IMETHODIMP nsSOAPTypeRegistry::AddSchemaType(nsAReadableString & aEncoding, n
 {
   NS_ENSURE_ARG_POINTER(aDecoder);
   nsStringKey typeKey(aType);
-  if (mTypeIDs->Exists(&typeKey))
+  if (mNativeTypes->Exists(&typeKey))
   {
     return NS_ERROR_ALREADY_INITIALIZED;
   }
   else {
-    mTypeIDs->Put(&typeKey, aDecoder);
+    mNativeTypes->Put(&typeKey, aDecoder);
     return NS_OK;
   }
 }
 
-/* nsISOAPType queryByTypeID (in DOMString aEncodingStyleURI, in DOMString aTypeID); */
-nsresult nsSOAPTypeRegistry::QueryByNativeType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsISOAPEncoder **_retval)
+/* nsISOAPType queryByNativeType (in DOMString aEncodingStyleURI, in DOMString aNativeType); */
+nsresult nsSOAPTypeRegistry::QueryByNativeType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNativeType, nsISOAPEncoder **_retval)
 {
-  nsStringKey typeKey(aTypeID);
-  *_retval = NS_STATIC_CAST(nsISOAPEncoder*, mTypeIDs->Get(&typeKey));
+  nsStringKey typeKey(aNativeType);
+  *_retval = NS_STATIC_CAST(nsISOAPEncoder*, mNativeTypes->Get(&typeKey));
   return NS_OK;
 }
 
-/* nsISOAPType queryBySchemaID (in DOMString aEncodingStyleURI, in DOMString aSchemaID); */
-nsresult nsSOAPTypeRegistry::QueryBySchemaType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, nsISOAPDecoder **_retval)
+/* nsISOAPType queryBySchemaType (in DOMString aEncodingStyleURI, in DOMString aSchemaType); */
+nsresult nsSOAPTypeRegistry::QueryBySchemaType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPDecoder **_retval)
 {
-  nsStringKey schemaKey(aSchemaID);
-  *_retval = NS_STATIC_CAST(nsISOAPDecoder*, mSchemaIDs->Get(&schemaKey));
+  nsStringKey schemaKey(aSchemaType);
+  *_retval = NS_STATIC_CAST(nsISOAPDecoder*, mSchemaTypes->Get(&schemaKey));
   return NS_OK;
 }
 
-NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPMessage *aMessage, nsISOAPParameter *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsIDOMNode* aDestination)
+NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPMessage *aMessage, nsISOAPParameter *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNativeType, nsIDOMNode* aDestination)
 {
-  nsAutoString typeID(aTypeID);
+  nsAutoString typeID(aNativeType);
   nsCOMPtr<nsISOAPEncoder> encoder;
   for (;;) {
     QueryByNativeType(aEncodingStyleURI, typeID, getter_AddRefs(encoder));
@@ -120,14 +120,14 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPMessage *aMessage, nsISOAPParame
       return NS_ERROR_NOT_IMPLEMENTED;
     typeID.Left(typeID, i);
   }
-  return encoder->Encode(aMessage, aSource, aEncodingStyleURI, aTypeID, aDestination);
+  return encoder->Encode(aMessage, aSource, aEncodingStyleURI, aNativeType, aDestination);
 }
 
-/* nsISupports decode (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID); */
-NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPMessage *aMessage, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, nsISOAPParameter **_retval)
+/* nsISupports decode (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaType); */
+NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPMessage *aMessage, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPParameter **_retval)
 {
   *_retval = nsnull;
-  nsAutoString schemaID(aSchemaID);
+  nsAutoString schemaID(aSchemaType);
   nsCOMPtr<nsISOAPDecoder> decoder;
   for (;;) {
     QueryBySchemaType(aEncodingStyleURI, schemaID, getter_AddRefs(decoder));
@@ -145,7 +145,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPMessage *aMessage, nsIDOMNode *a
     schemaID.Left(schemaID, i);
 #endif
   }
-  return decoder->Decode(aMessage, aSource, aEncodingStyleURI, aSchemaID, _retval);
+  return decoder->Decode(aMessage, aSource, aEncodingStyleURI, aSchemaType, _retval);
 }
 
 static const char* kAllAccess = "AllAccess";

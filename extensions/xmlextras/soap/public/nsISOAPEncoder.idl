@@ -42,7 +42,7 @@ interface nsISOAPEncoder : nsISupports {
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aTypeID The type ID of the source parameter
+ * @param aNativeType The type ID of the source parameter
  *
  * @param aDestination The node scope, if any, where the result 
  *   will live.  If this is null, then the result must be 
@@ -53,6 +53,6 @@ interface nsISOAPEncoder : nsISupports {
  */
 void encode(
     in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
-    in AString aEncodingStyleURI, in AString aTypeID, 
+    in AString aEncodingStyleURI, in AString aNativeType, 
     in nsIDOMNode aDestination);
 };

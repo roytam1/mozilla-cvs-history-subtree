@@ -44,7 +44,7 @@ protected:
 		                      const nsAReadableString & aDefaultTag, 
 		                      nsISOAPParameter * aSource, 
 		                      const nsAReadableString & aEncodingStyleURI, 
-				      const nsAReadableString & aSchemaID, 
+				      const nsAReadableString & aSchemaType, 
 				      nsIDOMNode* aDestination);
 #if 0
   nsresult StartEmptyMessage(nsISOAPMessage* message);

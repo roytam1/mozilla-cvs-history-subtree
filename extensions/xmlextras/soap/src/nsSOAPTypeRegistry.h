@@ -49,8 +49,8 @@ public:
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
 protected:
-  nsSupportsHashtable* mTypeIDs;
-  nsSupportsHashtable* mSchemaIDs;
+  nsSupportsHashtable* mNativeTypes;
+  nsSupportsHashtable* mSchemaTypes;
   nsCOMPtr<nsISOAPTypeRegistry> mDefault;
 
 };

@@ -149,7 +149,7 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 NS_IMETHODIMP nsSOAPCallEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rv;
@@ -240,7 +240,7 @@ NS_IMETHODIMP nsSOAPCallEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsSOAPCallEncoder::Decode(nsISOAPMessage *aMessage, 
 		                            nsIDOMNode *aSource, 
 					    const nsAReadableString & aEncodingStyleURI, 
-					    const nsAReadableString & aSchemaID, 
+					    const nsAReadableString & aSchemaType, 
 					    nsISOAPParameter **_retval)
 {
   nsresult rv;
@@ -301,7 +301,7 @@ NS_IMETHODIMP nsSOAPCallEncoder::Decode(nsISOAPMessage *aMessage,
       rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
       if (NS_FAILED(rv)) return rv;
       if (attr) {
-        type = nsSOAPUtils::kXMLSchemaSchemaIDPrefix;
+        type = nsSOAPUtils::kXMLSchemaSchemaTypePrefix;
 	nsAutoString t1;
 	nsAutoString t2;
 	attr->GetNodeValue(t1);
@@ -312,7 +312,7 @@ NS_IMETHODIMP nsSOAPCallEncoder::Decode(nsISOAPMessage *aMessage,
 	type.Append(t2);
       }
       else {
-        type = nsSOAPUtils::kXMLNameSchemaIDPrefix;
+        type = nsSOAPUtils::kXMLNameSchemaTypePrefix;
 	nsAutoString t1;
 	current->GetNamespaceURI(t1);
 	type.Append(t1);
@@ -349,7 +349,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 		                          const nsAReadableString & aDefaultTag, 
 		                          nsISOAPParameter * aSource, 
 		                          const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aSchemaID, 
+					  const nsAReadableString & aSchemaType, 
 					  nsIDOMNode* aDestination)
 {
   nsCOMPtr<nsIDOMDocument>document;
@@ -369,17 +369,17 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
   nsCOMPtr<nsIDOMNode>ignore;
   rc = aDestination->AppendChild(element, getter_AddRefs(ignore));
   if (NS_FAILED(rc)) return rc;
-  if (nsSOAPUtils::StartsWith(aSchemaID, nsSOAPUtils::kXMLSchemaSchemaIDPrefix)) {
-    PRUint32 l =  nsSOAPUtils::kXMLSchemaSchemaIDPrefix.Length() + 1;
-    PRUint32 i = aSchemaID.FindChar('#', l);
+  if (nsSOAPUtils::StartsWith(aSchemaType, nsSOAPUtils::kXMLSchemaSchemaTypePrefix)) {
+    PRUint32 l =  nsSOAPUtils::kXMLSchemaSchemaTypePrefix.Length() + 1;
+    PRUint32 i = aSchemaType.FindChar('#', l);
     if (i >= l) {	//  If possible, convert schema id into type field
       nsAutoString type;
       nsAutoString temp;
-      aSchemaID.Mid(temp, i, l - i);
+      aSchemaType.Mid(temp, i, l - i);
       rc = MakeNamespacePrefix(element, temp, type);
       if (NS_FAILED(rc)) return rc;
       type.Append(nsSOAPUtils::kTypeSeparator);
-      aSchemaID.Right(temp,aSchemaID.Length() - l - 1);
+      aSchemaType.Right(temp,aSchemaType.Length() - l - 1);
       type.Append(temp);
       element->SetAttributeNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, type);
     }
@@ -398,7 +398,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -429,7 +429,7 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -459,7 +459,7 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -490,7 +490,7 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -521,7 +521,7 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -552,7 +552,7 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -583,7 +583,7 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -614,7 +614,7 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPMessage *aMessage,
 NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aNativeType, 
 					  nsIDOMNode* aDestination)
 {
   nsresult rc;
@@ -661,7 +661,7 @@ Unknown
 NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPMessage *aMessage, 
 		                            nsIDOMNode *aSource, 
 					    const nsAReadableString & aEncodingStyleURI, 
-					    const nsAReadableString & aSchemaID, 
+					    const nsAReadableString & aSchemaType, 
 					    nsISOAPParameter **_retval)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
