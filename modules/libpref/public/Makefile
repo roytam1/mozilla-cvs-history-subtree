@@ -19,6 +19,10 @@ DEPTH	= ../../..
 
 MODULE	= pref
 
+<<<<<<< Makefile
 EXPORTS= prefapi.h prefldap.h
+=======
+EXPORTS	= prefapi.h prefldap.h nsIPref.h
+>>>>>>> 3.1.8.1
 
 include $(DEPTH)/config/rules.mk

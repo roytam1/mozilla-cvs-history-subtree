@@ -20,6 +20,10 @@ IGNORE_MANIFEST=1
 
 MODULE=pref 
 DEPTH=..\..\.. 
+<<<<<<< makefile.win
 EXPORTS=prefapi.h prefldap.h
+=======
+EXPORTS=prefapi.h prefldap.h nsIPref.h
+>>>>>>> 3.1.8.2
 
 include <$(DEPTH)\config\rules.mak>
