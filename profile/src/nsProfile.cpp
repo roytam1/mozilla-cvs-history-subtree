@@ -941,6 +941,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
 		NS_ASSERTION(NS_SUCCEEDED(rv),"failed to determine if we should force migration");
 	}
 
+#ifndef MOZ_XRE_APP   // xre apps don't use old profiles
     // Start Migaration activity
     rv = cmdLineArgs->GetCmdLineValue(INSTALLER_CMD_LINE_ARG, getter_Copies(cmdResult));
     if (NS_SUCCEEDED(rv) || forceMigration)
@@ -980,6 +981,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
             }
         }
     }
+#endif // MOZ_XRE_APP
 
 #ifdef DEBUG_profile_verbose
     printf("Profile Manager : Command Line Options : End\n");
