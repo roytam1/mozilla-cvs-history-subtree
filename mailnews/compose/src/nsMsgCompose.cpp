@@ -1062,9 +1062,6 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
       case nsIMsgCompType::ReplyToSenderAndGroup:
         {
           mQuotingToFollow = PR_TRUE;
-          NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
-  	      if (NS_SUCCEEDED(rv))
-		        prefs->GetBoolPref("mail.auto_quote", &mQuotingToFollow);
 
           // HACK: if we are replying to a message and that message used a charset over ride
           // (as speciifed in the top most window (assuming the reply originated from that window)
@@ -1156,89 +1153,94 @@ QuotingOutputStreamListener::~QuotingOutputStreamListener()
 
 QuotingOutputStreamListener::QuotingOutputStreamListener(const PRUnichar * originalMsgURI,
                                                          PRBool quoteHeaders,
+                                                         PRBool headersOnly,
                                                          nsIMsgIdentity *identity) 
 { 
   mQuoteHeaders = quoteHeaders;
+  mHeadersOnly = headersOnly;
   mIdentity = identity;
 
-  // For the built message body...
-
-  nsCOMPtr<nsIMessage> originalMsg = getter_AddRefs(GetIMessageFromURI(originalMsgURI));
-  if (originalMsg && !quoteHeaders)
+  if (! mHeadersOnly)
   {
-    nsresult rv;
+    // For the built message body...
 
-    // Setup the cite information....
-    nsXPIDLCString myGetter;
-    if (NS_SUCCEEDED(originalMsg->GetMessageId(getter_Copies(myGetter))))
+    nsCOMPtr<nsIMessage> originalMsg = getter_AddRefs(GetIMessageFromURI(originalMsgURI));
+    if (originalMsg && !quoteHeaders)
     {
-      nsCString unencodedURL(myGetter);
-           // would be nice, if nsXPIDL*String were ns*String
-      NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv)
-      if (!unencodedURL.IsEmpty() && NS_SUCCEEDED(rv) && serv)
+      nsresult rv;
+
+      // Setup the cite information....
+      nsXPIDLCString myGetter;
+      if (NS_SUCCEEDED(originalMsg->GetMessageId(getter_Copies(myGetter))))
       {
-        if (NS_SUCCEEDED(serv->Escape(unencodedURL.GetBuffer(),
-                 nsIIOService::url_FileBaseName | nsIIOService::url_Forced,
-                 getter_Copies(myGetter))))
+        nsCString unencodedURL(myGetter);
+             // would be nice, if nsXPIDL*String were ns*String
+        NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv)
+        if (!unencodedURL.IsEmpty() && NS_SUCCEEDED(rv) && serv)
         {
-          mCiteReference.AssignWithConversion(myGetter);
-          mCiteReference.Insert(NS_LITERAL_STRING("mid:"), 0);
+          if (NS_SUCCEEDED(serv->Escape(unencodedURL.GetBuffer(),
+                   nsIIOService::url_FileBaseName | nsIIOService::url_Forced,
+                   getter_Copies(myGetter))))
+          {
+            mCiteReference.AssignWithConversion(myGetter);
+            mCiteReference.Insert(NS_LITERAL_STRING("mid:"), 0);
+          }
+          else
+            mCiteReference.Truncate();
         }
-        else
-          mCiteReference.Truncate();
+      }
+
+      if (GetReplyOnTop() == 1) 
+        mCitePrefix += NS_LITERAL_STRING("<br><br>");
+
+      nsXPIDLString author;
+      rv = originalMsg->GetMime2DecodedAuthor(getter_Copies(author));
+      if (NS_SUCCEEDED(rv))
+      {
+        char * authorName = nsnull;
+        nsCOMPtr<nsIMsgHeaderParser> parser = do_GetService(kHeaderParserCID);
+
+        if (parser)
+        {
+          nsAutoString aCharset;
+          aCharset.AssignWithConversion(msgCompHeaderInternalCharset());
+          char * utf8Author = nsnull;
+          nsAutoString authorStr; authorStr.Assign(author);
+          rv = ConvertFromUnicode(aCharset, authorStr, &utf8Author);
+          if (NS_SUCCEEDED(rv) && utf8Author)
+          {
+            nsCAutoString acharsetC;
+            acharsetC.AssignWithConversion(aCharset);
+            rv = parser->ExtractHeaderAddressName(acharsetC, utf8Author,
+                                                  &authorName);
+            if (NS_SUCCEEDED(rv))
+              rv = ConvertToUnicode(aCharset, authorName, authorStr);
+          }
+          else
+          {
+            nsCAutoString authorCStr;
+            authorCStr.AssignWithConversion(author);
+            rv = parser->ExtractHeaderAddressName(nsnull, authorCStr,
+                                                  &authorName);
+            if (NS_SUCCEEDED(rv))
+              authorStr.AssignWithConversion(authorName);
+          }
+          PR_FREEIF(utf8Author);
+          if (authorName)
+            PL_strfree(authorName);
+
+          if (NS_SUCCEEDED(rv) && !authorStr.IsEmpty())
+            mCitePrefix.Append(authorStr);
+          else
+            mCitePrefix.Append(author);
+          mCitePrefix.AppendWithConversion(" wrote:<br><html>");  //XXX I18n?
+        }
       }
     }
 
-    if (GetReplyOnTop() == 1) 
-      mCitePrefix += NS_LITERAL_STRING("<br><br>");
-
-    nsXPIDLString author;
-    rv = originalMsg->GetMime2DecodedAuthor(getter_Copies(author));
-    if (NS_SUCCEEDED(rv))
-    {
-      char * authorName = nsnull;
-      nsCOMPtr<nsIMsgHeaderParser> parser = do_GetService(kHeaderParserCID);
-
-      if (parser)
-      {
-        nsAutoString aCharset;
-        aCharset.AssignWithConversion(msgCompHeaderInternalCharset());
-        char * utf8Author = nsnull;
-        nsAutoString authorStr; authorStr.Assign(author);
-        rv = ConvertFromUnicode(aCharset, authorStr, &utf8Author);
-        if (NS_SUCCEEDED(rv) && utf8Author)
-        {
-          nsCAutoString acharsetC;
-          acharsetC.AssignWithConversion(aCharset);
-          rv = parser->ExtractHeaderAddressName(acharsetC, utf8Author,
-                                                &authorName);
-          if (NS_SUCCEEDED(rv))
-            rv = ConvertToUnicode(aCharset, authorName, authorStr);
-        }
-        else
-        {
-          nsCAutoString authorCStr;
-          authorCStr.AssignWithConversion(author);
-          rv = parser->ExtractHeaderAddressName(nsnull, authorCStr,
-                                                &authorName);
-          if (NS_SUCCEEDED(rv))
-            authorStr.AssignWithConversion(authorName);
-        }
-        PR_FREEIF(utf8Author);
-        if (authorName)
-          PL_strfree(authorName);
-
-        if (NS_SUCCEEDED(rv) && !authorStr.IsEmpty())
-          mCitePrefix.Append(authorStr);
-        else
-          mCitePrefix.Append(author);
-        mCitePrefix.AppendWithConversion(" wrote:<br><html>");  //XXX I18n?
-      }
-    }
+    if (mCitePrefix.IsEmpty())
+      mCitePrefix.AppendWithConversion("<br><br>--- Original Message ---<br><html>");  //XXX I18n?
   }
-
-  if (mCitePrefix.IsEmpty())
-    mCitePrefix.AppendWithConversion("<br><br>--- Original Message ---<br><html>");  //XXX I18n?
   
   NS_INIT_REFCNT(); 
 }
@@ -1426,7 +1428,8 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
       }
     }
     
-    mMsgBody.AppendWithConversion("</html>");
+    if (! mHeadersOnly)
+      mMsgBody.AppendWithConversion("</html>");
     
     // Now we have an HTML representation of the quoted message.
     // If we are in plain text mode, we need to convert this to plain
@@ -1464,6 +1467,9 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnDataAvailable(nsIChannel * /* aChan
 {
 	nsresult rv = NS_OK;
   NS_ENSURE_ARG(inStr);
+  
+  if (mHeadersOnly)
+    return rv;
 
 	char *newBuf = (char *)PR_Malloc(count + 1);
 	if (!newBuf)
@@ -1533,9 +1539,14 @@ nsMsgCompose::QuoteOriginalMessage(const PRUnichar *originalMsgURI, PRInt32 what
   if (NS_FAILED(rv) || !mQuote)
     return NS_ERROR_FAILURE;
 
+  PRBool bAutoQuote = PR_TRUE;
+  NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
+  if (NS_SUCCEEDED(rv))
+    prefs->GetBoolPref("mail.auto_quote", &bAutoQuote);
+
   // Create the consumer output stream.. this will receive all the HTML from libmime
   mQuoteStreamListener =
-    new QuotingOutputStreamListener(originalMsgURI, what != 1, m_identity);
+    new QuotingOutputStreamListener(originalMsgURI, what != 1, !bAutoQuote, m_identity);
   
   if (!mQuoteStreamListener)
   {
