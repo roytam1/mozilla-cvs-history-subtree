@@ -71,6 +71,7 @@
 #define INCL_DOS
 #define INCL_ERRORS
 #include <os2.h>
+#include <process.h>
 #endif
 
 #define DEFAULT_COUNT 10000
