@@ -956,8 +956,18 @@ prefpane[selected="true"] {
   opacity: 0.0;
 }
 
+prefwindow[type="child"] > prefpane,
+prefwindow[type="child"] > prefpane[selected="true"] {
+  opacity: 1.0;
+}
+
 prefpane > .content-box {
   overflow: hidden;
+}
+
+prefwindow[type="child"] > prefpane > .content-box {
+  -moz-box-flex: 1;
+  overflow: -moz-hidden-unscrollable;
 }
 
 preferences {

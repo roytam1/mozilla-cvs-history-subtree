@@ -135,8 +135,14 @@
             this.removeAttribute("disabled");
 
           var elements = document.getElementsByAttribute("preference", this.id);
-          for (var i = 0; i < elements.length; ++i) 
+          for (var i = 0; i < elements.length; ++i) {
             elements[i].disabled = val;
+            
+            var labels = document.getElementsByAttribute("control", elements[i].id);
+            for (var j = 0; j < labels.length; ++j)
+              labels[j].disabled = val;
+          }
+            
           return val;
         ]]>
         </setter>
@@ -364,7 +370,7 @@
       <![CDATA[
         if (this.type != "child") {
           var psvc = Components.classes["@mozilla.org/preferences-service;1"]
-                              .getService(Components.interfaces.nsIPrefBranch);
+                               .getService(Components.interfaces.nsIPrefBranch);
           this.instantApply = psvc.getBoolPref("browser.preferences.instantApply");
           if (this.instantApply) {
             var dlgButtons = document.getAnonymousElementByAttribute(this, "anonid", "dlg-buttons");
@@ -476,15 +482,17 @@
           // selectedIndex to that value to switch to it.
           for (var i = 0; i < this.childNodes.length; ++i) {
             if (this.childNodes[i] == aPaneElement) {
-              var oldPane = document.getElementById(this.lastSelected);
-              oldPane.selected = !(aPaneElement.selected = true);
-              oldPane.style.opacity = 0.0;
-              if (!this._initialized || oldPane.id != aPaneElement.id) {
-                this._paneDeck.setAttribute("selectedIndex", i);
-                this.lastSelected = aPaneElement.id;
-                aPaneElement.style.opacity = 0.0;
-                this.animate(oldPane, aPaneElement);
-                this._initialized = true;
+              this._paneDeck.setAttribute("selectedIndex", i);
+              
+              if (this.type != "child") {
+                var oldPane = this.lastSelected ? document.getElementById(this.lastSelected) : this.preferencePanes[0];
+                oldPane.selected = !(aPaneElement.selected = true);
+                if (!this._initialized || oldPane.id != aPaneElement.id) {
+                  this.lastSelected = aPaneElement.id;
+                  aPaneElement.style.opacity = 0.0;
+                  this.animate(oldPane, aPaneElement);
+                  this._initialized = true;
+                }
               }
               break;
             }
@@ -764,8 +772,13 @@
         // Initialize all values from preferences.
         var elements = this.preferenceElements;
         for (var i = 0; i < elements.length; ++i) {
-          var preference = this.preferenceForElement(elements[i]);
-          preference.setElementValue(elements[i]);
+          try {
+            var preference = this.preferenceForElement(elements[i]);
+            preference.setElementValue(elements[i]);
+          }
+          catch (e) {
+            dump("*** No preference found for " + elements[i].getAttribute("preference") + "\n");
+          }
         }
       ]]>      
       </handler>

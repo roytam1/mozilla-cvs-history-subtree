@@ -4,6 +4,8 @@ browser.jar:
 *   content/browser/preferences/advancedScript.xul
 *   content/browser/preferences/content.xul
 *   content/browser/preferences/content.js
+*   content/browser/preferences/connection.xul
+*   content/browser/preferences/connection.js
 *   content/browser/preferences/downloads.xul
 *   content/browser/preferences/downloads.js
 *   content/browser/preferences/general.xul

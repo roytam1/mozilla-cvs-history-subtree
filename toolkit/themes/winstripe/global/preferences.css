@@ -63,6 +63,10 @@ prefwindow[type="child"] > prefpane {
   padding-right: 10px;
 }
 
+prefwindow[type="child"] .prefWindow-dlgbuttons {
+  padding: 0px;
+}
+
 radio[pane] {
   border: 1px solid transparent;
   margin: 0px 1px 0px 1px;

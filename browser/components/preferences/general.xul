@@ -30,8 +30,8 @@
       <hbox align="center" flex="1">
         <label value="&location.label;" accesskey="&location.accesskey;" control="browserStartupHomepage"/>
         <textbox id="browserStartupHomepage" class="padded" flex="1" 
-                type="autocomplete" autocompletesearch="history"
-                preference="browser.startup.homepage"/>
+                 type="autocomplete" autocompletesearch="history"
+                 preference="browser.startup.homepage"/>
       </hbox>
       <hbox align="center" pack="end">
         <button label="&useCurrent.label;" accesskey="&useCurrent.accesskey;"

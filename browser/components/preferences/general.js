@@ -132,7 +132,8 @@ var gGeneralPane = {
   
   showConnections: function ()
   {
-    openDialog("chrome://browser/content/pref/pref-connection.xul", "", "centerscreen,chrome,modal=yes,dialog=yes");
+    document.documentElement.openSubDialog("chrome://browser/content/preferences/connection.xul",
+                                           "", null);
   },
 
 #ifdef HAVE_SHELL_SERVICE

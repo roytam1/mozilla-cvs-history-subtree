@@ -38,8 +38,8 @@
 
 <!DOCTYPE overlay [
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd">
-%brandDTD;
 <!ENTITY % downloadsDTD SYSTEM "chrome://browser/locale/preferences/downloads.dtd">
+%brandDTD;
 %downloadsDTD;
 ]>
 

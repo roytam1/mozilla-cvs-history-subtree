@@ -18,6 +18,6 @@
 
 <!ENTITY showConnections.label      "Connection Settings...">
 <!ENTITY showConnections.accesskey  "o">
-<!ENTITY proxiesInfo.label          "Set up Proxies for accessing the internet.">
+<!ENTITY proxiesInfo.label          "Determine how &brandShortName; connects to the Internet.">
 <!ENTITY connectionsInfo.caption    "Connection">
 
