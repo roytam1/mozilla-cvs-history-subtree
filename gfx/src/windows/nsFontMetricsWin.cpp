@@ -44,6 +44,8 @@
 #define NS_FONT_TYPE_NON_UNICODE       1
 
 
+#define ENCODING_FOR_SYMBOL_FONT "windows-1252"
+
 #define NOT_SETUP 0x33
 static PRBool gIsWIN95 = NOT_SETUP;
 
@@ -105,6 +107,9 @@ PLHashTable* nsFontMetricsWin::gFontMaps = nsnull;
 
 static int gInitializedFamilyNames = 0;
 PLHashTable* nsFontMetricsWin::gFamilyNames = nsnull;
+
+static int gInitializedEnableSymbolFonts = 0;
+static PRBool gEnableSymbolFonts = PR_FALSE;
 
 //-- Font weight
 static int gInitializedFontWeights = 0;
@@ -1055,21 +1060,40 @@ GetEncoding(const char* aFontName, nsString& aValue)
 // converter for the font whose name is given. The caller holds a reference
 // to the converter, and should take care of the release...
 static nsresult
-GetConverter(const char* aFontName, nsIUnicodeEncoder** aConverter)
+GetConverterCommon(nsString& value, nsIUnicodeEncoder** aConverter)
 {
   *aConverter = nsnull;
-
-  nsAutoString value;
-  nsresult rv = GetEncoding(aFontName, value);
-  if (NS_FAILED(rv)) return rv;
-
   nsCOMPtr<nsIAtom> charset;
-  rv = gCharSetManager->GetCharsetAtom(value.get(), getter_AddRefs(charset));
+  nsresult rv = gCharSetManager->GetCharsetAtom(value.get(), getter_AddRefs(charset));
   if (NS_FAILED(rv)) return rv;
 
   rv = gCharSetManager->GetUnicodeEncoder(charset, aConverter);
   if (NS_FAILED(rv)) return rv;
   return (*aConverter)->SetOutputErrorBehavior((*aConverter)->kOnError_Replace, nsnull, '?');
+}
+static nsresult
+GetConverter(const char* aFontName, nsIUnicodeEncoder** aConverter)
+{
+  *aConverter = nsnull;
+  nsAutoString value;
+  nsresult rv = GetEncoding(aFontName, value);
+  if (NS_FAILED(rv)) return rv;
+  return GetConverterCommon(value, aConverter);
+}
+static nsresult
+GetDefaultConverterForSymbol(nsIUnicodeEncoder** aConverter)
+{
+  if(! gInitializedEnableSymbolFonts) 
+  {
+    gPref->GetBoolPref("win.font.enablesymbol", &gEnableSymbolFonts);
+    gInitializedEnableSymbolFonts = 1;
+  }
+  if( ! gEnableSymbolFonts )
+    return NS_ERROR_FAILURE;
+
+  nsAutoString value;
+  value.AssignWithConversion(ENCODING_FOR_SYMBOL_FONT);
+  return GetConverterCommon(value, aConverter);
 }
 
 // This function uses the charset converter manager to fill the map for the
@@ -1080,6 +1104,19 @@ GetMap(const char* aFontName, PRUint32* aMap)
   // see if we know something about the converter of this font 
   nsCOMPtr<nsIUnicodeEncoder> converter;
   if (NS_SUCCEEDED(GetConverter(aFontName, getter_AddRefs(converter)))) {
+    nsCOMPtr<nsICharRepresentable> mapper = do_QueryInterface(converter);
+    if (mapper && NS_SUCCEEDED(mapper->FillInfo(aMap))) {
+      return 1;
+    }
+  }
+  return 0;
+}
+static int
+GetDefaultMapForSymbol(PRUint32* aMap)
+{
+  // see if we know something about the converter of this font 
+  nsCOMPtr<nsIUnicodeEncoder> converter;
+  if (NS_SUCCEEDED(GetDefaultConverterForSymbol(getter_AddRefs(converter)))) {
     nsCOMPtr<nsICharRepresentable> mapper = do_QueryInterface(converter);
     if (mapper && NS_SUCCEEDED(mapper->FillInfo(aMap))) {
       return 1;
@@ -1318,8 +1355,11 @@ nsFontMetricsWin::GetCMAP(HDC aDC, const char* aShortName, int* aFontType, PRUin
           *aFontType = NS_FONT_TYPE_NON_UNICODE;
         }
         if (!GetMap(aShortName, map)) {
-          PR_Free(map);
-          map = gEmptyMap;
+          // cannot get encoding, fallback 
+          if(!GetDefaultMapForSymbol(map)) {
+            PR_Free(map);
+            map = gEmptyMap;
+          }
         }
         PR_Free(buf);
 
@@ -1898,6 +1938,10 @@ nsFontMetricsWin::LoadFont(HDC aDC, nsString* aName)
         }
 #endif
         font = new nsFontWinNonUnicode(&logFont, hfont, map, converter);
+      } else {
+        if (NS_SUCCEEDED(GetDefaultConverterForSymbol(getter_AddRefs(converter)))) {
+         font = new nsFontWinNonUnicode(&logFont, hfont, map, converter);
+       }
       }
     }
     if (!font) {
