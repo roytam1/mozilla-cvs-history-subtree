@@ -109,6 +109,52 @@ nsPrefLDAP::OnLDAPMessage(nsILDAPMessage *aMessage)
     }
 }
 
+// void onLDAPInit (in nsresult aStatus);
+//
+NS_IMETHODIMP
+nsPrefLDAP::OnLDAPInit(nsresult aStatus)
+{
+    nsresult rv;        // temp for xpcom return values
+    nsCOMPtr<nsILDAPMessageListener> selfProxy;
+
+    // create and initialize an LDAP operation (to be used for the bind)
+    //  
+    mOperation = do_CreateInstance("@mozilla.org/network/ldap-operation;1", 
+                                   &rv);
+    if (NS_FAILED(rv)) {
+        FinishLDAPQuery();
+        return NS_ERROR_FAILURE;
+    }
+
+    // get a proxy object so the callback happens on the main thread
+    //
+    rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
+                              NS_GET_IID(nsILDAPMessageListener), 
+                              NS_STATIC_CAST(nsILDAPMessageListener *, this),
+                              PROXY_ASYNC | PROXY_ALWAYS, 
+                              getter_AddRefs(selfProxy));
+    if (NS_FAILED(rv)) {
+        FinishLDAPQuery();
+        return NS_ERROR_FAILURE;
+    }
+
+    // our OnLDAPMessage accepts all result callbacks
+    //
+    rv = mOperation->Init(mConnection, selfProxy);
+    if (NS_FAILED(rv)) {
+        FinishLDAPQuery();
+        return NS_ERROR_UNEXPECTED; // this should never happen
+    }
+
+    // kick off a bind operation 
+    // 
+    rv = mOperation->SimpleBind(NULL); 
+    if (NS_FAILED(rv)) {
+        FinishLDAPQuery();
+        return NS_ERROR_FAILURE;
+    }
+}
+
 nsresult
 nsPrefLDAP::OnLDAPBind(nsILDAPMessage *aMessage)
 {
@@ -409,48 +455,26 @@ nsPrefLDAP::InitConnection()
         return NS_ERROR_FAILURE;
     }
         
-    rv = mConnection->Init(host, port, 0);
-    if NS_FAILED(rv) {
-        FinishLDAPQuery();
-        return rv;
-    }
-
-    // create and initialize an LDAP operation (to be used for the bind)
-    //  
-    mOperation = do_CreateInstance("@mozilla.org/network/ldap-operation;1", 
-                                   &rv);
-    if (NS_FAILED(rv)) {
-        FinishLDAPQuery();
-        return NS_ERROR_FAILURE;
-    }
-
     // get a proxy object so the callback happens on the main thread
     //
     rv = NS_GetProxyForObject(NS_CURRENT_EVENTQ,
                               NS_GET_IID(nsILDAPMessageListener), 
-                              NS_STATIC_CAST(nsILDAPMessageListener *, this),
+                              NS_STATIC_CAST(nsILDAPMessageListener *, this), 
                               PROXY_ASYNC | PROXY_ALWAYS, 
                               getter_AddRefs(selfProxy));
     if (NS_FAILED(rv)) {
         FinishLDAPQuery();
+        NS_ERROR("nsPrefLDAP::InitConnection(): couldn't "
+                 "create proxy to this object for callback");
         return NS_ERROR_FAILURE;
     }
 
-    // our OnLDAPMessage accepts all result callbacks
-    //
-    rv = mOperation->Init(mConnection, selfProxy);
+    rv = mConnection->Init(host, port, 0, selfProxy);
     if (NS_FAILED(rv)) {
         FinishLDAPQuery();
         return NS_ERROR_UNEXPECTED; // this should never happen
     }
 
-    // kick off a bind operation 
-    // 
-    rv = mOperation->SimpleBind(NULL); 
-    if (NS_FAILED(rv)) {
-        FinishLDAPQuery();
-        return NS_ERROR_FAILURE;
-    }
     return NS_OK;
 }
 
