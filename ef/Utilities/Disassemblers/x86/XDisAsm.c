@@ -47,7 +47,10 @@
 #define FALSE 0
 typedef uint32 db_addr_t;
 typedef int boolean_t;
-#define __P(x) x
+
+#ifndef __P
+#    define __P(x) x
+#endif
 
 #define DB_STGY_ANY 0
 #define DB_STGY_XTRN 1
