@@ -128,8 +128,8 @@ public:                                                                       \
   const cls&  operator*(void) const   { return *mPtr; }                       \
   operator const cls*(void) const     { return mPtr;  }                       \
 private:                                                                      \
-  void* operator new(size_t size);                                            \
-  void operator delete(void* aPtr);                                           \
+  void* operator new(size_t size) { return 0; }                               \
+  void operator delete(void* aPtr)  {}                                        \
   cls*  mPtr;                                                                 \
 public:                                                                       \
 friend inline PRBool operator==(const cls* aInterface, const cls##Ptr& aPtr)  \
