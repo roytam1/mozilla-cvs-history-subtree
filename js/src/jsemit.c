@@ -3415,7 +3415,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                     if (op == JSOP_SETNAME)
                         EMIT_ATOM_INDEX_OP(JSOP_BINDNAME, atomIndex);
                     pn3 = pn2->pn_expr;
-                    if (!js_DefineCompileTimeConstant(cx, cg, pn2->pn_atom,
+                    if (pn->pn_op == JSOP_DEFCONST &&
+                        !js_DefineCompileTimeConstant(cx, cg, pn2->pn_atom,
                                                       pn3)) {
                         return JS_FALSE;
                     }

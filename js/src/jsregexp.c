@@ -137,7 +137,7 @@ struct RENode {
     union {
         void        *kid2;      /* second operand */
         jsint       num;        /* could be a number */
-        jsint       parenIndex; /* or a parenthesis index */
+        uint16      parenIndex; /* or a parenthesis index */
         struct {                /* or a quantifier range */
             uint16  min;
             uint16  max;
@@ -224,9 +224,9 @@ typedef struct REBackTrackData {
     jsbytecode *backtrack_pc;       /* where to backtrack to */
     jsbytecode backtrack_op;
     const jschar *cp;               /* index in text of match at backtrack */
-    intN parenIndex;                /* start index of saved paren contents */
+    uint16 parenIndex;              /* start index of saved paren contents */
     uint16 parenCount;              /* # of saved paren contents */
-    uint16 precedingStateTop;       /* number of parent states */
+    uint16 saveStateStackTop;       /* number of parent states */
     /* saved parent states follow */
     /* saved paren contents follow */
 } REBackTrackData;
@@ -244,11 +244,11 @@ typedef struct REGlobalData {
 
     REProgState *stateStack;        /* stack of state of current parents */
     uint16 stateStackTop;
-    uint16 maxStateStack;
+    uint16 stateStackLimit;
 
     REBackTrackData *backTrackStack;/* stack of matched-so-far positions */
     REBackTrackData *backTrackSP;
-    size_t maxBackTrack;
+    size_t backTrackStackSize;
     size_t cursz;                   /* size of current stack entry */
 
     JSArenaPool pool;               /* I don't understand but it's faster to
@@ -429,8 +429,8 @@ static JSBool ParseQuantifier(CompilerState *state);
  *  regexp:     altern                  A regular expression is one or more
  *              altern '|' regexp       alternatives separated by vertical bar.
  */
+#define INITIAL_STACK_SIZE  128
 
-#define INITIAL_STACK_SIZE (128)
 static JSBool
 ParseRegExp(CompilerState *state)
 {
@@ -465,10 +465,11 @@ ParseRegExp(CompilerState *state)
         parenIndex = state->parenCount;
         if (state->cp == state->cpend) {
             /*
-             * If we are at the end of the regexp and we're short an operand,
-             * the regexp must have the form /x|/ or some such.
+             * If we are at the end of the regexp and we're short one or more
+             * operands, the regexp must have the form /x|/ or some such, with
+             * left parentheses making us short more than one operand.
              */
-            if (operatorSP == operandSP) {
+            if (operatorSP >= operandSP) {
                 operand = NewRENode(state, REOP_EMPTY);
                 if (!operand)
                     goto out;
@@ -640,6 +641,15 @@ restartOperator:
                 }
             }
             break;
+        case '+':
+        case '*':
+        case '?':
+        case '{':
+            js_ReportCompileErrorNumber(state->context, state->tokenStream,
+                                        NULL, JSREPORT_ERROR,
+                                        JSMSG_BAD_QUANTIFIER, state->cp);
+            result = JS_FALSE;
+            goto out;
         default:
             /* Anything else is the start of the next term */
             op = REOP_CONCAT;
@@ -667,21 +677,76 @@ out:
 }
 
 /*
- * Extract and return a decimal value at state->cp, the
- * initial character 'c' has already been read.
+ * Hack two bits in CompilerState.flags, for use within FindParenCount to flag
+ * its being on the stack, and to propagate errors to its callers.
  */
-static intN
-GetDecimalValue(jschar c, CompilerState *state)
+#define JSREG_FIND_PAREN_COUNT  0x8000
+#define JSREG_FIND_PAREN_ERROR  0x4000
+
+/*
+ * Magic return value from FindParenCount and GetDecimalValue, to indicate
+ * overflow beyond GetDecimalValue's max parameter, or a computed maximum if
+ * its findMax parameter is non-null.
+ */
+#define OVERFLOW_VALUE          ((uintN)-1)
+
+static uintN
+FindParenCount(CompilerState *state)
 {
-    intN value = JS7_UNDEC(c);
+    CompilerState temp;
+    int i;
+
+    if (state->flags & JSREG_FIND_PAREN_COUNT)
+        return OVERFLOW_VALUE;
+
+    /*
+     * Copy state into temp, flag it so we never report an invalid backref,
+     * and reset its members to parse the entire regexp.  This is obviously
+     * suboptimal, but GetDecimalValue calls us only if a backref appears to
+     * refer to a forward parenthetical, which is rare.
+     */
+    temp = *state;
+    temp.flags |= JSREG_FIND_PAREN_COUNT;
+    temp.cp = temp.cpbegin;
+    temp.parenCount = 0;
+    temp.classCount = 0;
+    temp.progLength = 0;
+    temp.treeDepth = 0;
+    for (i = 0; i < CLASS_CACHE_SIZE; i++)
+        temp.classCache[i].start = NULL;
+
+    if (!ParseRegExp(&temp)) {
+        state->flags |= JSREG_FIND_PAREN_ERROR;
+        return OVERFLOW_VALUE;
+    }
+    return temp.parenCount;
+}
+
+/*
+ * Extract and return a decimal value at state->cp.  The initial character c
+ * has already been read.  Return OVERFLOW_VALUE if the result exceeds max.
+ * Callers who pass a non-null findMax should test JSREG_FIND_PAREN_ERROR in
+ * state->flags to discover whether an error occurred under findMax.
+ */
+static uintN
+GetDecimalValue(jschar c, uintN max, uintN (*findMax)(CompilerState *state),
+                CompilerState *state)
+{
+    uintN value = JS7_UNDEC(c);
+    JSBool overflow = (value > max && (!findMax || value > findMax(state)));
+
+    /* The following restriction allows simpler overflow checks. */
+    JS_ASSERT(max <= ((uintN)-1 - 9) / 10);
     while (state->cp < state->cpend) {
         c = *state->cp;
         if (!JS7_ISDEC(c))
             break;
-        value = (10 * value) + JS7_UNDEC(c);
+        value = 10 * value + JS7_UNDEC(c);
+        if (!overflow && value > max && (!findMax || value > findMax(state)))
+            overflow = JS_TRUE;
         ++state->cp;
     }
-    return value;
+    return overflow ? OVERFLOW_VALUE : value;
 }
 
 /*
@@ -954,7 +1019,15 @@ ParseTerm(CompilerState *state)
             return JS_TRUE;
         /* Decimal escape */
         case '0':
-            if (JS_HAS_STRICT_OPTION(state->context)){
+            if (JS_HAS_STRICT_OPTION(state->context)) {
+                if (!js_ReportCompileErrorNumber(state->context,
+                                                 state->tokenStream,
+                                                 NULL,
+                                                 JSREPORT_WARNING |
+                                                 JSREPORT_STRICT,
+                                                 JSMSG_INVALID_BACKREF)) {
+                    return JS_FALSE;
+                }
                 c = 0;
             } else {
      doOctal:
@@ -989,13 +1062,27 @@ ParseTerm(CompilerState *state)
         case '8':
         case '9':
             termStart = state->cp - 1;
-            num = (uintN)GetDecimalValue(c, state);
-            if (num > 9 &&
-                num > state->parenCount &&
-                !JS_HAS_STRICT_OPTION(state->context)) {
-                state->cp = termStart;
-                goto doOctal;
+            num = GetDecimalValue(c, state->parenCount, FindParenCount, state);
+            if (state->flags & JSREG_FIND_PAREN_ERROR)
+                return JS_FALSE;
+            if (num == OVERFLOW_VALUE) {
+                if (!JS_HAS_STRICT_OPTION(state->context)) {
+                    state->cp = termStart;
+                    goto doOctal;
+                }
+                if (!js_ReportCompileErrorNumber(state->context,
+                                                 state->tokenStream,
+                                                 NULL,
+                                                 JSREPORT_WARNING |
+                                                 JSREPORT_STRICT,
+                                                 (c >= '8')
+                                                 ? JSMSG_INVALID_BACKREF
+                                                 : JSMSG_BAD_BACKREF)) {
+                    return JS_FALSE;
+                }
+                num = 0x10000;
             }
+            JS_ASSERT(1 <= num && num <= 0x10000);
             state->result = NewRENode(state, REOP_BACKREF);
             if (!state->result)
                 return JS_FALSE;
@@ -1177,7 +1264,7 @@ ParseQuantifier(CompilerState *state)
             if (!state->result)
                 return JS_FALSE;
             state->result->u.range.min = 1;
-            state->result->u.range.max = -1;
+            state->result->u.range.max = (uint16)-1;
             /* <PLUS>, <next> ... <ENDCHILD> */
             state->progLength += 4;
             goto quantifier;
@@ -1186,7 +1273,7 @@ ParseQuantifier(CompilerState *state)
             if (!state->result)
                 return JS_FALSE;
             state->result->u.range.min = 0;
-            state->result->u.range.max = -1;
+            state->result->u.range.max = (uint16)-1;
             /* <STAR>, <next> ... <ENDCHILD> */
             state->progLength += 4;
             goto quantifier;
@@ -1202,18 +1289,17 @@ ParseQuantifier(CompilerState *state)
         case '{':       /* balance '}' */
             {
                 intN err;
-                intN min = 0;
-                intN max = -1;
+                uintN min, max;
                 jschar c;
                 const jschar *errp = state->cp++;
 
                 c = *state->cp;
                 if (JS7_ISDEC(c)) {
                     ++state->cp;
-                    min = GetDecimalValue(c, state);
+                    min = GetDecimalValue(c, 0xFFFF, NULL, state);
                     c = *state->cp;
 
-                    if ((min + 1) >> 16) {
+                    if (min == OVERFLOW_VALUE) {
                         err = JSMSG_MIN_TOO_BIG;
                         goto quantError;
                     }
@@ -1221,9 +1307,9 @@ ParseQuantifier(CompilerState *state)
                         c = *++state->cp;
                         if (JS7_ISDEC(c)) {
                             ++state->cp;
-                            max = GetDecimalValue(c, state);
+                            max = GetDecimalValue(c, 0xFFFF, NULL, state);
                             c = *state->cp;
-                            if ((max + 1) >> 16) {
+                            if (max == OVERFLOW_VALUE) {
                                 err = JSMSG_MAX_TOO_BIG;
                                 goto quantError;
                             }
@@ -1231,6 +1317,8 @@ ParseQuantifier(CompilerState *state)
                                 err = JSMSG_OUT_OF_ORDER;
                                 goto quantError;
                             }
+                        } else {
+                            max = (uintN)-1;
                         }
                     } else {
                         max = min;
@@ -1644,28 +1732,29 @@ js_NewRegExpOpt(JSContext *cx, JSTokenStream *ts,
 static REBackTrackData *
 PushBackTrackState(REGlobalData *gData, REOp op,
                    jsbytecode *target, REMatchState *x, const jschar *cp,
-                   intN parenIndex, intN parenCount)
+                   uintN parenIndex, intN parenCount)
 {
     intN i;
     REBackTrackData *result =
         (REBackTrackData *) ((char *)gData->backTrackSP + gData->cursz);
 
-    size_t sz = sizeof(REBackTrackData)
-                    + gData->stateStackTop * sizeof(REProgState)
-                    + parenCount * sizeof(RECapture);
+    size_t sz = sizeof(REBackTrackData) +
+                gData->stateStackTop * sizeof(REProgState) +
+                parenCount * sizeof(RECapture);
 
+    ptrdiff_t btsize = gData->backTrackStackSize;
+    ptrdiff_t btincr = ((char *)result + sz) -
+                       ((char *)gData->backTrackStack + btsize);
 
-    if ((char *)result + sz >
-        (char *)gData->backTrackStack + gData->maxBackTrack) {
+    if (btincr > 0) {
         ptrdiff_t offset = (char *)result - (char *)gData->backTrackStack;
-        gData->backTrackStack
-            = (REBackTrackData *)JS_ArenaGrow(&gData->pool,
-                                              gData->backTrackStack,
-                                              gData->maxBackTrack,
-                                              gData->maxBackTrack);
-        gData->maxBackTrack <<= 1;
+
+        btincr = JS_ROUNDUP(btincr, btsize);
+        JS_ARENA_GROW_CAST(gData->backTrackStack, REBackTrackData *,
+                           &gData->pool, btsize, btincr);
         if (!gData->backTrackStack)
             return NULL;
+        gData->backTrackStackSize = btsize + btincr;
         result = (REBackTrackData *) ((char *)gData->backTrackStack + offset);
     }
     gData->backTrackSP = result;
@@ -1677,15 +1766,17 @@ PushBackTrackState(REGlobalData *gData, REOp op,
     result->cp = cp;
     result->parenCount = parenCount;
 
-    result->precedingStateTop = gData->stateStackTop;
+    result->saveStateStackTop = gData->stateStackTop;
     JS_ASSERT(gData->stateStackTop);
     memcpy(result + 1, gData->stateStack,
-           sizeof(REProgState) * result->precedingStateTop);
+           sizeof(REProgState) * result->saveStateStackTop);
 
-    if (parenCount != -1) {
+    /* FIXME: parenCount should be uintN */
+    JS_ASSERT(parenCount >= 0);
+    if (parenCount > 0) {
         result->parenIndex = parenIndex;
         memcpy((char *)(result + 1) +
-               sizeof(REProgState) * result->precedingStateTop,
+               sizeof(REProgState) * result->saveStateStackTop,
                &x->parens[parenIndex],
                sizeof(RECapture) * parenCount);
         for (i = 0; i < parenCount; i++)
@@ -2030,21 +2121,22 @@ js_DestroyRegExp(JSContext *cx, JSRegExp *re)
 static JSBool
 ReallocStateStack(REGlobalData *gData)
 {
-    size_t sz = sizeof(REProgState) * gData->maxStateStack;
-    gData->maxStateStack <<= 1;
-    gData->stateStack
-        = (REProgState *)JS_ArenaGrow(&gData->pool, gData->stateStack, sz, sz);
+    uint16 limit = gData->stateStackLimit;
+    size_t sz = sizeof(REProgState) * limit;
+
+    JS_ARENA_GROW_CAST(gData->stateStack, REProgState *, &gData->pool, sz, sz);
     if (!gData->stateStack) {
         gData->ok = JS_FALSE;
         return JS_FALSE;
     }
+    gData->stateStackLimit = limit + limit;
     return JS_TRUE;
 }
 
 #define PUSH_STATE_STACK(data)                                                \
     JS_BEGIN_MACRO                                                            \
         ++(data)->stateStackTop;                                              \
-        if ((data)->stateStackTop == (data)->maxStateStack &&                 \
+        if ((data)->stateStackTop == (data)->stateStackLimit &&               \
             !ReallocStateStack((data))) {                                     \
             return NULL;                                                      \
         }                                                                     \
@@ -2061,7 +2153,7 @@ SimpleMatch(REGlobalData *gData, REMatchState *x, REOp op,
 {
     REMatchState *result = NULL;
     jschar matchCh;
-    intN parenIndex;
+    uintN parenIndex;
     intN offset, length, index;
     jsbytecode *pc = *startpc;  /* pc has already been incremented past op */
     jschar *source;
@@ -2433,8 +2525,8 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
                     break;
                 }
                 curState->u.assertion.top
-                    = (char *)gData->backTrackSP
-                                - (char *)gData->backTrackStack;
+                    = (char *)gData->backTrackSP -
+                      (char *)gData->backTrackStack;
                 curState->u.assertion.sz = gData->cursz;
                 curState->index = x->cp - gData->cpbegin;
                 curState->parenSoFar = parenSoFar;
@@ -2472,11 +2564,11 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
 
             case REOP_STAR:
                 curState->u.quantifier.min = 0;
-                curState->u.quantifier.max = -1;
+                curState->u.quantifier.max = (uint16)-1;
                 goto quantcommon;
             case REOP_PLUS:
                 curState->u.quantifier.min = 1;
-                curState->u.quantifier.max = -1;
+                curState->u.quantifier.max = (uint16)-1;
                 goto quantcommon;
             case REOP_OPT:
                 curState->u.quantifier.min = 0;
@@ -2586,11 +2678,11 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
 
             case REOP_MINIMALSTAR:
                 curState->u.quantifier.min = 0;
-                curState->u.quantifier.max = -1;
+                curState->u.quantifier.max = (uint16)-1;
                 goto minimalquantcommon;
             case REOP_MINIMALPLUS:
                 curState->u.quantifier.min = 1;
-                curState->u.quantifier.max = -1;
+                curState->u.quantifier.max = (uint16)-1;
                 goto minimalquantcommon;
             case REOP_MINIMALOPT:
                 curState->u.quantifier.min = 0;
@@ -2613,8 +2705,9 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
                     op = (REOp) *pc++;
                 } else {
                     if (!PushBackTrackState(gData, REOP_MINIMALREPEAT,
-                                            pc, x, x->cp, 0, 0))
+                                            pc, x, x->cp, 0, 0)) {
                         return NULL;
+                    }
                     --gData->stateStackTop;
                     pc = pc + GET_OFFSET(pc);
                     op = (REOp) *pc++;
@@ -2671,9 +2764,9 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
                 if (!PushBackTrackState(gData, REOP_MINIMALREPEAT,
                                         pc, x, x->cp,
                                         curState->parenSoFar,
-                                        parenSoFar
-                                            - curState->parenSoFar))
+                                        parenSoFar - curState->parenSoFar)) {
                     return NULL;
+                }
                 --gData->stateStackTop;
                 pc = pc + GET_OFFSET(pc);
                 op = (REOp) *pc++;
@@ -2699,17 +2792,17 @@ ExecuteREBytecode(REGlobalData *gData, REMatchState *x)
             x->cp = backTrackData->cp;
             pc = backTrackData->backtrack_pc;
             op = backTrackData->backtrack_op;
-            gData->stateStackTop = backTrackData->precedingStateTop;
+            gData->stateStackTop = backTrackData->saveStateStackTop;
             JS_ASSERT(gData->stateStackTop);
 
             memcpy(gData->stateStack, backTrackData + 1,
-                   sizeof(REProgState) * backTrackData->precedingStateTop);
+                   sizeof(REProgState) * backTrackData->saveStateStackTop);
             curState = &gData->stateStack[gData->stateStackTop - 1];
 
             if (backTrackData->parenCount) {
                 memcpy(&x->parens[backTrackData->parenIndex],
                        (char *)(backTrackData + 1) +
-                       sizeof(REProgState) * backTrackData->precedingStateTop,
+                       sizeof(REProgState) * backTrackData->saveStateStackTop,
                        sizeof(RECapture) * backTrackData->parenCount);
                 parenSoFar = backTrackData->parenIndex + backTrackData->parenCount;
             } else {
@@ -2764,7 +2857,7 @@ InitMatch(JSContext *cx, REGlobalData *gData, JSRegExp *re)
     REMatchState *result;
     uintN i;
 
-    gData->maxBackTrack = INITIAL_BACKTRACK;
+    gData->backTrackStackSize = INITIAL_BACKTRACK;
     JS_ARENA_ALLOCATE_CAST(gData->backTrackStack, REBackTrackData *,
                            &gData->pool,
                            INITIAL_BACKTRACK);
@@ -2774,7 +2867,7 @@ InitMatch(JSContext *cx, REGlobalData *gData, JSRegExp *re)
     gData->cursz = 0;
 
 
-    gData->maxStateStack = INITIAL_STATESTACK;
+    gData->stateStackLimit = INITIAL_STATESTACK;
     JS_ARENA_ALLOCATE_CAST(gData->stateStack, REProgState *,
                            &gData->pool,
                            sizeof(REProgState) * INITIAL_STATESTACK);

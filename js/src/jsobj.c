@@ -1045,7 +1045,18 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         principals = NULL;
     }
 
-    fp->flags |= JSFRAME_EVAL;
+    /*
+     * Set JSFRAME_EVAL on fp and any frames (e.g., fun_call if eval.call was
+     * invoked) between fp and its scripted caller, to help the compiler easily
+     * find the same caller whose scope and var obj we've set.
+     *
+     * FIXME 244619: this nonsense should go away with a better way to pass
+     * params to the compiler than via the top-most frame.
+     */
+    do {
+        fp->flags |= JSFRAME_EVAL;
+    } while ((fp = fp->down) != caller);
+
     script = JS_CompileUCScriptForPrincipals(cx, scopeobj, principals,
                                              JSSTRING_CHARS(str),
                                              JSSTRING_LENGTH(str),
@@ -1223,15 +1234,21 @@ obj_watch_handler(JSContext *cx, JSObject *obj, jsval id, jsval old, jsval *nvp,
 static JSBool
 obj_watch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
+    JSObject *funobj;
     JSFunction *fun;
     jsval userid, value;
     jsid propid;
     uintN attrs;
 
-    fun = js_ValueToFunction(cx, &argv[1], 0);
-    if (!fun)
-        return JS_FALSE;
-    argv[1] = OBJECT_TO_JSVAL(fun->object);
+    if (JSVAL_IS_FUNCTION(cx, argv[1])) {
+        funobj = JSVAL_TO_OBJECT(argv[1]);
+    } else {
+        fun = js_ValueToFunction(cx, &argv[1], 0);
+        if (!fun)
+            return JS_FALSE;
+        funobj = fun->object;
+    }
+    argv[1] = OBJECT_TO_JSVAL(funobj);
 
     /* Compute the unique int/atom symbol id needed by js_LookupProperty. */
     userid = argv[0];
@@ -1242,7 +1259,7 @@ obj_watch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     if (attrs & JSPROP_READONLY)
         return JS_TRUE;
-    return JS_SetWatchPoint(cx, obj, userid, obj_watch_handler, fun->object);
+    return JS_SetWatchPoint(cx, obj, userid, obj_watch_handler, funobj);
 }
 
 static JSBool
