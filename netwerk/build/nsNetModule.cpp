@@ -230,11 +230,11 @@ RegisterStreamConverters(nsIComponentManager *aCompMgr, nsIFile *aPath,
     nsXPIDLCString previous;
 
     PRUint32 count = 0;
-    while (count++ < g_StreamConverterCount) {
+    while (count < g_StreamConverterCount) {
         rv = catmgr->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, g_StreamConverterArray[count],
-                                      nsnull, PR_TRUE, PR_TRUE, getter_Copies(previous));
+                                      "x", PR_TRUE, PR_TRUE, getter_Copies(previous));
         if (NS_FAILED(rv)) return rv;
-         NS_ASSERTION(!previous, "someone already registered this converter at startup");
+        count++;
     }
     
     return rv;
@@ -252,11 +252,12 @@ UnregisterStreamConverters(nsIComponentManager *aCompMgr, nsIFile *aPath,
     nsXPIDLCString entry;
 
     PRUint32 count = 0;
-    while (count++ < g_StreamConverterCount) {
+    while (count < g_StreamConverterCount) {
         rv = catmgr->DeleteCategoryEntry(NS_ISTREAMCONVERTER_KEY, g_StreamConverterArray[count],
                                          PR_TRUE, getter_Copies(entry));
         if (NS_FAILED(rv)) return rv;
         NS_ASSERTION(entry, "deleting an entry that doesn't exist");
+        count++;
     }
     return rv;
 }
