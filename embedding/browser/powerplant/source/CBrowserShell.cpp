@@ -35,6 +35,9 @@
 #include "nsIDocShellTreeOwner.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIWebProgressListener.h"
+#include "nsIDocShellHistory.h"
+#include "nsIGlobalHistory.h"
+#include "nsIServiceManager.h"
 
 #include <UModalDialogs.h>
 #include <LStream.h>
@@ -106,7 +109,7 @@ NS_IMETHODIMP CBrowserShell::CommonConstruct()
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mWebBrowser));
   NS_ENSURE_TRUE(webNav, NS_ERROR_FAILURE);
   mWebBrowserAsWebNav = webNav;
-
+    
   return NS_OK;
 }
 
@@ -133,8 +136,20 @@ void CBrowserShell::FinishCreateSelf()
 		
    mWebBrowserAsBaseWin->InitWindow(aWidget->GetNativeData(NS_NATIVE_WIDGET), nsnull, r.x, r.y, r.width, r.height);
    mWebBrowserAsBaseWin->Create();
+
+  // Set the global history
+  nsCOMPtr<nsIDocShell> docShell(do_GetInterface(mWebBrowser));
+  ThrowIfNil_(docShell);
+  nsCOMPtr<nsIDocShellHistory> dsHistory(do_QueryInterface(docShell));
+  if (dsHistory)
+  {
+    nsresult rv;
+    NS_WITH_SERVICE(nsIGlobalHistory, history, NS_GLOBALHISTORY_CONTRACTID, &rv);  
+    if (history)
+      dsHistory->SetGlobalHistory(history);
+  }
    
-   AdjustFrame();   
+  AdjustFrame();   
 	StartRepeating();
 	StartListening();
 }
