@@ -747,79 +747,6 @@ PRInt32 StyleUserInterfaceImpl::CalcDifference(const StyleUserInterfaceImpl& aOt
   return NS_STYLE_HINT_VISUAL;
 }
 
-//-----------------------
-// nsStylePrint
-//
-
-nsStylePrint::nsStylePrint(void) { }
-nsStylePrint::~nsStylePrint(void) { }
-
-struct StylePrintImpl: public nsStylePrint {
-  StylePrintImpl(void)  { }
-
-  void ResetFrom(const nsStylePrint* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStylePrint& aSource);
-  void CopyTo(nsStylePrint& aDest) const;
-  PRInt32 CalcDifference(const StylePrintImpl& aOther) const;
- 
-private:  // These are not allowed
-  StylePrintImpl(const StylePrintImpl& aOther);
-  StylePrintImpl& operator=(const StylePrintImpl& aOther);
-};
-
-void StylePrintImpl::ResetFrom(const nsStylePrint* aParent, nsIPresContext* aPresContext)
-{
-  if (aParent) {
-    mPageBreakBefore = aParent->mPageBreakBefore;
-    mPageBreakAfter = aParent->mPageBreakAfter;
-    mPageBreakInside = aParent->mPageBreakInside;
-    mWidows = aParent->mWidows;
-    mOrphans = aParent->mOrphans;
-		mMarks = aParent->mMarks;
-		mSizeWidth = aParent->mSizeWidth;
-		mSizeHeight = aParent->mSizeHeight;
-  }
-  else {
-    mPageBreakBefore = NS_STYLE_PAGE_BREAK_AUTO;
-    mPageBreakAfter = NS_STYLE_PAGE_BREAK_AUTO;
-    mPageBreakInside = NS_STYLE_PAGE_BREAK_AUTO;
-    mWidows = 2;
-    mOrphans = 2;
-		mMarks = NS_STYLE_PAGE_MARKS_NONE;
-		mSizeWidth.SetAutoValue();
-		mSizeHeight.SetAutoValue();
-  }
-}
-
-void StylePrintImpl::SetFrom(const nsStylePrint& aSource)
-{
-  nsCRT::memcpy((nsStylePrint*)this, &aSource, sizeof(nsStylePrint));
-}
-
-void StylePrintImpl::CopyTo(nsStylePrint& aDest) const
-{
-  nsCRT::memcpy(&aDest, (const nsStylePrint*)this, sizeof(nsStylePrint));
-}
-
-PRInt32 StylePrintImpl::CalcDifference(const StylePrintImpl& aOther) const
-{
-	if ((mPageBreakBefore == aOther.mPageBreakBefore)
-	&& (mPageBreakAfter == aOther.mPageBreakAfter)
-	&& (mPageBreakInside == aOther.mPageBreakInside)
-	&& (mWidows == aOther.mWidows)
-	&& (mOrphans == aOther.mOrphans)
-	&& (mMarks == aOther.mMarks)
-	&& (mSizeWidth == aOther.mSizeWidth)
-	&& (mSizeHeight == aOther.mSizeHeight)) {
-  	return NS_STYLE_HINT_NONE;
-	}
-
-	if (mMarks != aOther.mMarks) {
-  	return NS_STYLE_HINT_VISUAL;
-	}
-  return NS_STYLE_HINT_REFLOW;
-}
-
 //----------------------------------------------------------------------
 
 class StyleContextImpl : public nsIStyleContext,
@@ -857,7 +784,6 @@ public:
   virtual nsStyleStruct* GetMutableStyleData(nsStyleStructID aSID);
 
   virtual void ForceUnique(void);
-  virtual void RecalcAutomaticData(nsIPresContext* aPresContext);
   NS_IMETHOD  CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference = PR_FALSE);
 
   virtual void  List(FILE* out, PRInt32 aIndent);
@@ -893,20 +819,11 @@ protected:
   StyleTableImpl          mTable;
   StyleContentImpl        mContent;
   StyleUserInterfaceImpl  mUserInterface;
-	StylePrintImpl					mPrint;
-
-  // make sure we have valid style data
-  nsresult EnsureStyleData(nsIPresContext* aPresContext);
-  nsresult HaveStyleData(void) const;
-
+	
   nsCOMPtr<nsIStyleSet>   mStyleSet;
 };
 
 static PRInt32 gLastDataCode;
-
-#ifdef XP_MAC
-#pragma mark -
-#endif
 
 StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
                                    nsIAtom* aPseudoTag,
@@ -925,8 +842,7 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mDisplay(),
     mTable(),
     mContent(),
-    mUserInterface(),
-    mPrint()
+    mUserInterface()
 {
   NS_INIT_REFCNT();
   NS_IF_ADDREF(mPseudoTag);
@@ -1149,8 +1065,8 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     case eStyleStruct_Padding:
     case eStyleStruct_Outline:
     case eStyleStruct_List:
-    case eStyleStruct_XUL:
     case eStyleStruct_Position:
+    case eStyleStruct_XUL: 
       if (cachedData) // First look to see if we have computed data.
         return cachedData;  // We do. Just return it.
       if (mParent && (mInheritBits & nsCachedStyleData::GetBitForSID(aSID))) // Now check inheritance
@@ -1175,9 +1091,6 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     case eStyleStruct_UserInterface:
       result = & GETSCDATA(UserInterface);
       break;
-    case eStyleStruct_Print:
-    	result = & GETSCDATA(Print);
-    	break;
     default:
       NS_ERROR("Invalid style struct id");
       break;
@@ -1236,9 +1149,6 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
     case eStyleStruct_UserInterface:
       result = & GETSCDATA(UserInterface);
       break;
-    case eStyleStruct_Print:
-    	result = & GETSCDATA(Print);
-    	break;
     default:
       NS_ERROR("Invalid style struct id");
       break;
@@ -1300,9 +1210,6 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
     case eStyleStruct_UserInterface:
       GETSCDATA(UserInterface).SetFrom((const nsStyleUserInterface&)aStruct);
       break;
-    case eStyleStruct_Print:
-      GETSCDATA(Print).SetFrom((const nsStylePrint&)aStruct);
-    	break;
     case eStyleStruct_Margin:
       mCachedStyleData->mMarginData = (nsStyleMargin*)(const nsStyleMargin*)(&aStruct);
       break;
@@ -1363,10 +1270,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 {
   mDataCode = -1;
 
-  if (NS_FAILED(EnsureStyleData(aPresContext))) {
-    return NS_ERROR_UNEXPECTED;
-  }
-
   if (nsnull != mParent) {
     GETSCDATA(Color).ResetFrom(&(mParent->GETSCDATA(Color)), aPresContext);
     GETSCDATA(Text).ResetFrom(&(mParent->GETSCDATA(Text)), aPresContext);
@@ -1374,7 +1277,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     GETSCDATA(Table).ResetFrom(&(mParent->GETSCDATA(Table)), aPresContext);
     GETSCDATA(Content).ResetFrom(&(mParent->GETSCDATA(Content)), aPresContext);
     GETSCDATA(UserInterface).ResetFrom(&(mParent->GETSCDATA(UserInterface)), aPresContext);
-    GETSCDATA(Print).ResetFrom(&(mParent->GETSCDATA(Print)), aPresContext);
   }
   else {
     GETSCDATA(Color).ResetFrom(nsnull, aPresContext);
@@ -1383,7 +1285,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     GETSCDATA(Table).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
     GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
-    GETSCDATA(Print).ResetFrom(nsnull, aPresContext);
   }
 
   PRBool isRoot = PR_FALSE;
@@ -1457,7 +1358,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
       GETSCDATA(Table).ResetFrom(nsnull, aPresContext);
       GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
       GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
-      GETSCDATA(Print).ResetFrom(nsnull, aPresContext);
       //GETSCDATA(Margin).ResetFrom(nsnull, aPresContext);
       //GETSCDATA(Padding).ResetFrom(nsnull, aPresContext);
       //GETSCDATA(Border).ResetFrom(nsnull, aPresContext);
@@ -1507,8 +1407,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     }
   }
 
-  RecalcAutomaticData(aPresContext);
-
   if (aRecurse) {
     if (nsnull != mChild) {
       StyleContextImpl* child = mChild;
@@ -1535,27 +1433,9 @@ void StyleContextImpl::ForceUnique(void)
   }
 }
 
-void StyleContextImpl::RecalcAutomaticData(nsIPresContext* aPresContext)
-{
-  // XXXdwh figure this out!
-  /*
-  if (NS_FAILED(EnsureStyleData(aPresContext))) {
-    return;
-  }
-  GETSCDATA(Margin).RecalcData();
-  GETSCDATA(Padding).RecalcData();
-  GETSCDATA(Border).RecalcData(GETSCDATA(Color).mColor);
-  GETSCDATA(Outline).RecalcData();
-  */
-}
-
 NS_IMETHODIMP
 StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference /*= PR_FALSE*/)
 {
-  if (NS_FAILED(HaveStyleData())) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
   if (aOther) {
     PRInt32 hint;
     const StyleContextImpl* other = (const StyleContextImpl*)aOther;
@@ -1675,35 +1555,9 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
-    if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(Print).CalcDifference(other->GETSCDATA(Print));
-      if (aHint < hint) {
-        aHint = hint;
-      }
-    }
   }
   return NS_OK;
 }
-
-
-nsresult StyleContextImpl::EnsureStyleData(nsIPresContext* aPresContext)
-{
-  nsresult rv = NS_OK;
-  NS_ASSERTION(aPresContext, "null presContext argument is illegal and immoral");
-  if (nsnull == aPresContext) {
-    // no pres context provided, and we have no style data, so send back an error
-    return NS_ERROR_FAILURE;
-  }
-
-  return rv;
-}
-
-nsresult StyleContextImpl::HaveStyleData(void) const
-{
-  return NS_OK;
-}
-
-
 
 void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
 {
@@ -1780,9 +1634,7 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     totalSize += (long)sizeof(GETSCDATA(Content));
     printf( " - StyleUserInterfaceImpl: %ld\n", (long)sizeof(GETSCDATA(UserInterface)) );
     totalSize += (long)sizeof(GETSCDATA(UserInterface));
-	  printf( " - StylePrintImpl:         %ld\n", (long)sizeof(GETSCDATA(Print)));
-    totalSize += (long)sizeof(GETSCDATA(Print));
-    printf( " - Total:                  %ld\n", (long)totalSize);
+	  printf( " - Total:                  %ld\n", (long)totalSize);
     printf( "*************************************\n");
   }
 
@@ -1991,19 +1843,6 @@ void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* ou
     (int)GETSCDATA(UserInterface).mResizer,
     NS_ConvertUCS2toUTF8(GETSCDATA(UserInterface).mBehavior).get());
 
-  // PRINT
-  IndentBy(out,aIndent);
-  fprintf(out, "<print data=\"%d %d %d %s %ld %ld %d ",
-    (int)GETSCDATA(Print).mPageBreakBefore,
-    (int)GETSCDATA(Print).mPageBreakAfter,
-    (int)GETSCDATA(Print).mPageBreakInside,
-    NS_ConvertUCS2toUTF8(GETSCDATA(Print).mPage).get(),
-    (long)GETSCDATA(Print).mWidows,
-    (long)GETSCDATA(Print).mOrphans,
-    (int)GETSCDATA(Print).mMarks);
-  GETSCDATA(Print).mSizeWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "\" />\n");
 }
 #endif
 

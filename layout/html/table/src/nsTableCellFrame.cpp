@@ -1125,8 +1125,6 @@ NS_METHOD nsTableCellFrame::DidSetStyleContext(nsIPresContext* aPresContext)
   printf("nsTableCellFrame::DidSetStyleContext \n");
 #endif
 
-  MapBorderPadding(aPresContext);
-  mStyleContext->RecalcAutomaticData(aPresContext);
   return NS_OK;
 }
 

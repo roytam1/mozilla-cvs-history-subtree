@@ -48,7 +48,7 @@ class nsIFrame;
 #define NS_STYLE_INHERIT_TABLE      0x0040
 #define NS_STYLE_INHERIT_CONTENT    0x0080
 #define NS_STYLE_INHERIT_UI         0x0100
-#define NS_STYLE_INHERIT_PRINT      0x0200
+
 #define NS_STYLE_INHERIT_MARGIN     0x0400
 #define NS_STYLE_INHERIT_PADDING    0x0800
 #define NS_STYLE_INHERIT_BORDER     0x1000
@@ -65,7 +65,7 @@ enum nsStyleStructID {
   eStyleStruct_Table          = 7,
   eStyleStruct_Content        = 8,
   eStyleStruct_UserInterface  = 9,
-  eStyleStruct_Print					= 10,
+  
   eStyleStruct_Margin         = 11,
   eStyleStruct_Padding        = 12,
   eStyleStruct_Border         = 13,
@@ -739,21 +739,6 @@ struct nsStyleUserInterface: public nsStyleStruct {
   PRUint8   mResizer;         // [reset]
   nsString  mBehavior;        // [reset] absolute url string
 
-};
-
-struct nsStylePrint: public nsStyleStruct {
-  nsStylePrint(void);
-  ~nsStylePrint(void);
-
-  PRUint8       mPageBreakBefore;	// [reset] see nsStyleConsts.h NS_STYLE_PAGE_BREAK_*
-  PRUint8       mPageBreakAfter;	// [reset] see nsStyleConsts.h NS_STYLE_PAGE_BREAK_*
-  PRUint8       mPageBreakInside;	// [reset] see nsStyleConsts.h NS_STYLE_PAGE_BREAK_*
-	nsString			mPage;
-  PRUint32      mWidows;					// [reset] = 2, number of isolated lines at the top of a page
-  PRUint32      mOrphans;					// [reset] = 2, number of isolated lines at the bottom of a page
-  PRUint8       mMarks;						// [reset] see nsStyleConsts.h NS_STYLE_PAGE_MARKS_*
-  nsStyleCoord  mSizeWidth;				// [reset] length, enum: see nsStyleConsts.h NS_STYLE_PAGE_SIZE_*
-  nsStyleCoord  mSizeHeight;			// [reset] length, enum: see nsStyleConsts.h NS_STYLE_PAGE_SIZE_*
 };
 
 #ifdef INCLUDE_XUL

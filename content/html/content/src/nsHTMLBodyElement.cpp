@@ -311,35 +311,35 @@ BodyRule::MapRuleInfoInto(nsRuleData* aData)
   nsHTMLValue   value;
   PRInt32       attrCount;
   mPart->GetAttributeCount(attrCount);
-  if (attrCount == 0)
-    return NS_OK;
-
+  
   PRInt32 bodyMarginWidth  = -1;
   PRInt32 bodyMarginHeight = -1;
 
-  // if marginwidth/marginheight are set, reflect them as 'margin'
-  mPart->GetHTMLAttribute(nsHTMLAtoms::marginwidth, value);
-  if (eHTMLUnit_Pixel == value.GetUnit()) {
-    bodyMarginWidth = value.GetPixelValue();
-    if (bodyMarginWidth < 0) bodyMarginWidth = 0;
-    nsCSSValue hval((float)bodyMarginWidth, eCSSUnit_Pixel);
-    nsCSSRect* margin = aData->mMarginData->mMargin;
-    if (margin->mLeft.GetUnit() == eCSSUnit_Null)
-      margin->mLeft = hval;
-    if (margin->mRight.GetUnit() == eCSSUnit_Null)
-      margin->mRight = hval;
-  }
+  if (attrCount > 0) {
+    // if marginwidth/marginheight are set, reflect them as 'margin'
+    mPart->GetHTMLAttribute(nsHTMLAtoms::marginwidth, value);
+    if (eHTMLUnit_Pixel == value.GetUnit()) {
+      bodyMarginWidth = value.GetPixelValue();
+      if (bodyMarginWidth < 0) bodyMarginWidth = 0;
+      nsCSSValue hval((float)bodyMarginWidth, eCSSUnit_Pixel);
+      nsCSSRect* margin = aData->mMarginData->mMargin;
+      if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+        margin->mLeft = hval;
+      if (margin->mRight.GetUnit() == eCSSUnit_Null)
+        margin->mRight = hval;
+    }
 
-  mPart->GetHTMLAttribute(nsHTMLAtoms::marginheight, value);
-  if (eHTMLUnit_Pixel == value.GetUnit()) {
-    bodyMarginHeight = value.GetPixelValue();
-    if (bodyMarginHeight < 0) bodyMarginHeight = 0;
-    nsCSSValue vval((float)bodyMarginHeight, eCSSUnit_Pixel);
-    nsCSSRect* margin = aData->mMarginData->mMargin;
-    if (margin->mTop.GetUnit() == eCSSUnit_Null)
-      margin->mTop = vval;
-    if (margin->mBottom.GetUnit() == eCSSUnit_Null)
-      margin->mBottom = vval;
+    mPart->GetHTMLAttribute(nsHTMLAtoms::marginheight, value);
+    if (eHTMLUnit_Pixel == value.GetUnit()) {
+      bodyMarginHeight = value.GetPixelValue();
+      if (bodyMarginHeight < 0) bodyMarginHeight = 0;
+      nsCSSValue vval((float)bodyMarginHeight, eCSSUnit_Pixel);
+      nsCSSRect* margin = aData->mMarginData->mMargin;
+      if (margin->mTop.GetUnit() == eCSSUnit_Null)
+        margin->mTop = vval;
+      if (margin->mBottom.GetUnit() == eCSSUnit_Null)
+        margin->mBottom = vval;
+    }
   }
 
   // if marginwidth or marginheight is set in the <frame> and not set in the <body>

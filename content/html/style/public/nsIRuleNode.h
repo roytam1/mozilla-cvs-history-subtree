@@ -95,8 +95,6 @@ struct nsCachedStyleData
         return NS_STYLE_INHERIT_CONTENT;
       case eStyleStruct_UserInterface:
         return NS_STYLE_INHERIT_UI;
-      case eStyleStruct_Print:
-    	  return NS_STYLE_INHERIT_PRINT;
       case eStyleStruct_Margin:
     	  return NS_STYLE_INHERIT_MARGIN;
       case eStyleStruct_Padding:

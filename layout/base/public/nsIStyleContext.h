@@ -98,9 +98,6 @@ public:
   virtual void  ForceUnique(void) = 0;
 
   NS_IMETHOD RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse = PR_TRUE) = 0;
-
-  // call if you change style data after creation
-  virtual void    RecalcAutomaticData(nsIPresContext* aPresContext) = 0;
 };
 
 
