@@ -1547,11 +1547,21 @@ GetMSD(MimeDisplayOptions *opt)
   return msd;
 }
 
+PRBool
+NoEmitterProcessing(nsMimeOutputType    format_out)
+{
+  if ( (format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
+       (format_out == nsMimeOutput::nsMimeMessageEditorTemplate) )
+    return PR_TRUE;
+  else
+    return PR_FALSE;
+}
+
 extern "C" nsresult
 mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const char *value)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1571,7 +1581,7 @@ extern "C" nsresult
 mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char *value)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1591,7 +1601,7 @@ extern "C" nsresult
 mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char *contentType, const char *url)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1611,7 +1621,7 @@ extern "C" nsresult
 mimeEmitterEndAttachment(MimeDisplayOptions *opt)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1634,7 +1644,7 @@ extern "C" nsresult
 mimeEmitterStartBody(MimeDisplayOptions *opt, PRBool bodyOnly, const char *msgID, const char *outCharset)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1654,7 +1664,7 @@ extern "C" nsresult
 mimeEmitterEndBody(MimeDisplayOptions *opt)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1674,7 +1684,7 @@ extern "C" nsresult
 mimeEmitterEndHeader(MimeDisplayOptions *opt)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
@@ -1695,7 +1705,7 @@ mimeEmitterStartHeader(MimeDisplayOptions *opt, PRBool rootMailHeader, PRBool he
                        const char *outCharset)
 {
   // Check for draft processing...
-  if (opt->format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if (NoEmitterProcessing(opt->format_out))
     return NS_OK;
 
   mime_stream_data  *msd = GetMSD(opt);
