@@ -27,7 +27,7 @@
 #ifdef XP_UNIX  /* this whole module is ifdef'd UNIX */
 
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkformat.h"
 #include "net.h"
 

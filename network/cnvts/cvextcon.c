@@ -26,6 +26,7 @@
 #include "mkgeturl.h"
 #include "cvextcon.h"
 #include "mkformat.h"
+#include "cstream.h"
 
 #include <fcntl.h>
 #include <sys/wait.h>

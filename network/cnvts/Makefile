@@ -51,6 +51,6 @@ EXPORTS= \
     cvjscfg.h
 
 REQUIRES	= network img lay layer util parse pref js \
-	security marimurl style zlib softupdt
+	security marimurl style zlib softupdt cstream
 
 include $(DEPTH)/config/rules.mk
