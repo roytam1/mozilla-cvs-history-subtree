@@ -1481,7 +1481,7 @@ sub BuildSecurityProjects()
 
     StartBuildModule("security");
 
-    BuildOneProject(":mozilla:security:nss:macbuild:NSS.mcp","NSS$D.o", 0, 0, 0);
+    BuildProject(":mozilla:security:nss:macbuild:NSS.mcp","NSS$D.o");
     if($main::options{psm2}) {
     	BuildOneProject(":mozilla:security:manager:ssl:macbuild:PIPNSS.mcp", "PIPNSS$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     	BuildOneProject(":mozilla:security:manager:pki:macbuild:PIPPKI.mcp", "PIPPKI$D.$S", 1, $main::ALIAS_SYM_FILES, 1); 
@@ -1518,10 +1518,11 @@ sub BuildSecurityProjects()
     		copy(":mozilla:security:psm:doc:".$file, $doc_dir.$file);
     	}
     } 
-    #Build the loadable module that contains the root certs.
 
-	BuildOneProject(":mozilla:security:nss:macbuild:NSSckfw.mcp", "NSSckfw$D.o", 0, 0, 0);
-	BuildOneProject(":mozilla:security:nss:macbuild:LoadableRoots.mcp", "NSSckbi$D.shlb", 0, $main::ALIAS_SYM_FILES, 0);
+    #Build the loadable module that contains the root certs.
+	BuildProject(":mozilla:security:nss:macbuild:NSSckfw.mcp", "NSSckfw$D.o");
+	BuildProject(":mozilla:security:nss:macbuild:LoadableRoots.mcp", "NSSckbi$D.shlb");
+
 	# NSS doesn't properly load the shared library created above if it's an alias, so we'll just copy it so that
 	# all builds will just work.  It's 140K optimized and 164K debug so it's not too much disk space.
 	copy(":mozilla:security:nss:macbuild:NSSckbi$D.$S",$dist_dir."Essential Files:NSSckbi$D.shlb");
