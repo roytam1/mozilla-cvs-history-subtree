@@ -76,6 +76,7 @@ sub STORE
   if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
+      $self->{"_oc_numattr_"}++;
     }
 }
 
@@ -104,6 +105,9 @@ sub DELETE
   return unless defined($self->{$attr});
 
   $self->{"_${attr}_deleted_"} = 1;
+  # TODO: Now remove it from _oc_order_, including
+  # $self->{"_oc_numattr_"}++;
+
   undef $self->{$attr};
 }
 
@@ -122,19 +126,23 @@ sub EXISTS
 
 
 #############################################################################
-# Reset the each()/key() session, and return the first key.
+# Reset the each()/key() session, and return the first key. This honors
+# the oc_order, i.e. the order the attributes were returned in.
 #
 sub FIRSTKEY
 {
   my $self = $_[$[];
-  my $tmp = keys %{$self};
-  my $key = scalar each %{$self};
+  my $key, $idx = 0;
+  my @attrs = @{$self->{"_oc_order_"}};
 
-  while ($key && (($key =~ /^_.+_$/) || $self->{"_${key}_deleted_"} ||
-		  lc $key eq "dn"))
+  while ($idx < $self->{"_oc_numattr_"})
     {
-      $key = scalar each %{$self};
+      $key = $attrs[$idx++];
+      next if ($key =~ /^_.+_$/);
+      next if $self->{"_${key}_deleted_"};
+      last;
     }
+  $self->{"_oc_keyidx_"} = $idx;
 
   return $key;
 }
@@ -146,13 +154,17 @@ sub FIRSTKEY
 sub NEXTKEY
 {
   my $self = $_[$[];
-  my $key = scalar each %{$self};
+  my $key, $idx = $self->{"_oc_keyidx_"};
+  my @attrs = @{$self->{"_oc_order_"}};
 
-  while ($key && (($key =~ /^_.+_$/) || $self->{"_${key}_deleted_"} ||
-		  lc $key eq "dn"))
+  while ($idx < $self->{"_oc_numattr_"})
     {
-      $key = scalar each %{$self};
+      $key = $attrs[$idx++];
+      next if ($key =~ /^_.+_$/);
+      next if $self->{"_${key}_deleted_"};
+      last;
     }
+  $self->{"_oc_keyidx_"} = $idx;
 
   return $key;
 }
@@ -175,6 +187,7 @@ sub attrModified
 
   return 1;
 }
+*markModified = \*attrModified;
 
 
 #############################################################################
@@ -232,6 +245,9 @@ sub remove
   return 0 unless defined($self->{$attr});
 
   $self->{"_self_obj_"}->{"_${attr}_deleted_"} = 1;
+  # TODO: Now remove it from _oc_order_, including
+  # $self->{"_oc_numattr_"}++;
+
   undef $self->{"_self_obj_"}->{$attr};
 
   return 1;
@@ -268,7 +284,8 @@ sub removeValue
 	  else
 	    {
 	      $self->{"_self_obj_"}->{"_${attr}_deleted_"} = 1;
-	      # TODO: Now remove it from _oc_order_ !
+	      # TODO: Now remove it from _oc_order_, including
+	      # $self->{"_oc_numattr_"}++;
 	    }
 
 	  return 1;
@@ -316,6 +333,7 @@ sub addValue
   if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
+      $self->{"_oc_numattr_"}++;
     }
 
   return 1;
