@@ -24,6 +24,7 @@
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIContent.h"
+#include "nsIDocument.h"
 #include "nsIFrame.h"
 #include "nsIDOMElement.h"
 #include "nsIStyleContext.h"
@@ -76,7 +77,7 @@ private:
   nsresult GetDisplay(nsIFrame *aFrame, nsIDOMCSSPrimitiveValue*& aValue);
 
   nsresult GetBehavior(nsIFrame *aFrame, nsIDOMCSSPrimitiveValue*& aValue);
-  nsCOMPtr<nsIPresShell> mPresShell;
+  void GetPresShell(nsIPresShell*& aPresShell);
   nsCOMPtr<nsIContent> mContent;
   nsString mPseudo;
 
@@ -100,8 +101,7 @@ NS_NewComputedDOMStyle(nsIComputedDOMStyle** aComputedStyle)
 }
 
 
-nsComputedDOMStyle::nsComputedDOMStyle() : mPresShell(nsnull),
-                                           mContent(nsnull),
+nsComputedDOMStyle::nsComputedDOMStyle() : mContent(nsnull),
                                            mT2P(0.0f),
                                            mScriptObject(nsnull)
 {
@@ -159,9 +159,7 @@ nsComputedDOMStyle::Init(nsIDOMElement *aElement, const nsAReadableString& aPseu
                          nsIPresShell *aPresShell)
 {
   NS_ENSURE_ARG_POINTER(aElement);
-  NS_ENSURE_ARG_POINTER(aPresShell);
-
-  mPresShell = aPresShell;
+  // XXX aPresShell is no longer needed! Remove it!
 
   mContent = do_QueryInterface(aElement);
   if (!mContent) {
@@ -171,13 +169,38 @@ nsComputedDOMStyle::Init(nsIDOMElement *aElement, const nsAReadableString& aPseu
 
   mPseudo = aPseudoElt;
 
-  nsCOMPtr<nsIPresContext> presCtx;
-  mPresShell->GetPresContext(getter_AddRefs(presCtx));
-  NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIPresShell> presShell;
+  GetPresShell(*getter_AddRefs(presShell));
 
-  presCtx->GetTwipsToPixels(&mT2P);
+  if (presShell) {
+    nsCOMPtr<nsIPresContext> presCtx;
+    presShell->GetPresContext(getter_AddRefs(presCtx));
+    NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
+
+    presCtx->GetTwipsToPixels(&mT2P);
+  }
 
   return NS_OK;
+}
+
+void
+nsComputedDOMStyle::GetPresShell(nsIPresShell*& aPresShell)
+{
+  aPresShell = nsnull;
+
+  if (!mContent) {
+    return;
+  }
+
+  nsCOMPtr<nsIDocument> doc;
+
+  mContent->GetDocument(*getter_AddRefs(doc));
+
+  if (!doc) {
+    return;
+  }
+
+  aPresShell = doc->GetShellAt(0); // GetShellAt() addrefs!
 }
 
 NS_IMETHODIMP
@@ -240,8 +263,15 @@ nsComputedDOMStyle::GetPropertyCSSValue(const nsAReadableString& aPropertyName,
   NS_ENSURE_ARG_POINTER(aReturn);
   *aReturn = nsnull;
 
+  nsCOMPtr<nsIPresShell> presShell;
+  GetPresShell(*getter_AddRefs(presShell));
+
+  if (!presShell) {
+    return NS_OK;
+  }
+
   nsIFrame *frame = nsnull;
-  mPresShell->GetPrimaryFrameFor(mContent, &frame);
+  presShell->GetPrimaryFrameFor(mContent, &frame);
 
   nsCOMPtr<nsIDOMCSSPrimitiveValue> val;
   nsresult rv = NS_OK;
@@ -364,6 +394,8 @@ nsresult
 nsComputedDOMStyle::GetBehavior(nsIFrame *aFrame,
                                 nsIDOMCSSPrimitiveValue*& aValue)
 {
+  aValue = nsnull;
+
   nsISupports *tmp = NS_STATIC_CAST(nsIComputedDOMStyle *, this);
 
   nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
@@ -375,8 +407,15 @@ nsComputedDOMStyle::GetBehavior(nsIFrame *aFrame,
   if (aFrame) {
     aFrame->GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&)ui);
   } else {
+    nsCOMPtr<nsIPresShell> presShell;
+    GetPresShell(*getter_AddRefs(presShell));
+
+    if (!presShell) {
+      return NS_OK;
+    }
+
     nsCOMPtr<nsIPresContext> presCtx;
-    mPresShell->GetPresContext(getter_AddRefs(presCtx));
+    presShell->GetPresContext(getter_AddRefs(presCtx));
     NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
 
     nsCOMPtr<nsIStyleContext> styleCtx;
@@ -1239,7 +1278,14 @@ nsComputedDOMStyle::GetAbsoluteFrameRect(nsIFrame *aFrame, nsRect& aRect)
   }
 
   // Flush all pending notifications so that our frames are uptodate
-  mPresShell->FlushPendingNotifications();
+  nsCOMPtr<nsIPresShell> presShell;
+  GetPresShell(*getter_AddRefs(presShell));
+
+  if (!presShell) {
+    return NS_OK;
+  }
+
+  presShell->FlushPendingNotifications();
 
   // Get it's origin
   nsPoint origin;
