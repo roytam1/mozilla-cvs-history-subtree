@@ -148,9 +148,6 @@ ifeq ($(OS_TARGET), OS2)
 ifdef XP_OS2_VACPP
   LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
-else
-  LIBPR = -lnspr$(MOD_VERSION)
-  LIBPLC= -lplc$(MOD_VERSION)
 endif
 else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
