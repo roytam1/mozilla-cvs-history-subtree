@@ -1619,7 +1619,7 @@ NS_IMETHODIMP nsBulletFrame::OnStartContainer(imgIRequest *aRequest,
       NS_ASSERTION(mParent, "No parent to pass the reflow request up to.");
       if (mParent) {
         mState |= NS_FRAME_IS_DIRTY;
-        shell->FrameNeedsReflow(this);
+        shell->FrameNeedsReflow(this, PR_TRUE);
       }
     }
   }

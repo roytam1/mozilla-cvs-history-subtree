@@ -270,7 +270,7 @@ nsMenuPopupFrame::MarkStyleChange(nsBoxLayoutState& aState)
       frame->MarkDirtyChildren(state); // Mark the popupset as dirty.
     }
     else {
-      return aState.PresShell()->FrameNeedsReflow(frame);
+      return aState.PresShell()->FrameNeedsReflow(frame, PR_TRUE);
     }
   }
   return NS_OK;
@@ -319,7 +319,7 @@ nsMenuPopupFrame::MarkDirty(nsBoxLayoutState& aState)
       frame->MarkDirtyChildren(state); // Mark the popupset as dirty.
     }
     else {
-      return aState.PresShell()->FrameNeedsReflow(frame);
+      return aState.PresShell()->FrameNeedsReflow(frame, PR_TRUE);
     }
   }
 

@@ -569,7 +569,7 @@ nsImageFrame::OnStartContainer(imgIRequest *aRequest, imgIContainer *aImage)
     NS_ASSERTION(presShell, "No PresShell.");
     if (mParent && presShell) { 
       mState |= NS_FRAME_IS_DIRTY;
-      presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this));
+      presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
     }
   }
 
@@ -672,7 +672,7 @@ nsImageFrame::OnStopDecode(imgIRequest *aRequest,
         NS_ASSERTION(mParent, "No parent to pass the reflow request up to.");
         if (mParent && presShell) { 
           mState |= NS_FRAME_IS_DIRTY;
-          presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this));
+          presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
         }
       } else {
         nsSize s = GetSize();
@@ -1771,7 +1771,7 @@ nsImageFrame::AttributeChanged(nsIContent* aChild,
   if (nsHTMLAtoms::alt == aAttribute)
   {
     mState |= NS_FRAME_IS_DIRTY;
-    presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this));
+    presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
   }
 
   return NS_OK;

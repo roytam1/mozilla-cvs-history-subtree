@@ -1775,7 +1775,7 @@ nsComboboxControlFrame::RedisplayText(PRInt32 aIndex)
       rv = ActuallyDisplayText(textToDisplay, PR_TRUE);
       //mTextFrame->AddStateBits(NS_FRAME_IS_DIRTY);
       mDisplayFrame->AddStateBits(NS_FRAME_IS_DIRTY);
-      mPresContext->PresShell()->FrameNeedsReflow(mDisplayFrame);
+      mPresContext->PresShell()->FrameNeedsReflow(mDisplayFrame, PR_TRUE);
     }
   }
   return rv;

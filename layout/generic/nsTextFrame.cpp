@@ -1412,7 +1412,7 @@ nsTextFrame::CharacterDataChanged(nsPresContext* aPresContext,
   }
 
   // Ask the parent frame to reflow me.  
-  aPresContext->GetPresShell()->FrameNeedsReflow(targetTextFrame);
+  aPresContext->GetPresShell()->FrameNeedsReflow(targetTextFrame, PR_TRUE);
 
   return NS_OK;
 }

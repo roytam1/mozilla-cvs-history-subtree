@@ -10611,7 +10611,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
 
         // XXX Work around a bug in the block code where the float won't get
         // reflowed unless the line containing the placeholder frame is reflowed...
-        aPresShell->FrameNeedsReflow(placeholderFrame);
+        aPresShell->FrameNeedsReflow(placeholderFrame, PR_TRUE);
       }
     }
 

@@ -3126,7 +3126,7 @@ nsObjectFrame::PluginNotAvailable(const char *aMimeType)
 
     mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
 
-    mContent->GetDocument()->GetShellAt(0)->FrameNeedsReflow(this);
+    mContent->GetDocument()->GetShellAt(0)->FrameNeedsReflow(this, PR_TRUE);
   }
 }
 

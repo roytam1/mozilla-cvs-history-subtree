@@ -4368,7 +4368,7 @@ nsBlockFrame::AppendFrames(nsPresContext* aPresContext,
   nsresult rv = AddFrames(aPresContext, aFrameList, lastKid);
   if (NS_SUCCEEDED(rv)) {
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
-    aPresShell.FrameNeedsReflow(this);
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
   return rv;
 }
@@ -4413,7 +4413,7 @@ nsBlockFrame::InsertFrames(nsPresContext* aPresContext,
 #endif // IBMBIDI
   if (NS_SUCCEEDED(rv)) {
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
-    aPresShell.FrameNeedsReflow(this);
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
   return rv;
 }
@@ -4584,7 +4584,7 @@ nsBlockFrame::RemoveFrame(nsPresContext* aPresContext,
 
   if (NS_SUCCEEDED(rv)) {
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
-    aPresShell.FrameNeedsReflow(this);
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
   return rv;
 }
