@@ -88,7 +88,24 @@ TypeInState::~TypeInState()
   Reset();
 }
 
-NS_IMETHODIMP TypeInState::NotifySelectionChanged(nsIDOMDocument *, nsISelection *aSelection,short)
+nsresult TypeInState::UpdateSelState(nsISelection *aSelection)
+{
+  if (!aSelection) return NS_ERROR_NULL_POINTER;
+  
+  PRBool isCollapsed = PR_FALSE;
+  nsresult result = aSelection->GetIsCollapsed(&isCollapsed);
+
+  if (NS_FAILED(result)) return result;
+
+  if (isCollapsed)
+  {
+    result = nsEditor::GetStartNodeAndOffset(aSelection, address_of(mLastSelectionContainer), &mLastSelectionOffset);
+  }
+  return result;
+}
+
+
+NS_IMETHODIMP TypeInState::NotifySelectionChanged(nsIDOMDocument *, nsISelection *aSelection, short)
 {
   // XXX: Selection currently generates bogus selection changed notifications
   // XXX: (bug 140303). It can notify us when the selection hasn't actually
@@ -428,8 +445,8 @@ PRBool TypeInState::IsPropCleared(nsIAtom *aProp,
 }
 
 PRBool TypeInState::FindPropInList(nsIAtom *aProp, 
-                                   const nsString &aAttr,
-                                   nsString *outValue,
+                                   const nsAString &aAttr,
+                                   nsAString *outValue,
                                    nsVoidArray &aList,
                                    PRInt32 &outIndex)
 {
@@ -455,7 +472,7 @@ PRBool TypeInState::FindPropInList(nsIAtom *aProp,
  *    PropItem: helper struct for TypeInState
  *******************************************************************/
 
-PropItem::PropItem(nsIAtom *aTag, const nsString &aAttr, const nsString &aValue) :
+PropItem::PropItem(nsIAtom *aTag, const nsAString &aAttr, const nsAString &aValue) :
  tag(aTag)
 ,attr(aAttr)
 ,value(aValue)

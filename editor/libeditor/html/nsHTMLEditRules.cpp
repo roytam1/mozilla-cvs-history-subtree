@@ -48,8 +48,8 @@
 #include "nsEditor.h"
 #include "nsTextEditUtils.h"
 #include "nsHTMLEditUtils.h"
+#include "nsHTMLCSSUtils.h"
 #include "nsHTMLEditor.h"
-#include "TypeInState.h"
 
 #include "nsIServiceManager.h"
 #include "nsCRT.h"
@@ -191,10 +191,32 @@ nsHTMLEditRules::nsHTMLEditRules() :
 mDocChangeRange(nsnull)
 ,mListenerEnabled(PR_TRUE)
 ,mReturnInEmptyLIKillsList(PR_TRUE)
+,mDidDeleteSelection(PR_FALSE)
 ,mDidRangedDelete(PR_FALSE)
 ,mUtilRange(nsnull)
 ,mJoinOffset(0)
 {
+  nsString emptyString;
+  // populate mCachedStyles
+  mCachedStyles[0] = StyleCache(nsEditProperty::b, emptyString, emptyString);
+  mCachedStyles[1] = StyleCache(nsEditProperty::i, emptyString, emptyString);
+  mCachedStyles[2] = StyleCache(nsEditProperty::u, emptyString, emptyString);
+  mCachedStyles[3] = StyleCache(nsEditProperty::font, NS_LITERAL_STRING("face"), emptyString);
+  mCachedStyles[4] = StyleCache(nsEditProperty::font, NS_LITERAL_STRING("size"), emptyString);
+  mCachedStyles[5] = StyleCache(nsEditProperty::font, NS_LITERAL_STRING("color"), emptyString);
+  mCachedStyles[6] = StyleCache(nsEditProperty::tt, emptyString, emptyString);
+  mCachedStyles[7] = StyleCache(nsEditProperty::em, emptyString, emptyString);
+  mCachedStyles[8] = StyleCache(nsEditProperty::strong, emptyString, emptyString);
+  mCachedStyles[9] = StyleCache(nsEditProperty::dfn, emptyString, emptyString);
+  mCachedStyles[10] = StyleCache(nsEditProperty::code, emptyString, emptyString);
+  mCachedStyles[11] = StyleCache(nsEditProperty::samp, emptyString, emptyString);
+  mCachedStyles[12] = StyleCache(nsEditProperty::var, emptyString, emptyString);
+  mCachedStyles[13] = StyleCache(nsEditProperty::cite, emptyString, emptyString);
+  mCachedStyles[14] = StyleCache(nsEditProperty::abbr, emptyString, emptyString);
+  mCachedStyles[15] = StyleCache(nsEditProperty::acronym, emptyString, emptyString);
+  mCachedStyles[16] = StyleCache(nsEditProperty::cssBackgroundColor, emptyString, emptyString);
+  mCachedStyles[17] = StyleCache(nsEditProperty::sub, emptyString, emptyString);
+  mCachedStyles[18] = StyleCache(nsEditProperty::sup, emptyString, emptyString);
 }
 
 nsHTMLEditRules::~nsHTMLEditRules()
@@ -302,22 +324,44 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
     if (NS_FAILED(res)) return res;
   
     // get the selection start location
-    nsCOMPtr<nsIDOMNode> selNode;
+    nsCOMPtr<nsIDOMNode> selStartNode, selEndNode;
     PRInt32 selOffset;
-    res = mHTMLEditor->GetStartNodeAndOffset(selection, address_of(selNode), &selOffset);
+    res = mHTMLEditor->GetStartNodeAndOffset(selection, address_of(selStartNode), &selOffset);
     if (NS_FAILED(res)) return res;
-    mRangeItem.startNode = selNode;
+    mRangeItem.startNode = selStartNode;
     mRangeItem.startOffset = selOffset;
 
     // get the selection end location
-    res = mHTMLEditor->GetEndNodeAndOffset(selection, address_of(selNode), &selOffset);
+    res = mHTMLEditor->GetEndNodeAndOffset(selection, address_of(selEndNode), &selOffset);
     if (NS_FAILED(res)) return res;
-    mRangeItem.endNode = selNode;
+    mRangeItem.endNode = selEndNode;
     mRangeItem.endOffset = selOffset;
 
     // register this range with range updater to track this as we perturb the doc
     (mHTMLEditor->mRangeUpdater).RegisterRangeItem(&mRangeItem);
 
+    // clear deletion state bool
+    mDidDeleteSelection = PR_FALSE;
+    
+    // HACK:  all sorts of hurt for managing typeinstate.  If we are deleting,
+    // or doing a block operation, clear the type in state
+    if ((action == nsEditor::kOpDeleteText)          || 
+        (action == nsEditor::kOpDeleteSelection)     ||
+        (action == nsHTMLEditor::kOpMakeList)        ||
+        (action == nsHTMLEditor::kOpIndent)          ||
+        (action == nsHTMLEditor::kOpOutdent)         ||
+        (action == nsHTMLEditor::kOpAlign)           ||
+        (action == nsHTMLEditor::kOpMakeBasicBlock)  ||
+        (action == nsHTMLEditor::kOpRemoveList)      ||
+        (action == nsHTMLEditor::kOpMakeDefListItem) ||
+        (action == nsHTMLEditor::kOpInsertElement)   ||
+        (action == nsHTMLEditor::kOpInsertQuotation) ||
+        (action == nsHTMLEditor::kOpInsertBreak)     ||
+        (action == nsHTMLEditor::kOpInsertBreak))
+    {
+      mHTMLEditor->mTypeInState->Reset();
+    }
+    
     // clear out mDocChangeRange and mUtilRange
     nsCOMPtr<nsIDOMNSRange> nsrange;
     if(mDocChangeRange)
@@ -333,6 +377,19 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
       if (!nsrange)
         return NS_ERROR_FAILURE;
       nsrange->NSDetach();  // ditto for mUtilRange.  
+    }
+
+    // remember current inline styles for deletion and normal insertion operations
+    if ((action == nsEditor::kOpInsertText)      || 
+        (action == nsEditor::kOpInsertIMEText)   ||
+        (action == nsEditor::kOpDeleteSelection) ||
+        (action == nsEditor::kOpInsertBreak))
+    {
+      nsCOMPtr<nsIDOMNode> selNode = selStartNode;
+      if (aDirection == nsIEditor::eNext)
+        selNode = selEndNode;
+      res = CacheInlineStyles(selNode);
+      if (NS_FAILED(res)) return res;
     }
     
     // check that selection is in subtree defined by body node
@@ -446,13 +503,14 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
         (action == nsHTMLEditor::kOpLoadHTML)))
     {
       res = ReplaceNewlines(mDocChangeRange);
+      if (NS_FAILED(res)) return res;
     }
     
     // clean up any empty nodes in the selection
     res = RemoveEmptyNodes();
     if (NS_FAILED(res)) return res;
 
-    // attempt to transform any uneeded nbsp's into spaces after doing various operations
+    // attempt to transform any unneeded nbsp's into spaces after doing various operations
     if ((action == nsEditor::kOpInsertText) || 
         (action == nsEditor::kOpInsertIMEText) ||
         (action == nsEditor::kOpDeleteSelection) ||
@@ -490,7 +548,19 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
       res = AdjustSelection(selection, aDirection);
       if (NS_FAILED(res)) return res;
     }
-    
+
+    // check for any styles which were removed inappropriately
+    if ((action == nsEditor::kOpInsertText)      || 
+        (action == nsEditor::kOpInsertIMEText)   ||
+        (action == nsEditor::kOpDeleteSelection) ||
+        (action == nsEditor::kOpInsertBreak))
+    {
+      mHTMLEditor->mTypeInState->UpdateSelState(selection);
+      res = ReapplyCachedStyles();
+      if (NS_FAILED(res)) return res;
+      res = ClearCachedStyles();
+      if (NS_FAILED(res)) return res;
+    }    
   }
 
   // detect empty doc
@@ -503,6 +573,7 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
   {
     res = CheckInterlinePosition(selection);
   }
+  
   return res;
 }
 
@@ -1788,6 +1859,9 @@ nsHTMLEditRules::WillDeleteSelection(nsISelection *aSelection,
   *aCancel = PR_FALSE;
   *aHandled = PR_FALSE;
 
+  // remember that we did a selection deletion.  Used by CreateStyleForInsertText()
+  mDidDeleteSelection = PR_TRUE;
+  
   // if there is only bogus content, cancel the operation
   if (mBogusNode) 
   {
@@ -2055,10 +2129,13 @@ nsHTMLEditRules::WillDeleteSelection(nsISelection *aSelection,
       }
       
       // dont cross table boundaries
-      PRBool bInDifTblElems;
-      res = InDifferentTableElements(leftNode, rightNode, &bInDifTblElems);
-      if (NS_FAILED(res) || bInDifTblElems) return res;
-
+      if (leftNode && rightNode)
+      {
+	      PRBool bInDifTblElems;
+	      res = InDifferentTableElements(leftNode, rightNode, &bInDifTblElems);
+	      if (NS_FAILED(res) || bInDifTblElems) return res;
+      }
+      
       if (bDeletedBR)
       {
         // put selection at edge of block and we are done.
@@ -4043,6 +4120,48 @@ nsHTMLEditRules::CreateStyleForInsertText(nsISelection *aSelection, nsIDOMDocume
   nsresult res = mHTMLEditor->GetStartNodeAndOffset(aSelection, address_of(node), &offset);
   if (NS_FAILED(res)) return res;
   PropItem *item = nsnull;
+  
+  // if we deleted selection then also apply cached styles
+  if (mDidDeleteSelection && 
+      ((mTheAction == nsEditor::kOpInsertText ) ||
+       (mTheAction == nsEditor::kOpInsertIMEText) ||
+       (mTheAction == nsEditor::kOpInsertBreak) ||
+       (mTheAction == nsEditor::kOpDeleteSelection)))
+  {
+    res = ReapplyCachedStyles();
+    if (NS_FAILED(res)) return res;
+  }
+  // either way we clear the cached styles array
+  res = ClearCachedStyles();  
+  if (NS_FAILED(res)) return res;  
+
+  // next examine our present style and make sure default styles are either present or
+  // explicitly overridden.  If neither, add the default style to the TypeInState
+  PRInt32 j, defcon = mHTMLEditor->mDefaultStyles.Count();
+  for (j=0; j<defcon; j++)
+  {
+    PropItem *propItem = (PropItem*)mHTMLEditor->mDefaultStyles[j];
+    if (!propItem) 
+      return NS_ERROR_NULL_POINTER;
+    PRBool bFirst, bAny, bAll;
+
+    // GetInlineProperty also examine TypeInState.  The only gotcha here is that a cleared
+    // property looks like an unset property.  For now I'm assuming that's not a problem:
+    // that default styles will always be multivalue styles (like font face or size) where
+    // clearing the style means we want to go back to the default.  If we ever wanted a 
+    // "toggle" style like bold for a default, though, I'll have to add code to detect the
+    // difference between unset and explicitly cleared, else user would never be able to
+    // unbold, for instance.
+    nsAutoString curValue;
+    res = mHTMLEditor->GetInlinePropertyBase(propItem->tag, &(propItem->attr), nsnull, 
+                                             &bFirst, &bAny, &bAll, &curValue, PR_FALSE);
+    if (NS_FAILED(res)) return res;
+    
+    if (!bAny)  // no style set for this prop/attr
+    {
+      mHTMLEditor->mTypeInState->SetProp(propItem->tag, propItem->attr, propItem->value);
+    }
+  }
   
   // process clearing any styles first
   mHTMLEditor->mTypeInState->TakeClearProperty(&item);
@@ -6940,6 +7059,104 @@ nsHTMLEditRules::GetTopEnclosingMailCite(nsIDOMNode *aNode,
 
 
 nsresult 
+nsHTMLEditRules::CacheInlineStyles(nsIDOMNode *aNode)
+{
+  if (!aNode) return NS_ERROR_NULL_POINTER;
+
+  PRBool useCSS;
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
+
+  PRInt32 j;
+  for (j=0; j<SIZE_STYLE_TABLE; j++)
+  {
+    PRBool isSet = PR_FALSE;
+    nsAutoString outValue;
+    nsCOMPtr<nsIDOMNode> resultNode;
+    if (!useCSS)
+    {
+      mHTMLEditor->IsTextPropertySetByContent(aNode, mCachedStyles[j].tag, &(mCachedStyles[j].attr), nsnull,
+                               isSet, getter_AddRefs(resultNode), &outValue);
+    }
+    else
+    {
+      mHTMLEditor->mHTMLCSSUtils->IsCSSEquivalentToHTMLInlineStyleSet(aNode, mCachedStyles[j].tag, &(mCachedStyles[j].attr),
+                                                    isSet, outValue, COMPUTED_STYLE_TYPE);
+    }
+    if (isSet)
+    {
+      mCachedStyles[j].mPresent = PR_TRUE;
+      mCachedStyles[j].value.Assign(outValue);
+    }
+  }
+  return NS_OK;
+}
+
+
+nsresult 
+nsHTMLEditRules::ReapplyCachedStyles()
+{
+  // The idea here is to examine our cached list of styles
+  // and see if any have been removed.  If so, add typeinstate
+  // for them, so that they will be reinserted when new 
+  // content is added.
+  PRBool useCSS;
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
+
+  // get selection point
+  nsCOMPtr<nsISelection>selection;
+  nsresult res = mHTMLEditor->GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(res)) return res;
+  nsCOMPtr<nsIDOMNode> selNode;
+  PRInt32 selOffset;
+  res = mHTMLEditor->GetStartNodeAndOffset(selection, address_of(selNode), &selOffset);
+  if (NS_FAILED(res)) return res;
+
+  res = NS_OK;
+  PRInt32 j;
+  for (j=0; j<SIZE_STYLE_TABLE; j++)
+  {
+    if (mCachedStyles[j].mPresent)
+    {
+      PRBool bFirst, bAny, bAll;
+      nsAutoString curValue;
+      if (useCSS) // check computed style first in css case
+      {
+        mHTMLEditor->mHTMLCSSUtils->IsCSSEquivalentToHTMLInlineStyleSet(selNode, mCachedStyles[j].tag, &(mCachedStyles[j].attr),
+                                                    bAny, curValue, COMPUTED_STYLE_TYPE);
+      }
+      if (!bAny) // then check typeinstate and html style
+      {
+        res = mHTMLEditor->GetInlinePropertyBase(mCachedStyles[j].tag, &(mCachedStyles[j].attr), &(mCachedStyles[j].value), 
+                                                        &bFirst, &bAny, &bAll, &curValue, PR_FALSE);
+        if (NS_FAILED(res)) return res;
+      }
+      // this style has disappeared through deletion.  Add it onto our typeinstate:
+      if (!bAny) 
+      {
+        mHTMLEditor->mTypeInState->SetProp(mCachedStyles[j].tag, mCachedStyles[j].attr, mCachedStyles[j].value);
+      }
+    }
+  }
+  return NS_OK;
+}
+
+
+nsresult
+nsHTMLEditRules::ClearCachedStyles()
+{
+  // clear the mPresent bits in mCachedStyles array
+  
+  PRInt32 j;
+  for (j=0; j<SIZE_STYLE_TABLE; j++)
+  {
+    mCachedStyles[j].mPresent = PR_FALSE;
+    mCachedStyles[j].value.Truncate(0);
+  }
+  return NS_OK;
+}
+
+
+nsresult 
 nsHTMLEditRules::AdjustSpecialBreaks(PRBool aSafeToAskFrames)
 {
   nsCOMArray<nsIDOMNode> arrayOfNodes;
@@ -7421,6 +7638,7 @@ nsHTMLEditRules::RemoveEmptyNodes()
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("u"))      || 
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("tt"))     || 
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("s"))      || 
+              nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("span"))   || 
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("strike")) || 
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("big"))    || 
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("small"))  || 

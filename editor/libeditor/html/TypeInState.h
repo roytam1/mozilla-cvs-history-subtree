@@ -53,7 +53,8 @@ struct PropItem
   nsString attr;
   nsString value;
   
-  PropItem(nsIAtom *aTag, const nsString &aAttr, const nsString &aValue);
+  PropItem() : tag(nsnull), attr(), value() {};
+  PropItem(nsIAtom *aTag, const nsAString &aAttr, const nsAString &aValue);
   ~PropItem();
 };
 
@@ -67,6 +68,7 @@ public:
   void Reset();
   virtual ~TypeInState();
 
+  nsresult TypeInState::UpdateSelState(nsISelection *aSelection);
   NS_IMETHOD NotifySelectionChanged(nsIDOMDocument *aDoc, nsISelection *aSel, short aReason);
 
   nsresult SetProp(nsIAtom *aProp);
@@ -98,6 +100,8 @@ public:
   nsresult GetTypingState(PRBool &isSet, PRBool &theSetting, nsIAtom *aProp, 
                           const nsString &aAttr, nsString* outValue);
 
+  static   PRBool FindPropInList(nsIAtom *aProp, const nsAString &aAttr, nsAString *outValue, nsVoidArray &aList, PRInt32 &outIndex);
+
 protected:
 
   nsresult RemovePropFromSetList(nsIAtom *aProp, const nsString &aAttr);
@@ -106,13 +110,14 @@ protected:
   PRBool IsPropSet(nsIAtom *aProp, const nsString &aAttr, nsString* outValue, PRInt32 &outIndex);
   PRBool IsPropCleared(nsIAtom *aProp, const nsString &aAttr);
   PRBool IsPropCleared(nsIAtom *aProp, const nsString &aAttr, PRInt32 &outIndex);
-  PRBool FindPropInList(nsIAtom *aProp, const nsString &aAttr, nsString *outValue, nsVoidArray &aList, PRInt32 &outIndex);
 
   nsVoidArray mSetArray;
   nsVoidArray mClearedArray;
   PRInt32 mRelativeFontSize;
   nsCOMPtr<nsIDOMNode> mLastSelectionContainer;
   PRInt32 mLastSelectionOffset;
+  
+  friend class nsHTMLEditRules;
 };
 
 
