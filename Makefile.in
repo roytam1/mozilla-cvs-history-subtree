@@ -137,5 +137,7 @@ export::
 endif
 
 install::
-	echo "Hacking taskoverlay to include xmlterm"
-	(cd dist/bin; $(PERL) menuhack)
+	if test -f dist/bin/menuhack; \
+         then \
+         echo "Hacking taskoverlay to include xmlterm"; \
+         cd dist/bin; $(PERL) menuhack; cd ../..; fi
