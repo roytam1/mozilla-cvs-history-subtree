@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
- *                          `
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #include "nspr.h"
@@ -35,6 +39,9 @@
 #include "nsHTTPAtoms.h"
 
 #include "nsIPref.h" // preferences stuff
+#ifdef DEBUG_gagan
+#include "nsUnixColorPrintf.h"
+#endif
 
 #if defined(PR_LOGGING)
 //
@@ -79,7 +86,10 @@ NS_METHOD NS_CreateOrGetHTTPHandler(nsIHTTPProtocolHandler* *o_HTTPHandler)
     return NS_ERROR_NULL_POINTER;
 }
 
-nsHTTPHandler::nsHTTPHandler():mProxy(nsnull)
+nsHTTPHandler::nsHTTPHandler():
+    mDoKeepAlive(PR_FALSE),
+    mProxy(nsnull),
+    mUseProxy(PR_FALSE)
 {
     nsresult rv;
     NS_INIT_REFCNT();
@@ -105,6 +115,14 @@ nsHTTPHandler::nsHTTPHandler():mProxy(nsnull)
         NS_ERROR("Failed to create the transport list");
     }
     
+    // At some later stage we could merge this with the transport
+    // list and add a field to each transport to determine its 
+    // state. 
+    rv = NS_NewISupportsArray(getter_AddRefs(mIdleTransports));
+    if (NS_FAILED(rv)) {
+        NS_ERROR("Failed to create the idle transport list");
+    }
+
     // Prefs stuff. Is this the right place to do this? TODO check
     NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
 
@@ -115,15 +133,31 @@ nsHTTPHandler::nsHTTPHandler():mProxy(nsnull)
     }
     else 
     {
+#if 1   // only for keep alive
+        // This stuff only till Keep-Alive is not switched on by default
+        PRInt32 keepalive = -1;
+        rv = prefs->GetIntPref("network.http.keep-alive", &keepalive);
+        mDoKeepAlive = (keepalive == 1);
+#ifdef DEBUG_gagan
+        printf("Keep-alive switched ");
+        printf(mDoKeepAlive ? STARTYELLOW "on\n" ENDCOLOR : 
+                STARTRED "off\n" ENDCOLOR);
+#endif //DEBUG_gagan
+#endif  // remove till here
+
         nsXPIDLCString proxyServer;
         PRInt32 proxyPort = -1;
-        rv = prefs->CopyCharPref("network.proxy.http", getter_Copies(proxyServer));
+        PRInt32 type = -1;
+        rv = prefs->GetIntPref("network.proxy.type", &type);
+        //WARN for type==2
+        mUseProxy = (type == 1); //type == 2 is autoconfig stuff. 
+        if (NS_FAILED(rv))
+            return ; // NE_ERROR("Failed to get proxy type");
+        rv = prefs->CopyCharPref("network.proxy.http", 
+                getter_Copies(proxyServer));
         if (NS_FAILED(rv)) 
             return; //NS_ERROR("Failed to get the HTTP proxy server");
         rv = prefs->GetIntPref("network.proxy.http_port",&proxyPort);
-#ifdef DEBUG_gagan
-        printf("Read HTTP proxy = %s:%d\n", (const char*)proxyServer,proxyPort);
-#endif
 
         if (NS_SUCCEEDED(rv) && (proxyPort>0)) // currently a bug in IntPref
         {
@@ -142,6 +176,7 @@ nsHTTPHandler::~nsHTTPHandler()
 
     mPendingChannelList->Clear();
     mTransportList->Clear();
+    mIdleTransports->Clear();
 
     // Release the Atoms used by the HTTP protocol...
     nsHTTPAtoms::ReleaseAtoms();
@@ -156,30 +191,25 @@ NS_METHOD
 nsHTTPHandler::NewChannel(const char* verb, nsIURI* i_URL,
                           nsILoadGroup *aGroup,
                           nsIEventSinkGetter *eventSinkGetter,
+                          nsIURI* originalURI,
                           nsIChannel **o_Instance)
 {
     nsresult rv;
     nsHTTPChannel* pChannel = nsnull;
-    char* scheme        = nsnull;
-    char* handlerScheme = nsnull;
+    nsXPIDLCString scheme;
+    nsXPIDLCString handlerScheme;
 
     // Initial checks...
     if (!i_URL || !o_Instance) {
         return NS_ERROR_NULL_POINTER;
     }
 
-    i_URL->GetScheme(&scheme);
-    GetScheme(&handlerScheme);
+    i_URL->GetScheme(getter_Copies(scheme));
+    GetScheme(getter_Copies(handlerScheme));
     
     if (scheme != nsnull  && handlerScheme != nsnull  &&
         0 == PL_strcasecmp(scheme, handlerScheme)) 
     {
-        if (scheme)
-            nsCRT::free(scheme);
-        
-        if (handlerScheme)
-            nsCRT::free(handlerScheme);
-        
         nsCOMPtr<nsIURI> channelURI;
         PRUint32 count;
         PRInt32 index;
@@ -188,14 +218,17 @@ nsHTTPHandler::NewChannel(const char* verb, nsIURI* i_URL,
         mConnections->Count(&count);
         for (index=count-1; index >= 0; --index) {
             //switch to static_cast...
-            pChannel = (nsHTTPChannel*)((nsIHTTPChannel*) mConnections->ElementAt(index));
+            pChannel = (nsHTTPChannel*)((nsIHTTPChannel*) 
+                mConnections->ElementAt(index));
             //Do other checks here as well... TODO
             rv = pChannel->GetURI(getter_AddRefs(channelURI));
             if (NS_SUCCEEDED(rv) && (channelURI.get() == i_URL))
             {
                 NS_ADDREF(pChannel);
                 *o_Instance = pChannel;
-                return NS_OK; // TODO return NS_USING_EXISTING... or NS_DUPLICATE_REQUEST something like that.
+                // TODO return NS_USING_EXISTING... 
+                // or NS_DUPLICATE_REQUEST something like that.
+                return NS_OK; 
             }
         }
 
@@ -203,11 +236,13 @@ nsHTTPHandler::NewChannel(const char* verb, nsIURI* i_URL,
         pChannel = new nsHTTPChannel(i_URL, 
                                      verb,
                                      eventSinkGetter,
+                                     originalURI,
                                      this);
         if (pChannel) {
             NS_ADDREF(pChannel);
             pChannel->Init(aGroup);
-            rv = pChannel->QueryInterface(NS_GET_IID(nsIChannel), (void**)o_Instance);
+            rv = pChannel->QueryInterface(NS_GET_IID(nsIChannel), 
+                    (void**)o_Instance);
             // add this instance to the active list of connections
             // TODO!
             NS_RELEASE(pChannel);
@@ -216,12 +251,6 @@ nsHTTPHandler::NewChannel(const char* verb, nsIURI* i_URL,
         }
         return rv;
     }
-
-    if (scheme)
-            nsCRT::free(scheme);
-        
-    if (handlerScheme)
-            nsCRT::free(handlerScheme);
 
     NS_ERROR("Non-HTTP request coming to HTTP Handler!!!");
     //return NS_ERROR_MISMATCHED_URL;
@@ -262,22 +291,6 @@ nsHTTPHandler::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 NS_IMPL_RELEASE(nsHTTPHandler);
 
 NS_METHOD
-nsHTTPHandler::MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI,
-                            char **_retval)
-{
-    // XXX optimize this to not needlessly construct the URL
-
-    nsresult rv;
-    nsIURI* url;
-    rv = NewURI(aRelativeSpec, aBaseURI, &url);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = url->GetSpec(_retval);
-    NS_RELEASE(url);
-    return rv;
-}
-
-NS_METHOD
 nsHTTPHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                       nsIURI **result)
 {
@@ -292,8 +305,9 @@ nsHTTPHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
     }
     else
     {
-        rv = nsComponentManager::CreateInstance(kStandardUrlCID, nsnull, NS_GET_IID(nsIURI),
-                                                (void**)&url);
+        rv = nsComponentManager::CreateInstance(kStandardUrlCID, 
+                                    nsnull, NS_GET_IID(nsIURI),
+                                    (void**)&url);
         if (NS_FAILED(rv)) return rv;
         rv = url->SetSpec((char*)aSpec);
     }
@@ -320,15 +334,18 @@ nsHTTPHandler::NewEncodeStream(nsIInputStream *rawStream, PRUint32 encodeFlags,
 }
 
 NS_IMETHODIMP
-nsHTTPHandler::NewDecodeStream(nsIInputStream *encodedStream, PRUint32 decodeFlags,
-                               nsIInputStream **result)
+nsHTTPHandler::NewDecodeStream(nsIInputStream *encodedStream, 
+                                PRUint32 decodeFlags,
+                                nsIInputStream **result)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsHTTPHandler::NewPostDataStream(PRBool isFile, const char *data, PRUint32 encodeFlags,
-                                 nsIInputStream **result)
+nsHTTPHandler::NewPostDataStream(PRBool isFile, 
+                                const char *data, 
+                                PRUint32 encodeFlags,
+                                nsIInputStream **result)
 {
     nsresult rv;
     if (isFile) {
@@ -342,7 +359,9 @@ nsHTTPHandler::NewPostDataStream(PRBool isFile, const char *data, PRUint32 encod
         NS_RELEASE(in);
         if (NS_FAILED(rv)) return rv;
 
-        rv = NewEncodeStream(rawStream, nsIHTTPProtocolHandler::ENCODE_NORMAL, result);
+        rv = NewEncodeStream(rawStream,     
+                nsIHTTPProtocolHandler::ENCODE_NORMAL, 
+                result);
         NS_RELEASE(rawStream);
         return rv;
     }
@@ -371,7 +390,10 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
     count = 0;
     mTransportList->Count(&count);
     if (count >= MAX_NUMBER_OF_OPEN_TRANSPORTS) {
-        rv = mPendingChannelList->AppendElement(i_Channel) ? NS_OK : NS_ERROR_FAILURE;  // XXX this method incorrectly returns a bool
+
+        // XXX this method incorrectly returns a bool
+        rv = mPendingChannelList->AppendElement(i_Channel) 
+            ? NS_OK : NS_ERROR_FAILURE;  
         NS_ASSERTION(NS_SUCCEEDED(rv), "AppendElement failed");
 
         PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
@@ -383,46 +405,83 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
         return NS_ERROR_BUSY;
     }
 
-#if 0
-    // Check in the table...
-    nsIChannel* trans = (nsIChannel*) mTransportList->Get(&key);
-    if (trans) {
-        *o_pTrans = trans;
-        return NS_OK;
-    }
-#endif /* 0 */
+    PRInt32 port;
+    nsXPIDLCString host;
 
-    // Create a new one...
+    rv = i_Uri->GetHost(getter_Copies(host));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = i_Uri->GetPort(&port);
+    if (NS_FAILED(rv)) return rv;
+
+    if (port == -1)
+        GetDefaultPort(&port);
+
     nsIChannel* trans;
-
-    NS_WITH_SERVICE(nsISocketTransportService, sts, kSocketTransportServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    if (!mProxy)
+    // Check in the idle transports for a host/port match
+    count = 0;
+    PRInt32 index = 0;
+    if (mDoKeepAlive)
     {
-        PRInt32 port;
-        nsXPIDLCString host;
+        mIdleTransports->Count(&count);
 
-        // Get the host and port of the URI to create a new socket transport...
-        rv = i_Uri->GetHost(getter_Copies(host));
-        if (NS_FAILED(rv)) return rv;
+        for (index=count-1; index >= 0; --index) 
+        {
+            nsCOMPtr<nsIURI> uri;
+            trans = (nsIChannel*) mIdleTransports->ElementAt(index);
+            if (trans && 
+                    (NS_SUCCEEDED(trans->GetURI(getter_AddRefs(uri)))))
+            {
+                nsXPIDLCString idlehost;
+                if (NS_SUCCEEDED(uri->GetHost(getter_Copies(idlehost))))
+                {
+                    if (0 == PL_strcasecmp(host, idlehost))
+                    {
+                        PRInt32 idleport;
+                        if (NS_SUCCEEDED(uri->GetPort(&idleport)))
+                        {
+                            if (idleport == -1)
+                                GetDefaultPort(&idleport);
 
-        rv = i_Uri->GetPort(&port);
-        if (NS_FAILED(rv)) return rv;
+#ifdef DEBUG_gagan
+                            printf(STARTYELLOW "%s:%d\n", 
+                                    (const char*)idlehost, idleport);
+#endif
 
-        if (port == -1) {
-            GetDefaultPort(&port);
+                            if (idleport == port)
+                            {
+                                // Addref it before removing it!
+                                NS_ADDREF(trans);
+#ifdef DEBUG_gagan
+                                PRINTF_BLUE;
+                                printf("Found a match in idle list!\n");
+#endif
+                                // Remove it from the idle
+                                mIdleTransports->RemoveElement(trans);
+                                //break;// break out of the for loop 
+                            }
+                        }
+                    }
+                }
+            }
+            // else delibrately ignored.
         }
-
-        rv = sts->CreateTransport(host, port, i_ESG, &trans);
-        i_Channel->SetUsingProxy(PR_FALSE);
     }
-    else
+    // if we didn't find any from the keep-alive idlelist
+    if (*o_pTrans == nsnull)
     {
-        rv = sts->CreateTransport(mProxy, mProxyPort, i_ESG, &trans);
-        i_Channel->SetUsingProxy(PR_TRUE);
+        // Create a new one...
+        if (!mProxy || !mUseProxy)
+        {
+            rv = CreateTransport(host, port, i_ESG, host, &trans);
+        }
+        else
+        {
+            rv = CreateTransport(mProxy, mProxyPort, i_ESG, host, &trans);
+        }
+        if (NS_FAILED(rv)) return rv;
     }
-    if (NS_FAILED(rv)) return rv;
+    i_Channel->SetUsingProxy(mUseProxy);
 
     // Put it in the table...
     // XXX this method incorrectly returns a bool
@@ -433,12 +492,26 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
     
     PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
            ("nsHTTPHandler::RequestTransport."
-            "\tGot a socket transport for nsHTTPChannel [%x].\n",
-            i_Channel));
+            "\tGot a socket transport for nsHTTPChannel [%x]. %d Active transports.\n",
+            i_Channel, count+1));
 
     return rv;
 }
 
+nsresult nsHTTPHandler::CreateTransport(const char* host, 
+                            PRInt32 port, 
+                            nsIEventSinkGetter* i_ESG, 
+                            const char* aPrintHost,
+                            nsIChannel** o_pTrans)
+{
+    nsresult rv;
+
+    NS_WITH_SERVICE(nsISocketTransportService, sts, 
+            kSocketTransportServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    return sts->CreateTransport(host, port, i_ESG, aPrintHost, o_pTrans);  
+}
 
 nsHTTPHandler * nsHTTPHandler::GetInstance(void)
 {
@@ -454,12 +527,40 @@ nsHTTPHandler * nsHTTPHandler::GetInstance(void)
 nsresult nsHTTPHandler::ReleaseTransport(nsIChannel* i_pTrans)
 {
     nsresult rv;
-    PRUint32 count;
+    PRUint32 count=0;
+
+    PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
+           ("nsHTTPHandler::ReleaseTransport."
+            "\tReleasing socket transport %x.\n",
+            i_pTrans));
 
     rv = mTransportList->RemoveElement(i_pTrans);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Transport not in table...");
 
-    count = 0;
+    if (mDoKeepAlive)
+    {
+        // if this transport is to be kept alive 
+        // then add it to mIdleTransports
+        NS_WITH_SERVICE(nsISocketTransportService, sts, 
+                kSocketTransportServiceCID, &rv);
+        // don't bother about failure of this one...
+        if (NS_SUCCEEDED(rv))
+        {
+            PRBool reuse = PR_FALSE;
+            rv = sts->ReuseTransport(i_pTrans, &reuse);
+            // Delibrately ignoring the return value of AppendElement 
+            // if we can't append a transport we just won't have keep-alive
+            // but life goes on... assert in debug though
+            if (NS_SUCCEEDED(rv) && reuse)
+            {
+                PRBool added = mIdleTransports->AppendElement(i_pTrans);
+                NS_ASSERTION(added, 
+                    "Failed to add a socket to idle transports list!");
+            }
+        }
+    }
+    
+    // Now trigger an additional one from the pending list
     mPendingChannelList->Count(&count);
     if (count) {
         nsCOMPtr<nsISupports> item;
@@ -481,6 +582,23 @@ nsresult nsHTTPHandler::ReleaseTransport(nsIChannel* i_pTrans)
 
     return rv;
 }
+
+nsresult nsHTTPHandler::CancelPendingChannel(nsHTTPChannel* aChannel)
+{
+  PRBool ret;
+
+  // XXX: RemoveElement *really* returns a PRBool :-(
+  ret = (PRBool) mPendingChannelList->RemoveElement(aChannel);
+
+  PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
+         ("nsHTTPHandler::CancelPendingChannel."
+          "\tCancelling nsHTTPChannel [%x]\n",
+          aChannel));
+
+  return ret ? NS_OK : NS_ERROR_FAILURE;
+
+}
+
 
 nsresult
 nsHTTPHandler::GetProxyHost(const char* *o_ProxyHost) const
