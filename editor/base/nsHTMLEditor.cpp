@@ -2516,13 +2516,6 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
   rangeStartHint = numstr1.ToInteger(&err);
   rangeEndHint   = numstr2.ToInteger(&err);
 
-  // HACK: ignore range hints for now.  This is because they are not yet reliable.
-  // Leading or trailing whitespace can make me think all of a node is not selected
-  // when in fact it looks selected to the user, since the leading/trailing whitespace
-  // does not render.  Remove this once we solve whitespace issues in nsDocumentEncoder.
-  rangeStartHint = 0;
-  rangeEndHint = 0;
-  
   // make a list of what nodes in docFrag we need to move
   
   // First off create a range over the portion of docFrag indicated by
@@ -3191,12 +3184,10 @@ nsHTMLEditor::InsertNodeAtPoint(nsIDOMNode *aNode,
   // Search up the parent chain to find a suitable container      
   while (!CanContainTag(parent, tagName))
   {
-    // If the current parent is a root (body or table cell)
+    // If the current parent is a root (body or table element)
     // then go no further - we can't insert
-    parent->GetNodeName(parentTagName);
-    res = IsRootTag(parentTagName, isRoot);
-    NS_ENSURE_SUCCESS(res, res);
-    if (isRoot) return NS_ERROR_FAILURE;
+    if (nsHTMLEditUtils::IsBody(parent) || nsHTMLEditUtils::IsTableElement(parent))
+      return NS_ERROR_FAILURE;
     // Get the next parent
     parent->GetParentNode(getter_AddRefs(tmp));
     NS_ENSURE_TRUE(tmp, NS_ERROR_FAILURE);
