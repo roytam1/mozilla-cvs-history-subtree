@@ -341,7 +341,6 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
 
   gfx_format format;
 
-  // then initalize the frame (which was appended above in nsPNGDecoder::Init())
   if (channels == 3) {
     format = nsIGFXFormat::RGB;
   } else if (channels > 3) {
@@ -357,6 +356,7 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
   format += 1; // RGB to BGR
 #endif
 
+  // then initalize the frame and append it to the container
   decoder->mFrame->Init(0, 0, width, height, format);
 
   decoder->mImage->AppendFrame(decoder->mFrame);
