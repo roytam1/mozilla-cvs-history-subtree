@@ -27,9 +27,10 @@ DIRS=mdn
 BUILD_SMIME=1
 !endif
 
-!if defined(BUILD_SMIME)
-DIRS=$(DIRS) smime
-!endif
+# no smime in this build
+#!if defined(BUILD_SMIME)
+#DIRS=$(DIRS) smime
+#!endif
 
 !if defined(BUILD_MAIL_SMOKETEST)
 DIRS=$(DIRS) smoketest
