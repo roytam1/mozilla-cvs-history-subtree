@@ -104,7 +104,8 @@ ToStringGuts(XPCCallContext& ccx)
         if(to)
         {
             const char* fmt = name ? " (%s)" : "%s";
-            name = JS_sprintf_append(name, fmt, to->GetInterface()->GetName());
+            name = JS_sprintf_append(name, fmt, 
+                                     to->GetInterface()->GetNameString());
         }    
         else if(!name)
         {
@@ -113,7 +114,7 @@ ToStringGuts(XPCCallContext& ccx)
             PRUint16 count = set->GetInterfaceCount();
 
             if(count == 1)
-                name = JS_sprintf_append(name, "%s", array[0]->GetName());
+                name = JS_sprintf_append(name, "%s", array[0]->GetNameString());
             else
             {
                 for(PRUint16 i = 0; i < count; i++)
@@ -121,7 +122,8 @@ ToStringGuts(XPCCallContext& ccx)
                     const char* fmt = (i == 0) ? 
                                         "(%s" : (i == count-1) ? 
                                             ", %s)" : ", %s";
-                    name = JS_sprintf_append(name, fmt, array[i]->GetName());
+                    name = JS_sprintf_append(name, fmt, 
+                                             array[i]->GetNameString());
                 }       
             }
         }
