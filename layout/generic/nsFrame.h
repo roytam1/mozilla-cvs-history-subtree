@@ -47,7 +47,6 @@
 #endif
 
 #include "nsIPresShell.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsIFrameSelection.h"
 #include "nsHTMLReflowState.h"
 #include "nsHTMLReflowMetrics.h"
@@ -367,13 +366,6 @@ public:
   // returned.
   PRBool IsFrameTreeTooDeep(const nsHTMLReflowState& aReflowState,
                             nsHTMLReflowMetrics& aMetrics);
-
-  static nsresult CreateAndPostReflowCommand(nsIPresShell*                   aPresShell,
-                                             nsIFrame*                       aTargetFrame,
-                                             nsReflowType aReflowType,
-                                             nsIFrame*                       aChildFrame,
-                                             nsIAtom*                        aAttribute,
-                                             nsIAtom*                        aListName);
 
   // Do the work for getting the parent style context frame so that
   // other frame's |GetParentStyleContextFrame| methods can call this

@@ -4536,34 +4536,6 @@ nsFrame::GetFirstLeaf(nsPresContext* aPresContext, nsIFrame **aFrame)
   }
 }
 
-nsresult nsFrame::CreateAndPostReflowCommand(nsIPresShell* aPresShell,
-                                             nsIFrame*     aTargetFrame,
-                                             nsReflowType  aReflowType,
-                                             nsIFrame*     aChildFrame,
-                                             nsIAtom*      aAttribute,
-                                             nsIAtom*      aListName)
-{
-  nsresult rv;
-
-  if (!aPresShell || !aTargetFrame) {
-    rv = NS_ERROR_NULL_POINTER;
-  }
-  else {
-    nsHTMLReflowCommand* reflowCmd;
-    rv = NS_NewHTMLReflowCommand(&reflowCmd, aTargetFrame,
-                                 aReflowType, aChildFrame, 
-                                 aAttribute);
-    if (NS_SUCCEEDED(rv)) {
-      if (nsnull != aListName) {
-        reflowCmd->SetChildListName(aListName);
-      }
-      aPresShell->AppendReflowCommand(reflowCmd);    
-    }
-  } 
-
-  return rv;
-}
-
 NS_IMETHODIMP
 nsFrame::CaptureMouse(nsPresContext* aPresContext, PRBool aGrabMouseEvents)
 {
