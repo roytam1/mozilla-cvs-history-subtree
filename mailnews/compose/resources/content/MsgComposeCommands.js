@@ -129,17 +129,17 @@ function ComposeStartup()
     var identitySelect = document.getElementById("msgIdentity");
 
     if (identitySelect) {
-        fillIdentitySelect(identitySelect);
+        //fillIdentitySelect(identitySelect);
 
 	// because of bug #14312, a default option was in the select widget
 	// remove it now
- 	identitySelect.remove(0);   
+        identitySelect.remove(0);   
     }
 
     if (args.preselectid)
-        identitySelect.value = args.preselectid;
+        identitySelect.value = "identity://" + args.preselectid;
     else
-        identitySelect.selectedIndex = 0;
+        identitySelect.value = identitySelect.options[1].value;
 
     // fill in Recipient type combobox
     FillRecipientTypeCombobox();
@@ -150,7 +150,7 @@ function ComposeStartup()
         // back to an identity, to pass to initcompose
         // it would be nice if there was some way to actually send the
         // identity through "args"
-        var identity = getIdentityForKey(args.preselectid);
+        var identity = getIdentityForURI("identity://" + args.preselectid);
         
 		msgCompose = msgComposeService.InitCompose(window, args.originalMsg, args.type, args.format, args.fieldsAddr, identity);
 		if (msgCompose)
@@ -529,18 +529,23 @@ function getCurrentIdentity()
 
     // fill in Identity combobox
     var identitySelect = document.getElementById("msgIdentity");
-    var identityKey = identitySelect.value;
+    var identityURI = identitySelect.value;
     // dump("Looking for identity " + identityKey + "\n");
-    var identity = accountManager.getIdentity(identityKey);
+    var identity = getIdentityForURI(identityURI);
     
     return identity;
 }
 
-function getIdentityForKey(key)
+function getIdentityForURI(uri)
 {
+    // make sure the uri begins with identity://
     var accountManager = msgService.accountManager;
 
-    return accountManager.getIdentity(key);
+    var idprefix = "identity://";
+    if (uri.indexOf(idprefix) == 0) {
+        var key = uri.substring(idprefix.length, uri.length);
+        return accountManager.getIdentity(key);
+    }
 }
 
 function SetComposeWindowTitle(event) 
