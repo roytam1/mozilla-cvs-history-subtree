@@ -294,10 +294,13 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
-  REFLOW_ASSERTFRAME(this);
+  // XXX It seems as if mAbsoluteContainers can't be in the reflow tree...
+  // the current node will still be our parent blockframe
+  //  REFLOW_ASSERTFRAME(this);
   nsIFrame *childFrame;
 
   // See if the reflow command is targeted at us
+  // XXX FIX? if our children don't put us in the list, can we be a target?
   PRBool amTarget = reflowIterator.IsTarget();
 
   if (amTarget) {
@@ -352,6 +355,14 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
     }
     // We reflowed all our DIRTY children, but other children that are in
     // the tree still may need reflow.
+
+    // If we reflowed a DIRTY child, should it be removed as a candidate
+    // for going into Reflow() on?  I don't think so, because the DIRTY
+    // reflow on that frame does not guarantee _all_ the correct reflows
+    // are done on the children of that frame (for example, if a grandchild
+    // of that node needed a reflow, but the child of that node wasn't
+    // marked dirty).  So we might end up reflowing a node twice if we're
+    // targeted and have a child/etc as a target as well.
   }
   // now handle any targets that are children of this node
   while (reflowIterator.NextChild(&childFrame))
