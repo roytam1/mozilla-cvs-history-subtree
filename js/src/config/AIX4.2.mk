@@ -32,10 +32,9 @@ CPU_ARCH = rs6000
 GFX_ARCH = x
 INLINES = js_compare_and_swap:js_fast_lock1:js_fast_unlock1:js_lock_get_slot:js_lock_set_slot:js_lock_scope1
 
-XLDFLAGS += -lbsd -lsvld -lm -lc_r
 #-lpthreads -lc_r
 
-MKSHLIB = /usr/lpp/xlC/bin/makeC++SharedLib_r -p 0 -brtl -berok
+MKSHLIB = /usr/lpp/xlC/bin/makeC++SharedLib_r -p 0 -G -berok
 
 ifdef JS_THREADSAFE
 XLDFLAGS += -ldl
