@@ -51,7 +51,7 @@ txExecutionState::~txExecutionState()
     delete mEvalContext;
     
     // XXX mind the initial evalcontext, it can occur more then once in the
-    // evalcontext-stack
+    // evalcontext-stack. If we refcount them this won't be a problem.
 }
 
 nsresult

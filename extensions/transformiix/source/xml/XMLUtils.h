@@ -64,7 +64,6 @@ public:
         TX_IF_RELEASE_ATOM(mLocalName);
     }
     
-    nsresult init(const String& aQName, Node* aResolver, MBool aUseDefault);
     nsresult init(const String& aQName, txNamespaceMap& aResolver,
                   MBool aUseDefault);
 
