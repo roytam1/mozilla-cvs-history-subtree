@@ -17,58 +17,99 @@
  * 
  * Contributors:
  *   ddrinan@netscape.com
+ *   Scott MacGreogr <mscott@netscape.com>
  */
 
+var ismimeCompFields = Components.interfaces.nsIMsgSMIMECompFields;
+var smimeCompFieldsContractID = "@mozilla.org/messenger-smime/composefields;1";
+
+// InitializeSecurityInfo --> when we want to override the default smime behavior for the current message,
+// we need to make sure we have a security info object on the msg compose fields....
+function GetSecurityInfo()
+{
+  var smimeComposefields;
+  var msgCompFields = msgCompose.compFields;
+  if (msgCompFields)
+  {
+    if (!msgCompFields.securityInfo)
+    {
+      smimeComposefields = Components.classes[smimeCompFieldsContractID].createInstance(ismimeCompFields);
+      if (smimeComposefields)
+      {
+        msgCompFields.securityInfo = smimeComposefields;
+        // set up the intial security state....
+        smimeComposefields.alwaysEncryptMessage = gCurrentIdentity.getBoolAttribute("encrypt_mail_always");
+        smimeComposefields.signMessage = gCurrentIdentity.getBoolAttribute("sign_mail");
+      }
+    } 
+    else
+    {
+      smimeComposefields = msgCompFields.securityInfo;
+    }
+  } // if we have message compose fields...
+
+  return smimeComposefields
+}
 
 function encryptMessage()
 {
-  var encryptionCertName = gCurrentIdentity.getUnicharAttribute("encryption_cert_name");
-  if (!encryptionCertName) {
-    alert(gComposeMsgsBundle.getString("chooseEncryptionCertMsg"));
-    document.getElementById("menu_securityEncryptAlways").removeAttribute("checked");
-    return;
-  }
+  var checkedNode = document.getElementById("menu_securityEncryptAlways");
+  var checked = checkedNode.getAttribute("checked");
 
-  var msgCompFields = msgCompose.compFields;
-  if (msgCompFields) {
-    if (msgCompFields.alwaysEncryptMessage) {
-      msgCompFields.alwaysEncryptMessage = false;
-    } else {
-      msgCompFields.alwaysEncryptMessage = true;
+  var smimeCompFields = GetSecurityInfo();
+  
+  if (checked)
+  {
+    var encryptionCertName = gCurrentIdentity.getUnicharAttribute("encryption_cert_name");
+    if (!encryptionCertName) 
+    {
+      alert(gComposeMsgsBundle.getString("chooseEncryptionCertMsg"));
+      checkedNode.removeAttribute("checked");
+      smimeCompFields.signMessage = false;
+      return;
     }
+    
+    smimeCompFields.alwaysEncryptMessage = true;
+    checkedNode.setAttribute("checked", true);  
+  }
+  else
+  {
+    smimeCompFields.alwaysEncryptMessage = false;
+    checkedNode.removeAttribute("checked");  
   }
 }
 
 function signMessage()
-{
-  var signingCertName = gCurrentIdentity.getUnicharAttribute("signing_cert_name");
-  if (signingCertName == null) {
-    alert(gComposeMsgsBundle.getString("chooseSigningCertMsg"));
-    document.getElementById("menu_securitySign").removeAttribute("checked");
-    return;
-  }
+{ 
+  var checkedNode = document.getElementById("menu_securitySign");
+  var checked = checkedNode.getAttribute("checked");
 
-  var msgCompFields = msgCompose.compFields;
-  if (msgCompFields) {
-    if (msgCompFields.signMessage) {
-      msgCompFields.signMessage = false;
-    } else {
-      msgCompFields.signMessage = true;
+  var smimeCompFields = GetSecurityInfo(); 
+
+  if (checked) // if checked, make sure we have a cert name...
+  {
+    var signingCertName = gCurrentIdentity.getUnicharAttribute("signing_cert_name");
+    if (!signingCertName) 
+    {
+      alert(gComposeMsgsBundle.getString("chooseSigningCertMsg"));
+      checkedNode.removeAttribute("checked");
+      smimeCompFields.signMessage = false;
+      return;
     }
-  }
-}
 
-function initSecuritySettings()
-{
-  var alwaysEncrypt = gCurrentIdentity.getBoolAttribute("encrypt_mail_always");
-  document.getElementById("menu_securityEncryptAlways").setAttribute("checked", alwaysEncrypt);
-  var alwaysSign = gCurrentIdentity.getBoolAttribute("sign_mail");
-  document.getElementById("menu_securitySign").setAttribute("checked", alwaysSign);
+    smimeCompFields.signMessage = true;
+    checkedNode.setAttribute("checked", true);  
+  }
+  else
+  {
+    smimeCompFields.signMessage = false;
+    checkedNode.removeAttribute("checked");  
+  }
 }
 
 function setSecuritySettings()
-{
-  var msgCompFields = msgCompose.compFields;
-  document.getElementById("menu_securityEncryptAlways").setAttribute("checked", msgCompFields.alwaysEncryptMessage);
-  document.getElementById("menu_securitySign").setAttribute("checked", msgCompFields.signMessage);
+{ 
+  var smimeCompFields = GetSecurityInfo();
+  document.getElementById("menu_securityEncryptAlways").setAttribute("checked", smimeCompFields.alwaysEncryptMessage);
+  document.getElementById("menu_securitySign").setAttribute("checked", smimeCompFields.signMessage);
 }
