@@ -52,6 +52,7 @@ LINCS=                          \
         -I$(PUBLIC)\dom         \
         -I$(PUBLIC)\raptor      \
         -I$(PUBLIC)\nspr2       \
+		-I$(PUBLIC)\zlib        \
         $(NULL)
 
 LLIBS =                                \
@@ -64,6 +65,8 @@ LLIBS =                                \
         $(DIST)\lib\jsdombase_s.lib    \
         $(DIST)\lib\jsdomevents_s.lib  \
         $(DIST)\lib\raptorbase.lib     \
+		$(DIST)\lib\zip3250.lib        \
+		$(DIST)\lib\plc3.lib           \
         $(LIBNSPR)                     \
         $(NULL)
 
