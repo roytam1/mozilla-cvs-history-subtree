@@ -213,6 +213,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsToolkit, nsIToolkit);
 // assume we begin as the fg app
 bool nsToolkit::sInForeground = true;
 
+static const char* gQuartzRenderingPref = "browser.quartz.enable";
 
 //-------------------------------------------------------------------------
 //
@@ -257,7 +258,35 @@ NS_IMETHODIMP nsToolkit::Init(PRThread */*aThread*/)
 
   mInited = true;
 
-#if TARGET_CARBON
+  SetupQuartzRendering();
+  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
+  if ( prefs )
+    prefs->RegisterCallback(gQuartzRenderingPref, QuartzChangedCallback, nsnull);
+
+  return NS_OK;
+}
+
+
+//
+// QuartzChangedCallback
+//
+// The pref changed, reset the app to use quartz rendering as dictated by the pref
+//
+int nsToolkit::QuartzChangedCallback(const char* pref, void* data)
+{
+  SetupQuartzRendering();
+  return NS_OK;
+}
+
+
+//
+// SetupQuartzRendering
+//
+// Use apple's technote for 10.1.5 to turn on quartz rendering with CG metrics. This
+// slows us down about 12% when turned on.
+//
+void nsToolkit::SetupQuartzRendering()
+{
   // from Apple's technote, yet un-numbered.
 #if UNIVERSAL_INTERFACES_VERSION <= 0x0400
   enum {
@@ -268,6 +297,7 @@ NS_IMETHODIMP nsToolkit::Init(PRThread */*aThread*/)
     kQDUseCGTextMetrics = (1 << 2)
   };
 #endif
+  const int kFlagsWeUse = kQDUseTrueTypeScalerGlyphs | kQDUseCGTextRendering | kQDUseCGTextMetrics;
   
   // turn on quartz rendering if we find the symbol in the app framework. Just turn
   // on the bits that we need, don't turn off what someone else might have wanted. If
@@ -275,20 +305,19 @@ NS_IMETHODIMP nsToolkit::Init(PRThread */*aThread*/)
   // in a pref to disable it, rather than force everyone who wants it to carry around
   // an extra pref.
   typedef UInt32 (*qd_procptr)(UInt32);  
-  qd_procptr SwapQDTextFlags = (qd_procptr) getQDFunction(CFSTR("SwapQDTextFlags"));
+  static qd_procptr SwapQDTextFlags = (qd_procptr) getQDFunction(CFSTR("SwapQDTextFlags"));
   if ( SwapQDTextFlags ) {
     nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
     if (!prefs)
-      return NS_OK;
+      return;
     PRBool enableQuartz = PR_TRUE;
-    nsresult rv = prefs->GetBoolPref("browser.quartz.enable", &enableQuartz);
-    if ( NS_FAILED(rv) || enableQuartz ) {
-      UInt32 oldFlags = SwapQDTextFlags(kQDDontChangeFlags);
-      SwapQDTextFlags(oldFlags | kQDUseTrueTypeScalerGlyphs | kQDUseCGTextRendering | kQDUseCGTextMetrics);
-    }
+    nsresult rv = prefs->GetBoolPref(gQuartzRenderingPref, &enableQuartz);
+    UInt32 oldFlags = SwapQDTextFlags(kQDDontChangeFlags);
+    if ( NS_FAILED(rv) || enableQuartz )
+      SwapQDTextFlags(oldFlags | kFlagsWeUse);
+    else 
+      SwapQDTextFlags(oldFlags & !kFlagsWeUse);
   }
-#endif
-  return NS_OK;
 }
 
 
