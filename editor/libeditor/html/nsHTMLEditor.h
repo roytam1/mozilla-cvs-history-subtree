@@ -394,7 +394,10 @@ protected:
   nsresult GetTextSelectionOffsets(nsIDOMSelection *aSelection,
                                    PRInt32 &aStartOffset, 
                                    PRInt32 &aEndOffset);
-  
+
+  // Methods for handling plaintext quotations
+  NS_IMETHOD PasteAsPlaintextQuotation();
+  NS_IMETHOD InsertAsPlaintextQuotation(const nsString& aQuotedText);
 
   // I hate seeing nsCOMPtr return types.
   nsCOMPtr<nsIDOMElement> FindPreElement();

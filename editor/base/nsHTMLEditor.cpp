@@ -60,6 +60,8 @@
 #include "nsIDOMDocumentFragment.h"
 #include "nsIPresShell.h"
 #include "nsIImage.h"
+#include "nsAOLCiter.h"
+#include "nsInternetCiter.h"
 
 // netwerk
 #include "nsIURI.h"
@@ -97,6 +99,7 @@ static NS_DEFINE_CID(kHTMLEditorCID,  NS_HTMLEDITOR_CID);
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
 static NS_DEFINE_CID(kCRangeCID,      NS_RANGE_CID);
 static NS_DEFINE_IID(kFileWidgetCID,  NS_FILEWIDGET_CID);
+static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
 // Drag & Drop, Clipboard Support
 static NS_DEFINE_CID(kCClipboardCID,    NS_CLIPBOARD_CID);
@@ -2686,13 +2689,10 @@ NS_IMETHODIMP nsHTMLEditor::PasteAsCitedQuotation(const nsString& aCitation)
   return res;
 }
 
-#if 0
 //
-// Similar to that in nsEditor::Paste except that it does indentation:
+// Paste a plaintext quotation
 //
-
-// text paste as quotation. Factor in!
-NS_IMETHODIMP nsTextEditor::PasteAsQuotation()
+NS_IMETHODIMP nsHTMLEditor::PasteAsPlaintextQuotation()
 {
 #ifdef ENABLE_JS_EDITOR_LOG
   nsAutoJSEditorLogLock logLock(mJSEditorLog);
@@ -2700,8 +2700,6 @@ NS_IMETHODIMP nsTextEditor::PasteAsQuotation()
   if (mJSEditorLog)
     mJSEditorLog->PasteAsQuotation();
 #endif // ENABLE_JS_EDITOR_LOG
-
-  nsString stuffToPaste;
 
   // Get Clipboard Service
   nsIClipboard* clipboard;
@@ -2714,39 +2712,32 @@ NS_IMETHODIMP nsTextEditor::PasteAsQuotation()
   rv = nsComponentManager::CreateInstance(kCTransferableCID, nsnull, 
                                           nsITransferable::GetIID(), 
                                           (void**) getter_AddRefs(trans));
-  if (NS_OK == rv)
+  if (NS_SUCCEEDED(rv) && trans)
   {
-    // Get nsITransferable interface for getting the data from the clipboard
-    if (trans)
-    {
-      // We only handle plaintext pastes here
-      nsAutoString flavor(kTextMime);
-
-      trans->AddDataFlavor(&flavor);
+    // We only handle plaintext pastes here
+    nsAutoString flavor(kTextMime);
+    trans->AddDataFlavor(&flavor);
 
       // Get the Data from the clipboard
-      clipboard->GetData(trans);
+    clipboard->GetData(trans);
 
-      // Now we ask the transferable for the data
-      // it still owns the data, we just have a pointer to it.
-      // If it can't support a "text" output of the data the call will fail
-      char *str = 0;
-      PRUint32 len;
-      if (NS_OK == trans->GetTransferData(&flavor, (void **)&str, &len)) {
-
-        // Make adjustments for null terminated strings
-        if (str && len > 0) {
-          // stuffToPaste is ready for insertion into the content
-          stuffToPaste.SetString(str, len);
-        }
-      }
+    // Now we ask the transferable for the data
+    // it still owns the data, we just have a pointer to it.
+    // If it can't support a "text" output of the data the call will fail
+    char *str = 0;
+    PRUint32 len;
+    rv = trans->GetTransferData(&flavor, (void **)&str, &len);
+    if (NS_SUCCEEDED(rv) && str && len > 0)
+    {
+      nsString stuffToPaste;
+      stuffToPaste.SetString(str, len);
+      rv = InsertAsPlaintextQuotation(stuffToPaste);
     }
   }
   nsServiceManager::ReleaseService(kCClipboardCID, clipboard);
 
-  return InsertAsQuotation(stuffToPaste);
+  return rv;
 }
-#endif
 
 NS_IMETHODIMP nsHTMLEditor::InsertAsQuotation(const nsString& aQuotedText)
 {
@@ -2761,10 +2752,8 @@ NS_IMETHODIMP nsHTMLEditor::InsertAsQuotation(const nsString& aQuotedText)
   return InsertAsCitedQuotation(aQuotedText, citation);
 }
 
-
-#if 0
 // text insert. Factor in!
-NS_IMETHODIMP nsTextEditor::InsertAsQuotation(const nsString& aQuotedText)
+NS_IMETHODIMP nsHTMLEditor::InsertAsPlaintextQuotation(const nsString& aQuotedText)
 {
 #ifdef ENABLE_JS_EDITOR_LOG
   nsAutoJSEditorLogLock logLock(mJSEditorLog);
@@ -2803,8 +2792,6 @@ NS_IMETHODIMP nsTextEditor::InsertAsQuotation(const nsString& aQuotedText)
 
   return InsertText(quotedStuff);
 }
-
-#endif
 
 NS_IMETHODIMP nsHTMLEditor::InsertAsCitedQuotation(const nsString& aQuotedText,
                                                    const nsString& aCitation)
@@ -2986,13 +2973,17 @@ NS_IMETHODIMP nsHTMLEditor::Paste()
     {
       // Create the desired DataFlavor for the type of data
       // we want to get out of the transferable
+      nsAutoString imageFlavor(kJPEGImageMime);
       nsAutoString htmlFlavor(kHTMLMime);
       nsAutoString textFlavor(kTextMime);
-      nsAutoString imageFlavor(kJPEGImageMime);
 
-      trans->AddDataFlavor(&htmlFlavor);
+#warning fix me.
+      if (1)  // This should only happen in html editors, not plaintext
+      {
+        trans->AddDataFlavor(&imageFlavor);
+        trans->AddDataFlavor(&htmlFlavor);
+      }
       trans->AddDataFlavor(&textFlavor);
-      trans->AddDataFlavor(&imageFlavor);
 
       // Get the Data from the clipboard
       if (NS_SUCCEEDED(clipboard->GetData(trans)))
@@ -3038,74 +3029,6 @@ NS_IMETHODIMP nsHTMLEditor::Paste()
 
   return rv;
 }
-
-#if 0
-// text paste. Factor in!
-NS_IMETHODIMP nsTextEditor::Paste()
-{
-
-#ifdef ENABLE_JS_EDITOR_LOG
-  nsAutoJSEditorLogLock logLock(mJSEditorLog);
-
-  if (mJSEditorLog)
-    mJSEditorLog->Paste();
-#endif // ENABLE_JS_EDITOR_LOG
-
-  //printf("nsEditor::Paste\n");
-  nsString stuffToPaste;
-
-  // Get Clipboard Service
-  nsIClipboard* clipboard;
-  nsresult rv = nsServiceManager::GetService(kCClipboardCID,
-                                             nsIClipboard::GetIID(),
-                                             (nsISupports **)&clipboard);
-
-  // Create generic Transferable for getting the data
-  nsCOMPtr<nsITransferable> trans;
-  rv = nsComponentManager::CreateInstance(kCTransferableCID, nsnull, 
-                                          nsITransferable::GetIID(), 
-                                          (void**) getter_AddRefs(trans));
-  if (NS_SUCCEEDED(rv))
-  {
-    // Get the nsITransferable interface for getting the data from the clipboard
-    if (trans)
-    {
-      // The only data type we support is plaintext;
-      // derived classes will support other types.
-      nsAutoString textFlavor(kTextMime);
-      trans->AddDataFlavor(&textFlavor);
-
-      // Get the Data from the clipboard
-      if (NS_SUCCEEDED(clipboard->GetData(trans)))
-      {
-        nsAutoString flavor;
-        char *       data;
-        PRUint32     len;
-        if (NS_SUCCEEDED(trans->GetAnyTransferData(&flavor, (void **)&data, &len)))
-        {
-#ifdef DEBUG
-          printf("Got flavor [%s]\n", flavor.ToNewCString());
-#endif
-          if (flavor.Equals(textFlavor))
-          {
-            if (data && len > 0) // stuffToPaste is ready for insertion into the content
-            {
-              stuffToPaste.SetString(data, len);
-              rv = InsertText(stuffToPaste);
-            }
-          }
-        }
-
-      }
-    }
-  }
-  nsServiceManager::ReleaseService(kCClipboardCID, clipboard);
-
-  return rv;
-}
-
-#endif
-
 
 NS_IMETHODIMP nsHTMLEditor::OutputToString(nsString& aOutputString,
                                            const nsString& aFormatType,
