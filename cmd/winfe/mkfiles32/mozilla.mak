@@ -177,8 +177,8 @@ _MSC_VER=1020
 !if "$(MOZ_BITS)"=="32"
 #CFLAGS_RELEASE=/DNDEBUG \
 CFLAGS_RELEASE=/DNDEBUG /DCookieManagement /DSingleSignon \
-!ifdef MOZ_PRIVACY
-/DTRANSACTION_RECEIPTS /DPRIVACY_POLICIES \
+!ifdef MOZ_TRANSACTION_RECEIPTS 
+/DTRANSACTION_RECEIPTS \
 !endif
 !else
 CFLAGS_RELEASE=/DNDEBUG \
@@ -222,8 +222,8 @@ MOZ_STACK=33679
 VERSTR=Dbg
 !if "$(MOZ_BITS)"=="32"
 CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG) /DCookieManagement /DSingleSignon \
-!ifdef MOZ_PRIVACY
-/DTRANSACTION_RECEIPTS /DPRIVACY_POLICIES\
+!ifdef MOZ_TRANSACTION_RECEIPTS
+/DTRANSACTION_RECEIPTS \
 !endif
 !else
 CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
@@ -366,10 +366,9 @@ LINK_LIBS= \
     $(DIST)\lib\libplc21.lib \
     $(DIST)\lib\libmsgc21.lib \
 !endif
-!if defined(MOZ_OJI)
-!elseif defined(MOZ_JAVA)
+!if defined(MOZ_JAVA)
     $(DIST)\lib\jrt32$(VERSION_NUMBER).lib \
-!else
+!elseif !defined(NSJVM)
     $(DIST)\lib\libsjs32.lib \
     $(DIST)\lib\libnjs32.lib \
 !endif
@@ -377,7 +376,9 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\jsd32$(VERSION_NUMBER).lib \
 !endif
+!ifdef MOZ_OJI
     $(DIST)\lib\jsj32$(VERSION_NUMBER).lib \
+!endif
 !ifdef MOZ_JAVA
     $(DIST)\lib\nsn32.lib \
 !endif
@@ -389,6 +390,7 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libapplet32.lib \
 !endif
+    $(DIST)\lib\plug.lib \
 !ifdef MOZ_OJI
     $(DIST)\lib\oji32.lib \
 !endif
@@ -397,7 +399,7 @@ LINK_LIBS= \
 !endif
 #!if defined(EDITOR)
 !if !defined(MOZ_LITE)
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
     $(DIST)\lib\edtplug.lib \
 !endif
 !endif
@@ -421,14 +423,12 @@ LINK_LIBS= \
     $(DIST)\lib\secfreenav32.lib \
 !endif
     $(DIST)\lib\htmldg32.lib \
-!ifdef JAVA_OR_OJI      
     $(DIST)\lib\libcaps.lib \
-!endif
 !ifdef MOZ_JAVA
     $(DIST)\lib\libnsc32.lib \
 !endif
     $(DIST)\lib\img32.lib \
-!ifdef JAVA_OR_OJI      # XXX remove later
+!ifdef JAVA_OR_NSJVM
     $(DIST)\lib\jmc.lib \
 !endif
 !ifndef MOZ_NGLAYOUT
@@ -440,9 +440,7 @@ LINK_LIBS= \
 !ifndef MOZ_NGLAYOUT
     $(DIST)\lib\winfont.lib \
 !endif
-!ifdef MOZ_PRIVACY
     $(DIST)\lib\privacy.lib \
-!endif
     $(DIST)\lib\abouturl.lib \
     $(DIST)\lib\dataurl.lib \
     $(DIST)\lib\fileurl.lib \
@@ -466,12 +464,15 @@ LINK_LIBS= \
     $(DIST)\lib\imap4url.lib \
     $(DIST)\lib\certurl.lib \
 !endif
+!ifdef SMART_MAIL
+    $(DIST)\lib\pop3url.lib \
+!endif
 !ifdef MOZ_LDAP
     $(DIST)\lib\ldapurl.lib \
     $(DIST)\lib\nsldap32v30.lib \
 !endif
     $(DIST)\lib\unicvt32.lib \
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
 !ifdef MOZ_SMARTUPDATE
     $(DIST)\lib\softup32.lib \
 !endif
@@ -620,7 +621,6 @@ CINCLUDES= \
     /I$(DEPTH)\lib\libcnv \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
-    /I$(DEPTH)\lib\plugin \
 !else
     /I$(EXPORTINC)
 !endif
@@ -639,8 +639,13 @@ CDISTINCLUDES1= \
     /I$(DIST)\include \
     /I$(XPDIST)\public\dbm \
     /I$(XPDIST)\public\java \
+    /I$(XPDIST)\public\raptor \
+    /I$(XPDIST)\public\plugin \
+    /I$(XPDIST)\public\plugimpl \
+    /I$(XPDIST)\public\caps \
 !if defined(MOZ_OJI)
     /I$(XPDIST)\public\oji \
+    /I$(XPDIST)\public\ojiimpl \
     /I$(XPDIST)\public\npj \
     /I$(XPDIST)\public\softupdt \
 !elseif defined(MOZ_JAVA)
@@ -685,7 +690,7 @@ CDISTINCLUDES3= \
 	/I$(XPDIST)\public\calendar \
 !endif
 #!ifdef EDITOR
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
     /I$(XPDIST)\public\edtplug \
 !endif
     /I$(XPDIST)\public\spellchk \
@@ -710,9 +715,7 @@ CDISTINCLUDES2= \
 !if defined(MOZ_NGLAYOUT)
 	/I$(XPDIST)\public\raptor \
 !endif
-!if defined(MOZ_PRIVACY)
     /I$(XPDIST)\public\privacy \
-!endif
     /I$(XPDIST)\public\util 
 
 CDISTINCLUDES = $(CDISTINCLUDES1) $(CDISTINCLUDES2) $(CDISTINCLUDES3)
@@ -744,6 +747,9 @@ CDEFINES=/DXP_PC /Dx386 /D_WINDOWS /D_X86_ \
     /DOJI \
 !elseif defined(MOZ_JAVA)
     /DJAVA \
+!endif
+!if defined(EDITOR)
+	/DENDER \
 !endif
     /DMOZILLA_CLIENT
 
@@ -1097,17 +1103,14 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\modules\libimg\src\xbm.c
 	$(DEPTH)\modules\libimg\src\ipng.c
 	$(DEPTH)\modules\libimg\src\png_png.c
-!if defined(JAVA_OR_OJI)        # XXX remove later
+!if defined(JAVA_OR_NSJVM)
 	$(DEPTH)\sun-java\jtools\src\jmc.c
 !endif
 !endif
 
-!ifndef MOZ_NGLAYOUT
-	$(DEPTH)\lib\plugin\npassoc.c 
-	$(DEPTH)\lib\plugin\npglue.cpp
-	$(DEPTH)\lib\plugin\npwplat.cpp
-	$(DEPTH)\lib\plugin\nsplugin.cpp
+	$(DEPTH)\cmd\winfe\npwplat.cpp 
 
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\xlate\isotab.c
 	$(DEPTH)\lib\xlate\stubs.c
 	$(DEPTH)\lib\xlate\tblprint.c 
@@ -1297,6 +1300,10 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\fmselone.cpp
 	$(DEPTH)\cmd\winfe\fmtext.cpp
 	$(DEPTH)\cmd\winfe\fmtxarea.cpp
+!if defined(EDITOR)
+	$(DEPTH)\cmd\winfe\fmhtml.cpp
+	$(DEPTH)\cmd\winfe\editfloat.cpp
+!endif
 !endif
 	$(DEPTH)\cmd\winfe\frameglu.cpp   
 	$(DEPTH)\cmd\winfe\framinit.cpp   
@@ -1329,8 +1336,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\mucwiz.cpp  
 	$(DEPTH)\cmd\winfe\mucproc.cpp 
 	$(DEPTH)\cmd\winfe\navbar.cpp 
-	$(DEPTH)\cmd\winfe\navcntr.cpp  
-	$(DEPTH)\cmd\winfe\navcontv.cpp  
 	$(DEPTH)\cmd\winfe\navfram.cpp  
 	$(DEPTH)\cmd\winfe\navigate.cpp   
 	$(DEPTH)\cmd\winfe\ncapiurl.cpp 
@@ -1624,6 +1629,7 @@ $(GENDIR)\config.rc:  $(DEPTH)\modules\libpref\src\init\config.js
 JAVAPARENT_DIR = $(OUTDIR)\plugins
 JAVABIN_DIR = $(OUTDIR)\plugins\nsjvm
 JAVACLS_DIR = $(OUTDIR)\plugins\nsjvm
+XJAVACLS_DIR = $(OUTDIR)\java\classes
 !elseif defined(MOZ_JAVA)
 JAVAPARENT_DIR = $(OUTDIR)\java
 JAVABIN_DIR = $(OUTDIR)\java\bin
@@ -1653,6 +1659,9 @@ install:    \
 !endif
 !IF EXIST($(DIST)\bin\brpref$(MOZ_BITS).dll)
 	    $(OUTDIR)\brpref$(MOZ_BITS).dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\winpref.dll)
+	    $(OUTDIR)\winpref.dll    \
 !ENDIF
 !ifdef EDITOR
 !IF EXIST($(DIST)\bin\edpref$(MOZ_BITS).dll)
@@ -1710,8 +1719,10 @@ install:    \
 !IF EXIST($(DIST)\bin\jsd32$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\jsd32$(VERSION_NUMBER).dll    \
 !ENDIF
+!ifdef MOZ_OJI
 !IF EXIST($(DIST)\bin\jsj32$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\jsj32$(VERSION_NUMBER).dll    \
+!endif
 !ENDIF
 !IF EXIST($(DIST)\bin\xppref32.dll)
 	    $(OUTDIR)\xppref32.dll    \
@@ -1733,7 +1744,7 @@ install:    \
 	    $(OUTDIR)\trackgdi.dll   \
 !ENDIF
 !endif
-!if defined(MOZ_OJI)
+!if defined(NSJVM)
 !IF EXIST($(DIST)\bin\jrt32$(VERSION_NUMBER).dll)
 	    $(JAVABIN_DIR)\jrt32$(VERSION_NUMBER).dll    \
 !ENDIF
@@ -1742,7 +1753,7 @@ install:    \
 	    $(OUTDIR)\jrt32$(VERSION_NUMBER).dll    \
 !ENDIF
 !endif
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
 !IF EXIST($(DIST)\bin\npj32$(VERSION_NUMBER).dll)
 	    $(JAVABIN_DIR)\npj32$(VERSION_NUMBER).dll    \
 !ENDIF
@@ -1770,7 +1781,7 @@ install:    \
 !IF EXIST($(DIST)\bin\zpw32$(VERSION_NUMBER).dll)
 	    $(JAVABIN_DIR)\zpw32$(VERSION_NUMBER).dll    \
 !ENDIF
-!endif  # JAVA_OR_OJI
+!endif  # JAVA_OR_NSJVM
 !IF EXIST($(DEPTH)\cmd\winfe\nstdfp32.dll)
 	    $(OUTDIR)\dynfonts\nstdfp32.dll    \
 !ENDIF
@@ -1810,7 +1821,7 @@ install:    \
 !ENDIF
 !endif
 !ELSE # MOZ_BITS==32 way above
-!IFDEF JAVA_OR_OJI
+!IFDEF JAVA_OR_NSJVM
 !IF EXIST($(DIST)\bin\npj16$(VERSION_NUMBER).dll)
 	    $(JAVABIN_DIR)\npj16$(VERSION_NUMBER).dll    \
 !ENDIF
@@ -1835,7 +1846,7 @@ install:    \
 #!IF EXIST($(DIST)\bin\jdb16$(VERSION_NUMBER).dll)
 #           $(JAVABIN_DIR)\jdb16$(VERSION_NUMBER).dll   \
 #!ENDIF
-!ENDIF # JAVA_OR_OJI
+!ENDIF # JAVA_OR_NSJVM
 !ifndef NSPR20
 !IF EXIST($(DIST)\bin\pr16$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\pr16$(VERSION_NUMBER).dll    \
@@ -1857,8 +1868,10 @@ install:    \
 !IF EXIST($(DIST)\bin\js16$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\js16$(VERSION_NUMBER).dll    \
 !ENDIF
+!ifdef MOZ_OJI
 !IF EXIST($(DIST)\bin\jsj16$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\jsj16$(VERSION_NUMBER).dll    \
+!ENDIF
 !ENDIF
 !IF EXIST($(DIST)\bin\xppref16.dll)
 	    $(OUTDIR)\xppref16.dll    \
@@ -1887,9 +1900,7 @@ install:    \
 !ENDIF
 !endif
 !ENDIF # MOZ_BITS==32 (end of "else" clause)
-!if defined(JAVA_OR_OJI)
-	    $(JAVACLS_DIR)\$(JAR_NAME) \
-!endif
+	    $(OUTDIR)\java\classes\ifc11.jar \
 	    $(OUTDIR)\netscape.cfg  \
 !if defined(DEATH_TO_POLICY_FILES)
 	    $(OUTDIR)\$(POLICY) \
@@ -2083,7 +2094,7 @@ $(JAVABIN_DIR)\npj32$(VERSION_NUMBER).dll:   $(DIST)\bin\npj32$(VERSION_NUMBER).
     @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
     @IF EXIST $(DIST)\bin\npj32$(VERSION_NUMBER).dll copy $(DIST)\bin\npj32$(VERSION_NUMBER).dll $(JAVABIN_DIR)\npj32$(VERSION_NUMBER).dll
 
-!if defined(MOZ_OJI)
+!if defined(NSJVM)
 $(JAVABIN_DIR)\jrt32$(VERSION_NUMBER).dll:   $(DIST)\bin\jrt32$(VERSION_NUMBER).dll
     @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
     @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
@@ -2244,17 +2255,31 @@ $(OUTDIR)\nscnv3230.dll:   $(DIST)\bin\nscnv3230.dll
     @IF EXIST $(DIST)\bin\nscnv3230.dll copy $(DIST)\bin\nscnv3230.dll $(OUTDIR)\nscnv3230.dll
 !endif
 
-# XXX this will copy them all, we really only want the ones that changed
-$(JAVACLS_DIR)\$(JAR_NAME): $(JAVA_DESTPATH)\$(JAR_NAME)
-    @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
-    @IF NOT EXIST "$(JAVACLS_DIR)/$(NULL)" mkdir "$(JAVACLS_DIR)"
-!if defined(JAVA_OR_OJI)
+$(OUTDIR)\java\classes\ifc11.jar:
+    @IF NOT EXIST "$(JAVAPARENT_DIR)\$(NULL)" mkdir "$(JAVAPARENT_DIR)"
+    @IF NOT EXIST "$(JAVACLS_DIR)\$(NULL)" mkdir "$(JAVACLS_DIR)"
+    @IF NOT EXIST "$(XJAVACLS_DIR)\$(NULL)" mkdir "$(XJAVACLS_DIR)"
+!if defined(MOZ_JAVA)
 !ifdef MOZ_COPY_ALL_JARS
     @copy $(JAVA_DESTPATH)\*.jar "$(JAVACLS_DIR)\"
 !else
     @copy $(JAVA_DESTPATH)\java*.jar "$(JAVACLS_DIR)\"
     @copy $(JAVA_DESTPATH)\ifc*.jar "$(JAVACLS_DIR)\"
     @copy $(JAVA_DESTPATH)\jsj*.jar "$(JAVACLS_DIR)\"
+!endif
+!elseif defined(MOZ_OJI)
+    @copy $(JAVA_DESTPATH)\ifc*.jar "$(XJAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\jsj*.jar "$(XJAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\nsplug*.jar "$(XJAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\nssec*.jar "$(XJAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\ldap*.jar "$(XJAVACLS_DIR)\"
+!ifdef NSJVM
+    @copy $(JAVA_DESTPATH)\java*.jar "$(JAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\jae*.jar "$(JAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\jio*.jar "$(JAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\jsj*.jar "$(JAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\scd*.jar "$(JAVACLS_DIR)\"
+    @copy $(JAVA_DESTPATH)\nav*.jar "$(JAVACLS_DIR)\"
 !endif
 !endif
 
@@ -2277,6 +2302,9 @@ $(OUTDIR)\prefui$(MOZ_BITS).dll:   $(DIST)\bin\prefui$(MOZ_BITS).dll
     @IF EXIST $(DIST)\bin\$(@F) copy $(DIST)\bin\$(@F) $@
 
 $(OUTDIR)\brpref$(MOZ_BITS).dll:   $(DIST)\bin\brpref$(MOZ_BITS).dll
+    @IF EXIST $(DIST)\bin\$(@F) copy $(DIST)\bin\$(@F) $@
+
+$(OUTDIR)\winpref.dll:   $(DIST)\bin\winpref.dll
     @IF EXIST $(DIST)\bin\$(@F) copy $(DIST)\bin\$(@F) $@
 
 $(OUTDIR)\lipref$(MOZ_BITS).dll:   $(DIST)\bin\lipref$(MOZ_BITS).dll
@@ -2436,6 +2464,8 @@ BUILD_SOURCE: SPAWN_BATCH1 BATCH_BUILD_2 WAIT_OBJECTS
 BUILD_SOURCE: $(OBJ_FILES)
 !endif
 
+"$(OUTDIR)\mozilla.exe" : "$(OUTDIR)" BUILD_SOURCE $(OUTDIR)\mozilla.res $(LINK_LIBS) LINK_CL DISPATCHER
+	$(LINK) @"$(OUTDIR)\link.cl"
 
 LINK_CL:
 	@echo Creating <<"$(OUTDIR)\link.cl"
@@ -2475,9 +2505,7 @@ LINK_CL:
 !ifdef MOZ_LDAP
     $(DIST)\lib\nsldap.lib +
 !endif
-!ifdef JAVA_OR_OJI
     $(DIST)\lib\libcaps.lib +
-!endif
 !if defined(MOZ_JAVA)
     $(DIST)\lib\jrt16$(VERSION_NUMBER).lib +
     $(DIST)\lib\libapp~1.lib +
@@ -2487,7 +2515,7 @@ LINK_CL:
     $(DIST)\lib\li16.lib +
 	$(DIST)\lib\prgrss16.lib +
 !ifdef EDITOR
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
     $(DIST)\lib\edtplug.lib +
 !endif
 !endif
@@ -2498,7 +2526,7 @@ LINK_CL:
     $(DIST)\lib\libsjs16.lib +
     $(DIST)\lib\libnjs16.lib +
 !endif
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
 !ifndef NO_SECURITY
     $(DIST)\lib\jsl16.lib +
 !endif
@@ -2540,9 +2568,7 @@ LINK_CL:
     $(DIST)\lib\xpcom16.lib +
     $(DIST)\lib\rdf16.lib +
     $(DIST)\lib\xpstrdll.lib +
-!ifdef MOZ_PRIVACY
     $(DIST)\lib\privacy.lib +
-!endif
     $(DIST)\lib\abouturl.lib +
     $(DIST)\lib\dataurl.lib +
     $(DIST)\lib\fileurl.lib +
@@ -2567,6 +2593,9 @@ LINK_CL:
     $(DIST)\lib\imap4url.lib +
     $(DIST)\lib\certurl.lib +
 !endif
+!ifdef SMART_MAIL
+    $(DIST)\lib\pop3url.lib +
+!endif
 !ifdef MOZ_LDAP
     $(DIST)\lib\ldapurl.lib +
 !endif
@@ -2584,25 +2613,27 @@ LINK_CL:
 !endif
 
 <<KEEP
+!if "$(MOZ_BITS)"=="16"
+    $(RSC) /K $(OUTDIR)\appicon.res $(OUTDIR)\mozilla.exe
+!endif
 !if "$(MOZ_EXPORT_ALL_SYMBOLS)"=="1"
+!if "$(MOZ_BITS)"=="32"
 	$(PERL) listsymb.pl $(OUTDIR)\link.cl $(OUTDIR)\symbols.txt
+!endif
 !endif
 
 # gendispw.pl depends on link.cl to generate dispwin.h & dispwin.c
 # dispwin.obj is then added to link.cl so that it will
 # be linked with the rest of the libraries and object files
 # to form the excutable
-
 DISPATCHER : $(OUTDIR)/symbols.txt
+!if "$(MOZ_EXPORT_ALL_SYMBOLS)"=="1"
+!if "$(MOZ_BITS)"=="32"
 	$(PERL) gendisp.pl $(OUTDIR)\symbols.txt $(OUTDIR)\dispwin.h $(OUTDIR)\dispwin.c $(OUTDIR)\cmoffset.h
+	copy $(OUTDIR)\cmoffset.h $(DEPTH)\include\cmoffset.h
 	@cl -c -MT -Fo"$(OUTDIR)/" -I"$(DIST)\include" $(OUTDIR)\dispwin.c
 	@echo $(OUTDIR)\dispwin.obj>>$(OUTDIR)\link.cl
-
-"$(OUTDIR)\mozilla.exe" : "$(OUTDIR)" BUILD_SOURCE $(OUTDIR)\mozilla.res $(LINK_LIBS) LINK_CL DISPATCHER
-	$(LINK) @"$(OUTDIR)\link.cl"
-
-!if "$(MOZ_BITS)"=="16"
-    $(RSC) /K $(OUTDIR)\appicon.res $(OUTDIR)\mozilla.exe
+!endif
 !endif
 
 PATCHER = $(DIST)\bin\patcher.exe
@@ -2895,11 +2926,10 @@ exports:
     -xcopy $(XPDIST)\public\ldap\*.h $(EXPORTINC) $(XCF)
 !endif
 !ifdef EDITOR
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
     -xcopy $(DEPTH)\modules\edtplug\include\*.h $(EXPORTINC) $(XCF)
 !endif
 !endif
-    -xcopy $(DEPTH)\lib\plugin\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_JAVA)
     -xcopy $(DEPTH)\modules\applet\include\*.h $(EXPORTINC) $(XCF)
 !endif
@@ -2927,18 +2957,19 @@ exports:
     -xcopy $(XPDIST)\public\applet\*.h $(EXPORTINC) $(XCF)
 !endif
     -xcopy $(XPDIST)\public\libreg\*.h $(EXPORTINC) $(XCF)
+    -xcopy $(XPDIST)\public\caps\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_OJI)
     -xcopy $(XPDIST)\public\oji\*.h $(EXPORTINC) $(XCF)
 !endif
     -xcopy $(XPDIST)\public\hook\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\pref\*.h $(EXPORTINC) $(XCF)
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
     -xcopy $(XPDIST)\public\edtplug\*.h $(EXPORTINC) $(XCF)
 !endif
     -xcopy $(XPDIST)\public\htmldlgs\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\softupdt\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\li\*.h $(EXPORTINC) $(XCF)
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
     -xcopy $(XPDIST)\public\progress\*.h $(EXPORTINC) $(XCF)
 !endif
     -xcopy $(XPDIST)\public\schedulr\*.h $(EXPORTINC) $(XCF)
@@ -2973,7 +3004,7 @@ ns.zip:
 	cd $(OUTDIR)
 	zip -9rpu ns.zip		\
 		mozilla.exe		\
-!if defined(JAVA_OR_OJI)
+!if defined(MOZ_JAVA)
 		java/bin/awt3240.dll	\
 		java/bin/jbn3240.dll	\
 		java/bin/jdb3240.dll	\
