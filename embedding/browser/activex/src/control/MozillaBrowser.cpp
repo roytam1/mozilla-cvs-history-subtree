@@ -749,11 +749,11 @@ HRESULT CMozillaBrowser::Initialize()
 	    
 		    USES_CONVERSION;
 		    NS_NewLocalFile(T2A(szBinDirPath), TRUE, getter_AddRefs(binDir));
-		    nsresult res = NS_InitEmbedding(binDir, nsnull);
+		    nsresult res = NS_InitEmbedding(binDir, nsnull, nsnull);
 	}
     else
     {
-        NS_InitEmbedding(nsnull, nsnull);
+        NS_InitEmbedding(nsnull, nsnull, nsnull);
     }
 
 	// Load preferences service

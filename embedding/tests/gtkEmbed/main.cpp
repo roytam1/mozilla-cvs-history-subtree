@@ -195,7 +195,7 @@ int main( int  argc,  char *argv[] )
   else
       loadURLStr = "http://www.mozilla.org/projects/embedding";
 
-  NS_InitEmbedding(nsnull, nsnull);
+  NS_InitEmbedding(nsnull, nsnull, nsnull);
 
   // set up the thread event queue
   nsCOMPtr<nsIEventQueueService> eventQService = do_GetService(kEventQueueServiceCID);

@@ -1363,7 +1363,7 @@ int _mozilla_embed_startup_xpcom(void)
       return FALSE;
   }
     
-  rv = NS_InitEmbedding(binDir, nsnull);
+  rv = NS_InitEmbedding(binDir, nsnull, nsnull);
   if (NS_FAILED(rv))
     return FALSE;
 
