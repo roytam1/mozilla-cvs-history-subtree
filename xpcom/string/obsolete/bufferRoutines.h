@@ -43,10 +43,6 @@
 #ifndef _BUFFERROUTINES_H
 #define _BUFFERROUTINES_H
 
-#ifndef nsStringDefines_h___
-#include "nsStringDefines.h"
-#endif
-
 #ifndef nsCharTraits_h___
 #include "nsCharTraits.h"
 #endif

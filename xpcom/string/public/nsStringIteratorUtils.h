@@ -24,10 +24,6 @@
 #ifndef nsStringIteratorUtils_h___
 #define nsStringIteratorUtils_h___
 
-#ifndef nsStringDefines_h___
-#include "nsStringDefines.h"
-#endif
-
 template <class CharT> class nsReadingIterator;
 
   // NOTE: need to break iterators out into their own file (as with many classes here), need
