@@ -394,6 +394,7 @@ private:
 
     static const char* sJSEnabledPrefName;
     static const char* sJSMailEnabledPrefName;
+    static const char* sJSStrictDomainCheckPrefName;
 
     nsObjectHashtable* mOriginToPolicyMap;
     DomainPolicy* mDefaultPolicy;
@@ -410,6 +411,7 @@ private:
     nsCOMPtr<nsIThreadJSContextStack> mJSContextStack;
     PRBool mNameSetRegistered;
     PRBool mPolicyPrefsChanged;
+    PRBool mStrictDomainCheckEnabled;
 };
 
 #endif /*_NS_SCRIPT_SECURITY_MANAGER_H_*/
