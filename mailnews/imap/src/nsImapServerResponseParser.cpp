@@ -785,6 +785,7 @@ void nsImapServerResponseParser::mailbox_list(PRBool discoveredFromLsub)
 		}
 	}
 
+	nsCRT::free(boxSpec->hostName);
 	PR_FREEIF(boxSpec); // mscott - do we have any fields we need to release?
 }
 
@@ -2267,7 +2268,7 @@ struct mailbox_spec *nsImapServerResponseParser::CreateCurrentMailboxSpec(const 
 			const char *host = 				
                 fServerConnection.GetImapHostName();
 			nsIMAPNamespace *ns = nsnull;
-			if (host != nsnull && fHostSessionList)
+			if (host && fHostSessionList)
 			{
                 const char* userName = fServerConnection.GetImapUserName();
 				fHostSessionList->GetNamespaceForMailboxForHost(host, 
