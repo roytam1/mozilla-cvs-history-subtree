@@ -249,13 +249,6 @@ XFE_ABMListDlg::createUI()
 													  m_abView->getContext(),
 													  fe_getMNMaster());
 #endif /* USE_ABCOM */
-#else
-						      stripForm[i],
-						      m_abView->getDir(), 
-						      m_abView->getAddrBook(),
-						      NULL,
-						      m_abView->getContext(),
-						      fe_getMNMaster());
       XtVaSetValues(listView->getBaseWidget(),
 		    XmNleftAttachment, XmATTACH_FORM,
 		    XmNtopAttachment, XmATTACH_WIDGET,

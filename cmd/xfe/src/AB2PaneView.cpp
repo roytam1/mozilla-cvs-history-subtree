@@ -25,11 +25,7 @@
 #include "AddrBookView.h"
 #include "ABAddrSearchView.h"
 
-#if defined(MOZ_MAIL_NEWS)
-#include "hpane/HPaned.h"
-#else
 #include <Xfe/Pane.h>
-#endif /* MOZ_MAIL_NEWS */
 
 XFE_AB2PaneView::XFE_AB2PaneView(XFE_Component *toplevel_component, 
 								 Widget         parent, 
@@ -55,16 +51,6 @@ XFE_AB2PaneView::XFE_AB2PaneView(XFE_Component *toplevel_component,
 													   xmFormWidgetClass,
 													   parent,
 													   NULL);
-#if defined(MOZ_MAIL_NEWS)
-	int    ac = 0;
-	Arg    av[20];
-	
-	Widget hpane;
-	ac = 0;
-	XtSetArg (av[ac], XmNallowResize, True); ac++;
-	hpane = XmCreateHPanedWindow(paneContainerForm,
-								 "hpane", av, ac);
-#else
 	Widget hpane;
 
 	hpane = XtVaCreateWidget("hpane",
@@ -76,7 +62,6 @@ XFE_AB2PaneView::XFE_AB2PaneView(XFE_Component *toplevel_component,
 							 XmNsashShadowThickness,	1,
 							 XmNpaneSashType,			XmPANE_SASH_LIVE,
 							 NULL);
-#endif /* MOZ_MAIL_NEWS */
 
 	// dir list
 	m_dirListView = new XFE_ABDirListView(toplevel_component, 

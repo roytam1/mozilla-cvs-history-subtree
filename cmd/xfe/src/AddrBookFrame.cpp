@@ -224,7 +224,7 @@ XFE_AddrBookFrame::XFE_AddrBookFrame(Widget toplevel,
    * import from XFE_BookmarkFrame::XFE_BookmarkFrame
    */
   XFE_AB2PaneView *view = new XFE_AB2PaneView(this, 
-											  getViewParent(), 
+											  getChromeParent(),
 											  NULL,
 											  m_context,
 											  AB_BOOK);

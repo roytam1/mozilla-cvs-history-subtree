@@ -477,10 +477,6 @@ char* XFE_ABNameFolderDlg::getFullname()
 
 		}/* switch */
 	}/* for i */
-#else
-	char *tmp0 = values[0].u.string,
-		 *tmp1 = values[1].u.string,
-		 *tmp2 = values[2].u.string;
 
 	if (!changed &&	(firstName && tmp0 && XP_STRCMP(firstName, tmp0)) ||
 		(lastName && tmp1 && XP_STRCMP(lastName, tmp1)))
