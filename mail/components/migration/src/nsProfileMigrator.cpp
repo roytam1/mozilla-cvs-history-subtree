@@ -184,7 +184,6 @@ nsProfileMigrator::GetDefaultMailMigratorKey(nsACString& aKey,
 NS_IMETHODIMP
 nsProfileMigrator::Import()
 {
-  printf("calling import registry profile");
   if (ImportRegistryProfiles(NS_LITERAL_CSTRING("Thunderbird")))
     return NS_OK;
 
@@ -237,15 +236,10 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
 
   nsCAutoString path;
   rv = regFile->GetNativePath(path);
-
-  printf("regFile Native Path: %s. ", path.get());
-
   NS_ENSURE_SUCCESS(rv, PR_FALSE);
 
   if (NR_StartupRegistry())
     return PR_FALSE;
-
-  printf("started up netscape registry. ");
 
   PRBool migrated = PR_FALSE;
   HREG reg = nsnull;
@@ -256,33 +250,25 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
   if (NR_RegOpen(path.get(), &reg))
     goto cleanup;
 
-  printf("opened netscape registry");
-
   if (NR_RegGetKey(reg, ROOTKEY_COMMON, "Profiles", &profiles))
     goto cleanup;
 
-  printf("found a Profiles root key with %d profiles", profiles);
-
   while (!NR_RegEnumSubkeys(reg, profiles, &enumstate,
                             profileName, MAXREGNAMELEN, REGENUM_CHILDREN)) {
-    
+#ifdef DEBUG_bsmedberg
     printf("Found profile %s.\n", profileName);
+#endif
 
     RKEY profile = 0;
     if (NR_RegGetKey(reg, profiles, profileName, &profile)) {
       NS_ERROR("Could not get the key that was enumerated.");
-      printf("Could not get the key that was enumerated.");
       continue;
     }
-
-    printf("found a profile registry key");
 
     char profilePath[MAXPATHLEN];
     if (NR_RegGetEntryString(reg, profile, "directory",
                              profilePath, MAXPATHLEN))
       continue;
-
-    printf("profile had a directory entry: %s", profilePath);
 
     nsCOMPtr<nsILocalFile> profileFile
       (do_CreateInstance("@mozilla.org/file/local;1"));
@@ -294,13 +280,9 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
     NS_ConvertUTF8toUTF16 widePath(profilePath);
     rv = profileFile->InitWithPath(widePath);
 #endif
-    printf("set the persistent descriptor on the profile file");
     if (NS_FAILED(rv)) continue;
 
     nsCOMPtr<nsIToolkitProfile> tprofile;
-
-    printf("calling create profile with our new profile");
-
     profileSvc->CreateProfile(profileFile, nsDependentCString(profileName),
                               getter_AddRefs(tprofile));
     migrated = PR_TRUE;
