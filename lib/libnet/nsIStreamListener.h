@@ -53,11 +53,8 @@ struct nsIStreamListener : public nsISupports
     NS_IMETHOD GetBindInfo(void)                           = 0;
     /**
      * Notify the client that progress as occurred for the URL load.<BR>
-     * 
-     * This method is currently not called.  In the future, arguments will
-     * be passed in to indicate the type of progress...
      */
-    NS_IMETHOD OnProgress(void)                            = 0;
+    NS_IMETHOD OnProgress(PRInt32 Progress, PRInt32 ProgressMax, const char *msg) = 0;
 
     /**
      * Notify the client that the URL has started to load.  This method is
