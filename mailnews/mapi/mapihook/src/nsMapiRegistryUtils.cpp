@@ -144,17 +144,9 @@ nsresult SetRegistryKey(HKEY baseKey, const char * keyName,
     LONG   rc = ::RegCreateKey(baseKey, keyName, &key);
   
     if (rc == ERROR_SUCCESS) {
-        char buffer[MAX_PATH] = {0};
-        DWORD len = sizeof buffer;
-        rc = ::RegQueryValueEx(key, valueName, NULL, NULL, (LPBYTE)buffer, 
-                                &len );
-        if (strcmp(value, buffer) != 0 ) {
-            rc = ::RegSetValueEx(key, valueName, NULL, REG_SZ, 
+        rc = ::RegSetValueEx(key, valueName, NULL, REG_SZ, 
                                  (LPBYTE)(const char*)value, strlen(value));
-            if (rc == ERROR_SUCCESS) {
-                result = NS_OK;
-            }
-        } else {
+        if (rc == ERROR_SUCCESS) {
             result = NS_OK;
         }
         ::RegCloseKey(key);
@@ -454,6 +446,7 @@ nsresult RestoreBackedUpMapiDll()
 nsresult setDefaultMailClient()
 {
     nsresult rv;
+    nsresult mailKeySet=NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     if (!isSmartDll()) {
         if (NS_FAILED(CopyMozMapiToWinSysDir())) return NS_ERROR_FAILURE;
@@ -516,35 +509,37 @@ nsresult setDefaultMailClient()
                     nsCAutoString iconKeyName ("Software\\Clients\\Mail\\");
                     iconKeyName.Append(appName.get());
                     iconKeyName.Append("\\DefaultIcon");
-                    rv = SetRegistryKey(HKEY_LOCAL_MACHINE,
+                    mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE,
                                         (char *)iconKeyName.get(),
                                         "", (char *)iconPath.get());
                 }
             }            
         }
     }
-    
-    nsresult result = SetRegistryKey(HKEY_CURRENT_USER, "Software\\Clients\\Mail",
-                                "", (char *)appName.get());
-    if (NS_SUCCEEDED(result)) {
-       result = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                           "Software\\Mozilla\\Desktop", 
-                           "defaultMailHasBeenSet", "1");
-    }
 
-    if (NS_SUCCEEDED(rv)) {
+    if (NS_SUCCEEDED(mailKeySet)) {
+        nsresult desktopKeySet = SetRegistryKey(HKEY_CURRENT_USER, 
+                                                "Software\\Clients\\Mail",
+                                                "", (char *)appName.get());
+        if (NS_SUCCEEDED(desktopKeySet)) {
+            desktopKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                                           "Software\\Mozilla\\Desktop", 
+                                           "defaultMailHasBeenSet", "1");
+        }
+        ::SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 
+                     (LPARAM)"Software\\Clients\\Mail");
         RegisterServer(CLSID_nsMapiImp, "Mozilla MAPI", "mozMapi", "mozMapi.1");
-        if (NS_SUCCEEDED(result))
-            return result;
+        return desktopKeySet;
     }
     
-    return NS_ERROR_FAILURE;
+    return mailKeySet;
 }
 
 /** Removes Mozilla as the default Mail client and restores the previous setting
  */
 nsresult unsetDefaultMailClient() {
     nsresult result = NS_OK;
+    nsresult mailKeySet = NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     if (!isSmartDll()) {
         if (NS_FAILED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
@@ -581,39 +576,42 @@ nsresult unsetDefaultMailClient() {
             }
         }
     }
-    if (!name.IsEmpty())
-        if (NS_SUCCEEDED(result))
-            result = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+    if (!name.IsEmpty()) {
+        if (NS_SUCCEEDED(result)) {
+            mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                                 "Software\\Clients\\Mail", 
                                 "", (char *)name.get());
+        }
+    }
     else
-        result = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+        mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                                 "Software\\Clients\\Mail", 
                                 "", "");
-   
-    nsCAutoString userAppName(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                              "Software\\Mozilla\\Desktop", 
-                              "HKEY_CURRENT_USER\\Software\\Clients\\Mail"));
-    nsresult rv = NS_OK;
-    if (!userAppName.IsEmpty()) {
-        rv = SetRegistryKey(HKEY_CURRENT_USER, 
-                                "Software\\Clients\\Mail", 
-                                "", (char *)userAppName.get());
-    }
-    else {
-        DeleteRegistryValue(HKEY_CURRENT_USER, "Software\\Clients\\Mail", "");
-    }
-    if (NS_SUCCEEDED(rv)) {
-        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                "Software\\Mozilla\\Desktop", 
-                                "defaultMailHasBeenSet", "0");
-    }
-    if (NS_SUCCEEDED(result)) {
+
+    if (NS_SUCCEEDED(mailKeySet)) {
+        nsCAutoString userAppName(GetRegistryKey(HKEY_LOCAL_MACHINE, 
+                                  "Software\\Mozilla\\Desktop", 
+                                  "HKEY_CURRENT_USER\\Software\\Clients\\Mail"));
+        nsresult desktopKeySet = NS_OK;
+        if (!userAppName.IsEmpty()) {
+            desktopKeySet = SetRegistryKey(HKEY_CURRENT_USER, 
+                                           "Software\\Clients\\Mail", 
+                                           "", (char *)userAppName.get());
+        }
+        else {
+            DeleteRegistryValue(HKEY_CURRENT_USER, "Software\\Clients\\Mail", "");
+        }
+        if (NS_SUCCEEDED(desktopKeySet)) {
+            desktopKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                                           "Software\\Mozilla\\Desktop", 
+                                           "defaultMailHasBeenSet", "0");
+        }
+        ::SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 
+                     (LPARAM)"Software\\Clients\\Mail");
         UnregisterServer(CLSID_nsMapiImp, "mozMapi", "mozMapi.1");
-        if (NS_SUCCEEDED(rv))
-            return rv;
+        return desktopKeySet;
     }
-    return NS_ERROR_FAILURE;
+    return mailKeySet;
 }
 
 /** Returns FALSE if showMapiDialog is set to 0.
