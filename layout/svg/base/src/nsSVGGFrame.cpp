@@ -90,7 +90,7 @@ public:
   
   // nsISVGFrame interface:
   NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
-  NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
+  NS_IMETHOD InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
@@ -305,22 +305,16 @@ nsSVGGFrame::Paint(nsSVGRenderingContext* renderingContext)
 }
 
 NS_IMETHODIMP
-nsSVGGFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
+nsSVGGFrame::InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw)
 {
   if (!uta && !bRedraw) return NS_OK;
   
-  if (!mParent) {
-    if (uta)
-      art_uta_free(uta);
+  if (!mParent)
     return NS_OK;
-  }
 
   nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
-  if (!SVGFrame) {
-    if (uta)
-      art_uta_free(uta);
+  if (!SVGFrame)
     return NS_OK;
-  }
 
   return SVGFrame->InvalidateRegion(uta, bRedraw);
 }

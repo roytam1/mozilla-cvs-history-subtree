@@ -91,7 +91,7 @@ public:
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
   NS_IMETHOD IsRedrawSuspended(PRBool* isSuspended);
-  NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
+  NS_IMETHOD InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw);
 
   // nsASVGGraphicSource methods:
   virtual void GetCTM(nsIDOMSVGMatrix** ctm);

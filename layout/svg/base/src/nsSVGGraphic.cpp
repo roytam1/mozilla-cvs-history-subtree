@@ -63,10 +63,10 @@ nsSVGGraphic::IsMouseHit(float x, float y)
   return (mFill.Contains(x,y) || mStroke.Contains(x,y));
 }
 
-ArtUta*
+nsArtUtaRef
 nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
 {
-  ArtUta* dirtyRegion = nsnull;
+  nsArtUtaRef dirtyRegion(NULL);
 
   if ((flags & NS_SVGGRAPHIC_UPDATE_FLAGS_PATHCHANGE) != 0 ||
       (flags & NS_SVGGRAPHIC_UPDATE_FLAGS_CTMCHANGE ) != 0 ||
@@ -133,8 +133,8 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
   // update stroke and fill:
 
   if (!mVPath) {
-    AccumulateUta(&dirtyRegion, mStroke.GetUta());
-    AccumulateUta(&dirtyRegion, mFill.GetUta());
+    dirtyRegion = Combine(dirtyRegion, mStroke.GetUta());
+    dirtyRegion = Combine(dirtyRegion, mFill.GetUta());
     mStroke.Clear();
     mFill.Clear();
     return dirtyRegion;
@@ -143,7 +143,7 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
   const nsStyleSVG* svgStyle = source->GetStyle();
     
   if (!mStroke.IsEmpty()) {
-    AccumulateUta(&dirtyRegion, mStroke.GetUta());
+    dirtyRegion = Combine(dirtyRegion, mStroke.GetUta());
   }
 
   if (svgStyle->mStroke.mType == eStyleSVGPaintType_Color &&
@@ -161,14 +161,14 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
     mStroke.SetOpacity(svgStyle->mStrokeOpacity);
     
     mStroke.Build(mVPath, strokeStyle);
-    AccumulateUta(&dirtyRegion, mStroke.GetUta());
+    dirtyRegion = Combine(dirtyRegion, mStroke.GetUta());
   }
   else {
     mStroke.Clear();
   }
 
   if (!mFill.IsEmpty()) {
-    AccumulateUta(&dirtyRegion, mFill.GetUta());
+    dirtyRegion = Combine(dirtyRegion, mFill.GetUta());
   }
 
   if (svgStyle->mFill.mType == eStyleSVGPaintType_Color) {
@@ -179,7 +179,7 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
     mFill.SetOpacity(svgStyle->mFillOpacity);
     
     mFill.Build(mVPath, fillStyle);
-    AccumulateUta(&dirtyRegion, mFill.GetUta());
+    dirtyRegion = Combine(dirtyRegion, mFill.GetUta());
   }
   else {
     mFill.Clear();
@@ -188,32 +188,23 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
   return dirtyRegion;
 }
 
-ArtUta*
+nsArtUtaRef
 nsSVGGraphic::GetUta()
 {
-  ArtUta* uta=nsnull;
-  AccumulateUta(&uta, mStroke.GetUta());
-  AccumulateUta(&uta, mFill.GetUta());
-  return uta;
+ return Combine(mFill.GetUta(), mStroke.GetUta());
 }
 
 
 
 // helpers
 
-void nsSVGGraphic::AccumulateUta(ArtUta** accu, ArtUta* uta)
+nsArtUtaRef nsSVGGraphic::Combine(nsArtUtaRef a, nsArtUtaRef b)
 {
-  if (uta == nsnull) return;
-  
-  if (*accu == nsnull) {
-    *accu = uta;
-    return ;
-  }
-  
-  ArtUta* temp = *accu;
-  *accu = art_uta_union(*accu, uta);
-  art_uta_free(temp);
-  art_uta_free(uta);  
+  if (!b) return a;
+  if (!a) return b;
+
+  // they're both valid
+ return nsArtUtaRef(art_uta_union(a.get(), b.get()));
 }
 
 double nsSVGGraphic::GetBezierFlatness()

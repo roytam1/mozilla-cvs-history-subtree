@@ -197,10 +197,7 @@ NS_IMETHODIMP
 nsSVGGraphicFrame::NotifyRedrawUnsuspended()
 {
   if (mUpdateFlags != 0) {
-    ArtUta* uta = nsnull;
-    uta = mGraphic.Update(mUpdateFlags, this);
-    if (uta)
-      InvalidateRegion(uta, PR_TRUE);
+   InvalidateRegion(mGraphic.Update(mUpdateFlags, this), PR_TRUE);
     mUpdateFlags = 0;
   }
   return NS_OK;
@@ -220,24 +217,18 @@ nsSVGGraphicFrame::IsRedrawSuspended(PRBool* isSuspended)
 }
 
 NS_IMETHODIMP
-nsSVGGraphicFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
+nsSVGGraphicFrame::InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw)
 {
   if (!uta && !bRedraw) return NS_OK;
 
   NS_ASSERTION(mParent, "need parent to invalidate!");
-  if (!mParent) {
-    if (uta)
-      art_uta_free(uta);
+  if (!mParent)
     return NS_OK;
-  }
 
   nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
   NS_ASSERTION(SVGFrame, "wrong frame type!");
-  if (!SVGFrame) {
-    if (uta)
-      art_uta_free(uta);
+  if (!SVGFrame)
     return NS_OK;
-  }
 
   return SVGFrame->InvalidateRegion(uta, bRedraw);
 }
@@ -286,10 +277,7 @@ void nsSVGGraphicFrame::UpdateGraphic(nsSVGGraphicUpdateFlags flags)
   PRBool suspended;
   IsRedrawSuspended(&suspended);
   if (!suspended) {
-    ArtUta* uta = nsnull;
-    uta = mGraphic.Update(mUpdateFlags, this);
-    if (uta)
-      InvalidateRegion(uta, PR_TRUE);
+      InvalidateRegion(mGraphic.Update(mUpdateFlags, this), PR_TRUE);
     mUpdateFlags = 0;
   }  
 }

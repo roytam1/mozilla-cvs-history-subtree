@@ -105,7 +105,7 @@ public:
   
   // nsISVGFrame interface:
   NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
-  NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
+  NS_IMETHOD InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
@@ -115,14 +115,15 @@ public:
 protected:
   // implementation helpers:
   void Update();
-  ArtUta* DoReflow();
-  ArtUta* GetUta();
+  nsArtUtaRef DoReflow();
+  nsArtUtaRef GetUta();
   float GetPxPerTwips();
   float GetTwipsPerPx();
   void TransformPoint(float& x, float& y);
   void TransformVector(float& x, float& y);
   void GetCTM(nsIDOMSVGMatrix** ctm);
-  static void AccumulateUta(ArtUta** accu, ArtUta* uta);
+
+  static nsArtUtaRef Combine(nsArtUtaRef a, nsArtUtaRef b);
 
   PRBool mIsDirty;
   nsIPresShell* mPresShell; // XXX is a non-owning ref ok?
@@ -412,12 +413,8 @@ NS_IMETHODIMP
 nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
 {
   // xxx see comments at the bottom of Init()
-  if (mIsDirty) {
-    ArtUta* dirtyRegion = DoReflow();
-    if (dirtyRegion) {
-      art_uta_free(dirtyRegion);
-    }
-  }
+  if (mIsDirty)
+ DoReflow();
   
   nsIRenderingContext* ctx = renderingContext->LockMozRenderingContext();
   nsRect dirtyRect = renderingContext->GetDirtyRectTwips();
@@ -452,23 +449,18 @@ nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
 }
 
 NS_IMETHODIMP
-nsSVGForeignObjectFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
+nsSVGForeignObjectFrame::InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw)
 {
   if (!uta && !bRedraw) return NS_OK;
   
   if (!mParent) {
     NS_ERROR("invalidating region without parent");
-    if (uta)
-      art_uta_free(uta);
     return NS_OK;
   }
 
   nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
-  if (!SVGFrame) {
-    if (uta)
-      art_uta_free(uta);
+  if (!SVGFrame)
     return NS_OK;
-  }
 
   return SVGFrame->InvalidateRegion(uta, bRedraw);
 }
@@ -518,7 +510,7 @@ NS_IMETHODIMP
 nsSVGForeignObjectFrame::NotifyRedrawUnsuspended()
 {
   if (mIsDirty) {
-    ArtUta* dirtyRegion = DoReflow();
+    nsArtUtaRef dirtyRegion = DoReflow();
     if (dirtyRegion) {
       InvalidateRegion(dirtyRegion, PR_TRUE);
     }
@@ -548,14 +540,14 @@ void nsSVGForeignObjectFrame::Update()
   PRBool suspended;
   IsRedrawSuspended(&suspended);
   if (!suspended) {
-    ArtUta* dirtyRegion = DoReflow();
+    nsArtUtaRef dirtyRegion = DoReflow();
     if (dirtyRegion) {
       InvalidateRegion(dirtyRegion, PR_TRUE);
     }
   }  
 }
 
-ArtUta* nsSVGForeignObjectFrame::DoReflow()
+nsArtUtaRef nsSVGForeignObjectFrame::DoReflow()
 {
   NS_ASSERTION(mPresShell, "need a presshell");
 
@@ -563,8 +555,7 @@ ArtUta* nsSVGForeignObjectFrame::DoReflow()
   mPresShell->GetPresContext(getter_AddRefs(presContext));  
 
   // remember the area we have to invalidate after this reflow:
-  ArtUta* dirtyRegion = nsnull;
-  AccumulateUta(&dirtyRegion, GetUta());
+  nsArtUtaRef dirtyRegion(GetUta());
   
   // initiate a synchronous reflow here and now:  
   nsSize availableSpace(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
@@ -588,14 +579,11 @@ ArtUta* nsSVGForeignObjectFrame::DoReflow()
   SizeTo(presContext, desiredSize.width, desiredSize.height);
   DidReflow(presContext, NS_FRAME_REFLOW_FINISHED);
 
-  AccumulateUta(&dirtyRegion, GetUta());
-
   mIsDirty = PR_FALSE;
-
-  return dirtyRegion;
+  return Combine(dirtyRegion, GetUta());
 }
 
-ArtUta* nsSVGForeignObjectFrame::GetUta()
+nsArtUtaRef nsSVGForeignObjectFrame::GetUta()
 {
   // get a uta from our mRect
   
@@ -607,7 +595,7 @@ ArtUta* nsSVGForeignObjectFrame::GetUta()
   irect.x1 = (int)((mRect.x+mRect.width+2) * pxPerTwips);
   irect.y1 = (int)((mRect.y+mRect.height+2) * pxPerTwips);
 
-  return art_uta_from_irect(&irect);
+  return nsArtUtaRef(art_uta_from_irect(&irect));
 }
 
 float nsSVGForeignObjectFrame::GetPxPerTwips()
@@ -681,18 +669,11 @@ void nsSVGForeignObjectFrame::GetCTM(nsIDOMSVGMatrix** ctm)
   transformable->GetCTM(ctm);  
 }
 
-void nsSVGForeignObjectFrame::AccumulateUta(ArtUta** accu, ArtUta* uta)
+nsArtUtaRef nsSVGForeignObjectFrame::Combine(nsArtUtaRef a, nsArtUtaRef b)
 {
-  if (uta == nsnull) return;
-  
-  if (*accu == nsnull) {
-    *accu = uta;
-    return ;
-  }
-  
-  ArtUta* temp = *accu;
-  *accu = art_uta_union(*accu, uta);
-  art_uta_free(temp);
-  art_uta_free(uta);  
-}
+  if (!b) return a;
+  if (!a) return b;
 
+  // they're both valid
+ return nsArtUtaRef(art_uta_union(a.get(), b.get()));
+}

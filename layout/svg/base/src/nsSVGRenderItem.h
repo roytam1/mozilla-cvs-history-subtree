@@ -29,6 +29,7 @@
 #include "prtypes.h"
 #include "nsColor.h"
 #include "libart-incs.h"
+#include "nsISVGFrame.h"
 
 class nsSVGRenderItem
 {
@@ -39,7 +40,8 @@ public:
   void Clear();
   
   ArtSVP* GetSvp() { return mSvp; }
-  ArtUta* GetUta(); // calculates micro-tile array
+  void SetSVP(ArtSVP *svp);
+  nsArtUtaRef GetUta(); // calculates micro-tile array
 
   PRBool IsEmpty() { return (mSvp == nsnull); }
 
@@ -53,6 +55,8 @@ public:
   
 protected:
   ArtSVP* mSvp;
+ nsArtUtaRef mUta;
+
   float   mOpacity;
   nscolor mColor;
 };

@@ -28,6 +28,7 @@
 
 #include "prtypes.h"
 #include "libart-incs.h"
+#include "nsISVGFrame.h"
 #include "nsSVGStroke.h"
 #include "nsSVGFill.h"
 
@@ -52,12 +53,12 @@ public:
 
   void Paint(nsSVGRenderingContext* ctx);  
   PRBool IsMouseHit(float x, float y);
-  ArtUta* Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source); // returns dirty area
-  ArtUta* GetUta(); // calculates micro-tile array of whole area
+  nsArtUtaRef Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source); // returns dirty area
+  nsArtUtaRef GetUta(); // calculates micro-tile array of whole area
   
 protected:
   // helpers
-  static void AccumulateUta(ArtUta** accu, ArtUta* uta);
+  static nsArtUtaRef Combine(nsArtUtaRef a, nsArtUtaRef b);
   static double GetBezierFlatness();
 
   // rendering items:

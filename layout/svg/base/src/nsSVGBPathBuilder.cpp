@@ -216,7 +216,7 @@ void nsSVGBPathBuilder::ClosePath()
 
 void nsSVGBPathBuilder::EnsureBPathSpace(PRUint32 space)
 {
-  const PRInt32 minGrowSize = 10;
+  const PRUint32 minGrowSize = 10;
 
   if (mBPathSize - mBPathEnd >= space)
     return;

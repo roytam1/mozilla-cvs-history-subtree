@@ -44,11 +44,6 @@ static ArtVpath* ConstructClosedPath(ArtVpath* path)
 void
 nsSVGFill::Build(ArtVpath* path, const nsSVGFillStyle& style)
 {
-  if (mSvp) {
-    art_svp_free(mSvp);
-    mSvp = nsnull;
-  }
-  
   PRBool bNeedsClosing = ContainsOpenSubPaths(path);
   if (bNeedsClosing) 
     path = ConstructClosedPath(path);
@@ -76,7 +71,7 @@ nsSVGFill::Build(ArtVpath* path, const nsSVGFillStyle& style)
       NS_ERROR("not reached");
   }
   
-  mSvp = art_svp_rewind_uncrossed (uncrossedSVP, wind);
+  SetSVP(art_svp_rewind_uncrossed (uncrossedSVP, wind));
   art_svp_free (uncrossedSVP);
 }
 

@@ -26,7 +26,8 @@
 #include "nsSVGRenderItem.h"
 
 nsSVGRenderItem::nsSVGRenderItem()
-    : mSvp(nsnull)
+    : mSvp(nsnull),
+ mUta(nsnull)
 {
   
 }
@@ -39,15 +40,21 @@ nsSVGRenderItem::~nsSVGRenderItem()
 void nsSVGRenderItem::Clear()
 {
   if (mSvp)
-    art_free(mSvp);
+    art_svp_free(mSvp);
   mSvp = nsnull;
 }  
 
-ArtUta*
+void nsSVGRenderItem::SetSVP(ArtSVP *svp)
+{
+ Clear();
+ mSvp = svp;
+ mUta = nsArtUtaRef(art_uta_from_svp(mSvp));
+}
+
+nsArtUtaRef
 nsSVGRenderItem::GetUta()
 {
-  if (!mSvp) return nsnull;
-  return art_uta_from_svp(mSvp);
+  return mUta;
 }
 
 PRBool

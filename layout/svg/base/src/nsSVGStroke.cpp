@@ -34,9 +34,8 @@
 void
 nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
 {
-  if (mSvp)
-    art_svp_free(mSvp);
-
+  ArtVpath* originalPath = path;
+  
   ArtPathStrokeCapType captype;
   switch(style.linecap) {
     case NS_STYLE_STROKE_LINECAP_BUTT:
@@ -114,13 +113,17 @@ nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
     }
   }
     
-  
-  mSvp = art_svp_vpath_stroke(path,
+  SetSVP(art_svp_vpath_stroke(path,
                               jointype,
                               captype,
                               style.width,
                               style.miterlimit,
-                              getFlatness());
+                              getFlatness()
+  ));
+  
+ // if the path changed, we built a dashed path : we need to get rid of it again!
+ if (path != originalPath)
+   art_free(path);
 }
 
 double nsSVGStroke::getFlatness()

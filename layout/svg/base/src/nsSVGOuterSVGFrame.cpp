@@ -126,7 +126,7 @@ public:
   
   // nsISVGFrame interface:
   NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
-  NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
+  NS_IMETHOD InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD NotifyCTMChanged();
 
@@ -853,7 +853,7 @@ nsSVGOuterSVGFrame::Paint(nsSVGRenderingContext* renderingContext)
 }
 
 NS_IMETHODIMP
-nsSVGOuterSVGFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
+nsSVGOuterSVGFrame::InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw)
 {
 //  NS_ASSERTION(mView, "need a view!");
 //  if (!mView) return NS_ERROR_FAILURE;
@@ -883,7 +883,7 @@ nsSVGOuterSVGFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
     int twipsPerPx = (int)(GetTwipsPerPx()+0.5f);
     
     int nRects=0;
-    ArtIRect* rectList = art_rect_list_from_uta(uta, 200, 200, &nRects);
+    ArtIRect* rectList = art_rect_list_from_uta(uta.get(), 200, 200, &nRects);
     for (int i=0; i<nRects; ++i) {
       nsRect rect(rectList[i].x0 * twipsPerPx, rectList[i].y0 * twipsPerPx,
                   (rectList[i].x1 - rectList[i].x0) * twipsPerPx,
@@ -892,7 +892,6 @@ nsSVGOuterSVGFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
     }
         
     art_free(rectList);
-    art_uta_free(uta);    
   }
   vm->EndUpdateViewBatch(bRedraw ? NS_VMREFRESH_IMMEDIATE : NS_VMREFRESH_NO_SYNC);
   

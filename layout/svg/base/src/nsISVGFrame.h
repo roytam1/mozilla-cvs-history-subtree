@@ -25,7 +25,7 @@
 
 #include "nsISupports.h"
 
-#include "libart-incs.h"
+#include "nsArtUtaRef.h"
 
 class nsSVGRenderingContext;
 class nsIFrame;
@@ -48,7 +48,7 @@ public:
   NS_IMETHOD NotifyRedrawUnsuspended()=0;
 
   // up the tree. these should really go into a separate nsISVGContainerFrame interface  
-  NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw)=0;
+  NS_IMETHOD InvalidateRegion(nsArtUtaRef uta, PRBool bRedraw)=0;
   NS_IMETHOD IsRedrawSuspended(PRBool* isSuspended)=0;
 };
 
