@@ -1418,9 +1418,7 @@ PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
         else {  // append new pseudo element selector
           selector.Reset();
           selector.mTag = pseudoClassList->mAtom; // steal ref count
-          list->AddSelector(selector);
-          pseudoClassList->mAtom = nsnull;
-          listSel->mOperator = PRUnichar('>');
+
           if (IsOutlinerPseudoElement(selector.mTag)) {
             // Take the remaining "pseudoclasses" that we parsed
             // inside the outliner pseudoelement's ()-list, and
@@ -1429,6 +1427,10 @@ PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
             selector.mPseudoClassList = pseudoClassList->mNext;
             pseudoClassList->mNext = nsnull;
           }
+
+          list->AddSelector(selector);
+          pseudoClassList->mAtom = nsnull;
+          listSel->mOperator = PRUnichar('>');
 
           if (nsnull == prevList) { // delete list entry
             listSel->mPseudoClassList = pseudoClassList->mNext;
