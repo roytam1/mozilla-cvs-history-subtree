@@ -93,12 +93,16 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -N\t\tname of certificate to use for SSL client authentication\n" );
     fprintf( stderr, "    -K pathname\tpath to key database to use for SSL client authentication\n" );
     fprintf( stderr, "    \t\t(default: path to certificate database provided with -P option)\n" );
+#ifdef LDAP_TOOL_PKCS11
     fprintf( stderr, "    -m pathname\tpath to security module database\n");
+#endif /* LDAP_TOOL_PKCS11 */
     fprintf( stderr, "    -W\t\tSSL key password\n" );
 
+#ifdef LDAP_TOOL_PKCS11
     fprintf( stderr, "    -Q [token][:certificate name]\tPKCS 11\n" );
     fprintf( stderr, "    -X pathname\tFORTEZZA compromised key list (CKL)\n" );
     fprintf( stderr, "    -I pin\tcard password file\n" );
+#endif /* LDAP_TOOL_PKCS11 */
 
 #endif /* NET_SSL */
     fprintf( stderr, "    -D binddn\tbind dn\n" );
@@ -176,6 +180,8 @@ static char		*ssl_keyname = NULL;
 */
 static char		*ssl_certname = NULL;
 static char		*ssl_passwd = NULL;
+
+#ifdef LDAP_TOOL_PKCS11
 static char     	*ssl_secmodpath = NULL;
 
 static char             *pkcs_token = NULL;
@@ -194,6 +200,7 @@ static char		*fortezza_personality = NULL;
 static char		*fortezza_krlfile = NULL;
 static char		*fortezza_pin = NULL;
 #endif /* FORTEZZA */
+#endif /* LDAP_TOOL_PKCS11 */
 #endif /* NET_SSL */
 
 
@@ -422,6 +429,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    }
 	    isW = 1;
 	    break;
+#ifdef LDAP_TOOL_PKCS11
 	case 'm':	/* SSL secmod path */
 	    ssl_secmodpath = strdup( optarg);
 	    if (NULL == ssl_secmodpath)
@@ -450,6 +458,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    ssl_donglefile = strdup( optarg );
 	    
 	    break;
+#endif /* LDAP_TOOL_PKCS11 */
 
 #endif /* NET_SSL */
 	case 'w':	/* bind password */
@@ -530,6 +539,8 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    print_library_info( &ldai, stdout );
 	}
     }
+
+#ifdef LDAP_TOOL_PKCS11
     if ((NULL != pkcs_token) && (NULL != ssl_certname)) {
 	char *result;
 	
@@ -538,6 +549,8 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    ssl_certname = result;
 	}
     }
+#endif /* LDAP_TOOL_PKCS11 */
+
     free( optstring );
 
     /*
@@ -727,6 +740,7 @@ ldaptool_ldap_init( int second_host )
      * ssl_certname is not NULL, then we will attempt to use client auth.
      * if the server supports it.
      */
+#ifdef LDAP_TOOL_PKCS11
     ldaptool_setcallbacks( &local_pkcs_fns );
 
     if ( !second_host 	&& secure  
@@ -738,12 +752,26 @@ ldaptool_ldap_init( int second_host )
 	    exit( LDAP_LOCAL_ERROR );
     }
 
-    if (secure) {
 #ifdef LDAP_TOOL_ARGPIN
+    if (secure) {
 	if (PinArgRegistration( )) {
 	    exit( LDAP_LOCAL_ERROR);
 	}
+    }
 #endif /* LDAP_TOOL_ARGPIN */
+
+#else /* LDAP_TOOL_PKCS11 */
+    if ( !second_host 	&& secure  
+	 &&(rc = ldapssl_client_init( ssl_certdbpath, NULL )) < 0) {
+	    /* secure connection requested -- fail if no SSL */
+	    rc = PORT_GetError();
+	    fprintf( stderr, "SSL initialization failed: error %d (%s)\n",
+		    rc, ldapssl_err2string( rc ));
+	    exit( LDAP_LOCAL_ERROR );
+    }
+#endif /* LDAP_TOOL_PKCS11 */
+
+    if (secure) {
 	if ( !user_port ) {
 	    port = LDAPS_PORT;
 	}
@@ -1106,6 +1134,27 @@ ldaptool_delete_ext_s( LDAP *ld, const char *dn, LDAPControl **serverctrls,
 
 
 /*
+ * Like ldap_compare_ext_s() but calls wait4result() to display
+ * any referrals returned and report errors in a consistent way.
+ */
+int ldaptool_compare_ext_s( LDAP *ld, const char *dn, const char *attrtype,
+	    const struct berval *bvalue, LDAPControl **serverctrls,
+	    LDAPControl **clientctrls, char *msg )
+{
+    int		rc, msgid;
+
+    if (( rc = ldap_compare_ext( ld, dn, attrtype, bvalue, serverctrls,
+	    clientctrls, &msgid )) != LDAP_SUCCESS ) {
+	ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP );
+    } else {
+	rc = wait4result( ld, msgid, NULL, msg );
+    }
+
+    return( rc );
+}
+
+
+/*
  * Like ldap_rename_s() but calls wait4result() to display
  * any referrals returned and report errors in a consistent way.
  */
@@ -1247,7 +1296,7 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	ldap_msgfree( res );
     }
 
-    if ( lderr != LDAP_SUCCESS ) {
+    if ( LDAPTOOL_RESULT_IS_AN_ERROR( lderr )) {
 	ldaptool_print_lderror( ld, msg, LDAPTOOL_CHECK4SSL_IF_APPROP );
     }
 
@@ -1406,6 +1455,24 @@ ldaptool_get_tmp_dir( void )
 
     return( p );
 }
+
+
+int
+ldaptool_berval_is_ascii( const struct berval *bvp )
+{
+    unsigned long	j;
+    int			is_ascii = 1;	 /* optimistic */
+
+    for ( j = 0; j < bvp->bv_len; ++j ) {
+	if ( !isascii( bvp->bv_val[ j ] )) {
+	    is_ascii = 0;
+	    break;
+	}
+    }
+
+    return( is_ascii );
+}
+
 
 #ifdef LDAP_DEBUG_MEMORY   
 #define LDAPTOOL_ALLOC_FREED	0xF001
@@ -1573,6 +1640,7 @@ certpath2keypath( char *certdbpath )
     return( keydbpath );
 }
 
+#ifdef LDAP_TOOL_PKCS11
 static 
 char * 
 buildTokenCertName( const char *tokenName, const char *certName)
@@ -1851,10 +1919,11 @@ ldaptool_fortezza_err2string( int err )
 }
 
 #endif /* FORTEZZA */
+#endif /* LDAP_TOOL_PKCS11 */
 #endif /* NET_SSL */
 
 int
-boolean_str2value ( const char *ptr )
+ldaptool_boolean_str2value ( const char *ptr )
 {
    if ( !(strcasecmp(ptr, "true")) ||
 	!(strcasecmp(ptr, "t")) ||
