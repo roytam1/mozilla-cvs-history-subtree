@@ -37,11 +37,11 @@ extern int LAY_PAGEINFO_METHOD;
 extern int LAY_PAGEINFO_LAYER;
 
 #define STREAM_WRITE(Str) \
-		(*stream->put_block)(stream, Str, XP_STRLEN(Str))
+		NET_StreamPutBlock(stream, Str, XP_STRLEN(Str))
 
 PRIVATE
 void
-lo_element_info(LO_Element *ele_list, NET_StreamClass *stream)
+lo_element_info(LO_Element *ele_list, NET_VoidStreamClass *stream)
 {
 	LO_Element *eptr;
 	char buf[1024];
@@ -303,7 +303,7 @@ lo_element_info(LO_Element *ele_list, NET_StreamClass *stream)
 
 PRIVATE
 void
-lo_backdrop_info(char *backdrop_image_url, NET_StreamClass *stream)
+lo_backdrop_info(char *backdrop_image_url, NET_VoidStreamClass *stream)
 {
     if (backdrop_image_url)
     {
@@ -343,7 +343,7 @@ lo_backdrop_info(char *backdrop_image_url, NET_StreamClass *stream)
 
 PRIVATE
 void
-lo_form_info(lo_FormData *form_list, NET_StreamClass *stream)
+lo_form_info(lo_FormData *form_list, NET_VoidStreamClass *stream)
 {
 	int form_num=1;
 
@@ -442,7 +442,7 @@ lo_form_info(lo_FormData *form_list, NET_StreamClass *stream)
  *		completly laid out and info can be found.
  */
 PUBLIC intn
-LO_DocumentInfo(MWContext *context, NET_StreamClass *stream)
+LO_DocumentInfo(MWContext *context, NET_VoidStreamClass *stream)
 {
 	int32 doc_id, i;
 	lo_TopState *top_state;
