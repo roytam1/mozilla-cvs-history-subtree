@@ -129,38 +129,41 @@ nsXFormsControl::GetInstanceNode()
   if (!model)
     return nsnull;
 
-  nsCOMPtr<nsIDOMElement> contextNode;
+  nsCOMPtr<nsIDOMElement> resolverNode;
+  nsAutoString expr;
 
   if (bindElement) {
-    contextNode = bindElement;
+    resolverNode = bindElement;
+    bindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
   } else {
-    mWrapper->GetElementNode(getter_AddRefs(contextNode));
+    mWrapper->GetElementNode(getter_AddRefs(resolverNode));
+    resolverNode->GetAttribute(NS_LITERAL_STRING("ref"), expr);
   }
 
-  nsAutoString ref;
-  contextNode->GetAttribute(NS_LITERAL_STRING("ref"), ref);
-
-  if (ref.IsEmpty())
+  if (expr.IsEmpty())
     return nsnull;
 
   // Get the instance data and evaluate the xpath expression.
   // XXXfixme when xpath extensions are implemented (instance())
   nsCOMPtr<nsIDOMDocument> instanceDoc;
   model->GetInstanceDocument(NS_LITERAL_STRING(""),
-			     getter_AddRefs(instanceDoc));
+                             getter_AddRefs(instanceDoc));
 
   if (!instanceDoc)
     return nsnull;
 
   nsCOMPtr<nsIDOMXPathEvaluator> eval = do_QueryInterface(instanceDoc);
   nsCOMPtr<nsIDOMXPathNSResolver> resolver;
-  eval->CreateNSResolver(instanceDoc, getter_AddRefs(resolver));
+  eval->CreateNSResolver(resolverNode, getter_AddRefs(resolver));
   NS_ENSURE_TRUE(resolver, nsnull);
 
+  nsCOMPtr<nsIDOMElement> docElement;
+  instanceDoc->GetDocumentElement(getter_AddRefs(docElement));
+
   nsCOMPtr<nsIDOMXPathResult> result;
-  eval->Evaluate(ref, contextNode, resolver,
-		 nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE, nsnull,
-		 getter_AddRefs(result));
+  eval->Evaluate(expr, docElement, resolver,
+                 nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE, nsnull,
+                 getter_AddRefs(result));
 
   nsIDOMNode *resultNode = nsnull;
 
