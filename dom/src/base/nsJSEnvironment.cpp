@@ -988,14 +988,28 @@ NS_IMETHODIMP_(nsIScriptGlobalObject*)
 nsJSContext::GetGlobalObject()
 {
   JSObject *global = ::JS_GetGlobalObject(mContext);
-  nsIScriptGlobalObject *script_global = nsnull;
 
-  if (nsnull != global) {
+  if (global) {
     nsISupports* sup = (nsISupports *)::JS_GetPrivate(mContext, global);
-    if (nsnull != sup) {
-      sup->QueryInterface(NS_GET_IID(nsIScriptGlobalObject), (void**) &script_global);
+
+    if (sup) {
+      nsCOMPtr<nsIXPConnectWrappedNative> wrapped_native =
+        do_QueryInterface(sup);
+
+      if (wrapped_native) {
+        nsCOMPtr<nsISupports> native;
+
+        wrapped_native->GetNative(getter_AddRefs(native));
+
+        if (native) {
+          nsIScriptGlobalObject *script_global = nsnull;
+
+          CallQueryInterface(native, &script_global);
+
+          return script_global;
+        }
+      }
     }
-    return script_global;
   }
   return nsnull;
 }
