@@ -55,7 +55,7 @@ AC_PROG_INSTALL
 AC_PROG_AWK
 AC_PROG_RANLIB
 
-AC_PATH_PROG(EMACS, emacs, /bin/true)
+AC_PATH_PROGS(EMACS, xemacs emacs, /bin/true)
 AC_PATH_PROG(PERL, perl, /bin/true)
 AC_PATH_PROG(WHOAMI, whoami, /bin/true)
 AC_PATH_PROG(UNZIP, unzip, /bin/true)
@@ -98,7 +98,6 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 dnl ========================================================
 AC_C_CONST
 AC_C_INLINE
-AC_HEADER_TIME
 AC_TYPE_MODE_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
@@ -114,8 +113,9 @@ dnl ========================================================
 AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
+AC_HEADER_TIME
 AC_CHECK_HEADERS(fcntl.h limits.h malloc.h paths.h strings.h unistd.h)
-AC_CHECK_HEADERS(sys/bittypes.h sys/file.h sys/ioctl.h sys/time.h unistd.h)
+AC_CHECK_HEADERS(sys/bittypes.h sys/file.h sys/ioctl.h sys/time.h)
 AC_CHECK_HEADERS(getopt.h ioctl.h sys/cdefs.h filio.h systeminfo.h)
 
 dnl Checks for library functions.
@@ -357,14 +357,14 @@ dnl Checks for X libraries.
 dnl ========================================================
 AC_CHECK_LIB(X11, XDrawLines,,
 	[MISSING_X="$MISSING_X -lX11"])
-AC_CHECK_LIB(Xext, XextAddDisplay,,
-	[MISSING_X="$MISSING_X -lXext"], -lX11)
-AC_CHECK_LIB(Xmu, XmuLookupString,,
-	[MISSING_X="$MISSING_X -lXmu"], -lX11)
-AC_CHECK_LIB(ICE, IceFlush,,, -lX11)
-AC_CHECK_LIB(SM, SmcCloseConnection,,, -lICE -lX11)
 AC_CHECK_LIB(Xt, XtFree,,
 	[MISSING_X="$MISSING_X -lXt"], -lX11)
+AC_CHECK_LIB(Xext, XextAddDisplay,,
+	[MISSING_X="$MISSING_X -lXext"], -lX11)
+AC_CHECK_LIB(ICE, IceFlush,,, -lX11)
+AC_CHECK_LIB(SM, SmcCloseConnection,,, -lICE -lX11)
+AC_CHECK_LIB(Xmu, XmuLookupString,,
+	[MISSING_X="$MISSING_X -lXmu"], -lXt -lX11)
 AC_CHECK_LIB(Xpm, XpmWriteFileFromImage,,
 	[MISSING_X="$MISSING_X -lXpm"], -lX11)
 
@@ -497,47 +497,8 @@ res=`echo :$MOZ_FE | grep -c " x"`
 if [ test $res != 0 ]; then
     if [ test "$MISSING_MOTIF" != "" ]; then 
 	AC_MSG_ERROR([ Could not find standard motif libraries.]);
-    fi
-fi
-
-res=`echo :$MOZ_FE | grep -c " qt"`
-if [ test $res != 0 ]; then
-    if [ test "$MISSING_QT" != "" ]; then 
-	AC_MSG_ERROR([ Could not find standard qt libraries.]);
-    fi
-fi
-
-res=`echo :$MOZ_FE | grep -c " gtk"`
-if [ test $res != 0 ]; then
-    if [ test "$MISSING_GTK" != "" ]; then
-	AC_MSG_ERROR([ Could not find standard gtk libraries.]);
-    fi
-fi
-
-res=`echo :$MOZ_FE | grep -c " gnome"`
-if [ test $res != 0 ]; then
-    if [ test "$MISSING_GNOME" != "" ]; then
-	AC_MSG_ERROR([ Could not find standard gnome libraries.]);
-    fi
-fi
-
-AC_OUTPUT(
-Makefile
-base/Makefile
-base/public/Makefile
-base/src/Makefile
-base/src/unix/Makefile
-base/tests/Makefile
-caps/Makefile
-caps/include/Makefile
-caps/src/Makefile
-cmd/Makefile
-cmd/gnomefe/Makefile
-cmd/gnomefe/gnome-src/Makefile
-cmd/gnomefe/gnome-widgets/Makefile
-cmd/qtfe/Makefile
-cmd/qtfe/icons/Makefile
-cmd/stubfe/Makefile
+    else
+	FE_X_MAKEFILES="
 cmd/xfe/Makefile
 cmd/xfe/DtWidgets/Makefile
 cmd/xfe/Microline3.0/Makefile
@@ -561,7 +522,58 @@ cmd/xfe/plugins/ImAlive/Makefile
 cmd/xfe/plugins/javatest/Makefile
 cmd/xfe/plugins/nullplugin/Makefile
 cmd/xfe/plugins/textplugin/Makefile
-cmd/xfe/src/Makefile
+cmd/xfe/src/Makefile"
+    fi
+fi
+
+res=`echo :$MOZ_FE | grep -c " qt"`
+if [ test $res != 0 ]; then
+    if [ test "$MISSING_QT" != "" ]; then 
+	AC_MSG_ERROR([ Could not find standard qt libraries.]);
+    else
+	FE_QT_MAKEFILES="
+cmd/qtfe/Makefile
+cmd/qtfe/icons/Makefile"
+    fi
+fi
+
+res=`echo :$MOZ_FE | grep -c " gtk"`
+if [ test $res != 0 ]; then
+    if [ test "$MISSING_GTK" != "" ]; then
+	AC_MSG_ERROR([ Could not find standard gtk libraries.]);
+    else
+	FE_GTK_MAKEFILES=""
+    fi
+fi
+
+res=`echo :$MOZ_FE | grep -c " gnome"`
+if [ test $res != 0 ]; then
+    if [ test "$MISSING_GNOME" != "" ]; then
+	AC_MSG_ERROR([ Could not find standard gnome libraries.]);
+    else
+	FE_GNOME_MAKEFILES="
+cmd/gnomefe/Makefile
+cmd/gnomefe/gnome-src/Makefile
+cmd/gnomefe/gnome-widgets/Makefile"
+    fi
+fi
+
+AC_OUTPUT(
+Makefile
+base/Makefile
+base/public/Makefile
+base/src/Makefile
+base/src/unix/Makefile
+base/tests/Makefile
+caps/Makefile
+caps/include/Makefile
+caps/src/Makefile
+cmd/Makefile
+cmd/stubfe/Makefile
+$FE_GNOME_MAKEFILES
+$FE_GTK_MAKEFILES
+$FE_QT_MAKEFILES
+$FE_X_MAKEFILES
 config/Makefile
 config/autoconf.mk
 config/mkdepend/Makefile
