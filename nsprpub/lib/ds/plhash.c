@@ -198,11 +198,11 @@ PL_HashTableRawLookup(PLHashTable *ht, PLHashNumber keyHash, const void *key)
 /*
 ** Same as PL_HashTableRawLookup but doesn't reorder the hash entries.
 */
-PR_IMPLEMENT(PLHashEntry *const *)
-PL_HashTableRawLookupConst(const PLHashTable *ht, PLHashNumber keyHash,
+PR_IMPLEMENT(PLHashEntry **)
+PL_HashTableRawLookupConst(PLHashTable *ht, PLHashNumber keyHash,
                            const void *key)
 {
-    PLHashEntry *he, *const *hep;
+    PLHashEntry *he, **hep;
     PLHashNumber h;
 
 #ifdef HASHMETER
@@ -380,7 +380,7 @@ PL_HashTableLookup(PLHashTable *ht, const void *key)
 ** Same as PL_HashTableLookup but doesn't reorder the hash entries.
 */
 PR_IMPLEMENT(void *)
-PL_HashTableLookupConst(const PLHashTable *ht, const void *key)
+PL_HashTableLookupConst(PLHashTable *ht, const void *key)
 {
     PLHashNumber keyHash;
     PLHashEntry *he, *const *hep;
