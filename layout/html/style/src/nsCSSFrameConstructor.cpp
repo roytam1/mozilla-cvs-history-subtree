@@ -5230,10 +5230,10 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 
       if (aTag == nsXULAtoms::treecell)
         rv = NS_NewXULTreeCellFrame(aPresShell, &newFrame);
-      
-      // create a box. Its not root, its layout manager is default (nsnull) which is "sprocket" and
-      // its default orientation is horizontal for hbox and vertical for vbox
-      rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull, aTag != nsXULAtoms::vbox);
+      else      
+        // create a box. Its not root, its layout manager is default (nsnull) which is "sprocket" and
+        // its default orientation is horizontal for hbox and vertical for vbox
+        rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull, aTag != nsXULAtoms::vbox);
 
       const nsStyleDisplay* display = (const nsStyleDisplay*)
            aStyleContext->GetStyleData(eStyleStruct_Display);
