@@ -1016,7 +1016,7 @@ nsInstall::SetPackageFolder(const nsString& aFolder)
  *                          can be either NO_STATUS_DLG or NO_FINALIZE_DLG
  */
 PRInt32    
-nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn)
+nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn)
 {
     *aReturn     = nsInstall::SUCCESS;
     
@@ -1030,6 +1030,9 @@ nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, 
         return NS_OK;
     }
     
+    mUIName = aUserPackageName;
+
+
     nsString *tempString = GetQualifiedPackageName( aPackageName );
     
     mRegistryPackageName.SetLength(0);
@@ -1086,7 +1089,7 @@ nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, 
     GetTime(time);
     
     *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
-//    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
+    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
     *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
     *mLogStream << nsEndl;
     *mLogStream << "     Starting Installation at " << nsAutoCString(time) << nsEndl;   
@@ -1096,13 +1099,13 @@ nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, 
 }
 
 PRInt32    
-nsInstall::StartInstall(const nsString& aPackageName, const nsIDOMInstallVersion& aVersion, PRInt32 aFlags, PRInt32* aReturn)
+nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsIDOMInstallVersion& aVersion, PRInt32 aFlags, PRInt32* aReturn)
 {
     return NS_OK;
 }
 
 PRInt32    
-nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn)
+nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn)
 {
     return NS_OK;
 }

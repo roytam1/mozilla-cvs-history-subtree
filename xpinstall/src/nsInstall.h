@@ -173,9 +173,9 @@ class nsInstall
         PRInt32    Patch(const nsString& aRegName, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
         PRInt32    ResetError();
         PRInt32    SetPackageFolder(const nsString& aFolder);
-        PRInt32    StartInstall(const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn);
-        PRInt32    StartInstall(const nsString& aPackageName, const nsIDOMInstallVersion& aVersion, PRInt32 aFlags, PRInt32* aReturn);
-        PRInt32    StartInstall(const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn);
+        PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn);
+        PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsIDOMInstallVersion& aVersion, PRInt32 aFlags, PRInt32* aReturn);
+        PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn);
         PRInt32    Uninstall(const nsString& aPackageName, PRInt32* aReturn);
         
 

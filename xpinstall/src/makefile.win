@@ -86,7 +86,6 @@ OBJS =                                          \
        .\$(OBJDIR)\nsInstallUninstall.obj       \
        .\$(OBJDIR)\nsInstallResources.obj       \
        .\$(OBJDIR)\ScheduledTasks.obj           \
-       .\$(OBJDIR)\nsAppShellProxy.obj          \
        $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

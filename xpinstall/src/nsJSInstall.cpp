@@ -1157,7 +1157,8 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
-  PRInt32 b2;
+  nsAutoString b2;
+  PRInt32 b3;
 
   *rval = JSVAL_NULL;
 
@@ -1173,8 +1174,9 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     //                           int flags);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(!JS_ValueToInt32(cx, argv[2], (int32 *)&b2))
+    if(!JS_ValueToInt32(cx, argv[3], (int32 *)&b3))
     {
       JS_ReportError(cx, "Parameter must be a number");
       return JS_FALSE;
@@ -1182,13 +1184,13 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
     if(JSVAL_IS_OBJECT(argv[1]))
     {
-      JSObject* jsobj = JSVAL_TO_OBJECT(argv[1]);
+      JSObject* jsobj = JSVAL_TO_OBJECT(argv[2]);
       JSClass* jsclass = JS_GetClass(cx, jsobj);
       if ((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) 
       {
         nsIDOMInstallVersion* version = (nsIDOMInstallVersion*)JS_GetPrivate(cx, jsobj);
 
-//        if(NS_OK != nativeThis->StartInstall(b0, version, b2, &nativeRet))
+//        if(NS_OK != nativeThis->StartInstall(b0, b1, version, b3, &nativeRet))
 //        {
           return JS_FALSE;
 //        }
@@ -1197,7 +1199,7 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     else
     {
       nsCvrtJSValToStr(b1, cx, argv[1]);
-      if(NS_OK != nativeThis->StartInstall(b0, b1, b2, &nativeRet))
+      if(NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet))
       {
         return JS_FALSE;
       }
