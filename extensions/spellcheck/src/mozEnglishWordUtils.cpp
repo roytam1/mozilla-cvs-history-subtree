@@ -96,19 +96,24 @@ NS_IMETHODIMP mozEnglishWordUtils::SetCharset(const PRUnichar * aCharset)
   nsresult res;
 
   mCharset = aCharset;
-
-  nsCAutoString convCharset;
-  convCharset.AssignWithConversion(mCharset); 
+  nsAutoString temp(aCharset);
+  // Resolve charset alias
+  nsCOMPtr <nsICharsetAlias> calias = do_GetService(NS_CHARSETALIAS_CONTRACTID, &res);
+  if (NS_SUCCEEDED(res)) {
+    if (mCharset.Length()) {
+      res = calias->GetPreferred(temp, mCharset);
+    }
+  }
   
   nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(kCharsetConverterManagerCID, &res);
   if (NS_FAILED(res)) return res;
   if(!ccm) return NS_ERROR_FAILURE;
-  res=ccm->GetUnicodeEncoder(convCharset.get(),getter_AddRefs(mEncoder));
+  res=ccm->GetUnicodeEncoder(&mCharset,getter_AddRefs(mEncoder));
   if(mEncoder && NS_SUCCEEDED(res)){
     res=mEncoder->SetOutputErrorBehavior(mEncoder->kOnError_Signal,nsnull,'?');
   }
   if (NS_FAILED(res)) return res;
-  res=ccm->GetUnicodeDecoder(convCharset.get(),getter_AddRefs(mDecoder));
+  res=ccm->GetUnicodeDecoder(&mCharset,getter_AddRefs(mDecoder));
   if (NS_FAILED(res)) return res;
   res = nsServiceManager::GetService(kUnicharUtilCID,NS_GET_IID(nsICaseConversion), getter_AddRefs(mCaseConv));
   return res;

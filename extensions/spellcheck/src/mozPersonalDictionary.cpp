@@ -310,18 +310,26 @@ NS_IMETHODIMP mozPersonalDictionary::SetCharset(const PRUnichar * aCharset)
 {
   nsresult res;
   mCharset = aCharset;
+  nsString convCharset = mCharset;
+  // Resolve charset alias
+  nsCOMPtr <nsICharsetAlias> calias = do_GetService(NS_CHARSETALIAS_CONTRACTID, &res);
+  if (NS_SUCCEEDED(res)) {
+    if (mCharset.Length()) {
+      res = calias->GetPreferred(convCharset, mCharset);
+    }
+  }
 
-  nsCAutoString convCharset;
-  convCharset.AssignWithConversion(mCharset); 
 
   nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(kCharsetConverterManagerCID, &res);
   if (NS_FAILED(res)) return res;
   if(!ccm) return NS_ERROR_FAILURE;
 
-  res=ccm->GetUnicodeEncoder(convCharset.get(),getter_AddRefs(mEncoder));
+  res=ccm->GetUnicodeEncoder(&mCharset,getter_AddRefs(mEncoder));
 
   if (NS_FAILED(res)) return res;
   if(!mEncoder) return NS_ERROR_FAILURE;
+
+
 
   if(mEncoder && NS_SUCCEEDED(res)){
     res=mEncoder->SetOutputErrorBehavior(mEncoder->kOnError_Signal,nsnull,'?');
