@@ -213,6 +213,11 @@ ifneq (,$(filter-out WIN16 OS2,$(OS_TARGET)))
 DLLBASE=/BASE:0x30000000
 RES=$(OBJDIR)/nspr.res
 RESNAME=nspr.rc
+ifdef MOZ_DEBUG
+ifdef GLOWCODE
+EXTRA_LIBS += $(GLOWDIR)/glowcode.lib
+endif
+endif
 endif
 
 ifeq ($(OS_TARGET), WIN16)
