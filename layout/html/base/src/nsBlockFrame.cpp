@@ -4048,7 +4048,9 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
 
   // See if the line fit. If it doesn't we need to push it. Our first
   // line will always fit.
-  if ((mLines.front() != aLine) && (newY > aState.mBottomEdge)) {
+  if (mLines.front() != aLine &&
+      newY > aState.mBottomEdge &&
+      aState.mBottomEdge != NS_UNCONSTRAINEDSIZE) {
     // Push this line and all of it's children and anything else that
     // follows to our next-in-flow
     NS_ASSERTION((aState.mCurrentLine == aLine), "oops");
