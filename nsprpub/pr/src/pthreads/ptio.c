@@ -1588,7 +1588,7 @@ static PRInt32 pt_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
 #ifdef _PR_INET6
-	if (AF_INET6 == addr->raw.family)
+	if (addr && (AF_INET6 == addr->raw.family))
         addr->raw.family = PR_AF_INET6;
 #endif
     if (bytes < 0)

@@ -227,6 +227,9 @@ static PRStatus PR_CALLBACK SocketConnect(
 {
 	PRInt32 rv;    /* Return value of _PR_MD_CONNECT */
     const PRNetAddr *addrp = addr;
+#if defined(_PR_INET6)
+	PRNetAddr addrCopy;
+#endif
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 
 	if (_PR_PENDING_INTERRUPT(me)) {
@@ -421,7 +424,7 @@ PRIntervalTime timeout)
 #endif
 
 #ifdef _PR_INET6
-	if (AF_INET6 == addr->raw.family)
+	if (addr && (AF_INET6 == addr->raw.family))
         addr->raw.family = PR_AF_INET6;
 #endif
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
@@ -468,6 +471,10 @@ PRIntervalTime timeout)
 	        PR_ASSERT(al == PR_NETADDR_SIZE(addr));
         	fd2->secret->md.accepted_socket = PR_TRUE;
         	memcpy(&fd2->secret->md.peer_addr, addr, al);
+#ifdef _PR_INET6
+		if (AF_INET6 == addr->raw.family)
+        	addr->raw.family = PR_AF_INET6;
+#endif
 	}
 	return fd2;
 }
@@ -478,6 +485,9 @@ static PRStatus PR_CALLBACK SocketBind(PRFileDesc *fd, const PRNetAddr *addr)
 {
 	PRInt32 result;
     const PRNetAddr *addrp = addr;
+#if defined(_PR_INET6)
+	PRNetAddr addrCopy;
+#endif
 
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
 
@@ -649,6 +659,9 @@ static PRInt32 PR_CALLBACK SocketSendTo(
 {
 	PRInt32 temp, count;
     const PRNetAddr *addrp = addr;
+#if defined(_PR_INET6)
+	PRNetAddr addrCopy;
+#endif
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 
 	if (_PR_PENDING_INTERRUPT(me)) {
@@ -708,7 +721,7 @@ PRIntn flags, PRNetAddr *addr, PRIntervalTime timeout)
 	al = sizeof(PRNetAddr);
 	rv = _PR_MD_RECVFROM(fd, buf, amount, flags, addr, &al, timeout);
 #ifdef _PR_INET6
-	if (AF_INET6 == addr->raw.family)
+	if (addr && (AF_INET6 == addr->raw.family))
         addr->raw.family = PR_AF_INET6;
 #endif
 	return rv;
@@ -760,13 +773,13 @@ PRIntervalTime timeout)
 			(*nd)->secret->md.accepted_socket = PR_TRUE;
 			memcpy(&(*nd)->secret->md.peer_addr, *raddr,
 				PR_NETADDR_SIZE(*raddr));
+#ifdef _PR_INET6
+			if (AF_INET6 == *raddr->raw.family)
+        		*raddr->raw.family = PR_AF_INET6;
+#endif
 		}
 	}
 	}
-#ifdef _PR_INET6
-	if (AF_INET6 == *raddr->raw.family)
-        *raddr->raw.family = PR_AF_INET6;
-#endif
 #else
 	rv = _PR_EmulateAcceptRead(sd, nd, raddr, buf, amount, timeout);
 #endif
@@ -811,12 +824,12 @@ PRIntervalTime timeout)
 		} else {
 			(*nd)->secret->md.io_model_committed = PR_TRUE;
 			(*nd)->secret->md.accepted_socket = PR_TRUE;
+			memcpy(&(*nd)->secret->md.peer_addr, *raddr,
+				PR_NETADDR_SIZE(*raddr));
 #ifdef _PR_INET6
 			if (AF_INET6 == *raddr->raw.family)
         		*raddr->raw.family = PR_AF_INET6;
 #endif
-			memcpy(&(*nd)->secret->md.peer_addr, *raddr,
-				PR_NETADDR_SIZE(*raddr));
 		}
 	}
 	return rv;
@@ -864,6 +877,10 @@ void *callbackArg)
 			(*nd)->secret->md.accepted_socket = PR_TRUE;
 			memcpy(&(*nd)->secret->md.peer_addr, *raddr,
 				PR_NETADDR_SIZE(*raddr));
+#ifdef _PR_INET6
+			if (AF_INET6 == *raddr->raw.family)
+        		*raddr->raw.family = PR_AF_INET6;
+#endif
 		}
 	}
 	return rv;
