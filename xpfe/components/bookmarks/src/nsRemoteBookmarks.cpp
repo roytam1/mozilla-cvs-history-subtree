@@ -102,11 +102,19 @@ static nsIRDFContainerUtils *gRDFC;
 
 nsIRDFResource *nsRemoteBookmarks::kRDF_type;
 nsIRDFResource *nsRemoteBookmarks::kNC_Bookmark;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkSeparator;
 nsIRDFResource *nsRemoteBookmarks::kNC_Folder;
 nsIRDFResource *nsRemoteBookmarks::kNC_Child;
 nsIRDFResource *nsRemoteBookmarks::kNC_Name;
 nsIRDFResource *nsRemoteBookmarks::kNC_URL;
 nsIRDFResource *nsRemoteBookmarks::kNC_LDAPURL;
+
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewBookmark;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewFolder;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewSeparator;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_DeleteBookmark;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_DeleteBookmarkFolder;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_DeleteBookmarkSeparator;
 
 
 
@@ -135,11 +143,19 @@ nsRemoteBookmarks::~nsRemoteBookmarks()
   {
     NS_IF_RELEASE(kRDF_type);
     NS_IF_RELEASE(kNC_Bookmark);
+    NS_IF_RELEASE(kNC_BookmarkSeparator);
     NS_IF_RELEASE(kNC_Folder);
     NS_IF_RELEASE(kNC_Child);
     NS_IF_RELEASE(kNC_Name);
     NS_IF_RELEASE(kNC_URL);
     NS_IF_RELEASE(kNC_LDAPURL);
+
+    NS_IF_RELEASE(kNC_BookmarkCommand_NewBookmark);
+    NS_IF_RELEASE(kNC_BookmarkCommand_NewFolder);
+    NS_IF_RELEASE(kNC_BookmarkCommand_NewSeparator);
+    NS_IF_RELEASE(kNC_BookmarkCommand_DeleteBookmark);
+    NS_IF_RELEASE(kNC_BookmarkCommand_DeleteBookmarkFolder);
+    NS_IF_RELEASE(kNC_BookmarkCommand_DeleteBookmarkSeparator);
 
 		if (gRDFC)
 		{
@@ -197,13 +213,21 @@ nsRemoteBookmarks::Init()
     if (NS_FAILED(rv))
       return(rv);
 
-    gRDF->GetResource(RDF_NAMESPACE_URI "type",    &kRDF_type);
-    gRDF->GetResource(NC_NAMESPACE_URI "Bookmark", &kNC_Bookmark);
-    gRDF->GetResource(NC_NAMESPACE_URI "Folder",   &kNC_Folder);
-    gRDF->GetResource(NC_NAMESPACE_URI "child",    &kNC_Child);
-    gRDF->GetResource(NC_NAMESPACE_URI "Name",     &kNC_Name);
-    gRDF->GetResource(NC_NAMESPACE_URI "URL",      &kNC_URL);
-    gRDF->GetResource(NC_NAMESPACE_URI "LDAPURL",  &kNC_LDAPURL);
+    gRDF->GetResource(RDF_NAMESPACE_URI "type",             &kRDF_type);
+    gRDF->GetResource(NC_NAMESPACE_URI "Bookmark",          &kNC_Bookmark);
+		gRDF->GetResource(NC_NAMESPACE_URI "BookmarkSeparator", &kNC_BookmarkSeparator);
+    gRDF->GetResource(NC_NAMESPACE_URI "Folder",            &kNC_Folder);
+    gRDF->GetResource(NC_NAMESPACE_URI "child",             &kNC_Child);
+    gRDF->GetResource(NC_NAMESPACE_URI "Name",              &kNC_Name);
+    gRDF->GetResource(NC_NAMESPACE_URI "URL",               &kNC_URL);
+    gRDF->GetResource(NC_NAMESPACE_URI "LDAPURL",           &kNC_LDAPURL);
+
+		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newbookmark",             &kNC_BookmarkCommand_NewBookmark);
+		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newfolder",               &kNC_BookmarkCommand_NewFolder);
+		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newseparator",            &kNC_BookmarkCommand_NewSeparator);
+		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=deletebookmark",          &kNC_BookmarkCommand_DeleteBookmark);
+		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=deletebookmarkfolder",    &kNC_BookmarkCommand_DeleteBookmarkFolder);
+		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=deletebookmarkseparator", &kNC_BookmarkCommand_DeleteBookmarkSeparator);
   }
 
 	// register this as a named data source with the RDF
@@ -769,7 +793,66 @@ nsRemoteBookmarks::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
     
                          nsISupportsArray/*<nsIRDFResource>*/* aArguments)
 {
-	return(NS_ERROR_NOT_IMPLEMENTED);
+  nsresult		rv = NS_OK;
+  PRInt32			loop;
+  PRUint32		numSources;
+  if (NS_FAILED(rv = aSources->Count(&numSources)))	return(rv);
+  if (numSources < 1)
+  {
+    return(NS_ERROR_ILLEGAL_VALUE);
+  }
+
+  // Note: some commands only run once (instead of looping over selection);
+  //       if that's the case, be sure to "break" (if success)
+
+  for (loop=((PRInt32)numSources)-1; loop>=0; loop--)
+  {
+    nsCOMPtr<nsISupports>	aSource = aSources->ElementAt(loop);
+    if (!aSource)	return(NS_ERROR_NULL_POINTER);
+    nsCOMPtr<nsIRDFResource>	src = do_QueryInterface(aSource);
+    if (!src)	return(NS_ERROR_NO_INTERFACE);
+
+    if (aCommand == kNC_BookmarkCommand_NewBookmark)
+    {
+      rv = insertLDAPBookmarkItem(src, aArguments, kNC_Bookmark);
+      if (NS_FAILED(rv))
+        return(rv);
+      break;
+    }
+    else if (aCommand == kNC_BookmarkCommand_NewFolder)
+    {
+      rv = insertLDAPBookmarkItem(src, aArguments, kNC_Folder);
+      if (NS_FAILED(rv))
+        return(rv);
+      break;
+    }
+    else if (aCommand == kNC_BookmarkCommand_NewSeparator)
+    {
+      rv = insertLDAPBookmarkItem(src, aArguments, kNC_BookmarkSeparator);
+      if (NS_FAILED(rv))
+        return(rv);
+      break;
+    }
+    else if (aCommand == kNC_BookmarkCommand_DeleteBookmark)
+    {
+      rv = deleteLDAPBookmarkItem(src, aArguments, loop, kNC_Bookmark);
+      if (NS_FAILED(rv))
+        return(rv);
+    }
+    else if (aCommand == kNC_BookmarkCommand_DeleteBookmarkFolder)
+    {
+      rv = deleteLDAPBookmarkItem(src, aArguments, loop, kNC_Folder);
+      if (NS_FAILED(rv))
+        return(rv);
+    }
+    else if (aCommand == kNC_BookmarkCommand_DeleteBookmarkSeparator)
+    {
+      rv = deleteLDAPBookmarkItem(src, aArguments, loop, kNC_BookmarkSeparator);
+      if (NS_FAILED(rv))
+        return(rv);
+    }
+  }
+  return(NS_OK);
 }
 
 
@@ -1556,4 +1639,75 @@ nsRemoteBookmarks::GetLDAPExtension(nsIRDFResource *aNode, const char *name,
   }
 
   return(NS_OK);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, 
+                                          nsISupportsArray *aArguments, 
+                                          nsIRDFResource *aItemType)
+{
+  return(NS_OK);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::deleteLDAPBookmarkItem(nsIRDFResource *aNode,
+                                          nsISupportsArray *aArguments,
+                                          PRInt32 parentArgIndex,
+                                          nsIRDFResource *aItemType)
+{
+  return(NS_OK);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::getArgumentN(nsISupportsArray *arguments,
+                                nsIRDFResource *res,
+                                PRInt32 offset,
+                                nsIRDFNode **argValue)
+{
+  nsresult		rv;
+  PRUint32		loop, numArguments;
+
+  *argValue = nsnull;
+
+  if (NS_FAILED(rv = arguments->Count(&numArguments)))
+    return(rv);
+
+  // format is argument, value, argument, value, ... [you get the idea]
+  // multiple arguments can be the same, by the way, thus the "offset"
+  for (loop = 0; loop < numArguments; loop += 2)
+  {
+    nsCOMPtr<nsISupports>	aSource = arguments->ElementAt(loop);
+    if (!aSource)
+      return(NS_ERROR_NULL_POINTER);
+    nsCOMPtr<nsIRDFResource>	src = do_QueryInterface(aSource);
+    if (!src)
+      return(NS_ERROR_NO_INTERFACE);
+
+    if (src.get() == res)
+    {
+      if (offset > 0)
+      {
+        --offset;
+        continue;
+      }
+
+      nsCOMPtr<nsISupports>	aValue = arguments->ElementAt(loop + 1);
+      if (!aSource)
+        return(NS_ERROR_NULL_POINTER);
+      nsCOMPtr<nsIRDFNode>	val = do_QueryInterface(aValue);
+      if (!val)
+        return(NS_ERROR_NO_INTERFACE);
+
+      *argValue = val;
+      NS_ADDREF(*argValue);
+      return(NS_OK);
+    }
+  }
+  return(NS_ERROR_INVALID_ARG);
 }

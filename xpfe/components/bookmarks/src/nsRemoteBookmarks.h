@@ -80,11 +80,20 @@ protected:
 
   static nsIRDFResource      *kRDF_type;
   static nsIRDFResource      *kNC_Bookmark;
+  static nsIRDFResource      *kNC_BookmarkSeparator;
   static nsIRDFResource      *kNC_Folder;
   static nsIRDFResource      *kNC_Child;
   static nsIRDFResource      *kNC_Name;
   static nsIRDFResource      *kNC_URL;
   static nsIRDFResource      *kNC_LDAPURL;
+
+  static nsIRDFResource      *kNC_BookmarkCommand_NewBookmark;
+  static nsIRDFResource      *kNC_BookmarkCommand_NewFolder;
+  static nsIRDFResource      *kNC_BookmarkCommand_NewSeparator;
+  static nsIRDFResource      *kNC_BookmarkCommand_DeleteBookmark;
+  static nsIRDFResource      *kNC_BookmarkCommand_DeleteBookmarkFolder;
+  static nsIRDFResource      *kNC_BookmarkCommand_DeleteBookmarkSeparator;
+
 
   // XXX XXX XXX hack TO DO for now testing only!
   nsCOMPtr<nsILDAPConnection> mConnection;
@@ -93,11 +102,15 @@ protected:
   nsCOMPtr<nsIRDFContainer>   mContainer;
   nsString                    mPassword;
 
+
   PRBool   isRemoteBookmarkURI(nsIRDFResource *r);
   nsresult doLDAPQuery(nsILDAPConnection *ldapConnection, nsIRDFResource *aSource, nsString bindDN, nsString password);
   nsresult doAuthentication(nsIRDFResource *aNode, nsString &bindDN, nsString &password);
   PRBool   GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAttrib, nsString &aValue);
   nsresult GetLDAPExtension(nsIRDFResource *aNode, const char *name, nsCString &value, PRBool *important);
+  nsresult insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, nsISupportsArray *aArguments, nsIRDFResource *aItemType);
+  nsresult deleteLDAPBookmarkItem(nsIRDFResource *aNode, nsISupportsArray *aArguments, PRInt32 parentArgIndex, nsIRDFResource *aItemType);
+  nsresult getArgumentN(nsISupportsArray *arguments, nsIRDFResource *res, PRInt32 offset, nsIRDFNode **argValue);
 
 public:
   nsRemoteBookmarks();
