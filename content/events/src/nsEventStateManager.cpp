@@ -46,6 +46,7 @@
 #include "nsIStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
+#include "nsIPrefBranchInternal.h"
 #include "nsDOMEvent.h"
 #include "nsHTMLAtoms.h"
 #include "nsIFormControl.h"
@@ -82,6 +83,7 @@
 
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
+#include "nsIPrefService.h"
 #include "nsIScriptSecurityManager.h"
 
 #include "nsIChromeEventHandler.h"
@@ -218,6 +220,12 @@ nsEventStateManager::Init()
     mPrefService->GetBoolPref("nglayout.events.dispatchLeftClickOnly", &mLeftClickOnly);
     if (nsEventStateManager::gGeneralAccesskeyModifier == -1)  // magic value of -1 means uninitialized
       mPrefService->GetIntPref("ui.key.generalAccessKey", &nsEventStateManager::gGeneralAccesskeyModifier);
+
+    nsCOMPtr<nsIPrefBranch> prefBranch;
+    mPrefService->GetBranch(nsnull, getter_AddRefs(prefBranch));
+    nsCOMPtr<nsIPrefBranchInternal> prefBranchInt(do_QueryInterface(prefBranch));
+    if (prefBranchInt)
+      prefBranchInt->AddObserver("accessibility.browsewithcaret", this, PR_TRUE);
   }
 
   if (nsEventStateManager::sTextfieldSelectModel == eTextfieldSelect_unset) {
@@ -291,6 +299,12 @@ nsEventStateManager::~nsEventStateManager()
 nsresult
 nsEventStateManager::Shutdown()
 {
+  nsCOMPtr<nsIPrefBranch> prefBranch;
+  mPrefService->GetBranch(nsnull, getter_AddRefs(prefBranch));
+  nsCOMPtr<nsIPrefBranchInternal> prefBranchInt(do_QueryInterface(prefBranch));
+  if (prefBranchInt)
+    prefBranchInt->RemoveObserver("accessibility.browsewithcaret", this);
+
   if (mPrefService) {
     mPrefService = nsnull;
   }
@@ -322,7 +336,13 @@ nsEventStateManager::Observe(nsISupports *aSubject,
 {
   if (!nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
     Shutdown();
-
+  else if (!nsCRT::strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
+    if (someData && nsDependentString(someData).Equals(NS_LITERAL_STRING("accessibility.browsewithcaret"))) {
+      PRBool browseWithCaret;
+      ResetBrowseWithCaret(&browseWithCaret);
+    }
+  }
+  
   return NS_OK;
 }
 
@@ -1592,8 +1612,6 @@ nsEventStateManager::DoWheelScroll(nsIPresContext* aPresContext,
 
   // initialize nativeMsg field otherwise plugin code will crash when trying to access it
   mouseOutEvent.nativeMsg = nsnull;
-
-  nsEventStatus mouseoutStatus = nsEventStatus_eIgnore;
 
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
@@ -4942,6 +4960,15 @@ nsresult nsEventStateManager::SetContentCaretVisible(nsIPresShell* aPresShell, n
   return NS_OK;
 }
 
+
+NS_IMETHODIMP
+nsEventStateManager::GetBrowseWithCaret(PRBool *aBrowseWithCaret)
+{
+  NS_ENSURE_ARG_POINTER(aBrowseWithCaret);
+  *aBrowseWithCaret = mBrowseWithCaret;
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsEventStateManager::ResetBrowseWithCaret(PRBool *aBrowseWithCaret)
 {
@@ -4949,7 +4976,8 @@ nsEventStateManager::ResetBrowseWithCaret(PRBool *aBrowseWithCaret)
   // or when a document gets focused 
 
   *aBrowseWithCaret = PR_FALSE;
-
+  if (!mPresContext) return NS_ERROR_FAILURE;
+  
   nsCOMPtr<nsISupports> pcContainer;
   mPresContext->GetContainer(getter_AddRefs(pcContainer));
   PRInt32 itemType;

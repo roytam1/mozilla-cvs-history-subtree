@@ -1939,6 +1939,14 @@ nsHTMLEditRules::WillDeleteSelection(nsISelection *aSelection,
 
   if (bCollapsed)
   {
+    if (aAction == nsIEditor::eNone)
+    {
+      // we are just deleting contents of selection (not a directional delete like
+      // backspace) and our selection is collapsed!  Do nothing.
+      *aCancel = PR_TRUE;
+      return res;
+    }
+    
     // if we are inside an empty block, delete it.
     res = CheckForEmptyBlock(startNode, bodyNode, aSelection, aHandled);
     if (NS_FAILED(res)) return res;

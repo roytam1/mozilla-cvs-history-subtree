@@ -340,7 +340,8 @@ interface nsIHTMLEditor : nsISupports
   void insertElementAtSelection(in nsIDOMElement aElement,
                                 in boolean aDeleteSelection);
 
-  /** Set the documents title.
+  /** 
+   *   Set the documents title.
    */
   void setDocumentTitle(in AString aTitle);
 
@@ -596,7 +597,18 @@ interface nsIHTMLEditor : nsISupports
     */
   attribute boolean isCSSEnabled;
 
+  /**
+   * Add listener for insertion override
+   * @param inFilter  function which callers want called during insertion
+   */
+
   void addInsertionListener(in nsIContentFilter inFilter);
+
+  /**
+   * Remove listener for insertion override
+   * @param inFilter  function which callers do not want called during insertion
+   */
+
   void removeInsertionListener(in nsIContentFilter inFilter);
 
   nsIDOMCSSStyleRule parseStyleAttrIntoCSSRule(in AString aString);

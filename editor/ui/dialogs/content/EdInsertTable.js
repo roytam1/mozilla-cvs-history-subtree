@@ -230,6 +230,11 @@ function onAccept()
 
     gActiveEditor.endTransaction();
 
+    // HACK ! Make sure that if the caret is placed in the (newly created)
+    // table, the resizing handles are correcly shown
+    var objectResizer = gActiveEditor.QueryInterface(Components.interfaces.nsIHTMLObjectResizer)
+    objectResizer.checkResizingState(gActiveEditor.selection);
+
     SaveWindowLocation();
     return true;
   }

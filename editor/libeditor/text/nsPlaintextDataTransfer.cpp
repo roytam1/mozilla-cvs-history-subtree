@@ -35,70 +35,33 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-#include "nsICaret.h"
 
 
 #include "nsPlaintextEditor.h"
 #include "nsTextEditUtils.h"
 
-#include "nsIDOMText.h"
-#include "nsIDOMNodeList.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMAttr.h"
 #include "nsIDocument.h"
 #include "nsIDOMEventReceiver.h" 
 #include "nsIDOMNSEvent.h"
-#include "nsIDOMKeyEvent.h"
-#include "nsIDOMKeyListener.h" 
-#include "nsIDOMMouseListener.h"
 #include "nsIDOMMouseEvent.h"
 #include "nsISelection.h"
-#include "nsISelectionPrivate.h"
-#include "nsIDOMHTMLAnchorElement.h"
-#include "nsIDOMHTMLImageElement.h"
-#include "nsISelectionController.h"
 
-#include "nsIFrameSelection.h"  // For TABLESELECTION_ defines
 #include "nsIIndependentSelection.h" //domselections answer to frameselection
-
-#include "nsICSSLoader.h"
-#include "nsICSSStyleSheet.h"
-#include "nsIHTMLContentContainer.h"
-#include "nsIStyleSet.h"
-#include "nsIDocumentObserver.h"
-#include "nsIDocumentStateListener.h"
 
 #include "nsIStyleContext.h"
 
-#include "nsIEnumerator.h"
-#include "nsIContent.h"
-#include "nsIContentIterator.h"
-#include "nsEditorCID.h"
-#include "nsLayoutCID.h"
+#include "nsCRT.h"
+#include "nsIServiceManagerUtils.h"
+
 #include "nsIDOMRange.h"
 #include "nsIDOMNSRange.h"
 #include "nsISupportsArray.h"
-#include "nsVoidArray.h"
 #include "nsFileSpec.h"
-#include "nsIURL.h"
-#include "nsIComponentManager.h"
-#include "nsIServiceManager.h"
-#include "nsWidgetsCID.h"
 #include "nsIDocumentEncoder.h"
-#include "nsIDOMDocumentFragment.h"
-#include "nsIPresShell.h"
-#include "nsIPresContext.h"
 #include "nsIParser.h"
 #include "nsParserCIID.h"
-#include "nsIImage.h"
-#include "nsAOLCiter.h"
-#include "nsInternetCiter.h"
-#include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
-
-// netwerk
-#include "nsIURI.h"
-#include "nsNetUtil.h"
 
 // Drag & Drop, Clipboard
 #include "nsWidgetsCID.h"
@@ -109,23 +72,16 @@
 
 // Misc
 #include "nsEditorUtils.h"
-#include "nsIPref.h"
+
 const PRUnichar nbsp = 160;
 
 // Drag & Drop, Clipboard Support
 static NS_DEFINE_CID(kCClipboardCID,    NS_CLIPBOARD_CID);
 static NS_DEFINE_CID(kCTransferableCID, NS_TRANSFERABLE_CID);
 static NS_DEFINE_CID(kCHTMLFormatConverterCID, NS_HTMLFORMATCONVERTER_CID);
-// private clipboard data flavors for html copy/paste
-#define kHTMLContext   "text/_moz_htmlcontext"
-#define kHTMLInfo      "text/_moz_htmlinfo"
 
 
-#if defined(NS_DEBUG) && defined(DEBUG_buster)
-static PRBool gNoisy = PR_FALSE;
-#else
 static const PRBool gNoisy = PR_FALSE;
-#endif
 
 NS_IMETHODIMP nsPlaintextEditor::PrepareTransferable(nsITransferable **transferable)
 {
@@ -141,13 +97,47 @@ NS_IMETHODIMP nsPlaintextEditor::PrepareTransferable(nsITransferable **transfera
   return NS_OK;
 }
 
-NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *transferable)
+nsresult nsPlaintextEditor::InsertTextAt(const nsAString &aStringToInsert,
+                                         nsIDOMNode *aDestinationNode,
+                                         PRInt32 aDestOffset,
+                                         PRBool aDoDeleteSelection)
+{
+  if (aDestinationNode)
+  {
+    nsresult res;
+    nsCOMPtr<nsISelection>selection;
+    res = GetSelection(getter_AddRefs(selection));
+    NS_ENSURE_SUCCESS(res, res);
+
+    nsCOMPtr<nsIDOMNode> targetNode = aDestinationNode;
+    PRInt32 targetOffset = aDestOffset;
+
+    if (aDoDeleteSelection)
+    {
+      // Use an auto tracker so that our drop point is correctly
+      // positioned after the delete.
+      nsAutoTrackDOMPoint tracker(mRangeUpdater, &targetNode, &targetOffset);
+      res = DeleteSelection(eNone);
+      NS_ENSURE_SUCCESS(res, res);
+    }
+
+    res = selection->Collapse(targetNode, targetOffset);
+    NS_ENSURE_SUCCESS(res, res);
+  }
+
+  return InsertText(aStringToInsert);
+}
+
+NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *aTransferable,
+                                                            nsIDOMNode *aDestinationNode,
+                                                            PRInt32 aDestOffset,
+                                                            PRBool aDoDeleteSelection)
 {
   nsresult rv = NS_OK;
   char* bestFlavor = nsnull;
   nsCOMPtr<nsISupports> genericDataObj;
   PRUint32 len = 0;
-  if ( NS_SUCCEEDED(transferable->GetAnyTransferData(&bestFlavor, getter_AddRefs(genericDataObj), &len)) )
+  if ( NS_SUCCEEDED(aTransferable->GetAnyTransferData(&bestFlavor, getter_AddRefs(genericDataObj), &len)) )
   {
     nsAutoTxnsConserveSelection dontSpazMySelection(this);
     nsAutoString flavor, stuffToPaste;
@@ -162,7 +152,7 @@ NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *tra
         NS_ASSERTION(text.Length() <= (len/2), "Invalid length!");
         stuffToPaste.Assign ( text.get(), len / 2 );
         nsAutoEditBatch beginBatching(this);
-        rv = InsertText(stuffToPaste);
+        rv = InsertTextAt(stuffToPaste, aDestinationNode, aDestOffset, aDoDeleteSelection);
       }
     }
   }
@@ -188,6 +178,12 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   dragService->GetCurrentSession(getter_AddRefs(dragSession));
   if (!dragSession) return NS_OK;
 
+  // transferable hooks
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  GetDocument(getter_AddRefs(domdoc));
+  if (!nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession))
+    return NS_OK;
+
   // Get the nsITransferable interface for getting the data from the drop
   nsCOMPtr<nsITransferable> trans;
   rv = PrepareTransferable(getter_AddRefs(trans));
@@ -200,6 +196,10 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
 
   // Combine any deletion and drop insertion into one transaction
   nsAutoEditBatch beginBatching(this);
+
+  PRBool deleteSelection = PR_FALSE;
+  nsCOMPtr<nsIDOMNode> newSelectionParent;
+  PRInt32 newSelectionOffset = 0;
 
   PRUint32 i; 
   PRBool doPlaceCaret = PR_TRUE;
@@ -221,7 +221,7 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       nsCOMPtr<nsIDOMMouseEvent> mouseEvent ( do_QueryInterface(aDropEvent) );
       if (mouseEvent)
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
         mouseEvent->GetAltKey(&userWantsCopy);
 #else
         mouseEvent->GetCtrlKey(&userWantsCopy);
@@ -246,8 +246,6 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       if (NS_FAILED(rv)) return rv;
       
       // Parent and offset under the mouse cursor
-      nsCOMPtr<nsIDOMNode> newSelectionParent;
-      PRInt32 newSelectionOffset = 0;
       rv = nsuiEvent->GetRangeParent(getter_AddRefs(newSelectionParent));
       if (NS_FAILED(rv)) return rv;
       if (!newSelectionParent) return NS_ERROR_FAILURE;
@@ -256,7 +254,6 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       if (NS_FAILED(rv)) return rv;
 
       // We never have to delete if selection is already collapsed
-      PRBool deleteSelection = PR_FALSE;
       PRBool cursorIsInSelection = PR_FALSE;
 
       // Check if mouse is in the selection
@@ -311,27 +308,14 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
         }
       }
 
-      if (deleteSelection)
-      {
-        // Use an auto tracker so that our drop point is correctly
-        // positioned after the delete.
-        nsAutoTrackDOMPoint tracker(mRangeUpdater, &newSelectionParent, &newSelectionOffset);
-        rv = DeleteSelection(eNone);
-        if (NS_FAILED(rv)) return rv;
-      }
-
-      // If we deleted the selection because we dropped from another doc,
-      //  then we don't have to relocate the caret (insert at the deletion point)
-      if (!(deleteSelection && srcdomdoc != destdomdoc))
-      {
-        // Move the selection to the point under the mouse cursor
-        selection->Collapse(newSelectionParent, newSelectionOffset);
-      }      
       // We have to figure out whether to delete and relocate caret only once
       doPlaceCaret = PR_FALSE;
     }
     
-    rv = InsertTextFromTransferable(trans);
+    if (!nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans))
+      return NS_OK;
+
+    rv = InsertTextFromTransferable(trans, newSelectionParent, newSelectionOffset, deleteSelection);
   }
 
   return rv;
@@ -378,7 +362,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDr
     }
   }
 
-  if ( eventTarget )
+  if (eventTarget)
   {
     nsCOMPtr<nsIDOMNode> eventTargetDomNode = do_QueryInterface(eventTarget);
     if ( eventTargetDomNode )
@@ -391,6 +375,12 @@ NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDr
     }
   }
 
+  if (NS_FAILED(res)) return res;
+  if (!*aCanDrag) return NS_OK;
+
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  GetDocument(getter_AddRefs(domdoc));
+  *aCanDrag = nsEditorHookUtils::DoAllowDragHook(domdoc, aDragEvent);
   return NS_OK;
 }
 
@@ -398,14 +388,14 @@ NS_IMETHODIMP nsPlaintextEditor::DoDrag(nsIDOMEvent *aDragEvent)
 {
   nsresult rv;
 
-  nsCOMPtr<nsIDOMEventTarget> eventTarget;
-  rv = aDragEvent->GetTarget(getter_AddRefs(eventTarget));
+  nsCOMPtr<nsITransferable> trans;
+  rv = PutDragDataInTransferable(getter_AddRefs(trans));
   if (NS_FAILED(rv)) return rv;
-  nsCOMPtr<nsIDOMNode> domnode = do_QueryInterface(eventTarget);
+  if (!trans) return NS_OK; // maybe there was nothing to copy?
 
-  /* get the selection to be dragged */
-  nsCOMPtr<nsISelection> selection;
-  rv = GetSelection(getter_AddRefs(selection));
+ /* get the drag service */
+  nsCOMPtr<nsIDragService> dragService = 
+           do_GetService("@mozilla.org/widget/dragservice;1", &rv);
   if (NS_FAILED(rv)) return rv;
 
   /* create an array of transferables */
@@ -414,108 +404,32 @@ NS_IMETHODIMP nsPlaintextEditor::DoDrag(nsIDOMEvent *aDragEvent)
   if (transferableArray == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  /* get the drag service */
-  nsCOMPtr<nsIDragService> dragService = 
-           do_GetService("@mozilla.org/widget/dragservice;1", &rv);
+  /* add the transferable to the array */
+  rv = transferableArray->AppendElement(trans);
   if (NS_FAILED(rv)) return rv;
 
-  /* create html flavor transferable */
-  nsCOMPtr<nsITransferable> trans = do_CreateInstance(kCTransferableCID);
-  NS_ENSURE_TRUE(trans, NS_ERROR_FAILURE);
-
+  // check our transferable hooks (if any)
   nsCOMPtr<nsIDOMDocument> domdoc;
-  rv = GetDocument(getter_AddRefs(domdoc));
+  GetDocument(getter_AddRefs(domdoc));
+  if (!nsEditorHookUtils::DoDragHook(domdoc, aDragEvent, trans))
+    return NS_OK;
+
+  /* invoke drag */
+  nsCOMPtr<nsIDOMEventTarget> eventTarget;
+  rv = aDragEvent->GetTarget(getter_AddRefs(eventTarget));
   if (NS_FAILED(rv)) return rv;
-	
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
-  if (doc)
-  {
-    // find out if we're a plaintext control or not
-    PRUint32 editorFlags = 0;
-    rv = GetFlags(&editorFlags);
-    if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIDOMNode> domnode = do_QueryInterface(eventTarget);
 
-    PRBool bIsPlainTextControl = ((editorFlags & eEditorPlaintextMask) != 0);
-    
-    // get correct mimeType and document encoder flags set
-    nsAutoString mimeType;
-    PRUint32 docEncoderFlags = 0;
-    if (bIsPlainTextControl)
-    {
-      docEncoderFlags |= nsIDocumentEncoder::OutputBodyOnly | nsIDocumentEncoder::OutputPreformatted;
-      mimeType = NS_LITERAL_STRING(kUnicodeMime);
-    }
-    else
-      mimeType = NS_LITERAL_STRING(kHTMLMime);
-    
-    // set up docEncoder
-    nsCOMPtr<nsIDocumentEncoder> docEncoder = do_CreateInstance(NS_HTMLCOPY_ENCODER_CONTRACTID);
-    NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
+  unsigned int flags;
+  // in some cases we'll want to cut rather than copy... hmmmmm...
+  flags = nsIDragService::DRAGDROP_ACTION_COPY + nsIDragService::DRAGDROP_ACTION_MOVE;
 
-    rv = docEncoder->Init(doc, mimeType, docEncoderFlags);
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = docEncoder->SetSelection(selection);
-    if (NS_FAILED(rv)) return rv;
+  rv = dragService->InvokeDragSession(domnode, transferableArray, nsnull, flags);
+  if (NS_FAILED(rv)) return rv;
 
-    // grab a string
-    nsAutoString buffer;
-    rv = docEncoder->EncodeToString(buffer);
-    if (NS_FAILED(rv)) return rv;
-
-    // if we have an empty string, we're done; otherwise continue
-    if ( !buffer.IsEmpty() )
-    {
-      nsCOMPtr<nsISupportsString> dataWrapper = do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID);
-      NS_ENSURE_TRUE(dataWrapper, NS_ERROR_FAILURE);
-
-      rv = dataWrapper->SetData( buffer );
-      if (NS_FAILED(rv)) return rv;
-
-      if (bIsPlainTextControl)
-      {
-         // Add the unicode flavor to the transferable
-        rv = trans->AddDataFlavor(kUnicodeMime);
-        if (NS_FAILED(rv)) return rv;
-      }
-      else
-      {
-        rv = trans->AddDataFlavor(kHTMLMime);
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsIFormatConverter> htmlConverter = do_CreateInstance(kCHTMLFormatConverterCID);
-        NS_ENSURE_TRUE(htmlConverter, NS_ERROR_FAILURE);
-
-        rv = trans->SetConverter(htmlConverter);
-        if (NS_FAILED(rv)) return rv;
-      }
-
-      // QI the data object an |nsISupports| so that when the transferable holds
-      // onto it, it will addref the correct interface.
-      nsCOMPtr<nsISupports> nsisupportsDataWrapper ( do_QueryInterface(dataWrapper) );
-      rv = trans->SetTransferData(bIsPlainTextControl ? kUnicodeMime : kHTMLMime,  
-                                  nsisupportsDataWrapper, buffer.Length() * 2);
-      if (NS_FAILED(rv)) return rv;
-
-      /* add the transferable to the array */
-      rv = transferableArray->AppendElement(trans);
-      if (NS_FAILED(rv)) return rv;
-
-      /* invoke drag */
-      unsigned int flags;
-      // in some cases we'll want to cut rather than copy... hmmmmm...
-        flags = nsIDragService::DRAGDROP_ACTION_COPY + nsIDragService::DRAGDROP_ACTION_MOVE;
-      
-      rv = dragService->InvokeDragSession( domnode, transferableArray, nsnull, flags);
-      if (NS_FAILED(rv)) return rv;
-
-      nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDragEvent));
-
-      if (nsevent) {
-        nsevent->PreventBubble();
-      }
-    }
-  }
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDragEvent));
+  if (nsevent)
+    nsevent->PreventBubble();
 
   return rv;
 }
@@ -538,7 +452,13 @@ NS_IMETHODIMP nsPlaintextEditor::Paste(PRInt32 aSelectionType)
     // Get the Data from the clipboard  
     if (NS_SUCCEEDED(clipboard->GetData(trans, aSelectionType)) && IsModifiable())
     {
-      rv = InsertTextFromTransferable(trans);
+      // handle transferable hooks
+      nsCOMPtr<nsIDOMDocument> domdoc;
+      GetDocument(getter_AddRefs(domdoc));
+      if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
+        return NS_OK;
+
+      rv = InsertTextFromTransferable(trans, nsnull, nsnull, PR_TRUE);
     }
   }
 
@@ -589,5 +509,117 @@ NS_IMETHODIMP nsPlaintextEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPa
   if (NS_FAILED(rv)) return rv;
   
   *aCanPaste = haveFlavors;
+  return NS_OK;
+}
+nsresult
+nsPlaintextEditor::SetupDocEncoder(nsIDocumentEncoder **aDocEncoder)
+{
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  nsresult rv = GetDocument(getter_AddRefs(domdoc));
+  if (NS_FAILED(rv)) return rv;
+	
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+  if (!doc) return NS_ERROR_FAILURE;
+
+  // find out if we're a plaintext control or not
+  PRUint32 editorFlags = 0;
+  rv = GetFlags(&editorFlags);
+  if (NS_FAILED(rv)) return rv;
+
+  PRBool bIsPlainTextControl = ((editorFlags & eEditorPlaintextMask) != 0);
+
+  // get correct mimeType and document encoder flags set
+  nsAutoString mimeType;
+  PRUint32 docEncoderFlags = 0;
+  if (bIsPlainTextControl)
+  {
+    docEncoderFlags |= nsIDocumentEncoder::OutputBodyOnly | nsIDocumentEncoder::OutputPreformatted;
+    mimeType = NS_LITERAL_STRING(kUnicodeMime);
+  }
+  else
+    mimeType = NS_LITERAL_STRING(kHTMLMime);
+
+  // set up docEncoder
+  nsCOMPtr<nsIDocumentEncoder> encoder = do_CreateInstance(NS_HTMLCOPY_ENCODER_CONTRACTID);
+  if (!encoder)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  rv = encoder->Init(doc, mimeType, docEncoderFlags);
+  if (NS_FAILED(rv)) return rv;
+    
+  /* get the selection to be dragged */
+  nsCOMPtr<nsISelection> selection;
+  rv = GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(rv)) return rv;
+
+  rv = encoder->SetSelection(selection);
+  if (NS_FAILED(rv)) return rv;
+
+  *aDocEncoder = encoder;
+  NS_ADDREF(*aDocEncoder);
+  return NS_OK;
+}
+
+nsresult
+nsPlaintextEditor::PutDragDataInTransferable(nsITransferable **aTransferable)
+{
+  *aTransferable = nsnull;
+  nsCOMPtr<nsIDocumentEncoder> docEncoder;
+  nsresult rv = SetupDocEncoder(getter_AddRefs(docEncoder));
+  if (NS_FAILED(rv)) return rv;
+
+  // grab a string
+  nsAutoString buffer;
+  rv = docEncoder->EncodeToString(buffer);
+  if (NS_FAILED(rv)) return rv;
+
+  // if we have an empty string, we're done; otherwise continue
+  if (buffer.IsEmpty())
+    return NS_OK;
+
+  nsCOMPtr<nsISupportsString> dataWrapper =
+                        do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = dataWrapper->SetData(buffer);
+  if (NS_FAILED(rv)) return rv;
+
+  /* create html flavor transferable */
+  nsCOMPtr<nsITransferable> trans = do_CreateInstance(kCTransferableCID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // find out if we're a plaintext control or not
+  PRUint32 editorFlags = 0;
+  rv = GetFlags(&editorFlags);
+  if (NS_FAILED(rv)) return rv;
+
+  PRBool bIsPlainTextControl = ((editorFlags & eEditorPlaintextMask) != 0);
+  if (bIsPlainTextControl)
+  {
+    // Add the unicode flavor to the transferable
+    rv = trans->AddDataFlavor(kUnicodeMime);
+    if (NS_FAILED(rv)) return rv;
+  }
+  else
+  {
+    rv = trans->AddDataFlavor(kHTMLMime);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFormatConverter> htmlConverter = do_CreateInstance(kCHTMLFormatConverterCID);
+    NS_ENSURE_TRUE(htmlConverter, NS_ERROR_FAILURE);
+
+    rv = trans->SetConverter(htmlConverter);
+    if (NS_FAILED(rv)) return rv;
+  }
+
+  // QI the data object an |nsISupports| so that when the transferable holds
+  // onto it, it will addref the correct interface.
+  nsCOMPtr<nsISupports> nsisupportsDataWrapper = do_QueryInterface(dataWrapper);
+  rv = trans->SetTransferData(bIsPlainTextControl ? kUnicodeMime : kHTMLMime,
+                   nsisupportsDataWrapper, buffer.Length() * sizeof(PRUnichar));
+  if (NS_FAILED(rv)) return rv;
+
+  *aTransferable = trans;
+  NS_ADDREF(*aTransferable);
   return NS_OK;
 }

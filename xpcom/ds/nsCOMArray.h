@@ -41,6 +41,7 @@
 
 #include "nsVoidArray.h"
 #include "nsISupports.h"
+#include "nsCOMPtr.h"
 
 // See below for the definition of nsCOMArray<T>
 
@@ -53,10 +54,13 @@ protected:
     nsCOMArray_base() {}
     nsCOMArray_base(PRInt32 aCount) : mArray(aCount) {}
     nsCOMArray_base(const nsCOMArray_base& other);
+    ~nsCOMArray_base();
 
     PRInt32 IndexOf(nsISupports* aObject) const {
         return mArray.IndexOf(aObject);
     }
+
+    PRInt32 IndexOfObject(nsISupports* aObject) const;
 
     PRBool EnumerateForwards(nsVoidArrayEnumFunc aFunc, void* aData) {
         return mArray.EnumerateForwards(aFunc, aData);
@@ -89,11 +93,11 @@ public:
         return mArray.Count();
     }
 
-    nsISupports* ObjectAt(PRInt32 aIndex) const {
-        return NS_STATIC_CAST(nsISupports*, mArray.ElementAt(aIndex));
+    nsDerivedSafe<nsISupports>* ObjectAt(PRInt32 aIndex) const {
+        return NS_REINTERPRET_CAST(nsDerivedSafe<nsISupports>*, mArray.ElementAt(aIndex));
     }
     
-    nsISupports* operator[](PRInt32 aIndex) const {
+    nsDerivedSafe<nsISupports>* operator[](PRInt32 aIndex) const {
         return ObjectAt(aIndex);
     }
 
@@ -138,24 +142,35 @@ class nsCOMArray : public nsCOMArray_base
     ~nsCOMArray() {}
 
     // these do NOT refcount on the way out, for speed
-    T* ObjectAt(PRInt32 aIndex) const {
-        return NS_STATIC_CAST(T*,nsCOMArray_base::ObjectAt(aIndex));
+    nsDerivedSafe<T>* ObjectAt(PRInt32 aIndex) const {
+        return NS_REINTERPRET_CAST(nsDerivedSafe<T>*,nsCOMArray_base::ObjectAt(aIndex));
     }
 
     // indexing operator for syntactic sugar
-    T* operator[](PRInt32 aIndex) const {
+    nsDerivedSafe<T>* operator[](PRInt32 aIndex) const {
         return ObjectAt(aIndex);
     }
 
     // index of the element in question.. does NOT refcount
+    // note: this does not check COM object identity. Use
+    // IndexOfObject() for that purpose
     PRInt32 IndexOf(T* aObject) const {
-        return nsCOMArray_base::IndexOf(aObject);
+        return nsCOMArray_base::IndexOf(NS_STATIC_CAST(nsISupports*, aObject));
+    }
+
+    // index of the element in question.. be careful!
+    // this is much slower than IndexOf() because it uses
+    // QueryInterface to determine actual COM identity of the object
+    // if you need to do this frequently then consider enforcing
+    // COM object identity before adding/comparing elements
+    PRInt32 IndexOfObject(T* aObject) const {
+        return nsCOMArray_base::IndexOfObject(NS_STATIC_CAST(nsISupports*, aObject));
     }
 
     // inserts aObject at aIndex, shifting the objects at aIndex and
     // later to make space
     PRBool InsertObjectAt(T* aObject, PRInt32 aIndex) {
-        return nsCOMArray_base::InsertObjectAt(aObject, aIndex);
+        return nsCOMArray_base::InsertObjectAt(NS_STATIC_CAST(nsISupports*, aObject), aIndex);
     }
 
     // inserts the objects from aObject at aIndex, shifting the
@@ -167,7 +182,7 @@ class nsCOMArray : public nsCOMArray_base
     // replaces an existing element. Warning: if the array grows,
     // the newly created entries will all be null
     PRBool ReplaceObjectAt(T* aObject, PRInt32 aIndex) {
-        return nsCOMArray_base::ReplaceObjectAt(aObject, aIndex);
+        return nsCOMArray_base::ReplaceObjectAt(NS_STATIC_CAST(nsISupports*, aObject), aIndex);
     }
 
     // override nsVoidArray stuff so that they can be accessed by
@@ -202,7 +217,7 @@ class nsCOMArray : public nsCOMArray_base
 
     // append an object, growing the array as necessary
     PRBool AppendObject(T *aObject) {
-        return nsCOMArray_base::AppendObject(aObject);
+        return nsCOMArray_base::AppendObject(NS_STATIC_CAST(nsISupports*, aObject));
     }
 
     // append objects, growing the array as necessary
@@ -214,7 +229,7 @@ class nsCOMArray : public nsCOMArray_base
     // array as necessary
     // Warning: if you pass null here, it will remove the first null element
     PRBool RemoveObject(T *aObject) {
-        return nsCOMArray_base::RemoveObject(aObject);
+        return nsCOMArray_base::RemoveObject(NS_STATIC_CAST(nsISupports*, aObject));
     }
 
     // remove an element at a specific position, shrinking the array

@@ -257,8 +257,13 @@ else
 tier_99_dirs	+= xpfe/bootstrap
 endif
 
-ifdef MOZ_ENABLE_GTK
-tier_99_dirs	+= embedding/browser/gtk/tests
+ifneq (,$(MOZ_ENABLE_GTK)$(MOZ_ENABLE_GTK2))
+tier_99_dirs	+= embedding/browser/gtk
+endif
+
+# winembed, mfcembed
+ifeq ($(OS_ARCH),WINNT)
+tier_99_dirs += embedding/tests
 endif
 
 else

@@ -92,6 +92,7 @@ protected:
   
   PRBool        SelectionIsCollapsed();
   nsresult      UpdateDirtyState(PRBool aNowDirty);  
+  nsresult      UpdateOneCommand(const char* aCommand);
   nsresult      CallUpdateCommands(const nsAString& aCommand);
   
   nsresult      PrimeUpdateTimer();

@@ -4386,33 +4386,111 @@ nsEditor::DeleteSelectionImpl(nsIEditor::EDirection aAction)
   return res;
 }
 
-// XXX: error handling in this routine needs to be cleaned up!
+/* 
+  InsertNodeAtPoint: attempts to insert aNode into the document, at a point specified by 
+      {*ioParent,*ioOffset}.  Checks with dtd to see if containment is allowed.  If not
+      allowed, will attempt to find a parent in the parent heirarchy of *ioParent that will
+      accept aNode as a child.  If such a parent is found, will split the document tree from
+      {*ioParent,*ioOffset} up to parent, and then insert aNode.  ioParent & ioOffset are then
+      adjusted to point to the actual location that aNode was inserted at.  aNoEmptyNodes
+      specifies if the splitting process is allowed to result in empty nodes.
+              nsIDOMNode            *aNode           node to insert
+              nsCOMPtr<nsIDOMNode>  *ioParent        insertion parent
+              PRInt32               *ioOffset        insertion offset
+              PRBool                aNoEmptyNodes    splitting can result in empty nodes?
+*/
+nsresult
+nsEditor::InsertNodeAtPoint(nsIDOMNode *aNode, 
+                                nsCOMPtr<nsIDOMNode> *ioParent, 
+                                PRInt32 *ioOffset, 
+                                PRBool aNoEmptyNodes)
+{
+  NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
+  NS_ENSURE_TRUE(ioParent, NS_ERROR_NULL_POINTER);
+  NS_ENSURE_TRUE(*ioParent, NS_ERROR_NULL_POINTER);
+  NS_ENSURE_TRUE(ioOffset, NS_ERROR_NULL_POINTER);
+  
+  nsresult res = NS_OK;
+  nsAutoString tagName;
+  aNode->GetNodeName(tagName);
+  ToLowerCase(tagName);
+  nsCOMPtr<nsIDOMNode> parent = *ioParent;
+  nsCOMPtr<nsIDOMNode> topChild = *ioParent;
+  nsCOMPtr<nsIDOMNode> tmp;
+  PRInt32 offsetOfInsert = *ioOffset;
+  
+  // get the root element 
+  nsCOMPtr<nsIDOMElement> rootElement; 
+  res = GetRootElement(getter_AddRefs(rootElement)); 
+  if (NS_FAILED(res)) return res; 
+  if (!rootElement)   return NS_ERROR_NULL_POINTER;
+   
+  // Search up the parent chain to find a suitable container      
+  while (!CanContainTag(parent, tagName))
+  {
+    // If the current parent is a root 
+    // then go no further - we can't insert
+    if (parent == rootElement)
+      return NS_ERROR_FAILURE;
+    // Get the next parent
+    parent->GetParentNode(getter_AddRefs(tmp));
+    NS_ENSURE_TRUE(tmp, NS_ERROR_FAILURE);
+    topChild = parent;
+    parent = tmp;
+  }
+  if (parent != topChild)
+  {
+    // we need to split some levels above the original selection parent
+    res = SplitNodeDeep(topChild, *ioParent, *ioOffset, &offsetOfInsert, aNoEmptyNodes);
+    if (NS_FAILED(res))
+      return res;
+    *ioParent = parent;
+    *ioOffset = offsetOfInsert;
+  }
+  // Now we can insert the new node
+  res = InsertNode(aNode, parent, offsetOfInsert);
+  return res;
+}
+
 NS_IMETHODIMP
 nsEditor::DeleteSelectionAndCreateNode(const nsAString& aTag,
-                                           nsIDOMNode ** aNewNode)
+                                       nsIDOMNode ** aNewNode)
 {
-  nsCOMPtr<nsIDOMNode> parentSelectedNode;
-  PRInt32 offsetOfNewNode;
-  nsresult result = DeleteSelectionAndPrepareToCreateNode(parentSelectedNode,
-                                                          offsetOfNewNode);
-  if (NS_FAILED(result))
-    return result;
-
-  nsCOMPtr<nsIDOMNode> newNode;
-  result = CreateNode(aTag, parentSelectedNode, offsetOfNewNode,
-                      getter_AddRefs(newNode));
-  // XXX: ERROR_HANDLING  check result, and make sure aNewNode is set correctly in success/failure cases
-  *aNewNode = newNode;
-  NS_IF_ADDREF(*aNewNode);
-
-  // we want the selection to be just after the new node
+  if (!aNewNode) return NS_ERROR_NULL_POINTER;
+  
+  nsCOMPtr<nsIDOMNode> node, parent;
+  PRInt32 offset;
+  
+  // get the selection
   nsCOMPtr<nsISelection> selection;
-  result = GetSelection(getter_AddRefs(selection));
-  if (NS_FAILED(result)) return result;
+  nsresult res = GetSelection(getter_AddRefs(selection));
+  NS_ENSURE_SUCCESS(res, res);
   if (!selection) return NS_ERROR_NULL_POINTER;
-  result = selection->Collapse(parentSelectedNode, offsetOfNewNode+1);
+  
+  // delete selected content  
+  res = DeleteSelection(nsIEditor::eNone);
+  NS_ENSURE_SUCCESS(res, res);
 
-  return result;
+  // get selection start
+  res = GetStartNodeAndOffset(selection, address_of(parent), &offset);
+  NS_ENSURE_SUCCESS(res, res);
+  
+  // create a new node of the correct type
+  nsCOMPtr<nsIContent> content;
+  res = CreateHTMLContent(aTag, getter_AddRefs(content));
+  node = do_QueryInterface(content);
+  NS_ENSURE_SUCCESS(res, res);
+  NS_ENSURE_TRUE(node, NS_ERROR_NULL_POINTER);
+  *aNewNode = node;
+  NS_IF_ADDREF(*aNewNode);
+  
+  // insert the node into the tree, splitting nodes as needed by DTD
+  res = InsertNodeAtPoint(node, address_of(parent), &offset, PR_TRUE);
+  NS_ENSURE_SUCCESS(res, res);
+  
+  // we want the selection to be just after the new node
+  res = selection->Collapse(parent, offset+1);
+  return res;
 }
 
 
@@ -4870,7 +4948,9 @@ nsEditor::CreateTxnForDeleteInsertionPoint(nsIDOMRange          *aRange,
         }
         else
         { // XXX: can you have an empty text node?  If so, what do you do?
+#ifdef DEBUG
           printf("ERROR: found a text node with 0 characters\n");
+#endif
           result = NS_ERROR_UNEXPECTED;
         }
       }
@@ -4909,7 +4989,9 @@ nsEditor::CreateTxnForDeleteInsertionPoint(nsIDOMRange          *aRange,
         }
         else
         { // XXX: can you have an empty text node?  If so, what do you do?
+#ifdef DEBUG
           printf("ERROR: found a text node with 0 characters\n");
+#endif
           result = NS_ERROR_UNEXPECTED;
         }
       }

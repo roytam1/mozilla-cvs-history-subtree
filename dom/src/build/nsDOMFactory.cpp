@@ -49,8 +49,20 @@
 #include "nsIExceptionService.h"
 #include "nsCRT.h"
 
+#include "nsIController.h"
+#include "nsIControllerContext.h"
+#include "nsIControllerCommandTable.h"
+#include "nsGlobalWindowCommands.h"
+
 #include "nsScriptNameSpaceManager.h"
 #include "nsDOMException.h"
+
+#define NS_WINDOWCOMMANDTABLE_CID \
+ { /* 0DE2FBFA-6B7F-11D7-BBBA-0003938A9D96 */        \
+  0x0DE2FBFA, 0x6B7F, 0x11D7, {0xBB, 0xBA, 0x00, 0x03, 0x93, 0x8A, 0x9D, 0x96} }
+
+static NS_DEFINE_CID(kWindowCommandTableCID, NS_WINDOWCOMMANDTABLE_CID);
+
 
 extern nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
                                        nsIScriptContext **aContext);
@@ -277,6 +289,47 @@ nsDOMSOFactory::RegisterDOMClassInfo(const char *aName,
 
 //////////////////////////////////////////////////////////////////////
 
+static NS_METHOD
+CreateWindowCommandTableConstructor(nsISupports *aOuter,
+                                    REFNSIID aIID, void **aResult)
+{
+  nsresult rv;
+  nsCOMPtr<nsIControllerCommandTable> commandTable =
+      do_CreateInstance(NS_CONTROLLERCOMMANDTABLE_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = nsWindowCommandRegistration::RegisterWindowCommands(commandTable);
+  if (NS_FAILED(rv)) return rv;
+
+  return commandTable->QueryInterface(aIID, aResult);
+}
+
+static NS_METHOD
+CreateWindowControllerWithSingletonCommandTable(nsISupports *aOuter,
+                                      REFNSIID aIID, void **aResult)
+{
+  nsresult rv;
+  nsCOMPtr<nsIController> controller =
+       do_CreateInstance("@mozilla.org/embedcomp/base-command-controller;1", &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIControllerCommandTable> windowCommandTable = do_GetService(kWindowCommandTableCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  // this is a singleton; make it immutable
+  windowCommandTable->MakeImmutable();
+
+  nsCOMPtr<nsIControllerContext> controllerContext = do_QueryInterface(controller, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  controllerContext->Init(windowCommandTable);
+  if (NS_FAILED(rv)) return rv;
+
+  return controller->QueryInterface(aIID, aResult);
+}
+
+//////////////////////////////////////////////////////////////////////
+
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMSOFactory);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBaseDOMException);
 
@@ -290,7 +343,17 @@ static const nsModuleComponentInfo gDOMModuleInfo[] = {
     NS_BASE_DOM_EXCEPTION_CID,
     nsnull,
     nsBaseDOMExceptionConstructor
-  }
+  },
+  { "Window Command Table",
+    NS_WINDOWCOMMANDTABLE_CID,
+    "",
+    CreateWindowCommandTableConstructor
+  },
+  { "Window Command Controller",
+    NS_WINDOWCONTROLLER_CID,
+    NS_WINDOWCONTROLLER_CONTRACTID,
+    CreateWindowControllerWithSingletonCommandTable
+  },
 };
 
 void PR_CALLBACK

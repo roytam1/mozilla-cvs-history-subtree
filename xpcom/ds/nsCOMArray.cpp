@@ -47,15 +47,38 @@ PR_STATIC_CALLBACK(PRBool) ReleaseObjects(void* aElement, void*);
 // object gets another AddRef()
 nsCOMArray_base::nsCOMArray_base(const nsCOMArray_base& aOther)
 {
-    PRInt32 count = aOther.Count();
     // make sure we do only one allocation
-    mArray.SizeTo(count);
-    
-    PRInt32 i;
-    for (i=0; i<count; i++) {
-        // ReplaceObjectAt will handle existing null entries for us
-        ReplaceObjectAt(aOther[i], i);
+    mArray.SizeTo(aOther.Count());
+    AppendObjects(aOther);
+}
+
+nsCOMArray_base::~nsCOMArray_base()
+{
+    PRInt32 count = Count(), i;
+    for (i = 0; i < count; ++i) {
+        nsISupports* obj = ObjectAt(i);
+        NS_IF_RELEASE(obj);
+    }                        
+}
+
+PRInt32
+nsCOMArray_base::IndexOfObject(nsISupports* aObject) const {
+    NS_ENSURE_TRUE(aObject, -1);
+    nsCOMPtr<nsISupports> supports = do_QueryInterface(aObject);
+    NS_ENSURE_TRUE(supports, -1);
+
+    PRInt32 i, count;
+    PRInt32 retval = -1;
+    count = mArray.Count();
+    for (i = 0; i < count; ++i) {
+        nsCOMPtr<nsISupports> arrayItem =
+            do_QueryInterface(NS_REINTERPRET_CAST(nsISupports*,mArray.ElementAt(i)));
+        if (arrayItem == supports) {
+            retval = i;
+            break;
+        }
     }
+    return retval;
 }
 
 PRBool
@@ -73,7 +96,7 @@ nsCOMArray_base::InsertObjectsAt(const nsCOMArray_base& aObjects, PRInt32 aIndex
         // need to addref all these
         PRInt32 count = aObjects.Count();
         for (PRInt32 i = 0; i < count; ++i) {
-            NS_IF_ADDREF(aObjects.ObjectAt(i));
+            NS_IF_ADDREF(NS_STATIC_CAST(nsISupports*, aObjects.mArray[i]));
         }
     }
     return result;
@@ -83,7 +106,8 @@ PRBool
 nsCOMArray_base::ReplaceObjectAt(nsISupports* aObject, PRInt32 aIndex)
 {
     // its ok if oldObject is null here
-    nsISupports *oldObject = ObjectAt(aIndex);
+    nsISupports *oldObject =
+        NS_REINTERPRET_CAST(nsISupports*, mArray.SafeElementAt(aIndex));
 
     PRBool result = mArray.ReplaceElementAt(aObject, aIndex);
 

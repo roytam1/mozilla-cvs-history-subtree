@@ -43,6 +43,7 @@
 #include "nsGUIEvent.h"
 #include "nsIContent.h"
 #include "nsIPref.h"
+#include "nsIPrefBranch.h"
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
 #include "nsHashtable.h"
@@ -147,6 +148,7 @@ public:
 
   NS_IMETHOD ShiftFocus(PRBool aForward, nsIContent* aStart=nsnull);
 
+  NS_IMETHOD GetBrowseWithCaret(PRBool *aBrowseWithCaret);
   NS_IMETHOD ResetBrowseWithCaret(PRBool *aBrowseWithCaret);
 
   NS_IMETHOD MoveFocusToCaret(PRBool aCanFocusDoc, PRBool *aIsSelectionWithFocus);

@@ -49,14 +49,13 @@
 class nsIDOMNode;
 class nsISelection;
 class nsITransferable;
-class nsIOverrideDragSource;
-class nsIOverrideDropSite;
 class nsIImage;
 class nsIPresShell;
 class nsIPresContext;
 class nsIImageFrame;
 class nsIContent;
 class nsIDocument;
+class nsISimpleEnumerator;
 
 
 // {1f34bc80-1bc7-11d6-a384-d705dd0746fc}
@@ -118,13 +117,12 @@ private:
                               nsITransferable** outTrans);
   void ExtractURLFromData(const nsACString & inFlavor, nsISupports* inDataWrapper, PRUint32 inDataLen,
                            nsAString & outURL);
+  nsresult GetHookEnumeratorFromEvent(nsIDOMEvent* inEvent, nsISimpleEnumerator** outEnumerator);
 
   PRPackedBool mListenerInstalled;
 
   nsCOMPtr<nsIDOMEventReceiver> mEventReceiver;
   nsIWebNavigation* mNavigator;                     // weak ref, this is probably my owning webshell
-  nsIOverrideDragSource* mOverrideDrag;             // weak, these could own us but probably will outlive us
-  nsIOverrideDropSite* mOverrideDrop;
 
 }; // class nsContentAreaDragDrop
 

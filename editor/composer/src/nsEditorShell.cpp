@@ -79,8 +79,8 @@
 
 #include "imgIContainer.h"
 
-#include "nsIEditorController.h"
 #include "nsIControllers.h"
+#include "nsIControllerContext.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDocShellTreeOwner.h"
@@ -323,15 +323,13 @@ nsEditorShell::ResetEditingState()
   }
 
   // clear this editor out of the controller
-  if (mEditorController)
-  {
-    mEditorController->SetCommandRefCon(nsnull);
-  }
+  nsCOMPtr<nsIControllerContext> editorContext = do_QueryInterface(mEditorController);
+  if (editorContext)
+    editorContext->SetCommandContext(nsnull);
 
-  if (mComposerController)
-  {
-    mComposerController->SetCommandRefCon(nsnull);
-  }
+  nsCOMPtr<nsIControllerContext> composerContext = do_QueryInterface(mComposerController);
+  if (composerContext)
+    composerContext->SetCommandContext(nsnull);
 
   mEditorType = eUninitializedEditorType;
   mEditor = 0;  // clear out the nsCOMPtr
@@ -466,10 +464,14 @@ nsEditorShell::PrepareDocumentForEditing(nsIDOMWindow* aDOMWindow, nsIURI *aUrl)
   
   // set the editor in the editor controller  
   nsCOMPtr<nsISupports> editorAsISupports = do_QueryInterface(editor);
-  if (mEditorController)
-    mEditorController->SetCommandRefCon(editorAsISupports);
-  if (mComposerController)
-    mComposerController->SetCommandRefCon(editorAsISupports);
+
+  nsCOMPtr<nsIControllerContext> editorContext = do_QueryInterface(mEditorController);
+  if (editorContext)
+    editorContext->SetCommandContext(editorAsISupports);
+
+  nsCOMPtr<nsIControllerContext> composerContext = do_QueryInterface(mComposerController);
+  if (composerContext)
+    composerContext->SetCommandContext(editorAsISupports);
 
   rv = editor->PostCreate();
   if (NS_FAILED(rv)) return rv;
@@ -619,11 +621,8 @@ nsEditorShell::SetContentWindow(nsIDOMWindowInternal* aWin)
     // the first is an editor controller, and takes an nsIEditor as the refCon
     nsCOMPtr<nsIController> controller = do_CreateInstance("@mozilla.org/editor/editorcontroller;1", &rv);
     if (NS_FAILED(rv)) return rv;  
-    nsCOMPtr<nsIEditorController> editorController = do_QueryInterface(controller);
-    rv = editorController->Init(nsnull);    // we set the editor later when we have one
-    if (NS_FAILED(rv)) return rv;
     
-    mEditorController = editorController;   // temp weak link, so we can get it and set the editor later
+    mEditorController = controller;   // temp weak link, so we can get it and set the editor later
     
     rv = controllers->InsertControllerAt(eEditorController, controller);
     if (NS_FAILED(rv)) return rv;  
@@ -631,14 +630,10 @@ nsEditorShell::SetContentWindow(nsIDOMWindowInternal* aWin)
 
   {
     // the second is a composer controller (now also takes nsIEditor as refCon)
-    nsCOMPtr<nsIController> controller = do_CreateInstance("@mozilla.org/editor/composercontroller;1", &rv);
+    nsCOMPtr<nsIController> controller = do_CreateInstance("@mozilla.org/editor/htmleditorcontroller;1", &rv);
     if (NS_FAILED(rv)) return rv;  
-    nsCOMPtr<nsIEditorController> editorController = do_QueryInterface(controller);
-    nsCOMPtr<nsISupports> editorAsISupports = do_QueryInterface(mEditor);
-    rv = editorController->Init(editorAsISupports);    // we set the editor later when we have one
-    if (NS_FAILED(rv)) return rv;
 
-    mComposerController = editorController;   // temp weak link, so we can get it and set the editor later
+    mComposerController = controller;   // temp weak link, so we can get it and set the editor later
 
     rv = controllers->InsertControllerAt(eComposerController, controller);
     if (NS_FAILED(rv)) return rv;
@@ -3155,10 +3150,8 @@ nsEditorShell::DoControllerCommand(const char *aCommand)
   if (NS_SUCCEEDED(rv))
   {
     if (!controller) return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsIEditorController> composerController = do_QueryInterface(controller);
     // Execute the command
-    rv = composerController->DoCommand(aCommand);
+    rv = controller->DoCommand(aCommand);
   }
   return rv;
 }

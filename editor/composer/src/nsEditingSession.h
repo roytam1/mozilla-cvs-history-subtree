@@ -47,6 +47,10 @@
 
 #include "nsIEditor.h"
 
+#ifndef __gen_nsIControllers_h__
+#include "nsIControllers.h"
+#endif
+
 #ifndef __gen_nsIDocShell_h__
 #include "nsIDocShell.h"
 #endif
@@ -88,14 +92,20 @@ public:
   // nsIEditingSession
   NS_DECL_NSIEDITINGSESSION
 
-
 protected:
 
   nsresult        GetDocShellFromWindow(nsIDOMWindow *inWindow, nsIDocShell** outDocShell);  
   nsresult        GetEditorDocShellFromWindow(nsIDOMWindow *inWindow, nsIEditorDocShell** outDocShell);
-  nsresult        SetupFrameControllers(nsIDOMWindow *inWindow, PRBool aSetupComposerController);
-  
-  nsresult        SetEditorOnControllers(nsIDOMWindow *inWindow, nsIEditor* inEditor);
+
+  nsresult        SetupEditorCommandController(const char *aControllerClassName,
+                                               nsIDOMWindow *aWindow,
+                                               nsISupports *aContext,
+                                               PRUint32 *aControllerId);
+  nsresult        SetEditorOnControllers(nsIDOMWindow *aWindow, 
+                                         nsIEditor* aEditor);
+  nsresult        SetContextOnControllerById(nsIControllers* aControllers, 
+                                            nsISupports* aContext,
+                                            PRUint32 aID);
 
   nsresult        PrepareForEditing();
   
@@ -114,7 +124,10 @@ protected:
 
   nsComposerCommandsUpdater    *mStateMaintainer;      // we hold the owning ref to this.
   const char *    mEditorClassString; //we need this to hold onto the type for invoking editor after loading uri  
+  nsCString       mEditorType; 
   PRUint32        mEditorFlags;
+  PRUint32        mBaseCommandControllerId;
+  PRUint32        mHTMLCommandControllerId;
 };
 
 

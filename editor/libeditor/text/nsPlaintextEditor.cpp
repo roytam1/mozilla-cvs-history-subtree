@@ -362,6 +362,8 @@ nsPlaintextEditor::InstallEventListeners()
   NS_ASSERTION(mDocWeak, "no document set on this editor");
   if (!mDocWeak) return NS_ERROR_NOT_INITIALIZED;
 
+  if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
+
   nsresult result;
   // get a key listener
   result = NS_NewEditorKeyListener(getter_AddRefs(mKeyListenerP), this);

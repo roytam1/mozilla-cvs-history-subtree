@@ -32,15 +32,19 @@ REQUIRES	= string \
 		  layout \
 		  content \
 		  xuldoc \
+		  caps \
+		  xpconnect \
+		  js \
 		  $(NULL)
 
 LIBRARY_NAME	= commandhandler_s
 
 CPPSRCS		= \
+      nsBaseCommandController.cpp \
       nsCommandGroup.cpp \
       nsCommandManager.cpp \
       nsCommandParams.cpp \
-      nsControllerCommandManager.cpp \
+      nsControllerCommandTable.cpp \
       $(NULL)
 
 

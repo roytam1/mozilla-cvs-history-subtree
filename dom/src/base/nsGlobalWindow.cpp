@@ -129,6 +129,8 @@
 #include "nsIJSNativeInitializer.h"
 #include "nsIFullScreen.h"
 #include "nsIStringBundle.h"
+#include "nsIControllerContext.h"
+#include "nsGlobalWindowCommands.h"
 
 #include "plbase64.h"
 
@@ -272,10 +274,32 @@ void GlobalWindowImpl::CleanUp()
   NS_IF_RELEASE(mScrollbars);
   NS_IF_RELEASE(mLocation);
   NS_IF_RELEASE(mFrames);
+
+  ClearControllers();
+
   mOpener = nsnull;             // Forces Release
-  mControllers = nsnull;        // Forces Release
   mContext = nsnull;            // Forces Release
   mChromeEventHandler = nsnull; // Forces Release
+}
+
+void
+GlobalWindowImpl::ClearControllers()
+{
+  if (mControllers) {
+    PRUint32 count;
+    mControllers->GetControllerCount(&count);
+
+    while (count--) {
+      nsCOMPtr<nsIController> controller;
+      mControllers->GetControllerAt(count, getter_AddRefs(controller));
+
+      nsCOMPtr<nsIControllerContext> context = do_QueryInterface(controller);
+      if (context)
+        context->SetCommandContext(nsnull);
+    }
+
+    mControllers = nsnull;
+  }
 }
 
 //*****************************************************************************
@@ -572,10 +596,11 @@ GlobalWindowImpl::SetDocShell(nsIDocShell* aDocShell)
       }
     }
 
+    ClearControllers();
+
     mContext->GC();
 
     mContext = nsnull;          // force release now
-    mControllers = nsnull;      // force release now
     mChromeEventHandler = nsnull; // force release now
   }
 
@@ -1293,17 +1318,22 @@ NS_IMETHODIMP
 GlobalWindowImpl::GetControllers(nsIControllers** aResult)
 {
   if (!mControllers) {
-    mControllers = do_CreateInstance(kXULControllersCID);
-    NS_ENSURE_TRUE(mControllers, NS_ERROR_FAILURE);
-#ifdef DOM_CONTROLLER
+    nsresult rv;
+    mControllers = do_CreateInstance(kXULControllersCID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     // Add in the default controller
-    nsDOMWindowController *domController = new nsDOMWindowController(this);
-    if (domController) {
-      nsCOMPtr<nsIController> controller(domController);
-      mControllers->AppendController(controller);
-    }
-#endif // DOM_CONTROLLER
+    nsCOMPtr<nsIController> controller = do_CreateInstance(
+                               NS_WINDOWCONTROLLER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    mControllers->InsertControllerAt(0, controller);
+    nsCOMPtr<nsIControllerContext> controllerContext = do_QueryInterface(controller);
+    if (!controllerContext) return NS_ERROR_FAILURE;
+
+    controllerContext->SetCommandContext(NS_STATIC_CAST(nsIDOMWindow*, this));
   }
+
   *aResult = mControllers;
   NS_ADDREF(*aResult);
   return NS_OK;
@@ -1344,7 +1374,7 @@ GlobalWindowImpl::GetOpener(nsIDOMWindowInternal** aOpener)
         }
       }
     }
-  } 
+  }
   NS_IF_ADDREF(*aOpener);
   return NS_OK;
 }
@@ -2026,7 +2056,7 @@ GlobalWindowImpl::Dump(const nsAString& aStr)
 
   char *cstr = ToNewUTF8String(aStr);
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
   // have to convert \r to \n so that printing to the console works
   char *c = cstr, *cEnd = cstr + aStr.Length();
   while (c < cEnd) {
@@ -2103,7 +2133,7 @@ GlobalWindowImpl::CheckSecurityIsChromeCaller(PRBool *aIsChrome)
   NS_ENSURE_ARG_POINTER(aIsChrome);
 
   *aIsChrome = PR_FALSE;
- 
+
   // Check if this is a privileged system script
 
   NS_ENSURE_TRUE(sSecMan, NS_ERROR_FAILURE);
@@ -2145,7 +2175,7 @@ GlobalWindowImpl::MakeScriptDialogTitle(const nsAString &aInTitle, nsAString &aO
     nsCOMPtr<nsIStringBundle> stringBundle;
     rv = stringBundleService->CreateBundle(kDOMBundleURL,
        getter_AddRefs(stringBundle));
-    
+
     if (stringBundle) {
       nsAutoString inTitle(aInTitle);
       nsXPIDLString tempString;
@@ -2158,7 +2188,7 @@ GlobalWindowImpl::MakeScriptDialogTitle(const nsAString &aInTitle, nsAString &aO
         aOutTitle = tempString.get();
     }
   }
-  
+
   // Just in case
   if (aOutTitle.IsEmpty()) {
     NS_WARNING("could not get ScriptDlgTitle string from string bundle");
@@ -2859,7 +2889,7 @@ GlobalWindowImpl::CheckForAbusePoint ()
 
   if (item) {
     PRInt32 type = nsIDocShellTreeItem::typeChrome;
-        
+
     item->GetItemType(&type);
 
     if (type != nsIDocShellTreeItem::typeContent)
@@ -5869,463 +5899,3 @@ NavigatorImpl::RefreshMIMEArray()
   return rv;
 }
 
-#ifdef XP_MAC
-#pragma mark -
-#endif
-
-//*****************************************************************************
-//***  DOM Controller Stuff
-//*****************************************************************************
-
-#ifdef DOM_CONTROLLER
-// nsDOMWindowController
-const char * const sCopyString = "cmd_copy";
-const char * const sCutString = "cmd_cut";
-const char * const sPasteString = "cmd_paste";
-const char * const sSelectAllString = "cmd_selectAll";
-const char * const sSelectNoneString = "cmd_selectNone";
-const char * const sCopyLinkString = "cmd_copyLink";
-const char * const sCopyImageLocationString = "cmd_copyImageLocation";
-const char * const sCopyImageContentsString = "cmd_copyImageContents";
-
-const char * const sScrollTopString = "cmd_scrollTop";
-const char * const sScrollBottomString = "cmd_scrollBottom";
-const char * const sScrollPageUpString = "cmd_scrollPageUp";
-const char * const sScrollPageDownString = "cmd_scrollPageDown";
-const char * const sMovePageUpString = "cmd_movePageUp";
-const char * const sMovePageDownString = "cmd_movePageDown";
-const char * const sScrollLineUpString = "cmd_scrollLineUp";
-const char * const sScrollLineDownString = "cmd_scrollLineDown";
-const char * const sScrollLeftString = "cmd_scrollLeft";
-const char * const sScrollRightString = "cmd_scrollRight";
-const char * const sBrowserBackString = "cmd_browserBack";
-const char * const sBrowserForwardString = "cmd_browserForward";
-
-// These are so the browser can use editor navigation key bindings
-// helps with accessibility (boolean pref accessibility.browsewithcaret)
-
-const char * const sSelectCharPreviousString = "cmd_selectCharPrevious";
-const char * const sSelectCharNextString = "cmd_selectCharNext";
-
-const char * const sWordPreviousString = "cmd_wordPrevious";
-const char * const sWordNextString = "cmd_wordNext";
-const char * const sSelectWordPreviousString = "cmd_selectWordPrevious";
-const char * const sSelectWordNextString = "cmd_selectWordNext";
-
-const char * const sBeginLineString = "cmd_beginLine";
-const char * const sEndLineString = "cmd_endLine";
-const char * const sSelectBeginLineString = "cmd_selectBeginLine";
-const char * const sSelectEndLineString = "cmd_selectEndLine";
-
-const char * const sSelectLinePreviousString = "cmd_selectLinePrevious";
-const char * const sSelectLineNextString = "cmd_selectLineNext";
-
-const char * const sSelectPagePreviousString = "cmd_selectPagePrevious";
-const char * const sSelectPageNextString = "cmd_selectPageNext";
-
-const char * const sSelectMoveTopString = "cmd_selectMoveTop";
-const char * const sSelectMoveBottomString = "cmd_selectMoveBottom";
-
-NS_IMPL_ADDREF(nsDOMWindowController)
-NS_IMPL_RELEASE(nsDOMWindowController)
-
-NS_INTERFACE_MAP_BEGIN(nsDOMWindowController)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIController)
-  NS_INTERFACE_MAP_ENTRY(nsIController)
-NS_INTERFACE_MAP_END
-
-
-nsDOMWindowController::nsDOMWindowController(nsIDOMWindowInternal *aWindow)
-{
-  NS_INIT_ISUPPORTS();
-  mWindow = aWindow;
-
-  // Set mBrowseWithCaret so we don't need to check pref every time
-  mBrowseWithCaret = PR_FALSE;
-  nsCOMPtr<nsIEventStateManager> esm;
-  if (NS_SUCCEEDED(GetEventStateManager(getter_AddRefs(esm))))
-    esm->ResetBrowseWithCaret(&mBrowseWithCaret);
-  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
-  if (prefs)
-    prefs->RegisterCallback("accessibility.browsewithcaret", (PrefChangedFunc)nsDOMWindowController::BrowseWithCaretPrefCallback, (void*)this);
-}
-
-nsDOMWindowController::~nsDOMWindowController()
-{
-  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
-  if (prefs) 
-    prefs->UnregisterCallback("accessibility.browsewithcaret", (PrefChangedFunc)nsDOMWindowController::BrowseWithCaretPrefCallback, (void*)this);
-}
-
-nsresult
-nsDOMWindowController::GetEventStateManager(nsIEventStateManager **aEventStateManager)
-{
-  *aEventStateManager = nsnull;
-  // Set browse with caret flag so we don't need to every time
-  nsCOMPtr<nsIPresShell> presShell;
-  GetPresShell(getter_AddRefs(presShell));
-
-  if (presShell) {
-    nsCOMPtr<nsIPresContext> presContext;
-    presShell->GetPresContext(getter_AddRefs(presContext));
-    if (presContext) {
-      nsCOMPtr<nsIEventStateManager> esm;
-      presContext->GetEventStateManager(getter_AddRefs(esm));
-      *aEventStateManager = esm;
-      if (esm) {
-        NS_ADDREF(*aEventStateManager);
-        return NS_OK;
-      }
-    }
-  }
-  return NS_ERROR_FAILURE;
-}
-
-int PR_CALLBACK
-nsDOMWindowController::BrowseWithCaretPrefCallback(const char* aPrefName, void* instance_data)
-{
-  nsDOMWindowController* domWindowController = (nsDOMWindowController*)instance_data;
-  NS_ASSERTION(domWindowController, "bad instance data");
-
-  nsCOMPtr<nsIEventStateManager> esm;
-
-  if (NS_SUCCEEDED(domWindowController->GetEventStateManager(getter_AddRefs(esm))))
-    esm->ResetBrowseWithCaret(&domWindowController->mBrowseWithCaret);
-
-  return 0;  // PREF_OK
-}
-
-nsresult
-nsDOMWindowController::GetEditInterface(nsIContentViewerEdit **aEditInterface)
-{
-  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(mWindow));
-  NS_ENSURE_TRUE(sgo, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIDocShell> docShell;
-  sgo->GetDocShell(getter_AddRefs(docShell));
-  NS_ENSURE_TRUE(docShell, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIContentViewer> viewer;
-  docShell->GetContentViewer(getter_AddRefs(viewer));
-  nsCOMPtr<nsIContentViewerEdit> edit(do_QueryInterface(viewer));
-  NS_ENSURE_TRUE(edit, NS_ERROR_FAILURE);
-
-  *aEditInterface = edit;
-  NS_ADDREF(*aEditInterface);
-  return NS_OK;
-}
-
-nsresult
-nsDOMWindowController::GetPresShell(nsIPresShell **aPresShell)
-{
-  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(mWindow));
-  NS_ENSURE_TRUE(sgo, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIDocShell> docShell;
-  sgo->GetDocShell(getter_AddRefs(docShell));
-  NS_ENSURE_TRUE(docShell, NS_ERROR_FAILURE);
-
-  NS_ENSURE_SUCCESS(docShell->GetPresShell(aPresShell), NS_ERROR_FAILURE);
-  return NS_OK;
-}
-
-nsresult
-nsDOMWindowController::GetSelectionController(nsISelectionController **aSelCon)
-{
-  nsCOMPtr<nsIPresShell> presShell;
-  nsresult result = GetPresShell(getter_AddRefs(presShell));
-  if (presShell && NS_SUCCEEDED(result)) {
-    nsCOMPtr<nsISelectionController> selController =
-      do_QueryInterface(presShell);
-    if (selController) {
-      *aSelCon = selController;
-      NS_ADDREF(*aSelCon);
-      return NS_OK;
-    }
-  }
-  return NS_FAILED(result) ? result : NS_ERROR_FAILURE;
-}
-
-
-
-NS_IMETHODIMP
-nsDOMWindowController::IsCommandEnabled(const char* aCommand,
-                                        PRBool *aResult)
-{
-  NS_ENSURE_ARG_POINTER(aResult);
-
-  *aResult = PR_FALSE;
-  nsresult rv = NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIContentViewerEdit> editInterface;
-  rv = GetEditInterface(getter_AddRefs(editInterface));
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(editInterface, NS_ERROR_NOT_INITIALIZED);
-
-	
-  if (!nsCRT::strcmp(sCopyString,aCommand)) {
-    rv = editInterface->GetCopyable(aResult);
-  }
-  else if (!nsCRT::strcmp(sCutString,aCommand)) {
-    rv = editInterface->GetCutable(aResult);
-  }
-  else if (!nsCRT::strcmp(sPasteString,aCommand)) {
-    rv = editInterface->GetPasteable(aResult);
-  }
-  else if (!nsCRT::strcmp(sSelectAllString,aCommand)) {
-    *aResult = PR_TRUE;
-    rv = NS_OK;
-  }
-  else if (!nsCRT::strcmp(sSelectNoneString,aCommand)) {
-    *aResult = PR_TRUE;
-    rv = NS_OK;
-  }
-  else if (!nsCRT::strcmp(sCopyLinkString,aCommand)) {
-    rv = editInterface->GetInLink(aResult);
-  }
-  else if (!nsCRT::strcmp(sCopyImageLocationString,aCommand)) {
-    rv = editInterface->GetInImage(aResult);
-  }
-  else if (!nsCRT::strcmp(sCopyImageContentsString,aCommand)) {
-    rv = editInterface->GetInImage(aResult);
-  }
-
-  return rv;
-}
-
-NS_IMETHODIMP
-nsDOMWindowController::SupportsCommand(const char * aCommand,
-                                       PRBool *outSupported)
-{
-  NS_ENSURE_ARG_POINTER(outSupported);
-
-  *outSupported = PR_FALSE;
-
-  if (!nsCRT::strcmp(aCommand,sCopyString) ||
-      !nsCRT::strcmp(aCommand,sSelectAllString) ||
-      !nsCRT::strcmp(aCommand,sSelectNoneString) ||
-      !nsCRT::strcmp(aCommand,sCutString) ||
-      !nsCRT::strcmp(aCommand,sPasteString) ||
-      !nsCRT::strcmp(aCommand,sScrollTopString) ||
-      !nsCRT::strcmp(aCommand,sScrollBottomString) ||
-      !nsCRT::strcmp(aCommand,sCopyLinkString) ||
-      !nsCRT::strcmp(aCommand,sCopyImageLocationString) ||
-      !nsCRT::strcmp(aCommand,sCopyImageContentsString) ||
-      !nsCRT::strcmp(aCommand,sScrollPageUpString) ||
-      !nsCRT::strcmp(aCommand,sScrollPageDownString) ||
-      !nsCRT::strcmp(aCommand,sMovePageUpString) ||
-      !nsCRT::strcmp(aCommand,sMovePageDownString) ||
-      !nsCRT::strcmp(aCommand,sBrowserBackString) ||
-      !nsCRT::strcmp(aCommand,sBrowserForwardString) ||
-      !nsCRT::strcmp(aCommand,sScrollLineUpString) ||
-      !nsCRT::strcmp(aCommand,sScrollLineDownString) ||
-      !nsCRT::strcmp(aCommand,sScrollLeftString) ||
-      !nsCRT::strcmp(aCommand,sScrollRightString) ||
-      !nsCRT::strcmp(aCommand,sSelectCharPreviousString) ||
-      !nsCRT::strcmp(aCommand,sSelectCharNextString) ||
-      !nsCRT::strcmp(aCommand,sWordPreviousString) ||
-      !nsCRT::strcmp(aCommand,sWordNextString) ||
-      !nsCRT::strcmp(aCommand,sSelectWordPreviousString) ||
-      !nsCRT::strcmp(aCommand,sSelectWordNextString) ||
-      !nsCRT::strcmp(aCommand,sBeginLineString) ||
-      !nsCRT::strcmp(aCommand,sEndLineString) ||
-      !nsCRT::strcmp(aCommand,sSelectBeginLineString) ||
-      !nsCRT::strcmp(aCommand,sSelectEndLineString) ||
-      !nsCRT::strcmp(aCommand,sSelectLinePreviousString) ||
-      !nsCRT::strcmp(aCommand,sSelectLineNextString) ||
-      !nsCRT::strcmp(aCommand,sSelectPagePreviousString) ||
-      !nsCRT::strcmp(aCommand,sSelectPageNextString) ||
-      !nsCRT::strcmp(aCommand,sSelectMoveTopString) ||
-      !nsCRT::strcmp(aCommand,sSelectMoveBottomString)
-      )
-    *outSupported = PR_TRUE;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDOMWindowController::DoCommand(const char *aCommand)
-{
-  nsresult rv = NS_ERROR_FAILURE;
-
-  if (!nsCRT::strcmp(aCommand,sCopyString) ||
-      !nsCRT::strcmp(aCommand,sSelectAllString) ||
-      !nsCRT::strcmp(aCommand,sSelectNoneString) ||
-      !nsCRT::strcmp(aCommand,sCutString) ||
-      !nsCRT::strcmp(aCommand,sPasteString) ||
-      !nsCRT::strcmp(aCommand,sCopyLinkString) ||
-      !nsCRT::strcmp(aCommand,sCopyImageLocationString) ||
-      !nsCRT::strcmp(aCommand,sCopyImageContentsString)) {
-    rv = DoCommandWithEditInterface(aCommand);
-  }
-  else if (!nsCRT::strcmp(aCommand,sScrollTopString) ||
-           !nsCRT::strcmp(aCommand,sScrollBottomString) ||
-           !nsCRT::strcmp(aCommand,sScrollPageUpString) ||
-           !nsCRT::strcmp(aCommand,sMovePageDownString) ||
-           !nsCRT::strcmp(aCommand,sMovePageUpString) ||
-           !nsCRT::strcmp(aCommand,sScrollPageDownString) ||
-           !nsCRT::strcmp(aCommand,sScrollLineUpString) ||
-           !nsCRT::strcmp(aCommand,sScrollLineDownString) ||
-           !nsCRT::strcmp(aCommand,sScrollLeftString) ||
-           !nsCRT::strcmp(aCommand,sScrollRightString) ||
-           !nsCRT::strcmp(aCommand,sSelectCharPreviousString) ||
-           !nsCRT::strcmp(aCommand,sSelectCharNextString) ||
-           !nsCRT::strcmp(aCommand,sWordPreviousString) ||
-           !nsCRT::strcmp(aCommand,sWordNextString) ||
-           !nsCRT::strcmp(aCommand,sSelectWordPreviousString) ||
-           !nsCRT::strcmp(aCommand,sSelectWordNextString) ||
-           !nsCRT::strcmp(aCommand,sBeginLineString) ||
-           !nsCRT::strcmp(aCommand,sEndLineString) ||
-           !nsCRT::strcmp(aCommand,sSelectBeginLineString) ||
-           !nsCRT::strcmp(aCommand,sSelectEndLineString) ||
-           !nsCRT::strcmp(aCommand,sSelectLinePreviousString) ||
-           !nsCRT::strcmp(aCommand,sSelectLineNextString) ||
-           !nsCRT::strcmp(aCommand,sSelectMoveTopString) ||
-           !nsCRT::strcmp(aCommand,sSelectMoveBottomString)) {
-    rv = DoCommandWithSelectionController(aCommand);
-    // If the user moves the caret in browse with caret mode
-    // Focus whatever they move onto, if it's focusable
-    if (mBrowseWithCaret) {
-      nsCOMPtr<nsIEventStateManager> esm;
-      if (NS_SUCCEEDED(GetEventStateManager(getter_AddRefs(esm)))) {
-        PRBool isSelectionWithFocus;
-        esm->MoveFocusToCaret(PR_TRUE, &isSelectionWithFocus);
-      }
-    }
-  }
-  else if (!nsCRT::strcmp(aCommand,sBrowserBackString) ||
-    !nsCRT::strcmp(aCommand,sBrowserForwardString)) {
-    rv = DoCommandWithWebNavigationInterface(aCommand);
-  }
-
-  return rv;
-}
-
-nsresult
-nsDOMWindowController::DoCommandWithWebNavigationInterface(const char *aCommandName)
-{
-  nsCOMPtr<nsIWebNavigation> webNav(do_GetInterface(mWindow));
-
-  nsresult rv = NS_ERROR_FAILURE;
-
-  if (webNav) {
-    if (!nsCRT::strcmp(aCommandName, sBrowserBackString)) {
-      rv = webNav->GoBack();
-    }
-    else if (!nsCRT::strcmp(aCommandName, sBrowserForwardString)) {
-      rv= webNav->GoForward();
-    }
-  }
-  return rv;
-}
-
-nsresult
-nsDOMWindowController::DoCommandWithEditInterface(const char *aCommandName)
-{
-  // get edit interface...
-  nsCOMPtr<nsIContentViewerEdit> editInterface;
-  nsresult rv = GetEditInterface(getter_AddRefs(editInterface));
-  // if we can't get an edit interface, that's bad
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(editInterface, NS_ERROR_NOT_INITIALIZED);
-
-  rv = NS_ERROR_FAILURE;
-
-  if (!nsCRT::strcmp(aCommandName,sCopyString))
-    rv = editInterface->CopySelection();
-  else if (!nsCRT::strcmp(aCommandName,sSelectAllString))
-    rv = editInterface->SelectAll();
-  else if (!nsCRT::strcmp(aCommandName,sSelectNoneString))
-    rv = editInterface->ClearSelection();
-  else if (!nsCRT::strcmp(aCommandName,sCutString))
-    rv = editInterface->CutSelection();
-  else if (!nsCRT::strcmp(aCommandName,sPasteString))
-    rv = editInterface->Paste();
-  else if (!nsCRT::strcmp(aCommandName,sCopyLinkString))
-    rv = editInterface->CopyLinkLocation();
-  else if (!nsCRT::strcmp(aCommandName,sCopyImageLocationString))
-    rv = editInterface->CopyImageLocation();
-  else if (!nsCRT::strcmp(aCommandName,sCopyImageContentsString))
-    rv = editInterface->CopyImageContents();
-
-  return rv;
-
-}
-
-nsresult
-nsDOMWindowController::DoCommandWithSelectionController(const char *aCommandName) {
-
-  // get selection controller...
-  nsCOMPtr<nsISelectionController> selCont;
-  nsresult rv = GetSelectionController(getter_AddRefs(selCont));
-  // if we can't get a selection controller, that's bad
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(selCont, NS_ERROR_NOT_INITIALIZED);
-
-  rv = NS_ERROR_FAILURE;
-
-  if (!nsCRT::strcmp(aCommandName,sScrollTopString))
-    rv = (mBrowseWithCaret? selCont->CompleteMove(PR_FALSE, PR_FALSE): selCont->CompleteScroll(PR_FALSE));
-  else if (!nsCRT::strcmp(aCommandName,sScrollBottomString))
-    rv = (mBrowseWithCaret? selCont->CompleteMove(PR_TRUE, PR_FALSE): selCont->CompleteScroll(PR_TRUE));
-  // cmd_ScrollPageUp/Down are used on Mac.  They do not move the
-  // caret in caret browsing mode.
-  else if (!nsCRT::strcmp(aCommandName,sScrollPageUpString))
-    rv = selCont->ScrollPage(PR_FALSE);
-  else if (!nsCRT::strcmp(aCommandName,sScrollPageDownString))
-    rv = selCont->ScrollPage(PR_TRUE);
-  // cmd_MovePageUp/Down are used on Window/Unix.  They move the caret
-  // in caret browsing mode.
-  else if (!nsCRT::strcmp(aCommandName,sMovePageUpString))
-    rv = (mBrowseWithCaret? selCont->PageMove(PR_FALSE, PR_FALSE): selCont->ScrollPage(PR_FALSE));
-  else if (!nsCRT::strcmp(aCommandName,sMovePageDownString))
-    rv = (mBrowseWithCaret? selCont->PageMove(PR_TRUE, PR_FALSE): selCont->ScrollPage(PR_TRUE));
-  else if (!nsCRT::strcmp(aCommandName,sScrollLineUpString))
-    rv = (mBrowseWithCaret? selCont->LineMove(PR_FALSE, PR_FALSE): selCont->ScrollLine(PR_FALSE));
-  else if (!nsCRT::strcmp(aCommandName,sScrollLineDownString))
-    rv = (mBrowseWithCaret? selCont->LineMove(PR_TRUE, PR_FALSE): selCont->ScrollLine(PR_TRUE));
-  else if (!nsCRT::strcmp(aCommandName,sScrollLeftString))
-    rv = (mBrowseWithCaret? selCont->CharacterMove(PR_FALSE, PR_FALSE): selCont->ScrollHorizontal(PR_TRUE));
-  else if (!nsCRT::strcmp(aCommandName,sScrollRightString))
-    rv = (mBrowseWithCaret? selCont->CharacterMove(PR_TRUE, PR_FALSE): selCont->ScrollHorizontal(PR_FALSE));
-  // These commands are so the browser can use editor navigation key bindings -
-  // Helps with accessibility - aaronl@chorus.net
-  else if (!nsCRT::strcmp(aCommandName,sSelectCharPreviousString))
-    rv = selCont->CharacterMove(PR_FALSE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectCharNextString))
-    rv = selCont->CharacterMove(PR_TRUE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sWordPreviousString))
-    rv = selCont->WordMove(PR_FALSE, PR_FALSE);
-  else if (!nsCRT::strcmp(aCommandName,sWordNextString))
-    rv = selCont->WordMove(PR_TRUE, PR_FALSE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectWordPreviousString))
-    rv = selCont->WordMove(PR_FALSE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectWordNextString))
-    rv = selCont->WordMove(PR_TRUE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sBeginLineString))
-    rv = selCont->IntraLineMove(PR_FALSE, PR_FALSE);
-  else if (!nsCRT::strcmp(aCommandName,sEndLineString))
-    rv = selCont->IntraLineMove(PR_TRUE, PR_FALSE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectBeginLineString))
-    rv = selCont->IntraLineMove(PR_FALSE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectEndLineString))
-    rv = selCont->IntraLineMove(PR_TRUE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectLinePreviousString))
-    rv = selCont->LineMove(PR_FALSE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectLineNextString))
-    rv = selCont->LineMove(PR_TRUE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectMoveTopString))
-    rv = selCont->CompleteMove(PR_FALSE, PR_TRUE);
-  else if (!nsCRT::strcmp(aCommandName,sSelectMoveBottomString))
-    rv = selCont->CompleteMove(PR_TRUE, PR_TRUE);
-
-  return rv;
-
-}
-
-NS_IMETHODIMP
-nsDOMWindowController::OnEvent(const char * aEventName)
-{
-  return NS_OK;
-}
-#endif

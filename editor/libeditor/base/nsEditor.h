@@ -187,6 +187,11 @@ public:
   */
   nsresult CreateHTMLContent(const nsAString& aTag, nsIContent** aContent);
 
+  nsresult InsertNodeAtPoint( nsIDOMNode *aNode, 
+                              nsCOMPtr<nsIDOMNode> *ioParent, 
+                              PRInt32 *ioOffset, 
+                              PRBool aNoEmptyNodes);
+
 protected:
 
   /*

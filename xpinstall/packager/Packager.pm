@@ -59,6 +59,7 @@ sub Copy {
   	$altdest = "";
   	$lineno++;
 
+  	s/\\/\//g if ($os eq "MSDOS");  # Convert to posix path
   	s/\;.*//;			# it's a comment, kill it.
   	s/^\s+//;			# nuke leading whitespace
   	s/\s+$//;			# nuke trailing whitespace
@@ -263,9 +264,9 @@ sub do_copyfile
 				$srcdir =~ s/\\/\//g;
 				$PD = "/";
 				$destpath =~ s/$srcdir$PD//g;
-				$destpath =~ s/\//\\/g;
-				$srcdir =~ s/\//\\/g;
-				$PD = "\\";
+				$destpath =~ s/\\/\//g;
+				$srcdir =~ s/\\/\//g;
+				$PD = "/";
 			} else {
 				$destpath =~ s/$srcdir$PD//;
 			}
@@ -308,18 +309,16 @@ sub do_copyfile
 			die "Error: copy of file $srcpath$srcname$srcsuffix failed ($package, $component, $lineno): $!.  Exiting...\n";
 
 		# if this is unix, set the dest file permissions
-		if ( $os eq "Unix" ) {
-			# read permissions
-			my($st) = stat("$srcpath$srcname$srcsuffix") ||
-				die "Error: can't stat $srcpath$srcname$srcsuffix: $!  Exiting...\n";
-			# set permissions
-			($debug >= 2) && print " chmod ".$st->mode." $destpath$destname$destsuffix\n";
-			chmod ($st->mode, "$destpath$destname$destsuffix") ||
-				warn "Warning: chmod of $destpath$destname$destsuffix failed: $!.  Exiting...\n";
-		}
-	} else {
+		# read permissions
+		my($st) = stat("$srcpath$srcname$srcsuffix") ||
+		    die "Error: can't stat $srcpath$srcname$srcsuffix: $!  Exiting...\n";
+		# set permissions
+		($debug >= 2) && print " chmod ".$st->mode." $destpath$destname$destsuffix\n";
+		chmod ($st->mode, "$destpath$destname$destsuffix") ||
+		    warn "Warning: chmod of $destpath$destname$destsuffix failed: $!.  Exiting...\n";
+	    } else {
 		warn "Error: file $srcpath$srcname$srcsuffix is not a file or is not readable ($package, $component, $lineno).\n";
-	}
+	    }
 }
 
 
@@ -488,7 +487,7 @@ sub check_arguments
 		fileparse_set_fstype ($os);
 	} elsif ( $os =~ /dos/i ) {
 		$os = "MSDOS";
-		$PD = "\\";
+		$PD = "/";
 		fileparse_set_fstype ($os);
 	} elsif ( $os =~ /unix/i ) {
 		$os = "Unix";       # can be anything but MacOS, MSDOS, or VMS
