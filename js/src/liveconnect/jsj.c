@@ -345,8 +345,6 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
                  "Ljava/lang/String;", njJSException);
     LOAD_FIELDID(netscape.javascript.JSWrappedException, exception, 
                  "Ljava/lang/Object;", njJSWrappedException);
-    LOAD_METHOD(netscape.javascript.JSWrappedException, getWrappedException,
-                "()Ljava/lang/Object;", njJSWrappedException);
     LOAD_STATIC_METHOD(netscape.javascript.JSUtil, getStackTrace,     
                        "(Ljava/lang/Throwable;)Ljava/lang/String;", njJSUtil);
 

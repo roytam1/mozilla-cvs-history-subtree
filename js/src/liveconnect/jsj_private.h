@@ -244,7 +244,6 @@ extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSException
 extern jmethodID njJSWrappedException_JSWrappedException; /* netscape.javascipt.JSWrappedException constructor */
 extern jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 extern jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
-extern jmethodID njJSWrappedException_getWrappedException; /* netscape.javascipt.JSWrappedException.getWrappedException */
 extern jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
 extern jfieldID njJSException_lineno;          /* netscape.javascript.JSException.lineno */
 extern jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
