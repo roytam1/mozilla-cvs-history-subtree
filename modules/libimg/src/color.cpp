@@ -38,6 +38,17 @@
 #endif /* __sun */
 #endif /* NSPR20 */
 
+/*	ebb - begin */
+#include "icc_profile.h"
+#include "icc_profile_types.h"
+
+static void
+il_match_image_colors	(	il_container	*ic,
+                  			const uint8		*sp,
+                  			int				num );
+
+/*	ebb - end */
+
 #ifdef PROFILE
 #pragma profile on
 #endif
@@ -80,6 +91,17 @@ ConvertRGBToCI(il_container *ic,
 	{
 	    index_map = il_identity_index_map;
 	}
+	
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
 
     if (!mask)
     {
@@ -127,6 +149,17 @@ DitherConvertRGBToCI(il_container *ic,
 	{
 	    index_map = il_identity_index_map;
 	}
+
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
 
     il_quantize_fs_dither(ic, mask, sp, x_offset, (uint8 XP_HUGE *) vout, num);
     if (mask) {
@@ -349,6 +382,17 @@ ConvertRGBToGrey8(il_container *ic,
     const uint8 *end = sp + num*3;
     uint32 grey;
 
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
+
     if (!mask)
     {
         while (sp < end)
@@ -404,6 +448,18 @@ ConvertRGBToRGB8(il_container *ic,
     uint8 *rm = (uint8*)private_data->r8torgbn;
     uint8 *gm = (uint8*)private_data->g8torgbn;
     uint8 *bm = (uint8*)private_data->b8torgbn;
+
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
+
     if (!mask)
     {
         while (sp < end) 
@@ -451,6 +507,17 @@ ConvertRGBToRGB16(il_container *ic,
     uint16 *gm = (uint16*)private_data->g8torgbn;
     uint16 *bm = (uint16*)private_data->b8torgbn;
 
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
+
     if (!mask)
     {
         while (sp < end) 
@@ -493,6 +560,17 @@ ConvertRGBToRGB24(il_container *ic,
     const uint8 *end = sp + num*3;
 	/* XXX this is a hack because it ignores the shifts */
 
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
+
     if (!mask)
     {
         while (sp < end) {
@@ -532,6 +610,17 @@ ConvertRGBToRGB32(il_container *ic,
     uint32 *rm = (uint32*)private_data->r8torgbn;
     uint32 *gm = (uint32*)private_data->g8torgbn;
     uint32 *bm = (uint32*)private_data->b8torgbn;
+
+/*	ebb - begin	*/
+	if (ic->icc_matching_session)
+	{
+		/*
+			All we need is the container,
+			the pixel pointer, and number of pixels
+		*/
+		il_match_image_colors(ic,sp,num);
+	}
+/*	ebb - end */
 
     if (!mask)
     {
@@ -781,6 +870,9 @@ il_setup_color_space_converter(il_container *ic)
     il_converter converter = NULL;
     NI_ColorSpace *img_color_space = ic->image->header.color_space;
     NI_ColorSpace *src_color_space = ic->src_header->color_space;
+/*	ebb - begin */
+	PRBool	icc_color_matching = FALSE;
+/*	ebb - begin */
 
     /* Make sure that the num_colors field of the source image's colormap
        represents the number of unique colors.  In the case of GIFs, for
@@ -802,6 +894,39 @@ il_setup_color_space_converter(il_container *ic)
 #endif
 #endif /* M12N */
 
+/*	ebb - begin */
+	/*
+		If the image container has a profile ref, propagate it to the
+		source color space, which serves as a convenient carrier.
+		Turn color matching on if we have both src and dest profiles,
+		it may be turned off below for certain src-dest imaging combos.
+	*/
+	switch (il_get_container_color_matching(ic))
+	{
+		default:
+		case	kNoMatching:
+			src_color_space->icc_profile_ref = (void*) kICCProfileRef_NoProfile;
+			icc_color_matching = FALSE;
+			break;
+		case	kProfileDefault:
+			src_color_space->icc_profile_ref = (void*) kICCProfileRef_DefaultProfile;
+			break;
+		case	kProfilePresent:
+			/* Should only get here if there was a cached image */
+		case	kProfileEmbedded:
+		case	kProfileFromURL:
+			src_color_space->icc_profile_ref = ic->icc_profile_ref;
+			break;
+	}
+
+	/* If we have both a source and dest - go for it. */
+	if ( (img_color_space->icc_profile_ref != NULL) &&
+		 (src_color_space->icc_profile_ref != NULL) )
+	{
+		icc_color_matching = TRUE;
+	}
+/*	ebb - end */
+
     conversion_type = (src_color_space->type << 3) | img_color_space->type;
     switch (conversion_type) {
 
@@ -817,6 +942,10 @@ il_setup_color_space_converter(il_container *ic)
         /* These conversions are accomplished by first converting to RGB,
            followed by closest color matching or dithering. */
     case IL_GreyToPseudo:
+/*	ebb - begin */
+		/* Turn off color matching (if it was on), not worth it in this case */
+		icc_color_matching = FALSE;
+/*	ebb - end */
     case IL_PseudoToPseudo:
 
 #ifdef STANDALONE_IMAGE_LIB
@@ -896,11 +1025,19 @@ il_setup_color_space_converter(il_container *ic)
         
         /* These conversions are accomplished by first converting to RGB24,
            followed by conversion to the actual image pixmap depth. */
-    case IL_TrueToGrey:
+/*	ebb - begin */
     case IL_PseudoToGrey:
     case IL_GreyToGrey:
+		/* Turn off color matching (if it was on), not worth it in these cases */
+		icc_color_matching = FALSE;
+    	break;
+    case IL_TrueToGrey:
+    	/* Move this case below the others so it can be color-matched. */
         switch (img_color_space->pixmap_depth) {
         case 1:
+			/* Turn off color matching, not worth it in these cases */
+			icc_color_matching = FALSE;
+/*	ebb - end */
             dither_mode = IL_Dither;
             converter = ConvertRGBToBW;
             break;
@@ -926,8 +1063,46 @@ il_setup_color_space_converter(il_container *ic)
         il_set_color_palette(ic->cx, ic);
 #endif /* M12N */
 
+/*	ebb - begin */
+	if (icc_color_matching)
+		il_setup_color_matching_session(ic);
+/*	ebb - end */
+
     return PR_TRUE;
 }
+
+/*	ebb - begin */
+/*	------------------------------------------------------------------------------
+	il_match_image_colors
+	
+	Desc:
+			A Color-Matching session has been established.
+			Now it is time to match the RGB colors in an image pixmap.
+			
+	In:		ic			The image container, from which we reference:
+							img_cb	(Callback interface)
+							icc_matching_session
+				
+			sp			Ptr to the RGB pixels to match, in RGB24 format.
+			
+			num			Number of RGB24 pixels to match.
+			
+*/
+static void
+il_match_image_colors	(	il_container	*ic,
+                  			const uint8		*sp,
+                  			int				num )
+{
+#ifdef STANDALONE_IMAGE_LIB
+    	ic->img_cb->ColorMatchRGBPixels( NULL, ic->icc_matching_session,
+    									sp, num );
+    										 
+#else
+    	IMGCBIF_ColorMatchRGBPixels(ic->img_cb, NULL, ic->icc_matching_session,
+    								sp, num );
+#endif /* STANDALONE_IMAGE_LIB */
+}
+/*	ebb - end */
 
 #ifdef PROFILE
 #pragma profile off
