@@ -21,22 +21,20 @@
 
 #include "nsISupports.h"
 
-#if defined(XPIDL_JS_STUBS)
-struct JSObject;
-struct JSContext;
-#endif
-
-
 // {D1899240-F9D2-11d2-BDD6-000064657374}
 #define NS_ISIMPLEENUMERATOR_IID \
 { 0xd1899240, 0xf9d2, 0x11d2, { 0xbd, 0xd6, 0x0, 0x0, 0x64, 0x65, 0x73, 0x74 } }
 
 class nsISimpleEnumerator : public nsISupports {
+public:
   static const nsIID& GetIID(void) { static nsIID iid = NS_ISIMPLEENUMERATOR_IID; return iid; }
   NS_IMETHOD HasMoreElements(PRBool* aResult) = 0;
   NS_IMETHOD GetNext(nsISupports** aResult) = 0;
 };
 
+
+extern "C" NS_COM nsresult
+NS_NewEmptyEnumerator(nsISimpleEnumerator** aResult);
 
 
 #define NS_IENUMERATOR_IID                           \
