@@ -43,6 +43,6 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS        = lock
+DIRS        = lock transmngr
 
 include $(topsrcdir)/config/rules.mk
