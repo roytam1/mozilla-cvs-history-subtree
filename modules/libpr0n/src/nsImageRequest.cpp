@@ -35,8 +35,6 @@
 
 #include "nsString.h"
 
-#include "nspr.h"
-
 #include "ImageCache.h"
 
 
@@ -60,8 +58,8 @@ nsresult nsImageRequest::Init(nsIChannel *aChannel)
 {
   // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
 
-  PR_ASSERT(!mImage);
-  PR_ASSERT(aChannel);
+  NS_ASSERTION(!mImage, "nsImageRequest::Init -- Multiple calls to init");
+  NS_ASSERTION(aChannel, "nsImageRequest::Init -- No channel");
 
   mChannel = aChannel;
 
@@ -262,7 +260,7 @@ NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsISupports
 /* void onStartRequest (in nsIChannel channel, in nsISupports ctxt); */
 NS_IMETHODIMP nsImageRequest::OnStartRequest(nsIChannel *channel, nsISupports *ctxt)
 {
-  PR_ASSERT(!mDecoder);
+  NS_ASSERTION(!mDecoder, "nsImageRequest::OnStartRequest -- we already have a decoder");
 
   nsXPIDLCString contentType;
   channel->GetContentType(getter_Copies(contentType));
@@ -289,7 +287,7 @@ NS_IMETHODIMP nsImageRequest::OnStartRequest(nsIChannel *channel, nsISupports *c
 /* void onStopRequest (in nsIChannel channel, in nsISupports ctxt, in nsresult status, in wstring statusArg); */
 NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ctxt, nsresult status, const PRUnichar *statusArg)
 {
-  PR_ASSERT(mChannel || mProcessing);
+  NS_ASSERTION(mChannel || mProcessing, "nsImageRequest::OnStopRequest -- received multiple OnStopRequest");
 
   mProcessing = PR_FALSE;
 
@@ -319,7 +317,10 @@ NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ct
 /* void onDataAvailable (in nsIChannel channel, in nsISupports ctxt, in nsIInputStream inStr, in unsigned long sourceOffset, in unsigned long count); */
 NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
 {
-  PR_ASSERT(mDecoder);
+  if (!mDecoder) {
+    NS_ASSERTION(mDecoder, "nsImageRequest::OnDataAvailable -- no decoder");
+    return NS_ERROR_FAILURE;
+  }
 
   PRUint32 wrote;
   return mDecoder->WriteFrom(inStr, count, &wrote);
