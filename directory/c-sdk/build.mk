@@ -412,6 +412,13 @@ LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) 
         -o $@ $(OBJS) $(EXTRA_LIBS)
 endif
 
+ifeq ($(OS_ARCH), SunOS)
+ifeq ($(USE_64), 1)
+LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS)  -R:$(RPATHFLAG)\
+        -o $@ $(OBJS) $(EXTRA_LIBS)
+endif
+endif
+
 
 PERL = perl
 #
