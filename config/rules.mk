@@ -397,6 +397,10 @@ MAKE_DIRS		+= $(MDDEPDIR)
 GARBAGE_DIRS		+= $(MDDEPDIR)
 endif
 
+ifneq ($(XPIDLSRCS),)
+GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
+endif
+
 #
 # Tags: emacs (etags), vi (ctags)
 # TAG_PROGRAM := ctags -L -
@@ -652,6 +656,8 @@ ifdef DIRS
 endif
 
 export:: $(SUBMAKEFILES) $(MAKE_DIRS)
+	+$(LOOP_OVER_DIRS)
+
 
 #
 # Rule to create list of libraries for final link
@@ -1424,10 +1430,6 @@ endif
 ################################################################################
 # Copy each element of EXPORTS to $(PUBLIC)
 
-_SUB_MODULE_XPIDLSRCS = $(foreach m,$(XPIDLSRCS_SUB_MODULES),$m_module_xpidlsrcs)
-
-export:: $(foreach m,$(EXPORTS_SUB_MODULES),$m_module_exports) $(_SUB_MODULE_XPIDLSRCS)
-
 ifneq ($(EXPORTS)$(XPIDLSRCS)$(SDK_HEADERS)$(SDK_XPIDLSRCS),)
 $(SDK_PUBLIC) $(PUBLIC)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
@@ -1452,12 +1454,6 @@ ifndef NO_DIST_INSTALL
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(SDK_PUBLIC),$^))
 endif
 endif 
-
-%_module_exports::
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $($(*F)_EXPORTS) $(PUBLIC:/$(MODULE)=/$(*F))
-	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC:/$(MODULE)=/$(*F))/.headerlist $(notdir $($(*F)_EXPORTS))
-endif
 
 ################################################################################
 # Copy each element of PREF_JS_EXPORTS to $(DIST)/bin/defaults/pref
@@ -1524,23 +1520,31 @@ $(XPIDL_GEN_DIR)/.done:
 # don't depend on $(XPIDL_GEN_DIR), because the modification date changes
 # with any addition to the directory, regenerating all .h files -> everything.
 
-$(XPIDL_GEN_DIR)/%.h: %.idl $(XPIDL_GEN_DIR)/.done
+$(XPIDL_GEN_DIR)/%.h: %.idl $(XPIDL_COMPILE) $(XPIDL_GEN_DIR)/.done
 	$(REPORT_BUILD)
+ifdef _NO_AUTO_VARS
+	$(ELOG) $(XPIDL_COMPILE) -m header -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $(srcdir)/$*.idl
+else
 	$(ELOG) $(XPIDL_COMPILE) -m header -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $<
+endif
 	@if test -n "$(findstring $*.h, $(EXPORTS) $(SDK_HEADERS))"; \
 	  then echo "*** WARNING: file $*.h generated from $*.idl overrides $(srcdir)/$*.h"; else true; fi
 
 ifndef NO_GEN_XPT
 # generate intermediate .xpt files into $(XPIDL_GEN_DIR), then link
 # into $(XPIDL_MODULE).xpt and export it to $(DIST)/bin/components.
-$(XPIDL_GEN_DIR)/%.xpt: %.idl $(XPIDL_GEN_DIR)/.done
+$(XPIDL_GEN_DIR)/%.xpt: %.idl $(XPIDL_COMPILE)
 	$(REPORT_BUILD)
+ifdef _NO_AUTO_VARS
+	$(ELOG) $(XPIDL_COMPILE) -m typelib -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $(srcdir)/$*.idl
+else
 	$(ELOG) $(XPIDL_COMPILE) -m typelib -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $<
+endif
 
 $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) Makefile.in Makefile
 	$(XPIDL_LINK) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) 
 
-process_xpidlsrcs libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
+libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(DIST)/bin/$(COMPONENTS_PATH)
 endif
@@ -1555,20 +1559,18 @@ endif
 endif # NO_INSTALL
 endif # NO_GEN_XPT
 
-endif # XPIDLSRCS || SDK_XPIDLSRCS
-
-ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS)$(_SUB_MODULE_XPIDLSRCS),)
 GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
-endif
+
+endif # XPIDLSRCS || SDK_XPIDLSRCS
 
 ifneq ($(XPIDLSRCS),)
 # export .idl files to $(IDL_DIR)
-process_xpidlsrcs export:: $(XPIDLSRCS) $(IDL_DIR)
+export:: $(XPIDLSRCS) $(IDL_DIR)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 endif
 
-process_xpidlsrcs export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(PUBLIC)
+export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(PUBLIC)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
@@ -1586,8 +1588,7 @@ endif
 
 endif # XPIDLSRCS
 
-%_module_xpidlsrcs:
-	$(MAKE) -e XPIDLSRCS="$($(*)_XPIDLSRCS)" XPIDL_MODULE="$(*)" MODULE=$(if $($(*)_MODULE),$($(*)_MODULE),$(MODULE)) process_xpidlsrcs
+
 
 #
 # General rules for exporting idl files.
