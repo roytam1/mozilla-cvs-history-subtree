@@ -359,7 +359,7 @@ nsStreamConverter::SetStreamURI(nsIURI *aURI)
 // networking library...
 //
 nsresult 
-nsStreamConverter::OnDataAvailable(nsISupports    *ctxt, 
+nsStreamConverter::OnDataAvailable(nsIChannel * /* aChannel */, nsISupports    *ctxt, 
                                    nsIInputStream *aIStream, 
                                    PRUint32       sourceOffset, 
                                    PRUint32       aLength)
@@ -419,7 +419,7 @@ char *output = "\
 // called only once, at the beginning of a URL load.
 //
 nsresult 
-nsStreamConverter::OnStartRequest(nsISupports *ctxt)
+nsStreamConverter::OnStartRequest(nsIChannel * /* aChannel */, nsISupports *ctxt)
 {
 #ifdef NS_DEBUG
     printf("nsStreamConverter::OnStartRequest()\n");
@@ -433,7 +433,7 @@ nsStreamConverter::OnStartRequest(nsISupports *ctxt)
 // called once when the networking library has finished processing the 
 //
 nsresult 
-nsStreamConverter::OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
+nsStreamConverter::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
 {
 #ifdef NS_DEBUG
     printf("nsStreamConverter::OnStopRequest()\n");
