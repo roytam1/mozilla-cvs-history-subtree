@@ -73,9 +73,14 @@ public:
   NS_IMETHOD           CaptureRollupEvents(nsIRollupListener * aListener,
                                            PRBool aDoCapture,
                                            PRBool aConsumeRollupEvent);
-  // XXX chris - do we need to override these?
-  // NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
-  // NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
+  NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
+  NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
+  void                 QueueDraw();
+  void                 UnqueueDraw();
+  void                 DoPaint(PRInt32 x, PRInt32 y, PRInt32 width, PRInt32 height,
+                               nsIRegion *aClipRegion);
+  static gboolean      UpdateIdle (gpointer data);
+  NS_IMETHOD           Update(void);
 #endif /* USE_SUPERWIN */
 
   gint                 ConvertBorderStyles(nsBorderStyle bs);
@@ -170,6 +175,7 @@ private:
   nsresult     SetIcon(GdkPixmap *window_pixmap, 
                        GdkBitmap *window_mask);
   nsresult     SetIcon();
+  PRBool       mIsUpdating;
 };
 
 //

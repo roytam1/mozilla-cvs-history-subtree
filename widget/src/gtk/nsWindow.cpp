@@ -69,6 +69,7 @@ nsWindow::nsWindow()
   
   mMenuBar = nsnull;
   mIsTooSmall = PR_FALSE;
+  mIsUpdating = PR_FALSE;
 }
 
 //-------------------------------------------------------------------------
@@ -86,6 +87,10 @@ nsWindow::~nsWindow()
   if (nsnull != mShell) {
     Destroy();
   }
+#ifdef USE_SUPERWIN
+  if (mIsUpdating)
+    UnqueueDraw();
+#endif
   NS_IF_RELEASE(mMenuBar);
 }
 
@@ -157,6 +162,64 @@ NS_IMETHODIMP nsWindow::Destroy()
 
 #ifdef USE_SUPERWIN
 
+// Routines implementing an update queue.
+// We keep a single queue for all widgets because it is 
+// (most likely) more efficient and better looking to handle
+// all the updates in one shot. Actually, this queue should
+// be at most per-toplevel. FIXME.
+//
+
+static GSList *update_queue = NULL;
+static guint update_idle = 0;
+
+gboolean 
+nsWindow::UpdateIdle (gpointer data)
+{
+  GSList *old_queue = update_queue;
+  GSList *tmp_list = old_queue;
+  
+  update_idle = 0;
+  update_queue = nsnull;
+  
+  while (tmp_list)
+  {
+    nsWindow *window = (nsWindow *)tmp_list->data;
+    
+    window->mIsUpdating = PR_FALSE;
+    window->Update();
+    
+    tmp_list = tmp_list->next;
+  }
+  
+  g_slist_free (old_queue);
+  
+  return PR_FALSE;
+}
+
+void
+nsWindow::QueueDraw ()
+{
+  if (!mIsUpdating)
+  {
+    update_queue = g_slist_prepend (update_queue, (gpointer)this);
+    if (!update_idle)
+      update_idle = g_idle_add_full (G_PRIORITY_HIGH_IDLE, 
+                                     UpdateIdle,
+                                     NULL, (GDestroyNotify)NULL);
+    mIsUpdating = PR_TRUE;
+  }
+}
+
+void
+nsWindow::UnqueueDraw ()
+{
+  if (mIsUpdating)
+  {
+    update_queue = g_slist_remove (update_queue, (gpointer)this);
+    mIsUpdating = PR_FALSE;
+  }
+}
+
 NS_IMETHODIMP nsWindow::GetAbsoluteBounds(nsRect &aRect)
 {
   gint x;
@@ -173,11 +236,83 @@ NS_IMETHODIMP nsWindow::GetAbsoluteBounds(nsRect &aRect)
   return NS_OK;
 }
 
+void 
+nsWindow::DoPaint (PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt32 aHeight,
+                   nsIRegion *aClipRegion)
+{
+  if (mEventCallback) 
+  {
+    nsPaintEvent event;
+    nsRect rect (aX, aY, aWidth, aHeight);
+ 
+    event.message = NS_PAINT;
+    event.widget = (nsWidget *)this;
+    event.eventStructType = NS_PAINT_EVENT;
+    event.point.x = aX;
+    event.point.y = aY; 
+    event.time = GDK_CURRENT_TIME; // No time in EXPOSE events
+    
+    event.rect = &rect;
+    event.region = nsnull;
+    
+    event.renderingContext = GetRenderingContext();
+    if (event.renderingContext)
+    {
+      PRBool rv;
+      
+      if (aClipRegion != nsnull)
+        event.renderingContext->SetClipRegion(NS_STATIC_CAST(const nsIRegion &, *aClipRegion),
+                                              nsClipCombine_kReplace, rv);
+      else
+      {
+        nsRect clipRect (aX, aY, aWidth, aHeight);
+        event.renderingContext->SetClipRect(clipRect,
+                                            nsClipCombine_kReplace, rv);
+      }
+      
+      DispatchWindowEvent(&event);
+      NS_RELEASE(event.renderingContext);
+    }
+  }
+}
+
+NS_IMETHODIMP nsWindow::Update(void)
+{
+  if (!mSuperWin)               // XXX ???
+    return NS_OK;
+
+  if (mIsUpdating)
+    UnqueueDraw();
+
+  if (!mUpdateArea->IsEmpty()) {
+    if (!mIsDestroying) {
+      PRInt32 x, y, width, height;
+
+      mUpdateArea->GetBoundingBox (&x, &y, &width, &height);
+      DoPaint (x, y, width, height, mUpdateArea);
+
+      mUpdateArea->SetTo(0, 0, 0, 0);
+      return NS_OK;
+    }
+    else {
+      return NS_ERROR_FAILURE;
+    }
+  }
+  else {
+    //  g_print("nsWidget::Update(this=%p): avoided update of empty area\n", this);
+  }
+ 
+  // While I'd think you should NS_RELEASE(aPaintEvent.widget) here,
+  // if you do, it is a NULL pointer.  Not sure where it is getting
+  // released.
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
                                             PRBool aDoCapture,
                                             PRBool aConsumeRollupEvent)
 {
-#ifdef DEBUG_pavlov
+#ifdef DEBUG_blizzard
   printf("nsWindow::CaptureRollupEvents() this = %p , doCapture = %i\n", this, aDoCapture);
 #endif
   GtkWidget *grabWidget;
@@ -233,6 +368,37 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
     //gRollupListener = nsnull;
     NS_IF_RELEASE(gRollupWidget);
   }
+  
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsWindow::Invalidate(PRBool aIsSynchronous)
+{
+
+  if (!mSuperWin)
+    return NS_OK;
+  
+  mUpdateArea->SetTo(mBounds.x, mBounds.y, mBounds.width, mBounds.height);
+  
+  if (aIsSynchronous)
+    Update();
+  else
+    QueueDraw();
+  
+  return NS_OK;
+}
+NS_IMETHODIMP nsWindow::Invalidate(const nsRect &aRect, PRBool aIsSynchronous)
+{
+
+  if (!mSuperWin)
+    return NS_OK;
+  
+  mUpdateArea->Union(aRect.x, aRect.y, aRect.width, aRect.height);
+
+  if (aIsSynchronous)
+    Update();
+  else
+    QueueDraw();
   
   return NS_OK;
 }
