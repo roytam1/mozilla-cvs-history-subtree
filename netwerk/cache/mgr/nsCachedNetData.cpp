@@ -130,8 +130,9 @@ StreamAsFile::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     }
 }
 
-// External clients of the cache can attach tagged pieces of meta-data to
-//   each cache-entry.  The tag is a NUL-terminated string.
+// External clients of the cache can attach tagged chunks of meta-data to each
+// cache-entry, which are stored in instances of this class.  The tag is a
+// NUL-terminated string.
 class CacheMetaData {
     CacheMetaData(const char *aTag):
 	    mTag(nsCRT::strdup(aTag)), mOpaqueBytes(0), mLength(0), mNext(0) {}
@@ -307,7 +308,7 @@ nsCachedNetData::NoteAccess()
         return;
 
     // Saturate access count at 16-bit limit
-    if (mNumAccesses < 0xFFFF)
+    if (mNumAccesses < 0xFF)
         mNumAccesses++;
 
     // Update array of recent access times
@@ -478,7 +479,7 @@ nsCachedNetData::Deserialize(bool aDeserializeFlags)
     if (aDeserializeFlags)
         mFlags = flags;
 
-    rv = binaryStream->Read16(&mNumAccesses);
+    rv = binaryStream->Read8(&mNumAccesses);
     if (NS_FAILED(rv)) return rv;
 
     for (int i = 0; i < MAX_K; i++) {
@@ -583,6 +584,18 @@ NS_IMETHODIMP
 nsCachedNetData::GetUpdateInProgress(PRBool *aUpdateInProgress)
 {
     return GetFlag(aUpdateInProgress, UPDATE_IN_PROGRESS);
+}
+
+NS_IMETHODIMP
+nsCachedNetData::GetInUse(PRBool *aInUse)
+{
+    nsresult rv;
+
+    rv = GetUpdateInProgress(aInUse);
+    if (NS_FAILED(rv)) return rv;
+    if (!*aInUse)
+        *aInUse = (mChannelCount != 0);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -753,7 +766,7 @@ nsCachedNetData::Commit(void)
     rv = binaryStream->Write16(mFlags);
     if (NS_FAILED(rv)) goto error;
 
-    rv = binaryStream->Write16(mNumAccesses);
+    rv = binaryStream->Write8(mNumAccesses);
     if (NS_FAILED(rv)) goto error;
 
     for (i = 0; i < MAX_K; i++) {
@@ -811,9 +824,9 @@ nsCachedNetData::FindTaggedMetaData(const char* aTag, PRBool aCreate)
 }
 
 NS_IMETHODIMP
-nsCachedNetData::GetProtocolPrivate(const char* aKey,
-                                    PRUint32* aProtocolDataLength,
-                                    char* *aProtocolData)
+nsCachedNetData::GetAnnotation(const char* aKey,
+                               PRUint32* aProtocolDataLength,
+                               char* *aProtocolData)
 {
     CHECK_AVAILABILITY();
 
@@ -832,9 +845,9 @@ nsCachedNetData::GetProtocolPrivate(const char* aKey,
 }
 
 NS_IMETHODIMP
-nsCachedNetData::SetProtocolPrivate(const char* aTag,
-                                    PRUint32 aLength,
-                                    const char *aProtocolData)
+nsCachedNetData::SetAnnotation(const char* aTag,
+                               PRUint32 aLength,
+                               const char *aProtocolData)
 {
     nsresult rv;
     CacheMetaData* metaData;
@@ -940,7 +953,6 @@ nsCachedNetData::Delete(void)
     // one from the cache manager and the caller of this method.
     if (mRefCnt <= 2) {
 
-        // FIXME - This isn't gonna work
         nsresult rv;
         nsCOMPtr<nsINetDataCacheRecord> record;
 
@@ -974,16 +986,20 @@ nsCachedNetData::Evict(PRUint32 aTruncatedContentLength)
     // Can only delete if all references are dropped excepting, of course, the
     // one from the cache manager.
     if (mRefCnt == 1) {
+
+        // If the protocol handler for this cache entry can't cope with a
+        // truncated record then we might as well blow it away completely to
+        // recover the space
+        if (!GetFlag(ALLOW_PARTIAL))
+            aTruncatedContentLength = 0;
+
         nsresult rv = record->SetStoredContentLength(aTruncatedContentLength);
         if (NS_FAILED(rv)) return rv;
 
         if (aTruncatedContentLength == 0) {
             SetFlag(VESTIGIAL);
-            ClearFlag(TRUNCATED_CONTENT);
-            // FIXME - delete meta-data ?
-        } else {
-            SetFlag(TRUNCATED_CONTENT);
         }
+        SetFlag(TRUNCATED_CONTENT);
         return NS_OK;
     }
 
@@ -1002,7 +1018,7 @@ nsCachedNetData::GetCache(nsINetDataCache* *aCache)
 }
 
 NS_IMETHODIMP
-nsCachedNetData::NewChannel(nsILoadGroup* aLoadGroup, nsIChannel* *aChannel)
+nsCachedNetData::NewChannel(nsILoadGroup* aLoadGroup, nsIChannel* aProxyChannel, nsIChannel* *aChannel)
 {
     nsresult rv;
     nsCOMPtr<nsIChannel> channel;
@@ -1012,10 +1028,15 @@ nsCachedNetData::NewChannel(nsILoadGroup* aLoadGroup, nsIChannel* *aChannel)
     rv =  mRecord->NewChannel(0, getter_AddRefs(channel));
     if (NS_FAILED(rv)) return rv;
 
-    *aChannel = new nsCacheEntryChannel(this, channel, aLoadGroup);
-    if (!*aChannel)
+    nsCacheEntryChannel *cacheEntryChannel;
+    cacheEntryChannel = new nsCacheEntryChannel(this, channel, aLoadGroup);
+    if (!cacheEntryChannel)
         return NS_ERROR_OUT_OF_MEMORY;
+    cacheEntryChannel->mProxyChannel = aProxyChannel;
+
+    *aChannel = cacheEntryChannel;
     NS_ADDREF(*aChannel);
+
     return NS_OK;
 }
 
@@ -1041,7 +1062,7 @@ public:
     nsresult Init(PRUint32 aStartingOffset) {
         nsresult rv;
 
-        rv = mCacheEntry->NewChannel(0, getter_AddRefs(mChannel));
+        rv = mCacheEntry->NewChannel(0, 0, getter_AddRefs(mChannel));
         if (NS_FAILED(rv)) return rv;
 
         return mChannel->OpenOutputStream(aStartingOffset, getter_AddRefs(mCacheStream));

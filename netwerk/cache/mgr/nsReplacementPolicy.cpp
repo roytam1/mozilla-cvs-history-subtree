@@ -61,7 +61,7 @@ nsReplacementPolicy::Init(PRUint32 aMaxCacheEntries)
 {
     nsresult rv;
 
-    rv = NS_NewHeapArena(getter_AddRefs(mArena), sizeof nsCachedNetData * 32);
+    rv = NS_NewHeapArena(getter_AddRefs(mArena), sizeof(nsCachedNetData) * 32);
     if (NS_FAILED(rv)) return rv;
 
     mMaxEntries = aMaxCacheEntries;
@@ -231,7 +231,7 @@ nsCachedNetData::NoteDownloadTime(PRTime start, PRTime end)
  * following paper:
  *
  *    "A Case for Delay-Conscious Caching of Web Documents"
- *    http://www.eecs.nwu.edu/EXTERNAL/dbwww/papers/www97/www97.html
+ *    http://www.bell-labs.com/user/rvingral/www97.html
  *
  * Briefly, expected profit is:
  *

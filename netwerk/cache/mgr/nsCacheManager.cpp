@@ -36,6 +36,10 @@
 #define MAX_MEM_CACHE_ENTRIES    800
 #define MAX_DISK_CACHE_ENTRIES  3200
 
+// Cache capacities in MB, overridable via APIs
+#define DEFAULT_MEMORY_CACHE_CAPACITY  2000
+#define DEFAULT_DISK_CACHE_CAPACITY   10000
+
 #define CACHE_HIGH_WATER_MARK(capacity) ((PRUint32)(0.98 * (capacity)))
 #define CACHE_LOW_WATER_MARK(capacity)  ((PRUint32)(0.97 * (capacity)))
 
@@ -45,8 +49,8 @@ NS_IMPL_ISUPPORTS(nsCacheManager, NS_GET_IID(nsINetDataCacheManager))
 
 nsCacheManager::nsCacheManager()
     : mActiveCacheRecords(0),
-    mDiskCacheCapacity((PRUint32)-1),
-    mMemCacheCapacity((PRUint32)-1)
+    mDiskCacheCapacity(DEFAULT_DISK_CACHE_CAPACITY),
+    mMemCacheCapacity(DEFAULT_MEMORY_CACHE_CAPACITY)
 {
     NS_ASSERTION(!gCacheManager, "Multiple cache managers created");
     gCacheManager = this;
@@ -90,13 +94,16 @@ nsCacheManager::Init()
             return rv;
     }
 
+#ifdef FILE_CACHE_IS_READY
     // Instantiate the file cache component
     rv = nsComponentManager::CreateInstance(NS_NETWORK_FILE_CACHE_PROGID,
                                             nsnull,
                                             NS_GET_IID(nsINetDataCache),
                                             getter_AddRefs(mFileCache));
-    if (NS_FAILED(rv))
-        return rv;
+    if (NS_FAILED(rv)) {
+        NS_WARNING("No disk cache present");
+    }
+#endif
 
     // Set up linked list of caches in search order
     mCacheSearchChain = mMemCache;
@@ -124,8 +131,10 @@ nsCacheManager::Init()
         return NS_ERROR_OUT_OF_MEMORY;
     rv = mDiskSpaceManager->Init(MAX_DISK_CACHE_ENTRIES);
     if (NS_FAILED(rv)) return rv;
-    rv = mDiskSpaceManager->AddCache(mFileCache);
-    if (NS_FAILED(rv)) return rv;
+    if (mFileCache) {
+        rv = mDiskSpaceManager->AddCache(mFileCache);
+        if (NS_FAILED(rv)) return rv;
+    }
     if (mFlatCache) {
         rv = mDiskSpaceManager->AddCache(mFlatCache);
         if (NS_FAILED(rv)) return rv;
@@ -155,17 +164,9 @@ nsCacheManager::GetCachedNetData(const char *aUriSpec, const char *aSecondaryKey
     } else if ((aFlags & BYPASS_PERSISTENT_CACHE) || !mDiskCacheCapacity) {
         cache = mMemCache;
         spaceManager = mMemSpaceManager;
-
-        // Ensure that cache is initialized
-        // FIXME - temporary comment out              if (mMemCacheCapacity == (PRUint32)-1)
-        // return NS_ERROR_NOT_AVAILABLE;
     } else {
         cache = mFlatCache ? mFlatCache : mFileCache;
         spaceManager = mDiskSpaceManager;
-
-        // Ensure that cache is initialized
-        if (mDiskCacheCapacity == (PRUint32)-1)
-            return NS_ERROR_NOT_AVAILABLE;
     }
 
     // Construct the cache key by appending the secondary key to the URI spec
@@ -216,7 +217,7 @@ nsCacheManager::NoteDormant(nsCachedNetData* aEntry)
     
     nsStringKey hashTableKey(nsCString(key, keyLength));
     deletedEntry = (nsCachedNetData*)gCacheManager->mActiveCacheRecords->Remove(&hashTableKey);
-// FIXME    NS_ASSERTION(deletedEntry == aEntry, "Hash table inconsistency");
+    NS_ASSERTION(deletedEntry == aEntry, "Hash table inconsistency");
     return NS_OK;
 }
 
@@ -232,7 +233,8 @@ nsCacheManager::Contains(const char *aUriSpec, const char *aSecondaryKey,
     if (aFlags & CACHE_AS_FILE) {
         cache = mFileCache;
         spaceManager = mDiskSpaceManager;
-    } else if ((aFlags & BYPASS_PERSISTENT_CACHE) || !mDiskCacheCapacity) {
+    } else if ((aFlags & BYPASS_PERSISTENT_CACHE) ||
+               (!mFileCache && !mFlatCache) || !mDiskCacheCapacity) {
         cache = mMemCache;
         spaceManager = mMemSpaceManager;
     } else {

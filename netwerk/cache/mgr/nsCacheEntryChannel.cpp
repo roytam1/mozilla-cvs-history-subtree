@@ -29,6 +29,20 @@
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 
+nsCacheEntryChannel::nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel,
+                                         nsILoadGroup* aLoadGroup):
+    nsChannelProxy(aChannel), mCacheEntry(aCacheEntry), mLoadGroup(aLoadGroup), mLoadAttributes(0)
+{
+    NS_ASSERTION(aCacheEntry->mChannelCount < 0xFF, "Overflowed channel counter");
+    mCacheEntry->mChannelCount++;
+    NS_INIT_REFCNT();
+}
+
+nsCacheEntryChannel::~nsCacheEntryChannel()
+{
+    mCacheEntry->mChannelCount--;
+}
+
 NS_IMPL_ISUPPORTS3(nsCacheEntryChannel, nsISupports, nsIChannel, nsIRequest)
 
 // A proxy for nsIOutputStream
@@ -101,16 +115,16 @@ nsCacheEntryChannel::OpenInputStream(PRUint32 aStartPosition, PRInt32 aReadCount
     return mChannel->OpenInputStream(aStartPosition, aReadCount, aInputStream);
 }
 
-class LoadGroupInterceptor: public nsIStreamListener  {
+class CacheManagerStreamListener: public nsIStreamListener  {
 
     public:
     
-    LoadGroupInterceptor(nsIStreamListener *aListener,
-                         nsILoadGroup *aLoadGroup, nsIChannel *aChannel):
+    CacheManagerStreamListener(nsIStreamListener *aListener,
+                               nsILoadGroup *aLoadGroup, nsIChannel *aChannel):
         mListener(aListener), mLoadGroup(aLoadGroup), mChannel(aChannel)
         { NS_INIT_REFCNT(); }
 
-    virtual ~LoadGroupInterceptor() {}
+    virtual ~CacheManagerStreamListener() {}
 
     private:
 
@@ -146,7 +160,7 @@ class LoadGroupInterceptor: public nsIStreamListener  {
     nsCOMPtr<nsIChannel>         mChannel;
 };
 
-NS_IMPL_ISUPPORTS2(LoadGroupInterceptor, nsIStreamListener, nsIStreamObserver)
+NS_IMPL_ISUPPORTS2(CacheManagerStreamListener, nsIStreamListener, nsIStreamObserver)
 
 NS_IMETHODIMP
 nsCacheEntryChannel::AsyncRead(PRUint32 aStartPosition, PRInt32 aReadCount,
@@ -168,18 +182,23 @@ nsCacheEntryChannel::AsyncRead(PRUint32 aStartPosition, PRInt32 aReadCount,
                                                   getter_AddRefs(headListener));
             if (NS_FAILED(rv)) return rv;
         }
+
     } else {
         headListener = aListener;
     }
 
-    LoadGroupInterceptor* loadGroupInterceptor =
-        new LoadGroupInterceptor(headListener, mLoadGroup, this);
-    if (!loadGroupInterceptor) return NS_ERROR_OUT_OF_MEMORY;
+    CacheManagerStreamListener* cacheManagerStreamListener;
+    nsIChannel *channelForListener;
 
-    NS_ADDREF(loadGroupInterceptor);
+    channelForListener = mProxyChannel ? mProxyChannel : this;
+    cacheManagerStreamListener =
+        new CacheManagerStreamListener(headListener, mLoadGroup, channelForListener);
+    if (!cacheManagerStreamListener) return NS_ERROR_OUT_OF_MEMORY;
+    
+    NS_ADDREF(cacheManagerStreamListener);
     rv = mChannel->AsyncRead(aStartPosition, aReadCount, aContext,
-                             loadGroupInterceptor);
-    NS_RELEASE(loadGroupInterceptor);
+                             cacheManagerStreamListener);
+    NS_RELEASE(cacheManagerStreamListener);
 
     return rv;
 }
@@ -191,6 +210,13 @@ nsCacheEntryChannel::AsyncWrite(nsIInputStream *aFromStream, PRUint32 aStartPosi
 				nsIStreamObserver *aObserver)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsCacheEntryChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
+{
+    *aLoadGroup = mLoadGroup;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -224,4 +250,11 @@ nsCacheEntryChannel::GetURI(nsIURI * *aURI)
     rv = serv->NewURI(spec, 0, aURI);
     nsAllocator::Free(spec);
     return rv;
+}
+
+NS_IMETHODIMP
+nsCacheEntryChannel::GetOriginalURI(nsIURI * *aURI)
+{
+    // FIXME - should return original URI passed into NewChannel() ?
+    return NS_ERROR_NOT_IMPLEMENTED;
 }

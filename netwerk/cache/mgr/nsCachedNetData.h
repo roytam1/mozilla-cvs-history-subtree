@@ -170,11 +170,14 @@ private:
     nsCachedNetData* mNext;
     
     // See flag bits, above
-    // NOTE: 16 bit member is combined with 16-bit mNumAccesses below for
+    // NOTE: 16 bit member is combined with members below for
     //       struct packing efficiency.  Do not change order of members!
     PRUint16    mFlags;
 
 protected:
+
+    // Number of nsCacheEntryChannels referring to this record
+    PRUint8     mChannelCount;
 
     // Below members are statistics kept per cache-entry, used to decide how
     // profitable it will be to evict a record from the cache relative to other
@@ -182,9 +185,9 @@ protected:
     // 1/1/70 epoch, same as a unix time_t.
 
     // Number of accesses for this cache record
-    // NOTE: 16 bit member is combined with 16-bit mFlags above for
+    // NOTE: 8 bit member is combined with members above for
     //       struct packing efficiency.  Do not change order of members!
-    PRUint16    mNumAccesses;
+    PRUint8     mNumAccesses;
 
     // A reference to the underlying, raw cache database record, either as a
     // pointer to an in-memory object or as a database record identifier

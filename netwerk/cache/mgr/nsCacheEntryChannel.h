@@ -32,7 +32,7 @@
 
 class nsIStreamListener;
 
-// A proxy for an nsIChannel, useful when only one or two nsIChannel
+// A proxy for an nsIChannel, useful when only a few nsIChannel
 // methods must be overridden
 class nsChannelProxy : public nsIChannel {
 
@@ -62,22 +62,20 @@ public:
 			  nsIStreamObserver *aObserver);
     NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes);
     NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes);
+    NS_IMETHOD GetLoadGroup(nsILoadGroup* *aLoadGroup);
     NS_IMETHOD GetURI(nsIURI * *aURI);
+    NS_IMETHOD GetOriginalURI(nsIURI * *aURI);
 
 protected:
-    nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel,
-                        nsILoadGroup* aLoadGroup):
-        nsChannelProxy(aChannel), mCacheEntry(aCacheEntry),
-        mLoadGroup(aLoadGroup), mLoadAttributes(0) {
-        NS_INIT_REFCNT();
-    }
-    virtual ~nsCacheEntryChannel() {};
+    nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+    virtual ~nsCacheEntryChannel();
 
     friend class nsCachedNetData;
 
 private:
     nsCOMPtr<nsCachedNetData>    mCacheEntry;
     nsCOMPtr<nsILoadGroup>       mLoadGroup;
+    nsCOMPtr<nsIChannel>         mProxyChannel;
     nsLoadFlags                  mLoadAttributes;
 };
 
