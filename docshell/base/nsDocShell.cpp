@@ -3067,7 +3067,8 @@ NS_IMETHODIMP nsDocShell::SetupNewViewer(nsIContentViewer* aNewViewer)
 
                 if (vm) {
                     vm->GetDefaultBackgroundColor(&bgcolor);
-                    bgSet = PR_TRUE;
+                    // If the background color is not known, don't propagate it.
+                    bgSet = NS_GET_A(bgcolor) != 0;
                 }
             }
   }
