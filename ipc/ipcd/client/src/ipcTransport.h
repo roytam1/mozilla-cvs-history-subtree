@@ -49,9 +49,6 @@
 
 #if defined(XP_UNIX) || defined(XP_OS2)
 #include "ipcTransportUnix.h"
-typedef nsISocketEventHandler ipcTransportSuper;
-#else
-typedef nsISupports ipcTransportSuper;
 #endif
 
 //----------------------------------------------------------------------------
@@ -70,7 +67,7 @@ public:
 // ipcTransport
 //-----------------------------------------------------------------------------
 
-class ipcTransport : public ipcTransportSuper
+class ipcTransport : public nsISupports
 {
 public:
     NS_DECL_ISUPPORTS
@@ -145,19 +142,20 @@ private:
     PRUint32               mClientID;
 
 #if defined(XP_UNIX) || defined(XP_OS2)
-    nsCOMPtr<nsIInputStreamNotify> mReceiver;
-    nsCOMPtr<nsISocketTransport>   mTransport;
-    nsCOMPtr<nsIInputStream>       mInputStream;
-    nsCOMPtr<nsIOutputStream>      mOutputStream;
+    nsCOMPtr<nsIInputStreamCallback> mReceiver;
+    nsCOMPtr<nsISocketTransport>     mTransport;
+    nsCOMPtr<nsIInputStream>         mInputStream;
+    nsCOMPtr<nsIOutputStream>        mOutputStream;
 
     //
     // unix specific helpers
     //
     nsresult CreateTransport();
     nsresult GetSocketPath(nsACString &);
+    nsresult PostEvent(PRUint32 type, void *param);
 
 public:
-    NS_DECL_NSISOCKETEVENTHANDLER
+    void OnSocketEvent(PRUint32 type, void *param);
 
     //
     // internal helper methods

@@ -78,6 +78,7 @@ ipcIOLayerConnect(PRFileDesc* fd, const PRNetAddr* a, PRIntervalTime timeout)
     if (status != PR_SUCCESS)
         return status;
 
+#ifndef XP_OS2
     //
     // now that we have a connected socket; do some security checks on the
     // file descriptor.
@@ -116,6 +117,7 @@ ipcIOLayerConnect(PRFileDesc* fd, const PRNetAddr* a, PRIntervalTime timeout)
             return PR_FAILURE;
         }
     }
+#endif
 
     return PR_SUCCESS;
 }

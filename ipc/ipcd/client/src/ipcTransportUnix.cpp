@@ -49,6 +49,7 @@
 #include "nsNetCID.h"
 #include "nsNetError.h"
 #include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
 
 #include "ipcConfig.h"
 #include "ipcLog.h"
@@ -60,12 +61,38 @@ static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
 #define IPC_BUFFER_SEGMENT_SIZE 4096
 
-// for use with nsISocketTransportService::PostEvent
 enum {
     IPC_TRANSPORT_EVENT_CONNECT,
     IPC_TRANSPORT_EVENT_DISCONNECT,
     IPC_TRANSPORT_EVENT_SENDMSG
 };
+
+#if defined(XP_UNIX) || defined(XP_OS2)
+struct ipcEvent : PLEvent
+{
+    ipcEvent(ipcTransport *transport, PRUint32 type, void *param)
+        : mTransport(transport)
+        , mType(type)
+    {
+        PL_InitEvent(this, param, HandleEvent, DestroyEvent);
+    }
+
+    PR_STATIC_CALLBACK(void*) HandleEvent(PLEvent *event)
+    {
+        ipcEvent *self = (ipcEvent *) event;
+        self->mTransport->OnSocketEvent(self->mType, event->owner);
+        return nsnull;
+    }
+
+    PR_STATIC_CALLBACK(void) DestroyEvent(PLEvent *event)
+    {
+        delete (ipcEvent *) event;
+    }
+
+    nsRefPtr<ipcTransport> mTransport;
+    PRUint32               mType;
+};
+#endif
 
 //-----------------------------------------------------------------------------
 // ipcTransport (XP_UNIX specific methods)
@@ -116,11 +143,7 @@ ipcTransport::SendMsg_Internal(ipcMessage *msg)
     
     if (nsIThread::IsMainThread()) {
         LOG(("  proxy to socket thread\n"));
-        nsresult rv;
-        nsCOMPtr<nsISocketTransportService> sts(
-                do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
-        if (NS_FAILED(rv)) return rv;
-        return sts->PostEvent(this, IPC_TRANSPORT_EVENT_SENDMSG, 0, msg);
+        return PostEvent(IPC_TRANSPORT_EVENT_SENDMSG, msg);
     }
 
     NS_ENSURE_TRUE(mOutputStream, NS_ERROR_NOT_INITIALIZED);
@@ -155,10 +178,7 @@ ipcTransport::Connect()
     nsresult rv;
     if (nsIThread::IsMainThread()) {
         LOG(("  proxy to socket thread\n"));
-        nsCOMPtr<nsISocketTransportService> sts(
-                do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
-        if (NS_FAILED(rv)) return rv;
-        return sts->PostEvent(this, IPC_TRANSPORT_EVENT_CONNECT, 0, nsnull);
+        return PostEvent(IPC_TRANSPORT_EVENT_CONNECT, nsnull);
     }
 
     rv = CreateTransport();
@@ -182,7 +202,7 @@ ipcTransport::Connect()
             return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    return asyncIn->AsyncWait(mReceiver, 0, nsnull);
+    return asyncIn->AsyncWait(mReceiver, 0, 0, nsnull);
 #else
     return NS_ERROR_NOT_IMPLEMENTED;
 #endif
@@ -195,11 +215,7 @@ ipcTransport::Disconnect()
 #if defined(XP_UNIX) || defined(XP_OS2)
     if (nsIThread::IsMainThread()) {
         LOG(("  proxy to socket thread\n"));
-        nsresult rv;
-        nsCOMPtr<nsISocketTransportService> sts(
-                do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
-        if (NS_FAILED(rv)) return rv;
-        return sts->PostEvent(this, IPC_TRANSPORT_EVENT_DISCONNECT, 0, nsnull);
+        return PostEvent(IPC_TRANSPORT_EVENT_DISCONNECT, nsnull);
     }
 
     mHaveConnection = PR_FALSE;
@@ -287,12 +303,30 @@ ipcTransport::GetSocketPath(nsACString &socketPath)
     return NS_OK;
 }
 
+nsresult
+ipcTransport::PostEvent(PRUint32 type, void *param)
+{
+    PLEvent *event = new ipcEvent(this, type, param);
+    if (!event)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsresult rv;
+    nsCOMPtr<nsIEventTarget> target =
+            do_GetService(kSocketTransportServiceCID, &rv); // XXX cache service
+    if (NS_FAILED(rv)) return rv;
+
+    rv = target->PostEvent(event);
+    if (NS_FAILED(rv))
+        PL_DestroyEvent(event);
+    return rv;
+}
+
 //----------------------------------------------------------------------------
-// ipcTransport::nsISocketEventHandler
+// ipcTransport event handler
 //----------------------------------------------------------------------------
 
-NS_IMETHODIMP
-ipcTransport::OnSocketEvent(PRUint32 type, PRUint32 uparam, void *vparam)
+void
+ipcTransport::OnSocketEvent(PRUint32 type, void *param)
 {
     switch (type) {
     case IPC_TRANSPORT_EVENT_CONNECT:
@@ -302,10 +336,9 @@ ipcTransport::OnSocketEvent(PRUint32 type, PRUint32 uparam, void *vparam)
         Disconnect();
         break;
     case IPC_TRANSPORT_EVENT_SENDMSG:
-        SendMsg_Internal((ipcMessage *) vparam);
+        SendMsg_Internal((ipcMessage *) param);
         break;
     }
-    return NS_OK;
 }
 #endif
 
@@ -313,7 +346,7 @@ ipcTransport::OnSocketEvent(PRUint32 type, PRUint32 uparam, void *vparam)
 // ipcReceiver
 //----------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(ipcReceiver, nsIInputStreamNotify)
+NS_IMPL_THREADSAFE_ISUPPORTS1(ipcReceiver, nsIInputStreamCallback)
 
 NS_METHOD
 ipcReceiver::ReadSegment(nsIInputStream *stream,
@@ -376,7 +409,7 @@ ipcReceiver::OnInputStreamReady(nsIAsyncInputStream *stream)
     }
 
     // continue reading...
-    return stream->AsyncWait(this, 0, nsnull);
+    return stream->AsyncWait(this, 0, 0, nsnull);
 #else
     return NS_ERROR_NOT_IMPLEMENTED;
 #endif

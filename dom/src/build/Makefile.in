@@ -45,7 +45,6 @@ REQUIRES	= xpcom \
 		  commandhandler \
 		  xuldoc \
 		  docshell \
-		  sidebar \
 		  plugin \
 		  necko \
 		  jsurl \

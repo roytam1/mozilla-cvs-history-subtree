@@ -290,7 +290,6 @@ endif
 ifeq ($(OS_ARCH),OS2)
 ifdef BUILD_STATIC_LIBS
 EXE_DEF_FILE = mozilla.def
-OS_LIBS += -llibuni -luconv
 endif
 endif
 

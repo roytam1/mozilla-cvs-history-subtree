@@ -651,8 +651,6 @@ xpfe/components/directory/Makefile
 xpfe/components/download-manager/Makefile
 xpfe/components/download-manager/src/Makefile
 xpfe/components/download-manager/public/Makefile
-xpfe/components/timebomb/Makefile
-xpfe/components/timebomb/tools/Makefile
 xpfe/components/find/Makefile
 xpfe/components/find/public/Makefile
 xpfe/components/find/src/Makefile
@@ -721,6 +719,7 @@ xpfe/global/resources/content/os2/Makefile
 xpfe/global/resources/content/unix/Makefile
 xpfe/global/resources/locale/Makefile
 xpfe/global/resources/locale/en-US/Makefile
+xpfe/global/resources/locale/en-US/region.dtd
 xpfe/global/resources/locale/en-US/mac/Makefile
 xpfe/global/resources/locale/en-US/os2/Makefile
 xpfe/global/resources/locale/en-US/unix/Makefile
@@ -922,6 +921,14 @@ mail/extensions/Makefile
 mail/extensions/smime/Makefile
 mail/extensions/offline/Makefile
 mail/config/Makefile
+xpfe/components/build2/Makefile
+"
+
+MAKEFILES_standalone_composer="
+composer/Makefile
+composer/app/Makefile
+composer/app/profile/Makefile
+composer/base/Makefile
 xpfe/components/build2/Makefile
 "
 
@@ -1401,6 +1408,10 @@ fi
 
 if test -n "$MOZ_THUNDERBIRD"; then
     add_makefiles "$MAKEFILES_thunderbird"
+fi
+
+if test -n "$MOZ_STANDALONE_COMPOSER"; then
+    add_makefiles "$MAKEFILES_standalone_composer"
 fi
 
 if test -n "$MOZ_IPCD"; then

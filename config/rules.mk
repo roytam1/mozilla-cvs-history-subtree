@@ -264,9 +264,9 @@ endif
 ALL_TRASH = \
 	$(GARBAGE) $(TARGETS) $(OBJS) $(PROGOBJS) LOGS TAGS a.out \
 	$(HOST_PROGOBJS) $(HOST_OBJS) $(IMPORT_LIBRARY) $(DEF_FILE)\
-	$(EXE_DEF_FILE) so_locations _gen _stubs $(wildcard *.res) \
+	$(EXE_DEF_FILE) so_locations _gen _stubs $(wildcard *.res) $(wildcard *.RES) \
 	$(wildcard *.pdb) $(CODFILE) $(MAPFILE) $(IMPORT_LIBRARY) \
-	$(SHARED_LIBRARY:$(DLL_SUFFIX)=.exp) \
+	$(SHARED_LIBRARY:$(DLL_SUFFIX)=.exp) $(wildcard *.ilk) \
 	$(PROGRAM:$(BIN_SUFFIX)=.exp) $(SIMPLE_PROGRAMS:$(BIN_SUFFIX)=.exp) \
 	$(PROGRAM:$(BIN_SUFFIX)=.lib) $(SIMPLE_PROGRAMS:$(BIN_SUFFIX)=.lib) \
 	$(SIMPLE_PROGRAMS:$(BIN_SUFFIX)=.$(OBJ_SUFFIX)) \
@@ -521,7 +521,7 @@ endif
 ifeq ($(OS_ARCH),WINNT)
 ifdef GNU_CC
 ifndef IS_COMPONENT
-DSO_LDOPTS += -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY)
+DSO_LDOPTS += -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY)  -Wl,-enable-runtime-pseudo-reloc
 endif
 endif
 endif
@@ -974,7 +974,7 @@ ifeq ($(IS_COMPONENT),1)
 ifeq ($(HAS_EXTRAEXPORTS),1)
 	$(FILTER) $(OBJS) $(SHARED_LIBRARY_LIBS) >> $@
 else
-	echo    NSGetModule >> $@
+	echo    _NSGetModule >> $@
 endif
 else
 	$(FILTER) $(OBJS) $(SHARED_LIBRARY_LIBS) >> $@
@@ -997,7 +997,9 @@ SUB_SHLOBJS = $(SUB_LOBJS)
 endif
 
 $(SHARED_LIBRARY): $(OBJS) $(LOBJS) $(DEF_FILE) $(RESFILE) $(SHARED_LIBRARY_LIBS) $(EXTRA_DEPS) Makefile Makefile.in
+ifndef INCREMENTAL_LINKER
 	rm -f $@
+endif
 ifneq ($(MOZ_OS2_TOOLS),VACPP)
 ifeq ($(OS_ARCH),OpenVMS)
 	@if test ! -f $(VMS_SYMVEC_FILE); then \
