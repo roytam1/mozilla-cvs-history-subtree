@@ -185,8 +185,6 @@ protected:
     // Script tag handling
     nsresult OpenScript(const nsIParserNode& aNode);
 
-    PRBool mInScript;
-
     // Style sheets
     nsresult ProcessStyleLink(nsIContent* aElement,
                               const nsString& aHref,
@@ -222,7 +220,7 @@ protected:
         PRInt32 Depth() { return mDepth; }
 
         nsresult Push(nsXULPrototypeNode* aNode, State aState);
-        nsresult Pop(nsXULPrototypeNode** aNode, nsVoidArray* aChildren, State* aState);
+        nsresult Pop(State* aState);
 
         nsresult GetTopNode(nsXULPrototypeNode** aNode);
         nsresult GetTopChildren(nsVoidArray** aChildren);
@@ -289,9 +287,7 @@ XULContentSinkImpl::ContextStack::Push(nsXULPrototypeNode* aNode, State aState)
 }
 
 nsresult
-XULContentSinkImpl::ContextStack::Pop(nsXULPrototypeNode** aNode,
-                                      nsVoidArray* aChildren,
-                                      State* aState)
+XULContentSinkImpl::ContextStack::Pop(State* aState)
 {
     if (mDepth == 0)
         return NS_ERROR_UNEXPECTED;
@@ -300,15 +296,12 @@ XULContentSinkImpl::ContextStack::Pop(nsXULPrototypeNode** aNode,
     mTop = mTop->mNext;
     --mDepth;
 
-    *aNode  = entry->mNode;
     *aState = entry->mState;
-
-    for (PRInt32 i = 0; i < entry->mChildren.Count(); ++i)
-        aChildren->AppendElement(entry->mChildren[i]);
-
     delete entry;
+
     return NS_OK;
 }
+
 
 nsresult
 XULContentSinkImpl::ContextStack::GetTopNode(nsXULPrototypeNode** aNode)
@@ -363,7 +356,6 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
       mTextLength(0),
       mTextSize(0),
       mConstrainSize(PR_TRUE),
-      mInScript(PR_FALSE),
       mState(eInProlog),
       mParser(nsnull),
       mStyleSheetCount(0)
@@ -455,17 +447,25 @@ XULContentSinkImpl::~XULContentSinkImpl()
     // any remaining content elements. The context stack _should_ be
     // empty, unless something has gone wrong.
     while (mContextStack.Depth()) {
-        nsXULPrototypeNode* node;
-        nsVoidArray children;
-        State state;
-        mContextStack.Pop(&node, &children, &state);
+        nsresult rv;
 
-        for (PRInt32 i = children.Count() - 1; i >= 0; --i) {
-            nsXULPrototypeNode* child = NS_REINTERPRET_CAST(nsXULPrototypeNode*, children[i]);
-            delete child;
+        nsVoidArray* children;
+        rv = mContextStack.GetTopChildren(&children);
+        if (NS_SUCCEEDED(rv)) {
+            for (PRInt32 i = children->Count() - 1; i >= 0; --i) {
+                nsXULPrototypeNode* child =
+                    NS_REINTERPRET_CAST(nsXULPrototypeNode*, children->ElementAt(i));
+
+                delete child;
+            }
         }
 
-        delete node;
+        nsXULPrototypeNode* node;
+        rv = mContextStack.GetTopNode(&node);
+        if (NS_SUCCEEDED(rv)) delete node;
+
+        State state;
+        mContextStack.Pop(&state);
     }
 
     PR_FREEIF(mText);
@@ -678,44 +678,48 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
     }
 #endif
 
-    // Flush any text _now_, so that we'll get text nodes created
-    // before popping the stack.
-    FlushText();
-
-    // Pop the context stack and do prototype hookup.
     nsXULPrototypeNode* node;
-    nsVoidArray children;
-    rv = mContextStack.Pop(&node, &children, &mState);
+    rv = mContextStack.GetTopNode(&node);
 
+    if (NS_FAILED(rv)) {
 #ifdef PR_LOGGING
-    if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
-        char* tagStr = aNode.GetText().ToNewCString();
-        PR_LOG(gLog, PR_LOG_ALWAYS,
-               ("xul: extra close tag '</%s>' at line %d\n",
-                tagStr, aNode.GetSourceLineNumber()));
-        nsCRT::free(tagStr);
-    }
+        if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
+            char* tagStr = aNode.GetText().ToNewCString();
+            PR_LOG(gLog, PR_LOG_ALWAYS,
+                   ("xul: extra close tag '</%s>' detected at line %d\n",
+                    tagStr, aNode.GetSourceLineNumber()));
+            nsCRT::free(tagStr);
+        }
 #endif
+
+        return NS_OK;
+    }
 
     switch (node->mType) {
     case nsXULPrototypeNode::eType_Element: {
+        // Flush any text _now_, so that we'll get text nodes created
+        // before popping the stack.
+        FlushText();
+
+        // Pop the context stack and do prototype hookup.
+        nsVoidArray* children;
+        rv = mContextStack.GetTopChildren(&children);
+        if (NS_FAILED(rv)) return rv;
+
         nsXULPrototypeElement* element =
             NS_REINTERPRET_CAST(nsXULPrototypeElement*, node);
 
-        if (children.Count()) {
-            element->mChildren = new nsXULPrototypeNode*[children.Count()];
+        PRInt32 count = children->Count();
+        if (count) {
+            element->mChildren = new nsXULPrototypeNode*[count];
             if (! element->mChildren)
                 return NS_ERROR_OUT_OF_MEMORY;
 
-            for (PRInt32 i = children.Count() - 1; i >= 0; --i)
-                element->mChildren[i] = NS_REINTERPRET_CAST(nsXULPrototypeNode*, children[i]);
+            for (PRInt32 i = count - 1; i >= 0; --i)
+                element->mChildren[i] =
+                    NS_REINTERPRET_CAST(nsXULPrototypeNode*, children->ElementAt(i));
 
-            element->mNumChildren = children.Count();
-        }
-
-        if (mContextStack.Depth() == 0) {
-            rv = mPrototype->SetRootElement(element);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set document root");
+            element->mNumChildren = count;
         }
     }
     break;
@@ -726,6 +730,8 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
 
         script->mInlineScript.SetString(mText, mTextLength);
         script->mInlineScript.Trim(" \t\n\r");
+
+        FlushText(PR_FALSE);
     }
     break;
 
@@ -733,6 +739,10 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         NS_ERROR("didn't expect that");
         break;
     }
+
+    rv = mContextStack.Pop(&mState);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "context stack corrupted");
+    if (NS_FAILED(rv)) return rv;
 
     PopNameSpaces();
 
@@ -1424,6 +1434,10 @@ XULContentSinkImpl::OpenRoot(const nsIParserNode& aNode, PRInt32 aNameSpaceID, n
     rv = AddAttributes(aNode, element);
     if (NS_FAILED(rv)) return rv;
 
+    rv = mPrototype->SetRootElement(element);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set document root");
+    if (NS_FAILED(rv)) return rv;
+
     mState = eInDocumentElement;
     return NS_OK;
 }
@@ -1531,7 +1545,6 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
             script->mSrcURI = url;
         }
 
-        mInScript = PR_TRUE;
         mConstrainSize = PR_FALSE;
 
         mContextStack.Push(script, mState);
