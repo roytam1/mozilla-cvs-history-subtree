@@ -152,6 +152,10 @@ OBJS += $(RES)
 endif
 endif
 
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+EXTRA_LIBS := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_LIBS))
+endif
+
 ALL_TRASH		= $(TARGETS) $(OBJS) $(filter-out . .., $(OBJDIR)) LOGS TAGS $(GARBAGE) \
 			  $(NOSUCHFILE) \
 			  so_locations
