@@ -39,10 +39,10 @@
 #define nsIComboboxControlFrame_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 #include "nsFont.h"
 
 class nsIPresContext;
-class nsString;
 class nsIContent;
 class nsVoidArray;
 class nsCSSFrameConstructor;

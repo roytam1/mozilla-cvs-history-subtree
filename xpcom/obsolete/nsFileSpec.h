@@ -223,8 +223,6 @@ class nsOutputFileStream;
 class nsInputFileStream;
 class nsOutputConsoleStream;
 
-class nsString;
-
 class nsIUnicodeEncoder;
 class nsIUnicodeDecoder;
 

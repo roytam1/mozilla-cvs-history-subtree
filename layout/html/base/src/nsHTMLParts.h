@@ -40,6 +40,7 @@
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsReflowType.h"
+#include "nsStringFwd.h"
 class nsHTMLReflowCommand;
 class nsIAtom;
 class nsINodeInfo;
@@ -53,7 +54,6 @@ class nsIHTMLFragmentContentSink;
 class nsIPresContext;
 class nsITextContent;
 class nsIURI;
-class nsString;
 class nsIWebShell;
 class nsIPresShell;
 class nsIChannel;

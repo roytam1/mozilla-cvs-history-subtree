@@ -144,7 +144,7 @@ nsSampleImpl::Poke(const char* aValue)
 
 static void GetStringValue(nsACString& aValue)
 {
-  aValue.Assign("GetValue");
+    NS_CStringSetData(aValue, "GetValue");
 }
 
 NS_IMETHODIMP
@@ -157,12 +157,8 @@ nsSampleImpl::WriteValue(const char* aPrefix)
     printf("%s %s\n", aPrefix, mValue);
 
     // This next part illustrates the nsEmbedString:
-    nsEmbedString foopy;
-    foopy.Append(PRUnichar('f'));
-    foopy.Append(PRUnichar('o'));
-    foopy.Append(PRUnichar('o'));
-    foopy.Append(PRUnichar('p'));
-    foopy.Append(PRUnichar('y'));
+    const PRUnichar foopy_data[] = {'f','o','o','p','y','\0'};
+    nsEmbedString foopy(foopy_data);
     
     const PRUnichar* f = foopy.get();
     PRUint32 l = foopy.Length();

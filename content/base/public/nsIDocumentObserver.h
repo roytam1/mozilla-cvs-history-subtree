@@ -40,13 +40,13 @@
 
 #include "nsISupports.h"
 #include "nsChangeHint.h"
+#include "nsStringFwd.h"
 
 class nsIAtom;
 class nsIContent;
 class nsIPresShell;
 class nsIStyleSheet;
 class nsIStyleRule;
-class nsString;
 class nsIDocument;
 
 #define NS_IDOCUMENT_OBSERVER_IID \

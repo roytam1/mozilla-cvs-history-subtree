@@ -49,8 +49,8 @@
 #include "prtypes.h"
 
 #include "nsIDOMHTMLInputElement.h"
+#include "nsStringFwd.h"
 
-class nsString;
 class nsVoidArray;
 
 // {7E4BB410-8740-11d3-967F-00105A1B1B76}

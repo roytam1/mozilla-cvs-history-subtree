@@ -98,6 +98,7 @@
 #define _FILESTREAM_H_
 
 #include "nscore.h"
+#include "nsStringFwd.h"
 
 #ifdef XP_MAC
 #include "pprio.h" // To get PR_ImportFile
@@ -110,7 +111,6 @@
 
 // Defined elsewhere
 class nsFileSpec;
-class nsString;
 class nsIInputStream;
 class nsIOutputStream;
 class nsIFileSpec;

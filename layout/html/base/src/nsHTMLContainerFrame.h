@@ -38,7 +38,7 @@
 #define nsHTMLContainerFrame_h___
 
 #include "nsContainerFrame.h"
-class nsString;
+#include "nsStringFwd.h"
 class nsAbsoluteFrame;
 class nsPlaceholderFrame;
 struct nsStyleDisplay;

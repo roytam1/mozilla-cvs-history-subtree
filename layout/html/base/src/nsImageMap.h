@@ -38,6 +38,7 @@
 #define nsImageMap_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 #include "nsCoord.h"
 #include "nsVoidArray.h"
 #include "nsIDocumentObserver.h"
@@ -51,7 +52,6 @@ class nsIDOMHTMLMapElement;
 class nsIPresContext;
 class nsIRenderingContext;
 class nsIURI;
-class nsString;
 class nsIDOMEvent;
 
 class nsImageMap : public nsIDocumentObserver, public nsIDOMFocusListener,

@@ -40,8 +40,8 @@
 
 #include "nsIContent.h"
 #include "nsChangeHint.h"
+#include "nsStringFwd.h"
 
-class nsString;
 class nsICSSStyleRule;
 class nsISupportsArray;
 class nsRuleWalker;

@@ -71,6 +71,7 @@
 #include "nsCRT.h"
 #include "nsEscape.h"
 #include "nsWeakReference.h"
+#include "nsUnicharUtils.h"
 
 
 #ifdef ALLOW_ASYNCH_STYLE_SHEETS

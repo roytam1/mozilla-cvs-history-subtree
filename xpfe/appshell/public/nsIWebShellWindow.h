@@ -41,9 +41,9 @@
 #include "nsISupports.h"
 
 /* Forward declarations.... */
+#include "nsStringFwd.h"
 class nsIWebShell;
 class nsIWidget;
-class nsString;
 class nsIDOMWindowInternal; 
 
 // Interface ID for nsIWebShellWindow

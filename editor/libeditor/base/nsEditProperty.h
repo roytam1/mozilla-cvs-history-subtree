@@ -41,9 +41,9 @@
 #define __nsEditProperty_h__
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 
 class nsIAtom;
-class nsString;
 
 /** simple interface for describing a single property as it relates to a range of content.
   *

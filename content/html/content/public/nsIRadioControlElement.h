@@ -40,7 +40,6 @@
 #define nsIRadioControlElement_h___
 
 #include "nsISupports.h"
-class nsAString;
 class nsIForm;
 
 // IID for the nsIRadioControl interface

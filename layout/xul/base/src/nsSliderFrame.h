@@ -39,6 +39,7 @@
 #define nsSliderFrame_h__
 
 
+#include "nsStringFwd.h"
 #include "nsBoxFrame.h"
 #include "prtypes.h"
 #include "nsIAtom.h"
@@ -46,7 +47,6 @@
 #include "nsITimer.h"
 #include "nsIDOMMouseListener.h"
 
-class nsString;
 class nsIScrollbarListener;
 class nsISupportsArray;
 class nsITimer;

@@ -43,6 +43,7 @@
 #include "nsReflowType.h"
 #include "nsCompatibility.h"
 #include "nsCOMArray.h"
+#include "nsStringFwd.h"
 #include <stdio.h> // for FILE definition
 
 class nsIAtom;
@@ -57,8 +58,6 @@ class nsIViewManager;
 class nsIDeviceContext;
 class nsIRenderingContext;
 class nsIPageSequenceFrame;
-class nsString;
-class nsAString;
 class nsStringArray;
 class nsICaret;
 class nsStyleContext;

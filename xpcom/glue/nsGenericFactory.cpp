@@ -47,6 +47,7 @@
 
 #ifdef XPCOM_GLUE
 #include "nsXPCOMGlue.h"
+#include "nsXPCOMPrivate.h"
 #include "nsIServiceManager.h"
 #include "nsIFile.h"
 #include "nsDirectoryServiceDefs.h"
@@ -301,9 +302,39 @@ nsGenericModule::Initialize(nsIComponentManager *compMgr)
     if (NS_FAILED(rv))
         return rv;
 
-    nsEmbedCString path;
+    // we have to manually resolve the string symbols since our glue stubs are
+    // not yet initialized.  it's unfortunate that there isn't a way to directly
+    // access the file path corresponding to a nsIFile instance.
+
+    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(xpcomDll, &rv);
+    if (NS_FAILED(rv))
+        return rv;
+
+    PRLibrary *lib;
+    rv = localFile->Load(&lib);
+    if (NS_FAILED(rv))
+        return rv;
+
+    CStringContainerInitFunc cstrInit = (CStringContainerInitFunc)
+        PR_FindSymbol(lib, "NS_CStringContainerInit");
+    CStringGetDataPtrFunc cstrRead = (CStringGetDataPtrFunc)
+        PR_FindSymbol(lib, "NS_CStringGetDataPtr");
+    CStringContainerFinishFunc cstrFinish = (CStringContainerFinishFunc)
+        PR_FindSymbol(lib, "NS_CStringContainerFinish");
+
+    nsCStringContainer path;
+    cstrInit(path);
+
+    // now extract the file path from the nsIFile object, and use that path
+    // to initialize our glue layer.
+
     xpcomDll->GetNativePath(path);
-    rv = XPCOMGlueStartup(path.get());
+    rv = XPCOMGlueStartup(cstrRead(path));
+
+    // cleanup
+
+    cstrFinish(path);
+    PR_UnloadLibrary(lib);
 
     if (NS_FAILED(rv))
         return rv;

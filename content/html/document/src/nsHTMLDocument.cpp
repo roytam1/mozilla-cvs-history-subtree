@@ -2517,7 +2517,7 @@ nsHTMLDocument::WriteCommon(const nsAString& aText,
   static NS_NAMED_LITERAL_STRING(empty, "");
   const nsAString  *term = aNewlineTerminate ? &new_line : &empty;
 
-  const nsAString& text = aText + *term;
+  const nsString text = aText + *term;
 
   // Save the data in cache
   if (mWyciwygChannel) {

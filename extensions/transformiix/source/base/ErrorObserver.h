@@ -29,7 +29,7 @@
 #include "baseutils.h"
 #include "txError.h"
 #include <iostream.h>
-class nsAString;
+#include "nsStringFwd.h"
 
 /**
  * A simple interface for observing errors

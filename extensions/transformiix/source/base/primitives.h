@@ -40,7 +40,7 @@
 #define MITRE_PRIMITIVES_H
 
 #include "baseutils.h"
-class nsAString;
+#include "nsStringFwd.h"
 
 /*
  * Utility class for doubles

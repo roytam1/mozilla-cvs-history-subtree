@@ -54,6 +54,7 @@
 
 #include "xpcprivate.h"
 
+#if 0
 /*
  * We require that STRING_TO_JSVAL(s) != (jsval)s, for tracking rootedness.
  * When we colonize Mars and change JSVAL_STRING, we'll need to update this
@@ -329,6 +330,57 @@ XPCStringConvert::JSStringToReadable(JSString *str)
     return new
         XPCReadableJSStringWrapper(str,
                                    NS_REINTERPRET_CAST(PRUnichar *,
+                                                       JS_GetStringChars(str)),
+                                   JS_GetStringLength(str));
+}
+#endif
+
+// not used
+void
+XPCStringConvert::ShutdownDOMStringFinalizer()
+{
+}
+
+// convert a readable to a JSString, copying string data
+// static
+JSString *
+XPCStringConvert::ReadableToJSString(JSContext *cx,
+                                     const nsAString &readable)
+{
+    JSString *str;
+
+    // blech, have to copy.
+
+    PRUint32 length = readable.Length();
+    jschar *chars = NS_REINTERPRET_CAST(jschar *,
+                                        JS_malloc(cx, (length + 1) *
+                                                  sizeof(jschar)));
+    if (!chars)
+        return NULL;
+
+    if (length && !CopyUnicodeTo(readable, 0,
+                                 NS_REINTERPRET_CAST(PRUnichar *, chars),
+                                 length))
+    {
+        JS_free(cx, chars);
+        return NULL;
+    }
+
+    chars[length] = 0;
+
+    str = JS_NewUCString(cx, chars, length);
+    if (!str)
+        JS_free(cx, chars);
+
+    return str;
+}
+
+// static
+XPCReadableJSStringWrapper *
+XPCStringConvert::JSStringToReadable(JSString *str)
+{
+    return new
+        XPCReadableJSStringWrapper(NS_REINTERPRET_CAST(PRUnichar *,
                                                        JS_GetStringChars(str)),
                                    JS_GetStringLength(str));
 }

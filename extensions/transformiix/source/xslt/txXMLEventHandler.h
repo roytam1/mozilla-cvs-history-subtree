@@ -26,8 +26,8 @@
 
 #include "baseutils.h"
 #include "txError.h"
+#include "nsStringFwd.h"
 
-class nsAString;
 class txOutputFormat;
 
 #ifdef TX_EXE

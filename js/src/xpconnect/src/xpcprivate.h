@@ -2323,6 +2323,7 @@ private:
 
 /***************************************************************************/
 
+#if 0
 // class to export a JSString as an const nsAString, including refcounting
 class XPCReadableJSStringWrapper : public nsDependentString
 {
@@ -2386,6 +2387,22 @@ protected:
 
     // Inline non-shared buffer handle
     nsBufferHandle<PRUnichar> mBufferHandle;
+};
+#endif
+
+// class to export a JSString as an const nsAString, no refcounting :(
+class XPCReadableJSStringWrapper : public nsDependentString
+{
+public:
+    typedef nsDependentString::char_traits char_traits;
+
+    XPCReadableJSStringWrapper(PRUnichar *chars, size_t length) :
+        nsDependentString(chars, length)
+    { }
+
+    XPCReadableJSStringWrapper() :
+        nsDependentString(char_traits::sEmptyBuffer, char_traits::sEmptyBuffer)
+    { SetIsVoid(PR_TRUE); }
 };
 
 // readable string conversions, static methods only

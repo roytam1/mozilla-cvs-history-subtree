@@ -190,8 +190,6 @@ protected:
 };
 
 
-class nsString;
-
 typedef int (* PR_CALLBACK nsStringArrayComparatorFunc)
             (const nsString* aElement1, const nsString* aElement2, void* aData);
 
@@ -243,8 +241,6 @@ private:
   nsStringArray(const nsStringArray& other);
 };
 
-
-class nsCString;
 
 typedef int (* PR_CALLBACK nsCStringArrayComparatorFunc)
             (const nsCString* aElement1, const nsCString* aElement2, void* aData);

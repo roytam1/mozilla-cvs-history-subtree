@@ -54,7 +54,6 @@ class  nsIURI;
 class  nsIDocShellTreeItem;
 class  nsIDocShellTreeOwner;
 class  nsIWebBrowserChrome;
-class  nsString;
 class  nsWatcherWindowEnumerator;
 struct JSContext;
 struct JSObject;

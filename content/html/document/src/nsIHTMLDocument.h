@@ -40,9 +40,9 @@
 
 #include "nsISupports.h"
 #include "nsCompatibility.h"
+#include "nsStringFwd.h"
 
 class nsIImageMap;
-class nsString;
 class nsIDOMNodeList;
 class nsIDOMHTMLCollection;
 class nsIDOMHTMLFormElement;

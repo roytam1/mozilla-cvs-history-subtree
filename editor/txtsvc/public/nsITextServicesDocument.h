@@ -40,12 +40,12 @@
 #define nsITextServicesDocument_h__
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 
 class nsIDOMDocument;
 class nsIDOMRange;
 class nsIPresShell;
 class nsIEditor;
-class nsString;
 class nsITextServicesFilter;
 
 /*

@@ -1299,9 +1299,13 @@ StringStuff(SprintfState* ss, const PRUnichar* sp, PRUint32 len)
 {
     ptrdiff_t off = ss->cur - ss->base;
     
-    nsAFlatString* str = NS_STATIC_CAST(nsAFlatString*,ss->stuffclosure);
+    nsAString* str = NS_STATIC_CAST(nsAString*,ss->stuffclosure);
     str->Append(sp, len);
-    ss->base = NS_CONST_CAST(PRUnichar*,str->get());
+
+    // we can assume contiguous storage
+    nsAString::iterator begin;
+    str->BeginWriting(begin);
+    ss->base = NS_CONST_CAST(PRUnichar*, begin.get());
     ss->cur = ss->base + off;
 
     return 0;
@@ -1387,6 +1391,7 @@ PRUint32 nsTextFormatter::vssprintf(nsAString& out, const PRUnichar* fmt, va_lis
     ss.stuffclosure = &out;
 
     int n;
+    /*
     if (out.GetFlatBufferHandle()) {
         nsAFlatString *flattenedString = NS_STATIC_CAST(nsAFlatString*, &out);
         out.Truncate();
@@ -1399,8 +1404,9 @@ PRUint32 nsTextFormatter::vssprintf(nsAString& out, const PRUnichar* fmt, va_lis
         n=dosprintf(&ss, fmt, ap);
         out = flattenedString;
     }
-
-
+    */
+    out.Truncate();
+    n=dosprintf(&ss, fmt, ap);
     return n ? n - 1 : n;
 }
 

@@ -42,7 +42,7 @@
 #include "nsCoord.h"
 #include "nsCRT.h"
 #include "nsStyleConsts.h"
-class nsString;
+#include "nsStringFwd.h"
 
 enum nsStyleUnit {
   eStyleUnit_Null         = 0,      // (no value) value is not specified

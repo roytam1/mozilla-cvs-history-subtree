@@ -71,9 +71,10 @@ CPPSRCS		= \
 		xpctest_inout.cpp \
 		xpctest_multiple.cpp \
 		xpctest_out.cpp \
-		xpctest_domstring.cpp \
 		xpctest_variant.cpp \
 		$(NULL)
+
+#		xpctest_domstring.cpp
 
 EXTRA_DSO_LDOPTS += \
 		$(MOZ_COMPONENT_LIBS) \

@@ -81,6 +81,7 @@
 #include "nsIXBLService.h"
 #include "nsICSSOMFactory.h"
 #include "nsLayoutCID.h"
+#include "nsStringFwd.h"
 
 #include "nsGenericElement.h" // for nsCheapVoidArray
 
@@ -90,7 +91,6 @@ class nsISupportsArray;
 class nsIXULContentUtils;
 class nsIXULPrototypeDocument;
 class nsRDFDOMNodeList;
-class nsString;
 class nsXULAttributes;
 class nsVoidArray;
 class nsIDocShell;

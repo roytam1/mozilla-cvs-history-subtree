@@ -39,7 +39,6 @@
 
 #include "nsISupports.idl"
 
-interface nsAString;
 interface inISearchObserver;
 interface nsISupportsArray;
 

@@ -38,11 +38,11 @@
 #define nsIXPBaseWindow_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 
 class nsIAppShell;
 class nsIFactory;
 class nsIWebShell;
-class nsString;
 class nsIPresShell;
 class nsIDOMElement;
 class nsIDOMNode;

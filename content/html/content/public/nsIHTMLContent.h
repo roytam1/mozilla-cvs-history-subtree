@@ -39,7 +39,8 @@
 
 #include "nsIXMLContent.h"
 #include "nsHTMLValue.h"
-class nsString;
+#include "nsStringFwd.h"
+
 class nsIFrame;
 class nsIStyleRule;
 class nsIPresContext;

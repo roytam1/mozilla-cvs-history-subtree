@@ -45,6 +45,7 @@
 #ifndef nsBoxLayoutState_h___
 #define nsBoxLayoutState_h___
 
+#include "nsStringFwd.h"
 #include "nsIFrame.h"
 #include "nsCOMPtr.h"
 #include "nsIPresContext.h"
@@ -54,7 +55,6 @@
 class nsReflowState;
 class nsCalculatedBoxInfo;
 struct nsHTMLReflowMetrics;
-class nsString;
 class nsIBox;
 class nsHTMLReflowCommand;
 

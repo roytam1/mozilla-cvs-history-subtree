@@ -39,11 +39,12 @@
 #define nsIFormControl_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
+
 class nsIDOMHTMLFormElement;
 class nsIPresContext;
 class nsIPresState;
 class nsIContent;
-class nsString;
 class nsIFormProcessor;
 class nsIFormSubmission;
 

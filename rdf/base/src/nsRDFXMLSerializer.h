@@ -28,7 +28,6 @@
 #include "nsNameSpaceMap.h"
 #include "nsXPIDLString.h"
 
-class nsString;
 class nsIOutputStream;
 class nsIRDFContainerUtils;
 

@@ -40,10 +40,10 @@
 #define nsIFontMetrics_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 #include "nsCoord.h"
 
 struct nsFont;
-class nsString;
 class nsIDeviceContext;
 class nsIAtom;
 

@@ -49,8 +49,7 @@
 #include "nsIHTMLEditor.h"
 #include "nsEditorEventListeners.h"
 #include "nsHTMLEditor.h"
-
-class nsString;
+#include "nsStringFwd.h"
 
 class nsHTMLEditorMouseListener : public nsTextEditorMouseListener
 {

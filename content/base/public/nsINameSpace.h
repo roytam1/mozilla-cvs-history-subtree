@@ -40,9 +40,9 @@
 #define nsINameSpace_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 
 class nsIAtom;
-class nsString;
 
 #define NS_INAMESPACE_IID \
   { 0xa6cf90d4, 0x15b3, 0x11d2, \

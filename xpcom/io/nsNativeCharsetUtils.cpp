@@ -51,6 +51,7 @@
 #include "nscore.h"
 #include "prlock.h"
 #include "nsAString.h"
+#include "nsReadableUtils.h"
 
 //
 // choose a conversion library.  we used to use mbrtowc/wcrtomb under Linux,
@@ -767,7 +768,7 @@ NS_CopyNativeToUnicode(const nsACString &input, nsAString &output)
     PRUint32 size;
     for (; iter != end; iter.advance(size)) {
         const char *buf = iter.get();
-        PRUint32 bufLeft = size = iter.size_forward();
+        PRUint32 bufLeft = size = Distance(iter, end); // iter.size_forward();
 
         rv = conv.NativeToUnicode(&buf, &bufLeft, &result, &resultLeft);
         if (NS_FAILED(rv)) return rv;
@@ -796,7 +797,7 @@ NS_CopyUnicodeToNative(const nsAString &input, nsACString &output)
     PRUint32 size;
     for (; iter != end; iter.advance(size)) {
         const PRUnichar *buf = iter.get();
-        PRUint32 bufLeft = size = iter.size_forward();
+        PRUint32 bufLeft = size = Distance(iter, end); //iter.size_forward();
         while (bufLeft) {
             char *p = temp;
             PRUint32 tempLeft = sizeof(temp);

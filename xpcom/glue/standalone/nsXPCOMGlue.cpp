@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* vim:set ts=4 sw=4 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -257,6 +258,116 @@ NS_GetTraceRefcnt(nsITraceRefcnt* *result)
     if (!xpcomFunctions)
         return NS_ERROR_NOT_INITIALIZED;
     return xpcomFunctions->getTraceRefcnt(result);
+}
+
+
+extern "C" NS_COM PRBool
+NS_StringContainerInit(nsStringContainer &aStr)
+{
+    if (!xpcomFunctions)
+        return PR_FALSE;
+    return xpcomFunctions->stringContainerInit(aStr);
+}
+
+extern "C" NS_COM void
+NS_StringContainerFinish(nsStringContainer &aStr)
+{
+    if (xpcomFunctions)
+        xpcomFunctions->stringContainerFinish(aStr);
+}
+
+extern "C" NS_COM PRUint32
+NS_StringGetLength(const nsAString &aStr)
+{
+    if (!xpcomFunctions)
+        return 0;
+    return xpcomFunctions->stringGetLength(aStr);
+}
+
+extern "C" NS_COM const PRUnichar *
+NS_StringGetDataPtr(const nsAString &aStr)
+{
+    if (!xpcomFunctions)
+        return nsnull;
+    return xpcomFunctions->stringGetDataPtr(aStr);
+}
+
+extern "C" NS_COM PRUint32
+NS_StringGetData(const nsAString &aStr, PRUnichar *aBuf, PRUint32 aBufLen)
+{
+    if (!xpcomFunctions)
+        return 0;
+    return xpcomFunctions->stringGetData(aStr, aBuf, aBufLen);
+}
+
+extern "C" NS_COM void
+NS_StringSetData(nsAString &aStr, const PRUnichar *aBuf, PRUint32 aCount)
+{
+    if (xpcomFunctions)
+        xpcomFunctions->stringSetData(aStr, aBuf, aCount);
+}
+
+extern "C" NS_COM void
+NS_StringCopy(nsAString &aDest, const nsAString &aSrc, PRUint32 aOffset,
+              PRUint32 aCount)
+{
+    if (xpcomFunctions)
+        xpcomFunctions->stringCopy(aDest, aSrc, aOffset, aCount);
+}
+
+
+extern "C" NS_COM PRBool
+NS_CStringContainerInit(nsCStringContainer &aStr)
+{
+    if (!xpcomFunctions)
+        return PR_FALSE;
+    return xpcomFunctions->cstringContainerInit(aStr);
+}
+
+extern "C" NS_COM void
+NS_CStringContainerFinish(nsCStringContainer &aStr)
+{
+    if (xpcomFunctions)
+        xpcomFunctions->cstringContainerFinish(aStr);
+}
+
+extern "C" NS_COM PRUint32
+NS_CStringGetLength(const nsACString &aStr)
+{
+    if (!xpcomFunctions)
+        return 0;
+    return xpcomFunctions->cstringGetLength(aStr);
+}
+
+extern "C" NS_COM const char *
+NS_CStringGetDataPtr(const nsACString &aStr)
+{
+    if (!xpcomFunctions)
+        return nsnull;
+    return xpcomFunctions->cstringGetDataPtr(aStr);
+}
+
+extern "C" NS_COM PRUint32
+NS_CStringGetData(const nsACString &aStr, char *aBuf, PRUint32 aBufLen)
+{
+    if (!xpcomFunctions)
+        return 0;
+    return xpcomFunctions->cstringGetData(aStr, aBuf, aBufLen);
+}
+
+extern "C" NS_COM void
+NS_CStringSetData(nsACString &aStr, const char *aBuf, PRUint32 aCount)
+{
+    if (xpcomFunctions)
+        xpcomFunctions->cstringSetData(aStr, aBuf, aCount);
+}
+
+extern "C" NS_COM void
+NS_CStringCopy(nsACString &aDest, const nsACString &aSrc, PRUint32 aOffset,
+              PRUint32 aCount)
+{
+    if (xpcomFunctions)
+        xpcomFunctions->cstringCopy(aDest, aSrc, aOffset, aCount);
 }
 
 #endif // #ifndef  XPCOM_GLUE_NO_DYNAMIC_LOADING

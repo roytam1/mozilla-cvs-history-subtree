@@ -31,7 +31,6 @@ class nsIDOMNode;
 class nsIDOMWindowInternal;
 class nsIController;
 class nsIControllers;
-class nsAString;
 
 // {AC71F479-17E1-4ee0-8EFD-0ECF2AA2F827}
 #define NS_IFOCUSCONTROLLER_IID \

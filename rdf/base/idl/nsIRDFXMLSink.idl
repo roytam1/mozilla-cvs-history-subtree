@@ -49,7 +49,7 @@
 [ref] native nsStringRef(nsString);
 %{C++
 class nsIAtom;
-class nsString;
+#include "nsStringFwd.h"
 %}
 
 interface nsIRDFXMLSink;

@@ -43,6 +43,7 @@
 
 #include "nscore.h"
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 #include "nsColor.h"
 #include "nsCoord.h"
 #include "nsIDrawingSurface.h"
@@ -50,7 +51,6 @@
 class nsIWidget;
 class nsIFontMetrics;
 class nsTransform2D;
-class nsString;
 class nsIDeviceContext;
 class nsIRegion;
 class nsIAtom;

@@ -55,10 +55,12 @@
 PRLogModuleInfo *gImgLog = PR_NewLogModule("imgRequest");
 #endif
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(imgRequest, imgILoad,
+NS_IMPL_THREADSAFE_ISUPPORTS8(imgRequest, imgILoad,
                               imgIDecoderObserver, imgIContainerObserver,
                               nsIStreamListener, nsIRequestObserver,
-                              nsISupportsWeakReference)
+                              nsISupportsWeakReference,
+                              nsIHttpEventSink, 
+                              nsIInterfaceRequestor)
 
 imgRequest::imgRequest() : 
   mObservers(0),
@@ -85,6 +87,9 @@ nsresult imgRequest::Init(nsIChannel *aChannel,
   NS_ASSERTION(aChannel, "imgRequest::Init -- No channel");
 
   mChannel = aChannel;
+
+  // Hook us up to listen to redirects and the like
+  mChannel->SetNotificationCallbacks(this);
 
   /* set our loading flag to true here.
      Setting it here lets checks to see if the load is in progress
@@ -665,6 +670,9 @@ NS_IMETHODIMP imgRequest::OnStopRequest(nsIRequest *aRequest, nsISupports *ctxt,
 
   if (mChannel) {
     mChannel->GetOriginalURI(getter_AddRefs(mURI));
+
+    // Turnoff handling of Redirects
+    mChannel->SetNotificationCallbacks(nsnull);
     mChannel = nsnull; // we no longer need the channel
   }
 
@@ -829,4 +837,33 @@ void
 imgRequest::SniffMimeType(const char *buf, PRUint32 len)
 {
   imgLoader::GetMimeTypeFromContent(buf, len, getter_Copies(mContentType));
+}
+
+/** nsIHttpEventSink methods **/
+
+NS_IMETHODIMP
+imgRequest::OnRedirect(nsIHttpChannel *aHttpChannel, nsIChannel *aNewChannel)
+{
+  NS_ASSERTION(aNewChannel, "new redirected channel is null!");
+
+  RemoveFromCache();
+
+  nsCOMPtr<nsIURI> uri;
+  aNewChannel->GetURI(getter_AddRefs(uri));
+
+  nsCOMPtr<nsICacheEntryDescriptor> entry;
+  imgCache::Put(uri, this, getter_AddRefs(entry));
+
+  mChannel    = aNewChannel;
+  mCacheEntry = entry;
+
+  return NS_OK;
+}
+
+/** nsIInterfaceRequestor methods **/
+
+NS_IMETHODIMP
+imgRequest::GetInterface(const nsIID & aIID, void **aResult)
+{
+    return QueryInterface(aIID, aResult);
 }

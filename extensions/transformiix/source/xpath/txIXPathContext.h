@@ -42,9 +42,9 @@
 #include "baseutils.h"
 #include "nsIAtom.h"
 #include "txError.h"
+#include "nsStringFwd.h"
 
 class FunctionCall;
-class nsAString;
 class nsIAtom;
 class txAExprResult;
 class txResultRecycler;

@@ -41,9 +41,7 @@
 
 #include "nscore.h"
 #include "nsComObsolete.h"
-
-class nsString;
-class nsAString;
+#include "nsStringFwd.h"
 
 // A color is a 32 bit unsigned integer with four components: R, G, B
 // and A.

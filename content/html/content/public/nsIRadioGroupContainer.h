@@ -39,9 +39,9 @@
 #define nsIRadioGroupContainer_h___
 
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 
 class nsIDOMHTMLInputElement;
-class nsString;
 class nsIRadioVisitor;
 class nsIFormControl;
 

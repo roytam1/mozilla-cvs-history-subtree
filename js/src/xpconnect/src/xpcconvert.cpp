@@ -709,17 +709,20 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
 
             if(useAllocator)
             {
-                if(str)
+                // XXX extra string copy when isNewString
+                if(str && !isNewString)
                 {
                     XPCReadableJSStringWrapper *wrapper =
                         XPCStringConvert::JSStringToReadable(str);
                     if(!wrapper)
                         return JS_FALSE;
 
+#if 0
                     // Ask for the shared buffer handle, which will root the
                     // string.
                     if(isNewString && ! wrapper->GetSharedBufferHandle())
                         return JS_FALSE;
+#endif
 
                     *((const nsAString**)d) = wrapper;
                 }
@@ -734,7 +737,8 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
                 }
                 else
                 {
-                    const nsAString *rs = new nsAutoString(chars, length);
+                    // use nsString to encourage sharing
+                    const nsAString *rs = new nsString(chars, length);
                     if(!rs)
                         return JS_FALSE;
                     *((const nsAString**)d) = rs;

@@ -40,9 +40,9 @@
 
 #include <stdio.h>
 #include "nsISupports.h"
+#include "nsStringFwd.h"
 
 class nsIAtom;
-class nsString;
 class nsIURI;
 class nsIStyleRule;
 class nsISupportsArray;
