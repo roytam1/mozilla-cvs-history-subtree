@@ -35,7 +35,9 @@
 #include "primpl.h"
 
 #include <string.h>
+#if !defined(WINCE)
 #include <fcntl.h>
+#endif
 
 #ifdef XP_UNIX
 #if defined(AIX) || defined(QNX)

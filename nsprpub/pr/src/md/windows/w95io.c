@@ -39,8 +39,10 @@
  */
 
 #include "primpl.h"
+#if !defined(WINCE)
 #include <direct.h>
 #include <mbstring.h>
+#endif
 
 
 struct _MDLock               _pr_ioq_lock;
@@ -624,6 +626,7 @@ _PR_MD_STAT(const char *fn, struct stat *info)
 {
     PRInt32 rv;
 
+#if !defined(WINCE)
     rv = _stat(fn, (struct _stat *)info);
     if (-1 == rv) {
         /*
@@ -652,6 +655,79 @@ _PR_MD_STAT(const char *fn, struct stat *info)
     if (-1 == rv) {
         _PR_MD_MAP_STAT_ERROR(errno);
     }
+#else
+    HANDLE readHandle = NULL;
+
+    /*
+     * Initialize the out arguments.
+     */
+    memset(info, 0, sizeof(struct stat));
+    rv = 0;
+
+    /*
+     * Attempt to fill in relevant parts of the struct.
+     * In order to do this we'll need read access to the file.
+     * We won't mind sharing the file.
+     */
+    readHandle = CreateFile(fn,
+                            GENERIC_READ,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if(NULL == readHandle)
+    {
+        rv = -1;
+    }
+    else
+    {
+        BOOL bRes = FALSE;
+        BY_HANDLE_FILE_INFORMATION fileInfo;
+
+        bRes = GetFileInformationByHandle(readHandle, &fileInfo);
+        if(FALSE == bRes)
+        {
+            rv = -1;
+        }
+        else
+        {
+            /*
+             * Access Times
+             */
+            _MD_FILETIME_2_time_t(info->st_ctime, fileInfo.ftCreationTime);
+            _MD_FILETIME_2_time_t(info->st_atime, fileInfo.ftLastAccessTime);
+            _MD_FILETIME_2_time_t(info->st_mtime, fileInfo.ftLastWriteTime);
+
+            /*
+             * Size.
+             * Note, this is not stat64.
+             */
+            info->st_size = (_off_t)fileInfo.nFileSizeLow;
+
+            /*
+             * Mode.
+             */
+            info->st_mode |= _S_IREAD;
+            if(0 == (FILE_ATTRIBUTE_READONLY & fileInfo.dwFileAttributes))
+            {
+                info->st_mode |= _S_IWRITE;
+            }
+            if(FILE_ATTRIBUTE_DIRECTORY & fileInfo.dwFileAttributes)
+            {
+                info->st_mode |= _S_IFDIR;
+            }
+            else
+            {
+                info->st_mode |= _S_IFREG;
+            }
+        }
+
+        CloseHandle(readHandle);
+        readHandle = NULL;
+    }
+#endif
+
     return rv;
 }
 
@@ -904,6 +980,7 @@ _PR_MD_GETOPENFILEINFO(const PRFileDesc *fd, PRFileInfo *info)
 PRStatus
 _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
 {
+#if !defined(WINCE)
     BOOL rv;
 
     /*
@@ -919,6 +996,10 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
         return PR_FAILURE;
     }
     return PR_SUCCESS;
+#else
+    _PR_MD_CE_NOT_IMPLEMENTED;
+    return PR_FAILURE;
+#endif
 } 
 
 void
@@ -934,6 +1015,7 @@ _PR_MD_INIT_FD_INHERITABLE(PRFileDesc *fd, PRBool imported)
 void
 _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
 {
+#if !defined(WINCE)
     DWORD flags;
 
     PR_ASSERT(_PR_TRI_UNKNOWN == fd->secret->inheritable);
@@ -944,6 +1026,9 @@ _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
             fd->secret->inheritable = _PR_TRI_FALSE;
         }
     }
+#else
+    fd->secret->inheritable = _PR_TRI_FALSE;
+#endif
 }
 
 PRInt32
@@ -961,7 +1046,9 @@ _PR_MD_RENAME(const char *from, const char *to)
 PRInt32
 _PR_MD_ACCESS(const char *name, PRAccessHow how)
 {
-PRInt32 rv;
+    PRInt32 rv = -1;
+
+#if !defined(WINCE)
     switch (how) {
       case PR_ACCESS_WRITE_OK:
         rv = _access(name, 02);
@@ -978,6 +1065,33 @@ PRInt32 rv;
     }
 	if (rv < 0)
 		_PR_MD_MAP_ACCESS_ERROR(errno);
+#else
+    DWORD attribs = 0;
+
+    attribs = GetFileAttributes(name);
+    if((DWORD)-1 != attribs)
+    {
+        switch(how)
+        {
+        case PR_ACCESS_WRITE_OK:
+            if(FILE_ATTRIBUTE_READONLY & attribs)
+            {
+                rv = 0;
+            }
+            break;
+        case PR_ACCESS_READ_OK:
+            rv = 0;
+            break;
+        case PR_ACCESS_EXISTS:
+            rv = 0;
+            break;
+        default:
+            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+            break;
+        }
+    }
+#endif
+
     return rv;
 }
 

@@ -2726,6 +2726,24 @@ elif test "$OS_ARCH" = "OS_2"; then
 fi
 
 #
+# Cross compiling for WinCE needs a special case here.
+# Only WCE300 (WinCE version 3.00) handled thus far.
+#
+# OSVERSION, and TARGETCPU are defined in a WinCE build environment.
+# Jump through hoops to make X86 look like x86 for the build system.
+#
+if test "$OSVERSION" = "WCE300"; then
+    OS_ARCH=WINCE
+    OS_TARGET=WINCE
+    OS_RELEASE=3.00
+    if test "$TARGETCPU" = "X86"; then
+        CPU_ARCH=x86
+    else
+        CPU_ARCH=$TARGETCPU
+    fi
+else
+
+#
 # On WIN32, we also define the variable CPU_ARCH.
 #
 
@@ -2784,6 +2802,7 @@ elif test "$OS_ARCH" = "CYGWIN32_NT"; then
     if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
         CPU_ARCH=x86
     fi
+fi
 fi
 
 if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINNT"; then
@@ -3748,8 +3767,16 @@ EOF
             DEFINES="$DEFINES -U_DEBUG"
         fi
 
+        if test "$OS_TARGET" = "WINCE"; then
+            DLL_LIBS="coredll.lib winsock.lib"
+        fi
+
         if test -n "$MOZ_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -MD"
+            if test "$OS_TARGET" = "WINCE"; then
+                CFLAGS="$CFLAGS -Zl"
+            else
+                CFLAGS="$CFLAGS -MD"
+            fi
             _OPTIMIZE_FLAGS=-O2
             DLLFLAGS='-OUT:"$@"'
 
@@ -3759,10 +3786,14 @@ EOF
                 LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             fi
         else
-            if test -n "$USE_DEBUG_RTL"; then
-                CFLAGS="$CFLAGS -MDd"
+            if test "$OS_TARGET" = "WINCE"; then
+                CFLAGS="$CFLAGS -Zl"
             else
-                CFLAGS="$CFLAGS -MD"
+                if test -n "$USE_DEBUG_RTL"; then
+                    CFLAGS="$CFLAGS -MDd"
+                else
+                    CFLAGS="$CFLAGS -MD"
+                fi
             fi
             _DEBUG_FLAGS="-Od -Z7"
             DLLFLAGS='-DEBUG -DEBUGTYPE:CV -OUT:"$@"'
@@ -3801,7 +3832,42 @@ EOF
         cat >> confdefs.h <<\EOF
 #define WINNT 1
 EOF
+    elif test "$OS_TARGET" = "WINCE"; then
+        cat >> confdefs.h <<\EOF
+#define WINCE 1
+EOF
+        cat >> confdefs.h <<\EOF
+#define _PR_GLOBAL_THREADS_ONLY 1
+EOF
+        cat >> confdefs.h <<\EOF
+#define UNICODE 1
+EOF
+        cat >> confdefs.h <<\EOF
+#define _UNICODE 1
+EOF
+        cat >> confdefs.h <<\EOF
+#define _WIN32_WCE 300
+EOF
+        cat >> confdefs.h <<\EOF
+#define UNDER_CE 300
+EOF
 
+        if test "$CPU_ARCH" = "x86"; then
+            cat >> confdefs.h <<\EOF
+#define x86 1
+EOF
+            cat >> confdefs.h <<\EOF
+#define _WIN32_WCE_CEPC 1
+EOF
+        elif test "$CPU_ARCH" = "ARM"; then
+            cat >> confdefs.h <<\EOF
+#define ARM 1
+EOF
+        else
+            cat >> confdefs.h <<\EOF
+#define UNHANDLED_WINCE_TARGETCPU_HERE 1
+EOF
+        fi
     else
         cat >> confdefs.h <<\EOF
 #define WIN95 1
@@ -3831,6 +3897,9 @@ EOF
 	    ;;
     WIN95)
 	    MDCPUCFG_H=_win95.cfg
+	    ;;
+    WINCE)
+	    MDCPUCFG_H=_wince.cfg
 	    ;;
     WIN16)
 	    MDCPUCFG_H=_win16.cfg
@@ -5749,6 +5818,7 @@ s%@RC@%$RC%g
 s%@DLLFLAGS@%$DLLFLAGS%g
 s%@EXEFLAGS@%$EXEFLAGS%g
 s%@OS_DLLFLAGS@%$OS_DLLFLAGS%g
+s%@DLL_LIBS@%$DLL_LIBS%g
 
 CEOF
 EOF

@@ -69,9 +69,11 @@ PR_END_EXTERN_C
 #ifdef XP_OS2_EMX
 #include <sys/types.h>
 #endif
+#if !defined(WINCE)
 #include <sys/stat.h>
 #include <io.h>
 #include <fcntl.h>          /* O_BINARY */
+#endif
 
 #ifdef OS2
 extern PRStatus _MD_OS2GetHostName(char *name, PRUint32 namelen);

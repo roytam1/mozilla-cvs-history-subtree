@@ -200,6 +200,24 @@ ifeq ($(OS_ARCH),OS2)
 endif
 
 #
+# Cross compiling for WinCE needs a special case here.
+# Only WCE300 (WinCE version 3.00) handled thus far.
+#
+# OSVERSION, and TARGETCPU are defined in a WinCE build environment.
+# Jump through hoops to make X86 look like x86 for the build system.
+#
+ifeq ($(OSVERSION),WCE300)
+	OS_ARCH := WINCE
+	OS_TARGET := WINCE
+	OS_RELEASE := 3.00
+	ifeq ($(TARGETCPU),X86)
+		CPU_ARCH := x86
+	else
+		CPU_ARCH := $(TARGETCPU)
+	endif
+else
+
+#
 # On WIN32, we also define the variable CPU_ARCH.
 #
 
@@ -265,6 +283,7 @@ ifeq ($(OS_ARCH), CYGWIN32_NT)
 	ifneq (,$(findstring 86,$(CPU_ARCH)))
 		CPU_ARCH = x86
 	endif
+endif
 endif
 endif
 endif

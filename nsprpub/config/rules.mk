@@ -314,8 +314,8 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	$(LD) $(XCFLAGS) -o $@ $(OBJS) -bE:$(OBJDIR)/lib$(LIBRARY_NAME)_syms \
 		-bM:SRE -bnoentry $(OS_LIBS) $(EXTRA_LIBS)
 else	# AIX 4.1
-ifeq ($(OS_ARCH), WINNT)
-	$(LINK_DLL) -MAP $(DLLBASE) $(DLL_LIBS) $(EXTRA_LIBS) $(OBJS)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+	$(LINK_DLL) -MAP $(DLLBASE) $(EXTRA_LIBS) $(OBJS) $(DLL_LIBS)
 else
 ifeq ($(OS_ARCH),OS2)
 # append ( >> ) doesn't seem to be working under OS/2 gmake. Run through OS/2 shell instead.	

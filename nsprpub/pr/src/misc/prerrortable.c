@@ -57,8 +57,12 @@ provided "as is" without express or implied warranty.
 #ifdef SUNOS4
 #include "md/sunos4.h"  /* for strerror */
 #endif
+#if !defined(WINCE)
 #include <assert.h>
 #include <errno.h>
+#else
+#include "primpl.h"
+#endif
 #include "prmem.h"
 #include "prerror.h"
 
@@ -200,8 +204,15 @@ PR_ErrorInstallTable(const struct PRErrorTable *table)
 
     new_et = (struct PRErrorTableList *)
 					PR_Malloc(sizeof(struct PRErrorTableList));
+#if !defined(WINCE)
     if (!new_et)
 	return errno;	/* oops */
+#else
+    if(NULL == new_et)
+    {
+        return ENOMEM;
+    }
+#endif
     new_et->table = table;
     if (callback_newtable) {
 	new_et->table_private = callback_newtable(table, callback_private);

@@ -33,7 +33,9 @@
  */
 
 #include "primpl.h"
+#if !defined(WINCE)
 #include <process.h>  /* for _beginthreadex() */
+#endif
 
 extern void _PR_Win32InitTimeZone(void);  /* defined in ntmisc.c */
 

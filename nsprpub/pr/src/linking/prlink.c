@@ -356,7 +356,7 @@ PR_GetLibraryPath(void)
     /* initialize pr_currentLibPath */
 
 #ifdef XP_PC
-    ev = getenv("LD_LIBRARY_PATH");
+    ev = _PR_MD_GET_ENV("LD_LIBRARY_PATH");
     if (!ev) {
     ev = ".;\\lib";
     }

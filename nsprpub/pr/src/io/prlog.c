@@ -109,6 +109,30 @@ static PRLock *_pr_logLock;
 #define WIN32_DEBUG_FILE (FILE*)-2
 #endif
 
+/*
+** CE needs a different OutputDebugString (UNICODE only).
+*/
+#if defined(WINCE)
+#define CEOutputDebugString(str) \
+    PR_BEGIN_MACRO \
+        int neededWChars = 0; \
+        \
+        neededWChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (str), -1, NULL, 0); \
+        if(0 < neededWChars) \
+        { \
+            LPTSTR wstr = NULL; \
+            \
+            wstr = (LPWSTR)PR_Malloc(sizeof(WCHAR) * neededWChars); \
+            if(NULL != wstr) \
+            { \
+                MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (str), -1, wstr, neededWChars); \
+                OutputDebugString(wstr); \
+                PR_Free(wstr); \
+            } \
+        } \
+    PR_END_MACRO
+#endif
+
 /* Macros used to reduce #ifdef pollution */
 
 #if defined(_PR_USE_STDIO_FOR_LOGGING)
@@ -242,7 +266,11 @@ void _PR_InitLog(void)
 #ifdef XP_PC
                 char* str = PR_smprintf("Unable to create nspr log file '%s'\n", ev);
                 if (str) {
+#if !defined(WINCE)
                     OutputDebugString(str);
+#else
+                    CEOutputDebugString(str);
+#endif
                     PR_smprintf_free(str);
                 }
 #else
@@ -355,8 +383,10 @@ PR_IMPLEMENT(PRBool) PR_SetLogFile(const char *file)
 #endif
     newLogFile = fopen(file, "w");
     if (newLogFile) {
+#if !defined(WINCE)
         /* We do buffering ourselves. */
         setvbuf(newLogFile, NULL, _IONBF, 0);
+#endif
         if (logFile && logFile != stdout && logFile != stderr) {
             fclose(logFile);
         }
@@ -440,7 +470,11 @@ PR_IMPLEMENT(void) PR_LogPrint(const char *fmt, ...)
     if (logBuf == 0) {
 #ifdef XP_PC
         if ( logFile == WIN32_DEBUG_FILE)
+#if !defined(WINCE)
             OutputDebugString( line );
+#else
+            CEOutputDebugString( line );
+#endif
         else
             _PUT_LOG(logFile, line, nb);
 #else

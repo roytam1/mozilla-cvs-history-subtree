@@ -564,6 +564,24 @@ elif test "$OS_ARCH" = "OS_2"; then
 fi
 
 #
+# Cross compiling for WinCE needs a special case here.
+# Only WCE300 (WinCE version 3.00) handled thus far.
+#
+# OSVERSION, and TARGETCPU are defined in a WinCE build environment.
+# Jump through hoops to make X86 look like x86 for the build system.
+#
+if test "$OSVERSION" = "WCE300"; then
+    OS_ARCH=WINCE
+    OS_TARGET=WINCE
+    OS_RELEASE=3.00
+    if test "$TARGETCPU" = "X86"; then
+        CPU_ARCH=x86
+    else
+        CPU_ARCH=$TARGETCPU
+    fi
+else
+
+#
 # On WIN32, we also define the variable CPU_ARCH.
 #
 
@@ -622,6 +640,7 @@ elif test "$OS_ARCH" = "CYGWIN32_NT"; then
     if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
         CPU_ARCH=x86
     fi
+fi
 fi
 
 if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINNT"; then
@@ -1196,8 +1215,16 @@ case "$target" in
             DEFINES="$DEFINES -U_DEBUG"
         fi
 
+        if test "$OS_TARGET" = "WINCE"; then
+            DLL_LIBS="coredll.lib winsock.lib"
+        fi
+
         if test -n "$MOZ_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -MD"
+            if test -n "$OS_TARGET" = "WINCE"; then
+                CFLAGS="$CFLAGS -Zl"
+            else
+                CFLAGS="$CFLAGS -MD"
+            fi
             _OPTIMIZE_FLAGS=-O2
             DLLFLAGS='-OUT:"$@"'
 
@@ -1207,10 +1234,14 @@ case "$target" in
                 LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             fi
         else
-            if test -n "$USE_DEBUG_RTL"; then
-                CFLAGS="$CFLAGS -MDd"
+            if test -n "$OS_TARGET" = "WINCE"; then
+                CFLAGS="$CFLAGS -Zl"
             else
-                CFLAGS="$CFLAGS -MD"
+                if test -n "$USE_DEBUG_RTL"; then
+                    CFLAGS="$CFLAGS -MDd"
+                else
+                    CFLAGS="$CFLAGS -MD"
+                fi
             fi
             _DEBUG_FLAGS="-Od -Z7"
             DLLFLAGS='-DEBUG -DEBUGTYPE:CV -OUT:"$@"'
@@ -1244,6 +1275,9 @@ case "$target" in
 
     if test "$OS_TARGET" = "WINNT"; then
         AC_DEFINE(WINNT)
+    elif test "$OS_TARGET" = "WINCE"; then
+        AC_DEFINE(WINCE)
+        AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     else
         AC_DEFINE(WIN95)
         AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
@@ -1267,6 +1301,9 @@ case "$target" in
 	    ;;
     WIN95)
 	    MDCPUCFG_H=_win95.cfg
+	    ;;
+    WINCE)
+	    MDCPUCFG_H=_wince.cfg
 	    ;;
     WIN16)
 	    MDCPUCFG_H=_win16.cfg
@@ -2291,6 +2328,7 @@ AC_SUBST(RC)
 AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
+AC_SUBST(DLL_LIBS)
 
 dnl ========================================================
 dnl Generate output files.
