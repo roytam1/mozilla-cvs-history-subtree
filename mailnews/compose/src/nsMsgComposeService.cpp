@@ -256,13 +256,15 @@ nsresult nsMsgComposeService::OpenWindow(const char *chrome, nsIMsgComposeParams
              clear the cache entry if everything goes well
           */
           nsCOMPtr<nsIDOMWindowInternal> domWindow(mCachedWindows[i].window);
-          mCachedWindows[i].listener->OnReopen(params);
           rv = ShowCachedComposeWindow(domWindow, PR_TRUE);
           if (NS_SUCCEEDED(rv))
+          {
+            mCachedWindows[i].listener->OnReopen(params);
             return NS_OK;
         }
       }
     }
+  }
   }
       
   //Else, create a new one...
@@ -768,6 +770,20 @@ nsresult nsMsgComposeService::ShowCachedComposeWindow(nsIDOMWindowInternal *aCom
   if (webShellContainer) {
     nsCOMPtr <nsIWebShellWindow> webShellWindow = do_QueryInterface(webShellContainer, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIDocShellTreeItem>  treeItem(do_QueryInterface(docShell));
+    if (treeItem)
+    {
+      nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
+      treeItem->GetTreeOwner(getter_AddRefs(treeOwner));
+      if (treeOwner)
+      {
+        nsCOMPtr<nsIBaseWindow> baseWindow;
+        baseWindow = do_QueryInterface(treeOwner);
+        if (baseWindow)
+          baseWindow->SetEnabled(aShow);
+      }
+    }
 
     // hide (show) the cached window
     rv = webShellWindow->Show(aShow);
