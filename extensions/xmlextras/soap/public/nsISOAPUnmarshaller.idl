@@ -59,18 +59,3 @@ nsISupports unmarshall(
     in DOMString aEncodingStyleURI, in DOMString aSchemaID, 
     in DOMString aTypeID, in nsISupports aConfiguration);
 };
-
-%{ C++
-#define NS_SOAPDEFAULTUNMARSHALLER_CID                            \
-{ /* e5fec014-1dd1-11b2-b9a6-f6403792debb */        \
-  0xe5fec014, 0x1dd1, 0x11b2,                       \
- {0xb9, 0xa6, 0xf6, 0x40, 0x37, 0x92, 0xde, 0xbb} }
-#define NS_SOAPDEFAULTUNMARSHALLER_CONTRACTID \
-"@mozilla.org/xmlextras/soap/defaultunmarshaller;1"
-#define NS_SOAPJSUNMARSHALLER_CID                            \
-{ /* 6937b0b6-1dd2-11b2-a4e3-e333c09b3429 */        \
-  0x6937b0b6, 0x1dd2, 0x11b2,                       \
- {0xa4, 0xe3, 0xe3, 0x33, 0xc0, 0x9b, 0x34, 0x29} }
-#define NS_SOAPJSUNMARSHALLER_CONTRACTID \
-"@mozilla.org/xmlextras/soap/jsunmarshaller;1"
-%}

@@ -58,12 +58,3 @@ interface nsISOAPResponseListener : nsISupports {
    */ 
   boolean handleResponse(in nsISOAPResponse aResponse, in boolean aLast);
 };
-
-%{ C++
-#define NS_SOAPJSRESPONSELISTENER_CID                            \
-{ /* a4df573c-1dd1-11b2-a36d-89962dde39f6 */        \
-  0xa4df573c, 0x1dd1, 0x11b2,                       \
- {0xa3, 0x6d, 0x89, 0x96, 0x2d, 0xde, 0x39, 0xf6} }
-#define NS_SOAPJSRESPONSELISTENER_CONTRACTID \
-"@mozilla.org/xmlextras/soap/jsresponselistener;1"
-%}

@@ -56,18 +56,3 @@ nsISupports marshall(
     in DOMString aEncodingStyleURI, in DOMString aTypeID, 
     in DOMString aSchemaID, in nsISupports aConfiguration);
 };
-
-%{ C++
-#define NS_SOAPDEFAULTMARSHALLER_CID                            \
-{ /* 4ccfa232-1dd2-11b2-b19b-e7bf52b0b5ad */        \
-  0x4ccfa232, 0x1dd2, 0x11b2,                       \
- {0xb1, 0x9b, 0xe7, 0xbf, 0x52, 0xb0, 0xb5, 0xad} }
-#define NS_SOAPDEFAULTMARSHALLER_CONTRACTID \
-"@mozilla.org/xmlextras/soap/defaultmarshaller;1"
-#define NS_SOAPJSMARSHALLER_CID                            \
-{ /* d69dd7fe-1dd1-11b2-ad04-866c82b4780b */        \
-  0xd69dd7fe, 0x1dd1, 0x11b2,                       \
- {0xad, 0x04, 0x86, 0x6c, 0x82, 0xb4, 0x78, 0x0b} }
-#define NS_SOAPJSMARSHALLER_CONTRACTID \
-"@mozilla.org/xmlextras/soap/jsmarshaller;1"
-%}
