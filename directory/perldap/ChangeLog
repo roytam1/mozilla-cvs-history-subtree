@@ -1,5 +1,9 @@
 2005-01-27  Leif Hedstrom  <leif@ogre.com>
 
+	* Conn.pm (new): Fixed the nspr option to truly be an on/off flag,
+	if we need to support shared in the future, we can do so with another
+	option.
+
 	* typemap: Kludgy fix for "void *", used for the prldap options.
 
 	* API.xs: Made it work properly, the arguments were totally wrong.

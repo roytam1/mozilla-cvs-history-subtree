@@ -65,12 +65,12 @@ sub new
       $self->{"certdb"} = $hash->{"cert"} if defined($hash->{"cert"});
       $self->{"certdb"} = $hash->{"certificate"} if defined($hash->{"certificate"});
       $self->{"version"} = $hash->{"vers"} || $hash->{"version"} || LDAP_VERSION3;
-      $self->{"usenspr"} = $hash->{"nspr"} if defined($hash->{"nspr"});
+      $self->{"usenspr"} = 1 if (defined($hash->{"nspr"}) && $hash->{"nspr"});
       $self->{"callback"} = $hash->{"callback"} if defined($hash->{"callback"});
       $self->{"entryclass"} = $hash->{"entryclass"} || 'Mozilla::LDAP::Entry';
       if (defined($hash->{"timeout"})) {
         die "Can only use the timeout option with NSPR enabled connections"
-          unless defined $self->{"usenspr"};
+          unless defined($self->{"usenspr"});
         $self->{"timeout"} = $hash->{"timeout"};
       }
     }
@@ -85,7 +85,7 @@ sub new
       $self->{"bindpasswd"} = $bindpasswd if defined($bindpasswd);
       $self->{"certdb"} = $certdb if defined($certdb);
       $self->{"version"} = $version || LDAP_VERSION3;
-      $self->{"usenspr"} = $nspr if defined($nspr);
+      $self->{"usenspr"} = 1 if (defined($nspr) && $nspr);
     }
 
   # Anonymous bind is the default...
@@ -151,7 +151,7 @@ sub init
   $self->{"ld"} = $ld;
 
   if (defined($self->{"usenspr"})) {
-    $ret = prldap_install_routines($self->{"ld"}, $self->{"usenspr"});
+    $ret = prldap_install_routines($self->{"ld"}, 0);
     return 0 unless ($ret == LDAP_SUCCESS);
     if (defined($self->{"timeout"})) {
       $ret = prldap_set_session_option($self->{"ld"}, 0,
@@ -970,7 +970,7 @@ sub installNSPR
   if (ref $arg)
     {
       $arg->close();
-      $arg->{"usenspr"} = $shared;
+      $arg->{"usenspr"} = 1;
       $arg->init();
     }
   else
@@ -1147,10 +1147,9 @@ New for PerLDAP v1.5 and later are the following:
     $ld->{"callback"}
     $ld->{"entryclass"}
 
-The B<nspr> flag (1/0) indicates that we wish to use the NSPR layer for all
-TCP connections. This obviously only works if PerLDAP has been compiled
-with NSPR support and libraries. The default is disabled, and the argument
-is a flag (0 or 1) indicating if the connection is shared (threaded app.
+The B<nspr> flag (1/0) indicates that we wish to use the NSPR layer for
+the LDAP connection. This obviously only works if PerLDAP has been compiled
+with NSPR support and libraries. The default is for NSPR to be disabled.
 
 For an NSPR enabled connection, you can also provide an optional timeout
 parameter, which will be used during the lifetime of the connection. This
@@ -1629,7 +1628,8 @@ Install NSPR I/O, threading, and DNS functions so they will be used by
 'ld'.
 
 Pass a non-zero value for the 'shared' parameter if you plan to use
-this LDAP * handle from more than one thread.
+this LDAP * handle from more than one thread. This is highly unlikely
+since PerLDAP is asynchronous.
 
 =item B<setNSPRTimeout>
 
