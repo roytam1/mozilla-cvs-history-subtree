@@ -1236,7 +1236,7 @@ sub BuildRuntimeProjects()
 
     BuildOneProjectWithOutput(":mozilla:lib:mac:NSStdLib:NSStdLib.mcp", "NSStdLib$C$D.shlb", "NSStdLib$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
 
-	BuildOneProjectWithOutput(":mozilla:nsprpub:macbuild:NSPR20PPC.mcp", "NSPR20$C$D.shlb", "NSPR20$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+	BuildOneProjectWithOutput(":mozilla:nsprpub:macbuild:NSPR20PPC.xml", "NSPR20$C$D.shlb", "NSPR20$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
 
     EndBuildModule("runtime");
 }
