@@ -202,6 +202,10 @@ public:
     virtual ~nsBookmarksService();
     nsresult Init();
 
+    // we really need to figure out our public/private interface story
+    void RemoveBookmark(nsIRDFResource* aBookmark);
+    nsresult ClearBookmarksContainer(nsIRDFResource* aContainer);
+
     // nsISupports
     NS_DECL_ISUPPORTS
 

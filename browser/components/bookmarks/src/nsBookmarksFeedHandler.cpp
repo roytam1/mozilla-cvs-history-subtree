@@ -225,7 +225,7 @@ nsFeedLoadListener::OnStopRequest(nsIRequest *aRequest,
             rv = gRDFC->MakeSeq(mInnerBMDataSource, mResource, getter_AddRefs(mLivemarkContainer));
             if (NS_FAILED(rv)) break;
         } else {
-            rv = nsBMSVCClearSeqContainer(mInnerBMDataSource, mResource);
+            rv = mBMSVC->ClearBookmarksContainer(mResource);
             if (NS_FAILED(rv)) break;
 
             mLivemarkContainer = do_CreateInstance (kRDFContainerCID, &rv);
@@ -893,8 +893,8 @@ nsBMSVCClearSeqContainer (nsIRDFDataSource* aDataSource, nsIRDFResource* aResour
     if (NS_FAILED(rv)) return rv;
     if (itemsCount) {
         do {
-            nsIRDFNode *removed;
-            rv = itemsContainer->RemoveElementAt(itemsCount, PR_TRUE, &removed);
+            nsCOMPtr<nsIRDFNode> removed;
+            rv = itemsContainer->RemoveElementAt(itemsCount, PR_TRUE, getter_AddRefs(removed));
             // er, ignore the error, I think
         } while (--itemsCount > 0);
     }

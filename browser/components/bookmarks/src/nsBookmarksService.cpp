@@ -3902,7 +3902,7 @@ nsBookmarksService::Unassert(nsIRDFResource* aSource,
         } else if (aProperty == kNC_LivemarkExpiration) {
             // reload livemark if someone unasserted the expiration
             // clear the Seq to make the command feel more responsive
-            nsBMSVCClearSeqContainer(mInner, aSource);
+            ClearBookmarksContainer(aSource);
             rv = UpdateLivemarkChildren(aSource);
         }
     }
@@ -5628,3 +5628,68 @@ nsBookmarksService::OnEndUpdateBatch(nsIRDFDataSource* aDataSource)
     return NS_OK;
 }
 
+void
+nsBookmarksService::RemoveBookmark(nsIRDFResource* aBookmark)
+{
+    nsresult rv;
+
+    // RDF really, really, really sucks.
+    // No, really.
+
+    nsCOMPtr<nsISimpleEnumerator> arcsOut;
+
+    rv = ArcLabelsOut(aBookmark, getter_AddRefs(arcsOut));
+    if (NS_FAILED(rv)) return;
+
+    PRBool hasMore = PR_FALSE;
+    for (rv = arcsOut->HasMoreElements(&hasMore);
+         NS_SUCCEEDED(rv) && hasMore;
+         rv = arcsOut->HasMoreElements(&hasMore))
+    {
+        nsCOMPtr<nsISupports> sup;
+        rv = arcsOut->GetNext(getter_AddRefs(sup));
+        if (NS_FAILED(rv)) return;
+
+        nsCOMPtr<nsIRDFResource> rsrc = do_QueryInterface(sup);
+        if (!rsrc) return;
+
+        nsCOMPtr<nsIRDFNode> node;
+        rv = mInner->GetTarget(aBookmark, rsrc, PR_TRUE, getter_AddRefs(node));
+        if (NS_FAILED(rv) || rv == NS_RDF_NO_VALUE)
+            continue;
+
+        (void) mInner->Unassert(aBookmark, rsrc, node);
+    }
+}
+
+nsresult
+nsBookmarksService::ClearBookmarksContainer(nsIRDFResource* aContainer)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIRDFContainer> itemsContainer = do_CreateInstance (kRDFContainerCID, &rv);
+    rv = itemsContainer->Init (mInner, aContainer);
+    if (NS_FAILED(rv)) return rv;
+
+    PRInt32 itemsCount = 0;
+    rv = itemsContainer->GetCount(&itemsCount);
+    if (NS_FAILED(rv)) return rv;
+    if (itemsCount) {
+        do {
+            nsCOMPtr<nsIRDFNode> removed;
+            rv = itemsContainer->RemoveElementAt(itemsCount, PR_TRUE, getter_AddRefs(removed));
+            if (NS_FAILED(rv)) continue;
+
+            nsCOMPtr<nsIRDFResource> rsrc = do_QueryInterface(removed);
+            if (!rsrc) continue;
+
+            // hackzor.
+            if (rsrc == mLivemarkLoadingBookmark ||
+                rsrc == mLivemarkLoadFailedBookmark)
+                continue;
+            RemoveBookmark(rsrc);
+        } while (--itemsCount > 0);
+    }
+
+    return NS_OK;
+}
