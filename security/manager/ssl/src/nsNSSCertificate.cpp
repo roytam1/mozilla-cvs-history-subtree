@@ -595,7 +595,7 @@ nsNSSCertificateDB::ImportCertificate(nsIX509Cert *cert,
                                       PRUint32 trusted,
                                       const PRUnichar *nickname)
 {
-  SECStatus srv;
+  SECStatus srv = SECFailure;
   nsresult nsrv;
   CERTCertificate *tmpCert = NULL;
   nsNSSCertTrust trust;
@@ -654,9 +654,8 @@ nsNSSCertificateDB::getCertNames(CERTCertList *certList,
                                  PRUint32      type, 
                                  nsString&     nameList)
 {
-  nsresult rv = NS_ERROR_FAILURE;
   CERTCertListNode *node;
-  int i, num = 0;
+  
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("List of certs:\n"));
   for (node = CERT_LIST_HEAD(certList);
        !CERT_LIST_END(node, certList);
