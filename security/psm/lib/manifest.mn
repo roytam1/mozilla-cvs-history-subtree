@@ -37,7 +37,7 @@ DEPTH      = ../..
 
 DIRS = protocol client
 
-#
-# these dirs are not built at the moment
-#
-#NOBUILD_DIRS = jar
+ifdef MOZILLA_CLIENT
+DIRS += nlslayer
+endif
+

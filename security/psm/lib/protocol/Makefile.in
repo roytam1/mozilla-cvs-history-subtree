@@ -1,5 +1,5 @@
 #! gmake
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -32,39 +32,57 @@
 # GPL.
 #
 
-DEPTH		= ../../../..
+#######################################################################
+# (0) Initialize autoconf variables                                   #
+#######################################################################
+
+CORE_DEPTH	= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
-include $(DEPTH)/config/autoconf.mk
+include $(CORE_DEPTH)/coreconf/autoconf.mk
 
-LIBRARY_NAME = protocol
-MODULE = security
+#######################################################################
+# (1) Include initial platform-independent assignments (MANDATORY).   #
+#######################################################################
 
-EXPORTS = \
-	protocol.h \
-	protocolf.h \
-	protocolport.h \
-	protocolnspr20.h \
-	protocolshr.h \
-	ssmdefs.h \
-	rsrcids.h \
-	messages.h \
-	newproto.h \
-	$(NULL)
+include $(srcdir)/manifest.mn
+
+#######################################################################
+# (2) Include "global" configuration information. (OPTIONAL)          #
+#######################################################################
+
+include $(topsrcdir)/coreconf/config.mk
+
+#######################################################################
+# (3) Include "component" configuration information. (OPTIONAL)       #
+#######################################################################
 
 
-CSRCS  = newproto.c \
-	 templates.c \
-	 protocolshr.c \
-	 $(NULL)
 
-ifeq ($(OS_ARCH),OS2)
-# we don't want the shared lib, but we want to force the creation of a static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
-endif
+#######################################################################
+# (4) Include "local" platform-dependent assignments (OPTIONAL).      #
+#######################################################################
 
-include $(topsrcdir)/config/rules.mk
+
+
+#######################################################################
+# (5) Execute "global" rules. (OPTIONAL)                              #
+#######################################################################
+
+include $(topsrcdir)/coreconf/rules.mk
+
+#######################################################################
+# (6) Execute "component" rules. (OPTIONAL)                           #
+#######################################################################
+
+
+
+#######################################################################
+# (7) Execute "local" rules. (OPTIONAL).                              #
+#######################################################################
+
+install::
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/bin
 

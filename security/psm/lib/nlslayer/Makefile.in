@@ -1,5 +1,5 @@
 #! gmake
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -32,25 +32,65 @@
 # GPL.
 #
 
-DEPTH		= ../../../..
+#######################################################################
+# (0) Initialize autoconf variables                                   #
+#######################################################################
+
+CORE_DEPTH	= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
-include $(DEPTH)/config/autoconf.mk
+include $(CORE_DEPTH)/coreconf/autoconf.mk
+
+#######################################################################
+# (1) Include initial platform-independent assignments (MANDATORY).   #
+#######################################################################
 
 LIBRARY_NAME = nlslayer
 MODULE = security
 
 EXPORTS = \
-	nlslayer.h \
-	$(NULL)
+        nlslayer.h \
+        $(NULL)
 
 CPPSRCS  = nlslayer.cpp \
-	 $(NULL)
+         $(NULL)
 
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
+CXXFLAGS += $(shell $(CORE_DEPTH)/../build/unix/mozilla-config --cflags)
 
-include $(topsrcdir)/config/rules.mk
+#######################################################################
+# (2) Include "global" configuration information. (OPTIONAL)          #
+#######################################################################
+
+include $(topsrcdir)/coreconf/config.mk
+
+#######################################################################
+# (3) Include "component" configuration information. (OPTIONAL)       #
+#######################################################################
+
+SHARED_LIBRARY =
+
+
+#######################################################################
+# (4) Include "local" platform-dependent assignments (OPTIONAL).      #
+#######################################################################
+
+
+
+#######################################################################
+# (5) Execute "global" rules. (OPTIONAL)                              #
+#######################################################################
+
+include $(topsrcdir)/coreconf/rules.mk
+
+#######################################################################
+# (6) Execute "component" rules. (OPTIONAL)                           #
+#######################################################################
+
+
+
+#######################################################################
+# (7) Execute "local" rules. (OPTIONAL).                              #
+#######################################################################
 
