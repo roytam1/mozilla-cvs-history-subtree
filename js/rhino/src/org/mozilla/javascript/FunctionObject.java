@@ -19,6 +19,8 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ * Norris Boyd
+ * vajda@2bridge.com
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -289,14 +291,13 @@ public class FunctionObject extends NativeFunction {
      * @param name the name of the methods to find
      * @return an array of the found methods, or null if no methods
      *         by that name were found.
-     * @see java.lang.Class#getMethods
+     * @see java.lang.Class#getDeclaredMethods
      */
     public static Method[] findMethods(Class clazz, String name) {
         Vector v = new Vector(5);
-        Method[] methods = clazz.getMethods();
+        Method[] methods = clazz.getDeclaredMethods();
         for (int i=0; i < methods.length; i++) {
-            if (methods[i].getDeclaringClass() == clazz &&
-                methods[i].getName().equals(name)){
+            if (methods[i].getName().equals(name)) {
                 v.addElement(methods[i]);
             }
         }
