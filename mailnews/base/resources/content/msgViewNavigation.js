@@ -161,6 +161,8 @@ function GoNextMessage(type, startFromBeginning)
     dump("XXX resultFolder = " + resultFolder.value + "\n");
 
     outlinerSelection.select(resultIndex.value);
+
+    EnsureRowInThreadOutlinerIsVisible(resultIndex.value); 
   }
   catch (ex) {
     dump("XXX ex = " + ex + "\n");

@@ -278,3 +278,8 @@ function GetThreadTreeFolder()
   return tree;
 }
 
+function EnsureRowInThreadOutlinerIsVisible(index)
+{
+  var outliner = GetThreadOutliner();
+  outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).ensureRowIsVisible(index); 
+}
