@@ -8,6 +8,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE	= libart_lgpl
 LIBRARY_NAME = moz_art_lgpl
+GRE_MODULE = 1
 
 PACKAGE_FILE = libart.pkg
 

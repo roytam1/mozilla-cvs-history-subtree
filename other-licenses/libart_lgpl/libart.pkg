@@ -1,4 +1,4 @@
 [gecko]
 #if SHARED_LIBRARY
-dist/bin/components/@SHARED_LIBRARY@
+dist/bin/@SHARED_LIBRARY@
 #endif

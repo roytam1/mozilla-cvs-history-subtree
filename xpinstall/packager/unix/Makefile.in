@@ -28,14 +28,17 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpinstall
-
 PACKAGE_FILE = installer.pkg
+
+BASE_NAME = mozilla-$(TARGET_CPU)-$(TARGET_VENDOR)-$(TARGET_OS)-$(MOZILLA_VERSION)
+STUB_NAME = $(BASE_NAME)-installer
+SEA_NAME  = $(BASE_NAME)-full-installer
 
 ifdef ARCHIVE_URL
 INSTALLER_FLAGS += -a $(ARCHIVE_URL)
 endif
 
 installer:
-	$(PERL) $(srcdir)/makeall.pl -o $(DEPTH) $(INSTALLER_FLAGS)
+	$(PERL) $(srcdir)/makeall.pl -o $(DEPTH) -b $(STUB_NAME) -f $(FULL_NAME) $(INSTALLER_FLAGS)
 
 include $(topsrcdir)/config/rules.mk

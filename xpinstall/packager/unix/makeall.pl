@@ -48,11 +48,15 @@ GetOptions('help|h|?'              => \&PrintUsage,
            'objdir|o=s'            => \$topobjdir,
            'stagepath|s=s'         => \$inStagePath,
            'archive-uri|aurl|a=s'  => \$inXpiURL,
+           'stub-installer|b=s'    => \$inStubInstallName,
+           'full-installer|f=s'    => \$inFullInstallName,
            'verbose|v+'            => \$MozPackager::verbosity);
 
 $topobjdir                = "$topsrcdir"                 if !defined($topobjdir);
 $inStagePath              = "$topobjdir/stage"           if !defined($inStagePath);
 $inXpiURL                 = "ftp://not.supplied.invalid" if !defined($inXpiURL);
+$inStubInstallName        = "mozilla-stub-installer"     if !defined($inStubInstallName);
+$inFullInstallName        = "mozilla-full-installer"     if !defined($inFullInstallName);
 
 $topobjdir   = File::Spec->rel2abs($topobjdir);
 $inStagePath = File::Spec->rel2abs($inStagePath);
@@ -178,7 +182,7 @@ foreach $package (keys %gPackages) {
 MozPackager::system("perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/unix/config.it > $gDirDistProduct/config.ini");
 
 $stubStageDir = "$gDirDistProduct/setup";
-$stubDistPath = "$gDirDistProduct/mozilla-stub-installer.tar.gz";
+$stubDistPath = "$gDirDistProduct/$inStubInstallName.tar.gz";
 
 {
   my $parser = new MozParser;
@@ -189,7 +193,7 @@ $stubDistPath = "$gDirDistProduct/mozilla-stub-installer.tar.gz";
 }
 
 $fullStageDir = "$gDirDistProduct/cd";
-$fullDistPath = "$gDirDistProduct/mozilla-installer.tar.gz";
+$fullDistPath = "$gDirDistProduct/$inFullInstallName.tar.gz";
 
 {
   my $parser = new MozParser;
