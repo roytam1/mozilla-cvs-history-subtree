@@ -1685,22 +1685,25 @@ nsGfxScrollFrameInner::~nsGfxScrollFrameInner()
 PRBool
 nsGfxScrollFrameInner::SetAttribute(nsIBox* aBox, nsIAtom* aAtom, nscoord aSize, PRBool aReflow)
 {
-  // convert to pixels
-  aSize /= mOnePixel;
-
-  // only set the attribute if it changed.
-
-  PRInt32 current = GetIntegerAttribute(aBox, aAtom, -1);
-  if (current != aSize)
+  if (aBox) 
   {
-      nsIFrame* frame = nsnull;
-      aBox->GetFrame(&frame);
-      nsAutoString newValue;
-      newValue.AppendInt(aSize);
-      frame->GetContent()->SetAttr(kNameSpaceID_None, aAtom, newValue, aReflow);
-      return PR_TRUE;
-  }
+    // convert to pixels
+    aSize /= mOnePixel;
 
+    // only set the attribute if it changed.
+
+    PRInt32 current = GetIntegerAttribute(aBox, aAtom, -1);
+    if (current != aSize)
+    {
+        nsIFrame* frame = nsnull;
+        aBox->GetFrame(&frame);
+        nsAutoString newValue;
+        newValue.AppendInt(aSize);
+        frame->GetContent()->SetAttr(kNameSpaceID_None, aAtom, newValue, aReflow);
+        return PR_TRUE;
+    }
+  }
+  
   return PR_FALSE;
 }
 
@@ -1763,12 +1766,12 @@ nsGfxScrollFrameInner::GetIntegerAttribute(nsIBox* aBox, nsIAtom* atom, PRInt32 
     nsAutoString value;
     if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, atom, value))
     {
-      PRInt32 error;
+        PRInt32 error;
 
-      // convert it to an integer
-      defaultValue = value.ToInteger(&error);
+        // convert it to an integer
+        defaultValue = value.ToInteger(&error);
     }
-
+    
     return defaultValue;
 }
 
