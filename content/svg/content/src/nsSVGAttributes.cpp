@@ -565,7 +565,7 @@ nsSVGAttributes::UpdateContentStyleRule()
 
   for (int i = 0; i< mAttributes.Count(); ++i) {
     nsSVGAttribute* attr = (nsSVGAttribute*) mAttributes[i];
-    nsCOMPtr<nsIAtom> nameatom = attr->GetNodeInfo()->GetNameAtom();
+    nsIAtom* nameatom = attr->GetNodeInfo()->NameAtom();
 
     if (!AffectsContentStyleRule(nameatom)) continue;
 
