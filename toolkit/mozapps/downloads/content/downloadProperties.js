@@ -24,17 +24,26 @@ function Startup()
   var pathField = document.getElementById("path");
   var sourceField = document.getElementById("source");
 
-  var dateStarted = ds.GetTarget(resource, dateStartedRes, true).QueryInterface(Components.interfaces.nsIRDFDate).Value;
-  var dateEnded = ds.GetTarget(resource, dateEndedRes, true).QueryInterface(Components.interfaces.nsIRDFDate).Value;
-  dateStarted = new Date(dateStarted/1000);
-  dateStarted = dateTimeService.FormatDateTime("", dateTimeService.dateFormatShort, dateTimeService.timeFormatSeconds, dateStarted.getFullYear(), dateStarted.getMonth()+1, dateStarted.getDate(), dateStarted.getHours(), dateStarted.getMinutes(), dateStarted.getSeconds());
-  dateEnded = new Date(dateEnded/1000);
-  dateEnded = dateTimeService.FormatDateTime("", dateTimeService.dateFormatShort, dateTimeService.timeFormatSeconds, dateEnded.getFullYear(), dateEnded.getMonth()+1, dateEnded.getDate(), dateEnded.getHours(), dateEnded.getMinutes(), dateEnded.getSeconds());
+  try {
+    var dateStarted = ds.GetTarget(resource, dateStartedRes, true).QueryInterface(Components.interfaces.nsIRDFDate).Value;
+    dateStarted = new Date(dateStarted/1000);
+    dateStarted = dateTimeService.FormatDateTime("", dateTimeService.dateFormatShort, dateTimeService.timeFormatSeconds, dateStarted.getFullYear(), dateStarted.getMonth()+1, dateStarted.getDate(), dateStarted.getHours(), dateStarted.getMinutes(), dateStarted.getSeconds());
+    dateStartedField.setAttribute("value", dateStarted);
+  }
+  catch (e) {
+  }
+  
+  try {
+    var dateEnded = ds.GetTarget(resource, dateEndedRes, true).QueryInterface(Components.interfaces.nsIRDFDate).Value;
+    dateEnded = new Date(dateEnded/1000);
+    dateEnded = dateTimeService.FormatDateTime("", dateTimeService.dateFormatShort, dateTimeService.timeFormatSeconds, dateEnded.getFullYear(), dateEnded.getMonth()+1, dateEnded.getDate(), dateEnded.getHours(), dateEnded.getMinutes(), dateEnded.getSeconds());
+    dateEndedField.setAttribute("value", dateEnded);
+  }
+  catch (e) {
+  }
   
   var source = ds.GetTarget(resource, sourceRes, true).QueryInterface(Components.interfaces.nsIRDFResource).Value;
 
-  dateStartedField.setAttribute("value", dateStarted);
-  dateEndedField.setAttribute("value", dateEnded);
   pathField.value = window.arguments[0];
   sourceField.value = source;
   

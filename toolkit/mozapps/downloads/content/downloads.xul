@@ -115,13 +115,13 @@
   <popup id="downloadContextMenu" onpopupshowing="return buildContextMenu(event);"/>
   
   <vbox id="downloadView" flex="1" style="overflow: auto;"
-        context="downloadContextMenu"
+        
         datasources="rdf:null" ref="NC:DownloadsRoot"
         ondragover="nsDragAndDrop.dragOver(event, gDownloadDNDObserver);"
         ondragdrop="nsDragAndDrop.drop(event, gDownloadDNDObserver);">
     <template>
       <rule>
-          <download uri="rdf:*" 
+          <download uri="rdf:*" context="downloadContextMenu"
                     image="moz-icon:rdf:http://home.netscape.com/NC-rdf#File"
                     animated="rdf:http://home.netscape.com/NC-rdf#DownloadAnimated"
                     target="rdf:http://home.netscape.com/NC-rdf#Name"

@@ -36,6 +36,8 @@
 # 
 # ***** END LICENSE BLOCK *****
 
+///////////////////////////////////////////////////////////////////////////////
+// Globals
 
 const kObserverServiceProgID = "@mozilla.org/observer-service;1";
 const NC_NS = "http://home.netscape.com/NC-rdf#";
@@ -44,6 +46,49 @@ var gDownloadManager;
 var gDownloadListener;
 var gDownloadsView;
 
+///////////////////////////////////////////////////////////////////////////////
+// Utility Functions 
+function setRDFProperty(aID, aProperty, aValue)
+{
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+
+  var db = gDownloadManager.datasource;
+  var propertyArc = rdf.GetResource(NC_NS + aProperty);
+  
+  var res = rdf.GetResource(aID);
+  var node = db.GetTarget(res, propertyArc, true);
+  if (node)
+    db.Change(res, propertyArc, node, rdf.GetLiteral(aValue));
+  else
+    db.Assert(res, propertyArc, rdf.GetLiteral(aValue), true);
+}
+
+function getRDFProperty(aID, aProperty)
+{
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+
+  var db = gDownloadManager.datasource;
+  var propertyArc = rdf.GetResource(NC_NS + aProperty);
+  
+  var res = rdf.GetResource(aID);
+  var node = db.GetTarget(res, propertyArc, true);
+  try {
+    node = node.QueryInterface(Components.interfaces.nsIRDFLiteral);
+    return node.Value;
+  }
+  catch (e) {
+    try {
+      node = node.QueryInterface(Components.interfaces.nsIRDFInt);
+      return node.Value;
+    }
+    catch (e) {
+      node = node.QueryInterface(Components.interfaces.nsIRDFResource);
+      return node.Value;
+    }
+  }
+  return "";
+}
+
 function fireEventForElement(aElement, aEventType)
 {
   var e = document.createEvent("Events");
@@ -51,6 +96,48 @@ function fireEventForElement(aElement, aEventType)
   
   aElement.dispatchEvent(e);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Start/Stop Observers
+var gDownloadObserver = {
+  observe: function (aSubject, aTopic, aState) 
+  {
+    var dl = aSubject.QueryInterface(Components.interfaces.nsIDownload);
+    switch (aTopic) {
+    case "dl-failed":
+    case "dl-done":
+    case "dl-cancel":
+      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+      var rdfc = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
+
+      var db = gDownloadManager.datasource;
+      
+      rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
+
+      var dlRes = rdf.GetUnicodeResource(dl.target.persistentDescriptor);
+      rdfc.RemoveElement(dlRes, true);
+      
+      var elts = rdfc.GetElements();
+      var insertIndex = 1;
+      while (elts.hasMoreElements()) {
+        var currDL = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        // This is based on the ASSumption that the dlmgr only hashes active downloads. 
+        var dl = gDownloadManager.getDownload(currDL.Value);
+        if (!dl) 
+          break;
+        ++insertIndex;
+      }
+      
+      if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
+        rdfc.AppendElement(dlRes);
+      else
+        rdfc.InsertElementAt(dlRes, insertIndex, true);      
+    }
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Download Event Handlers
 
 function onDownloadCancel(aEvent)
 {
@@ -86,7 +173,7 @@ function onDownloadResume(aEvent)
 
 function onDownloadRemove(aEvent)
 {
-  if (canRemoveDownload(aEvent.target)) {
+  if (aEvent.target.removable) {
     gDownloadManager.removeDownload(aEvent.target.id);
     
     gDownloadViewController.onCommandUpdate();
@@ -145,47 +232,6 @@ function onDownloadProperties(aEvent)
                     "_blank", "modal,centerscreen,chrome,resizable=no", aEvent.target.id);
 }
 
-function setRDFProperty(aID, aProperty, aValue)
-{
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-
-  var db = gDownloadManager.datasource;
-  var propertyArc = rdf.GetResource(NC_NS + aProperty);
-  
-  var res = rdf.GetResource(aID);
-  var node = db.GetTarget(res, propertyArc, true);
-  if (node)
-    db.Change(res, propertyArc, node, rdf.GetLiteral(aValue));
-  else
-    db.Assert(res, propertyArc, rdf.GetLiteral(aValue), true);
-}
-
-function getRDFProperty(aID, aProperty)
-{
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-
-  var db = gDownloadManager.datasource;
-  var propertyArc = rdf.GetResource(NC_NS + aProperty);
-  
-  var res = rdf.GetResource(aID);
-  var node = db.GetTarget(res, propertyArc, true);
-  try {
-    node = node.QueryInterface(Components.interfaces.nsIRDFLiteral);
-    return node.Value;
-  }
-  catch (e) {
-    try {
-      node = node.QueryInterface(Components.interfaces.nsIRDFInt);
-      return node.Value;
-    }
-    catch (e) {
-      node = node.QueryInterface(Components.interfaces.nsIRDFResource);
-      return node.Value;
-    }
-  }
-  return "";
-}
-
 function onDownloadAnimated(aEvent)
 {
   gDownloadViewController.onCommandUpdate();    
@@ -204,6 +250,8 @@ function onDownloadRetry(aEvent)
   gDownloadViewController.onCommandUpdate();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Startup, Shutdown
 function Startup() 
 {
   gDownloadsView = document.getElementById("downloadView");
@@ -235,6 +283,12 @@ function Startup()
   var downloadStrings = document.getElementById("downloadStrings");
   gDownloadListener = new DownloadProgressListener(document, downloadStrings);
   gDownloadManager.listener = gDownloadListener;
+  
+  var observerService = Components.classes[kObserverServiceProgID]
+                                  .getService(Components.interfaces.nsIObserverService);
+  observerService.addObserver(gDownloadObserver, "dl-done",   false);
+  observerService.addObserver(gDownloadObserver, "dl-cancel", false);
+  observerService.addObserver(gDownloadObserver, "dl-failed", false);  
 }
 
 function Shutdown() 
@@ -269,6 +323,8 @@ function saveStatusMessages()
   gDownloadManager.endBatchUpdate();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// View Context Menus
 var gContextMenus = [ 
   ["menuitem_pause", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_open", "menuitem_show", "menuseparator_properties", "menuitem_properties"],
@@ -301,6 +357,9 @@ function buildContextMenu(aEvent)
   return false;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Drag and Drop
+
 var gDownloadDNDObserver =
 {
   onDragOver: function (aEvent, aFlavour, aDragSession)
@@ -329,9 +388,8 @@ var gDownloadDNDObserver =
   }
 }
 
-function onSelect(aEvent) {
-  window.updateCommands("list-select");
-}
+///////////////////////////////////////////////////////////////////////////////
+// Command Updating and Command Handlers
 
 var gDownloadViewController = {
   supportsCommand: function dVC_supportsCommand (aCommand)
@@ -380,40 +438,18 @@ var gDownloadViewController = {
   }
 };
 
-function getFileForItem(aElement)
-{
-  return createLocalFile(aElement.id);
-}
-
-function createLocalFile(aFilePath) 
-{
-  var lfContractID = "@mozilla.org/file/local;1";
-  var lfIID = Components.interfaces.nsILocalFile;
-  var lf = Components.classes[lfContractID].createInstance(lfIID);
-  lf.initWithPath(aFilePath);
-  return lf;
-}
-
 function cleanUpDownloadsList()
 {
   gDownloadManager.startBatchUpdate();
 
   for (var i = gDownloadsView.childNodes.length - 1; i >= 0; --i) {
     var currItem = gDownloadsView.childNodes[i];
-    if (currItem.localName == "download" && canRemoveDownload(currItem))
+    if (currItem.localName == "download" && currItem.removable)
       gDownloadManager.removeDownload(currItem.id);
   }
   
   gDownloadManager.endBatchUpdate();
 
   gDownloadViewController.onCommandUpdate();
-}
-
-function canRemoveDownload(aDownload)
-{
-  return aDownload.getAttribute("state") == "1" ||
-         aDownload.getAttribute("state") == "2" ||
-         aDownload.getAttribute("state") == "3" ||
-         aDownload.getAttribute("state") == "4";
 }
 
