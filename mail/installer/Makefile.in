@@ -47,6 +47,7 @@ NO_PKG_FILES = \
 	bloaturls.txt \
 	codesighs* \
 	elf-dynstr-gc \
+	thunderbird-bin.elf \
 	thunderbird-config \
 	mangle* \
 	maptsv* \
@@ -90,6 +91,9 @@ NO_PKG_FILES = \
 	chrome/pippki.jar \
 	chrome/toolkit.jar \
 	PalmSyncInstall.exe \
+	components/libgkplugin.so \
+	components/plugin.xpt \
+	components/gkplugin.dll \
 	$(NULL)
 
 ifeq ($(OS_ARCH), WINNT)
