@@ -66,6 +66,7 @@ nsDiskCacheRecord::nsDiskCacheRecord(nsIDBAccessor* db, nsNetDiskCache* aCache) 
   mDB(db) ,
   mInfo(0) ,
   mInfoSize(0) ,
+  mNumChannels(0) ,
   mDiskCache(aCache) 
 {
 
