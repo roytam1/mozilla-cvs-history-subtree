@@ -1450,6 +1450,7 @@ var BookmarksUtils = {
 
     var chan = IOSVC.newChannel(aFavIconURL, null, null);
     var listener = new bookmarksFavIconLoadListener (aURL, aFavIconURL, chan);
+    chan.notificationCallbacks = listener;
     chan.asyncOpen(listener, null);
   }
 }
@@ -1737,14 +1738,27 @@ bookmarksFavIconLoadListener.prototype = {
   mStream : null,
 
   QueryInterface: function (iid) {
-    if (!iid.equals(Components.interfaces.nsIRequestObserver) &&
-        !iid.equals(Components.interfaces.nsISupports) &&
+    if (!iid.equals(Components.interfaces.nsISupports) &&
+        !iid.equals(Components.interfaces.nsIInterfaceRequestor) &&
+        !iid.equals(Components.interfaces.nsIRequestObserver) &&
+        !iid.equals(Components.interfaces.nsIHttpEventSink) &&
+        !iid.equals(Components.interfaces.nsIProgressEventSink) && // see below
         !iid.equals(Components.interfaces.nsIStreamListener)) {
       throw Components.results.NS_ERROR_NO_INTERFACE;
     }
     return this;
   },
 
+  // nsIInterfaceRequestor
+  getInterface: function (iid) {
+    try {
+      return this.QueryInterface(iid);
+    } catch (e) {
+      throw Components.results.NS_NOINTERFACE;
+    }
+  },
+
+  // nsIRequestObserver
   onStartRequest : function (aRequest, aContext) {
     this.mStream = Components.classes['@mozilla.org/binaryinputstream;1'].createInstance(Components.interfaces.nsIBinaryInputStream);
   },
@@ -1768,8 +1782,11 @@ bookmarksFavIconLoadListener.prototype = {
       }
       BMSVC.updateBookmarkIcon(this.mURI, dataurl);
     }
+
+    this.mChannel = null;
   },
 
+  // nsIStreamObserver
   onDataAvailable : function (aRequest, aContext, aInputStream, aOffset, aCount) {
     // we could get a different aInputStream, so we don't save this;
     // it's unlikely we'll get more than one onDataAvailable for a
@@ -1777,7 +1794,18 @@ bookmarksFavIconLoadListener.prototype = {
     this.mStream.setInputStream(aInputStream);
     this.mBytes += this.mStream.readBytes(aCount);
     this.mCountRead += aCount;
-  }
+  },
+
+  // nsIHttpEventSink
+  onRedirect : function (aHttpChannel, aNewChannel) {
+    this.mChannel = aNewChannel;
+  },
+
+  // nsIProgressEventSink: the only reason we support
+  // nsIProgressEventSink is to shut up a whole slew of xpconnect
+  // warnings in debug builds.  (see bug #253127)
+  onProgress : function (aRequest, aContext, aProgress, aProgressMax) { },
+  onStatus : function (aRequest, aContext, aStatus, aStatusArg) { }
 }
 
 #ifdef 0
