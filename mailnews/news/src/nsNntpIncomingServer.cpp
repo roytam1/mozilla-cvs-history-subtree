@@ -1502,8 +1502,28 @@ nsNntpIncomingServer::QuerySearchableHeader(const char *name, PRBool *result)
 NS_IMETHODIMP
 nsNntpIncomingServer::FindGroup(const char *name, nsIMsgNewsFolder **result)
 {
-  NS_ASSERTION(0,"not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG_POINTER(name);
+  NS_ENSURE_ARG_POINTER(result);
+
+  nsresult rv;
+  nsCOMPtr<nsIFolder> rootFolder;
+  rv = GetRootFolder(getter_AddRefs(rootFolder));
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!rootFolder) return NS_ERROR_FAILURE;
+
+  nsCOMPtr <nsIMsgFolder> serverFolder = do_QueryInterface(rootFolder, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!serverFolder) return NS_ERROR_FAILURE;
+
+  nsCOMPtr <nsIFolder> subFolder;
+  rv = serverFolder->FindSubFolder(name, getter_AddRefs(subFolder));
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!subFolder) return NS_ERROR_FAILURE;
+
+  rv = subFolder->QueryInterface(NS_GET_IID(nsIMsgNewsFolder), (void**)result);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!*result) return NS_ERROR_FAILURE;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
