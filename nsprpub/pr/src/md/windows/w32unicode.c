@@ -168,30 +168,6 @@ LPSTR _PR_MD_W2A(LPCWSTR inWideString, LPSTR outString, int inStringChars)
 ** This is similar to what NT does to support the funcAs.
 */
 
-VOID
-WINAPI
-OutputDebugStringA(
-    LPCSTR lpOutputString
-    )
-{
-    LPWSTR wideStr = NULL;
-
-    wideStr = _PR_MD_MALLOC_A2W(lpOutputString);
-    if(NULL == lpOutputString || NULL != wideStr)
-    {
-        OutputDebugStringW(wideStr);
-
-        if(NULL != wideStr)
-        {
-            PR_Free(wideStr);
-        }
-    }
-    else
-    {
-        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-    }
-}
-
 HINSTANCE
 WINAPI
 LoadLibraryA(

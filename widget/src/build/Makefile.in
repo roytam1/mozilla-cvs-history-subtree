@@ -52,7 +52,11 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../windows \
 		$(NULL)
 
+ifneq ($(OS_TARGET),WINCE)
 OS_LIBS		+= comctl32.lib comdlg32.lib uuid.lib ole32.lib shell32.lib oleaut32.lib
+else
+OS_LIBS		+= ceshell.lib ole32.lib
+endif
 
 SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)widget_windows.$(LIB_SUFFIX) \

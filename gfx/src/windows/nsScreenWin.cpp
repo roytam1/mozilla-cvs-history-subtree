@@ -50,13 +50,13 @@
 // needed because there are unicode/ansi versions of this routine
 // and we need to make sure we get the correct one.
 #ifdef UNICODE
-#define GetMonitorInfoQuoted "GetMonitorInfoW"
+#define GetMonitorInfoQuoted _T("GetMonitorInfoW")
 #else
-#define GetMonitorInfoQuoted "GetMonitorInfoA"
+#define GetMonitorInfoQuoted _T("GetMonitorInfoA")
 #endif
 
 
-#if _MSC_VER >= 1200
+#if _MSC_VER >= 1200 && !defined(WINCE)
 typedef BOOL (WINAPI *GetMonitorInfoProc)(HMONITOR inMon, LPMONITORINFO ioInfo); 
 #endif
 
@@ -74,10 +74,10 @@ nsScreenWin :: nsScreenWin ( void* inScreen )
   ::ReleaseDC(nsnull,hDCScreen);
 #endif
    
-#if _MSC_VER >= 1200
+#if _MSC_VER >= 1200 && !defined(WINCE)
   // figure out if we can call the multiple monitor APIs that are only
   // available on Win98/2000.
-  HMODULE lib = GetModuleHandle("user32.dll");
+  HMODULE lib = GetModuleHandle(_T("user32.dll"));
   if ( lib ) {
     mGetMonitorInfoProc = GetProcAddress ( lib, GetMonitorInfoQuoted );
     if ( mGetMonitorInfoProc )
@@ -105,7 +105,7 @@ NS_IMETHODIMP
 nsScreenWin :: GetRect(PRInt32 *outLeft, PRInt32 *outTop, PRInt32 *outWidth, PRInt32 *outHeight)
 {
   BOOL success = FALSE;
-#if _MSC_VER >= 1200
+#if _MSC_VER >= 1200 && !defined(WINCE)
   if ( mScreen && mHasMultiMonitorAPIs ) {
     GetMonitorInfoProc proc = (GetMonitorInfoProc)mGetMonitorInfoProc;
     MONITORINFO info;
@@ -138,7 +138,7 @@ NS_IMETHODIMP
 nsScreenWin :: GetAvailRect(PRInt32 *outLeft, PRInt32 *outTop, PRInt32 *outWidth, PRInt32 *outHeight)
 {
   BOOL success = FALSE;
-#if _MSC_VER >= 1200
+#if _MSC_VER >= 1200 && !defined(WINCE)
   if ( mScreen && mHasMultiMonitorAPIs ) {
     GetMonitorInfoProc proc = (GetMonitorInfoProc)mGetMonitorInfoProc;
     MONITORINFO info;

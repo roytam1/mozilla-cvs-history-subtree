@@ -49,7 +49,7 @@
 
 nsIServiceManager * gServiceManager = NULL;
 
-static char szNullPluginWindowClassName[] = CLASS_NULL_PLUGIN;
+static TCHAR szNullPluginWindowClassName[] = CLASS_NULL_PLUGIN;
 
 static LRESULT CALLBACK NP_LOADDS PluginWndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -72,7 +72,11 @@ BOOL RegisterNullPluginWindowClass()
   wc.lpfnWndProc   = (WNDPROC)PluginWndProc;
   wc.cbWndExtra    = sizeof(DWORD);
   wc.hInstance     = hInst;
+#if !defined(WINCE)
   wc.hIcon         = LoadIcon(hInst, IDI_APPLICATION);
+#else
+  wc.hIcon         = NULL;
+#endif
   wc.hCursor       = NULL;
   wc.hbrBackground = HBRUSH(COLOR_WINDOW + 1);
   wc.lpszClassName = szNullPluginWindowClassName;
@@ -124,43 +128,47 @@ CPlugin::CPlugin(HINSTANCE hInst,
   assert(m_hInst != NULL);
   assert(m_pNPInstance != NULL);
 
-  if((pluginType != NULL) && (lstrlen((LPSTR)pluginType) != 0))
+  if((pluginType != NULL) && (lstrlenA((LPSTR)pluginType) != 0))
   {
-    m_pNPMIMEType = (NPMIMEType)new char[lstrlen((LPSTR)pluginType) + 1];
+    m_pNPMIMEType = (NPMIMEType)new char[lstrlenA((LPSTR)pluginType) + 1];
     if(m_pNPMIMEType != NULL)
-      lstrcpy((LPSTR)m_pNPMIMEType, pluginType);
+      lstrcpyA((LPSTR)m_pNPMIMEType, pluginType);
   }
 
-  if((szPageURL != NULL) && (lstrlen(szPageURL) != 0))
+  if((szPageURL != NULL) && (lstrlenA(szPageURL) != 0))
   {
-    m_szPageURL = new char[lstrlen(szPageURL) + 1];
+    m_szPageURL = new char[lstrlenA(szPageURL) + 1];
     if(m_szPageURL != NULL)
-      lstrcpy(m_szPageURL, szPageURL);
+      lstrcpyA(m_szPageURL, szPageURL);
   }
   
-  if((szFileURL != NULL) && (lstrlen(szFileURL) != 0))
+  if((szFileURL != NULL) && (lstrlenA(szFileURL) != 0))
   {
-    m_szFileURL = new char[lstrlen(szFileURL) + 1];
+    m_szFileURL = new char[lstrlenA(szFileURL) + 1];
     if(m_szFileURL != NULL)
-      lstrcpy(m_szFileURL, szFileURL);
+      lstrcpyA(m_szFileURL, szFileURL);
   }
 
-  if((szFileExtension != NULL) && (lstrlen(szFileExtension) != 0))
+  if((szFileExtension != NULL) && (lstrlenA(szFileExtension) != 0))
   {
-    m_szFileExtension = new char[lstrlen(szFileExtension) + 1];
+    m_szFileExtension = new char[lstrlenA(szFileExtension) + 1];
     if(m_szFileExtension != NULL)
-      lstrcpy(m_szFileExtension, szFileExtension);
+      lstrcpyA(m_szFileExtension, szFileExtension);
   }
 
   m_hIcon = LoadIcon(m_hInst, MAKEINTRESOURCE(IDI_PLUGICON));
 
   char szString[1024] = {'\0'};
-  LoadString(m_hInst, IDS_CLICK_TO_GET, szString, sizeof(szString));
-  if(lstrlen(szString) != 0)
+#if !defined(WINCE)
+  LoadStringA(m_hInst, IDS_CLICK_TO_GET, szString, sizeof(szString));
+#else
+  _LoadStringA(m_hInst, IDS_CLICK_TO_GET, szString, sizeof(szString));
+#endif
+  if(lstrlenA(szString) != 0)
   {
-    m_szCommandMessage = new char[lstrlen(szString) + 1];
+    m_szCommandMessage = new char[lstrlenA(szString) + 1];
     if(m_szCommandMessage != NULL)
-      lstrcpy(m_szCommandMessage, szString);
+      lstrcpyA(m_szCommandMessage, szString);
   }
 }
 
@@ -249,7 +257,7 @@ BOOL CPlugin::init(HWND hWndParent)
     GetClientRect(m_hWndParent, &rcParent);
 
     CreateWindow(szNullPluginWindowClassName, 
-                 "NULL Plugin", 
+                 _T("NULL Plugin"), 
                  WS_CHILD,
                  0,0, rcParent.right, rcParent.bottom,
                  m_hWndParent,
@@ -327,10 +335,10 @@ LPSTR CPlugin::createURLString()
   // check if there is file URL first
   if(!m_bSmartUpdate && m_szFileURL != NULL)
   {
-    m_szURLString = new char[lstrlen(m_szFileURL) + 1];
+    m_szURLString = new char[lstrlenA(m_szFileURL) + 1];
     if(m_szURLString == NULL)
       return NULL;
-    lstrcpy(m_szURLString, m_szFileURL);
+    lstrcpyA(m_szURLString, m_szFileURL);
     return m_szURLString;
   }
   
@@ -346,18 +354,18 @@ LPSTR CPlugin::createURLString()
   
   if(!m_bSmartUpdate && m_szPageURL != NULL && !contentTypeIsJava)
   {
-    szAddress = new char[lstrlen(m_szPageURL) + 1];
+    szAddress = new char[lstrlenA(m_szPageURL) + 1];
     if(szAddress == NULL)
       return NULL;
-    lstrcpy(szAddress, m_szPageURL);
+    lstrcpyA(szAddress, m_szPageURL);
 
-    m_szURLString = new char[lstrlen(szAddress) + 1 + lstrlen((LPSTR)m_pNPMIMEType) + 1];
+    m_szURLString = new char[lstrlenA(szAddress) + 1 + lstrlenA((LPSTR)m_pNPMIMEType) + 1];
 
     if(m_szURLString == NULL)
       return NULL;
 
     // Append the MIME type to the URL
-    wsprintf(m_szURLString, "%s?%s", szAddress, (LPSTR)m_pNPMIMEType);
+    wsprintfA(m_szURLString, "%s?%s", szAddress, (LPSTR)m_pNPMIMEType);
   }
   else // default
   {
@@ -369,19 +377,19 @@ LPSTR CPlugin::createURLString()
         urlToOpen = szPageUrlForJVM;
       }
 
-      szAddress = new char[lstrlen(urlToOpen) + 1];
+      szAddress = new char[lstrlenA(urlToOpen) + 1];
       if(szAddress == NULL)
         return NULL;
-      lstrcpy(szAddress, urlToOpen);
+      lstrcpyA(szAddress, urlToOpen);
 
-      m_szURLString = new char[lstrlen(szAddress) + 10 + 
-                               lstrlen((LPSTR)m_pNPMIMEType) + 1];
+      m_szURLString = new char[lstrlenA(szAddress) + 10 + 
+                               lstrlenA((LPSTR)m_pNPMIMEType) + 1];
 
       if(m_szURLString == NULL)
         return NULL;
 
       // Append the MIME type to the URL
-      wsprintf(m_szURLString, "%s?mimetype=%s", 
+      wsprintfA(m_szURLString, "%s?mimetype=%s", 
                szAddress, (LPSTR)m_pNPMIMEType);
     }
     else
@@ -404,12 +412,12 @@ LPSTR CPlugin::createURLString()
         m_szFileURL[0] = '\0';
       }
 
-      m_szURLString = new char[lstrlen(szPluginFinderCommandBeginning) + lstrlen(urlToOpen) + 10 + 
-                               lstrlen((LPSTR)m_pNPMIMEType) + 13 +
-                               lstrlen((LPSTR)m_szPageURL) + 11 + 
-                               lstrlen((LPSTR)m_szFileURL) +
-                               lstrlen(szPluginFinderCommandEnd) + 1];
-      wsprintf(m_szURLString, "%s%s?mimetype=%s&pluginspage=%s&pluginurl=%s%s",
+      m_szURLString = new char[lstrlenA(szPluginFinderCommandBeginning) + lstrlenA(urlToOpen) + 10 + 
+                               lstrlenA((LPSTR)m_pNPMIMEType) + 13 +
+                               lstrlenA((LPSTR)m_szPageURL) + 11 + 
+                               lstrlenA((LPSTR)m_szFileURL) +
+                               lstrlenA(szPluginFinderCommandEnd) + 1];
+      wsprintfA(m_szURLString, "%s%s?mimetype=%s&pluginspage=%s&pluginurl=%s%s",
                szPluginFinderCommandBeginning, urlToOpen, 
                (LPSTR)m_pNPMIMEType, m_szPageURL, m_szFileURL, szPluginFinderCommandEnd);
 
@@ -450,7 +458,7 @@ void CPlugin::getPluginSmart()
 
   dbgOut3("%#08x '%s'", m_pNPInstance, szJSString);
 
-  assert(lstrlen(szJSString) > 0);
+  assert(lstrlenA(szJSString) > 0);
 
   NPN_GetURL(m_pNPInstance, szJSString, "smartupdate_plugin_finder");
 */
@@ -503,12 +511,16 @@ void CPlugin::getPlugin()
   }
 
   char szString[1024] = {'\0'};
-  LoadString(m_hInst, IDS_CLICK_WHEN_DONE, szString, sizeof(szString));
-  if(lstrlen(szString) != 0)
+#if !defined(WINCE)
+  LoadStringA(m_hInst, IDS_CLICK_WHEN_DONE, szString, sizeof(szString));
+#else /* WINCE */
+  _LoadStringA(m_hInst, IDS_CLICK_WHEN_DONE, szString, sizeof(szString));
+#endif /* WINCE */
+  if(lstrlenA(szString) != 0)
   {
-    m_szCommandMessage = new char[lstrlen(szString) + 1];
+    m_szCommandMessage = new char[lstrlenA(szString) + 1];
     if(m_szCommandMessage != NULL)
-      lstrcpy(m_szCommandMessage, szString);
+      lstrcpyA(m_szCommandMessage, szString);
   }
 
   InvalidateRect(m_hWnd, NULL, TRUE);
@@ -543,13 +555,18 @@ void CPlugin::URLNotify(const char * szURL)
   assert(m_hInst != NULL);
   assert(m_pNPInstance != NULL);
   
-  int iSize = LoadString(m_hInst, IDS_GOING2HTML, buf, sizeof(buf));
+  int iSize = 
+#if !defined(WINCE)
+      LoadStringA(m_hInst, IDS_GOING2HTML, buf, sizeof(buf));
+#else /* WINCE */
+      _LoadStringA(m_hInst, IDS_GOING2HTML, buf, sizeof(buf));
+#endif /* WINCE */
 
   NPError rc = NPN_NewStream(m_pNPInstance, "text/html", "asd_plugin_finder", &pStream);
 
   //char buf[] = "<html>\n<body>\n\n<h2 align=center>NPN_NewStream / NPN_Write - This seems to work.</h2>\n\n</body>\n</html>";
   
-  int32 iBytes = NPN_Write(m_pNPInstance, pStream, lstrlen(buf), buf);
+  int32 iBytes = NPN_Write(m_pNPInstance, pStream, lstrlenA(buf), buf);
 
   NPN_DestroyStream(m_pNPInstance, pStream, NPRES_DONE);
 }
@@ -557,11 +574,15 @@ void CPlugin::URLNotify(const char * szURL)
 BOOL CPlugin::readyToRefresh()
 {
   char szString[1024] = {'\0'};
-  LoadString(m_hInst, IDS_CLICK_WHEN_DONE, szString, sizeof(szString));
+#if !defined(WINCE)
+  LoadStringA(m_hInst, IDS_CLICK_WHEN_DONE, szString, sizeof(szString));
+#else /* WINCE */
+  _LoadStringA(m_hInst, IDS_CLICK_WHEN_DONE, szString, sizeof(szString));
+#endif /* WINCE */
   if(m_szCommandMessage == NULL)
     return FALSE;
 
-  return (lstrcmp(m_szCommandMessage, szString) == 0);
+  return (lstrcmpA(m_szCommandMessage, szString) == 0);
 }
 
 //***************************
@@ -593,13 +614,23 @@ static void DrawCommandMessage(HDC hDC, LPSTR szString, LPRECT lprc)
   if(szString == NULL)
     return;
 
-  HFONT hFont = GetStockFont(DEFAULT_GUI_FONT);
+  HFONT hFont = NULL;
+#if !defined(WINCE)
+  hFont = GetStockFont(DEFAULT_GUI_FONT);
+#else /* WINCE */
+  hFont = (HFONT)GetStockObject(SYSTEM_FONT);
+#endif /* WINCE */
+
   if(hFont == NULL)
     return;
 
   HFONT hFontOld = SelectFont(hDC, hFont);
   SIZE sz;
-  GetTextExtentPoint32(hDC, szString, lstrlen(szString), &sz);
+#if !defined(WINCE)
+  GetTextExtentPoint32(hDC, szString, lstrlenA(szString), &sz);
+#else /* WINCE */
+  _GetTextExtentExPointA(hDC, szString, lstrlenA(szString), 0, NULL, NULL, &sz);
+#endif /* WINCE */
   POINT pt;
   pt.x = sz.cx;
   pt.y = sz.cy;
@@ -621,7 +652,11 @@ static void DrawCommandMessage(HDC hDC, LPSTR szString, LPRECT lprc)
 
   int iModeOld = SetBkMode(hDC, TRANSPARENT);
   COLORREF crColorOld = SetTextColor(hDC, RGB(0,0,0));
-  DrawText(hDC, szString, lstrlen(szString), &rcText, DT_CENTER|DT_VCENTER);
+#if !defined(WINCE)
+  DrawTextA(hDC, szString, lstrlenA(szString), &rcText, DT_CENTER|DT_VCENTER);
+#else /* WINCE */
+  _DrawTextA(hDC, szString, lstrlenA(szString), &rcText, DT_CENTER|DT_VCENTER);
+#endif /* WINCE */
   SetTextColor(hDC, crColorOld);
   SetBkMode(hDC, iModeOld);
   SelectFont(hDC, hFontOld);

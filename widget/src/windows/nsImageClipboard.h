@@ -83,6 +83,12 @@ private:
 }; // class nsImageToClipboard
 
 
+#if defined(WINCE)
+typedef BITMAPINFO nsBITMAPHEADER;
+#else
+typedef BITMAPV4HEADER nsBITMAPHEADER;
+#endif
+
 //
 // nsImageFromClipboard
 //
@@ -92,7 +98,7 @@ private:
 class nsImageFromClipboard
 {
 public:
-  nsImageFromClipboard ( BITMAPV4HEADER* inHeader ) ;
+  nsImageFromClipboard ( nsBITMAPHEADER* inHeader ) ;
   ~nsImageFromClipboard ( ) ;
   
     // Retrieve the newly created image
@@ -102,6 +108,6 @@ private:
 
   PRUint8* GetDIBBits ( ) ;
 
-  BITMAPV4HEADER* mHeader;
+  nsBITMAPHEADER* mHeader;
 
 }; // nsImageFromClipboard

@@ -38,7 +38,7 @@
 #ifndef nsPluginSafety_h__
 #define nsPluginSafety_h__
 
-#if defined(XP_PC) && !defined(XP_OS2)
+#if defined(XP_PC) && !defined(XP_OS2) && !defined(WINCE)
 #define CALL_SAFETY_ON
 #endif
 

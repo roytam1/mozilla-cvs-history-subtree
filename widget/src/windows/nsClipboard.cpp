@@ -66,7 +66,7 @@
 
 
 // oddly, this isn't in the MSVC headers anywhere.
-UINT nsClipboard::CF_HTML = ::RegisterClipboardFormat("HTML Format");
+UINT nsClipboard::CF_HTML = ::RegisterClipboardFormat(_T("HTML Format"));
 
 
 //-------------------------------------------------------------------------
@@ -102,14 +102,16 @@ UINT nsClipboard::GetFormat(const char* aMimeStr)
     format = CF_UNICODETEXT;
   else if (mimeStr.Equals(kJPEGImageMime))
     format = CF_DIB;
+#if defined(CF_HDROP)
   else if (mimeStr.Equals(kFileMime))
     format = CF_HDROP;
+#endif
   else if (mimeStr.Equals(kURLMime))
     format = CF_UNICODETEXT;
   else if (mimeStr.Equals(kNativeHTMLMime))
     format = CF_HTML;
   else
-    format = ::RegisterClipboardFormat(aMimeStr);
+    format = ::RegisterClipboardFormatA(aMimeStr);
 
   return format;
 }
@@ -196,10 +198,14 @@ nsresult nsClipboard::SetupNativeDataObject(nsITransferable * aTransferable, IDa
         // the "file" flavors so that the win32 shell knows to create an internet
         // shortcut when it sees one of these beasts.
         FORMATETC shortcutFE;
+#if defined(CFSTR_FILEDESCRIPTOR)
         SET_FORMATETC(shortcutFE, ::RegisterClipboardFormat(CFSTR_FILEDESCRIPTOR), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL)
         dObj->AddDataFlavor(kURLMime, &shortcutFE);      
+#endif
+#if defined(CFSTR_FILECONTENTS)
         SET_FORMATETC(shortcutFE, ::RegisterClipboardFormat(CFSTR_FILECONTENTS), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL)
         dObj->AddDataFlavor(kURLMime, &shortcutFE);  
+#endif
 #ifdef CFSTR_SHELLURL
         SET_FORMATETC(shortcutFE, ::RegisterClipboardFormat(CFSTR_SHELLURL), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL)
         dObj->AddDataFlavor(kURLMime, &shortcutFE);      
@@ -255,14 +261,14 @@ nsresult nsClipboard::GetGlobalData(HGLOBAL aHGBL, void ** aData, PRUint32 * aLe
   // null them out to ensure that all of our strlen calls will succeed.
   nsresult  result = NS_ERROR_FAILURE;
   if (aHGBL != NULL) {
-    LPSTR lpStr = (LPSTR)::GlobalLock(aHGBL);
+    LPSTR lpStr = (LPSTR)GlobalLock(aHGBL);
     DWORD allocSize = ::GlobalSize(aHGBL);
     char* data = NS_STATIC_CAST(char*, nsMemory::Alloc(allocSize + sizeof(PRUnichar)));
     if ( data ) {    
       memcpy ( data, lpStr, allocSize );
       data[allocSize] = data[allocSize + 1] = '\0';     // null terminate for safety
 
-      ::GlobalUnlock(aHGBL);
+      GlobalUnlock(aHGBL);
       *aData = data;
       *aLen = allocSize;
 
@@ -287,7 +293,7 @@ nsresult nsClipboard::GetGlobalData(HGLOBAL aHGBL, void ** aData, PRUint32 * aLe
     );
 
     // Display the string.
-    MessageBox( NULL, (const char *)lpMsgBuf, "GetLastError", MB_OK|MB_ICONINFORMATION );
+    MessageBoxA( NULL, (const char *)lpMsgBuf, "GetLastError", MB_OK|MB_ICONINFORMATION );
 
     // Free the buffer.
     LocalFree( lpMsgBuf );    
@@ -392,8 +398,12 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
   // Currently this is only handling TYMED_HGLOBAL data
   // For Text, Dibs, Files, and generic data (like HTML)
   if (S_OK == hres) {
+#if defined(CFSTR_FILEDESCRIPTOR)
     static CLIPFORMAT fileDescriptorFlavor = ::RegisterClipboardFormat( CFSTR_FILEDESCRIPTOR ); 
+#endif
+#if defined(CFSTR_FILECONTENTS)
     static CLIPFORMAT fileFlavor = ::RegisterClipboardFormat( CFSTR_FILECONTENTS ); 
+#endif
     switch (stm.tymed) {
      case TYMED_HGLOBAL: 
         {
@@ -431,8 +441,8 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
             case CF_DIB :
               {
                 HGLOBAL hGlobal = stm.hGlobal;
-                BYTE  * pGlobal = (BYTE  *)::GlobalLock (hGlobal) ;
-                BITMAPV4HEADER * header = (BITMAPV4HEADER *)pGlobal;
+                BYTE  * pGlobal = (BYTE  *)GlobalLock (hGlobal) ;
+                nsBITMAPHEADER * header = (nsBITMAPHEADER *)pGlobal;
 
                 nsImageFromClipboard converter ( header );
                 nsIImage* image;
@@ -443,9 +453,10 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
                   result = NS_OK;
                 }
 
-                ::GlobalUnlock (hGlobal) ;
+                GlobalUnlock (hGlobal) ;
               } break;
 
+#if defined(CF_HDROP)
             case CF_HDROP : 
               {
                 // in the case of a file drop, multiple files are stashed within a
@@ -472,12 +483,22 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
                 ::GlobalUnlock (stm.hGlobal) ;
 
               } break;
+#endif
 
             default: {
-              if ( fe.cfFormat == fileDescriptorFlavor || fe.cfFormat == fileFlavor ) {
+#if defined(CFSTR_FILEDESCRIPTOR)
+              if ( fe.cfFormat == fileDescriptorFlavor) {
                 NS_WARNING ( "Mozilla doesn't yet understand how to read this type of file flavor" );
-              } 
-              else {
+              }
+              else
+#endif
+#if defined(CFSTR_FILECONTENTS)
+              if (fe.cfFormat == fileFlavor ) {
+                NS_WARNING ( "Mozilla doesn't yet understand how to read this type of file flavor" );
+              }
+              else
+#endif
+              {
                 // Get the data out of the global data handle. The size we return
                 // should not include the null because the other platforms don't
                 // use nulls, so just return the length we get back from strlen(),
@@ -753,6 +774,7 @@ nsClipboard :: FindURLFromLocalFile ( IDataObject* inDataObject, UINT inIndex, v
 void
 nsClipboard :: ResolveShortcut ( const char* inFileName, char** outURL )
 {
+#if !defined(WINCE)
 // IUniformResourceLocator isn't supported by VC5 (bless its little heart)
 #if _MSC_VER >= 1200
   HRESULT result;
@@ -789,6 +811,7 @@ nsClipboard :: ResolveShortcut ( const char* inFileName, char** outURL )
     urlLink->Release();
   }
 #endif
+#endif /* WINCE */
 } // ResolveShortcut
 
 
@@ -846,7 +869,7 @@ static void PlaceDataOnClipboard(PRUint32 aFormat, char * aData, int aLength)
     // Copy text to Global Memory Area
     hGlobalMemory = (HGLOBAL)::GlobalAlloc(GHND, size);
     if (hGlobalMemory != NULL) {
-      pGlobalMemory = (PSTR) ::GlobalLock(hGlobalMemory);
+      pGlobalMemory = (PSTR) GlobalLock(hGlobalMemory);
 
       int i;
 
@@ -857,7 +880,7 @@ static void PlaceDataOnClipboard(PRUint32 aFormat, char * aData, int aLength)
       }
 
       // Put data on Clipboard
-      ::GlobalUnlock(hGlobalMemory);
+      GlobalUnlock(hGlobalMemory);
       ::SetClipboardData(aFormat, hGlobalMemory);
     }
   }  

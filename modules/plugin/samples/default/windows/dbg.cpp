@@ -40,20 +40,28 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#if defined(WINCE)
+#include "wince_missing.h"
+#endif /* WINCE */
+
 extern char szAppName[];
 
 #ifdef _DEBUG
 
 void __cdecl dbgOut(LPSTR format, ...) { 
   static char buf[1024];
-  lstrcpy(buf, szAppName);
-  lstrcat(buf, ": ");
+  lstrcpyA(buf, szAppName);
+  lstrcatA(buf, ": ");
   va_list  va;
   va_start(va, format);
-  wvsprintf(&buf[lstrlen(buf)], format, va);
+  wvsprintfA(&buf[lstrlenA(buf)], format, va);
   va_end(va);
-  lstrcat(buf, "\n");
-  OutputDebugString(buf); 
+  lstrcatA(buf, "\n");
+#if !defined(WINCE)
+  OutputDebugStringA(buf); 
+#else /* WINCE */
+  _OutputDebugStringA(buf); 
+#endif /* WINCE */
 }
 
 #endif

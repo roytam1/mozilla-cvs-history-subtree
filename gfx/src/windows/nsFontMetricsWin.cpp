@@ -1136,22 +1136,22 @@ static PRUint8 gCharsetToBit[eCharset_COUNT] =
 
 // Helper to determine if a font has a private encoding that we know something about
 static nsresult
-GetEncoding(const char* aFontName, nsString& aValue)
+GetEncoding(LPCTSTR aFontName, nsString& aValue)
 {
   // this is "MS P Gothic" in Japanese
-  static const char* mspgothic=  
-    "\x82\x6c\x82\x72 \x82\x6f\x83\x53\x83\x56\x83\x62\x83\x4e";
+  static LPCTSTR mspgothic=  
+    _T("\x82\x6c\x82\x72 \x82\x6f\x83\x53\x83\x56\x83\x62\x83\x4e");
   // below is a list of common used name for startup
-  if ( (!strcmp(aFontName, "Tahoma" )) ||
-       (!strcmp(aFontName, "Arial" )) ||
-       (!strcmp(aFontName, "Times New Roman" )) ||
-       (!strcmp(aFontName, "Courier New" )) ||
-       (!strcmp(aFontName, mspgothic )) )
+  if ( (!_tcscmp(aFontName, _T("Tahoma") )) ||
+       (!_tcscmp(aFontName, _T("Arial") )) ||
+       (!_tcscmp(aFontName, _T("Times New Roman") )) ||
+       (!_tcscmp(aFontName, _T("Courier New") )) ||
+       (!_tcscmp(aFontName, mspgothic )) )
     return NS_ERROR_NOT_AVAILABLE; // error mean do not get a special encoding
 
   nsAutoString name;
   name.Assign(NS_LITERAL_STRING("encoding."));
-  name.AppendWithConversion(aFontName);
+  name.Append(aFontName);
   name.Append(NS_LITERAL_STRING(".ttf"));
   name.StripWhitespace();
   ToLowerCase(name);
@@ -1169,7 +1169,7 @@ GetEncoding(const char* aFontName, nsString& aValue)
 // converter for the font whose name is given. The caller holds a reference
 // to the converter, and should take care of the release...
 static nsresult
-GetConverter(const char* aFontName, nsIUnicodeEncoder** aConverter)
+GetConverter(LPCTSTR aFontName, nsIUnicodeEncoder** aConverter)
 {
   *aConverter = nsnull;
 
@@ -1189,7 +1189,7 @@ GetConverter(const char* aFontName, nsIUnicodeEncoder** aConverter)
 // This function uses the charset converter manager to fill the map for the
 // font whose name is given
 static PRUint16*
-GetCCMapThroughConverter(const char* aFontName)
+GetCCMapThroughConverter(LPCTSTR aFontName)
 {
   // see if we know something about the converter of this font 
   nsCOMPtr<nsIUnicodeEncoder> converter;
@@ -1409,7 +1409,7 @@ ReadCMAPTableFormat4(PRUint8* aBuf, PRInt32 aLength, PRUint32* aMap, PRUint8* aI
 }
 
 PRUint16*
-nsFontMetricsWin::GetFontCCMAP(HDC aDC, const char* aShortName, eFontType& aFontType, PRUint8& aCharset)
+nsFontMetricsWin::GetFontCCMAP(HDC aDC, LPCTSTR aShortName, eFontType& aFontType, PRUint8& aCharset)
 {
   PRUint16 *ccmap = nsnull;
   DWORD len = GetFontData(aDC, CMAP, 0, nsnull, 0);
@@ -1514,7 +1514,7 @@ nsFontMetricsWin::GetFontCCMAP(HDC aDC, const char* aShortName, eFontType& aFont
 // with it). Otherwise, you will leave a dangling pointer in the gFontMaps
 // hashtable.
 PRUint16*
-nsFontMetricsWin::GetCCMAP(HDC aDC, const char* aShortName, eFontType* aFontType, PRUint8* aCharset)
+nsFontMetricsWin::GetCCMAP(HDC aDC, LPCTSTR aShortName, eFontType* aFontType, PRUint8* aCharset)
 {
   if (!gFontMaps) {
     gFontMaps = PL_NewHashTable(0, HashKey, CompareKeys, nsnull, &fontmap_HashAllocOps,
@@ -1975,9 +1975,9 @@ nsFontMetricsWin::CreateFontAdjustHandle(HDC aDC, LOGFONT* aLogFont)
 
   if (hfont) {
     HFONT oldFont = (HFONT)::SelectObject(aDC, (HGDIOBJ)hfont);
-    char name[sizeof(aLogFont->lfFaceName)];
+    TCHAR name[sizeof(aLogFont->lfFaceName)];
     if (::GetTextFace(aDC, sizeof(name), name) &&
-        !strcmpi(name, aLogFont->lfFaceName)) {
+        !_tcsicmp(name, aLogFont->lfFaceName)) {
       float dev2app;
       mDeviceContext->GetDevUnitsToAppUnits(dev2app);
 
@@ -2030,8 +2030,12 @@ nsFontMetricsWin::CreateFontHandle(HDC aDC, nsString* aName, LOGFONT* aLogFont)
    * but we don't really have a choice since CreateFontIndirectW is
    * not supported on Windows 9X (see below) -- erik
    */
+#if defined(UNICODE)
+  wcsncpy(aLogFont->lfFaceName, aName->get(), sizeof(aLogFont->lfFaceName) / sizeof(TCHAR));
+#else
   WideCharToMultiByte(CP_ACP, 0, aName->get(), aName->Length() + 1,
     aLogFont->lfFaceName, sizeof(aLogFont->lfFaceName), nsnull, nsnull);
+#endif
 
   if (mFont.sizeAdjust <= 0) {
     // Quick return for the common case where no adjustement is needed
@@ -2049,7 +2053,7 @@ nsFontMetricsWin::CreateFontHandle(HDC aDC, nsGlobalFont* aGlobalFont, LOGFONT* 
   FillLogFont(aLogFont, weight);
   aLogFont->lfCharSet = aGlobalFont->logFont.lfCharSet;
   aLogFont->lfPitchAndFamily = aGlobalFont->logFont.lfPitchAndFamily;
-  strcpy(aLogFont->lfFaceName, aGlobalFont->logFont.lfFaceName);
+  _tcscpy(aLogFont->lfFaceName, aGlobalFont->logFont.lfFaceName);
 
   if (mFont.sizeAdjust <= 0) {
     // Quick return for the common case where no adjustement is needed
@@ -2065,9 +2069,9 @@ nsFontMetricsWin::LoadFont(HDC aDC, nsString* aName)
   HFONT hfont = CreateFontHandle(aDC, aName, &logFont);
   if (hfont) {
     HFONT oldFont = (HFONT)::SelectObject(aDC, (HGDIOBJ)hfont);
-    char name[sizeof(logFont.lfFaceName)];
-    if (::GetTextFace(aDC, sizeof(name), name) &&
-        !strcmpi(name, logFont.lfFaceName)) {
+    TCHAR name[sizeof(logFont.lfFaceName) / sizeof(TCHAR)];
+    if (::GetTextFace(aDC, sizeof(name) / sizeof(TCHAR), name) &&
+        !_tcsicmp(name, logFont.lfFaceName)) {
       eFontType fontType = eFontType_UNKNOWN;
       nsFontWin* font = nsnull;
       if (mIsUserDefined) {
@@ -2136,13 +2140,13 @@ enumProc(const LOGFONT* logFont, const TEXTMETRIC* metrics,
          DWORD fontType, LPARAM closure)
 {
   // XXX ignore vertical fonts
-  if (logFont->lfFaceName[0] == '@') {
+  if (logFont->lfFaceName[0] == _T('@')) {
     return 1;
   }
 
   for (int i = nsFontMetricsWin::gGlobalFonts->Count()-1; i >= 0; --i) {
     nsGlobalFont* font = (nsGlobalFont*)nsFontMetricsWin::gGlobalFonts->ElementAt(i);
-    if (!strcmp(font->logFont.lfFaceName, logFont->lfFaceName)) {
+    if (!_tcscmp(font->logFont.lfFaceName, logFont->lfFaceName)) {
       // work-around for Win95/98 problem 
       int charsetSigBit = gCharsetToBit[gCharsetToIndex[logFont->lfCharSet]];
       if (charsetSigBit >= 0) {
@@ -2156,16 +2160,22 @@ enumProc(const LOGFONT* logFont, const TEXTMETRIC* metrics,
   // XXX make this smarter: don't add font to list if we already have a font
   // with the same font signature -- erik
 
+#if !defined(UNICODE)
   PRUnichar name[LF_FACESIZE];
   name[0] = 0;
   MultiByteToWideChar(CP_ACP, 0, logFont->lfFaceName,
-    strlen(logFont->lfFaceName) + 1, name, sizeof(name)/sizeof(name[0]));
+    _tcslen(logFont->lfFaceName) + 1, name, sizeof(name)/sizeof(name[0]));
+#endif /* UNICODE */
 
   nsGlobalFont* font = new nsGlobalFont;
   if (!font) {
     return 0;
   }
+#if !defined(UNICODE)
   font->name.Assign(name);
+#else /* UNICODE */
+  font->name.Assign(logFont->lfFaceName);
+#endif /* UNICODE */
   font->ccmap = nsnull;
   font->logFont = *logFont;
   font->signature.fsCsb[0] = 0;
@@ -2598,8 +2608,12 @@ nsFontMetricsWin::GetFontWeightTable(HDC aDC, nsString* aFontName)
   // Look for all of the weights for a given font.
   LOGFONT logFont;
   logFont.lfCharSet = DEFAULT_CHARSET;
+#if !defined(UNICODE)
   WideCharToMultiByte(CP_ACP, 0, aFontName->get(), aFontName->Length() + 1,
     logFont.lfFaceName, sizeof(logFont.lfFaceName), nsnull, nsnull);
+#else
+  _tcsncpy(logFont.lfFaceName, aFontName->get(), sizeof(logFont.lfFaceName) / sizeof(TCHAR));
+#endif
   logFont.lfPitchAndFamily = 0;
 
   nsFontWeightInfo weightInfo;
@@ -3326,7 +3340,7 @@ nsFontMetricsWin::RealizeFont()
 
   // Cache the width of a single space.
   SIZE  size;
-  ::GetTextExtentPoint32(dc, " ", 1, &size);
+  ::GetTextExtentPoint32(dc, _T(" "), 1, &size);
   mSpaceWidth = NSToCoordRound(size.cx * dev2app);
 
   ::SelectObject(dc, oldfont);
@@ -3649,7 +3663,11 @@ nsFontMetricsWin::ResolveBackwards(HDC                  aDC,
 nsFontWin::nsFontWin(LOGFONT* aLogFont, HFONT aFont, PRUint16* aCCMap)
 {
   if (aLogFont) {
+#if !defined(WINCE)
     strcpy(mName, aLogFont->lfFaceName);
+#else /* WINCE */
+    w2a_buffer(aLogFont->lfFaceName, -1, mName, sizeof(mName));
+#endif /* WINCE */
   }
   mFont = aFont;
   mCCMap = aCCMap;
@@ -3828,7 +3846,11 @@ nsFontWinNonUnicode::GetWidth(HDC aDC, const PRUnichar* aString,
   mConverter->Convert(aString, &srcLength, pstr, &destLength);
 
   SIZE size;
+#if !defined(WINCE)
   ::GetTextExtentPoint32A(aDC, pstr, aLength, &size);
+#else
+  _GetTextExtentExPointA(aDC, pstr, aLength, 0, NULL, NULL, &size);
+#endif
 
   if (pstr != str) {
     delete[] pstr;
@@ -3851,7 +3873,11 @@ nsFontWinNonUnicode::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   PRInt32 srcLength = aLength, destLength = aLength;
   mConverter->Convert(aString, &srcLength, pstr, &destLength);
 
+#if !defined(WINCE)
   ::ExtTextOutA(aDC, aX, aY, 0, NULL, pstr, aLength, NULL);
+#else /* WINCE */
+  _ExtTextOutA(aDC, aX, aY, 0, NULL, pstr, aLength, NULL);
+#endif /* WINCE */
 
   if (pstr != str) {
     delete[] pstr;
@@ -4350,7 +4376,11 @@ nsFontSubset::GetWidth(HDC aDC, const PRUnichar* aString, PRUint32 aLength)
   Convert(aString, aLength, &pstr, &len);
   if (len) {
     SIZE size;
+#if !defined(WINCE)
     ::GetTextExtentPoint32A(aDC, pstr, len, &size);
+#else /* WINCE */
+    _GetTextExtentExPointA(aDC, pstr, len, 0, NULL, NULL, &size);
+#endif /* WINCE */
     if (pstr != str) {
       delete[] pstr;
     }
@@ -4368,7 +4398,11 @@ nsFontSubset::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   int len = CHAR_BUFFER_SIZE;
   Convert(aString, aLength, &pstr, &len);
   if (len) {
+#if !defined(WINCE)
     ::ExtTextOutA(aDC, aX, aY, 0, NULL, pstr, len, NULL);
+#else /* WINCE */
+    _ExtTextOutA(aDC, aX, aY, 0, NULL, pstr, len, NULL);
+#endif /* WINCE */
     if (pstr != str) {
       delete[] pstr;
     }
@@ -4585,9 +4619,9 @@ nsFontMetricsWinA::LoadFont(HDC aDC, nsString* aName)
     printf("%s\n", logFont.lfFaceName);
 #endif
     HFONT oldFont = (HFONT)::SelectObject(aDC, (HGDIOBJ)hfont);
-    char name[sizeof(logFont.lfFaceName)];
+    TCHAR name[sizeof(logFont.lfFaceName) / sizeof(TCHAR)];
     if (::GetTextFace(aDC, sizeof(name), name) &&
-        !strcmpi(name, logFont.lfFaceName)) {
+        !_tcsicmp(name, logFont.lfFaceName)) {
       PRUint16* ccmap = GetCCMAP(aDC, logFont.lfFaceName, nsnull, nsnull);
       if (ccmap) {
         nsFontWinA* font = new nsFontWinA(&logFont, hfont, ccmap);
@@ -4922,9 +4956,9 @@ nsFontMetricsWinA::LoadSubstituteFont(HDC aDC, nsString* aName)
   HFONT hfont = CreateFontHandle(aDC, aName, &logFont);
   if (hfont) {
     HFONT oldFont = (HFONT)::SelectObject(aDC, (HGDIOBJ)hfont);
-    char name[sizeof(logFont.lfFaceName)];
+    TCHAR name[sizeof(logFont.lfFaceName) / sizeof(TCHAR)];
     if (::GetTextFace(aDC, sizeof(name), name) &&
-        !strcmpi(name, logFont.lfFaceName)) {
+        !_tcsicmp(name, logFont.lfFaceName)) {
       nsFontWinSubstituteA* font = new nsFontWinSubstituteA(&logFont, hfont, nsnull);
       if (font) {
         font->mSubsets = (nsFontSubset**)nsMemory::Alloc(sizeof(nsFontSubset*));

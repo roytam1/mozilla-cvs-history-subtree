@@ -73,13 +73,18 @@ PRBool        MouseTrailer::mIsInCaptureMode(PR_FALSE);
 //
 // Dll entry point. Keep the dll instance
 //
-BOOL APIENTRY DllMain(  HINSTANCE hModule, 
+BOOL APIENTRY DllMain(  
+#if !defined(WINCE)
+                        HINSTANCE hModule, 
+#else
+                        HANDLE hModule, 
+#endif
                         DWORD reason, 
                         LPVOID lpReserved )
 {
     switch( reason ) {
         case DLL_PROCESS_ATTACH:
-            nsToolkit::Startup(hModule);
+            nsToolkit::Startup((HINSTANCE)hModule);
             break;
 
         case DLL_THREAD_ATTACH:
@@ -228,10 +233,11 @@ nsToolkit::Startup(HMODULE hModule)
     wc.hCursor          = NULL;
     wc.hbrBackground    = NULL;
     wc.lpszMenuName     = NULL;
-    wc.lpszClassName    = "nsToolkitClass";
+    wc.lpszClassName    = _T("nsToolkitClass");
 
     VERIFY(::RegisterClass(&wc));
 
+#if !defined(WINCE)
     //
     // Set flag of nsToolkit::mUseImeApiW due to using Unicode API.
     //
@@ -264,7 +270,9 @@ nsToolkit::Startup(HMODULE hModule)
         }
       }
     }
-
+#else /* WINCE */
+    nsToolkit::mUseImeApiW = PR_FALSE; 
+#endif /* WINCE */
 }
 
 
@@ -272,7 +280,7 @@ void
 nsToolkit::Shutdown()
 {
     //VERIFY(::UnregisterClass("nsToolkitClass", nsToolkit::mDllInstance));
-    ::UnregisterClass("nsToolkitClass", nsToolkit::mDllInstance);
+    ::UnregisterClass(_T("nsToolkitClass"), nsToolkit::mDllInstance);
 }
 
 
@@ -290,8 +298,8 @@ void nsToolkit::CreateInternalWindow(PRThread *aThread)
     //
     // create the internal window
     //
-    mDispatchWnd = ::CreateWindow("nsToolkitClass",
-                                       "NetscapeDispatchWnd",
+    mDispatchWnd = ::CreateWindow(_T("nsToolkitClass"),
+                                       _T("NetscapeDispatchWnd"),
                                        WS_DISABLED,
                                        -50, -50,
                                        10, 10,

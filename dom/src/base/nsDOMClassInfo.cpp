@@ -37,6 +37,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#if defined(WINCE)
+//  Get this mess out of the way for our special wince build.
+#include "wince_missing.h"
+#undef GetClassName
+#endif
+
 #include "nscore.h"
 #include "nsDOMClassInfo.h"
 #include "nsCRT.h"

@@ -134,7 +134,7 @@ nsOSChromeItem::nsOSChromeItem(char* aName) : mIsHidden(PR_FALSE)
 
   mName.Assign(aName);
 
-  HWND itemHandle = ::FindWindow(mName.get(), NULL);
+  HWND itemHandle = ::FindWindowA(mName.get(), NULL);
   ::GetWindowRect(itemHandle, &mItemRect);
 }
 
@@ -167,7 +167,7 @@ nsOSChromeItem::SetHidden(PRBool aHidden)
   if (mIsHidden == aHidden) 
     return NS_OK;
 
-  HWND itemHandle = ::FindWindow(mName.get(), NULL);
+  HWND itemHandle = ::FindWindowA(mName.get(), NULL);
 
   ::ShowWindow(itemHandle, aHidden ? SW_HIDE : SW_SHOWNA);
 

@@ -39,8 +39,12 @@
 
 HINSTANCE hInst; // global
 
+#if !defined(WINCE)
 BOOL WINAPI DllMain(HINSTANCE hDLL, DWORD dwReason, LPVOID lpReserved)
+#else
+BOOL WINAPI DllMain(HANDLE hDLL, DWORD dwReason, LPVOID lpReserved)
+#endif
 {
-  hInst = hDLL;
+  hInst = (HINSTANCE)hDLL;
   return TRUE;
 }

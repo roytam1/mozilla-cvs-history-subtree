@@ -58,8 +58,10 @@ NO_INSTALL = 1
 
 include $(topsrcdir)/config/rules.mk
 
+ifneq ($(OS_TARGET),WINCE)
 CXXFLAGS	+= -GX
 OS_LIBS		+= version.lib
+endif # WINCE
 
 install-plugin: $(SHARED_LIBRARY)
 ifdef SHARED_LIBRARY

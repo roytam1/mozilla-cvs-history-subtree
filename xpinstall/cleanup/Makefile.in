@@ -69,7 +69,9 @@ endif
 
 ifeq ($(OS_ARCH),WINNT)
 DEFINES	+= -DWIN32_LEAN_AND_MEAN
+ifneq ($(OS_TARGET),WINCE)
 LDFLAGS += /SUBSYSTEM:WINDOWS
+endif
 endif
 
 libs::

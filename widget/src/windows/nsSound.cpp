@@ -48,9 +48,9 @@ public:
   }
 
 
-  CWinMM(const char* aModuleName="WINMM.DLL") {
+  CWinMM(LPCTSTR aModuleName=_T("WINMM.DLL")) {
     mInstance=::LoadLibrary(aModuleName);  
-    mPlay=(mInstance) ? (PlayPtr)GetProcAddress(mInstance,"PlaySound") : 0;
+    mPlay=(mInstance) ? (PlayPtr)GetProcAddress(mInstance,_T("PlaySound")) : 0;
   }
 
   ~CWinMM() {
@@ -86,7 +86,13 @@ void nsSound::PurgeLastSound() {
   if (mLastSound) {
     // Purge the current sound buffer.
     CWinMM& theMM = CWinMM::GetModule();
-    theMM.PlaySound(nsnull, nsnull, SND_PURGE); // This call halts the sound if it was still playing.
+
+#if !defined(WINCE)
+    // This call halts the sound if it was still playing.
+    // WINCE has no purge ability, but we unsure the memory is not in use
+    //  as it was played synchronously.
+    theMM.PlaySound(nsnull, nsnull, SND_PURGE);
+#endif
 
     // Now delete the buffer.
     free(mLastSound);
@@ -138,7 +144,13 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
     memcpy(mLastSound, string, stringLen);
 
     CWinMM& theMM = CWinMM::GetModule();
+#if !defined(WINCE)
     theMM.PlaySound(mLastSound, nsnull, SND_MEMORY | SND_NODEFAULT | SND_ASYNC);
+#else
+    // As there is no SND_PURGE to stop accessing the memory, we must do
+    //  this synchronous.
+    theMM.PlaySound(mLastSound, nsnull, SND_MEMORY | SND_NODEFAULT);
+#endif
   }
 
   return NS_OK;

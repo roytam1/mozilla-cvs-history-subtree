@@ -120,6 +120,7 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_LETTER,    8.5,   11.0,  PR_TRUE},
   {DMPAPER_LEGAL,     8.5,   14.0,  PR_TRUE},
   {DMPAPER_A4,        210.0, 297.0, PR_FALSE},
+#if !defined(WINCE)
   {DMPAPER_TABLOID,   11.0,  17.0,  PR_TRUE},
   {DMPAPER_LEDGER,    17.0,  11.0,  PR_TRUE},
   {DMPAPER_STATEMENT, 5.5,   8.5,   PR_TRUE},
@@ -131,8 +132,10 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_ESHEET,    34.0,  44.0,  PR_TRUE},  
   {DMPAPER_LETTERSMALL, 8.5, 11.0,  PR_TRUE},  
   {DMPAPER_A4SMALL,   210.0, 297.0, PR_FALSE}, 
+#endif /* WINCE */
   {DMPAPER_B4,        250.0, 354.0, PR_FALSE}, 
   {DMPAPER_B5,        182.0, 257.0, PR_FALSE},
+#if !defined(WINCE)
   {DMPAPER_FOLIO,     8.5,   13.0,  PR_TRUE},
   {DMPAPER_QUARTO,    215.0, 275.0, PR_FALSE},
   {DMPAPER_10X14,     10.0,  14.0,  PR_TRUE},
@@ -158,8 +161,9 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_FANFOLD_US,   14.875, 11.0, PR_TRUE},  
   {DMPAPER_FANFOLD_STD_GERMAN, 8.5, 12.0, PR_TRUE},  
   {DMPAPER_FANFOLD_LGL_GERMAN, 8.5, 13.0, PR_TRUE},  
+#endif /* WINCE */
 };
-const PRInt32 kNumPaperSizes = 41;
+const PRInt32 kNumPaperSizes = sizeof(kPaperSizes) / sizeof(NativePaperSizes);
 
 //----------------------------------------------------------------------------------
 nsDeviceContextSpecWin::nsDeviceContextSpecWin()
@@ -206,7 +210,7 @@ static PRUnichar * GetDefaultPrinterNameFromGlobalPrinters()
   GlobalPrinters::GetInstance()->GetDefaultPrinterName(lpPrtName);
   nsString str;
 #ifdef UNICODE
-  str.AppendWithConversion((PRUnichar *)lpPrtName);
+  str.Assign((PRUnichar *)lpPrtName);
 #else 
   str.AssignWithConversion((char*)lpPrtName);
 #endif
@@ -219,6 +223,7 @@ static PRUnichar * GetDefaultPrinterNameFromGlobalPrinters()
 static nsresult 
 EnumerateNativePrinters(DWORD aWhichPrinters, LPTSTR aPrinterName, PRBool& aIsFound, PRBool& aIsFile)
 {
+#if !defined(WINCE)
   DWORD             dwSizeNeeded;
   DWORD             dwNumItems;
   LPPRINTER_INFO_2 lpInfo = NULL;
@@ -247,14 +252,19 @@ EnumerateNativePrinters(DWORD aWhichPrinters, LPTSTR aPrinterName, PRBool& aIsFo
 
   HeapFree(GetProcessHeap (), 0, lpInfo);
   return NS_OK;
+#else /* WINCE */
+  return NS_ERROR_NOT_IMPLEMENTED;
+#endif /* WINCE */
 }
 
 //----------------------------------------------------------------
 static void 
 CheckForPrintToFileWithName(LPTSTR aPrinterName, PRBool& aIsFile)
 {
-  PRBool isFound = PR_FALSE;
   aIsFile = PR_FALSE;
+
+#if !defined(WINCE)
+  PRBool isFound = PR_FALSE;
   nsresult rv = EnumerateNativePrinters(PRINTER_ENUM_LOCAL, aPrinterName, isFound, aIsFile);
   if (isFound) return;
 
@@ -266,7 +276,7 @@ CheckForPrintToFileWithName(LPTSTR aPrinterName, PRBool& aIsFile)
 
   rv = EnumerateNativePrinters(PRINTER_ENUM_REMOTE, aPrinterName, isFound, aIsFile);
   if (isFound) return;
-
+#endif /* WINCE */
 }
 
 static nsresult 
@@ -416,7 +426,20 @@ NS_IMETHODIMP nsDeviceContextSpecWin::Init(nsIWidget* aWidget,
         SetDevMode(devMode);
 
         if (!aIsPrintPreview) {
+#if !defined(WINCE)
           rv = CheckForPrintToFile(mPrintSettings, deviceName, nsnull);
+#else /* WINCE */
+          LPTSTR wDName = a2w_malloc(deviceName, -1, NULL);
+          if(NULL != wDName)
+          {
+            rv = CheckForPrintToFile(mPrintSettings, wDName, nsnull);
+            free(wDName);
+          }
+          else
+          {
+              rv = NS_ERROR_OUT_OF_MEMORY;
+          }
+#endif /* WINCE */
           NS_ENSURE_SUCCESS(rv, rv);
         }
 
@@ -516,7 +539,7 @@ nsDeviceContextSpecWin::GetDevMode(LPDEVMODE &aDevMode)
 {
   if (mIsDEVMODEGlobalHandle) {
     if (mGlobalDevMode) {
-      aDevMode = (DEVMODE *)::GlobalLock(mGlobalDevMode);
+      aDevMode = (DEVMODE *)GlobalLock(mGlobalDevMode);
     } else {
       aDevMode = NULL;
     }
@@ -645,6 +668,7 @@ static void DisplayLastError()
 nsresult
 nsDeviceContextSpecWin::GetDataFromPrinter(const PRUnichar * aName, nsIPrintSettings* aPS)
 {
+#if !defined(WINCE)
   nsresult rv = NS_ERROR_FAILURE;
 
   if (!GlobalPrinters::GetInstance()->PrintersAreAllocated()) {
@@ -706,6 +730,9 @@ nsDeviceContextSpecWin::GetDataFromPrinter(const PRUnichar * aName, nsIPrintSett
     DISPLAY_LAST_ERROR
   }
   return rv;
+#else /* WINCE */
+  return NS_ERROR_NOT_IMPLEMENTED;
+#endif /* WINCE */
 }
 
 //----------------------------------------------------------------------------------
@@ -898,7 +925,11 @@ nsPrinterEnumeratorWin::EnumeratePrinters(PRUint32* aCount, PRUnichar*** aResult
   while( count < numItems ) {
     LPTSTR name = GlobalPrinters::GetInstance()->GetItemFromList(printerInx++);
     nsString newName; 
+#if !defined(UNICODE)
     newName.AssignWithConversion(name);
+#else
+    newName.Assign(name);
+#endif
     PRUnichar *str = ToNewUnicode(newName);
     if (!str) {
       CleanupArray(array, count);
@@ -917,6 +948,7 @@ nsPrinterEnumeratorWin::EnumeratePrinters(PRUint32* aCount, PRUnichar*** aResult
 // Display the AdvancedDocumentProperties for the selected Printer
 NS_IMETHODIMP nsPrinterEnumeratorWin::DisplayPropertiesDlg(const PRUnichar *aPrinterName, nsIPrintSettings* aPrintSettings)
 {
+#if !defined(WINCE)
   nsresult rv = NS_ERROR_FAILURE;
   HANDLE hPrinter = NULL;
   BOOL status = ::OpenPrinter((char*)NS_ConvertUCS2toUTF8(aPrinterName).get(), &hPrinter, NULL);
@@ -985,6 +1017,9 @@ NS_IMETHODIMP nsPrinterEnumeratorWin::DisplayPropertiesDlg(const PRUnichar *aPri
   }
 
   return rv;
+#else /* WINCE */
+  return NS_ERROR_NOT_IMPLEMENTED;
+#endif /* WINCE */
 }
 
 //----------------------------------------------------------------------------------
@@ -1025,6 +1060,7 @@ GlobalPrinters::EnumerateNativePrinters()
   PR_PL(("-----------------------\n"));
   PR_PL(("EnumerateNativePrinters\n"));
 
+#if !defined(WINCE)
   TCHAR szDefaultPrinterName[1024];    
   DWORD status = GetProfileString("devices", 0, ",", szDefaultPrinterName, sizeof(szDefaultPrinterName)/sizeof(TCHAR));
   if (status > 0) {
@@ -1044,6 +1080,10 @@ GlobalPrinters::EnumerateNativePrinters()
     }
     rv = NS_OK;
   }
+#else /* WINCE */
+  rv = NS_ERROR_NOT_IMPLEMENTED;
+#endif /* WINCE */
+
   PR_PL(("-----------------------\n"));
 
   return rv;
@@ -1055,6 +1095,8 @@ void
 GlobalPrinters::GetDefaultPrinterName(LPTSTR& aDefaultPrinterName)
 {
   aDefaultPrinterName = nsnull;
+
+#if !defined(WINCE)
   TCHAR szDefaultPrinterName[1024];    
   DWORD status = GetProfileString("windows", "device", 0, szDefaultPrinterName, sizeof(szDefaultPrinterName)/sizeof(TCHAR));
   if (status > 0) {
@@ -1067,8 +1109,9 @@ GlobalPrinters::GetDefaultPrinterName(LPTSTR& aDefaultPrinterName)
     }
     aDefaultPrinterName = _tcsdup(szDefaultPrinterName);
   } else {
-    aDefaultPrinterName = _tcsdup("");
+    aDefaultPrinterName = _tcsdup(_T(""));
   }
+#endif /* WINCE */
 
   PR_PL(("DEFAULT PRINTER [%s]\n", aDefaultPrinterName));
 }

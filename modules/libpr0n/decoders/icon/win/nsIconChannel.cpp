@@ -341,7 +341,16 @@ NS_IMETHODIMP nsIconChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports
   }
 
   // (1) get an hIcon for the file
-  LONG result= SHGetFileInfo(filePath.get(), FILE_ATTRIBUTE_ARCHIVE, &sfi, sizeof(sfi), infoFlags);
+  LONG result= 0;
+#if !defined(WINCE)
+  result = SHGetFileInfo(filePath.get(), FILE_ATTRIBUTE_ARCHIVE, &sfi, sizeof(sfi), infoFlags);
+#else /* WINCE */
+  TCHAR wPath[MAX_PATH];
+  if(0 != a2w_buffer(filePath.get(), -1, wPath, sizeof(wPath) / sizeof(TCHAR)))
+  {
+    result = SHGetFileInfo(wPath, FILE_ATTRIBUTE_ARCHIVE, &sfi, sizeof(sfi), infoFlags);
+  }
+#endif /* WINCE */
   if (result > 0 && sfi.hIcon)
   {
     // we got a handle to an icon. Now we want to get a bitmap for the icon using GetIconInfo....

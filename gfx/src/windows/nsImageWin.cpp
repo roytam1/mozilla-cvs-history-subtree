@@ -1092,7 +1092,7 @@ PRBool nsImageWin::CanAlphaBlend(void)
     if (VER_PLATFORM_WIN32_WINDOWS != os.dwPlatformId ||
         os.dwMajorVersion != 4 || os.dwMinorVersion != 10) {
       gAlphaBlend = (ALPHABLENDPROC)::GetProcAddress(::LoadLibrary(_T("msimg32")),
-              "AlphaBlend");
+              _T("AlphaBlend"));
     }
     alreadyChecked = PR_TRUE;
   }

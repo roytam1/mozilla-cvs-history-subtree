@@ -290,12 +290,12 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
           sSubmenuDelay = 300;
 
           result = ::RegOpenKeyEx(HKEY_CURRENT_USER, 
-                   "Control Panel\\Desktop", 0, KEY_READ, &key);
+                   _T("Control Panel\\Desktop"), 0, KEY_READ, &key);
 
           if (result == ERROR_SUCCESS) {
             length = sizeof(value);
 
-            result = ::RegQueryValueEx(key, "MenuShowDelay",
+            result = ::RegQueryValueExA(key, "MenuShowDelay",
                      NULL, &type, (LPBYTE)&value, &length);
 
             ::RegCloseKey(key);
@@ -328,12 +328,12 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
 
 
           result = ::RegOpenKeyEx(HKEY_CURRENT_USER, 
-                   "Control Panel\\Desktop", 0, KEY_READ, &key);
+                   _T("Control Panel\\Desktop"), 0, KEY_READ, &key);
 
           if (result == ERROR_SUCCESS) {
             length = sizeof(value);
 
-            result = ::RegQueryValueEx(key, "DragFullWindows",
+            result = ::RegQueryValueExA(key, "DragFullWindows",
                      NULL, &type, (LPBYTE)&value, &length);
 
             ::RegCloseKey(key);

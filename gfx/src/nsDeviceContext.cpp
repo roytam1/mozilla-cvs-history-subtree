@@ -348,7 +348,9 @@ NS_IMETHODIMP DeviceContextImpl::GetPaletteInfo(nsPaletteInfo& aPaletteInfo)
   aPaletteInfo.isPaletteDevice = PR_FALSE;
   aPaletteInfo.sizePalette = 0;
   aPaletteInfo.numReserved = 0;
+#if !defined(WINCE)
   aPaletteInfo.palette = nsnull;
+#endif /* WINCE */
   return NS_OK;
 }
 

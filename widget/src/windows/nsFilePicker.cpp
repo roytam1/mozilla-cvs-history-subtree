@@ -40,6 +40,10 @@
 #include <windows.h>
 #include <SHLOBJ.H>
 
+#if defined(WINCE)
+#include <commdlg.h>
+#endif
+
 #ifdef MOZ_UNICODE
 #include "nsString.h"
 #include "nsToolkit.h"
@@ -276,6 +280,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
   NS_ENSURE_ARG_POINTER(aReturnVal);
 
   PRBool result = PR_FALSE;
+#if !defined(UNICODE)
   char fileBuffer[MAX_PATH+1] = "";
   char *converted = ConvertToFileSystemCharset(mDefault.get());
   if (nsnull == converted) {
@@ -285,8 +290,9 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
     PL_strncpyz(fileBuffer, converted, MAX_PATH+1);
     nsMemory::Free( converted );
   }
+#endif /* UNICODE */
 
-  char htmExt[] = "html";
+  TCHAR htmExt[] = _T("html");
 
   char *title = ConvertToFileSystemCharset(mTitle.get());
   if (nsnull == title)
@@ -318,9 +324,19 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
     // XXX UNICODE support is needed here --> DONE
     LPITEMIDLIST list = ::SHBrowseForFolder(&browserInfo);
     if (list != NULL) {
-      result = ::SHGetPathFromIDList(list, (LPSTR)fileBuffer);
+      result = ::SHGetPathFromIDList(list,
+#if !defined(UNICODE)
+          (LPTSTR)fileBuffer
+#else
+          (LPTSTR)mDefault.get()
+#endif
+          );
       if (result) {
+#if !defined(UNICODE)
           mFile.Append(fileBuffer);
+#else
+          mFile.AppendWithConversion(mDefault.get());
+#endif
       }
   
       // free PIDL
@@ -341,6 +357,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
 
     char extensionBuffer[MAX_EXTENSION_LENGTH+1] = "";
     
+#if !defined(UNICODE)
     PRInt32 l = (mFilterList.Length()+2)*2;
     char *filterBuffer = (char*) nsMemory::Alloc(l);
     int len = WideCharToMultiByte(CP_ACP, 0,
@@ -350,16 +367,36 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
                                   l, NULL, NULL);
     filterBuffer[len] = NULL;
     filterBuffer[len+1] = NULL;
+#endif
                                   
+#if !defined(UNICODE)
     if (!initialDir.IsEmpty()) {
       ofn.lpstrInitialDir = initialDir.get();
     }
+#else
+    TCHAR winitialDir[MAX_PATH];
+    if (!initialDir.IsEmpty()) {
+      if(MultiByteToWideChar(CP_ACP, 0, initialDir.get(), -1, winitialDir, sizeof(winitialDir) / sizeof(TCHAR)))
+        ofn.lpstrInitialDir = winitialDir;
+    }
+#endif
     
+#if !defined(UNICODE)
     ofn.lpstrTitle   = title;
     ofn.lpstrFilter  = filterBuffer;
+#else
+    ofn.lpstrTitle = mTitle.get();
+    ofn.lpstrFilter = mFilterList.get();
+#endif
     ofn.nFilterIndex = mSelectedType;
     ofn.hwndOwner    = mWnd;
+#if !defined(UNICODE)
     ofn.lpstrFile    = fileBuffer;
+#else
+    WCHAR wfileBuffer[MAX_PATH + 1];
+    wcscpy(wfileBuffer, mDefault.get());
+    ofn.lpstrFile = wfileBuffer;
+#endif
     ofn.nMaxFile     = MAX_PATH;
 
     ofn.Flags = OFN_NOCHANGEDIR | OFN_SHAREAWARE | OFN_LONGNAMES | OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
@@ -374,7 +411,13 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
         PL_strncpyz(extensionBuffer, convertedExt, MAX_EXTENSION_LENGTH+1);
         nsMemory::Free( convertedExt );
       }
+#if !defined(UNICODE)
       ofn.lpstrDefExt = extensionBuffer;
+#else
+      TCHAR wextensionBuffer[sizeof(extensionBuffer)];
+      MultiByteToWideChar(CP_ACP, 0, extensionBuffer, -1, wextensionBuffer, sizeof(wextensionBuffer) / sizeof(TCHAR));
+      ofn.lpstrDefExt = wextensionBuffer;
+#endif
     }
     else {
       // Get file extension from suggested filename
@@ -409,8 +452,11 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
       result = ::GetSaveFileName(&ofn);
       if (!result) {
         // Error, find out what kind.
-        if (::GetLastError() == ERROR_INVALID_PARAMETER ||
-            ::CommDlgExtendedError() == FNERR_INVALIDFILENAME) {
+        if (::GetLastError() == ERROR_INVALID_PARAMETER
+#if defined(FNERR_INVALIDFILENAME)
+            || ::CommDlgExtendedError() == FNERR_INVALIDFILENAME
+#endif
+            ) {
           // probably the default file name is too long or contains illegal characters!
           // Try again, without a starting file name.
           ofn.lpstrFile[0] = 0;
@@ -425,15 +471,21 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
     // Remember what filter type the user selected
     mSelectedType = (PRInt16)ofn.nFilterIndex;
 
+#if !defined(UNICODE)
     // Clean up filter buffers
     if (filterBuffer)
       nsMemory::Free( filterBuffer );
+#endif
 
     // Set user-selected location of file or directory
     if (result == PR_TRUE) {
       // I think it also needs a conversion here (to unicode since appending to nsString) 
       // but doing that generates garbage file name, weird.
+#if !defined(UNICODE)
       mFile.Append(fileBuffer);
+#else
+      mFile.AppendWithConversion(wfileBuffer);
+#endif
     }
 
   }

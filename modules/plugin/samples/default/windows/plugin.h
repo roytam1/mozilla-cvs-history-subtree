@@ -113,7 +113,7 @@ public:
 #define JVM_SMARTUPDATE_URL "http://cgi.netscape.com/cgi-bin/plug-in_finder.cgi"
 
 #ifdef WIN32
-#define REGISTRY_PLACE "Software\\Netscape\\Netscape Navigator\\Default Plugin"
+#define REGISTRY_PLACE _T("Software\\Netscape\\Netscape Navigator\\Default Plugin")
 #else
 #define GWL_USERDATA        0
 #define COLOR_3DSHADOW      COLOR_BTNFACE
@@ -121,7 +121,7 @@ public:
 #define COLOR_3DDKSHADOW    COLOR_BTNSHADOW
 #endif
 
-#define CLASS_NULL_PLUGIN "NullPluginClass"
+#define CLASS_NULL_PLUGIN _T("NullPluginClass")
  
 BOOL RegisterNullPluginWindowClass();
 void UnregisterNullPluginWindowClass();

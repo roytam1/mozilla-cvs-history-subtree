@@ -66,7 +66,7 @@ static void ClearVersion(verBlock *ver)
 
 static BOOL FileExists(LPCSTR szFile)
 {
-  return GetFileAttributes(szFile) != 0xFFFFFFFF;
+  return GetFileAttributesA(szFile) != 0xFFFFFFFF;
 }
 
 // Get file version information from a file
@@ -84,13 +84,13 @@ static BOOL GetFileVersion(LPSTR szFile, verBlock *vbVersion)
   if(FileExists(szFile))
   {
     bRv    = TRUE;
-    dwLen  = GetFileVersionInfoSize(szFile, &dwHandle);
+    dwLen  = GetFileVersionInfoSizeA(szFile, &dwHandle);
     lpData = (LPVOID)malloc(dwLen);
     uLen   = 0;
 
-    if(lpData && GetFileVersionInfo(szFile, dwHandle, dwLen, lpData) != 0)
+    if(lpData && GetFileVersionInfoA(szFile, dwHandle, dwLen, lpData) != 0)
     {
-      if(VerQueryValue(lpData, "\\", &lpBuffer, &uLen) != 0)
+      if(VerQueryValue(lpData, _T("\\"), &lpBuffer, &uLen) != 0)
       {
         lpBuffer2             = (VS_FIXEDFILEINFO *)lpBuffer;
         vbVersion->wMajor   = HIWORD(lpBuffer2->dwFileVersionMS);
@@ -230,24 +230,24 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     char szKey[_MAX_PATH] = "Software\\Netscape\\Netscape Navigator";
     char path[_MAX_PATH];
 
-    result = ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKey, 0, KEY_READ, &keyloc); 
+    result = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, szKey, 0, KEY_READ, &keyloc); 
 
     if (result == ERROR_SUCCESS) {
       char current_version[80];
       DWORD length = sizeof(current_version);
 
-      result = ::RegQueryValueEx(keyloc, "CurrentVersion", NULL, &type, (LPBYTE)&current_version, &length); 
+      result = ::RegQueryValueExA(keyloc, "CurrentVersion", NULL, &type, (LPBYTE)&current_version, &length); 
 
       ::RegCloseKey(keyloc);
       PL_strcat(szKey, "\\");
       PL_strcat(szKey, current_version);
       PL_strcat(szKey, "\\Main");
-      result = ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKey, 0, KEY_READ, &keyloc);
+      result = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, szKey, 0, KEY_READ, &keyloc);
 
       if (result == ERROR_SUCCESS) {
         DWORD pathlen = sizeof(path); 
 
-        result = ::RegQueryValueEx(keyloc, "Plugins Directory", NULL, &type, (LPBYTE)&path, &pathlen); 
+        result = ::RegQueryValueExA(keyloc, "Plugins Directory", NULL, &type, (LPBYTE)&path, &pathlen); 
         if (result == ERROR_SUCCESS)
           rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_TRUE, getter_AddRefs(localFile));
         ::RegCloseKey(keyloc); 
@@ -277,19 +277,19 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     char newestPath[_MAX_PATH + 4]; // to prevent buffer overrun when adding \bin
 
     newestPath[0] = 0;
-    LONG result = ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, curKey, 0, KEY_READ, &baseloc);
+    LONG result = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, curKey, 0, KEY_READ, &baseloc);
 
     // we must enumerate through the keys because what if there is more than one version?
     while (ERROR_SUCCESS == result) {
       path[0] = 0;
       numChars = _MAX_PATH;
       pathlen = sizeof(path);
-      result = ::RegEnumKeyEx(baseloc, index, curKey, &numChars, NULL, NULL, NULL, &modTime);
+      result = ::RegEnumKeyExA(baseloc, index, curKey, &numChars, NULL, NULL, NULL, &modTime);
       index++;
       if (ERROR_SUCCESS == result) {
-        if (ERROR_SUCCESS == ::RegOpenKeyEx(baseloc, curKey, 0, KEY_QUERY_VALUE, &keyloc)) {
+        if (ERROR_SUCCESS == ::RegOpenKeyExA(baseloc, curKey, 0, KEY_QUERY_VALUE, &keyloc)) {
           // we have a sub key
-          if (ERROR_SUCCESS == ::RegQueryValueEx(keyloc, "JavaHome", NULL, &type, (LPBYTE)&path, &pathlen)) {
+          if (ERROR_SUCCESS == ::RegQueryValueExA(keyloc, "JavaHome", NULL, &type, (LPBYTE)&path, &pathlen)) {
             verBlock curVer;
             TranslateVersionStr(curKey, &curVer);            
             if (CompareVersion(curVer, maxVer) >= 0 && CompareVersion(curVer, minVer) >= 0) {
@@ -326,7 +326,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     DWORD pathlen = sizeof(path);      
 
     // first we need to check the version of Quicktime via checking the EXE's version table
-    if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\QuickTimePlayer.exe", 0, KEY_READ, &keyloc)) {
+    if (ERROR_SUCCESS == ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, "software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\QuickTimePlayer.exe", 0, KEY_READ, &keyloc)) {
       if (ERROR_SUCCESS == ::RegQueryValueEx(keyloc, NULL, NULL, &type, (LPBYTE)&path, &pathlen)) {
         GetFileVersion((char*)path, &qtVer);
       }
@@ -335,10 +335,10 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     if (CompareVersion(qtVer, minVer) < 0)
       return rv;
 
-    if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "software\\Apple Computer, Inc.\\QuickTime", 0, KEY_READ, &keyloc)) {
+    if (ERROR_SUCCESS == ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, "software\\Apple Computer, Inc.\\QuickTime", 0, KEY_READ, &keyloc)) {
       DWORD pathlen = sizeof(path); 
 
-      result = ::RegQueryValueEx(keyloc, "InstallDir", NULL, &type, (LPBYTE)&path, &pathlen); 
+      result = ::RegQueryValueExA(keyloc, "InstallDir", NULL, &type, (LPBYTE)&path, &pathlen); 
       PL_strcat(path, "\\Plugins");
       if (result == ERROR_SUCCESS)
         rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_TRUE, getter_AddRefs(localFile));
@@ -360,7 +360,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     DWORD pathlen = sizeof(path); 
 
     // first we need to check the version of WMP
-    if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\wmplayer.exe", 0, KEY_READ, &keyloc)) {
+    if (ERROR_SUCCESS == ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, "software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\wmplayer.exe", 0, KEY_READ, &keyloc)) {
       if (ERROR_SUCCESS == ::RegQueryValueEx(keyloc, NULL, NULL, &type, (LPBYTE)&path, &pathlen)) {
         GetFileVersion((char*)path, &wmpVer);
       }
@@ -369,8 +369,8 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     if (CompareVersion(wmpVer, minVer) < 0)
       return rv;
 
-    if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "software\\Microsoft\\MediaPlayer", 0, KEY_READ, &keyloc)) {
-      if (ERROR_SUCCESS == ::RegQueryValueEx(keyloc, "Installation Directory", NULL, &type, (LPBYTE)&path, &pathlen))
+    if (ERROR_SUCCESS == ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, "software\\Microsoft\\MediaPlayer", 0, KEY_READ, &keyloc)) {
+      if (ERROR_SUCCESS == ::RegQueryValueExA(keyloc, "Installation Directory", NULL, &type, (LPBYTE)&path, &pathlen))
         rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_TRUE, getter_AddRefs(localFile));
       ::RegCloseKey(keyloc);
     }
@@ -396,9 +396,9 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     char newestPath[_MAX_PATH + 8]; // to prevent buffer overrun when adding \browser
 
     newestPath[0] = 0;
-    if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, curKey, 0, KEY_READ, &baseloc)) {
+    if (ERROR_SUCCESS != ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, curKey, 0, KEY_READ, &baseloc)) {
       PL_strcpy(curKey, "software\\Adobe\\Adobe Acrobat");
-      if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, curKey, 0, KEY_READ, &baseloc))
+      if (ERROR_SUCCESS != ::RegOpenKeyExA(HKEY_LOCAL_MACHINE, curKey, 0, KEY_READ, &baseloc))
         return NS_ERROR_FAILURE;
     }
 
@@ -408,13 +408,13 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
       path[0] = 0;
       numChars = _MAX_PATH;
       pathlen = sizeof(path);
-      result = ::RegEnumKeyEx(baseloc, index, curKey, &numChars, NULL, NULL, NULL, &modTime);
+      result = ::RegEnumKeyExA(baseloc, index, curKey, &numChars, NULL, NULL, NULL, &modTime);
       index++;
       if (ERROR_SUCCESS == result) {
         verBlock curVer;
         TranslateVersionStr(curKey, &curVer);
         PL_strcat(curKey, "\\InstallPath");
-        if (ERROR_SUCCESS == ::RegOpenKeyEx(baseloc, curKey, 0, KEY_QUERY_VALUE, &keyloc)) {
+        if (ERROR_SUCCESS == ::RegOpenKeyExA(baseloc, curKey, 0, KEY_QUERY_VALUE, &keyloc)) {
           // we have a sub key
           if (ERROR_SUCCESS == ::RegQueryValueEx(keyloc, NULL, NULL, &type, (LPBYTE)&path, &pathlen)) {
             if (CompareVersion(curVer, maxVer) >= 0 && CompareVersion(curVer, minVer) >= 0) {

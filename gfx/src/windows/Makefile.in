@@ -74,7 +74,9 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/.. \
 		$(NULL)
 
+ifneq ($(OS_TARGET),WINCE)
 OS_LIBS		+= winspool.lib comdlg32.lib
+endif # WINCE
 
 GARBAGE		+= nsCompressedCharMap.cpp
 

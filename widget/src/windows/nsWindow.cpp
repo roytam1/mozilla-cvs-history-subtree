@@ -110,13 +110,17 @@
 
 #include "prprf.h"
 
-static const char *kMozHeapDumpMessageString = "MOZ_HeapDump";
+static LPCTSTR kMozHeapDumpMessageString = _T("MOZ_HeapDump");
 
 #define kWindowPositionSlop 20
 
 #ifndef SPI_GETWHEELSCROLLLINES
 #define SPI_GETWHEELSCROLLLINES 104
 #endif
+
+//  How we squirell away pointers to our window object from the HWND.
+#define GWL_NSWINDOW_EXTRA              4 // bytes
+#define GWL_NSWINDOW_POINTER_INDEX      0
 
 // Pick some random timer ID.  Is there a better way?
 #define NS_FLASH_TIMER_ID 0x011231984
@@ -177,11 +181,15 @@ OleRegisterMgr::~OleRegisterMgr()
 ////////////////////////////////////////////////////
 BOOL nsWindow::sIsRegistered       = FALSE;
 BOOL nsWindow::sIsPopupClassRegistered = FALSE;
+#if defined(MSH_MOUSEWHEEL)
 UINT nsWindow::uMSH_MOUSEWHEEL     = 0;
+#endif
 UINT nsWindow::uWM_MSIME_RECONVERT = 0; // reconvert messge for MSIME
 UINT nsWindow::uWM_MSIME_MOUSE     = 0; // mouse messge for MSIME
 UINT nsWindow::uWM_ATOK_RECONVERT  = 0; // reconvert messge for ATOK
+#if !defined(WINCE)
 UINT nsWindow::uWM_HEAP_DUMP       = 0; // Heap Dump to a file
+#endif
 
 #ifdef ACCESSIBILITY
 BOOL nsWindow::gIsAccessibilityOn = FALSE;
@@ -545,7 +553,7 @@ static PRBool LangIDToCP(WORD aLangID, UINT& oCP)
         else 
            cp_name = cp_on_stack;
 	if (cp_name) {
-           GetLocaleInfo(localeid,LOCALE_IDEFAULTANSICODEPAGE,cp_name,numchar);
+           GetLocaleInfoA(localeid,LOCALE_IDEFAULTANSICODEPAGE,cp_name,numchar);
            oCP = atoi(cp_name);
            if(cp_name != cp_on_stack)
                delete [] cp_name;
@@ -811,15 +819,19 @@ nsWindow::nsWindow() : nsBaseWidget()
     // mouse message of MSIME98/2000
     nsWindow::uWM_MSIME_MOUSE     = ::RegisterWindowMessage(RWM_MOUSE);
 
+#if !defined(WINCE)
     // Heap dump
     nsWindow::uWM_HEAP_DUMP = ::RegisterWindowMessage(kMozHeapDumpMessageString);
+#endif
   }
 
   mNativeDragTarget = nsnull;
   mIsTopWidgetWindow = PR_FALSE;
- 
+
+#if defined(MSH_MOUSEWHEEL)
   if (!nsWindow::uMSH_MOUSEWHEEL)
     nsWindow::uMSH_MOUSEWHEEL = RegisterWindowMessage(MSH_MOUSEWHEEL);
+#endif /* MSH_MOUSEWHEEL */
 }
 
 
@@ -1005,7 +1017,11 @@ void nsWindow::InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint
       event.point.y = aPoint->y;
     }
 
+#if !defined(WINCE)
     event.time = ::GetMessageTime();
+#else
+    event.time = PR_IntervalNow();
+#endif
     event.message = aEventType;
 
     mLastPoint.x = event.point.x;
@@ -1130,29 +1146,15 @@ nsWindow::EventIsInsideWindow(UINT Msg, nsWindow* aWindow)
   return (PRBool) PtInRect(&r, mp);
 }
 
-static LPCTSTR GetNSWindowPropName() {
-  static ATOM atom = 0;
-
-  // this is threadsafe, even without locking;
-  // even if there's a race, GlobalAddAtom("MozillaWindowPtr")
-  // will just return the same value
-  if (!atom) {
-    atom = ::GlobalAddAtom("MozillansIWidgetPtr");
-  }
-  return MAKEINTATOM(atom);
-}
-
 nsWindow * nsWindow::GetNSWindowPtr(HWND aWnd) {
-  return (nsWindow *) ::GetProp(aWnd, GetNSWindowPropName());
+  return (nsWindow *) ::GetWindowLong(aWnd, GWL_NSWINDOW_POINTER_INDEX);
 }
 
 BOOL nsWindow::SetNSWindowPtr(HWND aWnd, nsWindow * ptr) {
-  if (ptr == NULL) {
-    ::RemoveProp(aWnd, GetNSWindowPropName());
-    return TRUE;
-  } else {
-    return ::SetProp(aWnd, GetNSWindowPropName(), (HANDLE)ptr);
-  }
+  SetLastError(0);
+  if(0 == SetWindowLong(aWnd, GWL_NSWINDOW_POINTER_INDEX, (LONG)ptr) && 0 != GetLastError())
+    return FALSE;
+  return TRUE;
 }
 
 //
@@ -1165,16 +1167,51 @@ nsWindow :: DealWithPopups ( UINT inMsg, WPARAM inWParam, LPARAM inLParam, LRESU
 {
   if ( gRollupListener && gRollupWidget) {
 
-    if (inMsg == WM_ACTIVATE || inMsg == WM_NCLBUTTONDOWN || inMsg == WM_LBUTTONDOWN ||
-      inMsg == WM_RBUTTONDOWN || inMsg == WM_MBUTTONDOWN || 
-      inMsg == WM_NCMBUTTONDOWN || inMsg == WM_NCRBUTTONDOWN || inMsg == WM_MOUSEACTIVATE ||
-      inMsg == WM_MOUSEWHEEL || inMsg == uMSH_MOUSEWHEEL || inMsg == WM_ACTIVATEAPP ||
-      inMsg == WM_MENUSELECT || inMsg == WM_MOVING || inMsg == WM_SIZING || inMsg == WM_GETMINMAXINFO)
+    if (inMsg == WM_ACTIVATE
+        || inMsg == WM_LBUTTONDOWN
+        || inMsg == WM_RBUTTONDOWN
+        || inMsg == WM_MBUTTONDOWN
+        || inMsg == WM_MOUSEWHEEL
+#if defined(WM_NCLBUTTONDOWN)
+        || inMsg == WM_NCLBUTTONDOWN
+#endif
+#if defined(WM_NCMBUTTONDOWN)
+        || inMsg == WM_NCMBUTTONDOWN
+#endif
+#if defined(WM_NCRBUTTONDOWN)
+        || inMsg == WM_NCRBUTTONDOWN
+#endif
+#if defined(WM_MOUSEACTIVATE)
+        || inMsg == WM_MOUSEACTIVATE
+#endif
+#if defined(MSH_MOUSEWHEEL)
+        || inMsg == uMSH_MOUSEWHEEL
+#endif
+#if defined(WM_ACTIVATEAPP)
+        || inMsg == WM_ACTIVATEAPP
+#endif
+#if defined(WM_MENUSELECT)
+        || inMsg == WM_MENUSELECT
+#endif
+#if defined(WM_MOVING)
+        || inMsg == WM_MOVING
+#endif
+#if defined(WM_SIZING)
+        || inMsg == WM_SIZING
+#endif
+#if defined(WM_GETMINMAXINFO)
+        || inMsg == WM_GETMINMAXINFO
+#endif
+        )
     {
       // Rollup if the event is outside the popup.
       PRBool rollup = !nsWindow::EventIsInsideWindow(inMsg, (nsWindow*)gRollupWidget);
 
-      if (rollup && (inMsg == WM_MOUSEWHEEL || inMsg == uMSH_MOUSEWHEEL)) 
+      if (rollup && (inMsg == WM_MOUSEWHEEL
+#if defined(MSH_MOUSEWHEEL)
+          || inMsg == uMSH_MOUSEWHEEL
+#endif
+          )) 
       {
         gRollupListener->ShouldRollupOnMouseWheelEvent(&rollup);
         *outResult = PR_TRUE;
@@ -1206,6 +1243,7 @@ nsWindow :: DealWithPopups ( UINT inMsg, WPARAM inWParam, LPARAM inLParam, LRESU
         } // if rollup listener knows about menus
       }
 
+#if defined(WM_MOUSEACTIVATE)
       if (inMsg == WM_MOUSEACTIVATE) {
         // Prevent the click inside the popup from causing a change in window
         // activation. Since the popup is shown non-activated, we need to eat 
@@ -1231,9 +1269,11 @@ nsWindow :: DealWithPopups ( UINT inMsg, WPARAM inWParam, LPARAM inLParam, LRESU
           }
         }
       }
+      else
+#endif
 
       // if we've still determined that we should still rollup everything, do it.
-      else if ( rollup ) {
+      if ( rollup ) {
         gRollupListener->Rollup();
 
         // Tell hook to stop processing messages
@@ -1481,7 +1521,7 @@ nsresult nsWindow::StandardWindowCreate(nsIWidget *aParent,
       mWnd = ::CreateWindowEx(extendedStyle,
                               aInitData && aInitData->mDropShadow ? 
                                 WindowPopupClass() : WindowClass(),
-                              "",
+                              _T(""),
                               style,
                               aRect.x,
                               aRect.y,
@@ -2226,9 +2266,11 @@ NS_METHOD nsWindow::SetBackgroundColor(const nscolor &aColor)
       ::DeleteObject(mBrush);
 
     mBrush = ::CreateSolidBrush(NSRGB_2_COLOREF(mBackground));
+#if defined(GCL_HBRBACKGROUND)
     if (mWnd != NULL) {
       SetClassLong(mWnd, GCL_HBRBACKGROUND, (LONG)mBrush);
     }
+#endif
     return NS_OK;
 }
 
@@ -3445,6 +3487,7 @@ void PrintEvent(UINT msg, PRBool aShowAllEvents, PRBool aShowMouseMoves)
 
 #define WM_XP_THEMECHANGED                 0x031A
 
+#if !defined(WINCE)
 // Static helper functions for heap dumping
 static nsresult HeapDump(const char *filename, const char *heading)
 {
@@ -3459,12 +3502,12 @@ static nsresult HeapDump(const char *filename, const char *heading)
   
   if (firstTime) {
     firstTime = PR_FALSE;
-    HMODULE kernel = GetModuleHandle("kernel32.dll");
+    HMODULE kernel = GetModuleHandle(_T("kernel32.dll"));
     if (kernel) {
       heapWalkP = (HeapWalkProc *)
-        GetProcAddress(kernel, "HeapWalk");
+        GetProcAddress(kernel, _T("HeapWalk"));
       getProcessHeapsP = (GetProcessHeapsProc *)
-        GetProcAddress(kernel, "GetProcessHeaps");
+        GetProcAddress(kernel, _T("GetProcessHeaps"));
     }
   }
 
@@ -3513,6 +3556,7 @@ static nsresult HeapDump(const char *filename, const char *heading)
   PR_Close(prfd);
   return NS_OK;
 }
+#endif
 
 PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *aRetValue)
 {
@@ -3549,9 +3593,11 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         }
         break;
 
+#if defined(WM_DISPLAYCHANGE)
         case WM_DISPLAYCHANGE:
           DispatchStandardEvent(NS_DISPLAYCHANGED);
         break;
+#endif
 
         case WM_SYSCOLORCHANGE:
           // Note: This is sent for child windows as well as top-level windows.
@@ -3836,6 +3882,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             result = DispatchMouseEvent(NS_MOUSE_LEFT_BUTTON_UP, wParam);
             break;
 
+#if defined(WM_CONTEXTMENU)
         case WM_CONTEXTMENU:
         {
             // if the context menu is brought up from the keyboard, |lParam|
@@ -3844,6 +3891,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             result = DispatchMouseEvent(msg, wParam);
         }
             break;
+#endif
             
         case WM_LBUTTONDBLCLK:
             result = DispatchMouseEvent(NS_MOUSE_LEFT_DOUBLECLICK, wParam);
@@ -3944,14 +3992,17 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
               PRBool result = DispatchWindowEvent(&event);
               NS_RELEASE(event.widget);
 
+#if defined(MA_ACTIVATE)
               if(event.acceptActivation)
                 *aRetValue = MA_ACTIVATE;
               else
                 *aRetValue = MA_NOACTIVATE; 
+#endif
             }				
           }
           break;
 
+#if defined(WM_MOUSEACTIVATE)
         case WM_MOUSEACTIVATE:
         {
           // This seems to be the only way we're
@@ -3961,13 +4012,16 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
             break;
         }
+#endif
 
+#if defined(WM_WINDOWPOSCHANGING)
         case WM_WINDOWPOSCHANGING: {
           LPWINDOWPOS info = (LPWINDOWPOS) lParam;
           if (!(info->flags & SWP_NOZORDER))
             ConstrainZLevel(&info->hwndInsertAfter);
           break;
         }
+#endif
 
       case WM_SETFOCUS:
 
@@ -3996,9 +4050,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         if(wcscmp(className, WindowClassW()))
           isMozWindowTakingFocus = PR_FALSE;
 #else
-        char className[19];
+        TCHAR className[19];
         ::GetClassName((HWND)wParam, className, 19);
-        if(strcmp(className, WindowClass()))
+        if(_tcscmp(className, WindowClass()))
           isMozWindowTakingFocus = PR_FALSE;
 #endif
         if(gJustGotDeactivate) {
@@ -4008,6 +4062,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
         break;
 
+#if !defined(WINCE)
       case WM_WINDOWPOSCHANGED: 
         {
             WINDOWPOS *wp = (LPWINDOWPOS)lParam;
@@ -4107,9 +4162,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 				if(wcscmp(className, WindowClassW()))
 				  isMozWindowTakingFocus = PR_FALSE;
 #else
-                char className[19];
+                TCHAR className[19];
                 ::GetClassName((HWND)wParam, className, 19);
-                if(strcmp(className, WindowClass()))
+                if(_tcscmp(className, WindowClass()))
                   isMozWindowTakingFocus = PR_FALSE;
 #endif
 
@@ -4125,6 +4180,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
             break;
         }
+#endif /* WINCE */
 
         case WM_SETTINGCHANGE:
           getWheelInfo = PR_TRUE;
@@ -4141,9 +4197,15 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
         case WM_QUERYNEWPALETTE:      // this window is about to become active
             mContext->GetPaletteInfo(palInfo);
-            if (palInfo.isPaletteDevice && palInfo.palette) {
+            if (palInfo.isPaletteDevice
+#if !defined(WINCE)
+                && palInfo.palette
+#endif
+                ) {
                 HDC hDC = ::GetDC(mWnd);
+#if !defined(WINCE)
                 HPALETTE hOldPal = ::SelectPalette(hDC, (HPALETTE)palInfo.palette, TRUE);
+#endif
                 
                 // Realize the drawing palette
                 int i = ::RealizePalette(hDC);
@@ -4160,15 +4222,19 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             result = PR_TRUE;
             break;
 
+#if defined(WM_INPUTLANGCHANGEREQUEST)
 				case WM_INPUTLANGCHANGEREQUEST:
 					*aRetValue = TRUE;
 					result = PR_FALSE;
 					break;
+#endif
 
+#if defined(WM_INPUTLANGCHANGE)
 				case WM_INPUTLANGCHANGE: 
 					result = OnInputLangChange((HKL)lParam, 
 								aRetValue);
 					break;
+#endif
 
 				case WM_IME_STARTCOMPOSITION: 
 					result = OnIMEStartComposition();
@@ -4207,6 +4273,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 					result = OnIMESetContext(wParam, lParam);
 					break;
 
+#if defined(WM_DROPFILES)
         case WM_DROPFILES: {
 #if 0
 	        HDROP hDropInfo = (HDROP) wParam;
@@ -4230,6 +4297,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 	        }
 #endif
         } break;
+#endif /* WM_DROPFILES */
 
       case WM_DESTROYCLIPBOARD: {
         nsIClipboard* clipboard;
@@ -4274,9 +4342,13 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       
       default: {
         // Handle both flavors of mouse wheel events.
-        if ((msg == WM_MOUSEWHEEL) || (msg == uMSH_MOUSEWHEEL)) {
-          static int iDeltaPerLine;
-          static ULONG ulScrollLines;
+        if ((msg == WM_MOUSEWHEEL)
+#if defined(MSH_MOUSEWHEEL)
+            || (msg == uMSH_MOUSEWHEEL)
+#endif
+            ) {
+          static int iDeltaPerLine = 40;
+          static ULONG ulScrollLines = 3;
           
           // Get mouse wheel metrics (but only once).
           if (getWheelInfo) {
@@ -4291,6 +4363,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             osversion.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
             GetVersionEx(&osversion);
             
+#if !defined(WINCE)
             if ((osversion.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) &&
                 (osversion.dwMajorVersion == 4) &&
                 (osversion.dwMinorVersion == 0))
@@ -4307,12 +4380,19 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                   }
                 }
               }
-            else if (osversion.dwMajorVersion >= 4) {
+            else
+#endif /* WINCE */
+            if (osversion.dwMajorVersion >= 4
+#if defined(WINCE)
+                || osversion.dwPlatformId == VER_PLATFORM_WIN32_CE
+#endif /* WINCE */
+                ) {
               // This is the Win98/NT4/Win2K case
               SystemParametersInfo (SPI_GETWHEELSCROLLLINES, 0,
                                     &ulScrollLines, 0);
             }
             
+#if defined(WHEEL_DELTA) && defined(WHEEL_PAGESCROLL)
             // ulScrollLines usually equals 3 or 0 (for no scrolling)
             // WHEEL_DELTA equals 120, so iDeltaPerLine will be 40.
 
@@ -4330,10 +4410,13 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                 ulScrollLines = WHEEL_PAGESCROLL;
               }
             }
+#endif
           }
           
+#if defined(WHEEL_PAGESCROLL)
           if ((ulScrollLines != WHEEL_PAGESCROLL) && (!iDeltaPerLine))
             return 0;
+#endif /* WHEEL_PAGESCROLL */
           
           // The mousewheel event will be dispatched to the toplevel
           // window.  We need to give it to the child window
@@ -4362,6 +4445,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             break;
           }
           
+#if defined(GCL_WNDPROC)
           LONG proc = ::GetWindowLong(destWnd, GWL_WNDPROC);
           if (proc != (LONG)&nsWindow::WindowProc)  {
             // Some other app, or a plugin window.
@@ -4401,6 +4485,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
               parentWnd = ::GetParent(parentWnd);
             } // while parentWnd
           }
+#endif /* GCL_WNDPROC */
+
           if (destWnd == nsnull)
               break; // done with this message.
           if (destWnd != mWnd) {
@@ -4417,13 +4503,16 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           
           nsMouseScrollEvent scrollEvent;
           scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
+#if defined(WHEEL_PAGESCROLL)
           if (ulScrollLines == WHEEL_PAGESCROLL) {
             scrollEvent.scrollFlags |= nsMouseScrollEvent::kIsFullPage;
             if (msg == WM_MOUSEWHEEL)
               scrollEvent.delta = (((short) HIWORD (wParam)) > 0) ? -1 : 1;
             else
               scrollEvent.delta = ((int) wParam > 0) ? -1 : 1;
-          } else {
+          } else
+#endif /* WHEEL_PAGESCROLL */
+          {
             if (msg == WM_MOUSEWHEEL)
               scrollEvent.delta = -((short) HIWORD (wParam) / iDeltaPerLine);
             else
@@ -4452,12 +4541,14 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         else if ((msg == nsWindow::uWM_ATOK_RECONVERT) || (msg == nsWindow::uWM_MSIME_RECONVERT)) {
           result = OnIMERequest(wParam, lParam, aRetValue, PR_TRUE);
         }
+#if !defined(WINCE)
         else if (msg == nsWindow::uWM_HEAP_DUMP) {
           // XXX for now we use c:\heapdump.txt until we figure out how to
           // XXX pass in message parameters.
           HeapDump("c:\\heapdump.txt", "whatever");
           result = PR_TRUE;
         }
+#endif
 
       } break;
     }
@@ -4497,7 +4588,7 @@ LPCWSTR nsWindow::WindowClassW()
         wc.lpfnWndProc      = ::DefWindowProcW;
 #endif
         wc.cbClsExtra       = 0;
-        wc.cbWndExtra       = 0;
+        wc.cbWndExtra       = GWL_NSWINDOW_EXTRA;
         wc.hInstance        = nsToolkit::mDllInstance;
         wc.hIcon            = ::LoadIconW(::GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_APPLICATION));
         wc.hCursor          = NULL;
@@ -4529,7 +4620,7 @@ LPCWSTR nsWindow::WindowPopupClassW()
         wc.lpfnWndProc      = ::DefWindowProcW;
 #endif
         wc.cbClsExtra       = 0;
-        wc.cbWndExtra       = 0;
+        wc.cbWndExtra       = GWL_NSWINDOW_EXTRA;
         wc.hInstance        = nsToolkit::mDllInstance;
         wc.hIcon            = ::LoadIconW(::GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_APPLICATION));
         wc.hCursor          = NULL;
@@ -4552,7 +4643,7 @@ LPCWSTR nsWindow::WindowPopupClassW()
 #else
 LPCTSTR nsWindow::WindowClass()
 {
-    const LPCTSTR className = "MozillaWindowClass";
+    const LPCTSTR className = _T("MozillaWindowClass");
     
     if (!nsWindow::sIsRegistered) {
         WNDCLASS wc;
@@ -4565,9 +4656,13 @@ LPCTSTR nsWindow::WindowClass()
         wc.lpfnWndProc      = ::DefWindowProc;
 #endif
         wc.cbClsExtra       = 0;
-        wc.cbWndExtra       = 0;
+        wc.cbWndExtra       = GWL_NSWINDOW_EXTRA;
         wc.hInstance        = nsToolkit::mDllInstance;
+#if !defined(WINCE)
         wc.hIcon            = ::LoadIcon(::GetModuleHandle(NULL), IDI_APPLICATION);
+#else
+        wc.hIcon = NULL;
+#endif
         wc.hCursor          = NULL;
         wc.hbrBackground    = mBrush;
         wc.lpszMenuName     = NULL;
@@ -4586,7 +4681,7 @@ LPCTSTR nsWindow::WindowClass()
 
 LPCTSTR nsWindow::WindowPopupClass()
 {
-    const LPCTSTR className = "MozillaDropShadowWindowClass";
+    const LPCTSTR className = _T("MozillaDropShadowWindowClass");
 
     if (!nsWindow::sIsPopupClassRegistered) {
         WNDCLASS wc;
@@ -4597,9 +4692,13 @@ LPCTSTR nsWindow::WindowPopupClass()
         wc.lpfnWndProc      = ::DefWindowProc;
 #endif
         wc.cbClsExtra       = 0;
-        wc.cbWndExtra       = 0;
+        wc.cbWndExtra       = GWL_NSWINDOW_EXTRA;
         wc.hInstance        = nsToolkit::mDllInstance;
+#if !defined(WINCE)
         wc.hIcon            = ::LoadIcon(::GetModuleHandle(NULL), IDI_APPLICATION);
+#else
+        wc.hIcon            = NULL;
+#endif
         wc.hCursor          = NULL;
         wc.hbrBackground    = mBrush;
         wc.lpszMenuName     = NULL;
@@ -4982,7 +5081,12 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, WPARAM wParam, nsPoint*
   event.eventStructType = NS_MOUSE_EVENT;
 
   //Dblclicks are used to set the click count, then changed to mousedowns
-  LONG curMsgTime = ::GetMessageTime();
+  LONG curMsgTime =
+#if !defined(WINCE)
+      ::GetMessageTime();
+#else
+      PR_IntervalNow();
+#endif
   POINT mp;
   DWORD pos = ::GetMessagePos();
   mp.x      = (short)LOWORD(pos);
@@ -5442,13 +5546,13 @@ NS_METHOD nsWindow::SetIcon(const nsAString& anIconSpec)
           // Now try the char* path.
           nsCAutoString aPath;
           pathConverter->GetNativePath( aPath );
-          bigIcon = (HICON)::LoadImage( NULL,
+          bigIcon = (HICON)::LoadImageA(NULL,
                                         aPath.get(),
                                         IMAGE_ICON,
                                         ::GetSystemMetrics(SM_CXICON),
                                         ::GetSystemMetrics(SM_CYICON),
                                         LR_LOADFROMFILE | LR_SHARED );
-          smallIcon = (HICON)::LoadImage( NULL,
+          smallIcon = (HICON)::LoadImageA(NULL,
                                           aPath.get(),
                                           IMAGE_ICON,
                                           ::GetSystemMetrics(SM_CXSMICON),
@@ -5631,9 +5735,17 @@ nsWindow::HandleStartComposition(HIMC hIMEContext)
 	//
   if (USE_OVERTHESPOT_IME(gKeyboardLayout))  {
     LOGFONT lf;
+#if !defined(UNICODE)
     NS_IMM_GETCOMPOSITIONFONT(hIMEContext, &lf);
+#else
+    NS_IMM_GETCOMPOSITIONFONTW(hIMEContext, &lf);
+#endif
     lf.lfHeight = event.theReply.mCursorPosition.height;
+#if !defined(UNICODE)
     NS_IMM_SETCOMPOSITIONFONT(hIMEContext, &lf);
+#else
+    NS_IMM_SETCOMPOSITIONFONTW(hIMEContext, &lf);
+#endif
 
     COMPOSITIONFORM cf;
     memset(&cf, NULL, sizeof(COMPOSITIONFORM));
@@ -6653,10 +6765,12 @@ LRESULT CALLBACK nsWindow::MozSpecialMsgFilter(int code, WPARAM wParam, LPARAM l
   }
 #endif
 
+#if defined(MSGF_MENU)
   if (gProcessHook && code == MSGF_MENU) {
     MSG* pMsg = (MSG*)lParam;
     ScheduleHookTimer( pMsg->hwnd, pMsg->message);
   }
+#endif
 
   return ::CallNextHookEx(gMsgFilterHook, code, wParam, lParam);
 }
@@ -6692,9 +6806,17 @@ LRESULT CALLBACK nsWindow::MozSpecialWndProc(int code, WPARAM wParam, LPARAM lPa
 
   if (gProcessHook) {
     CWPSTRUCT* cwpt = (CWPSTRUCT*)lParam;
-    if (cwpt->message == WM_MOVING || 
-        cwpt->message == WM_SIZING || 
-        cwpt->message == WM_GETMINMAXINFO) {
+    if (0
+#if defined(WM_MOVING)
+        || cwpt->message == WM_MOVING
+#endif
+#if defined(WM_SIZING)
+        || cwpt->message == WM_SIZING
+#endif
+#if defined(WM_GETMINMAXINFO)
+        || cwpt->message == WM_GETMINMAXINFO
+#endif
+        ) {
       ScheduleHookTimer( cwpt->hwnd, (UINT)cwpt->message);
     }
   }

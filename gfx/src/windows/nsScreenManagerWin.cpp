@@ -50,12 +50,12 @@
 // needed because there are unicode/ansi versions of this routine
 // and we need to make sure we get the correct one.
 #ifdef UNICODE
-#define GetMonitorInfoQuoted "GetMonitorInfoW"
+#define GetMonitorInfoQuoted _T("GetMonitorInfoW")
 #else
-#define GetMonitorInfoQuoted "GetMonitorInfoA"
+#define GetMonitorInfoQuoted _T("GetMonitorInfoA")
 #endif
 
-
+#if !defined(WINCE)
 #if _MSC_VER >= 1200
 typedef HMONITOR (WINAPI *MonitorFromRectProc)(LPCRECT inRect, DWORD inFlag); 
 typedef BOOL (WINAPI *EnumDisplayMonitorsProc)(HDC, LPCRECT, MONITORENUMPROC, LPARAM);
@@ -64,6 +64,7 @@ BOOL CALLBACK CountMonitors ( HMONITOR, HDC, LPRECT, LPARAM ioCount ) ;
 #else
 typedef void* HMONITOR;
 #endif
+#endif /* WINCE */
 
 
 class ScreenListItem
@@ -85,11 +86,11 @@ nsScreenManagerWin :: nsScreenManagerWin ( )
 
   // figure out if we can call the multiple monitor APIs that are only
   // available on Win98/2000.
-  HMODULE lib = GetModuleHandle("user32.dll");
+  HMODULE lib = GetModuleHandle(_T("user32.dll"));
   if ( lib ) {
     mGetMonitorInfoProc = GetProcAddress ( lib, GetMonitorInfoQuoted );
-    mMonitorFromRectProc = GetProcAddress ( lib, "MonitorFromRect" );
-    mEnumDisplayMonitorsProc = GetProcAddress ( lib, "EnumDisplayMonitors" );
+    mMonitorFromRectProc = GetProcAddress ( lib, _T("MonitorFromRect") );
+    mEnumDisplayMonitorsProc = GetProcAddress ( lib, _T("EnumDisplayMonitors") );
     if ( mGetMonitorInfoProc && mMonitorFromRectProc && mEnumDisplayMonitorsProc )
       mHasMultiMonitorAPIs = PR_TRUE;
   }
@@ -167,7 +168,7 @@ nsScreenManagerWin :: ScreenForRect ( PRInt32 inLeft, PRInt32 inTop, PRInt32 inW
   RECT globalWindowBounds = { inLeft, inTop, inLeft + inWidth, inTop + inHeight };
 
   void* genScreen = nsnull;
-#if _MSC_VER >= 1200
+#if _MSC_VER >= 1200 && !defined(WINCE)
   if ( mHasMultiMonitorAPIs ) {
     MonitorFromRectProc proc = (MonitorFromRectProc)mMonitorFromRectProc;
     HMONITOR screen = (*proc)( &globalWindowBounds, MONITOR_DEFAULTTOPRIMARY );
@@ -229,7 +230,7 @@ nsScreenManagerWin :: GetNumberOfScreens(PRUint32 *aNumberOfScreens)
 {
   if ( mNumberOfScreens )
     *aNumberOfScreens = mNumberOfScreens;
-#if _MSC_VER >= 1200
+#if _MSC_VER >= 1200 && !defined(WINCE)
   else if ( mHasMultiMonitorAPIs ) {
       PRUint32 count = 0;
       EnumDisplayMonitorsProc proc = (EnumDisplayMonitorsProc)mEnumDisplayMonitorsProc;

@@ -193,6 +193,7 @@ NS_IMETHODIMP nsDragService::GetNumDropItems (PRUint32 * aNumItems)
     if ( dataObjCol )
       *aNumItems = dataObjCol->GetNumDataObjects();
   }
+#if defined(CF_HDROP)
   else {
     // Next check if we have a file drop. Return the number of files in
     // the file drop as the number of items we have, pretending like we
@@ -211,6 +212,7 @@ NS_IMETHODIMP nsDragService::GetNumDropItems (PRUint32 * aNumItems)
     else
       *aNumItems = 1;
   }
+#endif /* WINCE */
 
   return NS_OK;
 }
@@ -241,6 +243,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
     // If they are asking for item "0", we can just get it...
     if (anItem == 0) 
        dataFound = nsClipboard::GetDataFromDataObject(mDataObject, anItem, nsnull, aTransferable);
+#if defined(CF_HDROP)
     else {
       // It better be a file drop, or else non-zero indexes are invalid!
       FORMATETC fe2;
@@ -250,6 +253,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
       else
         NS_WARNING ( "Reqesting non-zero index, but clipboard data is not a collection!" );
     }
+#endif /* WINCE */
   }
   return dataFound;
 }

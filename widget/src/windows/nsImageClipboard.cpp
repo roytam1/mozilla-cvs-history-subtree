@@ -201,7 +201,7 @@ nsImageToClipboard::CreateFromImage ( nsIImage* inImage, HANDLE* outBitmap )
     // Create the buffer where we'll copy the image bits (and header) into and lock it
     BITMAPINFOHEADER*  header = nsnull;
     *outBitmap = (HANDLE)::GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE | GMEM_ZEROINIT, imageSize);
-    if (*outBitmap && (header = (BITMAPINFOHEADER*)::GlobalLock((HGLOBAL) *outBitmap)) )
+    if (*outBitmap && (header = (BITMAPINFOHEADER*)GlobalLock((HGLOBAL) *outBitmap)) )
     {
       RGBQUAD *pRGBQUAD = (RGBQUAD *)&header[1];
       PBYTE bits = (PBYTE)&pRGBQUAD[imageHeader->biClrUsed];
@@ -244,7 +244,7 @@ nsImageToClipboard::CreateFromImage ( nsIImage* inImage, HANDLE* outBitmap )
       // Copy!!
       ::CopyMemory(bits, inImage->GetBits(), inImage->GetLineStride() * header->biHeight);
       
-      ::GlobalUnlock((HGLOBAL)outBitmap);
+      GlobalUnlock((HGLOBAL)outBitmap);
     }
     else
       result = NS_ERROR_FAILURE;
@@ -260,7 +260,7 @@ nsImageToClipboard::CreateFromImage ( nsIImage* inImage, HANDLE* outBitmap )
 #endif
 
 
-nsImageFromClipboard :: nsImageFromClipboard ( BITMAPV4HEADER* inHeader )
+nsImageFromClipboard :: nsImageFromClipboard ( nsBITMAPHEADER* inHeader )
   : mHeader(inHeader)
 {
   // nothing to do here
@@ -293,9 +293,15 @@ nsImageFromClipboard :: GetImage ( nsIImage** outImage )
   if ( NS_SUCCEEDED(rv) ) {
     // pull the size informat out of the BITMAPINFO header and
     // initialize the image
+#if !defined(WINCE)
     PRInt32 width  = mHeader->bV4Width;
     PRInt32 height = mHeader->bV4Height;
     PRInt32 depth  = mHeader->bV4BitCount;
+#else
+    PRInt32 width  = mHeader->bmiHeader.biWidth;
+    PRInt32 height = mHeader->bmiHeader.biHeight;
+    PRInt32 depth  = mHeader->bmiHeader.biBitCount;
+#endif
     PRUint8 * bits = GetDIBBits();
     if ( !bits )
       return NS_ERROR_FAILURE;
@@ -337,7 +343,7 @@ nsImageFromClipboard :: GetDIBBits ( )
   if (headerSize != sizeof (BITMAPCOREHEADER) &&
       headerSize != sizeof (BITMAPINFOHEADER) &&
       //headerSize != sizeof (BITMAPV5HEADER) &&
-      headerSize != sizeof (BITMAPV4HEADER))
+      headerSize != sizeof (nsBITMAPHEADER))
     return NULL ;
 
   // Get the size of the color masks

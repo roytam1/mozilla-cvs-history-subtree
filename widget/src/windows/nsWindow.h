@@ -96,53 +96,53 @@ public:
       return gIMM;
     }
 
-    nsIMM(const char* aModuleName="IMM32.DLL") {
+    nsIMM(LPCTSTR aModuleName=_T("IMM32.DLL")) {
       mInstance=::LoadLibrary(aModuleName);
   	  NS_ASSERTION(mInstance!=NULL,"nsIMM.LoadLibrary failed.");
 
-      mGetCompositionStringA=(mInstance) ? (GetCompStrPtr)GetProcAddress(mInstance,"ImmGetCompositionStringA") : 0;
+      mGetCompositionStringA=(mInstance) ? (GetCompStrPtr)GetProcAddress(mInstance,_T("ImmGetCompositionStringA")) : 0;
       NS_ASSERTION(mGetCompositionStringA!=NULL,"nsIMM.ImmGetCompositionStringA failed.");
 
-      mGetCompositionStringW=(mInstance) ? (GetCompStrPtr)GetProcAddress(mInstance,"ImmGetCompositionStringW") : 0;
+      mGetCompositionStringW=(mInstance) ? (GetCompStrPtr)GetProcAddress(mInstance,_T("ImmGetCompositionStringW")) : 0;
 	    NS_ASSERTION(mGetCompositionStringW!=NULL,"nsIMM.ImmGetCompositionStringW failed.");
       
-	    mGetContext=(mInstance) ? (GetContextPtr)GetProcAddress(mInstance,"ImmGetContext") : 0;
+	    mGetContext=(mInstance) ? (GetContextPtr)GetProcAddress(mInstance,_T("ImmGetContext")) : 0;
 	    NS_ASSERTION(mGetContext!=NULL,"nsIMM.ImmGetContext failed.");
       
-	    mReleaseContext=(mInstance) ? (RelContextPtr)GetProcAddress(mInstance,"ImmReleaseContext") : 0;
+	    mReleaseContext=(mInstance) ? (RelContextPtr)GetProcAddress(mInstance,_T("ImmReleaseContext")) : 0;
 	    NS_ASSERTION(mReleaseContext!=NULL,"nsIMM.ImmReleaseContext failed.");
       
-	    mGetConversionStatus=(mInstance) ? (GetCStatusPtr)GetProcAddress(mInstance,"ImmGetConversionStatus") : 0;
+	    mGetConversionStatus=(mInstance) ? (GetCStatusPtr)GetProcAddress(mInstance,_T("ImmGetConversionStatus")) : 0;
 	    NS_ASSERTION(mGetConversionStatus!=NULL,"nsIMM.ImmGetConversionStatus failed.");
       
-	    mSetConversionStatus=(mInstance) ? (SetCStatusPtr)GetProcAddress(mInstance,"ImmSetConversionStatus") : 0;
+	    mSetConversionStatus=(mInstance) ? (SetCStatusPtr)GetProcAddress(mInstance,_T("ImmSetConversionStatus")) : 0;
 	    NS_ASSERTION(mSetConversionStatus!=NULL,"nsIMM.ImmSetConversionStatus failed.");
       
-	    mNotifyIME=(mInstance) ? (NotifyIMEPtr)GetProcAddress(mInstance,"ImmNotifyIME") : 0;
+	    mNotifyIME=(mInstance) ? (NotifyIMEPtr)GetProcAddress(mInstance,_T("ImmNotifyIME")) : 0;
 	    NS_ASSERTION(mNotifyIME!=NULL,"nsIMM.ImmNotifyIME failed.");
       
-	    mSetCandiateWindow=(mInstance) ? (SetCandWindowPtr)GetProcAddress(mInstance,"ImmSetCandidateWindow") : 0;
+	    mSetCandiateWindow=(mInstance) ? (SetCandWindowPtr)GetProcAddress(mInstance,_T("ImmSetCandidateWindow")) : 0;
 	    NS_ASSERTION(mSetCandiateWindow!=NULL,"nsIMM.ImmSetCandidateWindow failed.");
       
-	    mGetCompositionWindow=(mInstance) ? (GetCompWindowPtr)GetProcAddress(mInstance,"ImmGetCompositionWindow") : 0;
+	    mGetCompositionWindow=(mInstance) ? (GetCompWindowPtr)GetProcAddress(mInstance,_T("ImmGetCompositionWindow")) : 0;
 	    NS_ASSERTION(mGetCompositionWindow!=NULL,"nsIMM.ImmGetCompositionWindow failed.");
       
-	    mGetCompositionFontA=(mInstance) ? (GetCompFontPtr)GetProcAddress(mInstance,"ImmGetCompositionFontA") : 0;
+	    mGetCompositionFontA=(mInstance) ? (GetCompFontPtr)GetProcAddress(mInstance,_T("ImmGetCompositionFontA")) : 0;
 	    NS_ASSERTION(mGetCompositionFontA!=NULL,"nsIMM.ImmGetCompositionFontA failed.");
 
-	    mGetCompositionFontW=(mInstance) ? (GetCompFontPtr)GetProcAddress(mInstance,"ImmGetCompositionFontW") : 0;
+	    mGetCompositionFontW=(mInstance) ? (GetCompFontPtr)GetProcAddress(mInstance,_T("ImmGetCompositionFontW")) : 0;
 	    NS_ASSERTION(mGetCompositionFontW!=NULL,"nsIMM.ImmGetCompositionFontW failed.");
 
-	    mSetCompositionFontA=(mInstance) ? (SetCompFontPtr)GetProcAddress(mInstance,"ImmSetCompositionFontA") : 0;
+	    mSetCompositionFontA=(mInstance) ? (SetCompFontPtr)GetProcAddress(mInstance,_T("ImmSetCompositionFontA")) : 0;
 	    NS_ASSERTION(mSetCompositionFontA!=NULL,"nsIMM.ImmSetCompositionFontA failed.");
 
-	    mSetCompositionFontW=(mInstance) ? (SetCompFontPtr)GetProcAddress(mInstance,"ImmSetCompositionFontW") : 0;
+	    mSetCompositionFontW=(mInstance) ? (SetCompFontPtr)GetProcAddress(mInstance,_T("ImmSetCompositionFontW")) : 0;
 	    NS_ASSERTION(mSetCompositionFontW!=NULL,"nsIMM.ImmSetCompositionFontW failed.");
 
-	    mSetCompositionWindow=(mInstance) ? (SetCompWindowPtr)GetProcAddress(mInstance,"ImmSetCompositionWindow") : 0;
+	    mSetCompositionWindow=(mInstance) ? (SetCompWindowPtr)GetProcAddress(mInstance,_T("ImmSetCompositionWindow")) : 0;
 	    NS_ASSERTION(mSetCompositionWindow!=NULL,"nsIMM.ImmSetCompositionWindow failed.");
 
-	    mGetProperty=(mInstance) ? (GetPropertyPtr)GetProcAddress(mInstance,"ImmGetProperty") : 0;
+	    mGetProperty=(mInstance) ? (GetPropertyPtr)GetProcAddress(mInstance,_T("ImmGetProperty")) : 0;
 	    NS_ASSERTION(mGetProperty!=NULL,"nsIMM.ImmGetProperty failed.");
     }
 
@@ -553,15 +553,19 @@ protected:
     static BOOL sIsPopupClassRegistered;
 
     HDWP mDeferredPositioner;
+#if defined(MSH_MOUSEWHEEL)
     static UINT uMSH_MOUSEWHEEL;
+#endif
 
     // IME special message
     static UINT uWM_MSIME_RECONVERT; // reconvert messge for MSIME
     static UINT uWM_MSIME_MOUSE;     // mouse messge for MSIME
     static UINT uWM_ATOK_RECONVERT;  // reconvert messge for ATOK
 
+#if !defined(WINCE)
     // Heap dump
     static UINT uWM_HEAP_DUMP;       // Dump heap to a file
+#endif
 
 #ifdef ACCESSIBILITY
     IAccessible* mRootAccessible;

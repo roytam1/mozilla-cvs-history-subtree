@@ -109,8 +109,10 @@ DEFINES		+= -D_IMPL_NS_PLUGIN
 
 ifeq ($(OS_ARCH),WINNT)
 DEFINES		+= -DWIN32_LEAN_AND_MEAN
+ifneq ($(OS_TARGET),WINCE)
 CXXFLAGS	+= -GX
 OS_LIBS		+= version.lib
+endif # WINCE
 endif
 
 ifdef MOZ_ENABLE_GTK

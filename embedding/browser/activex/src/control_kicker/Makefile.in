@@ -44,13 +44,19 @@ OS_LIBS	+= \
 
 include $(topsrcdir)/config/rules.mk
 
+ifneq ($(OS_TARGET),WINCE)
 CXXFLAGS += /D "WIN32" /GX /GF /MT /O1
+else
+CXXFLAGS += /D "WIN32" /GF /O1
+endif # WINCE
 
 libs::
 ifdef MOZ_ACTIVEX_REGISTRATION
+ifneq ($(OS_TARGET),WINCE)
 ifneq ($(OS_TARGET),WIN98)
 	-regsvr32 /s /c $(DIST)/bin/$(SHARED_LIBRARY)
 endif
+endif # WINCE
 endif
 
 clean clobber clobber_all realclean distclean::

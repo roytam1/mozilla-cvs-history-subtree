@@ -974,7 +974,11 @@ case "$target" in
         MKSHLIB='$(LD) /NOLOGO /DLL /OUT:$@ /PDB:$(PDBFILE) $(DSO_LDOPTS)'
         MKSHLIB_FORCE_ALL=
         MKSHLIB_UNFORCE_ALL=
-        DSO_LDOPTS=/SUBSYSTEM:WINDOWS
+        if test "$OS_TARGET" = "WINCE"; then
+            DSO_LDOPTS=/SUBSYSTEM:WINDOWSCE,3.00
+        else
+            DSO_LDOPTS=/SUBSYSTEM:WINDOWS
+        fi
         DSO_CFLAGS=
         DSO_PIC_CFLAGS=
         CFLAGS="$CFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"

@@ -179,8 +179,12 @@ STDMETHODIMP nsDataObj::GetData(LPFORMATETC pFE, LPSTGMEDIUM pSTM)
 
   PRUint32 dfInx = 0;
 
+#if defined(CFSTR_FILEDESCRIPTOR)
   static CLIPFORMAT fileDescriptorFlavor = ::RegisterClipboardFormat( CFSTR_FILEDESCRIPTOR ); 
+#endif
+#if defined(CFSTR_FILECONTENTS)
   static CLIPFORMAT fileFlavor = ::RegisterClipboardFormat( CFSTR_FILECONTENTS ); 
+#endif
 
   ULONG count;
   FORMATETC fe;
@@ -211,11 +215,17 @@ STDMETHODIMP nsDataObj::GetData(LPFORMATETC pFE, LPSTGMEDIUM pSTM)
             
 				  default:
 
+#if defined(CFSTR_FILEDESCRIPTOR)
             if ( format == fileDescriptorFlavor )
               return GetFileDescriptor ( *pFE, *pSTM );
-            else if ( format == fileFlavor )
+            else
+#endif
+#if defined(CFSTR_FILECONTENTS)
+            if ( format == fileFlavor )
               return GetFileContents ( *pFE, *pSTM );
-            else {
+            else
+#endif
+            {
               PRNTDEBUG2("***** nsDataObj::GetData - Unknown format %x\n", format);
 					    return GetText(*df, *pFE, *pSTM);
             }
@@ -467,6 +477,7 @@ nsDataObj :: GetFileContents ( FORMATETC& aFE, STGMEDIUM& aSTG )
 HRESULT
 nsDataObj :: GetFileDescriptorInternetShortcut ( FORMATETC& aFE, STGMEDIUM& aSTG )
 {
+#if defined(CFSTR_FILEDESCRIPTOR)
   HRESULT result = S_OK;
   
   // setup format structure
@@ -525,9 +536,10 @@ nsDataObj :: GetFileDescriptorInternetShortcut ( FORMATETC& aFE, STGMEDIUM& aSTG
     result = E_OUTOFMEMORY;
     
   return result;
-  
+#else
+  return E_FAIL;
+#endif /* CFSTR_FILEDESCRIPTOR */
 } // GetFileDescriptorInternetShortcut
-
 
 //
 // GetFileContentsInternetShortcut
@@ -538,6 +550,7 @@ nsDataObj :: GetFileDescriptorInternetShortcut ( FORMATETC& aFE, STGMEDIUM& aSTG
 HRESULT
 nsDataObj :: GetFileContentsInternetShortcut ( FORMATETC& aFE, STGMEDIUM& aSTG )
 {
+#if defined(CFSTR_FILECONTENTS)
   HRESULT result = S_OK;
   
   nsAutoString url;
@@ -569,7 +582,9 @@ nsDataObj :: GetFileContentsInternetShortcut ( FORMATETC& aFE, STGMEDIUM& aSTG )
   nsMemory::Free ( urlStr );
     
   return result;
-  
+#else
+  return E_FAIL;
+#endif
 } // GetFileContentsInternetShortcut
 
 
@@ -699,10 +714,10 @@ HRESULT nsDataObj::GetText(const nsACString & aDataFlavor, FORMATETC& aFE, STGME
 
   // Copy text to Global Memory Area
   if ( hGlobalMemory ) {
-    char* dest = NS_REINTERPRET_CAST(char*, ::GlobalLock(hGlobalMemory));
+    char* dest = NS_REINTERPRET_CAST(char*, GlobalLock(hGlobalMemory));
     char* source = NS_REINTERPRET_CAST(char*, data);
     memcpy ( dest, source, allocLen );                         // copies the null as well
-    BOOL status = ::GlobalUnlock(hGlobalMemory);
+    BOOL status = GlobalUnlock(hGlobalMemory);
   }
   aSTG.hGlobal = hGlobalMemory;
 
@@ -925,19 +940,19 @@ nsDataObj :: BuildPlatformHTML ( const char* inOurHTML, char** outPlatformHTML )
   // string when you overwrite it so you follow up with code to replace
   // the 0 appended at the end with a '\r'...
   char *ptr = strstr(buf, "StartHTML");
-  wsprintf(ptr+10, "%08u", strstr(buf, "<html>") - buf);
+  wsprintfA(ptr+10, "%08u", strstr(buf, "<html>") - buf);
   *(ptr+10+8) = '\r';
 
   ptr = strstr(buf, "EndHTML");
-  wsprintf(ptr+8, "%08u", strlen(buf));
+  wsprintfA(ptr+8, "%08u", strlen(buf));
   *(ptr+8+8) = '\r';
 
   ptr = strstr(buf, "StartFragment");
-  wsprintf(ptr+14, "%08u", strstr(buf, "<!--StartFrag") - buf);
+  wsprintfA(ptr+14, "%08u", strstr(buf, "<!--StartFrag") - buf);
   *(ptr+14+8) = '\r';
 
   ptr = strstr(buf, "EndFragment");
-  wsprintf(ptr+12, "%08u", strstr(buf, "<!--EndFrag") - buf);
+  wsprintfA(ptr+12, "%08u", strstr(buf, "<!--EndFrag") - buf);
   *(ptr+12+8) = '\r';
 
   *outPlatformHTML = buf;

@@ -39,6 +39,17 @@
 
 #include "domstubs.idl"
 
+%{C++
+#if defined(WINCE)
+//	WINCE has special needs.
+//	Conflict from wingdi.h
+#if defined(ERROR)
+#undef ERROR
+#endif
+#define ERROR DOM_EVENT_ERROR
+#endif
+%}
+
 [scriptable, uuid(a90977dd-a80b-49bb-8169-cc90e3d1da98)]
 interface nsIDOMNSEvent : nsISupports
 {

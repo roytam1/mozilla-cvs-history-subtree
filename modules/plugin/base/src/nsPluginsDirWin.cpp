@@ -77,8 +77,8 @@ static char* GetKeyValue(char* verbuf, char* key)
 	char        *buf = NULL;
 	UINT        blen;
 
-	::VerQueryValue(verbuf,
-					TEXT(key),
+	::VerQueryValueA(verbuf,
+					key,
 					(void **)&buf, &blen);
 
 	if(buf != NULL)
@@ -224,12 +224,12 @@ nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
 
 	BOOL restoreOrigDir = FALSE;
 	char aOrigDir[MAX_PATH + 1];
-	DWORD dwCheck = ::GetCurrentDirectory(sizeof(aOrigDir), aOrigDir);
+	DWORD dwCheck = ::GetCurrentDirectoryA(sizeof(aOrigDir), aOrigDir);
 	NS_ASSERTION(dwCheck <= MAX_PATH + 1, "Error in Loading plugin");
 
 	if (dwCheck <= MAX_PATH + 1)
 		{
-		restoreOrigDir = ::SetCurrentDirectory(pluginFolderPath);
+		restoreOrigDir = ::SetCurrentDirectoryA(pluginFolderPath);
 		NS_ASSERTION(restoreOrigDir, "Error in Loading plugin");
 		}
 
@@ -237,7 +237,7 @@ nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
 
 	if (restoreOrigDir)
 		{
-		BOOL bCheck = ::SetCurrentDirectory(aOrigDir);
+		BOOL bCheck = ::SetCurrentDirectoryA(aOrigDir);
 		NS_ASSERTION(bCheck, "Error in Loading plugin");
 		}
 
@@ -256,13 +256,13 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 	char* verbuf = nsnull;
 	const char* path = this->GetCString();
 
-  versionsize = ::GetFileVersionInfoSize((char*)path, &zerome);
+  versionsize = ::GetFileVersionInfoSizeA((char*)path, &zerome);
 	if (versionsize > 0)
 		verbuf = (char *)PR_Malloc(versionsize);
 	if(!verbuf)
 		return NS_ERROR_OUT_OF_MEMORY;
 
-	if(::GetFileVersionInfo((char*)path, NULL, versionsize, verbuf))
+	if(::GetFileVersionInfoA((char*)path, NULL, versionsize, verbuf))
 	{
 		info.fName = GetKeyValue(verbuf, "\\StringFileInfo\\040904E4\\ProductName");
 		info.fDescription = GetKeyValue(verbuf, "\\StringFileInfo\\040904E4\\FileDescription");

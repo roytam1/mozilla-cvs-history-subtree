@@ -301,7 +301,11 @@ PRBool nsScrollbar::OnScroll(UINT scrollCode, int cPos)
                 ::ScreenToClient(mWnd, &cpos);
                 event.point.x = cpos.x;
                 event.point.y = cpos.y;
+#if !defined(WINCE)
                 event.time = ::GetMessageTime();
+#else
+                event.time = PR_IntervalNow();
+#endif
                 event.position = (PRUint32)NSToIntRound(newPosition * mScaleFactor);
 
                 result = ConvertStatus((*mEventCallback)(&event));
@@ -335,7 +339,11 @@ PRBool nsScrollbar::OnScroll(UINT scrollCode, int cPos)
                 ::ScreenToClient(mWnd, &cpos);
                 event.point.x = cpos.x;
                 event.point.y = cpos.y;
+#if !defined(WINCE)
                 event.time = ::GetMessageTime();
+#else
+                event.time = PR_IntervalNow();
+#endif
                 event.position = (PRUint32)NSToIntRound(newPosition * mScaleFactor);
 
                 result = ConvertStatus((*mEventCallback)(&event));
@@ -381,7 +389,11 @@ PRBool nsScrollbar::OnScroll(UINT scrollCode, int cPos)
                 ::ScreenToClient(mWnd, &cpos);
                 event.point.x = cpos.x;
                 event.point.y = cpos.y;
+#if !defined(WINCE)
                 event.time = ::GetMessageTime();
+#else
+                event.time = PR_IntervalNow();
+#endif
                 event.position = (PRUint32)NSToIntRound(newPosition * mScaleFactor);;
 
 
@@ -420,7 +432,11 @@ PRBool nsScrollbar::OnScroll(UINT scrollCode, int cPos)
                 ::ScreenToClient(mWnd, &cpos);
                 event.point.x = cpos.x;
                 event.point.y = cpos.y;
+#if !defined(WINCE)
                 event.time = ::GetMessageTime();
+#else
+                event.time = PR_IntervalNow();
+#endif
                 event.position = (PRUint32)NSToIntRound(newPosition * mScaleFactor);
 
                 result = ConvertStatus((*mEventCallback)(&event));
@@ -452,7 +468,11 @@ PRBool nsScrollbar::OnScroll(UINT scrollCode, int cPos)
                 ::ScreenToClient(mWnd, &cpos);
                 event.point.x = cpos.x;
                 event.point.y = cpos.y;
+#if !defined(WINCE)
                 event.time = ::GetMessageTime();
+#else
+                event.time = PR_IntervalNow();
+#endif
                 event.position = (PRUint32)NSToIntRound(newPosition * mScaleFactor);
 
                 result = ConvertStatus((*mEventCallback)(&event));
@@ -476,7 +496,7 @@ PRBool nsScrollbar::OnScroll(UINT scrollCode, int cPos)
 //-------------------------------------------------------------------------
 LPCTSTR nsScrollbar::WindowClass()
 {
-    return "SCROLLBAR";
+    return _T("SCROLLBAR");
 }
 
 
