@@ -314,10 +314,13 @@ main(int argc, char **argv)
 	    }
 
 	    /* Check for a pre-existing symlink with identical content. */
-	    if (exists &&
-		(!S_ISLNK(tosb.st_mode) ||
-		 readlink(toname, buf, sizeof buf) != len ||
-		 strncmp(buf, name, len) != 0)) {
+	    if (exists) {
+          if (S_ISLNK(tosb.st_mode) &&
+              readlink(toname, buf, sizeof buf) == len &&
+              strncmp(buf, name, len) == 0) {
+            /*fprintf(stderr,"link exists: %s => %.*s\n", toname, len, buf);*/
+            continue;
+          }
 		(void) (S_ISDIR(tosb.st_mode) ? rmdir : unlink)(toname);
 		exists = 0;
 	    }
