@@ -69,6 +69,10 @@ public:
   virtual PRBool BalanceColumnWidths(nsIPresContext*          aPresContext,
                                      const nsHTMLReflowState& aReflowState);
 
+  virtual nscoord CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
+                                       nscoord                  aAvailWidth,
+                                       float                    aPixelToTwips);
+
   nscoord GetCOLSAttribute() const;
   void Dump(PRInt32 aIndent);
 
@@ -130,10 +134,6 @@ protected:
                                 nscoord                  aBasis,
                                 PRBool                   aTableIsAutoWidth,
                                 float                    aPixelToTwips);
-
-  nscoord CalcPctAdjTableWidth(const nsHTMLReflowState& aReflowState,
-                               nscoord                  aAvailWidth,
-                               float                    aPixelToTwips);
 
   void ReduceOverSpecifiedPctCols(nscoord aExcess);
 

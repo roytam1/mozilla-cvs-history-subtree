@@ -1837,6 +1837,7 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
   }
 
   if (NS_FAILED(rv)) return rv;
+  PRBool balanced = PR_FALSE;
 
   // The 2nd reflow is necessary during a constrained initial reflow and other reflows
   // which require either a strategy init or balance. This isn't done during an
@@ -1847,9 +1848,11 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
       if (NeedStrategyInit()) {
         mTableLayoutStrategy->Initialize(aPresContext, aReflowState);
         BalanceColumnWidths(aPresContext, aReflowState); 
+        balanced = PR_TRUE;
       }
       if (NeedStrategyBalance()) {
         BalanceColumnWidths(aPresContext, aReflowState); 
+        balanced = PR_TRUE;
       }
       haveReflowedColGroups = HaveReflowedColGroups();
     }
@@ -1918,6 +1921,11 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
   // See if we are supposed to compute our maximum width
   if (aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
     aDesiredSize.mMaximumWidth = GetPreferredWidth();
+    if (!mPrevInFlow && HasPctCol() && IsAutoWidth() && !balanced) {
+      nscoord minWidth;
+      CalcMinAndPreferredWidths(aPresContext, aReflowState, PR_TRUE, minWidth, aDesiredSize.mMaximumWidth);
+      SetPreferredWidth(aDesiredSize.mMaximumWidth);
+    }
   }
 
 #if defined DEBUG_TABLE_REFLOW | DEBUG_TABLE_REFLOW_TIMING
@@ -3216,7 +3224,7 @@ void nsTableFrame::BalanceColumnWidths(nsIPresContext*          aPresContext,
   SetNeedStrategyBalance(PR_FALSE);                    // we have just balanced
   // cache the min, desired, and preferred widths
   nscoord minWidth, prefWidth;
-  CalcMinAndPreferredWidths(aReflowState, minWidth, prefWidth);
+  CalcMinAndPreferredWidths(aPresContext, aReflowState, PR_FALSE, minWidth, prefWidth);
   SetMinWidth(minWidth); 
   nscoord desWidth = CalcDesiredWidth(aReflowState);
   SetDesiredWidth(desWidth);          
@@ -3996,9 +4004,11 @@ nsTableFrame::GetFrameName(nsString& aResult) const
 
 
 void 
-nsTableFrame::CalcMinAndPreferredWidths(const nsHTMLReflowState& aReflowState,
-                                        nscoord&                 aMinWidth,
-                                        nscoord&                 aPrefWidth) 
+nsTableFrame::CalcMinAndPreferredWidths(nsIPresContext* aPresContext,
+                                        const           nsHTMLReflowState& aReflowState,
+                                        PRBool          aCalcPrefWidthIfAutoWithPctCol,
+                                        nscoord&        aMinWidth,
+                                        nscoord&        aPrefWidth) 
 {
   aMinWidth = aPrefWidth = 0;
 
@@ -4009,15 +4019,9 @@ nsTableFrame::CalcMinAndPreferredWidths(const nsHTMLReflowState& aReflowState,
     nsTableColFrame* colFrame = GetColFrame(colX);
     if (!colFrame) continue;
     aMinWidth += PR_MAX(colFrame->GetMinWidth(), colFrame->GetWidth(MIN_ADJ));
-    nscoord width = colFrame->GetPctWidth();
+    nscoord width = colFrame->GetFixWidth();
     if (width <= 0) {
-      width = colFrame->GetFixWidth();
-      if (width <= 0) {
-        width = colFrame->GetWidth(MIN_PRO);
-        if (width <= 0) {
-          width = colFrame->GetDesWidth();
-        }
-      }
+      width = colFrame->GetDesWidth();
     }
     aPrefWidth += width;
     if (GetNumCellsOriginatingInCol(colX) > 0) {
@@ -4034,7 +4038,20 @@ nsTableFrame::CalcMinAndPreferredWidths(const nsHTMLReflowState& aReflowState,
   aPrefWidth = PR_MAX(aMinWidth, aPrefWidth);
 
   PRBool isPctWidth = PR_FALSE;
-  if (!IsAutoWidth(&isPctWidth)) { // a specified fix width becomes the min or preferred width
+  if (IsAutoWidth(&isPctWidth)) {
+    if (HasPctCol() && aCalcPrefWidthIfAutoWithPctCol && 
+        (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth)) {
+      // for an auto table with a pct cell, use the strategy's CalcPctAdjTableWidth
+      nscoord availWidth = CalcBorderBoxWidth(aReflowState);
+      availWidth = PR_MIN(availWidth, aReflowState.availableWidth);
+      if (mTableLayoutStrategy && IsAutoLayout()) {
+        float p2t;
+        aPresContext->GetPixelsToTwips(&p2t);
+        aPrefWidth = mTableLayoutStrategy->CalcPctAdjTableWidth(aReflowState, availWidth, p2t);
+      }
+    }
+  }
+  else { // a specified fix width becomes the min or preferred width
     nscoord compWidth = aReflowState.mComputedWidth;
     if ((NS_UNCONSTRAINEDSIZE != compWidth) && (0 != compWidth) && !isPctWidth) {
       compWidth += GetHorBorderPaddingWidth(aReflowState, this);

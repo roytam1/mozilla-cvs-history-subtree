@@ -601,7 +601,9 @@ public:
   // its reflow state.
   nscoord CalcBorderBoxHeight(nsIPresContext*          aPresContext,
                               const nsHTMLReflowState& aReflowState);
-  void CalcMinAndPreferredWidths(const nsHTMLReflowState& aReflowState,
+  void CalcMinAndPreferredWidths(nsIPresContext*          aPresContextconst,
+                                 const nsHTMLReflowState& aReflowState,
+                                 PRBool                   aCalcPrefWidthIfAutoWithPctCol,
                                  nscoord&                 aMinWidth,
                                  nscoord&                 aPreferredWidth);
 protected:
