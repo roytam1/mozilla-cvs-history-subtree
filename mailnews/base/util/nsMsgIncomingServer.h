@@ -93,6 +93,9 @@ protected:
   nsresult getDefaultBoolPref(const char *pref, PRBool *);
   nsresult getDefaultIntPref(const char *pref, PRInt32 *);
   
+  nsresult CreateLocalFolder(nsIFileSpec *path, const char *folderName);
+  nsresult GetDeferredServers(nsIMsgIncomingServer *server, nsISupportsArray **_retval);
+
   nsresult CreateRootFolder();
 
   nsresult InternalSetHostName(const char *aHostname, const char *prefName);

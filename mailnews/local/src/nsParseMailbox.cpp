@@ -73,6 +73,7 @@
 #include "nsIMimeHeaders.h"
 #include "nsIMsgMdnGenerator.h"
 #include "nsMsgSearchCore.h"
+#include "nsMailHeaders.h"
 
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
@@ -508,6 +509,7 @@ NS_IMETHODIMP nsParseMailMessageState::Clear()
   m_priority.length = 0;
   m_mdn_dnt.length = 0;
   m_return_path.length = 0;
+  m_account_key.length = 0;
   m_in_reply_to.length = 0;
   m_content_type.length = 0;
   m_mdn_original_recipient.length = 0;
@@ -916,6 +918,8 @@ int nsParseMailMessageState::ParseHeaders ()
       else if ( X_MOZILLA_STATUS_LEN == end - buf &&
         !nsCRT::strncasecmp(X_MOZILLA_STATUS, buf, end - buf) && !m_IgnoreXMozillaStatus)
         header = &m_mozstatus;
+      else if (!nsCRT::strncasecmp(HEADER_X_MOZILLA_ACCOUNT_KEY, buf, end - buf))
+        header = &m_account_key;
       // we could very well care what the priority header was when we 
       // remember its value. If so, need to remember it here. Also, 
       // different priority headers can appear in the same message, 
@@ -1118,6 +1122,7 @@ int nsParseMailMessageState::FinalizeHeaders()
   struct message_header *mozstatus;
   struct message_header *mozstatus2;
   struct message_header *priority;
+  struct message_header *account_key;
   struct message_header *ccList;
   struct message_header *mdn_dnt;
   struct message_header md5_header;
@@ -1161,6 +1166,7 @@ int nsParseMailMessageState::FinalizeHeaders()
   mdn_dnt	   = (m_mdn_dnt.length	  ? &m_mdn_dnt	  : 0);
   inReplyTo = (m_in_reply_to.length ? &m_in_reply_to : 0);
   content_type = (m_content_type.length ? &m_content_type : 0);
+  account_key = (m_account_key.length ? &m_account_key :0);
   
   if (mozstatus) 
   {
@@ -1346,6 +1352,8 @@ int nsParseMailMessageState::FinalizeHeaders()
           }
         }
         
+        if (account_key != nsnull)
+          m_newMsgHdr->SetAccountKey(account_key->value);
         // use in-reply-to header as references, if there's no references header
         if (references != nsnull)
           m_newMsgHdr->SetReferences(references->value);

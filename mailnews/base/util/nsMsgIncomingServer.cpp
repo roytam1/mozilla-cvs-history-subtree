@@ -180,11 +180,17 @@ nsMsgIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
 NS_IMETHODIMP
 nsMsgIncomingServer::PerformBiff(nsIMsgWindow* aMsgWindow)
 {
-  //This had to be implemented in the derived class, but in case someone doesn't implement it
+  //This has to be implemented in the derived class, but in case someone doesn't implement it
   //just return not implemented.
   return NS_ERROR_NOT_IMPLEMENTED;	
 }
 
+NS_IMETHODIMP
+nsMsgIncomingServer::GetNewMessages(nsIMsgFolder *aFolder, nsIMsgWindow *aMsgWindow, 
+                      nsIUrlListener *aUrlListener)
+{
+  return aFolder->GetNewMessages(aMsgWindow, aUrlListener);
+}
 
 NS_IMETHODIMP nsMsgIncomingServer::GetPerformingBiff(PRBool *aPerformingBiff)
 {
@@ -356,6 +362,21 @@ nsMsgIncomingServer::GetServerURI(char* *aResult)
     return NS_OK;
 }
 
+// helper routine to create local folder on disk, if it doesn't exist.
+// Path must already have a LeafName for this to work...
+nsresult
+nsMsgIncomingServer::CreateLocalFolder(nsIFileSpec *path, const char *folderName)
+{
+  (void) path->SetLeafName(folderName); // never fails
+  PRBool exists;
+  nsresult rv = path->Exists(&exists);
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (!exists) 
+    rv = path->Touch();
+  return rv;
+}
+
+
 nsresult
 nsMsgIncomingServer::CreateRootFolder()
 {
@@ -418,6 +439,7 @@ nsMsgIncomingServer::GetBoolValue(const char *prefname,
   return rv;
 }
 
+
 nsresult
 nsMsgIncomingServer::getDefaultBoolPref(const char *prefname,
                                         PRBool *val) {
@@ -432,6 +454,7 @@ nsMsgIncomingServer::getDefaultBoolPref(const char *prefname,
   }
   return rv;
 }
+
 
 nsresult
 nsMsgIncomingServer::SetBoolValue(const char *prefname,
@@ -2184,3 +2207,84 @@ nsMsgIncomingServer::GetSpamFilterPlugin(nsIMsgFilterPlugin **aFilterPlugin)
 }
 
 
+// get all the servers that defer to the account for the passed in server. Note that
+// destServer may not be "this"
+nsresult nsMsgIncomingServer::GetDeferredServers(nsIMsgIncomingServer *destServer, nsISupportsArray **_retval)
+{
+  nsresult rv;
+  nsCOMPtr<nsIMsgAccountManager> accountManager 
+    = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsISupportsArray> servers;
+  rv = NS_NewISupportsArray(getter_AddRefs(servers));
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr <nsIMsgAccount> thisAccount;
+  accountManager->FindAccountForServer(destServer, getter_AddRefs(thisAccount));
+  if (thisAccount)
+  {
+    nsCOMPtr <nsISupportsArray> allServers;
+    nsXPIDLCString accountKey;
+    thisAccount->GetKey(getter_Copies(accountKey));
+    accountManager->GetAllServers(getter_AddRefs(allServers));
+    if (allServers)
+    {
+      PRUint32 serverCount;
+      allServers->Count(&serverCount);
+      for (PRUint32 i = 0; i < serverCount; i++)
+      {
+        nsCOMPtr <nsIMsgIncomingServer> server (do_QueryElementAt(allServers, i));
+        if (server)
+        {
+          nsXPIDLCString deferredToAccount;
+          server->GetCharValue("deferred_to_account", getter_Copies(deferredToAccount));
+          if (deferredToAccount.Equals(accountKey))
+            servers->AppendElement(server);
+        }
+      }
+    }
+  }
+  *_retval = servers;
+  NS_ADDREF(*_retval);
+  return rv;
+}
+
+NS_IMETHODIMP nsMsgIncomingServer::GetIsDeferredTo(PRBool *aIsDeferredTo)
+{
+  NS_ENSURE_ARG_POINTER(aIsDeferredTo);
+  nsCOMPtr<nsIMsgAccountManager> accountManager 
+    = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID);
+  if (accountManager)
+  {
+    nsCOMPtr <nsIMsgAccount> thisAccount;
+    accountManager->FindAccountForServer(this, getter_AddRefs(thisAccount));
+    if (thisAccount)
+    {
+      nsCOMPtr <nsISupportsArray> allServers;
+      nsXPIDLCString accountKey;
+      thisAccount->GetKey(getter_Copies(accountKey));
+      accountManager->GetAllServers(getter_AddRefs(allServers));
+      if (allServers)
+      {
+        PRUint32 serverCount;
+        allServers->Count(&serverCount);
+        for (PRUint32 i = 0; i < serverCount; i++)
+        {
+          nsCOMPtr <nsIMsgIncomingServer> server (do_QueryElementAt(allServers, i));
+          if (server)
+          {
+            nsXPIDLCString deferredToAccount;
+            server->GetCharValue("deferred_to_account", getter_Copies(deferredToAccount));
+            if (deferredToAccount.Equals(accountKey))
+            {
+              *aIsDeferredTo = PR_TRUE;
+              return NS_OK;
+            }
+          }
+        }
+      }
+    }
+  }
+  *aIsDeferredTo = PR_FALSE;
+  return NS_OK;
+}

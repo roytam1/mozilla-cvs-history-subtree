@@ -191,6 +191,10 @@ function FinishAccount()
         accountData.smtpRequiresUsername = true;
     }
     
+    // we may need local folders before account is "Finished"
+    // if it's a pop3 account which defers to Local Folders.
+    verifyLocalFoldersAccount(gCurrentAccount);
+
     PageDataToAccountData(pageData, accountData);
 
     FixupAccountDataForIsp(accountData);
@@ -202,8 +206,6 @@ function FinishAccount()
     // transfer all attributes from the accountdata
     finishAccount(gCurrentAccount, accountData);
     
-    verifyLocalFoldersAccount(gCurrentAccount);
-
     if (!serverIsNntp(pageData))
         EnableCheckMailAtStartUpIfNeeded(gCurrentAccount);
 
@@ -318,6 +320,8 @@ function PageDataToAccountData(pageData, accountData)
         accountData.incomingServer = new Object;
     if (!accountData.smtp)
         accountData.smtp = new Object;
+    if (!accountData.pop3)
+        accountData.pop3 = new Object;
     
     var identity = accountData.identity;
     var server = accountData.incomingServer;
@@ -329,7 +333,19 @@ function PageDataToAccountData(pageData, accountData)
 
     server.type = getCurrentServerType(pageData);
     server.hostName = getCurrentHostname(pageData);
-
+    if (getCurrentServerIsDeferred(pageData))
+    {
+      try
+      {
+        var accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
+        var localFoldersServer = accountManager.localFoldersServer;
+        var localFoldersAccount = accountManager.FindAccountForServer(localFoldersServer);
+        accountData.pop3.deferredToAccount = localFoldersAccount.key;
+        accountData.pop3.deferGetNewMail = true;
+        server["ServerType-pop3"] = accountData.pop3;
+      }
+      catch (ex) {dump ("exception setting up deferred account" + ex);}
+    }
     if (serverIsNntp(pageData)) {
         // this stuff probably not relevant
         dump("not setting username/password/rememberpassword/etc\n");
@@ -392,7 +408,12 @@ function createAccount(accountData)
     dump("am.createAccount()\n");
     var account = am.createAccount();
     account.addIdentity(identity);
+    // we mark the server as invalid so that the account manager won't
+    // tell RDF about the new server - it's not quite finished getting
+    // set up yet, in particular, the deferred storage pref hasn't been set.
+    server.valid = false;
     account.incomingServer = server;
+    server.valid = true;
     return account;
 }
 
@@ -423,6 +444,8 @@ function finishAccount(account, accountData)
             }
         }
         account.incomingServer.valid=true;
+        // hack to cause an account loaded notification now the server is valid
+        account.incomingServer = account.incomingServer;
     }
 
     // copy identity info
@@ -540,11 +563,6 @@ function verifyLocalFoldersAccount(account)
 	}
 
     try {
-    var server = account.incomingServer;
-    var identity = account.identities.QueryElementAt(0, Components.interfaces.nsIMsgIdentity);
-
-	// for this server, do we default the folder prefs to this server, or to the "Local Folders" server
-	var defaultCopiesAndFoldersPrefsToServer = server.defaultCopiesAndFoldersPrefsToServer;
 
 	if (!localMailServer) {
         	// dump("Creating local mail account\n");
@@ -559,6 +577,11 @@ function verifyLocalFoldersAccount(account)
 			localMailServer = null;
 		}	
     	}
+
+  var server = account.incomingServer;
+  var identity = account.identities.QueryElementAt(0, Components.interfaces.nsIMsgIdentity);
+	// for this server, do we default the folder prefs to this server, or to the "Local Folders" server
+	var defaultCopiesAndFoldersPrefsToServer = server.defaultCopiesAndFoldersPrefsToServer;
 
 	var copiesAndFoldersServer = null;
 	if (defaultCopiesAndFoldersPrefsToServer) {
@@ -824,6 +847,14 @@ function getCurrentServerType(pageData) {
     else if (pageData.server && pageData.server.servertype)
         servertype = pageData.server.servertype.value;
     return servertype;
+}
+
+function getCurrentServerIsDeferred(pageData) {
+    var serverDeferred = false; 
+    if (pageData.server && pageData.server.deferStorage)
+        serverDeferred = pageData.server.deferStorage.value;
+
+    return serverDeferred;
 }
 
 function getCurrentHostname(pageData) {

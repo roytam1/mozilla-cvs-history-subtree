@@ -43,6 +43,7 @@
 #include "nsILocalMailIncomingServer.h"
 #include "nsMsgIncomingServer.h"
 #include "nsIPop3Protocol.h"
+#include "nsIMsgWindow.h"
 
 /* get some implementation from nsMsgIncomingServer */
 class nsPop3IncomingServer : public nsMsgIncomingServer,
@@ -64,10 +65,21 @@ public:
     NS_IMETHOD GetCanBeDefaultServer(PRBool *canBeDefaultServer);
     NS_IMETHOD GetCanSearchMessages(PRBool *canSearchMessages);
     NS_IMETHOD GetOfflineSupportLevel(PRInt32 *aSupportLevel);
+    NS_IMETHOD GetRootMsgFolder(nsIMsgFolder **aRootMsgFolder);
+    NS_IMETHOD GetCanFileMessagesOnServer(PRBool *aCanFileMessagesOnServer);
+    NS_IMETHOD GetCanCreateFoldersOnServer(PRBool *aCanCreateFoldersOnServer);
+    NS_IMETHOD GetNewMessages(nsIMsgFolder *aFolder, nsIMsgWindow *aMsgWindow, 
+                      nsIUrlListener *aUrlListener);
+
+protected:
+    nsresult GetInbox(nsIMsgWindow *msgWindow, nsIMsgFolder **inbox);
+
 private:    
     PRUint32 m_capabilityFlags;
     PRBool m_authenticated;
     nsCOMPtr <nsIPop3Protocol> m_runningProtocol;
+    nsCOMPtr <nsIMsgFolder> m_rootMsgFolder;
+    nsCStringArray m_uidlsToMarkDeleted;
 };
 
 #endif

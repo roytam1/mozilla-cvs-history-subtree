@@ -51,7 +51,7 @@
 
 interface nsIMsgFolder;
 
-[scriptable, uuid(4e994f60-c317-11d2-8cc9-0060b0fc14a3)]
+[scriptable, uuid(89b3cc7e-1f50-4f6a-8576-e5aaf71f00b1)]
 interface nsIMsgHdr : nsISupports
 {
     /* general property routines - I think this can retrieve any
@@ -121,7 +121,8 @@ interface nsIMsgHdr : nsISupports
     
 	attribute string Charset;
 	attribute nsMsgLabelValue label;
-  readonly attribute nsIMsgFolder folder;
+    attribute string accountKey;
+    readonly attribute nsIMsgFolder folder;
 };
 
 [scriptable, uuid(B5212A60-F93F-11d2-951C-006097222B83)]

@@ -175,6 +175,7 @@ nsMsgAccountManagerDataSource::nsMsgAccountManagerDataSource()
                                    &kNC_SupportsFilters);
       getRDFService()->GetResource(NS_LITERAL_CSTRING(NC_RDF_CANGETMESSAGES),
                                    &kNC_CanGetMessages);
+
       getRDFService()->GetResource(NS_LITERAL_CSTRING(NC_RDF_CANGETINCOMINGMESSAGES),
                                    &kNC_CanGetIncomingMessages);
       getRDFService()->GetResource(NS_LITERAL_CSTRING(NC_RDF_ACCOUNT), &kNC_Account);
@@ -289,13 +290,16 @@ nsMsgAccountManagerDataSource::Init()
     nsCOMPtr<nsIMsgAccountManager> am;
 
     // get a weak ref to the account manager
-    if (!mAccountManager) {
+    if (!mAccountManager) 
+    {
         am = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
         mAccountManager = do_GetWeakReference(am);
-    } else
+    }
+    else
         am = do_QueryReferent(mAccountManager);
 
-    if (am) {
+    if (am) 
+    {
         am->AddIncomingServerListener(this);
         am->AddRootFolderListener(this);
     }
@@ -309,12 +313,13 @@ void nsMsgAccountManagerDataSource::Cleanup()
     nsCOMPtr<nsIMsgAccountManager> am =
         do_QueryReferent(mAccountManager);
 
-    if (am) {
+    if (am)
+    {
         am->RemoveIncomingServerListener(this);
         am->RemoveRootFolderListener(this);
     }
 
-	nsMsgRDFDataSource::Cleanup();
+    nsMsgRDFDataSource::Cleanup();
 }
 
 /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource property, in boolean aTruthValue); */
@@ -330,8 +335,9 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
   rv = NS_RDF_NO_VALUE;
 
   nsAutoString str;
-  if (property == kNC_Name || property == kNC_FolderTreeName || property == kNC_FolderTreeSimpleName) {
-
+  if (property == kNC_Name || property == kNC_FolderTreeName 
+    || property == kNC_FolderTreeSimpleName) 
+  {
       rv = getStringBundle();
       NS_ENSURE_SUCCESS(rv, rv);
       
@@ -895,17 +901,14 @@ nsMsgAccountManagerDataSource::createServerResources(nsISupports *element,
   nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(element, &rv);
   if (NS_FAILED(rv)) return PR_TRUE;
 
-	nsCOMPtr <nsIMsgFolder> serverFolder;
-	rv = server->GetRootFolder(getter_AddRefs(serverFolder));
-	if(NS_FAILED(rv)) return PR_TRUE;
+  nsCOMPtr <nsIMsgFolder> serverFolder;
+  rv = server->GetRootFolder(getter_AddRefs(serverFolder));
+  if(NS_FAILED(rv)) return PR_TRUE;
 
   // add the resource to the array
   nsCOMPtr<nsIRDFResource> serverResource = do_QueryInterface(serverFolder);
-	if(!serverResource)
-		return PR_TRUE;
-
-  rv = servers->AppendElement(serverResource);
-  if (NS_FAILED(rv)) return PR_TRUE;
+  if (serverResource)
+    (void) servers->AppendElement(serverResource);
   
   return PR_TRUE;
 }
@@ -1208,12 +1211,12 @@ nsMsgAccountManagerDataSource::getServerForObject(nsISupports *aObject,
   nsresult rv;
   nsCOMPtr<nsIMsgFolder> folder =
     do_QueryInterface(aObject, &rv);
-  if (NS_SUCCEEDED(rv)) {
+  if (NS_SUCCEEDED(rv)) 
+  {
     PRBool isServer;
     rv = folder->GetIsServer(&isServer);
-    if (NS_SUCCEEDED(rv) && isServer) {
+    if (NS_SUCCEEDED(rv) && isServer) 
         return folder->GetServer(aResult);
-    }
   }
   return NS_ERROR_FAILURE;
 }
@@ -1230,7 +1233,8 @@ nsMsgAccountManagerDataSource::findServerByKey(nsISupports *aElement,
 
     nsXPIDLCString key;
     server->GetKey(getter_Copies(key));
-    if (nsCRT::strcmp(key, entry->serverKey)==0) {
+    if (nsCRT::strcmp(key, entry->serverKey)==0) 
+    {
         entry->found = PR_TRUE;
         return PR_FALSE;        // stop when found
     }
@@ -1249,18 +1253,15 @@ nsMsgAccountManagerDataSource::getStringBundle()
         do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv = strBundleService->CreateBundle("chrome://messenger/locale/prefs.properties",
+    return strBundleService->CreateBundle("chrome://messenger/locale/prefs.properties",
                                         getter_AddRefs(mStringBundle));
-    return rv;
 }
 
 NS_IMETHODIMP
 nsMsgAccountManagerDataSource::OnServerLoaded(nsIMsgIncomingServer* aServer)
 {
-  nsresult rv;
-
   nsCOMPtr<nsIMsgFolder> serverFolder;
-  rv = aServer->GetRootFolder(getter_AddRefs(serverFolder));
+  nsresult rv = aServer->GetRootFolder(getter_AddRefs(serverFolder));
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIRDFResource> serverResource =
@@ -1273,15 +1274,16 @@ nsMsgAccountManagerDataSource::OnServerLoaded(nsIMsgIncomingServer* aServer)
   printf("nsMsgAccountmanagerDataSource::OnServerLoaded(%s)\n", (const char*)serverUri);
 #endif
   
-  NotifyObservers(kNC_AccountRoot, kNC_Child, serverResource, PR_TRUE, PR_FALSE);
-  NotifyObservers(kNC_AccountRoot, kNC_Settings, serverResource, PR_TRUE, PR_FALSE);
+  NotifyObservers(kNC_AccountRoot, kNC_Child, serverResource, nsnull, PR_TRUE, PR_FALSE);
+  NotifyObservers(kNC_AccountRoot, kNC_Settings, serverResource, nsnull, PR_TRUE, PR_FALSE);
 
   PRBool fakeAccountServer;
   IsIncomingServerForFakeAccount(aServer, &fakeAccountServer);
 
-  if (fakeAccountServer) {
-    NotifyObservers(kNC_AccountRoot, kNC_Child, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
-    NotifyObservers(kNC_AccountRoot, kNC_Settings, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
+  if (fakeAccountServer)
+  {
+    NotifyObservers(kNC_AccountRoot, kNC_Child, kNC_PageTitleFakeAccount, nsnull, PR_FALSE, PR_FALSE);
+    NotifyObservers(kNC_AccountRoot, kNC_Settings, kNC_PageTitleFakeAccount, nsnull, PR_FALSE, PR_FALSE);
   }
 
   return NS_OK;
@@ -1301,8 +1303,8 @@ nsMsgAccountManagerDataSource::OnServerUnloaded(nsIMsgIncomingServer* aServer)
   if (NS_FAILED(rv)) return rv;
 
   
-  NotifyObservers(kNC_AccountRoot, kNC_Child, serverResource, PR_FALSE, PR_FALSE);
-  NotifyObservers(kNC_AccountRoot, kNC_Settings, serverResource, PR_FALSE, PR_FALSE);
+  NotifyObservers(kNC_AccountRoot, kNC_Child, serverResource, nsnull, PR_FALSE, PR_FALSE);
+  NotifyObservers(kNC_AccountRoot, kNC_Settings, serverResource, nsnull, PR_FALSE, PR_FALSE);
 
   return NS_OK;
 }
@@ -1368,7 +1370,7 @@ nsMsgAccountManagerDataSource::OnItemBoolPropertyChanged(nsISupports *aItem,
         if (NS_FAILED(rv)) return NS_OK;
 
         NotifyObservers(serverResource, kNC_IsDefaultServer, kTrueLiteral,
-                        aNewValue, PR_FALSE);
+                        nsnull, aNewValue, PR_FALSE);
         
     }    
     return NS_OK;
@@ -1431,7 +1433,8 @@ nsMsgAccountManagerDataSource::IsIncomingServerForFakeAccount(nsIMsgIncomingServ
   rv = GetFakeAccountHostName(getter_Copies(fakeAccountHostName));
   NS_ENSURE_SUCCESS(rv,rv);
 
-  if (fakeAccountHostName.IsEmpty()) {
+  if (fakeAccountHostName.IsEmpty()) 
+  {
     *aResult = PR_FALSE;
     return NS_OK;
   }
@@ -1467,8 +1470,8 @@ nsMsgAccountManagerDataSource::Observe(nsISupports *aSubject, const char *aTopic
   if (!strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
     nsDependentString prefName(aData);
     if (prefName.Equals(NS_LITERAL_STRING(PREF_SHOW_FAKE_ACCOUNT))) {
-      NotifyObservers(kNC_AccountRoot, kNC_Child, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
-      NotifyObservers(kNC_AccountRoot, kNC_Settings, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
+      NotifyObservers(kNC_AccountRoot, kNC_Child, kNC_PageTitleFakeAccount, nsnull, PR_FALSE, PR_FALSE);
+      NotifyObservers(kNC_AccountRoot, kNC_Settings, kNC_PageTitleFakeAccount, nsnull, PR_FALSE, PR_FALSE);
     }
   }
   else if (!strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)) {

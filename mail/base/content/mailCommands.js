@@ -33,7 +33,7 @@ function DoRDFCommand(dataSource, command, srcArray, argumentArray)
     }
 }
 
-function GetNewMessages(selectedFolders, compositeDataSource)
+function GetNewMessages(selectedFolders, server, compositeDataSource)
 {
 	var numFolders = selectedFolders.length;
 	if(numFolders > 0)
@@ -55,8 +55,9 @@ function GetNewMessages(selectedFolders, compositeDataSource)
 			var folderResource = msgFolder.QueryInterface(Components.interfaces.nsIRDFResource);
 		    var folderArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 			folderArray.AppendElement(folderResource);
-
-			DoRDFCommand(compositeDataSource, "http://home.netscape.com/NC-rdf#GetNewMessages", folderArray, null);
+		  var serverArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
+      serverArray.AppendElement(server);
+			DoRDFCommand(compositeDataSource, "http://home.netscape.com/NC-rdf#GetNewMessages", folderArray, serverArray);
 		}
 	}
 	else {
@@ -218,6 +219,13 @@ function ComposeMessage(type, format, folder, messageArray)
 
       var hdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
       var hintForIdentity = (type == msgComposeType.Template) ? hdr.author : hdr.recipients + hdr.ccList;
+      var accountKey = hdr.accountKey;
+      if (accountKey.length > 0)
+      {
+        var account = accountManager.getAccount(accountKey);
+        if (account)
+          server = account.incomingServer;
+      }
 
       if (server)
         identity = getIdentityForServer(server, hintForIdentity);

@@ -225,6 +225,10 @@ function MsgSortByLocation()
     MsgSortThreadPane(nsMsgViewSortType.byLocation);
 }
 
+function msgSortByAccount()
+{
+    MsgSortThreadPane(nsMsgViewSortType.byAccount);
+}
 
 function MsgSortByFlagged() 
 {

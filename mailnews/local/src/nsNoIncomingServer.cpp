@@ -51,6 +51,8 @@
 #include "nsIMsgLocalMailFolder.h"
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
+#include "nsIMsgAccountManager.h"
+#include "nsIPop3IncomingServer.h"
 
 NS_IMPL_ISUPPORTS_INHERITED2(nsNoIncomingServer,
                             nsMsgIncomingServer,
@@ -143,7 +145,8 @@ NS_IMETHODIMP nsNoIncomingServer::CopyDefaultMessages(const char *folderNameOnDi
   }
 
 	// if it exists add to the end, else copy
-	if (exists) {
+  if (exists) 
+  {
 #ifdef DEBUG_sspitzer
 		printf("append default %s\n",folderNameOnDisk);
 #endif
@@ -161,77 +164,63 @@ NS_IMETHODIMP nsNoIncomingServer::CopyDefaultMessages(const char *folderNameOnDi
 	return NS_OK;
 }
 
+
 NS_IMETHODIMP nsNoIncomingServer::CreateDefaultMailboxes(nsIFileSpec *path)
 {
-        nsresult rv;
-        PRBool exists;
-        if (!path) 
-          return NS_ERROR_NULL_POINTER;
-
-		// notice, no Inbox
-        rv = path->AppendRelativeUnixPath("Trash");
-        if (NS_FAILED(rv)) return rv;
-        rv = path->Exists(&exists);
-        if (!exists) {
-                rv = path->Touch();
-                if (NS_FAILED(rv)) return rv;
-        }
-
-        rv = path->SetLeafName("Sent");
-        if (NS_FAILED(rv)) return rv;
-        rv = path->Exists(&exists);
-        if (NS_FAILED(rv)) return rv;
-        if (!exists) {
-                rv = path->Touch();
-                if (NS_FAILED(rv)) return rv;
-        }
-
-        rv = path->SetLeafName("Drafts");
-        if (NS_FAILED(rv)) return rv;
-        rv = path->Exists(&exists);
-        if (NS_FAILED(rv)) return rv;
-        if (!exists) {
-                rv = path->Touch();
-                if (NS_FAILED(rv)) return rv;
-        }
-
-		// copy the default templates into the Templates folder
-		nsCOMPtr<nsIFileSpec> parentDir;
-		rv = path->GetParent(getter_AddRefs(parentDir));
-		if (NS_FAILED(rv)) return rv;
-		rv = CopyDefaultMessages("Templates",parentDir);
-        if (NS_FAILED(rv)) return rv;
-
-		// we may not have had any default templates.  if so
-		// we still want to create the Templates folder
-        rv = path->SetLeafName("Templates");
-        if (NS_FAILED(rv)) return rv;
-        rv = path->Exists(&exists);
-        if (NS_FAILED(rv)) return rv;
-        if (!exists) {
-                rv = path->Touch();
-                if (NS_FAILED(rv)) return rv;
-        }
-
-        rv = path->SetLeafName("Unsent Messages");
-        if (NS_FAILED(rv)) return rv;
-        rv = path->Exists(&exists);
-        if (NS_FAILED(rv)) return rv;
-        if (!exists) {
-                rv = path->Touch();
-                if (NS_FAILED(rv)) return rv;
-        }
-
-        return NS_OK;
+  nsresult rv;
+  if (!path) 
+    return NS_ERROR_NULL_POINTER;
+  
+  // notice, no Inbox, unless we're deferred to...
+  // need to have a leaf to start with
+  rv = path->AppendRelativeUnixPath("Trash");
+  PRBool isDeferredTo;
+  if (NS_SUCCEEDED(GetIsDeferredTo(&isDeferredTo)) && isDeferredTo)
+    CreateLocalFolder(path, "Inbox");
+  CreateLocalFolder(path, "Trash");
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = CreateLocalFolder(path, "Sent");
+  if (NS_FAILED(rv)) return rv;
+  rv = CreateLocalFolder(path, "Drafts");
+  if (NS_FAILED(rv)) return rv;
+  
+  // copy the default templates into the Templates folder
+  nsCOMPtr<nsIFileSpec> parentDir;
+  rv = path->GetParent(getter_AddRefs(parentDir));
+  if (NS_FAILED(rv)) return rv;
+  rv = CopyDefaultMessages("Templates",parentDir);
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = CreateLocalFolder(path, "Drafts");
+  if (NS_FAILED(rv)) return rv;
+  
+  (void ) CreateLocalFolder(path, "Unsent Messages");
+  return NS_OK;
 }
 
-NS_IMETHODIMP nsNoIncomingServer::GetNewMail(nsIMsgWindow *aMsgWindow, nsIUrlListener *aUrlListener, nsIMsgFolder *aInbox, nsIURI **aResult)
+NS_IMETHODIMP
+nsNoIncomingServer::GetNewMail(nsIMsgWindow *aMsgWindow, nsIUrlListener *aUrlListener, nsIMsgFolder *aInbox, nsIURI **aResult)
 {
+  nsCOMPtr <nsISupportsArray> deferredServers;
+  nsresult rv = GetDeferredServers(this, getter_AddRefs(deferredServers));
+  NS_ENSURE_SUCCESS(rv, rv);
+  PRUint32 count;
+  deferredServers->Count(&count);
+  if (count > 0)
+  {
+    nsCOMPtr <nsIPop3IncomingServer> firstServer(do_QueryElementAt(deferredServers, 0));
+    if (firstServer)
+    {
+      rv = firstServer->DownloadMailFromServers(deferredServers, aMsgWindow,
+                              aInbox, 
+                              aUrlListener);
+    }
+  }
   // listener might be counting on us to send a notification.
-  if (aUrlListener)
+  else if (aUrlListener)
     aUrlListener->OnStopRunningUrl(nsnull, NS_OK);
-  // do nothing, there is no new mail for this incoming server, ever.
-  return NS_OK;
+  return rv;
 }
 
 // the "none" server does not support filters, because

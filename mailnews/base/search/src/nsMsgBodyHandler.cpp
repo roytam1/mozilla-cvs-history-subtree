@@ -189,9 +189,7 @@ PRInt32 nsMsgBodyHandler::GetNextLocalLine(nsCString &buf)
     if (m_fileLineStream)
     {
       PRBool more = PR_FALSE;
-      nsAutoString unicodeLine;
-      nsresult rv = m_fileLineStream->ReadLine(unicodeLine, &more);
-      LossyCopyUTF16toASCII(unicodeLine, buf);
+      nsresult rv = m_fileLineStream->ReadLine(buf, &more);
       if (NS_SUCCEEDED(rv))
         return buf.Length();
     }

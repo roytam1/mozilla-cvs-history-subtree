@@ -131,6 +131,8 @@ protected:
   nsresult createFolderSpecialNode(nsIMsgFolder *folder, nsIRDFNode **target);
   nsresult createFolderServerTypeNode(nsIMsgFolder *folder,
                                       nsIRDFNode **target);
+  nsresult createServerIsDeferredNode(nsIMsgFolder* folder,
+                                      nsIRDFNode **target);
   nsresult createFolderRedirectorTypeNode(nsIMsgFolder *folder,
                                       nsIRDFNode **target);
   nsresult createFolderCanCreateFoldersOnServerNode(nsIMsgFolder *folder,
@@ -222,6 +224,7 @@ protected:
   static nsIRDFResource* kNC_MSGFolderRoot;
   static nsIRDFResource* kNC_SpecialFolder;
   static nsIRDFResource* kNC_ServerType;
+  static nsIRDFResource* kNC_IsDeferred;
   static nsIRDFResource* kNC_RedirectorType;
   static nsIRDFResource* kNC_CanCreateFoldersOnServer;
   static nsIRDFResource* kNC_CanFileMessagesOnServer;
@@ -246,6 +249,7 @@ protected:
   static nsIRDFResource* kNC_Synchronize;
   static nsIRDFResource* kNC_SyncDisabled;
   static nsIRDFResource* kNC_CanSearchMessages;
+  
 
   // commands
   static nsIRDFResource* kNC_Delete;
@@ -275,8 +279,9 @@ protected:
   static nsIAtom* kNameAtom;
   static nsIAtom* kSynchronizeAtom;
   static nsIAtom* kOpenAtom;
-
+  static nsIAtom* kIsDeferredAtom;
   static nsrefcnt gFolderResourceRefCnt;
+  static nsIAtom* kCanFileMessagesAtom;
 
 	nsCOMPtr<nsISupportsArray> kFolderArcsOutArray;
 
