@@ -470,10 +470,10 @@ MailDataSource::ArcLabelsOut(nsIRDFResource* source,
         if (! temp)
             return NS_ERROR_OUT_OF_MEMORY;
 
+        temp->AppendElement(kNC_Name); // XXX hack to get things to look right
         temp->AppendElement(kNC_subject);
         temp->AppendElement(kNC_From);
         temp->AppendElement(kNC_date);
-        temp->AppendElement(kNC_Name); // XXX hack to get things to look right
         *labels = new ArrayMailCursor(source, kNC_Child, temp);
         NS_ADDREF(*labels);
 
@@ -485,9 +485,9 @@ MailDataSource::ArcLabelsOut(nsIRDFResource* source,
         if (! temp)
             return NS_ERROR_OUT_OF_MEMORY;
 
-        temp->AppendElement(kNC_Child);
         temp->AppendElement(kNC_Name);
         temp->AppendElement(kNC_subject); // XXX hack to get things to look right
+        temp->AppendElement(kNC_Child);
         *labels = new ArrayMailCursor(source, kNC_Child, temp);
         NS_ADDREF(*labels);
 
@@ -499,9 +499,9 @@ MailDataSource::ArcLabelsOut(nsIRDFResource* source,
         if (! temp)
             return NS_ERROR_OUT_OF_MEMORY;
 
-        temp->AppendElement(kNC_Folder);
         temp->AppendElement(kNC_Name);
         temp->AppendElement(kNC_subject); // XXX hack to get things to look right
+        temp->AppendElement(kNC_Folder);
         *labels = new ArrayMailCursor(source, kNC_Child, temp);
         NS_ADDREF(*labels);
 
@@ -1283,6 +1283,7 @@ ArrayMailCursor::ArrayMailCursor(nsIRDFResource* u, nsIRDFResource* s, nsVoidArr
 
 ArrayMailCursor::~ArrayMailCursor(void)
 {
+    // note that individual elements in the array are _not_ refcounted.
     NS_IF_RELEASE(mSource);
     NS_IF_RELEASE(mValue);
     NS_IF_RELEASE(mProperty);
