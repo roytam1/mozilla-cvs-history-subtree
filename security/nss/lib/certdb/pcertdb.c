@@ -4269,10 +4269,8 @@ SEC_OpenPermCertDB(CERTCertDBHandle *handle, PRBool readOnly,
 	    DestroyDBEntry((certDBEntry *)versionEntry);
 	    PORT_Free(certdbname);
 	    return(SECFailure);
-	} else {
-	    DestroyDBEntry((certDBEntry *)versionEntry);
-	    versionEntry = NULL;
 	}
+
     }
 
 

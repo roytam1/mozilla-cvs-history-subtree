@@ -1450,7 +1450,7 @@ struct PRMonitor {
     const char* name;           /* monitor name for debugging */
 #if defined(_PR_PTHREADS)
     PRLock lock;                /* the lock structure */
-    PRThread *owner;            /* the owner of the lock or NULL */
+    pthread_t owner;            /* the owner of the lock or invalid */
     PRCondVar *cvar;            /* condition variable queue */
 #else  /* defined(_PR_PTHREADS) */
     PRCondVar *cvar;            /* associated lock and condition variable queue */
@@ -1735,9 +1735,6 @@ extern void _PR_InitMW(void);
 extern void _PR_InitRWLocks(void);
 extern void _PR_NotifyCondVar(PRCondVar *cvar, PRThread *me);
 extern void _PR_CleanupThread(PRThread *thread);
-extern void _PR_CleanupLayerCache(void);
-extern void _PR_CleanupStacks(void);
-extern void _PR_CleanupThreads(void);
 extern void _PR_CleanupTPD(void);
 extern void _PR_Cleanup(void);
 extern void _PR_LogCleanup(void);

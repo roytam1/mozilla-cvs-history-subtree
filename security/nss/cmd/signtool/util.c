@@ -352,12 +352,8 @@ foreach(char *dirname, char *prefix,
 	if (!dir) return -1;
 
 	for (entry = PR_ReadDir (dir,0); entry; entry = PR_ReadDir (dir,0)) {
-		if ( strcmp(entry->name, ".")==0   ||
-                     strcmp(entry->name, "..")==0 )
-                {
-                    /* no infinite recursion, please */   
-		    continue;
-                }
+		if (*entry->name == '.' || *entry->name == '#')
+			continue;
 
 		/* can't sign self */
 		if (!strcmp (entry->name, "META-INF"))

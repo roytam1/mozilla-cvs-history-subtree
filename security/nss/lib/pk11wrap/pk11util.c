@@ -42,9 +42,7 @@
 /* these are for displaying error messages */
 
 static  SECMODModuleList *modules = NULL;
-static  SECMODModuleList *modulesDB = NULL;
 static  SECMODModule *internalModule = NULL;
-static  SECMODModule *defaultDBModule = NULL;
 static SECMODListLock *moduleLock = NULL;
 
 extern SECStatus
@@ -137,7 +135,7 @@ secmod_FindExternalRoot(char *dbname)
 	return;
 }
 
-void SECMOD_Init() {
+void SECMOD_init(char *dbname) {
     SECMODModuleList *thisModule;
     int found=0;
     int rootFound=0;
@@ -145,10 +143,54 @@ void SECMOD_Init() {
 
 
     /* don't initialize twice */
-    if (moduleLock) return;
+    if (modules) return;
+
+    PK11_InitSlotLists();
+
+    SECMOD_InitDB(dbname);
+
+    /*
+     * read in the current modules from the database
+     */
+    modules = SECMOD_ReadPermDB();
+
+    /* make sure that the internal module is loaded */
+    for (thisModule = modules; thisModule ; thisModule = thisModule->next) {
+	if (thisModule->module->internal) {
+	    found++;
+	    internalModule = SECMOD_ReferenceModule(thisModule->module);
+	}
+	if (secmod_ModuleHasRoots(thisModule->module)) {
+	    rootFound++;
+	}
+    }
+
+    if (!found) {
+	thisModule = modules;
+	modules = SECMOD_NewModuleListElement();
+	modules->module = SECMOD_NewInternal();
+	PORT_Assert(modules->module != NULL);
+	modules->next = thisModule;
+	SECMOD_AddPermDB(modules->module);
+	internalModule = SECMOD_ReferenceModule(modules->module);
+    }
+
+    /* load it first... we need it to verify the external modules
+     * which we are loading.... */
+    rv = SECMOD_LoadModule(internalModule);
+    if( rv != SECSuccess )
+        internalModule = NULL;
+
+    if (! rootFound ) {
+	secmod_FindExternalRoot(dbname);
+    }
+    /* Load each new module */
+    for (thisModule = modules; thisModule ; thisModule = thisModule->next) {
+        if( !( thisModule->module->internal ) )
+	    SECMOD_LoadModule(thisModule->module);
+    }
 
     moduleLock = SECMOD_NewListLock();
-    PK11_InitSlotLists();
 }
 
 
@@ -166,11 +208,6 @@ void SECMOD_Shutdown() {
     /* destroy the list */
     if (modules) {
 	SECMOD_DestroyModuleList(modules);
-	modules = NULL;
-    }
-   
-    if (modulesDB) {
-	SECMOD_DestroyModuleList(modulesDB);
 	modules = NULL;
     }
 
@@ -201,52 +238,6 @@ SECMOD_SetInternalModule( SECMODModule *mod) {
    if (!moduleLock) {
        moduleLock = SECMOD_NewListLock();
    }
-}
-
-SECStatus
-secmod_AddModuleToList(SECMODModuleList **moduleList,SECMODModule *newModule) {
-    SECStatus rv;
-    SECMODModuleList *mlp, *newListElement, *last = NULL;
-
-    newListElement = SECMOD_NewModuleListElement();
-    if (newListElement == NULL) {
-	return SECFailure;
-    }
-
-    newListElement->module = newModule;
-
-    SECMOD_GetWriteLock(moduleLock);
-    /* Added it to the end (This is very inefficient, but Adding a module
-     * on the fly should happen maybe 2-3 times through the life this program
-     * on a given computer, and this list should be *SHORT*. */
-    for(mlp = *moduleList; mlp != NULL; mlp = mlp->next) {
-	last = mlp;
-    }
-
-    if (last == NULL) {
-	*moduleList = newListElement;
-    } else {
-	SECMOD_AddList(last,newListElement,NULL);
-    }
-    SECMOD_ReleaseWriteLock(moduleLock);
-    return SECSuccess;
-    return;
-}
-
-SECStatus
-SECMOD_AddModuleToList(SECMODModule *newModule) {
-    if (newModule->internal && !internalModule) {
-	internalModule = SECMOD_ReferenceModule(newModule);
-    }
-    return secmod_AddModuleToList(&modules,newModule);
-}
-
-SECStatus
-SECMOD_AddModuleToDBOnlyList(SECMODModule *newModule) {
-    if (defaultDBModule == NULL) {
-	defaultDBModule = SECMOD_ReferenceModule(newModule);
-    }
-    return secmod_AddModuleToList(&modulesDB,newModule);
 }
 
 /*
@@ -355,7 +346,7 @@ SECMOD_DeleteModule(char *name, int *type) {
 
 
     if (rv == SECSuccess) {
- 	pk11_DeletePermDB(mlp->module);
+ 	SECMOD_DeletePermDB(mlp->module);
 	SECMOD_DestroyModuleListElement(mlp);
     }
     return rv;
@@ -410,8 +401,6 @@ SECMOD_DeleteInternalModule(char *name) {
 	   SECMOD_ReleaseWriteLock(moduleLock);
 	   return SECFailure; 
 	}
-	newModule->libraryParams = 
-	     PORT_ArenaStrdup(mlp->module->arena,mlp->module->libraryParams);
 	oldModule = internalModule;
 	internalModule = SECMOD_ReferenceModule(newModule);
 	SECMOD_AddModule(internalModule);
@@ -442,13 +431,29 @@ SECMOD_AddModule(SECMODModule *newModule) {
 	return rv;
     }
 
-    if (newModule->parent == NULL) {
-	newModule->parent = SECMOD_ReferenceModule(defaultDBModule);
+    newListElement = SECMOD_NewModuleListElement();
+    if (newListElement == NULL) {
+	return SECFailure;
     }
 
-    pk11_AddPermDB(newModule);
-    SECMOD_AddModuleToList(newModule);
+    SECMOD_AddPermDB(newModule);
 
+    newListElement->module = newModule;
+
+    SECMOD_GetWriteLock(moduleLock);
+    /* Added it to the end (This is very inefficient, but Adding a module
+     * on the fly should happen maybe 2-3 times through the life this program
+     * on a given computer, and this list should be *SHORT*. */
+    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
+	last = mlp;
+    }
+
+    if (last == NULL) {
+	modules = newListElement;
+    } else {
+	SECMOD_AddList(last,newListElement,NULL);
+    }
+    SECMOD_ReleaseWriteLock(moduleLock);
     return SECSuccess;
 }
 
@@ -548,10 +553,10 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
                 } /* for each slot of this module */
 
                 /* delete and re-add module in order to save changes to the module */
-                result = pk11_DeletePermDB(module);
+                result = SECMOD_DeletePermDB(module);
                 
                 if (result == SECSuccess) {          
-                    result = pk11_AddPermDB(module);
+                    result = SECMOD_AddPermDB(module);
                     if (result == SECSuccess) {
                         return SECSuccess;
                     }                    

@@ -142,7 +142,6 @@ US
 liz
 liz@moz.org
 SIGNSCRIPT
-  html_msg $? 0 "Create objsign cert (signtool -G)"
 
   echo "$SCRIPTNAME: Signing a set of files ----------------------------"
   echo "signtool -Z nojs.jar -d ${R_ALICEDIR} -p \"nss\" -k objsigner \\"
@@ -151,9 +150,9 @@ SIGNSCRIPT
   html_msg $? 0 "Signing a set of files (signtool -Z)"
 
   echo "$SCRIPTNAME: Listing signed files in jar ----------------------"
-  echo "signtool -v nojs.jar -d ${R_ALICEDIR} -p nss -k objsigner"
-  signtool -v nojs.jar -d ${R_ALICEDIR} -p nss -k objsigner
-  html_msg $? 0 "Listing signed files in jar (signtool -v)"
+  echo "signtool -w nojs.jar -d ${R_ALICEDIR}"
+  signtool -w nojs.jar -d ${R_ALICEDIR}
+  html_msg $? 0 "Listing signed files in jar (signtool -w)"
   
   echo "$SCRIPTNAME: Show who signed jar ------------------------------"
   echo "signtool -w nojs.jar -d ${R_ALICEDIR}"
