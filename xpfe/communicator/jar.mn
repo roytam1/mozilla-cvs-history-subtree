@@ -10,7 +10,6 @@ comm.jar:
     content/communicator/openLocation.xul                (resources/content/openLocation.xul)
     content/communicator/taskbarOverlay.xul              (resources/content/taskbarOverlay.xul) 
     content/communicator/tasksOverlay.js                 (resources/content/tasksOverlay.js) 
-    content/communicator/tasksOverlay.xul                (resources/content/tasksOverlay.xul) 
     content/communicator/browserBindings.xul             (resources/content/browserBindings.xul) 
     content/communicator/editorBindings.xul              (resources/content/editorBindings.xul) 
     content/communicator/platformBrowserBindings.xul     (resources/content/win/platformBrowserBindings.xul) 
