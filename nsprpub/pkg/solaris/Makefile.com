@@ -16,11 +16,12 @@ endif
 
 PKGARCHIVE = $(dist_libdir)/pkgarchive
 DATAFILES = copyright
-FILES = $(DATAFILES) pkginfo
+FILES = $(DATAFILES) pkginfo prototype
 
 PACKAGE = $(shell basename `pwd`)
 
-PRODUCT_VERSION = $(MOD_VERSION).$(MOD_MINOR).$(MOD_PATCH)
+PRODUCT_VERSION =  $(MOD_MAJOR_VERSION).$(MOD_MINOR_VERSION).$(MOD_REVISION_VERSION)
+
 LN = /usr/bin/ln
 
 CLOBBERFILES = $(FILES)
