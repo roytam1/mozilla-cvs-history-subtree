@@ -35,7 +35,7 @@ ifdef XP_OS2_EMX
 # These are for emx/gcc
 ######################################################################
 
-PLATFORM_FLAGS	= -ansi -Wall -Zmtd -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_EMX
+PLATFORM_FLAGS	= -ansi -Wall -Zmtd -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_EMX -DOS2
 MOVEMAIL_FLAGS	=
 PORT_FLAGS		= -DNEED_GETOPT_H -DHAVE_SIGNED_CHAR
 
