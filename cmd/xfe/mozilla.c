@@ -39,7 +39,7 @@
 #include "secnav.h"
 #include "secrng.h"
 #include "mozjava.h"
-#ifdef MOZ_MAIL_NEWS
+#ifdef MOZ_CALENDAR
 #include "nlsxp.h"
 #endif
 #ifdef MOZ_SMARTUPDATE
