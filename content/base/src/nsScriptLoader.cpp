@@ -104,9 +104,8 @@ public:
   PRPackedBool mLoading;             // Are we still waiting for a load to complete?
   PRPackedBool mWasPending;          // Processed immediately or pending
   PRPackedBool mIsInline;            // Is the script inline or loaded?
-  //  nsSharableString mScriptText;  // Holds script for loaded scripts
-  nsString mScriptText;
-  const char* mJSVersion;      // We don't own this string
+  nsString mScriptText;              // Holds script for loaded scripts
+  const char* mJSVersion;            // We don't own this string
   nsCOMPtr<nsIURI> mURI;
   PRInt32 mLineNo;
 };
