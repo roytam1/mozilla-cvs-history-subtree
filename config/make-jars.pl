@@ -465,7 +465,9 @@ sub EnsureFileInDir
     return 0;
 }
 
-while (<STDIN>) {
+my @gLines = <STDIN>;
+
+while (defined($_ = shift @gLines)) {
     chomp;
 
 start: 
@@ -475,7 +477,7 @@ start:
         my $overrides = "";
         my $cwd = cwd();
         print "+++ making chrome $cwd  => $chromeDir/$jarfile.jar\n";
-        while (<STDIN>) {
+        while (defined($_ = shift @gLines)) {
             if (/^\s+([\w\d.\-\_\\\/\+]+)\s*(\([\w\d.\-\_\\\/]+\))?$\s*/) {
                 my $dest = $1;
                 my $srcPath = defined($2) ? substr($2, 1, -1) : $2;
