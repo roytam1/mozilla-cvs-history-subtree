@@ -15,7 +15,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#define DEBUG_notme
+
 /*
  * JS regular expressions, after Perl.
  */
