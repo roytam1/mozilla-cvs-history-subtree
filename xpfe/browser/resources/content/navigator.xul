@@ -264,13 +264,15 @@ Contributor(s): ______________________________________. -->
                      ondragover="nsDragAndDrop.dragOver(event, folderObserver);"
                      template="bookmarksMenuTemplate">
         <menupopup onpopuphiding="gDidOpen = false;"
-                   onpopupshowing="checkBookmarksMenuTemplateBuilder();"
+                   onpopupshowing="checkBookmarksMenuTemplateBuilder(); updateGroupmarkMenuitem('PT_bookmarks_groupmark');">
                    ondragdrop="nsDragAndDrop.drop(event, menuDNDObserver); event.preventBubble();"
                    ondragexit="nsDragAndDrop.dragExit(event, menuDNDObserver); event.preventBubble();"
                    ondragover="nsDragAndDrop.dragOver(event, menuDNDObserver); event.preventBubble();">
           <menuitem accesskey="&addCurPageCmd.accesskey;" key="addBookmarkKb" observes="Browser:AddBookmark"
                     ondragover="event.preventBubble(); return false;"/>
           <menuitem accesskey="&addCurPageAsCmd.accesskey;" key="addBookmarkAsKb" observes="Browser:AddBookmarkAs"
+                    ondragover="event.preventBubble(); return false;"/>
+          <menuitem id="PT_bookmarks_groupmark" observes="Browser:AddGroupmarkAs"
                     ondragover="event.preventBubble(); return false;"/>
           <menuseparator ondragover="event.preventBubble(); return false;"/>
           <menuitem accesskey="&manBookmarksCmd.accesskey;" key="manBookmarkKb" observes="Browser:ManageBookmark"

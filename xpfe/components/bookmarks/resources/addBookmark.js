@@ -90,6 +90,8 @@
  *      filing a single bookmark or a group. For the single bookmark the
  *      values are taken from the name, URL and charset arguments.
  *      For the group, the values are taken from the sixth argument.
+ *      This parameter can also be String("addGroup,group") where "group"
+ *      specifies that the dialog starts in filing as a group.
  */
 
 var gFld_Name   = null;
@@ -151,6 +153,13 @@ function Startup()
       setupFields();
       sizeToFit();
       break;
+    case "addGroup,group":
+      document.getElementById("showaddgroup").setAttribute("hidden", "false");
+      gCB_AddGroup.setAttribute("checked", "true");
+      setupFields();
+      toggleGroup();
+      sizeToFit();
+      break;
     default:
       // Regular Add Bookmark
       setupFields();
@@ -196,7 +205,7 @@ function setupFields()
   onFieldInput();
   gFld_Name.select();
   gFld_Name.focus();
-  gBookmarkCharset = window.arguments [3] || null;
+  gBookmarkCharset = window.arguments[3] || null;
 }
 
 function onFieldInput()
@@ -324,7 +333,7 @@ function toggleGroup()
   temp = gOldURLValue;
   gOldURLValue = gFld_URL.value;
   gFld_URL.value = temp;
-  gFld_URL.disabled = gCB_AddGroup.checked;
+  gFld_URL.disabled = gCB_AddGroup.getAttribute("checked") == "true";
 
   gFld_Name.select();
   gFld_Name.focus();
@@ -334,5 +343,5 @@ function toggleGroup()
 function addingGroup()
 {
   const showAddGroup = document.getElementById("showaddgroup");
-  return showAddGroup.getAttribute("hidden") != "true" && gCB_AddGroup.checked;
+  return showAddGroup.getAttribute("hidden") != "true" && gCB_AddGroup.getAttribute("checked") == "true";
 }

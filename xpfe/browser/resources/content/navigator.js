@@ -721,6 +721,17 @@ function addBookmarkAs()
     BookmarksUtils.addBookmarkForBrowser(gBrowser.webNavigation, true);
 }
 
+function addGroupmarkAs()
+{
+  BookmarksUtils.addBookmarkForTabBrowser(gBrowser, true);
+}
+
+function updateGroupmarkMenuitem(id)
+{
+  const disabled = gBrowser.browsers.length == 1;
+  document.getElementById(id).setAttribute("disabled", disabled);
+}
+
 function readRDFString(aDS,aRes,aProp)
 {
   var n = aDS.GetTarget(aRes, aProp, true);
