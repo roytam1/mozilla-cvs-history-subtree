@@ -505,6 +505,20 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
 - (void)setTitle:(NSString *)title
 {
+  if ([title length] == 0)
+  {
+    // if we get a blank title that is not for "about:blank", use the url,
+    // or filename
+    NSString* curURL = [self getCurrentURLSpec];
+    if (![curURL isEqualToString:@"about:blank"])
+    {
+      if ([curURL hasPrefix:@"file://"])
+        title = [curURL lastPathComponent];
+      else
+        title = curURL;
+    }
+  }
+
   [self setTabTitle:title windowTitle:title];
 }
 
