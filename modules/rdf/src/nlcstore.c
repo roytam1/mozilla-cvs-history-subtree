@@ -816,7 +816,8 @@ nlocalStoreAddChildAt(RDFT rdf, RDF_Resource parent, RDF_Resource ref,
 
 
 RDF_Cursor 
-nlcStoreArcsIn (RDFT rdf, RDF_Resource u) {
+nlcStoreArcsIn (RDFT rdf, RDF_Resource u)
+{
   RDF_Cursor c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
   c->u = u;
   c->queryType = RDF_ARC_LABELS_IN_QUERY;
@@ -825,8 +826,11 @@ nlcStoreArcsIn (RDFT rdf, RDF_Resource u) {
   return c;
 }
 
+
+
 RDF_Cursor 
-nlcStoreArcsOut (RDFT rdf, RDF_Resource u) {
+nlcStoreArcsOut (RDFT rdf, RDF_Resource u)
+{
   RDF_Cursor c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
   c->u = u;
   c->queryType =  RDF_ARC_LABELS_OUT_QUERY;
@@ -835,8 +839,10 @@ nlcStoreArcsOut (RDFT rdf, RDF_Resource u) {
 }
 
 
+
 RDF_Resource 
-nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c) {
+nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c)
+{
   while (c->count < (int16) gCoreVocabSize) {
     RDF_Resource s = *(gAllVocab + c->count);
     size_t size;
@@ -851,7 +857,6 @@ nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c) {
   }
   return NULL;
 }
-      
 
 
 

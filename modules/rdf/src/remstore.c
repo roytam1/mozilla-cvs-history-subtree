@@ -344,8 +344,10 @@ remoteStoreGetSlotValues (RDFT mcf, RDF_Resource u, RDF_Resource s, RDF_ValueTyp
 }
 
 
+
 RDF_Cursor
-remoteStoreArcLabelsIn (RDFT mcf, RDF_Resource u) {
+remoteStoreArcLabelsIn (RDFT mcf, RDF_Resource u)
+{
   if (u->rarg2) {
     RDF_Cursor c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct));
     c->u = u;
@@ -355,8 +357,11 @@ remoteStoreArcLabelsIn (RDFT mcf, RDF_Resource u) {
   } else return NULL;
 }
 
+
+
 RDF_Cursor
-remoteStoreArcLabelsOut (RDFT mcf, RDF_Resource u) {
+remoteStoreArcLabelsOut (RDFT mcf, RDF_Resource u)
+{
   if (u->rarg1) {
     RDF_Cursor c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct));
     c->u = u;
@@ -366,7 +371,11 @@ remoteStoreArcLabelsOut (RDFT mcf, RDF_Resource u) {
   } else return NULL;
 }
 
-void* arcLabelsOutNextValue (RDFT mcf, RDF_Cursor c) {
+
+
+void *
+arcLabelsOutNextValue (RDFT mcf, RDF_Cursor c)
+{
   while (c->pdata != null) {
     Assertion as = (Assertion) c->pdata;
     if ((as->db == mcf) && (as->u == c->u)) {
@@ -380,7 +389,10 @@ void* arcLabelsOutNextValue (RDFT mcf, RDF_Cursor c) {
 }
 
 
-void* arcLabelsInNextValue (RDFT mcf, RDF_Cursor c) {
+
+void *
+arcLabelsInNextValue (RDFT mcf, RDF_Cursor c)
+{
   while (c->pdata != null) {
     Assertion as = (Assertion) c->pdata;
     if ((as->db == mcf) && (as->value == c->u)) {
@@ -392,6 +404,7 @@ void* arcLabelsInNextValue (RDFT mcf, RDF_Cursor c) {
   }  
   return null;
 }
+
 
 
 void *
@@ -608,4 +621,3 @@ MakeSCookDB (char* url)
     return ntr;
   } else return NULL;
 }
-

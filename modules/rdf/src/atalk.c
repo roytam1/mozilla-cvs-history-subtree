@@ -1,4 +1,4 @@
-* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -1095,7 +1095,7 @@ MakeAtalkStore (char* url)
 
 	if (strstr(url, "rdf:appletalk"))
 	{
-		if ((ntr = NewRemoteStore(url);
+		if ((ntr = NewRemoteStore(url)) != NULL)
 		{
 			ntr->assert = AtalkAssert;
 			ntr->unassert = NULL;
