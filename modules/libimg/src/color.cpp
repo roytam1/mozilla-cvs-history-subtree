@@ -518,7 +518,7 @@ ConvertRGBToRGB24(il_container *ic,
     if (!mask)
     {
         while (sp < end) {
-#if !defined(XP_UNIX)  || defined(NTO)
+#if !defined(XP_UNIX)  || defined(MOZ_WIDGET_PHOTON)
             out[2] = sp[0];
             out[1] = sp[1];
             out[0] = sp[2];
@@ -534,7 +534,7 @@ ConvertRGBToRGB24(il_container *ic,
         while (sp < end) {
             if (*mask++)
             {
-#if !defined(XP_UNIX) || defined(NTO)
+#if !defined(XP_UNIX) || defined(MOZ_WIDGET_PHOTON)
             out[2] = sp[0];
             out[1] = sp[1];
             out[0] = sp[2];
