@@ -26,7 +26,7 @@ CPPSRCS		= nsplugin.cpp
 
 EXPORTS		= nppg.h npupp.h nsplugin.h nsjvm.h npglue.h nppriv.h
 
-REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom netcnvts
+REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom netcnvts network cstream
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2) 
 CPPSRCS		= npwplat.cpp

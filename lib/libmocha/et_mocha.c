@@ -1840,7 +1840,7 @@ et_streamabort_handler(StreamEvent * e)
     ET_BEGIN_EVENT_HANDLER(e);
 
     if (decoder->stream && !decoder->nesting_url) {
-        ET_moz_Abort(NET_StreamAbort, decoder->stream, e->status);
+        ET_moz_Abort((MKStreamAbortFunc)NET_StreamAbort, decoder->stream, e->status);
         NET_StreamFree(decoder->stream);
         decoder->stream = 0;
         decoder->free_stream_on_close = JS_FALSE;
