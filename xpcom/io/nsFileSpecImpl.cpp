@@ -22,10 +22,8 @@
 #include "nsIFileStream.h"
 #include "nsFileStream.h"
 
-/*
- * XXX xpcom/ should not depend on widget/public/nsIFileWidget.h
- * XXX We need to move into widget. - at least, that's dp's opinion.
- */
+#define FILE_WIDGET_DEPENDENCY // because the interface file is here with us in base, now.
+
 #ifdef FILE_WIDGET_DEPENDENCY
 #include "nsIFileWidget.h"
 #include "nsWidgetsCID.h"
