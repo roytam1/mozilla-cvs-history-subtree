@@ -683,25 +683,25 @@ function ClearMessagePane()
 }
 
 
-function GetSelectedFolder()
+function GetSelectedFolderIndex()
 {
-  try {
-	var tree = GetFolderTree();
-	var selection = tree.selectedItems;
-	if(selection.length > 0)
-		return selection[0];
-	else
-		return null;
-  }
-  catch (ex) {
-    return null;
-  }
+    var folderOutliner = GetFolderOutliner();
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    return startIndex.value;
 }
 
 function FolderPaneOnClick(event)
 {
-	debug("in FolderPaneClick()\n");
-
+    debug("in FolderPaneClick()\n");
+    var folderOutliner = GetFolderOutliner();
+    var row = {};
+    var col = {};
+    var elt = {};
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+    var folderResource = GetFolderResource(row.value);
+ /*
   var t = event.originalTarget;
   var item;
   var uri;
@@ -749,9 +749,12 @@ function FolderPaneOnClick(event)
 		if (item.localName == "treeitem")
 			FolderPaneDoubleClick(item);
 	}
+*/
+    if (event.detail == 2)
+        FolderPaneDoubleClick(folderResource);
 }
 
-function FolderPaneDoubleClick(treeitem)
+function FolderPaneDoubleClick(resource)
 {
 	var isServer = false;
 
@@ -813,24 +816,25 @@ function ClearActiveThreadPaneSortColumn()
 
 function GetSelectedMsgFolders()
 {
-	var folderTree = GetFolderTree();
-	var selectedFolders = folderTree.selectedItems;
-	var numFolders = selectedFolders.length;
+    var folderArray = [];
+    var k = 0;
+    var folderOutliner = GetFolderOutliner();
+    var rangeCount = folderOutliner.outlinerBoxObject.selection.getRangeCount();
 
-	var folderArray = new Array(numFolders);
+    for(var i = 0; i < rangeCount; i++)
+    {
+        var startIndex = {};
+        var endIndex = {};
+        folderOutliner.outlinerBoxObject.selection.getRangeAt(i, startIndex, endIndex);
+        for (var j = startIndex.value; j <= endIndex.value; j++)
+        {
+            var msgFolder = GetFolderResource(j).QueryInterface(Components.interfaces.nsIMsgFolder);
+            if(msgFolder)
+                folderArray[k++] = msgFolder;
+        }
+    }
 
-	for(var i = 0; i < numFolders; i++)
-	{
-		var folder = selectedFolders[i];
-		var folderUri = folder.getAttribute("id");
-		var folderResource = RDF.GetResource(folderUri);
-		var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-		if(msgFolder)
-		{
-			folderArray[i] = msgFolder;	
-		}
-	}
-	return folderArray;
+    return folderArray;
 }
 
 function GetFirstSelectedMessage()
@@ -911,10 +915,10 @@ function SetNextMessageAfterDelete()
 
 function SelectFolder(folderUri)
 {
-	var tree = GetFolderTree();
-	var treeitem = document.getElementById(folderUri);
-	if(tree && treeitem)
-		ChangeSelection(tree, treeitem);
+    var folderOutliner = GetFolderOutliner();
+    var folderResource = RDF.GetResource(folderUri);
+    var folderIndex = GetFolderIndex(folderResource);
+    ChangeSelection(folderOutliner, folderIndex);
 }
 
 function SelectMessage(messageUri)
