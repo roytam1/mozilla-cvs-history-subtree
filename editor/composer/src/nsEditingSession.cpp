@@ -650,7 +650,7 @@ nsEditingSession::GetEditorDocShellFromWindow(nsIDOMWindow *inWindow, nsIEditorD
   nsresult rv = GetDocShellFromWindow(inWindow, getter_AddRefs(docShell));
   if (NS_FAILED(rv)) return rv;
   
-  return docShell->QueryInterface(NS_GET_IID(nsIEditorDocShell), outDocShell);
+  return CallQueryInterface(docShell, outDocShell);
 }
 
 /*---------------------------------------------------------------------------
