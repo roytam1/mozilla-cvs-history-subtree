@@ -246,6 +246,9 @@ extern NS_LAYOUT nsresult
    NS_NewXMLDocument(nsIDocument** aInstancePtrResult);
 
 extern NS_LAYOUT nsresult
+   NS_NewRDFDocument(nsIDocument** aInstancePtrResult);
+
+extern NS_LAYOUT nsresult
    NS_NewImageDocument(nsIDocument** aInstancePtrResult);
 
 // Note: The buffer passed into NewPostData(...) becomes owned by the IPostData
