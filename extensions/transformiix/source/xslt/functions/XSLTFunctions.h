@@ -32,14 +32,15 @@
 #define TRANSFRMX_XSLT_FUNCTIONS_H
 
 #include "Expr.h"
-#include "ExprResult.h"
 #include "TxString.h"
 #include "Map.h"
-#include "NamedMap.h"
 #include "List.h"
-#include "txXSLTPatterns.h"
 
+class ExprResult;
+class NamedMap;
 class ProcessorState;
+class txPattern;
+
 /**
  * The definition for the XSLT document() function
 **/
@@ -318,7 +319,7 @@ public:
      * aNode is the Element in the stylesheet containing the 
      * Expr and is used for namespaceID resolution
     **/
-    SystemPropertyFunctionCall(Element* aNode);
+    SystemPropertyFunctionCall(Node* aQNameResolveNode);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -334,7 +335,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    Element* mStylesheetNode;
+    Node* mQNameResolveNode;
 };
 
 /**
@@ -349,7 +350,7 @@ public:
      * aNode is the Element in the stylesheet containing the 
      * Expr and is used for namespaceID resolution
     **/
-    ElementAvailableFunctionCall(Element* aNode);
+    ElementAvailableFunctionCall(Node* aQNameResolveNode);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -365,7 +366,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    Element* mStylesheetNode;
+    Node* mQNameResolveNode;
 };
 
 /**
@@ -378,7 +379,7 @@ public:
     /**
      * Creates a new function-available() function call
     **/
-    FunctionAvailableFunctionCall();
+    FunctionAvailableFunctionCall(Node* aQNameResolveNode);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -391,6 +392,10 @@ public:
     ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
+    /*
+     * resolve namespaceIDs with this node
+     */
+    Node* mQNameResolveNode;
 };
 
 #endif

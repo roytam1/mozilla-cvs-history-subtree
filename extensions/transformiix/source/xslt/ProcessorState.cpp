@@ -1054,7 +1054,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
        return NS_OK;
    }
    if (CHECK_FN(functionAvailable)) {
-       aFunction = new FunctionAvailableFunctionCall();
+       aFunction = new FunctionAvailableFunctionCall(aElem);
        return NS_OK;
    }
 
