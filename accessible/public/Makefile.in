@@ -33,12 +33,12 @@ XPIDLSRCS = \
       nsIAccessibilityService.idl \
       nsIAccessible.idl \
       nsIAccessibleDocument.idl \
+      nsIAccessibleDocumentInternal.idl \
       nsIAccessibleEventReceiver.idl \
       nsIAccessibleEventListener.idl \
       $(NULL)
 
 EXPORTS = \
-  .\nsIAccessibleDocumentInternal.h \
   $(NULL)
 
 include $(topsrcdir)/config/rules.mk
