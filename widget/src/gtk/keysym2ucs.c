@@ -851,10 +851,15 @@ long keysym2ucs(KeySym keysym)
     int max = sizeof(keysymtab) / sizeof(struct codepair) - 1;
     int mid;
 
+#include "platform.h"
+
+#if defined(SUNOS4) || defined(SOLARIS)
+
     /* to work with the euro input (AltGraph+e) from Sun keyboard */
     /* map keysym 164 to euro unicode of 0x20ac */
     if ( keysym == 164 ) 
 	return 0x20ac;
+#endif
 
     /* first check for Latin-1 characters (1:1 mapping) */
     if ((keysym >= 0x0020 && keysym <= 0x007e) ||
