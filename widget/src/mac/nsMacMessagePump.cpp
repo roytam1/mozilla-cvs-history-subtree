@@ -222,7 +222,7 @@ WindowPtr nsMacMessagePump::GetFrontApplicationWindow()
 {
 	WindowPtr firstAppWindow = ::FrontWindow();
 
-#if DEBUG
+#if DEBUG && !defined(MACOSX)
 	if (IsSIOUXWindow(firstAppWindow))
 	  firstAppWindow = ::GetNextWindow(firstAppWindow);
 #endif

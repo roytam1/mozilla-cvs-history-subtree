@@ -25,7 +25,7 @@
 
 #include "nsWindow.h"
 #include "nsITextAreaWidget.h"
-#ifndef RHAPSODY
+#ifndef MACOSX
 #include "WASTE.h"
 #endif
 #include "nsRepeater.h"

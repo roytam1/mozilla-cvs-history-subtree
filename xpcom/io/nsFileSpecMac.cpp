@@ -29,15 +29,12 @@
 #include "prtypes.h"
 #include "nscore.h"
 
-#ifndef RHAPSODY
 #include "FullPath.h"
 #include "FileCopy.h"
 #include "MoreFilesExtras.h"
-#endif
 
 #include <Aliases.h>
 #include <Folders.h>
-#include <Errors.h>
 #include <Math64.h>
 #include <TextUtils.h>
 #include <Processes.h>
@@ -48,7 +45,6 @@
 #include "nsXPIDLString.h"
 
 
-#ifndef RHAPSODY
 const unsigned char* kAliasHavenFolderName = "\pnsAliasHaven";
 
 //========================================================================================
@@ -592,20 +588,21 @@ char* MacFileHelpers::PathNameFromFSSpec( const FSSpec& inSpec, Boolean wantLeaf
 			}
 		}
 	}
-	if ( err != noErr && err != fnfErr)
-		goto Clean;
 
-	fullPathLength = GetHandleSize(fullPath);
-	err = noErr;	
-	int allocSize = 1 + fullPathLength;
-	// We only want the leaf name if it's the root directory or wantLeafName is true.
-	if (inSpec.parID != fsRtParID && !wantLeafName)
+    if ( err == noErr || err == fnfErr ) {
+      fullPathLength = GetHandleSize(fullPath);
+         err = noErr;  
+         int allocSize = 1 + fullPathLength;
+         // We only want the leaf name if it's the root directory or wantLeafName is true.
+         if (inSpec.parID != fsRtParID && !wantLeafName)
 		allocSize -= inSpec.name[0];
-	result = new char[allocSize];
-	if (!result)
-		goto Clean;
-	memcpy(result, *fullPath, allocSize - 1);
-	result[ allocSize - 1 ] = 0;
+         result = new char[allocSize];
+         if (result) {
+        memcpy(result, *fullPath, allocSize - 1);
+        result[ allocSize - 1 ] = 0;
+      }
+    }
+
 Clean:
 	if (fullPath)
 		DisposeHandle(fullPath);
@@ -613,7 +610,6 @@ Clean:
 	return result;
 } // MacFileHelpers::PathNameFromFSSpec
 
-#endif
 
 #pragma mark -
 
@@ -621,7 +617,6 @@ Clean:
 //					  Macintosh nsFileSpec implementation
 //========================================================================================
 
-#ifndef RHAPSODY
 //----------------------------------------------------------------------------------------
 nsFileSpec::nsFileSpec()
 //----------------------------------------------------------------------------------------
@@ -629,7 +624,6 @@ nsFileSpec::nsFileSpec()
 //    NS_ASSERTION(0, "nsFileSpec is unsupported - use nsIFile!");
 	Clear();
 }
-#endif
 
 //----------------------------------------------------------------------------------------
 nsFileSpec::nsFileSpec(const FSSpec& inSpec, PRBool resolveAlias)
@@ -653,7 +647,6 @@ void nsFileSpec::operator = (const FSSpec& inSpec)
 	mError = NS_OK;
 }
 
-#ifndef RHAPSODY
 //----------------------------------------------------------------------------------------
 nsFileSpec::nsFileSpec(const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
@@ -1448,8 +1441,8 @@ nsDirectoryIterator::nsDirectoryIterator(
 //----------------------------------------------------------------------------------------
 	: mCurrent(inDirectory)
 	, mExists(false)
-	, mIndex(-1)
 	, mResoveSymLinks(resolveSymLinks)
+	, mIndex(-1)
 {
 	CInfoPBRec pb;
 	OSErr err = inDirectory.GetCatInfo(pb);
@@ -1526,4 +1519,3 @@ nsDirectoryIterator& nsDirectoryIterator::operator ++ ()
 	return *this;
 } // nsDirectoryIterator::operator ++
 
-#endif

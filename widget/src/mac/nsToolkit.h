@@ -56,6 +56,7 @@ class nsIEventQueueService;
  */
 
 #include "MacTypes.h"
+#include "nsIEventQueueService.h"
 
 class nsToolkit : public nsIToolkit
 {

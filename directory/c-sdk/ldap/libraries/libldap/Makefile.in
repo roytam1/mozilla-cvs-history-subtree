@@ -110,7 +110,7 @@ ifneq (,$(filter BeOS Linux,$(OS_ARCH)))
 DSO_LDOPTS	+= -L../liblber -llber40
 endif
 
-ifeq ($(OS_ARCH), OpenVMS)
+ifneq (,$(filter OpenVMS Darwin,$(OS_ARCH)))
 EXTRA_LIBS      += -L../liblber -llber40
 endif
 

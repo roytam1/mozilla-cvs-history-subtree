@@ -38,7 +38,7 @@
 
 #include "vr_stubs.h"
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #include <Folders.h>
 #include <Script.h>
 #include <stdlib.h>
@@ -202,7 +202,7 @@ int FAR PASCAL _export WEP(int nParam)
  * ------------------------------------------------------------------
  */
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #include <Files.h>
 #include "FullPath.h"
 
@@ -428,6 +428,7 @@ char *strdup(const char *source)
         return newAllocation;
 }
 
+#ifndef MACOSX
 int strcasecmp(const char *str1, const char *str2)
 {
     char    currentChar1, currentChar2;
@@ -486,6 +487,7 @@ int strncasecmp(const char *str1, const char *str2, int length)
 
     return currentChar1 - currentChar2;
 }
+#endif /* MACOSX */
 #endif /* STANDALONE_REGISTRY */
 
 #endif /* XP_MAC */
@@ -516,14 +518,14 @@ char *TheRegistry = "registry";
 char *Flist;
 
 /* WARNING: build hackery */
-#if defined(STANDALONE_REGISTRY) && !defined(XP_MAC)
+#if defined(STANDALONE_REGISTRY) && !defined(XP_MAC) && !defined(MACOSX)
 long BUILDNUM = NS_BUILD_ID;
 #endif
 
 
 REGERR vr_ParseVersion(char *verstr, VERSION *result);
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) && !defined(MACOSX)
 
 #ifdef STANDALONE_REGISTRY
 extern XP_File vr_fileOpen (const char *name, const char * mode)

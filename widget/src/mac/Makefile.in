@@ -18,7 +18,6 @@
 DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -37,6 +36,8 @@ CPPSRCS         = nsAppShell.cpp \
 		nsDeleteObserver.cpp \
 		nsDragService.cpp \
 		nsFilePicker.cpp \
+		nsFileWidget.cpp \
+		nsLabel.cpp \
 		nsLookAndFeel.cpp \
 		nsMacControl.cpp \
 		nsMacEventHandler.cpp \
@@ -49,7 +50,6 @@ CPPSRCS         = nsAppShell.cpp \
 		nsMenuBarX.cpp \
 		nsMenuItemX.cpp \
 		nsMimeMapper.cpp \
-		$(topsrcdir)/gfx/src/mac/nsRegionMac.cpp \
 		nsScrollbar.cpp \
 		nsSound.cpp \
 		nsTextWidget.cpp \
@@ -57,6 +57,16 @@ CPPSRCS         = nsAppShell.cpp \
 		nsWidgetFactory.cpp \
 		nsWidgetSupport.cpp \
 		nsWindow.cpp \
+		$(NULL)
+
+# src files from gfx/src/mac
+# XXX We're building these files here because they are built in
+# XXX gfx/src/mac/libgfx_mac.dylib, which is buit as a component
+# XXX thus can't be statically linked against.
+CPPSRCS += \
+		$(topsrcdir)/gfx/src/mac/nsRegionMac.cpp \
+		$(topsrcdir)/gfx/src/mac/nsRepeater.cpp \
+		$(topsrcdir)/gfx/src/mac/nsWatchTask.cpp \
 		$(NULL)
 
 XPIDLSRCS	+= \
@@ -68,10 +78,14 @@ include $(topsrcdir)/config/rules.mk
 EXTRA_DSO_LDOPTS += \
                 $(DIST)/lib/libxpwidgets_s.a \
                 $(TK_LIBS) \
-                -lgkgfx \
                 $(MOZ_COMPONENT_LIBS) \
+                -lgkgfx \
+                -ltimer_mac \
                 $(NULL)
 
 INCLUDES	+= $(TK_CFLAGS) -I$(topsrcdir)/gfx/src/mac -I$(srcdir)/../xpwidgets \
 		-I$(topsrcdir)/widget/timer/src/mac \
 		$(NULL)
+
+# for "EnterMovies" in nsSound.cpp
+LDFLAGS	+= -framework QuickTime

@@ -27,6 +27,7 @@
 short nsMacResources::mRefNum				= kResFileNotOpened;
 short nsMacResources::mSaveResFile	= 0;
 
+#if !TARGET_CARBON
 pascal OSErr __NSInitialize(const CFragInitBlock *theInitBlock);
 pascal OSErr __initializeResources(const CFragInitBlock *theInitBlock);
 
@@ -61,6 +62,7 @@ pascal void __terminateResources(void)
 	::CloseResFile(nsMacResources::GetLocalResourceFile());
     __NSTerminate();
 }
+#endif /*!TARGET_CARBON*/
 
 //----------------------------------------------------------------------------------------
 //

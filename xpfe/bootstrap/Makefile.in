@@ -189,6 +189,11 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
+ifeq ($(OS_ARCH),Rhapsody)
+# don't let us build with "-dynamiclib"
+EXTRA_DSO_LDOPTS = -execute
+endif
+
 # This code removes the console from release builds
 # (unless you've set MOZ_WINCONSOLE=1).
 ifndef MOZ_WINCONSOLE

@@ -59,7 +59,12 @@ CPPSRCS		= \
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
 CPPSRCS		+= nsLocalFileOS2.cpp
 else
+ifeq ($(MOZ_WIDGET_TOOLKIT),mac)
+CPPSRCS     += nsLocalFileMac.cpp
+CSRCS       += macDirectoryCopy.c
+else
 CPPSRCS		+= nsLocalFileUnix.cpp
+endif
 endif
 
 EXPORTS		= \
@@ -86,7 +91,11 @@ EXPORTS		= \
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
 EXPORTS		+= nsLocalFileOS2.h
 else
+ifeq ($(MOZ_WIDGET_TOOLKIT),mac)
+EXPORTS     += nsLocalFileMac.h nsILocalFileMac.h
+else
 EXPORTS		+= nsLocalFileUnix.h
+endif
 endif
 
 XPIDLSRCS	= \

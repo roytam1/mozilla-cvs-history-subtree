@@ -28,11 +28,14 @@
 #include "nsLocalFile.h"
 #include "nsDebug.h"
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #include <Folders.h>
 #include <Files.h>
 #include <Memory.h>
 #include <Processes.h>
+#ifdef MACOSX
+#include "prenv.h"
+#endif
 #elif defined(XP_WIN)
 #include <windows.h>
 #include <shlobj.h>
@@ -58,7 +61,7 @@
 
 #include "nsSpecialSystemDirectory.h"
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #define COMPONENT_REGISTRY_NAME "Component Registry"
 #define COMPONENT_DIRECTORY     "Components"
 #else
@@ -66,7 +69,7 @@
 #define COMPONENT_DIRECTORY     "components"    
 #endif 
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #define APP_REGISTRY_NAME "Application Registry"
 #elif defined(XP_WIN) || defined(XP_OS2)
 #define APP_REGISTRY_NAME "registry.dat"
@@ -78,7 +81,7 @@
 // For Windows platform, We are choosing Appdata folder as HOME
 #if defined (XP_WIN)
 #define HOME_DIR NS_WIN_APPDATA_DIR
-#elif defined (XP_MAC)
+#elif defined (XP_MAC) || defined(MACOSX)
 #define HOME_DIR NS_MAC_HOME_DIR
 #elif defined (XP_UNIX)
 #define HOME_DIR NS_UNIX_HOME_DIR
@@ -89,7 +92,7 @@
 #endif
 
 // define default product directory
-#if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_WIN) || defined(XP_MAC) || defined(MACOSX) || defined(XP_OS2) || defined(XP_BEOS)
 #define DEFAULT_PRODUCT_DIR "Mozilla"
 #elif defined (XP_UNIX)
 #define DEFAULT_PRODUCT_DIR ".mozilla"
@@ -144,13 +147,17 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
         return NS_OK;
     }
 
-#elif defined(XP_MAC)
+#elif defined(XP_MAC) || defined(MACOSX)
     // get info for the the current process to determine the directory
     // its located in
     OSErr err;
+#if 0
     ProcessSerialNumber psn;
     if (!(err = GetCurrentProcess(&psn)))
     {
+#else
+	ProcessSerialNumber psn = {kNoProcess, kCurrentProcess};
+#endif
         ProcessInfoRec pInfo;
         FSSpec         tempSpec;
 
@@ -160,7 +167,8 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
         pInfo.processAppSpec = &tempSpec;
         pInfo.processInfoLength = sizeof(ProcessInfoRec);
 
-        if (!(err = GetProcessInformation(&psn, &pInfo)))
+        err = GetProcessInformation(&psn, &pInfo);
+        if (!err)
         {
             FSSpec appFSSpec = *(pInfo.processAppSpec);
             
@@ -169,13 +177,57 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
 
         	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface((nsIFile*)localFile);
 		    if (localFileMac) 
-          {
-				    localFileMac->InitWithFSSpec(&appFSSpec);
-            *aFile = localFile;
-            return NS_OK;
-          }
+          	{
+				localFileMac->InitWithFSSpec(&appFSSpec);
+            	*aFile = localFile;
+            	return NS_OK;
+          	}
         }
+#if defined(DEBUG) && defined(MACOSX)
+		else
+		{
+    		// In the absence of a good way to get the executable directory let
+    		// us try this for unix:
+    		//	- if MOZILLA_FIVE_HOME is defined, that is it
+#if 0    		
+		    char *moz5 = PR_GetEnv("MOZILLA_FIVE_HOME");
+#else
+		    char *moz5 = "X:Users:pedemont:build:mozilla:obj:dist:bin";
+#endif
+		    if (moz5)
+		    {
+		    	printf( "nsDirectoryService::MOZILLA_FIVE_HOME is set to %s\n", moz5 );
+		    	Str255 pascalpath;
+		    	FSSpec ioSpec;
+		    	
+				int srcLength = strlen(moz5);
+				pascalpath[0] = srcLength;
+				memcpy(&pascalpath[1], moz5, srcLength);
+				err = ::FSMakeFSSpec(0, 0, pascalpath, &ioSpec);
+				
+        		nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface((nsIFile*)localFile);
+			    if (localFileMac) 
+    	      	{
+					localFileMac->InitWithFSSpec(&ioSpec);
+            		*aFile = localFile;
+        			return NS_OK;
+        		}
+		    }
+		    else
+		    {
+    		    static PRBool firstWarning = PR_TRUE;
+	
+    		    if(firstWarning) {
+    		        // Warn that MOZILLA_FIVE_HOME not set, once.
+    		        printf("***Warning: MOZILLA_FIVE_HOME not set.\n*** Set to something like MacOSX:Users:foo:build:mozilla:obj:dist:bin\n");
+    		        firstWarning = PR_FALSE;
+    		    }
+    		}
+        }
+#endif /* DEBUG && MACOSX */
+#if 0
     }
+#endif
 
 #elif defined(XP_UNIX)
 
@@ -287,7 +339,7 @@ nsIAtom*  nsDirectoryService::sOS_DriveDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sOS_TemporaryDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sOS_CurrentProcessDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sOS_CurrentWorkingDirectory = nsnull;
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 nsIAtom*  nsDirectoryService::sDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sDesktopDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sTrashDirectory = nsnull;
@@ -386,7 +438,7 @@ nsDirectoryService::Init()
     nsDirectoryService::sOS_TemporaryDirectory      = NS_NewAtom(NS_OS_TEMP_DIR);
     nsDirectoryService::sOS_CurrentProcessDirectory = NS_NewAtom(NS_OS_CURRENT_PROCESS_DIR);
     nsDirectoryService::sOS_CurrentWorkingDirectory = NS_NewAtom(NS_OS_CURRENT_WORKING_DIR);
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
     nsDirectoryService::sDirectory                  = NS_NewAtom(NS_OS_SYSTEM_DIR);
     nsDirectoryService::sDesktopDirectory           = NS_NewAtom(NS_MAC_DESKTOP_DIR);
     nsDirectoryService::sTrashDirectory             = NS_NewAtom(NS_MAC_TRASH_DIR);
@@ -467,7 +519,7 @@ nsDirectoryService::~nsDirectoryService()
      NS_IF_RELEASE(nsDirectoryService::sOS_TemporaryDirectory);
      NS_IF_RELEASE(nsDirectoryService::sOS_CurrentProcessDirectory);
      NS_IF_RELEASE(nsDirectoryService::sOS_CurrentWorkingDirectory);
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
      NS_IF_RELEASE(nsDirectoryService::sDirectory);
      NS_IF_RELEASE(nsDirectoryService::sDesktopDirectory);
      NS_IF_RELEASE(nsDirectoryService::sTrashDirectory);
@@ -748,7 +800,7 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
         rv = NS_FileSpecToIFile(&fileSpec, getter_AddRefs(localFile));  
     }
        
-#ifdef XP_MAC          
+#if defined(XP_MAC) || defined(MACOSX)          
     else if (inAtom == nsDirectoryService::sDirectory)
     {
         nsSpecialSystemDirectory fileSpec(nsSpecialSystemDirectory::Mac_SystemDirectory); 

@@ -26,12 +26,16 @@
 #include "nsSpecialSystemDirectory.h"
 #include "nsDebug.h"
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #include <Folders.h>
 #include <Files.h>
 #include <Memory.h>
 #include <Processes.h>
 #include "nsIInternetConfigService.h"
+#ifdef MACOSX
+#include <unistd.h>
+#include "prenv.h"
+#endif
 #elif defined(XP_WIN)
 #include <windows.h>
 #include <shlobj.h>
@@ -243,13 +247,17 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
     return;
 
 
-#elif defined(XP_MAC)
+#elif defined(XP_MAC) || defined(MACOSX)
     // get info for the the current process to determine the directory
     // its located in
     OSErr err;
+#if 0
     ProcessSerialNumber psn;
     if (!(err = GetCurrentProcess(&psn)))
     {
+#else
+	ProcessSerialNumber psn = {kNoProcess, kCurrentProcess};
+#endif
         ProcessInfoRec pInfo;
         FSSpec         tempSpec;
 
@@ -281,7 +289,38 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
                 return;
             }
         }
+#if defined(DEBUG) && defined(MACOSX)
+		else
+		{
+		    // In the absence of a good way to get the executable directory let
+		    // us try this for unix:
+		    //	- if MOZILLA_FIVE_HOME is defined, that is it
+#if 0
+		    char *moz5 = PR_GetEnv("MOZILLA_FIVE_HOME");
+#else
+		    char *moz5 = "X:Users:pedemont:build:mozilla:obj:dist:bin";
+#endif
+    		if (moz5)
+    		{
+		    	printf( "nsSpecialSystemDirectory::MOZILLA_FIVE_HOME is set to %s\n", moz5 );
+        		aFileSpec = moz5;
+        		return;
+    		}
+		    else
+		    {
+        		static PRBool firstWarning = PR_TRUE;
+
+        		if(firstWarning) {
+        		    // Warn that MOZILLA_FIVE_HOME not set, once.
+    		        printf("***Warning: MOZILLA_FIVE_HOME not set.\n*** Set to something like MacOSX:Users:foo:build:mozilla:obj:dist:bin\n");
+		            firstWarning = PR_FALSE;
+        		}
+    		}
+        }
+#endif /* DEBUG && MACOSX */
+#if 0
     }
+#endif
 
 #elif defined(XP_UNIX)
 
@@ -407,7 +446,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             printf( "Got OS_DriveDirectory: %s\n", buffer);
 #endif
         }
-#elif defined(XP_MAC)
+#elif defined(XP_MAC) || defined(MACOSX)
         {
             *this = kVolumeRootFolderType;
         }
@@ -438,7 +477,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
              // use exe's directory if not set
              else GetCurrentProcessDirectory(*this);
           }
-#elif defined(XP_MAC)
+#elif defined(XP_MAC) || defined(MACOSX)
             *this = kTemporaryFolderType;
         
 #elif defined(XP_UNIX) || defined(XP_BEOS)
@@ -490,7 +529,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 
                 if (needToAppend) {
                     // XXX We need to unify these names across all platforms
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
                     *this += "Component Registry";
 #else
                     *this += "component.reg";
@@ -528,7 +567,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 
                 if (needToAppend) {
                     // XXX We need to unify these names across all platforms
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
                     *this += "Components";
 #else
                     *this += "components";
@@ -555,7 +594,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             }
             break;
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
         case Mac_SystemDirectory:
             *this = kSystemFolderType;
             break;
@@ -808,7 +847,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         }
 #endif  // XP_WIN
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) && !defined(MACOSX)
         case Unix_LocalDirectory:
             *this = "/usr/local/netscape/";
             break;
@@ -978,7 +1017,7 @@ nsSpecialSystemDirectory::Set(SystemDirectories dirToSet, nsFileSpec *dirSpec)
     return;
 }
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 //----------------------------------------------------------------------------------------
 nsSpecialSystemDirectory::nsSpecialSystemDirectory(OSType folderType)
 //----------------------------------------------------------------------------------------

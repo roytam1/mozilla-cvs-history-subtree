@@ -31,14 +31,13 @@
 #include "nsXPIDLString.h"
 
 
-#if defined(XP_MAC)
+#if defined(XP_MAC) || defined(MACOSX)
 #include <Folders.h>
 #include <Script.h>
 #include <Processes.h>
 #include <Gestalt.h>
 #include "nsILocalFileMac.h"
-#endif
-#if defined(XP_OS2)
+#elif defined(XP_OS2)
 #define INCL_DOSPROCESS
 #define INCL_DOSMODULEMGR
 #include <os2.h>
@@ -60,7 +59,7 @@
 // WARNING: These hard coded names need to go away. They need to
 // come from localizable resources
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
 #define APP_REGISTRY_NAME "Application Registry"
 #elif defined(XP_WIN) || defined(XP_OS2)
 #define APP_REGISTRY_NAME "registry.dat"
@@ -69,7 +68,7 @@
 #endif
 
 // define default product directory
-#if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_WIN) || defined(XP_MAC) || defined(MACOSX) || defined(XP_OS2) || defined(XP_BEOS)
 #define DEFAULT_PRODUCT_DIR "Mozilla"
 #elif defined (XP_UNIX)
 #define DEFAULT_PRODUCT_DIR ".mozilla"
@@ -252,7 +251,7 @@ NS_METHOD nsAppFileLocationProvider::GetProductDirectory(nsILocalFile **aLocalFi
     PRBool exists;
     nsCOMPtr<nsILocalFile> localDir;
 
-#if defined(XP_MAC)
+#if defined(XP_MAC) || defined(MACOSX)
     nsCOMPtr<nsIProperties> directoryService = 
              do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
@@ -331,7 +330,7 @@ NS_METHOD nsAppFileLocationProvider::GetDefaultUserProfileRoot(nsILocalFile **aL
     rv = GetProductDirectory(getter_AddRefs(localDir));
     if (NS_FAILED(rv)) return rv;
 
-#if defined(XP_MAC) || defined(XP_OS2) || defined(XP_PC)
+#if defined(XP_MAC) || defined(MACOSX) || defined(XP_OS2) || defined(XP_PC)
     // These 3 platforms share this part of the path - do them as one
     rv = localDir->AppendRelativePath("Profiles");
     if (NS_FAILED(rv)) return rv;

@@ -67,7 +67,7 @@ private:
     static nsIAtom *sOS_TemporaryDirectory;
     static nsIAtom *sOS_CurrentProcessDirectory;
     static nsIAtom *sOS_CurrentWorkingDirectory;
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
     static nsIAtom *sDirectory;
     static nsIAtom *sDesktopDirectory;
     static nsIAtom *sTrashDirectory;

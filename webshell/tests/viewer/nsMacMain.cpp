@@ -37,8 +37,12 @@
 #include <Dialogs.h>
 
 #include "nsMacMessagePump.h"	// for the windowless menu event handler
+#ifdef GC_LEAK_DETECTOR
 #include "nsILeakDetector.h"
+#endif
+#ifndef MACOSX
 #include "macstdlibextras.h"
+#endif
 
 typedef		SInt32			MessageT;
 typedef   PRUint32    Uint32;
@@ -351,6 +355,7 @@ nsNativeBrowserWindow::DispatchMenuItem(PRInt32 aID)
 				case cmd_DebugToggleSelection:	xpID = VIEWER_TOGGLE_SELECTION;			break;
 				case cmd_DebugRobot:						xpID = VIEWER_DEBUGROBOT;						break;
 				case cmd_ShowContentQuality:		xpID =VIEWER_SHOW_CONTENT_QUALITY;	break;
+#ifdef GC_LEAK_DETECTOR
 				case cmd_DumpLeaks:
 					{
 						nsresult rv;
@@ -360,6 +365,7 @@ nsNativeBrowserWindow::DispatchMenuItem(PRInt32 aID)
 							leakDetector->DumpLeaks();
 					}
 					break;
+#endif
 				case cmd_GFXScrollBars:		xpID =VIEWER_GFX_SCROLLBARS_ON;	break;
 				case cmd_NativeScrollBars: xpID =VIEWER_GFX_SCROLLBARS_OFF; break;
 			}
@@ -427,6 +433,7 @@ static pascal OSErr handleQuitApplication(const AppleEvent*, AppleEvent*, UInt32
 //----------------------------------------------------------------------
 int main(int argc, char **argv)
 {
+#if !TARGET_CARBON
 	// Set up the toolbox and (if DEBUG) the console
 	InitializeMacToolbox();
 
@@ -435,6 +442,7 @@ int main(int argc, char **argv)
 									NewAEEventHandlerProc(handleQuitApplication), 0, false);
 	NS_ASSERTION((err==noErr), "AEInstallEventHandler failed");
 
+#endif
 	// Start up XPCOM?
  	nsresult rv = NS_InitXPCOM(nsnull, nsnull);
 	NS_ASSERTION(NS_SUCCEEDED(rv), "NS_InitXPCOM failed");

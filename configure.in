@@ -971,23 +971,30 @@ alpha*-*-osf*)
     fi
     ;;
 
-*-rhapsody*) 
+*-darwin*) 
+    dnl |_PEDANTIC| causes tons of warnings with apple headers
+    _PEDANTIC=
     DLL_SUFFIX=".dylib"
     DSO_LDOPTS='-compatibility_version 1 -current_version 1'
+    LDFLAGS='-framework Carbon'
     AC_DEFINE(NO_X11)
-    AC_DEFINE(DARWIN)
+    AC_DEFINE(MACOSX)
     AC_DEFINE(RHAPSODY)
     AC_DEFINE(TARGET_CARBON)
     AC_DEFINE(TARGET_API_MAC_CARBON)
     ENABLE_TESTS=
     MOZ_WIDGET_TOOLKIT='mac'
     TK_LIBS='/System/Library/Frameworks/Carbon.framework/Carbon'
-    CFLAGS="$CFLAGS -traditional-cpp -fno-common -I/System/Library/Frameworks/Carbon.framework/Headers"
-    CXXFLAGS="$CXXFLAGS -traditional-cpp -fno-common -I/System/Library/Frameworks/Carbon.framework/Headers"
+    TK_CFLAGS="-I/Developer/Headers/FlatCarbon -F/System/Library/Frameworks"
+    CFLAGS="$CFLAGS -fpascal-strings -traditional-cpp -fno-common $TK_CFLAGS"
+    CXXFLAGS="$CXXFLAGS -fpascal-strings -traditional-cpp -fno-common $TK_CFLAGS"
     MKSHLIB='$(CXX) $(CXXFLAGS) -arch ppc $(DSO_LDOPTS) -o $@'
     MKCSHLIB='$(CC) $(CFLAGS) $(DSO_LDOPTS) -o $@'
     MKSHLIB_FORCE_ALL=''
     MKSHLIB_UNFORCE_ALL=''
+    dnl it pains me to do this, but a lot of makefiles reference Rhapsody already
+    OS_ARCH=Rhapsody
+    OS_TARGET=Rhapsody
     ;;
 
 *-sco*) 
@@ -1230,6 +1237,10 @@ WIDGET_DLL='\"libwidget_$(MOZ_WIDGET_TOOLKIT)$(DLL_SUFFIX)\"'
 GFXWIN_DLL='\"libgfx_$(MOZ_GFX_TOOLKIT)$(DLL_SUFFIX)\"'
 
 case "$target_os" in
+darwin*)
+    MOZ_WIDGET_TOOLKIT="mac"
+    ;;
+
 beos*)
     MOZ_WIDGET_TOOLKIT="beos"
     ;;
@@ -4446,7 +4457,7 @@ elif test "$OS_TARGET" = "BeOS"; then
   AC_DEFINE(HAVE_MOVEMAIL)
   HAVE_MOVEMAIL=1
   AC_SUBST(HAVE_MOVEMAIL)
-elif test "$OS_TARGET" = "Mac OS"; then
+elif test "$OS_TARGET" = "Rhapsody"; then
   AC_DEFINE(XP_UNIX)
   AC_DEFINE(UNIX_EMBED)
   AC_DEFINE(UNIX_LDAP)

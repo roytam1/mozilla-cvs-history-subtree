@@ -431,7 +431,7 @@ NS_IMETHODIMP nsRegistry::Open( const char *regFile ) {
 
 static void
 EnsureDefaultRegistryDirectory() {
-    #ifdef XP_UNIX
+    #if defined(XP_UNIX) && !defined(MACOSX)
     // Create ~/.mozilla as that is the default place for the registry file
 
     /* The default registry on the unix system is $HOME/.mozilla/registry per

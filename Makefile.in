@@ -51,6 +51,11 @@ endif
 
 DIRS	+= $(NSPRPUB_DIR)
 
+# MacOSX needs to build lib for MoreFiles before xpcom
+ifeq ($(OS_ARCH),Rhapsody)
+DIRS           += lib/mac/MoreFiles
+endif
+
 DIRS		+= dbm modules/libreg js string xpcom js/src/xpconnect
 
 ifdef MOZ_OJI

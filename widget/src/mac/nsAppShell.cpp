@@ -48,7 +48,7 @@
 
 #include <stdlib.h>
 
-#ifndef RHAPSODY
+#ifndef MACOSX
 #include "macstdlibextras.h"
 #endif
 PRBool nsAppShell::mInitializedToolbox = PR_FALSE;

@@ -36,7 +36,7 @@
 #include "nsIRollupListener.h"
 #include "nsIMenuRollup.h"
 
-#ifndef RHAPSODY
+#ifndef MACOSX
 #include <locale>
 #endif
 
