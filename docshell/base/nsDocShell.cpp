@@ -427,9 +427,9 @@ NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
     }
     else if (aIID.Equals(NS_GET_IID(nsIClipboardDragDropHookList)) 
             && NS_SUCCEEDED(EnsureTransferableHookData())) {
-      *aSink = mTransferableHookData;
-      NS_ADDREF((nsISupports *)*aSink);
-      return NS_OK;
+        *aSink = mTransferableHookData;
+        NS_ADDREF((nsISupports *)*aSink);
+        return NS_OK;
     }
     else if (aIID.Equals(NS_GET_IID(nsISelectionDisplay))) {
       nsCOMPtr<nsIPresShell> shell;

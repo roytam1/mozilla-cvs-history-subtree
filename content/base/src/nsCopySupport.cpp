@@ -302,7 +302,7 @@ nsresult nsCopySupport::DoHooks(nsIDocument *aDoc, nsITransferable *aTrans,
     override = do_QueryInterface(isupp);
     if (override)
     {
-      nsresult hookResult = override->OnCopyOrDrag(aTrans, aDoPutOnClipboard);
+      nsresult hookResult = override->OnCopyOrDrag(nsnull, aTrans, aDoPutOnClipboard);
       NS_ASSERTION(NS_SUCCEEDED(hookResult), "OnCopyOrDrag hook failed");
       if (!*aDoPutOnClipboard)
         break;

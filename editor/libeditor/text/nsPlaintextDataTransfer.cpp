@@ -35,70 +35,33 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-#include "nsICaret.h"
 
 
 #include "nsPlaintextEditor.h"
 #include "nsTextEditUtils.h"
 
-#include "nsIDOMText.h"
-#include "nsIDOMNodeList.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMAttr.h"
 #include "nsIDocument.h"
 #include "nsIDOMEventReceiver.h" 
 #include "nsIDOMNSEvent.h"
-#include "nsIDOMKeyEvent.h"
-#include "nsIDOMKeyListener.h" 
-#include "nsIDOMMouseListener.h"
 #include "nsIDOMMouseEvent.h"
 #include "nsISelection.h"
-#include "nsISelectionPrivate.h"
-#include "nsIDOMHTMLAnchorElement.h"
-#include "nsIDOMHTMLImageElement.h"
-#include "nsISelectionController.h"
 
-#include "nsIFrameSelection.h"  // For TABLESELECTION_ defines
 #include "nsIIndependentSelection.h" //domselections answer to frameselection
-
-#include "nsICSSLoader.h"
-#include "nsICSSStyleSheet.h"
-#include "nsIHTMLContentContainer.h"
-#include "nsIStyleSet.h"
-#include "nsIDocumentObserver.h"
-#include "nsIDocumentStateListener.h"
 
 #include "nsIStyleContext.h"
 
-#include "nsIEnumerator.h"
-#include "nsIContent.h"
-#include "nsIContentIterator.h"
-#include "nsEditorCID.h"
-#include "nsLayoutCID.h"
+#include "nsCRT.h"
+#include "nsIServiceManagerUtils.h"
+
 #include "nsIDOMRange.h"
 #include "nsIDOMNSRange.h"
 #include "nsISupportsArray.h"
-#include "nsVoidArray.h"
 #include "nsFileSpec.h"
-#include "nsIURL.h"
-#include "nsIComponentManager.h"
-#include "nsIServiceManager.h"
-#include "nsWidgetsCID.h"
 #include "nsIDocumentEncoder.h"
-#include "nsIDOMDocumentFragment.h"
-#include "nsIPresShell.h"
-#include "nsIPresContext.h"
 #include "nsIParser.h"
 #include "nsParserCIID.h"
-#include "nsIImage.h"
-#include "nsAOLCiter.h"
-#include "nsInternetCiter.h"
-#include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
-
-// netwerk
-#include "nsIURI.h"
-#include "nsNetUtil.h"
 
 // Drag & Drop, Clipboard
 #include "nsWidgetsCID.h"
@@ -106,30 +69,19 @@
 #include "nsITransferable.h"
 #include "nsIDragService.h"
 #include "nsIDOMNSUIEvent.h"
-#include "nsIDocShell.h"
-#include "nsIClipboardDragDropHooks.h"
-#include "nsIClipboardDragDropHookList.h"
-#include "nsISimpleEnumerator.h"
 
 // Misc
 #include "nsEditorUtils.h"
-#include "nsIPref.h"
+
 const PRUnichar nbsp = 160;
 
 // Drag & Drop, Clipboard Support
 static NS_DEFINE_CID(kCClipboardCID,    NS_CLIPBOARD_CID);
 static NS_DEFINE_CID(kCTransferableCID, NS_TRANSFERABLE_CID);
 static NS_DEFINE_CID(kCHTMLFormatConverterCID, NS_HTMLFORMATCONVERTER_CID);
-// private clipboard data flavors for html copy/paste
-#define kHTMLContext   "text/_moz_htmlcontext"
-#define kHTMLInfo      "text/_moz_htmlinfo"
 
 
-#if defined(NS_DEBUG) && defined(DEBUG_buster)
-static PRBool gNoisy = PR_FALSE;
-#else
 static const PRBool gNoisy = PR_FALSE;
-#endif
 
 NS_IMETHODIMP nsPlaintextEditor::PrepareTransferable(nsITransferable **transferable)
 {
@@ -145,13 +97,47 @@ NS_IMETHODIMP nsPlaintextEditor::PrepareTransferable(nsITransferable **transfera
   return NS_OK;
 }
 
-NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *transferable)
+nsresult nsPlaintextEditor::InsertTextAt(const nsAString &aStringToInsert,
+                                         nsIDOMNode *aDestinationNode,
+                                         PRInt32 aDestOffset,
+                                         PRBool aDoDeleteSelection)
+{
+  if (aDestinationNode)
+  {
+    nsresult res;
+    nsCOMPtr<nsISelection>selection;
+    res = GetSelection(getter_AddRefs(selection));
+    NS_ENSURE_SUCCESS(res, res);
+
+    nsCOMPtr<nsIDOMNode> targetNode = aDestinationNode;
+    PRInt32 targetOffset = aDestOffset;
+
+    if (aDoDeleteSelection)
+    {
+      // Use an auto tracker so that our drop point is correctly
+      // positioned after the delete.
+      nsAutoTrackDOMPoint tracker(mRangeUpdater, &targetNode, &targetOffset);
+      res = DeleteSelection(eNone);
+      NS_ENSURE_SUCCESS(res, res);
+    }
+
+    res = selection->Collapse(targetNode, targetOffset);
+    NS_ENSURE_SUCCESS(res, res);
+  }
+
+  return InsertText(aStringToInsert);
+}
+
+NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *aTransferable,
+                                                            nsIDOMNode *aDestinationNode,
+                                                            PRInt32 aDestOffset,
+                                                            PRBool aDoDeleteSelection)
 {
   nsresult rv = NS_OK;
   char* bestFlavor = nsnull;
   nsCOMPtr<nsISupports> genericDataObj;
   PRUint32 len = 0;
-  if ( NS_SUCCEEDED(transferable->GetAnyTransferData(&bestFlavor, getter_AddRefs(genericDataObj), &len)) )
+  if ( NS_SUCCEEDED(aTransferable->GetAnyTransferData(&bestFlavor, getter_AddRefs(genericDataObj), &len)) )
   {
     nsAutoTxnsConserveSelection dontSpazMySelection(this);
     nsAutoString flavor, stuffToPaste;
@@ -166,7 +152,7 @@ NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *tra
         NS_ASSERTION(text.Length() <= (len/2), "Invalid length!");
         stuffToPaste.Assign ( text.get(), len / 2 );
         nsAutoEditBatch beginBatching(this);
-        rv = InsertText(stuffToPaste);
+        rv = InsertTextAt(stuffToPaste, aDestinationNode, aDestOffset, aDoDeleteSelection);
       }
     }
   }
@@ -193,9 +179,9 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   if (!dragSession) return NS_OK;
 
   // transferable hooks
-  PRBool isAllowed = PR_TRUE;
-  DoAllowDropHook(aDropEvent, dragSession, &isAllowed);
-  if (!isAllowed)
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  GetDocument(getter_AddRefs(domdoc));
+  if (!nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession))
     return NS_OK;
 
   // Get the nsITransferable interface for getting the data from the drop
@@ -210,6 +196,10 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
 
   // Combine any deletion and drop insertion into one transaction
   nsAutoEditBatch beginBatching(this);
+
+  PRBool deleteSelection = PR_FALSE;
+  nsCOMPtr<nsIDOMNode> newSelectionParent;
+  PRInt32 newSelectionOffset = 0;
 
   PRUint32 i; 
   PRBool doPlaceCaret = PR_TRUE;
@@ -256,8 +246,6 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       if (NS_FAILED(rv)) return rv;
       
       // Parent and offset under the mouse cursor
-      nsCOMPtr<nsIDOMNode> newSelectionParent;
-      PRInt32 newSelectionOffset = 0;
       rv = nsuiEvent->GetRangeParent(getter_AddRefs(newSelectionParent));
       if (NS_FAILED(rv)) return rv;
       if (!newSelectionParent) return NS_ERROR_FAILURE;
@@ -266,7 +254,6 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       if (NS_FAILED(rv)) return rv;
 
       // We never have to delete if selection is already collapsed
-      PRBool deleteSelection = PR_FALSE;
       PRBool cursorIsInSelection = PR_FALSE;
 
       // Check if mouse is in the selection
@@ -321,32 +308,14 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
         }
       }
 
-      if (deleteSelection)
-      {
-        // Use an auto tracker so that our drop point is correctly
-        // positioned after the delete.
-        nsAutoTrackDOMPoint tracker(mRangeUpdater, &newSelectionParent, &newSelectionOffset);
-        rv = DeleteSelection(eNone);
-        if (NS_FAILED(rv)) return rv;
-      }
-
-      // If we deleted the selection because we dropped from another doc,
-      //  then we don't have to relocate the caret (insert at the deletion point)
-      if (!(deleteSelection && srcdomdoc != destdomdoc))
-      {
-        // Move the selection to the point under the mouse cursor
-        selection->Collapse(newSelectionParent, newSelectionOffset);
-      }      
       // We have to figure out whether to delete and relocate caret only once
       doPlaceCaret = PR_FALSE;
     }
     
-    PRBool doInsert = PR_TRUE;
-    DoInsertionHook(aDropEvent, trans, &doInsert);
-    if (!doInsert)
+    if (!nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans))
       return NS_OK;
 
-    rv = InsertTextFromTransferable(trans);
+    rv = InsertTextFromTransferable(trans, newSelectionParent, newSelectionOffset, deleteSelection);
   }
 
   return rv;
@@ -411,37 +380,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDr
 
   nsCOMPtr<nsIDOMDocument> domdoc;
   GetDocument(getter_AddRefs(domdoc));
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
-  if (!doc) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISupports> isupp;
-  doc->GetContainer(getter_AddRefs(isupp));
-  nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(isupp);
-  nsCOMPtr<nsIClipboardDragDropHookList> hookObj = do_GetInterface(docShell);
-  if (!hookObj) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISimpleEnumerator> enumerator;
-  hookObj->GetHookEnumerator(getter_AddRefs(enumerator));
-  if (!enumerator) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIClipboardDragDropHooks> override;
-  PRBool hasMoreHooks = PR_FALSE;
-  while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks))
-         && hasMoreHooks)
-  {
-    res = enumerator->GetNext(getter_AddRefs(isupp));
-    if (NS_FAILED(res)) break;
-    override = do_QueryInterface(isupp);
-    if (override)
-    {
-      res = override->AllowStartDrag(aDragEvent, aCanDrag);
-      NS_ASSERTION(NS_SUCCEEDED(res), "hook failure in AllowStartDrag");
-    }
-
-    if (!*aCanDrag)
-      break;
-  }
-
+  *aCanDrag = nsEditorHookUtils::DoAllowDragHook(domdoc, aDragEvent);
   return NS_OK;
 }
 
@@ -472,38 +411,8 @@ NS_IMETHODIMP nsPlaintextEditor::DoDrag(nsIDOMEvent *aDragEvent)
   // check our transferable hooks (if any)
   nsCOMPtr<nsIDOMDocument> domdoc;
   GetDocument(getter_AddRefs(domdoc));
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
-  if (!doc) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISupports> isupp;
-  doc->GetContainer(getter_AddRefs(isupp));
-  nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(isupp);
-  nsCOMPtr<nsIClipboardDragDropHookList> hookObj = do_GetInterface(docShell);
-  if (!hookObj) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISimpleEnumerator> enumerator;
-  hookObj->GetHookEnumerator(getter_AddRefs(enumerator));
-  if (!enumerator) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIClipboardDragDropHooks> override;
-  PRBool canInvokeDrag = PR_TRUE;
-  PRBool hasMoreHooks = PR_FALSE;
-  while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks))
-         && hasMoreHooks)
-  {
-    rv = enumerator->GetNext(getter_AddRefs(isupp));
-    if (NS_FAILED(rv)) break;
-    override = do_QueryInterface(isupp);
-    if (override)
-    {
-      nsresult hookResult = override->OnCopyOrDrag(trans, &canInvokeDrag);
-      NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in OnCopyOrDrag");
-    }
-
-    // if one of our overrides says we can't invoke drag, return now
-    if (!canInvokeDrag)
-      return NS_OK;
-  }
+  if (!nsEditorHookUtils::DoDragHook(domdoc, aDragEvent, trans))
+    return NS_OK;
 
   /* invoke drag */
   nsCOMPtr<nsIDOMEventTarget> eventTarget;
@@ -544,12 +453,12 @@ NS_IMETHODIMP nsPlaintextEditor::Paste(PRInt32 aSelectionType)
     if (NS_SUCCEEDED(clipboard->GetData(trans, aSelectionType)) && IsModifiable())
     {
       // handle transferable hooks
-      PRBool doInsert = PR_TRUE;
-      DoInsertionHook(nsnull, trans, &doInsert);
-      if (!doInsert)
+      nsCOMPtr<nsIDOMDocument> domdoc;
+      GetDocument(getter_AddRefs(domdoc));
+      if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
         return NS_OK;
 
-      rv = InsertTextFromTransferable(trans);
+      rv = InsertTextFromTransferable(trans, nsnull, nsnull, PR_TRUE);
     }
   }
 
@@ -713,85 +622,4 @@ nsPlaintextEditor::PutDragDataInTransferable(nsITransferable **aTransferable)
   *aTransferable = trans;
   NS_ADDREF(*aTransferable);
   return NS_OK;
-}
-
-nsresult
-nsPlaintextEditor::DoAllowDropHook(nsIDOMEvent* aDropEvent, 
-                                   nsIDragSession *aSession, PRBool *aAllowDrop)
-{
-  *aAllowDrop = PR_TRUE;
-
-  nsCOMPtr<nsIDOMDocument> domdoc;
-  GetDocument(getter_AddRefs(domdoc));
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
-  if (!doc) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISupports> isupp;
-  doc->GetContainer(getter_AddRefs(isupp));
-  nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(isupp);
-  nsCOMPtr<nsIClipboardDragDropHookList> hookObj = do_GetInterface(docShell);
-  if (!hookObj) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISimpleEnumerator> enumerator;
-  hookObj->GetHookEnumerator(getter_AddRefs(enumerator));
-  if (!enumerator) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIClipboardDragDropHooks> override;
-  PRBool hasMoreHooks = PR_FALSE;
-  nsresult res = NS_OK;
-  while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks)) && hasMoreHooks)
-  {
-    res = enumerator->GetNext(getter_AddRefs(isupp));
-    if (NS_FAILED(res)) break;
-    override = do_QueryInterface(isupp);
-    if (override)
-    {
-      nsresult hookResult = override->AllowDrop(aDropEvent, aSession, aAllowDrop);
-      NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in AllowDrop");
-    }
-
-    if (!*aAllowDrop)
-      break;
-  }
-
-  return res;
-}
-
-
-nsresult
-nsPlaintextEditor::DoInsertionHook(nsIDOMEvent* aDropEvent,
-                                   nsITransferable *aTrans, PRBool *aDoInsert)
-{
-  nsCOMPtr<nsIDOMDocument> domdoc;
-  GetDocument(getter_AddRefs(domdoc));
-  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
-  if (!doc) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISupports> isupp;
-  doc->GetContainer(getter_AddRefs(isupp));
-  nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(isupp);
-  nsCOMPtr<nsIClipboardDragDropHookList> hookObj = do_GetInterface(docShell);
-  if (!hookObj) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsISimpleEnumerator> enumerator;
-  hookObj->GetHookEnumerator(getter_AddRefs(enumerator));
-  if (!enumerator) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIClipboardDragDropHooks> override;
-  PRBool hasMoreHooks = PR_FALSE;
-  nsresult res = NS_OK;
-  while (*aDoInsert &&
-       NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks)) && hasMoreHooks)
-  {
-    res = enumerator->GetNext(getter_AddRefs(isupp));
-    if (NS_FAILED(res)) break;
-    override = do_QueryInterface(isupp);
-    if (override)
-    {
-      nsresult hookResult = override->OnPasteOrDrop(aDropEvent, aTrans, aDoInsert);
-      NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in OnPasteOrDrop");
-    }
-  }
-
-  return res;
 }

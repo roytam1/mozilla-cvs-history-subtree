@@ -334,7 +334,7 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
 
   PRBool doContinue = PR_TRUE;
 
-  res = DoContentFilterCallback(aFlavor, 
+  res = DoContentFilterCallback(aFlavor, aDeleteSelection,
                                 (nsIDOMNode **)address_of(fragmentAsNode), 
                                 (nsIDOMNode **)address_of(streamStartParent), 
                                 &streamStartOffset,
@@ -844,6 +844,7 @@ nsHTMLEditor::RemoveInsertionListener(nsIContentFilter *aListener)
  
 nsresult
 nsHTMLEditor::DoContentFilterCallback(const nsAString &aFlavor, 
+                                      PRBool aWillDeleteSelection,
                                       nsIDOMNode **aFragmentAsNode, 
                                       nsIDOMNode **aFragStartNode, 
                                       PRInt32 *aFragStartOffset,
@@ -864,7 +865,8 @@ nsHTMLEditor::DoContentFilterCallback(const nsAString &aFlavor,
   {
     listener = (nsIContentFilter *)mContentFilters->ElementAt(i);
     if (listener)
-      listener->NotifyOfInsertion(aFlavor, nsnull, aFragmentAsNode,
+      listener->NotifyOfInsertion(aFlavor, nsnull, aWillDeleteSelection,
+                                  aFragmentAsNode,
                                   aFragStartNode, aFragStartOffset, 
                                   aFragEndNode, aFragEndOffset,
                                   aTargetNode, aTargetOffset, aDoContinue);
@@ -1133,7 +1135,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         stuffToPaste.Assign ( text.get(), len / 2 );
         nsAutoEditBatch beginBatching(this);
         // need to provide a hook from this point
-        rv = InsertText(stuffToPaste);
+        rv = InsertTextAt(stuffToPaste, aDestinationNode, aDestOffset, aDoDeleteSelection);
       }
     }
     else if (mPasteFlavor.Equals(NS_LITERAL_STRING(kFileMime)))
@@ -1224,9 +1226,9 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   if (!dragSession) return NS_OK;
 
   // transferable hooks here
-  PRBool isAllowed = PR_TRUE;
-  DoAllowDropHook(aDropEvent, dragSession, &isAllowed);
-  if (!isAllowed)
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  GetDocument(getter_AddRefs(domdoc));
+  if (!nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession))
     return NS_OK;
 
   // find out if we have our internal html flavor on the clipboard.  We don't want to mess
@@ -1247,6 +1249,11 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
 
   // Combine any deletion and drop insertion into one transaction
   nsAutoEditBatch beginBatching(this);
+
+ // We never have to delete if selection is already collapsed
+  PRBool deleteSelection = PR_FALSE;
+  nsCOMPtr<nsIDOMNode> newSelectionParent;
+  PRInt32 newSelectionOffset = 0;
 
   PRUint32 i; 
   PRBool doPlaceCaret = PR_TRUE;
@@ -1291,11 +1298,6 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       NS_ASSERTION(text.Length() <= (infoLen/2), "Invalid length!");
       infoStr.Assign(text.get(), infoLen / 2);
     }
-
-    // We never have to delete if selection is already collapsed
-    PRBool deleteSelection = PR_FALSE;
-    nsCOMPtr<nsIDOMNode> newSelectionParent;
-    PRInt32 newSelectionOffset = 0;
 
     if (doPlaceCaret)
     {
@@ -1427,9 +1429,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
     }
     
     // handle transferable hooks
-    PRBool doInsert = PR_TRUE;
-    DoInsertionHook(aDropEvent, trans, &doInsert);
-    if (!doInsert)
+    if (!nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans))
       return NS_OK;
 
     rv = InsertFromTransferable(trans, contextStr, infoStr, newSelectionParent,
@@ -1646,9 +1646,9 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
       }
 
       // handle transferable hooks
-      PRBool doInsert = PR_TRUE;
-      DoInsertionHook(nsnull, trans, &doInsert);
-      if (!doInsert)
+      nsCOMPtr<nsIDOMDocument> domdoc;
+      GetDocument(getter_AddRefs(domdoc));
+      if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
         return NS_OK;
 
       rv = InsertFromTransferable(trans, contextStr, infoStr,
