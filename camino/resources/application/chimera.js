@@ -62,3 +62,8 @@ pref("chimera.keychain_passwords_autofill", true);
 
 // enable plugins by default
 pref("chimera.enable_plugins", true);
+
+// Identify Chimera in the UA string
+pref("general.useragent.vendor", "Chimera");
+pref("general.useragent.vendorSub", "0.5+");
+
