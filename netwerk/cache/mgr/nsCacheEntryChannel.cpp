@@ -22,6 +22,7 @@
  *   Scott Furman, fur@netscape.com
  */
 
+#include "nsCacheManager.h"
 #include "nsCacheEntryChannel.h"
 #include "nsIOutputStream.h"
 
@@ -46,12 +47,14 @@ public:
 
     NS_IMETHOD
     Write(const char *aBuf, PRUint32 aCount, PRUint32 *aActualBytes) {
-	nsresult rv;
+        nsresult rv;
     
-	*aActualBytes = 0;
-	rv = mOutputStream->Write(aBuf, aCount, aActualBytes);
-	mCacheEntry->mLogicalLength += *aActualBytes;
-	if (NS_FAILED(rv)) return rv;
+        *aActualBytes = 0;
+        rv = mOutputStream->Write(aBuf, aCount, aActualBytes);
+        mCacheEntry->mLogicalLength += *aActualBytes;
+        if (NS_FAILED(rv)) return rv;
+        nsCacheManager::LimitCacheSize();
+        return rv;
     }
     
 protected:
