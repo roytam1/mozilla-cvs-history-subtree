@@ -659,16 +659,6 @@ FileSystemCursor::GetValue(nsIRDFNode **aValue)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetDataSource(nsIRDFDataSource **aDataSource)
-{
-	NS_ADDREF(gFileSystemDataSource);
-	*aDataSource = gFileSystemDataSource;
-	return NS_OK;
-}
-
-
-
-NS_IMETHODIMP
 FileSystemCursor::GetSubject(nsIRDFResource **aResource)
 {
 	NS_ADDREF(mSource);

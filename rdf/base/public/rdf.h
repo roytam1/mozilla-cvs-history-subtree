@@ -58,13 +58,9 @@ static const char* kTag##prefix##_##name = kURI##prefix##_##name## + sizeof(##na
 /**
  * @name Standard RDF error codes
  */
+#define NS_ERROR_RDF_NO_VALUE           NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF, 2)
 
 /*@{*/
-
-/* Returned from nsIRDFCursor::Advance() if the cursor has no more
-   elements to enuemrate */
-#define NS_ERROR_RDF_CURSOR_EMPTY       NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF, 1)
-#define NS_ERROR_RDF_NO_VALUE           NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF, 2)
 
 /*@}*/
 

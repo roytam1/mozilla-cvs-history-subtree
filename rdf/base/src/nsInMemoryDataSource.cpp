@@ -37,7 +37,7 @@
 
 #include "nscore.h"
 #include "nsIOutputStream.h"
-#include "nsIRDFCursor.h"
+#include "nsIEnumerator.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
@@ -58,15 +58,10 @@
 #endif
 
 
-static NS_DEFINE_IID(kIRDFAssertionCursorIID,  NS_IRDFASSERTIONCURSOR_IID);
-static NS_DEFINE_IID(kIRDFArcsInCursorIID,     NS_IRDFARCSINCURSOR_IID);
-static NS_DEFINE_IID(kIRDFArcsOutCursorIID,    NS_IRDFARCSOUTCURSOR_IID);
-static NS_DEFINE_IID(kIRDFCursorIID,           NS_IRDFCURSOR_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,       NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,          NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFNodeIID,             NS_IRDFNODE_IID);
 static NS_DEFINE_IID(kIRDFResourceIID,         NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFResourceCursorIID,   NS_IRDFRESOURCECURSOR_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
 
 enum Direction {
@@ -167,7 +162,7 @@ public:
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFAssertionCursor** sources);
+                          nsIEnumerator/*<nsIRDFResource>*/** sources);
 
     NS_IMETHOD GetTarget(nsIRDFResource* source,
                          nsIRDFResource* property,
@@ -177,7 +172,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFAssertionCursor** targets);
+                          nsIEnumerator/*<nsIRDFNode>*/** targets);
 
     NS_IMETHOD Assert(nsIRDFResource* source, 
                       nsIRDFResource* property, 
@@ -199,12 +194,12 @@ public:
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFArcsInCursor** labels);
+                           nsIEnumerator/*<nsIRDFResource>*/** labels);
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFArcsOutCursor** labels);
+                            nsIEnumerator/*<nsIRDFNode>*/** labels);
 
-    NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor);
+    NS_IMETHOD GetAllResources(nsIEnumerator/*<nsIRDFResource>*/** aCursor);
 
     NS_IMETHOD Flush();
 
@@ -265,7 +260,6 @@ public:
    
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void);
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
     NS_IMETHOD GetValue(nsIRDFNode** aValue);
 
     // nsIRDFAssertionCursor interface
@@ -371,19 +365,6 @@ InMemoryAssertionCursor::GetValue(nsIRDFNode** aValue)
     *aValue = mValue;
     return NS_OK;
 }   
-
-NS_IMETHODIMP
-InMemoryAssertionCursor::GetDataSource(nsIRDFDataSource** aDataSource)
-{
-    NS_PRECONDITION(aDataSource != nsnull, "null ptr");
-    if (! aDataSource)
-        return NS_ERROR_NULL_POINTER;
-
-    NS_ADDREF(mDataSource);
-    *aDataSource = mDataSource;
-    return NS_OK;
-}
-
 
 NS_IMETHODIMP
 InMemoryAssertionCursor::GetSubject(nsIRDFResource** aSubject)
@@ -495,7 +476,6 @@ public:
 
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void);
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
     NS_IMETHOD GetValue(nsIRDFNode** aValue);
 
     // nsIRDFArcsOutCursor interface
@@ -629,18 +609,6 @@ InMemoryArcsCursor::GetValue(nsIRDFNode** aValue)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetDataSource(nsIRDFDataSource** aDataSource)
-{
-    NS_PRECONDITION(aDataSource != nsnull, "null ptr");
-    if (! aDataSource)
-        return NS_ERROR_NULL_POINTER;
-
-    NS_ADDREF(mDataSource);
-    *aDataSource = mDataSource;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 InMemoryArcsCursor::GetSubject(nsIRDFResource** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
@@ -708,7 +676,6 @@ public:
 
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void);
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
     NS_IMETHOD GetValue(nsIRDFNode** aValue);
 
     // nsIRDFResourceCursor interface
@@ -768,14 +735,6 @@ InMemoryResourceCursor::Advance(void)
     if (mNext >= mResources.Count())
         return NS_ERROR_RDF_CURSOR_EMPTY;
 
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-InMemoryResourceCursor::GetDataSource(nsIRDFDataSource** aDataSource)
-{
-    NS_ADDREF(mDataSource);
-    *aDataSource = mDataSource;
     return NS_OK;
 }
 
@@ -1085,7 +1044,7 @@ NS_IMETHODIMP
 InMemoryDataSource::GetSources(nsIRDFResource* property,
                                nsIRDFNode* target,
                                PRBool tv,
-                               nsIRDFAssertionCursor** sources)
+                               nsIEnumerator/*<nsIRDFResource>*/** sources)
 {
     NS_PRECONDITION(sources != nsnull, "null ptr");
     if (! sources)
@@ -1108,7 +1067,7 @@ NS_IMETHODIMP
 InMemoryDataSource::GetTargets(nsIRDFResource* source,
                                nsIRDFResource* property,
                                PRBool tv,
-                               nsIRDFAssertionCursor** targets)
+                               nsIEnumerator/*<nsIRDFNode>*/** targets)
 {
     NS_PRECONDITION(targets != nsnull, "null ptr");
     if (! targets)
@@ -1350,7 +1309,8 @@ InMemoryDataSource::RemoveObserver(nsIRDFObserver* observer)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::ArcLabelsIn(nsIRDFNode* node, nsIRDFArcsInCursor** labels)
+InMemoryDataSource::ArcLabelsIn(nsIRDFNode* node, 
+                                nsIEnumerator/*<nsIRDFResource>*/** labels)
 {
     NS_PRECONDITION(labels != nsnull, "null ptr");
     if (! labels)
@@ -1368,7 +1328,8 @@ InMemoryDataSource::ArcLabelsIn(nsIRDFNode* node, nsIRDFArcsInCursor** labels)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::ArcLabelsOut(nsIRDFResource* source, nsIRDFArcsOutCursor** labels)
+InMemoryDataSource::ArcLabelsOut(nsIRDFResource* source,
+                                 nsIEnumerator/*<nsIRDFNode>*/** labels)
 {
     NS_PRECONDITION(labels != nsnull, "null ptr");
     if (! labels)
@@ -1388,7 +1349,7 @@ InMemoryDataSource::ArcLabelsOut(nsIRDFResource* source, nsIRDFArcsOutCursor** l
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetAllResources(nsIRDFResourceCursor** aCursor)
+InMemoryDataSource::GetAllResources(nsIEnumerator/*<nsIRDFResource>*/** aCursor)
 {
     NS_PRECONDITION(aCursor != nsnull, "null ptr");
     if (! aCursor)

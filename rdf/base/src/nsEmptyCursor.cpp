@@ -26,7 +26,7 @@
  */
 
 #include "nscore.h"
-#include "nsIRDFCursor.h"
+#include "nsIEnumerator.h"
 
 static NS_DEFINE_IID(kIRDFArcsInCursorIID,    NS_IRDFARCSINCURSOR_IID);
 static NS_DEFINE_IID(kIRDFArcsOutCursorIID,   NS_IRDFARCSOUTCURSOR_IID);
@@ -71,10 +71,6 @@ public:
     }
 
     // nsIRDFAssertionCursor
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
-        return NS_ERROR_UNEXPECTED;
-    }
-
     NS_IMETHOD GetSubject(nsIRDFResource** aResource) {
         return NS_ERROR_UNEXPECTED;
     }
@@ -142,10 +138,6 @@ public:
     }
 
     // nsIRDFArcsOutCursor
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
-        return NS_ERROR_UNEXPECTED;
-    }
-
     NS_IMETHOD GetSubject(nsIRDFResource** aResource) {
         return NS_ERROR_UNEXPECTED;
     }
@@ -209,10 +201,6 @@ public:
     }
 
     // nsIRDFArcsInCursor
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
-        return NS_ERROR_UNEXPECTED;
-    }
-
     NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
         return NS_ERROR_UNEXPECTED;
     }

@@ -32,14 +32,11 @@
 #define NS_IRDFDATASOURCE_IID \
 { 0xf78da58, 0x8321, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
 
-class nsIRDFAssertionCursor;
-class nsIRDFArcsInCursor;
-class nsIRDFArcsOutCursor;
 class nsIRDFDataBase;
 class nsIRDFNode;
 class nsIRDFObserver;
 class nsIRDFResource;
-class nsIRDFResourceCursor;
+class nsIEnumerator;
 
 /**
  * An RDF data source.
@@ -82,13 +79,13 @@ public:
      * specified arc & truth value
      *
      * @return NS_OK unless a catastrophic error occurs. If the
-     * method returns NS_OK, you may assume that nsIRDFCursor points
+     * method returns NS_OK, you may assume that sources points
      * to a valid (but possibly empty) cursor.
      */
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFAssertionCursor** sources /* out */) = 0;
+                          nsIEnumerator/*<nsIRDFResource>*/** sources /* out */) = 0;
 
     /**
      * Find a child of that is related to the source by the given arc
@@ -107,13 +104,13 @@ public:
      * arc and truth value.
      *
      * @return NS_OK unless a catastrophic error occurs. If the
-     * method returns NS_OK, you may assume that nsIRDFCursor points
+     * method returns NS_OK, you may assume that targets points
      * to a valid (but possibly empty) cursor.
      */
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFAssertionCursor** targets /* out */) = 0;
+                          nsIEnumerator/*<nsIRDFNode>*/** targets /* out */) = 0;
 
     /**
      * Add an assertion to the graph.
@@ -158,10 +155,10 @@ public:
      *
      * @return NS_OK unless a catastrophic error occurs. If the method
      * returns NS_OK, you may assume that labels points to a valid (but
-     * possible empty) nsIRDFCursor object.
+     * possible empty) nsIEnumerator object.
      */
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFArcsInCursor** labels /* out */) = 0;
+                           nsIEnumerator/*<nsIRDFResource>*/** labels /* out */) = 0;
 
     /**
      * Get a cursor to iterate over all the arcs that originate in
@@ -169,16 +166,16 @@ public:
      *
      * @return NS_OK unless a catastrophic error occurs. If the method
      * returns NS_OK, you may assume that labels points to a valid (but
-     * possible empty) nsIRDFCursor object.
+     * possible empty) nsIEnumerator object.
      */
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFArcsOutCursor** labels /* out */) = 0;
+                            nsIEnumerator/*<nsIRDFNode>*/** labels /* out */) = 0;
 
     /**
      * Retrieve all of the resources that the data source currently
      * refers to.
      */
-    NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor) = 0;
+    NS_IMETHOD GetAllResources(nsIEnumerator/*<nsIRDFResource>*/** aCursor) = 0;
 
     /**
      * Request that a data source write it's contents out to 

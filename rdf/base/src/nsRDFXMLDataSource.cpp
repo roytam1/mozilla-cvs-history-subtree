@@ -49,7 +49,7 @@
 #include "nsIOutputStream.h"
 #include "nsIParser.h"
 #include "nsIRDFContentSink.h"
-#include "nsIRDFCursor.h"
+#include "nsIEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
 #include "nsIRDFXMLDataSource.h"

@@ -160,7 +160,6 @@ public:
 
 	NS_IMETHOD	Advance(void);
 	NS_IMETHOD	GetValue(nsIRDFNode **aValue);
-	NS_IMETHOD	GetDataSource(nsIRDFDataSource **aDataSource);
 	NS_IMETHOD	GetSubject(nsIRDFResource **aResource);
 	NS_IMETHOD	GetPredicate(nsIRDFResource **aPredicate);
 	NS_IMETHOD	GetObject(nsIRDFNode **aObject);

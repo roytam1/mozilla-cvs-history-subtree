@@ -41,27 +41,20 @@ class nsIRDFResource;
 /**
  * An abstract base interface that is the basis for all RDF cursors.
  */
-class nsIRDFCursor : public nsISupports {
+class nsIRDFCursor : public nsIEnumerator {
 public:
     static const nsIID& IID() { static nsIID iid = NS_IRDFCURSOR_IID; return iid; }
 
-    /**
-     * Advance the cursor to the next element.
-     * @return NS_ERROR_RDF_CURSOR_EMPTY if the cursor has reached the end
-     * and there are no more elements to enumerate; otherwise, NS_OK
-     * unless a catastrophic error occurs.
-     */
-    NS_IMETHOD Advance(void) = 0;
      /* Retrieve the data source from which the current item was obtained.
      * @return NS_OK, unless a catastrophic error occurs.
      */
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) = 0;
+
     /**
      * Irrespective of the query, a cursor is an interator over a set.
      * This allows you to obtain the current value.
      */
     NS_IMETHOD GetValue(nsIRDFNode** aValue) = 0;
-
 };
 
 

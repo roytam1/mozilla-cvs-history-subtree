@@ -40,7 +40,7 @@
  */
 
 #include "nscore.h"
-#include "nsIRDFCursor.h"
+#include "nsIEnumerator.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
@@ -53,8 +53,6 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kIRDFAssertionCursorIID, NS_IRDFASSERTIONCURSOR_IID);
-static NS_DEFINE_IID(kIRDFCursorIID,          NS_IRDFCURSOR_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
@@ -89,7 +87,6 @@ public:
 
     NS_IMETHOD Advance(void);
 
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
     NS_IMETHOD GetSubject(nsIRDFResource** aResource);
     NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
     NS_IMETHOD GetObject(nsIRDFNode** aObject);
@@ -221,19 +218,6 @@ done:
     return rv;
 }
 
-
-
-NS_IMETHODIMP
-ContainerCursorImpl::GetDataSource(nsIRDFDataSource** aDataSource)
-{
-    NS_PRECONDITION(aDataSource != nsnull, "null ptr");
-    if (! aDataSource)
-        return NS_ERROR_NULL_POINTER;
-
-    NS_ADDREF(mDataSource);
-    *aDataSource = mDataSource;
-    return NS_OK;
-}
 
 
 NS_IMETHODIMP
