@@ -3174,9 +3174,10 @@ nsBrowserAccess.prototype =
     throw Components.results.NS_NOINTERFACE;
   },
 
-  openURI : function(aURI, aWhere, aContext)
+  openURI : function(aURI, aOpener, aWhere, aContext)
   {
     var newWindow = null;
+    var referrer = null;
     if (aWhere == nsCI.nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW) {
       switch (aContext) {
         case nsCI.nsIBrowserDOMWindow.OPEN_EXTERNAL :
@@ -3192,15 +3193,37 @@ nsBrowserAccess.prototype =
         newWindow = openDialog(getBrowserURL(), "_blank", "all,dialog=no", url);
         break;
       case nsCI.nsIBrowserDOMWindow.OPEN_NEWTAB :
-        var newTab = gBrowser.addTab(url);
+        var newTab = gBrowser.addTab("about:blank");
         if (!gPrefService.getBoolPref("browser.tabs.loadDivertedInBackground"))
           gBrowser.selectedTab = newTab;
         newWindow = gBrowser.getBrowserForTab(newTab).docShell
                             .QueryInterface(nsCI.nsIInterfaceRequestor)
                             .getInterface(nsCI.nsIDOMWindow);
+        try {
+          if (aOpener) {
+            referrer = Components.classes["@mozilla.org/network/standard-url;1"]
+                                 .createInstance(nsCI.nsIURI);
+            referrer.spec = Components.lookupMethod(aOpener,"location")
+                                      .call(aOpener);
+          }
+          newWindow.QueryInterface(nsCI.nsIInterfaceRequestor)
+                   .getInterface(nsCI.nsIWebNavigation)
+                   .loadURI(url, nsCI.nsIWebNavigation.LOAD_FLAGS_NONE,
+                            referrer, null, null);
+        } catch(e) {
+        }
         break;
       default : // OPEN_CURRENTWINDOW or an illegal value
-        loadURI(url);
+        try {
+          if (aOpener) {
+            referrer = Components.classes["@mozilla.org/network/standard-url;1"]
+                                 .createInstance(nsCI.nsIURI);
+            referrer.spec = Components.lookupMethod(aOpener,"location")
+                                      .call(aOpener);
+          }
+          loadURI(url, referrer);
+        } catch(e) {
+        }
         newWindow = window;
     }
     return newWindow;
