@@ -38,26 +38,20 @@ DLL=.\$(OBJDIR)\$(DLLNAME).dll
 DEFINES=-D_IMPL_NS_GFX -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=nsColor.cpp nsColorNames.cpp nsFont.cpp nsFontList.cpp \
-    nsImageGroup.cpp nsImageManager.cpp nsImageNetContextAsync.cpp \
-    nsImageRenderer.cpp nsImageRequest.cpp nsImageSystemServices.cpp \
-    nsImageURL.cpp nsRect.cpp nsTransform2D.cpp nsBlender.cpp \
-	nsDeviceContext.cpp nsImageNetContextSync.cpp nsScriptableRegion.cpp nsPrintOptionsImpl.cpp
+	nsRect.cpp nsTransform2D.cpp nsBlender.cpp \
+	nsDeviceContext.cpp nsScriptableRegion.cpp nsPrintOptionsImpl.cpp
 
 CPP_OBJS=.\$(OBJDIR)\nsColor.obj .\$(OBJDIR)\nsColorNames.obj \
     .\$(OBJDIR)\nsFont.obj .\$(OBJDIR)\nsFontList.obj \
-    .\$(OBJDIR)\nsImageGroup.obj .\$(OBJDIR)\nsImageManager.obj \
-    .\$(OBJDIR)\nsImageNetContextAsync.obj .\$(OBJDIR)\nsImageRenderer.obj \
-    .\$(OBJDIR)\nsImageRequest.obj .\$(OBJDIR)\nsImageSystemServices.obj \
-    .\$(OBJDIR)\nsImageURL.obj .\$(OBJDIR)\nsRect.obj \
+	.\$(OBJDIR)\nsRect.obj \
     .\$(OBJDIR)\nsTransform2D.obj \
     .\$(OBJDIR)\nsDeviceContext.obj \
-	.\$(OBJDIR)\nsImageNetContextSync.obj \
 	.\$(OBJDIR)\nsBlender.obj \
   .\$(OBJDIR)\nsRenderingContextImpl.obj\
 	.\$(OBJDIR)\nsScriptableRegion.obj\
   .\$(OBJDIR)\nsPrintOptionsImpl.obj
 
-LINCS=-I$(PUBLIC)\util -I$(PUBLIC)\img \
+LINCS=-I$(PUBLIC)\util \
     -I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \
 !ifdef NECKO
     -I$(PUBLIC)\necko \
@@ -75,7 +69,6 @@ LCFLAGS = \
 
 LLIBS=				\
  $(DIST)\lib\xpcom.lib	\
- $(DIST)\lib\img32$(VERSION_NUMBER).lib        \
  $(DIST)\lib\js32$(VERSION_NUMBER).lib        \
  $(DIST)\lib\util.lib           \
  $(DIST)\lib\raptorgfxwin_s.lib \
@@ -94,11 +87,7 @@ WIN_LIBS=   \
 LLFLAGS = \
 		$(LLFLAGS) \
 		/INCLUDE:_NS_HexToRGB@8 \
-		/INCLUDE:_NS_ColorNameToRGB@8 \
-		/INCLUDE:_NS_NewImageGroup@4 \
-		/INCLUDE:_NS_NewImageRenderer@4 \
-		/INCLUDE:_NS_NewImageSystemServices@4 \
-		/INCLUDE:_NS_NewImageManager@4
+		/INCLUDE:_NS_ColorNameToRGB@8
 		 
 include <$(DEPTH)\config\rules.mak>
 
