@@ -69,23 +69,73 @@ public:
 #define TX_DECL_TXINSTRUCTION  \
     virtual nsresult execute(txExecutionState& aEs);
 
-class txStartLREElement : public txInstruction
+
+class txApplyTemplates : public txInstruction
 {
 public:
-    txStartLREElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
-                      nsIAtom* aPrefix);
+    txApplyTemplates(const txExpandedName& aMode);
+
+    TX_DECL_TXINSTRUCTION
+    
+    txExpandedName mMode;
+};
+
+class txCallTemplate : public txInstruction
+{
+public:
+    txCallTemplate(const txExpandedName& aName);
 
     TX_DECL_TXINSTRUCTION
 
-    PRInt32 mNamespaceID;
-    nsCOMPtr<nsIAtom> mLocalName;
-    nsCOMPtr<nsIAtom> mPrefix;
+    txExpandedName mName;
+};
+
+class txConditionalGoto : public txInstruction
+{
+public:
+    txConditionalGoto(Expr* aCondition, txInstruction* aTarget);
+    ~txConditionalGoto();
+
+    TX_DECL_TXINSTRUCTION
+    
+    Expr* mCondition;
+    txInstruction* mTarget;
 };
 
 class txEndLREElement : public txInstruction
 {
 public:
     TX_DECL_TXINSTRUCTION
+};
+
+class txForEach : public txInstruction
+{
+public:
+    txForEach();
+
+    TX_DECL_TXINSTRUCTION
+
+    txInstruction* mEndTarget;
+};
+
+class txGoTo : public txInstruction
+{
+public:
+    txGoTo(txInstruction* aTarget);
+
+    TX_DECL_TXINSTRUCTION
+    
+    txInstruction* mTarget;
+};
+
+class txInsertAttrSet : public txInstruction
+{
+public:
+    txInsertAttrSet(const txExpandedName& aName);
+
+    TX_DECL_TXINSTRUCTION
+
+    txExpandedName mName;
 };
 
 class txLREAttribute : public txInstruction
@@ -103,14 +153,53 @@ public:
     Expr* mValue;
 };
 
-class txInsertAttrSet : public txInstruction
+class txPushNewContext : public txInstruction
 {
 public:
-    txInsertAttrSet(const txExpandedName& aName);
+    txPushNewContext(Expr* aSelect);
+    ~txPushNewContext();
+
+    TX_DECL_TXINSTRUCTION
+    
+    //addSort(Expr* aSelectExpr, Expr* aLangExpr,
+    //        Expr* aDataTypeExpr, Expr* aOrderExpr,
+    //        Expr* aCaseOrderExpr, txIEvalContext* aContext);
+
+    Expr* mSelect;
+};
+
+class txRecursionCheckpointEnd : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};
+
+class txRecursionCheckpointStart : public txInstruction
+{
+public:
+    txRecursionCheckpointStart(const nsAString& aName);
+
+    TX_DECL_TXINSTRUCTION
+    
+    nsString mName;
+};
+
+class txReturn : public txInstruction
+{
+    TX_DECL_TXINSTRUCTION
+};
+
+class txStartLREElement : public txInstruction
+{
+public:
+    txStartLREElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
+                      nsIAtom* aPrefix);
 
     TX_DECL_TXINSTRUCTION
 
-    txExpandedName mName;
+    PRInt32 mNamespaceID;
+    nsCOMPtr<nsIAtom> mLocalName;
+    nsCOMPtr<nsIAtom> mPrefix;
 };
 
 class txText : public txInstruction
@@ -134,94 +223,6 @@ public:
 
     Expr* mExpr;
     PRBool mDOE;
-};
-
-class txRecursionCheckpointStart : public txInstruction
-{
-public:
-    txRecursionCheckpointStart(const nsAString& aName);
-
-    TX_DECL_TXINSTRUCTION
-    
-    nsString mName;
-};
-
-class txRecursionCheckpointEnd : public txInstruction
-{
-public:
-    TX_DECL_TXINSTRUCTION
-};
-
-class txConditionalGoto : public txInstruction
-{
-public:
-    txConditionalGoto(Expr* aCondition, txInstruction* aTarget);
-    ~txConditionalGoto();
-
-    TX_DECL_TXINSTRUCTION
-    
-    Expr* mCondition;
-    txInstruction* mTarget;
-};
-
-class txGoTo : public txInstruction
-{
-public:
-    txGoTo(txInstruction* aTarget);
-
-    TX_DECL_TXINSTRUCTION
-    
-    txInstruction* mTarget;
-};
-
-class txPushNewContext : public txInstruction
-{
-public:
-    txPushNewContext(Expr* aSelect);
-    ~txPushNewContext();
-
-    TX_DECL_TXINSTRUCTION
-    
-    //addSort(Expr* aSelectExpr, Expr* aLangExpr,
-    //        Expr* aDataTypeExpr, Expr* aOrderExpr,
-    //        Expr* aCaseOrderExpr, txIEvalContext* aContext);
-
-    Expr* mSelect;
-};
-
-class txApplyTemplates : public txInstruction
-{
-public:
-    txApplyTemplates(const txExpandedName& aMode);
-
-    TX_DECL_TXINSTRUCTION
-    
-    txExpandedName mMode;
-};
-
-class txReturn : public txInstruction
-{
-    TX_DECL_TXINSTRUCTION
-};
-
-class txCallTemplate : public txInstruction
-{
-public:
-    txCallTemplate(const txExpandedName& aName);
-
-    TX_DECL_TXINSTRUCTION
-
-    txExpandedName mName;
-};
-
-class txForEach : public txInstruction
-{
-public:
-    txForEach();
-
-    TX_DECL_TXINSTRUCTION
-
-    txInstruction* mEndTarget;
 };
 
 #endif //TRANSFRMX_TXINSTRUCTIONS_H
