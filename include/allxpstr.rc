@@ -944,7 +944,7 @@ Please verify that your Mail preferences are correct\n\
 and try again.")
 
 ResDef(MK_MSG_UNABLE_TO_SAVE_TEMPLATE, -474,
-"Netscape is unable to save your message as template.\n\
+MOZ_NAME_BRAND" is unable to save your message as template.\n\
 Please verify that your Mail preferences are correct\n\
 and try again.")
 
@@ -7663,14 +7663,9 @@ ResDef(MK_MSG_DELIV_IMAP_DONE,          XP_MSG_BASE + 1386,
 ResDef(MK_MSG_IMAP_DISCOVERING_MAILBOX, XP_MSG_BASE + 1387, 
 "Found folder: %s")
 
-ResDef(MK_MSG_UNABLE_TO_SAVE_DRAFT, XP_MSG_BASE + 1388,
-MOZ_NAME_BRAND" is unable to save your message as a draft. Please make sure \n\
-that your Drafts mail folder is correctly chosen in your Mail and \n\
-Newsgroups preferences.")
-ResDef(MK_MSG_UNABLE_TO_SAVE_TEMPLATE, XP_MSG_BASE + 1389,
-MOZ_NAME_BRAND" is unable to save your message as a template. Please make \n\
-sure that your Templates mail folder is correctly chosen in your Mail \n\
-and Newsgroups preferences.")
+ResDef(MK_MSG_FORWARD_INLINE, XP_MSG_BASE + 1388, "Forward Inline")
+
+/**** 1389 free for grab ***/
 
 ResDef(MK_MSG_IMAP_INBOX_NAME, XP_MSG_BASE + 1390, "Inbox")
 
@@ -7822,8 +7817,6 @@ ResDef(MK_MIMEHTML_DOWNLOAD_STATUS_HEADER, XP_MSG_BASE + 1441,
 
 ResDef(MK_MIMEHTML_DOWNLOAD_STATUS_NOT_DOWNLOADED, XP_MSG_BASE + 1442,
        "Not Downloaded Inline")
-
-ResDef(MK_MSG_FORWARD_INLINE, XP_MSG_BASE + 1443, "Forward Inline")
 
 /* -------- Range up tp 1449 reserved for MSGLIB!! ----------------*/
 
