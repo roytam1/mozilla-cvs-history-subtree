@@ -4070,19 +4070,10 @@ nsCSSFrameConstructor::ConstructDocElementTableFrame(nsIContent*     aDocElement
 
 #else
 inline nsresult 
-ProcessPseudoFrames(nsPresContext* aPresContext,
-                    nsPseudoFrames& aPseudoFrames,
+ProcessPseudoFrames(nsFrameConstructorState& aState,
                     nsFrameItems&   aItems)
 {
 }
-
-inline nsresult 
-ProcessPseudoFrames(nsPresContext* aPresContext,
-                    nsPseudoFrames& aPseudoFrames,
-                    nsIAtom*        aHighestType)
-{
-}
-
 #endif
 
 static PRBool CheckOverflow(nsPresContext* aPresContext,
@@ -5388,6 +5379,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsFrameConstructorState& aState,
       addedToFrameList = PR_TRUE;
     }
   }
+#endif
   else if (nsHTMLAtoms::object == aTag ||
            nsHTMLAtoms::applet == aTag ||
            nsHTMLAtoms::embed == aTag) {
@@ -7696,13 +7688,16 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsFrameConstructorState& aState,
   nsIFrame* adjParentFrame = aParentFrame;
   nsFrameItems* frameItems = &aFrameItems;
   PRBool pseudoParent = PR_FALSE;
+  nsresult rv;
+#ifdef CSS_TABLES
   nsFrameConstructorSaveState pseudoSaveState;
-  nsresult rv = AdjustParentFrame(aContent, display, adjParentFrame,
-                                  frameItems, aState, pseudoSaveState,
-                                  pseudoParent);
+  rv = AdjustParentFrame(aContent, display, adjParentFrame,
+                         frameItems, aState, pseudoSaveState,
+                         pseudoParent);
   if (NS_FAILED(rv)) {
     return rv;
   }
+#endif
 
   if (aContent->IsContentOfType(nsIContent::eTEXT)) 
     return ConstructTextFrame(aState, aContent, adjParentFrame, styleContext,
@@ -10160,8 +10155,7 @@ nsCSSFrameConstructor::StyleChangeReflow(nsIFrame* aFrame,
   if (IsFrameSpecial(aFrame))
     aFrame = GetIBContainingBlockFor(aFrame);
 
-  aPresContext->PresShell()->
-    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
+  mPresShell->FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }

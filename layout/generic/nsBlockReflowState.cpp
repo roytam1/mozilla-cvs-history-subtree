@@ -802,7 +802,7 @@ nsBlockReflowState::FlowAndPlaceFloat(nsFloatCache*   aFloatCache,
       floatX = prevRect.x;
     }
     else if (!keepFloatOnSameLine) {
-      floatX = mAvailSpaceRect.XMost() - region.width;
+      floatX = mAvailSpaceRect.XMost() - floatSize.width;
     } 
     else {
       // this is the IE quirk (see few lines above)
