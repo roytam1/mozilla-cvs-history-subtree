@@ -33,8 +33,6 @@ IS_COMPONENT	= 1
 RESFILE		= widget.res
 MODULE_NAME	= nsWidgetModule
 
-PACKAGE_FILE = widget.pkg
-
 REQUIRES	= xpcom \
 		  string \
 		  necko \
