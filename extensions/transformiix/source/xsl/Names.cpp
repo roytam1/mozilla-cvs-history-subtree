@@ -3,21 +3,21 @@
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
  * the License at http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS
  * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
- * 
+ *
  * The Original Code is TransforMiiX XSLT processor.
- * 
+ *
  * The Initial Developer of the Original Code is The MITRE Corporation.
  * Portions created by MITRE are Copyright (C) 1999 The MITRE Corporation.
  *
  * Portions created by Keith Visco as a Non MITRE employee,
  * (C) 1999 Keith Visco. All Rights Reserved.
- * 
- * Contributor(s): 
+ *
+ * Contributor(s):
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
@@ -39,7 +39,7 @@ const String STYLESHEET_PI     = "xml-stylesheet";
 const String STYLESHEET_PI_OLD = "xml:stylesheet";
 const String XML_SPACE         = "xml:space";
 const String XSL_MIME_TYPE     = "text/xsl";
-const String XSLT_NS           = "http://www.w3.org/XSL/Transform/";
+const String XSLT_NS           = "http://www.w3.org/1999/XSL/Transform";
 
 //-- Elements
 const String APPLY_IMPORTS      = "apply-imports";
@@ -92,7 +92,7 @@ const String MEDIA_TYPE_ATTR         = "media-type";
 const String MODE_ATTR               = "mode";
 const String NAME_ATTR               = "name";
 const String NAMESPACE_ATTR          = "namespace";
-const String OMIT_XMLDECL_ATTR       = "omit-xml-declaration"; 
+const String OMIT_XMLDECL_ATTR       = "omit-xml-declaration";
 const String PRIORITY_ATTR           = "priority";
 const String SELECT_ATTR             = "select";
 const String STANDALONE              = "standalone";
