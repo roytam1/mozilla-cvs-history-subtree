@@ -303,7 +303,7 @@ CNSNavFrame* CNSNavFrame::CreateFramedRDFViewFromResource(CWnd* pParent, int xPo
 	CNSNavFrame* pNavFrame = new CNSNavFrame();
 	pNavFrame->SetHTNode(node);
 	pNavFrame->SetDockStyle(DOCKSTYLE_FLOATING);
-	pNavFrame->Create(NULL, "Navigation Center", WS_POPUP, 
+	pNavFrame->Create(NULL, HT_GetNodeName(node), WS_POPUP, 
 					  CRect(xPos, yPos, width, height),
 					  pParent);
 	pNavFrame->SetWindowPos(&wndTopMost, xPos, yPos, width, height, 0);
@@ -311,7 +311,7 @@ CNSNavFrame* CNSNavFrame::CreateFramedRDFViewFromResource(CWnd* pParent, int xPo
 	
 	CRDFOutliner* pOutliner = (CRDFOutliner*)(pNavFrame->GetContentView()->GetOutlinerParent()->GetOutliner());
 	pOutliner->SetIsPopup(TRUE);
-	//pOutliner->SetFocus();
+	pOutliner->SetFocus();
 
 	return pNavFrame;
 }

@@ -1659,6 +1659,13 @@ void CRDFOutliner::OnKillFocus ( CWnd * pNewWnd )
 	((COutlinerParent*)GetParent())->UpdateFocusFrame();
 
 	FocusCheck(pNewWnd, FALSE);
+
+	if (IsPopup() && GetParent()->GetParent() != pNewWnd)
+	{
+		// Need to destroy the window
+		GetParentFrame()->SetParent(NULL);
+		GetParentFrame()->DestroyWindow();
+	}
 }
 	
 void CRDFOutliner::FocusCheck(CWnd* pWnd, BOOL gotFocus)
@@ -3861,7 +3868,6 @@ BEGIN_MESSAGE_MAP(CRDFContentView, CView)
 	ON_WM_CREATE()
     ON_WM_SIZE()
     ON_WM_SETFOCUS()
-	ON_WM_KILLFOCUS()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -3911,12 +3917,6 @@ void CRDFContentView::SwitchHTViews(HT_View newView)
 
 void CRDFContentView::OnKillFocus(CWnd* pNewWnd)
 {
-	CRDFOutliner* pOutliner = (CRDFOutliner*)(m_pOutlinerParent->GetOutliner());
-	if (pOutliner->IsPopup())
-	{
-		// Need to destroy the window
-		GetParent()->DestroyWindow();
-	}
 }
 
 // Functionality for the RDF Tree Embedded in HTML (Added 3/10/98 by Dave Hyatt).
