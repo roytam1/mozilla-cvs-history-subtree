@@ -91,4 +91,7 @@ function f(n) { var ret = ''; for (var i = 0; i < n; i++) { ret += cnX; } return
 s = f(5);
 if (s != 'XXXXX') result = false;
 
+var t = "abcdeXXXXXghij";
+if (t.split('XXXXX').length != 2) result = false;
+
 if (result) print("still sane") else print("gone off the deep end");

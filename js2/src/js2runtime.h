@@ -1473,7 +1473,7 @@ static const double two31 = 2147483648.0;
                 mScopeChain->addScope(Number_Type);
                 String_Type->createStaticComponent(this);
                 String_Type->setDefaultConstructor(new JSFunction(this, &String_Constructor, Object_Type));
-                String_Type->addMethod(widenCString("toString"), NULL, new JSFunction(this, &String_toString, String_Type));
+                String_Type->mPrototype->defineVariable(widenCString("toString"), NULL, String_Type, JSValue(new JSFunction(this, &String_toString, String_Type)));
                 String_Type->mPrototype->defineVariable(widenCString("split"), NULL, Array_Type, JSValue(new JSFunction(this, &String_split, Array_Type)));
                 String_Type->addMethod(widenCString("length"), NULL, new JSFunction(this, &String_length, Number_Type));
                 String_Type->completeClass(this, mScopeChain, Object_Type);

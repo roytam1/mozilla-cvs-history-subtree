@@ -1632,50 +1632,101 @@ JSValue String_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 a
     return JSValue((String *)thisObj->mPrivate);
 }
 
+struct MatchResult {
+    bool failure;
+    uint32 endIndex;
+    String **captures;
+};
+
+void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
+{
+    result.failure = true;
+    result.captures = NULL;
+
+    uint32 r = R->size();
+    uint32 s = S->size();
+    if ((q + r) > s)
+        return;
+    for (int i = 0; i < r; i++) {
+        if ((*S)[q + i] != (*R)[i])
+            return;
+    }
+    result.endIndex = q + r;
+    result.failure = false;
+}
+
+
 JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
     JSValue S = thisValue->toString(cx);
 
-    JSInstance *arrInst = Array_Type->newInstance(cx);
+    JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
     JSValue separatorV;
     JSValue limitV;
-    uint32 limit;
+    uint32 lim;
 
+    if (argc > 0)
+        separatorV = argv[0];
     if (argc > 1)
-        separatorV = argv[1];
-    if (argc > 2)
-        limitV = argv[2];
+        limitV = argv[1];
     
     if (limitV.isUndefined())
-        limit = two32minus1;
+        lim = two32minus1;
     else
-        limit = (uint32)(limitV.toUInt32(cx).f64);
+        lim = (uint32)(limitV.toUInt32(cx).f64);
 
     uint32 s = S.string->size();
-
     uint32 p = 0;
 
     // if separatorV.isRegExp() -->
 
     const String *R = separatorV.toString(cx).string;
 
-    if (limit == 0) 
-        return JSValue(arrInst);
+    if (lim == 0) 
+        return JSValue(A);
 
     if (separatorV.isUndefined()) {
-        //step 33
-        arrInst->setProperty(cx, widenCString("0"), NULL, S);
-        return JSValue(arrInst);
+        A->setProperty(cx, widenCString("0"), NULL, S);
+        return JSValue(A);
     }
 
     if (s == 0) {
-        // step 31
+        MatchResult z;
+        splitMatch(S.string, 0, R, z);
+        if (!z.failure)
+            return JSValue(A);
+        A->setProperty(cx, widenCString("0"), NULL, S);
+        return JSValue(A);
     }
     
-    
-    return JSValue(arrInst);
-    
+    while (true) {
+        uint32 q = p;
+step11:
+        if (q == s) {
+            String *T = new String(*S.string, p, (s - p));
+            A->setProperty(cx, *numberToString(A->mLength), NULL, JSValue(T));
+            return JSValue(A);
+        }
+        MatchResult z;
+        splitMatch(S.string, q, R, z);
+        if (z.failure) {
+            q = q + 1;
+            goto step11;
+        }
+        uint32 e = z.endIndex;
+        if (e == p) {
+            q = q + 1;
+            goto step11;
+        }
+        String *T = new String(*S.string, p, (q - p));
+        A->setProperty(cx, *numberToString(A->mLength), NULL, JSValue(T));
+        if (A->mLength == lim)
+            return JSValue(A);
+        p = e;
+        // step 20 --> 27, handle captures array (we know it's empty for non regexp)    
+    }
+
 }
 
 JSValue String_length(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
