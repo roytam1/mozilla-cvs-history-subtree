@@ -238,7 +238,7 @@ public:
 
 	//Construction/destruction
 	CCustToolbar(int nNumToolbars);
-	~CCustToolbar(); 
+	virtual ~CCustToolbar(); 
 
 		//Creation
 	int Create(CFrameWnd* pParent, BOOL bHasAnimation);
@@ -318,8 +318,6 @@ public:
 protected:
 //	virtual BOOL OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult );
  
-
-private:
 	int  CheckOpenButtons(CPoint point);
 	int	 CheckClosedButtons(CPoint point);
 	BOOL PointInClosedTab(CPoint point, HTAB_BITMAP tabType, int nNumClosedButtons, int nStartX,

@@ -961,6 +961,22 @@ void CGenericChrome::StopAnimation()
 	}
 }
 
+int CGenericChrome::CreateRDFToolbar(CString toolbarName, int nMaxToolbars, BOOL bHasAnimation)
+{
+	CRDFToolbarHolder* pHolder = new CRDFToolbarHolder(nMaxToolbars, m_pParent);
+	m_pCustToolbar = pHolder; 
+
+	if(! m_pCustToolbar->Create(m_pParent, bHasAnimation))
+		return FALSE;
+
+	m_toolbarName = toolbarName;
+	
+	// Toolbars will start coming in here.
+	pHolder->InitializeRDFData();
+	
+	return TRUE;
+}
+
 int CGenericChrome::CreateCustomizableToolbar(CString toolbarName, int nMaxToolbars, BOOL bHasAnimation)
 {
 	m_pCustToolbar=new CCustToolbar(nMaxToolbars);

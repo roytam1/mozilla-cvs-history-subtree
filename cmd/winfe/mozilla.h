@@ -275,6 +275,8 @@ public:
     HWND m_ParentAppWindow;
     BOOL m_bChildWindow;
 
+	CIsomorphicCommandMap* m_pBrowserCommandMap;
+
     //  Our very own run/pump/idle implementation.
 public:
     int Run();

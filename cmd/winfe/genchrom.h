@@ -249,6 +249,7 @@ public:
 	virtual void SetDocumentTitle(const char*);
 
 //  ToolbarManager Stuff
+	virtual int CreateRDFToolbar(CString toolbarName, int nMaxToolbars, BOOL bHasAnimation);
 	virtual int CreateCustomizableToolbar(CString toolbarName, int nMaxToolbars, BOOL bHasAnimation);
 	virtual int CreateCustomizableToolbar(UINT nStringID, int nMaxToolbars, BOOL bHasAnimation);
 	virtual CString GetCustToolbarString();

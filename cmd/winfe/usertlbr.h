@@ -133,7 +133,7 @@ protected:
 
 };
 
-void ptNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened);
+void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened);
 
 /****************************************************************************
 *
@@ -172,10 +172,11 @@ class CRDFToolbar : public CNSToolbar2 {
 
 private:
 	CRDFToolbarDropTarget m_DropTarget;
-	HT_Pane m_PersonalToolbarPane;
+	HT_View m_ToolbarView;
 	CRDFCommandMap m_MenuCommandMap;	// Command map for back-end generated right mouse menu commands.
 	
     int m_nNumberOfRows;
+	int m_nRowHeight;
 
 	CRDFToolbarButton* m_pDragButton;
 	int m_iDragFraction;
@@ -184,12 +185,12 @@ private:
 	static int m_nMaxToolbarButtonChars;
 
 public:
-	CRDFToolbar(int nMaxButtons, int nToolbarStyle, int nPicturesAndTextHeight, int nPicturesHeight,
+	CRDFToolbar(HT_View theView, int nMaxButtons, int nToolbarStyle, int nPicturesAndTextHeight, int nPicturesHeight,
 				 int nTextHeight);
 	~CRDFToolbar();
 
 	// Used to create toolbars
-	static CRDFToolbar* CreateUserToolbar(CWnd* pParent);
+	static CRDFToolbar* CreateUserToolbar(HT_View theView, CWnd* pParent);
 
 	int Create(CWnd *pParent);
 	virtual int GetHeight(void);
@@ -198,7 +199,9 @@ public:
     void LayoutButtons(int nIndex); // Index will be ignored by this version of the function
                                     // since adding/deleting buttons may cause all buttons to resize
 	
-	
+	// Toolbar's event handler.
+	void HandleEvent(HT_Notification ns, HT_Resource n, HT_Event whatHappened);
+
 	void AddHTButton(HT_Resource n);  // Called to add a new button to the toolbar
 
     void SetMinimumRows(int rowWidth); // Called to determine and set the # of rows required by the toolbar.
@@ -210,7 +213,7 @@ public:
 
 	void FillInToolbar(); // Called to create and place the buttons on the toolbar
 
-	HT_Pane GetPane() { return m_PersonalToolbarPane; }  // Returns the HT-Pane
+	HT_View GetHTView() { return m_ToolbarView; }  // Returns the HT-View for this toolbar.
 
 	void SetDragFraction(int i) { m_iDragFraction = i; }
 	int GetDragFraction() { return m_iDragFraction; }
@@ -232,5 +235,18 @@ protected:
 
 };
 
+class CRDFToolbarHolder : public CCustToolbar
+{
+protected:
+	HT_Pane m_ToolbarPane;
+	CFrameWnd* m_pCachedParentWindow;
+
+public:
+	CRDFToolbarHolder(int maxToolbars, CFrameWnd* pParent);
+	HT_Pane GetHTPane() { return m_ToolbarPane; }
+	void SetHTPane(HT_Pane p) { m_ToolbarPane = p; }
+	CFrameWnd* GetCachedParentWindow() { return m_pCachedParentWindow; }
+	void InitializeRDFData();
+};
 
 #endif

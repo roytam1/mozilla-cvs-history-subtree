@@ -27,6 +27,9 @@ extern "C" {
 #include "xpgetstr.h"
 };
 
+// The Nav Center vocab element
+extern "C" RDF_NCVocab gNavCenter;
+
 #define LEFT_TOOLBAR_MARGIN 10
 #define RIGHT_TOOLBAR_MARGIN 20
 #define SPACE_BETWEEN_BUTTONS 2
@@ -180,8 +183,17 @@ CSize CRDFToolbarButton::GetMaximalButtonSize(void)
 
 void CRDFToolbarButton::OnAction(void)
 {
-	if(m_Node && !HT_IsContainer(m_Node))
+	if(m_Node)
 	{
+		char* url = HT_GetNodeURL(m_Node);
+		if (strncmp(url, "command:", 8) == 0)
+		{
+			// We're a command, baby.  Look up our FE command and execute it.
+			UINT nCommand = theApp.m_pBrowserCommandMap->GetFEResource(url);
+			WFE_GetOwnerFrame(this)->PostMessage(WM_COMMAND, MAKEWPARAM(nCommand, nCommand), 0);
+		}
+		else if (!HT_IsContainer(m_Node))
+		{
 			CAbstractCX * pCX = FEU_GetLastActiveFrameContext();
 			ASSERT(pCX != NULL);
 			if (pCX != NULL)
@@ -189,6 +201,7 @@ void CRDFToolbarButton::OnAction(void)
 				if (!HT_Launch(m_Node, pCX->GetContext()))
 					pCX->NormalGetUrl((LPTSTR)HT_GetNodeURL(m_Node));
 			}
+		}
 	}
 }
 
@@ -272,11 +285,37 @@ void CRDFToolbarButton::EditTextChanged(char *pText)
 
 void CRDFToolbarButton::DrawPicturesAndTextMode(HDC hDC, CRect rect)
 {
-	 DrawBitmapOnSide(hDC, rect);
+	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+	void* data;
+	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		CString position((char*)data);
+		if (position == "top")
+		{
+			DrawBitmapOnTop(hDC, rect);
+			return;
+		}
+	}
+	
+	DrawBitmapOnSide(hDC, rect);
 }
 
 void CRDFToolbarButton::DrawPicturesMode(HDC hDC, CRect rect)
 {
+	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+	void* data;
+	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		CString position((char*)data);
+		if (position == "top")
+		{
+			DrawBitmapOnTop(hDC, rect);
+			return;
+		}
+	}
+
 	DrawBitmapOnSide(hDC, rect);
 }
 
@@ -288,18 +327,57 @@ void CRDFToolbarButton::DrawButtonText(HDC hDC, CRect rcTxt, CSize sizeTxt, CStr
 CSize CRDFToolbarButton::GetButtonSizeFromChars(CString s, int c)
 {
     if(m_nToolbarStyle != TB_TEXT)
+	{
+		CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+		void* data;
+		HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+		if (data)
+		{
+			CString position((char*)data);
+			if (position == "top")
+			{
+				return GetBitmapOnTopSize(s, c);
+			}
+		}
 		return(GetBitmapOnSideSize(s, c));
+	}
 	else
 		return(GetTextOnlySize(s, c));
 }
 
 void CRDFToolbarButton::GetPicturesAndTextModeTextRect(CRect &rect)
 {
+	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+	void* data;
+	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		CString position((char*)data);
+		if (position == "top")
+		{
+			GetBitmapOnTopTextRect(rect);
+			return;
+		}
+	}
+
 	GetBitmapOnSideTextRect(rect);
 }
 
 void CRDFToolbarButton::GetPicturesModeTextRect(CRect &rect)
 {
+	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+	void* data;
+	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		CString position((char*)data);
+		if (position == "top")
+		{
+			GetBitmapOnTopTextRect(rect);
+			return;
+		}
+	}
+
 	GetBitmapOnSideTextRect(rect);
 }
 
@@ -723,7 +801,7 @@ DROPEFFECT CRDFToolbarDropTarget::OnDragOver(CWnd * pWnd, COleDataObject * pData
 		pButton = NULL;
 	}
 	
-	HT_Resource theNode = pButton ? pButton->GetNode() : HT_TopNode(HT_GetSelectedView(m_pToolbar->GetPane()));
+	HT_Resource theNode = pButton ? pButton->GetNode() : HT_TopNode(m_pToolbar->GetHTView());
 	
 	m_pToolbar->SetDragButton(pButton);
 
@@ -753,7 +831,7 @@ DROPEFFECT CRDFToolbarDropTarget::OnDragOver(CWnd * pWnd, COleDataObject * pData
 BOOL CRDFToolbarDropTarget::OnDrop(CWnd * pWnd, COleDataObject * pDataObject,
 			DROPEFFECT dropEffect, CPoint point)
 {
-	HT_Resource theNode = HT_TopNode(HT_GetSelectedView(m_pToolbar->GetPane()));
+	HT_Resource theNode = HT_TopNode(m_pToolbar->GetHTView());
 	if (m_pToolbar->GetDragButton())
 	  theNode = m_pToolbar->GetDragButton()->GetNode();
 
@@ -770,13 +848,62 @@ BOOL CRDFToolbarDropTarget::OnDrop(CWnd * pWnd, COleDataObject * pDataObject,
 #define LINKTOOLBARHEIGHT 21
 #define SPACE_BETWEEN_ROWS 2
 
-// The Event Handler for HT notifications on the personal toolbar
-static void ptNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
+// The Event Handler for HT notifications on the toolbars
+static void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
 {
-  CRDFToolbar* theToolbar = (CRDFToolbar*)ns->data;
-  if (n != NULL)
-  {
+	static int toolbarIDCounter = 0;
+
+	CRDFToolbarHolder* theToolbarHolder = (CRDFToolbarHolder*)ns->data;
+	if (theToolbarHolder == NULL)
+		return;
+
 	HT_View theView = HT_GetView(n);
+	
+	// The pane has to handle some events.  These will go here.
+	if (whatHappened == HT_EVENT_VIEW_SELECTED)
+	{
+		
+	}
+	
+	if (theView == NULL)
+		return;
+
+	if (whatHappened == HT_EVENT_VIEW_ADDED) 
+	{
+		CRDFToolbar* theNewToolbar = CRDFToolbar::CreateUserToolbar(theView, theToolbarHolder->GetCachedParentWindow());
+		CButtonToolbarWindow *pWindow = new CButtonToolbarWindow(theNewToolbar, 
+										theApp.m_pToolbarStyle, 43, 27, eSMALL_HTAB);
+		
+		theToolbarHolder->AddNewWindow(ID_PERSONAL_TOOLBAR+toolbarIDCounter, pWindow, toolbarIDCounter, 43, 27, 1, 
+				HT_GetNodeName(HT_TopNode(theNewToolbar->GetHTView())),theApp.m_pToolbarStyle, TRUE, FALSE);
+		toolbarIDCounter++;
+		theToolbarHolder->GetCachedParentWindow()->RecalcLayout();
+	}
+	else if (whatHappened == HT_EVENT_VIEW_DELETED)
+	{
+	}
+	else if (whatHappened == HT_EVENT_NODE_VPROP_CHANGED && HT_TopNode(theView) == n)
+	{
+	}
+	else if (whatHappened == HT_EVENT_NODE_EDIT && HT_TopNode(theView) == n)
+	{
+		// Edit being performed on a selector bar item. (STILL TO DO)
+	}
+	else if (whatHappened == HT_EVENT_VIEW_WORKSPACE_REFRESH)
+	{
+	}
+	// If the pane doesn't handle the event, then a view does.
+	else 
+	{
+		CRDFToolbar* pToolbar = (CRDFToolbar*)HT_GetViewFEData(theView);
+	
+		pToolbar->HandleEvent(ns, n, whatHappened);
+	}
+}
+
+void CRDFToolbar::HandleEvent(HT_Notification ns, HT_Resource n, HT_Event whatHappened)
+{
+	HT_View theView = m_ToolbarView;
 	if (theView != NULL)
 	{
 		if (whatHappened == HT_EVENT_NODE_OPENCLOSE_CHANGED)
@@ -788,7 +915,7 @@ static void ptNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatH
 				if (n == HT_TopNode(theView))
 				{
 					// Initial population of the toolbar. We should only receive this event once.
-					theToolbar->FillInToolbar();
+					FillInToolbar();
 				}
 				else 
 				{
@@ -800,7 +927,7 @@ static void ptNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatH
 		}
 		else if (whatHappened == HT_EVENT_VIEW_REFRESH)
 		{
-			theToolbar->LayoutButtons(-1);
+			LayoutButtons(-1);
 		}
 		else if (HT_TopNode(theView) == HT_GetParent(n))
 		{
@@ -814,72 +941,55 @@ static void ptNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatH
 				{
 					// Destroy the toolbar button
 					CRDFToolbarButton* pButton = (CRDFToolbarButton*)HT_GetNodeFEData(n);
-					if (theToolbar->m_hWnd)
-					  theToolbar->RemoveButton(pButton);
-					else theToolbar->DecrementButtonCount();
+					if (m_hWnd)
+					  RemoveButton(pButton);
+					else DecrementButtonCount();
 					delete pButton;
 
 				}
 			}
 			else if (whatHappened == HT_EVENT_NODE_ADDED)
 			{
-				theToolbar->AddHTButton(n);
-				theToolbar->LayoutButtons(-1);
+				AddHTButton(n);
+				LayoutButtons(-1);
 			}
 			else if (whatHappened == HT_EVENT_NODE_VPROP_CHANGED)
 			{
 				CRDFToolbarButton* pButton = (CRDFToolbarButton*)HT_GetNodeFEData(n);
 				pButton->SetText(HT_GetNodeName(n)); // Update our name.
-				theToolbar->LayoutButtons(-1);
+				LayoutButtons(-1);
 			}
 		}
 	}
-  }
 }
 
-CRDFToolbar::CRDFToolbar(int nMaxButtons, int nToolbarStyle, int nPicturesAndTextHeight, int nPicturesHeight,
-						   int nTextHeight)
+CRDFToolbar::CRDFToolbar(HT_View htView, int nMaxButtons, int nToolbarStyle, int nPicturesAndTextHeight, 
+						 int nPicturesHeight, int nTextHeight)
 	 : CNSToolbar2(nMaxButtons, nToolbarStyle, nPicturesAndTextHeight, nPicturesHeight, nTextHeight)
 {
 	m_nNumberOfRows = 1;
-	
-	// Construct the notification struct used by HT
-	HT_Notification ns = new HT_NotificationStruct;
-	ns->notifyProc = ptNotifyProcedure;
-	ns->data = this;
-	
-	// Construct the pane and give it our notification struct
-	m_PersonalToolbarPane = HT_NewPersonalToolbarPane(ns);
-	if (m_PersonalToolbarPane)
-		HT_SetPaneFEData(m_PersonalToolbarPane, this);
+	m_nRowHeight = LINKTOOLBARHEIGHT;
+
+	// Set our view and point HT at us.
+	m_ToolbarView = htView;
+	HT_SetViewFEData(htView, this);
 }
 
-CRDFToolbar* CRDFToolbar::CreateUserToolbar(CWnd* pParent)
+CRDFToolbar* CRDFToolbar::CreateUserToolbar(HT_View theView, CWnd* pParent)
 {
-	// read in the maximum size we're allowing for personal toolbar items
-	int32 nMaxToolbarButtonChars;
-    int32 nMinToolbarButtonChars;
-
-	if(PREF_GetIntPref("browser.personal_toolbar_button.max_chars", &nMaxToolbarButtonChars) ==
-		PREF_ERROR)
-		m_nMaxToolbarButtonChars = 30;
-	else
-		m_nMaxToolbarButtonChars = CASTINT(nMaxToolbarButtonChars);
-
-    if(PREF_GetIntPref("browser.personal_toolbar_button.min_chars", &nMinToolbarButtonChars) ==
-		PREF_ERROR)
-		m_nMinToolbarButtonChars = 15;
-	else
-		m_nMinToolbarButtonChars = CASTINT(nMinToolbarButtonChars);
-
-	CRDFToolbar* pToolbar = new CRDFToolbar(MAX_TOOLBAR_BUTTONS,theApp.m_pToolbarStyle, 43, 27, 27);
+	CRDFToolbar* pToolbar = new CRDFToolbar(theView, MAX_TOOLBAR_BUTTONS, theApp.m_pToolbarStyle, 43, 27, 27);
 
 	if (pToolbar->Create(pParent))
 	{
 		pToolbar->SetButtonsSameWidth(FALSE);
 
 		// Top node is already open.  Fill it in.
-		pToolbar->FillInToolbar();
+		PRBool openState;
+		HT_Resource topNode = HT_TopNode(theView);
+		HT_GetOpenState(topNode, &openState);
+		if (openState)
+			pToolbar->FillInToolbar();
+		else HT_SetOpenState(topNode, PR_TRUE); // Let the callback kick in.
 	}
 
 	return pToolbar;
@@ -887,11 +997,10 @@ CRDFToolbar* CRDFToolbar::CreateUserToolbar(CWnd* pParent)
 
 CRDFToolbar::~CRDFToolbar()
 {
-	if (m_PersonalToolbarPane)
+	if (m_ToolbarView)
 	{
-		HT_Pane oldPane = m_PersonalToolbarPane;
-		m_PersonalToolbarPane = NULL;
-		HT_DeletePane(oldPane);
+		HT_DeleteView(m_ToolbarView);
+		m_ToolbarView = NULL;
 	}
 }
 
@@ -913,14 +1022,10 @@ int CRDFToolbar::Create(CWnd *pParent)
 
 void CRDFToolbar::FillInToolbar()
 {
-	if (!m_PersonalToolbarPane)
+	if (!m_ToolbarView)
 		return;
 
-	HT_View theView = HT_GetSelectedView(m_PersonalToolbarPane);
-	if (theView == NULL)
-		return;
-
-	HT_Resource top = HT_TopNode(theView);
+	HT_Resource top = HT_TopNode(m_ToolbarView);
 	HT_Cursor cursor = HT_NewCursor(top);
 	if (cursor == NULL)
 		return;
@@ -960,13 +1065,17 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	}
 
 	HT_SetNodeFEData(item, pButton);
+	CSize buttonSize = pButton->GetMinimalButtonSize(); // Only care about height.
+	
+	if (buttonSize.cy > m_nRowHeight)
+		m_nRowHeight = buttonSize.cy;
 
 	AddButtonAtIndex(pButton); // Have to put the button in the array, since the toolbar base class depends on it.
 }
 
 int CRDFToolbar::GetHeight(void)
 {
-    return m_nNumberOfRows * (LINKTOOLBARHEIGHT + SPACE_BETWEEN_ROWS) + SPACE_BETWEEN_ROWS;
+    return m_nNumberOfRows * (m_nRowHeight + SPACE_BETWEEN_ROWS) + SPACE_BETWEEN_ROWS;
 }
 
 
@@ -983,7 +1092,7 @@ void CRDFToolbar::SetMinimumRows(int rowWidth)
         return;
     }
 
-	HT_Cursor cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+	HT_Cursor cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 	if (!cursor)
 		return;
 	HT_Resource item;
@@ -1084,7 +1193,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
     int numChars = 0; // Start off trying to fit the whole thing on the toolbar.
     int minChars = 0;
 	
-	HT_Cursor cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+	HT_Cursor cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 	if (!cursor)
 		return;
 	HT_Resource item;
@@ -1111,7 +1220,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
         usedSpace = 0;
         numChars--;
         // Let's see what we can fit.
-        HT_Cursor cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+        HT_Cursor cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 		if (!cursor)
 			return;
 		HT_Resource item;
@@ -1138,7 +1247,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
 	CSize buttonSize;
     CString strTxt;
 
-	cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+	cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 	if (!cursor)
 		return;
 	while ((item = HT_GetNextItem(cursor)))
@@ -1154,7 +1263,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
         if (tempTotal > (width - RIGHT_TOOLBAR_MARGIN))
         {
             nStartX = LEFT_TOOLBAR_MARGIN;
-            nStartY += LINKTOOLBARHEIGHT + SPACE_BETWEEN_ROWS;
+            nStartY += m_nRowHeight + SPACE_BETWEEN_ROWS;
         }
 
 		pButton->MoveWindow(nStartX, nStartY,
@@ -1202,7 +1311,7 @@ void CRDFToolbar::WidthChanged(int animWidth)
 
     int numChars = 0; // Start off trying to fit the whole thing on the toolbar.
     int minChars = 0;
-	HT_Cursor cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+	HT_Cursor cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 	if (!cursor)
 		return;
 	HT_Resource item;
@@ -1229,7 +1338,7 @@ void CRDFToolbar::WidthChanged(int animWidth)
         usedSpace = 0;
         numChars--;
         // Let's see what we can fit.
-        HT_Cursor cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+        HT_Cursor cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 		if (!cursor)
 			return;
 		HT_Resource item;
@@ -1256,7 +1365,7 @@ void CRDFToolbar::WidthChanged(int animWidth)
 	CSize buttonSize;
     CString strTxt;
 
-	cursor = HT_NewCursor(HT_TopNode(HT_GetSelectedView(m_PersonalToolbarPane)));
+	cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
 	if (!cursor)
 		return;
 	
@@ -1273,7 +1382,7 @@ void CRDFToolbar::WidthChanged(int animWidth)
         if (tempTotal > (width - RIGHT_TOOLBAR_MARGIN))
         {
             nStartX = LEFT_TOOLBAR_MARGIN;
-            nStartY += LINKTOOLBARHEIGHT + SPACE_BETWEEN_ROWS;
+            nStartY += m_nRowHeight + SPACE_BETWEEN_ROWS;
         }
 
 		pButton->MoveWindow(nStartX, nStartY,
@@ -1306,8 +1415,7 @@ END_MESSAGE_MAP()
 void CRDFToolbar::OnRButtonDown(UINT nFlags, CPoint point)
 {
 	m_MenuCommandMap.Clear();
-	HT_View theView = HT_GetSelectedView(m_PersonalToolbarPane);
-	HT_Cursor theCursor = HT_NewContextualMenuCursor(theView, PR_FALSE, PR_TRUE);
+	HT_Cursor theCursor = HT_NewContextualMenuCursor(m_ToolbarView, PR_FALSE, PR_TRUE);
 	CMenu menu;
 	ClientToScreen(&point);
 	if (menu.CreatePopupMenu() != 0 && theCursor != NULL)
@@ -1345,9 +1453,93 @@ BOOL CRDFToolbar::OnCommand( WPARAM wParam, LPARAM lParam )
 		if (theCommand)
 		{
 			HT_MenuCmd htCommand = theCommand->GetHTCommand();
-			HT_DoMenuCmd(m_PersonalToolbarPane, htCommand);
+			HT_DoMenuCmd(HT_GetPane(m_ToolbarView), htCommand);
 		}
 		return TRUE;
 	}
 	return((BOOL)GetParentFrame()->SendMessage(WM_COMMAND, wParam, lParam));
+}
+
+// ==========================================================
+// CRDFToolbarHolder
+// The container of all the toolbars
+// ==========================================================
+
+CRDFToolbarHolder::CRDFToolbarHolder(int maxToolbars, CFrameWnd* pParentWindow)
+:CCustToolbar(maxToolbars)
+{
+	m_pCachedParentWindow = pParentWindow;
+}
+
+void CRDFToolbarHolder::InitializeRDFData()
+{
+	HT_Notification ns = new HT_NotificationStruct;
+	ns->notifyProc = toolbarNotifyProcedure;
+	ns->data = this;
+	
+	// Construct the pane and give it our notification struct
+	HT_Pane newPane = HT_NewToolbarPane(ns);
+	if (newPane)
+	{
+		SetHTPane(newPane);
+		HT_SetPaneFEData(newPane, this);
+	}
+}
+	
+CIsomorphicCommandMap* CIsomorphicCommandMap::InitializeCommandMap() 
+{
+	CIsomorphicCommandMap* result = new CIsomorphicCommandMap();
+
+	// Enter the builtin browser commands into the map.
+	result->AddItem("command:back", ID_NAVIGATE_BACK);
+	result->AddItem("command:forward", ID_NAVIGATE_FORWARD);
+	result->AddItem("command:reload", ID_NAVIGATE_RELOAD);
+	result->AddItem("command:print", ID_FILE_PRINT);
+	result->AddItem("command:stop", ID_NAVIGATE_INTERRUPT);
+
+	return result;
+}
+
+void CIsomorphicCommandMap::AddItem(CString xpItem, UINT feResource)
+{
+	char buffer[20];
+	_itoa((int)feResource, buffer, 10);
+	mapFromXPToFE.SetAt(xpItem, CString(buffer));
+	mapFromFEToXP.SetAt(CString(buffer), xpItem);
+}
+
+void CIsomorphicCommandMap::RemoveXPItem(CString xpItem)
+{
+	CString result;
+	mapFromXPToFE.Lookup(xpItem, result);
+	mapFromXPToFE.RemoveKey(xpItem);
+	mapFromFEToXP.RemoveKey(result);
+}
+
+void CIsomorphicCommandMap::RemoveFEItem(UINT feResource)
+{
+	char buffer[20];
+	_itoa((int)feResource, buffer, 10);
+	CString resource(buffer);
+	CString result;
+	mapFromFEToXP.Lookup(resource, result);
+	mapFromXPToFE.RemoveKey(result);
+	mapFromFEToXP.RemoveKey(resource);
+}
+
+UINT CIsomorphicCommandMap::GetFEResource(CString xpItem)
+{
+	CString result;
+	mapFromXPToFE.Lookup(xpItem, result);
+	return (atoi(result));
+}
+
+CString CIsomorphicCommandMap::GetXPResource(UINT feResource)
+{
+	char buffer[20];
+	_itoa((int)feResource, buffer, 10);
+	CString resource(buffer);
+	CString result;
+	mapFromFEToXP.Lookup(resource, result);
+	return result;
 }

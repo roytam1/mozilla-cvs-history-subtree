@@ -33,6 +33,7 @@
 #include "libevent.h"
 #include "navfram.h"
 #include "edview.h"
+#include "vocab.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -276,9 +277,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 			pIStatusBar->Release();
 		}
     } else {
-		
-		//I'm hardcoding string since I don't want it translated.
-	    GetChrome()->CreateCustomizableToolbar("Browser", 5, TRUE);
 
 /*
         // Now that the application palette has been created (if 
@@ -366,7 +364,7 @@ int CMainFrame::CreateLocationBar()
 
 int CMainFrame::CreateLinkBar(void)
 {
-	m_barLinks = CRDFToolbar::CreateUserToolbar(this);
+	m_barLinks = CRDFToolbar::CreateUserToolbar(NULL, this);
 
 	CButtonToolbarWindow *pWindow = new CButtonToolbarWindow(m_barLinks, theApp.m_pToolbarStyle, 43, 27, eSMALL_HTAB);
 
@@ -485,6 +483,16 @@ int CMainFrame::CreateMainToolbar(void)
 	RecalcLayout();
 
 	return TRUE;
+}
+
+void CMainFrame::BeginStreamingOfRDFToolbars()
+{
+	//I'm hardcoding string since I don't want it translated.
+	GetChrome()->CreateRDFToolbar("Browser", 5, TRUE);
+
+	//CreateMainToolbar();
+	//CreateLocationBar();
+	//CreateLinkBar();  
 }
 
 void CMainFrame::OnShowWindow (BOOL bShow, UINT nStatus)

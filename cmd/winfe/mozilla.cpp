@@ -1211,6 +1211,8 @@ BOOL CNetscapeApp::InitInstance()
 
 	RDF_Init(&initStruct);	// TODO: Can this fail? Want to bail if so.
 	
+	// Initialize the command map used by RDF configurable UI.
+	m_pBrowserCommandMap = CIsomorphicCommandMap::InitializeCommandMap();
 
 // RDF INITIALIZATION ENDS HERE
 
@@ -1794,10 +1796,7 @@ BOOL CNetscapeApp::InitInstance()
 				pMainFrame->OnLoadHomePage();
 				// Now that we have the frame, dynamically create the toolbars (We won't enter this function
 			    // from JavaScript. FE_MakeNewWindow is used instead.)
-				pMainFrame->CreateMainToolbar();
-				pMainFrame->CreateLocationBar();
-				pMainFrame->CreateLinkBar();  
-				pMainFrame->GetChrome()->FinishedAddingBrowserToolbars();
+				pMainFrame->BeginStreamingOfRDFToolbars();
 			}
 		}
 	}

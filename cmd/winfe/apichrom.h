@@ -144,6 +144,7 @@ public:
 	virtual void StopAnimation() = 0;
 
 // Configurable Toolbar Manager stuff
+	virtual int CreateRDFToolbar(CString toolbarName, int nMaxToolbars, BOOL bHasAnimation)=0;
 	virtual int CreateCustomizableToolbar(CString toolbarName, int nMaxToolbars, BOOL bHasAnimation)=0;
 	virtual int CreateCustomizableToolbar(UINT nStringID, int nMaxToolbars, BOOL bHasAnimation) = 0;
 	virtual CString GetCustToolbarString() = 0;

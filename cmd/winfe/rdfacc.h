@@ -21,6 +21,35 @@
 
 #include "cxstubs.h"
 
+class CIsomorphicCommandMap
+{
+private:
+	CMapStringToString mapFromXPToFE;
+	CMapStringToString mapFromFEToXP;
+
+public:
+	static CIsomorphicCommandMap* InitializeCommandMap();
+	// This function builds the command map and prepopulates it with the set of commands
+	// that can be responded to.  TODO: Make INIT take an argument indicating which command set
+	// e.g., mail, browser, editor to use.  For now, we're just worrying about the browser.
+
+	void AddItem(CString xpItem, UINT feResource);
+		// Adds an isomorphic entry into the two maps.
+
+	void RemoveXPItem(CString xpItem);
+		// Removes the isomorphic entry from the two maps (keyed on the XP item).
+
+	void RemoveFEItem(UINT feResource);
+		// Removes the isomorphic entry from the two maps (keyed on the FE resource ID)
+
+	UINT GetFEResource(CString xpItem);
+		// Given an XP name, retrieves the FE resource.
+
+	CString GetXPResource(UINT resource);
+		// Given an FE resource, retrieves the XP name.
+};
+
+
 class CCustomImageObject;
 class CRDFImage;
 
