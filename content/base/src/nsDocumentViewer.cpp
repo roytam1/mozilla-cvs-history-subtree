@@ -7063,13 +7063,18 @@ SetChildTextZoom(nsIMarkupDocumentViewer* aChild, void* aClosure)
 NS_IMETHODIMP DocumentViewerImpl::SetTextZoom(float aTextZoom)
 {
   if (mDeviceContext) {
+    float oldTextZoom = 1.0;  // just in case mDeviceContext doesn't implement
+    // Don't reflow if there's no change in the textZoom.
+    mDeviceContext->GetTextZoom(oldTextZoom);
     mDeviceContext->SetTextZoom(aTextZoom);
-    if (mPresContext) {
+    if (oldTextZoom != aTextZoom && mPresContext) {
       mPresContext->ClearStyleDataAndReflow();
     }
   }
 
-  // now set the text zoom on all children of mContainer
+  // now set the text zoom on all children of mContainer (even if our zoom
+  // didn't change, our children's zoom may be different, though it would
+  // be unusual).
   struct TextZoomInfo textZoomInfo = { aTextZoom };
   return CallChildren(SetChildTextZoom, &textZoomInfo);
 }
