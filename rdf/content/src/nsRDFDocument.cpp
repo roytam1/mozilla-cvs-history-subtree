@@ -23,6 +23,10 @@
   implementation serves as the basis for generating an NGLayout
   content model.
 
+  TO DO
+
+  1) Figure out how to get rid of the DummyListener hack.
+
  */
 
 #include "nsIArena.h"
@@ -85,6 +89,7 @@ static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIRDFXMLDocumentIID,     NS_IRDFXMLDOCUMENT_IID);
 static NS_DEFINE_IID(kIStreamListenerIID,     NS_ISTREAMLISTENER_IID);
+static NS_DEFINE_IID(kIStreamObserverIID,     NS_ISTREAMOBSERVER_IID);
 static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIWebShellIID,           NS_IWEB_SHELL_IID);
 static NS_DEFINE_IID(kIXMLDocumentIID,        NS_IXMLDOCUMENT_IID);
@@ -300,6 +305,9 @@ public:
     NS_IMETHOD OnCSSStyleSheetAdded(nsIURL* aStyleSheetURI);
     NS_IMETHOD OnNamedDataSourceAdded(const char* aNamedDataSourceURI);
 
+    // Implementation methods
+    nsresult StartLayout(void);
+
 protected:
     nsIContent*
     FindContent(const nsIContent* aStartNode,
@@ -312,9 +320,6 @@ protected:
     nsresult
     AddNamedDataSource(const char* uri);
 
-    nsresult
-    StartLayout(void);
-    
 
     nsIArena*              mArena;
     nsVoidArray            mObservers;
@@ -340,6 +345,99 @@ protected:
     nsIRDFDataSource*      mDocumentDataSource;
 };
 
+
+////////////////////////////////////////////////////////////////////////
+// DummyListener
+//
+//   This is a _total_ hack that is used to get stuff to draw right
+//   when a second copy is loaded. I need to talk to Guha about what
+//   the expected behavior should be...
+//
+class DummyListener : public nsIStreamListener
+{
+private:
+    RDFDocumentImpl* mRDFDocument;
+    PRBool mWasNotifiedOnce; // XXX why do we get _two_ OnStart/StopBinding() calls?
+
+public:
+    DummyListener(RDFDocumentImpl* aRDFDocument)
+        : mRDFDocument(aRDFDocument),
+          mWasNotifiedOnce(PR_FALSE)
+    {
+        NS_INIT_REFCNT();
+        NS_ADDREF(mRDFDocument);
+    }
+
+    virtual ~DummyListener(void) {
+        NS_RELEASE(mRDFDocument);
+    }
+
+    // nsISupports interface
+    NS_DECL_ISUPPORTS
+
+    // nsIStreamObserver interface
+    NS_IMETHOD
+    OnStartBinding(nsIURL* aURL, const char *aContentType) {
+        if (! mWasNotifiedOnce) {
+            mRDFDocument->BeginLoad();
+            mRDFDocument->StartLayout();
+        }
+        return NS_OK;
+    }
+
+    NS_IMETHOD
+    OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax) {
+        return NS_OK;
+    }
+
+    NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg) {
+        return NS_OK;
+    }
+
+    NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg) {
+        if (! mWasNotifiedOnce) {
+            mRDFDocument->EndLoad();
+            mWasNotifiedOnce = PR_TRUE;
+        }
+        return NS_OK;
+    }
+    
+
+    // nsIStreamListener interface
+    NS_IMETHOD
+    GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo) {
+        aInfo->seekable = PR_FALSE;
+        return NS_OK;
+    }
+
+    NS_IMETHOD
+    OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength) {
+        return NS_OK;
+    }
+};
+
+NS_IMPL_ADDREF(DummyListener);
+NS_IMPL_RELEASE(DummyListener);
+
+NS_IMETHODIMP
+DummyListener::QueryInterface(REFNSIID aIID, void** aResult)
+{
+    NS_PRECONDITION(aResult != nsnull, "null ptr");
+    if (! aResult)
+        return NS_ERROR_NULL_POINTER;
+
+    if (aIID.Equals(kIStreamListenerIID) ||
+        aIID.Equals(kIStreamObserverIID) ||
+        aIID.Equals(kISupportsIID)) {
+        *aResult = NS_STATIC_CAST(nsIStreamListener*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+    else {
+        *aResult = nsnull;
+        return NS_NOINTERFACE;
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////
 // ctors & dtors
@@ -489,15 +587,9 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
     if (NS_FAILED(rv))
         return rv;
       
-    // XXX a raw in-memory store is not appropriate, because it allows
-    // changes to be made to the data store and won't flush them. It'd
-    // be better to create this as a nsRDFStreamDataSource object, but
-    // there are some issues with getting the right parser.
-    //
-    // That said, we probably _do_ want to create a "scratch"
-    // in-memory data store to associate with the document to be a
-    // catch-all for any doc-specific info that we need to store
-    // (e.g., current sort order, etc.)
+    // Create a "scratch" in-memory data store to associate with the
+    // document to be a catch-all for any doc-specific info that we
+    // need to store (e.g., current sort order, etc.)
     if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
                                                     nsnull,
                                                     kIRDFDataSourceIID,
@@ -511,6 +603,7 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
     if (NS_FAILED(rv = aURL->GetSpec(&uri)))
         return rv;
 
+    // Now load the actual XML/RDF document data source.
     if (NS_SUCCEEDED(rv = mRDFService->GetDataSource(uri, &mDocumentDataSource))) {
         if (NS_FAILED(rv = mDB->AddDataSource(mDocumentDataSource)))
             return rv;
@@ -548,6 +641,37 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
             }
             NS_RELEASE(doc);
         }
+
+        // XXX Allright, this is an atrocious hack. Basically, we
+        // construct a dummy listener object so that we can load the
+        // URL, which allows us to receive StartLayout() and EndLoad()
+        // calls asynchronously. If we don't do this, then there is no
+        // way (that I could figure out) to force the content model to
+        // be traversed so that a document is laid out again.
+        //
+        // Looking at the "big picture" here, the real problem is that
+        // the "registered" data sources mechanism is really just a
+        // cache of stream data sources. It's not really clear what
+        // should happen when somebody opens a second document on the
+        // same source. You'd kinda like both to refer to the same
+        // thing, so changes to one are immediately reflected in the
+        // other. On the other hand, you'd also like to be able to
+        // _unload_ and reload a content model, say by doing
+        // "shift+reload". _So_, that kinda ties into the real cache,
+        // etc. etc.
+        //
+        // What I guess I'm saying is, maybe it doesn't make that much
+        // sense to register stream data sources when they're
+        // created...I dunno...
+        nsIStreamListener* lsnr = new DummyListener(this);
+        if (! lsnr)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        NS_ADDREF(lsnr);
+        *aDocListener = lsnr;
+
+        if (NS_FAILED(rv = NS_OpenURL(aURL, lsnr)))
+            return rv;
     }
     else if (NS_SUCCEEDED(rv = nsRepository::CreateInstance(kRDFStreamDataSourceCID,
                                                             nsnull,
@@ -570,11 +694,15 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
 
         if (NS_FAILED(rv = mDocumentDataSource->Init(uri)))
             return rv;
+
+        // XXX this may cause problems down the road
+        *aDocListener = nsnull;
     }
     else {
         // an error occurred
         PR_ASSERT(0);
     }
+
     return NS_OK;
 }
 
@@ -612,9 +740,9 @@ RDFDocumentImpl::SetDocumentCharacterSet(nsCharSetID aCharSetID)
 
 nsresult 
 RDFDocumentImpl::CreateShell(nsIPresContext* aContext,
-                           nsIViewManager* aViewManager,
-                           nsIStyleSet* aStyleSet,
-                           nsIPresShell** aInstancePtrResult)
+                             nsIViewManager* aViewManager,
+                             nsIStyleSet* aStyleSet,
+                             nsIPresShell** aInstancePtrResult)
 {
     NS_PRECONDITION(aInstancePtrResult, "null ptr");
     if (! aInstancePtrResult)
@@ -635,7 +763,7 @@ RDFDocumentImpl::CreateShell(nsIPresContext* aContext,
     }
 
     mPresShells.AppendElement(shell);
-    *aInstancePtrResult = shell;
+    *aInstancePtrResult = shell; // addref implicit
 
     return NS_OK;
 }
@@ -1828,9 +1956,10 @@ RDFDocumentImpl::StartLayout(void)
 
         NS_RELEASE(shell);
     }
-
     return NS_OK;
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////
 
