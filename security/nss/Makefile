@@ -76,23 +76,6 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
 
-nss_build_all: 
-	$(MAKE) build_coreconf
-	$(MAKE) build_nspr
-	$(MAKE) build_dbm
-	$(MAKE)
-
-build_coreconf:
-	cd $(CORE_DEPTH)/coreconf ;  $(MAKE)
-
-build_nspr:
-	cd $(CORE_DEPTH)/../nsprpub ; $(MAKE) OBJDIR_NAME=${OBJDIR_NAME} 
-
-build_dbm:
-	cd $(CORE_DEPTH)/dbm ; $(MAKE) export libs
-
-	
-
 moz_import::
 ifeq ($(OS_ARCH),WINNT)
 	cp $(DIST)/../include/* $(DIST)/include
@@ -114,9 +97,40 @@ else
 endif
 endif
 
+nsm:: all 
+	cd ssm/lib/protocol; gmake
+	cd ssm/server; gmake import; gmake
+
+nsm_rebuild:: 
+	cd ssm/lib/protocol; gmake
+	cd ssm/ui; gmake
+	cd ssm/server; gmake import; gmake
+
+nsm_protocol: all
+	cd ssm/lib/protocol; gmake
+
+nsm_ui: all
+	cd ssm/ui; gmake
+
+nsm_gromit: nsm_protocol
+	cd ssm/lib/client; gmake
+	cd ssm/nav/gromit; gmake
+
+nsm_server: nsm_protocol nsm_ui
+	cd ssm/server; gmake import; gmake
+
 coreconf_hack:
-	cd ../coreconf; $(MAKE)
-	$(MAKE) import
+	cd ../coreconf; gmake
+	gmake import
 
 nss_RelEng_bld: coreconf_hack
-	$(MAKE)
+#	gmake import; gmake
+#	cd ns/svrcore; gmake
+	gmake
+
+nsm_RelEng_srvr_coreconf_import:
+	gmake import
+
+nsm_RelEng_srvr_bld_Win: nsm_RelEng_srvr_coreconf_import nsm_server
+
+nsm_RelEng_srvr_bld: coreconf_hack nsm_server

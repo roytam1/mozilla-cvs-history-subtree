@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -258,7 +242,6 @@ static void _PR_InitializeRecycledThread(PRThread *thread)
 #endif
     PR_ASSERT(thread->dumpArg == 0 && thread->dump == 0);
     PR_ASSERT(thread->errorString == 0 && thread->errorStringSize == 0);
-    PR_ASSERT(thread->errorStringLength == 0);
 
     /* Reset data members in thread structure */
     thread->errorCode = thread->osErrorCode = 0;
@@ -356,14 +339,14 @@ _PR_UserDestroyThread(PRThread *thread)
     if (thread->threadAllocatedOnStack == 1) {
         _PR_MD_CLEAN_THREAD(thread);
         /*
-         *  Because the no_sched field is set, this thread/stack will
-         *  will not be re-used until the flag is cleared by the thread
-         *  we will context switch to.
-         */
-        _PR_FreeStack(thread->stack);
+          *  Because the no_sched field is set, this thread/stack will
+          *  will not be re-used until the flag is cleared by the thread
+          *  we will context switch to.
+          */
+    _PR_FreeStack(thread->stack);
     } else {
 #ifdef WINNT
-        _PR_MD_CLEAN_THREAD(thread);
+    _PR_MD_CLEAN_THREAD(thread);
 #else
         /*
          * This assertion does not apply to NT.  On NT, every fiber,
@@ -731,7 +714,7 @@ static void _PR_Resume(PRThread *thread)
  
         _PR_LOCK_LOCK(wLock);
         if (thread->wait.lock->owner == 0) {
-            _PR_UnblockLockWaiter(thread->wait.lock);
+            _PR_AssignLock(thread->wait.lock);
         }
         _PR_LOCK_UNLOCK(wLock);
         break;
@@ -1249,18 +1232,18 @@ PR_IMPLEMENT(PRThread*) _PR_CreateThread(PRThreadType type,
 #ifdef HAVE_STACK_GROWING_UP
             thread = (PRThread*) top;
             top = top + sizeof(PRThread);
-            /*
-             * Make stack 64-byte aligned
-             */
+        /*
+         * Make stack 64-byte aligned
+         */
             if ((PRUptrdiff)top & 0x3f) {
                 top = (char*)(((PRUptrdiff)top + 0x40) & ~0x3f);
             }
 #else
             top = top - sizeof(PRThread);
             thread = (PRThread*) top;
-            /*
-             * Make stack 64-byte aligned
-             */
+        /*
+         * Make stack 64-byte aligned
+         */
             if ((PRUptrdiff)top & 0x3f) {
                 top = (char*)((PRUptrdiff)top & ~0x3f);
             }
@@ -1320,13 +1303,13 @@ PR_IMPLEMENT(PRThread*) _PR_CreateThread(PRThreadType type,
             _PR_MD_INIT_CONTEXT(thread, top, _PR_UserRunThread, &status);
 
             if (status == PR_FALSE) {
-                _MD_FREE_LOCK(&thread->threadLock);
+        _MD_FREE_LOCK(&thread->threadLock);
                 if (thread->threadAllocatedOnStack == 1)
-                    _PR_FreeStack(thread->stack);
-                else {
-                    PR_DELETE(thread->privateData);
-                    PR_DELETE(thread);
-                }
+            _PR_FreeStack(thread->stack);
+        else {
+            PR_DELETE(thread->privateData);
+            PR_DELETE(thread);
+        }
                 return NULL;
             }
 
@@ -1336,16 +1319,16 @@ PR_IMPLEMENT(PRThread*) _PR_CreateThread(PRThreadType type,
             */
             if (state == PR_JOINABLE_THREAD) {
                 thread->term = PR_NewCondVar(_pr_terminationCVLock);
-                if (thread->term == NULL) {
-                    _MD_FREE_LOCK(&thread->threadLock);
-                    if (thread->threadAllocatedOnStack == 1)
-                        _PR_FreeStack(thread->stack);
-                    else {
-                        PR_DELETE(thread->privateData);
-                        PR_DELETE(thread);
-                    }
-                    return NULL;
-                }
+        if (thread->term == NULL) {
+            _MD_FREE_LOCK(&thread->threadLock);
+            if (thread->threadAllocatedOnStack == 1)
+                _PR_FreeStack(thread->stack);
+            else {
+                PR_DELETE(thread->privateData);
+                PR_DELETE(thread);
+            }
+            return NULL;
+        }
             }
   
         }

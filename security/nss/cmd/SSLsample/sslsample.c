@@ -252,40 +252,40 @@ myGetClientAuthData(void *arg,
 		    }
 		}
     } else { /* no nickname given, automatically find the right cert */
-	CERTCertNicknames *names;
-	int                i;
+		CERTCertNicknames *names;
+		int                i;
 
-	names = CERT_GetCertNicknames(CERT_GetDefaultCertDB(), 
-				      SEC_CERT_NICKNAMES_USER, proto_win);
+		names = CERT_GetCertNicknames(CERT_GetDefaultCertDB(), 
+		                              SEC_CERT_NICKNAMES_USER, proto_win);
 
-	if (names != NULL) {
-	    for(i = 0; i < names->numnicknames; i++ ) {
+		if (names != NULL) {
+		    for(i = 0; i < names->numnicknames; i++ ) {
 
-		cert = PK11_FindCertFromNickname(names->nicknames[i], 
-						 proto_win);
-		if (!cert) {
-		    continue;
+				cert = PK11_FindCertFromNickname(names->nicknames[i], 
+				                                 proto_win);
+				if (!cert) {
+				    continue;
+				}
+
+				/* Only check unexpired certs */
+				if (CERT_CheckCertValidTimes(cert, PR_Now(), PR_FALSE)
+				      != secCertTimeValid ) {
+				    CERT_DestroyCertificate(cert);
+				    continue;
+				}
+
+				secStatus = NSS_CmpCertChainWCANames(cert, caNames);
+				if (secStatus == SECSuccess) {
+				    privKey = PK11_FindKeyByAnyCert(cert, proto_win);
+				    if (privKey) {
+						break;
+				    }
+				    secStatus = SECFailure;
+				    break;
+				}
+				CERT_FreeNicknames(names);
+		    } /* for loop */
 		}
-
-		/* Only check unexpired certs */
-		if (CERT_CheckCertValidTimes(cert, PR_Now(), PR_FALSE)
-		      != secCertTimeValid ) {
-		    CERT_DestroyCertificate(cert);
-		    continue;
-		}
-
-		secStatus = NSS_CmpCertChainWCANames(cert, caNames);
-		if (secStatus == SECSuccess) {
-		    privKey = PK11_FindKeyByAnyCert(cert, proto_win);
-		    if (privKey) {
-			break;
-		    }
-		    secStatus = SECFailure;
-		    break;
-		}
-		CERT_FreeNicknames(names);
-	    } /* for loop */
-	}
     }
 
     if (secStatus == SECSuccess) {
@@ -301,7 +301,7 @@ myGetClientAuthData(void *arg,
  * Purpose: Called by SSL to inform application that the handshake is
  * complete. This function is mostly used on the server side of an SSL
  * connection, although it is provided for a client as well.
- * Useful when a non-blocking SSL_ReHandshake or SSL_ResetHandshake 
+ * Useful when a non-blocking SSL_RedoHandshake or SSL_ResetHandshake 
  * is used to initiate a handshake.
  *
  * A typical scenario would be:
@@ -334,23 +334,25 @@ myHandshakeCallback(PRFileDesc *socket, void *arg)
 **************************************************************************/
 
 void
-disableAllSSLCiphers(void)
+disableSSL2Ciphers(void)
 {
-    const PRUint16 *cipherSuites = SSL_ImplementedCiphers;
-    int             i            = SSL_NumImplementedCiphers;
-    SECStatus       rv;
+	int i;
 
-    /* disable all the SSL3 cipher suites */
-    while (--i >= 0) {
-	PRUint16 suite = cipherSuites[i];
-        rv = SSL_CipherPrefSetDefault(suite, PR_FALSE);
-	if (rv != SECSuccess) {
-	    printf("SSL_CipherPrefSetDefault didn't like value 0x%04x (i = %d)\n",
-	    	   suite, i);
-	    errWarn("SSL_CipherPrefSetDefault");
-	    exit(2);
+	/* disable all the SSL2 cipher suites */
+	for (i = 0; ssl2CipherSuites[i] != 0;  ++i) {
+		SSL_EnableCipher(ssl2CipherSuites[i], SSL_NOT_ALLOWED);
 	}
-    }
+}
+
+void
+disableSSL3Ciphers(void)
+{
+	int i;
+
+	/* disable all the SSL3 cipher suites */
+	for (i = 0; ssl3CipherSuites[i] != 0;  ++i) {
+		SSL_EnableCipher(ssl3CipherSuites[i], SSL_NOT_ALLOWED);
+	}
 }
 
 /**************************************************************************
@@ -389,7 +391,23 @@ printSecurityInfo(PRFileDesc *fd)
 	int    kp0;	/* total key bits */
 	int    kp1;	/* secret key bits */
 	int    result;
-	SSL3Statistics * ssl3stats = SSL_GetStatistics();
+
+#if 0
+/* statistics from ssl3_SendClientHello (sch) */
+extern long ssl3_sch_sid_cache_hits;
+extern long ssl3_sch_sid_cache_misses;
+extern long ssl3_sch_sid_cache_not_ok;
+
+/* statistics from ssl3_HandleServerHello (hsh) */
+extern long ssl3_hsh_sid_cache_hits;
+extern long ssl3_hsh_sid_cache_misses;
+extern long ssl3_hsh_sid_cache_not_ok;
+#endif
+
+/* statistics from ssl3_HandleClientHello (hch) */
+extern long ssl3_hch_sid_cache_hits;
+extern long ssl3_hch_sid_cache_misses;
+extern long ssl3_hch_sid_cache_not_ok;
 
 	result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
 	if (result != SECSuccess)
@@ -402,8 +420,8 @@ printSecurityInfo(PRFileDesc *fd)
 	PR_Free(sp);
 
 	printf("%ld cache hits; %ld cache misses, %ld cache not reusable\n",
-		ssl3stats->hch_sid_cache_hits, ssl3stats->hch_sid_cache_misses,
-	ssl3stats->hch_sid_cache_not_ok);
+		ssl3_hch_sid_cache_hits, ssl3_hch_sid_cache_misses,
+	ssl3_hch_sid_cache_not_ok);
 
 }
 
@@ -504,22 +522,22 @@ reap_threads(GlobalThreadMgr *threadMGR)
 		return 0;
 	PR_Lock(threadMGR->threadLock);
 	while (threadMGR->numRunning > 0) {
-	    PR_WaitCondVar(threadMGR->threadEndQ, PR_INTERVAL_NO_TIMEOUT);
-	    for (i = 0; i < threadMGR->numUsed; ++i) {
-		slot = &threadMGR->threads[i];
-		if (slot->running == rs_zombie)  {
-		    /* Handle cleanup of thread here. */
-		    printf("Thread in slot %d returned %d\n", i, slot->rv);
+		PR_WaitCondVar(threadMGR->threadEndQ, PR_INTERVAL_NO_TIMEOUT);
+		for (i = 0; i < threadMGR->numUsed; ++i) {
+			slot = &threadMGR->threads[i];
+			if (slot->running == rs_zombie)  {
+				/* Handle cleanup of thread here. */
+				printf("Thread in slot %d returned %d\n", i, slot->rv);
 
-		    /* Now make sure the thread has ended OK. */
-		    PR_JoinThread(slot->prThread);
-		    slot->running = rs_idle;
-		    --threadMGR->numRunning;
+				/* Now make sure the thread has ended OK. */
+				PR_JoinThread(slot->prThread);
+				slot->running = rs_idle;
+				--threadMGR->numRunning;
 
-		    /* notify the thread launcher. */
-		    PR_NotifyCondVar(threadMGR->threadStartQ);
+				/* notify the thread launcher. */
+				PR_NotifyCondVar(threadMGR->threadStartQ);
+			}
 		}
-	    }
 	}
 
 	/* Safety Sam sez: make sure count is right. */

@@ -152,10 +152,10 @@ ldap_sort_strcasecmp(
 {
     /* XXXceb
      * I am not 100% sure this is the way this should be handled.  
-     * For now we will return a NULL on invalid.
+     * For now we will return a 0 on invalid.
      */    
     if (NULL == a || NULL == b)
-        return (NULL);
+        return (0);
 	return( strcasecmp( (char *)*a, (char *)*b ) );
 }
 
