@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 4; c-file-style: "stroustrup" -*-
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8; c-file-style: "stroustrup" -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -47,14 +47,20 @@
 #include "nsSpecialSystemDirectory.h"
 #include "nsEnumeratorUtils.h"
 
+#include "nsIRDFRemoteDataSource.h"
+
 #include "nsEscape.h"
 
-#include "nsIPostToServer.h"
 #include "nsIURL.h"
 #ifdef NECKO
+#include "nsNeckoUtil.h"
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIChannel.h"
+#include "nsIHTTPChannel.h"
+#include "nsHTTPEnums.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#else
+#include "nsIPostToServer.h"
 #endif // NECKO
 #include "nsIBuffer.h"
 #include "nsIInputStream.h"
@@ -81,6 +87,7 @@ static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,    NS_RDFINMEMORYDATASOURCE_CID)
 static NS_DEFINE_IID(kISupportsIID,                NS_ISUPPORTS_IID);
 
 static const char kURINC_SearchRoot[] = "NC:SearchEngineRoot";
+static const char kURINC_LastSearchRoot[] = "NC:LastSearchRoot";
 
 
 
@@ -92,7 +99,8 @@ private:
 	nsIRDFResource		*mEngine;
 	static PRInt32		gRefCnt;
 
-    // pseudo-constants
+    // pseudo-constants    
+	static nsIRDFResource	*kNC_LastSearchRoot;
 	static nsIRDFResource	*kNC_loading;
 	static nsIRDFResource	*kNC_Child;
 	static nsIRDFResource	*kNC_Name;
@@ -111,17 +119,25 @@ public:
 			SearchDataSourceCallback(nsIRDFDataSource *ds, nsIRDFResource *parent, nsIRDFResource *engine);
 	virtual		~SearchDataSourceCallback(void);
 
+#ifdef NECKO
+    // nsIStreamObserver methods:
+    NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+    NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+    // nsIStreamListener methods:
+    NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+#else
 	// stream observer
 
-	NS_IMETHOD	OnStartBinding(nsIURL *aURL, const char *aContentType);
-	NS_IMETHOD	OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-	NS_IMETHOD	OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-	NS_IMETHOD	OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
+	NS_IMETHOD	OnStartRequest(nsIURI *aURL, const char *aContentType);
+	NS_IMETHOD	OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+	NS_IMETHOD	OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+	NS_IMETHOD	OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg);
 
 	// stream listener
-	NS_IMETHOD	GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo);
-	NS_IMETHOD	OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, 
+	NS_IMETHOD	GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo);
+	NS_IMETHOD	OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, 
                                PRUint32 aLength);
+#endif
 };
 
 
@@ -129,13 +145,12 @@ public:
 class SearchDataSource : public nsIRDFSearchDataSource
 {
 private:
-	char			*mURI;
-	nsVoidArray		*mObservers;
-
 	static PRInt32		gRefCnt;
 
     // pseudo-constants
 	static nsIRDFResource		*kNC_SearchRoot;
+	static nsIRDFResource		*kNC_LastSearchRoot;
+	static nsIRDFResource		*kNC_Ref;
 	static nsIRDFResource		*kNC_Child;
 	static nsIRDFResource		*kNC_Data;
 	static nsIRDFResource		*kNC_Name;
@@ -152,12 +167,12 @@ friend	class SearchDataSourceCallback;
 
 	NS_DECL_ISUPPORTS
 
-			SearchDataSource(void);
+				SearchDataSource(void);
 	virtual		~SearchDataSource(void);
+	nsresult	Init();
 
 	// nsIRDFDataSource methods
 
-	NS_IMETHOD	Init(const char *uri);
 	NS_IMETHOD	GetURI(char **uri);
 	NS_IMETHOD	GetSource(nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -182,6 +197,14 @@ friend	class SearchDataSourceCallback;
 	NS_IMETHOD	Unassert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target);
+	NS_IMETHOD	Change(nsIRDFResource* aSource,
+				nsIRDFResource* aProperty,
+				nsIRDFNode* aOldTarget,
+				nsIRDFNode* aNewTarget);
+	NS_IMETHOD	Move(nsIRDFResource* aOldSource,
+				nsIRDFResource* aNewSource,
+				nsIRDFResource* aProperty,
+				nsIRDFNode* aTarget);
 	NS_IMETHOD	HasAssertion(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -194,9 +217,10 @@ friend	class SearchDataSourceCallback;
 	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aResult);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
-	NS_IMETHOD	Flush();
 	NS_IMETHOD	GetAllCommands(nsIRDFResource* source,
 				nsIEnumerator/*<nsIRDFResource>*/** commands);
+	NS_IMETHOD	GetAllCmds(nsIRDFResource* source,
+				nsISimpleEnumerator/*<nsIRDFResource>*/** commands);
 
 	NS_IMETHOD	IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
 				nsIRDFResource*   aCommand,
@@ -214,7 +238,8 @@ static PRBool		isSearchURI(nsIRDFResource* aResource);
 static nsresult		BeginSearchRequest(nsIRDFResource *source);
 static nsresult		DoSearch(nsIRDFResource *source, nsIRDFResource *engine, nsString text);
 static nsresult		GetSearchEngineList();
-static nsresult		ReadFileContents(char *basename, nsString & sourceContents);
+static nsresult		GetSearchFolder(nsFileSpec &spec);
+static nsresult		ReadFileContents(char *baseFilename, nsString & sourceContents);
 static nsresult		GetData(nsString data, char *sectionToFind, char *attribToFind, nsString &value);
 static nsresult		GetInputs(nsString data, nsString text, nsString &input);
 static nsresult		GetURL(nsIRDFResource *source, nsIRDFLiteral** aResult);
@@ -231,6 +256,8 @@ PRInt32				SearchDataSource::gRefCnt;
 nsIRDFDataSource		*SearchDataSource::mInner = nsnull;
 
 nsIRDFResource			*SearchDataSource::kNC_SearchRoot;
+nsIRDFResource			*SearchDataSource::kNC_LastSearchRoot;
+nsIRDFResource			*SearchDataSource::kNC_Ref;
 nsIRDFResource			*SearchDataSource::kNC_Child;
 nsIRDFResource			*SearchDataSource::kNC_Data;
 nsIRDFResource			*SearchDataSource::kNC_Name;
@@ -240,6 +267,7 @@ nsIRDFResource			*SearchDataSource::kRDF_type;
 
 PRInt32				SearchDataSourceCallback::gRefCnt;
 
+nsIRDFResource			*SearchDataSourceCallback::kNC_LastSearchRoot;
 nsIRDFResource			*SearchDataSourceCallback::kNC_Child;
 nsIRDFResource			*SearchDataSourceCallback::kNC_Name;
 nsIRDFResource			*SearchDataSourceCallback::kNC_Data;
@@ -249,16 +277,19 @@ nsIRDFResource			*SearchDataSourceCallback::kNC_Site;
 nsIRDFResource			*SearchDataSourceCallback::kNC_Engine;
 nsIRDFResource			*SearchDataSourceCallback::kNC_loading;
 
+static const char		kEngineProtocol[] = "engine://";
+static const char		kSearchProtocol[] = "internetsearch:";
+
 
 
 PRBool
 SearchDataSource::isEngineURI(nsIRDFResource *r)
 {
 	PRBool		isEngineURIFlag = PR_FALSE;
-        nsXPIDLCString	uri;
+	const char	*uri = nsnull;
 	
-	r->GetValue( getter_Copies(uri) );
-	if (!strncmp(uri, "engine://", 9))
+	r->GetValueConst(&uri);
+	if ((uri) && (!strncmp(uri, kEngineProtocol, sizeof(kEngineProtocol) - 1)))
 	{
 		isEngineURIFlag = PR_TRUE;
 	}
@@ -271,10 +302,10 @@ PRBool
 SearchDataSource::isSearchURI(nsIRDFResource *r)
 {
 	PRBool		isSearchURIFlag = PR_FALSE;
-        nsXPIDLCString	uri;
+	const char	*uri = nsnull;
 	
-	r->GetValue( getter_Copies(uri) );
-	if (!strncmp(uri, "internetsearch:", strlen("internetsearch:")))
+	r->GetValueConst(&uri);
+	if ((uri) && (!strncmp(uri, kSearchProtocol, sizeof(kSearchProtocol) - 1)))
 	{
 		isSearchURIFlag = PR_TRUE;
 	}
@@ -284,8 +315,6 @@ SearchDataSource::isSearchURI(nsIRDFResource *r)
 
 
 SearchDataSource::SearchDataSource(void)
-	: mURI(nsnull),
-	  mObservers(nsnull)
 {
 	NS_INIT_REFCNT();
 
@@ -297,6 +326,8 @@ SearchDataSource::SearchDataSource(void)
 		PR_ASSERT(NS_SUCCEEDED(rv));
 
 		gRDFService->GetResource(kURINC_SearchRoot,                   &kNC_SearchRoot);
+		gRDFService->GetResource(kURINC_LastSearchRoot,               &kNC_LastSearchRoot);
+		gRDFService->GetResource(NC_NAMESPACE_URI "ref",              &kNC_Ref);
 		gRDFService->GetResource(NC_NAMESPACE_URI "child",            &kNC_Child);
 		gRDFService->GetResource(NC_NAMESPACE_URI "data",             &kNC_Data);
 		gRDFService->GetResource(NC_NAMESPACE_URI "Name",             &kNC_Name);
@@ -313,15 +344,11 @@ SearchDataSource::SearchDataSource(void)
 
 SearchDataSource::~SearchDataSource (void)
 {
-	gRDFService->UnregisterDataSource(this);
-
-	PL_strfree(mURI);
-
-	delete mObservers; // we only hold a weak ref to each observer
-
 	if (--gRefCnt == 0)
 	{
 		NS_RELEASE(kNC_SearchRoot);
+		NS_RELEASE(kNC_LastSearchRoot);
+		NS_RELEASE(kNC_Ref);
 		NS_RELEASE(kNC_Child);
 		NS_RELEASE(kNC_Data);
 		NS_RELEASE(kNC_Name);
@@ -343,22 +370,13 @@ NS_IMPL_ISUPPORTS(SearchDataSource, nsIRDFDataSource::GetIID());
 
 
 
-NS_IMETHODIMP
-SearchDataSource::Init(const char *uri)
+nsresult
+SearchDataSource::Init()
 {
-	NS_PRECONDITION(uri != nsnull, "null ptr");
-	if (! uri)
-		return NS_ERROR_NULL_POINTER;
-
 	nsresult	rv = NS_ERROR_OUT_OF_MEMORY;
 
 	if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
 		nsnull, nsIRDFDataSource::GetIID(), (void **)&mInner)))
-		return(rv);
-	if (NS_FAILED(rv = mInner->Init(uri)))
-		return(rv);
-
-	if ((mURI = PL_strdup(uri)) == nsnull)
 		return(rv);
 
 	// register this as a named data source with the service manager
@@ -381,8 +399,9 @@ SearchDataSource::GetURI(char **uri)
 	if (! uri)
 		return NS_ERROR_NULL_POINTER;
 
-	if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+	if ((*uri = nsXPIDLCString::Copy("rdf:search")) == nsnull)
 		return NS_ERROR_OUT_OF_MEMORY;
+
 	return NS_OK;
 }
 
@@ -456,6 +475,7 @@ SearchDataSource::GetTarget(nsIRDFResource *source,
 }
 
 
+
 NS_IMETHODIMP
 SearchDataSource::GetTargets(nsIRDFResource *source,
                            nsIRDFResource *property,
@@ -480,7 +500,7 @@ SearchDataSource::GetTargets(nsIRDFResource *source,
 	if (! tv)
 		return(rv);
 
-	if (source == kNC_SearchRoot)
+	if ((source == kNC_SearchRoot) || (source == kNC_LastSearchRoot))
 	{
 		if (property == kNC_Child)
 		{
@@ -490,6 +510,7 @@ SearchDataSource::GetTargets(nsIRDFResource *source,
 			}
 			return(rv);
 		}
+		return(NS_RDF_NO_VALUE);
 	}
 	else if (isSearchURI(source))
 	{
@@ -511,6 +532,11 @@ SearchDataSource::GetTargets(nsIRDFResource *source,
 			}
 			return(rv);
 		}
+		return(NS_RDF_NO_VALUE);
+	}
+	if (mInner)
+	{
+		rv = mInner->GetTargets(source, property, tv, targets);
 	}
 	return NS_NewEmptyEnumerator(targets);
 }
@@ -523,7 +549,6 @@ SearchDataSource::Assert(nsIRDFResource *source,
                        nsIRDFNode *target,
                        PRBool tv)
 {
-//	PR_ASSERT(0);
 	return NS_RDF_ASSERTION_REJECTED;
 }
 
@@ -534,7 +559,28 @@ SearchDataSource::Unassert(nsIRDFResource *source,
                          nsIRDFResource *property,
                          nsIRDFNode *target)
 {
-//	PR_ASSERT(0);
+	return NS_RDF_ASSERTION_REJECTED;
+}
+
+
+
+NS_IMETHODIMP
+SearchDataSource::Change(nsIRDFResource* aSource,
+			nsIRDFResource* aProperty,
+			nsIRDFNode* aOldTarget,
+			nsIRDFNode* aNewTarget)
+{
+	return NS_RDF_ASSERTION_REJECTED;
+}
+
+
+
+NS_IMETHODIMP
+SearchDataSource::Move(nsIRDFResource* aOldSource,
+					   nsIRDFResource* aNewSource,
+					   nsIRDFResource* aProperty,
+					   nsIRDFNode* aTarget)
+{
 	return NS_RDF_ASSERTION_REJECTED;
 }
 
@@ -573,7 +619,7 @@ SearchDataSource::HasAssertion(nsIRDFResource *source,
         
         if (mInner)
         {
-		mInner->HasAssertion(source, property, target, tv, hasAssertion);
+		rv = mInner->HasAssertion(source, property, target, tv, hasAssertion);
 	}
         return(rv);
 }
@@ -604,7 +650,7 @@ SearchDataSource::ArcLabelsOut(nsIRDFResource *source,
 
 	nsresult rv;
 
-	if ((source == kNC_SearchRoot) || isSearchURI(source))
+	if ((source == kNC_SearchRoot) || (source == kNC_LastSearchRoot) || isSearchURI(source))
 	{
             nsCOMPtr<nsISupportsArray> array;
             rv = NS_NewISupportsArray(getter_AddRefs(array));
@@ -618,10 +664,16 @@ SearchDataSource::ArcLabelsOut(nsIRDFResource *source,
 
             NS_ADDREF(result);
             *labels = result;
-            return NS_OK;
+            return(NS_OK);
+	}
+	
+	if (mInner)
+	{
+		rv = mInner->ArcLabelsOut(source, labels);
+		return(rv);
 	}
 
-        return NS_NewEmptyEnumerator(labels);
+	return NS_NewEmptyEnumerator(labels);
 }
 
 
@@ -641,23 +693,13 @@ SearchDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 
 
 NS_IMETHODIMP
-SearchDataSource::AddObserver(nsIRDFObserver *n)
+SearchDataSource::AddObserver(nsIRDFObserver *aObserver)
 {
 	nsresult	rv = NS_OK;
 
-	NS_PRECONDITION(n != nsnull, "null ptr");
-	if (! n)
-		return(NS_ERROR_NULL_POINTER);
-
-	if (nsnull == mObservers)
-	{
-		if ((mObservers = new nsVoidArray()) == nsnull)
-			return NS_ERROR_OUT_OF_MEMORY;
-	}
-	mObservers->AppendElement(n);
 	if (mInner)
 	{
-		rv = mInner->AddObserver(n);
+		rv = mInner->AddObserver(aObserver);
 	}
 	return(rv);
 }
@@ -665,34 +707,13 @@ SearchDataSource::AddObserver(nsIRDFObserver *n)
 
 
 NS_IMETHODIMP
-SearchDataSource::RemoveObserver(nsIRDFObserver *n)
-{
-	nsresult	rv = NS_OK;
-
-	NS_PRECONDITION(n != nsnull, "null ptr");
-	if (! n)
-		return NS_ERROR_NULL_POINTER;
-
-	if (nsnull == mObservers)
-		return NS_OK;
-	mObservers->RemoveElement(n);
-	if (mInner)
-	{
-		rv = mInner->RemoveObserver(n);
-	}
-	return(rv);
-}
-
-
-
-NS_IMETHODIMP
-SearchDataSource::Flush()
+SearchDataSource::RemoveObserver(nsIRDFObserver *aObserver)
 {
 	nsresult	rv = NS_OK;
 
 	if (mInner)
 	{
-		rv = mInner->Flush();
+		rv = mInner->RemoveObserver(aObserver);
 	}
 	return(rv);
 }
@@ -710,13 +731,21 @@ SearchDataSource::GetAllCommands(nsIRDFResource* source,
 
 
 NS_IMETHODIMP
+SearchDataSource::GetAllCmds(nsIRDFResource* source,
+                                     nsISimpleEnumerator/*<nsIRDFResource>*/** commands)
+{
+	return(NS_NewEmptyEnumerator(commands));
+}
+
+
+
+NS_IMETHODIMP
 SearchDataSource::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
                                        nsIRDFResource*   aCommand,
                                        nsISupportsArray/*<nsIRDFResource>*/* aArguments,
                                        PRBool* aResult)
 {
-	NS_NOTYETIMPLEMENTED("write me!");
-	return NS_ERROR_NOT_IMPLEMENTED;
+	return(NS_ERROR_NOT_IMPLEMENTED);
 }
 
 
@@ -726,8 +755,7 @@ SearchDataSource::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
                                 nsIRDFResource*   aCommand,
                                 nsISupportsArray/*<nsIRDFResource>*/* aArguments)
 {
-	NS_NOTYETIMPLEMENTED("write me!");
-	return NS_ERROR_NOT_IMPLEMENTED;
+	return(NS_ERROR_NOT_IMPLEMENTED);
 }
 
 
@@ -744,6 +772,13 @@ NS_NewRDFSearchDataSource(nsIRDFDataSource **result)
 		if ((gSearchDataSource = new SearchDataSource()) == nsnull)
 		{
 			return NS_ERROR_OUT_OF_MEMORY;
+		}
+
+		nsresult rv = gSearchDataSource->Init();
+		if (NS_FAILED(rv)) {
+			delete gSearchDataSource;
+			gSearchDataSource = nsnull;
+			return rv;
 		}
 	}
 	NS_ADDREF(gSearchDataSource);
@@ -764,6 +799,102 @@ SearchDataSource::BeginSearchRequest(nsIRDFResource *source)
 	nsAutoString		uri(sourceURI);
 	if (uri.Find("internetsearch:") != 0)
 		return(NS_ERROR_FAILURE);
+
+	// remember the last search query
+
+	nsCOMPtr<nsIRDFDataSource>	localstore;
+	rv = gRDFService->GetDataSource("rdf:local-store", getter_AddRefs(localstore));
+	if (NS_SUCCEEDED(rv))
+	{
+		nsCOMPtr<nsIRDFNode>	lastTarget;
+		if (NS_SUCCEEDED(rv = localstore->GetTarget(kNC_LastSearchRoot, kNC_Ref,
+			PR_TRUE, getter_AddRefs(lastTarget))))
+		{
+			if (rv != NS_RDF_NO_VALUE)
+			{
+#ifdef	DEBUG
+				nsCOMPtr<nsIRDFLiteral>	lastLit = do_QueryInterface(lastTarget);
+				if (lastLit)
+				{
+					const PRUnichar	*lastUni = nsnull;
+					lastLit->GetValueConst(&lastUni);
+					nsAutoString	lastStr(lastUni);
+					char *lastC = lastStr.ToNewCString();
+					if (lastC)
+					{
+						printf("\nLast Search: '%s'\n", lastC);
+						delete [] lastC;
+						lastC = nsnull;
+					}
+				}
+#endif
+				rv = localstore->Unassert(kNC_LastSearchRoot, kNC_Ref, lastTarget);
+			}
+		}
+		if (uri.Length() > 0)
+		{
+			const PRUnichar	*uriUni = uri.GetUnicode();
+			nsCOMPtr<nsIRDFLiteral>	uriLiteral;
+			if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(uriUni, getter_AddRefs(uriLiteral))))
+			{
+				rv = localstore->Assert(kNC_LastSearchRoot, kNC_Ref, uriLiteral, PR_TRUE);
+			}
+		}
+		
+		// XXX Currently, need to flush localstore as its being leaked
+		// and thus never written out to disk otherwise
+
+		// gotta love the name "remoteLocalStore"
+		nsCOMPtr<nsIRDFRemoteDataSource>	remoteLocalStore = do_QueryInterface(localstore);
+		if (remoteLocalStore)
+		{
+			remoteLocalStore->Flush();
+		}
+	}
+
+	if (mInner)
+	{
+		nsCOMPtr<nsISimpleEnumerator>	arcs;
+		if (NS_SUCCEEDED(rv = mInner->GetTargets(kNC_LastSearchRoot, kNC_Child, PR_TRUE, getter_AddRefs(arcs))))
+		{
+			PRBool			hasMore = PR_TRUE;
+			while (hasMore == PR_TRUE)
+			{
+				if (NS_FAILED(arcs->HasMoreElements(&hasMore)) || (hasMore == PR_FALSE))
+					break;
+				nsCOMPtr<nsISupports>	arc;
+				if (NS_FAILED(arcs->GetNext(getter_AddRefs(arc))))
+					break;
+				nsCOMPtr<nsIRDFResource>	child = do_QueryInterface(arc);
+				if (child)
+				{
+					mInner->Unassert(kNC_LastSearchRoot, kNC_Child, child);
+				}
+			}
+		}
+	}
+
+#if 0
+		nsCOMPtr<nsIRDFNode>	lastTarget;
+		if (NS_SUCCEEDED(rv = mInner->GetTarget(kNC_LastSearchRoot, kNC_Ref,
+			PR_TRUE, getter_AddRefs(lastTarget))))
+		{
+			if (rv != NS_RDF_NO_VALUE)
+			{
+				rv = mInner->Unassert(kNC_LastSearchRoot, kNC_Ref, lastTarget);
+			}
+		}
+		if (uri.Length() > 0)
+		{
+			const PRUnichar	*uriUni = uri.GetUnicode();
+			nsCOMPtr<nsIRDFLiteral>	uriLiteral;
+			if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(uriUni, getter_AddRefs(uriLiteral))))
+			{
+				rv = mInner->Assert(kNC_LastSearchRoot, kNC_Ref, uriLiteral, PR_TRUE);
+			}
+		}
+	}
+#endif
 	uri.Cut(0, strlen("internetsearch:"));
 
 	nsVoidArray	*engineArray = new nsVoidArray;
@@ -802,7 +933,7 @@ SearchDataSource::BeginSearchRequest(nsIRDFResource *source)
 		{
 			if (attrib.EqualsIgnoreCase("engine"))
 			{
-				if (value.Find("engine://") == 0)
+				if (value.Find(kEngineProtocol) == 0)
 				{
 					char	*val = value.ToNewCString();
 					if (val)
@@ -821,18 +952,18 @@ SearchDataSource::BeginSearchRequest(nsIRDFResource *source)
 	// loop over specified search engines
 	while (engineArray->Count() > 0)
 	{
-		char *basename = (char *)(engineArray->ElementAt(0));
+		char *baseFilename = (char *)(engineArray->ElementAt(0));
 		engineArray->RemoveElementAt(0);
-		if (!basename)	continue;
+		if (!baseFilename)	continue;
 
 #ifdef	DEBUG
-		printf("Search engine to query: '%s'\n", basename);
+		printf("Search engine to query: '%s'\n", baseFilename);
 #endif
 
 		nsCOMPtr<nsIRDFResource>	engine;
-		gRDFService->GetResource(basename, getter_AddRefs(engine));
-		delete [] basename;
-		basename = nsnull;
+		gRDFService->GetResource(baseFilename, getter_AddRefs(engine));
+		delete [] baseFilename;
+		baseFilename = nsnull;
 		if (!engine)	continue;
 		DoSearch(source, engine, text);
 	}
@@ -879,18 +1010,18 @@ SearchDataSource::DoSearch(nsIRDFResource *source, nsIRDFResource *engine, nsStr
 		if (NS_FAILED(rv = engine->GetValue(getter_Copies(engineURI))))
 			return(rv);
 		nsAutoString	engineStr(engineURI);
-		if (engineStr.Find("engine://") != 0)
+		if (engineStr.Find(kEngineProtocol) != 0)
 			return(rv);
-		engineStr.Cut(0, strlen("engine://"));
-		char	*basename = engineStr.ToNewCString();
-		if (!basename)
+		engineStr.Cut(0, sizeof(kEngineProtocol) - 1);
+		char	*baseFilename = engineStr.ToNewCString();
+		if (!baseFilename)
 			return(rv);
-		basename = nsUnescape(basename);
-		if (!basename)
+		baseFilename = nsUnescape(baseFilename);
+		if (!baseFilename)
 			return(rv);
-		rv = ReadFileContents(basename, data);
-		delete [] basename;
-		basename = nsnull;
+		rv = ReadFileContents(baseFilename, data);
+		delete [] baseFilename;
+		baseFilename = nsnull;
 		if (NS_FAILED(rv))
 		{
 			return(rv);
@@ -951,55 +1082,83 @@ SearchDataSource::DoSearch(nsIRDFResource *source, nsIRDFResource *engine, nsStr
 		action += "?";
 		action += input;
 	}
+
 	char	*searchURL = action.ToNewCString();
-	if (searchURL)
+	if (!searchURL)
+		return(NS_ERROR_NULL_POINTER);
+
+#ifdef	NECKO
+	SearchDataSourceCallback *callback = new SearchDataSourceCallback(mInner, source, engine);
+	if (nsnull != callback)
 	{
-		nsIURL		*url = nsnull;
-#ifndef NECKO
-        rv = NS_NewURL(&url, (const char*) searchURL);
-#else
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        nsIURI *uri = nsnull;
-        rv = service->NewURI((const char*) searchURL, nsnull, &uri);
-        if (NS_FAILED(rv)) return rv;
-
-        rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-        NS_RELEASE(uri);
-#endif // NECKO
-		if (NS_SUCCEEDED(rv))
+		nsCOMPtr<nsIURI>	url;
+		if (NS_SUCCEEDED(rv = NS_NewURI(getter_AddRefs(url), (const char*) searchURL)))
 		{
 			if (method.EqualsIgnoreCase("post"))
 			{
-				// HTTP Post method support
-			        nsCOMPtr<nsIPostToServer>	pts = do_QueryInterface(url);
-				if (pts)
-			        {
-			        	// construct post data to send
-			        	nsAutoString	postStr(POSTHEADER_PREFIX);
-			        	postStr.Append(input.Length(), 10);
-			        	postStr += POSTHEADER_SUFFIX;
-			        	postStr += input;
-					char	*postData = postStr.ToNewCString();
-					if (postData)
+				nsCOMPtr<nsIChannel>	channel;
+				if (NS_SUCCEEDED(rv = NS_OpenURI(getter_AddRefs(channel), url)))
+				{
+					nsCOMPtr<nsIHTTPChannel>	httpChannel = do_QueryInterface(channel);
+					if (httpChannel)
 					{
-						rv = pts->SendData(postData, (PRUint32)strlen(postData));
-						delete []postData;
-						postData = nsnull;
-					}
-			        }
-			}
+						httpChannel->SetRequestMethod(HM_POST);
 
-			SearchDataSourceCallback *callback = new SearchDataSourceCallback(mInner, source, engine);
-			if (nsnull != callback)
+				        	// construct post data to send
+				        	nsAutoString	postStr(POSTHEADER_PREFIX);
+				        	postStr.Append(input.Length(), 10);
+				        	postStr += POSTHEADER_SUFFIX;
+				        	postStr += input;
+				        	
+						char	*postData = postStr.ToNewCString();
+						if (postData)
+						{
+							nsCOMPtr<nsIInputStream>	postDataStream;
+							if (NS_SUCCEEDED(rv = NS_NewPostDataStream(PR_FALSE, postData,
+								0, getter_AddRefs(postDataStream))))
+							{
+								httpChannel->SetPostDataStream(postDataStream);
+								/* postData is now owned by the postDataStream instance... ? */
+								rv = channel->AsyncRead(0, -1, nsnull, callback);
+							}
+							else
+							{
+								delete []postData;
+								postData = nsnull;
+							}
+						}
+					}
+				}
+			}
+			else if (method.EqualsIgnoreCase("get"))
 			{
-				rv = NS_OpenURL(url, NS_STATIC_CAST(nsIStreamListener *, callback));
+				rv = NS_OpenURI(NS_STATIC_CAST(nsIStreamListener *, callback), nsnull, url);
 			}
 		}
-		delete [] searchURL;
-		searchURL = nsnull;
 	}
+#endif
+
+	delete [] searchURL;
+	searchURL = nsnull;
+	return(rv);
+}
+
+
+
+nsresult
+SearchDataSource::GetSearchFolder(nsFileSpec &spec)
+{
+#ifdef	XP_MAC
+	// on Mac, use system's search files
+	nsSpecialSystemDirectory	searchSitesDir(nsSpecialSystemDirectory::Mac_InternetSearchDirectory);
+#else
+	// on other platforms, use our search files
+	nsSpecialSystemDirectory	searchSitesDir(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+	searchSitesDir += "res";
+	searchSitesDir += "rdf";
+	searchSitesDir += "datasets";
+#endif
+	spec = searchSitesDir;
 	return(NS_OK);
 }
 
@@ -1015,20 +1174,12 @@ SearchDataSource::GetSearchEngineList()
 		return(NS_RDF_NO_VALUE);
 	}
 
-#ifdef	XP_MAC
-	// on Mac, use system's search files
-	nsSpecialSystemDirectory	searchSitesDir(nsSpecialSystemDirectory::Mac_InternetSearchDirectory);
-	nsFileSpec 			nativeDir(searchSitesDir);
-#else
-	// on other platforms, use our search files
-	nsSpecialSystemDirectory	searchSitesDir(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-	// XXX we should get this from prefs?
-	searchSitesDir += "res";
-	searchSitesDir += "rdf";
-	searchSitesDir += "search";
-	nsFileSpec 			nativeDir(searchSitesDir);
-#endif
-	for (nsDirectoryIterator i(nativeDir); i.Exists(); i++)
+	nsFileSpec			nativeDir;
+	if (NS_FAILED(rv = GetSearchFolder(nativeDir)))
+	{
+		return(rv);
+	}
+	for (nsDirectoryIterator i(nativeDir, PR_FALSE); i.Exists(); i++)
 	{
 		const nsFileSpec	fileSpec = (const nsFileSpec &)i;
 		const char		*childURL = fileSpec;
@@ -1044,36 +1195,41 @@ SearchDataSource::GetSearchEngineList()
 				CInfoPBRec	cInfo;
 				OSErr		err;
 				PRBool		wasAliased = PR_FALSE;
-				fileSpec.ResolveAlias(wasAliased);
+				fileSpec.ResolveSymlink(wasAliased);
 				err = fileSpec.GetCatInfo(cInfo);
 				if ((!err) && (cInfo.hFileInfo.ioFlFndrInfo.fdType == 'issp') &&
 					(cInfo.hFileInfo.ioFlFndrInfo.fdCreator == 'fndf'))
 #else
+				// else just check the extension
 				nsAutoString	extension;
 				if ((uri.Right(extension, 4) == 4) && (extension.EqualsIgnoreCase(".src")))
 #endif
 				{
-#ifdef	XP_MAC
-					PRInt32	separatorOffset = uri.RFind(":");
+					char	c;
+#ifdef	XP_WIN
+					c = '\\';
+#elif	XP_MAC
+					c = ':';
 #else
-					PRInt32	separatorOffset = uri.RFind("/");
+					c = '/';
 #endif
+					PRInt32	separatorOffset = uri.RFindChar(PRUnichar(c));
 					if (separatorOffset > 0)
 					{
 						uri.Cut(0, separatorOffset+1);
 						
-						nsAutoString	searchURL("engine://");
+						nsAutoString	searchURL(kEngineProtocol);
 						searchURL += uri;
 
-						char *basename = uri.ToNewCString();
-						if (!basename)	continue;
-						basename = nsUnescape(basename);
-						if (!basename)	continue;
+						char *baseFilename = uri.ToNewCString();
+						if (!baseFilename)	continue;
+						baseFilename = nsUnescape(baseFilename);
+						if (!baseFilename)	continue;
 
 						nsAutoString	data("");
-						rv = ReadFileContents(basename, data);
-						delete [] basename;
-						basename = nsnull;
+						rv = ReadFileContents(baseFilename, data);
+						delete [] baseFilename;
+						baseFilename = nsnull;
 						if (NS_FAILED(rv))	continue;
 
 						nsCOMPtr<nsIRDFResource>	searchRes;
@@ -1083,18 +1239,6 @@ SearchDataSource::GetSearchEngineList()
 							if (NS_SUCCEEDED(rv = gRDFService->GetResource(searchURI, getter_AddRefs(searchRes))))
 							{
 								mInner->Assert(kNC_SearchRoot, kNC_Child, searchRes, PR_TRUE);
-
-#if 0
-								// Note: don't save file contents here. Save them when a sort actually begins.
-								// This means we use a lot less memory as we only save datasets that we are using.
-
-								// save file contents
-								nsCOMPtr<nsIRDFLiteral>	dataLiteral;
-								if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(data.GetUnicode(), getter_AddRefs(dataLiteral))))
-								{
-									mInner->Assert(searchRes, kNC_Data, dataLiteral, PR_TRUE);
-								}
-#endif
 
 								// save name of search engine (as specified in file)
 								nsAutoString	nameValue;
@@ -1110,8 +1254,8 @@ SearchDataSource::GetSearchEngineList()
 							delete [] searchURI;
 							searchURI = nsnull;
 						}
-						delete [] basename;
-						basename = nsnull;
+						delete [] baseFilename;
+						baseFilename = nsnull;
 					}
 				}
 			}
@@ -1119,6 +1263,7 @@ SearchDataSource::GetSearchEngineList()
 	}
 	return(rv);
 }
+
 
 
 PRBool
@@ -1139,14 +1284,14 @@ SearchDataSource::isVisible(const nsNativeFileSpec& file)
 		}
 	}
 #else
-	char		*basename = file.GetLeafName();
-	if (nsnull != basename)
+	char		*baseFilename = file.GetLeafName();
+	if (nsnull != baseFilename)
 	{
-		if ((!strcmp(basename, ".")) || (!strcmp(basename, "..")))
+		if ((!strcmp(baseFilename, ".")) || (!strcmp(baseFilename, "..")))
 		{
 			isVisible = PR_FALSE;
 		}
-		nsCRT::free(basename);
+		nsCRT::free(baseFilename);
 	}
 #endif
 
@@ -1156,25 +1301,21 @@ SearchDataSource::isVisible(const nsNativeFileSpec& file)
 
 
 nsresult
-SearchDataSource::ReadFileContents(char *basename, nsString& sourceContents)
+SearchDataSource::ReadFileContents(char *baseFilename, nsString& sourceContents)
 {
 	nsresult			rv = NS_OK;
 
-#ifdef	XP_MAC
-	nsSpecialSystemDirectory	searchEngine(nsSpecialSystemDirectory::Mac_InternetSearchDirectory);
-#else
-	nsSpecialSystemDirectory	searchEngine(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-	// XXX we should get this from prefs.
-	searchEngine += "res";
-	searchEngine += "rdf";
-	searchEngine += "search";
-#endif
-	searchEngine += basename;
+	nsFileSpec			searchEngine;
+	if (NS_FAILED(rv = GetSearchFolder(searchEngine)))
+	{
+		return(rv);
+	}
+	searchEngine += baseFilename;
 
 #ifdef	XP_MAC
 	// be sure to resolve aliases in case we encounter one
 	PRBool	wasAliased = PR_FALSE;
-	searchEngine.ResolveAlias(wasAliased);
+	searchEngine.ResolveSymlink(wasAliased);
 #endif
 
 	nsInputFileStream		searchFile(searchEngine);
@@ -1189,7 +1330,7 @@ SearchDataSource::ReadFileContents(char *basename, nsString& sourceContents)
 		// on Mac, use system's search files
 		nsSpecialSystemDirectory	searchSitesDir(nsSpecialSystemDirectory::Mac_InternetSearchDirectory);
 		nsFileSpec 			nativeDir(searchSitesDir);
-		for (nsDirectoryIterator i(nativeDir); i.Exists(); i++)
+		for (nsDirectoryIterator i(nativeDir, PR_FALSE); i.Exists(); i++)
 		{
 			const nsFileSpec	fileSpec = (const nsFileSpec &)i;
 			const char		*childURL = fileSpec;
@@ -1197,16 +1338,15 @@ SearchDataSource::ReadFileContents(char *basename, nsString& sourceContents)
 			if (childURL != nsnull)
 			{
 				// be sure to resolve aliases in case we encounter one
-				CInfoPBRec	cInfo;
 				PRBool		wasAliased = PR_FALSE;
-				fileSpec.ResolveAlias(wasAliased);
+				fileSpec.ResolveSymlink(wasAliased);
 				nsAutoString	childPath(childURL);
-				PRInt32		separatorOffset = childPath.RFind(":");
+				PRInt32		separatorOffset = childPath.RFindChar(PRUnichar(':'));
 				if (separatorOffset > 0)
 				{
 						childPath.Cut(0, separatorOffset+1);
 				}
-				if (childPath.EqualsIgnoreCase(basename))
+				if (childPath.EqualsIgnoreCase(baseFilename))
 				{
 					searchFile = fileSpec;
 				}
@@ -1244,7 +1384,7 @@ SearchDataSource::GetData(nsString data, char *sectionToFind, char *attribToFind
 
 	while(buffer.Length() > 0)
 	{
-		PRInt32 eol = buffer.FindCharInSet("\r\n");
+		PRInt32 eol = buffer.FindCharInSet("\r\n", 0);
 		if (eol < 0)	break;
 		nsAutoString	line("");
 		if (eol > 0)
@@ -1314,13 +1454,13 @@ SearchDataSource::GetData(nsString data, char *sectionToFind, char *attribToFind
 nsresult
 SearchDataSource::GetInputs(nsString data, nsString text, nsString &input)
 {
-	nsAutoString	buffer(data);	
+	nsAutoString	buffer(data);	// , eolStr("\r\n");	
 	nsresult	rv = NS_OK;
 	PRBool		inSection = PR_FALSE;
 
 	while(buffer.Length() > 0)
 	{
-		PRInt32 eol = buffer.FindCharInSet("\r\n");
+		PRInt32 eol = buffer.FindCharInSet("\r\n", 0);
 		if (eol < 0)	break;
 		nsAutoString	line("");
 		if (eol > 0)
@@ -1365,14 +1505,14 @@ SearchDataSource::GetInputs(nsString data, nsString text, nsString &input)
 			PRInt32	nameOffset = line.Find("name", PR_TRUE);
 			if (nameOffset >= 0)
 			{
-				PRInt32 equal = line.Find(PRUnichar('='), nameOffset);
+				PRInt32 equal = line.FindChar(PRUnichar('='), PR_TRUE, nameOffset);
 				if (equal >= 0)
 				{
-					PRInt32	startQuote = line.Find(PRUnichar('\"'), equal + 1);
+					PRInt32	startQuote = line.FindChar(PRUnichar('\"'), PR_TRUE, equal + 1);
 					if (startQuote >= 0)
 					{
-						PRInt32	endQuote = line.Find(PRUnichar('\"'), startQuote + 1);
-						if (endQuote >= 0)
+						PRInt32	endQuote = line.FindChar(PRUnichar('\"'), PR_TRUE, startQuote + 1);
+						if (endQuote > 0)
 						{
 							line.Mid(nameAttrib, startQuote+1, endQuote-startQuote-1);
 						}
@@ -1382,7 +1522,7 @@ SearchDataSource::GetInputs(nsString data, nsString text, nsString &input)
 						nameAttrib = line;
 						nameAttrib.Cut(0, equal+1);
 						nameAttrib = nameAttrib.Trim(" \t");
-						PRInt32 space = nameAttrib.FindCharInSet(" \t");
+						PRInt32 space = nameAttrib.FindCharInSet(" \t", 0);
 						if (space > 0)
 						{
 							nameAttrib.Truncate(space);
@@ -1398,13 +1538,13 @@ SearchDataSource::GetInputs(nsString data, nsString text, nsString &input)
 			PRInt32	valueOffset = line.Find("value", PR_TRUE);
 			if (valueOffset >= 0)
 			{
-				PRInt32 equal = line.Find(PRUnichar('='), valueOffset);
+				PRInt32 equal = line.FindChar(PRUnichar('='), PR_TRUE, valueOffset);
 				if (equal >= 0)
 				{
-					PRInt32	startQuote = line.Find(PRUnichar('\"'), equal + 1);
+					PRInt32	startQuote = line.FindChar(PRUnichar('\"'), PR_TRUE, equal + 1);
 					if (startQuote >= 0)
 					{
-						PRInt32	endQuote = line.Find(PRUnichar('\"'), startQuote + 1);
+						PRInt32	endQuote = line.FindChar(PRUnichar('\"'), PR_TRUE, startQuote + 1);
 						if (endQuote >= 0)
 						{
 							line.Mid(valueAttrib, startQuote+1, endQuote-startQuote-1);
@@ -1413,18 +1553,10 @@ SearchDataSource::GetInputs(nsString data, nsString text, nsString &input)
 					else
 					{
 						// if value attribute's "value" isn't quoted, get the first word... ?
-/*
-						PRInt32 theEnd = line.FindCharInSet(" >\t", equal);
-						if (theEnd >= 0)
-						{
-							line.Mid(valueAttrib, equal+1, theEnd-equal-1);
-							valueAttrib.Trim(" \t");
-						}
-*/
 						valueAttrib = line;
 						valueAttrib.Cut(0, equal+1);
 						valueAttrib = valueAttrib.Trim(" \t");
-						PRInt32 space = valueAttrib.FindCharInSet(" \t>");
+						PRInt32 space = valueAttrib.FindCharInSet(" \t>", 0);
 						if (space > 0)
 						{
 							valueAttrib.Truncate(space);
@@ -1495,6 +1627,7 @@ SearchDataSourceCallback::SearchDataSourceCallback(nsIRDFDataSource *ds, nsIRDFR
 
 		PR_ASSERT(NS_SUCCEEDED(rv));
 
+		gRDFService->GetResource(kURINC_LastSearchRoot, &kNC_LastSearchRoot);
 		gRDFService->GetResource(NC_NAMESPACE_URI "child", &kNC_Child);
 		gRDFService->GetResource(NC_NAMESPACE_URI "Name", &kNC_Name);
 		gRDFService->GetResource(NC_NAMESPACE_URI "data", &kNC_Data);
@@ -1522,6 +1655,7 @@ SearchDataSourceCallback::~SearchDataSourceCallback()
 
 	if (--gRefCnt == 0)
 	{
+		NS_RELEASE(kNC_LastSearchRoot);
 		NS_RELEASE(kNC_Child);
 		NS_RELEASE(kNC_Name);
 		NS_RELEASE(kNC_Data);
@@ -1540,14 +1674,18 @@ SearchDataSourceCallback::~SearchDataSourceCallback()
 
 
 NS_IMETHODIMP
-SearchDataSourceCallback::OnStartBinding(nsIURL *aURL, const char *aContentType)
+#ifdef NECKO
+SearchDataSourceCallback::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+SearchDataSourceCallback::OnStartRequest(nsIURI *aURL, const char *aContentType)
+#endif
 {
 	nsAutoString		trueStr("true");
 	nsIRDFLiteral		*literal = nsnull;
 	nsresult		rv;
 
 #ifdef	DEBUG
-	printf("SearchDataSourceCallback::OnStartBinding entered.\n");
+	printf("SearchDataSourceCallback::OnStartRequest entered.\n");
 #endif
 
 	if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(trueStr.GetUnicode(), &literal)))
@@ -1560,8 +1698,9 @@ SearchDataSourceCallback::OnStartBinding(nsIURL *aURL, const char *aContentType)
 
 
 
+#ifndef NECKO
 NS_IMETHODIMP
-SearchDataSourceCallback::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax) 
+SearchDataSourceCallback::OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax) 
 {
 	return(NS_OK);
 }
@@ -1569,19 +1708,30 @@ SearchDataSourceCallback::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 
 
 
 NS_IMETHODIMP
-SearchDataSourceCallback::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+SearchDataSourceCallback::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 {
 	return(NS_OK);
 }
+#endif
 
 
 
 NS_IMETHODIMP
-SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg) 
+#ifdef NECKO
+SearchDataSourceCallback::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+					nsresult status, const PRUnichar *errorMsg) 
+#else
+SearchDataSourceCallback::OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg) 
+#endif
 {
 	nsAutoString		trueStr("true");
 	nsIRDFLiteral		*literal = nsnull;
 	nsresult		rv;
+#ifdef NECKO
+	nsCOMPtr<nsIURI> aURL;
+	rv = channel->GetURI(getter_AddRefs(aURL));
+	if (NS_FAILED(rv)) return rv;
+#endif
 
 	if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(trueStr.GetUnicode(), &literal)))
 	{
@@ -1592,11 +1742,16 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 	if (!mLine)
 	{
 #ifdef	DEBUG
-		printf(" *** SearchDataSourceCallback::OnStopBinding:  no data.\n\n");
+		printf(" *** SearchDataSourceCallback::OnStopRequest:  no data.\n\n");
 #endif
 
 		return(NS_OK);
 	}
+
+#if	0
+	printf("\n\n%s\n\n", mLine);
+#endif
+
 
 	nsAutoString	htmlResults(mLine);
 	delete [] mLine;
@@ -1631,7 +1786,7 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 	SearchDataSource::GetData(data, "interpret", "relevanceStart", relevanceStartStr);
 	SearchDataSource::GetData(data, "interpret", "relevanceEnd", relevanceEndStr);
 
-#ifdef	DEBUG
+#if 1
 	char *cStr;
 	cStr = resultListStartStr.ToNewCString();
 	if (cStr)
@@ -1694,15 +1849,20 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 		}
 	}
 
+	PRBool	trimItemEnd = PR_TRUE;
 	// if resultItemEndStr is not specified, try making it the same as resultItemStartStr
 	if (resultItemEndStr.Length() < 1)
 	{
 		resultItemEndStr = resultItemStartStr;
+		trimItemEnd = PR_FALSE;
 	}
 
-	PRInt32	resultItemStart;
-	while((resultItemStart = htmlResults.Find(resultItemStartStr, PR_TRUE)) >= 0)
+	while(PR_TRUE)
 	{
+		PRInt32	resultItemStart;
+		resultItemStart = htmlResults.Find(resultItemStartStr, PR_TRUE);
+		if (resultItemStart < 0)	break;
+
 		htmlResults.Cut(0, resultItemStart + resultItemStartStr.Length());
 
 		PRInt32	resultItemEnd = htmlResults.Find(resultItemEndStr, PR_TRUE );
@@ -1715,39 +1875,58 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 		htmlResults.Left(resultItem, resultItemEnd);
 
 		if (resultItem.Length() < 1)	break;
-		htmlResults.Cut(0, resultItemEnd + resultItemEndStr.Length());
+		if (trimItemEnd == PR_TRUE)
+		{
+			htmlResults.Cut(0, resultItemEnd + resultItemEndStr.Length());
+		}
+		else
+		{
+			htmlResults.Cut(0, resultItemEnd);
+		}
 
-#if 0
+#if DEBUG
 		char	*results = resultItem.ToNewCString();
 		if (results)
 		{
-			printf("-----\nResult: %s\n", results);
+			printf("\n----- Search result: '%s'\n\n", results);
 			delete [] results;
 			results = nsnull;
 		}
 #endif
 
 		// look for href
-		PRInt32	hrefOffset = resultItem.Find("<A HREF=", PR_TRUE);
+		PRInt32	hrefOffset = resultItem.Find("HREF=", PR_TRUE);
 		if (hrefOffset < 0)
 		{
+#ifdef	DEBUG
+			printf("\n***** Unable to find HREF!\n\n");
+#endif
 			continue;
 		}
 
 		nsAutoString	hrefStr("");
-		PRInt32 quoteStartOffset = resultItem.FindCharInSet("\"\'>", hrefOffset);
-		if (quoteStartOffset < hrefOffset)	continue;
+		PRInt32		quoteStartOffset = resultItem.FindCharInSet("\"\'>", hrefOffset);
 		PRInt32		quoteEndOffset;
-		if (resultItem[quoteStartOffset] == PRUnichar('>'))
+		if (quoteStartOffset < hrefOffset)
 		{
 			// handle case where HREF isn't quoted
-			quoteEndOffset = quoteStartOffset;
-			quoteStartOffset = hrefOffset + strlen("<A HREF=") -1;
+			quoteStartOffset = hrefOffset + nsCRT::strlen("HREF=");
+			quoteEndOffset = resultItem.FindCharInSet(">", quoteStartOffset);
+			if (quoteEndOffset < quoteStartOffset)	continue;
 		}
 		else
 		{
-			quoteEndOffset = resultItem.FindCharInSet("\"\'", quoteStartOffset + 1);
-			if (quoteEndOffset < hrefOffset)	continue;
+			if (resultItem[quoteStartOffset] == PRUnichar('>'))
+			{
+				// handle case where HREF isn't quoted
+				quoteEndOffset = quoteStartOffset;
+				quoteStartOffset = hrefOffset + nsCRT::strlen("HREF=") -1;
+			}
+			else
+			{
+				quoteEndOffset = resultItem.FindCharInSet("\"\'", quoteStartOffset + 1);
+				if (quoteEndOffset < hrefOffset)	continue;
+			}
 		}
 		resultItem.Mid(hrefStr, quoteStartOffset + 1, quoteEndOffset - quoteStartOffset - 1);
 		if (hrefStr.Length() < 1)	continue;
@@ -1755,9 +1934,17 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 		// check to see if this needs to be an absolute URL
 		if (hrefStr[0] == PRUnichar('/'))
 		{
+#ifdef NECKO
+			char *host = nsnull, *protocol = nsnull;
+#else
 			const char	*host = nsnull, *protocol = nsnull;
+#endif
 			aURL->GetHost(&host);
+#ifdef NECKO
+			aURL->GetScheme(&protocol);
+#else
 			aURL->GetProtocol(&protocol);
+#endif
 			if (host && protocol)
 			{
 				nsAutoString	temp;
@@ -1768,6 +1955,10 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 
 				hrefStr = temp;
 			}
+#ifdef NECKO
+			if (host) nsCRT::free(host);
+			if (protocol) nsCRT::free(protocol);
+#endif
 		}
 		
 		char	*href = hrefStr.ToNewCString();
@@ -1780,7 +1971,19 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 #endif
 
 		nsCOMPtr<nsIRDFResource>	res;
+
+#define	OLDWAY
+#ifdef	OLDWAY
 		rv = gRDFService->GetResource(href, getter_AddRefs(res));
+#else
+		const char			*parentURI = nsnull;
+		mParent->GetValueConst(&parentURI);
+		if (!parentURI)	break;
+		rv = rdf_CreateAnonymousResource(parentURI, getter_AddRefs(res));
+		// XXX must save HREF attribute
+#endif
+
+
 		delete [] href;
 		href = nsnull;
 		if (NS_FAILED(rv))	continue;
@@ -1790,7 +1993,7 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 		mDataSource->GetTarget(res, kNC_Site, PR_TRUE, getter_AddRefs(oldSiteRes));
 		if (!oldSiteRes)
 		{
-			PRInt32	protocolOffset = site.FindCharInSet(":");
+			PRInt32	protocolOffset = site.FindCharInSet(":", 0);
 			if (protocolOffset >= 0)
 			{
 				site.Cut(0, protocolOffset+1);
@@ -1798,7 +2001,7 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 				{
 					site.Cut(0, 1);
 				}
-				PRInt32	slashOffset = site.FindCharInSet("/");
+				PRInt32	slashOffset = site.FindCharInSet("/", 0);
 				if (slashOffset >= 0)
 				{
 					site.Truncate(slashOffset);
@@ -1823,9 +2026,22 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 
 		// look for name
 		PRInt32	anchorEnd = resultItem.FindCharInSet(">", quoteEndOffset);
-		if (anchorEnd < quoteEndOffset)	continue;
-		PRInt32	anchorStop = resultItem.Find("</A>", PR_TRUE);
-		if (anchorStop < anchorEnd)	continue;
+		if (anchorEnd < quoteEndOffset)
+		{
+#ifdef	DEBUG
+			printf("\n\nSearch: Unable to find ending > when computing name.\n\n");
+#endif
+			continue;
+		}
+//		PRInt32	anchorStop = resultItem.FindChar(PRUnichar('<'), PR_TRUE, quoteEndOffset);
+		PRInt32	anchorStop = resultItem.Find("</A>", PR_TRUE, quoteEndOffset);
+		if (anchorStop < anchorEnd)
+		{
+#ifdef	DEBUG
+			printf("\n\nSearch: Unable to find </A> tag to compute name.\n\n");
+#endif
+			continue;
+		}
 		
 		nsAutoString	nameStr;
 		resultItem.Mid(nameStr, anchorEnd + 1, anchorStop - anchorEnd - 1);
@@ -1872,7 +2088,7 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 		
 		// munge out anything inside of HTML "<" / ">" tags
 		PRInt32 tagStartOffset;
-		while ((tagStartOffset = nameStr.FindCharInSet("<")) >= 0)
+		while ((tagStartOffset = nameStr.FindCharInSet("<", 0)) >= 0)
 		{
 			PRInt32	tagEndOffset = nameStr.FindCharInSet(">", tagStartOffset);
 			if (tagEndOffset <= tagStartOffset)	break;
@@ -1881,7 +2097,7 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 
 		// cut out any CRs or LFs
 		PRInt32	eolOffset;
-		while ((eolOffset = nameStr.FindCharInSet("\n\r")) >= 0)
+		while ((eolOffset = nameStr.FindCharInSet("\n\r", 0)) >= 0)
 		{
 			nameStr.Cut(eolOffset, 1);
 		}
@@ -1913,9 +2129,9 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 		// look for relevance
 		nsAutoString	relItem("-");
 		PRInt32		relStart;
-		if ((relStart = resultItem.Find(relevanceStartStr /* , PR_TRUE */)) >= 0)
+		if ((relStart = resultItem.Find(relevanceStartStr, PR_TRUE)) >= 0)
 		{
-			PRInt32	relEnd = resultItem.Find(relevanceEndStr /* , PR_TRUE */);
+			PRInt32	relEnd = resultItem.Find(relevanceEndStr, PR_TRUE);
 			if (relEnd > relStart)
 			{
 				resultItem.Mid(relItem, relStart + relevanceStartStr.Length(),
@@ -1990,14 +2206,22 @@ SearchDataSourceCallback::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PR
 				}
 			}
 		}
-
+#ifdef	OLDWAY
 		// Note: always add in parent-child relationship last!  (if it isn't already set)
 		PRBool		parentHasChildFlag = PR_FALSE;
 		mDataSource->HasAssertion(mParent, kNC_Child, res, PR_TRUE, &parentHasChildFlag);
 		if (parentHasChildFlag == PR_FALSE)
+#endif
 		{
 			rv = mDataSource->Assert(mParent, kNC_Child, res, PR_TRUE);
 		}
+
+		// Persist this under kNC_LastSearchRoot
+		if (mDataSource)
+		{
+			rv = mDataSource->Assert(kNC_LastSearchRoot, kNC_Child, res, PR_TRUE);
+		}
+
 	}
 	return(NS_OK);
 }
@@ -2012,16 +2236,23 @@ NS_IMPL_ISUPPORTS(SearchDataSourceCallback, nsIRDFSearchDataSourceCallback::GetI
 
 
 
+#ifndef NECKO
 NS_IMETHODIMP
-SearchDataSourceCallback::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo)
+SearchDataSourceCallback::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo)
 {
 	return(NS_OK);
 }
+#endif
 
 
 
 NS_IMETHODIMP
-SearchDataSourceCallback::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength)
+#ifdef NECKO
+SearchDataSourceCallback::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt, nsIInputStream *aIStream,
+					  PRUint32 sourceOffset, PRUint32 aLength)
+#else
+SearchDataSourceCallback::OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength)
+#endif
 {
 	nsresult	rv = NS_OK;
 
@@ -2041,12 +2272,16 @@ SearchDataSourceCallback::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream
 			PRUint32	count=0, numBytes = (aLength > sizeof(buffer)-1 ? sizeof(buffer)-1 : aLength);
 			if (NS_FAILED(rv = aIStream->Read(buffer, numBytes, &count)))
 			{
+#ifdef	DEBUG			
 				printf("Search datasource read failure.\n");
+#endif
 				break;
 			}
 			if (numBytes != count)
 			{
+#ifdef	DEBUG
 				printf("Search datasource read # of bytes failure.\n");
+#endif
 				break;
 			}
 			buffer[count] = '\0';

@@ -26,7 +26,6 @@ EXPORTS=\
 	nsDateTimeFormatCID.h      \
 	nsICollation.h				\
 	nsIDateTimeFormat.h			\
-	nsILocale.h					\
 	nsILocaleFactory.h			\
 	nsLocaleCID.h				\
 	nsIWin32Locale.h			\

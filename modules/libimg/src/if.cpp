@@ -26,11 +26,10 @@
 
 #include "nsIImgDecoder.h"
 #include "nsImgDCallbk.h"
+#include "nsIComponentManager.h"
 #include "xpcompat.h"
 
-#include "nsImgDecCID.h"
 #include "prtypes.h"
-
 
 #include "il_strm.h"
 
@@ -53,36 +52,11 @@ int il_debug=0;
 /* Global list of image group contexts. */
 static IL_GroupContext *il_global_img_cx_list = NULL;
 
-
-/*-------------------------------------------------*/
-class ImgDecoder : public nsIImgDecoder {
-	
-public:
-
-  NS_DECL_ISUPPORTS
-  
-  il_container *GetContainer() {return mContainer;};
-  il_container *SetContainer(il_container *ic) {mContainer=ic; return ic;};
-
-  ImgDecoder(il_container *aContainer){ NS_INIT_ISUPPORTS(); mContainer=aContainer;};
-  virtual ~ImgDecoder(); // XXX Pam needs to fix this
-
-private:
-  il_container* mContainer;
-};
-
-NS_IMPL_ISUPPORTS(ImgDecoder, kImgDecoderIID)
-
-ImgDecoder:: ~ImgDecoder()
-{
-    return;
-}
-/*-----------------------------------------*/
 /*-----------------------------------------*/
 NS_IMETHODIMP ImgDCallbk::ImgDCBSetupColorspaceConverter()
 {  
-  if( mContainer != NULL ) {
-    il_setup_color_space_converter(mContainer);
+  if( ilContainer != NULL ) {
+    il_setup_color_space_converter(ilContainer);
   }
   return 0;
 }
@@ -90,7 +64,7 @@ NS_IMETHODIMP ImgDCallbk::ImgDCBSetupColorspaceConverter()
 NI_ColorSpace*
 ImgDCallbk::ImgDCBCreateGreyScaleColorSpace()
 {
-  if( mContainer != NULL ) {
+  if( ilContainer != NULL ) {
     return IL_CreateGreyScaleColorSpace(1,1);
   }
   return 0;
@@ -98,8 +72,8 @@ ImgDCallbk::ImgDCBCreateGreyScaleColorSpace()
   
 NS_IMETHODIMP ImgDCallbk::ImgDCBResetPalette()
 {
-   if( mContainer != NULL ) {
-       il_reset_palette(mContainer);
+   if( ilContainer != NULL ) {
+       il_reset_palette(ilContainer);
   }
   return NS_OK;
 }
@@ -108,8 +82,8 @@ NS_IMETHODIMP ImgDCallbk::ImgDCBResetPalette()
 NS_IMETHODIMP
 ImgDCallbk::ImgDCBHaveHdr(int destwidth, int destheight)
 {
-  if( mContainer != NULL ) {
-    il_dimensions_notify(mContainer, destwidth, destheight);
+  if( ilContainer != NULL ) {
+    il_dimensions_notify(ilContainer, destwidth, destheight);
   }
   return 0;
 
@@ -118,8 +92,8 @@ ImgDCallbk::ImgDCBHaveHdr(int destwidth, int destheight)
 NS_IMETHODIMP
 ImgDCallbk::ImgDCBInitTransparentPixel()
 {
-    if( mContainer != NULL ) {
-      il_init_image_transparent_pixel(mContainer);
+    if( ilContainer != NULL ) {
+      il_init_image_transparent_pixel(ilContainer);
   }
   return 0;
 
@@ -128,8 +102,8 @@ ImgDCallbk::ImgDCBInitTransparentPixel()
 NS_IMETHODIMP
 ImgDCallbk::ImgDCBDestroyTransparentPixel()
 {
-    if( mContainer != NULL ) {
-      il_destroy_image_transparent_pixel(mContainer);
+    if( ilContainer != NULL ) {
+      il_destroy_image_transparent_pixel(ilContainer);
   }
   return 0;
 
@@ -142,9 +116,9 @@ ImgDCallbk :: ImgDCBHaveRow(uint8 *rowbuf, uint8* rgbrow,
                             uint8 draw_mode, 
                             int pass )
 {
-  if( mContainer != NULL ) {
+  if( ilContainer != NULL ) {
     
-  	il_emit_row(mContainer, rowbuf, rgbrow, x_offset, len,
+  	il_emit_row(ilContainer, rowbuf, rgbrow, x_offset, len,
                        row, dup_rowcnt, (il_draw_mode)draw_mode, pass );
   }
   return 0;
@@ -154,8 +128,8 @@ ImgDCallbk :: ImgDCBHaveRow(uint8 *rowbuf, uint8* rgbrow,
 NS_IMETHODIMP 
 ImgDCallbk :: ImgDCBHaveImageFrame()
 {
-  if( mContainer != NULL ) {
-         il_frame_complete_notify(mContainer);
+  if( ilContainer != NULL ) {
+         il_frame_complete_notify(ilContainer);
   }
   return 0;
 }
@@ -163,8 +137,8 @@ ImgDCallbk :: ImgDCBHaveImageFrame()
 NS_IMETHODIMP 
 ImgDCallbk::ImgDCBFlushImage()
 {
-  if( mContainer != NULL ) {
-	  il_flush_image_data(mContainer);
+  if( ilContainer != NULL ) {
+	  il_flush_image_data(ilContainer);
   }
   return 0;
 }
@@ -172,8 +146,8 @@ ImgDCallbk::ImgDCBFlushImage()
 NS_IMETHODIMP 
 ImgDCallbk:: ImgDCBImageSize()
 { 
-  if( mContainer != NULL ) {
-    il_size(mContainer);
+  if( ilContainer != NULL ) {
+    il_size(ilContainer);
   }
   return 0;
 }
@@ -181,8 +155,8 @@ ImgDCallbk:: ImgDCBImageSize()
 NS_IMETHODIMP 
 ImgDCallbk :: ImgDCBHaveImageAll()
 {
-  if( mContainer != NULL ) {
-    il_image_complete(mContainer);
+  if( ilContainer != NULL ) {
+    il_image_complete(ilContainer);
   }
   return 0;
 
@@ -191,7 +165,7 @@ ImgDCallbk :: ImgDCBHaveImageAll()
 NS_IMETHODIMP 
 ImgDCallbk :: ImgDCBError()
 {
-  if( mContainer != NULL ) {
+  if( ilContainer != NULL ) {
   }
   return 0;
 
@@ -211,8 +185,6 @@ ImgDCallbk :: ImgDCBClearTimeout(void *timer_id)
   return 0;
 }
 
-/*-------------------------------------------------*/
-ImgDecoder *imgdec;
 /*********************** Image Observer Notification. *************************
 *
 * These functions are used to send messages to registered observers of an
@@ -238,6 +210,7 @@ il_description_notify(il_container *ic)
     case IL_XBM : PL_strcpy(buf2, "XBM"); break;
     case IL_JPEG : PL_strcpy(buf2, "JPEG"); break;
     case IL_PNG : PL_strcpy(buf2, "PNG"); break;
+    case IL_ART : PL_strcpy(buf2, "ART"); break;
 
     default : PL_strcpy(buf2, "");
     }
@@ -723,7 +696,9 @@ il_size(il_container *ic)
     /* Create and initialize the mask pixmap structure, if required.  A mask
        is allocated only if the image is transparent and no background color
        was specified for this image request. */
-    if (src_header->transparent_pixel && !ic->background_color) {
+    if ((src_header->transparent_pixel && !ic->background_color)
+      ||(img_header->alpha_bits))
+    {
         if (!ic->mask) {
             NI_PixmapHeader *mask_header;
     
@@ -732,12 +707,22 @@ il_size(il_container *ic)
             }
 
             mask_header = &ic->mask->header;
-            mask_header->color_space = IL_CreateGreyScaleColorSpace(1, 1);
+			if(img_header->alpha_bits)
+                mask_header->color_space = IL_CreateGreyScaleColorSpace(1, img_header->alpha_bits);
+			else
+                mask_header->color_space = IL_CreateGreyScaleColorSpace(1, 1);
+
             if (!mask_header->color_space)
                 return MK_OUT_OF_MEMORY;
+			
+			mask_header->alpha_bits = img_header->alpha_bits;
+
             mask_header->width = img_header->width;
             mask_header->height = img_header->height;
-            mask_header->widthBytes = (mask_header->width + 7) / 8;
+			if(img_header->alpha_bits == 1)
+                mask_header->widthBytes = (mask_header->width + 7) / 8;
+			if(img_header->alpha_bits == 8)
+				mask_header->widthBytes = mask_header->width;
 
             /* Mask data must be quadlet aligned for optimizations */
             mask_header->widthBytes = ROUNDUP(mask_header->widthBytes, 4);
@@ -746,10 +731,7 @@ il_size(il_container *ic)
         /* Notify observers that the image is transparent and has a mask. */
         il_transparent_notify(ic);
     }
-    else {                      /* Mask not required. */
-
-        /*  for png alpha*/
-        if (ic->mask) {
+    else if (ic->mask) /*  for png alpha*/ {
                 il_transparent_notify(ic);
                 if(ic->background_color){
 /*
@@ -758,12 +740,12 @@ il_size(il_container *ic)
                
                     XP_MEMCPY(img_trans_pixel, ic->background_color, sizeof(IL_IRGB)); 
 */
-        }
+                }else{
 /*
-            il_destroy_pixmap(ic->img_cb, ic->mask);
-            ic->mask = NULL;
+                    il_destroy_pixmap(ic->img_cb, ic->mask);
+                    ic->mask = NULL;
 */
-        }
+                }
         
     }
 
@@ -911,6 +893,18 @@ il_type(int suspected_type, const char *buf, int32 len)
 		return IL_JPEG;
 	}
 
+  /* ART begins with JG (4A 47). Major version offset 2.
+     Minor version offset 3. Offset 4 must be NULL.
+  */
+  if (len >= 5 &&
+     ((unsigned char) buf[0])==0x4a &&
+     ((unsigned char) buf[1])==0x47 &&
+     ((unsigned char) buf[4])==0x00 )
+  {
+      return IL_ART;
+  }
+
+
 	/* no simple test for XBM vs, say, XPM so punt for now */
 	if (len >= 8 && !strncmp(buf, "#define ", 8) ) 
 	{
@@ -995,9 +989,15 @@ IL_StreamFirstWrite(il_container *ic, const unsigned char *str, int32 len)
 
     FREE_IF_NOT_NULL(ic->fetch_url);
 
+#ifdef NECKO
+    if (ic->url){
+	    ic->fetch_url = ic->url->GetAddress();
+    }
+#else
     if((ic->url)&& ic->url->GetAddress()){
 	    ic->fetch_url = PL_strdup(ic->url->GetAddress());
     }
+#endif
     else{
 	if(ic->url_address) /* check needed because of mkicons.c */
         	ic->fetch_url = PL_strdup(ic->url_address);
@@ -1016,7 +1016,7 @@ IL_StreamFirstWrite(il_container *ic, const unsigned char *str, int32 len)
 	  ic->expires = ic->url->GetExpires();
 
 
-  ImgDecoder *imgdec;	
+  nsIImgDecoder *imgdec;	
 
   char imgtype[150];
   char imgtypestr[200];
@@ -1026,23 +1026,26 @@ IL_StreamFirstWrite(il_container *ic, const unsigned char *str, int32 len)
     case IL_XBM : PL_strcpy(imgtype, "xbm"); break;
     case IL_JPEG : PL_strcpy(imgtype, "jpeg"); break;
     case IL_PNG : PL_strcpy(imgtype, "png"); break;
+	case IL_ART : PL_strcpy(imgtype, "art"); break;
     default : PL_strcpy(imgtype, "");
     }
 
     sprintf(imgtypestr, "component://netscape/image/decoder&type=image/%s"
             , imgtype );
- 
-  result = nsRepository::CreateInstance(imgtypestr,
-                                           NULL,    
-                                           kImgDecoderIID,
-                                       (void **)&imgdec);
+
+    static NS_DEFINE_IID(kIImgDecoderIID, NS_IIMGDECODER_IID);
+    result = nsComponentManager::CreateInstance(imgtypestr, NULL,    
+                                                kIImgDecoderIID, // XXX was previously kImgDecoderIID
+                                                (void **)&imgdec);
 
   if (NS_FAILED(result))
     return MK_IMAGE_LOSSAGE;
   
   
   imgdec->SetContainer(ic);
+  // NS_ADDREF(imgdec); Dont need this as we aren't releasing the addref from CreateInstance
   ic->imgdec = imgdec;
+  
   ret = imgdec->ImgDInit();
   if(ret == 0)
   {
@@ -1401,22 +1404,22 @@ il_image_complete(il_container *ic)
 		    PR_ASSERT(ic->image && ic->image->bits);
 
 		    ILTRACE(1,("il: complete %d image width %d (%d) height %d,"
-                       " depth %d, %d colors",
-				       ic->multi,
-				       ic->image->header.width,
-                       ic->image->header.widthBytes,
-                       ic->image->header.height,
-                       ic->image->header.color_space->pixmap_depth, 
-				       ic->image->header.color_space->cmap.num_colors));
+                   " depth %d, %d colors",
+				           ic->multi,
+				           ic->image->header.width,
+                   ic->image->header.widthBytes,
+                   ic->image->header.height,
+                   ic->image->header.color_space->pixmap_depth, 
+				           ic->image->header.color_space->cmap.num_colors));
 
-		    /* 3 cases: simple, multipart MIME, multi-image animation */
-		    if (!ic->loop_count && !ic->is_multipart) {
+		        /* 3 cases: simple, multipart MIME, multi-image animation */
+		        if (!ic->loop_count && !ic->is_multipart) {
                 /* A single frame, single part image. */
                 il_container_complete(ic);
             }
             else {
                 /* Display the rest of the last image before starting a new one */
-			    il_flush_image_data(ic);
+			           il_flush_image_data(ic);
 
                 /* Force new colormap to be loaded in case its different from the
                  * LOSRC or previous images in the multipart message.
@@ -1495,7 +1498,7 @@ il_image_complete(il_container *ic)
                         /* Call to netlib for net cache data happens here. */
 					              netRequest->SetBackgroundLoad(PR_TRUE);
 					              reader = IL_NewNetReader(ic);
-                        (void) ic->net_cx->GetURL(ic->url, NET_DONT_RELOAD, 
+                        (void) ic->net_cx->GetURL(ic->url, NET_CACHE_ONLY_RELOAD /*NET_DONT_RELOAD*/, 
 											      reader);
                         /* Release reader, GetURL will keep a ref to it. */
                         NS_RELEASE(reader);
@@ -1590,8 +1593,14 @@ IL_StreamCreated(il_container *ic,
 	
 	ic->type = (int)type;
 	ic->content_length = url->GetContentLength();
-	ILTRACE(4,("il: new stream, type %d, %s", ic->type, 
-			   url->GetAddress()));
+#ifdef NECKO
+    char* addr = url->GetAddress();
+	ILTRACE(4,("il: new stream, type %d, %s", ic->type, addr));
+    nsCRT::free(addr);
+#else
+    ILTRACE(4,("il: new stream, type %d, %s", ic->type, 
+ 			   url->GetAddress()));
+#endif
 	ic->state = IC_STREAM;
 
 #ifndef M12N                    /* XXXM12N Fix me. */
@@ -1944,9 +1953,9 @@ IL_GetImage(const char* image_url,
             break;
             
         default:
-             PR_ASSERT(0); 
-            /*  NS_RELEASE(image_req->net_cx);*/
-            /*  PR_FREEIF(image_req);*/
+            PR_ASSERT(0);
+            //NS_RELEASE(image_req->net_cx);
+            //PR_FREEIF(image_req);
             /* This takes the image_req out of the ic client list,
                 frees image_req->new_cx, frees image_req.*/
             int ret = il_delete_client(ic, image_req);
@@ -1981,11 +1990,13 @@ IL_GetImage(const char* image_url,
 
     if (!url)
     {
-        /* NS_RELEASE(image_req->net_cx);*/
-        /* PR_FREEIF(image_req); */
+       // NS_IF_RELEASE(image_req->net_cx);  
+       // PR_FREEIF(image_req);
         /* This takes the image_req out of the ic client list,
-                frees image_req->new_cx, frees image_req. */
+           frees image_req->new_cx, frees image_req.
+        */
         int ret = il_delete_client(ic, image_req);
+
         return NULL;
     }        
     
@@ -2002,12 +2013,13 @@ IL_GetImage(const char* image_url,
     /* save away the container */
 	reader = IL_NewNetReader(ic);
 	if (!reader) {
-           /* NS_RELEASE(image_req->net_cx); */
-           /* PR_FREEIF(image_req);*/
-           /* This takes the image_req out of the ic client list,
-            frees image_req->new_cx, frees image_req.*/
-           int ret = il_delete_client(ic, image_req);
-           return NULL;
+        //NS_RELEASE(image_req->net_cx);
+        //PR_FREEIF(image_req);
+        /* This takes the image_req out of the ic client list,
+           frees image_req->new_cx, frees image_req.
+        */
+        int ret = il_delete_client(ic, image_req);
+        return NULL;
 	}
     err = ic->net_cx->GetURL(url, cache_reload_policy, reader);
     /* Release reader, GetURL will keep a ref to it. */
@@ -2342,7 +2354,8 @@ IL_GetIconDimensions(IL_GroupContext *img_cx, int icon_number, int *width,
 IL_IMPLEMENT(IL_Pixmap *)
 IL_GetImagePixmap(IL_ImageReq *image_req)
 {
-    if (image_req && image_req->ic)
+    if ((image_req && image_req->ic)&&
+		(image_req->ic->state == IC_COMPLETE)||(image_req->ic->state == IC_SIZED))
         return image_req->ic->image;
     else
         return NULL;

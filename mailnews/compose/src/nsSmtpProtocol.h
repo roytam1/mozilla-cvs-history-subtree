@@ -22,11 +22,8 @@
 #include "nsMsgProtocol.h"
 #include "nsIStreamListener.h"
 #include "nsCOMPtr.h"
-#include "nsITransport.h"
 #include "rosetta.h"
 #include HG40855
-
-#include "nsIOutputStream.h"
 #include "nsISmtpUrl.h"
 
  /* states of the machine
@@ -71,26 +68,22 @@ class nsSmtpProtocol : public nsMsgProtocol
 {
 public:
 	// Creating a protocol instance requires the URL which needs to be run.
-	nsSmtpProtocol(nsIURL * aURL);
+	nsSmtpProtocol(nsIURI * aURL);
 	virtual ~nsSmtpProtocol();
 
-	virtual nsresult LoadUrl(nsIURL * aURL, nsISupports * aConsumer = nsnull);
+	virtual nsresult LoadUrl(nsIURI * aURL, nsISupports * aConsumer = nsnull);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
 
 	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
 
 private:
-	// Smtp Event Sinks
-
 	// the nsISmtpURL that is currently running
 	nsCOMPtr<nsISmtpUrl>		m_runningURL;
 	PRUint32 m_LastTime;
-
-	HG60917
 
 	// Generic state information -- What state are we in? What state do we want to go to
 	// after the next response? What was the last response code? etc. 
@@ -99,8 +92,7 @@ private:
     PRInt32     m_responseCode;    /* code returned from Smtp server */
 	PRInt32 	m_previousResponseCode; 
 	PRInt32		m_continuationResponse;
-    nsString    m_responseText;   /* text returned from Smtp server */
-	char	   *m_hostName;
+    nsCString   m_responseText;   /* text returned from Smtp server */
 	PRUint32    m_port;
 
 	char	   *m_addressCopy;
@@ -120,8 +112,9 @@ private:
 	PRInt32   m_originalContentLength; /* the content length at the time of calling graph progress */
 	
 	// initialization function given a new url and transport layer
-	void Initialize(nsIURL * aURL);
-	virtual nsresult ProcessProtocolState(nsIURL * url, nsIInputStream * inputStream, PRUint32 length);
+	void Initialize(nsIURI * aURL);
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// Communication methods --> Reading and writing protocol

@@ -51,7 +51,7 @@ class nsRenderingContextMotif : public nsIRenderingContext
 {
 public:
   nsRenderingContextMotif();
-  ~nsRenderingContextMotif();
+  virtual ~nsRenderingContextMotif();
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
@@ -106,8 +106,12 @@ public:
 
   NS_IMETHOD DrawRect(const nsRect& aRect);
   NS_IMETHOD DrawRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
+
   NS_IMETHOD FillRect(const nsRect& aRect);
   NS_IMETHOD FillRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
+
+  NS_IMETHOD InvertRect(const nsRect& aRect);
+  NS_IMETHOD InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
 
   NS_IMETHOD DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
   NS_IMETHOD FillPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
@@ -155,6 +159,7 @@ public:
 
   NS_IMETHOD CopyOffScreenBits(nsDrawingSurface aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
   //locals
   NS_IMETHOD CommonInit();
@@ -187,4 +192,4 @@ private:
 
 };
 
-#endif /* nsRenderingContextMotif_h___ */
+#endif // nsRenderingContextMotif_h___

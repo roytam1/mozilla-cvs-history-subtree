@@ -1,38 +1,10 @@
-tree {
-  display: table;
-  background-color: white;
-  border: none;
-  border-spacing: 0px;
-  width: 100%;
+
+treerow > treecell > titledbutton {
+ height: 16px;
+ width: 16px;
+ color: inherit;
+ border: none;
+ padding: 0px;
+ margin: 0px;
 }
 
-treeitem {
-  display: table-row;
-}
-
-treehead {
-/*  display: table-header-group; */
-}
-
-treebody {
-  display: table-row-group;
-}
-
-treecell {
-  display: table-cell;
-  color: black;
-  font-family: Veranda;
-  font-size: 12pt;
-}
-
-treecell[selectedcell] { 
- background-color: #666699; 
- color: white;
-} 
-
-treehead treeitem treecell { 
- font-size: 9pt;
- background-color: #666699; 
- border: thin darkgray solid; 
- color: white;
-} 

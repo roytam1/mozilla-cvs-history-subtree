@@ -47,7 +47,7 @@ public:
 
   nsVoidArray** GetListenersByIID(const nsIID& aIID);
   
-  void ReleaseListeners(nsVoidArray* aListeners);
+  void ReleaseListeners(nsVoidArray** aListeners);
 
   /**
   * Retrieves events listeners of all types. 
@@ -89,6 +89,8 @@ public:
                                nsEvent* aEvent, 
                                nsIDOMEvent** aDOMEvent);
 
+  virtual nsresult RemoveAllListeners();
+
 protected:
   nsresult SetJSEventListener(nsIScriptContext *aContext, JSObject *aObject, REFNSIID aIID);
   nsresult GetIdentifiersForType(const nsString& aType, nsIID& aIID, PRInt32* aSubType);
@@ -106,7 +108,7 @@ protected:
   nsVoidArray* mPaintListeners;
   nsVoidArray* mTextListeners;
   nsVoidArray* mCompositionListeners;
-
+  nsVoidArray* mMenuListeners;
 };
 
 
@@ -154,6 +156,7 @@ protected:
 #define NS_EVENT_BITS_FORM_SUBMIT   0x01
 #define NS_EVENT_BITS_FORM_RESET    0x02
 #define NS_EVENT_BITS_FORM_CHANGE   0x04
+#define NS_EVENT_BITS_FORM_SELECT   0x08
 
 //nsIDOMLoadListener
 #define NS_EVENT_BITS_LOAD_NONE     0x00
@@ -161,8 +164,11 @@ protected:
 #define NS_EVENT_BITS_LOAD_UNLOAD   0x02
 #define NS_EVENT_BITS_LOAD_ABORT    0x04
 #define NS_EVENT_BITS_LOAD_ERROR    0x08
-#define NS_EVENT_BITS_LOAD_CONSTRUCT 0x10
-#define NS_EVENT_BITS_LOAD_DESTRUCT  0x20
+
+//nsIDOMMenuListener
+#define NS_EVENT_BITS_MENU_CREATE   0x00
+#define NS_EVENT_BITS_MENU_DESTROY  0x01
+#define NS_EVENT_BITS_MENU_ACTION   0x02
 
 //nsIDOMDragListener
 #define NS_EVENT_BITS_DRAG_NONE     0x00

@@ -277,16 +277,17 @@ nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
  */
 nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 {
+  nsresult res = NS_OK;
 	DWORD zerome, versionsize;
 	char* verbuf = nsnull;
-  const char* fileName;
-
 	const char* path = this->GetCString();
+/*
+  const char* fileName;
   fileName = PL_strrchr(path, '\\');
   if(fileName)
    ++fileName;
-
-	versionsize = ::GetFileVersionInfoSize((char*)path, &zerome);
+*/
+  versionsize = ::GetFileVersionInfoSize((char*)path, &zerome);
 	if (versionsize > 0)
 		verbuf = (char *)PR_Malloc(versionsize);
 	if(!verbuf)
@@ -294,7 +295,7 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 
 	if(::GetFileVersionInfo((char*)path, NULL, versionsize, verbuf))
 	{
-		info.fName = GetFileName(path);
+		info.fName = GetKeyValue(verbuf, "\\StringFileInfo\\040904E4\\ProductName");
 		info.fDescription = GetKeyValue(verbuf, "\\StringFileInfo\\040904E4\\FileDescription");
 
 		info.fMimeType = GetKeyValue(verbuf, "\\StringFileInfo\\040904E4\\MIMEType");
@@ -305,12 +306,15 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 		info.fMimeTypeArray = MakeStringArray(info.fVariantCount, info.fMimeType);
 		info.fMimeDescriptionArray = MakeStringArray(info.fVariantCount, info.fMimeDescription);
 		info.fExtensionArray = MakeStringArray(info.fVariantCount, info.fExtensions);
-    info.fFileName = PL_strdup(fileName);
+    //info.fFileName = PL_strdup(fileName);
+    info.fFileName = PL_strdup(path); // don't we need the full path too?
 	}
 	else
-		return NS_ERROR_FAILURE;
+		res = NS_ERROR_FAILURE;
 
-	return NS_OK;
+	PR_Free(verbuf);
+
+  return res;
 }
 
 

@@ -422,7 +422,7 @@ char *nsIMAPGenericParser::CreateQuoted(PRBool /*skipToEnd*/)
 	int  charIndex = 0;
 	int  tokenIndex = 0;
 	PRBool closeQuoteFound = PR_FALSE;
-	nsString2 returnString = currentChar;
+	nsCString returnString(currentChar);
 	
 	while (!closeQuoteFound && ContinueParse())
 	{
@@ -484,7 +484,7 @@ char *nsIMAPGenericParser::CreateQuoted(PRBool /*skipToEnd*/)
 		}
 	}
 	
-	return returnString.ToNewCString();
+	return PL_strdup(returnString.GetBuffer());
 }
 
 
@@ -588,8 +588,8 @@ char *nsIMAPGenericParser::CreateParenGroup()
 
 	// build up a buffer with the paren group.
 	// start with an initial chunk, expand later if necessary
-	nsString2 buf;
-	nsString2 returnString;
+	nsCString buf;
+	nsCString returnString;
 	int bytesUsed = 0;
 	
 	// count the number of parens in the current token
@@ -631,7 +631,7 @@ char *nsIMAPGenericParser::CreateParenGroup()
 							// first, flush buf
 							if (bytesUsed > 0)
 							{
-								buf.SetCharAt(bytesUsed, 0);
+								buf.Truncate(bytesUsed);
 								returnString.Append(buf);
 								bytesUsed = 0;
 							}
@@ -667,7 +667,7 @@ char *nsIMAPGenericParser::CreateParenGroup()
 					// first, flush buf
 					if (bytesUsed > 0)
 					{
-						buf.SetCharAt(bytesUsed, 0);
+						buf.Truncate(bytesUsed);
 						returnString.Append(buf);
 						bytesUsed = 0;
 					}
@@ -698,7 +698,9 @@ char *nsIMAPGenericParser::CreateParenGroup()
 				if (!extractReset)
 				{
 					// append this character to the buffer
-					buf.SetCharAt(bytesUsed, *fCurrentTokenPlaceHolder);
+					buf += *fCurrentTokenPlaceHolder;
+
+					//.SetCharAt(*fCurrentTokenPlaceHolder, bytesUsed);
 					bytesUsed++;
 					fCurrentTokenPlaceHolder++;
 				}
@@ -722,7 +724,7 @@ char *nsIMAPGenericParser::CreateParenGroup()
 		// flush buf the final time
 		if (bytesUsed > 0)
 		{
-			buf.SetCharAt(bytesUsed, 0);
+			buf.Truncate(bytesUsed);
 			returnString.Append(buf);
 		}
 		fNextToken = GetNextToken();

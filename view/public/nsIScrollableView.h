@@ -50,6 +50,9 @@ typedef enum
 class nsIScrollableView : public nsISupports
 {
 public:
+  
+  static const nsIID& GetIID() { static nsIID iid = NS_ISCROLLABLEVIEW_IID; return iid; }
+
   /**
    * Create the controls used to allow scrolling. Call this method
    * before anything else is done with the scrollable view.
@@ -207,10 +210,6 @@ public:
    * Returns the clip view
    */
   NS_IMETHOD GetClipView(const nsIView** aClipView) const = 0;
-
-private:
-  NS_IMETHOD_(nsrefcnt) AddRef(void) = 0;
-  NS_IMETHOD_(nsrefcnt) Release(void) = 0;
 };
 
 //regardless of the transparency or opacity settings

@@ -26,6 +26,7 @@ class nsIAtom;
 class nsString;
 class nsHTMLValue;
 class nsIHTMLAttributes;
+class nsIHTMLMappedAttributes;
 class nsIHTMLContent;
 class nsIDocument;
 
@@ -35,33 +36,49 @@ class nsIDocument;
 
 class nsIHTMLStyleSheet : public nsIStyleSheet {
 public:
-  NS_IMETHOD Init(nsIURL* aURL, nsIDocument* aDocument) = 0;
-  NS_IMETHOD Reset(nsIURL* aURL) = 0;
+  NS_IMETHOD Init(nsIURI* aURL, nsIDocument* aDocument) = 0;
+  NS_IMETHOD Reset(nsIURI* aURL) = 0;
+  NS_IMETHOD GetLinkColor(nscolor& aColor) = 0;
   NS_IMETHOD SetLinkColor(nscolor aColor) = 0;
+  NS_IMETHOD GetActiveLinkColor(nscolor& aColor) = 0;
   NS_IMETHOD SetActiveLinkColor(nscolor aColor) = 0;
+  NS_IMETHOD GetVisitedLinkColor(nscolor& aColor) = 0;
   NS_IMETHOD SetVisitedLinkColor(nscolor aColor) = 0;
+  NS_IMETHOD GetDocumentForegroundColor(nscolor& aColor) = 0;
+  NS_IMETHOD SetDocumentForegroundColor(nscolor aColor) = 0;
+  NS_IMETHOD GetDocumentBackgroundColor(nscolor& aColor) = 0;
+  NS_IMETHOD SetDocumentBackgroundColor(nscolor aColor) = 0;
 
   // Attribute management methods
   NS_IMETHOD SetAttributesFor(nsIHTMLContent* aContent, 
                               nsIHTMLAttributes*& aAttributes) = 0;
   NS_IMETHOD SetAttributeFor(nsIAtom* aAttribute, const nsString& aValue, 
+                             PRBool aMappedToStyle,
                              nsIHTMLContent* aContent, 
                              nsIHTMLAttributes*& aAttributes) = 0;
   NS_IMETHOD SetAttributeFor(nsIAtom* aAttribute, const nsHTMLValue& aValue, 
+                             PRBool aMappedToStyle,
                              nsIHTMLContent* aContent, 
                              nsIHTMLAttributes*& aAttributes) = 0;
   NS_IMETHOD UnsetAttributeFor(nsIAtom* aAttribute, nsIHTMLContent* aContent, 
                                nsIHTMLAttributes*& aAttributes) = 0;
 
+  // Mapped Attribute management methods
+  NS_IMETHOD UniqueMappedAttributes(nsIHTMLMappedAttributes* aMapped,
+                                    nsIHTMLMappedAttributes*& aUniqueMapped) = 0;
+  NS_IMETHOD DropMappedAttributes(nsIHTMLMappedAttributes* aMapped) = 0;
 };
 
 
 // XXX convenience method. Calls Initialize() automatically.
 extern NS_HTML nsresult
-  NS_NewHTMLStyleSheet(nsIHTMLStyleSheet** aInstancePtrResult, nsIURL* aURL, 
+  NS_NewHTMLStyleSheet(nsIHTMLStyleSheet** aInstancePtrResult, nsIURI* aURL, 
                        nsIDocument* aDocument);
 
 extern NS_HTML nsresult
   NS_NewHTMLStyleSheet(nsIHTMLStyleSheet** aInstancePtrResult);
+
+#define NS_HTML_STYLE_PROPERTY_NOT_THERE \
+  NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_LAYOUT,2)
 
 #endif /* nsIHTMLStyleSheet_h___ */

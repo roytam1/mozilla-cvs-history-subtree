@@ -23,6 +23,7 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMRange.h"
 #include "nsIDOMSelection.h"
+#include "nsIHTMLEditor.h"
 #include "nsTextServicesDocument.h"
 
 #define LOCK_DOC(doc)
@@ -568,7 +569,7 @@ nsTextServicesDocument::FirstSelectedBlock(TSDBlockSelectionStatus *aSelStatus, 
   nsCOMPtr<nsIDOMSelection> selection;
   PRBool isCollapsed = PR_FALSE;
 
-  result = mPresShell->GetSelection(getter_AddRefs(selection));
+  result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
   if (NS_FAILED(result))
   {
@@ -576,7 +577,7 @@ nsTextServicesDocument::FirstSelectedBlock(TSDBlockSelectionStatus *aSelStatus, 
     return result;
   }
 
-  result = selection->GetIsCollapsed(&isCollapsed);
+  result = selection->GetIsCollapsed( &isCollapsed);
 
   if (NS_FAILED(result))
   {
@@ -1050,7 +1051,7 @@ nsTextServicesDocument::LastSelectedBlock(TSDBlockSelectionStatus *aSelStatus, P
   nsCOMPtr<nsIDOMSelection> selection;
   PRBool isCollapsed = PR_FALSE;
 
-  result = mPresShell->GetSelection(getter_AddRefs(selection));
+  result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
   if (NS_FAILED(result))
   {
@@ -1849,7 +1850,7 @@ nsTextServicesDocument::DeleteSelection()
 
   // Now delete the actual content!
 
-  result = mEditor->DeleteSelection(nsIEditor::eDeleteLeft);
+  result = mEditor->DeleteSelection(nsIEditor::eDeletePrevious);
 
   if (NS_FAILED(result))
   {
@@ -1953,7 +1954,9 @@ nsTextServicesDocument::InsertText(const nsString *aText)
     return result;
   }
 
-  result = mEditor->InsertText(*aText);
+  nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor, &result);
+  if (htmlEditor)
+    result = htmlEditor->InsertText(*aText);
 
   if (NS_FAILED(result))
   {
@@ -2072,7 +2075,7 @@ nsTextServicesDocument::InsertText(const nsString *aText)
 
       mSelStartIndex = mSelEndIndex = i;
           
-      result = mPresShell->GetSelection(getter_AddRefs(selection));
+      result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
       if (NS_FAILED(result))
       {
@@ -2946,7 +2949,7 @@ nsTextServicesDocument::SetSelectionInternal(PRInt32 aOffset, PRInt32 aLength, P
 
   if (aDoUpdate)
   {
-    result = mPresShell->GetSelection(getter_AddRefs(selection));
+    result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
     if (NS_FAILED(result))
       return result;
@@ -3042,7 +3045,7 @@ nsTextServicesDocument::GetSelection(nsITextServicesDocument::TSDBlockSelectionS
   nsCOMPtr<nsIDOMSelection> selection;
   PRBool isCollapsed;
 
-  result = mPresShell->GetSelection(getter_AddRefs(selection));
+  result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
   if (NS_FAILED(result))
     return result;
@@ -3076,7 +3079,7 @@ nsTextServicesDocument::GetCollapsedSelection(nsITextServicesDocument::TSDBlockS
   nsresult result;
   nsCOMPtr<nsIDOMSelection> selection;
 
-  result = mPresShell->GetSelection(getter_AddRefs(selection));
+  result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
   if (NS_FAILED(result))
     return result;
@@ -3401,7 +3404,7 @@ nsTextServicesDocument::GetUncollapsedSelection(nsITextServicesDocument::TSDBloc
   nsCOMPtr<nsIDOMRange> range;
   OffsetEntry *entry;
 
-  result = mPresShell->GetSelection(getter_AddRefs(selection));
+  result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
   if (NS_FAILED(result))
     return result;

@@ -145,11 +145,11 @@ nsGenericHTMLElement::EnumTable kListTypeTable[] = {
   { 0 }
 };
 
-nsGenericHTMLElement::EnumTable kOtherListTypeTable[] = {
-  { "A", NS_STYLE_LIST_STYLE_UPPER_ALPHA },
-  { "a", NS_STYLE_LIST_STYLE_LOWER_ALPHA },
-  { "I", NS_STYLE_LIST_STYLE_UPPER_ROMAN },
-  { "i", NS_STYLE_LIST_STYLE_LOWER_ROMAN },
+nsGenericHTMLElement::EnumTable kOldListTypeTable[] = {
+  { "A", NS_STYLE_LIST_STYLE_OLD_UPPER_ALPHA },
+  { "a", NS_STYLE_LIST_STYLE_OLD_LOWER_ALPHA },
+  { "I", NS_STYLE_LIST_STYLE_OLD_UPPER_ROMAN },
+  { "i", NS_STYLE_LIST_STYLE_OLD_LOWER_ROMAN },
   { 0 }
 };
 
@@ -159,22 +159,19 @@ nsHTMLOListElement::StringToAttribute(nsIAtom* aAttribute,
                                       nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::type) {
-    if (!nsGenericHTMLElement::ParseEnumValue(aValue, kListTypeTable,
-                                              aResult)) {
-      if (!nsGenericHTMLElement::ParseCaseSensitiveEnumValue(aValue,
-                                  kOtherListTypeTable, aResult)) {
-        aResult.SetIntValue(NS_STYLE_LIST_STYLE_DECIMAL, eHTMLUnit_Enumerated);
-      }
+    if (nsGenericHTMLElement::ParseEnumValue(aValue, kListTypeTable,
+                                             aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
     }
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseCaseSensitiveEnumValue(aValue,
+                                kOldListTypeTable, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
-  if (aAttribute == nsHTMLAtoms::start) {
-    nsGenericHTMLElement::ParseValue(aValue, 1, aResult, eHTMLUnit_Integer);
-    return NS_CONTENT_ATTR_HAS_VALUE;
-  }
-  if (aAttribute == nsHTMLAtoms::compact) {
-    aResult.SetEmptyValue();
-    return NS_CONTENT_ATTR_NO_VALUE;
+  else if (aAttribute == nsHTMLAtoms::start) {
+    if (nsGenericHTMLElement::ParseValue(aValue, 1, aResult, eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   return NS_CONTENT_ATTR_NOT_THERE;
 }
@@ -185,14 +182,27 @@ nsHTMLOListElement::AttributeToString(nsIAtom* aAttribute,
                                       nsString& aResult) const
 {
   if (aAttribute == nsHTMLAtoms::type) {
-    nsGenericHTMLElement::EnumValueToString(aValue, kListTypeTable, aResult);
+    PRInt32 v = aValue.GetIntValue();
+    switch (v) {
+      case NS_STYLE_LIST_STYLE_OLD_LOWER_ROMAN:
+      case NS_STYLE_LIST_STYLE_OLD_UPPER_ROMAN:
+      case NS_STYLE_LIST_STYLE_OLD_LOWER_ALPHA:
+      case NS_STYLE_LIST_STYLE_OLD_UPPER_ALPHA:
+        nsGenericHTMLElement::EnumValueToString(aValue, kOldListTypeTable,
+                                                aResult);
+        break;
+      default:
+        nsGenericHTMLElement::EnumValueToString(aValue, kListTypeTable,
+                                                aResult);
+        break;
+    }
     return NS_CONTENT_ATTR_HAS_VALUE;
   }
   return mInner.AttributeToString(aAttribute, aValue, aResult);
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
@@ -206,15 +216,33 @@ MapAttributesInto(nsIHTMLAttributes* aAttributes,
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
       list->mListStyleType = value.GetIntValue();
     }
+    else if (value.GetUnit() != eHTMLUnit_Null) {
+      list->mListStyleType = NS_STYLE_LIST_STYLE_DECIMAL;
+    }
 
     // compact: empty
     aAttributes->GetAttribute(nsHTMLAtoms::compact, value);
-    if (value.GetUnit() == eHTMLUnit_Empty) {
+    if (value.GetUnit() != eHTMLUnit_Null) {
       // XXX set
     }
   }
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
 }
+
+NS_IMETHODIMP
+nsHTMLOListElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                             PRInt32& aHint) const
+{
+  if (aAttribute == nsHTMLAtoms::type) {
+    aHint = NS_STYLE_HINT_REFLOW;
+  }
+  else if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    aHint = NS_STYLE_HINT_CONTENT;
+  }
+
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsHTMLOListElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
@@ -237,21 +265,3 @@ nsHTMLOListElement::HandleDOMEvent(nsIPresContext& aPresContext,
                                aFlags, aEventStatus);
 }
 
-NS_IMETHODIMP
-nsHTMLOListElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  if ((aAttribute == nsHTMLAtoms::start) ||
-      (aAttribute == nsHTMLAtoms::compact)) {
-    *aHint = NS_STYLE_HINT_CONTENT;
-  }
-  else if (aAttribute == nsHTMLAtoms::type) {
-    *aHint = NS_STYLE_HINT_REFLOW;
-  }
-  else {
-    nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, aAttribute, aHint);
-  }
-
-  return NS_OK;
-}

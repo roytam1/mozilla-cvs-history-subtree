@@ -24,6 +24,7 @@
 /* rhp - for access to webshell */
 #include "nsCOMPtr.h"
 #include "nsIDOMWindow.h"
+#include "nsIBrowserWindow.h"
 #include "nsIWebShell.h"
 #include "nsIWebShellWindow.h"
 #include "nsIScriptGlobalObject.h"
@@ -34,6 +35,8 @@
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIDocumentViewer.h"
+#include "nsIDOMXULDocument.h"
+#include "nsIDocumentLoaderObserver.h"
 
 #include "nsIMsgMailSession.h"
 #include "nsIMsgIncomingServer.h"
@@ -45,17 +48,17 @@
 #include "nsIMsgFolder.h"
 #include "nsIPop3Service.h"
 
-#include "nsIDOMXULTreeElement.h"
+#include "nsIDOMXULElement.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFResource.h"
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
 #include "nsIAppShell.h"
 #include "nsIAppShellService.h"
+#include "nsIIOService.h"
 #include "nsAppShellCIDs.h"
 #include "nsMsgRDFUtils.h"
 
-#include "nsINetService.h"
 #include "nsICopyMsgStreamListener.h"
 #include "nsICopyMessageListener.h"
 
@@ -71,23 +74,32 @@
 
 #include "nsIMsgSendLater.h" 
 #include "nsMsgCompCID.h"
+#include "nsIMsgSendLaterListener.h"
+#include "nsIMsgDraft.h"
 
+#include "nsMsgStatusFeedback.h"
 
+#include "nsIContentViewer.h" 
+#include "nsIPref.h"
+#include "nsLayoutCID.h"
+#include "nsIPresContext.h"
+#include "nsIStringStream.h"
+
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
 static NS_DEFINE_CID(kCPop3ServiceCID, NS_POP3SERVICE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,	NS_RDFSERVICE_CID);
-static NS_DEFINE_IID(kIDocumentViewerIID,     NS_IDOCUMENT_VIEWER_IID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID); 
+static NS_DEFINE_IID(kIDocumentViewerIID,     NS_IDOCUMENT_VIEWER_IID); 
 static NS_DEFINE_IID(kAppShellServiceCID,        NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kTransactionManagerCID, NS_TRANSACTIONMANAGER_CID);
 static NS_DEFINE_CID(kComponentManagerCID,  NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
 static NS_DEFINE_CID(kCopyMessageStreamListenerCID, NS_COPYMESSAGESTREAMLISTENER_CID); 
+static NS_DEFINE_CID(kMsgDraftCID, NS_MSGDRAFT_CID);
+static NS_DEFINE_CID(kPrintPreviewContextCID, NS_PRINT_PREVIEW_CONTEXT_CID);
+static NS_DEFINE_IID(kIPresContextIID, NS_IPRESCONTEXT_IID);
+static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
-// we need this because of an egcs 1.0 (and possibly gcc) compiler bug
-// that doesn't allow you to call ::nsISupports::GetIID() inside of a class
-// that multiply inherits from nsISupports
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 class nsMessenger : public nsIMessenger
 {
@@ -104,12 +116,14 @@ public:
   NS_IMETHOD GetNewMessages(nsIRDFCompositeDataSource *db, nsIDOMXULElement *folderElement);
   NS_IMETHOD SetWindow(nsIDOMWindow* aWin);
   NS_IMETHOD OpenURL(const char * url);
-  NS_IMETHOD DeleteMessages(nsIDOMXULTreeElement *tree, nsIDOMXULElement *srcFolderElement, nsIDOMNodeList *nodeList);
+  NS_IMETHOD DoPrint();
+  NS_IMETHOD DoPrintPreview();
+  NS_IMETHOD DeleteMessages(nsIDOMXULElement *tree, nsIDOMXULElement *srcFolderElement, nsIDOMNodeList *nodeList);
   NS_IMETHOD DeleteFolders(nsIRDFCompositeDataSource *db, nsIDOMXULElement *parentFolder, nsIDOMXULElement *folder);
 
-  NS_IMETHOD CopyMessages(nsIDOMXULElement *srcFolderElement, nsIDOMXULElement *folderElement, nsIDOMNodeList *nodeList,
-						  PRBool isMove);
-  NS_IMETHOD GetRDFResourceForMessage(nsIDOMXULTreeElement *tree,
+  NS_IMETHOD CopyMessages(nsIRDFCompositeDataSource *database, nsIDOMXULElement *srcFolderElement,
+						  nsIDOMXULElement *dstFolderElement, nsIDOMNodeList *messages, PRBool isMove);
+  NS_IMETHOD GetRDFResourceForMessage(nsIDOMXULElement *tree,
                                       nsIDOMNodeList *nodeList, nsISupports
                                       **aSupport); 
   NS_IMETHOD Exit();
@@ -119,18 +133,29 @@ public:
   NS_IMETHOD ViewUnreadMessages(nsIRDFCompositeDataSource *databsae);
   NS_IMETHOD ViewAllThreadMessages(nsIRDFCompositeDataSource *database);
   NS_IMETHOD MarkMessagesRead(nsIRDFCompositeDataSource *database, nsIDOMNodeList *messages, PRBool markRead);
+  NS_IMETHOD MarkMessageRead(nsIRDFCompositeDataSource *database, nsIDOMXULElement *message, PRBool markRead);
+  NS_IMETHOD MarkAllMessagesRead(nsIRDFCompositeDataSource *database, nsIDOMXULElement *folder);
 
   NS_IMETHOD NewFolder(nsIRDFCompositeDataSource *database, nsIDOMXULElement *parentFolderElement,
 						const char *name);
+  NS_IMETHOD RenameFolder(nsIRDFCompositeDataSource* db, 
+                          nsIDOMXULElement* folder,
+                          const char* name);
+  NS_IMETHOD CompactFolder(nsIRDFCompositeDataSource* db,
+                           nsIDOMXULElement* folder);
+  NS_IMETHOD EmptyTrash(nsIRDFCompositeDataSource* db,
+                           nsIDOMXULElement* folder);
   NS_IMETHOD Undo();
   NS_IMETHOD Redo();
   NS_IMETHOD SendUnsentMessages();
+  NS_IMETHOD LoadFirstDraft();
   NS_IMETHOD SetDocumentCharset(const PRUnichar *characterSet);
 
 protected:
 	nsresult DoDelete(nsIRDFCompositeDataSource* db, nsISupportsArray *srcArray, nsISupportsArray *deletedArray);
 	nsresult DoCommand(nsIRDFCompositeDataSource *db, char * command, nsISupportsArray *srcArray, 
 					   nsISupportsArray *arguments);
+	nsresult DoMarkMessagesRead(nsIRDFCompositeDataSource *database, nsISupportsArray *resourceArray, PRBool markRead);
 private:
   
   nsString mId;
@@ -141,6 +166,7 @@ private:
   nsIDOMWindow       *mWindow;
   nsIWebShell        *mWebShell;
 
+  nsCOMPtr <nsIDocumentLoaderObserver> m_docLoaderObserver;
   // mscott: temporary variable used to support running urls through the 'Demo' menu....
   nsFileSpec m_folderPath; 
   void InitializeFolderRoot();
@@ -151,7 +177,7 @@ static nsresult ConvertDOMListToResourceArray(nsIDOMNodeList *nodeList, nsISuppo
 	nsresult rv = NS_OK;
 	PRUint32 listLength;
 	nsIDOMNode *node;
-	nsIDOMXULTreeElement *xulElement;
+	nsIDOMXULElement *xulElement;
 	nsIRDFResource *resource;
 
 	if(!resourceArray)
@@ -170,7 +196,7 @@ static nsresult ConvertDOMListToResourceArray(nsIDOMNodeList *nodeList, nsISuppo
 		if(NS_FAILED(nodeList->Item(i, &node)))
 			return rv;
 
-		if(NS_SUCCEEDED(rv = node->QueryInterface(nsIDOMXULElement::GetIID(), (void**)&xulElement)))
+		if(NS_SUCCEEDED(rv = node->QueryInterface(nsCOMTypeInfo<nsIDOMXULElement>::GetIID(), (void**)&xulElement)))
 		{
 			if(NS_SUCCEEDED(rv = xulElement->GetResource(&resource)))
 			{
@@ -214,12 +240,12 @@ static nsresult AddView(nsIRDFCompositeDataSource *database, nsIMessageView **me
 			//add the datasource
 		//return the view as an nsIMessageView
 	nsIRDFCompositeDataSource *viewCompositeDataSource;
-	if(NS_SUCCEEDED(view->QueryInterface(nsIRDFCompositeDataSource::GetIID(), (void**)&viewCompositeDataSource)))
+	if(NS_SUCCEEDED(view->QueryInterface(nsCOMTypeInfo<nsIRDFCompositeDataSource>::GetIID(), (void**)&viewCompositeDataSource)))
 	{
 		viewCompositeDataSource->AddDataSource(datasource);
 		NS_IF_RELEASE(viewCompositeDataSource);
 	}
-	rv = view->QueryInterface(nsIMessageView::GetIID(), (void**)messageView);
+	rv = view->QueryInterface(nsCOMTypeInfo<nsIMessageView>::GetIID(), (void**)messageView);
 
 	NS_IF_RELEASE(view);
 	NS_IF_RELEASE(datasource);
@@ -249,7 +275,7 @@ nsMessenger::~nsMessenger()
 //
 // nsISupports
 //
-NS_IMPL_ISUPPORTS(nsMessenger, nsIMessenger::GetIID())
+NS_IMPL_ISUPPORTS(nsMessenger, nsCOMTypeInfo<nsIMessenger>::GetIID())
 
 //
 // nsIMsgAppCore
@@ -257,7 +283,7 @@ NS_IMPL_ISUPPORTS(nsMessenger, nsIMessenger::GetIID())
 NS_IMETHODIMP    
 nsMessenger::Open3PaneWindow()
 {
-	char *  urlstr=nsnull;
+	const char *  urlstr=nsnull;
 	nsresult rv = NS_OK;
 	
 	nsCOMPtr<nsIWebShellWindow> newWindow;
@@ -265,27 +291,23 @@ nsMessenger::Open3PaneWindow()
 	urlstr = "resource:/res/samples/messenger.html";
 	NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
   
-	nsIURL* url = nsnull;
-	NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv);
-	if (NS_SUCCEEDED(rv) && pNetService) {
-		rv = pNetService->CreateURL(&url, urlstr);
-		if (NS_FAILED(rv))
-			goto done;		// goto in C++ is evil!
-	}
-	else
-		goto done;		// goto in C++ is evil!
+	nsCOMPtr<nsIURI> url;
+	NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv);
 
-	appShell->CreateTopLevelWindow(nsnull,      // parent
+	if (NS_SUCCEEDED(rv) && pNetService) 
+		rv = pNetService->NewURI(urlstr, nsnull, getter_AddRefs(url));
+
+
+	if (NS_SUCCEEDED(rv))
+		rv = appShell->CreateTopLevelWindow(nsnull,      // parent
                                    url,
                                    PR_TRUE,
-                                   *getter_AddRefs(newWindow),   // result widget
-                                   nsnull,      // observer
+                                   NS_CHROME_ALL_CHROME,
                                    nsnull,      // callbacks
-                                   200,         // width
-                                   200);        // height
-	done:
-	NS_IF_RELEASE(url);
-	return NS_OK;
+                                   NS_SIZETOCONTENT,           // width
+                                   NS_SIZETOCONTENT,           // height
+                                   getter_AddRefs(newWindow)); // result widget
+	return rv;
 }
 
 nsresult
@@ -337,8 +359,10 @@ nsMessenger::SetWindow(nsIDOMWindow* aWin)
   mWindow = aWin;
   NS_ADDREF(aWin);
 
+#ifdef DEBUG
   /* rhp - Needed to access the webshell to drive message display */
   printf("nsMessenger::SetWindow(): Getting the webShell of interest...\n");
+#endif
 
   nsCOMPtr<nsIScriptGlobalObject> globalObj( do_QueryInterface(aWin) );
   if (!globalObj) 
@@ -365,6 +389,23 @@ nsMessenger::SetWindow(nsIDOMWindow* aWin)
     else
         printf("nsMessenger::SetWindow(): Failed to find webshell %s.\n", (const char *) nsAutoCString(webShellName));
 #endif
+	if (mWebShell)
+	{
+		nsMsgStatusFeedback *docLoaderListener = new nsMsgStatusFeedback;
+		if (docLoaderListener)
+		{
+			nsIMsgStatusFeedback *iMsgStatusFeedback = docLoaderListener;
+			m_docLoaderObserver = do_QueryInterface(iMsgStatusFeedback);
+			docLoaderListener->SetWebShell(mWebShell, mWindow);
+			mWebShell->SetDocLoaderObserver(m_docLoaderObserver);
+
+			NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &rv); 
+
+			if(NS_SUCCEEDED(rv))
+				mailSession->SetTemporaryMsgStatusFeedback(iMsgStatusFeedback);
+
+		}
+	}
     NS_RELEASE(rootWebShell);
   }
 
@@ -411,7 +452,7 @@ void nsMessenger::InitializeFolderRoot()
     if (NS_SUCCEEDED(rv))
     {
       rv = compMgr->CreateInstance(kTransactionManagerCID, nsnull, 
-                                   nsITransactionManager::GetIID(),
+                                   nsCOMTypeInfo<nsITransactionManager>::GetIID(),
                                    getter_AddRefs(mTxnMgr));
       if (NS_SUCCEEDED(rv))
         mTxnMgr->SetMaxTransactionCount(-1);
@@ -423,7 +464,7 @@ nsMessenger::OpenURL(const char * url)
 {
 	if (url)
 	{
-#ifdef DEBUG_sspitzer
+#if defined(DEBUG_sspitzer) || defined(DEBUG_seth)
 		printf("nsMessenger::OpenURL(%s)\n",url);
 #endif    
 		nsIMsgMessageService * messageService = nsnull;
@@ -434,14 +475,26 @@ nsMessenger::OpenURL(const char * url)
 			messageService->DisplayMessage(url, mWebShell, nsnull, nsnull);
 			ReleaseMessageServiceFromURI(url, messageService);
 		}
-
+		//If it's not something we know about, then just load the url.
+		else
+		{
+			nsString urlStr(url);
+			mWebShell->LoadURL(urlStr.GetUnicode());
+		}
 	}
+	/*	here's how we'd turn off the throbber
+  setAttribute( rootWebshell, "Messenger:Throbber", "busy", "false" );
+  PRBool result=PR_TRUE;
+    //Disable the Stop button
+  setAttribute( rootWebshell, "canStop", "disabled", "true" );
+	*/
 	return NS_OK;
 }
 
 nsresult
 nsMessenger::DoCommand(nsIRDFCompositeDataSource* db, char *command,
-						nsISupportsArray *srcArray, nsISupportsArray *argumentArray)
+                       nsISupportsArray *srcArray, 
+                       nsISupportsArray *argumentArray)
 {
 
 	nsresult rv;
@@ -466,7 +519,7 @@ nsMessenger::DoCommand(nsIRDFCompositeDataSource* db, char *command,
 }
 
 NS_IMETHODIMP
-nsMessenger::DeleteMessages(nsIDOMXULTreeElement *tree, nsIDOMXULElement *srcFolderElement, nsIDOMNodeList *nodeList)
+nsMessenger::DeleteMessages(nsIDOMXULElement *tree, nsIDOMXULElement *srcFolderElement, nsIDOMNodeList *nodeList)
 {
 	nsresult rv;
 
@@ -547,12 +600,55 @@ NS_IMETHODIMP nsMessenger::DeleteFolders(nsIRDFCompositeDataSource *db, nsIDOMXU
 }
 
 NS_IMETHODIMP
-nsMessenger::CopyMessages(nsIDOMXULElement *srcFolderElement, nsIDOMXULElement *dstFolderElement,
-						   nsIDOMNodeList *nodeList, PRBool isMove)
+nsMessenger::CopyMessages(nsIRDFCompositeDataSource *database, nsIDOMXULElement *srcFolderElement,
+						  nsIDOMXULElement *dstFolderElement, nsIDOMNodeList *messages, PRBool isMove)
 {
+#if 1
 	nsresult rv;
 
-	if(!srcFolderElement || !dstFolderElement || !nodeList)
+	if(!srcFolderElement || !dstFolderElement || !messages)
+		return NS_ERROR_NULL_POINTER;
+
+	nsCOMPtr<nsIRDFResource> srcResource, dstResource;
+	nsCOMPtr<nsIMsgFolder> srcFolder;
+	nsCOMPtr<nsISupportsArray> argumentArray;
+	nsCOMPtr<nsISupportsArray> folderArray;
+
+	rv = dstFolderElement->GetResource(getter_AddRefs(dstResource));
+	if(NS_FAILED(rv))
+		return rv;
+
+	rv = srcFolderElement->GetResource(getter_AddRefs(srcResource));
+	if(NS_FAILED(rv))
+		return rv;
+
+	srcFolder = do_QueryInterface(srcResource);
+	if(!srcFolder)
+		return NS_ERROR_NO_INTERFACE;
+
+	rv =ConvertDOMListToResourceArray(messages, getter_AddRefs(argumentArray));
+	if(NS_FAILED(rv))
+		return rv;
+
+	nsCOMPtr<nsISupports> srcFolderSupports(do_QueryInterface(srcFolder));
+	if(srcFolderSupports)
+		argumentArray->InsertElementAt(srcFolderSupports, 0);
+
+	rv = NS_NewISupportsArray(getter_AddRefs(folderArray));
+	if(NS_FAILED(rv))
+	{
+		return NS_ERROR_OUT_OF_MEMORY;
+	}
+
+	folderArray->AppendElement(dstResource);
+	
+	rv = DoCommand(database, isMove ? (char *)NC_RDF_MOVE : (char *)NC_RDF_COPY, folderArray, argumentArray);
+	return rv;
+
+#else
+	nsresult rv;
+
+	if(!srcFolderElement || !dstFolderElement || !messages)
 		return NS_ERROR_NULL_POINTER;
 
 	nsCOMPtr<nsIRDFResource> srcResource, dstResource;
@@ -576,7 +672,7 @@ nsMessenger::CopyMessages(nsIDOMXULElement *srcFolderElement, nsIDOMXULElement *
 	if(!srcFolder)
 		return NS_ERROR_NO_INTERFACE;
 
-	rv =ConvertDOMListToResourceArray(nodeList, getter_AddRefs(resourceArray));
+	rv =ConvertDOMListToResourceArray(messages, getter_AddRefs(resourceArray));
 	if(NS_FAILED(rv))
 		return rv;
 
@@ -594,7 +690,7 @@ nsMessenger::CopyMessages(nsIDOMXULElement *srcFolderElement, nsIDOMXULElement *
 		firstMessage->GetValue(&uri);
 		nsCOMPtr<nsICopyMessageStreamListener> copyStreamListener; 
 		rv = nsComponentManager::CreateInstance(kCopyMessageStreamListenerCID, NULL,
-												nsICopyMessageStreamListener::GetIID(),
+												nsCOMTypeInfo<nsICopyMessageStreamListener>::GetIID(),
 												getter_AddRefs(copyStreamListener)); 
 		if(NS_FAILED(rv))
 			return rv;
@@ -607,7 +703,7 @@ nsMessenger::CopyMessages(nsIDOMXULElement *srcFolderElement, nsIDOMXULElement *
 
 		if (NS_SUCCEEDED(rv) && messageService)
 		{
-			nsIURL * url = nsnull;
+			nsIURI * url = nsnull;
 			nsCOMPtr<nsIStreamListener> streamListener(do_QueryInterface(copyStreamListener));
 			if(!streamListener)
 				return NS_ERROR_NO_INTERFACE;
@@ -618,10 +714,11 @@ nsMessenger::CopyMessages(nsIDOMXULElement *srcFolderElement, nsIDOMXULElement *
 	}
 
 	return rv;
+#endif
 }
 
 NS_IMETHODIMP
-nsMessenger::GetRDFResourceForMessage(nsIDOMXULTreeElement *tree,
+nsMessenger::GetRDFResourceForMessage(nsIDOMXULElement *tree,
                                        nsIDOMNodeList *nodeList, nsISupports
                                        **aSupport) 
 {
@@ -645,7 +742,7 @@ nsMessenger::GetRDFResourceForMessage(nsIDOMXULTreeElement *tree,
     {
         rv = aEnumerator->CurrentItem(&aItem);
         if (rv != NS_OK) break;
-        rv = aItem->QueryInterface(nsIMessage::GetIID(), (void**)aSupport);
+        rv = aItem->QueryInterface(nsCOMTypeInfo<nsIMessage>::GetIID(), (void**)aSupport);
         aItem->Release();
         if (rv == NS_OK && *aSupport) break;
         rv = aEnumerator->Next();
@@ -760,6 +857,32 @@ nsMessenger::ViewAllThreadMessages(nsIRDFCompositeDataSource *database)
 }
 
 NS_IMETHODIMP
+nsMessenger::MarkMessageRead(nsIRDFCompositeDataSource *database, nsIDOMXULElement *message, PRBool markRead)
+{
+	if(!database || !message)
+		return NS_ERROR_NULL_POINTER;
+
+	nsresult rv;
+
+	nsCOMPtr<nsIRDFResource> messageResource;
+	rv = message->GetResource(getter_AddRefs(messageResource));
+	if(NS_FAILED(rv))
+		return rv;
+
+	nsCOMPtr<nsISupportsArray> resourceArray;
+
+	rv = NS_NewISupportsArray(getter_AddRefs(resourceArray));
+	if(NS_FAILED(rv))
+		return NS_ERROR_OUT_OF_MEMORY;
+
+	resourceArray->AppendElement(messageResource);
+
+	rv = DoMarkMessagesRead(database, resourceArray, markRead);
+
+	return rv;
+}
+
+NS_IMETHODIMP
 nsMessenger::MarkMessagesRead(nsIRDFCompositeDataSource *database, nsIDOMNodeList *messages, PRBool markRead)
 {
 	nsresult rv;
@@ -767,12 +890,24 @@ nsMessenger::MarkMessagesRead(nsIRDFCompositeDataSource *database, nsIDOMNodeLis
 	if(!database || !messages)
 		return NS_ERROR_NULL_POINTER;
 
-	nsCOMPtr<nsISupportsArray> resourceArray, argumentArray;
+	nsCOMPtr<nsISupportsArray> resourceArray;
 
 
 	rv =ConvertDOMListToResourceArray(messages, getter_AddRefs(resourceArray));
 	if(NS_FAILED(rv))
 		return rv;
+
+	rv= DoMarkMessagesRead(database, resourceArray, markRead);
+
+
+	return rv;
+}
+
+nsresult
+nsMessenger::DoMarkMessagesRead(nsIRDFCompositeDataSource *database, nsISupportsArray *resourceArray, PRBool markRead)
+{
+	nsresult rv;
+	nsCOMPtr<nsISupportsArray> argumentArray;
 
 	rv = NS_NewISupportsArray(getter_AddRefs(argumentArray));
 	if(NS_FAILED(rv))
@@ -784,6 +919,31 @@ nsMessenger::MarkMessagesRead(nsIRDFCompositeDataSource *database, nsIDOMNodeLis
 		rv = DoCommand(database, NC_RDF_MARKREAD, resourceArray, argumentArray);
 	else
 		rv = DoCommand(database, NC_RDF_MARKUNREAD, resourceArray,  argumentArray);
+
+	return rv;
+
+}
+
+NS_IMETHODIMP
+nsMessenger::MarkAllMessagesRead(nsIRDFCompositeDataSource *database, nsIDOMXULElement *folder)
+{
+	nsresult rv;
+	nsCOMPtr<nsIRDFResource> folderResource;
+	nsCOMPtr<nsISupportsArray> folderArray;
+
+	if(!folder || !database)
+		return NS_ERROR_NULL_POINTER;
+
+	rv = folder->GetResource(getter_AddRefs(folderResource));
+	if(NS_FAILED(rv))
+		return rv;
+
+	if(NS_FAILED(NS_NewISupportsArray(getter_AddRefs(folderArray))))
+		return NS_ERROR_OUT_OF_MEMORY;
+
+	folderArray->AppendElement(folderResource);
+
+	DoCommand(database, NC_RDF_MARKALLMESSAGESREAD, folderArray, nsnull);
 
 	return rv;
 }
@@ -829,6 +989,77 @@ nsMessenger::NewFolder(nsIRDFCompositeDataSource *database, nsIDOMXULElement *pa
 }
 
 NS_IMETHODIMP
+nsMessenger::RenameFolder(nsIRDFCompositeDataSource* db,
+                          nsIDOMXULElement* folder,
+                          const char* name)
+{
+  nsresult rv = NS_ERROR_NULL_POINTER;
+  if (!db || !folder || !name || !*name) return rv;
+  nsCOMPtr<nsISupports> streamSupport;
+  rv = NS_NewCharInputStream(getter_AddRefs(streamSupport), name);
+  if (NS_SUCCEEDED(rv))
+  {
+    nsCOMPtr<nsISupportsArray> folderArray;
+    nsCOMPtr<nsISupportsArray> argsArray;
+    nsCOMPtr<nsIRDFResource> folderResource;
+    rv = folder->GetResource(getter_AddRefs(folderResource));
+    if (NS_SUCCEEDED(rv))
+    {
+      rv = NS_NewISupportsArray(getter_AddRefs(folderArray));
+      if (NS_FAILED(rv)) return rv;
+      folderArray->AppendElement(folderResource);
+      rv = NS_NewISupportsArray(getter_AddRefs(argsArray));
+      if (NS_FAILED(rv)) return rv;
+      argsArray->AppendElement(streamSupport);
+      rv = DoCommand(db, NC_RDF_RENAME, folderArray, argsArray);
+    }
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
+nsMessenger::CompactFolder(nsIRDFCompositeDataSource* db,
+                           nsIDOMXULElement* folder)
+{
+  nsresult rv = NS_ERROR_NULL_POINTER;
+  
+  if (!db || !folder) return rv;
+  nsCOMPtr<nsISupportsArray> folderArray;
+  nsCOMPtr<nsIRDFResource> folderResource;
+
+  rv = folder->GetResource(getter_AddRefs(folderResource));
+  if (NS_SUCCEEDED(rv))
+  {
+    rv = NS_NewISupportsArray(getter_AddRefs(folderArray));
+    if (NS_FAILED(rv)) return rv;
+    folderArray->AppendElement(folderResource);
+    rv = DoCommand(db, NC_RDF_COMPACT, folderArray, nsnull);
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
+nsMessenger::EmptyTrash(nsIRDFCompositeDataSource* db,
+                        nsIDOMXULElement* folder)
+{
+  nsresult rv = NS_ERROR_NULL_POINTER;
+  
+  if (!db || !folder) return rv;
+  nsCOMPtr<nsISupportsArray> folderArray;
+  nsCOMPtr<nsIRDFResource> folderResource;
+
+  rv = folder->GetResource(getter_AddRefs(folderResource));
+  if (NS_SUCCEEDED(rv))
+  {
+    rv = NS_NewISupportsArray(getter_AddRefs(folderArray));
+    if (NS_FAILED(rv)) return rv;
+    folderArray->AppendElement(folderResource);
+    rv = DoCommand(db, NC_RDF_EMPTYTRASH, folderArray, nsnull);
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
 nsMessenger::Undo()
 {
   nsresult rv = NS_OK;
@@ -868,14 +1099,79 @@ nsMessenger::GetTransactionManager(nsITransactionManager* *aTxnMgr)
   return NS_OK;
 }
 
-static nsresult 
-SendUnsentMessagesCallback(nsresult aExitCode, PRUint32 totalSentCount,
-                           PRUint32 totalSentSuccessfully, void *tagData)
+NS_IMETHODIMP nsMessenger::SetDocumentCharset(const PRUnichar *characterSet)
+{
+	// Set a default charset of the webshell. 
+	if (nsnull != mWebShell) {
+		mWebShell->SetDefaultCharacterSet(characterSet);
+	}
+    return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// This is the listener class for the send operation. 
+////////////////////////////////////////////////////////////////////////////////////
+class SendLaterListener: public nsIMsgSendLaterListener
+{
+public:
+  SendLaterListener(void);
+  virtual ~SendLaterListener(void);
+
+  // nsISupports interface
+  NS_DECL_ISUPPORTS
+
+  /* void OnStartSending (in PRUint32 aTotalMessageCount); */
+  NS_IMETHOD OnStartSending(PRUint32 aTotalMessageCount);
+
+  /* void OnProgress (in PRUint32 aCurrentMessage, in PRUint32 aTotalMessage); */
+  NS_IMETHOD OnProgress(PRUint32 aCurrentMessage, PRUint32 aTotalMessage);
+
+  /* void OnStatus (in wstring aMsg); */
+  NS_IMETHOD OnStatus(const PRUnichar *aMsg);
+
+  /* void OnStopSending (in nsresult aStatus, in wstring aMsg, in PRUint32 aTotalTried, in PRUint32 aSuccessful); */
+  NS_IMETHOD OnStopSending(nsresult aStatus, const PRUnichar *aMsg, PRUint32 aTotalTried, PRUint32 aSuccessful);
+};
+
+NS_IMPL_ISUPPORTS(SendLaterListener, nsCOMTypeInfo<nsIMsgSendLaterListener>::GetIID());
+
+SendLaterListener::SendLaterListener()
+{
+  NS_INIT_REFCNT();
+}
+
+SendLaterListener::~SendLaterListener()
+{
+}
+
+nsresult
+SendLaterListener::OnStartSending(PRUint32 aTotalMessageCount)
+{
+  return NS_OK;
+}
+
+nsresult
+SendLaterListener::OnProgress(PRUint32 aCurrentMessage, PRUint32 aTotalMessage)
+{
+  return NS_OK;
+}
+
+nsresult
+SendLaterListener::OnStatus(const PRUnichar *aMsg)
+{
+  return NS_OK;
+}
+
+nsresult
+SendLaterListener::OnStopSending(nsresult aStatus, const PRUnichar *aMsg, PRUint32 aTotalTried, 
+                                 PRUint32 aSuccessful) 
 {
 #ifdef NS_DEBUG
-  printf("SendUnsentMessagesCallback: Tried to send %d messages. %d successful.\n",
-          totalSentCount, totalSentSuccessfully);
+  if (NS_SUCCEEDED(aStatus))
+    printf("SendLaterListener::OnStopSending: Tried to send %d messages. %d successful.\n",
+            aTotalTried, aSuccessful);
 #endif
+
   return NS_OK;
 }
 
@@ -884,21 +1180,92 @@ nsMessenger::SendUnsentMessages()
 {
 	nsresult rv;
 	nsCOMPtr<nsIMsgSendLater> pMsgSendLater; 
-	rv = nsComponentManager::CreateInstance(kMsgSendLaterCID, NULL,nsIMsgSendLater::GetIID(),
+	rv = nsComponentManager::CreateInstance(kMsgSendLaterCID, NULL,nsCOMTypeInfo<nsIMsgSendLater>::GetIID(),
 																					(void **)getter_AddRefs(pMsgSendLater)); 
 	if (NS_SUCCEEDED(rv) && pMsgSendLater) 
 	{ 
+#ifdef DEBUG
 		printf("We succesfully obtained a nsIMsgSendLater interface....\n"); 
-		pMsgSendLater->SendUnsentMessages(nsnull, SendUnsentMessagesCallback, nsnull); 
+#endif
+
+    SendLaterListener *sendLaterListener = new SendLaterListener();
+    if (!sendLaterListener)
+        return NS_ERROR_FAILURE;
+
+    NS_ADDREF(sendLaterListener);
+    pMsgSendLater->AddListener(sendLaterListener);
+
+    // temporary hack to get the current identity
+    NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    nsCOMPtr<nsIMsgIdentity> identity;
+    rv = mailSession->GetCurrentIdentity(getter_AddRefs(identity));
+    if (NS_FAILED(rv)) return rv;
+      
+    pMsgSendLater->SendUnsentMessages(identity, nsnull); 
+    NS_RELEASE(sendLaterListener);
 	} 
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMessenger::SetDocumentCharset(const PRUnichar *characterSet)
+NS_IMETHODIMP
+nsMessenger::LoadFirstDraft()
 {
-	// Set a default charset of the webshell. 
-	if (nsnull != mWebShell) {
-		mWebShell->SetDefaultCharacterSet(characterSet);
-	}
-    return NS_OK;
+	nsresult              rv = NS_ERROR_FAILURE;
+	nsCOMPtr<nsIMsgDraft> pMsgDraft; 
+
+	rv = nsComponentManager::CreateInstance(kMsgDraftCID, NULL, nsCOMTypeInfo<nsIMsgDraft>::GetIID(),
+																					(void **)getter_AddRefs(pMsgDraft)); 
+	if (NS_SUCCEEDED(rv) && pMsgDraft) 
+	{ 
+#ifdef DEBUG
+		printf("We succesfully obtained a nsIMsgDraft interface....\n");
+#endif
+
+
+    // This should really pass in a URI, but for now, just to test, we can pass in nsnull
+    rv = pMsgDraft->OpenDraftMsg(nsnull, nsnull); 
+  } 
+
+  return rv;
+}
+
+NS_IMETHODIMP nsMessenger::DoPrint()
+{
+#ifdef DEBUG_seth
+  printf("nsMessenger::DoPrint()\n");
+#endif
+
+  nsresult rv = NS_ERROR_FAILURE;
+  nsCOMPtr<nsIContentViewer> viewer;
+
+  if (!mWebShell) {
+#ifdef DEBUG_seth
+	printf("can't print, there is no webshell\n");
+#endif
+	return rv;
+  }
+
+  mWebShell->GetContentViewer(getter_AddRefs(viewer));
+
+  if (viewer) {
+    rv = viewer->Print();
+  }
+#ifdef DEBUG_seth
+  else {
+	printf("failed to get the viewer for printing\n");
+  }
+#endif
+  
+  return rv;
+}
+
+NS_IMETHODIMP nsMessenger::DoPrintPreview()
+{
+  nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
+#ifdef DEBUG_seth
+  printf("nsMessenger::DoPrintPreview()\n");
+#endif
+  return rv;  
 }

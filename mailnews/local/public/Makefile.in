@@ -29,12 +29,9 @@ XPIDLSRCS = \
 	nsIPop3Service.idl	\
 	nsIMailboxService.idl	\
 	nsIPop3Sink.idl			\
-	$(NULL)
-
-EXPORTS= \
-	nsIPop3URL.h \
-	nsIMailboxUrl.h \
-	nsIMsgParseMailMsgState.h \
+	nsIPop3URL.idl			\
+	nsIMailboxUrl.idl		\
+	nsIMsgParseMailMsgState.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/config.mk

@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..
+include <$(DEPTH)/config/config.mak>
 MODULE=rdf 
 
 MAKE_OBJ_TYPE=DLL
@@ -38,13 +39,15 @@ LLIBS=\
  $(DIST)\lib\rdfdatasource_s.lib \
  $(DIST)\lib\xpcom.lib         \
  $(DIST)\lib\raptorgfxwin.lib    \
+ $(DIST)\lib\timer_s.lib \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib     \
+!else
  $(DIST)\lib\netlib.lib          \
- $(DIST)\lib\plc3.lib            \
+!endif
  $(DIST)\lib\jsdom.lib           \
  $(DIST)\lib\js3250.lib          \
  $(LIBNSPR)  
-
-MISCDEP=$(LLIBS)
 
 # XXX Note dependencies on implementation dirs for factory methods.
 

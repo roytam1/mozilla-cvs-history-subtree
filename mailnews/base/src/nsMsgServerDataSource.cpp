@@ -24,15 +24,19 @@
 #include "rdf.h"
 
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 
 class nsMsgServerDataSource : public nsMsgRDFDataSource
 {
 public:
-  // RDF datasource methods
-  
-  /* void Init (in string uri); */
-  NS_IMETHOD Init(const char *uri);
+  nsMsgServerDataSource();
+  virtual ~nsMsgServerDataSource();
+  virtual nsresult Init();
     
+  // RDF datasource methods
+
+  NS_IMETHOD GetURI(char* *aURI);
+  
   /* nsIRDFNode GetTarget (in nsIRDFResource source, in nsIRDFResource property, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
                        nsIRDFResource *property,
@@ -53,7 +57,7 @@ protected:
 
   static inline nsresult getServer(nsIRDFResource *resource,
                                    nsIMsgIncomingServer **server)
-        { return resource->QueryInterface(nsIMsgIncomingServer::GetIID(),
+        { return resource->QueryInterface(nsCOMTypeInfo<nsIMsgIncomingServer>::GetIID(),
                                           (void **)server); }
 
   
@@ -78,16 +82,45 @@ nsIRDFResource* nsMsgServerDataSource::kNC_Server;
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, child);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Server);
 
-/* void Init (in string uri); */
-NS_IMETHODIMP
-nsMsgServerDataSource::Init(const char *uri)
+nsMsgServerDataSource::nsMsgServerDataSource()
 {
-    nsMsgRDFDataSource::Init(uri);
+  nsresult rv;
+  rv = Init();
+
+  // XXX This call should be moved to a NS_NewMsgFooDataSource()
+  // method that the factory calls, so that failure to construct
+  // will return an error code instead of returning a partially
+  // initialized object.
+  NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, initialization failed");
+  if (NS_FAILED(rv)) return /* rv */;
+
+  return /* NS_OK */;
+}
+
+
+nsMsgServerDataSource::~nsMsgServerDataSource()
+{
+}
+
+nsresult
+nsMsgServerDataSource::Init()
+{
+    nsMsgRDFDataSource::Init();
     
     if (! kNC_Child) {
         getRDFService()->GetResource(kURINC_child, &kNC_Child);
         getRDFService()->GetResource(kURINC_Server, &kNC_Server);
     }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMsgServerDataSource::GetURI(char* *aURI)
+{
+    *aURI = nsXPIDLCString::Copy("rdf:msgservers");
+    if (! *aURI)
+        return NS_ERROR_OUT_OF_MEMORY;
+
     return NS_OK;
 }
 
@@ -142,6 +175,7 @@ nsresult
 NS_NewMsgServerDataSource(const nsIID& iid, void **result)
 {
   nsMsgServerDataSource *ids = new nsMsgServerDataSource();
+  if (!ids) return NS_ERROR_OUT_OF_MEMORY;
   return ids->QueryInterface(iid, result);
 }
 

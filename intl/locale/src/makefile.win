@@ -31,11 +31,15 @@ LIBRARY_NAME = nslocale_s
 
 CPPSRCS		=	nsLocale.cpp				\
 				nsLocaleFactory.cpp			\
+				nsLocaleService.cpp			\
+				nsScriptableDateFormat.cpp			\
 				nsCollation.cpp
 
 
 CPP_OBJS	=	.\$(OBJDIR)\nsLocale.obj			\
 				.\$(OBJDIR)\nsLocaleFactory.obj		\
+				.\$(OBJDIR)\nsLocaleService.obj		\
+				.\$(OBJDIR)\nsScriptableDateFormat.obj		\
 				.\$(OBJDIR)\nsCollation.obj
 
 LINCS		= -I.						\
@@ -48,8 +52,6 @@ LINCS		= -I.						\
 
 LLIBS		= $(DIST)\lib\xpcom.lib		\
 			  $(LIBNSPR)
-
-MISCDEP		= $(LLIBS)
 
 LCFLAGS		= $(LCFLAGS) \
 			  $(DEFINES)

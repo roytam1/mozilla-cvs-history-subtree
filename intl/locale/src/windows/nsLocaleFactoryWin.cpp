@@ -20,7 +20,9 @@
 #include "nsISupports.h"
 #include "nsIFactory.h"
 #include "nsCollationWin.h"
+#include "nsDateTimeFormatCID.h"
 #include "nsDateTimeFormatWin.h"
+#include "nsIScriptableDateFormat.h"
 #include "nsLocalefactoryWin.h"
 
 
@@ -29,6 +31,7 @@ NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
 NS_DEFINE_IID(kICollationFactoryIID, NS_ICOLLATIONFACTORY_IID);                                                         
 NS_DEFINE_IID(kICollationIID, NS_ICOLLATION_IID);                                                         
 NS_DEFINE_IID(kIDateTimeFormatIID, NS_IDATETIMEFORMAT_IID);
+NS_DEFINE_CID(kScriptableDateFormatCID, NS_SCRIPTABLEDATEFORMAT_CID);
 
 
 nsLocaleWinFactory::nsLocaleWinFactory(const nsCID &aClass)   
@@ -100,6 +103,12 @@ nsresult nsLocaleWinFactory::CreateInstance(nsISupports *aOuter,
   }
   else if (aIID.Equals(kIDateTimeFormatIID)) {
      NS_NEWXPCOM(inst, nsDateTimeFormatWin);
+  }
+  else if (aIID.Equals(nsIScriptableDateFormat::GetIID())) {
+     inst = NEW_SCRIPTABLE_DATEFORMAT();
+  }
+  else if (mClassID.Equals(kScriptableDateFormatCID)) {
+     inst = NEW_SCRIPTABLE_DATEFORMAT();
   }
   else 
   {

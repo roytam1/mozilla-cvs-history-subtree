@@ -140,7 +140,7 @@ NS_METHOD nsMenuBar::Create(nsIWidget *aParent)
     PR_LOG(PhWidLog, PR_LOG_ERROR, ("nsMenuBar::Create with nsIWidget parent=%p, this=%p Photon menuBar=<%p>\n", aParent, this, mMenuBar));
 
     SetParent(aParent);
-    PtRealizeWidget(mMenuBar);
+//    PtRealizeWidget(mMenuBar);
     return NS_OK;
   }
 }
@@ -172,7 +172,7 @@ NS_METHOD nsMenuBar::AddMenu(nsIMenu * aMenu)
 
   /* Add the nsMenu to our list */
   mItems->AppendElement(aMenu);
-  NS_ADDREF(aMenu);					// Not sure about this but windows did it
+  NS_ADDREF(aMenu);
 
 #ifdef DEBUG		  
   nsString Label;
@@ -238,13 +238,12 @@ NS_METHOD nsMenuBar::RemoveAll()
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenuBar::RemoveAll\n"));
 
-  while (mItems->Count())
-  {
+ while (mItems->Count()) {
     nsISupports * supports = (nsISupports *)mItems->ElementAt(0);
-	NS_RELEASE(supports);
-	mItems->RemoveElementAt(0);
+    NS_RELEASE(supports);
+    mItems->RemoveElementAt(0);
   }
-
+  
   return NS_OK;
 }
 
@@ -266,15 +265,11 @@ NS_METHOD nsMenuBar::SetNativeData(void * aData)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBar::Paint()
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenuBar::Paint - Not Implemented\n"));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenuBar::Paint\n"));
   mParent->Invalidate(PR_TRUE);
   return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-//
-// nsMenuListener interface
-//
 //-------------------------------------------------------------------------
 nsEventStatus nsMenuBar::MenuItemSelected(const nsMenuEvent & aMenuEvent)
 {
@@ -282,6 +277,7 @@ nsEventStatus nsMenuBar::MenuItemSelected(const nsMenuEvent & aMenuEvent)
   return nsEventStatus_eIgnore;
 }
 
+//-------------------------------------------------------------------------
 nsEventStatus nsMenuBar::MenuSelected(const nsMenuEvent & aMenuEvent)
 {
   // I should determine which menu was selected and call MenuConstruct
@@ -297,12 +293,14 @@ nsEventStatus nsMenuBar::MenuSelected(const nsMenuEvent & aMenuEvent)
   return nsEventStatus_eIgnore;
 }
 
+//-------------------------------------------------------------------------
 nsEventStatus nsMenuBar::MenuDeselected(const nsMenuEvent & aMenuEvent)
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenuBar::MenuDeSelected - Not Implemented\n"));
   return nsEventStatus_eIgnore;
 }
 
+//-------------------------------------------------------------------------
 nsEventStatus nsMenuBar::MenuConstruct(
     const nsMenuEvent & aMenuEvent,
     nsIWidget         * aParentWindow, 
@@ -334,7 +332,7 @@ nsEventStatus nsMenuBar::MenuConstruct(
             nsString menuName;
             menuElement->GetNodeName(menuNodeType);
             if (menuNodeType.Equals("menu")) {
-              menuElement->GetAttribute(nsAutoString("name"), menuName);
+              menuElement->GetAttribute(nsAutoString("value"), menuName);
               // Don't create the menu yet, just add in the top level names
               
                 // Create nsMenu
@@ -373,7 +371,7 @@ nsEventStatus nsMenuBar::MenuConstruct(
         // HACK: force a paint for now
         pnsMenuBar->Paint();
         
-	NS_RELEASE(pnsMenuBar);
+		NS_RELEASE(pnsMenuBar);
     } // end if ( nsnull != pnsMenuBar )
   }
   

@@ -44,7 +44,6 @@
 #include "prtypes.h"
 #include "prio.h"
 #include "plstr.h"
-#include <fstream.h>
 
 
 #ifdef XP_PC
@@ -306,6 +305,15 @@ PRBool COtherDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const {
   return CNavDTD::CanContain(aParent,aChild);
 }
 
+
+/**
+ * Give rest of world access to our tag enums, so that CanContain(), etc,
+ * become useful.
+ */
+NS_IMETHODIMP COtherDTD::StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const
+{
+  return CNavDTD::StringTagToIntTag(aTag, aIntTag);
+}
 
 /**
  *  This method gets called to determine whether a given 

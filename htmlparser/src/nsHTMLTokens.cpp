@@ -74,7 +74,7 @@ CHTMLToken::CHTMLToken(eHTMLTags aTag) : CToken(aTag) {
 void CHTMLToken::SetStringValue(const char* name){
   if(name) {
     mTextValue=name;
-    mTypeID = NS_TagToEnum(name);
+    mTypeID = nsHTMLTags::LookupTag(mTextValue);
   }
 }
 
@@ -124,10 +124,7 @@ void CStartToken::Reinitialize(PRInt32 aTag, const nsString& aString){
  */
 PRInt32 CStartToken::GetTypeID(){
   if(eHTMLTag_unknown==mTypeID) {
-    nsAutoString tmp(mTextValue);
-    char cbuf[20];
-    tmp.ToCString(cbuf, sizeof(cbuf));
-    mTypeID = NS_TagToEnum(cbuf);
+    mTypeID = nsHTMLTags::LookupTag(mTextValue);
   }
   return mTypeID;
 }
@@ -227,9 +224,7 @@ nsresult CStartToken::Consume(PRUnichar aChar, nsScanner& aScanner) {
 
   mTextValue=aChar;
   nsresult result=aScanner.ReadWhile(mTextValue,GetIdentChars(),PR_TRUE,PR_FALSE);
-  char buffer[300];
-  mTextValue.ToCString(buffer,sizeof(buffer)-1);
-  mTypeID = NS_TagToEnum(buffer);
+  mTypeID = nsHTMLTags::LookupTag(mTextValue);
 
   if(eHTMLTag_image==mTypeID){
     mTypeID=eHTMLTag_img;
@@ -325,12 +320,10 @@ nsresult CEndToken::Consume(PRUnichar aChar, nsScanner& aScanner) {
 
   if(NS_OK==result){
 
-    char buffer[20];
     PRInt32 theIndex=mTextValue.FindCharInSet(" \r\n\t\b",0);
-    PRInt32 theMaxLen=(kNotFound==theIndex) ? sizeof(buffer)-1 : theIndex;
-    mTextValue.ToCString(buffer,theMaxLen+1);
-    buffer[theMaxLen]=0;
-    mTypeID= NS_TagToEnum(buffer);
+    nsAutoString  buffer(mTextValue);
+    buffer.Truncate(theIndex);
+    mTypeID= nsHTMLTags::LookupTag(buffer);
     result=aScanner.GetChar(aChar); //eat the closing '>;
   }
   return result;
@@ -348,10 +341,7 @@ nsresult CEndToken::Consume(PRUnichar aChar, nsScanner& aScanner) {
  */
 PRInt32 CEndToken::GetTypeID(){
   if(eHTMLTag_unknown==mTypeID) {
-    nsAutoString tmp(mTextValue);
-    char cbuf[200];
-    tmp.ToCString(cbuf, sizeof(cbuf));
-    mTypeID = NS_TagToEnum(cbuf);
+    mTypeID = nsHTMLTags::LookupTag(mTextValue);
     switch(mTypeID) {
       case eHTMLTag_dir:
       case eHTMLTag_menu:
@@ -507,11 +497,12 @@ nsresult CTextToken::Consume(PRUnichar aChar, nsScanner& aScanner) {
  *  @return  error result
  */
 nsresult CTextToken::ConsumeUntil(PRUnichar aChar,PRBool aIgnoreComments,nsScanner& aScanner,nsString& aTerminalString){
-  PRBool       done=PR_FALSE; 
-  nsresult     result=NS_OK; 
-  nsString     temp; 
-  PRUnichar    theChar;
-  nsAutoString theRight;
+  PRBool        done=PR_FALSE; 
+  nsresult      result=NS_OK; 
+  PRUnichar     theChar;
+  nsAutoString  theRight;
+  PRInt32       rpos=0;
+
 
   //We're going to try a new algorithm here. Rather than scan for the matching 
  //end tag like we used to do, we're now going to scan for whitespace and comments. 
@@ -519,11 +510,15 @@ nsresult CTextToken::ConsumeUntil(PRUnichar aChar,PRBool aIgnoreComments,nsScann
  //target endtag, or the start of another comment. 
 
   static nsAutoString theWhitespace2("\b\t ");
+  static nsAutoString theTerminals("\"\'<");
 
+  PRInt32 termStrLen=aTerminalString.Length();
   while((!done) && (NS_OK==result)) { 
     result=aScanner.GetChar(aChar); 
     if((NS_OK==result) && (kLessThan==aChar)) { 
       //we're reading a tag or a comment... 
+      //FYI: <STYLE> and <SCRIPT> should be treated as CDATA. So, 
+      //don't try to acknowledge "HTML COMMENTS"...just ignore 'em.
       result=aScanner.GetChar(theChar); 
       if((NS_OK==result) && (kExclamation==theChar) && (PR_FALSE==aIgnoreComments)) { 
         //read a comment... 
@@ -532,39 +527,52 @@ nsresult CTextToken::ConsumeUntil(PRUnichar aChar,PRBool aIgnoreComments,nsScann
         if(NS_OK==result) { 
           //result=aScanner.SkipWhitespace();
           //temp.Append("<!");
-          temp.Append(theComment.GetStringValueXXX()); 
+          mTextValue.Append(theComment.GetStringValueXXX()); 
           //temp.Append(">");
         } 
       } else { 
         //read a tag... 
-        temp+=aChar; 
-        temp+=theChar; 
-        result=aScanner.ReadUntil(temp,kGreaterThan,PR_TRUE); 
+        mTextValue+=aChar; 
+        mTextValue+=theChar; 
+        result=aScanner.ReadUntil(mTextValue,kGreaterThan,PR_TRUE); 
       } 
     } 
+    else if((NS_OK==result) && ((kQuote==aChar) || kApostrophe==aChar)) {
+      static nsAutoString theEndings("\n\"\'");
+      mTextValue += aChar;
+      result=aScanner.ReadUntil(mTextValue,theEndings,PR_TRUE,PR_FALSE);
+      if(result==NS_OK) {
+        result=aScanner.GetChar(aChar);
+        if(result==NS_OK) mTextValue += aChar; // consume the character that stopped the scan
+      }
+    }
     else if(0<=theWhitespace2.BinarySearch(aChar)) { 
       static CWhitespaceToken theWS; 
       result=theWS.Consume(aChar,aScanner); 
       if(NS_OK==result) { 
-        temp.Append(theWS.GetStringValueXXX()); 
+        mTextValue.Append(theWS.GetStringValueXXX()); 
       } 
     } 
     else { 
-      temp+=aChar; 
-      result=aScanner.ReadUntil(temp,kLessThan,PR_FALSE); 
+      mTextValue+=aChar; 
+      result=aScanner.ReadUntil(mTextValue,theTerminals,PR_TRUE,PR_FALSE); 
     } 
-    temp.Right(theRight,aTerminalString.Length());
-    done=PRBool(0==theRight.Compare(aTerminalString,PR_TRUE)); 
+    mTextValue.Right(theRight,termStrLen+10); //first, get a wad of chars from the temp string
+    rpos=theRight.RFindChar('<');   //now scan for the '<'
+    if(-1<rpos)
+      rpos=theRight.RFind(aTerminalString,PR_TRUE);
+    done=PRBool(-1<rpos); 
   }  //while
-  int len=temp.Length(); 
-  temp.Truncate(len-aTerminalString.Length()); 
-  mTextValue=temp; 
-
-  // Make aTerminalString contain the name of the end tag ** as seen in **
-  // the document and not the made up one.
-  theRight.Cut(0,2);
-  theRight.Cut((theRight.Length()-1),1);
-  aTerminalString = theRight;
+  int len=mTextValue.Length();
+  if(NS_SUCCEEDED(result)) {
+    mTextValue.Truncate(len-(theRight.Length()-rpos)); 
+   
+    // Make aTerminalString contain the name of the end tag ** as seen in **
+    // the document and not the made up one.
+    theRight.Cut(0,rpos+2);
+    theRight.Truncate(theRight.Length()-1);
+    aTerminalString = theRight;
+  }
   return result; 
 }
 
@@ -781,6 +789,9 @@ nsresult ConsumeComment(PRUnichar aChar, nsScanner& aScanner,nsString& aString) 
   static    nsAutoString gEdibles("!-");
   static    nsAutoString gMinus("-");
   static    nsAutoString gWhitespace("\b\t\n\r ");
+  
+  static nsAutoString gDfltEndComment("-->");
+
   nsresult  result=NS_OK;
  
   /*********************************************************
@@ -790,7 +801,9 @@ nsresult ConsumeComment(PRUnichar aChar, nsScanner& aScanner,nsString& aString) 
    *********************************************************/
 
   aString="<!";
-  nsAutoString theRightChars;
+  nsAutoString  theRightChars;
+  PRInt32       theBestAltPos=kNotFound;
+  PRUint32      theStartOffset=0;
 
   result=aScanner.GetChar(aChar);
   if(NS_OK==result) {
@@ -801,34 +814,47 @@ nsresult ConsumeComment(PRUnichar aChar, nsScanner& aScanner,nsString& aString) 
         if(kMinus==aChar) {
              //in this case, we're reading a long-form comment <-- xxx -->
           aString+=aChar;
-          PRBool done=PR_FALSE;
           PRInt32 findpos=kNotFound;
-          result=aScanner.ReadWhile(aString,gMinus,PR_TRUE,PR_TRUE);  //get all available '---'
-          findpos=aString.RFind("-->");
-
           while((kNotFound==findpos) && (NS_OK==result)) {
-            result=aScanner.ReadUntil(aString,kMinus,PR_TRUE);
+            result=aScanner.ReadUntil(aString,kGreaterThan,PR_TRUE);          
+            if(NS_OK==result){
 
-            if(NS_OK==result) {
-              result=aScanner.ReadWhile(aString,gMinus,PR_TRUE,PR_FALSE);  //get all available '---'
-              if(NS_OK==result)
-                result=aScanner.ReadWhile(aString,gWhitespace,PR_TRUE,PR_FALSE);  //get all available whitespace
+              if(kNotFound==theBestAltPos) {
+                const PRUnichar* theBuf=aString.GetUnicode();
+                findpos=aString.Length()-3;
+                theBuf=(PRUnichar*)&theBuf[findpos];
+                if(!gDfltEndComment.Equals(theBuf,PR_FALSE,3)) {
+                  //we didn't find the dflt end comment delimiter, so look for alternatives...
+                  findpos=kNotFound;
+                  theRightChars.Truncate(0);
+                  aString.Right(theRightChars,15);
+                  theRightChars.StripChars(" ");
+
+                  int rclen=theRightChars.Length();
+                  aChar=theRightChars[rclen-2];
+                  if(('!'==aChar) || ('-'==aChar)) {
+                    theBestAltPos=aString.Length();
+                    theStartOffset=aScanner.GetOffset();
+                  }
+                }
+              }
+
             }
-            
-            if(NS_OK==result) {
-              result=aScanner.GetChar(aChar);
-              aString+=aChar;
-            }
-          
-            theRightChars.Truncate(0);
-            aString.Right(theRightChars,5);
-            theRightChars.StripChars(" ");
-            
-            findpos=theRightChars.RFind("-->");
-            if(kNotFound==findpos)
-              findpos=theRightChars.RFind("!>");
           } //while
+          if((kNotFound==findpos) && (!aScanner.IsIncremental())) {
+            //if you're here, then we're in a special state. 
+            //The problem at hand is that we've hit the end of the document without finding the normal endcomment delimiter "-->".
+            //In this case, the first thing we try is to see if we found one of the alternate endcomment delimiters "->" or "!>".
+            //If so, rewind just pass than, and use everything up to that point as your comment.
+            //If not, the document has no end comment and should be treated as one big comment.
+            if(kNotFound<theBestAltPos) {
+              aString.Truncate(theBestAltPos);
+              aScanner.Mark(theStartOffset);
+              result=NS_OK;
+            }
+          }
           return result;
+
         } //if
       }//if
     }//if
@@ -853,16 +879,17 @@ nsresult CCommentToken::Consume(PRUnichar aChar, nsScanner& aScanner) {
   PRBool theStrictForm=PR_FALSE;
   nsresult result=(theStrictForm) ? ConsumeStrictComment(aChar,aScanner,mTextValue) : ConsumeComment(aChar,aScanner,mTextValue);
 
-/*
-  //this change is here to make the editor teams' life easier.
-  //I'm removing the leading and trailing markup...
-
-  if(0==mTextValue.Find("<!"))
-    mTextValue.Cut(0,2);  //trim off 1st 2 chars...
-  if(kGreaterThan==mTextValue.Last())
-    mTextValue.Truncate(mTextValue.Length()-1); //trim off last char
-*/
-
+#if 0
+  if(NS_OK==result) {
+      //ok then, all is well so strip off the delimiters...
+    nsAutoString theLeft("");
+    mTextValue.Left(theLeft,2);
+    if(theLeft=="<!")
+      mTextValue.Cut(0,2);
+    if('>'==mTextValue.Last())
+      mTextValue.Truncate(mTextValue.Length()-1);
+  }
+#endif
   return result;
 }
 
@@ -1050,6 +1077,27 @@ PRInt32 CAttributeToken::GetTokenType(void) {
 }
 
 /*
+ *  Removes non-alpha-non-digit characters from the end of a KEY
+ *  
+ *  @update harishd 07/15/99
+ *  @param  
+ *  @return  
+ */
+void CAttributeToken::SanitizeKey() {
+  PRInt32   length=mTextKey.Length();
+  if(length > 0) {
+    PRUnichar theChar=mTextKey.Last();
+    while(!nsString::IsAlpha(theChar) && !nsString::IsDigit(theChar)) {
+      mTextKey.Truncate(length-1);
+      length = mTextKey.Length();
+      if(length <= 0) break;
+      theChar = mTextKey.Last();
+    }
+  }
+  return;
+}
+
+/*
  *  Dump contents of this token to given output stream
  *  
  *  @update  gess 3/25/98
@@ -1206,6 +1254,14 @@ nsresult CAttributeToken::Consume(PRUnichar aChar, nsScanner& aScanner) {
                     }
                     else if(kGreaterThan==aChar){      
                       result=aScanner.PutBack(aChar);
+                    }
+                    else if(kAmpersand==aChar) {
+                      mTextValue=aChar;
+                      result=aScanner.GetChar(aChar);
+                      if(NS_OK==result) {
+                        mTextValue += aChar;
+                        result=CEntityToken::ConsumeEntity(aChar,mTextValue,aScanner);
+                      }
                     }
                     else {
                       mTextValue=aChar;       //it's an alphanum attribute...
@@ -1405,18 +1461,23 @@ PRInt32 CEntityToken::ConsumeEntity(PRUnichar aChar,nsString& aString,nsScanner&
   PRUnichar theChar=0;
   PRInt32 result=aScanner.Peek(theChar);
   if(NS_OK==result) {
-    if(kLeftBrace==theChar) {
+    if(kLeftBrace==aChar) {
       //you're consuming a script entity...
-      static nsAutoString terminals("}>");
-      result=aScanner.ReadUntil(aString,terminals,PR_FALSE,PR_FALSE);
+      PRInt32 rightBraceCount = 0;
+      PRInt32 leftBraceCount  = 1;
+      while(leftBraceCount!=rightBraceCount) {
+        result=aScanner.GetChar(aChar);
+        if(NS_OK!=result) return result;
+        aString += aChar;
+        if(aChar==kRightBrace)
+          rightBraceCount++;
+        else if(aChar==kLeftBrace)
+          leftBraceCount++;
+      }
+      result=aScanner.ReadUntil(aString,kSemicolon,PR_FALSE);
       if(NS_OK==result) {
-        result=aScanner.Peek(theChar);
-        if(NS_OK==result) {
-          if(kRightBrace==theChar) {
-            aString+=kRightBrace;   //append rightbrace, and...
-            result=aScanner.GetChar(theChar);//yank the closing right-brace
-          }
-        }
+        result=aScanner.GetChar(aChar); // This character should be a semicolon
+        if(NS_OK==result) aString += aChar;
       }
     } //if
     else {
@@ -1435,6 +1496,7 @@ PRInt32 CEntityToken::ConsumeEntity(PRUnichar aChar,nsString& aString,nsScanner&
         if(NS_OK==result) {
           if (kSemicolon == theChar) {
             // consume semicolon that stopped the scan
+            aString+=theChar;
             result=aScanner.GetChar(theChar);
           }
         }
@@ -1504,7 +1566,6 @@ PRInt32 CEntityToken::TranslateToUnicodeStr(nsString& aString) {
 
   if(mTextValue.Length()>1) {
     PRUnichar theChar0=mTextValue.CharAt(0);
-    PRBool    isDigit0=nsString::IsDigit(theChar0);
 
     if(kHashsign==theChar0) {
       PRInt32 err=0;
@@ -1523,9 +1584,7 @@ PRInt32 CEntityToken::TranslateToUnicodeStr(nsString& aString) {
       }//if
     }
     else{
-      char cbuf[30];
-      mTextValue.ToCString(cbuf, sizeof(cbuf)-1);
-      value = NS_EntityToUnicode(cbuf);
+      value = nsHTMLEntities::EntityToUnicode(mTextValue);
       if(-1<value) {
         //we found a named entity...
         aString=PRUnichar(value);
@@ -1559,7 +1618,7 @@ void CEntityToken::DebugDumpSource(ostream& out) {
 void CEntityToken::GetSource(nsString& anOutputString){
   anOutputString="&";
   anOutputString+=mTextValue;
-  anOutputString+=";";
+  //anOutputString+=";";
 }
 
 /*
@@ -1757,11 +1816,11 @@ void CSkippedContentToken::GetSource(nsString& anOutputString){
  * @return
  */
 const char* GetTagName(PRInt32 aTag) {
-  const char* result = NS_EnumToTag((nsHTMLTag) aTag);
-  if (0 == result) {
+  const nsCString& result = nsHTMLTags::GetStringValue((nsHTMLTag) aTag);
+  if (0 == result.Length()) {
     if(aTag>=eHTMLTag_userdefined)
-      result = gUserdefined;
-    else result=0;
+      return gUserdefined;
+    else return 0;
   }
   return result;
 }
@@ -1848,4 +1907,17 @@ void CErrorToken::SetError(nsParserError *aError) {
 const nsParserError * CErrorToken::GetError(void) 
 { 
   return mError; 
+}
+
+// Doctype decl token
+
+CDoctypeDeclToken::CDoctypeDeclToken() : CHTMLToken(eHTMLTag_unknown) {
+}
+
+const char*  CDoctypeDeclToken::GetClassName(void) {
+  return "doctype";
+}
+
+PRInt32 CDoctypeDeclToken::GetTokenType(void) {
+  return eToken_doctypeDecl;
 }

@@ -1,4 +1,4 @@
-#!gmake
+#!nmake
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -14,7 +14,6 @@
 # Communications Corporation.  Portions created by Netscape are
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
-IGNORE_MANIFEST=1
 #//------------------------------------------------------------------------
 #//
 #// Makefile to build 
@@ -30,9 +29,7 @@ IGNORE_MANIFEST=1
 #//------------------------------------------------------------------------
 DEPTH= ..\..\..
 
-!ifndef MAKE_OBJ_TYPE
 MAKE_OBJ_TYPE=DLL
-!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -59,10 +56,10 @@ OBJS=                                       \
 #//
 #//------------------------------------------------------------------------
 
-LIBNAME=libreg$(MOZ_BITS)
+MODULE=mozreg
+DLLNAME=mozreg
 
-DLL=$(OBJDIR)\$(LIBNAME).dll
-LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
+DLL=$(OBJDIR)\$(DLLNAME).dll
 
 #//------------------------------------------------------------------------
 #//
@@ -71,20 +68,13 @@ LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
 #//
 #//------------------------------------------------------------------------
 
-LCFLAGS = $(LCFLAGS)
-LLIBS = $(LLIBS) $(LIBNSPR) $(DIST)\lib\plc3.lib
-
+LLIBS = \
+    $(LIBNSPR)                  \
 !if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
-LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
+    $(GLOWDIR)\glowcode.lib     \
 !endif
+    $(NULL)
 
-#//
-#// Win16 places ALL public header files in $(PUBLIC)/win16
-#//
-!if "$(MOZ_BITS)" != "16"
-LINCS= $(LINCS) -I$(PUBLIC)/libreg   \
-		$(NULL)
-!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -94,9 +84,9 @@ LINCS= $(LINCS) -I$(PUBLIC)/libreg   \
 include <$(DEPTH)/config/rules.mak>
 
 export:: $(DLL)	
-    $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+    $(MAKE_INSTALL) $(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
     $(MAKE_INSTALL) $(DLL) $(DIST)\bin
 
 clobber::
-    $(RM) $(DIST)\bin\$(LIBNAME).dll
-    $(RM) $(DIST)\lib\$(LIBNAME).lib
+    $(RM) $(DIST)\bin\$(DLLNAME).dll
+    $(RM) $(DIST)\lib\$(DLLNAME).lib

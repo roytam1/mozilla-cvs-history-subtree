@@ -66,7 +66,6 @@ nsWidget::nsWidget()
   mOnDestroyCalled = PR_FALSE;
   mIsToplevel = PR_FALSE;
   mUpdateArea.SetRect(0, 0, 0, 0);
-  mMenuBar = nsnull;
   mCreateHold = PR_TRUE;
   mHold = PR_FALSE;
 }
@@ -74,12 +73,30 @@ nsWidget::nsWidget()
 
 nsWidget::~nsWidget()
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::~nsWidget (%p).\n", this ));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::~nsWidget this=(%p) mWidget=<%p>\n", this, mWidget));
 
   mIsDestroying = PR_TRUE;
-  if (nsnull != mWidget) {
+  if (nsnull != mWidget)
+  {
     Destroy();
   }
+}
+
+
+NS_METHOD nsWidget::SetBackgroundColor( const nscolor &aColor )
+{
+  nsBaseWidget::SetBackgroundColor( aColor );
+
+  if( mWidget )
+  {
+    PtArg_t   arg;
+    PgColor_t color = NS_TO_PH_RGB( aColor );
+
+    PtSetArg( &arg, Pt_ARG_FILL_COLOR, color, 0 );
+    PtSetResources( mWidget, 1, &arg );
+  }
+
+  return NS_OK;
 }
 
 
@@ -103,7 +120,7 @@ NS_METHOD nsWidget::ScreenToWidget(const nsRect& aOldRect, nsRect& aNewRect)
 
 NS_IMETHODIMP nsWidget::Destroy(void)
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Destroy (%p).\n", this ));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Destroy this=<%p> mRefCnt=<%d> mWidget=<%p>\n",this,mRefCnt, mWidget));
 
   if( !mIsDestroying )
   {
@@ -114,12 +131,15 @@ NS_IMETHODIMP nsWidget::Destroy(void)
   if( mWidget )
   {
     mEventCallback = nsnull;
+	RemoveDamagedWidget(mWidget);
     PtDestroyWidget( mWidget );
     mWidget = nsnull;
 
     if( PR_FALSE == mOnDestroyCalled )
       OnDestroy();
   }
+
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Destroy the end  mRefCnt=<%d>\n",mRefCnt));
 
   return NS_OK;
 }
@@ -128,11 +148,13 @@ NS_IMETHODIMP nsWidget::Destroy(void)
 
 void nsWidget::OnDestroy()
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::OnDestroy.\n" ));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::OnDestroy this=<%p> mRefCnt=<%d>\n", mRefCnt, this));
 
   mOnDestroyCalled = PR_TRUE;
+
   // release references to children, device context, toolkit + app shell
   nsBaseWidget::OnDestroy();
+
   // dispatch the event
   if (!mIsDestroying) {
     // dispatching of the event may cause the reference count to drop to 0
@@ -152,14 +174,28 @@ void nsWidget::OnDestroy()
 
 nsIWidget *nsWidget::GetParent(void)
 {
+  nsIWidget *theParent = nsnull;
+  
   if( mParent )
   {
-    NS_ADDREF( mParent );
+	/* I know this is really a nsWidget so I am type casting to */
+	/* improve preformance since this function is used a lot. (kirkj) */
+    if ( ! (((nsWidget *)mParent)->mIsDestroying))
+	{
+	  NS_ADDREF( mParent );
+	  theParent = mParent;
+    }
+    else
+	{
+      PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetParent - mParent is being destroyed so return NULL!\n"));
+	}
   }
   else
+  {
     PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetParent - mParent is NULL!\n" ));
-
-  return mParent;
+  }
+  
+  return theParent;
 }
 
 
@@ -171,7 +207,7 @@ nsIWidget *nsWidget::GetParent(void)
 
 NS_METHOD nsWidget::Show(PRBool bState)
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Show." ));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Show. mRefCnt=<%d>", mRefCnt));
 
   if (!mWidget)
   {
@@ -182,7 +218,13 @@ NS_METHOD nsWidget::Show(PRBool bState)
   if (bState)
   {
     if( !PtWidgetIsRealized( mWidget ))
+    {
+      EnableDamage( mWidget, PR_FALSE );
       PtRealizeWidget(mWidget);
+      EnableDamage( mWidget, PR_TRUE );
+
+      Invalidate( PR_FALSE );
+    }
   }
   else
   {
@@ -191,6 +233,8 @@ NS_METHOD nsWidget::Show(PRBool bState)
   }
 
   mShown = bState;
+
+ PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Show end mRefCnt=<%d>", mRefCnt));
 
   return NS_OK;
 }
@@ -217,7 +261,7 @@ NS_METHOD nsWidget::IsVisible(PRBool &aState)
 // Move this component
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWidget::Move(PRUint32 aX, PRUint32 aY)
+NS_METHOD nsWidget::Move(PRInt32 aX, PRInt32 aY)
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Move (%p) to (%ld,%ld)\n", this, aX, aY ));
 
@@ -230,6 +274,8 @@ NS_METHOD nsWidget::Move(PRUint32 aX, PRUint32 aY)
     PhPoint_t *oldpos;
     PhPoint_t pos = {aX, aY};
 
+    EnableDamage( mWidget, PR_FALSE );
+
     PtSetArg( &arg, Pt_ARG_POS, &oldpos, 0 );
     if( PtGetResources( mWidget, 1, &arg ) == 0 )
     {
@@ -239,6 +285,9 @@ NS_METHOD nsWidget::Move(PRUint32 aX, PRUint32 aY)
         PtSetResources( mWidget, 1, &arg );
       }
     }
+
+    EnableDamage( mWidget, PR_TRUE );
+    Invalidate( PR_FALSE );
   }
   else
     PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Move - mWidget is NULL!\n" ));
@@ -247,7 +296,7 @@ NS_METHOD nsWidget::Move(PRUint32 aX, PRUint32 aY)
 }
 
 
-NS_METHOD nsWidget::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
+NS_METHOD nsWidget::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Resize (%p)\n", this ));
 
@@ -258,30 +307,25 @@ NS_METHOD nsWidget::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
   {
     PtArg_t arg;
     int     *border;
-    PhDim_t *olddim;
-    PhDim_t dim = {aWidth, aHeight};
 
     PtSetArg( &arg, Pt_ARG_BORDER_WIDTH, &border, 0 );
     if( PtGetResources( mWidget, 1, &arg ) == 0 )
     {
-      dim.w -= 2*(*border);
-      dim.h -= 2*(*border);
-    }
+      PhDim_t dim = {aWidth - 2*(*border), aHeight - 2*(*border)};
 
-    PtSetArg( &arg, Pt_ARG_DIM, &olddim, 0 );
-    if( PtGetResources( mWidget, 1, &arg ) == 0 )
-    {
-      if(( olddim->w != dim.w ) || ( olddim->h != dim.h ))
+      EnableDamage( mWidget, PR_FALSE );
+
+      PtSetArg( &arg, Pt_ARG_DIM, &dim, 0 );
+      PtSetResources( mWidget, 1, &arg );
+
+      if (aRepaint)
       {
-        PtSetArg( &arg, Pt_ARG_DIM, &dim, 0 );
-        PtSetResources( mWidget, 1, &arg );
-
-        if (aRepaint)
-        {
-          // REVISIT - photon doesnt like being told to redraw...
-        }
+        // REVISIT - photon doesnt like being told to redraw...
       }
+
+      EnableDamage( mWidget, PR_TRUE );
     }
+    Invalidate( PR_FALSE );
   }
   else
     PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Resize - mWidget is NULL!\n" ));
@@ -292,8 +336,8 @@ NS_METHOD nsWidget::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
 }
 
 
-NS_METHOD nsWidget::Resize(PRUint32 aX, PRUint32 aY, PRUint32 aWidth,
-                           PRUint32 aHeight, PRBool aRepaint)
+NS_METHOD nsWidget::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+                           PRInt32 aHeight, PRBool aRepaint)
 {
   Resize(aWidth,aHeight,aRepaint);
   Move(aX,aY);
@@ -307,22 +351,22 @@ NS_METHOD nsWidget::Resize(PRUint32 aX, PRUint32 aY, PRUint32 aWidth,
 //-------------------------------------------------------------------------
 PRBool nsWidget::OnResize(nsRect &aRect)
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::OnResize.\n" ));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::OnResize. mRefCnt=<%d>\n", mRefCnt));
 
   // call the event callback
-
   if (mEventCallback)
   {
     nsSizeEvent event;
     InitEvent(event, NS_SIZE);
     event.windowSize = &aRect;
     event.eventStructType = NS_SIZE_EVENT;
-    event.mWinWidth = 0;
-    event.mWinHeight = 0;
-    event.point.x = 0; //mWidget->allocation.x;
-    event.point.y = 0; //mWidget->allocation.y;
+    event.mWinWidth = mBounds.width;
+    event.mWinHeight = mBounds.height;
+    event.point.x = mBounds.x; //mWidget->allocation.x;
+    event.point.y = mBounds.y; //mWidget->allocation.y;
     event.time = 0;
 
+/*
     if (mWidget)
     {
       PhArea_t *area;
@@ -336,17 +380,21 @@ PRBool nsWidget::OnResize(nsRect &aRect)
         event.point.y = area->pos.y;
       }
     }
+*/
 
     PRBool result = DispatchWindowEvent(&event);
 
-    // XXX why does this always crash?  maybe we need to add 
-    // a ref in the dispatch code?  check the windows
-    // code for a reference
-    //NS_RELEASE(event.widget);
+    PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::OnResize. widget=<%p> mRefCnt=<%d>\n", event.widget, mRefCnt));
 
+	/* Not sure if this is really needed, kirkj */
+    NS_IF_RELEASE(event.widget);
+
+    PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::OnResize - end  mRefCnt=<%d>\n", mRefCnt));
+  
     return result;
   }
-return PR_FALSE;
+
+  return PR_FALSE;
 }
 
 //------
@@ -363,7 +411,7 @@ PRBool nsWidget::OnMove(PRInt32 aX, PRInt32 aY)
   event.point.y = aY;
   event.eventStructType = NS_GUI_EVENT;
   PRBool result = DispatchWindowEvent(&event);
-  // NS_RELEASE(event.widget);
+  NS_RELEASE(event.widget);
   return result;
 }
 
@@ -389,6 +437,7 @@ NS_METHOD nsWidget::Enable(PRBool bState)
   return NS_OK;
 }
 
+
 //-------------------------------------------------------------------------
 //
 // Give the focus to this component
@@ -405,56 +454,6 @@ NS_METHOD nsWidget::SetFocus(void)
 }
 
 
-NS_METHOD nsWidget::GetBounds(nsRect &aRect)
-{
-  ///////////////////////////////////////////////////////////
-  // NOTE: The nsWidget::GetBounds() function does not work
-  // for nsWindow objects. nsWindow MUST provide its own
-  // GetBounds method.
-
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetBounds.\n" ));
-
-  if( mWidget )
-  {
-    PtArg_t arg[2];
-//    PhDim_t  *dim;
-    PhArea_t  *area;
-    int      *border;
-
-//    PtSetArg( &arg[0], Pt_ARG_DIM, &dim, 0 );
-    PtSetArg( &arg[0], Pt_ARG_AREA, &area, 0 );
-    PtSetArg( &arg[1], Pt_ARG_BORDER_WIDTH, &border, 0 );
-    if( PtGetResources( mWidget, 2, arg ) == 0 )
-    {
-      mBounds.x = area->pos.x - *border;
-      mBounds.y = area->pos.y - *border;
-      mBounds.width = area->size.w + 2*(*border);
-      mBounds.height = area->size.h + 2*(*border);
-/*
-      mBounds.width = dim->w + 2*(*border);
-      mBounds.height = dim->h + 2*(*border);
-
-      short x,y,ox,oy;
-
-      PtGetAbsPosition( mWidget, &x, &y );
-      PtGetAbsPosition( mClient, &ox, &oy );
-      mBounds.x = x - ox;
-      mBounds.y = y - oy;
-*/
-    }
-    else
-      PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetBounds - GetResources FAILED!\n" ));
-  }
-  else
-    PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetBounds - mWidget is NULL!\n" ));
- 
-  aRect = mBounds;
-
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetBounds - bounds = (%ld,%ld,%ld,%ld)\n", aRect.x, aRect.y, aRect.width, aRect.height ));
-
-  return NS_OK;
-}
-
 //-------------------------------------------------------------------------
 //
 // Get this component font
@@ -466,6 +465,7 @@ nsIFontMetrics *nsWidget::GetFont(void)
 
   return nsnull;
 }
+
 
 //-------------------------------------------------------------------------
 //
@@ -610,24 +610,37 @@ NS_METHOD nsWidget::Invalidate(PRBool aIsSynchronous)
 
   if( mWidget )
   {
-    mUpdateArea.SetRect(0, 0, mBounds.width, mBounds.height );
+    PtArg_t  arg;
+    PhArea_t *area;
+    nsRect   rect;
 
-    if (aIsSynchronous)
+    // Just to be safe, get the real widget coords & set mBounds
+    PtSetArg( &arg, Pt_ARG_AREA, &area, 0 );
+    if( PtGetResources( mWidget, 1, &arg ) == 0 )
     {
-#if 0
-//      ::gtk_widget_draw(mWidget, NULL);
-      mUpdateArea.SetRect(0, 0, 1, 1);
-      PtDamageWidget( mWidget );
-      PtFlush();
-      mUpdateArea.SetRect(0, 0, 0, 0);
-#endif
-      UpdateWidgetDamage();
-    }
-    else
-    {
-//      ::gtk_widget_queue_draw(mWidget);
-//      mUpdateArea.SetRect(0, 0, mBounds.width, mBounds.height);
-      QueueWidgetDamage();
+      rect = mBounds;
+
+      GetParentClippedArea( rect );
+
+      if( rect.width && rect.height )
+      {
+        mUpdateArea.SetRect( rect.x - mBounds.x, rect.y - mBounds.y, rect.width, rect.height );
+
+        PR_LOG(PhWidLog, PR_LOG_DEBUG, ("  rect=(%i,%i,%i,%i)\n", rect.x - mBounds.x, rect.y - mBounds.y, rect.width, rect.height  ));
+
+        if (aIsSynchronous)
+        {
+          UpdateWidgetDamage();
+        }
+        else
+        {
+          QueueWidgetDamage();
+        }
+      }
+      else
+      {
+        mCreateHold = PR_FALSE; // Should do this even if we get a bad (hidden) rect
+      }
     }
   }
   else
@@ -643,33 +656,46 @@ NS_METHOD nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
 
   if( mWidget )
   {
-    mUpdateArea.UnionRect(mUpdateArea, aRect);
+    PtArg_t  arg;
+    PhArea_t *area;
+    nsRect   rect = aRect;
 
-    if( aIsSynchronous)
+
+    // Just to be safe, get the real widget coords
+    PtSetArg( &arg, Pt_ARG_AREA, &area, 0 );
+    if( PtGetResources( mWidget, 1, &arg ) == 0 )
     {
-#if 0
-      PhRect_t extent;
-      PhArea_t area;
+      mBounds.x = area->pos.x;
+      mBounds.y = area->pos.y;
+      mBounds.width  = area->size.w;
+      mBounds.height = area->size.h;
+    }
 
-      PtWidgetArea( mWidget, &area );
 
-      extent.ul.x = aRect.x + area.pos.x;
-      extent.ul.y = aRect.y + area.pos.y;
-      extent.lr.x = extent.ul.x + aRect.width - 1;
-      extent.lr.y = extent.ul.y + aRect.height - 1;
-      mUpdateArea.SetRect(0, 0, 1, 1);
-      PtDamageExtent( mWidget, &extent );
-      PtFlush();
-      mUpdateArea.SetRect(0, 0, 0, 0);
-#endif
-      UpdateWidgetDamage();
+    rect.x += mBounds.x;
+    rect.y += mBounds.y;
+
+    GetParentClippedArea( rect );
+
+    if( rect.width && rect.height )
+    {
+      rect.x -= mBounds.x;
+      rect.y -= mBounds.y;
+
+      mUpdateArea.UnionRect( mUpdateArea, rect );
+
+      if( aIsSynchronous)
+      {
+        UpdateWidgetDamage();
+      }
+      else
+      {
+        QueueWidgetDamage();
+      }
     }
     else
     {
-      QueueWidgetDamage();
-  //      ::gtk_widget_queue_draw_area(mWidget,
-  //                                   aRect.x, aRect.y,
-  //                                   aRect.width, aRect.height);
+      mCreateHold = PR_FALSE; // Should do this even if we get a bad (hidden) rect
     }
   }
   else
@@ -679,76 +705,116 @@ NS_METHOD nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
 }
 
 
+PRBool nsWidget::GetParentClippedArea( nsRect &rect )
+{
+// Traverse parent heirarchy and clip the passed-in rect bounds
+
+  PtArg_t    arg;
+  PhArea_t   *area;
+  PtWidget_t *parent;
+  PhPoint_t  offset;
+  nsRect     rect2;
+  PtWidget_t *disjoint = PtFindDisjoint( mWidget );
+
+//printf( "Clipping widget (%p) rect: %d,%d,%d,%d\n", this, rect.x, rect.y, rect.width, rect.height );
+
+  // convert passed-in rect to absolute window coords first...
+  PtWidgetOffset( mWidget, &offset );
+  rect.x += offset.x;
+  rect.y += offset.y;
+
+
+//printf( "  screen coords: %d,%d,%d,%d\n", rect.x, rect.y, rect.width, rect.height );
+
+  parent = PtWidgetParent( mWidget );
+  while( parent )
+  {
+    PtSetArg( &arg, Pt_ARG_AREA, &area, 0 );
+    if( PtGetResources( parent, 1, &arg ) == 0 )
+    {
+      rect2.width = area->size.w;
+      rect2.height = area->size.h;
+
+      if( parent != disjoint )
+      {
+        PtWidgetOffset( parent, &offset );
+        rect2.x = area->pos.x + offset.x;
+        rect2.y = area->pos.y + offset.y;
+      }
+      else
+      {
+        rect2.x = rect2.y = 0;
+      }
+
+//printf( "  parent at: %d,%d,%d,%d\n", rect2.x, rect2.y, rect2.width, rect2.height );
+
+      if( ( rect.x >= ( rect2.x + rect2.width )) ||   // rect is out of bounds to right
+          (( rect.x + rect.width ) <= rect2.x ) ||   // rect is out of bounds to left
+          ( rect.y >= ( rect2.y + rect2.height )) ||  // rect is out of bounds to bottom
+          (( rect.y + rect.height ) <= rect2.y ) )   // rect is out of bounds to top
+      {
+        rect.width = 0;
+        rect.height = 0;
+//printf( "  Out of bounds !\n" );
+        break;
+      }
+      else
+      {
+        if( rect.x < rect2.x )
+        {
+          rect.width -= ( rect2.x - rect.x );
+          rect.x = rect2.x;
+        }
+
+        if( rect.y < rect2.y )
+        {
+          rect.height -= ( rect2.y - rect.y );
+          rect.y = rect2.y;
+        }
+
+        if(( rect.x + rect.width ) > ( rect2.x + rect2.width ))
+        {
+          rect.width = (rect2.x + rect2.width) - rect.x;
+        }
+
+        if(( rect.y + rect.height ) > ( rect2.y + rect2.height ))
+        {
+          rect.height = (rect2.y + rect2.height) - rect.y;
+        }
+
+//printf( "  new widget coords: %d,%d,%d,%d\n", rect.x, rect.y, rect.width, rect.height );
+
+      }
+    }
+
+    parent = PtWidgetParent( parent );
+  }
+
+
+  // convert rect back to widget coords...
+  PtWidgetOffset( mWidget, &offset );
+  rect.x -= offset.x;
+  rect.y -= offset.y;
+
+//printf( "  final widget coords: %d,%d,%d,%d\n", rect.x, rect.y, rect.width, rect.height );
+
+  if( rect.width && rect.height )
+    return PR_TRUE;
+  else
+    return PR_FALSE;
+}
+
+
+
 NS_METHOD nsWidget::Update(void)
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Update\n" ));
 
-#if 0
-  if (! mWidget)
-    return NS_OK;
-
-  if (mUpdateArea.width && mUpdateArea.height)
-  {
-    if (!mIsDestroying)
-    {
-      PhRect_t extent;
-      PhArea_t area;
-
-      PtWidgetArea( mWidget, &area );
-
-//      GdkRectangle nRect;
-//      NSRECT_TO_GDKRECT(mUpdateArea,nRect);
-//      ::gtk_widget_draw(mWidget, &nRect);
-
-      extent.ul.x = mUpdateArea.x + area.pos.x;
-      extent.ul.y = mUpdateArea.y + area.pos.y;
-      extent.lr.x = mUpdateArea.x + mUpdateArea.width - 1;
-      extent.lr.y = mUpdateArea.y + mUpdateArea.height - 1;
-
-      PtDamageExtent( mWidget, &extent );
-      PtFlush();
-      mUpdateArea.SetRect(0, 0, 0, 0);
-
-      return NS_OK;
-    }
-    else
-    {
-      return NS_ERROR_FAILURE;
-    }
-  }
-#endif
-
   UpdateWidgetDamage();
-  return NS_OK;
-
-
-
-#if 0
-  if( mWidget )
-  {
-    if( mDamaged )
-    {
-      PtDamageWidget( mWidget );
-      PtFlush();
-      mDamaged = PR_FALSE;
-    }
-    PtArg_t  arg;
-    int      *flags;
-    
-    PtSetArg( &arg, Pt_ARG_FLAGS, &flags, 0 );
-    if( PtGetResources( mWidget, 1, &arg ) == 0 )
-    {
-      if( !(*flags & Pt_DAMAGED ))
-      {
-        PtDamageWidget( mWidget );
-      }
-    }
-    PtFlush();
-  }
 
   return NS_OK;
-#endif
 }
+
 
 //-------------------------------------------------------------------------
 //
@@ -833,12 +899,6 @@ NS_METHOD nsWidget::ShowMenuBar( PRBool aShow)
   return NS_ERROR_FAILURE;
 }
 
-NS_METHOD nsWidget::IsMenuBarVisible( PRBool *aVisible )
-{
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::IsMenuBarVisible - Not Implemented \n"));
-  return NS_ERROR_FAILURE;
-}
-
 nsresult nsWidget::CreateWidget(nsIWidget *aParent,
                                 const nsRect &aRect,
                                 EVENT_CALLBACK aHandleEventFunction,
@@ -848,12 +908,13 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
                                 nsWidgetInitData *aInitData,
                                 nsNativeWidget aNativeParent)
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget (%p).\n", this ));
-
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget this=<%p> mRefCnt=<%d>\n", this, mRefCnt));
   PtWidget_t *parentWidget = nsnull;
 
   BaseCreate(aParent, aRect, aHandleEventFunction, aContext,
              aAppShell, aToolkit, aInitData);
+
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget after BaseCreate  mRefCnt=<%d>\n", mRefCnt));
 
   mParent = aParent;
   NS_IF_ADDREF( mParent );
@@ -876,6 +937,8 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 //      parentWidget = GTK_WIDGET(shellWidget);
 //  }
 
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget before GetInstance mRefCnt=<%d>\n", mRefCnt));
+
   // Find the native client widget and store for ALL non-toplevel widgets
   if( parentWidget )
   {
@@ -888,11 +951,23 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   }
 
   mBounds = aRect;
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget - bounds=(%i,%i,%i,%i)\n", mBounds.x, mBounds.y, mBounds.width, mBounds.height ));
+
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget - bounds=(%i,%i,%i,%i) mRefCnt=<%d>\n", mBounds.x, mBounds.y, mBounds.width, mBounds.height, mRefCnt));
 
   CreateNative (parentWidget);
 
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget after CreateNative mRefCnt=<%d>\n", mRefCnt));
+
+  if( mWidget )
+  {
+    SetInstance(mWidget, this);
+    PtAddCallback( mWidget, Pt_CB_GOT_FOCUS, GotFocusCallback, this );
+    PtAddCallback( mWidget, Pt_CB_LOST_FOCUS, LostFocusCallback, this );
+  }
+
   DispatchStandardEvent(NS_CREATE);
+
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::CreateWidget end mRefCnt=<%d>\n", mRefCnt));
 
 //  InitCallbacks();
 
@@ -993,8 +1068,15 @@ PRBool nsWidget::DispatchWindowEvent(nsGUIEvent* event)
 {
 //  printf( ">>> nsWidget::DispatchWindowEvent\n" ); fflush( stdout );
   nsEventStatus status;
+  PRBool ret;
+  
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchWindowEvent  mRefCnt=<%d>\n", mRefCnt));
   DispatchEvent(event, status);
-  return ConvertStatus(status);
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchWindowEvent after DispatchEvent mRefCnt=<%d>\n", mRefCnt));
+  ret = ConvertStatus(status);
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchWindowEvent after ConvertStatus mRefCnt=<%d>\n", mRefCnt));
+  
+  return ret;
 }
 
 //-------------------------------------------------------------------------
@@ -1007,12 +1089,22 @@ PRBool nsWidget::DispatchStandardEvent(PRUint32 aMsg)
 {
 //  printf( ">>> nsWidget::DispatchStandardEvent\n" ); fflush( stdout );
 
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchStandardEvent aMsg=<%d> mRefCnt=<%d>\n", aMsg, mRefCnt));
+
   nsGUIEvent event;
   event.eventStructType = NS_GUI_EVENT;
   InitEvent(event, aMsg);
 
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchStandardEvent after InitEvent mRefCnt=<%d>\n", mRefCnt));
+
   PRBool result = DispatchWindowEvent(&event);
-//  NS_IF_RELEASE(event.widget);
+
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchStandardEvent after DispatchWindow widget=<%p> mRefCnt=<%d>\n", event.widget, mRefCnt));
+
+  NS_IF_RELEASE(event.widget);
+
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchStandardEvent exiting result=<%d> mRefCnt=<%d>\n", result, mRefCnt));
+
   return result;
 }
 
@@ -1026,15 +1118,40 @@ PRBool nsWidget::DispatchStandardEvent(PRUint32 aMsg)
 NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *event,
                                       nsEventStatus &aStatus)
 {
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent 1 mRefCnt=<%d>\n", mRefCnt));
+
+#if 1
+  aStatus = nsEventStatus_eIgnore;
+  
+  //if (nsnull != mMenuListener)
+  //	aStatus = mMenuListener->MenuSelected(*event);
+  if (nsnull != mEventCallback) {
+    aStatus = (*mEventCallback)(event);
+  }
+
+    // Dispatch to event listener if event was not consumed
+  if ((aStatus != nsEventStatus_eIgnore) && (nsnull != mEventListener)) {
+    aStatus = mEventListener->ProcessEvent(*event);
+  }
+
+  // the window can be destroyed during processing of seemingly innocuous events like, say,
+  // mousedowns due to the magic of scripting. mousedowns will return nsEventStatus_eIgnore,
+  // which causes problems with the deleted window. therefore:
+  if (mOnDestroyCalled)
+    aStatus = nsEventStatus_eConsumeNoDefault;
+#else
 //  printf( ">>> nsWidget::DispatchEvent\n" ); fflush(stdout);
+
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent 1 mRefCnt=<%d>\n", mRefCnt));
 
   if( !( event ) || !( event->widget ))
   {
-    printf( "  event or event->widget is NULL!\n" ); fflush(stdout);
     return NS_ERROR_FAILURE;
   }
 
-  NS_ADDREF(event->widget);
+//kirkj  NS_ADDREF(event->widget);
+
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent 2  mRefCnt=<%d>\n", mRefCnt));
 
   if( nsnull != mMenuListener )
   {
@@ -1044,12 +1161,15 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *event,
     }
   }
 
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent 3 mRefCnt=<%d>\n", mRefCnt));
+
   aStatus = nsEventStatus_eIgnore;
   if( nsnull != mEventCallback )
   {
-//printf ("kedl: real callback....\n");
     aStatus = (*mEventCallback)(event);
   }
+
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent 4 mRefCnt=<%d>\n", mRefCnt));
 
   // Dispatch to event listener if event was not consumed
   if(( aStatus != nsEventStatus_eIgnore) && (nsnull != mEventListener))
@@ -1057,7 +1177,12 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *event,
     aStatus = mEventListener->ProcessEvent(*event);
   }
 
-  NS_RELEASE(event->widget);
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent 5  mRefCnt=<%d>\n", mRefCnt));
+
+//kirkj  NS_RELEASE(event->widget);
+#endif
+
+PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::DispatchEvent end  mRefCnt=<%d>\n", mRefCnt));
 
   return NS_OK;
 }
@@ -1088,11 +1213,10 @@ PRBool nsWidget::DispatchMouseEvent( PhPoint_t &aPos, PRUint32 aEvent )
   event.isControl = PR_FALSE;
   event.isAlt = PR_FALSE;
 
-//printf ("kedl: in dispatchmouse %lu\n",aEvent);
   // call the event callback
   if (nsnull != mEventCallback) {
-//	printf ("kedl: dispatchwindow!!!\n");
     result = DispatchWindowEvent( &event );
+    NS_IF_RELEASE(event.widget);
 
     return result;
   }
@@ -1469,6 +1593,11 @@ int nsWidget::WorkProc( void *data )
       extent.lr.y = extent.ul.y + dqe->inst->mUpdateArea.height - 1;
 
       dqe->inst->mCreateHold = PR_FALSE;
+
+PR_LOG(PhWidLog, PR_LOG_DEBUG,("nsWidget::WorkProc Photon Widget=<%p>\n", dqe->widget));
+nsWidget *pWid = (nsWidget *) GetInstance( dqe->widget );
+PR_LOG(PhWidLog, PR_LOG_DEBUG,("nsWidget::WorkProc Mozilla Widget=<%p>\n", pWid));
+
       PtDamageExtent( dqe->widget, &extent );
       dqe->inst->mUpdateArea.SetRect(0,0,0,0);
 
@@ -1479,6 +1608,7 @@ int nsWidget::WorkProc( void *data )
 
     *dq = nsnull;
     mDmgQueueInited = PR_FALSE;
+    PtFlush();
     return Pt_END;
   }
 
@@ -1523,6 +1653,37 @@ void nsWidget::QueueWidgetDamage()
   }
 }
 
+void nsWidget::RemoveDamagedWidget(PtWidget_t *aWidget)
+{
+  PR_LOG(PhWidLog, PR_LOG_DEBUG,("nsWidget::RemoveDamagedWidget Photon Widget=<%p>\n", aWidget));
+
+    if( mDmgQueueInited )
+    {
+      DamageQueueEntry *dqe;
+      DamageQueueEntry *last_dqe = nsnull;
+  
+      dqe = mDmgQueue;
+
+      // If this widget is in the queue, remove it
+      while( dqe )
+      {
+        if( dqe->widget == aWidget )
+        {
+          if( last_dqe )
+            last_dqe->next = dqe->next;
+          else
+            mDmgQueue = dqe->next;
+
+          delete dqe;
+          break;
+        }
+        last_dqe = dqe;
+        dqe = dqe->next;
+      }
+    }
+}
+
+
 
 void nsWidget::UpdateWidgetDamage()
 {
@@ -1560,24 +1721,28 @@ void nsWidget::UpdateWidgetDamage()
     // Now damage the widget directly...
     if(( mUpdateArea.width && mUpdateArea.height ) || mCreateHold )
     {
+      PhRect_t extent;
+      PhArea_t area;
+
       if( mCreateHold )
-      {
         mCreateHold = PR_FALSE;
-        mUpdateArea.SetRect(0,0,1,1); // Just so the RawDrawFunc will work
-        PtDamageWidget( mWidget );
-      }
-      else
+
+      PtWidgetArea( mWidget, &area );
+
+      if( !mUpdateArea.width || !mUpdateArea.height )
       {
-        PhRect_t extent;
-        PhArea_t area;
+        mUpdateArea.x = area.pos.x;
+        mUpdateArea.y = area.pos.y;
+        mUpdateArea.width = area.size.w;
+        mUpdateArea.height = area.size.h;
+      }
 
-        PtWidgetArea( mWidget, &area );
-
+      if( GetParentClippedArea( mUpdateArea ))
+      {
         extent.ul.x = mUpdateArea.x + area.pos.x;
         extent.ul.y = mUpdateArea.y + area.pos.y;
         extent.lr.x = extent.ul.x + mUpdateArea.width - 1;
         extent.lr.y = extent.ul.y + mUpdateArea.height - 1;
-
         PtDamageExtent( mWidget, &extent );
       }
 
@@ -1587,4 +1752,36 @@ void nsWidget::UpdateWidgetDamage()
   }
 }
 
+
+int nsWidget::GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo )
+{
+  nsWidget *pWidget = (nsWidget *) data;
+
+  pWidget->DispatchStandardEvent(NS_GOTFOCUS);
+
+  return Pt_CONTINUE;
+}
+
+
+int nsWidget::LostFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo )
+{
+  nsWidget *pWidget = (nsWidget *) data;
+
+  pWidget->DispatchStandardEvent(NS_LOSTFOCUS);
+
+  return Pt_CONTINUE;
+}
+
+void nsWidget::EnableDamage( PtWidget_t *widget, PRBool enable )
+{
+  PtWidget_t *top = PtFindDisjoint( widget );
+
+  if( top )
+  {
+    if( PR_TRUE == enable )
+      PtEndFlux( top );
+    else
+      PtStartFlux( top );
+  }
+}
 

@@ -84,7 +84,7 @@ public:
   NS_IMETHOD FirstChild(nsIAtom* aListName, nsIFrame** aFirstChild) const;
   NS_IMETHOD GetAdditionalChildListName(PRInt32   aIndex,
                                         nsIAtom** aListName) const;
-  NS_IMETHOD DeleteFrame(nsIPresContext& aPresContext);
+  NS_IMETHOD Destroy(nsIPresContext& aPresContext);
   NS_IMETHOD IsSplittable(nsSplittableType& aIsSplittable) const;
   NS_IMETHOD ReResolveStyleContext(nsIPresContext* aPresContext,
                                    nsIStyleContext* aParentContext,
@@ -208,7 +208,8 @@ protected:
 
   void RecoverStateFrom(nsBlockReflowState& aState,
                         nsLineBox* aLine,
-                        nscoord aDeltaY);
+                        nscoord aDeltaY,
+                        nsRect* aDamageRect);
 
   //----------------------------------------
   // Methods for line reflow
@@ -216,7 +217,8 @@ protected:
 
   nsresult ReflowLine(nsBlockReflowState& aState,
                       nsLineBox* aLine,
-                      PRBool* aKeepReflowGoing);
+                      PRBool* aKeepReflowGoing,
+                      PRBool aDamageDirtyArea = PR_FALSE);
 
   virtual void DidReflowLine(nsBlockReflowState& aState,
                              nsLineBox* aLine,
@@ -264,7 +266,8 @@ protected:
   nsresult ReflowFloater(nsBlockReflowState& aState,
                          nsPlaceholderFrame* aPlaceholder,
                          nsRect& aCombinedRect,
-                         nsMargin& aMarginResult);
+                         nsMargin& aMarginResult,
+                         nsMargin& aComputedOffsetsResult);
 
   //----------------------------------------
   // Methods for pushing/pulling lines/frames
@@ -315,12 +318,23 @@ protected:
 
   void BuildFloaterList();
 
+  //----------------------------------------
+  // List handling kludge
+
   void RenumberLists();
+
+  void RenumberListsIn(nsIFrame* aContainerFrame, PRInt32* aOrdinal);
+
+  PRBool FrameStartsCounterScope(nsIFrame* aFrame);
 
   void UpdateBulletPosition();
 
   void ReflowBullet(nsBlockReflowState& aState,
                     nsHTMLReflowMetrics& aMetrics);
+
+  void PlaceBullet(nsBlockReflowState& aState);
+
+  //----------------------------------------
 
   nsIFrame* LastChild();
 

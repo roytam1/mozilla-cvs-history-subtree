@@ -36,6 +36,8 @@ class nsFormFrame;
 #define CSS_NOTSET -1
 #define ATTR_NOTSET -1
 
+#define NS_FORMSIZE_NOTSET -1
+
 /** 
   * nsFormControlFrame is the base class for frames of form controls. It
   * provides a uniform way of creating widgets, resizing, and painting.
@@ -88,11 +90,6 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&      aStatus);
 
-
-  NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext,
-                              nsIContent*     aChild,
-                              nsIAtom*        aAttribute,
-                              PRInt32         aHint);
   // new behavior
 
   /**
@@ -113,15 +110,6 @@ public:
   virtual PRInt32 GetMaxNumValues();
   virtual PRBool  GetNamesValues(PRInt32 aMaxNumValues, PRInt32& aNumValues,
                                  nsString* aValues, nsString* aNames);
-
-  /**
-    * Get the widget associated with this frame
-    * @param aView the view associated with the frame. It is a convience parm.
-    * @param aWidget the address of address of where the widget will be placed.
-    * This method doses an AddRef on the widget.
-    */
-  nsresult GetWidget(nsIView* aView, nsIWidget** aWidget);
-  nsresult GetWidget(nsIWidget** aWidget);
 
   /**
     * Respond to a enter key being pressed
@@ -146,8 +134,6 @@ public:
                                 nscoord& aWidth, nscoord& aHeight);
 
   virtual void SetFocus(PRBool aOn = PR_TRUE, PRBool aRepaint = PR_FALSE);
-
-  void SetColors(nsIPresContext& aPresContext);
   
   virtual void Reset();
   virtual PRBool IsSuccessful(nsIFormControlFrame* aSubmitter);
@@ -227,6 +213,8 @@ protected:
                               nsHTMLReflowMetrics& aDesiredLayoutSize,
                               nsSize& aDesiredWidgetSize);
 
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
+
 //
 //-------------------------------------------------------------------------------------
 //  Utility methods for managing checkboxes and radiobuttons
@@ -268,12 +256,12 @@ protected:
 
   nsresult SetDefaultCheckState(PRBool aState);
 
-  nsMouseState mLastMouseState;
-  nsIWidget*   mWidget;
   nsSize       mWidgetSize;
   PRBool       mDidInit;
   nsPoint      mLastClickPoint;
   nsFormFrame* mFormFrame;
+  nscoord      mSuggestedWidth;
+  nscoord      mSuggestedHeight;
 
 private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }

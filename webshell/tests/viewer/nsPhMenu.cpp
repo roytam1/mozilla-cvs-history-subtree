@@ -24,12 +24,31 @@
 
 #include "stdio.h"
 
-extern void MenuProc(PRUint32 aId);
 
 int MenuItemActivate (PtWidget_t *widget, void *command, PtCallbackInfo_t *cbinfo)
 {
-//  printf("MenuItemActivateCb command=<%p>\n", command);
-  ::MenuProc((PRUint32)command);
+  PtArg_t    arg;
+  void       **data;
+
+  PtWidget_t *nativeWindow = PtGetParent( widget, PtWindow );
+
+  if( nativeWindow )
+  {  
+    PtSetArg( &arg, Pt_ARG_USER_DATA, &data, 0 );
+    if( PtGetResources( nativeWindow, 1, &arg ) == 0 )
+    {
+      if( data )
+      {
+        nsIWidget *xpWindow = (nsIWidget *) *data;
+        nsBrowserWindow* bw = nsBrowserWindow::FindBrowserFor( xpWindow, FIND_WINDOW );
+
+        if( bw )
+        {
+          bw->DispatchMenuItem( (int) command );
+        }
+      }
+    }
+  }
 
   return Pt_CONTINUE;
 }
@@ -126,24 +145,24 @@ struct MenuList_s {
 
 struct MenuList_s DemoList[18] = 
 { 
-  {"demo #0", VIEWER_DEMO0},
-  {"demo #1", VIEWER_DEMO1},
-  {"demo #2", VIEWER_DEMO2},
-  {"demo #3", VIEWER_DEMO3},
-  {"demo #4", VIEWER_DEMO4},
-  {"demo #5", VIEWER_DEMO5},
-  {"demo #6", VIEWER_DEMO6},
-  {"demo #7", VIEWER_DEMO7},
-  {"demo #8", VIEWER_DEMO8},
-  {"demo #9", VIEWER_DEMO9},
-  {"demo #10", VIEWER_DEMO10},
-  {"demo #11", VIEWER_DEMO11},
-  {"demo #12", VIEWER_DEMO12},
-  {"demo #13", VIEWER_DEMO13},
-  {"demo #14", VIEWER_DEMO14},
-  {"demo #15", VIEWER_DEMO15},
-  {"demo #16", VIEWER_DEMO16},
-  {"demo #17", VIEWER_DEMO17}
+  {"#0 Basic Styles", VIEWER_DEMO0},
+  {"#1 CSS Styles", VIEWER_DEMO1},
+  {"#2 Images", VIEWER_DEMO2},
+  {"#3 Basic Tables", VIEWER_DEMO3},
+  {"#4 Sample Tables", VIEWER_DEMO4},
+  {"#5 More Styles", VIEWER_DEMO5},
+  {"#6 Deeply Nested Tables", VIEWER_DEMO6},
+  {"#7 Scaled Anim Image", VIEWER_DEMO7},
+  {"#8 Form", VIEWER_DEMO8},
+  {"#9 Frames", VIEWER_DEMO9},
+  {"#10 Anim Images", VIEWER_DEMO10},
+  {"#11 Fixed Positioning", VIEWER_DEMO11},
+  {"#12 More Fixed Pos", VIEWER_DEMO12},
+  {"#13 DHTML", VIEWER_DEMO13},
+  {"#14 XML Sorting", VIEWER_DEMO14},
+  {"#15 XML IRS", VIEWER_DEMO15},
+  {"#16 Gfx Widgets", VIEWER_DEMO16},
+  {"#17 <Empty>", VIEWER_DEMO17}
 };
 
   for(int i=0; i<=17; i++)

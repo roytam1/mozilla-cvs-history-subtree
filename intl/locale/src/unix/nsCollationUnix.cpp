@@ -57,15 +57,17 @@ nsresult nsCollationUnix::Initialize(nsILocale* locale)
   mCharset.SetString("ISO-8859-1"); //TODO: need to get this from locale
 
   // store platform locale
-  mLocale.SetString("en_US");
+  mLocale.SetString("C");
 
   if (locale != nsnull) {
+    PRUnichar *aLocaleUnichar;
     nsString aLocale;
     nsString aCategory("NSILOCALE_COLLATE");
-    nsresult res = locale->GetCategory(&aCategory, &aLocale);
+    nsresult res = locale->GetCategory(aCategory.GetUnicode(), &aLocaleUnichar);
     if (NS_FAILED(res)) {
       return res;
     }
+    aLocale.SetString(aLocaleUnichar);
 
     nsIPosixLocale* posixLocale;
     char locale[32];
@@ -74,7 +76,7 @@ nsresult nsCollationUnix::Initialize(nsILocale* locale)
     if (NS_FAILED(res)) {
       return res;
     }
-    if (NS_SUCCEEDED(res = posixLocale->GetPlatformLocale(&aCategory, locale, length))) {
+    if (NS_SUCCEEDED(res = posixLocale->GetPlatformLocale(&aLocale, locale, length))) {
       mLocale.SetString(locale);
     }
     posixLocale->Release();

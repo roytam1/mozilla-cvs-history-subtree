@@ -39,11 +39,19 @@ public:
 
   NS_IMETHOD    Forward()=0;
 
+  NS_IMETHOD    Reload(PRUint32 aReloadType)=0;
+
   NS_IMETHOD    Stop()=0;
 
   NS_IMETHOD    LoadUrl(const nsString& aUrl)=0;
 
   NS_IMETHOD    LoadInitialPage()=0;
+
+  NS_IMETHOD    BackButtonPopup()=0;
+
+  NS_IMETHOD    ForwardButtonPopup()=0;
+
+  NS_IMETHOD    GotoHistoryIndex(PRInt32 aIndex)=0;
 
   NS_IMETHOD    WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm)=0;
 
@@ -88,9 +96,13 @@ public:
 #define NS_DECL_IDOMBROWSERAPPCORE   \
   NS_IMETHOD    Back();  \
   NS_IMETHOD    Forward();  \
+  NS_IMETHOD    Reload(PRUint32 aReloadType);  \
   NS_IMETHOD    Stop();  \
   NS_IMETHOD    LoadUrl(const nsString& aUrl);  \
   NS_IMETHOD    LoadInitialPage();  \
+  NS_IMETHOD    BackButtonPopup();  \
+  NS_IMETHOD    ForwardButtonPopup();  \
+  NS_IMETHOD    GotoHistoryIndex(PRInt32 aIndex);  \
   NS_IMETHOD    WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm);  \
   NS_IMETHOD    CookieViewer(nsIDOMWindow* aWin);  \
   NS_IMETHOD    SignonViewer(nsIDOMWindow* aWin);  \
@@ -116,9 +128,13 @@ public:
 #define NS_FORWARD_IDOMBROWSERAPPCORE(_to)  \
   NS_IMETHOD    Back() { return _to Back(); }  \
   NS_IMETHOD    Forward() { return _to Forward(); }  \
+  NS_IMETHOD    Reload(PRUint32 aReloadType) { return _to Reload(aReloadType); }  \
   NS_IMETHOD    Stop() { return _to Stop(); }  \
   NS_IMETHOD    LoadUrl(const nsString& aUrl) { return _to LoadUrl(aUrl); }  \
   NS_IMETHOD    LoadInitialPage() { return _to LoadInitialPage(); }  \
+  NS_IMETHOD    BackButtonPopup() { return _to BackButtonPopup(); }  \
+  NS_IMETHOD    ForwardButtonPopup() { return _to ForwardButtonPopup(); }  \
+  NS_IMETHOD    GotoHistoryIndex(PRInt32 aIndex) { return _to GotoHistoryIndex(aIndex); }  \
   NS_IMETHOD    WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm) { return _to WalletPreview(aWin, aForm); }  \
   NS_IMETHOD    CookieViewer(nsIDOMWindow* aWin) { return _to CookieViewer(aWin); }  \
   NS_IMETHOD    SignonViewer(nsIDOMWindow* aWin) { return _to SignonViewer(aWin); }  \

@@ -39,8 +39,9 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
+#include "nsNeckoUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 
@@ -228,14 +229,6 @@ nsHTMLImageElement::StringToAttribute(nsIAtom* aAttribute,
     aResult.SetEmptyValue();
     return NS_CONTENT_ATTR_HAS_VALUE;
   }
-  if ((aAttribute == nsHTMLAtoms::usemap) ||
-      (aAttribute == nsHTMLAtoms::src) ||
-      (aAttribute == nsHTMLAtoms::lowsrc)) {
-    nsAutoString tmp(aValue);
-    tmp.StripWhitespace();
-    aResult.SetStringValue(tmp);
-    return NS_CONTENT_ATTR_HAS_VALUE;
-  }
   else if (nsGenericHTMLElement::ParseImageAttribute(aAttribute,
                                                      aValue, aResult)) {
     return NS_CONTENT_ATTR_HAS_VALUE;
@@ -262,7 +255,7 @@ nsHTMLImageElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
@@ -311,9 +304,32 @@ MapAttributesInto(nsIHTMLAttributes* aAttributes,
     }
   }
   nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext, aPresContext);
-  nsGenericHTMLElement::MapImageBorderAttributesInto(aAttributes, aContext, aPresContext, nsnull);
+  nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aContext, aPresContext, nsnull);
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
 }
+
+NS_IMETHODIMP
+nsHTMLImageElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                             PRInt32& aHint) const
+{
+  if ((aAttribute == nsHTMLAtoms::usemap) ||
+      (aAttribute == nsHTMLAtoms::ismap)) {
+    aHint = NS_STYLE_HINT_FRAMECHANGE;
+  }
+  else if (aAttribute == nsHTMLAtoms::align) {
+    aHint = NS_STYLE_HINT_REFLOW;
+  }
+  else if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    if (! nsGenericHTMLElement::GetImageMappedAttributesImpact(aAttribute, aHint)) {
+      if (! nsGenericHTMLElement::GetImageBorderAttributeImpact(aAttribute, aHint)) {
+        aHint = NS_STYLE_HINT_CONTENT;
+      }
+    }
+  }
+
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsHTMLImageElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
@@ -384,24 +400,6 @@ nsHTMLImageElement::Finalize(JSContext *aContext)
   mInner.Finalize(aContext);
 }
 
-
-NS_IMETHODIMP
-nsHTMLImageElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  if (aAttribute == nsHTMLAtoms::src) {
-    *aHint = NS_STYLE_HINT_CONTENT;
-  }
-  else if ((aAttribute == nsHTMLAtoms::usemap) ||
-           (aAttribute == nsHTMLAtoms::ismap)) {
-    *aHint = NS_STYLE_HINT_FRAMECHANGE;
-  }
-  else {
-    nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, aAttribute, aHint);
-  }
-  return NS_OK;
-}
 
 NS_IMETHODIMP    
 nsHTMLImageElement::Initialize(JSContext* aContext, 
@@ -528,7 +526,7 @@ nsHTMLImageElement::SetSrc(const nsString& aSrc)
           }
 
           nsAutoString url, empty;
-          nsIURL* baseURL;
+          nsIURI* baseURL;
 
           empty.Truncate();
           result = mOwnerDocument->GetBaseURL(baseURL);
@@ -536,19 +534,7 @@ nsHTMLImageElement::SetSrc(const nsString& aSrc)
 #ifndef NECKO
             result = NS_MakeAbsoluteURL(baseURL, empty, aSrc, url);
 #else
-            NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-            if (NS_FAILED(result)) return result;
-
-            nsIURI *baseUri = nsnull;
-            result = baseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-            if (NS_FAILED(result)) return result;
-
-            char *absUrlStr = nsnull;
-            const char *urlSpec = aSrc.GetBuffer();
-            result = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
-            NS_RELEASE(baseUri);
-            url = absUrlStr;
-            delete [] absUrlStr;
+            result = NS_MakeAbsoluteURI(aSrc, baseURL, url);
 #endif // NECKO
             if (NS_FAILED(result)) {
               url = aSrc;
@@ -569,6 +555,7 @@ nsHTMLImageElement::SetSrc(const nsString& aSrc)
           result = context->StartLoadImage(url, nsnull, specifiedSize,
                                            nsnull, nsnull, nsnull,
                                            nsnull);
+
           NS_RELEASE(context);
         }
         

@@ -57,7 +57,9 @@ struct nsCategory {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class nsBrowsingProfile : public nsIBrowsingProfile, public nsIRDFObserver {
+class nsBrowsingProfile : public nsIBrowsingProfile,
+                          public nsIRDFObserver
+{
 public:
     NS_DECL_ISUPPORTS
 
@@ -71,12 +73,21 @@ public:
     NS_IMETHOD CountPageVisit(const char* url);
 
     // nsIRDFObserver methods:
-    NS_IMETHOD OnAssert(nsIRDFResource* subject,
-                        nsIRDFResource* predicate,
-                        nsIRDFNode* object);
-    NS_IMETHOD OnUnassert(nsIRDFResource* subject,
-                          nsIRDFResource* predicate,
-                          nsIRDFNode* object);
+    NS_IMETHOD OnAssert(nsIRDFResource* aSource,
+                        nsIRDFResource* aProperty,
+                        nsIRDFNode* aTarget);
+    NS_IMETHOD OnUnassert(nsIRDFResource* aSource,
+                          nsIRDFResource* aProperty,
+                          nsIRDFNode* aTarget);
+    NS_IMETHOD OnChange(nsIRDFResource* aSource,
+                        nsIRDFResource* aProperty,
+                        nsIRDFNode* aOldTarget,
+                        nsIRDFNode* aNewTarget);
+    NS_IMETHOD OnMove(nsIRDFResource* aOldSource,
+                      nsIRDFResource* aNewSource,
+                      nsIRDFResource* aProperty,
+                      nsIRDFNode* aTarget);
+                        
 
     // nsBrowsingProfile methods:
     nsBrowsingProfile();
@@ -382,11 +393,11 @@ nsBrowsingProfile::CountPageVisit(const char* initialURL)
 
     nsAutoString urlStr(initialURL);
     // first chop off any query part of the initialURL
-    pos = urlStr.RFind("?");
+    pos = urlStr.RFindChar('?');
     if (pos >= 0) {
         urlStr.Cut(pos, urlStr.Length());
     }
-    pos = urlStr.RFind("#");
+    pos = urlStr.RFindChar('#');
     if (pos >= 0) {
         urlStr.Cut(pos, urlStr.Length());
     }
@@ -449,7 +460,7 @@ nsBrowsingProfile::CountPageVisit(const char* initialURL)
             }
 
             // _Now_ find the right most forward-slash
-            pos = urlStr.RFind("/");
+            pos = urlStr.RFindChar('/');
 
             if (pos >= 0) {
                 // leave the last '/', as this is the way most opendir
@@ -493,7 +504,7 @@ nsBrowsingProfile::GetCategoryID(nsIRDFResource* category, PRUint16 *result)
 nsresult
 nsBrowsingProfile::RecordHit(const char* categoryURL, PRUint16 id)
 {
-    nsCStringKey key(categoryURL);
+    nsStringKey key(categoryURL);
     nsCategory* cat = NS_STATIC_CAST(nsCategory*, mCategories.Get(&key));
     if (cat == nsnull) {
         nsCategory* cat = new nsCategory;
@@ -586,6 +597,27 @@ nsBrowsingProfile::OnUnassert(nsIRDFResource* subject,
     return NS_OK;
 }
 
+
+NS_IMETHODIMP
+nsBrowsingProfile::OnChange(nsIRDFResource* aSource,
+                            nsIRDFResource* aProperty,
+                            nsIRDFNode* aOldTarget,
+                            nsIRDFNode* aNewTarget)
+{
+    // XXX Do we care?
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsBrowsingProfile::OnMove(nsIRDFResource* aOldSource,
+                          nsIRDFResource* aNewSource,
+                          nsIRDFResource* aProperty,
+                          nsIRDFNode* aTarget)
+{
+    // XXX Do we care?
+    return NS_OK;
+}
 
 void
 nsBrowsingProfile::Uint8ToHex(PRUint8 aNum, char aBuf[2])

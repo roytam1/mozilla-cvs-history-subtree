@@ -22,8 +22,16 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
+
 #include "nsBaseWidget.h"
 #include "nsHashtable.h"
+#include "prlog.h"
+
+#include "nsIXlibWindowService.h"
+
+#ifdef DEBUG_blizzard
+#define XLIB_WIDGET_NOISY
+#endif
 
 class nsWidget : public nsBaseWidget
 {
@@ -60,14 +68,14 @@ public:
   NS_IMETHOD Show(PRBool bState);
   NS_IMETHOD IsVisible(PRBool &aState);
 
-  NS_IMETHOD Move(PRUint32 aX, PRUint32 aY);
-  NS_IMETHOD Resize(PRUint32 aWidth,
-                    PRUint32 aHeight,
+  NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);
+  NS_IMETHOD Resize(PRInt32 aWidth,
+                    PRInt32 aHeight,
                     PRBool   aRepaint);
-  NS_IMETHOD Resize(PRUint32 aX,
-                    PRUint32 aY,
-                    PRUint32 aWidth,
-                    PRUint32 aHeight,
+  NS_IMETHOD Resize(PRInt32 aX,
+                    PRInt32 aY,
+                    PRInt32 aWidth,
+                    PRInt32 aHeight,
                     PRBool   aRepaint);
 
   NS_IMETHOD Enable(PRBool bState);
@@ -82,10 +90,8 @@ public:
   virtual void*           GetNativeData(PRUint32 aDataType);
   NS_IMETHOD              SetColorMap(nsColorMap *aColorMap);
   NS_IMETHOD              Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect);
-  NS_IMETHOD              SetTitle(const nsString& aTitle); 
   NS_IMETHOD              SetMenuBar(nsIMenuBar * aMenuBar); 
   NS_IMETHOD              ShowMenuBar(PRBool aShow);
-  NS_IMETHOD              IsMenuBarVisible(PRBool *aVisible);
   NS_IMETHOD              SetTooltips(PRUint32 aNumberOfTips,nsRect* aTooltipAreas[]);   
   NS_IMETHOD              RemoveTooltips();
   NS_IMETHOD              UpdateTooltips(nsRect* aNewTips[]);
@@ -96,70 +102,110 @@ public:
   NS_IMETHOD              GetPreferredSize(PRInt32& aWidth, PRInt32& aHeight);
   NS_IMETHOD              SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight);
   NS_IMETHOD              DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus);
+  NS_IMETHOD              PreCreateWidget(nsWidgetInitData *aInitData);
+  NS_IMETHOD              SetBounds(const nsRect &aRect);
+  NS_IMETHOD              GetRequestedBounds(nsRect &aRect);
 
-  PRBool                  OnPaint(nsPaintEvent &event);
-  PRBool                  OnResize(nsSizeEvent &event);
-  PRBool                  DispatchMouseEvent(nsMouseEvent &aEvent);
-  static nsWidget        *getWidgetForWindow(Window aWindow);
+#ifdef DEBUG
+  void                    DebugPrintEvent(nsGUIEvent & aEvent,Window aWindow);
+#endif
+
+  virtual PRBool          OnPaint(nsPaintEvent &event);
+  virtual PRBool          OnResize(nsSizeEvent &event);
+  virtual PRBool          OnDeleteWindow(void);
+  virtual PRBool          DispatchMouseEvent(nsMouseEvent &aEvent);
+  virtual PRBool          DispatchKeyEvent(nsKeyEvent &aKeyEvent);
+  virtual PRBool          DispatchDestroyEvent(void);
+
+  static nsWidget        * GetWidgetForWindow(Window aWindow);
+  void                     SetVisibility(int aState); // using the X constants here
+  void                     SetMapStatus(PRBool aState);
+
+  PRBool DispatchWindowEvent(nsGUIEvent & aEvent);
+
+//   static nsresult         SetXlibWindowCallback(nsXlibWindowCallback *aCallback);
+//   static nsresult         XWindowCreated(Window aWindow);
+//   static nsresult         XWindowDestroyed(Window aWindow);
+
+  // these are for the wm protocols
+  static Atom   WMDeleteWindow;
+  static Atom   WMTakeFocus;
+  static Atom   WMSaveYourself;
+  static PRBool WMProtocolsInitialized;
+
 protected:
+
+  // private event functions
+  PRBool ConvertStatus(nsEventStatus aStatus);
+
   // create the native window for this class
+  virtual void CreateNativeWindow(Window aParent, nsRect aRect,
+                                  XSetWindowAttributes aAttr, unsigned long aMask);
   virtual void CreateNative(Window aParent, nsRect aRect);
   virtual void DestroyNative(void);
+  void         CreateGC(void);
+  void         Map(void);
+  void         Unmap(void);
+
+  // Let each sublclass set the event mask according to their needs
+  virtual long GetEventMask();
 
   // these will add and delete a window
   static void  AddWindowCallback   (Window aWindow, nsWidget *aWidget);
   static void  DeleteWindowCallback(Window aWindow);
-  static       nsHashtable *window_list;
-  PRUint32     mPreferredWidth;
-  PRUint32     mPreferredHeight;
-  nsIWidget   *parentWidget;
 
-  // private event functions
-  PRBool nsWidget::DispatchWindowEvent(nsGUIEvent* event);
-  PRBool nsWidget::ConvertStatus(nsEventStatus aStatus);
+  // set up our wm hints
+  void          SetUpWMHints(void);
+
+  // here's how we add children
+  // there's no geometry information here because that should be in the mBounds
+  // in the widget
+  void WidgetPut        (nsWidget *aWidget);
+  void WidgetMove       (nsWidget *aWidget);
+  void WidgetMoveResize (nsWidget *aWidget);
+  void WidgetResize     (nsWidget *aWidget);
+  void WidgetShow       (nsWidget *aWidget);
+  // check to see whether or not a rect will intersect with the current scrolled area
+  PRBool WidgetVisible  (nsRect   &aBounds);
+
+  PRBool         mIsShown;
+  PRBool         mIsMapped;
+  int            mVisibility; // this is an int because that's the way X likes it
+  PRUint32       mPreferredWidth;
+  PRUint32       mPreferredHeight;
+
+  nsIWidget   *  mParentWidget;
 
   // All widgets have at least these items.
-  Window        mBaseWindow;
-  unsigned long bg_pixel;
-  PRUint32      border_rgb;
-  unsigned long border_pixel;
-  GC            mGC; // until we get gc pooling working...
-  const char   *name;  // name of the type of widget
+  Display *      mDisplay;
+  Screen *       mScreen;
+  Window         mBaseWindow;
+  Visual *       mVisual;
+  int            mDepth;
+  unsigned long  mBackgroundPixel;
+  PRUint32       mBorderRGB;
+  unsigned long  mBorderPixel;
+  GC             mGC;             // until we get gc pooling working...
+  nsString       mName;           // name of the type of widget
+  PRBool         mIsToplevel;
+  nsRect         mRequestedSize;
+
+private:
+  static       nsHashtable *          gsWindowList;
+
+  static       nsXlibWindowCallback   gsWindowCreateCallback;
+  static       nsXlibWindowCallback   gsWindowDestroyCallback;
+  static       nsXlibEventDispatcher  gsEventDispatcher;
 };
 
-extern Display         *gDisplay;
-extern Screen          *gScreen;
-extern int              gScreenNum;
-extern int              gDepth;
-extern Visual          *gVisual;
-extern XVisualInfo     *gVisualInfo;
-
-extern PRUint32  gRedZeroMask;     //red color mask in zero position
-extern PRUint32  gGreenZeroMask;   //green color mask in zero position
-extern PRUint32  gBlueZeroMask;    //blue color mask in zero position
-extern PRUint32  gAlphaZeroMask;   //alpha data mask in zero position
-extern PRUint32  gRedMask;         //red color mask
-extern PRUint32  gGreenMask;       //green color mask
-extern PRUint32  gBlueMask;        //blue color mask
-extern PRUint32  gAlphaMask;       //alpha data mask
-extern PRUint8   gRedCount;        //number of red color bits
-extern PRUint8   gGreenCount;      //number of green color bits
-extern PRUint8   gBlueCount;       //number of blue color bits
-extern PRUint8   gAlphaCount;      //number of alpha data bits
-extern PRUint8   gRedShift;        //number to shift value into red position
-extern PRUint8   gGreenShift;      //number to shift value into green position
-extern PRUint8   gBlueShift;       //number to shift value into blue position
-extern PRUint8   gAlphaShift;      //number to shift value into alpha position
-
-// this is from the xlibrgb code.
-
-extern "C"
-unsigned long
-xlib_rgb_xpixel_from_rgb (unsigned int rgb);
-
-extern "C"
-Colormap
-xlib_rgb_get_cmap (void);
+extern PRLogModuleInfo *XlibWidgetsLM;
+extern PRLogModuleInfo *XlibScrollingLM;
 
 #endif
+
+
+
+
+
+
 

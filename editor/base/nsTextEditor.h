@@ -22,6 +22,7 @@
 #include "nsITextEditor.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMEventListener.h"
+#include "nsIDOMElement.h"
 #include "nsEditor.h"
 #include "nsTextEditRules.h"
 #include "TypeInState.h"
@@ -54,6 +55,8 @@ public:
 
   NS_IMETHOD GetFlags(PRUint32 *aFlags);
   NS_IMETHOD SetFlags(PRUint32 aFlags);
+  NS_IMETHOD GetDocumentLength(PRInt32 *aCount);
+
 
 //============================================================================
 // Methods that are duplicates of nsEditor -- exposed here for convenience
@@ -69,8 +72,11 @@ public:
   NS_IMETHOD DeleteSelection(nsIEditor::ECollapsedSelectionAction aAction);
   NS_IMETHOD InsertText(const nsString& aStringToInsert);
   NS_IMETHOD SetMaxTextLength(PRInt32 aMaxTextLength);
+  NS_IMETHOD GetMaxTextLength(PRInt32& aMaxTextLength);
   NS_IMETHOD InsertBreak();
   NS_IMETHOD CopyAttributes(nsIDOMNode *aDestNode, nsIDOMNode *aSourceNode);
+  // This method sets background of the page (the body tag)
+  NS_IMETHOD SetBackgroundColor(const nsString& aColor);
 
 // Transaction control
   NS_IMETHOD EnableUndo(PRBool aEnable);
@@ -108,16 +114,23 @@ public:
 
 // Input/Output
   NS_IMETHOD BeginComposition(void);
-  NS_IMETHOD SetCompositionString(const nsString& aCompositionString);
+  NS_IMETHOD SetCompositionString(const nsString& aCompositionString, nsIPrivateTextRangeList* aRangeList, nsTextEventReply* aReply);
   NS_IMETHOD EndComposition(void);
-  NS_IMETHOD OutputTextToString(nsString& aOutputString);
-  NS_IMETHOD OutputHTMLToString(nsString& aOutputString);
-  NS_IMETHOD OutputTextToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride);
-  NS_IMETHOD OutputHTMLToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride);
+
+  NS_IMETHOD OutputToString(nsString& aOutputString,
+                            const nsString& aFormatType,
+                            PRUint32 aFlags);
+  NS_IMETHOD OutputToStream(nsIOutputStream* aOutputStream,
+                            const nsString& aFormatType,
+                            const nsString* aCharsetOverride,
+                            PRUint32 aFlags);
 
 // Plain text wrapping control
   NS_IMETHOD GetBodyWrapWidth(PRInt32 *aWrapColumn);
   NS_IMETHOD SetBodyWrapWidth(PRInt32 aWrapColumn);
+
+// Miscellaneous
+  NS_IMETHOD ApplyStyleSheet(const nsString& aURL);
 
 // Logging methods
 
@@ -126,6 +139,8 @@ public:
 
 // End of methods implemented in nsEditor
 //=============================================================
+
+  
 
 protected:
 
@@ -138,6 +153,11 @@ protected:
   virtual void  InitRules();
   
 // Utility Methods
+
+  /** returns the PRE elements that bounds the content of the text document
+    * @param domdoc      The text document
+    */
+  nsCOMPtr<nsIDOMElement> FindPreElement();
 
   /** content-based query returns PR_TRUE if <aProperty aAttribute=aValue> effects aNode
     * If <aProperty aAttribute=aValue> contains aNode, 
@@ -273,11 +293,16 @@ protected:
                                   PRInt32     aStartOffset,
                                   PRInt32     aEndOffset,
                                   nsIDOMSelection *aSelection);
+
+  /** returns the absolute position of the end points of aSelection
+    * in the document as a text stream.
+    */
+  nsresult GetTextSelectionOffsets(nsIDOMSelection *aSelection,
+                                   PRInt32 &aStartOffset, 
+                                   PRInt32 &aEndOffset);
   
 
   TypeInState *GetTypeInState(); 
-  NS_IMETHOD OutputTextInternal(nsIOutputStream* aOutputStream, nsString* aOutputString, nsString* aCharsetOverride);
-  NS_IMETHOD OutputHTMLInternal(nsIOutputStream* aOutputStream, nsString* aOutputString, nsString* aCharsetOverride);
 
   /** simple utility to handle any error with event listener allocation or registration */
   void HandleEventListenerError();
@@ -297,6 +322,7 @@ protected:
   nsCOMPtr<nsIDOMEventListener> mFocusListenerP;
   PRBool 	mIsComposing;
   PRInt32 mMaxTextLength;
+  PRUint32 mWrapColumn;
 
 // friends
 friend class nsTextEditRules;

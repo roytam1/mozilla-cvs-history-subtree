@@ -26,8 +26,6 @@
 #include "nsIPref.h"
 #include "nsIAddrBookSession.h"
 #include "nsIMsgHeaderParser.h"
-#include "nsIRDFService.h"
-#include "nsRDFCID.h"
 #include "nsXPIDLString.h"
   
   // For the new pref API's
@@ -36,7 +34,6 @@ static NS_DEFINE_CID(kAbCardPropertyCID, NS_ABCARDPROPERTY_CID);
 static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
 static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRESSBOOKDB_CID);
 static NS_DEFINE_CID(kMsgHeaderParserCID,		NS_MSGHEADERPARSER_CID); 
-static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 NS_IMPL_ISUPPORTS(nsAbAddressCollecter, nsCOMTypeInfo<nsIAbAddressCollecter>::GetIID());
 
@@ -101,7 +98,7 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 			{
 				nsCOMPtr <nsIAbCard> existingCard;
 
-				rv = m_historyAB->GetCardForEmailAddress(m_historyDirectory, curAddress, getter_AddRefs(existingCard));
+				rv = m_historyAB->GetCardForEmailAddress(curAddress, getter_AddRefs(existingCard));
 
 				if (!existingCard)
 				{
@@ -111,7 +108,7 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 					{
 						if (curName && nsCRT::strlen(curName) > 0)
 						{
-							SetNamesForCard(senderCard, curName);
+							senderCard->SetDisplayName(curName);
 						}
 						else
 						{
@@ -129,8 +126,12 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 				}
 				else
 				{
-					SetNamesForCard(existingCard, curName);
-					existingCard->EditCardToDatabase("abdirectory://history.mab");
+					char *displayName = nsnull;
+
+					rv = existingCard->GetDisplayName(&displayName);
+					if (NS_SUCCEEDED(rv) && displayName)
+					{
+					}
 				}
 			}
 			curName += strlen(curName) + 1;
@@ -166,17 +167,6 @@ nsresult nsAbAddressCollecter::OpenHistoryAB(nsIAddrDatabase **aDatabase)
 		if (NS_SUCCEEDED(rv) && addrDBFactory)
 			rv = addrDBFactory->Open(dbPath, PR_TRUE, aDatabase, PR_TRUE);
 	}
-	NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv);
-	if (NS_FAILED(rv)) 
-		return rv;
-
-	nsCOMPtr <nsIRDFResource> resource;
-	rv = rdfService->GetResource("abdirectory://history.mab", getter_AddRefs(resource));
-	if (NS_FAILED(rv)) 
-		return rv;
-
-	// query interface 
-	m_historyDirectory = do_QueryInterface(resource, &rv);
 	return rv;
 }
 
@@ -225,29 +215,6 @@ nsresult nsAbAddressCollecter::IsDomainExcluded(const char *address, nsIPref *pP
 	return rv;
 }
 
-nsresult nsAbAddressCollecter::SetNamesForCard(nsIAbCard *senderCard, const char *fullName)
-{
-	char *firstName = nsnull;
-	char *lastName = nsnull;
-
-	char *displayName = nsnull;
-
-	nsresult rv = senderCard->GetFirstName(&firstName);
-	if (NS_SUCCEEDED(rv) && firstName)
-	{
-	}
-	senderCard->SetDisplayName((char *) fullName);
-	rv = SplitFullName (fullName, &firstName, &lastName);
-	if (NS_SUCCEEDED(rv))
-	{
-		senderCard->SetFirstName(firstName);
-		senderCard->SetLastName(lastName);
-	}
-	PR_FREEIF(firstName);
-	PR_FREEIF(lastName);
-	return rv;
-}
-
 nsresult nsAbAddressCollecter::SplitFullName (const char *fullName, char **firstName, char **lastName)
 {
     if (fullName)
@@ -265,7 +232,7 @@ nsresult nsAbAddressCollecter::SplitFullName (const char *fullName, char **first
             if (*walkName == ' ')
             {
                 plastSpace = walkName;
-                plastName = plastSpace + 1;
+                plastName = ++plastSpace;
             }
             
             walkName++;

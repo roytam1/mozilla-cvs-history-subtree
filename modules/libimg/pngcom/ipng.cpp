@@ -17,17 +17,16 @@
  */
 
 #include "png.h"
+#include "nsIImgDecoder.h" // include if_struct.h Needs to be first
 
-#include "if_struct.h"
 #include "ipng.h"
 
 
 #include "dllcompat.h"
 #include "pngdec.h"
 
-#include "nsIImgDecoder.h"
 #include "nsPNGDecoder.h"
-#include "nsPNGCallback.h"
+#include "nsIImgDCallbk.h"
 #include "ilISystemServices.h"
 
 #define OK 1
@@ -114,9 +113,13 @@ il_png_write(il_container *ic, const unsigned char *buf, int32 len)
     }
     /* note addition of ic to png structure.... */
     png_ptr->io_ptr = ic;
+    if (setjmp(png_ptr->jmpbuf)) {
+         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+         return !OK;
+    }
     png_process_data( png_ptr, info_ptr, (unsigned char *)buf, len );
     ipng_ptr->state = PNG_CONTINUE;
-   
+          
     return OK;
 }
 
@@ -130,16 +133,28 @@ png_set_dims( il_container *ic, png_structp png_ptr)
 
     src_hdr->width = img_hdr->width = png_ptr->width;
     src_hdr->height = img_hdr->height = png_ptr->height;
+#if 1
+    if((png_ptr->num_trans)||(png_ptr->color_type  & PNG_COLOR_MASK_ALPHA))
+    {
+      ic->image->header.alpha_bits = 1;
+      ic->image->header.alpha_shift = 0;
+      ic->image->header.is_interleaved_alpha = TRUE;
+    }
+#endif 
 
-    if((png_ptr->channels > 3 )||(png_ptr->trans)){
-        il_create_alpha_mask( (il_container *)png_ptr->io_ptr, 0, png_ptr->width, png_ptr->height);
-        ic->image->header.is_interleaved_alpha = TRUE;
-        //il_init_image_transparent_pixel(ic);
-       ic->imgdcb->ImgDCBInitTransparentPixel();
-
+#if 0
+    if(png_ptr->num_trans){
+      ic->image->header.alpha_bits = 1;
+      ic->image->header.alpha_shift = 0;
+      ic->image->header.is_interleaved_alpha = TRUE;
+    }
+    if(png_ptr->color_type  & PNG_COLOR_MASK_ALPHA){
+      ic->image->header.alpha_bits = 8;
+      ic->image->header.alpha_shift = 0;
+      ic->image->header.is_interleaved_alpha = TRUE;
     }
 
-    //status = il_size(ic);
+#endif
     status = ic->imgdcb->ImgDCBImageSize();
 
     /*Note: all png's are decoded to RGB or RGBa and
@@ -169,15 +184,10 @@ il_png_init_transparency(png_structp png_ptr, il_container *ic, int index)
            transparency color of the destination image. */
         img_trans_pixel = ic->image->header.transparent_pixel;
 
-        src_trans_pixel->red = png_ptr->trans_values.red;
-        src_trans_pixel->green = png_ptr->trans_values.green;
-        src_trans_pixel->blue = png_ptr->trans_values.blue;
+        src_trans_pixel->red = (uint8) png_ptr->trans_values.red;
+        src_trans_pixel->green = (uint8) png_ptr->trans_values.green;
+        src_trans_pixel->blue = (uint8) png_ptr->trans_values.blue;
   
-/* 
-        src_trans_pixel->red = img_trans_pixel->red;
-        src_trans_pixel->green = img_trans_pixel->green;
-        src_trans_pixel->blue = img_trans_pixel->blue;
-*/
         
     /* Set the source image's transparent pixel index.  Do this even if the source
        image's transparent pixel has previously been set, since the index can vary
@@ -208,18 +218,14 @@ il_png_destroy_transparency(il_container *ic)
 void
 png_delay_time_callback(void *closure)
 {
-	ipng_struct *ipng_ptr = (ipng_struct *)closure;
+    ipng_struct *ipng_ptr = (ipng_struct *)closure;
 
     PR_ASSERT(ipng_ptr->state == PNG_DELAY);
 
-    ipng_ptr->delay_time = NULL;
-
     if (ipng_ptr->ic->state == IC_ABORT_PENDING)
         return;                                        
-
-    ipng_ptr->delay_time = 0;         /* Reset for next image */
-
     
+    ipng_ptr->delay_time = 0;         /* Reset for next image */
 }
 
 void 
@@ -234,7 +240,7 @@ il_png_complete(il_container *ic)
 	/* notify observers that the current frame has completed. */
  
     //il_frame_complete_notify(ic);                
-  ic->imgdcb->ImgDCBHaveImageFrame();
+    ic->imgdcb->ImgDCBHaveImageFrame();
 
     /* An image can specify a delay time before which to display
        subsequent images.  Block until the appointed time. */
@@ -259,33 +265,5 @@ void il_png_abort(il_container *ic)
 {
 /*    il_abort( ic ); */
 	return;
-}
-
-
-/*-----------------------------------------------------------------------------
- * Put alpha channel in a separate 8 bit input
- *---------------------------------------------------------------------------*/
-void
-il_get_alpha_channel(
-    uint8  *src,                 /* RGBa, input data */
-    int src_len,                /* Number of pixels in source row */
-    uint8  *maskp,       /* Output pointer, left-justified bitmask */
-    int mask_len               /* Number of pixels in output row */
-    )
-{
-    
-    if (!src || !mask_len)
-        return;
- 
-    if (src_len == mask_len)
-    {   
-        int i = src_len;
-
-        while (i--) {
-           *maskp++ = *(src + 3);
-                src += 4;
-            }
-     }
-
 }
 

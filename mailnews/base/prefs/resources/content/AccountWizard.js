@@ -19,11 +19,12 @@
  */
 
 var wizardMap = {
-    intro:    { next: "identity"},
-    identity: { next: "smtp",   previous: "intro"},
-    smtp:     { next: "server", previous: "identity"},
-    server:   { next: "done", previous: "server"},
-    done:     { previous: "server" }
+    accounttype: { next: "identity" },
+    identity: { next: "server", previous: "accounttype" },
+    server:   { next: "login", previous: "identity"},
+    login:    { next: "accname", previous: "server"},
+    accname:  { next: "done", previous: "login" },
+    done:     { previous: "accname" }
 }
 
 var pagePrefix="aw-";
@@ -33,16 +34,50 @@ var currentPageTag;
 
 var contentWindow;
 
+var wizardContents;
+
+function init() {
+    if (!contentWindow) contentWindow = window.frames["wizardContents"];
+    if (!wizardContents) wizardContents = new Array;
+}
 // event handlers
 function onLoad() {
-    dump("Initializing the wizard..\n");
-    contentWindow = window.frames["wizardContents"];
+    init();
+}
+
+function wizardPageLoaded(tag) {
+    init();
+    currentPageTag=tag;
+    initializePage(contentWindow, wizardContents);
 }
 
 function onNext(event) {
-    savePageInfo(contentWindow);
+
+    if (!wizardMap[currentPageTag]) {
+        dump("Error, could not find entry for current page: " +
+             currentPageTag + "\n");
+        return;
+    }
+    
+    // only run validation routine if it's there
+    var validate = wizardMap[currentPageTag].validate;
+    if (validate)
+        if (!validate(contentWindow, wizardContents)) return;
+
+    if (typeof(contentWindow.ValidateContents) == "function")
+        if (!contentWindow.ValidateContents()) return;
+
+    saveContents(contentWindow, wizardContents);
+    
     nextPage(contentWindow);
-    initializePage(contentWindow);
+}
+
+function onCancel(event) {
+    window.close();
+}
+
+function onLoadPage(event) {
+    contentWindow.location = getUrlFromTag(document.getElementById("newPage").value);
 }
 
 function onBack(event) {
@@ -56,13 +91,17 @@ function getUrlFromTag(title) {
 
 
 // helper functions that actually do stuff
-function savePageInfo(win) {
+function setNextEnabled(enabled) {
     
 }
 
+function setBackEnabled(enabled) {
+
+}
 
 function nextPage(win) {
     var nextPageTag = wizardMap[currentPageTag].next;
+    dump("Loading " + getUrlFromTag(nextPageTag) + "\n");
     if (nextPageTag)
         win.location=getUrlFromTag(nextPageTag);
 }
@@ -73,6 +112,47 @@ function previousPage(win) {
         win.location=getUrlFromTag(previousPageTag)
 }
 
-function initializePage(win) {
-    
+function initializePage(win, hash) {
+    var doc = win.document;
+    for (var i in hash) {
+        var formElement=doc.getElementById(i);
+        if (formElement) {
+            formElement.value = hash[i];
+        }
+
+    }
 }
+
+
+function saveContents(win, hash) {
+
+    var inputs = win.document.getElementsByTagName("FORM")[0].elements;
+    dump("There are " + inputs.length + " input tags\n");
+    for (var i=0 ; i<inputs.length; i++) {
+        dump("Saving: ");
+        dump("ID=" + inputs[i].name + " Value=" + inputs[i].value + "..");
+        hash[inputs[i].name] = inputs[i].value;
+        dump("done.\n");
+    }
+
+}
+
+function validateIdentity(win, hash) {
+    var email = win.document.getElementById("email").value;
+    
+    if (email.indexOf('@') == -1) {
+        window.alert("Invalid e-mail address!");
+        dump("Invalid e-mail address!\n");
+        return false;
+    }
+    return true;
+}
+
+function validateServer(win, hash) {
+    return true;
+}
+
+function validateSmtp(win, hash) {
+    return true;
+}
+

@@ -49,6 +49,12 @@ NSGetFactory(nsISupports* aServMgr,
         rv = factory->SetConstructor(xpctest::ConstructEcho);
     else if(aClass.Equals(xpctest::GetChildCID()))
         rv = factory->SetConstructor(xpctest::ConstructChild);
+    else if(aClass.Equals(xpctest::GetNoisyCID()))
+        rv = factory->SetConstructor(xpctest::ConstructNoisy);
+    else if(aClass.Equals(xpctest::GetStringTestCID()))
+        rv = factory->SetConstructor(xpctest::ConstructStringTest);
+    else if(aClass.Equals(xpctest::GetOverloadedCID()))
+        rv = factory->SetConstructor(xpctest::ConstructOverloaded);
     else
     {
         NS_ASSERTION(0, "incorrectly registered");
@@ -56,10 +62,9 @@ NSGetFactory(nsISupports* aServMgr,
     }
 
     if (NS_FAILED(rv)) {
-        delete factory;
+        NS_RELEASE(factory);
         return rv;
     }
-    NS_ADDREF(factory);
     *aFactory = factory;
     return NS_OK;
 }
@@ -83,6 +88,19 @@ NSRegisterSelf(nsISupports* aServMgr , const char* aPath)
                                     "nsChild", "nsChild", aPath,
                                     PR_TRUE, PR_TRUE);
 
+    rv = compMgr->RegisterComponent(xpctest::GetNoisyCID(),
+                                    "nsNoisy", "nsNoisy", aPath,
+                                    PR_TRUE, PR_TRUE);
+
+    rv = compMgr->RegisterComponent(xpctest::GetStringTestCID(),
+                                    "nsStringTest", "nsStringTest", aPath,
+                                    PR_TRUE, PR_TRUE);
+
+    rv = compMgr->RegisterComponent(xpctest::GetOverloadedCID(),
+                                    "nsOverloaded", "nsOverloaded", aPath,
+                                    PR_TRUE, PR_TRUE);
+
+
     return rv;
 }
 
@@ -96,6 +114,9 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* aPath)
 
     rv = compMgr->UnregisterComponent(xpctest::GetEchoCID(), aPath);
     rv = compMgr->UnregisterComponent(xpctest::GetChildCID(), aPath);
+    rv = compMgr->UnregisterComponent(xpctest::GetNoisyCID(), aPath);
+    rv = compMgr->UnregisterComponent(xpctest::GetStringTestCID(), aPath);
+    rv = compMgr->UnregisterComponent(xpctest::GetOverloadedCID(), aPath);
 
     return rv;
 }

@@ -68,12 +68,19 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
 
     /* Check for existence of the newer	version	*/
     
-    PRBool versionNewer = PR_FALSE;  // Is this a newer version
     char* qualifiedRegNameString = inComponentName.ToNewCString();
 
     if ( (forceInstall == PR_FALSE ) && (inVInfo !=  "") && ( VR_ValidateComponent( qualifiedRegNameString ) == 0 ) ) 
     {
         nsInstallVersion *newVersion = new nsInstallVersion();
+        
+        if (newVersion == nsnull)
+        {
+            delete [] qualifiedRegNameString;
+            *error = nsInstall::OUT_OF_MEMORY;
+            return;
+        }
+
         newVersion->Init(inVInfo);
         
         VERSION versionStruct;
@@ -81,6 +88,14 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
         VR_GetVersion( qualifiedRegNameString, &versionStruct );
         
         nsInstallVersion* oldVersion = new nsInstallVersion();
+        
+        if (newVersion == nsnull)
+        {
+            delete [] qualifiedRegNameString;
+            delete oldVersion;
+            *error = nsInstall::OUT_OF_MEMORY;
+            return;
+        }
 
         oldVersion->Init(versionStruct.major,
                          versionStruct.minor,
@@ -99,22 +114,50 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
             areTheyEqual == nsIDOMInstallVersion::BLD_DIFF_MINUS   )
         {
             // the file to be installed is OLDER than what is on disk.  Return error
-            delete qualifiedRegNameString;
+            delete [] qualifiedRegNameString;
             *error = areTheyEqual;
             return;
         }
     }
 
-    delete qualifiedRegNameString;
+    delete [] qualifiedRegNameString;
 
+    mFinalFile = new nsFileSpec(folderSpec);
     
-     mFinalFile = new nsFileSpec(folderSpec);
+    if (mFinalFile == nsnull)
+    {
+        *error = nsInstall::OUT_OF_MEMORY;
+        return;
+    }
+    
+    if ( mFinalFile->Exists() )
+    {
+        // is there a file with the same name as the proposed folder?
+        if ( mFinalFile->IsFile() ) 
+        {
+            *error = nsInstall::FILENAME_ALREADY_USED;
+            return;
+        }
+        // else this directory already exists, so do nothing
+    }
+    else
+    {
+        /* the nsFileSpecMac.cpp operator += requires "this" (the nsFileSpec)
+         * to be an existing dir
+         */
+        int dirPermissions = 0755; // std default for UNIX, ignored otherwise
+        mFinalFile->CreateDir(dirPermissions);
+    }
+
     *mFinalFile += inPartialPath;
     
     mReplaceFile = mFinalFile->Exists();
     
     if (mReplaceFile == PR_FALSE)
     {
+       /* although it appears that we are creating the dir _again_ it is necessary
+        * when inPartialPath has arbitrary levels of nested dirs before the leaf
+        */
         nsFileSpec parent;
         mFinalFile->GetParent(parent);
         nsFileSpec makeDirs(parent.GetCString(), PR_TRUE);
@@ -125,7 +168,15 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
     mVersionRegistryName    = new nsString(inComponentName);
     mJarLocation            = new nsString(inJarLocation);
     mVersionInfo	        = new nsString(inVInfo);
-        
+     
+    if (mVersionRegistryName == nsnull ||
+        mJarLocation         == nsnull ||
+        mVersionInfo         == nsnull )
+    {
+        *error = nsInstall::OUT_OF_MEMORY;
+        return;
+    }
+
     nsString regPackageName;
     mInstall->GetRegPackageName(regPackageName);
     
@@ -145,11 +196,11 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
 
         if (startsWith.Equals(regPackageName))
         {
-            mChildFile = true;
+            mChildFile = PR_TRUE;
         }
         else
         {
-            mChildFile = false;
+            mChildFile = PR_FALSE;
         }
     }
 }
@@ -219,6 +270,9 @@ char* nsInstallFile::toString()
 {
     char* buffer = new char[1024];
     
+    if (buffer == nsnull)
+        return nsnull;
+
     if (mFinalFile == nsnull)
     {
         sprintf( buffer, nsInstallResources::GetInstallFileString(), nsnull);

@@ -36,6 +36,8 @@ class nsAppShell : public nsIAppShell
   virtual nsresult      Run(); 
   NS_IMETHOD            Spinup() { return NS_OK; }
   NS_IMETHOD            Spindown() { return NS_OK; }
+  NS_IMETHOD            PushThreadEventQueue();
+  NS_IMETHOD            PopThreadEventQueue();
   NS_IMETHOD            GetNativeEvent(PRBool &aRealEvent, void *&aEvent);
   NS_IMETHOD            DispatchNativeEvent(PRBool aRealEvent, void * aEvent);
   NS_IMETHOD            EventIsForModalWindow(PRBool aRealEvent, void *aEvent,
@@ -44,17 +46,31 @@ class nsAppShell : public nsIAppShell
   NS_IMETHOD            SetDispatchListener(nsDispatchListener* aDispatchListener);
   NS_IMETHOD            Exit();
   virtual void *        GetNativeData(PRUint32 aDataType);
-  
+  static void           DispatchXEvent(XEvent *event);
  private:
   nsDispatchListener*     mDispatchListener;
-  void DispatchEvent(XEvent *event);
   static void HandleButtonEvent(XEvent *event, nsWidget *aWidget);
   static void HandleMotionNotifyEvent(XEvent *event, nsWidget *aWidget);
   static void HandleExposeEvent(XEvent *event, nsWidget *aWidget);
   static void HandleConfigureNotifyEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleKeyPressEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleKeyReleaseEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleFocusInEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleFocusOutEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleVisibilityNotifyEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleMapNotifyEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleUnmapNotifyEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleEnterEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleLeaveEvent(XEvent *event, nsWidget *aWidget);
+  static void HandleClientMessageEvent(XEvent *event, nsWidget *aWidget);
+  static PRBool DieAppShellDie;
 
 protected:
   nsIEventQueueService * mEventQueueService;
+
+
+  Display * mDisplay;
+  Screen *  mScreen;
 };
 
 #endif // nsAppShell_h__

@@ -130,7 +130,12 @@ public:
                           nsIPresShell&   aPresShell,
                           nsIAtom*        aListName,
                           nsIFrame*       aOldFrame);
-  NS_IMETHOD  DeleteFrame(nsIPresContext& aPresContext);
+  NS_IMETHOD  ReplaceFrame(nsIPresContext& aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aOldFrame,
+                           nsIFrame*       aNewFrame);
+  NS_IMETHOD  Destroy(nsIPresContext& aPresContext);
   NS_IMETHOD  GetContent(nsIContent** aContent) const;
   NS_IMETHOD  GetStyleContext(nsIStyleContext** aStyleContext) const;
   NS_IMETHOD  SetStyleContext(nsIPresContext* aPresContext,
@@ -174,6 +179,16 @@ public:
                                  PRInt32*               outFrameContentOffset,
                                  nsIFrame*              *outChildFrame);
 
+  NS_IMETHOD  GetNextPrevLineFromeBlockFrame(nsIFocusTracker *aTracker,
+                                        nsDirection aDirection, 
+                                        nsIFrame *aBlockFrame, 
+                                        PRInt32 aLineStart, 
+                                        nscoord aDesiredX,
+                                        nsIContent **aResultContent, 
+                                        PRInt32 *aContentOffset,
+                                        PRInt8 aOutSideLimit
+                                        );
+
   NS_IMETHOD  GetFrameState(nsFrameState* aResult);
   NS_IMETHOD  SetFrameState(nsFrameState aNewState);
 
@@ -203,7 +218,6 @@ public:
   NS_IMETHOD  IsPercentageBase(PRBool& aBase) const;
   NS_IMETHOD  GetNextSibling(nsIFrame** aNextSibling) const;
   NS_IMETHOD  SetNextSibling(nsIFrame* aNextSibling);
-  NS_IMETHOD  IsTransparent(PRBool& aTransparent) const;
   NS_IMETHOD  Scrolled(nsIView *aView);
   NS_IMETHOD  List(FILE* out, PRInt32 aIndent) const;
   NS_IMETHOD  GetFrameName(nsString& aResult) const;
@@ -296,6 +310,10 @@ public:
   void Trace(const char* aMethod, PRBool aEnter);
   void Trace(const char* aMethod, PRBool aEnter, nsReflowStatus aStatus);
   void TraceMsg(const char* fmt, ...);
+
+  // Helper function that verifies that each frame in the list has the
+  // NS_FRAME_IS_DIRTY bit set
+  static void VerifyDirtyBitSet(nsIFrame* aFrameList);
 #endif
 
   void ListTag(FILE* out) const {

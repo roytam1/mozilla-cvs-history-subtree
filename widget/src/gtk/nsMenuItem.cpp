@@ -459,7 +459,7 @@ NS_METHOD nsMenuItem::DoCommand()
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
   event.eventStructType = NS_MOUSE_EVENT;
-  event.message = NS_MOUSE_LEFT_CLICK;
+  event.message = NS_MENU_ACTION;
 
   nsCOMPtr<nsIContent> contentNode;
   contentNode = do_QueryInterface(mDOMElement);
@@ -472,6 +472,18 @@ NS_METHOD nsMenuItem::DoCommand()
   rv = contentNode->HandleDOMEvent(*presContext, &event, nsnull, NS_EVENT_FLAG_INIT, status);
   //g_print("HandleDOMEvent called");
   return rv;
+}
+
+//-------------------------------------------------------------------------
+NS_METHOD nsMenuItem::SetDOMNode(nsIDOMNode * aDOMNode)
+{
+  return NS_OK;
+}
+    
+//-------------------------------------------------------------------------
+NS_METHOD nsMenuItem::GetDOMNode(nsIDOMNode ** aDOMNode)
+{
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -494,3 +506,30 @@ NS_METHOD nsMenuItem::SetWebShell(nsIWebShell * aWebShell)
   return NS_OK;
 }
 
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetShortcutChar(const nsString &aText)
+{
+  mKeyEquivalent = aText;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetShortcutChar(nsString &aText)
+{
+  aText = mKeyEquivalent;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetModifiers(PRUint8 aModifiers)
+{
+  mModifiers = aModifiers;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetModifiers(PRUint8 * aModifiers)
+{
+  *aModifiers = mModifiers; 
+  return NS_OK;
+}

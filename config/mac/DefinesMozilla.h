@@ -16,17 +16,20 @@
  * Reserved.
  */
 
-// ——— Security
+#ifndef DefinesMozilla_h_
+#define DefinesMozilla_h_
+
+// *** Security
 //#define NADA_VERSION
 //#define EXPORT_VERSION
 #define US_VERSION
 
-// ——— Misc
+// *** Misc
 //#define NO_DBM		// define this to kill DBM
-#define NEW_BOOKMARKS
+//#define NEW_BOOKMARKS
 // Enables us to switch profiling from project preferences
 
-// ——— Version
+// *** Version
 //#define ALPHA
 //#define BETA
 // Comment out both ALPHA and BETA for the final version
@@ -37,25 +40,28 @@
 #define ClientWallet 1
 
 // 98-07-29 pinkerton -- defines to turn on feature. REMOVE WHEN THIS LANDS.
-#define PRIVACY_POLICIES 1
+//#define PRIVACY_POLICIES 1
 
 // 98-08-10 joe -- temporary item to turn on ENDER (html textareas) before it fully lands
-#define ENDER 1
+//#define ENDER 1
 
 // 98-09-25 mlm - turn on javascript thread safety
 #define JS_THREADSAFE 1
 
 // 98-10-14 joe -- temporary item to turn on ENDER MIME support before it fully lands
-#define MOZ_ENDER_MIME 1
+//#define MOZ_ENDER_MIME 1
 
 #define USE_NSREG 1
 
 //  used to change string class
 //#define USE_STRING2	1
 
-// ———————————————————————————————————————————————————————————————————————————
+// External DTD support for XML
+#define XML_DTD
+
+// ***************************************************************************
 //	•	You typically will not need to change things below here
-// ———————————————————————————————————————————————————————————————————————————
+// ***************************************************************************
 
 #define MOCHA
 #define MOZILLA_CLIENT	1
@@ -73,10 +79,13 @@
 #define LAYERS	1
 // #define NU_CACHE 1 // uncomment to turn on new memory cache features
 
-#define CASTED_READ_OBJECT(stream, type, reference) (reference = NULL)
+//#define CASTED_READ_OBJECT(stream, type, reference) (reference = NULL)
 
 /* Defined in javaStubs prefix files
 #define VERSION_NUMBER "4_0b0"
 #define ZIP_NAME "java"##VERSION_NUMBER
 */
 
+#define NECKO 1
+
+#endif /* DefinesMozilla_h_ */

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -187,7 +187,10 @@ void *nsHashtable::Remove(nsHashKey *aKey) {
   return res;
 }
 
-static PR_CALLBACK PRIntn _hashEnumerateCopy(PLHashEntry *he, PRIntn i, void *arg)
+// XXX This method was called _hashEnumerateCopy, but it didn't copy the element!
+// I don't know how this was supposed to work since the elements are neither copied
+// nor refcounted.
+static PR_CALLBACK PRIntn _hashEnumerateShare(PLHashEntry *he, PRIntn i, void *arg)
 {
   nsHashtable *newHashtable = (nsHashtable *)arg;
   newHashtable->Put((nsHashKey *) he->key, he->value);
@@ -200,7 +203,7 @@ nsHashtable * nsHashtable::Clone() {
     threadSafe = PR_TRUE;
   nsHashtable *newHashTable = new nsHashtable(hashtable->nentries, threadSafe);
 
-  PL_HashTableEnumerateEntries(hashtable, _hashEnumerateCopy, newHashTable);
+  PL_HashTableEnumerateEntries(hashtable, _hashEnumerateShare, newHashTable);
   return newHashTable;
 }
 
@@ -213,47 +216,233 @@ void nsHashtable::Enumerate(nsHashtableEnumFunc aEnumFunc, void* closure) {
 
 static PR_CALLBACK PRIntn _hashEnumerateRemove(PLHashEntry *he, PRIntn i, void *arg)
 {
-  return HT_ENUMERATE_REMOVE;
+  _HashEnumerateArgs* thunk = (_HashEnumerateArgs*)arg;
+  if (thunk)
+      return thunk->fn((nsHashKey *) he->key, he->value, thunk->arg)
+          ? HT_ENUMERATE_REMOVE
+          : HT_ENUMERATE_STOP;
+  else
+      return HT_ENUMERATE_REMOVE;
 }
 
 void nsHashtable::Reset() {
-  PL_HashTableEnumerateEntries(hashtable, _hashEnumerateRemove, NULL);
+  Reset(NULL);
+}
+
+void nsHashtable::Reset(nsHashtableEnumFunc destroyFunc, void* closure)
+{
+  if (destroyFunc != NULL)
+  {
+      _HashEnumerateArgs thunk;
+      thunk.fn = destroyFunc;
+      thunk.arg = closure;
+      PL_HashTableEnumerateEntries(hashtable, _hashEnumerateRemove, &thunk);
+  }
+  else
+      PL_HashTableEnumerateEntries(hashtable, _hashEnumerateRemove, NULL);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-nsCStringKey::nsCStringKey(const char* str)
-  : mStr(mBuf)
+nsStringKey::nsStringKey(const char* str)
 {
-  PRUint32 len = PL_strlen(str);
-  if (len >= sizeof(mBuf)) {
-    mStr = PL_strdup(str);
-    NS_ASSERTION(mStr, "out of memory");
-  }
-  else {
-    PL_strcpy(mStr, str);
-  }
+	mStr.Assign(str);
 }
 
-nsCStringKey::~nsCStringKey(void)
+nsStringKey::nsStringKey(const PRUnichar* str)
 {
-  if (mStr != mBuf)
-    PL_strfree(mStr);
+	mStr.Assign(str);
 }
 
-PRUint32 nsCStringKey::HashValue(void) const
+nsStringKey::nsStringKey(const nsStr& str)
 {
-  return (PRUint32) PL_HashString((const void*) mStr);
+	mStr.Assign(str);
 }
 
-PRBool nsCStringKey::Equals(const nsHashKey* aKey) const
+nsStringKey::~nsStringKey(void)
 {
-  return PL_strcmp( ((nsCStringKey*)aKey)->mStr, mStr ) == 0;
 }
 
-nsHashKey* nsCStringKey::Clone() const
+PRUint32 nsStringKey::HashValue(void) const
 {
-  return new nsCStringKey(mStr);
+	if(mStr.IsUnicode())
+		{
+		PRUint32 h;
+		PRUint32 n;
+		PRUint32 m;
+		const PRUnichar* c;
+
+		h = 0;
+		n = mStr.Length();
+		c = mStr.GetUnicode();
+		if(n < 16)
+			{	/* Hash every char in a short string. */
+			for(; n; c++, n--)
+				h = (h >> 28) ^ (h << 4) ^ *c;
+			}
+		else
+			{	/* Sample a la jave.lang.String.hash(). */
+			for(m = n / 8; n >= m; c += m, n -= m)
+				h = (h >> 28) ^ (h << 4) ^ *c;
+			}
+		return h; 
+		}
+	return (PRUint32)PL_HashString((const void*) mStr.GetBuffer());
+}
+
+PRBool nsStringKey::Equals(const nsHashKey* aKey) const
+{
+	return ((nsStringKey*)aKey)->mStr == mStr;
+}
+
+nsHashKey* nsStringKey::Clone() const
+{
+	return new nsStringKey(mStr);
+}
+
+const nsString& nsStringKey::GetString() const
+{
+    return mStr;
+}    
+
+////////////////////////////////////////////////////////////////////////////////
+// nsObjectHashtable: an nsHashtable where the elements are C++ objects to be
+// deleted
+
+nsObjectHashtable::nsObjectHashtable(nsHashtableCloneElementFunc cloneElementFun,
+                                     void* cloneElementClosure,
+                                     nsHashtableEnumFunc destroyElementFun,
+                                     void* destroyElementClosure,
+                                     PRUint32 aSize, PRBool threadSafe)
+    : nsHashtable(aSize, threadSafe),
+      mCloneElementFun(cloneElementFun),
+      mCloneElementClosure(cloneElementClosure),
+      mDestroyElementFun(destroyElementFun),
+      mDestroyElementClosure(destroyElementClosure)
+{
+}
+
+nsObjectHashtable::~nsObjectHashtable()
+{
+    Reset();
+}
+
+PR_CALLBACK PRIntn 
+nsObjectHashtable::CopyElement(PLHashEntry *he, PRIntn i, void *arg)
+{
+  nsObjectHashtable *newHashtable = (nsObjectHashtable *)arg;
+  void* newElement = 
+      newHashtable->mCloneElementFun((nsHashKey*)he->key, he->value, 
+                                     newHashtable->mCloneElementClosure);
+  if (newElement == nsnull)
+      return HT_ENUMERATE_STOP;
+  newHashtable->Put((nsHashKey*)he->key, newElement);
+  return HT_ENUMERATE_NEXT;
+}
+
+nsHashtable*
+nsObjectHashtable::Clone()
+{
+    PRBool threadSafe = PR_FALSE;
+    if (mLock)
+        threadSafe = PR_TRUE;
+    nsObjectHashtable* newHashTable = 
+        new nsObjectHashtable(mCloneElementFun, mCloneElementClosure,
+                              mDestroyElementFun, mDestroyElementClosure,
+                              hashtable->nentries, threadSafe);
+
+    PL_HashTableEnumerateEntries(hashtable, CopyElement, newHashTable);
+    return newHashTable;
+}
+
+void 
+nsObjectHashtable::Reset()
+{
+    nsHashtable::Reset(mDestroyElementFun, mDestroyElementClosure);
+}
+
+PRBool
+nsObjectHashtable::RemoveAndDelete(nsHashKey *aKey)
+{
+    void *value = Remove(aKey);
+    if (value && mDestroyElementFun)
+    {
+        return (*mDestroyElementFun)(aKey, value, mDestroyElementClosure);
+    }
+    else
+        return PR_FALSE;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// nsSupportsHashtable: an nsHashtable where the elements are nsISupports*
+
+static PR_CALLBACK PRBool
+_ReleaseElement(nsHashKey *aKey, void *aData, void* closure)
+{
+    nsISupports* element = NS_STATIC_CAST(nsISupports*, aData);
+    NS_RELEASE(element);
+    return PR_TRUE;
+}
+
+nsSupportsHashtable::~nsSupportsHashtable()
+{
+    Enumerate(_ReleaseElement, nsnull);
+}
+
+void*
+nsSupportsHashtable::Put(nsHashKey *aKey, void *aData)
+{
+    nsISupports* element = NS_STATIC_CAST(nsISupports*, aData);
+    NS_ADDREF(element);
+    return nsHashtable::Put(aKey, aData);
+}
+
+void*
+nsSupportsHashtable::Get(nsHashKey *aKey)
+{
+    void* data = nsHashtable::Get(aKey);
+    nsISupports* element = NS_STATIC_CAST(nsISupports*, data);
+    NS_ADDREF(element);
+    return data;
+}
+
+void*
+nsSupportsHashtable::Remove(nsHashKey *aKey)
+{
+    void* data = nsHashtable::Remove(aKey);
+    nsISupports* element = NS_STATIC_CAST(nsISupports*, data);
+    NS_RELEASE(element);
+    return data;
+}
+
+static PR_CALLBACK PRIntn
+_hashEnumerateCopy(PLHashEntry *he, PRIntn i, void *arg)
+{
+    nsHashtable *newHashtable = (nsHashtable *)arg;
+    nsISupports* element = NS_STATIC_CAST(nsISupports*, he->value);
+    NS_ADDREF(element);
+    newHashtable->Put((nsHashKey*)he->key, he->value);
+    return HT_ENUMERATE_NEXT;
+}
+
+nsHashtable*
+nsSupportsHashtable::Clone()
+{
+    PRBool threadSafe = PR_FALSE;
+    if (mLock)
+        threadSafe = PR_TRUE;
+    nsSupportsHashtable* newHashTable = 
+        new nsSupportsHashtable(hashtable->nentries, threadSafe);
+
+    PL_HashTableEnumerateEntries(hashtable, _hashEnumerateCopy, newHashTable);
+    return newHashTable;
+}
+
+void 
+nsSupportsHashtable::Reset()
+{
+    Enumerate(_ReleaseElement, nsnull);
+    nsHashtable::Reset();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

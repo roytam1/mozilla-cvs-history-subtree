@@ -19,11 +19,15 @@ DEPTH=..\..\..\..
 
 MODULE=xpconnect
 
-XPIDLSRCS= .\xpccomponents.idl \
-           .\xpcjsid.idl \
-           .\xpctest.idl \
-           .\nsIXPCSecurityManager.idl \
-           $(NULL)
+XPIDLSRCS = \
+	.\xpccomponents.idl \
+	.\xpcjsid.idl \
+	.\xpctest.idl \
+	.\xpctest2.idl \
+	.\xpcexception.idl \
+	.\nsIJSContextStack.idl \
+	.\nsIXPCSecurityManager.idl \
+	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
 

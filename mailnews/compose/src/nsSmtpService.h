@@ -21,6 +21,7 @@
 
 #include "nscore.h"
 #include "nsISmtpService.h"
+#include "nsIProtocolHandler.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // The Smtp Service is an interfaced designed to make building and running mail to urls
@@ -29,7 +30,7 @@
 // this service away =).
 ////////////////////////////////////////////////////////////////////////////////////////
 
-class nsSmtpService : public nsISmtpService
+class nsSmtpService : public nsISmtpService, public nsIProtocolHandler
 {
 public:
 
@@ -45,16 +46,29 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// SendMailMessage requires the file name of the message to send, the sender, a comma delimited list of recipients.
 	// It builds an Smtp url, makes an smtp connection and runs the url. If you want a handle on the running task, pass in 
-	// a valid nsIURL ptr. You can later interrupt this action by asking the netlib service manager to interrupt the url you 
+	// a valid nsIURI ptr. You can later interrupt this action by asking the netlib service manager to interrupt the url you 
 	// are given back. Remember to release aURL when you are done with it. Pass nsnull in for aURL if you don't care about 
 	// the returned URL.
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	NS_IMETHOD SendMailMessage(const nsFilePath& aFilePath, const nsString& aRecipients, nsIUrlListener * aUrlListener, 
-							   nsIURL ** aURL);
+							   nsIURI ** aURL);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// End support of nsISmtpService interface 
+	////////////////////////////////////////////////////////////////////////////////////////
+
+	////////////////////////////////////////////////////////////////////////////////////////
+	// we suppport the nsIProtocolHandler interface 
+	////////////////////////////////////////////////////////////////////////////////////////
+	NS_IMETHOD GetScheme(char * *aScheme);
+	NS_IMETHOD GetDefaultPort(PRInt32 *aDefaultPort);
+	NS_IMETHOD MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval);
+	NS_IMETHOD NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval);
+	NS_IMETHOD NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIChannel **_retval);
+	
+	////////////////////////////////////////////////////////////////////////////////////////
+	// End support of nsIProtocolHandler interface 
 	////////////////////////////////////////////////////////////////////////////////////////
 };
 

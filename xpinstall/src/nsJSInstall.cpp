@@ -46,7 +46,8 @@ enum Install_slots
   INSTALL_SILENT          = -3,
   INSTALL_JARFILE         = -4,
   INSTALL_FORCE           = -5,
-  INSTALL_ARGUMENTS       = -6
+  INSTALL_ARGUMENTS       = -6,
+  INSTALL_URL             = -7
 };
 
 /***********************************************************************/
@@ -104,9 +105,19 @@ GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
       case INSTALL_ARGUMENTS:
       {
-        nsAutoString prop;
+        nsString prop;
         
         a->GetInstallArguments(prop); 
+        *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop.GetUnicode(), prop.Length()) );
+        
+        break;
+      }
+        
+      case INSTALL_URL:
+      {
+        nsString prop;
+        
+        a->GetInstallURL(prop); 
         *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop.GetUnicode(), prop.Length()) );
         
         break;
@@ -274,7 +285,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallAbortInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
 
   *rval = JSVAL_NULL;
 
@@ -311,7 +321,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -425,7 +434,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -538,7 +546,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallDeleteComponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -579,7 +586,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallDeleteFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -623,7 +629,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -664,7 +669,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -721,7 +725,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFinalizeInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
 
   *rval = JSVAL_NULL;
@@ -759,7 +762,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallGestalt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -801,7 +803,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   nsString* nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -864,7 +865,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   nsString* nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -927,7 +927,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
 
 
@@ -965,14 +964,13 @@ InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 PR_STATIC_CALLBACK(JSBool)
 InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool = JS_FALSE;
-  nsAutoString b0;
-  nsAutoString b1;
-
   *rval = JSVAL_NULL;
 
 #ifdef _WINDOWS
+  nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
+  nsAutoString b0;
+  nsAutoString b1;
+  
   // If there's no private data, this must be the prototype, so ignore
   if(nsnull == nativeThis)
   {
@@ -1009,12 +1007,13 @@ InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 PR_STATIC_CALLBACK(JSBool)
 InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
-
   *rval = JSVAL_NULL;
 
 #ifdef _WINDOWS
+  
+  nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
+  JSBool rBool = JS_FALSE;
+
   // If there's no private data, this must be the prototype, so ignore
   if(nsnull == nativeThis)
   {
@@ -1081,7 +1080,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -1153,7 +1151,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallResetError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
 
   *rval = JSVAL_NULL;
 
@@ -1190,7 +1187,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   nsAutoString b0;
 
   *rval = JSVAL_NULL;
@@ -1229,7 +1225,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -1277,7 +1272,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallUninstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -1338,7 +1332,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpDirCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -1380,7 +1373,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool = JS_FALSE;
   nsFileSpec   nativeRet;
   nsAutoString b0;
   nsString     nativeRetNSStr;
@@ -1424,7 +1416,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpDirRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   PRBool       b1;
@@ -1473,7 +1464,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpDirRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -1524,7 +1514,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -1570,7 +1559,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileDelete(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -1612,7 +1600,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileExists(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -1654,7 +1641,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -1699,7 +1685,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileGetNativeVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool      = JS_FALSE;
   nsAutoString nativeRet;
   nsAutoString b0;
 
@@ -1741,7 +1726,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileGetDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool      = JS_FALSE;
   PRUint32     nativeRet;
   nsAutoString b0;
 
@@ -1794,7 +1778,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileGetModDate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool      = JS_FALSE;
   PRUint32     nativeRet;
   nsAutoString b0;
 
@@ -1847,7 +1830,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool      = JS_FALSE;
   PRUint32     nativeRet;
   nsAutoString b0;
 
@@ -1900,7 +1882,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileIsDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -1942,7 +1923,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileIsFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
 
@@ -1984,7 +1964,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileModDateChanged(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool       rBool      = JS_FALSE;
   PRInt32      nativeRet;
   nsAutoString b0;
   PRUint32     b1;
@@ -2029,7 +2008,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileMove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -2075,7 +2053,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -2126,7 +2103,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileWinShortcutCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   PRInt32      b1;
@@ -2171,7 +2147,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileMacAliasCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   PRInt32      b1;
@@ -2216,7 +2191,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallFileOpFileUnixLinkCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   PRInt32      b1;
@@ -2254,6 +2228,40 @@ InstallFileOpFileUnixLinkCreate(JSContext *cx, JSObject *obj, uintN argc, jsval 
   return JS_TRUE;
 }
 
+//
+// Native method LogComment
+//
+PR_STATIC_CALLBACK(JSBool)
+InstallLogComment(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+  nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
+  nsAutoString b0;
+
+  *rval = JSVAL_NULL;
+
+  // If there's no private data, this must be the prototype, so ignore
+  if(nsnull == nativeThis)
+  {
+    return JS_TRUE;
+  }
+
+  if(argc >= 1)
+  {
+    //  public int LogComment (String aComment);
+
+    ConvertJSValToStr(b0, cx, argv[0]);
+
+    nativeThis->LogComment(b0);
+  }
+  else
+  {
+    JS_ReportError(cx, "Function LogComment requires 1 parameter");
+    return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
 /***********************************************************************/
 //
 // class for Install
@@ -2282,6 +2290,7 @@ static JSPropertySpec InstallProperties[] =
   {"force",             INSTALL_FORCE,              JSPROP_ENUMERATE | JSPROP_READONLY},
   {"jarfile",           INSTALL_JARFILE,            JSPROP_ENUMERATE | JSPROP_READONLY},
   {"arguments",         INSTALL_ARGUMENTS,          JSPROP_ENUMERATE | JSPROP_READONLY},
+  {"url",               INSTALL_URL,                JSPROP_ENUMERATE | JSPROP_READONLY},
   {0}
 };
 
@@ -2300,6 +2309,7 @@ static JSConstDoubleSpec install_constants[] =
     { nsInstall::USER_CANCELLED,             "USER_CANCELLED"               },
     { nsInstall::INSTALL_NOT_STARTED,        "INSTALL_NOT_STARTED"          },
     { nsInstall::SILENT_MODE_DENIED,         "SILENT_MODE_DENIED"           },
+    { nsInstall::NO_SUCH_COMPONENT,          "NO_SUCH_COMPONENT"            },
     { nsInstall::FILE_DOES_NOT_EXIST,        "FILE_DOES_NOT_EXIST"          },
     { nsInstall::FILE_READ_ONLY,             "FILE_READ_ONLY"               },
     { nsInstall::FILE_IS_DIRECTORY,          "FILE_IS_DIRECTORY"            },
@@ -2310,10 +2320,17 @@ static JSConstDoubleSpec install_constants[] =
     { nsInstall::PATCH_BAD_CHECKSUM_TARGET,  "PATCH_BAD_CHECKSUM_TARGET"    },
     { nsInstall::PATCH_BAD_CHECKSUM_RESULT,  "PATCH_BAD_CHECKSUM_RESULT"    },
     { nsInstall::UNINSTALL_FAILED,           "UNINSTALL_FAILED"             },
+    { nsInstall::PACKAGE_FOLDER_NOT_SET,     "PACKAGE_FOLDER_NOT_SET"       },
+    { nsInstall::EXTRACTION_FAILED,          "EXTRACTION_FAILED"            },
+    { nsInstall::FILENAME_ALREADY_USED,      "FILENAME_ALREADY_USED"        },
+    { nsInstall::ABORT_INSTALL,              "ABORT_INSTALL"                },
+
     { nsInstall::GESTALT_UNKNOWN_ERR,        "GESTALT_UNKNOWN_ERR"          },
     { nsInstall::GESTALT_INVALID_ARGUMENT,   "GESTALT_INVALID_ARGUMENT"     },
+
     { nsInstall::SUCCESS,                    "SUCCESS"                      },
     { nsInstall::REBOOT_NEEDED,              "REBOOT_NEEDED"                },
+
     { nsInstall::LIMITED_INSTALL,            "LIMITED_INSTALL"              },
     { nsInstall::FULL_INSTALL,               "FULL_INSTALL"                 },
     { nsInstall::NO_STATUS_DLG ,             "NO_STATUS_DLG"                },
@@ -2369,31 +2386,21 @@ static JSFunctionSpec InstallMethods[] =
   {"FileWinShortcutCreate",     InstallFileOpFileWinShortcutCreate,    2},
   {"FileMacAliasCreate",        InstallFileOpFileMacAliasCreate,       2},
   {"FileUnixLinkCreate",        InstallFileOpFileUnixLinkCreate,       2},
+  {"LogComment",                InstallLogComment,                     1},
   {0}
 };
 
 
 
-//
-// Install constructor
-//
-PR_STATIC_CALLBACK(JSBool)
-Install(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-  return JS_FALSE;
-}
 
-//
-// Install class initialization
-//
 
-PRInt32 InitXPInstallObjects(nsIScriptContext *aContext, const char* jarfile, const char* args)
+PRInt32 InitXPInstallObjects(JSContext *jscontext, 
+                             JSObject *global, 
+                             const char* jarfile, 
+                             const PRUnichar* url,
+                             const PRUnichar* args)
 {
-  JSContext *jscontext          = (JSContext *)aContext->GetNativeContext();
-  JSObject *global              = JS_GetGlobalObject(jscontext);
   JSObject *installObject       = nsnull;
-  JSObject *winRegPrototype     = nsnull;
-  JSObject *winProfilePrototype = nsnull;
   nsInstall *nativeInstallObject;
 
   installObject  = JS_InitClass( jscontext,         // context
@@ -2419,65 +2426,15 @@ PRInt32 InitXPInstallObjects(nsIScriptContext *aContext, const char* jarfile, co
 
   nativeInstallObject->SetJarFileLocation(jarfile);
   nativeInstallObject->SetInstallArguments(args);
+  nativeInstallObject->SetInstallURL(url);
 
   JS_SetPrivate(jscontext, installObject, nativeInstallObject);
   nativeInstallObject->SetScriptObject(installObject);
  
 #ifdef _WINDOWS
-  if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
-  {
-      return NS_ERROR_FAILURE;
-  }
-  nativeInstallObject->SaveWinRegPrototype(winRegPrototype);
-
-  if(NS_OK != InitWinProfilePrototype(jscontext, global, &winRegPrototype))
-  {
-      return NS_ERROR_FAILURE;
-  }
-  nativeInstallObject->SaveWinProfilePrototype(winProfilePrototype);
-#endif
-
-  return NS_OK;
-}
-
-
-
-
-PRInt32 InitXPInstallObjects(JSContext *jscontext, JSObject *global, const char* jarfile, const char* args)
-{
-  JSObject *installObject       = nsnull;
   JSObject *winRegPrototype     = nsnull;
   JSObject *winProfilePrototype = nsnull;
-  nsInstall *nativeInstallObject;
 
-  installObject  = JS_InitClass( jscontext,         // context
-                                 global,            // global object
-                                 nsnull,            // parent proto 
-                                 &InstallClass,     // JSClass
-                                 nsnull,            // JSNative ctor
-                                 0,                 // ctor args
-                                 nsnull,            // proto props
-                                 nsnull,            // proto funcs
-                                 InstallProperties, // ctor props (static)
-                                 InstallMethods);   // ctor funcs (static)
-
-  if (nsnull == installObject) 
-  {
-      return NS_ERROR_FAILURE;
-  }
-
-  if ( PR_FALSE == JS_DefineConstDoubles(jscontext, installObject, install_constants) )
-            return NS_ERROR_FAILURE;
-  
-  nativeInstallObject = new nsInstall();
-
-  nativeInstallObject->SetJarFileLocation(jarfile);
-  nativeInstallObject->SetInstallArguments(args);
-
-  JS_SetPrivate(jscontext, installObject, nativeInstallObject);
-  nativeInstallObject->SetScriptObject(installObject);
- 
-#ifdef _WINDOWS
   if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
   {
       return NS_ERROR_FAILURE;

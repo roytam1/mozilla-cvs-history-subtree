@@ -21,67 +21,35 @@
 window {
  display: block;
  background-color: white;
- overflow: visible;
 }
 
-tree {
- display: table;
- background-color: white;
+treeitem[Status=""] > treerow {
+	font-weight: bold;
+}
+
+treeitem[Status="new"] > treerow{
+	font-weight: bold;
+}
+
+treerow > treecell > titledbutton {
+ //list-style-image: url("chrome://messenger/skin/mailMessage.gif");
+ color: inherit;
  border: none;
- border-spacing: 0px;
- //border-collapse: collapse;
- width: 100%;
- table-layout: fixed;
-}
-
-treeitem { 
- display: table-row; 
- font-family: Verdana;
- font-size: 10pt;
- color: black;
-} 
-
-treehead { 
- display: table-header-group; 
-} 
-
-treebody { 
- display: table-row-group; 
-} 
-
-treecell { 
- display: table-cell; 
- white-space: nowrap;
-} 
-
-treeitem[selected="true"] { 
- background-color: #666699; 
- color: white;
-} 
-
-treeitem[Status=""] {
-	font-weight: bold;
-}
-
-treeitem[Status="new"] {
-	font-weight: bold;
-}
-
-treehead treeitem treecell { 
- font-size: 9pt;
- background-color: #666699; 
- border: thin darkgray solid; 
- color: white;
-} 
-
-icon {
- display: list-item;
+ padding: 0px;
+ margin: 0px;
  height: 16px;
  width: 16px;
-// list-style-image: url("chrome://messenger/skin/closedMailFolder.gif");
 }
 
-treecol {
- display: table-column;
- }
+titledbutton.unreadcol {
+  list-style-image: url("chrome://messenger/skin/readmail.gif");
+}
+
+treeitem[Status=""] treerow > treecell > titledbutton.unreadcol {
+  list-style-image: url("chrome://messenger/skin/unreadmail.gif");
+}
+
+treeitem[Status="new"] treerow > treecell > titledbutton.unreadcol {
+  list-style-image: url("chrome://messenger/skin/unreadmail.gif");
+}
 

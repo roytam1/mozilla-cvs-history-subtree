@@ -30,12 +30,13 @@
  */
 
 #include "nsCOMPtr.h"
+#include "nsIAllocator.h"
 #include "nsIAtom.h"
 #include "nsIComponentManager.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
-#include "nsIRDFXMLDataSource.h"
+#include "nsIRDFRemoteDataSource.h"
 #include "nsIServiceManager.h"
 #include "nsRDFCID.h"
 #include "nsString.h"
@@ -48,7 +49,8 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_CID(kRDFXMLDataSourceCID, NS_RDFXMLDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFXMLDataSourceCID,    NS_RDFXMLDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFDefaultResourceCID,  NS_RDFDEFAULTRESOURCE_CID);
 
 static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
@@ -61,6 +63,12 @@ static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog = nsnull;
 #endif
+
+// Defining these will re-use the string pointer that is owned by the
+// resource (or literal) as the key for the hashtable. It avoids two
+// strdup()'s for each new resource that is created.
+#define REUSE_RESOURCE_URI_AS_KEY
+#define REUSE_LITERAL_VALUE_AS_KEY
 
 ////////////////////////////////////////////////////////////////////////
 // ServiceImpl
@@ -120,11 +128,11 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result);
+    NS_IMETHOD EqualsNode(nsIRDFNode* aNode, PRBool* aResult);
 
     // nsIRDFLiteral
-    NS_IMETHOD GetValue(PRUnichar* *value);
-    NS_IMETHOD EqualsLiteral(nsIRDFLiteral* literal, PRBool* result);
+    NS_IMETHOD GetValue(PRUnichar* *aValue);
+    NS_IMETHOD GetValueConst(const PRUnichar** aValue);
 
 private:
     nsAutoString mValue;
@@ -164,19 +172,23 @@ LiteralImpl::QueryInterface(REFNSIID iid, void** result)
 }
 
 NS_IMETHODIMP
-LiteralImpl::EqualsNode(nsIRDFNode* node, PRBool* result)
+LiteralImpl::EqualsNode(nsIRDFNode* aNode, PRBool* aResult)
 {
     nsresult rv;
     nsIRDFLiteral* literal;
-    if (NS_SUCCEEDED(node->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
-        rv = EqualsLiteral(literal, result);
+    rv = aNode->QueryInterface(kIRDFLiteralIID, (void**) &literal);
+    if (NS_SUCCEEDED(rv)) {
+        *aResult = (NS_STATIC_CAST(nsIRDFLiteral*, this) == literal);
         NS_RELEASE(literal);
+        return NS_OK;
+    }
+    else if (rv == NS_NOINTERFACE) {
+        *aResult = PR_FALSE;
+        return NS_OK;
     }
     else {
-        *result = PR_FALSE;
-        rv = NS_OK;
+        return rv;
     }
-    return rv;
 }
 
 NS_IMETHODIMP
@@ -192,23 +204,11 @@ LiteralImpl::GetValue(PRUnichar* *value)
 
 
 NS_IMETHODIMP
-LiteralImpl::EqualsLiteral(nsIRDFLiteral* literal, PRBool* result)
+LiteralImpl::GetValueConst(const PRUnichar** aValue)
 {
-    NS_ASSERTION(literal && result, "null ptr");
-    if (!literal || !result)
-        return NS_ERROR_NULL_POINTER;
-
-    nsresult rv;
-    nsXPIDLString p;
-    if (NS_FAILED(rv = literal->GetValue(getter_Copies(p))))
-        return rv;
-
-    nsAutoString s((const PRUnichar*) p);
-
-    *result = s.Equals(mValue);
+    *aValue = mValue.GetUnicode();
     return NS_OK;
 }
-
 
 ////////////////////////////////////////////////////////////////////////
 // DateImpl
@@ -227,9 +227,9 @@ public:
 
     // nsIRDFDate
     NS_IMETHOD GetValue(PRTime *value);
-    NS_IMETHOD EqualsDate(nsIRDFDate* date, PRBool* result);
 
 private:
+    nsresult EqualsDate(nsIRDFDate* date, PRBool* result);
     PRTime mValue;
 };
 
@@ -292,7 +292,7 @@ DateImpl::GetValue(PRTime *value)
 }
 
 
-NS_IMETHODIMP
+nsresult
 DateImpl::EqualsDate(nsIRDFDate* date, PRBool* result)
 {
     NS_ASSERTION(date && result, "null ptr");
@@ -325,9 +325,9 @@ public:
 
     // nsIRDFInt
     NS_IMETHOD GetValue(PRInt32 *value);
-    NS_IMETHOD EqualsInt(nsIRDFInt* value, PRBool* result);
 
 private:
+    nsresult EqualsInt(nsIRDFInt* value, PRBool* result);
     PRInt32 mValue;
 };
 
@@ -390,7 +390,7 @@ IntImpl::GetValue(PRInt32 *value)
 }
 
 
-NS_IMETHODIMP
+nsresult
 IntImpl::EqualsInt(nsIRDFInt* intValue, PRBool* result)
 {
     NS_ASSERTION(intValue && result, "null ptr");
@@ -418,6 +418,13 @@ rdf_HashWideString(const void* key)
     return result;
 }
 
+static PRIntn
+rdf_CompareWideStrings(const void* v1, const void* v2)
+{
+    return 0 == nsCRT::strcmp(NS_STATIC_CAST(const PRUnichar*, v1), NS_STATIC_CAST(const PRUnichar*, v2));
+}
+
+
 ServiceImpl::ServiceImpl(void)
     :  mNamedDataSources(nsnull), mResources(nsnull), mLiterals(nsnull)
 {
@@ -430,7 +437,7 @@ ServiceImpl::ServiceImpl(void)
 
     mLiterals = PL_NewHashTable(1023,
                                 rdf_HashWideString,
-                                PL_CompareStrings,
+                                rdf_CompareWideStrings,
                                 PL_CompareValues,
                                 nsnull, nsnull);
 
@@ -481,20 +488,8 @@ ServiceImpl::GetRDFService(nsIRDFService** mgr)
 }
 
 
-
-NS_IMETHODIMP_(nsrefcnt)
-ServiceImpl::AddRef(void)
-{
-    return 2;
-}
-
-NS_IMETHODIMP_(nsrefcnt)
-ServiceImpl::Release(void)
-{
-    return 1;
-}
-
-
+NS_IMPL_ADDREF(ServiceImpl);
+NS_IMPL_RELEASE(ServiceImpl);
 NS_IMPL_QUERY_INTERFACE(ServiceImpl, kIRDFServiceIID);
 
 
@@ -510,6 +505,8 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
     if (! aResource)
         return NS_ERROR_NULL_POINTER;
 
+    PR_LOG(gLog, PR_LOG_DEBUG, ("rdfserv get-resource %s", aURI));
+
     // First, check the cache to see if we've already created and
     // registered this thing.
     nsIRDFResource* result =
@@ -523,32 +520,38 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
     }
 
     // Nope. So go to the repository to create it.
-    nsresult rv;
-    char* p = PL_strchr(aURI, ':');
-    if (!p) {
-        // no colon, so try the default resource factory
-        rv = nsComponentManager::CreateInstance(NS_RDF_RESOURCE_FACTORY_PROGID,
-                                          nsnull, nsIRDFResource::GetIID(),
-                                          (void**)&result);
 
-        if (NS_FAILED(rv)) {
-            NS_ERROR("unable to create resource");
-            return rv;
-        }
-    }
-    else {
-        // the resource is qualified, so construct a ProgID and
-        // construct it from the repository.
+    // Compute the scheme of the URI. Scan forward until we either:
+    //
+    // 1. Reach the end of the string
+    // 2. Encounter a non-alpha character
+    // 3. Encouter a colon.
+    //
+    // If we encounter a colon _before_ encountering a non-alpha
+    // character, then assume it's the scheme.
+    //
+    // XXX Although it's really not correct, we'll allow underscore
+    // characters ('_'), too.
+    const char* p = aURI;
+    while ((*p) && ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p == '_')) && (*p != ':'))
+        ++p;
+
+    nsresult rv;
+    nsCOMPtr<nsIFactory> factory;
+
+    if (*p == ':') {
+        // There _was_ a scheme. Try to find a factory using the
+        // component manager.
         static const char kRDFResourceFactoryProgIDPrefix[]
             = NS_RDF_RESOURCE_FACTORY_PROGID_PREFIX;
 
-        PRInt32 pos = (p) ? (p - aURI) : (-1);
+        PRInt32 pos = p - aURI;
         PRInt32 len = pos + sizeof(kRDFResourceFactoryProgIDPrefix) - 1;
 
         // Safely convert to a C-string for the XPCOM APIs
         char buf[128];
         char* progID = buf;
-        if (len >= sizeof(buf))
+        if (len >= PRInt32(sizeof buf))
             progID = new char[len + 1];
 
         if (progID == nsnull)
@@ -558,24 +561,32 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
         PL_strncpy(progID + sizeof(kRDFResourceFactoryProgIDPrefix) - 1, aURI, pos);
         progID[len] = '\0';
 
-        rv = nsComponentManager::CreateInstance(progID, nsnull,
-                                          nsIRDFResource::GetIID(),
-                                          (void**)&result);
+        nsCID cid;
+        rv = nsComponentManager::ProgIDToCLSID(progID, &cid);
 
         if (progID != buf)
             delete[] progID;
 
-        if (NS_FAILED(rv)) {
-            // if we failed, try the default resource factory
-            rv = nsComponentManager::CreateInstance(NS_RDF_RESOURCE_FACTORY_PROGID,
-                                              nsnull, nsIRDFResource::GetIID(),
-                                              (void**)&result);
-            if (NS_FAILED(rv)) {
-                NS_ERROR("unable to create resource");
-                return rv;
-            }
+        if (NS_SUCCEEDED(rv)) {
+            rv = nsComponentManager::FindFactory(cid, getter_AddRefs(factory));
+            NS_ASSERTION(NS_SUCCEEDED(rv), "factory registered, but couldn't load");
+            if (NS_FAILED(rv)) return rv;
         }
     }
+
+    if (! factory) {
+        // fall through to using the "default" resource factory if either:
+        //
+        // 1. The URI didn't have a scheme, or
+        // 2. There was no resource factory registered for the scheme.
+        rv = nsComponentManager::FindFactory(kRDFDefaultResourceCID, getter_AddRefs(factory));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get default resource factory");
+        if (NS_FAILED(rv)) return rv;
+    }
+
+
+    rv = factory->CreateInstance(nsnull, nsIRDFResource::GetIID(), (void**) &result);
+    if (NS_FAILED(rv)) return rv;
 
     // Now initialize it with it's URI. At this point, the resource
     // implementation should register itself with the RDF service.
@@ -593,14 +604,24 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
 NS_IMETHODIMP
 ServiceImpl::GetUnicodeResource(const PRUnichar* aURI, nsIRDFResource** aResource)
 {
-    nsAutoString uriStr(aURI);
     char buf[128];
     char* uri = buf;
 
-    if (uriStr.Length() >= sizeof(buf))
-        uri = new char[uriStr.Length() + 1];
+    PRUint32 len = nsCRT::strlen(aURI);
+    if (len >= sizeof(buf)) {
+        uri = new char[len + 1];
+        if (! uri) return NS_ERROR_OUT_OF_MEMORY;
+    }
 
-    uriStr.ToCString(uri, uriStr.Length() + 1);
+    /* CopyChars2To1(uri, 0, aURI, 0, len); // XXX not exported */
+    const PRUnichar* src = aURI;
+    char* dst = uri;
+    while (*src) {
+        *dst = (*src < 256) ? char(*src) : '.';
+        ++src;
+        ++dst;
+    }
+    *dst = '\0';
 
     nsresult rv = GetResource(uri, aResource);
 
@@ -677,19 +698,22 @@ ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
 
     nsresult rv;
 
+#ifdef REUSE_RESOURCE_URI_AS_KEY
+    const char* uri;
+    rv = aResource->GetValueConst(&uri);
+#else
     nsXPIDLCString uri;
     rv = aResource->GetValue(getter_Copies(uri));
-    if (NS_FAILED(rv)) {
-        NS_ERROR("unable to get URI from resource");
-        return rv;
-    }
+#endif
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get URI from resource");
+    if (NS_FAILED(rv)) return rv;
 
     NS_ASSERTION(uri != nsnull, "resource has no URI");
     if (! uri)
         return NS_ERROR_NULL_POINTER;
 
     PLHashEntry** hep = PL_HashTableRawLookup(mResources, (*mResources->keyHash)(uri), uri);
-    
+
     if (*hep) {
         if (!replace) {
             NS_WARNING("resource already registered, and replace not specified");
@@ -704,14 +728,21 @@ ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
                ("rdfserv   replace-resource [%p] <-- [%p] %s",
                 (*hep)->value, aResource, (const char*) uri));
 
+#ifdef REUSE_RESOURCE_URI_AS_KEY
+        (*hep)->key   = uri;
+#endif
         (*hep)->value = aResource;
     }
     else {
+#ifdef REUSE_RESOURCE_URI_AS_KEY
+        PL_HashTableAdd(mResources, uri, aResource);
+#else
         const char* key = PL_strdup(uri);
         if (! key)
             return NS_ERROR_OUT_OF_MEMORY;
 
         PL_HashTableAdd(mResources, key, aResource);
+#endif
 
         PR_LOG(gLog, PR_LOG_DEBUG,
                ("rdfserv   register-resource [%p] %s",
@@ -735,16 +766,27 @@ ServiceImpl::UnregisterResource(nsIRDFResource* aResource)
 
     nsresult rv;
 
+#ifdef REUSE_RESOURCE_URI_AS_KEY
+    const char* uri;
+    rv = aResource->GetValueConst(&uri);
+#else
     nsXPIDLCString uri;
     rv = aResource->GetValue(getter_Copies(uri));
+#endif
     if (NS_FAILED(rv)) return rv;
+
+    NS_ASSERTION(uri != nsnull, "resource has no URI");
+    if (! uri)
+        return NS_ERROR_UNEXPECTED;
 
     PLHashEntry** hep = PL_HashTableRawLookup(mResources, (*mResources->keyHash)(uri), uri);
     NS_ASSERTION(*hep != nsnull, "resource wasn't registered");
     if (! *hep)
         return NS_ERROR_FAILURE;
 
+#ifndef REUSE_RESOURCE_URI_AS_KEY
     PL_strfree((char*) (*hep)->key);
+#endif
 
     // N.B. that we _don't_ release the resource: we only held a weak
     // reference to it in the hashtable.
@@ -844,6 +886,8 @@ ServiceImpl::UnregisterDataSource(nsIRDFDataSource* aDataSource)
 NS_IMETHODIMP
 ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
 {
+    nsresult rv;
+
     // First, check the cache to see if we already have this
     // datasource loaded and initialized.
     {
@@ -851,6 +895,12 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
             NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
 
         if (cached) {
+            nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(cached);
+            if (remote) {
+                rv = remote->Refresh(PR_FALSE);
+                if (NS_FAILED(rv)) return rv;
+            }
+
             NS_ADDREF(cached);
             *aDataSource = cached;
             return NS_OK;
@@ -858,7 +908,6 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
     }
 
     // Nope. So go to the repository to try to create it.
-    nsresult rv;
     nsCOMPtr<nsIRDFDataSource> ds;
 	nsAutoString rdfName(uri);
     static const char kRDFPrefix[] = "rdf:";
@@ -874,7 +923,7 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
         // Safely convert it to a C-string for the XPCOM APIs
         char buf[64];
         char* progID = buf, *p;
-        if (progIDStr.Length() >= sizeof(buf))
+        if (progIDStr.Length() >= PRInt32(sizeof buf))
             progID = new char[progIDStr.Length() + 1];
 
         if (progID == nsnull)
@@ -898,8 +947,11 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
         ds = do_QueryInterface(isupports, &rv);
         if (NS_FAILED(rv)) return rv;
 
-        rv = ds->Init(uri);
-        if (NS_FAILED(rv)) return rv;
+        nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(ds);
+        if (remote) {
+            rv = remote->Init(uri);
+            if (NS_FAILED(rv)) return rv;
+        }
     }
     else {
         // Try to load this as an RDF/XML data source
@@ -910,17 +962,17 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
 
         if (NS_FAILED(rv)) return rv;
 
-        rv = ds->Init(uri);
-        if (NS_FAILED(rv)) return rv;
-
         // Start the datasource load asynchronously. If you wanted it
         // loaded synchronously, then you should've tried to do it
         // yourself.
-        nsCOMPtr<nsIRDFXMLDataSource> rdfxmlDataSource(do_QueryInterface(ds));
-        NS_ASSERTION(rdfxmlDataSource, "not an RDF/XML data source!");
-        if (! rdfxmlDataSource) return NS_ERROR_UNEXPECTED;
+        nsCOMPtr<nsIRDFRemoteDataSource> remote(do_QueryInterface(ds));
+        NS_ASSERTION(remote, "not a remote RDF/XML data source!");
+        if (! remote) return NS_ERROR_UNEXPECTED;
 
-        rv = rdfxmlDataSource->Open(PR_FALSE);
+        rv = remote->Init(uri);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = remote->Refresh(PR_FALSE);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -937,30 +989,59 @@ ServiceImpl::RegisterLiteral(nsIRDFLiteral* aLiteral, PRBool aReplace)
     NS_PRECONDITION(aLiteral != nsnull, "null ptr");
 
     nsresult rv;
+
+#ifdef REUSE_LITERAL_VALUE_AS_KEY
+    const PRUnichar* value;
+    rv = aLiteral->GetValueConst(&value);
+#else
     nsXPIDLString value;
     rv = aLiteral->GetValue(getter_Copies(value));
+#endif
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get literal's value");
     if (NS_FAILED(rv)) return rv;
 
-    nsIRDFLiteral* prevLiteral =
-        NS_STATIC_CAST(nsIRDFLiteral*, PL_HashTableLookup(mLiterals, value));
+    PLHashEntry** hep = PL_HashTableRawLookup(mLiterals, (*mLiterals->keyHash)(value), value);
 
-    if (prevLiteral) {
-        if (aReplace) {
-            NS_RELEASE(prevLiteral);
-            // XXXwaterson LEAK! free the previous key
-        }
-        else {
+    if (*hep) {
+        if (! aReplace) {
             NS_WARNING("literal already registered and replace not specified");
             return NS_ERROR_FAILURE;
         }
+
+        // N.B., we do _not_ release the original literal because we
+        // only ever held a weak reference to it. We simply replace
+        // it.
+
+        PR_LOG(gLog, PR_LOG_DEBUG,
+               ("rdfserv   replace-literal [%p] <-- [%p] %s",
+                (*hep)->value, aLiteral, (const PRUnichar*) value));
+
+#ifdef REUSE_LITERAL_VALUE_AS_KEY
+        (*hep)->key   = value;
+#endif
+        (*hep)->value = aLiteral;
+    }
+    else {
+#ifdef REUSE_LITERAL_VALUE_AS_KEY
+        PL_HashTableAdd(mLiterals, value, aLiteral);
+#else
+        const PRUnichar* key = nsXPIDLString::Copy(value);
+        if (! key)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        PL_HashTableAdd(mLiterals, key, aLiteral);
+#endif
+
+        PR_LOG(gLog, PR_LOG_DEBUG,
+               ("rdfserv   register-literal [%p] %s",
+                aLiteral, (const PRUnichar*) value));
+
+        // N.B., we only hold a weak reference to the literal: that
+        // way, the literal can be destroyed when the last refcount
+        // goes away. The single addref that the CreateLiteral() call
+        // made will be owned by the callee.
     }
 
-    const PRUnichar* key = nsXPIDLString::Copy(value);
-    if (! key)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    PL_HashTableAdd(mLiterals, key, aLiteral);
     return NS_OK;
 }
 
@@ -972,14 +1053,33 @@ ServiceImpl::UnregisterLiteral(nsIRDFLiteral* aLiteral)
 
     nsresult rv;
 
+#ifdef REUSE_LITERAL_VALUE_AS_KEY
+    const PRUnichar* value;
+    rv = aLiteral->GetValueConst(&value);
+#else
     nsXPIDLString value;
     rv = aLiteral->GetValue(getter_Copies(value));
+#endif
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get literal's value");
     if (NS_FAILED(rv)) return rv;
 
-    PL_HashTableRemove(mLiterals, value);
+    PLHashEntry** hep = PL_HashTableRawLookup(mLiterals, (*mLiterals->keyHash)(value), value);
+    NS_ASSERTION(*hep != nsnull, "literal wasn't registered");
+    if (! *hep)
+        return NS_ERROR_FAILURE;
 
-    // XXXwaterson LEAK! free the key
+#ifndef REUSE_LITERAL_VALUE_AS_KEY
+    nsAllocator::Free((void*) (*hep)->key);
+#endif
+
+    // N.B. that we _don't_ release the literal: we only held a weak
+    // reference to it in the hashtable.
+
+    PR_LOG(gLog, PR_LOG_DEBUG,
+           ("rdfserv unregister-literal [%p] %s",
+            aLiteral, (const PRUnichar*) value));
+
+    PL_HashTableRawRemove(mLiterals, hep, *hep);
     return NS_OK;
 }
 

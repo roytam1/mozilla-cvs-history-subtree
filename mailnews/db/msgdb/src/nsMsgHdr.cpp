@@ -20,6 +20,7 @@
 #include "nsMsgHdr.h"
 #include "nsMsgDatabase.h"
 #include "nsMsgUtils.h"
+#include "nsIMsgHeaderParser.h"
 
 NS_IMPL_ISUPPORTS(nsMsgHdr, nsIMsgDBHdr::GetIID())
 
@@ -38,15 +39,16 @@ nsMsgHdr::nsMsgHdr(nsMsgDatabase *db, nsIMdbRow *dbRow)
 void nsMsgHdr::Init()
 {
 	m_cachedValuesInitialized = PR_FALSE;
-	m_statusOffset = -1;
+	m_statusOffset = 0xffffffff;
 	m_messageKey = nsMsgKey_None;
-	m_date = 0;
 	m_messageSize = 0;
+	m_date = LL_ZERO;
 	m_csID = 0;
 	m_flags = 0;
 	m_mdbRow = NULL;
 	m_numReferences = 0;
 	m_threadId = nsMsgKey_None;
+	m_threadParent = nsMsgKey_None;
 }
 
 nsresult nsMsgHdr::InitCachedValues()
@@ -65,10 +67,13 @@ nsresult nsMsgHdr::InitCachedValues()
 
 		err = GetUInt32Column(m_mdb->m_flagsColumnToken, &m_flags);
 		err = GetUInt32Column(m_mdb->m_messageSizeColumnToken, &m_messageSize);
+
 	    err = GetUInt32Column(m_mdb->m_dateColumnToken, &uint32Value);
-		m_date = uint32Value;
+	    nsMsgDatabase::Seconds2PRTime(uint32Value, &m_date);
+
 		err = GetUInt32Column(m_mdb->m_messageThreadIdColumnToken, &m_threadId);
 		err = GetUInt32Column(m_mdb->m_numReferencesColumnToken, &uint32Value);
+		err = GetUInt32Column(m_mdb->m_threadParentColumnToken, &m_threadParent);
 		if (NS_SUCCEEDED(err))
 			m_numReferences = (PRUint16) uint32Value;
 		
@@ -178,7 +183,10 @@ NS_IMETHODIMP nsMsgHdr::GetProperty(const char *propertyName, nsString &resultPr
 	nsresult err = NS_OK;
 	mdb_token	property_token;
 
-	err = m_mdb->GetStore()->StringToToken(m_mdb->GetEnv(),  propertyName, &property_token);
+	if (m_mdb->GetStore())
+		err = m_mdb->GetStore()->StringToToken(m_mdb->GetEnv(),  propertyName, &property_token);
+	else
+		err = NS_ERROR_NULL_POINTER;
 	if (err == NS_OK)
 		err = m_mdb->RowCellColumnTonsString(GetMDBRow(), property_token, resultProperty);
 
@@ -226,7 +234,7 @@ NS_IMETHODIMP nsMsgHdr::GetNumReferences(PRUint16 *result)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgHdr::GetStringReference(PRInt32 refNum, nsString2 &resultReference)
+NS_IMETHODIMP nsMsgHdr::GetStringReference(PRInt32 refNum, nsCString &resultReference)
 {
 	nsresult err = NS_OK;
 	nsAutoString	allReferences (eOneByte);
@@ -246,7 +254,7 @@ NS_IMETHODIMP nsMsgHdr::GetStringReference(PRInt32 refNum, nsString2 &resultRefe
 	return err;
 }
 
-NS_IMETHODIMP nsMsgHdr::GetDate(time_t *result) 
+NS_IMETHODIMP nsMsgHdr::GetDate(PRTime *result) 
 {
 	*result = m_date;
     return NS_OK;
@@ -269,7 +277,7 @@ NS_IMETHODIMP nsMsgHdr::SetAuthor(const char *author)
 
 NS_IMETHODIMP nsMsgHdr::SetReferences(const char *references)
 {
-	nsString2 reference;
+	nsCString reference;
 
 	for (const char *startNextRef = references; startNextRef != nsnull;)
 	{
@@ -333,7 +341,7 @@ NS_IMETHODIMP nsMsgHdr::SetCCListArray(const char *names, const char *addresses,
 	nsresult ret;
 	const char *curName = names;
 	const char *curAddress = addresses;
-	nsString	allRecipients;
+	nsAutoString	allRecipients(eOneByte);
 
 	for (PRUint32 i = 0; i < numAddresses; i++)
 	{
@@ -358,9 +366,7 @@ NS_IMETHODIMP nsMsgHdr::SetCCListArray(const char *names, const char *addresses,
 		curName += strlen(curName) + 1;
 		curAddress += strlen(curAddress) + 1;
 	}
-	char *cstringRecipients = allRecipients.ToNewCString();
-	ret = SetCCList(cstringRecipients);
-	delete [] cstringRecipients;
+	ret = SetCCList(allRecipients.GetBuffer());
 	return ret;
 }
 
@@ -382,9 +388,12 @@ NS_IMETHODIMP nsMsgHdr::SetStatusOffset(PRUint32 statusOffset)
 	return SetUInt32Column(statusOffset, m_mdb->m_statusOffsetColumnToken);
 }
 
-NS_IMETHODIMP nsMsgHdr::SetDate(time_t date)
+NS_IMETHODIMP nsMsgHdr::SetDate(PRTime date)
 {
-    return SetUInt32Column((PRUint32) date, m_mdb->m_dateColumnToken);
+	m_date = date;
+	PRUint32 seconds;
+	nsMsgDatabase::PRTime2Seconds(date, &seconds);
+    return SetUInt32Column((PRUint32) seconds, m_mdb->m_dateColumnToken);
 }
 
 NS_IMETHODIMP nsMsgHdr::GetStatusOffset(PRUint32 *result)
@@ -446,65 +455,104 @@ NS_IMETHODIMP nsMsgHdr::SetPriority(const char *priority)
 	return SetPriority(priorityVal);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetAuthor(nsString &resultAuthor)
+NS_IMETHODIMP nsMsgHdr::GetAuthor(nsString *resultAuthor)
 {
-	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_senderColumnToken, resultAuthor);
+	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_senderColumnToken, *resultAuthor);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetSubject(nsString &resultSubject)
+NS_IMETHODIMP nsMsgHdr::GetSubject(nsString *resultSubject)
 {
-	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject);
+	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_subjectColumnToken, *resultSubject);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetRecipients(nsString &resultRecipients)
+NS_IMETHODIMP nsMsgHdr::GetRecipients(nsString *resultRecipients)
 {
-	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients);
+	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_recipientsColumnToken, *resultRecipients);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetCCList(nsString &resultCCList)
+NS_IMETHODIMP nsMsgHdr::GetCCList(nsString *resultCCList)
 {
-	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_ccListColumnToken, resultCCList);
+	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_ccListColumnToken, *resultCCList);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetMessageId(nsString &resultMessageId)
+NS_IMETHODIMP nsMsgHdr::GetMessageId(nsCString *resultMessageId)
 {
-	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_messageIdColumnToken, resultMessageId);
+	return m_mdb->RowCellColumnTonsCString(GetMDBRow(), m_mdb->m_messageIdColumnToken, *resultMessageId);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetMime2EncodedAuthor(nsString &resultAuthor)
+NS_IMETHODIMP nsMsgHdr::GetMime2DecodedAuthor(nsString *resultAuthor)
 {
-	return m_mdb->RowCellColumnToMime2EncodedString(GetMDBRow(), m_mdb->m_senderColumnToken, resultAuthor);
+	return m_mdb->RowCellColumnToMime2DecodedString(GetMDBRow(), m_mdb->m_senderColumnToken, *resultAuthor);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetMime2EncodedSubject(nsString &resultSubject)
+NS_IMETHODIMP nsMsgHdr::GetMime2DecodedSubject(nsString *resultSubject)
 {
-	return m_mdb->RowCellColumnToMime2EncodedString(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject);
+	return m_mdb->RowCellColumnToMime2DecodedString(GetMDBRow(), m_mdb->m_subjectColumnToken, *resultSubject);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetMime2EncodedRecipients(nsString &resultRecipients)
+NS_IMETHODIMP nsMsgHdr::GetMime2DecodedRecipients(nsString *resultRecipients)
 {
-	return m_mdb->RowCellColumnToMime2EncodedString(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients);
+	return m_mdb->RowCellColumnToMime2DecodedString(GetMDBRow(), m_mdb->m_recipientsColumnToken, *resultRecipients);
 }
 
 
-NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(nsString &resultAuthor)
+NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(nsString *resultAuthor)
 {
-	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_senderColumnToken, resultAuthor);
+	nsCAutoString cSender;
+	char *name = nsnull;
+
+	nsresult ret = m_mdb->RowCellColumnTonsCString(GetMDBRow(), m_mdb->m_senderColumnToken, cSender);
+	if (NS_SUCCEEDED(ret))
+	{
+		nsIMsgHeaderParser *headerParser = m_mdb->GetHeaderParser();
+		if (headerParser)
+		{
+			//XXXOnce we get the csid, use Intl version
+			if(NS_SUCCEEDED(ret = headerParser->ExtractHeaderAddressName (nsnull, cSender, &name)))
+				*resultAuthor = name;
+
+		}
+	}
+	if (NS_SUCCEEDED(ret))
+	{
+		nsAutoString autoString(name);
+		ret = m_mdb->CreateCollationKey(autoString, *resultAuthor);
+	}
+
+	if(name)
+		PL_strfree(name);
+
+	return ret;
 }
 
-NS_IMETHODIMP nsMsgHdr::GetSubjectCollationKey(nsString &resultSubject)
+NS_IMETHODIMP nsMsgHdr::GetSubjectCollationKey(nsString *resultSubject)
 {
-	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject);
+	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_subjectColumnToken, *resultSubject);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetRecipientsCollationKey(nsString &resultRecipients)
+NS_IMETHODIMP nsMsgHdr::GetRecipientsCollationKey(nsString *resultRecipients)
 {
-	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients);
+	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_recipientsColumnToken, *resultRecipients);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetCharSet(nsString &result)
+NS_IMETHODIMP nsMsgHdr::GetCharSet(nsString *result)
 {
-	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_messageCharSetColumnToken, result);
+	return m_mdb->RowCellColumnTonsString(GetMDBRow(), m_mdb->m_messageCharSetColumnToken, *result);
+}
+
+NS_IMETHODIMP nsMsgHdr::SetThreadParent(nsMsgKey inKey)
+{
+	m_threadParent = inKey;
+	SetUInt32Column(m_threadParent, m_mdb->m_threadParentColumnToken);
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgHdr::GetThreadParent(nsMsgKey *result)
+{
+	nsresult res;
+    res = GetUInt32Column(m_mdb->m_threadParentColumnToken, &m_threadParent);
+    *result = m_threadParent;
+    return NS_OK;
 }
 
 nsresult nsMsgHdr::SetStringColumn(const char *str, mdb_token token)
@@ -537,7 +585,7 @@ nsresult nsMsgHdr::GetUInt32Column(mdb_token token, PRUint32 *pvalue)
 }
 
 // get the next <> delimited reference from nextRef and copy it into reference,
-const char *nsMsgHdr::GetNextReference(const char *startNextRef, nsString2 &reference)
+const char *nsMsgHdr::GetNextReference(const char *startNextRef, nsCString &reference)
 {
 	const char *ptr = startNextRef;
 
@@ -555,7 +603,7 @@ const char *nsMsgHdr::GetNextReference(const char *startNextRef, nsString2 &refe
 // Get previous <> delimited reference - used to go backwards through the
 // reference string. Caller will need to make sure that prevRef is not before
 // the start of the reference string when we return.
-const char *nsMsgHdr::GetPrevReference(const char *prevRef, nsString2 &reference)
+const char *nsMsgHdr::GetPrevReference(const char *prevRef, nsCString &reference)
 {
 	const char *ptr = prevRef;
 
@@ -570,5 +618,18 @@ const char *nsMsgHdr::GetPrevReference(const char *prevRef, nsString2 &reference
 	if (*ptr == '<')
 		ptr--;
 	return ptr;
+}
+
+PRBool nsMsgHdr::IsParentOf(nsIMsgDBHdr *possibleChild)
+{
+	PRUint16 numReferences = 0;
+	possibleChild->GetNumReferences(&numReferences);
+	nsCString reference;
+	nsCString messageId;
+
+	GetMessageId(&messageId);
+	possibleChild->GetStringReference(numReferences - 1, reference);
+
+	return (messageId.Equals(reference));
 }
 

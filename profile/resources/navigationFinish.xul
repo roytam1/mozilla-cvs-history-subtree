@@ -3,12 +3,12 @@
 
 <!DOCTYPE window>
 
-
 <window
   xmlns:html="http://www.w3.org/TR/REC-html40"
   xmlns:rdf="http://www.w3.org/TR/WD-rdf-syntax#"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
+<html:div flex="100%">
 
 <html:script>
 	var count = parent.count;
@@ -25,9 +25,11 @@
 			}
 		}
 		parent.frames[0].commit();
-		parent.frames[0].location.replace( pages[count] );
+		//parent.frames[0].location.replace( pages[count] );
+		parent.frames[0].location.href = pages[count];
 		parent.count = count;
-		parent.frames[1].location.replace("resource:/res/profile/navigationStart.xul");
+		//parent.frames[1].location.replace("resource:/res/profile/navigationStart.xul");
+		parent.frames[1].location.href = "resource:/res/profile/navigationStart.xul";
 	}
 
 
@@ -44,18 +46,6 @@
 		dump("Inside the Exit Wizard function...\n");
 		parent.frames[0].commit();
 		parent.Finish();
-		var toolkitCore = XPAppCoresManager.Find("toolkitCore");
-		if (!toolkitCore) {
-			toolkitCore = new ToolkitCore();
-		
-			if (toolkitCore) {
-				toolkitCore.Init("toolkitCore");
-			}
-		}
-
-		if (toolkitCore) {
-			toolkitCore.CloseWindow(parent);
-		}
 	}
 </html:script>
 
@@ -65,4 +55,5 @@
 	<html:button onclick="ExitWizard();"> Finish </html:button>
 </html:center>
 
+</html:div>
 </window>

@@ -22,25 +22,19 @@
 #include "nsIPrincipalManager.h"
 #include "nsHashtable.h"
 
-#define NS_PRINCIPALMANAGER_CID \
-{ 0x7ee2a4c0, 0x4b91, 0x11d3, \
-{ 0xba, 0x18, 0x00, 0x60, 0xb0, 0xf1, 0x99, 0xa2 }}
-
 class nsPrincipalManager : public nsIPrincipalManager {
 
 public:
 
-  NS_DEFINE_STATIC_CID_ACCESSOR(NS_PRINCIPALMANAGER_CID)
-
 	NS_DECL_ISUPPORTS
 
-	static nsresult
-	GetPrincipalManager(nsPrincipalManager * * prinMan);
+	static nsPrincipalManager *
+	GetPrincipalManager();
 
 	virtual ~nsPrincipalManager(void);
 
 	NS_IMETHOD
-	CreateCodebasePrincipal(const char *codebaseURL, nsIURI * url, nsIPrincipal * * prin);
+	CreateCodebasePrincipal(const char *codebaseURL, nsIPrincipal * * prin);
 
 	NS_IMETHOD
 	CreateCertificatePrincipal(const unsigned char * * certChain, PRUint32 * certChainLengths, PRUint32 noOfCerts, nsIPrincipal * * prin);
@@ -101,9 +95,7 @@ public:
 
 
 private:
-  nsPrincipalManager(void);
-  NS_IMETHODIMP
-  Init();
+	nsPrincipalManager(void);
 	nsHashtable * itsPrinNameToPrincipalTable;
 };
 

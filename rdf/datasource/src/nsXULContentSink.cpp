@@ -53,18 +53,16 @@
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
-#include "nsIRDFXMLDataSource.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptContextOwner.h"
 #include "nsIServiceManager.h"
 #include "nsIUnicharStreamLoader.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-#endif // NECKO
+#include "nsNeckoUtil.h"
+#else
 #include "nsIURLGroup.h"
+#endif // NECKO
 #include "nsIViewManager.h"
 #include "nsIXULContentSink.h"
 #include "nsLayoutCID.h"
@@ -76,11 +74,17 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "prmem.h"
 #include "rdfutil.h"
 #include "nsIXULChildDocument.h"
+#include "nsIXULDocumentInfo.h"
+#include "nsIXULParentDocument.h"
 #include "nsIHTMLContentContainer.h"
+
+#include "nsIDocumentLoader.h"
+#include "nsIWebShell.h"
+#include "nsIContentViewerContainer.h"
 
 #include "nsHTMLTokens.h" // XXX so we can use nsIParserNode::GetTokenType()
 
-static const char kNameSpaceSeparator[] = ":";
+static const char kNameSpaceSeparator = ':';
 static const char kNameSpaceDef[] = "xmlns";
 static const char kXULID[] = "id";
 
@@ -116,10 +120,15 @@ static NS_DEFINE_IID(kIXMLContentSinkIID,      NS_IXMLCONTENT_SINK_IID);
 static NS_DEFINE_IID(kIXULContentSinkIID,      NS_IXULCONTENTSINK_IID);
 static NS_DEFINE_IID(kIHTMLContentContainerIID, NS_IHTMLCONTENTCONTAINER_IID);
 
+static NS_DEFINE_CID(kXULDocumentInfoCID,         NS_XULDOCUMENTINFO_CID);
+static NS_DEFINE_IID(kIXULDocumentInfoIID,        NS_IXULDOCUMENTINFO_IID);
+
 static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kRDFContainerUtilsCID,     NS_RDFCONTAINERUTILS_CID);
 static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+
+static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
 
 ////////////////////////////////////////////////////////////////////////
 // Utility routines
@@ -155,10 +164,10 @@ public:
     NS_IMETHOD AddComment(const nsIParserNode& aNode);
     NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
     NS_IMETHOD NotifyError(const nsParserError* aError);
+    NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
 
     // nsIXMLContentSink
-    NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode);
-    NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode);
+    NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode);    
     NS_IMETHOD AddCharacterData(const nsIParserNode& aNode);
     NS_IMETHOD AddUnparsedEntity(const nsIParserNode& aNode);
     NS_IMETHOD AddNotation(const nsIParserNode& aNode);
@@ -166,6 +175,8 @@ public:
 
     // nsIXULContentSink
     NS_IMETHOD Init(nsIDocument* aDocument, nsIRDFDataSource* aDataSource);
+    NS_IMETHOD UnblockNextOverlay();
+    NS_IMETHOD UpdateOverlayCounters(PRInt32 aDelta);
 
 protected:
     static nsrefcnt             gRefCnt;
@@ -227,6 +238,8 @@ protected:
     PRBool mInScript;
     PRUint32 mScriptLineNo;
 
+    // Overlays
+    nsresult ProcessOverlay(const nsString& aHref);
 
     // Style sheets
     nsresult ProcessStyleLink(nsIContent* aElement,
@@ -245,16 +258,20 @@ protected:
 
     nsVoidArray* mContextStack;
 
-    nsIURL*      mDocumentURL;
-    nsIURL*      mDocumentBaseURL;
+    nsIURI*      mDocumentURL;
+    nsIURI*      mDocumentBaseURL;
 
     PRBool       mHaveSetRootResource;
 
     nsIDocument* mDocument;
+    nsIDocument* mChildDocument;
     nsIParser*   mParser;
     
-    nsIRDFResource*  mFragmentRoot;
-
+    PRInt32      mUnprocessedOverlayCount;
+    nsVoidArray*       mOverlayArray;
+    PRInt32        mCurrentOverlay;
+    nsIXULContentSink* mParentContentSink;
+  
     nsString      mPreferredStyle;
     PRInt32       mStyleSheetCount;
     nsICSSLoader* mCSSLoader;
@@ -271,18 +288,26 @@ nsIRDFResource*      XULContentSinkImpl::kXUL_element;
 ////////////////////////////////////////////////////////////////////////
 
 XULContentSinkImpl::XULContentSinkImpl()
-    : mDocumentURL(nsnull),
-      mDocumentBaseURL(nsnull),
-      mDataSource(nsnull),
-      mContextStack(nsnull),
-      mText(nsnull),
+    : mText(nsnull),
       mTextLength(0),
       mTextSize(0),
       mConstrainSize(PR_TRUE),
+      mNameSpaceManager(nsnull),
+      mInScript(PR_FALSE),
+      mScriptLineNo(0),
+      mDataSource(nsnull),
+      mState(eXULContentSinkState_InProlog),
+      mContextStack(nsnull),
+      mDocumentURL(nsnull),
+      mDocumentBaseURL(nsnull),
       mHaveSetRootResource(PR_FALSE),
       mDocument(nsnull),
+      mChildDocument(nsnull),
       mParser(nsnull),
-      mFragmentRoot(nsnull),
+      mUnprocessedOverlayCount(0),
+      mOverlayArray(nsnull),
+      mCurrentOverlay(0),
+      mParentContentSink(nsnull),
       mStyleSheetCount(0),
       mCSSLoader(nsnull)
 {
@@ -313,47 +338,49 @@ XULContentSinkImpl::XULContentSinkImpl()
 
 XULContentSinkImpl::~XULContentSinkImpl()
 {
-    // There shouldn't be any here except in an error condition
-    PRInt32 index = mNameSpaceStack.Count();
+    {
+        // There shouldn't be any here except in an error condition
+        PRInt32 i = mNameSpaceStack.Count();
 
-    while (0 < index--) {
-        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack[index];
+        while (0 < i--) {
+            nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack[i];
 
 #ifdef PR_LOGGING
-        if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
-            nsAutoString uri;
-            nsCOMPtr<nsIAtom> prefixAtom;
+            if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
+                nsAutoString uri;
+                nsCOMPtr<nsIAtom> prefixAtom;
 
-            nameSpace->GetNameSpaceURI(uri);
-            nameSpace->GetNameSpacePrefix(*getter_AddRefs(prefixAtom));
+                nameSpace->GetNameSpaceURI(uri);
+                nameSpace->GetNameSpacePrefix(*getter_AddRefs(prefixAtom));
 
-            nsAutoString prefix;
-            if (prefixAtom)
-                prefix = prefixAtom->GetUnicode();
-            else
-                prefix = "<default>";
+                nsAutoString prefix;
+                if (prefixAtom)
+                    prefix = prefixAtom->GetUnicode();
+                else
+                    prefix = "<default>";
 
-            char* prefixStr = prefix.ToNewCString();
-            char* uriStr = uri.ToNewCString();
+                char* prefixStr = prefix.ToNewCString();
+                char* uriStr = uri.ToNewCString();
 
-            PR_LOG(gLog, PR_LOG_ALWAYS,
-                   ("xul: warning: unclosed namespace '%s' (%s)",
-                    prefixStr, uriStr));
+                PR_LOG(gLog, PR_LOG_ALWAYS,
+                       ("xul: warning: unclosed namespace '%s' (%s)",
+                        prefixStr, uriStr));
 
-            delete[] prefixStr;
-            delete[] uriStr;
-        }
+                delete[] prefixStr;
+                delete[] uriStr;
+            }
 #endif
 
-        NS_RELEASE(nameSpace);
+            NS_RELEASE(nameSpace);
+        }
     }
 
     if (mContextStack) {
         // XXX we should never need to do this, but, we'll write the
         // code all the same. If someone left the content stack dirty,
         // pop all the elements off the stack and release them.
-        PRInt32 index = mContextStack->Count();
-        while (0 < index--) {
+        PRInt32 i = mContextStack->Count();
+        while (0 < i--) {
             nsIRDFResource* resource;
             XULContentSinkState state;
             PopResourceAndState(resource, state);
@@ -410,7 +437,6 @@ XULContentSinkImpl::~XULContentSinkImpl()
     NS_IF_RELEASE(mDataSource);
     NS_IF_RELEASE(mDocument);
     NS_IF_RELEASE(mParser);
-    NS_IF_RELEASE(mFragmentRoot);
     NS_IF_RELEASE(mCSSLoader);
 
     PR_FREEIF(mText);
@@ -422,6 +448,17 @@ XULContentSinkImpl::~XULContentSinkImpl()
         NS_IF_RELEASE(kRDF_type);
         NS_IF_RELEASE(kXUL_element);
     }
+
+  // Delete all the elements from our overlay array
+  if (mOverlayArray) {
+    PRInt32 count = mOverlayArray->Count();
+    for (PRInt32 i = 0; i < count; i++) {
+    nsString* element = (nsString*)(mOverlayArray->ElementAt(i));
+    delete element;
+    }
+    
+    delete mOverlayArray;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -484,8 +521,8 @@ XULContentSinkImpl::MakeResourceFromQualifiedTag(PRInt32 aNameSpaceID,
 NS_IMETHODIMP 
 XULContentSinkImpl::WillBuildModel(void)
 {
-    mDocument->BeginLoad();
-    return NS_OK;
+  mChildDocument->BeginLoad();
+  return NS_OK;
 }
 
 NS_IMETHODIMP 
@@ -506,7 +543,7 @@ XULContentSinkImpl::DidBuildModel(PRInt32 aQualityLevel)
         }
     }
 
-    mDocument->EndLoad();
+    mChildDocument->EndLoad();
 
     // Drop our reference to the parser to get rid of a circular
     // reference.
@@ -548,19 +585,16 @@ XULContentSinkImpl::OpenContainer(const nsIParserNode& aNode)
     if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
         const nsString& text = aNode.GetText();
 
-        nsAutoString extraWhiteSpace;
+        nsCAutoString extraWhiteSpace;
         PRInt32 count = mContextStack ? mContextStack->Count() : 0;
         while (--count >= 0)
             extraWhiteSpace += "  ";
 
-        char* extraWhiteSpaceStr = extraWhiteSpace.ToNewCString();
-        char* textStr = text.ToNewCString();
-
         PR_LOG(gLog, PR_LOG_DEBUG,
-               ("xul: %.5d. %s<%s>", aNode.GetSourceLineNumber(), extraWhiteSpaceStr, textStr));
-
-        delete[] textStr;
-        delete[] extraWhiteSpaceStr;
+               ("xul: %.5d. %s<%s>",
+                aNode.GetSourceLineNumber(),
+                NS_STATIC_CAST(const char*, extraWhiteSpace),
+                NS_STATIC_CAST(const char*, nsCAutoString(text))));
     }
 #endif
 
@@ -583,37 +617,38 @@ XULContentSinkImpl::OpenContainer(const nsIParserNode& aNode)
         break;
 
     case eXULContentSinkState_InEpilog:
-        PR_ASSERT(0);
+    case eXULContentSinkState_InScript:
+        PR_LOG(gLog, PR_LOG_ALWAYS,
+               ("xul: warning: unexpected tags in epilog at line %d",
+                aNode.GetSourceLineNumber()));
+
         rv = NS_ERROR_UNEXPECTED; // XXX
         break;
     }
 
-	//NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected content");
+  //NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected content");
     return rv;
 }
 
 NS_IMETHODIMP 
 XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
 {
-    nsresult rv;
+    nsresult rv = NS_OK;
 
 #ifdef PR_LOGGING
     if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
         const nsString& text = aNode.GetText();
 
-        nsAutoString extraWhiteSpace;
+        nsCAutoString extraWhiteSpace;
         PRInt32 count = mContextStack ? mContextStack->Count() : 0;
         while (--count > 0)
             extraWhiteSpace += "  ";
 
-        char* extraWhiteSpaceStr = extraWhiteSpace.ToNewCString();
-        char* textStr = text.ToNewCString();
-
         PR_LOG(gLog, PR_LOG_DEBUG,
-               ("xul: %.5d. %s</%s>", aNode.GetSourceLineNumber(), extraWhiteSpaceStr, textStr));
-
-        delete[] textStr;
-        delete[] extraWhiteSpaceStr;
+               ("xul: %.5d. %s</%s>",
+                aNode.GetSourceLineNumber(),
+                NS_STATIC_CAST(const char*, extraWhiteSpace),
+                NS_STATIC_CAST(const char*, nsCAutoString(text))));
     }
 #endif
 
@@ -625,43 +660,52 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         FlushText();
     }
 
-	// XXX The following code is a hack to make forms work in XUL. Forms aren't
-	// really pushed and popped like other elements.
-	  nsAutoString tag;
-    PRInt32 nameSpaceID;
-    SplitQualifiedName(aNode.GetText(), nameSpaceID, tag);
-	  PRBool popContent = PR_TRUE;
-    if (nameSpaceID == kNameSpaceID_HTML) {
-		    if (tag.Equals("form"))
-		        popContent = PR_FALSE;
-		}
 
-    if (popContent) {
-        nsIRDFResource* resource;
+    nsIRDFResource* resource;
 
-        if (NS_FAILED(PopResourceAndState(resource, mState))) {
+    if (NS_FAILED(PopResourceAndState(resource, mState))) {
 #ifdef PR_LOGGING
-            if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
-                char* tagStr = aNode.GetText().ToNewCString();
-                PR_LOG(gLog, PR_LOG_ALWAYS,
-                       ("xul: extra close tag '</%s>' at line %d\n",
-                        tagStr, aNode.GetSourceLineNumber()));
-                delete[] tagStr;
-            }
-#endif
-            // Failure to return NS_OK causes stuff to freak out. See Bug 4433.
-            return NS_OK;
+        if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
+            char* tagStr = aNode.GetText().ToNewCString();
+            PR_LOG(gLog, PR_LOG_ALWAYS,
+                   ("xul: extra close tag '</%s>' at line %d\n",
+                    tagStr, aNode.GetSourceLineNumber()));
+            delete[] tagStr;
         }
-
-        NS_IF_RELEASE(resource);
+#endif
+        // Failure to return NS_OK causes stuff to freak out. See Bug 4433.
+        return NS_OK;
     }
 
-    PRInt32 nestLevel = mContextStack->Count();
-    if (nestLevel == 0)
-        mState = eXULContentSinkState_InEpilog;
+    NS_IF_RELEASE(resource);
 
     PopNameSpaces();
-    return NS_OK;
+
+    PRInt32 nestLevel = mContextStack->Count();
+    if (nestLevel == 0) {
+      mState = eXULContentSinkState_InEpilog;
+      
+      // We're about to finish parsing. Now we want to kick off the processing
+      // of our child overlays.
+      PRInt32 count;
+      if (mOverlayArray && (count = mOverlayArray->Count())) {
+        // Block the parser. It will only be unblocked after all
+        // of our child overlays have finished parsing.
+        rv = NS_ERROR_HTMLPARSER_BLOCK;
+
+        // All content sinks in a chain back to the root have 
+        // +count added to them.  Until all overlays are
+        // processed, they won't unblock.
+        UpdateOverlayCounters(count);
+      }
+      else if (mParentContentSink) {
+        // We had no overlays.  If we have a parent content sink,
+        // we need to notify them that this overlay completed.
+        mParentContentSink->UpdateOverlayCounters(-1);
+      }
+    }
+
+    return rv;
 }
 
 
@@ -712,7 +756,7 @@ static void SplitMimeType(const nsString& aValue, nsString& aType, nsString& aPa
 {
   aType.Truncate();
   aParams.Truncate();
-  PRInt32 semiIndex = aValue.Find(PRUnichar(';'));
+  PRInt32 semiIndex = aValue.FindChar(PRUnichar(';'));
   if (-1 != semiIndex) {
     aValue.Left(aType, semiIndex);
     aValue.Right(aParams, (aValue.Length() - semiIndex) - 1);
@@ -720,6 +764,65 @@ static void SplitMimeType(const nsString& aValue, nsString& aType, nsString& aPa
   else {
     aType = aValue;
   }
+}
+
+nsresult
+XULContentSinkImpl::ProcessOverlay(const nsString& aHref)
+{
+  // Synchronously load the overlay.
+  nsresult result = NS_OK;
+  
+  // Kick off the load 
+  nsCOMPtr<nsIContentViewerContainer> container;
+  nsCOMPtr<nsIXULParentDocument> xulParentDocument;
+  xulParentDocument = do_QueryInterface(mDocument);
+  if (xulParentDocument == nsnull) {
+      NS_ERROR("Unable to turn document into a XUL parent document.");
+      return result;
+  }
+
+  if (NS_FAILED(result = xulParentDocument->GetContentViewerContainer(getter_AddRefs(container)))) {
+      NS_ERROR("Unable to retrieve content viewer container from parent document.");
+      return result;
+  }
+
+  nsAutoString command;
+  if (NS_FAILED(result = xulParentDocument->GetCommand(command))) {
+      NS_ERROR("Unable to retrieve the command from parent document.");
+      return result;
+  }
+  
+  nsCOMPtr<nsIXULDocumentInfo> docInfo;
+  if (NS_FAILED(result = nsComponentManager::CreateInstance(kXULDocumentInfoCID,
+                                                        nsnull,
+                                                        kIXULDocumentInfoIID,
+                                                        (void**) getter_AddRefs(docInfo)))) {
+      NS_ERROR("unable to create document info object");
+      return result;
+  }
+  
+  if (NS_FAILED(result = docInfo->Init(mDocument, this))) {
+      NS_ERROR("unable to initialize doc info object.");
+      return result;
+  }
+
+  // Turn the content viewer into a webshell
+  nsCOMPtr<nsIWebShell> webshell;
+  webshell = do_QueryInterface(container);
+  if (webshell == nsnull) {
+      NS_ERROR("this isn't a webshell. we're in trouble.");
+      return result;
+  }
+
+  nsCOMPtr<nsIDocumentLoader> docLoader;
+  if (NS_FAILED(result = webshell->GetDocumentLoader(*getter_AddRefs(docLoader)))) {
+      NS_ERROR("unable to obtain the document loader to kick off the load.");
+      return result;
+  }
+
+  docLoader->LoadSubDocument(aHref,
+                             docInfo.get());
+  return result;
 }
 
 nsresult
@@ -743,35 +846,22 @@ XULContentSinkImpl::ProcessStyleLink(nsIContent* aElement,
   SplitMimeType(aType, mimeType, params);
 
   if ((0 == mimeType.Length()) || mimeType.EqualsIgnoreCase(kCSSType)) {
-    nsIURL* url = nsnull;
-    nsIURLGroup* urlGroup = nsnull;
-    mDocumentBaseURL->GetURLGroup(&urlGroup);
-    if (urlGroup) {
-      result = urlGroup->CreateURL(&url, mDocumentBaseURL, aHref, nsnull);
-      NS_RELEASE(urlGroup);
+    nsIURI* url = nsnull;
+#ifdef NECKO
+    result = NS_NewURI(&url, aHref, mDocumentBaseURL);
+#else
+    nsILoadGroup* LoadGroup = nsnull;
+    mDocumentBaseURL->GetLoadGroup(&LoadGroup);
+    if (LoadGroup) {
+      result = LoadGroup->CreateURL(&url, mDocumentBaseURL, aHref, nsnull);
+      NS_RELEASE(LoadGroup);
     }
     else {
-#ifndef NECKO
       result = NS_NewURL(&url, aHref, mDocumentBaseURL);
-#else
-      NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-      if (NS_FAILED(result)) return result;
-
-      nsIURI *uri = nsnull, *baseUri = nsnull;
-      result = mDocumentBaseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-      if (NS_FAILED(result)) return result;
-
-      const char *uriStr = aHref.GetBuffer();
-      result = service->NewURI(uriStr, baseUri, &uri);
-      NS_RELEASE(baseUri);
-      if (NS_FAILED(result)) return result;
-
-      result = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-      NS_RELEASE(uri);
-#endif // NECKO
     }
+#endif
     if (NS_OK != result) {
-      return NS_OK; // The URL is bad, move along, don't propogate the error (for now)
+      return NS_OK; // The URL is bad, move along, don't propagate the error (for now)
     }
 
     PRBool blockParser = PR_FALSE;
@@ -811,6 +901,7 @@ XULContentSinkImpl::AddProcessingInstruction(const nsIParserNode& aNode)
 {
 
     static const char kStyleSheetPI[] = "<?xml-stylesheet";
+    static const char kOverlayPI[] = "<?xul-overlay";
 
     nsresult rv;
     FlushText();
@@ -822,8 +913,26 @@ XULContentSinkImpl::AddProcessingInstruction(const nsIParserNode& aNode)
     // We just check for a style sheet PI
     const nsString& text = aNode.GetText();
 
+    if (text.Find(kOverlayPI) == 0) {
+      // Load a XUL overlay.
+      nsAutoString href;
+      if (NS_FAILED(rv = nsRDFParserUtils::GetQuotedAttributeValue(text, "href", href)))
+            return rv;
+
+      // If there was an error or there's no href, we can't do
+      // anything with this PI
+      if (0 == href.Length())
+          return NS_OK;
+
+	  // Add the overlay to our list of overlays that need to be processed.
+	  if (mOverlayArray == nsnull)
+		mOverlayArray = new nsVoidArray();
+		
+	  nsString* overlayItem = new nsString(href);
+	  mOverlayArray->AppendElement(overlayItem);
+	}
     // If it's a stylesheet PI...
-    if (0 == text.Find(kStyleSheetPI)) {
+    else if (text.Find(kStyleSheetPI) == 0) {
         nsAutoString href;
         if (NS_FAILED(rv = nsRDFParserUtils::GetQuotedAttributeValue(text, "href", href)))
             return rv;
@@ -862,7 +971,7 @@ XULContentSinkImpl::AddProcessingInstruction(const nsIParserNode& aNode)
 }
 
 NS_IMETHODIMP 
-XULContentSinkImpl::AddDocTypeDecl(const nsIParserNode& aNode)
+XULContentSinkImpl::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
 {
     PR_LOG(gLog, PR_LOG_WARNING,
            ("xul: ignoring doctype decl at line %d", aNode.GetSourceLineNumber()));
@@ -968,11 +1077,13 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsIRDFDataSource* aDataSource)
     if (! aDocument)
         return NS_ERROR_NULL_POINTER;
     
+    mChildDocument = aDocument;
+
     nsCOMPtr<nsIXULChildDocument> childDocument;
     childDocument = do_QueryInterface(aDocument);
-    childDocument->GetFragmentRoot(&mFragmentRoot);
-    if (mFragmentRoot) {
-        // We're totally a subdocument. Find the root document's
+    childDocument->GetContentSink(&mParentContentSink);
+    if (mParentContentSink) {
+        // We're an overlay. Find the parent document's
         // data source and make assertions there.
       
         // First of all, find the root document.
@@ -995,6 +1106,8 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsIRDFDataSource* aDataSource)
             return NS_ERROR_INVALID_ARG; 
         } 
 
+		    aDocument = rootDocument;
+		
         nsCOMPtr<nsIRDFDataSource> docDataSource; 
         if (NS_FAILED(rv = rdfRootDoc->GetDocumentDataSource(getter_AddRefs(docDataSource)))) { 
             NS_ERROR("Unable to retrieve an RDF document's data source."); 
@@ -1005,6 +1118,7 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsIRDFDataSource* aDataSource)
         NS_IF_RELEASE(mDataSource);
         mDataSource = docDataSource.get();
         NS_ADDREF(mDataSource);
+
     }
     else {
 
@@ -1032,7 +1146,7 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsIRDFDataSource* aDataSource)
         return rv;
     }
 
-    if (mFragmentRoot == nsnull) {
+    if (mParentContentSink == nsnull) {
         // XUL Namespace isn't registered if we're a root document.
         // We need to register it.
         rv = mNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
@@ -1181,16 +1295,24 @@ XULContentSinkImpl::GetXULIDAttribute(const nsIParserNode& aNode,
         nsAutoString id = aNode.GetValueAt(i);
         nsRDFParserUtils::StripAndConvert(id);
 
-        nsAutoString uri;
+        nsCAutoString uri;
         nsRDFContentUtils::MakeElementURI(mDocument, id, uri);
 
-        return gRDFService->GetUnicodeResource(uri.GetUnicode(), aResource);
+        return gRDFService->GetResource(uri, aResource);
     }
 
     // Otherwise, we couldn't find anything, so just gensym one...
+#ifdef NECKO
+    char* url;
+#else
     const char* url;
+#endif
     mDocumentURL->GetSpec(&url);
-    return rdf_CreateAnonymousResource(url, aResource);
+    nsresult rv = rdf_CreateAnonymousResource(url, aResource);
+#ifdef NECKO
+    nsCRT::free(url);
+#endif
+    return rv;
 }
 
 nsresult
@@ -1246,6 +1368,22 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode,
         nsAutoString valueStr(aNode.GetValueAt(i));
         nsRDFParserUtils::StripAndConvert(valueStr);
 
+#ifdef PR_LOGGING
+        if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
+            nsCAutoString extraWhiteSpace;
+            PRInt32 count = mContextStack ? mContextStack->Count() : 0;
+            while (--count >= 0)
+                extraWhiteSpace += "  ";
+
+            PR_LOG(gLog, PR_LOG_DEBUG,
+                   ("xul: %.5d. %s    %s=%s",
+                    aNode.GetSourceLineNumber(),
+                    NS_STATIC_CAST(const char*, extraWhiteSpace),
+                    NS_STATIC_CAST(const char*, nsCAutoString(key)),
+                    NS_STATIC_CAST(const char*, nsCAutoString(valueStr))));
+        }
+#endif
+
         //if (nameSpaceID == kNameSpaceID_HTML)
         //    attr.ToLowerCase(); // Not our problem. You'd better be lowercase.
 
@@ -1275,7 +1413,19 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode,
         rv = gRDFService->GetLiteral(valueStr.GetUnicode(), getter_AddRefs(value));
         if (NS_FAILED(rv)) return rv;
 
-        rv = mDataSource->Assert(aSubject, property, value, PR_TRUE);
+        // XUL overlays may cause an old attribute to be over-ridden by
+        // a new value. So we check the graph to see if somebody has set
+        // the attribute already, and act appropriately.
+        nsCOMPtr<nsIRDFNode> oldvalue;
+        rv = mDataSource->GetTarget(aSubject, property, PR_TRUE, getter_AddRefs(oldvalue));
+        if (NS_FAILED(rv)) return rv;
+
+        if (oldvalue) {
+          rv = mDataSource->Change(aSubject, property, oldvalue, value);
+        }
+        else {
+          rv = mDataSource->Assert(aSubject, property, value, PR_TRUE);
+        }
         if (NS_FAILED(rv)) return rv;
     }
     return NS_OK;
@@ -1296,21 +1446,10 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
     SplitQualifiedName(aNode.GetText(), nameSpaceID, tag);
 
     // HTML tags must be lowercase
-	PRBool pushContent = PR_TRUE;
     if (nameSpaceID == kNameSpaceID_HTML) {
         if (tag.Equals("script")) {
             return OpenScript(aNode);
         }
-		else if (tag.Equals("form")) {
-			// XXX Forms (for whatever reason) are treated differently.  Their
-			// children are treated as if they were children of the form's
-			// parent node, and the form itself is added in as a sibling.
-			// This makes no sense to me, but it is what the other two
-			// content sinks are doing, so I'm blindly following it.
-			// I would like to know if this is a hack or if this really is
-			// the right thing to do. - Dave
-			pushContent = PR_FALSE;
-		}
     }
 
     // Figure out the URI of this object, and create an RDF node for it.
@@ -1345,8 +1484,8 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to assert tag type");
     if (NS_FAILED(rv)) return rv;
 
-	// Make arcs from us to all of our attribute values (with the attribute names
-	// as the labels of the arcs).
+    // Make arcs from us to all of our attribute values (with the attribute names
+    // as the labels of the arcs).
     if (NS_FAILED(rv = AddAttributes(aNode, rdfResource))) {
         NS_ERROR("problem adding properties to node");
         return rv;
@@ -1357,14 +1496,7 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
         // container).
         mHaveSetRootResource = PR_TRUE;
 
-        if (mFragmentRoot) {
-            // We're a subdocument.  We need to take this fragment
-            // node (which is the root of the fragment) and completely
-            // discard it.  The fragment root's resource is actually what
-            // should become the root of this subtree.
-            rdfResource = dont_QueryInterface(mFragmentRoot);
-        }
-        else {
+		    if (!mParentContentSink) {
             nsCOMPtr<nsIRDFDocument> rdfDoc;
             if (NS_SUCCEEDED(mDocument->QueryInterface(nsIRDFDocument::GetIID(),
                                                        (void**) getter_AddRefs(rdfDoc)))) {
@@ -1382,16 +1514,54 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
         rv = NS_NewRDFContainer(mDataSource, GetTopResource(), getter_AddRefs(container));
         if (NS_FAILED(rv)) return rv;
 
-        rv = container->AppendElement(rdfResource);
+        // Find out if a position is specified.  If so, we use that as the arc
+        // label instead of appending the object to the end.
+        // Add the attribute to RDF
+        nsCOMPtr<nsIRDFResource> property;
+        nsAutoString attr("#position");
+        
+        rv = gRDFService->GetUnicodeResource(attr.GetUnicode(), getter_AddRefs(property));
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFNode> positionValue;
+        rv = mDataSource->GetTarget(rdfResource, property, PR_TRUE, getter_AddRefs(positionValue));
+        if (NS_FAILED(rv)) return rv;
+
+        if (positionValue) { 
+          nsCOMPtr<nsIRDFLiteral> positionLiteral = do_QueryInterface(positionValue);
+          if (positionLiteral) {
+            // Retrieve the value that represents the position.
+            const PRUnichar* valueStr;
+            positionLiteral->GetValueConst(&valueStr);
+            nsCOMPtr<nsIRDFResource> posResource;
+            nsAutoString posStr(valueStr);
+            nsAutoString nextValStr = kRDFNameSpaceURI;
+            nextValStr.Append("_");
+            nextValStr.Append(posStr, 10);
+            rv = gRDFService->GetUnicodeResource(nextValStr.GetUnicode(), getter_AddRefs(posResource));
+            if (NS_FAILED(rv)) return rv;
+
+            rv = mDataSource->Assert(GetTopResource(), posResource, rdfResource, PR_TRUE);
+          }
+          else rv = container->AppendElement(rdfResource);
+        }
+        else {
+          // XXX We could be an overlay node indicating a removal.  If so, then we
+          // want to find the original assertion that linked us to the parent
+          // and perform a removal.
+
+          // Otherwise we're just a normal child and should be appended just like anyone
+          // else.
+          rv = container->AppendElement(rdfResource);
+        }
+
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add child to container");
         if (NS_FAILED(rv)) return rv;
     }
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
-	// (XXX The push content hack is for HTML form content. See above.)
-    if (pushContent)
-		PushResourceAndState(rdfResource, mState);
+    PushResourceAndState(rdfResource, mState);
     mState = eXULContentSinkState_InDocumentElement;
     return NS_OK;
 }
@@ -1436,32 +1606,23 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
         // If there is a SRC attribute...
         if (src.Length() > 0) {
             // Use the SRC attribute value to load the URL
-            nsIURL* url = nsnull;
+            nsIURI* url = nsnull;
             nsAutoString absURL;
-            nsIURLGroup* urlGroup;
+#ifdef NECKO
+            rv = NS_NewURI(&url, src, mDocumentBaseURL);
+#else
+            nsILoadGroup* LoadGroup;
 
-            rv = mDocumentBaseURL->GetURLGroup(&urlGroup);
+            rv = mDocumentBaseURL->GetLoadGroup(&LoadGroup);
       
-            if ((NS_OK == rv) && urlGroup) {
-                rv = urlGroup->CreateURL(&url, mDocumentBaseURL, src, nsnull);
-                NS_RELEASE(urlGroup);
+            if ((NS_OK == rv) && LoadGroup) {
+                rv = LoadGroup->CreateURL(&url, mDocumentBaseURL, src, nsnull);
+                NS_RELEASE(LoadGroup);
             }
             else {
-#ifndef NECKO
                 rv = NS_NewURL(&url, absURL);
-#else
-                NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-                if (NS_FAILED(rv)) return rv;
-
-                nsIURI *uri = nsnull;
-                const char *uriStr = absURL.GetBuffer();
-                rv = service->NewURI(uriStr, nsnull, &uri);
-                if (NS_FAILED(rv)) return rv;
-
-                rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-                NS_RELEASE(uri);
-#endif // NECKO
             }
+#endif
             if (NS_OK != rv) {
                 return rv;
             }
@@ -1473,6 +1634,9 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
             nsIUnicharStreamLoader* loader;
             rv = NS_NewUnicharStreamLoader(&loader,
                                            url, 
+#ifdef NECKO
+                                           nsCOMPtr<nsILoadGroup>(mDocument->GetDocumentLoadGroup()),
+#endif
                                            (nsStreamCompleteFunc)DoneLoadingScript, 
                                            (void *)this);
             NS_RELEASE(url);
@@ -1538,8 +1702,12 @@ XULContentSinkImpl::EvaluateScript(nsString& aScript, PRUint32 aLineNo)
                 return rv;
             }
         
-            nsIURL* docURL = mDocument->GetDocumentURL();
+            nsIURI* docURL = mDocument->GetDocumentURL();
+#ifdef NECKO
+            char* url;
+#else
             const char* url;
+#endif
             if (docURL) {
                 (void)docURL->GetSpec(&url);
             }
@@ -1547,9 +1715,11 @@ XULContentSinkImpl::EvaluateScript(nsString& aScript, PRUint32 aLineNo)
             nsAutoString val;
             PRBool isUndefined;
 
-            PRBool result = context->EvaluateString(aScript, url, aLineNo, 
-                                                    val, &isUndefined);
-      
+            context->EvaluateString(aScript, url, aLineNo, 
+                                    val, &isUndefined);
+#ifdef NECKO
+            nsCRT::free(url);
+#endif
             NS_IF_RELEASE(docURL);
       
             NS_RELEASE(context);
@@ -1632,9 +1802,9 @@ XULContentSinkImpl::PopResourceAndState(nsIRDFResource*& rResource,
         return NS_ERROR_NULL_POINTER;
     }
 
-    PRInt32 index = mContextStack->Count() - 1;
-    e = NS_STATIC_CAST(RDFContextStackElement*, mContextStack->ElementAt(index));
-    mContextStack->RemoveElementAt(index);
+    PRInt32 i = mContextStack->Count() - 1;
+    e = NS_STATIC_CAST(RDFContextStackElement*, mContextStack->ElementAt(i));
+    mContextStack->RemoveElementAt(i);
 
     // don't bother Release()-ing: call it our implicit AddRef().
     rResource = e->mResource;
@@ -1674,7 +1844,7 @@ XULContentSinkImpl::PushNameSpacesFrom(const nsIParserNode& aNode)
             continue;
 
         nsAutoString prefix;
-        if (k.Length() >= sizeof(kNameSpaceDef)) {
+        if (k.Length() >= PRInt32(sizeof kNameSpaceDef)) {
             // If the next character is a :, there is a namespace prefix
             PRUnichar next = k.CharAt(sizeof(kNameSpaceDef)-1);
             if (':' == next) {
@@ -1716,7 +1886,7 @@ nsIAtom*
 XULContentSinkImpl::CutNameSpacePrefix(nsString& aString)
 {
     nsAutoString  prefix;
-    PRInt32 nsoffset = aString.Find(kNameSpaceSeparator);
+    PRInt32 nsoffset = aString.FindChar(kNameSpaceSeparator);
     if (-1 != nsoffset) {
         aString.Left(prefix, nsoffset);
         aString.Cut(0, nsoffset+1);
@@ -1733,8 +1903,8 @@ XULContentSinkImpl::GetNameSpaceID(nsIAtom* aPrefix)
     PRInt32 id = kNameSpaceID_Unknown;
   
     if (0 < mNameSpaceStack.Count()) {
-        PRInt32 index = mNameSpaceStack.Count() - 1;
-        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack[index];
+        PRInt32 i = mNameSpaceStack.Count() - 1;
+        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack[i];
         nameSpace->FindNameSpaceID(aPrefix, id);
     }
 
@@ -1745,15 +1915,70 @@ void
 XULContentSinkImpl::PopNameSpaces(void)
 {
     if (0 < mNameSpaceStack.Count()) {
-        PRInt32 index = mNameSpaceStack.Count() - 1;
-        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack[index];
-        mNameSpaceStack.RemoveElementAt(index);
+        PRInt32 i = mNameSpaceStack.Count() - 1;
+        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack[i];
+        mNameSpaceStack.RemoveElementAt(i);
 
         // Releasing the most deeply nested namespace will recursively
         // release intermediate parent namespaces until the next
         // reference is held on the namespace stack.
         NS_RELEASE(nameSpace);
     }
+}
+
+////////////////
+
+NS_IMETHODIMP
+XULContentSinkImpl::UnblockNextOverlay() 
+{
+	if (!mOverlayArray)
+		return NS_OK;
+	
+	PRInt32 count = mOverlayArray->Count();
+	nsresult result=NS_OK;
+
+  // Process the next overlay.
+  nsString* href = (nsString*)mOverlayArray->ElementAt(mCurrentOverlay);
+	ProcessOverlay(*href);
+	
+  mCurrentOverlay++;
+  
+	return result;
+}
+
+NS_IMETHODIMP
+XULContentSinkImpl::UpdateOverlayCounters(PRInt32 aDelta)
+{
+  nsresult result = NS_OK;
+  if (!mOverlayArray)
+    return result;
+
+  PRInt32 count = mOverlayArray->Count();
+  PRInt32 remaining = count - mCurrentOverlay;
+  
+  mUnprocessedOverlayCount += aDelta;
+  
+  if (remaining && (remaining == mUnprocessedOverlayCount)) {
+    // The only overlays we have left are our own.
+    // Unblock the next overlay.
+    UnblockNextOverlay();
+  }
+
+  if (mParentContentSink)
+      mParentContentSink->UpdateOverlayCounters(aDelta);
+
+  if (count && mUnprocessedOverlayCount == 0) {
+    // We're done now, so we need to do a special
+    // extra notification.
+    if (mParentContentSink)
+      mParentContentSink->UpdateOverlayCounters(-1);
+    
+    // We can be unblocked and allowed to finish.
+    // XXX THIS CAUSES US TO BE DELETED. Why??
+    result=mParser->EnableParser(PR_TRUE);
+  }
+
+  return result;
 }
 
 ////////////////////////////////////////////////////////////////////////

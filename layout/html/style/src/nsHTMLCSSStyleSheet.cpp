@@ -271,9 +271,9 @@ public:
   NS_IMETHOD_(nsrefcnt) Release();
 
   // basic style sheet data
-  NS_IMETHOD Init(nsIURL* aURL, nsIDocument* aDocument);
-  NS_IMETHOD Reset(nsIURL* aURL);
-  NS_IMETHOD GetURL(nsIURL*& aURL) const;
+  NS_IMETHOD Init(nsIURI* aURL, nsIDocument* aDocument);
+  NS_IMETHOD Reset(nsIURI* aURL);
+  NS_IMETHOD GetURL(nsIURI*& aURL) const;
   NS_IMETHOD GetTitle(nsString& aTitle) const;
   NS_IMETHOD GetType(nsString& aType) const;
   NS_IMETHOD GetMediumCount(PRInt32& aCount) const;
@@ -318,7 +318,7 @@ protected:
   PRUint32 mInHeap : 1;
   PRUint32 mRefCnt : 31;
 
-  nsIURL*         mURL;
+  nsIURI*         mURL;
   nsIDocument*    mDocument;
 
   CSSFirstLineRule* mFirstLineRule;
@@ -425,13 +425,10 @@ PRInt32 HTMLCSSStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
 
   PRInt32 matchCount = 0;
 
-  if (!aPresContext || !aContent || !aResults) return matchCount;
-
   nsIStyledContent* styledContent;
 
   // just get the one and only style rule from the content's STYLE attribute
   if (NS_SUCCEEDED(aContent->QueryInterface(nsIStyledContent::GetIID(), (void**)&styledContent))) {
-    nsIStyleRule* rule = nsnull;
     PRUint32 index = 0;
     aResults->Count(&index);
     if (NS_SUCCEEDED(styledContent->GetInlineStyleRules(aResults))) {
@@ -503,7 +500,7 @@ PRInt32 HTMLCSSStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-HTMLCSSStyleSheetImpl::Init(nsIURL* aURL, nsIDocument* aDocument)
+HTMLCSSStyleSheetImpl::Init(nsIURI* aURL, nsIDocument* aDocument)
 {
   NS_PRECONDITION(aURL && aDocument, "null ptr");
   if (! aURL || ! aDocument)
@@ -529,7 +526,7 @@ HTMLCSSStyleSheetImpl::HasStateDependentStyle(nsIPresContext* aPresContext,
 
 
 NS_IMETHODIMP 
-HTMLCSSStyleSheetImpl::Reset(nsIURL* aURL)
+HTMLCSSStyleSheetImpl::Reset(nsIURI* aURL)
 {
   NS_IF_RELEASE(mURL);
   mURL = aURL;
@@ -546,7 +543,7 @@ HTMLCSSStyleSheetImpl::Reset(nsIURL* aURL)
 }
 
 NS_IMETHODIMP
-HTMLCSSStyleSheetImpl::GetURL(nsIURL*& aURL) const
+HTMLCSSStyleSheetImpl::GetURL(nsIURI*& aURL) const
 {
   NS_IF_ADDREF(mURL);
   aURL = mURL;
@@ -627,23 +624,33 @@ HTMLCSSStyleSheetImpl::SetOwningDocument(nsIDocument* aDocument)
 
 void HTMLCSSStyleSheetImpl::List(FILE* out, PRInt32 aIndent) const
 {
-  PRUnichar* buffer;
-
   // Indent
   for (PRInt32 index = aIndent; --index >= 0; ) fputs("  ", out);
 
   fputs("HTML CSS Style Sheet: ", out);
-  mURL->ToString(&buffer);
-  nsAutoString as(buffer,0);
-  fputs(as, out);
+#ifdef NECKO
+  char* urlSpec = nsnull;
+  mURL->GetSpec(&urlSpec);
+  if (urlSpec) {
+    fputs(urlSpec, out);
+    nsCRT::free(urlSpec);
+  }
+#else
+  PRUnichar* urlSpec = nsnull;
+  mURL->ToString(&urlSpec);
+  if (urlSpec) {
+    nsAutoString buffer(urlSpec);
+    fputs(buffer, out);
+    delete [] urlSpec;
+  }
+#endif
   fputs("\n", out);
-  delete buffer;
 }
 
 
 // XXX For backwards compatibility and convenience
 NS_HTML nsresult
-  NS_NewHTMLCSSStyleSheet(nsIHTMLCSSStyleSheet** aInstancePtrResult, nsIURL* aURL,
+  NS_NewHTMLCSSStyleSheet(nsIHTMLCSSStyleSheet** aInstancePtrResult, nsIURI* aURL,
                           nsIDocument* aDocument)
 {
   nsresult rv;

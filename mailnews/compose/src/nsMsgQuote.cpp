@@ -23,7 +23,8 @@
 #include "nsIGenericFactory.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
-#include "nsIStreamConverter.h"
+#include "nsIStreamConverter2.h"
+#include "nsIMimeStreamConverter.h"
 #include "nsFileStream.h"
 #include "nsFileSpec.h"
 #include "nsMimeTypes.h"
@@ -31,7 +32,6 @@
 #include "nsICharsetConverterManager.h"
 #include "prprf.h"
 #include "nsMsgQuote.h" 
-#include "nsINetService.h"
 #include "nsMsgCompUtils.h"
 #include "nsIMsgMessageService.h"
 #include "nsMsgUtils.h"
@@ -46,7 +46,6 @@ nsMsgQuote::nsMsgQuote()
 
   mTmpFileSpec = nsnull;
   mTmpIFileSpec = nsnull;
-  mOutStream = nsnull;
   mURI = nsnull;
   mMessageService = nsnull;
 }
@@ -63,7 +62,7 @@ nsMsgQuote::~nsMsgQuote()
 }
 
 /* the following macro actually implement addref, release and query interface for our component. */
-NS_IMPL_ISUPPORTS(nsMsgQuote, nsIMsgQuote::GetIID());
+NS_IMPL_ISUPPORTS(nsMsgQuote, nsCOMTypeInfo<nsIMsgQuote>::GetIID());
 
 /* this function will be used by the factory to generate an Message Compose Fields Object....*/
 nsresult 
@@ -83,8 +82,6 @@ NS_NewMsgQuote(const nsIID &aIID, void ** aInstancePtrResult)
 		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
 }
 
-// net service definitions....
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 
 // stream converter
 static NS_DEFINE_CID(kStreamConverterCID,    NS_STREAM_CONVERTER_CID);
@@ -157,7 +154,7 @@ nsresult
 FileInputStreamImpl::PumpFileStream()
 {
   if (mInFile->eof())
-    NS_BASE_STREAM_EOF;
+    return NS_BASE_STREAM_EOF;
   
   mBufLen = mInFile->read(mBuf, sizeof(mBuf));
   if (mBufLen > 0)
@@ -166,7 +163,7 @@ FileInputStreamImpl::PumpFileStream()
     return NS_BASE_STREAM_EOF;
 }
 
-NS_IMPL_ISUPPORTS(FileInputStreamImpl, nsIInputStream::GetIID());
+NS_IMPL_ISUPPORTS(FileInputStreamImpl, nsCOMTypeInfo<nsIInputStream>::GetIID());
 
 ////////////////////////////////////////////////////////////////////////////////////
 // End of FileInputStreamImpl()
@@ -175,32 +172,14 @@ NS_IMPL_ISUPPORTS(FileInputStreamImpl, nsIInputStream::GetIID());
 
 ////////////////////////////////////////////////////////////////////////
 
-// Utility to create a nsIURL object...
-nsresult 
-NewURL(nsIURL** aInstancePtrResult, const nsString& aSpec)
-{  
-  if (nsnull == aInstancePtrResult) 
-    return NS_ERROR_NULL_POINTER;
-  
-  nsINetService *inet = nsnull;
-  nsresult rv = nsServiceManager::GetService(kNetServiceCID, nsINetService::GetIID(),
-                                             (nsISupports **)&inet);
-  if (rv != NS_OK) 
-    return rv;
-
-  rv = inet->CreateURL(aInstancePtrResult, aSpec, nsnull, nsnull, nsnull);
-  nsServiceManager::ReleaseService(kNetServiceCID, inet);
-  return rv;
-}
-
 nsresult
-SaveQuoteMessageCompleteCallback(nsIURL *aURL, nsresult aExitCode, void *tagData)
+SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData)
 {
   nsresult        rv = NS_OK;
 
   if (!tagData)
   {
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_INVALID_ARG;
   }
 
   nsMsgQuote *ptr = (nsMsgQuote *) tagData;
@@ -210,16 +189,20 @@ SaveQuoteMessageCompleteCallback(nsIURL *aURL, nsresult aExitCode, void *tagData
     ptr->mMessageService = nsnull;
   }
 
-  if (NS_FAILED(aExitCode))
+  /* mscott - the NS_BINDING_ABORTED is a hack to get around a problem I have
+     with the necko code...it returns this and treats it as an error when
+	 it really isn't an error! I'm trying to get them to change this.
+   */
+  if (NS_FAILED(aExitCode) && aExitCode != NS_BINDING_ABORTED)
   {
     NS_RELEASE(ptr);
     return aExitCode;
   }
 
   // Create a mime parser (nsIStreamConverter)!
-  nsCOMPtr<nsIStreamConverter> mimeParser;
+  nsCOMPtr<nsIStreamConverter2> mimeParser;
   rv = nsComponentManager::CreateInstance(kStreamConverterCID, 
-                                          NULL, nsIStreamConverter::GetIID(), 
+                                          NULL, nsCOMTypeInfo<nsIStreamConverter2>::GetIID(), 
                                           (void **) getter_AddRefs(mimeParser)); 
   if (NS_FAILED(rv) || !mimeParser)
   {
@@ -242,7 +225,7 @@ SaveQuoteMessageCompleteCallback(nsIURL *aURL, nsresult aExitCode, void *tagData
   {
     NS_RELEASE(ptr);
     printf("Failed to create nsIInputStream\n");
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_OUT_OF_MEMORY;
   }
 
   if (NS_FAILED(fileStream->OpenDiskFile(*(ptr->mTmpFileSpec))))
@@ -253,25 +236,28 @@ SaveQuoteMessageCompleteCallback(nsIURL *aURL, nsresult aExitCode, void *tagData
   }
   
   // Set us as the output stream for HTML data from libmime...
-  if (NS_FAILED(mimeParser->SetOutputStream(ptr->mOutStream, ptr->mURI)))
+  nsCOMPtr<nsIMimeStreamConverter> mimeConverter = do_QueryInterface(mimeParser);
+  if (mimeConverter)
+	  mimeConverter->SetMimeOutputType(nsMimeOutput::nsMimeMessageQuoting);
+  if (NS_FAILED(mimeParser->Init(aURL, ptr->mStreamListener, nsnull /* the channel */)))
   {
     NS_RELEASE(ptr);
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_UNEXPECTED;
   }
 
   // Assuming this is an RFC822 message...
-  mimeParser->OnStartBinding(aURL, MESSAGE_RFC822);
+  mimeParser->OnStartRequest(nsnull, aURL);
 
   // Just pump all of the data from the file into libmime...
   while (NS_SUCCEEDED(fileStream->PumpFileStream()))
   {
     PRUint32    len;
     in->GetLength(&len);
-    mimeParser->OnDataAvailable(aURL, in, len);
+    mimeParser->OnDataAvailable(nsnull, aURL, in, 0, len);
   }
 
-  mimeParser->OnStopBinding(aURL, NS_OK, nsnull);
+  mimeParser->OnStopRequest(nsnull, aURL, NS_OK, nsnull);
   in->Close();
   ptr->mTmpFileSpec->Delete(PR_FALSE);
   NS_RELEASE(ptr);
@@ -279,14 +265,15 @@ SaveQuoteMessageCompleteCallback(nsIURL *aURL, nsresult aExitCode, void *tagData
 }
 
 nsresult
-nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, nsIOutputStream *outStream)
+nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, nsIStreamListener * aQuoteMsgStreamListener)
 {
 nsresult  rv;
 
   if (!msgURI)
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_INVALID_ARG;
 
-  mOutStream = outStream;
+  mStreamListener = aQuoteMsgStreamListener;
+
   mTmpFileSpec = nsMsgCreateTempFileSpec("nsquot.tmp"); 
 	if (!mTmpFileSpec)
     return NS_ERROR_FAILURE;
@@ -299,12 +286,12 @@ nsresult  rv;
   mURI = convertString.ToNewCString();
 
   if (!mURI)
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_OUT_OF_MEMORY;
 
   rv = GetMessageServiceFromURI(mURI, &mMessageService);
   if (NS_FAILED(rv) && !mMessageService)
   {
-    return NS_ERROR_FAILURE;
+    return rv;
   }
 
   NS_ADDREF(this);
@@ -314,13 +301,13 @@ nsresult  rv;
   {
     ReleaseMessageServiceFromURI(mURI, mMessageService);
     mMessageService = nsnull;
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_OUT_OF_MEMORY;
   }
 
   rv = mMessageService->SaveMessageToDisk(mURI, mTmpIFileSpec, PR_FALSE, sendListener, nsnull);
 
 	if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;    
-
-  return NS_OK;
+    return rv;    
+  else
+    return NS_OK;
 }

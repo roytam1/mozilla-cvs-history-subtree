@@ -61,7 +61,7 @@
 #include "nsIRDFContentSink.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
-#include "nsIRDFXMLDataSource.h"
+#include "nsIRDFXMLSink.h"
 #include "nsIServiceManager.h"
 #include "nsIURL.h"
 #include "nsIXMLContentSink.h"
@@ -78,7 +78,7 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static const char kNameSpaceSeparator[] = ":";
+static const char kNameSpaceSeparator = ':';
 static const char kNameSpaceDef[] = "xmlns";
 
 static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
@@ -162,19 +162,19 @@ public:
     NS_IMETHOD AddComment(const nsIParserNode& aNode);
     NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
     NS_IMETHOD NotifyError(const nsParserError* aError);
+    NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
 
     // nsIXMLContentSink
-    NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode);
-    NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode);
+    NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode);    
     NS_IMETHOD AddCharacterData(const nsIParserNode& aNode);
     NS_IMETHOD AddUnparsedEntity(const nsIParserNode& aNode);
     NS_IMETHOD AddNotation(const nsIParserNode& aNode);
     NS_IMETHOD AddEntityReference(const nsIParserNode& aNode);
 
     // nsIRDFContentSink
-    NS_IMETHOD Init(nsIURL* aURL, nsINameSpaceManager* aNameSpaceManager);
-    NS_IMETHOD SetDataSource(nsIRDFXMLDataSource* ds);
-    NS_IMETHOD GetDataSource(nsIRDFXMLDataSource*& ds);
+    NS_IMETHOD Init(nsIURI* aURL, nsINameSpaceManager* aNameSpaceManager);
+    NS_IMETHOD SetDataSource(nsIRDFDataSource* aDataSource);
+    NS_IMETHOD GetDataSource(nsIRDFDataSource*& aDataSource);
 
 protected:
     // pseudo constants
@@ -208,7 +208,7 @@ protected:
     void      GetNameSpaceURI(PRInt32 aID, nsString& aURI);
     void      PopNameSpaces();
 
-    nsINameSpaceManager*  mNameSpaceManager;
+    nsCOMPtr<nsINameSpaceManager> mNameSpaceManager;
     nsVoidArray* mNameSpaceStack;
     PRInt32      mRDFNameSpaceID;
 
@@ -239,9 +239,11 @@ protected:
     virtual nsresult OpenMember(const nsIParserNode& aNode);
     virtual nsresult OpenValue(const nsIParserNode& aNode);
 
-    // Miscellaneous RDF junk
-    nsIRDFXMLDataSource*   mDataSource;
-    RDFContentSinkState    mState;
+    // The datasource in which we're assigning assertions
+    nsCOMPtr<nsIRDFDataSource> mDataSource;
+
+    // The current state of the content sink
+    RDFContentSinkState mState;
 
     // content stack management
     PRInt32         PushContext(nsIRDFResource *aContext, RDFContentSinkState aState);
@@ -250,7 +252,7 @@ protected:
 
     nsVoidArray* mContextStack;
 
-    nsIURL*      mDocumentURL;
+    nsIURI*      mDocumentURL;
     PRUint32     mGenSym; // for generating anonymous resources
 };
 
@@ -273,17 +275,16 @@ nsIAtom* RDFContentSinkImpl::kLiAtom;
 ////////////////////////////////////////////////////////////////////////
 
 RDFContentSinkImpl::RDFContentSinkImpl()
-    : mDocumentURL(nsnull),
-      mDataSource(nsnull),
-      mGenSym(0),
-      mNameSpaceManager(nsnull),
-      mNameSpaceStack(nsnull),
-      mRDFNameSpaceID(kNameSpaceID_Unknown),
-      mContextStack(nsnull),
-      mText(nsnull),
+    : mText(nsnull),
       mTextLength(0),
       mTextSize(0),
-      mConstrainSize(PR_TRUE)
+      mConstrainSize(PR_TRUE),
+      mNameSpaceStack(nsnull),
+      mRDFNameSpaceID(kNameSpaceID_Unknown),
+      mState(eRDFContentSinkState_InProlog),
+      mContextStack(nsnull),
+      mDocumentURL(nsnull),
+      mGenSym(0)
 {
     NS_INIT_REFCNT();
 
@@ -326,15 +327,12 @@ RDFContentSinkImpl::~RDFContentSinkImpl()
 {
     NS_IF_RELEASE(mDocumentURL);
 
-    NS_IF_RELEASE(mDataSource);
-
-    NS_IF_RELEASE(mNameSpaceManager);
     if (mNameSpaceStack) {
         // There shouldn't be any here except in an error condition
-        PRInt32 index = mNameSpaceStack->Count();
+        PRInt32 i = mNameSpaceStack->Count();
 
-        while (0 < index--) {
-            nsINameSpace* ns = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
+        while (0 < i--) {
+            nsINameSpace* ns = (nsINameSpace*)mNameSpaceStack->ElementAt(i);
             NS_RELEASE(ns);
         }
         delete mNameSpaceStack;
@@ -346,8 +344,8 @@ RDFContentSinkImpl::~RDFContentSinkImpl()
         // XXX we should never need to do this, but, we'll write the
         // code all the same. If someone left the content stack dirty,
         // pop all the elements off the stack and release them.
-        PRInt32 index = mContextStack->Count();
-        while (0 < index--) {
+        PRInt32 i = mContextStack->Count();
+        while (0 < i--) {
             nsIRDFResource* resource;
             RDFContentSinkState state;
             PopContext(resource, state);
@@ -431,25 +429,45 @@ RDFContentSinkImpl::QueryInterface(REFNSIID iid, void** result)
 NS_IMETHODIMP 
 RDFContentSinkImpl::WillBuildModel(void)
 {
-    return (mDataSource != nsnull) ? mDataSource->BeginLoad() : NS_OK;
+    if (mDataSource) {
+        nsCOMPtr<nsIRDFXMLSink> sink = do_QueryInterface(mDataSource);
+        if (sink) 
+            return sink->BeginLoad();
+    }
+    return NS_OK;
 }
 
 NS_IMETHODIMP 
 RDFContentSinkImpl::DidBuildModel(PRInt32 aQualityLevel)
 {
-    return (mDataSource != nsnull) ? mDataSource->EndLoad() : NS_OK;
+    if (mDataSource) {
+        nsCOMPtr<nsIRDFXMLSink> sink = do_QueryInterface(mDataSource);
+        if (sink)
+            return sink->EndLoad();
+    }
+    return NS_OK;
 }
 
 NS_IMETHODIMP 
 RDFContentSinkImpl::WillInterrupt(void)
 {
-    return (mDataSource != nsnull) ? mDataSource->Interrupt() : NS_OK;
+    if (mDataSource) {
+        nsCOMPtr<nsIRDFXMLSink> sink = do_QueryInterface(mDataSource);
+        if (sink)
+            return sink->Interrupt();
+    }
+    return NS_OK;
 }
 
 NS_IMETHODIMP 
 RDFContentSinkImpl::WillResume(void)
 {
-    return (mDataSource != nsnull) ? mDataSource->Resume() : NS_OK;
+    if (mDataSource) {
+        nsCOMPtr<nsIRDFXMLSink> sink = do_QueryInterface(mDataSource);
+        if (sink)
+            return sink->Resume();
+    }
+    return NS_OK;
 }
 
 NS_IMETHODIMP 
@@ -461,10 +479,6 @@ RDFContentSinkImpl::SetParser(nsIParser* aParser)
 NS_IMETHODIMP 
 RDFContentSinkImpl::OpenContainer(const nsIParserNode& aNode)
 {
-#ifdef DEBUG
-    const nsString& text = aNode.GetText();
-#endif
-
     FlushText();
 
     // We must register namespace declarations found in the attribute
@@ -515,10 +529,6 @@ RDFContentSinkImpl::OpenContainer(const nsIParserNode& aNode)
 NS_IMETHODIMP 
 RDFContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
 {
-#ifdef DEBUG
-    const nsString& text = aNode.GetText();
-#endif
-
     FlushText();
 
     nsIRDFResource* resource;
@@ -526,19 +536,38 @@ RDFContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         // XXX parser didn't catch unmatched tags?
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gLog, PR_LOG_ALWAYS)) {
-            char* tag = text.ToNewCString();
+            const nsString& tagStr = aNode.GetText();
+            char* tagCStr = tagStr.ToNewCString();
 
             PR_LOG(gLog, PR_LOG_ALWAYS,
                    ("rdfxml: extra close tag '%s' at line %d",
-                    tag, aNode.GetSourceLineNumber()));
+                    tagCStr, aNode.GetSourceLineNumber()));
 
-            delete[] tag;
+            delete[] tagCStr;
         }
 #endif
 
         return NS_ERROR_UNEXPECTED; // XXX
     }
 
+    // If we've just popped a member or property element, _now_ is the
+    // time to add that element to the graph.
+    switch (mState) {
+    case eRDFContentSinkState_InMemberElement: {
+        nsCOMPtr<nsIRDFContainer> container;
+        NS_NewRDFContainer(getter_AddRefs(container));
+        container->Init(mDataSource, GetContextElement(1));
+        container->AppendElement(resource);
+    } break;
+
+    case eRDFContentSinkState_InPropertyElement: {
+        mDataSource->Assert(GetContextElement(1), GetContextElement(0), resource, PR_TRUE);
+    } break;
+
+    default:
+        break;
+    }
+    
     PRInt32 nestLevel = mContextStack->Count();
     if (nestLevel == 0)
         mState = eRDFContentSinkState_InEpilog;
@@ -605,7 +634,7 @@ RDFContentSinkImpl::AddProcessingInstruction(const nsIParserNode& aNode)
 }
 
 NS_IMETHODIMP 
-RDFContentSinkImpl::AddDocTypeDecl(const nsIParserNode& aNode)
+RDFContentSinkImpl::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
 {
     // XXX We'll ignore it for now
     PR_LOG(gLog, PR_LOG_ALWAYS,
@@ -713,7 +742,7 @@ RDFContentSinkImpl::AddEntityReference(const nsIParserNode& aNode)
 // nsIRDFContentSink interface
 
 NS_IMETHODIMP
-RDFContentSinkImpl::Init(nsIURL* aURL, nsINameSpaceManager* aNameSpaceManager)
+RDFContentSinkImpl::Init(nsIURI* aURL, nsINameSpaceManager* aNameSpaceManager)
 {
     NS_PRECONDITION((nsnull != aURL) && (nsnull != aNameSpaceManager), "null ptr");
     if ((! aURL) || (! aNameSpaceManager))
@@ -722,28 +751,25 @@ RDFContentSinkImpl::Init(nsIURL* aURL, nsINameSpaceManager* aNameSpaceManager)
     mDocumentURL = aURL;
     NS_ADDREF(aURL);
 
-    mNameSpaceManager = aNameSpaceManager;
-    NS_ADDREF(mNameSpaceManager);
+    mNameSpaceManager = dont_QueryInterface(aNameSpaceManager);
 
     mState = eRDFContentSinkState_InProlog;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-RDFContentSinkImpl::SetDataSource(nsIRDFXMLDataSource* ds)
+RDFContentSinkImpl::SetDataSource(nsIRDFDataSource* aDataSource)
 {
-    NS_IF_RELEASE(mDataSource);
-    mDataSource = ds;
-    NS_IF_ADDREF(mDataSource);
+    mDataSource = dont_QueryInterface(aDataSource);
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
-RDFContentSinkImpl::GetDataSource(nsIRDFXMLDataSource*& ds)
+RDFContentSinkImpl::GetDataSource(nsIRDFDataSource*& aDataSource)
 {
-    ds = mDataSource;
-    NS_IF_ADDREF(mDataSource);
+    aDataSource = mDataSource;
+    NS_IF_ADDREF(aDataSource);
     return NS_OK;
 }
 
@@ -827,7 +853,7 @@ RDFContentSinkImpl::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
 nsIAtom*
 RDFContentSinkImpl::CutNameSpacePrefix(nsString& aString)
 {
-    PRInt32 nsoffset = aString.Find(kNameSpaceSeparator);
+    PRInt32 nsoffset = aString.FindChar(kNameSpaceSeparator);
 
     if (nsoffset >= 0) {
         nsAutoString prefix;
@@ -852,13 +878,20 @@ RDFContentSinkImpl::GetNameSpaceID(nsIAtom* aPrefix, PRInt32& aNameSpaceID)
         return NS_ERROR_UNEXPECTED;
 
     // Look it up using the namespace stack
-    PRInt32 index = mNameSpaceStack->Count() - 1;
-    nsINameSpace* ns = (nsINameSpace*) mNameSpaceStack->ElementAt(index);
+    PRInt32 i = mNameSpaceStack->Count() - 1;
+    nsINameSpace* ns = (nsINameSpace*) mNameSpaceStack->ElementAt(i);
 
     nsresult rv;
     rv = ns->FindNameSpaceID(aPrefix, aNameSpaceID);
 
     if (NS_FAILED(rv)) {
+
+	if (aPrefix == nsnull)
+	{
+		aNameSpaceID = kNameSpaceID_None;
+		rv = NS_OK;
+	}
+
         // Couldn't find the namespace, probably because the prefix
         // was never declared using an 'xmlns' decl.
 
@@ -931,7 +964,11 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
     PRInt32 ac = aNode.GetAttributeCount();
     nsresult rv;
 
+#ifdef NECKO
+    char* docURI;
+#else
     const char* docURI;
+#endif
     mDocumentURL->GetSpec(&docURI);
 
     for (PRInt32 i = 0; i < ac; i++) {
@@ -955,6 +992,9 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
             nsRDFParserUtils::StripAndConvert(uri);
 
             rdf_MakeAbsoluteURI(docURI, uri);
+#ifdef NECKO
+            nsCRT::free(docURI);
+#endif
 
             return gRDFService->GetUnicodeResource(uri.GetUnicode(), aResource);
         }
@@ -985,6 +1025,9 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
             name.Insert('#', 0);
             
             rdf_MakeAbsoluteURI(docURI, name);
+#ifdef NECKO
+            nsCRT::free(docURI);
+#endif
 
             return gRDFService->GetUnicodeResource(name.GetUnicode(), aResource);
         }
@@ -997,7 +1040,11 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
     }
 
     // Otherwise, we couldn't find anything, so just gensym one...
-    return rdf_CreateAnonymousResource(docURI, aResource);
+    rv = rdf_CreateAnonymousResource(docURI, aResource);
+#ifdef NECKO
+    nsCRT::free(docURI);
+#endif
+    return rv;
 }
 
 
@@ -1032,9 +1079,16 @@ RDFContentSinkImpl::GetResourceAttribute(const nsIParserNode& aNode,
             // XXX Take the URI and make it fully qualified by
             // sticking it into the document's URL. This may not be
             // appropriate...
+#ifdef NECKO
+            char* documentURL;
+#else
             const char* documentURL;
+#endif
             mDocumentURL->GetSpec(&documentURL);
             rdf_MakeAbsoluteURI(documentURL, uri);
+#ifdef NECKO
+            nsCRT::free(documentURL);
+#endif
 
             return gRDFService->GetUnicodeResource(uri.GetUnicode(), aResource);
         }
@@ -1143,25 +1197,6 @@ RDFContentSinkImpl::OpenObject(const nsIParserNode& aNode)
     rv = GetIdAboutAttribute(aNode, &rdfResource);
     if (NS_FAILED(rv)) return rv;
 
-    // If we're in a member or property element, then this is the cue
-    // that we need to hook the object up into the graph via the
-    // member/property.
-    switch (mState) {
-    case eRDFContentSinkState_InMemberElement: {
-        nsCOMPtr<nsIRDFContainer> container;
-        NS_NewRDFContainer(getter_AddRefs(container));
-        container->Init(mDataSource, GetContextElement(1));
-        container->AppendElement(rdfResource);
-    } break;
-
-    case eRDFContentSinkState_InPropertyElement: {
-        mDataSource->Assert(GetContextElement(1), GetContextElement(0), rdfResource, PR_TRUE);
-    } break;
-
-    default:
-        break;
-    }
-    
     // Push the element onto the context stack
     PushContext(rdfResource, mState);
 
@@ -1388,9 +1423,9 @@ RDFContentSinkImpl::PopContext(nsIRDFResource*& rResource, RDFContentSinkState& 
         return NS_ERROR_NULL_POINTER;
     }
 
-    PRInt32 index = mContextStack->Count() - 1;
-    e = NS_STATIC_CAST(RDFContextStackElement*, mContextStack->ElementAt(index));
-    mContextStack->RemoveElementAt(index);
+    PRInt32 i = mContextStack->Count() - 1;
+    e = NS_STATIC_CAST(RDFContextStackElement*, mContextStack->ElementAt(i));
+    mContextStack->RemoveElementAt(i);
 
     // don't bother Release()-ing: call it our implicit AddRef().
     rResource = e->mResource;
@@ -1410,7 +1445,6 @@ RDFContentSinkImpl::PushNameSpacesFrom(const nsIParserNode& aNode)
     nsAutoString k, uri, prefix;
     PRInt32 ac = aNode.GetAttributeCount();
     PRInt32 offset;
-    nsresult result = NS_OK;
     nsINameSpace* ns = nsnull;
 
     if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
@@ -1432,7 +1466,7 @@ RDFContentSinkImpl::PushNameSpacesFrom(const nsIParserNode& aNode)
             if (0 == offset) {
                 prefix.Truncate();
 
-                if (k.Length() >= sizeof(kNameSpaceDef)) {
+                if (k.Length() >= PRInt32(sizeof kNameSpaceDef)) {
                     // If the next character is a :, there is a namespace prefix
                     PRUnichar next = k.CharAt(sizeof(kNameSpaceDef)-1);
                     if (':' == next) {
@@ -1457,7 +1491,9 @@ RDFContentSinkImpl::PushNameSpacesFrom(const nsIParserNode& aNode)
                 }
 
                 // Add it to the set of namespaces used in the RDF/XML document.
-                mDataSource->AddNameSpace(prefixAtom, uri);
+                nsCOMPtr<nsIRDFXMLSink> sink = do_QueryInterface(mDataSource);
+                if (sink)
+                    sink->AddNameSpace(prefixAtom, uri);
       
                 NS_IF_RELEASE(prefixAtom);
             }
@@ -1481,9 +1517,9 @@ void
 RDFContentSinkImpl::PopNameSpaces()
 {
     if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
-        PRInt32 index = mNameSpaceStack->Count() - 1;
-        nsINameSpace* ns = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
-        mNameSpaceStack->RemoveElementAt(index);
+        PRInt32 i = mNameSpaceStack->Count() - 1;
+        nsINameSpace* ns = (nsINameSpace*)mNameSpaceStack->ElementAt(i);
+        mNameSpaceStack->RemoveElementAt(i);
 
         // Releasing the most deeply nested namespace will recursively
         // release intermediate parent namespaces until the next

@@ -31,6 +31,8 @@
 #include "nsRepository.h"
 #include "nsDOMCID.h"
 
+#include "nsSoftwareUpdateIIDs.h"
+
 extern void ConvertJSValToStr(nsString&  aString,
                              JSContext* aContext,
                              jsval      aValue);
@@ -269,7 +271,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallVersionInit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallVersion *nativeThis = (nsIDOMInstallVersion*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   nsAutoString b0;
 
   *rval = JSVAL_NULL;
@@ -279,20 +280,19 @@ InstallVersionInit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval 
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
-
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->Init(b0)) {
-      return JS_FALSE;
-    }
-
-    *rval = JSVAL_VOID;
+  if (argc == 1) 
+  {
+      nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
   }
-  else {
-    JS_ReportError(cx, "Function init requires 1 parameters");
-    return JS_FALSE;
+  else 
+  {
+      b0 = "0.0.0.0";
   }
+    
+  if (NS_OK != nativeThis->Init(b0)) 
+        return JS_FALSE;
+  
+  *rval = JSVAL_VOID;
 
   return JS_TRUE;
 }
@@ -305,7 +305,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallVersionToString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallVersion *nativeThis = (nsIDOMInstallVersion*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   nsAutoString nativeRet;
 
   *rval = JSVAL_NULL;
@@ -339,7 +338,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallVersionCompareTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallVersion *nativeThis = (nsIDOMInstallVersion*)JS_GetPrivate(cx, obj);
-  JSBool                  rBool = JS_FALSE;
   PRInt32                 nativeRet;
   nsString                b0str;
   PRInt32                 b0int;
@@ -462,7 +460,7 @@ static JSPropertySpec InstallVersionProperties[] =
 {
   {"major",    INSTALLVERSION_MAJOR,    JSPROP_ENUMERATE},
   {"minor",    INSTALLVERSION_MINOR,    JSPROP_ENUMERATE},
-  {"release",    INSTALLVERSION_RELEASE,    JSPROP_ENUMERATE},
+  {"release",  INSTALLVERSION_RELEASE,  JSPROP_ENUMERATE},
   {"build",    INSTALLVERSION_BUILD,    JSPROP_ENUMERATE},
   {0}
 };
@@ -473,11 +471,26 @@ static JSPropertySpec InstallVersionProperties[] =
 //
 static JSFunctionSpec InstallVersionMethods[] = 
 {
-  {"init",          InstallVersionInit,     1},
-  {"toString",          InstallVersionToString,     0},
-  {"compareTo",          InstallVersionCompareTo,     1},
+  {"init",          InstallVersionInit,       1},
+  {"toString",      InstallVersionToString,   0},
+  {"compareTo",     InstallVersionCompareTo,  1},
   {0}
 };
+
+static JSConstDoubleSpec version_constants[] = 
+{
+    { nsIDOMInstallVersion::EQUAL,                  "EQUAL"              },
+    { nsIDOMInstallVersion::BLD_DIFF,               "BLD_DIFF"           },
+    { nsIDOMInstallVersion::BLD_DIFF_MINUS,         "BLD_DIFF_MINUS"     },
+    { nsIDOMInstallVersion::REL_DIFF,               "REL_DIFF"           },
+    { nsIDOMInstallVersion::REL_DIFF_MINUS,         "REL_DIFF_MINUS"     },
+    { nsIDOMInstallVersion::MINOR_DIFF,             "MINOR_DIFF"         },
+    { nsIDOMInstallVersion::MINOR_DIFF_MINUS,       "MINOR_DIFF_MINUS"   },
+    { nsIDOMInstallVersion::MAJOR_DIFF,             "MAJOR_DIFF"         },
+    { nsIDOMInstallVersion::MAJOR_DIFF_MINUS,       "MAJOR_DIFF_MINUS"   },
+    {0}
+};
+
 
 
 //
@@ -487,35 +500,20 @@ PR_STATIC_CALLBACK(JSBool)
 InstallVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsresult result;
-  nsIID classID;
-  nsIScriptContext* context = (nsIScriptContext*)JS_GetContextPrivate(cx);
-  nsIScriptNameSpaceManager* manager;
+  
   nsIDOMInstallVersion *nativeThis;
   nsIScriptObjectOwner *owner = nsnull;
 
   static NS_DEFINE_IID(kIDOMInstallVersionIID, NS_IDOMINSTALLVERSION_IID);
+  static NS_DEFINE_IID(kInstallVersion_CID, NS_SoftwareUpdateInstallVersion_CID);
 
-  result = context->GetNameSpaceManager(&manager);
-  if (NS_OK != result) {
-    return JS_FALSE;
-  }
-
-  result = manager->LookupName("InstallVersion", PR_TRUE, classID);
-  NS_RELEASE(manager);
-  if (NS_OK != result) {
-    return JS_FALSE;
-  }
-
-  result = nsRepository::CreateInstance(classID,
+  result = nsRepository::CreateInstance(kInstallVersion_CID,
                                         nsnull,
                                         kIDOMInstallVersionIID,
                                         (void **)&nativeThis);
-  if (NS_OK != result) {
-    return JS_FALSE;
-  }
+  if (NS_OK != result) return JS_FALSE;
 
-  // XXX We should be calling Init() on the instance
-
+            
   result = nativeThis->QueryInterface(kIScriptObjectOwnerIID, (void **)&owner);
   if (NS_OK != result) {
     NS_RELEASE(nativeThis);
@@ -526,7 +524,42 @@ InstallVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
   JS_SetPrivate(cx, obj, nativeThis);
 
   NS_RELEASE(owner);
+   
+  jsval ignore;
+  InstallVersionInit(cx, obj, argc, argv, &ignore);
+
   return JS_TRUE;
+}
+
+nsresult InitInstallVersionClass(JSContext *jscontext, JSObject *global, void** prototype)
+{
+  JSObject *proto = nsnull;
+
+  if (prototype != nsnull)
+    *prototype = nsnull;
+
+  proto = JS_InitClass(jscontext,     // context
+                       global,        // global object
+                       nsnull,  // parent proto 
+                       &InstallVersionClass,      // JSClass
+                       InstallVersion,            // JSNative ctor
+                       0,             // ctor args
+                       InstallVersionProperties,  // proto props
+                       InstallVersionMethods,     // proto funcs
+                       nsnull,        // ctor props (static)
+                       nsnull);       // ctor funcs (static)
+  
+  if (nsnull == proto)
+      return NS_ERROR_FAILURE;
+  
+  
+  if ( PR_FALSE == JS_DefineConstDoubles(jscontext, proto, version_constants) )
+            return NS_ERROR_FAILURE;
+  
+  if (prototype != nsnull)
+      *prototype = proto;
+  
+  return NS_OK;
 }
 
 //
@@ -537,7 +570,6 @@ nsresult NS_InitInstallVersionClass(nsIScriptContext *aContext, void **aPrototyp
   JSContext *jscontext = (JSContext *)aContext->GetNativeContext();
   JSObject *proto = nsnull;
   JSObject *constructor = nsnull;
-  JSObject *parent_proto = nsnull;
   JSObject *global = JS_GetGlobalObject(jscontext);
   jsval vp;
 
@@ -545,65 +577,23 @@ nsresult NS_InitInstallVersionClass(nsIScriptContext *aContext, void **aPrototyp
       !JSVAL_IS_OBJECT(vp) ||
       ((constructor = JSVAL_TO_OBJECT(vp)) == nsnull) ||
       (PR_TRUE != JS_LookupProperty(jscontext, JSVAL_TO_OBJECT(vp), "prototype", &vp)) || 
-      !JSVAL_IS_OBJECT(vp)) {
-
-    proto = JS_InitClass(jscontext,     // context
-                         global,        // global object
-                         parent_proto,  // parent proto 
-                         &InstallVersionClass,      // JSClass
-                         InstallVersion,            // JSNative ctor
-                         0,             // ctor args
-                         InstallVersionProperties,  // proto props
-                         InstallVersionMethods,     // proto funcs
-                         nsnull,        // ctor props (static)
-                         nsnull);       // ctor funcs (static)
-    if (nsnull == proto) {
-      return NS_ERROR_FAILURE;
-    }
-
-    if ((PR_TRUE == JS_LookupProperty(jscontext, global, "InstallVersion", &vp)) &&
-        JSVAL_IS_OBJECT(vp) &&
-        ((constructor = JSVAL_TO_OBJECT(vp)) != nsnull)) {
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::EQUAL);
-      JS_SetProperty(jscontext, constructor, "EQUAL", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::BLD_DIFF);
-      JS_SetProperty(jscontext, constructor, "BLD_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::BLD_DIFF_MINUS);
-      JS_SetProperty(jscontext, constructor, "BLD_DIFF_MINUS", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::REL_DIFF);
-      JS_SetProperty(jscontext, constructor, "REL_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::REL_DIFF_MINUS);
-      JS_SetProperty(jscontext, constructor, "REL_DIFF_MINUS", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::MINOR_DIFF);
-      JS_SetProperty(jscontext, constructor, "MINOR_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::MINOR_DIFF_MINUS);
-      JS_SetProperty(jscontext, constructor, "MINOR_DIFF_MINUS", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::MAJOR_DIFF);
-      JS_SetProperty(jscontext, constructor, "MAJOR_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallVersion::MAJOR_DIFF_MINUS);
-      JS_SetProperty(jscontext, constructor, "MAJOR_DIFF_MINUS", &vp);
-
-    }
-
+      !JSVAL_IS_OBJECT(vp)) 
+  {
+    nsresult rv = InitInstallVersionClass(jscontext, global, (void**)&proto);
+    if (NS_FAILED(rv)) return rv;
   }
-  else if ((nsnull != constructor) && JSVAL_IS_OBJECT(vp)) {
+  else if ((nsnull != constructor) && JSVAL_IS_OBJECT(vp)) 
+  {
     proto = JSVAL_TO_OBJECT(vp);
   }
-  else {
+  else 
+  {
     return NS_ERROR_FAILURE;
   }
 
-  if (aPrototype) {
+  if (aPrototype) 
     *aPrototype = proto;
-  }
+  
   return NS_OK;
 }
 

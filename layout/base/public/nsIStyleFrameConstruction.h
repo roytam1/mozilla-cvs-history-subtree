@@ -27,6 +27,7 @@ class nsIAtom;
 class nsIStyleSheet;
 class nsIStyleRule;
 class nsStyleChangeList;
+class nsIFrameManager;
 
 // IID for the nsIStyleSet interface {a6cf9066-15b3-11d2-932e-00805f8add32}
 #define NS_ISTYLE_FRAME_CONSTRUCTION_IID \
@@ -102,6 +103,14 @@ public:
                                    nsIFrame*       aFrame,
                                    nsIFrame*       aParentFrame,
                                    nsIFrame**      aContinuingFrame) = 0;
+
+  // Request to find the primary frame associated with a given content object.
+  // This is typically called by the pres shell when there is no mapping in
+  // the pres shell hash table
+  NS_IMETHOD FindPrimaryFrameFor(nsIPresContext*  aPresContext,
+                                 nsIFrameManager* aFrameManager,
+                                 nsIContent*      aContent,
+                                 nsIFrame**       aFrame) = 0;
 };
 
 #endif /* nsIStyleFrameConstruction_h___ */

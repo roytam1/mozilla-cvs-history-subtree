@@ -21,34 +21,23 @@
 
 #include "nsIImapUrl.h"
 #include "nsCOMPtr.h"
-#include "nsIUrlListenerManager.h"
-#include "nsINetlibURL.h" /* this should be temporary until nunet project lands */
+#include "nsMsgMailNewsUrl.h"
 #include "nsIMsgIncomingServer.h"
 
-class nsImapUrl : public nsIImapUrl, public nsINetlibURL
+class nsImapUrl : public nsIImapUrl, public nsMsgMailNewsUrl, public nsIMsgUriUrl
 {
 public:
 
-	NS_DECL_ISUPPORTS
+	NS_DECL_ISUPPORTS_INHERITED
 
-	/////////////////////////////////////////////////////////////////////////////// 
-	// we support the nsIMsgMailNewsUrl interface...
-	///////////////////////////////////////////////////////////////////////////////
-	NS_IMETHOD SetUrlState(PRBool aRunningUrl, nsresult aExitCode);
-	NS_IMETHOD GetUrlState(PRBool * aRunningUrl);
-
-	NS_IMETHOD SetErrorMessage (char * errorMessage);
-	NS_IMETHOD GetErrorMessage (char ** errorMessage) const;  // caller must free using PR_Free
-	NS_IMETHOD RegisterListener (nsIUrlListener * aUrlListener);
-	NS_IMETHOD UnRegisterListener (nsIUrlListener * aUrlListener);
+	// nsIURI override
+	NS_IMETHOD SetSpec(char * aSpec);
 
 	/////////////////////////////////////////////////////////////////////////////// 
 	// we support the nsIImapUrl interface
 	///////////////////////////////////////////////////////////////////////////////
 
 	NS_IMETHOD Initialize(const char * aUserName);
-
-	NS_IMETHOD GetServer(nsIMsgIncomingServer ** aServer);
 
 	NS_IMETHOD GetImapLog(nsIImapLog ** aImapLog);
 	NS_IMETHOD SetImapLog(nsIImapLog  * aImapLog);
@@ -77,8 +66,8 @@ public:
 	NS_IMETHOD CreateServerSourceFolderPathString(char **result) ;
 	NS_IMETHOD CreateServerDestinationFolderPathString(char **result);
 
-	NS_IMETHOD	CreateSearchCriteriaString(nsString2 *aResult);
-	NS_IMETHOD	CreateListOfMessageIdsString(nsString2 *result) ;
+	NS_IMETHOD	CreateSearchCriteriaString(nsCString *aResult);
+	NS_IMETHOD	CreateListOfMessageIdsString(nsCString *result) ;
 	NS_IMETHOD	MessageIdsAreUids(PRBool *result);
 	NS_IMETHOD	GetMsgFlags(imapMessageFlagsType *result);	// kAddMsgFlags or kSubtractMsgFlags only
     NS_IMETHOD GetChildDiscoveryDepth(PRInt32* result);
@@ -90,66 +79,23 @@ public:
 	NS_IMETHOD	SetAllowContentChange(PRBool allowContentChange);
 	NS_IMETHOD  GetAllowContentChange(PRBool *results);
 
-	/////////////////////////////////////////////////////////////////////////////// 
-	// we support the nsINetlibURL interface
-	///////////////////////////////////////////////////////////////////////////////
+    NS_IMETHOD SetCopyState(nsISupports* copyState);
+    NS_IMETHOD GetCopyState(nsISupports** copyState);
+    
+    NS_IMETHOD SetMsgFileSpec(nsIFileSpec* fileSpec);
+    NS_IMETHOD GetMsgFileSpec(nsIFileSpec** fileSpec);
 
-    NS_IMETHOD GetURLInfo(URL_Struct_ **aResult) const;
-    NS_IMETHOD SetURLInfo(URL_Struct_ *URL_s);
-
-	/////////////////////////////////////////////////////////////////////////////// 
-	// we support the nsIURL interface
-	///////////////////////////////////////////////////////////////////////////////
-
-	// mscott: some of these we won't need to implement..as part of the netlib re-write we'll be removing them
-	// from nsIURL and then we can remove them from here as well....
-    NS_IMETHOD_(PRBool) Equals(const nsIURL *aURL) const;
-    NS_IMETHOD GetSpec(const char* *result) const;
-    NS_IMETHOD SetSpec(const char* spec);
-    NS_IMETHOD GetProtocol(const char* *result) const;
-    NS_IMETHOD SetProtocol(const char* protocol);
-    NS_IMETHOD GetHost(const char* *result) const;
-    NS_IMETHOD SetHost(const char* host);
-    NS_IMETHOD GetHostPort(PRUint32 *result) const;
-    NS_IMETHOD SetHostPort(PRUint32 port);
-    NS_IMETHOD GetFile(const char* *result) const;
-    NS_IMETHOD SetFile(const char* file);
-    NS_IMETHOD GetRef(const char* *result) const;
-    NS_IMETHOD SetRef(const char* ref);
-    NS_IMETHOD GetSearch(const char* *result) const;
-    NS_IMETHOD SetSearch(const char* search);
-    NS_IMETHOD GetContainer(nsISupports* *result) const;
-    NS_IMETHOD SetContainer(nsISupports* container);	
-    NS_IMETHOD GetLoadAttribs(nsILoadAttribs* *result) const;	// make obsolete
-    NS_IMETHOD SetLoadAttribs(nsILoadAttribs* loadAttribs);	// make obsolete
-    NS_IMETHOD GetURLGroup(nsIURLGroup* *result) const;	// make obsolete
-    NS_IMETHOD SetURLGroup(nsIURLGroup* group);	// make obsolete
-    NS_IMETHOD SetPostHeader(const char* name, const char* value);	// make obsolete
-    NS_IMETHOD SetPostData(nsIInputStream* input);	// make obsolete
-    NS_IMETHOD GetContentLength(PRInt32 *len);
-    NS_IMETHOD GetServerStatus(PRInt32 *status);  // make obsolete
-    NS_IMETHOD ToString(PRUnichar* *aString) const;
+    // nsIMsgUriUrl
+    NS_IMETHOD GetURI(char **aURI);
 
 	// nsImapUrl
 	nsImapUrl();
 	virtual ~nsImapUrl();
 
 protected:
+	virtual nsresult ParseUrl();
+	virtual const char * GetUserName() { return m_userName;}
 
-	nsresult ParseURL(const nsString& aSpec, const nsIURL* aURL = nsnull);
-	void ReconstructSpec(void);
-	// manager of all of current url listeners....
-	nsCOMPtr<nsIUrlListenerManager>  m_urlListeners;
-	// Here's our link to the old netlib world....
-    URL_Struct *m_URL_s;
-
-	char		*m_spec;
-    char		*m_protocol;
-    char		*m_host;
-	PRUint32	 m_port;
-	char		*m_search;
-	char		*m_file;
-	char		*m_errorMessage;
 	char		*m_listOfMessageIds;
 
 	// handle the imap specific parsing
@@ -161,7 +107,7 @@ protected:
 	void		ParseChildDiscoveryDepth();
 	void		ParseUidChoice();
 	void		ParseMsgFlags();
-	void		ParseListofMessageIds();
+	void		ParseListOfMessageIds();
 
     char        *m_sourceCanonicalFolderPathSubString;
     char        *m_destinationCanonicalFolderPathSubString;
@@ -187,8 +133,10 @@ protected:
     nsCOMPtr<nsIImapMessageSink>	m_imapMessageSink;
     nsCOMPtr<nsIImapExtensionSink>	m_imapExtensionSink;
     nsCOMPtr<nsIImapMiscellaneousSink> m_imapMiscellaneousSink;
-
-	nsCOMPtr<nsIMsgIncomingServer>  m_server;
+  
+    // online message copy support; i don't have a better solution yet
+    nsCOMPtr<nsISupports> m_copyState;
+    nsCOMPtr<nsIFileSpec> m_fileSpec;
 };
 
 #endif /* nsImapUrl_h___ */

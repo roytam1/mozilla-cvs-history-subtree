@@ -146,8 +146,7 @@ struct input_callback_stack {
     IncludePathEntry *include_path;
 };
 
-/* XXX pass in input_callback_data so we can get line number for error */
-static FILE *
+ static FILE *
 fopen_from_includes(const char *filename, const char *mode,
                     IncludePathEntry *include_path)
 {
@@ -184,8 +183,7 @@ fopen_from_includes(const char *filename, const char *mode,
         if (file)
             return file;
     }
-    fprintf(stderr, "can't open %s for reading\n", filename);
-    return NULL;
+     return NULL;
 }
 
 #ifdef XP_MAC
@@ -217,7 +215,9 @@ new_input_callback_data(const char *filename, IncludePathEntry *include_path)
     new_data->point = new_data->buf;
     new_data->max = INPUT_BUF_CHUNK;
     new_data->filename = xpidl_strdup(filename);
-    new_data->lineno = 1;
+
+    /* libIDL expects the line number to be that of the *next* line */
+    new_data->lineno = 2;
     return new_data;
 }
 
@@ -248,7 +248,7 @@ NextIsRaw(struct input_callback_data *data, char **startp, int *lenp)
         *lenp = end - data->point + 2;
         data->f_raw = 0;
     } else {
-        *lenp = data->len;
+        *lenp = data->buf + data->len - data->point;
         data->f_raw = 1;
     }
     return 1;
@@ -281,6 +281,26 @@ NextIsComment(struct input_callback_data *data, char **startp, int *lenp)
     end = strstr(data->point, "*/");
     *lenp = 0;
     if (end) {
+	int skippedLines;
+
+	/* get current lineno */
+	IDL_file_get(NULL,(int *)&data->lineno);
+
+	*startp = data->point;
+
+	/* get line count */
+	for(skippedLines = 0;;)
+	    {
+		*startp = strstr(*startp,"\n");
+		if (!*startp || *startp >= end)
+		    break;
+		
+		*startp += 1;
+		skippedLines++;
+	    }
+	data->lineno += skippedLines;
+	IDL_file_set(data->filename, (int)data->lineno);
+
         *startp = end + 2;
         data->f_comment = 0;
     } else {
@@ -326,12 +346,16 @@ NextIsInclude(struct input_callback_stack *stack, char **startp, int *lenp)
         }
         
         /* make sure we have accurate line info */
-        IDL_file_get(&scratch, &data->lineno);
+        IDL_file_get(&scratch, (int *)&data->lineno);
         fprintf(stderr,
-                "didn't find end of quoted include name %*s at %s:%d\n",
-                end - start, start, scratch, data->lineno);
+                "%s:%d: didn't find end of quoted include name %*s\n",
+                scratch, data->lineno, end - start, start);
         return -1;
     }
+
+    if (*end == '\r' || *end == '\n')
+	IDL_file_set(NULL,(int)(++data->lineno));
+
     *end = '\0';
     *startp = end + 1;
     end = strrchr(filename, '.');
@@ -353,12 +377,23 @@ NextIsInclude(struct input_callback_stack *stack, char **startp, int *lenp)
         g_hash_table_insert(stack->includes, filename, file_basename);
         new_data = new_input_callback_data(filename, stack->include_path);
         if (!new_data) {
+#ifdef XP_MAC
+	    static char warning_message[1024];
+	    IDL_file_get(&scratch, (int *)&data->lineno);
+	    sprintf(warning_message, "%s:%d: can't open included file %s for reading\n", scratch,
+		    data->lineno, filename);
+	    mac_warning(warning_message);
+#else
+	    IDL_file_get(&scratch, (int *)&data->lineno);
+	    fprintf(stderr, "%s:%d: can't open included file %s for reading\n", scratch,
+		    data->lineno, filename);
+#endif
             return -1;
         }
 
         new_data->next = data;
         IDL_inhibit_push();
-        IDL_file_get(&scratch, &data->lineno);
+        IDL_file_get(&scratch, (int *)&data->lineno);
         data = stack->top = new_data;
         IDL_file_set(data->filename, (int)data->lineno);
     }
@@ -375,7 +410,7 @@ FindSpecial(struct input_callback_data *data, char **startp, int *lenp) {
 
     /* magic sequences are:
      * "%{"               raw block
-     * "/*"               comment
+     * "/\*"               comment
      * "#include \""      include
      * The first and last want a newline [\r\n] before, or the start of the
      * file.
@@ -479,7 +514,8 @@ input_callback(IDL_input_reason reason, union IDL_input_data *cb_data,
             /* shaver: what about freeing the input structure? */
             free(data);
             data = stack->top;
-            IDL_file_set(data->filename, (int)++data->lineno);
+
+            IDL_file_set(data->filename, (int)data->lineno);
             IDL_inhibit_pop();
             data->f_include = INPUT_IN_NONE;
         }
@@ -491,12 +527,12 @@ input_callback(IDL_input_reason reason, union IDL_input_data *cb_data,
          * Now we scan for sequences which require special attention:
          *   \n#include                   begins an include statement
          *   \n%{                         begins a raw-source block
-         *   /*                           begins a comment
+         *   /\*                           begins a comment
          * 
          * We used to be fancier here, so make sure that we sent the most
          * data possible at any given time.  To that end, we skipped over
          * \n%{ raw \n%} blocks and then _continued_ the search for special
-         * sequences like \n#include or /* comments .
+         * sequences like \n#include or /\* comments .
          * 
          * It was really ugly, though -- liberal use of goto!  lots of implicit
          * state!  what fun! -- so now we just do this:
@@ -516,7 +552,7 @@ input_callback(IDL_input_reason reason, union IDL_input_data *cb_data,
          * include processing or when a comment/raw follows another
          * immediately, etc.)
          *
-         * XXX we don't handle the case where the \n#include or /* or \n%{
+         * XXX we don't handle the case where the \n#include or /\* or \n%{
          * sequence straddles a block boundary.  We should really fix that.
          *
          * XXX we don't handle doc-comments correctly (correct would be sending
@@ -525,30 +561,28 @@ input_callback(IDL_input_reason reason, union IDL_input_data *cb_data,
          * upgrade libIDL versions, it'll handle comments for us, which will
          * help a lot.
          *
-         * XXX our line counts are pretty much always wrong (bugzilla #5872)
-         *
-         * XXX const string foo = "/*" will just screw us horribly.
+         * XXX const string foo = "/\*" will just screw us horribly.
          */
 
         /*
-         * Order is important, so that you can have /* comments and
+         * Order is important, so that you can have /\* comments and
          * #includes within raw sections, and so that you can comment out
          * #includes.
          */
 
         /* XXX should check for errors here, too */
-        rv = NextIsRaw(data, &start, &len);
+        rv = NextIsRaw(data, &start, (int *)&len);
         if (rv == -1) return -1;
         if (!rv) {
-            rv = NextIsComment(data, &start, &len);
+            rv = NextIsComment(data, &start, (int *)&len);
             if (rv == -1) return -1;
             if (!rv) {
                 /* includes might need to push a new file */
-                rv = NextIsInclude(stack, &start, &len);
+                rv = NextIsInclude(stack, &start, (int *)&len);
                 if (rv == -1) return -1;
                 if (!rv)
                     /* FindSpecial can't fail? */
-                    FindSpecial(data, &start, &len);
+                    FindSpecial(data, &start, (int *)&len);
             }
         }
 
@@ -703,4 +737,154 @@ xpidl_write_comment(TreeState *state, int indent)
                     IDLF_OUTPUT_NO_QUALIFY_IDENTS |
                     IDLF_OUTPUT_PROPERTIES);
     fputs(" */\n", state->file);
+}
+
+/*
+ * Print an iid to into a supplied buffer; the buffer should be at least
+ * UUID_LENGTH bytes.
+ */
+gboolean
+xpidl_sprint_iid(struct nsID *id, char iidbuf[])
+{
+    int printed;
+
+    printed = sprintf(iidbuf,
+                       "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                       (PRUint32) id->m0, (PRUint32) id->m1,(PRUint32) id->m2,
+                       (PRUint32) id->m3[0], (PRUint32) id->m3[1],
+                       (PRUint32) id->m3[2], (PRUint32) id->m3[3],
+                       (PRUint32) id->m3[4], (PRUint32) id->m3[5],
+                       (PRUint32) id->m3[6], (PRUint32) id->m3[7]);
+
+#ifdef SPRINTF_RETURNS_STRING
+    return (printed && strlen((char *)printed) == 36);
+#else
+    return (printed == 36);
+#endif
+}
+
+/* We only parse the {}-less format.  (xpidl_header never has, so we're safe.) */
+static const char nsIDFmt2[] =
+  "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
+
+/*
+ * Parse a uuid string into an nsID struct.  We cannot link against libxpcom,
+ * so we re-implement nsID::Parse here.
+ */
+gboolean
+xpidl_parse_iid(struct nsID *id, const char *str)
+{
+    PRInt32 count = 0;
+    PRInt32 n1, n2, n3[8];
+    PRInt32 n0, i;
+
+    assert(str != NULL);
+    
+    if (strlen(str) != 36) {
+        return FALSE;
+    }
+     
+#ifdef DEBUG_shaver_iid
+    fprintf(stderr, "parsing iid   %s\n", str);
+#endif
+
+    count = sscanf(str, nsIDFmt2,
+                   &n0, &n1, &n2,
+                   &n3[0],&n3[1],&n3[2],&n3[3],
+                   &n3[4],&n3[5],&n3[6],&n3[7]);
+
+    id->m0 = (PRInt32) n0;
+    id->m1 = (PRInt16) n1;
+    id->m2 = (PRInt16) n2;
+    for (i = 0; i < 8; i++) {
+      id->m3[i] = (PRInt8) n3[i];
+    }
+
+#ifdef DEBUG_shaver_iid
+    if (count == 11) {
+        fprintf(stderr, "IID parsed to ");
+        print_IID(id, stderr);
+        fputs("\n", stderr);
+    }
+#endif
+    return (gboolean)(count == 11);
+}
+
+/*
+ * Common method verification code, called by *op_dcl in the various backends.
+ */
+gboolean
+verify_method_declaration(TreeState *state)
+{
+    struct _IDL_OP_DCL *op = &IDL_OP_DCL(state->tree);
+    IDL_tree iface;
+    gboolean scriptable_interface;
+
+    if (op->f_varargs) {
+        /* We don't currently support varargs. */
+        IDL_tree_error(state->tree, "varargs are not currently supported\n");
+        return FALSE;
+    }
+
+    /* 
+     * Verify that we've been called on an interface, and decide if the
+     * interface was marked [scriptable].
+     */
+    if (IDL_NODE_UP(state->tree) && IDL_NODE_UP(IDL_NODE_UP(state->tree)) &&
+        IDL_NODE_TYPE(iface = IDL_NODE_UP(IDL_NODE_UP(state->tree))) 
+        == IDLN_INTERFACE)
+    {
+        scriptable_interface =
+            (IDL_tree_property_get(IDL_INTERFACE(iface).ident, "scriptable")
+             != NULL);
+    } else {
+        IDL_tree_error(state->tree, "verify_op_dcl called on a non-interface?");
+        return FALSE;
+    }
+
+    /*
+     * Require that any method in an interface marked as [scriptable], that
+     * *isn't* scriptable because it refers to some native type, be marked
+     * [noscript] or [notxpcom].
+     */
+    if (scriptable_interface &&
+        IDL_tree_property_get(op->ident, "notxpcom") == NULL &&
+        IDL_tree_property_get(op->ident, "noscript") == NULL)
+    {
+        IDL_tree iter;
+
+        /* Loop through the parameters and check. */
+        for (iter = op->parameter_dcls; iter; iter = IDL_LIST(iter).next) {
+            IDL_tree param_type =
+                IDL_PARAM_DCL(IDL_LIST(iter).data).param_type_spec;
+            IDL_tree simple_decl =
+                IDL_PARAM_DCL(IDL_LIST(iter).data).simple_declarator;
+
+            /*
+             * Reject this method if a parameter is native and isn't marked
+             * with either nsid or iid_is.
+             */
+            if (UP_IS_NATIVE(param_type) &&
+                IDL_tree_property_get(param_type, "nsid") == NULL &&
+                IDL_tree_property_get(simple_decl, "iid_is") == NULL)
+            {
+                IDL_tree_error(state->tree,
+                               "methods in [scriptable] interfaces which are "
+                               "non-scriptable because they refer to native "
+                               "types (parameter \"%s\") must be marked "
+                               "[noscript]\n", IDL_IDENT(simple_decl).str);
+                return FALSE;
+            }
+        }
+        
+        /* How about the return type? */
+        if (op->op_type_spec != NULL && UP_IS_NATIVE(op->op_type_spec)) {
+            IDL_tree_error(state->tree,
+                           "methods in [scriptable] interfaces which are "
+                           "non-scriptable because they return native "
+                           "types must be marked [noscript]\n");
+            return FALSE;
+        }
+    }
+    return TRUE;
 }

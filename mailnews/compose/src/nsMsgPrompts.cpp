@@ -17,7 +17,6 @@
  */
 #include "nsMsgCopy.h"
 #include "nsIPref.h"
-#include "nsMsgCompPrefs.h"
 #include "nsMsgPrompts.h"
 #include "nsINetSupportDialogService.h"
 #include "nsMsgComposeStringBundle.h"
@@ -31,11 +30,15 @@ nsMsgDisplayMessageByID(PRInt32 msgID)
 
   char *msg = ComposeBEGetStringByID(msgID);
   if (!msg)
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_INVALID_ARG;
 
+#ifdef NECKO
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);
+#else
   NS_WITH_SERVICE(nsINetSupportDialogService, dialog, kNetSupportDialogCID, &rv);
+#endif
   if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_FACTORY_NOT_LOADED;
 
   nsAutoString alertText(msg);
   if (dialog) 
@@ -44,8 +47,7 @@ nsMsgDisplayMessageByID(PRInt32 msgID)
     rv = dialog->Alert(alertText);
 #else
     // will only work for single byte languages for now
-    nsString alertStr(msg, eOneByte);
-    printf("Alert: %s", alertStr.GetBuffer());
+    printf("Alert: %s", msg);
 #endif
   }
 
@@ -59,11 +61,15 @@ nsMsgDisplayMessageByString(char *msg)
   nsresult rv;
 
   if ((!msg) || (!*msg))
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_INVALID_ARG;
 
+#ifdef NECKO
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);
+#else
   NS_WITH_SERVICE(nsINetSupportDialogService, dialog, kNetSupportDialogCID, &rv);
+#endif
   if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_FACTORY_NOT_LOADED;
 
   nsAutoString alertText(msg);
   if (dialog) 
@@ -72,8 +78,7 @@ nsMsgDisplayMessageByString(char *msg)
     rv = dialog->Alert(alertText);
 #else
     // will only work for single byte languages for now
-    nsString alertStr(msg, eOneByte);
-    printf("Alert: %s", alertStr.GetBuffer());
+    printf("Alert: %s", msg);
 #endif    
   }
 
@@ -88,16 +93,16 @@ nsMsgAskBooleanQuestionByID(PRInt32 msgID, PRBool *answer)
 
   char *msg = ComposeBEGetStringByID(msgID);
   if (!msg)
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_INVALID_ARG;
 
-  NS_WITH_SERVICE(nsINetSupportDialogService, dialog, kNetSupportDialogCID, &rv);  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);  
   if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_FACTORY_NOT_LOADED;
   
   nsAutoString confirmText(msg);
   if (dialog) 
   {
-    rv = dialog->Confirm(confirmText, &result);
+    rv = dialog->Confirm(confirmText.GetUnicode(), &result);
     if (result == 1) 
     {
       *answer = PR_TRUE;
@@ -119,16 +124,16 @@ nsMsgAskBooleanQuestionByID(char *msg, PRBool *answer)
   PRInt32 result;
 
   if ((!msg) || (!*msg))
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_INVALID_ARG;
 
-  NS_WITH_SERVICE(nsINetSupportDialogService, dialog, kNetSupportDialogCID, &rv);  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);  
   if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_FACTORY_NOT_REGISTERED;
   
   nsAutoString confirmText(msg);
   if (dialog) 
   {
-    rv = dialog->Confirm(confirmText, &result);
+    rv = dialog->Confirm(confirmText.GetUnicode(), &result);
     if (result == 1) 
     {
       *answer = PR_TRUE;

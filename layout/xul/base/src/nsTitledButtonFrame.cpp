@@ -96,6 +96,10 @@ static NS_DEFINE_IID(kIHTMLDocumentIID, NS_IHTMLDOCUMENT_IID);
 #define ALIGN_TOP    "top"
 #define ALIGN_BOTTOM "bottom"
 
+#define CROP_LEFT   "left"
+#define CROP_RIGHT  "right"
+#define CROP_CENTER "center"
+
 nsresult
 nsTitledButtonFrame::UpdateImageFrame(nsIPresContext* aPresContext,
                                       nsHTMLImageLoader* aLoader,
@@ -151,7 +155,7 @@ nsTitledButtonFrame::AttributeChanged(nsIPresContext* aPresContext,
   mNeedsLayout = PR_TRUE;
   UpdateAttributes(*aPresContext);
 
-#if 0
+#if 1 // added back in because boxes now handle only redraw what is reflowed.
   // reflow
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
@@ -185,20 +189,20 @@ nsTitledButtonFrame::AttributeChanged(nsIPresContext* aPresContext,
 nsTitledButtonFrame::nsTitledButtonFrame()
 {
 	mTitle = "";
-	mAlign = NS_SIDE_BOTTOM;
-	mTruncationType = Right;
+	mAlign = NS_SIDE_TOP;
+	mCropType = CropRight;
 	mNeedsLayout = PR_TRUE;
 	mHasImage = PR_FALSE;
   mHasOnceBeenInMixedState = PR_FALSE;
 }
 
 NS_METHOD
-nsTitledButtonFrame::DeleteFrame(nsIPresContext& aPresContext)
+nsTitledButtonFrame::Destroy(nsIPresContext& aPresContext)
 {
   // Release image loader first so that it's refcnt can go to zero
   mImageLoader.StopAllLoadImages(&aPresContext);
 
-  return nsLeafFrame::DeleteFrame(aPresContext);
+  return nsLeafFrame::Destroy(aPresContext);
 }
 
 
@@ -224,7 +228,7 @@ nsTitledButtonFrame::Init(nsIPresContext&  aPresContext,
   // Always set the image loader's base URL, because someone may
   // decide to change a button _without_ an image to have an image
   // later.
-  nsIURL* baseURL = nsnull;
+  nsIURI* baseURL = nsnull;
   nsIHTMLContent* htmlContent;
   if (NS_SUCCEEDED(mContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) {
     htmlContent->GetBaseURL(baseURL);
@@ -290,15 +294,33 @@ nsTitledButtonFrame::UpdateAttributes(nsIPresContext&  aPresContext)
 	  mAlign = NS_SIDE_LEFT;
   else if (value.EqualsIgnoreCase(ALIGN_RIGHT))
 	  mAlign = NS_SIDE_RIGHT;
-  else if (value.EqualsIgnoreCase(ALIGN_TOP))
-	  mAlign = NS_SIDE_TOP;
-  else 
+  else if (value.EqualsIgnoreCase(ALIGN_BOTTOM))
 	  mAlign = NS_SIDE_BOTTOM;
+  else 
+	  mAlign = NS_SIDE_TOP;
+
+  value="";
+	mContent->GetAttribute(kNameSpaceID_None, nsXULAtoms::crop, value);
+
+  if (value.EqualsIgnoreCase(CROP_LEFT))
+	  mCropType = CropLeft;
+  else if (value.EqualsIgnoreCase(CROP_CENTER))
+	  mCropType = CropCenter;
+  else if (value.EqualsIgnoreCase(CROP_RIGHT))
+	  mCropType = CropRight;
+  else 
+    mCropType = CropNone;
 
   value = "";
 	mContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::value, value);
   mTitle = value;
 
+  UpdateImage(aPresContext);
+}
+
+void
+nsTitledButtonFrame::UpdateImage(nsIPresContext&  aPresContext)
+{
   // see if the source changed
   // get the old image src
   nsString oldSrc ="";
@@ -309,35 +331,43 @@ nsTitledButtonFrame::UpdateAttributes(nsIPresContext&  aPresContext)
   GetImageSource(src);
 
    // see if the images are different
-  if (PR_FALSE == oldSrc.Equals(src)) {
-    if (!src.Equals("")) {
-      if (mImageLoader.IsImageSizeKnown()) {
-        mImageLoader.UpdateURLSpec(&aPresContext, src);
-        PRUint32 loadStatus = mImageLoader.GetLoadStatus();
-        if (loadStatus & NS_IMAGE_LOAD_STATUS_IMAGE_READY) {
-          // Trigger a paint now because image-loader won't if the
-          // image is already loaded and ready to go.
-          Invalidate(nsRect(0, 0, mRect.width, mRect.height), PR_FALSE);
+  if (!oldSrc.Equals(src)) {      
+//   if (loadStatus & NS_IMAGE_LOAD_STATUS_IMAGE_READY) {
+
+        if (!src.Equals("")) {
+          mSizeFrozen = PR_FALSE;
+          mHasImage = PR_TRUE;
+        } else {
+          mSizeFrozen = PR_TRUE;
+          mHasImage = PR_FALSE;
         }
-      }
-      else {
-        // Force a reflow when the image size isn't already known
-        if (nsnull != mContent) {
-          nsIDocument* document = nsnull;
-          mContent->GetDocument(document);
-          if (nsnull != document) {
-            document->ContentChanged(mContent, nsnull);
-            NS_RELEASE(document);
+
+        mImageLoader.UpdateURLSpec(&aPresContext, src);
+        //PRUint32 loadStatus = mImageLoader.GetLoadStatus();
+
+        // if the image is the same size only redraw otherwise reflow
+        PRBool reflow = PR_TRUE;
+
+        if (mImageLoader.IsImageSizeKnown()) {
+          nsIImage* image = mImageLoader.GetImage();
+          if (image && image->GetWidth() == mImageRect.width && image->GetHeight() == mImageRect.height) {
+             reflow = PR_FALSE;
+             Invalidate(nsRect(0, 0, mRect.width, mRect.height), PR_FALSE);
+          }
+        } 
+
+        if (reflow) {
+          // Force a reflow when the image size isn't already known
+          if (nsnull != mContent) {
+            nsIDocument* document = nsnull;
+            mContent->GetDocument(document);
+            if (nsnull != document) {
+              document->ContentChanged(mContent, nsnull);
+              NS_RELEASE(document);
+            }
           }
         }
-      }
-      mSizeFrozen = PR_FALSE;
-      mHasImage = PR_TRUE;
-    }
-    else {
-      mSizeFrozen = PR_TRUE;
-      mHasImage = PR_FALSE;
-    }
+  
   }
 }
 
@@ -388,7 +418,7 @@ nsTitledButtonFrame::LayoutTitleAndImage(nsIPresContext& aPresContext,
 		 return;
 
 	 // given our rect try to place the image and text
-	 // if they don't fit then truncate the text, the image can't be squeezed.
+	 // if they don't fit then crop the text, the image can't be squeezed.
 
 	 nsRect rect; 
 	 mRenderer.GetButtonContentRect(nsRect(0,0,mRect.width,mRect.height), rect);
@@ -401,86 +431,84 @@ nsTitledButtonFrame::LayoutTitleAndImage(nsIPresContext& aPresContext,
 	 nscoord center_x   = rect.x + rect.width/2;
 	 nscoord center_y   = rect.y + rect.height/2;
 
-   mTruncatedTitle = "";
+   mCroppedTitle = "";
 
-	 // if we don't have a title
-	 if (mTitle.Length() == 0)
-	 {
-		// have an image
-		 if (PR_TRUE == mHasImage) {
-			 // just center the image
- 			 mImageRect.x = center_x  - mImageRect.width/2;
-			 mImageRect.y = center_y  - mImageRect.height/2;
-		 } else { // no image
-			 //do nothing
-		 }
-	 } else if (mTitle.Length() > 0) {  // have a title
-		 // but no image
-		 if (PR_FALSE == mHasImage) {
-			 // just center the title
-             CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width);
-      		 // title top
-			 mTitleRect.x = center_x  - mTitleRect.width/2;
-			 mTitleRect.y = center_y  - mTitleRect.height/2;
-		 } else { // image too?
-					 
+   nscoord spacing = 0;
+
+   // if we have a title or an image we need to do spacing
+   if (mTitle.Length() > 0 && mHasImage) 
+   {
+     spacing = mSpacing;
+   }
+
+  
 		// for each type of alignment layout of the image and the text.
 			 switch (mAlign) {
-			  case NS_SIDE_TOP: {
+			  case NS_SIDE_BOTTOM: {
 				  // get title and center it
 				  CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width);
 
-				  // title top
-				  mTitleRect.x = center_x  - mTitleRect.width/2;
-				  mTitleRect.y = top_y;
+          if (mHasImage) {
 
-				  // image bottom center
-				  mImageRect.x = center_x - mImageRect.width/2;
-				  mImageRect.y = rect.y + (rect.height - mTitleRect.height - mSpacing)/2 - mImageRect.height/2 + mTitleRect.height + mSpacing;
+				    // title top
+				    mTitleRect.x = center_x  - mTitleRect.width/2;
+				    mTitleRect.y = top_y;
+
+				    // image bottom center
+				    mImageRect.x = center_x - mImageRect.width/2;
+				    mImageRect.y = rect.y + (rect.height - mTitleRect.height - spacing)/2 - mImageRect.height/2 + mTitleRect.height + spacing;
+          } else {
+				    // title bottom
+				    mTitleRect.x = center_x - mTitleRect.width/2;
+				    mTitleRect.y = bottom_y - mTitleRect.height;	  
+          }
 			  }       
 			  break;
-			  case NS_SIDE_BOTTOM:{
+			  case NS_SIDE_TOP:{
 				  // get title and center it
 				  CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width);
 
-				  // image top center
-				  mImageRect.x = center_x  - mImageRect.width/2;
-				  mImageRect.y = rect.y + (rect.height - mTitleRect.height - mSpacing)/2 - mImageRect.height/2 + mSpacing;
+          if (mHasImage) {
+				    // image top center
+				    mImageRect.x = center_x  - mImageRect.width/2;
+				    mImageRect.y = rect.y + (rect.height - mTitleRect.height - spacing)/2 - mImageRect.height/2 + spacing;
 
-				  // title bottom
-				  mTitleRect.x = center_x - mTitleRect.width/2;
-				  mTitleRect.y = bottom_y - mTitleRect.height;
+				    // title bottom
+				    mTitleRect.x = center_x - mTitleRect.width/2;
+				    mTitleRect.y = bottom_y - mTitleRect.height;
+          } else {
+				    mTitleRect.x = center_x  - mTitleRect.width/2;
+				    mTitleRect.y = top_y;
+          }
 			  }       
 			  break;
 			 case NS_SIDE_LEFT: {
 				  // get title
-				  CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width - (mImageRect.width + mSpacing));
+				  CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width - (mImageRect.width + spacing));
 
- 				  // title left
-				  mTitleRect.x = left_x;
-				  mTitleRect.y = center_y  - mTitleRect.height/2;
+ 				  // image left
+				  mImageRect.x = left_x;
+				  mImageRect.y = center_y  - mImageRect.height/2;
 
-				  // image right center
-				  mImageRect.x = (rect.width - mTitleRect.width - mSpacing)/2 - mImageRect.width/2 + mTitleRect.width + rect.x + mSpacing;
-				  mImageRect.y = center_y - mImageRect.height/2;
+				  // text after image
+				  mTitleRect.x = mImageRect.x + mImageRect.width + spacing;
+				  mTitleRect.y = center_y - mTitleRect.height/2;
 			  }       
 			  break;
 			  case NS_SIDE_RIGHT: {
-				  CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width - (mImageRect.width + mSpacing));
+				  CalculateTitleForWidth(aPresContext, aRenderingContext, rect.width - (mImageRect.width + spacing));
 
-  				  // image left center
-				  mImageRect.x = (rect.width - mTitleRect.width - mSpacing)/2 - mImageRect.width/2 +  rect.x;
-				  mImageRect.y = center_y  - mImageRect.height/2;
+ 				  // image right
+				  mImageRect.x = right_x - mImageRect.width;
+				  mImageRect.y = center_y - mImageRect.height/2;
 
-				  // title right
-				  mTitleRect.x = right_x - mTitleRect.width;
-				  mTitleRect.y = center_y - mTitleRect.height/2;
+  				  // text left of image
+				  mTitleRect.x = mImageRect.x - spacing - mTitleRect.width;
+				  mTitleRect.y = center_y  - mTitleRect.height/2;
+
 			   }
 			  break;
 		   }
-
-		 }
-	 }
 	 
    // ok layout complete
    mNeedsLayout = PR_FALSE;
@@ -506,6 +534,9 @@ nsTitledButtonFrame::GetTextSize(nsIPresContext& aPresContext, nsIRenderingConte
 void 
 nsTitledButtonFrame::CalculateTitleForWidth(nsIPresContext& aPresContext, nsIRenderingContext& aRenderingContext, nscoord aWidth)
 {
+  if (mTitle.Length() == 0)
+     return;
+
   const nsStyleFont* fontStyle = (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
 
   nsFont font(fontStyle->mFont);
@@ -520,7 +551,7 @@ nsTitledButtonFrame::CalculateTitleForWidth(nsIPresContext& aPresContext, nsIRen
   // see if the text will completely fit in the width given
   aRenderingContext.GetWidth(mTitle, mTitleRect.width);
   fontMet->GetHeight(mTitleRect.height);
-  mTruncatedTitle = mTitle;
+  mCroppedTitle = mTitle;
 
   if ( aWidth >= mTitleRect.width)
           return;  // fits done.
@@ -533,18 +564,19 @@ nsTitledButtonFrame::CalculateTitleForWidth(nsIPresContext& aPresContext, nsIRen
    mTitleRect.width = aWidth;
  
    if (aWidth <= elipsisWidth) {
-       mTruncatedTitle = "";
+       mCroppedTitle = "";
        return;
    }
 
-   mTruncatedTitle = ELIPSIS;
+   mCroppedTitle = ELIPSIS;
 
    aWidth -= elipsisWidth;
 
-   // ok truncate things
-    switch (mTruncationType)
+   // ok crop things
+    switch (mCropType)
     {
-       case Right: 
+       case CropNone:
+       case CropRight: 
        {
 		   nscoord cwidth;
 		   nscoord twidth = 0;
@@ -566,12 +598,11 @@ nsTitledButtonFrame::CalculateTitleForWidth(nsIPresContext& aPresContext, nsIRen
 		   // insert what character we can in.
            nsString title = mTitle;
            title.Truncate(i);
-		   mTruncatedTitle = title + mTruncatedTitle;
-           return;
+		   mCroppedTitle = title + mCroppedTitle;
        } 
        break;
        
-       case Left:
+       case CropLeft:
        {
 		   nscoord cwidth;
 		   nscoord twidth = 0;
@@ -588,16 +619,72 @@ nsTitledButtonFrame::CalculateTitleForWidth(nsIPresContext& aPresContext, nsIRen
            }
 
            if (i == 0) 
-               return;
+               break;
         
-           return;       
+           nsString copy = "";
+           mTitle.Right(copy, length-i-1);
+           mCroppedTitle = mCroppedTitle + copy;
        } 
        break;
 
-       case Center:
-          // TBD
-       break;
+       case CropCenter:
+
+       nsString elipsisLeft = ELIPSIS;
+
+       if (aWidth <= elipsisWidth) 
+         elipsisLeft = "";
+       else
+          aWidth -= elipsisWidth;
+    
+
+	     nscoord cwidth;
+		   nscoord twidth = 0;
+       aRenderingContext.GetWidth(mTitle, twidth);
+
+       int length = mTitle.Length();
+		   int i = 0;
+       int i2 = length-1;
+           for (i = 0; i < length;)
+           {
+              PRUnichar ch = mTitle.CharAt(i);
+              aRenderingContext.GetWidth(ch,cwidth);
+              twidth -= cwidth;
+              i++;
+
+              if (twidth <= aWidth) 
+                  break;
+
+              ch = mTitle.CharAt(i2);
+              aRenderingContext.GetWidth(ch,cwidth);
+              i2--;
+			        twidth -= cwidth;
+
+              if (twidth <= aWidth) {
+                  break;
+              }
+
+           }
+
+
+           nsString copy = "";
+
+           if (i2 > i)
+              mTitle.Mid(copy, i,i2-i);
+
+           /*
+           char cht[100];
+           mTitle.ToCString(cht,100);
+
+           char chc[100];
+           copy.ToCString(chc,100);
+
+           printf("i=%d, i2=%d, diff=%d, old='%s', new='%s', aWidth=%d\n", i, i2, i2-i, cht,chc, aWidth);
+           */
+           mCroppedTitle = elipsisLeft + copy + mCroppedTitle;
+           break;
     }
+
+    aRenderingContext.GetWidth(mCroppedTitle, mTitleRect.width);
 }
 
 NS_IMETHODIMP
@@ -608,6 +695,9 @@ nsTitledButtonFrame::PaintTitle(nsIPresContext& aPresContext,
 {
    if (eFramePaintLayer_Content == aWhichLayer) {
  
+     if (mTitle.Length() == 0)
+         return NS_OK;
+
    	 // place 4 pixels of spacing
 		 float p2t;
 		 aPresContext.GetScaledPixelsToTwips(&p2t);
@@ -629,11 +719,11 @@ nsTitledButtonFrame::PaintTitle(nsIPresContext& aPresContext,
 	   if (PR_TRUE == mRenderer.isDisabled())
 	   {
 		   aRenderingContext.SetColor(NS_RGB(255,255,255));
-		   aRenderingContext.DrawString(mTruncatedTitle, disabledRect.x, disabledRect.y);
+		   aRenderingContext.DrawString(mCroppedTitle, disabledRect.x, disabledRect.y);
 	   }
 
 	   aRenderingContext.SetColor(colorStyle->mColor);
-	   aRenderingContext.DrawString(mTruncatedTitle, mTitleRect.x, mTitleRect.y);
+	   aRenderingContext.DrawString(mCroppedTitle, mTitleRect.x, mTitleRect.y);
 
    }
 
@@ -655,7 +745,7 @@ nsTitledButtonFrame::PaintImage(nsIPresContext& aPresContext,
   }
 
   // don't draw if the image is not dirty
-  if (PR_FALSE == aDirtyRect.Intersects(mImageRect))
+  if (!mHasImage || !aDirtyRect.Intersects(mImageRect))
       return NS_OK;
 
 
@@ -688,6 +778,18 @@ nsTitledButtonFrame::Reflow(nsIPresContext&   aPresContext,
                      const nsHTMLReflowState& aReflowState,
                      nsReflowStatus&          aStatus)
 {
+  // redraw us on a reflow
+  
+  if (eReflowReason_Incremental == aReflowState.reason) {
+    nsIFrame* targetFrame;
+    
+    // See if it's targeted at us
+    aReflowState.reflowCommand->GetTarget(targetFrame);
+    if (this == targetFrame) {
+      Invalidate(nsRect(0,0,mRect.width,mRect.height), PR_FALSE);
+    }
+  }
+
   mNeedsLayout = PR_TRUE;
   nsresult result = nsLeafFrame::Reflow(aPresContext, aMetrics, aReflowState, aStatus);
   return result;
@@ -709,15 +811,15 @@ nsTitledButtonFrame::GetDesiredSize(nsIPresContext* aPresContext,
   aDesiredSize.height = info.prefSize.height;
 
   // if either the width or the height was not computed use our intrinsic size
-  if (aReflowState.computedWidth != NS_INTRINSICSIZE)
-    if (aReflowState.computedWidth > info.minSize.width)
-       aDesiredSize.width = aReflowState.computedWidth;
+  if (aReflowState.mComputedWidth != NS_INTRINSICSIZE)
+    if (aReflowState.mComputedWidth > info.minSize.width)
+       aDesiredSize.width = aReflowState.mComputedWidth;
     else 
        aDesiredSize.width = info.minSize.width;
 
-  if (aReflowState.computedHeight != NS_INTRINSICSIZE)
-    if (aReflowState.computedHeight > info.minSize.height)
-       aDesiredSize.height = aReflowState.computedHeight;
+  if (aReflowState.mComputedHeight != NS_INTRINSICSIZE)
+    if (aReflowState.mComputedHeight > info.minSize.height)
+       aDesiredSize.height = aReflowState.mComputedHeight;
     else 
        aDesiredSize.height = info.minSize.height;
 }
@@ -1089,6 +1191,9 @@ nsTitledButtonFrame :: ReResolveStyleContext ( nsIPresContext* aPresContext, nsI
     }
   }
   mRenderer.ReResolveStyles(*aPresContext, aParentChange, aChangeList, aLocalChange);
+
+  // if list-style-image change we want to change the image
+  UpdateImage(*aPresContext);
   
   return rv;
   
@@ -1154,32 +1259,49 @@ nsTitledButtonFrame::GetBoxInfo(nsIPresContext& aPresContext, const nsHTMLReflow
    switch (mAlign) {
       case NS_SIDE_TOP:
       case NS_SIDE_BOTTOM:
+
+        // if we have an image add the image to our min size
+        if (mHasImage)
+           aSize.minSize.width = aSize.prefSize.width;
+
+        // if we are not cropped then our min size also includes the text.
+        if (mCropType == CropNone) 
+           aSize.minSize.width = PR_MAX(size.width, aSize.minSize.width);
+
 		  if (size.width > aSize.prefSize.width)
 			  aSize.prefSize.width = size.width;
 
-  		  if (mTitle.Length() > 0) 
+  		  if (mTitle.Length() > 0) {
              aSize.prefSize.height += size.height;
-			 
-  		  if (mTitle.Length() > 0 && mHasImage) 
-              aSize.prefSize.height += mSpacing;
+  		       if (mHasImage) 
+                aSize.prefSize.height += mSpacing;
+        }
 
         aSize.minSize.height = aSize.prefSize.height;
-          
+
         break;
      case NS_SIDE_LEFT:
      case NS_SIDE_RIGHT:
 		  if (size.height > aSize.prefSize.height)
 			  aSize.prefSize.height = size.height;
 
-   		  if (mTitle.Length() > 0) 
-             aSize.prefSize.width += size.width;
-
-		  if (mTitle.Length() > 0 && mHasImage)
-             aSize.prefSize.width += mSpacing;
-
+      if (mHasImage)
          aSize.minSize.width = aSize.prefSize.width;
+      
+      // if we are not cropped then our min size also includes the text.
+      if (mCropType == CropNone) 
+         aSize.minSize.width += size.width;
 
-         break;
+      if (mTitle.Length() > 0) {
+         aSize.prefSize.width += size.width;
+      
+         if (mHasImage) {
+            aSize.prefSize.width += mSpacing;
+            aSize.minSize.width += mSpacing;
+         }
+      }
+
+      break;
    }
 
    nsMargin focusBorder = mRenderer.GetAddedButtonBorderAndPadding();
@@ -1237,3 +1359,9 @@ nsTitledButtonFrame::Release(void)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsTitledButtonFrame::GetFrameName(nsString& aResult) const
+{
+  aResult = "TitledButton";
+  return NS_OK;
+}

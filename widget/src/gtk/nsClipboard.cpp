@@ -20,12 +20,21 @@
 
 #include "nsCOMPtr.h"
 
+#include "nsISupportsArray.h"
 #include "nsIClipboardOwner.h"
 #include "nsITransferable.h"   // kTextMime
 
 #include "nsIWidget.h"
+#include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsWidgetsCID.h"
+
+#include "nsVoidArray.h"
+
+// XXX: This must go away when nsAutoCString moves out of nsFileSpec.h
+#include "nsFileSpec.h" // for nsAutoCString()
+
+
 
 // The class statics:
 GtkWidget* nsClipboard::sWidget = 0;
@@ -33,12 +42,29 @@ GtkWidget* nsClipboard::sWidget = 0;
 NS_IMPL_ADDREF_INHERITED(nsClipboard, nsBaseClipboard)
 NS_IMPL_RELEASE_INHERITED(nsClipboard, nsBaseClipboard)
 
-static NS_DEFINE_CID(kCClipboardCID,       NS_CLIPBOARD_CID);
 
-#if defined(DEBUG_akkana) || defined(DEBUG_mcafee)
+#if defined(DEBUG_akkana) || defined(DEBUG_mcafee) || defined(DEBUG_pavlov)
 #define DEBUG_CLIPBOARD
 #endif
  
+enum {
+  TARGET_NONE,
+  TARGET_TEXT_PLAIN,
+  TARGET_TEXT_XIF,
+  TARGET_TEXT_UNICODE,
+  TARGET_TEXT_HTML,
+  TARGET_AOLMAIL,
+  TARGET_IMAGE_PNG,
+  TARGET_IMAGE_JPEG,
+  TARGET_IMAGE_GIF,
+  // compatibility types
+  TARGET_NS4_HTML_NETSCAPE,
+  TARGET_NS4_HTML,
+  TARGET_UNKNOWN,
+  TARGET_LAST
+};
+
+static GdkAtom sSelTypes[TARGET_LAST];
 
 //-------------------------------------------------------------------------
 //
@@ -48,7 +74,7 @@ static NS_DEFINE_CID(kCClipboardCID,       NS_CLIPBOARD_CID);
 nsClipboard::nsClipboard() : nsBaseClipboard()
 {
 #ifdef DEBUG_CLIPBOARD
-  printf("  nsClipboard::nsClipboard()\n");
+  g_print("nsClipboard::nsClipboard()\n");
 #endif /* DEBUG_CLIPBOARD */
 
   //NS_INIT_REFCNT();
@@ -57,6 +83,9 @@ nsClipboard::nsClipboard() : nsBaseClipboard()
   mTransferable   = nsnull;
   mSelectionData.data = nsnull;
   mSelectionData.length = 0;
+
+  // initialize the widget, etc we're binding to
+  Init();
 }
 
 //-------------------------------------------------------------------------
@@ -67,17 +96,30 @@ nsClipboard::nsClipboard() : nsBaseClipboard()
 nsClipboard::~nsClipboard()
 {
 #ifdef DEBUG_CLIPBOARD
-  printf("  nsClipboard::~nsClipboard()\n");  
+  printf("nsClipboard::~nsClipboard()\n");  
 #endif /* DEBUG_CLIPBOARD */
 
   // Remove all our event handlers:
   if (sWidget &&
-      gdk_selection_owner_get (GDK_SELECTION_PRIMARY) == sWidget->window)
+      (gdk_selection_owner_get(GDK_SELECTION_PRIMARY) == sWidget->window))
     gtk_selection_remove_all(sWidget);
 
   // free the selection data, if any
   if (mSelectionData.data != nsnull)
     g_free(mSelectionData.data);
+
+  nsClipboard *cb = (nsClipboard*)gtk_object_get_data(GTK_OBJECT(sWidget), "cb");
+  if (cb != nsnull)
+  {
+    NS_RELEASE(cb);
+    gtk_object_remove_data(GTK_OBJECT(sWidget), "cb");
+  }
+
+  if (sWidget)
+  {
+    gtk_widget_destroy(sWidget);
+    sWidget = nsnull;
+  }
 }
 
 /**
@@ -127,87 +169,66 @@ nsresult nsClipboard::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 //};
 //
 
-void nsClipboard::SetTopLevelWidget(GtkWidget* w)
+//-------------------------------------------------------------------------
+void nsClipboard::Init(void)
 {
-  // Don't set up any more event handlers if we're being called twice
-  // for the same toplevel widget
-  if (sWidget == w)
-    return;
-
-  if (sWidget != 0 && sWidget->window != 0)
-    return;
-
-  if (w == 0 || w->window == 0)
-  {
 #ifdef DEBUG_CLIPBOARD
-    printf("  nsClipboard::SetTopLevelWidget: widget passed in is null or has no window!\n");
-#endif /* DEBUG_CLIPBOARD */
-    return;
-  }
+  g_print("nsClipboard::Init\n");
+#endif
 
-#ifdef DEBUG_CLIPBOARD
-  printf("  nsClipboard::SetTopLevelWidget\n");
-#endif /* DEBUG_CLIPBOARD */
-  
-  // If we're changing from one widget to another
-  // (shouldn't generally happen), clear the old event handlers:
-  if (sWidget &&
-      gdk_selection_owner_get (GDK_SELECTION_PRIMARY) == sWidget->window)
-    gtk_selection_remove_all(sWidget);
+  sSelTypes[TARGET_NONE]          = GDK_NONE;
+  sSelTypes[TARGET_TEXT_PLAIN]    = gdk_atom_intern(kTextMime, FALSE);
+  sSelTypes[TARGET_TEXT_XIF]      = gdk_atom_intern(kXIFMime, FALSE);
+  sSelTypes[TARGET_TEXT_UNICODE]  = gdk_atom_intern(kUnicodeMime, FALSE);
+  sSelTypes[TARGET_TEXT_HTML]     = gdk_atom_intern(kHTMLMime, FALSE);
+  sSelTypes[TARGET_AOLMAIL]       = gdk_atom_intern(kAOLMailMime, FALSE);
+  sSelTypes[TARGET_IMAGE_PNG]     = gdk_atom_intern(kPNGImageMime, FALSE);
+  sSelTypes[TARGET_IMAGE_JPEG]    = gdk_atom_intern(kJPEGImageMime, FALSE);
+  sSelTypes[TARGET_IMAGE_GIF]     = gdk_atom_intern(kGIFImageMime, FALSE);
+  // compatibility with other apps
+  sSelTypes[TARGET_NS4_HTML_NETSCAPE] = gdk_atom_intern("NETSCAPE_HTML", FALSE);
+  sSelTypes[TARGET_NS4_HTML]          = gdk_atom_intern("HTML", FALSE);
 
-  sWidget = w;
 
-  // Get the clipboard from the service manager.
-  nsresult rv;
-  NS_WITH_SERVICE(nsIClipboard, clipboard, kCClipboardCID, &rv);
+  // create invisible widget to use for the clipboard
+  sWidget = gtk_invisible_new();
 
-  if (!NS_SUCCEEDED(rv)) {
-    printf("Couldn't get clipboard service!\n");
-    return;
-  }
+  // add the clipboard pointer to the widget so we can get it.
+  gtk_object_set_data(GTK_OBJECT(sWidget), "cb", this);
+
+  NS_ADDREF_THIS();
 
   // Handle selection requests if we called gtk_selection_add_target:
   gtk_signal_connect(GTK_OBJECT(sWidget), "selection_get",
                      GTK_SIGNAL_FUNC(nsClipboard::SelectionGetCB),
-                     clipboard);
+                     nsnull);
 
   // When someone else takes the selection away:
   gtk_signal_connect(GTK_OBJECT(sWidget), "selection_clear_event",
                      GTK_SIGNAL_FUNC(nsClipboard::SelectionClearCB),
-                     clipboard);
+                     nsnull);
 
   // Set up the paste handler:
   gtk_signal_connect(GTK_OBJECT(sWidget), "selection_received",
                      GTK_SIGNAL_FUNC(nsClipboard::SelectionReceivedCB),
-                     clipboard);
+                     nsnull);
+
 
 #if 0
   // Handle selection requests if we called gtk_selection_add_targets:
   gtk_signal_connect(GTK_OBJECT(sWidget), "selection_request_event",
                      GTK_SIGNAL_FUNC(nsClipboard::SelectionRequestCB),
-                     clipboard);
+                     nsnull);
   
   // Watch this, experimenting with Gtk :-)
   gtk_signal_connect(GTK_OBJECT(sWidget), "selection_notify_event",
                      GTK_SIGNAL_FUNC(nsClipboard::SelectionNotifyCB),
-                     clipboard);
+                     nsnull);
 #endif
-
-  // Hmm, sometimes we need this, sometimes not.  I'm not clear why.
-  // See also long comment above on why we don't register a whole target list.
-
-  // Register all the target types we handle:
-  gtk_selection_add_target(sWidget, 
-                           GDK_SELECTION_PRIMARY,
-                           GDK_SELECTION_TYPE_STRING,
-                           GDK_SELECTION_TYPE_STRING);
 }
 
 
-/**
-  * 
-  *
-  */
+//-------------------------------------------------------------------------
 NS_IMETHODIMP nsClipboard::SetNativeClipboardData()
 {
   mIgnoreEmptyNotification = PR_TRUE;
@@ -218,45 +239,313 @@ NS_IMETHODIMP nsClipboard::SetNativeClipboardData()
 
   // make sure we have a good transferable
   if (nsnull == mTransferable) {
-    printf("  SetNativeClipboardData: no transferable!\n");
+    printf("nsClipboard::SetNativeClipboardData(): no transferable!\n");
     return NS_ERROR_FAILURE;
   }
 
-  // If we're already the selection owner, don't need to do anything,
-  // we'll already get the events:
-  if (gdk_selection_owner_get (GDK_SELECTION_PRIMARY) == sWidget->window)
-    return NS_OK;
-
-  // Clear the native clipboard
-  if (sWidget &&
-      gdk_selection_owner_get (GDK_SELECTION_PRIMARY) == sWidget->window)
+  // are we already the owner?
+  if (gdk_selection_owner_get(GDK_SELECTION_PRIMARY) == sWidget->window)
+  {
+    // if so, clear all the targets
     gtk_selection_remove_all(sWidget);
+  }
+#if 0
+  else
+  {
+#endif
+    // we arn't already the owner, so we will become it
+    gint have_selection = gtk_selection_owner_set(sWidget,
+                                                  GDK_SELECTION_PRIMARY,
+                                                  GDK_CURRENT_TIME);
+    if (have_selection == 0)
+      return NS_ERROR_FAILURE;
+#if 0
+  }
+#endif
 
+  nsString *df;
+  int i = 0;
+  nsVoidArray *dfList;
+  // find out what types this data can be
+  mTransferable->FlavorsTransferableCanExport(&dfList);
 
-  // register as the selection owner:
-  gint have_selection =
-    gtk_selection_owner_set(sWidget,
-                            GDK_SELECTION_PRIMARY,
-                            GDK_CURRENT_TIME);
-  if (have_selection == 0)
-    return NS_ERROR_FAILURE;
+  int cnt = dfList->Count();
+
+  for (i=0;i<cnt;i++)
+  {
+    df = (nsString *)dfList->ElementAt(i);
+    if (nsnull != df) {
+      gint format = GetFormat(*df);
+
+      // add these types as selection targets
+      RegisterFormat(format);
+
+    }
+  }
 
   mIgnoreEmptyNotification = PR_FALSE;
 
   return NS_OK;
 }
 
+gint nsClipboard::GetFormat(const nsString &aMimeStr)
+{
+  gint type = TARGET_NONE;
 
+#ifdef DEBUG_CLIPBOARD
+  char *foo = aMimeStr.ToNewCString();
+  g_print("  nsClipboard::GetFormat(%s)\n", foo);
+  delete [] foo;
+#endif
+  if (aMimeStr.Equals(kTextMime)) {
+    type = TARGET_TEXT_PLAIN;
+  } else if (aMimeStr.Equals("STRING")) {
+    type = TARGET_TEXT_PLAIN;
+  } else if (aMimeStr.Equals(kXIFMime)) {
+    type = TARGET_TEXT_XIF;
+  } else if (aMimeStr.Equals(kUnicodeMime)) {
+    type = TARGET_TEXT_UNICODE;
+  } else if (aMimeStr.Equals(kHTMLMime)) {
+    type = TARGET_TEXT_HTML;
+  } else if (aMimeStr.Equals("HTML")) {
+    type = TARGET_TEXT_HTML;
+  } else if (aMimeStr.Equals("NETSCAPE_HTML")) {
+    type = TARGET_TEXT_HTML;
+  } else if (aMimeStr.Equals(kAOLMailMime)) {
+    type = TARGET_AOLMAIL;
+  } else if (aMimeStr.Equals(kPNGImageMime)) {
+    type = TARGET_IMAGE_PNG;
+  } else if (aMimeStr.Equals(kJPEGImageMime)) {
+    type = TARGET_IMAGE_JPEG;
+  } else if (aMimeStr.Equals(kGIFImageMime)) {
+    type = TARGET_IMAGE_GIF;
+  }
+
+#ifdef WE_DO_DND
+  else if (aMimeStr.Equals(kDropFilesMime)) {
+    format = CF_HDROP;
+  } else {
+    char * str = aMimeStr.ToNewCString();
+    format = ::RegisterClipboardFormat(str);
+    delete[] str;
+  }
+#endif
+  return type;
+}
+
+void nsClipboard::RegisterFormat(gint format)
+{
+#ifdef DEBUG_CLIPBOARD
+  g_print("  nsClipboard::RegisterFormat(%s)\n", gdk_atom_name(sSelTypes[format]));
+#endif
+
+  /* when doing the selection_add_target, each case should have the same last parameter
+     which matches the case match */
+  switch(format)
+  {
+  case TARGET_TEXT_PLAIN:
+    // text/plain (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    // STRING (what X uses)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             GDK_SELECTION_TYPE_STRING,
+                             format);
+    break;
+
+  case TARGET_TEXT_XIF:
+    // text/xif (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    break;
+
+  case TARGET_TEXT_UNICODE:
+    // text/unicode (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    break;
+
+  case TARGET_TEXT_HTML:
+    // text/html (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    // NETSCAPE_HTML (used in NS4.x)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[TARGET_NS4_HTML_NETSCAPE],
+                             format);
+    // HTML (used in NS4.x)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[TARGET_NS4_HTML],
+                             format);
+
+    break;
+
+  case TARGET_AOLMAIL:
+    // text/aolmail (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    break;
+  case TARGET_IMAGE_PNG:
+    // image/png (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    break;
+  case TARGET_IMAGE_JPEG:
+    // image/jpeg (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    break;
+  case TARGET_IMAGE_GIF:
+    // image/gif (default)
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+    break;
+  default:
+    // if we don't match something above, then just add it like its something we know about...
+    gtk_selection_add_target(sWidget, 
+                             GDK_SELECTION_PRIMARY,
+                             sSelTypes[format],
+                             format);
+  }
+}
+
+PRBool nsClipboard::DoRealConvert(GdkAtom type)
+{
+#ifdef DEBUG_CLIPBOARD
+  g_print("    nsClipboard::DoRealConvert(%i)\n    {\n", type);
+#endif
+  int e = 0;
+  // Set a flag saying that we're blocking waiting for the callback:
+  mBlocking = PR_TRUE;
+
+  //
+  // ask X what kind of data we can get
+  //
+#ifdef DEBUG_CLIPBOARD
+  g_print("     Doing real conversion of atom type '%s'\n", gdk_atom_name(type));
+#endif
+  gtk_selection_convert(sWidget,
+                        GDK_SELECTION_PRIMARY,
+                        type,
+                        GDK_CURRENT_TIME);
+
+  // Now we need to wait until the callback comes in ...
+  // i is in case we get a runaway (yuck).
+#ifdef DEBUG_CLIPBOARD
+  printf("      Waiting for the callback... mBlocking = %d\n", mBlocking);
+#endif /* DEBUG_CLIPBOARD */
+  for (e=0; mBlocking == PR_TRUE && e < 1000; ++e)
+  {
+    gtk_main_iteration_do(PR_TRUE);
+  }
+
+#ifdef DEBUG_CLIPBOARD
+  g_print("    }\n");
+#endif
+
+  if (mSelectionData.length > 0)
+    return PR_TRUE;
+
+  return PR_FALSE;
+}
+
+/* return PR_TRUE if we have converted or PR_FALSE if we havn't and need to keep being called */
+PRBool nsClipboard::DoConvert(gint format)
+{
+#ifdef DEBUG_CLIPBOARD
+  g_print("  nsClipboard::DoConvert(%s)\n", gdk_atom_name(sSelTypes[format]));
+#endif
+
+  /* when doing the selection_add_target, each case should have the same last parameter
+     which matches the case match */
+  PRBool r = PR_FALSE;
+
+  switch(format)
+  {
+  case TARGET_TEXT_PLAIN:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    r = DoRealConvert(GDK_SELECTION_TYPE_STRING);
+    if (r) return r;
+    break;
+
+  case TARGET_TEXT_XIF:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    break;
+
+  case TARGET_TEXT_UNICODE:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    break;
+
+  case TARGET_TEXT_HTML:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    r = DoRealConvert(sSelTypes[TARGET_NS4_HTML_NETSCAPE]);
+    if (r) return r;
+    r = DoRealConvert(sSelTypes[TARGET_NS4_HTML]);
+    if (r) return r;
+    break;
+
+  case TARGET_AOLMAIL:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    break;
+
+  case TARGET_IMAGE_PNG:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    break;
+
+  case TARGET_IMAGE_JPEG:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    break;
+
+  case TARGET_IMAGE_GIF:
+    r = DoRealConvert(sSelTypes[format]);
+    if (r) return r;
+    break;
+
+  default:
+    g_print("DoConvert called with bogus format\n");
+  }
+  return r;
+}
+
+//-------------------------------------------------------------------------
 //
 // The blocking Paste routine
 //
+//-------------------------------------------------------------------------
 NS_IMETHODIMP
 nsClipboard::GetNativeClipboardData(nsITransferable * aTransferable)
 {
-  nsresult rv = NS_OK;
+  nsString *df;
+  int i = 0;
 
 #ifdef DEBUG_CLIPBOARD
-  printf("  nsClipboard::GetNativeClipboardData()\n");
+  printf("nsClipboard::GetNativeClipboardData()\n");
 #endif /* DEBUG_CLIPBOARD */
 
   // make sure we have a good transferable
@@ -265,100 +554,26 @@ nsClipboard::GetNativeClipboardData(nsITransferable * aTransferable)
     return NS_ERROR_FAILURE;
   }
 
-  // Dunno why we need to do this, copying the win32 code ...
-  nsCOMPtr<nsITransferable> trans = do_QueryInterface(aTransferable);
-  if (!trans)
-    return rv;
-
-  //
-  // We can't call the copy callback when we're blocking on the paste callback;
-  // so if this app is already the selection owner, we need to copy our own
-  // data without going through the X server.
-  //
-  if (gdk_selection_owner_get (GDK_SELECTION_PRIMARY) == sWidget->window)
-  {
-    // XXX only support text/plain for now
-    nsAutoString  dataFlavor(kTextMime);
-
-    // Get data out of our existing transferable.
-    void     *clipboardData;
-    PRUint32 dataLength;
-    rv = mTransferable->GetTransferData(&dataFlavor, 
-                                        &clipboardData,
-                                        &dataLength);
-    if (NS_SUCCEEDED(rv))
-      rv = trans->SetTransferData(&dataFlavor,
-                                  clipboardData, dataLength);
-    return rv;
-  }
-
-#define ONLY_SUPPORT_PLAIN_TEXT 1
-#ifdef ONLY_SUPPORT_PLAIN_TEXT
-  gtk_selection_convert(sWidget, GDK_SELECTION_PRIMARY,
-                        GDK_SELECTION_TYPE_STRING, GDK_CURRENT_TIME);
-  // Tried to use straight Xlib call but this would need more work:
-  //XConvertSelection(GDK_WINDOW_XDISPLAY(sWidget->window),
-  //                  XA_PRIMARY, XA_STRING, gdk_selection_property, 
-  //                  GDK_WINDOW_XWINDOW(sWidget->window), GDK_CURRENT_TIME);
-
-#else /* ONLY_SUPPORT_PLAIN_TEXT */
-    //
-    // XXX This code isn't implemented for Unix yet!
-    // Instead of SetTransferData it will have to call gtk_selection_convert.
-    //
-
   // Get the transferable list of data flavors
-  nsVoidArray * dfList;
+  nsVoidArray *dfList;
   aTransferable->GetTransferDataFlavors(&dfList);
 
   // Walk through flavors and see which flavor matches the one being pasted:
-  PRUint32 i;
-  PRUint32 cnt = 0;
-  nsresult rv = dfList->Count(&cnt);
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Count failed");
+  int cnt = dfList->Count();
+
   for (i=0;i<cnt;i++) {
-    nsString * df = (nsString *)dfList->ElementAt(i);
+    df = (nsString *)dfList->ElementAt(i);
     if (nsnull != df) {
-      UINT format = GetFormat(*df);
+      gint format = GetFormat(*df);
 
-      void   * data;
-      PRUint32 dataLen;
-
-      if (nsnull != aDataObject) {
-        res = GetNativeDataOffClipboard(aDataObject, format, &data, &dataLen);
-        if (NS_OK == res) {
-          trans->SetTransferData(df, data, dataLen);
-        }
-      } else if (nsnull != aWindow) {
-        res = GetNativeDataOffClipboard(aWindow, format, &data, &dataLen);
-        if (NS_OK == res) {
-          trans->SetTransferData(df, data, dataLen);
-        }
-      } 
+      if (DoConvert(format))
+        break;
     }
   }
-#endif /* ONLY_SUPPORT_PLAIN_TEXT */
 
-  //
-  // We've told X what type to send, and we just have to wait
-  // for the callback saying that the data have been transferred.
-  //
-
-  // Set a flag saying that we're blocking waiting for the callback:
-  mBlocking = PR_TRUE;
-#ifdef DEBUG_CLIPBOARD
-  printf("Waiting for the callback\n");
-#endif /* DEBUG_CLIPBOARD */
-
-  // Now we need to wait until the callback comes in ...
-  // i is in case we get a runaway (yuck).
-  for (int i=0; mBlocking == PR_TRUE && i < 10000; ++i)
-  {
-    gtk_main_iteration_do(PR_TRUE);
-  }
 
 #ifdef DEBUG_CLIPBOARD
-  printf("Got the callback: '%s', %d\n",
+  printf("  Got the callback: '%s', %d\n",
          mSelectionData.data, mSelectionData.length);
 #endif /* DEBUG_CLIPBOARD */
 
@@ -369,86 +584,133 @@ nsClipboard::GetNativeClipboardData(nsITransferable * aTransferable)
   // Now we have data in mSelectionData.data.
   // We just have to copy it to the transferable.
   // 
-  nsAutoString  dataFlavor(kTextMime);
-  trans->SetTransferData(&dataFlavor, mSelectionData.data, mSelectionData.length);
 
-  // Can't free the selection data -- the transferable just saves a pointer.
-  // But the transferable is responsible for freeing it, so we have to
-  // consider it freed now:
-  //g_free(mSelectionData.data);
+  
+  nsString *name = new nsString((const char*)gdk_atom_name(mSelectionData.type));
+  
+  int format = GetFormat(*name);
+
+  df->SetString((const char*)gdk_atom_name(sSelTypes[format]));
+  aTransferable->SetTransferData(df,
+                                 mSelectionData.data,
+                                 mSelectionData.length);
+
+  delete name;
+
+  // transferable is now copying the data, so we can free it.
+  //  g_free(mSelectionData.data);
   mSelectionData.data = nsnull;
   mSelectionData.length = 0;
 
   return NS_OK;
 }
 
-//
-// Called when the data from a paste comes in:
-// 
+/**
+ * Called when the data from a paste comes in (recieved from gdk_selection_convert)
+ *
+ * @param  aWidget the widget
+ * @param  aSelectionData gtk selection stuff
+ * @param  aTime time the selection was requested
+ */
 void
-nsClipboard::SelectionReceivedCB (GtkWidget *aWidget,
+nsClipboard::SelectionReceivedCB (GtkWidget        *aWidget,
                                   GtkSelectionData *aSelectionData,
-                                  gpointer aData)
+                                  guint             aTime)
 {
 #ifdef DEBUG_CLIPBOARD
-  printf("  nsClipboard::SelectionReceivedCB\n");
+  printf("      nsClipboard::SelectionReceivedCB\n      {\n");
 #endif /* DEBUG_CLIPBOARD */
-
-  // ARGHH!  GTK doesn't pass the arg to the callback, so we can't
-  // get "this" back!  Until we solve this, get it from the service mgr:
-  nsresult rv;
-  NS_WITH_SERVICE(nsIClipboard, iclipboard, kCClipboardCID, &rv);
-
-  if (NS_FAILED(rv)) {
-    printf("Couldn't get clipboard service!\n");
+  nsClipboard *cb =(nsClipboard *)gtk_object_get_data(GTK_OBJECT(aWidget),
+                                                      "cb");
+  if (!cb)
+  {
+    g_print("no clipboard found.. this is bad.\n");
     return;
   }
-  nsClipboard* clipboard = (nsClipboard*)iclipboard;
-  if (!clipboard) {
-    printf("couldn't convert nsIClipboard to nsClipboard\n");
-    return;
-  }
-
-  clipboard->SelectionReceiver(aWidget, aSelectionData);
+  cb->SelectionReceiver(aWidget, aSelectionData);
+#ifdef DEBUG_CLIPBOARD
+  g_print("      }\n");
+#endif
 }
 
-void
-nsClipboard::SelectionReceiver (GtkWidget *aWidget,
-                                GtkSelectionData *aSelectionData)
-{
-  mBlocking = PR_FALSE;
-
-  if (aSelectionData->length < 0)
-  {
-    printf("Error retrieving selection: length was %d\n",
-           aSelectionData->length);
-    return;
-  }
-
-  switch (aSelectionData->type)
-  {
-    case GDK_SELECTION_TYPE_STRING:
-      mSelectionData = *aSelectionData;
-      mSelectionData.data = g_new(guchar, aSelectionData->length + 1);
-      memcpy(mSelectionData.data,
-             aSelectionData->data, aSelectionData->length);
-      // Null terminate in case anyone cares,
-      // and so we can print the string for debugging:
-      mSelectionData.data[aSelectionData->length] = '\0';
-      mSelectionData.length = aSelectionData->length;
-      return;
-
-    default:
-      printf("Can't convert type %s (%ld) to string\n",
-             gdk_atom_name (aSelectionData->type), aSelectionData->type);
-      return;
-  }
-}
 
 /**
-  * No-op.
-  *
-  */
+ * local method (called from nsClipboard::SelectionReceivedCB)
+ *
+ * @param  aWidget the widget
+ * @param  aSelectionData gtk selection stuff
+ */
+void
+nsClipboard::SelectionReceiver (GtkWidget *aWidget,
+                                GtkSelectionData *aSD)
+{
+  gint type;
+
+  mBlocking = PR_FALSE;
+
+  if (aSD->length < 0)
+  {
+    printf("        Error retrieving selection: length was %d\n",
+           aSD->length);
+    return;
+  }
+
+  type = TARGET_NONE;
+  for (int i=0; i < TARGET_LAST; i++)
+  {
+    if (sSelTypes[i] == aSD->type)
+    {
+      type = i;
+      break;
+    }
+  }
+
+  switch (type)
+  {
+  case GDK_TARGET_STRING:
+  case TARGET_TEXT_PLAIN:
+  case TARGET_TEXT_XIF:
+  case TARGET_TEXT_UNICODE:
+  case TARGET_TEXT_HTML:
+#ifdef DEBUG_CLIPBOARD
+    g_print("        Copying mSelectionData pointer -- ");
+#endif
+    mSelectionData = *aSD;
+    mSelectionData.data = g_new(guchar, aSD->length + 1);
+#ifdef DEBUG_CLIPBOARD
+    g_print("        Data = %s\n    Length = %i\n", aSD->data, aSD->length);
+#endif
+    memcpy(mSelectionData.data,
+           aSD->data,
+           aSD->length);
+    // Null terminate in case anyone cares,
+    // and so we can print the string for debugging:
+    mSelectionData.data[aSD->length] = '\0';
+    mSelectionData.length = aSD->length;
+    return;
+
+  default:
+    mSelectionData = *aSD;
+    mSelectionData.data = g_new(guchar, aSD->length + 1);
+    memcpy(mSelectionData.data,
+           aSD->data,
+           aSD->length);
+    mSelectionData.length = aSD->length;
+    printf("        Can't convert type %s (%ld) to string\n",
+           gdk_atom_name (aSD->type), aSD->type);
+    return;
+  }
+}
+
+
+
+/**
+ * Some platforms support deferred notification for putting data on the clipboard
+ * This method forces the data onto the clipboard in its various formats
+ * This may be used if the application going away.
+ *
+ * @result NS_OK if successful.
+ */
 NS_IMETHODIMP nsClipboard::ForceDataToClipboard()
 {
 #ifdef DEBUG_CLIPBOARD
@@ -463,45 +725,107 @@ NS_IMETHODIMP nsClipboard::ForceDataToClipboard()
   return NS_OK;
 }
 
-//
-// This is the callback which is called when another app
-// requests the selection.
-//
+
+/**
+ * This is the callback which is called when another app
+ * requests the selection.
+ *
+ * @param  widget The widget
+ * @param  aSelectionData Selection data
+ * @param  info Value passed in from the callback init
+ * @param  time Time when the selection request came in
+ */
 void nsClipboard::SelectionGetCB(GtkWidget        *widget,
                                  GtkSelectionData *aSelectionData,
-                                 guint      /*info*/,
-                                 guint      /*time*/,
-                                 gpointer   aData)
+                                 guint            aInfo,
+                                 guint            aTime)
 { 
 #ifdef DEBUG_CLIPBOARD
-  printf("  nsClipboard::SelectionGetCB\n"); 
+  printf("nsClipboard::SelectionGetCB\n"); 
 #endif /* DEBUG_CLIPBOARD */
 
-  nsClipboard *clipboard = (nsClipboard *)aData;
+  nsClipboard *cb = (nsClipboard *)gtk_object_get_data(GTK_OBJECT(widget),
+                                                       "cb");
 
   void     *clipboardData;
   PRUint32 dataLength;
   nsresult rv;
+  GdkAtom type = GDK_NONE;
 
   // Make sure we have a transferable:
-  if (!clipboard->mTransferable) {
+  if (!cb->mTransferable) {
     printf("Clipboard has no transferable!\n");
     return;
   }
 
-  // XXX hack, string-only for now.
-  // Create string data-flavor.
-  nsString dataFlavor (kTextMime);
+#ifdef DEBUG_CLIPBOARD
+  g_print("  aInfo == %d -", aInfo);
+#endif
+
+  nsString dataFlavor;
+
+  switch(aInfo)
+    {
+    case GDK_TARGET_STRING:
+      type = GDK_TARGET_STRING;
+      dataFlavor = kTextMime;
+      break;
+    case TARGET_TEXT_PLAIN:
+      type = sSelTypes[aInfo];
+      dataFlavor = kTextMime;
+      break;
+    case TARGET_TEXT_XIF:
+      type = sSelTypes[aInfo];
+      dataFlavor = kXIFMime;
+      break;
+    case TARGET_TEXT_UNICODE:
+      type = sSelTypes[aInfo];
+      dataFlavor = kUnicodeMime;
+      break;
+    case TARGET_TEXT_HTML:
+      type = sSelTypes[aInfo];
+      dataFlavor = kHTMLMime;
+      break;
+    case TARGET_AOLMAIL:
+      type = sSelTypes[aInfo];
+      dataFlavor = kAOLMailMime;
+      break;
+    case TARGET_IMAGE_PNG:
+      type = sSelTypes[aInfo];
+      dataFlavor = kPNGImageMime;
+      break;
+    case TARGET_IMAGE_JPEG:
+      type = sSelTypes[aInfo];
+      dataFlavor = kJPEGImageMime;
+      break;
+    case TARGET_IMAGE_GIF:
+      type = sSelTypes[aInfo];
+      dataFlavor = kGIFImageMime;
+      break;
+    default:
+      {
+        /* handle outside things */
+        if (aInfo == sSelTypes[TARGET_NS4_HTML] ||
+            aInfo == sSelTypes[TARGET_NS4_HTML_NETSCAPE])
+        {
+          type = aInfo;
+          dataFlavor = kHTMLMime;
+          break;
+        }
+      }
+    }
+#ifdef DEBUG_CLIPBOARD
+  g_print("- aInfo is for %s\n", gdk_atom_name(type));
+#endif
 
   // Get data out of transferable.
-  rv = clipboard->mTransferable->GetTransferData(&dataFlavor, 
-                                                 &clipboardData,
-                                                 &dataLength);
+  rv = cb->mTransferable->GetTransferData(&dataFlavor, 
+                                          &clipboardData,
+                                          &dataLength);
 
-  // Currently we only offer the data in GDK_SELECTION_TYPE_STRING format.
   if (NS_SUCCEEDED(rv) && clipboardData && dataLength > 0) {
     gtk_selection_data_set(aSelectionData,
-                           GDK_SELECTION_TYPE_STRING, 8,
+                           type, 8,
                            (unsigned char *)clipboardData,
                            dataLength);
   }
@@ -510,19 +834,35 @@ void nsClipboard::SelectionGetCB(GtkWidget        *widget,
 }
 
 
-
-// Called when another app requests selection ownership:
-void nsClipboard::SelectionClearCB(GtkWidget *widget,
-                                   GdkEventSelection *event,
-                                   gpointer data)
+/**
+ * Called when another app requests selection ownership
+ *
+ * @param  aWidget the widget
+ * @param  aEvent the GdkEvent for the selection
+ * @param  aData value passed in from the callback init
+ */
+void nsClipboard::SelectionClearCB(GtkWidget *aWidget,
+                                   GdkEventSelection *aEvent,
+                                   gpointer aData)
 {
 #ifdef DEBUG_CLIPBOARD
   printf("  nsClipboard::SelectionClearCB\n");
 #endif /* DEBUG_CLIPBOARD */
+
+  nsClipboard *cb = (nsClipboard *)gtk_object_get_data(GTK_OBJECT(aWidget),
+                                                       "cb");
+
+  cb->EmptyClipboard();
 }
 
 
-// The routine called when another app asks for the content of the selection
+/**
+ * The routine called when another app asks for the content of the selection
+ *
+ * @param  aWidget the widget
+ * @param  aSelectionData gtk selection stuff
+ * @param  aData value passed in from the callback init
+ */
 void
 nsClipboard::SelectionRequestCB (GtkWidget *aWidget,
                                  GtkSelectionData *aSelectionData,
@@ -533,12 +873,19 @@ nsClipboard::SelectionRequestCB (GtkWidget *aWidget,
 #endif /* DEBUG_CLIPBOARD */
 }
 
+/**
+ * ...
+ *
+ * @param  aWidget the widget
+ * @param  aSelectionData gtk selection stuff
+ * @param  aData value passed in from the callback init
+ */
 void
 nsClipboard::SelectionNotifyCB (GtkWidget *aWidget,
-                                  GtkSelectionData *aSelectionData,
-                                  gpointer aData)
+                                GtkSelectionData *aSelectionData,
+                                gpointer aData)
 {
 #ifdef DEBUG_CLIPBOARD
-   printf("  nsClipboard::SelectionNotifyCB\n");
+  printf("  nsClipboard::SelectionNotifyCB\n");
 #endif /* DEBUG_CLIPBOARD */
 }

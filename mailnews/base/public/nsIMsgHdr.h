@@ -22,7 +22,7 @@
 #include "MailNewsTypes.h"
 #include "nsString.h"
 
-class nsString2;
+class nsCString;
 
 #define NS_IMSGHDR_IID                              \
 { /* 4e994f60-c317-11d2-8cc9-0060b0fc14a3 */         \
@@ -41,9 +41,9 @@ public:
     NS_IMETHOD GetUint32Property(const char *propertyName, PRUint32 *pResult) = 0;
     NS_IMETHOD SetUint32Property(const char *propertyName, PRUint32 propertyVal) = 0;
     NS_IMETHOD GetNumReferences(PRUint16 *result) = 0;
-    NS_IMETHOD GetStringReference(PRInt32 refNum, nsString2 &resultReference) = 0;
-    NS_IMETHOD GetDate(time_t *result) = 0;
-    NS_IMETHOD SetDate(time_t date) = 0;
+    NS_IMETHOD GetStringReference(PRInt32 refNum, nsCString &resultReference) = 0;
+    NS_IMETHOD GetDate(PRTime *result) = 0;
+    NS_IMETHOD SetDate(PRTime date) = 0;
     NS_IMETHOD SetMessageId(const char *messageId) = 0;
     NS_IMETHOD SetReferences(const char *references) = 0;
     NS_IMETHOD SetCCList(const char *ccList) = 0;
@@ -54,19 +54,19 @@ public:
     NS_IMETHOD SetSubject(const char *subject) = 0;
     NS_IMETHOD SetStatusOffset(PRUint32 statusOffset) = 0;
 
-	NS_IMETHOD GetAuthor(nsString &resultAuthor) = 0;
-	NS_IMETHOD GetSubject(nsString &resultSubject) = 0;
-	NS_IMETHOD GetRecipients(nsString &resultRecipients) = 0;
-	NS_IMETHOD GetCCList(nsString &ccList) = 0;
-	NS_IMETHOD GetMessageId(nsString &resultMessageId) = 0;
+	NS_IMETHOD GetAuthor(nsString *resultAuthor) = 0;
+	NS_IMETHOD GetSubject(nsString *resultSubject) = 0;
+	NS_IMETHOD GetRecipients(nsString *resultRecipients) = 0;
+	NS_IMETHOD GetCCList(nsString *ccList) = 0;
+	NS_IMETHOD GetMessageId(nsCString *resultMessageId) = 0;
 
-	NS_IMETHOD GetMime2EncodedAuthor(nsString &resultAuthor) = 0;
-	NS_IMETHOD GetMime2EncodedSubject(nsString &resultSubject) = 0;
-	NS_IMETHOD GetMime2EncodedRecipients(nsString &resultRecipients) = 0;
+	NS_IMETHOD GetMime2DecodedAuthor(nsString *resultAuthor) = 0;
+	NS_IMETHOD GetMime2DecodedSubject(nsString *resultSubject) = 0;
+	NS_IMETHOD GetMime2DecodedRecipients(nsString *resultRecipients) = 0;
 
-	NS_IMETHOD GetAuthorCollationKey(nsString &resultAuthor) = 0;
-	NS_IMETHOD GetSubjectCollationKey(nsString &resultSubject) = 0;
-	NS_IMETHOD GetRecipientsCollationKey(nsString &resultRecipients) = 0;
+	NS_IMETHOD GetAuthorCollationKey(nsString *resultAuthor) = 0;
+	NS_IMETHOD GetSubjectCollationKey(nsString *resultSubject) = 0;
+	NS_IMETHOD GetRecipientsCollationKey(nsString *resultRecipients) = 0;
 
     // flag handling routines
     NS_IMETHOD GetFlags(PRUint32 *result) = 0;
@@ -89,8 +89,11 @@ public:
     NS_IMETHOD SetPriority(const char *priority) = 0;
     NS_IMETHOD GetMessageOffset(PRUint32 *result) = 0;
     NS_IMETHOD GetStatusOffset(PRUint32 *result) = 0; 
-	NS_IMETHOD GetCharSet(nsString &result) = 0;
+	NS_IMETHOD GetCharSet(nsString *result) = 0;
 	NS_IMETHOD GetPriority(nsMsgPriority *msgPriority) = 0;
+    NS_IMETHOD GetThreadParent(nsMsgKey *result) = 0;
+    NS_IMETHOD SetThreadParent(nsMsgKey inKey) = 0;
+
 };
 
 #define NS_IDBMSGHDR_IID                              \

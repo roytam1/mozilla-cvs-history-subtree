@@ -42,7 +42,7 @@ class nsIMenuListener;
 class nsIMenu : public nsISupports {
 
   public:
-    static const nsIID& GetIID() { static nsIID iid = NS_IMENU_IID; return iid; }
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENU_IID)
 
   /**
     * Creates the Menu
@@ -68,7 +68,19 @@ class nsIMenu : public nsISupports {
     */
     NS_IMETHOD SetLabel(const nsString &aText) = 0;
 
-   /**
+	/**
+    * Get the Menu Access Key
+    *
+    */
+	NS_IMETHOD GetAccessKey(nsString &aText) = 0;
+   
+	/**
+    * Set the Menu Access Key
+    *
+    */
+	NS_IMETHOD SetAccessKey(const nsString &aText) = 0;
+
+	/**
     * Adds a Menu Item
     *
     */

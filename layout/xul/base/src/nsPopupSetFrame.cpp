@@ -78,16 +78,7 @@ NS_IMETHODIMP nsPopupSetFrame::QueryInterface(REFNSIID aIID, void** aInstancePtr
 {           
   if (NULL == aInstancePtr) {                                            
     return NS_ERROR_NULL_POINTER;                                        
-  }   
-  
-  *aInstancePtr = NULL;                                                  
-                                                                                        
-  if (aIID.Equals(nsIPopupSetFrame::GetIID())) {                                         
-    *aInstancePtr = (void*)(nsIPopupSetFrame*) this;                                        
-    NS_ADDREF_THIS();                                                    
-    return NS_OK;                                                        
-  }   
-
+  }                                                  
   return nsBoxFrame::QueryInterface(aIID, aInstancePtr);                                     
 }
 
@@ -295,17 +286,14 @@ nsPopupSetFrame::RemoveFrame(nsIPresContext& aPresContext,
   for (int i=0; i < mSpringCount; i++) 
     mSprings[i].clear();
 
-  nsresult  rv;
-  
   if (mPopupFrames.ContainsFrame(aOldFrame)) {
     // Go ahead and remove this frame.
+    nsHTMLContainerFrame::RemoveFrame(aPresContext, aPresShell, nsLayoutAtoms::popupList, aOldFrame);
     mPopupFrames.DestroyFrame(aPresContext, aOldFrame);
-    rv = GenerateDirtyReflowCommand(aPresContext, aPresShell);
-  } else {
-    rv = nsBoxFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
+    return NS_OK;
   }
 
-  return rv;
+  return nsBoxFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
 }
 
 NS_IMETHODIMP
@@ -322,16 +310,11 @@ nsPopupSetFrame::InsertFrames(nsIPresContext& aPresContext,
   nsCOMPtr<nsIContent> frameChild;
   aFrameList->GetContent(getter_AddRefs(frameChild));
   nsCOMPtr<nsIAtom> tag;
-  nsresult          rv;
   frameChild->GetTag(*getter_AddRefs(tag));
   if (tag && tag.get() == nsXULAtoms::menupopup) {
     mPopupFrames.InsertFrames(nsnull, nsnull, aFrameList);
-    rv = GenerateDirtyReflowCommand(aPresContext, aPresShell);
-  } else {
-    rv = nsBoxFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList);  
   }
-
-  return rv;
+  return nsHTMLContainerFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList);  
 }
 
 NS_IMETHODIMP
@@ -351,37 +334,10 @@ nsPopupSetFrame::AppendFrames(nsIPresContext& aPresContext,
   aFrameList->GetContent(getter_AddRefs(frameChild));
 
   nsCOMPtr<nsIAtom> tag;
-  nsresult          rv;
-  
   frameChild->GetTag(*getter_AddRefs(tag));
   if (tag && tag.get() == nsXULAtoms::menupopup) {
     mPopupFrames.AppendFrames(nsnull, aFrameList);
-    rv = GenerateDirtyReflowCommand(aPresContext, aPresShell);
-  } else {
-    rv = nsBoxFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 
   }
-
-  return rv;
-}
-
-NS_IMETHODIMP
-nsPopupSetFrame::CreatePopup(nsIFrame* aElementFrame, nsIContent* aPopupContent, 
-                             PRInt32 aXPos, PRInt32 aYPos, 
-                             const nsString& aPopupType, const nsString& anAnchorAlignment,
-                             const nsString& aPopupAlignment)
-{
-  // Generate the popup.
-  //MarkAsGenerated(aPopupContent);
-
-  // Now we'll have it in our child frame list. Make it our active child.
-  //SetActiveChild(aPopupContent);
-
-  // Show the popup at the specified position.
-  mXPos = aXPos;
-  mYPos = aYPos;
-
-  // Mark the view as active.
-  //ActivateMenuPopup(PR_TRUE);
-
-  return NS_OK;
+  
+  return nsHTMLContainerFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 
 }

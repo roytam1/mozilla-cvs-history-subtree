@@ -48,16 +48,19 @@
 #include "nsDocument.h"
 #include "nsTitledButtonFrame.h"
 #include "nsScrollbarButtonFrame.h"
+#include "nsIScrollbarListener.h"
+#include "nsISupportsArray.h"
 
+static NS_DEFINE_IID(kIAnonymousContentCreatorIID,     NS_IANONYMOUS_CONTENT_CREATOR_IID);
 
 nsresult
-NS_NewSliderFrame ( nsIFrame** aNewFrame )
+NS_NewSliderFrame ( nsIFrame** aNewFrame)
 {
   NS_PRECONDITION(aNewFrame, "null OUT ptr");
   if (nsnull == aNewFrame) {
     return NS_ERROR_NULL_POINTER;
   }
-  nsSliderFrame* it = new nsSliderFrame;
+  nsSliderFrame* it = new nsSliderFrame();
   if (nsnull == it)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -66,9 +69,45 @@ NS_NewSliderFrame ( nsIFrame** aNewFrame )
   
 } // NS_NewSliderFrame
 
-
 nsSliderFrame::nsSliderFrame()
+:mScrollbarListener(nsnull), mCurPos(0)
 {
+}
+
+/**
+ * Anonymous interface
+ */
+NS_IMETHODIMP
+nsSliderFrame::CreateAnonymousContent(nsISupportsArray& aAnonymousChildren)
+{
+  // supply anonymous content if there is no content
+  PRInt32 count = 0;
+  mContent->ChildCount(count); 
+  if (count == 0) 
+  {
+    // get the document
+    nsCOMPtr<nsIDocument> idocument;
+    mContent->GetDocument(*getter_AddRefs(idocument));
+
+    nsCOMPtr<nsIDOMDocument> document(do_QueryInterface(idocument));
+
+    // create a thumb
+    nsCOMPtr<nsIDOMElement> node;
+    document->CreateElement("thumb",getter_AddRefs(node));
+    nsCOMPtr<nsIContent> content;
+    content = do_QueryInterface(node);
+
+    // if we are not in a scrollbar default our thumbs flex to be
+    // flexible.
+    nsIContent* scrollbar = GetScrollBar();
+
+    if (scrollbar) 
+       content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_TRUE);
+
+    aAnonymousChildren.AppendElement(content);
+  }
+
+  return NS_OK;
 }
 
 
@@ -164,25 +203,25 @@ nsSliderFrame::ReflowThumb(nsIPresContext&   aPresContext,
                                        thumbFrame, available);
 
     // always give the thumb as much size as it needs
-    thumbReflowState.computedWidth = computed.width;
-    thumbReflowState.computedHeight = computed.height;
+    thumbReflowState.mComputedWidth = computed.width;
+    thumbReflowState.mComputedHeight = computed.height;
 
     // subtract out the childs margin and border if computed
     const nsStyleSpacing* spacing;
     nsresult rv = thumbFrame->GetStyleData(eStyleStruct_Spacing,
                    (const nsStyleStruct*&) spacing);
 
-    nsMargin margin;
+    nsMargin margin(0,0,0,0);
     spacing->GetMargin(margin);
-    nsMargin border;
+    nsMargin border(0,0,0,0);
     spacing->GetBorderPadding(border);
     nsMargin total = margin + border;
 
-    if (thumbReflowState.computedWidth != NS_INTRINSICSIZE)
-       thumbReflowState.computedWidth -= total.left + total.right;
+    if (thumbReflowState.mComputedWidth != NS_INTRINSICSIZE)
+       thumbReflowState.mComputedWidth -= total.left + total.right;
 
-    if (thumbReflowState.computedHeight != NS_INTRINSICSIZE)
-       thumbReflowState.computedHeight -= total.top + total.bottom;
+    if (thumbReflowState.mComputedHeight != NS_INTRINSICSIZE)
+       thumbReflowState.mComputedHeight -= total.top + total.bottom;
 
     ReflowChild(thumbFrame, aPresContext, aDesiredSize, thumbReflowState, aStatus);
     
@@ -221,8 +260,8 @@ nsSliderFrame::Reflow(nsIPresContext&   aPresContext,
 
   nsHTMLReflowMetrics thumbSize(nsnull);
 
-  nsSize availableSize(isHorizontal ? NS_INTRINSICSIZE: aReflowState.computedWidth, isHorizontal ? aReflowState.computedHeight : NS_INTRINSICSIZE);
-  nsSize computedSize(isHorizontal ? NS_INTRINSICSIZE: aReflowState.computedWidth, isHorizontal ? aReflowState.computedHeight : NS_INTRINSICSIZE);
+  nsSize availableSize(isHorizontal ? NS_INTRINSICSIZE: aReflowState.mComputedWidth, isHorizontal ? aReflowState.mComputedHeight : NS_INTRINSICSIZE);
+  nsSize computedSize(isHorizontal ? NS_INTRINSICSIZE: aReflowState.mComputedWidth, isHorizontal ? aReflowState.mComputedHeight : NS_INTRINSICSIZE);
      
   ReflowThumb(aPresContext, thumbSize, aReflowState, aStatus, thumbFrame, availableSize, computedSize);
  
@@ -240,19 +279,19 @@ nsSliderFrame::Reflow(nsIPresContext&   aPresContext,
   aPresContext.GetScaledPixelsToTwips(&p2t);
   nscoord onePixel = NSIntPixelsToTwips(1, p2t);
 
-  if (aReflowState.computedHeight == NS_INTRINSICSIZE) 
+  if (aReflowState.mComputedHeight == NS_INTRINSICSIZE) 
     aDesiredSize.height = isHorizontal ? thumbSize.height : 200*onePixel;
   else {
-    aDesiredSize.height = aReflowState.computedHeight;
+    aDesiredSize.height = aReflowState.mComputedHeight;
     if (aDesiredSize.height < thumbSize.height)
       aDesiredSize.height = thumbSize.height;
   }
 
   // set the width to the computed or if intrinsic then the width of the thumb.
-  if (aReflowState.computedWidth == NS_INTRINSICSIZE) 
+  if (aReflowState.mComputedWidth == NS_INTRINSICSIZE) 
     aDesiredSize.width = isHorizontal ? 200*onePixel : thumbSize.width;
   else {
-    aDesiredSize.width = aReflowState.computedWidth;
+    aDesiredSize.width = aReflowState.mComputedWidth;
     if (aDesiredSize.width < thumbSize.width)
       aDesiredSize.width = thumbSize.width;
   }
@@ -347,6 +386,9 @@ nsSliderFrame::HandleEvent(nsIPresContext& aPresContext,
        // convert coord to pixels
       nscoord pos = isHorizontal ? aEvent->point.x : aEvent->point.y;
 
+       // mDragStartPx is in pixels and is in our client areas coordinate system. 
+       // so we need to first convert it so twips and then get it into our coordinate system.
+
        // convert start to twips
        nscoord startpx = mDragStartPx;
               
@@ -356,8 +398,19 @@ nsSliderFrame::HandleEvent(nsIPresContext& aPresContext,
        nscoord start = startpx*onePixel;
 
        nsIFrame* thumbFrame = mFrames.FirstChild();
-       
-       // convert it to the thumb coordinate system.
+
+       // get it into our coordintate system by subtracting our parents offsets.
+       nsIFrame* parent = this;
+       while(parent != nsnull)
+       {
+         nsRect r;
+         parent->GetRect(r);
+         isHorizontal ? start -= r.x : start -= r.y;
+         parent->GetParent(&parent);
+       }
+
+      //printf("Translated to start=%d\n",start);
+
        start -= mThumbStart;
 
        // take our current position and substract the start location
@@ -455,6 +508,10 @@ nsSliderFrame::PageUpDown(nsIPresContext& aPresContext, nsIFrame* aThumbFrame, n
   // asking it for the current position and the page increment. If we are not in a scrollbar we will
   // get the values from our own node.
   nsIContent* scrollbar = GetScrollBar();
+  
+  if (mScrollbarListener)
+    mScrollbarListener->PagedUpDown(); // Let the listener decide our increment.
+
   nscoord pageIncrement = GetPageIncrement(scrollbar);
   PRInt32 curpos = GetCurrentPosition(scrollbar);
   SetCurrentPosition(aPresContext, scrollbar, aThumbFrame, curpos + change*pageIncrement);
@@ -496,7 +553,7 @@ nsSliderFrame::CurrentPositionChanged(nsIPresContext* aPresContext)
     nsresult rv = GetStyleData(eStyleStruct_Spacing,
                    (const nsStyleStruct*&) spacing);
 
-    nsMargin borderPadding;
+    nsMargin borderPadding(0,0,0,0);
     spacing->GetBorderPadding(borderPadding);
     
     // figure out the new rect
@@ -516,6 +573,12 @@ nsSliderFrame::CurrentPositionChanged(nsIPresContext* aPresContext)
 
     // redraw just the change
     Invalidate(changeRect, PR_TRUE);
+
+    if (mScrollbarListener)
+      mScrollbarListener->PositionChanged(*aPresContext, mCurPos, curpos);
+    
+    mCurPos = curpos;
+
 }
 
 void
@@ -527,6 +590,7 @@ nsSliderFrame::SetCurrentPosition(nsIPresContext& aPresContext, nsIContent* scro
   nscoord onePixel = NSIntPixelsToTwips(1, p2t);
 
    // get our current position and max position from our content node
+  PRInt32 curpos = GetCurrentPosition(scrollbar);
   PRInt32 maxpos = GetMaxPosition(scrollbar);
 
   // get the new position and make sure it is in bounds
@@ -541,7 +605,7 @@ nsSliderFrame::SetCurrentPosition(nsIPresContext& aPresContext, nsIContent* scro
   // set the new position
   scrollbar->SetAttribute(kNameSpaceID_None, nsXULAtoms::curpos, nsString(ch), PR_TRUE);
 
-  printf("Current Pos=%d\n",newpos);
+  //printf("Current Pos=%d\n",newpos);
   
 }
 
@@ -594,7 +658,7 @@ nsSliderFrame::RemoveFrame(nsIPresContext& aPresContext,
 {
       // remove the child frame
       nsresult rv = nsHTMLContainerFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
-      mFrames.DeleteFrame(aPresContext, aOldFrame);
+      mFrames.DestroyFrame(aPresContext, aOldFrame);
       return rv;
 }
 
@@ -648,7 +712,7 @@ nsSliderFrame::MouseDown(nsIDOMEvent* aMouseEvent)
   else
      mThumbStart = thumbRect.y;
      
-  //printf("Pressed y=%d\n",c);
+  //printf("Pressed mDragStartPx=%d\n",mDragStartPx);
   
   return NS_OK;
 }
@@ -739,7 +803,11 @@ NS_IMETHODIMP nsSliderFrame::QueryInterface(REFNSIID aIID, void** aInstancePtr)
                                                                          
   *aInstancePtr = NULL;                                                  
                                                                                         
-  if (aIID.Equals(kIDOMMouseListenerIID)) {                                         
+  if (aIID.Equals(kIAnonymousContentCreatorIID)) {                                         
+    *aInstancePtr = (void*)(nsIAnonymousContentCreator*) this;                                        
+    NS_ADDREF_THIS();                                                    
+    return NS_OK;                                                        
+  } else if (aIID.Equals(kIDOMMouseListenerIID)) {                                         
     *aInstancePtr = (void*)(nsIDOMMouseListener*) this;                                        
     NS_ADDREF_THIS();                                                    
     return NS_OK;                                                        
@@ -758,4 +826,11 @@ NS_IMETHODIMP_(nsrefcnt)
 nsSliderFrame::Release(void)
 {
     return NS_OK;
+}
+
+void 
+nsSliderFrame::SetScrollbarListener(nsIScrollbarListener* aListener)
+{
+  // Don't addref/release this, since it's actually a frame.
+  mScrollbarListener = aListener;
 }

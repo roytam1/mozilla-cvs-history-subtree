@@ -21,6 +21,9 @@
 #define nsToolbarDragListener_h__
 
 #include "nsIDOMDragListener.h"
+#include "nsIDOMMouseMotionListener.h"
+#include "nsIDOMMouseListener.h"
+
 #include "nsCoord.h"
 
 
@@ -29,7 +32,7 @@ class nsIPresContext;
 class nsIDOMEvent;
 
 
-class nsToolbarDragListener : public nsIDOMDragListener
+class nsToolbarDragListener : public nsIDOMDragListener, public nsIDOMMouseListener, public nsIDOMMouseMotionListener
 {
 public:
 
@@ -46,7 +49,18 @@ public:
   virtual nsresult DragOver(nsIDOMEvent* aDragEvent);
   virtual nsresult DragExit(nsIDOMEvent* aDragEvent);
   virtual nsresult DragDrop(nsIDOMEvent* aDragEvent);
-  virtual nsresult DragGesture(nsIDOMEvent* aDragEvent);
+
+    // nsIDOMMouseMotionListener
+  virtual nsresult MouseMove(nsIDOMEvent* aMouseEvent);
+  virtual nsresult DragMove(nsIDOMEvent* aMouseEvent);
+
+    // nsIDOMMouseListener
+  virtual nsresult MouseDown(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseUp(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseClick(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseDblClick(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseOver(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
 
 protected:
 
@@ -55,6 +69,9 @@ protected:
   nsToolbarFrame * mToolbar;         // toolbar owns me, don't be circular
   nsIPresContext * mPresContext;     // weak reference
   PRInt32          mCurrentDropLoc;
+
+  PRBool           mMouseDown;
+  PRBool           mMouseDrag;
 
 }; // class nsToolbarDragListener
 

@@ -152,6 +152,10 @@ static void MapGenericFamilyToFont(const nsString& aGenericFamily, nsString& aFo
   {
     aFontFace = "Courier";
   }
+  else if (aGenericFamily.EqualsIgnoreCase("-moz-fixed"))
+  {
+    aFontFace = "Courier";
+  }
 }
 
 struct FontEnumData {
@@ -349,6 +353,13 @@ NS_EXPORT void nsFontMetricsMac::GetNativeTextStyle(nsIFontMetrics& inMetrics,
 #endif
 	if (aFont->weight > NS_FONT_WEIGHT_NORMAL)	// don't test NS_FONT_WEIGHT_BOLD
 		textFace |= bold;
+
+	if ( aFont->decorations & NS_FONT_DECORATION_UNDERLINE )
+		textFace |= underline;
+	if ( aFont->decorations & NS_FONT_DECORATION_OVERLINE )
+		textFace |= underline;  // THIS IS WRONG, BUT HERE FOR COMPLETENESS
+	if ( aFont->decorations & NS_FONT_DECORATION_LINE_THROUGH )
+		textFace |= underline;  // THIS IS WRONG, BUT HERE FOR COMPLETENESS
 
 	RGBColor	black = {0};
 	

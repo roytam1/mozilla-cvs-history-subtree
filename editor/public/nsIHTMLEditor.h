@@ -16,118 +16,197 @@
  * Reserved.
  */
 
+
 #ifndef nsIHTMLEditor_h__
 #define nsIHTMLEditor_h__
 
-#define NS_IHTMLEDITOR_IID \
-{/*BD62F311-CB8A-11d2-983A-00805F8AA8B8*/     \
-0xbd62f311, 0xcb8a, 0x11d2, \
-{ 0x98, 0x3a, 0x0, 0x80, 0x5f, 0x8a, 0xa8, 0xb8 } }
+
+#define NS_IHTMLEDITOR_IID                       \
+{ /* 4805e683-49b9-11d3-9ce4-ed60bd6cb5bc} */    \
+0x4805e683, 0x49b9, 0x11d3,                      \
+{ 0x9c, 0xe4, 0xed, 0x60, 0xbd, 0x6c, 0xb5, 0xbc } }
 
 
-#include "nsIEditor.h"
-#include "nscore.h"
-//#include "nsIDOMDocumentFragment.h"
-
-class nsIEditorCallback;
-class nsISupportsArray;
+class nsString;
 class nsStringArray;
-class nsIAtom;
-class nsIOutputStream;
-class nsIDOMWindow;
-class nsIFileSpec;
 
-/**
- * The HTML editor interface. 
- * <P>
- * Use to edit text and other HTML objects represented as a DOM tree. 
- */
-class nsIHTMLEditor  : public nsISupports{
+class nsIAtom;
+class nsIDOMNode;
+class nsIDOMElement;
+
+
+class nsIHTMLEditor : public nsISupports
+{
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_IHTMLEDITOR_IID; return iid; }
 
-	typedef enum {eSaveFileText = 0, eSaveFileHTML = 1 } ESaveFileType;
 
-  /** Initialize the HTML editor 
-    *
-    */
-  NS_IMETHOD Init(nsIDOMDocument *aDoc, 
-                  nsIPresShell   *aPresShell)=0;
+  // the bits in an editor behavior mask.
+  enum {
+    eEditorPlaintextBit       = 0,        // only plain text entry is allowed via events
+    eEditorSingleLineBit,                 // enter key and CR-LF handled specially
+    eEditorPasswordBit,                   // text is not entered into content, only a representative character
+    eEditorReadonlyBit,                   // editing events are disabled.  Editor may still accept focus.
+    eEditorDisabledBit,                   // all events are disabled (like scrolling).  Editor will not accept focus.
+    eEditorFilterInputBit                 // text input is limited to certain character types, use mFilter
+    
+    // max 32 bits
+  };
+  
+  enum {
+    eEditorPlaintextMask      = (1 << eEditorPlaintextBit),
+    eEditorSingleLineMask     = (1 << eEditorSingleLineBit),
+    eEditorPasswordMask       = (1 << eEditorPasswordBit),
+    eEditorReadonlyMask       = (1 << eEditorReadonlyBit),
+    eEditorDisabledMask       = (1 << eEditorDisabledBit),
+    eEditorFilterInputMask    = (1 << eEditorFilterInputBit)
+  };
+  
+  
+  /* ------------ Document info methods -------------- */
 
-// Methods shared with nsITextEditor (see nsITextEditor.h for details)
-  NS_IMETHOD SetTextProperty(nsIAtom *aProperty, 
+  /** get the length of the document in characters */
+  NS_IMETHOD GetDocumentLength(PRInt32 *aCount)=0;
+
+  NS_IMETHOD SetMaxTextLength(PRInt32 aMaxTextLength)=0;
+  NS_IMETHOD GetMaxTextLength(PRInt32& aMaxTextLength)=0;
+
+  /* ------------ Inline property methods -------------- */
+
+
+  /**
+   * SetInlineProperty() sets the aggregate properties on the current selection
+   *
+   * @param aProperty   the property to set on the selection 
+   * @param aAttribute  the attribute of the property, if applicable.  May be null.
+   *                    Example: aProperty="font", aAttribute="color"
+   * @param aValue      if aAttribute is not null, the value of the attribute.  May be null.
+   *                    Example: aProperty="font", aAttribute="color", aValue="0x00FFFF"
+   */
+  NS_IMETHOD SetInlineProperty(nsIAtom *aProperty, 
                              const nsString *aAttribute,
                              const nsString *aValue)=0;
-  NS_IMETHOD GetTextProperty(nsIAtom *aProperty, 
+
+  /**
+   * GetInlineProperty() gets the aggregate properties of the current selection.
+   * All object in the current selection are scanned and their attributes are
+   * represented in a list of Property object.
+   *
+   * @param aProperty   the property to get on the selection 
+   * @param aAttribute  the attribute of the property, if applicable.  May be null.
+   *                    Example: aProperty="font", aAttribute="color"
+   * @param aValue      if aAttribute is not null, the value of the attribute.  May be null.
+   *                    Example: aProperty="font", aAttribute="color", aValue="0x00FFFF"
+   * @param aFirst      [OUT] PR_TRUE if the first text node in the selection has the property
+   * @param aAny        [OUT] PR_TRUE if any of the text nodes in the selection have the property
+   * @param aAll        [OUT] PR_TRUE if all of the text nodes in the selection have the property
+   */
+  NS_IMETHOD GetInlineProperty(nsIAtom *aProperty, 
                              const nsString *aAttribute,
                              const nsString *aValue,
-                             PRBool &aFirst, PRBool &aAll, PRBool &aAny)=0;
-  NS_IMETHOD GetParagraphFormat(nsString& aParagraphFormat)=0;
-  NS_IMETHOD SetParagraphFormat(const nsString& aParagraphFormat)=0;
-  NS_IMETHOD RemoveTextProperty(nsIAtom *aProperty, const nsString *aAttribute)=0;
-  NS_IMETHOD DeleteSelection(nsIEditor::ECollapsedSelectionAction aAction)=0;
-  NS_IMETHOD InsertText(const nsString& aStringToInsert)=0;
+                             PRBool &aFirst, PRBool &aAny, PRBool &aAll)=0;
+
+  /**
+   * RemoveInlineProperty() deletes the properties from all text in the current selection.
+   * If aProperty is not set on the selection, nothing is done.
+   *
+   * @param aProperty   the property to reomve from the selection 
+   * @param aAttribute  the attribute of the property, if applicable.  May be null.
+   *                    Example: aProperty="font", aAttribute="color"
+   *                    nsIEditProperty::allAttributes is special.  It indicates that
+   *                    all content-based text properties are to be removed from the selection.
+   */
+  NS_IMETHOD RemoveInlineProperty(nsIAtom *aProperty, const nsString *aAttribute)=0;
+
+
+  /* ------------ HTML content methods -------------- */
+
+  /**
+   * Insert a break into the content model.<br>
+   * The interpretation of a break is up to the rule system:
+   * it may enter a character, split a node in the tree, etc.
+   */
   NS_IMETHOD InsertBreak()=0;
-  NS_IMETHOD EnableUndo(PRBool aEnable)=0;
-  NS_IMETHOD Undo(PRUint32 aCount)=0;
-  NS_IMETHOD CanUndo(PRBool &aIsEnabled, PRBool &aCanUndo)=0;
-  NS_IMETHOD Redo(PRUint32 aCount)=0;
-  NS_IMETHOD CanRedo(PRBool &aIsEnabled, PRBool &aCanRedo)=0;
-  NS_IMETHOD BeginTransaction()=0;
-  NS_IMETHOD EndTransaction()=0;
-  NS_IMETHOD MoveSelectionUp(nsIAtom *aIncrement, PRBool aExtendSelection)=0;
-  NS_IMETHOD MoveSelectionDown(nsIAtom *aIncrement, PRBool aExtendSelection)=0;
-  NS_IMETHOD MoveSelectionNext(nsIAtom *aIncrement, PRBool aExtendSelection)=0;
-  NS_IMETHOD MoveSelectionPrevious(nsIAtom *aIncrement, PRBool aExtendSelection)=0;
-  NS_IMETHOD SelectNext(nsIAtom *aIncrement, PRBool aExtendSelection)=0; 
-  NS_IMETHOD SelectPrevious(nsIAtom *aIncrement, PRBool aExtendSelection)=0;
-  NS_IMETHOD SelectAll()=0;
-  NS_IMETHOD BeginningOfDocument()=0;
-  NS_IMETHOD EndOfDocument()=0;
-  NS_IMETHOD ScrollUp(nsIAtom *aIncrement)=0;
-  NS_IMETHOD ScrollDown(nsIAtom *aIncrement)=0;
-  NS_IMETHOD ScrollIntoView(PRBool aScrollToBegin)=0;
 
-  NS_IMETHOD Save()=0;
-  NS_IMETHOD SaveAs(PRBool aSavingCopy)=0;
+  /**
+   * InsertText() Inserts a string at the current location, given by the selection.
+   * If the selection is not collapsed, the selection is deleted and the insertion
+   * takes place at the resulting collapsed selection.
+   *
+   * NOTE: what happens if the string contains a CR?
+   *
+   * @param aString   the string to be inserted
+   */
+  NS_IMETHOD InsertText(const nsString& aStringToInsert)=0;
 
-  NS_IMETHOD Cut()=0;
-  NS_IMETHOD Copy()=0;
-  NS_IMETHOD Paste()=0;
-  NS_IMETHOD PasteAsQuotation()=0;
-  NS_IMETHOD PasteAsCitedQuotation(const nsString& aCitation)=0;
-  NS_IMETHOD InsertAsQuotation(const nsString& aQuotedText)=0;
-  NS_IMETHOD InsertAsCitedQuotation(const nsString& aQuotedText, const nsString& aCitation)=0;
-
-
+  /**
+   * document me!
+   */
   NS_IMETHOD InsertHTML(const nsString &aInputString)=0;
 
-  NS_IMETHOD OutputTextToString(nsString& aOutputString)=0;
-  NS_IMETHOD OutputHTMLToString(nsString& aOutputString)=0;
 
-  NS_IMETHOD OutputTextToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride = nsnull)=0;
-  NS_IMETHOD OutputHTMLToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride = nsnull)=0;
+  /** Insert an element, which may have child nodes, at the selection
+    * Used primarily to insert a new element for various insert element dialogs,
+    *   but it enforces the HTML 4.0 DTD "CanContain" rules, so it should
+    *   be useful for other elements.
+    *
+    * @param aElement           The element to insert
+    * @param aDeleteSelection   Delete the selection before inserting
+    *     If aDeleteSelection is PR_FALSE, then the element is inserted 
+    *     after the end of the selection for all element except
+    *     Named Anchors, which insert before the selection
+    */  
+  NS_IMETHOD InsertElement(nsIDOMElement* aElement, PRBool aDeleteSelection)=0;
 
-// Miscellaneous Methods
-  /** Set the background color of the selected table cell, row, columne, or table,
-    * or the document background if not in a table
+
+
+  /** 
+   * DeleteSelectionAndCreateNode combines DeleteSelection and CreateNode
+   * It deletes only if there is something selected (doesn't do DEL, BACKSPACE action)   
+   * @param aTag      The type of object to create
+   * @param aNewNode  [OUT] The node created.  Caller must release aNewNode.
    */
-  NS_IMETHOD SetBackgroundColor(const nsString& aColor)=0;
-  /** Set any BODY element attribute
-   */
-  NS_IMETHOD SetBodyAttribute(const nsString& aAttr, const nsString& aValue)=0;
+  NS_IMETHOD DeleteSelectionAndCreateNode(const nsString& aTag, nsIDOMNode ** aNewNode)=0;
 
-  /*
-  NS_IMETHOD CheckSpelling()=0;
-  NS_IMETHOD SpellingLanguage(nsIAtom *aLanguage)=0;
-  */
-  /* The editor doesn't know anything about specific services like SpellChecking.  
-   * Services can be invoked on the content, and these services can use the editor if they choose
-   * to get transactioning/undo/redo.
-   * For things like auto-spellcheck, the App should implement nsIDocumentObserver and 
-   * trigger off of ContentChanged notifications.
-   */
+  /* ------------ Selection manipulation -------------- */
+  /* Should these be moved to nsIDOMSelection? */
+  
+  /** Set the selection at the suppled element
+    *
+    * @param aElement   An element in the document
+    */
+  NS_IMETHOD SelectElement(nsIDOMElement* aElement)=0;
 
+  /** Create a collapsed selection just after aElement
+    * 
+    * XXX could we parameterize SelectElement(before/select/after>?
+    *
+    * The selection is set to parent-of-aElement with an
+    *   offset 1 greater than aElement's offset
+    *   but it enforces the HTML 4.0 DTD "CanContain" rules, so it should
+    *   be useful for other elements.
+    *
+    * @param aElement  An element in the document
+    */
+  NS_IMETHOD SetCaretAfterElement(nsIDOMElement* aElement)=0;
+
+
+  /**
+   * Document me!
+   * 
+   */
+  NS_IMETHOD GetParagraphFormat(nsString& aParagraphFormat)=0;
+
+  /**
+   * Document me!
+   * 
+   */
+  NS_IMETHOD SetParagraphFormat(const nsString& aParagraphFormat)=0;
+
+  /**
+   * Document me!
+   * 
+   */
   NS_IMETHOD GetParagraphStyle(nsStringArray *aTagList)=0;
 
   /** Add a block parent node around the selected content.
@@ -159,47 +238,103 @@ public:
     */
   NS_IMETHOD RemoveParent(const nsString &aParentTag)=0;
 
-  NS_IMETHOD InsertLink(nsString& aURL)=0;
-  NS_IMETHOD InsertImage(nsString& aURL,
-                         nsString& aWidth, nsString& aHeight,
-                         nsString& aHspace, nsString& aVspace,
-                         nsString& aBorder,
-                         nsString& aAlt, nsString& aAlignment)=0;
-
+  /**
+   * Document me!
+   * 
+   */
   NS_IMETHOD InsertList(const nsString& aListType)=0;
+
+  /**
+   * Document me!
+   * 
+   */
   NS_IMETHOD Indent(const nsString& aIndent)=0;
+
+  /**
+   * Document me!
+   * 
+   */
   NS_IMETHOD Align(const nsString& aAlign)=0;
 
-  // This should replace InsertLink and InsertImage once it is working
+  /** Return the input node or a parent matching the given aTagName,
+    *   starting the search at the supplied node.
+    * An example of use is for testing if a node is in a table cell
+    *   given a selection anchor node.
+    *
+    * @param aTagName  The HTML tagname
+    *    Special input values for Links and Named anchors:
+    *    Use "link" or "href" to get a link node 
+    *      (an "A" tag with the "href" attribute set)
+    *    Use "anchor" or "namedanchor" to get a named anchor node
+    *      (an "A" tag with the "name" attribute set)
+    *
+    * @param aNode    The node in the document to start the search
+    *     If it is null, the anchor node of the current selection is used
+    */
+  NS_IMETHOD GetElementOrParentByTagName(const nsString& aTagName, nsIDOMNode *aNode, nsIDOMElement** aReturn)=0;
+
+  /** Return an element only if it is the only node selected,
+    *    such as an image, horizontal rule, etc.
+    * The exception is a link, which is more like a text attribute:
+    *    The Ancho tag is returned if the selection is within the textnode(s)
+    *    that are children of the "A" node.
+    *    This could be a collapsed selection, i.e., a caret within the link text.
+    *
+    * @param aTagName  The HTML tagname
+    *    Special input values for Links and Named anchors:
+    *    Use "link" or "href" to get a link node
+    *      (an "A" tag with the "href" attribute set)
+    *    Use "anchor" or "namedanchor" to get a named anchor node
+    *      (an "A" tag with the "name" attribute set)
+    */
   NS_IMETHOD GetSelectedElement(const nsString& aTagName, nsIDOMElement** aReturn)=0;
+
+  /** Return a new element with default attribute values
+    * 
+    * This does not rely on the selection, and is not sensitive to context.
+    * 
+    * Used primarily to supply new element for various insert element dialogs
+    *  (Image, Link, NamedAnchor, Table, and HorizontalRule 
+    *   are the only returned elements as of 7/25/99)
+    *
+    * @param aTagName  The HTML tagname
+    *    Special input values for Links and Named anchors:
+    *    Use "link" or "href" to get a link node
+    *      (an "A" tag with the "href" attribute set)
+    *    Use "anchor" or "namedanchor" to get a named anchor node
+    *      (an "A" tag with the "name" attribute set)
+    */
   NS_IMETHOD CreateElementWithDefaults(const nsString& aTagName, nsIDOMElement** aReturn)=0;
-  NS_IMETHOD InsertElement(nsIDOMElement* aElement, PRBool aDeleteSelection)=0;
+
+  /** Save the attributes of a Horizontal Rule in user preferences
+    * These prefs are used when the user inserts a new Horizontal line
+    *
+    * XXX this functionality should move to the editorShell.
+    * 
+    * @param aElement An HR element
+    */
   NS_IMETHOD SaveHLineSettings(nsIDOMElement* aElement)=0;
+  
+  /** Insert an link element as the parent of the current selection
+    *   be useful for other elements.
+    *
+    * @param aElement   An "A" element with a non-empty "href" attribute
+    */
   NS_IMETHOD InsertLinkAroundSelection(nsIDOMElement* aAnchorElement)=0;
-  NS_IMETHOD SelectElement(nsIDOMElement* aElement)=0;
-  NS_IMETHOD SetCaretAfterElement(nsIDOMElement* aElement)=0;
 
-// Table editing Methods
-  NS_IMETHOD InsertTable()=0;
-  NS_IMETHOD InsertTableCell(PRInt32 aNumber, PRBool aAfter)=0;
-  NS_IMETHOD InsertTableColumn(PRInt32 aNumber, PRBool aAfter)=0;
-  NS_IMETHOD InsertTableRow(PRInt32 aNumber, PRBool aAfter)=0;
-  NS_IMETHOD DeleteTable()=0;
-  NS_IMETHOD DeleteTableCell(PRInt32 aNumber)=0;
-  NS_IMETHOD DeleteTableColumn(PRInt32 aNumber)=0;
-  NS_IMETHOD DeleteTableRow(PRInt32 aNumber)=0;
-  NS_IMETHOD JoinTableCells(PRBool aCellToRight)=0;
-
-// IME editing Methods
-  NS_IMETHOD BeginComposition(void)=0;
-  NS_IMETHOD SetCompositionString(const nsString& aCompositionString)=0;
-  NS_IMETHOD EndComposition(void)=0;
+  /**
+   * Document me!
+   * 
+   */
+  NS_IMETHOD SetBackgroundColor(const nsString& aColor)=0;
 
 
-  // Logging Methods
-  NS_IMETHOD StartLogging(nsIFileSpec *aLogFile)=0;
-  NS_IMETHOD StopLogging()=0;
+  /**
+   * Document me!
+   * 
+   */
+  NS_IMETHOD SetBodyAttribute(const nsString& aAttr, const nsString& aValue)=0;
+
 };
 
-#endif //nsIEditor_h__
-
+#endif // nsIHTMLEditor_h__

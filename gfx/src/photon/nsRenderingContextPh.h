@@ -106,8 +106,12 @@ public:
 
   NS_IMETHOD DrawRect(const nsRect& aRect);
   NS_IMETHOD DrawRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
+
   NS_IMETHOD FillRect(const nsRect& aRect);
   NS_IMETHOD FillRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
+
+  NS_IMETHOD InvertRect(const nsRect& aRect);
+  NS_IMETHOD InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
 
   NS_IMETHOD DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
   NS_IMETHOD FillPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
@@ -155,6 +159,7 @@ public:
 
   NS_IMETHOD CopyOffScreenBits(nsDrawingSurface aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
   // nsIScriptObjectOwner
   NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
@@ -173,13 +178,15 @@ private:
   void SetGC();
   NS_IMETHOD CommonInit();
   void RestoreGC();
-  void ApplyClipping( PRBool = PR_FALSE );
+  void ApplyClipping( PhGC_t *);
+  void SetPhLineStyle();
 
 protected:
   PhGC_t             *mGC;
   PhGC_t             *mholdGC;
   PhGC_t             *mOldGC;
   nscolor            mCurrentColor;
+  nsLineStyle        mLineStyle;
   nsTransform2D      *mTMatrix;		// transform that all the graphics drawn here will obey
   nsIFontMetrics     *mFontMetrics;
   nsDrawingSurfacePh *mOffscreenSurface;
@@ -197,12 +204,7 @@ protected:
   //state management
   GraphicsState     *mStates;
   nsVoidArray       *mStateCache;
-  nscolor           mCurrBrushColor;
-  nsIFontMetrics    *mCurrFontMetrics;
-  nscolor           mCurrPenColor;
   PRUint8           *mGammaTable;
-  nscolor           mCurrTextColor;
-  nsLineStyle       mCurrLineStyle;
 
   static PhGC_t     *mPtGC;
 

@@ -30,17 +30,36 @@
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "nsIMsgBiffManager.h"
-
+#include "nscore.h"
+#include "nsIProfile.h"
 #include "nsCRT.h"  // for nsCRT::strtok
+#include "prprf.h"
+#include "nsINetSupportDialogService.h"
+#include "nsIMsgFolderCache.h"
+#include "nsFileStream.h"
+#include "nsMsgUtils.h"
+#include "nsSpecialSystemDirectory.h"
 
 // this should eventually be moved to the pop3 server for upgrading
 #include "nsIPop3IncomingServer.h"
+// this should eventually be moved to the imap server for upgrading
+#include "nsIImapIncomingServer.h"
+// this should eventually be moved to the nntp server for upgrading
+#include "nsINntpIncomingServer.h"
+
+#define PREF_MAIL_ACCOUNTMANAGER_ACCOUNTS "mail.accountmanager.accounts"
+#define BUF_STR_LEN 1024
+
+#if defined(DEBUG_alecf) || defined(DEBUG_sspitzer) || defined(DEBUG_seth)
+#define DEBUG_ACCOUNTMANAGER 1
+#endif
 
 static NS_DEFINE_CID(kMsgAccountCID, NS_MSGACCOUNT_CID);
 static NS_DEFINE_CID(kMsgIdentityCID, NS_MSGIDENTITY_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kMsgBiffManagerCID, NS_MSGBIFFMANAGER_CID);
-
+static NS_DEFINE_CID(kProfileCID, NS_PROFILE_CID);
+static NS_DEFINE_CID(kCNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 
 // use this to search all accounts for the given account and store the
 // resulting key in hashKey
@@ -55,8 +74,9 @@ typedef struct _findAccountEntry {
 // put them in "servers"
 typedef struct _findServerEntry {
   const char *hostname;
-  const nsIID *iid;
-  nsISupportsArray *servers;
+  const char *username;
+  const char *type;
+  nsIMsgIncomingServer *server;
 } findServerEntry;
 
 
@@ -72,28 +92,42 @@ typedef struct _findServersByIdentityEntry {
   nsIMsgIdentity *identity;
 } findServersByIdentityEntry;
 
-class nsMsgAccountManager : public nsIMsgAccountManager {
+typedef struct _findIdentityByKeyEntry {
+  const char *key;
+  nsIMsgIdentity *identity;
+} findIdentityByKeyEntry;
+
+class nsMsgAccountManager : public nsIMsgAccountManager,
+                            public nsIShutdownListener
+{
 public:
 
   nsMsgAccountManager();
   virtual ~nsMsgAccountManager();
   
   NS_DECL_ISUPPORTS
+
+  /* nsIShutdownListener methods */
+
+  NS_IMETHOD OnShutdown(const nsCID& aClass, nsISupports *service);
+  
+  /* nsIMsgAccountManager methods */
   
   /* nsIMsgAccount createAccount (in nsIMsgIncomingServer server,
      in nsIMsgIdentity identity); */
-  NS_IMETHOD createAccount(nsIMsgIncomingServer *server,
+  NS_IMETHOD CreateAccount(nsIMsgIncomingServer *server,
                            nsIMsgIdentity *identity,
                            nsIMsgAccount **_retval) ;
   
-  /* nsIMsgAccount addAccount (in nsIMsgIncomingServer server,
+  /* nsIMsgAccount AddAccount (in nsIMsgIncomingServer server,
      in nsIMsgIdentity identity, in string accountKey); */
-  NS_IMETHOD createAccountWithKey(nsIMsgIncomingServer *server,
+  NS_IMETHOD CreateAccountWithKey(nsIMsgIncomingServer *server,
                                   nsIMsgIdentity *identity, 
                                   const char *accountKey,
                                   nsIMsgAccount **_retval) ;
 
-  NS_IMETHOD addAccount(nsIMsgAccount *account);
+  NS_IMETHOD AddAccount(nsIMsgAccount *account);
+  NS_IMETHOD RemoveAccount(nsIMsgAccount *account);
   
   /* attribute nsIMsgAccount defaultAccount; */
   NS_IMETHOD GetDefaultAccount(nsIMsgAccount * *aDefaultAccount) ;
@@ -111,10 +145,17 @@ public:
   NS_IMETHOD GetAllServers(nsISupportsArray **_retval) ;
 
   NS_IMETHOD LoadAccounts();
+  NS_IMETHOD UnloadAccounts();
+  NS_IMETHOD MigratePrefs();
+  NS_IMETHOD WriteToFolderCache(nsIMsgFolderCache *folderCache);
 
-  NS_IMETHOD FindServersByHostname(const char* hostname,
-                                   const nsIID& iid,
-                                   nsISupportsArray* *serverArray);
+  /* nsIMsgIdentity GetIdentityByKey (in string key); */
+  NS_IMETHOD GetIdentityByKey(const char *key, nsIMsgIdentity **_retval);
+
+  NS_IMETHOD FindServer(const char* username,
+                        const char* hostname,
+                        const char *type,
+                        nsIMsgIncomingServer* *aResult);
 
   NS_IMETHOD GetIdentitiesForServer(nsIMsgIncomingServer *server,
                                     nsISupportsArray **_retval);
@@ -123,10 +164,12 @@ public:
                                    nsISupportsArray **_retval);
 
   //Add/remove an account to/from the Biff Manager if it has Biff turned on.
-  nsresult addAccountToBiff(nsIMsgAccount *account);
-  nsresult removeAccountFromBiff(nsIMsgAccount *account);
+  nsresult AddAccountToBiff(nsIMsgAccount *account);
+  nsresult RemoveAccountFromBiff(nsIMsgAccount *account);
   
 private:
+  PRBool m_accountsLoaded;
+  
   nsHashtable *m_accounts;
   nsCOMPtr<nsIMsgAccount> m_defaultAccount;
 
@@ -141,10 +184,19 @@ private:
                                    void* closure);
   static PRBool addIdentitiesToArray(nsHashKey *aKey, void *aData,
                                      void *closure);
+
+  static PRBool hashTableGetAccountList(nsHashKey *aKey, void *aData,
+                                        void *closure);
   static PRBool hashTableFindAccount(nsHashKey *aKey, void *aData,
                                      void *closure);
   static PRBool hashTableFindFirst(nsHashKey *aKey, void *aData,
                                    void *closure);
+
+  static PRBool hashTableRemoveAccount(nsHashKey *aKey, void *aData,
+                                       void *closure);
+
+  static PRBool hashTableWriteFolderCache(nsHashKey *aKey, void *aData,
+                                       void *closure);
 
   static PRBool findIdentitiesForServer(nsHashKey *aKey,
                                         void *aData, void *closure);
@@ -156,17 +208,57 @@ private:
 
   // nsISupportsArray enumerators
   static PRBool findServerByName(nsISupports *aElement, void *data);
-  
+  static PRBool findIdentityByKey(nsISupports *aElement, void *data);
+
+  PRBool isUnique(nsIMsgIncomingServer *server);
   nsresult upgradePrefs();
-  nsIMsgAccount *LoadAccount(char *accountKey);
+  nsresult createSpecialFile(nsFileSpec & dir, const char *specialFileName);
+  nsresult CopyIdentity(nsIMsgIdentity *srcIdentity, nsIMsgIdentity *destIdentity);
   
+  PRInt32 MigrateImapAccounts(nsIMsgIdentity *identity);
+  nsresult MigrateImapAccount(nsIMsgIdentity *identity, const char *hostname, PRInt32 accountNum);
+  
+  PRInt32 MigratePopAccounts(nsIMsgIdentity *identity);
+  
+  PRInt32 MigrateNewsAccounts(nsIMsgIdentity *identity, PRInt32 baseAccountNum);
+  nsresult MigrateNewsAccount(nsIMsgIdentity *identity, const char *hostname, const char *newsrcfile, PRInt32 accountNum);
+
+  nsIMsgAccount *LoadAccount(nsCAutoString& accountKey);
+  nsresult SetPasswordForServer(nsIMsgIncomingServer * server);
+
+  nsIPref *prefService();
   nsIPref *m_prefs;
 };
 
 
-NS_IMPL_ISUPPORTS(nsMsgAccountManager, GetIID());
+NS_IMPL_ADDREF(nsMsgAccountManager)
+NS_IMPL_RELEASE(nsMsgAccountManager)
+  
+nsresult
+nsMsgAccountManager::QueryInterface(const nsIID& iid, void **result)
+{
+  nsresult rv = NS_NOINTERFACE;
+  if (! result)
+    return NS_ERROR_NULL_POINTER;
+
+  void *res = nsnull;
+  if (iid.Equals(nsCOMTypeInfo<nsIMsgAccountManager>::GetIID()) ||
+      iid.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
+    res = NS_STATIC_CAST(nsIMsgAccountManager*, this);
+  else if (iid.Equals(nsCOMTypeInfo<nsIShutdownListener>::GetIID()))
+    res = NS_STATIC_CAST(nsIShutdownListener*, this);
+
+  if (res) {
+    NS_ADDREF(this);
+    *result = res;
+    rv = NS_OK;
+  }
+
+  return rv;
+}
 
 nsMsgAccountManager::nsMsgAccountManager() :
+  m_accountsLoaded(PR_FALSE),
   m_defaultAccount(null_nsCOMPtr()),
   m_prefs(0)
 {
@@ -176,49 +268,78 @@ nsMsgAccountManager::nsMsgAccountManager() :
 
 nsMsgAccountManager::~nsMsgAccountManager()
 {
+  
   if (m_prefs) nsServiceManager::ReleaseService(kPrefServiceCID, m_prefs);
-  m_accounts->Enumerate(hashTableRemoveAccountFromBiff, this);
+  UnloadAccounts();
   delete m_accounts;
+}
+
+nsIPref*
+nsMsgAccountManager::prefService() {
+
+  // get the prefs service
+  if (!m_prefs) {
+    nsresult rv =
+      nsServiceManager::GetService(kPrefServiceCID,
+                                   nsCOMTypeInfo<nsIPref>::GetIID(),
+                                   (nsISupports**)&m_prefs,
+                                   this);
+    NS_ASSERTION(NS_SUCCEEDED(rv),
+                 "prefs service not available. I will crash soon!");
+  }
+
+  return m_prefs;
+}
+
+NS_IMETHODIMP
+nsMsgAccountManager::OnShutdown(const nsCID& aClass, nsISupports *service)
+{
+  if (aClass.Equals(kPrefServiceCID)) {
+    if (m_prefs) nsServiceManager::ReleaseService(kPrefServiceCID, m_prefs);
+    m_prefs = nsnull;
+  }
+
+  return NS_OK;
 }
 
 /*
  * generate a relevant, understandable key from the given server and
- * identity, make sure it's unique, then pass to addAccount
+ * identity, make sure it's unique, then pass to AddAccount
  *
  */
 NS_IMETHODIMP
-nsMsgAccountManager::createAccount(nsIMsgIncomingServer *server,
+nsMsgAccountManager::CreateAccount(nsIMsgIncomingServer *server,
                                    nsIMsgIdentity *identity,
                                    nsIMsgAccount **_retval)
 {
   const char *key = "default";
 
-  return createAccountWithKey(server, identity, key, _retval);
+  return CreateAccountWithKey(server, identity, key, _retval);
 }
 
-/* nsIMsgAccount addAccount (in nsIMsgIncomingServer server, in nsIMsgIdentity
+/* nsIMsgAccount AddAccount (in nsIMsgIncomingServer server, in nsIMsgIdentity
    identity, in string accountKey); */
 NS_IMETHODIMP
-nsMsgAccountManager::createAccountWithKey(nsIMsgIncomingServer *server,
+nsMsgAccountManager::CreateAccountWithKey(nsIMsgIncomingServer *server,
                                           nsIMsgIdentity *identity, 
                                           const char *accountKey,
                                           nsIMsgAccount **_retval)
 {
   nsresult rv;
-  nsIMsgAccount* account=nsnull;
+  nsCOMPtr<nsIMsgAccount> account=nsnull;
 
   rv = nsComponentManager::CreateInstance(kMsgAccountCID,
                                           nsnull,
-                                          nsIMsgAccount::GetIID(),
-                                          (void **)&account);
+                                          nsCOMTypeInfo<nsIMsgAccount>::GetIID(),
+                                          getter_AddRefs(account));
 
   if (NS_SUCCEEDED(rv)) {
     rv = account->SetIncomingServer(server);
     rv = account->addIdentity(identity);
   }
 
-  account->SetKey((char *)accountKey);
-  rv = addAccount(account);
+  account->SetKey(NS_CONST_CAST(char*, accountKey));
+  rv = AddAccount(account);
 
   // pointer has already been addreffed by CreateInstance
   if (NS_SUCCEEDED(rv))
@@ -229,34 +350,60 @@ nsMsgAccountManager::createAccountWithKey(nsIMsgIncomingServer *server,
 }
 
 NS_IMETHODIMP
-nsMsgAccountManager::addAccount(nsIMsgAccount *account)
+nsMsgAccountManager::AddAccount(nsIMsgAccount *account)
 {
+    nsresult rv;
+    rv = LoadAccounts();
+    if (NS_FAILED(rv)) return rv;
+
+
     nsXPIDLCString accountKey;
     account->GetKey(getter_Copies(accountKey));
-    nsCStringKey key(accountKey);
+    nsStringKey key(accountKey);
     
-#ifdef DEBUG_alecf
+    // check for uniqueness
+    nsCOMPtr<nsIMsgIncomingServer> server;
+    rv = account->GetIncomingServer(getter_AddRefs(server));
+    if (NS_FAILED(rv)) return rv;
+    if (!isUnique(server)) {
+#ifdef DEBUG_ACCOUNTMANAGER
+      printf("nsMsgAccountManager::AddAccount(%s) failed because server was not unique\n", (const char*)accountKey);
+#endif
+      // this means the server was found, which is bad.
+      return NS_ERROR_UNEXPECTED;
+    }
+
+#ifdef DEBUG_ACCOUNTMANAGER
     printf("Adding account %s\n", (const char *)accountKey);
 #endif
 
-    
     if (m_accounts->Exists(&key))
       return NS_ERROR_UNEXPECTED;
         
-    m_accounts->Put(&key, account);
-
     // do an addref for the storage in the hash table
     NS_ADDREF(account);
+    m_accounts->Put(&key, account);
+
+    // reconstruct the list of accounts
+    // this is wierd, because we could have been called
+    // from the initial LoadAccounts(). The expectation is that LoadAccounts
+    // keeps its own copy of this pref during initialization so we aren't
+    // clobbering it every time.
+    nsCString accountList;
+    m_accounts->Enumerate(hashTableGetAccountList, &accountList);
+
+    prefService()->SetCharPref(PREF_MAIL_ACCOUNTMANAGER_ACCOUNTS,
+                               accountList.GetBuffer());
     
     if (m_accounts->Count() == 1)
       m_defaultAccount = dont_QueryInterface(account);
 
-	addAccountToBiff(account);
+	AddAccountToBiff(account);
     return NS_OK;
 }
 
 nsresult
-nsMsgAccountManager::addAccountToBiff(nsIMsgAccount *account)
+nsMsgAccountManager::AddAccountToBiff(nsIMsgAccount *account)
 {
 	nsresult rv;
 	nsCOMPtr<nsIMsgIncomingServer> server;
@@ -282,7 +429,7 @@ nsMsgAccountManager::addAccountToBiff(nsIMsgAccount *account)
 	return rv;
 }
 
-nsresult nsMsgAccountManager::removeAccountFromBiff(nsIMsgAccount *account)
+nsresult nsMsgAccountManager::RemoveAccountFromBiff(nsIMsgAccount *account)
 {
 	nsresult rv;
 	nsCOMPtr<nsIMsgIncomingServer> server;
@@ -308,14 +455,33 @@ nsresult nsMsgAccountManager::removeAccountFromBiff(nsIMsgAccount *account)
 	return rv;
 }
 
+NS_IMETHODIMP
+nsMsgAccountManager::RemoveAccount(nsIMsgAccount *aAccount)
+{
+  nsresult rv;
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
+  nsHashKey *key = findAccount(aAccount);
+  if (!key) return NS_ERROR_UNEXPECTED;
+  
+  NS_RELEASE(aAccount);
+  m_accounts->Remove(key);
+  return NS_OK;
+}
+
 /* get the default account. If no default account, pick the first account */
 NS_IMETHODIMP
 nsMsgAccountManager::GetDefaultAccount(nsIMsgAccount * *aDefaultAccount)
 {
+  nsresult rv;
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
   if (!aDefaultAccount) return NS_ERROR_NULL_POINTER;
 
   if (!m_defaultAccount) {
-#if defined(DEBUG_alecf) || defined(DEBUG_sspitzer)
+#ifdef DEBUG_ACCOUNTMANAGER
     printf("No default account. Looking for one..\n");
 #endif
     
@@ -326,7 +492,7 @@ nsMsgAccountManager::GetDefaultAccount(nsIMsgAccount * *aDefaultAccount)
     // are there ANY entries?
     if (!entry.found) return NS_ERROR_UNEXPECTED;
 
-#if defined(DEBUG_alecf) || defined(DEBUG_sspitzer)
+#ifdef DEBUG_ACCOUNTMANAGER
     printf("Account (%p) found\n", entry.account);
 #endif
     m_defaultAccount = dont_QueryInterface(entry.account);
@@ -346,11 +512,59 @@ nsMsgAccountManager::SetDefaultAccount(nsIMsgAccount * aDefaultAccount)
   return NS_OK;
 }
 
+PRBool
+nsMsgAccountManager::isUnique(nsIMsgIncomingServer *server)
+{
+  nsresult rv;
+  nsXPIDLCString username;
+  nsXPIDLCString hostname;
+  nsXPIDLCString type;
+  
+  // make sure this server is unique
+  rv = server->GetUsername(getter_Copies(username));
+  if (NS_FAILED(rv)) return rv;
+    
+  rv = server->GetHostName(getter_Copies(hostname));
+  if (NS_FAILED(rv)) return rv;
+
+  rv = server->GetType(getter_Copies(type));
+
+  nsCOMPtr<nsIMsgIncomingServer> dupeServer;
+  rv = FindServer(username, hostname, type, getter_AddRefs(dupeServer));
+
+  // if the server was not found, then it really is unique.
+  if (NS_FAILED(rv)) return PR_TRUE;
+  
+  // if we're here, then we found it, but maybe it's literally the
+  // same server that we're searching for.
+
+  // return PR_FALSE on error because if one of the keys doesn't
+  // exist, then it's likely a different server
+  
+  nsXPIDLCString dupeKey;
+  rv = dupeServer->GetKey(getter_Copies(dupeKey));
+  if (NS_FAILED(rv)) return PR_FALSE;
+  
+  nsXPIDLCString serverKey;
+  server->GetKey(getter_Copies(serverKey));
+  if (NS_FAILED(rv)) return PR_FALSE;
+  
+  if (!PL_strcmp(dupeKey, serverKey))
+    // it's unique because this EXACT server is the only one that exists
+    return PR_TRUE;
+  else
+    // there is already a server with this {username, hostname, type}
+    return PR_FALSE;
+}
+
+
 /* map account->key by enumerating all accounts and returning the key
  * when the account is found */
 nsHashKey *
 nsMsgAccountManager::findAccount(nsIMsgAccount *aAccount)
 {
+  if (!aAccount) return nsnull;
+  
   findAccountEntry entry = {aAccount, PR_FALSE, nsnull };
 
   m_accounts->Enumerate(hashTableFindAccount, (void *)&entry);
@@ -398,7 +612,7 @@ nsMsgAccountManager::hashTableFindFirst(nsHashKey *aKey,
   entry->account = (nsIMsgAccount *)aData;
   entry->found = PR_TRUE;
 
-#ifdef DEBUG_alecf
+#ifdef DEBUG_ACCOUNTMANAGER
   printf("hashTableFindFirst: returning first account %p/%p\n",
          aData, entry->account);
 #endif
@@ -412,7 +626,37 @@ PRBool nsMsgAccountManager::hashTableRemoveAccountFromBiff(nsHashKey *aKey, void
 	nsIMsgAccount* account = (nsIMsgAccount *)aData;
 	nsMsgAccountManager *accountManager = (nsMsgAccountManager*)closure;
 
-	accountManager->removeAccountFromBiff(account);
+	accountManager->RemoveAccountFromBiff(account);
+	
+	return PR_TRUE;
+
+}
+
+// enumeration for removing accounts from the account manager
+PRBool
+nsMsgAccountManager::hashTableRemoveAccount(nsHashKey *aKey, void *aData,
+                                            void*closure)
+{
+  nsIMsgAccount* account = (nsIMsgAccount*)aData;
+
+  // remove from hashtable
+  NS_RELEASE(account);
+
+  return PR_TRUE;
+}
+
+
+// enumaration for writing out accounts to folder cache.
+PRBool nsMsgAccountManager::hashTableWriteFolderCache(nsHashKey *aKey, void *aData, void *closure)
+{
+	nsIMsgAccount* account = (nsIMsgAccount *)aData;
+	nsIMsgFolderCache *folderCache = (nsIMsgFolderCache *) closure;
+
+	nsCOMPtr <nsIMsgIncomingServer> server;
+
+	account->GetIncomingServer(getter_AddRefs(server));
+
+	server->WriteToFolderCache(folderCache);
 	
 	return PR_TRUE;
 
@@ -423,8 +667,13 @@ PRBool nsMsgAccountManager::hashTableRemoveAccountFromBiff(nsHashKey *aKey, void
 NS_IMETHODIMP
 nsMsgAccountManager::GetAccounts(nsISupportsArray **_retval)
 {
+  nsresult rv;
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
   nsCOMPtr<nsISupportsArray> accounts;
   NS_NewISupportsArray(getter_AddRefs(accounts));
+  
   m_accounts->Enumerate(addAccountsToArray, (void *)accounts);
 
   *_retval = accounts;
@@ -485,8 +734,11 @@ NS_IMETHODIMP
 nsMsgAccountManager::GetAllIdentities(nsISupportsArray **_retval)
 {
   nsresult rv;
-  nsISupportsArray *identities;
-  rv = NS_NewISupportsArray(&identities);
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
+  nsCOMPtr<nsISupportsArray> identities;
+  rv = NS_NewISupportsArray(getter_AddRefs(identities));
   if (NS_FAILED(rv)) return rv;
 
   // convert hash table->nsISupportsArray of identities
@@ -495,6 +747,7 @@ nsMsgAccountManager::GetAllIdentities(nsISupportsArray **_retval)
   // convert nsISupportsArray->nsISupportsArray
   // when do we free the nsISupportsArray?
   *_retval = identities;
+  NS_ADDREF(*_retval);
   return rv;
 }
 
@@ -503,6 +756,9 @@ NS_IMETHODIMP
 nsMsgAccountManager::GetAllServers(nsISupportsArray **_retval)
 {
   nsresult rv;
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
   nsISupportsArray *servers;
   rv = NS_NewISupportsArray(&servers);
 
@@ -521,251 +777,1086 @@ nsMsgAccountManager::LoadAccounts()
 {
   nsresult rv;
 
-  NS_IF_RELEASE(m_prefs);
-  rv = nsServiceManager::GetService(kPrefServiceCID,
-                                    nsIPref::GetIID(),
-                                    (nsISupports**)&m_prefs);
-  if (NS_FAILED(rv)) return rv;
+  // for now safeguard multiple calls to this function
+  if (m_accountsLoaded)
+    return NS_OK;
   
-  char *accountList = nsnull;
-  rv = m_prefs->CopyCharPref("mail.accountmanager.accounts", &accountList);
+  m_accountsLoaded = PR_TRUE;
+  // mail.accountmanager.accounts is the main entry point for all accounts
+
+  nsXPIDLCString accountList;
+  rv = prefService()->CopyCharPref(PREF_MAIL_ACCOUNTMANAGER_ACCOUNTS,
+                                   getter_Copies(accountList));
 
   if (NS_FAILED(rv) || !accountList || !accountList[0]) {
-    // create default bogus accounts
+#ifdef DEBUG_ACCOUNTMANAGER
     printf("No accounts. I'll try to migrate 4.x prefs..\n");
+#endif
     rv = upgradePrefs();
-
     return rv;
   }
-  else {    
+
     /* parse accountList and run loadAccount on each string, comma-separated */
-#ifdef DEBUG_sspitzer
-    printf("accountList = %s\n", accountList);
+#ifdef DEBUG_ACCOUNTMANAGER
+    printf("accountList = %s\n", (const char*)accountList);
 #endif
    
     nsCOMPtr<nsIMsgAccount> account;
     char *token = nsnull;
-    char *rest = accountList;
-    nsString str("",eOneByte);
+    char *rest = NS_CONST_CAST(char*,(const char*)accountList);
+    nsCAutoString str;
 
     token = nsCRT::strtok(rest, ",", &rest);
     while (token && *token) {
       str = token;
       str.StripWhitespace();
       
-      if (str != "") {
-#ifdef DEBUG_sspitzer
-        printf("accountKey = %s\n", str.GetBuffer());
-#endif
-        account = getter_AddRefs(LoadAccount((char *)str.GetBuffer()));
+      if (!str.IsEmpty()) {
+        account = getter_AddRefs(LoadAccount(str));
         if (account) {
-          addAccount(account);
-        }
-        else {
-          PR_Free(accountList);
-          return NS_ERROR_NULL_POINTER;
+          rv = AddAccount(account);
+          if (NS_FAILED(rv)) {
+
+#ifdef DEBUG_ACCOUNTMANAGER
+            printf("Error adding account %s\n", str.GetBuffer());
+#endif
+            // warn the user here?
+            // don't break out of the loop because there might
+            // be other accounts worth loading
+          }
         }
         str = "";
       }
-#ifdef DEBUG_sspitzer
-      else {
-        printf("nothing between two commas. ignore and keep going...\n");
-      }
-#endif
       token = nsCRT::strtok(rest, ",", &rest);
     }
 
     /* finished loading accounts */
-    PR_Free(accountList);
     return NS_OK;
+}
+
+PRBool
+nsMsgAccountManager::hashTableGetAccountList(nsHashKey *aKey, void *aData,
+                                             void *closure)
+{
+  nsresult rv;
+  nsCString* accountList = (nsCString*) closure;
+  nsIMsgAccount *account = (nsIMsgAccount *) aData;
+
+  nsXPIDLCString key;
+  rv = account->GetKey(getter_Copies(key));
+  if (NS_FAILED(rv)) return PR_TRUE;
+
+  if ((*accountList).IsEmpty())
+    (*accountList) += key;
+  else {
+    (*accountList) += ',';
+    (*accountList) += key;
   }
+
+  return PR_TRUE;
+}
+
+nsresult
+nsMsgAccountManager::UnloadAccounts()
+{
+  // release the default account
+  m_defaultAccount=nsnull;
+  m_accounts->Enumerate(hashTableRemoveAccountFromBiff, this);
+  m_accounts->Enumerate(hashTableRemoveAccount, this);
+  m_accounts->Reset();
+  m_accountsLoaded = PR_FALSE;
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsMsgAccountManager::WriteToFolderCache(nsIMsgFolderCache *folderCache)
+{
+	m_accounts->Enumerate(hashTableWriteFolderCache, folderCache);
+	return folderCache->Close();
+}
+
+nsresult
+nsMsgAccountManager::MigratePrefs()
+{
+#ifdef DEBUG_ACCOUNTMANAGER
+	printf("nsMsgAccountManager::MigratePrefs()\n");
+#endif
+
+	// do nothing right now.
+	// right now, all the migration happens when we don't find
+	// the mail.accountmanager.accounts pref in LoadAccounts()
+	return NS_OK;
 }
 
 nsIMsgAccount *
-nsMsgAccountManager::LoadAccount(char *accountKey)
+nsMsgAccountManager::LoadAccount(nsCAutoString& accountKey)
 {
-
-  printf("Loading preferences for account: %s\n", accountKey);
-  
+#ifdef DEBUG_ACCOUNTMANAGER
+  printf("Loading preferences for account: %s\n", accountKey.GetBuffer());
+#endif
   nsIMsgAccount *account = nsnull;
   nsresult rv;
   rv = nsComponentManager::CreateInstance(kMsgAccountCID,
                                           nsnull,
-                                          nsIMsgAccount::GetIID(),
+                                          nsCOMTypeInfo<nsIMsgAccount>::GetIID(),
                                           (void **)&account);
-#ifdef DEBUG_alecf
+#ifdef DEBUG_ACCOUNTMANAGER
   if (NS_FAILED(rv)) printf("Could not create an account\n");
 #endif
   
   if (NS_FAILED(rv)) return nsnull;
 
-  account->SetKey(accountKey);
+  // mscott - due to a bug in the idl compiler, SetKey takes a char * when it should
+  // take a const char *. but the cast *is* safe just ugly until the idl bug gets fixed
+  account->SetKey(NS_CONST_CAST(char*,(const char*)accountKey));
   
   return account;
 }
 
 nsresult
+nsMsgAccountManager::createSpecialFile(nsFileSpec & dir, const char *specialFileName)
+{
+	if (!specialFileName) return NS_ERROR_NULL_POINTER;
+
+	nsresult rv;
+	nsFileSpec file(dir);
+	file += specialFileName;
+
+	nsCOMPtr <nsIFileSpec> specialFile;
+	rv = NS_NewFileSpecWithSpec(file, getter_AddRefs(specialFile));
+    if (NS_FAILED(rv)) return rv;
+
+	PRBool specialFileExists;
+	rv = specialFile->exists(&specialFileExists);
+	if (NS_FAILED(rv)) return rv;
+
+	if (!specialFileExists) {
+		rv = specialFile->touch();
+	}
+
+	return rv;
+}
+nsresult
 nsMsgAccountManager::upgradePrefs()
 {
     nsresult rv;
-    nsCOMPtr<nsIMsgAccount> account;
-    nsCOMPtr<nsIMsgIdentity> identity;
-    nsCOMPtr<nsIMsgIncomingServer> server;
-
-    rv = nsComponentManager::CreateInstance(kMsgAccountCID,
-                                            nsnull,
-                                            nsIMsgAccount::GetIID(),
-                                            (void **)&account);
-    
-    rv = nsComponentManager::CreateInstance(kMsgIdentityCID,
-                                            nsnull,
-                                            nsIMsgIdentity::GetIID(),
-                                            (void **)&identity);
-
-    const char* serverProgID;
     PRInt32 oldMailType;
+    PRInt32 numAccounts = 0;
+    char *oldstr = nsnull;
+    PRBool oldbool;
 
-    rv = m_prefs->GetIntPref("mail.server_type", &oldMailType);
+    rv = prefService()->GetIntPref("mail.server_type", &oldMailType);
     if (NS_FAILED(rv)) {
+#ifdef DEBUG_ACCOUNTMANAGER
         printf("Tried to upgrade old prefs, but couldn't find server type!\n");
+#endif
         return rv;
     }
 
-    if ( oldMailType == 0)       // POP
-        serverProgID="component://netscape/messenger/server&type=pop3";
-    else if (oldMailType == 1)   // IMAP
-        serverProgID="component://netscape/messenger/server&type=imap";
+    nsCOMPtr<nsIMsgIdentity> identity;
+    rv = nsComponentManager::CreateInstance(kMsgIdentityCID,
+                                            nsnull,
+                                            nsCOMTypeInfo<nsIMsgIdentity>::GetIID(),
+                                            getter_AddRefs(identity));
+    identity->SetKey("identity1");
+
+    // identity stuff
+    rv = prefService()->CopyCharPref("mail.identity.useremail", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetEmail(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+    rv = prefService()->CopyCharPref("mail.identity.username", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetFullName(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+    rv = prefService()->CopyCharPref("mail.identity.reply_to", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetReplyTo(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+    rv = prefService()->CopyCharPref("mail.identity.organization", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetOrganization(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+    rv = prefService()->GetBoolPref("mail.compose_html", &oldbool);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetComposeHtml(oldbool);
+    }
+    
+    rv = prefService()->CopyCharPref("network.hosts.smtp_server", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetSmtpHostname(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+    rv = prefService()->CopyCharPref("mail.smtp_name", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      identity->SetSmtpUsername(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+    if ( oldMailType == 0) {      // POP
+      numAccounts += MigratePopAccounts(identity);
+	}
+    else if (oldMailType == 1) {  // IMAP
+      numAccounts += MigrateImapAccounts(identity);
+	}
     else {
+#ifdef DEBUG_ACCOUNTMANAGER
         printf("Unrecognized server type %d\n", oldMailType);
+#endif
         return NS_ERROR_UNEXPECTED;
     }
 
-    rv = nsComponentManager::CreateInstance(serverProgID,
-                                            nsnull,
-                                            nsIMsgIncomingServer::GetIID(),
-                                            (void **)&server);
-    account->SetKey("account1");
-    server->SetKey("server1");
-    identity->SetKey("identity1");
+	numAccounts += MigrateNewsAccounts(identity, numAccounts);
+
+    if (numAccounts == 0) return NS_ERROR_FAILURE;
     
-    account->SetIncomingServer(server);
-    account->addIdentity(identity);
-    addAccount(account);
+    // we still need to create these additional prefs.
+    // assume there is at least one account
+    prefService()->SetCharPref(PREF_MAIL_ACCOUNTMANAGER_ACCOUNTS,"account1");
+    prefService()->SetCharPref("mail.account.account1.identities","identity1");
+    prefService()->SetCharPref("mail.account.account1.server","server1");
 
-    // now upgrade all the prefs
-    char *oldstr;
-    PRInt32 oldint;
-    PRBool oldbool;
+    char *oldAccountsValueBuf=nsnull;
+    char newAccountsValueBuf[BUF_STR_LEN];
+    char prefNameBuf[BUF_STR_LEN];
+    char prefValueBuf[BUF_STR_LEN];
 
-    // identity stuff
-    rv = m_prefs->CopyCharPref("mail.identity.useremail", &oldstr);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetEmail(oldstr);
-        PR_Free(oldstr);
-    }
-
-    rv = m_prefs->CopyCharPref("mail.identity.vcard.fn", &oldstr);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetFullName(oldstr);
-        PR_Free(oldstr);
-    }
-    
-    rv = m_prefs->CopyCharPref("mail.identity.reply_to", &oldstr);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetReplyTo(oldstr);
-        PR_Free(oldstr);
-    }
-
-    rv = m_prefs->CopyCharPref("mail.identity.organization", &oldstr);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetOrganization(oldstr);
-        PR_Free(oldstr);
-    }
-    
-    rv = m_prefs->GetBoolPref("mail.send_html", &oldbool);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetUseHtml(oldbool);
-    }
-
-    rv = m_prefs->CopyCharPref("mail.smtp_server", &oldstr);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetSmtpHostname(oldstr);
-        PR_Free(oldstr);
-    }
-    
-    rv = m_prefs->CopyCharPref("mail.smtp_name", &oldstr);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetSmtpUsername(oldstr);
-        PR_Free(oldstr);
-    }
-    
-    rv = m_prefs->GetIntPref("mail.wrap_column", &oldint);
-    if (NS_SUCCEEDED(rv)) {
-        identity->SetWrapColumn(oldint);
-    }
-    
-    // generic server stuff
-
-    // pop stuff
-    // some of this ought to be moved out into the POP implementation
-    nsCOMPtr<nsIPop3IncomingServer> popServer;
-    popServer = do_QueryInterface(server, &rv);
-    if (NS_SUCCEEDED(rv)) {
-
-      rv = m_prefs->CopyCharPref("mail.pop_name", &oldstr);
+    // handle the rest of the accounts.
+    for (PRInt32 i=2;i<=numAccounts;i++) {
+      rv = prefService()->CopyCharPref(PREF_MAIL_ACCOUNTMANAGER_ACCOUNTS, &oldAccountsValueBuf);
       if (NS_SUCCEEDED(rv)) {
-        server->SetUsername(oldstr);
-        PR_Free(oldstr);
+        PR_snprintf(newAccountsValueBuf, BUF_STR_LEN, "%s,account%d",oldAccountsValueBuf,i);
+        prefService()->SetCharPref(PREF_MAIL_ACCOUNTMANAGER_ACCOUNTS,
+                                   newAccountsValueBuf);
       }
-
-      rv = m_prefs->CopyCharPref("mail.pop_password", &oldstr);
-      if (NS_SUCCEEDED(rv)) {
-        server->SetPassword(oldstr);
-        PR_Free(oldstr);
-      }
-
-      rv = m_prefs->CopyCharPref("network.hosts.pop_server", &oldstr);
-      if (NS_SUCCEEDED(rv)) {
-        server->SetHostName(oldstr);
-        PR_Free(oldstr);
-      }
-
-      rv = m_prefs->GetBoolPref("mail.check_new_mail", &oldbool);
-      if (NS_SUCCEEDED(rv)) {
-        server->SetDoBiff(oldbool);
-      }
+      PR_FREEIF(oldAccountsValueBuf);
+      oldAccountsValueBuf = nsnull;
       
-      rv = m_prefs->GetIntPref("mail.check_time", &oldint);
-      if (NS_SUCCEEDED(rv)) {
-        server->SetBiffMinutes(oldint);
-      }
+      PR_snprintf(prefNameBuf, BUF_STR_LEN, "mail.account.account%d.identities", i);
+      PR_snprintf(prefValueBuf, BUF_STR_LEN, "identity%d", i);
+      prefService()->SetCharPref(prefNameBuf, prefValueBuf);
 
-      rv = m_prefs->CopyCharPref("mail.directory", &oldstr);
-      if (NS_SUCCEEDED(rv)) {
-        server->SetLocalPath(oldstr);
-        PR_Free(oldstr);
-      }
-
-      rv = m_prefs->GetBoolPref("mail.leave_on_server", &oldbool);
-      if (NS_SUCCEEDED(rv)) {
-        popServer->SetLeaveMessagesOnServer(oldbool);
-      }
-      
-      rv = m_prefs->GetBoolPref("mail.delete_mail_left_on_server", &oldbool);
-      if (NS_SUCCEEDED(rv)) {
-        popServer->SetDeleteMailLeftOnServer(oldbool);
-      }
-      
-      
+      PR_snprintf(prefNameBuf, BUF_STR_LEN, "mail.account.account%d.server", i);
+      PR_snprintf(prefValueBuf, BUF_STR_LEN, "server%d", i);
+      prefService()->SetCharPref(prefNameBuf, prefValueBuf);
     }
 
     return NS_OK;
 }
 
+nsresult
+nsMsgAccountManager::SetPasswordForServer(nsIMsgIncomingServer * server)
+{
+  if (!server) return NS_ERROR_NULL_POINTER;
+  
+  // we do this because we can't handle 4.x passwords in 5.0 yet
+  server->SetPassword("enter your clear text password here");
+  
+  return NS_OK;
+}
+
+PRInt32
+nsMsgAccountManager::MigratePopAccounts(nsIMsgIdentity *identity)
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsIMsgAccount> account;
+  nsCOMPtr<nsIMsgIncomingServer> server;
+  
+  rv = nsComponentManager::CreateInstance(kMsgAccountCID,
+                                          nsnull,
+                                          nsCOMTypeInfo<nsIMsgAccount>::GetIID(),
+                                          getter_AddRefs(account));
+  if (NS_FAILED(rv)) return 0;
+
+  rv = nsComponentManager::CreateInstance("component://netscape/messenger/server&type=pop3",
+                                          nsnull,
+                                          nsCOMTypeInfo<nsIMsgIncomingServer>::GetIID(),
+                                          getter_AddRefs(server));
+  if (NS_FAILED(rv)) return 0;
+
+  account->SetKey("account1");
+  server->SetKey("server1");
+  
+  account->SetIncomingServer(server);
+  account->addIdentity(identity);
+
+  // adds account to the hash table.
+  AddAccount(account);
+
+  // now upgrade all the prefs
+  char *oldstr = nsnull;
+  PRInt32 oldint;
+  PRBool oldbool;
+
+  nsFileSpec profileDir;
+  
+  NS_WITH_SERVICE(nsIProfile, profile, kProfileCID, &rv);
+  if (NS_FAILED(rv)) return 0;
+  
+  rv = profile->GetCurrentProfileDir(&profileDir);
+  if (NS_FAILED(rv)) return 0;
+  
+
+  // pop stuff
+  // some of this ought to be moved out into the POP implementation
+  nsCOMPtr<nsIPop3IncomingServer> popServer;
+  popServer = do_QueryInterface(server, &rv);
+  if (NS_SUCCEEDED(rv)) {
+    server->SetType("pop3");
+	
+    rv = prefService()->CopyCharPref("mail.pop_name", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      server->SetUsername(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+    
+#ifdef CAN_UPGRADE_4x_PASSWORDS
+    rv = prefService()->CopyCharPref("mail.pop_password", &oldstr);
+    if (NS_SUCCEEDED(rv)) {
+      server->SetPassword(oldstr);
+      PR_FREEIF(oldstr);
+      oldstr = nsnull;
+    }
+#else
+    rv = SetPasswordForServer(server);
+    if (NS_FAILED(rv)) return rv;
+#endif /* CAN_UPGRADE_4x_PASSWORDS */
+
+    char *hostname=nsnull;
+    rv = prefService()->CopyCharPref("network.hosts.pop_server", &hostname);
+    if (NS_SUCCEEDED(rv)) {
+      server->SetHostName(hostname);
+    }
+    
+    rv = prefService()->GetBoolPref("mail.check_new_mail", &oldbool);
+    if (NS_SUCCEEDED(rv)) {
+      server->SetDoBiff(oldbool);
+    }
+    
+    rv = prefService()->GetIntPref("mail.check_time", &oldint);
+    if (NS_SUCCEEDED(rv)) {
+      server->SetBiffMinutes(oldint);
+    }
+    
+    // create the directory structure for this pop account
+    // under <profile dir>/Mail/<hostname>
+    nsCOMPtr <nsIFileSpec> mailDir;
+    nsFileSpec dir(profileDir);
+    PRBool dirExists;
+    
+    // turn profileDir into the mail dir.
+    dir += "Mail";
+    if (!dir.Exists()) {
+      dir.CreateDir();
+    }
+    dir += hostname;
+    PR_FREEIF(hostname);
+    
+    rv = NS_NewFileSpecWithSpec(dir, getter_AddRefs(mailDir));
+    if (NS_FAILED(rv)) return 0;
+    
+    rv = mailDir->exists(&dirExists);
+    if (NS_FAILED(rv)) return 0;
+    
+    if (!dirExists) {
+      mailDir->createDir();
+    }
+    
+    char *str = nsnull;
+    mailDir->GetNativePath(&str);
+    
+    if (str && *str) {
+      server->SetLocalPath(str);
+      PR_FREEIF(str);
+      str = nsnull;
+    }
+    
+    rv = mailDir->exists(&dirExists);
+    if (NS_FAILED(rv)) return 0;
+    
+    if (!dirExists) {
+      mailDir->createDir();
+    }
+    
+    // create the files for the special folders.
+    // this needs to be i18N.
+    rv = createSpecialFile(dir,"Inbox");
+    if (NS_FAILED(rv)) return 0;
+    
+    rv = createSpecialFile(dir,"Sent");
+    if (NS_FAILED(rv)) return 0;
+    
+    rv = createSpecialFile(dir,"Trash");
+    if (NS_FAILED(rv)) return 0;
+    
+    rv = createSpecialFile(dir,"Drafts");
+    if (NS_FAILED(rv)) return 0;
+    
+    rv = createSpecialFile(dir,"Templates");
+    if (NS_FAILED(rv)) return 0;
+    
+    rv = createSpecialFile(dir,"Unsent Message");
+    if (NS_FAILED(rv)) return 0;
+	
+    rv = prefService()->GetBoolPref("mail.leave_on_server", &oldbool);
+    if (NS_SUCCEEDED(rv)) {
+      popServer->SetLeaveMessagesOnServer(oldbool);
+    }
+    
+    rv = prefService()->GetBoolPref("mail.delete_mail_left_on_server", &oldbool);
+    if (NS_SUCCEEDED(rv)) {
+      popServer->SetDeleteMailLeftOnServer(oldbool);
+    }
+  }
+  
+  // one account created!
+  return 1;
+}
+
+PRInt32
+nsMsgAccountManager::MigrateImapAccounts(nsIMsgIdentity *identity)
+{
+  nsresult rv;
+  PRInt32 numAccounts = 0;
+  char *hostList=nsnull;
+  rv = prefService()->CopyCharPref("network.hosts.imap_servers", &hostList);
+  if (NS_FAILED(rv)) return 0;
+
+  if (!hostList || !*hostList) return 0;
+  
+  char *token = nsnull;
+  char *rest = NS_CONST_CAST(char*,(const char*)hostList);
+  nsCAutoString str;
+      
+  token = nsCRT::strtok(rest, ",", &rest);
+  while (token && *token) {
+    str = token;
+    str.StripWhitespace();
+    
+    if (!str.IsEmpty()) {
+	  numAccounts++;
+      // str is the hostname
+      if (NS_FAILED(MigrateImapAccount(identity,str,numAccounts))) {
+		// failed to migrate.  bail out.
+        return 0;
+      }
+      str = "";
+    }
+    token = nsCRT::strtok(rest, ",", &rest);
+  }
+  PR_FREEIF(hostList);
+  return numAccounts;
+}
+
+nsresult
+nsMsgAccountManager::CopyIdentity(nsIMsgIdentity *srcIdentity, nsIMsgIdentity *destIdentity)
+{
+	nsresult rv;
+	nsXPIDLCString oldstr;
+	PRBool oldbool;
+
+	rv = srcIdentity->GetEmail(getter_Copies(oldstr)); 
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetEmail(NS_CONST_CAST(char*,(const char*)oldstr));
+
+	rv = srcIdentity->GetReplyTo(getter_Copies(oldstr)); 
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetReplyTo(NS_CONST_CAST(char*,(const char*)oldstr)); 
+
+	rv = srcIdentity->GetComposeHtml(&oldbool); 
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetComposeHtml(oldbool); 
+
+	rv = srcIdentity->GetFullName(getter_Copies(oldstr)); 
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetFullName(NS_CONST_CAST(char*,(const char*)oldstr)); 
+	
+	rv = srcIdentity->GetOrganization(getter_Copies(oldstr)); 
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetOrganization(NS_CONST_CAST(char*,(const char*)oldstr)); 
+	rv = srcIdentity->GetSmtpHostname(getter_Copies(oldstr));
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetSmtpHostname(NS_CONST_CAST(char*,(const char*)oldstr)); 
+	rv = srcIdentity->GetSmtpUsername(getter_Copies(oldstr));
+	if (NS_FAILED(rv)) return rv;
+	destIdentity->SetSmtpUsername(NS_CONST_CAST(char*,(const char*)oldstr));
+
+	return rv;
+}
+
+nsresult
+nsMsgAccountManager::MigrateImapAccount(nsIMsgIdentity *identity, const char *hostname, PRInt32 accountNum)
+{
+  nsresult rv;
+  PRInt32 oldint;
+  PRBool oldbool;
+
+  if (!hostname) return NS_ERROR_NULL_POINTER;
+  if (accountNum < 1) return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsIMsgAccount> account;
+  nsCOMPtr<nsIMsgIncomingServer> server;
+  
+  rv = nsComponentManager::CreateInstance(kMsgAccountCID,
+                                          nsnull,
+                                          nsCOMTypeInfo<nsIMsgAccount>::GetIID(),
+                                          getter_AddRefs(account));
+  if (NS_FAILED(rv)) return rv;
+
+  rv = nsComponentManager::CreateInstance("component://netscape/messenger/server&type=imap",
+                                          nsnull,
+                                          nsCOMTypeInfo<nsIMsgIncomingServer>::GetIID(),
+                                          getter_AddRefs(server));
+  if (NS_FAILED(rv)) return rv;
+
+  char accountStr[BUF_STR_LEN];
+  char serverStr[BUF_STR_LEN];
+  char identityStr[BUF_STR_LEN];
+
+  PR_snprintf(accountStr,BUF_STR_LEN,"account%d",accountNum);
+#ifdef DEBUG_ACCOUNTMANAGER
+  printf("account str = %s\n",accountStr);
+#endif
+  account->SetKey(accountStr);
+  PR_snprintf(serverStr,BUF_STR_LEN,"server%d",accountNum);
+#ifdef DEBUG_ACCOUNTMANAGER
+  printf("server str = %s\n",serverStr);
+#endif
+  server->SetKey(serverStr);
+  
+  account->SetIncomingServer(server);
+
+  nsCOMPtr<nsIMsgIdentity> copied_identity;
+  rv = nsComponentManager::CreateInstance(kMsgIdentityCID,
+                                            nsnull,
+                                            nsCOMTypeInfo<nsIMsgIdentity>::GetIID(),
+                                            getter_AddRefs(copied_identity));
+  if (NS_FAILED(rv)) return rv;
+
+  PR_snprintf(identityStr,BUF_STR_LEN,"identity%d",accountNum);
+  copied_identity->SetKey(identityStr);
+
+  rv = CopyIdentity(identity,copied_identity);
+  if (NS_FAILED(rv)) return rv;
+
+  account->addIdentity(copied_identity);
+
+  // adds account to the hash table.
+  AddAccount(account);
+
+  // now upgrade all the prefs
+  char *oldstr = nsnull;
+
+  nsFileSpec profileDir;
+  
+  NS_WITH_SERVICE(nsIProfile, profile, kProfileCID, &rv);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  
+  rv = profile->GetCurrentProfileDir(&profileDir);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  
+  // some of this ought to be moved out into the IMAP implementation
+  nsCOMPtr<nsIImapIncomingServer> imapServer;
+  imapServer = do_QueryInterface(server, &rv);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  
+  server->SetType("imap");
+  server->SetHostName((char *)hostname);
+
+  char prefName[BUF_STR_LEN];
+  PR_snprintf(prefName, BUF_STR_LEN, "mail.imap.server.%s.userName",hostname);
+  rv = prefService()->CopyCharPref(prefName, &oldstr);
+  if (NS_SUCCEEDED(rv)) {
+    server->SetUsername(oldstr);
+    PR_FREEIF(oldstr);
+    oldstr = nsnull;
+  }
+
+#ifdef CAN_UPGRADE_4x_PASSWORDS
+  // upgrade the password
+  PR_snprintf(prefName, BUF_STR_LEN, "mail.imap.server.%s.password",hostname);
+  rv = prefService()->CopyCharPref(prefName, &oldstr);
+  if (NS_SUCCEEDED(rv)) {
+    server->SetPassword("enter your clear text password here");
+    PR_FREEIF(oldstr);
+    oldstr = nsnull;
+  }
+#else
+  rv = SetPasswordForServer(server);
+  if (NS_FAILED(rv)) return rv;
+#endif /* CAN_UPGRADE_4x_PASSWORDS */
+
+  // upgrade the biff prefs
+  PR_snprintf(prefName, BUF_STR_LEN, "mail.imap.server.%s.check_new_mail",hostname);
+  rv = prefService()->GetBoolPref(prefName, &oldbool);
+  if (NS_SUCCEEDED(rv)) {
+    server->SetDoBiff(oldbool);
+  }
+
+  PR_snprintf(prefName, BUF_STR_LEN, "mail.imap.server.%s.check_time",hostname);
+  rv = prefService()->GetIntPref(prefName, &oldint);
+  if (NS_SUCCEEDED(rv)) {
+    server->SetBiffMinutes(oldint);
+  }
+  
+  // create the directory structure for this pop account
+  // under <profile dir>/Mail/<hostname>
+  nsCOMPtr <nsIFileSpec> imapMailDir;
+  nsFileSpec dir(profileDir);
+  PRBool dirExists;
+  
+  // turn profileDir into the mail dir.
+  dir += "ImapMail";
+  if (!dir.Exists()) {
+    dir.CreateDir();
+  }
+  dir += hostname;
+  
+  rv = NS_NewFileSpecWithSpec(dir, getter_AddRefs(imapMailDir));
+  if (NS_FAILED(rv)) return rv;
+
+  char *str = nsnull;
+  imapMailDir->GetNativePath(&str);
+
+  if (str && *str) {
+    server->SetLocalPath(str);
+    PR_FREEIF(str);
+    str = nsnull;
+  }
+  
+  rv = imapMailDir->exists(&dirExists);
+  if (NS_FAILED(rv)) return rv;
+  
+  if (!dirExists) {
+    imapMailDir->createDir();
+  }
+  
+  return NS_OK;
+}
+  
+#ifdef USE_NEWSRC_MAP_FILE
+#define NEWSRC_MAP_FILE_COOKIE "netscape-newsrc-map-file"
+#endif /* USE_NEWSRC_MAP_FILE */
+
+PRInt32
+nsMsgAccountManager::MigrateNewsAccounts(nsIMsgIdentity *identity, PRInt32 baseAccountNum)
+{
+	PRInt32 numAccounts = 0;
+	nsresult rv;
+
+	// there should be one imap or one pop by this point.
+	// if there isn't, bail now?
+	//if (accountNum < 1) return 0;
+
+	nsFileSpec profileDir;
+	
+	NS_WITH_SERVICE(nsIProfile, profile, kProfileCID, &rv);
+	if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+	
+	rv = profile->GetCurrentProfileDir(&profileDir);
+	if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+	nsFileSpec newsDir(profileDir);
+	
+	// turn profileDir into the News dir.
+	newsDir += "News";
+	if (!newsDir.Exists()) {
+		newsDir.CreateDir();
+	}
+
+#ifdef USE_NEWSRC_MAP_FILE	
+	// use news.directory to find the fat file
+	// for each news server in the fat file call MigrateNewsAccount();
+	
+	// use news.directory?
+	nsFileSpec fatFile(newsDir);
+	fatFile += NEWS_FAT_FILE_NAME;
+	
+	char buffer[512];
+	char psuedo_name[512];
+	char filename[512];
+	char is_newsgroup[512];
+	PRBool ok;
+
+	nsInputFileStream inputStream(fatFile);
+	
+	if (inputStream.eof()) {
+		inputStream.close();
+		return 0;
+	}
+	
+    /* we expect the first line to be NEWSRC_MAP_FILE_COOKIE */
+	ok = inputStream.readline(buffer, sizeof(buffer));
+	
+    if ((!ok) || (PL_strncmp(buffer, NEWSRC_MAP_FILE_COOKIE, PL_strlen(NEWSRC_MAP_FILE_COOKIE)))) {
+		inputStream.close();
+		return 0;
+	}   
+	
+	while (!inputStream.eof()) {
+		char * p;
+		PRInt32 i;
+		
+		ok = inputStream.readline(buffer, sizeof(buffer));
+		if (!ok) {
+			inputStream.close();
+			return 0;
+		}  
+		
+		/* sspitzer todo:  replace this with nsString code */
+
+		/*
+		This used to be scanf() call which would incorrectly
+		parse long filenames with spaces in them.  - JRE
+		*/
+		
+		filename[0] = '\0';
+		is_newsgroup[0]='\0';
+		
+		for (i = 0, p = buffer; *p && *p != '\t' && i < 500; p++, i++)
+			psuedo_name[i] = *p;
+		psuedo_name[i] = '\0';
+		if (*p) 
+		{
+			for (i = 0, p++; *p && *p != '\t' && i < 500; p++, i++)
+				filename[i] = *p;
+			filename[i]='\0';
+			if (*p) 
+			{
+				for (i = 0, p++; *p && *p != '\r' && i < 500; p++, i++)
+					is_newsgroup[i] = *p;
+				is_newsgroup[i]='\0';
+			}
+		}
+		
+		if(!PL_strncmp(is_newsgroup, "TRUE", 4)) {
+#ifdef DEBUG_ACCOUNTMANAGER
+			printf("is_newsgroups_file = TRUE\n");
+#endif
+		}
+		else {
+#ifdef DEBUG_ACCOUNTMANAGER
+          printf("is_newsgroups_file = FALSE\n");
+  
+          printf("psuedo_name=%s,filename=%s\n", psuedo_name, filename);
+#endif			
+#ifdef NEWS_FAT_STORES_ABSOLUTE_NEWSRC_FILE_PATHS
+			// most likely, the fat file has been copied (or moved ) from
+			// its old location.  So the absolute file paths will be wrong.
+			// all we care about is the leaf, so use that.
+			nsFileSpec oldRcFile(filename);
+			char *leaf = oldRcFile.GetLeafName();
+
+			// use news.directory instead of newsDir?
+			nsFileSpec rcFile(newsDir);
+			rcFile += leaf;
+			nsCRT::free(leaf);
+			leaf = nsnull;
+#else
+		    // use news.directory instead of newsDir?
+			nsFileSpec rcFile(newsDir);
+			rcFile += filename;
+#endif /* NEWS_FAT_STORES_ABSOLUTE_NEWSRC_FILE_PATHS */
+
+			numAccounts++;
+				
+			// psuedo-name is of the form newsrc-<host> or snewsrc-<host>.  
+			// right now, we can't handle snewsrc, so if we get one of those
+			// gracefully handle it by ignoring it.
+			if (PL_strncmp(PSUEDO_NAME_PREFIX,psuedo_name,PL_strlen(PSUEDO_NAME_PREFIX)) != 0) {
+				continue;
+			}
+
+			// check that there is a hostname to get after the "newsrc-" part
+			NS_ASSERTION(PL_strlen(psuedo_name) > PL_strlen(PSUEDO_NAME_PREFIX), "psuedo_name is too short");
+			if (PL_strlen(psuedo_name) <= PL_strlen(PSUEDO_NAME_PREFIX)) {
+				return 0;
+			}
+
+			char *hostname = psuedo_name + PL_strlen(PSUEDO_NAME_PREFIX);
+#ifdef DEBUG_ACCOUNTMANAGER
+            printf("rcFile?  should it be a const char *?\n");
+#endif
+			if (NS_FAILED(MigrateNewsAccount(identity, hostname, rcFile, baseAccountNum + numAccounts))) {
+				// failed to migrate.  bail out
+				return 0;
+			}
+		}
+	}
+	
+	inputStream.close();
+
+#else
+    char *news_directory_value = nsnull;
+	nsFileSpec dirWithTheNewsrcFiles;
+    
+	rv = prefService()->CopyCharPref("news.directory", &news_directory_value);
+	if (NS_SUCCEEDED(rv)) {
+      dirWithTheNewsrcFiles = news_directory_value;
+      PR_FREEIF(news_directory_value);
+      news_directory_value = nsnull;
+	}
+    else {
+      // if that fails, use the home directory
+      
+#ifdef XP_UNIX
+      nsSpecialSystemDirectory homeDir(nsSpecialSystemDirectory::Unix_HomeDirectory);
+#elif XP_BEOS
+      nsSpecialSystemDirectory homeDir(nsSpecialSystemDirectory::BeOS_HomeDirectory);
+#else
+#error where_are_your_newsrc_files
+#endif /* XP_UNIX, XP_BEOS */
+
+      dirWithTheNewsrcFiles = homeDir;
+    }
+
+    for (nsDirectoryIterator i(dirWithTheNewsrcFiles, PR_FALSE); i.Exists(); i++) {
+      nsFileSpec possibleRcFile = i.Spec();
+
+      char *filename = possibleRcFile.GetLeafName();
+#ifdef DEBUG_ACCOUNTMANAGER
+      printf("leaf = %s\n", filename);
+#endif
+      
+      if ((PL_strncmp(NEWSRC_FILE_PREFIX, filename, PL_strlen(NEWSRC_FILE_PREFIX)) == 0) && (PL_strlen(filename) > PL_strlen(NEWSRC_FILE_PREFIX))) {
+#ifdef DEBUG_ACCOUNTMANAGER
+        printf("found a newsrc file!\n");
+#endif
+        numAccounts++;
+
+        char *hostname = filename + PL_strlen(NEWSRC_FILE_PREFIX);
+        if (NS_FAILED(MigrateNewsAccount(identity, hostname, possibleRcFile, baseAccountNum + numAccounts))) {
+          // failed to migrate.  bail out
+          return 0;
+        }
+      }
+      nsCRT::free(filename);
+      filename = nsnull;
+    }
+#endif /* USE_NEWSRC_MAP_FILE */
+
+	return numAccounts;
+}
+
+nsresult
+nsMsgAccountManager::MigrateNewsAccount(nsIMsgIdentity *identity, const char *hostname, const char *newsrcfile, PRInt32 accountNum)
+{  
+	nsresult rv;
+	
+	if (!newsrcfile) return NS_ERROR_NULL_POINTER;
+	if (!hostname) return NS_ERROR_NULL_POINTER;
+	if (accountNum < 1) return NS_ERROR_FAILURE;
+	
+	nsCOMPtr<nsIMsgAccount> account;
+	nsCOMPtr<nsIMsgIncomingServer> server;
+	
+	rv = nsComponentManager::CreateInstance(kMsgAccountCID,
+		nsnull,
+		nsCOMTypeInfo<nsIMsgAccount>::GetIID(),
+		getter_AddRefs(account));
+	if (NS_FAILED(rv)) return rv;
+	
+	rv = nsComponentManager::CreateInstance("component://netscape/messenger/server&type=nntp",
+		nsnull,
+		nsCOMTypeInfo<nsIMsgIncomingServer>::GetIID(),
+		getter_AddRefs(server));
+	if (NS_FAILED(rv)) return rv;
+
+	char accountStr[BUF_STR_LEN];
+	char serverStr[BUF_STR_LEN];
+	char identityStr[BUF_STR_LEN];
+	PR_snprintf(accountStr,BUF_STR_LEN,"account%d",accountNum);
+#ifdef DEBUG_ACCOUNTMANAGER
+	printf("account str = %s\n",accountStr);
+#endif
+	account->SetKey(accountStr);
+	PR_snprintf(serverStr,BUF_STR_LEN,"server%d",accountNum);
+#ifdef DEBUG_ACCOUNTMANAGER
+	printf("server str = %s\n",serverStr);
+#endif
+	server->SetKey(serverStr);
+	
+	account->SetIncomingServer(server);
+
+	nsCOMPtr<nsIMsgIdentity> copied_identity;
+	rv = nsComponentManager::CreateInstance(kMsgIdentityCID,
+						    nsnull,
+						    nsCOMTypeInfo<nsIMsgIdentity>::GetIID(),
+						    getter_AddRefs(copied_identity));
+	if (NS_FAILED(rv)) return rv;
+
+	PR_snprintf(identityStr,BUF_STR_LEN,"identity%d",accountNum);
+	copied_identity->SetKey(identityStr);
+
+	rv = CopyIdentity(identity,copied_identity);
+	if (NS_FAILED(rv)) return rv;
+
+	account->addIdentity(copied_identity);
+	
+	// adds account to the hash table.
+	AddAccount(account);
+	
+	// now upgrade all the prefs
+	nsFileSpec profileDir;
+	
+	NS_WITH_SERVICE(nsIProfile, profile, kProfileCID, &rv);
+	if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+	
+	rv = profile->GetCurrentProfileDir(&profileDir);
+	if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+	
+	// some of this ought to be moved out into the NNTP implementation
+	nsCOMPtr<nsINntpIncomingServer> nntpServer;
+	nntpServer = do_QueryInterface(server, &rv);
+	if (NS_FAILED(rv)) {
+		return rv;
+	}
+	
+	server->SetType("nntp");
+	server->SetHostName((char *)hostname);
+
+#ifdef SUPPORT_SNEWS
+	char *oldstr = nsnull;
+	
+	// we don't handle nntp servers that accept username / passwords yet
+	char prefName[BUF_STR_LEN];
+	PR_snprintf(prefName, BUF_STR_LEN, "???nntp.server.%s.userName",hostname);
+	rv = prefService()->CopyCharPref(prefName, &oldstr);
+	if (NS_SUCCEEDED(rv)) {
+		server->SetUsername(oldstr);
+		PR_FREEIF(oldstr);
+		oldstr = nsnull;
+	}
+
+#ifdef CAN_UPGRADE_4x_PASSWORDS
+	// upgrade the password
+	PR_snprintf(prefName, BUF_STR_LEN, "???nntp.server.%s.password",hostname);
+	rv = prefService()->CopyCharPref(prefName, &oldstr);
+	if (NS_SUCCEEDED(rv)) {
+		server->SetPassword("enter your clear text password here");
+		PR_FREEIF(oldstr);
+		oldstr = nsnull;
+	}
+#else
+	rv = SetPasswordForServer(server);
+	if (NS_FAILED(rv)) return rv;
+#endif /* CAN_UPGRADE_4x_PASSWORDS */
+#endif /* SUPPORT_SNEWS */
+		
+	// create the directory structure for this pop account
+	// under <profile dir>/News/host-<hostname>
+	nsCOMPtr <nsIFileSpec> newsDir;
+	nsFileSpec dir(profileDir);
+	PRBool dirExists;
+	
+	// turn profileDir into the News dir.
+	dir += "News";
+	if (!dir.Exists()) {
+		dir.CreateDir();
+	}
+
+	// can't do dir += "host-"; dir += hostname; 
+	// because += on a nsFileSpec inserts a separator
+	// so we'd end up with host-/<hostname> and not host-<hostname>
+	nsCAutoString alteredHost ((const char *) "host-");
+	alteredHost += hostname;
+	NS_MsgHashIfNecessary(alteredHost);	
+	dir += (const char *) alteredHost;
+
+	rv = NS_NewFileSpecWithSpec(dir, getter_AddRefs(newsDir));
+	if (NS_FAILED(rv)) return rv;
+
+	char *str = nsnull;
+	newsDir->GetNativePath(&str);
+	
+	if (str && *str) {
+		server->SetLocalPath(str);
+		PR_FREEIF(str);
+		str = nsnull;
+	}
+	
+	rv = newsDir->exists(&dirExists);
+	if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+	
+	if (!dirExists) {
+		newsDir->createDir();
+	}
+	
+	nntpServer->SetNewsrcFilePath((char *)newsrcfile);
+
+	return NS_OK;
+}
+
 NS_IMETHODIMP
-nsMsgAccountManager::FindServersByHostname(const char* hostname,
-                                           const nsIID& iid,
-                                           nsISupportsArray* *matchingServers)
+nsMsgAccountManager::GetIdentityByKey(const char *key,
+                                      nsIMsgIdentity **_retval)
+{
+  // there might be a better way, do it the cheesy way for now
+  nsresult rv;
+  
+  nsCOMPtr<nsISupportsArray> identities;
+  rv = GetAllIdentities(getter_AddRefs(identities));
+
+  findIdentityByKeyEntry findEntry;
+  findEntry.key = key;
+  findEntry.identity = nsnull;
+
+  identities->EnumerateForwards(findIdentityByKey, (void *)&findEntry);
+
+  if (findEntry.identity) {
+    *_retval = findEntry.identity;
+    NS_ADDREF(*_retval);
+  }
+  return NS_OK;
+
+}
+
+PRBool
+nsMsgAccountManager::findIdentityByKey(nsISupports *aElement, void *data)
+{
+  nsresult rv;
+  nsCOMPtr<nsIMsgIdentity> identity = do_QueryInterface(aElement, &rv);
+  if (NS_FAILED(rv)) return PR_TRUE;
+
+  findIdentityByKeyEntry *entry = (findIdentityByKeyEntry*) data;
+
+  nsXPIDLCString key;
+  rv = identity->GetKey(getter_Copies(key));
+  if (NS_FAILED(rv)) return rv;
+  
+  if (key && entry->key && !PL_strcmp(key, entry->key)) {
+    entry->identity = identity;
+    NS_ADDREF(entry->identity);
+    return PR_FALSE;
+  }
+
+  return PR_TRUE;
+}
+
+NS_IMETHODIMP
+nsMsgAccountManager::FindServer(const char* username,
+                                const char* hostname,
+                                const char* type,
+                                nsIMsgIncomingServer** aResult)
 {
   nsresult rv;
   nsCOMPtr<nsISupportsArray> servers;
@@ -773,17 +1864,19 @@ nsMsgAccountManager::FindServersByHostname(const char* hostname,
   rv = GetAllServers(getter_AddRefs(servers));
   if (NS_FAILED(rv)) return rv;
 
-  rv = NS_NewISupportsArray(matchingServers);
-  if (NS_FAILED(rv)) return rv;
-  
   findServerEntry serverInfo;
   serverInfo.hostname = hostname;
-  serverInfo.iid = &iid;
-  serverInfo.servers = *matchingServers;
+  // username might be blank, pass "" instead
+  serverInfo.username = username ? username : ""; 
+  serverInfo.type = type;
+  serverInfo.server = *aResult = nsnull;
   
   servers->EnumerateForwards(findServerByName, (void *)&serverInfo);
 
-  // as long as we have an nsISupportsArray, we are successful
+  if (!serverInfo.server) return NS_ERROR_UNEXPECTED;
+  *aResult = serverInfo.server;
+  NS_ADDREF(*aResult);
+  
   return NS_OK;
 
 }
@@ -798,16 +1891,26 @@ nsMsgAccountManager::findServerByName(nsISupports *aElement, void *data)
 
   findServerEntry *entry = (findServerEntry*) data;
 
+  nsresult rv;
+  
   nsXPIDLCString thisHostname;
-  nsresult rv = server->GetHostName(getter_Copies(thisHostname));
+  rv = server->GetHostName(getter_Copies(thisHostname));
   if (NS_FAILED(rv)) return PR_TRUE;
 
-  // do a QI to see if we support this interface, but be sure to release it!
-  nsISupports* dummy;
+  char *username=nsnull;
+  rv = server->GetUsername(&username);
+  if (NS_FAILED(rv)) return PR_TRUE;
+  if (!username) username=PL_strdup("");
+  
+  nsXPIDLCString thisType;
+  rv = server->GetType(getter_Copies(thisType));
+  if (NS_FAILED(rv)) return PR_TRUE;
+  
   if (PL_strcasecmp(entry->hostname, thisHostname)==0 &&
-      NS_SUCCEEDED(server->QueryInterface(*(entry->iid), (void **)&dummy))) {
-    NS_RELEASE(dummy);
-    entry->servers->AppendElement(aElement);
+      PL_strcmp(entry->username, username)==0 &&
+      PL_strcmp(entry->type, thisType)==0) {
+    entry->server = server;
+    return PR_FALSE;            // stop on first find
   }
 
   return PR_TRUE;
@@ -818,6 +1921,9 @@ nsMsgAccountManager::GetIdentitiesForServer(nsIMsgIncomingServer *server,
                                             nsISupportsArray **_retval)
 {
   nsresult rv;
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
   nsCOMPtr<nsISupportsArray> identities;
   rv = NS_NewISupportsArray(getter_AddRefs(identities));
   if (NS_FAILED(rv)) return rv;
@@ -846,7 +1952,7 @@ nsMsgAccountManager::findIdentitiesForServer(nsHashKey *key,
   
   nsIMsgIncomingServer* thisServer;
   rv = account->GetIncomingServer(&thisServer);
-  if (NS_FAILED(rv)) return rv;
+  if (NS_FAILED(rv)) return PR_TRUE;
   
   // ugh, this is bad. Need a better comparison method
   if (entry->server == thisServer) {
@@ -866,8 +1972,10 @@ NS_IMETHODIMP
 nsMsgAccountManager::GetServersForIdentity(nsIMsgIdentity *identity,
                                            nsISupportsArray **_retval)
 {
-
   nsresult rv;
+  rv = LoadAccounts();
+  if (NS_FAILED(rv)) return rv;
+  
   nsCOMPtr<nsISupportsArray> servers;
   rv = NS_NewISupportsArray(getter_AddRefs(servers));
   if (NS_FAILED(rv)) return rv;
@@ -907,14 +2015,22 @@ nsMsgAccountManager::findServersForIdentity(nsHashKey *key,
     if (!thisSupports) continue;
     
     nsIMsgIdentity *thisIdentity;
-    rv = thisSupports->QueryInterface(nsIMsgIdentity::GetIID(),
+    rv = thisSupports->QueryInterface(nsCOMTypeInfo<nsIMsgIdentity>::GetIID(),
                                       (void **)&thisIdentity);
     NS_RELEASE(thisSupports);
     if (NS_SUCCEEDED(rv)) {
 
-      // if the identity is found, add this server to this element
-      // bad bad bad - pointer comparisons are evil.
-      if (entry->identity == thisIdentity) {
+	  char *thisIdentityKey = nsnull, *identityKey = nsnull;
+
+	  rv = entry->identity->GetKey(&identityKey);
+	  if(NS_SUCCEEDED(rv))
+		  rv = thisIdentity->GetKey(&thisIdentityKey);
+
+	  //SP:  Don't compare pointers.  Identities are getting created multiple times with
+	  // the same id.  Therefore ptr tests don't succeed, but key tests do.  We should probably
+	  // be making sure we only have one identity per key.  But that is a different problem that
+	  // needs to be solved.
+      if (NS_SUCCEEDED(rv) && PL_strcmp(identityKey, thisIdentityKey) == 0) {
         nsCOMPtr<nsIMsgIncomingServer> thisServer;
         rv = account->GetIncomingServer(getter_AddRefs(thisServer));
         if (NS_SUCCEEDED(rv)) {
@@ -922,9 +2038,17 @@ nsMsgAccountManager::findServersForIdentity(nsHashKey *key,
 
           // release everything NOW since we're breaking out of the loop
           NS_RELEASE(thisIdentity);
+		  if(thisIdentityKey)
+		    PL_strfree(thisIdentityKey);
+		  if(identityKey)
+		    PL_strfree(identityKey);
           break;
         }
       }
+	  if(thisIdentityKey)
+		  PL_strfree(thisIdentityKey);
+	  if(identityKey)
+		  PL_strfree(identityKey);
       NS_RELEASE(thisIdentity);
     }
   }

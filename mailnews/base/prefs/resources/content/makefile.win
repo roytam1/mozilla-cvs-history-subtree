@@ -24,37 +24,46 @@ install::
 	$(MAKE_INSTALL) AccountManager.js	$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) accounttree.xul		$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) am-main.xul			$(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) am-test.xul			$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) am-server.xul		$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) am-server-top.xul	$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) am-server-pop3.xul	$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) am-copies.xul		$(DIST)\bin\chrome\messenger\content\default
 	$(MAKE_INSTALL) am-advanced.xul		$(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-mailnews.html	$(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-identity.html	$(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-mailservers.html $(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-newsservers.html $(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-winsetting.html $(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-receipts.html	$(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) custreceipt.html	$(DIST)\bin\chrome\messenger\content\default
-	$(MAKE_INSTALL) pref-diskspace.html	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) pref-mailnews.xul	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) pref-winsetting.xul $(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) pref-receipts.xul	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) custreceipt.xul		$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) pref-diskspace.xul	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) AccountWizard.xul	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) AccountWizard.js	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) aw-accounttype.xul	$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) aw-identity.xul		$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) aw-server.xul		$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) aw-login.xul		$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) aw-accname.xul		$(DIST)\bin\chrome\messenger\content\default
+	$(MAKE_INSTALL) aw-done.xul			$(DIST)\bin\chrome\messenger\content\default
 
 clobber::
 	rm -f $(DIST)\chrome\messenger\content\default\AccountManager.xul
 	rm -f $(DIST)\chrome\messenger\content\default\AccountManager.js
 	rm -f $(DIST)\chrome\messenger\content\default\accounttree.xul
 	rm -f $(DIST)\chrome\messenger\content\default\am-main.xul
-	rm -f $(DIST)\chrome\messenger\content\default\am-test.xul
 	rm -f $(DIST)\chrome\messenger\content\default\am-server.xul
 	rm -f $(DIST)\chrome\messenger\content\default\am-server-top.xul
 	rm -f $(DIST)\chrome\messenger\content\default\am-server-pop3.xul
 	rm -f $(DIST)\chrome\messenger\content\default\am-copies.xul
 	rm -f $(DIST)\chrome\messenger\content\default\am-advanced.xul
-	rm -f $(DIST)\chrome\messenger\content\default\pref-mailnews.html
-	rm -f $(DIST)\chrome\messenger\content\default\pref-identity.html
-	rm -f $(DIST)\chrome\messenger\content\default\pref-mailservers.html
-	rm -f $(DIST)\chrome\messenger\content\default\pref-newsservers.html
-	rm -f $(DIST)\chrome\messenger\content\default\pref-winsetting.html
-	rm -f $(DIST)\chrome\messenger\content\default\pref-receipts.html
-	rm -f $(DIST)\chrome\messenger\content\default\custreceipt.html
-	rm -f $(DIST)\chrome\messenger\content\default\pref-diskspace.html
+	rm -f $(DIST)\chrome\messenger\content\default\AccountWizard.xul
+	rm -f $(DIST)\chrome\messenger\content\default\AccountWizard.js
+	rm -f $(DIST)\chrome\messenger\content\default\aw-accounttype.xul
+	rm -f $(DIST)\chrome\messenger\content\default\aw-identity.xul
+	rm -f $(DIST)\chrome\messenger\content\default\aw-server.xul
+	rm -f $(DIST)\chrome\messenger\content\default\aw-smtp.xul
+	rm -f $(DIST)\chrome\messenger\content\default\aw-login.xul
+	rm -f $(DIST)\chrome\messenger\content\default\aw-accname.xul
+	rm -f $(DIST)\chrome\messenger\content\default\aw-done.xul
+	rm -f $(DIST)\chrome\messenger\content\default\pref-mailnews.xul
+	rm -f $(DIST)\chrome\messenger\content\default\pref-winsetting.xul
+	rm -f $(DIST)\chrome\messenger\content\default\pref-receipts.xul
+	rm -f $(DIST)\chrome\messenger\content\default\custreceipt.xul
+	rm -f $(DIST)\chrome\messenger\content\default\pref-diskspace.xul

@@ -343,12 +343,12 @@ public:
 
     NS_DECL_ISUPPORTS
 
-    NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-    NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-    NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-    NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
-    NS_IMETHOD GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info);
-    NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, 
+    NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+    NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+    NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+    NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg);
+    NS_IMETHOD GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* info);
+    NS_IMETHOD OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, 
                                PRUint32 aLength);
 
     void     SetStatus(nsresult aStatus);
@@ -427,18 +427,18 @@ void ProxyEvent::Fire(nsIEventQueue* aEventQ)
 
 struct StreamListenerProxyEvent : public ProxyEvent
 {
-    StreamListenerProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL);
+    StreamListenerProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL);
     virtual ~StreamListenerProxyEvent();
 
     virtual void InitEvent();
     static void PR_CALLBACK HandlePLEvent(PLEvent* aEvent);
 
     nsStreamListenerProxy* mProxy;
-    nsIURL* mURL;
+    nsIURI* mURL;
 };
 
 
-StreamListenerProxyEvent::StreamListenerProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL)
+StreamListenerProxyEvent::StreamListenerProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL)
 {
     mProxy = aProxy;
     mURL   = aURL;
@@ -476,35 +476,35 @@ void PR_CALLBACK StreamListenerProxyEvent::HandlePLEvent(PLEvent* aEvent)
     }
 }
 
-/*-------------- OnStartBinding Proxy --------------------------------------*/
+/*-------------- OnStartRequest Proxy --------------------------------------*/
 
-struct OnStartBindingProxyEvent : public StreamListenerProxyEvent
+struct OnStartRequestProxyEvent : public StreamListenerProxyEvent
 {
-    OnStartBindingProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL, 
+    OnStartRequestProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL, 
                              const char *aContentType);
-    virtual ~OnStartBindingProxyEvent();
+    virtual ~OnStartRequestProxyEvent();
     NS_IMETHOD HandleEvent();
 
     char *mContentType;
 };
 
-OnStartBindingProxyEvent::OnStartBindingProxyEvent(nsStreamListenerProxy* aProxy,
-                                                   nsIURL* aURL,
+OnStartRequestProxyEvent::OnStartRequestProxyEvent(nsStreamListenerProxy* aProxy,
+                                                   nsIURI* aURL,
                                                    const char *aContentType)
                         : StreamListenerProxyEvent(aProxy, aURL)
 {
     mContentType = PL_strdup(aContentType);
 }
 
-OnStartBindingProxyEvent::~OnStartBindingProxyEvent()
+OnStartRequestProxyEvent::~OnStartRequestProxyEvent()
 {
     PR_Free(mContentType);
 }
 
 NS_IMETHODIMP
-OnStartBindingProxyEvent::HandleEvent()
+OnStartRequestProxyEvent::HandleEvent()
 {
-    return mProxy->mRealListener->OnStartBinding(mURL, mContentType);
+    return mProxy->mRealListener->OnStartRequest(mURL, mContentType);
 }
 
 
@@ -512,7 +512,7 @@ OnStartBindingProxyEvent::HandleEvent()
 
 struct OnProgressProxyEvent : public StreamListenerProxyEvent
 {
-    OnProgressProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL, 
+    OnProgressProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL, 
                          PRUint32 aProgress, PRUint32 aProgressMax);
     NS_IMETHOD HandleEvent();
 
@@ -521,7 +521,7 @@ struct OnProgressProxyEvent : public StreamListenerProxyEvent
 };
 
 OnProgressProxyEvent::OnProgressProxyEvent(nsStreamListenerProxy* aProxy,
-                                           nsIURL* aURL,
+                                           nsIURI* aURL,
                                            PRUint32 aProgress,
                                            PRUint32 aProgressMax)
                      : StreamListenerProxyEvent(aProxy, aURL)
@@ -540,7 +540,7 @@ OnProgressProxyEvent::HandleEvent()
 
 struct OnStatusProxyEvent : public StreamListenerProxyEvent
 {
-    OnStatusProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL, 
+    OnStatusProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL, 
                        const PRUnichar* aMsg);
     NS_IMETHOD HandleEvent();
 
@@ -548,7 +548,7 @@ struct OnStatusProxyEvent : public StreamListenerProxyEvent
 };
 
 OnStatusProxyEvent::OnStatusProxyEvent(nsStreamListenerProxy* aProxy,
-                                       nsIURL* aURL,
+                                       nsIURI* aURL,
                                        const PRUnichar* aMsg)
                    : StreamListenerProxyEvent(aProxy, aURL)
 {
@@ -565,11 +565,11 @@ OnStatusProxyEvent::HandleEvent()
 }
 
 
-/*-------------- OnStopBinding Proxy ---------------------------------------*/
+/*-------------- OnStopRequest Proxy ---------------------------------------*/
 
-struct OnStopBindingProxyEvent : public StreamListenerProxyEvent
+struct OnStopRequestProxyEvent : public StreamListenerProxyEvent
 {
-    OnStopBindingProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL, 
+    OnStopRequestProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL, 
                             nsresult aStatus, const PRUnichar* aMsg);
     NS_IMETHOD HandleEvent();
 
@@ -577,8 +577,8 @@ struct OnStopBindingProxyEvent : public StreamListenerProxyEvent
     PRUnichar* mMsg;
 };
 
-OnStopBindingProxyEvent::OnStopBindingProxyEvent(nsStreamListenerProxy* aProxy,
-                                                 nsIURL* aURL,
+OnStopRequestProxyEvent::OnStopRequestProxyEvent(nsStreamListenerProxy* aProxy,
+                                                 nsIURI* aURL,
                                                  nsresult aStatus,
                                                  const PRUnichar* aMsg)
                        : StreamListenerProxyEvent(aProxy, aURL)
@@ -588,9 +588,9 @@ OnStopBindingProxyEvent::OnStopBindingProxyEvent(nsStreamListenerProxy* aProxy,
 }
 
 NS_IMETHODIMP
-OnStopBindingProxyEvent::HandleEvent()
+OnStopRequestProxyEvent::HandleEvent()
 {
-    nsresult  rv = mProxy->mRealListener->OnStopBinding(mURL, mStatus, mMsg);
+    nsresult  rv = mProxy->mRealListener->OnStopRequest(mURL, mStatus, mMsg);
     delete []mMsg;
     mMsg = nsnull;
     return rv;
@@ -601,7 +601,7 @@ OnStopBindingProxyEvent::HandleEvent()
 
 struct OnDataAvailableProxyEvent : public StreamListenerProxyEvent
 {
-    OnDataAvailableProxyEvent(nsStreamListenerProxy* aProxy, nsIURL* aURL, 
+    OnDataAvailableProxyEvent(nsStreamListenerProxy* aProxy, nsIURI* aURL, 
                               nsIInputStream* aStream, PRUint32 aLength);
     virtual ~OnDataAvailableProxyEvent();
     NS_IMETHOD HandleEvent();
@@ -611,7 +611,7 @@ struct OnDataAvailableProxyEvent : public StreamListenerProxyEvent
 };
 
 OnDataAvailableProxyEvent::OnDataAvailableProxyEvent(nsStreamListenerProxy* aProxy,
-                                                     nsIURL* aURL,
+                                                     nsIURI* aURL,
                                                      nsIInputStream* aStream,
                                                      PRUint32 aLength)
                          : StreamListenerProxyEvent(aProxy, aURL)
@@ -676,16 +676,16 @@ static NS_DEFINE_IID(kIStreamListenerIID, NS_ISTREAMLISTENER_IID);
 NS_IMPL_THREADSAFE_ISUPPORTS(nsStreamListenerProxy, kIStreamListenerIID);
 
 NS_IMETHODIMP 
-nsStreamListenerProxy::OnStartBinding(nsIURL* aURL, const char *aContentType)
+nsStreamListenerProxy::OnStartRequest(nsIURI* aURL, const char *aContentType)
 {
   nsresult rv;
 
   if (PR_GetCurrentThread() == gNetlibThread) {
-    OnStartBindingProxyEvent* ev;
+    OnStartRequestProxyEvent* ev;
 
     rv = GetStatus();
     if (NS_SUCCEEDED(rv)) {
-      ev = new OnStartBindingProxyEvent(this, aURL, aContentType);
+      ev = new OnStartRequestProxyEvent(this, aURL, aContentType);
       if (nsnull == ev) {
         rv = NS_ERROR_OUT_OF_MEMORY;
       } else {
@@ -693,13 +693,13 @@ nsStreamListenerProxy::OnStartBinding(nsIURL* aURL, const char *aContentType)
       }
     }
   } else {
-    rv = mRealListener->OnStartBinding(aURL, aContentType);
+    rv = mRealListener->OnStartRequest(aURL, aContentType);
   }
   return rv;
 }
 
 NS_IMETHODIMP
-nsStreamListenerProxy::OnProgress(nsIURL* aURL, PRUint32 aProgress, 
+nsStreamListenerProxy::OnProgress(nsIURI* aURL, PRUint32 aProgress, 
                                   PRUint32 aProgressMax)
 {
   nsresult rv;
@@ -726,7 +726,7 @@ nsStreamListenerProxy::OnProgress(nsIURL* aURL, PRUint32 aProgress,
 }
 
 NS_IMETHODIMP
-nsStreamListenerProxy::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+nsStreamListenerProxy::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 {
   nsresult rv;
 
@@ -752,24 +752,24 @@ nsStreamListenerProxy::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
 }
 
 NS_IMETHODIMP
-nsStreamListenerProxy::OnStopBinding(nsIURL* aURL, nsresult aStatus, 
+nsStreamListenerProxy::OnStopRequest(nsIURI* aURL, nsresult aStatus, 
                                      const PRUnichar* aMsg)
 {
   nsresult rv = NS_OK;
 
   if (PR_GetCurrentThread() == gNetlibThread) {
-    OnStopBindingProxyEvent* ev;
+    OnStopRequestProxyEvent* ev;
     /*
-     * Always fire the OnStopBinding notification...
+     * Always fire the OnStopRequest notification...
      */
-    ev = new OnStopBindingProxyEvent(this, aURL, aStatus, aMsg);
+    ev = new OnStopRequestProxyEvent(this, aURL, aStatus, aMsg);
     if (nsnull == ev) {
       rv = NS_ERROR_OUT_OF_MEMORY;
     } else {
       ev->Fire(mEventQ);
     }
   } else {
-    rv = mRealListener->OnStopBinding(aURL, aStatus, aMsg);
+    rv = mRealListener->OnStopRequest(aURL, aStatus, aMsg);
   }
   return rv;
 }
@@ -777,7 +777,7 @@ nsStreamListenerProxy::OnStopBinding(nsIURL* aURL, nsresult aStatus,
 /*--------------------------------------------------------------------------*/
 
 NS_IMETHODIMP
-nsStreamListenerProxy::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info)
+nsStreamListenerProxy::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* info)
 {
   nsresult rv;
 
@@ -791,7 +791,7 @@ nsStreamListenerProxy::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info)
 }
 
 NS_IMETHODIMP
-nsStreamListenerProxy::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, 
+nsStreamListenerProxy::OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, 
                                        PRUint32 aLength)
 {
   nsresult rv = NS_OK;

@@ -36,13 +36,21 @@ class nsIPopUpMenu;
 class nsIWidget;
 class nsIMenuListener;
 
+enum {
+  knsMenuItemNoModifier      = 0,
+  knsMenuItemShiftModifier   = (1 << 0),
+  knsMenuItemAltModifier     = (1 << 1),
+  knsMenuItemControlModifier = (1 << 2),
+  knsMenuItemCommandModifier = (1 << 3)
+};
+
 /**
  * MenuItem widget
  */
 class nsIMenuItem : public nsISupports {
 
   public:
-    static const nsIID& GetIID() { static nsIID iid = NS_IMENUITEM_IID; return iid; }
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENUITEM_IID)
 
    /**
     * Creates the MenuItem
@@ -60,10 +68,22 @@ class nsIMenuItem : public nsISupports {
 
    /**
     * Get the MenuItem label
+
     *
     */
     NS_IMETHOD SetLabel(nsString &aText) = 0;
 
+   /**
+    * Set the Menu shortcut char
+    *
+    */
+    NS_IMETHOD SetShortcutChar(const nsString &aText) = 0;
+  
+    /**
+    * Get the Menu shortcut char
+    *
+    */
+    NS_IMETHOD GetShortcutChar(nsString &aText) = 0;
    /**
     * Sets whether the item is enabled or disabled
     *
@@ -137,9 +157,17 @@ class nsIMenuItem : public nsISupports {
     */
     NS_IMETHOD DoCommand() = 0;
 
+    NS_IMETHOD SetDOMNode(nsIDOMNode * aDOMNode) = 0;
+    NS_IMETHOD GetDOMNode(nsIDOMNode ** aDOMNode) = 0;
     NS_IMETHOD SetDOMElement(nsIDOMElement * aDOMElement) = 0;
     NS_IMETHOD GetDOMElement(nsIDOMElement ** aDOMElement) = 0;
     NS_IMETHOD SetWebShell(nsIWebShell * aWebShell) = 0;
+    
+    /**
+    *
+    */
+    NS_IMETHOD SetModifiers(PRUint8 aModifiers) = 0;
+    NS_IMETHOD GetModifiers(PRUint8 * aModifiers) = 0;
 };
 
 #endif

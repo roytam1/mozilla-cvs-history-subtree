@@ -64,8 +64,8 @@ public:
   NS_IMETHOD SetOrganization(char * aOrganization);
 
   /* attribute boolean useHtml; */
-  NS_IMETHOD GetUseHtml(PRBool *aUseHtml);
-  NS_IMETHOD SetUseHtml(PRBool aUseHtml);
+  NS_IMETHOD GetComposeHtml(PRBool *aComposeHtml);
+  NS_IMETHOD SetComposeHtml(PRBool aComposeHtml);
 
   /* attribute boolean attachSignature */
   NS_IMETHOD GetAttachSignature(PRBool *aAttachSignature);
@@ -90,10 +90,6 @@ public:
   /* attribute string smtpUsername; */
   NS_IMETHOD GetSmtpUsername(char * *aSmtpUsername);
   NS_IMETHOD SetSmtpUsername(char * aSmtpUsername);
- 
-  /* attribute long WrapColumn; */
-  NS_IMETHOD GetWrapColumn(PRInt32 *aWrapColumn);
-  NS_IMETHOD SetWrapColumn(PRInt32 aWrapColumn);
 
 private:
   nsIMsgSignature* m_signature;
@@ -102,12 +98,18 @@ private:
   nsIPref *m_prefs;
   
 protected:
-  static char *getPrefName(const char *identityKey, const char *pref);
+  char *getPrefName(const char *identityKey, const char *pref);
+  char *getDefaultPrefName(const char *pref);
   nsresult getCharPref(const char *pref, char **);
+  nsresult getDefaultCharPref(const char *pref, char **);
   nsresult setCharPref(const char *pref, char *);
+
   nsresult getBoolPref(const char *pref, PRBool *);
+  nsresult getDefaultBoolPref(const char *pref, PRBool *);
   nsresult setBoolPref(const char *pref, PRBool);
+
   nsresult getIntPref(const char *pref, PRInt32 *);
+  nsresult getDefaultIntPref(const char *pref, PRInt32 *);
   nsresult setIntPref(const char *pref, PRInt32);
 
 };

@@ -28,6 +28,7 @@
 #include "nsMsgBaseCID.h"
 #include "nsIPref.h"
 #include "nsCOMPtr.h"
+#include "nsIMsgFolderCache.h"
 
 static NS_DEFINE_CID(kMsgIdentityCID, NS_MSGIDENTITY_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
@@ -93,9 +94,12 @@ NS_IMETHODIMP
 nsMsgAccount::GetIncomingServer(nsIMsgIncomingServer * *aIncomingServer)
 {
   if (!aIncomingServer) return NS_ERROR_NULL_POINTER;
-  nsresult rv;
+  //Need to initialize this otherwise if there's already an m_incomingServer, this
+  //will be unitialized.
+  nsresult rv = NS_OK;
 
   // need to call SetKey() first!
+  NS_ASSERTION(m_accountKey, "Account key not initialized.");
   if (!m_accountKey) return NS_ERROR_NOT_INITIALIZED;
   
   // create the incoming server lazily
@@ -144,20 +148,12 @@ nsMsgAccount::GetIncomingServer(nsIMsgIncomingServer * *aIncomingServer)
     
     PR_FREEIF(serverType);
     
-    nsIMsgIncomingServer *server;
+    nsCOMPtr<nsIMsgIncomingServer> server;
     rv = nsComponentManager::CreateInstance(serverTypeProgID,
                                             nsnull,
-                                            nsIMsgIncomingServer::GetIID(),
-                                            (void **)&server);
+                                            nsCOMTypeInfo<nsIMsgIncomingServer>::GetIID(),
+                                            getter_AddRefs(server));
     PR_FREEIF(serverTypeProgID);
-    
-#ifdef DEBUG_alecf
-    if (NS_SUCCEEDED(rv)) {
-      printf("Created a %s server\n", serverType);
-    } else {
-      printf("Could not create a %s server\n", serverType);
-    }
-#endif
     
     if (NS_SUCCEEDED(rv))
       rv = server->SetKey(serverKey);
@@ -168,6 +164,7 @@ nsMsgAccount::GetIncomingServer(nsIMsgIncomingServer * *aIncomingServer)
     PR_FREEIF(serverKey);
   }
   
+  if (NS_FAILED(rv)) return rv;
   if (!m_incomingServer) return NS_ERROR_UNEXPECTED;
   
   *aIncomingServer = m_incomingServer;
@@ -188,6 +185,7 @@ nsMsgAccount::SetIncomingServer(nsIMsgIncomingServer * aIncomingServer)
 NS_IMETHODIMP
 nsMsgAccount::GetIdentities(nsISupportsArray **_retval)
 {
+  NS_ASSERTION(m_accountKey, "Account key not initialized.");
   if (!_retval) return NS_ERROR_NULL_POINTER;
   if (!m_identities) return NS_ERROR_UNEXPECTED;
   
@@ -201,6 +199,7 @@ nsMsgAccount::GetIdentities(nsISupportsArray **_retval)
 NS_IMETHODIMP
 nsMsgAccount::GetDefaultIdentity(nsIMsgIdentity * *aDefaultIdentity)
 {
+  NS_ASSERTION(m_accountKey, "Account key not initialized.");
   if (!aDefaultIdentity) return NS_ERROR_NULL_POINTER;
   if (!m_defaultIdentity) return NS_ERROR_NULL_POINTER;
   
@@ -212,6 +211,7 @@ nsMsgAccount::GetDefaultIdentity(nsIMsgIdentity * *aDefaultIdentity)
 NS_IMETHODIMP
 nsMsgAccount::SetDefaultIdentity(nsIMsgIdentity * aDefaultIdentity)
 {
+  NS_ASSERTION(m_accountKey, "Account key not initialized.");
   NS_ASSERTION(m_identities->IndexOf(aDefaultIdentity) != -1, "Where did that identity come from?!");
   if (m_identities->IndexOf(aDefaultIdentity) == -1)
     return NS_ERROR_UNEXPECTED;
@@ -252,7 +252,7 @@ nsMsgAccount::SetKey(char *accountKey)
   // need the prefs service to do anything
   if (!m_prefs)
     rv = nsServiceManager::GetService(kPrefServiceCID,
-                                      nsIPref::GetIID(),
+                                      nsCOMTypeInfo<nsIPref>::GetIID(),
                                       (nsISupports**)&m_prefs);
   if (NS_FAILED(rv)) return rv;
 
@@ -279,7 +279,7 @@ nsMsgAccount::SetKey(char *accountKey)
   nsIMsgIdentity *identity = nsnull;
   rv = nsComponentManager::CreateInstance(kMsgIdentityCID,
                                           nsnull,
-                                          nsIMsgIdentity::GetIID(),
+                                          nsCOMTypeInfo<nsIMsgIdentity>::GetIID(),
                                           (void **)&identity);
 
   if (NS_SUCCEEDED(rv))
@@ -302,7 +302,8 @@ NS_NewMsgAccount(const nsIID& iid, void **result)
   if (!result) return NS_ERROR_NULL_POINTER;
   
   nsMsgAccount *account = new nsMsgAccount;
-
+  if (!account) return NS_ERROR_OUT_OF_MEMORY;
+  
   return account->QueryInterface(iid, result);
 }
 

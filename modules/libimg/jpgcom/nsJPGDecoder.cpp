@@ -21,7 +21,7 @@
  */
 
 
-#include "if_struct.h"
+#include "nsIImgDecoder.h" // include if_struct.h Needs to be first
 #include "jpeg.h"
 #include "prmem.h"
 #include "merrors.h"
@@ -29,9 +29,6 @@
 
 #include "dllcompat.h"
 #include "nsJPGDecoder.h"
-#include "nsImgDecCID.h"
-#include "nsIImgDecoder.h"  /* interface class */
-#include "nsImgDecoder.h" /* factory */
 #include "nscore.h"
 
 /*--- needed for autoregistry ---*/
@@ -62,19 +59,19 @@ public:
   NS_IMETHOD ImgDComplete();
   NS_IMETHOD ImgDAbort();
 
-  il_container *SetContainer(il_container *ic){mContainer = ic; return ic;}
-  il_container *GetContainer() {return mContainer;}
+  NS_IMETHOD_(il_container *) SetContainer(il_container *ic){ilContainer = ic; return ic;}
+  NS_IMETHOD_(il_container *) GetContainer() {return ilContainer;}
 
   
 private:
-  il_container* mContainer;
+  il_container* ilContainer;
 };
 /*-------------------------------------------------*/
 
 JPGDecoder::JPGDecoder(il_container* aContainer)
 {
   NS_INIT_REFCNT();
-  mContainer = aContainer;
+  ilContainer = aContainer;
 };
 
 
@@ -94,10 +91,11 @@ JPGDecoder::QueryInterface(const nsIID& aIID, void** aInstPtr)
     return NS_ERROR_NULL_POINTER;
   }
 
-NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+  NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+  NS_DEFINE_IID(kIImgDecoderIID, NS_IIMGDECODER_IID);
 
   if (aIID.Equals(kJPGDecoderIID) ||     
-      aIID.Equals(kImgDecoderIID) ||
+      aIID.Equals(kIImgDecoderIID) ||
       aIID.Equals(kISupportsIID)) {
 	  *aInstPtr = (void*) this;
     NS_INIT_REFCNT();
@@ -124,7 +122,7 @@ NSRegisterSelf(nsISupports* aServMgr, const char *path)
                            nsIComponentManager::GetIID(), 
                            (nsISupports**)&compMgr);
   if (NS_FAILED(rv)) return rv;
-  if ((rv = nsRepository::RegisterComponent(kJPGDecoderCID, "Netscape JPGDec", "component://netscape/image/decoder&type=image/jpeg", path, PR_TRUE, PR_TRUE)
+  if ((rv = compMgr->RegisterComponent(kJPGDecoderCID, "Netscape JPGDec", "component://netscape/image/decoder&type=image/jpeg", path, PR_TRUE, PR_TRUE)
 				  ) != NS_OK) {
         return rv;
 	}
@@ -173,7 +171,7 @@ protected:
 
 private:
 	nsCID mClassID;
-	il_container *mContainer;
+	il_container *ilContainer;
 };
 
 /*-----------------------------------------*/
@@ -258,8 +256,8 @@ NSGetFactory(nsISupports* serviceMgr,
 NS_IMETHODIMP
 JPGDecoder::ImgDInit()
 {
-   if(mContainer != NULL) {
-     return(il_jpeg_init(mContainer));
+   if(ilContainer != NULL) {
+     return(il_jpeg_init(ilContainer));
   }
   else {
     return nsnull;
@@ -276,8 +274,8 @@ JPGDecoder::ImgDWriteReady()
 NS_IMETHODIMP
 JPGDecoder::ImgDWrite(const unsigned char *buf, int32 len)
 {
-  if( mContainer != NULL ) {
-     return(il_jpeg_write(mContainer, buf,len));
+  if( ilContainer != NULL ) {
+     return(il_jpeg_write(ilContainer, buf,len));
   }
   return 0;
 }
@@ -285,8 +283,8 @@ JPGDecoder::ImgDWrite(const unsigned char *buf, int32 len)
 NS_IMETHODIMP 
 JPGDecoder::ImgDComplete()
 {
-  if( mContainer != NULL ) {
-     il_jpeg_complete(mContainer);
+  if( ilContainer != NULL ) {
+     il_jpeg_complete(ilContainer);
   }
   return 0;
 }
@@ -294,8 +292,8 @@ JPGDecoder::ImgDComplete()
 NS_IMETHODIMP 
 JPGDecoder::ImgDAbort()
 {
-  if( mContainer != NULL ) {
-    il_jpeg_abort(mContainer);
+  if( ilContainer != NULL ) {
+    il_jpeg_abort(ilContainer);
   }
   return 0;
 }

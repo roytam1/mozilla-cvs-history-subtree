@@ -43,13 +43,11 @@ static const PRBool gsDebug = PR_FALSE;
 
 //#define NO_DOUBLE_BUFFER
 #define NEW_COMPOSITOR
+#define USE_DISPLAY_LIST_ELEMENTS
 
 //used for debugging new compositor
 //#define SHOW_RECTS
 //#define SHOW_DISPLAYLIST
-
-//number of entries per view in display list
-#define DISPLAYLIST_INC  3
 
 //display list flags
 #define RENDER_VIEW   0x0000
@@ -57,10 +55,28 @@ static const PRBool gsDebug = PR_FALSE;
 #define PUSH_CLIP     0x0002
 #define POP_CLIP      0x0004
 
+#ifdef USE_DISPLAY_LIST_ELEMENTS
+
+#define DISPLAYLIST_INC  1
+
+//display list elements
+struct DisplayListElement {
+  nsIView*	mView;
+  nsRect	mClip;
+  PRUint32	mFlags;
+};
+
+#else
+
+//number of entries per view in display list
+#define DISPLAYLIST_INC  3
+
 //display list slots
 #define VIEW_SLOT     0
 #define RECT_SLOT     1
 #define FLAGS_SLOT    2
+
+#endif
 
 static void vm_timer_callback(nsITimer *aTimer, void *aClosure)
 {
@@ -127,9 +143,6 @@ nsViewManager :: ~nsViewManager()
   {
     nsIRenderingContext *rc;
 
-    static NS_DEFINE_IID(kRenderingContextCID, NS_RENDERING_CONTEXT_CID);
-    static NS_DEFINE_IID(kIRenderingContextIID, NS_IRENDERING_CONTEXT_IID);
-
     nsresult rv = nsComponentManager::CreateInstance(kRenderingContextCID, 
                                        nsnull, 
                                        kIRenderingContextIID, 
@@ -165,8 +178,15 @@ nsViewManager :: ~nsViewManager()
 
   if (nsnull != mDisplayList)
   {
+#ifdef USE_DISPLAY_LIST_ELEMENTS
+	PRInt32 count = mDisplayList->Count();
+	for (PRInt32 index = 0; index < count; index++) {
+		DisplayListElement* element = (DisplayListElement*) mDisplayList->ElementAt(index);
+		if (element != nsnull)
+			delete element;
+	}
+#else
     PRInt32 cnt = mDisplayList->Count(), idx;
-
     for (idx = RECT_SLOT; idx < cnt; idx += DISPLAYLIST_INC)
     {
       nsRect *rect = (nsRect *)mDisplayList->ElementAt(idx);
@@ -174,6 +194,7 @@ nsViewManager :: ~nsViewManager()
       if (nsnull != rect)
         delete rect;
     }
+#endif
 
     delete mDisplayList;
     mDisplayList = nsnull;
@@ -571,7 +592,9 @@ typedef enum
 #define TRANS_PROPERTY_TRANS      0
 #define TRANS_PROPERTY_OPACITY    1
 
+#ifdef SHOW_RECTS
 static PRInt32 evenodd = 0;
+#endif
 
 void nsViewManager :: RenderViews(nsIView *aRootView, nsIRenderingContext& aRC, const nsRect& aRect, PRBool &aResult)
 {
@@ -607,62 +630,7 @@ void nsViewManager :: RenderViews(nsIView *aRootView, nsIRenderingContext& aRC, 
   mContext->GetDevUnitsToAppUnits(p2t);
 
 #ifdef SHOW_DISPLAYLIST
-{
-  char      nest[400];
-  PRUint32  newnestcnt, nestcnt = 0;
-
-  for (cnt = 0; cnt < 400; cnt++)
-    nest[cnt] = ' ';
-
-  printf("flatlen %d\n", flatlen);
-
-  for (cnt = 0; cnt < flatlen; cnt += DISPLAYLIST_INC)
-  {
-    nsRect    *rect;
-    PRUint32  flags;
-
-    nest[nestcnt << 1] = 0;
-
-    printf("%sview: %x\n", nest, mDisplayList->ElementAt(cnt + VIEW_SLOT));
-
-    rect = (nsRect *)mDisplayList->ElementAt(cnt + RECT_SLOT);
-
-    if (nsnull != rect)
-      printf("%srect: %d, %d, %d, %d\n", nest, rect->x, rect->y, rect->width, rect->height);
-    else
-      printf("%srect: null\n", nest);
-
-    flags = (PRUint32)mDisplayList->ElementAt(cnt + FLAGS_SLOT);
-
-    newnestcnt = nestcnt;
-
-    if (flags)
-    {
-      printf("%s", nest);
-
-      if (flags & POP_CLIP)
-      {
-        printf("POP_CLIP ");
-        newnestcnt--;
-      }
-
-      if (flags & PUSH_CLIP)
-      {
-        printf("PUSH_CLIP ");
-        newnestcnt++;
-      }
-
-      if (flags & VIEW_INCLUDED)
-        printf("VIEW_INCLUDED ");
-
-      printf("\n");
-    }
-
-    nest[nestcnt << 1] = ' ';
-
-    nestcnt = newnestcnt;
-  }
-}
+  ShowDisplayList(flatlen);
 #endif
 
   while (state != COMPOSITION_DONE)
@@ -675,9 +643,18 @@ void nsViewManager :: RenderViews(nsIView *aRootView, nsIRenderingContext& aRC, 
 
     for (cnt = loopstart; (increment > 0) ? (cnt < loopend) : (cnt > loopend); cnt += increment)
     {
+#ifdef USE_DISPLAY_LIST_ELEMENTS
+      DisplayListElement* curelement = (DisplayListElement*) mDisplayList->ElementAt(cnt);
+      if (nsnull == curelement)
+        continue;
+      curview = curelement->mView;
+      currect = &curelement->mClip;
+      curflags = curelement->mFlags;
+#else    
       curview = (nsIView *)mDisplayList->ElementAt(cnt + VIEW_SLOT);
       currect = (nsRect *)mDisplayList->ElementAt(cnt + RECT_SLOT);
       curflags = (PRUint32)mDisplayList->ElementAt(cnt + FLAGS_SLOT);
+#endif
     
       if ((nsnull != curview) && (nsnull != currect))
       {
@@ -834,7 +811,11 @@ void nsViewManager :: RenderViews(nsIView *aRootView, nsIRenderingContext& aRC, 
                     mOpaqueRgn->ContainsRect(trect.x, trect.y, trect.width, trect.height))
                 {
                   transprop |= (trans << TRANS_PROPERTY_TRANS) | (translucent << TRANS_PROPERTY_OPACITY);
+#ifdef USE_DISPLAY_LIST_ELEMENTS
+                  curelement->mFlags = (VIEW_INCLUDED | curflags);
+#else
                   mDisplayList->ReplaceElementAt((void *)(VIEW_INCLUDED | curflags), cnt + FLAGS_SLOT);
+#endif
 
                   if (!isBottom)
                   {
@@ -1332,113 +1313,6 @@ void nsViewManager :: UpdateDirtyViews(nsIView *aView, nsRect *aParentRect) cons
   }
 }
 
-#if 0
-
-  nsRect    bounds;
-  nsIRegion *dirtyRegion, *damager;
-  PRInt32   posx, posy;
-
-  aView->GetBounds(bounds);
-
-  //translate parent region into child coords.
-
-  if (nsnull != aParentDamage)
-  {
-    float     scale;
-
-    mContext->GetAppUnitsToDevUnits(scale);
-
-    posx = NSTwipsToIntPixels(bounds.x, scale);
-    posy = NSTwipsToIntPixels(bounds.y, scale);
-
-    aParentDamage->Offset(-posx, -posy);
-  }
-
-  // See if the view has a non-empty dirty region
-
-  aView->GetDirtyRegion(dirtyRegion);
-
-  if (nsnull != dirtyRegion)
-  {
-    if (PR_FALSE == dirtyRegion->IsEmpty())
-    {
-      if (nsnull != aParentDamage)
-        dirtyRegion->Union(*aParentDamage);
-
-      damager = dirtyRegion;
-    }
-    else
-      damager = aParentDamage;
-  }
-  else
-    damager = aParentDamage;
-
-  nsIWidget *widget;
-
-  aView->GetWidget(widget);
-
-  if (nsnull != widget)
-  {
-    //have we not yet figured out the rootmost
-    //view for the damage repair? if not, keep
-    //recording widgets as we find them as the
-    //topmost widget containing the topmost
-    //damaged view.
-
-    if (nsnull == *aTopDamaged)
-      *aTopWidget = widget;
-
-    if (nsnull != damager)
-    {
-      nsRegionComplexity cplx;
-
-      damager->GetRegionComplexity(cplx);
-
-      if (cplx == eRegionComplexity_rect)
-      {
-        nsRect trect;
-
-        damager->GetBoundingBox(&trect.x, &trect.y, &trect.width, &trect.height);
-        widget->Invalidate(trect, PR_FALSE);
-      }
-      else if (cplx == eRegionComplexity_complex)
-        widget->Invalidate(*damager, PR_FALSE);
-    }
-
-    NS_RELEASE(widget);
-  }
-
-  //record the topmost damaged view
-
-  if ((nsnull == *aTopDamaged) && (damager == dirtyRegion))
-    *aTopDamaged = aView;
-
-  // Check our child views
-  nsIView *child;
-
-  aView->GetChild(0, child);
-
-  while (nsnull != child)
-  {
-    UpdateDirtyViews(child, damager, aTopDamaged, aTopWidget);
-    child->GetNextSibling(child);
-  }
-
-  //translate the parent damage region back to where it used to be
-
-  if (nsnull != aParentDamage)
-    aParentDamage->Offset(posx, posy);
-
-  if (nsnull != dirtyRegion)
-  {
-    // Clear our dirty region
-
-    dirtyRegion->SetTo(0, 0, 0, 0);
-    NS_RELEASE(dirtyRegion);
-  }
-
-#endif
-
 NS_IMETHODIMP nsViewManager :: Composite()
 {
   if (mUpdateCnt > 0)
@@ -1628,16 +1502,18 @@ NS_IMETHODIMP nsViewManager :: DispatchEvent(nsGUIEvent *aEvent, nsEventStatus &
 
           if (varea > 0.0000001f)
           {
-            nsRect     arearect;
+            // nsRect     arearect;
             PRUint32   updateFlags = 0;
 
             // Auto double buffering logic.
             // See if the paint region is greater than .25 the area of our view.
             // If so, enable double buffered painting.
-
-            arearect.IntersectRect(damrect, viewrect);
+             
+            // XXX These two lines cause a lot of flicker for drag-over re-drawing - rods
+            //arearect.IntersectRect(damrect, viewrect);
   
-            if ((((float)arearect.width * arearect.height) / varea) >  0.25f)
+            //if ((((float)arearect.width * arearect.height) / varea) >  0.25f)
+            // XXX rods
               updateFlags |= NS_VMREFRESH_DOUBLE_BUFFER;
 
 //printf("refreshing: view: %x, %d, %d, %d, %d\n", view, trect.x, trect.y, trect.width, trect.height);
@@ -1737,6 +1613,14 @@ NS_IMETHODIMP nsViewManager :: DispatchEvent(nsGUIEvent *aEvent, nsEventStatus &
 
         aEvent->point.x = NSTwipsToIntPixels(aEvent->point.x, t2p);
         aEvent->point.y = NSTwipsToIntPixels(aEvent->point.y, t2p);
+
+		//
+		// if the event is an nsTextEvent, we need to map the reply back into platform coordinates
+		//
+		if (aEvent->message==NS_TEXT_EVENT) {
+			((nsTextEvent*)aEvent)->theReply.mCursorPosition.x=NSTwipsToIntPixels(((nsTextEvent*)aEvent)->theReply.mCursorPosition.x, t2p);
+			((nsTextEvent*)aEvent)->theReply.mCursorPosition.y=NSTwipsToIntPixels(((nsTextEvent*)aEvent)->theReply.mCursorPosition.y, t2p);
+       }
       }
 
       break;
@@ -2228,7 +2112,7 @@ nsDrawingSurface nsViewManager :: GetDrawingSurface(nsIRenderingContext &aContex
 
 		nscolor col = NS_RGB(255,255,255);
 		aContext.SetColor(col);
-		aContext.FillRect(bounds);
+		//aContext.FillRect(bounds);
   }
 
   return mDrawingSurface;
@@ -2312,15 +2196,13 @@ void nsViewManager :: AddRectToDirtyRegion(nsIView* aView, const nsRect &aRect) 
 
   if (nsnull == dirtyRegion)
   {
-    static NS_DEFINE_IID(kRegionCID, NS_REGION_CID);
-    static NS_DEFINE_IID(kIRegionIID, NS_IREGION_IID);
-
     // The view doesn't have a dirty region so create one
     nsresult rv = nsComponentManager::CreateInstance(kRegionCID, 
                                        nsnull, 
                                        kIRegionIID, 
                                        (void **)&dirtyRegion);
 
+    if (NS_FAILED(rv)) return;
     dirtyRegion->Init();
     aView->SetDirtyRegion(dirtyRegion);
   }
@@ -2437,9 +2319,7 @@ NS_IMETHODIMP nsViewManager :: GetRootScrollableView(nsIScrollableView **aScroll
 
 NS_IMETHODIMP nsViewManager :: Display(nsIView* aView)
 {
-  nsRect              wrect;
   nsIRenderingContext *localcx = nsnull;
-  nsDrawingSurface    ds = nsnull;
   nsRect              trect;
 
   if (PR_FALSE == mRefreshEnabled)
@@ -2487,10 +2367,11 @@ PRBool nsViewManager :: CreateDisplayList(nsIView *aView, PRInt32 *aIndex,
                                           const nsRect *aDamageRect, nsIView *aTopView,
                                           nsVoidArray *aArray, nscoord aX, nscoord aY)
 {
-  PRInt32     numkids, cnt;
+  PRInt32     numkids, zindex;
   PRBool      hasWidget, retval = PR_FALSE;
   nsIClipView *clipper = nsnull;
   nsPoint     *point;
+  nsIView     *child = nsnull;
 
   NS_ASSERTION(!(!aView), "no view");
   NS_ASSERTION(!(!aIndex), "no index");
@@ -2549,13 +2430,12 @@ PRBool nsViewManager :: CreateDisplayList(nsIView *aView, PRInt32 *aIndex,
 //    if ((aView == aTopView) || !hasWidget || (aView == aRealView))
 //    if ((aView == aTopView) || !(hasWidget && clipper) || (aView == aRealView))
     {
-      for (cnt = 0; cnt < numkids; cnt++)
+      for (aView->GetChild(0, child); nsnull != child; child->GetNextSibling(child))
       {
-        nsIView *child;
-
-        aView->GetChild(cnt, child);
+        child->GetZIndex(zindex);
+        if (zindex < 0)
+          break;
         retval = CreateDisplayList(child, aIndex, aOriginX, aOriginY, aRealView, aDamageRect, aTopView, aArray, lrect.x, lrect.y);
-
         if (retval)
           break;
       }
@@ -2595,37 +2475,42 @@ PRBool nsViewManager :: CreateDisplayList(nsIView *aView, PRInt32 *aIndex,
       if (retval || !trans && (opacity == 1.0f) && (irect == *aDamageRect))
         retval = PR_TRUE;
     }
+    
+    // any children with negative z-indices?
+    if (!retval && nsnull != child) {
+      lrect.x += aOriginX;
+      lrect.y += aOriginY;
+      for (; nsnull != child; child->GetNextSibling(child)) {
+        retval = CreateDisplayList(child, aIndex, aOriginX, aOriginY, aRealView, aDamageRect, aTopView, aArray, lrect.x, lrect.y);
+        if (retval)
+          break;
+	  }
+    }
   }
-
-#if 0
-  if ((aTopView == aView) &&
-      (trans || (opacity < 1.0f) ||
-      (nsViewVisibility_kHide == vis) ||
-      !overlap))
-  {
-    nsIView *parent;
-
-    //the root view that we were given is transparent, translucent or
-    //hidden, so we need to walk up the tree and add intervening parents
-    //to the view list until we find the root view or something opaque,
-    //non-transparent and not hidden. gross.
-
-    aView->GetBounds(lrect);
-    aView->GetParent(parent);
-
-    lrect.x = -lrect.x;
-    lrect.y = -lrect.y;
-
-    ComputeParentOffsets(parent, &lrect.x, &lrect.y);
-    FlattenViewTreeUp(aView, aIndex, aDamageRect, parent, aArray);
-  }
-#endif
-
+  
   return retval;
 }
 
 PRBool nsViewManager :: AddToDisplayList(nsVoidArray *aArray, PRInt32 *aIndex, nsIView *aView, nsRect &aRect, PRUint32 aFlags)
 {
+#ifdef USE_DISPLAY_LIST_ELEMENTS
+  PRInt32 index = (*aIndex)++;
+  DisplayListElement* element = (DisplayListElement*) mDisplayList->ElementAt(index);
+  if (element == nsnull) {
+    element = new DisplayListElement;
+    if (element == nsnull) {
+      *aIndex = index;
+      return PR_TRUE;
+    }
+    mDisplayList->ReplaceElementAt(element, index);
+  }
+  
+  element->mView = aView;
+  element->mClip = aRect;
+  element->mFlags = aFlags;
+  
+  return PR_FALSE;
+#else
   aArray->ReplaceElementAt(aView, (*aIndex)++);
 
   nsRect *grect = (nsRect *)aArray->ElementAt(*aIndex);
@@ -2650,6 +2535,73 @@ PRBool nsViewManager :: AddToDisplayList(nsVoidArray *aArray, PRInt32 *aIndex, n
   aArray->ReplaceElementAt((void *)aFlags, (*aIndex)++);
 
   return PR_FALSE;
+#endif
+}
+
+void nsViewManager::ShowDisplayList(PRInt32 flatlen)
+{
+  char     nest[400];
+  PRInt32  newnestcnt, nestcnt = 0, cnt;
+
+  for (cnt = 0; cnt < 400; cnt++)
+    nest[cnt] = ' ';
+
+  float t2p;
+  mContext->GetAppUnitsToDevUnits(t2p);
+
+  printf("### display list length=%d ###\n", flatlen);
+
+  for (cnt = 0; cnt < flatlen; cnt += DISPLAYLIST_INC)
+  {
+    nsIView   *view, *parent;
+    nsRect    rect;
+    PRUint32  flags;
+    PRInt32   zindex;
+
+#ifdef USE_DISPLAY_LIST_ELEMENTS
+    DisplayListElement* element = (DisplayListElement*) mDisplayList->ElementAt(cnt);
+    view = element->mView;
+    rect = element->mClip;
+    flags = element->mFlags;
+#else
+    view = mDisplayList->ElementAt(cnt + VIEW_SLOT);
+    rect = *(nsRect *)mDisplayList->ElementAt(cnt + RECT_SLOT);
+    flags = (PRUint32)mDisplayList->ElementAt(cnt + FLAGS_SLOT);
+#endif
+
+    nest[nestcnt << 1] = 0;
+
+    view->GetParent(parent);
+    view->GetZIndex(zindex);
+    rect *= t2p;
+    printf("%snsIView@%08X [z=%d, x=%d, y=%d, w=%d, h=%d, p=%08X]\n", nest, view, zindex, rect.x, rect.y, rect.width, rect.height, parent);
+
+    newnestcnt = nestcnt;
+
+    if (flags)
+    {
+      printf("%s", nest);
+
+      if (flags & POP_CLIP) {
+        printf("POP_CLIP ");
+        newnestcnt--;
+      }
+
+      if (flags & PUSH_CLIP) {
+        printf("PUSH_CLIP ");
+        newnestcnt++;
+      }
+
+      if (flags & VIEW_INCLUDED)
+        printf("VIEW_INCLUDED ");
+
+      printf("\n");
+    }
+
+    nest[nestcnt << 1] = ' ';
+
+    nestcnt = newnestcnt;
+  }
 }
 
 #if 0

@@ -24,7 +24,6 @@
 %{C++
 #include "nsIDOMWindow.h"
 #include "nsIDOMNodeList.h"
-#include "nsIDOMXULTreeElement.h"
 #include "nsIDOMXULElement.h"
 %}
 
@@ -39,11 +38,14 @@ interface nsIMessenger : nsISupports {
 	void Open3PaneWindow();
     void SetWindow(in nsIDOMWindow ptr);
     void OpenURL(in string str);
-    void DeleteMessages(in nsIDOMXULTreeElement tree, in nsIDOMXULElement srcFolder, in nsIDOMNodeList node);
+    void DoPrint();
+    void DoPrintPreview();
+    void DeleteMessages(in nsIDOMXULElement tree, in nsIDOMXULElement srcFolder, in nsIDOMNodeList node);
     void DeleteFolders(in nsIRDFCompositeDataSource db, in nsIDOMXULElement parentFolder, in nsIDOMXULElement folder);
-	void CopyMessages(in nsIDOMXULElement srcFolderElement, in nsIDOMXULElement dstFolderElement, in nsIDOMNodeList messages,
+	void CopyMessages(in nsIRDFCompositeDataSource database, in nsIDOMXULElement srcFolderElement,
+					  in nsIDOMXULElement dstFolderElement, in nsIDOMNodeList messages,
 					  in boolean isMove);
-    nsISupports GetRDFResourceForMessage(in nsIDOMXULTreeElement tree, in nsIDOMNodeList node);
+    nsISupports GetRDFResourceForMessage(in nsIDOMXULElement tree, in nsIDOMNodeList node);
 	void Exit();
     void Close();
     void OnUnload();
@@ -52,11 +54,21 @@ interface nsIMessenger : nsISupports {
 	void ViewAllThreadMessages(in nsIRDFCompositeDataSource database);
 	void MarkMessagesRead(in nsIRDFCompositeDataSource database, in nsIDOMNodeList messages,
 						  in boolean markRead);
+	void MarkMessageRead(in nsIRDFCompositeDataSource database, in nsIDOMXULElement message,
+						  in boolean markRead);
+	void MarkAllMessagesRead(in nsIRDFCompositeDataSource database, in nsIDOMXULElement folder);
 	void NewFolder(in nsIRDFCompositeDataSource database, in nsIDOMXULElement parentFolderElement,
 				   in string name);
+
+    void RenameFolder(in nsIRDFCompositeDataSource db, 
+                      in nsIDOMXULElement folder, in string name);
+    void CompactFolder(in nsIRDFCompositeDataSource db, in nsIDOMXULElement folder);
+    void EmptyTrash(in nsIRDFCompositeDataSource db, in nsIDOMXULElement folder);
+
     void Undo();
     void Redo();
 	void SendUnsentMessages();
+	void LoadFirstDraft();
 	void SetDocumentCharset(in wstring characterSet);
 };
 

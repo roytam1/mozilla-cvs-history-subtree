@@ -121,7 +121,7 @@ CTagList  gInTR(1,0,eHTMLTag_tr);
 CTagList  gInDL(2,0,eHTMLTag_dl,eHTMLTag_body);
 CTagList  gInFrameset(1,0,eHTMLTag_frameset);
 CTagList  gInNoframes(1,0,eHTMLTag_noframes);
-CTagList  gInP(2,0,eHTMLTag_address,eHTMLTag_form);
+CTagList  gInP(4,0,eHTMLTag_address,eHTMLTag_form,eHTMLTag_span,eHTMLTag_table);
 CTagList  gOptgroupParents(2,0,eHTMLTag_optgroup,eHTMLTag_select);
 CTagList  gBodyParents(2,0,eHTMLTag_html,eHTMLTag_noframes);
 CTagList  gColParents(2,0,eHTMLTag_table,eHTMLTag_colgroup);
@@ -366,7 +366,7 @@ nsHTMLElement gHTMLElements[] = {
 	  /*rootnodes,endrootnodes*/          &gInHTML,	&gInHTML,
     /*autoclose starttags and endtags*/ &gBodyAutoClose,0,0,
     /*parent,incl,exclgroups*/          kHTMLContent,(kFlowEntity|kSelf), kNone,	
-    /*special props, prop-range*/       kOmitEndTag|kLegalOpen, kBodyPropRange,
+    /*special props, prop-range*/       kOmitEndTag, kBodyPropRange,
     /*special parents,kids,skip*/       &gInNoframes,&gBodyKids,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_br,
@@ -438,7 +438,7 @@ nsHTMLElement gHTMLElements[] = {
 	  /*rootnodes,endrootnodes*/          &gRootTags,	&gRootTags,	
     /*autoclose starttags and endtags*/ &gDTCloseTags,0,0,
     /*parent,incl,exclgroups*/          kInlineEntity, kFlowEntity, kNone,	
-    /*special props, prop-range*/       kNoPropagate,kDefaultPropRange,
+    /*special props, prop-range*/       kNoPropagate|kMustCloseSelf,kDefaultPropRange,
     /*special parents,kids,skip*/       &gInDL,0,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_del,
@@ -477,7 +477,7 @@ nsHTMLElement gHTMLElements[] = {
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
 	  /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,	
     /*autoclose starttags and endtags*/ 0,0,0,
-    /*parent,incl,exclgroups*/          kBlock, kFlowEntity, kNone,	
+    /*parent,incl,exclgroups*/          kBlock, kSelf|kFlowEntity, kNone,	
     /*special props, prop-range*/       kOmitWS, kNoPropRange,
     /*special parents,kids,skip*/       0,&gDLKids,eHTMLTag_unknown},
 
@@ -549,7 +549,7 @@ nsHTMLElement gHTMLElements[] = {
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_body,
 	  /*rootnodes,endrootnodes*/          &gFramesetParents,&gInHTML,	
     /*autoclose starttags and endtags*/ 0,0,0,
-    /*parent,incl,exclgroups*/          kHTMLContent, kSelf, kNone,	
+    /*parent,incl,exclgroups*/          kHTMLContent, kSelf, kAllTags,	
     /*special props, prop-range*/       kOmitWS|kNoPropagate|kNoStyleLeaksIn, kNoPropRange,
     /*special parents,kids,skip*/       &gInHTML,&gFramesetKids,eHTMLTag_unknown},
 
@@ -623,7 +623,7 @@ nsHTMLElement gHTMLElements[] = {
 	  /*rootnodes,endrootnodes*/          &gHTMLRootTags,	&gHTMLRootTags,
     /*autoclose starttags and endtags*/ 0,0,0,
     /*parent,incl,exclgroups*/          kNone, kHTMLContent, kNone,	
-    /*special props, prop-range*/       kOmitEndTag|kOmitWS|kNoStyleLeaksIn, kDefaultPropRange,
+    /*special props, prop-range*/       kSaveMisplaced|kOmitEndTag|kOmitWS|kNoStyleLeaksIn, kDefaultPropRange,
     /*special parents,kids,skip*/       0,&gHtmlKids,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_i,
@@ -638,7 +638,7 @@ nsHTMLElement gHTMLElements[] = {
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
 	  /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,	
     /*autoclose starttags and endtags*/ 0,0,0,
-    /*parent,incl,exclgroups*/          kSpecial, (kSelf|SPECIALTYPE), kNone,	
+    /*parent,incl,exclgroups*/          kSpecial, (kSelf|kFlowEntity), kNone,	
     /*special props, prop-range*/       kNoStyleLeaksIn, kNoPropRange,
     /*special parents,kids,skip*/       0,0,eHTMLTag_unknown},
 
@@ -707,7 +707,7 @@ nsHTMLElement gHTMLElements[] = {
     /*special parents,kids,skip*/       0,0,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_label,
-    /*req-parent excl-parent*/          eHTMLTag_form,eHTMLTag_unknown,
+    /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
 	  /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,	
     /*autoclose starttags and endtags*/ 0,0,0,
     /*parent,incl,exclgroups*/          kFormControl, kInlineEntity, kSelf,	
@@ -851,11 +851,11 @@ nsHTMLElement gHTMLElements[] = {
     /*special parents,kids,skip*/       &gOptgroupParents,&gContainsOpts,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_option,
-    /*requiredAncestor*/                eHTMLTag_form,eHTMLTag_unknown,
+    /*requiredAncestor*/                eHTMLTag_unknown,eHTMLTag_unknown,
 	  /*rootnodes,endrootnodes*/          &gOptgroupParents,&gOptgroupParents,	 
     /*autoclose starttags and endtags*/ 0,0,0,
     /*parent,incl,exclgroups*/          kNone, kPCDATA, kFlowEntity,	
-    /*special props, prop-range*/       kNoStyleLeaksIn, kDefaultPropRange,
+    /*special props, prop-range*/       kNoPropagate|kNoStyleLeaksIn, kDefaultPropRange,
     /*special parents,kids,skip*/       &gOptgroupParents,&gContainsText,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_p,
@@ -927,15 +927,15 @@ nsHTMLElement gHTMLElements[] = {
 	  /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,	
     /*autoclose starttags and endtags*/ 0,0,0,
     /*parent,incl,exclgroups*/          (kSpecial|kHeadMisc), kPCDATA, kNone,	
-    /*special props, prop-range*/       kNoStyleLeaksIn, kNoPropRange,
+    /*special props, prop-range*/       kNoStyleLeaksIn|kLegalOpen, kNoPropRange,
     /*special parents,kids,skip*/       0,&gContainsText,eHTMLTag_script},
 
   { /*tag*/                             eHTMLTag_select,
-    /*requiredAncestor*/                eHTMLTag_form, eHTMLTag_unknown,
+    /*requiredAncestor*/                eHTMLTag_unknown, eHTMLTag_unknown,
 	  /*rootnodes,endrootnodes*/          &gInForm,&gInForm,	
     /*autoclose starttags and endtags*/ 0,0,0,
     /*parent,incl,exclgroups*/          kFormControl, kNone, kFlowEntity,	
-    /*special props, prop-range*/       kOmitWS|kNoStyleLeaksIn, kDefaultPropRange,
+    /*special props, prop-range*/       kNoPropagate|kOmitWS|kNoStyleLeaksIn, kDefaultPropRange,
     /*special parents,kids,skip*/       &gInForm,&gContainsOpts,eHTMLTag_unknown},
 
   { /*tag*/                             eHTMLTag_server,
@@ -982,7 +982,7 @@ nsHTMLElement gHTMLElements[] = {
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
 	  /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,	
     /*autoclose starttags and endtags*/ 0,0,0,
-    /*parent,incl,exclgroups*/          kSpecial, (kSelf|SPECIALTYPE), kNone,	
+    /*parent,incl,exclgroups*/          kBlock, (kInlineEntity|kSelf|kFlowEntity), kNone,	
     /*special props, prop-range*/       0,kDefaultPropRange,
     /*special parents,kids,skip*/       0,0,eHTMLTag_unknown},
 
@@ -1217,6 +1217,41 @@ public:
   }
 };
 CTableInitializer gTableInitializer;
+
+int nsHTMLElement::GetSynonymousGroups(int aGroup) {
+  int result=0;
+
+  switch(aGroup) {
+
+    case kPhrase:
+    case kSpecial:
+    case kFontStyle: 
+      result=aGroup; 
+      break;
+
+    case kHTMLContent:
+    case kHeadContent:
+    case kHeadMisc:
+    case kFormControl:
+    case kPreformatted:
+    case kHeading:
+    case kBlockMisc:
+    case kBlock:
+    case kList:
+    case kPCDATA:
+    case kExtensions:
+    case kTable:
+    case kSelf:
+    case kInlineEntity:
+    case kBlockEntity:
+    case kFlowEntity:
+    case kAllTags:
+    default:
+      break;
+  }
+
+  return result;
+}
 
 /**
  * 
@@ -1646,6 +1681,11 @@ PRBool nsHTMLElement::CanContain(eHTMLTags aChild) const{
 
   if(IsContainer(mTagID)){
 
+    if(gHTMLElements[aChild].HasSpecialProperty(kLegalOpen)) {
+      // Some tags could be opened anywhere, in the document, as they please.
+      return PR_TRUE;
+    }
+
     if(mTagID==aChild) {
       return CanContainSelf();  //not many tags can contain themselves...
     }
@@ -1691,9 +1731,6 @@ PRBool nsHTMLElement::CanContain(eHTMLTags aChild) const{
       }
     }
 
-    if(mTagID!=eHTMLTag_server){
-      int x=5;
-    }
   }
   
   return PR_FALSE;
@@ -1712,6 +1749,7 @@ PRBool nsHTMLElement::HasSpecialProperty(PRInt32 aProperty) const{
 }
 
 void nsHTMLElement::DebugDumpContainment(const char* aFilename,const char* aTitle){
+#ifdef  RICKG_DEBUG
 
   PRBool t=CanContain(eHTMLTag_address,eHTMLTag_object);
 
@@ -1725,7 +1763,7 @@ void nsHTMLElement::DebugDumpContainment(const char* aFilename,const char* aTitl
   int linenum=5;
   for(i=1;i<eHTMLTag_text;i++){
 
-    const char* tag=NS_EnumToTag((eHTMLTags)i);
+    const char* tag=nsHTMLTags::GetStringValue((eHTMLTags)i);
     out << endl << endl << "Tag: <" << tag << ">" << endl;
     out << prefix;
     linenum+=3;
@@ -1733,7 +1771,7 @@ void nsHTMLElement::DebugDumpContainment(const char* aFilename,const char* aTitl
     char startChar=0;
     if(IsContainer((eHTMLTags)i)) {
       for(j=1;j<eHTMLTag_text;j++){
-        tag=NS_EnumToTag((eHTMLTags)j);
+        tag=nsHTMLTags::GetStringValue((eHTMLTags)j);
         if(tag) {
           if(!startChar)
             startChar=tag[0];
@@ -1761,9 +1799,12 @@ void nsHTMLElement::DebugDumpContainment(const char* aFilename,const char* aTitl
       linenum++;
     }
   } //for
+#endif
 }
 
 void nsHTMLElement::DebugDumpMembership(const char* aFilename){
+#ifdef  RICKG_DEBUG
+
   const char* prefix="             ";
   const char* suffix="       ";
   const char* shortSuffix="     ";
@@ -1781,7 +1822,7 @@ void nsHTMLElement::DebugDumpMembership(const char* aFilename){
   char* answer[]={".","Y"};
   char startChar=0;
   for(i=1;i<eHTMLTag_text;i++){
-    const char* tag=NS_EnumToTag((eHTMLTags)i);
+    const char* tag=nsHTMLTags::GetStringValue((eHTMLTags)i);
     out << tag; 
     int len=strlen(tag);
 
@@ -1815,10 +1856,13 @@ void nsHTMLElement::DebugDumpMembership(const char* aFilename){
     out << answer[gHTMLElements[eHTMLTags(i)].mParentBits==kPreformatted] << suffix << endl;
 */
   } //for
-    out<<endl<<endl;
+  out<<endl<<endl;
+#endif
 }
 
 void nsHTMLElement::DebugDumpContainType(const char* aFilename){
+#ifdef RICKG_DEBUG
+
   const char* prefix="             ";
   const char* suffix="       ";
   const char* shortSuffix="     ";
@@ -1836,7 +1880,7 @@ void nsHTMLElement::DebugDumpContainType(const char* aFilename){
   char* answer[]={".","Y"};
   char startChar=0;
   for(i=1;i<eHTMLTag_text;i++){
-    const char* tag=NS_EnumToTag((eHTMLTags)i);
+    const char* tag=nsHTMLTags::GetStringValue((eHTMLTags)i);
     out << tag; 
     int len=strlen(tag);
 
@@ -1857,5 +1901,6 @@ void nsHTMLElement::DebugDumpContainType(const char* aFilename){
     out << answer[gHTMLElements[eHTMLTags(i)].CanContainType(kPreformatted)] << suffix << endl;
 
   } //for
-    out<<endl<<endl;
+  out<<endl<<endl;
+#endif
 }

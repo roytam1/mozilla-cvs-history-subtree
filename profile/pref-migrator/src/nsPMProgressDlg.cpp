@@ -34,14 +34,19 @@
 #include "nsINameSpaceManager.h"
 #include "nsIContentViewer.h"
 #include "nsIDOMElement.h"
+#ifndef NECKO
 #include "nsINetService.h"
+static NS_DEFINE_IID( kNetServiceCID,      NS_NETSERVICE_CID );
+#else
+#include "nsNeckoUtil.h"
+#endif // NECKO
 
+#include "nsIBrowserWindow.h"
 #include "nsIWebShell.h"
 #include "nsIWebShellWindow.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID( kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
-static NS_DEFINE_IID( kNetServiceCID,      NS_NETSERVICE_CID );
 
 // Utility to set element attribute.
 static nsresult setAttribute( nsIDOMXULDocument *doc,
@@ -164,8 +169,13 @@ nsPrefMigrationProgressDialog::CreateProfileProgressDialog()
     if ( NS_SUCCEEDED( rv ) ) 
     {
         // Open "progress" dialog.
-        nsIURL *url;
-        rv = NS_NewURL( &url, "resource:/res/profile/progress_undetermined.xul" );
+        nsIURI *url;
+        const char *urlSpec = "resource:/res/profile/progress_undetermined.xul";
+#ifndef NECKO
+        rv = NS_NewURL( &url,  urlSpec);
+#else
+        rv = NS_NewURI(&url, urlSpec);
+#endif // NECKO
         if ( NS_SUCCEEDED(rv) ) 
         {
         
@@ -173,11 +183,11 @@ nsPrefMigrationProgressDialog::CreateProfileProgressDialog()
             rv = appShell->CreateTopLevelWindow( nsnull,
                                                  url,
                                                  PR_TRUE,
-                                                 *getter_AddRefs(newWindow),
-                                                 nsnull,
+                                                 NS_CHROME_ALL_CHROME,
                                                  this,  // callbacks??
                                                  0,
-                                                 0 );
+                                                 0,
+                                                 getter_AddRefs(newWindow));
 
             if ( NS_SUCCEEDED( rv ) ) 
             {

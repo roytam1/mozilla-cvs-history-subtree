@@ -30,15 +30,15 @@ extern "C" {
 }
 
 
-NS_DEFINE_IID(kIInputStreamIID, NS_IINPUTSTREAM_IID);
-NS_DEFINE_IID(kIConnectionInfoIID, NS_ICONNECTIONINFO_IID);
+static NS_DEFINE_IID(kIInputStreamIID, NS_IINPUTSTREAM_IID);
+static NS_DEFINE_IID(kIConnectionInfoIID, NS_ICONNECTIONINFO_IID);
 
 #define BUFFER_BLOCK_SIZE   8192
 
 
 
 
-nsConnectionInfo::nsConnectionInfo(nsIURL *aURL,
+nsConnectionInfo::nsConnectionInfo(nsIURI *aURL,
                                    nsNetlibStream *aStream, 
                                    nsIStreamListener *aNotify)
 {
@@ -82,7 +82,7 @@ nsConnectionInfo::~nsConnectionInfo()
 }
 
 NS_IMETHODIMP 
-nsConnectionInfo::GetURL(nsIURL **aURL)
+nsConnectionInfo::GetURL(nsIURI **aURL)
 {
     *aURL = pURL;
     NS_IF_ADDREF(pURL);    
@@ -91,7 +91,7 @@ nsConnectionInfo::GetURL(nsIURL **aURL)
 }
 
 NS_IMETHODIMP 
-nsConnectionInfo::SetURL(nsIURL *aURL)
+nsConnectionInfo::SetURL(nsIURI *aURL)
 {
 	NS_IF_RELEASE(pURL); // release old one
 	pURL = aURL;
@@ -146,7 +146,6 @@ nsresult nsNetlibStream::QueryInterface(const nsIID &aIID, void** aInstancePtr)
         return NS_ERROR_NULL_POINTER;
     }
     static NS_DEFINE_IID(kISupportsIID,     NS_ISUPPORTS_IID);
-    static NS_DEFINE_IID(kIInputStreamIID,  NS_IINPUTSTREAM_IID);
     static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
     if (aIID.Equals(kIInputStreamIID)) {
         *aInstancePtr = (void*) ((nsIInputStream*)this);

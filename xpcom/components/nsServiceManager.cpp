@@ -156,29 +156,34 @@ protected:
 
     virtual ~nsServiceManagerImpl(void);
 
-    nsHashtable/*<nsServiceEntry>*/* mServices;
+    nsObjectHashtable/*<nsServiceEntry>*/* mServices;
+    PRBool mShuttingDown;
 };
-
-nsServiceManagerImpl::nsServiceManagerImpl(void)
-{
-    NS_INIT_REFCNT();
-    mServices = new nsHashtable(256, PR_TRUE);	// Get a threadSafe hashtable
-    NS_ASSERTION(mServices, "out of memory already?");
-}
 
 static PRBool
 DeleteEntry(nsHashKey *aKey, void *aData, void* closure)
 {
     nsServiceEntry* entry = (nsServiceEntry*)aData;
+    entry->NotifyListeners();
     NS_RELEASE(entry->mService);
     delete entry;
     return PR_TRUE;
 }
 
+nsServiceManagerImpl::nsServiceManagerImpl(void)
+    : mShuttingDown(PR_FALSE)
+{
+    NS_INIT_REFCNT();
+    mServices = new nsObjectHashtable(nsnull, nsnull,   // should never be cloned
+                                      DeleteEntry, nsnull,
+                                      256, PR_TRUE);    // Get a threadSafe hashtable
+    NS_ASSERTION(mServices, "out of memory already?");
+}
+
 nsServiceManagerImpl::~nsServiceManagerImpl(void)
 {
+    mShuttingDown = PR_TRUE;
     if (mServices) {
-        mServices->Enumerate(DeleteEntry);
         delete mServices;
     }
 }
@@ -252,7 +257,7 @@ nsServiceManagerImpl::GetService(const nsCID& aClass, const nsIID& aIID,
                 if (NS_SUCCEEDED(rv)) {
                     mServices->Put(&key, entry);
                     *result = service;
-                    NS_ADDREF(service);      // Released in UnregisterService
+                    NS_ADDREF(service);		// Released in service manager destructor
                 }
                 else {
                     NS_RELEASE(service);
@@ -270,25 +275,37 @@ NS_IMETHODIMP
 nsServiceManagerImpl::ReleaseService(const nsCID& aClass, nsISupports* service,
                                      nsIShutdownListener* shutdownListener)
 {
+    PRBool serviceFound = PR_FALSE;
     nsresult rv = NS_OK;
     PR_CEnterMonitor(this);
 
-    nsIDKey key(aClass);
-    nsServiceEntry* entry = (nsServiceEntry*)mServices->Get(&key);
+#ifndef NS_DEBUG
+    // Do entry lookup only if there is a shutdownlistener to be removed.
+    //
+    // For Debug builds, Consistency check for entry always. Releasing service
+    // when the service is not with the servicemanager is mostly wrong.
+    if (shutdownListener)
+#endif
+    {
+        nsIDKey key(aClass);
+        nsServiceEntry* entry = (nsServiceEntry*)mServices->Get(&key);
 
-    NS_ASSERTION(entry, "service not found");
-    // NS_ASSERTION(entry->mService == service, "service looked failed");
-
-    if (entry) {
-        rv = entry->RemoveListener(shutdownListener);
-        nsrefcnt cnt;
-        NS_RELEASE2(service, cnt);
-        if (NS_SUCCEEDED(rv) && cnt == 0) {
-            mServices->Remove(&key);
-            delete entry;
-            rv = nsComponentManager::FreeLibraries();
+        if (entry) {
+            rv = entry->RemoveListener(shutdownListener);
+            serviceFound = PR_TRUE;
         }
     }
+    
+    nsrefcnt cnt;
+    NS_RELEASE2(service, cnt);
+
+    // Consistency check: Service ref count cannot go to zero because of the
+    // extra addref the service manager does, unless the service has been
+    // unregistered (ie) not found in the service managers hash table.
+    // 
+    NS_ASSERTION(cnt > 0 || !serviceFound,
+                 "*** Service in hash table but is being deleted. Dangling pointer\n"
+                 "*** in service manager hash table.");
 
     PR_CExitMonitor(this);
     return rv;
@@ -311,7 +328,7 @@ nsServiceManagerImpl::RegisterService(const nsCID& aClass, nsISupports* aService
             rv = NS_ERROR_OUT_OF_MEMORY;
         else {
             mServices->Put(&key, entry);
-            NS_ADDREF(aService);      // Released in UnregisterService
+            NS_ADDREF(aService);      // Released in DeleteEntry from UnregisterService
         }
     }
     PR_CExitMonitor(this);
@@ -331,17 +348,9 @@ nsServiceManagerImpl::UnregisterService(const nsCID& aClass)
         rv = NS_ERROR_SERVICE_NOT_FOUND;
     }
     else {
-        rv = entry->NotifyListeners();         // break the cycles
+        rv = entry->NotifyListeners();  // break the cycles
         entry->mShuttingDown = PR_TRUE;
-        nsrefcnt cnt;
-        NS_RELEASE2(entry->mService, cnt);       // AddRef in GetService
-        if (NS_SUCCEEDED(rv) && cnt == 0) {
-            mServices->Remove(&key);
-            delete entry;
-            rv = nsComponentManager::FreeLibraries();
-        }
-        else
-            rv = NS_ERROR_SERVICE_IN_USE;
+        mServices->RemoveAndDelete(&key);				// This will call the delete entry func
     }
 
     PR_CExitMonitor(this);
@@ -452,7 +461,7 @@ nsServiceManager::ReleaseService(const nsCID& aClass, nsISupports* service,
     nsIServiceManager* mgr;
     nsresult rv = GetGlobalServiceManager(&mgr);
     if (NS_FAILED(rv)) return rv;
-    return mgr->ReleaseService(aClass, service, shutdownListener);
+    return mgr ? mgr->ReleaseService(aClass, service, shutdownListener) : NS_OK;
 }
 
 nsresult

@@ -88,11 +88,18 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
     mRegistryName   =   new nsString(inVRName);
     mJarLocation    =   new nsString(inJarLocation);
     mTargetFile     =   new nsFileSpec(folderSpec);
-    
     mVersionInfo    =   new nsInstallVersion();
     
+    if (mRegistryName == nsnull ||
+        mJarLocation  == nsnull ||
+        mTargetFile   == nsnull ||
+        mVersionInfo  == nsnull )
+    {
+        *error = nsInstall::OUT_OF_MEMORY;
+        return;
+    }
+
     mVersionInfo->Init(inVInfo);
-    
 }
 
 
@@ -118,10 +125,20 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
     mRegistryName   =   new nsString(inVRName);
     mJarLocation    =   new nsString(inJarLocation);
     mVersionInfo    =   new nsInstallVersion();
+    mTargetFile     =   new nsFileSpec(folderSpec);
+
+    if (mRegistryName == nsnull ||
+        mJarLocation  == nsnull ||
+        mTargetFile   == nsnull ||
+        mVersionInfo  == nsnull )
+    {
+        *error = nsInstall::OUT_OF_MEMORY;
+        return;
+    }
     
     mVersionInfo->Init(inVInfo);
     
-    mTargetFile = new nsFileSpec(folderSpec);
+    
     if(inPartialPath != "null")
         *mTargetFile += inPartialPath;
 }
@@ -247,8 +264,8 @@ PRInt32 nsInstallPatch::Complete()
                               tempVersion, 
                               PR_FALSE );
             
-            delete [] tempRegName;
-            delete [] tempVersion;
+            if (tempRegName) delete [] tempRegName;
+            if (tempVersion) delete [] tempVersion;
 
         }
         else
@@ -281,8 +298,12 @@ void nsInstallPatch::Abort()
 char* nsInstallPatch::toString()
 {
 	char* buffer = new char[1024];
+    
+    if (buffer == nsnull)
+        return buffer;
 
-	// FIX!  sprintf( buffer, nsInstallResources::GetPatchFileString(), mPatchedFile->GetCString());
+    if (mTargetFile != nsnull) 
+        sprintf( buffer, nsInstallResources::GetPatchFileString(), mTargetFile->GetCString()); 
 
 	return buffer;
 }
@@ -399,7 +420,7 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 		nsString newFileName = sourceFile.GetLeafName();
 
         PRInt32 index;
-		if ((index = newFileName.RFind(".")) > 0)
+		if ((index = newFileName.RFindChar('.')) > 0)
 		{
             nsString extention;
             nsString fileName;
@@ -562,19 +583,13 @@ nsInstallPatch::HashFilePath(const nsFilePath& aPath)
     if(cPath != nsnull) 
     {
         char  ch;
-        char* filePath = PL_strdup(cPath);
-        PRUint32 cnt=0;
+        char* pathIndex = cPath;
 
-        while ((ch = *filePath++) != 0) 
+        while ((ch = *pathIndex++) != 0) 
         {
             // FYI: rv = rv*37 + ch
             rv = ((rv << 5) + (rv << 2) + rv) + ch;
-            cnt++;
         }
-        
-        for (PRUint32 i=0; i<=cnt; i++)
-            *filePath--;
-		PL_strfree(filePath);
     }
 
 	PL_strfree(cPath);

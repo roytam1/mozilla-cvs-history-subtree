@@ -130,6 +130,10 @@ typedef PRUint32 nsFrameState;
 // If this bit is set, then the frame reflects content that may be selected
 #define NS_FRAME_SELECTED_CONTENT 0x00000200
 
+// If this bit is set, then the frame is dirty and needs to be reflowed.
+// This bit is set when the frame is first created
+#define NS_FRAME_IS_DIRTY 0x00000400
+
 // The low 16 bits of the frame state word are reserved by this API.
 #define NS_FRAME_RESERVED 0x0000FFFF
 
@@ -175,8 +179,8 @@ enum nsSpread {
  * there is no order defined between frames in different child lists of
  * the same parent frame.
  *
- * Frames are NOT reference counted. Use the DeleteFrame() member function
- * to delete a frame. The lifetime of the frame hierarchy is bounded by the
+ * Frames are NOT reference counted. Use the Destroy() member function
+ * to destroy a frame. The lifetime of the frame hierarchy is bounded by the
  * lifetime of the presentation shell which owns the frames.
  */
 class nsIFrame : public nsISupports
@@ -207,6 +211,12 @@ public:
                    nsIFrame*        aPrevInFlow) = 0;
 
   /**
+   * Destroys this frame and each of its child frames (recursively calls
+   * Destroy() for each child)
+   */
+  NS_IMETHOD  Destroy(nsIPresContext& aPresContext) = 0;
+
+  /**
    * Called to set the initial list of frames. This happens after the frame
    * has been initialized.
    *
@@ -215,7 +225,8 @@ public:
    *
    * @param   aListName the name of the child list. A NULL pointer for the atom
    *            name means the unnamed principal child list
-   * @param   aChildList list of child frames
+   * @param   aChildList list of child frames. Each of the frames has its
+   *            NS_FRAME_IS_DIRTY bit set
    * @return  NS_ERROR_INVALID_ARG if there is no child list with the specified
    *            name,
    *          NS_ERROR_UNEXPECTED if the frame is an atomic frame or if the
@@ -229,15 +240,16 @@ public:
 
   /**
    * This method is responsible for appending frames to the frame
-   * list.  The implementation should do something with the new frames
-   * and then generate a reflow command.
+   * list.  The implementation should append the frames to the specified
+   * child list and then generate a reflow command.
    *
    * @param   aListName the name of the child list. A NULL pointer for the atom
    *            name means the unnamed principal child list
-   * @param   aFrameList list of child frames to append
+   * @param   aFrameList list of child frames to append. Each of the frames has
+   *            its NS_FRAME_IS_DIRTY bit set
    * @return  NS_ERROR_INVALID_ARG if there is no child list with the specified
    *            name,
-   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame
+   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame,
    *          NS_OK otherwise
    */
   NS_IMETHOD AppendFrames(nsIPresContext& aPresContext,
@@ -247,16 +259,17 @@ public:
 
   /**
    * This method is responsible for inserting frames into the frame
-   * list.  The implementation should do something with the new frames
-   * and then generate a reflow command.
+   * list.  The implementation should insert the new frames into the specified
+   * child list and then generate a reflow command.
    *
    * @param   aListName the name of the child list. A NULL pointer for the atom
    *            name means the unnamed principal child list
    * @param   aPrevFrame the frame to insert frames <b>after</b>
-   * @param   aFrameList list of child frames to insert <b>after</b> aPrevFrame
+   * @param   aFrameList list of child frames to insert <b>after</b> aPrevFrame.
+   *            Each of the frames has its NS_FRAME_IS_DIRTY bit set
    * @return  NS_ERROR_INVALID_ARG if there is no child list with the specified
    *            name,
-   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame
+   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame,
    *          NS_OK otherwise
    */
   NS_IMETHOD InsertFrames(nsIPresContext& aPresContext,
@@ -276,7 +289,9 @@ public:
    * @param   aOldFrame the frame to remove
    * @return  NS_ERROR_INVALID_ARG if there is no child list with the specified
    *            name,
-   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame
+   *          NS_ERROR_FAILURE if the child frame is not in the specified
+   *            child list,
+   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame,
    *          NS_OK otherwise
    */
   NS_IMETHOD RemoveFrame(nsIPresContext& aPresContext,
@@ -285,10 +300,27 @@ public:
                          nsIFrame*       aOldFrame) = 0;
 
   /**
-   * Deletes this frame and each of its child frames (recursively calls
-   * DeleteFrame() for each child)
+   * This method is responsible for replacing the old frame with the
+   * new frame. The old frame should be destroyed and the new frame inserted
+   * in its place in the specified child list.
+   *
+   * @param   aListName the name of the child list. A NULL pointer for the atom
+   *            name means the unnamed principal child list
+   * @param   aOldFrame the frame to remove
+   * @param   aNewFrame the frame to replace it with. The new frame has its
+   *            NS_FRAME_IS_DIRTY bit set
+   * @return  NS_ERROR_INVALID_ARG if there is no child list with the specified
+   *            name,
+   *          NS_ERROR_FAILURE if the old child frame is not in the specified
+   *            child list,
+   *          NS_ERROR_UNEXPECTED if the frame is an atomic frame,
+   *          NS_OK otherwise
    */
-  NS_IMETHOD  DeleteFrame(nsIPresContext& aPresContext) = 0;
+  NS_IMETHOD ReplaceFrame(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aOldFrame,
+                          nsIFrame*       aNewFrame) = 0;
 
   /**
    * Get the content object associated with this frame. Adds a reference to
@@ -548,12 +580,6 @@ public:
    * Is this frame a "containing block"?
    */
   NS_IMETHOD  IsPercentageBase(PRBool& aBase) const = 0;
-
-  /**
-   * Does this frame have content that is considered "transparent"?
-   * This is binary transparency as opposed to translucency. MMP
-   */
-  NS_IMETHOD IsTransparent(PRBool& aTransparent) const = 0;
 
   /**
    * called when the frame has been scrolled to a new

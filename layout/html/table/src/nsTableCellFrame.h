@@ -54,6 +54,23 @@ public:
                   nsIStyleContext* aContext,
                   nsIFrame*        aPrevInFlow);
 
+  // table cells contain an area frame which does most of the work, and
+  // so these functions should never be called. They assert and return
+  // NS_ERROR_NOT_IMPLEMENTED
+  NS_IMETHOD AppendFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD InsertFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aPrevFrame,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD RemoveFrame(nsIPresContext& aPresContext,
+                         nsIPresShell&   aPresShell,
+                         nsIAtom*        aListName,
+                         nsIFrame*       aOldFrame);
+
   void InitCellFrame(PRInt32 aColIndex);
 
   void SetBorderEdge(PRUint8 aSide, 
@@ -108,10 +125,16 @@ public:
 
   // there is no set row index because row index depends on the cell's parent row only
 
+  /*---------------- nsITableCellLayout methods ------------------------*/
+
   /**
    * return the cell's starting row index (starting at 0 for the first row).
    * for continued cell frames the row index is that of the cell's first-in-flow
+   * and the column index (starting at 0 for the first column
    */
+  NS_IMETHOD GetCellIndexes(PRInt32 &aRowIndex, PRInt32 &aColIndex);
+
+  /** return the mapped cell's row index (starting at 0 for the first row) */
   virtual nsresult GetRowIndex(PRInt32 &aRowIndex);
 
   /**
@@ -124,6 +147,7 @@ public:
   
   /** return the cell's column index (starting at 0 for the first column) */
   virtual nsresult GetColIndex(PRInt32 &aColIndex);
+  virtual nsresult SetColIndex(PRInt32 aColIndex);
 
   /** return the available width given to this frame during its last reflow */
   virtual nscoord GetPriorAvailWidth();

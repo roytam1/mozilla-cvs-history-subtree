@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 IGNORE_MANIFEST=1
 
 MAKE_OBJ_TYPE = DLL
@@ -31,9 +32,6 @@ DEFINES=-D_IMPL_NS_GFX -D_IMPL_NS_GFXNONXP -DWIN32_LEAN_AND_MEAN -DSTRICT
 DEFINES=$(DEFINES) -DNGLAYOUT_DDRAW
 !endif
 
-MISCDEP=                        \
- $(DIST)\lib\raptorgfx_s.lib
- 
 OBJS =                                  \
 	.\$(OBJDIR)\nsDeviceContextWin.obj   \
 	.\$(OBJDIR)\nsDrawingSurfaceWin.obj         \
@@ -44,7 +42,6 @@ OBJS =                                  \
 	.\$(OBJDIR)\nsDeviceContextSpecWin.obj          \
 	.\$(OBJDIR)\nsDeviceContextSpecFactoryW.obj          \
 	.\$(OBJDIR)\nsGfxFactoryWin.obj          \
-	.\$(OBJDIR)\nsTimer.obj        \
 	$(NULL)
 
 EXPORTS= nsIRenderingContextWin.h \
@@ -75,15 +72,23 @@ LLIBS=				\
  $(DIST)\lib\img32$(VERSION_NUMBER).lib        \
  $(DIST)\lib\js32$(VERSION_NUMBER).lib        \
  $(DIST)\lib\util.lib           \
- $(DIST)\lib\plc3.lib       \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib       \
+!else
  $(DIST)\lib\netlib.lib       \
+!endif
  $(DIST)\lib\raptorgfx_s.lib \
+ $(DIST)\lib\timer_s.lib \
 !if defined(NGLAYOUT_DDRAW)
- ole32.lib \
  $(NGLAYOUT_DDRAW)\lib\ddraw.lib \
 !endif
- comdlg32.lib \
  $(LIBNSPR)  
+
+WIN_LIBS=   \
+!if defined(NGLAYOUT_DDRAW)
+ ole32.lib \
+!endif
+ comdlg32.lib
 
 LLFLAGS = \
 		$(LLFLAGS) \
@@ -103,4 +108,3 @@ install:: $(DLL)
 clobber::
 	rm -f $(DIST)\bin\$(DLLNAME).dll
 	rm -f $(DIST)\lib\$(DLLNAME).lib
-	

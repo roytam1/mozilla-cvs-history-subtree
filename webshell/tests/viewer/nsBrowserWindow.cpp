@@ -99,10 +99,10 @@
 #ifndef NECKO
 #include "nsINetService.h"
 static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
-static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 #else
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 
@@ -111,7 +111,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #if defined(ClientWallet) || defined(SingleSignon)
 #include "nsIWalletService.h"
 static NS_DEFINE_IID(kIWalletServiceIID, NS_IWALLETSERVICE_IID);
-static NS_DEFINE_IID(kWalletServiceCID, NS_WALLETSERVICE_CID);
+static NS_DEFINE_CID(kWalletServiceCID, NS_WALLETSERVICE_CID);
 #endif
 
 
@@ -144,20 +144,20 @@ static NS_DEFINE_IID(kWalletServiceCID, NS_WALLETSERVICE_CID);
 #define WEBSHELL_BOTTOM_INSET 0
 #endif
 
-static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
-static NS_DEFINE_IID(kBrowserWindowCID, NS_BROWSER_WINDOW_CID);
-static NS_DEFINE_IID(kButtonCID, NS_BUTTON_CID);
-static NS_DEFINE_IID(kFileWidgetCID, NS_FILEWIDGET_CID);
-static NS_DEFINE_IID(kTextFieldCID, NS_TEXTFIELD_CID);
-static NS_DEFINE_IID(kThrobberCID, NS_THROBBER_CID);
-static NS_DEFINE_IID(kWebShellCID, NS_WEB_SHELL_CID);
-static NS_DEFINE_IID(kWindowCID, NS_WINDOW_CID);
-static NS_DEFINE_IID(kDialogCID, NS_DIALOG_CID);
-static NS_DEFINE_IID(kCheckButtonCID, NS_CHECKBUTTON_CID);
-static NS_DEFINE_IID(kRadioButtonCID, NS_RADIOBUTTON_CID);
-static NS_DEFINE_IID(kLabelCID, NS_LABEL_CID);
-static NS_DEFINE_IID(kIXPBaseWindowIID, NS_IXPBASE_WINDOW_IID);
+static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
+static NS_DEFINE_CID(kBrowserWindowCID, NS_BROWSER_WINDOW_CID);
+static NS_DEFINE_CID(kButtonCID, NS_BUTTON_CID);
+static NS_DEFINE_CID(kFileWidgetCID, NS_FILEWIDGET_CID);
+static NS_DEFINE_CID(kTextFieldCID, NS_TEXTFIELD_CID);
+static NS_DEFINE_CID(kThrobberCID, NS_THROBBER_CID);
+static NS_DEFINE_CID(kWebShellCID, NS_WEB_SHELL_CID);
+static NS_DEFINE_CID(kWindowCID, NS_WINDOW_CID);
+static NS_DEFINE_CID(kDialogCID, NS_DIALOG_CID);
+static NS_DEFINE_CID(kCheckButtonCID, NS_CHECKBUTTON_CID);
+static NS_DEFINE_CID(kRadioButtonCID, NS_RADIOBUTTON_CID);
+static NS_DEFINE_CID(kLabelCID, NS_LABEL_CID);
 
+static NS_DEFINE_IID(kIXPBaseWindowIID, NS_IXPBASE_WINDOW_IID);
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 static NS_DEFINE_IID(kIBrowserWindowIID, NS_IBROWSER_WINDOW_IID);
 static NS_DEFINE_IID(kIButtonIID, NS_IBUTTON_IID);
@@ -175,9 +175,12 @@ static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
 static NS_DEFINE_IID(kICheckButtonIID, NS_ICHECKBUTTON_IID);
 static NS_DEFINE_IID(kIRadioButtonIID, NS_IRADIOBUTTON_IID);
 static NS_DEFINE_IID(kILabelIID, NS_ILABEL_IID);
+#ifdef NECKO
+#else
 static NS_DEFINE_IID(kINetSupportIID,         NS_INETSUPPORT_IID);
+#endif
 static NS_DEFINE_IID(kIDocumentViewerIID, NS_IDOCUMENT_VIEWER_IID);
-static NS_DEFINE_IID(kXPBaseWindowCID, NS_XPBASE_WINDOW_CID);
+static NS_DEFINE_CID(kXPBaseWindowCID, NS_XPBASE_WINDOW_CID);
 static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
@@ -497,10 +500,6 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
     DoPaste();
     break;
 
-  case VIEWER_EDIT_SELECTALL:
-    DoSelectAll();
-    break;
-
   case VIEWER_EDIT_FINDINPAGE:
     DoFind();
     break;
@@ -628,7 +627,7 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
                                      kIWalletServiceIID,
                                      (nsISupports **)&walletservice);
   if ((NS_OK == res) && (nsnull != walletservice)) {
-    nsIURL * url;
+    nsIURI * url;
 #ifndef NECKO
     res = NS_NewURL(&url, WALLET_EDITOR_URL);
 #else
@@ -639,7 +638,7 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
     res = service->NewURI(WALLET_EDITOR_URL, nsnull, &uri);
     if (NS_FAILED(res)) return nsEventStatus_eIgnore;
 
-    res = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+    res = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
     NS_RELEASE(uri);
 #endif // NECKO
     if (!NS_FAILED(res)) {
@@ -663,7 +662,7 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
                                          kINetServiceIID,
                                          (nsISupports **)&netservice);
       if ((NS_OK == res) && (nsnull != netservice)) {
-        res = netservice->Cookie_DisplayCookieInfoAsHTML();
+//        res = netservice->Cookie_DisplayCookieInfoAsHTML();
         NS_RELEASE(netservice);
       }
 #endif // NECKO
@@ -677,7 +676,7 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
                                      kIWalletServiceIID,
                                      (nsISupports **)&walletservice);
   if ((NS_OK == res) && (nsnull != walletservice)) {
-    res = walletservice->SI_DisplaySignonInfoAsHTML();
+//    res = walletservice->SI_DisplaySignonInfoAsHTML();
     NS_RELEASE(walletservice);
   }
   break;
@@ -982,22 +981,6 @@ nsBrowserWindow::DoFind()
 
 }
 
-void
-nsBrowserWindow::DoSelectAll()
-{
-
-  nsIPresShell* shell = GetPresShell();
-  if (nsnull != shell) {
-    nsCOMPtr<nsIDocument> doc;
-    shell->GetDocument(getter_AddRefs(doc));
-    if (doc) {
-      doc->SelectAll();
-      ForceRefresh();
-    }
-    NS_RELEASE(shell);
-  }
-}
-
 
 //----------------------------------------------------------------------
 
@@ -1016,7 +999,7 @@ GetTitleSuffix(void)
   if (NS_FAILED(ret)) {
     return suffix;
   }
-  nsIURL* url = nsnull;
+  nsIURI* url = nsnull;
 #ifndef NECKO
   ret = NS_NewURL(&url, nsString(VIEWER_BUNDLE_URL));
 #else
@@ -1027,7 +1010,7 @@ GetTitleSuffix(void)
     ret = service->NewURI(VIEWER_BUNDLE_URL, nsnull, &uri);
     if (NS_FAILED(ret)) return ret;
 
-    ret = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+    ret = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
     NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(ret)) {
@@ -1108,11 +1091,20 @@ nsBrowserWindow::QueryInterface(const nsIID& aIID,
     NS_ADDREF_THIS();
     return NS_OK;
   }
+#ifdef NECKO
+  if (aIID.Equals(nsIProgressEventSink::GetIID())) {
+    *aInstancePtrResult = (void*) ((nsIProgressEventSink*)this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+#else
+  // XXX I don't think so...
   if (aIID.Equals(kINetSupportIID)) {
     *aInstancePtrResult = (void*) ((nsINetSupport*)this);
     NS_ADDREF_THIS();
     return NS_OK;
   }
+#endif
   if (aIID.Equals(kISupportsIID)) {
     *aInstancePtrResult = (void*) ((nsISupports*)((nsIBrowserWindow*)this));
     NS_ADDREF_THIS();
@@ -1143,7 +1135,8 @@ nsBrowserWindow::Init(nsIAppShell* aAppShell,
     return rv;
   }
   nsWidgetInitData initData;
-  initData.mBorderStyle = eBorderStyle_window;
+  initData.mWindowType = eWindowType_toplevel;
+  initData.mBorderStyle = eBorderStyle_default;
 
   nsRect r(0, 0, aBounds.width, aBounds.height);
   mWindow->Create((nsIWidget*)NULL, r, HandleBrowserEvent,
@@ -1292,9 +1285,12 @@ nsBrowserWindow::SetWebCrawler(nsWebCrawler* aCrawler)
   }
   if (aCrawler) {
     mWebCrawler = aCrawler;
+    /* Nisheeth: the crawler registers as a document loader observer with
+     * the webshell when nsWebCrawler::Start() is called.
     if (mWebShell) {
       mWebShell->SetDocLoaderObserver(aCrawler);
     }
+    */
     NS_ADDREF(aCrawler);
   }
 }
@@ -1453,15 +1449,18 @@ nsBrowserWindow::Layout(PRInt32 aWidth, PRInt32 aHeight)
         NS_SUCCEEDED(mLocation->QueryInterface(kIWidgetIID,
                                                (void**)&locationWidget))) {
       if (mThrobber) {
+	      PRInt32 width = PR_MAX(aWidth - (2*BUTTON_WIDTH + THROBBER_WIDTH), 0);
+      
 	      locationWidget->Resize(2*BUTTON_WIDTH, 0,
-                               aWidth - (2*BUTTON_WIDTH + THROBBER_WIDTH),
+                               width,
                                BUTTON_HEIGHT,
                                PR_TRUE);
 	      mThrobber->MoveTo(aWidth - THROBBER_WIDTH, 0);
       }
       else {
+	      PRInt32 width = PR_MAX(aWidth - 2*BUTTON_WIDTH, 0);
 	      locationWidget->Resize(2*BUTTON_WIDTH, 0,
-                               aWidth - 2*BUTTON_WIDTH,
+                               width,
                                BUTTON_HEIGHT,
                                PR_TRUE);
       }
@@ -1531,7 +1530,7 @@ nsBrowserWindow::MoveTo(PRInt32 aX, PRInt32 aY)
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::SizeTo(PRInt32 aWidth, PRInt32 aHeight)
+nsBrowserWindow::SizeContentTo(PRInt32 aWidth, PRInt32 aHeight)
 {
   NS_PRECONDITION(nsnull != mWindow, "null window");
 
@@ -1543,7 +1542,13 @@ nsBrowserWindow::SizeTo(PRInt32 aWidth, PRInt32 aHeight)
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::GetBounds(nsRect& aBounds)
+nsBrowserWindow::SizeWindowTo(PRInt32 aWidth, PRInt32 aHeight)
+{
+  return SizeContentTo(aWidth, aHeight);
+}
+
+NS_IMETHODIMP
+nsBrowserWindow::GetContentBounds(nsRect& aBounds)
 {
   mWindow->GetClientBounds(aBounds);
   return NS_OK;
@@ -1599,6 +1604,13 @@ nsBrowserWindow::Close()
 
 
 NS_IMETHODIMP
+nsBrowserWindow::ShowModally(PRBool aPrepare)
+{
+  // unsupported by viewer
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
 nsBrowserWindow::SetChrome(PRUint32 aChromeMask)
 {
   mChromeMask = aChromeMask;
@@ -1624,7 +1636,21 @@ nsBrowserWindow::GetWebShell(nsIWebShell*& aResult)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsBrowserWindow::GetContentWebShell(nsIWebShell **aResult)
+{
+  *aResult = mWebShell;
+  NS_IF_ADDREF(mWebShell);
+  return NS_OK;
+}
+
 //----------------------------------------
+NS_IMETHODIMP
+nsBrowserWindow::IsIntrinsicallySized(PRBool& aResult)
+{
+  aResult = PR_FALSE;
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 nsBrowserWindow::SetTitle(const PRUnichar* aTitle)
@@ -1662,6 +1688,18 @@ nsBrowserWindow::GetStatus(const PRUnichar** aResult)
 }
 
 NS_IMETHODIMP
+nsBrowserWindow::SetDefaultStatus(const PRUnichar* aStatus)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBrowserWindow::GetDefaultStatus(const PRUnichar** aResult)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsBrowserWindow::SetProgress(PRInt32 aProgress, PRInt32 aProgressMax)
 {
   return NS_OK;
@@ -1670,13 +1708,6 @@ nsBrowserWindow::SetProgress(PRInt32 aProgress, PRInt32 aProgressMax)
 NS_IMETHODIMP
 nsBrowserWindow::ShowMenuBar(PRBool aShow)
 {
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBrowserWindow::IsMenuBarVisible(PRBool *aVisible)
-{
-  *aVisible = PR_TRUE;
   return NS_OK;
 }
 
@@ -1721,7 +1752,7 @@ nsBrowserWindow::ProgressLoadURL(nsIWebShell* aShell,
 NS_IMETHODIMP
 nsBrowserWindow::EndLoadURL(nsIWebShell* aShell,
                             const PRUnichar* aURL,
-                            PRInt32 aStatus)
+                            nsresult aStatus)
 {
   if (aShell == mWebShell) {
     PRTime endLoadTime = PR_Now();
@@ -1766,7 +1797,7 @@ nsBrowserWindow::NewWebShell(PRUint32 aChromeMask,
   if (nsnull != browser)
   {
     nsRect  bounds;
-    GetBounds(bounds);
+    GetContentBounds(bounds);
 
     browser->SetApp(mApp);
 
@@ -1805,7 +1836,7 @@ nsBrowserWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupConte
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow)
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup)
 {
   return NS_OK;
 }
@@ -1854,17 +1885,39 @@ nsBrowserWindow::FocusAvailable(nsIWebShell* aFocusedWebShell, PRBool& aFocusTak
 // Stream observer implementation
 
 NS_IMETHODIMP
-nsBrowserWindow::OnProgress(nsIURL* aURL,
+#ifdef NECKO
+nsBrowserWindow::OnProgress(nsIChannel* channel, nsISupports *ctxt,
+                            PRUint32 aProgress, PRUint32 aProgressMax)
+#else
+nsBrowserWindow::OnProgress(nsIURI* aURL,
                             PRUint32 aProgress,
                             PRUint32 aProgressMax)
+#endif
 {
+  nsresult rv;
+
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aURL;
+  rv = channel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(rv)) return rv;
+#endif
+  
   if (mStatus) {
     nsAutoString url;
     if (nsnull != aURL) {
+#ifdef NECKO
+      char* str;
+      aURL->GetSpec(&str);
+#else
       PRUnichar* str;
       aURL->ToString(&str);
+#endif
       url = str;
+#ifdef NECKO
+      nsCRT::free(str);
+#else
       delete[] str;
+#endif
     }
     url.Append(": progress ");
     url.Append(aProgress, 10);
@@ -1880,7 +1933,11 @@ nsBrowserWindow::OnProgress(nsIURL* aURL,
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+#ifdef NECKO
+nsBrowserWindow::OnStatus(nsIChannel* channel, nsISupports *ctxt, const PRUnichar *aMsg)
+#else
+nsBrowserWindow::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
+#endif
 {
   if (mStatus) {
     PRUint32 size;
@@ -1890,15 +1947,36 @@ nsBrowserWindow::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::OnStartBinding(nsIURL* aURL, const char *aContentType)
+#ifdef NECKO
+nsBrowserWindow::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+nsBrowserWindow::OnStartRequest(nsIURI* aURL, const char *aContentType)
+#endif
 {
+  nsresult rv;
+
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aURL;
+  rv = channel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(rv)) return rv;
+#endif
+  
   if (mStatus) {
     nsAutoString url;
     if (nsnull != aURL) {
+#ifdef NECKO
+      char* str;
+      aURL->GetSpec(&str);
+#else
       PRUnichar* str;
       aURL->ToString(&str);
+#endif
       url = str;
+#ifdef NECKO
+      nsCRT::free(str);
+#else
       delete[] str;
+#endif
     }
     url.Append(": start");
     PRUint32 size;
@@ -1908,17 +1986,39 @@ nsBrowserWindow::OnStartBinding(nsIURL* aURL, const char *aContentType)
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::OnStopBinding(nsIURL* aURL,
+#ifdef NECKO
+nsBrowserWindow::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+                               nsresult status, const PRUnichar *errorMsg)
+#else
+nsBrowserWindow::OnStopRequest(nsIURI* aURL,
                                nsresult status,
                                const PRUnichar* aMsg)
+#endif
 {
+  nsresult rv;
+
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aURL;
+  rv = channel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(rv)) return rv;
+#endif
+  
   if (mStatus) {
     nsAutoString url;
     if (nsnull != aURL) {
+#ifdef NECKO
+      char* str;
+      aURL->GetSpec(&str);
+#else
       PRUnichar* str;
       aURL->ToString(&str);
+#endif
       url = str;
+#ifdef NECKO
+      nsCRT::free(str);
+#else
       delete[] str;
+#endif
     }
     url.Append(": stop");
     PRUint32 size;
@@ -2085,7 +2185,7 @@ void
 nsBrowserWindow::ShowPrintPreview(PRInt32 aID)
 {
   static NS_DEFINE_CID(kPrintPreviewContextCID, NS_PRINT_PREVIEW_CONTEXT_CID);
-  static NS_DEFINE_CID(kIPresContextIID, NS_IPRESCONTEXT_IID);
+  static NS_DEFINE_IID(kIPresContextIID, NS_IPRESCONTEXT_IID);
   nsIContentViewer* cv = nsnull;
   if (nsnull != mWebShell) {
     if ((NS_OK == mWebShell->GetContentViewer(&cv)) && (nsnull != cv)) {
@@ -2127,14 +2227,13 @@ nsBrowserWindow::ShowPrintPreview(PRInt32 aID)
 
 void nsBrowserWindow::DoPrint(void)
 {
-  nsIContentViewer *viewer = nsnull;
+  nsCOMPtr <nsIContentViewer> viewer;
 
-  mWebShell->GetContentViewer(&viewer);
+  mWebShell->GetContentViewer(getter_AddRefs(viewer));
 
-  if (nsnull != viewer)
+  if (viewer)
   {
     viewer->Print();
-    NS_RELEASE(viewer);
   }
 }
 

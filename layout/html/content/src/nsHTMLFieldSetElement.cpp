@@ -68,7 +68,7 @@ public:
   NS_IMPL_IDOMEVENTRECEIVER_USING_GENERIC(mInner)
 
   // nsIContent
-  NS_IMPL_ICONTENT_USING_GENERIC(mInner)
+  NS_IMPL_ICONTENT_NO_SETPARENT_NO_SETDOCUMENT_USING_GENERIC(mInner)
 
   // nsIHTMLContent
   NS_IMPL_IHTMLCONTENT_USING_GENERIC(mInner)
@@ -164,6 +164,20 @@ nsHTMLFieldSetElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   return it->QueryInterface(kIDOMNodeIID, (void**) aReturn);
 }
 
+// nsIContent
+
+NS_IMETHODIMP
+nsHTMLFieldSetElement::SetParent(nsIContent* aParent)
+{
+  return mInner.SetParentForFormControls(aParent, this, mForm);
+}
+
+NS_IMETHODIMP
+nsHTMLFieldSetElement::SetDocument(nsIDocument* aDocument, PRBool aDeep)
+{
+  return mInner.SetDocumentForFormControls(aDocument, aDeep, this, mForm);
+}
+
 NS_IMETHODIMP
 nsHTMLFieldSetElement::GetForm(nsIDOMHTMLFormElement** aForm)
 {
@@ -220,11 +234,21 @@ nsHTMLFieldSetElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
+}
+
+NS_IMETHODIMP
+nsHTMLFieldSetElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                                PRInt32& aHint) const
+{
+  if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    aHint = NS_STYLE_HINT_CONTENT;
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -261,12 +285,3 @@ nsHTMLFieldSetElement::GetType(PRInt32* aType)
   }
 }
 
-
-NS_IMETHODIMP
-nsHTMLFieldSetElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, aAttribute, aHint);
-  return NS_OK;
-}

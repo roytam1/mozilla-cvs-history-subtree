@@ -16,6 +16,8 @@
  * Reserved.
  */
 #define NS_IMPL_IDS
+#include "nsCOMPtr.h"
+#include "nsIIOService.h"
 #include "nsIServiceManager.h"
 #include "nsICharsetConverterManager.h"
 
@@ -31,10 +33,10 @@
 #include "mimexpcom.h"
 #include "mimevcrd.h"
 #include "nsEscape.h"
+#include "nsIURI.h"
 
 #include "nsIEventQueueService.h"
 #include "nsIStringBundle.h"
-#include "nsINetService.h"
 #include "nsIPref.h"
 #include "nsVCardStringResources.h"
 
@@ -43,6 +45,7 @@
 
 //#include "vobject.h"
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 static int MimeInlineTextVCard_parse_line (char *, PRInt32, MimeObject *);
 static int MimeInlineTextVCard_parse_eof (MimeObject *, PRBool);
@@ -72,6 +75,9 @@ typedef struct
 	} AttributeName;
 
 #define kNumAttributes 12
+
+// Define CIDs...
+static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 
 /*
  * These functions are the public interface for this content type
@@ -890,22 +896,22 @@ static int OutputAdvancedVcard(MimeObject *obj, VObject *v)
 		{
 			if (VALUE_TYPE(prop2)) {
 				namestring  = fakeCString (vObjectUStringZValue(prop2));
-        char *tString = NULL;
+        char *tString1 = NULL;
 				if (PL_strcmp (namestring, "0") == 0)
         {
-          tString = VCardGetStringByID(VCARD_ADDR_DEFAULT_DLS);
+          tString1 = VCardGetStringByID(VCARD_ADDR_DEFAULT_DLS);
         }
 				else 
         {
 					if (PL_strcmp (namestring, "1") == 0)
-						tString = VCardGetStringByID(VCARD_ADDR_SPECIFIC_DLS);
+						tString1 = VCardGetStringByID(VCARD_ADDR_SPECIFIC_DLS);
 					else
 						if (PL_strcmp (namestring, "2") == 0)
-							tString = VCardGetStringByID(VCARD_ADDR_HOSTNAMEIP);
+							tString1 = VCardGetStringByID(VCARD_ADDR_HOSTNAMEIP);
 				}
 
-        status = WriteLineToStream (obj, tString);
-        PR_FREEIF(tString);
+        status = WriteLineToStream (obj, tString1);
+        PR_FREEIF(tString1);
 				PR_FREEIF (namestring);
 				if (status < 0) return status;
 			}
@@ -977,7 +983,6 @@ static int OutputAdvancedVcard(MimeObject *obj, VObject *v)
 static int OutputButtons(MimeObject *obj, PRBool basic, VObject *v)
 {
 	int status = 0;
-	char * htmlLine = NULL;
 	char * htmlLine1 = NULL;
 	char * htmlLine2 = NULL;
 	char* vCard = NULL;
@@ -1554,7 +1559,6 @@ static int WriteOutEachVCardProperty (MimeObject *obj, VObject* o, int* numEmail
 	char *attribName = NULL;
 	char * url = NULL;
 	char *value = NULL;
-	char *ptr = NULL;
 	int status = 0;
 
 	if (vObjectName(o)) {
@@ -1927,72 +1931,78 @@ vCard_SACat (char **destination, const char *source)
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
-#define VCARD_URL       "resource:/res/mailnews/messenger/vcard.properties"
+char *VCARD_URL = {"resource:/chrome/messenger/content/default/vcard_en.properties"};
 
 extern "C" 
 char *
 VCardGetStringByIDREAL(PRInt32 stringID)
 {
-  nsresult    res;
+  nsresult    res = NS_OK;
   char*       propertyURL;
-
-/***************************************     
-    // Father forgive me...
-    NS_WITH_SERVICE(nsIEventQueueService, pEventQueueService, kEventQueueServiceCID, &res); 
-//    nsresult ret = nsServiceManager::GetService(kEventQueueServiceCID,
-//      kIEventQueueServiceIID, (nsISupports**) &pEventQueueService);
-    if (NS_FAILED(res)) {
-      printf("cannot get event queue service\n");
-      return "xx";
-    }
-    res = pEventQueueService->CreateThreadEventQueue();
-    if (NS_FAILED(res)) 
-    {
-      printf("CreateThreadEventQueue failed\n");
-      return "xx";
-    }
-****************************************/
 
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &res); 
   if (NS_SUCCEEDED(res) && prefs)
     res = prefs->CopyCharPref("mail.strings.vcard", &propertyURL);
 
   if (!NS_SUCCEEDED(res) || !prefs)
-    propertyURL = PL_strdup(VCARD_URL);
+    propertyURL = VCARD_URL;
 
-  // we're not using propertyURL anywhere, so free it.
-  PL_strfree(propertyURL);
-  
-  NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &res); 
-  if (!NS_SUCCEEDED(res) || (nsnull == pNetService)) 
+  nsCOMPtr<nsIURI> pURI;
+  NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &res);
+  if (NS_FAILED(res)) 
   {
-      return PL_strdup("???");   // Don't I18N this string...failsafe return value
+    if (propertyURL != VCARD_URL)
+      PR_FREEIF(propertyURL);
+    return PL_strdup("???");   // Don't I18N this string...failsafe return value
+  }
+
+  res = pService->NewURI(propertyURL, nsnull, getter_AddRefs(pURI));
+  if (NS_FAILED(res))
+  {
+    if (propertyURL != VCARD_URL)
+      PR_FREEIF(propertyURL);
+    return PL_strdup("???");   // Don't I18N this string...failsafe return value
+  }
+
+  if (propertyURL != VCARD_URL)
+  {
+    PR_FREEIF(propertyURL);
+    propertyURL = nsnull;
   }
 
   NS_WITH_SERVICE(nsIStringBundleService, sBundleService, kStringBundleServiceCID, &res); 
   if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
   {
-    nsIURL      *url = nsnull;
     nsILocale   *locale = nsnull;
-
-    res = pNetService->CreateURL(&url, nsString(VCARD_URL), nsnull, nsnull, nsnull);
+#if 1
+    nsIStringBundle* sBundle = nsnull;
+    res = sBundleService->CreateBundle(VCARD_URL, locale, &sBundle);
+#else
+   res = pNetService->CreateURL(&url, nsString(VCARD_URL), nsnull, nsnull, nsnull);
     if (NS_FAILED(res)) 
     {
       return PL_strdup("???");   // Don't I18N this string...failsafe return value
     }
 
     nsIStringBundle* sBundle = nsnull;
-    res = sBundleService->CreateBundle(url, locale, &sBundle);
+    res = sBundleService->CreateBundle(pURI, locale, &sBundle);
+#endif
+
     if (NS_FAILED(res)) 
     {
       return PL_strdup("???");   // Don't I18N this string...failsafe return value
     }
 
     nsAutoString v("");
+#if 1
+    PRUnichar *ptrv = nsnull;
+    res = sBundle->GetStringFromID(stringID, &ptrv);
+    v = ptrv;
+#else
     res = sBundle->GetStringFromID(stringID, v);
+#endif
     if (NS_FAILED(res)) 
     {
       char    buf[128];

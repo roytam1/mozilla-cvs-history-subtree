@@ -67,14 +67,6 @@ nsNativeBrowserWindow::InitNativeWindow()
   return NS_OK;
 }
 
-void MenuProc(PRUint32 aId) 
-{
-  // XXX our menus are horked: we can't support multiple windows!
-  nsBrowserWindow* bw = (nsBrowserWindow*)
-    nsBrowserWindow::gBrowsers.ElementAt(0);
-  bw->DispatchMenuItem(aId);
-}
-
 static NS_DEFINE_IID( kMenuBarCID, 	NS_MENUBAR_CID );
 static NS_DEFINE_IID( kIMenuBarIID, NS_IMENUBAR_IID );
 static NS_DEFINE_IID( kMenuCID, 	NS_MENU_CID );
@@ -89,15 +81,21 @@ nsNativeBrowserWindow::CreateMenuBar(PRInt32 aWidth)
 {
   nsIMenuBar  * menubar  = nsnull;
   void *PhMenuBar;
-  
+
   /* Create the MenuBar */
   nsComponentManager::CreateInstance( kMenuBarCID, nsnull, kIMenuBarIID, (void**)&menubar );
   if( menubar )
   {
     menubar->Create( mWindow );
-    mWindow->SetMenuBar( menubar );
-    menubar->GetNativeData(PhMenuBar);
-    ::CreateViewerMenus((PtWidget_t *) PhMenuBar,this);
+
+    // REVISIT - strange problem here. May be a race condition or a compiler bug.
+
+    if( mWindow->SetMenuBar( menubar ) == NS_OK )
+    {
+      mWindow->ShowMenuBar( PR_TRUE );
+      menubar->GetNativeData(PhMenuBar);
+      ::CreateViewerMenus((PtWidget_t *) PhMenuBar,this);
+    }
   }
 
   return NS_OK;

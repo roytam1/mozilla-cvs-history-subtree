@@ -338,7 +338,7 @@ nsProgressMeterFrame :: Paint ( nsIPresContext& aPresContext,
   // get our border
 	const nsStyleSpacing* spacing =
 		(const nsStyleSpacing*)mStyleContext->GetStyleData(eStyleStruct_Spacing);
-	nsMargin border;
+	nsMargin border(0,0,0,0);
 	spacing->CalcBorderFor(this, border);
 
 	const nsStyleColor* colorStyle =
@@ -607,6 +607,17 @@ nsProgressMeterFrame :: Reflow ( nsIPresContext&          aPresContext,
                             const nsHTMLReflowState& aReflowState,
                             nsReflowStatus&          aStatus)
 {	
+
+  if (eReflowReason_Incremental == aReflowState.reason) {
+    nsIFrame* targetFrame;
+  
+    // See if it's targeted at us
+    aReflowState.reflowCommand->GetTarget(targetFrame);
+    if (this == targetFrame) {
+      Invalidate(nsRect(0,0,mRect.width,mRect.height), PR_FALSE);
+    }
+  }
+
   if (mUndetermined)
      gStripeAnimator->AddFrame(this);
   else 
@@ -625,12 +636,12 @@ nsProgressMeterFrame::GetDesiredSize(nsIPresContext* aPresContext,
   CalcSize(*aPresContext,aDesiredSize.width,aDesiredSize.height);
 
    // if the width is set use it
-	if (NS_INTRINSICSIZE != aReflowState.computedWidth) 
-	  aDesiredSize.width = aReflowState.computedWidth;
+	if (NS_INTRINSICSIZE != aReflowState.mComputedWidth) 
+	  aDesiredSize.width = aReflowState.mComputedWidth;
 
 	// if the height is set use it
- 	if (NS_INTRINSICSIZE != aReflowState.computedHeight) 
-		aDesiredSize.height = aReflowState.computedHeight;
+ 	if (NS_INTRINSICSIZE != aReflowState.mComputedHeight) 
+		aDesiredSize.height = aReflowState.mComputedHeight;
 }
 
 

@@ -17,23 +17,22 @@
  */
 
 #include "nsCOMPtr.h"
+#include "nsIContent.h"
+#include "nsIDocument.h"
 #include "nsIDOMElement.h"
-#include "nsIXULKeyListener.h"
+#include "nsIDOMFocusListener.h"
 #include "nsIDOMKeyListener.h"
 #include "nsIDOMMouseListener.h"
-#include "nsIDOMFocusListener.h"
-#include "nsRDFCID.h"
-
-#include "nsIScriptGlobalObject.h"
-#include "nsIDOMWindow.h"
-#include "nsIScriptContextOwner.h"
-#include "nsIDOMXULDocument.h"
-#include "nsIDocument.h"
-#include "nsIContent.h"
 #include "nsIDOMUIEvent.h"
-#include "nsIPresShell.h"
-#include "nsIPresContext.h"
+#include "nsIDOMWindow.h"
+#include "nsIDOMXULDocument.h"
 #include "nsINSEvent.h"
+#include "nsIPresContext.h"
+#include "nsIPresShell.h"
+#include "nsIScriptContextOwner.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIXULKeyListener.h"
+#include "nsRDFCID.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -45,6 +44,12 @@ static NS_DEFINE_IID(kIDomNodeIID,            NS_IDOMNODE_IID);
 static NS_DEFINE_IID(kIDomElementIID,         NS_IDOMELEMENT_IID);
 static NS_DEFINE_IID(kIDomEventListenerIID,   NS_IDOMEVENTLISTENER_IID);
 static NS_DEFINE_IID(kIDomUIEventIID,         NS_IDOMUIEVENT_IID);
+
+enum eEventType {
+  eKeyPress,
+  eKeyDown,
+  eKeyUp
+};
 
 ////////////////////////////////////////////////////////////////////////
 // KeyListenerImpl
@@ -97,6 +102,8 @@ public:
 protected:
 
 private:
+    nsresult DoKey(nsIDOMEvent* aKeyEvent, eEventType aEventType);
+
     nsIDOMElement* element; // Weak reference. The element will go away first.
     nsIDOMDocument* mDOMDocument; // Weak reference.
 }; 
@@ -123,7 +130,8 @@ nsXULKeyListenerImpl::QueryInterface(REFNSIID iid, void** result)
         return NS_ERROR_NULL_POINTER;
 
     *result = nsnull;
-    if (iid.Equals(nsIXULKeyListener::GetIID())) {
+    if (iid.Equals(nsIXULKeyListener::GetIID()) ||
+        iid.Equals(kISupportsIID)) {
         *result = NS_STATIC_CAST(nsIXULKeyListener*, this);
         NS_ADDREF_THIS();
         return NS_OK;
@@ -162,10 +170,10 @@ nsXULKeyListenerImpl::Init(
  */
 nsresult nsXULKeyListenerImpl::KeyDown(nsIDOMEvent* aKeyEvent)
 {
-  nsresult result = NS_OK;
-  return result;
+  return DoKey(aKeyEvent, eKeyDown);
 }
 
+////////////////////////////////////////////////////////////////
 /**
  * Processes a key release event
  * @param aKeyEvent @see nsIDOMEvent.h 
@@ -173,10 +181,10 @@ nsresult nsXULKeyListenerImpl::KeyDown(nsIDOMEvent* aKeyEvent)
  */
 nsresult nsXULKeyListenerImpl::KeyUp(nsIDOMEvent* aKeyEvent)
 {
-  nsresult result = NS_OK;
-  return result;
+  return DoKey(aKeyEvent, eKeyUp);
 }
 
+////////////////////////////////////////////////////////////////
 /**
  * Processes a key typed event
  * @param aKeyEvent @see nsIDOMEvent.h 
@@ -188,8 +196,11 @@ nsresult nsXULKeyListenerImpl::KeyUp(nsIDOMEvent* aKeyEvent)
  // iterate over key(s) looking for appropriate handler
 nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
 {
-  nsresult res = NS_OK;
-  
+  return DoKey(aKeyEvent, eKeyPress);
+}
+
+nsresult nsXULKeyListenerImpl::DoKey(nsIDOMEvent* aKeyEvent, eEventType aEventType)
+{
   if(aKeyEvent && mDOMDocument) {
     // Get DOMEvent target
     nsIDOMNode* target = nsnull;
@@ -212,13 +223,16 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
   //printf("Root Node [%s] \n", rootName.ToNewCString()); // this leaks
   nsCOMPtr<nsIDOMNode> rootNode(do_QueryInterface(rootElement));
   
-  nsresult rv = -1;
+  nsresult rv = NS_ERROR_FAILURE;
   
   nsCOMPtr<nsIDOMNode> keysetNode;
   rootNode->GetFirstChild(getter_AddRefs(keysetNode));
   while (keysetNode) {
      nsString keysetNodeType;
      nsCOMPtr<nsIDOMElement> keysetElement(do_QueryInterface(keysetNode));
+     if(!keysetElement)
+       return rv;
+       
      keysetElement->GetNodeName(keysetNodeType);
 	 if (keysetNodeType.Equals("keyset")) {
 	  // Given the DOM node and Key Event
@@ -249,12 +263,16 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
 		      keyElement->GetAttribute(nsAutoString("disabled"),        disabled);
 		      if (disabled == "false") {
 	            PRUint32 theChar;
-	          #ifdef XP_PC
-		        theEvent->GetCharCode(&theChar);
-		      #else
-		        theEvent->GetKeyCode(&theChar);
-		      #endif
-		        //printf("event key [%c] \n", theChar); // this leaks
+
+				      switch(aEventType) {
+				        case eKeyPress:
+		              theEvent->GetCharCode(&theChar);
+				        break;
+				        case eKeyUp:
+				        case eKeyDown:
+		              theEvent->GetKeyCode(&theChar);
+				        break;
+				      }
 		        
 		        char tempChar[2];
 		        tempChar[0] = theChar;
@@ -265,13 +283,26 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
 		         keyName.ToUpperCase();
 		         tempChar2.ToUpperCase();
 		        if (tempChar2 == keyName) {
-			      keyElement->GetAttribute(nsAutoString("modifiercommand"), modCommand);
-			      keyElement->GetAttribute(nsAutoString("modifiercontrol"), modControl);
-			      keyElement->GetAttribute(nsAutoString("modifiershift"),   modShift);
-			      keyElement->GetAttribute(nsAutoString("modifieralt"),     modAlt);
-			      keyElement->GetAttribute(nsAutoString("onkeypress"),      cmdToExecute);
+			      keyElement->GetAttribute(nsAutoString("command"), modCommand);
+			      keyElement->GetAttribute(nsAutoString("control"), modControl);
+			      keyElement->GetAttribute(nsAutoString("shift"),   modShift);
+			      keyElement->GetAttribute(nsAutoString("alt"),     modAlt);
+			      switch(aEventType) {
+			        case eKeyPress:
+			          keyElement->GetAttribute(nsAutoString("onkeypress"), cmdToExecute);
+			        break;
+			        case eKeyDown:
+			          keyElement->GetAttribute(nsAutoString("onkeydown"), cmdToExecute);
+			        break;
+			        case eKeyUp:
+			          keyElement->GetAttribute(nsAutoString("onkeyup"), cmdToExecute);
+			        break;
+			      }
+			      
+			      
 			      //printf("onkeypress [%s] \n", cmdToExecute.ToNewCString()); // this leaks
 		          do {
+		          #ifdef XP_MAC
 		            // Test Command attribute
 		            PRBool isCommand = PR_FALSE;
 		            theEvent->GetMetaKey(&isCommand);
@@ -285,8 +316,21 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
 		            if ((isControl && (modControl != "true")) ||
 		                (!isControl && (modControl == "true")))
 		                break;
-		            //printf("Passed control test \n"); // this leaks    
-		                
+		            //printf("Passed control test \n"); // this leaks 
+		          #else
+                    // Test Command attribute
+		            PRBool isCommand = PR_FALSE;
+		            PRBool isControl = PR_FALSE;
+		            theEvent->GetMetaKey(&isCommand);
+		            theEvent->GetCtrlKey(&isControl);
+		            if (((isCommand && (modCommand == "false")) ||
+		                (!isCommand && (modCommand == "true"))) || 
+		                ((isControl && (modControl == "false")) ||
+		                (!isControl && (modControl == "true"))))
+		              break;
+                    //printf("Passed command/ctrl test \n"); // this leaks   
+		          #endif
+		          
 		            // Test Shift attribute
 		            PRBool isShift = PR_FALSE;
 		            theEvent->GetShiftKey(&isShift);
@@ -303,7 +347,6 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
 		            
 		            // Modifier tests passed so execute onclick command
 		            
-					nsresult rv = NS_ERROR_FAILURE;
 
 				    // This code executes in every presentation context in which this
 				    // document is appearing.
@@ -334,7 +377,12 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
 				        nsEventStatus status = nsEventStatus_eIgnore;
 				        nsKeyEvent event;
 				        event.eventStructType = NS_KEY_EVENT;
-				        event.message = NS_KEY_PRESS;
+				        switch (aEventType)
+				        {
+				          case eKeyPress:  event.message = NS_KEY_PRESS; break;
+				          case eKeyDown:   event.message = NS_KEY_DOWN; break;
+				          default:         event.message = NS_KEY_UP; break;
+				        }
 				        content->HandleDOMEvent(*aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, status);
 				    }
     
@@ -351,7 +399,8 @@ nsresult nsXULKeyListenerImpl::KeyPress(nsIDOMEvent* aKeyEvent)
       oldkeysetNode->GetNextSibling(getter_AddRefs(keysetNode));
 	} // end while(keysetNode)
   } // end if(aKeyEvent && mDOMDocument) 
-  return res;
+  return NS_ERROR_BASE;
+  
 }
 
 ////////////////////////////////////////////////////////////////

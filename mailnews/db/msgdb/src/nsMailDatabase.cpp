@@ -38,11 +38,16 @@ nsMailDatabase::~nsMailDatabase()
 
 
 
-NS_IMETHODIMP nsMailDatabase::Open(nsFileSpec &folderName, PRBool create, nsIMsgDatabase** pMessageDB, PRBool upgrading /*=PR_FALSE*/)
+NS_IMETHODIMP nsMailDatabase::Open(nsIFileSpec *aFolderName, PRBool create, PRBool upgrading, nsIMsgDatabase** pMessageDB)
 {
 	nsMailDatabase	*mailDB;
 	PRBool			summaryFileExists;
 	PRBool			newFile = PR_FALSE;
+	nsFileSpec		folderName;
+
+	if (!aFolderName)
+		return NS_ERROR_NULL_POINTER;
+	aFolderName->GetFileSpec(&folderName);
 	nsLocalFolderSummarySpec	summarySpec(folderName);
 
 	nsIDBFolderInfo	*folderInfo = NULL;
@@ -95,8 +100,7 @@ NS_IMETHODIMP nsMailDatabase::Open(nsFileSpec &folderName, PRBool create, nsIMsg
 			{
 				PRInt32 numNewMessages;
                 PRUint32 folderSize;
-				PRInt32 folderDateInSeconds;
-                time_t  folderDate;
+                PRUint32  folderDate;
 				nsFileSpec::TimeStamp actualFolderTimeStamp;
 
 				mailDB->m_folderSpec->GetModDate(actualFolderTimeStamp) ;
@@ -104,8 +108,7 @@ NS_IMETHODIMP nsMailDatabase::Open(nsFileSpec &folderName, PRBool create, nsIMsg
 
 				folderInfo->GetNumNewMessages(&numNewMessages);
                 folderInfo->GetFolderSize(&folderSize);
-                folderInfo->GetFolderDate(&folderDateInSeconds);
-				folderDate = folderDateInSeconds;
+                folderInfo->GetFolderDate(&folderDate);
 				if (folderSize != mailDB->m_folderSpec->GetFileSize()||
                     folderDate != actualFolderTimeStamp ||
                     numNewMessages < 0)
@@ -355,8 +358,7 @@ void nsMailDatabase::UpdateFolderFlag(nsIMsgDBHdr *mailHdr, PRBool bSet,
 		{
 			nsFileSpec::TimeStamp actualFolderTimeStamp;
 			m_folderSpec->GetModDate(actualFolderTimeStamp) ;
-
-
+			
 			m_dbFolderInfo->SetFolderSize(m_folderSpec->GetFileSize());
 			m_dbFolderInfo->SetFolderDate(actualFolderTimeStamp);
 		}
@@ -424,7 +426,8 @@ nsresult nsMailDatabase::SetFolderInfoValid(nsFileSpec *folderName, int num, int
 {
 	nsLocalFolderSummarySpec	summarySpec(*folderName);
 	nsFileSpec					summaryPath(summarySpec);
-	nsresult		err;
+	nsresult		err = NS_OK;
+	PRBool			bOpenedDB = PR_FALSE;
 
 	if (!folderName->Exists())
 		return NS_MSG_ERROR_FOLDER_SUMMARY_MISSING;
@@ -452,6 +455,7 @@ nsresult nsMailDatabase::SetFolderInfoValid(nsFileSpec *folderName, int num, int
 			delete pMessageDB;
 			pMessageDB = NULL;
 		}
+		bOpenedDB = PR_TRUE;
 	}
 	else
 		pMessageDB->AddRef();
@@ -473,8 +477,18 @@ nsresult nsMailDatabase::SetFolderInfoValid(nsFileSpec *folderName, int num, int
 		pMessageDB->m_dbFolderInfo->ChangeNumNewMessages(numunread);
 		pMessageDB->m_dbFolderInfo->ChangeNumMessages(num);
 	}
-	pMessageDB->Close(PR_TRUE);
-	return NS_OK;
+	// if we opened the db, then we'd better close it. Otherwise, we found it in the cache,
+	// so just commit and release.
+	if (bOpenedDB)
+	{
+		pMessageDB->Close(PR_TRUE);
+	}
+	else if (pMessageDB)
+	{ 
+		err = pMessageDB->Commit(nsMsgDBCommitType::kSessionCommit);
+		pMessageDB->Release();
+	}
+	return err;
 }
 
 
@@ -487,7 +501,7 @@ void nsMailDatabase::SetReparse(PRBool reparse)
 
 
 static PRBool gGotThreadingPrefs = PR_FALSE;
-static PRBool gThreadWithoutRe = PR_FALSE;
+static PRBool gThreadWithoutRe = PR_TRUE;
 
 
 // should we thread messages with common subjects that don't start with Re: together?
@@ -500,6 +514,7 @@ PRBool	nsMailDatabase::ThreadBySubjectWithoutRe()
 		gGotThreadingPrefs = PR_TRUE;
 	}
 
+	gThreadWithoutRe = PR_TRUE;	// we need to this to be true for now.
 	return gThreadWithoutRe;
 }
 
@@ -508,20 +523,14 @@ nsresult nsMailDatabase::PrePopulate()
 {
 	nsIMsgDBHdr	*msg;
 	nsMsgHdr	*newHdr = NULL;
-	PRTime resultTime, intermediateResult, microSecondsPerSecond;
-	resultTime = PR_Now();
-	time_t resDate;
-
-	LL_I2L(microSecondsPerSecond, PR_USEC_PER_SEC);
-	LL_DIV(intermediateResult, resultTime, microSecondsPerSecond);
-	LL_L2I(resDate, intermediateResult);
+	PRTime      now = PR_Now();
 
 	nsresult rv = CreateNewHdr(1, &msg);
     if (NS_FAILED(rv)) return rv;
     newHdr = NS_STATIC_CAST(nsMsgHdr*, msg);          // closed system, cast ok
 	newHdr->SetAuthor("bird@celtics.com (Larry Bird)");
 	newHdr->SetSubject("Why the Lakers suck");
-	newHdr->SetDate(resDate);
+	newHdr->SetDate(now);
 	newHdr->SetRecipients("riley@heat.com (Pat Riley)", PR_FALSE);
 	AddNewHdrToDB (newHdr, PR_TRUE);
 	newHdr->Release();
@@ -531,7 +540,7 @@ nsresult nsMailDatabase::PrePopulate()
     newHdr = NS_STATIC_CAST(nsMsgHdr*, msg);          // closed system, cast ok
 	newHdr->SetAuthor("shaq@brick.com (Shaquille O'Neal)");
 	newHdr->SetSubject("Anyone here know how to shoot free throws?");
-	newHdr->SetDate(resDate);
+	newHdr->SetDate(now);
 	AddNewHdrToDB (newHdr, PR_TRUE);
 	newHdr->Release();
 
@@ -540,7 +549,7 @@ nsresult nsMailDatabase::PrePopulate()
     newHdr = NS_STATIC_CAST(nsMsgHdr*, msg);          // closed system, cast ok
 	newHdr->SetAuthor("dj@celtics.com (Dennis Johnson)");
 	newHdr->SetSubject("Has anyone seen my jump shot?");
-	newHdr->SetDate(resDate);
+	newHdr->SetDate(now);
 	AddNewHdrToDB (newHdr, PR_TRUE);
 	newHdr->Release();
 
@@ -549,7 +558,7 @@ nsresult nsMailDatabase::PrePopulate()
     newHdr = NS_STATIC_CAST(nsMsgHdr*, msg);          // closed system, cast ok
 	newHdr->SetAuthor("sichting@celtics.com (Jerry Sichting)");
 	newHdr->SetSubject("Tips for fighting 7' 4\" guys");
-	newHdr->SetDate(resDate);
+	newHdr->SetDate(now);
 	AddNewHdrToDB (newHdr, PR_TRUE);
 	newHdr->Release();
 	return NS_OK;

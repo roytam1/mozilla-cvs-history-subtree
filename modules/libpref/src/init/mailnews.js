@@ -16,6 +16,9 @@
  * Reserved.
  */
 
+pref("mail.showMessengerPerformance", false);
+pref("sidebar.messenger.open", true);
+
 // Added by mwelch 97 Feb
 pref("news.show_pretty_names",              false);
 pref("mail.wrap_long_lines",                false);
@@ -109,6 +112,7 @@ pref("mail.wfe.addr_book.show_value", 0);
 pref("mail.addr_book.lastnamefirst", false);
 pref("mail.addr_book.sortby", 2);
 pref("mail.addr_book.sort_ascending", true);
+pref("mail.addr_book.displayName.autoGeneration", true);
 localDefPref("mail.addr_book.name.width", 0);
 localDefPref("mail.addr_book.email.width", 0);
 localDefPref("mail.addr_book.nickname.width", 0);
@@ -122,6 +126,7 @@ localDefPref("mail.addr_book.locality.pos", -1);
 localDefPref("mail.addr_book.company.pos", -1);
 pref("mail.attach_vcard",                   false);
 pref("mail.html_compose",                   true);
+pref("mail.compose.other.header",	    "");
 pref("mail.htmldomains", "netscape.com,mcom.com");
 pref("mail.play_sound",                     true);
 pref("mail.send_html",                      true);
@@ -165,7 +170,9 @@ localDefPref("news.window_rect",                    "-1,-1,-1,-1");
 pref("news.fcc_folder",                     "");
 pref("news.notify.on",                      true);
 pref("news.notify.size",                    1000);
-pref("news.max_articles",                   500);
+// was 500.  this is only until we fix performance in 5.0
+pref("news.max_articles",                   50);
+pref("news.abbreviate_pretty_names",        0);
 pref("news.mark_old_read",                  false);
 pref("news.server_is_secure",               false);
 pref("news.server_port",                    119);  //default non-secure port number
@@ -328,6 +335,10 @@ pref("ldap_2.servers.switchboard.serverName",					"ldap.switchboard.com");
 pref("ldap_2.user_id",											0);
 pref("ldap_2.version",											1); /* Update kCurrentListVersion in include/dirprefs.h if you change this */
 
-/* until bug #7417 gets fix, or until beta */
-pref("mailnews.start_page.url", "http://people.netscape.com/sspitzer/startpage.html");
+pref("mailnews.start_page.url", "http://messenger.netscape.com/bookmark/4_5/messengerstart.html");
 pref("mailnews.start_page.enabled", true);
+
+/* default prefs for Mozilla 5.0 */
+pref("mail.identity.default.compose_html", true);
+
+pref("mail.update_compose_title_as_you_type", true);

@@ -17,6 +17,8 @@
 
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
+
 IGNORE_MANIFEST=1
 
 MAKE_OBJ_TYPE = DLL
@@ -36,7 +38,11 @@ LINCS= \
         -I$(XPDIST)\public\browser      \
     -I$(XPDIST)\public\txtsvc   \
     -I$(XPDIST)\public\js       \
+!ifdef NECKO
+	-I$(XPDIST)\public\necko 	\
+!else
 	-I$(XPDIST)\public\netlib 	\
+!endif
     -I$(XPDIST)\public\network 	\
 	-I$(XPDIST)\public\dom      \
 	-I$(XPDIST)\public\xpcom    \
@@ -52,7 +58,11 @@ LINCS= \
     $(NULL)
 
 LLIBS =				            \
+!ifdef NECKO
+    $(DIST)\lib\neckoutil_s.lib      \
+!else
     $(DIST)\lib\netlib.lib      \
+!endif
  	$(DIST)\lib\xpcom.lib     \
     $(DIST)\lib\xppref32.lib    \
     $(DIST)\lib\xplib.lib       \
@@ -62,13 +72,10 @@ LLIBS =				            \
 	$(DIST)\lib\raptorgfxwin.lib	\
     $(DIST)\lib\raptorwidget.lib \
 	$(LIBNSPR)		            \
-    $(DIST)\lib\plc3.lib    \
     $(NULL)
 
 OBJS = \
     .\$(OBJDIR)\nsBaseAppCore.obj       \
-    .\$(OBJDIR)\nsDOMPropsCore.obj       \
-    .\$(OBJDIR)\nsDOMPropsCoreFactory.obj       \
     .\$(OBJDIR)\nsProfileCore.obj       \
     .\$(OBJDIR)\nsRDFCore.obj       \
     .\$(OBJDIR)\nsRDFCoreFactory.obj       \
@@ -82,7 +89,6 @@ OBJS = \
     .\$(OBJDIR)\nsAppCoresManagerFactory.obj       \
     .\$(OBJDIR)\nsJSBaseAppCore.obj       \
     .\$(OBJDIR)\nsJSAppCoresManager.obj       \
-    .\$(OBJDIR)\nsJSDOMPropsCore.obj   \
     .\$(OBJDIR)\nsJSProfileCore.obj   \
     .\$(OBJDIR)\nsJSRDFCore.obj   \
     .\$(OBJDIR)\nsJSToolkitCore.obj     \
@@ -124,7 +130,6 @@ install:: $(DLL)
 	$(MAKE_INSTALL) ..\xul\resources\TB_HTab.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_HTab_mo.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_LoadImages.gif		$(DIST)\bin\res\toolbar
-	$(MAKE_INSTALL) ..\xul\resources\TB_LoadImages.mo.gif	$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Location.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Location_mo.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_MiniAddr.gif		$(DIST)\bin\res\toolbar
@@ -133,7 +138,6 @@ install:: $(DLL)
 	$(MAKE_INSTALL) ..\xul\resources\TB_MiniNav.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_MiniTab.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_MixSecurity.gif		$(DIST)\bin\res\toolbar
-	$(MAKE_INSTALL) ..\xul\resources\TB_MixSecurity.mo.gif	$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Netscape.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Netscape_mo.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_PersonalIcon.gif	$(DIST)\bin\res\toolbar
@@ -149,7 +153,6 @@ install:: $(DLL)
 	$(MAKE_INSTALL) ..\xul\resources\TB_Secure.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Secure_mo.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Stop.gif			$(DIST)\bin\res\toolbar
-	$(MAKE_INSTALL) ..\xul\resources\TB_Stop.mo.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Stop_dis.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Stop_mo.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Tab.gif				$(DIST)\bin\res\toolbar
@@ -157,7 +160,6 @@ install:: $(DLL)
 	$(MAKE_INSTALL) ..\xul\resources\TB_TabSmall_mo.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Tab_mo.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_Unsecure.gif		$(DIST)\bin\res\toolbar
-	$(MAKE_INSTALL) ..\xul\resources\TB_Unsecure.mo.gif		$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_WhatsRelated.gif	$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_WhatsRelated_mo.gif $(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\StatusBar-insecure.gif $(DIST)\bin\res\toolbar
@@ -168,8 +170,10 @@ install:: $(DLL)
 	$(MAKE_INSTALL) ..\xul\resources\TB_NewStop.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_NewHome.gif			$(DIST)\bin\res\toolbar
 	$(MAKE_INSTALL) ..\xul\resources\TB_NewPrint.gif			$(DIST)\bin\res\toolbar
-	$(MAKE_INSTALL) ..\xul\resources\grippy.gif			$(DIST)\bin\res\toolbar
-	$(MAKE_INSTALL) ..\xul\resources\grippyO.gif			$(DIST)\bin\res\toolbar
+	$(MAKE_INSTALL) ..\xul\resources\grippy-horizontal-before.gif	$(DIST)\bin\res\toolbar
+	$(MAKE_INSTALL) ..\xul\resources\grippy-horizontal-after.gif	$(DIST)\bin\res\toolbar
+	$(MAKE_INSTALL) ..\xul\resources\grippy-vertical-before.gif	    $(DIST)\bin\res\toolbar
+	$(MAKE_INSTALL) ..\xul\resources\grippy-vertical-after.gif		$(DIST)\bin\res\toolbar
 
   $(MAKE_INSTALL) ..\xul\resources\throbbingN.gif			$(DIST)\bin\res\throbber
 
@@ -208,7 +212,6 @@ clobber::
 	rm -f $(DIST)\bin\res\samples\TB_HTab.gif			
 	rm -f $(DIST)\bin\res\samples\TB_HTab_mo.gif			
 	rm -f $(DIST)\bin\res\samples\TB_LoadImages.gif		
-	rm -f $(DIST)\bin\res\samples\TB_LoadImages.mo.gif	
 	rm -f $(DIST)\bin\res\samples\TB_Location.gif		
 	rm -f $(DIST)\bin\res\samples\TB_Location_mo.gif		
 	rm -f $(DIST)\bin\res\samples\TB_MiniAddr.gif		
@@ -217,7 +220,6 @@ clobber::
 	rm -f $(DIST)\bin\res\samples\TB_MiniNav.gif			
 	rm -f $(DIST)\bin\res\samples\TB_MiniTab.gif			
 	rm -f $(DIST)\bin\res\samples\TB_MixSecurity.gif		
-	rm -f $(DIST)\bin\res\samples\TB_MixSecurity.mo.gif	
 	rm -f $(DIST)\bin\res\samples\TB_Netscape.gif		
 	rm -f $(DIST)\bin\res\samples\TB_Netscape_mo.gif		
 	rm -f $(DIST)\bin\res\samples\TB_PersonalIcon.gif	
@@ -233,7 +235,6 @@ clobber::
 	rm -f $(DIST)\bin\res\samples\TB_Secure.gif			
 	rm -f $(DIST)\bin\res\samples\TB_Secure_mo.gif		
 	rm -f $(DIST)\bin\res\samples\TB_Stop.gif			
-	rm -f $(DIST)\bin\res\samples\TB_Stop.mo.gif			
 	rm -f $(DIST)\bin\res\samples\TB_Stop_dis.gif		
 	rm -f $(DIST)\bin\res\samples\TB_Stop_mo.gif			
 	rm -f $(DIST)\bin\res\samples\TB_Tab.gif				
@@ -241,7 +242,6 @@ clobber::
 	rm -f $(DIST)\bin\res\samples\TB_TabSmall_mo.gif		
 	rm -f $(DIST)\bin\res\samples\TB_Tab_mo.gif			
 	rm -f $(DIST)\bin\res\samples\TB_Unsecure.gif		
-	rm -f $(DIST)\bin\res\samples\TB_Unsecure.mo.gif		
 	rm -f $(DIST)\bin\res\samples\TB_WhatsRelated.gif	
 	rm -f $(DIST)\bin\res\samples\TB_WhatsRelated_mo.gif 
 	rm -f $(DIST)\bin\res\samples\StatusBar-insecure.gif 
@@ -252,8 +252,10 @@ clobber::
 	rm -f $(DIST)\bin\res\samples\TB_NewStop.gif	
 	rm -f $(DIST)\bin\res\samples\TB_NewHome.gif	
 	rm -f $(DIST)\bin\res\samples\TB_NewPrint.gif	
-	rm -f $(DIST)\bin\res\toolbar\grippy.gif	
-	rm -f $(DIST)\bin\res\toolbar\grippyO.gif	
+	rm -f $(DIST)\bin\res\toolbar\grippy-horizontal-before.gif	
+	rm -f $(DIST)\bin\res\toolbar\grippy-horizontal-after.gif	
+	rm -f $(DIST)\bin\res\toolbar\grippy-vertical-before.gif	
+	rm -f $(DIST)\bin\res\toolbar\grippy-vertical-after.gif	
   
   rm -f $(DIST)\bin\res\throbber\throbbingN.gif
 

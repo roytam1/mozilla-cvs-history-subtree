@@ -19,6 +19,35 @@
 #include "nscore.h"
 #include "nsIMsgAccountManager.h"
 
+/*
+ * some platforms (like Windows and Mac) use a map file, because of
+ * file name length limitations.
+ */
+#if defined(XP_UNIX) || defined(XP_BEOS)
+// if you don't use the fat file, then you need to specify the newsrc file prefix you use
+#define NEWSRC_FILE_PREFIX ".newsrc-"
+#else
+#define USE_NEWSRC_MAP_FILE
+
+// in the fat file, the hostname is prefix by this string:
+#define PSUEDO_NAME_PREFIX "newsrc-"
+
+#if defined(XP_PC)
+#define NEWS_FAT_FILE_NAME "fat"
+/*
+ * on the PC, the fat file stores absolute paths to the newsrc files
+ * on the Mac, the fat file stores relative paths to the newsrc files
+ */
+#define NEWS_FAT_STORES_ABSOLUTE_NEWSRC_FILE_PATHS 1
+#elif defined(XP_MAC)
+#define NEWS_FAT_FILE_NAME "NewsFAT"
+#else
+#error dont_know_what_your_news_fat_file_is
+#endif /* XP_PC, XP_MAC */
+
+#endif /* XP_UNIX || XP_BEOS */
+
+
 NS_BEGIN_EXTERN_C
 
 nsresult

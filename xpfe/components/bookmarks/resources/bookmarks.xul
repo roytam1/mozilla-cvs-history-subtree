@@ -18,103 +18,119 @@
 
 -->
 
-<?xml-stylesheet href="bookmarks.css" type="text/css"?>
+<?xml-stylesheet href="chrome://global/skin/xul.css" type="text/css"?>
+<?xml-stylesheet href="chrome://bookmarks/skin/manage-bookmarks.css"
+   type="text/css"?>
+<?xml-stylesheet href="chrome://bookmarks/skin/" type="text/css"?>
 
-<!DOCTYPE window
-[
-<!ENTITY menu.file.label            "File">
-<!ENTITY menuitem.newWindow.label     "New Window">
-<!ENTITY menuitem.newBookmark.label   "New Bookmark...">
-<!ENTITY menuitem.newFolder.label     "New Folder...">
-<!ENTITY menuitem.newSeparator.label  "New Separator">
-<!ENTITY menuitem.close.label         "Close">
-<!ENTITY menu.edit.label            "Edit">
-<!ENTITY menuitem.undo.label          "Undo">
-<!ENTITY menuitem.redo.label          "Redo">
-<!ENTITY menuitem.cut.label           "Cut">
-<!ENTITY menuitem.copy.label          "Copy">
-<!ENTITY menuitem.paste.label         "Paste">
-<!ENTITY menuitem.delete.label        "Delete">
-<!ENTITY menuitem.selectAll.label     "Select All">
-<!ENTITY menuitem.find.label          "Find in Bookmarks...">
-<!ENTITY menuitem.findAgain.label     "Find Again">
-<!ENTITY menuitem.properties.label    "Bookmark Properties...">
-<!ENTITY tree.header.name.label           "Name">
-<!ENTITY tree.header.url.label            "URL">
-<!ENTITY tree.header.shortcut.label       "Shortcut URL">
-<!ENTITY bookmarksWindowTitle.label	"Bookmarks">
-]>
-
+<!DOCTYPE window SYSTEM "chrome://bookmarks/locale/bookmarks.dtd">
 <xul:window title="&bookmarksWindowTitle.label;"
   xmlns:html="http://www.w3.org/TR/REC-html40"
   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  xmlns:web="http://home.netscape.com/WEB-rdf#"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  width="500" height="400">
 
-  <html:script src="bookmarks.js"/>
+  <html:script src="chrome://bookmarks/content/bookmarks.js"/>
 
   <menubar>
-    <menu name="&menu.file.label;">
-      <menuitem name="&menuitem.newWindow.label;"
-                onclick="BookmarksNewWindow();"/>
-      <menuitem name="x&menuitem.newBookmark.label;"/>
-      <menuitem name="x&menuitem.newFolder.label;"/>
-      <menuitem name="x&menuitem.newSeparator.label;"/>
-      <separator/>
-      <menuitem name="x&menuitem.close.label;"/>
+    <menu value="&menu.file.label;">
+	  <menupopup>
+      <menuitem value="&menuitem.newWindow.label;"
+                onaction="window.open('chrome://bookmarks/content/',
+                                     'ManageBookmarks',
+                                     'chrome,menubar,resizable');" />
+      <menuitem value="&menuitem.newBookmark.label;" onaction="return doContextCmd('http://home.netscape.com/NC-rdf#bookmarkcommand?newbookmark');" />
+      <menuitem value="&menuitem.newFolder.label;" onaction="return doContextCmd('http://home.netscape.com/NC-rdf#bookmarkcommand?newfolder');"/>
+      <menuitem value="&menuitem.newSeparator.label;" onaction="return doContextCmd('http://home.netscape.com/NC-rdf#bookmarkcommand?newseparator');"/>
+      <menuseparator/>
+      <menuitem value="&menuitem.close.label;"
+                onaction="window.close()" />
+	  </menupopup>
     </menu>
-    <menu name="&menu.edit.label;">
-      <menuitem name="x&menuitem.undo.label;"/>
-      <menuitem name="x&menuitem.redo.label;"/>
-      <separator/>
-      <menuitem name="x&menuitem.cut.label;"/>
-      <menuitem name="x&menuitem.copy.label;"/>
-      <menuitem name="x&menuitem.paste.label;"/>
-      <menuitem name="x&menuitem.delete.label;"/>
-      <menuitem name="x&menuitem.selectAll.label;"/>
-      <separator/>
-      <menuitem name="x&menuitem.find.label;"/>
-      <menuitem name="x&menuitem.findAgain.label;"/>
-      <separator/>
-      <menuitem name="&menuitem.properties.label;"
-                onclick="return BookmarkProperties();"/>
+    <menu value="&menu.edit.label;">
+	  <menupopup>
+      <menuitem value="x&menuitem.undo.label;"/>
+      <menuitem value="x&menuitem.redo.label;"/>
+      <menuseparator/>
+      <menuitem value="x&menuitem.cut.label;"/>
+      <menuitem value="x&menuitem.copy.label;"/>
+      <menuitem value="x&menuitem.paste.label;"/>
+      <menuitem value="x&menuitem.delete.label;"/>
+      <menuitem value="x&menuitem.selectAll.label;"/>
+      <menuseparator/>
+      <menuitem value="&menuitem.find.label;" onaction="OpenSearch('find');"/>
+      <menuseparator/>
+      <menuitem value="&menuitem.properties.label;" onaction="BookmarkProperties();"/>
+	  </menupopup>
     </menu>
   </menubar>
 
-<tree  id="bookmarksTree" 
+<popup id="contextual" oncreate="return fillContextMenu('contextual');" >
+	<menu />
+</popup>
+
+<tree  id="bookmarksTree" ref="NC:BookmarksRoot" context="contextual"
        datasources="rdf:bookmarks rdf:files rdf:ftp rdf:find rdf:internetsearch"
-       ondblclick="return OpenURL(event,event.target.parentNode);"
-       flex="100%">
+       ondblclick="return OpenURL(event,event.target.parentNode.parentNode);"
+       style="height:100%;">
 
   <template>
-  	<rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator" rootcontainment="treebody" subcontainment="treechildren">
-  		<treeitem uri="...">
-  			<treecell>
-  				<html:hr width="75%" align="center" size="1" />
-  			</treecell>
-		</treeitem>  		
-  	</rule>
-  	
-  	<rule rootcontainment="treebody" subcontainment="treechildren">
-	  	<treeitem uri="...">
-			<treecell>
-				<treeindentation />
-				<titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name" align="right" />
-			</treecell>
-			<treecell>
-				<titledbutton value="rdf:http://home.netscape.com/NC-rdf#URL" align="right" style="list-style-image: none;" />
-			</treecell>
-			<treecell>
-				<titledbutton value="rdf:http://home.netscape.com/NC-rdf#ShortcutURL" align="right" style="list-style-image: none;" />
-			</treecell>
-	  	</treeitem>
-	</rule>
+    <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+      <treechildren>
+       <treeitem uri="..." rdf:type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type" loading="rdf:http://home.netscape.com/NC-rdf#loading">
+         <treerow>
+           <treecell>
+             <html:hr width="75%" align="center" size="1" />
+           </treecell>
+         </treerow>
+       </treeitem>  		
+      </treechildren>
+     </rule>
+
+     <rule>
+      <treechildren>
+       <treeitem uri="..." persist="open" open="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#open" rdf:type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type" loading="rdf:http://home.netscape.com/NC-rdf#loading">
+         <treerow>
+           <treecell>
+             <treeindentation />
+             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name" align="left" />
+           </treecell>
+           <treecell>
+             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#URL" align="left" style="list-style-image: none;" />
+           </treecell>
+           <treecell>
+             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#ShortcutURL" align="left" style="list-style-image: none;" />
+           </treecell>
+           <treecell>
+             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#Description" align="left" style="list-style-image: none;" />
+           </treecell>
+           <treecell>
+             <titledbutton value="rdf:http://home.netscape.com/WEB-rdf#LastVisitDate" align="left" style="list-style-image: none;" />
+           </treecell>
+           <treecell>
+             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#BookmarkAddDate" align="left" style="list-style-image: none;" />
+           </treecell>
+           <treecell>
+             <titledbutton value="rdf:http://home.netscape.com/WEB-rdf#LastModifiedDate" align="left" style="list-style-image: none;" />
+           </treecell>
+
+         </treerow>
+       </treeitem>
+      </treechildren>
+     </rule>
   </template>
 
   <treecol id="NameColumn" rdf:resource="http://home.netscape.com/NC-rdf#Name"/>
   <treecol id="URLColumn" rdf:resource="http://home.netscape.com/NC-rdf#URL"/>
   <treecol id="ShortcutURLColumn" rdf:resource="http://home.netscape.com/NC-rdf#ShortcutURL"/>
+  <treecol id="DescriptionColumn" rdf:resource="http://home.netscape.com/NC-rdf#Description"/>
+  <treecol id="LastVisitColumn" rdf:resource="http://home.netscape.com/WEB-rdf#LastVisitDate"/>
+  <treecol id="AddedOnColumn" rdf:resource="http://home.netscape.com/NC-rdf#BookmarkAddDate"/>
+  <treecol id="LastModColumn" rdf:resource="http://home.netscape.com/WEB-rdf#LastModifiedDate"/>
+
   <treehead>
-    <treeitem>
+    <treerow>
       <treecell onclick="return doSort('NameColumn');">
 	<xul:observes element="NameColumn" attribute="sortActive"/>
 	<xul:observes element="NameColumn" attribute="sortDirection"/>
@@ -127,11 +143,25 @@
 	<xul:observes element="ShortcutURLColumn" attribute="sortActive"/>
 	<xul:observes element="ShortcutURLColumn" attribute="sortDirection"/>
       &tree.header.shortcut.label;</treecell>
-    </treeitem>
-  </treehead>
+      <treecell onclick="return doSort('DescriptionColumn');">
+	<xul:observes element="DescriptionColumn" attribute="sortActive"/>
+	<xul:observes element="DescriptionColumn" attribute="sortDirection"/>
+      &tree.header.description.label;</treecell>
+      <treecell onclick="return doSort('LastVisitColumn');">
+	<xul:observes element="LastVisitColumn" attribute="sortActive"/>
+	<xul:observes element="LastVisitColumn" attribute="sortDirection"/>
+      &tree.header.lastvisit.label;</treecell>
+      <treecell onclick="return doSort('AddedOnColumn');">
+	<xul:observes element="AddedOnColumn" attribute="sortActive"/>
+	<xul:observes element="AddedOnColumn" attribute="sortDirection"/>
+      &tree.header.addedon.label;</treecell>
+      <treecell onclick="return doSort('LastModColumn');">
+	<xul:observes element="LastModColumn" attribute="sortActive"/>
+	<xul:observes element="LastModColumn" attribute="sortDirection"/>
+      &tree.header.lastmod.label;</treecell>
 
-  <treebody id="NC:BookmarksRoot" />
+    </treerow>
+  </treehead>
 </tree>
 
 </xul:window>
-

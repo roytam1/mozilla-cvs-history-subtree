@@ -30,7 +30,7 @@ Feel free to email me with questions or to volunteer to contribute xptcall code 
 
 <TR>
 <TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
-<TD>Win32</TD>
+<TD>Win32 x86</TD>
 <TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:jband@netscape.com">John Bandhauer &lt;jband@netscape.com&gt;</a></TD>
 <TD><a href="http://lxr.mozilla.org/mozilla/source/xpcom/reflect/xptcall/src/md/win32">win32</a></TD>
@@ -108,40 +108,65 @@ John?
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Started</b></font></TD>
-<TD>OpenVMS Alpha and VAX</TD>
-<TD><img alt="Started" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
+<TD>OpenVMS Alpha</TD>
+<TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:colin@theblakes.com">Colin R. Blake &lt;colin@theblakes.com&gt;</a></TD>
 <TD>
-Colin wrote: 
-I am porting Mozilla to OpenVMS. I guess you can put me down as someone who will port xptcall to
-OpenVMS Alpha and OpenVMS VAX. Won't be for a while though since Mozilla's nowhere near
-building on OpenVMS yet. 
+Colin says this is passing all the tests on OpenVMS Alpha!
 </TD>
 </TR>
 
-
 <TR>
-<TD bgcolor="red"><font color="white"><b>HELP!</b></font></TD>
-<TD>Linux ARM</TD>
-<TD> <font color="red"><b>?</b></font>
-<a href="mailto:willy@bofh.ai">Matthew Wilcox &lt;willy@bofh.ai&gt;</a></TD>
-<TD align="center">-</TD>
+<TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
+<TD>NT Alpha</TD>
+<TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<a href="mailto:bob@guiduck.com">bob meader &lt;bob@guiduck.com&gt;</a></TD>
+<TD>
+bob writes:<br>
+Enclosed is xptcall for alpha/nt target..
+<p>
+It is a variation of the IRIS port (only targeted for win32).
+<p>
+Notice the last 2 files (the change to mozilla\xpcom\build\makefile.win and
+mozilla\xpcom\build) are needed because I was unable to figure how to do a
+"declspecexport" from the assembler ASAXP ... if some knows how to do that then
+those last 2 files won't be needed.
+<p>
+I have had someone look over this code at bridge.com (the entry point to
+compaq/gem compiler team) and this code was given the OK. I consider it "done".
+<p>
+This code lives in the files where the name includes 'alpha' in the <a href="http://lxr.mozilla.org/mozilla/source/xpcom/reflect/xptcall/src/md/win32">win32</a> directory.<BR>
+</TD>
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Maybe?</b></font></TD>
+<TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
+<TD>Linux ARM</TD>
+<TD><img alt="Started" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<a href="mailto:sh990154@mail.uni-greifswald.de">Stefan Hanske&lt;sh990154@mail.uni-greifswald.de&gt;</a><BR>
+<font color="red"><b>?</b></font>
+<a href="mailto:willy@bofh.ai">Matthew Wilcox &lt;willy@bofh.ai&gt;</a></TD>
+<TD>
+Stefan's code is checked in and he says it is working.
+</TD>
+</TR>
+
+<TR>
+<TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
 <TD>Linux Sparc</TD>
 <TD>
+<img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<a href="mailto:anton@progsoc.uts.edu.au">Anton Blanchard &lt;anton@progsoc.uts.edu.au&gt;</a>,
+<BR>
+<img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<a href="mailto:rogerl@netscape.com">Roger Lawrence &lt;rogerl@netscape.com&gt;</a>,
+<BR>
 <img alt="Maybe" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:ehle.3@osu.eduehle.3@osu.edu">Brandon Ehle &lt;ehle.3@osu.edu&gt;</a>
-<BR>
-<font color="red"><b>?</b></font> 
-<a href="mailto:anton@progsoc.uts.edu.au">Anton Blanchard &lt;anton@progsoc.uts.edu.au&gt;</a>
 </TD>
 <TD>
-Brandon writes:<br>
-I will do the Linux Sparc xptcall if nobody else commits to it.
+Anton contributed patches to Roger's Sparc code. Anton says it works and passes the tests!
 </TD>
 </TR>
 
@@ -156,14 +181,32 @@ I will do the Linux Sparc xptcall if nobody else commits to it.
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Started</b></font></TD>
+<TD bgcolor="khaki"><font color="black"><b>Working</b></font></TD>
 <TD>Linux Alpha</TD>
-<TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<TD>
+<img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<a href="mailto:glen.nakamura@usa.net">Glen Nakamura &lt;glen.nakamura@usa.net&gt;</a><BR>
+<img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:morrildl@nycap.rr.com">Dan Morril &lt;morrildl@nycap.rr.com&gt;</a><BR>
 </TD>
 <TD>
-Dan is working on this. I get the feeling that he wouldn't
-mind getting some help.
+Glen writes:
+<p>
+I am attaching a patch which contains my Linux Alpha xptcall code.
+It passes TestXPTCInvoke and TestXPC on my machine which runs
+kernel 2.2.7, glibc 2.1.1, and egcs 1.1.2.  I have not tested it
+with older GNU compilers such as gcc 2.8.x.  From looking at the
+Linux x86 code, I gather that the vtable layout is a little different
+for those compilers and the code will need minor modifications
+in order to work properly.
+<p>
+I am not sure how much of the code can be used for OpenVMS Alpha
+and/or Digital UNIX.  Currently the code is dependent on the g++
+name mangling convention and a few GNU extensions so I'm not sure
+how useful it will be for the other systems.  Hopefully the
+comments in the code are detailed enough to help people attempting
+a port.
+<p>
 </TD>
 </TR>
 
@@ -176,10 +219,10 @@ mind getting some help.
 </TR>
 
 <TR>
-<TD bgcolor="red"><font color="white"><b>HELP!</b></font></TD>
+<TD bgcolor="khaki"><font color="black"><b>Coded?</b></font></TD>
 <TD>HP-UX</TD>
-<TD align="center">-</TD>
-<TD align="center">-</TD>
+<TD align="center">?</TD>
+<TD>I hear that some folks at HP have some code for us! More info to come...</TD>
 </TR>
 
 <TR>
@@ -199,23 +242,23 @@ but eventually I will verify.
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Coded</b></font></TD>
+<TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
 <TD>Irix</TD>
-<TD><img alt="Coded" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:jasonh@m7.engr.sgi.com">Jason Heirtzler &lt;jasonh@m7.engr.sgi.com&gt;</a><BR>
 </TD>
-<TD>Jason has this working. He's dealing with some issues having to do with the lack of inline asm support with the native compiler.</TD>
+<TD>Jason has declared this done!</TD>
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Coded</b></font></TD>
+<TD bgcolor="green"><font color="white"><b>Done</b></font></TD>
 <TD>BeOS x86</TD>
 <TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:duncan@be.com">Duncan Wilcox &lt;duncan@be.com&gt;</a><BR>
 </TD>
 <TD>
 <a href="http://lxr.mozilla.org/mozilla/source/xpcom/reflect/xptcall/src/md/unix">unix</a> (yet another reuse of the Linux 86 code!)<BR>
-Duncan has the invoker test working and is confident that the stubs stuff will work, but it's untested (TestXPC not yet compiling).
+Duncan says this is all working. He did the code for old cfront style 'this' adjustment for others to use too!
 </TD>
 </TR>
 
@@ -227,20 +270,22 @@ Duncan has the invoker test working and is confident that the stubs stuff will w
 </TR>
 
 <TR>
-<TD bgcolor="red"><font color="white"><b>HELP!</b></font></TD>
-<TD>Digital Unix</TD>
-<TD align="center">-</TD>
+<TD bgcolor="khaki"><font color="black"><b>Investigating</b></font></TD>
+<TD>Compaq Tru64 UNIX (Digital UNIX)</TD>
+<TD><img alt="Investigating" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
+<a href="mailto:streeter@zk3.dec.com">Steve Streeter &lt;streeter@zk3.dec.com&gt;</a><BR>
+</TD>
 <TD align="center">-</TD>
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Coded</b></font></TD>
+<TD bgcolor="khaki"><font color="black"><b>Working</b></font></TD>
 <TD>Neutrio x86</TD>
 <TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:Jerry.Kirk@Nexwarecorp.com">Jerry L. Kirk &lt;Jerry.Kirk@Nexwarecorp.com&gt;</a><BR>
 </TD>
 <TD>
-Patch contributed for xptcinvoke_unixish_x86.cpp. Will be checked in when xpcom tree is open. 
+Patches for xptc*_unixish_x86.cpp checked in. Waiting for verification that this is really finished. 
 </TD>
 </TR>
 
@@ -256,14 +301,13 @@ Patch contributed for xptcinvoke_unixish_x86.cpp. Will be checked in when xpcom 
 </TR>
 
 <TR>
-<TD bgcolor="khaki"><font color="black"><b>Coded</b></font></TD>
+<TD bgcolor="khaki"><font color="black"><b>Works</b></font></TD>
 <TD>NetBSD/m68k</TD>
 <TD><img alt="Contributed code!" src="http://cvs-mirror.mozilla.org/webtools/tinderbox/star.gif">
 <a href="mailto:khym@bga.com">Dave Huang &lt;khym@bga.com&gt;</a><BR>
 </TD>
 <TD>
-Dave has posted patches for this. I'm waiting for the xpcom tree to clear to
-check them in.</TD>
+Dave's changes are in the tree. Waiting for verification that it is really finished.</TD>
 </TR>
 
 <TR>

@@ -3,37 +3,46 @@
 <?xml-stylesheet href="chrome://messenger/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/accounttree.css" type="text/css"?>
 
-<!DOCTYPE window>
+<!DOCTYPE window SYSTEM "chrome://messenger/locale/accounttree.dtd" >
+<window	xmlns:html="http://www.w3.org/TR/REC-html40"
+		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+		xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        style="width:100%">
 
-<xul:window xmlns:html="http://www.w3.org/TR/REC-html40"
-        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        style="width:100%"
-        onload = "">
-<html:script language="JavaScript" src="AccountManager.js"/>
-<tree rdf:datasources="rdf:msgaccountmanager"
-  onclick="showPage(event)"
-  id="accounttree">
-  <treecol rdf:resource="http://home.netscape.com/NC-rdf#Name"/>
-  <treehead>
-    <treecell>Name</treecell>
-  </treehead>
+	<tree rdf:datasources="rdf:msgaccountmanager"
+          rdf:containment="http://home.netscape.com/NC-rdf#Settings"
+          onclick="parent.showPage(event)" id="accounttree"
+          style="height: 100%"
+          ref="msgaccounts:/">
 
-  <treebody rdf:containment="http://home.netscape.com/NC-rdf#Settings">
-    <treeitem id="msgaccounts:/" open="true"/>
-  </treebody>
-  
-</tree>
-<box align="vertical">
-<box align="horizontal">
-<titledbutton class="push" flex="50%" name="Duplicate" value="Duplicate"/>
-<titledbutton class="push" flex="50%" name="Delete" value="Delete"/>
-</box>
-<box align="horizontal">
-<titledbutton class="push" name="NewAccount" value="New Account" flex="100%"/>
-</box>
-<box align="horizontal">
-<titledbutton class="push" name="Default" value="Set As Default" flex="100%"/>
-</box>
-</box>
-</xul:window>
+	  <template>
+	  	<rule>
+            <treechildren>
+			<treeitem uri="...">
+		  		<treerow >
+                    <treecell treeallowevents="true">
+                      <titledbutton class="twisty" onclick="return parent.ToggleTwisty(event.target.parentNode.parentNode.parentNode)"/>
+                    </treecell>
+					<treecell>
+                        <treeindentation/>
+						<titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name" align="right" />
+					</treecell>
+		  		</treerow>
+			</treeitem>
+            </treechildren>
+		</rule>
+	  </template>
+
+      <treecol style="width:20px"/>
+	  <treecol rdf:resource="http://home.netscape.com/NC-rdf#Name"/>
+	  <treehead>
+		<treerow>
+          <treecell/>
+	      <treecell>&nameCol.label;</treecell>
+		</treerow>
+	  </treehead>
+
+	</tree>
+
+</window>
+	

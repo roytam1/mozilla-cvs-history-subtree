@@ -55,6 +55,51 @@ public:
   nsHashtable *Clone();
   void Enumerate(nsHashtableEnumFunc aEnumFunc, void* closure = NULL);
   void Reset();
+  void Reset(nsHashtableEnumFunc destroyFunc, void* closure = NULL);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// nsObjectHashtable: an nsHashtable where the elements are C++ objects to be
+// deleted
+
+typedef void* (*nsHashtableCloneElementFunc)(nsHashKey *aKey, void *aData, void* closure);
+
+class NS_COM nsObjectHashtable : public nsHashtable {
+public:
+  nsObjectHashtable(nsHashtableCloneElementFunc cloneElementFun,
+                    void* cloneElementClosure,
+                    nsHashtableEnumFunc destroyElementFun,
+                    void* destroyElementClosure,
+                    PRUint32 aSize = 256, PRBool threadSafe = PR_FALSE);
+  ~nsObjectHashtable();
+
+  nsHashtable *Clone();
+  void Reset();
+  PRBool RemoveAndDelete(nsHashKey *aKey);
+
+protected:
+  static PR_CALLBACK PRIntn CopyElement(PLHashEntry *he, PRIntn i, void *arg);
+  
+  nsHashtableCloneElementFunc   mCloneElementFun;
+  void*                         mCloneElementClosure;
+  nsHashtableEnumFunc           mDestroyElementFun;
+  void*                         mDestroyElementClosure;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// nsSupportsHashtable: an nsHashtable where the elements are nsISupports*
+
+class NS_COM nsSupportsHashtable : public nsHashtable {
+public:
+  nsSupportsHashtable(PRUint32 aSize = 256, PRBool threadSafe = PR_FALSE)
+    : nsHashtable(aSize, threadSafe) {}
+  ~nsSupportsHashtable();
+
+  void *Put(nsHashKey *aKey, void *aData);
+  void *Get(nsHashKey *aKey);
+  void *Remove(nsHashKey *aKey);
+  nsHashtable *Clone();
+  void Reset();
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,20 +187,21 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsCStringKey: Where keys are char*'s
+// nsStringKey: Where keys are PRUnichar* or char*
 // Some uses: hashing ProgIDs, filenames, URIs
 
-#include "plstr.h"
+#include "nsString.h"
 
-class NS_COM nsCStringKey : public nsHashKey {
+class NS_COM nsStringKey : public nsHashKey {
 protected:
-  char  mBuf[64];
-  char* mStr;
+  nsAutoString mStr;
 
 public:
-  nsCStringKey(const char* str);
+  nsStringKey(const char* str);
+  nsStringKey(const PRUnichar* str);
+  nsStringKey(const nsStr& str);
 
-  ~nsCStringKey(void);
+  ~nsStringKey(void);
 
   PRUint32 HashValue(void) const;
 
@@ -163,6 +209,10 @@ public:
 
   nsHashKey* Clone() const;
 
+  // For when the owner of the hashtable wants to peek at the actual
+  // string in the key. No copy is made, so be careful.
+  const nsString& GetString() const;
 };
+
 
 #endif

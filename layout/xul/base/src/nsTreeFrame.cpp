@@ -48,18 +48,26 @@ NS_NewTreeFrame (nsIFrame** aNewFrame)
 
 // Constructor
 nsTreeFrame::nsTreeFrame()
-:nsTableFrame() { }
+:nsTableFrame(),mSlatedForReflow(PR_FALSE) { }
 
 // Destructor
 nsTreeFrame::~nsTreeFrame()
 {
 }
 
-void nsTreeFrame::SetSelection(nsIPresContext& aPresContext, nsTreeCellFrame* pFrame)
+void nsTreeFrame::SetSelection(nsIPresContext& aPresContext, nsTreeCellFrame* aFrame)
 {
+  PRInt32 count = mSelectedItems.Count();
+  if (count == 1) {
+    // See if we're already selected.
+    nsTreeCellFrame* frame = (nsTreeCellFrame*)mSelectedItems[0];
+    if (frame == aFrame)
+      return;
+  }
+			
 	ClearSelection(aPresContext);
-	mSelectedItems.AppendElement(pFrame);
-	pFrame->Select(aPresContext, PR_TRUE);
+	mSelectedItems.AppendElement(aFrame);
+	aFrame->Select(aPresContext, PR_TRUE);
 
   FireChangeHandler(aPresContext);
 }
@@ -89,7 +97,7 @@ void nsTreeFrame::ToggleSelection(nsIPresContext& aPresContext, nsTreeCellFrame*
 			{
 				CellData *cellData = mCellMap->GetCellAt(rowIndex, colIndex);
 				if (nsnull!=cellData)
-					cellFrame = cellData->mRealCell->mCell;
+					cellFrame = cellData->mSpanData->mOrigCell;
 			}
 
 			// Select this cell frame.
@@ -142,7 +150,7 @@ void nsTreeFrame::RangedSelection(nsIPresContext& aPresContext, nsTreeCellFrame*
 		{
 			CellData *cellData = mCellMap->GetCellAt(i, colIndex);
 			if (nsnull!=cellData)
-				cellFrame = cellData->mRealCell->mCell;
+				cellFrame = cellData->mSpanData->mOrigCell;
 		}
 
 		// We now have the cell that should be selected. 
@@ -243,7 +251,7 @@ void nsTreeFrame::MoveToRowCol(nsIPresContext& aPresContext, PRInt32 row, PRInt3
 	{
 		CellData *cellData = mCellMap->GetCellAt(row, col);
 		if (nsnull!=cellData)
-			cellFrame = cellData->mRealCell->mCell;
+			cellFrame = cellData->mSpanData->mOrigCell;
 	}
 
 	// We now have the cell that should be selected. 
@@ -269,8 +277,18 @@ void nsTreeFrame::FireChangeHandler(nsIPresContext& aPresContext)
 }
 
 NS_IMETHODIMP 
-nsTreeFrame::DeleteFrame(nsIPresContext& aPresContext)
+nsTreeFrame::Destroy(nsIPresContext& aPresContext)
 {
   ClearSelection(aPresContext);
-  return nsTableFrame::DeleteFrame(aPresContext);
+  return nsTableFrame::Destroy(aPresContext);
+}
+
+NS_IMETHODIMP
+nsTreeFrame::Reflow(nsIPresContext&          aPresContext,
+							      nsHTMLReflowMetrics&     aMetrics,
+							      const nsHTMLReflowState& aReflowState,
+							      nsReflowStatus&          aStatus)
+{
+  mSlatedForReflow = PR_FALSE;
+  return nsTableFrame::Reflow(aPresContext, aMetrics, aReflowState, aStatus);
 }

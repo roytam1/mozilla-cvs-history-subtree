@@ -16,24 +16,36 @@
  * Reserved.
  */
 
+#include <stdlib.h>
+#include "nsCOMPtr.h"
 #include "nsComponentManager.h"
 #include "nsIServiceManager.h"
-#include <stdlib.h>
+#include "nsSpecialSystemDirectory.h"
+#include "nsCRT.h"
+#include "nsIEnumerator.h"
+#include "nsIModule.h"
+#include "nsHashtableEnumerator.h"
+#include "nsISupportsPrimitives.h"
 
 #include "plstr.h"
 #include "prlink.h"
 #include "prsystem.h"
 #include "prprf.h"
 #include "xcDll.h"
-#include "prlog.h"
 #include "prerror.h"
 #include "prmem.h"
 
 #include "prcmon.h"
 #include "prthread.h" /* XXX: only used for the NSPR initialization hack (rick) */
 
+#ifdef XP_BEOS
+#include <FindDirectory.h>
+#include <Path.h>
+#endif
+
 // Logging of debug output
-#define FORCE_PR_LOG		// Allow logging in release builds
+#define FORCE_PR_LOG /* Allow logging in the release build */
+#include "prlog.h"
 PRLogModuleInfo* nsComponentManagerLog = NULL;
 
 // Enable printing of critical errors on screen even for release builds
@@ -74,8 +86,8 @@ const char inprocServerValueName[]="InprocServer";
 // nsFactoryEntry
 ////////////////////////////////////////////////////////////////////////////////
 
-nsFactoryEntry::nsFactoryEntry()
-    : factory(NULL), dll(NULL)
+nsFactoryEntry::nsFactoryEntry(const nsCID &aClass, nsDll *aDll)
+    : cid(aClass), factory(NULL), dll(aDll)
 {
 }
 
@@ -94,74 +106,34 @@ nsFactoryEntry::~nsFactoryEntry(void)
     // DO NOT DELETE nsDll *dll;
 }
 
-nsresult
-nsFactoryEntry::Init(nsHashtable* dllCollection, 
-                     const nsCID &aClass, const char *aLibrary,
-                     PRTime lastModTime, PRUint32 fileSize)
-{
-    if (aLibrary == NULL) {
-        return NS_OK;
-    }
-    cid = aClass;
-      
-    nsCStringKey key(aLibrary);
-
-    // If dll not already in dllCollection, add it.
-    dll = (nsDll *) dllCollection->Get(&key);
-    // PR_ExitMonitor(mMon);
-    	
-    if (dll == NULL) {
-        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-               ("nsComponentManager: New dll \"%s\".", aLibrary));
-
-        // Add a new Dll into the nsDllStore
-        dll = new nsDll(aLibrary, lastModTime, fileSize);
-        if (dll == NULL)
-            return NS_ERROR_OUT_OF_MEMORY;
-        if (dll->GetStatus() != DLL_OK) {
-            // Cant create a nsDll. Backoff.
-            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-                   ("nsComponentManager: New dll status error. \"%s\".", aLibrary));
-            delete dll;
-            dll = NULL;
-        }
-        else {
-            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-                   ("nsComponentManager: Adding New dll \"%s\" to mDllStore.",
-                    aLibrary));
-
-            dllCollection->Put(&key, (void *)dll);
-        }
-    }
-    else {
-        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-               ("nsComponentManager: Found in mDllStore \"%s\".", aLibrary));
-        // XXX We found the dll in the dllCollection.
-        // XXX Consistency check: dll needs to have the same
-        // XXX lastModTime and fileSize. If not that would mean
-        // XXX that the dll wasn't registered properly.
-    }
-    return NS_OK;
-}
-
-
 ////////////////////////////////////////////////////////////////////////////////
-// autoFree
+// autoStringFree
 ////////////////////////////////////////////////////////////////////////////////
 
 //
-// To prevent string leaks, we are using these classes. Typical use would be
+// To prevent leaks, we are using this class. Typical use would be
 // for each ptr to be deleted, create an object of these types with that ptr.
 // Once that object goes out of scope, deletion and hence memory free will
 // automatically happen.
 //
-class autoFree
+class autoStringFree
 {
-private:
-    void *mPtr;
 public:
-    autoFree(void *Ptr=NULL): mPtr(Ptr) {}
-    ~autoFree() { PR_FREEIF(mPtr); }
+    enum DeleteModel {
+        NSPR_Delete = 1,
+        nsCRT_String_Delete = 2
+    };
+    autoStringFree(char *Ptr, DeleteModel whichDelete): mPtr(Ptr), mWhichDelete(whichDelete) {}
+    ~autoStringFree() {
+        if (mPtr)
+            if (mWhichDelete == NSPR_Delete) { PR_FREEIF(mPtr); }
+            else if (mWhichDelete == nsCRT_String_Delete) nsCRT::free(mPtr);
+            else PR_ASSERT(0);
+    }
+private:
+    char *mPtr;
+    DeleteModel mWhichDelete;
+    
 };
 
 
@@ -171,9 +143,36 @@ public:
 
 
 nsComponentManagerImpl::nsComponentManagerImpl()
-    : mFactories(NULL), mProgIDs(NULL), mMon(NULL), mDllStore(NULL), mRegistry(NULL)
+    : mFactories(NULL), mProgIDs(NULL), mMon(NULL), mDllStore(NULL), 
+      mRegistry(NULL), mPrePopulationDone(PR_FALSE)
 {
     NS_INIT_REFCNT();
+}
+
+PRBool
+nsFactoryEntry_Destroy(nsHashKey *aKey, void *aData, void* closure)
+{
+    nsFactoryEntry* entry = NS_STATIC_CAST(nsFactoryEntry*, aData);
+    delete entry;
+    return PR_TRUE;
+}
+
+PRBool
+nsCID_Destroy(nsHashKey *aKey, void *aData, void* closure)
+{
+    nsCID* entry = NS_STATIC_CAST(nsCID*, aData);
+    // nasty hack. We "know" that kNoCID was entered into the hash table.
+    if (entry != &kNoCID)
+	    delete entry;
+    return PR_TRUE;
+}
+
+PRBool
+nsDll_Destroy(nsHashKey *aKey, void *aData, void* closure)
+{
+    nsDll* entry = NS_STATIC_CAST(nsDll*, aData);
+    delete entry;
+    return PR_TRUE;
 }
 
 nsresult nsComponentManagerImpl::Init(void) 
@@ -184,12 +183,16 @@ nsresult nsComponentManagerImpl::Init(void)
     }
 
     if (mFactories == NULL) {
-        mFactories = new nsHashtable(256, /* Thread Safe */ PR_TRUE);
+        mFactories = new nsObjectHashtable(nsnull, nsnull,      // should never be copied
+                                           nsFactoryEntry_Destroy, nsnull, 
+                                           256, /* Thread Safe */ PR_TRUE);
         if (mFactories == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
     if (mProgIDs == NULL) {
-        mProgIDs = new nsHashtable(256, /* Thread Safe */ PR_TRUE);
+        mProgIDs = new nsObjectHashtable(nsnull, nsnull,      // should never be copied
+                                         nsCID_Destroy, nsnull,
+                                         256, /* Thread Safe */ PR_TRUE);
         if (mProgIDs == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -199,7 +202,9 @@ nsresult nsComponentManagerImpl::Init(void)
             return NS_ERROR_OUT_OF_MEMORY;
     }
     if (mDllStore == NULL) {
-        mDllStore = new nsHashtable(256, /* Thead Safe */ PR_TRUE);
+        mDllStore = new nsObjectHashtable(nsnull, nsnull,      // should never be copied
+                                          nsDll_Destroy, nsnull,
+                                          256, /* Thead Safe */ PR_TRUE);
         if (mDllStore == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -216,18 +221,35 @@ nsresult nsComponentManagerImpl::Init(void)
 
 nsComponentManagerImpl::~nsComponentManagerImpl()
 {
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, ("nsComponentManager: Beginning destruction."));
+
+    // Release all cached factories
     if (mFactories)
         delete mFactories;
+
+    // Unload libraries
+    UnloadLibraries(NULL);
+
+    // Release Progid hash tables
     if (mProgIDs)
         delete mProgIDs;
-    if (mMon)
-        PR_DestroyMonitor(mMon);
+
+    // Release dll abstraction storage
     if (mDllStore)
         delete mDllStore;
+
 #ifdef USE_REGISTRY
+    // Release registry
     if(mRegistry)
         NS_RELEASE(mRegistry);
 #endif /* USE_REGISTRY */
+    
+    // Destroy the Lock
+    if (mMon)
+        PR_DestroyMonitor(mMon);
+
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, ("nsComponentManager: Destroyed."));
+
 }
 
 NS_IMPL_ISUPPORTS(nsComponentManagerImpl, nsIComponentManager::GetIID());
@@ -243,7 +265,7 @@ nsComponentManagerImpl::PlatformInit(void)
 {
     nsresult rv = NS_ERROR_FAILURE;
 
-    // We need to creaet out registry. Since we are in the constructor
+    // We need to create our registry. Since we are in the constructor
     // we haven't gone as far as registering the registry factory.
     // Hence, we hand create a registry.
     if (mRegistry == NULL) {		
@@ -291,7 +313,23 @@ nsComponentManagerImpl::PlatformInit(void)
         }
     }
 #endif /* XP_UNIX */
-    
+
+#ifdef XP_BEOS
+    BPath p;
+    const char *settings = "/boot/home/config/settings";
+    if(find_directory(B_USER_SETTINGS_DIRECTORY, &p) == B_OK)
+        settings = p.Path();
+    char settingsMozillaDir[1024];
+    PR_snprintf(settingsMozillaDir, sizeof(settingsMozillaDir),
+                "%s/" NS_MOZILLA_DIR_NAME, settings);
+    if (PR_Access(settingsMozillaDir, PR_ACCESS_EXISTS) != PR_SUCCESS) {
+        PR_MkDir(settingsMozillaDir, NS_MOZILLA_DIR_PERMISSION);
+        printf("nsComponentManager: Creating Directory %s\n", settingsMozillaDir);
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Creating Directory %s", settingsMozillaDir));
+    }
+#endif
+
     // Open the App Components registry. We will keep it open forever!
     rv = mRegistry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
     if (NS_FAILED(rv)) return rv;
@@ -332,7 +370,7 @@ nsComponentManagerImpl::PlatformVersionCheck()
     
     char *buf;
     nsresult err = mRegistry->GetString(xpcomKey, versionValueName, &buf);
-    autoFree bufAutoFree(buf);
+    autoStringFree delete_buf(buf, autoStringFree::NSPR_Delete);
 
     // If there is a version mismatch or no version string, we got an old registry.
     // Delete the old repository hierarchies and recreate version string
@@ -404,7 +442,6 @@ nsComponentManagerImpl::PlatformVersionCheck()
                    ("nsComponentManager: Failed To Set String (Version) Under (%s)",xpcomKeyName));
             return rv;
         }
-
     }
     else 
     {
@@ -417,19 +454,17 @@ nsComponentManagerImpl::PlatformVersionCheck()
 
 
 void
-nsComponentManagerImpl::PlatformGetFileInfo(nsIRegistry::Key key,PRTime *lastModifiedTime,PRUint32 *fileSize)
+nsComponentManagerImpl::PlatformGetFileInfo(nsIRegistry::Key key, PRUint32 *lastModifiedTime, PRUint32 *fileSize)
 {
     PR_ASSERT(lastModifiedTime);
     PR_ASSERT(fileSize);
 
     nsresult rv;
-    PRTime *lastModPtr;
-    uint32 n = sizeof(PRTime);
-    rv = mRegistry->GetBytes(key, lastModValueName, (void **)&lastModPtr, &n);
-    if(NS_SUCCEEDED(rv))
+    int32 lastMod;
+    rv = mRegistry->GetInt(key, lastModValueName, &lastMod);
+    if (NS_SUCCEEDED(rv))
     {
-        *lastModifiedTime = *lastModPtr;
-        PR_Free(lastModPtr);
+        *lastModifiedTime = lastMod;
     }
     	
     int32 fsize = 0;
@@ -440,6 +475,12 @@ nsComponentManagerImpl::PlatformGetFileInfo(nsIRegistry::Key key,PRTime *lastMod
     }
 }
 
+void
+nsComponentManagerImpl::PlatformSetFileInfo(nsIRegistry::Key key, PRUint32 lastModifiedTime, PRUint32 fileSize)
+{
+    mRegistry->SetInt(key, lastModValueName, lastModifiedTime);
+    mRegistry->SetInt(key, fileSizeValueName, fileSize);
+}
 
 /**
  * PlatformCreateDll(const char *fullname)
@@ -463,11 +504,9 @@ nsComponentManagerImpl::PlatformCreateDll(const char *fullname, nsDll* *result)
         return rv;
     }
     	
-    PRTime lastModTime=LL_ZERO;
-    PRUint32 fileSize=0;
-
-    PlatformGetFileInfo(fullnameKey,&lastModTime,&fileSize);
-
+    PRUint32 lastModTime = 0;
+    PRUint32 fileSize = 0;
+    PlatformGetFileInfo(fullnameKey, &lastModTime, &fileSize);
     	
     nsDll *dll = new nsDll(fullname, lastModTime, fileSize);
     if (dll == NULL)
@@ -491,30 +530,22 @@ nsComponentManagerImpl::PlatformMarkNoComponents(nsDll *dll)
 {
     PR_ASSERT(mRegistry!=NULL);
     
-    // XXX Gross. LongLongs dont have a serialization format. This makes
-    // XXX the registry non-xp. Someone beat on the nspr people to get
-    // XXX a longlong serialization function please!
-
     nsresult rv;
 
     nsIRegistry::Key dllPathKey;
-    rv = mRegistry->AddSubtreeRaw(mXPCOMKey, dll->GetFullPath(), &dllPathKey);    
+    rv = mRegistry->AddSubtreeRaw(mXPCOMKey, dll->GetPersistentDescriptorString(), &dllPathKey);    
     if(NS_FAILED(rv))
     {
         return rv;
     }
     	
-    PRTime lastModTime = dll->GetLastModifiedTime();
-    PRUint32 fileSize = dll->GetSize();
-    int32 nComponents = 0;
-
-    rv = mRegistry->SetBytes(dllPathKey,lastModValueName,&lastModTime, sizeof(lastModTime));
-    rv = mRegistry->SetInt(dllPathKey,fileSizeValueName,fileSize);
-    rv = mRegistry->SetInt(dllPathKey, componentCountValueName, nComponents);
+    PlatformSetFileInfo(dllPathKey, dll->GetLastModifiedTime(), dll->GetSize());
+    rv = mRegistry->SetInt(dllPathKey, componentCountValueName, 0);
       
     return rv;
 }
 
+  // XXX PlatformRegister needs to deal with dllName type dlls
 nsresult
 nsComponentManagerImpl::PlatformRegister(const char *cidString,
                                          const char *className,
@@ -537,7 +568,7 @@ nsComponentManagerImpl::PlatformRegister(const char *cidString,
     {
         rv = mRegistry->SetString(IDkey,progIDValueName, progID);        
     }
-    rv = mRegistry->SetString(IDkey, inprocServerValueName, dll->GetFullPath());
+    rv = mRegistry->SetString(IDkey, inprocServerValueName, dll->GetPersistentDescriptorString());
     
     if (progID)
     {
@@ -551,13 +582,9 @@ nsComponentManagerImpl::PlatformRegister(const char *cidString,
     // XXX a longlong serialization function please!
     
     nsIRegistry::Key dllPathKey;
-    rv = mRegistry->AddSubtreeRaw(mXPCOMKey,dll->GetFullPath(), &dllPathKey);
+    rv = mRegistry->AddSubtreeRaw(mXPCOMKey,dll->GetPersistentDescriptorString(), &dllPathKey);
 
-    PRTime lastModTime = dll->GetLastModifiedTime();
-    int32 fileSize = dll->GetSize();
-
-    rv = mRegistry->SetBytes(dllPathKey,lastModValueName,&lastModTime, sizeof(lastModTime));
-    rv = mRegistry->SetInt(dllPathKey,fileSizeValueName, fileSize);
+    PlatformSetFileInfo(dllPathKey, dll->GetLastModifiedTime(), dll->GetSize());
 
     int32 nComponents = 0;
     rv = mRegistry->GetInt(dllPathKey, componentCountValueName, &nComponents);
@@ -632,14 +659,10 @@ nsComponentManagerImpl::PlatformFind(const nsCID &aCID, nsFactoryEntry* *result)
         // Registry inconsistent. No File name for CLSID.
         return rv;
     }
-    autoFree libAutoFree(library);
-
-    // XXX Gross. LongLongs dont have a serialization format. This makes
-    // XXX the registry non-xp. Someone beat on the nspr people to get
-    // XXX a longlong serialization function please!
+    autoStringFree delete_library(library, autoStringFree::NSPR_Delete);
 
     // Get the library name, modifiedtime and size
-    PRTime lastModTime = LL_ZERO;
+    PRUint32 lastModTime = 0;
     PRUint32 fileSize = 0;
 
     nsIRegistry::Key key;
@@ -649,14 +672,213 @@ nsComponentManagerImpl::PlatformFind(const nsCID &aCID, nsFactoryEntry* *result)
         PlatformGetFileInfo(key, &lastModTime, &fileSize);			
     }
 
-    nsFactoryEntry *res = new nsFactoryEntry;
+    nsDll *dll = CreateCachedDll(library, lastModTime, fileSize);
+    if (dll == NULL) return NS_ERROR_OUT_OF_MEMORY;
+    nsFactoryEntry *res = new nsFactoryEntry(aCID, dll);
     if (res == NULL) return NS_ERROR_OUT_OF_MEMORY;
-    rv = res->Init(mDllStore, aCID, library, lastModTime, fileSize);
-    if (NS_FAILED(rv)) return rv;
 
     *result = res;
     return NS_OK;
 }
+
+nsresult
+nsComponentManagerImpl::PlatformProgIDToCLSID(const char *aProgID, nsCID *aClass) 
+{
+    PR_ASSERT(aClass != NULL);
+    PR_ASSERT(mRegistry);
+
+    nsresult rv;
+    	
+    nsIRegistry::Key progIDKey;
+    rv = mRegistry->GetSubtreeRaw(mClassesKey, aProgID, &progIDKey);
+    if (NS_FAILED(rv)) return rv;
+
+    char *cidString;
+    rv = mRegistry->GetString(progIDKey, classIDValueName, &cidString);
+    if(NS_FAILED(rv)) return rv;
+    if (!(aClass->Parse(cidString)))
+    {
+        rv = NS_ERROR_FAILURE;
+    }
+
+    PR_FREEIF(cidString);
+    return NS_OK;
+}
+
+nsresult
+nsComponentManagerImpl::PlatformCLSIDToProgID(nsCID *aClass,
+                                              char* *aClassName, char* *aProgID)
+{
+    	
+    PR_ASSERT(aClass);
+    PR_ASSERT(mRegistry);
+
+    nsresult rv;
+
+    char* cidStr = aClass->ToString();
+    nsIRegistry::Key cidKey;
+    rv = mRegistry->GetSubtreeRaw(mCLSIDKey, cidStr, &cidKey);
+    if(NS_FAILED(rv)) return rv;
+    PR_FREEIF(cidStr);
+
+    char* classnameString;
+    rv = mRegistry->GetString(cidKey, classNameValueName, &classnameString);
+    if(NS_FAILED(rv)) return rv;
+    *aClassName = classnameString;
+
+    char* progidString;
+    rv = mRegistry->GetString(cidKey,progIDValueName,&progidString);
+    if (NS_FAILED(rv)) return rv;
+    *aProgID = progidString;
+
+    return NS_OK;
+
+}
+
+nsresult nsComponentManagerImpl::PlatformPrePopulateRegistry()
+{
+    // Read in all dll entries and populate the mDllStore
+    nsCOMPtr<nsIEnumerator> dllEnum;
+    nsresult rv = mRegistry->EnumerateSubtrees( mXPCOMKey, getter_AddRefs(dllEnum));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = dllEnum->First();
+    for (; NS_SUCCEEDED(rv) && !dllEnum->IsDone(); (rv = dllEnum->Next()))
+    {
+        nsCOMPtr<nsISupports> base;
+        rv = dllEnum->CurrentItem(getter_AddRefs(base));
+        if (NS_FAILED(rv))  continue;
+
+        // Get specific interface.
+        nsIID nodeIID = NS_IREGISTRYNODE_IID;
+        nsCOMPtr<nsIRegistryNode> node;
+        rv = base->QueryInterface( nodeIID, getter_AddRefs(node) );
+        if (NS_FAILED(rv)) continue;
+
+        // Get library name
+        char *library = NULL;
+        rv = node->GetName(&library);
+        if (NS_FAILED(rv)) continue;
+        // XXX make sure the following will work
+        autoStringFree delete_library(library, autoStringFree::nsCRT_String_Delete);
+
+        // Get key associated with library
+        nsIRegistry::Key libKey;
+        rv = node->GetKey(&libKey);
+        if (NS_FAILED(rv)) continue;
+
+        // Create nsDll with this name
+        PRUint32 lastModTime = 0;
+        PRUint32 fileSize = 0;
+        PlatformGetFileInfo(libKey, &lastModTime, &fileSize);
+
+        //        printf("Populating dll: %s, %d, %d\n", library, lastModTime, fileSize);
+
+        nsDll *dll = CreateCachedDll(library, lastModTime, fileSize);
+        if (dll == NULL)
+        {
+            rv = NS_ERROR_OUT_OF_MEMORY;
+            continue;
+        }
+    }
+
+    // Then read in all CID entries and populate the mFactories
+    nsCOMPtr<nsIEnumerator> cidEnum;
+    rv = mRegistry->EnumerateSubtrees( mCLSIDKey, getter_AddRefs(cidEnum));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = cidEnum->First();
+    for (; NS_SUCCEEDED(rv) && !cidEnum->IsDone(); (rv = cidEnum->Next()))
+    {
+        nsCOMPtr<nsISupports> base;
+        rv = cidEnum->CurrentItem(getter_AddRefs(base));
+        if (NS_FAILED(rv))  continue;
+
+        // Get specific interface.
+        nsIID nodeIID = NS_IREGISTRYNODE_IID;
+        nsCOMPtr<nsIRegistryNode> node;
+        rv = base->QueryInterface( nodeIID, getter_AddRefs(node) );
+        if (NS_FAILED(rv)) continue;
+
+        // Get library name
+        char *cidString = NULL;
+        rv = node->GetName(&cidString);
+        if (NS_FAILED(rv)) continue;
+        autoStringFree delete_cidString(cidString, autoStringFree::nsCRT_String_Delete);
+
+        // Get key associated with library
+        nsIRegistry::Key cidKey;
+        rv = node->GetKey(&cidKey);
+        if (NS_FAILED(rv)) continue;
+
+        // Create the CID entry
+        char *library = NULL;
+        rv = mRegistry->GetString(cidKey, inprocServerValueName, &library);
+        if (NS_FAILED(rv)) continue;
+        autoStringFree delete_library(library, autoStringFree::NSPR_Delete);
+        nsCID aClass;
+        if (!(aClass.Parse(cidString))) continue;
+
+        nsDll *dll = CreateCachedDll(library, 0, 0);
+        if (!dll) continue;
+        nsFactoryEntry* entry = new nsFactoryEntry(aClass, dll);
+        if (!entry) continue;
+
+        nsIDKey key(aClass);
+        mFactories->Put(&key, entry);
+    }
+
+    // Finally read in PROGID -> CID mappings
+    nsCOMPtr<nsIEnumerator> progidEnum;
+    rv = mRegistry->EnumerateSubtrees( mClassesKey, getter_AddRefs(progidEnum));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = progidEnum->First();
+    for (; NS_SUCCEEDED(rv) && !progidEnum->IsDone(); (rv = progidEnum->Next()))
+    {
+        nsCOMPtr<nsISupports> base;
+        rv = progidEnum->CurrentItem(getter_AddRefs(base));
+        if (NS_FAILED(rv))  continue;
+
+        // Get specific interface.
+        nsIID nodeIID = NS_IREGISTRYNODE_IID;
+        nsCOMPtr<nsIRegistryNode> node;
+        rv = base->QueryInterface(nodeIID, getter_AddRefs(node));
+        if (NS_FAILED(rv)) continue;
+
+        // Get the progid string
+        char *progidString = NULL;
+        rv = node->GetName(&progidString);
+        if (NS_FAILED(rv)) continue;
+        autoStringFree delete_progidString(progidString, autoStringFree::nsCRT_String_Delete);
+
+        // Get cid string
+        nsIRegistry::Key progidKey;
+        rv = node->GetKey(&progidKey);
+        if (NS_FAILED(rv)) continue;
+        char *cidString = NULL;
+        rv = mRegistry->GetString(progidKey, classIDValueName, &cidString);
+        if (NS_FAILED(rv)) continue;
+        autoStringFree delete_cidString(cidString, autoStringFree::NSPR_Delete);
+        nsCID *aClass = new nsCID();
+        if (!aClass) continue;		// Protect against out of memory.
+        if (!(aClass->Parse(cidString)))
+        {
+            delete aClass;
+            continue;
+        }
+
+        // put the {progid, Cid} mapping into our map
+        nsStringKey key(progidString);
+        mProgIDs->Put(&key, aClass);
+        //  printf("Populating [ %s, %s ]\n", cidString, progidString);
+    }
+
+    mPrePopulationDone = PR_TRUE;
+    return NS_OK;
+}
+
+#endif /* USE_REGISTRY */
 
 //
 // HashProgID
@@ -669,7 +891,7 @@ nsComponentManagerImpl::HashProgID(const char *aProgID, const nsCID &aClass)
         return NS_ERROR_NULL_POINTER;
     }
     
-    nsCStringKey key(aProgID);
+    nsStringKey key(aProgID);
     nsCID* cid = (nsCID*) mProgIDs->Get(&key);
     if (cid)
     {
@@ -693,63 +915,113 @@ nsComponentManagerImpl::HashProgID(const char *aProgID, const nsCID &aClass)
     return NS_OK;
 }
 
-
-nsresult
-nsComponentManagerImpl::PlatformProgIDToCLSID(const char *aProgID, nsCID *aClass) 
+nsDll* nsComponentManagerImpl::CreateCachedDllName(const char *dllName)
 {
-    PR_ASSERT(aClass != NULL);
-    PR_ASSERT(mRegistry);
-
-    nsresult rv;
-    	
-    nsIRegistry::Key progIDKey;
-    rv = mRegistry->GetSubtreeRaw(mClassesKey, aProgID, &progIDKey);
-    if (NS_FAILED(rv)) return rv;
-
-    char *cidString;
-    rv = mRegistry->GetString(progIDKey, classIDValueName, &cidString);
-    if(NS_FAILED(rv)) return rv;
-    autoFree cidAutoFree(cidString);
-
-    if (!(aClass->Parse(cidString)))
+    // Check our dllCollection for a dll with matching name
+    nsStringKey key(dllName);
+    nsDll *dll = (nsDll *) mDllStore->Get(&key);
+    
+    if (dll == NULL)
     {
-        return NS_ERROR_FAILURE;
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: New dll \"%s\".", dllName));
+
+        // Add a new Dll into the nsDllStore
+        dll = new nsDll(dllName, 1 /* dummy */);
+        if (dll == NULL) return NULL;
+        if (dll->GetStatus() != DLL_OK)
+        {
+            // Cant create a nsDll. Backoff.
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                   ("nsComponentManager: ERROR in creating nsDll from \"%s\".", dllName));
+            delete dll;
+            dll = NULL;
+        }
+        else
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                   ("nsComponentManager: Adding New dll \"%s\" to mDllStore.",
+                    dllName));
+
+            mDllStore->Put(&key, (void *)dll);
+        }
+    }
+    else
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Found in mDllStore \"%s\".", dllName));
     }
 
-    return NS_OK;
+    return dll;
 }
 
-nsresult
-nsComponentManagerImpl::PlatformCLSIDToProgID(nsCID *aClass,
-                                              char* *aClassName, char* *aProgID)
+
+nsDll* nsComponentManagerImpl::CreateCachedDll(const char *persistentDescriptor,
+                                               PRUint32 modDate, PRUint32 fileSize)
 {
-    	
-    PR_ASSERT(aClass);
-    PR_ASSERT(mRegistry);
+    // Check our dllCollection for a dll with matching name
+    nsStringKey key(persistentDescriptor);
+    nsDll *dll = (nsDll *) mDllStore->Get(&key);
+    
+    if (dll == NULL)
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: New dll \"%s\".", persistentDescriptor));
 
-    nsresult rv;
+        // Add a new Dll into the nsDllStore
+        dll = new nsDll(persistentDescriptor, modDate, fileSize);
+        if (dll == NULL) return NULL;
+        if (dll->GetStatus() != DLL_OK)
+        {
+            // Cant create a nsDll. Backoff.
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                   ("nsComponentManager: ERROR in creating nsDll from \"%s\".", persistentDescriptor));
+            delete dll;
+            dll = NULL;
+        }
+        else
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                   ("nsComponentManager: Adding New dll \"%s\" to mDllStore.",
+                    persistentDescriptor));
 
-    char* cidStr = aClass->ToString();
-    nsIRegistry::Key cidKey;
-    rv = mRegistry->GetSubtreeRaw(mClassesKey,cidStr,&cidKey);
-    if(NS_FAILED(rv)) return rv;
-    PR_FREEIF(cidStr);
+            mDllStore->Put(&key, (void *)dll);
+        }
+    }
+    else
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Found in mDllStore \"%s\".", persistentDescriptor));
+        // XXX We found the dll in the dllCollection.
+        // XXX Consistency check: dll needs to have the same
+        // XXX lastModTime and fileSize. If not that would mean
+        // XXX that the dll wasn't registered properly.
+    }
 
-    char* classnameString;
-    rv = mRegistry->GetString(cidKey, classNameValueName, &classnameString);
-    if(NS_FAILED(rv)) return rv;
-    *aClassName = classnameString;
-
-    char* progidString;
-    rv = mRegistry->GetString(cidKey,progIDValueName,&progidString);
-    if (NS_FAILED(rv)) return rv;
-    *aProgID = progidString;
-
-    return NS_OK;
-
+    return dll;
 }
 
-#endif /* USE_REGISTRY */
+
+
+nsDll* nsComponentManagerImpl::CreateCachedDll(nsIFileSpec *dllSpec)
+{
+    nsDll *dll = NULL;
+    PRUint32 modDate;
+    PRUint32 size;
+
+    if (NS_FAILED(dllSpec->GetModDate(&modDate)) ||
+        NS_FAILED(dllSpec->GetFileSize(&size)))
+        return NULL;
+
+    char *persistentDescriptor = NULL;
+    if (NS_FAILED(dllSpec->GetPersistentDescriptorString(&persistentDescriptor)))
+        return NULL;
+    dll = CreateCachedDll(persistentDescriptor, modDate, size);
+    nsCRT::free(persistentDescriptor);
+
+    return dll;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsComponentManagerImpl: Public methods
@@ -768,6 +1040,8 @@ nsresult
 nsComponentManagerImpl::LoadFactory(nsFactoryEntry *aEntry,
                                     nsIFactory **aFactory)
 {
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+           ("nsComponentManager: LoadFactory() \"%s\".", aEntry->dll->GetNativePath()));
     if (aFactory == NULL)
     {
         return NS_ERROR_NULL_POINTER;
@@ -782,7 +1056,7 @@ nsComponentManagerImpl::LoadFactory(nsFactoryEntry *aEntry,
     {
         // Load the dll
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-               ("nsComponentManager: + Loading \"%s\".", aEntry->dll->GetFullPath()));
+               ("nsComponentManager: + Loading \"%s\".", aEntry->dll->GetNativePath()));
         if (aEntry->dll->Load() == PR_FALSE)
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
@@ -792,14 +1066,14 @@ nsComponentManagerImpl::LoadFactory(nsFactoryEntry *aEntry,
             if (PR_GetErrorTextLength() < (int) sizeof(errorMsg))
                 PR_GetErrorText(errorMsg);
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-                   ("nsComponentManager: Load(%s) FAILED with error:%s", aEntry->dll->GetFullPath(), errorMsg));
+                   ("nsComponentManager: Load(%s) FAILED with error:%s", aEntry->dll->GetNativePath(), errorMsg));
 
 #ifdef PRINT_CRITICAL_ERROR_TO_SCREEN
             // Put the error message on the screen.
             printf("**************************************************\n"
     		   "nsComponentManager: Load(%s) FAILED with error: %s\n"
             	   "**************************************************\n",
-    		   aEntry->dll->GetFullPath(), errorMsg);
+    		   aEntry->dll->GetNativePath(), errorMsg);
 #endif
             return NS_ERROR_FAILURE;
         }
@@ -808,24 +1082,45 @@ nsComponentManagerImpl::LoadFactory(nsFactoryEntry *aEntry,
 #ifdef MOZ_TRACE_XPCOM_REFCNT
     // Inform refcnt tracer of new library so that calls through the
     // new library can be traced.
-    nsTraceRefcnt::LoadLibrarySymbols(aEntry->dll->GetFullPath(), aEntry->dll->GetInstance());
+    nsTraceRefcnt::LoadLibrarySymbols(aEntry->dll->GetNativePath(), aEntry->dll->GetInstance());
 #endif
+    nsIServiceManager* serviceMgr = NULL;
+    nsresult rv = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+    if (NS_FAILED(rv)) return rv;
+
+    // Create the module object and get the factory
+    nsCOMPtr<nsIModule> mobj;
+    rv = aEntry->dll->GetModule(gComponentManager, getter_AddRefs(mobj));
+    if (NS_SUCCEEDED(rv))
+    {
+        nsCOMPtr<nsISupports> classObject;
+        PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
+               ("nsComponentManager: %s using nsIModule to get factory.",
+                aEntry->dll->GetNativePath()));
+        rv = mobj->GetClassObject(gComponentManager, aEntry->cid, getter_AddRefs(classObject));
+        if (NS_SUCCEEDED(rv))
+        {
+            rv = classObject->QueryInterface(nsIFactory::GetIID(), (void **)aFactory);
+        }
+        return rv;
+    }
+
+#ifndef OBSOLETE_MODULE_LOADING
+    // Try the older OBSOLETE method
     nsFactoryProc proc = (nsFactoryProc) aEntry->dll->FindSymbol("NSGetFactory");
     if (proc != NULL)
     {
         char* className = NULL;
         char* progID = NULL;
-        nsresult rv;
+
+        PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
+               ("nsComponentManager: %s using OBSOLETE method NSGetFactory().", aEntry->dll->GetNativePath()));
 
         // XXX dp, warren: deal with this!
 #if 0
         rv = CLSIDToProgID(&aEntry->cid, &className, &progID);
         // if CLSIDToProgID fails, just pass null to NSGetFactory
 #endif
-
-        nsIServiceManager* serviceMgr = NULL;
-        rv = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
-        if (NS_FAILED(rv)) return rv;
 
         rv = proc(serviceMgr, aEntry->cid, className, progID, aFactory);
         if (NS_FAILED(rv)) return rv;
@@ -836,9 +1131,42 @@ nsComponentManagerImpl::LoadFactory(nsFactoryEntry *aEntry,
             delete[] progID;
         return rv;
     }
+#endif /* OBSOLETE_MODULE_LOADING */
+
     PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
-           ("nsComponentManager: NSGetFactory entrypoint not found."));
+           ("nsComponentManager: Module entrypoint not found."));
     return NS_ERROR_FACTORY_NOT_LOADED;
+}
+
+
+nsFactoryEntry *
+nsComponentManagerImpl::GetFactoryEntry(const nsCID &aClass, PRBool checkRegistry)
+{
+    nsIDKey key(aClass);
+    nsFactoryEntry *entry = (nsFactoryEntry*) mFactories->Get(&key);
+
+    if (entry)
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, ("\t\tfound in factory cache."));
+    else
+#ifdef USE_REGISTRY
+        if (checkRegistry)
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                   ("\t\tnot found in factory cache. Looking in registry"));
+
+            nsresult rv = PlatformFind(aClass, &entry);
+
+            // If we got one, cache it in our hashtable
+            if (NS_SUCCEEDED(rv))
+            {
+                PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                       ("\t\tfound in registry."));
+                mFactories->Put(&key, entry);
+            }
+        }
+#endif /* USE_REGISTRY */
+
+    return (entry);
 }
 
 /**
@@ -860,56 +1188,26 @@ nsComponentManagerImpl::FindFactory(const nsCID &aClass,
         PR_LogPrint("nsComponentManager: FindFactory(%s)", buf);
         delete [] buf;
     }
-    	
+
     PR_ASSERT(aFactory != NULL);
-    	
-    PR_EnterMonitor(mMon);
-    	
-    nsIDKey key(aClass);
-    nsFactoryEntry *entry = (nsFactoryEntry*) mFactories->Get(&key);
-    	
-    nsresult res = NS_ERROR_FACTORY_NOT_REGISTERED;
-    	
-#ifdef USE_REGISTRY
-    if (entry == NULL)
-    {
-        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-               ("\t\tnot found in factory cache. Looking in registry"));
 
-        // bug# 7308 , bug# 8150
-        // Findfactory randomly fails if a ProgIDToCLSID() happenes
-        // at the same time from another thread.
-        // The registry seems to be locking properly. Until I figureout
-        // what the right problem is, I am putting this major locks on
-        // these two routines
-        //		PlatformFind() and PlatformProgIDToCLSID()
-        //to achieve mutual exclusion at a course level.
-        PR_EnterMonitor(mMon);
-        nsresult rv = PlatformFind(aClass, &entry);
-        PR_ExitMonitor(mMon);
+    nsFactoryEntry *entry = GetFactoryEntry(aClass, PR_TRUE);
 
-        // If we got one, cache it in our hashtable
-        if (NS_SUCCEEDED(rv))
-        {
-            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-                   ("\t\tfound in registry."));
-            mFactories->Put(&key, entry);
-        }
-    }
-    else
-    {
-        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-               ("\t\tfound in factory cache."));
-    }
-#endif /* USE_REGISTRY */
+    nsresult res = NS_ERROR_FACTORY_NOT_REGISTERED;    	
     	
-    PR_ExitMonitor(mMon);
-    	
-    if (entry != NULL)
+    if (entry)
     {
-        if ((entry)->factory == NULL)
+        if (entry->factory == NULL)
         {
             res = LoadFactory(entry, aFactory);
+            // XXX Cache factory that we created for performance.
+            // XXX Need a way to release this factory else dlls will never
+            // XXX get unloaded
+            if (NS_SUCCEEDED(res))
+            {
+                entry->factory = *aFactory;
+                NS_ADDREF(entry->factory);
+            }
         }
         else
         {
@@ -920,8 +1218,7 @@ nsComponentManagerImpl::FindFactory(const nsCID &aClass,
     }
     	
     PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-           ("\t\tFindFactory() %s",
-            NS_SUCCEEDED(res) ? "succeeded" : "FAILED"));
+           ("\t\tFindFactory() %s", NS_SUCCEEDED(res) ? "succeeded" : "FAILED"));
     	
     return res;
 }
@@ -931,7 +1228,6 @@ nsComponentManagerImpl::FindFactory(const nsCID &aClass,
  *
  * Mapping function from a ProgID to a classID. Directly talks to the registry.
  *
- * XXX We need to add a cache this translation as this is done a lot.
  */
 nsresult
 nsComponentManagerImpl::ProgIDToCLSID(const char *aProgID, nsCID *aClass) 
@@ -953,7 +1249,7 @@ nsComponentManagerImpl::ProgIDToCLSID(const char *aProgID, nsCID *aClass)
     // keep the ProgID to CID cache up-to-date. However, doing this
     // significantly improves performance, so it'll do for now.
 
-    nsCStringKey key(aProgID);
+    nsStringKey key(aProgID);
     nsCID* cid = (nsCID*) mProgIDs->Get(&key);
     if (cid) {
         if (cid == &kNoCID) {
@@ -968,19 +1264,7 @@ nsComponentManagerImpl::ProgIDToCLSID(const char *aProgID, nsCID *aClass)
     else {
         // This is the first time someone has asked for this
         // ProgID. Go to the registry to find the CID.
-
-        // bug# 7308 , bug# 8150
-        // Findfactory randomly fails if a ProgIDToCLSID() happenes
-        // at the same time from another thread.
-        // The registry seems to be locking properly. Until I figureout
-        // what the right problem is, I am putting this major locks on
-        // these two routines
-        //		PlatformFind() and PlatformProgIDToCLSID()
-        //to achieve mutual exclusion at a course level.
-        PR_EnterMonitor(mMon);
         res = PlatformProgIDToCLSID(aProgID, aClass);
-        PR_ExitMonitor(mMon);
-
 
         if (NS_SUCCEEDED(res)) {
             // Found it. So put it into the cache.
@@ -994,7 +1278,7 @@ nsComponentManagerImpl::ProgIDToCLSID(const char *aProgID, nsCID *aClass)
             // Didn't find it. Put a special CID in the cache so we
             // don't need to hit the registry on subsequent requests
             // for the same ProgID.
-            mProgIDs->Put(&key, (void*) &kNoCID);
+            mProgIDs->Put(&key, (void *)&kNoCID);
         }
     }
 #endif /* USE_REGISTRY */
@@ -1143,36 +1427,26 @@ nsComponentManagerImpl::RegisterFactory(const nsCID &aClass,
         delete [] buf;
     }
 
-    nsIFactory *old = NULL;
-    FindFactory(aClass, &old);
-
-    if (old != NULL)
-    {
-        NS_RELEASE(old);
-        if (!aReplace)
-        {
-            PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-                   ("\t\tFactory already registered."));
-            return NS_ERROR_FACTORY_EXISTS;
-        }
-        else
-        {
-            PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-                   ("\t\tdeleting old Factory Entry."));
-        }
-    }
-    	
-    PR_EnterMonitor(mMon);
-	
+    nsFactoryEntry *entry = NULL;
     nsIDKey key(aClass);
-    nsFactoryEntry* entry = new nsFactoryEntry(aClass, aFactory);
-    if (entry == NULL)
-    {
-        PR_ExitMonitor(mMon);
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-    mFactories->Put(&key, entry);
+    entry = GetFactoryEntry(aClass, PR_TRUE);
 
+    if (entry && !aReplace)
+    {
+        // Already registered
+        PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tFactory already registered."));
+        return NS_ERROR_FACTORY_EXISTS;
+    }
+
+    nsFactoryEntry *newEntry = new nsFactoryEntry(aClass, aFactory);
+    if (newEntry == NULL) return NS_ERROR_OUT_OF_MEMORY;
+    if (entry)
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tdeleting old Factory Entry."));
+        mFactories->RemoveAndDelete(&key);
+        entry = NULL;
+    }
+    mFactories->Put(&key, newEntry);
 
     // Update the ProgID->CLSID Map
     if (aProgID)
@@ -1180,27 +1454,13 @@ nsComponentManagerImpl::RegisterFactory(const nsCID &aClass,
         nsresult rv = HashProgID(aProgID, aClass);
         if(NS_FAILED(rv))
         {
-            // Adding progID mapping failed. This would result in
-            // an error in CreateInstance(..progid,..) However
-            // we have already added the mapping of CLSID -> factory
-            // and hence, a CreateInstance(..,CLSID,..) would pass.
-            //
-            // mmh! Should I pass back an error or not.
-            //
-            // thinking..ok we are passing back an error as we
-            // think for people registering with progid,
-            // CreateInstance(..progid..) is the more used one.
-            //
-            PR_ExitMonitor(mMon);
             PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
                    ("\t\tFactory register succeeded. PROGID->CLSID mapping failed."));
             return (rv);
         }
     }
-    PR_ExitMonitor(mMon);
     	
-    PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-           ("\t\tFactory register succeeded."));
+    PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tFactory register succeeded."));
     	
     return NS_OK;
 }
@@ -1209,7 +1469,7 @@ nsresult
 nsComponentManagerImpl::RegisterComponent(const nsCID &aClass,
                                           const char *aClassName,
                                           const char *aProgID,
-                                          const char *aLibrary,
+                                          const char *aLibraryPersistentDescriptor,
                                           PRBool aReplace,
                                           PRBool aPersist)
 {
@@ -1219,41 +1479,66 @@ nsComponentManagerImpl::RegisterComponent(const nsCID &aClass,
     {
         char *buf = aClass.ToString();
         PR_LogPrint("nsComponentManager: RegisterComponent(%s, %s, %s, %s), replace = %d, persist = %d.",
-                    buf, aClassName, aProgID, aLibrary, (int)aReplace, (int)aPersist);
+                    buf, aClassName, aProgID, aLibraryPersistentDescriptor, (int)aReplace, (int)aPersist);
         delete [] buf;
     }
 
-    nsIFactory *old = NULL;
-    FindFactory(aClass, &old);
-    	
-    if (old != NULL)
+    // Convert the persistent descriptor into a nsIFileSpec
+    nsCOMPtr<nsIFileSpec>libSpec;
+    NS_DEFINE_IID(kFileSpecIID, NS_IFILESPEC_IID);
+    rv = CreateInstance(NS_FILESPEC_PROGID, NULL, kFileSpecIID, getter_AddRefs(libSpec));
+    if (NS_FAILED(rv)) return rv;
+    rv = libSpec->SetPersistentDescriptorString((char *)aLibraryPersistentDescriptor);
+    if (NS_FAILED(rv)) return rv;
+
+    // Call the register component with FileSpec routine
+    rv = RegisterComponentSpec(aClass, aClassName, aProgID, libSpec, aReplace, aPersist);
+    return rv;
+}
+
+
+nsresult
+nsComponentManagerImpl::RegisterComponentSpec(const nsCID &aClass,
+                                              const char *aClassName,
+                                              const char *aProgID,
+                                              nsIFileSpec *aLibrarySpec,
+                                              PRBool aReplace,
+                                              PRBool aPersist)
+{
+    nsresult rv = NS_OK;
+
+    if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
-        NS_RELEASE(old);
-        if (!aReplace)
-        {
-            PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-                   ("\t\tFactory already registered."));
-            return NS_ERROR_FACTORY_EXISTS;
-        }
-        else
-        {
-            PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-                   ("\t\tdeleting registered Factory."));
-        }
+        char *fullName = NULL;
+        aLibrarySpec->GetNativePath(&fullName);
+        char *buf = aClass.ToString();
+        PR_LogPrint("nsComponentManager: RegisterComponentSpec(%s, %s, %s, %s), replace = %d, persist = %d.",
+                    buf, aClassName, aProgID, fullName, (int)aReplace, (int)aPersist);
+        delete [] buf;
+        if (fullName) delete [] fullName;
     }
-    	
-    PR_EnterMonitor(mMon);
-    	
+
+    nsIDKey key(aClass);
+    nsFactoryEntry *entry = GetFactoryEntry(aClass, PR_TRUE);
+
+    if (entry && !aReplace)
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tFactory already registered."));
+        return NS_ERROR_FACTORY_EXISTS;
+    }
+    
 #ifdef USE_REGISTRY
-    if (aPersist == PR_TRUE)
+    if (aPersist)
     {
         // Add it to the registry
-        nsDll *dll = new nsDll(aLibrary);
-        if (dll == NULL) {
-            rv = NS_ERROR_OUT_OF_MEMORY;
-            goto done;
-        }
+        nsDll *dll = new nsDll(aLibrarySpec);
+        if (dll == NULL) return NS_ERROR_OUT_OF_MEMORY;
         char *cidString = aClass.ToString();
+        if (cidString == NULL)
+        {
+            delete dll;
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
         PlatformRegister(cidString, aClassName, aProgID, dll);
         delete [] cidString;
         delete dll;
@@ -1261,54 +1546,123 @@ nsComponentManagerImpl::RegisterComponent(const nsCID &aClass,
     else
 #endif
     {
-        nsDll *dll = new nsDll(aLibrary);
-        if (dll == NULL) {
-            rv = NS_ERROR_OUT_OF_MEMORY;
-            goto done;
-        }
-        nsIDKey key(aClass);
-        nsFactoryEntry* entry = new nsFactoryEntry;
-        if (entry == NULL) {
+        // Create a dll from the librarySpec
+        nsDll *dll = CreateCachedDll(aLibrarySpec);
+        if (dll == NULL) return NS_ERROR_OUT_OF_MEMORY;
+        
+        // Use the dll to create a factoryEntry
+        nsFactoryEntry *newEntry = new nsFactoryEntry(aClass, dll);
+        if (newEntry == NULL)
+        {
             delete dll;
-            rv = NS_ERROR_OUT_OF_MEMORY;
-            goto done;
+            return NS_ERROR_OUT_OF_MEMORY;
         }
-        rv = entry->Init(mDllStore, aClass, aLibrary,
-                         dll->GetLastModifiedTime(), dll->GetSize());
-        delete dll;
-        if (NS_FAILED(rv)) {
-            goto done;
+        if (entry)
+        {
+            mFactories->RemoveAndDelete(&key);
+            entry = NULL;
+            PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tdeleting registered Factory."));
         }
-        mFactories->Put(&key, entry);
+        mFactories->Put(&key, newEntry);
     }
     	
- done:
-	
-    if(NS_SUCCEEDED(rv))
-    {
-        // Update the ProgID->CLSID Map if we were successful
-        // If we do this unconditionally, this map could grow into a map
-        // of all component progid. We want to populate the ProgID->CLSID mapping
-        // only if we aren't storing the mapping in the registry. If we are
-        // storing in the registry, on first creation, the mapping will get
-        // added.
+    // Update the ProgID->CLSID Map if this isnt stored in registry
 #ifdef USE_REGISTRY
-        if (aProgID && aPersist != PR_TRUE)
-        {
-            rv = HashProgID(aProgID, aClass);
-        }
+    if (aProgID && aPersist != PR_TRUE)
+        rv = HashProgID(aProgID, aClass);
 #else /* USE_REGISTRY */
-        if (aProgID)
-            rv = HashProgID(aProgID, aClass);
+    if (aProgID)
+        rv = HashProgID(aProgID, aClass);
 #endif /* USE_REGISTRY */
-    }
-    
-    PR_ExitMonitor(mMon);
+
     PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-           ("\t\tFactory register %s.",
-            rv == NS_OK ? "succeeded" : "failed"));
+           ("\t\tFactory register %s.", NS_SUCCEEDED(rv) ? "succeeded" : "failed"));
     return rv;
 }
+
+nsresult
+nsComponentManagerImpl::RegisterComponentLib(const nsCID &aClass,
+                                             const char *aClassName,
+                                             const char *aProgID,
+                                             const char *aDllName,
+                                             PRBool aReplace,
+                                             PRBool aPersist /* has to be PR_FALSE */)
+{
+    nsresult rv = NS_OK;
+
+    // XXX We cant store dllName registrations in the registry yet.
+    PR_ASSERT(aPersist == PR_FALSE);
+
+    if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
+    {
+        char *buf = aClass.ToString();
+        PR_LogPrint("nsComponentManager: RegisterComponentLib(%s, %s, %s, %s), replace = %d, persist = %d.",
+                    buf, aClassName, aProgID, aDllName, (int)aReplace, (int)aPersist);
+        delete [] buf;
+    }
+
+    nsIDKey key(aClass);
+    nsFactoryEntry *entry = GetFactoryEntry(aClass, PR_TRUE);
+
+    if (entry && !aReplace)
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tFactory already registered."));
+        return NS_ERROR_FACTORY_EXISTS;
+    }
+
+#ifdef USE_REGISTRY
+    if (aPersist)
+    {
+        // Add it to the registry
+        nsDll *dll = new nsDll(aDllName, 1/* dummy */);
+        if (dll == NULL) rv = NS_ERROR_OUT_OF_MEMORY;
+        char *cidString = aClass.ToString();
+        if (cidString == NULL)
+        {
+            delete dll;
+            rv = NS_ERROR_OUT_OF_MEMORY;
+        }
+        PlatformRegister(cidString, aClassName, aProgID, dll);
+        delete [] cidString;
+        delete dll;
+    } 
+    else
+#endif
+    {
+        // Create a dll from the DllName
+        nsDll *dll = CreateCachedDllName(aDllName);
+        if (dll == NULL) return NS_ERROR_OUT_OF_MEMORY;
+        
+        // Use the dll to create a factoryEntry
+        nsFactoryEntry* newEntry = new nsFactoryEntry(aClass, dll);
+        if (newEntry == NULL)
+        {
+            delete dll;
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        if (entry)
+        {
+            mFactories->RemoveAndDelete(&key);
+            entry = NULL;
+            PR_LOG(nsComponentManagerLog, PR_LOG_WARNING, ("\t\tdeleting registered Factory."));
+        }
+        mFactories->Put(&key, newEntry);
+    }
+    	
+        // Update the ProgID->CLSID Map if this isn't stored in registry
+#ifdef USE_REGISTRY
+    if (aProgID && aPersist != PR_TRUE)
+        rv = HashProgID(aProgID, aClass);
+#else /* USE_REGISTRY */
+    if (aProgID)
+        rv = HashProgID(aProgID, aClass);
+#endif /* USE_REGISTRY */
+
+    PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
+           ("\t\tFactory register %s.", rv == NS_OK ? "succeeded" : "failed"));
+    return rv;
+}
+
 
 nsresult
 nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
@@ -1330,9 +1684,9 @@ nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
         if (old->factory == aFactory)
         {
             PR_EnterMonitor(mMon);
-            old = (nsFactoryEntry *) mFactories->Remove(&key);
+            old = (nsFactoryEntry *) mFactories->RemoveAndDelete(&key);
+            old = NULL;
             PR_ExitMonitor(mMon);
-            delete old;
             res = NS_OK;
         }
 
@@ -1349,11 +1703,40 @@ nsresult
 nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
                                             const char *aLibrary)
 {
+    nsresult rv;
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
         char *buf = aClass.ToString();
-        PR_LogPrint("nsComponentManager: Unregistering Factory.");
-        PR_LogPrint("nsComponentManager: + %s in \"%s\".", buf, aLibrary);
+        PR_LogPrint("nsComponentManager: UnregisterComponentSpec(%s, %s)", buf,
+                    aLibrary);
+        delete [] buf;
+    }
+
+    // Convert the persistent descriptor into a nsIFileSpec
+    nsCOMPtr<nsIFileSpec>libSpec;
+    NS_DEFINE_IID(kFileSpecIID, NS_IFILESPEC_IID);
+    rv = CreateInstance(NS_FILESPEC_PROGID, NULL, kFileSpecIID, getter_AddRefs(libSpec));
+    if (NS_FAILED(rv)) return rv;
+    rv = libSpec->SetPersistentDescriptorString((char *)aLibrary);
+    if (NS_FAILED(rv)) return rv;
+
+    return UnregisterComponentSpec(aClass, libSpec);
+}
+
+nsresult
+nsComponentManagerImpl::UnregisterComponentSpec(const nsCID &aClass,
+                                                nsIFileSpec *aLibrarySpec)
+{
+    char *aLibrary;
+    nsresult rv = aLibrarySpec->GetPersistentDescriptorString(&aLibrary);
+    if (NS_FAILED(rv))
+        return NS_ERROR_INVALID_ARG;
+
+    if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
+    {
+        char *buf = aClass.ToString();
+        PR_LogPrint("nsComponentManager: UnregisterComponentSpec(%s, %s)", buf,
+                    aLibrary);
         delete [] buf;
     }
     	
@@ -1366,16 +1749,16 @@ nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
     	
     if (old != NULL && old->dll != NULL)
     {
-        if (old->dll->GetFullPath() != NULL &&
-#ifdef XP_UNIX
-            PL_strcasecmp(old->dll->GetFullPath(), aLibrary)
+        if (old->dll->GetPersistentDescriptorString() != NULL &&
+#if defined(XP_UNIX) || defined(XP_BEOS)
+            PL_strcasecmp(old->dll->GetPersistentDescriptorString(), aLibrary)
 #else
-            PL_strcmp(old->dll->GetFullPath(), aLibrary)
+            PL_strcmp(old->dll->GetPersistentDescriptorString(), aLibrary)
 #endif
             )
         {
-            nsFactoryEntry *entry = (nsFactoryEntry *) mFactories->Remove(&key);
-            delete entry;
+            mFactories->RemoveAndDelete(&key);
+            old = NULL;
             res = NS_OK;
         }
 #ifdef USE_REGISTRY
@@ -1394,44 +1777,102 @@ nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
     return res;
 }
 
+static nsresult
+nsFreeLibrary(nsDll *dll, nsIServiceManager *serviceMgr)
+{
+    nsresult rv = NS_ERROR_FAILURE;
+
+    if (!dll || dll->IsLoaded() == PR_FALSE)
+    {
+        return NS_ERROR_INVALID_ARG;
+    }
+
+    // Get if the dll was marked for unload in an earlier round
+    PRBool dllMarkedForUnload = dll->IsMarkedForUnload();
+
+    // Reset dll marking for unload just in case we return with
+    // an error.
+    dll->MarkForUnload(PR_FALSE);
+
+    
+    // Get the module object
+    nsCOMPtr<nsIModule> mobj;
+    rv = dll->GetModule(nsComponentManagerImpl::gComponentManager, getter_AddRefs(mobj));
+    if (NS_FAILED(rv))
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+               ("nsComponentManager: Cannot get module object for %s", dll->GetNativePath()));
+        return  rv;
+    }
+
+    PRBool canUnload;
+    rv = mobj->CanUnload(nsComponentManagerImpl::gComponentManager, &canUnload);
+    if (NS_FAILED(rv))
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+               ("nsComponentManager: nsIModule::CanUnload() returned error for %s.", dll->GetNativePath()));
+        return rv;
+    }
+        
+    if (canUnload)
+    {
+        if (dllMarkedForUnload)
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+                   ("nsComponentManager: + Unloading \"%s\".", dll->GetNativePath()));
+#if 0
+            // XXX dlls aren't counting their outstanding instances correctly
+            // XXX hence, dont unload until this gets enforced.
+            rv = dll->Unload();
+#endif /* 0 */
+        }
+        else
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                   ("nsComponentManager: Ready for unload \"%s\".", dll->GetNativePath()));
+        }
+    }
+    else
+    {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+               ("nsComponentManager: + NOT Unloading %s", dll->GetNativePath()));
+        rv = NS_ERROR_FAILURE;
+    }
+    return rv;
+}
+
 static PRBool
 nsFreeLibraryEnum(nsHashKey *aKey, void *aData, void* closure) 
 {
-    nsFactoryEntry *entry = (nsFactoryEntry *) aData;
+    nsDll *dll = (nsDll *) aData;
     nsIServiceManager* serviceMgr = (nsIServiceManager*)closure;
-    	
-    if (entry->dll && entry->dll->IsLoaded() == PR_TRUE)
-    {
-        nsCanUnloadProc proc = (nsCanUnloadProc) entry->dll->FindSymbol("NSCanUnload");
-        if (proc != NULL) {
-            nsresult rv = proc(serviceMgr);
-            if (NS_FAILED(rv))
-            {
-                PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-                       ("nsComponentManager: + Unloading \"%s\".", entry->dll->GetFullPath()));
-                entry->dll->Unload();
-            }
-        }
-    }
-    	
+    nsFreeLibrary(dll, serviceMgr);
     return PR_TRUE;
 }
 
 nsresult
 nsComponentManagerImpl::FreeLibraries(void) 
 {
-    PR_EnterMonitor(mMon);
-    	
-    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-           ("nsComponentManager: Freeing Libraries."));
-
     nsIServiceManager* serviceMgr = NULL;
     nsresult rv = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
     if (NS_FAILED(rv)) return rv;
-    mFactories->Enumerate(nsFreeLibraryEnum, serviceMgr);
+    rv = UnloadLibraries(serviceMgr);
+    return rv;
+}
+
+// Private implementation of unloading libraries
+nsresult
+nsComponentManagerImpl::UnloadLibraries(nsIServiceManager *serviceMgr)
+{
+    PR_EnterMonitor(mMon);
+    	
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+           ("nsComponentManager: Unloading Libraries."));
+
+    mDllStore->Enumerate(nsFreeLibraryEnum, serviceMgr);
     	
     PR_ExitMonitor(mMon);
-    	
+
     return NS_OK;
 }
 
@@ -1454,63 +1895,114 @@ nsComponentManagerImpl::FreeLibraries(void)
  */
 
 nsresult
-nsComponentManagerImpl::AutoRegister(RegistrationTime when, const char* dir)
+nsComponentManagerImpl::AutoRegister(RegistrationTime when, nsIFileSpec *inDirSpec)
 {
-    nsresult rv = NS_ERROR_FAILURE;
+    nsCOMPtr<nsIFileSpec> dirSpec;
 
-    if (dir != NULL)
+    if (inDirSpec == NULL)
     {
-        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-               ("nsComponentManager: Autoregistration begins. dir = %s", dir));
-#ifdef DEBUG
-        printf("nsComponentManager: Autoregistration begins. dir = %s\n", dir);
-#endif /* DEBUG */
-        rv = SyncComponentsInDir(when, dir);
-        PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-               ("nsComponentManager: Autoregistration ends. dir = %s", dir));
-#ifdef DEBUG
-        printf("nsComponentManager: Autoregistration ends. dir = %s\n", dir);
-#endif /* DEBUG */
+        // Do default components directory
+        nsSpecialSystemDirectory sysdir(nsSpecialSystemDirectory::XPCOM_CurrentProcessComponentDirectory);
+        nsresult rv = NS_NewFileSpecWithSpec(sysdir, getter_AddRefs(dirSpec));
+        if (NS_FAILED(rv)) return rv;
     }
+    else
+        dirSpec = inDirSpec;
+
+    char *nativePath = NULL;
+    nsresult rv = dirSpec->GetNativePath(&nativePath);
+    if (NS_FAILED(rv)) return rv;
+
+    if (nativePath == NULL)
+    {
+        return NS_ERROR_INVALID_POINTER;
+    }
+
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+           ("nsComponentManager: Autoregistration begins. dir = %s", nativePath));
+#ifdef DEBUG
+    printf("nsComponentManager: Autoregistration begins. dir = %s\n", nativePath);
+#endif /* DEBUG */
+
+    rv = SyncComponentsInDir(when, dirSpec);
+
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+           ("nsComponentManager: Autoregistration ends. dir = %s", nativePath));
+#ifdef DEBUG
+    printf("nsComponentManager: Autoregistration ends. dir = %s\n", nativePath);
+#endif /* DEBUG */
+
+    nsCRT::free(nativePath);
 
     return rv;
 }
 
 
 nsresult
-nsComponentManagerImpl::SyncComponentsInDir(RegistrationTime when, const char *dir)
+nsComponentManagerImpl::SyncComponentsInDir(RegistrationTime when, nsIFileSpec *dirSpec)
 {
-    PRDir *prdir = PR_OpenDir(dir);
-    if (prdir == NULL)
-        return NS_ERROR_FAILURE;
-    	
-    // Create a buffer that has dir/ in it so we can append
-    // the filename each time in the loop
-    char fullname[NS_MAX_FILENAME_LEN];
-    PL_strncpyz(fullname, dir, sizeof(fullname));
-    unsigned int n = strlen(fullname);
-    if (n+1 < sizeof(fullname))
+    nsresult rv = NS_ERROR_FAILURE;
+    PRBool isDir = PR_FALSE;
+
+    // Maker sure we are dealing with a directory
+    rv = dirSpec->isDirectory(&isDir);
+    if (NS_FAILED(rv)) return rv;
+    if (isDir == PR_FALSE)
     {
-        fullname[n] = '/';
-        n++;
+        return NS_ERROR_INVALID_POINTER;
     }
-    char *filepart = fullname + n;
-    	
-    PRDirEntry *dirent = NULL;
-    while ((dirent = PR_ReadDir(prdir, PR_SKIP_BOTH)) != NULL)
+
+    // Create a directory iterator
+    NS_DEFINE_IID(kDirectoryIteratorIID, NS_IDIRECTORYITERATOR_IID);
+    nsCOMPtr<nsIDirectoryIterator>dirIterator;
+    rv = CreateInstance(NS_DIRECTORYITERATOR_PROGID, NULL, kDirectoryIteratorIID, getter_AddRefs(dirIterator));
+    if (NS_FAILED(rv)) return rv;
+    rv = dirIterator->Init(dirSpec, PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
+
+    // whip through the directory to register every file
+    nsIFileSpec *dirEntry = NULL;
+    PRBool more = PR_FALSE;
+    rv = dirIterator->exists(&more);
+    if (NS_FAILED(rv)) return rv;
+    while (more == PR_TRUE)
     {
-        PL_strncpyz(filepart, dirent->name, sizeof(fullname)-n);
-        nsresult ret = AutoRegisterComponent(when, fullname);
-        if (NS_FAILED(ret) && ret == NS_ERROR_IS_DIR) {
-            SyncComponentsInDir(when, fullname);
+        rv = dirIterator->GetCurrentSpec(&dirEntry);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = dirEntry->isDirectory(&isDir);
+        if (NS_FAILED(rv)) return rv;
+        if (isDir == PR_TRUE)
+        {
+            // This is a directory. Grovel for components into the directory.
+            rv = SyncComponentsInDir(when, dirEntry);
         }
-    } // foreach file
-    PR_CloseDir(prdir);
-    return NS_OK;
+        else
+        {
+            // This is a file. Try to register it.
+            rv = AutoRegisterComponent(when, dirEntry);
+        }
+        if (NS_FAILED(rv))
+        {
+            // This means either of AutoRegisterComponent or
+            // SyncComponentsInDir failed. It could be because
+            // the file isn't a component like initpref.js
+            // So dont break on these errors.
+        }
+
+        NS_RELEASE(dirEntry);
+        
+        rv = dirIterator->next();
+        if (NS_FAILED(rv)) return rv;
+        rv = dirIterator->exists(&more);
+        if (NS_FAILED(rv)) return rv;
+    }
+    
+    return rv;
 }
 
 nsresult
-nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char *fullname)
+nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, nsIFileSpec *component)
 {
     const char *ValidDllExtensions[] = {
         ".dll",		/* Windows */
@@ -1520,88 +2012,112 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
         ".so.1.0",	/* Unix: BSD */
         ".sl",		/* Unix: HP-UX */
         ".shlb",	/* Mac ? */
+#if defined(VMS)
+        ".exe",		/* Open VMS */
+#endif
         ".dlm",		/* new for all platforms */
         NULL
     };
-    	
-    	
-    PRFileInfo statbuf;
-    if (PR_GetFileInfo(fullname,&statbuf) != PR_SUCCESS)
-    {
-        // Skip files that cannot be stat
-        return NS_ERROR_FAILURE;
-    }
+    nsresult rv;
 
-    if (statbuf.type == PR_FILE_DIRECTORY)
-    {
-        // Cant register a directory
-        return NS_ERROR_IS_DIR;
-    }
-    else if (statbuf.type != PR_FILE_FILE)
-    {
-        // Skip non-files
-        return NS_ERROR_FAILURE;
-    }
-    	
-    // deal with only files that have the right extension
+    // Ensure we are dealing with a file as opposed to a dir
+    PRBool b = PR_FALSE;
+
+    rv = component->isFile(&b);
+    if (NS_FAILED(rv)) return rv;
+
+    if (b == PR_FALSE) return NS_ERROR_FAILURE;
+
+    // deal only with files that have a valid extension
     PRBool validExtension = PR_FALSE;
-    int flen = PL_strlen(fullname);
+
+#ifdef	XP_MAC
+	// rjc - on Mac, check the file's type code (skip checking the creator code)
+	nsFileSpec	fs;
+	if (NS_FAILED(rv = component->GetFileSpec(&fs)))
+			return(rv);
+
+	CInfoPBRec	catInfo;
+	OSErr 		err = fs.GetCatInfo(catInfo);
+	if (!err)
+	{
+		// on Mac, Mozilla shared libraries are of type 'shlb'
+		// Note: we don't check the creator (which for Mozilla is 'MOZZ')
+		// so that 3rd party shared libraries will be noticed!
+		if ((catInfo.hFileInfo.ioFlFndrInfo.fdType == 'shlb')
+			/* && (catInfo.hFileInfo.ioFlFndrInfo.fdCreator == 'MOZZ') */ )
+		{
+			validExtension = PR_TRUE;
+		}
+	}
+#else
+    char *leafName = NULL;
+    rv = component->GetLeafName(&leafName);
+    if (NS_FAILED(rv)) return rv;
+    int flen = PL_strlen(leafName);
     for (int i=0; ValidDllExtensions[i] != NULL; i++)
     {
         int extlen = PL_strlen(ValidDllExtensions[i]);
     		
         // Does fullname end with this extension
         if (flen >= extlen &&
-            !PL_strcasecmp(&(fullname[flen - extlen]), ValidDllExtensions[i])
+            !PL_strcasecmp(&(leafName[flen - extlen]), ValidDllExtensions[i])
             )
         {
             validExtension = PR_TRUE;
             break;
         }
     }
+    if (leafName) nsCRT::free(leafName);
+#endif
     	
     if (validExtension == PR_FALSE)
     {
         // Skip invalid extensions
         return NS_ERROR_FAILURE;
     }
-    	
+
+    // Get the name of the dll
+    char *persistentDescriptor = NULL;
+    rv = component->GetPersistentDescriptorString(&persistentDescriptor);
+    if (NS_FAILED(rv)) return rv;
+    autoStringFree delete_persistentDescriptor(persistentDescriptor, autoStringFree::nsCRT_String_Delete);
+    nsStringKey key(persistentDescriptor);
+
     // Check if dll is one that we have already seen
-    nsCStringKey key(fullname);
     nsDll *dll = (nsDll *) mDllStore->Get(&key);
-    nsresult rv = NS_OK;
+    rv = NS_OK;
     if (dll == NULL)
     {
         // Create nsDll for this from registry and
         // add it to our dll cache mDllStore.
 #ifdef USE_REGISTRY
-        rv = PlatformCreateDll(fullname, &dll);
+        rv = PlatformCreateDll(persistentDescriptor, &dll);
         if (NS_SUCCEEDED(rv))
         {
             mDllStore->Put(&key, (void *) dll);
         }
 #endif /* USE_REGISTRY */
     }
-    	
-    if (NS_SUCCEEDED(rv))
+
+    if (dll != NULL)
     {
         // Make sure the dll is OK
         if (dll->GetStatus() != NS_OK)
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                    ("nsComponentManager: + nsDll not NS_OK \"%s\". Skipping...",
-                    dll->GetFullPath()));
+                    dll->GetNativePath()));
             return NS_ERROR_FAILURE;
         }
     		
         // We already have seen this dll. Check if this dll changed
-        if (LL_EQ(dll->GetLastModifiedTime(), statbuf.modifyTime) &&
-            (dll->GetSize() == statbuf.size))
+        if (!dll->HasChanged())
         {
             // Dll hasn't changed. Skip.
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                    ("nsComponentManager: + nsDll not changed \"%s\". Skipping...",
-                    dll->GetFullPath()));
+                    dll->GetNativePath()));
             return NS_OK;
         }
     		
@@ -1609,34 +2125,22 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
         // re-register dll
         if (dll->IsLoaded())
         {
-            // We are screwed. We loaded the old version of the dll
-            // and now we find that the on-disk copy if newer.
-            // The only thing to do would be to ask the dll if it can
-            // unload itself. It can do that if it hasn't created objects
-            // yet.
-            nsCanUnloadProc proc = (nsCanUnloadProc)
-                dll->FindSymbol("NSCanUnload");
-            if (proc != NULL)
+            // We loaded the old version of the dll and now we find that the
+            // on-disk copy if newer. Try to unload the dll.
+            nsIServiceManager* serviceMgr = NULL;
+            nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+            // if getting the serviceMgr failed, we can still pass NULL to FreeLibraries
+            rv = nsFreeLibrary(dll, serviceMgr);
+            if (NS_FAILED(rv))
             {
-                PRBool res = proc(this /*, PR_TRUE*/);
-                if (res)
-                {
-                    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-                           ("nsComponentManager: + Unloading \"%s\".",
-                            dll->GetFullPath()));
-                    dll->Unload();
-                }
-                else
-                {
-                    // THIS IS THE WORST SITUATION TO BE IN.
-                    // Dll doesn't want to be unloaded. Cannot re-register
-                    // this dll.
-                    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-                           ("nsComponentManager: *** Dll already loaded. "
-                            "Cannot unload either. Hence cannot re-register "
-                            "\"%s\". Skipping...", dll->GetFullPath()));
-                    return NS_ERROR_FAILURE;
-                }
+                // THIS IS THE WORST SITUATION TO BE IN.
+                // Dll doesn't want to be unloaded. Cannot re-register
+                // this dll.
+                PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+                       ("nsComponentManager: *** Dll already loaded. "
+                        "Cannot unload either. Hence cannot re-register "
+                        "\"%s\". Skipping...", dll->GetNativePath()));
+                return rv;
             }
             else {
                 // dll doesn't have a CanUnload proc. Guess it is
@@ -1644,7 +2148,7 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
                 dll->Unload();
                 PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                        ("nsComponentManager: + Unloading \"%s\". (no CanUnloadProc).",
-                        dll->GetFullPath()));
+                        dll->GetNativePath()));
             }
     			
         } // dll isloaded
@@ -1657,7 +2161,7 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
             // loaded. Whoever taught dp programming...
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                    ("nsComponentManager: Dll still loaded. Cannot re-register "
-                    "\"%s\". Skipping...", dll->GetFullPath()));
+                    "\"%s\". Skipping...", dll->GetNativePath()));
             return NS_ERROR_FAILURE;
         }
     } // dll != NULL
@@ -1667,7 +2171,7 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
         // It is ok to do this even if the creation of nsDll
         // didnt succeed. That way we wont do this again
         // when we encounter the same dll.
-        dll = new nsDll(fullname);
+        dll = new nsDll(persistentDescriptor);
         if (dll == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
         mDllStore->Put(&key, (void *) dll);
@@ -1683,7 +2187,7 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsComponentManager: Autoregistration FAILED for "
-                "\"%s\". Skipping...", dll->GetFullPath()));
+                "\"%s\". Skipping...", dll->GetNativePath()));
         // Mark dll as not xpcom dll along with modified time and size in
         // the registry so that we wont need to load the dll again every
         // session until the dll changes.
@@ -1696,13 +2200,14 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsComponentManager: Autoregistration Passed for "
-                "\"%s\".", dll->GetFullPath()));
+                "\"%s\".", dll->GetNativePath()));
         // Marking dll along with modified time and size in the
         // registry happens at PlatformRegister(). No need to do it
         // here again.
     }
     return ret;
 }
+
 
 /*
  * SelfRegisterDll
@@ -1717,8 +2222,10 @@ nsComponentManagerImpl::SelfRegisterDll(nsDll *dll)
     // Precondition: dll is not loaded already
     PR_ASSERT(dll->IsLoaded() == PR_FALSE);
 
-    nsresult res = NS_ERROR_FAILURE;
-    	
+    nsIServiceManager* serviceMgr = NULL;
+    nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+    if (NS_FAILED(res)) return res;
+
     if (dll->Load() == PR_FALSE)
     {
         // Cannot load. Probably not a dll.
@@ -1727,32 +2234,51 @@ nsComponentManagerImpl::SelfRegisterDll(nsDll *dll)
             PR_GetErrorText(errorMsg);
 
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-               ("nsComponentManager: SelfRegisterDll(%s) Load FAILED with error:%s", dll->GetFullPath(), errorMsg));
+               ("nsComponentManager: SelfRegisterDll(%s) Load FAILED with error:%s", dll->GetNativePath(), errorMsg));
 
 #ifdef PRINT_CRITICAL_ERROR_TO_SCREEN
         printf("**************************************************\n"
                "nsComponentManager: Load(%s) FAILED with error: %s\n"
                "**************************************************\n",
-               dll->GetFullPath(), errorMsg);
+               dll->GetNativePath(), errorMsg);
 #endif
-        return(NS_ERROR_FAILURE);
+        return NS_ERROR_FAILURE;
     }
-    	
-    nsRegisterProc regproc = (nsRegisterProc)dll->FindSymbol("NSRegisterSelf");
 
-    if (regproc == NULL)
+    PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
+      ("nsComponentManager: + Loaded \"%s\".", dll->GetNativePath()));
+
+    // Tell the module to self register
+    nsCOMPtr<nsIModule> mobj;
+    res = dll->GetModule(gComponentManager, getter_AddRefs(mobj));
+    if (NS_SUCCEEDED(res))
     {
-        res = NS_ERROR_NO_INTERFACE;
+        PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
+               ("nsComponentManager: %s using nsIModule to register self.", dll->GetNativePath()));
+        nsCOMPtr<nsIFileSpec> fs;
+        res = dll->GetDllSpec(getter_AddRefs(fs));
+        if (NS_SUCCEEDED(res))
+            res = mobj->RegisterSelf(gComponentManager, fs);
+        else
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
+                   ("nsComponentManager: dll->GetDllSpec() on %s FAILED.", dll->GetNativePath()));
+        }
+        mobj = NULL;	// Force a release of the Module object before unload()
     }
+#ifndef OBSOLETE_MODULE_LOADING
     else
     {
-        // Call the NSRegisterSelfProc to enable dll registration
-        nsIServiceManager* serviceMgr = NULL;
-        res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
-        if (NS_SUCCEEDED(res)) {
-            res = regproc(serviceMgr, dll->GetFullPath());
+        res = NS_ERROR_NO_INTERFACE;
+        nsRegisterProc regproc = (nsRegisterProc)dll->FindSymbol("NSRegisterSelf");
+        if (regproc)
+        {
+            // Call the NSRegisterSelfProc to enable dll registration
+            res = regproc(serviceMgr, dll->GetPersistentDescriptorString());
         }
     }
+#endif /* OBSOLETE_MODULE_LOADING */
+
     dll->Unload();
     return res;
 }
@@ -1762,32 +2288,160 @@ nsComponentManagerImpl::SelfUnregisterDll(nsDll *dll)
 {
     // Precondition: dll is not loaded
     PR_ASSERT(dll->IsLoaded() == PR_FALSE);
-    	
+
+    nsIServiceManager* serviceMgr = NULL;
+    nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+    if (NS_FAILED(res)) return res;
+
     if (dll->Load() == PR_FALSE)
     {
         // Cannot load. Probably not a dll.
         return(NS_ERROR_FAILURE);
     }
     	
-    nsUnregisterProc unregproc =
-        (nsUnregisterProc) dll->FindSymbol("NSUnregisterSelf");
-    nsresult res = NS_OK;
-    	
-    if (unregproc == NULL)
+    // Tell the module to self register
+    nsCOMPtr<nsIModule> mobj;
+    res = dll->GetModule(gComponentManager, getter_AddRefs(mobj));
+    if (NS_SUCCEEDED(res))
     {
-        return(NS_ERROR_NO_INTERFACE);
+        PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
+               ("nsComponentManager: %s using nsIModule to unregister self.", dll->GetNativePath()));
+        nsCOMPtr<nsIFileSpec> fs;
+        res = dll->GetDllSpec(getter_AddRefs(fs));
+        if (NS_SUCCEEDED(res))
+            res = mobj->UnregisterSelf(gComponentManager, fs);
+        else
+        {
+            PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
+                   ("nsComponentManager: dll->GetDllSpec() on %s FAILED.", dll->GetNativePath()));
+        }
+        mobj = NULL;	// Force a release of the Module object before unload()
     }
+#ifndef OBSOLETE_MODULE_LOADING
     else
     {
-        // Call the NSUnregisterSelfProc to enable dll de-registration
-        nsIServiceManager* serviceMgr = NULL;
-        res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
-        if (NS_SUCCEEDED(res)) {
-            res = unregproc(serviceMgr, dll->GetFullPath());
+        res = NS_ERROR_NO_INTERFACE;
+        nsUnregisterProc unregproc =
+            (nsUnregisterProc) dll->FindSymbol("NSUnregisterSelf");
+        if (unregproc)
+        {
+            // Call the NSUnregisterSelfProc to enable dll de-registration
+            res = unregproc(serviceMgr, dll->GetPersistentDescriptorString());
         }
     }
+#endif /* OBSOLETE_MODULE_LOADING */
     dll->Unload();
     return res;
+}
+
+nsresult
+nsComponentManagerImpl::IsRegistered(const nsCID &aClass,
+                                     PRBool *aRegistered)
+{
+    if(!aRegistered)
+    {
+        NS_ASSERTION(0, "null ptr");
+        return NS_ERROR_NULL_POINTER;
+    }
+    *aRegistered = (nsnull != GetFactoryEntry(aClass, PR_TRUE));
+    return NS_OK;
+}
+
+static NS_IMETHODIMP
+ConvertFactoryEntryToCID(nsHashKey *key, void *data, void *convert_data,
+                         nsISupports **retval)
+{
+    nsComponentManagerImpl *compMgr = (nsComponentManagerImpl*) convert_data;
+    nsresult rv;
+
+    nsISupportsID* cidHolder;
+
+    if(NS_SUCCEEDED(rv = compMgr->CreateInstance(NS_SUPPORTS_ID_PROGID, nsnull, 
+                                                 NS_GET_IID(nsISupportsID),
+                                                 (void **)&cidHolder)))
+    {
+        nsFactoryEntry *fe = (nsFactoryEntry *) data;
+        cidHolder->SetData(&fe->cid);
+        *retval = cidHolder;
+    }
+    else
+        *retval = nsnull;
+
+    return rv;
+}
+
+static NS_IMETHODIMP
+ConvertProgIDKeyToString(nsHashKey *key, void *data, void *convert_data,
+                         nsISupports **retval)
+{
+    nsComponentManagerImpl *compMgr = (nsComponentManagerImpl*) convert_data;
+    nsresult rv;
+
+    nsISupportsString* strHolder;
+
+    if(NS_SUCCEEDED(rv = compMgr->CreateInstance(NS_SUPPORTS_STRING_PROGID, nsnull, 
+                                                 NS_GET_IID(nsISupportsString),
+                                                 (void **)&strHolder)))
+    {
+        nsStringKey *strKey = (nsStringKey *) key;
+        const nsString& str = strKey->GetString();
+        char* yetAnotherCopyOfTheString = str.ToNewCString();
+        if(yetAnotherCopyOfTheString)
+        {
+            strHolder->SetData(yetAnotherCopyOfTheString);
+            delete [] yetAnotherCopyOfTheString;
+        }
+        *retval = strHolder;
+    }
+    else
+        *retval = nsnull;
+
+    return rv;
+}
+
+nsresult
+nsComponentManagerImpl::EnumerateCLSIDs(nsIEnumerator** aEmumerator)
+{
+    if(!aEmumerator)
+    {
+        NS_ASSERTION(0, "null ptr");
+        return NS_ERROR_NULL_POINTER;
+    }
+    *aEmumerator = nsnull;
+
+    nsresult rv;
+    if(!mPrePopulationDone)
+    {
+        rv = PlatformPrePopulateRegistry();
+        if(NS_FAILED(rv))
+            return rv;
+    }
+
+    return NS_NewHashtableEnumerator(mFactories, ConvertFactoryEntryToCID,
+                                     this, aEmumerator);
+}
+
+nsresult
+nsComponentManagerImpl::EnumerateProgIDs(nsIEnumerator** aEmumerator)
+{
+    if(!aEmumerator)
+    {
+        NS_ASSERTION(0, "null ptr");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aEmumerator = nsnull;
+
+    nsresult rv;
+    if(!mPrePopulationDone)
+    {
+        rv = PlatformPrePopulateRegistry();
+        if(NS_FAILED(rv))
+            return rv;
+    }
+
+    return NS_NewHashtableEnumerator(mProgIDs, ConvertProgIDKeyToString,
+                                     this, aEmumerator);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -30,14 +30,11 @@ class nsIMAPBodyShell;
 #define NS_IIMAPHOSTSESSIONLIST_IID							\
 { 0x2a8e21fe, 0xe3c4, 0x11d2, {0xa5, 0x04, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7 } }
 
-//479ce8fc-e725-11d2-a505-0060b0fc04b7
-#define NS_IIMAPHOSTSESSIONLIST_CID							\
-{ 0x479ce8fc, 0xe725, 0x11d2, {0xa5, 0x05, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7 } }
-
 // this is an interface to a linked list of host info's    
 class nsIImapHostSessionList : public nsISupports
 {
 public:
+   static const nsIID& GetIID() { static nsIID iid = NS_IIMAPHOSTSESSIONLIST_IID; return iid; }
 
 	// Host List
 	 NS_IMETHOD	AddHostToList(const char *hostname, const char *userName) = 0;
@@ -98,6 +95,7 @@ public:
 
 	// Namespaces
 	 NS_IMETHOD		GetNamespaceForMailboxForHost(const char *hostname, const char *userName, const char *mailbox_name, nsIMAPNamespace * & result) = 0;
+	 NS_IMETHOD		SetNamespaceFromPrefForHost(const char *hostName, const char *userName, const char *namespacePref, EIMAPNamespaceType type) = 0;
 	 NS_IMETHOD		AddNewNamespaceForHost(const char *hostname, const char *userName, nsIMAPNamespace *ns) = 0;
 	 NS_IMETHOD		ClearServerAdvertisedNamespacesForHost(const char *hostName, const char *userName) = 0;
 	 NS_IMETHOD		ClearPrefsNamespacesForHost(const char *hostName, const char *userName) = 0;

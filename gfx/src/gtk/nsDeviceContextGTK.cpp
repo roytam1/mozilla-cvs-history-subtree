@@ -26,7 +26,8 @@
 #include "nsDeviceContextGTK.h"
 #include "nsGfxCIID.h"
 
-#include "../ps/nsDeviceContextPS.h"
+#include "nsGfxPSCID.h"
+#include "nsIDeviceContextPS.h"
 
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
@@ -50,6 +51,11 @@ nsDeviceContextGTK::nsDeviceContextGTK()
   mPaletteInfo.numReserved = 0;
   mPaletteInfo.palette = NULL;
   mNumCells = 0;
+
+  mWidthFloat = 0.0f;
+  mHeightFloat = 0.0f;
+  mWidth = -1;
+  mHeight = -1;
 }
 
 nsDeviceContextGTK::~nsDeviceContextGTK()
@@ -133,6 +139,9 @@ NS_IMETHODIMP nsDeviceContextGTK::Init(nsNativeWidget aNativeWidget)
   gtk_widget_destroy(sb);
   gtk_widget_unref(sb);
 
+  mWidthFloat = (float) gdk_screen_width();
+  mHeightFloat = (float) gdk_screen_height();
+
 #ifdef DEBUG
   static PRBool once = PR_TRUE;
   if (once) {
@@ -140,6 +149,8 @@ NS_IMETHODIMP nsDeviceContextGTK::Init(nsNativeWidget aNativeWidget)
     once = PR_FALSE;
   }
 #endif
+
+  DeviceContextImpl::CommonInit();
 
   return NS_OK;
 }
@@ -149,6 +160,9 @@ NS_IMETHODIMP nsDeviceContextGTK::CreateRenderingContext(nsIRenderingContext *&a
   nsIRenderingContext *pContext;
   nsresult             rv;
   nsDrawingSurfaceGTK  *surf;
+  GtkWidget *w;
+
+  w = (GtkWidget*)mWidget;
 
   // to call init for this, we need to have a valid nsDrawingSurfaceGTK created
   pContext = new nsRenderingContextGTK();
@@ -160,14 +174,24 @@ NS_IMETHODIMP nsDeviceContextGTK::CreateRenderingContext(nsIRenderingContext *&a
     // create the nsDrawingSurfaceGTK
     surf = new nsDrawingSurfaceGTK();
 
-    if (nsnull != surf)
+    if (surf && w)
       {
+        GdkDrawable *gwin = nsnull;
         GdkDrawable *win = nsnull;
         // FIXME
-        if (GTK_IS_LAYOUT((GtkWidget*)mWidget))
-          win = (GdkDrawable*)gdk_window_ref(GTK_LAYOUT((GtkWidget*)mWidget)->bin_window);
+        if (GTK_IS_LAYOUT(w))
+          gwin = (GdkDrawable*)GTK_LAYOUT(w)->bin_window;
         else
-          win = (GdkDrawable*)gdk_window_ref(((GtkWidget*)mWidget)->window);
+          gwin = (GdkDrawable*)(w)->window;
+
+        // window might not be realized... ugh
+        if (gwin)
+          gdk_window_ref(gwin);
+        else
+          win = gdk_pixmap_new(nsnull,
+                               w->allocation.width,
+                               w->allocation.height,
+                               gdk_rgb_get_visual()->depth);
 
         GdkGC *gc = gdk_gc_new(win);
 
@@ -354,20 +378,44 @@ NS_IMETHODIMP nsDeviceContextGTK::CheckFontExistence(const nsString& aFontName)
 
 NS_IMETHODIMP nsDeviceContextGTK::GetDeviceSurfaceDimensions(PRInt32 &aWidth, PRInt32 &aHeight)
 {
-  aWidth = 1;
-  aHeight = 1;
+  if (mWidth == -1)
+    mWidth = NSToIntRound(mWidthFloat * mDevUnitsToAppUnits);
 
-  return NS_ERROR_FAILURE;
+  if (mHeight == -1)
+    mHeight = NSToIntRound(mHeightFloat * mDevUnitsToAppUnits);
+
+  aWidth = mWidth;
+  aHeight = mHeight;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsDeviceContextGTK::GetDeviceContextFor(nsIDeviceContextSpec *aDevice,
                                                       nsIDeviceContext *&aContext)
 {
+  static NS_DEFINE_CID(kCDeviceContextPS, NS_DEVICECONTEXTPS_CID);
+  
   // Create a Postscript device context 
-  aContext = new nsDeviceContextPS();
-  ((nsDeviceContextPS *)aContext)->SetSpec(aDevice);
-  NS_ADDREF(aDevice);
-  return((nsDeviceContextPS *) aContext)->Init((nsIDeviceContext*)aContext, (nsIDeviceContext*)this);
+  nsresult rv;
+  nsIDeviceContextPS *dcps;
+  
+  rv = nsComponentManager::CreateInstance(kCDeviceContextPS,
+                                          nsnull,
+                                          nsIDeviceContextPS::GetIID(),
+                                          (void **)&dcps);
+
+  NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create PS Device context");
+  
+  dcps->SetSpec(aDevice);
+  dcps->InitDeviceContextPS((nsIDeviceContext*)aContext,
+                            (nsIDeviceContext*)this);
+
+  rv = dcps->QueryInterface(nsIDeviceContext::GetIID(),
+                            (void **)&aContext);
+
+  NS_RELEASE(dcps);
+  
+  return rv;
 }
 
 NS_IMETHODIMP nsDeviceContextGTK::BeginDocument(void)

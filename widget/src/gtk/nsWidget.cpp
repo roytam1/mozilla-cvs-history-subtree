@@ -19,7 +19,6 @@
 #include "nsWidget.h"
 
 #include "nsGtkEventHandler.h"
-#include "nsGtkUtils.h"
 #include "nsIAppShell.h"
 #include "nsIComponentManager.h"
 #include "nsIDeviceContext.h"
@@ -27,26 +26,9 @@
 #include "nsILookAndFeel.h"
 #include "nsToolkit.h"
 #include "nsWidgetsCID.h"
+
 #include <gdk/gdkx.h>
 
-#undef DEBUG_pavlov
-
-#define NSRECT_TO_GDKRECT(ns,gdk) \
-  PR_BEGIN_MACRO \
-  gdk.x = ns.x; \
-  gdk.y = ns.y; \
-  gdk.width = ns.width; \
-  gdk.height = ns.height; \
-  PR_END_MACRO
-
-// BGR, not RGB
-#define NSCOLOR_TO_GDKCOLOR(g,n) \
-  g.red=NS_GET_B(n); \
-  g.green=NS_GET_G(n); \
-  g.blue=NS_GET_R(n);
-
-// Taken from nsRenderingContextGTK.cpp
-#define NS_TO_GDK_RGB(ns) (ns & 0xff) << 16 | (ns & 0xff00) | ((ns >> 16) & 0xff)
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 nsILookAndFeel *nsWidget::sLookAndFeel = nsnull;
 PRUint32 nsWidget::sWidgetCount = 0;
@@ -89,6 +71,7 @@ nsWidget::nsWidget()
   mBounds.width = 0;
   mBounds.height = 0;
   mIsDestroying = PR_FALSE;
+  mIsDragDest = PR_FALSE;
   mOnDestroyCalled = PR_FALSE;
   mIsToplevel = PR_FALSE;
   mUpdateArea.SetRect(0, 0, 0, 0);
@@ -110,17 +93,64 @@ nsWidget::~nsWidget()
   }
 }
 
+NS_METHOD nsWidget::GetAbsoluteBounds(nsRect &aRect)
+{
+  gint x;
+  gint y;
+
+#ifdef DEBUG_pavlov
+  g_print("nsWidget::GetAbsoluteBounds\n");
+#endif
+  if (mWidget)
+  {
+    if (mWidget->window)
+    {
+      gdk_window_get_origin(mWidget->window, &x, &y);
+      aRect.x = x;
+      aRect.y = y;
+#ifdef DEBUG_pavlov
+      g_print("  x = %i, y = %i\n", x, y);
+#endif
+    }
+    else
+      return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
+}
+
 NS_METHOD nsWidget::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
 {
-    g_print("nsWidget::WidgetToScreen\n");
-    // FIXME gdk_window_get_origin()   might do what we want.... ???
-    NS_NOTYETIMPLEMENTED("nsWidget::WidgetToScreen");
-    return NS_OK;
+  gint x;
+  gint y;
+
+#ifdef DEBUG_pavlov
+  g_print("nsWidget::WidgetToScreen\n");
+#endif
+
+  if (mWidget)
+  {
+    if (mWidget->window)
+    {
+      gdk_window_get_origin(mWidget->window, &x, &y);
+      aNewRect.x = x + aOldRect.x;
+      aNewRect.y = y + aOldRect.y;
+#ifdef DEBUG_pavlov
+      g_print("  x = %i, y = %i\n", x, y);
+#endif
+    }
+    else
+      return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
 }
 
 NS_METHOD nsWidget::ScreenToWidget(const nsRect& aOldRect, nsRect& aNewRect)
 {
+#ifdef DEBUG_pavlov
     g_print("nsWidget::ScreenToWidget\n");
+#endif
     NS_NOTYETIMPLEMENTED("nsWidget::ScreenToWidget");
     return NS_OK;
 }
@@ -261,6 +291,22 @@ NS_METHOD nsWidget::SetModal(void)
 	return NS_OK;
 }
 
+//-------------------------------------------------------------------------
+//
+// grab mouse events for this widget
+//
+//-------------------------------------------------------------------------
+NS_METHOD nsWidget::CaptureMouse(PRBool aCapture)
+{
+  if (aCapture)
+    gtk_grab_add(mWidget);
+  else
+    gtk_grab_remove(mWidget);
+
+  return NS_OK;
+}
+
+
 NS_METHOD nsWidget::IsVisible(PRBool &aState)
 {
   if (mWidget) {
@@ -278,15 +324,53 @@ NS_METHOD nsWidget::IsVisible(PRBool &aState)
 //
 //-------------------------------------------------------------------------
 
-NS_METHOD nsWidget::Move(PRUint32 aX, PRUint32 aY)
+NS_METHOD nsWidget::Move(PRInt32 aX, PRInt32 aY)
 {
-  if (mWidget) {
-    ::gtk_layout_move(GTK_LAYOUT(mWidget->parent), mWidget, aX, aY);
+  if (mWidget) 
+  {
+    GtkWidget *    layout = mWidget->parent;
+
+    GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
+    GtkAdjustment* va = gtk_layout_get_vadjustment(GTK_LAYOUT(layout));
+
+    // This correction is needed because the view manager code in
+    // gecko assumes that the implementation of scrolling happens
+    // only in one window (as is the case in win32 and mac).  The
+    // GtkLayout widget uses 2 windows to do arbitrarily long scrolling
+    // (beyond the 16 bit dimension hard limit of X windows)
+    //
+    // The first window is the base.
+    // 
+    // The second window is a clip window (called the bin_window).
+    //
+    // The position of the bin_window is controlled by 2 GtkAdjustment
+    // data structures.
+    // 
+    // What happens is that the view manager computes offsets for 
+    // widgets from the viewport's origin.  
+    //
+    // The GtkLayout widget scrolls the bin_window (which is the true
+    // parent window of the widgets we are trying to Move) from
+    // its own origin.
+    // 
+    // So, the widgets end up being positioned off by the amount of
+    // offset between the viewport's origin, and the position of
+    // the GtkLayout's clip window and hence the correction...
+    //
+    // Simple...
+    PRInt32        x_correction = (PRInt32) ha->value;
+    PRInt32        y_correction = (PRInt32) va->value;
+    
+    ::gtk_layout_move(GTK_LAYOUT(layout), 
+                      mWidget, 
+                      aX + x_correction, 
+                      aY + y_correction);
   }
+
   return NS_OK;
 }
 
-NS_METHOD nsWidget::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
+NS_METHOD nsWidget::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
 #if 0
   printf("nsWidget::Resize %s (%p) to %d %d\n",
@@ -307,8 +391,8 @@ NS_METHOD nsWidget::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
   return NS_OK;
 }
 
-NS_METHOD nsWidget::Resize(PRUint32 aX, PRUint32 aY, PRUint32 aWidth,
-                           PRUint32 aHeight, PRBool aRepaint)
+NS_METHOD nsWidget::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+                           PRInt32 aHeight, PRBool aRepaint)
 {
   Resize(aWidth,aHeight,aRepaint);
   Move(aX,aY);
@@ -434,22 +518,8 @@ NS_METHOD nsWidget::SetFont(const nsFont &aFont)
             return NS_ERROR_FAILURE;
         }
 
-        if (mWidget) {
-            gtk_widget_ensure_style(mWidget);
-
-            GtkStyle *style = gtk_style_copy(mWidget->style);
-            // gtk_style_copy ups the ref count of the font
-            gdk_font_unref (style->font);
-
-            GdkFont *font = (GdkFont *)fontHandle;
-            style->font = font;
-            gdk_font_ref(style->font);
-
-            gtk_widget_set_style(mWidget, style);
-
-            gtk_style_unref(style);
-        }
-
+        if (mWidget) 
+          SetFontNative((GdkFont *)fontHandle);
     }
     NS_RELEASE(mFontMetrics);
     return NS_OK;
@@ -460,32 +530,36 @@ NS_METHOD nsWidget::SetFont(const nsFont &aFont)
 // Set the background color
 //
 //-------------------------------------------------------------------------
+
 NS_METHOD nsWidget::SetBackgroundColor(const nscolor &aColor)
 {
   nsBaseWidget::SetBackgroundColor(aColor);
 
-  // There are some "issues" with the conversion of rgb values
-#if 0
-  if (nsnull != mWidget)
-  {
-    GdkColor gdk_color;
+  if (nsnull != mWidget) {
+    GdkColor color_nor, color_bri, color_dark;
+
+    NSCOLOR_TO_GDKCOLOR(aColor, color_nor);
+    NSCOLOR_TO_GDKCOLOR(NS_BrightenColor(aColor), color_bri);
+    NSCOLOR_TO_GDKCOLOR(NS_DarkenColor(aColor), color_dark);
+
+    //    gdk_color.red = 256 * NS_GET_R(aColor);
+    // gdk_color.green = 256 * NS_GET_G(aColor);
+    // gdk_color.blue = 256 * NS_GET_B(aColor);
+    // gdk_color.pixel ?
+
+    // calls virtual native set color
+    SetBackgroundColorNative(&color_nor, &color_bri, &color_dark);
 
 #if 0
-//     gdk_color.red = NS_GET_R(NS_TO_GDK_RGB(aColor));
-//     gdk_color.green = NS_GET_G(NS_TO_GDK_RGB(aColor));
-//     gdk_color.blue = NS_GET_B(NS_TO_GDK_RGB(aColor));
-#else
-//     gdk_color.pixel = gdk_rgb_xpixel_from_rgb(aColor);
+    GtkStyle *style = gtk_style_copy(mWidget->style);
+  
+    style->bg[GTK_STATE_NORMAL]=gdk_color;
+    // other states too? (GTK_STATE_ACTIVE, GTK_STATE_PRELIGHT,
+    //               GTK_STATE_SELECTED, GTK_STATE_INSENSITIVE)
+    gtk_widget_set_style(mWidget, style);
+    gtk_style_unref(style);
 #endif
-
-    GtkRcFlags rc_flags = GTK_RC_BG | GTK_RC_BASE;
-
-    nsGtkUtils::gtk_widget_set_color(mWidget,
-                                     rc_flags,
-                                     GTK_STATE_NORMAL,
-                                     &gdk_color);
   }
-#endif
 
   return NS_OK;
 }
@@ -582,9 +656,6 @@ NS_METHOD nsWidget::Invalidate(PRBool aIsSynchronous)
     mUpdateArea.SetRect(0, 0, mBounds.width, mBounds.height);
   }
 
-#ifdef DEBUG_pavlov
-  g_print("nsWidget::Invalidate(this=%p, %i)\n", this, aIsSynchronous);
-#endif
   return NS_OK;
 }
 
@@ -614,11 +685,6 @@ NS_METHOD nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
                                    aRect.width, aRect.height);
   }
 
-#ifdef DEBUG_pavlov
-  g_print("nsWidget::Invalidate(this=%p, {x=%i,y=%i,w=%i,h=%i}, %i)\n",
-          this, aRect.x, aRect.y, aRect.width, aRect.height, aIsSynchronous);
-#endif
-
   return NS_OK;
 }
 
@@ -629,14 +695,7 @@ NS_METHOD nsWidget::Update(void)
 
   if (mUpdateArea.width && mUpdateArea.height) {
     if (!mIsDestroying) {
-      GdkRectangle nRect;
-      NSRECT_TO_GDKRECT(mUpdateArea,nRect);
-#ifdef DEBUG_pavlov
-      g_print("nsWidget::Update(this=%p): update {%i,%i,%i,%i}\n",
-              this, mUpdateArea.x, mUpdateArea.y,
-              mUpdateArea.width, mUpdateArea.height);
-#endif
-      ::gtk_widget_draw(mWidget, &nRect);
+      Invalidate(mUpdateArea, PR_TRUE);
 
       mUpdateArea.SetRect(0, 0, 0, 0);
       return NS_OK;
@@ -646,9 +705,7 @@ NS_METHOD nsWidget::Update(void)
     }
   }
   else {
-#ifdef DEBUG_pavlov
-  g_print("nsWidget::Update(this=%p): avoided update of empty area\n", this);
-#endif
+    //  g_print("nsWidget::Update(this=%p): avoided update of empty area\n", this);
   }
   return NS_OK;
 }
@@ -674,7 +731,8 @@ void *nsWidget::GetNativeData(PRUint32 aDataType)
       case NS_NATIVE_DISPLAY:
         return (void *)GDK_DISPLAY();
 
-      case NS_NATIVE_WIDGET:
+    case NS_NATIVE_WIDGET:
+    case NS_NATIVE_PLUGIN_PORT:
         if (mWidget) {
 #ifdef NS_GTK_REF
             gtk_widget_ref(mWidget);
@@ -775,13 +833,6 @@ NS_METHOD nsWidget::ShowMenuBar(PRBool aShow)
   return NS_OK;
 }
 
-NS_METHOD nsWidget::IsMenuBarVisible(PRBool *aVisible)
-{
-  g_print("bleh\n");
-  NS_NOTYETIMPLEMENTED("nsWidget::IsMenuBarvisible");
-  return NS_OK;
-}
-
 nsresult nsWidget::CreateWidget(nsIWidget *aParent,
                                 const nsRect &aRect,
                                 EVENT_CALLBACK aHandleEventFunction,
@@ -808,7 +859,11 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   gtk_widget_push_colormap(gdk_rgb_get_cmap());
   gtk_widget_push_visual(gdk_rgb_get_visual());
 
-  BaseCreate(aParent, aRect, aHandleEventFunction, aContext,
+  nsIWidget *baseParent = aInitData &&
+               (aInitData->mWindowType == eWindowType_dialog ||
+                aInitData->mWindowType == eWindowType_toplevel) ?
+                nsnull : aParent;
+  BaseCreate(baseParent, aRect, aHandleEventFunction, aContext,
              aAppShell, aToolkit, aInitData);
   mParent = aParent;
   NS_IF_ADDREF(mParent);
@@ -828,12 +883,48 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   CreateNative (parentWidget);
 
   Resize(aRect.width, aRect.height, PR_FALSE);
-  /* place the widget in its parent */
-  if (parentWidget)
-    gtk_layout_put(GTK_LAYOUT(parentWidget), mWidget, aRect.x, aRect.y);
+
+  /* place the widget in its parent if it isn't a toplevel window*/
+  if (mIsToplevel)
+  {
+    if (parentWidget)
+    {
+      // set transient properties
+    }
+  }
+  else
+  {
+    if (parentWidget)
+    {
+      gtk_layout_put(GTK_LAYOUT(parentWidget), mWidget, aRect.x, aRect.y);
+    }
+  }
 
   gtk_widget_pop_colormap();
   gtk_widget_pop_visual();
+
+
+  InstallButtonPressSignal(mWidget);
+  InstallButtonReleaseSignal(mWidget);
+
+  InstallMotionNotifySignal(mWidget);
+
+  InstallEnterNotifySignal(mWidget);
+  InstallLeaveNotifySignal(mWidget);
+
+
+  // Drag & Drop events.
+  InstallDragBeginSignal(mWidget);
+  InstallDragLeaveSignal(mWidget);
+  InstallDragMotionSignal(mWidget);
+  InstallDragDropSignal(mWidget);
+
+
+  // Focus
+  InstallFocusInSignal(mWidget);
+  InstallFocusOutSignal(mWidget);
+
+
 
   DispatchStandardEvent(NS_CREATE);
   InitCallbacks();
@@ -975,6 +1066,100 @@ PRBool nsWidget::DispatchStandardEvent(PRUint32 aMsg)
   return result;
 }
 
+PRBool nsWidget::DispatchFocus(nsGUIEvent &aEvent)
+{
+  if (mEventCallback) {
+    return DispatchWindowEvent(&aEvent);
+  }
+  return PR_FALSE;
+}
+
+//////////////////////////////////////////////////////////////////
+//
+// OnSomething handlers
+//
+//////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////
+//
+// Turning TRACE_EVENTS on will cause printfs for all
+// mouse events that are dispatched.
+//
+// These are extra noisy, and thus have their own switch:
+//
+// NS_MOUSE_MOVE
+// NS_PAINT
+// NS_MOUSE_ENTER, NS_MOUSE_EXIT
+//
+//////////////////////////////////////////////////////////////////
+
+#undef TRACE_EVENTS
+#undef TRACE_EVENTS_MOTION
+#undef TRACE_EVENTS_PAINT
+#undef TRACE_EVENTS_CROSSING
+
+#if 0
+#ifdef DEBUG_pavlov
+#define EVENT_SPAM
+#endif
+#endif
+
+#if defined(EVENT_SPAM)
+#define TRACE_EVENTS 1
+#define TRACE_EVENTS_MOTION 1
+#define TRACE_EVENTS_PAINT 1
+#define TRACE_EVENTS_CROSSING 1
+#endif
+
+#ifdef DEBUG
+void
+nsWidget::DebugPrintEvent(nsGUIEvent &   aEvent,
+                          GtkWidget *    aGtkWidget)
+{
+#ifndef TRACE_EVENTS_MOTION
+  if (aEvent.message == NS_MOUSE_MOVE)
+  {
+    return;
+  }
+#endif
+
+#ifndef TRACE_EVENTS_PAINT
+  if (aEvent.message == NS_PAINT)
+  {
+    return;
+  }
+#endif
+
+#ifndef TRACE_EVENTS_CROSSING
+  if (aEvent.message == NS_MOUSE_ENTER || aEvent.message == NS_MOUSE_EXIT)
+  {
+    return;
+  }
+#endif
+
+  static int sPrintCount=0;
+
+  printf("%4d %-26s(this=%-8p , name=%-12s",
+         sPrintCount++,
+         (const char *) nsAutoCString(GuiEventToString(aEvent)),
+         this,
+         aGtkWidget ? gtk_widget_get_name(aGtkWidget) : "null");
+         
+  Window win = 0;
+  
+  if (aGtkWidget && GTK_WIDGET_REALIZED(aGtkWidget))
+  {
+    win = GDK_WINDOW_XWINDOW(aGtkWidget->window);
+  }
+  
+  printf(" , xid=%-8p",(void *) win);
+  
+  printf(" , x=%-3d, y=%d)",aEvent.point.x,aEvent.point.y);
+
+  printf("\n");
+}
+#endif // DEBUG
+//////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------
 //
@@ -986,6 +1171,10 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *event,
                                       nsEventStatus &aStatus)
 {
   NS_ADDREF(event->widget);
+
+#ifdef TRACE_EVENTS
+  DebugPrintEvent(*event,mWidget);
+#endif
 
   if (nsnull != mMenuListener) {
     if (NS_MENU_EVENT == event->eventStructType)
@@ -1006,6 +1195,7 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *event,
   return NS_OK;
 }
 
+
 //-------------------------------------------------------------------------
 //
 // Deal with all sort of mouse event
@@ -1017,7 +1207,6 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
   if (nsnull == mEventCallback && nsnull == mMouseListener) {
     return result;
   }
-
 
   // call the event callback
   if (nsnull != mEventCallback) {
@@ -1055,6 +1244,14 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
         result = ConvertStatus(mMouseListener->MouseReleased(aEvent));
         result = ConvertStatus(mMouseListener->MouseClicked(aEvent));
         break;
+
+    case NS_DRAGDROP_DROP:
+      printf("nsWidget::DispatchMouseEvent, NS_DRAGDROP_DROP\n");
+      break;
+
+    default:
+      break;
+
     } // switch
   }
   return result;
@@ -1069,7 +1266,7 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 //////////////////////////////////////////////////////////////////
 void
 nsWidget::AddToEventMask(GtkWidget * aWidget,
-						 gint        aEventMask)
+                         gint        aEventMask)
 {
   NS_ASSERTION( nsnull != aWidget, "widget is null");
   NS_ASSERTION( 0 != aEventMask, "mask is 0");
@@ -1086,6 +1283,47 @@ nsWidget::InstallMotionNotifySignal(GtkWidget * aWidget)
 				"motion_notify_event",
 				GTK_SIGNAL_FUNC(nsWidget::MotionNotifySignal));
 }
+
+void 
+nsWidget::InstallDragLeaveSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+                "drag_leave",
+                GTK_SIGNAL_FUNC(nsWidget::DragLeaveSignal));
+}
+
+void 
+nsWidget::InstallDragMotionSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+                "drag_motion",
+                GTK_SIGNAL_FUNC(nsWidget::DragMotionSignal));
+}
+
+void 
+nsWidget::InstallDragBeginSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+                "drag_begin",
+                GTK_SIGNAL_FUNC(nsWidget::DragBeginSignal));
+}
+
+void 
+nsWidget::InstallDragDropSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+                "drag_drop",
+                GTK_SIGNAL_FUNC(nsWidget::DragDropSignal));
+}
+
 //////////////////////////////////////////////////////////////////
 void 
 nsWidget::InstallEnterNotifySignal(GtkWidget * aWidget)
@@ -1128,6 +1366,26 @@ nsWidget::InstallButtonReleaseSignal(GtkWidget * aWidget)
 }
 //////////////////////////////////////////////////////////////////
 void 
+nsWidget::InstallFocusInSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+				"focus_in_event",
+				GTK_SIGNAL_FUNC(nsWidget::FocusInSignal));
+}
+//////////////////////////////////////////////////////////////////
+void 
+nsWidget::InstallFocusOutSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+				"focus_out_event",
+				GTK_SIGNAL_FUNC(nsWidget::FocusOutSignal));
+}
+//////////////////////////////////////////////////////////////////
+void 
 nsWidget::InstallRealizeSignal(GtkWidget * aWidget)
 {
   NS_ASSERTION( nsnull != aWidget, "widget is null");
@@ -1139,107 +1397,6 @@ nsWidget::InstallRealizeSignal(GtkWidget * aWidget)
 //////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////
-//
-// OnSomething handlers
-//
-//////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////
-//
-// Turning TRACE_MOUSE_EVENTS on will cause printfs for all
-// mouse events that are dispatched.
-//
-//////////////////////////////////////////////////////////////////
-
-#undef TRACE_MOUSE_EVENTS
-
-#ifdef DEBUG
-void
-nsWidget::DebugPrintMouseEvent(nsMouseEvent & aEvent,
-                               char *         sMessage,
-                               GtkWidget *    aGtkWidget)
-{
-  char * eventName = nsnull;
-
-  switch(aEvent.message)
-  {
-  case NS_MOUSE_MOVE: 
-    eventName = "NS_MOUSE_MOVE"; 
-    break;
-
-  case NS_MOUSE_LEFT_BUTTON_UP: 
-    eventName = "NS_MOUSE_LEFT_BUTTON_UP"; 
-    break;
-
-  case NS_MOUSE_LEFT_BUTTON_DOWN: 
-    eventName = "NS_MOUSE_LEFT_BUTTON_DOWN"; 
-    break;
-
-  case NS_MOUSE_MIDDLE_BUTTON_UP: 
-    eventName = "NS_MOUSE_MIDDLE_BUTTON_UP"; 
-    break;
-
-  case NS_MOUSE_MIDDLE_BUTTON_DOWN: 
-    eventName = "NS_MOUSE_MIDDLE_BUTTON_DOWN"; 
-    break;
-
-  case NS_MOUSE_RIGHT_BUTTON_UP: 
-    eventName = "NS_MOUSE_RIGHT_BUTTON_UP"; 
-    break;
-
-  case NS_MOUSE_RIGHT_BUTTON_DOWN: 
-    eventName = "NS_MOUSE_RIGHT_BUTTON_DOWN"; 
-    break;
-
-  case NS_MOUSE_ENTER: 
-    eventName = "NS_MOUSE_ENTER"; 
-    break;
-
-  case NS_MOUSE_EXIT: 
-    eventName = "NS_MOUSE_EXIT"; 
-    break;
-
-  case NS_MOUSE_LEFT_DOUBLECLICK: 
-    eventName = "NS_MOUSE_LEFT_DOUBLECLICK"; 
-    break;
-
-  case NS_MOUSE_MIDDLE_DOUBLECLICK: 
-    eventName = "NS_MOUSE_MIDDLE_DOUBLECLICK"; 
-    break;
-
-  case NS_MOUSE_RIGHT_DOUBLECLICK: 
-    eventName = "NS_MOUSE_RIGHT_DOUBLECLICK"; 
-    break;
-
-  case NS_MOUSE_LEFT_CLICK: 
-    eventName = "NS_MOUSE_LEFT_CLICK"; 
-    break;
-
-  case NS_MOUSE_MIDDLE_CLICK: 
-    eventName = "NS_MOUSE_MIDDLE_CLICK"; 
-    break;
-
-  case NS_MOUSE_RIGHT_CLICK: 
-    eventName = "NS_MOUSE_RIGHT_CLICK"; 
-    break;
-
-  default: 
-    eventName = "UNKNOWN"; break;
-  }
-
-  static int sPrintCount=0;
-
-  printf("%4d %s(this=%p,name=%s,event=%s,x=%d,y=%d)\n",
-         sPrintCount++,
-         sMessage,
-         this,
-         gtk_widget_get_name(aGtkWidget),
-         eventName,
-         aEvent.point.x,
-         aEvent.point.y);
-}
-#endif // DEBUG
-//////////////////////////////////////////////////////////////////
 /* virtual */ void 
 nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
 {
@@ -1250,6 +1407,10 @@ nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
 
   // If there is a button motion target, use that instead of the
   // current widget
+
+  // XXX pav
+  // i'm confused as to wtf this sButtonMoetionTarget thing is for.
+  // so i'm not going to use it.
 
   // XXX ramiro
   // 
@@ -1264,6 +1425,22 @@ nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
   // the GtkWidget corresponding to the sButtonMotionTarget and
   // marking if nsnull in there.
   //
+  gint x, y;
+
+  if (aGdkMotionEvent)
+  {
+    x = (gint) aGdkMotionEvent->x;
+    y = (gint) aGdkMotionEvent->y;
+ 
+    gdk_window_get_pointer(aGdkMotionEvent->window, &x, &y, nsnull);
+
+    event.point.x = nscoord(x);
+    event.point.y = nscoord(y);
+
+    event.widget = this;
+  }
+
+#if 0
   if (nsnull != sButtonMotionTarget)
   {
     gint diffX;
@@ -1298,10 +1475,108 @@ nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
   {
     event.time = aGdkMotionEvent->time;
   }
-  
-#ifdef TRACE_MOUSE_EVENTS
-  DebugPrintMouseEvent(event,"Motion",mWidget);
 #endif
+
+  AddRef();
+
+  DispatchMouseEvent(event);
+
+  Release();
+}
+
+/* virtual */ void 
+nsWidget::OnDragMotionSignal(GdkDragContext *aGdkDragContext,
+                             gint            x,
+                             gint            y,
+                             guint           time)
+{
+  if (!mIsDragDest)
+  {
+    // this will happen on the first motion event, so we will generate an ENTER event
+    OnDragEnterSignal(aGdkDragContext, x, y, time);
+  }
+
+  nsMouseEvent event;
+
+  event.message = NS_DRAGDROP_OVER;
+  event.eventStructType = NS_DRAGDROP_EVENT;
+
+  event.widget = this;
+
+  event.point.x = x;
+  event.point.y = y;
+
+  AddRef();
+
+  DispatchMouseEvent(event);
+
+  Release();
+}
+
+/* not a real signal.. called from OnDragMotionSignal */
+/* virtual */ void 
+nsWidget::OnDragEnterSignal(GdkDragContext *aGdkDragContext,
+                             gint            x,
+                             gint            y,
+                             guint           time)
+{
+  // we are a drag dest.. cool huh?
+  mIsDragDest = PR_TRUE;
+
+  nsMouseEvent event;
+
+  event.message = NS_DRAGDROP_ENTER;
+  event.eventStructType = NS_DRAGDROP_EVENT;
+
+  event.widget = this;
+
+  event.point.x = x;
+  event.point.y = y;
+
+  AddRef();
+
+  DispatchMouseEvent(event);
+
+  Release();
+}
+
+/* virtual */ void 
+nsWidget::OnDragLeaveSignal(GdkDragContext   *context,
+                            guint             time)
+{
+  mIsDragDest = PR_FALSE;
+
+
+  nsMouseEvent event;
+
+  event.message = NS_DRAGDROP_EXIT;
+  event.eventStructType = NS_DRAGDROP_EVENT;
+
+  event.widget = this;
+
+  //  GdkEvent *current_event;
+  //  current_event = gtk_get_current_event();
+
+  //  g_print("current event's x_root = %i , y_root = %i\n", current_event->dnd.x_root, current_event->dnd.y_root);
+
+  // FIXME
+  event.point.x = 0;
+  event.point.y = 0;
+
+  AddRef();
+
+  DispatchMouseEvent(event);
+
+  Release();
+}
+
+/* virtual */ void 
+nsWidget::OnDragBeginSignal(GdkDragContext * aGdkDragContext)
+{
+  nsMouseEvent event;
+
+  event.message = NS_MOUSE_MOVE;
+  event.eventStructType = NS_MOUSE_EVENT;
   
   AddRef();
 
@@ -1309,6 +1584,32 @@ nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
 
   Release();
 }
+
+
+/* virtual */ void 
+nsWidget::OnDragDropSignal(GdkDragContext *aDragContext,
+                           gint            x,
+                           gint            y,
+                           guint           time)
+{
+  nsMouseEvent    event;
+
+  event.message = NS_DRAGDROP_DROP;
+  event.eventStructType = NS_DRAGDROP_EVENT;
+  event.widget = this;
+  
+  // Test coordinates.
+  event.point.x = 17;
+  event.point.y = 19;
+
+  AddRef();
+
+  DispatchWindowEvent(&event);
+
+  Release();
+}
+
+
 //////////////////////////////////////////////////////////////////
 /* virtual */ void
 nsWidget::OnEnterNotifySignal(GdkEventCrossing * aGdkCrossingEvent)
@@ -1337,10 +1638,6 @@ nsWidget::OnEnterNotifySignal(GdkEventCrossing * aGdkCrossingEvent)
     event.point.y = nscoord(aGdkCrossingEvent->y);
     event.time = aGdkCrossingEvent->time;
   }
-
-#ifdef TRACE_MOUSE_EVENTS
-  DebugPrintMouseEvent(event,"Enter",mWidget);
-#endif
 
   AddRef();
 
@@ -1376,10 +1673,6 @@ nsWidget::OnLeaveNotifySignal(GdkEventCrossing * aGdkCrossingEvent)
     event.point.y = nscoord(aGdkCrossingEvent->y);
     event.time = aGdkCrossingEvent->time;
   }
-
-#ifdef TRACE_MOUSE_EVENTS
-  DebugPrintMouseEvent(event,"Leave",mWidget);
-#endif
 
   AddRef();
 
@@ -1456,10 +1749,6 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 
   InitMouseEvent(aGdkButtonEvent, event, eventType);
 
-#ifdef TRACE_MOUSE_EVENTS
-  DebugPrintMouseEvent(event,"ButtonPress",mWidget);
-#endif
-
   // Set the button motion target and remeber the widget and root coords
   sButtonMotionTarget = this;
 
@@ -1504,10 +1793,6 @@ nsWidget::OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent)
 
   InitMouseEvent(aGdkButtonEvent, event, eventType);
 
-#ifdef TRACE_MOUSE_EVENTS
-  DebugPrintMouseEvent(event,"ButtonRelease",mWidget);
-#endif
-
   if (nsnull != sButtonMotionTarget)
   {
     sButtonMotionTarget = nsnull;
@@ -1520,6 +1805,58 @@ nsWidget::OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent)
 
   DispatchMouseEvent(event);
 
+  Release();
+}
+//////////////////////////////////////////////////////////////////////
+/* virtual */ void
+nsWidget::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
+{
+  if (mIsDestroying)
+    return;
+
+  nsGUIEvent event;
+  
+  event.message = NS_GOTFOCUS;
+  event.widget  = this;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+//  event.time = aGdkFocusEvent->time;;
+//  event.time = PR_Now();
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+
+  AddRef();
+  
+  DispatchFocus(event);
+  
+  Release();
+}
+//////////////////////////////////////////////////////////////////////
+/* virtual */ void
+nsWidget::OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent)
+{
+  if (mIsDestroying)
+    return;
+
+  nsGUIEvent event;
+  
+  event.message = NS_LOSTFOCUS;
+  event.widget  = this;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+//  event.time = aGdkFocusEvent->time;;
+//  event.time = PR_Now();
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+
+  AddRef();
+  
+  DispatchFocus(event);
+  
   Release();
 }
 //////////////////////////////////////////////////////////////////////
@@ -1538,17 +1875,17 @@ nsWidget::OnRealize()
 //////////////////////////////////////////////////////////////////
 void 
 nsWidget::InstallSignal(GtkWidget *   aWidget,
-						gchar *       aSignalName,
-						GtkSignalFunc aSignalFunction)
+                        gchar *       aSignalName,
+                        GtkSignalFunc aSignalFunction)
 {
   NS_ASSERTION( nsnull != aWidget, "widget is null");
   NS_ASSERTION( aSignalName, "signal name is null");
   NS_ASSERTION( aSignalFunction, "signal function is null");
 
   gtk_signal_connect(GTK_OBJECT(aWidget),
-					 aSignalName,
-					 GTK_SIGNAL_FUNC(aSignalFunction),
-					 (gpointer) this);
+                     aSignalName,
+                     GTK_SIGNAL_FUNC(aSignalFunction),
+                     (gpointer) this);
 }
 //////////////////////////////////////////////////////////////////
 void 
@@ -1660,13 +1997,84 @@ nsWidget::MotionNotifySignal(GtkWidget *      aWidget,
 
   if (widget->DropEvent(aWidget, aGdkMotionEvent->window))
   {
-	return PR_TRUE;
+    return PR_TRUE;
   }
 
   widget->OnMotionNotifySignal(aGdkMotionEvent);
 
   return PR_TRUE;
 }
+
+/* static */ gint
+nsWidget::DragMotionSignal(GtkWidget *      aWidget,
+                           GdkDragContext   *aDragContext,
+                           gint             x,
+                           gint             y,
+                           guint            time,
+                           void             *aData)
+{
+  nsWidget * widget = (nsWidget *) aData;
+  NS_ASSERTION( nsnull != widget, "instance pointer is null");
+
+  widget->OnDragMotionSignal(aDragContext, x, y, time);
+
+  return PR_TRUE;
+}
+
+/* static */ void
+nsWidget::DragLeaveSignal(GtkWidget *      aWidget,
+                          GdkDragContext   *aDragContext,
+                          guint            time,
+                          void             *aData)
+{
+  nsWidget * widget = (nsWidget *) aData;
+  NS_ASSERTION( nsnull != widget, "instance pointer is null");
+
+  widget->OnDragLeaveSignal(aDragContext, time);
+}
+
+/* static */ gint
+nsWidget::DragBeginSignal(GtkWidget *      aWidget,
+                          GdkDragContext   *aDragContext,
+                          gint             x,
+                          gint             y,
+                          guint            time,
+                          void             *aData)
+{
+  printf("nsWidget::DragBeginSignal\n");
+  fflush(stdout);
+
+  return PR_TRUE;
+}
+
+/* static */ gint
+nsWidget::DragDropSignal(GtkWidget *      aWidget,
+                         GdkDragContext   *aDragContext,
+                         gint             x,
+                         gint             y,
+                         guint            time,
+                         void             *aData)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+  NS_ASSERTION( nsnull != aDragContext, "dragcontext is null");
+
+  nsWidget * widget = (nsWidget *) aData;
+  NS_ASSERTION( nsnull != widget, "instance pointer is null");
+
+#if 0
+  if (widget->DropEvent(aWidget, aDragContext->source_window)) {
+    return PR_TRUE;
+  }
+#endif
+
+  widget->OnDragDropSignal(aDragContext, x, y, time);
+
+  return PR_TRUE;
+}
+
+
+
+
 //////////////////////////////////////////////////////////////////
 /* static */ gint 
 nsWidget::EnterNotifySignal(GtkWidget *        aWidget, 
@@ -1777,7 +2185,60 @@ nsWidget::RealizeSignal(GtkWidget *      aWidget,
   return PR_TRUE;
 }
 //////////////////////////////////////////////////////////////////////
+/* static */ gint
+nsWidget::FocusInSignal(GtkWidget *      aWidget, 
+                        GdkEventFocus *  aGdkFocusEvent, 
+                        gpointer         aData)
+{
+  //  printf("nsWidget::ButtonReleaseSignal(%p)\n",aData);
 
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+  NS_ASSERTION( nsnull != aGdkFocusEvent, "event is null");
+
+  nsWidget * widget = (nsWidget *) aData;
+
+  NS_ASSERTION( nsnull != widget, "instance pointer is null");
+
+//   if (widget->DropEvent(aWidget, aGdkFocusEvent->window))
+//   {
+// 	return PR_TRUE;
+//   }
+
+  widget->OnFocusInSignal(aGdkFocusEvent);
+
+  if (GTK_IS_WINDOW(aWidget))
+    gtk_signal_emit_stop_by_name(GTK_OBJECT(aWidget), "focus_in_event");
+  
+  return PR_TRUE;
+}
+//////////////////////////////////////////////////////////////////////
+/* static */ gint
+nsWidget::FocusOutSignal(GtkWidget *      aWidget, 
+                        GdkEventFocus *  aGdkFocusEvent, 
+                        gpointer         aData)
+{
+  //  printf("nsWidget::ButtonReleaseSignal(%p)\n",aData);
+
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+  NS_ASSERTION( nsnull != aGdkFocusEvent, "event is null");
+
+  nsWidget * widget = (nsWidget *) aData;
+
+  NS_ASSERTION( nsnull != widget, "instance pointer is null");
+
+//   if (widget->DropEvent(aWidget, aGdkFocusEvent->window))
+//   {
+// 	return PR_TRUE;
+//   }
+
+  widget->OnFocusOutSignal(aGdkFocusEvent);
+
+  if (GTK_IS_WINDOW(aWidget))
+    gtk_signal_emit_stop_by_name(GTK_OBJECT(aWidget), "focus_out_event");
+  
+  return PR_TRUE;
+}
+//////////////////////////////////////////////////////////////////////
 
 /* virtual */ GdkWindow *
 nsWidget::GetWindowForSetBackground()
@@ -1791,3 +2252,46 @@ nsWidget::GetWindowForSetBackground()
 
   return gdk_window;
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// default setfont for most widgets
+/*virtual*/
+void nsWidget::SetFontNative(GdkFont *aFont)
+{
+  GtkStyle *style = gtk_style_copy(mWidget->style);
+  // gtk_style_copy ups the ref count of the font
+  gdk_font_unref (style->font);
+  
+  style->font = aFont;
+  gdk_font_ref(style->font);
+  
+  gtk_widget_set_style(mWidget, style);
+  
+  gtk_style_unref(style);
+}
+
+//////////////////////////////////////////////////////////////////////
+// default SetBackgroundColor for most widgets
+/*virtual*/
+void nsWidget::SetBackgroundColorNative(GdkColor *aColorNor,
+                                        GdkColor *aColorBri,
+                                        GdkColor *aColorDark)
+{
+  // use same style copy as SetFont
+  GtkStyle *style = gtk_style_copy(mWidget->style);
+  
+  style->bg[GTK_STATE_NORMAL]=*aColorNor;
+  
+  // Mouse over button
+  style->bg[GTK_STATE_PRELIGHT]=*aColorBri;
+
+  // Button is down
+  style->bg[GTK_STATE_ACTIVE]=*aColorDark;
+
+  // other states too? (GTK_STATE_ACTIVE, GTK_STATE_PRELIGHT,
+  //               GTK_STATE_SELECTED, GTK_STATE_INSENSITIVE)
+  gtk_widget_set_style(mWidget, style);
+  gtk_style_unref(style);
+}
+

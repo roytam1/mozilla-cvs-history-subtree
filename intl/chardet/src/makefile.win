@@ -21,6 +21,9 @@ LCFLAGS= $(LCFLAGS) -D__STDC__
 
 DEFINES= -DWIN32_LEAN_AND_MEAN
 LIBRARY_NAME= chardet
+!if "$(_MSC_VER)" != "" && "$(_MSC_VER)" != "1100"
+DIRS = windows
+!endif
 
 OBJS= \
 	$(NULL)
@@ -31,11 +34,23 @@ CSRCS= \
 CPPSRCS= \
          nsCharDetDll.cpp \
          nsMetaCharsetObserver.cpp \
+         nsXMLEncodingObserver.cpp \
+         nsObserverBase.cpp \
+         nsDetectionAdaptor.cpp \
+         nsDebugDetector.cpp \
+         nsPSMDetectors.cpp \
+         nsCyrillicDetector.cpp \
 	$(NULL)
 
 CPP_OBJS= \
         .\$(OBJDIR)\nsCharDetDll.obj \
         .\$(OBJDIR)\nsMetaCharsetObserver.obj \
+        .\$(OBJDIR)\nsXMLEncodingObserver.obj \
+        .\$(OBJDIR)\nsObserverBase.obj \
+        .\$(OBJDIR)\nsDetectionAdaptor.obj \
+        .\$(OBJDIR)\nsDebugDetector.obj \
+        .\$(OBJDIR)\nsPSMDetectors.obj \
+        .\$(OBJDIR)\nsCyrillicDetector.obj \
 	$(NULL)
 
 MODULE=chardet
@@ -52,7 +67,6 @@ DLL=.\$(OBJDIR)\$(DLLNAME).dll
 
 LLIBS= \
 	$(DIST)\lib\xpcom.lib	\
-	$(DIST)\lib\plc3.lib	\
 	$(LIBNSPR)	
 
 include <$(DEPTH)\config\rules.mak>

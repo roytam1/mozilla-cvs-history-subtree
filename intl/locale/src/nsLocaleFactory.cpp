@@ -23,13 +23,14 @@
 #include "nsLocale.h"
 #include "nsLocaleCID.h"
 #include "nsIComponentManager.h"
+#include <ctype.h>  // for isalpha, tolower & isspace
+
 #ifdef XP_PC
 #include <windows.h>
 #endif
 #if defined(XP_UNIX) || defined(XP_BEOS)
 #include <locale.h>
 #include <stdlib.h>
-#include <ctype.h>  // for isalpha, tolower & isspace
 #endif
 
 #define NSILOCALE_MAX_ACCEPT_LANGUAGE	16
@@ -202,7 +203,6 @@ nsLocaleFactory::NewLocale(const nsString* localeName, nsILocale** locale)
 NS_IMETHODIMP
 nsLocaleFactory::GetSystemLocale(nsILocale** systemLocale)
 {
-	nsString*	systemLocaleName;
 	nsresult	result;
 
 	if (fSystemLocale!=NULL)
@@ -217,6 +217,7 @@ nsLocaleFactory::GetSystemLocale(nsILocale** systemLocale)
 	//
 #ifdef XP_PC
 	LCID				sysLCID;
+  nsString*   systemLocaleName;
 	
 	sysLCID = GetSystemDefaultLCID();
 	if (sysLCID==0) {
@@ -253,6 +254,7 @@ nsLocaleFactory::GetSystemLocale(nsILocale** systemLocale)
  
   char* lc_all = setlocale(LC_ALL,NULL);
   char* lc_temp;
+  char* tempvalue;
   char* lang = getenv("LANG");
   nsString* lc_values[LOCALE_CATEGORY_LISTLEN];
   int i;
@@ -266,7 +268,7 @@ nsLocaleFactory::GetSystemLocale(nsILocale** systemLocale)
     //
     lc_values[0] = new nsString();
     fPosixLocaleInterface->GetXPLocale(lc_all,lc_values[0]);
-    char* tempvalue = lc_values[0]->ToNewCString();
+    tempvalue = lc_values[0]->ToNewCString();
     result = NewLocale(lc_values[0],&fSystemLocale);
     if (result!=NS_OK) {
       delete lc_values[0];
@@ -313,6 +315,8 @@ nsLocaleFactory::GetSystemLocale(nsILocale** systemLocale)
   return NS_OK;
 
 #else
+  nsString* systemLocaleName;
+
 	systemLocaleName = new nsString("en-US");
 	result = this->NewLocale(systemLocaleName,&fSystemLocale);
 	if (result!=NS_OK) {
@@ -334,7 +338,7 @@ nsLocaleFactory::GetSystemLocale(nsILocale** systemLocale)
 NS_IMETHODIMP
 nsLocaleFactory::GetApplicationLocale(nsILocale** applicationLocale)
 {
-	nsString*	applicationLocaleName;
+
 	nsresult	result;
 
 	if (fApplicationLocale!=NULL)
@@ -352,6 +356,7 @@ nsLocaleFactory::GetApplicationLocale(nsILocale** applicationLocale)
 	//
 #ifdef XP_PC
 	LCID				appLCID;
+  nsString*   applicationLocaleName;
 	
 	appLCID = GetUserDefaultLCID();
 	if (appLCID==0) {
@@ -392,6 +397,8 @@ nsLocaleFactory::GetApplicationLocale(nsILocale** applicationLocale)
   return result;
 
 #else
+  nsString* applicationLocaleName;
+
 	applicationLocaleName = new nsString("en-US");
 	result = this->NewLocale(applicationLocaleName,&fApplicationLocale);
 	if (result!=NS_OK) {
@@ -457,7 +464,8 @@ nsLocaleFactory::GetLocaleFromAcceptLanguage(const char* acceptLanguage, nsILoca
     cPtr = strtok(input,",");
     while (cPtr) {
       qvalue[countLang] = 1.0f;
-      if (cPtr1 = strchr(cPtr,';')) {
+      /* add extra parens to get rid of warning */
+      if ((cPtr1 = strchr(cPtr,';'))) {
         sscanf(cPtr1,";q=%f",&qvalue[countLang]);
         *cPtr1 = '\0';
       }

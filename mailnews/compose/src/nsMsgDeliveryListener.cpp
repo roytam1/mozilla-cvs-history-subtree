@@ -21,24 +21,30 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsMsgPrompts.h"
 
-NS_IMPL_ISUPPORTS(nsMsgDeliveryListener, nsIUrlListener::GetIID())
+NS_IMPL_ISUPPORTS(nsMsgDeliveryListener, nsCOMTypeInfo<nsIUrlListener>::GetIID())
 
 nsresult 
-nsMsgDeliveryListener::OnStartRunningUrl(nsIURL * aUrl)
+nsMsgDeliveryListener::OnStartRunningUrl(nsIURI * aUrl)
 {
 #ifdef NS_DEBUG
-  printf("Starting to run the delivery operation\n");
+//  printf("Starting to run the delivery operation\n");
 #endif
+
+  if (mMsgSendObj)
+    mMsgSendObj->NotifyListenersOnStartSending(nsnull, nsnull);
+
+  if (mMsgSendLaterObj)
+    mMsgSendLaterObj->NotifyListenersOnStartSending(nsnull);
   
 	return NS_OK;
 }
 
 nsresult 
-nsMsgDeliveryListener::OnStopRunningUrl(nsIURL * aUrl, nsresult aExitCode)
+nsMsgDeliveryListener::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
 {
-  nsresult rv;
+  nsresult rv = NS_ERROR_UNEXPECTED;
 #ifdef NS_DEBUG
-  printf("\nOnStopRunningUrl() called!\n");
+//  printf("\nOnStopRunningUrl() called!\n");
 #endif
 
   // First, stop being a listener since we are done.
@@ -50,12 +56,27 @@ nsMsgDeliveryListener::OnStopRunningUrl(nsIURL * aUrl, nsresult aExitCode)
 			mailUrl->UnRegisterListener(this);
 	}
 
+  if (mMsgSendObj)
+    mMsgSendObj->NotifyListenersOnStopSending(
+                                  nsnull,     // const char *aMsgID, 
+                                  aExitCode,  // nsresult aStatus, 
+                                  nsnull,     // const PRUnichar *aMsg, 
+                                  nsnull);    // nsIFileSpec *returnFileSpec);
+
+  if (mMsgSendLaterObj)
+    mMsgSendLaterObj->NotifyListenersOnStopSending(aExitCode,
+                            nsnull,  // const PRUnichar *aMsg, 
+                            nsnull,  // PRUint32 aTotalTried, 
+                            nsnull); // PRUint32 aSuccessful);
+
   // 
   // Now, important, if there was a callback registered, call the 
   // creators exit routine.
   //
   if (mCompletionCallback)
     rv = (*mCompletionCallback) (aUrl, aExitCode, mTagData);
+  else
+    rv = NS_OK;
 
 	return rv;
 }
@@ -67,6 +88,10 @@ nsMsgDeliveryListener::nsMsgDeliveryListener(nsMsgDeliveryCompletionCallback cal
   mDeliveryType = delivType;
   mTagData = tagData;
   mCompletionCallback = callback;
+  mMsgSendObj = nsnull;
+  mMsgSendLaterObj = nsnull;
+
+  NS_INIT_REFCNT();
 }
 
 nsMsgDeliveryListener::~nsMsgDeliveryListener()
@@ -74,3 +99,16 @@ nsMsgDeliveryListener::~nsMsgDeliveryListener()
   delete mTempFileSpec;
 }
 
+nsresult 
+nsMsgDeliveryListener::SetMsgComposeAndSendObject(nsMsgComposeAndSend *obj)
+{
+  mMsgSendObj = obj;
+  return NS_OK;
+}
+
+nsresult 
+nsMsgDeliveryListener::SetMsgSendLaterObject(nsMsgSendLater *obj)
+{
+  mMsgSendLaterObj = obj;
+  return NS_OK;
+}

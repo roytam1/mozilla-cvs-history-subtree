@@ -93,6 +93,7 @@ NS_IMPL_ISUPPORTS(ns4xPluginStreamListener, kIPluginStreamListenerIID);
 NS_IMETHODIMP
 ns4xPluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
 {
+
 	NPP npp;
 	const NPPluginFuncs *callbacks;
 	PRBool seekable;
@@ -124,7 +125,6 @@ ns4xPluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
 	if(error != NPERR_NO_ERROR)
 		return NS_ERROR_FAILURE;
 #endif
-	
 	// translate the old 4x style stream type to the new one
 	switch(streamType)
 	{
@@ -139,6 +139,7 @@ ns4xPluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
 		default: return NS_ERROR_FAILURE;
 	}
 
+	
     return NS_OK;
 }
 

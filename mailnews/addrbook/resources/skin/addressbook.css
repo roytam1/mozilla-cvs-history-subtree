@@ -1,6 +1,23 @@
-/* Address Book specific style */
+/*
+The contents of this file are subject to the Netscape Public
+License Version 1.1 (the "License"); you may not use this file
+except in compliance with the License. You may obtain a copy of
+the License at http://www.mozilla.org/NPL/
 
+Software distributed under the License is distributed on an "AS
+IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+implied. See the License for the specific language governing
+rights and limitations under the License.
 
+The Original Code is Mozilla Communicator client code, released
+March 31, 1998.
+
+The Initial Developer of the Original Code is Netscape
+Communications Corporation. Portions created by Netscape are
+ Copyright (C) 1998-1999 Netscape Communications Corporation. All
+Rights Reserved.
+*/
+ 
 /* CardEdit styles - used in the Card Edit Dialog */
 
 box[class="CardEdit"] {
@@ -10,12 +27,16 @@ box[class="CardEdit"] {
 }
 
 input[class="CardEdit"] {
-	height       : 22px;
-	width        : 190px;
+	height       : 12px;
+	width        : 25em;
 	margin-left  : 0px;
 	margin-right : 0px;
-	margin-top   : 1px;
-	margin-bottom: 1px;
+	margin-top   : 0px;
+	margin-bottom: 0px;
+}
+
+div[class="CardEdit"] {
+	vertical-align: middle;
 }
 
 
@@ -27,106 +48,63 @@ div[class="CardViewHeading"] {
 	color: white;
 	background-color: #5050ff;
 	font-weight: bold;
-	display: none;
+	margin-top: 8px;
+	margin-bottom: 3px;
 }
 
 div[class="CardViewText"] {
 	padding-left: 20px;
 	padding-right: 2px;
-	display: none;
+	color:inherit;
 }
 
+/* FIX ME - remove this style if it does not add something */
 box[class="CardView"] {
 	padding: 0px;
-	padding-top: 12px;
-	padding-bottom: 4px;
 	border: none;
-	display: block;
 }
 
-spring[class="CardViewHeadingSpace"] {
-	height: 3px;
-}
-
-
-/* General styles */
-
-spring[class="PromptEditSpacing"] {
-	width: 5px;
-}
-
-/* Standard Tree */
-
-/*
-tree {
- display: table;
- background-color: white;
- border: none;
- border-spacing: 0px;
- width: 100%;
- table-layout: fixed;
-}
-
-treeitem { 
- display: table-row; 
- color: black;
- font-family: Verdona;
- font-size: 10pt;
-} 
-
-treehead { 
- display: table-header-group; 
-} 
-
-treebody { 
- display: table-row-group; 
-} 
-
-treeitem[selected="true"] { 
- color: white;
- background-color: #666699; 
-}
-
-treecell { 
- display: table-cell; 
- white-space: nowrap;
-} 
-
-treehead treeitem treecell { 
- font-size: 10pt;
- background-color: #a0a0a0; 
- border: thin black solid; 
- border-top: none;
- color: black;
-} 
-
-
-treecol {
- display: table-column;
-}
-*/
 
 /* Custom Trees */
 
-tree[class="abDirectory"] treeitem > treecell > titledbutton {
- vertical-align: bottom;
- min-height: 1px;
- min-width: 1px;
- height: 1em;
- width: 1em;
- margin:0px;
- padding:0px;
- list-style-image: url("chrome://addressbook/skin/myaddrbk.gif");
+tree[class="abDirectory"] treeitem > treerow > treecell > titledbutton {
+	 vertical-align: bottom;
+	 min-height: 1px;
+	 min-width: 1px;
+	 height: 1em;
+	 width: 1em;
+	 margin:0px;
+	 padding:0px;
+	 border:none;
+	 list-style-image: url("chrome://addressbook/skin/myaddrbk.gif");
+	 color:inherit;
 }
 
-tree[class="abResults"] treeitem > treecell > titledbutton {
- vertical-align: middle;
- min-height: 1px;
- min-width: 1px;
- height: 1em;
- width: 2em;
- margin:0px;
- padding:0px;
- list-style-image: url("chrome://addressbook/skin/person.gif");
+tree[class="abResults"] treeitem > treerow  > treecell > titledbutton {
+	 vertical-align: middle;
+	 min-height: 1px;
+	 min-width: 1px;
+	 height: 1em;
+	 width: 2em;
+	 margin:0px;
+	 padding:0px;
+	 border:none;
+	 list-style-image: url("chrome://addressbook/skin/person.gif");
+	 color:inherit;
 }
 
+
+/* Address Book specific style */
+
+div[hide] {
+	display: none;
+}
+
+box[hide] {
+	display: none;
+}
+
+titledbutton#Throbber
+{
+        list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
+} 

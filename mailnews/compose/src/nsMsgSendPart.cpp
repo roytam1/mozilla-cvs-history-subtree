@@ -27,7 +27,7 @@
 #include "nsMsgCompUtils.h"
 #include "nsFileStream.h"
 
-#include "MsgCompGlue.h"
+#include "nsMsgTransition.h"
 
 // defined in msgCompGlue.cpp
 static char *mime_mailto_stream_read_buffer = 0;
@@ -39,11 +39,11 @@ static NS_DEFINE_CID(kCMimeURLUtilsCID, NS_IMIME_URLUTILS_CID);
 
 int MIME_EncoderWrite(MimeEncoderData *data, const char *buffer, PRInt32 size) 
 {
-  MimeEncoderData *returnEncoderData = nsnull;
+  //  MimeEncoderData *returnEncoderData = nsnull;
   nsIMimeConverter *converter;
   PRInt32 written = 0;
   nsresult res = nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
-    nsIMimeConverter::GetIID(), (void **)&converter);
+    nsCOMTypeInfo<nsIMimeConverter>::GetIID(), (void **)&converter);
   if (NS_SUCCEEDED(res) && nsnull != converter) {
     res = converter->EncoderWrite(data, buffer, size, &written);
     NS_RELEASE(converter);
@@ -60,7 +60,7 @@ nsMsgSendPart::nsMsgSendPart(nsMsgComposeAndSend* state, const char *part_charse
   SetMimeDeliveryState(state);
   
   m_parent = NULL;
-  m_filename = NULL;
+  m_filespec = NULL;
   m_filetype = (XP_FileType)0;
   m_buffer = NULL;
   m_type = NULL;
@@ -89,7 +89,8 @@ nsMsgSendPart::~nsMsgSendPart()
 	delete [] m_children;
     PR_FREEIF(m_buffer);
 	PR_FREEIF(m_other);
-	PR_FREEIF(m_filename);
+	if (m_filespec)
+    delete m_filespec;
 	PR_FREEIF(m_type);
 }
 
@@ -103,18 +104,17 @@ int nsMsgSendPart::CopyString(char** dest, const char* src)
   else
     *dest = PL_strdup(src);
   
-  return *dest? 0 : MK_OUT_OF_MEMORY;
+  return *dest? 0 : NS_ERROR_OUT_OF_MEMORY;
 }
 
 
-int nsMsgSendPart::SetFile(const char* filename, XP_FileType type)
+int nsMsgSendPart::SetFile(nsFileSpec *filename)
 {
-  NS_ASSERTION(m_filename == NULL, "not-null m_filename");
-  int status = CopyString(&m_filename, filename);
-  if (status < 0)
-    return status;
-  m_filetype = type;
-  return status;
+  m_filespec = new nsFileSpec(*filename);
+  if (!m_filespec)
+    return NS_ERROR_OUT_OF_MEMORY;
+  else
+    return NS_OK;
 }
 
 
@@ -129,7 +129,7 @@ int nsMsgSendPart::SetType(const char* type)
 {
   PR_FREEIF(m_type);
   m_type = PL_strdup(type);
-  return m_type ? 0 : MK_OUT_OF_MEMORY;
+  return m_type ? 0 : NS_ERROR_OUT_OF_MEMORY;
 }
 
 
@@ -163,7 +163,7 @@ int nsMsgSendPart::AppendOtherHeaders(const char* more)
 
 	char* tmp = (char *) PR_Malloc(sizeof(char) * (PL_strlen(m_other) + PL_strlen(more) + 2));
 	if (!tmp)
-		return MK_OUT_OF_MEMORY;
+		return NS_ERROR_OUT_OF_MEMORY;
 
 	PL_strcpy(tmp, m_other);
 	PL_strcat(tmp, more);
@@ -190,7 +190,7 @@ int nsMsgSendPart::AddChild(nsMsgSendPart* child)
 {
   m_numchildren++;
   nsMsgSendPart** tmp = new nsMsgSendPart* [m_numchildren];
-  if (tmp == NULL) return MK_OUT_OF_MEMORY;
+  if (tmp == NULL) return NS_ERROR_OUT_OF_MEMORY;
   for (int i=0 ; i<m_numchildren-1 ; i++) {
     tmp[i] = m_children[i];
   }
@@ -258,49 +258,12 @@ int nsMsgSendPart::PushBody(char* buffer, PRInt32 length)
   int status = 0;
   char* encoded_data = buffer;
   
-  /* if this is the first block, create the conversion object
-	 */
-  if (m_firstBlock) {
-    if (m_needIntlConversion) {
-      MWContext *x = nsnull; // RICHIE
-      m_intlDocToMailConverter =
-        nsMsgI18NCreateDocToMailConverter(x,
-        (!PL_strcasecmp(m_type,
-        TEXT_HTML)),
-        (unsigned char*) buffer,
-        length);
-      
-      // No conversion is done when mail_csid (ToCSID for the converter) is JIS 
-      // and type is HTML (usually csid is SJIS or EUC for Japanese HTML)
-      // in order to avoid mismatch META_TAG (bug#104255).
-      if (m_intlDocToMailConverter != NULL) {
-        PRBool Base64HtmlNoChconv = ((INTL_GetCCCToCSID(m_intlDocToMailConverter) == CS_JIS) &&
-          !PL_strcasecmp(m_type, TEXT_HTML) &&
-          (m_encoder_data != NULL));
-        if (Base64HtmlNoChconv) {
-          nsMsgI18NDestroyCharCodeConverter(m_intlDocToMailConverter);
-          m_intlDocToMailConverter = NULL;
-        }
-      }
-    }
-    m_firstBlock = PR_FALSE;		/* No longer the first block */
-  }
-  
-  if (m_intlDocToMailConverter) {
-    encoded_data =
-      (char*)nsMsgI18NCallCharCodeConverter(m_intlDocToMailConverter,
-      (unsigned char*)buffer,
-      length);
-    /* the return buffer is different from the */
-    /* origional one.  The size needs to be change */
-    if(encoded_data && encoded_data != buffer) {
-      length = PL_strlen(encoded_data);
-    }
-  }
-  
-  if (m_encoder_data) {
+  if (m_encoder_data) 
+  {
     status = MIME_EncoderWrite(m_encoder_data, encoded_data, length);
-  } else {
+  } 
+  else 
+  {
     // Merely translate all linebreaks to CRLF.
     int status = 0;
     const char *in = encoded_data;
@@ -309,7 +272,7 @@ int nsMsgSendPart::PushBody(char* buffer, PRInt32 length)
     
     
     buffer = mime_get_stream_write_buffer();
-    if (!buffer) return MK_OUT_OF_MEMORY;
+    if (!buffer) return NS_ERROR_OUT_OF_MEMORY;
     
     NS_ASSERTION(encoded_data != buffer, "encoded_data == buffer");
     out = buffer;
@@ -396,19 +359,19 @@ itself.  (This relies on the fact that all body-related headers begin with
     
     *message_headers = (char *)PR_Malloc(L+1);
     if (!*message_headers)
-      return MK_OUT_OF_MEMORY;
+      return NS_ERROR_OUT_OF_MEMORY;
     
     *content_headers = (char *)PR_Malloc(L+1);
     if (!*content_headers) {
       PR_Free(*message_headers);
-      return MK_OUT_OF_MEMORY;
+      return NS_ERROR_OUT_OF_MEMORY;
     }
     
     *content_type_header = (char *)PR_Malloc(L+1);
     if (!*content_type_header) {
       PR_Free(*message_headers);
       PR_Free(*content_headers);
-      return MK_OUT_OF_MEMORY;
+      return NS_ERROR_OUT_OF_MEMORY;
     }
     
     message_tail = *message_headers;
@@ -515,42 +478,41 @@ int nsMsgSendPart::Write()
 #define PUSH(str) PUSHLEN(str, PL_strlen(str))
   
   if (m_mainpart && m_type && PL_strcmp(m_type, TEXT_HTML) == 0) {		  
-    if (m_filename) {
+    if (m_filespec) 
+    {
       // The "insert HTML links" code requires a memory buffer,
       // so read the file into memory.
       NS_ASSERTION(m_buffer == NULL, "not-null buffer");
       PRInt32           length = 0;
-      nsFileSpec        mySpec(m_filename);
-
-      if (mySpec.Valid())
-        length = mySpec.GetFileSize();
-
+      
+      if (m_filespec->Valid())
+        length = m_filespec->GetFileSize();
+      
       m_buffer = (char *) PR_Malloc(sizeof(char) * (length + 1));
       if (m_buffer) 
-	  {
-		nsInputFileStream file(mySpec);
+      {
+        nsInputFileStream file(*m_filespec);
         if (file.is_open()) 
-		{
-			length = file.read(m_buffer, length);
-			file.close();
-			m_buffer[length] = '\0';
-			PR_FREEIF(m_filename);
+        {
+          length = file.read(m_buffer, length);
+          file.close();
+          m_buffer[length] = '\0';
         }
         else 
-		  PR_Free(m_buffer);
+          PR_Free(m_buffer);
       }
     }
     if (m_buffer) 
     {
       nsCOMPtr<nsIMimeURLUtils> myURLUtil;
       char                      *tmp = NULL;
-
-      int res = nsComponentManager::CreateInstance(kCMimeURLUtilsCID, 
-                                                   NULL, nsIMimeURLUtils::GetIID(), 
-                                                   (void **) getter_AddRefs(myURLUtil)); 
+      
+      nsresult res = nsComponentManager::CreateInstance(kCMimeURLUtilsCID, 
+        NULL, nsCOMTypeInfo<nsIMimeURLUtils>::GetIID(), 
+        (void **) getter_AddRefs(myURLUtil)); 
       if (!NS_SUCCEEDED(res))
         goto FAIL;
-    
+      
       myURLUtil->ScanHTMLForURLs(m_buffer, &tmp);
       if (tmp) {
         SetBuffer(tmp);
@@ -614,7 +576,7 @@ int nsMsgSendPart::Write()
       if (!content_type_header) {
         if (content_headers)
           PR_Free(content_headers);
-        status = MK_OUT_OF_MEMORY;
+        status = NS_ERROR_OUT_OF_MEMORY;
         goto FAIL;
       }
     }
@@ -630,7 +592,7 @@ int nsMsgSendPart::Write()
       if (!separator) {
         separator = mime_make_separator("");
         if (!separator) {
-          status = MK_OUT_OF_MEMORY;
+          status = NS_ERROR_OUT_OF_MEMORY;
           goto FAIL;
         }
       }
@@ -647,7 +609,7 @@ int nsMsgSendPart::Write()
       if (!ct2) {
         if (content_headers)
           PR_Free(content_headers);
-        status = MK_OUT_OF_MEMORY;
+        status = NS_ERROR_OUT_OF_MEMORY;
         goto FAIL;
       }
       
@@ -679,15 +641,14 @@ int nsMsgSendPart::Write()
   m_intlDocToMailConverter = NULL;
   
   
-  if (m_buffer) {
-    NS_ASSERTION(!m_filename, "not-null m_filename");
+  if (m_buffer) 
+  {
     status = PushBody(m_buffer, PL_strlen(m_buffer));
     if (status < 0)
       goto FAIL;
   }
-  else if (m_filename) {
-    nsFileSpec      mySpec(m_filename);
-    nsIOFileStream  myStream(mySpec);
+  else if (m_filespec) {
+    nsIOFileStream  myStream(*m_filespec);
 
     if (!myStream.is_open())
     {
@@ -700,7 +661,7 @@ int nsMsgSendPart::Write()
       mime_mailto_stream_read_buffer = (char *)
         PR_Malloc(MIME_BUFFER_SIZE);
       if (!mime_mailto_stream_read_buffer) {
-        status = MK_OUT_OF_MEMORY;
+        status = NS_ERROR_OUT_OF_MEMORY;
         goto FAIL;
       }
     }
@@ -811,10 +772,6 @@ int nsMsgSendPart::Write()
   
 FAIL:
   PR_FREEIF(separator);
-  if (m_intlDocToMailConverter) {
-    nsMsgI18NDestroyCharCodeConverter(m_intlDocToMailConverter);
-    m_intlDocToMailConverter = NULL;
-  }
   return status;
 }
 

@@ -23,13 +23,17 @@ MODULE		= addrbook
 
 include $(DEPTH)/config/autoconf.mk
 XPIDLSRCS =				  \
-		nsIAbBase.idl	\
 		nsIAbListener.idl	\
 		nsIAbDirectory.idl	\
 		nsIAbCard.idl	\
 		nsIAddrDBAnnouncer.idl  \
 		nsIAddrDBListener.idl	\
 		nsIAddrDatabase.idl	\
+		nsIAddressBook.idl	\
+		nsIAbBase.idl \
+		nsIAddrBookSession.idl	\
+		nsIAutoCompleteListener.idl \
+		nsIAutoCompleteSession.idl  \
 		$(NULL)
 
 EXPORTS =				\

@@ -25,9 +25,12 @@
 #include "nsString.h"
 #include "nsFileSpec.h"
 #include "nsIDBChangeListener.h"
+#include "nsIDBChangeAnnouncer.h"
 #include "nsMsgMessageFlags.h"
 #include "nsISupportsArray.h"
 #include "nsDBFolderInfo.h"
+#include "nsICollation.h"
+#include "nsCOMPtr.h"
 
 class ListContext;
 class nsMsgKeyArray;
@@ -49,15 +52,17 @@ public:
 
   NS_IMETHOD NotifyKeyChangeAll(nsMsgKey keyChanged, PRUint32 aOldFlags, PRUint32 aNewFlags, 
                                 nsIDBChangeListener *instigator);
-  NS_IMETHOD NotifyKeyAddedAll(nsMsgKey keyAdded, PRInt32 flags, 
+  NS_IMETHOD NotifyKeyAddedAll(nsMsgKey keyAdded, nsMsgKey parentKey, PRInt32 flags, 
                                nsIDBChangeListener *instigator);
-  NS_IMETHOD NotifyKeyDeletedAll(nsMsgKey keyDeleted, PRInt32 flags, 
+  NS_IMETHOD NotifyKeyDeletedAll(nsMsgKey keyDeleted, nsMsgKey parentKey, PRInt32 flags, 
                                  nsIDBChangeListener *instigator);
+  NS_IMETHOD NotifyParentChangedAll(nsMsgKey keyReparented, nsMsgKey oldParent, nsMsgKey newParent,
+								nsIDBChangeListener *instigator);
   NS_IMETHOD NotifyAnnouncerGoingAway(void);
 
   //////////////////////////////////////////////////////////////////////////////
   // nsIMsgDatabase methods:
-  NS_IMETHOD Open(nsFileSpec &folderName, PRBool create, nsIMsgDatabase** pMessageDB, PRBool upgrading);
+  NS_IMETHOD Open(nsIFileSpec *folderName, PRBool create, PRBool upgrading, nsIMsgDatabase** pMessageDB);
   NS_IMETHOD Close(PRBool forceCommit);
 
   // argh, these two shouldn't be Interface methods, but I can't diddle the interfaces
@@ -65,7 +70,7 @@ public:
   NS_IMETHOD OpenMDB(const char *dbName, PRBool create);
   NS_IMETHOD CloseMDB(PRBool commit);
 
-  NS_IMETHOD Commit(nsMsgDBCommitType commitType);
+  NS_IMETHOD Commit(nsMsgDBCommit commitType);
   // Force closed is evil, and we should see if we can do without it.
   // In 4.x, it was mainly used to remove corrupted databases.
   NS_IMETHOD ForceClosed(void);
@@ -75,12 +80,6 @@ public:
  //Returns whether or not this database contains the given key
   NS_IMETHOD ContainsKey(nsMsgKey key, PRBool *containsKey);
 
-  // create a new message header from a hdrStruct. Caller must release resulting header,
-  // after adding any extra properties they want.
-  NS_IMETHOD CreateNewHdrAndAddToDB(PRBool *newThread,
-                                    nsMsgHdrStruct *hdrStruct,
-                                    nsIMsgDBHdr **newHdr,
-                                    PRBool notify);
   // Must call AddNewHdrToDB after creating. The idea is that you create
   // a new header, fill in its properties, and then call AddNewHdrToDB.
   // AddNewHdrToDB will send notifications to any listeners.
@@ -89,9 +88,6 @@ public:
 
   NS_IMETHOD CopyHdrFromExistingHdr(nsMsgKey key, nsIMsgDBHdr *existingHdr, nsIMsgDBHdr **newHdr);
   NS_IMETHOD AddNewHdrToDB(nsIMsgDBHdr *newHdr, PRBool notify);
-  // extract info from an nsIMsgDBHdr into a nsMsgHdrStruct
-  NS_IMETHOD GetMsgHdrStructFromnsMsgHdr(nsIMsgDBHdr *msgHdr, 
-                                         nsMsgHdrStruct *hdrStruct);
 
 #if HAVE_INT_ENUMERATORS
   NS_IMETHOD EnumerateKeys(nsIEnumerator* *outputKeys);
@@ -136,9 +132,9 @@ public:
   NS_IMETHOD MarkHasAttachments(nsMsgKey key, PRBool bHasAttachments, 
                                 nsIDBChangeListener *instigator);
 
-  NS_IMETHOD MarkThreadIgnored(nsThreadMessageHdr *thread, nsMsgKey threadKey, PRBool bIgnored,
+  NS_IMETHOD MarkThreadIgnored(nsIMsgThread *thread, nsMsgKey threadKey, PRBool bIgnored,
                                nsIDBChangeListener *instigator);
-  NS_IMETHOD MarkThreadWatched(nsThreadMessageHdr *thread, nsMsgKey threadKey, PRBool bWatched,
+  NS_IMETHOD MarkThreadWatched(nsIMsgThread *thread, nsMsgKey threadKey, PRBool bWatched,
                                nsIDBChangeListener *instigator);
 
   NS_IMETHOD IsRead(nsMsgKey key, PRBool *pRead);
@@ -147,7 +143,7 @@ public:
   NS_IMETHOD HasAttachments(nsMsgKey key, PRBool *pHasThem);
 
   NS_IMETHOD MarkAllRead(nsMsgKeyArray *thoseMarked);
-  NS_IMETHOD MarkReadByDate (time_t te, time_t endDate, nsMsgKeyArray *markedIds);
+  NS_IMETHOD MarkReadByDate (PRTime te, PRTime endDate, nsMsgKeyArray *markedIds);
 
   NS_IMETHOD DeleteMessages(nsMsgKeyArray* nsMsgKeys, nsIDBChangeListener *instigator);
   NS_IMETHOD DeleteMessage(nsMsgKey key, 
@@ -158,20 +154,20 @@ public:
 
   NS_IMETHOD UndoDelete(nsIMsgDBHdr *msgHdr);
 
-  NS_IMETHOD MarkLater(nsMsgKey key, time_t *until);
+  NS_IMETHOD MarkLater(nsMsgKey key, PRTime until);
   NS_IMETHOD MarkMarked(nsMsgKey key, PRBool mark,
                         nsIDBChangeListener *instigator);
   NS_IMETHOD MarkOffline(nsMsgKey key, PRBool offline,
                          nsIDBChangeListener *instigator);
 
   // returns NS_OK on success, NS_COMFALSE on failure
-  NS_IMETHOD  AllMsgKeysImapDeleted(const nsMsgKeyArray *keys);
+  NS_IMETHOD  AllMsgKeysImapDeleted(nsMsgKeyArray *keys);
 
   NS_IMETHOD MarkImapDeleted(nsMsgKey key, PRBool deleted,
                              nsIDBChangeListener *instigator);
 
   NS_IMETHOD GetFirstNew(nsMsgKey *result);
-  NS_IMETHOD HasNew(void);  // returns NS_OK if true, NS_COMFALSE if false
+  NS_IMETHOD HasNew(PRBool *_retval);  
   NS_IMETHOD ClearNewList(PRBool notify);
   NS_IMETHOD AddToNewList(nsMsgKey key);
 
@@ -186,8 +182,6 @@ public:
 
   NS_IMETHOD GetThreadForMsgKey(nsMsgKey msgKey, nsIMsgThread **result);
   NS_IMETHOD GetThreadContainingMsgHdr(nsIMsgDBHdr *msgHdr, nsIMsgThread **result) ;
-
-  NS_IMETHOD GetMsgKeySet(nsMsgKeySet **pSet) ;
 
   NS_IMETHOD                GetHighWaterArticleNum(nsMsgKey *key);
   NS_IMETHOD                GetLowWaterArticleNum(nsMsgKey *key);
@@ -204,23 +198,36 @@ public:
 	nsIMdbStore				*GetStore() {return m_mdbStore;}
 	virtual PRUint32		GetCurVersion();
 	nsIMsgHeaderParser		*GetHeaderParser();
+	nsresult				GetCollationKeyGenerator();
 
 	static nsMsgDatabase* FindInCache(nsFileSpec &dbName);
 
 	//helper function to fill in nsStrings from hdr row cell contents.
 	nsresult				RowCellColumnTonsString(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr);
-	nsresult				RowCellColumnToUInt32(nsIMdbRow *row, mdb_token columnToken, PRUint32 *uint32Result);
-	nsresult				RowCellColumnToUInt32(nsIMdbRow *row, mdb_token columnToken, PRUint32 &uint32Result);
-	nsresult				RowCellColumnToMime2EncodedString(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr);
+	nsresult				RowCellColumnTonsCString(nsIMdbRow *row, mdb_token columnToken, nsCString &resultStr);
+	nsresult				RowCellColumnToUInt32(nsIMdbRow *row, mdb_token columnToken, PRUint32 *uint32Result, PRUint32 defaultValue = 0);
+	nsresult				RowCellColumnToUInt32(nsIMdbRow *row, mdb_token columnToken, PRUint32 &uint32Result, PRUint32 defaultValue = 0);
+	nsresult				RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr);
 	nsresult				RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr);
 
 	// helper functions to put values in cells for the passed-in row
 	nsresult				UInt32ToRowCellColumn(nsIMdbRow *row, mdb_token columnToken, PRUint32 value);
+	nsresult				CharPtrToRowCellColumn(nsIMdbRow *row, mdb_token columnToken, const char *charPtr);
+	nsresult				RowCellColumnToCharPtr(nsIMdbRow *row, mdb_token columnToken, char **result);
+
+	nsresult				CreateCollationKey(nsString &sourceString, nsString &resultString);
+
 	// helper functions to copy an nsString to a yarn, int32 to yarn, and vice versa.
 	static	struct mdbYarn *nsStringToYarn(struct mdbYarn *yarn, nsString *str);
 	static	struct mdbYarn *UInt32ToYarn(struct mdbYarn *yarn, PRUint32 i);
 	static	void			YarnTonsString(struct mdbYarn *yarn, nsString *str);
+	static	void			YarnTonsCString(struct mdbYarn *yarn, nsCString *str);
 	static	void			YarnToUInt32(struct mdbYarn *yarn, PRUint32 *i);
+
+	
+	// helper functions to convert a 64bits PRTime into a 32bits value (compatible time_t) and vice versa.
+	static void				PRTime2Seconds(PRTime prTime, PRUint32 *seconds);
+	static void				Seconds2PRTime(PRUint32 seconds, PRTime *prTime);
 
 	static void		CleanupCache();
 #ifdef DEBUG
@@ -239,18 +246,18 @@ protected:
 	// prefs stuff - in future, we might want to cache the prefs interface
 	nsresult GetBoolPref(const char *prefName, PRBool *result);
 	// retrieval methods
-	nsMsgThread *	GetThreadForReference(nsString2 &msgID);
-	nsMsgThread *	GetThreadForSubject(const char * subject);
-	nsMsgThread *	GetThreadForThreadId(nsMsgKey threadId);
-	nsMsgHdr	*	GetMsgHdrForReference(nsString2 &reference);
-	nsIMsgDBHdr	*	GetMsgHdrForMessageID(nsString2 &msgID);
-	nsMsgThread *	GetThreadContainingMsgHdr(nsMsgHdr *msgHdr);
+	nsIMsgThread *	GetThreadForReference(nsCString &msgID, nsIMsgDBHdr **pMsgHdr);
+	nsIMsgThread *	GetThreadForSubject(nsCString &subject);
+	nsIMsgThread *	GetThreadForThreadId(nsMsgKey threadId);
+	nsMsgHdr	*	GetMsgHdrForReference(nsCString &reference);
+	nsIMsgDBHdr	*	GetMsgHdrForMessageID(nsCString &msgID);
+	nsIMsgDBHdr	*	GetMsgHdrForSubject(nsCString &msgID);
 	// threading interfaces
-	virtual nsresult CreateNewThread(nsMsgKey key, nsMsgThread **newThread);
+	virtual nsresult CreateNewThread(nsMsgKey key, const char *subject, nsMsgThread **newThread);
 	virtual PRBool	ThreadBySubjectWithoutRe();
 	virtual nsresult ThreadNewHdr(nsMsgHdr* hdr, PRBool &newThread);
 	virtual nsresult AddNewThread(nsMsgHdr *msgHdr);
-	virtual nsresult AddToThread(nsMsgHdr *newHdr, nsMsgThread *thread, PRBool threadInThread);
+	virtual nsresult AddToThread(nsMsgHdr *newHdr, nsIMsgThread *thread, nsIMsgDBHdr *pMsgHdr, PRBool threadInThread);
 
 
 	// open db cache
@@ -282,6 +289,7 @@ protected:
 	static nsVoidArray/*<nsMsgDatabase>*/* GetDBCache();
 	static nsVoidArray/*<nsMsgDatabase>*/* m_dbCache;
 
+	nsCOMPtr <nsICollation> m_collationKeyGenerator;
 	// mdb bookkeeping stuff
 	nsresult			InitExistingDB();
 	nsresult			InitNewDB();
@@ -291,13 +299,16 @@ protected:
 	nsIMdbEnv		    *m_mdbEnv;	// to be used in all the db calls.
 	nsIMdbStore	 	    *m_mdbStore;
 	nsIMdbTable		    *m_mdbAllMsgHeadersTable;
+	nsIMdbTable			*m_mdbAllThreadsTable;
 	nsFileSpec		    m_dbName;
 	nsMsgKeySet		    *m_newSet;	// new messages since last open.
 	PRBool				m_mdbTokensInitialized;
     nsVoidArray/*<nsIDBChangeListener>*/ *m_ChangeListeners;
 	mdb_token			m_hdrRowScopeToken;
+	mdb_token			m_threadRowScopeToken;
 	mdb_token			m_hdrTableKindToken;
 	mdb_token			m_threadTableKindToken;
+	mdb_token			m_allThreadsTableKindToken;
 	mdb_token			m_subjectColumnToken;
 	mdb_token			m_senderColumnToken;
 	mdb_token			m_messageIdColumnToken;
@@ -315,8 +326,11 @@ protected:
 	mdb_token			m_threadChildrenColumnToken;
 	mdb_token			m_threadUnreadChildrenColumnToken;
 	mdb_token			m_messageThreadIdColumnToken;
+	mdb_token			m_threadSubjectColumnToken;
 	mdb_token			m_numReferencesColumnToken;
 	mdb_token			m_messageCharSetColumnToken;
+	mdb_token			m_threadParentColumnToken;
+	mdb_token			m_threadRootKeyColumnToken;
 	nsIMsgHeaderParser	*m_HeaderParser;
 };
 

@@ -24,6 +24,10 @@ REQUIRES=xpcom raptor pref
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=					\
+        nsToolbarDragListener.cpp        \
+        nsToolbarItemFrame.cpp        \
+        nsSplitterFrame.cpp        \
+        nsGrippyFrame.cpp        \
         nsTabFrame.cpp        \
         nsDeckFrame.cpp        \
         nsBoxFrame.cpp        \
@@ -32,6 +36,7 @@ CPPSRCS=					\
 	nsToolboxFrame.cpp		\
 	nsToolbarFrame.cpp		\
 	nsTreeFrame.cpp			\
+	nsTreeRowGroupFrame.cpp \
 	nsTreeIndentationFrame.cpp \
 	nsTreeCellFrame.cpp \
 	nsTriStateCheckboxFrame.cpp \
@@ -41,9 +46,18 @@ CPPSRCS=					\
 	nsSliderFrame.cpp \
 	nsColorPickerFrame.cpp \
 	nsFontPickerFrame.cpp \
+	nsMenuPopupFrame.cpp \
+	nsMenuFrame.cpp \
+	nsMenuBarFrame.cpp \
+	nsMenuBarListener.cpp \
+	nsPopupSetFrame.cpp \
 	$(NULL)
 
 CPP_OBJS=					\
+        .\$(OBJDIR)\nsToolbarDragListener.obj    \
+        .\$(OBJDIR)\nsToolbarItemFrame.obj    \
+        .\$(OBJDIR)\nsGrippyFrame.obj    \
+        .\$(OBJDIR)\nsSplitterFrame.obj    \
         .\$(OBJDIR)\nsTabFrame.obj    \
         .\$(OBJDIR)\nsDeckFrame.obj    \
         .\$(OBJDIR)\nsBoxFrame.obj    \
@@ -52,6 +66,7 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsToolboxFrame.obj		\
 	.\$(OBJDIR)\nsToolbarFrame.obj		\
 	.\$(OBJDIR)\nsTreeFrame.obj	\
+	.\$(OBJDIR)\nsTreeRowGroupFrame.obj \
 	.\$(OBJDIR)\nsTreeIndentationFrame.obj \
 	.\$(OBJDIR)\nsTreeCellFrame.obj \
 	.\$(OBJDIR)\nsTriStateCheckboxFrame.obj \
@@ -61,6 +76,11 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsSliderFrame.obj \
 	.\$(OBJDIR)\nsColorPickerFrame.obj \
 	.\$(OBJDIR)\nsFontPickerFrame.obj \
+	.\$(OBJDIR)\nsMenuPopupFrame.obj \
+	.\$(OBJDIR)\nsMenuFrame.obj \
+	.\$(OBJDIR)\nsMenuBarFrame.obj \
+	.\$(OBJDIR)\nsMenuBarListener.obj \
+	.\$(OBJDIR)\nsPopupSetFrame.obj \
 	$(NULL)
 
 EXPORTS =					\

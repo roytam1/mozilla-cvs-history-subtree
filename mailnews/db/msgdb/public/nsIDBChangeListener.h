@@ -10,7 +10,7 @@
 class nsIDBChangeListener : public nsISupports
 {
 public:
-    static const nsIID& IID(void) { static nsIID iid = NS_IDBCHANGELISTENER_IID; return iid; }
+    static const nsIID& GetIID(void) { static nsIID iid = NS_IDBCHANGELISTENER_IID; return iid; }
   
     NS_IMETHOD OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, PRUint32 aNewFlags, 
                            nsIDBChangeListener * aInstigator) = 0;

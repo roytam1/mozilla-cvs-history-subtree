@@ -28,7 +28,7 @@
 #include "nsSoftwareUpdateIIDs.h"
 
 #include "nsInstall.h"
-#include "zipfile.h"
+//#include "zipfile.h" // replaced by nsIJAR.h
 
 #include "nsRepository.h"
 #include "nsIServiceManager.h"
@@ -40,7 +40,8 @@
 #include "jsapi.h"
 
 #include "nsIEventQueueService.h"
-
+#include "nsIEnumerator.h"
+#include "nsIJAR.h"
 
 static NS_DEFINE_IID(kISoftwareUpdateIID, NS_ISOFTWAREUPDATE_IID);
 static NS_DEFINE_IID(kSoftwareUpdateCID,  NS_SoftwareUpdate_CID);
@@ -56,12 +57,14 @@ static JSClass global_class =
 };
 
 
-extern PRInt32 InitXPInstallObjects(JSContext *jscontext, JSObject *global, const char* jarfile, const char* args);
+extern PRInt32 InitXPInstallObjects(JSContext *jscontext, JSObject *global, const char* jarfile, const PRUnichar* url, const PRUnichar* args);
+extern nsresult InitInstallVersionClass(JSContext *jscontext, JSObject *global, void** prototype);
+extern nsresult InitInstallTriggerGlobalClass(JSContext *jscontext, JSObject *global, void** prototype);
 
 // Defined in this file:
 static void     XPInstallErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
 static nsresult GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *scriptLength);
-static nsresult SetupInstallContext(const char* jarFile, const char* args, JSRuntime **jsRT, JSContext **jsCX, JSObject **jsGlob);
+static nsresult SetupInstallContext(const char* jarFile, const PRUnichar* url, const PRUnichar* args, JSRuntime **jsRT, JSContext **jsCX, JSObject **jsGlob);
 
 extern "C" void RunInstallOnThread(void *data);
 
@@ -126,16 +129,29 @@ XPInstallErrorReporter(JSContext *cx, const char *message, JSErrorReport *report
 static nsresult 
 GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *scriptLength)
 {
-    // Open the jarfile.
-    void* hZip;
+    nsIJAR* hZip = nsnull;
+    PRInt32 result;
     
     *scriptBuffer = nsnull;
     *scriptLength = 0;
 
-    nsresult rv = ZIP_OpenArchive(jarFile ,  &hZip);
-    
-    if (rv != ZIP_OK)
+    static NS_DEFINE_IID(kIJARIID, NS_IJAR_IID);
+    static NS_DEFINE_IID(kJARCID,  NS_JAR_CID);
+    nsresult rv = nsComponentManager::CreateInstance(kJARCID, nsnull, kIJARIID, 
+                                                     (void**) &hZip);
+    // Open the jarfile
+    if (hZip)
+        rv = hZip->Open( jarFile, &result );
+    if (NS_FAILED(rv))
+    {
+        NS_IF_RELEASE(hZip);
         return rv;
+    }
+    if (result != 0)
+    {
+        NS_IF_RELEASE(hZip);
+        return NS_ERROR_FAILURE;
+    }
 
 
     // Read manifest file for Install Script filename.
@@ -147,13 +163,18 @@ GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *
     installJSFileSpec.MakeUnique();
 
     // Extract the install.js file.
-    rv  = ZIP_ExtractFile( hZip, "install.js", nsNSPRPath(installJSFileSpec) );
-    if (rv != ZIP_OK)
+    rv = hZip->Extract( "install.js", nsNSPRPath(installJSFileSpec), &result );
+    if (NS_FAILED(rv))
     {
-        ZIP_CloseArchive(&hZip);
+        NS_IF_RELEASE( hZip );
         return rv;
     }
-    
+    if (result != 0)
+    {
+        NS_IF_RELEASE(hZip);
+        return NS_ERROR_FAILURE;
+    }
+
     // Read it into a buffer
     char* buffer;
     PRUint32 bufferLength;
@@ -162,6 +183,9 @@ GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *
     nsInputFileStream fileStream(installJSFileSpec);
     (fileStream.GetIStream())->GetLength(&bufferLength);
     buffer = new char[bufferLength + 1];
+    
+    if (buffer == nsnull)
+        return NS_ERROR_FAILURE;
 
     rv = (fileStream.GetIStream())->Read(buffer, bufferLength, &readLength);
 
@@ -175,7 +199,7 @@ GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *
         delete [] buffer;
     }
 
-    ZIP_CloseArchive(&hZip);
+    NS_IF_RELEASE( hZip );
     fileStream.close();
     installJSFileSpec.Delete(PR_FALSE);
         
@@ -187,13 +211,15 @@ GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *
 // Description	    : Creates a Javascript runtime and adds our xpinstall objects to it.
 // Return type		: static nsresult
 // Argument         : const char* jarFile - native filepath to where jar exists on disk 
-// Argument         : const char* args    - any arguments passed into the javascript context
+// Argument         : const PRUnichar* url  - URL of where this package came from
+// Argument         : const PRUnichar* args    - any arguments passed into the javascript context
 // Argument         : JSRuntime **jsRT   - Must be deleted via JS_DestroyRuntime
 // Argument         : JSContext **jsCX   - Must be deleted via JS_DestroyContext
 // Argument         : JSObject **jsGlob
 ///////////////////////////////////////////////////////////////////////////////////////////////
-static nsresult SetupInstallContext(const char* jarFile, 
-                                    const char* args, 
+static nsresult SetupInstallContext(const char* jarFile,
+                                    const PRUnichar* url,
+                                    const PRUnichar* args, 
                                     JSRuntime **jsRT, 
                                     JSContext **jsCX, 
                                     JSObject **jsGlob)
@@ -229,11 +255,10 @@ static nsresult SetupInstallContext(const char* jarFile,
     JS_InitStandardClasses(cx, glob);
 
     // Add our Install class to this context
-    InitXPInstallObjects(cx, glob, jarFile, args);
+    InitXPInstallObjects(cx, glob, jarFile, url, args);
+    InitInstallVersionClass(cx, glob, nsnull);
+    InitInstallTriggerGlobalClass(cx, glob, nsnull);
 
-    // Fix:  We have to add Version and Trigger to this context!!
-    
-    
     *jsRT   = rt;
     *jsCX   = cx;
     *jsGlob = glob;
@@ -252,7 +277,7 @@ static nsresult SetupInstallContext(const char* jarFile,
 ///////////////////////////////////////////////////////////////////////////////////////////////
 PRInt32 RunInstall(nsInstallInfo *installInfo)
 {   
-    if (installInfo->GetFlags() == 0x00000001)
+    if (installInfo->GetFlags() == 0x0000FFFF) // XXX bogus value -- do we want this feature?
     {
         RunInstallOnThread((void *)installInfo);
     }
@@ -288,31 +313,29 @@ extern "C" void RunInstallOnThread(void *data)
     JSRuntime   *rt;
 	JSContext   *cx;
     JSObject    *glob;
-    
-    nsISoftwareUpdate *softwareUpdate;
 
-    nsresult rv = nsServiceManager::GetService( kSoftwareUpdateCID, 
-                                                kISoftwareUpdateIID,
-                                                (nsISupports**)&softwareUpdate);
-    
     nsIXPINotifier *notifier;
+    nsresult    rv;
 
-    if (NS_SUCCEEDED(rv))
+    NS_WITH_SERVICE(nsISoftwareUpdate, softwareUpdate, kSoftwareUpdateCID, &rv );
+
+    if (!NS_SUCCEEDED(rv))
     {
-        softwareUpdate->GetTopLevelNotifier(&notifier);
-    }
-    else
-    {
+        NS_WARNING("shouldn't have RunInstall() if we can't get SoftwareUpdate");
         return;
     }
+
+    softwareUpdate->SetActiveNotifier( installInfo->GetNotifier() );
+    softwareUpdate->GetMasterNotifier(&notifier);
     
+    nsString url;
+    installInfo->GetURL(url);
+
     if(notifier)
-        notifier->BeforeJavascriptEvaluation();
-    
+        notifier->BeforeJavascriptEvaluation( url.GetUnicode() );
     
     nsString args;
     installInfo->GetArguments(args);
-
 
     char *jarpath;
     installInfo->GetLocalFile(&jarpath);
@@ -329,7 +352,8 @@ extern "C" void RunInstallOnThread(void *data)
         goto bail;
 
     rv = SetupInstallContext(   jarpath, 
-                                nsAutoCString( args ), 
+                                url.GetUnicode(),
+                                args.GetUnicode(), 
                                 &rt, &cx, &glob);
     if (NS_FAILED(rv))
         goto bail;
@@ -349,11 +373,12 @@ extern "C" void RunInstallOnThread(void *data)
     JS_DestroyRuntime(rt);
 
 bail:
-    if(notifier)
-        notifier->AfterJavascriptEvaluation();
+    if(notifier) 
+        notifier->AfterJavascriptEvaluation( url.GetUnicode() );
 
     if (scriptBuffer) delete [] scriptBuffer;
     if (jarpath) nsCRT::free(jarpath);
 
+    softwareUpdate->SetActiveNotifier(0);
     softwareUpdate->InstallJarCallBack();
 }

@@ -17,7 +17,7 @@
  */
 
 #include <stdio.h>
-#include "nsITextEditor.h"
+
 #include "nsIEditor.h"
 #include "TextEditorTest.h"
 #include "nsIDOMSelection.h"
@@ -43,7 +43,7 @@ TextEditorTest::~TextEditorTest()
   printf("destroyed a TextEditorTest\n");
 }
 
-void TextEditorTest::Run(nsITextEditor *aEditor, PRInt32 *outNumTests, PRInt32 *outNumTestsFailed)
+void TextEditorTest::Run(nsIEditor *aEditor, PRInt32 *outNumTests, PRInt32 *outNumTestsFailed)
 {
   if (!aEditor) return;
   mTextEditor = do_QueryInterface(aEditor);
@@ -89,14 +89,18 @@ nsresult TextEditorTest::RunUnitTest(PRInt32 *outNumTests, PRInt32 *outNumTestsF
   (*outNumTests)++;
   (*outNumTestsFailed) += (NS_FAILED(result) != NS_OK);
 
+  // get us back to the original document
+  result = mEditor->Undo(12);
+  TEST_RESULT(result);
+
   return result;
 }
 
 nsresult TextEditorTest::InitDoc()
 {
-  nsresult result = mTextEditor->SelectAll();
+  nsresult result = mEditor->SelectAll();
   TEST_RESULT(result);
-  result = mTextEditor->DeleteSelection(nsIEditor::eDeleteRight);
+  result = mEditor->DeleteSelection(nsIEditor::eDeleteNext);
   TEST_RESULT(result);
   return result;
 }
@@ -142,7 +146,7 @@ nsresult TextEditorTest::TestTextProperties()
   nodeList->GetLength(&count);
   NS_ASSERTION(0!=count, "there are no text nodes in the document!");
   nsCOMPtr<nsIDOMNode>textNode;
-  result = nodeList->Item(0, getter_AddRefs(textNode));
+  result = nodeList->Item(count-1, getter_AddRefs(textNode));
   TEST_RESULT(result);
   TEST_POINTER(textNode.get());
 
@@ -161,14 +165,14 @@ nsresult TextEditorTest::TestTextProperties()
   PRBool any = PR_FALSE;
   PRBool all = PR_FALSE;
   PRBool first=PR_FALSE;
-  result = mTextEditor->GetTextProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_FALSE==first, "first should be false");
   NS_ASSERTION(PR_FALSE==any, "any should be false");
   NS_ASSERTION(PR_FALSE==all, "all should be false");
-  result = mTextEditor->SetTextProperty(nsIEditProperty::b, nsnull, nsnull);
+  result = mTextEditor->SetInlineProperty(nsIEditProperty::b, nsnull, nsnull);
   TEST_RESULT(result);
-  result = mTextEditor->GetTextProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_TRUE==first, "first should be true");
   NS_ASSERTION(PR_TRUE==any, "any should be true");
@@ -177,9 +181,9 @@ nsresult TextEditorTest::TestTextProperties()
 
   // remove the bold we just set
   printf("set the whole first text node to not bold\n");
-  result = mTextEditor->RemoveTextProperty(nsIEditProperty::b, nsnull);
+  result = mTextEditor->RemoveInlineProperty(nsIEditProperty::b, nsnull);
   TEST_RESULT(result);
-  result = mTextEditor->GetTextProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_FALSE==first, "first should be false");
   NS_ASSERTION(PR_FALSE==any, "any should be false");
@@ -190,23 +194,23 @@ nsresult TextEditorTest::TestTextProperties()
   printf("set the first text node (1, length-1) to bold and italic, and (2, length-1) to underline.\n");
   selection->Collapse(textNode, 1);
   selection->Extend(textNode, length-1);
-  result = mTextEditor->SetTextProperty(nsIEditProperty::b, nsnull, nsnull);
+  result = mTextEditor->SetInlineProperty(nsIEditProperty::b, nsnull, nsnull);
   TEST_RESULT(result);
-  result = mTextEditor->GetTextProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_TRUE==first, "first should be true");
   NS_ASSERTION(PR_TRUE==any, "any should be true");
   NS_ASSERTION(PR_TRUE==all, "all should be true");
   mEditor->DebugDumpContent();
   // make all that same text italic
-  result = mTextEditor->SetTextProperty(nsIEditProperty::i, nsnull, nsnull);
+  result = mTextEditor->SetInlineProperty(nsIEditProperty::i, nsnull, nsnull);
   TEST_RESULT(result);
-  result = mTextEditor->GetTextProperty(nsIEditProperty::i, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::i, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_TRUE==first, "first should be true");
   NS_ASSERTION(PR_TRUE==any, "any should be true");
   NS_ASSERTION(PR_TRUE==all, "all should be true");
-  result = mTextEditor->GetTextProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_TRUE==first, "first should be true");
   NS_ASSERTION(PR_TRUE==any, "any should be true");
@@ -219,17 +223,17 @@ nsresult TextEditorTest::TestTextProperties()
   TEST_POINTER(nodeList.get());
   nodeList->GetLength(&count);
   NS_ASSERTION(0!=count, "there are no text nodes in the document!");
-  result = nodeList->Item(1, getter_AddRefs(textNode));
+  result = nodeList->Item(count-2, getter_AddRefs(textNode));
   TEST_RESULT(result);
   TEST_POINTER(textNode.get());
   textData = do_QueryInterface(textNode);
   textData->GetLength(&length);
+  NS_ASSERTION(length==249, "wrong text node");
   selection->Collapse(textNode, 1);
   selection->Extend(textNode, length-2);
-
-  result = mTextEditor->SetTextProperty(nsIEditProperty::u, nsnull, nsnull);
+  result = mTextEditor->SetInlineProperty(nsIEditProperty::u, nsnull, nsnull);
   TEST_RESULT(result);
-  result = mTextEditor->GetTextProperty(nsIEditProperty::u, nsnull, nsnull, first, any, all);
+  result = mTextEditor->GetInlineProperty(nsIEditProperty::u, nsnull, nsnull, first, any, all);
   TEST_RESULT(result);
   NS_ASSERTION(PR_TRUE==first, "first should be true");
   NS_ASSERTION(PR_TRUE==any, "any should be true");

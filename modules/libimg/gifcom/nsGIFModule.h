@@ -29,7 +29,7 @@ class nsGIFModule : public nsIModule
 
     // nsIModule Interfaces
     NS_IMETHOD GetClassObject(nsIComponentManager *aCompMgr, const nsCID & aClass,
-                              const nsIID &aIID, void **r_classObj);
+                              nsISupports **r_classObj);
     NS_IMETHOD RegisterSelf(nsIComponentManager *aCompMgr, nsIFileSpec *location);
     NS_IMETHOD UnregisterSelf(nsIComponentManager *aCompMgr, nsIFileSpec *location);
     NS_IMETHOD CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload);

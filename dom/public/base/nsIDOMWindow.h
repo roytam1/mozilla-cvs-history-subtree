@@ -58,6 +58,8 @@ public:
 
   NS_IMETHOD    GetTop(nsIDOMWindow** aTop)=0;
 
+  NS_IMETHOD    GetContent(nsIDOMWindow** aContent)=0;
+
   NS_IMETHOD    GetMenubar(nsIDOMBarProp** aMenubar)=0;
 
   NS_IMETHOD    GetToolbar(nsIDOMBarProp** aToolbar)=0;
@@ -156,7 +158,7 @@ public:
 
   NS_IMETHOD    SetInterval(JSContext *cx, jsval *argv, PRUint32 argc, PRInt32* aReturn)=0;
 
-  NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, PRInt32 aXPos, PRInt32 aYPos, const nsString& aPopupType, const nsString& aAnchorAlignment, const nsString& aPopupAlignment)=0;
+  NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, PRInt32 aXPos, PRInt32 aYPos, const nsString& aPopupType, const nsString& aAnchorAlignment, const nsString& aPopupAlignment, nsIDOMWindow** aReturn)=0;
 
   NS_IMETHOD    Open(JSContext *cx, jsval *argv, PRUint32 argc, nsIDOMWindow** aReturn)=0;
 
@@ -173,6 +175,7 @@ public:
   NS_IMETHOD    GetHistory(nsIDOMHistory** aHistory);  \
   NS_IMETHOD    GetParent(nsIDOMWindow** aParent);  \
   NS_IMETHOD    GetTop(nsIDOMWindow** aTop);  \
+  NS_IMETHOD    GetContent(nsIDOMWindow** aContent);  \
   NS_IMETHOD    GetMenubar(nsIDOMBarProp** aMenubar);  \
   NS_IMETHOD    GetToolbar(nsIDOMBarProp** aToolbar);  \
   NS_IMETHOD    GetLocationbar(nsIDOMBarProp** aLocationbar);  \
@@ -228,7 +231,7 @@ public:
   NS_IMETHOD    ClearInterval(PRInt32 aTimerID);  \
   NS_IMETHOD    SetTimeout(JSContext *cx, jsval *argv, PRUint32 argc, PRInt32* aReturn);  \
   NS_IMETHOD    SetInterval(JSContext *cx, jsval *argv, PRUint32 argc, PRInt32* aReturn);  \
-  NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, PRInt32 aXPos, PRInt32 aYPos, const nsString& aPopupType, const nsString& aAnchorAlignment, const nsString& aPopupAlignment);  \
+  NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, PRInt32 aXPos, PRInt32 aYPos, const nsString& aPopupType, const nsString& aAnchorAlignment, const nsString& aPopupAlignment, nsIDOMWindow** aReturn);  \
   NS_IMETHOD    Open(JSContext *cx, jsval *argv, PRUint32 argc, nsIDOMWindow** aReturn);  \
   NS_IMETHOD    OpenDialog(JSContext *cx, jsval *argv, PRUint32 argc, nsIDOMWindow** aReturn);  \
 
@@ -243,6 +246,7 @@ public:
   NS_IMETHOD    GetHistory(nsIDOMHistory** aHistory) { return _to GetHistory(aHistory); } \
   NS_IMETHOD    GetParent(nsIDOMWindow** aParent) { return _to GetParent(aParent); } \
   NS_IMETHOD    GetTop(nsIDOMWindow** aTop) { return _to GetTop(aTop); } \
+  NS_IMETHOD    GetContent(nsIDOMWindow** aContent) { return _to GetContent(aContent); } \
   NS_IMETHOD    GetMenubar(nsIDOMBarProp** aMenubar) { return _to GetMenubar(aMenubar); } \
   NS_IMETHOD    GetToolbar(nsIDOMBarProp** aToolbar) { return _to GetToolbar(aToolbar); } \
   NS_IMETHOD    GetLocationbar(nsIDOMBarProp** aLocationbar) { return _to GetLocationbar(aLocationbar); } \
@@ -298,7 +302,7 @@ public:
   NS_IMETHOD    ClearInterval(PRInt32 aTimerID) { return _to ClearInterval(aTimerID); }  \
   NS_IMETHOD    SetTimeout(JSContext *cx, jsval *argv, PRUint32 argc, PRInt32* aReturn) { return _to SetTimeout(cx, argv, argc, aReturn); }  \
   NS_IMETHOD    SetInterval(JSContext *cx, jsval *argv, PRUint32 argc, PRInt32* aReturn) { return _to SetInterval(cx, argv, argc, aReturn); }  \
-  NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, PRInt32 aXPos, PRInt32 aYPos, const nsString& aPopupType, const nsString& aAnchorAlignment, const nsString& aPopupAlignment) { return _to CreatePopup(aElement, aPopupContent, aXPos, aYPos, aPopupType, aAnchorAlignment, aPopupAlignment); }  \
+  NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, PRInt32 aXPos, PRInt32 aYPos, const nsString& aPopupType, const nsString& aAnchorAlignment, const nsString& aPopupAlignment, nsIDOMWindow** aReturn) { return _to CreatePopup(aElement, aPopupContent, aXPos, aYPos, aPopupType, aAnchorAlignment, aPopupAlignment, aReturn); }  \
   NS_IMETHOD    Open(JSContext *cx, jsval *argv, PRUint32 argc, nsIDOMWindow** aReturn) { return _to Open(cx, argv, argc, aReturn); }  \
   NS_IMETHOD    OpenDialog(JSContext *cx, jsval *argv, PRUint32 argc, nsIDOMWindow** aReturn) { return _to OpenDialog(cx, argv, argc, aReturn); }  \
 

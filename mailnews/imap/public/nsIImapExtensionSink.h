@@ -57,7 +57,14 @@ public:
 							   FolderQueryInfo* aInfo) = 0;
   NS_IMETHOD SetCopyResponseUid(nsIImapProtocol* aProtocol,
                                 nsMsgKeyArray* keyArray, 
-                                const char *msgIdString) = 0;
+                                const char *msgIdString,
+                                nsISupports* copyState) = 0;
+  NS_IMETHOD SetAppendMsgUid(nsIImapProtocol* aProtocol,
+                             nsMsgKey newKey,
+                             nsISupports* copyState) = 0;
+  NS_IMETHOD GetMessageId(nsIImapProtocol* aProtocol,
+                          nsCString* messageId,
+                          nsISupports* copyState) = 0;
 };
 
 #endif

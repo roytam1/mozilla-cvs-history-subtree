@@ -138,7 +138,7 @@
 
 #ifdef XP_MAC
 #include <Files.h>
-#elif defined(XP_UNIX) || defined (XP_OS2)
+#elif defined(XP_UNIX) || defined (XP_OS2) || defined(XP_BEOS)
 #include <dirent.h>
 #elif defined(XP_PC)
 #include "prio.h"
@@ -339,8 +339,10 @@ class NS_COM nsFileSpec
                                 nsFileSpec(
                                     short vRefNum,
                                     long parID,
-                                    ConstStr255Param name);
-                                nsFileSpec(const FSSpec& inSpec);
+                                    ConstStr255Param name,
+                                    PRBool resolveAlias = PR_TRUE);
+
+                                nsFileSpec(const FSSpec& inSpec, PRBool resolveAlias = PR_TRUE);
         void                    operator = (const FSSpec& inSpec);
 
                                 operator FSSpec* () { return &mSpec; }
@@ -353,12 +355,6 @@ class NS_COM nsFileSpec
         ConstFSSpecPtr          GetFSSpecPtr() const { return &mSpec; }
         FSSpecPtr               GetFSSpecPtr() { return &mSpec; }
         void                    MakeAliasSafe();
-                                    // Called for the spec of an alias.  Copies the alias to
-                                    // a secret temp directory and modifies the spec to point
-                                    // to it.  Sets mError.
-        void                    ResolveAlias(PRBool& wasAliased);
-                                    // Called for the spec of an alias.  Modifies the spec to
-                                    // point to the original.  Sets mError.
         void                    MakeUnique(ConstStr255Param inSuggestedLeafName);
         StringPtr               GetLeafPName() { return mSpec.name; }
         ConstStr255Param        GetLeafPName() const { return mSpec.name; }
@@ -456,14 +452,22 @@ class NS_COM nsFileSpec
                                     // More stringent than Exists()
         PRBool                  Exists() const;
 
+        PRBool                  IsHidden() const;
+        
+        PRBool                  IsSymlink() const;
     //--------------------------------------------------
     // Creation and deletion of objects.  These can modify the disk.
     //--------------------------------------------------
+
+        nsresult                ResolveSymlink(PRBool& wasSymlink);
+                                    // Called for the spec of an alias.  Modifies the spec to
+                                    // point to the original.  Sets mError.
 
         void                    CreateDirectory(int mode = 0700 /* for unix */);
         void                    CreateDir(int mode = 0700) { CreateDirectory(mode); }
                                    // workaround for yet another VC++ bug with long identifiers.
         void                    Delete(PRBool inRecursive) const;
+        void                    RecursiveCopy(nsFileSpec newDir) const;
         
         nsresult                Rename(const char* inNewName); // not const: gets updated
         nsresult                Rename(const nsString& inNewName)
@@ -661,26 +665,23 @@ class NS_COM nsDirectoryIterator
 //  Example:
 //
 //       nsFileSpec parentDir(...); // directory over whose children we shall iterate
-//       for (nsDirectoryIterator i(parentDir); i.Exists(); i++)
+//       for (nsDirectoryIterator i(parentDir, PR_FALSE); i.Exists(); i++)
 //       {
 //              // do something with i.Spec()
 //       }
 //
-//  or:
+//            - or -
 //
-//       for (nsDirectoryIterator i(parentDir, -1); i.Exists(); i--)
+//       for (nsDirectoryIterator i(parentDir, PR_TRUE); i.Exists(); i--)
 //       {
 //              // do something with i.Spec()
 //       }
-//
-//  Currently, the only platform on which backwards iteration actually goes backwards
-//  is Macintosh.  On other platforms, both styles will work, but will go forwards.
+//       This one passed the PR_TRUE flag which will resolve any symlink encountered.
 //========================================================================================
 {
 	public:
-	                            nsDirectoryIterator(
-	                            	const nsFileSpec& parent,
-	                            	int iterateDirection = +1);
+	                            nsDirectoryIterator( const nsFileSpec& parent,
+	                            	                 PRBool resoveSymLinks);
 #ifndef XP_MAC
 	// Macintosh currently doesn't allocate, so needn't clean up.
 	    virtual                 ~nsDirectoryIterator();
@@ -708,9 +709,14 @@ class NS_COM nsDirectoryIterator
 
 	    nsFileSpec              mCurrent;
 	    PRBool                  mExists;
-	      
-#if defined(XP_UNIX)
-        DIR*                    mDir;
+        PRBool                  mResoveSymLinks;
+
+#if defined(XP_UNIX) || defined(XP_BEOS) || defined (XP_PC)
+	    nsFileSpec		        mStarting;
+#endif
+        
+#if defined(XP_UNIX) || defined(XP_BEOS)
+	    DIR*                    mDir;
 #elif defined(XP_PC)
         PRDir*                  mDir; // XXX why not use PRDir for Unix too?
 #elif defined(XP_MAC)

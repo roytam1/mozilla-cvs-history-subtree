@@ -103,7 +103,6 @@ EXPORTS = jvmmgr.h \
 
 LLIBS = \
 	$(LIBNSPR)			\
-	$(DIST)\lib\plc3.lib	\
 	$(DIST)\lib\xpcom.lib         \
 	$(DIST)\lib\xplib.lib           \
 	$(DIST)\lib\js3250.lib          \
@@ -134,6 +133,7 @@ PUBLIC_HEADER_DIR=$(PUBLIC)\win16
 install::  $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).$(DLL_SUFFIX) $(DIST)\bin\components
 
 clobber::
     $(RM_R) _jri

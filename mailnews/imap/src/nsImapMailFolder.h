@@ -20,6 +20,7 @@
 
 #include "nsImapCore.h"
 #include "nsMsgDBFolder.h"
+#include "nsIMessage.h"
 #include "nsIImapMailFolderSink.h"
 #include "nsIImapMessageSink.h"
 #include "nsIImapExtensionSink.h"
@@ -31,21 +32,53 @@
 #include "nsIMsgParseMailMsgState.h"
 #include "nsITransactionManager.h"
 #include "nsMsgTxn.h"
-#ifdef DEBUG_bienvenu
-#define DOING_FILTERS
-#endif
-#ifdef DOING_FILTERS
+#include "nsIMsgMessageService.h"
 #include "nsIMsgFilterHitNotify.h"
 #include "nsIMsgFilterList.h"
 
 class nsImapMoveCoalescer;
 
-#endif
 
-/* fa32d000-f6a0-11d2-af8d-001083002da8 */
-#define NS_IMAPRESOURCE_CID \
-{ 0xfa32d000, 0xf6a0, 0x11d2, \
-    { 0xaf, 0x8d, 0x00, 0x10, 0x83, 0x00, 0x2d, 0xa8 } }
+#define FOUR_K 4096
+
+/* b64534f0-3d53-11d3-ac2a-00805f8ac968 */
+
+#define NS_IMAPMAILCOPYSTATE_IID \
+{ 0xb64534f0, 0x3d53, 0x11d3, \
+    { 0xac, 0x2a, 0x00, 0x80, 0x5f, 0x8a, 0xc9, 0x68 } }
+
+class nsImapMailCopyState: public nsISupports
+{
+public:
+    static const nsIID& GetIID()
+    {
+        static nsIID iid = NS_IMAPMAILCOPYSTATE_IID;
+        return iid;
+    }
+    
+    NS_DECL_ISUPPORTS
+
+    nsImapMailCopyState();
+    virtual ~nsImapMailCopyState();
+
+    nsCOMPtr<nsISupports> m_srcSupport; // source file spec or folder
+    nsCOMPtr<nsISupportsArray> m_messages; // array of source messages
+    nsCOMPtr<nsMsgTxn> m_undoMsgTxn; // undo object with this copy operation
+    nsCOMPtr<nsIMessage> m_message; // current message to be copied
+    nsCOMPtr<nsIMsgCopyServiceListener> m_listener; // listener of this copy
+                                                    // operation 
+    nsCOMPtr<nsIFileSpec> m_tmpFileSpec; // temp file spec for copy operation
+
+    nsIMsgMessageService* m_msgService; // source folder message service; can
+                                        // be Nntp, Mailbox, or Imap
+    PRBool m_isMove;             // is a move
+    PRBool m_selectedState;      // needs to be in selected state; append msg
+    PRUint32 m_curIndex; // message index to the message array which we are
+                         // copying 
+    PRUint32 m_totalCount;// total count of messages we have to do
+    PRBool m_streamCopy;
+    char *m_dataBuffer; // temporary buffer for this copy operation
+};
 
 class nsImapMailFolder : public nsMsgDBFolder, 
                          public nsIMsgImapMailFolder,
@@ -64,8 +97,6 @@ public:
 	virtual ~nsImapMailFolder();
 
 	NS_DECL_ISUPPORTS_INHERITED
-    // nsIMsgImapMailFolder methods
-    NS_IMETHOD GetPathName(nsNativeFileSpec& aPathName);
 
     // nsICollection methods:
     NS_IMETHOD Enumerate(nsIEnumerator* *result);
@@ -81,19 +112,17 @@ public:
 	NS_IMETHOD CreateSubfolder(const char *folderName);
     
 	NS_IMETHOD RemoveSubFolder (nsIMsgFolder *which);
+    NS_IMETHOD Compact();
+    NS_IMETHOD EmptyTrash();
 	NS_IMETHOD Delete ();
 	NS_IMETHOD Rename (const char *newName);
 	NS_IMETHOD Adopt(nsIMsgFolder *srcFolder, PRUint32 *outPos);
-    
-    NS_IMETHOD GetChildNamed(const char * name, nsISupports ** aChild);
-    
-    // this override pulls the value from the db
-	NS_IMETHOD GetName(char ** name);   // Name of this folder (as presented to user).
-	NS_IMETHOD GetPrettyName(char ** prettyName);	// Override of the base, for top-level mail folder
+
+	NS_IMETHOD GetPrettyName(PRUnichar ** prettyName);	// Override of the base, for top-level mail folder
     
     NS_IMETHOD BuildFolderURL(char **url);
     
-	NS_IMETHOD UpdateSummaryTotals() ;
+	NS_IMETHOD UpdateSummaryTotals(PRBool force) ;
     
 	NS_IMETHOD GetExpungedBytesCount(PRUint32 *count);
 	NS_IMETHOD GetDeletable (PRBool *deletable); 
@@ -103,20 +132,36 @@ public:
     
 	NS_IMETHOD GetSizeOnDisk(PRUint32 * size);
     
-	NS_IMETHOD GetUsersName(char** userName);
-	NS_IMETHOD GetHostName(char** hostName);
+	NS_IMETHOD GetUsername(char** userName);
+	NS_IMETHOD GetHostname(char** hostName);
 	NS_IMETHOD UserNeedsToAuthenticateForFolder(PRBool displayOnly, PRBool *authenticate);
 	NS_IMETHOD RememberPassword(const char *password);
 	NS_IMETHOD GetRememberedPassword(char ** password);
+
+	NS_IMETHOD MarkMessagesRead(nsISupportsArray *messages, PRBool markRead);
+	NS_IMETHOD MarkAllMessagesRead(void);
+
+    NS_IMETHOD DeleteSubFolders(nsISupportsArray *folders);
     
     virtual nsresult GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo,
                                           nsIMsgDatabase **db);
  	NS_IMETHOD DeleteMessages(nsISupportsArray *messages,
-                              nsITransactionManager *txnMgr, PRBool deleteStorage);
+                              nsITransactionManager *txnMgr, PRBool
+                              deleteStorage);
+    NS_IMETHOD CopyMessages(nsIMsgFolder *srcFolder, 
+                            nsISupportsArray* messages,
+                            PRBool isMove, nsITransactionManager* txnMgr,
+                            nsIMsgCopyServiceListener* listener);
+    NS_IMETHOD CopyFileMessage(nsIFileSpec* fileSpec, 
+                               nsIMessage* msgToReplace,
+                               PRBool isDraftOrTemplate,
+                               nsITransactionManager* txnMgr,
+                               nsIMsgCopyServiceListener* listener);
 	NS_IMETHOD CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgHdr, nsIMessage
                                          **message);
     NS_IMETHOD GetNewMessages();
 
+    NS_IMETHOD GetPath(nsIFileSpec** aPathName);
     // nsIImapMailFolderSink methods
     // Tell mail master about a discovered imap mailbox
     NS_IMETHOD PossibleImapMailbox(nsIImapProtocol* aProtocol,
@@ -184,8 +229,8 @@ public:
 	NS_IMETHOD EndCopy(PRBool copySucceeded);
 
     // nsIUrlListener methods
-	NS_IMETHOD OnStartRunningUrl(nsIURL * aUrl);
-	NS_IMETHOD OnStopRunningUrl(nsIURL * aUrl, nsresult aExitCode);
+	NS_IMETHOD OnStartRunningUrl(nsIURI * aUrl);
+	NS_IMETHOD OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode);
 
     // nsIImapExtensionSink methods
     NS_IMETHOD SetUserAuthenticated(nsIImapProtocol* aProtocol,
@@ -206,7 +251,14 @@ public:
                                  FolderQueryInfo* aInfo);
     NS_IMETHOD SetCopyResponseUid(nsIImapProtocol* aProtocol,
                                   nsMsgKeyArray* keyArray,
-                                  const char* msgIdString);
+                                  const char* msgIdString,
+                                  nsISupports* copyState);
+    NS_IMETHOD SetAppendMsgUid(nsIImapProtocol* aProtocol,
+                               nsMsgKey aKey,
+                               nsISupports* copyState);
+    NS_IMETHOD GetMessageId(nsIImapProtocol* aProtocol,
+                            nsCString* messageId,
+                            nsISupports* copyState);
     
     // nsIImapMiscellaneousSink methods
 	NS_IMETHOD AddSearchResult(nsIImapProtocol* aProtocol, 
@@ -236,7 +288,7 @@ public:
 	NS_IMETHOD FEAlertFromServer(nsIImapProtocol* aProtocol,
                                  const char* aString);
 	NS_IMETHOD ProgressStatus(nsIImapProtocol* aProtocol,
-                              const char* statusMsg);
+                              PRUint32 aMsgId);
 	NS_IMETHOD PercentProgress(nsIImapProtocol* aProtocol,
                                ProgressInfo* aInfo);
 	NS_IMETHOD PastPasswordCheck(nsIImapProtocol* aProtocol);
@@ -248,18 +300,28 @@ public:
                                msg_line_info* aInfo);
 	NS_IMETHOD ProcessTunnel(nsIImapProtocol* aProtocol,
                              TunnelInfo *aInfo);
-	NS_IMETHOD LoadNextQueuedUrl(nsIImapProtocol* aProtocol, nsIImapIncomingServer *aInfo);
+	NS_IMETHOD LoadNextQueuedUrl(nsIImapProtocol* aProtocol,
+                                 nsIImapIncomingServer *aInfo);
+    NS_IMETHOD CopyNextStreamMessage(nsIImapProtocol* aProtocol,
+                                     nsISupports* copyState);
+    NS_IMETHOD SetUrlState(nsIImapProtocol* aProtocol,
+                           nsIMsgMailNewsUrl* aUrl,
+                           PRBool isRunning,
+                           nsresult statusCode);
 
-#ifdef DOING_FILTERS
+	NS_IMETHOD MatchName(nsString *name, PRBool *matches);
 	// nsIMsgFilterHitNotification method(s)
 	NS_IMETHOD ApplyFilterHit(nsIMsgFilter *filter, PRBool *applyMore);
+
+    // overriding nsMsgDBFolder::GetMsgDatabase()
+    NS_IMETHOD GetMsgDatabase(nsIMsgDatabase** aMsgDatabase);
 
 	nsresult MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr, 
 									   nsIMsgDatabase *sourceDB, 
 									   char *destFolder,
 									   nsIMsgFilter *filter);
 	nsresult StoreImapFlags(imapMessageFlagsType flags, PRBool addFlags, nsMsgKeyArray &msgKeys);
-#endif // DOING_FILTERS
+	static nsresult AllocateUidStringFromKeyArray(nsMsgKeyArray &keyArray, nsCString &msgIds);
 protected:
     // Helper methods
 	void FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKeyArray
@@ -276,6 +338,7 @@ protected:
 	virtual PRBool DeleteIsMoveToTrash();
 	void ParseUidString(char *uidString, nsMsgKeyArray &keys);
 	nsresult GetTrashFolder(nsIMsgFolder **pTrashFolder);
+    PRBool InTrash(nsIMsgFolder* folder);
 
     nsresult AddDirectorySeparator(nsFileSpec &path);
     nsresult CreateDirectoryForFolder(nsFileSpec &path);
@@ -283,21 +346,37 @@ protected:
 	//Creates a subfolder with the name 'name' and adds it to the list of
     //children. Returns the child as well.
 	nsresult AddSubfolder(nsAutoString name, nsIMsgFolder **child);
-
 	nsresult GetDatabase();
+	virtual const char *GetIncomingServerType() {return "imap";}
 
-	virtual const nsIID& GetIncomingServerType() {return nsIImapIncomingServer::GetIID();}
+    // Uber message copy service
+    nsresult CopyMessages2(nsIMsgFolder* srcFolder,
+                           nsISupportsArray* messages,
+                           PRBool isMove,
+                           nsITransactionManager* txnMgr,
+                           nsIMsgCopyServiceListener* listener);
+    nsresult CopyStreamMessage(nsIMessage* message, nsIMsgFolder* dstFolder,
+                               PRBool isMove);
+    nsresult InitCopyState(nsISupports* srcSupport, 
+                           nsISupportsArray* messages,
+                           PRBool isMove,
+                           PRBool selectedState,
+                           nsIMsgCopyServiceListener* listener);
+    void ClearCopyState(nsresult exitCode);
+    nsresult SetTransactionManager(nsITransactionManager* txnMgr);
+    nsresult BuildIdsAndKeyArray(nsISupportsArray* messages,
+                                 nsCString& msgIds, nsMsgKeyArray& keyArray);
+
+	nsresult GetMessageHeader(nsIMsgDBHdr ** aMsgHdr);
 
     nsNativeFileSpec *m_pathName;
     PRBool m_initialized;
     PRBool m_haveDiscoverAllFolders;
     PRBool m_haveReadNameFromDB;
 	nsCOMPtr<nsIMsgParseMailMsgState> m_msgParser;
-#ifdef DOING_FILTERS
 	nsCOMPtr<nsIMsgFilterList> m_filterList;
 	PRBool				m_msgMovedByFilter;
 	nsImapMoveCoalescer *m_moveCoalescer;
-#endif
 	nsMsgKey			m_curMsgUid;
 	PRInt32			m_nextMessageByteLength;
     nsCOMPtr<nsIEventQueue> m_eventQueue;
@@ -311,6 +390,8 @@ protected:
     // *** jt - undo move/copy trasaction support
     nsCOMPtr<nsITransactionManager> m_transactionManager;
     nsCOMPtr<nsMsgTxn> m_pendingUndoTxn;
+    nsCOMPtr<nsImapMailCopyState> m_copyState;
+    PRMonitor *m_appendMsgMonitor;
 };
 
 #endif

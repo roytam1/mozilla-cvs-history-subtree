@@ -37,6 +37,32 @@
 
 struct nsPluginPort;
 
+
+// utility port setting class
+
+class StPortSetter
+{
+public:
+				StPortSetter(WindowPtr destWindowPort)
+				{
+					::GetPort(&mOldPort);
+#if TARGET_CARBON
+					::SetPortWindowPort(destWindowPort);
+#else
+					::SetPort(destWindowPort);
+#endif
+				}
+				
+				~StPortSetter()
+				{
+					::SetPort(mOldPort);
+				}
+				
+protected:
+	GrafPtr		mOldPort;
+};
+
+
 //-------------------------------------------------------------------------
 //
 // nsWindow
@@ -84,9 +110,9 @@ public:
     NS_IMETHOD              Show(PRBool aState);
     NS_IMETHOD 							IsVisible(PRBool & aState);
 
-    NS_IMETHOD            	Move(PRUint32 aX, PRUint32 aY);
-    NS_IMETHOD            	Resize(PRUint32 aWidth,PRUint32 aHeight, PRBool aRepaint);
-    NS_IMETHOD            	Resize(PRUint32 aX, PRUint32 aY,PRUint32 aWidth,PRUint32 aHeight, PRBool aRepaint);
+    NS_IMETHOD            	Move(PRInt32 aX, PRInt32 aY);
+    NS_IMETHOD            	Resize(PRInt32 aWidth,PRInt32 aHeight, PRBool aRepaint);
+    NS_IMETHOD            	Resize(PRInt32 aX, PRInt32 aY,PRInt32 aWidth,PRInt32 aHeight, PRBool aRepaint);
 
     NS_IMETHOD            	Enable(PRBool bState);
     NS_IMETHOD            	SetFocus(void);
@@ -122,7 +148,6 @@ public:
 
     NS_IMETHOD 							SetMenuBar(nsIMenuBar * aMenuBar);
     NS_IMETHOD							ShowMenuBar(PRBool aShow);
-    NS_IMETHOD              IsMenuBarVisible(PRBool *aVisible);
     virtual nsIMenuBar* 		GetMenuBar();
     NS_IMETHOD 							GetPreferredSize(PRInt32& aWidth, PRInt32& aHeight);
     NS_IMETHOD 							SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight);
@@ -150,6 +175,8 @@ protected:
 
   NS_IMETHOD			CalcOffset(PRInt32 &aX,PRInt32 &aY);
 
+		// our own impl of ::ScrollRect() that uses CopyBits so that it looks good
+	void					ScrollBits ( Rect & foo, PRInt32 inLeftDelta, PRInt32 inTopDelta ) ;
 
 protected:
 	char		gInstanceClassName[256];

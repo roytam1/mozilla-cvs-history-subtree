@@ -21,6 +21,7 @@
 #include "nsWebShellWindow.h"
 
 #include "nsLayoutCID.h"
+#include "nsIWeakReference.h"
 #include "nsIDocumentLoader.h"
 
 #include "nsIComponentManager.h"
@@ -28,7 +29,7 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIPref.h"
@@ -95,7 +96,18 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #ifdef XP_MAC
 #include <Menus.h>
 #endif
+#include "nsIMenuItem.h"
+#include "nsIDOMXULDocument.h"
+// End hack
+
 #include "nsIWindowMediator.h"
+
+// This is to bring up a MsgCompose window when a mailto link is clicked.
+// This is a temporary hack for M8 until NECKO lands when I can use their
+// Protocol registry
+#include "nsIDOMToolkitCore.h"
+#include "nsAppCoresCIDs.h"
+
 
 /* Define Class IDs */
 static NS_DEFINE_IID(kWindowCID,           NS_WINDOW_CID);
@@ -111,6 +123,7 @@ static NS_DEFINE_IID(kContextMenuCID,      NS_CONTEXTMENU_CID);
 
 static NS_DEFINE_CID(kPrefCID,             NS_PREF_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_IID(kToolkitCoreCID, NS_TOOLKITCORE_CID);
 
 
 
@@ -118,6 +131,12 @@ static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 
 static NS_DEFINE_IID(kIDocumentLoaderFactoryIID, NS_IDOCUMENTLOADERFACTORY_IID);
 static NS_DEFINE_CID(kLayoutDocumentLoaderFactoryCID, NS_LAYOUT_DOCUMENT_LOADER_FACTORY_CID);
+
+#ifndef NECKO
+#ifdef MOZ_MAIL_NEWS
+static NS_DEFINE_CID(kMsgComposeServiceCID, NS_MSGCOMPOSESERVICE_CID);
+#endif /* MOZ_MAIL_NEWS */
+#endif   /* NECKO  */
 
 
 /* Define Interface IDs */
@@ -151,16 +170,19 @@ static NS_DEFINE_IID(kIWindowMediatorIID,NS_IWINDOWMEDIATOR_IID);
 
 static NS_DEFINE_IID(kIXULPopupListenerIID, NS_IXULPOPUPLISTENER_IID);
 static NS_DEFINE_CID(kXULPopupListenerCID, NS_XULPOPUPLISTENER_CID);
-
+static NS_DEFINE_IID(kIUrlDispatcherIID,     NS_IURLDISPATCHER_IID);
 
 #ifdef DEBUG_rods
 #define DEBUG_MENUSDEL 1
 #endif
-
+#include "nsICommonDialogs.h"
+static NS_DEFINE_CID(	kCommonDialogsCID, NS_CommonDialog_CID );
+static NS_DEFINE_IID( kIPromptIID, NS_IPROMPT_IID );
 #include "nsIWebShell.h"
 
 const char * kThrobberOnStr  = "resource:/res/throbber/anims07.gif";
 const char * kThrobberOffStr = "resource:/res/throbber/anims00.gif";
+const char * kPrimaryContentTypeValue  = "content-primary";
 
 struct ThreadedWindowEvent {
   PLEvent           event;
@@ -171,11 +193,13 @@ struct ThreadedWindowEvent {
 // subsequently be filled in when we receive a webshell added notification.
 struct nsWebShellInfo {
   nsString id; // The identifier of the iframe or frame node in the XUL tree.
+  PRBool   primary;   // whether it's considered a/the primary content
   nsIWebShell* child; // The child web shell that will end up being used for the content area.
 
-  nsWebShellInfo(const nsString& anID, nsIWebShell* aChildShell)
+  nsWebShellInfo(const nsString& anID, PRBool aPrimary, nsIWebShell* aChildShell)
   {
     id = anID; 
+    primary = aPrimary;
     child = aChildShell;
     NS_IF_ADDREF(aChildShell);
   }
@@ -198,6 +222,8 @@ nsWebShellWindow::nsWebShellWindow()
   mLockedUntilChromeLoad = PR_FALSE;
   mContentShells = nsnull;
   mChromeMask = NS_CHROME_ALL_CHROME;
+  mIntrinsicallySized = PR_FALSE;
+  mCreatedVisible = PR_TRUE;
 }
 
 
@@ -271,6 +297,26 @@ nsWebShellWindow::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     NS_ADDREF_THIS();
     return NS_OK;
   }
+  if (aIID.Equals(kIUrlDispatcherIID)) {
+     *aInstancePtr = (void*) (nsIUrlDispatcher*) this;
+     NS_ADDREF_THIS();
+     return NS_OK;
+  }	
+  if (aIID.Equals(kIPromptIID )) {
+    *aInstancePtr = (void*)(nsIPrompt*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(nsIModalWindowSupport::GetIID())) {
+     *aInstancePtr = (void*)NS_STATIC_CAST(nsIModalWindowSupport*, this);
+     NS_ADDREF_THIS();
+     return NS_OK;
+  }
+  if (aIID.Equals(nsISupportsWeakReference::GetIID())) {
+    *aInstancePtr = (void*)NS_STATIC_CAST(nsISupportsWeakReference *, this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
   if (aIID.Equals(kISupportsIID)) {
     *aInstancePtr = (void*)(nsISupports*)(nsIWebShellContainer*)this;
     NS_ADDREF_THIS();
@@ -281,21 +327,22 @@ nsWebShellWindow::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
 
 nsresult nsWebShellWindow::Initialize(nsIWebShellWindow* aParent,
-                                      nsIAppShell* aShell, nsIURL* aUrl, 
+                                      nsIAppShell* aShell, nsIURI* aUrl, 
+                                      PRBool aCreatedVisible,
                                       nsIStreamObserver* anObserver,
                                       nsIXULWindowCallbacks *aCallbacks,
-                                      PRInt32 aInitialWidth, PRInt32 aInitialHeight)
+                                      PRInt32 aInitialWidth, PRInt32 aInitialHeight,
+                                      nsWidgetInitData& widgetInitData)
 {
   nsresult rv;
-
   nsIWidget *parentWidget;
+
+  mCreatedVisible = aCreatedVisible;
   
   // XXX: need to get the default window size from prefs...
-	// Doesn't come from prefs... will come from CSS/XUL/RDF
+  // Doesn't come from prefs... will come from CSS/XUL/RDF
   nsRect r(0, 0, aInitialWidth, aInitialHeight);
   
-  nsWidgetInitData initData;
-
   // Create top level window
   rv = nsComponentManager::CreateInstance(kWindowCID, nsnull, kIWidgetIID,
                                     (void**)&mWindow);
@@ -303,10 +350,25 @@ nsresult nsWebShellWindow::Initialize(nsIWebShellWindow* aParent,
     return rv;
   }
 
-  initData.mBorderStyle = eBorderStyle_window;
-
   if (!aParent || NS_FAILED(aParent->GetWidget(parentWidget)))
     parentWidget = nsnull;
+
+  /* This next bit is troublesome. We carry two different versions of a pointer
+     to our parent window. One is the parent window's widget, which is passed
+     to our own widget. The other is a weak reference we keep here to our
+     parent WebShellWindow. The former is useful to the widget, and we can't
+     trust its treatment of the parent reference because they're platform-
+     specific. The latter is useful to this class.
+       A better implementation would be one in which the parent keeps strong
+     references to its children and closes them before it allows itself
+     to be closed. This would mimic the behaviour of OSes that support
+     top-level child windows in OSes that do not. Later.
+  */
+  parentWidget = nsnull;
+  if (aParent) {
+    aParent->GetWidget(parentWidget);
+    mParentWindow = getter_AddRefs(NS_GetWeakReference(aParent));
+  }
 
   mWindow->SetClientData(this);
   mWindow->Create(parentWidget,                       // Parent nsIWidget
@@ -315,7 +377,7 @@ nsresult nsWebShellWindow::Initialize(nsIWebShellWindow* aParent,
                   nsnull,                             // Device context
                   aShell,                             // Application shell
                   nsnull,                             // nsIToolkit
-                  &initData);                         // Widget initialization data
+                  &widgetInitData);                   // Widget initialization data
   mWindow->GetClientBounds(r);
   mWindow->SetBackgroundColor(NS_RGB(192,192,192));
 
@@ -353,13 +415,6 @@ nsresult nsWebShellWindow::Initialize(nsIWebShellWindow* aParent,
                                     nsIPref::GetIID(), 
                                     (nsISupports **)&prefs);
   if (NS_SUCCEEDED(rv)) {
-    // XXX Enforce the STANDARD compatibility mode? Nav Quirks causes
-    // the chrome to malfunction. Having this be a general pref applied
-    // everywhere seems bogus to me.  We certainly don't want it on for
-    // the chrome.
-    prefs->SetIntPref("nglayout.compatibility.mode", eCompatibility_Standard);
-    prefs->SavePrefFile();
-
     // Set the prefs in the outermost webshell.
     mWebShell->SetPrefs(prefs);
     nsServiceManager::ReleaseService(kPrefCID, prefs);
@@ -370,11 +425,18 @@ nsresult nsWebShellWindow::Initialize(nsIWebShellWindow* aParent,
   NS_IF_ADDREF(mCallbacks);
 
   if (nsnull != aUrl)  {
+#ifdef NECKO
+    char *tmpStr = NULL;
+#else
     const char *tmpStr = NULL;
+#endif
     nsString urlString;
 
     aUrl->GetSpec(&tmpStr);
     urlString = tmpStr;
+#ifdef NECKO
+    nsCRT::free(tmpStr);
+#endif
     mWebShell->LoadURL(urlString.GetUnicode());
   }
                      
@@ -454,6 +516,21 @@ nsWebShellWindow::HandleEvent(nsGUIEvent *aEvent)
         break;
       }
 
+      case NS_GOTFOCUS: {
+        void* data;
+        aEvent->widget->GetClientData(data);
+        if (data) {
+          nsCOMPtr<nsIWebShell> contentShell;
+          ((nsWebShellWindow *)data)->GetContentWebShell(getter_AddRefs(contentShell));
+          if (contentShell) {
+            nsCOMPtr<nsIDOMWindow> domWindow;
+            if (NS_SUCCEEDED(((nsWebShellWindow *)data)->
+                ConvertWebShellToDOMWindow(contentShell, getter_AddRefs(domWindow)))) {
+              domWindow->Focus();
+            }
+          }
+        }
+      }
       default:
         break;
 
@@ -489,7 +566,7 @@ nsWebShellWindow::ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL,
 
 NS_IMETHODIMP 
 nsWebShellWindow::EndLoadURL(nsIWebShell* aWebShell, const PRUnichar* aURL,
-                             PRInt32 aStatus)
+                             nsresult aStatus)
 {
   return NS_OK;
 }
@@ -554,8 +631,28 @@ NS_IMETHODIMP nsWebShellWindow::CreateMenu(nsIMenuBar * aMenuBar,
       menuElement->SetAttribute("open", "true");
 
     // Begin menuitem inner loop
+    
+    // Now get the kids. Retrieve our menupopup child.
+    nsCOMPtr<nsIDOMNode> menuPopupNode;
+    aMenuNode->GetFirstChild(getter_AddRefs(menuPopupNode));
+    while (menuPopupNode) {
+      nsCOMPtr<nsIDOMElement> menuPopupElement(do_QueryInterface(menuPopupNode));
+      if (menuPopupElement) {
+        nsString menuPopupNodeType;
+        menuPopupElement->GetNodeName(menuPopupNodeType);
+        if (menuPopupNodeType.Equals("menupopup"))
+          break;
+      }
+      nsCOMPtr<nsIDOMNode> oldMenuPopupNode(menuPopupNode);
+      oldMenuPopupNode->GetNextSibling(getter_AddRefs(menuPopupNode));
+    }
+
+    if (!menuPopupNode)
+      return NS_OK;
+
     nsCOMPtr<nsIDOMNode> menuitemNode;
-    aMenuNode->GetFirstChild(getter_AddRefs(menuitemNode));
+    menuPopupNode->GetFirstChild(getter_AddRefs(menuitemNode));
+
     while (menuitemNode) {
       nsCOMPtr<nsIDOMElement> menuitemElement(do_QueryInterface(menuitemNode));
       if (menuitemElement) {
@@ -565,7 +662,7 @@ NS_IMETHODIMP nsWebShellWindow::CreateMenu(nsIMenuBar * aMenuBar,
         if (menuitemNodeType.Equals("menuitem")) {
           // LoadMenuItem
           LoadMenuItem(pnsMenu, menuitemElement, menuitemNode);
-        } else if (menuitemNodeType.Equals("separator")) {
+        } else if (menuitemNodeType.Equals("menuseparator")) {
           pnsMenu->AddSeparator();
         } else if (menuitemNodeType.Equals("menu")) {
           // Load a submenu
@@ -591,22 +688,12 @@ NS_IMETHODIMP nsWebShellWindow::LoadMenuItem(
   nsString menuitemName;
   nsString menuitemCmd;
 
-  menuitemElement->GetAttribute(nsAutoString("name"), menuitemName);
+  menuitemElement->GetAttribute(nsAutoString("value"), menuitemName);
   menuitemElement->GetAttribute(nsAutoString("cmd"), menuitemCmd);
   // Create nsMenuItem
   nsIMenuItem * pnsMenuItem = nsnull;
   nsresult rv = nsComponentManager::CreateInstance(kMenuItemCID, nsnull, kIMenuItemIID, (void**)&pnsMenuItem);
   if (NS_OK == rv) {
-    pnsMenuItem->Create(pParentMenu, menuitemName, 0);                 
-    // Set nsMenuItem Name
-    //pnsMenuItem->SetLabel(menuitemName);
-    // Make nsMenuItem a child of nsMenu
-    //pParentMenu->AddMenuItem(pnsMenuItem);
-    nsISupports * supports = nsnull;
-    pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
-    pParentMenu->AddItem(supports);
-    NS_RELEASE(supports);
-          
     // Create MenuDelegate - this is the intermediator inbetween 
     // the DOM node and the nsIMenuItem
     // The nsWebShellWindow wacthes for Document changes and then notifies the 
@@ -615,8 +702,73 @@ NS_IMETHODIMP nsWebShellWindow::LoadMenuItem(
     if (!domElement) {
       return NS_ERROR_FAILURE;
     }
+    
+    pnsMenuItem->Create(pParentMenu, menuitemName, 0);                 
+    // Set nsMenuItem Name
+    //pnsMenuItem->SetLabel(menuitemName);
+    
+    // Set key shortcut and modifiers
+    nsAutoString keyAtom("key");
+    nsString keyValue;
+    domElement->GetAttribute(keyAtom, keyValue);
+    
+    // Try to find the key node.
+    nsCOMPtr<nsIDocument> document;
+    nsCOMPtr<nsIContent> content = do_QueryInterface(domElement);
+    if (NS_FAILED(rv = content->GetDocument(*getter_AddRefs(document)))) {
+      NS_ERROR("Unable to retrieve the document.");
+      return rv;
+    }
 
-    nsAutoString cmdAtom("onclick");
+    // Turn the document into a XUL document so we can use getElementById
+    nsCOMPtr<nsIDOMXULDocument> xulDocument = do_QueryInterface(document);
+    if (xulDocument == nsnull) {
+      NS_ERROR("not XUL!");
+      return NS_ERROR_FAILURE;
+    }
+  
+    nsIDOMElement * keyElement = nsnull;
+    xulDocument->GetElementById(keyValue, &keyElement);
+    
+    if(keyElement){
+        PRUint8 modifiers = knsMenuItemNoModifier;
+	    nsAutoString shiftAtom("shift");
+	    nsAutoString altAtom("alt");
+	    nsAutoString commandAtom("command");
+	    nsString shiftValue;
+	    nsString altValue;
+	    nsString commandValue;
+	    nsString keyChar = " ";
+	    
+	    keyElement->GetAttribute(keyAtom, keyChar);
+	    keyElement->GetAttribute(shiftAtom, shiftValue);
+	    keyElement->GetAttribute(altAtom, altValue);
+	    keyElement->GetAttribute(commandAtom, commandValue);
+	    
+	    if(keyChar != " ")
+	      pnsMenuItem->SetShortcutChar(keyChar);
+	      
+	    if(shiftValue == "true")
+	      modifiers |= knsMenuItemShiftModifier;
+	    
+	    if(altValue == "true")
+	      modifiers |= knsMenuItemAltModifier;
+	    
+	    if(commandValue == "false")
+	     modifiers |= knsMenuItemCommandModifier;
+	      
+        pnsMenuItem->SetModifiers(modifiers);
+    }
+    
+    // Make nsMenuItem a child of nsMenu
+    nsISupports * supports = nsnull;
+    pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
+    pParentMenu->AddItem(supports);
+    NS_RELEASE(supports);
+          
+
+
+    nsAutoString cmdAtom("onaction");
     nsString cmdName;
 
     domElement->GetAttribute(cmdAtom, cmdName);
@@ -626,6 +778,7 @@ NS_IMETHODIMP nsWebShellWindow::LoadMenuItem(
     menuDelegate->SetWebShell(mWebShell);
     menuDelegate->SetDOMElement(domElement);
     menuDelegate->SetMenuItem(pnsMenuItem);
+    
     nsIXULCommand * icmd;
     if (NS_OK == menuDelegate->QueryInterface(kIXULCommandIID, (void**) &icmd)) {
       nsCOMPtr<nsIMenuListener> listener(do_QueryInterface(menuDelegate));
@@ -660,7 +813,7 @@ void nsWebShellWindow::LoadSubMenu(
   nsIDOMNode *    menuNode)
 {
   nsString menuName;
-  menuElement->GetAttribute(nsAutoString("name"), menuName);
+  menuElement->GetAttribute(nsAutoString("value"), menuName);
   //printf("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
 
   // Create nsMenu
@@ -673,6 +826,9 @@ void nsWebShellWindow::LoadSubMenu(
     pnsMenu->Create(supports, menuName);
     NS_RELEASE(supports); // Balance QI
 
+    // Open the node so that the contents are visible.
+    menuElement->SetAttribute("open", "true");
+      
     // Set nsMenu Name
     pnsMenu->SetLabel(menuName); 
     // Make nsMenu a child of parent nsMenu
@@ -683,8 +839,28 @@ void nsWebShellWindow::LoadSubMenu(
 	NS_RELEASE(supports);
 
     // Begin menuitem inner loop
-    nsCOMPtr<nsIDOMNode> menuitemNode;
-    menuNode->GetFirstChild(getter_AddRefs(menuitemNode));
+    
+    // Now get the kids. Retrieve our menupopup child.
+    nsCOMPtr<nsIDOMNode> menuPopupNode;
+    menuNode->GetFirstChild(getter_AddRefs(menuPopupNode));
+    while (menuPopupNode) {
+      nsCOMPtr<nsIDOMElement> menuPopupElement(do_QueryInterface(menuPopupNode));
+      if (menuPopupElement) {
+        nsString menuPopupNodeType;
+        menuPopupElement->GetNodeName(menuPopupNodeType);
+        if (menuPopupNodeType.Equals("menupopup"))
+          break;
+      }
+      nsCOMPtr<nsIDOMNode> oldMenuPopupNode(menuPopupNode);
+      oldMenuPopupNode->GetNextSibling(getter_AddRefs(menuPopupNode));
+    }
+
+    if (!menuPopupNode)
+      return;
+
+  nsCOMPtr<nsIDOMNode> menuitemNode;
+  menuPopupNode->GetFirstChild(getter_AddRefs(menuitemNode));
+
     while (menuitemNode) {
       nsCOMPtr<nsIDOMElement> menuitemElement(do_QueryInterface(menuitemNode));
       if (menuitemElement) {
@@ -692,13 +868,13 @@ void nsWebShellWindow::LoadSubMenu(
         menuitemElement->GetNodeName(menuitemNodeType);
 
 #ifdef DEBUG_saari
-        printf("Type [%s] %d\n", menuitemNodeType.ToNewCString(), menuitemNodeType.Equals("separator"));
+        printf("Type [%s] %d\n", menuitemNodeType.ToNewCString(), menuitemNodeType.Equals("menuseparator"));
 #endif
 
         if (menuitemNodeType.Equals("menuitem")) {
           // Load a menuitem
           LoadMenuItem(pnsMenu, menuitemElement, menuitemNode);
-        } else if (menuitemNodeType.Equals("separator")) {
+        } else if (menuitemNodeType.Equals("menuseparator")) {
           pnsMenu->AddSeparator();
         } else if (menuitemNodeType.Equals("menu")) {
           // Add a submenu
@@ -717,6 +893,9 @@ void nsWebShellWindow::LoadSubMenu(
 //----------------------------------------
 void nsWebShellWindow::DynamicLoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aParentWindow) 
 {
+  nsRect oldRect;
+  mWindow->GetClientBounds(oldRect);
+
   // locate the window element which holds toolbars and menus and commands
   nsCOMPtr<nsIDOMElement> element;
   aDOMDoc->GetDocumentElement(getter_AddRefs(element));
@@ -741,12 +920,12 @@ void nsWebShellWindow::DynamicLoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aP
         nsMenuEvent fake;
         menuListener->MenuConstruct(fake, aParentWindow, menubarNode, mWebShell);
 
-      // XXX ok this is somewhat of a kludge but it is needed. When the menu bar is added the client area got smaller
-      // unfortunately the document will already have been flowed. So we need to reflow it to a smaller size. -EDV
-      // BEGIN REFLOW CODE
+      #ifdef XP_MAC
+      #else
+      // Resize around the menu.
       rv = NS_ERROR_FAILURE;
 
-      // do a reflow
+      // do a resize
       nsCOMPtr<nsIContentViewerContainer> contentViewerContainer;
       contentViewerContainer = do_QueryInterface(mWebShell);
       if (!contentViewerContainer) {
@@ -779,7 +958,6 @@ void nsWebShellWindow::DynamicLoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aP
           return;
       }
 
-
       nsRect rect;
 
       if (NS_FAILED(rv = mWindow->GetClientBounds(rect))) {
@@ -787,22 +965,18 @@ void nsWebShellWindow::DynamicLoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aP
           return;
       }
 
-      // convert to twips
-      float p2t;
-      presContext->GetScaledPixelsToTwips(&p2t);
-      rect.width = NSIntPixelsToTwips(rect.width, p2t);
-      rect.height = NSIntPixelsToTwips(rect.height, p2t);
-    
-      if (NS_FAILED(rv = presShell->ResizeReflow(rect.width,rect.height))) {
-          NS_ERROR("Failed to reflow the document after the menu was added");
-          return;
-      }
+      // Resize the browser window by the difference.
+      PRInt32 heightDelta = oldRect.height - rect.height;
+      nsRect currentBounds;
+      GetWindowBounds(currentBounds);
+      SizeWindowTo(currentBounds.width, currentBounds.height + heightDelta);
       // END REFLOW CODE
+      #endif
                   
       } // end if ( nsnull != pnsMenuBar )
     }
   } // end if (menuBar)
-} // nsWebShellWindow::LoadMenus
+} // nsWebShellWindow::DynamicLoadMenus
 
 //----------------------------------------
 void nsWebShellWindow::LoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aParentWindow) 
@@ -839,7 +1013,7 @@ void nsWebShellWindow::LoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aParentWi
             nsString menuName;
             menuElement->GetNodeName(menuNodeType);
             if (menuNodeType.Equals("menu")) {
-              menuElement->GetAttribute(nsAutoString("name"), menuName);
+              menuElement->GetAttribute(nsAutoString("value"), menuName);
 
 #ifdef DEBUG_rods
               printf("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
@@ -859,10 +1033,10 @@ void nsWebShellWindow::LoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aParentWi
         pnsMenuBar->Paint();
         
         // HACK for M4, should be removed by M5
-        #ifdef XP_MAC
+#ifdef XP_MAC
         Handle tempMenuBar = ::GetMenuBar(); // Get a copy of the menu list
 		pnsMenuBar->SetNativeData((void*)tempMenuBar);
-		#endif
+#endif
 
         // The parent owns the menubar, so we can release it		
 		NS_RELEASE(pnsMenuBar);
@@ -945,10 +1119,11 @@ nsWebShellWindow::GetContentShellById(const nsString& aID, nsIWebShell** aChildS
 //------------------------------------------------------------------------------
 NS_IMETHODIMP
 nsWebShellWindow::AddWebShellInfo(const nsString& aID,
+                                  PRBool aPrimary,
                                   nsIWebShell* aChildShell)
 {
 
-  nsWebShellInfo* webShellInfo = new nsWebShellInfo(aID, 
+  nsWebShellInfo* webShellInfo = new nsWebShellInfo(aID, aPrimary,
                                                     aChildShell);
   
   if (mContentShells == nsnull)
@@ -991,9 +1166,17 @@ nsWebShellWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
                               PRInt32 aXPos, PRInt32 aYPos, 
                               const nsString& aPopupType, const nsString& anAnchorAlignment,
                               const nsString& aPopupAlignment,
-                              nsIDOMWindow* aWindow)
+                              nsIDOMWindow* aWindow, nsIDOMWindow** outPopup)
 {
   nsresult rv = NS_OK;
+  
+  // clear out result param up front. It's an error if a legal place to
+  // stick the result isn't provided.
+  if ( !outPopup ) {
+    NS_ERROR ( "Invalid param -- need to provide a place for result" );
+    return NS_ERROR_INVALID_ARG;
+  }
+  *outPopup = nsnull;
 
   nsCOMPtr<nsIContentViewerContainer> contentViewerContainer;
   contentViewerContainer = do_QueryInterface(mWebShell);
@@ -1069,15 +1252,19 @@ nsWebShellWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
   }
 
   nsCOMPtr<nsIContent> popupContent = do_QueryInterface(aPopupContent);
+  if ( !popupContent ) 
+    return NS_OK; // It's ok. Really.
   
-  // Fire the CONSTRUCT DOM event to give JS/C++ a chance to build the popup
-  // dynamically.
+  // Fire the create DOM event to give JS/C++ a chance to build the popup
+  // dynamically. After we fire off the event, make sure we check the result
+  // for |nsEventStatus_eConsumeNoDefault| which translates into an event
+  // handler returning false. If that happens, abort creating the popup.
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
   event.eventStructType = NS_EVENT;
-  event.message = NS_POPUP_CONSTRUCT;
+  event.message = NS_MENU_CREATE;
   rv = popupContent->HandleDOMEvent(*presContext, &event, nsnull, NS_EVENT_FLAG_INIT, status);
-  if (rv != NS_OK)
+  if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )
     return rv;
 
   // Find out if we're a menu.
@@ -1090,10 +1277,9 @@ nsWebShellWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
   if (NS_FAILED(popupContent->ChildAt(0, *getter_AddRefs(rootContent))))
     return NS_OK; // Doesn't matter. Don't report it.
 
-  nsCOMPtr<nsIDOMElement> rootElement = do_QueryInterface(rootContent);
-  
   nsString tagName;
-  if (NS_FAILED(rootElement->GetTagName(tagName))) 
+  nsCOMPtr<nsIDOMElement> rootElement = do_QueryInterface(rootContent);
+  if ( !rootElement || NS_FAILED(rootElement->GetTagName(tagName))) 
     return NS_OK; // It's ok. Really.
 
   if (tagName == "menu") {
@@ -1101,11 +1287,10 @@ nsWebShellWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
     // XXX Need to distinguish between popup menus and context menus?
     DoContextMenu(nsnull, rootElement, mWindow, aXPos, aYPos, aPopupAlignment, anAnchorAlignment);
 
-    // Fire the DESTRUCT DOM event to give JS/C++ a chance to destroy the popup contents
-    nsEventStatus status = nsEventStatus_eIgnore;
-    nsMouseEvent event;
+    // Fire the destroy DOM event to give JS/C++ a chance to destroy the popup contents
+    status = nsEventStatus_eIgnore;
     event.eventStructType = NS_EVENT;
-    event.message = NS_POPUP_DESTRUCT;
+    event.message = NS_MENU_DESTROY;
     rv = popupContent->HandleDOMEvent(*presContext, &event, nsnull, NS_EVENT_FLAG_INIT, status);
     return rv;
   }
@@ -1117,13 +1302,29 @@ nsWebShellWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
   
   // (1) Create a top-level chromeless window. The size of the window can be specified
   // on the window tag contained inside.  Retrieve the webshell from the new nsWebShellWindow.
-  NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
-  if (NS_FAILED(rv))
-    return rv;
 
   nsCOMPtr<nsIWebShellWindow> newWindow;
-  appShell->CreateTopLevelWindow(nsnull, nsnull, PR_FALSE, *getter_AddRefs(newWindow),
-                                 nsnull, nsnull, 200, 300);
+  
+  nsWebShellWindow* window = new nsWebShellWindow();
+  if (nsnull == window) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  // temporarily disabling parentage because non-Windows platforms
+  // seem to be interpreting it in unexpected ways.
+  nsWidgetInitData widgetInitData;
+  widgetInitData.mWindowType = eWindowType_popup;
+  widgetInitData.mBorderStyle = eBorderStyle_default;
+
+  window->SetIntrinsicallySized(PR_TRUE);
+  rv = window->Initialize((nsIWebShellWindow *) nsnull, nsnull, nsnull,
+                          PR_TRUE, nsnull, nsnull,
+                          1, 1, widgetInitData);
+
+  if (NS_FAILED(rv)) 
+    return rv;
+
+  newWindow = window;
+
   // Move the window to aXPos and aYPos
   nsCOMPtr<nsIBrowserWindow> browserWindow = do_QueryInterface(newWindow);
   browserWindow->MoveTo(aXPos, aYPos);
@@ -1205,21 +1406,23 @@ nsWebShellWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
   NS_IF_RELEASE(popupRoot);
   nsCOMPtr<nsIDOMFocusListener> blurListener = do_QueryInterface(popupListener);
   nsCOMPtr<nsIDOMEventTarget> targetWindow = do_QueryInterface(domWindow);
-  targetWindow->AddEventListener("blur", blurListener, PR_FALSE, PR_FALSE);  
+  targetWindow->AddEventListener("blur", blurListener, PR_FALSE);  
        
   // (8) Set up the opener property
   domWindow->SetOpener(aWindow);
 
-  // (9) Show the window, and give the window the focus.
+  // (9) Show the window. Don't give the focus yet because we may not want to.
+  // For example, popup windows want focus, but tooltips do not.
   newWindow->Show(PR_TRUE);
-  domWindow->Focus();
 
   // (10) Do some layout.
   nsCOMPtr<nsIXULChildDocument> popupChild = do_QueryInterface(popupDocument);
   popupChild->LayoutPopupDocument();
 
-  // XXX Do we return the popup document? Might want to, since it's kind of like
-  // a sick and twisted distortion of a window.open call.
+  // return the popup.
+  *outPopup = domWindow;
+  NS_ADDREF(*outPopup);
+  
   return rv;
 }
 
@@ -1227,10 +1430,29 @@ NS_IMETHODIMP
 nsWebShellWindow::ContentShellAdded(nsIWebShell* aChildShell, nsIContent* frameNode)
 {
   // Find out the id of the frameNode in question 
-  nsIAtom* idAtom = NS_NewAtom("id");
+  nsIAtom      *idAtom = NS_NewAtom("id");
+  nsIAtom      *typeAtom = NS_NewAtom("type");
+  PRBool       isPrimary;
   nsAutoString value;
-	frameNode->GetAttribute(kNameSpaceID_None, idAtom, value);
-	AddWebShellInfo(value, aChildShell);
+
+  // right now, any webshell with type "content" or "content-XXX" is
+  // considered a content webshell.  but only "content-primary" is
+  // considered primary.
+  frameNode->GetAttribute(kNameSpaceID_None, typeAtom, value);
+  isPrimary = value.EqualsIgnoreCase(kPrimaryContentTypeValue) ? PR_TRUE : PR_FALSE;
+  frameNode->GetAttribute(kNameSpaceID_None, idAtom, value);
+
+  AddWebShellInfo(value, isPrimary, aChildShell);
+
+  // For some reason nsCOMPtr and do_queryInterface fail here
+  if (aChildShell) {
+    nsIUrlDispatcher *  ud = nsnull;
+    QueryInterface(kIUrlDispatcherIID, (void **)&ud);
+    aChildShell->SetUrlDispatcher(ud);
+    NS_RELEASE(ud);
+  }
+
+  NS_RELEASE(typeAtom);
   NS_RELEASE(idAtom);
   return NS_OK;
 }
@@ -1246,11 +1468,16 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
 
   nsCOMPtr<nsIWebShellWindow> newWindow;
 
+  // XXX Check modal chrome flag to run a modal dialog!
+
   if ((aChromeMask & NS_CHROME_OPEN_AS_CHROME) != 0) {
     // Just do a nice normal create of a web shell and
-    // return it immediately.  
-    rv = appShell->CreateTopLevelWindow(nsnull, nsnull, PR_FALSE, *getter_AddRefs(newWindow),
-                                   nsnull, nsnull, 615, 480);
+    // return it immediately. 
+
+    nsIWebShellWindow *parent = aChromeMask & NS_CHROME_DEPENDENT ? this : nsnull;
+    rv = appShell->CreateTopLevelWindow(parent, nsnull, PR_FALSE, aChromeMask,
+                                 nsnull, NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+                                 getter_AddRefs(newWindow));
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsIBrowserWindow> browser(do_QueryInterface(newWindow));
       if (browser)
@@ -1260,7 +1487,6 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
     return rv;
   }
 
-#ifdef XP_PC // XXX: Won't work on any other platforms yet. Sigh.
   // We need to create a new top level window and then enter a nested
   // loop. Eventually the new window will be told that it has loaded,
   // at which time we know it is safe to spin out of the nested loop
@@ -1268,14 +1494,9 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
 
   // First push a nested event queue for event processing from netlib
   // onto our UI thread queue stack.
-  NS_WITH_SERVICE(nsIEventQueueService, eQueueService, kEventQueueServiceCID, &rv);
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Unable to obtain queue service.");
-    return rv;
-  }
-  eQueueService->PushThreadEventQueue();
+  appShell->PushThreadEventQueue();
 
-  nsCOMPtr<nsIURL> urlObj;
+  nsCOMPtr<nsIURI> urlObj;
   char * urlStr = "chrome://navigator/content/";
 #ifndef NECKO
   rv = NS_NewURL(getter_AddRefs(urlObj), urlStr);
@@ -1287,13 +1508,15 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
   rv = service->NewURI(urlStr, nsnull, &uri);
   if (NS_FAILED(rv)) return rv;
 
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+  rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
   NS_RELEASE(uri);
 #endif // NECKO
 
-  if (NS_SUCCEEDED(rv))
-    rv = appShell->CreateTopLevelWindow(nsnull, urlObj, PR_FALSE, *getter_AddRefs(newWindow),
-                                   nsnull, nsnull, 615, 480);
+  if (NS_SUCCEEDED(rv)) {
+    rv = appShell->CreateTopLevelWindow(nsnull, urlObj, PR_FALSE, aChromeMask,
+                                 nsnull, 615, 480,
+                                 getter_AddRefs(newWindow));
+  }
 
   nsIAppShell *subshell;
   if (NS_SUCCEEDED(rv)) {
@@ -1326,8 +1549,8 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
       newWindow->GetLockedState(locked);
     }
 
-    // Get rid of the nested UI thread queue used for netlib, and release the event queue service.
-    eQueueService->PopThreadEventQueue();
+    // Get rid of the nested UI thread queue used for netlib
+    appShell->PopThreadEventQueue();
 
     subshell->Spindown();
     NS_RELEASE(subshell);
@@ -1344,29 +1567,87 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
       return rv;
     }
   }
-#endif // XP_PC
 
   return rv;
 }
 
 
+/**
+ * FindWebShellWithName - recursively search for any open window
+ * containing a webshell with the given name.
+ * @param aName - the name of the webshell to find. I believe this cannot
+ *                be null. Hard to tell. If zero-length, the find will
+ *                always fail (returning NS_OK).
+ * @param aResult - the webshell, returned, addrefed. null on failure to
+ *                  locate the desired webshell.
+ * @return an error indication. Can be NS_OK even if no match was found.
+ */
 NS_IMETHODIMP nsWebShellWindow::FindWebShellWithName(const PRUnichar* aName,
                                                      nsIWebShell*& aResult)
 {
   nsresult rv = NS_OK;
+  nsString nameStr(aName);
 
   // Zero result (in case we fail).
   aResult = nsnull;
 
-  // Search for named frame within our root webshell.  This will
-  // bypass the .xul document (and rightfully so).  We need to be
-  // careful not to give that documents child frames names!
-  //
-  // This will need to be enhanced to search for (owned?) named
-  // windows at some point.
-  if ( mWebShell ) {
-      rv = mWebShell->FindChildWithName( aName, aResult );
-  }
+  // first, special cases
+  if (nameStr.Length() == 0)
+    return NS_OK;
+  if (nameStr.EqualsIgnoreCase("_content"))
+    return GetContentWebShell(&aResult);
+
+  // look for open windows with the given name
+  /*   Note: this function arguably works as expected, but the end effect
+     is wrong.  The webshell that catches the name given from a JavaScript
+     window.open call is the content, not the chrome, so a window whose
+     location is redirected will have its content replaced, not its chrome.
+     That may be the right choice; maybe not.  Also, there's a visual problem
+     where the window position is reset.
+       So when two or three bad things get cleared up, this next bit will be
+     helpful.  As it is, it's not too. */
+
+  NS_WITH_SERVICE(nsIWindowMediator, windowMediator, kWindowMediatorCID, &rv);
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
+
+    if (NS_SUCCEEDED(windowMediator->GetEnumerator(nsnull, getter_AddRefs(windowEnumerator)))) {
+      PRBool more;
+
+      // get the (main) webshell for each window in the enumerator
+      windowEnumerator->HasMoreElements(&more);
+      while (more) {
+        nsCOMPtr<nsISupports> protoWindow;
+        rv = windowEnumerator->GetNext(getter_AddRefs(protoWindow));
+        if (NS_SUCCEEDED(rv) && protoWindow) {
+          // it's supposed to be an nsIDOMWindow, so it's one of these, too
+          nsCOMPtr<nsIScriptGlobalObject> whatever(do_QueryInterface(protoWindow));
+          if (whatever) {
+            nsCOMPtr<nsIWebShell> webshell;
+            whatever->GetWebShell(getter_AddRefs(webshell));
+            if (webshell) {
+              // check the webshell, and then its children, for a name match
+              const PRUnichar *name;
+              if (NS_SUCCEEDED(webshell->GetName(&name)) && nameStr.Equals(name)) {
+                aResult = webshell;
+                NS_ADDREF(aResult);
+                break;
+              }
+              // Search for named frame within our root webshell.  This will
+              // bypass the .xul document (and rightfully so).  We need to be
+              // careful not to give that documents child frames names!
+              if (NS_SUCCEEDED(webshell->FindChildWithName(aName, aResult)) && aResult)
+                break;
+            }
+          }
+        }
+        windowEnumerator->HasMoreElements(&more);
+      }
+    }
+  } else
+    // should be redundant, but left in for now
+    if (mWebShell)
+      rv = mWebShell->FindChildWithName(aName, aResult);
 
   return rv;
 }
@@ -1385,6 +1666,13 @@ nsWebShellWindow::Show(PRBool aShow)
 {
   mWebShell->Show(); // crimminy -- it doesn't take a parameter!
   mWindow->Show(aShow);
+  
+  nsresult rv;
+  NS_WITH_SERVICE(nsIWindowMediator, windowMediator, kWindowMediatorCID, &rv);
+  if ( NS_SUCCEEDED(rv) )
+  {
+   	windowMediator->UpdateWindowTimeStamp( this ); 
+  } 
   return NS_OK;
 }
 
@@ -1436,11 +1724,77 @@ nsWebShellWindow::ShowModalInternal()
 }
 
 
+// yes, this one's name and ShowModal are a confusing pair. plan is to merge
+// the two someday.
+NS_IMETHODIMP
+nsWebShellWindow::ShowModally(PRBool aPrepare)
+{
+  nsresult            rv;
+  nsCOMPtr<nsIWidget> parentWidget;
+
+  NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+
+  if (aPrepare && NS_FAILED(appShell->PushThreadEventQueue()))
+    aPrepare = PR_FALSE;
+
+  parentWidget = do_QueryReferent(mParentWindow);
+  if (parentWidget)
+    parentWidget->Enable(PR_FALSE);
+  rv = ShowModal();
+  if (parentWidget)
+    parentWidget->Enable(PR_TRUE);
+
+  if (aPrepare)
+    appShell->PopThreadEventQueue();
+
+  return rv;
+}
+
+
+/* return the main, outermost webshell in this window */
 NS_IMETHODIMP 
 nsWebShellWindow::GetWebShell(nsIWebShell *& aWebShell)
 {
   aWebShell = mWebShell;
   NS_ADDREF(mWebShell);
+  return NS_OK;
+}
+
+/* return the webshell intended to hold (html) content.  In a simple
+   browser window, that would be the main content area.  If no such
+   webshell was found for any reason, the outermost webshell will be
+   returned.  (Note that is the main chrome webshell, and probably
+   not what you wanted, but at least it's a webshell.)
+     Also note that if no content webshell was marked "primary,"
+   we return the chrome webshell, even if (non-primary) content webshells
+   do exist.  Thas was done intentionally.  The selection would be
+   nondeterministic, and it seems dangerous to set a precedent like that.
+*/
+NS_IMETHODIMP
+nsWebShellWindow::GetContentWebShell(nsIWebShell **aResult)
+{
+  nsIWebShell  *content;
+
+  content = nsnull;
+  
+  // first, try looking in the webshell list
+  // (note this list isn't dynamic: it's set up when the webshell is added,
+  // but not updated when its attributes are poked. could be a problem...)
+  if (mContentShells) {
+    PRInt32 count = mContentShells->Count();
+    for (PRInt32 ctr = 0; ctr < count; ctr++) {
+      nsWebShellInfo* webInfo = (nsWebShellInfo*)(mContentShells->ElementAt(ctr));
+      if (webInfo->primary) {
+        content = webInfo->child;
+        break;
+      }
+    }
+  }
+
+  NS_IF_ADDREF(content);
+  *aResult = content;
   return NS_OK;
 }
 
@@ -1474,15 +1828,21 @@ nsWebShellWindow::DestroyModalDialogEvent(PLEvent *aEvent)
 //----------------------------------------
 NS_IMETHODIMP
 nsWebShellWindow::OnStartDocumentLoad(nsIDocumentLoader* loader, 
-                                      nsIURL* aURL, const char* aCommand)
+                                      nsIURI* aURL, const char* aCommand)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader, 
-                                    nsIURL* aURL, PRInt32 aStatus,
-									nsIDocumentLoaderObserver * aDocObserver)
+                                    nsIChannel* channel, nsresult aStatus,
+                                    nsIDocumentLoaderObserver * aDocObserver)
+#else
+nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader, 
+                                    nsIURI* aURL, PRInt32 aStatus,
+                                    nsIDocumentLoaderObserver * aDocObserver)
+#endif
 {
 #ifdef DEBUG_MENUSDEL
   printf("OnEndDocumentLoad\n");
@@ -1498,10 +1858,9 @@ nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader,
 
   mChromeInitialized = PR_TRUE;
 
-  if (mLockedUntilChromeLoad) {
-    mLockedUntilChromeLoad = PR_FALSE;
-  }
+  mLockedUntilChromeLoad = PR_FALSE;
 
+#ifdef XP_MAC // Anyone still using native menus should add themselves here.
   // register as document listener
   // this is needed for menus
   nsCOMPtr<nsIContentViewer> cv;
@@ -1519,16 +1878,18 @@ nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader,
 
     doc->AddObserver(NS_STATIC_CAST(nsIDocumentObserver*, this));
   }
+#endif
 
   ExecuteStartupCode();
 
+#ifdef XP_MAC // Anyone still using native menus should add themselves here.
   ///////////////////////////////
   // Find the Menubar DOM  and Load the menus, hooking them up to the loaded commands
   ///////////////////////////////
   nsCOMPtr<nsIDOMDocument> menubarDOMDoc(GetNamedDOMDoc(nsAutoString("this"))); // XXX "this" is a small kludge for code reused
   if (menubarDOMDoc)
   {
-    #ifdef XP_MAC
+#ifdef SOME_PLATFORM // Anyone using native non-dynamic menus should add themselves here.
     LoadMenus(menubarDOMDoc, mWindow);
     // Context Menu test
     nsCOMPtr<nsIDOMElement> element;
@@ -1538,94 +1899,100 @@ nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader,
     int endCount = 0;
     contextMenuTest = FindNamedDOMNode(nsAutoString("contextmenu"), window, endCount, 1);
     // End Context Menu test
-    #else
+#else
     DynamicLoadMenus(menubarDOMDoc, mWindow);
-    #endif
+#endif 
   }
+#endif // XP_MAC
 
-  SetSizeFromXUL();
   SetTitleFromXUL();
   ShowAppropriateChrome();
   LoadContentAreas();
+  
+  // Here's where we service the "show" request initially given in Initialize()
+  if (mCreatedVisible)
+    Show(PR_TRUE);
 
-#if 0
-  nsCOMPtr<nsIDOMDocument> toolbarDOMDoc(GetNamedDOMDoc(nsAutoString("browser.toolbar")));
-  nsCOMPtr<nsIDOMDocument> contentDOMDoc(GetNamedDOMDoc(nsAutoString("browser.webwindow")));
-  nsCOMPtr<nsIDocument> contentDoc(do_QueryInterface(contentDOMDoc));
-  nsCOMPtr<nsIDocument> statusDoc(do_QueryInterface(statusDOMDoc));
-  nsCOMPtr<nsIDocument> toolbarDoc(do_QueryInterface(toolbarDOMDoc));
-
-  nsIWebShell* statusWebShell = nsnull;
-  mWebShell->FindChildWithName(nsAutoString("browser.status"), statusWebShell);
-
-  PRInt32 actualStatusHeight  = GetDocHeight(statusDoc);
-  PRInt32 actualToolbarHeight = GetDocHeight(toolbarDoc);
-
-
-  PRInt32 height = 0;
-  PRInt32 x,y,w,h;
-  PRInt32 contentHeight;
-  PRInt32 toolbarHeight;
-  PRInt32 statusHeight;
-
-  mWebShell->GetBounds(x, y, w, h);
-  toolbarWebShell->GetBounds(x, y, w, toolbarHeight);
-  contentWebShell->GetBounds(x, y, w, contentHeight);
-  statusWebShell->GetBounds(x, y, w, statusHeight); 
-
-  //h = toolbarHeight + contentHeight + statusHeight;
-  contentHeight = h - actualStatusHeight - actualToolbarHeight;
-
-  toolbarWebShell->GetBounds(x, y, w, h);
-  toolbarWebShell->SetBounds(x, y, w, actualToolbarHeight);
-
-  contentWebShell->GetBounds(x, y, w, h);
-  contentWebShell->SetBounds(x, y, w, contentHeight);
-
-  statusWebShell->GetBounds(x, y, w, h);
-  statusWebShell->SetBounds(x, y, w, actualStatusHeight);
-#endif
+  nsCOMPtr<nsIWebShell> contentShell;
+  GetContentWebShell(getter_AddRefs(contentShell));
+  if (contentShell) {
+    nsCOMPtr<nsIDOMWindow> domWindow;
+    if (NS_SUCCEEDED(ConvertWebShellToDOMWindow(contentShell, 
+                                                getter_AddRefs(domWindow)))) {
+      domWindow->Focus();
+    }
+  }
 
   return NS_OK;
 }
 
 NS_IMETHODIMP 
+#ifdef NECKO
 nsWebShellWindow::OnStartURLLoad(nsIDocumentLoader* loader, 
-                                 nsIURL* aURL, 
+                                 nsIChannel* channel, 
+                                 nsIContentViewer* aViewer)
+#else
+nsWebShellWindow::OnStartURLLoad(nsIDocumentLoader* loader, 
+                                 nsIURI* aURL, 
                                  const char* aContentType, 
                                  nsIContentViewer* aViewer)
+#endif
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsWebShellWindow::OnProgressURLLoad(nsIDocumentLoader* loader, 
-                                    nsIURL* aURL, 
+                                    nsIChannel* channel, 
                                     PRUint32 aProgress, 
                                     PRUint32 aProgressMax)
+#else
+nsWebShellWindow::OnProgressURLLoad(nsIDocumentLoader* loader, 
+                                    nsIURI* aURL, 
+                                    PRUint32 aProgress, 
+                                    PRUint32 aProgressMax)
+#endif
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsWebShellWindow::OnStatusURLLoad(nsIDocumentLoader* loader, 
-                                  nsIURL* aURL, nsString& aMsg)
+                                  nsIChannel* channel, nsString& aMsg)
+#else
+nsWebShellWindow::OnStatusURLLoad(nsIDocumentLoader* loader, 
+                                  nsIURI* aURL, nsString& aMsg)
+#endif
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsWebShellWindow::OnEndURLLoad(nsIDocumentLoader* loader, 
-                               nsIURL* aURL, PRInt32 aStatus)
+                               nsIChannel* channel, nsresult aStatus)
+#else
+nsWebShellWindow::OnEndURLLoad(nsIDocumentLoader* loader, 
+                               nsIURI* aURL, PRInt32 aStatus)
+#endif
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsWebShellWindow::HandleUnknownContentType(nsIDocumentLoader* loader, 
-                                           nsIURL* aURL,
+                                           nsIChannel* channel, 
                                            const char *aContentType,
                                            const char *aCommand )
+#else
+nsWebShellWindow::HandleUnknownContentType(nsIDocumentLoader* loader, 
+                                           nsIURI* aURL,
+                                           const char *aContentType,
+                                           const char *aCommand )
+#endif
 {
   return NS_OK;
 }
@@ -1634,6 +2001,9 @@ nsWebShellWindow::HandleUnknownContentType(nsIDocumentLoader* loader,
 //----------------------------------------
 nsCOMPtr<nsIDOMNode> nsWebShellWindow::FindNamedDOMNode(const nsString &aName, nsIDOMNode * aParent, PRInt32 & aCount, PRInt32 aEndCount)
 {
+  if(!aParent)
+    return nsnull;
+    
   nsCOMPtr<nsIDOMNode> node;
   aParent->GetFirstChild(getter_AddRefs(node));
   while (node) {
@@ -1739,91 +2109,6 @@ PRInt32 nsWebShellWindow::GetDocHeight(nsIDocument * aDoc)
 }
 
 //----------------------------------------
-#if 0
-NS_IMETHODIMP nsWebShellWindow::OnConnectionsComplete()
-{
-#ifdef DEBUG_MENUSDEL
-  printf("OnConnectionsComplete\n");
-#endif
-
-  // register as document listener
-  // this is needed for menus
-  nsCOMPtr<nsIContentViewer> cv;
-  mWebShell->GetContentViewer(getter_AddRefs(cv));
-  if (cv) {
-   
-    nsCOMPtr<nsIDocumentViewer> docv(do_QueryInterface(cv));
-    if (!docv)
-      return NS_OK;
-
-    nsCOMPtr<nsIDocument> doc;
-    docv->GetDocument(*getter_AddRefs(doc));
-    if (!doc)
-      return NS_OK;
-
-    doc->AddObserver(NS_STATIC_CAST(nsIDocumentObserver*, this));
-  }
-
-  ExecuteStartupCode();
-
-  ///////////////////////////////
-  // Find the Menubar DOM  and Load the menus, hooking them up to the loaded commands
-  ///////////////////////////////
-  nsCOMPtr<nsIDOMDocument> menubarDOMDoc(GetNamedDOMDoc(nsAutoString("this"))); // XXX "this" is a small kludge for code reused
-  if (menubarDOMDoc) {
-    #ifdef XP_MAC
-    LoadMenus(menubarDOMDoc, mWindow);
-    #else
-    DynamicLoadMenus(menubarDOMDoc, mWindow);
-    #endif
-  }
-
-  SetSizeFromXUL();
-  SetTitleFromXUL();
-
-#if 0
-  nsCOMPtr<nsIDOMDocument> toolbarDOMDoc(GetNamedDOMDoc(nsAutoString("browser.toolbar")));
-  nsCOMPtr<nsIDOMDocument> contentDOMDoc(GetNamedDOMDoc(nsAutoString("browser.webwindow")));
-  nsCOMPtr<nsIDocument> contentDoc(do_QueryInterface(contentDOMDoc));
-  nsCOMPtr<nsIDocument> statusDoc(do_QueryInterface(statusDOMDoc));
-  nsCOMPtr<nsIDocument> toolbarDoc(do_QueryInterface(toolbarDOMDoc));
-
-  nsIWebShell* statusWebShell = nsnull;
-  mWebShell->FindChildWithName(nsAutoString("browser.status"), statusWebShell);
-
-  PRInt32 actualStatusHeight  = GetDocHeight(statusDoc);
-  PRInt32 actualToolbarHeight = GetDocHeight(toolbarDoc);
-
-
-  PRInt32 height = 0;
-  PRInt32 x,y,w,h;
-  PRInt32 contentHeight;
-  PRInt32 toolbarHeight;
-  PRInt32 statusHeight;
-
-  mWebShell->GetBounds(x, y, w, h);
-  toolbarWebShell->GetBounds(x, y, w, toolbarHeight);
-  contentWebShell->GetBounds(x, y, w, contentHeight);
-  statusWebShell->GetBounds(x, y, w, statusHeight); 
-
-  //h = toolbarHeight + contentHeight + statusHeight;
-  contentHeight = h - actualStatusHeight - actualToolbarHeight;
-
-  toolbarWebShell->GetBounds(x, y, w, h);
-  toolbarWebShell->SetBounds(x, y, w, actualToolbarHeight);
-
-  contentWebShell->GetBounds(x, y, w, h);
-  contentWebShell->SetBounds(x, y, w, contentHeight);
-
-  statusWebShell->GetBounds(x, y, w, h);
-  statusWebShell->SetBounds(x, y, w, actualStatusHeight);
-#endif
-
-  return NS_OK;
-} // nsWebShellWindow::OnConnectionsComplete 
-#endif  /* 0 */
-
-
 
 /**
  * Get nsIDOMNode corresponding to a given webshell
@@ -1857,36 +2142,8 @@ nsWebShellWindow::GetDOMNodeFromWebShell(nsIWebShell *aShell)
   return node;
 }
 
-void nsWebShellWindow::ExecuteJavaScriptString(nsString& aJavaScript)
-{
-  if (aJavaScript.Length() == 0) {
-    return;
-  }
-  
-  // Get nsIScriptContextOwner
-  nsCOMPtr<nsIScriptContextOwner> scriptContextOwner ( do_QueryInterface(mWebShell) );
-  if ( scriptContextOwner ) {
-    const char* url = "";
-      // Get nsIScriptContext
-    nsCOMPtr<nsIScriptContext> scriptContext;
-    nsresult status = scriptContextOwner->GetScriptContext(getter_AddRefs(scriptContext));
-    if (NS_OK == status) {
-      // Ask the script context to evalute the javascript string
-      PRBool isUndefined = PR_FALSE;
-      nsString rVal("xxx");
-      scriptContext->EvaluateString(aJavaScript, url, 0, rVal, &isUndefined);
-
-#ifdef DEBUG_MENUSDEL
-      printf("EvaluateString - %d [%s]\n", isUndefined, rVal.ToNewCString());
-#endif
-    }
-
-  }
-}
-
-
 /**
- * Execute window onLoad handler
+ * XXX Hack for XUL Window callbacks. MUST GO AWAY!!!!
  */
 void nsWebShellWindow::ExecuteStartupCode()
 {
@@ -1901,75 +2158,11 @@ void nsWebShellWindow::ExecuteStartupCode()
 
   // Execute the string in the onLoad attribute of the webshellElement.
   nsString startupCode;
-  // This is now triggered from elsewhere.
-  //if (webshellElement && NS_SUCCEEDED(webshellElement->GetAttribute("onload", startupCode)))
-  //  ExecuteJavaScriptString(startupCode);
-
+  
   if (mCallbacks)
     mCallbacks->ConstructAfterJavaScript(mWebShell);
-
 }
 
-
-/* A somewhat early version of window sizing code.  This simply reads attributes
-   from the window tag and blindly sets the size to whatever it finds within.
-*/
-void nsWebShellWindow::SetSizeFromXUL()
-{
-  nsCOMPtr<nsIDOMNode> webshellNode = GetDOMNodeFromWebShell(mWebShell);
-  nsIWidget *windowWidget = GetWidget();
-  nsCOMPtr<nsIDOMElement> webshellElement;
-  nsString sizeString;
-  PRInt32 errorCode,
-          specWidth, specHeight,
-          specSize;
-  nsRect  currentSize;
-
-  if (webshellNode)
-    webshellElement = do_QueryInterface(webshellNode);
-  if (!webshellElement || !windowWidget) // it's hopeless
-    return;
-
-  // first guess: use current size
-  mWindow->GetBounds(currentSize);
-  specWidth = currentSize.width;
-  specHeight = currentSize.height;
-
-  // read "height" attribute
-  if (NS_SUCCEEDED(webshellElement->GetAttribute("height", sizeString))) {
-    specSize = sizeString.ToInteger(&errorCode);
-    if (NS_SUCCEEDED(errorCode) && specSize > 0)
-      specHeight = specSize;
-  }
-
-  // read "width" attribute
-  if (NS_SUCCEEDED(webshellElement->GetAttribute("width", sizeString))) {
-    specSize = sizeString.ToInteger(&errorCode);
-    if (NS_SUCCEEDED(errorCode) || specSize > 0)
-      specWidth = specSize;
-  }
-
-  if (specWidth != currentSize.width || specHeight != currentSize.height)
-    windowWidget->Resize(specWidth, specHeight, PR_TRUE);
-
-#if 0
-  // adjust height to fit contents?
-  if (fitHeight == PR_TRUE) {
-    nsCOMPtr<nsIContentViewer> cv;
-    mWebShell->GetContentViewer(getter_AddRefs(cv));
-    if (cv) {
-      nsCOMPtr<nsIDocumentViewer> docv(do_QueryInterface(cv));
-      if (docv) {
-        nsCOMPtr<nsIDocument> doc;
-        docv->GetDocument(*getter_AddRefs(doc));
-        if (doc)
-          specHeight = GetDocHeight(doc);
-      }
-    }
-    mWindow->GetBounds(currentSize);
-  }
-#endif
-} // SetSizeFromXUL
 
 
 void nsWebShellWindow::SetTitleFromXUL()
@@ -1982,8 +2175,9 @@ void nsWebShellWindow::SetTitleFromXUL()
   if (webshellNode)
     webshellElement = do_QueryInterface(webshellNode);
   if (webshellElement && windowWidget &&
-      NS_SUCCEEDED(webshellElement->GetAttribute("title", windowTitle)))
-  SetTitle(windowTitle.GetUnicode());
+      NS_SUCCEEDED(webshellElement->GetAttribute("title", windowTitle)) &&
+      windowTitle != "")
+    SetTitle(windowTitle.GetUnicode());
 } // SetTitleFromXUL
 
 
@@ -1994,6 +2188,7 @@ void nsWebShellWindow::ShowAppropriateChrome()
   nsCOMPtr<nsIDOMXULElement> xulRoot;
   nsCOMPtr<nsIDOMDocument>   chromeDoc;
   nsCOMPtr<nsIDOMWindow>     domWindow;
+  PRUint32                   chromeMask;
 
   // get this window's document
   if (NS_FAILED(ConvertWebShellToDOMWindow(mWebShell, getter_AddRefs(domWindow))))
@@ -2002,6 +2197,21 @@ void nsWebShellWindow::ShowAppropriateChrome()
     return;
   if (NS_FAILED(chromeDoc->GetDocumentElement(getter_AddRefs(rootElement))) || !rootElement)
     return;
+
+  // calculate a special version of the chrome mask. we store the actual
+  // value sent, but we make local changes depending on whether defaults
+  // were asked for.  Note that only internal (not OS-) chrome matters
+  // at this point, so the OS chrome is not calculated.
+  chromeMask = mChromeMask;
+  if (chromeMask & NS_CHROME_DEFAULT_CHROME)
+    if (chromeMask & NS_CHROME_OPEN_AS_DIALOG)
+      chromeMask &= ~(NS_CHROME_MENU_BAR_ON | NS_CHROME_TOOL_BAR_ON |
+                      NS_CHROME_LOCATION_BAR_ON | NS_CHROME_STATUS_BAR_ON |
+                      NS_CHROME_PERSONAL_TOOLBAR_ON | NS_CHROME_SCROLLBARS_ON);
+    else
+      // theoretically, this won't happen (only dialogs can have defaults)
+      // but, we cover this case anyway
+      chromeMask |= NS_CHROME_ALL_CHROME;
 
   // special treatment for the menubar
   ShowMenuBar(mChromeMask & NS_CHROME_MENU_BAR_ON ? PR_TRUE : PR_FALSE);
@@ -2026,7 +2236,10 @@ void nsWebShellWindow::ShowAppropriateChrome()
           // show or hide the element according to its chromeclass and the chromemask
           domElement->GetAttribute("chromeclass", chromeClass);
           makeChange = PR_FALSE;
-          if (chromeClass == "toolbar") {
+          if (chromeClass == "menubar") {
+            makeChange = PR_TRUE;
+            flag = mChromeMask & NS_CHROME_MENU_BAR_ON;
+          } else if (chromeClass == "toolbar") {
             makeChange = PR_TRUE;
             flag = mChromeMask & NS_CHROME_TOOL_BAR_ON;
           } else if (chromeClass == "location") {
@@ -2063,11 +2276,21 @@ void nsWebShellWindow::LoadContentAreas() {
     if (docViewer) {
       nsCOMPtr<nsIDocument> doc;
       docViewer->GetDocument(*getter_AddRefs(doc));
-      nsCOMPtr<nsIURL> mainURL = getter_AddRefs(doc->GetDocumentURL());
+      nsCOMPtr<nsIURI> mainURL = getter_AddRefs(doc->GetDocumentURL());
       if (mainURL) {
+#ifdef NECKO
+        char *search = nsnull;
+        nsCOMPtr<nsIURL> url = do_QueryInterface(mainURL);
+        if (url)
+          url->GetQuery(&search);
+#else
         const char *search;
         mainURL->GetSearch(&search);
+#endif
         searchSpec = search;
+#ifdef NECKO
+        nsCRT::free(search);
+#endif
       }
     }
   }
@@ -2086,11 +2309,11 @@ void nsWebShellWindow::LoadContentAreas() {
     for (endPos = 0; endPos < searchSpec.Length(); ) {
       // extract contentAreaID and URL substrings
       begPos = endPos;
-      eqPos = searchSpec.Find('=', begPos);
+      eqPos = searchSpec.FindChar('=', PR_FALSE,begPos);
       if (eqPos < 0)
         break;
 
-      endPos = searchSpec.Find(';', eqPos);
+      endPos = searchSpec.FindChar(';', PR_FALSE,eqPos);
       if (endPos < 0)
         endPos = searchSpec.Length();
       searchSpec.Mid(contentAreaID, begPos, eqPos-begPos);
@@ -2297,7 +2520,7 @@ NS_IMETHODIMP nsWebShellWindow::Init(nsIAppShell* aAppShell,
                    PRBool aAllowPlugins)
 {
    nsresult rv;
-   nsCOMPtr<nsIURL> urlObj;
+   nsCOMPtr<nsIURI> urlObj;
    char * urlStr = "chrome://navigator/content/";
  
 #ifndef NECKO
@@ -2310,7 +2533,7 @@ NS_IMETHODIMP nsWebShellWindow::Init(nsIAppShell* aAppShell,
    rv = service->NewURI(urlStr, nsnull, &uri);
    if (NS_FAILED(rv)) return rv;
 
-   rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+   rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
    NS_RELEASE(uri);
 #endif // NECKO
    if (NS_FAILED(rv))
@@ -2319,8 +2542,12 @@ NS_IMETHODIMP nsWebShellWindow::Init(nsIAppShell* aAppShell,
    // Note: null nsIStreamObserver means this window won't be able to answer FE_callback-type
    // questions from netlib.  Observers are generally appcores.  We'll have to supply
    // a generic browser appcore here someday.
-   rv = Initialize(nsnull, aAppShell, urlObj,
-       nsnull, nsnull, aBounds.width, aBounds.height);
+   nsWidgetInitData widgetInitData;
+   widgetInitData.mWindowType = eWindowType_child;
+   widgetInitData.mBorderStyle = eBorderStyle_default;
+
+   rv = Initialize(nsnull, aAppShell, urlObj, PR_TRUE,
+       nsnull, nsnull, aBounds.width, aBounds.height, widgetInitData);
    mChromeMask = aChromeMask;
    if (NS_SUCCEEDED(rv))
      MoveTo(aBounds.x, aBounds.y);
@@ -2333,16 +2560,49 @@ NS_IMETHODIMP nsWebShellWindow::MoveTo(PRInt32 aX, PRInt32 aY)
    return NS_OK;
 }
  
-NS_IMETHODIMP nsWebShellWindow::SizeTo(PRInt32 aWidth, PRInt32 aHeight)
+NS_IMETHODIMP nsWebShellWindow::SizeWindowTo(PRInt32 aWidth, PRInt32 aHeight)
 {
+  // XXX We have to look at the delta between our content shell's 
+  // size and the size passed in and then resize ourselves based on that
+  // delta.
+   mIntrinsicallySized = PR_FALSE; // We got changed. No more intrinsic sizing here.
    mWindow->Resize(aWidth, aHeight, PR_TRUE);
    return NS_OK;
 }
  
-NS_IMETHODIMP nsWebShellWindow::GetBounds(nsRect& aResult)
+NS_IMETHODIMP nsWebShellWindow::SizeContentTo(PRInt32 aWidth, PRInt32 aHeight)
 {
-   mWindow->GetClientBounds(aResult);
+   PRInt32 x,y,width,height;
+   mWebShell->GetBounds(x,y,width,height);
+   PRInt32 aWidthDelta = aWidth - width;
+   PRInt32 aHeightDelta = aHeight - height;
+   
+   nsRect windowBounds;
+   mWindow->GetBounds(windowBounds);
+   mWindow->Resize(windowBounds.width + aWidthDelta, 
+                   windowBounds.height + aHeightDelta,
+                   PR_TRUE);
    return NS_OK;
+}
+
+NS_IMETHODIMP nsWebShellWindow::GetContentBounds(nsRect& aResult)
+{
+  // Should return the size of the content webshell.
+  nsCOMPtr<nsIWebShell> contentShell;
+  GetContentWebShell(getter_AddRefs(contentShell));
+  if (!contentShell) {
+    NS_ERROR("Attempt to retrieve the content bounds for a window with no content.");
+    return NS_ERROR_FAILURE;
+  }
+
+  PRInt32 x,y,width,height;
+  contentShell->GetBounds(x,y,width,height);
+  aResult.x = x;
+  aResult.y = y;
+  aResult.width = width;
+  aResult.height = height;
+
+  return NS_OK;
 }
  
 NS_IMETHODIMP nsWebShellWindow::GetWindowBounds(nsRect& aResult)
@@ -2373,28 +2633,37 @@ NS_IMETHODIMP nsWebShellWindow::SetTitle(const PRUnichar* aTitle)
   nsCOMPtr<nsIDOMNode> webshellNode = GetDOMNodeFromWebShell(mWebShell);
   nsCOMPtr<nsIDOMElement> webshellElement;
   nsString windowTitleModifier;
-
+  nsString windowSeparator;
   if (webshellNode)
     webshellElement = do_QueryInterface(webshellNode);
   if (webshellElement )
+  {
   	webshellElement->GetAttribute("titlemodifier", windowTitleModifier );
+  	webshellElement->GetAttribute("titlemenuseparator", windowSeparator );
+  }
    nsString title( aTitle );
-   title += windowTitleModifier;
-      
+   
+   if( title.Length() > 0 )
+  	 title += windowSeparator+windowTitleModifier;
+   else
+   	title = windowTitleModifier;  
    if (windowWidget)
      windowWidget->SetTitle(title);
+
      
+
      // Tell the window mediator that a title has changed
    #if 1 
    {
    	  nsIWindowMediator* service;
   		if (NS_FAILED(nsServiceManager::GetService(kWindowMediatorCID, kIWindowMediatorIID, (nsISupports**) &service ) ) )
     		return NS_OK;
-  		service->UpdateWindowTitle( this, title );
+  		service->UpdateWindowTitle( this, title.GetUnicode() );
 	 		nsServiceManager::ReleaseService(kWindowMediatorCID, service);
    }
    #endif // Window Mediation
    return NS_OK;
+
 }
  
 NS_IMETHODIMP nsWebShellWindow::GetTitle(const PRUnichar** aResult)
@@ -2431,8 +2700,11 @@ nsWebShellWindow::NotifyObservers( const nsString &aTopic, const nsString &someD
 NS_IMETHODIMP nsWebShellWindow::SetStatus(const PRUnichar* aStatus)
 {
     nsresult rv = NS_OK;
-    // Store status text.
+    // Store status text unless empty string was set, then use defaultStatus
     mStatus = aStatus;
+    if (mStatus.Length() == 0) {
+      mStatus = mDefaultStatus;
+    }
     // Broadcast status text change to interested parties.
     rv = NotifyObservers( "status", aStatus );
     return rv;
@@ -2444,6 +2716,28 @@ NS_IMETHODIMP nsWebShellWindow::GetStatus(const PRUnichar** aResult)
     if ( aResult ) {
         // Semantics are ill-defined: How to allocate?  Who frees it?
         *aResult = mStatus.ToNewUnicode();
+    } else {
+        rv = NS_ERROR_NULL_POINTER;
+    }
+    return rv;
+}
+ 
+NS_IMETHODIMP nsWebShellWindow::SetDefaultStatus(const PRUnichar* aStatus)
+{
+    nsresult rv = NS_OK;
+    // Store status text.
+    mDefaultStatus = aStatus;
+    // Broadcast status text change to interested parties.
+    rv = NotifyObservers( "defaultStatus", aStatus );
+    return rv;
+}
+ 
+NS_IMETHODIMP nsWebShellWindow::GetDefaultStatus(const PRUnichar** aResult)
+{
+    nsresult rv = NS_OK;
+    if ( aResult ) {
+        // Semantics are ill-defined: How to allocate?  Who frees it?
+        *aResult = mDefaultStatus.ToNewUnicode();
     } else {
         rv = NS_ERROR_NULL_POINTER;
     }
@@ -2479,8 +2773,207 @@ nsWebShellWindow::ShowMenuBar(PRBool aShow)
   return mWindow->ShowMenuBar(aShow);
 }
 
+//nsIUrlDispatcher methods
+
 NS_IMETHODIMP
-nsWebShellWindow::IsMenuBarVisible(PRBool *aVisible)
-{
-  return mWindow->IsMenuBarVisible(aVisible);
+nsWebShellWindow::HandleUrl(const PRUnichar * aCommand, 
+                            const PRUnichar * aURLSpec, 
+                            nsIInputStream * aPostDataStream)
+{  
+  /* Make the topic to observe. The topic will be of the format 
+   * linkclick:<prototocol>. Note thet this is a totally made up thing.
+   * Things are going to change later
+   */
+  nsString topic(aCommand);
+  topic += ":";
+  nsAutoString url(aURLSpec);
+  nsresult rv;
+
+  PRInt32 offset = url.FindChar(':');
+  if (offset <= 0)
+     return NS_ERROR_FAILURE;
+
+  PRInt32 offset2= url.Find("mailto:", PR_TRUE);
+
+  if (offset2 == 0) {
+    topic += "mailto";
+
+	/* I know about all that is going on regarding using window.open
+     * instead of showWindowWithArgs(). But, I really don't have another
+     * option in this case to invoke the messenger compose window.
+     * This piece of code will eventually go away when I start using the 
+     * protocol registries in NECKO
+     */
+
+	NS_WITH_SERVICE(nsIDOMToolkitCore, toolkitCore, kToolkitCoreCID, &rv)
+	if (NS_FAILED(rv))
+		return rv;
+  /* Messenger doesn't understand to:xyz@domain.com,subject="xyz" yet.
+   * So, just pass the type and mode info
+   */
+	rv = toolkitCore->ShowWindowWithArgs("chrome://messengercompose/content",
+		                                    nsnull,
+		                                   "type=0,mode=0");
+	if (NS_FAILED(rv))
+		return rv;
+  }
+  else {
+    topic += "browser";
+  }
+
+  return NS_OK;
+  
 }
+
+NS_IMETHODIMP
+nsWebShellWindow::IsIntrinsicallySized(PRBool& aResult)
+{
+  aResult = mIntrinsicallySized;
+  return NS_OK;
+}
+
+
+// nsIPrompt
+NS_IMETHODIMP nsWebShellWindow::Alert(const PRUnichar *text)
+{
+  nsresult rv; 
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  nsIWebShell* tempWebShell;
+  GetWebShell(tempWebShell  );
+  nsCOMPtr<nsIWebShell> webShell( dont_AddRef(tempWebShell) );
+  if (NS_FAILED(rv = ConvertWebShellToDOMWindow(webShell, getter_AddRefs(domWindow))))
+  {
+    NS_ERROR("Unable to retrieve the DOM window from the new web shell.");
+    return rv;
+  }
+ 
+ NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv);
+ if ( NS_SUCCEEDED( rv ) )
+ 	rv = dialog->Alert( domWindow, text );
+  return rv; 
+}
+
+NS_IMETHODIMP nsWebShellWindow::Confirm(const PRUnichar *text, PRBool *_retval)
+{
+  nsresult rv; 
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  nsIWebShell* tempWebShell;
+  GetWebShell(tempWebShell  );
+  nsCOMPtr<nsIWebShell> webShell( dont_AddRef(tempWebShell) );
+  if (NS_FAILED(rv = ConvertWebShellToDOMWindow(webShell, getter_AddRefs(domWindow))))
+  {
+    NS_ERROR("Unable to retrieve the DOM window from the new web shell.");
+    return rv;
+  }
+ 
+ NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv);
+ if ( NS_SUCCEEDED( rv ) )
+ 	rv = dialog->Confirm( domWindow, text, _retval );
+  return rv; 
+}
+
+NS_IMETHODIMP nsWebShellWindow::ConfirmCheck(const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+{
+	 nsresult rv; 
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  nsIWebShell* tempWebShell;
+  GetWebShell(tempWebShell  );
+  nsCOMPtr<nsIWebShell> webShell( dont_AddRef(tempWebShell) );
+  if (NS_FAILED(rv = ConvertWebShellToDOMWindow(webShell, getter_AddRefs(domWindow))))
+  {
+    NS_ERROR("Unable to retrieve the DOM window from the new web shell.");
+    return rv;
+  }
+ 
+ NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv);
+ if ( NS_SUCCEEDED( rv ) )
+ 	rv =dialog->ConfirmCheck( domWindow, text, checkMsg, checkValue, _retval );
+  return rv; 
+}
+
+NS_IMETHODIMP nsWebShellWindow::Prompt(const PRUnichar *text, const PRUnichar *defaultText, PRUnichar **result, PRBool *_retval)
+{
+  nsresult rv; 
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  nsIWebShell* tempWebShell;
+  GetWebShell(tempWebShell  );
+  nsCOMPtr<nsIWebShell> webShell( dont_AddRef(tempWebShell) );
+  if (NS_FAILED(rv = ConvertWebShellToDOMWindow(webShell, getter_AddRefs(domWindow))))
+  {
+    NS_ERROR("Unable to retrieve the DOM window from the new web shell.");
+    return rv;
+  }
+ 
+ NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv);
+ if ( NS_SUCCEEDED( rv ) )
+ 	rv = dialog->Prompt( domWindow, text, defaultText, result, _retval );
+  return rv; 
+}
+
+NS_IMETHODIMP nsWebShellWindow::PromptUsernameAndPassword(const PRUnichar *text, PRUnichar **user, PRUnichar **pwd, PRBool *_retval)
+{	
+  nsresult rv; 
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  nsIWebShell* tempWebShell;
+  GetWebShell(tempWebShell  );
+  nsCOMPtr<nsIWebShell> webShell( dont_AddRef(tempWebShell) );
+  if (NS_FAILED(rv = ConvertWebShellToDOMWindow(webShell, getter_AddRefs(domWindow))))
+  {
+    NS_ERROR("Unable to retrieve the DOM window from the new web shell.");
+    return rv;
+  }
+ 
+ NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv);
+ if ( NS_SUCCEEDED( rv ) )
+ 	rv = dialog->PromptUsernameAndPassword( domWindow, text, user, pwd, _retval );
+  return rv;
+}
+
+NS_IMETHODIMP nsWebShellWindow::PromptPassword(const PRUnichar *text, PRUnichar **pwd, PRBool *_retval)
+{
+  nsresult rv; 
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  nsIWebShell* tempWebShell;
+  GetWebShell(tempWebShell  );
+  nsCOMPtr<nsIWebShell> webShell( dont_AddRef(tempWebShell) );
+  if (NS_FAILED(rv = ConvertWebShellToDOMWindow(webShell, getter_AddRefs(domWindow))))
+  {
+    NS_ERROR("Unable to retrieve the DOM window from the new web shell.");
+    return rv;
+  }
+ 
+ NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv);
+ if ( NS_SUCCEEDED( rv ) )
+ 	rv = dialog->PromptPassword( domWindow, text, pwd, _retval );
+  return rv;
+}
+
+NS_IMETHODIMP nsWebShellWindow::ConfirmYN(const PRUnichar *text, PRBool *_retval)
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+ 
+NS_IMETHODIMP nsWebShellWindow::ConfirmCheckYN(const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+// nsIModalWindowSupport interface
+nsresult nsWebShellWindow::PrepareModality()
+{
+  nsresult rv;
+  NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+  return appShell->PushThreadEventQueue();
+}
+
+nsresult nsWebShellWindow::FinishModality()
+{
+  nsresult rv;
+  NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+  return appShell->PopThreadEventQueue();
+}
+

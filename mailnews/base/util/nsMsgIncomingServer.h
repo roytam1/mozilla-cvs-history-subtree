@@ -21,6 +21,9 @@
 #include "msgCore.h"
 #include "nsIFolder.h"
 #include "nsCOMPtr.h"
+
+class nsIMsgFolderCache;
+
 /*
  * base class for nsIMsgIncomingServer - derive your class from here
  * if you want to get some free implementation
@@ -40,8 +43,8 @@ class NS_MSG_BASE nsMsgIncomingServer : public nsIMsgIncomingServer {
   NS_IMETHOD SetKey(char * aKey);
   
    /* attribute string prettyName; */
-  NS_IMETHOD GetPrettyName(char * *aPrettyName);
-  NS_IMETHOD SetPrettyName(char * aPrettyName);
+  NS_IMETHOD GetPrettyName(PRUnichar * *aPrettyName);
+  NS_IMETHOD SetPrettyName(PRUnichar * aPrettyName);
 
   /* attribute string hostName; */
   NS_IMETHOD GetHostName(char * *aHostName);
@@ -51,8 +54,9 @@ class NS_MSG_BASE nsMsgIncomingServer : public nsIMsgIncomingServer {
   NS_IMETHOD GetUsername(char * *aUserName);
   NS_IMETHOD SetUsername(char * aUserName);
 
-  /* attribute boolean rememberPassword; */
+  /* attribute string type; */
   NS_IMETHOD GetType(char * *aType);
+  NS_IMETHOD SetType(char * aType);
   
   /* attribute boolean rememberPassword; */
   NS_IMETHOD GetRememberPassword(PRBool *aRememberPassword);
@@ -80,7 +84,7 @@ class NS_MSG_BASE nsMsgIncomingServer : public nsIMsgIncomingServer {
   NS_IMETHOD SetRootFolder(nsIFolder * aRootFolder);
 
   NS_IMETHOD PerformBiff();
-
+  NS_IMETHOD WriteToFolderCache(nsIMsgFolderCache *folderCache);
 private:
   nsIPref *m_prefs;
   char *m_serverKey;
@@ -92,7 +96,7 @@ protected:
   nsCOMPtr <nsIFolder> m_rootFolder;
   nsresult getCharPref(const char *pref, char **);
   nsresult getDefaultCharPref(const char *pref, char **);
-  nsresult setCharPref(const char *pref, char *);
+  nsresult setCharPref(const char *pref, const char *);
   
   nsresult getBoolPref(const char *pref, PRBool *);
   nsresult getDefaultBoolPref(const char *pref, PRBool *);

@@ -22,10 +22,14 @@
 #include "nsIMenu.h"
 #include "nsIMenuListener.h"
 #include "nsVoidArray.h"
+
 #include "Xm/Xm.h"
 #include "nsXtManageWidget.h"
 
+class nsIDOMElement;
+class nsIDOMNode;
 class nsIMenuBar;
+class nsIWebShell;
 
 /**
  * Native Motif Menu wrapper
@@ -51,13 +55,13 @@ public:
         void              * aWebShell);
   nsEventStatus MenuDestruct(const nsMenuEvent & aMenuEvent);
   
-//  NS_IMETHOD Create(nsIMenuBar * aParent, const nsString &aLabel);
-
   // nsIMenu Methods
   NS_IMETHOD Create(nsISupports * aParent, const nsString &aLabel);
   NS_IMETHOD GetParent(nsISupports *&aParent);
   NS_IMETHOD GetLabel(nsString &aText);
   NS_IMETHOD SetLabel(const nsString &aText);
+  NS_IMETHOD GetAccessKey(nsString &aText);
+  NS_IMETHOD SetAccessKey(const nsString &aText);
   NS_IMETHOD AddItem(nsISupports* aItem);
   NS_IMETHOD AddMenuItem(nsIMenuItem * aMenuItem);
   NS_IMETHOD AddMenu(nsIMenu * aMenu);
@@ -65,7 +69,6 @@ public:
   NS_IMETHOD GetItemCount(PRUint32 &aCount);
   NS_IMETHOD GetItemAt(const PRUint32 aPos, nsISupports *& aMenuItem);
   NS_IMETHOD InsertItemAt(const PRUint32 aPos, nsISupports * aMenuItem);
-  NS_IMETHOD InsertSeparator(const PRUint32 aCount);
   NS_IMETHOD RemoveItem(const PRUint32 aCount);
   NS_IMETHOD RemoveAll();
   NS_IMETHOD GetNativeData(void** aData);
@@ -76,16 +79,33 @@ public:
   NS_IMETHOD SetWebShell(nsIWebShell * aWebShell);
 
 protected:
-  void       Create(Widget aParent, const nsString &aLabel);
+  void LoadMenuItem(
+    nsIMenu       * pParentMenu,
+    nsIDOMElement * menuitemElement,
+    nsIDOMNode    * menuitemNode,
+    unsigned short  menuitemIndex,
+    nsIWebShell   * aWebShell);
+
+  void LoadSubMenu(
+    nsIMenu       * pParentMenu,
+    nsIDOMElement * menuElement,
+    nsIDOMNode    * menuNode);
+
   Widget     GetNativeParent();
 
   nsString   mLabel;
+  nsString   mAccessKey;
   PRUint32   mNumMenuItems;
   Widget     mMenu;
 
   nsIMenu    *mMenuParent;
   nsIMenuBar *mMenuBarParent;
+  nsIMenuListener * mListener;
 
+  PRBool mConstructCalled;
+  nsIDOMNode    * mDOMNode;
+  nsIWebShell   * mWebShell;
+  nsIDOMElement * mDOMElement;
 };
 
 #endif // nsMenu_h__

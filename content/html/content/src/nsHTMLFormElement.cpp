@@ -123,7 +123,7 @@ public:
 
 protected:
   nsFormControlList*       mControls;
-  nsGenericHTMLLeafElement mInner;
+  nsGenericHTMLContainerElement mInner;
 };
 
 // nsFormControlList
@@ -363,12 +363,14 @@ nsHTMLFormElement::StringToAttribute(nsIAtom* aAttribute,
                               nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::method) {
-    nsGenericHTMLElement::ParseEnumValue(aValue, kFormMethodTable, aResult);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseEnumValue(aValue, kFormMethodTable, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (aAttribute == nsHTMLAtoms::enctype) {
-    nsGenericHTMLElement::ParseEnumValue(aValue, kFormEnctypeTable, aResult);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseEnumValue(aValue, kFormEnctypeTable, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   return NS_CONTENT_ATTR_NOT_THERE;
 }
@@ -394,13 +396,25 @@ nsHTMLFormElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
   // XXX write me
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
 }
+
+NS_IMETHODIMP
+nsHTMLFormElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                            PRInt32& aHint) const
+{
+  if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    aHint = NS_STYLE_HINT_CONTENT;
+  }
+
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsHTMLFormElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
@@ -713,11 +727,3 @@ nsFormControlList::NamedItem(const nsString& aName, nsIDOMNode** aReturn)
   return result;
 }
 
-NS_IMETHODIMP
-nsHTMLFormElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, aAttribute, aHint);
-  return NS_OK;
-}

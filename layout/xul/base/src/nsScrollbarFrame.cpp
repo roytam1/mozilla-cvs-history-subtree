@@ -27,6 +27,14 @@
 #include "nsScrollbarFrame.h"
 #include "nsScrollbarButtonFrame.h"
 #include "nsXULAtoms.h"
+#include "nsHTMLAtoms.h"
+#include "nsISupportsArray.h"
+#include "nsIDOMElement.h"
+#include "nsIDOMDocument.h"
+#include "nsDocument.h"
+#include "nsINameSpaceManager.h"
+
+static NS_DEFINE_IID(kIAnonymousContentCreatorIID,     NS_IANONYMOUS_CONTENT_CREATOR_IID);
 
 //
 // NS_NewToolbarFrame
@@ -49,6 +57,48 @@ NS_NewScrollbarFrame ( nsIFrame** aNewFrame )
   
 } // NS_NewScrollbarFrame
 
+/**
+ * Anonymous interface
+ */
+NS_IMETHODIMP
+nsScrollbarFrame::CreateAnonymousContent(nsISupportsArray& aAnonymousChildren)
+{
+  // if not content the create some anonymous content
+  PRInt32 count = 0;
+  mContent->ChildCount(count); 
+
+  if (count == 0) {
+    // get the document
+    nsCOMPtr<nsIDocument> idocument;
+    mContent->GetDocument(*getter_AddRefs(idocument));
+
+    nsCOMPtr<nsIDOMDocument> document(do_QueryInterface(idocument));
+
+    // create a decrement button
+    nsCOMPtr<nsIDOMElement> node;
+    document->CreateElement("scrollbarbutton",getter_AddRefs(node));
+    nsCOMPtr<nsIContent> content;
+
+    content = do_QueryInterface(node);
+    content->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::kClass, "decrement", PR_TRUE);
+    aAnonymousChildren.AppendElement(content);
+
+    // a slider
+    document->CreateElement("slider",getter_AddRefs(node));
+    content = do_QueryInterface(node);
+    content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_TRUE);
+    aAnonymousChildren.AppendElement(content);
+
+    // and increment button
+    document->CreateElement("scrollbarbutton",getter_AddRefs(node));
+    content = do_QueryInterface(node);
+    content->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::kClass, "increment", PR_TRUE);
+    aAnonymousChildren.AppendElement(content);
+  }
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsScrollbarFrame::AttributeChanged(nsIPresContext* aPresContext,
                                nsIContent* aChild,
@@ -69,3 +119,22 @@ nsScrollbarFrame::AttributeChanged(nsIPresContext* aPresContext,
 
   return rv;
 }
+
+NS_IMETHODIMP 
+nsScrollbarFrame::QueryInterface(REFNSIID aIID, void** aInstancePtr)      
+{           
+  if (NULL == aInstancePtr) {                                            
+    return NS_ERROR_NULL_POINTER;                                        
+  }                                                                      
+                                                                         
+  *aInstancePtr = NULL;                                                  
+                                                                                        
+  if (aIID.Equals(kIAnonymousContentCreatorIID)) {                                         
+    *aInstancePtr = (void*)(nsIAnonymousContentCreator*) this;                                        
+    NS_ADDREF_THIS();                                                    
+    return NS_OK;                                                        
+  }
+
+  return nsBoxFrame::QueryInterface(aIID, aInstancePtr);                                     
+}
+

@@ -98,11 +98,15 @@ public:
 
   NS_IMETHOD InsertHTML(const nsString &aInputString);
 
-  NS_IMETHOD OutputTextToString(nsString& aOutputString);
-  NS_IMETHOD OutputHTMLToString(nsString& aOutputString);
+  NS_IMETHOD OutputToString(nsString& aOutputString,
+                            const nsString& aFormatType,
+                            PRUint32 aFlags);
+  NS_IMETHOD OutputToStream(nsIOutputStream* aOutputStream,
+                            const nsString& aFormatType,
+                            const nsString* aCharsetOverride,
+                            PRUint32 aFlags);
 
-  NS_IMETHOD OutputTextToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride = nsnull);
-  NS_IMETHOD OutputHTMLToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride = nsnull);
+  NS_IMETHOD ApplyStyleSheet(const nsString& aURL);
 
   NS_IMETHOD GetLocalFileURL(nsIDOMWindow* aParent, const nsString& aFilterType, nsString& aReturn);
   NS_IMETHOD SetBackgroundColor(const nsString& aColor);
@@ -112,15 +116,11 @@ public:
   NS_IMETHOD ReplaceBlockParent(nsString& aParentTag);
   NS_IMETHOD RemoveParagraphStyle();
   NS_IMETHOD RemoveParent(const nsString &aParentTag);
-  NS_IMETHOD InsertLink(nsString& aURL);
-  NS_IMETHOD InsertImage(nsString& aURL,
-                         nsString& aWidth, nsString& aHeight,
-                         nsString& aHspace, nsString& aVspace,
-                         nsString& aBorder,
-                         nsString& aAlt, nsString& aAlignment);
   NS_IMETHOD InsertList(const nsString& aListType);
+  NS_IMETHOD InsertHeader(const nsString& aHeaderType);
   NS_IMETHOD Indent(const nsString& aIndent);
   NS_IMETHOD Align(const nsString& aAlign);
+  NS_IMETHOD GetElementOrParentByTagName(const nsString& aTagName, nsIDOMNode *aNode, nsIDOMElement** aReturn);
   NS_IMETHOD GetSelectedElement(const nsString& aTagName, nsIDOMElement** aReturn);
   NS_IMETHOD CreateElementWithDefaults(const nsString& aTagName, nsIDOMElement** aReturn);
   NS_IMETHOD InsertElement(nsIDOMElement* aElement, PRBool aDeleteSelection);
@@ -128,7 +128,12 @@ public:
   NS_IMETHOD InsertLinkAroundSelection(nsIDOMElement* aAnchorElement);
   NS_IMETHOD SelectElement(nsIDOMElement* aElement);
   NS_IMETHOD SetCaretAfterElement(nsIDOMElement* aElement);
-  NS_IMETHOD InsertTable();
+  NS_IMETHOD GetEmbeddedObjects(nsISupportsArray** aNodeList);
+  NS_IMETHOD GetCellIndexes(nsIDOMElement *aCell, PRInt32 &aColIndex, PRInt32 &aRowIndex);
+  NS_IMETHOD GetTableSize(nsIDOMElement *aTable, PRInt32 &aRowCount, PRInt32 &aColCount);
+  NS_IMETHOD GetCellAt(nsIDOMElement* aTable, PRInt32 aRowIndex, PRInt32 aColIndex, nsIDOMElement* &aCell);
+  NS_IMETHOD GetCellDataAt(nsIDOMElement* aTable, PRInt32 aRowIndex, PRInt32 aColIndex, nsIDOMElement* &aCell, 
+                           PRInt32& aStartRowIndex, PRInt32& aStartColIndex, PRInt32& aRowSpan, PRInt32& aColSpan, PRBool& aIsSelected);
   NS_IMETHOD InsertTableCell(PRInt32 aNumber, PRBool aAfter);
   NS_IMETHOD InsertTableColumn(PRInt32 aNumber, PRBool aAfter);
   NS_IMETHOD InsertTableRow(PRInt32 aNumber, PRBool aAfter);
@@ -136,9 +141,10 @@ public:
   NS_IMETHOD DeleteTableCell(PRInt32 aNumber);
   NS_IMETHOD DeleteTableColumn(PRInt32 aNumber);
   NS_IMETHOD DeleteTableRow(PRInt32 aNumber);
-  NS_IMETHOD JoinTableCells(PRBool aCellToRight);
+  NS_IMETHOD JoinTableCells();
+  NS_IMETHOD NormalizeTable(nsIDOMElement *aTable);
   NS_IMETHOD BeginComposition(void);
-  NS_IMETHOD SetCompositionString(const nsString& aCompositionString);
+  NS_IMETHOD SetCompositionString(const nsString& aCompositionString, nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply);
   NS_IMETHOD EndComposition(void);
   NS_IMETHOD StartLogging(nsIFileSpec *aLogFile);
   NS_IMETHOD StopLogging();

@@ -33,7 +33,9 @@ EXPORT_RESOURCE_CONTENT = \
 	$(srcdir)/EditorInitPage.html \
 	$(srcdir)/EditorInitPagePlain.html \
 	$(srcdir)/editor.properties \
+	$(srcdir)/EditorStyles1.css \
+	$(srcdir)/EditorContent.css \
 	$(NULL)
 
 install:: 
-	$(INSTALL) $(EXPORT_RESOURCE_CONTENT) $(DIST)/bin/chrome/editor/composer/content/default
+	$(INSTALL) $(EXPORT_RESOURCE_CONTENT) $(DIST)/bin/chrome/editor/content/default

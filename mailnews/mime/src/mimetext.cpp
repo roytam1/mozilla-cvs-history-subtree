@@ -92,12 +92,8 @@ MimeInlineText_initialize (MimeObject *obj)
       {
         if (obj->options && obj->options->default_charset)
           text->charset = PL_strdup(obj->options->default_charset);
-          // Do not label US-ASCII if the app default charset is multibyte.
-          // Perhaps US-ASCII label should be removed for all cases.
-        else if (MULTIBYTE & INTL_DefaultDocCharSetID(0))
-          ;
         else
-          text->charset = PL_strdup("US-ASCII");
+          text->charset = PL_strdup("");
       }
     }
   }
@@ -272,12 +268,22 @@ MimeInlineText_rotate_convert_and_parse_line(char *line, PRInt32 length,
   if ( (obj->options && obj->options->charset_conversion_fn) &&
        (!obj->options->force_user_charset) )  /* Only convert if the user prefs is false */
 	{
-	  PRInt32 converted_len = 0;
-    const char *input_charset = (obj->options->override_charset
-									? obj->options->override_charset
-									: obj->options->default_charset);
+	  PRInt32         converted_len = 0;
+    const char      *input_charset = NULL;
+    PRBool          input_autodetect = PR_FALSE;
+    MimeInlineText  *text = (MimeInlineText *) obj;
 
-	  status = obj->options->charset_conversion_fn(line, length,
+    if (obj->options->override_charset && (*obj->options->override_charset))
+      input_charset = obj->options->override_charset;
+    else if ( (text) && (text->charset) && (*(text->charset)) )
+      input_charset = text->charset;
+    else 
+    {
+      input_charset = obj->options->default_charset;
+      input_autodetect = PR_TRUE;
+    }
+
+	  status = obj->options->charset_conversion_fn(input_autodetect, line, length,
 												   input_charset,
 												   "UTF-8",
 												   &converted,

@@ -26,6 +26,7 @@
 #include "nsICharsetAlias.h"
 #include "nsFileSpec.h"
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 const char* kBadHTMLText="<H3>Oops...</H3>You just tried to read a non-existent document: <BR>";
 const char* kUnorderedStringError = "String argument must be ordered. Don't you read API's?";
@@ -50,10 +51,10 @@ nsScanner::nsScanner(nsString& anHTMLString, const nsString& aCharset, nsCharset
   mBuffer(anHTMLString), mFilename("")
 {
   mTotalRead=mBuffer.Length();
-  mIncremental=PR_TRUE;
+  mIncremental=PR_FALSE;
   mOwnsStream=PR_FALSE;
   mOffset=0;
-  mMarkPos=-1;
+  mMarkPos=0;
   mInputStream=0;
   mUnicodeDecoder = 0;
   mCharset = "";
@@ -75,7 +76,7 @@ nsScanner::nsScanner(nsString& aFilename,PRBool aCreateStream, const nsString& a
 {
   mIncremental=PR_TRUE;
   mOffset=0;
-  mMarkPos=-1;
+  mMarkPos=0;
   mTotalRead=0;
   mOwnsStream=aCreateStream;
   mInputStream=0;
@@ -98,14 +99,14 @@ nsScanner::nsScanner(nsString& aFilename,PRBool aCreateStream, const nsString& a
  *  @param   aFilename --
  *  @return  
  */
-nsScanner::nsScanner(nsString& aFilename,nsInputStream& aStream,const nsString& aCharset, nsCharsetSource aSource, PRBool assumeOwnership) :
+nsScanner::nsScanner(nsString& aFilename,nsInputStream& aStream,const nsString& aCharset, nsCharsetSource aSource) :
     mBuffer(""), mFilename(aFilename) 
 {    
-  mIncremental=PR_TRUE;
+  mIncremental=PR_FALSE;
   mOffset=0;
-  mMarkPos=-1;
+  mMarkPos=0;
   mTotalRead=0;
-  mOwnsStream=assumeOwnership;
+  mOwnsStream=PR_FALSE;
   mInputStream=&aStream;
   mUnicodeDecoder = 0;
   mCharset = "";
@@ -113,8 +114,8 @@ nsScanner::nsScanner(nsString& aFilename,nsInputStream& aStream,const nsString& 
   SetDocumentCharset(aCharset, aSource);
 }
 
-nsresult nsScanner::SetDocumentCharset(const nsString& aCharset , nsCharsetSource aSource)
-{
+
+nsresult nsScanner::SetDocumentCharset(const nsString& aCharset , nsCharsetSource aSource) {
 
   nsresult res = NS_OK;
 
@@ -150,7 +151,7 @@ nsresult nsScanner::SetDocumentCharset(const nsString& aCharset , nsCharsetSourc
 
     nsICharsetConverterManager * ccm = nsnull;
     res = nsServiceManager::GetService(kCharsetConverterManagerCID, 
-                                       kICharsetConverterManagerIID, 
+                                       nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(), 
                                        (nsISupports**)&ccm);
     if(NS_SUCCEEDED(res) && (nsnull != ccm))
     {
@@ -211,12 +212,15 @@ PRUint32 nsScanner::RewindToMark(void){
  *  @param   
  *  @return  
  */
-PRUint32 nsScanner::Mark(void){
-  if((mOffset>0) && (mOffset>eBufferSizeThreshold)) {
-    mBuffer.Cut(0,mOffset);   //delete chars up to mark position
-    mOffset=0;
+PRUint32 nsScanner::Mark(PRInt32 anIndex){
+  if(kNotFound==anIndex) {
+    if((mOffset>0) && (mOffset>eBufferSizeThreshold)) {
+      mBuffer.Cut(0,mOffset);   //delete chars up to mark position
+      mOffset=0;
+    }
+    mMarkPos=mOffset;
   }
-  mMarkPos=mOffset;
+  else mOffset=(PRUint32)anIndex;
   return 0;
 }
  
@@ -228,7 +232,7 @@ PRUint32 nsScanner::Mark(void){
  * @update  gess4/3/98
  * @return  error code 
  */
-PRBool nsScanner::Append(nsString& aBuffer) {
+PRBool nsScanner::Append(const nsString& aBuffer) {
   mBuffer.Append(aBuffer);
   mTotalRead+=aBuffer.Length();
   return PR_TRUE;
@@ -244,37 +248,37 @@ PRBool nsScanner::Append(nsString& aBuffer) {
 PRBool nsScanner::Append(const char* aBuffer, PRUint32 aLen){
  
   if(mUnicodeDecoder) {
-   PRInt32 unicharBufLen = 0;
-    mUnicodeDecoder->Length(aBuffer, 0, aLen, &unicharBufLen);
-    PRUnichar *unichars = new PRUnichar [ unicharBufLen ];
-	nsresult res;
-	do {
+    PRInt32 unicharBufLen = 0;
+      mUnicodeDecoder->Length(aBuffer, 0, aLen, &unicharBufLen);
+      PRUnichar *unichars = new PRUnichar [ unicharBufLen+1 ];
+	  nsresult res;
+	  do {
 	    PRInt32 srcLength = aLen;
-		PRInt32 unicharLength = unicharBufLen;
-		res = mUnicodeDecoder->Convert(unichars, 0, &unicharLength,aBuffer, 0, &srcLength );
-		mBuffer.Append(unichars, unicharLength);
-		mTotalRead += unicharLength;
-                // if we failed, we consume one byte by replace it with U+FFFD
-                // and try conversion again.
-		if(NS_FAILED(res)) {
-			mUnicodeDecoder->Reset();
-			mBuffer.Append( (PRUnichar)0xFFFD);
-			mTotalRead++;
-			if(((PRUint32) (srcLength + 1)) > aLen)
-				srcLength = aLen;
-			else 
-				srcLength++;
-			aBuffer += srcLength;
-			aLen -= srcLength;
-		}
-	} while (NS_FAILED(res) && (aLen > 0));
-        // we continue convert the bytes data into Unicode 
-        // if we have conversion error and we have more data.
+		  PRInt32 unicharLength = unicharBufLen;
+		  res = mUnicodeDecoder->Convert(unichars, 0, &unicharLength,aBuffer, 0, &srcLength );
+      unichars[unicharLength]=0;  //add this since the unicode converters can't be trusted to do so.
+		  mBuffer.Append(unichars, unicharLength);
+		  mTotalRead += unicharLength;
+                  // if we failed, we consume one byte by replace it with U+FFFD
+                  // and try conversion again.
+		  if(NS_FAILED(res)) {
+			  mUnicodeDecoder->Reset();
+			  mBuffer.Append( (PRUnichar)0xFFFD);
+			  mTotalRead++;
+			  if(((PRUint32) (srcLength + 1)) > aLen)
+				  srcLength = aLen;
+			  else 
+				  srcLength++;
+			  aBuffer += srcLength;
+			  aLen -= srcLength;
+		  }
+	  } while (NS_FAILED(res) && (aLen > 0));
+          // we continue convert the bytes data into Unicode 
+          // if we have conversion error and we have more data.
 
-	delete[] unichars;
+	  delete[] unichars;
   }
   else {
-    
     mBuffer.Append(aBuffer,aLen);
     mTotalRead+=aLen;
   }
@@ -458,7 +462,7 @@ nsresult nsScanner::SkipOver(nsString& aSkipSet){
   while(NS_OK==result) {
     result=GetChar(theChar);
     if(NS_OK == result) {
-      PRInt32 pos=aSkipSet.Find(theChar);
+      PRInt32 pos=aSkipSet.FindChar(theChar);
       if(kNotFound==pos) {
         PutBack(theChar);
         break;
@@ -485,7 +489,7 @@ nsresult nsScanner::SkipTo(nsString& aValidSet){
   while(NS_OK==result) {
     result=GetChar(ch);
     if(NS_OK == result) {
-      PRInt32 pos=aValidSet.Find(ch);
+      PRInt32 pos=aValidSet.FindChar(ch);
       if(kNotFound!=pos) {
         PutBack(ch);
         break;
@@ -534,7 +538,7 @@ nsresult nsScanner::ReadWhile(nsString& aString,
   while(NS_OK==result) {
     result=GetChar(theChar);
     if(NS_OK==result) {
-      PRInt32 pos=(anOrderedSet) ? aValidSet.BinarySearch(theChar) : aValidSet.Find(theChar);
+      PRInt32 pos=(anOrderedSet) ? aValidSet.BinarySearch(theChar) : aValidSet.FindChar(theChar);
       if(kNotFound==pos) {
         if(addTerminal)
           aString+=theChar;
@@ -570,7 +574,7 @@ nsresult nsScanner::ReadUntil(nsString& aString,
   while(NS_OK == result) {
     result=GetChar(theChar);
     if(NS_OK==result) {
-      PRInt32 pos=(anOrderedSet) ? aTerminalSet.BinarySearch(theChar) : aTerminalSet.Find(theChar);
+      PRInt32 pos=(anOrderedSet) ? aTerminalSet.BinarySearch(theChar) : aTerminalSet.FindChar(theChar);
       if(kNotFound!=pos) {
         if(addTerminal)
           aString+=theChar;

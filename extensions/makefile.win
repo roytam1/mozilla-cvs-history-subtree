@@ -16,7 +16,12 @@
 # Reserved.
 
 DEPTH=..
+include <$(DEPTH)/config/config.mak>
 
-DIRS=wallet pics
+!ifdef NECKO
+DIRS = wallet pics cookie
+!else
+DIRS = wallet pics
+!endif
 
 include <$(DEPTH)\config\rules.mak>

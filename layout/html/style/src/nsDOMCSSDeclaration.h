@@ -24,7 +24,8 @@
 #include "nsIScriptObjectOwner.h"
 
 class nsICSSDeclaration;
-class nsIURL;
+class nsICSSParser;
+class nsIURI;
 
 class nsDOMCSSDeclaration : public nsIDOMCSS2Properties,
                             public nsIScriptObjectOwner
@@ -45,11 +46,10 @@ public:
   virtual void DropReference() = 0;
   virtual nsresult GetCSSDeclaration(nsICSSDeclaration **aDecl,
                                      PRBool aAllocate) = 0;
-  virtual nsresult StylePropertyChanged(const nsString& aPropertyName,
-                                        PRInt32 aHint) = 0;
-  virtual nsresult GetParent(nsISupports **aParent) = 0;
-  virtual nsresult GetBaseURL(nsIURL** aURL) = 0; // get URL that style URLs are realtive to
 
+  virtual nsresult ParseDeclaration(const nsString& aDecl) = 0;
+  virtual nsresult GetParent(nsISupports **aParent) = 0;
+  
 protected:
   virtual ~nsDOMCSSDeclaration();
 

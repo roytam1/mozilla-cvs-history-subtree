@@ -19,18 +19,13 @@
 #ifndef _NS_TARGET_H_
 #define _NS_TARGET_H_
 
-#include <string.h>
-#include "prtypes.h"
-#include "plhash.h"
-
 #include "nsHashtable.h"
 #include "nsVector.h"
-#include "nsCaps.h"
-#include "nsPrincipal.h"
-#include "nsPrivilege.h"
+#include "nsIPrincipal.h"
+#include "nsIPrincipalArray.h"
+#include "nsIPrivilege.h"
+#include "nsITarget.h"
 #include "nsUserDialogHelper.h"
-
-typedef nsVector nsTargetArray;
 
 PR_BEGIN_EXTERN_C
 #include "jpermission.h"
@@ -48,144 +43,129 @@ extern char* capsGetString(int id);
 
 PR_END_EXTERN_C
 
+extern PRBool CreateSystemTargets(nsIPrincipal * sysPrin);
 
-extern PRBool CreateSystemTargets(nsPrincipal *sysPrin);
-
-struct nsTarget {
+class nsTarget : public nsITarget {
 
 public:
 
-	/* Public Methods */
+	NS_DECL_ISUPPORTS
+
+	nsTarget(char *name, nsIPrincipal * prin, 
+		PRInt32 risk = JavaSecUI_targetRiskHigh(), 
+		/* XXX: char *riskColor = JavaSecUI_getString(CAPS_TARGET_RISK_COLOR_HIGH), */
+		char * riskColor = "High", char * description = NULL, char * detailDescription = NULL,
+		char * url = NULL, nsTargetArray* targetArray = NULL)
+	{
+		this->Init(name, prin, targetArray, risk, riskColor, description, detailDescription, url);
+	}
+
+	nsTarget(char *name, nsIPrincipal * prin, 
+		PRInt32 risk = JavaSecUI_targetRiskHigh(), 
+		/* XXX: char *riskColor = JavaSecUI_getString(CAPS_TARGET_RISK_COLOR_HIGH), */
+		char * riskColor = "High", int desc_id = 0, int detail_desc_id = 0,
+		int help_url_id = 0, nsTargetArray* targetArray = NULL);
 
 	virtual ~nsTarget(void);
 
-	nsTarget(char *name, nsPrincipal *prin, 
-             PRInt32 risk = JavaSecUI_targetRiskHigh(), 
-             /* XXX: char *riskColor = JavaSecUI_getString(CAPS_TARGET_RISK_COLOR_HIGH), */
-             char *riskColor = "High",
-             char *description = NULL, 
-             char *detailDescription = NULL,
-             char *url = NULL, 
-             nsTargetArray* targetArray = NULL)
-    {
-  		init(name, prin, targetArray, risk, riskColor, description, 
-             detailDescription, url);
-    }
+	static nsITarget * FindTarget(nsITarget * target);
 
-	nsTarget(char *name, nsPrincipal *prin, 
-             PRInt32 risk = JavaSecUI_targetRiskHigh(), 
-             /* XXX: char *riskColor = JavaSecUI_getString(CAPS_TARGET_RISK_COLOR_HIGH), */
-             char *riskColor = "High",
-             int desc_id = 0, 
-             int detail_desc_id = 0,
-             int help_url_id = 0, 
-             nsTargetArray* targetArray = NULL);
+	static nsITarget * FindTarget(char * name);
 
-	nsTarget * registerTarget(void);
+	static nsITarget * FindTarget(char * name, nsIPrincipal *prin);
 
-	nsTarget * registerTarget(void* context);
+	static nsITarget * GetTargetFromDescription(char *a);
 
-	static nsTarget * findTarget(nsTarget *target);
+	static nsTargetArray * GetAllRegisteredTargets(void);
 
-	static nsTarget * findTarget(char *name);
+	nsIPrivilege * CheckPrivilegeEnabled(nsTargetArray * targetArray, void *data);
 
-	static nsTarget * findTarget(char *name, nsPrincipal *prin);
+	nsIPrivilege * CheckPrivilegeEnabled(nsTargetArray * targetArray);
 
-	nsPrivilege * checkPrivilegeEnabled(nsTargetArray* prinArray, void *data);
+	nsIPrivilege * CheckPrivilegeEnabled(nsIPrincipal * p, void * data);
 
-	nsPrivilege * checkPrivilegeEnabled(nsTargetArray* prinArray);
+	NS_IMETHOD RegisterTarget(void * context, nsITarget * * target);
 
-	nsPrivilege * checkPrivilegeEnabled(nsPrincipal *p, void *data);
+	NS_IMETHOD EnablePrivilege(nsIPrincipal * prin, void * data, nsIPrivilege * * priv);
 
-	virtual nsPrivilege * enablePrivilege(nsPrincipal *prin, void *data);
+//	virtual nsIPrivilege * EnablePrivilege(nsIPrincipal *prin, void *data);
+//seems more likely to bleong to nsIPrivilege
+	nsIPrivilege * GetPrincipalPrivilege(nsIPrincipal *prin, void *data);
 
-	nsPrivilege * getPrincipalPrivilege(nsPrincipal *prin, void *data);
+	NS_IMETHOD GetFlattenedTargetArray(nsTargetArray * * targs);
 
-	nsTargetArray* getFlattenedTargetArray(void);
+	NS_IMETHOD GetRisk(char * * risk);
 
-	static nsTargetArray* getAllRegisteredTargets(void);
+	NS_IMETHOD GetRiskColor(char * * riskColor);
 
-	char * getRisk(void);
+	NS_IMETHOD GetDescription(char * * description);
 
-	char * getRiskColor(void);
+	NS_IMETHOD GetDetailDescription(char * * detailedDescription);
 
-	char * getDescription(void);
+	NS_IMETHOD GetHelpURL(char * * helpUrl);
 
-	char * getDetailDescription(void);
+	NS_IMETHOD GetDetailedInfo(void *a, char * * dinfo);
 
-	static nsTarget * getTargetFromDescription(char *a);
+	NS_IMETHOD GetPrincipal (nsIPrincipal * * prin);
 
-	char * getHelpURL(void);
+	NS_IMETHOD GetName(char * * name);
 
-	char * getDetailedInfo(void *a);
+	NS_IMETHOD IsRegistered(PRBool * result);
 
-	nsPrincipal * getPrincipal(void);
+	NS_IMETHOD Equals(nsITarget * other, PRBool * eq);
 
-	char * getName(void);
+	NS_IMETHOD HashCode(PRUint32 * code);
 
-	PRBool equals(nsTarget *a);
-
-	PRInt32 hashCode(void);
-
-	char * toString(void);
-
-	PRBool isRegistered(void);
+	NS_IMETHOD ToString(char * * result);
 
 private:
 
 	/* Private Field Accessors */
 	char * itsName;
-
-	nsPrincipal * itsPrincipal;
-
-	PRInt32 itsRisk;
-
-	char * itsRiskColorStr;
-
-	char * itsDescriptionStr;
-
-	char * itsDetailDescriptionStr;
-
-	char * itsURLStr;
-
+	nsIPrincipal * itsPrincipal;
 	PRBool itsRegistered;
-
-	nsTargetArray* itsTargetArray;
-
-	nsTargetArray* itsExpandedTargetArray;
-	
-	char *itsString;
-
+	PRInt32 itsRisk;
+	char * itsRiskColorStr;
+	char * itsDescriptionStr;
+	char * itsDetailDescriptionStr;
+	char * itsURLStr;
+	nsTargetArray * itsTargetArray;
+	nsTargetArray * itsExpandedTargetArray;
+	char * itsString;
 	PRUint32 itsDescriptionHash;
-
 	static PRBool theInited;
 
 	/* Private Methods */
-	void init(char *name, nsPrincipal *prin, nsTargetArray* targetArray, PRInt32 risk, char *riskColor, char *description, char *detailDescription, char *url);
+	void Init(char *name, nsIPrincipal *prin, nsTargetArray* targetArray, PRInt32 risk,
+				char *riskColor, char *description, char *detailDescription, char *url);
 
-	void getFlattenedTargets(nsHashtable *targHash, nsTargetArray* expandedTargetArray);
+	void GetFlattenedTargets(nsHashtable *targHash, nsTargetArray* expandedTargetArray);
 
 };
 
 
 class TargetKey: public nsHashKey {
 public:
-  nsTarget *itsTarget;
-  TargetKey(nsTarget *targ) {
-    itsTarget = targ;
-  }
-  
-  PRUint32 HashValue(void) const {
-    return itsTarget->hashCode();
-  }
+	nsITarget * itsTarget;
+	TargetKey(nsITarget * targ) {
+		itsTarget = targ;
+	}
 
-  PRBool Equals(const nsHashKey *aKey) const {
-    return (itsTarget->equals(((const TargetKey *) aKey)->itsTarget));
-  }
+	PRUint32 HashValue(void) const {
+		PRUint32 code=0;
+		itsTarget->HashCode(& code);
+		return NS_OK;
+	}
 
-  nsHashKey *Clone(void) const {
-    return new TargetKey(itsTarget);
-  }
+	PRBool Equals(const nsHashKey * aKey) const {
+		PRBool eq;
+		itsTarget->Equals(((const TargetKey *) aKey)->itsTarget, & eq);
+		return eq;
+	}
+
+	nsHashKey * Clone(void) const {
+		return new TargetKey(itsTarget);
+	}
 };
 
 /* XXX: IMO, IntegerKey and StringKey should be part of xpcom */

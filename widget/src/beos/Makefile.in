@@ -33,6 +33,7 @@ DEFINES += \
 		-I$(srcdir)/.
 
 CPPSRCS = \
+	$(topsrcdir)/widget/src/build/nsWidgetSupport.cpp \
 	nsAppShell.cpp      \
 	nsButton.cpp        \
 	nsCheckButton.cpp   \
@@ -76,7 +77,6 @@ EXTRA_DSO_LDOPTS+=	       \
 	$(MKSHLIB_FORCE_ALL)   \
 	$(SHARED_LIBRARY_LIBS) \
 	$(MKSHLIB_UNFORCE_ALL) \
-	-L$(DIST)/bin -lraptorhtmlpars \
 	$(NULL)
 
 EXTRA_DSO_LDOPTS += $(TK_LIBS)

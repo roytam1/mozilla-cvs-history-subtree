@@ -104,7 +104,7 @@ nsresult nsMsgNewsFactory::QueryInterface(const nsIID &aIID, void **aResult)
 	*aResult = NULL;   
 
 	// we support two interfaces....nsISupports and nsFactory.....
-	if (aIID.Equals(::nsISupports::GetIID()))    
+	if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
 		*aResult = (void *)(nsISupports*)this;   
 	else if (aIID.Equals(nsIFactory::GetIID()))   
 		*aResult = (void *)(nsIFactory*)this;   
@@ -136,7 +136,7 @@ nsresult nsMsgNewsFactory::CreateInstance(nsISupports * /* aOuter */,
   
 	if (mClassID.Equals(kNntpUrlCID)) 
 	{		
-    nsNntpUrl *url = new nsNntpUrl(nsnull, nsnull);
+    nsNntpUrl *url = new nsNntpUrl();
     if (url)
       rv = url->QueryInterface(aIID, aResult);
     else
@@ -318,6 +318,13 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
                                   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) return rv;
 
+	rv = compMgr->RegisterComponent(kNntpServiceCID,  
+                                    "NNTP Protocol Handler",
+                                    NS_NETWORK_PROTOCOL_PROGID_PREFIX "news",
+                                    path, PR_TRUE, PR_TRUE);
+
+	if (NS_FAILED(rv)) return rv;
+
 	rv = compMgr->RegisterComponent(kNewsFolderResourceCID,
                                   "News Folder Resource Factory",
                                   NS_RDF_RESOURCE_FACTORY_PROGID_PREFIX "news",
@@ -340,31 +347,31 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
   
 	rv = compMgr->RegisterComponent(kNNTPNewsgroupCID,
                                   "NNTP Newsgroup",
-                                  "component://netscape/messeneger/nntpnewsgroup",
+                                  "component://netscape/messenger/nntpnewsgroup",
                                   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) return rv;
 
   rv = compMgr->RegisterComponent(kNNTPNewsgroupPostCID,
                                   "NNTP Newsgroup Post",
-                                  "component://netscape/messeneger/nntpnewsgrouppost",
+                                  "component://netscape/messenger/nntpnewsgrouppost",
                                   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) return rv;
 
   rv = compMgr->RegisterComponent(kNNTPNewsgroupListCID,
                                   "NNTP Newsgroup List",
-                                  "component://netscape/messeneger/nntpnewsgrouplist",
+                                  "component://netscape/messenger/nntpnewsgrouplist",
                                   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) return rv;
 
   rv = compMgr->RegisterComponent(kNNTPArticleListCID,
                                   "NNTP Article List",
-                                  "component://netscape/messeneger/nntparticlelist",
+                                  "component://netscape/messenger/nntparticlelist",
                                   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) return rv;
 
   rv = compMgr->RegisterComponent(kNNTPHostCID,
                                   "NNTP Host",
-                                  "component://netscape/messeneger/nntphost",
+                                  "component://netscape/messenger/nntphost",
                                   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) return rv;
   

@@ -22,7 +22,32 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = $(MOZ_TOOLKIT) xpwidgets build
+##
+## Dont build the DSO under the 'build' directory as windows does.
+##
+## The DSOs get built in the toolkit dir itself.  Do this so that 
+## multiple implementations of widget can be built on the same
+##  source tree.
+##
+ifdef TOOLKIT_EXORCISM
+DIRS = xpwidgets 
+
+ifdef MOZ_ENABLE_GTK
+  DIRS += gtk
+endif
+
+ifdef MOZ_ENABLE_MOTIF
+  DIRS += motif
+endif
+
+ifdef MOZ_ENABLE_XLIB
+  DIRS += xlib
+endif
+
+DIRS += unix_services
+else
+DIRS = xpwidgets $(MOZ_WIDGET_TOOLKIT)
+endif
 
 include $(topsrcdir)/config/config.mk
 

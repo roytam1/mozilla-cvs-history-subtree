@@ -16,7 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
-MODULE= msgcompose
+MODULE= msgcompo
 
 include <$(DEPTH)\config\config.mak>
 
@@ -26,7 +26,6 @@ include <$(DEPTH)\config\config.mak>
 EXPORTS=    nsSmtpUrl.h             \
             nsSmtpProtocol.h        \
             nsSmtpService.h                 \
-            nsMsgCompPrefs.h                \
             nsMsgZapIt.h \
             nsMsgCreate.h \
             nsMsgSendLater.h \
@@ -35,6 +34,8 @@ EXPORTS=    nsSmtpUrl.h             \
 			nsMsgCompose.h \
 			nsMsgCompFields.h \
 			nsMsgQuote.h \
+			nsURLFetcher.h \
+			nsMsgTransition.h \
             $(NULL)
 
 ################################################################################
@@ -44,14 +45,12 @@ LIBRARY_NAME=msgcompose_s
 
 CPP_OBJS=   .\$(OBJDIR)\nsMsgCompFields.obj             \
             .\$(OBJDIR)\nsSmtpUrl.obj                   \
-                                .\$(OBJDIR)\MsgCompGlue.obj                     \
                         .\$(OBJDIR)\nsSmtpProtocol.obj          \
                         .\$(OBJDIR)\nsMsgSend.obj                       \
                         .\$(OBJDIR)\nsMsgSendPart.obj           \
                         .\$(OBJDIR)\nsSmtpService.obj           \
                         .\$(OBJDIR)\nsMsgComposeService.obj     \
                         .\$(OBJDIR)\nsMsgCompose.obj            \
-                        .\$(OBJDIR)\nsMsgCompPrefs.obj          \
             .\$(OBJDIR)\nsMsgZapIt.obj \
                         .\$(OBJDIR)\nsMsgCreate.obj \
                 .\$(OBJDIR)\nsMsgCopy.obj \
@@ -64,6 +63,7 @@ CPP_OBJS=   .\$(OBJDIR)\nsMsgCompFields.obj             \
                         .\$(OBJDIR)\nsMsgAttachmentHandler.obj \
                         .\$(OBJDIR)\nsMsgPrompts.obj \
                         .\$(OBJDIR)\nsMsgQuote.obj \
+                        .\$(OBJDIR)\nsURLFetcher.obj \
             $(NULL)
 
 

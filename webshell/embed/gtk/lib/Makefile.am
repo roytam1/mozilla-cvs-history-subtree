@@ -22,25 +22,25 @@ MOZ_LIB_UTIL_PREFIX=moz
 
 ZLIB_LIBS = -lz
 
+TIMER_LIBS -ltimer_gtk_s
+
 BASE_LIBS =          \
         -lpref       \
         $(ZLIB_LIBS) \
-        -lreg        \
+        -lmozreg        \
         -l$(MOZ_LIB_JS_PREFIX)js             \
+		$(TIMER_LIBS) \
         -lxpcom      \
         -lsecfree    \
         -l$(MOZ_LIB_UTIL_PREFIX)util    \
         $(NULL)
 
-TOOLKIT_WIDGET_LIB = -lwidgetgtk
-TOOLKIT_GFX_LIB = -lgfxgtk
+MOZ_WIDGET_TOOLKIT_LDFLAGS=-lwidget_gtk
 
 GECKO_LIBS =                  \
         -lraptorwebwidget     \
-        $(TOOLKIT_WIDGET_LIB) \
-        -lraptorgfx           \
-        $(TOOLKIT_GFX_LIB)    \
-        -lgfxps  \
+		$(MOZ_WIDGET_TOOLKIT_LDFLAGS) \
+		-lraptorgfx 	\
         -lraptorhtmlpars      \
         -lexpat \
         -lxmltok \

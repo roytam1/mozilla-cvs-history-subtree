@@ -16,7 +16,7 @@
  * Reserved.
  */
 
-/* Tests for XPConnect - hacked together while deveolpment continues. */
+/* Tests for XPConnect - hacked together while development continues. */
 
 #include <stdio.h>
 
@@ -28,6 +28,8 @@
 #include "nsIXPCSecurityManager.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
+#include "nsIEnumerator.h"
+#include "nsISupportsPrimitives.h"
 #include "jsapi.h"
 #include "xpclog.h"
 #include "nscore.h"
@@ -38,6 +40,9 @@
 #include "nsIGenericFactory.h"
 #include "nsSpecialSystemDirectory.h"	// For exe dir
 
+#include "nsIJSContextStack.h"
+
+static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kGenericFactoryCID, NS_GENERICFACTORY_CID);
 static NS_DEFINE_IID(kIAllocatorIID, NS_IALLOCATOR_IID);
 static NS_DEFINE_IID(kAllocatorCID, NS_ALLOCATOR_CID);
@@ -67,6 +72,7 @@ NS_IMPL_ISUPPORTS(MyScriptable, kMyScriptableIID);
 
 // XPC_IMPLEMENT_FORWARD_IXPCSCRIPTABLE(MyScriptable);
     XPC_IMPLEMENT_FORWARD_CREATE(MyScriptable);
+    XPC_IMPLEMENT_IGNORE_GETFLAGS(MyScriptable);
     XPC_IMPLEMENT_FORWARD_LOOKUPPROPERTY(MyScriptable);
     XPC_IMPLEMENT_FORWARD_DEFINEPROPERTY(MyScriptable);
     XPC_IMPLEMENT_FORWARD_GETPROPERTY(MyScriptable);
@@ -124,7 +130,7 @@ NS_IMETHODIMP nsTestXPCFoo::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
   if (aIID.Equals(nsITestXPCFoo::GetIID()) ||
       aIID.Equals(nsITestXPCFoo2::GetIID()) ||
-      aIID.Equals(nsISupports::GetIID())) {
+      aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
     *aInstancePtr = (void*) this;
     NS_ADDREF_THIS();
     return NS_OK;
@@ -219,8 +225,8 @@ public:
                              double            p10,
                              PRBool            p11,
                              char              p12,
-                             PRUnichar            p13,
-                             nsID*             p14,
+                             PRUnichar         p13,
+                             const nsID*       p14,
                              const char*       p15,
                              const PRUnichar*  p16);
     NS_IMETHOD SendInOutManyTypes(PRUint8*    p1,
@@ -265,6 +271,15 @@ public:
 
     /* nsISupports ReturnInterface (in nsISupports obj); */
     NS_IMETHOD ReturnInterface(nsISupports *obj, nsISupports **_retval);
+
+    /* nsIJSStackFrameLocation GetStack (); */
+    NS_IMETHOD GetStack(nsIJSStackFrameLocation **_retval);
+
+    /* void SetReceiverReturnOldReceiver (inout nsIEcho aReceiver); */
+    NS_IMETHOD SetReceiverReturnOldReceiver(nsIEcho **aReceiver);
+
+    /* void MethodWithForwardDeclaredParam (in nsITestXPCSomeUselessThing sut); */
+    NS_IMETHOD MethodWithForwardDeclaredParam(nsITestXPCSomeUselessThing *sut);
 
     MyEcho();
 private:
@@ -355,7 +370,7 @@ MyEcho::SendManyTypes(PRUint8              p1,
                       PRBool            p11,
                       char              p12,
                       PRUnichar            p13,
-                      nsID*             p14,
+                      const nsID*       p14,
                       const char*       p15,
                       const PRUnichar*  p16)
 {
@@ -452,7 +467,64 @@ MyEcho::ReturnInterface(nsISupports *obj, nsISupports **_retval)
         NS_ADDREF(obj);
     *_retval = obj;
     return NS_OK;
-}        
+}
+
+/* nsIJSStackFrameLocation GetStack (); */
+NS_IMETHODIMP
+MyEcho::GetStack(nsIJSStackFrameLocation **_retval)
+{
+    nsIJSStackFrameLocation* stack = nsnull;
+    if(!_retval)
+        return NS_ERROR_NULL_POINTER;
+
+    nsresult rv;
+    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
+    if(NS_SUCCEEDED(rv))
+    {
+        nsIJSStackFrameLocation* jsstack;
+        if(NS_SUCCEEDED(xpc->GetCurrentJSStack(&jsstack)) && jsstack)
+        {
+            xpc->CreateStackFrameLocation(JS_FALSE,
+                                          __FILE__,
+                                          "MyEcho::GetStack",
+                                          __LINE__,
+                                          jsstack,
+                                          &stack);
+            NS_RELEASE(jsstack);
+        }
+    }
+
+    if(stack)
+    {
+        *_retval = stack;
+        return NS_OK;
+    }
+    return NS_ERROR_FAILURE;
+}
+
+/* void SetReceiverReturnOldReceiver (inout nsIEcho aReceiver); */
+NS_IMETHODIMP
+MyEcho::SetReceiverReturnOldReceiver(nsIEcho **aReceiver)
+{
+    if(!aReceiver)
+        return NS_ERROR_NULL_POINTER;
+
+    nsIEcho* oldReceiver = mReceiver;
+    mReceiver = *aReceiver;
+    if(mReceiver)
+        NS_ADDREF(mReceiver);
+
+    /* don't release the reference, that is the caller's problem */
+    *aReceiver = oldReceiver;
+    return NS_OK;
+}
+
+/* void MethodWithForwardDeclaredParam (in nsITestXPCSomeUselessThing sut); */
+NS_IMETHODIMP
+MyEcho::MethodWithForwardDeclaredParam(nsITestXPCSomeUselessThing *sut)
+{
+    return NS_OK;
+}
 
 /***************************************************************************/
 // security manager test class
@@ -510,7 +582,7 @@ MySecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISuppor
         case OK_ALL:
             return NS_OK;
         case VETO_ALL:
-            JS_SetPendingException(aJSContext, 
+            JS_SetPendingException(aJSContext,
                 STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
                     "security exception")));
             return NS_ERROR_FAILURE;
@@ -528,7 +600,7 @@ MySecMan::CanCreateInstance(JSContext * aJSContext, const nsCID & aCID)
         case OK_ALL:
             return NS_OK;
         case VETO_ALL:
-            JS_SetPendingException(aJSContext, 
+            JS_SetPendingException(aJSContext,
                 STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
                     "security exception")));
             return NS_ERROR_FAILURE;
@@ -546,7 +618,7 @@ MySecMan::CanGetService(JSContext * aJSContext, const nsCID & aCID)
         case OK_ALL:
             return NS_OK;
         case VETO_ALL:
-            JS_SetPendingException(aJSContext, 
+            JS_SetPendingException(aJSContext,
                 STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
                     "security exception")));
             return NS_ERROR_FAILURE;
@@ -564,7 +636,7 @@ MySecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports 
         case OK_ALL:
             return NS_OK;
         case VETO_ALL:
-            JS_SetPendingException(aJSContext, 
+            JS_SetPendingException(aJSContext,
                 STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
                     "security exception")));
             return NS_ERROR_FAILURE;
@@ -582,7 +654,7 @@ MySecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports
         case OK_ALL:
             return NS_OK;
         case VETO_ALL:
-            JS_SetPendingException(aJSContext, 
+            JS_SetPendingException(aJSContext,
                 STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
                     "security exception")));
             return NS_ERROR_FAILURE;
@@ -600,7 +672,7 @@ MySecMan::CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports
         case OK_ALL:
             return NS_OK;
         case VETO_ALL:
-            JS_SetPendingException(aJSContext, 
+            JS_SetPendingException(aJSContext,
                 STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
                     "security exception")));
             return NS_ERROR_FAILURE;
@@ -921,6 +993,14 @@ int main()
     jsval rval;
     JSBool success = JS_TRUE;
     MySecMan* sm = new MySecMan();
+    nsTestXPCFoo* foo3 = new nsTestXPCFoo();
+
+    if(!sm || ! foo3)
+    {
+        success = JS_FALSE;
+        printf("failed to create object!\n");
+        goto sm_test_done;
+    }
 
     rval = JSVAL_FALSE;
     JS_SetProperty(jscontext, glob, "failed", &rval);
@@ -935,12 +1015,12 @@ int main()
 
     sm->SetMode(MySecMan::OK_ALL);
     printf("  getService no veto: ");
-    t = "try{Components.classes.allocator.getService(); print('passed');}catch(e){failed = true; print('failed');}";
+    t = "try{Components.classes.nsIXPConnect.getService(); print('passed');}catch(e){failed = true; print('failed');}";
     JS_EvaluateScript(jscontext, glob, t, strlen(t), "builtin", 1, &rval);
 
     sm->SetMode(MySecMan::VETO_ALL);
     printf("  getService with veto: ");
-    t = "try{Components.classes.allocator.getService(); failed = true; print('failed');}catch(e){print('passed');}";
+    t = "try{Components.classes.nsIXPConnect.getService(); failed = true; print('failed');}catch(e){print('passed');}";
     JS_EvaluateScript(jscontext, glob, t, strlen(t), "builtin", 1, &rval);
 
 
@@ -1002,7 +1082,7 @@ int main()
 
     sm->SetMode(MySecMan::VETO_ALL);
     printf("  build wrapper with veto: ");
-    if(NS_SUCCEEDED(xpc->WrapNative(jscontext, foo, nsITestXPCFoo2::GetIID(), &wrapper3)))
+    if(NS_SUCCEEDED(xpc->WrapNative(jscontext, foo3, nsITestXPCFoo2::GetIID(), &wrapper3)))
     {
         success = JS_FALSE;
         printf("failed\n");
@@ -1016,7 +1096,129 @@ int main()
 sm_test_done:
     success = success && JS_GetProperty(jscontext, glob, "failed", &rval) && JSVAL_TRUE != rval;
     printf("SecurityManager tests : %s\n", success ? "passed" : "failed");
+    NS_RELEASE(foo3);
     }
+
+
+    {
+        // arg formatter test...
+
+        jsval* argv;
+        void* mark;
+
+        const char* a_in = "some string";
+        const char* b_in = "another meaningless chunck of text";
+        char* a_out;
+        char* b_out;
+
+        printf("ArgumentFormatter test: ");
+
+        argv = JS_PushArguments(jscontext, &mark, "s %ip s",
+                                a_in, &nsITestXPCFoo2::GetIID(), foo, b_in);
+
+        if(argv)
+        {
+            nsISupports* fooc;
+            nsTestXPCFoo* foog;
+            if(JS_ConvertArguments(jscontext, 3, argv, "s %ip s",
+                                   &a_out, &fooc, &b_out))
+            {
+                if(fooc)
+                {
+                    if(NS_SUCCEEDED(fooc->QueryInterface(nsTestXPCFoo::GetIID(),
+                                    (void**)&foog)))
+                    {
+                        if(foog == foo)
+                        {
+                            if(!strcmp(a_in, a_out) && !strcmp(b_in, b_out))
+                                printf("passed\n");
+                            else
+                                printf(" conversion OK, but surrounding was mangled -- failed!\n");
+                        }
+                        else
+                            printf(" JS to native returned wrong value -- failed!\n");
+                        NS_RELEASE(foog);
+                    }
+                    else
+                    {
+                        printf(" could not QI value JS to native returned -- failed!\n");
+                    }
+                    NS_RELEASE(fooc);
+                }
+                else
+                {
+                    printf(" JS to native returned NULL -- failed!\n");
+                }
+            }
+            else
+            {
+                printf(" could not convert from JS to native -- failed!\n");
+            }
+            JS_PopArguments(jscontext, mark);
+        }
+        else
+        {
+            printf(" could not convert from native to JS -- failed!\n");
+        }
+    }
+
+
+    {
+        // ThreadJSContextStack test
+
+        printf("ThreadJSContextStack tests...\n");
+
+        nsresult rv;
+        NS_WITH_SERVICE(nsIJSContextStack, stack, "nsThreadJSContextStack", &rv);
+
+        if(NS_SUCCEEDED(rv))
+        {
+            PRInt32 count;
+            if(NS_SUCCEEDED(stack->GetCount(&count)))
+                printf("\tstack->GetCount() : %s\n",
+                        count == 0 ? "passed" : "failed!");
+            else
+                printf("\tstack->GetCount() failed!\n");
+
+            if(NS_FAILED(stack->Push(jscontext)))
+                printf("\tstack->Push() failed!\n");
+            else
+                printf("\tstack->Push() passed\n");
+
+            if(NS_SUCCEEDED(stack->GetCount(&count)))
+                printf("\tstack->GetCount() : %s\n",
+                        count == 1 ? "passed" : "failed!");
+            else
+                printf("\tstack->GetCount() failed!\n");
+
+            JSContext* testCX;
+            if(NS_FAILED(stack->Peek(&testCX)))
+                printf("\tstack->Peek() failed!\n");
+
+            if(jscontext == testCX)
+                printf("\tstack->Push/Peek : passed\n");
+            else
+                printf("\tstack->Push/Peek : failed\n");
+
+            if(NS_FAILED(stack->Pop(&testCX)))
+                printf("\tstack->Pop() failed!\n");
+
+            if(jscontext == testCX)
+                printf("\tstack->Push/Pop : passed\n");
+            else
+                printf("\tstack->Push/Pop : failed\n");
+
+            if(NS_SUCCEEDED(stack->GetCount(&count)))
+                printf("\tstack->GetCount() : %s\n",
+                        count == 0 ? "passed" : "failed!");
+            else
+                printf("\tstack->GetCount() failed!\n");
+        }
+        else
+            printf("\tfailed to get nsThreadJSContextStack service!\n");
+
+    }
+
 
     // cleanup
 
@@ -1058,6 +1260,103 @@ sm_test_done:
     NS_RELEASE(xpc);
     JS_DestroyRuntime(rt);
     JS_ShutDown();
+
+#if 0
+// a fun test...
+    {
+        nsresult rv;
+        NS_WITH_SERVICE(nsIComponentManager, cm, kComponentManagerCID, &rv);
+        if(NS_SUCCEEDED(rv))
+        {
+            int count = 0;
+            nsIEnumerator* cids;
+            rv = cm->EnumerateCLSIDs(&cids);
+            if(NS_SUCCEEDED(rv))
+            {
+                nsISupports* raw_holder;
+
+                for(rv = cids->First();
+                    NS_SUCCEEDED(rv) && !cids->IsDone();
+                    rv = cids->Next())
+                {
+                    rv = cids->CurrentItem(&raw_holder);
+                    if(NS_FAILED(rv))
+                        continue;
+                    nsISupportsID* holder;
+                    rv = raw_holder->QueryInterface(NS_GET_IID(nsISupportsID),
+                                                    (void**) &holder);
+                    NS_RELEASE(raw_holder);
+                    if(NS_SUCCEEDED(rv))
+                    {
+                        nsID* cid;
+                        rv = holder->GetData(&cid);
+                        if(NS_SUCCEEDED(rv))
+                        {
+                            char* str = cid->ToString();
+                            if(str)
+                            {
+                                char* progid;
+                                char* classname;
+                                rv = cm->CLSIDToProgID(cid, &classname, &progid);
+                                if(NS_SUCCEEDED(rv))
+                                {
+                                    printf("%s - %s - %s\n", str, progid, classname);
+                                    delete [] progid;
+                                    delete [] classname;
+                                }
+                                else
+                                    printf("%s\n", str);
+                                count++;
+                                delete [] str;                            
+                            }
+                            nsAllocator::Free(cid);
+                        }
+                        NS_RELEASE(holder);
+                    }
+                }
+                NS_RELEASE(cids);
+            }
+            printf("%d CIDs found\n", count);
+            count = 0;
+
+
+            nsIEnumerator* progids;
+            rv = cm->EnumerateProgIDs(&progids);
+            if(NS_SUCCEEDED(rv))
+            {
+                nsISupports* raw_holder;
+
+                for(rv = progids->First();
+                    NS_SUCCEEDED(rv) && !progids->IsDone();
+                    rv = progids->Next())
+                {
+                    rv = progids->CurrentItem(&raw_holder);
+                    if(NS_FAILED(rv))
+                        continue;
+                    nsISupportsString* holder;
+                    rv = raw_holder->QueryInterface(NS_GET_IID(nsISupportsString),
+                                                    (void**) &holder);
+                    NS_RELEASE(raw_holder);
+                    if(NS_SUCCEEDED(rv))
+                    {
+                        char* progid;
+                        rv = holder->GetData(&progid);
+                        if(NS_SUCCEEDED(rv))
+                        {
+                            printf("%s\n", progid);
+                            count++;
+                            nsAllocator::Free(progid);
+                        }
+                        NS_RELEASE(holder);
+                    }
+                }
+                NS_RELEASE(progids);
+            }
+            printf("%d Progids found\n", count);
+        }
+    }
+#endif
+
     return 0;
 }
 

@@ -15,17 +15,24 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */ 
-#include "nsISupports.h"
+
+// as does this
+#define NS_IMPL_IDS
 #include "nsIServiceManager.h"
 #include "nsICharsetConverterManager.h"
+
+#include "nsISupports.h"
 #include "nsIPref.h"
 #include "nsIMimeConverter.h"
 #include "msgCore.h"
 #include "rosetta_mailnews.h"
 #include "nsMsgI18N.h"
+#include "nsFileSpec.h"
+#include "nsFileStream.h"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kCMimeConverterCID, NS_MIME_CONVERTER_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 //
 // International functions necessary for composition
@@ -145,7 +152,7 @@ char * nsMsgI18NEncodeMimePartIIStr(const char *header, const char *charset, PRB
   char *encodedString = nsnull;
   nsIMimeConverter *converter;
   nsresult res = nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
-                                           nsIMimeConverter::GetIID(), (void **)&converter);
+                                           nsCOMTypeInfo<nsIMimeConverter>::GetIID(), (void **)&converter);
   if (NS_SUCCEEDED(res) && nsnull != converter) {
     res = converter->EncodeMimePartIIStr_UTF8(header, charset, kMIME_ENCODED_WORD_SIZE, &encodedString);
     NS_RELEASE(converter);
@@ -158,7 +165,7 @@ nsresult nsMsgI18NDecodeMimePartIIStr(const nsString& header, nsString& charset,
 {
   nsIMimeConverter *converter;
   nsresult res = nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
-                                                    nsIMimeConverter::GetIID(), (void **)&converter);
+                                                    nsCOMTypeInfo<nsIMimeConverter>::GetIID(), (void **)&converter);
   if (NS_SUCCEEDED(res) && nsnull != converter) {
     res = converter->DecodeMimePartIIStr(header, charset, decodedString);
     NS_RELEASE(converter);
@@ -179,14 +186,14 @@ char * nsMsgI18NGetDefaultMailCharset()
 	  
 	  if (NS_SUCCEEDED(res)) 
 	  {
-		//TODO: map to mail charset (e.g. Shift_JIS -> ISO-2022-JP) bug#3941.
-		retVal = prefValue;
+  		//TODO: map to mail charset (e.g. Shift_JIS -> ISO-2022-JP) bug#3941.
+  		 retVal = prefValue;
 	  }
 	  else 
-		retVal = PL_strdup("us-ascii");
+		  retVal = PL_strdup("iso-8859-1");
   }
 
-  return (nsnull != retVal) ? retVal : PL_strdup("us-ascii");
+  return (nsnull != retVal) ? retVal : PL_strdup("iso-8859-1");
 }
 
 // Return True if a charset is stateful (e.g. JIS).
@@ -224,6 +231,51 @@ PRBool nsMsgI18N7bit_data_part(const char *charset, const char *inString, const 
   return PR_TRUE;  // all 7 bit
 }
 
+// Simple parser to parse META charset. 
+// It only supports the case when the description is within one line. 
+const char * 
+nsMsgI18NParseMetaCharset(nsFileSpec* fileSpec) 
+{ 
+  static char charset[65]; 
+  char buffer[512]; 
+  nsInputFileStream fileStream(*fileSpec); 
+
+  *charset = '\0'; 
+
+  while (!fileStream.eof() && !fileStream.failed() && 
+         fileStream.is_open()) { 
+    fileStream.readline(buffer, 512); 
+    if (*buffer == CR || *buffer == LF || *buffer == 0) 
+      continue; 
+
+    for (int i = 0; i < (int)PL_strlen(buffer); i++) { 
+      buffer[i] = toupper(buffer[i]); 
+    } 
+
+    if (PL_strstr(buffer, "/HEAD")) 
+      break; 
+
+    if (PL_strstr(buffer, "META") && 
+        PL_strstr(buffer, "HTTP-EQUIV") && 
+        PL_strstr(buffer, "CONTENT-TYPE") && 
+        PL_strstr(buffer, "CHARSET") 
+        ) 
+    { 
+      char *cp = PL_strstr(PL_strstr(buffer, "CHARSET"), "=") + 1; 
+      char seps[]   = " \"\'"; 
+      char *token; 
+      char* newStr; 
+      token = nsCRT::strtok(cp, seps, &newStr); 
+      if (token != NULL) 
+      { 
+        PL_strcpy(charset, token); 
+      } 
+    } 
+  } 
+
+  return charset; 
+} 
+
 // RICHIE - not sure about this one?? need to see what it did in the old
 // world.
 char *
@@ -231,20 +283,3 @@ nsMsgI18NGetAcceptLanguage(void)
 {
   return "en";
 }
-
-///////////////////////////////////////////////////////
-// RICHIE -MAKE THESE GO AWAY!!!!
-///////////////////////////////////////////////////////
-void				nsMsgI18NDestroyCharCodeConverter(CCCDataObject) {return;}
-unsigned char *		nsMsgI18NCallCharCodeConverter(CCCDataObject,const unsigned char *,int32) {return NULL;}
-int					nsMsgI18NGetCharCodeConverter(int16 ,int16 ,CCCDataObject) {return nsnull;}
-CCCDataObject		nsMsgI18NCreateCharCodeConverter() {return NULL;}
-int16				nsMsgI18NGetCSIWinCSID(INTL_CharSetInfo) {return 2;}
-INTL_CharSetInfo LO_GetDocumentCharacterSetInfo(MWContext *) {return NULL;}
-int16				nsMsgI18NGetCSIDocCSID(INTL_CharSetInfo obj) {return 2;}
-int16				nsMsgI18NDefaultWinCharSetID(MWContext *) {return 2;}
-int16				nsMsgI18NDefaultMailCharSetID(int16 csid) {return 2;}
-int16				nsMsgI18NDefaultNewsCharSetID(int16 csid) {return 2;}
-void				nsMsgI18NMessageSendToNews(XP_Bool toNews) {return;}
-CCCDataObject nsMsgI18NCreateDocToMailConverter(iDocumentContext context, XP_Bool isHTML, unsigned char *buffer, 
-                                            uint32 buffer_size) {return NULL;}

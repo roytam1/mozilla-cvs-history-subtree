@@ -20,6 +20,8 @@
 #include "nsHTMLTags.h"
 #include "nsString.h"
 
+#include <iostream.h>
+
 static NS_DEFINE_IID(kIContentSinkIID, NS_ICONTENT_SINK_IID);
 static NS_DEFINE_IID(kIHTMLContentSinkIID, NS_IHTML_CONTENT_SINK_IID);
 static NS_DEFINE_IID(kILoggingSinkIID, NS_ILOGGING_SINK_IID);
@@ -83,6 +85,7 @@ public:
   NS_IMETHOD NotifyError(const nsParserError* aError);
   NS_IMETHOD AddComment(const nsIParserNode& aNode);
   NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
 
   // nsIHTMLContentSink
   NS_IMETHOD SetTitle(const nsString& aValue);
@@ -241,7 +244,7 @@ nsLoggingSink::CloseContainer(const nsIParserNode& aNode)
   nsHTMLTag nodeType = nsHTMLTag(aNode.GetNodeType());
   if ((nodeType >= eHTMLTag_unknown) &&
       (nodeType <= nsHTMLTag(NS_HTML_TAG_MAX))) {
-    const char* tag = NS_EnumToTag(nodeType);
+    const char* tag = nsHTMLTags::GetStringValue(nodeType);
 		return CloseNode(tag);
 	}
 	return CloseNode("???");
@@ -272,6 +275,21 @@ nsLoggingSink::NotifyError(const nsParserError* aError)
 NS_IMETHODIMP
 nsLoggingSink::AddProcessingInstruction(const nsIParserNode& aNode){
 
+#ifdef VERBOSE_DEBUG
+  DebugDump("<",aNode.GetText(),(mNodeStackPos)*2);
+#endif
+
+  return NS_OK;
+}
+
+/**
+ *  This gets called by the parser when it encounters
+ *  a DOCTYPE declaration in the HTML document.
+ */
+
+NS_IMETHODIMP
+nsLoggingSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+{
 #ifdef VERBOSE_DEBUG
   DebugDump("<",aNode.GetText(),(mNodeStackPos)*2);
 #endif
@@ -393,7 +411,7 @@ nsLoggingSink::OpenNode(const char* aKind, const nsIParserNode& aNode)
   nsHTMLTag nodeType = nsHTMLTag(aNode.GetNodeType());
   if ((nodeType >= eHTMLTag_unknown) &&
       (nodeType <= nsHTMLTag(NS_HTML_TAG_MAX))) {
-    const char* tag = NS_EnumToTag(nodeType);
+    const char* tag = nsHTMLTags::GetStringValue(nodeType);
 		(*mOutput) << "\"" << tag << "\"";
   }
   else {
@@ -455,8 +473,6 @@ nsLoggingSink::WriteAttributes(const nsIParserNode& aNode)
   if (0 != strchr(gSkippedContentTags, aNode.GetNodeType())) {
     const nsString& content = aNode.GetSkippedContent();
     if (content.Length() > 0) {
-      nsAutoString tmp;
-
       QuoteText(content, tmp);
 			(*mOutput) << " <content value=\"";
 			(*mOutput) << tmp << "\"/>" << endl;
@@ -490,7 +506,7 @@ nsLoggingSink::LeafNode(const nsIParserNode& aNode)
 
   if ((nodeType >= eHTMLTag_unknown) &&
       (nodeType <= nsHTMLTag(NS_HTML_TAG_MAX))) {
-    const char* tag = NS_EnumToTag(nodeType);
+    const char* tag = nsHTMLTags::GetStringValue(nodeType);
 
 		if(tag)
 			(*mOutput) << "<leaf tag=\"" << tag << "\"";

@@ -43,6 +43,8 @@ enum nsDTDMode {
  */
 class nsIHTMLDocument : public nsISupports {
 public:
+  static const nsIID& GetIID() { static nsIID iid = NS_IHTMLDOCUMENT_IID; return iid; }
+
   NS_IMETHOD SetTitle(const nsString& aTitle) = 0;
 
   NS_IMETHOD AddImageMap(nsIDOMHTMLMapElement* aMap) = 0;
@@ -60,6 +62,8 @@ public:
 
   NS_IMETHOD GetBaseTarget(nsString& aTarget) const = 0;
   NS_IMETHOD SetBaseTarget(const nsString& aTarget) = 0;
+
+  NS_IMETHOD SetLastModified(const nsString& aLastModified) = 0;
 
   /**
    * Access DTD compatibility mode for this document

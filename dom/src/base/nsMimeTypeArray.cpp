@@ -36,7 +36,7 @@ MimeTypeArrayImpl::MimeTypeArrayImpl(nsIDOMNavigator* navigator)
 MimeTypeArrayImpl::~MimeTypeArrayImpl()
 {
 	if (mMimeTypeArray != nsnull) {
-		for (int i = 0; i < mMimeTypeCount; i++) {
+		for (PRUint32 i = 0; i < mMimeTypeCount; i++) {
 			NS_IF_RELEASE(mMimeTypeArray[i]);
 		}
 		delete[] mMimeTypeArray;
@@ -107,7 +107,7 @@ NS_IMETHODIMP MimeTypeArrayImpl::Item(PRUint32 aIndex, nsIDOMMimeType** aReturn)
 		if (rv != NS_OK)
 			return rv;
 	}
-	if (aIndex >= 0 && aIndex < mMimeTypeCount) {
+	if (aIndex < mMimeTypeCount) {
 		*aReturn = mMimeTypeArray[aIndex];
 		NS_IF_ADDREF(*aReturn);
 		return NS_OK;

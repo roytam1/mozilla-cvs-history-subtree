@@ -17,11 +17,11 @@
 #
 
 msgCore.h
-nsIMsgMailNewsUrl.h
 nsIMsgHdr.h
-nsIUrlListenerManager.h
 nsMsgFolderFlags.h
 nsMsgHeaderMasks.h
 nsMsgLocalFolderHdrs.h
 nsMsgMessageFlags.h
 nsMsgMD5.h
+nsIUrlListenerManager.h
+

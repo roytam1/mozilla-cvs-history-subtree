@@ -36,21 +36,18 @@
 
 #include "nsMsgLineBuffer.h"
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 
 // this is only needed as long as our libmime hack is in place
 #include "prio.h"
 
-#ifdef XP_UNIX
-#define ARTICLE_PATH "/usr/tmp/tempMessage.eml"
-#define ERROR_PATH "/usr/tmp/errorMessage.htm"
-#endif
-
-#ifdef XP_PC
+#if defined(XP_UNIX) || defined (XP_BEOS)
+#define ARTICLE_PATH "/tmp/tempMessage.eml"
+#define ERROR_PATH "/tmp/errorMessage.htm"
+#elif defined(XP_PC)
 #define ARTICLE_PATH  "c:\\temp\\tempMessage.eml"
 #define ERROR_PATH "c:\\temp\\errorMessage.htm"
-#endif
-
-#ifdef XP_MAC
+#elif defined(XP_MAC)
 #define ARTICLE_PATH "tempMessage.eml"
 #define ERROR_PATH "errorMessage.htm"
 #endif
@@ -159,27 +156,30 @@ public:
 	virtual ~nsNNTPProtocol();
 
 	// initialization function given a news url
-	NS_IMETHOD Initialize(nsIURL * aURL);
+	NS_IMETHOD Initialize(nsIURI * aURL);
 
 	// aConsumer is typically a display stream you may want the results to be displayed into...
-	virtual nsresult LoadUrl(nsIURL * aURL, nsISupports * aConsumer = nsnull);
+	virtual nsresult LoadUrl(nsIURI * aURL, nsISupports * aConsumer = nsnull);
 
 	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports * aCtxt, nsresult aStatus, const PRUnichar* aMsg);
 
 	char * m_ProxyServer;		/* proxy server hostname */
 
 private:
 	// over-rides from nsMsgProtocol
-	virtual nsresult ProcessProtocolState(nsIURL * url, nsIInputStream * inputStream, PRUint32 length);
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length);
 	virtual nsresult CloseSocket();
 
 	// we have our own implementation of SendData which writes to the nntp log
 	// and then calls the base class to transmit the data
-	PRInt32 SendData(nsIURL * aURL, const char * dataBuffer);
+	PRInt32 SendData(nsIURI * aURL, const char * dataBuffer);
 
     void ParseHeaderForCancel(char *buf);
-    
+
+    static PRBool CheckIfAuthor(nsISupports *aElement, void *data);
+        
 	// part of temporary libmime converstion trick......these should go away once MIME uses a new stream
 	// converter interface...
 	nsCOMPtr<nsIOutputStream> m_tempArticleStream;
@@ -188,6 +188,9 @@ private:
     // message pane.
 	nsCOMPtr<nsIOutputStream> m_tempErrorStream;
 	nsFileSpec m_tempErrorFile;
+
+    // uber copy service support
+    nsCOMPtr<nsIStreamListener> m_copyStreamListener; // per message
 
 	// News Event Sinks
     nsCOMPtr <nsINNTPNewsgroupList> m_newsgroupList;
@@ -210,7 +213,7 @@ private:
     PRInt32     m_responseCode;    /* code returned from NNTP server */
 	PRInt32 	m_previousResponseCode; 
     char       *m_responseText;   /* text returned from NNTP server */
-	char	   *m_hostName;
+	nsXPIDLCString m_hostName;
 
     char		*m_dataBuf;
     PRUint32	 m_dataBufSize;
@@ -290,7 +293,7 @@ private:
 
 	// Figure out what the first command is and send it. 
 	// Returns the status from the NETWrite.
-	PRInt32 SendFirstNNTPCommand(nsIURL * url);
+	PRInt32 SendFirstNNTPCommand(nsIURI * url);
 
 	// Interprets the server response from the first command sent.
 	// returns negative if the server responds unexpectedly.
@@ -372,7 +375,7 @@ private:
 	// End of Protocol Methods
 	////////////////////////////////////////////////////////////////////////////////////////
 
-	nsresult ParseURL(nsIURL * aURL, char ** aHostAndPort, PRBool * bValP, char ** aGroup, char ** aMessageID, char ** aCommandSpecificData);
+	nsresult ParseURL(nsIURI * aURL, PRBool * bValP, char ** aGroup, char ** aMessageID, char ** aCommandSpecificData);
 };
 
 NS_BEGIN_EXTERN_C

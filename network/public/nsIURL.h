@@ -26,18 +26,18 @@
 class nsIInputStream;
 class nsIStreamListener;
 class nsString;
-class nsIURLGroup;
+class nsILoadGroup;
 
 #define NS_IURL_IID           \
 { 0x6ecb2900, 0x93b5, 0x11d1, \
   {0x89, 0x5b, 0x00, 0x60, 0x08, 0x91, 0x1b, 0x81} }
 
-class nsIURL : public nsISupports {
+class nsIURI : public nsISupports {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_IURL_IID; return iid; }
 
   /** Equality operator */
-  NS_IMETHOD_(PRBool) Equals(const nsIURL *aURL) const = 0;
+  NS_IMETHOD_(PRBool) Equals(const nsIURI *aURL) const = 0;
 
   /** Accessors */
   //@{
@@ -82,8 +82,8 @@ public:
   NS_IMETHOD GetLoadAttribs(nsILoadAttribs* *result) const = 0;
   NS_IMETHOD SetLoadAttribs(nsILoadAttribs* loadAttribs) = 0;
 
-  NS_IMETHOD GetURLGroup(nsIURLGroup* *result) const = 0;
-  NS_IMETHOD SetURLGroup(nsIURLGroup* group) = 0;
+  NS_IMETHOD GetLoadGroup(nsILoadGroup* *result) const = 0;
+  NS_IMETHOD SetLoadGroup(nsILoadGroup* group) = 0;
   //@}
 
   NS_IMETHOD SetPostHeader(const char* name, const char* value) = 0;
@@ -101,25 +101,25 @@ public:
 // XXXwhh (re)move these...
 
 /** Create a new URL, interpreting aSpec as relative to aURL (if non-null). */
-extern NS_NET nsresult NS_NewURL(nsIURL** aInstancePtrResult,
+extern NS_NET nsresult NS_NewURL(nsIURI** aInstancePtrResult,
                                  const nsString& aSpec,
-                                 const nsIURL* aBaseURL = nsnull,
+                                 const nsIURI* aBaseURL = nsnull,
                                  nsISupports* aContainer = nsnull,
-                                 nsIURLGroup* aGroup = nsnull);
+                                 nsILoadGroup* aGroup = nsnull);
 
 /**
  * Utility routine to take a url (may be nsnull) and a base url (may
  * be empty), and a url spec and combine them properly into a new
  * absolute url.
  */
-extern NS_NET nsresult NS_MakeAbsoluteURL(nsIURL* aURL,
+extern NS_NET nsresult NS_MakeAbsoluteURL(nsIURI* aURL,
                                           const nsString& aBaseURL,
                                           const nsString& aSpec,
                                           nsString& aResult);
 
-extern NS_NET nsresult NS_OpenURL(nsIURL* aURL, nsIStreamListener* aConsumer);
+extern NS_NET nsresult NS_OpenURL(nsIURI* aURL, nsIStreamListener* aConsumer);
 
-extern NS_NET nsresult NS_OpenURL(nsIURL* aURL, nsIInputStream* *aNewStream,
+extern NS_NET nsresult NS_OpenURL(nsIURI* aURL, nsIInputStream* *aNewStream,
                                   nsIStreamListener* aConsumer = nsnull);
 
 #endif /* nsIURL_h___ */

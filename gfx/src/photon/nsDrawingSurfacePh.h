@@ -36,6 +36,7 @@ public:
   NS_IMETHOD Lock(PRInt32 aX, PRInt32 aY, PRUint32 aWidth, PRUint32 aHeight,
                   void **aBits, PRInt32 *aStride, PRInt32 *aWidthBytes,
                   PRUint32 aFlags);
+  NS_IMETHOD XOR(PRInt32 aX, PRInt32 aY, PRUint32 aWidth, PRUint32 aHeight);
   NS_IMETHOD Unlock(void);
   NS_IMETHOD GetDimensions(PRUint32 *aWidth, PRUint32 *aHeight);
   NS_IMETHOD IsOffscreen(PRBool *aOffScreen);
@@ -65,6 +66,16 @@ private:
   PRUint32	mHeight;
   PRUint32	mFlags;
   PRBool	mIsOffscreen;
+  nsPixelFormat mPixFormat;
+
+  /* for locks */
+  PhImage_t 	*mImage;
+  PRInt32	mLockX;
+  PRInt32	mLockY;
+  PRUint32	mLockWidth;
+  PRUint32	mLockHeight;
+  PRUint32	mLockFlags;
+  PRBool	mLocked;
 };
 
 #endif

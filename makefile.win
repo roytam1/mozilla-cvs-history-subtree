@@ -13,6 +13,8 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
+NECKO=1
+
 #//------------------------------------------------------------------------
 #//
 #// Toplevel windows Makefile to build the mozilla tree
@@ -40,7 +42,6 @@ DIRS = \
 !if defined(DIST_DIRS)
   config			\
   dbm				\
-  nsprpub			\
   include			\
   jpeg				\
   modules\libreg		\
@@ -58,20 +59,20 @@ DIRS = \
   intl                          \
   caps                          \
   lib\xp			\
-  lib\libpwcac			\
 !if !defined(NECKO)
+  lib\libpwcac			\
   network			\
-!endif
-!if defined(NECKO)
-  netwerk			\
 !endif
   profile			\
 !endif
 !if defined(LAYOUT_DIRS)
 # the following are associated with the layout engine
   expat				\
-  htmlparser			\
   gfx				\
+!if defined(NECKO)
+  netwerk			\
+!endif
+  htmlparser			\
   widget			\
   dom				\
   view				\
@@ -86,12 +87,18 @@ DIRS = \
   xpfe				\
   xpinstall                     \
   extensions			\
-!if !defined(DISABLE_MAILNEWS) && !defined(NECKO)
+!if !defined(DISABLE_MAILNEWS)
   mailnews			\
 !endif
 !endif
   $(NULL)
 
+
+!ifdef NECKO
+all::
+export::
+        @echo NECKO is enabled
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -99,3 +106,57 @@ DIRS = \
 #//
 #//------------------------------------------------------------------------
 include <$(DEPTH)\config\rules.mak>
+
+
+#//------------------------------------------------------------------------
+#//
+#// MOZILLA_OFFICIAL junk: rebase and splitsym for binary release
+#//
+#//------------------------------------------------------------------------
+#// should make sure we have rebase, and die if not
+
+!if defined(MOZILLA_OFFICIAL)
+
+!if [for %i in (. %PATH%) do $(QUIET)if exist %i\$(REBASE) echo %i\$(REBASE) > rebase.yes]
+!endif
+
+!if !exist(rebase.yes)  
+REBASE=
+!if [del rebase.yes]                                                           
+!endif
+!endif
+!endif
+
+rebase:
+!if defined(MOZILLA_OFFICIAL)
+!if defined(FIND)
+!if "$(REBASE)" != ""
+	echo rebasing $(DIST)
+        $(FIND) $(DIST) -name "*.dll" > rebase.lst
+        $(REBASE) -b 60000000 -R . -G rebase.lst
+        del rebase.lst
+!else
+        echo No rebase defined.
+!endif
+!else
+        echo No find defined.
+!endif
+!endif
+
+splitsymbols:
+!if defined(MOZ_FULLCIRCLE)
+!if defined(FIND)
+!if "$(SPLITSYM)" != ""
+	echo splitting symbols for FullCircle
+	$(FIND) $(DIST) -name "*.dll" -exec $(SPLITSYM) {} ;
+	$(FIND) $(DIST) -name "*.exe" -exec $(SPLITSYM) {} ;
+!else
+        echo No splitsym defined.
+!endif
+!else
+        echo No find defined.
+!endif
+!endif
+
+install:: rebase splitsymbols
+

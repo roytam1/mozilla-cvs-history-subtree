@@ -171,10 +171,15 @@ void testStrings(nsIDocument* aDoc) {
 class MyDocument : public nsMarkupDocument {
 public:
   MyDocument();
-  NS_IMETHOD StartDocumentLoad(nsIURL *aUrl, 
+  NS_IMETHOD StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                               nsIChannel* aChannel,
+                               nsILoadGroup* aLoadGroup,
+#else
+                               nsIURI *aUrl, 
+#endif
                                nsIContentViewerContainer* aContainer,
-                               nsIStreamListener **aDocListener,
-                               const char* aCommand)
+                               nsIStreamListener **aDocListener)
   {
     return NS_OK;
   }
@@ -225,7 +230,7 @@ int main(int argc, char** argv)
   nsIDOMText* txt = nsnull;
   static NS_DEFINE_IID(kIDOMTextIID, NS_IDOMTEXT_IID);
   text->QueryInterface(kIDOMTextIID, (void**) &txt);
-  nsAutoString tmp(destStr, destLen);
+  nsAutoString tmp(destStr);
   txt->AppendData(tmp);
   NS_RELEASE(txt);
 

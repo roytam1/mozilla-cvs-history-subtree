@@ -23,22 +23,6 @@
 #include "xpidl.h"
 #include <ctype.h>
 
-/* is this node from an aggregate type (interface)? */
-#define UP_IS_AGGREGATE(node)                                                 \
-    (IDL_NODE_UP(node) &&                                                     \
-     (IDL_NODE_TYPE(IDL_NODE_UP(node)) == IDLN_INTERFACE ||                   \
-      IDL_NODE_TYPE(IDL_NODE_UP(node)) == IDLN_FORWARD_DCL))
-
-#define UP_IS_NATIVE(node)                                                    \
-    (IDL_NODE_UP(node) &&                                                     \
-     IDL_NODE_TYPE(IDL_NODE_UP(node)) == IDLN_NATIVE)
-
-/* is this type output in the form "<foo> *"? */
-#define STARRED_TYPE(node) (IDL_NODE_TYPE(node) == IDLN_TYPE_STRING ||        \
-                            IDL_NODE_TYPE(node) == IDLN_TYPE_WIDE_STRING ||   \
-                            (IDL_NODE_TYPE(node) == IDLN_IDENT &&             \
-                             UP_IS_AGGREGATE(node)))
-
 static void
 write_header(gpointer key, gpointer value, gpointer user_data)
 {
@@ -68,7 +52,7 @@ pass_1(TreeState *state)
     return TRUE;
 }
 
-static gboolean
+static void
 write_classname_iid_define(FILE *file, const char *className)
 {
     const char *iidName;
@@ -82,7 +66,6 @@ write_classname_iid_define(FILE *file, const char *className)
     while (*iidName)
         fputc(toupper(*iidName++), file);
     fputs("_IID", file);
-    return TRUE;
 }
 
 static gboolean
@@ -92,6 +75,8 @@ interface(TreeState *state)
     char *className = IDL_IDENT(IDL_INTERFACE(iface).ident).str;
     const char *iid;
     const char *name_space;
+    struct nsID id;
+    char iid_parsed[UUID_LENGTH];
 
     fprintf(state->file,   "\n/* starting interface:    %s */\n",
             className);
@@ -107,23 +92,43 @@ interface(TreeState *state)
     }
 
     if (iid) {
-        /* XXX use nsID parsing routines to validate? */
-        if (strlen(iid) != 36)
-            /* XXX report error */
+        /* Redundant, but a better error than 'cannot parse.' */
+        if (strlen(iid) != 36) {
+            IDL_tree_error(state->tree, "IID %s is the wrong length\n", iid);
             return FALSE;
-        fprintf(state->file, "\n/* {%s} */\n#define ", iid);
-        if (!write_classname_iid_define(state->file, className))
+        }
+
+        /*
+         * Parse uuid and then output resulting nsID to string, to validate
+         * uuid and normalize resulting .h files.
+         */
+        if (!xpidl_parse_iid(&id, iid)) {
+            IDL_tree_error(state->tree, "cannot parse IID %s\n", iid);
             return FALSE;
-        fprintf(state->file, "_STR \"%s\"\n#define ", iid);
-        if (!write_classname_iid_define(state->file, className))
+        }
+        if (!xpidl_sprint_iid(&id, iid_parsed)) {
+            IDL_tree_error(state->tree, "error formatting IID %s\n", iid);
             return FALSE;
-        /* This is such a gross hack... */
-        fprintf(state->file, " \\\n  {0x%.8s, 0x%.4s, 0x%.4s, \\\n    "
-                "{ 0x%.2s, 0x%.2s, 0x%.2s, 0x%.2s, "
-                "0x%.2s, 0x%.2s, 0x%.2s, 0x%.2s }}\n\n",
-                iid, iid + 9, iid + 14, iid + 19, iid + 21, iid + 24,
-                iid + 26, iid + 28, iid + 30, iid + 32, iid + 34);
+        }
+
+        /* #define NS_ISUPPORTS_IID_STR "00000000-0000-0000-c000-000000000046" */
+        fprintf(state->file, "\n");
+        fprintf(state->file, "#define ");
+        write_classname_iid_define(state->file, className);
+        fprintf(state->file, "_STR \"%s\"\n", iid_parsed);
+
+        /* #define NS_ISUPPORTS_IID { {0x00000000 .... 0x46 }} */
+        fprintf(state->file, "#define ");
+        write_classname_iid_define(state->file, className);
+        fprintf(state->file, " \\\n"
+                "  {0x%.8x, 0x%.4x, 0x%.4x, \\\n"
+                "    { 0x%.2x, 0x%.2x, 0x%.2x, 0x%.2x, "
+                "0x%.2x, 0x%.2x, 0x%.2x, 0x%.2x }}\n\n",
+                id.m0, id.m1, id.m2,
+                id.m3[0], id.m3[1], id.m3[2], id.m3[3],
+                id.m3[4], id.m3[5], id.m3[6], id.m3[7]);
     }
+
     fprintf(state->file, "class %s", className);
     if ((iter = IDL_INTERFACE(iface).inheritance_spec)) {
         fputs(" : ", state->file);
@@ -138,8 +143,7 @@ interface(TreeState *state)
           " public: \n", state->file);
     if (iid) {
         fputs("  NS_DEFINE_STATIC_IID_ACCESSOR(", state->file);
-        if (!write_classname_iid_define(state->file, className))
-            return FALSE;
+        write_classname_iid_define(state->file, className);
         fputs(")\n", state->file);
     }
 
@@ -446,9 +450,13 @@ static gboolean
 op_dcl(TreeState *state)
 {
     struct _IDL_OP_DCL *op = &IDL_OP_DCL(state->tree);
+    gboolean no_generated_args = TRUE;
     gboolean op_notxpcom =
         (IDL_tree_property_get(op->ident, "notxpcom") != NULL);
     IDL_tree iter;
+
+    if (!verify_method_declaration(state))
+        return FALSE;
 
     xpidl_write_comment(state, 2);
 
@@ -470,6 +478,7 @@ op_dcl(TreeState *state)
         if ((IDL_LIST(iter).next ||
              (!op_notxpcom && op->op_type_spec) || op->f_varargs))
             fputs(", ", state->file);
+        no_generated_args = FALSE;
     }
 
     /* make IDL return value into trailing out argument */
@@ -484,12 +493,23 @@ op_dcl(TreeState *state)
             return FALSE;
         if (op->f_varargs)
             fputs(", ", state->file);
+        no_generated_args = FALSE;
     }
 
     /* varargs go last */
     if (op->f_varargs) {
         fputs("nsVarArgs *_varargs", state->file);
+        no_generated_args = FALSE;
     }
+
+    /*
+     * If generated method has no arguments, output 'void' to avoid C legacy
+     * behavior of disabling type checking.
+     */
+    if (no_generated_args) {
+        fputs("void", state->file);
+    }
+
     fputs(") = 0;\n", state->file);
     return TRUE;
 }
@@ -516,7 +536,6 @@ codefrag(TreeState *state)
     }
     g_slist_foreach(IDL_CODEFRAG(state->tree).lines, write_codefrag_line,
                     (gpointer)state);
-    fputc('\n', state->file);
     return TRUE;
 }
 

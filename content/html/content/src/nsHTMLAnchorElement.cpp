@@ -221,19 +221,14 @@ nsHTMLAnchorElement::StringToAttribute(nsIAtom* aAttribute,
                                        nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::tabindex) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, 32767, aResult,
-                                     eHTMLUnit_Integer);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, 32767, aResult,
+                                         eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
-  if (aAttribute == nsHTMLAtoms::href) {
-    nsAutoString href(aValue);
-    href.StripWhitespace();
-    aResult.SetStringValue(href);
-    return NS_CONTENT_ATTR_HAS_VALUE;
-  }
-  if (aAttribute == nsHTMLAtoms::suppress) {
+  else if (aAttribute == nsHTMLAtoms::suppress) {
     if (aValue.EqualsIgnoreCase("true")) {
-      aResult.SetEmptyValue();
+      aResult.SetEmptyValue();  // XXX? shouldn't just leave "true"
       return NS_CONTENT_ATTR_HAS_VALUE;
     }
   }
@@ -249,11 +244,21 @@ nsHTMLAnchorElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
+}
+
+NS_IMETHODIMP
+nsHTMLAnchorElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                              PRInt32& aHint) const
+{
+  if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    aHint = NS_STYLE_HINT_CONTENT;
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -302,19 +307,30 @@ nsHTMLAnchorElement::HandleDOMEvent(nsIPresContext& aPresContext,
         break;
 
       case NS_MOUSE_LEFT_CLICK:
+      case NS_KEY_PRESS:
       {
         if (nsEventStatus_eConsumeNoDefault != aEventStatus) {
-          nsAutoString target;
-          nsIURL* baseURL = nsnull;
-          GetBaseURL(baseURL);
-          GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::target, target);
-          if (target.Length() == 0) {
-            GetBaseTarget(target);
+
+          nsKeyEvent * keyEvent;
+          if (aEvent->eventStructType == NS_KEY_EVENT) {
+            //Handle key commands from keys with char representation here, not on KeyDown
+            keyEvent = (nsKeyEvent *)aEvent;
           }
-          mInner.TriggerLink(aPresContext, eLinkVerb_Replace,
-                             baseURL, href, target, PR_TRUE);
-          NS_IF_RELEASE(baseURL);
-          aEventStatus = nsEventStatus_eConsumeDoDefault; 
+
+          //Click or return key
+          if (aEvent->message == NS_MOUSE_LEFT_CLICK || keyEvent->keyCode == NS_VK_RETURN) {
+            nsAutoString target;
+            nsIURI* baseURL = nsnull;
+            GetBaseURL(baseURL);
+            GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::target, target);
+            if (target.Length() == 0) {
+              GetBaseTarget(target);
+            }
+            mInner.TriggerLink(aPresContext, eLinkVerb_Replace,
+                               baseURL, href, target, PR_TRUE);
+            NS_IF_RELEASE(baseURL);
+            aEventStatus = nsEventStatus_eConsumeDoDefault;
+          }
         }
       }
       break;
@@ -332,7 +348,7 @@ nsHTMLAnchorElement::HandleDOMEvent(nsIPresContext& aPresContext,
         }
 
         nsAutoString target;
-        nsIURL* baseURL = nsnull;
+        nsIURI* baseURL = nsnull;
         GetBaseURL(baseURL);
         GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::target, target);
         if (target.Length() == 0) {
@@ -367,30 +383,3 @@ nsHTMLAnchorElement::HandleDOMEvent(nsIPresContext& aPresContext,
   return ret;
 }
 
-NS_IMETHODIMP
-nsHTMLAnchorElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  if ((aAttribute == nsHTMLAtoms::charset) ||
-      (aAttribute == nsHTMLAtoms::coords) ||
-      (aAttribute == nsHTMLAtoms::href) ||
-      (aAttribute == nsHTMLAtoms::hreflang) ||
-      (aAttribute == nsHTMLAtoms::name) ||
-      (aAttribute == nsHTMLAtoms::rel) ||
-      (aAttribute == nsHTMLAtoms::rev) ||
-      (aAttribute == nsHTMLAtoms::shape) ||
-      (aAttribute == nsHTMLAtoms::tabindex) ||
-      (aAttribute == nsHTMLAtoms::target) ||
-      (aAttribute == nsHTMLAtoms::type)) {
-    *aHint = NS_STYLE_HINT_CONTENT;
-  }
-  else if (aAttribute == nsHTMLAtoms::accesskey) {
-    // XXX Notification needs to happen for this attribute
-    *aHint = NS_STYLE_HINT_CONTENT;
-  }
-  else {
-    nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, aAttribute, aHint);
-  }
-  return NS_OK;
-}

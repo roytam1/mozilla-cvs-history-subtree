@@ -45,10 +45,8 @@
 #include "nsIMsgMailSession.h"
 #include "nsIMsgIncomingServer.h"
 #include "nsINntpIncomingServer.h"
+#include "nsINewsDatabase.h"
 #include "nsMsgBaseCID.h"
-
-//not using nsMsgLineBuffer yet, but I need to soon...
-//#include "nsMsgLineBuffer.h"
 
 // we need this because of an egcs 1.0 (and possibly gcc) compiler bug
 // that doesn't allow you to call ::nsISupports::GetIID() inside of a class
@@ -61,29 +59,44 @@ static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
 #define PREF_NEWS_MAX_HEADERS_TO_SHOW "news.max_headers_to_show"
+#define PREF_NEWS_ABBREVIATE_PRETTY_NAMES "news.abbreviate_pretty_name"
+#define NEWSRC_FILE_BUFFER_SIZE 1024
 
 ////////////////////////////////////////////////////////////////////////////////
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-nsMsgNewsFolder::nsMsgNewsFolder(void)
-  : mPath(nsnull), mExpungedBytes(0), mGettingNews(PR_FALSE),
+nsMsgNewsFolder::nsMsgNewsFolder(void) : nsMsgLineBuffer(nsnull, PR_FALSE),
+    mPath(nsnull), mExpungedBytes(0), mGettingNews(PR_FALSE),
     mInitialized(PR_FALSE), mOptionLines(nsnull), mHostname(nsnull)
 {
+  mIsNewsHost = PR_FALSE;
+  mIsNewsHostInitialized = PR_FALSE;
+  /* we're parsing the newsrc file, and the line breaks are platform specific.
+   * if MSG_LINEBREAK != CRLF, then we aren't looking for CRLF 
+   */
+  if (PL_strcmp(MSG_LINEBREAK, CRLF)) {
+    SetLookingForCRLF(PR_FALSE);
+  }
 //  NS_INIT_REFCNT(); done by superclass
 }
 
 nsMsgNewsFolder::~nsMsgNewsFolder(void)
 {
-	if (mPath)
+	if (mPath) {
 		delete mPath;
+    mPath = nsnull;
+  }
 
   // mHostname allocated in nsGetNewsHostName() with new char[]
-  if (mHostname)
+  if (mHostname) {
     delete [] mHostname;
+    mHostname = nsnull;
+  }
 
   PR_FREEIF(mOptionLines);
+  mOptionLines = nsnull;
 }
 
 NS_IMPL_ADDREF_INHERITED(nsMsgNewsFolder, nsMsgDBFolder)
@@ -108,219 +121,47 @@ NS_IMETHODIMP nsMsgNewsFolder::QueryInterface(REFNSIID aIID, void** aInstancePtr
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-#if 0
-static PRBool
-nsShouldIgnoreFile(nsString& name)
-{
-  PRUnichar theFirstChar=name.CharAt(0);
-  if (theFirstChar == '.' || theFirstChar == '#' || name.CharAt(name.Length() - 1) == '~')
-    return PR_TRUE;
-
-  if (name.EqualsIgnoreCase("rules.dat"))
-    return PR_TRUE;
-
-  PRInt32 len = name.Length();
-
-  // don't add summary files to the list of folders;
-  // don't add popstate files to the list either, or rules (sort.dat). 
-  if ((len > 4 && name.RFind(".snm", PR_TRUE) == len - 4) ||
-      name.EqualsIgnoreCase("popstate.dat") ||
-      name.EqualsIgnoreCase("sort.dat") ||
-      name.EqualsIgnoreCase("newsfilt.log") ||
-      name.EqualsIgnoreCase("filters.js") ||
-      name.RFind(".toc", PR_TRUE) == len - 4)
-    return PR_TRUE;
-
-  if ((len > 4 && name.RFind(".sbd", PR_TRUE) == len - 4) ||
-		(len > 4 && name.RFind(".msf", PR_TRUE) == len - 4))
-	  return PR_TRUE;
-  return PR_FALSE;
-}
-#endif
 
 PRBool
 nsMsgNewsFolder::isNewsHost() 
 {
+  if (mIsNewsHostInitialized) {
+    return mIsNewsHost;
+  }
+
   // this will do for now.  Eventually, this will go away...
   PRInt32 uriLen = PL_strlen(mURI);
 
   // if we are shorter than news://, we are too short to be a host
   if (uriLen <= kNewsRootURILen) {
-    return PR_FALSE;
-  }
-  
-  if (PL_strncmp(mURI, kNewsRootURI, kNewsRootURILen) == 0) {
-    // if we get here, mURI looks like this:  news://x
-    // where x is non-empty, and may contain "/"
-    char *rightAfterTheRoot = mURI+kNewsRootURILen+1;
-#ifdef DEBUG_NEWS
-    printf("search for a slash in %s\n",rightAfterTheRoot);
-#endif
-    if (PL_strstr(rightAfterTheRoot,"/") == nsnull) {
-      // there is no slashes after news://,
-      // so mURI is of the form news://x
-      return PR_TRUE;
-    }
-    else {
-      // there is another slash, so mURI is of the form
-      // news://x/y, so it is not a host
-      return PR_FALSE;
-    }
+    mIsNewsHost = PR_FALSE;
   }
   else {
-    // mURI doesn't start with news:// so it can't be a host
-    return PR_FALSE;
-  }
-}
-#ifdef USE_NEWSRC_MAP_FILE
-
-#define NEWSRC_MAP_FILE_COOKIE "netscape-newsrc-map-file"
-
-nsresult
-nsMsgNewsFolder::MapHostToNewsrcFile(char *newshostname, nsFileSpec &fatFile, nsFileSpec &newsrcFile)
-{
-  char *lookingFor = nsnull;
-	char buffer[512];
-	char psuedo_name[512];
-	char filename[512];
-	char is_newsgroup[512];
-  PRBool rv;
-
+    if (PL_strncmp(mURI, kNewsRootURI, kNewsRootURILen) == 0) {
+      // if we get here, mURI looks like this:  news://x
+      // where x is non-empty, and may contain "/"
+      char *rightAfterTheRoot = mURI+kNewsRootURILen+1;
 #ifdef DEBUG_NEWS
-  printf("MapHostToNewsrcFile(%s,%s,%s,??)\n",newshostname,(const char *)fatFile, newshostname);
+      printf("search for a slash in %s\n",rightAfterTheRoot);
 #endif
-  lookingFor = PR_smprintf("newsrc-%s",newshostname);
-  if (lookingFor == nsnull) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  nsInputFileStream inputStream(fatFile);
- 
-  if (inputStream.eof()) {
-    newsrcFile = "";
-    inputStream.close();
-    PR_FREEIF(lookingFor);
-    return NS_ERROR_FAILURE;
-  }
-
-  /* we expect the first line to be NEWSRC_MAP_FILE_COOKIE */
-	rv = inputStream.readline(buffer, sizeof(buffer));
-
-  if ((!rv) || (PL_strncmp(buffer, NEWSRC_MAP_FILE_COOKIE, PL_strlen(NEWSRC_MAP_FILE_COOKIE)))) {
-    newsrcFile = "";
-    inputStream.close();
-    PR_FREEIF(lookingFor);
-    return NS_ERROR_FAILURE;
-  }   
-
-	while (!inputStream.eof()) {
-    char * p;
-    int i;
-
-    rv = inputStream.readline(buffer, sizeof(buffer));
-    if (!rv) {
-      newsrcFile = "";
-      inputStream.close();
-      PR_FREEIF(lookingFor);
-      return NS_ERROR_FAILURE;
-    }  
-
-    /*
-      This used to be scanf() call which would incorrectly
-      parse long filenames with spaces in them.  - JRE
-    */
-    
-    filename[0] = '\0';
-    is_newsgroup[0]='\0';
-    
-    for (i = 0, p = buffer; *p && *p != '\t' && i < 500; p++, i++)
-      psuedo_name[i] = *p;
-    psuedo_name[i] = '\0';
-    if (*p) 
-      {
-        for (i = 0, p++; *p && *p != '\t' && i < 500; p++, i++)
-          filename[i] = *p;
-        filename[i]='\0';
-        if (*p) 
-          {
-            for (i = 0, p++; *p && *p != '\r' && i < 500; p++, i++)
-              is_newsgroup[i] = *p;
-            is_newsgroup[i]='\0';
-          }
+      if (!PL_strstr(rightAfterTheRoot,"/")) {
+        // there is no slashes after news://,
+        // so mURI is of the form news://x
+        mIsNewsHost=PR_TRUE;
       }
-
-		if(!PL_strncmp(is_newsgroup, "TRUE", 4)) {
-#ifdef DEBUG_NEWS
-      printf("is_newsgroups_file = TRUE\n");
-#endif
+      else {
+        // there is another slash, so mURI is of the form
+        // news://x/y, so it is not a host
+        mIsNewsHost=PR_FALSE;
+      }
     }
     else {
-#ifdef DEBUG_NEWS
-      printf("is_newsgroups_file = FALSE\n");
-#endif
-    }
-    
-#ifdef DEBUG_NEWS
-    printf("psuedo_name=%s,filename=%s\n", psuedo_name, filename);
-#endif
-    if (!PL_strncmp(psuedo_name,lookingFor,PL_strlen(lookingFor))) {
-#ifdef DEBUG_NEWS
-      printf("found a match for %s\n",lookingFor);
-#endif
-
-#ifdef NEWS_FAT_STORES_ABSOLUTE_NEWSRC_FILE_PATHS
-      newsrcFile = filename;
-#else
-	  // the fat file is storing the newsrc files relative to the directory the fat
-	  // file is in.  so we'll use that.
-	  newsrcFile = fatFile;
-	  newsrcFile.SetLeafName(filename);
-#endif /* NEWS_FAT_STORES_ABSOLUTE_NEWSRC_FILE_PATHS */
-      inputStream.close();
-      PR_FREEIF(lookingFor);
-      return NS_OK;
+      // mURI doesn't start with news:// so it can't be a host
+      mIsNewsHost=PR_FALSE;
     }
   }
-
-  // failed to find a match in the map file
-  newsrcFile = "";
-  inputStream.close();
-  PR_FREEIF(lookingFor);
-  return NS_ERROR_FAILURE;
-}
-#endif /* USE_NEWSRC_MAP_FILE */
-
-nsresult 
-nsMsgNewsFolder::GetNewsrcFile(char *newshostname, nsFileSpec &path, nsFileSpec &newsrcFile)
-{
-  nsresult rv = NS_OK;
-  
-  if (newshostname == nsnull) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-#ifdef USE_NEWSRC_MAP_FILE
-  // the fat file lives in the same directory as
-  // the newsrc files
-  nsFileSpec fatFile(path);
-  fatFile.SetLeafName(NEWS_FAT_FILE_NAME);
-
-  rv = MapHostToNewsrcFile(newshostname, fatFile, newsrcFile);
-#else
-  char *str = nsnull;
-
-  str = PR_smprintf(".newsrc-%s", newshostname);
-  if (str == nsnull) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  newsrcFile = path;
-  newsrcFile.SetLeafName(str);
-  PR_FREEIF(str);
-  str = nsnull;
-  rv = NS_OK;
-#endif /* USE_NEWSRC_MAP_FILE */
-
-  return rv;
+  mIsNewsHostInitialized = PR_TRUE;
+  return mIsNewsHost;
 }
 
 nsresult
@@ -329,16 +170,34 @@ nsMsgNewsFolder::CreateSubFolders(nsFileSpec &path)
   nsresult rv = NS_OK;
 
   char *hostname;
-  rv = GetHostName(&hostname);
+  rv = GetHostname(&hostname);
   if (NS_FAILED(rv)) return rv;
       
   if (isNewsHost()) {  
 #ifdef DEBUG_NEWS
     printf("CreateSubFolders:  %s = %s\n", mURI, (const char *)path);
 #endif
-    nsFileSpec newsrcFile("");
-    rv = GetNewsrcFile(hostname, path, newsrcFile);
-    if (rv == NS_OK) {
+
+    char *newsrcFilePathStr = nsnull;
+    
+    //Are we assured this is the server for this folder?
+    nsCOMPtr<nsIMsgIncomingServer> server;
+    rv = GetServer(getter_AddRefs(server));
+    if (NS_FAILED(rv)) return rv;
+  
+    nsCOMPtr<nsINntpIncomingServer> nntpServer;
+    rv = server->QueryInterface(nsINntpIncomingServer::GetIID(),
+                                getter_AddRefs(nntpServer));
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = nntpServer->GetNewsrcFilePath(&newsrcFilePathStr);
+    if (NS_FAILED(rv)) return rv;
+      
+    nsFileSpec newsrcFile(newsrcFilePathStr);
+    PR_FREEIF(newsrcFilePathStr);
+    newsrcFilePathStr = nsnull;
+
+    if (NS_SUCCEEDED(rv)) {
 #ifdef DEBUG_NEWS
       printf("uri = %s newsrc file = %s\n", mURI, (const char *)newsrcFile);
 #endif
@@ -357,35 +216,68 @@ nsMsgNewsFolder::CreateSubFolders(nsFileSpec &path)
   return rv;
 }
 
-nsresult nsMsgNewsFolder::AddSubfolder(nsAutoString name, nsIMsgFolder **child)
+nsresult
+nsMsgNewsFolder::AddSubfolder(nsAutoString name, nsIMsgFolder **child, char *setStr)
 {
-	if(!child)
+	if (!child)
 		return NS_ERROR_NULL_POINTER;
 
+  if (!setStr)
+    return NS_ERROR_NULL_POINTER;
+  
+#ifdef DEBUG_NEWS
+  nsCString nameStr(name);
+  printf("AddSubfolder(%s,??,%s)\n",nameStr.GetBuffer(),setStr);
+#endif
+  
 	nsresult rv = NS_OK;
 	NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv); 
 
 	if(NS_FAILED(rv))
 		return rv;
 
-	nsAutoString uri (eOneByte);
+	nsCString uri("");
 	uri.Append(mURI);
 	uri.Append('/');
 
 	uri.Append(name);
 
-	nsIRDFResource* res;
-	rv = rdf->GetResource(uri.GetBuffer(), &res);
+	nsCOMPtr<nsIRDFResource> res;
+	rv = rdf->GetResource(uri.GetBuffer(), getter_AddRefs(res));
 	if (NS_FAILED(rv))
 		return rv;
-
-	nsCOMPtr<nsIMsgFolder> folder(do_QueryInterface(res, &rv));
+  
+  nsCOMPtr<nsIMsgFolder> folder(do_QueryInterface(res, &rv));
 	if (NS_FAILED(rv))
 		return rv;        
 
-	folder->SetFlag(MSG_FOLDER_FLAG_NEWSGROUP);
-
-	mSubFolders->AppendElement(folder);
+	rv = folder->SetFlag(MSG_FOLDER_FLAG_NEWSGROUP);
+  if (NS_FAILED(rv))
+    return rv;        
+  
+  nsCOMPtr<nsIMsgNewsFolder> newsFolder(do_QueryInterface(res, &rv));
+  if (NS_FAILED(rv))
+    return rv;        
+  
+  rv = newsFolder->SetUnreadSetStr(setStr);
+  if (NS_FAILED(rv))
+    return rv;
+  
+#ifdef DEBUG_NEWS
+  char *testStr = nsnull;
+  rv = newsFolder->GetUnreadSetStr(&testStr);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  printf("set str = %s\n",testStr);
+  if (testStr) {
+    delete [] testStr;
+    testStr = nsnull;
+  }
+#endif
+ 
+	//convert to an nsISupports before appending
+	nsCOMPtr<nsISupports> folderSupports(do_QueryInterface(folder));
+	if(folderSupports)
+		mSubFolders->AppendElement(folderSupports);
 	*child = folder;
 	NS_ADDREF(*child);
 
@@ -453,9 +345,14 @@ NS_IMETHODIMP
 nsMsgNewsFolder::GetSubFolders(nsIEnumerator* *result)
 {
   if (!mInitialized) {
-    nsFileSpec path;
-    nsresult rv = GetPath(path);
-    if (NS_FAILED(rv)) return rv;
+	nsresult rv;
+	nsCOMPtr<nsIFileSpec> pathSpec;
+	rv = GetPath(getter_AddRefs(pathSpec));
+	if (NS_FAILED(rv)) return rv;
+
+	nsFileSpec path;
+	rv = pathSpec->GetFileSpec(&path);
+	if (NS_FAILED(rv)) return rv;
 	
     rv = CreateSubFolders(path);
     if (NS_FAILED(rv)) return rv;
@@ -485,17 +382,18 @@ nsresult nsMsgNewsFolder::GetDatabase()
 {
 	if (!mDatabase)
 	{
-		nsNativeFileSpec path;
-		nsresult rv = GetPath(path);
+		nsCOMPtr<nsIFileSpec> pathSpec;
+		nsresult rv;
+		rv = GetPath(getter_AddRefs(pathSpec));
 		if (NS_FAILED(rv)) return rv;
 
 		nsresult folderOpen = NS_OK;
-		nsIMsgDatabase * newsDBFactory = nsnull;
+		nsCOMPtr <nsIMsgDatabase> newsDBFactory;
 
-		rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, nsIMsgDatabase::GetIID(), (void **) &newsDBFactory);
+		rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, nsIMsgDatabase::GetIID(), getter_AddRefs(newsDBFactory));
 		if (NS_SUCCEEDED(rv) && newsDBFactory)
 		{
-			folderOpen = newsDBFactory->Open(path, PR_TRUE, getter_AddRefs(mDatabase), PR_FALSE);
+			folderOpen = newsDBFactory->Open(pathSpec, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
 #ifdef DEBUG_NEWS
       if (NS_SUCCEEDED(folderOpen)) {
         printf ("newsDBFactory->Open() succeeded\n");
@@ -505,12 +403,14 @@ nsresult nsMsgNewsFolder::GetDatabase()
         return rv;
       }
 #endif
-			NS_RELEASE(newsDBFactory);
 		}
 
-		if(mDatabase) {
-			mDatabase->AddListener(this);
-      UpdateSummaryTotals();
+		if (mDatabase) {
+			rv = mDatabase->AddListener(this);
+      if (NS_FAILED(rv)) return rv;
+       
+      rv = UpdateSummaryTotals(PR_TRUE);
+      if (NS_FAILED(rv)) return rv;
 		}
 	}
 	return NS_OK;
@@ -519,6 +419,9 @@ nsresult nsMsgNewsFolder::GetDatabase()
 NS_IMETHODIMP
 nsMsgNewsFolder::GetMessages(nsIEnumerator* *result)
 {
+#ifdef DEBUG_NEWS
+  printf("nsMsgNewsFolder::GetMessages(%s)\n",mURI);
+#endif
   // number_to_show is a tempory hack to allow newsgroups
   // with thousands of message to work.  the way it works is
   // we return a cropped enumerator back to to the caller
@@ -527,6 +430,7 @@ nsMsgNewsFolder::GetMessages(nsIEnumerator* *result)
 
   PRInt32 number_to_show;
   nsresult rv = NS_OK;
+
   NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
   if (NS_SUCCEEDED(rv) && prefs) {
     rv = prefs->GetIntPref(PREF_NEWS_MAX_HEADERS_TO_SHOW, &number_to_show);
@@ -558,14 +462,14 @@ nsMsgNewsFolder::GetMessages(nsIEnumerator* *result)
       if(NS_SUCCEEDED(rv)) {
         NS_NewISupportsArray(getter_AddRefs(shortlist));
         PRInt32 total = 0;
-        for (msgHdrEnumerator->First(); msgHdrEnumerator->IsDone() != NS_OK; msgHdrEnumerator->Next()) {
+        for (msgHdrEnumerator->First(); NS_FAILED(msgHdrEnumerator->IsDone()); msgHdrEnumerator->Next()) {
           total++;
         }
 #ifdef DEBUG_NEWS
         printf("total = %d\n",total);
 #endif
         PRInt32 count = 0;
-        for (msgHdrEnumerator->First(); msgHdrEnumerator->IsDone() != NS_OK; msgHdrEnumerator->Next()) {
+        for (msgHdrEnumerator->First(); NS_FAILED(msgHdrEnumerator->IsDone()); msgHdrEnumerator->Next()) {
           if (count >= (total - number_to_show)) {
             nsCOMPtr<nsISupports> i;
             rv = msgHdrEnumerator->CurrentItem(getter_AddRefs(i));
@@ -594,7 +498,6 @@ nsMsgNewsFolder::GetMessages(nsIEnumerator* *result)
         }
       }
     }
-    return rv;
   }
   else {
     rv = GetDatabase();
@@ -608,8 +511,11 @@ nsMsgNewsFolder::GetMessages(nsIEnumerator* *result)
           rv = NS_NewMessageFromMsgHdrEnumerator(msgHdrEnumerator, this, &messageEnumerator);
         *result = messageEnumerator;
     }
-    return rv;   
   }
+
+  rv = GetNewMessages();
+  if (NS_FAILED(rv)) return rv;
+  return rv;
 }
 
 NS_IMETHODIMP nsMsgNewsFolder::BuildFolderURL(char **url)
@@ -619,11 +525,15 @@ NS_IMETHODIMP nsMsgNewsFolder::BuildFolderURL(char **url)
   if(!url)
     return NS_ERROR_NULL_POINTER;
 
+  nsCOMPtr<nsIFileSpec> pathSpec;
+  nsresult rv = GetPath(getter_AddRefs(pathSpec));
+  if (NS_FAILED(rv)) return rv;
+
   nsFileSpec path;
-  nsresult rv = GetPath(path);
+  rv = pathSpec->GetFileSpec(&path);
   if (NS_FAILED(rv)) return rv;
 #if defined(XP_MAC)
-  nsAutoString tmpPath((nsFilePath)path, eOneByte);	//ducarroz: please don't cast a nsFilePath to char* on Mac
+  nsAutoString tmpPath((nsFilePath)path, eOneByte); //ducarroz: please don't cast a nsFilePath to char* on Mac
   *url = PR_smprintf("%s%s", urlScheme, tmpPath.GetBuffer());
 #else
   const char *pathName = path;
@@ -703,47 +613,38 @@ NS_IMETHODIMP nsMsgNewsFolder::CreateSubfolder(const char *folderName)
 	nsOutputFileStream outputStream(path);	
    
 	// Create an empty database for this news folder, set its name from the user  
-	nsIMsgDatabase * newsDBFactory = nsnull;
+	nsCOMPtr<nsIMsgDatabase> newsDBFactory;
 
-	rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, nsIMsgDatabase::GetIID(), (void **) &newsDBFactory);
-	if (NS_SUCCEEDED(rv) && newsDBFactory)
-	{
-        nsIMsgDatabase *unusedDB = NULL;
-		rv = newsDBFactory->Open(path, PR_TRUE, (nsIMsgDatabase **) &unusedDB, PR_TRUE);
-
-        if (NS_SUCCEEDED(rv) && unusedDB)
-        {
-			//need to set the folder name
-			nsIDBFolderInfo *folderInfo;
-			rv = unusedDB->GetDBFolderInfo(&folderInfo);
-			if(NS_SUCCEEDED(rv))
-			{
+	rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, nsIMsgDatabase::GetIID(), getter_AddRefs(newsDBFactory));
+	if (NS_SUCCEEDED(rv) && newsDBFactory) {
+    nsIMsgDatabase *unusedDB = nsnull;
+		rv = newsDBFactory->Open(path, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) &unusedDB);
+    
+    if (NS_SUCCEEDED(rv) && unusedDB) {
+      //need to set the folder name
+			nsCOMPtr <nsIDBFolderInfo> folderInfo;
+			rv = unusedDB->GetDBFolderInfo(getter_AddRefs(folderInfo));
+			if(NS_SUCCEEDED(rv)) {
 				//folderInfo->SetNewsgroupName(leafNameFromUser);
-				NS_IF_RELEASE(folderInfo);
 			}
-
+      
 			//Now let's create the actual new folder
 			nsAutoString folderNameStr(folderName);
-			rv = AddSubfolder(folderName, getter_AddRefs(child));
-            unusedDB->SetSummaryValid(PR_TRUE);
-            unusedDB->Close(PR_TRUE);
-        }
-        else
-        {
+			rv = AddSubfolder(folderName, getter_AddRefs(child), "");
+      unusedDB->SetSummaryValid(PR_TRUE);
+      unusedDB->Close(PR_TRUE);
+    }
+    else {
 			path.Delete(PR_FALSE);
-            rv = NS_MSG_CANT_CREATE_FOLDER;
-        }
-		NS_IF_RELEASE(newsDBFactory);
+      rv = NS_MSG_CANT_CREATE_FOLDER;
+    }
 	}
-	if(rv == NS_OK && child)
-	{
-		nsISupports *folderSupports;
-
-		rv = child->QueryInterface(kISupportsIID, (void**)&folderSupports);
-		if(NS_SUCCEEDED(rv))
-		{
+	if(NS_SUCCEEDED(rv) && child) {
+		nsCOMPtr <nsISupports> folderSupports;
+    
+		rv = child->QueryInterface(kISupportsIID, getter_AddRefs(folderSupports));
+		if(NS_SUCCEEDED(rv)) {
 			NotifyItemAdded(folderSupports);
-			NS_IF_RELEASE(folderSupports);
 		}
 	}
 	return rv;
@@ -788,97 +689,175 @@ nsMsgNewsFolder::GetChildNamed(const char *name, nsISupports ** aChild)
   // will return nsnull if we can't find it
   *aChild = nsnull;
 
-  nsIMsgFolder *folder = nsnull;
+  nsCOMPtr <nsIMsgFolder> folder;
 
   PRUint32 cnt;
   nsresult rv = mSubFolders->Count(&cnt);
   if (NS_FAILED(rv)) return rv;
   PRUint32 count = cnt;
 
-  for (PRUint32 i = 0; i < count; i++)
-  {
-    nsISupports *supports;
+  for (PRUint32 i = 0; i < count; i++) {
+    nsCOMPtr <nsISupports> supports;
     supports = mSubFolders->ElementAt(i);
-    if(folder)
-      NS_RELEASE(folder);
-    if(NS_SUCCEEDED(supports->QueryInterface(kISupportsIID, (void**)&folder))) {
-      char *folderName;
 
+    if(NS_SUCCEEDED(supports->QueryInterface(kISupportsIID, getter_AddRefs(folder)))) {
+      PRUnichar *folderName;
+      
       folder->GetName(&folderName);
       
-	  // case-insensitive compare is probably LCD across OS filesystems
-	  if (folderName && PL_strcasecmp(name, folderName)!=0) {
+      // case-insensitive compare is probably LCD across OS filesystems
+      if (folderName && nsCRT::strcasecmp(folderName, name)!=0) {
         *aChild = folder;
         PR_FREEIF(folderName);
         return NS_OK;
       }
       PR_FREEIF(folderName);
     }
-    NS_RELEASE(supports);
   }
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::GetName(char **name)
+NS_IMETHODIMP nsMsgNewsFolder::GetPrettyName(PRUnichar ** prettyName)
 {
-  if(!name)
-    return NS_ERROR_NULL_POINTER;
+  nsresult rv = NS_OK;
 
-	nsAutoString folderName;
-	nsNewsURI2Name(kNewsRootURI, mURI, folderName);
-	*name = folderName.ToNewCString();
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsMsgNewsFolder::GetPrettyName(char ** prettyName)
-{
   if (!prettyName)
     return NS_ERROR_NULL_POINTER;
-  
-  nsresult rv = NS_OK;;
-  char *pName = PL_strdup(*prettyName);
-  if (pName) {
-    rv = nsMsgFolder::GetPrettyName(&pName); 
-    delete[] pName;
+
+  rv = nsMsgFolder::GetPrettyName(prettyName);
+
+  //not ready for prime time yet, as I don't know how to test this yet.
+#ifdef NOT_READY_FOR_PRIME_TIME
+  // only do this for newsgroup names, not for newsgroup hosts.
+  if (!isNewsHost()) {
+    NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    PRInt32 numFullWords;
+    rv = prefs->GetIntPref(PREF_NEWS_ABBREVIATE_PRETTY_NAMES, &numFullWords);
+    if (NS_FAILED(rv)) return rv;
+    
+    if (numFullWords != 0) { 
+      rv = AbbreviatePrettyName(prettyName, numFullWords);
+    }
   }
-  else {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+#endif /* NOT_READY_FOR_PRIME_TIME */
   return rv;
 }
 
+// original code from Oleg Rekutin
+// rekusha@asan.com
+// Public domain, created by Oleg Rekutin
+//
+// takes a newsgroup name, number of words from the end to leave unabberviated
+// the newsgroup name, will get reset to the following format:
+// x.x.x, where x is the first letter of each word and with the
+// exception of last 'fullwords' words, which are left intact.
+// If a word has a dash in it, it is abbreviated as a-b, where
+// 'a' is the first letter of the part of the word before the
+// dash and 'b' is the first letter of the part of the word after
+// the dash
+nsresult nsMsgNewsFolder::AbbreviatePrettyName(PRUnichar ** prettyName, PRInt32 fullwords)
+{
+  if (!prettyName)
+		return NS_ERROR_NULL_POINTER;
+  
+  nsString name(*prettyName);
+  PRInt32 totalwords = 0; // total no. of words
+
+  // get the total no. of words
+  for (PRInt32 pos = 0;
+       (pos++) != name.Length();
+       pos = name.FindChar('.', PR_FALSE,pos))
+    totalwords ++;
+
+  // get the no. of words to abbreviate
+  PRInt32 abbrevnum = totalwords - fullwords;
+  if (abbrevnum < 1)
+    return NS_OK; // nothing to abbreviate
+  
+  // build the ellipsis
+  nsString out;
+  
+  out += name[0];
+  
+  PRInt32    length = name.Length();
+  PRInt32    newword = 0;     // == 2 if done with all abbreviated words
+  
+  fullwords = 0;
+  for (PRInt32 i = 1; i < length; i++) {
+    if (newword < 2) {
+      switch (name[i]) {
+      case '.':
+        fullwords++;
+        // check if done with all abbreviated words...
+        if (fullwords == abbrevnum)
+          newword = 2;
+        else
+          newword = 1;
+        break;
+      case '-':
+        newword = 1;
+        break;
+      default:
+        if (newword)
+          newword = 0;
+        else
+          continue;
+      }
+    }
+    out += name[i];
+  }
+
+  if (!prettyName)
+		return NS_ERROR_NULL_POINTER;
+  // we are going to set *prettyName to something else, so free what was there
+  
+  PR_FREEIF(*prettyName);
+  *prettyName = out.ToNewUnicode();
+  
+  return (*prettyName) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+
 nsresult  nsMsgNewsFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgDatabase **db)
 {
-    nsresult openErr=NS_ERROR_UNEXPECTED;
-    if(!db || !folderInfo)
+  nsresult openErr=NS_ERROR_UNEXPECTED;
+  if(!db || !folderInfo)
 		return NS_ERROR_NULL_POINTER;	//ducarroz: should we use NS_ERROR_INVALID_ARG?
 		
 	if (!mPath)
 		return NS_ERROR_NULL_POINTER;
 
-	nsIMsgDatabase *newsDBFactory = nsnull;
+	nsCOMPtr <nsIMsgDatabase> newsDBFactory;
 	nsIMsgDatabase *newsDB;
 
-	nsresult rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, nsIMsgDatabase::GetIID(), (void **) &newsDBFactory);
-	if (NS_SUCCEEDED(rv) && newsDBFactory)
-	{
-		openErr = newsDBFactory->Open(*mPath, PR_FALSE, (nsIMsgDatabase **) &newsDB, PR_FALSE);
-		newsDBFactory->Release();
+	nsresult rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, nsIMsgDatabase::GetIID(), getter_AddRefs(newsDBFactory));
+	if (NS_SUCCEEDED(rv) && newsDBFactory) {
+		nsCOMPtr <nsIFileSpec> dbFileSpec;
+		NS_NewFileSpecWithSpec(*mPath, getter_AddRefs(dbFileSpec));
+		openErr = newsDBFactory->Open(dbFileSpec, PR_FALSE, PR_FALSE, (nsIMsgDatabase **) &newsDB);
 	}
+  else {
+    return rv;
+  }
 
-    *db = newsDB;
-    if (NS_SUCCEEDED(openErr)&& *db)
-        openErr = (*db)->GetDBFolderInfo(folderInfo);
-    return openErr;
+  *db = newsDB;
+  if (NS_SUCCEEDED(openErr)&& *db)
+    openErr = (*db)->GetDBFolderInfo(folderInfo);
+  return openErr;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::UpdateSummaryTotals()
+NS_IMETHODIMP nsMsgNewsFolder::UpdateSummaryTotals(PRBool force)
 {
-	PRUint32 oldUnreadMessages = mNumUnreadMessages;
-	PRUint32 oldTotalMessages = mNumTotalMessages;
+#ifdef DEBUG_NEWS
+	printf("nsMsgNewsFolder::UpdateSummaryTotals(%s)\n",mURI);
+#endif
+
+	PRInt32 oldUnreadMessages = mNumUnreadMessages;
+	PRInt32 oldTotalMessages = mNumTotalMessages;
 	//We need to read this info from the database
-	ReadDBFolderInfo(PR_TRUE);
+	ReadDBFolderInfo(force);
 
 	// If we asked, but didn't get any, stop asking
 	if (mNumUnreadMessages == -1)
@@ -890,8 +869,8 @@ NS_IMETHODIMP nsMsgNewsFolder::UpdateSummaryTotals()
 		char *oldTotalMessagesStr = PR_smprintf("%d", oldTotalMessages);
 		char *totalMessagesStr = PR_smprintf("%d",mNumTotalMessages);
 		NotifyPropertyChanged("TotalMessages", oldTotalMessagesStr, totalMessagesStr);
-		PR_smprintf_free(totalMessagesStr);
-		PR_smprintf_free(oldTotalMessagesStr);
+		PR_FREEIF(totalMessagesStr);
+		PR_FREEIF(oldTotalMessagesStr);
 	}
 
 	if(oldUnreadMessages != mNumUnreadMessages)
@@ -899,8 +878,8 @@ NS_IMETHODIMP nsMsgNewsFolder::UpdateSummaryTotals()
 		char *oldUnreadMessagesStr = PR_smprintf("%d", oldUnreadMessages);
 		char *totalUnreadMessages = PR_smprintf("%d",mNumUnreadMessages);
 		NotifyPropertyChanged("TotalUnreadMessages", oldUnreadMessagesStr, totalUnreadMessages);
-		PR_smprintf_free(totalUnreadMessages);
-		PR_smprintf_free(oldUnreadMessagesStr);
+		PR_FREEIF(totalUnreadMessages);
+		PR_FREEIF(oldUnreadMessagesStr);
 	}
 
 	return NS_OK;
@@ -997,13 +976,13 @@ NS_IMETHODIMP nsMsgNewsFolder::GetSizeOnDisk(PRUint32 *size)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::GetUsersName(char** userName)
+NS_IMETHODIMP nsMsgNewsFolder::GetUsername(char** userName)
 {
-  PR_ASSERT(0);
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *userName = PL_strdup("");
+  return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::GetHostName(char** hostName)
+NS_IMETHODIMP nsMsgNewsFolder::GetHostname(char** hostName)
 {
   nsresult rv = NS_OK;
   
@@ -1033,7 +1012,7 @@ NS_IMETHODIMP nsMsgNewsFolder::UserNeedsToAuthenticateForFolder(PRBool displayOn
 NS_IMETHODIMP nsMsgNewsFolder::RememberPassword(const char *password)
 {
 #ifdef HAVE_DB
-  NewsDB *newsDb = NULL;
+  NewsDB *newsDb = nsnull;
   NewsDB::Open(m_pathName, TRUE, &newsDb);
   if (newsDb)
   {
@@ -1049,18 +1028,19 @@ NS_IMETHODIMP nsMsgNewsFolder::GetRememberedPassword(char ** password)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::GetPath(nsFileSpec& aPathName)
+NS_IMETHODIMP nsMsgNewsFolder::GetPath(nsIFileSpec** aPathName)
 {
+  nsresult rv;
   if (! mPath) {
     mPath = new nsNativeFileSpec("");
     if (! mPath)
     	return NS_ERROR_OUT_OF_MEMORY;
 
-    nsresult rv = nsNewsURI2Path(kNewsRootURI, mURI, *mPath);
+    rv = nsNewsURI2Path(kNewsRootURI, mURI, *mPath);
     if (NS_FAILED(rv)) return rv;
   }
-  aPathName = *mPath;
-  return NS_OK;
+  rv = NS_NewFileSpecWithSpec(*mPath, aPathName);
+  return rv;
 }
 
 /* this is news, so remember that DeleteMessage is really CANCEL */
@@ -1078,16 +1058,17 @@ NS_IMETHODIMP nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages,
   
   if (NS_SUCCEEDED(rv) && nntpService) {
     char *hostname;
-    rv = GetHostName(&hostname);
+    rv = GetHostname(&hostname);
     if (NS_FAILED(rv)) return rv;
-    char *newsgroupname;
+    PRUnichar *newsgroupname;
     rv = GetName(&newsgroupname);
+	nsCString asciiName(newsgroupname);
     if (NS_FAILED(rv)) {
       PR_FREEIF(hostname);
       return rv;
     }
     
-    rv = nntpService->CancelMessages(hostname, newsgroupname, messages, nsnull, nsnull, nsnull);
+    rv = nntpService->CancelMessages(hostname, asciiName.GetBuffer(), messages, nsnull, nsnull, nsnull);
     
     PR_FREEIF(hostname);
     PR_FREEIF(newsgroupname);
@@ -1105,10 +1086,26 @@ NS_IMETHODIMP nsMsgNewsFolder::GetNewMessages()
 #endif
 
   if (isNewsHost()) {
+#ifdef DEBUG_NEWS
 		printf("sorry, can't get news for entire news server yet.  try it on a newsgroup by newsgroup level\n");
+#endif 
 		return NS_OK;
   }
 
+#ifdef DEBUG_NEWS
+  char *setStr = nsnull;
+  // caller needs to use delete [] to free
+  rv = GetUnreadSetStr(&setStr);
+  if (NS_FAILED(rv)) return rv;
+  if (setStr) {
+    printf("GetNewMessage with setStr = %s\n", setStr);
+  }
+  if (setStr) {
+    delete [] setStr;
+    setStr = nsnull;
+  }
+#endif
+  
   NS_WITH_SERVICE(nsINntpService, nntpService, kNntpServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
   
@@ -1119,20 +1116,18 @@ NS_IMETHODIMP nsMsgNewsFolder::GetNewMessages()
   
   nsCOMPtr<nsINntpIncomingServer> nntpServer;
   rv = server->QueryInterface(nsINntpIncomingServer::GetIID(),
-                              (void **)&nntpServer);
-  if (NS_SUCCEEDED(rv)) {
+                              getter_AddRefs(nntpServer));
+  if (NS_FAILED(rv)) return rv;
+  
 #ifdef DEBUG_NEWS
-    printf("Getting new news articles....\n");
+  printf("Getting new news articles....\n");
 #endif
-    rv = nntpService->GetNewNews(nntpServer, mURI, nsnull, nsnull);
-  }
+  rv = nntpService->GetNewNews(nntpServer, mURI, nsnull, nsnull);
   return rv;
-
 }
 
 NS_IMETHODIMP nsMsgNewsFolder::CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, nsIMessage **message)
 {
-	
   nsresult rv; 
   NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
   if (NS_FAILED(rv)) return rv;
@@ -1140,274 +1135,72 @@ NS_IMETHODIMP nsMsgNewsFolder::CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, 
 	char* msgURI = nsnull;
 	nsFileSpec path;
 	nsMsgKey key;
-	nsIRDFResource* res;
+	nsCOMPtr <nsIRDFResource> res;
 
 	rv = msgDBHdr->GetMessageKey(&key);
-
-	if(NS_SUCCEEDED(rv))
-		rv = nsBuildNewsMessageURI(mURI, key, &msgURI);
+  if (NS_FAILED(rv)) return rv;
   
-	if(NS_SUCCEEDED(rv))
-	{
-		rv = rdfService->GetResource(msgURI, &res);
+  rv = nsBuildNewsMessageURI(mURI, key, &msgURI);
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = rdfService->GetResource(msgURI, getter_AddRefs(res));
+  
+  PR_FREEIF(msgURI);
+  msgURI = nsnull;
+  
+  if (NS_FAILED(rv)) return rv;
+  
+  nsCOMPtr<nsIDBMessage> messageResource = do_QueryInterface(res);
+  if(messageResource) {
+    messageResource->SetMsgDBHdr(msgDBHdr);
+    *message = messageResource;
+    NS_IF_ADDREF(*message);
   }
-	if(msgURI)
-		PR_smprintf_free(msgURI);
   
-	if(NS_SUCCEEDED(rv))
-    {
-      nsIMessage *messageResource;
-      rv = res->QueryInterface(nsIMessage::GetIID(), (void**)&messageResource);
-      if(NS_SUCCEEDED(rv))
-        {
-          //We know from our factory that news message resources are going to be
-          //nsNewsMessages.
-          nsNewsMessage *newsMessage = NS_STATIC_CAST(nsNewsMessage*, messageResource);
-          newsMessage->SetMsgDBHdr(msgDBHdr);
-          *message = messageResource;
-        }
-      NS_IF_RELEASE(res);
-    }
 	return rv;
-}
-
-
-/* sspitzer:  from mozilla/network/protocol/pop3/mkpop3.c */
-
-static PRInt32
-msg_GrowBuffer (PRUint32 desired_size, PRUint32 element_size, PRUint32 quantum,
-				char **buffer, PRUint32 *size)
-{
-  if (*size <= desired_size)
-	{
-	  char *new_buf;
-	  PRUint32 increment = desired_size - *size;
-	  if (increment < quantum) /* always grow by a minimum of N bytes */
-		increment = quantum;
-
-#ifdef TESTFORWIN16
-	  if (((*size + increment) * (element_size / sizeof(char))) >= 64000)
-		{
-		  /* Make sure we don't choke on WIN16 */
-		  PR_ASSERT(0);
-		  return -1;
-		}
-#endif /* DEBUG */
-
-	  new_buf = (*buffer
-				 ? (char *) PR_Realloc (*buffer, (*size + increment)
-										* (element_size / sizeof(char)))
-				 : (char *) PR_Malloc ((*size + increment)
-									  * (element_size / sizeof(char))));
-	  if (! new_buf)
-      return -1; // NS_ERROR_OUT_OF_MEMORY;
-	  *buffer = new_buf;
-	  *size += increment;
-	}
-  return 0;
-}
-
-/* Take the given buffer, tweak the newlines at the end if necessary, and
-   send it off to the given routine.  We are guaranteed that the given
-   buffer has allocated space for at least one more character at the end. */
-static PRInt32
-msg_convert_and_send_buffer(char* buf, PRUint32 length, PRBool convert_newlines_p,
-							PRInt32 (*per_line_fn) (char *line,
-												  PRUint32 line_length,
-												  void *closure),
-							void *closure)
-{
-  /* Convert the line terminator to the native form.
-   */
-  char* newline;
-
-  PR_ASSERT(buf && length > 0);
-  if (!buf || length <= 0) return -1;
-  newline = buf + length;
-  PR_ASSERT(newline[-1] == CR || newline[-1] == LF);
-  if (newline[-1] != CR && newline[-1] != LF) return -1;
-
-  if (!convert_newlines_p)
-	{
-	}
-#if (LINEBREAK_LEN == 1)
-  else if ((newline - buf) >= 2 &&
-		   newline[-2] == CR &&
-		   newline[-1] == LF)
-	{
-	  /* CRLF -> CR or LF */
-	  buf [length - 2] = LINEBREAK[0];
-	  length--;
-	}
-  else if (newline > buf + 1 &&
-		   newline[-1] != LINEBREAK[0])
-	{
-	  /* CR -> LF or LF -> CR */
-	  buf [length - 1] = LINEBREAK[0];
-	}
-#else
-  else if (((newline - buf) >= 2 && newline[-2] != CR) ||
-		   ((newline - buf) >= 1 && newline[-1] != LF))
-	{
-	  /* LF -> CRLF or CR -> CRLF */
-	  length++;
-	  buf[length - 2] = LINEBREAK[0];
-	  buf[length - 1] = LINEBREAK[1];
-	}
-#endif
-
-  return (*per_line_fn)(buf, length, closure);
-}
-
-static int
-msg_LineBuffer (const char *net_buffer, PRInt32 net_buffer_size,
-				char **bufferP, PRUint32 *buffer_sizeP, PRUint32 *buffer_fpP,
-				PRBool convert_newlines_p,
-				PRInt32 (*per_line_fn) (char *line, PRUint32 line_length,
-									  void *closure),
-				void *closure)
-{
-  int status = 0;
-  if (*buffer_fpP > 0 && *bufferP && (*bufferP)[*buffer_fpP - 1] == CR &&
-	  net_buffer_size > 0 && net_buffer[0] != LF) {
-	/* The last buffer ended with a CR.  The new buffer does not start
-	   with a LF.  This old buffer should be shipped out and discarded. */
-	PR_ASSERT(*buffer_sizeP > *buffer_fpP);
-	if (*buffer_sizeP <= *buffer_fpP) return -1;
-	status = msg_convert_and_send_buffer(*bufferP, *buffer_fpP,
-										 convert_newlines_p,
-										 per_line_fn, closure);
-	if (status < 0) return status;
-	*buffer_fpP = 0;
-  }
-  while (net_buffer_size > 0)
-	{
-	  const char *net_buffer_end = net_buffer + net_buffer_size;
-	  const char *newline = 0;
-	  const char *s;
-
-
-	  for (s = net_buffer; s < net_buffer_end; s++)
-		{
-		  /* Move forward in the buffer until the first newline.
-			 Stop when we see CRLF, CR, or LF, or the end of the buffer.
-			 *But*, if we see a lone CR at the *very end* of the buffer,
-			 treat this as if we had reached the end of the buffer without
-			 seeing a line terminator.  This is to catch the case of the
-			 buffers splitting a CRLF pair, as in "FOO\r\nBAR\r" "\nBAZ\r\n".
-		   */
-		  if (*s == CR || *s == LF)
-			{
-			  newline = s;
-			  if (newline[0] == CR)
-				{
-				  if (s == net_buffer_end - 1)
-					{
-					  /* CR at end - wait for the next character. */
-					  newline = 0;
-					  break;
-					}
-				  else if (newline[1] == LF)
-					/* CRLF seen; swallow both. */
-					newline++;
-				}
-			  newline++;
-			  break;
-			}
-		}
-
-	  /* Ensure room in the net_buffer and append some or all of the current
-		 chunk of data to it. */
-	  {
-		const char *end = (newline ? newline : net_buffer_end);
-		PRUint32 desired_size = (end - net_buffer) + (*buffer_fpP) + 1;
-
-		if (desired_size >= (*buffer_sizeP))
-		  {
-			status = msg_GrowBuffer (desired_size, sizeof(char), 1024,
-									 bufferP, buffer_sizeP);
-			if (status < 0) return status;
-		  }
-		nsCRT::memcpy((*bufferP) + (*buffer_fpP), net_buffer, (end - net_buffer));
-		(*buffer_fpP) += (end - net_buffer);
-	  }
-
-	  /* Now *bufferP contains either a complete line, or as complete
-		 a line as we have read so far.
-
-		 If we have a line, process it, and then remove it from `*bufferP'.
-		 Then go around the loop again, until we drain the incoming data.
-	   */
-	  if (!newline)
-		return 0;
-
-	  status = msg_convert_and_send_buffer(*bufferP, *buffer_fpP,
-										   convert_newlines_p,
-										   per_line_fn, closure);
-	  if (status < 0) return status;
-
-	  net_buffer_size -= (newline - net_buffer);
-	  net_buffer = newline;
-	  (*buffer_fpP) = 0;
-	}
-  return 0;
 }
 
 nsresult 
 nsMsgNewsFolder::LoadNewsrcFileAndCreateNewsgroups(nsFileSpec &newsrcFile)
 {
-	char *ibuffer = 0;
-	PRUint32 ibuffer_size = 0;
-	PRUint32 ibuffer_fp = 0;
-  int size = 1024;
-  char *buffer;
-  buffer = new char[size];
-  int status = 0;
+  nsInputFileStream newsrcStream(newsrcFile); 
+	nsresult rv = NS_OK;
   PRInt32 numread = 0;
 
-  PR_FREEIF(mOptionLines);
-
-  if (!buffer) return NS_ERROR_OUT_OF_MEMORY;
-
-  nsInputFileStream inputStream(newsrcFile); 
+  if (NS_FAILED(m_inputStream.GrowBuffer(NEWSRC_FILE_BUFFER_SIZE))) {
+#ifdef DEBUG_NEWS
+    printf("GrowBuffer failed\n");
+#endif
+    return NS_ERROR_FAILURE;
+  }
+	
   while (1) {
-    numread = inputStream.read(buffer, size);
+    numread = newsrcStream.read(m_inputStream.GetBuffer(), NEWSRC_FILE_BUFFER_SIZE);
+#ifdef DEBUG_NEWS
+    printf("numread == %d\n", numread);
+#endif
     if (numread == 0) {
       break;
     }
     else {
-      msg_LineBuffer(buffer, numread,
-                     &ibuffer, &ibuffer_size, &ibuffer_fp,
-                     FALSE,
-#ifdef XP_OS2
-                     (PRInt32 (_Optlink*) (char*,PRUint32,void*))
-#endif /* XP_OS2 */
-                     nsMsgNewsFolder::ProcessLine_s, this);
-      if (numread <= 0) {
+      rv = BufferInput(m_inputStream.GetBuffer(), numread);
+      if (NS_FAILED(rv)) {
+#ifdef DEBUG_NEWS
+        printf("bufferInput did not return NS_OK\n");
+#endif
         break;
       }
     }
   }
 
-  if (status == 0 && ibuffer_fp > 0) {
-    status = ProcessLine_s(ibuffer, ibuffer_fp, this);
-    ibuffer_fp = 0;
-  }
-
-  inputStream.close();
-  delete [] buffer;
+  newsrcStream.close();
   
-  return NS_OK;
+  return rv;
 }
 
-PRInt32
-nsMsgNewsFolder::ProcessLine_s(char* line, PRUint32 line_size, void* closure)
-{
-  return ((nsMsgNewsFolder*) closure)->ProcessLine(line, line_size);
-}
 
 PRInt32
-nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
+nsMsgNewsFolder::HandleLine(char* line, PRUint32 line_size)
 {
 	/* guard against blank line lossage */
 	if (line[0] == '#' || line[0] == CR || line[0] == LF) return 0;
@@ -1419,11 +1212,9 @@ nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
 		return RememberLine(line);
 	}
 
-	char *s;
+	char *s = nsnull;
+  char *setStr = nsnull;
 	char *end = line + line_size;
-#ifdef HAVE_PORT
-	static msg_NewsArtSet *set;
-#endif
 
 	for (s = line; s < end; s++)
 		if (*s == ':' || *s == '!')
@@ -1433,20 +1224,12 @@ nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
 		/* What is this?? Well, don't just throw it away... */
 		return RememberLine(line);
 	}
-
-#ifdef HAVE_PORT
-	set = msg_NewsArtSet::Create(s + 1, this);
-	if (!set) return NS_OUT_OF_MEMORY;
-#endif
-
+    
 	PRBool subscribed = (*s == ':');
+  setStr = s+1;
 	*s = '\0';
-
-	if (PL_strlen(line) == 0)
-	{
-#ifdef HAVE_PORT
-		delete set;
-#endif
+  
+	if (PL_strlen(line) == 0) {
 		return 0;
 	}
  
@@ -1469,10 +1252,9 @@ nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
   // So lines like this in a newsrc file should be ignored:
   // 3746EF3F.6080309@netscape.com:
   // 3746EF3F.6080309%40netscape.com:
-  if ((PL_strstr(line,"@") != nsnull) || 
-      (PL_strstr(line,"%40") != nsnull)) {
+  if (PL_strstr(line,"@") || PL_strstr(line,"%40")) {
 #ifdef DEBUG_NEWS
-	printf("skipping %s.  it contains @ or %%40\n",line);
+    printf("skipping %s.  it contains @ or %%40\n",line);
 #endif
   	subscribed = PR_FALSE;
   }
@@ -1482,12 +1264,13 @@ nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
     printf("subscribed: %s\n", line);
 #endif
 
-    // were subscribed, so add it
-    nsIMsgFolder *child = nsnull;
+    // we're subscribed, so add it
+    nsCOMPtr <nsIMsgFolder> child;
     nsAutoString currentFolderNameStr(line);
-    AddSubfolder(currentFolderNameStr,&child);
-    NS_IF_RELEASE(child);
-    child = nsnull;
+    
+    nsresult rv = AddSubfolder(currentFolderNameStr,getter_AddRefs(child), setStr);
+    
+    if (NS_FAILED(rv)) return -1;
   }
   else {
 #ifdef DEBUG_NEWS
@@ -1519,8 +1302,9 @@ nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
 			if (!info) {	// autosubscribe, if we haven't seen this one.
 				char* groupLine = PR_smprintf("%s:", fullname);
 				if (groupLine) {
-					ProcessLine(groupLine, PL_strlen(groupLine));
-					XP_FREE(groupLine);
+					HandleLine(groupLine, PL_strlen(groupLine));
+					PR_FREEIF(groupLine);
+          groupLine = nsnull;
 				}
 			}
 			delete [] fullname;
@@ -1545,7 +1329,7 @@ nsMsgNewsFolder::ProcessLine(char* line, PRUint32 line_size)
 	// Except this might disable the update of new counts - check it out...
 	m_master->InitFolderFromCache (info);
 #endif /* HAVE_PORT */
-
+  
   return 0;
 }
 
@@ -1563,10 +1347,66 @@ nsMsgNewsFolder::RememberLine(char* line)
 	}
 	if (!new_data) return -1; // NS_ERROR_OUT_OF_MEMORY;
 	PL_strcpy(new_data, line);
-	PL_strcat(new_data, LINEBREAK);
+	PL_strcat(new_data, MSG_LINEBREAK);
 
 	mOptionLines = new_data;
 
 	return 0;
 
+}
+
+nsresult nsMsgNewsFolder::ForgetLine()
+{
+  PR_FREEIF(mOptionLines);
+  mOptionLines = nsnull;
+  return NS_OK;
+}
+
+// caller needs to use delete [] to free
+NS_IMETHODIMP nsMsgNewsFolder::GetUnreadSetStr(char * *aUnreadSetStr)
+{
+  nsresult rv;
+  
+  if (!aUnreadSetStr) return NS_ERROR_NULL_POINTER;
+
+  rv = GetDatabase();
+  if (NS_FAILED(rv)) return rv;
+
+  NS_ASSERTION(mDatabase, "no database!");
+  if (!mDatabase) return NS_ERROR_NULL_POINTER;
+
+  nsMsgKeySet * set = nsnull;
+  
+  nsCOMPtr<nsINewsDatabase> db(do_QueryInterface(mDatabase, &rv));
+  if (NS_FAILED(rv))
+	return rv;        
+
+  rv = db->GetUnreadSet(&set);
+  if (NS_FAILED(rv)) return rv;
+      
+  *aUnreadSetStr = set->Output();
+
+  if (!*aUnreadSetStr) return NS_ERROR_OUT_OF_MEMORY;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgNewsFolder::SetUnreadSetStr(char * aUnreadSetStr)
+{
+  nsresult rv;
+    
+  if (!aUnreadSetStr) return NS_ERROR_NULL_POINTER;
+
+  rv = GetDatabase();
+  if (NS_FAILED(rv)) return rv;
+
+  NS_ASSERTION(mDatabase, "no database!");
+  if (!mDatabase) return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsINewsDatabase> db(do_QueryInterface(mDatabase, &rv));
+  if (NS_FAILED(rv))
+	return rv;        
+
+  rv = db->SetUnreadSet(aUnreadSetStr);
+  return rv;
 }

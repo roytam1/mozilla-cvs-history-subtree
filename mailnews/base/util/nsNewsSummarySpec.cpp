@@ -50,7 +50,7 @@ void nsNewsSummarySpec::CreateSummaryFileName()
 {
 	char *leafName = GetLeafName();
 
-    nsAutoString fullLeafName(leafName, PL_strlen(leafName), eOneByte);
+    nsCAutoString fullLeafName((const char*)leafName);
 
 	// Append .msf (message summary file) 
 	fullLeafName += ".msf";	

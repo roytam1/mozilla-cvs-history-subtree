@@ -346,7 +346,7 @@ NS_IMETHODIMP DeviceContextImpl::LoadIconImage(PRInt32 aId, nsIImage*& aImage)
 {
   // XXX synchronous image loading doesn't work on unix or mac yet
   // because netlib is not in its own thread.
-#if defined(XP_UNIX) || defined(XP_MAC)
+#if defined(XP_UNIX) || defined(XP_MAC) || defined(XP_BEOS)
   return NS_ERROR_FAILURE;
 #endif
   nsresult  result;
@@ -375,7 +375,7 @@ NS_IMETHODIMP DeviceContextImpl::LoadIconImage(PRInt32 aId, nsIImage*& aImage)
 
   // Build the URL string
   char  url[128];
-  sprintf(url, "resource://res/gfx/icon_%d.gif", aId);
+  sprintf(url, "resource:/res/gfx/icon_%d.gif", aId);
 
   // Use a sync net context
   ilINetContext* netContext;

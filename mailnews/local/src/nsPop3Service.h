@@ -26,9 +26,10 @@
 #include "nsIUrlListener.h"
 #include "nsIStreamListener.h"
 #include "nsFileSpec.h"
+#include "nsIProtocolHandler.h"
 
 
-class nsPop3Service : public nsIPop3Service
+class nsPop3Service : public nsIPop3Service, nsIProtocolHandler
 {
 public:
 
@@ -42,23 +43,37 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 	NS_IMETHOD GetNewMail(nsIUrlListener * aUrlListener,
                           nsIPop3IncomingServer *popServer,
-                          nsIURL ** aURL);
+                          nsIURI ** aURL);
 
 	NS_IMETHOD CheckForNewMail(nsIUrlListener * aUrlListener,
 							   nsIMsgFolder *inbox,
                                nsIPop3IncomingServer *popServer,
-                               nsIURL ** aURL);
+                               nsIURI ** aURL);
 	
 	////////////////////////////////////////////////////////////////////////////////////////
 	// End suppport for the nsIPop3Service Interface
 	////////////////////////////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	// we suppport the nsIProtocolHandler interface 
+	////////////////////////////////////////////////////////////////////////////////////////
+	NS_IMETHOD GetScheme(char * *aScheme);
+	NS_IMETHOD GetDefaultPort(PRInt32 *aDefaultPort);
+	NS_IMETHOD MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval);
+	NS_IMETHOD NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval);
+	NS_IMETHOD NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIChannel **_retval);
+	
+	////////////////////////////////////////////////////////////////////////////////////////
+	// End support of nsIProtocolHandler interface 
+	////////////////////////////////////////////////////////////////////////////////////////
+
 protected:
 	// convience function to make constructing of the pop3 url easier...
-	nsresult BuildPop3Url(const char * urlSpec, nsIMsgFolder *inbox,
-                          nsIPop3IncomingServer *,
-                          nsIPop3URL ** aUrl);
+	nsresult BuildPop3Url(char * urlSpec, nsIMsgFolder *inbox,
+                          nsIPop3IncomingServer *, nsIUrlListener * aUrlListener,
+                          nsIURI ** aUrl);
 
+	nsresult RunPopUrl(nsIMsgIncomingServer * aServer, nsIURI * aUrlToRun);
 };
 
 #endif /* nsPop3Service_h___ */

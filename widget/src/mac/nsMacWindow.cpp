@@ -60,16 +60,57 @@ const short kDialogMarginWidth = 6;
 DragTrackingHandlerUPP nsMacWindow::sDragTrackingHandlerUPP = NewDragTrackingHandlerProc(DragTrackingHandler);
 DragReceiveHandlerUPP nsMacWindow::sDragReceiveHandlerUPP = NewDragReceiveHandlerProc(DragReceiveHandler);
 
+void SetDragActionBasedOnModifiers ( nsIDragService* inDragService, short inModifiers ) ; 
+
+
+//
+// SetDragActionsBasedOnModifiers [static]
+//
+// Examines the MacOS modifier keys and sets the appropriate drag action on the
+// drag session to copy/move/etc
+//
+void
+SetDragActionBasedOnModifiers ( nsIDragService* inDragService, short inModifiers ) 
+{
+	nsCOMPtr<nsIDragSession> dragSession;
+	inDragService->GetCurrentSession ( getter_AddRefs(dragSession) );
+	if ( dragSession ) {
+		PRUint32 action = nsIDragService::DRAGDROP_ACTION_NONE;
+		
+		// force copy = option, alias = cmd-option
+		if ( inModifiers & optionKey ) {
+			if ( inModifiers & cmdKey )
+				action = nsIDragService::DRAGDROP_ACTION_LINK;
+			else
+				action = nsIDragService::DRAGDROP_ACTION_COPY;
+		}
+
+		// I think we only need to set this when it's not "none"
+		if ( action != nsIDragService::DRAGDROP_ACTION_NONE )
+			dragSession->SetDragAction ( action );		
+	}
+
+} // SetDragActionBasedOnModifiers
+
+
 
 //¥¥¥ this should probably go into the drag session as a static
 pascal OSErr
 nsMacWindow :: DragTrackingHandler ( DragTrackingMessage theMessage, WindowPtr theWindow, 
 										void *handlerRefCon, DragReference theDrag)
 {
+	// holds our drag service across multiple calls to this callback. The reference to
+	// the service is obtained when the mouse enters the window and is released when
+	// the mouse leaves the window (or there is a drop). This prevents us from having
+	// to re-establish the connection to the service manager 15 times a second when
+	// handling the |kDragTrackingInWindow| message.
+	static nsIDragService* sDragService = nsnull;
+
 	nsMacWindow* geckoWindow = reinterpret_cast<nsMacWindow*>(handlerRefCon);
 	if ( !theWindow || !geckoWindow )
 		return dragNotAcceptedErr;
 		
+	nsresult rv = NS_OK;
 	switch ( theMessage ) {
 	
 		case kDragTrackingEnterHandler:
@@ -77,17 +118,16 @@ nsMacWindow :: DragTrackingHandler ( DragTrackingMessage theMessage, WindowPtr t
 			
 		case kDragTrackingEnterWindow:
 		{
-			printf("DragTracker :: entering window\n");
-
-			// make sure that the drag session knows about this drag
-			nsIDragService* dragService;
+			// get our drag service for the duration of the drag.
 			nsresult rv = nsServiceManager::GetService(kCDragServiceCID,
                                        					nsIDragService::GetIID(),
-      	                            					(nsISupports **)&dragService);
-			if ( NS_SUCCEEDED(rv) && dragService ) {
-				dragService->StartDragSession();
-				nsCOMPtr<nsIDragSessionMac> macSession ( do_QueryInterface(dragService) );
-				printf("enter window, Drag ref is %ld\n", theDrag);
+      	                            					(nsISupports **)&sDragService);
+      	    NS_ASSERTION ( sDragService, "Couldn't get a drag service, we're in biiig trouble" );
+
+			// tell the session about this drag
+			if ( sDragService ) {
+				sDragService->StartDragSession();
+				nsCOMPtr<nsIDragSessionMac> macSession ( do_QueryInterface(sDragService) );
 				if ( macSession )
 					macSession->SetDragReference ( theDrag );
 			}
@@ -107,9 +147,10 @@ nsMacWindow :: DragTrackingHandler ( DragTrackingMessage theMessage, WindowPtr t
 			short modifiers;
 			::GetDragModifiers ( theDrag, &modifiers, nsnull, nsnull );
 			
-			//¥¥¥set the drag action so the frames know
-			//PRInt32 geckoEvent;
-			//ComputeDragActionBasedOnModifiers ( modifiers, &geckoEvent );
+			NS_ASSERTION ( sDragService, "If we don't have a drag service, we're fucked" );
+			
+			// set the drag action on the service so the frames know what is going on
+			SetDragActionBasedOnModifiers ( sDragService, modifiers );
 			
 			// pass into gecko for handling...
 			geckoWindow->DragEvent ( NS_DRAGDROP_OVER, mouseLocGlobal, modifiers );
@@ -118,22 +159,18 @@ nsMacWindow :: DragTrackingHandler ( DragTrackingMessage theMessage, WindowPtr t
 		
 		case kDragTrackingLeaveWindow:
 		{
-			printf("DragTracker :: leaving window\n");
-			// tell the drag session that we don't need it around anymore.
-			nsIDragService* dragService;
-			nsresult rv = nsServiceManager::GetService(kCDragServiceCID,
-                                       					nsIDragService::GetIID(),
-      	                            					(nsISupports **)&dragService);
-			if ( NS_SUCCEEDED(rv) && dragService ) {
-				dragService->EndDragSession();
+			// tell the drag service that we're done with it.
+			if ( sDragService ) {
+				sDragService->EndDragSession();
 				
 				// clear out the dragRef in the drag session. We are guaranteed that
 				// this will be called _after_ the drop has been processed (if there
 				// is one), so we're not destroying valuable information if the drop
 				// was in our window.
-				nsCOMPtr<nsIDragSessionMac> macSession ( do_QueryInterface(dragService) );
+				nsCOMPtr<nsIDragSessionMac> macSession ( do_QueryInterface(sDragService) );
 				if ( macSession )
 					macSession->SetDragReference ( 0 );
+					
 			}
 			
 			// let gecko know that the mouse has left the window so it
@@ -143,6 +180,13 @@ nsMacWindow :: DragTrackingHandler ( DragTrackingMessage theMessage, WindowPtr t
 			geckoWindow->DragEvent ( NS_DRAGDROP_EXIT, mouseLocGlobal, 0L );
 			
 			::HideDragHilite ( theDrag );
+ 	
+ 			// we're _really_ done with it, so let go of the service.
+			if ( sDragService ) {
+				nsServiceManager::ReleaseService(kCDragServiceCID, sDragService);
+				sDragService = nsnull;			
+			}
+			
 			break;
 		}
 		
@@ -264,45 +308,88 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 	// build the main native window
 	if (aNativeParent == nsnull)
 	{
-		nsBorderStyle borderStyle;
+		nsWindowType windowType;
 		if (aInitData)
-			borderStyle = aInitData->mBorderStyle;
-		else
-			borderStyle = (mIsDialog ? eBorderStyle_dialog : eBorderStyle_window);
+		{
+			windowType = aInitData->mWindowType;
+			// if a toplevel window was requested without a titlebar, use a dialog windowproc
+			if (aInitData->mWindowType == eWindowType_toplevel &&
+				(aInitData->mBorderStyle == eBorderStyle_none ||
+				 aInitData->mBorderStyle != eBorderStyle_all && !(aInitData->mBorderStyle & eBorderStyle_title)))
+				windowType = eWindowType_dialog;
+		} else
+			windowType = (mIsDialog ? eWindowType_dialog : eWindowType_toplevel);
 
 		short			wDefProcID;
-		Boolean		goAwayFlag;
+		Boolean			goAwayFlag;
 		short			hOffset;
 		short			vOffset;
-		switch (borderStyle)
+
+		switch (windowType)
 		{
-			case eBorderStyle_none:
+			case eWindowType_popup:
+			    // (pinkerton)
+			    // Added very very early support for |eBorderStyle_BorderlessTopLevel| but
+			    // it isn't correct because it takes the focus away from the main window
+			    // The main window must remain active.
+			    //
+			    // ...fall through...
+			    
+			case eWindowType_child:
 				wDefProcID = plainDBox;
 				goAwayFlag = false;
 				hOffset = 0;
 				vOffset = 0;
 				break;
 
-			case eBorderStyle_dialog:
-				wDefProcID = kWindowMovableModalDialogProc;
-				goAwayFlag = true;
+			case eWindowType_dialog:
+				if (aInitData &&
+					aInitData->mBorderStyle != eBorderStyle_all &&
+					aInitData->mBorderStyle != eBorderStyle_default &&
+					(aInitData->mBorderStyle == eBorderStyle_none ||
+					 !(aInitData->mBorderStyle & eBorderStyle_title)))
+				{
+					wDefProcID = kWindowModalDialogProc;
+					goAwayFlag = false;
+				} else {
+					wDefProcID = kWindowMovableModalDialogProc;
+					goAwayFlag = true; // revisit this below
+				}
 				hOffset = kDialogMarginWidth;
 				vOffset = kDialogTitleBarHeight;
 				break;
 
-			case eBorderStyle_window:
-				wDefProcID = kWindowFullZoomGrowDocumentProc;
+			case eWindowType_toplevel:
+				if (aInitData &&
+					aInitData->mBorderStyle != eBorderStyle_all &&
+					aInitData->mBorderStyle != eBorderStyle_default &&
+					(aInitData->mBorderStyle == eBorderStyle_none ||
+					 !(aInitData->mBorderStyle & eBorderStyle_resizeh)))
+					wDefProcID = kWindowDocumentProc;
+				else
+					wDefProcID = kWindowFullZoomGrowDocumentProc;
 				goAwayFlag = true;
 				hOffset = kWindowMarginWidth;
 				vOffset = kWindowTitleBarHeight;
 				break;
-
+        /*
 			case eBorderStyle_3DChildWindow:
 				wDefProcID = altDBoxProc;
 				goAwayFlag = false;
 				hOffset = 0;
 				vOffset = 0;
 				break;
+        */
+		}
+
+		// now turn off some default features if requested by aInitData
+		if (aInitData && aInitData->mBorderStyle != eBorderStyle_all)
+		{
+			if (aInitData->mBorderStyle == eBorderStyle_none ||
+					aInitData->mBorderStyle == eBorderStyle_default &&
+					windowType == eWindowType_dialog ||
+					!(aInitData->mBorderStyle & eBorderStyle_close))
+				goAwayFlag = false;
 		}
 
 		Rect wRect;
@@ -371,7 +458,8 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 	nsRect bounds(0, 0, aRect.width, aRect.height - bottomPinDelta);
 
 	// init base class
-	Inherited::StandardCreate(aParent, bounds, aHandleEventFunction, 
+        // (note: aParent is ignored. Mac (real) windows don't want parents)
+	Inherited::StandardCreate(nsnull, bounds, aHandleEventFunction, 
 														aContext, aAppShell, aToolkit, aInitData);
 
 
@@ -429,12 +517,30 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool bState)
   return NS_OK;
 }
 
+
+/*
+NS_METHOD nsWindow::Minimize(void)
+{
+  return NS_OK;
+}
+
+NS_METHOD nsWindow::Maximize(void)
+{
+  return NS_OK;
+}
+
+NS_METHOD nsWindow::Restore(void)
+{
+  return NS_OK;
+}
+*/
+
 //-------------------------------------------------------------------------
 //
 // Move this window
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsMacWindow::Move(PRUint32 aX, PRUint32 aY)
+NS_IMETHODIMP nsMacWindow::Move(PRInt32 aX, PRInt32 aY)
 {
 	if (mWindowMadeHere)
 	{
@@ -514,7 +620,7 @@ NS_IMETHODIMP nsMacWindow::Move(PRUint32 aX, PRUint32 aY)
 // Resize this window
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsMacWindow::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
+NS_IMETHODIMP nsMacWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
 	if (mWindowMadeHere)
 	{

@@ -21,7 +21,12 @@
 #include "nsDocument.h"
 #include "nsIArena.h"
 #include "nsIURL.h"
+#ifdef NECKO
+#include "nsILoadGroup.h"
+#include "nsIChannel.h"
+#else
 #include "nsIURLGroup.h"
+#endif
 #include "nsString.h"
 #include "nsIContent.h"
 #include "nsIDocumentObserver.h"
@@ -47,11 +52,7 @@
 #include "nsIDOMDOMImplementation.h"
 #include "nsGenericElement.h"
 
-//#include "nsCSSPropIDs.h"
-//#include "nsCSSProps.h"
 #include "nsICSSStyleSheet.h"
-//#include "nsICSSStyleRule.h"
-//#include "nsICSSDeclaration.h"
 
 #include "nsITextContent.h"
 #include "nsXIFConverter.h"
@@ -98,7 +99,6 @@ static NS_DEFINE_IID(kIDocumentObserverIID, NS_IDOCUMENT_OBSERVER_IID);
 static NS_DEFINE_IID(kICSSStyleSheetIID, NS_ICSS_STYLE_SHEET_IID);
 static NS_DEFINE_IID(kCRangeCID, NS_RANGE_CID);
 static NS_DEFINE_IID(kIDOMRange, NS_IDOMRANGE_IID);
-static NS_DEFINE_IID(kCRangeListCID, NS_RANGELIST_CID);
 static NS_DEFINE_IID(kIEnumeratorIID, NS_IENUMERATOR_IID);
 static NS_DEFINE_IID(kIDOMScriptObjectFactoryIID, NS_IDOM_SCRIPT_OBJECT_FACTORY_IID);
 static NS_DEFINE_IID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -471,18 +471,15 @@ nsDOMImplementation::GetScriptObject(nsIScriptContext *aContext,
   nsresult result = NS_OK;
 
   if (nsnull == mScriptObject) {
-    nsIDOMScriptObjectFactory *factory;
+    NS_WITH_SERVICE(nsIDOMScriptObjectFactory, factory, 
+                    kDOMScriptObjectFactoryCID, &result);
 
-    result = nsServiceManager::GetService(kDOMScriptObjectFactoryCID,
-                                          kIDOMScriptObjectFactoryIID,
-                                          (nsISupports **)&factory);
     if (NS_OK == result) {
       nsIScriptGlobalObject *global = aContext->GetGlobalObject();
 
       result = factory->NewScriptDOMImplementation(aContext, (nsISupports*)(nsIDOMDOMImplementation*)this,
                                                    global, &mScriptObject);
       NS_RELEASE(global);
-      NS_RELEASE(factory);
     }
   }
   
@@ -501,6 +498,7 @@ nsDOMImplementation::SetScriptObject(void *aScriptObject)
 // =
 // ==================================================================
 
+#if 0
 NS_LAYOUT nsresult
 NS_NewPostData(PRBool aIsFile, char* aData, 
                nsIPostData** aInstancePtrResult)
@@ -520,8 +518,9 @@ NS_NewPostData(PRBool aIsFile, char* aData,
 
   return rv;
 }
+#endif
 
-
+#if 0 // nuking postdata
 nsPostData::nsPostData(PRBool aIsFile, char* aData)
 {
   NS_INIT_REFCNT();
@@ -564,6 +563,7 @@ PRInt32 nsPostData::GetDataLength()
 {
   return mDataLen;
 }
+#endif // nuking postdata.
 
 // ==================================================================
 // =
@@ -629,7 +629,7 @@ nsDocument::nsDocument()
   mArena = nsnull;
   mDocumentTitle = nsnull;
   mDocumentURL = nsnull;
-  mDocumentURLGroup = nsnull;
+  mDocumentLoadGroup = nsnull;
   mCharacterSet = "ISO-8859-1";
   mParentDocument = nsnull;
   mRootContent = nsnull;
@@ -673,7 +673,7 @@ nsDocument::~nsDocument()
     mDocumentTitle = nsnull;
   }
   NS_IF_RELEASE(mDocumentURL);
-  NS_IF_RELEASE(mDocumentURLGroup);
+  NS_IF_RELEASE(mDocumentLoadGroup);
 
   mParentDocument = nsnull;
 
@@ -828,7 +828,11 @@ nsIArena* nsDocument::GetArena()
 }
 
 nsresult
-nsDocument::Reset(nsIURL *aURL)
+#ifdef NECKO
+nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
+#else
+nsDocument::Reset(nsIURI *aURL)
+#endif
 {
   nsresult rv = NS_OK;
 
@@ -837,7 +841,7 @@ nsDocument::Reset(nsIURL *aURL)
     mDocumentTitle = nsnull;
   }
   NS_IF_RELEASE(mDocumentURL);
-  NS_IF_RELEASE(mDocumentURLGroup);
+  NS_IF_RELEASE(mDocumentLoadGroup);
 
   // Delete references to sub-documents
   PRInt32 index = mSubDocuments.Count();
@@ -882,12 +886,19 @@ nsDocument::Reset(nsIURL *aURL)
 
   NS_IF_RELEASE(mNameSpaceManager);
 
+#ifdef NECKO
+  (void)aChannel->GetURI(&mDocumentURL);
+//  (void)aChannel->GetLoadGroup(&mDocumentLoadGroup);
+  mDocumentLoadGroup = aLoadGroup;
+  NS_ADDREF(mDocumentLoadGroup);
+  NS_ASSERTION(mDocumentLoadGroup, "Should have a load group now on construction.");
+#else
   mDocumentURL = aURL;
   if (nsnull != aURL) {
     NS_ADDREF(aURL);
-
-    rv = aURL->GetURLGroup(&mDocumentURLGroup);
+    rv = aURL->GetLoadGroup(&mDocumentLoadGroup);
   }
+#endif
 
   if (NS_OK == rv) {
     rv = NS_NewNameSpaceManager(&mNameSpaceManager);
@@ -897,12 +908,21 @@ nsDocument::Reset(nsIURL *aURL)
 }
 
 nsresult
-nsDocument::StartDocumentLoad(nsIURL *aURL, 
+nsDocument::StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                              nsIChannel* aChannel,
+                              nsILoadGroup* aLoadGroup,
+#else
+                              nsIURI *aURL, 
+#endif
                               nsIContentViewerContainer* aContainer,
-                              nsIStreamListener **aDocListener,
-                              const char* aCommand)
+                              nsIStreamListener **aDocListener)
 {
+#ifdef NECKO
+  return Reset(aChannel, aLoadGroup);
+#else
   return Reset(aURL);
+#endif
 }
 
 const nsString* nsDocument::GetDocumentTitle() const
@@ -910,7 +930,7 @@ const nsString* nsDocument::GetDocumentTitle() const
   return mDocumentTitle;
 }
 
-nsIURL* nsDocument::GetDocumentURL() const
+nsIURI* nsDocument::GetDocumentURL() const
 {
   NS_IF_ADDREF(mDocumentURL);
   return mDocumentURL;
@@ -923,14 +943,14 @@ nsDocument::GetContentType(nsString& aContentType) const
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-nsIURLGroup* nsDocument::GetDocumentURLGroup() const
+nsILoadGroup* nsDocument::GetDocumentLoadGroup() const
 {
-  NS_IF_ADDREF(mDocumentURLGroup);
-  return mDocumentURLGroup;
+  NS_IF_ADDREF(mDocumentLoadGroup);
+  return mDocumentLoadGroup;
 }
 
 NS_IMETHODIMP
-nsDocument::GetBaseURL(nsIURL*& aURL) const
+nsDocument::GetBaseURL(nsIURI*& aURL) const
 {
   aURL = mDocumentURL;
   NS_IF_ADDREF(mDocumentURL);
@@ -1064,10 +1084,11 @@ nsDocument::SetHeaderData(nsIAtom* aHeaderField, const nsString& aData)
 
 #if 0
 // XXX Temp hack: moved to nsMarkupDocument
-nsresult nsDocument::CreateShell(nsIPresContext* aContext,
-                                 nsIViewManager* aViewManager,
-                                 nsIStyleSet* aStyleSet,
-                                 nsIPresShell** aInstancePtrResult)
+NS_IMETHODIMP
+nsDocument::CreateShell(nsIPresContext* aContext,
+                        nsIViewManager* aViewManager,
+                        nsIStyleSet* aStyleSet,
+                        nsIPresShell** aInstancePtrResult)
 {
   NS_PRECONDITION(nsnull != aInstancePtrResult, "null ptr");
   if (nsnull == aInstancePtrResult) {
@@ -2263,6 +2284,7 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext& aPresContext,
 
   if (NS_EVENT_FLAG_INIT == aFlags) {
     aDOMEvent = &mDOMEvent;
+    aEvent->flags = NS_EVENT_FLAG_NONE;
   }
   
   //Capturing stage
@@ -2275,7 +2297,8 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext& aPresContext,
   }
   
   //Local handling stage
-  if (nsnull != mListenerManager) {
+  if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH)) {
+    aEvent->flags = aFlags;
     mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, aFlags, aEventStatus);
   }
 
@@ -2331,13 +2354,12 @@ nsresult nsDocument::RemoveEventListenerByIID(nsIDOMEventListener *aListener, co
 }
 
 nsresult nsDocument::AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                      PRBool aPostProcess, PRBool aUseCapture)
+                                      PRBool aUseCapture)
 {
   nsIEventListenerManager *manager;
 
   if (NS_OK == GetListenerManager(&manager)) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     manager->AddEventListenerByType(aListener, aType, flags);
     NS_RELEASE(manager);
@@ -2347,11 +2369,10 @@ nsresult nsDocument::AddEventListener(const nsString& aType, nsIDOMEventListener
 }
 
 nsresult nsDocument::RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                         PRBool aPostProcess, PRBool aUseCapture)
+                                         PRBool aUseCapture)
 {
   if (nsnull != mListenerManager) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     mListenerManager->RemoveEventListenerByType(aListener, aType, flags);
     return NS_OK;
@@ -2464,7 +2485,8 @@ PRBool    nsDocument::SetProperty(JSContext *aContext, jsval aID, jsval *aVp)
           }
         }
       }
-      else if (mPropName == "onsubmit" || mPropName == "onreset" || mPropName == "onchange") {
+      else if (mPropName == "onsubmit" || mPropName == "onreset" || mPropName == "onchange" ||
+               mPropName == "onselect") {
         if (NS_OK == GetListenerManager(&mManager)) {
           nsIScriptContext *mScriptCX = (nsIScriptContext *)JS_GetContextPrivate(aContext);
           if (NS_OK != mManager->RegisterScriptEventListener(mScriptCX, this, kIDOMFormListenerIID)) {
@@ -2539,80 +2561,6 @@ void      nsDocument::Finalize(JSContext *aContext)
 }
 
 /**
-  * Returns the Selection Object
- */
-NS_IMETHODIMP nsDocument::GetSelection(nsIDOMSelection ** aSelection) {
-  if (!aSelection)
-    return NS_ERROR_NULL_POINTER;
-  return NS_ERROR_FAILURE;
-}
-
-/**
-  * Selects all the Content
- */
-NS_IMETHODIMP nsDocument::SelectAll() {
-
-  nsIContent * start = nsnull;
-  nsIContent * end   = nsnull;
-  nsIContent * body  = nsnull;
-
-  nsString bodyStr("BODY");
-  PRInt32 i, n;
-  mRootContent->ChildCount(n);
-  for (i=0;i<n;i++) {
-    nsIContent * child;
-    mRootContent->ChildAt(i, child);
-    PRBool isSynthetic;
-    child->IsSynthetic(isSynthetic);
-    if (!isSynthetic) {
-      nsIAtom * atom;
-      child->GetTag(atom);
-      if (bodyStr.EqualsIgnoreCase(atom)) {
-        body = child;
-        break;
-      }
-      NS_IF_RELEASE(atom);
-    }
-    NS_RELEASE(child);
-  }
-
-  if (body == nsnull) {
-    return NS_ERROR_FAILURE;
-  }
-
-  start = body;
-  // Find Very first Piece of Content
-  NS_ADDREF(start); //to balance release below
-  for (;;) {
-    start->ChildCount(n);
-    if (n <= 0) {
-      break;
-    }
-    nsIContent * child = start;
-    child->ChildAt(0, start);
-    NS_RELEASE(child);
-  }
-
-  end = body;
-  NS_ADDREF(end); //to balance release below
-  // Last piece of Content
-  for (;;) {
-    end->ChildCount(n);
-    if (n <= 0) {
-      break;
-    }
-    nsIContent * child = end;
-    child->ChildAt(n-1, end);
-    NS_RELEASE(child);
-  }
-
-  NS_RELEASE(body);
-  SetDisplaySelection(PR_TRUE);
-
-  return NS_OK;
-}
-
-/**
   * Finds text in content
  */
 NS_IMETHODIMP nsDocument::FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
@@ -2683,10 +2631,10 @@ void nsDocument::ToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
     nsIContent* content = nsnull;
     nsresult    isContent = aNode->QueryInterface(kIContentIID, (void**)&content);
 
-    if (isContent != nsnull)
+    if (NS_SUCCEEDED(isContent) && content)
     {
       PRBool  isInSelection = IsInSelection(sel,content);
-      
+
       if (isInSelection == PR_TRUE)
       {
         BeginConvertToXIF(aConverter,aNode);
@@ -2710,9 +2658,7 @@ void nsDocument::ToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
 
 void nsDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
 {
-  
-  nsXIFConverter  converter(aBuffer);
-  // call the function
+  nsXIFConverter converter(aBuffer);
 
   converter.SetSelection(aSelection);
 
@@ -2724,23 +2670,53 @@ void nsDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
   converter.BeginStartTag("document_info");
   converter.AddAttribute(nsString("charset"),charset);
   converter.FinishStartTag("document_info",PR_TRUE,PR_TRUE);
-    
-  
+
   converter.AddEndTag("section_head");
   converter.AddStartTag("section_body");
 
   nsIDOMElement* root = nsnull;
   if (NS_OK == GetDocumentElement(&root)) 
   {  
+#if 1
     ToXIF(converter,root);
+#else
+    // Make a content iterator over the selection:
+    nsCOMPtr<nsIContentIterator> iter;
+    nsresult res = nsComponentManager::CreateInstance(kCContentIteratorCID, nsnull,
+                                                      nsIContentIterator::GetIID(), 
+                                                      getter_AddRefs(iter));
+    if ((NS_SUCCEEDED(res)) && iter)
+    {
+      nsCOMPtr<nsIContent> rootContent (do_QueryInterface(root));
+      if (rootContent)
+      {
+        iter->Init(rootContent);
+        // loop through the content iterator for each content node
+        while (NS_COMFALSE == iter->IsDone())
+        {
+          nsCOMPtr<nsIContent> content;
+          res = iter->CurrentNode(getter_AddRefs(content));
+          if (NS_FAILED(res))
+            break;
+          //content->BeginConvertToXIF(converter);
+          content->ConvertContentToXIF(converter);
+          //content->FinishConvertToXIF(converter);
+#if 0
+          nsCOMPtr<nsIDOMNode> node (do_QueryInterface(content));
+          if (node)
+            ToXIF(converter, node);
+#endif
+          iter->Next();
+        }
+      }
+    }
+#endif
     NS_RELEASE(root);
   }
+
   converter.AddEndTag("section_body");
 
   converter.AddEndTag("section");
-
-  converter.Write();
-  
 }
 
 static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
@@ -2923,6 +2899,11 @@ nsDocument::IncrementModCount(PRInt32 aNumMods)
   return NS_OK;
 }
 
+//
+// FindContent does a depth-first search from aStartNode
+// and returns the first of aTest1 or aTest2 which it finds.
+// I think.
+//
 nsIContent* nsDocument::FindContent(const nsIContent* aStartNode,
                                     const nsIContent* aTest1, 
                                     const nsIContent* aTest2) const
@@ -2950,28 +2931,6 @@ nsIContent* nsDocument::FindContent(const nsIContent* aStartNode,
   return nsnull;
 }
 
-PRBool nsDocument::IsInRange(const nsIContent *aStartContent, const nsIContent* aEndContent, const nsIContent* aContent) const
-{
-  PRBool  result;
-
-  if (aStartContent == aEndContent) 
-  {
-    return PRBool(aContent == aStartContent);
-  }
-  else if (aStartContent == aContent || aEndContent == aContent)
-  {
-    result = PR_TRUE;
-  }
-  else
-  {
-    result = IsBefore(aStartContent,aContent);
-    if (result == PR_TRUE)
-      result = IsBefore(aContent,aEndContent);
-  }
-  return result;
-
-}
-
 
 /**
  *  Determines if the content is found within the selection
@@ -2981,66 +2940,13 @@ PRBool nsDocument::IsInRange(const nsIContent *aStartContent, const nsIContent* 
  *  @param   param -- description
  *  @return  PR_TRUE if the content is found within the selection
  */
-PRBool nsDocument::IsInSelection(nsIDOMSelection* aSelection, const nsIContent* aContent) const
+PRBool
+nsDocument::IsInSelection(nsIDOMSelection* aSelection, const nsIContent* aContent) const
 {
-  PRBool          result = PR_FALSE;
-  
-  
-  if (aSelection != nsnull) {
-    //traverses through an iterator to see if the acontent is in the ranges
-    nsIEnumerator *enumerator;
-    if (NS_SUCCEEDED(aSelection->QueryInterface(kIEnumeratorIID, (void **)&enumerator))) 
-    {
-      for (enumerator->First();NS_OK != enumerator->IsDone() ; enumerator->Next()) {
-        nsIDOMRange* range = nsnull;
-        if (NS_SUCCEEDED(enumerator->CurrentItem((nsISupports**)&range)))
-        {
-          nsIDOMNode* startNode = nsnull;
-          nsIDOMNode* endNode = nsnull;
-
-          range->GetStartParent(&startNode); 
-          range->GetEndParent(&endNode);
-          
-          if (startNode && endNode)
-          {
-            nsIContent* start;
-            nsIContent* end;
-
-            if (NS_SUCCEEDED(startNode->QueryInterface(kIContentIID, (void **)&start)) &&
-                NS_SUCCEEDED(endNode->QueryInterface(kIContentIID, (void **)&end)) )
-            {
-              result = IsInRange(start,end,aContent);
-            }
-            NS_IF_RELEASE(start);
-            NS_IF_RELEASE(end);
-          }
-          NS_IF_RELEASE(startNode);
-          NS_IF_RELEASE(endNode);
-          NS_RELEASE(range);
-        }
-        if (result) break;
-      }
-      NS_IF_RELEASE(enumerator);
-    }
-  }
-  return result;
-}
-
-
-
-PRBool nsDocument::IsBefore(const nsIContent *aNewContent, const nsIContent* aCurrentContent) const
-{
-
-  PRBool result = PR_FALSE;
-
-  if (nsnull != aNewContent && nsnull != aCurrentContent && aNewContent != aCurrentContent)
-  {
-    nsIContent* test = FindContent(mRootContent,aNewContent,aCurrentContent);
-    if (test == aNewContent)
-      result = PR_TRUE;
-    NS_RELEASE(test);
-  }
-  return result;
+  PRBool aYes = PR_FALSE;
+  nsCOMPtr<nsIDOMNode> node (do_QueryInterface((nsIContent *) aContent));
+  aSelection->ContainsNode(node, PR_FALSE, &aYes);
+  return aYes;
 }
 
 nsIContent* nsDocument::GetPrevContent(const nsIContent *aContent) const

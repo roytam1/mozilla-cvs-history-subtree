@@ -18,19 +18,20 @@
 #include "prprf.h"
 #include "prmem.h"
 #include "nsCOMPtr.h"
-#include "nsINetService.h"
 #include "nsIStringBundle.h"
 #include "nsMsgComposeStringBundle.h"
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
+#include "nsIIOService.h"
+#include "nsIURI.h"
 
 /* This is the next generation string retrieval call */
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
-#define COMPOSE_BE_URL       "resource:/res/mailnews/messenger/compose_be.properties"
+#define COMPOSE_BE_URL       "resource:/chrome/messengercompose/content/default/composebe_en.properties"
 
 extern "C" 
 char *
@@ -46,7 +47,7 @@ ComposeBEGetStringByIDREAL(PRInt32 stringID)
   if (!NS_SUCCEEDED(res) || !prefs)
     propertyURL = COMPOSE_BE_URL;
 
-  NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &res); 
+  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &res);
   if (!NS_SUCCEEDED(res) || (nsnull == pNetService)) 
   {
       return PL_strdup("???");   // Don't I18N this string...failsafe return value
@@ -55,10 +56,14 @@ ComposeBEGetStringByIDREAL(PRInt32 stringID)
   NS_WITH_SERVICE(nsIStringBundleService, sBundleService, kStringBundleServiceCID, &res); 
   if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
   {
-    nsIURL      *url = nsnull;
+    nsCOMPtr<nsIURI>	url;
     nsILocale   *locale = nsnull;
 
-    res = pNetService->CreateURL(&url, nsString(propertyURL), nsnull, nsnull, nsnull);
+#if 1
+    nsIStringBundle* sBundle = nsnull;
+    res = sBundleService->CreateBundle(propertyURL, locale, &sBundle);
+#else
+    res = pNetService->NewURI(propertyURL, nsnull, getter_AddRefs(url));
     // cleanup...if necessary
     if (propertyURL != COMPOSE_BE_URL)
       PR_FREEIF(propertyURL);
@@ -73,13 +78,20 @@ ComposeBEGetStringByIDREAL(PRInt32 stringID)
 
     nsIStringBundle* sBundle = nsnull;
     res = sBundleService->CreateBundle(url, locale, &sBundle);
+#endif
     if (NS_FAILED(res)) 
     {
       return PL_strdup("???");   // Don't I18N this string...failsafe return value
     }
 
     nsAutoString v("");
+#if 1
+    PRUnichar *ptrv = nsnull;
+    res = sBundle->GetStringFromID(stringID, &ptrv);
+    v = ptrv;
+#else
     res = sBundle->GetStringFromID(stringID, v);
+#endif
     if (NS_FAILED(res)) 
     {
       char    buf[128];

@@ -724,6 +724,22 @@ nsRenderingContextPS :: FillRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord
   return NS_OK;
 }
 
+NS_IMETHODIMP 
+nsRenderingContextPS :: InvertRect(const nsRect& aRect)
+{
+	NS_NOTYETIMPLEMENTED("nsRenderingContextPS::InvertRect");
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsRenderingContextPS :: InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+{
+	NS_NOTYETIMPLEMENTED("nsRenderingContextPS::InvertRect");
+
+  return NS_OK;
+}
+
 /** ---------------------------------------------------
  *  See documentation in nsIRenderingContext.h
  *	@update 12/21/98 dwc
@@ -1215,6 +1231,11 @@ NS_IMETHODIMP nsRenderingContextPS :: CopyOffScreenBits(nsDrawingSurface aSrcSur
   return NS_OK;
 }
 
+NS_IMETHODIMP nsRenderingContextPS::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+{
+  return NS_OK;
+}
+
 /** ---------------------------------------------------
  *  See documentation in nsIRenderingContext.h
  *	@update 12/21/98 dwc
@@ -1254,7 +1275,8 @@ nsRenderingContextPS :: PostscriptTextOut(const char *aString, PRUint32 aLength,
 int             ptr = 0;
 unsigned int    i;
 char            *buf = 0;
-nscoord         fontHeight = 0,yCoord;
+nscoord         fontHeight = 0;
+//nscoord 	yCoord;
 const nsFont    *font;
 
   mFontMetrics->GetHeight(fontHeight);
@@ -1323,12 +1345,10 @@ NS_IMETHODIMP
 nsRenderingContextPS::SetColor(const nsString& aColor)
 {
   nscolor rgb;
-  char cbuf[40];
-  aColor.ToCString(cbuf, sizeof(cbuf));
-  if (NS_ColorNameToRGB(cbuf, &rgb)) {
+  if (NS_ColorNameToRGB(aColor, &rgb)) {
     SetColor(rgb);
   }
-  else if (NS_HexToRGB(cbuf, &rgb)) {
+  else if (NS_HexToRGB(aColor, &rgb)) {
     SetColor(rgb);
   }
   return NS_OK;

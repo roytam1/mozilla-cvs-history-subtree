@@ -39,6 +39,7 @@
 #include "nsIScrollableView.h"
 #include "nsIAreaFrame.h"
 #include "nsLayoutAtoms.h"
+#include "nsIPresShell.h"
 
 // Interface IDs
 static NS_DEFINE_IID(kAreaFrameIID, NS_IAREAFRAME_IID);
@@ -49,14 +50,25 @@ static NS_DEFINE_IID(kIFrameIID, NS_IFRAME_IID);
  * Root frame class.
  *
  * The root frame is the parent frame for the document element's frame.
- * It only supports having a single child frame which must be one of the
- * following:
- * - scroll frame
- * - area frame
- * - page sequence frame
+ * It only supports having a single child frame which must be an area
+ * frame
  */
 class RootFrame : public nsHTMLContainerFrame {
 public:
+  NS_IMETHOD AppendFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD InsertFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aPrevFrame,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD RemoveFrame(nsIPresContext& aPresContext,
+                         nsIPresShell&   aPresShell,
+                         nsIAtom*        aListName,
+                         nsIFrame*       aOldFrame);
+
   NS_IMETHOD Reflow(nsIPresContext&          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -113,8 +125,11 @@ RootFrame::SetRect(const nsRect& aRect)
 {
   nsresult  rv = nsHTMLContainerFrame::SetRect(aRect);
 
-  // Make sure our child's frame is adjusted as well
-  // Note: only do this if it's 'height' is 'auto'
+  // If our height is larger than our natural height (the height we returned
+  // as our desired height), then make sure the document element's frame is
+  // increased as well. This happens because the scroll frame will make sure
+  // that our height fills the entire scroll area.
+  // Note: only do this if the document element's 'height' is 'auto'
   nsIFrame* kidFrame = mFrames.FirstChild();
   if (nsnull != kidFrame) {
     nsStylePosition*  kidPosition;
@@ -133,6 +148,102 @@ RootFrame::SetRect(const nsRect& aRect)
 }
 
 NS_IMETHODIMP
+RootFrame::AppendFrames(nsIPresContext& aPresContext,
+                        nsIPresShell&   aPresShell,
+                        nsIAtom*        aListName,
+                        nsIFrame*       aFrameList)
+{
+  nsresult  rv;
+
+  NS_ASSERTION(!aListName, "unexpected child list name");
+  NS_PRECONDITION(mFrames.IsEmpty(), "already have a child frame");
+  if (aListName) {
+    // We only support unnamed principal child list
+    rv = NS_ERROR_INVALID_ARG;
+
+  } else if (!mFrames.IsEmpty()) {
+    // We only allow a single child frame
+    rv = NS_ERROR_FAILURE;
+
+  } else {
+    // Insert the new frames
+#ifdef NS_DEBUG
+    nsFrame::VerifyDirtyBitSet(aFrameList);
+#endif
+    mFrames.AppendFrame(nsnull, aFrameList);
+
+    // Generate a reflow command to reflow the newly inserted frame
+    nsIReflowCommand* reflowCmd;
+    rv = NS_NewHTMLReflowCommand(&reflowCmd, this, nsIReflowCommand::ReflowDirty);
+    if (NS_SUCCEEDED(rv)) {
+      aPresShell.AppendReflowCommand(reflowCmd);
+      NS_RELEASE(reflowCmd);
+    }
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+RootFrame::InsertFrames(nsIPresContext& aPresContext,
+                        nsIPresShell&   aPresShell,
+                        nsIAtom*        aListName,
+                        nsIFrame*       aPrevFrame,
+                        nsIFrame*       aFrameList)
+{
+  nsresult  rv;
+
+  // Because we only support a single child frame inserting is the same
+  // as appending
+  NS_PRECONDITION(!aPrevFrame, "unexpected previous sibling frame");
+  if (aPrevFrame) {
+    rv = NS_ERROR_UNEXPECTED;
+  } else {
+    rv = AppendFrames(aPresContext, aPresShell, aListName, aFrameList);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+RootFrame::RemoveFrame(nsIPresContext& aPresContext,
+                       nsIPresShell&   aPresShell,
+                       nsIAtom*        aListName,
+                       nsIFrame*       aOldFrame)
+{
+  nsresult  rv;
+
+  NS_ASSERTION(!aListName, "unexpected child list name");
+  if (aListName) {
+    // We only support the unnamed principal child list
+    rv = NS_ERROR_INVALID_ARG;
+  
+  } else if (aOldFrame == mFrames.FirstChild()) {
+    // It's our one and only child frame
+    // Damage the area occupied by the deleted frame
+    nsRect  damageRect;
+    aOldFrame->GetRect(damageRect);
+    Invalidate(damageRect, PR_FALSE);
+
+    // Remove the frame and destroy it
+    mFrames.DestroyFrame(aPresContext, aOldFrame);
+
+    // Generate a reflow command so we get reflowed
+    nsIReflowCommand* reflowCmd;
+    rv = NS_NewHTMLReflowCommand(&reflowCmd, this, nsIReflowCommand::ReflowDirty);
+    if (NS_SUCCEEDED(rv)) {
+      aPresShell.AppendReflowCommand(reflowCmd);
+      NS_RELEASE(reflowCmd);
+    }
+
+  } else {
+    rv = NS_ERROR_FAILURE;
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
 RootFrame::Reflow(nsIPresContext&          aPresContext,
                   nsHTMLReflowMetrics&     aDesiredSize,
                   const nsHTMLReflowState& aReflowState,
@@ -144,7 +255,8 @@ RootFrame::Reflow(nsIPresContext&          aPresContext,
   // Initialize OUT parameter
   aStatus = NS_FRAME_COMPLETE;
 
-  PRBool  isChildInitialReflow = PR_FALSE;
+  PRBool  isStyleChange = PR_FALSE;
+  PRBool  isDirtyChildReflow = PR_FALSE;
 
   // Check for an incremental reflow
   if (eReflowReason_Incremental == aReflowState.reason) {
@@ -152,40 +264,22 @@ RootFrame::Reflow(nsIPresContext&          aPresContext,
     nsIFrame* targetFrame;
     aReflowState.reflowCommand->GetTarget(targetFrame);
     if (this == targetFrame) {
-      nsIReflowCommand::ReflowType  reflowType;
-      nsIFrame*                     childFrame;
-
       // Get the reflow type
+      nsIReflowCommand::ReflowType  reflowType;
       aReflowState.reflowCommand->GetType(reflowType);
 
-      if ((nsIReflowCommand::FrameAppended == reflowType) ||
-          (nsIReflowCommand::FrameInserted == reflowType)) {
+      switch (reflowType) {
+      case nsIReflowCommand::ReflowDirty:
+        isDirtyChildReflow = PR_TRUE;
+        break;
 
-        NS_ASSERTION(mFrames.IsEmpty(), "only one child frame allowed");
+      case nsIReflowCommand::StyleChanged:
+        // Remember it's a style change so we can set the reflow reason below
+        isStyleChange = PR_TRUE;
+        break;
 
-        // Insert the frame into the child list
-        aReflowState.reflowCommand->GetChildFrame(childFrame);
-        mFrames.SetFrames(childFrame);
-
-        // It's the child frame's initial reflow
-        isChildInitialReflow = PR_TRUE;
-
-      } else if (nsIReflowCommand::FrameRemoved == reflowType) {
-        nsIFrame* deletedFrame;
-
-        // Get the child frame we should delete
-        aReflowState.reflowCommand->GetChildFrame(deletedFrame);
-        NS_ASSERTION(deletedFrame == mFrames.FirstChild(), "not a child frame");
-
-        // Remove it from the child list
-        if (deletedFrame == mFrames.FirstChild()) {
-          // Damage the area occupied by the deleted frame
-          nsRect  damageRect;
-          deletedFrame->GetRect(damageRect);
-          Invalidate(damageRect, PR_FALSE);
-
-          mFrames.DeleteFrame(aPresContext, deletedFrame);
-        }
+      default:
+        NS_ASSERTION(PR_FALSE, "unexpected reflow command type");
       }
 
     } else {
@@ -199,20 +293,25 @@ RootFrame::Reflow(nsIPresContext&          aPresContext,
   // Reflow our one and only child frame
   nsHTMLReflowMetrics kidDesiredSize(nsnull);
   if (mFrames.IsEmpty()) {
-    // Return our desired size
+    // We have no child frame, so return an empty size
     aDesiredSize.width = aDesiredSize.height = 0;
     aDesiredSize.ascent = aDesiredSize.descent = 0;
 
   } else {
     nsIFrame* kidFrame = mFrames.FirstChild();
 
-    // We must pass in that the available height is unconstrained, because
-    // constrained is only for when we're paginated...
+    // We must specify an unconstrained available height, because constrained
+    // is only for when we're paginated...
     nsHTMLReflowState kidReflowState(aPresContext, aReflowState, kidFrame,
                                      nsSize(aReflowState.availableWidth,
                                             NS_UNCONSTRAINEDSIZE));
-    if (isChildInitialReflow) {
+    if (isDirtyChildReflow) {
+      // Note: the only reason the frame would be dirty would be if it had
+      // just been inserted or appended
       kidReflowState.reason = eReflowReason_Initial;
+      kidReflowState.reflowCommand = nsnull;
+    } else if (isStyleChange) {
+      kidReflowState.reason = eReflowReason_StyleChange;
       kidReflowState.reflowCommand = nsnull;
     }
 
@@ -222,76 +321,90 @@ RootFrame::Reflow(nsIPresContext&          aPresContext,
       ReflowChild(kidFrame, aPresContext, kidDesiredSize, kidReflowState,
                   aStatus);
 
-      // Get the total size including any space needed for absolute positioned
-      // elements
-      // XXX It would be nice if this were part of the reflow metrics...
+      // The document element's background should cover the entire canvas, so
+      // take into account the combined area and any space taken up by
+      // absolutely positioned elements
+      nsMargin      border;
+      nsFrameState  kidState;
+
+      if (!kidReflowState.mStyleSpacing->GetBorder(border)) {
+        NS_NOTYETIMPLEMENTED("percentage border");
+      }
+      kidFrame->GetFrameState(&kidState);
+
+      // First check the combined area
+      if (NS_FRAME_OUTSIDE_CHILDREN & kidState) {
+        // The background covers the content area and padding area, so check
+        // for children sticking outside the child frame's padding edge
+        nscoord paddingEdgeX = kidDesiredSize.width - border.right;
+        nscoord paddingEdgeY = kidDesiredSize.height - border.bottom;
+
+        if (kidDesiredSize.mCombinedArea.XMost() > paddingEdgeX) {
+          kidDesiredSize.width = kidDesiredSize.mCombinedArea.XMost() +
+                                 border.right;
+        }
+        if (kidDesiredSize.mCombinedArea.YMost() > paddingEdgeY) {
+          kidDesiredSize.height = kidDesiredSize.mCombinedArea.YMost() +
+                                  border.bottom;
+        }
+      }
+
+      // XXX It would be nice if this were also part of the reflow metrics...
       nsIAreaFrame* areaFrame;
       if (NS_SUCCEEDED(kidFrame->QueryInterface(kAreaFrameIID, (void**)&areaFrame))) {
-        nscoord xMost, yMost;
+        // Get the x-most and y-most of the absolutely positioned children
+        nscoord positionedXMost, positionedYMost;
+        areaFrame->GetPositionedInfo(positionedXMost, positionedYMost);
+        
+        // The background covers the content area and padding area, so check
+        // for children sticking outside the padding edge
+        nscoord paddingEdgeX = kidDesiredSize.width - border.right;
+        nscoord paddingEdgeY = kidDesiredSize.height - border.bottom;
 
-        areaFrame->GetPositionedInfo(xMost, yMost);
-        if (xMost > kidDesiredSize.width) {
-          kidDesiredSize.width = xMost;
+        if (positionedXMost > paddingEdgeX) {
+          kidDesiredSize.width = positionedXMost + border.right;
         }
-        if (yMost > kidDesiredSize.height) {
-          kidDesiredSize.height = yMost;
+        if (positionedYMost > paddingEdgeY) {
+          kidDesiredSize.height = positionedYMost + border.bottom;
         }
       }
 
       // If our height is fixed, then make sure the child frame plus its top and
       // bottom margin is at least that high as well...
-      if (NS_AUTOHEIGHT != aReflowState.computedHeight) {
-        nscoord totalHeight = kidDesiredSize.height + kidReflowState.computedMargin.top +
-          kidReflowState.computedMargin.bottom;
+      if (NS_AUTOHEIGHT != aReflowState.mComputedHeight) {
+        nscoord totalHeight = kidDesiredSize.height + kidReflowState.mComputedMargin.top +
+          kidReflowState.mComputedMargin.bottom;
 
-        if (totalHeight < aReflowState.computedHeight) {
-          kidDesiredSize.height += aReflowState.computedHeight - totalHeight;
+        if (totalHeight < aReflowState.mComputedHeight) {
+          kidDesiredSize.height += aReflowState.mComputedHeight - totalHeight;
         }
       }
-      nsRect  rect(kidReflowState.computedMargin.left, kidReflowState.computedMargin.top,
+
+      // Position and size the child frame
+      nsRect  rect(kidReflowState.mComputedMargin.left, kidReflowState.mComputedMargin.top,
                    kidDesiredSize.width, kidDesiredSize.height);
       kidFrame->SetRect(rect);
-    }
 
-    // If this is a resize reflow then do a repaint
-    if (eReflowReason_Resize == aReflowState.reason) {
-      nsRect  damageRect(0, 0, aReflowState.availableWidth, aReflowState.availableHeight);
-      Invalidate(damageRect, PR_FALSE);
+      // If the child frame was just inserted, then we're responsible for making sure
+      // it repaints
+      if (isDirtyChildReflow) {
+        // Damage the area occupied by the deleted frame
+        Invalidate(rect, PR_FALSE);
+      }
     }
 
     // Return our desired size
-    aDesiredSize.width = kidDesiredSize.width + kidReflowState.computedMargin.left +
-      kidReflowState.computedMargin.right;
-    aDesiredSize.height = kidDesiredSize.height + kidReflowState.computedMargin.top +
-      kidReflowState.computedMargin.bottom;
+    aDesiredSize.width = kidDesiredSize.width + kidReflowState.mComputedMargin.left +
+      kidReflowState.mComputedMargin.right;
+    aDesiredSize.height = kidDesiredSize.height + kidReflowState.mComputedMargin.top +
+      kidReflowState.mComputedMargin.bottom;
     aDesiredSize.ascent = aDesiredSize.height;
     aDesiredSize.descent = 0;
+    // XXX Don't completely ignore NS_FRAME_OUTSIDE_CHILDREN for child frames
+    // that stick out on the left or top edges...
 
-    // Set NS_FRAME_OUTSIDE_CHILDREN flag, or reset it, as appropriate
-    nsFrameState  kidState;
-    kidFrame->GetFrameState(&kidState);
-    if (NS_FRAME_OUTSIDE_CHILDREN & kidState) {
-      nscoord kidXMost = kidReflowState.computedMargin.left +
-                         kidDesiredSize.mCombinedArea.XMost();
-      nscoord kidYMost = kidReflowState.computedMargin.top +
-                         kidDesiredSize.mCombinedArea.YMost();
-
-      if ((kidXMost > aDesiredSize.width) || (kidYMost > aDesiredSize.height)) {
-        aDesiredSize.mCombinedArea.x = 0;
-        aDesiredSize.mCombinedArea.y = 0;
-        aDesiredSize.mCombinedArea.width = PR_MAX(aDesiredSize.width, kidXMost);
-        aDesiredSize.mCombinedArea.height = PR_MAX(aDesiredSize.height, kidYMost);
-        mState |= NS_FRAME_OUTSIDE_CHILDREN;
-
-      } else {
-        mState &= ~NS_FRAME_OUTSIDE_CHILDREN;
-      }
-
-    } else {
-      mState &= ~NS_FRAME_OUTSIDE_CHILDREN;
-    }
-
-    // XXX Temporary hack. Remember this for later when our parent resizes us
+    // XXX Temporary hack. Remember this for later when our parent resizes us.
+    // See SetRect()
     mNaturalHeight = aDesiredSize.height;
   }
 

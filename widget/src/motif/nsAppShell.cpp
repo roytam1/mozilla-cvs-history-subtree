@@ -21,6 +21,9 @@
 #include "nsIServiceManager.h"
 #include "nsIEventQueueService.h"
 #include "nsICmdLineService.h"
+
+#include "nsIMotifAppContextService.h"
+
 #include <stdlib.h>
 
 #ifdef LINUX
@@ -31,15 +34,18 @@
 #include <X11/Xmu/Editres.h>
 #endif
 
-XtAppContext gAppContext;
+#include "xlibrgb.h"
+
+#include "nsIPref.h"
 
 //-------------------------------------------------------------------------
 //
 // XPCOM CIDs
 //
 //-------------------------------------------------------------------------
-static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-static NS_DEFINE_IID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
+static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
 //-------------------------------------------------------------------------
 //
@@ -56,6 +62,8 @@ NS_METHOD nsAppShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
   return NS_OK;
 }
 
+XtAppContext nsAppShell::sAppContext = nsnull;
+
 //-------------------------------------------------------------------------
 //
 // Create the application shell
@@ -64,13 +72,9 @@ NS_METHOD nsAppShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
 
 NS_METHOD nsAppShell::Create(int* bac, char ** bav)
 {
-  char *home=nsnull;
-  char *path=nsnull;
-
   int argc = bac ? *bac : 0;
   char **argv = bav;
 
-#if 1
   nsresult rv;
 
   NS_WITH_SERVICE(nsICmdLineService, cmdLineArgs, kCmdLineServiceCID, &rv);
@@ -84,22 +88,30 @@ NS_METHOD nsAppShell::Create(int* bac, char ** bav)
     if(NS_FAILED(rv))
       argv = bav;
   }
-#endif
 
   XtSetLanguageProc(NULL, NULL, NULL);
 							
-  mTopLevel = XtAppInitialize(&mAppContext,          // app_context_return
-							  "nsAppShell", 		 //	application_class
-							  NULL, 				 //	options
-							  0, 			         //	num_options
-                              &argc,
-							  argv,
-							  NULL, 				 //	fallback_resources
-							  NULL,                  // args 
-							  0);		             //	num_args
+  mTopLevel = XtAppInitialize(&sAppContext,   // app_context_return
+                              "nsAppShell",   // application_class
+                              NULL,           // options
+                              0,              // num_options
+                              &argc,          // argc_in_out
+                              argv,           // argv_in_out
+                              NULL,           // fallback_resources
+                              NULL,           // args
+                              0);             // num_args
 
-  // XXX This is BAD -- needs to be fixed
-  gAppContext = mAppContext;
+  xlib_set_xt_app_context(sAppContext);
+
+  printf("nsAppShell::Create() app_context = %p\n",sAppContext);
+
+  xlib_rgb_init(XtDisplay(mTopLevel), XtScreen(mTopLevel));
+
+  printf("xlib_rgb_init(display=%p,screen=%p)\n",
+         XtDisplay(mTopLevel),
+         XtScreen(mTopLevel));
+
+  SetAppContext(sAppContext);
 
   return NS_OK;
 }
@@ -110,47 +122,18 @@ NS_METHOD nsAppShell::Create(int* bac, char ** bav)
 //
 //-------------------------------------------------------------------------
 
-// static void event_processor_callback(gpointer data,
-//                                      gint source,
-//                                      GdkInputCondition condition)
-// {
-//   nsIEventQueue *eventQueue = (nsIEventQueue*)data;
-//   eventQueue->ProcessPendingEvents();
-// }
-
-static void nsUnixEventProcessorCallback(XtPointer       aClosure, 
-                                         int *           aFd, 
-                                         XtIntervalId *  aId) 
+static void event_processor_callback(XtPointer       aClosure,
+                                     int *           aFd,
+                                     XtIntervalId *  aId)
 {
-//   NS_ASSERTION(*aFd==PR_GetEventQueueSelectFD(gUnixMainEventQueue), "Error in nsUnixMain.cpp:nsUnixEventProcessCallback");
-//   PR_ProcessPendingEvents(gUnixMainEventQueue);
-
-  nsIEventQueue *eventQueue = (nsIEventQueue*) aClosure;
+  nsIEventQueue *eventQueue = (nsIEventQueue*)aClosure;
   eventQueue->ProcessPendingEvents();
 }
-
-// NS_METHOD nsAppShell::Run()
-// {
-//   XtRealizeWidget(mTopLevel);
-
-//   XEvent event;
-//   for (;;) {
-//     XtAppNextEvent(mAppContext, &event);
-//     XtDispatchEvent(&event);
-//     if (mDispatchListener)
-//       mDispatchListener->AfterDispatch();
-//   } 
-
-//   return NS_OK;
-// }
-
 
 NS_METHOD nsAppShell::Run()
 {
   NS_ADDREF_THIS();
-
   nsresult   rv = NS_OK;
-
   nsIEventQueue * EQueue = nsnull;
 
   // Get the event queue service 
@@ -189,11 +172,11 @@ done:
 
   printf("Calling XtAppAddInput() with event queue\n");
 
-  XtAppAddInput(gAppContext, 
+  XtAppAddInput(nsAppShell::GetAppContext(),
                 EQueue->GetEventQueueSelectFD(),
-                (XtPointer)(XtInputReadMask), 
-                nsUnixEventProcessorCallback, 
-                0);
+                (XtPointer) XtInputReadMask, 
+                event_processor_callback, 
+                EQueue);
 
   XtRealizeWidget(mTopLevel);
 
@@ -209,7 +192,7 @@ done:
 
   for (;;) 
   {
-    XtAppNextEvent(mAppContext, &event);
+    XtAppNextEvent(sAppContext, &event);
 
     XtDispatchEvent(&event);
 
@@ -222,30 +205,65 @@ done:
   return NS_OK;
 }
 
-
-//This one put here by ZuperDee.
-
 NS_METHOD nsAppShell::Spinup()
 {
-  //FIXME: Need to implement.  --ZuperDee
   return NS_OK;
 }
 
 NS_METHOD nsAppShell::Spindown()
 {
-  //FIXME: Need to implement.  --ZuperDee
   return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+//
+// PushThreadEventQueue - begin processing events from a new queue
+//   note this is the Windows implementation and may suffice, but
+//   this is untested on motif.
+//
+//-------------------------------------------------------------------------
+NS_METHOD nsAppShell::PushThreadEventQueue()
+{
+  nsresult rv;
+
+  // push a nested event queue for event processing from netlib
+  // onto our UI thread queue stack.
+  NS_WITH_SERVICE(nsIEventQueueService, eQueueService, kEventQueueServiceCID, &rv);
+  if (NS_SUCCEEDED(rv))
+    rv = eQueueService->PushThreadEventQueue();
+  else
+    NS_ERROR("Appshell unable to obtain eventqueue service.");
+  return rv;
+}
+
+//-------------------------------------------------------------------------
+//
+// PopThreadEventQueue - stop processing on a previously pushed event queue
+//   note this is the Windows implementation and may suffice, but
+//   this is untested on motif.
+//
+//-------------------------------------------------------------------------
+NS_METHOD nsAppShell::PopThreadEventQueue()
+{
+  nsresult rv;
+
+  NS_WITH_SERVICE(nsIEventQueueService, eQueueService, kEventQueueServiceCID, &rv);
+  if (NS_SUCCEEDED(rv))
+    rv = eQueueService->PopThreadEventQueue();
+  else
+    NS_ERROR("Appshell unable to obtain eventqueue service.");
+  return rv;
 }
 
 NS_METHOD nsAppShell::GetNativeEvent(PRBool &aRealEvent, void *&aEvent)
 {
-  //FIXME: Need to implement.  --ZuperDee
+  //XXX:Implement this.
   return NS_OK;
 }
 
 NS_METHOD nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void * aEvent)
 {
-  //FIXME: Need to implement.  --ZuperDee
+  //XXX:Implement this.
   return NS_OK;
 }
 
@@ -268,7 +286,7 @@ NS_METHOD nsAppShell::Exit()
 //-------------------------------------------------------------------------
 nsAppShell::nsAppShell()
 { 
-  mRefCnt = 0;
+  NS_INIT_REFCNT();
   mDispatchListener = 0;
 }
 
@@ -294,9 +312,53 @@ void* nsAppShell::GetNativeData(PRUint32 aDataType)
   return nsnull;
 }
 
+
 NS_METHOD nsAppShell::EventIsForModalWindow(PRBool aRealEvent, void *aEvent, nsIWidget *aWidget,
                                             PRBool *aForWindow)
 {
-  //FIXME: Need to implement.  --ZuperDee
+  //XXX:Implement this.
   return NS_OK;
+}
+
+static NS_DEFINE_CID(kCMotifAppContextServiceCID, NS_MOTIF_APP_CONTEXT_SERVICE_CID);
+
+//-------------------------------------------------------------------------
+//
+// SetAppContext
+//
+//-------------------------------------------------------------------------
+/* static */ void 
+nsAppShell::SetAppContext(XtAppContext aAppContext)
+{
+  NS_ASSERTION(aAppContext != nsnull,"App context cant be null.");
+
+  static PRBool once = PR_TRUE;
+
+  if (once)
+  {
+    once = PR_FALSE;
+
+    nsresult   rv;
+    nsIMotifAppContextService * ac_service = nsnull;
+    
+    rv = nsComponentManager::CreateInstance(kCMotifAppContextServiceCID,
+                                            nsnull,
+                                            nsIMotifAppContextService::GetIID(),
+                                            (void **)& ac_service);
+    
+    NS_ASSERTION(rv == NS_OK,"Cannot obtain app context service.");
+
+    if (ac_service)
+    {
+      printf("nsAppShell::SetAppContext() ac_service = %p\n",ac_service);
+
+      nsresult rv2 = ac_service->SetAppContext(aAppContext);
+
+      NS_ASSERTION(rv2 == NS_OK,"Cannot set the app context.");
+
+      printf("nsAppShell::SetAppContext() All is ok.\n");
+
+      NS_RELEASE(ac_service);
+    }
+  }
 }

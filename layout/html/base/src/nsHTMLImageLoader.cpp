@@ -20,10 +20,7 @@
 #include "nsFrame.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 
 #ifdef DEBUG
@@ -54,7 +51,7 @@ void
 nsHTMLImageLoader::Init(nsIFrame* aFrame,
                         nsHTMLImageLoaderCB aCallBack,
                         void* aClosure,
-                        nsIURL* aBaseURL,
+                        nsIURI* aBaseURL,
                         const nsString& aURLSpec)
 {
   mFrame = aFrame;
@@ -85,19 +82,7 @@ nsHTMLImageLoader::SetURL(const nsString& aNewSpec)
 #ifndef NECKO
     rv = NS_MakeAbsoluteURL(mBaseURL, empty, mURLSpec, mURL);
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return;
-
-    nsIURI *baseUri = nsnull;
-    rv = mBaseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-    if (NS_FAILED(rv)) return;
-
-    char *absUrl = nsnull;
-    const char *urlSpec = mURLSpec.GetBuffer();
-    rv = service->MakeAbsolute(urlSpec, baseUri, &absUrl);
-    NS_RELEASE(baseUri);
-    mURL = absUrl;
-    delete [] absUrl;
+    rv = NS_MakeAbsoluteURI(mURLSpec, mBaseURL, mURL);
 #endif // NECKO
     if (NS_FAILED(rv)) {
       mURL = mURLSpec;
@@ -238,17 +223,15 @@ nsHTMLImageLoader::GetDesiredSize(nsIPresContext* aPresContext,
   PRBool fixedContentHeight = PR_FALSE;
 
   if (aReflowState) {
-    widthConstraint = aReflowState->computedWidth;
-    heightConstraint = aReflowState->computedHeight;
+    widthConstraint = aReflowState->mComputedWidth;
+    heightConstraint = aReflowState->mComputedHeight;
 
     // Determine whether the image has fixed content width and height
-    fixedContentWidth = aReflowState->HaveFixedContentWidth();
-    fixedContentHeight = aReflowState->HaveFixedContentHeight();
-    if (NS_INTRINSICSIZE == widthConstraint) {
-      fixedContentWidth = PR_FALSE;
+    if (NS_UNCONSTRAINEDSIZE != widthConstraint) {
+      fixedContentWidth = PR_TRUE;
     }
-    if (NS_INTRINSICSIZE == heightConstraint) {
-      fixedContentHeight = PR_FALSE;
+    if (NS_UNCONSTRAINEDSIZE != heightConstraint) {
+      fixedContentHeight = PR_TRUE;
     }
   }
 
@@ -270,9 +253,9 @@ nsHTMLImageLoader::GetDesiredSize(nsIPresContext* aPresContext,
         newWidth = widthConstraint;
         if (mFlags.mHaveIntrinsicImageSize) {
           float width = mIntrinsicImageSize.width
-            ? mIntrinsicImageSize.width
-            : mIntrinsicImageSize.height;         // avoid divide by zero
-          float height = mIntrinsicImageSize.height;
+            ? (float) mIntrinsicImageSize.width
+            : (float) mIntrinsicImageSize.height;     // avoid divide by zero
+          float height = (float) mIntrinsicImageSize.height;
           newHeight = (nscoord)
             NSToIntRound(widthConstraint * height / width);
           haveComputedSize = PR_TRUE;
@@ -289,10 +272,10 @@ nsHTMLImageLoader::GetDesiredSize(nsIPresContext* aPresContext,
       // once we have the intrinsic image size.
       newHeight = heightConstraint;
       if (mFlags.mHaveIntrinsicImageSize) {
-        float width = mIntrinsicImageSize.width;
+        float width = (float) mIntrinsicImageSize.width;
         float height = mIntrinsicImageSize.height
-          ? mIntrinsicImageSize.height
-          : mIntrinsicImageSize.width;            // avoid divide by zero
+          ? (float) mIntrinsicImageSize.height
+          : (float) mIntrinsicImageSize.width;         // avoid divide by zero
         newWidth = (nscoord)
           NSToIntRound(heightConstraint * width / height);
         haveComputedSize = PR_TRUE;

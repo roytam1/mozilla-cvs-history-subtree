@@ -19,20 +19,17 @@
 #ifndef nsPop3Protocol_h__
 #define nsPop3Protocol_h__
 
+#include "nsCOMPtr.h"
 #include "nsIStreamListener.h"
-#include "nsITransport.h"
 #include "nsIOutputStream.h"
 #include "nsIInputStream.h"
 #include "nsIPop3URL.h"
 #include "nsIPop3Sink.h"
 #include "nsMsgLineBuffer.h"
-#include "nsCOMPtr.h"
 #include "nsMsgProtocol.h"
 #include "MailNewsTypes.h"
 
 #include "rosetta.h"
-#include HG09893
-#include HG47233
 
 #include "prerror.h"
 #include "plhash.h"
@@ -113,7 +110,6 @@ extern int MK_CONNECTION_TIMED_OUT;
 #define MK_CONNECTION_TIMED_OUT -241
 #endif
 
-#define POP3_PORT 110 // The IANA port for Pop3
 #define OUTPUT_BUFFER_SIZE 8192 // maximum size of command string
 
 /* structure to hold data pertaining to the active state of
@@ -281,36 +277,36 @@ typedef struct _Pop3ConData {
     PRBool delete_server_message_during_top_traversal;
     PRBool get_url;
     PRBool seenFromHeader;
-    char *sender_info;
 } Pop3ConData;
 
 class nsPop3Protocol : public nsMsgProtocol, public nsMsgLineBuffer
 {
 public:
-    nsPop3Protocol(nsIURL* aURL);  
+    nsPop3Protocol(nsIURI* aURL);  
     virtual ~nsPop3Protocol();
     
-    virtual nsresult LoadUrl(nsIURL *aURL, nsISupports * aConsumer = nsnull);
+    virtual nsresult LoadUrl(nsIURI *aURL, nsISupports * aConsumer = nsnull);
 
     const char* GetUsername() { return m_username.GetBuffer(); };
     void SetUsername(const char* name);
 
-    const char* GetPassword() { return m_password.GetBuffer(); };
+    const char* GetPassword();
     void SetPassword(const char* password);
 
 private:
 
     PRUint32 m_pop3CapabilityFlags;
-    nsString m_username;
-    nsString m_password;
+    nsCString m_username;
+    nsCString m_password;
     Pop3ConData* m_pop3ConData;
-	
-	nsString m_commandResponse;
+	nsCString m_senderInfo;
+	nsCString m_commandResponse;
 
-	virtual nsresult ProcessProtocolState(nsIURL* aURL, nsIInputStream* aInputStream, PRUint32 aLength); 
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length);
 	virtual nsresult CloseSocket();
-	virtual PRInt32 SendData(nsIURL * aURL, const char * dataBuffer);
-	void Initialize(nsIURL * aURL);
+	virtual PRInt32 SendData(nsIURI * aURL, const char * dataBuffer);
+	void Initialize(nsIURI * aURL);
 
     nsCOMPtr<nsIPop3URL> m_nsIPop3URL;
     nsCOMPtr<nsIPop3Sink> m_nsIPop3Sink;

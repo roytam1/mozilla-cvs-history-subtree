@@ -77,12 +77,13 @@ struct nsHTMLElement {
   static  PRBool  IsInlineEntity(eHTMLTags aTag);
   static  PRBool  IsFlowEntity(eHTMLTags aTag);
   static  PRBool  IsBlockCloser(eHTMLTags aTag);
+  static  int     GetSynonymousGroups(int aGroup);
 
+  CTagList*       GetSynonymousTags(void) const {return mSynonymousTags;}
   CTagList*       GetRootTags(void) const {return mRootNodes;}
   CTagList*       GetEndRootTags(void) const {return mEndRootNodes;}
   CTagList*       GetAutoCloseStartTags(void) const {return mAutocloseStart;}
   CTagList*       GetAutoCloseEndTags(void) const {return mAutocloseEnd;}
-  CTagList*       GetSynonymousTags(void) const {return mSynonymousTags;}
   eHTMLTags       GetCloseTargetForEndTag(nsEntryStack& aTagStack,PRInt32 anIndex) const;
 
   CTagList*       GetSpecialChildren(void) const {return mSpecialKids;}
@@ -145,6 +146,7 @@ static const int kBadContentWatch = 0x0020;
 static const int kNoStyleLeaksIn  = 0x0040; 
 static const int kNoStyleLeaksOut = 0x0080; 
 static const int kMustCloseSelf   = 0x0100; 
+static const int kSaveMisplaced   = 0x0200; //If set, then children this tag can't contain are pushed onto the misplaced stack
 
 //*********************************************************************************************
 // The following ints define the standard groups of HTML elements...
@@ -177,6 +179,7 @@ static const int kTable         = 0x10000;//  TR,TD,THEAD,TBODY,TFOOT,CAPTION,TH
 static const int kInlineEntity  = (kPCDATA|kFontStyle|kPhrase|kSpecial|kFormControl|kExtensions);  //  #PCDATA, %fontstyle, %phrase, %special, %formctrl
 static const int kBlockEntity   = (kHeading|kList|kPreformatted|kBlock); //  %heading, %list, %preformatted, %blockmisc
 static const int kFlowEntity    = (kBlockEntity|kInlineEntity); //  %block, %inline
+static const int kAllTags       = 0xffffff;
 
 
 #endif

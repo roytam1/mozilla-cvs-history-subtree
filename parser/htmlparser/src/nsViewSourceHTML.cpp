@@ -194,6 +194,11 @@ static void SetFont(const char* aFace,const char* aSize,PRBool aEnable,nsIConten
     theNode.Init(theToken,0);
     aSink.CloseContainer(theNode);
   }
+
+  while((theToken=(CToken*)theNode.PopAttributeToken())){
+    //dump the attributes since they're on the stack...
+  }
+
   if(theToken)
     gTokenRecycler->RecycleToken(theToken);
 }
@@ -213,12 +218,17 @@ static void SetColor(const char* aColor,PRBool aEnable,nsIContentSink& aSink) {
     theNode.Init(theToken,0);
     aSink.CloseContainer(theNode);
   }
+
+  while((theToken=(CToken*)theNode.PopAttributeToken())){
+    //dump the attributes since they're on the stack...
+  }
+
   if(theToken)
     gTokenRecycler->RecycleToken(theToken);
 }
 
 static void SetStyle(eHTMLTags theTag,PRBool aEnable,nsIContentSink& aSink) {
-  nsCParserNode theNode;
+  static nsCParserNode theNode;
   CToken*       theToken=0;
   if(aEnable){
     theToken=gTokenRecycler->CreateTokenOfType(eToken_start,theTag); 
@@ -230,6 +240,7 @@ static void SetStyle(eHTMLTags theTag,PRBool aEnable,nsIContentSink& aSink) {
     theNode.Init(theToken);
     aSink.CloseContainer(theNode);
   }
+
   if(theToken)
     gTokenRecycler->RecycleToken(theToken);
 }
@@ -242,11 +253,10 @@ static void SetStyle(eHTMLTags theTag,PRBool aEnable,nsIContentSink& aSink) {
  *  @param   
  *  @return  
  */
-CViewSourceHTML::CViewSourceHTML() : nsIDTD() {
+CViewSourceHTML::CViewSourceHTML() : nsIDTD(), mFilename("") {
   NS_INIT_REFCNT();
   mParser=0;
   mSink=0;
-  mFilename;
   mLineNumber=0;
   mTokenizer=0;
   mIsHTML=PR_FALSE;
@@ -341,9 +351,12 @@ NS_IMETHODIMP CViewSourceHTML::WillBuildModel(nsString& aFilename,PRBool aNotify
       //now let's automatically open the body...
     CStartToken theBodyToken(eHTMLTag_body);
     theNode.Init(&theBodyToken,0);
+    CAttributeToken theColor("bgcolor","white");
+    theNode.AddAttribute(&theColor);
+
     mSink->OpenBody(theNode);
 
-     //now let's automatically open the body...
+     //now let's automatically open the pre...
     if(mIsPlaintext) {
       CStartToken thePREToken(eHTMLTag_pre);
       theNode.Init(&thePREToken,0);
@@ -455,6 +468,21 @@ nsITokenRecycler* CViewSourceHTML::GetTokenRecycler(void){
 }
 
 /**
+ * Use this id you want to stop the building content model
+ * --------------[ Sets DTD to STOP mode ]----------------
+ * It's recommended to use this method in accordance with
+ * the parser's terminate() method.
+ *
+ * @update	harishd 07/22/99
+ * @param 
+ * @return
+ */
+nsresult  CViewSourceHTML::Terminate(void)
+{
+  return NS_ERROR_HTMLPARSER_STOPPARSING;
+}
+
+/**
  * Retrieve the preferred tokenizer for use by this DTD.
  * @update	gess12/28/98
  * @param   none
@@ -532,6 +560,15 @@ PRBool CViewSourceHTML::CanContain(PRInt32 aParent,PRInt32 aChild) const{
 }
 
 /**
+ * Give rest of world access to our tag enums, so that CanContain(), etc,
+ * become useful.
+ */
+NS_IMETHODIMP CViewSourceHTML::StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/**
  *  This method gets called to determine whether a given 
  *  tag is itself a container
  *  
@@ -558,12 +595,10 @@ nsresult WriteNewline(nsIContentSink& aSink,CSharedVSContext& aContext) {
 
   //if you're here, we already know gTokenRecyler is valid...
 
-  CToken* theToken = (CStartToken*)gTokenRecycler->CreateTokenOfType(eToken_start,eHTMLTag_br);
-  if(theToken){
-    aContext.mStartNode.Init(theToken);
-    result=aSink.AddLeaf(aContext.mStartNode); 
-    gTokenRecycler->RecycleToken(theToken);
-  }
+//  CToken* theToken = (CStartToken*)gTokenRecycler->CreateTokenOfType(eToken_start,eHTMLTag_br);
+  CStartToken theToken(eHTMLTag_br);
+  aContext.mStartNode.Init(&theToken);
+  result=aSink.AddLeaf(aContext.mStartNode); 
   return NS_OK;
 }
 
@@ -581,14 +616,11 @@ nsresult WriteNBSP(PRInt32 aCount, nsIContentSink& aSink,CSharedVSContext& aCont
 
   //if you're here, we already know gTokenRecyler is valid...
 
-  CToken* theToken = (CEntityToken*)gTokenRecycler->CreateTokenOfType(eToken_entity,eHTMLTag_unknown,"nbsp");
-  if(theToken){
-    aContext.mStartNode.Init(theToken);
-    int theIndex;
-    for(theIndex=0;theIndex<aCount;theIndex++)
-      result=aSink.AddLeaf(aContext.mStartNode); 
-    gTokenRecycler->RecycleToken(theToken);
-  }
+  CEntityToken theToken("nbsp");
+  aContext.mStartNode.Init(&theToken);
+  int theIndex;
+  for(theIndex=0;theIndex<aCount;theIndex++)
+    result=aSink.AddLeaf(aContext.mStartNode); 
 
   return NS_OK;
 }
@@ -610,7 +642,6 @@ nsresult WriteText(const nsString& aTextString,nsIContentSink& aSink,PRBool aPre
   PRInt32   theTextOffset=0;
   PRInt32   theOffset=-1; //aTextString.FindCharInSet("\t\n\r ",theStartOffset);
   PRInt32   theSpaces=0;
-  PRBool    theOutputReady=PR_FALSE;
   PRUnichar theChar=0;
   PRUnichar theNextChar=0;
 
@@ -644,7 +675,7 @@ nsresult WriteText(const nsString& aTextString,nsIContentSink& aSink,PRBool aPre
           }
           theSpaces+=8;
           theOffset++;
-          theTextOffset=theOffset+1;
+          theTextOffset=theOffset;
         }
         break;
 
@@ -785,10 +816,11 @@ PRBool WriteTag(nsCParserNode& aNode,nsIContentSink& aSink,PRBool anEndToken,PRB
  * @return  TRUE if ok, FALSE if error
  */
 nsresult CViewSourceHTML::OpenHead(const nsIParserNode& aNode){
+  nsresult result=NS_OK;
   if(!mHasOpenHead++) {
-    nsresult result=(mSink) ? mSink->OpenHead(aNode) : NS_OK; 
+    result=(mSink) ? mSink->OpenHead(aNode) : NS_OK; 
   }
-  return NS_OK;
+  return result;
 }
 
 /**
@@ -800,12 +832,13 @@ nsresult CViewSourceHTML::OpenHead(const nsIParserNode& aNode){
  * @return  TRUE if ok, FALSE if error
  */
 nsresult CViewSourceHTML::CloseHead(const nsIParserNode& aNode){
+  nsresult result=NS_OK;
   if(mHasOpenHead) {
     if(0==--mHasOpenHead){
-      nsresult result=(mSink) ? mSink->CloseHead(aNode) : NS_OK; 
+      result=(mSink) ? mSink->CloseHead(aNode) : NS_OK; 
     }
   }
-  return NS_OK;
+  return result;
 }
 /**
  *  
@@ -848,7 +881,7 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
           }
         }
         theStr.Append(aToken->GetStringValueXXX());
-        theStr.Append(";");
+        //theStr.Append(";");
         ::WriteText(theStr,*mSink,PR_FALSE,mIsPlaintext,theContext);
         if(!mIsPlaintext){
           SetStyle(eHTMLTag_font,PR_FALSE,*mSink);
@@ -865,7 +898,9 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
         nsString& theText=aToken->GetStringValueXXX();
 
         //if the comment has had it's markup stripped, then write it out seperately...
-        if(0!=theText.Find("<!"))
+        nsAutoString theLeft("");
+        theText.Left(theLeft,2);
+        if(theLeft!="<!")
           ::WriteText(nsAutoString("<!"),*mSink,PR_TRUE,mIsPlaintext,theContext);
         ::WriteText(theText,*mSink,PR_TRUE,mIsPlaintext,theContext);
         if(kGreaterThan!=theText.Last())
@@ -880,8 +915,8 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
     case eToken_style:
     case eToken_skippedcontent:
       {
-        CAttributeToken* theToken=(CAttributeToken*)aToken;
-        nsString& theText=theToken->GetKey();
+        CAttributeToken* theAToken=(CAttributeToken*)aToken;
+        nsString& theText=theAToken->GetKey();
         ::WriteText(theText,*mSink,PR_FALSE,mIsPlaintext,theContext);
       }
       break;
@@ -902,7 +937,7 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
     case eToken_instruction:
       {
         if(!mIsPlaintext){
-          SetColor("orange",PR_TRUE,*mSink);
+          SetColor("#D74702",PR_TRUE,*mSink);
           SetStyle(eHTMLTag_i,PR_TRUE,*mSink);
         }
 
@@ -925,12 +960,12 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
         if(0<attrCount){ //go collect the attributes...
           int attr=0;
           for(attr=0;attr<attrCount;attr++){
-            CToken* theToken=mTokenizer->PeekToken();
-            if(theToken)  {
-              eHTMLTokenTypes theType=eHTMLTokenTypes(theToken->GetTokenType());
-              if(eToken_attribute==theType){
+            CToken* theInnerToken=mTokenizer->PeekToken();
+            if(theInnerToken)  {
+              eHTMLTokenTypes theInnerType=eHTMLTokenTypes(theInnerToken->GetTokenType());
+              if(eToken_attribute==theInnerType){
                 mTokenizer->PopToken(); //pop it for real...
-                theContext.mTokenNode.AddAttribute(theToken);
+                theContext.mTokenNode.AddAttribute(theInnerToken);
               } 
             }
             else return kEOF;
@@ -969,6 +1004,11 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
     default:
       result=NS_OK;
   }//switch
+
+  while(theContext.mTokenNode.PopAttributeToken()){
+    //dump the attributes since they're on the stack...
+  }
+
   return result;
 }
 

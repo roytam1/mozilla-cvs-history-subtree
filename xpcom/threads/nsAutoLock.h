@@ -84,17 +84,19 @@ private:
     // Not meant to be implemented. This makes it a compiler error to
     // construct or assign an nsAutoLock object incorrectly.
     nsAutoLock(void) {}
-    nsAutoLock(nsAutoLock& aLock) {}
-    nsAutoLock& operator =(nsAutoLock& aLock) {
+    nsAutoLock(nsAutoLock& /*aLock*/) {}
+    nsAutoLock& operator =(nsAutoLock& /*aLock*/) {
         return *this;
     }
 
     // Not meant to be implemented. This makes it a compiler error to
     // attempt to create an nsAutoLock object on the heap.
-    static void* operator new(size_t size) {
+    static void* operator new(size_t /*size*/) {
+#if !(__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95))
         return nsnull;
+#endif
     }
-    static void operator delete(void* memory) {}
+    static void operator delete(void* /*memory*/) {}
 
 public:
     nsAutoLock(PRLock* aLock) : mLock(aLock) {
@@ -138,7 +140,8 @@ public:
     }
 
     ~nsAutoMonitor() {
-        PRStatus status = PR_ExitMonitor(mMonitor);
+        PRStatus status;
+	status = PR_ExitMonitor(mMonitor);
         NS_ASSERTION(status == PR_SUCCESS, "PR_CExitMonitor failed");
     }
 
@@ -163,17 +166,19 @@ private:
     // Not meant to be implemented. This makes it a compiler error to
     // construct or assign an nsAutoLock object incorrectly.
     nsAutoMonitor(void) {}
-    nsAutoMonitor(nsAutoMonitor& aMon) {}
-    nsAutoMonitor& operator =(nsAutoMonitor& aMon) {
+    nsAutoMonitor(nsAutoMonitor& /*aMon*/) {}
+    nsAutoMonitor& operator =(nsAutoMonitor& /*aMon*/) {
         return *this;
     }
 
     // Not meant to be implemented. This makes it a compiler error to
     // attempt to create an nsAutoLock object on the heap.
-    static void* operator new(size_t size) {
+    static void* operator new(size_t /*size*/) {
+#if !(__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95))
         return nsnull;
+#endif
     }
-    static void operator delete(void* memory) {}
+    static void operator delete(void* /*memory*/) {}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -194,7 +199,8 @@ public:
     }
 
     ~nsAutoCMonitor() {
-        PRStatus status = PR_CExitMonitor(mLockObject);
+        PRStatus status;
+	status = PR_CExitMonitor(mLockObject);
         NS_ASSERTION(status == PR_SUCCESS, "PR_CExitMonitor failed");
     }
 
@@ -219,17 +225,19 @@ private:
     // Not meant to be implemented. This makes it a compiler error to
     // construct or assign an nsAutoLock object incorrectly.
     nsAutoCMonitor(void) {}
-    nsAutoCMonitor(nsAutoCMonitor& aMon) {}
-    nsAutoCMonitor& operator =(nsAutoCMonitor& aMon) {
+    nsAutoCMonitor(nsAutoCMonitor& /*aMon*/) {}
+    nsAutoCMonitor& operator =(nsAutoCMonitor& /*aMon*/) {
         return *this;
     }
 
     // Not meant to be implemented. This makes it a compiler error to
     // attempt to create an nsAutoLock object on the heap.
-    static void* operator new(size_t size) {
+    static void* operator new(size_t /*size*/) {
+#if !(__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95))
         return nsnull;
+#endif
     }
-    static void operator delete(void* memory) {}
+    static void operator delete(void* /*memory*/) {}
 };
 
 #endif // nsAutoLock_h__

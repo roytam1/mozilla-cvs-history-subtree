@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://messenger/skin/wizard.css" type="text/css"?>
 
 <!--
 The contents of this file are subject to the Netscape Public
@@ -22,25 +23,33 @@ Communications Corporation. Portions created by Netscape are
 Rights Reserved.
 -->
 
-<!DOCTYPE window>
+<!DOCTYPE window SYSTEM "chrome://messenger/locale/AccountWizard.dtd" >
 
 <window id="account-wizard-dialog" xmlns:html="http://www.w3.org/TR/REC-html40"
     xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+    title="New Messenger Account Wizard"
     onload="onLoad();">
 
 <html:script language="JavaScript" src="AccountWizard.js"/>
 
 <box align="vertical" style="width: 100%; height: 100%">
-  <html:iframe flex="100%" style="width: 100%; height: 200px; border: none" src="aw-intro.xul" name="wizardContents"/>
+  <html:iframe flex="100%" style="width: 100%; height: 240px; border: none; margin: 5px;" src="aw-accounttype.xul" name="wizardContents" scrolling="auto"/>
+  <html:div>
+    &instructions.label;
+  </html:div>
   <html:br/><html:hr/>
   <box align="horizontal" style="margin: 10px">
+<!--
+    <html:input type="text" id="newPage" flex="100%"/>
+    <titledbutton value="Load Page" onclick="onLoadPage(event);"/>
+-->
     <spring flex="100%"/>
-    <titledbutton value="&lt; Back" onclick="onBack(event);"/>
-    <titledbutton value="Next &gt;" onclick="onNext(event);"/>
+    <titledbutton value="&lt; &backButton.label;" onclick="onBack(event);"/>
+    <titledbutton value="&nextButton.label; &gt;" onclick="onNext(event);"/>
     <spring style="width: 10px"/>
-    <titledbutton value="Finish" onclick="onFinish(event);"/>
+    <titledbutton value="&finishButton.label;" onclick="onFinish(event);"/>
     <spring style="width: 10px"/>
-    <titledbutton value="Cancel" onclick="onCancel(event);"/>
+    <titledbutton value="&cancelButton.label;" onclick="onCancel(event);"/>
   </box>
 </box>
 </window>

@@ -22,12 +22,17 @@
 #include "nsISupportsArray.h"
 #include "nsIComponentManager.h"
 #include "nsIURL.h"
+#ifdef NECKO
+#include "nsNeckoUtil.h"
+#endif // NECKO
 #include "nsIServiceManager.h"
 #include "nsIEventQueueService.h"
 #include "nsXPComFactory.h"    /* template implementation of a XPCOM factory */
 
 #include "nsIAppShell.h"
 #include "nsIWidget.h"
+#include "nsIDOMWindow.h"
+#include "nsIBrowserWindow.h"
 #include "nsIWebShellWindow.h"
 #include "nsWebShellWindow.h"
 
@@ -62,6 +67,8 @@ static NS_DEFINE_IID(kPICSCID, NS_PICS_CID);
 
 #include "nsMetaCharsetCID.h"
 #include "nsIMetaCharsetService.h"
+#include "nsXMLEncodingCID.h"
+#include "nsIXMLEncodingService.h"
 
 /* Define Class IDs */
 static NS_DEFINE_IID(kAppShellCID,          NS_APPSHELL_CID);
@@ -69,6 +76,7 @@ static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_IID(kCScriptNameSetRegistryCID, NS_SCRIPT_NAMESET_REGISTRY_CID);
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 static NS_DEFINE_IID(kMetaCharsetCID, NS_META_CHARSET_CID);
+static NS_DEFINE_IID(kXMLEncodingCID, NS_XML_ENCODING_CID);
 
 
 /* Define Interface IDs */
@@ -91,27 +99,27 @@ public:
   NS_DECL_ISUPPORTS
 
   NS_IMETHOD Initialize(nsICmdLineService*aCmdLineService);
-  NS_IMETHOD Run(void);
-  NS_IMETHOD Shutdown(void);
+  NS_IMETHOD Run();
+  NS_IMETHOD Shutdown();
+  NS_IMETHOD PushThreadEventQueue();
+  NS_IMETHOD PopThreadEventQueue();
 
-  NS_IMETHOD CreateTopLevelWindow(nsIWebShellWindow * aParent,
-                                  nsIURL* aUrl, 
-                                  PRBool showWindow,
-                                  nsIWebShellWindow*& aResult, nsIStreamObserver* anObserver,
+  NS_IMETHOD CreateTopLevelWindow(nsIWebShellWindow *aParent,
+                                  nsIURI *aUrl, 
+                                  PRBool aShowWindow,
+                                  PRUint32 aChromeMask,
                                   nsIXULWindowCallbacks *aCallbacks,
-                                  PRInt32 aInitialWidth, PRInt32 aInitialHeight);
-  NS_IMETHOD CreateDialogWindow(  nsIWebShellWindow * aParent,
-                                  nsIURL* aUrl, 
-                                  PRBool showWindow,
-                                  nsIWebShellWindow*& aResult, nsIStreamObserver* anObserver,
-                                  nsIXULWindowCallbacks *aCallbacks,
-                                  PRInt32 aInitialWidth, PRInt32 aInitialHeight);
-  NS_IMETHOD RunModalDialog(      nsIWebShellWindow * aParent,
-                                  nsIURL* aUrl, 
-                                  nsIWebShellWindow*& aResult, nsIStreamObserver* anObserver,
+                                  PRInt32 aInitialWidth, PRInt32 aInitialHeight,
+                                  nsIWebShellWindow **aResult);
+
+  NS_IMETHOD RunModalDialog(      nsIWebShellWindow **aWindow,
+                                  nsIWebShellWindow *aParent,
+                                  nsIURI *aUrl, 
+                                  PRUint32 aChromeMask,
                                   nsIXULWindowCallbacks *aCallbacks,
                                   PRInt32 aInitialWidth, PRInt32 aInitialHeight);
   NS_IMETHOD CloseTopLevelWindow(nsIWebShellWindow* aWindow);
+  NS_IMETHOD GetHiddenWindow(nsIWebShellWindow **aWindow);
   NS_IMETHOD RegisterTopLevelWindow(nsIWebShellWindow* aWindow);
   NS_IMETHOD UnregisterTopLevelWindow(nsIWebShellWindow* aWindow);
 
@@ -119,17 +127,27 @@ public:
 protected:
   virtual ~nsAppShellService();
 
+  NS_IMETHOD JustCreateTopWindow(nsIWebShellWindow *aParent,
+                                 nsIURI *aUrl, 
+                                 PRBool aShowWindow,
+                                 PRUint32 aChromeMask,
+                                 nsIXULWindowCallbacks *aCallbacks,
+                                 PRInt32 aInitialWidth, PRInt32 aInitialHeight,
+                                 nsIWebShellWindow **aResult);
+  void CreateHiddenWindow();
   void InitializeComponent( const nsCID &aComponentCID );
   void ShutdownComponent( const nsCID &aComponentCID );
+  typedef void (nsAppShellService::*EnumeratorMemberFunction)(const nsCID&);
   void EnumerateComponents( void (nsAppShellService::*function)(const nsCID&) );
 
   nsIAppShell* mAppShell;
   nsISupportsArray* mWindowList;
   nsICmdLineService* mCmdLineService;
+  nsIWindowMediator* mWindowMediator;
+  nsCOMPtr<nsIWebShellWindow> mHiddenWindow;
 };
 
-
-nsAppShellService::nsAppShellService()
+nsAppShellService::nsAppShellService() : mWindowMediator( NULL )
 {
   NS_INIT_REFCNT();
 
@@ -143,6 +161,10 @@ nsAppShellService::~nsAppShellService()
   NS_IF_RELEASE(mAppShell);
   NS_IF_RELEASE(mWindowList);
   NS_IF_RELEASE(mCmdLineService);
+  if (mHiddenWindow)
+    mHiddenWindow->Close(); // merely releasing the ref isn't enough!
+  if (mWindowMediator)
+    nsServiceManager::ReleaseService(kWindowMediatorCID, mWindowMediator);
 }
 
 
@@ -219,6 +241,19 @@ nsAppShellService::Initialize( nsICmdLineService *aCmdLineService )
    }
    rv = nsServiceManager::ReleaseService(kMetaCharsetCID, metacharset);
 
+  nsIXMLEncodingService* xmlencoding;
+  rv = nsServiceManager::GetService(kXMLEncodingCID,
+                                    nsIXMLEncodingService::GetIID(),
+                                     (nsISupports **) &xmlencoding);
+   if(NS_FAILED(rv)) {
+      goto done;
+   }
+   rv = xmlencoding->Start();
+   if(NS_FAILED(rv)) {
+      goto done;
+   }
+   rv = nsServiceManager::ReleaseService(kXMLEncodingCID, xmlencoding);
+
   // Create widget application shell
   rv = nsComponentManager::CreateInstance(kAppShellCID, nsnull, kIAppShellIID,
                                     (void**)&mAppShell);
@@ -234,14 +269,43 @@ nsAppShellService::Initialize( nsICmdLineService *aCmdLineService )
 
   // Initialize each registered component.
   EnumerateComponents( &nsAppShellService::InitializeComponent );
+	
+// enable window mediation
+	rv = nsServiceManager::GetService(kWindowMediatorCID, kIWindowMediatorIID,
+                                   (nsISupports**) &mWindowMediator);
+
+  CreateHiddenWindow();
 
 done:
   return rv;
 }
 
+void nsAppShellService::CreateHiddenWindow()
+{
+  nsresult rv;
+  nsIURI* url = nsnull;
+
+#ifndef NECKO
+  rv = NS_NewURL(&url, "chrome://global/content/hiddenWindow.xul");
+#else
+  rv = NS_NewURI(&url, "chrome://global/content/hiddenWindow.xul");
+#endif
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsIWebShellWindow> newWindow;
+    rv = JustCreateTopWindow(nsnull, url, PR_FALSE, NS_CHROME_ALL_CHROME,
+                        nsnull, 100, 100, getter_AddRefs(newWindow));
+    if (NS_SUCCEEDED(rv)) {
+      mHiddenWindow = newWindow;
+      // RegisterTopLevelWindow(newWindow); -- Mac only
+    }
+    NS_RELEASE(url);
+  }
+  NS_ASSERTION(NS_SUCCEEDED(rv), "HiddenWindow not created");
+}
+
 // Apply function (Initialize/Shutdown) to each app shell component.
 void
-nsAppShellService::EnumerateComponents( void (nsAppShellService::*function)( const nsCID& ) ) {
+nsAppShellService::EnumerateComponents( EnumeratorMemberFunction function ) {
     nsresult rv;
     nsIRegistry *registry = 0;
     nsIRegistry::Key key;
@@ -407,80 +471,145 @@ nsAppShellService::Run(void)
 NS_IMETHODIMP
 nsAppShellService::Shutdown(void)
 {
-
-#if 1
+#if 0
   // Shutdown all components.
   EnumerateComponents( &nsAppShellService::ShutdownComponent );
-
-  mAppShell->Exit();
+  mAppShell->Exit(); // this is rude, and gtk complains
 #else
-  while (mWindowList->Count() > 0) {
-    nsISupports * winSupports = mWindowList->ElementAt(0);
-    nsCOMPtr<nsIWidget> window(do_QueryInterface(winSupports));
-    if (window) {
-      mWindowList->RemoveElementAt(0);
-      CloseTopLevelWindow(window);
-    } else {
-      nsCOMPtr<nsIWebShellWindow> webShellWin(do_QueryInterface(winSupports));
-      if (webShellWin) {
-        nsIWidget * win;
-        webShellWin->GetWidget(win);
-        CloseTopLevelWindow(win);
+  nsresult rv;
+
+  // Shutdown all components.
+  EnumerateComponents(&nsAppShellService::ShutdownComponent);
+
+  // now step through all opened registered windows and close them.
+  NS_WITH_SERVICE(nsIWindowMediator, windowMediator, kWindowMediatorCID, &rv);
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
+
+    if (NS_SUCCEEDED(windowMediator->GetEnumerator(nsnull, getter_AddRefs(windowEnumerator)))) {
+      PRBool more;
+
+      // get the (main) webshell for each window in the enumerator
+      windowEnumerator->HasMoreElements(&more);
+      while (more) {
+        nsCOMPtr<nsISupports> protoWindow;
+        rv = windowEnumerator->GetNext(getter_AddRefs(protoWindow));
+        if (NS_SUCCEEDED(rv) && protoWindow) {
+          nsCOMPtr<nsIDOMWindow> window(do_QueryInterface(protoWindow));
+          if (window)
+            window->Close();
+        }
+        windowEnumerator->HasMoreElements(&more);
       }
-      //nsCOMPtr<nsIWebShellContainer> wsc(do_QueryInterface(winSupports));
-      //if (wsc) {
-      //
-      //}
-      break;
     }
   }
 #endif
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsAppShellService::PushThreadEventQueue() {
+  return mAppShell->PushThreadEventQueue();
+}
+
+NS_IMETHODIMP
+nsAppShellService::PopThreadEventQueue() {
+  return mAppShell->PopThreadEventQueue();
+}
+
 /*
  * Create a new top level window and display the given URL within it...
- *
- * @param aParent - parent for the window to be created (generally null;
- *                  included for compatibility with dialogs).
- *                  (currently unused).
- * @param aURL - location of XUL window contents description
- * @param aShowWindow - whether or not to show the window initially.
- * @param anObserver - a stream observer to give to the new window
- * @param aConstructionCallbacks - methods which will be called during
- *                                 window construction. can be null.
- * @param aInitialWidth - width of window, in pixels (currently unused)
- * @param aInitialHeight - height of window, in pixels (currently unused)
  */
 NS_IMETHODIMP
 nsAppShellService::CreateTopLevelWindow(nsIWebShellWindow *aParent,
-                                        nsIURL* aUrl, PRBool showWindow,
-                                        nsIWebShellWindow*& aResult, nsIStreamObserver* anObserver,
-                                        nsIXULWindowCallbacks *aCallbacks,
-                                        PRInt32 aInitialWidth, PRInt32 aInitialHeight)
+                                  nsIURI *aUrl, 
+                                  PRBool aShowWindow,
+                                  PRUint32 aChromeMask,
+                                  nsIXULWindowCallbacks *aCallbacks,
+                                  PRInt32 aInitialWidth, PRInt32 aInitialHeight,
+                                  nsIWebShellWindow **aResult)
+
+{
+  nsresult rv;
+
+  rv = JustCreateTopWindow(aParent, aUrl, aShowWindow, aChromeMask,
+                                 aCallbacks, aInitialWidth, aInitialHeight,
+                                 aResult);
+
+  if (NS_SUCCEEDED(rv))
+    // the addref resulting from this is the owning addref for this window
+    RegisterTopLevelWindow(*aResult);
+
+  return rv;
+}
+
+
+/*
+ * Just do the window-making part of CreateTopLevelWindow
+ */
+NS_IMETHODIMP
+nsAppShellService::JustCreateTopWindow(nsIWebShellWindow *aParent,
+                                 nsIURI *aUrl, 
+                                 PRBool aShowWindow,
+                                 PRUint32 aChromeMask,
+                                 nsIXULWindowCallbacks *aCallbacks,
+                                 PRInt32 aInitialWidth, PRInt32 aInitialHeight,
+                                 nsIWebShellWindow **aResult)
 {
   nsresult rv;
   nsWebShellWindow* window;
+  PRBool intrinsicallySized;
 
-  aResult = nsnull;
+  *aResult = nsnull;
+  intrinsicallySized = PR_FALSE;
   window = new nsWebShellWindow();
-  if (nsnull == window) {
+  if (!window)
     rv = NS_ERROR_OUT_OF_MEMORY;
-  } else {
-    // temporarily disabling parentage because non-Windows platforms
-    // seem to be interpreting it in unexpected ways.
-    rv = window->Initialize((nsIWebShellWindow *) nsnull, mAppShell, aUrl,
-                            anObserver, aCallbacks,
-                            aInitialWidth, aInitialHeight);
-    if (NS_SUCCEEDED(rv))
-    {
-      // this does the AddRef of the return value
-      rv = window->QueryInterface(kIWebShellWindowIID, (void **) &aResult);
+  else {
+    nsWidgetInitData widgetInitData;
+
+    widgetInitData.mWindowType = aChromeMask & NS_CHROME_OPEN_AS_DIALOG ?
+                                 eWindowType_dialog : eWindowType_toplevel;
+
+    // note default chrome overrides other OS chrome settings, but
+    // not internal chrome
+    if (aChromeMask & NS_CHROME_DEFAULT_CHROME)
+      widgetInitData.mBorderStyle = eBorderStyle_default;
+    else if ((aChromeMask & NS_CHROME_ALL_CHROME) == NS_CHROME_ALL_CHROME)
+      widgetInitData.mBorderStyle = eBorderStyle_all;
+    else {
+      widgetInitData.mBorderStyle = eBorderStyle_none; // assumes none == 0x00
+      if (aChromeMask & NS_CHROME_WINDOW_BORDERS_ON)
+        widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_border);
+      if (aChromeMask & NS_CHROME_TITLEBAR_ON)
+        widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_title);
+      if (aChromeMask & NS_CHROME_WINDOW_CLOSE_ON)
+        widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_close);
+      if (aChromeMask & NS_CHROME_WINDOW_RESIZE_ON)
+        widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_resizeh | eBorderStyle_minimize | eBorderStyle_maximize | eBorderStyle_menu);
+    }
+
+    if (aInitialWidth == NS_SIZETOCONTENT ||
+        aInitialHeight == NS_SIZETOCONTENT) {
+      aInitialWidth = 1;
+      aInitialHeight = 1;
+      intrinsicallySized = PR_TRUE;
+      window->SetIntrinsicallySized(PR_TRUE);
+    }
+
+    rv = window->Initialize(aParent, mAppShell, aUrl,
+                            aShowWindow, nsnull, aCallbacks,
+                            aInitialWidth, aInitialHeight, widgetInitData);
       
-      // the addref resulting from this is the owning addref for this window
-      RegisterTopLevelWindow(window);
-      if (showWindow)
-				window->Show(PR_TRUE);
+    if (NS_SUCCEEDED(rv)) {
+
+      // this does the AddRef of the return value
+      rv = window->QueryInterface(kIWebShellWindowIID, (void **) aResult);
+
+      // if intrinsically sized, don't show until we have the size figured out
+      if (aShowWindow && !intrinsicallySized)
+        window->Show(PR_TRUE);
+
     }
   }
 
@@ -494,81 +623,56 @@ nsAppShellService::CloseTopLevelWindow(nsIWebShellWindow* aWindow)
   return aWindow->Close();
 }
 
-/*
- * Like CreateTopLevelWindow, but with dialog window borders.  This
- * method is necessary because of the current misfortune that the window
- * is created before its XUL description has been parsed, so the description
- * can't affect attributes like window type.
- */
 NS_IMETHODIMP
-nsAppShellService::CreateDialogWindow(nsIWebShellWindow * aParent,
-                                      nsIURL* aUrl, PRBool showWindow,
-                                      nsIWebShellWindow*& aResult, nsIStreamObserver* anObserver,
-                                      nsIXULWindowCallbacks *aCallbacks,
-                                      PRInt32 aInitialWidth, PRInt32 aInitialHeight)
+nsAppShellService::GetHiddenWindow(nsIWebShellWindow **aWindow)
 {
-  nsresult rv;
-  nsWebShellWindow* window;
+  nsIWebShellWindow *rv;
 
-  aResult = nsnull;
-  window = new nsWebShellWindow();
-  if (nsnull == window) {
-    rv = NS_ERROR_OUT_OF_MEMORY;
-  } else {
-    // temporarily disabling parentage because non-Windows platforms
-    // seem to be interpreting it in unexpected ways.
-    rv = window->Initialize((nsIWebShellWindow *) nsnull, mAppShell, aUrl,
-                            anObserver, aCallbacks,
-                            aInitialWidth, aInitialHeight);
-    if (NS_SUCCEEDED(rv)) {
-      rv = window->QueryInterface(kIWebShellWindowIID, (void **) &aResult);
-      RegisterTopLevelWindow(window);
-      if (showWindow)
-				window->Show(PR_TRUE);
-    }
-  }
-
-  return rv;
+  NS_ASSERTION(aWindow, "null param to GetHiddenWindow");
+  rv = mHiddenWindow;
+  NS_IF_ADDREF(rv);
+  *aWindow = rv;
+  return rv ? NS_OK : NS_ERROR_FAILURE;
 }
 
-
-/* CreateDialogWindow, run it modally, and destroy it.  To make initial control
+/* Create a Window, run it modally, and destroy it.  To make initial control
    settings or get information out of the dialog before dismissal, use
    event handlers.  This wrapper method is desirable because of the
    complications creeping in to the modal window story: there's a lot of setup.
    See the code..
 
-   Note that the window created is returned in aResult.  By the time this function
-   exits, that window has been partially destroyed.  We return it anyway, in the
-   hopes that it may be queried for results, somehow.  This may be a mistake.
-   It is returned addrefed (by the QueryInterface to nsIWebShellWindow in
-   CreateDialogWindow).
+   If a window is passed in via the first parameter, that window will be
+   the one displayed modally.  If no window is passed in (if *aWindow is null)
+   the window created will be returned in *aWindow.  Note that by the time
+   this function exits, that window has been partially destroyed.  We return it
+   anyway, in the hopes that it may be queried for results, somehow.
+   This may be a mistake.  It is returned addrefed (by the QueryInterface
+   to nsIWebShellWindow in CreateTopLevelWindow).
 */
 NS_IMETHODIMP
 nsAppShellService::RunModalDialog(
-                      nsIWebShellWindow *aParent, nsIURL* aUrl,
-                      nsIWebShellWindow*& aResult, nsIStreamObserver *anObserver,
+                      nsIWebShellWindow **aWindow,
+                      nsIWebShellWindow *aParent,
+                      nsIURI *aUrl, 
+                      PRUint32 aChromeMask,
                       nsIXULWindowCallbacks *aCallbacks,
                       PRInt32 aInitialWidth, PRInt32 aInitialHeight)
 {
+  nsresult          rv;
+  nsIWebShellWindow *theWindow;
+  PRBool            pushedQueue;
 
-  nsresult             rv;
-
-
-#ifdef XP_PC // XXX: Won't work with any other platforms yet.
-  // First push a nested event queue for event processing from netlib
-  // onto our UI thread queue stack.
-  // nsCOMPtr<nsIEventQueue> innerQueue;
-  NS_WITH_SERVICE(nsIEventQueueService, eQueueService, kEventQueueServiceCID, &rv);
-  if (NS_FAILED(rv)) {
-    NS_ERROR("RunModalDialog unable to obtain eventqueue service.");
-    return rv;
+  pushedQueue = PR_FALSE;
+  if (aWindow && *aWindow) {
+    theWindow = *aWindow; // and rv is already some success indication
+    NS_ADDREF(theWindow);
+    rv = NS_OK;
+  } else {
+    pushedQueue = PR_TRUE;
+    PushThreadEventQueue();
+    rv = CreateTopLevelWindow(aParent, aUrl, PR_TRUE, aChromeMask,
+            aCallbacks, aInitialWidth, aInitialHeight, &theWindow);
   }
-  eQueueService->PushThreadEventQueue();
-#endif
-
-  rv = CreateDialogWindow(aParent, aUrl, PR_TRUE, aResult, anObserver, aCallbacks,
-            aInitialWidth, aInitialHeight);
 
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIWidget> parentWindowWidgetThing;
@@ -578,15 +682,22 @@ nsAppShellService::RunModalDialog(
     // Windows OS wants the parent disabled for modality
     if (NS_SUCCEEDED(gotParent))
       parentWindowWidgetThing->Enable(PR_FALSE);
-    aResult->ShowModal();
+    theWindow->ShowModal();
     if (NS_SUCCEEDED(gotParent))
       parentWindowWidgetThing->Enable(PR_TRUE);
+
+    // return the used window if possible, or otherwise get rid of it
+    if (aWindow)
+      if (*aWindow)
+        NS_RELEASE(theWindow); // we borrowed it, now let it go
+      else
+        *aWindow = theWindow;  // and it's addrefed from Create...
+    else
+      NS_RELEASE(theWindow);   // can't return it; let it go
   }
 
-	// Release the event queue 
-#ifdef XP_PC // XXX Won't work on other platforms yet
-  eQueueService->PopThreadEventQueue();
-#endif
+  if (pushedQueue)
+    PopThreadEventQueue();
 
   return rv;
 }

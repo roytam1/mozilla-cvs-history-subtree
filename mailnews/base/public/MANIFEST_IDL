@@ -12,6 +12,8 @@ nsIMessageView.idl
 nsIMsgAccount.idl
 nsIMsgAccountManager.idl
 nsIMsgFolder.idl
+nsIMsgFolderCache.idl
+nsIMsgFolderCacheElement.idl
 nsIMsgGroupRecord.idl
 nsIMsgHost.idl
 nsIMsgIdentity.idl
@@ -22,4 +24,10 @@ nsIMsgSignature.idl
 nsIMsgThread.idl
 nsIMsgVCard.idl
 nsIUrlListener.idl
+nsIUrlListenerManager.idl
 nsIMsgBiffManager.idl
+nsIMsgCopyService.idl
+nsIMsgCopyServiceListener.idl
+nsIMsgStatusFeedback.idl
+nsIMsgMailNewsUrl.idl
+

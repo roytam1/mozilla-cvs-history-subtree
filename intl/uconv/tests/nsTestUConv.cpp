@@ -29,6 +29,9 @@
 #include "nsICharRepresentable.h"
 #include "prmem.h"
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_IID(kICharsetConverterManagerIID, NS_ICHARSETCONVERTERMANAGER_IID);
+
 //#define TEST_IS_REPRESENTABLE
 
 /**
@@ -830,6 +833,42 @@ nsresult testMUTF7Decoder()
   }
 }
 
+/**
+ * Test the UTF-7 decoder.
+ */
+nsresult testUTF7Decoder()
+{
+  char * testName = "T108";
+  printf("\n[%s] Unicode <- UTF7\n", testName);
+
+  // create converter
+  CREATE_DECODER("utf-7");
+
+  // test data
+  char src[] = {"+ADwAIQ-DOC"};
+  PRUnichar exp[] = {'<','!','D','O','C'};
+
+  // test converter - normal operation
+  res = testDecoder(dec, src, ARRAY_SIZE(src)-1, exp, ARRAY_SIZE(exp), testName);
+
+  // reset converter
+  if (NS_SUCCEEDED(res)) res = resetDecoder(dec, testName);
+
+  // test converter - stress test
+  if (NS_SUCCEEDED(res)) 
+    res = testStressDecoder(dec, src, ARRAY_SIZE(src)-1, exp, ARRAY_SIZE(exp), testName);
+
+  // release converter
+  NS_RELEASE(dec);
+
+  if (NS_FAILED(res)) {
+    return res;
+  } else {
+    printf("Test Passed.\n");
+    return NS_OK;
+  }
+}
+
 //----------------------------------------------------------------------
 // Encoders testing functions
 
@@ -1030,6 +1069,43 @@ nsresult testMUTF7Encoder()
   }
 }
 
+/**
+ * Test the UTF-7 encoder.
+ */
+nsresult testUTF7Encoder()
+{
+  char * testName = "T206";
+  printf("\n[%s] Unicode -> UTF-7\n", testName);
+
+  // create converter
+  CREATE_ENCODER("utf-7");
+  enc->SetOutputErrorBehavior(enc->kOnError_Replace, NULL, 0x00cc);
+
+  // test data
+  PRUnichar src[] = {'e','t','i','r','a',0x0a};
+  char exp[] = {"etira\x0a"};
+
+  // test converter - easy test
+  res = testEncoder(enc, src, ARRAY_SIZE(src), exp, ARRAY_SIZE(exp)-1, testName);
+
+  // reset converter
+  if (NS_SUCCEEDED(res)) res = resetEncoder(enc, testName);
+
+  // test converter - stress test
+  if (NS_SUCCEEDED(res)) 
+    res = testStressEncoder(enc, src, ARRAY_SIZE(src), exp, ARRAY_SIZE(exp)-1, testName);
+
+  // release converter
+  NS_RELEASE(enc);
+
+  if (NS_FAILED(res)) {
+    return res;
+  } else {
+    printf("Test Passed.\n");
+    return NS_OK;
+  }
+}
+
 nsresult  testPlatformCharset()
 {
   nsIPlatformCharset * cinfo;
@@ -1076,6 +1152,7 @@ nsresult testAll()
   testSJISDecoder();
   testUTF8Decoder();
   testMUTF7Decoder();
+  testUTF7Decoder();
 
   // test encoders
   testLatin1Encoder();
@@ -1083,6 +1160,7 @@ nsresult testAll()
   testEUCJPEncoder();
   testISO2022JPEncoder();
   testMUTF7Encoder();
+  testUTF7Encoder();
 
   // return
   return NS_OK;

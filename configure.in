@@ -69,7 +69,7 @@ dnl ========================================================
 dnl Set the version number of the libs included with mozilla
 dnl ========================================================
 MOZJPEG=62
-MOZPNG=95
+MOZPNG=10002
 NSPR_VERSION=3 # Should be in sync with nsprpub/configure.in
 
 dnl ========================================================
@@ -87,6 +87,12 @@ MISSING_NSPR=
 MISSING_X=
 
 dnl ==============================================================
+dnl Initialize the Pthread test variables early so they can be
+dnl  overridden by each platform.
+dnl ========================================================
+USE_PTHREADS=
+PTHREAD_LDFLAGS=""
+
 dnl Do not allow a separate objdir build if a srcdir build exists.
 dnl ==============================================================
 _topsrcdir=`cd \`dirname $0\`; pwd`
@@ -310,8 +316,14 @@ AC_PROG_MAKE_SET
 
 AC_PATH_XTRA
 
-XLDFLAGS="$X_LIBS"
-XLIBS="$X_EXTRA_LIBS"
+GNU_CC=
+GNU_CXX=
+if test "$GCC" = "yes"; then
+    GNU_CC=1
+fi
+if test "$GXX" = "yes"; then
+    GNU_CXX=1
+fi
 
 dnl ========================================================
 dnl set the defaults first
@@ -321,6 +333,10 @@ DLL_SUFFIX=so
 OBJ_SUFFIX=o
 LIB_SUFFIX=a
 TARGET_MD_ARCH=unix
+
+OS_TARGET=`uname -s`
+CROSS_COMPILE=
+_COMPILER_PREFIX=
 
 dnl ========================================================
 dnl GNU specific defaults
@@ -338,7 +354,10 @@ if test "$GNU_CC"; then
     #             be a little bit stricter
     # -pipe     - speeds up the build a little by using pipes rather than
     #             temp files
-    _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wall -Wconversion -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align"
+    # Warnings slamm took out for now (these were giving more noise than help):
+    # -Wbad-function-cast - warns when casting a function to a new return type
+    # -Wconversion - complained when char's or short's were used a function args
+    _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wall -Wshadow -Wpointer-arith -Wcast-align"
 
     _DEFINES_CFLAGS='-include $(DEPTH)/config-defs.h'
     _USE_CPP_INCLUDE_FLAG=1
@@ -353,7 +372,12 @@ fi
 
 if test "$GNU_CXX"; then
     # Turn on GNU specific features
-    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wall -Wconversion -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Woverloaded-virtual -Wsynth"
+    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wall -Wconversion -Wpointer-arith -Wbad-function-cast -Wcast-align -Woverloaded-virtual -Wsynth"
+
+	dnl The following warning breaks Qt
+	if test ! "$QTDIR"; then
+    	_WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wshadow"
+	fi
 
     _DEFINES_CXXFLAGS='-include $(DEPTH)/config-defs.h'
     _USE_CPP_INCLUDE_FLAG=1
@@ -426,6 +450,7 @@ case "$target" in
 *-beos*)
     MKSHLIB='$(CXX) $(DSO_LDOPTS) -o $@'
     DSO_LDOPTS='-nostart -Xlinker --ignore-undefined'
+    TK_LIBS='-lbe -lroot'
     ;;
 
 *-bsdi*)
@@ -436,6 +461,9 @@ case "$target" in
 	    DSO_LDOPTS='-r'
 	    _WARNINGS_CFLAGS="-Wall"
 	    _WARNINGS_CXXFLAGS="-Wall"
+	    # The test above doesn't work properly, at least on 3.1.
+	    MKSHLIB_FORCE_ALL=''
+	    MKSHLIB_UNFORCE_ALL=''
 	;;
     esac
     ;;
@@ -464,12 +492,18 @@ case "$target" in
     DSO_LDOPTS='-b -E -L$(DIST)/bin'
     MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
     MKCSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
+    AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
     ;;
 
 *-irix5*)
     DSO_LDOPTS='-elf -shared'
-    MKSHLIB_FORCE_ALL='-all'
-    MKSHLIB_UNFORCE_ALL='-none'
+    if test "$GNU_CC"; then
+       MKSHLIB_FORCE_ALL='-Wl,-all'
+       MKSHLIB_UNFORCE_ALL='-Wl,-none'
+    else
+       MKSHLIB_FORCE_ALL='-all'
+       MKSHLIB_UNFORCE_ALL='-none'
+    fi
     ;;
 
 *-irix6*)
@@ -573,6 +607,29 @@ case "$target" in
     fi
     ;;
 
+*-nto*) 
+    CFLAGS="$CFLAGS -DNTO -D__QNXNTO__ -D_QNX_SOURCE -D_POSIX_SOURCE -D__i386__ -D_i386 -DNSCAP_NO_EXPLICIT -DNO_REGEX -DSTRINGS_ALIGNED -D_SEEKPOS_DEFINED_ -I/usr/gcc/lib/gcc-lib/ntox86/2.8.1/include"
+    CXXFLAGS="$CXXFLAGS -DNTO -D__QNXNTO__ -D_QNX_SOURCE -D_POSIX_SOURCE -D__i386__ -D_i386 -DNSCAP_NO_EXPLICIT -DNO_REGEX -DSTRINGS_ALIGNED -D_SEEKPOS_DEFINED_ -I/usr/gcc/lib/gcc-lib/ntox86/2.8.1/include"
+    _WARNINGS_CFLAGS='-w'
+    _WARNINGS_CXXFLAGS='-w'
+    OS_TARGET="NTO"
+    MOZ_OPTIMIZE_FLAGS="-O2"
+	MOZ_DEBUG_FLAGS="-gdwarf-2"
+    DSO_LDOPTS="-M $DSO_LDOPTS"
+    DSO_CFLAGS=''
+    DSO_PIC_CFLAGS="-shared -Wc,-fPIC -DPIC"
+    MKSHLIB='qcc -Vgcc_ntox86 $(DSO_LDOPTS)'
+    MKCSHLIB='qcc -Vgcc_ntox86 $(DSO_LDOPTS)'
+    AR='qcc -Vgcc_ntox86 -M -a $@'
+    _DEFINES_CFLAGS='-Wp,-include,$(DEPTH)/config-defs.h'
+    _DEFINES_CXXFLAGS='-Wp,-include,$(DEPTH)/config-defs.h'
+    _PREPROCESSOR_PREFIX="-Wp,"
+    _COMPILER_PREFIX="-Wc,"
+    _LINKER_PREFIX="-Wl,"      
+	USE_PTHREADS=1
+	PTHREAD_LDFLAGS=""
+    ;;
+
 *-openbsd*)
     DLL_SUFFIX="so.1.0"
     DSO_CFLAGS=''
@@ -589,19 +646,39 @@ case "$target" in
     ;;
 
 *-openvms*) 
-    DLL_SUFFIX="exe"
+    if test "$OS_TARGET" = "POSIX_for_OpenVMS_AXP"; then
+	dnl Hack...
+	CROSS_COMPILE=1
+	NSPR_LIBS="-lnspr$NSPR_VERSION -lplc$NSPR_VERSION -lplds$NSPR_VERSION"
+    fi
     ;;
 
 alpha*-*-osf*)
     if test "$GNU_CC"; then
-        DSO_LDOPTS='-shared -Wl,-soname -Wl,$(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
+	DSO_LDOPTS='-shared -Wl,-soname -Wl,$(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
     else
 	CFLAGS="$CFLAGS -std1 -ieee_with_inexact"
 	CXXFLAGS="$CXXFLAGS -std1 -ieee_with_inexact"
-        DSO_LDOPTS='-shared -msym -expect_unresolved \* -soname $(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
-        DSO_CFLAGS=
-        MKSHLIB_FORCE_ALL='-all'
-        MKSHLIB_UNFORCE_ALL='-none'
+	DSO_LDOPTS='-shared -msym -expect_unresolved \* -soname $(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
+	DSO_CFLAGS=
+	MKSHLIB='-$(LD) $(DSO_LDOPTS)'
+	MKCSHLIB='-$(LD) $(DSO_LDOPTS)'
+	MKSHLIB_FORCE_ALL='-all'
+	MKSHLIB_UNFORCE_ALL='-none'
+	dnl Might fix the libxpcom.so breakage on this platform as well....
+	AC_DEFINE(NSCAP_DISABLE_TEST_DONTQUERY_CASES)
+	AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
+    fi
+    ;;
+
+*-qnx*) 
+    dnl Solves the problems the QNX compiler has with nsCOMPtr.h.
+    AC_DEFINE(NSCAP_DISABLE_TEST_DONTQUERY_CASES)
+    AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
+    if test "$no_x" = "yes"; then
+	MOZ_WIDGET_TOOLKIT='photon'
+	TK_LIBS='-lphoton -lphrender'
+	AC_DEFINE(NO_X11)
     fi
     ;;
 
@@ -610,6 +687,7 @@ alpha*-*-osf*)
     ;;
 
 *-sco*) 
+    CXXFLAGS="$CXXFLAGS -I/usr/include/CC"
     if test ! "$GNU_CC"; then
        DSO_LDOPTS='-G -h $(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
     fi
@@ -619,6 +697,7 @@ dnl the qsort routine under solaris is faulty
 *-solaris*) 
     AC_DEFINE(BROKEN_QSORT)
     if test ! "$GNU_CC"; then
+       AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
        LDFLAGS='-xildoff'
        MKSHLIB='$(CXX) $(DSO_LDOPTS) -o $@'
        MKCSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
@@ -637,111 +716,112 @@ dnl the qsort routine under solaris is faulty
            ASFLAGS='-xarch=v8 -P -L -D_ASM -D__STDC__=0 -K PIC'
            ;;
        esac
+       dnl The C++ compiler in Workshop 5.0 uses standard iostreams by
+       dnl default. -library=iostream will force use of classic iostreams.
+       if test ! -z "`${CC} -V 2>&1 | head -1 | grep '5.0'`"; then
+	  CXX="$CXX -library=iostream"
+       fi
     else
-       MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+       MKSHLIB='$(CXX) $(DSO_LDOPTS) -o $@'
+       MKCSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+       if test "$ac_cv_mkshlib_force_and_unforce" != "no"; then
+       MKSHLIB_FORCE_ALL='-z allextract'
+       MKSHLIB_UNFORCE_ALL=''
+       fi
+       DSO_LDOPTS='-G -h $(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
        _WARNINGS_CFLAGS=''
        _WARNINGS_CXXFLAGS=''
-       AS='$(CC)'
-       ASFLAGS='$(CFLAGS)'
     fi
     ;;
 
 *-sunos*) 
     AS='$(CC)'
     ASFLAGS='$(CFLAGS)'
-    DSO_LDOPTS=''
-    MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
-    MKCSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
+    DSO_LDOPTS='-Bdynamic'
+    MKSHLIB='-$(LD) $(DSO_LDOPTS) -o $@'
+    MKCSHLIB='-$(LD) $(DSO_LDOPTS) -o $@'
+    AC_DEFINE(SPRINTF_RETURNS_STRING)
     ;;
 
 esac
 
 dnl ========================================================
-dnl =
-dnl = --diable-pic-dso-cflags
-dnl =
-dnl = A hack to disable the generation of PIC for shared libs
-dnl =
+dnl Any platform that doesn't have MKSHLIB_FORCE_ALL defined
+dnl by now will not have any way to link most binaries (tests
+dnl as well as viewer, apprunner, etc.), because some symbols
+dnl will be left out of the "composite" .so's by ld as unneeded.
+dnl So, by defining NO_LD_ARCHIVE_FLAGS for these platforms,
+dnl they can link in the static libs that provide the missing
+dnl symbols.
 dnl ========================================================
-ENABLE_PIC_DSO_CFLAGS=1
-
-MOZ_ARG_DISABLE_BOOL(pic-dso-cflags,
-[  --disable-pic-dso-cflags         Dont generate PIC for shared libs)],
-  ENABLE_PIC_DSO_CFLAGS= )
-
-if test ! "$ENABLE_PIC_DSO_CFLAGS"
-then
-  DSO_PIC_CFLAGS=""
+NO_LD_ARCHIVE_FLAGS=
+if test -z "$MKSHLIB_FORCE_ALL"; then
+    NO_LD_ARCHIVE_FLAGS=1
 fi
+AC_SUBST(NO_LD_ARCHIVE_FLAGS)
+
+XLDFLAGS="$X_LIBS"
+XLIBS="$X_EXTRA_LIBS"
 
 dnl ========================================================
-
-dnl ========================================================
-dnl =
-dnl = --diable-dtd-debug
-dnl =
-dnl = Disable some DTD debugging code in the parser that 
-dnl = breaks on some compilers because of evil and broken 
-dnl = streams code in htmlparser/src/prstrm.cpp
-dnl =
-dnl ========================================================
-MOZ_DISABLE_DTD_DEBUG=
-
-MOZ_ARG_DISABLE_BOOL(dtd-debug,
-[  --disable-dtd-debug         Disable some DTD debuggin code in the parser)],
-  MOZ_DISABLE_DTD_DEBUG=1 
-  AC_DEFINE(MOZ_DISABLE_DTD_DEBUG) )
-
-dnl ========================================================
-
-
 dnl Checks for X libraries.
 dnl Ordering is important.
 dnl Xt is dependent upon SM as of X11R6
 dnl ========================================================
 if test "$no_x" != "yes"; then
+XLIBS="-lX11 $XLIBS"
 _SAVE_LDFLAGS="$LDFLAGS"
 LDFLAGS="$XLDFLAGS $LDFLAGS"
-AC_CHECK_LIB(X11, XDrawLines, [XLIBS="-lX11 $XLIBS"],
+AC_CHECK_LIB(X11, XDrawLines, [X11_LIBS="-lX11"],
 	[MISSING_X="$MISSING_X -lX11"], $XLIBS)
-AC_CHECK_LIB(Xext, XextAddDisplay, [XLIBS="-lXext $XLIBS"],
+AC_CHECK_LIB(Xext, XextAddDisplay, [XEXT_LIBS="-lXext"],
 	[MISSING_X="$MISSING_X -lXext"], $XLIBS)
-AC_CHECK_LIB(ICE, IceFlush, [XLIBS="-lICE $XLIBS"],, $XLIBS)
-AC_CHECK_LIB(SM, SmcCloseConnection, [XLIBS="-lSM $XLIBS"],, $XLIBS)
-AC_CHECK_LIB(Xt, XtFree, [XLIBS="-lXt $XLIBS"],
-	[MISSING_X="$MISSING_X -lXt"], $XLIBS)
-AC_CHECK_LIB(Xmu, XmuLookupString, [XLIBS="-lXmu $XLIBS"],
-	[MISSING_X="$MISSING_X -lXmu"], $XLIBS)
+AC_CHECK_LIB(ICE, IceFlush, [XICE_LIBS="-lICE"],, $XLIBS)
+AC_CHECK_LIB(SM, SmcCloseConnection, [XSM_LIBS="-lSM"],, $XLIBS)
+AC_CHECK_LIB(Xt, XtFree, [ XT_LIBS="-lXt"],
+	[MISSING_X="$MISSING_X -lXt"], $X_PRE_LIBS $XLIBS)
+AC_CHECK_LIB(Xmu, XmuLookupString, [XMU_LIBS="-lXmu"],
+	[MISSING_X="$MISSING_X -lXmu"], $X_PRE_LIBS $XLIBS $XT_LIBS $XEXT_LIBS)
 LDFLAGS="$_SAVE_LDFLAGS"
 
 dnl Check for toolkit libs
 dnl ========================================================
 useRhapsody=`echo $target_os | egrep "^Rhapsody"`
-useBeOS=`echo $target_os | egrep "^BeOS"`
+
+dnl ========================================================
+dnl =
+dnl = --enable-toolkit
+dnl = 
+dnl = Select which toolkit to use for widgets.
+dnl = 
+dnl = Choices are:
+dnl = 
+dnl = gtk (default)
+dnl = motif
+dnl = xlib
+dnl = 
+dnl ========================================================
 AC_ARG_ENABLE(toolkit,
 [  --enable-toolkit=\$val   Enable \$val fe (defaults to gtk)],
   [if test "$enableval" = "motif" \
         -o "$enableval" = "gtk" \
+        -o "$enableval" = "qt" \
         -o "$enableval" = "xlib" \
-        -o "$useRhapsody" \
-	-o "$useBeOS"; then
+        -o "$useRhapsody" ; then
      dnl nglayout only supports building with one toolkit,
      dnl so ignore everything after the first comma (",").
-     MOZ_TOOLKIT=`echo "$enableval" | sed -e "s/,.*$//"`
+     MOZ_WIDGET_TOOLKIT=`echo "$enableval" | sed -e "s/,.*$//"`
    else
-     AC_MSG_ERROR(Toolkit must be Xlib, GTK or Motif.)
+     AC_MSG_ERROR(Toolkit must be Xlib, GTK, Qt, or Motif.)
    fi], 
   [if test "$useRhapsody" ; then
-     MOZ_TOOLKIT="rhapsody"
+     MOZ_WIDGET_TOOLKIT="rhapsody"
    else
-     if test "$useBeOS" ; then
-       MOZ_TOOLKIT="beos"
-     else
-       MOZ_TOOLKIT="gtk"
-     fi
+     MOZ_WIDGET_TOOLKIT="gtk"
    fi])
 
-if echo ":$MOZ_TOOLKIT" | grep "motif" >/dev/null; then
+
+if echo ":$MOZ_WIDGET_TOOLKIT" | grep "motif" >/dev/null; then
 if test "$no_x" != "yes"; then
     if test "$x_includes"; then
 	MOTIF_XINCS="-xif -I$x_includes"
@@ -762,19 +842,23 @@ fi
     if test "$MOTIF_REQUIRES_XPM" = "True" -o "$MOTIF_VERSION" = "2.1"; then
         _SAVE_LDFLAGS="$LDFLAGS"
     	LDFLAGS="$XLDFLAGS $LDFLAGS"
+
 	if test "$MOTIF_REQUIRES_XPM" = "True"; then
 	    AC_CHECK_LIB(Xpm, XpmWriteFileFromImage, 
-		TK_LIBS="-lXpm $TK_LIBS", 
+		XPM_LIBS="-lXpm", 
 		[MISSING_MOTIF="$MISSING_MOTIF -lXpm"], $XLIBS)
 	fi
+
 	if test "$MOTIF_VERSION" = "2.1"; then
 	    AC_CHECK_LIB(Xp, XpGetPrinterList, 
-		TK_LIBS="-lXp $TK_LIBS",
+		MOTIF_XP_LIBS="-lXp",
 		[MISSING_MOTIF="$MISSING_MOTIF -lXp"], $XLIBS)
 	fi
-	TK_LIBS="$XLDFLAGS $TK_LIBS"
+
 	LDFLAGS="$_SAVE_LDFLAGS"
     fi
+
+    TK_LIBS="$XLDFLAGS $TK_LIBS"
 
     if test "$MOTIF_STATIC_LIB" = "unknown" \
          -a "$MOTIF_DYNAMIC_LIB" = "unknown"; then
@@ -798,6 +882,8 @@ fi
 	MOTIF_INCLUDE_DIR=
     fi
 
+    TK_LIBS="$MOTIF_XP_LIBS $TK_LIBS $X_LIBS $XT_LIBS $XMU_LIBS $XPM_LIBS $XEXT_LIBS $X11_LIBS $XSM_LIBS $XICE_LIBS"
+
     AC_ARG_WITH(static-motif,
     [  --with-static-motif     link Motif statically if possible],
 	sysstaticmotif=$withval)
@@ -820,7 +906,7 @@ fi
     TK_CFLAGS="$MOTIF_INCLUDES"
 fi
 
-if echo ":$MOZ_TOOLKIT" | grep "gtk" >/dev/null; then
+if echo ":$MOZ_WIDGET_TOOLKIT" | grep "gtk" >/dev/null; then
     AM_PATH_GTK($GTK_VERSION,,
       AC_MSG_ERROR(Test for GTK failed.))
 
@@ -859,17 +945,410 @@ if echo ":$MOZ_TOOLKIT" | grep "gtk" >/dev/null; then
     TK_CFLAGS=$GTK_CFLAGS
 fi
 
+if echo ":$MOZ_WIDGET_TOOLKIT" | grep "qt" >/dev/null; then
+    QT_CFLAGS="-I${QTDIR}/include"
+    QT_LIBS="-L/usr/X11R6/lib -lqt -lXext -lX11"
+dnl    AM_PATH_QT($QT_VERSION,,
+dnl      AC_MSG_ERROR(Test for QT failed.))
+
+    AC_ARG_WITH(static-qt,
+    [  --with-static-qt       link qt statically if possible],
+	sysstaticqt=$withval)
+
+    if test "$sysstaticqt" != "yes"; then
+       TK_LIBS=$QT_LIBS
+    else
+       changequote(,)
+
+       QT_LIBS_LOC=`echo $QT_LIBS | sed 's/\(.*\)\(-lqt.*\)/\1/'`
+
+       QT_STATIC_LOC=`echo $QT_LIBS | sed 's/^ *-L\([^ ]*\) .*$/\1/'`
+       QT_STATIC=`echo $QT_LIBS | sed 's/^.*-l\(qt[^ ]*\) .*/\1/'`
+
+       changequote([,])
+
+       TK_LIBS="$QT_STATIC_LOC/lib${QT_STATIC}.a"
+       TK_LIBS="$TK_LIBS $QT_STATIC_LOC/lib${QT_STATIC}.a"
+       TK_LIBS="$TK_LIBS $QT_LIBS_LOC"
+    fi
+    TK_CFLAGS=$QT_CFLAGS
+fi 
+
 # tk=xlib build.
-if echo ":$MOZ_TOOLKIT" | grep "xlib" >/dev/null; then
+if echo ":$MOZ_WIDGET_TOOLKIT" | grep "xlib" >/dev/null; then
     TK_CFLAGS='$(XCFLAGS)'
-    TK_LIBS='$(XLDFLAGS) $(XLIBS)'
+    TK_LIBS='$(XLDFLAGS)'
+    TK_LIBS="$TK_LIBS $XEXT_LIBS $X11_LIBS"
 fi
 
 fi # $no_x
 
+# BeOS toolkit setting
+if test "`echo $target_os | egrep "beos"`"; then
+        MOZ_WIDGET_TOOLKIT="beos"
+fi
+
+# Photon toolkit setting for the Neutrino platform
+if test "`echo $target_os | egrep "nto"`"; then
+        MOZ_WIDGET_TOOLKIT="photon"
+        AC_DEFINE(NO_X11)
+        TK_LIBS='-lphoton -lphrender'
+fi
+
+dnl ========================================================
+dnl =
+dnl = --enable-gfx-toolkit
+dnl = 
+dnl = Select which toolkit to use for gfx (rendering)
+dnl = 
+dnl = Choices are:
+dnl = 
+dnl = gtk
+dnl = motif
+dnl = xlib
+dnl = 
+dnl = Default is whatever MOZ_WIDGET_TOOLKIT is
+dnl = 
+dnl = The only valid combinations are:
+dnl = 
+dnl = widget       gfx
+dnl = ------       ---
+dnl = gtk          gtk
+dnl = motif        motif
+dnl = xlib         xlib
+dnl = 
+dnl = motif        xlib (broken)
+dnl = gtk          xlib (not tested yet)
+dnl = 
+dnl ========================================================
+MOZ_GFX_TOOLKIT=$MOZ_WIDGET_TOOLKIT
+
+AC_ARG_ENABLE(gfx-toolkit,
+[  --enable-gfx-toolkit=\$val   Enable \$val fe (defaults to same as widget)],
+  [ MOZ_GFX_TOOLKIT=`echo "$enableval" | sed -e "s/,.*$//"` ], 
+  [])
+
+
+if echo ":$MOZ_GFX_TOOLKIT" | grep "xlib" >/dev/null
+then
+  MOZ_XLIBRGB_LDFLAGS=-lxlibrgb
+  MOZ_USING_XLIBRGB=1
+
+  AC_DEFINE(MOZ_USING_XLIBRGB)
+
+  AC_SUBST(MOZ_XLIBRGB_LDFLAGS)
+  AC_SUBST(MOZ_USING_XLIBRGB)
+fi
+
+
+dnl ========================================================
+dnl =													   =
+dnl = --with-gtk										   =
+dnl = 													   =
+dnl = Gtk support hackery                                  =
+dnl = 													   =
+dnl ========================================================
+if test "$no_x" != "yes"
+then
+	AC_ARG_WITH(gtk,
+	[  --with-gtk         Enable GTK+ support ],
+	[
+		if test "$withval" = "yes"
+		then
+			MOZ_ENABLE_GTK=1
+    	else
+			MOZ_ENABLE_GTK=
+    	fi
+	])
+fi
+
+if test "$MOZ_ENABLE_GTK"
+then
+    AM_PATH_GTK($GTK_VERSION,,
+      AC_MSG_ERROR(Test for GTK failed.))
+
+    AC_ARG_WITH(static-gtk,
+    [  --with-static-gtk       link gtk statically if possible],
+	sysstaticgtk=$withval)
+
+    if test "$sysstaticgtk" != "yes"; then
+       MOZ_GTK_LDFLAGS=$GTK_LIBS
+    else
+       changequote(,)
+
+       GTK_LIBS_LOC=`echo $GTK_LIBS | sed 's/\(.*\)\(-lgtk.*\)/\1/'`
+
+       GTK_STATIC_LOC=`echo $GTK_LIBS | sed 's/^ *-L\([^ ]*\) .*$/\1/'`
+       GTK_STATIC=`echo $GTK_LIBS | sed 's/^.*-l\(gtk[^ ]*\) .*/\1/'`
+       GDK_STATIC=`echo $GTK_LIBS | sed 's/^.*-l\(gdk[^ ]*\) .*/\1/'`
+
+       GLIB_STATIC_LOC=`echo $GTK_LIBS | sed -e 's/^.*-lgdk[^ ]* *-L\([^ ]*\).*$/\1/' -e 's/^.* -lgdk[^ ]* .*$//'`
+       if test ! "$GLIB_STATIC_LOC" ; then
+         GLIB_STATIC_LOC=$GTK_STATIC_LOC
+       fi
+       GMODULE_STATIC=`echo $GTK_LIBS | sed 's/^.*-l\(gmodule[^ ]*\) .*/\1/'`
+       GLIB_STATIC=`echo $GTK_LIBS | sed 's/^.*-l\(glib[^ ]*\) .*/\1/'`
+
+       GTK_OTHER_LIBS=`echo $GTK_LIBS | sed 's/^.*-lglib *\(.*\)/\1/'`
+
+       changequote([,])
+
+       MOZ_GTK_LDFLAGS="$GTK_STATIC_LOC/lib${GTK_STATIC}.a"
+       MOZ_GTK_LDFLAGS="$MOZ_GTK_LDFLAGS $GTK_STATIC_LOC/lib${GDK_STATIC}.a"
+       MOZ_GTK_LDFLAGS="$MOZ_GTK_LDFLAGS $GLIB_STATIC_LOC/lib${GMODULE_STATIC}.a"
+       MOZ_GTK_LDFLAGS="$MOZ_GTK_LDFLAGS $GLIB_STATIC_LOC/lib${GLIB_STATIC}.a"
+       MOZ_GTK_LDFLAGS="$MOZ_GTK_LDFLAGS $GTK_LIBS_LOC $GTK_OTHER_LIBS"
+    fi
+
+    MOZ_GTK_CFLAGS=$GTK_CFLAGS
+fi
+dnl ========================================================
+dnl = 													   =
+dnl = End Gtk support hackery                              =
+dnl = 													   =
+dnl ========================================================
+
+
+dnl ========================================================
+dnl =													   =
+dnl = --with-motif										   =
+dnl = 													   =
+dnl = Motif support hackery                                =
+dnl = 													   =
+dnl ========================================================
+if test "$no_x" != "yes"
+then
+	AC_ARG_WITH(motif,
+	[  --with-motif         Enable Motif support ],
+	[
+		if test "$withval" = "yes"
+		then
+			MOZ_ENABLE_MOTIF=1
+    	else
+			MOZ_ENABLE_MOTIF=
+    	fi
+	])
+fi
+
+if test "$MOZ_ENABLE_MOTIF"
+then
+	AC_MSG_CHECKING(for motif insanity)
+
+    if test "$x_includes"
+	then
+		MOTIF_XINCS="-xif -I$x_includes"
+    fi
+
+    detect_motif="${srcdir}/config/mkdetect/detect_motif.sh -cc $CC $MOTIF_XINCS"
+    MOTIF_VERSION=`${detect_motif}`
+    MOTIF_INCLUDES=`${detect_motif} -if`
+    MOTIF_STATIC_FLAGS=`${detect_motif} -sf`
+    MOTIF_DYNAMIC_FLAGS=`${detect_motif} -df`
+    MOTIF_DYNAMIC_PATHS=`${detect_motif} -dp`
+dnl    MOTIF_REQUIRES_XPM=`${detect_motif} -xpm`
+    MOTIF_REQUIRES_XPM="False"
+
+    ${srcdir}/config/mkdetect/detect_motif.sh --cleanup
+
+    if test "$MOTIF_REQUIRES_XPM" = "True" -o "$MOTIF_VERSION" = "2.1"
+	then
+        _SAVE_LDFLAGS="$LDFLAGS"
+    	LDFLAGS="$XLDFLAGS $LDFLAGS"
+	fi
+
+	if test "$MOTIF_REQUIRES_XPM" = "True"
+	then
+	    AC_CHECK_LIB(Xpm, XpmWriteFileFromImage, 
+		XPM_LIBS="-lXpm", 
+		[MISSING_MOTIF="$MISSING_MOTIF -lXpm"], $XLIBS)
+	fi
+
+	if test "$MOTIF_VERSION" = "2.1"
+	then
+	    AC_CHECK_LIB(Xp, XpGetPrinterList, 
+		MOTIF_XP_LIBS="-lXp",
+		[MISSING_MOTIF="$MISSING_MOTIF -lXp"], $XLIBS)
+	fi
+
+	LDFLAGS="$_SAVE_LDFLAGS"
+
+    MOZ_MOTIF_LDFLAGS="$XLDFLAGS $MOZ_MOTIF_LDFLAGS"
+
+    if test "$MOTIF_STATIC_LIB" = "unknown" -a "$MOTIF_DYNAMIC_LIB" = "unknown"
+	then
+		AC_MSG_RESULT(no)
+	else
+		AC_MSG_RESULT(yes)
+    fi
+
+    # Get rid of offending error values
+    if test "$MOTIF_DYNAMIC_PATHS" = "unknown"
+	then 
+		MOTIF_DYNAMIC_PATHS=
+    fi
+
+    if test "$MOTIF_DYNAMIC_FLAGS" = "unknown"
+	then 
+		MOTIF_DYNAMIC_FLAGS=
+    fi
+
+    if test "$MOTIF_STATIC_FLAGS" = "unknown"
+	then 
+		MOTIF_STATIC_FLAGS=
+    fi
+
+    if test "$MOTIF_INCLUDE_DIR" = "unknown"
+	then
+		MOTIF_INCLUDE_DIR=
+    fi
+
+    MOZ_MOTIF_LDFLAGS="$MOTIF_XP_LIBS $MOZ_MOTIF_LDFLAGS $X_LIBS $XT_LIBS $XMU_LIBS $XPM_LIBS $XEXT_LIBS $X11_LIBS $XSM_LIBS $XICE_LIBS"
+
+    AC_ARG_WITH(static-motif,
+    [  --with-static-motif     link Motif statically if possible],
+	sysstaticmotif=$withval)
+
+    if test "$sysstaticmotif" != "yes"; then
+	_SAVE_LDFLAGS="$LDFLAGS"
+    	LDFLAGS="$MOTIF_DYNAMIC_PATHS $XLDFLAGS $LDFLAGS"
+    	AC_CHECK_LIB(Xm, XmStringCreate, 
+	    MOZ_MOTIF_LDFLAGS="$MOTIF_DYNAMIC_PATHS $MOTIF_DYNAMIC_FLAGS $MOZ_MOTIF_LDFLAGS",
+	    [MISSING_MOTIF="$MISSING_MOTIF $MOTIF_DYNAMIC_FLAGS"], 
+	    $MOTIF_DYNAMIC_PATHS $MOZ_MOTIF_LDFLAGS $XLIBS)
+	LDFLAGS="$_SAVE_LDFLAGS"
+    else
+    	AC_CHECK_LIB(Xm, XmStringCreate, 
+	    MOZ_MOTIF_LDFLAGS="$MOTIF_STATIC_FLAGS $MOZ_MOTIF_LDFLAGS",
+	    [MISSING_MOTIF="$MISSING_MOTIF $MOTIF_STATIC_FLAGS"], 
+	    $MOZ_MOTIF_LDFLAGS $XLIBS)
+    fi
+
+    MOZ_MOTIF_CFLAGS="$MOTIF_INCLUDES"
+fi
+dnl ========================================================
+dnl = 													   =
+dnl = End Motif support hackery                            =
+dnl = 													   =
+dnl ========================================================
+
+
+dnl ========================================================
+dnl =													   =
+dnl = --with-xlib										   =
+dnl = 													   =
+dnl = Xlib support hackery                                 =
+dnl = 													   =
+dnl ========================================================
+if test "$no_x" != "yes"
+then
+	AC_ARG_WITH(xlib,
+	[  --with-xlib         Enable xlib support ],
+	[
+		if test "$withval" = "yes"
+		then
+			MOZ_ENABLE_XLIB=1
+    	else
+			MOZ_ENABLE_XLIB=
+    	fi
+	])
+fi
+
+if test "$MOZ_ENABLE_XLIB"
+then
+	AC_MSG_CHECKING(for xlib insanity)
+	AC_MSG_RESULT(yes)
+
+    MOZ_XLIB_CFLAGS="$X_CFLAGS"
+    MOZ_XLIB_LDFLAGS="$XLDFLAGS"
+    MOZ_XLIB_LDFLAGS="$MOZ_XLIB_LDFLAGS $XEXT_LIBS $X11_LIBS"
+fi
+dnl ========================================================
+dnl = 													   =
+dnl = End Xlib support hackery                             =
+dnl = 													   =
+dnl ========================================================
+
+
+dnl ========================================================
+dnl =													   =
+dnl = --with-qt  										   =
+dnl = 													   =
+dnl = Qt support hackery                                   =
+dnl = 													   =
+dnl ========================================================
+if test "$no_x" != "yes"
+then
+	AC_ARG_WITH(qt,
+	[  --with-qt            Enable Qt support ],
+	[
+		if test "$withval" = "yes"
+		then
+			MOZ_ENABLE_QT=1
+    	else
+			MOZ_ENABLE_QT=
+    	fi
+	])
+fi
+
+if test "$MOZ_ENABLE_QT"
+then
+	AC_MSG_CHECKING(for Qt insanity)
+
+
+    QT_CFLAGS="-I${QTDIR}/include"
+    QT_LIBS="-L/usr/X11R6/lib -lqt -lXext -lX11"
+dnl    AM_PATH_QT($QT_VERSION,,
+dnl      AC_MSG_ERROR(Test for QT failed.))
+
+    AC_ARG_WITH(static-qt,
+    [  --with-static-qt       link qt statically if possible],
+	sysstaticqt=$withval)
+
+    if test "$sysstaticqt" != "yes"; then
+       MOZ_QT_LDFLAGS=$QT_LIBS
+    else
+       changequote(,)
+
+       QT_LIBS_LOC=`echo $QT_LIBS | sed 's/\(.*\)\(-lqt.*\)/\1/'`
+
+       QT_STATIC_LOC=`echo $QT_LIBS | sed 's/^ *-L\([^ ]*\) .*$/\1/'`
+       QT_STATIC=`echo $QT_LIBS | sed 's/^.*-l\(qt[^ ]*\) .*/\1/'`
+
+       changequote([,])
+
+       MOZ_QT_LDFLAGS="$QT_STATIC_LOC/lib${QT_STATIC}.a"
+       MOZ_QT_LDFLAGS="$MOZ_QT_LDFLAGS $QT_STATIC_LOC/lib${QT_STATIC}.a"
+       MOZ_QT_LDFLAGS="$MOZ_QT_LDFLAGS $QT_LIBS_LOC"
+    fi
+
+    MOZ_QT_CFLAGS=$QT_CFLAGS
+fi
+dnl ========================================================
+dnl = 													   =
+dnl = End Qt support hackery                               =
+dnl = 													   =
+dnl ========================================================
+
 AC_SUBST(GTK_CONFIG)
 AC_SUBST(TK_CFLAGS)
 AC_SUBST(TK_LIBS)
+
+AC_SUBST(MOZ_ENABLE_GTK)
+AC_SUBST(MOZ_ENABLE_MOTIF)
+AC_SUBST(MOZ_ENABLE_XLIB)
+AC_SUBST(MOZ_ENABLE_GTK)
+AC_SUBST(MOZ_ENABLE_MOTIF)
+AC_SUBST(MOZ_ENABLE_XLIB)
+AC_SUBST(MOZ_ENABLE_QT)
+AC_SUBST(MOZ_GTK_CFLAGS)
+AC_SUBST(MOZ_GTK_LDFLAGS)
+AC_SUBST(MOZ_MOTIF_CFLAGS)
+AC_SUBST(MOZ_MOTIF_LDFLAGS)
+AC_SUBST(MOZ_XLIB_CFLAGS)
+AC_SUBST(MOZ_XLIB_LDFLAGS)
+AC_SUBST(MOZ_QT_CFLAGS)
+AC_SUBST(MOZ_QT_LDFLAGS)
+AC_SUBST(MOZ_SINGLE_TOOLKIT)
 
 XCFLAGS="$X_CFLAGS"
 
@@ -1052,8 +1531,6 @@ AC_CHECK_LIB(elf, elf_rawdata)
 AC_CHECK_LIB(intl, textdomain)
 AC_CHECK_LIB(posix4, shm_open)
 AC_CHECK_LIB(w, iswupper)
-AC_CHECK_LIB(l, yywrap,,
-    AC_CHECK_LIB(fl, yywrap))
 
 dnl Replace `main' with a function in -lC_r:
 dnl AC_CHECK_LIB(C_r, main)
@@ -1093,8 +1570,6 @@ dnl
 dnl Start by checking whether the system support pthreads
 dnl 
 
-USE_PTHREADS=
-PTHREAD_LDFLAGS=""
 
 dnl 
 dnl Try lib pthread
@@ -1151,22 +1626,6 @@ then
 	rm -f conftest*
 
 	case "$target" in
-	    *-*-solaris*) 
-    			AC_DEFINE(_REENTRANT) 
-			if test ! "$GNU_CC"; then
-				CFLAGS="$CFLAGS -mt" 
-				CXXFLAGS="$CXXFLAGS -mt" 
-			fi
-			;;
-
-	    *-*-linux*) 
-			AC_DEFINE(_REENTRANT) 
-			;;
-
-	    alpha*-*-osf*)
-			AC_DEFINE(_REENTRANT)
-			;;
-
 	    *-*-freebsd*)
 			AC_DEFINE(_REENTRANT)
 			AC_DEFINE(_THREAD_SAFE)
@@ -1175,6 +1634,26 @@ then
 				PTHREAD_LDFLAGS=""
 			else
 				PTHREAD_LDFLAGS="-lc_r"
+			fi
+			;;
+
+	    *-*-linux*) 
+			AC_DEFINE(_REENTRANT) 
+			;;
+
+	    *-*-nto*) 
+			AC_DEFINE(_REENTRANT) 
+			;;
+
+	    alpha*-*-osf*)
+			AC_DEFINE(_REENTRANT)
+			;;
+
+	    *-*-solaris*) 
+    			AC_DEFINE(_REENTRANT) 
+			if test ! "$GNU_CC"; then
+				CFLAGS="$CFLAGS -mt" 
+				CXXFLAGS="$CXXFLAGS -mt" 
 			fi
 			;;
 	esac
@@ -1200,6 +1679,9 @@ AC_ARG_WITH(nsprlib,
 [  --with-nsprlib=\$dir        location of nspr libraries],
 	NSPR_LIBDIR=$withval)
 
+dnl Skip this if cross-compiling, since the checks will fail.
+if test "$CROSS_COMPILE"x = x; then
+
 _SAVE_CFLAGS=$CFLAGS
 _SAVE_LDFLAGS=$LDFLAGS
 _SAVE_LIBS=$LIBS
@@ -1221,7 +1703,7 @@ AC_TRY_RUN(
 	}
 	, [NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"],
 	[_NSPR_NEEDS_THREAD_LIB=1 result="no"], 
-	[_NSPR_NEEDS_THREAD_LIB=1 result="no"] )
+	[NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"] )
 rm -f core
 AC_MSG_RESULT("$result")
 
@@ -1240,7 +1722,7 @@ AC_MSG_CHECKING("for PR_GetCurrentThread in -lnspr$NSPR_VERSION with thread lib"
 	}
 	, [NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"],
 	[MISSING_NSPR="$MISSING_NSPR -lnspr$NSPR_VERSION" result="no"], 
-	[MISSING_NSPR="$MISSING_NSPR -lnspr$NSPR_VERSION" result="no"] )
+	[NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"] )
     rm -f core
 AC_MSG_RESULT("$result")
 fi
@@ -1250,12 +1732,15 @@ dnl	[MISSING_NSPR="$MISSING_NSPR -lnspr$NSPR_VERSION"], $NSPR_LIBS)
 
 AC_CHECK_LIB(plc$NSPR_VERSION, PL_CreateOptState, NSPR_LIBS="-lplc$NSPR_VERSION $NSPR_LIBS",
 	[MISSING_NSPR="$MISSING_NSPR -lplc$NSPR_VERSION"], $NSPR_LIBS)
-AC_CHECK_LIB(plds3, PL_GetEvent, NSPR_LIBS="-lplds$NSPR_VERSION $NSPR_LIBS",
+AC_CHECK_LIB(plds$NSPR_VERSION, PL_GetEvent, NSPR_LIBS="-lplds$NSPR_VERSION $NSPR_LIBS",
 	[MISSING_NSPR="$MISSING_NSPR -lplds$NSPR_VERSION"], $NSPR_LIBS)
 
 CFLAGS=$_SAVE_CFLAGS
 LDFLAGS=$_SAVE_LDFLAGS
 LIBS=$_SAVE_LIBS
+
+fi
+
 if test "${NSPR_DIR}" -a -d "${NSPR_DIR}"; then
     NSPR_INCLUDE_DIR="${NSPR_DIR}/include"
     NSPR_CFLAGS="-I${NSPR_INCLUDE_DIR}"
@@ -1396,7 +1881,7 @@ dnl By default, turn rtti and exceptions off on g++/egcs
 dnl ========================================================
 if test "$GNU_CXX"; then
 
-  _MOZ_RTTI_FLAGS=-fno-rtti
+  _MOZ_RTTI_FLAGS=${_COMPILER_PREFIX}-fno-rtti
 
   AC_MSG_CHECKING(for C++ exceptions flag)
 
@@ -1407,9 +1892,9 @@ if test "$GNU_CXX"; then
   ${CXX-g++} -c -fno-handle-exceptions conftest.C > conftest.out 2>&1
 
   if egrep "warning.*renamed" conftest.out >/dev/null; then
-    ac_cv_cxx_exceptions_flags=-fno-exceptions
+    ac_cv_cxx_exceptions_flags=${_COMPILER_PREFIX}-fno-exceptions
   else
-    ac_cv_cxx_exceptions_flags=-fno-handle-exceptions
+    ac_cv_cxx_exceptions_flags=${_COMPILER_PREFIX}-fno-handle-exceptions
   fi
 
   rm -f conftest*])
@@ -1516,6 +2001,37 @@ if test "$ac_cv_cpp_explicit" = yes ; then
    AC_DEFINE(HAVE_CPP_EXPLICIT)
 fi
 
+dnl Check for template specialization
+dnl Test code and requirement from scc@netscape.com.
+dnl Autoconf cut-and-paste job by shaver@mozilla.org.
+AC_CACHE_CHECK(for C++ template specialization support,
+               ac_cv_cpp_template_specialization,
+               [AC_TRY_COMPILE(template <class T> struct X { int a; };
+                               class Y {};
+                               template <> struct X<Y> { double a; };,
+                               X<int> int_x;
+                               X<Y> y_x;,
+                               ac_cv_cpp_template_specialization=yes,
+                               ac_cv_cpp_template_specialization=no)])
+dnl The above test works fine for Sun's WorkShop 4.2 compiler, but
+dnl dies horribly trying to build mozilla with HAVE_CPP_SPECIALIZATION
+dnl defined.  So, even though the output above will say yes, we force
+dnl it to reconsider....  (5.0 works fine, though.)
+dnl Info and testing provided by tor@cs.brown.edu.
+case "$target" in
+  *-*-solaris*)
+	if test ! "$GNU_CC"; then
+	   if test ! -z "`${CC} -V 2>&1 | head -1 | grep '4.2'`"; then
+             ac_cv_cpp_template_specialization=no
+	   fi
+	fi
+	;;
+esac
+if test "$ac_cv_cpp_template_specialization" = yes ; then
+  AC_DEFINE(HAVE_CPP_SPECIALIZATION)
+fi
+
+
 dnl
 dnl We dont do exceptions on unix.  The only reason this used to be here
 dnl is that mozilla/xpcom/tests/TestCOMPtr.cpp has a test which uses 
@@ -1570,7 +2086,7 @@ AC_CACHE_CHECK(whether C++ requires implementation of unused methods,
 if test "$ac_cv_cpp_unused_required" = yes ; then
    AC_DEFINE(NEED_CPP_UNUSED_IMPLEMENTATIONS)
 fi
-    
+
 CC=$_SAVE_CC
 ac_ext=c
 
@@ -1597,7 +2113,7 @@ if test "$ac_cv_i18n_lc_messages" = yes; then
    AC_DEFINE(HAVE_I18N_LC_MESSAGES)
 fi 	
 
-  
+
 dnl Mozilla specific options
 dnl ========================================================
 dnl The macros used for command line options
@@ -1641,17 +2157,17 @@ MOZ_ARG_DISABLE_BOOL(mailnews,
 [  --disable-mailnews      Dont build Mail & News],
   MOZ_MAIL_NEWS= )
 
+NECKO=1
+
+dnl NECKO is the new netlib module. Build Necko by default
+MOZ_ARG_DISABLE_BOOL(necko,
+[  --disable-necko  Dont build Necko, the new network library.],
+  NECKO=)
+
 dnl Note: This conflicts with --disable-shared
 MOZ_ARG_ENABLE_BOOL(oji,
 [  --enable-oji            Enable use of Open JVM Interface],
   [MOZ_OJI=1 FULL_STATIC_BUILD= NO_SHARED_LIB=])
-
-dnl build the tests by default
-ENABLE_TESTS=1
-
-MOZ_ARG_DISABLE_BOOL(tests,
-[  --disable-tests         Dont build the tests],
-  ENABLE_TESTS= )
 
 dnl Build PICS (mozilla/extensions/pics) code
 MOZ_ARG_ENABLE_BOOL(pics,
@@ -1660,11 +2176,43 @@ MOZ_ARG_ENABLE_BOOL(pics,
 
 AC_DEFINE(ENABLE_PICS)
 
+
+dnl build the tests by default
+ENABLE_TESTS=1
+
+MOZ_ARG_DISABLE_BOOL(tests,
+[  --disable-tests         Dont build the tests],
+  ENABLE_TESTS= )
+
 dnl Build browsing profile; off by default
 MOZ_ARG_ENABLE_BOOL(brprof,
 [  --enable-brprof        Enable browsing profile cookie],
   MOZ_BRPROF=1
   AC_DEFINE(MOZ_BRPROF))
+
+dnl Toolkit exorcism - a temporary hack.
+MOZ_ARG_ENABLE_BOOL(toolkit-exorcism,
+[  --enable-toolkit-exorcism           Exorcise toolkit specific link time dependencies],
+  TOOLKIT_EXORCISM=1
+  AC_DEFINE(TOOLKIT_EXORCISM))
+
+dnl ========================================================
+dnl =
+dnl = --diable-pic-dso-cflags
+dnl =
+dnl = A hack to disable the generation of PIC for shared libs
+dnl =
+dnl ========================================================
+ENABLE_PIC_DSO_CFLAGS=1
+
+MOZ_ARG_DISABLE_BOOL(pic-dso-cflags,
+[  --disable-pic-dso-cflags         Dont generate PIC for shared libs)],
+  ENABLE_PIC_DSO_CFLAGS= )
+
+if test ! "$ENABLE_PIC_DSO_CFLAGS"
+then
+  DSO_PIC_CFLAGS=""
+fi
 
 dnl ========================================================
 dnl =
@@ -1692,7 +2240,7 @@ MOZ_ARG_DISABLE_BOOL(single-signon,
 if test "$ClientWallet"
 then
   AC_DEFINE(ClientWallet)
-  
+
   # I guess one depends on the other
   SingleSignon=1
 fi
@@ -1718,8 +2266,20 @@ MOZ_ENABLE_GTK_MOZILLA=
 MOZ_ARG_ENABLE_BOOL(gtk-mozilla,
 [  --enable-gtk-mozilla           Enable building of GtkMozilla GTK+ widget],
   MOZ_ENABLE_GTK_MOZILLA=1 MOZ_BUILD_ROOT=`pwd`)
-dnl ========================================================
 
+dnl Make sure GtkMozilla is only built if gtk is the mail toolkit
+if test ! "$MOZ_WIDGET_TOOLKIT" = "gtk" -a "$MOZ_ENABLE_GTK_MOZILLA"
+then
+  echo
+  echo "*** You can only build GtkMozilla (A GTK+ widget to embed gecko)"
+  echo "*** into any GTK+ app) if the main toolkit is \"gtk\"."
+  echo "*** You have currently chosen \"$MOZ_WIDGET_TOOLKIT\" as your main toolkit."
+  echo "*** GtkMozilla will not be built."
+  echo
+  MOZ_ENABLE_GTK_MOZILLA= MOZ_BUILD_ROOT=
+  sleep 3
+fi
+dnl ========================================================
 
 dnl ========================================================
 dnl =
@@ -1801,6 +2361,22 @@ MOZ_ARG_ENABLE_BOOL(strip-libs,
 
 dnl ========================================================
 dnl =
+dnl = --enable-strip-not-exported
+dnl = 
+dnl = Enable stripping of not exported symbols in .so files
+dnl = 
+dnl ========================================================
+MOZ_STRIP_NOT_EXPORTED=
+
+MOZ_ARG_ENABLE_BOOL(strip-not-exported,
+[  --enable-strip-not-exported       Enable stripping of not exported symbols in .so files ],
+  [MOZ_STRIP_NOT_EXPORTED=1
+   AC_DEFINE(MOZ_STRIP_NOT_EXPORTED) ])
+
+dnl ========================================================
+
+dnl ========================================================
+dnl =
 dnl = --with-debug-modules=module1,module1,etc
 dnl = 
 dnl = Enable debug for specific modules only
@@ -1833,6 +2409,12 @@ MOZ_ARG_ENABLE_BOOL(pedantic,
 [  --enable-pedantic       Issue all warnings demanded by strict ANSI C ],
   [ _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -pedantic"
     _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -pedantic" ])
+
+dnl pass -Wno-long-long to the compiler
+MOZ_ARG_ENABLE_BOOL(ignore-no-long-long-warning,
+[  --enable-ignore-no-long-long-warning       pass -Wno-long-long to the compiler],
+  [ _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wno-long-long"
+    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wno-long-long" ])
 
 dnl Note: This should not be disabled if --enable-oji is set
 MOZ_ARG_DISABLE_BOOL(shared,
@@ -1895,6 +2477,10 @@ MOZ_ARG_WITH_STRING(wrap-malloc,
 [  --with-wrap-malloc-=\$dir Location of malloc wrapper library],
   WRAP_MALLOC_LIB=$withval)
 
+MOZ_ARG_ENABLE_BOOL(efence,
+[  --enable-efence         Link with Electric Fence if available (default=no) ],
+  AC_CHECK_LIB(efence,malloc))
+
 dnl ========================================================
 dnl =
 dnl = Misc. Options
@@ -1920,17 +2506,21 @@ MOZ_ARG_ENABLE_BOOL(xterm-updates,
 [  --enable-xterm-updates  Update XTERM titles with current command.],
   MOZ_UPDATE_XTERM=1)
 
-dnl NECKO is the new netlib landing.
-MOZ_ARG_ENABLE_BOOL(necko,
-[  --enable-necko  Enable NECKO, the new network library.],
-  NECKO=1)
+dnl ========================================================
+dnl =
+dnl = --diable-dtd-debug
+dnl =
+dnl = Disable some DTD debugging code in the parser that 
+dnl = breaks on some compilers because of evil and broken 
+dnl = streams code in htmlparser/src/prstrm.cpp
+dnl =
+dnl ========================================================
+MOZ_DISABLE_DTD_DEBUG=
 
-dnl commenting this out
-dnl according to waterson it is obsolete.
-dnl I'll remove it once I hear back from jband.  
-dnl MOZ_ARG_ENABLE_BOOL(js-stubs,
-dnl [  --enable-js-stubs       Use XPIDL JavaScript Stubs.],
-dnl   AC_DEFINE(XPIDL_JS_STUBS))
+MOZ_ARG_DISABLE_BOOL(dtd-debug,
+[  --disable-dtd-debug         Disable some DTD debuggin code in the parser)],
+  MOZ_DISABLE_DTD_DEBUG=1 
+  AC_DEFINE(MOZ_DISABLE_DTD_DEBUG) )
 
 dnl ========================================================
 dnl =
@@ -1938,10 +2528,6 @@ dnl = Untested or Broken Options
 dnl = 
 dnl ========================================================
 MOZ_ARG_HEADER(Untested or Broken Options)
-
-MOZ_ARG_ENABLE_BOOL(crypto,
-[  --enable-crypto         Enable use of SSL (untested)],
-  MOZ_SECURITY=1)
 
 dnl Netcaster is dead
 dnl MOZ_ARG_ENABLE_BOOL(netcast,
@@ -1960,9 +2546,9 @@ then
   exit 1
 fi
 
-MOZ_ARG_ENABLE_BOOL(mail-compose,
-[  --enable-mail-compose   Enable old Messenger mail composer],
-  [ MOZ_MAIL_COMPOSE=1 MOZ_EDITOR=1 ])
+dnl MOZ_ARG_ENABLE_BOOL(mail-compose,
+dnl [  --enable-mail-compose   Enable old Messenger mail composer],
+dnl  [ MOZ_MAIL_COMPOSE=1 MOZ_EDITOR=1 ])
 
 dnl The new mail app is "smart-mail"
 dnl MOZ_ARG_ENABLE_BOOL(smart-mail,
@@ -2001,9 +2587,11 @@ AC_SUBST(LD)
 AC_SUBST(ASFLAGS)
 AC_SUBST(AS_DASH_C_FLAG)
 AC_SUBST(NS_USE_NATIVE)
-AC_SUBST(MOZ_TOOLKIT)
+AC_SUBST(MOZ_WIDGET_TOOLKIT)
+AC_SUBST(MOZ_GFX_TOOLKIT)
 AC_SUBST(MOZ_UPDATE_XTERM)
 AC_SUBST(NECKO)
+AC_SUBST(TOOLKIT_EXORCISM)
 AC_SUBST(MOZ_SECURITY)
 dnl AC_SUBST(MOZ_NETCAST)
 AC_SUBST(MOZ_JAVA)
@@ -2022,6 +2610,7 @@ AC_SUBST(MOZ_EDITOR)
 AC_SUBST(MOZ_BRPROF)
 
 AC_SUBST(UNIX_CRASH_ON_ASSERT)
+AC_SUBST(MOZ_STRIP_NOT_EXPORTED)
 AC_SUBST(NO_UNIX_ASYNC_DNS)
 AC_SUBST(NO_SHARED_LIB)
 AC_SUBST(NO_STATIC_LIB)
@@ -2177,19 +2766,14 @@ _SAVE_LDFLAGS=$LDFLAGS
 _SAVE_LIBS=$LIBS
 CFLAGS="$CFLAGS -I${FULLCIRCLE_DIR}"
 LDFLAGS="$LDFLAGS -L${FULLCIRCLE_DIR}"
-
-AC_MSG_CHECKING("for FC_Initialize in -ltalkback");
 LIBS="-ltalkback $LIBS"
-AC_TRY_LINK([
-	#include "fullcircle.h"
-        #include <stdio.h>
-	],
-        [FC_Initialize();
-        exit(0);]
-        ,[FULLCIRCLE_LIB="-ltalkback $FULLCIRCLE_LIB" result="yes"],
-        [MISSING_FULLCIRCLE=1 result="no"])
+AC_MSG_CHECKING("for FC_Initialize in -ltalkback");
+AC_TRY_LINK([ #include <stdio.h>
+	      #include "fullcircle.h" ],
+            [ FC_Initialize(); exit(0); ],
+            [FULLCIRCLE_LIB="-ltalkback $FULLCIRCLE_LIB" result="yes"],
+            [MISSING_FULLCIRCLE=1 result="no"])
 AC_MSG_RESULT("$result")
-
 CFLAGS=$_SAVE_CFLAGS
 LDFLAGS=$_SAVE_LDFLAGS
 LIBS=$_SAVE_LIBS
@@ -2273,6 +2857,7 @@ AC_SUBST(TARGET_CPU)
 AC_SUBST(TARGET_OS)
 AC_SUBST(TARGET_NSPR_MDCPUCFG)
 AC_SUBST(TARGET_MD_ARCH)
+AC_SUBST(OS_TARGET)
 
 AC_SUBST(LIB_SUFFIX)
 AC_SUBST(OBJ_SUFFIX)
@@ -2331,6 +2916,9 @@ case "$target" in
     ;;
 *-OS2*)
     AC_DEFINE(XP_PC)
+    ;;
+*-beos*)
+    AC_DEFINE(XP_BEOS)
     ;;
 *)
     AC_DEFINE(XP_UNIX)

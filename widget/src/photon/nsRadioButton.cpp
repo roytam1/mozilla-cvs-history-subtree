@@ -152,7 +152,7 @@ NS_METHOD nsRadioButton::SetLabel(const nsString& aText)
   {
     PtArg_t arg;
     
-    NS_ALLOC_STR_BUF(label, aText, 256);
+    NS_ALLOC_STR_BUF(label, aText, aText.Length());
 
     PtSetArg( &arg, Pt_ARG_TEXT_STRING, label, 0 );
     if( PtSetResources( mWidget, 1, &arg ) == 0 )
@@ -171,8 +171,26 @@ NS_METHOD nsRadioButton::SetLabel(const nsString& aText)
 //-------------------------------------------------------------------------
 NS_METHOD nsRadioButton::GetLabel(nsString& aBuffer)
 {
+  nsresult res = NS_ERROR_FAILURE;
+
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsRadioButton::GetLabel\n"));
-  return NS_OK;
+
+  aBuffer.SetLength(0);
+
+  if( mWidget )
+  {
+    PtArg_t arg;
+    char    *label;    
+
+    PtSetArg( &arg, Pt_ARG_TEXT_STRING, &label, 0 );
+    if( PtGetResources( mWidget, 1, &arg ) == 0 )
+    {
+      aBuffer.Append( label );
+      res = NS_OK;
+    }
+  }
+
+  return res;
 }
 
 //-------------------------------------------------------------------------

@@ -23,6 +23,7 @@
 #include "nsILocale.h"
 #include "nsLocale.h"
 #include "nsLocaleCID.h"
+#include "nsCOMPtr.h"
 
 #define LOCALE_HASH_SIZE	0xFF
 
@@ -32,6 +33,31 @@ NS_DEFINE_IID(kLocaleCID, NS_LOCALE_CID);
 
 /* nsILocale */
 NS_IMPL_ISUPPORTS(nsLocale,kILocaleIID)
+
+nsLocale::nsLocale(void)
+:	fHashtable(nsnull), fCategoryCount(0)
+{
+	NS_INIT_REFCNT();
+
+	fHashtable = PL_NewHashTable(LOCALE_HASH_SIZE,&nsLocale::Hash_HashFunction,
+		&nsLocale::Hash_CompareNSString,&nsLocale::Hash_CompareNSString,NULL,NULL);
+	NS_ASSERTION(fHashtable!=NULL,"nsLocale: failed to allocate PR_Hashtable");
+}
+
+nsLocale::nsLocale(nsLocale* other)
+:	fHashtable(nsnull), fCategoryCount(0)
+{
+	NS_INIT_REFCNT();
+
+	fHashtable = PL_NewHashTable(LOCALE_HASH_SIZE,&nsLocale::Hash_HashFunction,
+		&nsLocale::Hash_CompareNSString,&nsLocale::Hash_CompareNSString,NULL,NULL);
+	NS_ASSERTION(fHashtable!=NULL,"nsLocale: failed to allocate PR_Hashtable");
+
+	//
+	// enumerate Hash and copy
+	//
+	PL_HashTableEnumerateEntries(other->fHashtable,&nsLocale::Hash_EnumerateCopy,fHashtable);
+}
 
 
 nsLocale::nsLocale(nsString** categoryList,nsString** valueList, PRUint32 count)
@@ -91,6 +117,39 @@ nsLocale::GetCategory(const nsString* category,nsString* result)
 }
 
 
+NS_IMETHODIMP
+nsLocale::GetCategory(const PRUnichar *category,PRUnichar **result)
+{
+
+	nsString aCategory(category);
+	const nsString*	value;
+
+	value = (const nsString*)PL_HashTableLookup(fHashtable,&aCategory);
+	if (value!=NULL)
+	{
+		(*result)=value->ToNewUnicode();
+		return NS_OK;
+	}
+
+	return NS_ERROR_FAILURE;
+
+}
+
+NS_IMETHODIMP
+nsLocale::AddCategory(const PRUnichar *category, const PRUnichar *value)
+{
+	nsString* new_key = new nsString(category);
+	if (!new_key) return NS_ERROR_OUT_OF_MEMORY;
+	
+	nsString* new_value = new nsString(value);
+	if (!new_value) return NS_ERROR_OUT_OF_MEMORY;
+
+	(void)PL_HashTableAdd(fHashtable,new_key,new_value);
+
+	return NS_OK;
+}
+
+
 PLHashNumber
 nsLocale::Hash_HashFunction(const void* key)
 {
@@ -124,7 +183,7 @@ nsLocale::Hash_CompareNSString(const void* s1, const void* s2)
 
 
 PRIntn
-nsLocale::Hash_EnmerateDelete(PLHashEntry *he, PRIntn index, void *arg)
+nsLocale::Hash_EnmerateDelete(PLHashEntry *he, PRIntn hashIndex, void *arg)
 {
 	nsString*	key, *value;
 
@@ -138,3 +197,26 @@ nsLocale::Hash_EnmerateDelete(PLHashEntry *he, PRIntn index, void *arg)
 
 	return (HT_ENUMERATE_NEXT | HT_ENUMERATE_REMOVE);
 }
+
+PRIntn
+nsLocale::Hash_EnumerateCopy(PLHashEntry *he, PRIntn hashIndex, void* arg)
+{
+	nsString	*new_key, *new_value;
+
+	new_key = new nsString(*((nsString*)he->key));
+	if (!new_key)
+		return HT_ENUMERATE_STOP;
+
+	new_value = new nsString(*((nsString*)he->value));
+	if (!new_value)
+		return HT_ENUMERATE_STOP;
+
+	(void)PL_HashTableAdd((PLHashTable*)arg,new_key,new_value);
+
+	return (HT_ENUMERATE_NEXT);
+}
+
+
+
+
+

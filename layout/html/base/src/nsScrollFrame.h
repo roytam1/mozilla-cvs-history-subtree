@@ -26,6 +26,9 @@
  *
  * It only supports having a single child frame that typically is an area
  * frame, but doesn't have to be. The child frame must have a view, though
+ *
+ * Scroll frames don't support incremental changes, i.e. you can't replace
+ * or remove the scrolled frame
  */
 class nsScrollFrame : public nsHTMLContainerFrame {
 public:
@@ -37,9 +40,30 @@ public:
                   nsIStyleContext* aContext,
                   nsIFrame*        aPrevInFlow);
 
+  // Called to set the one and only child frame. Returns NS_ERROR_INVALID_ARG
+  // if the child frame is NULL, and NS_ERROR_UNEXPECTED if the child list
+  // contains more than one frame
   NS_IMETHOD SetInitialChildList(nsIPresContext& aPresContext,
                                  nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
+
+  // Because there can be only one child frame, these two function return
+  // NS_ERROR_FAILURE
+  NS_IMETHOD AppendFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD InsertFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aPrevFrame,
+                          nsIFrame*       aFrameList);
+
+  // This function returns NS_ERROR_NOT_IMPLEMENTED
+  NS_IMETHOD RemoveFrame(nsIPresContext& aPresContext,
+                         nsIPresShell&   aPresShell,
+                         nsIAtom*        aListName,
+                         nsIFrame*       aOldFrame);
 
   NS_IMETHOD DidReflow(nsIPresContext&   aPresContext,
                        nsDidReflowStatus aStatus);
@@ -66,12 +90,26 @@ public:
 protected:
   nsScrollFrame();
   virtual PRIntn GetSkipSides() const;
+
    // Creation of the widget for the scrolling view is factored into a virtual method so
    // that sub-classes may control widget creation.
   virtual nsresult CreateScrollingViewWidget(nsIView* aView,const nsStylePosition* aPosition);
+   // Getting the view for scollframe may be overriden to provide a parent view for te scroll frame
+  virtual nsresult GetScrollingParentView(nsIFrame* aParent, nsIView** aParentView);
 
 private:
   nsresult CreateScrollingView(nsIPresContext& aPresContext);
+
+  nsresult CalculateScrollAreaSize(nsIPresContext&          aPresContext,
+                                   const nsHTMLReflowState& aReflowState,
+                                   nsMargin&                aMargin,
+                                   nscoord                  aSBWidth,
+                                   nscoord                  aSBHeight,
+                                   nsSize*                  aScrollAreaSize,
+                                   PRBool*                  aRoomForVerticalScrollbar);
+
+  nsresult CalculateChildTotalSize(nsIFrame*            aKidFrame,
+                                   nsHTMLReflowMetrics& aKidReflowMetrics);
 };
 
 #endif /* nsScrollFrame_h___ */

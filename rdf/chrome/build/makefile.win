@@ -26,6 +26,8 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsChromeFactory.obj    \
 	$(NULL)
 
+LINCS = $(LINCS) -I..\src         # for implementation headers
+
 # XXX linking in raptor is a heinous crime that will go away once we
 # have a more DOM-based mechanism for constructing elements and
 # hooking in to their changes.
@@ -33,10 +35,7 @@ CPP_OBJS=\
 LLIBS=\
  $(DIST)\lib\xpcom.lib         \
  $(DIST)\lib\chrome_s.lib        \
- $(DIST)\lib\plc3.lib            \
  $(LIBNSPR)  
-
-MISCDEP=$(LLIBS)
 
 include <$(DEPTH)\config\rules.mak>
 

@@ -16,8 +16,10 @@
  * Reserved. 
  */ 
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 #include "nsHTMLDocument.h"
 #include "nsIParser.h"
+#include "nsIParserFilter.h"
 #include "nsIHTMLContentSink.h"
 #include "nsHTMLParts.h"
 #include "nsIHTMLStyleSheet.h"
@@ -34,16 +36,19 @@
 #include "nsIDOMComment.h" 
 #include "nsIDOMWindow.h"
 #include "nsIDOMHTMLFormElement.h"
-#include "nsIPostToServer.h"  
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
-#endif // NECKO
+#include "nsIURL.h"
+#include "nsNeckoUtil.h"
+#else
+#include "nsIPostToServer.h"  
 #include "nsIURLGroup.h"
+#endif // NECKO
 #include "nsIContentViewerContainer.h"
 #include "nsIWebShell.h"
+#include "nsIWebShellServices.h"
 #include "nsIDocumentLoader.h"
 #include "CNavDTD.h"
 #include "nsIScriptGlobalObject.h"
@@ -63,13 +68,27 @@
 #include "nsIDOMHTMLMapElement.h"
 #include "nsIDOMHTMLBodyElement.h"
 #include "nsINameSpaceManager.h"
+#include "nsGenericHTMLElement.h"
 #include "nsGenericDOMNodeList.h"
 #include "nsICSSLoader.h"
+#include "nsIHTTPChannel.h"
+
+#include "nsICharsetDetector.h"
+#include "nsICharsetDetectionAdaptor.h"
+#include "nsCharsetDetectionAdaptorCID.h"
+#include "nsIPref.h"
+static char g_detector_progid[128];
+static PRBool gInitDetector = PR_FALSE;
+static PRBool gPlugDetector = PR_FALSE;
 
 #ifdef PCB_USE_PROTOCOL_CONNECTION
 // beard: how else would we get the referrer to a URL?
 #include "nsIProtocolConnection.h"
 #include "net.h"
+#endif
+
+#ifdef NECKO
+#include "prmem.h"
 #endif
 
 // Find/Serach Includes
@@ -83,14 +102,11 @@ const PRInt32 kBackward = 1;
 #endif
 
 // XXX Used to control whether we implement document.layers
-#define NS_IMPLEMENT_DOCUMENT_LAYERS
+//#define NS_IMPLEMENT_DOCUMENT_LAYERS
 
 static NS_DEFINE_IID(kIWebShellIID, NS_IWEB_SHELL_IID);
 static NS_DEFINE_IID(kIDocumentIID, NS_IDOCUMENT_IID);
-static NS_DEFINE_IID(kIContentIID, NS_ICONTENT_IID);
-static NS_DEFINE_IID(kIDOMElementIID, NS_IDOMELEMENT_IID);
 static NS_DEFINE_IID(kIDOMTextIID, NS_IDOMTEXT_IID);
-static NS_DEFINE_IID(kIDOMNodeIID, NS_IDOMNODE_IID);
 static NS_DEFINE_IID(kIDOMNodeListIID, NS_IDOMNODELIST_IID);
 static NS_DEFINE_IID(kIHTMLDocumentIID, NS_IHTMLDOCUMENT_IID);
 static NS_DEFINE_IID(kIDOMHTMLDocumentIID, NS_IDOMHTMLDOCUMENT_IID);
@@ -104,11 +120,10 @@ static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 
-static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIHTMLContentContainerIID, NS_IHTMLCONTENTCONTAINER_IID);
-static NS_DEFINE_IID(kIDOMHTMLElementIID, NS_IDOMHTMLELEMENT_IID);
 static NS_DEFINE_IID(kIDOMHTMLBodyElementIID, NS_IDOMHTMLBODYELEMENT_IID);
 
+static NS_DEFINE_IID(kIParserFilterIID, NS_IPARSERFILTER_IID);
 // ==================================================================
 // =
 // ==================================================================
@@ -116,7 +131,9 @@ NS_LAYOUT nsresult
 NS_NewHTMLDocument(nsIDocument** aInstancePtrResult)
 {
   nsHTMLDocument* doc = new nsHTMLDocument();
-  return doc->QueryInterface(kIDocumentIID, (void**) aInstancePtrResult);
+  if(doc)
+    return doc->QueryInterface(kIDocumentIID, (void**) aInstancePtrResult);
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 nsHTMLDocument::nsHTMLDocument()
@@ -124,7 +141,8 @@ nsHTMLDocument::nsHTMLDocument()
     mAttrStyleSheet(nsnull),
     mStyleAttrStyleSheet(nsnull),
     mBaseURL(nsnull),
-    mBaseTarget(nsnull)
+    mBaseTarget(nsnull),
+    mLastModified(nsnull)
 {
   mImages = nsnull;
   mApplets = nsnull;
@@ -134,8 +152,8 @@ nsHTMLDocument::nsHTMLDocument()
   mLayers = nsnull;
   mNamedItems = nsnull;
   mParser = nsnull;
-  nsHTMLAtoms::AddrefAtoms();
-  mDTDMode = eDTDMode_NoQuirks;
+  nsHTMLAtoms::AddRefAtoms();
+  mDTDMode = eDTDMode_Nav;
   mCSSLoader = nsnull;
 
   // Find/Search Init
@@ -180,6 +198,10 @@ nsHTMLDocument::~nsHTMLDocument()
   if (nsnull != mBaseTarget) {
     delete mBaseTarget;
     mBaseTarget = nsnull;
+  }
+  if (nsnull != mLastModified) {
+    delete mLastModified;
+    mLastModified = nsnull;
   }
   NS_IF_RELEASE(mParser);
   for (i = 0; i < mImageMaps.Count(); i++) {
@@ -244,9 +266,20 @@ nsrefcnt nsHTMLDocument::Release()
 }
 
 nsresult 
-nsHTMLDocument::Reset(nsIURL *aURL)
+#ifdef NECKO
+nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
+#else
+nsHTMLDocument::Reset(nsIURI *aURL)
+#endif
 {
+#ifdef NECKO
+  nsresult result = nsDocument::Reset(aChannel, aLoadGroup);
+  nsCOMPtr<nsIURI> aURL;
+  result = aChannel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(result)) return result;
+#else
   nsresult result = nsDocument::Reset(aURL);
+#endif
   if (NS_FAILED(result)) {
     return result;
   }
@@ -298,20 +331,73 @@ nsHTMLDocument::GetContentType(nsString& aContentType) const
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::StartDocumentLoad(nsIURL *aURL,
-                                  nsIContentViewerContainer* aContainer,
-                                  nsIStreamListener **aDocListener,
-                                  const char* aCommand)
+nsHTMLDocument::CreateShell(nsIPresContext* aContext,
+                            nsIViewManager* aViewManager,
+                            nsIStyleSet* aStyleSet,
+                            nsIPresShell** aInstancePtrResult)
 {
-  nsresult rv = nsDocument::StartDocumentLoad(aURL, 
+  nsresult result = nsMarkupDocument::CreateShell(aContext,
+                                                  aViewManager,
+                                                  aStyleSet,
+                                                  aInstancePtrResult);
+
+  if (NS_SUCCEEDED(result)) {
+    aContext->SetCompatibilityMode(((eDTDMode_NoQuirks == mDTDMode) ? 
+                                    eCompatibility_Standard : 
+                                    eCompatibility_NavQuirks));
+  }
+  return result;
+}
+
+NS_IMETHODIMP
+nsHTMLDocument::StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                                  nsIChannel* aChannel,
+                                  nsILoadGroup* aLoadGroup,
+#else
+                                  nsIURI *aURL, 
+#endif
+                                  nsIContentViewerContainer* aContainer,
+                                  nsIStreamListener **aDocListener)
+{
+  nsresult rv = nsDocument::StartDocumentLoad(aCommand,
+#ifdef NECKO
+                                              aChannel, aLoadGroup,
+#else
+                                              aURL, 
+#endif
                                               aContainer, 
-                                              aDocListener,
-                                              aCommand);
+                                              aDocListener);
   if (NS_FAILED(rv)) {
     return rv;
   }
 
   nsIWebShell* webShell;
+
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aURL;
+  rv = aChannel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(rv)) return rv;
+  
+  nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(aChannel);
+  if (httpChannel) {
+    nsXPIDLCString header;
+    nsAutoString lastModified;
+    nsIAtom* key = NS_NewAtom("last-modified");
+
+    rv = httpChannel->GetResponseHeader(key, 
+                                        getter_Copies(header));
+
+    NS_RELEASE(key);
+    if (NS_SUCCEEDED(rv)) {
+      lastModified = header;
+      SetLastModified(lastModified);
+    }
+    // Don't propogate the result code beyond here, since it
+    // could just be that the response header wasn't found.
+    rv = NS_OK;
+  }
+#endif
 
   static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
   static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
@@ -330,6 +416,7 @@ nsHTMLDocument::StartDocumentLoad(nsIURL *aURL,
     const PRUnichar* requestCharset = nsnull;
     nsCharsetSource requestCharsetSource = kCharsetUninitialized;
     
+    nsIParserFilter *cdetflt = nsnull;
 
 #ifdef rickgdebug
     nsString outString;   // added out. Redirect to stdout if desired -- gpk 04/01/99
@@ -362,6 +449,72 @@ nsHTMLDocument::StartDocumentLoad(nsIURL *aURL,
             //TODO: we should define appropriate constant for force charset
             charsetSource = kCharsetFromPreviousLoading;  
        }
+
+       nsresult rv_detect = NS_OK;
+       if(! gInitDetector)
+       {
+           nsIPref* pref = nsnull;
+           if(NS_SUCCEEDED(webShell->GetPrefs(pref)) && pref)
+           {
+      
+             char* detector_name = nsnull;
+             if(NS_SUCCEEDED(
+                 rv_detect = pref->CopyCharPref("intl.charset.detector",
+                                     &detector_name)))
+             {
+                PL_strcpy(g_detector_progid, NS_CHARSET_DETECTOR_PROGID_BASE);
+                PL_strcat(g_detector_progid, detector_name);
+                gPlugDetector = PR_TRUE;
+                PR_FREEIF(detector_name);
+             }
+             // XXX we should also register callback here
+           }
+           NS_IF_RELEASE(pref);
+           gInitDetector = PR_TRUE;
+       }
+   
+       if((charsetSource < kCharsetFromAutoDetection)  && gPlugDetector)
+       {
+           // we could do charset detection
+           
+           nsICharsetDetector *cdet = nsnull;
+           nsIWebShellServices *wss = nsnull;
+           nsICharsetDetectionAdaptor *adp = nsnull;
+
+           if(NS_SUCCEEDED( rv_detect = 
+                nsComponentManager::CreateInstance(g_detector_progid, nsnull,
+                               nsICharsetDetector::GetIID(), (void**)&cdet)))
+           {
+              
+              if(NS_SUCCEEDED( rv_detect = 
+                nsComponentManager::CreateInstance(
+                               NS_CHARSET_DETECTION_ADAPTOR_PROGID, nsnull,
+                               kIParserFilterIID, (void**)&cdetflt)))
+              {
+                 if(cdetflt && 
+                    NS_SUCCEEDED( rv_detect=
+                         cdetflt->QueryInterface(
+                            nsICharsetDetectionAdaptor::GetIID(),(void**) &adp)))
+                 {
+                   if( NS_SUCCEEDED( rv_detect=
+                         webShell->QueryInterface(
+                            nsIWebShellServices::GetIID(),(void**) &wss)))
+                   {
+                     rv_detect = adp->Init(wss, cdet);
+                   }
+                 }
+              }
+           } else {
+              // IF we cannot create the detector, don't bother to 
+              // create one next time.
+
+              gPlugDetector = PR_FALSE;
+           }
+           NS_IF_RELEASE(wss);
+           NS_IF_RELEASE(cdet);
+           NS_IF_RELEASE(adp);
+           // NO NS_IF_RELEASE(cdetflt); here, do it after mParser->SetParserFilter
+       }
     }
     NS_IF_RELEASE(webShell);
 #endif
@@ -389,6 +542,13 @@ nsHTMLDocument::StartDocumentLoad(nsIURL *aURL,
 //        nsIDTD* theDTD=0;
 //        NS_NewNavHTMLDTD(&theDTD);
 //        mParser->RegisterDTD(theDTD);
+
+        nsIParserFilter *oldFilter = nsnull;
+        if(cdetflt)
+           oldFilter = mParser->SetParserFilter(cdetflt);
+        NS_IF_RELEASE(oldFilter);
+        NS_IF_RELEASE(cdetflt);
+
         mParser->SetDocumentCharset( charset, charsetSource);
         mParser->SetCommand(aCommand);
         mParser->SetContentSink(sink); 
@@ -551,7 +711,7 @@ nsHTMLDocument::InternalInsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex
 
 
 NS_IMETHODIMP
-nsHTMLDocument::GetBaseURL(nsIURL*& aURL) const
+nsHTMLDocument::GetBaseURL(nsIURI*& aURL) const
 {
   if (nsnull != mBaseURL) {
     NS_ADDREF(mBaseURL);
@@ -570,31 +730,20 @@ nsHTMLDocument:: SetBaseURL(const nsString& aURLSpec)
 
   NS_IF_RELEASE(mBaseURL);
   if (0 < aURLSpec.Length()) {
-    nsIURLGroup* urlGroup = nsnull;
-    (void)mDocumentURL->GetURLGroup(&urlGroup);
-    if (urlGroup) {
-      result = urlGroup->CreateURL(&mBaseURL, mDocumentURL, aURLSpec, nsnull);
-      NS_RELEASE(urlGroup);
+#ifndef NECKO
+    nsILoadGroup* LoadGroup = nsnull;
+    (void)mDocumentURL->GetLoadGroup(&LoadGroup);
+    if (LoadGroup) {
+      result = LoadGroup->CreateURL(&mBaseURL, mDocumentURL, aURLSpec, nsnull);
+      NS_RELEASE(LoadGroup);
     }
-    else {
+    else
+#endif
+    {
 #ifndef NECKO
         result = NS_NewURL(&mBaseURL, aURLSpec, mDocumentURL);
 #else
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-        if (NS_FAILED(result)) return result;
-
-        nsIURI *uri = nsnull, *baseUri = nsnull;
-
-        result = mDocumentURL->QueryInterface(nsIURL::GetIID(), (void**)&baseUri);
-        if (NS_FAILED(result)) return result;
-
-        const char *uriStr = aURLSpec.GetBuffer();
-        result = service->NewURI(uriStr, baseUri, &uri);
-        NS_RELEASE(baseUri);
-        if (NS_FAILED(result)) return result;
-
-        result = uri->QueryInterface(nsIURL::GetIID(), (void**)&mBaseURL);
-        NS_RELEASE(uri);
+        result = NS_NewURI(&mBaseURL, aURLSpec, mDocumentURL);
 #endif // NECKO
     }
   }
@@ -633,12 +782,35 @@ nsHTMLDocument:: SetBaseTarget(const nsString& aTarget)
   return NS_OK;
 }
 
+NS_IMETHODIMP 
+nsHTMLDocument::SetLastModified(const nsString& aLastModified)
+{
+  if (0 < aLastModified.Length()) {
+    if (nsnull != mLastModified) {
+      *mLastModified = aLastModified;
+    }
+    else {
+      mLastModified = aLastModified.ToNewString();
+    }
+  }
+  else if (nsnull != mLastModified) {
+    delete mLastModified;
+    mLastModified = nsnull;
+  }
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsHTMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
 {
   nsresult result = NS_OK;
   if (! mCSSLoader) {
     result = NS_NewCSSLoader(this, &mCSSLoader);
+  }
+  if (mCSSLoader) {
+    mCSSLoader->SetCaseSensitive(PR_FALSE);
+    mCSSLoader->SetQuirkMode(PRBool(eDTDMode_NoQuirks != mDTDMode));
   }
   aLoader = mCSSLoader;
   NS_IF_ADDREF(aLoader);
@@ -657,6 +829,9 @@ NS_IMETHODIMP
 nsHTMLDocument::SetDTDMode(nsDTDMode aMode)
 {
   mDTDMode = aMode;
+  if (mCSSLoader) {
+    mCSSLoader->SetQuirkMode(PRBool(eDTDMode_NoQuirks != mDTDMode));
+  }
   return NS_OK;
 }
 
@@ -1020,9 +1195,16 @@ nsHTMLDocument::GetDomain(nsString& aDomain)
   // PCB: This is the domain name of the server that produced this document. Can we just
   // extract it from the URL? What about proxy servers, etc.?
   if (nsnull != mDocumentURL) {
+#ifdef NECKO
+    char* hostName;
+#else
     const char* hostName;
+#endif
     mDocumentURL->GetHost(&hostName);
     aDomain.SetString(hostName);
+#ifdef NECKO
+    nsCRT::free(hostName);
+#endif
   } else {
     aDomain.SetLength(0);
   }
@@ -1033,10 +1215,19 @@ NS_IMETHODIMP
 nsHTMLDocument::GetURL(nsString& aURL)
 {
   if (nsnull != mDocumentURL) {
+#ifdef NECKO
+    char* str;
+    mDocumentURL->GetSpec(&str);
+#else
     PRUnichar* str;
     mDocumentURL->ToString(&str);
+#endif
     aURL = str;
-    delete str;
+#ifdef NECKO
+    nsCRT::free(str);
+#else
+    delete[] str;
+#endif
   }
   return NS_OK;
 }
@@ -1200,18 +1391,12 @@ NS_IMETHODIMP
 nsHTMLDocument::GetCookie(nsString& aCookie)
 {
 #ifndef NECKO
-  nsINetService *service;
-  nsresult res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
-  if ((NS_OK == res) && (nsnull != service) && (nsnull != mDocumentURL)) {
-
-    res = service->GetCookieString(mDocumentURL, aCookie);
-
-    NS_RELEASE(service);
+  nsresult result = NS_OK;
+  NS_WITH_SERVICE(nsINetService, service, kNetServiceCID, &result);
+  if ((NS_OK == result) && (nsnull != service) && (nsnull != mDocumentURL)) {
+    result = service->GetCookieString(mDocumentURL, aCookie);
   }
-
-  return res;
+  return result;
 #else
   // XXX NECKO we need to use the cookie module for this info instead of 
   // XXX the IOService
@@ -1223,18 +1408,12 @@ NS_IMETHODIMP
 nsHTMLDocument::SetCookie(const nsString& aCookie)
 {
 #ifndef NECKO
-  nsINetService *service;
-  nsresult res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
-  if ((NS_OK == res) && (nsnull != service) && (nsnull != mDocumentURL)) {
-
-    res = service->SetCookieString(mDocumentURL, aCookie);
-
-    NS_RELEASE(service);
+  nsresult result = NS_OK;
+  NS_WITH_SERVICE(nsINetService, service, kNetServiceCID, &result);
+  if ((NS_OK == result) && (nsnull != service) && (nsnull != mDocumentURL)) {
+    result = service->SetCookieString(mDocumentURL, aCookie);
   }
-
-  return res;
+  return result;
 #else
   // XXX NECKO we need to use the cookie module for this info instead of 
   // XXX the IOService
@@ -1244,7 +1423,7 @@ nsHTMLDocument::SetCookie(const nsString& aCookie)
 
 nsresult
 nsHTMLDocument::GetSourceDocumentURL(JSContext* cx,
-                                     nsIURL** sourceURL)
+                                     nsIURI** sourceURL)
 {
   // XXX Tom said this reminded him of the "Six Degrees of
   // Kevin Bacon" game. We try to get from here to there using
@@ -1274,16 +1453,7 @@ nsHTMLDocument::GetSourceDocumentURL(JSContext* cx,
 #ifndef NECKO            
             result = NS_NewURL(sourceURL, url);
 #else
-            NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-            if (NS_FAILED(result)) return result;
-
-            nsIURI *uri = nsnull;
-            const char *uriStr = url.GetBuffer();
-            result = service->NewURI(uriStr, nsnull, &uri);
-            if (NS_FAILED(result)) return result;
-
-            result = uri->QueryInterface(nsIURL::GetIID(), (void**)sourceURL);
-            NS_RELEASE(uri);
+            result = NS_NewURI(sourceURL, url);
 #endif // NECKO
           }
         }
@@ -1297,13 +1467,21 @@ nsHTMLDocument::GetSourceDocumentURL(JSContext* cx,
 
 // XXX TBI: accepting arguments to the open method.
 nsresult
-nsHTMLDocument::OpenCommon(nsIURL* aSourceURL)
+nsHTMLDocument::OpenCommon(nsIURI* aSourceURL)
 {
   nsresult result = NS_OK;
   // The open occurred after the document finished loading.
   // So we reset the document and create a new one.
   if (nsnull == mParser) {
+#ifdef NECKO
+    nsCOMPtr<nsIChannel> channel;
+    result = NS_OpenURI(getter_AddRefs(channel), aSourceURL);
+    if (NS_FAILED(result)) return result;
+    result = Reset(channel, mDocumentLoadGroup);
+    if (NS_FAILED(result)) return result;
+#else
     result = Reset(aSourceURL);
+#endif
     if (NS_OK == result) {
       static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
       static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
@@ -1352,22 +1530,14 @@ NS_IMETHODIMP
 nsHTMLDocument::Open()
 {
   nsresult result = NS_OK;
-  nsIURL* sourceURL;
+  nsIURI* sourceURL;
 
   // XXX For the non-script Open case, we have to make
   // up a URL.
-#ifndef NECKO
-  result = NS_NewURL(&sourceURL, "about:blank");
+#ifdef NECKO
+  result = NS_NewURI(&sourceURL, "about:blank");
 #else
-  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-  if (NS_FAILED(result)) return result;
-
-  nsIURI *uri = nsnull;
-  result = service->NewURI("about:blank", nsnull, &uri);
-  if (NS_FAILED(result)) return result;
-
-  result = uri->QueryInterface(nsIURL::GetIID(), (void**)&sourceURL);
-  NS_RELEASE(uri);
+  result = NS_NewURL(&sourceURL, "about:blank");
 #endif // NECKO
 
   if (NS_SUCCEEDED(result)) {
@@ -1382,7 +1552,7 @@ NS_IMETHODIMP
 nsHTMLDocument::Open(JSContext *cx, jsval *argv, PRUint32 argc)
 {
   nsresult result = NS_OK;
-  nsIURL* sourceURL;
+  nsIURI* sourceURL;
 
   // XXX The URL of the newly created document will match
   // that of the source document. Is this right?
@@ -1392,15 +1562,7 @@ nsHTMLDocument::Open(JSContext *cx, jsval *argv, PRUint32 argc)
 #ifndef NECKO
       result = NS_NewURL(&sourceURL, "about:blank");
 #else
-      NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-      if (NS_FAILED(result)) return result;
-
-      nsIURI *uri = nsnull;
-      result = service->NewURI("about:blank", nsnull, &uri);
-      if (NS_FAILED(result)) return result;
-
-      result = uri->QueryInterface(nsIURL::GetIID(), (void**)&sourceURL);
-      NS_RELEASE(uri);
+      result = NS_NewURI(&sourceURL, "about:blank");
 #endif // NECKO
   }
 
@@ -1613,13 +1775,22 @@ nsHTMLDocument::GetAlinkColor(nsString& aAlinkColor)
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
 
+  aAlinkColor.Truncate();
   result = GetBodyElement(&body);
   if (NS_OK == result) {
     result = body->GetALink(aAlinkColor);
     NS_RELEASE(body);
   }
+  else if (nsnull != mAttrStyleSheet) {
+    nscolor color;
+    result = mAttrStyleSheet->GetActiveLinkColor(color);
+    if (NS_OK == result) {
+      nsHTMLValue value(color);
+      nsGenericHTMLElement::ColorToString(value, aAlinkColor);
+    }
+  }
 
-  return result;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1633,8 +1804,15 @@ nsHTMLDocument::SetAlinkColor(const nsString& aAlinkColor)
     result = body->SetALink(aAlinkColor);
     NS_RELEASE(body);
   }
-
-  return result;
+  else if (nsnull != mAttrStyleSheet) {
+    nsHTMLValue value;
+  
+    if (nsGenericHTMLElement::ParseColor(aAlinkColor, this, value)) {
+      mAttrStyleSheet->SetActiveLinkColor(value.GetColorValue());
+    }
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1643,13 +1821,22 @@ nsHTMLDocument::GetLinkColor(nsString& aLinkColor)
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
 
+  aLinkColor.Truncate();
   result = GetBodyElement(&body);
   if (NS_OK == result) {
     result = body->GetLink(aLinkColor);
     NS_RELEASE(body);
   }
+  else if (nsnull != mAttrStyleSheet) {
+    nscolor color;
+    result = mAttrStyleSheet->GetLinkColor(color);
+    if (NS_OK == result) {
+      nsHTMLValue value(color);
+      nsGenericHTMLElement::ColorToString(value, aLinkColor);
+    }
+  }
 
-  return result;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1663,8 +1850,14 @@ nsHTMLDocument::SetLinkColor(const nsString& aLinkColor)
     result = body->SetLink(aLinkColor);
     NS_RELEASE(body);
   }
-
-  return result;
+  else if (nsnull != mAttrStyleSheet) {
+    nsHTMLValue value;
+    if (nsGenericHTMLElement::ParseColor(aLinkColor, this, value)) {
+      mAttrStyleSheet->SetLinkColor(value.GetColorValue());
+    }
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1673,13 +1866,22 @@ nsHTMLDocument::GetVlinkColor(nsString& aVlinkColor)
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
 
+  aVlinkColor.Truncate();
   result = GetBodyElement(&body);
   if (NS_OK == result) {
     result = body->GetVLink(aVlinkColor);
     NS_RELEASE(body);
   }
+  else if (nsnull != mAttrStyleSheet) {
+    nscolor color;
+    result = mAttrStyleSheet->GetVisitedLinkColor(color);
+    if (NS_OK == result) {
+      nsHTMLValue value(color);
+      nsGenericHTMLElement::ColorToString(value, aVlinkColor);
+    }
+  }
 
-  return result;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1693,8 +1895,14 @@ nsHTMLDocument::SetVlinkColor(const nsString& aVlinkColor)
     result = body->SetVLink(aVlinkColor);
     NS_RELEASE(body);
   }
-
-  return result;
+  else if (nsnull != mAttrStyleSheet) {
+    nsHTMLValue value;
+    if (nsGenericHTMLElement::ParseColor(aVlinkColor, this, value)) {
+      mAttrStyleSheet->SetVisitedLinkColor(value.GetColorValue());
+    }
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1703,13 +1911,22 @@ nsHTMLDocument::GetBgColor(nsString& aBgColor)
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
 
+  aBgColor.Truncate();
   result = GetBodyElement(&body);
   if (NS_OK == result) {
     result = body->GetBgColor(aBgColor);
     NS_RELEASE(body);
   }
+  else if (nsnull != mAttrStyleSheet) {
+    nscolor color;
+    result = mAttrStyleSheet->GetDocumentBackgroundColor(color);
+    if (NS_OK == result) {
+      nsHTMLValue value(color);
+      nsGenericHTMLElement::ColorToString(value, aBgColor);
+    }
+  }
 
-  return result;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1723,8 +1940,14 @@ nsHTMLDocument::SetBgColor(const nsString& aBgColor)
     result = body->SetBgColor(aBgColor);
     NS_RELEASE(body);
   }
-
-  return result;
+  else if (nsnull != mAttrStyleSheet) {
+    nsHTMLValue value;
+    if (nsGenericHTMLElement::ParseColor(aBgColor, this, value)) {
+      mAttrStyleSheet->SetDocumentBackgroundColor(value.GetColorValue());
+    }
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1733,13 +1956,22 @@ nsHTMLDocument::GetFgColor(nsString& aFgColor)
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
 
+  aFgColor.Truncate();
   result = GetBodyElement(&body);
   if (NS_OK == result) {
     result = body->GetText(aFgColor);
     NS_RELEASE(body);
   }
+  else if (nsnull != mAttrStyleSheet) {
+    nscolor color;
+    result = mAttrStyleSheet->GetDocumentForegroundColor(color);
+    if (NS_OK == result) {
+      nsHTMLValue value(color);
+      nsGenericHTMLElement::ColorToString(value, aFgColor);
+    }
+  }
 
-  return result;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
@@ -1753,15 +1985,29 @@ nsHTMLDocument::SetFgColor(const nsString& aFgColor)
     result = body->SetText(aFgColor);
     NS_RELEASE(body);
   }
-
-  return result;
+  else if (nsnull != mAttrStyleSheet) {
+    nsHTMLValue value;
+  
+    if (nsGenericHTMLElement::ParseColor(aFgColor, this, value)) {
+      mAttrStyleSheet->SetDocumentForegroundColor(value.GetColorValue());
+    }
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
 nsHTMLDocument::GetLastModified(nsString& aLastModified)
 {
-  //XXX TBI
-  return NS_ERROR_NOT_IMPLEMENTED;
+  //XXX TBImplemented
+  if (nsnull != mLastModified) {
+    aLastModified = *mLastModified;
+  }
+  else {
+    aLastModified.SetString("January 1, 1970 GMT");
+  }
+
+  return NS_OK;
 }
 
 
@@ -1804,7 +2050,7 @@ nsHTMLDocument::GetLayers(nsIDOMHTMLCollection** aLayers)
 {
 #ifdef NS_IMPLEMENT_DOCUMENT_LAYERS
   if (nsnull == mLayers) {
-    mAnchors = new nsContentList(this, MatchLayers, nsnull);
+    mLayers = new nsContentList(this, MatchLayers, nsnull);
     if (nsnull == mLayers) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -1823,15 +2069,17 @@ nsHTMLDocument::GetLayers(nsIDOMHTMLCollection** aLayers)
 NS_IMETHODIMP    
 nsHTMLDocument::GetPlugins(nsIDOMHTMLCollection** aPlugins)
 {
-  //XXX TBI
-  return NS_ERROR_NOT_IMPLEMENTED;
+  //XXX TBImplemented
+  *aPlugins = nsnull;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
 nsHTMLDocument::GetSelection(nsString& aReturn)
 {
-  //XXX TBI
-  return NS_ERROR_NOT_IMPLEMENTED;
+  //XXX TBImplemented
+  aReturn.Truncate();
+  return NS_OK;
 }
 
 PRIntn 
@@ -2126,24 +2374,27 @@ void BlockText::ClearBlock()
 //----------------------------
 void BlockText::AddSubText(nsIDOMNode * aNode, nsString & aStr, PRInt32 aDirection, PRInt32 & aOffset) 
 {
-  SubText * subTxt     = new SubText();
-  subTxt->mContentNode = aNode;
-  subTxt->mLength      = aStr.Length();
-  if (aDirection == kForward) {
-    subTxt->mOffset = mText.Length();
-    mText.Append(aStr);
-    mSubTexts[mNumSubTexts++] = subTxt;
-  } else {
-    subTxt->mOffset = 0;
-    // Shift them all down one slot
-    PRInt32 i;
-    for (i=mNumSubTexts;i>0;i--) {
-      mSubTexts[i] = mSubTexts[i-1];
-      mSubTexts[i]->mOffset += aStr.Length();
+  SubText* subTxt     = new SubText();
+  if(subTxt) {
+    subTxt->mContentNode = aNode;
+    subTxt->mLength      = aStr.Length();
+    if (aDirection == kForward) {
+      subTxt->mOffset = mText.Length();
+      mText.Append(aStr);
+      mSubTexts[mNumSubTexts++] = subTxt;
+    } 
+    else {
+      subTxt->mOffset = 0;
+      // Shift them all down one slot
+      PRInt32 i;
+      for (i=mNumSubTexts;i>0;i--) {
+        mSubTexts[i] = mSubTexts[i-1];
+        mSubTexts[i]->mOffset += aStr.Length();
+      }
+      mNumSubTexts++;
+      mText.Insert(aStr, 0, aStr.Length());
+      mSubTexts[0] = subTxt;
     }
-    mNumSubTexts++;
-    mText.Insert(aStr, 0, aStr.Length());
-    mSubTexts[0] = subTxt;
   }
 }
 
@@ -2304,15 +2555,11 @@ PRBool nsHTMLDocument::NodeIsBlock(nsIDOMNode * aNode)
   if (NS_OK != rv) {
     return isBlock;
   }
-  nsString tagName;
+  nsAutoString tagName;
   domElement->GetTagName(tagName);
   NS_RELEASE(domElement);
 
-  char * cStr = tagName.ToNewCString();
-
-  isBlock = IsBlockLevel(NS_TagToEnum(cStr), mIsPreTag);
-
-  delete[] cStr;
+  isBlock = IsBlockLevel(nsHTMLTags::LookupTag(tagName), mIsPreTag);
 
   return isBlock;
 }
@@ -2663,7 +2910,7 @@ NS_IMETHODIMP nsHTMLDocument::FindNext(const nsString &aSearchStr, PRBool aMatch
   // Temporary
   PRBool   doReplace = PR_FALSE;
   nsString replacementStr("xxxx");
-  PRInt32 inx = mSearchStr->Find('/');
+  PRInt32 inx = mSearchStr->FindChar('/');
   if (inx > -1) {
     if (inx == mSearchStr->Length()-1) {
       replacementStr.SetLength(0);

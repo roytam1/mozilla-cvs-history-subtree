@@ -124,29 +124,6 @@ nsXPCWrappedJSClass::~nsXPCWrappedJSClass()
     NS_RELEASE(mInfo);
 }
 
-/***************************************************************************/
-// XXX for now IIDs are represented in JS as string objects containing strings
-// of the form: {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx} (just like the nsID
-// Parse and ToString methods use.
-
-// XXX lots of room for optimization here!
-
-// JSObject*
-// nsXPCWrappedJSClass::CreateIIDJSObject(REFNSIID aIID)
-// {
-//     JSObject* obj = NULL;
-//     char* str = aIID.ToString();
-//     if(str)
-//     {
-//         JSContext* cx = GetJSContext();
-//         JSString* jsstr = JS_InternString(cx, str);
-//         delete [] str;
-//         if(jsstr)
-//             JS_ValueToObject(cx, STRING_TO_JSVAL(jsstr), &obj);
-//     }
-//     return obj;
-// }
-
 JSObject*
 nsXPCWrappedJSClass::CallQueryInterfaceOnJSObject(JSObject* jsobj, REFNSIID aIID)
 {
@@ -159,7 +136,6 @@ nsXPCWrappedJSClass::CallQueryInterfaceOnJSObject(JSObject* jsobj, REFNSIID aIID
     if(!cx)
         return NULL;
 
-//    id = CreateIIDJSObject(aIID);
     id = xpc_NewIIDObject(cx, aIID);
 
     if(id)
@@ -223,20 +199,15 @@ nsXPCWrappedJSClass::DelegatedQueryInterface(nsXPCWrappedJS* self,
                                              REFNSIID aIID,
                                              void** aInstancePtr)
 {
-    if(aIID.Equals(nsISupports::GetIID()))
-    {
-        // asking for nsISupports... no problem
-        nsXPCWrappedJS* root = self->GetRootWrapper();
-        *aInstancePtr = (void*) root;
-        NS_ADDREF(root);
-        return NS_OK;
-    }
+    nsXPCWrappedJS* sibling;
 
-    if(aIID.Equals(self->GetIID()))
+    // This includes checking for nsISupports and the iid of self.
+    // And it also checks for other wrappers that have been constructed
+    // for this object.
+    if(NULL != (sibling = self->Find(aIID)))
     {
-        // asking for our wrapper's type... no problem
-        *aInstancePtr = (void*) self;
-        NS_ADDREF(self);
+        NS_ADDREF(sibling);
+        *aInstancePtr = (void*) sibling;
         return NS_OK;
     }
 
@@ -299,7 +270,7 @@ nsXPCWrappedJSClass::DelegatedQueryInterface(nsXPCWrappedJS* self,
 JSObject*
 nsXPCWrappedJSClass::GetRootJSObject(JSObject* aJSObj)
 {
-    JSObject* result = CallQueryInterfaceOnJSObject(aJSObj, nsISupports::GetIID());
+    JSObject* result = CallQueryInterfaceOnJSObject(aJSObj, nsCOMTypeInfo<nsISupports>::GetIID());
     return result ? result : aJSObj;
 }
 

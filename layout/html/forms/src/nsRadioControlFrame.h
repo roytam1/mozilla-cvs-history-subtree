@@ -19,17 +19,20 @@
 #ifndef nsRadioControlFrame_h___
 #define nsRadioControlFrame_h___
 
-#include "nsFormControlFrame.h"
+#include "nsIRadioControlFrame.h"
+#include "nsNativeFormControlFrame.h"
 #include "nsVoidArray.h"
 #include "nsString.h"
 class nsIAtom;
 
 // nsRadioControlFrame
 
-class nsRadioControlFrame : public nsFormControlFrame 
+class nsRadioControlFrame : public nsNativeFormControlFrame, public nsIRadioControlFrame
 {
+private:
+	typedef nsNativeFormControlFrame Inherited;
+
 public:
-  nsRadioControlFrame();
     // nsFormControlFrame overrides
   nsresult RequiresWidget(PRBool &aHasWidget);
 
@@ -42,12 +45,11 @@ public:
                                 nscoord& aWidth,
                                 nscoord& aHeight);
 
-  NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext,
-                              nsIContent*     aChild,
-                              nsIAtom*        aAttribute,
-                              PRInt32         aHint);
-
   NS_IMETHOD GetFrameName(nsString& aResult) const;
+
+   //nsIRadioControlFrame methods
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+  NS_IMETHOD SetRadioButtonFaceStyleContext(nsIStyleContext *aRadioButtonFaceStyleContext);
 
   virtual PRBool GetChecked(PRBool aGetInitialValue);
   virtual void   SetChecked(PRBool aValue, PRBool aSetInitialValue);
@@ -69,14 +71,6 @@ public:
   // Expect this code to repackaged and moved to a new location in the future.
   //
 
-  NS_IMETHOD Paint(nsIPresContext& aPresContext,
-                   nsIRenderingContext& aRenderingContext,
-                   const nsRect& aDirtyRect,
-                   nsFramePaintLayer aWhichLayer);
-
-  virtual void PaintRadioButton(nsIPresContext& aPresContext,
-                        nsIRenderingContext& aRenderingContext,
-                        const nsRect& aDirtyRect);
 
   NS_IMETHOD HandleEvent(nsIPresContext& aPresContext, 
                          nsGUIEvent* aEvent,
@@ -90,37 +84,15 @@ protected:
   void SetRadioControlFrameState(const nsString& aValue);
   void GetRadioControlFrameState(nsString& aValue);             
 
-  virtual nscoord GetRadioboxSize(float aPixToTwip) const;
-  virtual void GetDesiredSize(nsIPresContext* aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics& aDesiredLayoutSize,
-                              nsSize& aDesiredWidgetSize);
-    //GFX-rendered state variables
-  PRBool mChecked;
-};
-
-// nsRadioControlGroup
-
-class nsRadioControlGroup
-{
-public:
-  nsRadioControlGroup(nsString& aName);
-  virtual ~nsRadioControlGroup();
-
-  PRBool               AddRadio(nsRadioControlFrame* aRadio);
-  PRInt32              GetRadioCount() const;
-  nsRadioControlFrame* GetRadioAt(PRInt32 aIndex) const;
-  PRBool               RemoveRadio(nsRadioControlFrame* aRadio);
-
-  nsRadioControlFrame* GetCheckedRadio();
-  void                 SetCheckedRadio(nsRadioControlFrame* aRadio);
-  void                 GetName(nsString& aNameResult) const;
-
 protected:
-  nsString             mName;
-  nsVoidArray          mRadios;
-  nsRadioControlFrame* mCheckedRadio;
+	virtual PRBool	GetRadioState() = 0;
+	virtual void 		SetRadioState(PRBool aValue) = 0;
+
+private:
+  NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
 };
+
 
 #endif
 

@@ -116,7 +116,7 @@ public:
   NS_IMPL_IDOMEVENTRECEIVER_USING_GENERIC(mInner)
 
   // nsIContent
-  NS_IMPL_ICONTENT_USING_GENERIC(mInner)
+  NS_IMPL_ICONTENT_NO_SETPARENT_NO_SETDOCUMENT_USING_GENERIC(mInner)
 
   // nsIHTMLContent
   NS_IMPL_IHTMLCONTENT_USING_GENERIC(mInner)
@@ -224,7 +224,7 @@ nsHTMLInputElement::Release()
   }
 }
 
-// nsIDOMHTMLInputElement
+// nsIDOMNode
 
 nsresult
 nsHTMLInputElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
@@ -235,6 +235,20 @@ nsHTMLInputElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   }
   mInner.CopyInnerTo(this, &it->mInner, aDeep);
   return it->QueryInterface(kIDOMNodeIID, (void**) aReturn);
+}
+
+// nsIContent
+
+NS_IMETHODIMP
+nsHTMLInputElement::SetParent(nsIContent* aParent)
+{
+  return mInner.SetParentForFormControls(aParent, this, mForm);
+}
+
+NS_IMETHODIMP
+nsHTMLInputElement::SetDocument(nsIDocument* aDocument, PRBool aDeep)
+{
+  return mInner.SetDocumentForFormControls(aDocument, aDeep, this, mForm);
 }
 
 NS_IMETHODIMP
@@ -449,8 +463,38 @@ nsHTMLInputElement::Select()
 NS_IMETHODIMP
 nsHTMLInputElement::Click()
 {
-  //XXX TBI
-  return NS_ERROR_NOT_IMPLEMENTED;
+  PRInt32 type;
+  GetType(&type);
+  switch(type) {
+  case NS_FORM_INPUT_CHECKBOX:
+    {
+      PRBool checked;
+      GetChecked(&checked);
+      SetChecked(!checked);
+    }
+    break;
+
+  case NS_FORM_INPUT_RADIO:
+    SetChecked(PR_TRUE);
+    break;
+
+#if 0
+  case NS_FORM_INPUT_BUTTON:
+  case NS_FORM_INPUT_RESET:
+  case NS_FORM_INPUT_SUBMIT:
+    {
+      nsIFormControlFrame* formControlFrame = nsnull;
+      if (NS_OK == nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame)) {
+        if (formControlFrame) {
+          formControlFrame->MouseClicked(XXXpresContextXXX);
+        }
+      }
+    }
+    break;
+#endif
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -460,9 +504,50 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext& aPresContext,
                             PRUint32 aFlags,
                             nsEventStatus& aEventStatus)
 {
-  return mInner.HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
+  // Try script event handlers first
+  nsresult ret = mInner.HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
                                aFlags, aEventStatus);
+
+  if ((NS_OK == ret) && (nsEventStatus_eIgnore == aEventStatus)) {
+    switch (aEvent->message) {
+      case NS_KEY_PRESS:
+      {
+        nsKeyEvent * keyEvent = (nsKeyEvent *)aEvent;
+        if (keyEvent->keyCode == NS_VK_RETURN || keyEvent->charCode == 0x20) {
+          PRInt32 type;
+          GetType(&type);
+          switch(type) {
+          case NS_FORM_INPUT_CHECKBOX:
+          case NS_FORM_INPUT_RADIO:
+            ret = Click();
+            break;
+          case NS_FORM_INPUT_BUTTON:
+          case NS_FORM_INPUT_RESET:
+          case NS_FORM_INPUT_SUBMIT:
+            {
+              //Checkboxes and radio trigger off return or space but buttons
+              //just trigger of of space, go figure.
+              if (keyEvent->charCode == 0x20) {
+                //XXX We should just be able to call Click() here but then
+                //Click wouldn't have a PresContext.
+                nsIFormControlFrame* formControlFrame = nsnull;
+                if (NS_OK == nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame)) {
+                  if (formControlFrame) {
+                    formControlFrame->MouseClicked(&aPresContext);
+                  }
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return ret;
 }
+
 
 // nsIHTMLContent
 
@@ -510,26 +595,31 @@ nsHTMLInputElement::StringToAttribute(nsIAtom* aAttribute,
     return NS_CONTENT_ATTR_HAS_VALUE;
   }
   else if (aAttribute == nsHTMLAtoms::width) {
-    nsGenericHTMLElement::ParseValueOrPercent(aValue, aResult,
-                                              eHTMLUnit_Pixel);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValueOrPercent(aValue, aResult,
+                                                  eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   } 
   else if (aAttribute == nsHTMLAtoms::height) {
-    nsGenericHTMLElement::ParseValueOrPercent(aValue, aResult,
-                                              eHTMLUnit_Pixel);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValueOrPercent(aValue, aResult,
+                                                  eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   } 
   else if (aAttribute == nsHTMLAtoms::maxlength) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (aAttribute == nsHTMLAtoms::size) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (aAttribute == nsHTMLAtoms::tabindex) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (IsImage()) {
     if (nsGenericHTMLElement::ParseImageAttribute(aAttribute,
@@ -538,8 +628,9 @@ nsHTMLInputElement::StringToAttribute(nsIAtom* aAttribute,
     }
   }
   else if (aAttribute == nsHTMLAtoms::border) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   return NS_CONTENT_ATTR_NOT_THERE;
 }
@@ -564,7 +655,7 @@ nsHTMLInputElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
@@ -636,7 +727,7 @@ MapAttributesInto(nsIHTMLAttributes* aAttributes,
           NS_RGB(0, 0, 255),
           NS_RGB(0, 0, 255)
         };
-        nsGenericHTMLElement::MapImageBorderAttributesInto(aAttributes, aContext, aPresContext, blue);
+        nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aContext, aPresContext, blue);
         nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext, aPresContext);
         break;
       }
@@ -644,6 +735,28 @@ MapAttributesInto(nsIHTMLAttributes* aAttributes,
   }
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
 }
+
+NS_IMETHODIMP
+nsHTMLInputElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                             PRInt32& aHint) const
+{
+  if ((aAttribute == nsHTMLAtoms::align)) {
+    aHint = NS_STYLE_HINT_REFLOW;
+  }
+  else if ((aAttribute == nsHTMLAtoms::type)) {
+    aHint = NS_STYLE_HINT_FRAMECHANGE;
+  }
+  else if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    if (! nsGenericHTMLElement::GetImageMappedAttributesImpact(aAttribute, aHint)) {
+      if (! nsGenericHTMLElement::GetImageBorderAttributeImpact(aAttribute, aHint)) {
+        aHint = NS_STYLE_HINT_CONTENT;
+      }
+    }
+  }
+
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsHTMLInputElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
@@ -689,16 +802,6 @@ nsHTMLInputElement::GetType(PRInt32* aType)
   } else {
     return NS_FORM_NOTOK;
   }
-}
-
-
-NS_IMETHODIMP 
-nsHTMLInputElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  *aHint = NS_STYLE_HINT_CONTENT;
-  return NS_OK;
 }
 
 

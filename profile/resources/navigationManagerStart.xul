@@ -3,12 +3,12 @@
 
 <!DOCTYPE window>
 
-
 <window
   xmlns:html="http://www.w3.org/TR/REC-html40"
   xmlns:rdf="http://www.w3.org/TR/WD-rdf-syntax#"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
+<html:div flex="100%">
 
 <html:script>
 	var count = parent.count;
@@ -32,11 +32,13 @@
 		}
 
 		parent.frames[0].commit();
-		parent.frames[0].location.replace( pages[count] );
+		//parent.frames[0].location.replace( pages[count] );
+		parent.frames[0].location.href =  pages[count];
 
 		if (count == 1) {
 			parent.count = count;
-			parent.frames[1].location.replace("resource:/res/profile/navigationManagerFinish.xul");
+			//parent.frames[1].location.replace("resource:/res/profile/navigationManagerFinish.xul");
+			parent.frames[1].location.href = "resource:/res/profile/navigationManagerFinish.xul";
 		}
 	}
 
@@ -56,4 +58,5 @@
 	<html:button onclick="BrowserLoadURL('Next');"> Next </html:button>
 </html:center>
 
+</html:div>
 </window>

@@ -36,7 +36,10 @@
 #include "nsIDOMWindow.h"
 #include "nsIDOMElement.h"
 #include "nsISimpleEnumerator.h"
-
+#include "nsIDocumentViewer.h"
+#include "nsIDocument.h"
+#include "nsIDOMDocument.h"
+static NS_DEFINE_IID(kISupportsIID,                NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,        NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,           NS_IRDFSERVICE_IID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
@@ -47,6 +50,7 @@ static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 static NS_DEFINE_IID(kIWindowMediatorIID,NS_IWINDOWMEDIATOR_IID);
 static NS_DEFINE_IID(kISimpleEnumberatorIID, NS_ISIMPLEENUMERATOR_IID);
 static NS_DEFINE_CID(kRDFContainerCID,                    NS_RDFCONTAINER_CID);
+static NS_DEFINE_IID( kISimpleEnumerator, NS_ISIMPLEENUMERATOR_IID );
 static const char kURINC_WindowMediatorRoot[] = "NC:WindowMediatorRoot";
 
 
@@ -73,23 +77,58 @@ nsresult NS_NewRDFContainer(nsIRDFDataSource* aDataSource,
     return rv;
 }
 
-void GetWindowType( nsIWebShellWindow* inWindow, nsString& outType )
-{
-  nsCOMPtr<nsIDOMElement> webshellElement;
-
-  if (inWindow)
-    webshellElement = do_QueryInterface(inWindow);
- 
-  if (webshellElement )
-  	webshellElement->GetAttribute("windowtype", outType );
-}
-
 nsresult GetDOMWindow( nsIWebShellWindow* inWindow, nsCOMPtr< nsIDOMWindow>& outDOMWindow )
 {
 	nsCOMPtr<nsIWebShell> webShell;
 
 	inWindow->GetWebShell( *getter_AddRefs( webShell ) );
 	return inWindow->ConvertWebShellToDOMWindow( webShell, getter_AddRefs( outDOMWindow ) );
+}
+
+
+nsCOMPtr<nsIDOMNode> GetDOMNodeFromWebShell(nsIWebShell *aShell)
+{
+  nsCOMPtr<nsIDOMNode> node;
+
+  nsCOMPtr<nsIContentViewer> cv;
+  aShell->GetContentViewer(getter_AddRefs(cv));
+  if (cv) {
+    nsCOMPtr<nsIDocumentViewer> docv(do_QueryInterface(cv));
+    if (docv) {
+      nsCOMPtr<nsIDocument> doc;
+      docv->GetDocument(*getter_AddRefs(doc));
+      if (doc) {
+        nsCOMPtr<nsIDOMDocument> domdoc(do_QueryInterface(doc));
+        if (domdoc) {
+          nsCOMPtr<nsIDOMElement> element;
+          domdoc->GetDocumentElement(getter_AddRefs(element));
+          if (element)
+            node = do_QueryInterface(element);
+        }
+      }
+    }
+  }
+
+  return node;
+}
+
+void GetWindowType( nsIWebShellWindow* inWindow, nsString& outType )
+{
+ 
+  nsIWebShell* shell = NULL;
+  if ( inWindow &&
+  		NS_SUCCEEDED(inWindow->GetWebShell( shell ) ) )
+  {
+  		nsCOMPtr<nsIDOMNode> node( GetDOMNodeFromWebShell ( shell ) );
+ 		
+	  if (node )
+	  {
+	  	nsCOMPtr<nsIDOMElement> webshellElement( do_QueryInterface(node));
+  		if ( webshellElement.get() )
+  			webshellElement->GetAttribute("windowtype", outType );
+  	  }
+  	NS_IF_RELEASE( shell );
+  }
 }
 
 class nsWindowMediator;
@@ -106,15 +145,15 @@ struct nsWindowInfo
 	}
 	
 	nsCOMPtr<nsIRDFResource>	   mRDFID;
+	PRInt32			  mTimeStamp;
 	nsCOMPtr<nsIWebShellWindow> mWindow;
+	
 	nsString    GetType()
 		{ 
 			nsString rtnString;
 		 	GetWindowType( mWindow, rtnString );
 		 	return rtnString;
 		}
-	PRInt32			  mTimeStamp;
-	
 };
 
 class nsWindowEnumerator;
@@ -126,26 +165,39 @@ friend class nsWindowEnumerator;
 public:
 	nsWindowMediator();
 	virtual ~nsWindowMediator();
+  nsresult Init();
 	
-	NS_IMETHOD GetEnumerator( nsString* inType, nsISimpleEnumerator** outEnumerator );
-	NS_IMETHOD GetMostRecentWindow( nsString* inType, nsIDOMWindow** outWindow );
+	NS_IMETHOD GetEnumerator( const PRUnichar* inType, nsISimpleEnumerator** outEnumerator );
+	NS_IMETHOD GetMostRecentWindow( const PRUnichar* inType, nsIDOMWindow** outWindow );
 	
 	NS_IMETHOD RegisterWindow( nsIWebShellWindow* inWindow );
 	NS_IMETHOD UnregisterWindow( nsIWebShellWindow* inWindow );
 	
 	NS_IMETHOD UpdateWindowTimeStamp( nsIWebShellWindow* inWindow );
-	NS_IMETHOD UpdateWindowTitle( nsIWebShellWindow* inWindow , const nsString& inTitle );
-	NS_IMETHOD GetWindowForResource( nsIRDFResource* inResource, nsIDOMWindow** outWindow );
+	NS_IMETHOD UpdateWindowTitle( nsIWebShellWindow* inWindow , const PRUnichar* inTitle );
+	NS_IMETHOD GetWindowForResource( const PRUnichar* inResource, nsIDOMWindow** outWindow );
+
+	NS_IMETHOD ConvertISupportsToDOMWindow( nsISupports* inInterface, nsIDOMWindow** outWindow )
+	{
+		
+		return inInterface->QueryInterface(nsIDOMWindow::GetIID()  , (void**) outWindow );
+	}
 	// COM and RDF 
 	NS_DECL_ISUPPORTS	
 
 	// RDF
   // nsIRDFDataSource
-  NS_IMETHOD Init(const char* uri);
-
   NS_IMETHOD GetURI(char* *uri)
   {
-      return mInner->GetURI(uri);
+    NS_PRECONDITION(uri != nsnull, "null ptr");
+    if (! uri)
+      return NS_ERROR_NULL_POINTER;
+
+    *uri = nsXPIDLCString::Copy("rdf:window-mediator");
+    if (! *uri)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    return NS_OK;
   }
 
   NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -189,6 +241,16 @@ public:
                       nsIRDFResource* aProperty,
                       nsIRDFNode* aTarget);
 
+  NS_IMETHOD Change(nsIRDFResource* aSource,
+                    nsIRDFResource* aProperty,
+                    nsIRDFNode* aOldTarget,
+                    nsIRDFNode* aNewTarget);
+
+  NS_IMETHOD Move(nsIRDFResource* aOldSource,
+                  nsIRDFResource* aNewSource,
+                  nsIRDFResource* aProperty,
+                  nsIRDFNode* aTarget);
+
   NS_IMETHOD HasAssertion(nsIRDFResource* source,
                           nsIRDFResource* property,
                           nsIRDFNode* target,
@@ -223,10 +285,10 @@ public:
       return mInner->GetAllResources(aCursor);
   }
 
-  NS_IMETHOD Flush(void);
-
   NS_IMETHOD GetAllCommands(nsIRDFResource* source,
                             nsIEnumerator** commands);
+  NS_IMETHOD GetAllCmds(nsIRDFResource* source,
+                            nsISimpleEnumerator** commands);
 
   NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
                               nsIRDFResource*   aCommand,
@@ -241,9 +303,10 @@ private:
 	nsresult AddWindowToRDF( nsWindowInfo* ioWindowInfo );
 	PRInt32 AddEnumerator( nsWindowEnumerator* inEnumerator );
 	PRInt32 RemoveEnumerator( nsWindowEnumerator* inEnumerator);
+	PRInt32		mTimeStamp;
 	nsVoidArray mEnumeratorList;
 	nsVoidArray	mWindowList;
-	PRInt32		mTimeStamp;
+	
 
   // pseudo-constants for RDF
   static nsIRDFResource* kNC_WindowMediatorRoot;
@@ -258,7 +321,7 @@ class nsWindowEnumerator : public nsISimpleEnumerator
 {
 
 public:
-	nsWindowEnumerator ( nsString* inTypeString,  nsWindowMediator& inMediator  );
+	nsWindowEnumerator ( const PRUnichar* inTypeString,  nsWindowMediator& inMediator  );
 	virtual ~nsWindowEnumerator();
 	NS_IMETHOD HasMoreElements(PRBool *retval);
   NS_IMETHOD GetNext(nsISupports **retval);
@@ -270,7 +333,7 @@ private:
 	PRInt32 FindNext();
 	void WindowRemoved( PRInt32 inIndex);
 	
-	nsCOMPtr<nsWindowMediator> mWindowMediator;
+	nsWindowMediator* mWindowMediator;
 	nsString mType;
 	PRInt32 mCurrentPosition;
 };
@@ -286,18 +349,14 @@ nsIRDFDataSource *nsWindowMediator::mInner = NULL;
 
 
 nsWindowMediator::nsWindowMediator() :
-	mTimeStamp( 0 ), mEnumeratorList(5), mWindowList(5)
+	mTimeStamp( 0 ), mEnumeratorList(), mWindowList()
 {
 	 NS_INIT_REFCNT();
 
-	 if (gRefCnt++ == 0)
-	 {
-      nsresult rv = nsServiceManager::GetService( kRDFServiceCID, kIRDFServiceIID, (nsISupports**) &gRDFService );
-
-			gRDFService->GetResource( kURINC_WindowMediatorRoot,   &kNC_WindowMediatorRoot );
-			gRDFService->GetResource (kURINC_Name, &kNC_Name );
-			gRDFService->GetResource( kURINC_URL, &kNC_URL );
-    }
+   // This should really be done in the static constructor fn.
+   nsresult rv;
+   rv = Init();
+   NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, couldn't Init() for some reason");
 }
 
 nsWindowMediator::~nsWindowMediator()
@@ -313,14 +372,16 @@ nsWindowMediator::~nsWindowMediator()
 			}
 		
 		// unregister this from the RDF service
-			gRDFService->UnregisterDataSource(this);
-			nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
-			gRDFService = nsnull;
-		
-      NS_RELEASE(kNC_WindowMediatorRoot);
-      NS_RELEASE( kNC_Name );
-      NS_RELEASE(kNC_URL);
-      NS_RELEASE(mInner);
+			if ( gRDFService )
+			{
+				gRDFService->UnregisterDataSource(this);
+				nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
+				gRDFService = nsnull;
+		 	}
+      NS_IF_RELEASE(kNC_WindowMediatorRoot);
+      NS_IF_RELEASE( kNC_Name );
+      NS_IF_RELEASE(kNC_URL);
+      NS_IF_RELEASE(mInner);
     }
 }
 
@@ -371,13 +432,22 @@ NS_IMETHODIMP nsWindowMediator::UnregisterWindow( nsIWebShellWindow* inWindow )
 	
 	if ( windowInfo == NULL )	
 		return NS_ERROR_INVALID_ARG;
-	// Inform the iterators
-	PRInt32 index = -1;
+		
+  // Inform the iterators
+  PRInt32 index = -1;
   while (++index < mEnumeratorList.Count() ) 
   {
   	((nsWindowEnumerator*)mEnumeratorList[ index ] )->WindowRemoved ( windowIndex );
   }
- 
+  
+ 	// Remove From RDF
+  nsCOMPtr<nsIRDFContainer> container;
+  nsresult rv = NS_NewRDFContainer(mInner, kNC_WindowMediatorRoot, getter_AddRefs(container));
+  if (NS_SUCCEEDED(rv))
+  {
+  	container->RemoveElement( windowInfo->mRDFID, PR_TRUE );
+  }
+ 	
 	// Remove from the list and free up 
 	mWindowList.RemoveElement( windowInfo );
 	
@@ -386,14 +456,16 @@ NS_IMETHODIMP nsWindowMediator::UnregisterWindow( nsIWebShellWindow* inWindow )
 }
 
 
-NS_METHOD nsWindowMediator::GetEnumerator( nsString* inType, nsISimpleEnumerator** outEnumerator )
+NS_METHOD nsWindowMediator::GetEnumerator( const PRUnichar* inType, nsISimpleEnumerator** outEnumerator )
 {
 		if ( outEnumerator == NULL )
 			return NS_ERROR_INVALID_ARG;
-		*outEnumerator = new nsWindowEnumerator( inType, *this );
-		if (*outEnumerator )
-			return NS_OK;
-		
+	
+		nsWindowEnumerator* enumerator = new nsWindowEnumerator( inType, *this );
+		if (enumerator )
+		{
+			return enumerator->QueryInterface( kISimpleEnumerator , (void**)outEnumerator );
+		}
 		return NS_ERROR_OUT_OF_MEMORY;
 };	
  
@@ -413,18 +485,18 @@ PRInt32 nsWindowMediator::RemoveEnumerator( nsWindowEnumerator* inEnumerator)
 	Returns the window of type inType ( if null return any window type ) which has the most recent
 	time stamp
 */
-NS_IMETHODIMP nsWindowMediator::GetMostRecentWindow( nsString* inType, nsIDOMWindow** outWindow )
+NS_IMETHODIMP nsWindowMediator::GetMostRecentWindow( const PRUnichar* inType, nsIDOMWindow** outWindow )
 {
-	nsWindowInfo* windowInfo = NULL;
 	*outWindow = NULL;
 	PRInt32 lastTimeStamp = -1;
 	PRInt32 count = mWindowList.Count();
-	nsIWebShellWindow* mostRecentWindow;
+	nsIWebShellWindow* mostRecentWindow = NULL;
+	nsString typeString( inType );
 	// Find the most window with the highest time stamp that matches the requested type
 	for ( int32 i = 0; i< count; i++ )
 	{	
 		nsWindowInfo* windowInfo = (nsWindowInfo*) mWindowList[i];
-		if ( ( inType == NULL || windowInfo->GetType() == *inType ) && windowInfo->mTimeStamp >= lastTimeStamp )
+		if ( ( inType == NULL || windowInfo->GetType() == typeString ) && windowInfo->mTimeStamp >= lastTimeStamp )
 		{
 			mostRecentWindow = windowInfo->mWindow;
 			lastTimeStamp = windowInfo->mTimeStamp;
@@ -437,6 +509,7 @@ NS_IMETHODIMP nsWindowMediator::GetMostRecentWindow( nsString* inType, nsIDOMWin
 			if( NS_SUCCEEDED ( GetDOMWindow( mostRecentWindow, DOMWindow  ) ) )
 			{	
 				*outWindow = DOMWindow;
+				(*outWindow)->AddRef();
 				return NS_OK;
 			}
 			else
@@ -444,10 +517,9 @@ NS_IMETHODIMP nsWindowMediator::GetMostRecentWindow( nsString* inType, nsIDOMWin
 				return NS_ERROR_FAILURE;
 			}
 	}
-	else
-	{
-		return NS_ERROR_FAILURE;
-	}
+	
+	return NS_OK;
+	
 }
 
 
@@ -469,7 +541,7 @@ NS_IMETHODIMP nsWindowMediator::UpdateWindowTimeStamp( nsIWebShellWindow* inWind
 }
 
 
-NS_IMETHODIMP  nsWindowMediator::UpdateWindowTitle( nsIWebShellWindow* inWindow, const nsString& inTitle )
+NS_IMETHODIMP  nsWindowMediator::UpdateWindowTitle( nsIWebShellWindow* inWindow, const PRUnichar* inTitle )
 {
 	PRInt32 count = mWindowList.Count();
 	nsresult rv;
@@ -489,7 +561,7 @@ NS_IMETHODIMP  nsWindowMediator::UpdateWindowTitle( nsIWebShellWindow* inWindow,
             
             // Add new title             
 			nsCOMPtr<nsIRDFLiteral> newTitle;
-			if (NS_FAILED(rv = gRDFService->GetLiteral( inTitle.GetUnicode(), getter_AddRefs(newTitle))))
+			if ( gRDFService && NS_FAILED(rv = gRDFService->GetLiteral( inTitle, getter_AddRefs(newTitle) ) ) )
 			{
 				NS_ERROR("unable to create literal for window name");
 				return rv;
@@ -506,30 +578,39 @@ NS_IMETHODIMP  nsWindowMediator::UpdateWindowTitle( nsIWebShellWindow* inWindow,
 	return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP  nsWindowMediator::GetWindowForResource( nsIRDFResource* inResource, nsIDOMWindow** outWindow )
+NS_IMETHODIMP  nsWindowMediator::GetWindowForResource( const PRUnichar* inResource, nsIDOMWindow** outWindow )
 {
 	if ( outWindow == NULL )
 		return NS_ERROR_INVALID_ARG;
-		*outWindow = NULL;
+	*outWindow = NULL;
 	PRInt32 count = mWindowList.Count();
 	// Find the window
+	nsresult result = NS_ERROR_FAILURE;
+	nsString temp( inResource );
+	char* resourceString = temp.ToNewCString();
 	for ( int32 i = 0; i< count; i++ )
 	{	
 		nsWindowInfo* windowInfo = (nsWindowInfo*) mWindowList[i];
-		PRBool result = PR_FALSE;
-		if (  windowInfo->mRDFID->EqualsResource( inResource, &result)  && result == PR_TRUE ) 
+		PRBool isMatch = PR_FALSE;
+
+		if ( NS_SUCCEEDED( windowInfo->mRDFID->EqualsString( resourceString, &isMatch) ) && isMatch ) 
 		{
 			nsCOMPtr <nsIDOMWindow> DOMWindow;
 			if( NS_SUCCEEDED ( GetDOMWindow( windowInfo->mWindow, DOMWindow  ) ) )
 			{	
 				*outWindow = DOMWindow;
-				return NS_OK;
+				(*outWindow)->AddRef();
+				result = NS_OK;
 			}
-			else
-				return NS_ERROR_FAILURE;
+			break;
 		}
 	} 
-	return NS_ERROR_FAILURE;
+
+	delete resourceString;
+	// Rather than returning an error when you pass in crap, return NS_OK
+	// Doing this to avoid throwing a JS exception becasue event bubbling is not working as of 7/26/99
+	//return result;
+	return NS_OK;
 }
 
 // COM
@@ -543,7 +624,8 @@ NS_IMETHODIMP nsWindowMediator::QueryInterface(REFNSIID iid, void **result)
 
 	*result = nsnull;
 	if (iid.Equals(kIRDFDataSourceIID) ||
-		iid.Equals(kIWindowMediatorIID))
+		iid.Equals(kIWindowMediatorIID)	||
+		 iid.Equals(kISupportsIID) )
 	{
 		*result = NS_STATIC_CAST(nsIWindowMediator *, this);
 		AddRef();
@@ -553,9 +635,20 @@ NS_IMETHODIMP nsWindowMediator::QueryInterface(REFNSIID iid, void **result)
 }
 
 // RDF
-NS_IMETHODIMP nsWindowMediator::Init(const char* uri)
+nsresult
+nsWindowMediator::Init()
 {
 	nsresult rv;
+
+	 if (gRefCnt++ == 0)
+	 {
+      rv = nsServiceManager::GetService( kRDFServiceCID, kIRDFServiceIID, (nsISupports**) &gRDFService );
+      if (NS_FAILED(rv)) return rv;
+
+			gRDFService->GetResource( kURINC_WindowMediatorRoot,   &kNC_WindowMediatorRoot );
+			gRDFService->GetResource (kURINC_Name, &kNC_Name );
+			gRDFService->GetResource( kURINC_URL, &kNC_URL );
+    }
 
 	if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
 	                                                nsnull,
@@ -565,12 +658,6 @@ NS_IMETHODIMP nsWindowMediator::Init(const char* uri)
 		return rv;
 	}
 
-	if (NS_FAILED(rv = mInner->Init(uri)))
-	{
-	 	NS_ERROR( "unable to init mInner");
-		return rv;
-	}
-	
 	NS_WITH_SERVICE(nsIRDFContainerUtils, rdfc, kRDFContainerUtilsCID, &rv);
 	if (NS_FAILED(rv))
 		return rv;
@@ -579,7 +666,8 @@ NS_IMETHODIMP nsWindowMediator::Init(const char* uri)
 	NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to make NC:WindowMediatorRoot a sequence");
 	if (NS_FAILED(rv))
 		return rv;
-
+	if ( gRDFService == NULL )
+		return NS_ERROR_NULL_POINTER;
   // register this as a named data source with the RDF service
   return gRDFService->RegisterDataSource(this, PR_FALSE);
 }
@@ -602,15 +690,34 @@ NS_IMETHODIMP nsWindowMediator::Unassert(nsIRDFResource* aSource,
 }
 
 
-NS_IMETHODIMP nsWindowMediator::Flush(void)
+NS_IMETHODIMP nsWindowMediator::Change(nsIRDFResource* aSource,
+                                       nsIRDFResource* aProperty,
+                                       nsIRDFNode* aOldTarget,
+                                       nsIRDFNode* aNewTarget)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+  // XXX TODO: filter out changes we don't care about
+  return mInner->Change(aSource, aProperty, aOldTarget, aNewTarget);
+}
+
+NS_IMETHODIMP nsWindowMediator::Move(nsIRDFResource* aOldSource,
+                                     nsIRDFResource* aNewSource,
+                                     nsIRDFResource* aProperty,
+                                     nsIRDFNode* aTarget)
+{
+  // XXX TODO: filter out changes we don't care about
+  return mInner->Move(aOldSource, aNewSource, aProperty, aTarget);
 }
 
 
 NS_IMETHODIMP nsWindowMediator::GetAllCommands(nsIRDFResource* source,
                                        nsIEnumerator/*<nsIRDFResource>*/** commands)
+{
+    NS_NOTYETIMPLEMENTED("write me!");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsWindowMediator::GetAllCmds(nsIRDFResource* source,
+                                       nsISimpleEnumerator/*<nsIRDFResource>*/** commands)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -637,8 +744,8 @@ NS_IMETHODIMP nsWindowMediator::DoCommand(nsISupportsArray* aSources,
 // Private helpers
 nsresult nsWindowMediator::AddWindowToRDF( nsWindowInfo* ioWindowInfo )
 {
-	if ( ioWindowInfo == NULL || ioWindowInfo->mWindow == NULL )
-		return PR_FALSE;
+	if ( !ioWindowInfo || !(ioWindowInfo->mWindow) || !gRDFService )
+		return NS_ERROR_NULL_POINTER;
 		
 	nsCOMPtr<nsIRDFResource> window;
 	nsresult rv;	
@@ -712,21 +819,18 @@ nsresult NS_NewWindowMediatorFactory(nsIFactory** aResult)
 }
 
 // window Enumerator
-nsWindowEnumerator::nsWindowEnumerator ( nsString* inTypeString, nsWindowMediator& inMediator )
-	:mWindowMediator( &inMediator )
+nsWindowEnumerator::nsWindowEnumerator ( const PRUnichar* inTypeString, nsWindowMediator& inMediator )
+	: mWindowMediator( &inMediator ), mType( inTypeString ), mCurrentPosition( -1 )
 {
 	NS_INIT_REFCNT();
-	if ( inTypeString )
-	{
-		mType = *inTypeString;
-	}
 	mWindowMediator->AddEnumerator( this );
-	NS_ADDREF( this );
+	mWindowMediator->AddRef();
 }
 
 nsWindowEnumerator::~nsWindowEnumerator()
 {
 	mWindowMediator->RemoveEnumerator( this );
+	mWindowMediator->Release();
 }
 
 NS_IMETHODIMP nsWindowEnumerator::HasMoreElements(PRBool *retval)
@@ -744,24 +848,25 @@ NS_IMETHODIMP nsWindowEnumerator::GetNext(nsISupports **retval)
 {
 	if ( !retval )
 		return NS_ERROR_INVALID_ARG;
-		
+	*retval = NULL;
 	PRInt32 index = FindNext();
 	if ( index >= 0 )
 	{
 		nsWindowInfo* windowInfo = (nsWindowInfo*) mWindowMediator->mWindowList[index];
-		*retval = windowInfo->mWindow;
-		NS_ADDREF( *retval );
+		nsCOMPtr<nsIDOMWindow> domWindow;
+		GetDOMWindow( windowInfo->mWindow, domWindow );
+		domWindow->QueryInterface( kISupportsIID ,(void**)retval );
+		
+		mCurrentPosition++;
 	}
 	return NS_OK;
 }
 
 PRInt32 nsWindowEnumerator::FindNext()
 {
-	// Now find the window
-	PRInt32 i = mCurrentPosition;
 	PRInt32 numWindows =  mWindowMediator->mWindowList.Count();
 	PRBool allWindows = (mType.Length() == 0);
-	for ( i++;i < numWindows; i++ )
+	for ( PRInt32 i = mCurrentPosition+1; i < numWindows; i++ )
 	{
 		nsWindowInfo* windowInfo = (nsWindowInfo*) mWindowMediator->mWindowList[i];
 		if (  allWindows  || ( windowInfo->GetType() == mType ) )

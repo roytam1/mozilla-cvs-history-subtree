@@ -19,33 +19,12 @@
 #include "nsDrawingSurfaceXlib.h"
 #include "prlog.h"
 
+#include "xlibrgb.h"      // for xlib_rgb_get_visual_info
+#include <X11/Xutil.h>    // for XVisualInfo.
+
 static NS_DEFINE_IID(kIDrawingSurfaceIID, NS_IDRAWING_SURFACE_IID);
 
 static PRLogModuleInfo *DrawingSurfaceXlibLM = PR_NewLogModule("DrawingSurfaceXlib");
-
-extern Display         *gDisplay;
-extern Screen          *gScreen;
-extern int              gScreenNum;
-extern int              gDepth;
-extern Visual          *gVisual;
-extern XVisualInfo     *gVisualInfo;
-
-extern PRUint32  gRedZeroMask;     //red color mask in zero position
-extern PRUint32  gGreenZeroMask;   //green color mask in zero position
-extern PRUint32  gBlueZeroMask;    //blue color mask in zero position
-extern PRUint32  gAlphaZeroMask;   //alpha data mask in zero position
-extern PRUint32  gRedMask;         //red color mask
-extern PRUint32  gGreenMask;       //green color mask
-extern PRUint32  gBlueMask;        //blue color mask
-extern PRUint32  gAlphaMask;       //alpha data mask
-extern PRUint8   gRedCount;        //number of red color bits
-extern PRUint8   gGreenCount;      //number of green color bits
-extern PRUint8   gBlueCount;       //number of blue color bits
-extern PRUint8   gAlphaCount;      //number of alpha data bits
-extern PRUint8   gRedShift;        //number to shift value into red position
-extern PRUint8   gGreenShift;      //number to shift value into green position
-extern PRUint8   gBlueShift;       //number to shift value into blue position
-extern PRUint8   gAlphaShift;      //number to shift value into alpha position
 
 nsDrawingSurfaceXlib::nsDrawingSurfaceXlib()
 {
@@ -54,6 +33,10 @@ nsDrawingSurfaceXlib::nsDrawingSurfaceXlib()
   mDrawable = 0;
   mDestroyDrawable = PR_FALSE;
   mImage = nsnull;
+  mDisplay = nsnull;
+  mScreen = nsnull;
+  mVisual = nsnull;
+  mDepth = 0;
   mGC = 0;
   // set up lock info
   mLocked = PR_FALSE;
@@ -66,19 +49,29 @@ nsDrawingSurfaceXlib::nsDrawingSurfaceXlib()
   mWidth = 0;
   mHeight = 0;
   mIsOffscreen = PR_FALSE;
+
   // set up the masks for the pix formats
-  mPixFormat.mRedMask = gRedMask;
-  mPixFormat.mGreenMask = gGreenMask;
-  mPixFormat.mBlueMask = gBlueMask;
-  mPixFormat.mAlphaMask = gAlphaMask;
-  mPixFormat.mRedCount = gRedCount;
-  mPixFormat.mGreenCount = gGreenCount;
-  mPixFormat.mBlueCount = gBlueCount;
-  mPixFormat.mAlphaCount = gAlphaCount;
-  mPixFormat.mRedShift = gRedShift;
-  mPixFormat.mGreenShift = gGreenShift;
-  mPixFormat.mBlueShift = gBlueShift;
-  mPixFormat.mAlphaShift = gAlphaShift;
+  XVisualInfo * x_visual_info = xlib_rgb_get_visual_info();
+
+  NS_ASSERTION(nsnull != x_visual_info,"Visual info from xlibrgb is null.");
+
+  if (nsnull != x_visual_info)
+  {
+    mPixFormat.mRedMask = x_visual_info->red_mask;
+    mPixFormat.mGreenMask = x_visual_info->green_mask;;
+    mPixFormat.mBlueMask = x_visual_info->blue_mask;;
+    mPixFormat.mAlphaMask = 0;
+
+    mPixFormat.mRedCount = ConvertMaskToCount(x_visual_info->red_mask);
+    mPixFormat.mGreenCount = ConvertMaskToCount(x_visual_info->green_mask);
+    mPixFormat.mBlueCount = ConvertMaskToCount(x_visual_info->blue_mask);;
+    mPixFormat.mAlphaCount = 0;
+
+    mPixFormat.mRedShift = GetShiftForMask(x_visual_info->red_mask);
+    mPixFormat.mGreenShift = GetShiftForMask(x_visual_info->green_mask);
+    mPixFormat.mBlueShift = GetShiftForMask(x_visual_info->blue_mask);
+    mPixFormat.mAlphaShift = 0;
+  }
 }
 
 nsDrawingSurfaceXlib::~nsDrawingSurfaceXlib()
@@ -86,7 +79,7 @@ nsDrawingSurfaceXlib::~nsDrawingSurfaceXlib()
   PR_LOG(DrawingSurfaceXlibLM, PR_LOG_DEBUG, ("nsDrawingSurfaceXlib::~nsDrawingSurfaceXlib()\n"));
   // if it's been labeled as destroy, it's a pixmap.
   if (mDestroyDrawable) {
-    XFreePixmap(gDisplay, mDrawable);
+    XFreePixmap(mDisplay, mDrawable);
   }
   if (mImage) {
     XDestroyImage(mImage);
@@ -98,8 +91,19 @@ NS_IMPL_ADDREF(nsDrawingSurfaceXlib)
 NS_IMPL_RELEASE(nsDrawingSurfaceXlib)
 
 NS_IMETHODIMP
-nsDrawingSurfaceXlib::Init(Drawable aDrawable, GC aGC) {
+nsDrawingSurfaceXlib::Init(Display * aDisplay,
+                           Screen *  aScreen,
+                           Visual *  aVisual,
+                           int       aDepth,
+                           Drawable  aDrawable, 
+                           GC        aGC) 
+{
   PR_LOG(DrawingSurfaceXlibLM, PR_LOG_DEBUG, ("nsDrawingSurfaceXlib::Init()\n"));
+
+  mDisplay = aDisplay;
+  mScreen = aScreen;
+  mVisual = aVisual;
+  mDepth = aDepth;
   mGC = aGC;
   mDrawable = aDrawable;
   mIsOffscreen = PR_FALSE;
@@ -107,17 +111,31 @@ nsDrawingSurfaceXlib::Init(Drawable aDrawable, GC aGC) {
 }
 
 NS_IMETHODIMP
-nsDrawingSurfaceXlib::Init (GC aGC,
-                            PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFlags) {
+nsDrawingSurfaceXlib::Init (Display * aDisplay,
+                            Screen *  aScreen,
+                            Visual *  aVisual,
+                            int       aDepth,
+                            GC        aGC,
+                            PRUint32  aWidth, 
+                            PRUint32  aHeight, 
+                            PRUint32  aFlags) 
+{
+  mDisplay = aDisplay;
+  mScreen = aScreen;
+  mVisual = aVisual;
+  mDepth = aDepth;
   mGC = aGC;
   mWidth = aWidth;
   mHeight = aHeight;
   mLockFlags = aFlags;
 
   mIsOffscreen = PR_TRUE;
-  
-  mDrawable = XCreatePixmap(gDisplay, RootWindow(gDisplay, gScreenNum),
-                            mWidth, mHeight, gDepth);
+
+  mDrawable = XCreatePixmap(mDisplay, 
+                            RootWindow(mDisplay, GetScreenNumber()),
+                            mWidth, 
+                            mHeight, 
+                            mDepth);
   return NS_OK;
 }
 
@@ -141,7 +159,7 @@ nsDrawingSurfaceXlib::Lock(PRInt32 aX, PRInt32 aY,
   mLockHeight = aHeight;
   mLockFlags = aFlags;
 
-  mImage = XGetImage(gDisplay, mDrawable,
+  mImage = XGetImage(mDisplay, mDrawable,
                      mLockX, mLockY,
                      mLockWidth, mLockHeight,
                      0xFFFFFFFF,
@@ -166,7 +184,7 @@ nsDrawingSurfaceXlib::Unlock(void)
   
   // If the lock was not read only, put the bits back on the pixmap
   if (!(mLockFlags & NS_LOCK_SURFACE_READ_ONLY)) {
-    XPutImage(gDisplay, mDrawable, mGC, mImage,
+    XPutImage(mDisplay, mDrawable, mGC, mImage,
               0, 0, mLockX, mLockY,
               mLockWidth, mLockHeight);
   }
@@ -205,4 +223,34 @@ nsDrawingSurfaceXlib::GetPixelFormat(nsPixelFormat *aFormat)
 {
   *aFormat = mPixFormat;
   return NS_OK;
+}
+
+PRUint8 
+nsDrawingSurfaceXlib::ConvertMaskToCount(unsigned long val)
+{
+  PRUint8 retval = 0;
+  PRUint8 cur_bit = 0;
+  // walk through the number, incrementing the value if
+  // the bit in question is set.
+  while (cur_bit < (sizeof(unsigned long) * 8)) {
+    if ((val >> cur_bit) & 0x1) {
+      retval++;
+    }
+    cur_bit++;
+  }
+  return retval;
+}
+
+PRUint8 
+nsDrawingSurfaceXlib::GetShiftForMask(unsigned long val)
+{
+  PRUint8 cur_bit = 0;
+  // walk through the number, looking for the first 1
+  while (cur_bit < (sizeof(unsigned long) * 8)) {
+    if ((val >> cur_bit) & 0x1) {
+      return cur_bit;
+    }
+    cur_bit++;
+  }
+  return cur_bit;
 }

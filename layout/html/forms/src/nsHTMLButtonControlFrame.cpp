@@ -375,25 +375,25 @@ nsHTMLButtonControlFrame::Paint(nsIPresContext& aPresContext,
 static
 void ButtonHack(nsHTMLReflowState& aReflowState, char* aMessage)
 {
-  if (aReflowState.computedWidth == 0) {
-    aReflowState.computedWidth = aReflowState.availableWidth;
+  if (aReflowState.mComputedWidth == 0) {
+    aReflowState.mComputedWidth = aReflowState.availableWidth;
   }
-  if ((aReflowState.computedWidth != NS_INTRINSICSIZE) &&
-      (aReflowState.computedWidth > aReflowState.availableWidth) &&
+  if ((aReflowState.mComputedWidth != NS_INTRINSICSIZE) &&
+      (aReflowState.mComputedWidth > aReflowState.availableWidth) &&
       (aReflowState.availableWidth > 0)) {
 //    printf("BUG - %s has a computed width = %d, available width = %d \n", 
-//    aMessage, aReflowState.computedWidth, aReflowState.availableWidth);
-    aReflowState.computedWidth = aReflowState.availableWidth;
+//    aMessage, aReflowState.mComputedWidth, aReflowState.availableWidth);
+    aReflowState.mComputedWidth = aReflowState.availableWidth;
   }
-  if (aReflowState.computedHeight == 0) {
-    aReflowState.computedHeight = aReflowState.availableHeight;
+  if (aReflowState.mComputedHeight == 0) {
+    aReflowState.mComputedHeight = aReflowState.availableHeight;
   }
-  if ((aReflowState.computedHeight != NS_INTRINSICSIZE) &&
-      (aReflowState.computedHeight > aReflowState.availableHeight) &&
+  if ((aReflowState.mComputedHeight != NS_INTRINSICSIZE) &&
+      (aReflowState.mComputedHeight > aReflowState.availableHeight) &&
       (aReflowState.availableHeight > 0)) {
 //    printf("BUG - %s has a computed height = %d, available height = %d \n", 
-//    aMessage, aReflowState.computedHeight, aReflowState.availableHeight);
-    aReflowState.computedHeight = aReflowState.availableHeight;
+//    aMessage, aReflowState.mComputedHeight, aReflowState.availableHeight);
+    aReflowState.mComputedHeight = aReflowState.availableHeight;
   }
 }
 
@@ -445,12 +445,13 @@ nsHTMLButtonControlFrame::Reflow(nsIPresContext& aPresContext,
 
   // reflow the child
   nsIFrame* firstKid = mFrames.FirstChild();
-  nsSize availSize(aReflowState.computedWidth, aReflowState.computedHeight);
+  nsSize availSize(aReflowState.mComputedWidth, NS_INTRINSICSIZE);
 
   // indent the child inside us by the the focus border. We must do this separate from the
   // regular border.
   nsMargin focusPadding = mRenderer.GetAddedButtonBorderAndPadding();
 
+  
   if (NS_INTRINSICSIZE != availSize.width) {
     availSize.width -= focusPadding.left + focusPadding.right;
     availSize.width = PR_MAX(availSize.width,0);
@@ -459,8 +460,10 @@ nsHTMLButtonControlFrame::Reflow(nsIPresContext& aPresContext,
     availSize.height -= focusPadding.top + focusPadding.bottom;
     availSize.height = PR_MAX(availSize.height,0);
   }
-
+  
   nsHTMLReflowState reflowState(aPresContext, aReflowState, firstKid, availSize);
+  //reflowState.computedWidth = availSize;
+
   // XXX remove the following when the reflow state is fixed
   //ButtonHack(reflowState, "html4 button's area");
 
@@ -471,7 +474,8 @@ nsHTMLButtonControlFrame::Reflow(nsIPresContext& aPresContext,
     // See if it's targeted at us
     aReflowState.reflowCommand->GetTarget(targetFrame);
     if (this == targetFrame) {
-      // XXX Handle this...
+      Invalidate(nsRect(0,0,mRect.width,mRect.height), PR_FALSE);
+
       reflowState.reason = eReflowReason_Resize;
     } else {
       nsIFrame* nextFrame;
@@ -487,9 +491,16 @@ nsHTMLButtonControlFrame::Reflow(nsIPresContext& aPresContext,
   nsRect rect = nsRect(focusPadding.left + aReflowState.mComputedBorderPadding.left, focusPadding.top + aReflowState.mComputedBorderPadding.top, aDesiredSize.width, aDesiredSize.height);
   firstKid->SetRect(rect);
 
-  // add in our border and padding to the size of the child
-  aDesiredSize.width  += focusPadding.left + focusPadding.right;
-  aDesiredSize.height += focusPadding.top + focusPadding.bottom;
+  // if computed use the computed values.
+  if (aReflowState.mComputedWidth != NS_INTRINSICSIZE && (aDesiredSize.width < aReflowState.mComputedWidth)) 
+    aDesiredSize.width = aReflowState.mComputedWidth;
+  else 
+    aDesiredSize.width  += focusPadding.left + focusPadding.right;
+
+  if (aReflowState.mComputedHeight != NS_INTRINSICSIZE && (aDesiredSize.height < aReflowState.mComputedHeight)) 
+    aDesiredSize.height = aReflowState.mComputedHeight;
+  else
+    aDesiredSize.height += focusPadding.top + focusPadding.bottom;
 
   aDesiredSize.width  += aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right;
   aDesiredSize.height += aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
@@ -499,16 +510,9 @@ nsHTMLButtonControlFrame::Reflow(nsIPresContext& aPresContext,
     aDesiredSize.AddBorderPaddingToMaxElementSize(aReflowState.mComputedBorderPadding);
   }
 
-  // if we are constrained and the child is smaller, use the constrained values
-  //if (aReflowState.HaveFixedContentWidth() && (aDesiredSize.width < aReflowState.computedWidth)) {
-  //  aDesiredSize.width = aReflowState.computedWidth;
-  //}
-  //if (aReflowState.HaveFixedContentHeight() && (aDesiredSize.height < aReflowState.computedHeight)) {
-  //  aDesiredSize.height = aReflowState.computedHeight;
-  //}
-
   aDesiredSize.ascent  = aDesiredSize.height;
   aDesiredSize.descent = 0;
+
 
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
@@ -599,6 +603,13 @@ nsHTMLButtonControlFrame::ReResolveStyleContext ( nsIPresContext* aPresContext, 
   return rv;
   
 } // ReResolveStyleContext
+
+NS_IMETHODIMP nsHTMLButtonControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
+{
+//  mSuggestedWidth = aWidth;
+//  mSuggestedHeight = aHeight;
+  return NS_OK;
+}
 
 
 

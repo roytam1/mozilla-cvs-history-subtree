@@ -19,6 +19,7 @@
 #include "nsJVMPluginTagInfo.h"
 #include "nsIPluginTagInfo2.h"
 #include "plstr.h"
+#include "nsCRT.h"      // mixing metaphors with plstr.h!
 #ifdef XP_UNIX
 #undef Bool
 #endif

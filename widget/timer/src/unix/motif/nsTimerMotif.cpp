@@ -168,7 +168,7 @@ nsTimerMotif::EnsureAppContext()
   return NS_OK;
 }
 
-#ifdef MOZ_MONOLITHIC_TOOLKIT
+#ifndef TOOLKIT_EXORCISM
 nsresult NS_NewTimer(nsITimer** aInstancePtrResult)
 {
     NS_PRECONDITION(nsnull != aInstancePtrResult, "null ptr");
@@ -183,4 +183,4 @@ nsresult NS_NewTimer(nsITimer** aInstancePtrResult)
 
     return timer->QueryInterface(kITimerIID, (void **) aInstancePtrResult);
 }
-#endif /* MOZ_MONOLITHIC_TOOLKIT */
+#endif /* TOOLKIT_EXORCISM */

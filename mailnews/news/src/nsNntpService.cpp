@@ -18,51 +18,32 @@
 
 #include "msgCore.h"    // precompiled header...
 #include "nntpCore.h"
+#include "nsMsgNewsCID.h"
 
 #ifdef XP_PC
 #include <windows.h>    // for InterlockedIncrement
 #endif
 
 #include "nsNntpService.h"
-
-#include "nsINetService.h"
-
 #include "nsINntpUrl.h"
 #include "nsNNTPProtocol.h"
-
 #include "nsNNTPNewsgroupPost.h"
-#include "nsINetService.h"
-
 #include "nsIMsgMailSession.h"
 #include "nsIMsgIdentity.h"
-
 #include "nsString.h"
-
 #include "nsNewsUtils.h"
-
 #include "nsNewsDatabase.h"
 #include "nsMsgDBCID.h"
-
-#include "nsString.h"
-
 #include "nsNNTPNewsgroup.h"
 #include "nsCOMPtr.h"
 #include "nsMsgBaseCID.h"
 #include "nsMsgNewsCID.h"
-
 #include "nsIMessage.h"
-
 #include "nsINetSupportDialogService.h"
-
 #include "nsIPref.h"
-
 #include "nsCRT.h"  // for nsCRT::strtok
 
 #define PREF_NETWORK_HOSTS_NNTP_SERVER	"network.hosts.nntp_server"
-
-#ifdef DEBUG_sspitzer_
-#define DEBUG_NEWS 1
-#endif
 
 // we need this because of an egcs 1.0 (and possibly gcc) compiler bug
 // that doesn't allow you to call ::nsISupports::GetIID() inside of a class
@@ -70,7 +51,6 @@
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 static NS_DEFINE_CID(kCNntpUrlCID, NS_NNTPURL_CID);
-static NS_DEFINE_CID(kCNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 static NS_DEFINE_CID(kCNNTPNewsgroupCID, NS_NNTPNEWSGROUP_CID);
 static NS_DEFINE_CID(kCNNTPNewsgroupPostCID, NS_NNTPNEWSGROUPPOST_CID);
@@ -108,6 +88,12 @@ nsresult nsNntpService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
         NS_ADDREF_THIS();
         return NS_OK;
     }
+	if (aIID.Equals(nsIProtocolHandler::GetIID()))
+	{
+		*aInstancePtr = (void *) ((nsIProtocolHandler*) this);
+		NS_ADDREF_THIS();
+		return NS_OK;
+	}
 
 #if defined(NS_DEBUG)
     /*
@@ -125,15 +111,20 @@ nsresult nsNntpService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
 // nsIMsgMessageService support
 ////////////////////////////////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsNntpService::SaveMessageToDisk(const char *aMessageURI, nsIFileSpec *aFile, PRBool aAppendToFile, nsIUrlListener *aUrlListener, nsIURL **aURL)
+NS_IMETHODIMP nsNntpService::SaveMessageToDisk(const char *aMessageURI, nsIFileSpec *aFile, PRBool aAppendToFile, nsIUrlListener *aUrlListener, nsIURI **aURL)
 {
 	// unimplemented for news right now....if we feel it would be useful to 
 	// be able to spool a news article to disk then this is the method we need to implement.
-	nsresult rv = NS_OK;
+
+  //
+  // Returning success causes us much grief with the editor because we wait until this is
+  // complete to do anything...so changing this to failure.
+  //
+	nsresult rv = NS_ERROR_FAILURE;
 	return rv;
 }
 
-nsresult nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayConsumer, nsIUrlListener * aUrlListener, nsIURL ** aURL)
+nsresult nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayConsumer, nsIUrlListener * aUrlListener, nsIURI ** aURL)
 {
   nsresult rv = NS_OK;
   
@@ -185,7 +176,7 @@ nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, ns
   // take news.mcom.com/mcom.linux (in hostname) and put
   // "mcom.linux" into newsgroupName and truncate to leave
   // "news.mcom.com" in hostname
-  PRInt32 hostEnd = hostname.Find('/');
+  PRInt32 hostEnd = hostname.FindChar('/');
   if (hostEnd > 0) {
     hostname.Right(newsgroupName, hostname.Length() - hostEnd - 1);
     hostname.Truncate(hostEnd);
@@ -201,7 +192,7 @@ nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, ns
   printf("ConvertNewsMessageURI2NewsURI(%s,??) -> %s %u\n", messageURI, newsgroupName.GetBuffer(), *key);
 #endif
 
-  nsNativeFileSpec pathResult;
+  nsFileSpec pathResult;
 
   rv = nsNewsURI2Path(kNewsMessageRootURI, messageUriWithoutKey.GetBuffer(), pathResult);
   if (NS_FAILED(rv)) {
@@ -216,7 +207,9 @@ nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, ns
     return rv;
   }
 
-  rv = newsDBFactory->Open(pathResult, PR_TRUE, getter_AddRefs(newsDB), PR_FALSE);
+  nsCOMPtr <nsIFileSpec> dbFileSpec;
+  NS_NewFileSpecWithSpec(pathResult, getter_AddRefs(dbFileSpec));
+  rv = newsDBFactory->Open(dbFileSpec, PR_TRUE, PR_FALSE, getter_AddRefs(newsDB));
     
   if (NS_FAILED(rv) || (!newsDB)) {
     return rv;
@@ -229,8 +222,8 @@ nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, ns
     return rv;
   }
 
-  nsAutoString messageId;
-  rv = msgHdr->GetMessageId(messageId);
+  nsCString messageId;
+  rv = msgHdr->GetMessageId(&messageId);
 
 #ifdef DEBUG_NEWS
   PRUint32 bytes;
@@ -261,18 +254,29 @@ nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, ns
 
 
 nsresult nsNntpService::CopyMessage(const char * aSrcMailboxURI, nsIStreamListener * aMailboxCopyHandler, PRBool moveMessage,
-						   nsIUrlListener * aUrlListener, nsIURL **aURL)
+						   nsIUrlListener * aUrlListener, nsIURI **aURL)
 {
-	NS_ASSERTION(0, "unimplemented feature");
-	return NS_OK;
+    nsresult rv = NS_ERROR_NULL_POINTER;
+    nsCOMPtr<nsISupports> streamSupport;
+    if (!aSrcMailboxURI || !aMailboxCopyHandler) return rv;
+    streamSupport = do_QueryInterface(aMailboxCopyHandler, &rv);
+    if (NS_SUCCEEDED(rv))
+        rv = DisplayMessage(aSrcMailboxURI, streamSupport, aUrlListener, aURL);
+	return rv;
 }
 
 nsresult nsNntpService::FindHostFromGroup(nsString &host, nsString &groupName)
 {
   nsresult rv = NS_OK;
+  // host always comes in as ""
+  NS_ASSERTION(host == "", "host is not empty");
+  if (host != "") return NS_ERROR_FAILURE;
+  
   if (0) {
-    // we have "group"
-    // todo:  look for "group" in the newsrc files of all the hosts, starting with the default nntp host.
+    // groupName is "foobar"
+    // todo:  look for "foobar" in the newsrc files of all the hosts,
+    // starting with the default nntp host.
+    //
     // for now, leave host blank so we'll just use the default nntp host.
   }
   
@@ -299,37 +303,37 @@ nsresult nsNntpService::FindHostFromGroup(nsString &host, nsString &groupName)
     return NS_OK;
 }
 
-nsresult nsNntpService::DetermineHostForPosting(nsString &host, const char *newsgroupNames)
+nsresult nsNntpService::DetermineHostForPosting(nsString &host, const char *newsgroupsNames)
 {
   nsresult rv = NS_OK;
   
-  if (!newsgroupNames) return NS_ERROR_NULL_POINTER;
-  if (PL_strlen(newsgroupNames) == 0) return NS_ERROR_FAILURE;
+  if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
+  if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
 
 #ifdef DEBUG_NEWS
-  printf("newsgroupNames == %s\n",newsgroupNames);
+  printf("newsgroupsNames == %s\n",newsgroupsNames);
 #endif
   
-  // newsgroupNames can be a comma seperated list of these:
+  // newsgroupsNames can be a comma seperated list of these:
   // news://host/group
   // news://group
   // host/group
   // group
   //
   // we are not going to allow the user to cross post to multiple hosts.
-  // so as soon as we determine the host from newsgroupNames, we can stop.
+  // so as soon as we determine the host from newsgroupsNames, we can stop.
   //
   // 1) explict (news://host/group or host/group)
   // 2) context (if you reply to a message when reading it on host x, reply to that host.
   // 3) no context look up news://group or group in the various newsrc files to determine host, with PREF_NETWORK_HOSTS_NNTP_SERVER being the first newrc file searched each time
   // 4) use the default nntp server
 
-  //nsCRT::strtok is going destroy what we pass to it, so we need to make a copy of newsgroupNames.
-  char *list = PL_strdup(newsgroupNames);
+  //nsCRT::strtok is going destroy what we pass to it, so we need to make a copy of newsgroupsNames.
+  char *list = PL_strdup(newsgroupsNames);
   char *token = nsnull;
   char *rest = list;
   nsString str("", eOneByte);
-
+  
   token = nsCRT::strtok(rest, ",", &rest);
   while (token && *token) {
     str = token;
@@ -340,12 +344,20 @@ nsresult nsNntpService::DetermineHostForPosting(nsString &host, const char *news
       printf("value = %s\n", str.GetBuffer());
 #endif
       nsString theRest("",eOneByte);
-
+      nsString currentHost("", eOneByte);
+      
       // does str start with "news:/"?
       if (str.Find(kNewsRootURI) == 0) {
         // we have news://group or news://host/group
         // set theRest to what's after news://
         str.Right(theRest, str.Length() - kNewsRootURILen /* for news:/ */ - 1 /* for the slash */);
+      }
+      else if (str.Find(":/") != -1) {
+#ifdef DEBUG_NEWS
+	printf("we have x:/y where x != news. this is bad, return failure\n");
+#endif
+        PR_FREEIF(list);
+        return NS_ERROR_FAILURE;
       }
       else {
         theRest = str;
@@ -356,20 +368,37 @@ nsresult nsNntpService::DetermineHostForPosting(nsString &host, const char *news
 #endif
       
       // theRest is "group" or "host/group"
-      PRInt32 slashpos = theRest.Find('/');
+      PRInt32 slashpos = theRest.FindChar('/');
       if (slashpos > 0 ) {
         // theRest is "host/group"
-        theRest.Left(host, slashpos);
+        theRest.Left(currentHost, slashpos);
 #ifdef DEBUG_NEWS
-        printf("host == %s\n", host.GetBuffer());
+        printf("currentHost == %s\n", currentHost.GetBuffer());
 #endif
       }
       else {
         // theRest is "group"
-        rv = FindHostFromGroup(host, str);
+        rv = FindHostFromGroup(currentHost, str);
+        PR_FREEIF(list);
         if (NS_FAILED(rv)) return rv;
-      }  
+      }
+
+      if (host == "") {
+        host = currentHost;
+
+        //we have our host, we're done.
+        //break;
+      }
+      else {
+        if (host != currentHost) {
+          printf("no cross posting to multiple hosts!\n");
+          PR_FREEIF(list);
+          return NS_ERROR_FAILURE;
+        }
+      }
+      
       str = "";
+      currentHost = "";
     }
 #ifdef DEBUG_NEWS
     else {
@@ -377,11 +406,8 @@ nsresult nsNntpService::DetermineHostForPosting(nsString &host, const char *news
     }
 #endif
     token = nsCRT::strtok(rest, ",", &rest);
-    
-    //we have our host, we're done.
-    //if (host != "") break;
   }    
-  PR_Free(list);
+  PR_FREEIF(list);
   
   if (host != "")
     return NS_OK;
@@ -391,13 +417,156 @@ nsresult nsNntpService::DetermineHostForPosting(nsString &host, const char *news
 ////////////////////////////////////////////////////////////////////////////////////////
 // nsINntpService support
 ////////////////////////////////////////////////////////////////////////////////////////
-nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgroupNames, nsIUrlListener * aUrlListener, nsIURL **_retval)
+nsresult nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retval)
+{
+  nsresult rv = NS_OK;
+  
+  if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
+  if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
+
+#ifdef DEBUG_NEWS
+  printf("newsgroupsNames == %s\n",newsgroupsNames);
+#endif
+  
+  // newsgroupsNames can be a comma seperated list of these:
+  // news://host/group
+  // news://group
+  // host/group
+  // group
+  //
+  // we are not going to allow the user to cross post to multiple hosts.
+  // if we detect that, we stop and return error.
+
+  // nsCRT::strtok is going destroy what we pass to it, so we need to make a copy of newsgroupsNames.
+  char *list = PL_strdup(newsgroupsNames);
+  char *token = nsnull;
+  char *rest = list;
+  nsString host("", eOneByte);
+  nsString str("", eOneByte);
+  nsString retvalStr("", eOneByte);
+    
+  token = nsCRT::strtok(rest, ",", &rest);
+  while (token && *token) {
+    str = token;
+    str.StripWhitespace();
+
+    if (str != "") {
+#ifdef DEBUG_NEWS
+      printf("value = %s\n", str.GetBuffer());
+#endif
+      nsString currentHost("", eOneByte);
+      nsString theRest("",eOneByte);
+
+      // does str start with "news:/"?
+      if (str.Find(kNewsRootURI) == 0) {
+        // we have news://group or news://host/group
+        // set theRest to what's after news://
+        str.Right(theRest, str.Length() - kNewsRootURILen /* for news:/ */ - 1 /* for the slash */);
+      }
+      else if (str.Find(":/") != -1) {
+#ifdef DEBUG_NEWS
+	printf("we have x:/y where x != news. this is bad, return failure\n");
+#endif
+        PR_FREEIF(list);
+        return NS_ERROR_FAILURE;
+      }
+      else {
+        theRest = str;
+      }
+      
+#ifdef DEBUG_NEWS
+      printf("theRest == %s\n",theRest.GetBuffer());
+#endif
+      
+      // theRest is "group" or "host/group"
+      PRInt32 slashpos = theRest.FindChar('/');
+      if (slashpos > 0 ) {
+        nsString currentGroup("",eOneByte);
+        
+        // theRest is "host/group"
+        theRest.Left(currentHost, slashpos);
+        
+#ifdef DEBUG_NEWS
+        printf("currentHost == %s\n", currentHost.GetBuffer());
+#endif
+        // from "host/group", put "group" into currentGroup;
+        theRest.Right(currentGroup, theRest.Length() - currentHost.Length() - 1);
+
+        NS_ASSERTION(currentGroup != "", "currentGroup is empty");
+        if (currentGroup == "") {
+          PR_FREEIF(list);
+          return NS_ERROR_FAILURE;
+        }
+        
+        // build up the retvalStr;
+        if (retvalStr != "") {
+          retvalStr += ",";
+        }
+        retvalStr += currentGroup;
+      }
+      else {
+        // theRest is "group"
+        rv = FindHostFromGroup(currentHost, str);
+        if (NS_FAILED(rv)) {
+            PR_FREEIF(list);
+            return rv;
+        }
+
+        // build up the retvalStr;
+        if (retvalStr != "") {
+          retvalStr += ",";
+        }
+        retvalStr += str;
+      }
+
+      if (currentHost == "") {
+        printf("empty current host!\n");
+        PR_FREEIF(list);
+        return NS_ERROR_FAILURE;
+      }
+      
+      if (host == "") {
+        printf("got a host, set it\n");
+        host = currentHost;
+      }
+      else {
+        if (host != currentHost) {
+          printf("no cross posting to multiple hosts!\n");
+          PR_FREEIF(list);
+          return NS_ERROR_FAILURE;
+        }
+      }
+
+      str = "";
+      currentHost = "";
+    }
+#ifdef DEBUG_NEWS
+    else {
+        printf("nothing between two commas. ignore and keep going...\n");
+    }
+#endif
+    token = nsCRT::strtok(rest, ",", &rest);
+  }
+  PR_FREEIF(list);
+  
+  // caller will free with PR_FREEIF()
+  *_retval = PL_strdup(retvalStr.GetBuffer());
+  if (!*_retval) return NS_ERROR_OUT_OF_MEMORY;
+  
+#ifdef DEBUG_NEWS
+  printf("Newsgroups header = %s\n", *_retval);
+#endif
+
+  return NS_OK;
+}
+
+nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgroupsNames, nsIUrlListener * aUrlListener, nsIURI **_retval)
 {
 #ifdef DEBUG_NEWS
-  printf("nsNntpService::PostMessage(%s,%s,??,??)\n",(const char *)pathToFile,newsgroupNames);
+  printf("nsNntpService::PostMessage(%s,%s,??,??)\n",(const char *)pathToFile,newsgroupsNames);
 #endif
-  if (!newsgroupNames) return NS_ERROR_NULL_POINTER;
-  if (PL_strlen(newsgroupNames) == 0) return NS_ERROR_FAILURE;
+  if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
+  if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
     
   NS_LOCK_INSTANCE();
   
@@ -408,8 +577,8 @@ nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgrou
   if (NS_FAILED(rv) || !nntpUrl) return rv;
 
   nsString host("",eOneByte);
-
-  rv = DetermineHostForPosting(host, newsgroupNames);
+  rv = DetermineHostForPosting(host, newsgroupsNames);
+  
   if (NS_FAILED(rv) || (host == "")) return rv;
 
 #ifdef DEBUG_NEWS
@@ -417,11 +586,19 @@ nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgrou
 #endif
 
   char *urlstr = PR_smprintf("%s/%s",kNewsRootURI,host.GetBuffer());
-  nntpUrl->SetSpec(urlstr);
+  nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
+  if (mailnewsurl) {
+    mailnewsurl->SetSpec(urlstr);
+    mailnewsurl->SetPort(NEWS_PORT);
+  }
+  else {
+    return NS_ERROR_FAILURE;
+  }
+  
   PR_FREEIF(urlstr);
   
   if (aUrlListener) // register listener if there is one...
-    nntpUrl->RegisterListener(aUrlListener);
+    mailnewsurl->RegisterListener(aUrlListener);
   
   // almost there...now create a nntp protocol instance to run the url in...
   nsNNTPProtocol *nntpProtocol = nsnull;
@@ -429,7 +606,7 @@ nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgrou
   nntpProtocol = new nsNNTPProtocol();
   if (!nntpProtocol) return NS_ERROR_OUT_OF_MEMORY;;
   
-  rv = nntpProtocol->Initialize(nntpUrl);
+  rv = nntpProtocol->Initialize(mailnewsurl);
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr <nsINNTPNewsgroupPost> post;
@@ -446,10 +623,10 @@ nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgrou
   rv = nntpUrl->SetMessageToPost(post);
   if (NS_FAILED(rv)) return rv;
             
-  rv = nntpProtocol->LoadUrl(nntpUrl, /* aConsumer */ nsnull);
+  rv = nntpProtocol->LoadUrl(mailnewsurl, /* aConsumer */ nsnull);
 		
   if (_retval)
-    *_retval = nntpUrl; // transfer ref count
+	  nntpUrl->QueryInterface(nsIURI::GetIID(), (void **) _retval);
     
   NS_UNLOCK_INSTANCE();
 
@@ -457,10 +634,10 @@ nsresult nsNntpService::PostMessage(nsFilePath &pathToFile, const char *newsgrou
 }
 
 nsresult 
-nsNntpService::RunNewsUrl(nsString& urlString, nsString &newsgroupName, nsMsgKey key, nsISupports * aConsumer, nsIUrlListener *aUrlListener, nsIURL **_retval)
+nsNntpService::RunNewsUrl(nsString& urlString, nsString &newsgroupName, nsMsgKey key, nsISupports * aConsumer, nsIUrlListener *aUrlListener, nsIURI **_retval)
 {
-#ifdef DEBUG_sspitzer
-  printf("nsNntpService::RunNewsUrl(%s,%s,%lu,...)\n", (const char *)nsAutoCString(urlString), (const char *)nsAutoCString(newsgroupName), key);
+#ifdef DEBUG_NEWS
+  printf("nsNntpService::RunNewsUrl(%s,%s,%u,...)\n", (const char *)nsAutoCString(urlString), (const char *)nsAutoCString(newsgroupName), key);
 #endif
   
   nsCOMPtr <nsINntpUrl> nntpUrl;
@@ -469,26 +646,34 @@ nsNntpService::RunNewsUrl(nsString& urlString, nsString &newsgroupName, nsMsgKey
   rv = nsComponentManager::CreateInstance(kCNntpUrlCID, nsnull, nsINntpUrl::GetIID(), getter_AddRefs(nntpUrl));
   if (NS_FAILED(rv) || !nntpUrl) return rv;
   
-  nntpUrl->SetSpec(nsAutoCString(urlString));
+  nsCOMPtr <nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
+  // don't worry this cast is really okay...there'a bug in XPIDL compiler that is preventing
+  // a "cont char *" in paramemter for uri SetSpec...
+  mailnewsurl->SetSpec(nsCAutoString(urlString));
+  mailnewsurl->SetPort(NEWS_PORT);
 
   if (newsgroupName != "") {
     nsCOMPtr <nsINNTPNewsgroup> newsgroup;
     rv = nsComponentManager::CreateInstance(kCNNTPNewsgroupCID, nsnull, nsINNTPNewsgroup::GetIID(), getter_AddRefs(newsgroup));
     if (NS_FAILED(rv) || !newsgroup) return rv;                       
        
-    rv = newsgroup->Initialize(nsnull /* line */, nsnull /* set */, PR_FALSE /* subscribed */);
-  
-    newsgroup->SetName((char *)(newsgroupName.GetBuffer()));
-    nntpUrl->SetNewsgroup(newsgroup);
-
+    rv = newsgroup->Initialize(newsgroupName.GetBuffer(), nsnull /* set */, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = nntpUrl->SetNewsgroup(newsgroup);
+    if (NS_FAILED(rv)) return rv;
+    
     // if we are running a news url to display a message, these
     // will be used later, to mark the message as read after we finish loading
-    nntpUrl->SetMessageKey(key);
-    nntpUrl->SetNewsgroupName((char *)(newsgroupName.GetBuffer()));
+    rv = nntpUrl->SetMessageKey(key);
+    if (NS_FAILED(rv)) return rv;
+        
+    rv = nntpUrl->SetNewsgroupName((char *)(newsgroupName.GetBuffer()));
+    if (NS_FAILED(rv)) return rv;
   }
   
   if (aUrlListener) // register listener if there is one...
-    nntpUrl->RegisterListener(aUrlListener);
+    mailnewsurl->RegisterListener(aUrlListener);
 
   // almost there...now create a nntp protocol instance to run the url in...
   nsNNTPProtocol *nntpProtocol = nsnull;
@@ -496,19 +681,19 @@ nsNntpService::RunNewsUrl(nsString& urlString, nsString &newsgroupName, nsMsgKey
   nntpProtocol = new nsNNTPProtocol();
   if (!nntpProtocol) return NS_ERROR_OUT_OF_MEMORY;
   
-  rv = nntpProtocol->Initialize(nntpUrl);
+  rv = nntpProtocol->Initialize(mailnewsurl);
   if (NS_FAILED(rv)) return rv;
   
-  rv = nntpProtocol->LoadUrl(nntpUrl, aConsumer);
+  rv = nntpProtocol->LoadUrl(mailnewsurl, aConsumer);
   if (NS_FAILED(rv)) return rv;
   
   if (_retval)
-    *_retval = nntpUrl; // transfer ref count
+	  nntpUrl->QueryInterface(nsIURI::GetIID(), (void **) _retval);
 	
   return rv;
 }
 
-NS_IMETHODIMP nsNntpService::GetNewNews(nsINntpIncomingServer *nntpServer, const char *uri, nsIUrlListener * aUrlListener, nsIURL **_retval)
+NS_IMETHODIMP nsNntpService::GetNewNews(nsINntpIncomingServer *nntpServer, const char *uri, nsIUrlListener * aUrlListener, nsIURI **_retval)
 {
   if (!uri) {
 	return NS_ERROR_NULL_POINTER;
@@ -567,7 +752,7 @@ NS_IMETHODIMP nsNntpService::GetNewNews(nsINntpIncomingServer *nntpServer, const
   return rv;
 }
 
-NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *newsgroupname, nsISupportsArray *messages, nsISupports * aConsumer, nsIUrlListener * aUrlListener, nsIURL ** aURL)
+NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *newsgroupname, nsISupportsArray *messages, nsISupports * aConsumer, nsIUrlListener * aUrlListener, nsIURI ** aURL)
 {
   nsresult rv = NS_OK;
   PRUint32 count = 0;
@@ -575,13 +760,13 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   if (!hostname) return NS_ERROR_NULL_POINTER;
   if (PL_strlen(hostname) == 0) return NS_ERROR_FAILURE;
 
-  NS_WITH_SERVICE(nsINetSupportDialogService,dialog,kCNetSupportDialogCID,&rv);
+  NS_WITH_SERVICE(nsIPrompt, dialog, kCNetSupportDialogCID, &rv);
   if (NS_FAILED(rv)) return rv;
     
   if (!messages) {
     nsAutoString alertText("No articles are selected.");
     if (dialog)
-      rv = dialog->Alert(alertText);
+      rv = dialog->Alert(alertText.GetUnicode());
     
     return NS_ERROR_NULL_POINTER;
   }
@@ -597,19 +782,19 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   if (count != 1) {
     nsAutoString alertText("You can only cancel one article at a time.");
     if (dialog)
-      rv = dialog->Alert(alertText);
+      rv = dialog->Alert(alertText.GetUnicode());
     return NS_ERROR_FAILURE;
   }
   
   nsMsgKey key;
-  nsString messageId("", eOneByte);
+  nsCString messageId;
   
   nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(0));
   nsCOMPtr<nsIMessage> message(do_QueryInterface(msgSupports));
   if (message) {
     rv = message->GetMessageKey(&key);
     if (NS_FAILED(rv)) return rv;
-    rv = message->GetMessageId(messageId);
+    rv = message->GetMessageId(&messageId);
     if (NS_FAILED(rv)) return rv;
   }
   else {
@@ -632,4 +817,49 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   rv = RunNewsUrl(urlStr, newsgroupNameStr, key, aConsumer, aUrlListener, aURL);
 
   return rv; 
+}
+
+NS_IMETHODIMP nsNntpService::GetScheme(char * *aScheme)
+{
+	nsresult rv = NS_OK;
+	if (aScheme)
+		*aScheme = PL_strdup("news");
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 
+}
+
+NS_IMETHODIMP nsNntpService::GetDefaultPort(PRInt32 *aDefaultPort)
+{
+	nsresult rv = NS_OK;
+	if (aDefaultPort)
+		*aDefaultPort = NEWS_PORT;
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 	
+}
+
+NS_IMETHODIMP nsNntpService::MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval)
+{
+	// no such thing as relative urls for smtp.....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsNntpService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
+{
+    *_retval = nsnull;
+	// i just haven't implemented this yet...I will be though....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsNntpService::NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIChannel **_retval)
+{
+    *_retval = nsnull;
+	// mscott - right now, I don't like the idea of returning channels to the caller. They just want us
+	// to run the url, they don't want a channel back...I'm going to be addressing this issue with
+	// the necko team in more detail later on.
+	NS_ASSERTION(0, "unimplemented");
+	return NS_ERROR_FAILURE;
 }

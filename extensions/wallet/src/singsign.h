@@ -32,9 +32,6 @@
 XP_BEGIN_PROTOS
 
 extern void
-SINGSIGN_DisplaySignonInfoAsHTML();
-
-extern void
 SINGSIGN_GetSignonListForViewer (nsString& aSignonList);
 
 extern void
@@ -42,9 +39,6 @@ SINGSIGN_GetRejectListForViewer (nsString& aRejectList);
 
 extern void
 SINGSIGN_SignonViewerReturn(nsAutoString results);
-
-extern void
-SINGSIGN_RememberSignonData(char* URLName, char** name_array, char** value_array, char** type_array, PRInt32 value_cnt);
 
 extern void
 SINGSIGN_RestoreSignonData(char* URLName, char* name, char** value);
@@ -58,6 +52,7 @@ SINGSIGN_PromptPassword (char *prompt, char *URLName, PRBool pickFirstUser);
 
 extern char *
 SINGSIGN_Prompt (char *prompt, char* defaultUsername, char *URLName);
+
 
 XP_END_PROTOS
 

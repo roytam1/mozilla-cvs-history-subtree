@@ -30,7 +30,7 @@ class nsTitledButtonFrame : public nsLeafFrame, public nsIBox
 {
 public:
 
-  enum TruncationStyle { Left, Right, Center };
+  enum CroppingStyle { CropNone, CropLeft, CropRight, CropCenter };
 
   friend nsresult NS_NewTitledButtonFrame(nsIFrame** aNewFrame);
 
@@ -38,12 +38,7 @@ public:
   NS_IMETHOD GetBoxInfo(nsIPresContext& aPresContext, const nsHTMLReflowState& aReflowState, nsBoxInfo& aSize);
   NS_IMETHOD Dirty(const nsHTMLReflowState& aReflowState, nsIFrame*& incrementalChild);
 
-  NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr); 
-
-  NS_IMETHOD_(nsrefcnt) AddRef(void);
-  NS_IMETHOD_(nsrefcnt) Release(void);
-
-
+  NS_DECL_ISUPPORTS
 
   NS_IMETHOD  Init(nsIPresContext&  aPresContext,
                    nsIContent*      aContent,
@@ -62,10 +57,12 @@ public:
                                       nsStyleChangeList* aChangeList,
                                       PRInt32* aLocalChange) ;
 
-  NS_IMETHOD DeleteFrame(nsIPresContext& aPresContext);
+  NS_IMETHOD Destroy(nsIPresContext& aPresContext);
 
+  NS_IMETHOD GetFrameName(nsString& aResult) const;
 
   virtual void UpdateAttributes(nsIPresContext&  aPresContext);
+  virtual void UpdateImage(nsIPresContext&  aPresContext);
 
   // nsIHTMLReflow overrides
   NS_IMETHOD Reflow(nsIPresContext&          aPresContext,
@@ -154,10 +151,10 @@ private:
 
   PRBool mHasOnceBeenInMixedState;
  
-  TruncationStyle mTruncationType;
+  CroppingStyle mCropType;
   PRIntn mAlign;
   nsString mTitle;
-  nsString mTruncatedTitle;
+  nsString mCroppedTitle;
 
   nsHTMLImageLoader mImageLoader;
   PRBool mSizeFrozen;

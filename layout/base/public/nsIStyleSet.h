@@ -30,6 +30,7 @@ class nsIPresContext;
 class nsIContent;
 class nsIFrame;
 class nsIDocument;
+class nsIFrameManager;
 
 
 // IID for the nsIStyleSet interface {e59396b0-b244-11d1-8031-006008159b5a}
@@ -156,6 +157,14 @@ public:
                                    nsIFrame*       aFrame,
                                    nsIFrame*       aParentFrame,
                                    nsIFrame**      aContinuingFrame) = 0;
+
+  // Request to find the primary frame associated with a given content object.
+  // This is typically called by the pres shell when there is no mapping in
+  // the pres shell hash table
+  NS_IMETHOD FindPrimaryFrameFor(nsIPresContext*  aPresContext,
+                                 nsIFrameManager* aFrameManager,
+                                 nsIContent*      aContent,
+                                 nsIFrame**       aFrame) = 0;
 
   virtual void List(FILE* out = stdout, PRInt32 aIndent = 0) = 0;
   virtual void ListContexts(nsIStyleContext* aRootContext, FILE* out = stdout, PRInt32 aIndent = 0) = 0;

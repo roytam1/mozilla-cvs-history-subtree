@@ -35,6 +35,8 @@ EXPORTS =                  \
 	nsIPtr.h           \
         nsISupportsUtils.h \
         nsTraceRefcnt.h    \
+        nsWeakReference.h  \
+        nsWeakPtr.h        \
         nscore.h           \
         $(NULL)			
 
@@ -43,6 +45,7 @@ XPIDL_MODULE = xpcom_base
 XPIDLSRCS =               \
         .\nsrootidl.idl   \
         .\nsISupports.idl \
+        .\nsIWeakReference.idl \
         $(NULL)
 
 ################################################################################
@@ -64,9 +67,9 @@ CPP_OBJS =                            \
         .\$(OBJDIR)\nsDebug.obj       \
         .\$(OBJDIR)\nsAllocator.obj   \
         .\$(OBJDIR)\nsCOMPtr.obj      \
-        .\$(OBJDIR)\nsDebug.obj       \
         .\$(OBJDIR)\nsID.obj          \
         .\$(OBJDIR)\nsTraceRefcnt.obj \
+        .\$(OBJDIR)\nsWeakReference.obj \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -30,7 +30,13 @@ CSRCS		= \
 
 CPPSRCS		= \
 		  nsCharDetDll.cpp \
+		  nsObserverBase.cpp \
+		  nsXMLEncodingObserver.cpp \
 		  nsMetaCharsetObserver.cpp \
+		  nsDetectionAdaptor.cpp \
+		  nsDebugDetector.cpp \
+		  nsPSMDetectors.cpp \
+		  nsCyrillicDetector.cpp \
 		  $(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

@@ -485,10 +485,42 @@ PRInt32 nsCRT::strncasecmp(const PRUnichar* s1, const char* s2, PRUint32 n)
 PRUnichar* nsCRT::strdup(const PRUnichar* str)
 {
   PRUint32 len = nsCRT::strlen(str) + 1; // add one for null
-  PRUnichar* rslt = new PRUnichar[len];
+
+
+	nsCppSharedAllocator<PRUnichar> shared_allocator;
+	PRUnichar* rslt = shared_allocator.allocate(len);
+  // PRUnichar* rslt = new PRUnichar[len];
+
   if (rslt == NULL) return NULL;
   nsCRT::memcpy(rslt, str, len * sizeof(PRUnichar));
   return rslt;
+}
+
+PRUint32 nsCRT::HashValue(const char* us)
+{
+  PRUint32 rv = 0;
+  if(us) {
+    char ch;
+    while ((ch = *us++) != 0) {
+      // FYI: rv = rv*37 + ch
+      rv = ((rv << 5) + (rv << 2) + rv) + ch;
+    }
+  }
+  return rv;
+}
+
+PRUint32 nsCRT::HashValue(const char* us, PRUint32* uslenp)
+{
+  PRUint32 rv = 0;
+  PRUint32 len = 0;
+  char ch;
+  while ((ch = *us++) != 0) {
+    // FYI: rv = rv*37 + ch
+    rv = ((rv << 5) + (rv << 2) + rv) + ch;
+    len++;
+  }
+  *uslenp = len;
+  return rv;
 }
 
 PRUint32 nsCRT::HashValue(const PRUnichar* us)

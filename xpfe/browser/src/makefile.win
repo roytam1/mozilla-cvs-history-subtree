@@ -21,73 +21,15 @@ IGNORE_MANIFEST=1
 DEFINES=-DWIN32_LEAN_AND_MEAN
 MODULE=raptor 
 
-CPPSRCS=                                \
- nsWidgetListener.cpp                   \
- nsBrowserController.cpp                \
- nsBrowserFactory.cpp                   \
- $(NULL)
-
-CPP_OBJS=                               \
- .\$(OBJDIR)\nsWidgetListener.obj       \
- .\$(OBJDIR)\nsBrowserController.obj    \
- .\$(OBJDIR)\nsBrowserFactory.obj       \
- $(NULL)
-
-LINCS=-I$(PUBLIC)\raptor                \
-      -I$(PUBLIC)\xpcom                 \
-      -I$(PUBLIC)\base                  \
-      -I$(PUBLIC)\dom                   \
-      -I$(PUBLIC)\js                    \
-      -I$(PUBLIC)\netlib 
-
-MAKE_OBJ_TYPE = DLL
-DLLNAME = nsbrowser
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-
-LCFLAGS = \
-        $(LCFLAGS) \
-        $(DEFINES) \
-        $(NULL)
-
-# These are the libraries we need to link with to create the DLL
-LLIBS=                          \
- $(DIST)\lib\xpcom.lib        \
- $(DIST)\lib\raptorgfxwin.lib   \
- $(DIST)\lib\plc3.lib       \
- $(DIST)\lib\netlib.lib         \
- $(LIBNSPR)                     \
- $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
 
 # Define this so nobody can screw it up.
 DISTRES=$(DIST)\bin\res\samples
 
-install:: $(DLL)
-	$(MAKE_INSTALL) $(DLL) $(DIST)\bin
-	$(MAKE_INSTALL) appshell.html $(DISTRES)
-	$(MAKE_INSTALL) status.html $(DISTRES)
+install::
 	$(MAKE_INSTALL) status.xul $(DISTRES)
 	$(MAKE_INSTALL) toolbar.xml $(DISTRES)
-	$(MAKE_INSTALL) BrowserInitPage.html $(DISTRES)
-	$(MAKE_INSTALL) contentframe.css $(DISTRES)
-	$(MAKE_INSTALL) contentframe.html $(DISTRES)
-	$(MAKE_INSTALL) contentframe.js $(DISTRES)
-	$(MAKE_INSTALL) contentframe.xul $(DISTRES)
-	$(MAKE_INSTALL) sidebar.html $(DISTRES)
-	$(MAKE_INSTALL) xul.css $(DISTRES)
-	$(MAKE_INSTALL) dialogs.css $(DISTRES)
-	$(MAKE_INSTALL) navigator.css $(DISTRES)
-	$(MAKE_INSTALL) navigator.xul $(DISTRES)
-	$(MAKE_INSTALL) navigator.js $(DISTRES)
-	$(MAKE_INSTALL) viewSource.xul $(DISTRES)
-	$(MAKE_INSTALL) openLocation.js $(DISTRES)
-	$(MAKE_INSTALL) openLocation.xul $(DISTRES)
-	$(MAKE_INSTALL) viewsource.js $(DISTRES)
-	$(MAKE_INSTALL) unknownContent.xul $(DISTRES)
-	$(MAKE_INSTALL) NetSupportUserPassword.xul $(DISTRES)
-	$(MAKE_INSTALL) NetSupportPassword.xul $(DISTRES)
-	$(MAKE_INSTALL) NetSupportPrompt.xul $(DISTRES)
 	$(MAKE_INSTALL) downloadProgress.xul $(DISTRES)
 	$(MAKE_INSTALL) downloadProgress.css $(DISTRES)
 	$(MAKE_INSTALL) navigator-mozillazine0.css $(DISTRES)
@@ -96,43 +38,33 @@ install:: $(DLL)
 	$(MAKE_INSTALL) navigator-shiny.css $(DISTRES)
 	$(MAKE_INSTALL) raindrops_light.gif $(DISTRES)
 	$(MAKE_INSTALL) skindemo.xul $(DISTRES)
-	$(MAKE_INSTALL) NetSupportAlert.xul $(DISTRES)
-	$(MAKE_INSTALL) NetSupportConfirm.xul $(DISTRES)
-	$(MAKE_INSTALL) NetSupportConfirmCheck.xul $(DISTRES)
-	$(MAKE_INSTALL) alertl.gif $(DISTRES)
-	$(MAKE_INSTALL) errorI.gif $(DISTRES)
-	$(MAKE_INSTALL) messagel.gif $(DISTRES)
-	$(MAKE_INSTALL) questionl.gif $(DISTRES)
+	$(MAKE_INSTALL) DumpDOM.js $(DISTRES)
+	$(MAKE_INSTALL) onerror.js $(DISTRES)
+	$(MAKE_INSTALL) lessCols.gif $(DISTRES)
+	$(MAKE_INSTALL) lessCols_mo.gif $(DISTRES)
+	$(MAKE_INSTALL) lessCols_dis.gif $(DISTRES)
+	$(MAKE_INSTALL) moreCols.gif $(DISTRES)
+	$(MAKE_INSTALL) moreCols_mo.gif $(DISTRES)
+	$(MAKE_INSTALL) moreCols_dis.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollUp.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollUp_mo.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollUp_dis.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollDown.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollDown_mo.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollDown_dis.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollThumb.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollThumb_mo.gif $(DISTRES)
+	$(MAKE_INSTALL) scrollThumb_dis.gif $(DISTRES)
 
 clobber::
 	rm -f $(DIST)\bin\$(DLLNAME).dll
-	rm -f $(DISTRES)\appshell.html
-	rm -f $(DISTRES)\status.html
-	rm -f $(DISTRES)\status.xul
-	rm -f $(DISTRES)\BrowserInitPage.html
-	rm -f $(DISTRES)\contentframe.html
-	rm -f $(DISTRES)\sidebar.html
-	rm -f $(DISTRES)\xul.css
-	rm -f $(DISTRES)\navigator.xul
-	rm -f $(DISTRES)\viewSource.xul
-    rm -f $(DISTRES)\viewsource.js
-	rm -f $(DISTRES)\openLocation.xul
-    rm -f $(DISTRES)\openLocation.js
-	rm -f $(DISTRES)\unknownContent.xul
 	rm -f $(DISTRES)\downloadProgress.xul
 	rm -f $(DISTRES)\downloadProgress.css
-	rm -f $(DISTRES)\dialogs.css
-	rm -f $(DISTRES)\navigator.css
 	rm -f $(DISTRES)\navigator-mozillazine0.css
 	rm -f $(DISTRES)\navigator-test1.xul
 	rm -f $(DISTRES)\navigator-goofy.css
 	rm -f $(DISTRES)\navigator-shiny.css
 	rm -f $(DISTRES)\raindrops_light.gif
-	rm -f $(DISTRES)\NetSupportUserPassword.xul
-	rm -f $(DISTRES)\NetSupportAlert.xul 
-	rm -f $(DISTRES)\NetSupportConfirm.xul
-	rm -f $(DISTRES)\NetSupportConfirmCheck.xul
-	rm -f $(DISTRES)\alertl.gif
-	rm -f $(DISTRES)\errorI.gif
-	rm -f $(DISTRES)\messagel.gif
-	rm -f $(DISTRES)\questionl.gif
+	rm -f $(DISTRES)\status.xul
+	rm -f $(DISTRES)\DumpDOM.js
+	

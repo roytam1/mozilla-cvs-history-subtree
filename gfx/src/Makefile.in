@@ -24,7 +24,36 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
-DIRS = ps $(MOZ_TOOLKIT)
+ifneq (,$(filter gtk xlib motif,$(MOZ_WIDGET_TOOLKIT)))
+XLIB_RGB_DIRS = xlibrgb
+else
+
+ifdef TOOLKIT_EXORCISM
+XLIB_RGB_DIRS = xlibrgb
+endif
+
+endif
+
+DIRS = ps $(XLIB_RGB_DIRS) $(MOZ_GFX_TOOLKIT)
+
+ifdef TOOLKIT_EXORCISM
+DIRS = ps $(XLIB_RGB_DIRS) 
+
+ifdef MOZ_ENABLE_GTK
+  DIRS += gtk
+endif
+
+ifdef MOZ_ENABLE_MOTIF
+  DIRS += motif
+endif
+
+ifdef MOZ_ENABLE_XLIB
+  DIRS += xlib
+endif
+
+else
+DIRS = ps $(XLIB_RGB_DIRS) $(MOZ_GFX_TOOLKIT)
+endif
 
 LIBRARY_NAME = raptorgfx
 
@@ -34,7 +63,7 @@ REQUIRES=util img xpcom raptor netlib dom js
 
 DEFINES += -D_IMPL_NS_GFX 
 
-CPPSRCS=nsColor.cpp nsColorNames.cpp nsColorNamesRGB.cpp nsFont.cpp \
+CPPSRCS=nsColor.cpp nsColorNames.cpp nsFont.cpp \
     nsImageGroup.cpp nsImageManager.cpp nsImageNetContextAsync.cpp \
     nsImageRenderer.cpp nsImageRequest.cpp nsImageSystemServices.cpp \
     nsImageURL.cpp nsRect.cpp nsTransform2D.cpp \
@@ -43,3 +72,6 @@ CPPSRCS=nsColor.cpp nsColorNames.cpp nsColorNamesRGB.cpp nsFont.cpp \
     nsJSRenderingContext.cpp
 
 include $(topsrcdir)/config/rules.mk
+
+caca:
+	@echo $(DIRS)

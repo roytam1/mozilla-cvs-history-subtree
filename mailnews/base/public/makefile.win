@@ -29,6 +29,8 @@ XPIDLSRCS =								\
 		.\nsIMsgAccount.idl				\
 		.\nsIMsgAccountManager.idl		\
 		.\nsIMsgFolder.idl				\
+		.\nsIMsgFolderCache.idl			\
+		.\nsIMsgFolderCacheElement.idl	\
 		.\nsIMsgGroupRecord.idl			\
 		.\nsIMsgHost.idl				\
 		.\nsIMsgIdentity.idl			\
@@ -40,6 +42,11 @@ XPIDLSRCS =								\
 		.\nsIMsgVCard.idl				\
 		.\nsIUrlListener.idl			\
 		.\nsIMsgBiffManager.idl			\
+		.\nsIMsgCopyService.idl			\
+		.\nsIMsgCopyServiceListener.idl			\
+		.\nsIUrlListenerManager.idl		\
+		.\nsIMsgStatusFeedback.idl		\
+		.\nsIMsgMailNewsUrl.idl			\
 		$(NULL)
 
 ################################################################################
@@ -47,8 +54,6 @@ XPIDLSRCS =								\
 
 EXPORTS =                           \
 			msgCore.h               \
-			nsIMsgMailNewsUrl.h		\
-			nsIUrlListenerManager.h \
 			nsMsgFolderFlags.h      \
 			nsMsgHeaderMasks.h      \
 			nsMsgLocalFolderHdrs.h  \

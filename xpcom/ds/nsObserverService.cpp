@@ -87,6 +87,14 @@ nsresult nsObserverService::GetObserverService(nsIObserverService** anObserverSe
     return NS_OK;
 }
 
+static PRBool
+ReleaseObserverList(nsHashKey *aKey, void *aData, void* closure)
+{
+    nsIObserverList* observerList = NS_STATIC_CAST(nsIObserverList*, aData);
+    NS_RELEASE(observerList);
+    return PR_TRUE;
+}
+
 nsresult nsObserverService::GetObserverList(const nsString& aTopic, nsIObserverList** anObserverList)
 {
     if (anObserverList == NULL)
@@ -95,30 +103,15 @@ nsresult nsObserverService::GetObserverList(const nsString& aTopic, nsIObserverL
     }
 	
 	if(mObserverTopicTable == NULL) {
-        mObserverTopicTable = new nsHashtable(256, PR_TRUE);
+        mObserverTopicTable = new nsObjectHashtable(nsnull, nsnull,   // should never be cloned
+                                                    ReleaseObserverList, nsnull,
+                                                    256, PR_TRUE);
         if (mObserverTopicTable == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
 
 
-	// Safely convert to a C-string 
-    char buf[128];
-    char* topic = buf;
-    char *temp = 0;
-
-    if (aTopic.Length() >= sizeof(buf))
-        topic = temp = new char[aTopic.Length() + 1];
-
-    if (topic == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    aTopic.ToCString(topic, aTopic.Length() + 1);
-
-	nsCStringKey key(topic);
-
-    if ( temp ) {
-        delete [] temp;
-    }
+	 nsStringKey key(aTopic);
 
     nsIObserverList *topicObservers = nsnull;
     if (mObserverTopicTable->Exists(&key)) {

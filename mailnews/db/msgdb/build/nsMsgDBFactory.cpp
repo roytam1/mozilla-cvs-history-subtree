@@ -67,9 +67,10 @@ nsMsgDBFactory::nsMsgDBFactory(const nsCID &aClass, const char* aClassName, cons
 
 nsMsgDBFactory::~nsMsgDBFactory()   
 {
+	nsMsgDatabase::CleanupCache();
 	NS_ASSERTION(mRefCnt == 0, "non-zero refcnt at destruction");   
-  PL_strfree(mClassName);
-  PL_strfree(mProgID);
+	PL_strfree(mClassName);
+	PL_strfree(mProgID);
 }   
 
 nsresult nsMsgDBFactory::QueryInterface(const nsIID &aIID, void **aResult)   
@@ -81,7 +82,7 @@ nsresult nsMsgDBFactory::QueryInterface(const nsIID &aIID, void **aResult)
   *aResult = NULL;   
 
   // we support two interfaces....nsISupports and nsFactory.....
-  if (aIID.Equals(::nsISupports::GetIID()))    
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
     *aResult = (void *)(nsISupports*)this;   
   else if (aIID.Equals(nsIFactory::GetIID()))   
     *aResult = (void *)(nsIFactory*)this;   
@@ -118,7 +119,7 @@ nsresult nsMsgDBFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, 
 	// do they want an  nsNewsDatabase ?
 	else if (mClassID.Equals(kCNewsDB))
 	{
-		inst = NS_STATIC_CAST(nsIMsgDatabase*, new nsNewsDatabase());
+		inst = NS_STATIC_CAST(nsINewsDatabase*, new nsNewsDatabase());
 	}
 	// do they want an nsImapDatabase?
 	else if (mClassID.Equals(kCImapDB)) 
@@ -168,7 +169,11 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
 
 extern "C" NS_EXPORT PRBool NSCanUnload(nsISupports* aServMgr) 
 {
-    return PRBool(g_InstanceCount == 0 && g_LockCount == 0);
+	PRBool ret = PRBool(g_InstanceCount == 0 && g_LockCount == 0);
+
+	if (ret)
+		nsMsgDatabase::CleanupCache();
+	return ret;
 }
 
 extern "C" NS_EXPORT nsresult
@@ -181,15 +186,15 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
 
   if (NS_FAILED(rv)) return rv;
 
-  rv = compMgr->RegisterComponent(kCMailDB, nsnull, nsnull,
+  rv = compMgr->RegisterComponent(kCMailDB, "Local Mail DB", "component://netscape/messenger/maildb",
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv))finalResult = rv;
 
-  rv = compMgr->RegisterComponent(kCNewsDB, nsnull, nsnull, 
+  rv = compMgr->RegisterComponent(kCNewsDB, "News DB", "component://netscape/messenger/newsdb", 
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
-  rv = compMgr->RegisterComponent(kCImapDB, nsnull, nsnull,
+  rv = compMgr->RegisterComponent(kCImapDB, "IMAP DB", "component://netscape/messenger/imapdb",
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
   

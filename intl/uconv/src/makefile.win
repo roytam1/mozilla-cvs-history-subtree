@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 
 DEFINES=-D_IMPL_NS_INTL -DWIN32_LEAN_AND_MEAN
 
@@ -69,16 +70,21 @@ LINCS=					\
 	-I$(PUBLIC)\raptor		\
 	-I$(PUBLIC)\xpcom 		\
 	-I$(PUBLIC)\uconv		\
+#ifdef NECKO
+	-I$(PUBLIC)\necko		\
+#else
 	-I$(PUBLIC)\netlib		\
+#endif
 	-I..\ucvja	  		\
 	-I..\ucvlatin			\
 	$(NULL)
 
 LLIBS=					\
  $(DIST)\lib\xpcom.lib		\
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib		\
+!endif
  $(LIBNSPR)
-
-MISCDEP = $(LLIBS)
 
 LCFLAGS = \
         $(LCFLAGS) \

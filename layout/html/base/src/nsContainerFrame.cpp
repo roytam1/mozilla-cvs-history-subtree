@@ -54,11 +54,17 @@ nsContainerFrame::SetInitialChildList(nsIPresContext& aPresContext,
   NS_PRECONDITION(mFrames.IsEmpty(), "already initialized");
 
   nsresult  result;
-  if (nsnull != mFrames.FirstChild()) {
+  if (!mFrames.IsEmpty()) {
+    // We already have child frames which means we've already been
+    // initialized
     result = NS_ERROR_UNEXPECTED;
-  } else if (nsnull != aListName) {
+  } else if (aListName) {
+    // All we know about is the unnamed principal child list
     result = NS_ERROR_INVALID_ARG;
   } else {
+#ifdef NS_DEBUG
+    nsFrame::VerifyDirtyBitSet(aChildList);
+#endif
     mFrames.SetFrames(aChildList);
     result = NS_OK;
   }
@@ -66,7 +72,7 @@ nsContainerFrame::SetInitialChildList(nsIPresContext& aPresContext,
 }
 
 NS_IMETHODIMP
-nsContainerFrame::DeleteFrame(nsIPresContext& aPresContext)
+nsContainerFrame::Destroy(nsIPresContext& aPresContext)
 {
   // Prevent event dispatch during destruction
   nsIView* view;
@@ -76,10 +82,10 @@ nsContainerFrame::DeleteFrame(nsIPresContext& aPresContext)
   }
 
   // Delete the primary child list
-  mFrames.DeleteFrames(aPresContext);
+  mFrames.DestroyFrames(aPresContext);
 
-  // Base class will delete the frame
-  return nsFrame::DeleteFrame(aPresContext);
+  // Base class will destroy the frame
+  return nsFrame::Destroy(aPresContext);
 }
 
 NS_IMETHODIMP
@@ -157,17 +163,26 @@ nsContainerFrame::ReResolveStyleContext(nsIPresContext* aPresContext,
   }
 
   if (NS_COMFALSE != result) {
-    // Update primary child list
-    nsIFrame* child;
+    // Update all children since our context changed
+    PRInt32 listIndex = 0;
+    nsIAtom* childList = nsnull;
     PRInt32 childChange;
-    result = FirstChild(nsnull, &child);
-    while ((NS_SUCCEEDED(result)) && (nsnull != child)) {
-      result = child->ReResolveStyleContext(aPresContext, mStyleContext, 
-                                            ourChange, aChangeList, &childChange);
-      child->GetNextSibling(&child);
-    }
+    nsIFrame* child;
 
-    // Update overflow list too
+    do {
+      child = nsnull;
+      result = FirstChild(childList, &child);
+      while ((NS_SUCCEEDED(result)) && (child)) {
+        result = child->ReResolveStyleContext(aPresContext, mStyleContext, 
+                                              ourChange, aChangeList, &childChange);
+        child->GetNextSibling(&child);
+      }
+
+      NS_IF_RELEASE(childList);
+      GetAdditionalChildListName(listIndex++, &childList);
+    } while (childList);
+
+    // Update overflow list too (XXX this is not just another child list?)
     child = mOverflowFrames.FirstChild();
     while ((NS_SUCCEEDED(result)) && (nsnull != child)) {
       result = child->ReResolveStyleContext(aPresContext, mStyleContext, 
@@ -178,6 +193,8 @@ nsContainerFrame::ReResolveStyleContext(nsIPresContext* aPresContext,
     // And just to be complete, update our prev-in-flows overflow list
     // too (since in theory, those frames will become our frames)
     // XXX Eeek, this is potentially re-resolving these frames twice, can this be optimized?
+    //     Better yet, this should just go away, overflow push/pull code should re-resolve
+    //     as needed for parent changes
     if (nsnull != mPrevInFlow) {
       child = ((nsContainerFrame*)mPrevInFlow)->mOverflowFrames.FirstChild();
       while ((NS_SUCCEEDED(result)) && (nsnull != child)) {
@@ -186,6 +203,7 @@ nsContainerFrame::ReResolveStyleContext(nsIPresContext* aPresContext,
         child->GetNextSibling(&child);
       }
     }
+
   }
   return result;
 }
@@ -353,6 +371,32 @@ nsContainerFrame::GetFrameForPointUsing(const nsPoint& aPoint,
   return NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP
+nsContainerFrame::ReplaceFrame(nsIPresContext& aPresContext,
+                               nsIPresShell&   aPresShell,
+                               nsIAtom*        aListName,
+                               nsIFrame*       aOldFrame,
+                               nsIFrame*       aNewFrame)
+{
+  nsIFrame* prevFrame;
+  nsIFrame* firstChild;
+  nsresult  rv;
+
+  // Get the old frame's previous sibling frame
+  FirstChild(aListName, &firstChild);
+  nsFrameList frames(firstChild);
+  NS_ASSERTION(frames.ContainsFrame(aOldFrame), "frame is not a valid child frame");
+  prevFrame = frames.GetPrevSiblingFor(aOldFrame);
+
+  // Default implementation treats it like two separate operations
+  rv = RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
+  if (NS_SUCCEEDED(rv)) {
+    rv = InsertFrames(aPresContext, aPresShell, aListName, prevFrame, aNewFrame);
+  }
+
+  return rv;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // Helper member functions
 
@@ -380,10 +424,13 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
   }
 
 #ifdef DEBUG
+  nsSize* saveMaxElementSize = aDesiredSize.maxElementSize;
+#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
   if (nsnull != aDesiredSize.maxElementSize) {
     aDesiredSize.maxElementSize->width = nscoord(0xdeadbeef);
     aDesiredSize.maxElementSize->height = nscoord(0xdeadbeef);
   }
+#endif
 #endif
 
   // Send the WillReflow notification, and reflow the child frame
@@ -392,6 +439,12 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
                               aStatus);
 
 #ifdef DEBUG
+  if (saveMaxElementSize != aDesiredSize.maxElementSize) {
+    printf("nsContainerFrame: ");
+    nsFrame::ListTag(stdout, aKidFrame);
+    printf(" changed the maxElementSize *pointer* (baaaad boy!)\n");
+  }
+#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
   if ((nsnull != aDesiredSize.maxElementSize) &&
       ((nscoord(0xdeadbeef) == aDesiredSize.maxElementSize->width) ||
        (nscoord(0xdeadbeef) == aDesiredSize.maxElementSize->height))) {
@@ -401,6 +454,7 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
     aDesiredSize.maxElementSize->width = 0;
     aDesiredSize.maxElementSize->height = 0;
   }
+#endif
 #endif
 
   // If the reflow was successful and the child frame is complete, delete any
@@ -458,7 +512,7 @@ nsContainerFrame::DeleteChildsNextInFlow(nsIPresContext& aPresContext,
   NS_ASSERTION(result, "failed to remove frame");
 
   // Delete the next-in-flow frame
-  nextInFlow->DeleteFrame(aPresContext);
+  nextInFlow->Destroy(aPresContext);
 
 #ifdef NS_DEBUG
   aChild->GetNextInFlow(&nextInFlow);

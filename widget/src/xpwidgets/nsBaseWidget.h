@@ -55,6 +55,7 @@ public:
     NS_IMETHOD              PreCreateWidget(nsWidgetInitData *aWidgetInitData) { return NS_OK;}
 
       // nsIWidget interface
+    NS_IMETHOD              CaptureMouse(PRBool aCapture);
     NS_IMETHOD              GetClientData(void*& aClientData);
     NS_IMETHOD              SetClientData(void* aClientData);
     NS_IMETHOD              Destroy();
@@ -75,6 +76,7 @@ public:
     virtual nsIAppShell *   GetAppShell();
     virtual nsIToolkit*     GetToolkit();  
     NS_IMETHOD              SetModal(void); 
+    NS_IMETHOD              SetWindowType(nsWindowType aWindowType);
     NS_IMETHOD              SetBorderStyle(nsBorderStyle aBorderStyle); 
     NS_IMETHOD              SetTitle(const nsString& aTitle); 
     NS_IMETHOD              SetTooltips(PRUint32 aNumberOfTips,nsRect* aTooltipAreas[]);   
@@ -120,6 +122,7 @@ protected:
     nscolor           mBackground;
     nscolor           mForeground;
     nsCursor          mCursor;
+    nsWindowType      mWindowType;
     nsBorderStyle     mBorderStyle;
     PRBool            mIsShiftDown;
     PRBool            mIsControlDown;
@@ -149,7 +152,7 @@ protected:
       NS_IMETHOD IsDone();
 
     private:
-      PRInt32       mCurrentPosition;
+      PRUint32       mCurrentPosition;
       nsBaseWidget& mParent;
     };
     friend class Enumerator;
@@ -165,7 +168,10 @@ protected:
         SET_CURSOR,
         CREATE_HACK
     };
-    
+
+#ifdef DEBUG
+  static nsAutoString GuiEventToString(nsGUIEvent & aEvent);
+#endif
 };
 
 #endif // nsBaseWidget_h__

@@ -20,7 +20,9 @@ DEPTH=..\..\..\..
 EXPORTS=nsIFormManager.h \
   nsIListControlFrame.h \
   nsIComboboxControlFrame.h \
-  nsIFormControlFrame.h
+  nsIRadioControlFrame.h \
+  nsIFormControlFrame.h \
+  nsIFormSubmitObserver.h
 
 MODULE=raptor 
 

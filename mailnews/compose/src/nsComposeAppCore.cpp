@@ -734,7 +734,7 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
 	NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv); 
     if (NS_FAILED(rv)) return rv;
 
-	nsIURL* url = nsnull;
+	nsIURI* url = nsnull;
 	NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv); 
 	if (NS_SUCCEEDED(rv) && pNetService) 
 	{
@@ -786,7 +786,7 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
         char *aCString;
 
         message->GetCharSet(aCharset);
-				message->GetSubject(aString);
+				message->GetSubject(&aString);
                 switch (messageType)
                 {
                 default:        
@@ -807,7 +807,7 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
                       }
                     }
                     
-					message->GetAuthor(aString);		
+					message->GetAuthor(&aString);		
 					mMsgCompFields->SetTo(nsAutoCString(aString), NULL);
                     if (NS_SUCCEEDED(rv = nsMsgI18NDecodeMimePartIIStr(aString, encodedCharset, decodedString))) {
                       if (NS_SUCCEEDED(rv = ConvertFromUnicode(msgCompHeaderInternalCharset(), decodedString, &aCString))) {
@@ -819,8 +819,8 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
                     if (messageType == 1)
                     {
                         nsString cString, dString;
-                        message->GetRecipients(cString);
-                        message->GetCCList(dString);
+                        message->GetRecipients(&cString);
+                        message->GetCCList(&dString);
                         if (cString.Length() > 0 && dString.Length() > 0)
                             cString = cString + ", ";
                         cString = cString + dString;

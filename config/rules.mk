@@ -122,14 +122,38 @@ ifdef MKSHLIB
 
 SHARED_LIBRARY		:= $(LIBRARY:.$(LIB_SUFFIX)=.$(DLL_SUFFIX))
 
-ifeq ($(TARGET_ARCH),OS2)
-MAPS			:= $(LIBRARY:$(LIB_SUFFIX)=.map)
-endif # OS2
+ifeq ($(OS_ARCH),OS2)
+SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
+MAPS			:= $(LIBRARY:.lib=.map)
+else  # OS2
+ifeq ($(OS_ARCH),WINNT)
+SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
+else  # WINNT
+ifeq ($(OS_ARCH),BeOS)
+SHARED_LIBRARY		:= $(LIBRARY:.a=.$(DLL_SUFFIX))
+else
 
 ifdef LIB_IS_C_ONLY
 MKSHLIB			= $(MKCSHLIB)
 endif # LIB_IS_C_ONLY
 
+ifeq ($(OS_ARCH),HP-UX)
+SHARED_LIBRARY		:= $(LIBRARY:.a=.sl)
+else  # HPUX
+ifeq ($(OS_ARCH)$(OS_RELEASE),SunOS4.1)
+SHARED_LIBRARY		:= $(LIBRARY:.a=.so.1.0)
+else  # SunOS4
+ifeq ($(OS_ARCH)$(OS_RELEASE),AIX4.1)
+SHARED_LIBRARY		:= $(LIBRARY:.a=)_shr.a
+else  # AIX
+SHARED_LIBRARY		:= $(LIBRARY:.a=.$(DLL_SUFFIX))
+endif # AIX
+endif # SunOS4
+endif # HPUX
+
+endif # BeOS
+endif # WINNT
+endif # OS2
 endif # MKSHLIB
 endif # !NO_SHARED_LIB
 
@@ -191,27 +215,22 @@ ALL_TRASH		+= $(addprefix $(JAVA_DESTPATH)/,$(JDIRS))
 endif
 endif
 
+ifdef QTDIR
+ALL_TRASH		+= $(MOCSRCS)
+endif
+
 ifdef JAVA_OR_NSJVM
 JMC_SUBDIR              = _jmc
 else
 JMC_SUBDIR              = $(LOCAL_JMC_SUBDIR)
 endif
 
-ifdef NSBUILDROOT
-JDK_GEN_DIR		= $(XPDIST)/_gen
-JMC_GEN_DIR		= $(XPDIST)/$(JMC_SUBDIR)
-JRI_GEN_DIR		= $(XPDIST)/_jri
-JNI_GEN_DIR		= $(XPDIST)/_jni
-JDK_STUB_DIR		= $(XPDIST)/_stubs
-XPIDL_GEN_DIR		= $(XPDIST)/_xpidlgen
-else
 JDK_GEN_DIR		= _gen
 JMC_GEN_DIR		= $(JMC_SUBDIR)
 JRI_GEN_DIR		= _jri
 JNI_GEN_DIR		= _jni
 JDK_STUB_DIR		= _stubs
 XPIDL_GEN_DIR		= _xpidlgen
-endif
 
 #
 # If this is an "official" build, try to build everything.
@@ -226,7 +245,7 @@ CLICK_STOPWATCH		= true
 endif
 
 ifdef MOZ_UPDATE_XTERM
-UPDATE_TITLE		= echo "]2;gmake: $@ in $(SRCDIR)/$$d"
+UPDATE_TITLE		= echo "]2;gmake: $@ in $(shell echo $(srcdir) | sed 's:\.\./::g')/$$d"
 else
 UPDATE_TITLE		= true
 endif
@@ -264,7 +283,7 @@ all:: export libs install
 alldep:: export depend libs install
 
 # Do everything from scratch
-everything:: clobber_all alldep
+everything:: realclean alldep
 
 #
 # Rules to make OBJDIR and MDDEPDIR (for --enable-md).
@@ -317,9 +336,9 @@ ifdef IS_COMPONENT
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib/components
 else
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib
-endif
-endif
-endif
+endif # IS_COMPONENT
+endif # LIBRARY
+endif # ! NO_STATIC_LIB
 ifdef MAPS
 	$(INSTALL) -m 444 $(MAPS) $(DIST)/bin
 endif
@@ -327,11 +346,17 @@ ifdef SHARED_LIBRARY
 ifdef IS_COMPONENT
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib/components
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin/components
+ifeq ($(OS_ARCH),OpenVMS)
+	$(INSTALL) -m 555 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/bin/components
+endif
 else
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin
+ifeq ($(OS_ARCH),OpenVMS)
+	$(INSTALL) -m 555 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/bin
 endif
-endif
+endif # IS_COMPONENT
+endif # SHARED_LIBRARY
 ifdef PROGRAM
 	$(INSTALL) -m 555 $(PROGRAM) $(DIST)/bin
 endif
@@ -339,7 +364,7 @@ ifdef SIMPLE_PROGRAMS
 	$(INSTALL) -m 555 $(SIMPLE_PROGRAMS) $(DIST)/bin
 endif
 	+$(LOOP_OVER_DIRS)
-else
+else # ! LIBS_NEQ_INSTALL
 libs:: $(MAKE_DIRS) $(LIBRARY) $(SHARED_LIBRARY) $(SHARED_LIBRARY_LIBS)
 ifndef NO_STATIC_LIB
 ifdef LIBRARY
@@ -347,18 +372,24 @@ ifdef IS_COMPONENT
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib/components
 else
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib
-endif
-endif
-endif
+endif # IS_COMPONENT
+endif # LIBRARY
+endif # ! NO_STATIC_LIB
 ifdef SHARED_LIBRARY
 ifdef IS_COMPONENT
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib/components
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin/components
+ifeq ($(OS_ARCH),OpenVMS)
+	$(INSTALL) -m 555 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/bin/components
+endif
 else
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin
+ifeq ($(OS_ARCH),OpenVMS)
+	$(INSTALL) -m 555 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/bin
 endif
-endif
+endif # IS_COMPONENT
+endif # SHARED_LIBRARY
 	+$(LOOP_OVER_DIRS)
 
 install:: $(PROGRAM) $(SIMPLE_PROGRAMS)
@@ -367,9 +398,21 @@ ifdef MAPS
 endif
 ifdef PROGRAM
 	$(INSTALL) -m 555 $(PROGRAM) $(DIST)/bin
+ifeq ($(OS_ARCH),BeOS)
+	-rm components add-ons lib
+	ln -sf $(DIST)/bin/components components
+	ln -sf $(DIST)/bin add-ons
+	ln -sf $(DIST)/bin lib
+endif
 endif
 ifdef SIMPLE_PROGRAMS
 	$(INSTALL) -m 555 $(SIMPLE_PROGRAMS) $(DIST)/bin
+ifeq ($(OS_ARCH),BeOS)
+	-rm components add-ons lib
+	ln -sf $(DIST)/bin/components components
+	ln -sf $(DIST)/bin add-ons
+	ln -sf $(DIST)/bin lib
+endif
 endif
 	+$(LOOP_OVER_DIRS)
 endif
@@ -421,6 +464,18 @@ ifdef CPPSRCS
 CPP_PROG_LINK = 1
 endif
 
+ifeq ($(OS_ARCH),BeOS)
+ifdef SHARED_LIBRARY
+#
+# BeOS specific section: link against dependant shared libs
+#
+BEOS_LIB_LIST = $(shell cat $(topsrcdir)/dependencies.beos/$(LIBRARY_NAME).dependencies)
+BEOS_LINK_LIBS = $(foreach lib,$(BEOS_LIB_LIST),$(shell $(topsrcdir)/config/beos/checklib.sh $(DIST)/bin $(lib))) $(shell $(topsrcdir)/config/beos/appstub.sh $(DIST)/bin)
+LDFLAGS += -L$(DIST)/bin $(BEOS_LINK_LIBS) $(NSPR_LIBS)
+EXTRA_DSO_LDOPTS += -L$(DIST)/bin $(BEOS_LINK_LIBS) $(NSPR_LIBS) $(DIST)/bin/_APP_
+endif
+endif
+
 #
 # PROGRAM = Foo
 # creates OBJS, links with LIBS to create Foo
@@ -434,8 +489,20 @@ ifeq ($(OS_ARCH),WINNT)
 else
 ifeq ($(CPP_PROG_LINK),1)
 	$(CCC) $(WRAP_MALLOC_CFLAGS) -o $@ $(PROGOBJS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(WRAP_MALLOC_LIB)
+ifeq ($(OS_ARCH),BeOS)
+ifdef BEOS_PROGRAM_RESOURCE
+	xres -o $@ $(BEOS_PROGRAM_RESOURCE)
+	mimeset $@
+endif
+endif
 else
 	$(CC) -o $@ $(PROGOBJS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS)
+ifeq ($(OS_ARCH),BeOS)
+ifdef BEOS_PROGRAM_RESOURCE
+	xres -o $@ $(BEOS_PROGRAM_RESOURCE)
+	mimeset $@
+endif
+endif
 endif
 endif
 endif
@@ -486,14 +553,14 @@ ifneq ($(OS_ARCH),OS2)
 # that are built using other static libraries.  Confused...?
 #
 ifdef SHARED_LIBRARY_LIBS
-ifeq ($(OS_ARCH),NTO)
+ifeq ($(OS_TARGET),NTO)
 AR_LIST		:= ar.elf t
 AR_EXTRACT	:= ar.elf x
 else
 AR_LIST		:= ar t
 AR_EXTRACT	:= ar x
 endif
-ifneq (,$(filter OSF1 BSD_OS FreeBSD NetBSD,$(OS_ARCH)))
+ifneq (,$(filter OSF1 BSD_OS FreeBSD NetBSD OpenBSD SunOS,$(OS_ARCH)))
 CLEANUP1	:= | egrep -v '(________64ELEL_|__.SYMDEF)'
 CLEANUP2	:= rm -f ________64ELEL_ __.SYMDEF
 else
@@ -525,13 +592,44 @@ $(LIBRARY): $(OBJS)
 endif
 endif
 
+ifdef MOZ_STRIP_NOT_EXPORTED
+ifndef INHIBIT_STRIP_NOT_EXPORTED
+EXTRA_DSO_LDOPTS += -Wl,--version-exports-section -Wl,Mozilla
+endif
+endif
+
 ifneq ($(OS_ARCH),OS2)
 $(SHARED_LIBRARY): $(OBJS) $(LOBJS)
 	rm -f $@
-ifdef USE_AUTOCONF_2
-	$(MKSHLIB) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
+ifneq ($(OS_ARCH),OpenVMS)
+ifeq ($(NO_LD_ARCHIVE_FLAGS),1)
+ifdef SHARED_LIBRARY_LIBS
+	@rm -f $(SUB_LOBJS)
+	@for lib in $(SHARED_LIBRARY_LIBS); do $(AR_EXTRACT) $${lib}; $(CLEANUP2); done
+	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(SUB_LOBJS) $(EXTRA_DSO_LDOPTS)
 else
 	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
+endif
+else
+	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
+endif
+	@rm -f foodummyfilefoo $(SUB_LOBJS)
+ifdef MOZ_STRIP_NOT_EXPORTED
+ifdef INHIBIT_STRIP_NOT_EXPORTED
+	objcopy -R ".exports" $@
+endif
+endif
+else
+	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
+	@if test ! -f $(OBJDIR)/VMSuni.opt; then \
+	    echo "Creating universal symbol option file $(OBJDIR)/VMSuni.opt"; \
+	    for lib in $(SHARED_LIBRARY_LIBS); do $(AR_EXTRACT) $${lib}; $(CLEANUP2); done; \
+	    create_opt_uni $(OBJS) $(SUB_LOBJS); \
+	    mv VMSuni.opt $(OBJDIR); \
+	fi
+	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
+	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(OBJDIR)/VMSuni.opt;
+	@echo "`translate $@`" > $(@:.$(DLL_SUFFIX)=.vms)
 endif
 	chmod +x $@
 	$(MOZ_POST_DSO_LIB_COMMAND) $@
@@ -566,6 +664,9 @@ ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
 else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
+
+$(OBJDIR)/moc_%.cpp: %.h
+	$(MOC) $< -o $@ 
 
 # The AS_DASH_C_FLAG is needed cause not all assemblers (Solaris) accept
 # a '-c' flag.
@@ -670,7 +771,7 @@ export:: $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE)
 
 all:: export
 
-clobber::
+clean clobber::
 	rm -f $(XPDIST)/classes/$(PACKAGE)/*.class
 
 endif
@@ -715,11 +816,7 @@ endif
 #
 ifneq ($(JDK_GEN),)
 ifdef JAVA_OR_NSJVM
-ifdef NSBUILDROOT
-INCLUDES		+= -I$(JDK_GEN_DIR) -I$(XPDIST)
-else
 INCLUDES		+= -I$(JDK_GEN_DIR)
-endif
 JDK_PACKAGE_CLASSES	= $(JDK_GEN)
 JDK_PATH_CLASSES	= $(subst .,/,$(JDK_PACKAGE_CLASSES))
 JDK_HEADER_CLASSFILES	= $(patsubst %,$(JAVA_DESTPATH)/%.class,$(JDK_PATH_CLASSES))
@@ -758,11 +855,7 @@ endif
 #
 ifneq ($(JRI_GEN),)
 ifdef JAVA_OR_NSJVM
-ifdef NSBUILDROOT
-INCLUDES		+= -I$(JRI_GEN_DIR) -I$(XPDIST)
-else
 INCLUDES		+= -I$(JRI_GEN_DIR)
-endif
 JRI_PACKAGE_CLASSES	= $(JRI_GEN)
 JRI_PATH_CLASSES	= $(subst .,/,$(JRI_PACKAGE_CLASSES))
 JRI_HEADER_CLASSFILES	= $(patsubst %,$(JAVA_DESTPATH)/%.class,$(JRI_PATH_CLASSES))
@@ -803,11 +896,7 @@ endif
 #
 ifneq ($(JNI_GEN),)
 ifdef JAVA_OR_NSJVM
-ifdef NSBUILDROOT
-INCLUDES		+= -I$(JNI_GEN_DIR) -I$(XPDIST)
-else
 INCLUDES		+= -I$(JNI_GEN_DIR)
-endif
 JNI_PACKAGE_CLASSES	= $(JNI_GEN)
 JNI_PATH_CLASSES	= $(subst .,/,$(JNI_PACKAGE_CLASSES))
 JNI_HEADER_CLASSFILES	= $(patsubst %,$(JAVA_DESTPATH)/%.class,$(JNI_PATH_CLASSES))
@@ -883,13 +972,13 @@ endif # JAVA_OR_NSJVM
 endif
 
 ################################################################################
-# Copy each element of EXPORTS to $(XPDIST)/include
+# Copy each element of EXPORTS to $(PUBLIC)
 
 ifneq ($(EXPORTS),)
-$(XPDIST)/include::
+$(PUBLIC)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
 
-export:: $(EXPORTS) $(XPDIST)/include
+export:: $(EXPORTS) $(PUBLIC)
 	$(INSTALL) -m 444 $^
 endif 
 
@@ -930,7 +1019,7 @@ $(XPDIST)/idl::
 export:: $(XPIDLSRCS) $(XPDIST)/idl
 	$(INSTALL) -m 444 $^
 
-# generate .h files from into $(XPIDL_GEN_DIR), then export to $(XPDIST)/include;
+# generate .h files from into $(XPIDL_GEN_DIR), then export to $(PUBLIC);
 # warn against overriding existing .h file.  (Added to MAKE_DIRS above.)
 $(XPIDL_GEN_DIR):
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; mkdir $@; else true; fi
@@ -943,7 +1032,7 @@ $(XPIDL_GEN_DIR)/%.h: %.idl $(XPIDL_COMPILE)
 	@if test -n "$(findstring $*.h, $(EXPORTS))"; \
 	  then echo "*** WARNING: file $*.h generated from $*.idl overrides $(srcdir)/$*.h"; else true; fi
 
-export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(XPDIST)/include
+export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(PUBLIC)
 	$(INSTALL) -m 444 $^
 
 ifndef NO_GEN_XPT
@@ -964,6 +1053,120 @@ GARBAGE += $(XPIDL_GEN_DIR) # add $(XPIDL_GEN_DIR) to clobber candidates
 endif
 endif
 
+################################################################################
+# Generate chrome building rules.
+#
+# You need to set these in your makefile.win to utilize this support:
+#   CHROME_DIR - specifies the chrome subdirectory where your chrome files
+#                go; e.g., CHROME_DIR=navigator or CHROME_DIR=global
+#
+# Note:  All file listed in the next three macros MUST be prefaced with .\ (or ./)!
+#
+#   CHROME_CONTENT - list of chrome content files; these can be prefaced with
+#                arbitrary paths; e.g., CHROME_CONTENT=./content/default/foobar.xul
+#   CHROME_SKIN - list of skin files
+#   CHROME_L10N - list of localization files, e.g., CHROME_L10N=./locale/en-US/foobar.dtd
+#
+# These macros are optional, if not specified, each defaults to ".".
+#   CHROME_CONTENT_DIR - specifies chrome subdirectory where content files will be
+#                  installed; this path is inserted between $(CHROME_DIR) and
+#                  the path you specify in each $(CHROME_CONTENT) entry; i.e.,
+#                  for CHROME_CONTENT=./content/default/foobar.xul, it will be
+#                  installed into:
+#                    $(DIST)\bin\chrome\$(CHROME_DIR)\$(CHROME_CONTENT_DIR)\content\default\foobar.xul.
+#                  e.g., CHROME_DIR=global
+#                        CHROME_CONTENT_DIR=content\default
+#                        CHROME_CONTENT=.\foobar.xul
+#                  will install foobar.xul into content/default (even though it
+#                  resides in content/foobar.xul (no default) in the source tree.
+#                  But note that such usage must be put in a makefile.win that
+#                  itself resides in the content directory (i.e., it can't reside
+#                  up a level, since then CHROME_CONTENT=./content/foobar.xul which
+#                  would install into ...global\content\default\content\foobar.xul.
+#   CHROME_SKIN_DIR - Like above, but for skin files
+#   CHROME_L10N_DIR - Like above, but for localization files
+ifneq ($(CHROME_DIR),)
+
+# Figure out root of chrome dist dir.
+CHROME_DIST=$(DIST)/bin/chrome/$(CHROME_DIR)
+
+# Content
+ifneq ($(CHROME_CONTENT),)
+
+# Content goes to CHROME_DIR unless specified otherwise.
+ifeq ($(CHROME_CONTENT_DIR),)
+CHROME_CONTENT_DIR=.
+endif
+
+# Export content files by copying to dist.
+install:: $(addprefix "INSTALL-", $(CHROME_CONTENT))
+
+# Pseudo-target specifying how to install content files.
+$(addprefix "INSTALL-", $(CHROME_CONTENT)) :
+	$(INSTALL) $(subst "INSTALL-",,$(CHROME_SOURCE_DIR)/$@) $(CHROME_DIST)/$(CHROME_CONTENT_DIR)/$(subst "INSTALL-",,$(@D))
+
+# Clobber content files.
+clobber:: $(addprefix "CLOBBER-", $(CHROME_CONTENT))
+
+# Pseudo-target specifying how to clobber content files.
+$(addprefix "CLOBBER-", $(CHROME_CONTENT)) :
+	-$(RM) $(CHROME_DIST)/$(CHROME_CONTENT_DIR)/$(subst "CLOBBER-",,$@)
+
+endif
+# content
+
+# Skin
+ifneq ($(CHROME_SKIN),)
+
+# Skin goes to CHROME_DIR unless specified otherwise.
+ifeq ($(CHROME_SKIN_DIR),)
+CHROME_SKIN_DIR=.
+endif
+
+# Export content files by copying to dist.
+install:: $(addprefix "INSTALL-", $(CHROME_SKIN))
+
+# Pseudo-target specifying how to install chrome files.
+$(addprefix "INSTALL-", $(CHROME_SKIN)) :
+	$(INSTALL) $(subst "INSTALL-",,$(CHROME_SOURCE_DIR)/$@) $(CHROME_DIST)/$(CHROME_SKIN_DIR)/$(subst "INSTALL-",,$(@D))
+
+# Clobber content files.
+clobber:: $(addprefix "CLOBBER-", $(CHROME_SKIN))
+
+# Pseudo-target specifying how to clobber content files.
+$(addprefix "CLOBBER-", $(CHROME_SKIN)) :
+	-$(RM) $(CHROME_DIST)/$(CHROME_SKIN_DIR)/$(subst "CLOBBER-",,$@)
+
+endif
+# skin
+
+# Localization.
+ifneq ($(CHROME_L10N),)
+
+# L10n goes to CHROME_DIR unless specified otherwise.
+ifeq ($(CHROME_L10N_DIR),)
+CHROME_L10N_DIR=.
+endif
+
+# Export l10n files by copying to dist.
+install:: $(addprefix "INSTALL-", $(CHROME_L10N))
+
+# Pseudo-target specifying how to install l10n files.
+$(addprefix "INSTALL-", $(CHROME_L10N)) :
+	$(INSTALL) $(subst "INSTALL-",,$(CHROME_SOURCE_DIR)/$@) $(CHROME_DIST)/$(CHROME_L10N_DIR)/$(subst "INSTALL-",,$(@D))
+
+# Clobber l10n files.
+clobber:: $(addprefix "CLOBBER-", $(CHROME_L10N))
+
+# Pseudo-target specifying how to clobber l10n files.
+$(addprefix "CLOBBER-", $(CHROME_L10N)) :
+	-$(RM) $(CHROME_DIST)/$(CHROME_L10N_DIR)/$(subst "CLOBBER-",,$@)
+
+endif
+# localization
+
+endif
+# chrome
 ##############################################################################
 
 ifndef NO_MDUPDATE

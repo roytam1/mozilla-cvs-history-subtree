@@ -12,215 +12,110 @@
  *
  * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Copyright (C) 1999 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
 #include "nsIComponentManager.h"
-#include "nsCapsEnums.h"
 #include "nsCCapsManager.h"
-#include "nsICodebasePrincipal.h"
-#include "nsICertPrincipal.h"
-#include "nsCCodebasePrincipal.h"
-#include "nsCCertPrincipal.h"
-#include "nsCCodeSourcePrincipal.h"
+#include "nsCodebasePrincipal.h"
+#include "nsCertificatePrincipal.h"
+#include "nsPrincipalArray.h"
 #include "nsCaps.h"
-
-static NS_DEFINE_CID(kCCapsManagerCID, NS_CCAPSMANAGER_CID);
-static NS_DEFINE_IID(kICapsManagerIID, NS_ICAPSMANAGER_IID);
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+#include "nsICapsSecurityCallbacks.h"
+#include "secnav.h"
+#ifdef MOZ_SECURITY
+	#include "navhook.h"
+	#include "jarutil.h"
+#endif /* MOZ_SECURITY */
 
 #define ALL_JAVA_PERMISSION "AllJavaPermission"
 
-////////////////////////////////////////////////////////////////////////////
-// from nsISupports and AggregatedQueryInterface:
+static NS_DEFINE_CID(kCCapsManagerCID, NS_CCAPSMANAGER_CID);
+static NS_DEFINE_IID(kICapsManagerIID, NS_ICAPSMANAGER_IID);
 
-// Thes macro expands to the aggregated query interface scheme.
+NS_IMPL_ISUPPORTS(nsCCapsManager, kICapsManagerIID);
 
-NS_IMPL_AGGREGATED(nsCCapsManager);
 
-NS_METHOD
-nsCCapsManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
+nsCCapsManager *
+nsCCapsManager::GetSecurityManager()
 {
-    if (aIID.Equals(kISupportsIID)) {
-      *aInstancePtr = GetInner();
-      AddRef();
-      return NS_OK;
-    }
-    if (aIID.Equals(kICapsManagerIID)) {
-        *aInstancePtr = this;
-        AddRef();
-        return NS_OK;
-    }
-    return NS_NOINTERFACE;
+	static nsCCapsManager * capsMan = NULL;
+	if (!capsMan)
+		capsMan = new nsCCapsManager();
+	return capsMan;
 }
 
-
-
-////////////////////////////////////////////////////////////////////////////
-// from nsICapsManager:
-
-NS_METHOD
-nsCCapsManager::CreateCodebasePrincipal(const char *codebaseURL, 
-                                        nsIPrincipal** prin)
+NS_IMETHODIMP
+nsCCapsManager::GetPrincipalManager(nsIPrincipalManager * * prinMan)
 {
-   nsresult result = NS_OK;
-   nsCCodebasePrincipal *pNSCCodebasePrincipal = 
-       new nsCCodebasePrincipal(codebaseURL, &result);
-   if (pNSCCodebasePrincipal == NULL)
-   {
-      return NS_ERROR_OUT_OF_MEMORY;
-   }
-   pNSCCodebasePrincipal->AddRef();
-   *prin = (nsIPrincipal *)pNSCCodebasePrincipal;
-   return result;
+	* prinMan = (nsIPrincipalManager *)nsPrincipalManager::GetPrincipalManager();
+	return NS_OK;
 }
 
-NS_METHOD
-nsCCapsManager::CreateCertPrincipal(const unsigned char **certChain, 
-                                    PRUint32 *certChainLengths, 
-                                    PRUint32 noOfCerts, 
-                                    nsIPrincipal** prin)
+NS_IMETHODIMP
+nsCCapsManager::GetPrivilegeManager(nsIPrivilegeManager * * privMan)
 {
-   nsresult result = NS_OK;
-   nsCCertPrincipal *pNSCCertPrincipal = 
-       new nsCCertPrincipal(certChain, certChainLengths, noOfCerts, &result);
-   if (pNSCCertPrincipal == NULL)
-   {
-      return NS_ERROR_OUT_OF_MEMORY;
-   }
-   pNSCCertPrincipal->AddRef();
-   *prin = (nsIPrincipal *)pNSCCertPrincipal;
-   return NS_OK;
+	* privMan = (nsIPrivilegeManager *)nsPrivilegeManager::GetPrivilegeManager();
+	return NS_OK;
 }
 
-NS_METHOD
-nsCCapsManager::CreateCodeSourcePrincipal(const unsigned char **certChain, 
-                                          PRUint32 *certChainLengths, 
-                                          PRUint32 noOfCerts, 
-                                          const char *codebaseURL, 
-                                          nsIPrincipal** prin)
+NS_IMETHODIMP
+nsCCapsManager::CreateCodebasePrincipal(const char * codebaseURL, nsIPrincipal * * prin)
 {
-   nsresult result = NS_OK;
-   nsCCodeSourcePrincipal *pNSCCodeSourcePrincipal = 
-       new nsCCodeSourcePrincipal(certChain, certChainLengths, noOfCerts, 
-                                  codebaseURL, &result);
-   if (pNSCCodeSourcePrincipal == NULL)
-   {
-      return NS_ERROR_OUT_OF_MEMORY;
-   }
-   pNSCCodeSourcePrincipal->AddRef();
-   *prin = (nsIPrincipal *)pNSCCodeSourcePrincipal;
-   return NS_OK;
+	return nsPrincipalManager::GetPrincipalManager()->CreateCodebasePrincipal(codebaseURL, prin);
 }
 
-
-
-/**
-* Returns the permission for given principal and target
-*
-* @param prin   - is either certificate principal or codebase principal
-* @param target - is NS_ALL_PRIVILEGES.
-* @param state  - the return value is passed in this parameter.
-*/
-NS_METHOD
-nsCCapsManager::GetPermission(nsIPrincipal* pNSIPrincipal, 
-                              nsITarget* ignoreTarget, 
-                              nsPermission *state)
+NS_IMETHODIMP
+nsCCapsManager::CreateCertificatePrincipal(const unsigned char **certChain, PRUint32 * certChainLengths, 
+											PRUint32 noOfCerts, nsIPrincipal** prin)
 {
-   *state = nsPermission_Unknown;
-   nsTarget *target = nsTarget::findTarget(ALL_JAVA_PERMISSION);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      nsPrincipal *pNSPrincipal  = NULL;
-      result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-      if( result != NS_OK)
-      {
-        return result;
-      }
-
-      nsPrivilege* privilege = 
-          m_pNSPrivilegeManager->getPrincipalPrivilege(target, pNSPrincipal, 
-                                                       NULL);
-      *state = ConvertPrivilegeToPermission(privilege);
-   }
-   return NS_OK;
+	return nsPrincipalManager::GetPrincipalManager()->CreateCertificatePrincipal(certChain,certChainLengths,noOfCerts,prin);
 }
 
-/**
-* Set the permission state for given principal and target. This wouldn't 
-* prompt the end user with UI.
-*
-* @param prin   - is either certificate principal or codebase principal
-* @param target - is NS_ALL_PRIVILEGES.
-* @param state  - is permisson state that should be set for the given prin
-*                 and target parameters.
-*/
-NS_METHOD
-nsCCapsManager::SetPermission(nsIPrincipal* pNSIPrincipal, 
-                              nsITarget* ignoreTarget,
-                              nsPermission state)
-{  
-   nsTarget *target = nsTarget::findTarget(ALL_JAVA_PERMISSION);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      nsPrincipal *pNSPrincipal  = NULL;
-      result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-      if( result != NS_OK)
-      {
-        return result;
-      }
-      nsPrivilege* privilege = ConvertPermissionToPrivilege(state);
-      m_pNSPrivilegeManager->SetPermission(pNSPrincipal, target, privilege);
-   }
-   return NS_OK;
+NS_IMETHODIMP
+nsCCapsManager::GetPermission(nsIPrincipal * prin, nsITarget * ignoreTarget, PRInt16 * privilegeState)
+{
+	* privilegeState = nsIPrivilege::PrivilegeState_Blank;
+	nsITarget * target = nsTarget::FindTarget(ALL_JAVA_PERMISSION);
+	if( target == NULL ) return NS_OK;
+	if (nsPrivilegeManager::GetPrivilegeManager() != NULL) {
+		nsIPrivilege * privilege;
+		nsPrivilegeManager::GetPrivilegeManager()->GetPrincipalPrivilege(target, prin, NULL, & privilege);
+// ARIEL WORK ON THIS SHIT
+//		* privilegeState = this->ConvertPrivilegeToPermission(privilege);
+	}
+	return NS_OK;
 }
 
-/**
-* Prompts the user if they want to grant permission for the given principal and 
-* for the given target. 
-*
-* @param prin   - is either certificate principal or codebase principal
-* @param target - is NS_ALL_PRIVILEGES.
-* @param result - is the permission user has given for the given principal and 
-*                 target
-*/
-NS_METHOD
-nsCCapsManager::AskPermission(nsIPrincipal* pNSIPrincipal, 
-                              nsITarget* ignoreTarget, 
-                              nsPermission *state)
+NS_IMETHODIMP
+nsCCapsManager::SetPermission(nsIPrincipal * prin, nsITarget * ignoreTarget, PRInt16 privilegeState)
 {
-   nsTarget *target = nsTarget::findTarget(ALL_JAVA_PERMISSION);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      *state = nsPermission_Unknown;
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      nsPrincipal *pNSPrincipal  = NULL;
-      result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-      if( result != NS_OK)
-      {
-        return result;
-      }
-      m_pNSPrivilegeManager->AskPermission(pNSPrincipal,target, NULL);
-      nsPrivilege* privilege = 
-          m_pNSPrivilegeManager->getPrincipalPrivilege(target, pNSPrincipal, 
-                                                       NULL);
-      *state = ConvertPrivilegeToPermission(privilege);
-   }
-   return NS_OK;
+	nsITarget * target = nsTarget::FindTarget(ALL_JAVA_PERMISSION);
+	if(target == NULL ) return NS_OK;
+//	if (privilegeManager != NULL) {
+// WORK ON THIS ARIEL
+//		nsPrivilege* privilege = this->ConvertPermissionToPrivilege(privilegeState);
+//		privilegeManager->SetPermission(prin, target, privilegeState);
+//	}
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsCCapsManager::AskPermission(nsIPrincipal * prin, nsITarget * ignoreTarget, PRInt16 * privilegeState)
+{
+	nsITarget * target = nsTarget::FindTarget(ALL_JAVA_PERMISSION);
+	if( target == NULL ) {
+		* privilegeState = nsIPrivilege::PrivilegeState_Blank;
+		return NS_OK;
+	}
+	if (nsPrivilegeManager::GetPrivilegeManager() != NULL) {
+		PRBool perm;
+		nsPrivilegeManager::GetPrivilegeManager()->AskPermission(prin, target, NULL, & perm);
+		nsIPrivilege * privilege;
+		nsPrivilegeManager::GetPrivilegeManager()->GetPrincipalPrivilege(target, prin, NULL,& privilege);
+  //	   * privilegeState = ConvertPrivilegeToPermission(privilege);
+	}
+	return NS_OK;
 }
 
 /**
@@ -229,34 +124,23 @@ nsCCapsManager::AskPermission(nsIPrincipal* pNSIPrincipal,
  *
  * @param result - is true if principal was successfully registered with the system
  */
-NS_METHOD
-nsCCapsManager::Initialize(PRBool *result)
+NS_IMETHODIMP
+nsCCapsManager::Initialize(PRBool * result)
 {
-    *result = nsCapsInitialize();
-    return NS_OK;
+//	* result = nsCapsInitialize();
+	return NS_OK;
 }
 
-/**
- * Registers the given Principal with the system.
- *
- * @param prin   - is either certificate principal or codebase principal
- * @param result - is true if principal was successfully registered with the system
- */
-NS_METHOD
-nsCCapsManager::RegisterPrincipal(nsIPrincipal* pNSIPrincipal, PRBool *ret_val)
+NS_IMETHODIMP
+nsCCapsManager::InitializeFrameWalker(nsICapsSecurityCallbacks* aInterface)
 {
-   nsresult result = NS_OK;
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      nsPrincipal *pNSPrincipal  = NULL;
-      result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-      if( result != NS_OK)
-      {
-        return result;
-      }
-      m_pNSPrivilegeManager->registerPrincipal(pNSPrincipal);
-   }
-   return NS_OK;
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsCCapsManager::RegisterPrincipal(nsIPrincipal * prin)
+{
+	return NS_OK;
 }
 
 /**
@@ -270,344 +154,154 @@ nsCCapsManager::RegisterPrincipal(nsIPrincipal* pNSIPrincipal, PRBool *ret_val)
  * @param ret_val - is true if user has given permission for the given principal and 
  *                  target
  */
-NS_METHOD
-nsCCapsManager::EnablePrivilege(void* context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
+NS_IMETHODIMP
+nsCCapsManager::EnablePrivilege(nsIScriptContext * context, const char* targetName, PRInt32 callerDepth, PRBool * ret_val)
 {
-   nsTarget *target = nsTarget::findTarget((char*)targetName);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      *ret_val = PR_FALSE;
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      *ret_val = m_pNSPrivilegeManager->enablePrivilege(context, target, callerDepth);
-   }
-   return NS_OK;
+	nsITarget *target = nsTarget::FindTarget((char*)targetName);
+	if( target == NULL )
+	{
+		* ret_val = PR_FALSE;
+		return NS_OK;
+	}
+//	if (privilegeManager != NULL)
+//		ret_val = privilegeManager->EnablePrivilege(context, target, NULL, callerDepth, ret_val);
+	return NS_OK;
 }
 
-/**
- * Returns if the user granted permission for the principal located at the given 
- * stack depth for the given target. 
- *
- * @param context     - is the parameter JS needs to determinte the principal 
- * @param targetName  - is the name of the target.
- * @param callerDepth - is the depth of JS stack frame, which JS uses to determinte the 
- *                      principal 
- * @param ret_val - is true if user has given permission for the given principal and 
- *                 target
+NS_IMETHODIMP
+nsCCapsManager::IsPrivilegeEnabled(nsIScriptContext * context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
+{
+	nsITarget *target = nsTarget::FindTarget((char*)targetName);
+	if( target == NULL )
+	{
+		* ret_val = PR_FALSE;
+		return NS_OK;
+	}
+	nsPrivilegeManager::GetPrivilegeManager()->IsPrivilegeEnabled(context, target, callerDepth, ret_val);
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsCCapsManager::RevertPrivilege(nsIScriptContext * context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
+{
+	nsITarget *target = nsTarget::FindTarget((char*)targetName);
+	if( target == NULL ) {
+		* ret_val = PR_FALSE;
+		return NS_OK;
+	}
+	nsPrivilegeManager::GetPrivilegeManager()->RevertPrivilege(context, target, callerDepth,ret_val);
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsCCapsManager::DisablePrivilege(nsIScriptContext * context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
+{
+	nsITarget *target = nsTarget::FindTarget((char*)targetName);
+	if( target == NULL ) {
+		* ret_val = PR_FALSE;
+		return NS_OK;
+	}
+	nsPrivilegeManager::GetPrivilegeManager()->DisablePrivilege(context, target, callerDepth,ret_val);
+	return NS_OK;
+}
+
+//XXX: todo: This method is covered by to nsIPrincipal object, should not be part of caps
+//XXX: nsPrincipal struct if deprecated, access as nsIPrincipal
+//do not use IsCodebaseExact, Tostring, or any other of the principal specific objects from here
+
+/*
+ * CreateMixedPrincipalArray take codebase and  ZIG file information and returns a
+ * pointer to an array of nsIPrincipal objects.
+
  */
+ /*
 NS_METHOD
-nsCCapsManager::IsPrivilegeEnabled(void* context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
+nsCCapsManager::CreateMixedPrincipalArray(void *aZig, const char * name, const char* codebase, nsIPrincipalArray * * result)
 {
-   nsTarget *target = nsTarget::findTarget((char*)targetName);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      *ret_val = PR_FALSE;
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      *ret_val = m_pNSPrivilegeManager->isPrivilegeEnabled(context, target, callerDepth);
-   }
-   return NS_OK;
+	*result = NULL;
+	PRBool hasCodebase;
+	int i;
+	PRUint32 count;
+	nsIPrincipal *principal;
+	hasCodebase = (PRBool)codebase;
+	count = codebase ? 1 : 0;
+#if 0
+	SOBITEM *item;
+	ZIG_Context * zig_aCx = NULL;
+	ZIG *zig = (ZIG*)aZig;
+	if (zig && name) {
+		if ((zig_aCx = SOB_find(zig, name, ZIG_SIGN)) != NULL) {
+			int zig_count=0;
+			while (SOB_find_next(zig_aCx, &item) >= 0) zig_count++;
+			SOB_find_end(zig_aCx);
+			count += zig_count;
+		} else  zig = NULL;
+	}
+#endif
+	if (count == 0) return NS_OK;
+	NewPrincipalArray(count, result);
+	if (*result == NULL) return NS_ERROR_FAILURE;
+#if 0
+	if (zig && ((zig_aCx = SOB_find(zig, name, ZIG_SIGN)) == NULL)) return NS_ERROR_FAILURE;
+	i = 0;
+	while (zig && SOB_find_next(zig_aCx, &item) >= 0) {
+		FINGERZIG *fingPrint;
+		fingPrint = (FINGERZIG *) item->data;
+		this->NewPrincipal(nsPrincipal::PrincipalType_CertificateKey, fingPrint->key,
+		                           fingPrint->length, zig, &principal);
+		RegisterPrincipal(principal, NULL);
+		SetPrincipalArrayElement(*result, i++, principal);
+	}
+	if (zig) SOB_find_end(zig_aCx);
+#endif
+	if (codebase) {
+		this->NewPrincipal(nsIPrincipal::PrincipalType_CodebaseExact, (void*)codebase,
+		                           PL_strlen(codebase), NULL, &principal);
+		RegisterPrincipal(principal, NULL);
+		SetPrincipalArrayElement(*result, i++, principal);
+	}
+	return NS_OK;
 }
-
-/**
- * Reverts the permission (granted/denied) user gave for the principal located
- * at the given stack depth for the given target. 
- *
- * @param context      - is the parameter JS needs to determinte the principal 
- * @param targetName   - is the name of the target.
- * @param callerDepth  - is the depth of JS stack frame, which JS uses to determinte the 
- *                       principal 
- * @param ret_val - is true if user has given permission for the given principal and 
- *                 target
- */
-NS_METHOD
-nsCCapsManager::RevertPrivilege(void* context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
-{
-   nsTarget *target = nsTarget::findTarget((char*)targetName);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      *ret_val = PR_FALSE;
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      *ret_val = m_pNSPrivilegeManager->revertPrivilege(context, target, callerDepth);
-   }
-   return NS_OK;
-}
-
-/**
- * Disable permissions for the principal located at the given stack depth for the 
- * given target. 
- *
- * @param context      - is the parameter JS needs to determinte the principal 
- * @param targetName   - is the name of the target.
- * @param callerDepth  - is the depth of JS stack frame, which JS uses to determinte the 
- *                       principal 
- * @param ret_val - is true if user has given permission for the given principal and 
- *                 target
- */
-NS_METHOD
-nsCCapsManager::DisablePrivilege(void* context, const char* targetName, PRInt32 callerDepth, PRBool *ret_val)
-{
-   nsTarget *target = nsTarget::findTarget((char*)targetName);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      *ret_val = PR_FALSE;
-      return NS_OK;
-   }
-   if (m_pNSPrivilegeManager != NULL)
-   {
-      *ret_val = m_pNSPrivilegeManager->disablePrivilege(context, target, callerDepth);
-   }
-   return NS_OK;
-}
-
-
-/* XXX: Some of the arguments for the following interfaces may change.
- * This is a first cut. I need to talk to joki. We should get rid of void* parameters.
- */
-NS_METHOD
-nsCCapsManager::ComparePrincipalArray(void* prin1Array, void* prin2Array, nsSetComparisonType *ret_val)
-{
-   nsresult result = NS_OK;
-   *ret_val = nsSetComparisonType_NoSubset;
-   if (m_pNSPrivilegeManager != NULL)
-   {
-     nsPrincipalArray *newPrin1Array=NULL;
-     nsPrincipalArray *newPrin2Array=NULL;
-     result = GetNSPrincipalArray((nsPrincipalArray*) prin1Array, &newPrin1Array);
-     if (result != NS_OK) {
-         return result;
-     }
-     result = GetNSPrincipalArray((nsPrincipalArray*) prin2Array, &newPrin2Array);
-     if (result != NS_OK) {
-         return result;
-     }
-     *ret_val = m_pNSPrivilegeManager->comparePrincipalArray(newPrin1Array, newPrin2Array);
-     nsCapsFreePrincipalArray(newPrin1Array);
-     nsCapsFreePrincipalArray(newPrin2Array);
-   }
-   return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::IntersectPrincipalArray(void* prin1Array, void* prin2Array, void* *ret_val)
-{
-   nsresult result = NS_OK;
-   *ret_val = NULL;
-   if (m_pNSPrivilegeManager != NULL)
-   {
-     nsPrincipalArray *newPrin1Array=NULL;
-     nsPrincipalArray *newPrin2Array=NULL;
-     nsPrincipalArray *intersectPrinArray=NULL;
-     result = GetNSPrincipalArray((nsPrincipalArray*) prin1Array, &newPrin1Array);
-     if (result != NS_OK) {
-         return result;
-     }
-     result = GetNSPrincipalArray((nsPrincipalArray*) prin2Array, &newPrin2Array);
-     if (result != NS_OK) {
-         return result;
-     }
-     intersectPrinArray = m_pNSPrivilegeManager->intersectPrincipalArray(newPrin1Array, 
-                                                                         newPrin2Array);
-     CreateNSPrincipalArray(intersectPrinArray, (nsPrincipalArray**)ret_val);
-     nsCapsFreePrincipalArray(newPrin1Array);
-     nsCapsFreePrincipalArray(newPrin2Array);
-   }
-   return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::CanExtendTrust(void* fromPrinArray, void* toPrinArray, PRBool *ret_val)
-{
-   nsresult result = NS_OK;
-   *ret_val = nsSetComparisonType_NoSubset;
-   if (m_pNSPrivilegeManager != NULL)
-   {
-     nsPrincipalArray *newPrin1Array=NULL;
-     nsPrincipalArray *newPrin2Array=NULL;
-     result = GetNSPrincipalArray((nsPrincipalArray*) fromPrinArray, &newPrin1Array);
-     if (result != NS_OK) {
-         return result;
-     }
-     result = GetNSPrincipalArray((nsPrincipalArray*) toPrinArray, &newPrin2Array);
-     if (result != NS_OK) {
-         return result;
-     }
-     *ret_val = m_pNSPrivilegeManager->canExtendTrust(newPrin1Array, newPrin2Array);
-     nsCapsFreePrincipalArray(newPrin1Array);
-     nsCapsFreePrincipalArray(newPrin2Array);
-   }
-   return NS_OK;
-}
-
-
-/* interfaces for nsIPrincipal object, may be we should move some of them to nsIprincipal */
-
-NS_METHOD
-nsCCapsManager::NewPrincipal(nsPrincipalType type, void* key, PRUint32 key_len, void *zig, nsIPrincipal** ret_val)
-{
-  nsIPrincipal* pNSIPrincipal;
-  nsPrincipal *pNSPrincipal = new nsPrincipal(type, key, key_len, zig);
-  if (pNSPrincipal->isCodebase()) {
-      pNSIPrincipal = (nsIPrincipal*)new nsCCodebasePrincipal(pNSPrincipal);
-  } else {
-      pNSIPrincipal = (nsIPrincipal*)new nsCCertPrincipal(pNSPrincipal);
-  }
-  *ret_val = pNSIPrincipal;
-  return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::IsCodebaseExact(nsIPrincipal* pNSIPrincipal, PRBool *ret_val)
-{
-   nsresult result = NS_OK;
-   nsPrincipal *pNSPrincipal  = NULL;
-   *ret_val = PR_FALSE;
-   result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-   if( result != NS_OK) {
-       return result;
-   }
-   *ret_val = pNSPrincipal->isCodebaseExact();
-    
-   return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::ToString(nsIPrincipal* pNSIPrincipal, char* *ret_val)
-{
-   nsresult result = NS_OK;
-   nsPrincipal *pNSPrincipal  = NULL;
-   *ret_val = NULL;
-   result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-   if( result != NS_OK) {
-       return result;
-   }
-   *ret_val = pNSPrincipal->toString();
-    
-   return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::GetVendor(nsIPrincipal* pNSIPrincipal, char* *ret_val)
-{
-   nsresult result = NS_OK;
-   nsPrincipal *pNSPrincipal  = NULL;
-   *ret_val = NULL;
-   result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
-   if( result != NS_OK) {
-       return result;
-   }
-   *ret_val = pNSPrincipal->getVendor();
-    
-   return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::NewPrincipalArray(PRUint32 count, void* *ret_val)
-{
-  *ret_val = nsCapsNewPrincipalArray(count);
-  return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::FreePrincipalArray(void *prinArray)
-{
-    nsCapsFreePrincipalArray(prinArray);
-    return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::GetPrincipalArrayElement(void *prinArrayArg, PRUint32 index, nsIPrincipal* *ret_val)
-{
- nsIPrincipal* pNSIPrincipal;
- nsPrincipal *pNSPrincipal = (nsPrincipal *)nsCapsGetPrincipalArrayElement(prinArrayArg, index);
- if (pNSPrincipal->isCodebase()) {
-     pNSIPrincipal = (nsIPrincipal*)new nsCCodebasePrincipal(pNSPrincipal);
- } else {
-     pNSIPrincipal = (nsIPrincipal*)new nsCCertPrincipal(pNSPrincipal);
- }
- *ret_val = pNSIPrincipal;
-  return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::SetPrincipalArrayElement(void *prinArrayArg, PRUint32 index, nsIPrincipal* principal)
-{
-  nsCapsSetPrincipalArrayElement(prinArrayArg, index, principal);
-  return NS_OK;
-}
-
-NS_METHOD
-nsCCapsManager::GetPrincipalArraySize(void *prinArrayArg, PRUint32 *ret_val)
-{
-  *ret_val = nsCapsGetPrincipalArraySize(prinArrayArg);
-  return NS_OK;
-}
+*/
 
 /* The following interfaces will replace all of the following old calls.
- *
  * nsCapsGetPermission(struct nsPrivilege *privilege)
- * nsCapsGetPrivilege(struct nsPrivilegeTable *annotation, struct nsTarget *target)
- *
+ * nsCapsGetPrivilege(struct nsPrivilegeTable *annotation, struct nsITarget *target)
  */
-NS_METHOD
-nsCCapsManager::IsAllowed(void *annotation, char* targetName, PRBool *ret_val)
+NS_IMETHODIMP
+nsCCapsManager::IsAllowed(void *annotation, const char * targetName, PRBool * ret_val)
 {
-   nsTarget *target = nsTarget::findTarget(targetName);
-   nsresult result = NS_OK;
-   if( target == NULL )
-   {
-      *ret_val = PR_FALSE;
-      return NS_OK;
-   }
-   struct nsPrivilege * pNSPrivilege = nsCapsGetPrivilege((struct nsPrivilegeTable *)annotation,
-                                                          target);
-   if (pNSPrivilege == NULL) {
-       *ret_val = PR_FALSE;
-       return NS_OK;
-    }
-    nsPermissionState perm = nsCapsGetPermission(pNSPrivilege);
-
-    *ret_val = (perm == nsPermissionState_Allowed);
-    return NS_OK;
+	nsITarget *target = nsTarget::FindTarget((char *)targetName);
+	if( target == NULL ) {
+		*ret_val = PR_FALSE;
+		return NS_OK;
+	}
+	nsIPrivilege * pNSPrivilege = nsCapsGetPrivilege((nsPrivilegeTable * )annotation, target);
+	if (pNSPrivilege == NULL) {
+	   *ret_val = PR_FALSE;
+	   return NS_OK;
+	}
+//	ARIEL WORK ON THIS
+//	PRInt16 privilegeState = nsCapsGetPermission(pNSPrivilege);
+//	*ret_val = (privilegeState == nsIPrivilege::PrivilegeState_Allowed);
+	return NS_OK;
 }
 
-
-////////////////////////////////////////////////////////////////////////////
-// from nsCCapsManager:
-
-nsCCapsManager::nsCCapsManager(nsISupports *aOuter):m_pNSPrivilegeManager(NULL) 
+nsCCapsManager::nsCCapsManager()
 {
-    NS_INIT_AGGREGATED(aOuter);
-    PRBool result;
-    if (Initialize(&result) == NS_OK)
-    {
-      m_pNSPrivilegeManager = new nsPrivilegeManager();
-    }
-    else
-    { 
-      m_pNSPrivilegeManager = NULL;
-    }
+	NS_INIT_REFCNT();
+	NS_ADDREF(this);
 }
 
 nsCCapsManager::~nsCCapsManager()
 {
 }
-
+/*
 void
-nsCCapsManager::CreateNSPrincipalArray(nsPrincipalArray* prinArray, 
-                                       nsPrincipalArray* *pPrincipalArray)
+nsCCapsManager::CreateNSPrincipalArray(nsIPrincipalArray* prinArray, 
+                                       nsIPrincipalArray* *pPrincipalArray)
 {
+	//prin arrays will either be removed, or updated to use the nsIPrincipal Object
  nsIPrincipal* pNSIPrincipal;
  nsPrincipal *pNSPrincipal  = NULL;
 
@@ -619,46 +313,48 @@ nsCCapsManager::CreateNSPrincipalArray(nsPrincipalArray* prinArray,
  for (PRUint32 index = 0; index < count; index++) {
     pNSPrincipal = (nsPrincipal *)prinArray->Get(index);
     if (pNSPrincipal->isCodebase()) {
-        pNSIPrincipal = (nsIPrincipal*)new nsCCodebasePrincipal(pNSPrincipal);
+        pNSIPrincipal = (nsIPrincipal*)new nsCodebasePrincipal(pNSPrincipal);
     } else {
-        pNSIPrincipal = (nsIPrincipal*)new nsCCertPrincipal(pNSPrincipal);
+        pNSIPrincipal = (nsIPrincipal*)new nsCertificatePrincipal(pNSPrincipal);
     }
     newPrinArray->Set(index, pNSIPrincipal);
  }
  *pPrincipalArray = newPrinArray;
 }
-
-
+*/
+/*
 NS_METHOD
 nsCCapsManager::GetNSPrincipalArray(nsPrincipalArray* prinArray, 
                                     nsPrincipalArray* *pPrincipalArray)
 {
+
+
  nsIPrincipal* pNSIPrincipal;
- nsPrincipal *pNSPrincipal  = NULL;
+ nsIPrincipal *pNSPrincipal  = NULL;
  nsresult result = NS_OK;
 
  PRUint32 count = prinArray->GetSize();
  nsPrincipalArray *newPrinArray = new nsPrincipalArray();
  newPrinArray->SetSize(count, 1);
  *pPrincipalArray = NULL;
-
  for (PRUint32 index = 0; index < count; index++) {
     pNSIPrincipal = (nsIPrincipal*)prinArray->Get(index);
-    result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
+//    result = GetNSPrincipal(pNSIPrincipal, &pNSPrincipal);
     if( result != NS_OK)
     {
        nsCapsFreePrincipalArray(newPrinArray);
        return result;
     }
-    newPrinArray->Set(index, pNSPrincipal);
+//    newPrinArray->Set(index, pNSPrincipal);
  }
  *pPrincipalArray = newPrinArray;
  return result;
+ return NS_OK;
 }
-
+*/
+/*
 NS_METHOD
-nsCCapsManager::GetNSPrincipal(nsIPrincipal* pNSIPrincipal, 
-                               nsPrincipal **ppNSPrincipal)
+nsCCapsManager::GetNSPrincipal(nsIPrincipal* pNSIPrincipal, nsPrincipal **ppNSPrincipal)
 {
    nsISupports *pNSISupports   = NULL;
    nsPrincipal *pNSPrincipal  = NULL;
@@ -669,32 +365,34 @@ nsCCapsManager::GetNSPrincipal(nsIPrincipal* pNSIPrincipal,
       return NS_ERROR_NULL_POINTER;
    }
 
-   NS_DEFINE_IID(kICertPrincipalIID, NS_ICERTPRINCIPAL_IID);
+   NS_DEFINE_IID(kICertificatePrincipalIID, NS_ICERTIFICATEPRINCIPAL_IID);
    NS_DEFINE_IID(kICodebasePrincipalIID, NS_ICODEBASEPRINCIPAL_IID);
-   NS_DEFINE_IID(kICodeSourcePrincipalIID, NS_ICODESOURCEPRINCIPAL_IID);
+//   NS_DEFINE_IID(kICodeSourcePrincipalIID, NS_ICODESOURCEPRINCIPAL_IID);
 
    if (pNSIPrincipal->QueryInterface(kICodeSourcePrincipalIID,
                             (void**)&pNSISupports) == NS_OK) 
    {
       nsCCodeSourcePrincipal *pNSCCodeSourcePrincipal = (nsCCodeSourcePrincipal *)pNSIPrincipal;
-      nsICertPrincipal       *pNSICertPrincipal       = pNSCCodeSourcePrincipal->GetCertPrincipal();
+      nsICertificatePrincipal       *pNSICertPrincipal       = pNSCCodeSourcePrincipal->GetCertPrincipal();
       nsICodebasePrincipal   *pNSICodebasePrincipal   = pNSCCodeSourcePrincipal->GetCodebasePrincipal();
       PRBool bIsTrusted = PR_FALSE;
       if(pNSICertPrincipal != NULL )
       {
-          pNSICertPrincipal->IsTrusted(NULL, &bIsTrusted);
+          pNSICertPrincipal->IsSecure(&bIsTrusted);
       }
       if (bIsTrusted)
       {
-          nsCCertPrincipal *pNSCCertPrincipal = (nsCCertPrincipal *)pNSICertPrincipal;
-          pNSPrincipal = pNSCCertPrincipal->GetPeer();
+          nsCertificatePrincipal *pNSCCertPrincipal = (nsCertificatePrincipal *)pNSICertPrincipal;
+//			peer object is deprecated, no longer use nsPrincipal object
+//          pNSPrincipal = pNSCCertPrincipal->GetPeer();
           pNSCCertPrincipal->Release();
       }
       else
       if(pNSICodebasePrincipal != NULL )
       {
-          nsCCodebasePrincipal *pNSCCodebasePrincipal = (nsCCodebasePrincipal *)pNSICodebasePrincipal;
-          pNSPrincipal = pNSCCodebasePrincipal->GetPeer();
+          nsCodebasePrincipal *pNSCCodebasePrincipal = (nsCodebasePrincipal *)pNSICodebasePrincipal;
+//			peer object is deprecated, no longer use nsPrincipal object
+//          pNSPrincipal = pNSCCodebasePrincipal->GetPeer();
           pNSCCodebasePrincipal->Release();
       }
       else
@@ -703,20 +401,22 @@ nsCCapsManager::GetNSPrincipal(nsIPrincipal* pNSIPrincipal,
       }
    }
    else
-   if (pNSIPrincipal->QueryInterface(kICertPrincipalIID,
+   if (pNSIPrincipal->QueryInterface(kICertificatePrincipalIID,
                             (void**)&pNSISupports) == NS_OK) 
    {
-      nsCCertPrincipal *pNSCCertPrincipal = (nsCCertPrincipal *)pNSIPrincipal;
-      pNSPrincipal = pNSCCertPrincipal->GetPeer();
+      nsCertificatePrincipal *pNSCCertPrincipal = (nsCertificatePrincipal *)pNSIPrincipal;
+//			peer object is deprecated, no longer use nsPrincipal object
+//      pNSPrincipal = pNSCCertPrincipal->GetPeer();
       pNSCCertPrincipal->Release();
    }
    else
    if (pNSIPrincipal->QueryInterface(kICodebasePrincipalIID,
                             (void**)&pNSISupports) == NS_OK) 
    {
-      nsCCodebasePrincipal *pNSCCodebasePrincipal = 
-          (nsCCodebasePrincipal *)pNSIPrincipal;
-      pNSPrincipal = pNSCCodebasePrincipal->GetPeer();
+      nsCodebasePrincipal *pNSCCodebasePrincipal = 
+          (nsCodebasePrincipal *)pNSIPrincipal;
+//			peer object is deprecated, no longer use nsPrincipal object
+//      pNSPrincipal = pNSCCodebasePrincipal->GetPeer();
       pNSCCodebasePrincipal->Release();
    }
    else
@@ -724,12 +424,12 @@ nsCCapsManager::GetNSPrincipal(nsIPrincipal* pNSIPrincipal,
       return NS_ERROR_NO_INTERFACE;
    }
    *ppNSPrincipal = pNSPrincipal;
-   return NS_OK;
+	return NS_OK;
 }
-
-
+*/
+/*
 nsPermission
-nsCCapsManager::ConvertPrivilegeToPermission(nsPrivilege *pNSPrivilege)
+nsCCapsManager::ConvertPrivilegeToPermission(nsPrivilege * pNSPrivilege)
 {
   	if(pNSPrivilege->isAllowedForever())
      return nsPermission_AllowedForever;
@@ -773,17 +473,4 @@ nsCCapsManager::ConvertPermissionToPrivilege(nsPermission state)
     }
     return nsPrivilege::findPrivilege(permission, duration);
 }
-
-void
-nsCCapsManager::SetSystemPrivilegeManager()
-{
-    nsPrivilegeManager *pNSPrivilegeManager = 
-        nsPrivilegeManager::getPrivilegeManager();
-     if (   (m_pNSPrivilegeManager  != NULL )
-         && (m_pNSPrivilegeManager != pNSPrivilegeManager)
-        )
-     {
-        delete m_pNSPrivilegeManager;
-        m_pNSPrivilegeManager = pNSPrivilegeManager;
-     }
-}
+*/

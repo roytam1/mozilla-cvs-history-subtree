@@ -51,18 +51,27 @@
 #define MORK_UNIX 1
 #endif
 
+#ifdef XP_BEOS
+#define MORK_BEOS 1
+#endif
+
 #ifdef MORK_OBSOLETE
 #undef MORK_MAC
 #endif
 
 // } %%%%% end platform defs peculiar to Mork %%%%%
 
-#if defined(MORK_WIN) || defined(MORK_UNIX) || defined(MORK_MAC)
+#if defined(MORK_WIN) || defined(MORK_UNIX) || defined(MORK_MAC) || defined(MORK_BEOS)
 #include "stdio.h" 
 #include "ctype.h" 
 #include "errno.h" 
 #include "string.h" 
+#ifdef HAVE_MEMORY_H
 #include "memory.h" 
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>  /* for SEEK_SET, SEEK_END */
+#endif
 
 #ifndef MORK_ALONE
 #include "nsDebug.h" 
@@ -105,10 +114,10 @@
 #    define mork_kNewline           "\015\012"
 #    define mork_kNewlineSize       2
 #  else
-#    ifdef MORK_UNIX
+#    if defined(MORK_UNIX) || defined(MORK_BEOS)
 #      define mork_kNewline         "\012"
 #      define mork_kNewlineSize     1
-#    endif /* MORK_UNIX */
+#    endif /* MORK_UNIX || MORK_BEOS */
 #  endif /* MORK_WIN */
 #endif /* MORK_MAC */
 
@@ -128,7 +137,7 @@ extern void mork_assertion_signal(const char* inMessage);
 #define MORK_PROVIDE_STDLIB 1
 #endif /*MORK_OBSOLETE*/
 
-#if defined(MORK_WIN) || defined(MORK_UNIX) || defined(MORK_MAC)
+#if defined(MORK_WIN) || defined(MORK_UNIX) || defined(MORK_MAC) || defined(MORK_BEOS)
 #define MORK_USE_C_STDLIB 1
 #endif /*MORK_WIN*/
 

@@ -19,16 +19,15 @@
 #include "nsISupports.idl"
 #include "nsIMsgIncomingServer.idl"
 #include "nsIMsgIdentity.idl"
+#include "nsISupportsArray.idl"
 
-/* an account consists of an incoming server and one or more
-   outgoing identities
-*/
-
-interface nsISupportsArray;
-
-%{C++
-#include "nsISupportsArray.h"
-%}
+/*
+ * an account consists of an incoming server and one or more
+ * outgoing identities
+ * an account is identitfied by a key, which is the <account> string in
+ * the account preferences, such as in
+ * mail.account.<account>.identities
+ */
 
 [scriptable, uuid(da368bd0-e624-11d2-b7fc-00805f05ffa5)]
 interface nsIMsgAccount : nsISupports {
@@ -39,12 +38,17 @@ interface nsIMsgAccount : nsISupports {
   /* incoming server stuff */
   attribute nsIMsgIncomingServer incomingServer;
 
-  /* outgoing identity list */
+  /* outgoing identity list
+   * array of nsIMsgIdentity's
+   */
   readonly attribute nsISupportsArray identities;
 
+  /* the default identity for this account. */
   attribute nsIMsgIdentity defaultIdentity;
-  
-  void addIdentity(in nsIMsgIdentity identity);
-  void removeIdentity(in nsIMsgIdentity identity);
 
+  /* add a new identity to this account (probably does not work) */
+  void addIdentity(in nsIMsgIdentity identity);
+
+  /* remove an identity from this account (probably does not work) */
+  void removeIdentity(in nsIMsgIdentity identity);
 };

@@ -51,17 +51,17 @@ class nsISoftwareUpdate : public nsISupports
         	NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISOFTWAREUPDATE_IID)
             
             NS_IMETHOD InstallJar(nsIFileSpec* localFile,
+                                  const PRUnichar* URL,
                                   const PRUnichar* arguments,
                                   long  flags,
                                   nsIXPINotifier* notifier = 0) = 0; 
             
             NS_IMETHOD RegisterNotifier(nsIXPINotifier *notifier) = 0;
             
-//            NS_IMETHOD InstallPending(void) = 0;
-
             /* FIX: these should be in a private interface */
             NS_IMETHOD InstallJarCallBack()                   = 0; 
-            NS_IMETHOD GetTopLevelNotifier(nsIXPINotifier **notifier) = 0;
+            NS_IMETHOD GetMasterNotifier(nsIXPINotifier **notifier) = 0;
+            NS_IMETHOD SetActiveNotifier(nsIXPINotifier *notifier) = 0;
 };
 
 

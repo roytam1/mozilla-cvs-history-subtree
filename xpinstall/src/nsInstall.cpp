@@ -41,9 +41,10 @@
 #include "nsIPref.h"
 
 #include "prmem.h"
+#include "plstr.h"
+#include "prprf.h"
 
 #include "VerReg.h"
-#include "zipfile.h"
 
 #include "nsInstall.h"
 #include "nsInstallFolder.h"
@@ -53,6 +54,9 @@
 #include "nsInstallExecute.h"
 #include "nsInstallPatch.h"
 #include "nsInstallUninstall.h"
+#ifdef NECKO
+#include "nsNeckoUtil.h"
+#endif
 
 #ifdef _WINDOWS
 #include "nsWinReg.h"
@@ -64,23 +68,36 @@
 
 #ifdef XP_MAC
 #include "Gestalt.h"
+#include "nsAppleSingleDecoder.h"
 #endif 
 
 #ifdef XP_PC
-#define FILESEP "\\"
+#define FILESEP '\\'
 #elif defined(XP_MAC)
-#define FILESEP ":"
+#define FILESEP ':'
 #else
-#define FILESEP "/"
+#define FILESEP '/'
 #endif
 
+static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_IID(kIEventQueueServiceIID, NS_IEVENTQUEUESERVICE_IID);
+#ifdef NECKO
+#else
+static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
+#endif
+static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
+static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
+	
 
-nsInstallInfo::nsInstallInfo(nsIFileSpec* aFile, 
+nsInstallInfo::nsInstallInfo(nsIFileSpec*     aFile, 
+                             const PRUnichar* aURL,
                              const PRUnichar* aArgs, 
-                             long flags, 
-                             nsIXPINotifier* aNotifier)
+                             long             flags, 
+                             nsIXPINotifier*  aNotifier)
 : mError(0), 
-  mFlags(flags), 
+  mFlags(flags),
+  mURL(aURL),
   mArgs(aArgs), 
   mFile(aFile), 
   mNotifier(aNotifier)
@@ -90,7 +107,6 @@ nsInstallInfo::nsInstallInfo(nsIFileSpec* aFile,
 
 nsInstallInfo::~nsInstallInfo()
 {
-    VR_Close();
 }
 
 void 
@@ -108,12 +124,13 @@ nsInstallInfo::GetLocalFile(char **aPath)
 static NS_DEFINE_IID(kISoftwareUpdateIID, NS_ISOFTWAREUPDATE_IID);
 static NS_DEFINE_IID(kSoftwareUpdateCID,  NS_SoftwareUpdate_CID);
 
+static NS_DEFINE_IID(kIJARIID, NS_IJAR_IID);
+static NS_DEFINE_IID(kJARCID,  NS_JAR_CID);
 
 nsInstall::nsInstall()
 {
     mScriptObject           = nsnull;           // this is the jsobject for our context
-    mVersionInfo            = nsnull;           // this is the version information passed to us in StartInstall()
-    mJarFileData            = nsnull;           // this is an opaque handle to the jarfile.  
+    mVersionInfo            = nsnull;           // this is the version information passed to us in StartInstall()             
     mRegistryPackageName    = "";               // this is the name that we will add into the registry for the component we are installing 
     mUIName                 = "";               // this is the name that will be displayed in UI.
 
@@ -123,14 +140,18 @@ nsInstall::nsInstall()
     mJarFileLocation    = "";
     mInstallArguments   = "";
 
+    // mJarFileData is an opaque handle to the jarfile.
+    nsresult rv = nsComponentManager::CreateInstance(kJARCID, nsnull, kIJARIID, 
+                                                     (void**) &mJarFileData);
+
     nsISoftwareUpdate *su;
-    nsresult rv = nsServiceManager::GetService(kSoftwareUpdateCID, 
+    rv = nsServiceManager::GetService(kSoftwareUpdateCID, 
                                                kISoftwareUpdateIID,
                                                (nsISupports**) &su);
     
     if (NS_SUCCEEDED(rv))
     {
-        su->GetTopLevelNotifier(&mNotifier);
+        su->GetMasterNotifier( &mNotifier );
     }
 
     su->Release();
@@ -142,12 +163,13 @@ nsInstall::~nsInstall()
         delete mVersionInfo;
 }
 
-
+PRInt32
 nsInstall::SetScriptObject(void *aScriptObject)
 {
   mScriptObject = (JSObject*) aScriptObject;
   return NS_OK;
 }
+
 #ifdef _WINDOWS
 nsInstall::SaveWinRegPrototype(void *aScriptObject)
 {
@@ -188,11 +210,11 @@ nsInstall::GetRegPackageName(nsString& aRegPackageName)
     return NS_OK;
 }
 
-PRInt32    
-nsInstall::AbortInstall()
+void
+nsInstall::InternalAbort(PRInt32 errcode)
 {
     if (mNotifier)
-        mNotifier->InstallAborted();
+        mNotifier->FinalStatus(mInstallURL.GetUnicode(), errcode);
 
     nsInstallObject* ie;
     if (mInstalledFiles != nsnull) 
@@ -201,14 +223,18 @@ nsInstall::AbortInstall()
         for (i=0; i < mInstalledFiles->GetSize(); i++) 
         {
             ie = (nsInstallObject *)mInstalledFiles->Get(i);
-            if (ie == nsnull)
-                continue;
-            ie->Abort();
+            if (ie) 
+                ie->Abort();
         }
     }
     
     CleanUp();
-    
+}
+
+PRInt32    
+nsInstall::AbortInstall()
+{
+    InternalAbort(ABORT_INSTALL);
     return NS_OK;
 }
 
@@ -265,6 +291,12 @@ nsInstall::AddDirectory(const nsString& aRegName,
     
     nsVector *paths = new nsVector();
     
+    if (paths == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return NS_OK;
+    }
+
     result = ExtractDirEntries(aJarSource, paths);
     if (result != nsInstall::SUCCESS)
     {
@@ -303,6 +335,12 @@ nsInstall::AddDirectory(const nsString& aRegName,
                                 aForceMode,
                                 &result);
         
+        if (ie == nsnull)
+        {
+            *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+                return NS_OK;
+        }
+
         if (result == nsInstall::SUCCESS)
         {
             result = ScheduleForInstall( ie );
@@ -431,6 +469,12 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
                             tempTargetName, 
                             aForceMode, 
                             &errcode );
+    
+    if (ie == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+            return NS_OK;
+    }
 
     if (errcode == nsInstall::SUCCESS) 
     {
@@ -520,6 +564,13 @@ nsInstall::DeleteComponent(const nsString& aRegistryName, PRInt32* aReturn)
     }
     
     nsInstallDelete* id = new nsInstallDelete(this, "", qualifiedRegName, &result);
+    
+    if (id == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return NS_OK;
+    }
+
     if (result == nsInstall::SUCCESS) 
     {
         result = ScheduleForInstall( id );
@@ -542,6 +593,12 @@ nsInstall::DeleteFile(const nsString& aFolder, const nsString& aRelativeFileName
     }
    
     nsInstallDelete* id = new nsInstallDelete(this, aFolder, aRelativeFileName, &result);
+
+    if (id == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return NS_OK;
+    }
 
     if (result == nsInstall::SUCCESS) 
     {
@@ -579,6 +636,12 @@ nsInstall::Execute(const nsString& aJarSource, const nsString& aArgs, PRInt32* a
     }
    
     nsInstallExecute* ie = new nsInstallExecute(this, aJarSource, aArgs, &result);
+    
+    if (ie == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return NS_OK;
+    }
 
     if (result == nsInstall::SUCCESS) 
     {
@@ -600,11 +663,13 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
 {
     PRBool  rebootNeeded = PR_FALSE;
 
-    PRInt32 result = SanityCheck();
+    *aReturn = SanityCheck();
 
-    if (result != nsInstall::SUCCESS)
+    if (*aReturn != nsInstall::SUCCESS)
     {
-        *aReturn = SaveError( result );
+        SaveError( *aReturn );
+        if (mNotifier)
+            mNotifier->FinalStatus(mInstallURL.GetUnicode(), *aReturn);
         return NS_OK;
     }
     
@@ -614,42 +679,75 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
         // and no need for user confirmation
     
         CleanUp();
+        if (mNotifier)
+            mNotifier->FinalStatus(mInstallURL.GetUnicode(), *aReturn);
         return NS_OK; 
     }
-
-    nsInstallObject* ie = nsnull;
 
     if ( mUninstallPackage )
     {
         VR_UninstallCreateNode( (char*)(const char*) nsAutoCString(mRegistryPackageName), 
                                 (char*)(const char*) nsAutoCString(mUIName));
     }
-      
+
+    // Install the Component into the Version Registry.
+    if (mVersionInfo)
+    {
+        nsString versionString;
+
+        mVersionInfo->ToString(versionString);
+
+        VR_Install( (char*)(const char*)nsAutoCString(mRegistryPackageName), 
+                    nsnull,  
+                    (char*)(const char*)nsAutoCString(versionString), 
+                    PR_FALSE );
+    }
+
+    PRInt32 result;
+    nsInstallObject* ie = nsnull;
+
     PRUint32 i=0;
     for (i=0; i < mInstalledFiles->GetSize(); i++) 
     {
         ie = (nsInstallObject*)mInstalledFiles->Get(i);
+        NS_ASSERTION(ie, "NULL object in install queue!");
         if (ie == NULL)
             continue;
     
         char *objString = ie->toString();
         
         if (mNotifier)
-            mNotifier->InstallFinalization(objString, i , mInstalledFiles->GetSize());
+            mNotifier->FinalizeProgress(nsAutoString(objString).GetUnicode(),
+                                        i, mInstalledFiles->GetSize());
 
-        delete [] objString;
-    
-        ie->Complete();
+        if (objString)
+            delete [] objString;
+
+        result = ie->Complete();
 
         if (result != nsInstall::SUCCESS) 
         {
-            ie->Abort();
-            *aReturn = SaveError( result );
-            return NS_OK;
+            if ( result == REBOOT_NEEDED )
+            {
+                rebootNeeded = PR_TRUE;
+                result = SUCCESS;
+            }
+            else
+            {
+                InternalAbort( result );
+                break;
+            }
         }
     }
 
-    *aReturn = NS_OK;
+    if ( result != SUCCESS )
+        *aReturn = SaveError( result );
+    else if ( rebootNeeded )
+        *aReturn = SaveError( REBOOT_NEEDED );
+
+    if (mNotifier)
+        mNotifier->FinalStatus(mInstallURL.GetUnicode(), *aReturn);
+
     return NS_OK;
 }
 
@@ -705,13 +803,14 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
             int i;
 
             nsString dirStr(dir);
-            if (  (i = dirStr.RFind(FILESEP)) > 0 ) 
+            if (  (i = dirStr.RFindChar(FILESEP)) > 0 ) 
             {
                 // i is the index in the string, not the total number of
                 // characters in the string.  ToCString() requires the
                 // total number of characters in the string to copy,
                 // therefore add 1 to it.
-                dirStr.ToCString(dir, i + 1);
+                dirStr.Truncate(i + 1);
+                dirStr.ToCString(dir, MAXREGPATHLEN);
             }
         }
         else
@@ -730,15 +829,13 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
         if(aSubdirectory != "")
         {
           nsfsDir += aSubdirectory;
-          if(!nsfsDir.Exists())
-          {
-              nsfsDir.CreateDirectory();
-          }
         }
         *aFolder  = new nsString(nsfsDir.GetNativePathCString());
     }
 
-    delete [] componentCString;
+    if (componentCString)
+        delete [] componentCString;
+    
     return NS_OK;
 }
 
@@ -755,11 +852,14 @@ nsInstall::GetFolder(const nsString& targetFolder, const nsString& aSubdirectory
     *aFolder = nsnull;
 
     spec = new nsInstallFolder(targetFolder, aSubdirectory);   
-       
-    nsString dirString;
-    spec->GetDirectoryPath(dirString);
+    
+    if (spec != nsnull)
+    {
+        nsString dirString;
+        spec->GetDirectoryPath(dirString);
 
-    *aFolder = new nsString(dirString);
+        *aFolder = new nsString(dirString);
+    }
     return NS_OK;    
 }
 
@@ -779,22 +879,24 @@ nsInstall::GetLastError(PRInt32* aReturn)
 PRInt32    
 nsInstall::GetWinProfile(const nsString& aFolder, const nsString& aFile, JSContext* jscontext, JSClass* WinProfileClass, jsval* aReturn)
 {
+    *aReturn = JSVAL_NULL;
+
 #ifdef _WINDOWS
     JSObject*     winProfileObject;
     nsWinProfile* nativeWinProfileObject = new nsWinProfile(this, aFolder, aFile);
+    
+    if (nativeWinProfileObject == nsnull)
+        return NS_OK;
+    
     JSObject*     winProfilePrototype    = this->RetrieveWinProfilePrototype();
-
+    
     winProfileObject = JS_NewObject(jscontext, WinProfileClass, winProfilePrototype, NULL);
     if(winProfileObject == NULL)
-    {
-      return PR_FALSE;
-    }
-
+        return NS_OK;
+    
     JS_SetPrivate(jscontext, winProfileObject, nativeWinProfileObject);
 
     *aReturn = OBJECT_TO_JSVAL(winProfileObject);
-#else
-    *aReturn = JSVAL_NULL;
 #endif /* _WINDOWS */
 
     return NS_OK;
@@ -803,22 +905,24 @@ nsInstall::GetWinProfile(const nsString& aFolder, const nsString& aFile, JSConte
 PRInt32    
 nsInstall::GetWinRegistry(JSContext* jscontext, JSClass* WinRegClass, jsval* aReturn)
 {
+    *aReturn = JSVAL_NULL;
+
 #ifdef _WINDOWS
     JSObject* winRegObject;
     nsWinReg* nativeWinRegObject = new nsWinReg(this);
+    
+    if (nativeWinRegObject == nsnull)
+        return NS_OK;
+
     JSObject* winRegPrototype    = this->RetrieveWinRegPrototype();
 
     winRegObject = JS_NewObject(jscontext, WinRegClass, winRegPrototype, NULL);
     if(winRegObject == NULL)
-    {
-      return PR_FALSE;
-    }
-
+        return NS_OK;
+ 
     JS_SetPrivate(jscontext, winRegObject, nativeWinRegObject);
 
     *aReturn = OBJECT_TO_JSVAL(winRegObject);
-#else
-    *aReturn = JSVAL_NULL;
 #endif /* _WINDOWS */
 
     return NS_OK;
@@ -827,20 +931,15 @@ nsInstall::GetWinRegistry(JSContext* jscontext, JSClass* WinRegClass, jsval* aRe
 PRInt32
 nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aReturn)
 {
-    static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-    static NS_DEFINE_IID(kIEventQueueServiceIID, NS_IEVENTQUEUESERVICE_IID);
-    static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
-    static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
-    static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-    static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
-	
     nsresult ret;
     nsFileSpec* resFile;
     nsFileURL* resFileURL = nsnull;
-    nsIURL *url = nsnull;
+    nsIURI *url = nsnull;
     nsILocale* locale = nsnull;
     nsIStringBundleService* service = nsnull;
+#ifndef NECKO
     nsINetService* pNetService = nsnull;
+#endif
     nsIEventQueueService* pEventQueueService = nsnull;
     nsIStringBundle* bundle = nsnull;
     nsIBidirectionalEnumerator* propEnum = nsnull;
@@ -851,18 +950,17 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
     JS_GetProperty( cx, JS_GetGlobalObject( cx ), "Object", &v );
     if (!v)
     {
-        SaveError(nsInstall::UNEXPECTED_ERROR);
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_NULL_POINTER;
     }
     JSClass *objclass = JS_GetClass( cx, JSVAL_TO_OBJECT(v) );
     JSObject *res = JS_NewObject( cx, objclass, JSVAL_TO_OBJECT(v), 0 );
 
     // extract properties file
     // XXX append locale info: lang code, country code, .properties suffix to aBaseName
-    ExtractFileFromJar(aBaseName, nsnull, &resFile);
-    if (!resFile)
+    PRInt32 err = ExtractFileFromJar(aBaseName, nsnull, &resFile);
+    if ( (!resFile) || (err != nsInstall::SUCCESS)  )
     {
-        SaveError( nsInstall::FILE_DOES_NOT_EXIST );
+        SaveError( err );
         return NS_OK;
     }
 	
@@ -870,55 +968,82 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
     ret = nsServiceManager::GetService(kStringBundleServiceCID, 
                     kIStringBundleServiceIID, (nsISupports**) &service);
     if (NS_FAILED(ret)) 
-        goto handle_err;
+        goto cleanup;
+#ifndef NECKO
     ret = nsServiceManager::GetService(kNetServiceCID, kINetServiceIID, (nsISupports**) &pNetService);
     if (NS_FAILED(ret)) 
-        goto handle_err;
+        goto cleanup;
+#endif
     ret = nsServiceManager::GetService(kEventQueueServiceCID,
                     kIEventQueueServiceIID, (nsISupports**) &pEventQueueService);
     if (NS_FAILED(ret)) 
-        goto handle_err;
+        goto cleanup;
     ret = pEventQueueService->CreateThreadEventQueue();
     if (NS_FAILED(ret)) 
-        goto handle_err;
+        goto cleanup;
 
     // construct properties file URL as required by StringBundle interface
     resFileURL = new nsFileURL( *resFile );
+#ifdef NECKO
+    ret = NS_NewURI(&url, resFileURL->GetURLString());
+#else
     ret = pNetService->CreateURL(&url, nsString( resFileURL->GetURLString()), nsnull, nsnull, nsnull);
+#endif
     if (resFileURL)
         delete resFileURL;
-    if (resFile)
-	    delete resFile;
     if (NS_FAILED(ret)) 
-        goto handle_err;
+        goto cleanup;
 
     // get the string bundle using the extracted properties file
+#if 1
+    {
+#ifndef NECKO
+      const char* spec = nsnull;
+#else
+      char* spec = nsnull;
+#endif /* NECKO */
+      ret = url->GetSpec(&spec);
+      if (NS_FAILED(ret)) {
+        printf("cannot get url spec\n");
+        nsServiceManager::ReleaseService(kStringBundleServiceCID, service);
+#ifdef NECKO
+        nsCRT::free(spec);
+#endif /* NECKO */
+        return ret;
+      }
+      ret = service->CreateBundle(spec, locale, &bundle);
+#ifdef NECKO
+      nsCRT::free(spec);
+#endif /* NECKO */
+    }
+#else
     ret = service->CreateBundle(url, locale, &bundle);
+#endif
     if (NS_FAILED(ret)) 
-        goto handle_err;
+        goto cleanup;
     ret = bundle->GetEnumeration(&propEnum);
     if (NS_FAILED(ret))
-        goto handle_err;
+        goto cleanup;
 
     // set the variables of the JSObject to return using the StringBundle's
     // enumeration service
     ret = propEnum->First();
     if (NS_FAILED(ret))
-        goto handle_err;
+        goto cleanup;
     while (NS_SUCCEEDED(ret))
     {
         nsIPropertyElement* propElem = nsnull;
         ret = propEnum->CurrentItem((nsISupports**)&propElem);
         if (NS_FAILED(ret))
-            goto handle_err;
+            goto cleanup;
         nsString* key = nsnull;
         nsString* val = nsnull;
         ret = propElem->GetKey(&key);
         if (NS_FAILED(ret)) 
-            goto handle_err;
+            goto cleanup;
         ret = propElem->GetValue(&val);
         if (NS_FAILED(ret))
-            goto handle_err;
+            goto cleanup;
         char* keyCStr = key->ToNewCString();
         PRUnichar* valCStr = val->ToNewUnicode();
         if (keyCStr && valCStr) 
@@ -937,10 +1062,29 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
     }
 	 
     *aReturn = OBJECT_TO_JSVAL(res);
-    return NS_OK;
+    ret = nsInstall::SUCCESS;
 
-handle_err:
-    SaveError(ret);
+cleanup:
+    SaveError( ret );
+	
+    // release services
+    NS_IF_RELEASE( service );
+    NS_IF_RELEASE( pEventQueueService );
+#ifndef NECKO
+    NS_IF_RELEASE( pNetService );
+#endif
+
+    // release file, URL, StringBundle, Enumerator
+    NS_IF_RELEASE( url );
+    NS_IF_RELEASE( bundle );
+    NS_IF_RELEASE( propEnum );
+    if (resFile)
+    {
+		// delete the transient properties file
+		resFile->Delete(PR_FALSE);
+        delete resFile;
+    }
+
     return NS_OK;
 }
 
@@ -972,6 +1116,11 @@ nsInstall::Patch(const nsString& aRegName, const nsString& aVersion, const nsStr
                                              aTargetName,
                                              &result);
     
+    if (ip == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return NS_OK;
+    }
 
     if (result == nsInstall::SUCCESS) 
     {
@@ -1008,6 +1157,12 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
 {
     char szRegPackagePath[MAXREGPATHLEN];
     char* szRegPackageName = aRegistryPackageName.ToNewCString();
+    
+    if (szRegPackageName == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return PR_FALSE;
+    }
 
     *szRegPackagePath = '0';
     *aReturn   = nsInstall::SUCCESS;
@@ -1047,10 +1202,22 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
         delete mVersionInfo;
 
     mVersionInfo    = new nsInstallVersion();
+    if (mVersionInfo == nsnull)
+    {
+        *aReturn = nsInstall::OUT_OF_MEMORY;
+        return nsInstall::OUT_OF_MEMORY;
+    }
+
     mVersionInfo->Init(aVersion);
 
     mInstalledFiles = new nsVector();
     mPatchList      = new nsHashtable();
+    
+    if (mInstalledFiles == nsnull || mPatchList == nsnull)
+    {
+        *aReturn = nsInstall::OUT_OF_MEMORY;
+        return nsInstall::OUT_OF_MEMORY;
+    }
 
     /* this function should also check security!!! */
     *aReturn = OpenJARFile();
@@ -1064,7 +1231,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
     SaveError(*aReturn);
     
     if (mNotifier)
-            mNotifier->InstallStarted(nsAutoCString(mUIName));
+            mNotifier->InstallStarted(mInstallURL.GetUnicode(), mUIName.GetUnicode());
 
     return NS_OK;
 }
@@ -1094,6 +1261,12 @@ nsInstall::Uninstall(const nsString& aRegistryPackageName, PRInt32* aReturn)
                                                      qualifiedPackageName,
                                                      &result );
 
+    if (ie == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+        return NS_OK;
+    }
+    
     if (result == nsInstall::SUCCESS) 
     {
         result = ScheduleForInstall( ie );
@@ -1134,6 +1307,19 @@ nsInstall::FileOpDirCreate(nsFileSpec& aTarget, PRInt32* aReturn)
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_DIR_CREATE, aTarget, aReturn);
 
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
+  
   if (*aReturn == nsInstall::SUCCESS) 
   {
       *aReturn = ScheduleForInstall( ifop );
@@ -1164,6 +1350,19 @@ nsInstall::FileOpDirRemove(nsFileSpec& aTarget, PRInt32 aFlags, PRInt32* aReturn
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_DIR_REMOVE, aTarget, aFlags, aReturn);
 
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
+
   if (*aReturn == nsInstall::SUCCESS) 
   {
       *aReturn = ScheduleForInstall( ifop );
@@ -1183,6 +1382,19 @@ PRInt32
 nsInstall::FileOpDirRename(nsFileSpec& aSrc, nsString& aTarget, PRInt32* aReturn)
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_DIR_RENAME, aSrc, aTarget, aReturn);
+
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
 
   if (*aReturn == nsInstall::SUCCESS) 
   {
@@ -1204,6 +1416,19 @@ nsInstall::FileOpFileCopy(nsFileSpec& aSrc, nsFileSpec& aTarget, PRInt32* aRetur
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_FILE_COPY, aSrc, aTarget, aReturn);
 
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
+
   if (*aReturn == nsInstall::SUCCESS) 
   {
       *aReturn = ScheduleForInstall( ifop );
@@ -1224,6 +1449,19 @@ nsInstall::FileOpFileDelete(nsFileSpec& aTarget, PRInt32 aFlags, PRInt32* aRetur
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_FILE_DELETE, aTarget, aFlags, aReturn);
 
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
+
   if (*aReturn == nsInstall::SUCCESS) 
   {
       *aReturn = ScheduleForInstall( ifop );
@@ -1243,6 +1481,19 @@ PRInt32
 nsInstall::FileOpFileExecute(nsFileSpec& aTarget, nsString& aParams, PRInt32* aReturn)
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_FILE_EXECUTE, aTarget, aParams, aReturn);
+
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
 
   if (*aReturn == nsInstall::SUCCESS) 
   {
@@ -1319,6 +1570,19 @@ nsInstall::FileOpFileMove(nsFileSpec& aSrc, nsFileSpec& aTarget, PRInt32* aRetur
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_FILE_MOVE, aSrc, aTarget, aReturn);
 
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
+
   if (*aReturn == nsInstall::SUCCESS) 
   {
       *aReturn = ScheduleForInstall( ifop );
@@ -1338,6 +1602,19 @@ PRInt32
 nsInstall::FileOpFileRename(nsFileSpec& aSrc, nsString& aTarget, PRInt32* aReturn)
 {
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_FILE_RENAME, aSrc, aTarget, aReturn);
+
+  PRInt32 result = SanityCheck();
+  if (result != nsInstall::SUCCESS)
+  {
+      *aReturn = SaveError( result );
+      return NS_OK;
+  }
+
+  if (ifop == nsnull)
+  {
+      *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
+      return NS_OK;
+  }
 
   if (*aReturn == nsInstall::SUCCESS) 
   {
@@ -1372,6 +1649,13 @@ nsInstall::FileOpFileUnixLinkCreate(nsFileSpec& aTarget, PRInt32 aFlags, PRInt32
   return NS_OK;
 }
 
+void
+nsInstall::LogComment(nsString& aComment)
+{
+  if(mNotifier)
+    mNotifier->LogComment(aComment.GetUnicode());
+}
+
 /////////////////////////////////////////////////////////////////////////
 // Private Methods
 /////////////////////////////////////////////////////////////////////////
@@ -1392,32 +1676,42 @@ nsInstall::ScheduleForInstall(nsInstallObject* ob)
     // flash current item
 
     if (mNotifier)
-        if ( !NS_SUCCEEDED(mNotifier->ItemScheduled(objString)) )
-            mUserCancelled = PR_TRUE;
+        mNotifier->ItemScheduled(nsAutoString(objString).GetUnicode());
 
-    delete [] objString;
-    
+
     // do any unpacking or other set-up
     error = ob->Prepare();
     
-    if (error != nsInstall::SUCCESS) 
-        return error;
-    
-    
-    // Add to installation list if we haven't thrown out
-    
-    mInstalledFiles->Add( ob );
+    if (error == nsInstall::SUCCESS) 
+    {
+        // Add to installation list
+        mInstalledFiles->Add( ob );
 
-    // turn on flags for creating the uninstall node and
-    // the package node for each InstallObject
+        // turn on flags for creating the uninstall node and
+        // the package node for each InstallObject
+
+        if (ob->CanUninstall())
+            mUninstallPackage = PR_TRUE;
+
+        if (ob->RegisterPackageNode())
+            mRegisterPackage = PR_TRUE;
+    }
+    else if ( mNotifier )
+    {
+        // error in preparation step -- log it
+        char* errprefix = PR_smprintf("ERROR (%d): ",error);
+        nsString errstr = errprefix;
+        errstr += objString;
+
+        mNotifier->LogComment( errstr.GetUnicode() );
+
+        PR_smprintf_free(errprefix);
+    }
+
+    if (objString)
+        delete [] objString;
     
-    if (ob->CanUninstall())
-        mUninstallPackage = PR_TRUE;
-	
-    if (ob->RegisterPackageNode())
-        mRegisterPackage = PR_TRUE;
-  
-  return nsInstall::SUCCESS;
+    return error;
 }
 
 
@@ -1437,8 +1731,7 @@ nsInstall::SanityCheck(void)
 
     if (mUserCancelled) 
     {
-        AbortInstall();
-        SaveError(USER_CANCELLED);
+        InternalAbort(USER_CANCELLED);
         return USER_CANCELLED;
     }
 	
@@ -1539,7 +1832,6 @@ void
 nsInstall::CurrentUserNode(nsString& userRegNode)
 {    
     char *profname;
-    int len = MAXREGNAMELEN;
     nsIPref * prefs;
     
     nsresult rv = nsServiceManager::GetService(kPrefsCID, 
@@ -1622,7 +1914,8 @@ nsInstall::CleanUp(void)
         for (; i < mInstalledFiles->GetSize(); i++) 
         {
             ie = (nsInstallObject*)mInstalledFiles->Get(i);
-            delete (ie);
+            if (ie)
+                delete (ie);
         }
 
         mInstalledFiles->RemoveAll();
@@ -1632,7 +1925,7 @@ nsInstall::CleanUp(void)
 
     if (mPatchList)
     {
-        // do I need to delete every entry?
+        // XXX do I need to delete every entry?
         delete mPatchList;
     }
     
@@ -1665,21 +1958,27 @@ nsInstall::SetInstallArguments(const nsString& args)
 }
 
 
+void nsInstall::GetInstallURL(nsString& url)        { url = mInstallURL; }
+void nsInstall::SetInstallURL(const nsString& url)  { mInstallURL = url; }
+
+
 
 PRInt32 
 nsInstall::OpenJARFile(void)
 {    
-    
-    PRInt32 result = ZIP_OpenArchive(nsAutoCString(mJarFileLocation),  &mJarFileData);
-    
+    PRInt32 result;
+
+    nsresult rv = mJarFileData->Open( nsAutoCString(mJarFileLocation), &result );
+    if (NS_FAILED(rv))
+        return UNEXPECTED_ERROR;
+
     return result;
 }
 
 void
 nsInstall::CloseJARFile(void)
 {
-    ZIP_CloseArchive(&mJarFileData);
-    mJarFileData = nsnull;
+    NS_IF_RELEASE(mJarFileData);
 }
 
 
@@ -1693,43 +1992,86 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsFileSpec* aSuggestedNa
     PRInt32 result;
     nsFileSpec *extractHereSpec;
 
-    nsSpecialSystemDirectory tempFile(nsSpecialSystemDirectory::OS_TemporaryDirectory);
-        
-    if (aSuggestedName == nsnull || aSuggestedName->Exists() )
+    if (aSuggestedName == nsnull)
     {
-        nsString tempfileName = "xpinstall";
-         
-        // Get the extention of the file in the jar.
-        
-        PRInt32 result = aJarfile.RFind(".");
+        nsSpecialSystemDirectory tempFile(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+        nsString tempFileName = "xpinstall";
+
+        // Get the extension of the file in the JAR
+        result = aJarfile.RFindChar('.');
         if (result != -1)
-        {            
-            // We found an extention.  Add it to the tempfileName string
-            nsString extention;
-            aJarfile.Right(extention, (aJarfile.Length() - result) );        
-            tempfileName += extention;
+        {
+            // We found the extension; add it to the tempFileName string
+            nsString extension;
+            aJarfile.Right(extension, (aJarfile.Length() - result) );
+            tempFileName += extension;
         }
-         
-        tempFile += tempfileName;
-         
-        // Create a temporary file to extract to.
+
+        tempFile += tempFileName;
+
+        // Create a temporary file to extract to
         tempFile.MakeUnique();
-        
+
         extractHereSpec = new nsFileSpec(tempFile);
+
+        if (extractHereSpec == nsnull)
+            return nsInstall::OUT_OF_MEMORY;
     }
     else
     {
         // extract to the final destination.
         extractHereSpec = new nsFileSpec(*aSuggestedName);
+        if (extractHereSpec == nsnull)
+            return nsInstall::OUT_OF_MEMORY;
+
+        extractHereSpec->MakeUnique();
     }
 
     // We will overwrite what is in the way.  is this something that we want to do?  
     extractHereSpec->Delete(PR_FALSE);
 
-    result  = ZIP_ExtractFile( mJarFileData, nsAutoCString(aJarfile), nsNSPRPath( *extractHereSpec ) );
-    
+    nsresult rv = mJarFileData->Extract( nsAutoCString(aJarfile), nsNSPRPath( *extractHereSpec ), &result );
+    if (NS_FAILED(rv))
+    {
+        if (extractHereSpec != nsnull)
+            delete extractHereSpec;
+        return EXTRACTION_FAILED;
+    }
+
     if (result == 0)
     {
+    
+#ifdef XP_MAC
+		FSSpec finalSpec, extractedSpec = extractHereSpec->GetFSSpec();
+		
+		if ( nsAppleSingleDecoder::IsAppleSingleFile(&extractedSpec) )
+		{
+			nsAppleSingleDecoder *asd = new nsAppleSingleDecoder(&extractedSpec, &finalSpec);
+		
+			OSErr decodeErr = asd->Decode();
+		
+			if (decodeErr != noErr)
+			{			
+				if (extractHereSpec)
+					delete extractHereSpec;
+				if (asd)
+					delete asd;
+				return EXTRACTION_FAILED;
+			}
+		
+			if ( !(extractedSpec.vRefNum == finalSpec.vRefNum) ||
+				 !(extractedSpec.parID   == finalSpec.parID)   ||
+				 !(nsAppleSingleDecoder::PLstrcmp(extractedSpec.name, finalSpec.name)) )
+			{
+				// delete the unique extracted file that got renamed in AS decoding
+				FSpDelete(&extractedSpec);
+				
+				// "real name" in AppleSingle entry may cause file rename
+				*extractHereSpec = finalSpec;
+			}
+		}		
+#endif
+
         *aRealName = extractHereSpec;
     }
     else
@@ -1744,38 +2086,56 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsFileSpec* aSuggestedNa
 PRInt32 
 nsInstall::ExtractDirEntries(const nsString& directory, nsVector *paths)
 {
-    PRInt32 err;
-    char    buf[512];  // XXX: need an XP "max path"
+    char                *buf;
+    nsISimpleEnumerator *jarEnum = nsnull;
+    nsIJARItem          *currJARItem = nsnull;
 
     if ( paths )
     {
         nsString pattern(directory);
-        pattern += "/?*";
+        pattern += "/*";
+        PRInt32 prefix_length = directory.Length()+1; // account for slash
 
-        void* find = ZIP_FindInit( mJarFileData, nsAutoCString(pattern) );
+        nsresult rv = mJarFileData->Find( nsAutoCString(pattern), &jarEnum );
+        if (NS_FAILED(rv) || !jarEnum)
+            goto handle_err;
 
-        if ( find ) 
+        PRBool bMore;
+        rv = jarEnum->HasMoreElements(&bMore);
+        while (bMore && NS_SUCCEEDED(rv))
         {
-            PRInt32 prefix_length = directory.Length();
-            if ( prefix_length >= sizeof(buf)-1 )
-                return UNEXPECTED_ERROR;
-
-            err = ZIP_FindNext( find, buf, sizeof(buf) );
-            while ( err == ZIP_OK ) 
+            rv = jarEnum->GetNext( (nsISupports**) &currJARItem );
+            if (currJARItem)
             {
-                paths->Add(new nsString(buf+prefix_length));
-                err = ZIP_FindNext( find, buf, sizeof(buf) );
-            }
-            ZIP_FindFree( find );
-        }
-        else
-            err = ZIP_ERR_GENERAL;
+                // expensive 'buf' callee malloc per iteration!
+                rv = currJARItem->GetName(&buf);
+                if (NS_FAILED(rv)) 
+                    goto handle_err;
+                if (buf)
+                {
+                    PRInt32 namelen = PL_strlen(buf);
+                    NS_ASSERTION( prefix_length <= namelen, "Match must be longer than pattern!" );
 
-        if ( err == ZIP_ERR_FNF )
-            return SUCCESS;   // found them all
+                    if ( buf[namelen-1] != '/' ) 
+                    {
+                        paths->Add( new nsString(buf+prefix_length) ); // XXX manipulation should be in caller
+                    }
+
+                    PR_FREEIF( buf );
+                }
+                NS_IF_RELEASE(currJARItem);
+            }
+            rv = jarEnum->HasMoreElements(&bMore);
+        }
     }
 
-    return UNEXPECTED_ERROR;
+    NS_IF_RELEASE(jarEnum);
+    return SUCCESS;
+
+handle_err:    
+    NS_IF_RELEASE(jarEnum);                         
+    NS_IF_RELEASE(currJARItem); 
+    return EXTRACTION_FAILED;
 }
 
 void

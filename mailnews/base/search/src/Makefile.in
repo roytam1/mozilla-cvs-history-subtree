@@ -22,8 +22,8 @@ srcdir		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE = msgsearch
-LIBRARY_NAME=search_s
+MODULE=msgsearch
+LIBRARY_NAME=msgsearch_s
 
 EXPORTS = nsMsgFilterService.h \
 	$(NULL)
@@ -36,16 +36,6 @@ CPPSRCS = \
 	nsMsgBodyHandler.cpp\
 	nsMsgLocalSearch.cpp\
 	nsMsgSearchAdapter.cpp\
-	$(NULL)
-
-EXTRA_DSO_LDOPTS = \
-	-L$(DIST)/bin	\
-	-L$(DIST)/lib	\
-	$(NSPR_LIBS)	\
-	-lxpcom		\
-	-lreg		\
-	-lmork		\
-	-lmsgbaseutil	\
 	$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.

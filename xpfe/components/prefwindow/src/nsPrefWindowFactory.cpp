@@ -89,7 +89,6 @@ nsresult nsPrefWindowFactory::CreateInstance(
 {  
 	if (aResult == nsnull)  
 		return NS_ERROR_NULL_POINTER;  
-	nsresult rv = NS_OK;
 	*aResult = nsnull;  
   
 //	if (!mClassID.Equals(nsPrefWindow::GetCID())) 
@@ -150,7 +149,7 @@ extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* /*aServMgr*/, const ch
 	if (NS_FAILED(rv))
 		return rv;
 #ifdef NS_DEBUG
-	printf("Who me? You want to register me? The PrefsWindow? Gosh!\n");
+	printf("Registering the PrefsWindow\n");
 #endif
 	rv = compMgr->RegisterComponent(
 		nsPrefWindow::GetCID(),

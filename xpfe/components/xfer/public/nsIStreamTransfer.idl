@@ -17,11 +17,13 @@
  */
 
 #include "nsIAppShellComponent.idl"
+#include "domstubs.idl"
 
-[ptr] native nsIURL( nsIURL );
+[ptr] native nsIURI( nsIURI );
 
 %{C++
-class nsIURL;
+class nsIURI;
+class nsIDOMWindow;
 %}
 
 /*----------------------------- nsIStreamTransfer ------------------------------
@@ -41,7 +43,7 @@ class nsIURL;
 | stream transfer is completed.  The result generally indicates only whether   |
 | or not the stream transfer was successfully initiated.                       |
 ------------------------------------------------------------------------------*/
-[scriptable, uuid(a6cf90f0-15b3-11d2-932e-00805f8add32)]
+[uuid(a6cf90f0-15b3-11d2-932e-00805f8add32)]
 interface nsIStreamTransfer : nsIAppShellComponent {
 
     /*-------------------- SelectFileAndTransferLocation -----------------------
@@ -49,7 +51,8 @@ interface nsIStreamTransfer : nsIAppShellComponent {
     | the argument URL as source to that file, while showing a progress        |
     | dialog.                                                                  |
     --------------------------------------------------------------------------*/
-    void SelectFileAndTransferLocation( in nsIURL aURL );
+    void SelectFileAndTransferLocation( in nsIURI aURL, in nsIDOMWindow parent );
+    void SelectFileAndTransferLocationSpec( in string aURL, in nsIDOMWindow parent );
 };
 
 
@@ -57,5 +60,6 @@ interface nsIStreamTransfer : nsIAppShellComponent {
 #define NS_ISTREAMTRANSFER_PROGID NS_IAPPSHELLCOMPONENT_PROGID "/xfer"
 #define NS_ISTREAMTRANSFER_CLASSNAME "Mozilla Stream Transfer Component"
 #define NS_DECL_ISTREAMTRANSFER \
-    NS_IMETHOD SelectFileAndTransferLocation( nsIURL *aURL );
+    NS_IMETHOD SelectFileAndTransferLocation( nsIURI*, nsIDOMWindow* ); \
+    NS_IMETHOD SelectFileAndTransferLocationSpec( char const*, nsIDOMWindow* );
 %}

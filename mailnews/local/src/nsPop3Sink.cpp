@@ -168,7 +168,7 @@ nsPop3Sink::EndMailDelivery()
 	{
 		if (m_outFileStream)
 			m_outFileStream->flush();	// try this.
-		m_newMailParser->OnStopBinding(nsnull, NS_OK, nsnull);
+		m_newMailParser->OnStopRequest(nsnull, nsnull, NS_OK, nsnull);
 		delete m_newMailParser;
 		m_newMailParser = NULL;
 	}
@@ -200,7 +200,7 @@ nsPop3Sink::AbortMailDelivery()
 
 nsresult
 nsPop3Sink::IncorporateBegin(const char* uidlString,
-                             nsIURL* aURL,
+                             nsIURI* aURL,
                              PRUint32 flags,
                              void** closure)
 {

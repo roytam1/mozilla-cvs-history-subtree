@@ -21,6 +21,8 @@
 
 #include "nsIMsgMailSession.h"
 #include "nsISupports.h"
+#include "nsCOMPtr.h"
+#include "nsIMsgStatusFeedback.h"
 
 ///////////////////////////////////////////////////////////////////////////////////
 // The mail session is a replacement for the old 4.x MSG_Master object. It contains
@@ -32,6 +34,8 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 #include "nsIMsgAccountManager.h"
+
+class nsIMsgFolderCache;
 
 class nsMsgMailSession : public nsIMsgMailSession
 {
@@ -54,11 +58,25 @@ public:
 	NS_IMETHOD NotifyFolderItemAdded(nsIFolder *folder, nsISupports *item);
 	NS_IMETHOD NotifyFolderItemDeleted(nsIFolder *folder, nsISupports *item);
 
-  
+	NS_IMETHOD GetFolderCache(nsIMsgFolderCache **aFolderCache);
+
+	NS_IMETHOD SetTemporaryMsgStatusFeedback(nsIMsgStatusFeedback *aMsgStatusFeedback);
+	NS_IMETHOD GetTemporaryMsgStatusFeedback(nsIMsgStatusFeedback **aMsgStatusFeedback);
+	nsresult Init();
 protected:
   nsIMsgAccountManager *m_accountManager;
+  nsIMsgFolderCache		*m_msgFolderCache;
 	nsVoidArray *mListeners; 
+	// stick this here temporarily
+	nsCOMPtr <nsIMsgStatusFeedback> m_temporaryMsgStatusFeedback;
 
 };
+
+NS_BEGIN_EXTERN_C
+
+nsresult
+NS_NewMsgMailSession(const nsIID& iid, void **result);
+
+NS_END_EXTERN_C
 
 #endif /* nsMsgMailSession_h__ */

@@ -39,15 +39,13 @@ private:
   
 public:
   
-  NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS_INHERITED
 
   nsMsgFolderDataSource(void);
   virtual ~nsMsgFolderDataSource (void);
-
+  virtual nsresult Init();
 
   // nsIRDFDataSource methods
-  NS_IMETHOD Init(const char* uri);
-
   NS_IMETHOD GetURI(char* *uri);
 
   NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -93,10 +91,10 @@ public:
 
   NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult);
 
-  NS_IMETHOD Flush();
-
   NS_IMETHOD GetAllCommands(nsIRDFResource* source,
                             nsIEnumerator/*<nsIRDFResource>*/** commands);
+  NS_IMETHOD GetAllCmds(nsIRDFResource* source,
+                            nsISimpleEnumerator/*<nsIRDFResource>*/** commands);
 
   NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
                               nsIRDFResource*   aCommand,
@@ -146,6 +144,9 @@ protected:
   nsresult DoDeleteFromFolder(nsIMsgFolder *folder,
 							  nsISupportsArray *arguments, nsITransactionManager *txnMgr);
 
+  nsresult DoCopyToFolder(nsIMsgFolder *dstFolder, nsISupportsArray *arguments,
+						  nsITransactionManager *txnMgr, PRBool isMove);
+
   nsresult DoNewFolder(nsIMsgFolder *folder,
 							  nsISupportsArray *arguments);
 
@@ -154,7 +155,7 @@ protected:
   nsresult DoFolderHasAssertion(nsIMsgFolder *folder, nsIRDFResource *property, nsIRDFNode *target,
 													 PRBool tv, PRBool *hasAssertion);
 
-	nsresult GetBiffStateString(PRUint32 biffState, nsString& biffStateStr);
+	nsresult GetBiffStateString(PRUint32 biffState, nsCAutoString & biffStateStr);
 
   static nsIRDFResource* kNC_Child;
   static nsIRDFResource* kNC_MessageChild;
@@ -172,5 +173,14 @@ protected:
   static nsIRDFResource* kNC_Delete;
   static nsIRDFResource* kNC_NewFolder;
   static nsIRDFResource* kNC_GetNewMessages;
+  static nsIRDFResource* kNC_Copy;
+  static nsIRDFResource* kNC_Move;
+  static nsIRDFResource* kNC_MarkAllMessagesRead;
+  static nsIRDFResource* kNC_Compact;
+  static nsIRDFResource* kNC_Rename;
+  static nsIRDFResource* kNC_EmptyTrash;
 
 };
+
+PR_EXTERN(nsresult)
+NS_NewMsgFolderDataSource(const nsIID& iid, void **result);

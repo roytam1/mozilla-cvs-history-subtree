@@ -25,9 +25,14 @@
 #include "nscore.h"
 #include "nsAutoLock.h"
 #include "prlog.h"
+
 #ifdef XP_MAC
 #include <Types.h>
 #include <Memory.h>
+#endif
+
+#if defined(XP_BEOS)
+#include <OS.h>
 #endif
 
 /*******************************************************************************
@@ -47,7 +52,7 @@
 #endif
 
 #define NS_PAGEMGR_MIN_PAGES            32      // XXX bogus -- this should be a runtime parameter
-#define NS_PAGEMGR_MAX_PAGES            32767   // XXX bogus -- this should be a runtime parameter
+#define NS_PAGEMGR_MAX_PAGES            2560    // 10 meg    XXX bogus -- this should be a runtime parameter
 
 /******************************************************************************/
 
@@ -182,6 +187,15 @@ class nsPageMgr : public nsIPageManager, public nsIAllocator {
     nsSegmentDesc*      mSegTable;
     PRWord              mSegTableCount;
 #endif
+
+#if defined(XP_BEOS)
+	area_id				mAid;
+#endif
+
+#if (! defined(VMS)) && (! defined(XP_BEOS)) && (! defined(XP_MAC)) && (! defined(XP_PC))
+    int mZero_fd;
+#endif
+
 };
 
 /******************************************************************************/

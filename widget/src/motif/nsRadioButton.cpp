@@ -16,15 +16,13 @@
  * Reserved.
  */
 
-#include "nsRadioButton.h"
-#include "nsColor.h"
-#include "nsGUIEvent.h"
-#include "nsString.h"
-#include "nsStringUtil.h"
-
-#include "nsXtEventHandler.h"
 #include <Xm/ToggleB.h>
 #include <Xm/RowColumn.h>
+
+#include "nsRadioButton.h"
+#include "nsString.h"
+
+#include "nsXtEventHandler.h"
 
 NS_IMPL_ADDREF(nsRadioButton)
 NS_IMPL_RELEASE(nsRadioButton)
@@ -202,7 +200,6 @@ void nsRadioButton::DisArmed()
 //-------------------------------------------------------------------------
 NS_METHOD nsRadioButton::SetState(const PRBool aState) 
 {
-  int state = aState;
   if (mIsArmed) {
     mNewValue    = aState;
     mValueWasSet = PR_TRUE;

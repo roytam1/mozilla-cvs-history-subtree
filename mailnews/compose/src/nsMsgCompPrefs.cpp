@@ -20,52 +20,24 @@
 #include "nsIMsgIdentity.h"
 #include "nsMsgCompPrefs.h"
 #include "nsMsgBaseCID.h"
+#include "nsIPref.h"
 
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
 nsMsgCompPrefs::nsMsgCompPrefs()
 {
 	nsresult res;
 
-	m_organization = nsnull;
-	m_userFullName = nsnull;
-	m_userEmail = nsnull;
-	m_replyTo = nsnull;
-	m_useHTML = PR_TRUE;
 	m_wrapColumn = 72;
 
-	// get the current identity from the mail session....
-	NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &res); 
-	if (NS_SUCCEEDED(res) && mailSession)
-	{
-		nsCOMPtr<nsIMsgIdentity> identity;
-		res = mailSession->GetCurrentIdentity(getter_AddRefs(identity));
-		if (NS_SUCCEEDED(res) && identity)
-		{
-			char * aString = nsnull;
-
-			identity->GetOrganization(&m_organization);
-
-			identity->GetFullName(&m_userFullName);
-				
-			identity->GetEmail(&m_userEmail);
-
-			identity->GetReplyTo(&m_replyTo);
-
-			identity->GetUseHtml(&m_useHTML);
-			identity->GetWrapColumn(&m_wrapColumn);
-		}
-		else
-			NS_ASSERTION(0, "no current identity found for this user (a)....");
-	}
-	else
-		NS_ASSERTION(0, "no current identity found for this user (b)....");
+  NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &res); 
+  if (NS_SUCCEEDED(res) && prefs) 
+    {
+      res = prefs->GetIntPref("mail.wraplength", &m_wrapColumn);
+    }
 }
 
 nsMsgCompPrefs::~nsMsgCompPrefs()
 {
-	PR_FREEIF(m_organization);
-	PR_FREEIF(m_userFullName);
-	PR_FREEIF(m_userEmail);
-	PR_FREEIF(m_replyTo);
 }

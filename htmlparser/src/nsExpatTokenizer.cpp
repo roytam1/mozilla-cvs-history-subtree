@@ -30,10 +30,14 @@
 #include "nsIParser.h"
 #include "prlog.h"
 
-#ifdef EXTERNAL_ENTITY_SUPPORT
+#include "prmem.h"
+#include "nsIUnicharInputStream.h"
+#ifdef NECKO
+#include "nsNeckoUtil.h"
+#else
 #include "nsINetService.h"
-#include "nsIServiceManager.h"
 #endif
+#include "nsIServiceManager.h"
 
  /************************************************************************
   And now for the main class -- nsExpatTokenizer...
@@ -43,10 +47,17 @@ static NS_DEFINE_IID(kISupportsIID,       NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kITokenizerIID,      NS_ITOKENIZER_IID);
 static NS_DEFINE_IID(kHTMLTokenizerIID,   NS_HTMLTOKENIZER_IID);
 static NS_DEFINE_IID(kClassIID,           NS_EXPATTOKENIZER_IID);
+#ifndef NECKO
+static NS_DEFINE_IID(kNetServiceCID,      NS_NETSERVICE_CID);
+static NS_DEFINE_IID(kINetServiceIID,     NS_INETSERVICE_IID);
+#endif
+
 
 static CTokenRecycler* gTokenRecycler=0;
 static nsDeque* gTokenDeque=0;
 static XML_Parser gExpatParser=0;
+static const char* kXMLDeclPrefix = "<?xml";
+static const char* kDocTypeDeclPrefix = "<!DOCTYPE";
 
 /**
  *  This method gets called as part of our COM-like interfaces.
@@ -106,7 +117,7 @@ NS_IMPL_ADDREF(nsExpatTokenizer)
 NS_IMPL_RELEASE(nsExpatTokenizer)
 
 /**
- * Sets up the callbacks for the expat parser      
+ * Sets up the callbacks for the expat parser
  * @update  nra 2/24/99
  * @param   none
  * @return  none
@@ -116,14 +127,13 @@ void nsExpatTokenizer::SetupExpatCallbacks(void) {
     XML_SetElementHandler(mExpatParser, HandleStartElement, HandleEndElement);    
     XML_SetCharacterDataHandler(mExpatParser, HandleCharacterData);
     XML_SetProcessingInstructionHandler(mExpatParser, HandleProcessingInstruction);
-    XML_SetDefaultHandler(mExpatParser, nsnull);
+    XML_SetDefaultHandlerExpand(mExpatParser, NULL);
     XML_SetUnparsedEntityDeclHandler(mExpatParser, HandleUnparsedEntityDecl);
     XML_SetNotationDeclHandler(mExpatParser, HandleNotationDecl);
     XML_SetExternalEntityRefHandler(mExpatParser, HandleExternalEntityRef);
-#ifdef EXTERNAL_ENTITY_SUPPORT
-    XML_SetExternalDTDLoader(mExpatParser, LoadExternalDTD);
-#endif
-    XML_SetUnknownEncodingHandler(mExpatParser, HandleUnknownEncoding, NULL);    
+    XML_SetCommentHandler(mExpatParser, HandleComment);
+    XML_SetUnknownEncodingHandler(mExpatParser, HandleUnknownEncoding, NULL);
+    XML_SetDoctypeDeclHandler(mExpatParser, HandleStartDoctypeDecl, HandleEndDoctypeDecl);
   }
 }
 
@@ -135,14 +145,18 @@ void nsExpatTokenizer::SetupExpatCallbacks(void) {
  *  @param   
  *  @return  
  */
-nsExpatTokenizer::nsExpatTokenizer() : nsHTMLTokenizer() {  
+nsExpatTokenizer::nsExpatTokenizer(nsString* aURL) : nsHTMLTokenizer() {  
   NS_INIT_REFCNT();
   mBytesParsed = 0;
-  mSeenError = PR_FALSE;
   nsAutoString buffer("UTF-16");
   const PRUnichar* encoding = buffer.GetUnicode();
   if (encoding) {
     mExpatParser = XML_ParserCreate((const XML_Char*) encoding);
+#ifdef XML_DTD
+    XML_SetParamEntityParsing(mExpatParser, XML_PARAM_ENTITY_PARSING_ALWAYS);
+#endif
+    if (aURL)
+      XML_SetBase(mExpatParser, (const XML_Char*) aURL->GetUnicode());
     gTokenRecycler=(CTokenRecycler*)GetTokenRecycler();
     if (mExpatParser) {
       SetupExpatCallbacks();
@@ -158,7 +172,7 @@ nsExpatTokenizer::nsExpatTokenizer() : nsHTMLTokenizer() {
  *  @return  
  */
 nsExpatTokenizer::~nsExpatTokenizer(){
-  if (mExpatParser) {
+  if (mExpatParser) {    
     XML_ParserFree(mExpatParser);
     mExpatParser = nsnull;
   }
@@ -169,20 +183,27 @@ nsExpatTokenizer::~nsExpatTokenizer(){
   Here begins the real working methods for the tokenizer.
  *******************************************************************/
 
-
-void nsExpatTokenizer::SetErrorContextInfo(nsParserError* aError, PRUint32 aByteIndex, 
-                                const char* aSourceBuffer, PRUint32 aLength)
+/* 
+ * Parameters:
+ * 
+ * aSourceBuffer (in): String buffer.
+ * aLength (in): Length of input buffer.
+ * aOffset (in): Offset in buffer
+ * aLine (out): Line on which the character, aSourceBuffer[aOffset], is located.
+ */
+void nsExpatTokenizer::GetLine(const char* aSourceBuffer, PRUint32 aLength, 
+                                PRUint32 aOffset, nsString& aLine)
 {
-  /* Figure out the substring inside aSourceBuffer that contains the line on which the error
-     occurred.  Copy the line into aError->sourceLine */
-  PR_ASSERT(aByteIndex > 0 && aByteIndex < aLength);
+  /* Figure out the line inside aSourceBuffer that contains character specified by aOffset.
+     Copy it into aLine. */
+  PR_ASSERT(aOffset > 0 && aOffset < aLength);
   /* Assert that the byteIndex and the length of the buffer is even */
-  PR_ASSERT(aByteIndex % 2 == 0 && aLength % 2 == 0);  
-  PRUnichar* start = (PRUnichar* ) &aSourceBuffer[aByteIndex];  /* Will try to find the start of the line */
-  PRUnichar* end = (PRUnichar* ) &aSourceBuffer[aByteIndex];    /* Will try to find the end of the line */
-  PRUint32 startIndex = aByteIndex / 2;          /* Track the position of the 'start' pointer into the buffer */
-  PRUint32 endIndex = aByteIndex / 2;          /* Track the position of the 'end' pointer into the buffer */
-  PRUint32 numCharsInBuffer = aLength / 2;
+  PR_ASSERT(aOffset % 2 == 0 && aLength % 2 == 0);  
+  PRUnichar* start = (PRUnichar* ) &aSourceBuffer[aOffset];  /* Will try to find the start of the line */
+  PRUnichar* end = (PRUnichar* ) &aSourceBuffer[aOffset];    /* Will try to find the end of the line */
+  PRUint32 startIndex = aOffset / sizeof(PRUnichar);          /* Track the position of the 'start' pointer into the buffer */
+  PRUint32 endIndex = aOffset / sizeof(PRUnichar);          /* Track the position of the 'end' pointer into the buffer */
+  PRUint32 numCharsInBuffer = aLength / sizeof(PRUnichar);
   PRBool reachedStart;
   PRBool reachedEnd;
   
@@ -204,12 +225,13 @@ void nsExpatTokenizer::SetErrorContextInfo(nsParserError* aError, PRUint32 aByte
     }
   }
 
+  aLine.Truncate(0);
   if (startIndex == endIndex) {
     /* Special case if the error is on a line where the only character is a newline */
-    aError->sourceLine.Append("");
+    aLine.Append("");
   }
   else {
-    PR_ASSERT(endIndex - startIndex >= 2);
+    PR_ASSERT(endIndex - startIndex >= sizeof(PRUnichar));
     /* At this point, there are two cases.  Either the error is on the first line or
        on subsequent lines.  If the error is on the first line, startIndex will decrement
        all the way to zero.  If not, startIndex will decrement to the position of the
@@ -222,7 +244,7 @@ void nsExpatTokenizer::SetErrorContextInfo(nsParserError* aError, PRUint32 aByte
     /* At this point, the substring starting at startPosn and ending at (endIndex - 1),
        is the line on which the error occurred. Copy that substring into the error structure. */
     const PRUnichar* unicodeBuffer = (const PRUnichar*) aSourceBuffer;
-    aError->sourceLine.Append(&unicodeBuffer[startPosn], endIndex - startPosn);
+    aLine.Append(&unicodeBuffer[startPosn], endIndex - startPosn);
   }
 }
 
@@ -231,19 +253,25 @@ void nsExpatTokenizer::SetErrorContextInfo(nsParserError* aError, PRUint32 aByte
  * an error token and pushes it onto the token queue.
  *
  */
-void nsExpatTokenizer::PushXMLErrorToken(const char *aBuffer, PRUint32 aLength)
+void nsExpatTokenizer::PushXMLErrorToken(const char *aBuffer, PRUint32 aLength, PRBool aIsFinal)
 {
   CErrorToken* token= (CErrorToken *) gTokenRecycler->CreateTokenOfType(eToken_error, eHTMLTag_unknown);
   nsParserError *error = new nsParserError;
-  PRUint32 byteIndexRelativeToFile = 0;
-
+  
   if(error){  
     error->code = XML_GetErrorCode(mExpatParser);
     error->lineNumber = XML_GetCurrentLineNumber(mExpatParser);
     error->colNumber = XML_GetCurrentColumnNumber(mExpatParser);  
     error->description = XML_ErrorString(error->code);
-    byteIndexRelativeToFile = XML_GetCurrentByteIndex(mExpatParser);  
-    SetErrorContextInfo(error, (byteIndexRelativeToFile - mBytesParsed), aBuffer, aLength);  
+    if (!aIsFinal) {
+      PRInt32 byteIndexRelativeToFile = 0;
+      byteIndexRelativeToFile = XML_GetCurrentByteIndex(mExpatParser);
+      GetLine(aBuffer, aLength, (byteIndexRelativeToFile - mBytesParsed), error->sourceLine);
+    }
+    else {
+      error->sourceLine.Append(mLastLine);
+    }
+
     token->SetError(error);
 
     CToken* theToken = (CToken* )token;
@@ -251,14 +279,20 @@ void nsExpatTokenizer::PushXMLErrorToken(const char *aBuffer, PRUint32 aLength)
   }
 }
 
-nsresult nsExpatTokenizer::ParseXMLBuffer(const char* aBuffer, PRUint32 aLength){
+nsresult nsExpatTokenizer::ParseXMLBuffer(const char* aBuffer, PRUint32 aLength, PRBool aIsFinal)
+{
   nsresult result=NS_OK;
-  if (mExpatParser) {    
-    if (!XML_Parse(mExpatParser, aBuffer, aLength, PR_FALSE)) {
-      PushXMLErrorToken(aBuffer, aLength);
+  PR_ASSERT((aBuffer && aLength) || (aBuffer == nsnull && aLength == 0));
+  if (mExpatParser) {
+    if (!XML_Parse(mExpatParser, aBuffer, aLength, aIsFinal)) {
+      PushXMLErrorToken(aBuffer, aLength, aIsFinal);
       result=NS_ERROR_HTMLPARSER_STOPPARSING;
     }
-	  mBytesParsed += aLength;
+    else if (aBuffer && aLength) {
+      // Cache the last line in the buffer
+      GetLine(aBuffer, aLength, aLength - sizeof(PRUnichar), mLastLine);
+    }
+	  mBytesParsed += aLength;    
   }
   else {
     result = NS_ERROR_FAILURE;
@@ -286,23 +320,26 @@ nsresult nsExpatTokenizer::ConsumeToken(nsScanner& aScanner) {
   // Ask the scanner to send us all the data it has
   // scanned and pass that data to expat.
   nsresult result = NS_OK;
-  nsString& theBuffer = aScanner.GetBuffer();
-  PRInt32 length = theBuffer.Length();
-  if(0 < length) {
-    const PRUnichar* expatBuffer = theBuffer.GetUnicode();
-    PRUint32 bufLength = theBuffer.Length() * 2;
-    if (expatBuffer) {
-      gTokenDeque=&mTokenDeque;
-      gExpatParser = mExpatParser;
-      result = ParseXMLBuffer((const char *)expatBuffer, bufLength);
-    }
-    theBuffer.Truncate(0);
-  }
+  nsString& theBuffer = aScanner.GetBuffer();  
+  PRUint32 bufLength = theBuffer.Length() * sizeof(PRUnichar);
+  const PRUnichar* expatBuffer = (bufLength) ? theBuffer.GetUnicode() : nsnull;
+  
+  gTokenDeque=&mTokenDeque;
+  gExpatParser = mExpatParser;
+
+  result = ParseXMLBuffer((const char *)expatBuffer, bufLength);
+    
+  theBuffer.Truncate(0);
+  
   if(NS_OK==result)
     result=aScanner.Eof();
   return result;
 }
 
+nsresult nsExpatTokenizer::DidTokenize(PRBool aIsFinalChunk)
+{
+  return ParseXMLBuffer(nsnull, 0, aIsFinalChunk);
+}
 
 /**
  * 
@@ -408,6 +445,18 @@ void nsExpatTokenizer::HandleCharacterData(void *userData, const XML_Char *s, in
   }  
 }
 
+void nsExpatTokenizer::HandleComment(void *userData, const XML_Char *name) {
+  CToken* theToken=gTokenRecycler->CreateTokenOfType(eToken_comment, eHTMLTag_unknown);
+  if(theToken) {
+    nsString& theString=theToken->GetStringValueXXX();
+    theString.SetString((PRUnichar *) name);
+    AddToken(theToken,NS_OK,*gTokenDeque,gTokenRecycler);
+  }
+  else{
+    //THROW A HUGE ERROR IF WE CANT CREATE A TOKEN!
+  }
+}
+
 void nsExpatTokenizer::HandleProcessingInstruction(void *userData, const XML_Char *target, const XML_Char *data){
   CToken* theToken=gTokenRecycler->CreateTokenOfType(eToken_instruction,eHTMLTag_unknown);
   if(theToken) {
@@ -427,7 +476,7 @@ void nsExpatTokenizer::HandleProcessingInstruction(void *userData, const XML_Cha
 }
 
 void nsExpatTokenizer::HandleDefault(void *userData, const XML_Char *s, int len) {
-//  NS_NOTYETIMPLEMENTED("Error: nsExpatTokenizer::HandleDefault() not yet implemented.");
+  NS_NOTYETIMPLEMENTED("Error: nsExpatTokenizer::HandleDefault() not yet implemented.");
 }
 
 void nsExpatTokenizer::HandleUnparsedEntityDecl(void *userData, 
@@ -437,6 +486,92 @@ void nsExpatTokenizer::HandleUnparsedEntityDecl(void *userData,
                                           const XML_Char *publicId,
                                           const XML_Char *notationName) {
   NS_NOTYETIMPLEMENTED("Error: nsExpatTokenizer::HandleUnparsedEntityDecl() not yet implemented.");
+}
+
+nsresult
+nsExpatTokenizer::OpenInputStream(const nsString& aURLStr, 
+                                  const nsString& aBaseURL, 
+                                  nsIInputStream** in, 
+                                  nsString* aAbsURL) 
+{
+  nsresult rv;
+#ifndef NECKO
+  nsINetService* pNetService = nsnull;
+
+  aAbsURL->Truncate(0);
+  rv = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID, (nsISupports**) &pNetService);
+  
+  if (NS_SUCCEEDED(rv)) {
+    nsIURI* contextURL = nsnull;
+    rv = pNetService->CreateURL(&contextURL, aBaseURL);
+    if (NS_SUCCEEDED(rv)) {
+      nsIURI* url = nsnull;
+      rv = pNetService->CreateURL(&url, aURLStr, contextURL);
+      if (NS_SUCCEEDED(rv)) {
+        rv = pNetService->OpenBlockingStream(url, nsnull, in);
+        const char* absURL = nsnull;
+        url->GetSpec(&absURL);
+        aAbsURL->Append(absURL);
+        NS_RELEASE(url);
+      }    
+      NS_RELEASE(contextURL);
+    }
+    NS_RELEASE(pNetService);
+  }
+#else // NECKO
+  nsIURI* uri;
+  nsIURI* baseURI;
+  
+  rv = NS_NewURI(&baseURI, aBaseURL);
+  if (NS_SUCCEEDED(rv)) {
+    rv = NS_NewURI(&uri, aURLStr, baseURI);
+    if (NS_SUCCEEDED(rv)) {
+      rv = NS_OpenURI(in, uri);
+      char* absURL = nsnull;
+      uri->GetSpec(&absURL);
+      aAbsURL->Append(absURL);
+      nsCRT::free(absURL);
+      NS_RELEASE(uri);
+    }
+    NS_RELEASE(baseURI);
+  }
+#endif // NECKO
+  return rv;
+}
+
+nsresult nsExpatTokenizer::LoadStream(nsIInputStream* in, 
+                                      PRUnichar*& uniBuf, 
+                                      PRUint32& retLen)
+{
+  // read it
+  PRUint32               aCount = 1024,
+                         bufsize = aCount*sizeof(PRUnichar);  
+  nsIUnicharInputStream *uniIn = nsnull;
+  nsString *utf8 = new nsString("UTF-8");
+
+  nsresult res = NS_NewConverterStream(&uniIn,
+                                       nsnull,
+                                       in,
+                                       aCount,
+                                       utf8);
+  if (NS_FAILED(res)) return res;
+
+  PRUint32 aReadCount = 0;
+  uniBuf = (PRUnichar *) PR_Malloc(bufsize);
+
+  while (NS_OK == (res=uniIn->Read(uniBuf, retLen, aCount, &aReadCount))) {
+    retLen += aReadCount;
+    if (((aReadCount+32) >= aCount) &&
+        ((retLen+aCount) >= bufsize)) {
+
+      bufsize += aCount;
+      uniBuf = (PRUnichar *) PR_Realloc(uniBuf, bufsize*sizeof(PRUnichar));
+    }
+  }/* while */
+  if (NS_BASE_STREAM_EOF == res)
+    res = NS_OK;
+  return res;
 }
 
 void nsExpatTokenizer::HandleNotationDecl(void *userData,
@@ -451,59 +586,49 @@ int nsExpatTokenizer::HandleExternalEntityRef(XML_Parser parser,
                                          const XML_Char *openEntityNames,
                                          const XML_Char *base,
                                          const XML_Char *systemId,
-                                         const XML_Char *publicId){
-  NS_NOTYETIMPLEMENTED("Error: nsExpatTokenizer::HandleExternalEntityRef() not yet implemented.");
-  int result=0;
+                                         const XML_Char *publicId)
+{
+  int result = 0;
+
+#ifdef XML_DTD
+  // Create a parser for parsing the external entity
+  nsAutoString encoding("UTF-16");  
+  XML_Parser entParser = nsnull;
+
+  entParser = XML_ExternalEntityParserCreate(parser, 
+                                   0, 
+                                   (const XML_Char*) encoding.GetUnicode());
+
+  // Load the external entity into a buffer
+  nsIInputStream *in = nsnull;
+  nsString urlSpec = (const PRUnichar*) systemId;
+  nsString baseURL = (const PRUnichar*) base;
+  nsString absURL;
+
+  nsresult rv = OpenInputStream(urlSpec, baseURL, &in, &absURL);
+
+  if (entParser && NS_SUCCEEDED(rv)) {
+    PRUint32 retLen = 0;
+    PRUnichar *uniBuf = nsnull;
+    rv = LoadStream(in, uniBuf, retLen);
+    NS_RELEASE(in);
+
+    // Pass the buffer to expat for parsing
+    if (NS_SUCCEEDED(rv)) {    
+      XML_SetBase(entParser, (const XML_Char*) absURL.GetUnicode());
+      result = XML_Parse(entParser, (char *)uniBuf,  retLen * sizeof(PRUnichar), 1);
+      XML_ParserFree(entParser);
+      PR_FREEIF(uniBuf);      
+    }
+  }
+#else /* ! XML_DTD */
+
+  NS_NOTYETIMPLEMENTED("Error: nsExpatTokenizer::HandleExternalEntityRef() not yet implemented.");  
+
+#endif /* XML_DTD */
+
   return result;
 }
-
-#ifdef EXTERNAL_ENTITY_SUPPORT
-static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
-static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
-
-int nsExpatTokenizer::LoadExternalDTD(const XML_Char * base, 
-                                      const XML_Char * systemId,
-                                      char ** data)
-{
-  // XXX free resources when not needed anymore & generally clean this code
-
-  nsINetService * netService = nsnull;
-  nsresult res = nsServiceManager::GetService(kNetServiceCID,
-    kINetServiceIID, (nsISupports**) &netService);
-  if (NS_FAILED(res)) {
-    return -1;
-  }
-
-  // XXX try to compose this using base url
-  nsIURL * url = nsnull;
-  nsString * s = new nsString((PRUnichar *)systemId);
-  res = netService->CreateURL(&url, *s);
-  if (NS_FAILED(res)) {
-    return -1;
-  }
-
-  nsIInputStream * in = nsnull;
-  res = netService->OpenBlockingStream(url, nsnull, &in);
-  if (NS_FAILED(res)) {
-    NS_RELEASE(url);
-    return -1;
-  }
-
-  // XXX yuck!
-  char * buff = (char *) malloc(1000);
-  PRUnichar * buff2 = (PRUnichar *) malloc(1000);
-  PRUint32 len = 0;
-  PRUint32 j;
-  res = in->Read(buff, 1000, &len);
-  for (j=0 ; j<len; j++) buff2[j] = (PRUnichar) buff[j];
-
-  NS_RELEASE(url);
-  NS_RELEASE(in);
-
-  *data = (char *)buff2;
-  return len*2;
-}
-#endif
 
 int nsExpatTokenizer::HandleUnknownEncoding(void *encodingHandlerData,
                                        const XML_Char *name,
@@ -513,3 +638,21 @@ int nsExpatTokenizer::HandleUnknownEncoding(void *encodingHandlerData,
   return result;
 }
 
+void nsExpatTokenizer::HandleStartDoctypeDecl(void *userData, 
+                                              const XML_Char *doctypeName)
+{  
+  CToken* token=gTokenRecycler->CreateTokenOfType(eToken_doctypeDecl,eHTMLTag_unknown);
+  if (token) {
+    nsString& str = token->GetStringValueXXX();
+    str.Append(kDocTypeDeclPrefix);
+    str.Append(" ");
+    str.Append((PRUnichar*) doctypeName);
+    str.Append(">");
+    AddToken(token,NS_OK,*gTokenDeque,gTokenRecycler);
+  }
+}
+
+void nsExpatTokenizer::HandleEndDoctypeDecl(void *userData)
+{
+  // Do nothing
+}

@@ -25,26 +25,8 @@ include $(topsrcdir)/config/config.mk
 include $(topsrcdir)/config/rules.mk
 
 EXPORT_RESOURCE_SAMPLES = \
-	$(srcdir)/appshell.html \
 	$(srcdir)/status.xul \
-	$(srcdir)/status.html \
 	$(srcdir)/toolbar.xml \
-	$(srcdir)/BrowserInitPage.html \
-	$(srcdir)/contentframe.css \
-	$(srcdir)/contentframe.html \
-	$(srcdir)/contentframe.js \
-	$(srcdir)/contentframe.xul \
-	$(srcdir)/sidebar.html \
-	$(srcdir)/xul.css \
-	$(srcdir)/dialogs.css \
-	$(srcdir)/navigator.css \
-	$(srcdir)/navigator.xul \
-	$(srcdir)/navigator.js \
-	$(srcdir)/unknownContent.xul \
-	$(srcdir)/viewSource.xul \
-	$(srcdir)/viewsource.js \
-	$(srcdir)/openLocation.xul \
-	$(srcdir)/openLocation.js \
 	$(srcdir)/downloadProgress.xul \
 	$(srcdir)/downloadProgress.css \
 	$(srcdir)/navigator-shiny.css \
@@ -53,16 +35,23 @@ EXPORT_RESOURCE_SAMPLES = \
 	$(srcdir)/navigator-test1.xul \
 	$(srcdir)/raindrops_light.gif \
 	$(srcdir)/skindemo.xul \
-	$(srcdir)/NetSupportUserPassword.xul \
-	$(srcdir)/NetSupportPrompt.xul \
-	$(srcdir)/NetSupportPassword.xul \
-	$(srcdir)/NetSupportAlert.xul \
-	$(srcdir)/NetSupportConfirm.xul \
-	$(srcdir)/NetSupportConfirmCheck.xul \
-	$(srcdir)/alertl.gif \
-	$(srcdir)/errorI.gif \
-	$(srcdir)/messagel.gif \
-	$(srcdir)/questionl.gif \
+	$(srcdir)/onerror.js \
+	$(srcdir)/DumpDOM.js \
+	$(srcdir)/lessCols.gif \
+	$(srcdir)/lessCols_mo.gif \
+	$(srcdir)/lessCols_dis.gif \
+	$(srcdir)/moreCols.gif \
+	$(srcdir)/moreCols_mo.gif \
+	$(srcdir)/moreCols_dis.gif \
+	$(srcdir)/scrollUp.gif \
+	$(srcdir)/scrollUp_mo.gif \
+	$(srcdir)/scrollUp_dis.gif \
+	$(srcdir)/scrollDown.gif \
+	$(srcdir)/scrollDown_mo.gif \
+	$(srcdir)/scrollDown_dis.gif \
+	$(srcdir)/scrollThumb.gif \
+	$(srcdir)/scrollThumb_mo.gif \
+	$(srcdir)/scrollThumb_dis.gif \
 	$(NULL)
 
 install:: 

@@ -17,65 +17,39 @@
  */
 
 #include "nsRadioControlFrame.h"
-#include "nsFormControlFrame.h"
-#include "nsIContent.h"
-#include "prtypes.h"
-#include "nsIFrame.h"
-#include "nsISupports.h"
-#include "nsIAtom.h"
-#include "nsIPresContext.h"
-#include "nsIHTMLContent.h"
-#include "nsHTMLIIDs.h"
 #include "nsIRadioButton.h"
+#include "nsNativeFormControlFrame.h"
 #include "nsWidgetsCID.h"
-#include "nsSize.h"
+#include "nsIContent.h"
 #include "nsHTMLAtoms.h"
-#include "nsIFormControl.h"
-#include "nsIFormManager.h"
-#include "nsIView.h"
-#include "nsIStyleContext.h"
-#include "nsStyleUtil.h"
 #include "nsFormFrame.h"
-#include "nsIDOMHTMLInputElement.h"
 #include "nsINameSpaceManager.h"
-#include "nsILookAndFeel.h"
-#include "nsIComponentManager.h"
+#include "nsFormFrame.h"
 
-static NS_DEFINE_IID(kIRadioIID, NS_IRADIOBUTTON_IID);
-static NS_DEFINE_IID(kIFormControlIID, NS_IFORMCONTROL_IID);
-static NS_DEFINE_IID(kIDOMHTMLInputElementIID, NS_IDOMHTMLINPUTELEMENT_IID);
-static NS_DEFINE_IID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
-static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 
-#define NS_DEFAULT_RADIOBOX_SIZE  12
+static NS_DEFINE_IID(kIRadioControlFrameIID,  NS_IRADIOCONTROLFRAME_IID);
 
 
 nsresult
-NS_NewRadioControlFrame(nsIFrame** aNewFrame)
+nsRadioControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-  NS_PRECONDITION(aNewFrame, "null OUT ptr");
-  if (nsnull == aNewFrame) {
+  NS_PRECONDITION(0 != aInstancePtr, "null ptr");
+  if (NULL == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
-  nsRadioControlFrame* it = new nsRadioControlFrame;
-  if (!it) {
-    return NS_ERROR_OUT_OF_MEMORY;
+  if (aIID.Equals(kIRadioControlFrameIID)) {
+    *aInstancePtr = (void*) ((nsIRadioControlFrame*) this);
+    return NS_OK;
   }
-  *aNewFrame = it;
-  return NS_OK;
+ 
+  return Inherited::QueryInterface(aIID, aInstancePtr);
 }
-
-nsRadioControlFrame::nsRadioControlFrame()
-{
-   // Initialize GFX-rendered state
-  mChecked = PR_FALSE;
-}
-
 
 
 const nsIID&
 nsRadioControlFrame::GetIID()
 {
+	static NS_DEFINE_IID(kIRadioIID, NS_IRADIOBUTTON_IID);
   return kIRadioIID;
 }
   
@@ -86,48 +60,6 @@ nsRadioControlFrame::GetCID()
   return kRadioCID;
 }
 
-nscoord 
-nsRadioControlFrame::GetRadioboxSize(float aPixToTwip) const
-{
-  nsILookAndFeel * lookAndFeel;
-  PRInt32 radioboxSize = 0;
-  if (NS_OK == nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, kILookAndFeelIID, (void**)&lookAndFeel)) {
-   lookAndFeel->GetMetric(nsILookAndFeel::eMetric_RadioboxSize,  radioboxSize);
-   NS_RELEASE(lookAndFeel);
-  }
- if (radioboxSize == 0)
-   radioboxSize = NS_DEFAULT_RADIOBOX_SIZE;
-  return NSIntPixelsToTwips(radioboxSize, aPixToTwip);
-}
-
-void 
-nsRadioControlFrame::GetDesiredSize(nsIPresContext*        aPresContext,
-                                  const nsHTMLReflowState& aReflowState,
-                                  nsHTMLReflowMetrics&     aDesiredLayoutSize,
-                                  nsSize&                  aDesiredWidgetSize)
-{
-
-  nsWidgetRendering mode;
-  aPresContext->GetWidgetRenderingMode(&mode);
-  if (eWidgetRendering_Gfx == mode) {
-    nsFormControlFrame::GetDesiredSize(aPresContext,aReflowState,aDesiredLayoutSize,
-                                    aDesiredWidgetSize);
-  } else {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    aDesiredWidgetSize.width  = GetRadioboxSize(p2t);
-    aDesiredWidgetSize.height = aDesiredWidgetSize.width;
-
-    aDesiredLayoutSize.width  = aDesiredWidgetSize.width;
-    aDesiredLayoutSize.height = aDesiredWidgetSize.height;
-    aDesiredLayoutSize.ascent = aDesiredLayoutSize.height;
-    aDesiredLayoutSize.descent = 0;
-    if (aDesiredLayoutSize.maxElementSize) {
-      aDesiredLayoutSize.maxElementSize->width  = aDesiredLayoutSize.width;
-      aDesiredLayoutSize.maxElementSize->height = aDesiredLayoutSize.height;
-    }
-  }
-}
 
 void 
 nsRadioControlFrame::PostCreateWidget(nsIPresContext* aPresContext, nscoord& aWidth, nscoord& aHeight)
@@ -141,52 +73,6 @@ nsRadioControlFrame::PostCreateWidget(nsIPresContext* aPresContext, nscoord& aWi
     else
       SetRadioControlFrameState(NS_STRING_FALSE);
   }
-
-  if (mWidget != nsnull) {
-    const nsStyleColor* color =
-    nsStyleUtil::FindNonTransparentBackground(mStyleContext);
-
-    if (nsnull != color) {
-      mWidget->SetBackgroundColor(color->mBackgroundColor);
-    } else {
-      mWidget->SetBackgroundColor(NS_RGB(0xFF, 0xFF, 0xFF));
-    }
-    mWidget->Enable(!nsFormFrame::GetDisabled(this));
-  }           
-
-}
-
-
-NS_IMETHODIMP
-nsRadioControlFrame::AttributeChanged(nsIPresContext* aPresContext,
-                                      nsIContent*     aChild,
-                                      nsIAtom*        aAttribute,
-                                      PRInt32         aHint)
-{
-  nsresult result = NS_OK;
-  if (mWidget) {
-    if (nsHTMLAtoms::checked == aAttribute) {
-      nsIRadioButton* button = nsnull;
-      result = mWidget->QueryInterface(kIRadioIID, (void**)&button);
-      if ((NS_SUCCEEDED(result)) && (nsnull != button)) {
-        PRBool checkedAttr = PR_TRUE;
-        GetCurrentCheckState(&checkedAttr);
-        PRBool checkedPrevState = PR_TRUE;
-        button->GetState(checkedPrevState);
-        if (checkedAttr != checkedPrevState) {
-          button->SetState(checkedAttr);
-          mFormFrame->OnRadioChecked(*this, checkedAttr);
-        }
-        NS_RELEASE(button);
-      }
-    }   
-    // Allow the base class to handle common attributes supported
-    // by all form elements... 
-    else {
-      result = nsFormControlFrame::AttributeChanged(aPresContext, aChild, aAttribute, aHint);
-    }
-  }
-  return result;
 }
 
 void 
@@ -244,13 +130,8 @@ nsRadioControlFrame::GetNamesValues(PRInt32 aMaxNumValues, PRInt32& aNumValues,
     return PR_FALSE;
   }
 
-  PRBool state = PR_FALSE;
+  PRBool state = GetRadioState();
 
-  nsIRadioButton* radio = nsnull;
- 	if (mWidget && (NS_OK == mWidget->QueryInterface(kIRadioIID,(void**)&radio))) {
-  	radio->GetState(state);
-	  NS_RELEASE(radio);
-  }
   if(PR_TRUE != state) {
     return PR_FALSE;
   }
@@ -277,61 +158,6 @@ nsRadioControlFrame::Reset()
   SetCurrentCheckState(checked);
 }  
 
-
-// CLASS nsRadioControlGroup
-
-nsRadioControlGroup::nsRadioControlGroup(nsString& aName)
-:mName(aName), mCheckedRadio(nsnull)
-{
-}
-
-nsRadioControlGroup::~nsRadioControlGroup()
-{
-  mCheckedRadio = nsnull;
-}
-  
-PRInt32 
-nsRadioControlGroup::GetRadioCount() const 
-{ 
-  return mRadios.Count(); 
-}
-
-nsRadioControlFrame*
-nsRadioControlGroup::GetRadioAt(PRInt32 aIndex) const 
-{ 
-  return (nsRadioControlFrame*) mRadios.ElementAt(aIndex);
-}
-
-PRBool 
-nsRadioControlGroup::AddRadio(nsRadioControlFrame* aRadio) 
-{ 
-  return mRadios.AppendElement(aRadio);
-}
-
-PRBool 
-nsRadioControlGroup::RemoveRadio(nsRadioControlFrame* aRadio) 
-{ 
-  return mRadios.RemoveElement(aRadio);
-}
-
-nsRadioControlFrame*
-nsRadioControlGroup::GetCheckedRadio()
-{
-  return mCheckedRadio;
-}
-
-void    
-nsRadioControlGroup::SetCheckedRadio(nsRadioControlFrame* aRadio)
-{
-  mCheckedRadio = aRadio;
-}
-
-void
-nsRadioControlGroup::GetName(nsString& aNameResult) const
-{
-  aNameResult = mName;
-}
-
 NS_IMETHODIMP
 nsRadioControlFrame::GetFrameName(nsString& aResult) const
 {
@@ -339,68 +165,13 @@ nsRadioControlFrame::GetFrameName(nsString& aResult) const
 }
 
 
-void
-nsRadioControlFrame::PaintRadioButton(nsIPresContext& aPresContext,
-                                      nsIRenderingContext& aRenderingContext,
-                                      const nsRect& aDirtyRect)
+NS_IMETHODIMP
+nsRadioControlFrame::SetRadioButtonFaceStyleContext(nsIStyleContext *aRadioButtonFaceStyleContext)
 {
-  aRenderingContext.PushState();
-
-  const nsStyleColor* color = (const nsStyleColor*)
-     mStyleContext->GetStyleData(eStyleStruct_Color); 
-
-  //XXX: This is backwards for now. The PaintCircular border code actually draws pie slices.
-
-  nsFormControlHelper::PaintCircularBorder(aPresContext,aRenderingContext,
-                         aDirtyRect, mStyleContext, PR_FALSE, this, mRect.width, mRect.height);
-  nsFormControlHelper::PaintCircularBackground(aPresContext,aRenderingContext,
-                         aDirtyRect, mStyleContext, PR_FALSE, this, mRect.width, mRect.height);
-
- 
-  PRBool checked = PR_TRUE;
-  GetCurrentCheckState(&checked); // Get check state from the content model
-  if (PR_TRUE == checked) {
-	  // Have to do 180 degress at a time because FillArc will not correctly
-	  // go from 0-360
-    float p2t;
-    aPresContext.GetScaledPixelsToTwips(&p2t);
-
-    nscoord onePixel     = NSIntPixelsToTwips(1, p2t);
-//XXX    nscoord twelvePixels = NSIntPixelsToTwips(12, p2t);
-
-    nsRect outside;
-    nsFormControlHelper::GetCircularRect(mRect.width, mRect.height, outside);
-  
-    outside.Deflate(onePixel, onePixel);
-    outside.Deflate(onePixel, onePixel);
-    outside.Deflate(onePixel, onePixel);
-    outside.Deflate(onePixel, onePixel);
-    
-    aRenderingContext.SetColor(color->mColor);
-    aRenderingContext.FillArc(outside, 0, 180);
-    aRenderingContext.FillArc(outside, 180, 360);
-  }
-
-  PRBool clip;
-  aRenderingContext.PopState(clip);
+ /* for gfx widgets only */
+ return NS_OK;
 }
 
-NS_METHOD 
-nsRadioControlFrame::Paint(nsIPresContext& aPresContext,
-                           nsIRenderingContext& aRenderingContext,
-                           const nsRect& aDirtyRect,
-                           nsFramePaintLayer aWhichLayer)
-{
- 	const nsStyleDisplay* disp = (const nsStyleDisplay*)
-	mStyleContext->GetStyleData(eStyleStruct_Display);
-	if (!disp->mVisible)
-		return NS_OK;
-
-  if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
-    PaintRadioButton(aPresContext, aRenderingContext, aDirtyRect);
-  }
-  return NS_OK;
-}
 
 NS_METHOD 
 nsRadioControlFrame::HandleEvent(nsIPresContext& aPresContext, 
@@ -408,6 +179,10 @@ nsRadioControlFrame::HandleEvent(nsIPresContext& aPresContext,
                                  nsEventStatus& aEventStatus)
 {
   if (nsEventStatus_eConsumeNoDefault == aEventStatus) {
+    return NS_OK;
+  }
+
+  if (nsFormFrame::GetDisabled(this)) { 
     return NS_OK;
   }
 
@@ -424,44 +199,18 @@ nsRadioControlFrame::HandleEvent(nsIPresContext& aPresContext,
       break;
   }
 
-  return(nsFormControlFrame::HandleEvent(aPresContext, aEvent, aEventStatus));
+  return(Inherited::HandleEvent(aPresContext, aEvent, aEventStatus));
 }
 
 void nsRadioControlFrame::GetRadioControlFrameState(nsString& aValue)
 {
-  if (nsnull != mWidget) {
-    nsIRadioButton* radio = nsnull;
-    if (NS_OK == mWidget->QueryInterface(kIRadioIID,(void**)&radio)) {
-      PRBool state = PR_FALSE;
-      radio->GetState(state);
-      nsFormControlHelper::GetBoolString(state, aValue);
-      NS_RELEASE(radio);
-    }
-  }
-  else {   
-      // Get the state for GFX-rendered widgets
-    nsFormControlHelper::GetBoolString(mChecked, aValue);
-  }
+	nsFormControlHelper::GetBoolString(GetRadioState(), aValue);
 }         
 
 void nsRadioControlFrame::SetRadioControlFrameState(const nsString& aValue)
 {
-  if (nsnull != mWidget) {
-    nsIRadioButton* radio = nsnull;
-    if (NS_OK == mWidget->QueryInterface(kIRadioIID,(void**)&radio)) {
-      if (aValue == NS_STRING_TRUE)
-        radio->SetState(PR_TRUE);
-      else
-        radio->SetState(PR_FALSE);
-
-      NS_RELEASE(radio);
-    }
-  }
-  else {    
-       // Set the state for GFX-rendered widgets
-    mChecked = nsFormControlHelper::GetBool(aValue);
-    nsFormControlHelper::ForceDrawFrame(this);
-  }
+  PRBool state = nsFormControlHelper::GetBool(aValue);
+  SetRadioState(state);
 }         
 
 NS_IMETHODIMP nsRadioControlFrame::SetProperty(nsIAtom* aName, const nsString& aValue)
@@ -474,7 +223,7 @@ NS_IMETHODIMP nsRadioControlFrame::SetProperty(nsIAtom* aName, const nsString& a
     }
   }
   else {
-    return nsFormControlFrame::SetProperty(aName, aValue);
+    return Inherited::SetProperty(aName, aValue);
   }
 
   return NS_OK;    
@@ -489,7 +238,7 @@ NS_IMETHODIMP nsRadioControlFrame::GetProperty(nsIAtom* aName, nsString& aValue)
     GetRadioControlFrameState(aValue);
   }
   else {
-    return nsFormControlFrame::GetProperty(aName, aValue);
+    return Inherited::GetProperty(aName, aValue);
   }
 
   return NS_OK;    

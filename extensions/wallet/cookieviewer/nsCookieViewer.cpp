@@ -20,7 +20,11 @@
 #include "nsIAllocator.h"
 #include "plstr.h"
 #include "stdio.h"
+#ifdef NECKO
+#include "nsICookieService.h"
+#else
 #include "nsINetService.h"
+#endif
 #include "nsIServiceManager.h"
 #include "nsIDOMWindow.h"
 #include "nsCOMPtr.h"
@@ -29,8 +33,13 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsICookieViewer.h"
 
+#ifdef NECKO
+static NS_DEFINE_IID(kICookieServiceIID, NS_ICOOKIESERVICE_IID);
+static NS_DEFINE_IID(kCookieServiceCID, NS_COOKIESERVICE_CID);
+#else
 static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
 static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
+#endif
 
 class CookieViewerImpl : public nsICookieViewer
 {
@@ -85,8 +94,17 @@ CookieViewerImpl::GetCookieValue(char** aValue)
     return NS_ERROR_NULL_POINTER;
   }
 
-  nsINetService *netservice;
   nsresult res;
+#ifdef NECKO
+  NS_WITH_SERVICE(nsICookieService, cookieservice, kCookieServiceCID, &res);
+  if (NS_FAILED(res)) return res;
+  nsAutoString cookieList;
+  res = cookieservice->Cookie_GetCookieListForViewer(cookieList);
+  if (NS_SUCCEEDED(res)) {
+    *aValue = cookieList.ToNewCString();
+  }
+#else
+  nsINetService *netservice;
   res = nsServiceManager::GetService(kNetServiceCID,
                                      kINetServiceIID,
                                      (nsISupports **)&netservice);
@@ -97,6 +115,7 @@ CookieViewerImpl::GetCookieValue(char** aValue)
       *aValue = cookieList.ToNewCString();
     }
   }
+#endif
   return res;
 }
 
@@ -108,8 +127,17 @@ CookieViewerImpl::GetPermissionValue(char** aValue)
     return NS_ERROR_NULL_POINTER;
   }
 
-  nsINetService *netservice;
   nsresult res;
+#ifdef NECKO
+  NS_WITH_SERVICE(nsICookieService, cookieservice, kCookieServiceCID, &res);
+  if (NS_FAILED(res)) return res;
+  nsAutoString PermissionList;
+  res = cookieservice->Cookie_GetPermissionListForViewer(PermissionList);
+  if (NS_SUCCEEDED(res)) {
+    *aValue = PermissionList.ToNewCString();
+  }
+#else
+  nsINetService *netservice;
   res = nsServiceManager::GetService(kNetServiceCID,
                                      kINetServiceIID,
                                      (nsISupports **)&netservice);
@@ -120,6 +148,7 @@ CookieViewerImpl::GetPermissionValue(char** aValue)
       *aValue = PermissionList.ToNewCString();
     }
   }
+#endif
   return res;
 }
 
@@ -169,8 +198,14 @@ CookieViewerImpl::SetValue(const char* aValue, nsIDOMWindow* win)
   if (! aValue) {
     return NS_ERROR_NULL_POINTER;
   }
-  nsINetService *netservice;
   nsresult res;
+#ifdef NECKO
+  NS_WITH_SERVICE(nsICookieService, cookieservice, kCookieServiceCID, &res);
+  if (NS_FAILED(res)) return res;
+  nsAutoString netList = aValue;
+  res = cookieservice->Cookie_CookieViewerReturn(netList);
+#else
+  nsINetService *netservice;
   res = nsServiceManager::GetService(kNetServiceCID,
                                      kINetServiceIID,
                                      (nsISupports **)&netservice);
@@ -178,5 +213,6 @@ CookieViewerImpl::SetValue(const char* aValue, nsIDOMWindow* win)
     nsAutoString netList = aValue;
     res = netservice->Cookie_CookieViewerReturn(netList);
   }
+#endif
   return res;
 }

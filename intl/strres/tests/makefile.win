@@ -32,7 +32,6 @@ LINCS=\
 LLIBS=				\
  $(DIST)\lib\xpcom.lib	\
  $(LIBNSPR)			\
- $(DIST)\lib\plc3.lib	\
 !if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
  $(GLOWDIR)\glowcode.lib	\
 !endif
@@ -40,27 +39,18 @@ LLIBS=				\
 
 include <$(DEPTH)\config\rules.mak>
 
+DISTBROWSWER=$(DIST)\bin\chrome\global\content\default
+
 install:: $(PROGRAMS)
 	$(MAKE_INSTALL) $(PROG0) $(DIST)\bin
 	$(MAKE_INSTALL) strres.properties $(DIST)\bin\res
+	$(MAKE_INSTALL) strres-test.html $(DIST)\bin\res
+	$(MAKE_INSTALL) strres-test.xul $(DIST)\bin\res
+	$(MAKE_INSTALL) strres-test.dtd $(DIST)\bin\res
+	$(MAKE_INSTALL) strres-test.js $(DIST)\bin\res
+	$(MAKE_INSTALL) strres.js $(DISTBROWSWER)
 
 clobber::
 	rm -f $(DIST)\bin\StringBundleTest.exe
-
-# Move this into config/obj.inc when it's allowed
-.cpp{.\$(OBJDIR)\}.exe:
-    $(CC) @<<$(CFGFILE)
-        $(CFLAGS)
-        $(LCFLAGS)
-        $(LINCS)
-        $(LINCS_1)
-        $(INCS)
-        $(LLIBS)
-        $(OS_LIBS)
-        -Fd$(PDBFILE)
-        -Fe.\$(OBJDIR)\
-        -Fo.\$(OBJDIR)\
-        $(CURDIR)$(*B).cpp
-<<KEEP
 
 $(PROG0): $(OBJDIR) StringBundleTest.cpp

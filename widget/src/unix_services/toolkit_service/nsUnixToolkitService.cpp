@@ -32,11 +32,7 @@
 
 /* static */ const nsCID * nsUnixToolkitService::sTimerCID = nsnull;
 
-#ifdef MOZ_DEFAULT_TOOLKIT
-/* static */ const char *  nsUnixToolkitService::ksDefaultToolkit = MOZ_DEFAULT_TOOLKIT;
-#else
 /* static */ const char *  nsUnixToolkitService::ksDefaultToolkit = "gtk";
-#endif
 
 #ifdef MOZ_DLL_SUFFIX    
 /* static */ const char *  nsUnixToolkitService::ksDllSuffix = MOZ_DLL_SUFFIX;
@@ -91,8 +87,7 @@ nsUnixToolkitService::IsValidToolkit(const nsString & aToolkitName,
 
   if (aToolkitName == "gtk" ||
       aToolkitName == "motif" ||
-      aToolkitName == "xlib" ||
-      aToolkitName == "qt")
+      aToolkitName == "xlib")
   {
     *aResultOut = PR_TRUE;
   }
@@ -211,7 +206,6 @@ static NS_DEFINE_IID(kITimerIID, NS_ITIMER_IID);
 static NS_DEFINE_CID(kCTimerGtkCID, NS_TIMER_GTK_CID);
 static NS_DEFINE_CID(kCTimerMotifCID, NS_TIMER_MOTIF_CID);
 static NS_DEFINE_CID(kCTimerXlibCID, NS_TIMER_XLIB_CID);
-static NS_DEFINE_CID(kCTimerQtCID, NS_TIMER_QT_CID);
 
 //////////////////////////////////////////////////////////////////////////
 NS_IMETHODIMP
@@ -245,11 +239,6 @@ nsUnixToolkitService::GetTimerCID(nsCID ** aTimerCIDOut)
     else if (unixToolkitName == "xlib")
     {
       sTimerCID = &kCTimerXlibCID;
-    }
-    // Qt
-    else if (unixToolkitName == "qt")
-    {
-      sTimerCID = &kCTimerQtCID;
     }
     else
     {
@@ -318,11 +307,6 @@ nsUnixToolkitService::EnsureToolkitName()
   else if (nsCRT::strcasecmp(MOZ_TOOLKIT,"motif") == 0)
   {
     *sToolkitName = "motif";
-  }
-  // Qt
-  else if (nsCRT::strcasecmp(MOZ_TOOLKIT,"qt") == 0)
-  {
-    *sToolkitName = "qt";
   }
   else
   {

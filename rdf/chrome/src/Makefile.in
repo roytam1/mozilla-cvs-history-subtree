@@ -28,12 +28,8 @@ LIBRARY_NAME = chrome_s
 
 CPPSRCS =				\
 	nsChromeRegistry.cpp		\
+	nsChromeProtocolHandler.cpp     \
 	$(NULL)
-
-EXPORTS = \
-	$(NULL)
-
-EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
 
 MODULE = rdfbase
 

@@ -52,12 +52,22 @@ public:
     NS_IMETHOD Redo(void);
     NS_IMETHOD GetUndoString(nsString *aString);
     NS_IMETHOD GetRedoString(nsString *aString);
-    
+
     // helper
     nsresult SetUndoString(nsString *aString);
     nsresult SetRedoString(nsString *aString);
     nsresult SetCopyResponseUid(nsMsgKeyArray* keyArray,
                                 const char *msgIdString);
+    nsresult GetSrcKeyArray(nsMsgKeyArray& srcKeyArray);
+    nsresult GetDstKeyArray(nsMsgKeyArray& dstKeyArray);
+    nsresult AddDstKey(nsMsgKey aKey);
+    nsresult UndoMailboxDelete();
+    nsresult RedoMailboxDelete();
+    nsresult Init(nsIMsgFolder* srcFolder, nsMsgKeyArray* srcKeyArray,
+                  const char* srcMsgIdString, nsIMsgFolder* dstFolder,
+                  PRBool idsAreUids, PRBool isMove, 
+                  nsIEventQueue *eventQueue, 
+                  nsIUrlListener *urlListener);
 
 private:
 
@@ -73,6 +83,8 @@ private:
     nsString m_redoString;
     PRBool m_idsAreUids;
     PRBool m_isMove;
+    PRBool m_srcIsPop3;
+    nsUInt32Array m_srcSizeArray;
 };
 
 #endif

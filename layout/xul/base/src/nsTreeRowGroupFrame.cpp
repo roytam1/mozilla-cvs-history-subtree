@@ -971,21 +971,11 @@ void nsTreeRowGroupFrame::OnContentAdded(nsIPresContext& aPresContext)
   if (IsLazy() && !treeFrame->IsSlatedForReflow()) {
     treeFrame->SlateForReflow();
 
-    // Mark the table frame as dirty
-    nsFrameState      frameState;
-    
-    treeFrame->GetFrameState(&frameState);
-    frameState |= NS_FRAME_IS_DIRTY;
-    treeFrame->SetFrameState(frameState);
-     
-    // Schedule a reflow for us
+    // Schedule a reflow for us.
     nsCOMPtr<nsIReflowCommand> reflowCmd;
-    nsIFrame*                  outerTableFrame;
-    nsresult                   rv;
-
-    treeFrame->GetParent(&outerTableFrame);
-    rv = NS_NewHTMLReflowCommand(getter_AddRefs(reflowCmd), outerTableFrame,
-                                 nsIReflowCommand::ReflowDirty);
+    
+    nsresult rv = NS_NewHTMLReflowCommand(getter_AddRefs(reflowCmd), treeFrame,
+                                          nsIReflowCommand::FrameAppended, nsnull);
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsIPresShell> presShell;
       aPresContext.GetShell(getter_AddRefs(presShell));
@@ -1017,21 +1007,11 @@ void nsTreeRowGroupFrame::OnContentRemoved(nsIPresContext& aPresContext,
   if (IsLazy() && !treeFrame->IsSlatedForReflow()) {
     treeFrame->SlateForReflow();
 
-    // Mark the table frame as dirty
-    nsFrameState      frameState;
-    
-    treeFrame->GetFrameState(&frameState);
-    frameState |= NS_FRAME_IS_DIRTY;
-    treeFrame->SetFrameState(frameState);
-     
     // Schedule a reflow for us.
     nsCOMPtr<nsIReflowCommand> reflowCmd;
-    nsIFrame*                  outerTableFrame;
-    nsresult                   rv;
-
-    treeFrame->GetParent(&outerTableFrame);
-    rv = NS_NewHTMLReflowCommand(getter_AddRefs(reflowCmd), treeFrame,
-                                 nsIReflowCommand::ReflowDirty);
+    
+    nsresult rv = NS_NewHTMLReflowCommand(getter_AddRefs(reflowCmd), treeFrame,
+                                          nsIReflowCommand::FrameRemoved, nsnull);
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsIPresShell> presShell;
       aPresContext.GetShell(getter_AddRefs(presShell));

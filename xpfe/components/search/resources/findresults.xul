@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/xul.css" type="text/css"?>
 <?xml-stylesheet href="findresults.css" type="text/css"?>
 
 
@@ -13,49 +14,57 @@
 ]>
 
 
-<window title="&window.title.label;" style="width:100%; height:100%; background-color:white"
+<window title="&window.title.label;" style="width:100%; height:100%; background-color:white" align="vertical"
 	xmlns:html="http://www.w3.org/TR/REC-html40"
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
 	<html:script src="shared.js" />
 
-	<tree id="findresultstree" flex="100%" datasources="rdf:bookmarks rdf:history rdf:find"  ondblclick="return OpenURL(event,event.target.parentNode);">
+	<tree id="findresultstree" style="height: 100%" flex="100%" datasources="rdf:bookmarks rdf:history rdf:find" ondblclick="return OpenURL(event, event.target.parentNode.parentNode);">
 		<treecol id="NameColumn" rdf:resource="http://home.netscape.com/NC-rdf#Name" sortActive="true" sortDirection="ascending" />
 		<treecol id="URLColumn" rdf:resource="http://home.netscape.com/NC-rdf#URL"/>
 		<treecol id="ShortcutURLColumn" rdf:resource="http://home.netscape.com/NC-rdf#ShortcutURL"/>
 		<treecol id="DescriptionColumn" rdf:resource="http://home.netscape.com/NC-rdf#Description"/>
 
 		<template>
-			<rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator" rootcontainment="treebody" subcontainment="treechildren">
+			<rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+                                <treechildren>
 				<treeitem uri="...">
-					<treecell>
-						<html:hr width="75%" align="center" size="1" />
-					</treecell>
-				</treeitem>  		
+					<treerow>
+						<treecell>
+							<html:hr width="75%" align="center" size="1" />
+						</treecell>
+					</treerow>
+				</treeitem>  	
+                                </treechildren>	
 			</rule>
 
-			<rule rootcontainment="treebody" subcontainment="treechildren">
+			<rule>
+                                <treechildren>
 				<treeitem uri="...">
-					<treecell>
-						<treeindentation />
-						<titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name" align="right" />
-					</treecell>
-					<treecell>
-						<titledbutton value="rdf:http://home.netscape.com/NC-rdf#URL" align="right" style="list-style-image: none;" />
-					</treecell>
-					<treecell>
-						<titledbutton value="rdf:http://home.netscape.com/NC-rdf#ShortcutURL" align="right" style="list-style-image: none;" />
-					</treecell>
-					<treecell>
-						<titledbutton value="rdf:http://home.netscape.com/NC-rdf#Description" align="right" style="list-style-image: none;" />
-					</treecell>
+					<treerow>
+						<treecell>
+							<treeindentation />
+							<titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name" align="left" />
+						</treecell>
+						<treecell>
+							<titledbutton value="rdf:http://home.netscape.com/NC-rdf#URL" align="left" style="list-style-image: none;" />
+						</treecell>
+						<treecell>
+							<titledbutton value="rdf:http://home.netscape.com/NC-rdf#ShortcutURL" align="left" style="list-style-image: none;" />
+						</treecell>
+						<treecell>
+							<titledbutton value="rdf:http://home.netscape.com/NC-rdf#Description" align="left" style="list-style-image: none;" />
+						</treecell>
+					</treerow>
 				</treeitem>
+                                </treechildren>
 			</rule>
 		</template>
 
 		<treehead>
-			<treeitem>
+			<treerow>
 				<treecell resource="http://home.netscape.com/NC-rdf#Name" onclick="return doSort('NameColumn');" sortActive="true" sortDirection="ascending">
 					<observes element="NameColumn" attribute="sortActive"/>
 					<observes element="NameColumn" attribute="sortDirection"/>
@@ -76,9 +85,10 @@
 					<observes element="DescriptionColumn" attribute="sortDirection"/>
 					&description.column.label;
 				</treecell>
-			</treeitem>
+			</treerow>
 		</treehead>
 
-		<treebody />
+		<treechildren open="true" />
 	</tree>
+	<spring flex="100%" align="horizontal" />
 </window>

@@ -22,13 +22,14 @@
 #define nsIXPConnect_h___
 
 #include "nsISupports.h"
-#include "jsapi.h"
+#include "jspubtd.h"
 #include "nsIInterfaceInfo.h"
 #include "nsIInterfaceInfoManager.h"
 #include "xptinfo.h"
 
 #include "xpccomponents.h"
 #include "xpcjsid.h"
+#include "xpcexception.h"
 
 /*
  * The linkage of XPC API functions differs depending on whether the file is
@@ -88,6 +89,9 @@ public:
     NS_IMETHOD GetIID(nsIID** iid) = 0; // returns IAllocatator alloc'd copy
     NS_IMETHOD DebugDump(int depth) = 0;
     NS_IMETHOD SetFinalizeListener(nsIXPConnectFinalizeListener* aListener) = 0;
+
+    // NOT YET IMPLEMTED!!!
+    NS_IMETHOD GetJSObjectPrototype(JSObject** aJSObj) = 0;
 
     // XXX other methods?
 };
@@ -185,6 +189,16 @@ public:
     NS_IMETHOD GetSecurityManagerForJSContext(JSContext* aJSContext,
                                     nsIXPCSecurityManager** aManager,
                                     PRUint16* flags) = 0;
+
+    NS_IMETHOD GetCurrentJSStack(nsIJSStackFrameLocation** aStack) = 0;
+
+    NS_IMETHOD CreateStackFrameLocation(JSBool isJSFrame,
+                                        const char* aFilename,
+                                        const char* aFunctionName,
+                                        PRInt32 aLineNumber,
+                                        nsIJSStackFrameLocation* aCaller,
+                                        nsIJSStackFrameLocation** aStack) = 0;
+
     // XXX other methods?
 };
 

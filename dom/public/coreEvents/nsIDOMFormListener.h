@@ -35,7 +35,7 @@
 class nsIDOMFormListener : public nsIDOMEventListener {
 
 public:
-
+   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMFORMLISTENER_IID)
   /**
   * Processes a form submit event
   * @param aEvent @see nsIDOMEvent.h 
@@ -56,6 +56,13 @@ public:
    * @returns whether the event was consumed or ignored. @see nsresult
    */
   virtual nsresult Change(nsIDOMEvent* aEvent) = 0;
+
+  /**
+   * Processes a form select event
+   * @param aEvent @see nsIDOMEvent.h 
+   * @returns whether the event was consumed or ignored. @see nsresult
+   */
+  virtual nsresult Select(nsIDOMEvent* aEvent) = 0;
 
 };
 

@@ -437,10 +437,10 @@ nsEventStatus nsContextMenu::MenuItemSelected(const nsMenuEvent & aMenuEvent)
   return nsEventStatus_eIgnore;
 }
 
-void nsContextMenu::MenuPosFunc(GtkMenu *menu,
-                                  gint *x,
-                                  gint *y,
-                                  gpointer data)
+void menu_popup_position(GtkMenu *menu,
+                         gint *x,
+                         gint *y,
+                         gpointer data)
 {
   nsContextMenu *cm = (nsContextMenu*)data;
   *x = cm->GetX();
@@ -449,15 +449,21 @@ void nsContextMenu::MenuPosFunc(GtkMenu *menu,
 
 nsEventStatus nsContextMenu::MenuSelected(const nsMenuEvent & aMenuEvent)
 {
+  MenuConstruct(aMenuEvent,
+                mParent,
+                mDOMNode,
+                mWebShell);
+
   GtkWidget *parent = GTK_WIDGET(mParent->GetNativeData(NS_NATIVE_WIDGET));
   gtk_menu_popup (GTK_MENU(mMenu),
-                  parent, NULL,
-                  nsContextMenu::MenuPosFunc,
+                  (GtkWidget*)nsnull, (GtkWidget*)nsnull,
+                  menu_popup_position,
                   this, 1, GDK_CURRENT_TIME);
-
+  /*
   if (nsnull != mListener) {
     mListener->MenuSelected(aMenuEvent);
   }
+  */
   return nsEventStatus_eIgnore;
 }
 
@@ -596,7 +602,7 @@ void nsContextMenu::LoadMenuItem(nsIMenu        *pParentMenu,
 
     pnsMenuItem->SetCommand(cmdName);
    // DO NOT use passed in webshell because of messed up windows dynamic loading
-   // code. 
+      // code. 
     pnsMenuItem->SetWebShell(mWebShell);
     pnsMenuItem->SetDOMElement(domElement);
 

@@ -198,8 +198,8 @@ TableRowsCollection::GetLength(PRUint32* aLength)
     {
       rowGroup = nsnull;
       nsIDOMNode *node;
-      PRUint32 index=0;
-      tbodies->Item(index, &node);
+      PRUint32 theIndex=0;
+      tbodies->Item(theIndex, &node);
       while (nsnull!=node)
       {
         nsIContent *content=nsnull;
@@ -208,10 +208,10 @@ TableRowsCollection::GetLength(PRUint32* aLength)
         PRUint32 rows;
         body.GetLength(&rows);
         *aLength += rows;
-        index++;
+        theIndex++;
         NS_RELEASE(content);
         NS_RELEASE(node);
-        tbodies->Item(index, &node);
+        tbodies->Item(theIndex, &node);
       }
       NS_RELEASE(tbodies);
     }
@@ -253,8 +253,8 @@ TableRowsCollection::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
     if (nsnull != tbodies) {
       rowGroup = nsnull;
       nsIDOMNode *node;
-      PRUint32 index=0;
-      tbodies->Item(index, &node);
+      PRUint32 theIndex=0;
+      tbodies->Item(theIndex, &node);
       while (nsnull != node) {
         nsIContent *content = nsnull;
         node->QueryInterface(kIContentIID, (void **)&content);
@@ -269,8 +269,8 @@ TableRowsCollection::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 		  return NS_OK;
         }
         count += rows;
-        index++;
-        tbodies->Item(index, &node);
+        theIndex++;
+        tbodies->Item(theIndex, &node);
       }
       NS_RELEASE(tbodies);
     }
@@ -700,7 +700,7 @@ nsHTMLTableElement::InsertRow(PRInt32 aIndex, nsIDOMHTMLElement** aValue)
     refRow->GetParentNode(&parent);
     // create the row
     nsIHTMLContent *newRow=nsnull;
-    nsresult rv = NS_NewHTMLTableRowElement(&newRow, nsHTMLAtoms::tr);
+    rv = NS_NewHTMLTableRowElement(&newRow, nsHTMLAtoms::tr);
     if (NS_SUCCEEDED(rv) && (nsnull!=newRow))
     {
       nsIDOMNode *newRowNode=nsnull;
@@ -841,50 +841,37 @@ nsHTMLTableElement::StringToAttribute(nsIAtom* aAttribute,
   /* attributes that resolve to pixels, with min=0 */
   if ((aAttribute == nsHTMLAtoms::cellspacing) ||
       (aAttribute == nsHTMLAtoms::cellpadding)) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
 
   /* attributes that are either empty, or integers, with min=0 */
   else if (aAttribute == nsHTMLAtoms::cols) {
-    nsAutoString tmp(aValue);
-    tmp.StripWhitespace();
-    if (0 == tmp.Length()) {
-      // Just set COLS, same as COLS=number of columns
-      aResult.SetEmptyValue();
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
     }
-    else 
-    {
-      nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Integer);
-    }    
-    return NS_CONTENT_ATTR_HAS_VALUE;
   }
 
   /* attributes that are either empty, or pixels */
   else if (aAttribute == nsHTMLAtoms::border) {
-    nsAutoString tmp(aValue);
-    tmp.StripWhitespace();
-    if (0 == tmp.Length()) {
-      // Just enable the border; same as border=1
-      aResult.SetEmptyValue();
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
     }
-    else 
-    {
-      nsGenericHTMLElement::ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel);
-    }    
-    return NS_CONTENT_ATTR_HAS_VALUE;
   }
 
   /* attributes that resolve to integers or percents */
   else if (aAttribute == nsHTMLAtoms::height) {
-    nsGenericHTMLElement::ParseValueOrPercent(aValue, aResult, eHTMLUnit_Pixel);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValueOrPercent(aValue, aResult, eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
 
   /* attributes that resolve to integers or percents or proportions */
   else if (aAttribute == nsHTMLAtoms::width) {
-    nsGenericHTMLElement::ParseValueOrPercentOrProportional(aValue, aResult, eHTMLUnit_Pixel);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValueOrPercentOrProportional(aValue, aResult, eHTMLUnit_Pixel)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
 
   /* other attributes */
@@ -893,27 +880,25 @@ nsHTMLTableElement::StringToAttribute(nsIAtom* aAttribute,
       return NS_CONTENT_ATTR_HAS_VALUE;
     }
   }
-  else if (aAttribute == nsHTMLAtoms::background) {
-    nsAutoString href(aValue);
-    href.StripWhitespace();
-    aResult.SetStringValue(href);
-    return NS_CONTENT_ATTR_HAS_VALUE;
-  }
   else if (aAttribute == nsHTMLAtoms::bgcolor) {
-    nsGenericHTMLElement::ParseColor(aValue, aResult);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseColor(aValue, mInner.mDocument, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (aAttribute == nsHTMLAtoms::frame) {
-    nsGenericHTMLElement::ParseEnumValue(aValue, kFrameTable, aResult);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseEnumValue(aValue, kFrameTable, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (aAttribute == nsHTMLAtoms::layout) {
-    nsGenericHTMLElement::ParseEnumValue(aValue, kLayoutTable, aResult);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseEnumValue(aValue, kLayoutTable, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
   else if (aAttribute == nsHTMLAtoms::rules) {
-    nsGenericHTMLElement::ParseEnumValue(aValue, kRulesTable, aResult);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseEnumValue(aValue, kRulesTable, aResult)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
 
   return NS_CONTENT_ATTR_NOT_THERE;
@@ -953,7 +938,7 @@ nsHTMLTableElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void 
-MapTableFrameInto(nsIHTMLAttributes* aAttributes,
+MapTableFrameInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext, 
                   nsStyleSpacing* aSpacing)
@@ -1025,7 +1010,7 @@ MapTableFrameInto(nsIHTMLAttributes* aAttributes,
 }
 
 static void 
-MapTableBorderInto(nsIHTMLAttributes* aAttributes,
+MapTableBorderInto(const nsIHTMLMappedAttributes* aAttributes,
                    nsIStyleContext* aContext,
                    nsIPresContext* aPresContext)
 {
@@ -1035,21 +1020,14 @@ MapTableBorderInto(nsIHTMLAttributes* aAttributes,
   nsHTMLValue borderValue;
 
   aAttributes->GetAttribute(nsHTMLAtoms::border, borderValue);
-  if (borderValue.GetUnit() == eHTMLUnit_String)
-  {
-    nsAutoString borderAsString;
-    borderValue.GetStringValue(borderAsString);
-    nsGenericHTMLElement::ParseValue(borderAsString, 0, borderValue, eHTMLUnit_Pixel);
-  }
-  else if (borderValue.GetUnit() == eHTMLUnit_Null)
+  if (borderValue.GetUnit() == eHTMLUnit_Null)
   { // the absence of "border" with the presence of "frame" implies border = 1 pixel
     nsHTMLValue frameValue;
     aAttributes->GetAttribute(nsHTMLAtoms::frame, frameValue);
     if (frameValue.GetUnit() != eHTMLUnit_Null)
       borderValue.SetPixelValue(1);
   }
-  if ((borderValue.GetUnit() == eHTMLUnit_Pixel) || 
-      (borderValue.GetUnit() == eHTMLUnit_Empty)) {
+  if (borderValue.GetUnit() != eHTMLUnit_Null) {
     nsStyleSpacing* spacing = (nsStyleSpacing*)
       aContext->GetMutableStyleData(eStyleStruct_Spacing);
     nsStyleTable *tableStyle = (nsStyleTable*)
@@ -1057,7 +1035,7 @@ MapTableBorderInto(nsIHTMLAttributes* aAttributes,
     float p2t;
     aPresContext->GetScaledPixelsToTwips(&p2t);
     nsStyleCoord twips;
-    if (borderValue.GetUnit() == eHTMLUnit_Empty) {
+    if (borderValue.GetUnit() != eHTMLUnit_Pixel) {
       tableStyle->mRules=NS_STYLE_TABLE_RULES_ALL;  // non-0 values of border imply default rules=all
       twips.SetCoordValue(NSIntPixelsToTwips(1, p2t));
     }
@@ -1081,7 +1059,7 @@ MapTableBorderInto(nsIHTMLAttributes* aAttributes,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
@@ -1215,24 +1193,35 @@ x += 1;
       //background: color
       nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext, aPresContext);
       nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
-
-      // direction
-      aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
-      if (eHTMLUnit_String == value.GetUnit()) {
-        nsString dir;
-        value.GetStringValue(dir);
-        nsStyleDisplay* display = (nsStyleDisplay*)
-          aContext->GetMutableStyleData(eStyleStruct_Display);
-        if (dir.EqualsIgnoreCase("RTL")) {
-          display->mDirection = NS_STYLE_DIRECTION_RTL;
-        } 
-        else {
-          display->mDirection = NS_STYLE_DIRECTION_LTR;
-        }
-      }
     }
   }
 }
+
+NS_IMETHODIMP
+nsHTMLTableElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                             PRInt32& aHint) const
+{
+  if ((aAttribute == nsHTMLAtoms::align) || 
+      (aAttribute == nsHTMLAtoms::layout) ||
+      (aAttribute == nsHTMLAtoms::cellpadding) ||
+      (aAttribute == nsHTMLAtoms::cellspacing) ||
+      (aAttribute == nsHTMLAtoms::cols) ||
+      (aAttribute == nsHTMLAtoms::rules) ||
+      (aAttribute == nsHTMLAtoms::border) ||
+      (aAttribute == nsHTMLAtoms::frame) ||
+      (aAttribute == nsHTMLAtoms::width) ||
+      (aAttribute == nsHTMLAtoms::height)) {
+    aHint = NS_STYLE_HINT_REFLOW;
+  }
+  else if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    if (! nsGenericHTMLElement::GetBackgroundAttributesImpact(aAttribute, aHint)) {
+      aHint = NS_STYLE_HINT_CONTENT;
+    }
+  }
+
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsHTMLTableElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
@@ -1255,19 +1244,3 @@ nsHTMLTableElement::HandleDOMEvent(nsIPresContext& aPresContext,
                                aFlags, aEventStatus);
 }
 
-NS_IMETHODIMP
-nsHTMLTableElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  if (PR_TRUE == nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, 
-    aAttribute, aHint)) {
-    // Do nothing
-  }
-  else if (nsHTMLAtoms::summary != aAttribute)
-  {
-    // XXX put in real handling for known attributes, return CONTENT for anything else
-    *aHint = NS_STYLE_HINT_CONTENT;
-  }
-  return NS_OK;
-}

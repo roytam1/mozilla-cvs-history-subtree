@@ -54,10 +54,20 @@ public:
 
   NS_IMETHOD GetContentType(nsString& aContentType) const;
 
-  NS_IMETHOD StartDocumentLoad(nsIURL* aUrl, 
+  NS_IMETHOD CreateShell(nsIPresContext* aContext,
+                         nsIViewManager* aViewManager,
+                         nsIStyleSet* aStyleSet,
+                         nsIPresShell** aInstancePtrResult);
+
+  NS_IMETHOD StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                               nsIChannel* aChannel,
+                               nsILoadGroup* aLoadGroup,
+#else
+                               nsIURI *aUrl, 
+#endif
                                nsIContentViewerContainer* aContainer,
-                               nsIStreamListener** aDocListener,
-                               const char* aCommand);
+                               nsIStreamListener **aDocListener);
 
   NS_IMETHOD EndLoad();
 
@@ -72,10 +82,12 @@ public:
   NS_IMETHOD GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aStyleSheet);
   NS_IMETHOD GetCSSLoader(nsICSSLoader*& aLoader);
 
-  NS_IMETHOD GetBaseURL(nsIURL*& aURL) const;
+  NS_IMETHOD GetBaseURL(nsIURI*& aURL) const;
   NS_IMETHOD SetBaseURL(const nsString& aURLSpec);
   NS_IMETHOD GetBaseTarget(nsString& aTarget) const;
   NS_IMETHOD SetBaseTarget(const nsString& aTarget);
+
+  NS_IMETHOD SetLastModified(const nsString& aLastModified);
 
   NS_IMETHOD GetDTDMode(nsDTDMode& aMode);
   NS_IMETHOD SetDTDMode(nsDTDMode aMode);
@@ -172,24 +184,29 @@ protected:
   static PRBool MatchLayers(nsIContent *aContent, nsString* aData);
   static PRBool MatchNameAttribute(nsIContent* aContent, nsString* aData);
 
-  nsresult GetSourceDocumentURL(JSContext* cx, nsIURL** sourceURL);
+  nsresult GetSourceDocumentURL(JSContext* cx, nsIURI** sourceURL);
 
   PRBool GetBodyContent();
   nsresult GetBodyElement(nsIDOMHTMLBodyElement** aBody);
 
-  virtual nsresult Reset(nsIURL *aURL);
+#ifdef NECKO
+  virtual nsresult Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+#else
+  virtual nsresult Reset(nsIURI *aURL);
+#endif
   nsresult WriteCommon(const nsString& aText,
                        PRBool aNewlineTerminate);
   nsresult ScriptWriteCommon(JSContext *cx, 
                              jsval *argv, 
                              PRUint32 argc,
                              PRBool aNewlineTerminate);
-  nsresult OpenCommon(nsIURL* aUrl);
+  nsresult OpenCommon(nsIURI* aUrl);
 
   nsIHTMLStyleSheet*    mAttrStyleSheet;
   nsIHTMLCSSStyleSheet* mStyleAttrStyleSheet;
-  nsIURL*     mBaseURL;
+  nsIURI*     mBaseURL;
   nsString*   mBaseTarget;
+  nsString*   mLastModified;
   nsDTDMode mDTDMode;
   nsVoidArray mImageMaps;
   nsICSSLoader* mCSSLoader;

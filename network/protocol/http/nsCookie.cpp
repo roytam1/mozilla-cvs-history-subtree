@@ -149,7 +149,7 @@ cookie_Localize(char* genericString) {
     printf("cannot get net service\n");
     return v.ToNewCString();
   }
-  nsIURL *url = nsnull;
+  nsIURI *url = nsnull;
   ret = pNetService->CreateURL(&url, nsString(TEST_URL), nsnull, nsnull,
     nsnull);
   if (NS_FAILED(ret)) {
@@ -169,7 +169,18 @@ cookie_Localize(char* genericString) {
   }
   nsILocale* locale = nsnull;
   nsIStringBundle* bundle = nsnull;
+#if 1
+  const char* spec = nsnull;
+  ret = url->GetSpec(&spec);
+  if (NS_FAILED(ret)) {
+    printf("cannot get url spec\n");
+    nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
+    return v.ToNewCString();
+  }
+  ret = pStringService->CreateBundle(spec, locale, &bundle);
+#else
   ret = pStringService->CreateBundle(url, locale, &bundle);
+#endif
   if (NS_FAILED(ret)) {
     printf("cannot create instance\n");
     nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
@@ -178,7 +189,15 @@ cookie_Localize(char* genericString) {
   nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
 
   /* localize the given string */
+#if 1
+  nsString   strtmp(genericString);
+  const PRUnichar *ptrtmp = strtmp.GetUnicode();
+  PRUnichar *ptrv = nsnull;
+  ret = bundle->GetStringFromName(ptrtmp, &ptrv);
+  v = ptrv;
+#else
   ret = bundle->GetStringFromName(nsString(genericString), v);
+#endif
   PR_Free(bundle);
   if (NS_FAILED(ret)) {
     printf("cannot get string from name\n");
@@ -1144,6 +1163,7 @@ net_IntSetCookieString(MWContext * context,
 	PRBool HG83744 is_domain=FALSE, accept=FALSE;
 	MWContextType type;
 	Bool bCookieAdded;
+	PRBool pref_scd = PR_FALSE;
 
 	if(!context) {
 		PR_Free(cur_path);
@@ -1307,6 +1327,17 @@ net_IntSetCookieString(MWContext * context,
  *    cookies for the entire .co.nz domain.
  */
 
+/*
+ *  Although this is the right thing to do(tm), it breaks too many sites.  
+ *  So only do it if the restrictCookieDomains pref is TRUE.
+ *
+ */
+            if ( PREF_GetBoolPref(pref_strictCookieDomains, &pref_scd) < 0 ) {
+               pref_scd = PR_FALSE;
+            }
+
+            if ( pref_scd == PR_TRUE ) {
+
 			cur_host[cur_host_length-domain_length] = '\0';
 			dot = XP_STRCHR(cur_host, '.');
 			cur_host[cur_host_length-domain_length] = '.';
@@ -1320,6 +1351,7 @@ net_IntSetCookieString(MWContext * context,
 				net_UndeferCookies();
 				return;
 			}
+            }
 
 			/* all tests passed, copy in domain to hostname field
 			 */
@@ -1867,7 +1899,7 @@ net_ReadCookiePermissions()
 
     int hostIndex, permissionIndex;
     hostIndex = 0;
-    if ((permissionIndex=buffer->Find('\t', hostIndex)+1) == 0) {
+    if ((permissionIndex=buffer->FindChar('\t',PR_FALSE, hostIndex)+1) == 0) {
       PR_Free(buffer);
       continue;      
     }
@@ -2048,12 +2080,12 @@ net_ReadCookies()
 
     int hostIndex, isDomainIndex, pathIndex, xxxIndex, expiresIndex, nameIndex, cookieIndex;
     hostIndex = 0;
-    if ((isDomainIndex=buffer->Find('\t', hostIndex)+1) == 0 ||
-        (pathIndex=buffer->Find('\t', isDomainIndex)+1) == 0 ||
-        (xxxIndex=buffer->Find('\t', pathIndex)+1) == 0 ||
-        (expiresIndex=buffer->Find('\t', xxxIndex)+1) == 0 ||
-        (nameIndex=buffer->Find('\t', expiresIndex)+1) == 0 ||
-        (cookieIndex=buffer->Find('\t', nameIndex)+1) == 0 ) {
+    if ((isDomainIndex=buffer->FindChar('\t', PR_FALSE,hostIndex)+1) == 0 ||
+        (pathIndex=buffer->FindChar('\t', PR_FALSE,isDomainIndex)+1) == 0 ||
+        (xxxIndex=buffer->FindChar('\t', PR_FALSE,pathIndex)+1) == 0 ||
+        (expiresIndex=buffer->FindChar('\t', PR_FALSE,xxxIndex)+1) == 0 ||
+        (nameIndex=buffer->FindChar('\t', PR_FALSE,expiresIndex)+1) == 0 ||
+        (cookieIndex=buffer->FindChar('\t', PR_FALSE,nameIndex)+1) == 0 ) {
       PR_Free(buffer);
       continue;
     }
@@ -2770,7 +2802,7 @@ cookie_FindValueInArgs(nsAutoString results, char* name) {
         return nsAutoString("").ToNewCString();
     }
     start += PL_strlen(name); /* get passed the |name| part */
-    length = results.Find('|', start) - start;
+    length = results.FindChar('|', PR_FALSE,start) - start;
     results.Mid(value, start, length);
     return value.ToNewCString();
 }

@@ -35,12 +35,10 @@
 #include "nsIDocument.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-#endif // NECKO
+#include "nsNeckoUtil.h"
+#else
 #include "nsIURLGroup.h"
+#endif // NECKO
 #include "nsIPluginInstanceOwner.h"
 #include "nsIHTMLContent.h"
 #include "nsISupportsArray.h"
@@ -140,7 +138,7 @@ public:
   //nsIEventListener interface
   nsEventStatus ProcessEvent(const nsGUIEvent & anEvent);
   
-  void Paint(const nsRect& aDirtyRect);
+  void Paint(const nsRect& aDirtyRect, PRUint32 ndc = nsnull);
 
   // nsITimerCallback interface
   virtual void Notify(nsITimer *timer);
@@ -166,9 +164,10 @@ private:
   PRInt32           mNumParams;
   char              **mParamNames;
   char              **mParamVals;
+  char              *mDocumentBase;
   nsIWidget         *mWidget;
   nsIPresContext    *mContext;
-  nsITimer			    *mPluginTimer;
+  nsITimer		    *mPluginTimer;
   nsIPluginHost     *mPluginHost;
 };
 
@@ -207,7 +206,7 @@ public:
                             nsISupports*    aSubContent);
   //local methods
   nsresult CreateWidget(nscoord aWidth, nscoord aHeight, PRBool aViewOnly);
-  nsresult GetFullURL(nsIURL*& aFullURL);
+  nsresult GetFullURL(nsIURI*& aFullURL);
 
   nsresult GetPluginInstance(nsIPluginInstance*& aPluginInstance);
   
@@ -223,7 +222,7 @@ protected:
                               nsHTMLReflowMetrics& aDesiredSize);
 
 
-  nsresult SetFullURL(nsIURL* aURL);
+  nsresult SetFullURL(nsIURI* aURL);
 
   nsresult InstantiateWidget(nsIPresContext&          aPresContext,
 							nsHTMLReflowMetrics&     aMetrics,
@@ -235,7 +234,7 @@ protected:
 							const nsHTMLReflowState& aReflowState,
 							nsIPluginHost* aPluginHost, 
 							const char* aMimetype,
-							nsIURL* aURL);
+							nsIURI* aURL);
 
   nsresult HandleImage(nsIPresContext&          aPresContext,
 					   nsHTMLReflowMetrics&     aMetrics,
@@ -243,11 +242,11 @@ protected:
 					   nsReflowStatus&          aStatus,
 					   nsIFrame* child);
  
-  nsresult GetBaseURL(nsIURL* &aURL);
+  nsresult GetBaseURL(nsIURI* &aURL);
 
 private:
   nsPluginInstanceOwner *mInstanceOwner;
-  nsIURL                *mFullURL;
+  nsIURI                *mFullURL;
   nsIFrame              *mFirstChild;
   nsIWidget				      *mWidget;
 };
@@ -270,6 +269,7 @@ static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kIHTMLContentIID, NS_IHTMLCONTENT_IID);
 static NS_DEFINE_IID(kILinkHandlerIID, NS_ILINKHANDLER_IID);
 static NS_DEFINE_IID(kCAppShellCID, NS_APPSHELL_CID);
+static NS_DEFINE_IID(kIContentConnectorIID, NS_ICONTENTCONNECTOR_IID);
 static NS_DEFINE_IID(kIPluginHostIID, NS_IPLUGINHOST_IID);
 static NS_DEFINE_IID(kIContentViewerContainerIID, NS_ICONTENT_VIEWER_CONTAINER_IID);
 
@@ -319,7 +319,7 @@ void nsObjectFrame::IsSupportedImage(nsIContent* aContent, PRBool* aImage)
     nsAutoString ext;
     
     PRInt32 iLastCharOffset = data.Length() - 1;
-    PRInt32 iPointOffset = data.RFind(".");
+    PRInt32 iPointOffset = data.RFindChar('.');
 
     if(iPointOffset != -1)
     {
@@ -380,7 +380,7 @@ nsObjectFrame::Init(nsIPresContext&  aPresContext,
       mFrames.AppendFrame(this, aNewFrame);
     }
     else
-      aNewFrame->DeleteFrame(aPresContext);
+      aNewFrame->Destroy(aPresContext);
   }
 
   return rv;
@@ -487,23 +487,34 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
   PRUint32 width = EMBED_DEF_DIM;
   PRUint32 height = EMBED_DEF_DIM;
 
-  if (aReflowState.HaveFixedContentWidth()) {
-    aMetrics.width = aReflowState.computedWidth;
+  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedWidth) {
+    aMetrics.width = aReflowState.mComputedWidth;
     haveWidth = PR_TRUE;
   }
-  if (aReflowState.HaveFixedContentHeight()) {
-    aMetrics.height = aReflowState.computedHeight;
+  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) {
+    aMetrics.height = aReflowState.mComputedHeight;
     haveHeight = PR_TRUE;
   }
 
   // the first time, mInstanceOwner will be null, so we a temporary default
   if(mInstanceOwner != nsnull)
   {
-    mInstanceOwner->GetWidth(&width);
-    mInstanceOwner->GetHeight(&height);
-	// XXX this is temporary fix so plugins display until we support padding
-	haveHeight = PR_FALSE;
-	haveWidth = PR_FALSE;
+    // if no width and height attributes specified use embed_def_dim.
+    if(NS_OK != mInstanceOwner->GetWidth(&width))
+    {
+      width = EMBED_DEF_DIM;
+  	  haveWidth = PR_FALSE;
+    }
+    else
+	    haveWidth = PR_FALSE;
+
+    if(NS_OK != mInstanceOwner->GetHeight(&height))
+    {
+      height = EMBED_DEF_DIM;
+  	  haveHeight = PR_FALSE;
+    }
+    else
+	    haveHeight = PR_FALSE;
   }
 
 
@@ -531,6 +542,7 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
   aMetrics.ascent = aMetrics.height;
   aMetrics.descent = 0;
 }
+
 
 #define JAVA_CLASS_ID "8AD9C840-044E-11D1-B3E9-00805F499D93"
 
@@ -566,8 +578,8 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
     nsISupports               *container = nsnull;
     nsIPluginHost             *pluginHost = nsnull;
     nsIContentViewerContainer *cv = nsnull;
-    nsIURL* baseURL = nsnull;
-    nsIURL* fullURL = nsnull;
+    nsIURI* baseURL = nsnull;
+    nsIURI* fullURL = nsnull;
 
     nsAutoString classid;
     PRInt32 nameSpaceID;
@@ -577,30 +589,47 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
     if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(nameSpaceID, nsHTMLAtoms::classid, classid))
     {
       nsCID widgetCID;
+	
+	PRBool bJavaObject = PR_FALSE;
+	PRBool bJavaPluginClsid = PR_FALSE;
+
+	if (classid.Find("java:") != -1)
+	{
+	    classid.Cut(0, 5); // Strip off the "java:". What's left is the class file.
+	    bJavaObject = PR_TRUE;
+	}
+
+	if (classid.Find("clsid:") != -1)
+	{
+            classid.Cut(0, 6); // Strip off the "clsid:". What's left is the class ID.
+	    bJavaPluginClsid = (classid == JAVA_CLASS_ID);
+	}
 
       // if we find "java:" in the class id, or we match the Java classid number, we have a java applet
-      if((classid.Find("java:") != -1) || classid == JAVA_CLASS_ID)
+      if(bJavaObject || bJavaPluginClsid)
       {
         mimeType = (char *)PR_Malloc(PL_strlen("application/x-java-vm") + 1);
         PL_strcpy(mimeType, "application/x-java-vm");
 
-        // removing the "java:" leaves us with the class file
-        if(classid != JAVA_CLASS_ID)
-          classid.Cut(0, 5); 
+      if((rv = GetBaseURL(baseURL)) != NS_OK)
+	return rv;
 
-	      if((rv = GetBaseURL(baseURL)) != NS_OK)
-	        return rv;
-
-        nsIURLGroup* group = nsnull;
+#ifndef NECKO
+        nsILoadGroup* group = nsnull;
         if (nsnull != baseURL)
-          baseURL->GetURLGroup(&group);
+          baseURL->GetLoadGroup(&group);
+#endif
 
         nsAutoString codeBase;
         if(NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase) &&
-           classid != JAVA_CLASS_ID) 
+           !bJavaPluginClsid) 
 		    {
-          nsIURL* codeBaseURL = nsnull;
+          nsIURI* codeBaseURL = nsnull;
+#ifdef NECKO
+          rv = NS_NewURI(&codeBaseURL, codeBase, baseURL);
+#else
           rv = NS_NewURL(&codeBaseURL, codeBase, baseURL, nsnull, group);
+#endif
           if(rv == NS_OK)
           {
             NS_IF_RELEASE(baseURL);
@@ -608,18 +637,27 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
           }
         }
 
-        const char* url;
-        (void)baseURL->GetSpec(&url);
+#ifndef NECKO   // unused urlxxx?
+        const char* urlxxx;
+        (void)baseURL->GetSpec(&urlxxx);
+#endif
 
         // Create an absolute URL
-        if(classid != JAVA_CLASS_ID)
+        if(bJavaPluginClsid) {
+#ifdef NECKO
+          rv = NS_NewURI(&fullURL, classid, baseURL);
+#else
           rv = NS_NewURL(&fullURL, classid, baseURL, nsnull, group);
+#endif
+        }
         else
         {
           fullURL = baseURL;
           NS_IF_ADDREF(fullURL);
         }
+#ifndef NECKO
         NS_IF_RELEASE(group);
+#endif
 
         // get the nsIPluginHost interface
         if((rv = aPresContext.GetContainer(&container)) != NS_OK)
@@ -655,16 +693,22 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
 	        if((rv = GetBaseURL(baseURL)) != NS_OK)
 	          return rv;
 
-	        nsIURLGroup* group = nsnull;
+#ifndef NECKO
+	        nsILoadGroup* group = nsnull;
           if(nsnull != baseURL)
-            baseURL->GetURLGroup(&group);
+            baseURL->GetLoadGroup(&group);
+#endif
 
 	        // if we have a codebase, add it to the fullURL
 	        nsAutoString codeBase;
           if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase)) 
 	        {
-            nsIURL* codeBaseURL = nsnull;
+            nsIURI* codeBaseURL = nsnull;
+#ifdef NECKO
+            rv = NS_NewURI(&fullURL, codeBase, baseURL);
+#else
             rv = NS_NewURL(&fullURL, codeBase, baseURL, nsnull, group);
+#endif
             if(rv == NS_OK)
             {
               NS_IF_RELEASE(baseURL);
@@ -675,7 +719,9 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
               NS_IF_ADDREF(fullURL);
 	      }
 
+#ifndef NECKO
 	        NS_IF_RELEASE(group);
+#endif
 
           // get the nsIPluginHost interface
           if((rv = aPresContext.GetContainer(&container)) != NS_OK)
@@ -758,15 +804,21 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
 
       if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::code, src)) 
 	    {
-        nsIURLGroup* group = nsnull;
+#ifndef NECKO
+        nsILoadGroup* group = nsnull;
         if (nsnull != baseURL)
-          baseURL->GetURLGroup(&group);
+          baseURL->GetLoadGroup(&group);
+#endif
 
         nsAutoString codeBase;
         if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase)) 
 		    {
-          nsIURL* codeBaseURL = nsnull;
+          nsIURI* codeBaseURL = nsnull;
+#ifdef NECKO
+          rv = NS_NewURI(&codeBaseURL, codeBase, baseURL);
+#else
           rv = NS_NewURL(&codeBaseURL, codeBase, baseURL, nsnull, group);
+#endif
           if(rv == NS_OK)
           {
             NS_IF_RELEASE(baseURL);
@@ -775,8 +827,12 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
         }
 
         // Create an absolute URL
+#ifdef NECKO
+        rv = NS_NewURI(&fullURL, src, baseURL);
+#else
         rv = NS_NewURL(&fullURL, src, baseURL, nsnull, group);
         NS_IF_RELEASE(group);
+#endif
       }
 
       rv = InstantiatePlugin(aPresContext, aMetrics, aReflowState, pluginHost, mimeType, fullURL);
@@ -797,23 +853,33 @@ nsObjectFrame::Reflow(nsIPresContext&          aPresContext,
       //stream in the object source if there is one...
       if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::src, src)) 
 	    {
-        nsIURLGroup* group = nsnull;
+#ifdef NECKO
+        // Create an absolute URL
+        rv = NS_NewURI(&fullURL, src, baseURL);
+#else
+        nsILoadGroup* group = nsnull;
         if (nsnull != baseURL)
-          baseURL->GetURLGroup(&group);
+          baseURL->GetLoadGroup(&group);
 
         // Create an absolute URL
         rv = NS_NewURL(&fullURL, src, baseURL, nsnull, group);
         NS_IF_RELEASE(group);
+#endif
 	    }
 	    else if(NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::data, src)) 
 	    {
-        nsIURLGroup* group = nsnull;
+#ifdef NECKO
+        // Create an absolute URL
+        rv = NS_NewURI(&fullURL, src, baseURL);
+#else
+        nsILoadGroup* group = nsnull;
         if (nsnull != baseURL)
-          baseURL->GetURLGroup(&group);
+          baseURL->GetLoadGroup(&group);
 
         // Create an absolute URL
         rv = NS_NewURL(&fullURL, src, baseURL, nsnull, group);
         NS_IF_RELEASE(group);
+#endif
 	    } else {// we didn't find a src or data param, so just set the url to the base
 		  fullURL = baseURL;
 		  NS_IF_ADDREF(fullURL);
@@ -890,6 +956,15 @@ nsObjectFrame::InstantiateWidget(nsIPresContext&          aPresContext,
   nsIWidget *parent;
   parentWithView->GetOffsetFromWidget(nsnull, nsnull, parent);
   mWidget->Create(parent, r, nsnull, nsnull);
+
+  // See if the widget implements the CONTENT CONNECTOR interface.  If it
+  // does, we can hand it the content subtree for further processing.
+  nsIContentConnector* cc;
+  if ((rv = mWidget->QueryInterface(kIContentConnectorIID, (void**)&cc)) == NS_OK)
+  {
+    cc->SetContentRoot(mContent);
+    NS_IF_RELEASE(cc); 
+  }
   mWidget->Show(PR_TRUE);
   return rv;
 }
@@ -900,7 +975,7 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext&          aPresContext,
 							const nsHTMLReflowState& aReflowState,
 							nsIPluginHost* aPluginHost, 
 							const char* aMimetype,
-							nsIURL* aURL)
+							nsIURI* aURL)
 {
   nsIView *parentWithView;
   nsPoint origin;
@@ -983,7 +1058,7 @@ nsObjectFrame::HandleImage(nsIPresContext&          aPresContext,
       if(eHTMLUnit_Pixel == val.GetUnit())
       {
         nscoord width = val.GetPixelValue();
-        kidReflowState.computedWidth = NSIntPixelsToTwips(width, p2t);
+        kidReflowState.mComputedWidth = NSIntPixelsToTwips(width, p2t);
       }
     }
     if(NS_CONTENT_ATTR_HAS_VALUE == hc->GetHTMLAttribute(nsHTMLAtoms::height, val))
@@ -991,7 +1066,7 @@ nsObjectFrame::HandleImage(nsIPresContext&          aPresContext,
       if(eHTMLUnit_Pixel == val.GetUnit())
       {
         nscoord height = val.GetPixelValue();
-        kidReflowState.computedHeight = NSIntPixelsToTwips(height, p2t);
+        kidReflowState.mComputedHeight = NSIntPixelsToTwips(height, p2t);
       }
     }
   }
@@ -1012,7 +1087,7 @@ nsObjectFrame::HandleImage(nsIPresContext&          aPresContext,
 
 
 nsresult
-nsObjectFrame::GetBaseURL(nsIURL* &aURL)
+nsObjectFrame::GetBaseURL(nsIURI* &aURL)
 {
   nsIHTMLContent* htmlContent;
   if (NS_SUCCEEDED(mContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) 
@@ -1147,13 +1222,15 @@ nsObjectFrame::Paint(nsIPresContext& aPresContext,
     return NS_OK;
   }
 
+  aRenderingContext.SetColor(NS_RGB(192, 192, 192));
+  aRenderingContext.FillRect(0, 0, mRect.width, mRect.height);
+
 #if !defined(XP_MAC)
   if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) 
   {
-    aRenderingContext.SetColor(NS_RGB(192, 192, 192));
-    aRenderingContext.FillRect(0, 0, mRect.width, mRect.height);
 
-    //~~~
+//~~~
+#ifdef XP_WIN
     nsIPluginInstance * inst;
     if(NS_OK == GetPluginInstance(inst))
     {
@@ -1162,13 +1239,20 @@ nsObjectFrame::Paint(nsIPresContext& aPresContext,
       nsPluginWindow * window;
       mInstanceOwner->GetWindow(window);
       if(window->type == nsPluginWindowType_Drawable)
-        mInstanceOwner->Paint(aDirtyRect);
-      return NS_OK;
+      {
+        PRUint32 hdc;
+        aRenderingContext.RetrieveCurrentNativeGraphicData(&hdc);
+        mInstanceOwner->Paint(aDirtyRect, hdc);
+        return NS_OK;
+      }
     }
+#endif
 
     const nsStyleFont* font = (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
 
     aRenderingContext.SetFont(font->mFont);
+    aRenderingContext.SetColor(NS_RGB(192, 192, 192));
+    aRenderingContext.FillRect(0, 0, mRect.width, mRect.height);
     aRenderingContext.SetColor(NS_RGB(0, 0, 0));
     aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
     float p2t;
@@ -1262,7 +1346,7 @@ nsObjectFrame::Scrolled(nsIView *aView)
 }
 
 nsresult
-nsObjectFrame::SetFullURL(nsIURL* aURL)
+nsObjectFrame::SetFullURL(nsIURI* aURL)
 {
   NS_IF_RELEASE(mFullURL);
   mFullURL = aURL;
@@ -1270,7 +1354,7 @@ nsObjectFrame::SetFullURL(nsIURL* aURL)
   return NS_OK;
 }
 
-nsresult nsObjectFrame::GetFullURL(nsIURL*& aFullURL)
+nsresult nsObjectFrame::GetFullURL(nsIURI*& aFullURL)
 {
   aFullURL = mFullURL;
   NS_IF_ADDREF(aFullURL);
@@ -1325,6 +1409,7 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   mNumParams = 0;
   mParamNames = nsnull;
   mParamVals = nsnull;
+  mDocumentBase = nsnull;
   mPluginTimer = nsnull;
   mPluginHost = nsnull;
 }
@@ -1402,6 +1487,12 @@ nsPluginInstanceOwner::~nsPluginInstanceOwner()
   {
     PR_Free(mParamVals);
     mParamVals = nsnull;
+  }
+
+  if (nsnull != mDocumentBase)
+  {
+    nsCRT::free(mDocumentBase);
+    mDocumentBase = nsnull;
   }
 
   NS_IF_RELEASE(mWidget);
@@ -1629,7 +1720,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetURL(const char *aURL, const char *aTarge
           nsAutoString  uniurl = nsAutoString(aURL);
           nsAutoString  unitarget = nsAutoString(aTarget);
           nsAutoString  fullurl;
-          nsIURL* baseURL;
+          nsIURI* baseURL;
 
           mOwner->GetFullURL(baseURL);
 
@@ -1637,19 +1728,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetURL(const char *aURL, const char *aTarge
 #ifndef NECKO
           rv = NS_MakeAbsoluteURL(baseURL, nsString(), uniurl, fullurl);
 #else
-          NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-          if (NS_FAILED(rv)) return rv;
-
-          nsIURI *baseUri = nsnull;
-          rv = baseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-          if (NS_FAILED(rv)) return rv;
-
-          char *absUrlStr = nsnull;
-          const char *urlSpec = uniurl.GetBuffer();
-          rv = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
-          NS_RELEASE(baseUri);
-          fullurl = absUrlStr;
-          delete [] absUrlStr;
+          rv = NS_MakeAbsoluteURI(uniurl, baseURL, fullurl);
 #endif // NECKO
 
           NS_IF_RELEASE(baseURL);
@@ -1946,27 +2025,38 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetParameter(const char* name, const char* 
   
 NS_IMETHODIMP nsPluginInstanceOwner::GetDocumentBase(const char* *result)
 {
-  if (nsnull != mContext)
-  {
+  nsresult rv = NS_OK;
+  if (nsnull == mDocumentBase) {
+    if (nsnull == mContext) {
+      *result = nsnull;
+      return NS_ERROR_FAILURE;
+    }
+    
     nsCOMPtr<nsIPresShell> shell;
     mContext->GetShell(getter_AddRefs(shell));
 
     nsCOMPtr<nsIDocument> doc;
     shell->GetDocument(getter_AddRefs(doc));
 
-    nsCOMPtr<nsIURL> docURL( dont_AddRef(doc->GetDocumentURL()) );
+    nsCOMPtr<nsIURI> docURL( dont_AddRef(doc->GetDocumentURL()) );
 
-    nsresult rv = docURL->GetSpec(result);
-
-    return rv;
+#ifdef NECKO
+    rv = docURL->GetSpec(&mDocumentBase);
+#else
+    const char* spec;
+    rv = docURL->GetSpec(&spec);
+    if (rv == NS_OK) {
+      mDocumentBase = nsCRT::strdup(spec);
+      if (*result == nsnull)
+        rv = NS_ERROR_OUT_OF_MEMORY;
+    }
+#endif
   }
-  else
-  {
-    *result = "";
-    return NS_ERROR_FAILURE;
-  }
+  if (rv == NS_OK)
+    *result = mDocumentBase;
+  return rv;
 }
-  
+
 NS_IMETHODIMP nsPluginInstanceOwner::GetDocumentEncoding(const char* *result)
 {
 printf("instance owner getdocumentencoding called\n");
@@ -2150,7 +2240,7 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 
 // Paints are handled differently, so we just simulate an update event.
 
-void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect)
+void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
 {
 #ifdef XP_MAC
 	if (mInstance != NULL) {
@@ -2170,13 +2260,11 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect)
 //~~~
 #ifdef XP_WIN
 	nsPluginEvent pluginEvent;
-  nsPluginPort* pluginPort = GetPluginPort();
   pluginEvent.event = 0x000F; //!!! This is bad, but is it better to include <windows.h> for WM_PAINT only?
-  pluginEvent.wParam = (uint32)pluginPort;
+  pluginEvent.wParam = (uint32)ndc;
   pluginEvent.lParam = nsnull;
 	PRBool eventHandled = PR_FALSE;
 	mInstance->HandleEvent(&pluginEvent, &eventHandled);
-  ReleasePluginPort(pluginPort);
 #endif
 }
 
@@ -2272,8 +2360,6 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
                                 windowless);
       if (NS_OK == rv)
       {
-        nsIView   *view;
-
         mOwner->GetView(&view);
         view->GetWidget(mWidget);
 

@@ -38,9 +38,7 @@
 #include "nsISupportsArray.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsFrame.h"
 #include "nsIPresShell.h"
@@ -759,8 +757,8 @@ nsGenericElement::HandleDOMEvent(nsIPresContext& aPresContext,
   nsIDOMEvent* domEvent = nsnull;
   if (NS_EVENT_FLAG_INIT == aFlags) {
     aDOMEvent = &domEvent;
+    aEvent->flags = NS_EVENT_FLAG_NONE;
 
-    //Initiate capturing phase
     //Initiate capturing phase.  Special case first call to document
     if (nsnull != mDocument) {
       mDocument->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
@@ -776,12 +774,14 @@ nsGenericElement::HandleDOMEvent(nsIPresContext& aPresContext,
   }
   
   //Local handling stage
-  if (nsnull != mListenerManager) {
+  if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH)) {
+    aEvent->flags = aFlags;
     mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, aFlags, aEventStatus);
   }
 
   //Bubbling stage
-  if ((NS_EVENT_FLAG_CAPTURE != aFlags) && (mParent != nsnull) && (mDocument != nsnull)) {
+  if ((NS_EVENT_FLAG_CAPTURE != aFlags) && 
+      (mParent != nsnull) && (mDocument != nsnull)) {
     ret = mParent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
                                   NS_EVENT_FLAG_BUBBLE, aEventStatus);
   }
@@ -821,6 +821,16 @@ nsGenericElement::RangeAdd(nsIDOMRange& aRange)
   if (nsnull == mDOMSlots->mRangeList) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
+
+  // Make sure we don't add a range that is already
+  // in the list!
+  PRInt32 i = mDOMSlots->mRangeList->IndexOf(&aRange);
+  if (i >= 0) {
+    // Range is already in the list, so there
+    // is nothing to do!
+    return NS_OK;
+  }
+
   // dont need to addref - this call is made by the range object itself
   PRBool rv = mDOMSlots->mRangeList->AppendElement(&aRange);
   if (rv)  return NS_OK;
@@ -1006,13 +1016,12 @@ nsGenericElement::RemoveEventListenerByIID(nsIDOMEventListener* aListener,
 
 nsresult
 nsGenericElement::AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                   PRBool aPostProcess, PRBool aUseCapture)
+                                   PRBool aUseCapture)
 {
   nsIEventListenerManager *manager;
 
   if (NS_OK == GetListenerManager(&manager)) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     manager->AddEventListenerByType(aListener, aType, flags);
     NS_RELEASE(manager);
@@ -1023,11 +1032,10 @@ nsGenericElement::AddEventListener(const nsString& aType, nsIDOMEventListener* a
 
 nsresult
 nsGenericElement::RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                      PRBool aPostProcess, PRBool aUseCapture)
+                                      PRBool aUseCapture)
 {
   if (nsnull != mListenerManager) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     mListenerManager->RemoveEventListenerByType(aListener, aType, flags);
     return NS_OK;
@@ -1110,7 +1118,8 @@ nsGenericElement::SetProperty(JSContext *aContext, jsval aID, jsval *aVp)
           }
         }
       }
-      else if (propName == "onsubmit" || propName == "onreset" || propName == "onchange") {
+      else if (propName == "onsubmit" || propName == "onreset" || propName == "onchange" ||
+               propName == "onselect") {
         if (NS_OK == GetListenerManager(&manager)) {
           nsIScriptContext *mScriptCX = (nsIScriptContext *)JS_GetContextPrivate(aContext);
           if (NS_OK != manager->RegisterScriptEventListener(mScriptCX, owner, kIDOMFormListenerIID)) {
@@ -1201,7 +1210,7 @@ nsGenericElement::Release()
 void
 nsGenericElement::TriggerLink(nsIPresContext& aPresContext,
                               nsLinkVerb aVerb,
-                              nsIURL* aBaseURL,
+                              nsIURI* aBaseURL,
                               const nsString& aURLSpec,
                               const nsString& aTargetSpec,
                               PRBool aClick)
@@ -1212,30 +1221,26 @@ nsGenericElement::TriggerLink(nsIPresContext& aPresContext,
     // Resolve url to an absolute url
     nsAutoString absURLSpec;
     if (nsnull != aBaseURL) {
-      nsString empty;
 #ifndef NECKO
+      nsString empty;
       NS_MakeAbsoluteURL(aBaseURL, empty, aURLSpec, absURLSpec);
 #else
-      nsresult rv;
-      NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-      if (NS_FAILED(rv)) return;
-
-      nsIURI *baseUri = nsnull;
-      rv = aBaseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-      if (NS_FAILED(rv)) return;
-
-      char *absUrl = nsnull;
-      const char *uriStr = aURLSpec.GetBuffer();
-      rv = service->MakeAbsolute(uriStr, baseUri, &absUrl);
-      NS_RELEASE(baseUri);
-      if (NS_FAILED(rv)) return;
-      absURLSpec = absUrl;
-      delete [] absUrl;
+      rv = NS_MakeAbsoluteURI(aURLSpec, aBaseURL, absURLSpec);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "XXX make this function return an nsresult, like it should!");
 #endif // NECKO
     }
     else {
       absURLSpec = aURLSpec;
     }
+
+	// HACK HACK HACK. If the link clicked is a mailto: url just
+    // pass the aURLSpec. This is because, netlib doesn't recognize
+    // mailto: protocol. Note: This s'd go away after  NECKO lands
+  
+    PRInt32 offset = -1;
+    offset = aURLSpec.Find("mailto", PR_TRUE);
+    if (offset >= 0)
+      absURLSpec = aURLSpec;
 
     // Now pass on absolute url to the click handler
     if (aClick) {
@@ -1282,12 +1287,12 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
         else {
           nsIEventListenerManager *manager;
           if (NS_OK == GetListenerManager(&manager)) {
-            nsIScriptObjectOwner* owner;
+            nsIScriptObjectOwner* cowner;
             if (NS_OK == mContent->QueryInterface(kIScriptObjectOwnerIID,
-                                                  (void**) &owner)) {
-              ret = manager->AddScriptEventListener(context, owner,
+                                                  (void**) &cowner)) {
+              ret = manager->AddScriptEventListener(context, cowner,
                                                     aAttribute, aValue, aIID);
-              NS_RELEASE(owner);
+              NS_RELEASE(cowner);
             }
             NS_RELEASE(manager);
           }
@@ -1300,13 +1305,13 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
   return ret;
 }
 
-static char kNameSpaceSeparator[] = ":";
+static char kNameSpaceSeparator = ':';
 
 nsIAtom*  
 nsGenericElement::CutNameSpacePrefix(nsString& aString)
 {
   nsAutoString  prefix;
-  PRInt32 nsoffset = aString.Find(kNameSpaceSeparator);
+  PRInt32 nsoffset = aString.FindChar(kNameSpaceSeparator);
   if (-1 != nsoffset) {
     aString.Left(prefix, nsoffset);
     aString.Cut(0, nsoffset+1);

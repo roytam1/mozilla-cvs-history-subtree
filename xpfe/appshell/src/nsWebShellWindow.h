@@ -23,23 +23,28 @@
 #include "nsISupports.h"
 #include "nsIWebShellWindow.h"
 #include "nsIBrowserWindow.h"
+#include "nsIModalWindowSupport.h"
 #include "nsGUIEvent.h"
 #include "nsIWebShell.h"  
 #include "nsIDocumentLoaderObserver.h"
 #include "nsIDocumentObserver.h"
 #include "nsVoidArray.h"
 #include "nsIMenu.h"
+#include "nsIUrlDispatcher.h"
+
+#include "nsIPrompt.h"
 
 // can't use forward class decl's because of template bugs on Solaris 
 #include "nsIDOMDocument.h"
 #include "nsIDOMNode.h"
 
 #include "nsCOMPtr.h"
+#include "nsWeakReference.h"
 
 /* Forward declarations.... */
 struct PLEvent;
 
-class nsIURL;
+class nsIURI;
 class nsIAppShell;
 class nsIContent;
 class nsIDocument;
@@ -57,7 +62,12 @@ class nsWebShellWindow : public nsIWebShellWindow,
                          public nsIWebShellContainer,
                          public nsIBrowserWindow,
                          public nsIDocumentLoaderObserver,
-                         public nsIDocumentObserver
+                         public nsIDocumentObserver,
+                         public nsIUrlDispatcher,
+                         public nsIPrompt,
+                         public nsIModalWindowSupport,
+                         public nsSupportsWeakReference
+
 {
 public:
   nsWebShellWindow();
@@ -81,14 +91,14 @@ public:
 
   NS_IMETHOD EndLoadURL(nsIWebShell* aShell,
                         const PRUnichar* aURL,
-                        PRInt32 aStatus);
+                        nsresult aStatus);
 
 
   NS_IMETHOD CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, 
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow);
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup);
 
   NS_IMETHOD ContentShellAdded(nsIWebShell* aChildShell, nsIContent* frameNode);
 
@@ -97,10 +107,11 @@ public:
                          nsIWebShell *&aNewWebShell);
 
   NS_IMETHOD AddWebShellInfo(const nsString& aID,
-                             nsIWebShell* aChildShell);
+                         PRBool aPrimary,
+                         nsIWebShell* aChildShell);
 
-	NS_IMETHOD GetContentShellById(const nsString& anID, nsIWebShell** aResult);
-	NS_IMETHOD LockUntilChromeLoad() { mLockedUntilChromeLoad = PR_TRUE; return NS_OK; }
+  NS_IMETHOD GetContentShellById(const nsString& anID, nsIWebShell** aResult);
+  NS_IMETHOD LockUntilChromeLoad() { mLockedUntilChromeLoad = PR_TRUE; return NS_OK; }
   NS_IMETHOD GetLockedState(PRBool& aResult) { aResult = mLockedUntilChromeLoad; return NS_OK; }
 
   NS_IMETHOD FindWebShellWithName(const PRUnichar* aName,
@@ -111,16 +122,21 @@ public:
   // nsIWebShellWindow methods...
   NS_IMETHOD Show(PRBool aShow);
   NS_IMETHOD ShowModal();
+  NS_IMETHOD ShowModally(PRBool aPrepare);
   NS_IMETHOD Close();
   NS_IMETHOD GetWebShell(nsIWebShell *& aWebShell);
+  NS_IMETHOD GetContentWebShell(nsIWebShell **aResult);
   NS_IMETHOD GetWidget(nsIWidget *& aWidget);
   NS_IMETHOD ConvertWebShellToDOMWindow(nsIWebShell* aShell, nsIDOMWindow** aDOMWindow);
   // nsWebShellWindow methods...
-  nsresult Initialize(nsIWebShellWindow * aParent, nsIAppShell* aShell, nsIURL* aUrl,
-                      nsIStreamObserver* anObserver,
+  nsresult Initialize(nsIWebShellWindow * aParent, nsIAppShell* aShell, nsIURI* aUrl,
+                      PRBool aCreatedVisible, nsIStreamObserver* anObserver,
                       nsIXULWindowCallbacks *aCallbacks,
-                      PRInt32 aInitialWidth, PRInt32 aInitialHeight);
+                      PRInt32 aInitialWidth, PRInt32 aInitialHeight,
+                      nsWidgetInitData& widgetInitData);
   nsIWidget* GetWidget(void) { return mWindow; }
+
+  void SetIntrinsicallySized(PRBool isIntrinsicallySized) { mIntrinsicallySized = isIntrinsicallySized; };
 
   void DoContextMenu(
 	  nsMenuEvent * aMenuEvent,
@@ -132,26 +148,35 @@ public:
     const nsString& aAnchorAlignment);
   
   // nsIDocumentLoaderObserver
+#ifdef NECKO
+	NS_IMETHOD OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand);
+	NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus, nsIDocumentLoaderObserver* aObserver);
+	NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsIContentViewer* aViewer);
+	NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, PRUint32 aProgress, PRUint32 aProgressMax);
+	NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsString& aMsg);
+	NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus);
+	NS_IMETHOD HandleUnknownContentType(nsIDocumentLoader* loader, nsIChannel* channel, const char *aContentType,const char *aCommand );		
+#else
   NS_IMETHOD OnStartDocumentLoad(nsIDocumentLoader* loader, 
-                                 nsIURL* aURL, const char* aCommand);
+                                 nsIURI* aURL, const char* aCommand);
   NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, 
-                               nsIURL *aUrl, PRInt32 aStatus,
+                               nsIURI *aUrl, PRInt32 aStatus,
 							   nsIDocumentLoaderObserver * aDocObserver);
   NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, 
-                            nsIURL* aURL, const char* aContentType, 
+                            nsIURI* aURL, const char* aContentType, 
                             nsIContentViewer* aViewer);
   NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, 
-                               nsIURL* aURL, PRUint32 aProgress, 
+                               nsIURI* aURL, PRUint32 aProgress, 
                                PRUint32 aProgressMax);
   NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, 
-                             nsIURL* aURL, nsString& aMsg);
+                             nsIURI* aURL, nsString& aMsg);
   NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, 
-                          nsIURL* aURL, PRInt32 aStatus);
+                          nsIURI* aURL, PRInt32 aStatus);
   NS_IMETHOD HandleUnknownContentType(nsIDocumentLoader* loader, 
-                                      nsIURL* aURL,
+                                      nsIURI* aURL,
                                       const char *aContentType,
                                       const char *aCommand );
-
+#endif
   
   // nsIDocumentObserver
   NS_IMETHOD BeginUpdate(nsIDocument *aDocument);
@@ -205,16 +230,19 @@ public:
                               nsIStyleRule* aStyleRule);
   NS_IMETHOD DocumentWillBeDestroyed(nsIDocument *aDocument);
 
-	// nsIBrowserWindow methods not already covered elsewhere
+  // nsIBrowserWindow methods not already covered elsewhere
   NS_IMETHOD Init(nsIAppShell* aAppShell,
                   nsIPref* aPrefs,
                   const nsRect& aBounds,
                   PRUint32 aChromeMask,
                   PRBool aAllowPlugins = PR_TRUE);
   NS_IMETHOD MoveTo(PRInt32 aX, PRInt32 aY);
-  NS_IMETHOD SizeTo(PRInt32 aWidth, PRInt32 aHeight);
-  NS_IMETHOD GetBounds(nsRect& aResult);
+  NS_IMETHOD SizeContentTo(PRInt32 aWidth, PRInt32 aHeight);
+  NS_IMETHOD SizeWindowTo(PRInt32 aWidth, PRInt32 aHeight);
+  NS_IMETHOD GetContentBounds(nsRect& aResult);
   NS_IMETHOD GetWindowBounds(nsRect& aResult);
+  NS_IMETHOD IsIntrinsicallySized(PRBool& aResult);
+  NS_IMETHOD ShowAfterCreation() { mCreatedVisible = PR_TRUE; return NS_OK; }
   NS_IMETHOD Show() { Show(PR_TRUE); return NS_OK; }
   NS_IMETHOD Hide() { Show(PR_FALSE); return NS_OK; }
   NS_IMETHOD SetChrome(PRUint32 aNewChromeMask);
@@ -223,13 +251,30 @@ public:
   NS_IMETHOD GetTitle(const PRUnichar** aResult);
   NS_IMETHOD SetStatus(const PRUnichar* aStatus);
   NS_IMETHOD GetStatus(const PRUnichar** aResult);
+  NS_IMETHOD SetDefaultStatus(const PRUnichar* aStatus);
+  NS_IMETHOD GetDefaultStatus(const PRUnichar** aResult);
   NS_IMETHOD SetProgress(PRInt32 aProgress, PRInt32 aProgressMax);
   NS_IMETHOD ShowMenuBar(PRBool aShow);
-  NS_IMETHOD IsMenuBarVisible(PRBool *aVisible);
+
+  NS_DECL_IURLDISPATCHER
+  // nsINetSupport
+
+
+  NS_IMETHOD Alert(const PRUnichar *text);
+  NS_IMETHOD Confirm(const PRUnichar *text, PRBool *_retval);
+  NS_IMETHOD ConfirmCheck(const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval);
+  NS_IMETHOD Prompt(const PRUnichar *text, const PRUnichar *defaultText, PRUnichar **result, PRBool *_retval);
+  NS_IMETHOD PromptUsernameAndPassword(const PRUnichar *text, PRUnichar **user, PRUnichar **pwd, PRBool *_retval);
+  NS_IMETHOD PromptPassword(const PRUnichar *text, PRUnichar **pwd, PRBool *_retval);
+  NS_IMETHOD ConfirmYN(const PRUnichar *text, PRBool *_retval);
+  NS_IMETHOD ConfirmCheckYN(const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval);
+
+  // nsIModalWindowSupport
+  NS_IMETHOD PrepareModality();
+  NS_IMETHOD FinishModality();
 
 protected:
-  void ExecuteJavaScriptString(nsString& aJavaScript);
-
+  
   PRInt32 GetDocHeight(nsIDocument * aDoc);
  
   void LoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aParentWindow);
@@ -244,7 +289,6 @@ protected:
 
   nsCOMPtr<nsIDOMNode>     GetDOMNodeFromWebShell(nsIWebShell *aShell);
   void                     ExecuteStartupCode();
-  void                     SetSizeFromXUL();
   void                     SetTitleFromXUL();
   void                     ShowAppropriateChrome();
   void                     LoadContentAreas();
@@ -259,11 +303,13 @@ protected:
 
   nsIWidget*              mWindow;
   nsIWebShell*            mWebShell;
+  nsCOMPtr<nsIWeakReference> mParentWindow;
   nsIXULWindowCallbacks*  mCallbacks;
   PRBool                  mContinueModalLoop;
   PRBool                  mLockedUntilChromeLoad;
   PRBool                  mChromeInitialized;
   PRUint32                mChromeMask;
+  PRBool                  mCreatedVisible;
 
   nsVoidArray mMenuDelegates;
 
@@ -273,6 +319,10 @@ protected:
   nsIDOMNode * contextMenuTest;
 
   nsString mStatus;
+  nsString mDefaultStatus;
+
+  PRBool mIntrinsicallySized; // Whether or not this window gets sized to its content.
+
 private:
 
   static void * HandleModalDialogEvent(PLEvent *aEvent);

@@ -25,7 +25,7 @@
 
 
 // These are temporary
-#if defined(XP_UNIX) || defined(XP_MAC)
+#if defined(XP_UNIX) || defined(XP_MAC) || defined(XP_BEOS)
 #include <strstream.h>
 #endif
 
@@ -45,6 +45,7 @@
 #include "nsXIFFormatConverter.h"
 
 static NS_DEFINE_IID(kIXIFFormatConverterIID,  NS_IFORMATCONVERTER_IID);
+static NS_DEFINE_IID(kISupportsIID,  NS_ISUPPORTS_IID);
 //static NS_DEFINE_IID(kCXIFConverterCID,  NS_XIFCONVERTER_CID);
 
 static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
@@ -92,6 +93,13 @@ nsresult nsXIFFormatConverter::QueryInterface(const nsIID& aIID, void** aInstanc
     NS_ADDREF_THIS();
     return NS_OK;
   }
+
+  if (aIID.Equals(kISupportsIID)) {                                      
+    *aInstancePtr = (void*)(nsISupports*)this;                        
+    NS_ADDREF_THIS();                                                    
+    return NS_OK;                                                        
+  }
+
 
   return rv;
 }
@@ -168,7 +176,11 @@ NS_IMETHODIMP nsXIFFormatConverter::Convert(nsString * aFromDataFlavor, void * a
 
   nsAutoString text;
   nsAutoString srcText;
-  srcText.SetString((char *)aFromData, aDataLen);
+
+  // XIF on clipboard is going to always be double byte
+  // since the data is in two byte chunks the length represents
+  // the length in single 8 bit chars, so we need to divide by two
+  srcText.SetString((PRUnichar *)aFromData, aDataLen/2);
 
   if (aToDataFlavor->Equals(kTextMime)) {
     if (NS_OK == ConvertFromXIFToText(srcText, text)) {

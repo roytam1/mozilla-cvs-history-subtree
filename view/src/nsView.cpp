@@ -76,6 +76,7 @@ nsView :: nsView()
   mXForm = nsnull;
   mVFlags = 0;
   mOpacity = 1.0f;
+  mViewManager = nsnull;
 }
 
 nsView :: ~nsView()
@@ -150,6 +151,9 @@ nsresult nsView :: QueryInterface(const nsIID& aIID, void** aInstancePtr)
   if (nsnull == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
+  
+  *aInstancePtr = nsnull;
+  
   static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
   static NS_DEFINE_IID(kClassIID, kIViewIID);
 
@@ -270,12 +274,10 @@ NS_IMETHODIMP nsView :: Paint(nsIRenderingContext& rc, const nsRect& rect,
       {
         if ((mClip.mLeft != mClip.mRight) && (mClip.mTop != mClip.mBottom))
         {
-          nsRect  crect, brect;
+          nsRect  crect;
 
-          GetBounds(brect);
-
-          crect.x = mClip.mLeft + brect.x;
-          crect.y = mClip.mTop + brect.y;
+          crect.x = mClip.mLeft;
+          crect.y = mClip.mTop;
           crect.width = mClip.mRight - mClip.mLeft;
           crect.height = mClip.mBottom - mClip.mTop;
 
@@ -470,7 +472,7 @@ NS_IMETHODIMP nsView :: Paint(nsIRenderingContext& rc, const nsRect& rect,
             nsIView     *curview, *preview = this;
             nsVoidArray *views = (nsVoidArray *)new nsVoidArray();
             nsVoidArray *rects = (nsVoidArray *)new nsVoidArray();
-            nscoord     posx, posy;
+            // nscoord     posx, posy;
             nsRect      damRect = rect;
 
             localcx->PushState();
@@ -893,6 +895,10 @@ NS_IMETHODIMP nsView :: GetPosition(nscoord *x, nscoord *y) const
 
 NS_IMETHODIMP nsView :: SetDimensions(nscoord width, nscoord height, PRBool aPaint)
 {
+  if ((mBounds.width == width) &&
+      (mBounds.height == height))
+    return NS_OK;
+  
   mBounds.SizeTo(width, height);
 
 #if 0
@@ -955,7 +961,13 @@ NS_IMETHODIMP nsView :: SetBounds(nscoord aX, nscoord aY, nscoord aWidth, nscoor
 
 NS_IMETHODIMP nsView :: GetBounds(nsRect &aBounds) const
 {
-  nsIView *rootView;
+  nsIView *rootView = nsnull;
+
+  NS_ASSERTION(mViewManager, "mViewManager is null!");
+  if (!mViewManager) {
+    aBounds.x = aBounds.y = 0;
+    return NS_ERROR_FAILURE;
+  }
 
   mViewManager->GetRootView(rootView);
   aBounds = mBounds;

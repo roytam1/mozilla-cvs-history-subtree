@@ -22,7 +22,7 @@
  */
 
 #include "nsISupports.h"
-//#include "nsIEnumerator.h"
+#include "nsIDOMNodeList.h"
 #include "nsIContentIterator.h"
 #include "nsRange.h"
 #include "nsIContent.h"
@@ -32,6 +32,56 @@
 #include "nsCOMPtr.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+
+// couple of utility static functs
+
+///////////////////////////////////////////////////////////////////////////
+// GetNumChildren: returns the number of things inside aNode. 
+//
+static PRUint32
+GetNumChildren(nsIDOMNode *aNode) 
+{
+  PRUint32 numChildren = 0;
+  if (!aNode)
+    return 0;
+
+  PRBool hasChildNodes;
+  aNode->HasChildNodes(&hasChildNodes);
+  if (hasChildNodes)
+  {
+    nsCOMPtr<nsIDOMNodeList>nodeList;
+    nsresult res = aNode->GetChildNodes(getter_AddRefs(nodeList));
+    if (NS_SUCCEEDED(res) && nodeList) 
+      nodeList->GetLength(&numChildren);
+  }
+  return numChildren;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// GetChildAt: returns the node at this position index in the parent
+//
+static nsCOMPtr<nsIDOMNode> 
+GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset)
+{
+  nsCOMPtr<nsIDOMNode> resultNode;
+  
+  if (!aParent) 
+    return resultNode;
+  
+  PRBool hasChildNodes;
+  aParent->HasChildNodes(&hasChildNodes);
+  if (PR_TRUE==hasChildNodes)
+  {
+    nsCOMPtr<nsIDOMNodeList>nodeList;
+    nsresult res = aParent->GetChildNodes(getter_AddRefs(nodeList));
+    if (NS_SUCCEEDED(res) && nodeList) 
+      nodeList->Item(aOffset, getter_AddRefs(resultNode));
+  }
+  
+  return resultNode;
+}
+  
+
 
 
 /*
@@ -113,7 +163,9 @@ nsresult NS_NewContentIterator(nsIContentIterator** aInstancePtrResult);
 nsresult NS_NewContentIterator(nsIContentIterator** aInstancePtrResult)
 {
   nsContentIterator * iter = new nsContentIterator();
-  return iter->QueryInterface(nsIContentIterator::GetIID(), (void**) aInstancePtrResult);
+  if (iter)
+    return iter->QueryInterface(nsIContentIterator::GetIID(), (void**) aInstancePtrResult);
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 
@@ -729,7 +781,9 @@ nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aInstancePtrResult);
 nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aInstancePtrResult)
 {
   nsContentIterator * iter = new nsContentSubtreeIterator();
-  return iter->QueryInterface(nsIContentIterator::GetIID(), (void**) aInstancePtrResult);
+  if (iter)
+    return iter->QueryInterface(nsIContentIterator::GetIID(), (void**) aInstancePtrResult);
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 
@@ -761,6 +815,7 @@ nsresult nsContentSubtreeIterator::Init(nsIDOMRange* aRange)
   nsCOMPtr<nsIContent> cN;
   nsCOMPtr<nsIContent> firstCandidate;
   nsCOMPtr<nsIContent> lastCandidate;
+  nsCOMPtr<nsIDOMNode> dChild;
   nsCOMPtr<nsIContent> cChild;
   PRInt32 indx, startIndx, endIndx;
   PRInt32 numChildren;
@@ -805,7 +860,7 @@ nsresult nsContentSubtreeIterator::Init(nsIDOMRange* aRange)
   
   // find first node in range
   aRange->GetStartOffset(&indx);
-  cStartP->ChildCount(numChildren);
+  numChildren = GetNumChildren(startParent);
   
   if (!numChildren) // no children, must be a text node
   {
@@ -813,7 +868,8 @@ nsresult nsContentSubtreeIterator::Init(nsIDOMRange* aRange)
   }
   else
   {
-    cStartP->ChildAt(indx,*getter_AddRefs(cChild));
+    dChild = GetChildAt(startParent, indx);
+    cChild = do_QueryInterface(dChild);
     if (!cChild)  // offset after last child
     {
       cN = cStartP;
@@ -859,21 +915,23 @@ nsresult nsContentSubtreeIterator::Init(nsIDOMRange* aRange)
   
   // now to find the last node
   aRange->GetEndOffset(&indx);
+  numChildren = GetNumChildren(endParent);
+
+  if (indx > numChildren) indx = numChildren;
   if (!indx)
   {
     cN = cEndP;
   }
   else
   {
-    cEndP->ChildCount(numChildren);
-  
     if (!numChildren) // no children, must be a text node
     {
       cN = cEndP; 
     }
     else
     {
-      cEndP->ChildAt(--indx,*getter_AddRefs(cChild));
+      dChild = GetChildAt(endParent, --indx);
+      cChild = do_QueryInterface(dChild);
       if (!cChild)  // shouldn't happen
       {
         NS_ASSERTION(0,"tree traversal trouble in nsContentSubtreeIterator::Init");
@@ -1018,7 +1076,5 @@ nsresult nsContentSubtreeIterator::GetTopAncestorInRange(
   }
   return NS_ERROR_FAILURE;
 }
-
-
 
 

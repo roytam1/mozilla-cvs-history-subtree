@@ -17,6 +17,7 @@
  */
 
 #include "msgCore.h"
+#include "nsMsgImapCID.h"
 
 #include "nsString.h"
 
@@ -36,6 +37,10 @@
 
 #include "prmem.h"
 #include "plstr.h"
+#include "nsXPIDLString.h"
+#include "nsIMsgFolder.h"
+
+#include "nsCOMPtr.h"
 
 static NS_DEFINE_CID(kCImapHostSessionList, NS_IIMAPHOSTSESSIONLIST_CID);
 static NS_DEFINE_CID(kImapProtocolCID, NS_IMAPPROTOCOL_CID);
@@ -66,9 +71,23 @@ public:
                                            nsIImapUrl* aImapUrl,
                                            nsIUrlListener* aUrlListener = 0,
                                            nsISupports* aConsumer = 0,
-                                           nsIURL** aURL = 0);
+                                           nsIURI** aURL = 0);
     NS_IMETHOD LoadNextQueuedUrl();
     NS_IMETHOD RemoveConnection(nsIImapProtocol* aImapConnection);
+
+	/* attribute string personal namespace; */
+	NS_IMETHOD GetPersonalNamespace(char * *aPersonalNamespace);
+	NS_IMETHOD SetPersonalNamespace(char * aPersonalNamespace);
+
+	/* attribute string public namespace; */
+	NS_IMETHOD GetPublicNamespace(char * *aPublicNamespace);
+	NS_IMETHOD SetPublicNamespace(char * aPublicNamespace);
+
+		/* attribute string personal namespace; */
+	NS_IMETHOD GetOtherUsersNamespace(char * *aOtherUsersNamespace);
+	NS_IMETHOD SetOtherUsersNamespace(char * aOtherUsersNamespace);
+
+	NS_IMETHOD PerformBiff();
 
 private:
     nsresult CreateImapConnection (nsIEventQueue* aEventQueue,
@@ -120,6 +139,36 @@ NS_IMETHODIMP nsImapIncomingServer::SetKey(char * aKey)  // override nsMsgIncomi
     if (NS_FAILED(rv)) return rv;
 
 	hostSession->AddHostToList(hostName, userName);
+
+	char *personalNamespace = nsnull;
+	char *publicNamespace = nsnull;
+	char *otherUsersNamespace = nsnull;
+
+	rv = GetPersonalNamespace(&personalNamespace);
+	rv = GetPublicNamespace(&publicNamespace);
+	rv = GetOtherUsersNamespace(&otherUsersNamespace);
+
+	if (!personalNamespace && !publicNamespace && !otherUsersNamespace)
+		personalNamespace = PL_strdup("\"\"");
+
+	if (NS_SUCCEEDED(rv))
+	{
+		hostSession->SetNamespaceFromPrefForHost(hostName, userName, personalNamespace, kPersonalNamespace);
+		PR_FREEIF(personalNamespace);
+	}
+
+	if (NS_SUCCEEDED(rv))
+	{
+		hostSession->SetNamespaceFromPrefForHost(hostName, userName, publicNamespace, kPublicNamespace);
+		PR_FREEIF(publicNamespace);
+	}
+
+	if (NS_SUCCEEDED(rv))
+	{
+		hostSession->SetNamespaceFromPrefForHost(hostName, userName, otherUsersNamespace, kOtherUsersNamespace);
+		PR_FREEIF(otherUsersNamespace);
+	}
+
 	PR_FREEIF(userName);
 	PR_FREEIF(hostName);
 
@@ -129,18 +178,17 @@ NS_IMETHODIMP nsImapIncomingServer::SetKey(char * aKey)  // override nsMsgIncomi
 NS_IMETHODIMP nsImapIncomingServer::GetServerURI(char ** aServerURI)
 {
 	nsresult rv = NS_OK;
-	nsString2 serverUri("imap://", eOneByte);
-	char * hostName = nsnull;
-	rv = GetHostName(&hostName);
-	if (NS_FAILED(rv))
-		return rv;
 
-	serverUri += hostName;
-	if (aServerURI)
-		*aServerURI = PL_strdup(serverUri.GetBuffer());
+    nsXPIDLCString hostname;
+    rv = GetHostName(getter_Copies(hostname));
 
+    nsXPIDLCString username;
+    rv = GetUsername(getter_Copies(username));
+    
+    if (NS_FAILED(rv)) return rv;
 
-	PR_FREEIF(hostName);
+    *aServerURI = PR_smprintf("imap://%s@%s", (const char*)username,
+                              (const char*)hostname);
 
 	return rv;
 }
@@ -151,6 +199,12 @@ NS_IMPL_SERVERPREF_INT(nsImapIncomingServer, MaximumConnectionsNumber,
 NS_IMPL_SERVERPREF_INT(nsImapIncomingServer, TimeOutLimits,
                        "timeout");
 
+NS_IMPL_SERVERPREF_STR(nsImapIncomingServer, PersonalNamespace, "namespace.personal");
+
+NS_IMPL_SERVERPREF_STR(nsImapIncomingServer, PublicNamespace, "namespace.public");
+
+NS_IMPL_SERVERPREF_STR(nsImapIncomingServer, OtherUsersNamespace, "namespace.other_users");
+
 NS_IMETHODIMP
 nsImapIncomingServer::GetImapConnectionAndLoadUrl(nsIEventQueue*
                                                   aClientEventQueue,
@@ -158,7 +212,7 @@ nsImapIncomingServer::GetImapConnectionAndLoadUrl(nsIEventQueue*
                                                   nsIUrlListener*
                                                   aUrlListener,
                                                   nsISupports* aConsumer,
-                                                  nsIURL** aURL)
+                                                  nsIURI** aURL)
 {
     nsresult rv = NS_OK;
     nsIImapProtocol* aProtocol = nsnull;
@@ -166,18 +220,19 @@ nsImapIncomingServer::GetImapConnectionAndLoadUrl(nsIEventQueue*
     rv = CreateImapConnection(aClientEventQueue, aImapUrl, &aProtocol);
     if (NS_FAILED(rv)) return rv;
 
-    if (aUrlListener)
-        aImapUrl->RegisterListener(aUrlListener);
+	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(aImapUrl, &rv);
+    if (NS_SUCCEEDED(rv) && mailnewsurl && aUrlListener)
+        mailnewsurl->RegisterListener(aUrlListener);
 
     if (aProtocol)
     {
-        rv = aProtocol->LoadUrl(aImapUrl, aConsumer);
+        rv = aProtocol->LoadUrl(mailnewsurl, aConsumer);
         // *** jt - in case of the time out situation or the connection gets
         // terminated by some unforseen problems let's give it a second chance
         // to run the url
         if (NS_FAILED(rv))
         {
-            rv = aProtocol->LoadUrl(aImapUrl, aConsumer);
+            rv = aProtocol->LoadUrl(mailnewsurl, aConsumer);
         }
         else
         {
@@ -188,15 +243,17 @@ nsImapIncomingServer::GetImapConnectionAndLoadUrl(nsIEventQueue*
     {   // unable to get an imap connection to run the url; add to the url
         // queue
         PR_CEnterMonitor(this);
-        m_urlQueue->AppendElement(aImapUrl);
+		nsCOMPtr <nsISupports> supports(do_QueryInterface(aImapUrl));
+		if (supports)
+			m_urlQueue->AppendElement(supports);
         m_urlConsumers.AppendElement((void*)aConsumer);
         NS_IF_ADDREF(aConsumer);
         PR_CExitMonitor(this);
     }
     if (aURL)
     {
-        *aURL = aImapUrl;
-        NS_IF_RELEASE(*aURL);
+        *aURL = mailnewsurl;
+        NS_IF_ADDREF(*aURL);
     }
 
     return rv;
@@ -231,7 +288,9 @@ nsImapIncomingServer::LoadNextQueuedUrl()
                                                &protocolInstance);
             if (NS_SUCCEEDED(rv) && protocolInstance)
             {
-                rv = protocolInstance->LoadUrl(aImapUrl, aConsumer);
+				nsCOMPtr<nsIURI> url = do_QueryInterface(aImapUrl, &rv);
+				if (NS_SUCCEEDED(rv) && url)
+					rv = protocolInstance->LoadUrl(url, aConsumer);
                 m_urlQueue->RemoveElementAt(0);
                 m_urlConsumers.RemoveElementAt(0);
             }
@@ -405,6 +464,23 @@ nsImapIncomingServer::CreateImapConnection(nsIEventQueue *aEventQueue,
     PR_CExitMonitor(this);
 	return rv;
 }
+
+NS_IMETHODIMP nsImapIncomingServer::PerformBiff()
+{
+	nsresult rv;
+
+	nsCOMPtr<nsIFolder> rootFolder;
+	rv = GetRootFolder(getter_AddRefs(rootFolder));
+	if(NS_SUCCEEDED(rv))
+	{
+		nsCOMPtr<nsIMsgFolder> rootMsgFolder = do_QueryInterface(rootFolder);
+		if(rootMsgFolder)
+			rv = rootMsgFolder->GetNewMessages();
+	}
+
+	return rv;
+}
+    
 
 nsresult NS_NewImapIncomingServer(const nsIID& iid,
                                   void **result)

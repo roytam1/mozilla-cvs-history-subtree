@@ -161,6 +161,9 @@ protected:
 	// Indicates the browser is busy doing something
 	BOOL					m_bBusy;
 
+	// Flag to indicate if the browser has a drop target
+	BOOL                    m_bDropTarget;
+
 	// Contains an error message if startup went wrong
 	tstring					m_sErrorMessage;
 
@@ -173,8 +176,10 @@ protected:
 	// List of registered browser helper objects
 	ObjectList				m_cBrowserHelperList;
 
+	virtual HRESULT SetErrorInfo(LPCTSTR lpszDesc, HRESULT hr);
 	virtual HRESULT CreateWebShell();
 	virtual HRESULT GetDOMDocument(nsIDOMDocument **pDocument);
+	virtual int MessageBox(LPCTSTR lpszText, LPCTSTR lpszCaption = _T(""), UINT nType = MB_OK);
 	virtual BOOL IsValid();
 
 	virtual HRESULT LoadBrowserHelpers();

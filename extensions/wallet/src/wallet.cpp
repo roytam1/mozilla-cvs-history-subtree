@@ -22,13 +22,13 @@
 */
 
 #include "wallet.h"
-
 #ifndef NECKO
 #include "nsINetService.h"
 #else
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIChannel.h"
+//#include "nsNeckoUtil2.h"
 #endif // NECKO
 
 #include "nsIServiceManager.h"
@@ -55,6 +55,7 @@
 #include "prmem.h"
 #include "prprf.h"  
 #include "nsIProfile.h"
+#include "nsIContent.h"
 
 static NS_DEFINE_IID(kIDOMHTMLDocumentIID, NS_IDOMHTMLDOCUMENT_IID);
 static NS_DEFINE_IID(kIDOMHTMLFormElementIID, NS_IDOMHTMLFORMELEMENT_IID);
@@ -82,6 +83,221 @@ static NS_DEFINE_CID(kFileLocatorCID, NS_FILELOCATOR_CID);
 
 #include "prlong.h"
 #include "prinrval.h"
+
+/*************************************
+ * Code that really belongs in necko *
+ *************************************/
+
+#ifdef WIN32 
+#include <windows.h>
+#endif
+#include "nsFileStream.h"
+#include "nsIFileSpec.h"
+#include "nsIEventQueueService.h"
+#include "nsIIOService.h"
+#include "nsIServiceManager.h"
+#include "nsIStreamObserver.h"
+#include "nsIStreamListener.h"
+#include "nsIInputStream.h"
+#include "nsIOutputStream.h"
+#include "nsIChannel.h"
+#include "nsCOMPtr.h"
+#include "nsIURI.h"
+
+static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
+#ifdef ReallyInNecko
+static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
+#endif
+
+static int gKeepRunning = 0;
+static nsIEventQueue* gEventQ = nsnull;
+
+class InputConsumer : public nsIStreamListener
+{
+public:
+
+  InputConsumer();
+  virtual ~InputConsumer();
+
+  // ISupports interface...
+  NS_DECL_ISUPPORTS
+
+  // IStreamListener interface...
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports* context);
+
+  NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports* context,
+                             nsIInputStream *aIStream, 
+                             PRUint32 aSourceOffset,
+                             PRUint32 aLength);
+
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports* context,
+                           nsresult aStatus,
+                           const PRUnichar* aMsg);
+
+  NS_IMETHOD Init(nsFileSpec dirSpec, const char *out);
+
+  nsOutputFileStream   *mOutFile;
+
+};
+
+
+InputConsumer::InputConsumer():
+mOutFile(nsnull)
+{
+  NS_INIT_REFCNT();
+}
+
+
+InputConsumer::~InputConsumer()
+{
+  if (mOutFile) {
+      delete mOutFile;
+  }
+}
+
+
+NS_IMPL_ISUPPORTS(InputConsumer,nsCOMTypeInfo<nsIStreamListener>::GetIID());
+
+
+NS_IMETHODIMP
+InputConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
+{
+    if (! mOutFile->is_open()) 
+    {
+       return NS_ERROR_FAILURE;
+    }
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+InputConsumer::OnDataAvailable(nsIChannel* channel, 
+                               nsISupports* context,
+                               nsIInputStream *aIStream, 
+                               PRUint32 aSourceOffset,
+                               PRUint32 aLength)
+{
+  char buf[1001];
+  PRUint32 amt;
+  nsresult rv;
+  do {
+    rv = aIStream->Read(buf, 1000, &amt);
+    if (rv == NS_BASE_STREAM_EOF) break;
+    if (NS_FAILED(rv)) return rv;
+    buf[amt] = '\0';
+    mOutFile->write(buf,amt);
+  } while (amt);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+InputConsumer::OnStopRequest(nsIChannel* channel, 
+                             nsISupports* context,
+                             nsresult aStatus,
+                             const PRUnichar* aMsg)
+{
+  if (mOutFile) {
+      mOutFile->flush();
+      mOutFile->close();
+  }
+  gKeepRunning = 0;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+InputConsumer::Init(nsFileSpec dirSpec, const char *out)
+
+{
+  mOutFile = new nsOutputFileStream(dirSpec+out);
+  return NS_OK;
+}
+
+#ifdef ReallyInNecko
+NECKO_EXPORT(nsresult)
+#else
+nsresult
+#endif
+NS_NewURItoFile(const char *in, nsFileSpec dirSpec, const char *out)
+{
+    nsresult rv;
+    gKeepRunning = 0;
+
+    // Create the Event Queue for this thread...
+    NS_WITH_SERVICE(nsIEventQueueService, eventQService, 
+                    kEventQueueServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = eventQService->CreateThreadEventQueue();
+    if (NS_FAILED(rv)) return rv;
+
+    rv = eventQService->GetThreadEventQueue(PR_CurrentThread(), &gEventQ);
+    if (NS_FAILED(rv)) return rv;
+
+    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIURI> pURL;
+    rv = serv->NewURI(in, nsnull, getter_AddRefs(pURL));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIChannel> pChannel;
+
+    // Async reading thru the calls of the event sink interface
+    rv = serv->NewChannelFromURI("load", pURL, nsnull, 
+                                 getter_AddRefs(pChannel));
+    if (NS_FAILED(rv)) {
+        printf("ERROR: NewChannelFromURI failed for %s\n", in);
+        return rv;
+    }
+            
+    InputConsumer* listener;
+    listener = new InputConsumer;
+    NS_IF_ADDREF(listener);
+    if (!listener) {
+        NS_ERROR("Failed to create a new stream listener!");
+        return NS_ERROR_OUT_OF_MEMORY;;
+    }
+    rv = listener->Init(dirSpec, out);
+
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(listener);
+        return rv;
+    }
+
+    rv = pChannel->AsyncRead(0,         // starting position
+                             -1,        // number of bytes to read
+                             nsnull,    // ISupports context
+                             listener); // IStreamListener consumer
+
+    if (NS_SUCCEEDED(rv)) {
+         gKeepRunning = 1;
+    }
+
+    NS_RELEASE(listener);
+    if (NS_FAILED(rv)) return rv;
+
+    // Enter the message pump to allow the URL load to proceed.
+    while ( gKeepRunning ) {
+#ifdef WIN32
+        MSG msg;
+
+        if (GetMessage(&msg, NULL, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        } else {
+            gKeepRunning = 0;
+        }
+#else
+        PLEvent *gEvent;
+        rv = gEventQ->GetEvent(&gEvent);
+        if (NS_SUCCEEDED(rv)) {
+            rv  = gEventQ->HandleEvent(gEvent);
+        }
+#endif /* !WIN32 */
+    }
+    return rv;
+}
 
 /***************************************************/
 /* The following declarations define the data base */
@@ -285,10 +501,6 @@ SI_RegisterCallback(const char* domain, PrefChangedFunc callback, void* instance
 extern PRBool
 SI_GetBoolPref(const char * prefname, PRBool defaultvalue);
 
-extern void
-SI_SetBoolPref(char * prefname, PRBool prefvalue);
-
-
 static const char *pref_captureForms =
     "wallet.captureForms";
 PRIVATE Bool wallet_captureForms = PR_FALSE;
@@ -362,7 +574,7 @@ Wallet_Localize(char* genericString) {
     printf("cannot get net service\n");
     return v.ToNewCString();
   }
-  nsIURL *url = nsnull;
+  nsIURI *url = nsnull;
 
 #ifndef NECKO
   ret = pNetService->CreateURL(&url, nsString(TEST_URL), nsnull, nsnull,
@@ -378,7 +590,7 @@ Wallet_Localize(char* genericString) {
     return v.ToNewCString();
   }
 
-  ret = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+  ret = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
   nsServiceManager::ReleaseService(kIOServiceCID, pNetService);
 
 #endif // NECKO
@@ -398,7 +610,28 @@ Wallet_Localize(char* genericString) {
   }
   nsILocale* locale = nsnull;
   nsIStringBundle* bundle = nsnull;
+#if 1
+#ifndef NECKO
+  const char* spec = nsnull;
+#else
+  char* spec = nsnull;
+#endif /* NECKO */
+  ret = url->GetSpec(&spec);
+  if (NS_FAILED(ret)) {
+    printf("cannot get url spec\n");
+    nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
+#ifdef NECKO
+    nsCRT::free(spec);
+#endif /* NECKO */
+    return v.ToNewCString();
+  }
+  ret = pStringService->CreateBundle(spec, locale, &bundle);
+#ifdef NECKO
+  nsCRT::free(spec);
+#endif /* NECKO */
+#else
   ret = pStringService->CreateBundle(url, locale, &bundle);
+#endif
   if (NS_FAILED(ret)) {
     printf("cannot create instance\n");
     nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
@@ -407,7 +640,16 @@ Wallet_Localize(char* genericString) {
   nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
 
   /* localize the given string */
+#if 1
+  nsString   strtmp(genericString);
+  const PRUnichar *ptrtmp = strtmp.GetUnicode();
+  PRUnichar *ptrv = nsnull;
+  ret = bundle->GetStringFromName(ptrtmp, &ptrv);
+  v = ptrv;
+#else
   ret = bundle->GetStringFromName(nsString(genericString), v);
+#endif
+  NS_RELEASE(bundle);
   if (NS_FAILED(ret)) {
     printf("cannot get string from name\n");
     return v.ToNewCString();
@@ -420,7 +662,26 @@ Wallet_Localize(char* genericString) {
 /**********************/
 
 PUBLIC PRBool
-Wallet_Confirm(char * szMessage) {
+Wallet_Confirm(char * szMessage)
+{
+#ifdef NECKO
+  PRBool retval = PR_TRUE; /* default value */
+
+  nsresult res;  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &res);
+  if (NS_FAILED(res)) {
+    return retval;
+  }
+
+  const nsString message = szMessage;
+  retval = PR_FALSE; /* in case user exits dialog by clicking X */
+  res = dialog->Confirm(message.GetUnicode(), &retval);
+  if (NS_FAILED(res)) {
+    return retval;
+  }
+
+  return retval;
+#else
   PRBool retval = PR_TRUE; /* default value */
   nsINetSupportDialogService* dialog = NULL;
   nsresult res = nsServiceManager::GetService(kNetSupportDialogCID,
@@ -430,14 +691,66 @@ Wallet_Confirm(char * szMessage) {
   }
   if (dialog) {
     const nsString message = szMessage;
+    retval = PR_FALSE; /* in case user exits dialog by clicking X */
     dialog->Confirm(message, &retval);
   }
   nsServiceManager::ReleaseService(kNetSupportDialogCID, dialog);
   return retval;
+#endif
+}
+
+PUBLIC PRBool
+Wallet_ConfirmYN(char * szMessage)
+{
+#ifdef NECKO
+  PRBool retval = PR_TRUE; /* default value */
+
+  nsresult res;  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &res);
+  if (NS_FAILED(res)) {
+    return retval;
+  }
+
+  const nsString message = szMessage;
+  retval = PR_FALSE; /* in case user exits dialog by clicking X */
+  res = dialog->ConfirmYN(message.GetUnicode(), &retval);
+  if (NS_FAILED(res)) {
+    return retval;
+  }
+
+  return retval;
+#else
+  PRBool retval = PR_TRUE; /* default value */
+  nsINetSupportDialogService* dialog = NULL;
+  nsresult res = nsServiceManager::GetService(kNetSupportDialogCID,
+  nsINetSupportDialogService::GetIID(), (nsISupports**)&dialog);
+  if (NS_FAILED(res)) {
+    return retval;
+  }
+  if (dialog) {
+    const nsString message = szMessage;
+    retval = PR_FALSE; /* in case user exits dialog by clicking X */
+    dialog->ConfirmYN(message, &retval);
+  }
+  nsServiceManager::ReleaseService(kNetSupportDialogCID, dialog);
+  return retval;
+#endif
 }
 
 PUBLIC void
-Wallet_Alert(char * szMessage) {
+Wallet_Alert(char * szMessage)
+{
+#ifdef NECKO
+  nsresult res;  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &res);
+  if (NS_FAILED(res)) {
+    return;     // XXX should return the error
+  }
+
+  const nsString message = szMessage;
+  res = dialog->Alert(message.GetUnicode());
+  return;     // XXX should return the error
+#else
   nsINetSupportDialogService* dialog = NULL;
   nsresult res = nsServiceManager::GetService(kNetSupportDialogCID,
   nsINetSupportDialogService::GetIID(), (nsISupports**)&dialog);
@@ -450,10 +763,34 @@ Wallet_Alert(char * szMessage) {
   }
   nsServiceManager::ReleaseService(kNetSupportDialogCID, dialog);
   return;
+#endif
 }
 
 PUBLIC PRBool
-Wallet_CheckConfirm(char * szMessage, char * szCheckMessage, PRBool* checkValue) {
+Wallet_CheckConfirmYN(char * szMessage, char * szCheckMessage, PRBool* checkValue)
+{
+#ifdef NECKO
+  PRBool retval = PR_TRUE; /* default value */
+
+  nsresult res;  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &res);
+  if (NS_FAILED(res)) {
+    *checkValue = 0;
+    return retval;
+  }
+
+  const nsString message = szMessage;
+  const nsString checkMessage = szCheckMessage;
+  retval = PR_FALSE; /* in case user exits dialog by clicking X */
+  res = dialog->ConfirmCheckYN(message.GetUnicode(), checkMessage.GetUnicode(), checkValue, &retval);
+  if (NS_FAILED(res)) {
+    *checkValue = 0;
+  }
+  if (*checkValue!=0 && *checkValue!=1) {
+    *checkValue = 0; /* this should never happen but it is happening!!! */
+  }
+  return retval;
+#else
   PRBool retval = PR_TRUE; /* default value */
   nsINetSupportDialogService* dialog = NULL;
   nsresult res = nsServiceManager::GetService(kNetSupportDialogCID,
@@ -464,16 +801,45 @@ Wallet_CheckConfirm(char * szMessage, char * szCheckMessage, PRBool* checkValue)
   if (dialog) {
     const nsString message = szMessage;
     const nsString checkMessage = szCheckMessage;
-    dialog->ConfirmCheck(message, checkMessage, &retval, checkValue);
+    retval = PR_FALSE; /* in case user exits dialog by clicking X */
+    dialog->ConfirmCheckYN(message, checkMessage, &retval, checkValue);
     if (*checkValue!=0 && *checkValue!=1) {
       *checkValue = 0; /* this should never happen but it is happening!!! */
     }
   }
   nsServiceManager::ReleaseService(kNetSupportDialogCID, dialog);
   return retval;
+#endif
 }
 
-char * wallet_GetString(char * szMessage) {
+char * wallet_GetString(char * szMessage)
+{
+#ifdef NECKO
+  nsString password;
+  PRBool retval;
+
+  nsresult res;  
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &res);
+  if (NS_FAILED(res)) {
+    return NULL;     // XXX should return the error
+  }
+
+  const nsString message = szMessage;
+  PRUnichar* pwd;
+  retval = PR_FALSE; /* in case user exits dialog by clicking X */
+  res = dialog->PromptPassword(message.GetUnicode(), &pwd, &retval);
+  if (NS_FAILED(res)) {
+    return NULL;
+  }
+  password = pwd;
+  delete[] pwd;
+
+  if (retval) {
+    return password.ToNewCString();
+  } else {
+    return NULL; /* user pressed cancel */
+  }
+#else
   nsString password;
   PRBool retval;
   nsINetSupportDialogService* dialog = NULL;
@@ -484,6 +850,7 @@ char * wallet_GetString(char * szMessage) {
   }
   if (dialog) {
     const nsString message = szMessage;
+    retval = PR_FALSE; /* in case user exits dialog by clicking X */
     dialog->PromptPassword(message, password, &retval);
   }
   nsServiceManager::ReleaseService(kNetSupportDialogCID, dialog);
@@ -492,6 +859,7 @@ char * wallet_GetString(char * szMessage) {
   } else {
     return NULL; /* user pressed cancel */
   }
+#endif
 }
 
 /**********************************************************************************/
@@ -702,7 +1070,7 @@ wallet_ReadFromSublist(nsAutoString& value, XP_List*& resume)
 #define maxKeySize 100
 char key[maxKeySize+1];
 PRUint32 keyPosition = 0;
-PRBool keyFailure = PR_FALSE;
+PRBool keyCancel = PR_FALSE;
 PRBool keySet = PR_FALSE;
 
 PUBLIC void
@@ -719,14 +1087,28 @@ Wallet_GetKey() {
 }
 
 PUBLIC PRBool
-Wallet_BadKey() {
-  return keyFailure;
+Wallet_KeySet() {
+  return keySet;
+}
+
+PUBLIC PRBool
+Wallet_CancelKey() {
+  return keyCancel;
 }
 
 PUBLIC nsresult Wallet_ProfileDirectory(nsFileSpec& dirSpec) {
   /* return the profile */
   nsIFileSpec* spec =
     NS_LocateFileOrDirectory(nsSpecialFileSpec::App_UserProfileDirectory50);
+  if (!spec) {
+    return NS_ERROR_FAILURE;
+  }
+  return spec->GetFileSpec(&dirSpec);
+}
+
+PUBLIC nsresult Wallet_ResourceDirectory(nsFileSpec& dirSpec) {
+  nsIFileSpec* spec =
+    NS_LocateFileOrDirectory(nsSpecialFileSpec::App_ResDirectory);
   if (!spec) {
     return NS_ERROR_FAILURE;
   }
@@ -754,7 +1136,7 @@ wallet_KeySize() {
 
 PUBLIC PRBool
 Wallet_SetKey(PRBool isNewkey) {
-  if (keySet && !isNewkey) {
+  if (Wallet_KeySet() && !isNewkey) {
     return PR_TRUE;
   }
 
@@ -776,10 +1158,14 @@ Wallet_SetKey(PRBool isNewkey) {
   } else {
     newkey = wallet_GetString(password);
   }
+  keyCancel = PR_FALSE;
   if (newkey == NULL) { /* user hit cancel button */
     if (wallet_KeySize() < 0) { /* no password file existed before */
       newkey  = PL_strdup(""); /* use zero-length password */
+    } else if (isNewkey) { /* user is changing the password */
+      newkey  = PL_strdup(""); /* use zero-length password */
     } else {
+      keyCancel = PR_TRUE;
       return PR_FALSE; /* user could not supply the correct password */
     }
   }
@@ -802,12 +1188,10 @@ Wallet_SetKey(PRBool isNewkey) {
     nsFileSpec dirSpec;
     nsresult rval = Wallet_ProfileDirectory(dirSpec);
     if (NS_FAILED(rval)) {
-      keyFailure = PR_TRUE;
       return PR_FALSE;
     }
     nsOutputFileStream strm2(dirSpec + "key");
     if (!strm2.is_open()) {
-      keyFailure = PR_TRUE;
       *key = '\0';
       return PR_FALSE;
     }
@@ -828,7 +1212,6 @@ Wallet_SetKey(PRBool isNewkey) {
     strm2.close();
     Wallet_RestartKey();
     keySet = PR_TRUE;
-    keyFailure = PR_FALSE;
     return PR_TRUE;
 
   } else {
@@ -845,14 +1228,12 @@ Wallet_SetKey(PRBool isNewkey) {
     if ((PL_strlen(key) == 0) && (wallet_KeySize() == 0) ) {
       Wallet_RestartKey();
       keySet = PR_TRUE;
-      keyFailure = PR_FALSE;
       return PR_TRUE;
     }
 
     nsFileSpec dirSpec;
     nsresult rval = Wallet_ProfileDirectory(dirSpec);
     if (NS_FAILED(rval)) {
-      keyFailure = PR_TRUE;
       return PR_FALSE;
     }
     nsInputFileStream strm(dirSpec + "key");
@@ -861,14 +1242,12 @@ Wallet_SetKey(PRBool isNewkey) {
     while (*p) {
       if (strm.get() != (*(p++)^Wallet_GetKey()) || strm.eof()) {
         strm.close();
-        keyFailure = PR_TRUE;
         *key = '\0';
         return PR_FALSE;
       }
     }
     if (strm.get() != ((*key)^Wallet_GetKey()) || strm.eof()) {
       strm.close();
-      keyFailure = PR_TRUE;
       *key = '\0';
       return PR_FALSE;
     }
@@ -878,10 +1257,8 @@ Wallet_SetKey(PRBool isNewkey) {
     if (rv) {
       Wallet_RestartKey();
       keySet = PR_TRUE;
-      keyFailure = PR_FALSE;
       return PR_TRUE;
     } else {
-      keyFailure = PR_TRUE;
       *key = '\0';
       return PR_FALSE;
     }
@@ -902,6 +1279,9 @@ wallet_GetLine(nsInputFileStream strm, nsAutoString*& aLine, PRBool obscure) {
 
   /* read the line */
   aLine = new nsAutoString("");   
+  if (!aLine) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
   char c;
   for (;;) {
     c = strm.get()^(obscure ? Wallet_GetKey() : (char)0);
@@ -919,7 +1299,7 @@ wallet_GetLine(nsInputFileStream strm, nsAutoString*& aLine, PRBool obscure) {
     }
   }
 
-  return 0;
+  return NS_OK;
 }
 
 /*
@@ -932,7 +1312,7 @@ wallet_PutLine(nsOutputFileStream strm, const nsString& aLine, PRBool obscure)
   /* allocate a buffer from the heap */
   char * cp = new char[aLine.Length() + 1];
   if (! cp) {
-    return -1;
+    return NS_ERROR_OUT_OF_MEMORY;
   }
 
   aLine.ToCString(cp, aLine.Length() + 1);
@@ -956,7 +1336,7 @@ wallet_WriteToFile(char* filename, XP_List* list, PRBool obscure) {
   XP_List * list_ptr;
   wallet_MapElement * ptr;
 
-  if (obscure && Wallet_BadKey()) {
+  if (obscure && !Wallet_KeySet()) {
     return;
   }
 
@@ -981,19 +1361,27 @@ wallet_WriteToFile(char* filename, XP_List* list, PRBool obscure) {
   /* traverse the list */
   list_ptr = list;
   while((ptr = (wallet_MapElement *) XP_ListNextObject(list_ptr))!=0) {
-    wallet_PutLine(strm, *ptr->item1, obscure);
+    if (NS_FAILED(wallet_PutLine(strm, *ptr->item1, obscure))) {
+      break;
+    }
     if (*ptr->item2 != "") {
-      wallet_PutLine(strm, *ptr->item2, obscure);
+      if (NS_FAILED(wallet_PutLine(strm, *ptr->item2, obscure))) {
+        break;
+      }
     } else {
       XP_List * list_ptr1;
       wallet_Sublist * ptr1;
       list_ptr1 = ptr->itemList;
       while((ptr1=(wallet_Sublist *) XP_ListNextObject(list_ptr1))!=0) {
-        wallet_PutLine(strm, *ptr->item1, obscure);
+        if (NS_FAILED(wallet_PutLine(strm, *ptr->item1, obscure))) {
+          break;
+        }
       }
     }
-    wallet_PutLine(strm, "", obscure);
- }
+    if (NS_FAILED(wallet_PutLine(strm, "", obscure))) {
+      break;
+    }
+  }
 
   /* close the stream */
   strm.flush();
@@ -1003,16 +1391,23 @@ wallet_WriteToFile(char* filename, XP_List* list, PRBool obscure) {
 /*
  * Read contents of designated file into designated list
  */
+
 void
 wallet_ReadFromFile
-    (char* filename, XP_List*& list, PRBool obscure, PlacementType placement = DUP_AFTER) {
+    (char* filename, XP_List*& list, PRBool obscure, PRBool localFile, PlacementType placement = DUP_AFTER) {
 
   /* open input stream */
   nsFileSpec dirSpec;
-  nsresult rv = Wallet_ProfileDirectory(dirSpec);
+  nsresult rv;
+  if (localFile) {
+    rv = Wallet_ProfileDirectory(dirSpec);
+  } else {
+    rv = Wallet_ResourceDirectory(dirSpec);
+  }
   if (NS_FAILED(rv)) {
     return;
   }
+
   nsInputFileStream strm(dirSpec + filename);
   if (!strm.is_open()) {
     /* file doesn't exist -- that's not an error */
@@ -1022,14 +1417,14 @@ wallet_ReadFromFile
 
   for (;;) {
     nsAutoString * aItem1;
-    if (wallet_GetLine(strm, aItem1, obscure) == -1) {
+    if (NS_FAILED(wallet_GetLine(strm, aItem1, obscure))) {
       /* end of file reached */
       strm.close();
       return;
     }
 
     nsAutoString * aItem2;
-    if (wallet_GetLine(strm, aItem2, obscure) == -1) {
+    if (NS_FAILED(wallet_GetLine(strm, aItem2, obscure))) {
       /* unexpected end of file reached */
       delete aItem1;
       strm.close();
@@ -1037,7 +1432,7 @@ wallet_ReadFromFile
     }
 
     nsAutoString * aItem3;
-    if (wallet_GetLine(strm, aItem3, obscure) == -1) {
+    if (NS_FAILED(wallet_GetLine(strm, aItem3, obscure))) {
       /* end of file reached */
       XP_List* dummy = NULL;
       wallet_WriteToList(*aItem1, *aItem2, dummy, list, placement);
@@ -1063,9 +1458,13 @@ wallet_ReadFromFile
       delete aItem3;
       /* add any following items to sublist up to next blank line */
       nsAutoString * dummy2 = new nsAutoString("");
+      if (!dummy2) {
+        strm.close();
+        return;
+      }
       for (;;) {
         /* get next item for sublist */
-        if (wallet_GetLine(strm, aItem3, obscure) == -1) {
+        if (NS_FAILED(wallet_GetLine(strm, aItem3, obscure))) {
           /* end of file reached */
           wallet_WriteToList(*aItem1, *dummy2, itemList, list, placement);
           strm.close();
@@ -1095,7 +1494,7 @@ wallet_ReadFromURLFieldToSchemaFile
 
   /* open input stream */
   nsFileSpec dirSpec;
-  nsresult rv = Wallet_ProfileDirectory(dirSpec);
+  nsresult rv = Wallet_ResourceDirectory(dirSpec);
   if (NS_FAILED(rv)) {
     return;
   }
@@ -1118,7 +1517,7 @@ wallet_ReadFromURLFieldToSchemaFile
   for (;;) {
 
     nsAutoString * aItem;
-    if (wallet_GetLine(strm, aItem, PR_FALSE) == -1) {
+    if (NS_FAILED(wallet_GetLine(strm, aItem, PR_FALSE))) {
       /* end of file reached */
       strm.close();
       return;
@@ -1126,11 +1525,15 @@ wallet_ReadFromURLFieldToSchemaFile
 
     XP_List * itemList = XP_ListNew();
     nsAutoString * dummy = new nsAutoString("");
+    if (!dummy) {
+      strm.close();
+      return;
+    }
     wallet_WriteToList(*aItem, *dummy, itemList, list, placement);
 
     for (;;) {
       nsAutoString * aItem1;
-      if (wallet_GetLine(strm, aItem1, PR_FALSE) == -1) {
+      if (NS_FAILED(wallet_GetLine(strm, aItem1, PR_FALSE))) {
         /* end of file reached */
         strm.close();
         return;
@@ -1142,7 +1545,7 @@ wallet_ReadFromURLFieldToSchemaFile
       }
 
       nsAutoString * aItem2;
-      if (wallet_GetLine(strm, aItem2, PR_FALSE) == -1) {
+      if (NS_FAILED(wallet_GetLine(strm, aItem2, PR_FALSE))) {
         /* unexpected end of file reached */
         delete aItem1;
         strm.close();
@@ -1153,7 +1556,7 @@ wallet_ReadFromURLFieldToSchemaFile
       wallet_WriteToList(*aItem1, *aItem2, dummy, itemList, placement);
 
       nsAutoString * aItem3;
-      if (wallet_GetLine(strm, aItem3, PR_FALSE) == -1) {
+      if (NS_FAILED(wallet_GetLine(strm, aItem3, PR_FALSE))) {
         /* end of file reached */
         strm.close();
         return;
@@ -1168,95 +1571,6 @@ wallet_ReadFromURLFieldToSchemaFile
       delete aItem3;
     }
   }
-}
-
-/***************************************************************/
-/* The following routines are for fetching data from NetCenter */
-/***************************************************************/
-
-void
-wallet_FetchFromNetCenter(char* from, char* to) {
-    nsIInputStream* newStream;
-    nsIInputStream* *aNewStream = &newStream;
-    nsresult rv;
-#ifndef NECKO
-    nsIURL * url;
-    if (!NS_FAILED(NS_NewURL(&url, from))) {
-        NS_WITH_SERVICE(nsINetService, inet, kNetServiceCID, &rv);
-        if (NS_FAILED(rv)) return;
-
-        rv = inet->OpenBlockingStream(url, nsnull, aNewStream);
-#else
-    NS_WITH_SERVICE(nsIIOService, inet, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return;
-
-
-    nsIChannel *channel = nsnull;
-    // XXX NECKO what verb do we want here?
-    rv = inet->NewChannel("load", from, nsnull, nsnull, &channel);
-    if (NS_FAILED(rv)) return;
-
-    rv = channel->OpenInputStream(0, -1, aNewStream);
-#endif // NECKO
-
-        /* open network stream */
-        if (NS_SUCCEEDED(rv)) {
-
-          /* open output file */
-          nsFileSpec dirSpec;
-          rv = Wallet_ProfileDirectory(dirSpec);
-          if (NS_FAILED(rv)) {
-            return;
-          }
-          nsOutputFileStream strm(dirSpec + to);
-          if (!strm.is_open()) {
-            NS_ERROR("unable to open file");
-          } else {
-
-            /* place contents of network stream in output file */
-            char buff[1001];
-            PRUint32 count;
-            while (NS_SUCCEEDED((*aNewStream)->Read(buff,1000,&count))) {
-              buff[count] = '\0';
-              strm.write(buff, count);
-            }
-            strm.flush();
-            strm.close();
-          }
-        }
-#ifndef NECKO
-    }
-#endif // NECKO
-}
-
-/*
- * fetch URL-specific field/schema mapping from netcenter and put into local copy of file
- * at URLFieldSchema.tbl
- */
-void
-wallet_FetchURLFieldSchemaFromNetCenter() {
-  wallet_FetchFromNetCenter
-    ("http://people.netscape.com/morse/wallet/URLFieldSchema.tbl","URLFieldSchema.tbl");
-}
-
-/*
- * fetch generic field/schema mapping from netcenter and put into
- * local copy of file at FieldSchema.tbl
- */
-void
-wallet_FetchFieldSchemaFromNetCenter() {
-  wallet_FetchFromNetCenter
-    ("http://people.netscape.com/morse/wallet/FieldSchema.tbl","FieldSchema.tbl");
-}
-
-/*
- * fetch generic schema-concatenation rules from netcenter and put into
- * local copy of file at SchemaConcat.tbl
- */
-void
-wallet_FetchSchemaConcatFromNetCenter() {
-  wallet_FetchFromNetCenter
-    ("http://people.netscape.com/morse/wallet/SchemaConcat.tbl","SchemaConcat.tbl");
 }
 
 /*********************************************************************/
@@ -1412,7 +1726,7 @@ wallet_GetPrefills(
         }
 
         /*
-         * if schema name was specified in vcard attribute the get value from schema name,
+         * if schema name was specified in vcard attribute then get value from schema name,
          * otherwise get value from field name by using mapping tables to get schema name
          */
         if (FieldToValue(field, schema, value, itemList, resume) == 0) {
@@ -1424,7 +1738,7 @@ wallet_GetPrefills(
           schemaPtr = new nsAutoString(schema);
           selectElement = nsnull;
           selectIndex = -1;
-          return 0;
+          return NS_OK;
         }
       }
     }
@@ -1450,7 +1764,7 @@ wallet_GetPrefills(
             valuePtr = new nsAutoString(value);
             schemaPtr = new nsAutoString(schema);
             inputElement = nsnull;
-            return 0;
+            return NS_OK;
           }
         } else {
           /* synonym list exists, try each value */
@@ -1461,7 +1775,7 @@ wallet_GetPrefills(
               valuePtr = new nsAutoString(value);
               schemaPtr = new nsAutoString(schema);
               inputElement = nsnull;
-              return 0;
+              return NS_OK;
             }
           }
         }
@@ -1478,33 +1792,26 @@ wallet_GetPrefills(
 void
 wallet_Initialize() {
   static PRBool wallet_Initialized = PR_FALSE;
+  static PRBool wallet_keyInitialized = PR_FALSE;
   if (!wallet_Initialized) {
-    wallet_FetchFieldSchemaFromNetCenter();
-    wallet_FetchURLFieldSchemaFromNetCenter();
-    wallet_FetchSchemaConcatFromNetCenter();
-
-    wallet_ReadFromFile("FieldSchema.tbl", wallet_FieldToSchema_list, PR_FALSE);
+    wallet_ReadFromFile("FieldSchema.tbl", wallet_FieldToSchema_list, PR_FALSE, PR_FALSE);
     wallet_ReadFromURLFieldToSchemaFile("URLFieldSchema.tbl", wallet_URLFieldToSchema_list);
-    wallet_ReadFromFile("SchemaConcat.tbl", wallet_SchemaConcat_list, PR_FALSE);
-
+    wallet_ReadFromFile("SchemaConcat.tbl", wallet_SchemaConcat_list, PR_FALSE, PR_FALSE);
     wallet_Initialized = PR_TRUE;
+  }
 
+  if (!wallet_keyInitialized) {
     Wallet_RestartKey();
     char * message = Wallet_Localize("IncorrectKey_TryAgain?");
-    char * failed = Wallet_Localize("KeyFailure");
     while (!Wallet_SetKey(PR_FALSE)) {
-      if (!Wallet_Confirm(message)) {
-        Wallet_Alert(failed);
+      if (Wallet_CancelKey() || !Wallet_Confirm(message)) {
         PR_FREEIF(message);
-        PR_FREEIF(failed);
         return;
       }
     }
     PR_FREEIF(message);
-    PR_FREEIF(failed);
-
-
-    wallet_ReadFromFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE);
+    wallet_ReadFromFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE, PR_TRUE);
+    wallet_keyInitialized = PR_TRUE;
   }
 
 #if DEBUG
@@ -1550,7 +1857,7 @@ void WLLT_ChangePassword() {
 #ifdef SingleSignon
   SI_LoadSignonData(PR_TRUE);
 #endif
-  if (Wallet_BadKey()) {
+  if (!Wallet_KeySet()) {
     return;
   }
 
@@ -1568,7 +1875,7 @@ void
 wallet_InitializeURLList() {
   static PRBool wallet_URLListInitialized = PR_FALSE;
   if (!wallet_URLListInitialized) {
-    wallet_ReadFromFile("URL.tbl", wallet_URL_list, PR_FALSE);
+    wallet_ReadFromFile("URL.tbl", wallet_URL_list, PR_FALSE, PR_TRUE);
     wallet_URLListInitialized = PR_TRUE;
   }
 }
@@ -1577,10 +1884,10 @@ wallet_InitializeURLList() {
  */
 void
 wallet_InitializeCurrentURL(nsIDocument * doc) {
-  static nsIURL * lastUrl = NULL;
+  static nsIURI * lastUrl = NULL;
 
   /* get url */
-  nsIURL* url;
+  nsIURI* url;
   url = doc->GetDocumentURL();
   if (lastUrl == url) {
     NS_RELEASE(url);
@@ -1593,12 +1900,30 @@ wallet_InitializeCurrentURL(nsIDocument * doc) {
   }
 
   /* get host+file */
+#ifdef NECKO
+  char* host;
+#else
   const char* host;
-  url->GetHost(&host);
+#endif
+  nsresult rv = url->GetHost(&host);
+  if (NS_FAILED(rv)) {
+    return;
+  }
   nsAutoString urlName = nsAutoString(host);
+#ifdef NECKO
+  nsCRT::free(host);
+#endif
+#ifdef NECKO
+  char* file;
+  url->GetPath(&file);
+#else
   const char* file;
   url->GetFile(&file);
+#endif
   urlName = urlName + file;
+#ifdef NECKO
+  nsCRT::free(file);
+#endif
   NS_RELEASE(url);
 
   /* get field/schema mapping specific to current url */
@@ -1617,7 +1942,7 @@ wallet_InitializeCurrentURL(nsIDocument * doc) {
 #endif
 }
 
-#define SEPARATOR "#*%&"
+#define SEPARATOR "#*%$"
 
 nsAutoString *
 wallet_GetNextInString(char*& ptr) {
@@ -1775,6 +2100,112 @@ Wallet_SignonViewerReturn (nsAutoString results) {
     delete[] gone;
 }
 
+/*
+ * see if user wants to capture data on current page
+ */
+
+PRIVATE PRBool
+wallet_OKToCapture(char* urlName) {
+  nsAutoString * url = new nsAutoString(urlName);
+
+  /* see if this url is already on list of url's for which we don't want to capture */
+  wallet_InitializeURLList();
+  XP_List* URL_list = wallet_URL_list;
+  XP_List* dummy;
+  nsAutoString * value = new nsAutoString("nn");
+  if (!url || !value) {
+    return PR_FALSE;
+  }
+  if (wallet_ReadFromList(*url, *value, dummy, URL_list)) {
+    if (value->CharAt(NO_CAPTURE) == 'y') {
+      return PR_FALSE;
+    }
+  }
+
+  /* ask user if we should capture the values on this form */
+  char * message = Wallet_Localize("WantToCaptureForm?");
+  char * checkMessage = Wallet_Localize("NeverSave");
+  PRBool checkValue;
+  PRBool result = Wallet_CheckConfirmYN(message, checkMessage, &checkValue);
+  if (!result) {
+    if (checkValue) {
+      /* add URL to list with NO_CAPTURE indicator set */
+      value->SetCharAt('y', NO_CAPTURE);
+      wallet_WriteToList(*url, *value, dummy, wallet_URL_list, DUP_OVERWRITE);
+      wallet_WriteToFile("URL.tbl", wallet_URL_list, PR_FALSE);
+    } else {
+      delete url;
+    }
+  }
+  PR_FREEIF(checkMessage);
+  PR_FREEIF(message);
+  return result;
+}
+
+/*
+ * capture the value of a form element
+ */
+PRIVATE void
+wallet_Capture(nsIDocument* doc, nsString field, nsString value, nsString vcard) {
+
+  /* do nothing if there is no value */
+  if (!value.Length()) {
+    return;
+  }
+
+  /* read in the mappings if they are not already present */
+  if (!vcard.Length()) {
+    wallet_Initialize();
+    wallet_InitializeCurrentURL(doc);
+    if (!Wallet_KeySet()) {
+      return;
+    }
+  }
+
+  nsAutoString oldValue;
+
+  /* is there a mapping from this field name to a schema name */
+  nsAutoString schema(vcard);
+  XP_List* FieldToSchema_list = wallet_FieldToSchema_list;
+  XP_List* URLFieldToSchema_list = wallet_specificURLFieldToSchema_list;
+  XP_List* SchemaToValue_list = wallet_SchemaToValue_list;
+  XP_List* dummy;
+
+  if (schema.Length() ||
+      (wallet_ReadFromList(field, schema, dummy, URLFieldToSchema_list)) ||
+      (wallet_ReadFromList(field, schema, dummy, FieldToSchema_list))) {
+
+    /* field to schema mapping already exists */
+
+    /* is this a new value for the schema */
+    if (!(wallet_ReadFromList(schema, oldValue, dummy, SchemaToValue_list)) || 
+        (oldValue != value)) {
+
+      /* this is a new value so store it */
+      nsAutoString * aValue = new nsAutoString(value);
+      nsAutoString * aSchema = new nsAutoString(schema);
+      dummy = 0;
+      wallet_WriteToList(*aSchema, *aValue, dummy, wallet_SchemaToValue_list);
+      wallet_WriteToFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE);
+    }
+  } else {
+
+    /* no field to schema mapping so assume schema name is same as field name */
+
+    /* is this a new value for the schema */
+    if (!(wallet_ReadFromList(field, oldValue, dummy, SchemaToValue_list)) ||
+        (oldValue != value)) {
+
+      /* this is a new value so store it */
+      nsAutoString * aField = new nsAutoString(field);
+      nsAutoString * aValue = new nsAutoString(value);
+      dummy = 0;
+      wallet_WriteToList(*aField, *aValue, dummy, wallet_SchemaToValue_list);
+      wallet_WriteToFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE);
+    }
+  }
+}
+
 /***************************************************************/
 /* The following are the interface routines seen by other dlls */
 /***************************************************************/
@@ -1844,7 +2275,7 @@ WLLT_GetNocaptureListForViewer(nsString& aNocaptureList)
 
 PUBLIC void
 WLLT_PostEdit(nsAutoString walletList) {
-  if (Wallet_BadKey()) {
+  if (!Wallet_KeySet()) {
     return;
   }
 
@@ -1893,7 +2324,9 @@ WLLT_PostEdit(nsAutoString walletList) {
       return;
     }
     *separator = '\0';
-    wallet_PutLine(strm, nextItem, PR_TRUE);
+    if (NS_FAILED(wallet_PutLine(strm, nextItem, PR_TRUE))) {
+      break;
+    }
     nextItem = separator+1;
     *separator = BREAK;
   }
@@ -1901,13 +2334,16 @@ WLLT_PostEdit(nsAutoString walletList) {
   /* close the file and read it back into the SchemaToValue list */
   strm.close();
   wallet_Clear(&wallet_SchemaToValue_list);
-  wallet_ReadFromFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE);
+  wallet_ReadFromFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE, PR_TRUE);
   delete []walletListAsCString;
 }
 
 PUBLIC void
 WLLT_PreEdit(nsAutoString& walletList) {
   wallet_Initialize();
+  if (!Wallet_KeySet()) {
+    return;
+  }
   walletList = BREAK;
   XP_List * list_ptr;
   wallet_MapElement * ptr;
@@ -1952,10 +2388,12 @@ WLLT_PrefillReturn(nsAutoString results) {
     XP_List* URL_list = wallet_URL_list;
     XP_List* dummy;
     nsAutoString * value = new nsAutoString("nn");
-    wallet_ReadFromList(*url, *value, dummy, URL_list);
-    value->SetCharAt('y', NO_PREVIEW);
-    wallet_WriteToList(*url, *value, dummy, wallet_URL_list, DUP_OVERWRITE);
-    wallet_WriteToFile("URL.tbl", wallet_URL_list, PR_FALSE);
+    if (!url || !value) {
+      wallet_ReadFromList(*url, *value, dummy, URL_list);
+      value->SetCharAt('y', NO_PREVIEW);
+      wallet_WriteToList(*url, *value, dummy, wallet_URL_list, DUP_OVERWRITE);
+      wallet_WriteToFile("URL.tbl", wallet_URL_list, PR_FALSE);
+    }
   }
 
   /* process the list, doing the fillins */
@@ -2154,6 +2592,11 @@ WLLT_Prefill(nsIPresShell* shell, nsString url, PRBool quick) {
 
   /* return if no elements were put into the list */
   if (!wallet_PrefillElement_list || !XP_ListCount(wallet_PrefillElement_list)) {
+    if (Wallet_KeySet()) {
+      char * message = Wallet_Localize("noPrefills");
+      Wallet_Alert(message);
+      PR_FREEIF(message);
+    }
     return NS_ERROR_FAILURE; // indicates to caller not to display preview screen
   }
 
@@ -2167,10 +2610,12 @@ WLLT_Prefill(nsIPresShell* shell, nsString url, PRBool quick) {
     XP_List* dummy;
     nsAutoString * value = new nsAutoString("nn");
     nsAutoString * urlPtr = new nsAutoString(url);
-    wallet_ReadFromList(*urlPtr, *value, dummy, URL_list);
-    noPreview = (value->CharAt(NO_PREVIEW) == 'y');
-    delete value;
-    delete urlPtr;
+    if (!value || !urlPtr) {
+      wallet_ReadFromList(*urlPtr, *value, dummy, URL_list);
+      noPreview = (value->CharAt(NO_PREVIEW) == 'y');
+      delete value;
+      delete urlPtr;
+    }
   }
 
   /* determine if preview is necessary */
@@ -2204,119 +2649,182 @@ wallet_ClearStopwatch();
   }
 }
 
-/*
- * see if user wants to capture data on current page
- */
+#define FORM_TYPE_TEXT          1
+#define FORM_TYPE_PASSWORD      7
+#define MAX_ARRAY_SIZE 500
+
+extern void
+SINGSIGN_RememberSignonData
+  (char* URLName, char** name_array, char** value_array, char** type_array, PRInt32 value_cnt);
 
 PUBLIC void
-WLLT_OKToCapture(PRBool * result, PRInt32 count, char* urlName) {
-  nsAutoString * url = new nsAutoString(urlName);
-//  static int level = 0;
+WLLT_OnSubmit(nsIContent* formNode) {
 
-  /* see if this url is already on list of url's for which we don't want to capture */
-  wallet_InitializeURLList();
-  XP_List* URL_list = wallet_URL_list;
-  XP_List* dummy;
-  nsAutoString * value = new nsAutoString("nn");
-  if (wallet_ReadFromList(*url, *value, dummy, URL_list)) {
-    if (value->CharAt(NO_CAPTURE) == 'y') {
-      *result = PR_FALSE;
-      return;
-    }
-  }
-
-//  if (level > 0) {
-//    *result = PR_FALSE;
-//    return;
-//  }
-//  level++;
-
-  /* ask user if we should capture the values on this form */
-  if (wallet_GetFormsCapturingPref() && (count>=3)) {
-    char * message = Wallet_Localize("WantToCaptureForm?");
-    char * checkMessage = Wallet_Localize("NeverSave");
-    PRBool checkValue;
-//    PRBool checkValue = PR_FALSE;
-//    *result = Wallet_Confirm(message);
-    *result = Wallet_CheckConfirm(message, checkMessage, &checkValue);
-    if (!(*result)) {
-      if (checkValue) {
-        /* add URL to list with NO_CAPTURE indicator set */
-        value->SetCharAt('y', NO_CAPTURE);
-        wallet_WriteToList(*url, *value, dummy, wallet_URL_list, DUP_OVERWRITE);
-        wallet_WriteToFile("URL.tbl", wallet_URL_list, PR_FALSE);
-      } else {
-        delete url;
-      }
-    }
-    PR_FREEIF(checkMessage);
-    PR_FREEIF(message);
-  } else {
-    *result = PR_FALSE;
-  }
-//  level--;
-}
-
-/*
- * capture the value of a form element
- */
-PUBLIC void
-WLLT_Capture(nsIDocument* doc, nsString field, nsString value, nsString vcard) {
-
-  /* do nothing if there is no value */
-  if (!value.Length()) {
+  /* get url name as ascii string */
+  char *URLName = nsnull;
+  nsIURI* docURL = nsnull;
+  nsIDocument* doc = nsnull;
+  formNode->GetDocument(doc);
+#ifdef NECKO
+  char* spec;
+#else
+  const char* spec;
+#endif
+  if (!doc) {
     return;
   }
-
-  /* read in the mappings if they are not already present */
-  if (!vcard.Length()) {
-    wallet_Initialize();
-    wallet_InitializeCurrentURL(doc);
-    if (Wallet_BadKey()) {
-      return;
-    }
+  docURL = doc->GetDocumentURL();
+  if (!docURL) {
+    return;
   }
+  (void)docURL->GetSpec(&spec);
+  URLName = (char*)PR_Malloc(PL_strlen(spec)+1);
+  PL_strcpy(URLName, spec);
+  NS_IF_RELEASE(docURL);
+#ifdef NECKO
+  nsCRT::free(spec);
+#endif
 
-  nsAutoString oldValue;
+  /* get to the form elements */
+  PRInt32 count = 0;
+  nsIDOMHTMLFormElement* formElement = nsnull;
+  nsresult result = formNode->QueryInterface(kIDOMHTMLFormElementIID, (void**)&formElement);
+  if ((NS_SUCCEEDED(result)) && (nsnull != formElement)) {
+    nsIDOMHTMLCollection* elements = nsnull;
+    result = formElement->GetElements(&elements);
+    if ((NS_SUCCEEDED(result)) && (nsnull != elements)) {
 
-  /* is there a mapping from this field name to a schema name */
-  nsAutoString schema(vcard);
-  XP_List* FieldToSchema_list = wallet_FieldToSchema_list;
-  XP_List* URLFieldToSchema_list = wallet_specificURLFieldToSchema_list;
-  XP_List* SchemaToValue_list = wallet_SchemaToValue_list;
-  XP_List* dummy;
+      char* name_array[MAX_ARRAY_SIZE];
+      char* value_array[MAX_ARRAY_SIZE];
+      uint8 type_array[MAX_ARRAY_SIZE];
+      PRInt32 value_cnt = 0;
 
-  if (schema.Length() ||
-      (wallet_ReadFromList(field, schema, dummy, URLFieldToSchema_list)) ||
-      (wallet_ReadFromList(field, schema, dummy, FieldToSchema_list))) {
+      /* got to the form elements at long last */
+      /* now find out how many text fields are on the form */
+      /* also build arrays for single signon */
+      PRUint32 numElements;
+      elements->GetLength(&numElements);
+      for (PRUint32 elementX = 0; elementX < numElements; elementX++) {
+        nsIDOMNode* elementNode = nsnull;
+        elements->Item(elementX, &elementNode);
+        if (nsnull != elementNode) {
+          nsIDOMHTMLInputElement* inputElement;  
+          result =
+            elementNode->QueryInterface(kIDOMHTMLInputElementIID, (void**)&inputElement);
+          if ((NS_SUCCEEDED(result)) && (nsnull != inputElement)) {
+            nsAutoString type;
+            result = inputElement->GetType(type);
+            if (NS_SUCCEEDED(result)) {
+              PRBool isText = ((type == "") || (type.Compare("text", PR_TRUE)==0));
+              PRBool isPassword = (type.Compare("password", PR_TRUE)==0);
+              if (isText) {
+                count++;
+              }
+              if (value_cnt < MAX_ARRAY_SIZE) {
+                if (isText) {
+                  type_array[value_cnt] = FORM_TYPE_TEXT;
+                } else if (isPassword) {
+                  type_array[value_cnt] = FORM_TYPE_PASSWORD;
+                }
+                nsAutoString value;
+                result = inputElement->GetValue(value);
+                if (NS_SUCCEEDED(result)) {
+                  nsAutoString field;
+                  result = inputElement->GetName(field);
+                  if (NS_SUCCEEDED(result)) {
+                    value_array[value_cnt] = value.ToNewCString();
+                    name_array[value_cnt] = field.ToNewCString();
+                    value_cnt++;
+                  }
+                }
+              }
+            }
+            NS_RELEASE(inputElement);
+          }
+          NS_RELEASE(elementNode);
+        }
+      }
 
-    /* field to schema mapping already exists */
+      /* save login if appropriate */
+      SINGSIGN_RememberSignonData
+        (URLName, (char**)name_array, (char**)value_array, (char**)type_array, value_cnt);
 
-    /* is this a new value for the schema */
-    if (!(wallet_ReadFromList(schema, oldValue, dummy, SchemaToValue_list)) || 
-        (oldValue != value)) {
+      /* save form if it meets all necessary conditions */
+      if (wallet_GetFormsCapturingPref() && (count>=3) && wallet_OKToCapture(URLName)) {
 
-      /* this is a new value so store it */
-      nsAutoString * aValue = new nsAutoString(value);
-      nsAutoString * aSchema = new nsAutoString(schema);
-      dummy = 0;
-      wallet_WriteToList(*aSchema, *aValue, dummy, wallet_SchemaToValue_list);
-      wallet_WriteToFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE);
+        /* conditions all met, now save it */
+        for (PRUint32 elementX = 0; elementX < numElements; elementX++) {
+          nsIDOMNode* elementNode = nsnull;
+          elements->Item(elementX, &elementNode);
+          if (nsnull != elementNode) {
+            nsIDOMHTMLInputElement* inputElement;  
+            result =
+              elementNode->QueryInterface(kIDOMHTMLInputElementIID, (void**)&inputElement);
+            if ((NS_SUCCEEDED(result)) && (nsnull != inputElement)) {
+
+              /* it's an input element */
+              nsAutoString type;
+              result = inputElement->GetType(type);
+              if ((NS_SUCCEEDED(result)) &&
+                  ((type =="") || (type.Compare("text", PR_TRUE) == 0))) {
+                nsAutoString field;
+                result = inputElement->GetName(field);
+                if (NS_SUCCEEDED(result)) {
+                  nsAutoString value;
+                  result = inputElement->GetValue(value);
+                  if (NS_SUCCEEDED(result)) {
+
+                    /* get schema name from vcard attribute if it exists */
+                    nsAutoString vcardValue("");
+                    nsIDOMElement * element;
+                    result = elementNode->QueryInterface(kIDOMElementIID, (void**)&element);
+                    if ((NS_SUCCEEDED(result)) && (nsnull != element)) {
+                      nsAutoString vcardName("VCARD_NAME");
+                      result = element->GetAttribute(vcardName, vcardValue);
+                      NS_RELEASE(element);
+                    }
+                    wallet_Capture(doc, field, value, vcardValue);
+                  }
+                }
+              }
+              NS_RELEASE(inputElement);
+            }
+            NS_RELEASE(elementNode);
+          }
+        }
+      }
+      NS_RELEASE(elements);
     }
-  } else {
+    NS_RELEASE(formElement);
+  }
+}
 
-    /* no field to schema mapping so assume schema name is same as field name */
+PUBLIC void
+WLLT_FetchFromNetCenter() {
 
-    /* is this a new value for the schema */
-    if (!(wallet_ReadFromList(field, oldValue, dummy, SchemaToValue_list)) ||
-        (oldValue != value)) {
+  /* temporary patch to avoid bug 11766 */
+  return;
 
-      /* this is a new value so store it */
-      nsAutoString * aField = new nsAutoString(field);
-      nsAutoString * aValue = new nsAutoString(value);
-      dummy = 0;
-      wallet_WriteToList(*aField, *aValue, dummy, wallet_SchemaToValue_list);
-      wallet_WriteToFile("SchemaValue.tbl", wallet_SchemaToValue_list, PR_TRUE);
-    }
+  nsresult rv;
+
+  nsFileSpec dirSpec;
+  rv = Wallet_ResourceDirectory(dirSpec);
+  if (NS_FAILED(rv)) {
+    return;
+  }
+  rv = NS_NewURItoFile("http://people.netscape.com/morse/wallet/URLFieldSchema.tbl",
+                       dirSpec, "URLFieldSchema.tbl");
+  if (NS_FAILED(rv)) {
+    return;
+  }
+  rv = NS_NewURItoFile("http://people.netscape.com/morse/wallet/SchemaConcat.tbl",
+                       dirSpec, "SchemaConcat.tbl");
+  if (NS_FAILED(rv)) {
+    return;
+  }
+  rv = NS_NewURItoFile("http://people.netscape.com/morse/wallet/FieldSchema.tbl",
+                       dirSpec, "FieldSchema.tbl");
+  if (NS_FAILED(rv)) {
+    return;
   }
 }

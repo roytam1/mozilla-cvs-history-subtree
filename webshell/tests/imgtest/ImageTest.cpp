@@ -199,7 +199,8 @@ MyLoadImage(char *aFileName)
     if (gImageGroup == NULL) {
         nsIDeviceContext *deviceCtx = gWindow->GetDeviceContext();
         if (NS_NewImageGroup(&gImageGroup) != NS_OK ||
-            gImageGroup->Init(deviceCtx, nsnull) != NS_OK) {
+            gImageGroup->Init(deviceCtx, nsnull) != NS_OK)
+        {
                 ::MessageBox(NULL, "Couldn't create image group",
                              class1Name, MB_OK);
                 NS_RELEASE(deviceCtx);
@@ -218,7 +219,7 @@ MyLoadImage(char *aFileName)
     nscolor white;
     MyObserver *observer = new MyObserver();
             
-    NS_ColorNameToRGB("white", &white);
+    NS_ColorNameToRGB(nsAutoString("white"), &white);
     gImageReq = gImageGroup->GetImage(fileURL,
                                       observer,
                                       &white, 0, 0, 0);

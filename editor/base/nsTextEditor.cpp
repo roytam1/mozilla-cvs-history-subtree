@@ -1,4 +1,4 @@
-/* -*- Mode: C++ tab-width: 2 indent-tabs-mode: nil c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL") you may not use this file except in
@@ -19,14 +19,7 @@
 #include "nsTextEditor.h"
 #include "nsEditorEventListeners.h"
 
-#include "nsIStreamListener.h"
-#include "nsIParser.h"
-#include "nsParserCIID.h"
 #include "nsIDocument.h"
-#include "nsIHTMLContentSink.h"
-#include "nsHTMLContentSinkStream.h"
-#include "nsHTMLToTXTSinkStream.h"
-#include "nsXIFDTD.h"
 #include "nsFileSpec.h"
 
 #include "nsIDOMDocument.h"
@@ -36,12 +29,12 @@
 #include "nsIDOMDragListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDOMSelection.h"
-#include "nsIDOMRange.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMTextListener.h"
 #include "nsIDiskDocument.h"
+#include "nsIDocumentEncoder.h"
 #include "nsEditorCID.h"
 #include "nsISupportsArray.h"
 #include "nsIEnumerator.h"
@@ -70,16 +63,14 @@
 #include "nsIFileWidget.h"
 
 // Drag & Drop, Clipboard
-#include "nsWidgetsCID.h"
 #include "nsIClipboard.h"
 #include "nsITransferable.h"
-#include "nsIFormatConverter.h"
+//#include "nsIFormatConverter.h"
 
 // Drag & Drop, Clipboard Support
 static NS_DEFINE_CID(kCClipboardCID,           NS_CLIPBOARD_CID);
 static NS_DEFINE_CID(kCTransferableCID,        NS_TRANSFERABLE_CID);
-static NS_DEFINE_IID(kCXIFFormatConverterCID,  NS_XIFFORMATCONVERTER_CID);
-
+//static NS_DEFINE_IID(kCXIFFormatConverterCID,  NS_XIFFORMATCONVERTER_CID);
 
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
@@ -120,7 +111,7 @@ TypeInState::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   if (nsnull == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
-  if (aIID.Equals(nsISupports::GetIID())) {
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
     *aInstancePtr = (void*)(nsISupports*)this;
     NS_ADDREF_THIS();
     return NS_OK;
@@ -151,24 +142,35 @@ NS_IMETHODIMP TypeInState::NotifySelectionChanged()
 nsTextEditor::nsTextEditor()
 :  mTypeInState(nsnull)
 ,  mRules(nsnull)
+,  mKeyListenerP(nsnull)
 ,  mIsComposing(PR_FALSE)
 {
 // Done in nsEditor
 //  NS_INIT_REFCNT();
   mRules = nsnull;
   mMaxTextLength = -1;
+  mWrapColumn = 72;
 }
 
 nsTextEditor::~nsTextEditor()
 {
   //the autopointers will clear themselves up. 
   //but we need to also remove the listeners or we have a leak
+  nsCOMPtr<nsIDOMSelection>selection;
+  nsresult result = nsEditor::GetSelection(getter_AddRefs(selection));
+  if (NS_SUCCEEDED(result) && selection) 
+  {
+    nsCOMPtr<nsIDOMSelectionListener>listener;
+    listener = do_QueryInterface(mTypeInState);
+    if (listener) {
+      selection->RemoveSelectionListener(listener); 
+    }
+  }
   nsCOMPtr<nsIDOMDocument> doc;
   nsEditor::GetDocument(getter_AddRefs(doc));
   if (doc)
   {
-    nsCOMPtr<nsIDOMEventReceiver> erP;
-    nsresult result = doc->QueryInterface(nsIDOMEventReceiver::GetIID(), getter_AddRefs(erP));
+    nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(doc, &result);
     if (NS_SUCCEEDED(result) && erP) 
     {
       if (mKeyListenerP) {
@@ -269,9 +271,6 @@ NS_IMETHODIMP nsTextEditor::Init(nsIDOMDocument *aDoc,
     // get a mouse listener
     result = NS_NewEditorMouseListener(getter_AddRefs(mMouseListenerP), this);
     if (NS_OK != result) {
-#ifdef DEBUG_akkana
-      printf("Couldn't get mouse listener\n");
-#endif
       HandleEventListenerError();
       return result;
     }
@@ -394,7 +393,7 @@ NS_IMETHODIMP nsTextEditor::SetTextProperty(nsIAtom        *aProperty,
     nsAutoString propString;
     aProperty->ToString(propString);
     char *propCString = propString.ToNewCString();
-    if (gNoisy) { printf("---------- nsTextEditor::SetTextProperty %s ----------\n", propCString); }
+    if (gNoisy) { printf("---------- start nsTextEditor::SetTextProperty %s ----------\n", propCString); }
     delete [] propCString;
   }
 
@@ -420,13 +419,13 @@ NS_IMETHODIMP nsTextEditor::SetTextProperty(nsIAtom        *aProperty,
         // set the text property for all selected ranges
         nsEditor::BeginTransaction();
         nsCOMPtr<nsIEnumerator> enumerator;
-        enumerator = do_QueryInterface(selection);
-        if (enumerator)
+        result = selection->GetEnumerator(getter_AddRefs(enumerator));
+        if (NS_SUCCEEDED(result) && enumerator)
         {
           enumerator->First(); 
-          nsISupports *currentItem;
-          result = enumerator->CurrentItem(&currentItem);
-          if ((NS_SUCCEEDED(result)) && (nsnull!=currentItem))
+          nsCOMPtr<nsISupports> currentItem;
+          result = enumerator->CurrentItem(getter_AddRefs(currentItem));
+          if ((NS_SUCCEEDED(result)) && (currentItem))
           {
             nsCOMPtr<nsIDOMRange> range( do_QueryInterface(currentItem) );
             nsCOMPtr<nsIDOMNode>commonParent;
@@ -439,7 +438,10 @@ NS_IMETHODIMP nsTextEditor::SetTextProperty(nsIAtom        *aProperty,
               nsCOMPtr<nsIDOMNode> startParent;  nsCOMPtr<nsIDOMNode> endParent;
               range->GetStartParent(getter_AddRefs(startParent));
               range->GetEndParent(getter_AddRefs(endParent));
-              if (startParent.get()==endParent.get()) 
+              PRBool startIsText = IsTextNode(startParent);
+              PRBool endIsText = IsTextNode(endParent);
+              if ((PR_TRUE==startIsText) && (PR_TRUE==endIsText) &&
+                  (startParent.get()==endParent.get())) 
               { // the range is entirely contained within a single text node
                 // commonParent==aStartParent, so get the "real" parent of the selection
                 startParent->GetParentNode(getter_AddRefs(commonParent));
@@ -456,7 +458,8 @@ NS_IMETHODIMP nsTextEditor::SetTextProperty(nsIAtom        *aProperty,
                 if (NS_SUCCEEDED(result))
                 {
                   PRBool canCollapseStyleNode = PR_FALSE;
-                  if (endGrandParent.get()==startGrandParent.get())
+                  if ((PR_TRUE==startIsText) && (PR_TRUE==endIsText) &&
+                      endGrandParent.get()==startGrandParent.get())
                   {
                     result = IntermediateNodesAreInline(range, startParent, startOffset, 
                                                         endParent, endOffset, 
@@ -496,15 +499,19 @@ NS_IMETHODIMP nsTextEditor::SetTextProperty(nsIAtom        *aProperty,
         }
         nsEditor::EndTransaction();
       }
-      if (NS_SUCCEEDED(result))
-      { // set the selection
-        // XXX: can't do anything until I can create ranges
-      }
       // post-process
       result = mRules->DidDoAction(selection, &ruleInfo, result);
     }
   }
   if (gNoisy) {DebugDumpContent(); } // DEBUG
+  if (gNoisy) 
+  { 
+    nsAutoString propString;
+    aProperty->ToString(propString);
+    char *propCString = propString.ToNewCString();
+    if (gNoisy) { printf("---------- end nsTextEditor::SetTextProperty %s ----------\n", propCString); }
+    delete [] propCString;
+  }
   return result;
 }
 
@@ -515,7 +522,7 @@ NS_IMETHODIMP nsTextEditor::GetTextProperty(nsIAtom *aProperty,
 {
   if (!aProperty)
     return NS_ERROR_NULL_POINTER;
-
+/*
   if (gNoisy) 
   { 
     nsAutoString propString;
@@ -524,7 +531,7 @@ NS_IMETHODIMP nsTextEditor::GetTextProperty(nsIAtom *aProperty,
     if (gNoisy) { printf("nsTextEditor::GetTextProperty %s\n", propCString); }
     delete [] propCString;
   }
-
+*/
   nsresult result=NS_ERROR_NOT_INITIALIZED;
   aAny=PR_FALSE;
   aAll=PR_TRUE;
@@ -537,12 +544,12 @@ NS_IMETHODIMP nsTextEditor::GetTextProperty(nsIAtom *aProperty,
     PRBool isCollapsed;
     selection->GetIsCollapsed(&isCollapsed);
     nsCOMPtr<nsIEnumerator> enumerator;
-    enumerator = do_QueryInterface(selection);
-    if (enumerator)
+    result = selection->GetEnumerator(getter_AddRefs(enumerator));
+    if (NS_SUCCEEDED(result) && enumerator)
     {
       enumerator->First(); 
-      nsISupports *currentItem;
-      result = enumerator->CurrentItem(&currentItem);
+      nsCOMPtr<nsISupports> currentItem;
+      result = enumerator->CurrentItem(getter_AddRefs(currentItem));
       // XXX: should be a while loop, to get each separate range
       if ((NS_SUCCEEDED(result)) && currentItem)
       {
@@ -555,20 +562,16 @@ NS_IMETHODIMP nsTextEditor::GetTextProperty(nsIAtom *aProperty,
         if ((NS_SUCCEEDED(result)) && iter)
         {
           iter->Init(range);
-          // loop through the content iterator for each content node
-          // for each text node:
-          // get the frame for the content, and from it the style context
-          // ask the style context about the property
           nsCOMPtr<nsIContent> content;
           result = iter->CurrentNode(getter_AddRefs(content));
           while (NS_COMFALSE == iter->IsDone())
           {
-            if (gNoisy) { printf("  checking node %p\n", content.get()); }
+            //if (gNoisy) { printf("  checking node %p\n", content.get()); }
             nsCOMPtr<nsIDOMCharacterData>text;
             text = do_QueryInterface(content);
+            PRBool skipNode = PR_FALSE;
             if (text)
             {
-              PRBool skipNode = PR_FALSE;
               if (PR_FALSE==isCollapsed && PR_TRUE==first && PR_TRUE==firstNodeInRange)
               {
                 firstNodeInRange = PR_FALSE;
@@ -578,30 +581,43 @@ NS_IMETHODIMP nsTextEditor::GetTextProperty(nsIAtom *aProperty,
                 text->GetLength(&count);
                 if (startOffset==(PRInt32)count) 
                 {
-                  if (gNoisy) { printf("  skipping node %p\n", content.get()); }
+                  //if (gNoisy) { printf("  skipping node %p\n", content.get()); }
                   skipNode = PR_TRUE;
                 }
               }
-              if (PR_FALSE==skipNode)
+            }
+            else
+            { // handle non-text leaf nodes here
+              PRBool canContainChildren;
+              content->CanContainChildren(canContainChildren);
+              if (PR_TRUE==canContainChildren)
               {
-                nsCOMPtr<nsIDOMNode>node;
-                node = do_QueryInterface(content);
-                if (node)
+                //if (gNoisy) { printf("  skipping non-leaf node %p\n", content.get()); }
+                skipNode = PR_TRUE;
+              }
+              else {
+                //if (gNoisy) { printf("  testing non-text leaf node %p\n", content.get()); }
+              }
+            }
+            if (PR_FALSE==skipNode)
+            {
+              nsCOMPtr<nsIDOMNode>node;
+              node = do_QueryInterface(content);
+              if (node)
+              {
+                PRBool isSet;
+                nsCOMPtr<nsIDOMNode>resultNode;
+                IsTextPropertySetByContent(node, aProperty, aAttribute, aValue, isSet, getter_AddRefs(resultNode));
+                if (PR_TRUE==first)
                 {
-                  PRBool isSet;
-                  nsCOMPtr<nsIDOMNode>resultNode;
-                  IsTextPropertySetByContent(node, aProperty, aAttribute, aValue, isSet, getter_AddRefs(resultNode));
-                  if (PR_TRUE==first)
-                  {
-                    aFirst = isSet;
-                    first = PR_FALSE;
-                  }
-                  if (PR_TRUE==isSet) {
-                    aAny = PR_TRUE;
-                  }
-                  else {
-                    aAll = PR_FALSE;
-                  }
+                  aFirst = isSet;
+                  first = PR_FALSE;
+                }
+                if (PR_TRUE==isSet) {
+                  aAny = PR_TRUE;
+                }
+                else {
+                  aAll = PR_FALSE;
                 }
               }
             }
@@ -615,7 +631,7 @@ NS_IMETHODIMP nsTextEditor::GetTextProperty(nsIAtom *aProperty,
   if (PR_FALSE==aAny) { // make sure that if none of the selection is set, we don't report all is set
     aAll = PR_FALSE;
   }
-  if (gNoisy) { printf("  returning first=%d any=%d all=%d\n", aFirst, aAny, aAll); }
+  //if (gNoisy) { printf("  returning first=%d any=%d all=%d\n", aFirst, aAny, aAll); }
   return result;
 }
 
@@ -665,7 +681,7 @@ void nsTextEditor::IsTextPropertySetByContent(nsIDOMNode     *aNode,
       if (propName.EqualsIgnoreCase(tag))
       {
         PRBool found = PR_FALSE;
-        if (aAttribute)
+        if (aAttribute && 0!=aAttribute->Length())
         {
           nsAutoString value;
           element->GetAttribute(*aAttribute, value);
@@ -721,7 +737,7 @@ NS_IMETHODIMP nsTextEditor::RemoveTextProperty(nsIAtom *aProperty, const nsStrin
     nsAutoString propString;
     aProperty->ToString(propString);
     char *propCString = propString.ToNewCString();
-    if (gNoisy) { printf("---------- nsTextEditor::RemoveTextProperty %s ----------\n", propCString); }
+    if (gNoisy) { printf("---------- start nsTextEditor::RemoveTextProperty %s ----------\n", propCString); }
     delete [] propCString;
   }
 
@@ -755,13 +771,13 @@ NS_IMETHODIMP nsTextEditor::RemoveTextProperty(nsIAtom *aProperty, const nsStrin
         nsCOMPtr<nsIDOMNode> startParent, endParent;
         PRInt32 startOffset, endOffset;
         nsCOMPtr<nsIEnumerator> enumerator;
-        enumerator = do_QueryInterface(selection);
-        if (enumerator)
+        result = selection->GetEnumerator(getter_AddRefs(enumerator));
+        if (NS_SUCCEEDED(result) && enumerator)
         {
           enumerator->First(); 
-          nsISupports *currentItem;
-          result = enumerator->CurrentItem(&currentItem);
-          if ((NS_SUCCEEDED(result)) && (nsnull!=currentItem))
+          nsCOMPtr<nsISupports>currentItem;
+          result = enumerator->CurrentItem(getter_AddRefs(currentItem));
+          if ((NS_SUCCEEDED(result)) && (currentItem))
           {
             nsCOMPtr<nsIDOMRange> range( do_QueryInterface(currentItem) );
             nsCOMPtr<nsIDOMNode>commonParent;
@@ -782,38 +798,10 @@ NS_IMETHODIMP nsTextEditor::RemoveTextProperty(nsIAtom *aProperty, const nsStrin
               }
               else
               {
-                nsCOMPtr<nsIDOMNode> startGrandParent;
-                startParent->GetParentNode(getter_AddRefs(startGrandParent));
-                nsCOMPtr<nsIDOMNode> endGrandParent;
-                endParent->GetParentNode(getter_AddRefs(endGrandParent));
-                if (NS_SUCCEEDED(result))
-                {
-                  PRBool canCollapseStyleNode = PR_FALSE;
-                  if (endGrandParent.get()==startGrandParent.get())
-                  {
-                    result = IntermediateNodesAreInline(range, startParent, startOffset, 
-                                                        endParent, endOffset, 
-                                                        canCollapseStyleNode);
-                  }
-                  if (NS_SUCCEEDED(result)) 
-                  {
-                    if (PR_TRUE==canCollapseStyleNode)
-                    { // the range is between 2 nodes that have a common (immediate) grandparent,
-                      // and any intermediate nodes are just inline style nodes
-                      result = RemoveTextPropertiesForNodesWithSameParent(startParent,startOffset,
-                                                                          endParent,  endOffset,
-                                                                          commonParent,
-                                                                          aProperty, nsnull);
-                    }
-                    else
-                    { // the range is between 2 nodes that have no simple relationship
-                      result = RemoveTextPropertiesForNodeWithDifferentParents(startParent,startOffset, 
-                                                                               endParent,  endOffset,
-                                                                               commonParent,
-                                                                               aProperty, nsnull);
-                    }
-                  }
-                }
+                result = RemoveTextPropertiesForNodeWithDifferentParents(startParent,startOffset, 
+                                                                         endParent,  endOffset,
+                                                                         commonParent,
+                                                                         aProperty, nsnull);
               }
               if (NS_SUCCEEDED(result))
               { // compute a range for the selection
@@ -836,6 +824,14 @@ NS_IMETHODIMP nsTextEditor::RemoveTextProperty(nsIAtom *aProperty, const nsStrin
       result = mRules->DidDoAction(selection, &ruleInfo, result);
     }
   }
+  if (gNoisy) 
+  { 
+    nsAutoString propString;
+    aProperty->ToString(propString);
+    char *propCString = propString.ToNewCString();
+    if (gNoisy) { printf("---------- end nsTextEditor::RemoveTextProperty %s ----------\n", propCString); }
+    delete [] propCString;
+  }
   return result;
 }
 
@@ -854,13 +850,13 @@ void nsTextEditor::GetTextSelectionOffsetsForRange(nsIDOMSelection *aSelection,
   aSelection->GetFocusOffset(&endOffset);
 
   nsCOMPtr<nsIEnumerator> enumerator;
-  enumerator = do_QueryInterface(aSelection);
-  if (enumerator)
+  result = aSelection->GetEnumerator(getter_AddRefs(enumerator));
+  if (NS_SUCCEEDED(result) && enumerator)
   {
     enumerator->First(); 
-    nsISupports *currentItem;
-    result = enumerator->CurrentItem(&currentItem);
-    if ((NS_SUCCEEDED(result)) && (nsnull!=currentItem))
+    nsCOMPtr<nsISupports> currentItem;
+    result = enumerator->CurrentItem(getter_AddRefs(currentItem));
+    if ((NS_SUCCEEDED(result)) && currentItem)
     {
       nsCOMPtr<nsIDOMRange> range( do_QueryInterface(currentItem) );
       range->GetCommonParent(aParent);
@@ -1034,6 +1030,12 @@ NS_IMETHODIMP nsTextEditor::InsertText(const nsString& aStringToInsert)
 NS_IMETHODIMP nsTextEditor::SetMaxTextLength(PRInt32 aMaxTextLength)
 {
   mMaxTextLength = aMaxTextLength;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsTextEditor::GetMaxTextLength(PRInt32& aMaxTextLength)
+{
+  aMaxTextLength = mMaxTextLength;
   return NS_OK;
 }
 
@@ -1247,7 +1249,7 @@ NS_IMETHODIMP nsTextEditor::SaveDocument(PRBool saveAs, PRBool saveCopy)
   	}
   }
 
-  nsAutoString  charsetStr("ISO-8859-1");
+  nsAutoString  charsetStr("");
   rv = diskDoc->SaveFile(&docFileSpec, replacing, saveCopy, nsIDiskDocument::eSaveFileHTML, charsetStr);
   
   if (NS_FAILED(rv))
@@ -1268,7 +1270,12 @@ NS_IMETHODIMP nsTextEditor::Save()
     mJSEditorLog->Save();
 #endif // ENABLE_JS_EDITOR_LOG
 
-  return SaveDocument(PR_FALSE, PR_FALSE);
+  nsresult rv = SaveDocument(PR_FALSE, PR_FALSE);
+  if (NS_FAILED(rv))
+    return rv;
+   
+  rv = DoAfterDocumentSave();
+  return rv;
 }
 
 NS_IMETHODIMP nsTextEditor::SaveAs(PRBool aSavingCopy)
@@ -1309,10 +1316,6 @@ NS_IMETHODIMP nsTextEditor::PasteAsQuotation()
   if (mJSEditorLog)
     mJSEditorLog->PasteAsQuotation();
 #endif // ENABLE_JS_EDITOR_LOG
-
-#ifdef DEBUG_akkana
-  printf("nsTextEditor::PasteAsQuotation\n");
-#endif
 
   nsString stuffToPaste;
 
@@ -1375,16 +1378,19 @@ NS_IMETHODIMP nsTextEditor::InsertAsQuotation(const nsString& aQuotedText)
   nsresult rv = nsServiceManager::GetService(kPrefServiceCID,
                                              nsIPref::GetIID(),
                                              (nsISupports**)&prefs);
-  char *citationType;
+  char *citationType = 0;
   rv = prefs->CopyCharPref("mail.compose.citationType", &citationType);
                           
-  if (NS_SUCCEEDED(rv) && citationType[0]
-      && !strncmp(citationType, "aol", 3))
-    citer = new nsAOLCiter;
+  if (NS_SUCCEEDED(rv) && citationType[0])
+  {
+    if (!strncmp(citationType, "aol", 3))
+      citer = new nsAOLCiter;
+    else
+      citer = new nsInternetCiter;
+    PL_strfree(citationType);
+  }
   else
     citer = new nsInternetCiter;
-  
-  if (citationType) PL_strfree(citationType);
   
   nsServiceManager::ReleaseService(kPrefServiceCID, prefs);
 
@@ -1400,35 +1406,6 @@ NS_IMETHODIMP nsTextEditor::InsertAsQuotation(const nsString& aQuotedText)
   return InsertText(quotedStuff);
 }
 
-// Useful helper method for Get/SetBodyWrapWidth:
-static nsCOMPtr<nsIDOMElement>
-findPreElement(nsIDOMDocument* domdoc)
-{
-  nsCOMPtr<nsIDocument> doc (do_QueryInterface(domdoc));
-  if (!doc)
-    return 0;
-
-  nsIContent* rootContent = doc->GetRootContent();
-  if (!rootContent)
-    return 0;
-
-  nsCOMPtr<nsIDOMNode> rootNode (do_QueryInterface(rootContent));
-  if (!rootNode)
-    return 0;
-
-  nsString prestr ("PRE");  // GetFirstNodeOfType requires capitals
-  nsCOMPtr<nsIDOMNode> preNode;
-  if (!NS_SUCCEEDED(nsEditor::GetFirstNodeOfType(rootNode, prestr,
-                                                 getter_AddRefs(preNode))))
-  {
-#ifdef DEBUG_akkana
-    printf("No PRE tag\n");
-#endif
-    return 0;
-  }
-  return do_QueryInterface(preNode);
-}
-
 //
 // Get the wrap width for the first PRE tag in the document.
 // If no PRE tag, throw an error.
@@ -1440,12 +1417,7 @@ NS_IMETHODIMP nsTextEditor::GetBodyWrapWidth(PRInt32 *aWrapColumn)
   if (! aWrapColumn)
     return NS_ERROR_NULL_POINTER;
 
-  nsCOMPtr<nsIDOMDocument> domdoc;
-  nsEditor::GetDocument(getter_AddRefs(domdoc));
-  if (!domdoc)
-    return NS_ERROR_UNEXPECTED;
-
-  nsCOMPtr<nsIDOMElement> preElement = findPreElement(domdoc);
+  nsCOMPtr<nsIDOMElement> preElement = FindPreElement();
   if (!preElement)
     return NS_ERROR_UNEXPECTED;
   nsString colsStr ("cols");
@@ -1453,12 +1425,7 @@ NS_IMETHODIMP nsTextEditor::GetBodyWrapWidth(PRInt32 *aWrapColumn)
   PRBool isSet;
   res = GetAttributeValue(preElement, colsStr, numCols, isSet);
   if (!NS_SUCCEEDED(res))
-  {
-#ifdef DEBUG_akkana
-    printf("GetAttributeValue(cols) failed\n");
-#endif
     return NS_ERROR_UNEXPECTED;
-  }
 
   if (isSet)
   {
@@ -1473,12 +1440,7 @@ NS_IMETHODIMP nsTextEditor::GetBodyWrapWidth(PRInt32 *aWrapColumn)
   nsString wrapStr ("wrap");
   res = GetAttributeValue(preElement, colsStr, numCols, isSet);
   if (!NS_SUCCEEDED(res))
-  {
-#ifdef DEBUG_akkana
-    printf("GetAttributeValue(cols) failed\n");
-#endif
     return NS_ERROR_UNEXPECTED;
-  }
 
   if (isSet)
     *aWrapColumn = 0;   // wrap to window width
@@ -1497,15 +1459,9 @@ NS_IMETHODIMP nsTextEditor::SetBodyWrapWidth(PRInt32 aWrapColumn)
 {
   nsresult res;
 
-  if (! aWrapColumn)
-    return NS_ERROR_NULL_POINTER;
+  mWrapColumn = aWrapColumn;
 
-  nsCOMPtr<nsIDOMDocument> domdoc;
-  nsEditor::GetDocument(getter_AddRefs(domdoc));
-  if (!domdoc)
-    return NS_ERROR_UNEXPECTED;
-
-  nsCOMPtr<nsIDOMElement> preElement = findPreElement(domdoc);
+  nsCOMPtr<nsIDOMElement> preElement = FindPreElement();
   if (!preElement)
     return NS_ERROR_UNEXPECTED;
 
@@ -1538,152 +1494,200 @@ NS_IMETHODIMP nsTextEditor::SetBodyWrapWidth(PRInt32 aWrapColumn)
   return res;
 }  
 
-NS_IMETHODIMP nsTextEditor::OutputTextToString(nsString& aOutputString)
+NS_IMETHODIMP nsTextEditor::ApplyStyleSheet(const nsString& aURL)
 {
-  return OutputTextInternal(nsnull,&aOutputString,nsnull);
+  return nsEditor::ApplyStyleSheet(aURL);
 }
 
-NS_IMETHODIMP nsTextEditor::OutputTextToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride)
+NS_IMETHODIMP nsTextEditor::OutputToString(nsString& aOutputString,
+                                           const nsString& aFormatType,
+                                           PRUint32 aFlags)
 {
-  return OutputTextInternal(aOutputStream,nsnull,aCharsetOverride);
-}
+  PRBool cancel;
+  nsString resultString;
+  nsTextRulesInfo ruleInfo(nsTextEditRules::kOutputText);
+  ruleInfo.outString = &resultString;
+  nsresult rv = mRules->WillDoAction(nsnull, &ruleInfo, &cancel);
+  if (NS_FAILED(rv)) { return rv; }
+  if (PR_TRUE==cancel)
+  { // this case will get triggered by password fields
+    aOutputString = *(ruleInfo.outString);
+  }
+  else
+  { // default processing
+    nsCOMPtr<nsITextEncoder> encoder;
+    char* progid = new char[strlen(NS_DOC_ENCODER_PROGID_BASE) + aFormatType.Length() + 1];
+    if (! progid)
+      return NS_ERROR_OUT_OF_MEMORY;
+    strcpy(progid, NS_DOC_ENCODER_PROGID_BASE);
+    char* type = aFormatType.ToNewCString();
+    strcat(progid, type);
+    delete[] type;
+    rv = nsComponentManager::CreateInstance(progid,
+                                            nsnull,
+                                            nsIDocumentEncoder::GetIID(),
+                                            getter_AddRefs(encoder));
 
-
-NS_IMETHODIMP nsTextEditor::OutputTextInternal(nsIOutputStream* aOutputStream, nsString* aOutputString, nsString* aCharsetOverride)
-{ 
-  nsresult rv = NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIPresShell> shell;
- 	GetPresShell(getter_AddRefs(shell));
-  if (shell) {
-    nsCOMPtr<nsIDocument> doc;
-    shell->GetDocument(getter_AddRefs(doc));
-    if (doc) {
-      nsString buffer;
-
-      doc->CreateXIF(buffer);
-
-      nsAutoString charset;
-      rv = doc->GetDocumentCharacterSet(charset);
-      if(NS_FAILED(rv)) {
-         charset = "ISO-8859-1"; 
-      }
-      nsIParser* parser;
-
-      static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
-      static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
-
-      rv = nsComponentManager::CreateInstance(kCParserCID, 
-                                                 nsnull, 
-                                                 kCParserIID, 
-                                                 (void **)&parser);
-
-      if (NS_SUCCEEDED(rv)) {
-        nsIHTMLContentSink* sink = nsnull;
-        
-        if (NS_SUCCEEDED(rv))
-        {
-          
-          if (aOutputString != nsnull)
-            rv = NS_New_HTMLToTXT_SinkStream(&sink,aOutputString); 
-          else if (aOutputStream != nsnull)
-            rv = NS_New_HTMLToTXT_SinkStream(&sink,aOutputStream,aCharsetOverride);
-
-          if (sink && NS_SUCCEEDED(rv))
-          {
- 	          parser->SetContentSink(sink);
-            parser->SetDocumentCharset(charset, kCharsetFromPreviousLoading);
- 	          nsIDTD* dtd = nsnull;
-	          rv = NS_NewXIFDTD(&dtd);
-	          if (NS_OK == rv) {
-	            parser->RegisterDTD(dtd);
-	            parser->Parse(buffer, 0, "text/xif",PR_FALSE,PR_TRUE);           
-	          }
-
-	          NS_IF_RELEASE(dtd);
-	          NS_IF_RELEASE(sink);
-            NS_IF_RELEASE(parser);
-          }
-
-        }        
-      }
+    delete[] progid;
+    if (NS_FAILED(rv))
+    {
+      printf("Couldn't get progid %s\n", progid);
+      return rv;
     }
+
+    nsCOMPtr<nsIDOMDocument> domdoc;
+    rv = GetDocument(getter_AddRefs(domdoc));
+    if (NS_FAILED(rv))
+      return rv;
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+
+    nsCOMPtr<nsIPresShell> shell;
+
+ 	  rv = GetPresShell(getter_AddRefs(shell));
+    if (NS_FAILED(rv))
+      return rv;
+    rv = encoder->Init(shell, doc, aFormatType);
+    if (NS_FAILED(rv))
+      return rv;
+
+	  if (aFlags & EditorOutputSelectionOnly)
+    {
+	    nsCOMPtr<nsIDOMSelection> selection;
+	    rv = GetSelection(getter_AddRefs(selection));
+	    if (NS_SUCCEEDED(rv) && selection)
+	      encoder->SetSelection(selection);
+	  }
+	  
+    // Try to set pretty printing, but don't panic if it doesn't work:
+    (void)encoder->PrettyPrint((aFlags & EditorOutputFormatted)
+                               ? PR_TRUE : PR_FALSE);
+    // Indicate whether we want the comment and doctype headers prepended:
+    (void)encoder->AddHeader((aFlags & EditorOutputNoDoctype)
+                             ? PR_FALSE : PR_TRUE);
+    // Set the wrap column.  If our wrap column is 0,
+    // i.e. wrap to body width, then don't set it, let the
+    // document encoder use its own default.
+    if (mWrapColumn != 0)
+    {
+      PRUint32 wc;
+      if (mWrapColumn < 0)
+        wc = 0;
+      else
+        wc = (PRUint32)mWrapColumn;
+      if (mWrapColumn > 0)
+        (void)encoder->SetWrapColumn(wc);
+    }
+
+    rv = encoder->EncodeToString(aOutputString);
   }
   return rv;
 }
 
-
-NS_IMETHODIMP nsTextEditor::OutputHTMLToString(nsString& aOutputString)
+NS_IMETHODIMP nsTextEditor::OutputToStream(nsIOutputStream* aOutputStream,
+                                           const nsString& aFormatType,
+                                           const nsString* aCharset,
+                                           PRUint32 aFlags)
 {
-  return OutputHTMLInternal(nsnull,&aOutputString,nsnull);
-}
+  nsresult rv;
+  nsCOMPtr<nsITextEncoder> encoder;
+  char* progid = new char[strlen(NS_DOC_ENCODER_PROGID_BASE) + aFormatType.Length() + 1];
+  if (! progid)
+      return NS_ERROR_OUT_OF_MEMORY;
 
-NS_IMETHODIMP nsTextEditor::OutputHTMLToStream(nsIOutputStream* aOutputStream,nsString* aCharsetOverride)
-{
-  return OutputHTMLInternal(aOutputStream,nsnull,aCharsetOverride);
-}
+  strcpy(progid, NS_DOC_ENCODER_PROGID_BASE);
+  char* type = aFormatType.ToNewCString();
+  strcat(progid, type);
+  delete[] type;
+  rv = nsComponentManager::CreateInstance(progid,
+                                          nsnull,
+                                          nsIDocumentEncoder::GetIID(),
+                                          getter_AddRefs(encoder));
 
+  delete[] progid;
+  if (NS_FAILED(rv))
+  {
+    printf("Couldn't get progid %s\n", progid);
+    return rv;
+  }
 
-NS_IMETHODIMP nsTextEditor::OutputHTMLInternal(nsIOutputStream* aOutputStream, nsString* aOutputString, nsString* aCharsetOverride)
-{
-  
-  nsresult rv = NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  rv = GetDocument(getter_AddRefs(domdoc));
+  if (NS_FAILED(rv))
+    return rv;
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+
+  if (aCharset && aCharset->Length() != 0 && aCharset->Equals("null")==PR_FALSE)
+    encoder->SetCharset(*aCharset);
+
   nsCOMPtr<nsIPresShell> shell;
- 	GetPresShell(getter_AddRefs(shell));
-  if (shell) {
-    nsCOMPtr<nsIDocument> doc;
-    shell->GetDocument(getter_AddRefs(doc));
-    if (doc) {
-      nsString buffer;
 
-      doc->CreateXIF(buffer);
+ 	rv = GetPresShell(getter_AddRefs(shell));
+  if (NS_SUCCEEDED(rv)) {
+    rv = encoder->Init(shell,doc, aFormatType);
+    if (NS_FAILED(rv))
+      return rv;
+  }
 
-      nsAutoString charset;
-      rv = doc->GetDocumentCharacterSet(charset);
-      if(NS_FAILED(rv)) {
-         charset = "ISO-8859-1"; 
-      }
-      nsIParser* parser;
+  if (aFlags & EditorOutputSelectionOnly)
+  {
+    nsCOMPtr<nsIDOMSelection>  selection;
+    rv = GetSelection(getter_AddRefs(selection));
+    if (NS_SUCCEEDED(rv) && selection)
+      encoder->SetSelection(selection);
+  }
 
-      static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
-      static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
+  // Try to set pretty printing, but don't panic if it doesn't work:
+  (void)encoder->PrettyPrint((aFlags & EditorOutputFormatted)
+                             ? PR_TRUE : PR_FALSE);
+  // Indicate whether we want the comment and doc type headers prepended:
+  (void)encoder->AddHeader((aFlags & EditorOutputNoDoctype)
+                           ? PR_FALSE : PR_TRUE);
+  // Set the wrap column.  If our wrap column is 0,
+  // i.e. wrap to body width, then don't set it, let the
+  // document encoder use its own default.
+  if (mWrapColumn != 0)
+  {
+    PRUint32 wc;
+    if (mWrapColumn < 0)
+      wc = 0;
+    else
+      wc = (PRUint32)mWrapColumn;
+    if (mWrapColumn > 0)
+      (void)encoder->SetWrapColumn(wc);
+  }
 
-      rv = nsComponentManager::CreateInstance(kCParserCID, 
-                                                 nsnull, 
-                                                 kCParserIID, 
-                                                 (void **)&parser);
-
-      if (NS_OK == rv) {
-        nsIHTMLContentSink* sink = nsnull;
-
-        if (aOutputStream)
-          rv = NS_New_HTML_ContentSinkStream(&sink,aOutputStream,aCharsetOverride);
-        else if (aOutputString)
-          rv = NS_New_HTML_ContentSinkStream(&sink,aOutputString);
-  
-      	if (sink && NS_SUCCEEDED(rv)) {
-
-	        if (NS_OK == rv) {
-	          parser->SetContentSink(sink);
-	    
-	          parser->SetDocumentCharset(charset, kCharsetFromPreviousLoading);
-
-	          nsIDTD* dtd = nsnull;
-	          rv = NS_NewXIFDTD(&dtd);
-	          if (NS_OK == rv) {
-	            parser->RegisterDTD(dtd);
-	            parser->Parse(buffer, 0, "text/xif",PR_FALSE,PR_TRUE);           
-	          }
-	          NS_IF_RELEASE(dtd);
-	          NS_IF_RELEASE(sink);
-	        }
-        }
-        NS_RELEASE(parser);
-      }
-  	}
-	}
-  return rv;
+  return encoder->EncodeToStream(aOutputStream);
 }
+
+nsCOMPtr<nsIDOMElement>
+nsTextEditor::FindPreElement()
+{
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  nsEditor::GetDocument(getter_AddRefs(domdoc));
+  if (!domdoc)
+    return 0;
+
+  nsCOMPtr<nsIDocument> doc (do_QueryInterface(domdoc));
+  if (!doc)
+    return 0;
+
+  nsIContent* rootContent = doc->GetRootContent();
+  if (!rootContent)
+    return 0;
+
+  nsCOMPtr<nsIDOMNode> rootNode (do_QueryInterface(rootContent));
+  if (!rootNode)
+    return 0;
+
+  nsString prestr ("PRE");  // GetFirstNodeOfType requires capitals
+  nsCOMPtr<nsIDOMNode> preNode;
+  if (!NS_SUCCEEDED(nsEditor::GetFirstNodeOfType(rootNode, prestr,
+                                                 getter_AddRefs(preNode))))
+    return 0;
+
+  return do_QueryInterface(preNode);
+}
+
 
 
 NS_IMETHODIMP nsTextEditor::SetTextPropertiesForNode(nsIDOMNode  *aNode, 
@@ -1696,46 +1700,69 @@ NS_IMETHODIMP nsTextEditor::SetTextPropertiesForNode(nsIDOMNode  *aNode,
 {
   if (gNoisy) { printf("nsTextEditor::SetTextPropertyForNode\n"); }
   nsresult result=NS_OK;
-  // verify that aNode is a text node
-  nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
-  nodeAsChar =  do_QueryInterface(aNode);
-  if (!nodeAsChar)
-    return NS_ERROR_FAILURE;
-
   PRBool textPropertySet;
   nsCOMPtr<nsIDOMNode>resultNode;
   IsTextPropertySetByContent(aNode, aPropName, aAttribute, aValue, textPropertySet, getter_AddRefs(resultNode));
   if (PR_FALSE==textPropertySet)
   {
+    if (aValue  &&  0!=aValue->Length())
+    {
+      result = RemoveTextPropertiesForNode(aNode, aParent, aStartOffset, aEndOffset, aPropName, aAttribute);
+    }
     nsAutoString tag;
     aPropName->ToString(tag);
     if (NS_SUCCEEDED(result)) 
     {
       nsCOMPtr<nsIDOMNode>newStyleNode;
-      if (NS_SUCCEEDED(result))
+      result = nsEditor::CreateNode(tag, aParent, 0, getter_AddRefs(newStyleNode));
+      if (NS_SUCCEEDED(result) && newStyleNode)
       {
-        result = nsEditor::CreateNode(tag, aParent, 0, getter_AddRefs(newStyleNode));
-        if (NS_SUCCEEDED(result) && newStyleNode)
+        nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
+        nodeAsChar =  do_QueryInterface(aNode);
+        if (nodeAsChar)
         {
           result = MoveContentOfNodeIntoNewParent(aNode, newStyleNode, aStartOffset, aEndOffset);
-          if (NS_SUCCEEDED(result) && newStyleNode) 
-          {
-            if (aAttribute)
-            {
-              nsCOMPtr<nsIDOMElement> newStyleElement;
-              newStyleElement = do_QueryInterface(newStyleNode);
-              nsAutoString value;
-              if (aValue) {
-                value = *aValue;
+        }
+        else
+        { // handle non-text selection
+          nsCOMPtr<nsIDOMNode> parent;  // used just to make the code easier to understand
+          nsCOMPtr<nsIDOMNode> child;
+          parent = do_QueryInterface(aNode);
+          child = GetChildAt(parent, aStartOffset);
+          // XXX: need to loop for aStartOffset!=aEndOffset-1?
+          PRInt32 offsetInParent = aStartOffset; // remember where aNode was in aParent
+          if (NS_SUCCEEDED(result))
+          { // remove child from parent
+            result = nsEditor::DeleteNode(child);
+            if (NS_SUCCEEDED(result)) 
+            { // put child into the newStyleNode
+              result = nsEditor::InsertNode(child, newStyleNode, 0);
+              if (NS_SUCCEEDED(result)) 
+              { // put newStyleNode in parent where child was
+                result = nsEditor::InsertNode(newStyleNode, parent, offsetInParent);
               }
-              // XXX should be a call to editor to change attribute!
-              result = newStyleElement->SetAttribute(*aAttribute, value);
             }
+          }
+        }
+        if (NS_SUCCEEDED(result)) 
+        {
+          if (aAttribute && 0!=aAttribute->Length())
+          {
+            nsCOMPtr<nsIDOMElement> newStyleElement;
+            newStyleElement = do_QueryInterface(newStyleNode);
+            nsAutoString value;
+            if (aValue) {
+              value = *aValue;
+            }
+            // XXX should be a call to editor to change attribute!
+            result = newStyleElement->SetAttribute(*aAttribute, value);
           }
         }
       }
     }
   }
+  if (gNoisy) { printf("SetTextPropertyForNode returning %d, dumping content...\n", result);}
+  if (gNoisy) {DebugDumpContent(); } // DEBUG
   return result;
 }
 
@@ -1800,6 +1827,7 @@ NS_IMETHODIMP nsTextEditor::MoveContentOfNodeIntoNewParent(nsIDOMNode  *aNode,
             {
               result = nsEditor::DeleteNode(newChildNode); 
               done = PR_TRUE;
+              // XXX: need to set selection here
             }
           }
           // move the new child node into the new parent
@@ -1867,15 +1895,31 @@ nsTextEditor::SetTextPropertiesForNodesWithSameParent(nsIDOMNode  *aStartNode,
   IsTextPropertySetByContent(aStartNode, aPropName, aAttribute, aValue, textPropertySet, getter_AddRefs(resultNode));
   if (PR_FALSE==textPropertySet)
   {
+    if (aValue  &&  0!=aValue->Length())
+    {
+      result = RemoveTextPropertiesForNodesWithSameParent(aStartNode, aStartOffset,
+                                                          aEndNode,   aEndOffset,
+                                                          aParent, aPropName, aAttribute);
+    }
     nsAutoString tag;
     aPropName->ToString(tag);
     // create the new style node, which will be the new parent for the selected nodes
     nsCOMPtr<nsIDOMNode>newStyleNode;
-    result = nsEditor::CreateNode(tag, aParent, 0, getter_AddRefs(newStyleNode));
+    nsCOMPtr<nsIDOMDocument>doc;
+    result = GetDocument(getter_AddRefs(doc));
+    if (NS_SUCCEEDED(result) && doc)
+    {
+      nsCOMPtr<nsIDOMElement>newElement;
+      result = doc->CreateElement(tag, getter_AddRefs(newElement));
+      if (NS_SUCCEEDED(result) && newElement)
+      {
+        newStyleNode = do_QueryInterface(newElement);
+      }
+    }
     if (NS_SUCCEEDED(result) && newStyleNode)
     {
       result = MoveContiguousContentIntoNewParent(aStartNode, aStartOffset, aEndNode, aEndOffset, aParent, newStyleNode);
-      if (NS_SUCCEEDED(result) && aAttribute)
+      if (NS_SUCCEEDED(result) && aAttribute && 0!=aAttribute->Length())
       {
         nsCOMPtr<nsIDOMElement> newStyleElement;
         newStyleElement = do_QueryInterface(newStyleNode);
@@ -1890,6 +1934,8 @@ nsTextEditor::SetTextPropertiesForNodesWithSameParent(nsIDOMNode  *aStartNode,
   return result;
 }
 
+//XXX won't work for selections that are not leaf nodes!
+//    should fix up the end points to make sure they are leaf nodes
 NS_IMETHODIMP nsTextEditor::MoveContiguousContentIntoNewParent(nsIDOMNode  *aStartNode, 
                                                                PRInt32      aStartOffset, 
                                                                nsIDOMNode  *aEndNode,
@@ -1901,74 +1947,116 @@ NS_IMETHODIMP nsTextEditor::MoveContiguousContentIntoNewParent(nsIDOMNode  *aSta
   if (gNoisy) { printf("nsTextEditor::MoveContiguousContentIntoNewParent\n"); }
 
   nsresult result = NS_OK;
+  nsCOMPtr<nsIDOMNode>startNode, endNode;
+  PRInt32 startOffset = aStartOffset; // this will be the left edge of what we change
+  PRInt32 endOffset = aEndOffset;     // this will be the right edge of what we change
   nsCOMPtr<nsIDOMNode>newLeftNode;  // this will be the middle text node
-  if (0!=aStartOffset) {
-    result = nsEditor::SplitNode(aStartNode, aStartOffset, getter_AddRefs(newLeftNode));
+  if (IsTextNode(aStartNode))
+  {
+    startOffset = 0;
+    if (gNoisy) { printf("aStartNode is a text node.\n"); }
+    startNode = do_QueryInterface(aStartNode);
+    if (0!=aStartOffset) 
+    {
+      result = nsEditor::SplitNode(aStartNode, aStartOffset, getter_AddRefs(newLeftNode));
+      if (gNoisy) { printf("split aStartNode, newLeftNode = %p\n", newLeftNode.get()); }
+    }
+    else { 
+      if (gNoisy) { printf("did not split aStartNode\n"); } 
+    }
+  }
+  else {
+    startNode = GetChildAt(aStartNode, aStartOffset);
+    if (gNoisy) { printf("aStartNode is not a text node, got startNode = %p.\n", startNode.get()); }
   }
   if (NS_SUCCEEDED(result))
   {
-    PRUint32 count;
-    GetLengthOfDOMNode(aEndNode, count);
     nsCOMPtr<nsIDOMNode>newRightNode;  // this will be the middle text node
-    if ((PRInt32)count!=aEndOffset) {
-      result = nsEditor::SplitNode(aEndNode, aEndOffset, getter_AddRefs(newRightNode));
+    if (IsTextNode(aEndNode))
+    {
+      if (gNoisy) { printf("aEndNode is a text node.\n"); }
+      endNode = do_QueryInterface(aEndNode);
+      PRUint32 count;
+      GetLengthOfDOMNode(aEndNode, count);
+      if ((PRInt32)count!=aEndOffset) 
+      {
+        result = nsEditor::SplitNode(aEndNode, aEndOffset, getter_AddRefs(newRightNode));
+        if (gNoisy) { printf("split aEndNode, newRightNode = %p\n", newRightNode.get()); }
+      }
+      else {
+        newRightNode = do_QueryInterface(aEndNode);
+        if (gNoisy) { printf("did not split aEndNode\n"); }
+      }
     }
-    else {
-      newRightNode = do_QueryInterface(aEndNode);
+    else
+    {
+      endNode = GetChildAt(aEndNode, aEndOffset-1);
+      newRightNode = do_QueryInterface(endNode);
+      if (gNoisy) { printf("aEndNode is not a text node, got endNode = %p.\n", endNode.get()); }
     }
     if (NS_SUCCEEDED(result))
     {
       PRInt32 offsetInParent;
+      result = GetChildOffset(startNode, aGrandParentNode, offsetInParent);
+      /*
       if (newLeftNode) {
         result = GetChildOffset(newLeftNode, aGrandParentNode, offsetInParent);
       }
       else {
-        offsetInParent = -1; // relies on +1 below in call to CreateNode
+        offsetInParent = 0; // relies on +1 below in call to CreateNode
       }
+      */
       if (NS_SUCCEEDED(result))
       {
-        // wherever aNewParentNode is, delete it and insert it into aGrandParentNode
-        result = nsEditor::DeleteNode(aNewParentNode);
+        // insert aNewParentNode into aGrandParentNode
+        result = nsEditor::InsertNode(aNewParentNode, aGrandParentNode, offsetInParent);
         if (NS_SUCCEEDED(result))
-        { 
-          result = nsEditor::InsertNode(aNewParentNode, aGrandParentNode, offsetInParent);
+        { // move the right half of the start node into the new parent node
+          nsCOMPtr<nsIDOMNode>intermediateNode;
+          result = startNode->GetNextSibling(getter_AddRefs(intermediateNode));
           if (NS_SUCCEEDED(result))
-          { // move the right half of the start node into the new parent node
-            nsCOMPtr<nsIDOMNode>intermediateNode;
-            result = aStartNode->GetNextSibling(getter_AddRefs(intermediateNode));
-            if (NS_SUCCEEDED(result))
-            {
-              result = nsEditor::DeleteNode(aStartNode);
-              if (NS_SUCCEEDED(result)) 
-              { 
-                PRInt32 childIndex=0;
-                result = nsEditor::InsertNode(aStartNode, aNewParentNode, childIndex);
-                childIndex++;
-                if (NS_SUCCEEDED(result))
-                { // move all the intermediate nodes into the new parent node
-                  nsCOMPtr<nsIDOMNode>nextSibling;
-                  while (intermediateNode.get() != aEndNode)
-                  {
-                    if (!intermediateNode)
-                      result = NS_ERROR_NULL_POINTER;
-                    if (NS_FAILED(result)) {
-                      break;
-                    }
-                    // get the next sibling before moving the current child!!!
-                    intermediateNode->GetNextSibling(getter_AddRefs(nextSibling));
-                    result = nsEditor::DeleteNode(intermediateNode);
-                    if (NS_SUCCEEDED(result)) {
-                      result = nsEditor::InsertNode(intermediateNode, aNewParentNode, childIndex);
-                      childIndex++;
-                    }
-                    intermediateNode = do_QueryInterface(nextSibling);
+          {
+            result = nsEditor::DeleteNode(startNode);
+            if (NS_SUCCEEDED(result)) 
+            { 
+              PRInt32 childIndex=0;
+              result = nsEditor::InsertNode(startNode, aNewParentNode, childIndex);
+              childIndex++;
+              if (NS_SUCCEEDED(result))
+              { // move all the intermediate nodes into the new parent node
+                nsCOMPtr<nsIDOMNode>nextSibling;
+                while (intermediateNode.get() != endNode.get())
+                {
+                  if (!intermediateNode)
+                    result = NS_ERROR_NULL_POINTER;
+                  if (NS_FAILED(result)) {
+                    break;
                   }
-                  if (NS_SUCCEEDED(result))
-                  { // move the left half of the end node into the new parent node
-                    result = nsEditor::DeleteNode(newRightNode);
+                  // get the next sibling before moving the current child!!!
+                  intermediateNode->GetNextSibling(getter_AddRefs(nextSibling));
+                  result = nsEditor::DeleteNode(intermediateNode);
+                  if (NS_SUCCEEDED(result)) {
+                    result = nsEditor::InsertNode(intermediateNode, aNewParentNode, childIndex);
+                    childIndex++;
+                  }
+                  intermediateNode = do_QueryInterface(nextSibling);
+                }
+                if (NS_SUCCEEDED(result))
+                { // move the left half of the end node into the new parent node
+                  result = nsEditor::DeleteNode(newRightNode);
+                  if (NS_SUCCEEDED(result)) 
+                  {
+                    result = nsEditor::InsertNode(newRightNode, aNewParentNode, childIndex);
+                    // now set the selection
                     if (NS_SUCCEEDED(result)) 
                     {
-                      result = nsEditor::InsertNode(newRightNode, aNewParentNode, childIndex);
+                      nsCOMPtr<nsIDOMSelection>selection;
+                      result = nsEditor::GetSelection(getter_AddRefs(selection));
+                      if (NS_SUCCEEDED(result)) 
+                      {
+                        selection->Collapse(startNode, startOffset);
+                        selection->Extend(newRightNode, endOffset);
+                      }
                     }
                   }
                 }
@@ -2001,13 +2089,28 @@ nsTextEditor::SetTextPropertiesForNodeWithDifferentParents(nsIDOMRange *aRange,
                                                            const nsString *aAttribute,
                                                            const nsString *aValue)
 {
-  if (gNoisy) { printf("nsTextEditor::SetTextPropertiesForNodeWithDifferentParents\n"); }
+  if (gNoisy) { printf("start nsTextEditor::SetTextPropertiesForNodeWithDifferentParents\n"); }
   nsresult result=NS_OK;
   PRUint32 count;
   if (!aRange || !aStartNode || !aEndNode || !aParent || !aPropName)
     return NS_ERROR_NULL_POINTER;
+
+  PRInt32 startOffset, endOffset;
   // create a style node for the text in the start parent
   nsCOMPtr<nsIDOMNode>parent;
+
+  result = RemoveTextPropertiesForNodeWithDifferentParents(aStartNode,aStartOffset, 
+                                                           aEndNode,  aEndOffset, 
+                                                           aParent,   aPropName, aAttribute);
+  if (NS_FAILED(result)) { return result; }
+
+  // RemoveTextProperties... might have changed selection endpoints, get new ones
+  nsCOMPtr<nsIDOMSelection>selection;
+  result = nsEditor::GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(result)) { return result; }
+  if (!selection) { return NS_ERROR_NULL_POINTER; } 
+  selection->GetAnchorOffset(&aStartOffset);
+  selection->GetFocusOffset(&aEndOffset);
 
   // create new parent nodes for all the content between the start and end nodes
   nsCOMPtr<nsIContentIterator>iter;
@@ -2015,97 +2118,166 @@ nsTextEditor::SetTextPropertiesForNodeWithDifferentParents(nsIDOMRange *aRange,
                                               nsIContentIterator::GetIID(), getter_AddRefs(iter));
   if ((NS_SUCCEEDED(result)) && iter)
   {
+    // find our starting point
+    PRBool startIsText = IsTextNode(aStartNode);
     nsCOMPtr<nsIContent>startContent;
-    startContent = do_QueryInterface(aStartNode);
-    nsCOMPtr<nsIContent>endContent;
-    endContent = do_QueryInterface(aEndNode);
-    if (startContent && endContent)
-    {
-      iter->Init(aRange);
-      nsCOMPtr<nsIContent> content;
-      iter->CurrentNode(getter_AddRefs(content));
-      nsAutoString tag;
-      aPropName->ToString(tag);
-      while (NS_COMFALSE == iter->IsDone())
-      {
-        if ((content.get() != startContent.get()) &&
-            (content.get() != endContent.get()))
-        {
-          nsCOMPtr<nsIDOMCharacterData>charNode;
-          charNode = do_QueryInterface(content);
-          if (charNode)
-          {
-            // only want to wrap the text node in a new style node if it doesn't already have that style
-            nsCOMPtr<nsIDOMNode>node;
-            node = do_QueryInterface(content);
-            PRBool textPropertySet;
-            nsCOMPtr<nsIDOMNode>resultNode;
-            IsTextPropertySetByContent(node, aPropName, aAttribute, aValue, textPropertySet, getter_AddRefs(resultNode));
-            if (PR_FALSE==textPropertySet)
-            {
-              charNode->GetParentNode(getter_AddRefs(parent));
-              if (!parent) {
-                return NS_ERROR_NULL_POINTER;
-              }
-              nsCOMPtr<nsIContent>parentContent;
-              parentContent = do_QueryInterface(parent);
-            
-              PRInt32 offsetInParent;
-              parentContent->IndexOf(content, offsetInParent);
+    if (PR_TRUE==startIsText) {
+      startContent = do_QueryInterface(aStartNode);
+    }
+    else {
+      nsCOMPtr<nsIDOMNode>node = GetChildAt(aStartNode, aStartOffset);
+      startContent = do_QueryInterface(node);
+    }
 
-              nsCOMPtr<nsIDOMNode>newStyleNode;
-              result = nsEditor::CreateNode(tag, parent, offsetInParent, getter_AddRefs(newStyleNode));
-              if (NS_SUCCEEDED(result) && newStyleNode) 
+    // find our ending point
+    PRBool endIsText = IsTextNode(aEndNode);
+    nsCOMPtr<nsIContent>endContent;
+    if (PR_TRUE==endIsText) {
+      endContent = do_QueryInterface(aEndNode);
+    }
+    else 
+    {
+      nsCOMPtr<nsIDOMNode>theEndNode;
+      if (aEndOffset>0)
+      {
+        theEndNode = GetChildAt(aEndNode, aEndOffset-1);
+      }
+      else {
+        // XXX: we need to find the previous node and set the selection correctly
+        NS_ASSERTION(0, "unexpected selection");
+        return NS_ERROR_NOT_IMPLEMENTED;
+      }
+      endContent = do_QueryInterface(theEndNode);
+    }
+
+    if (!startContent || !endContent) { return NS_ERROR_NULL_POINTER; }
+    // iterate over the nodes between the starting and ending points
+    iter->Init(aRange);
+    nsCOMPtr<nsIContent> content;
+    iter->CurrentNode(getter_AddRefs(content));
+    nsAutoString tag;
+    aPropName->ToString(tag);
+    while (NS_COMFALSE == iter->IsDone())
+    {
+      if ((content.get() != startContent.get()) &&
+          (content.get() != endContent.get()))
+      {
+        nsCOMPtr<nsIDOMNode>node;
+        node = do_QueryInterface(content);
+        if (IsEditable(node))
+        {
+          PRBool canContainChildren;
+          content->CanContainChildren(canContainChildren);
+          if (PR_FALSE==canContainChildren)
+          { 
+            nsEditor::GetTagString(node,tag);
+            if (tag != "br")  // skip <BR>, even though it's a leaf
+            { // only want to wrap the text node in a new style node if it doesn't already have that style
+              if (gNoisy) { printf("node %p is an editable leaf.\n", node.get()); }
+              PRBool textPropertySet;
+              nsCOMPtr<nsIDOMNode>resultNode;
+              IsTextPropertySetByContent(node, aPropName, aAttribute, aValue, textPropertySet, getter_AddRefs(resultNode));
+              if (PR_FALSE==textPropertySet)
               {
-                nsCOMPtr<nsIDOMNode>contentNode;
-                contentNode = do_QueryInterface(content);
-                if (!contentNode) { return NS_ERROR_NULL_POINTER;}
-                result = GetLengthOfDOMNode(contentNode, count);
+                if (gNoisy) { printf("property not set\n"); }
+                node->GetParentNode(getter_AddRefs(parent));
+                if (!parent) { return NS_ERROR_NULL_POINTER; }
+                nsCOMPtr<nsIContent>parentContent;
+                parentContent = do_QueryInterface(parent);
+                nsCOMPtr<nsIDOMNode>parentNode = do_QueryInterface(parent);
+                if (PR_TRUE==IsTextNode(node))
+                {
+                  startOffset = 0;
+                  result = GetLengthOfDOMNode(node, (PRUint32&)endOffset);
+                }
+                else
+                {
+                  parentContent->IndexOf(content, startOffset);
+                  endOffset = startOffset+1;
+                }
+                if (gNoisy) { printf("start/end = %d %d\n", startOffset, endOffset); }
                 if (NS_SUCCEEDED(result)) {
-                  result = SetTextPropertiesForNode(contentNode, newStyleNode, 0, count, aPropName, aAttribute, aValue);
+                  result = SetTextPropertiesForNode(node, parentNode, startOffset, endOffset, aPropName, aAttribute, aValue);
                 }
               }
             }
           }
         }
-        // note we don't check the result, we just rely on iter->IsDone
-        iter->Next();
-        iter->CurrentNode(getter_AddRefs(content));
+        // XXX: shouldn't there be an else here for non-text leaf nodes?
       }
+      // note we don't check the result, we just rely on iter->IsDone
+      iter->Next();
+      iter->CurrentNode(getter_AddRefs(content));
     }
-  }
-
-  // handle endpoints
-  if (NS_SUCCEEDED(result))
-  {
-    // create a style node for the text in the start parent
-    result = aStartNode->GetParentNode(getter_AddRefs(parent));
-    if (NS_FAILED(result)) {
-      return result;
-    }
-    nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
-    nodeAsChar = do_QueryInterface(aStartNode);
-    if (nodeAsChar)
-    {   
-      nodeAsChar->GetLength(&count);
-      result = SetTextPropertiesForNode(aStartNode, parent, aStartOffset, count, aPropName, aAttribute, aValue);
-    }
-
+    // handle endpoints
     if (NS_SUCCEEDED(result))
     {
-      // create a style node for the text in the end parent
-      result = aEndNode->GetParentNode(getter_AddRefs(parent));
+      // create a style node for the text in the start parent
+      nsCOMPtr<nsIDOMNode>startNode = do_QueryInterface(startContent);
+      result = startNode->GetParentNode(getter_AddRefs(parent));
       if (NS_FAILED(result)) {
         return result;
       }
-      nodeAsChar = do_QueryInterface(aEndNode);
+      nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
+      nodeAsChar = do_QueryInterface(startNode);
       if (nodeAsChar)
-      {
+      {   
         nodeAsChar->GetLength(&count);
-        result = SetTextPropertiesForNode(aEndNode, parent, 0, aEndOffset, aPropName, aAttribute, aValue);
+        if (gNoisy) { printf("processing start node %p.\n", nodeAsChar.get()); }
+        result = SetTextPropertiesForNode(startNode, parent, aStartOffset, count, aPropName, aAttribute, aValue);
+        startOffset = 0;
+      }
+      else 
+      {
+        nsCOMPtr<nsIDOMNode>grandParent;
+        result = parent->GetParentNode(getter_AddRefs(grandParent));
+        if (gNoisy) { printf("processing start node %p.\n", parent.get()); }
+        result = SetTextPropertiesForNode(parent, grandParent, aStartOffset, aStartOffset+1, aPropName, aAttribute, aValue);
+        startNode = do_QueryInterface(parent);
+        startOffset = aStartOffset;
+      }
+
+
+      if (NS_SUCCEEDED(result))
+      {
+        // create a style node for the text in the end parent
+        nsCOMPtr<nsIDOMNode>endNode = do_QueryInterface(endContent);
+        result = endNode->GetParentNode(getter_AddRefs(parent));
+        if (NS_FAILED(result)) {
+          return result;
+        }
+        nodeAsChar = do_QueryInterface(endNode);
+        if (nodeAsChar)
+        {
+          nodeAsChar->GetLength(&count);
+          if (gNoisy) { printf("processing end node %p.\n", nodeAsChar.get()); }
+          result = SetTextPropertiesForNode(endNode, parent, 0, aEndOffset, aPropName, aAttribute, aValue);
+          // SetTextPropertiesForNode kindly computed the proper selection focus node and offset for us, 
+          // remember them here
+          selection->GetFocusOffset(&endOffset);
+          selection->GetFocusNode(getter_AddRefs(endNode));
+        }
+        else 
+        {
+          NS_ASSERTION(0!=aEndOffset, "unexpected selection end offset");
+          if (0==aEndOffset) { return NS_ERROR_NOT_IMPLEMENTED; }
+          nsCOMPtr<nsIDOMNode>grandParent;
+          result = parent->GetParentNode(getter_AddRefs(grandParent));
+          if (gNoisy) { printf("processing end node %p.\n", parent.get()); }
+          result = SetTextPropertiesForNode(parent, grandParent, aEndOffset-1, aEndOffset, aPropName, aAttribute, aValue);
+          endNode = do_QueryInterface(parent);
+          endOffset = 0;
+        }
+        if (NS_SUCCEEDED(result))
+        {
+
+          selection->Collapse(startNode, startOffset);
+          selection->Extend(endNode, aEndOffset);
+        }
       }
     }
   }
+  if (gNoisy) { printf("end nsTextEditor::SetTextPropertiesForNodeWithDifferentParents\n"); }
 
   return result;
 }
@@ -2417,7 +2589,7 @@ nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents(nsIDOMNode  *aStar
                                                               nsIAtom     *aPropName,
                                                               const nsString *aAttribute)
 {
-  if (gNoisy) { printf("nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents\n"); }
+  if (gNoisy) { printf("start nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents\n"); }
   nsresult result=NS_OK;
   if (!aStartNode || !aEndNode || !aParent || !aPropName)
     return NS_ERROR_NULL_POINTER;
@@ -2425,46 +2597,91 @@ nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents(nsIDOMNode  *aStar
   PRInt32 rangeStartOffset = aStartOffset;  // used to construct a range for the nodes between
   PRInt32 rangeEndOffset = aEndOffset;      // aStartNode and aEndNode after we've processed those endpoints
 
+  // temporary state variables
+  PRBool textPropertySet;
+  nsCOMPtr<nsIDOMNode>resultNode;
+
   // delete the style node for the text in the start parent
-  PRBool skippedStartNode = PR_FALSE;
-  nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
+  nsCOMPtr<nsIDOMNode>startNode = do_QueryInterface(aStartNode);  // use computed endpoint based on end points passed in
+  nsCOMPtr<nsIDOMNode>endNode = do_QueryInterface(aEndNode);      // use computed endpoint based on end points passed in
+  nsCOMPtr<nsIDOMNode>parent;                                     // the parent of the node we're operating on
+  PRBool skippedStartNode = PR_FALSE;                             // we skip the start node if aProp is not set on it
   PRUint32 count;
-  nsCOMPtr<nsIDOMNode>parent;
-  result = aStartNode->GetParentNode(getter_AddRefs(parent));
-  if (NS_FAILED(result)) {
-    return result;
-  }
-  nodeAsChar = do_QueryInterface(aStartNode);
-  if (!nodeAsChar) { return NS_ERROR_FAILURE; }
-  nodeAsChar->GetLength(&count);
-  if ((PRUint32)aStartOffset!=count) {  // only do this if at least one child is selected
-    result = RemoveTextPropertiesForNode(aStartNode, parent, aStartOffset, count, aPropName, aAttribute);
-    if (0!=aStartOffset) {
-      rangeStartOffset = 0; // we split aStartNode at aStartOffset and it is the right node now
+  nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
+  nodeAsChar = do_QueryInterface(startNode);
+  if (nodeAsChar) 
+  {
+    result = aStartNode->GetParentNode(getter_AddRefs(parent));
+    if (NS_FAILED(result)) { return result; }
+    nodeAsChar->GetLength(&count);
+    if ((PRUint32)aStartOffset!=count) 
+    {  // only do this if at least one child is selected
+      IsTextPropertySetByContent(aStartNode, aPropName, aAttribute, nsnull, textPropertySet, getter_AddRefs(resultNode));
+      if (PR_TRUE==textPropertySet)
+      {
+        result = RemoveTextPropertiesForNode(aStartNode, parent, aStartOffset, count, aPropName, aAttribute);
+        if (0!=aStartOffset) {
+          rangeStartOffset = 0; // we split aStartNode at aStartOffset and it is the right node now
+        }
+      }
+      else 
+      {
+        skippedStartNode = PR_TRUE;
+        if (gNoisy) { printf("skipping start node because property not set\n"); }
+      }
+    }
+    else 
+    { 
+      skippedStartNode = PR_TRUE;
+      if (gNoisy) { printf("skipping start node because aStartOffset==count\n"); } 
     }
   }
-  else 
-  { 
-    skippedStartNode = PR_TRUE;
-    if (gNoisy) { printf("skipping start node because aStartOffset==count\n"); } 
+  else
+  {
+    startNode = GetChildAt(aStartNode, aStartOffset);
+    parent = do_QueryInterface(aStartNode);
+    if (!startNode || !parent) {return NS_ERROR_NULL_POINTER;}
+    IsTextPropertySetByContent(startNode, aPropName, aAttribute, nsnull, textPropertySet, getter_AddRefs(resultNode));
+    if (PR_TRUE==textPropertySet)
+    {
+      result = RemoveTextPropertiesForNode(startNode, parent, aStartOffset, aStartOffset+1, aPropName, aAttribute);
+    }
+    else
+    {
+      skippedStartNode = PR_TRUE;
+      if (gNoisy) { printf("skipping start node because property not set\n"); }
+    }
   }
 
   // delete the style node for the text in the end parent
   if (NS_SUCCEEDED(result))
   {
-    result = aEndNode->GetParentNode(getter_AddRefs(parent));
-    if (NS_SUCCEEDED(result)) 
+    nodeAsChar = do_QueryInterface(endNode);
+    if (nodeAsChar)
     {
-      nodeAsChar = do_QueryInterface(aEndNode);
-      if (!nodeAsChar) { return NS_ERROR_FAILURE; }
+      result = endNode->GetParentNode(getter_AddRefs(parent));
+      if (NS_FAILED(result)) { return result; }
       nodeAsChar->GetLength(&count);
-      if (aEndOffset!=0) {  // only do this if at least one child is selected
-        result = RemoveTextPropertiesForNode(aEndNode, parent, 0, aEndOffset, aPropName, aAttribute);
-        if (0!=aEndOffset) {
-          rangeEndOffset = 0; // we split aEndNode at aEndOffset and it is the right node now
+      if (aEndOffset!=0) 
+      {  // only do this if at least one child is selected
+        IsTextPropertySetByContent(endNode, aPropName, aAttribute, nsnull, textPropertySet, getter_AddRefs(resultNode));
+        if (PR_TRUE==textPropertySet)
+        {
+          result = RemoveTextPropertiesForNode(endNode, parent, 0, aEndOffset, aPropName, aAttribute);
+          if (0!=aEndOffset) {
+            rangeEndOffset = 0; // we split endNode at aEndOffset and it is the right node now
+          }
         }
+        else { if (gNoisy) { printf("skipping end node because aProperty not set.\n"); } }
       }
       else { if (gNoisy) { printf("skipping end node because aEndOffset==0\n"); } }
+    }
+    else
+    {
+      endNode = GetChildAt(aEndNode, aEndOffset);
+      parent = do_QueryInterface(aEndNode);
+      if (!endNode || !parent) {return NS_ERROR_NULL_POINTER;}
+      result = RemoveTextPropertiesForNode(endNode, parent, aEndOffset, aEndOffset+1, aPropName, aAttribute);
     }
   }
 
@@ -2480,17 +2697,19 @@ nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents(nsIDOMNode  *aStar
     if (NS_FAILED(result)) { return result; }
     if (!range) { return NS_ERROR_NULL_POINTER; }
     // compute the start node
-    nsCOMPtr<nsIDOMNode>startNode = do_QueryInterface(aStartNode);
-    if (PR_TRUE==skippedStartNode) {
-      nsEditor::GetNextNode(aStartNode, PR_TRUE, getter_AddRefs(startNode));
+    if (PR_TRUE==skippedStartNode) 
+    {
+      nsCOMPtr<nsIDOMNode>tempNode = do_QueryInterface(startNode);
+      nsEditor::GetNextNode(startNode, PR_TRUE, getter_AddRefs(tempNode));
+      startNode = do_QueryInterface(tempNode);
     }
     range->SetStart(startNode, rangeStartOffset);
-    range->SetEnd(aEndNode, rangeEndOffset);
+    range->SetEnd(endNode, rangeEndOffset);
     if (gNoisy) 
     { 
       printf("created range [(%p,%d), (%p,%d)]\n", 
-              aStartNode, rangeStartOffset,
-              aEndNode, rangeEndOffset);
+              startNode.get(), rangeStartOffset,
+              endNode.get(), rangeEndOffset);
     }
 
     nsVoidArray nodeList;
@@ -2500,9 +2719,9 @@ nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents(nsIDOMNode  *aStar
     if ((NS_SUCCEEDED(result)) && iter)
     {
       nsCOMPtr<nsIContent>startContent;
-      startContent = do_QueryInterface(aStartNode);
+      startContent = do_QueryInterface(startNode);
       nsCOMPtr<nsIContent>endContent;
-      endContent = do_QueryInterface(aEndNode);
+      endContent = do_QueryInterface(endNode);
       if (startContent && endContent)
       {
         iter->Init(range);
@@ -2589,6 +2808,19 @@ nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents(nsIDOMNode  *aStar
         contentPtr = (nsIContent*)(nodeList.ElementAt(0));
       }
     }
+    nsCOMPtr<nsIDOMSelection>selection;
+    result = nsEditor::GetSelection(getter_AddRefs(selection));
+    if (NS_SUCCEEDED(result)) 
+    {
+      selection->Collapse(startNode, rangeStartOffset);
+      selection->Extend(endNode, rangeEndOffset);
+      if (gNoisy) { printf("RTPFNWDP set selection.\n"); }
+    }
+  }
+  if (gNoisy) 
+  { 
+    printf("end nsTextEditor::RemoveTextPropertiesForNodeWithDifferentParents, dumping content...\n"); 
+    DebugDumpContent();
   }
 
   return result;
@@ -2664,6 +2896,30 @@ nsTextEditor::SetTypeInStateForProperty(TypeInState    &aTypeInState,
   return NS_OK;
 }
 
+NS_IMETHODIMP nsTextEditor::SetBackgroundColor(const nsString& aColor)
+{
+// This is done in nsHTMLEditor::SetBackgroundColor should we do it here?
+#ifdef ENABLE_JS_EDITOR_LOG
+  nsAutoJSEditorLogLock logLock(mJSEditorLog);
+
+  if (mJSEditorLog)
+    mJSEditorLog->SetBackgroundColor(aColor);
+#endif // ENABLE_JS_EDITOR_LOG
+
+  nsresult res;
+  NS_ASSERTION(mDoc, "Missing Editor DOM Document");
+  
+  // Set the background color attribute on the body tag
+  nsCOMPtr<nsIDOMElement> bodyElement;
+  res = nsEditor::GetBodyElement(getter_AddRefs(bodyElement));
+  if (NS_SUCCEEDED(res) && bodyElement)
+  {
+    nsAutoEditBatch beginBatching(this);
+    bodyElement->SetAttribute("bgcolor", aColor);
+  }
+  return res;
+}
+
 // This file should be rearranged to put all methods that simply call nsEditor together
 NS_IMETHODIMP
 nsTextEditor::CopyAttributes(nsIDOMNode *aDestNode, nsIDOMNode *aSourceNode)
@@ -2678,9 +2934,9 @@ nsTextEditor::BeginComposition(void)
 }
 
 NS_IMETHODIMP
-nsTextEditor::SetCompositionString(const nsString& aCompositionString)
+nsTextEditor::SetCompositionString(const nsString& aCompositionString,nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply)
 {
-	return nsEditor::SetCompositionString(aCompositionString);
+	return nsEditor::SetCompositionString(aCompositionString,aTextRangeList,aReply);
 }
 
 NS_IMETHODIMP
@@ -2718,4 +2974,121 @@ nsTextEditor::StopLogging()
 {
   return nsEditor::StopLogging();
 }
+
+
+NS_IMETHODIMP
+nsTextEditor::GetDocumentLength(PRInt32 *aCount)                                              
+{
+  if (!aCount) { return NS_ERROR_NULL_POINTER; }
+  nsresult result;
+  // initialize out params
+  *aCount = 0;
+  
+  nsCOMPtr<nsIDOMSelection> sel;
+  result = GetSelection(getter_AddRefs(sel));
+  if ((NS_SUCCEEDED(result)) && sel)
+  {
+    nsAutoSelectionReset selectionResetter(sel);
+    result = SelectAll();
+    if (NS_SUCCEEDED(result))
+    {
+      PRInt32 start, end;
+      result = GetTextSelectionOffsets(sel, start, end);
+      if (NS_SUCCEEDED(result))
+      {
+        NS_ASSERTION(0==start, "GetTextSelectionOffsets failed to set start correctly.");
+        NS_ASSERTION(0<=end, "GetTextSelectionOffsets failed to set end correctly.");
+        if (0<=end) {
+          *aCount = end;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+// this is a complete ripoff from nsTextEditor::GetTextSelectionOffsetsForRange
+// the two should use common code, or even just be one method
+nsresult nsTextEditor::GetTextSelectionOffsets(nsIDOMSelection *aSelection,
+                                               PRInt32 &aStartOffset, 
+                                               PRInt32 &aEndOffset)
+{
+  nsresult result;
+  // initialize out params
+  aStartOffset = 0; // default to first char in selection
+  aEndOffset = -1;  // default to total length of text in selection
+
+  nsCOMPtr<nsIDOMNode> startNode, endNode, parentNode;
+  PRInt32 startOffset, endOffset;
+  aSelection->GetAnchorNode(getter_AddRefs(startNode));
+  aSelection->GetAnchorOffset(&startOffset);
+  aSelection->GetFocusNode(getter_AddRefs(endNode));
+  aSelection->GetFocusOffset(&endOffset);
+
+  nsCOMPtr<nsIEnumerator> enumerator;
+  result = aSelection->GetEnumerator(getter_AddRefs(enumerator));
+  if (NS_SUCCEEDED(result) && enumerator)
+  {
+    // don't use "result" in this block
+    enumerator->First(); 
+    nsCOMPtr<nsISupports> currentItem;
+    nsresult findParentResult = enumerator->CurrentItem(getter_AddRefs(currentItem));
+    if ((NS_SUCCEEDED(findParentResult)) && (currentItem))
+    {
+      nsCOMPtr<nsIDOMRange> range( do_QueryInterface(currentItem) );
+      range->GetCommonParent(getter_AddRefs(parentNode));
+    }
+    else parentNode = do_QueryInterface(startNode);
+  }
+
+  nsCOMPtr<nsIContentIterator> iter;
+  result = nsComponentManager::CreateInstance(kCContentIteratorCID, nsnull,
+                                              nsIContentIterator::GetIID(), 
+                                              getter_AddRefs(iter));
+  if ((NS_SUCCEEDED(result)) && iter)
+  {
+    PRUint32 totalLength=0;
+    nsCOMPtr<nsIDOMCharacterData>textNode;
+    nsCOMPtr<nsIContent>blockParentContent = do_QueryInterface(parentNode);
+    iter->Init(blockParentContent);
+    // loop through the content iterator for each content node
+    nsCOMPtr<nsIContent> content;
+    result = iter->CurrentNode(getter_AddRefs(content));
+    while (NS_COMFALSE == iter->IsDone())
+    {
+      textNode = do_QueryInterface(content);
+      if (textNode)
+      {
+        nsCOMPtr<nsIDOMNode>currentNode = do_QueryInterface(textNode);
+        if (!currentNode) {return NS_ERROR_NO_INTERFACE;}
+        if (PR_TRUE==IsEditable(currentNode))
+        {
+          if (currentNode.get() == startNode.get())
+          {
+            aStartOffset = totalLength + startOffset;
+          }
+          if (currentNode.get() == endNode.get())
+          {
+            aEndOffset = totalLength + endOffset;
+            break;
+          }
+          PRUint32 length;
+          textNode->GetLength(&length);
+          totalLength += length;
+        }
+      }
+      iter->Next();
+      iter->CurrentNode(getter_AddRefs(content));
+    }
+    if (-1==aEndOffset) {
+      aEndOffset = totalLength;
+    }
+  }
+  return result;
+}
+
+
+
+
+
 

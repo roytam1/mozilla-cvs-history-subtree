@@ -24,7 +24,13 @@ DIRS	= components
 MAKE_OBJ_TYPE	= EXE
 PROG1 = .\$(OBJDIR)\TestXPC.exe
 PROGRAMS = $(PROG1)
-TESTCASES = testxpc.js simpletest.js xpctest_echo.js
+TESTCASES = \
+            testxpc.js \
+            simpletest.js \
+            xpctest_echo.js \
+            xpctest_ids.js \
+            xpctest_enum_create.js \
+            xpctest_primitives.js 
 
 LCFLAGS=-DUSE_NSREG -DWIN32_LEAN_AND_MEAN -DJS_THREADSAFE -DJSFILE
 
@@ -47,21 +53,5 @@ install:: $(PROGRAMS)
 
 clobber::
 	-for %p in ($(PROGRAMS)) do $(RM) %p $(DIST)\bin\%p
-
-# Move this into config/obj.inc when it's allowed
-.cpp{.\$(OBJDIR)\}.exe:
-    $(CC) @<<$(CFGFILE)
-        $(CFLAGS)
-        $(LCFLAGS)
-        $(LINCS)
-        $(LINCS_1)
-        $(INCS)
-        $(LLIBS)
-        $(OS_LIBS)
-        -Fd$(PDBFILE)
-        -Fe.\$(OBJDIR)\
-        -Fo.\$(OBJDIR)\
-        $(CURDIR)$(*B).cpp
-<<KEEP
 
 $(PROG1): $(OBJDIR) TestXPC.cpp

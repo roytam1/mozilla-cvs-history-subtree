@@ -19,11 +19,14 @@
 #include "nsCopyMessageStreamListener.h"
 #include "nsIMsgMailNewsUrl.h"
 #include "nsIMailboxUrl.h"
+#include "nsIMsgHdr.h"
+#include "nsIMessage.h"
 #include "nsIRDFService.h"
 #include "nsIRDFNode.h"
 #include "nsRDFCID.h"
 
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
+static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 NS_BEGIN_EXTERN_C
 
@@ -46,11 +49,11 @@ NS_IMETHODIMP nsCopyMessageStreamListener::QueryInterface(REFNSIID aIID, void** 
 {
 	if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
 	*aInstancePtr = nsnull;
-	if (aIID.Equals(nsIStreamListener::GetIID()))
+	if (aIID.Equals(nsCOMTypeInfo<nsIStreamListener>::GetIID()) || aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
 	{
 		*aInstancePtr = NS_STATIC_CAST(nsIStreamListener*, this);
 	}              
-	else if(aIID.Equals(nsICopyMessageStreamListener::GetIID()))
+	else if(aIID.Equals(nsCOMTypeInfo<nsICopyMessageStreamListener>::GetIID()))
 	{
 		*aInstancePtr = NS_STATIC_CAST(nsICopyMessageStreamListener*, this);
 	}
@@ -64,7 +67,7 @@ NS_IMETHODIMP nsCopyMessageStreamListener::QueryInterface(REFNSIID aIID, void** 
 	return NS_ERROR_NO_INTERFACE;
 }
 
-static nsresult GetMessage(nsIURL *aURL, nsIMessage **message)
+static nsresult GetMessage(nsIURI *aURL, nsIMessage **message)
 {
 	nsCOMPtr<nsIMsgUriUrl> uriURL;
 	char* uri;
@@ -88,7 +91,7 @@ static nsresult GetMessage(nsIURL *aURL, nsIMessage **message)
 		nsCOMPtr<nsIRDFResource> messageResource;
 		if(NS_SUCCEEDED(rdfService->GetResource(uri, getter_AddRefs(messageResource))))
 		{
-			messageResource->QueryInterface(nsIMessage::GetIID(), (void**)message);
+			messageResource->QueryInterface(nsCOMTypeInfo<nsIMessage>::GetIID(), (void**)message);
 		}
 	}
 	delete[] uri;
@@ -96,7 +99,7 @@ static nsresult GetMessage(nsIURL *aURL, nsIMessage **message)
 	return rv;
 }
 
-static nsresult IsMoveMessage(nsIURL *aURL, PRBool *isMoveMessage)
+static nsresult IsMoveMessage(nsIURI *aURL, PRBool *isMoveMessage)
 {
 	if(!isMoveMessage)
 		return NS_ERROR_NULL_POINTER;
@@ -111,7 +114,7 @@ static nsresult IsMoveMessage(nsIURL *aURL, PRBool *isMoveMessage)
 		rv = mailboxURL->GetMailboxAction(&mailboxAction);
 
 		if(NS_SUCCEEDED(rv))
-			*isMoveMessage = (mailboxAction == nsMailboxActionMoveMessage);
+			*isMoveMessage = (mailboxAction == nsIMailboxUrl::ActionMoveMessage);
 	}
 
 
@@ -119,7 +122,7 @@ static nsresult IsMoveMessage(nsIURL *aURL, PRBool *isMoveMessage)
 
 }
 
-static nsresult DeleteMessage(nsIURL *aURL, nsIMsgFolder *srcFolder)
+static nsresult DeleteMessage(nsIURI *aURL, nsIMsgFolder *srcFolder)
 {
 	nsCOMPtr<nsIMessage> message;
 	nsresult rv;
@@ -129,7 +132,9 @@ static nsresult DeleteMessage(nsIURL *aURL, nsIMsgFolder *srcFolder)
 	{
 		nsCOMPtr<nsISupportsArray> messageArray;
 		NS_NewISupportsArray(getter_AddRefs(messageArray));
-		messageArray->AppendElement(message);
+		nsCOMPtr<nsISupports> messageSupports(do_QueryInterface(message));
+		if(messageSupports)
+			messageArray->AppendElement(messageSupports);
 		rv = srcFolder->DeleteMessages(messageArray, nsnull, PR_TRUE);
 	}
 	return rv;
@@ -154,53 +159,46 @@ NS_IMETHODIMP nsCopyMessageStreamListener::Init(nsIMsgFolder *srcFolder, nsICopy
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsCopyMessageStreamListener::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo)
-{
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsCopyMessageStreamListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, 
-                               PRUint32 aLength)
+NS_IMETHODIMP nsCopyMessageStreamListener::OnDataAvailable(nsIChannel * /* aChannel */, nsISupports *ctxt, nsIInputStream *aIStream, PRUint32 sourceOffset, PRUint32 aLength)
 {
 	nsresult rv;
 	rv = mDestination->CopyData(aIStream, aLength);
 	return rv;
 }
-NS_IMETHODIMP nsCopyMessageStreamListener::OnStartBinding(nsIURL* aURL, const char *aContentType)
+
+NS_IMETHODIMP nsCopyMessageStreamListener::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
 	nsCOMPtr<nsIMessage> message;
-	nsresult rv;
-
-
-	rv = GetMessage(aURL, getter_AddRefs(message));
+	nsresult rv = NS_OK;
+	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt, &rv);
+	
+	if (NS_SUCCEEDED(rv))
+		rv = GetMessage(uri, getter_AddRefs(message));
 	if(NS_SUCCEEDED(rv))
 		rv = mDestination->BeginCopy(message);
 
 	return rv;
 }
 
-NS_IMETHODIMP nsCopyMessageStreamListener::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
+NS_IMETHODIMP nsCopyMessageStreamListener::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
-	return NS_OK;
-}
+	nsresult rv = NS_OK;
+	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt, &rv);
 
-NS_IMETHODIMP nsCopyMessageStreamListener::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
-{
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsCopyMessageStreamListener::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg)
-{
+	if (NS_FAILED(rv)) return rv;
+	PRBool copySucceeded = (aStatus == NS_BINDING_SUCCEEDED);
+	rv = mDestination->EndCopy(copySucceeded);
 	//If this is a move and we finished the copy, delete the old message.
-	if(aStatus == NS_BINDING_SUCCEEDED)
+	if(copySucceeded)
 	{
 		PRBool moveMessage;
-		IsMoveMessage(aURL, &moveMessage);
+		IsMoveMessage(uri, &moveMessage);
 		if(moveMessage)
 		{
-			DeleteMessage(aURL, mSrcFolder);
+			rv = DeleteMessage(uri, mSrcFolder);
 		}
 	}
-
-	return mDestination->EndCopy(aStatus == NS_BINDING_SUCCEEDED);
+	//Even if the above actions failed we probably still want to return NS_OK.  There should probably
+	//be some error dialog if either the copy or delete failed.
+	return NS_OK;
 }

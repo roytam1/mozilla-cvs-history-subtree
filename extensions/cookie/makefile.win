@@ -16,13 +16,13 @@
 # Reserved.
 
 DEPTH=..\..
+include <$(DEPTH)/config/config.mak>
 IGNORE_MANIFEST=1
 
 DEFINES=-D_IMPL_NS_COOKIE -DWIN32_LEAN_AND_MEAN
 MODULE=cookie 
 
 EXPORTS = nsICookieService.h nsCookieHTTPNotify.h nsCookie.h
-
 
 CSRCS=				\
  $(NULL)
@@ -43,11 +43,7 @@ CPP_OBJS=				\
  .\$(OBJDIR)\nsCookieHTTPNotify.obj	\
  $(NULL)
 
-!ifdef NECKO
 LINCS = -I$(DEPTH)\include \
-!else
-LINCS = -I$(DEPTH)\netwerk\dist\include \
-!endif
 
 MAKE_OBJ_TYPE = DLL
 DLLNAME = cookie
@@ -61,12 +57,14 @@ LCFLAGS = \
 
 # These are the libraries we need to link with to create the dll
 LLIBS	= \
- $(DIST)\lib\plc3.lib \
  $(LIBNSPR) \
  $(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
- $(DIST)\lib\xplib.lib		\
  $(DIST)\lib\xpcom.lib \
+!ifdef NECKO
+ $(DIST)\lib\necko.lib \
+!else
  $(DIST)\lib\netwerk.lib \
+!endif
  $(DIST)\lib\xppref32.lib \
  $(DIST)\lib\secfreenav32.lib	\
  $(HASHLIBS)

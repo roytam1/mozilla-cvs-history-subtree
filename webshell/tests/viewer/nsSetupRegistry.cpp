@@ -17,6 +17,7 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 #define NS_IMPL_IDS
+#include "nsCOMPtr.h"
 #include "nsIPref.h"
 #include "nsIComponentManager.h"
 #include "nsWidgetsCID.h"
@@ -38,7 +39,6 @@
 #ifdef OJI
 #include "nsICapsManager.h"
 #include "nsILiveconnect.h"
-#include "nsIJVMManager.h"
 #endif
 #include "nsIPluginManager.h"
 #include "nsIProperties.h"
@@ -50,11 +50,18 @@
 #include "nsIEventQueueService.h"
 #include "nsIGenericFactory.h"
 #include "nsGfxCIID.h"
+#include "nsSpecialSystemDirectory.h"
 
 #include "nsISound.h"
+#include "nsIFileSpecWithUI.h"
+
+#if defined(XP_UNIX) && defined(TOOLKIT_EXORCISM)
+#include "nsIUnixToolkitService.h"
+#endif
 
 #include "prprf.h"
 #include "prmem.h"
+#include "prlog.h"	// PR_ASSERT
 
 #ifdef XP_PC
     #define WIDGET_DLL "raptorwidget.dll"
@@ -64,7 +71,11 @@
     #define PREF_DLL   "xppref32.dll"
     #define PARSER_DLL "raptorhtmlpars.dll"
     #define DOM_DLL    "jsdom.dll"
+#ifdef NECKO
+    #define NECKO_DLL "necko.dll"
+#else
     #define NETLIB_DLL "netlib.dll"
+#endif // NECKO
     #define PLUGIN_DLL "raptorplugin.dll"
     #define CAPS_DLL   "caps.dll"
     #define LIVECONNECT_DLL    "jsj3250.dll"
@@ -77,7 +88,11 @@
     #define PREF_DLL        "PREF_DLL"
     #define PARSER_DLL    "PARSER_DLL"
     #define DOM_DLL        "DOM_DLL"
+#ifdef NECKO
+    #define NECKO_DLL "NECKO_DLL"
+#else
     #define NETLIB_DLL    "NETLIB_DLL"
+#endif // NECKO
     #define PLUGIN_DLL    "PLUGIN_DLL"
     #define CAPS_DLL    "CAPS_DLL"
     #define LIVECONNECT_DLL "LIVECONNECT_DLL"
@@ -88,17 +103,21 @@
       * since that is the default.
      **/
     #ifndef WIDGET_DLL
-    #define WIDGET_DLL "libwidgetgtk"MOZ_DLL_SUFFIX
+    #define WIDGET_DLL "libwidget_gtk"MOZ_DLL_SUFFIX
     #endif
     #ifndef GFXWIN_DLL
-    #define GFXWIN_DLL "libgfxgtk"MOZ_DLL_SUFFIX
+    #define GFXWIN_DLL "libgfx_gtk"MOZ_DLL_SUFFIX
     #endif
     #define VIEW_DLL   "libraptorview"MOZ_DLL_SUFFIX
     #define WEB_DLL    "libraptorwebwidget"MOZ_DLL_SUFFIX
     #define PREF_DLL   "libpref"MOZ_DLL_SUFFIX
     #define PARSER_DLL "libraptorhtmlpars"MOZ_DLL_SUFFIX
     #define DOM_DLL    "libjsdom"MOZ_DLL_SUFFIX
+#ifdef NECKO
+    #define NECKO_DLL "libnecko"MOZ_DLL_SUFFIX
+#else
     #define NETLIB_DLL "libnetlib"MOZ_DLL_SUFFIX
+#endif // NECKO
     #define PLUGIN_DLL "libraptorplugin"MOZ_DLL_SUFFIX
     #define CAPS_DLL   "libcaps"MOZ_DLL_SUFFIX
     #define LIVECONNECT_DLL "libliveconnect"MOZ_DLL_SUFFIX
@@ -138,6 +157,7 @@ static NS_DEFINE_IID(kCMenuItemCID,               NS_MENUITEM_CID);
 static NS_DEFINE_IID(kCContextMenuCID,            NS_CONTEXTMENU_CID);
 //static NS_DEFINE_IID(kCXULCommandCID,             NS_XULCOMMAND_CID);
 static NS_DEFINE_IID(kSoundCID,            NS_SOUND_CID);
+static NS_DEFINE_CID(kFileSpecWithUICID, NS_FILESPECWITHUI_CID);
 
 // GFXWIN
 static NS_DEFINE_IID(kCRenderingContextIID, NS_RENDERING_CONTEXT_CID);
@@ -166,6 +186,7 @@ static NS_DEFINE_CID(kCPrefCID, NS_PREF_CID);
 // PARSER
 static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
 static NS_DEFINE_CID(kCWellFormedDTDCID, NS_WELLFORMEDDTD_CID);
+static NS_DEFINE_CID(kCNavDTDCID, NS_CNAVDTD_CID);
 
 // DOM
 static NS_DEFINE_IID(kCDOMScriptObjectFactory, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -184,88 +205,206 @@ static NS_DEFINE_CID(kCPluginManagerCID,          NS_PLUGINMANAGER_CID);
 #ifdef OJI
 static NS_DEFINE_CID(kCapsManagerCID,             NS_CCAPSMANAGER_CID);
 static NS_DEFINE_CID(kCLiveconnectCID,             NS_CLIVECONNECT_CID);
-static NS_DEFINE_CID(kCJVMManagerCID,              NS_JVMMANAGER_CID);
 #endif
-
 
 extern "C" void
 NS_SetupRegistry()
 {
+#if defined(XP_UNIX) && defined(TOOLKIT_EXORCISM)
+  // On unix, the widget and gfx toolkit are not linked into the app.
+  //
+  // Instead, they are loaded at runtime courtesy of xpcom.
+  //
+  // Loading the toolkit specific dlls at runtime has many benefits:
+  //
+  // o Simplifies linking of the "app" since it no longer needs to 
+  //   pull in the toolkit world.
+  //
+  // o Makes it possible to embed the xlib gfx/widget backends into
+  //   other high level x toolkit such as motif and gtk.  This is
+  //   highly desirable in the long run as a means to increase code
+  //   reuse and eyeball focus.
+  //
+  // o Makes it possible to run X Mozilla using different toolkits
+  //   without having to hack the application bits.  This in turn
+  //   simplifies everyone's life, since only one binary is needed.
+  //   The only platform specific bits are:
+  //
+  //   mozilla/gfx/src
+  //   mozilla/widget/src/
+  //   mozilla/widget/timer/
+  //
+  // o It bypasses (yeah right) the toolkit inquisitions and crusades.
+  // 
+  // o It makes you breakfast, lunch and dinner.
+  //
+
+
+  //
+  // Note1:
+  //
+  // The following code assumes that:
+  //
+  // + Some kind of auto registration has occurred for components.
+  //   For example, NS_AutoRegister() or nsComponentManager::AutoRegister().
+  //
+  //   -or-
+  //
+  // + The "app" was installed and a registry with information on the
+  //   toolkit_service component has been populated.  The master plan
+  //   is that this occurs at install time.  Otherwise bad things will
+  //   happen.
+  //
+  // During the development of mozilla, this usually occurs in the
+  // main() of the "app" (viewer/apprunner).  It is always the first
+  // thing that happens on the NS_SetupRegistry() function.
+  //
+  // If for some reason that changes in the future, the following code
+  // might have to be moved.
+  //
+  // Note2:
+  //
+  // The WIDGET_DLL and GFX_DLL macros will be redefined from the 
+  // hard coded values set in this file above.  They will point
+  // to strings valid only in the scope of this function.  
+  //
+  // If for some reason, the nsComponentManager::RegisterComponentLib()
+  // calls below are moved to a different scope, this unix specific code
+  // will have to deal.
+
+  static NS_DEFINE_CID(kCUnixToolkitServiceCID, NS_UNIX_TOOLKIT_SERVICE_CID);
+
+  nsresult   rv;
+
+  nsIUnixToolkitService * unixToolkitService = nsnull;
+    
+  rv = nsComponentManager::CreateInstance(kCUnixToolkitServiceCID,
+                                          nsnull,
+                                          nsIUnixToolkitService::GetIID(),
+                                          (void **) &unixToolkitService);
+  
+  NS_ASSERTION(rv == NS_OK,"Cannot obtain unix toolkit service.");
+
+  nsString unixToolkitName = "error";
+  nsString unixWidgetDllName = "error";
+  nsString unixGfxDllName = "error";
+  
+  if (NS_OK == rv && nsnull != unixToolkitService)
+  {
+    nsresult rv2;
+
+    rv2 = unixToolkitService->GetToolkitName(unixToolkitName);
+
+    NS_ASSERTION(rv2 == NS_OK,"Cannot get unix toolkit name context.");
+
+    rv2 = unixToolkitService->GetWidgetDllName(unixWidgetDllName);
+
+    NS_ASSERTION(rv2 == NS_OK,"Cannot get unix toolkit widget dll name.");
+
+    rv2 = unixToolkitService->GetGfxDllName(unixGfxDllName);
+
+    NS_ASSERTION(rv2 == NS_OK,"Cannot get unix toolkit gfx dll name.");
+
+    NS_RELEASE(unixToolkitService);
+  }
+
+#ifdef NS_DEBUG
+  printf("NS_SetupRegistry() MOZ_TOOLKIT=%s, WIDGET_DLL=%s, GFX_DLL=%s\n",
+         (const char *) nsAutoCString(unixToolkitName),
+         (const char *) nsAutoCString(unixWidgetDllName),
+         (const char *) nsAutoCString(unixGfxDllName));
+#endif
+  
+#undef WIDGET_DLL
+#undef GFXWIN_DLL
+
+#define WIDGET_DLL (const char *) nsAutoCString(unixWidgetDllName)
+#define GFXWIN_DLL (const char *) nsAutoCString(unixGfxDllName)
+
+#endif /* defined(XP_UNIX) && defined(TOOLKIT_EXORCISM) */
+
+
+  
+
+
   // WIDGET
-  nsComponentManager::RegisterComponent(kCLookAndFeelCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCWindowCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCVScrollbarCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCHScrollbarCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCDialogCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCLabelCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCButtonCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCComboBoxCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCFileWidgetCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCListBoxCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCRadioButtonCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCTextAreaCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCTextFieldCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCCheckButtonCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCChildCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCAppShellCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCToolkitCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kClipboardCID,            NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCTransferableCID,        NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kDataFlavorCID,           NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCXIFFormatConverterCID,  NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCDragServiceCID,          NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  //nsComponentManager::RegisterComponent(kCFileListTransferableCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCFontRetrieverServiceCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCMenuBarCID,       NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCMenuCID,          NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCMenuItemCID,      NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCContextMenuCID,   NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kSoundCID,   "Sound Services", "component://netscape/sound", WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCLookAndFeelCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCWindowCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCVScrollbarCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCHScrollbarCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDialogCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCLabelCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCButtonCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCComboBoxCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCFileWidgetCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCListBoxCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCRadioButtonCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCTextAreaCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCTextFieldCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCCheckButtonCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCChildCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCAppShellCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCToolkitCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kClipboardCID,            NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCTransferableCID,        NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kDataFlavorCID,           NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCXIFFormatConverterCID,  NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDragServiceCID,          NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  //nsComponentManager::RegisterComponentLib(kCFileListTransferableCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCFontRetrieverServiceCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCMenuBarCID,       NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCMenuCID,          NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCMenuItemCID,      NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCContextMenuCID,   NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kSoundCID,   "Sound Services", "component://netscape/sound", WIDGET_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kFileSpecWithUICID,   NS_FILESPECWITHUI_CLASSNAME, NS_FILESPECWITHUI_PROGID, WIDGET_DLL, PR_FALSE, PR_FALSE);
 
   // GFXWIN
-  nsComponentManager::RegisterComponent(kCRenderingContextIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCDeviceContextIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCFontMetricsIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCImageIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCRegionIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCBlenderIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCDeviceContextSpecCID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCDeviceContextSpecFactoryCID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCRenderingContextIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDeviceContextIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCFontMetricsIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCImageIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCRegionIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCBlenderIID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDeviceContextSpecCID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDeviceContextSpecFactoryCID, NULL, NULL, GFXWIN_DLL, PR_FALSE, PR_FALSE);
 
   // VIEW
-  nsComponentManager::RegisterComponent(kCViewManagerCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCScrollingViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCViewManagerCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCScrollingViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
 
   // WEB
-  nsComponentManager::RegisterComponent(kCWebShellCID, NULL, NULL, WEB_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCDocLoaderServiceCID, NULL, NULL, WEB_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCThrobberCID, NULL, NULL, WEB_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCWebShellCID, NULL, NULL, WEB_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDocLoaderServiceCID, NULL, NULL, WEB_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCThrobberCID, NULL, NULL, WEB_DLL, PR_FALSE, PR_FALSE);
 
   // PREF
-  nsComponentManager::RegisterComponent(kCPrefCID, "Preferences Services", "component://netscape/preferences", PREF_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCPrefCID, "Preferences Services", "component://netscape/preferences", PREF_DLL, PR_FALSE, PR_FALSE);
 
   // PARSER
-  nsComponentManager::RegisterComponent(kCParserCID, NULL, NULL, PARSER_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCWellFormedDTDCID, NULL, NULL, PARSER_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCParserCID, NULL, NULL, PARSER_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCWellFormedDTDCID, NULL, NULL, PARSER_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCNavDTDCID, NULL, NULL, PARSER_DLL, PR_FALSE, PR_FALSE);
 
   // DOM
-  nsComponentManager::RegisterComponent(kCDOMScriptObjectFactory, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCScriptNameSetRegistry, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCDOMScriptObjectFactory, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCScriptNameSetRegistry, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
 
   // NETLIB
 #ifndef NECKO
-  nsComponentManager::RegisterComponent(kCNetServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCNetServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
 #else
-  nsComponentManager::RegisterComponent(kIOServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
+//  nsComponentManager::RegisterComponentLib(kIOServiceCID, NULL, NULL, NECKO_DLL, PR_FALSE, PR_FALSE);
 #endif // NECKO
 
   // PLUGIN
-  nsComponentManager::RegisterComponent(kCPluginHostCID, NULL, NULL, PLUGIN_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCPluginManagerCID, NULL, NULL, PLUGIN_DLL,      PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCPluginHostCID, NULL, NULL, PLUGIN_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCPluginManagerCID, NULL, NULL, PLUGIN_DLL, PR_FALSE, PR_FALSE);
+
 #ifdef OJI
-  nsComponentManager::RegisterComponent(kCapsManagerCID, NULL, NULL, CAPS_DLL,          PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCLiveconnectCID, NULL, NULL, LIVECONNECT_DLL,   PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kCJVMManagerCID,  NULL, NULL, OJI_DLL,           PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCapsManagerCID, NULL, NULL, CAPS_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponentLib(kCLiveconnectCID, NULL, NULL, LIVECONNECT_DLL, PR_FALSE, PR_FALSE);
 #endif
 }
+

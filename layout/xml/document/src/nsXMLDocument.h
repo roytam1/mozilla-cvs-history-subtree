@@ -23,6 +23,9 @@
 #include "nsMarkupDocument.h"
 #include "nsIXMLDocument.h"
 #include "nsIHTMLContentContainer.h"
+#ifdef XSL
+#include "nsITransformMediator.h"
+#endif
 
 class nsIParser;
 class nsIDOMNode;
@@ -44,10 +47,15 @@ public:
 
   NS_IMETHOD GetContentType(nsString& aContentType) const;
 
-  NS_IMETHOD StartDocumentLoad(nsIURL *aUrl, 
+  NS_IMETHOD StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                               nsIChannel* aChannel,
+                               nsILoadGroup* aLoadGroup,
+#else
+                               nsIURI *aUrl, 
+#endif
                                nsIContentViewerContainer* aContainer,
-                               nsIStreamListener **aDocListener,
-                               const char* aCommand);
+                               nsIStreamListener **aDocListener);
 
   NS_IMETHOD EndLoad();
 
@@ -64,6 +72,9 @@ public:
 
   // nsIXMLDocument interface
   NS_IMETHOD GetContentById(const nsString& aName, nsIContent** aContent);
+#ifdef XSL
+  NS_IMETHOD SetTransformMediator(nsITransformMediator* aMediator);
+#endif
 
   // nsIHTMLContentContainer
   NS_IMETHOD GetAttributeStyleSheet(nsIHTMLStyleSheet** aResult);
@@ -73,7 +84,11 @@ public:
 protected:
   virtual void InternalAddStyleSheet(nsIStyleSheet* aSheet);  // subclass hook for sheet ordering
   virtual void InternalInsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex);
-  virtual nsresult Reset(nsIURL* aUrl);
+#ifdef NECKO
+  virtual nsresult Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+#else
+  virtual nsresult Reset(nsIURI* aUrl);
+#endif
 
   // For HTML elements in our content model
   nsIHTMLStyleSheet*    mAttrStyleSheet;
@@ -81,6 +96,9 @@ protected:
 
   nsIParser *mParser;
   nsICSSLoader* mCSSLoader;
+#ifdef XSL
+  nsITransformMediator* mTransformMediator;
+#endif
 };
 
 

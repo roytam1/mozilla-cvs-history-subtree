@@ -63,7 +63,7 @@
 #include "macstdlibextras.h"
 #endif
 
-#define DRAW_ON_RESIZE	1		// if 1, debug builds draw on resize when the command key is down
+#define DRAW_ON_RESIZE	1		// if 1, enable live-resize except when the command key is down
 
 const short	kMinWindowWidth = 300;
 const short kMinWindowHeight = 150;
@@ -445,11 +445,11 @@ void nsMacMessagePump::DoMouseDown(EventRecord &anEvent)
 				::SetPort(whichWindow);
 #endif
 
-#if DEBUG
-				Boolean drawOnResize = (DRAW_ON_RESIZE && ((anEvent.modifiers & cmdKey) != 0));
-#else
-				Boolean drawOnResize = false;
-#endif
+//#if DEBUG
+				Boolean drawOnResize = (DRAW_ON_RESIZE && ((anEvent.modifiers & cmdKey) == 0));
+//#else
+//  		Boolean drawOnResize = false;
+//#endif
 				if (drawOnResize)
 				{
 					Point oldPt = anEvent.where;
@@ -686,7 +686,17 @@ void  nsMacMessagePump::DoKey(EventRecord &anEvent)
 	//}
 	//else
 	{
-		DispatchOSEventToRaptor(anEvent, ::FrontWindow());
+		PRBool handled = DispatchOSEventToRaptor(anEvent, ::FrontWindow());
+		if((!handled) && (anEvent.what == keyDown) && ((anEvent.modifiers & cmdKey) != 0) )
+		{
+			// do a menu key command
+			long menuResult = ::MenuKey(theChar);
+			if (HiWord(menuResult) != 0)
+			{
+			    menuResult = ConvertOSMenuResultToPPMenuResult(menuResult);
+				DoMenu(anEvent, menuResult);
+			}
+		}
 	}
 }
 

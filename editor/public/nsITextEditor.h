@@ -40,11 +40,6 @@ class nsIFileSpec;
 #define TEXT_EDITOR_FLAG_DISABLED    0x10   // all events are disabled (like scrolling).  Editor will not accept focus.
 #define TEXT_EDITOR_FLAG_FILTER      0x20   // text input is limited to certain character types, use mFilter
 
-// XXX Text filters are extremely preliminary and should not yet be used!
-//     Need to work with international group to rationalize restricted input
-#define TEXT_EDITOR_FILTER_NUMBERS          0x01 // ignore numbers
-#define TEXT_EDITOR_FILTER_LETTERS          0x02 // ignore a-z,A-Z
-#define TEXT_EDITOR_FILTER_NONALPHANUMBERIC 0x04 // accept only numbers and letters
 
 
 /**
@@ -75,6 +70,9 @@ public:
 
   /** set the edit flags for this editor.  May be called at any time. */
   NS_IMETHOD SetFlags(PRUint32 aFlags)=0;
+
+  /** get the length of the document in characters */
+  NS_IMETHOD GetDocumentLength(PRInt32 *aCount)=0;
 
   /**
    * SetTextProperties() sets the aggregate properties on the current selection
@@ -119,6 +117,11 @@ public:
    *                    all content-based text properties are to be removed from the selection.
    */
   NS_IMETHOD RemoveTextProperty(nsIAtom *aProperty, const nsString *aAttribute)=0;
+
+  /** 
+   * Set the background color of the the document background
+   */
+  NS_IMETHOD SetBackgroundColor(const nsString& aColor)=0;
 
   /** 
    * DeleteSelection removes all nodes in the current selection.
@@ -330,11 +333,17 @@ public:
   NS_IMETHOD ScrollIntoView(PRBool aScrollToBegin)=0;
 
 // Input/Output
-  NS_IMETHOD OutputTextToString(nsString& aOutputString)=0;
-  NS_IMETHOD OutputHTMLToString(nsString& aOutputString)=0;
-  
-  NS_IMETHOD OutputTextToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride = nsnull)=0;
-  NS_IMETHOD OutputHTMLToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride = nsnull)=0;
+  /**
+   * Output methods:
+   * aFormatType is a mime type, like text/plain.
+   */
+  NS_IMETHOD OutputToString(nsString& aOutputString,
+                            const nsString& aFormatType,
+                            PRUint32 aFlags) = 0;
+  NS_IMETHOD OutputToStream(nsIOutputStream* aOutputStream,
+                            const nsString& aFormatType,
+                            const nsString* aCharsetOverride,
+                            PRUint32 aFlags) = 0;
 
   /** Get and set the body wrap width
     * @param aWrapColumn - the column to wrap at. This is set as a COLS attribute
@@ -349,6 +358,12 @@ public:
   NS_IMETHOD SetBodyWrapWidth(PRInt32 aWrapColumn)=0;
 
 // Miscellaneous Methods
+
+  /** Apply the style sheet, specified by aURL, to the
+    * text editor's document.
+    */
+  NS_IMETHOD ApplyStyleSheet(const nsString& aURL)=0;
+
   /*
   NS_IMETHOD CheckSpelling()=0;
   NS_IMETHOD SpellingLanguage(nsIAtom *aLanguage)=0;
@@ -362,7 +377,7 @@ public:
 
 // IME Editing Methods
   NS_IMETHOD BeginComposition(void)=0;
-  NS_IMETHOD SetCompositionString(const nsString& aCompositionString)=0;
+  NS_IMETHOD SetCompositionString(const nsString& aCompositionString, nsIPrivateTextRangeList* aTextRangeList, nsTextEventReply* aReply)=0;
   NS_IMETHOD EndComposition(void)=0;
 
 

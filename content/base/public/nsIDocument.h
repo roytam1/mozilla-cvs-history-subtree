@@ -36,8 +36,8 @@ class nsIStreamObserver;
 class nsIStyleSet;
 class nsIStyleSheet;
 class nsIStyleRule;
-class nsIURL;
-class nsIURLGroup;
+class nsIURI;
+class nsILoadGroup;
 class nsIViewManager;
 class nsString;
 class nsIScriptContextOwner;
@@ -48,10 +48,11 @@ class nsIParser;
 class nsIDOMNode;
 class nsXIFConverter;
 class nsINameSpaceManager;
-class nsIDOMSelection;
 class nsIDOMDocumentFragment;
 class nsILineBreaker;
 class nsIWordBreaker;
+class nsIDOMSelection;
+class nsIChannel;
 
 // IID for the nsIDocument interface
 #define NS_IDOCUMENT_IID      \
@@ -64,6 +65,7 @@ class nsIWordBreaker;
 { 0x152ab6e0, 0xff13, 0x11d1, \
   {0xbe, 0xb9, 0x00, 0x80, 0x5f, 0x8a, 0x66, 0xdc} }
 
+#if 0
 class nsIPostData : public nsISupports {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_IPOSTDATA_IID; return iid; }
@@ -72,6 +74,7 @@ public:
   virtual const char*  GetData() = 0;    // get the file name or raw data
   virtual PRInt32      GetDataLength() = 0;
 };
+#endif
 
 //----------------------------------------------------------------------
 
@@ -85,10 +88,15 @@ public:
   // returns the arena associated with this document.
   virtual nsIArena* GetArena() = 0;
 
-  NS_IMETHOD StartDocumentLoad(nsIURL *aUrl, 
+  NS_IMETHOD StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                               nsIChannel* aChannel,
+                               nsILoadGroup* aLoadGroup,
+#else
+                               nsIURI *aUrl, 
+#endif
                                nsIContentViewerContainer* aContainer,
-                               nsIStreamListener **aDocListener,
-                               const char* aCommand) = 0;
+                               nsIStreamListener **aDocListener) = 0;
 
   /**
    * Return the title of the document. May return null.
@@ -98,17 +106,17 @@ public:
   /**
    * Return the URL for the document. May return null.
    */
-  virtual nsIURL* GetDocumentURL() const = 0;
+  virtual nsIURI* GetDocumentURL() const = 0;
 
   /**
-   * Return the URLGroup for the document. May return null.
+   * Return the LoadGroup for the document. May return null.
    */
-  virtual nsIURLGroup* GetDocumentURLGroup() const = 0;
+  virtual nsILoadGroup* GetDocumentLoadGroup() const = 0;
 
   /**
    * Return the base URL for realtive URLs in the document. May return null (or the document URL).
    */
-  NS_IMETHOD GetBaseURL(nsIURL*& aURL) const = 0;
+  NS_IMETHOD GetBaseURL(nsIURI*& aURL) const = 0;
 
   /**
    * Return the content (mime) type of this document.
@@ -142,10 +150,10 @@ public:
    * it's presentation context (presentation context's <b>must not</b> be
    * shared among multiple presentation shell's).
    */
-  virtual nsresult CreateShell(nsIPresContext* aContext,
-                               nsIViewManager* aViewManager,
-                               nsIStyleSet* aStyleSet,
-                               nsIPresShell** aInstancePtrResult) = 0;
+  NS_IMETHOD CreateShell(nsIPresContext* aContext,
+                         nsIViewManager* aViewManager,
+                         nsIStyleSet* aStyleSet,
+                         nsIPresShell** aInstancePtrResult) = 0;
   virtual PRBool DeleteShell(nsIPresShell* aShell) = 0;
   virtual PRInt32 GetNumberOfShells() = 0;
   virtual nsIPresShell* GetShellAt(PRInt32 aIndex) = 0;
@@ -261,15 +269,6 @@ public:
                               nsIStyleRule* aStyleRule) = 0;
 
   /**
-    * Returns the Selection Object
-   */
-  NS_IMETHOD GetSelection(nsIDOMSelection ** aSelection) = 0;
-  /**
-    * Selects all the Content
-   */
-  NS_IMETHOD SelectAll() = 0;
-
-  /**
     * Finds text in content
    */
   NS_IMETHOD FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound) = 0;
@@ -289,8 +288,6 @@ public:
   virtual void FinishConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode) = 0;
 
   /* Helper methods to help determine the logical positioning of content */
-  virtual PRBool IsInRange(const nsIContent *aStartContent, const nsIContent* aEndContent, const nsIContent* aContent) const = 0;
-  virtual PRBool IsBefore(const nsIContent *aNewContent, const nsIContent* aCurrentContent) const = 0;
   virtual PRBool IsInSelection(nsIDOMSelection* aSelection, const nsIContent *aContent) const = 0;
   virtual nsIContent* GetPrevContent(const nsIContent *aContent) const = 0;
   virtual nsIContent* GetNextContent(const nsIContent *aContent) const = 0;
@@ -326,7 +323,9 @@ extern NS_LAYOUT nsresult
 // Note: The buffer passed into NewPostData(...) becomes owned by the IPostData
 //       instance and is freed when the instance is destroyed...
 //
+#if 0
 extern NS_LAYOUT nsresult
    NS_NewPostData(PRBool aIsFile, char *aData, nsIPostData** aInstancePtrResult);
+#endif
 
 #endif /* nsIDocument_h___ */

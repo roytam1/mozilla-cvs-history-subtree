@@ -15,7 +15,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-
+#include "nsCOMPtr.h"
 #include "msgCore.h"
 #include "mimerosetta.h"
 #include "mimei.h"
@@ -23,10 +23,8 @@
 #include "modmime.h"
 #include "prmem.h"
 #include "plstr.h"
-#include "imap.h"
 #include "prefapi.h"
 #include "mimebuf.h"
-#include "plugin_inst.h"
 #include "mimemoz2.h"
 #include "nsIMimeEmitter.h"
 #include "nsCRT.h"
@@ -1357,9 +1355,9 @@ MimeHeaders_write_grouped_header_1 (MimeHeaders *hdrs, char *name,
         }
         
         if (flags & MSG_FLAG_SENDER_AUTHED) {
-          char  *tString = MimeGetStringByID(MIME_MSG_XSENDER_INTERNAL);
-          PL_strcpy (out, tString);
-          PR_FREEIF(tString);
+          char  *tString1 = MimeGetStringByID(MIME_MSG_XSENDER_INTERNAL);
+          PL_strcpy (out, tString1);
+          PR_FREEIF(tString1);
           out += PL_strlen (out);
         }
       }
@@ -2494,12 +2492,25 @@ MimeHeaders_write_attachment_box(MimeHeaders *hdrs,
 {
   int     status = 0;
 
-  mimeEmitterStartAttachment(opt, lname, content_type, lname_url);
+  // RICHIE SHERRY 
+  // Writing a header "box" is not needed anymore since we are doing
+  // attachments a whole new way... I need to clean this up and this
+  // routine will probably go away for good...but until then, just return
+  // success
+  //
+  nsIPref *pref = GetPrefServiceManager(opt);   // Pref service manager
+  PRBool      mimeXULOutput = PR_FALSE;
+  
+  if (pref)
+    pref->GetBoolPref("mail.mime_xul_output", &mimeXULOutput);
 
-  status = MimeHeaders_write_all_headers (hdrs, opt, TRUE);
-  mimeEmitterAddAttachmentField(opt, HEADER_X_MOZILLA_PART_URL, lname_url);
-
-  mimeEmitterEndAttachment(opt);
+  if (!mimeXULOutput)
+  {
+    mimeEmitterStartAttachment(opt, lname, content_type, lname_url);
+    status = MimeHeaders_write_all_headers (hdrs, opt, PR_TRUE);
+    mimeEmitterAddAttachmentField(opt, HEADER_X_MOZILLA_PART_URL, lname_url);
+    mimeEmitterEndAttachment(opt);
+  }
 
   if (status < 0) 
     return status;

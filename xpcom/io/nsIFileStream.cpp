@@ -18,6 +18,7 @@
 
 #include "nsIFileStream.h"
 #include "nsFileSpec.h"
+#include "nsCOMPtr.h"
 
 #include "prerror.h"
 
@@ -43,6 +44,7 @@ class FileImpl
     public:
                                         FileImpl(PRFileDesc* inDesc)
                                             : mFileDesc(inDesc)
+											, mNSPRMode(0)
                                             , mFailed(PR_FALSE)
                                             , mEOF(PR_FALSE)
                                             , mLength(-1)
@@ -54,8 +56,10 @@ class FileImpl
                                             int nsprMode,
                                             PRIntn accessMode)
                                             : mFileDesc(nsnull)
+											, mNSPRMode(-1)
                                             , mFailed(PR_FALSE)
                                             , mEOF(PR_FALSE)
+                                            , mLength(-1)
                                         {
                                             NS_INIT_REFCNT();
                                             Open(inFile, nsprMode, accessMode);
@@ -90,7 +94,7 @@ class FileImpl
                                             if (!aLength)
                                                 return NS_ERROR_NULL_POINTER;
                                             if (mLength < 0)
-                                                return NS_FILE_RESULT(NS_ERROR_UNEXPECTED);
+                                                return NS_ERROR_UNEXPECTED;
                                             *aLength = mLength;
                                             return NS_OK;
                                         }
@@ -212,7 +216,7 @@ NS_IMETHODIMP FileImpl::QueryInterface(REFNSIID aIID, void** aInstancePtr)
       NS_ADDREF_THIS();
       return NS_OK;
   }
-  if (aIID.Equals(((nsISupports*)(nsIOutputStream*)this)->GetIID()))
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
   {
       *aInstancePtr = (void*)((nsISupports*)(nsIOutputStream*)this);
       NS_ADDREF_THIS();
@@ -273,7 +277,7 @@ NS_IMETHODIMP FileImpl::Open(
     // Resolve the alias to the original file.
     nsFileSpec original = inFile;
     PRBool ignoredResult;
-    original.ResolveAlias(ignoredResult);
+    original.ResolveSymlink(ignoredResult);
     const FSSpec& spec = original.operator const FSSpec&();
     if (nsprMode & PR_CREATE_FILE)
         err = FSpCreate(&spec, kCreator, 'TEXT', 0);
@@ -383,10 +387,10 @@ NS_IMETHODIMP FileImpl::Flush()
 #endif
     if (!mFileDesc) 
         return NS_FILE_RESULT(PR_BAD_DESCRIPTOR_ERROR);
-    PRBool itFailed = PR_Sync(mFileDesc) != PR_SUCCESS;
+    
 #ifdef XP_MAC
     // On unix, it seems to fail always.
-    if (itFailed)
+    if (PR_Sync(mFileDesc) != PR_SUCCESS)
         mFailed = PR_TRUE;
 #endif
     return NS_OK;
@@ -401,7 +405,27 @@ NS_COM nsresult NS_NewTypicalInputFileStream(
 // Factory method to get an nsInputStream from a file, using most common options
 //----------------------------------------------------------------------------------------
 {
+  // This QueryInterface was needed because NS_NewIOFileStream
+  // does a cast from (void *) to (nsISupports *) thus causing a 
+  // vtable problem on Windows, where we really didn't have the proper pointer
+  // to an nsIInputStream, this ensures that we do 
+#if 1
+    nsISupports    * supports;
+    nsIInputStream * inStr;
+
+    nsresult rv = NS_NewIOFileStream(&supports, inFile, PR_RDONLY, 0700);
+
+    *aResult = nsnull;
+    if (NS_SUCCEEDED(rv)) {
+      if (NS_SUCCEEDED(supports->QueryInterface(nsCOMTypeInfo<nsIInputStream>::GetIID(), (void**)&inStr))) {
+        *aResult = inStr;
+      }
+      NS_RELEASE(supports);
+    }
+    return rv;
+#else
     return NS_NewIOFileStream(aResult, inFile, PR_RDONLY, 0700);
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -432,11 +456,53 @@ NS_COM nsresult NS_NewTypicalOutputFileStream(
 // Factory method to get an nsOutputStream to a file - most common case.
 //----------------------------------------------------------------------------------------
 {
+  // This QueryInterface was needed because NS_NewIOFileStream
+  // does a cast from (void *) to (nsISupports *) thus causing a 
+  // vtable problem on Windows, where we really didn't have the proper pointer
+  // to an nsIOutputStream, this ensures that we do 
+#if 1
+/*    nsISupports     * supports;
+    nsIOutputStream * outStr;
+
+    nsresult rv = NS_NewIOFileStream(
+        &supports,
+        inFile,
+        (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE),
+        0700);
+
+    *aResult = nsnull;
+    if (NS_SUCCEEDED(rv)) { 
+      if (NS_SUCCEEDED(supports->QueryInterface(nsCOMTypeInfo<nsIOutputStream>::GetIID(), (void**)&outStr))) {
+        *aResult = outStr;
+      }
+      NS_RELEASE(supports);
+    }
+    return rv;
+    */
+
+    nsCOMPtr<nsISupports> supports;
+    nsIOutputStream * outStr;
+
+    nsresult rv = NS_NewIOFileStream(
+        getter_AddRefs(supports),
+        inFile,
+        (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE),
+        0700);
+
+    *aResult = nsnull;
+    if (NS_SUCCEEDED(rv)) { 
+      if (NS_SUCCEEDED(supports->QueryInterface(nsCOMTypeInfo<nsIOutputStream>::GetIID(), (void**)&outStr))) {
+        *aResult = outStr;
+      }
+    }
+    return rv;
+#else
     return NS_NewIOFileStream(
         aResult,
         inFile,
         (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE),
         0700);
+#endif
 }
 
 //----------------------------------------------------------------------------------------

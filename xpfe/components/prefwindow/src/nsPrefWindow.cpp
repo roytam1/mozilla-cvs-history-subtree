@@ -1,4 +1,3 @@
-
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
@@ -24,13 +23,13 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIFileLocator.h"
 #include "nsFileLocations.h"
 #include "nsFileSpec.h"
-#include "nsIFileSpec.h"
+#include "nsIFileSpecWithUI.h"
 #include "nsFileStream.h"
 #include "nsIBrowserWindow.h"
 #include "nsIWebShell.h"
@@ -102,7 +101,8 @@ nsPrefWindow::~nsPrefWindow()
 {
     NS_IF_RELEASE(mTreeFrame);
     NS_IF_RELEASE(mPanelFrame);
-    nsServiceManager::ReleaseService(kPrefCID, mPrefs);
+    if(mPrefs)
+        nsServiceManager::ReleaseService(kPrefCID, mPrefs);
     if (mSubStrings)
     {
         for (int i=0; i< PREFWINDOW_MAX_STRINGS; i++)
@@ -183,8 +183,7 @@ NS_IMETHODIMP nsPrefWindow::showWindow(
         return NS_ERROR_FAILURE;
 
     // (code adapted from nsToolkitCore::ShowModal. yeesh.)
-    nsIWebShellWindow* window = nsnull;
-    nsCOMPtr<nsIURL> urlObj;
+    nsCOMPtr<nsIURI> urlObj;
     char * urlStr = "chrome://pref/content/";
     nsresult rv;
 #ifndef NECKO
@@ -197,7 +196,7 @@ NS_IMETHODIMP nsPrefWindow::showWindow(
     rv = service->NewURI(urlStr, nsnull, &uri);
     if (NS_FAILED(rv)) return rv;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
     NS_RELEASE(uri);
 #endif // NECKO
     if (NS_FAILED(rv))
@@ -210,22 +209,9 @@ NS_IMETHODIMP nsPrefWindow::showWindow(
     nsIXULWindowCallbacks *cb = nsnull;
     nsCOMPtr<nsIWebShellWindow> parent;
     DOMWindowToWebShellWindow(currentFrontWin, &parent);
-    appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
-                                 nsnull, cb, 504, 436);
-    if (window)
-    {
-        nsCOMPtr<nsIWidget> parentWindowWidgetThing;
-        nsresult gotParent
-        	= parent ? parent->GetWidget(*getter_AddRefs(parentWindowWidgetThing)) :
-                             NS_ERROR_FAILURE;
-        // Windows OS is the only one that needs the parent disabled, or cares
-        // arguably this should be done by the new window, within ShowModal...
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_FALSE);
-        window->ShowModal();
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_TRUE);
-    }
+    rv = appShell->RunModalDialog(nsnull, parent, urlObj,
+                               NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                               cb, 504, 436);
     return rv;
 } // nsPrefWindow::showWindow()
 
@@ -245,7 +231,7 @@ static PRBool CheckAndStrip(
 static PRInt16 CheckOrdinalAndStrip(nsString& ioString, PRInt16& outOrdinal)
 //----------------------------------------------------------------------------------------
 {
-    PRInt32 colonPos = ioString.Find(':');
+    PRInt32 colonPos = ioString.FindChar(':');
     if (colonPos <= 0)
         return PR_FALSE;
     char* intString = ioString.ToNewCString();
@@ -406,6 +392,10 @@ nsresult nsPrefWindow::InitializeOneWidget(
             NS_RELEASE(specVal);
             break;
         }
+	case eNoType:
+	{
+		NS_ASSERTION(0, "eNoType not handled");
+	}
     }
     return NS_OK;
 } // nsPrefWindow::InitializeOneWidget
@@ -551,7 +541,7 @@ nsresult nsPrefWindow::FinalizeOneWidget(
             nsresult rv = inElement->GetValue(fieldValue);
             if (NS_FAILED(rv))
                 return rv;
-            nsIFileSpec* specValue = NS_CreateFileSpec();
+            nsIFileSpecWithUI* specValue = NS_CreateFileSpecWithUI();
             if (!specValue)
             	return NS_ERROR_FAILURE;
             nsCAutoString str(fieldValue);
@@ -560,6 +550,10 @@ nsresult nsPrefWindow::FinalizeOneWidget(
             NS_RELEASE(specValue);
             break;
         }
+	case eNoType:
+	{
+		NS_ASSERTION(0, "eNoType not handled");
+	}
     }
 //    if (inWidgetType == "checkbox" || inWidgetType = "radio")
 //    {

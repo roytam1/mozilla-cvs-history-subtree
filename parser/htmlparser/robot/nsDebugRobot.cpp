@@ -24,7 +24,7 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIServiceManager.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIIOService.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
@@ -132,13 +132,24 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 Progress, PRUint32 ProgressMax) { return NS_OK; }
-  NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg) { return NS_OK; }
-  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType) { return NS_OK; }
-  NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+#ifdef NECKO
+  // nsIStreamObserver methods:
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt) { return NS_OK; }
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+#else
+  NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 Progress, PRUint32 ProgressMax) { return NS_OK; }
+  NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg) { return NS_OK; }
+  NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType) { return NS_OK; }
+  NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
+#endif
 };
 
-NS_IMETHODIMP CStreamListener::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg)
+#ifdef NECKO
+NS_IMETHODIMP CStreamListener::OnStopRequest(nsIChannel* channel, nsISupports* aContext,
+                                             nsresult status, const PRUnichar* aMsg)
+#else
+NS_IMETHODIMP CStreamListener::OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg)
+#endif
 {
    fputs("done.\n",stdout);
    g_bReadyForNextUrl = PR_TRUE;
@@ -147,7 +158,7 @@ NS_IMETHODIMP CStreamListener::OnStopBinding(nsIURL* aURL, nsresult status, cons
 
 nsresult CStreamListener::QueryInterface(const nsIID& aIID, void** aInstancePtr)  
 {                                                                        
-  return NS_OK;                                                        
+  return NS_ERROR_NOT_IMPLEMENTED;      // never called
 }
 
 NS_IMPL_ADDREF(CStreamListener)
@@ -197,7 +208,7 @@ extern "C" NS_EXPORT int DebugRobot(
     g_workList->RemoveElementAt(n - 1);
 
     // Create url
-    nsIURL* url;
+    nsIURI* url;
     nsresult rv;
 #ifndef NECKO
     rv = NS_NewURL(&url, *urlName);
@@ -206,11 +217,13 @@ extern "C" NS_EXPORT int DebugRobot(
     if (NS_FAILED(rv)) return rv;
 
     nsIURI *uri = nsnull;
-    const char *uriStr = urlName->GetBuffer();
+    char *uriStr = urlName->ToNewCString();
+    if (!uriStr) return NS_ERROR_OUT_OF_MEMORY;
     rv = service->NewURI(uriStr, nsnull, &uri);
+    nsCRT::free(uriStr);
     if (NS_FAILED(rv)) return rv;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
     NS_RELEASE(uri);
 #endif // NECKO    
     if (NS_OK != rv) {
@@ -263,23 +276,44 @@ extern "C" NS_EXPORT int DebugRobot(
     parser->Parse(url, pl,PR_TRUE);/* XXX hook up stream listener here! */
     while (!g_bReadyForNextUrl) {
       if (yieldProc != NULL) {
+#ifdef NECKO
+        char* spec;
+        (void)url->GetSpec(&spec);
+        (*yieldProc)(spec);
+        nsCRT::free(spec);
+#else
         const char* spec;
         (void)url->GetSpec(&spec);
         (*yieldProc)(spec);
+#endif
       }
     }
     g_bReadyForNextUrl = PR_FALSE;
     if (ww) {
       ww->SetObserver(pl);
+#ifdef NECKO
+      char* spec;
+      (void)url->GetSpec(&spec);
+      nsAutoString theSpec(spec);
+      nsCRT::free(spec);
+#else
       const char* spec;
       (void)url->GetSpec(&spec);
       nsAutoString theSpec(spec);
+#endif
       ww->LoadURL(theSpec.GetUnicode());/* XXX hook up stream listener here! */
       while (!g_bReadyForNextUrl) {
         if (yieldProc != NULL) {
+#ifdef NECKO
+          char* spec;
+          (void)url->GetSpec(&spec);
+          (*yieldProc)(spec);
+          nsCRT::free(spec);
+#else
           const char* spec;
           (void)url->GetSpec(&spec);
           (*yieldProc)(spec);
+#endif
         }
       }
     }  

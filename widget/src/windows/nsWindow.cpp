@@ -45,15 +45,16 @@
 
 #include "nsNativeDragTarget.h"
 
-//~~~ for windowless plugin support
+//~~~ windowless plugin support
 #include "nsplugindefs.h"
 
 // For clipboard support
 #include "nsIServiceManager.h"
 #include "nsIClipboard.h"
 #include "nsWidgetsCID.h"
-static NS_DEFINE_IID(kIClipboardIID,    NS_ICLIPBOARD_IID);
-static NS_DEFINE_CID(kCClipboardCID,    NS_CLIPBOARD_CID);
+
+static NS_DEFINE_CID(kCClipboardCID,       NS_CLIPBOARD_CID);
+static NS_DEFINE_IID(kRenderingContextCID, NS_RENDERING_CONTEXT_CID);
 
 
 BOOL nsWindow::sIsRegistered = FALSE;
@@ -66,10 +67,11 @@ nsWindow* nsWindow::gCurrentWindow = nsnull;
 //     g_hinst - handle of the application instance 
 extern HINSTANCE g_hinst; 
 
-static NS_DEFINE_IID(kIWidgetIID,       NS_IWIDGET_IID);
-static NS_DEFINE_IID(kIMenuIID,         NS_IMENU_IID);
-static NS_DEFINE_IID(kIMenuItemIID,     NS_IMENUITEM_IID);
-//static NS_DEFINE_IID(kIMenuListenerIID, NS_IMENULISTENER_IID);
+//
+// input method offsets
+//
+#define IME_X_OFFSET	35
+#define IME_Y_OFFSET	35
 
 //-------------------------------------------------------------------------
 //
@@ -101,19 +103,29 @@ nsWindow::nsWindow() : nsBaseWidget()
     mHas3DBorder        = PR_FALSE;
     mMenuBar            = nsnull;
     mMenuCmdId          = 0;
-    mBorderStyle        = eBorderStyle_window;
+    mWindowType         = eWindowType_child;
+    mBorderStyle        = eBorderStyle_default;
     mBorderlessParent   = 0;
    
     mHitMenu            = nsnull;
     mHitSubMenus        = new nsVoidArray();
     mVScrollbar         = nsnull;
+    mIsInMouseCapture   = PR_FALSE;
 
 	mIMEProperty		= 0;
 	mIMEIsComposing		= PR_FALSE;
 	mIMECompositionString = NULL;
 	mIMECompositionStringSize = 0;
-	mIMECompositionStringSize = 0;
+	mIMECompositionStringLength = 0;
 	mIMECompositionUniString = NULL;
+	mIMECompositionUniStringSize = 0;
+	mIMEAttributeString = NULL;
+	mIMEAttributeStringSize = 0;
+	mIMEAttributeStringLength = 0;
+	mIMECompClauseString = NULL;
+	mIMECompClauseStringSize = 0;
+	mIMECompClauseStringLength = 0;
+
 #if 1
 	mHaveDBCSLeadByte = false;
 	mDBCSLeadByte = '\0';
@@ -152,6 +164,25 @@ nsWindow::~nsWindow()
   
   //XXX Temporary: Should not be caching the font
   delete mFont;
+
+  //
+  // delete any of the IME structures that we allocated
+  //
+  if (mIMECompositionString!=NULL) delete [] mIMECompositionString;
+  if (mIMEAttributeString!=NULL) delete [] mIMEAttributeString;
+  if (mIMECompositionUniString!=NULL) delete [] mIMECompositionUniString;
+}
+
+
+NS_METHOD nsWindow::CaptureMouse(PRBool aCapture)
+{
+  if (PR_TRUE == aCapture) { 
+    SetCapture(mWnd);
+  } else {
+    ReleaseCapture();
+  }
+  mIsInMouseCapture = aCapture;
+  return NS_OK;
 }
 
 
@@ -353,6 +384,65 @@ PRBool nsWindow::ConvertStatus(nsEventStatus aStatus)
   return PR_FALSE;
 }
 
+//////////////////////////////////////////////////////////////////
+//
+// Turning TRACE_EVENTS on will cause printfs for all
+// mouse events that are dispatched.
+//
+// These are extra noisy, and thus have their own switch:
+//
+// NS_MOUSE_MOVE
+// NS_PAINT
+// NS_MOUSE_ENTER, NS_MOUSE_EXIT
+//
+//////////////////////////////////////////////////////////////////
+
+#undef TRACE_EVENTS
+#undef TRACE_EVENTS_MOTION
+#undef TRACE_EVENTS_PAINT
+#undef TRACE_EVENTS_CROSSING
+
+#ifdef DEBUG
+void
+nsWindow::DebugPrintEvent(nsGUIEvent &   aEvent,
+                          HWND           aWnd)
+{
+#ifndef TRACE_EVENTS_MOTION
+  if (aEvent.message == NS_MOUSE_MOVE)
+  {
+    return;
+  }
+#endif
+
+#ifndef TRACE_EVENTS_PAINT
+  if (aEvent.message == NS_PAINT)
+  {
+    return;
+  }
+#endif
+
+#ifndef TRACE_EVENTS_CROSSING
+  if (aEvent.message == NS_MOUSE_ENTER || aEvent.message == NS_MOUSE_EXIT)
+  {
+    return;
+  }
+#endif
+
+  static int sPrintCount=0;
+
+  printf("%4d %-26s(this=%-8p , HWND=%-8p",
+         sPrintCount++,
+         (const char *) nsAutoCString(GuiEventToString(aEvent)),
+         this,
+         aWnd);
+         
+  printf(" , x=%-3d, y=%d)",aEvent.point.x,aEvent.point.y);
+
+  printf("\n");
+}
+#endif // DEBUG
+//////////////////////////////////////////////////////////////////
+
 //-------------------------------------------------------------------------
 //
 // Initialize an event to dispatch
@@ -401,7 +491,7 @@ void nsWindow::InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint
 NS_IMETHODIMP nsWindow::DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus)
 {
   aStatus = nsEventStatus_eIgnore;
-  
+ 
   //if (nsnull != mMenuListener)
   //	aStatus = mMenuListener->MenuSelected(*event);
   if (nsnull != mEventCallback) {
@@ -424,6 +514,10 @@ NS_IMETHODIMP nsWindow::DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus
 //-------------------------------------------------------------------------
 PRBool nsWindow::DispatchWindowEvent(nsGUIEvent* event)
 {
+#ifdef TRACE_EVENTS
+  DebugPrintEvent(*event,mWnd);
+#endif
+
   nsEventStatus status;
   DispatchEvent(event, status);
   return ConvertStatus(status);
@@ -453,16 +547,22 @@ PRBool nsWindow::DispatchStandardEvent(PRUint32 aMsg)
 //-------------------------------------------------------------------------
 LRESULT CALLBACK nsWindow::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-
     // Get the window which caused the event and ask it to process the message
     nsWindow *someWindow = (nsWindow*)::GetWindowLong(hWnd, GWL_USERDATA);
+
+    // hold on to the window for the life of this method, in case it gets
+    // deleted during processing. yes, it's a double hack, since someWindow
+    // is not really an interface.
+    nsCOMPtr<nsISupports> kungFuDeathGrip;
+    if (!someWindow->mIsDestroying) // not if we're in the destructor!
+      kungFuDeathGrip = do_QueryInterface(someWindow);
 
     // Re-direct a tab change message destined for its parent window to the
     // the actual window which generated the event.
     if (msg == WM_NOTIFY) {
       LPNMHDR pnmh = (LPNMHDR) lParam;
-      if (pnmh->code == TCN_SELCHANGE) {             
-        someWindow = (nsWindow*)::GetWindowLong(pnmh->hwndFrom, GWL_USERDATA); 
+      if (pnmh->code == TCN_SELCHANGE) {
+        someWindow = (nsWindow*)::GetWindowLong(pnmh->hwndFrom, GWL_USERDATA);
       }
     }
 
@@ -501,8 +601,11 @@ nsresult nsWindow::StandardWindowCreate(nsIWidget *aParent,
                       nsWidgetInitData *aInitData,
                       nsNativeWidget aNativeParent)
 {
-    
-    BaseCreate(aParent, aRect, aHandleEventFunction, aContext, 
+    nsIWidget *baseParent = aInitData &&
+                 (aInitData->mWindowType == eWindowType_dialog ||
+                  aInitData->mWindowType == eWindowType_toplevel) ?
+                  nsnull : aParent;
+    BaseCreate(baseParent, aRect, aHandleEventFunction, aContext, 
        aAppShell, aToolkit, aInitData);
 
       // See if the caller wants to explictly set clip children and clip siblings
@@ -558,17 +661,49 @@ nsresult nsWindow::StandardWindowCreate(nsIWidget *aParent,
 
     DWORD extendedStyle = WindowExStyle();
     if (nsnull != aInitData) {
+      SetWindowType(aInitData->mWindowType);
       SetBorderStyle(aInitData->mBorderStyle);
 
-      if (aInitData->mBorderStyle == eBorderStyle_dialog ||
-          aInitData->mBorderStyle == eBorderStyle_none) {
+      if (mWindowType == eWindowType_dialog) {
         extendedStyle &= ~WS_EX_CLIENTEDGE;
-      } else if (aInitData->mBorderStyle == eBorderStyle_3DChildWindow) {
-        extendedStyle |= WS_EX_CLIENTEDGE;
-      }  else if (aInitData->mBorderStyle == eBorderStyle_BorderlessTopLevel) {
+      } else if (mWindowType == eWindowType_popup) {
         extendedStyle = WS_EX_TOPMOST;
         style = WS_POPUP;
         mBorderlessParent = parent;
+         // Get the top most level window to use as the parent
+        while (::GetParent(parent)) {
+          parent = ::GetParent(parent);
+        } 
+      }
+
+      if (aInitData->mBorderStyle == eBorderStyle_default) {
+        if (mWindowType == eWindowType_dialog)
+          style &= ~(WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+      } else if (aInitData->mBorderStyle != eBorderStyle_all) {
+        if (aInitData->mBorderStyle == eBorderStyle_none ||
+            !(aInitData->mBorderStyle & eBorderStyle_border))
+          style &= ~WS_BORDER;
+
+        if (aInitData->mBorderStyle == eBorderStyle_none ||
+            !(aInitData->mBorderStyle & eBorderStyle_title)) {
+          style &= ~WS_DLGFRAME;
+          style |= WS_POPUP;
+        }
+        if (aInitData->mBorderStyle == eBorderStyle_none ||
+            !(aInitData->mBorderStyle & (eBorderStyle_close | eBorderStyle_menu)))
+          style &= ~WS_SYSMENU;
+
+        if (aInitData->mBorderStyle == eBorderStyle_none ||
+            !(aInitData->mBorderStyle & eBorderStyle_resizeh))
+          style &= ~WS_THICKFRAME;
+
+        if (aInitData->mBorderStyle == eBorderStyle_none ||
+            !(aInitData->mBorderStyle & eBorderStyle_minimize))
+          style &= ~WS_MINIMIZEBOX;
+
+        if (aInitData->mBorderStyle == eBorderStyle_none ||
+            !(aInitData->mBorderStyle & eBorderStyle_maximize))
+          style &= ~WS_MAXIMIZEBOX;
       }
     }
 
@@ -740,7 +875,11 @@ NS_METHOD nsWindow::Show(PRBool bState)
 {
     if (mWnd) {
         if (bState) {
-            ::SetWindowPos(mWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
+          DWORD flags = SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW;
+          if (mWindowType == eWindowType_popup) {
+            flags |= SWP_NOACTIVATE;
+          }
+            ::SetWindowPos(mWnd, HWND_TOP, 0, 0, 0, 0, flags);
         }
         else
             ::ShowWindow(mWnd, SW_HIDE);
@@ -765,15 +904,15 @@ NS_METHOD nsWindow::IsVisible(PRBool & bState)
 // Move this component
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWindow::Move(PRUint32 aX, PRUint32 aY)
+NS_METHOD nsWindow::Move(PRInt32 aX, PRInt32 aY)
 {
    // When moving a borderless top-level window the window
-   // must be placed relative to it's parent. WIN32 want's to
+   // must be placed relative to its parent. WIN32 wants to
    // place it relative to the screen, so we used the cached parent
    // to calculate the parent's location then add the x,y passed to
    // the move to get the screen coordinate for the borderless top-level
    // window.
-  if (mBorderStyle == eBorderStyle_BorderlessTopLevel) { 
+  if (mWindowType == eWindowType_popup) {
     HWND parent = mBorderlessParent;
     if (parent) { 
       RECT pr; 
@@ -814,8 +953,10 @@ NS_METHOD nsWindow::Move(PRUint32 aX, PRUint32 aY)
 // Resize this component
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWindow::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
+NS_METHOD nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
+  NS_ASSERTION((aWidth >=0 ) , "Negative width passed to nsWindow::Resize");
+  NS_ASSERTION((aHeight >=0 ), "Negative height passed to nsWindow::Resize");
   // Set cached value for lightweight and printing
   mBounds.width  = aWidth;
   mBounds.height = aHeight;
@@ -853,12 +994,15 @@ NS_METHOD nsWindow::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
 // Resize this component
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWindow::Resize(PRUint32 aX,
-                      PRUint32 aY,
-                      PRUint32 aWidth,
-                      PRUint32 aHeight,
+NS_METHOD nsWindow::Resize(PRInt32 aX,
+                      PRInt32 aY,
+                      PRInt32 aWidth,
+                      PRInt32 aHeight,
                       PRBool   aRepaint)
 {
+  NS_ASSERTION((aWidth >=0 ),  "Negative width passed to nsWindow::Resize");
+  NS_ASSERTION((aHeight >=0 ), "Negative height passed to nsWindow::Resize");
+
   // Set cached value for lightweight and printing
   mBounds.x      = aX;
   mBounds.y      = aY;
@@ -1393,12 +1537,12 @@ nsIMenuItem * nsWindow::FindMenuItem(nsIMenu * aMenu, PRUint32 aId)
     nsIMenu     * menu;
 
     aMenu->GetItemAt(i, item);
-    if (NS_OK == item->QueryInterface(kIMenuItemIID, (void **)&menuItem)) {
+    if (NS_OK == item->QueryInterface(nsCOMTypeInfo<nsIMenuItem>::GetIID(), (void **)&menuItem)) {
       if (((nsMenuItem *)menuItem)->GetCmdId() == (PRInt32)aId) {
         NS_RELEASE(item);
         return menuItem;
       }
-    } else if (NS_OK == item->QueryInterface(kIMenuIID, (void **)&menu)) {
+    } else if (NS_OK == item->QueryInterface(nsCOMTypeInfo<nsIMenu>::GetIID(), (void **)&menu)) {
       nsIMenuItem * fndItem = FindMenuItem(menu, aId);
       NS_RELEASE(menu);
       if (nsnull != fndItem) {
@@ -1420,7 +1564,7 @@ static nsIMenuItem * FindMenuChild(nsIMenu * aMenu, PRInt32 aId)
     nsISupports * item;
     aMenu->GetItemAt(i, item);
     nsIMenuItem * menuItem;
-    if (NS_OK == item->QueryInterface(kIMenuItemIID, (void **)&menuItem)) {
+    if (NS_OK == item->QueryInterface(nsCOMTypeInfo<nsIMenuItem>::GetIID(), (void **)&menuItem)) {
       if (((nsMenuItem *)menuItem)->GetCmdId() == (PRInt32)aId) {
         NS_RELEASE(item);
         return menuItem;
@@ -1447,7 +1591,7 @@ nsIMenu * nsWindow::FindMenu(nsIMenu * aMenu, HMENU aNativeMenu, PRInt32 &aDepth
     nsISupports * item;
     aMenu->GetItemAt(i, item);
     nsIMenu * menu;
-    if (NS_OK == item->QueryInterface(kIMenuIID, (void **)&menu)) {
+    if (NS_OK == item->QueryInterface(nsCOMTypeInfo<nsIMenu>::GetIID(), (void **)&menu)) {
       HMENU nativeMenu = ((nsMenu *)menu)->GetNativeMenu();
       if (nativeMenu == aNativeMenu) {
 		aDepth++;
@@ -1473,14 +1617,14 @@ static void AdjustMenus(nsIMenu * aCurrentMenu, nsIMenu * aNewMenu, nsMenuEvent 
 {
   if (nsnull != aCurrentMenu) {
     nsIMenuListener * listener;
-    if (NS_OK == aCurrentMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+    if (NS_OK == aCurrentMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
       //listener->MenuDeselected(aEvent);
       NS_RELEASE(listener);
     }
   }
   if (nsnull != aNewMenu)  {
     nsIMenuListener * listener;
-    if (NS_OK == aNewMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+    if (NS_OK == aNewMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
 		NS_ASSERTION(false, "get debugger");
       //listener->MenuSelected(aEvent);
       NS_RELEASE(listener);
@@ -1511,8 +1655,9 @@ nsresult nsWindow::MenuHasBeenSelected(
 
   PRBool isMenuItem = !(aFlags & MF_POPUP);
   if(isMenuItem) {
-	  //printf("WM_MENUSELECT for menu item\n"); 
-	  //return NS_OK;
+    //printf("WM_MENUSELECT for menu item\n"); 
+    //NS_RELEASE(event.widget);
+    //return NS_OK;
   }
   else
   {
@@ -1534,14 +1679,14 @@ nsresult nsWindow::MenuHasBeenSelected(
 	{
       if (nsnull != mHitMenu) {
         nsIMenuListener * listener;
-        if (NS_OK == mHitMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+        if (NS_OK == mHitMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
           listener->MenuDeselected(aEvent);
           NS_RELEASE(listener);
 		}
 	  }
       if (nsnull != aNewMenu)  {
         nsIMenuListener * listener;
-        if (NS_OK == aNewMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+        if (NS_OK == aNewMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
           listener->MenuSelected(aEvent);
           NS_RELEASE(listener);
 		}
@@ -1560,14 +1705,14 @@ nsresult nsWindow::MenuHasBeenSelected(
 	  {
         if (nsnull != aCurrentMenu) {
           nsIMenuListener * listener;
-          if (NS_OK == aCurrentMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+          if (NS_OK == aCurrentMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
             listener->MenuDeselected(event);
             NS_RELEASE(listener);
 		  }
 		}
         if (nsnull != aNewMenu)  {
           nsIMenuListener * listener;
-          if (NS_OK == aNewMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+          if (NS_OK == aNewMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
             listener->MenuSelected(event);
             NS_RELEASE(listener);
 		  }
@@ -1577,6 +1722,7 @@ nsresult nsWindow::MenuHasBeenSelected(
       NS_RELEASE(menu);
       mHitSubMenus->RemoveElementAt(inx);
     }
+    NS_RELEASE(event.widget);
     return NS_OK;
   } else { // The menu is being selected
     //printf("... for selection\n");
@@ -1595,14 +1741,14 @@ nsresult nsWindow::MenuHasBeenSelected(
 		{
           if (nsnull != mHitMenu) {
             nsIMenuListener * listener;
-            if (NS_OK == mHitMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+            if (NS_OK == mHitMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
               listener->MenuDeselected(aEvent);
               NS_RELEASE(listener);
 			}
 		  }
           if (nsnull != hitMenu)  {
             nsIMenuListener * listener;
-            if (NS_OK == hitMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+            if (NS_OK == hitMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
               listener->MenuSelected(aEvent);
               NS_RELEASE(listener);
 			}
@@ -1639,6 +1785,7 @@ nsresult nsWindow::MenuHasBeenSelected(
         // So it its depth is great then the current hit list count it already gone.
         if (fndDepth > mHitSubMenus->Count()) {
           NS_RELEASE(parentMenu);
+          NS_RELEASE(event.widget);
           return NS_OK;
         }
 
@@ -1649,8 +1796,9 @@ nsresult nsWindow::MenuHasBeenSelected(
           //printf("Getting submenu by position %d from parentMenu\n", aItemNum);
           nsISupports * item;
           parentMenu->GetItemAt((PRUint32)aItemNum, item);
-          if (NS_OK != item->QueryInterface(kIMenuIID, (void **)&newMenu)) {
+          if (NS_OK != item->QueryInterface(nsCOMTypeInfo<nsIMenu>::GetIID(), (void **)&newMenu)) {
             //printf("Item was not a menu! What are we doing here? Return early....\n");
+            NS_RELEASE(event.widget);
             return NS_ERROR_FAILURE;
           }
         }
@@ -1713,14 +1861,14 @@ nsresult nsWindow::MenuHasBeenSelected(
 		  {
             if (nsnull != aCurrentMenu) {
               nsIMenuListener * listener;
-              if (NS_OK == aCurrentMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+              if (NS_OK == aCurrentMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
                 listener->MenuDeselected(aEvent);
                 NS_RELEASE(listener);
 			  }
 			}
             if (nsnull != aNewMenu)  {
               nsIMenuListener * listener;
-              if (NS_OK == aNewMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+              if (NS_OK == aNewMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
 		        NS_ASSERTION(false, "get debugger");
                 listener->MenuSelected(aEvent);
 				NS_RELEASE(listener);
@@ -1735,6 +1883,7 @@ nsresult nsWindow::MenuHasBeenSelected(
  
         // At this point we bail if we are a menu item
         if (isMenuItem) {
+          NS_RELEASE(event.widget);
           return NS_OK;
         }
 
@@ -1754,14 +1903,14 @@ nsresult nsWindow::MenuHasBeenSelected(
 		  {
             if (nsnull != aCurrentMenu) {
               nsIMenuListener * listener;
-              if (NS_OK == aCurrentMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+              if (NS_OK == aCurrentMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
                 listener->MenuDeselected(aEvent);
                 NS_RELEASE(listener);
 			  }
 			}
             if (nsnull != aNewMenu)  {
               nsIMenuListener * listener;
-              if (NS_OK == aNewMenu->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+              if (NS_OK == aNewMenu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
                 listener->MenuSelected(aEvent);
                 NS_RELEASE(listener);
 			  }
@@ -1775,6 +1924,7 @@ nsresult nsWindow::MenuHasBeenSelected(
       }
     }
   }  
+  NS_RELEASE(event.widget);
   return NS_OK;
 }
 //---------------------------------------------------------
@@ -1925,7 +2075,8 @@ ULONG nsWindow::IsSpecialChar(UINT aVirtualKeyCode, WORD *aAsciiKey)
       break;
 
     case VK_MENU:
-      keyType = DONT_PROCESS_KEY;
+      // Let this through for XP menus.
+      *aAsciiKey = aVirtualKeyCode;
       break;
 
     default:        
@@ -2010,14 +2161,14 @@ BOOL nsWindow::OnKeyDown( UINT aVirtualKeyCode, UINT aScanCode)
   WORD asciiKey;
 
   asciiKey = 0;
-  DispatchKeyEvent(NS_KEY_DOWN, asciiKey, aVirtualKeyCode);
+  return DispatchKeyEvent(NS_KEY_DOWN, asciiKey, aVirtualKeyCode);
 
   // always let the def proc process a WM_KEYDOWN
-  return FALSE;
+  //return FALSE;
 }
 #else
 BOOL nsWindow::OnKeyDown( UINT aVirtualKeyCode, UINT aScanCode)
-{
+{ 
   WORD asciiKey;
 
   asciiKey = 0;
@@ -2077,7 +2228,7 @@ BOOL nsWindow::OnKeyUp( UINT aVirtualKeyCode, UINT aScanCode)
 
   if (asciiKey) {
     //printf("Dispatching Key Up [%d]\n", asciiKey);
-    return DispatchKeyEvent(NS_KEY_UP, asciiKey, aVirtualKeyCode);
+    DispatchKeyEvent(NS_KEY_UP, asciiKey, aVirtualKeyCode);
   }
 
   // always let the def proc process a WM_KEYUP
@@ -2113,9 +2264,9 @@ BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte 
   ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,charToConvert,length,
 	  &uniChar,sizeof(uniChar));
 
-  DispatchKeyEvent(NS_KEY_PRESS, uniChar, virtualKeyCode);
+  return DispatchKeyEvent(NS_KEY_PRESS, uniChar, virtualKeyCode);
 
-  return FALSE;
+  //return FALSE;
 }
 
 #else
@@ -2129,9 +2280,9 @@ BOOL nsWindow::OnChar( UINT aVirtualKeyCode )
 	//}
   //printf("OnChar (KeyDown) %d\n", aVirtualKeyCode);
 
-  DispatchKeyEvent(NS_KEY_DOWN, aVirtualKeyCode, aVirtualKeyCode);
+  return DispatchKeyEvent(NS_KEY_DOWN, aVirtualKeyCode, aVirtualKeyCode);
 
-  return FALSE;
+  //return FALSE;
 }
 #endif
 
@@ -2180,15 +2331,15 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                 nsIMenuItem * menuItem = FindMenuItem(menu, event.mCommand);
                 if (menuItem) {
                   nsIMenuListener * listener;
-                  if (NS_OK == menuItem->QueryInterface(kIMenuListenerIID, (void **)&listener)) {
+                  if (NS_OK == menuItem->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener)) {
                     listener->MenuItemSelected(event);
                     NS_RELEASE(listener);
 
-					menu->QueryInterface(kIMenuListenerIID, (void **)&listener);
-					if(listener){
-					  //listener->MenuDestruct(event);
-					  NS_RELEASE(listener);
-					}
+					          menu->QueryInterface(nsCOMTypeInfo<nsIMenuListener>::GetIID(), (void **)&listener);
+					          if(listener){
+					            //listener->MenuDestruct(event);
+					            NS_RELEASE(listener);
+					          }
                   }
                   NS_RELEASE(menuItem);
                 }
@@ -2330,8 +2481,27 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
               result = OnKeyUp(wParam, (HIWORD(lParam) & 0xFF));
 			      else
 				      result = PR_FALSE;
+
+            // Let's consume the ALT key up so that we don't go into
+            // a menu bar if we don't have one.
+            // XXX This will cause a tiny breakage in viewer... namely
+            // that hitting ALT by itself in viewer won't move you into
+            // the menu.  ALT+shortcut key will still work, though, so
+            // I figure this is ok.
+            if (!mMenuBar && (wParam == NS_VK_ALT)) {
+              result = PR_TRUE;
+              *aRetValue = 0;
+            }
+
             break;
 
+        // Let ths fall through if it isn't a key pad
+        case WM_SYSKEYDOWN:
+            // if it's a keypad key don't process a WM_CHAR will come or...oh well...
+            if (IsKeypadKey(wParam, lParam & 0x01000000)) {
+				      result = PR_TRUE;
+              break;
+            }
         case WM_KEYDOWN: {
             mIsShiftDown   = IS_VK_DOWN(NS_VK_SHIFT);
             mIsControlDown = IS_VK_DOWN(NS_VK_CONTROL);
@@ -2630,6 +2800,43 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 				return PR_TRUE;
 			}
 
+			//
+			// This provides us with the attribute string necessary for doing hiliting
+			//
+			if (lParam & GCS_COMPATTR) {
+				long attrStrLen = ::ImmGetCompositionString(hIMEContext,GCS_COMPATTR,NULL,0);
+				if (attrStrLen+1>mIMEAttributeStringSize) {
+					if (mIMEAttributeString!=NULL) delete [] mIMEAttributeString;
+					mIMEAttributeString = new char[attrStrLen+32];
+					mIMEAttributeStringSize = attrStrLen+32;
+				}
+
+				::ImmGetCompositionString(hIMEContext,GCS_COMPATTR,mIMEAttributeString,mIMEAttributeStringSize);
+				mIMEAttributeStringLength = attrStrLen;
+				mIMEAttributeString[attrStrLen]='\0';
+			}
+
+			if (lParam & GCS_COMPCLAUSE) {
+				long compClauseLen = ::ImmGetCompositionString(hIMEContext,GCS_COMPCLAUSE,NULL,0);
+				if (compClauseLen+1>mIMECompClauseStringSize) {
+					if (mIMECompClauseString!=NULL) delete [] mIMECompClauseString;
+					mIMECompClauseString = new char [compClauseLen+32];
+					mIMECompClauseStringSize = compClauseLen+32;
+				}
+
+				::ImmGetCompositionString(hIMEContext,GCS_COMPCLAUSE,mIMECompClauseString,mIMECompClauseStringSize);
+				mIMECompClauseStringLength = compClauseLen;
+				mIMECompClauseString[compClauseLen]='\0';
+			} else {
+				mIMECompClauseStringLength = 0;
+			}
+
+			if (lParam & GCS_CURSORPOS) {
+				mIMECursorPosition = ::ImmGetCompositionString(hIMEContext,GCS_CURSORPOS,NULL,0);
+			}
+			//
+			// This provides us with a composition string
+			//
 			if (lParam & GCS_COMPSTR) {
 #ifdef DEBUG_tague
 				fprintf(stderr,"nsWindow::WM_IME_COMPOSITION: handling GCS_COMPSTR\n");
@@ -2644,10 +2851,13 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 				::ImmGetCompositionString(hIMEContext,GCS_COMPSTR,mIMECompositionString,mIMECompositionStringSize);
 				mIMECompositionStringLength = compStrLen;
 				mIMECompositionString[compStrLen]='\0';
-				HandleTextEvent(PR_FALSE);
+				HandleTextEvent(hIMEContext);
 				result = PR_TRUE;
 			}
 
+			//
+			// This catches a fixed result
+			//
 			if (lParam & GCS_RESULTSTR) {
 #ifdef DEBUG_tague
 				fprintf(stderr,"nsWindow::WM_IME_COMPOSITION: handling GCS_RESULTSTR\n");
@@ -2663,7 +2873,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 				mIMECompositionStringLength = compStrLen;
 				mIMECompositionString[compStrLen]='\0';
 				result = PR_TRUE;
-				HandleTextEvent(PR_TRUE);
+				HandleTextEvent(hIMEContext);
 				HandleEndComposition();
 				HandleStartComposition();
 			}
@@ -2705,7 +2915,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       case WM_DESTROYCLIPBOARD: {
         nsIClipboard* clipboard;
         nsresult rv = nsServiceManager::GetService(kCClipboardCID,
-                                                   kIClipboardIID,
+                                                   nsCOMTypeInfo<nsIClipboard>::GetIID(),
                                                    (nsISupports **)&clipboard);
         clipboard->EmptyClipboard();
         nsServiceManager::ReleaseService(kCClipboardCID, clipboard);
@@ -2713,7 +2923,15 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
     }
 
-    return result;
+    //*aRetValue = result;
+    if (mWnd) {
+      return result;
+    }
+    else {
+      //Events which caused mWnd destruction and aren't consumed
+      //will crash during the Windows default processing.
+      return PR_TRUE;
+    }
 }
 
 
@@ -2908,15 +3126,15 @@ for (x = 0; x < 10000000; x++);
             event.rect = &rect;
             event.eventStructType = NS_PAINT_EVENT;
 
-            static NS_DEFINE_IID(kRenderingContextCID, NS_RENDERING_CONTEXT_CID);
-            static NS_DEFINE_IID(kRenderingContextIID, NS_IRENDERING_CONTEXT_IID);
-            static NS_DEFINE_IID(kRenderingContextWinIID, NS_IRENDERING_CONTEXT_WIN_IID);
 
-            if (NS_OK == nsComponentManager::CreateInstance(kRenderingContextCID, nsnull, kRenderingContextIID, (void **)&event.renderingContext))
+            if (NS_OK == nsComponentManager::CreateInstance(kRenderingContextCID, 
+                                                            nsnull, 
+                                                            nsCOMTypeInfo<nsIRenderingContext>::GetIID(), 
+                                                            (void **)&event.renderingContext))
             {
               nsIRenderingContextWin *winrc;
 
-              if (NS_OK == event.renderingContext->QueryInterface(kRenderingContextWinIID, (void **)&winrc))
+              if (NS_OK == event.renderingContext->QueryInterface(nsCOMTypeInfo<nsIRenderingContextWin>::GetIID(), (void **)&winrc))
               {
                 nsDrawingSurface surf;
 
@@ -3001,6 +3219,52 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
                       aEventType == NS_MOUSE_LEFT_DOUBLECLICK)? 2:1;
   event.eventStructType = NS_MOUSE_EVENT;
 
+
+  nsPluginEvent pluginEvent;
+
+  switch (aEventType)//~~~
+  {
+    case NS_MOUSE_LEFT_BUTTON_DOWN:
+      pluginEvent.event = WM_LBUTTONDOWN;
+      break;
+    case NS_MOUSE_LEFT_BUTTON_UP:
+      pluginEvent.event = WM_LBUTTONUP;
+      break;
+    case NS_MOUSE_LEFT_DOUBLECLICK:
+      pluginEvent.event = WM_LBUTTONDBLCLK;
+      break;
+    case NS_MOUSE_RIGHT_BUTTON_DOWN:
+      pluginEvent.event = WM_RBUTTONDOWN;
+      break;
+    case NS_MOUSE_RIGHT_BUTTON_UP:
+      pluginEvent.event = WM_RBUTTONUP;
+      break;
+    case NS_MOUSE_RIGHT_DOUBLECLICK:
+      pluginEvent.event = WM_RBUTTONDBLCLK;
+      break;
+    case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+      pluginEvent.event = WM_MBUTTONDOWN;
+      break;
+    case NS_MOUSE_MIDDLE_BUTTON_UP:
+      pluginEvent.event = WM_MBUTTONUP;
+      break;
+    case NS_MOUSE_MIDDLE_DOUBLECLICK:
+      pluginEvent.event = WM_MBUTTONDBLCLK;
+      break;
+    case NS_MOUSE_MOVE:
+      pluginEvent.event = WM_MOUSEMOVE;
+      break;
+    default:
+      break;
+  }
+
+  pluginEvent.wParam = 0;
+  pluginEvent.wParam |= (event.isShift) ? MK_SHIFT : 0;
+  pluginEvent.wParam |= (event.isControl) ? MK_CONTROL : 0;
+  pluginEvent.lParam = MAKELONG(event.point.x, event.point.y);
+
+  event.nativeMsg = (void *)&pluginEvent;
+
   // call the event callback 
   if (nsnull != mEventCallback) {
 
@@ -3008,9 +3272,31 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
 
     if (aEventType == NS_MOUSE_MOVE) {
 
-      MouseTrailer * mouseTrailer = MouseTrailer::GetMouseTrailer(0);
-      MouseTrailer::SetMouseTrailerWindow(this);
-      mouseTrailer->CreateTimer();
+      // if we are not in mouse cpature mode (mouse down and hold)
+      // then use "this" window
+      // if we are in mouse capture, then all events are being directed
+      // back to the nsWindow doing the capture. So therefore, the detection
+      // of whether we are in a new nsWindow is wrong. Meaning this MOUSE_MOVE
+      // event hold the captured windows pointer not the one the mouse is over.
+      //
+      // So we use "WindowFromPoint" to find what window we are over and 
+      // set that window into the mouse trailer timer.
+      if (!mIsInMouseCapture) {
+        MouseTrailer * mouseTrailer = MouseTrailer::GetMouseTrailer(0);
+        MouseTrailer::SetMouseTrailerWindow(this);
+        mouseTrailer->CreateTimer();
+      } else {
+        POINT mp;
+        DWORD pos = ::GetMessagePos();
+        mp.x = LOWORD(pos);
+        mp.y = HIWORD(pos);
+        nsWindow * someWindow = (nsWindow*)::GetWindowLong(::WindowFromPoint(mp), GWL_USERDATA);
+        if (nsnull != someWindow)  {
+          MouseTrailer * mouseTrailer = MouseTrailer::GetMouseTrailer(0);
+          MouseTrailer::SetMouseTrailerWindow(someWindow);
+          mouseTrailer->CreateTimer();
+        }
+      }
 
       nsRect rect;
       GetBounds(rect);
@@ -3079,14 +3365,37 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
 //-------------------------------------------------------------------------
 PRBool nsWindow::DispatchFocus(PRUint32 aEventType)
 {
-    // call the event callback 
-    if (mEventCallback) {
-      if ((nsnull != gCurrentWindow) && (!gCurrentWindow->mIsDestroying)) {
-        return(DispatchStandardEvent(aEventType));
-      }
+  // call the event callback 
+  if (mEventCallback) {
+    nsGUIEvent event;
+    event.eventStructType = NS_GUI_EVENT;
+    InitEvent(event, aEventType);
+
+    //focus and blur event should go to their base widget loc, not current mouse pos
+    event.point.x = 0;
+    event.point.y = 0;
+
+    nsPluginEvent pluginEvent;
+
+    switch (aEventType)//~~~
+    {
+      case NS_GOTFOCUS:
+        pluginEvent.event = WM_SETFOCUS;
+        break;
+      case NS_LOSTFOCUS:
+        pluginEvent.event = WM_KILLFOCUS;
+        break;
+      default:
+        break;
     }
 
-    return PR_FALSE;
+    event.nativeMsg = (void *)&pluginEvent;
+
+    PRBool result = DispatchWindowEvent(&event);
+    NS_RELEASE(event.widget);
+    return result;
+  }
+  return PR_FALSE;
 }
 
 
@@ -3118,7 +3427,8 @@ HBRUSH nsWindow::OnControlColor()
 //-------------------------------------------------------------------------
 DWORD ChildWindow::WindowStyle()
 {
-    return WS_CHILD | WS_CLIPCHILDREN | GetBorderStyle(mBorderStyle);
+  //    return WS_CHILD | WS_CLIPCHILDREN | GetBorderStyle(mBorderStyle);
+  return WS_CHILD | WS_CLIPCHILDREN | GetWindowType(mWindowType);
 }
 
 //-------------------------------------------------------------------------
@@ -3138,13 +3448,13 @@ PRBool ChildWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
     case NS_MOUSE_LEFT_BUTTON_DOWN:
     case NS_MOUSE_MIDDLE_BUTTON_DOWN:
     case NS_MOUSE_RIGHT_BUTTON_DOWN:
-      SetCapture(mWnd);
+        CaptureMouse(PR_TRUE);
       break;
 
     case NS_MOUSE_LEFT_BUTTON_UP:
     case NS_MOUSE_MIDDLE_BUTTON_UP:
     case NS_MOUSE_RIGHT_BUTTON_UP:
-      ReleaseCapture();
+        CaptureMouse(PR_FALSE);
       break;
 
     default:
@@ -3155,8 +3465,36 @@ PRBool ChildWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   return nsWindow::DispatchMouseEvent(aEventType, aPoint);
 }
 
+DWORD nsWindow::GetWindowType(nsWindowType aWindowType)
+{
+  switch(aWindowType)
+  {
+    case eWindowType_child:
+      return(0);
+    break;
+
+    case eWindowType_dialog:
+     return(WS_DLGFRAME | DS_3DLOOK);
+    break;
+
+    case eWindowType_popup:
+      return(0);
+    break;
+
+    case eWindowType_toplevel:
+      return(0);
+    break;
+
+    default:
+      NS_ASSERTION(0, "unknown border style");
+      return(WS_OVERLAPPEDWINDOW);
+  }
+}
+
 DWORD nsWindow::GetBorderStyle(nsBorderStyle aBorderStyle)
 {
+  return 0;
+  /*
   switch(aBorderStyle)
   {
     case eBorderStyle_none:
@@ -3179,6 +3517,7 @@ DWORD nsWindow::GetBorderStyle(nsBorderStyle aBorderStyle)
       NS_ASSERTION(0, "unknown border style");
       return(WS_OVERLAPPEDWINDOW);
   }
+  */
 }
 
 NS_METHOD nsWindow::SetTitle(const nsString& aTitle) 
@@ -3225,13 +3564,6 @@ NS_METHOD nsWindow::ShowMenuBar(PRBool aShow)
   return rv;
 }
 
-NS_METHOD nsWindow::IsMenuBarVisible(PRBool *aVisible)
-{
-  HMENU menu = ::GetMenu(mWnd);
-  *aVisible = menu ? PR_TRUE : PR_FALSE;
-  return NS_OK;
-}
-
 NS_METHOD nsWindow::GetPreferredSize(PRInt32& aWidth, PRInt32& aHeight)
 {
   aWidth  = mPreferredWidth;
@@ -3247,35 +3579,58 @@ NS_METHOD nsWindow::SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight)
 }
 
 void
-nsWindow::HandleTextEvent(PRBool commit)
+nsWindow::HandleTextEvent(HIMC hIMEContext)
 {
-  nsTextEvent event;
-  nsPoint point;
-  size_t	unicharSize;
-
+  nsTextEvent		event;
+  nsPoint			point;
+  size_t			unicharSize;
+  CANDIDATEFORM		candForm;
   point.x = 0;
   point.y = 0;
 
   InitEvent(event, NS_TEXT_EVENT, &point);
-  if (mIMECompositionUniString!=NULL)
-	  delete [] mIMECompositionUniString;
-  
+ 
+  //
+  // convert the composition string text into unicode before it is sent to xp-land
+  //
   unicharSize = ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,mIMECompositionString,mIMECompositionStringLength,
 	  mIMECompositionUniString,0);
-  mIMECompositionUniString = new PRUnichar[unicharSize+1];
+
+  if (mIMECompositionUniStringSize < (PRInt32)unicharSize) {
+	if (mIMECompositionUniString!=NULL) delete [] mIMECompositionUniString;
+		mIMECompositionUniString = new PRUnichar[unicharSize+32];
+		mIMECompositionUniStringSize = unicharSize+32;
+  }
   ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,mIMECompositionString,mIMECompositionStringLength,
 	  mIMECompositionUniString,unicharSize);
   mIMECompositionUniString[unicharSize] = (PRUnichar)0;
 
-  event.theText      = mIMECompositionUniString;
-  event.commitText	 = commit;
-  event.isShift   = mIsShiftDown;
+  //
+  // we need to convert the attribute array, which is alligned with the mutibyte text into an array of offsets
+  // mapped to the unicode text
+  //
+  MapDBCSAtrributeArrayToUnicodeOffsets(&(event.rangeCount),&(event.rangeArray));
+
+  event.theText = mIMECompositionUniString;
+  event.isShift	= mIsShiftDown;
   event.isControl = mIsControlDown;
-  event.isAlt     = mIsAltDown;
+  event.isAlt = mIsAltDown;
   event.eventStructType = NS_TEXT_EVENT;
 
   (void)DispatchWindowEvent(&event);
   NS_RELEASE(event.widget);
+
+  //
+  // Post process event
+  //
+  candForm.dwIndex = 0;
+  candForm.dwStyle = CFS_CANDIDATEPOS;
+  candForm.ptCurrentPos.x = event.theReply.mCursorPosition.x + IME_X_OFFSET;
+  candForm.ptCurrentPos.y = event.theReply.mCursorPosition.y + IME_Y_OFFSET;
+
+  printf("Candidate window position: x=%d, y=%d\n",candForm.ptCurrentPos.x,candForm.ptCurrentPos.y);
+
+  ::ImmSetCandidateWindow(hIMEContext,&candForm);
 
 }
 
@@ -3309,4 +3664,107 @@ nsWindow::HandleEndComposition(void)
 	event.compositionMessage = NS_COMPOSITION_END;
 	(void)DispatchWindowEvent(&event);
 	NS_RELEASE(event.widget);
+}
+
+//
+// This function converters the composition string (CGS_COMPSTR) into Unicode while mapping the 
+//  attribute (GCS_ATTR) string t
+void 
+nsWindow::MapDBCSAtrributeArrayToUnicodeOffsets(PRUint32* textRangeListLengthResult,nsTextRangeArray* textRangeListResult)
+{
+	PRUint32	i,rangePointer;
+	size_t		lastUnicodeOffset, substringLength, lastMBCSOffset;
+	
+	//
+	// figure out the ranges from the compclause string
+	//
+	if (mIMECompClauseStringLength==0) {
+		*textRangeListLengthResult = 2;
+		*textRangeListResult = new nsTextRange[2];
+		(*textRangeListResult)[0].mStartOffset=0;
+		substringLength = ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,mIMECompositionString,
+								mIMECompositionStringLength,NULL,0);
+		(*textRangeListResult)[0].mEndOffset = substringLength;
+		(*textRangeListResult)[0].mRangeType = NS_TEXTRANGE_RAWINPUT;
+		substringLength = ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,mIMECompositionString,
+								mIMECursorPosition,NULL,0);
+		(*textRangeListResult)[0].mStartOffset=substringLength;
+		(*textRangeListResult)[0].mEndOffset = substringLength;
+		(*textRangeListResult)[0].mRangeType = NS_TEXTRANGE_CARETPOSITION;
+
+		
+	} else {
+		
+		*textRangeListLengthResult = 1;
+		for(i=0;i<mIMECompClauseStringLength;i++) {
+			if (mIMECompClauseString[i]!=0x00) 
+				(*textRangeListLengthResult)++;
+		}
+
+		//
+		//  allocate the offset array
+		//
+		*textRangeListResult = new nsTextRange[*textRangeListLengthResult];
+
+		//
+		// figure out the cursor position
+		//
+		
+		substringLength = ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,mIMECompositionString,mIMECursorPosition,NULL,0);
+		(*textRangeListResult)[0].mStartOffset=substringLength;
+		(*textRangeListResult)[0].mEndOffset = substringLength;
+		(*textRangeListResult)[0].mRangeType = NS_TEXTRANGE_CARETPOSITION;
+
+
+	
+		//
+		// iterate over the attributes and convert them into unicode 
+		lastUnicodeOffset = 0;
+		lastMBCSOffset = 0;
+		rangePointer = 1;
+		for(i=0;i<mIMECompClauseStringLength;i++) {
+			if (mIMECompClauseString[i]!=0) {
+				(*textRangeListResult)[rangePointer].mStartOffset = lastUnicodeOffset;
+				substringLength = ::MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,mIMECompositionString+lastMBCSOffset,
+										mIMECompClauseString[i]-lastMBCSOffset,NULL,0);
+				(*textRangeListResult)[rangePointer].mEndOffset = lastUnicodeOffset + substringLength;
+				(*textRangeListResult)[rangePointer].mRangeType = mIMEAttributeString[mIMECompClauseString[i]-1];
+				lastUnicodeOffset+= substringLength;
+				lastMBCSOffset = mIMECompClauseString[i];
+				rangePointer++;
+			}
+		}
+	}
+
+#ifdef DEBUG_tague
+	printf("rangeCount =%d\n",*textRangeListLengthResult);
+	for(i=0;i<*textRangeListLengthResult;i++) {
+		printf("range %d: rangeStart=%d\trangeEnd=%d ",i,(*textRangeListResult)[i].mStartOffset,
+			(*textRangeListResult)[i].mEndOffset);
+		if ((*textRangeListResult)[i].mRangeType==ATTR_INPUT) printf("ATTR_INPUT\n");
+		if ((*textRangeListResult)[i].mRangeType==ATTR_TARGET_CONVERTED) printf("ATTR_TARGET_CONVERTED\n");
+		if ((*textRangeListResult)[i].mRangeType==ATTR_CONVERTED) printf("ATTR_CONVERTED\n");
+		if ((*textRangeListResult)[i].mRangeType==ATTR_TARGET_NOTCONVERTED) printf("ATTR_TARGET_NOTCONVERTED\n");
+		if ((*textRangeListResult)[i].mRangeType==ATTR_INPUT_ERROR) printf("ATTR_INPUT_ERROR\n");
+		if ((*textRangeListResult)[i].mRangeType==ATTR_FIXEDCONVERTED) printf("ATTR_FIXEDCONVERTED\n");
+	}
+#endif
+
+	//
+	// convert from windows attributes into nsGUI/DOM attributes
+	//
+	for(i=0;i<*textRangeListLengthResult;i++) {
+		if ((*textRangeListResult)[i].mRangeType==ATTR_INPUT)
+			(*textRangeListResult)[i].mRangeType=NS_TEXTRANGE_RAWINPUT;
+		else 
+			if ((*textRangeListResult)[i].mRangeType==ATTR_TARGET_CONVERTED)
+				(*textRangeListResult)[i].mRangeType=NS_TEXTRANGE_SELECTEDCONVERTEDTEXT;
+		else
+			if ((*textRangeListResult)[i].mRangeType==ATTR_CONVERTED)
+				(*textRangeListResult)[i].mRangeType=NS_TEXTRANGE_CONVERTEDTEXT;
+		else
+			if ((*textRangeListResult)[i].mRangeType==ATTR_TARGET_NOTCONVERTED)
+				(*textRangeListResult)[i].mRangeType=NS_TEXTRANGE_RAWINPUT;
+	}
+
 }

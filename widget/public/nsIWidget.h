@@ -63,6 +63,7 @@ typedef nsEventStatus (*PR_CALLBACK EVENT_CALLBACK)(nsGUIEvent *event);
 #define NS_NATIVE_OFFSETX		6
 #define NS_NATIVE_OFFSETY		7
 #define NS_NATIVE_PLUGIN_PORT	8
+#define NS_NATIVE_SCREEN      9
 
 // {18032AD5-B265-11d1-AA2A-000000000000}
 #define NS_IWIDGET_IID \
@@ -79,19 +80,51 @@ typedef void* nsNativeWidget;
  * Border styles
  */
 
-enum nsBorderStyle {   
-                  // no border
-                eBorderStyle_none,
-                  // dialog box border + title area
-                eBorderStyle_dialog,
-                  // window border
-                eBorderStyle_window,
-                  // child window 3D border hint
-                eBorderStyle_3DChildWindow,
-                  // top level window without border (drop down in combo
-		  // boxes, etc)
-                eBorderStyle_BorderlessTopLevel
-              }; 
+enum nsWindowType {
+  // default top level window
+  eWindowType_toplevel,
+  // top level window but usually handled differently by the OS
+  eWindowType_dialog,
+  // used for combo boxes, etc
+  eWindowType_popup,
+  // child windows (contained inside a window on the desktop (has no border))
+  eWindowType_child
+};
+
+
+enum nsBorderStyle
+{
+  // no border, titlebar, etc.. opposite of all
+  eBorderStyle_none     = 0,
+
+  // all window decorations
+  eBorderStyle_all      = 1 << 0,
+
+  // enables the border on the window.  these are only for decoration and are not resize hadles
+  eBorderStyle_border   = 1 << 1,
+
+  // enables the resize handles for the window.  if this is set, border is implied to also be set
+  eBorderStyle_resizeh  = 1 << 2,
+
+  // enables the titlebar for the window
+  eBorderStyle_title    = 1 << 3,
+
+  // enables the window menu button on the title bar.  this being on should force the title bar to display
+  eBorderStyle_menu     = 1 << 4,
+
+  // enables the minimize button so the user can minimize the window.
+  //   turned off for tranient windows since they can not be minimized seperate from their parent
+  eBorderStyle_minimize = 1 << 5,
+
+  // enables the maxmize button so the user can maximize the window
+  eBorderStyle_maximize = 1 << 6,
+
+  // show the close button
+  eBorderStyle_close    = 1 << 7,
+
+  // whatever the OS wants... i.e. don't do anything
+  eBorderStyle_default  = -1
+};
 
 /**
  * Cursor types.
@@ -116,7 +149,11 @@ enum nsCursor {   ///(normal cursor,       usually rendered as an arrow)
                 eCursor_arrow_west,
                 eCursor_arrow_west_plus,
                 eCursor_arrow_east,
-                eCursor_arrow_east_plus
+                eCursor_arrow_east_plus,
+                eCursor_crosshair,
+                //Don't know what 'move' cursor should be.  See CSS2.
+                eCursor_move,
+                eCursor_help
                 }; 
 
 
@@ -128,12 +165,14 @@ enum nsCursor {   ///(normal cursor,       usually rendered as an arrow)
 struct nsWidgetInitData {
   nsWidgetInitData()
     : clipChildren(PR_FALSE), clipSiblings(PR_FALSE),
-      mBorderStyle(eBorderStyle_window)
+      mWindowType(eWindowType_child),
+      mBorderStyle(eBorderStyle_default)
   {
   }
 
   // when painting exclude area occupied by child windows and sibling windows
   PRPackedBool  clipChildren, clipSiblings;
+  nsWindowType mWindowType;
   nsBorderStyle mBorderStyle;
 };
 
@@ -145,7 +184,7 @@ class nsIWidget : public nsISupports {
 
   public:
 
-    static const nsIID& GetIID() { static nsIID iid = NS_IWIDGET_IID; return iid; }
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IWIDGET_IID)
 
     /**
      * Create and initialize a widget. 
@@ -274,7 +313,7 @@ class nsIWidget : public nsISupports {
      * @param aY the new y position expressed in the parent's coordinate system
      *
      **/
-    NS_IMETHOD Move(PRUint32 aX, PRUint32 aY) = 0;
+    NS_IMETHOD Move(PRInt32 aX, PRInt32 aY) = 0;
 
     /**
      * Resize this widget. 
@@ -284,9 +323,9 @@ class nsIWidget : public nsISupports {
      * @param aRepaint whether the widget should be repainted
      *
      */
-    NS_IMETHOD Resize(PRUint32 aWidth,
-                        PRUint32 aHeight,
-                        PRBool   aRepaint) = 0;
+    NS_IMETHOD Resize(PRInt32 aWidth,
+                      PRInt32 aHeight,
+                      PRBool   aRepaint) = 0;
 
     /**
      * Move or resize this widget.
@@ -298,11 +337,11 @@ class nsIWidget : public nsISupports {
      * @param aRepaint whether the widget should be repainted if the size changes
      *
      */
-    NS_IMETHOD Resize(PRUint32 aX,
-                        PRUint32 aY,
-                        PRUint32 aWidth,
-                        PRUint32 aHeight,
-                        PRBool   aRepaint) = 0;
+    NS_IMETHOD Resize(PRInt32 aX,
+                      PRInt32 aY,
+                      PRInt32 aWidth,
+                      PRInt32 aHeight,
+                      PRBool   aRepaint) = 0;
 
     /**
      * Enable or disable this Widget
@@ -318,14 +357,14 @@ class nsIWidget : public nsISupports {
     NS_IMETHOD SetFocus(void) = 0;
 
     /**
-     * Get this widget's dimension outside dimensions, or in otherswords
-     * the dimensions of the widget or window
+     * Get this widget's outside dimensions relative to it's parent widget
      *
      * @param aRect on return it holds the  x. y, width and height of this widget
      *
      */
     NS_IMETHOD GetBounds(nsRect &aRect) = 0;
-
+  
+    
     /**
      * Get this widget's client area dimensions, if the window has a 3D border appearance
      * this returns the area inside the border, The x and y are always zero
@@ -540,14 +579,6 @@ class nsIWidget : public nsISupports {
     NS_IMETHOD ShowMenuBar(PRBool aShow) = 0;
 
     /**
-     * Query whether the widget's MenuBar is visible
-     *
-     * @param aVisible PR_TRUE if currently visible, PR_FALSE if not
-     */
-
-    NS_IMETHOD IsMenuBarVisible(PRBool *aVisible) = 0;
-
-    /**
      * Set the collection of tooltip rectangles.
      * A NS_SHOW_TOOLTIP event is generated when the mouse hovers over one
      * of the rectangles. a NS_HIDE_TOOLTIP event is generated when the mouse
@@ -653,6 +684,13 @@ class nsIWidget : public nsISupports {
     NS_IMETHOD EnableFileDrop(PRBool aEnable) = 0;
    
     virtual void  ConvertToDeviceCoordinates(nscoord	&aX,nscoord	&aY) = 0;
+
+    /**
+     * Enables/Disables system mouse capture.
+     * @param aCapture PR_TRUE enables mouse capture, PR_FALSE disables mouse capture 
+     *
+     */
+    NS_IMETHOD CaptureMouse(PRBool aCapture) = 0;
 };
 
 #endif // nsIWidget_h__

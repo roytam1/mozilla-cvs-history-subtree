@@ -16,13 +16,15 @@
  * Reserved.
  */
 
+#if 0 // OBSOLETE
+
 /* -*- Mode: C; tab-width: 4 -*-
  *   nsJPGDecoder.cpp --- interface to jpg decoder
  */
 #ifndef _nsJPGCallbk_h
 #define _nsJPGCallbk_h
 
-
+#include "nsIImgDCallbk.h"
 #include "nsIImgDecoder.h"
 #include "nsJPGDecoder.h"
 
@@ -43,14 +45,16 @@ class JPGCallbk : public nsIImgDCallbk {
 public:
   NS_DECL_ISUPPORTS
 
-  il_container *GetContainer() {return mContainer;};
-  il_container *SetContainer(il_container *ic) {mContainer=ic; return ic;};
+  il_container *GetContainer() {return ilContainer;};
+  il_container *SetContainer(il_container *ic) {ilContainer=ic; return ic;};
 
-  JPGCallbk(il_container *aContainer){mContainer=aContainer;};
-  virtual ~JPGCallbk() {};	// XXX Pam needs to fix this
+  JPGCallbk(il_container *aContainer){ilContainer=aContainer;};
+  virtual ~JPGCallbk() {if(ilContainer) delete ilContainer; };	// XXX Pam needs to fix this
 
 private:
-  il_container* mContainer;
+  il_container* ilContainer;
 };
 
 #endif
+
+#endif /* 0 */

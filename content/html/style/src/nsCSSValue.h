@@ -22,6 +22,7 @@
 #include "nsColor.h"
 #include "nsString.h"
 #include "nsCoord.h"
+#include "nsCSSProps.h"
 
 
 enum nsCSSUnit {
@@ -67,6 +68,7 @@ enum nsCSSUnit {
   eCSSUnit_EN           = 801,    // (float) .5 em
   eCSSUnit_XHeight      = 802,    // (float) distance from top of lower case x to baseline
   eCSSUnit_CapHeight    = 803,    // (float) distance from top of uppercase case H to baseline
+  eCSSUnit_Char         = 804,    // (float) number of characters, used for width with monospace font
 
   // Screen relative measure
   eCSSUnit_Pixel        = 900,    // (float)
@@ -97,6 +99,7 @@ public:
 
   nsCSSValue&  operator=(const nsCSSValue& aCopy);
   PRBool      operator==(const nsCSSValue& aOther) const;
+  PRBool      operator!=(const nsCSSValue& aOther) const;
 
   nsCSSUnit GetUnit(void) const { return mUnit; };
   PRBool    IsLengthUnit(void) const  
@@ -131,8 +134,8 @@ public:
   void  SetNormalValue(void);
 
   // debugging methods only
-  void  AppendToString(nsString& aBuffer, PRInt32 aPropID = -1) const;
-  void  ToString(nsString& aBuffer, PRInt32 aPropID = -1) const;
+  void  AppendToString(nsString& aBuffer, nsCSSProperty aPropID = eCSSProperty_UNKNOWN) const;
+  void  ToString(nsString& aBuffer, nsCSSProperty aPropID = eCSSProperty_UNKNOWN) const;
 
 protected:
   nsCSSUnit mUnit;
@@ -192,6 +195,12 @@ inline nscolor nsCSSValue::GetColorValue(void) const
   }
   return NS_RGB(0,0,0);
 }
+
+inline PRBool nsCSSValue::operator!=(const nsCSSValue& aOther) const
+{
+  return PRBool(! ((*this) == aOther));
+}
+
 
 
 #endif /* nsCSSValue_h___ */

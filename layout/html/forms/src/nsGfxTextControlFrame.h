@@ -22,16 +22,27 @@
 #include "nsFormControlFrame.h"
 #include "nsTextControlFrame.h"
 #include "nsIStreamObserver.h"
-#include "nsITextEditor.h"
+#include "nsIEditor.h"
 #include "nsIDocumentObserver.h"
 #include "nsIDOMKeyListener.h"
+//#include "nsIDOMMouseListener.h"
+#include "nsIDOMFocusListener.h"
+#include "nsIDOMSelectionListener.h"
+#include "nsIDOMDocument.h"
+#include "nsIPresContext.h"
+#include "nsIContent.h"
 
-class nsIContent;
 class nsIFrame;
-class nsIPresContext;
 class nsIWebShell;
+class nsIDOMSelection;
+
 
 class nsGfxTextControlFrame;
+
+#define NS_IENDER_EVENT_LISTENER_IID \
+{/* e4bf05b0-457f-11d3-86ea-000064657374*/ \
+0xe4bf05b0, 0x457f, 0x11d3, \
+{0x86, 0xea, 0x0, 0x0, 0x64, 0x65, 0x73, 0x74} }
 
 
 /*******************************************************************************
@@ -48,16 +59,22 @@ public:
 
   NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
 
-  virtual ~EnderTempObserver() {};
+  virtual ~EnderTempObserver();
 
   // nsISupports
   NS_DECL_ISUPPORTS
 
+#ifdef NECKO
+  // nsIStreamObserver methods:
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+#else
   // nsIStreamObserver
-  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-  NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-  NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-  NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+  NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+  NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+  NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
+#endif
 
 protected:
 
@@ -75,11 +92,11 @@ protected:
 class nsEnderDocumentObserver : public nsIDocumentObserver
 {
 public:
-  nsEnderDocumentObserver() { NS_INIT_REFCNT(); }
+  nsEnderDocumentObserver();
 
   NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
 
-  virtual ~nsEnderDocumentObserver() {};
+  virtual ~nsEnderDocumentObserver(); 
 
   // nsISupports
   NS_DECL_ISUPPORTS
@@ -141,6 +158,25 @@ protected:
   nsGfxTextControlFrame *mFrame; // not ref counted
 };
 
+
+/******************************************************************************
+ * nsIEnderEventListener
+ ******************************************************************************/
+
+class nsIEnderEventListener : public nsISupports
+{
+public:
+
+  static const nsIID& GetIID() { static nsIID iid = NS_IENDER_EVENT_LISTENER_IID; return iid; }
+
+  /** SetFrame sets the frame we send event messages to, when necessary
+   *  @param aFrame -- the frame, can be null, not ref counted (guaranteed to outlive us!)
+   */
+  NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame)=0;
+
+  NS_IMETHOD SetPresContext(nsIPresContext *aCx)=0;
+};
+
 /******************************************************************************
  * nsEnderKeyListener
  ******************************************************************************/
@@ -148,18 +184,14 @@ protected:
 class nsEnderKeyListener; // forward declaration for factory
 
 /* factory for ender key listener */
-nsresult NS_NewEnderKeyListener(nsEnderKeyListener ** aInstancePtrResult);
+nsresult NS_NewEnderKeyListener(nsIDOMKeyListener ** aInstancePtrResult);
 
-class nsEnderKeyListener : public nsIDOMKeyListener 
+class nsEnderKeyListener : public nsIDOMKeyListener, public nsIEnderEventListener
 {
 public:
-  /** the default destructor */
-  virtual ~nsEnderKeyListener() {};
 
-  /** SetFrame sets the frame we send event messages to, when necessary
-   *  @param aEditor the frame, can be null, not ref counted (guaranteed to outlive us!)
-   */
-  void SetFrame(nsGfxTextControlFrame *aFrame) {mFrame = aFrame;}
+  /** the default destructor */
+  virtual ~nsEnderKeyListener();
 
   /*interfaces for addref and release and queryinterface*/
   NS_DECL_ISUPPORTS
@@ -169,18 +201,166 @@ public:
   virtual nsresult KeyDown(nsIDOMEvent* aKeyEvent);
   virtual nsresult KeyUp(nsIDOMEvent* aKeyEvent);
   virtual nsresult KeyPress(nsIDOMEvent* aKeyEvent);
-  /*END interfaces from nsIDOMKeyListener*/
+  /* END interfaces from nsIDOMKeyListener*/
 
-  friend nsresult NS_NewEnderKeyListener(nsEnderKeyListener ** aInstancePtrResult);
+  /* nsIEnderEventListener interfaces */
+  NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
+  NS_IMETHOD SetPresContext(nsIPresContext *aCx) {mContext = do_QueryInterface(aCx); return NS_OK;}
+  /* END nsIEnderEventListener interfaces */
+
+
+  friend nsresult NS_NewEnderKeyListener(nsIDOMKeyListener ** aInstancePtrResult);
 
 protected:
   /** the default constructor.  Protected, use the factory to create an instance.
     * @see NS_NewEnderKeyListener
     */
-  nsEnderKeyListener() {NS_INIT_REFCNT();};
+  nsEnderKeyListener();
 
 protected:
-  nsGfxTextControlFrame *mFrame; // not ref counted
+  nsGfxTextControlFrame    *mFrame;   // not ref counted
+  nsCOMPtr<nsIPresContext>  mContext; // ref counted
+  nsCOMPtr<nsIContent>      mContent; // ref counted
+};
+
+/******************************************************************************
+ * nsEnderMouseListener
+ ******************************************************************************/
+#if 0 // see module notes
+class nsEnderMouseListener; // forward declaration for factory
+
+/* factory for ender key listener */
+nsresult NS_NewEnderMouseListener(nsIDOMMouseListener ** aInstancePtrResult);
+
+class nsEnderMouseListener : public nsIDOMMouseListener, public nsIEnderEventListener
+{
+public:
+
+  /** the default destructor */
+  virtual ~nsEnderMouseListener();
+
+  /*interfaces for addref and release and queryinterface*/
+  NS_DECL_ISUPPORTS
+
+  /* nsIDOMMouseListener interfaces */
+  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  virtual nsresult MouseDown(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseUp(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseClick(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseDblClick(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseOver(nsIDOMEvent* aMouseEvent);
+  virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
+  /* END interfaces from nsIDOMMouseListener*/
+
+  /* nsIEnderEventListener interfaces */
+  NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
+  NS_IMETHOD SetPresContext(nsIPresContext *aCx) {mContext = do_QueryInterface(aCx); return NS_OK;}
+  /* END nsIEnderEventListener interfaces */
+
+
+  friend nsresult NS_NewEnderMouseListener(nsIDOMMouseListener ** aInstancePtrResult);
+
+protected:
+  /** the default constructor.  Protected, use the factory to create an instance.
+    * @see NS_NewEnderMouseListener
+    */
+  nsEnderMouseListener();
+
+protected:
+  nsGfxTextControlFrame    *mFrame;   // not ref counted
+  nsCOMPtr<nsIPresContext>  mContext; // ref counted
+  nsCOMPtr<nsIContent>      mContent; // ref counted
+};
+#endif
+
+/******************************************************************************
+ * nsEnderFocusListener
+ * used to propogate focus, blur, and change notifications
+ ******************************************************************************/
+
+class nsEnderFocusListener; // forward declaration for factory
+
+/* factory for ender key listener */
+nsresult NS_NewEnderFocusListener(nsIDOMFocusListener ** aInstancePtrResult);
+
+class nsEnderFocusListener : public nsIDOMFocusListener, public nsIEnderEventListener
+{
+public:
+
+  /** the default destructor */
+  virtual ~nsEnderFocusListener();
+
+  /*interfaces for addref and release and queryinterface*/
+  NS_DECL_ISUPPORTS
+
+  /* nsIDOMFocusListener interfaces */
+  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  virtual nsresult Focus(nsIDOMEvent* aEvent);
+  virtual nsresult Blur (nsIDOMEvent* aEvent);
+  /* END interfaces from nsIDOMFocusListener*/
+
+  /* nsIEnderEventListener interfaces */
+  NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
+  NS_IMETHOD SetPresContext(nsIPresContext *aCx) {mContext = do_QueryInterface(aCx); return NS_OK;}
+  /* END nsIEnderEventListener interfaces */
+
+  friend nsresult NS_NewEnderFocusListener(nsIDOMFocusListener ** aInstancePtrResult);
+
+protected:
+  /** the default constructor.  Protected, use the factory to create an instance.
+    * @see NS_NewEnderFocusListener
+    */
+  nsEnderFocusListener();
+
+protected:
+  nsGfxTextControlFrame    *mFrame;   // not ref counted
+  nsCOMPtr<nsIPresContext>  mContext; // ref counted
+  nsCOMPtr<nsIContent>      mContent; // ref counted
+  nsString                  mTextValue; // the value of the text field at focus
+};
+
+
+/******************************************************************************
+ * nsEnderSelectionListener
+ * used to propogate onSelect notifications
+ ******************************************************************************/
+
+class nsEnderSelectionListener; // forward declaration for factory
+
+/* factory for ender key listener */
+nsresult NS_NewEnderSelectionListener(nsIDOMSelectionListener ** aInstancePtrResult);
+
+class nsEnderSelectionListener : public nsIDOMSelectionListener, nsIEnderEventListener
+{
+public:
+
+  /** the default destructor */
+  virtual ~nsEnderSelectionListener();
+
+  /*interfaces for addref and release and queryinterface*/
+  NS_DECL_ISUPPORTS
+
+  /* nsIDOMSelectionListener interfaces */
+  NS_IMETHOD NotifySelectionChanged();
+  /*END interfaces from nsIDOMSelectionListener*/
+
+  /* nsIEnderEventListener interfaces */
+  NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
+  NS_IMETHOD SetPresContext(nsIPresContext *aCx) {mContext = do_QueryInterface(aCx); return NS_OK;}
+  /* END nsIEnderEventListener interfaces */
+
+  friend nsresult NS_NewEnderSelectionListener(nsIDOMSelectionListener ** aInstancePtrResult);
+
+protected:
+  /** the default constructor.  Protected, use the factory to create an instance.
+    * @see NS_NewEnderSelectionListener
+    */
+  nsEnderSelectionListener();
+
+protected:
+  nsGfxTextControlFrame    *mFrame;   // not ref counted
+  nsCOMPtr<nsIPresContext>  mContext; // ref counted
+  nsCOMPtr<nsIContent>      mContent; // ref counted
 };
 
 
@@ -195,14 +375,28 @@ protected:
 
 class nsGfxTextControlFrame : public nsTextControlFrame
 {
+private:
+	typedef nsFormControlFrame Inherited;
+
 public:
   nsGfxTextControlFrame();
   virtual ~nsGfxTextControlFrame();
+
+  /** nsIFrame override of Init.
+    * all we do here is cache the pres context for later use
+    */
+  NS_IMETHOD  Init(nsIPresContext&  aPresContext,
+                   nsIContent*      aContent,
+                   nsIFrame*        aParent,
+                   nsIStyleContext* aContext,
+                   nsIFrame*        aPrevInFlow);
+
   NS_IMETHOD InitTextControl();
 
        // nsIFormControlFrame
   NS_IMETHOD SetProperty(nsIAtom* aName, const nsString& aValue);
   NS_IMETHOD GetProperty(nsIAtom* aName, nsString& aValue); 
+  virtual void SetFocus(PRBool aOn = PR_TRUE, PRBool aRepaint = PR_FALSE);
 
   virtual nsWidgetInitData* GetWidgetInitData(nsIPresContext& aPresContext);
 
@@ -253,7 +447,8 @@ public:
 
   virtual nsresult RequiresWidget(PRBool &aRequiresWidget);
 
-  NS_IMETHOD ContentChanged();
+  NS_IMETHOD InternalContentChanged();
+  NS_IMETHOD DoesAttributeExist(nsIAtom *aAtt);
 
   void RemoveNewlines(nsString &aString);
 
@@ -264,6 +459,8 @@ protected:
                             const nsSize& aSize);
 
   NS_IMETHOD InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDocument *aDoc);
+
+  NS_IMETHOD InstallEventListeners();
 
   NS_IMETHOD GetPresShellFor(nsIWebShell* aWebShell, nsIPresShell** aPresShell);
   
@@ -287,11 +484,20 @@ protected:
   PRBool mCreatingViewer;
   EnderTempObserver* mTempObserver;
   nsEnderDocumentObserver *mDocObserver;
-  nsCOMPtr<nsEnderKeyListener> mKeyListener;
-  nsCOMPtr<nsITextEditor>mEditor;
+
+  // listeners
+  nsCOMPtr<nsIDOMKeyListener>       mKeyListener;  // ref counted
+  //nsCOMPtr<nsIDOMMouseListener>   mMouseListener;  // ref counted
+  nsCOMPtr<nsIDOMFocusListener>     mFocusListener;  // ref counted
+  nsCOMPtr<nsIDOMSelectionListener> mSelectionListener;  // ref counted
+
+  nsCOMPtr<nsIEditor>       mEditor;  // ref counted
+  nsCOMPtr<nsIDOMDocument>  mDoc;     // ref counted
   nsNativeTextControlFrame *mDummyFrame; //DUMMY
+
   PRBool mNeedsStyleInit;
   PRBool mDummyInitialized; //DUMMY
+  nsIPresContext *mFramePresContext; // not ref counted
 };
 
 #endif

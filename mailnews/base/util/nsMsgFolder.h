@@ -71,8 +71,8 @@ public:
 
   // nsIFolder methods:
   NS_IMETHOD GetURI(char* *name) { return nsRDFResource::GetValue(name); }
-  NS_IMETHOD GetName(char **name);
-  NS_IMETHOD SetName(char *name);
+  NS_IMETHOD GetName(PRUnichar **name);
+  NS_IMETHOD SetName(PRUnichar *name);
   NS_IMETHOD GetChildNamed(const char *name, nsISupports* *result);
   NS_IMETHOD GetSubFolders(nsIEnumerator* *result);
   NS_IMETHOD GetHasSubFolders(PRBool *_retval);
@@ -95,8 +95,8 @@ public:
   NS_IMETHOD GetServer(nsIMsgIncomingServer ** aServer);
 
 
-  NS_IMETHOD GetPrettyName(char ** name);
-  NS_IMETHOD SetPrettyName(char * name);
+  NS_IMETHOD GetPrettyName(PRUnichar ** name);
+  NS_IMETHOD SetPrettyName(PRUnichar * name);
 #if 0
   static nsresult GetRoot(nsIMsgFolder* *result);
 #endif
@@ -117,7 +117,7 @@ public:
   NS_IMETHOD BuildFolderURL(char ** url);
 
 
-  NS_IMETHOD GetPrettiestName(char ** name);
+  NS_IMETHOD GetPrettiestName(PRUnichar ** name);
 
 #ifdef HAVE_ADMINURL
   NS_IMETHOD GetAdminUrl(MWContext *context, MSG_AdminURLType type);
@@ -136,6 +136,9 @@ public:
 
   NS_IMETHOD CreateSubfolder(const char *folderName);
 
+  NS_IMETHOD Compact();
+  NS_IMETHOD EmptyTrash();
+
   NS_IMETHOD Rename(const char *name);
   NS_IMETHOD Adopt(nsIMsgFolder *srcFolder, PRUint32*);
 
@@ -150,7 +153,7 @@ public:
 
   // updates num messages and num unread - should be pure virtual
   // when I get around to implementing in all subclasses?
-  NS_IMETHOD UpdateSummaryTotals();
+  NS_IMETHOD UpdateSummaryTotals(PRBool force);
   NS_IMETHOD SummaryChanged();
   NS_IMETHOD GetNumUnread(PRBool deep, PRInt32 *numUnread);       // How many unread messages in this folder.
   NS_IMETHOD GetTotalMessages(PRBool deep, PRInt32 *totalMessages);   // Total number of messages in this folder.
@@ -254,12 +257,26 @@ public:
   NS_IMETHOD RememberPassword(const char *password);
   NS_IMETHOD GetRememberedPassword(char ** password);
   NS_IMETHOD UserNeedsToAuthenticateForFolder(PRBool displayOnly, PRBool *needsAuthenticate);
-  NS_IMETHOD GetUsersName(char **userName);
-  NS_IMETHOD GetHostName(char **hostName);
-
+#if 0
+  NS_IMETHOD GetUsername(char **userName);
+  NS_IMETHOD GetHostname(char **hostName);
+#endif
+  
 	virtual nsresult GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgDatabase **db) = 0;
 	NS_IMETHOD DeleteMessages(nsISupportsArray *messages, 
-                            nsITransactionManager *txnMgr, PRBool deleteStorage) = 0;
+                            nsITransactionManager *txnMgr, PRBool
+                            deleteStorage) = 0;
+  NS_IMETHOD CopyMessages(nsIMsgFolder* srcFolder,
+                          nsISupportsArray *messages,
+                          PRBool isMove,
+                          nsITransactionManager* txnMgr,
+                          nsIMsgCopyServiceListener* listener);
+  NS_IMETHOD CopyFileMessage(nsIFileSpec* fileSpec,
+                             nsIMessage* messageToReplace,
+                             PRBool isDraftOrTemplate,
+                             nsITransactionManager* txnMgr,
+                             nsIMsgCopyServiceListener* listener);
+
 	NS_IMETHOD GetNewMessages();
 
 	NS_IMETHOD GetCharset(PRUnichar * *aCharset) = 0;
@@ -274,6 +291,14 @@ public:
 	NS_IMETHOD GetNewMessagesNotificationDescription(PRUnichar * *adescription);
 
 	NS_IMETHOD GetRootFolder(nsIMsgFolder * *aRootFolder);
+	NS_IMETHOD GetMsgDatabase(nsIMsgDatabase** aMsgDatabase);
+	NS_IMETHOD GetPath(nsIFileSpec * *aPath);
+
+	NS_IMETHOD MatchName(nsString *name, PRBool *matches);
+	NS_IMETHOD MarkMessagesRead(nsISupportsArray *messages, PRBool markRead);
+	NS_IMETHOD MarkAllMessagesRead(void);
+
+	NS_IMETHOD GetChildWithURI(const char *uri, PRBool deep, nsIMsgFolder ** folder);
 
 protected:
 	nsresult NotifyPropertyChanged(char *property, char* oldValue, char* newValue);
@@ -286,7 +311,7 @@ protected:
 	// we use it to get the IID of the incoming server for the derived folder.
 	// w/out a function like this we would have to implement GetServer in each
 	// derived folder class.
-	virtual const nsIID& GetIncomingServerType() = 0;
+	virtual const char* GetIncomingServerType() = 0;
 
 protected:
   nsString mName;
@@ -305,7 +330,7 @@ protected:
   nsISupports *mSemaphoreHolder; // set when the folder is being written to
 								//Due to ownership issues, this won't be AddRef'd.
 
-  nsCOMPtr<nsIMsgIncomingServer> m_server; // this will be addrefed....no ownership issue here
+  nsIMsgIncomingServer* m_server; //this won't be addrefed....ownership issue here
 
 #ifdef HAVE_DB
   nsMsgKey	m_lastMessageLoaded;
@@ -320,7 +345,6 @@ protected:
   PRInt32	mNumNewBiffMessages;
 
   PRBool mIsCachable;
-
 };
 
 #endif

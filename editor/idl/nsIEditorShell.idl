@@ -19,7 +19,8 @@
 #include "nsISupports.idl"
 #include "domstubs.idl"
 #include "nsIFileSpec.idl"
-
+#include "nsISupportsArray.idl"
+#include "nsIDocumentStateListener.idl"
 
 %{C++
 
@@ -27,18 +28,25 @@ class nsIDOMWindow;
 class nsIDOMDocument;
 class nsIDOMSelection;
 class nsIDOMElement;
-class nsIFileSpec;
+class nsIDOMNode;
 %}
 
+interface nsIFileSpec;
 
 [scriptable, uuid(9afff72b-ca9a-11d2-96c9-0060b0fb9956)]
 interface nsIEditorShell : nsISupports
 {
-  readonly attribute wstring           contentsAsText;
-  readonly attribute wstring           contentsAsHTML;
-
   readonly attribute nsIDOMDocument    editorDocument;
   readonly attribute nsIDOMSelection   editorSelection;
+  
+%{C++
+
+  enum {
+    eDocumentStatusUnmodified,
+    eDocumentStatusModified
+  };
+%}
+  readonly attribute boolean              documentModified;
   
   attribute wstring    paragraphFormat;
   attribute long       wrapColumn;
@@ -50,6 +58,19 @@ interface nsIEditorShell : nsISupports
   void SetContentWindow(in nsIDOMWindow win);
   void SetWebShellWindow(in nsIDOMWindow win);
   void LoadUrl(in wstring url);
+  
+  /* Register a doc state listener. This gets added to a list of listeners
+     which are registered with the editor when that gets instantiated.
+     If the LoadUrl fails, this listener will not receive any notifcations.
+     If you call this after the editor has been instantiated, it calls through
+     to editor::AddDocumentStateListener().
+  */
+  void RegisterDocumentStateListener(in nsIDocumentStateListener docListener);
+  /* Unregister a listener.
+     If you call this after the editor has been instantiated, it calls through
+     to editor::RemoveDocumentStateListener().
+  */
+  void UnregisterDocumentStateListener(in nsIDocumentStateListener docListener);
   
   void Init();
   
@@ -79,32 +100,97 @@ interface nsIEditorShell : nsISupports
   
   void Find();
   void FindNext();
+
+  /* Charset Menu */
+  wstring GetDocumentCharacterSet();
+  void SetDocumentCharacterSet(in wstring characterSet);
   
   /* Structure change */
   void InsertText(in wstring textToInsert);
+  void InsertSource(in wstring textToInsert);
   void InsertBreak();
   
-  void InsertLink();
-  void InsertImage();
   void InsertList(in wstring listType);
   void Indent(in wstring indent);
   void Align(in wstring align);
   
+  /* Element insert and property editing */
   nsIDOMElement GetSelectedElement(in wstring tagName);
+  /* returns the element conversion of supplied node or a parent of required type */
+  nsIDOMElement GetElementOrParentByTagName(in wstring tagName, in nsIDOMNode node);
   nsIDOMElement CreateElementWithDefaults(in wstring tagName);
-  void    InsertElement(in nsIDOMElement element, in boolean deleteSelection);
-  void    SaveHLineSettings(in nsIDOMElement element);
-  void    InsertLinkAroundSelection(in nsIDOMElement anchorElement);
-  void    SelectElement(in nsIDOMElement element);
-  void    SetSelectionAfterElement(in nsIDOMElement element);
+  void InsertElement(in nsIDOMElement element, in boolean deleteSelection);
+  void SaveHLineSettings(in nsIDOMElement element);
+  void InsertLinkAroundSelection(in nsIDOMElement anchorElement);
+  void SelectElement(in nsIDOMElement element);
+  void SetSelectionAfterElement(in nsIDOMElement element);
+
+  /***** Table editing *****/
+  /* These are done relative to selected cell
+     or cell contain the selection anchor */
+  void InsertTableCell(in PRInt32 number, in PRBool after);
+  void InsertTableRow(in PRInt32 number, in PRBool after);
+  void InsertTableColumn(in PRInt32 number, in PRBool after);
+  void DeleteTable();
+  void DeleteTableCell(in PRInt32 number);
+  void DeleteTableRow(in PRInt32 number);
+  void DeleteTableColumn(in PRInt32 number);
+  void JoinTableCells();
+
+  /** Scan through all rows and add cells as needed so 
+    *   all locations in the cellmap are occupied.
+    *   Used after inserting single cells or pasting
+    *   a collection of cells that extend past the
+    *   previous size of the table
+    * If aTable is null, it uses table enclosing the selection anchor
+    */
+  void NormalizeTable(in nsIDOMElement tableElement);
+
+  /* Get the indexes from layout's cellmap */
+  PRInt32 GetRowIndex(in nsIDOMElement cellElement);
+  PRInt32 GetColumnIndex(in nsIDOMElement cellElement);
+
+  /** Get the number of rows in a table from the layout's cellmap 
+    * If tableElement is null, it will try to find enclosing table of selection anchor
+    */
+  PRInt32 GetTableRowCount(in nsIDOMElement tableElement);
+
+  /* Get the number of columns in a table from the layout's cellmap
+    * If tableElement is null, it will try to find enclosing table of selection anchor
+    */
+  PRInt32 GetTableColumnCount(in nsIDOMElement tableElement);
+
+  /* Get cell at a location in the layout's cellmap
+     returns null when past last cell in a row or column */
+  nsIDOMElement GetCellAt(in nsIDOMElement tableElement, in PRInt32 rowIndex, in PRInt32 colIndex);
+  /* Get cell at a location in the layout's cellmap with associated data 
+     returns null when past last cell in a row or column */
+  nsIDOMElement GetCellDataAt(in nsIDOMElement tableElement, in PRInt32 rowIndex, in PRInt32 colIndex,
+                              out PRInt32 startRowIndex, out PRInt32 startColIndex,
+                              out PRInt32 rowSpan, out PRInt32 colSpan, out boolean isSelected);
+  
+  /**** end of table editing *****/
+
+  /* Get list of embedded objects, e.g. for mail compose */
+  nsISupportsArray GetEmbeddedObjects();
 
   /* Formatting */
   void SetTextProperty(in wstring prop, in wstring attr, in wstring value);
   void RemoveTextProperty(in wstring prop, in wstring attr);
-  void GetTextProperty(in wstring prop, in wstring attr, in wstring value, out wstring firstHas, out wstring anyHas, out wstring allHas);
+  void GetTextProperty(in wstring prop, in wstring attr, in wstring value, out boolean firstHas, out boolean anyHas, out boolean allHas);
   void SetBodyAttribute(in wstring attr, in wstring value);
   void SetBackgroundColor(in wstring color);
+
+  void ApplyStyleSheet(in wstring url);
     
+  /* Output.
+   * format is mime type, e.g. text/html;
+   * See nsIEditor.h for legal flag values.
+   */
+  wstring GetContentsAs(in wstring format, in PRUint32 flags);
+  /* For debugging, dump the content tree: */
+  void DumpContentTree();
+
   /* Utility */
   wstring GetLocalFileURL(in nsIDOMWindow parent, in wstring filterType);
 

@@ -20,6 +20,8 @@
 
 #include "nsProperties.h"
 
+#include <iostream.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 
 nsProperties::nsProperties(nsISupports* outer)
@@ -30,7 +32,7 @@ nsProperties::nsProperties(nsISupports* outer)
 NS_METHOD
 nsProperties::Create(nsISupports *outer, REFNSIID aIID, void **aResult)
 {
-    if (outer && !aIID.Equals(nsISupports::GetIID()))
+    if (outer && !aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
         return NS_NOINTERFACE;   // XXX right error?
     nsProperties* props = new nsProperties(outer);
     if (props == NULL)
@@ -63,7 +65,7 @@ nsProperties::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
         return NS_ERROR_NULL_POINTER;                                        
     }                                                                      
     if (aIID.Equals(nsIProperties::GetIID()) || 
-        aIID.Equals(nsISupports::GetIID())) {
+        aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *aInstancePtr = (void*) this; 
         NS_ADDREF_THIS(); 
         return NS_OK; 
@@ -74,7 +76,7 @@ nsProperties::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 NS_IMETHODIMP
 nsProperties::DefineProperty(const char* prop, nsISupports* initialValue)
 {
-    nsCStringKey key(prop);
+    nsStringKey key(prop);
     if (Exists(&key))
         return NS_ERROR_FAILURE;
 
@@ -87,7 +89,7 @@ nsProperties::DefineProperty(const char* prop, nsISupports* initialValue)
 NS_IMETHODIMP
 nsProperties::UndefineProperty(const char* prop)
 {
-    nsCStringKey key(prop);
+    nsStringKey key(prop);
     if (!Exists(&key))
         return NS_ERROR_FAILURE;
 
@@ -99,7 +101,7 @@ nsProperties::UndefineProperty(const char* prop)
 NS_IMETHODIMP
 nsProperties::GetProperty(const char* prop, nsISupports* *result)
 {
-    nsCStringKey key(prop);
+    nsStringKey key(prop);
     if (!Exists(&key))
         return NS_ERROR_FAILURE;
 
@@ -112,7 +114,7 @@ nsProperties::GetProperty(const char* prop, nsISupports* *result)
 NS_IMETHODIMP
 nsProperties::SetProperty(const char* prop, nsISupports* value)
 {
-    nsCStringKey key(prop);
+    nsStringKey key(prop);
     if (!Exists(&key))
         return NS_ERROR_FAILURE;
 
@@ -153,13 +155,27 @@ NS_NewIProperties(nsIProperties* *result)
 #include "nsProperties.h"
 #include "pratom.h"
 
+static PLHashNumber
+HashKey(const PRUnichar *aString)
+{
+  return (PLHashNumber) nsCRT::HashValue(aString);
+}
+
+static PRIntn
+CompareKeys(const PRUnichar *aStr1, const PRUnichar *aStr2)
+{
+  return nsCRT::strcmp(aStr1, aStr2) == 0;
+}
+
 nsPersistentProperties::nsPersistentProperties()
 {
   NS_INIT_REFCNT();
 
   mIn = nsnull;
   mSubclass = NS_STATIC_CAST(nsIPersistentProperties*, this);
-  mTable = nsnull;
+  mTable = PL_NewHashTable(8, (PLHashFunction) HashKey,
+    (PLHashComparator) CompareKeys,
+    (PLHashComparator) nsnull, nsnull, nsnull);
 }
 
 PR_STATIC_CALLBACK(PRIntn)
@@ -203,7 +219,7 @@ nsPersistentProperties::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     NS_ASSERTION(aInstancePtr != nsnull, "null ptr");
     if (aIID.Equals(nsIPersistentProperties::GetIID()) ||
         aIID.Equals(nsIProperties::GetIID()) ||
-        aIID.Equals(nsISupports::GetIID())) {
+        aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *aInstancePtr = NS_STATIC_CAST(nsIPersistentProperties*, this);
         NS_ADDREF_THIS();
         return NS_OK;
@@ -217,7 +233,12 @@ nsPersistentProperties::Load(nsIInputStream *aIn)
   PRInt32  c;
   nsresult ret;
 
+#if 1
+  nsString utf8("UTF-8");
+  ret = NS_NewConverterStream(&mIn, nsnull, aIn, 0, &utf8);
+#else
   ret = NS_NewConverterStream(&mIn, nsnull, aIn);
+#endif
   if (ret != NS_OK) {
 #ifdef NS_DEBUG
     cout << "NS_NewConverterStream failed" << endl;
@@ -272,18 +293,6 @@ nsPersistentProperties::Load(nsIInputStream *aIn)
   return NS_OK;
 }
 
-static PLHashNumber
-HashKey(const PRUnichar *aString)
-{
-  return (PLHashNumber) nsCRT::HashValue(aString);
-}
-
-static PRIntn
-CompareKeys(const PRUnichar *aStr1, const PRUnichar *aStr2)
-{
-  return nsCRT::strcmp(aStr1, aStr2) == 0;
-}
-
 NS_IMETHODIMP
 nsPersistentProperties::SetProperty(const nsString& aKey, nsString& aNewValue,
   nsString& aOldValue)
@@ -294,12 +303,7 @@ nsPersistentProperties::SetProperty(const nsString& aKey, nsString& aNewValue,
   cout << "will add " << aKey.ToNewCString() << "=" << aNewValue.ToNewCString() << endl;
 #endif
   if (!mTable) {
-    mTable = PL_NewHashTable(8, (PLHashFunction) HashKey,
-      (PLHashComparator) CompareKeys,
-      (PLHashComparator) nsnull, nsnull, nsnull);
-    if (!mTable) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
+    return NS_ERROR_FAILURE;
   }
 
   const PRUnichar *key = aKey.GetUnicode();  // returns internal pointer (not a copy)
@@ -341,7 +345,15 @@ nsPersistentProperties::Subclass(nsIPersistentProperties* aSubclass)
 NS_IMETHODIMP
 nsPersistentProperties::GetProperty(const nsString& aKey, nsString& aValue)
 {
+  if (!mTable)
+     return NS_ERROR_FAILURE;
+
   const PRUnichar *key = aKey.GetUnicode();
+
+  if (!mTable) {
+    return NS_ERROR_FAILURE;
+  }
+
   PRUint32 len;
   PRUint32 hashValue = nsCRT::HashValue(key, &len);
   PLHashEntry **hep = PL_HashTableRawLookup(mTable, hashValue, key);
@@ -362,8 +374,11 @@ AddElemToArray(PLHashEntry* he, PRIntn i, void* arg)
   nsString* keyStr = new nsString((PRUnichar*) he->key);
   nsString* valueStr = new nsString((PRUnichar*) he->value);
 
-  // XXX Fix to make XPCOM friendly?
   nsPropertyElement *element = new nsPropertyElement();
+  if (!element)
+     return HT_ENUMERATE_STOP;
+
+  NS_ADDREF(element);
   element->SetKey(keyStr);
   element->SetValue(valueStr);
   propArray->InsertElementAt(element, i);
@@ -383,7 +398,9 @@ nsPersistentProperties::EnumerateProperties(nsIBidirectionalEnumerator** aResult
 		return rv;
 
 	// Step through hash entries populating a transient array
-	PL_HashTableEnumerateEntries(mTable, AddElemToArray, (void *)propArray);
+   PRIntn n = PL_HashTableEnumerateEntries(mTable, AddElemToArray, (void *)propArray);
+   if ( n < (PRIntn) mTable->nentries )
+      return NS_ERROR_OUT_OF_MEMORY;
 
 	// Convert array into enumerator
 	rv = NS_NewISupportsArrayEnumerator(propArray, aResult);
@@ -510,7 +527,7 @@ nsPropertyElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
     NS_ASSERTION(aInstancePtr != nsnull, "null ptr");
     if (aIID.Equals(nsIPropertyElement::GetIID()) ||
-        aIID.Equals(nsISupports::GetIID())) {
+        aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *aInstancePtr = NS_STATIC_CAST(nsIPropertyElement*, this);
         NS_ADDREF_THIS();
         return NS_OK;

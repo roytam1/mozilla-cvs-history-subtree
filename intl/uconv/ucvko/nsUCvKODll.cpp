@@ -23,6 +23,7 @@
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsIFactory.h"
+#include "nsIRegistry.h"
 #include "nsCOMPtr.h"
 #include "nsICharsetConverterInfo.h"
 #include "nsUCvKOCID.h"
@@ -38,6 +39,8 @@
 #include "nsIUnicodeEncoder.h"
 #include "nsIUnicodeEncodeHelper.h"
 #include "nsICharsetConverterManager.h"
+#define DECODER_NAME_BASE "Unicode Decoder-"
+#define ENCODER_NAME_BASE "Unicode Encoder-"
 
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
@@ -59,6 +62,9 @@ PRUint16 g_ufKSC5601Mapping[] = {
 
 PRUint16 g_AsciiMapping[] = {
   0x0001, 0x0004, 0x0005, 0x0008, 0x0000, 0x0000, 0x007F, 0x0000
+};
+PRUint16 g_HangulNullMapping[] ={
+  0x0001, 0x0004, 0x0005, 0x0008, 0x0000, 0xAC00, 0xD7A3, 0xAC00
 };
 
 typedef nsresult (* fpCreateInstance) (nsISupports **);
@@ -178,28 +184,77 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
   return NS_NOINTERFACE;
 }
 
-extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char * path)
+extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports * aServMgr, 
+                                             const char * path)
 {
-  nsresult rv;
+  nsresult res;
+  PRUint32 i;
+  nsIComponentManager * compMgr = NULL;
+  nsIRegistry * registry = NULL;
+  nsIRegistry::Key key;
+  char buff[1024];
 
-  nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &rv));
-  if (NS_FAILED(rv)) return rv;
+  // get the service manager
+  nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &res));
 
-  nsIComponentManager* compMgr;
-  rv = servMgr->GetService(kComponentManagerCID, 
-                           nsIComponentManager::GetIID(), 
-                           (nsISupports**)&compMgr);
-  if (NS_FAILED(rv)) return rv;
+  // get the component manager
+  res = servMgr->GetService(kComponentManagerCID, 
+                            nsIComponentManager::GetIID(), 
+                            (nsISupports**)&compMgr);
+  if (NS_FAILED(res)) goto done;
 
-  for (PRUint32 i=0; i<ARRAY_SIZE(g_FactoryData); i++) {
-    rv = compMgr->RegisterComponent(*(g_FactoryData[i].mCID), NULL, NULL,
+  // get the registry
+  res = servMgr->GetService(NS_REGISTRY_PROGID, 
+                            nsIRegistry::GetIID(), 
+                            (nsISupports**)&registry);
+  if (NS_FAILED(res)) goto done;
+
+  // open the registry
+  res = registry->OpenWellKnownRegistry(
+      nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(res)) goto done;
+
+  char name[128];
+  char progid[128];
+  for (i=0; i<ARRAY_SIZE(g_FactoryData); i++) {
+    if(0==PL_strcmp(g_FactoryData[i].mCharsetSrc,"Unicode"))
+    {
+       PL_strcpy(name, DECODER_NAME_BASE);
+       PL_strcat(name, g_FactoryData[i].mCharsetDest);
+       PL_strcpy(progid, NS_UNICODEDECODER_PROGID_BASE);
+       PL_strcat(progid, g_FactoryData[i].mCharsetDest);
+    } else {
+       PL_strcpy(name, ENCODER_NAME_BASE);
+       PL_strcat(name, g_FactoryData[i].mCharsetSrc);
+       PL_strcpy(progid, NS_UNICODEENCODER_PROGID_BASE);
+       PL_strcat(progid, g_FactoryData[i].mCharsetSrc);
+    }
+    // register component
+    res = compMgr->RegisterComponent(*(g_FactoryData[i].mCID), name, progid,
       path, PR_TRUE, PR_TRUE);
-    if(NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
+    if(NS_FAILED(res) && (NS_ERROR_FACTORY_EXISTS != res)) goto done;
+
+    // register component info
+    // XXX take these KONSTANTS out of here
+    // XXX free the string from "ToString()"
+    sprintf(buff, "%s/%s", "software/netscape/intl/uconv", (g_FactoryData[i].mCID -> ToString()));
+    res = registry -> AddSubtree(nsIRegistry::Common, buff, &key);
+    if (NS_FAILED(res)) goto done;
+    res = registry -> SetString(key, "source", g_FactoryData[i].mCharsetSrc);
+    if (NS_FAILED(res)) goto done;
+    res = registry -> SetString(key, "destination", g_FactoryData[i].mCharsetDest);
+    if (NS_FAILED(res)) goto done;
   }
 
-  done:
-  (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
-  return rv;
+done:
+  if (compMgr != NULL) 
+    (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
+  if (registry != NULL) {
+    registry -> Close();
+    (void)servMgr->ReleaseService(NS_REGISTRY_PROGID, registry);
+  }
+
+  return res;
 }
 
 extern "C" NS_EXPORT nsresult NSUnregisterSelf(nsISupports* aServMgr, const char * path)

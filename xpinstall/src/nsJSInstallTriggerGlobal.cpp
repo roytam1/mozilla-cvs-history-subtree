@@ -15,7 +15,6 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-/* AUTO-GENERATED. DO NOT EDIT!!! */
 
 #include "jsapi.h"
 #include "nsJSUtils.h"
@@ -30,6 +29,11 @@
 #include "nsVector.h"
 #include "nsIDOMInstallVersion.h"
 #include "nsIDOMInstallTriggerGlobal.h"
+#include "nsXPITriggerInfo.h"
+
+#include "nsRepository.h"
+
+#include "nsSoftwareUpdateIIDs.h"
 
 extern void ConvertJSValToStr(nsString&  aString,
                              JSContext* aContext,
@@ -56,64 +60,6 @@ static NS_DEFINE_IID(kIInstallTriggerGlobalIID, NS_IDOMINSTALLTRIGGERGLOBAL_IID)
 
 NS_DEF_PTR(nsIDOMInstallTriggerGlobal);
 
-
-/***********************************************************************/
-//
-// InstallTriggerGlobal Properties Getter
-//
-PR_STATIC_CALLBACK(JSBool)
-GetInstallTriggerGlobalProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
-{
-  nsIDOMInstallTriggerGlobal *a = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == a) {
-    return JS_TRUE;
-  }
-
-  if (JSVAL_IS_INT(id)) {
-    switch(JSVAL_TO_INT(id)) {
-      case 0:
-      default:
-        return nsJSUtils::nsCallJSScriptObjectGetProperty(a, cx, id, vp);
-    }
-  }
-  else {
-    return nsJSUtils::nsCallJSScriptObjectGetProperty(a, cx, id, vp);
-  }
-
-  return PR_TRUE;
-}
-
-/***********************************************************************/
-//
-// InstallTriggerGlobal Properties Setter
-//
-PR_STATIC_CALLBACK(JSBool)
-SetInstallTriggerGlobalProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
-{
-  nsIDOMInstallTriggerGlobal *a = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == a) {
-    return JS_TRUE;
-  }
-
-  if (JSVAL_IS_INT(id)) {
-    switch(JSVAL_TO_INT(id)) {
-      case 0:
-      default:
-        return nsJSUtils::nsCallJSScriptObjectSetProperty(a, cx, id, vp);
-    }
-  }
-  else {
-    return nsJSUtils::nsCallJSScriptObjectSetProperty(a, cx, id, vp);
-  }
-
-  return PR_TRUE;
-}
-
-
 //
 // InstallTriggerGlobal finalizer
 //
@@ -123,24 +69,37 @@ FinalizeInstallTriggerGlobal(JSContext *cx, JSObject *obj)
   nsJSUtils::nsGenericFinalize(cx, obj);
 }
 
+static NS_DEFINE_IID(kIDOMInstallTriggerIID, NS_IDOMINSTALLTRIGGERGLOBAL_IID);
+static NS_DEFINE_IID(kInstallTrigger_CID, NS_SoftwareUpdateInstallTrigger_CID);
 
-//
-// InstallTriggerGlobal enumerate
-//
-PR_STATIC_CALLBACK(JSBool)
-EnumerateInstallTriggerGlobal(JSContext *cx, JSObject *obj)
+static JSBool CreateNativeObject(JSContext *cx, JSObject *obj, nsIDOMInstallTriggerGlobal **aResult)
 {
-  return nsJSUtils::nsGenericEnumerate(cx, obj);
-}
+    nsresult result;
+    nsIScriptObjectOwner *owner = nsnull;
+    nsIDOMInstallTriggerGlobal *nativeThis;
 
+    result = nsRepository::CreateInstance(kInstallTrigger_CID,
+                                        nsnull,
+                                        kIDOMInstallTriggerIID,
+                                        (void **)&nativeThis);
 
-//
-// InstallTriggerGlobal resolve
-//
-PR_STATIC_CALLBACK(JSBool)
-ResolveInstallTriggerGlobal(JSContext *cx, JSObject *obj, jsval id)
-{
-  return nsJSUtils::nsGenericResolve(cx, obj, id);
+    if (NS_OK != result) return JS_FALSE;
+    
+    result = nativeThis->QueryInterface(kIScriptObjectOwnerIID, (void **)&owner);
+
+    if (NS_OK != result) 
+    {
+        NS_RELEASE(nativeThis);
+        return JS_FALSE;
+    }
+
+    owner->SetScriptObject((void *)obj);
+    JS_SetPrivate(cx, obj, nativeThis);
+    
+    *aResult = nativeThis;
+    
+    NS_RELEASE(nativeThis);  // we only want one refcnt. JSUtils cleans us up.
+    return JS_TRUE;
 }
 
 //
@@ -150,15 +109,12 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRBool nativeRet;
 
   *rval = JSVAL_NULL;
 
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
-  }
+  if (nsnull == nativeThis  &&  (JS_FALSE == CreateNativeObject(cx, obj, &nativeThis)) )
+    return JS_FALSE;
 
   if (argc >= 0) {
 
@@ -186,10 +142,14 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 
   *rval = JSVAL_FALSE;
 
-  // If there's no private data this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
-  }
+  if (nsnull == nativeThis  &&  (JS_FALSE == CreateNativeObject(cx, obj, &nativeThis)) )
+    return JS_FALSE;
+
+  // make sure XPInstall is enabled, return false if not
+  PRBool enabled = PR_FALSE;
+  nativeThis->UpdateEnabled(&enabled);
+  if (!enabled)
+      return JS_TRUE;
 
   // parse associative array of installs
   if ( argc >= 1 && JSVAL_IS_OBJECT(argv[0]) )
@@ -255,7 +215,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-  PRInt32      nativeRet;
+  PRBool       nativeRet;
   nsAutoString b0;
   PRInt32      b1 = 0;
 
@@ -280,7 +240,7 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
     {
       return JS_FALSE;
     }
-    *rval = INT_TO_JSVAL(nativeRet);
+    *rval = BOOLEAN_TO_JSVAL(nativeRet);
   }
   else
   {
@@ -299,7 +259,6 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalConditionalSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
   nsAutoString b0;
   nsAutoString b1;
@@ -311,10 +270,8 @@ InstallTriggerGlobalConditionalSoftwareUpdate(JSContext *cx, JSObject *obj, uint
 
   *rval = JSVAL_NULL;
 
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
-  }
+  if (nsnull == nativeThis  &&  (JS_FALSE == CreateNativeObject(cx, obj, &nativeThis)) )
+    return JS_FALSE;
 
   if(argc >= 5)
   {
@@ -456,98 +413,81 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
-  nsAutoString b0;
-  nsAutoString b1str;
-  PRInt32      b1int;
-  PRInt32      b2int;
-  PRInt32      b3int;
-  PRInt32      b4int;
+  nsAutoString regname;
+  nsAutoString version;
+  int32        major,minor,release,build;
 
   *rval = JSVAL_NULL;
 
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
+  if (nsnull == nativeThis  &&  (JS_FALSE == CreateNativeObject(cx, obj, &nativeThis)) )
+    return JS_FALSE;
+
+  if (argc < 2 )
+  {
+    JS_ReportError(cx, "CompareVersion requires at least 2 parameters");
+    return JS_FALSE;
+  }
+  else if ( !JSVAL_IS_STRING(argv[0]) )
+  {
+    JS_ReportError(cx, "Invalid parameter passed to CompareVersion");
+    return JS_FALSE;
   }
 
-  if(argc >= 5)
+  // get the registry name argument
+  ConvertJSValToStr(regname, cx, argv[0]);
+
+  if (argc == 2 )
+  {
+    //  public int CompareVersion(String registryName, String version)
+    //  --OR-- CompareVersion(String registryNamve, InstallVersion version)
+
+    ConvertJSValToStr(version, cx, argv[1]);
+    if(NS_OK != nativeThis->CompareVersion(regname, version, &nativeRet))
+    {
+          return JS_FALSE;
+    }
+  }
+  else
   {
     //  public int CompareVersion(String registryName,
     //                            int    major,
     //                            int    minor,
     //                            int    release,
     //                            int    build);
+    //
+    //  minor, release, and build values are optional
 
-    ConvertJSValToStr(b0, cx, argv[0]);
+    major = minor = release = build = 0;
 
-    if(!JS_ValueToInt32(cx, argv[1], (int32 *)&b1int))
+    if(!JS_ValueToInt32(cx, argv[1], &major))
     {
       JS_ReportError(cx, "2th parameter must be a number");
       return JS_FALSE;
     }
-    if(!JS_ValueToInt32(cx, argv[2], (int32 *)&b2int))
+    if( argc > 2 && !JS_ValueToInt32(cx, argv[2], &minor) )
     {
       JS_ReportError(cx, "3th parameter must be a number");
       return JS_FALSE;
     }
-    if(!JS_ValueToInt32(cx, argv[3], (int32 *)&b3int))
+    if( argc > 3 && !JS_ValueToInt32(cx, argv[3], &release) )
     {
       JS_ReportError(cx, "4th parameter must be a number");
       return JS_FALSE;
     }
-    if(!JS_ValueToInt32(cx, argv[4], (int32 *)&b4int))
+    if( argc > 4 && !JS_ValueToInt32(cx, argv[4], &build) )
     {
       JS_ReportError(cx, "5th parameter must be a number");
       return JS_FALSE;
     }
 
-    if(NS_OK != nativeThis->CompareVersion(b0, b1int, b2int, b3int, b4int, &nativeRet))
+    if(NS_OK != nativeThis->CompareVersion(regname, major, minor, release, build, &nativeRet))
     {
       return JS_FALSE;
     }
-
-    *rval = INT_TO_JSVAL(nativeRet);
-  }
-  else if(argc >= 2)
-  {
-    //  public int CompareVersion(String registryName,
-    //                            String version); --OR-- VersionInfo version
-
-    ConvertJSValToStr(b0, cx, argv[0]);
-
-    if(JSVAL_IS_OBJECT(argv[1]))
-    {
-        JSObject* jsobj = JSVAL_TO_OBJECT(argv[1]);
-        JSClass* jsclass = JS_GetClass(cx, jsobj);
-        if((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) 
-        {
-          nsIDOMInstallVersion* version = (nsIDOMInstallVersion*)JS_GetPrivate(cx, jsobj);
-
-          if(NS_OK != nativeThis->CompareVersion(b0, version, &nativeRet))
-          {
-                return JS_FALSE;
-          }
-        }
-    }
-    else
-    {
-        ConvertJSValToStr(b1str, cx, argv[1]);
-        if(NS_OK != nativeThis->CompareVersion(b0, b1str, &nativeRet))
-        {
-          return JS_FALSE;
-        }
-    }
-
-    *rval = INT_TO_JSVAL(nativeRet);
-  }
-  else
-  {
-    JS_ReportError(cx, "Function CompareVersion requires 5 parameters");
-    return JS_FALSE;
   }
 
+  *rval = INT_TO_JSVAL(nativeRet);
   return JS_TRUE;
 }
 
@@ -557,50 +497,74 @@ InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsv
 // class for InstallTriggerGlobal
 //
 JSClass InstallTriggerGlobalClass = {
-  "InstallTriggerGlobal", 
+  "InstallTrigger", 
   JSCLASS_HAS_PRIVATE,
   JS_PropertyStub,
   JS_PropertyStub,
-  GetInstallTriggerGlobalProperty,
-  SetInstallTriggerGlobalProperty,
-  EnumerateInstallTriggerGlobal,
-  ResolveInstallTriggerGlobal,
+  JS_PropertyStub,
+  JS_PropertyStub,
+  JS_EnumerateStub,
+  JS_ResolveStub,
   JS_ConvertStub,
   FinalizeInstallTriggerGlobal
 };
-
-
-//
-// InstallTriggerGlobal class properties
-//
-static JSPropertySpec InstallTriggerGlobalProperties[] =
-{
-  {0}
-};
-
 
 //
 // InstallTriggerGlobal class methods
 //
 static JSFunctionSpec InstallTriggerGlobalMethods[] = 
 {
-  {"UpdateEnabled",             InstallTriggerGlobalUpdateEnabled,              0},
-  {"Install",                   InstallTriggerGlobalInstall,                    2},
-  {"StartSoftwareUpdate",       InstallTriggerGlobalStartSoftwareUpdate,        2},
-  {"ConditionalSoftwareUpdate", InstallTriggerGlobalConditionalSoftwareUpdate,  5},
-  {"CompareVersion",            InstallTriggerGlobalCompareVersion,             5},
+  {"UpdateEnabled",             InstallTriggerGlobalUpdateEnabled,             0},
+  {"Install",                   InstallTriggerGlobalInstall,                   2},
+  {"StartSoftwareUpdate",       InstallTriggerGlobalStartSoftwareUpdate,       2},
+  {"ConditionalSoftwareUpdate", InstallTriggerGlobalConditionalSoftwareUpdate, 5},
+  {"CompareVersion",            InstallTriggerGlobalCompareVersion,            5},
   {0}
 };
 
 
-//
-// InstallTriggerGlobal constructor
-//
-PR_STATIC_CALLBACK(JSBool)
-InstallTriggerGlobal(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+static JSConstDoubleSpec diff_constants[] = 
 {
-  return JS_FALSE;
+    { nsIDOMInstallTriggerGlobal::MAJOR_DIFF,    "MAJOR_DIFF" },
+    { nsIDOMInstallTriggerGlobal::MINOR_DIFF,    "MINOR_DIFF" },
+    { nsIDOMInstallTriggerGlobal::REL_DIFF,      "REL_DIFF"   },
+    { nsIDOMInstallTriggerGlobal::BLD_DIFF,      "BLD_DIFF"   },
+    { nsIDOMInstallTriggerGlobal::EQUAL,         "EQUAL"      },
+    {0}
+};
+
+
+
+nsresult InitInstallTriggerGlobalClass(JSContext *jscontext, JSObject *global, void** prototype)
+{
+  JSObject *proto = nsnull;
+  
+  if (prototype != nsnull)
+    *prototype = nsnull;
+
+    proto = JS_InitClass(jscontext,                       // context
+                         global,                          // global object
+                         nsnull,                          // parent proto 
+                         &InstallTriggerGlobalClass,      // JSClass
+                         nsnull,                          // JSNative ctor
+                         nsnull,                          // ctor args
+                         nsnull,                          // proto props
+                         nsnull,                          // proto funcs
+                         nsnull,                          // ctor props (static)
+                         InstallTriggerGlobalMethods);    // ctor funcs (static)
+    
+    
+    if (nsnull == proto) return NS_ERROR_FAILURE;
+    
+    if ( PR_FALSE == JS_DefineConstDoubles(jscontext, proto, diff_constants) )
+            return NS_ERROR_FAILURE;
+
+    if (prototype != nsnull)
+      *prototype = proto;
+  
+  return NS_OK;
 }
+
 
 
 //
@@ -611,7 +575,6 @@ nsresult NS_InitInstallTriggerGlobalClass(nsIScriptContext *aContext, void **aPr
   JSContext *jscontext = (JSContext *)aContext->GetNativeContext();
   JSObject *proto = nsnull;
   JSObject *constructor = nsnull;
-  JSObject *parent_proto = nsnull;
   JSObject *global = JS_GetGlobalObject(jscontext);
   jsval vp;
 
@@ -619,53 +582,23 @@ nsresult NS_InitInstallTriggerGlobalClass(nsIScriptContext *aContext, void **aPr
       !JSVAL_IS_OBJECT(vp) ||
       ((constructor = JSVAL_TO_OBJECT(vp)) == nsnull) ||
       (PR_TRUE != JS_LookupProperty(jscontext, JSVAL_TO_OBJECT(vp), "prototype", &vp)) || 
-      !JSVAL_IS_OBJECT(vp)) {
-
-    proto = JS_InitClass(jscontext,     // context
-                         global,        // global object
-                         parent_proto,  // parent proto 
-                         &InstallTriggerGlobalClass,      // JSClass
-                         InstallTriggerGlobal,            // JSNative ctor
-                         0,             // ctor args
-                         InstallTriggerGlobalProperties,  // proto props
-                         InstallTriggerGlobalMethods,     // proto funcs
-                         nsnull,        // ctor props (static)
-                         nsnull);       // ctor funcs (static)
-    if (nsnull == proto) {
-      return NS_ERROR_FAILURE;
-    }
-
-    if ((PR_TRUE == JS_LookupProperty(jscontext, global, "InstallTriggerGlobal", &vp)) &&
-        JSVAL_IS_OBJECT(vp) &&
-        ((constructor = JSVAL_TO_OBJECT(vp)) != nsnull)) {
-      vp = INT_TO_JSVAL(nsIDOMInstallTriggerGlobal::MAJOR_DIFF);
-      JS_SetProperty(jscontext, constructor, "MAJOR_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallTriggerGlobal::MINOR_DIFF);
-      JS_SetProperty(jscontext, constructor, "MINOR_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallTriggerGlobal::REL_DIFF);
-      JS_SetProperty(jscontext, constructor, "REL_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallTriggerGlobal::BLD_DIFF);
-      JS_SetProperty(jscontext, constructor, "BLD_DIFF", &vp);
-
-      vp = INT_TO_JSVAL(nsIDOMInstallTriggerGlobal::EQUAL);
-      JS_SetProperty(jscontext, constructor, "EQUAL", &vp);
-
-    }
-
+      !JSVAL_IS_OBJECT(vp)) 
+  {
+    nsresult rv = InitInstallTriggerGlobalClass(jscontext, global, (void**)&proto);
+    if (NS_FAILED(rv)) return rv;
   }
-  else if ((nsnull != constructor) && JSVAL_IS_OBJECT(vp)) {
+  else if ((nsnull != constructor) && JSVAL_IS_OBJECT(vp)) 
+  {
     proto = JSVAL_TO_OBJECT(vp);
   }
-  else {
+  else 
+  {
     return NS_ERROR_FAILURE;
   }
 
-  if (aPrototype) {
+  if (aPrototype) 
     *aPrototype = proto;
-  }
+  
   return NS_OK;
 }
 

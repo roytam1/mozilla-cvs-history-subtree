@@ -45,7 +45,7 @@ nsUrlListenerManager::~nsUrlListenerManager()
 	delete m_listeners;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS(nsUrlListenerManager, nsIUrlListenerManager::GetIID());
+NS_IMPL_THREADSAFE_ISUPPORTS(nsUrlListenerManager, nsCOMTypeInfo<nsIUrlListenerManager>::GetIID());
 
 nsresult nsUrlListenerManager::RegisterListener(nsIUrlListener * aUrlListener)
 {
@@ -62,7 +62,7 @@ nsresult nsUrlListenerManager::UnRegisterListener(nsIUrlListener * aUrlListener)
 	return NS_OK;
 }
 
-nsresult nsUrlListenerManager::BroadcastChange(nsIURL * aUrl, nsUrlNotifyType notification, nsresult aErrorCode)
+nsresult nsUrlListenerManager::BroadcastChange(nsIURI * aUrl, nsUrlNotifyType notification, nsresult aErrorCode)
 {
 	NS_PRECONDITION(aUrl, "we shouldn't get OnStartRunningUrl for the url listener manager without a url...");
 	nsresult rv = NS_OK;

@@ -22,13 +22,15 @@
 #include "nsweb.h"
 #include "prtypes.h"
 #include "nsISupports.h"
-#ifndef NECKO
+#ifdef NECKO
+#include "nsIChannel.h"
+#else
 #include "nsILoadAttribs.h"
 #endif // NECKO
 
 /* Forward declarations... */
 class nsString;
-class nsIURL;
+class nsIURI;
 class nsIFactory;
 class nsIPostData;
 class nsIContentViewer;
@@ -37,6 +39,8 @@ class nsIStreamListener;
 class nsIStreamObserver;
 class nsIDocumentLoaderObserver;
 class nsIDocument;
+class nsIChannel;
+class nsILoadGroup;
 
 /* f43ba260-0737-11d2-beb9-00805f8a66dc */
 #define NS_IDOCUMENTLOADERFACTORY_IID   \
@@ -63,9 +67,14 @@ class nsIDocumentLoaderFactory : public nsISupports
 public:
     NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENTLOADERFACTORY_IID)
 
-    NS_IMETHOD CreateInstance(nsIURL* aURL,
+    NS_IMETHOD CreateInstance(const char *aCommand,
+#ifdef NECKO
+                              nsIChannel* aChannel,
+                              nsILoadGroup* aLoadGroup,
+#else
+                              nsIURI* aURL,
+#endif
                               const char* aContentType, 
-                              const char *aCommand,
                               nsIContentViewerContainer* aContainer,
                               nsISupports* aExtraInfo,
                               nsIStreamListener** aDocListenerResult,
@@ -96,15 +105,23 @@ public:
     NS_IMETHOD LoadDocument(const nsString& aURLSpec, 
                             const char* aCommand,
                             nsIContentViewerContainer* aContainer,
-                            nsIPostData* aPostData = nsnull,
+                            nsIInputStream* aPostDataStream = nsnull,
                             nsISupports* aExtraInfo = nsnull,
                             nsIStreamObserver* anObserver = nsnull,
-                            nsURLReloadType type = nsURLReload,
+#ifdef NECKO
+                            nsLoadFlags aType = nsIChannel::LOAD_NORMAL,
+#else
+                            nsURLReloadType aType = nsURLReload,
+#endif
                             const PRUint32 aLocalIP = 0) = 0;
 
     NS_IMETHOD LoadSubDocument(const nsString& aURLSpec,
                                nsISupports* aExtraInfo = nsnull,
-                               nsURLReloadType type = nsURLReload,
+#ifdef NECKO
+                               nsLoadFlags aType = nsIChannel::LOAD_NORMAL,
+#else
+                               nsURLReloadType aType = nsURLReload,
+#endif
                                const PRUint32 aLocalIP = 0) = 0;
 
     NS_IMETHOD Stop(void) = 0;

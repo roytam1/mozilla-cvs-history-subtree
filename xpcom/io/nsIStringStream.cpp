@@ -158,7 +158,7 @@ class ConstCharImpl
     
         virtual PRInt32                 length() const
                                         {
-                                            return mLength;
+                                            return mLength - mOffset;
                                         }
 
         virtual PRInt32                 read(char* buf, PRUint32 aCount)
@@ -205,6 +205,14 @@ class CharImpl
 	                                            mConstString = mString;
 	                                            *mString = '\0';
 	                                            
+                                            }
+                                        }
+                                        
+                                        ~CharImpl()
+                                        {
+                                            if (mString) 
+                                            {
+                                                delete [] mString;
                                             }
                                         }
 
@@ -341,7 +349,7 @@ NS_IMETHODIMP BasicStringImpl::QueryInterface(REFNSIID aIID, void** aInstancePtr
       NS_ADDREF_THIS();
       return NS_OK;
   }
-  if (aIID.Equals(((nsISupports*)(nsIOutputStream*)this)->GetIID()))
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
   {
       *aInstancePtr = (void*)((nsISupports*)(nsIOutputStream*)this);
       NS_ADDREF_THIS();

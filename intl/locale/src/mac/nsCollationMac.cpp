@@ -28,7 +28,7 @@
 
 static NS_DEFINE_IID(kICollationIID, NS_ICOLLATION_IID);
 static NS_DEFINE_IID(kMacLocaleFactoryCID, NS_MACLOCALEFACTORY_CID);
-static NS_DEFINE_IID(kIMacLocaleIID, NS_MACLOCALE_CID);
+static NS_DEFINE_IID(kIMacLocaleIID, NS_IMACLOCALE_IID);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -132,24 +132,24 @@ nsresult nsCollationMac::Initialize(nsILocale* locale)
   m_scriptcode = 0; //smRoman
   mCharset.SetString("ISO-8859-1"); //TODO: should be "MacRoman"
   if (locale != nsnull) {
+    PRUnichar *aLocaleUnichar; 
     nsString aLocale;
     nsString aCategory("NSILOCALE_COLLATE");
-    nsresult res = locale->GetCategory(&aCategory, &aLocale);
-    if (NS_FAILED(res)) {
-      return res;
-    }
+    nsresult res = locale->GetCategory(aCategory.GetUnicode(), &aLocaleUnichar);
+    if (NS_SUCCEEDED(res)) {
+      aLocale.SetString(aLocaleUnichar);
 
-    //TODO: Get a charset name from a script code.
-    nsIMacLocale* macLocale;
-    short scriptcode, langcode;
-    res = nsComponentManager::CreateInstance(kMacLocaleFactoryCID, NULL, kIMacLocaleIID, (void**)&macLocale);
-    if (NS_FAILED(res)) {
-      return res;
+      //TODO: Get a charset name from a script code.
+      nsIMacLocale* macLocale = nsnull;
+      short scriptcode, langcode, regioncode;
+      res = nsComponentManager::CreateInstance(kMacLocaleFactoryCID, NULL, kIMacLocaleIID, (void**)&macLocale);
+      if (NS_SUCCEEDED(res) && nsnull != macLocale) {
+        if (NS_SUCCEEDED(res = macLocale->GetPlatformLocale(&aLocale, &scriptcode, &langcode, &regioncode))) {
+          m_scriptcode = scriptcode;
+        }
+        macLocale->Release();
+      }
     }
-    if (NS_SUCCEEDED(res = macLocale->GetPlatformLocale(&aCategory, &scriptcode, &langcode))) {
-      m_scriptcode = scriptcode;
-    }
-    macLocale->Release();
   }
 
   // Initialize a mapping table for the script code.
@@ -184,7 +184,7 @@ nsresult nsCollationMac::CreateRawSortKey(const nsCollationStrength strength,
   res = mCollation->UnicodeToChar(stringNormalized, &str, mCharset);
   if (NS_SUCCEEDED(res) && str != NULL) {
     str_len = strlen(str);
-    NS_ASSERTION(str_len > *outLen, "output buffer too small");
+    NS_ASSERTION(str_len <= *outLen, "output buffer too small");
     
     // If no CJK then generate a collation key
     if (smJapanese != m_scriptcode && smKorean != m_scriptcode && 

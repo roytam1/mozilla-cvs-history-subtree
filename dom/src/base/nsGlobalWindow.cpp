@@ -53,16 +53,25 @@
 #include "nsIPref.h"
 #include "nsCRT.h"
 #include "nsRect.h"
+#ifdef NECKO
+#include "nsIPrompt.h"
+#else
 #include "nsINetSupport.h"
+#endif
+#include "nsIModalWindowSupport.h"
 #include "nsIContentViewer.h"
+#include "nsIDocumentViewer.h"
+#include "nsIPresShell.h"
 #include "nsScreen.h"
 #include "nsHistory.h"
 #include "nsBarProps.h"
+#include "nsIScriptSecurityManager.h"
 #ifndef NECKO
 #include "nsINetService.h"
 #else
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
+#include "nsNeckoUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 
@@ -77,6 +86,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
+static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIScriptEventListenerIID, NS_ISCRIPTEVENTLISTENER_IID);
 static NS_DEFINE_IID(kIDOMWindowIID, NS_IDOMWINDOW_IID);
@@ -98,8 +108,9 @@ static NS_DEFINE_IID(kIDOMEventTargetIID, NS_IDOMEVENTTARGET_IID);
 static NS_DEFINE_IID(kIBrowserWindowIID, NS_IBROWSER_WINDOW_IID);
 static NS_DEFINE_IID(kIScriptContextOwnerIID, NS_ISCRIPTCONTEXTOWNER_IID);
 static NS_DEFINE_IID(kIDocumentIID, NS_IDOCUMENT_IID);
-static NS_DEFINE_IID(kINetSupportIID, NS_INETSUPPORT_IID);
+static NS_DEFINE_IID(kIDocumentViewerIID, NS_IDOCUMENT_VIEWER_IID);
 #ifndef NECKO
+static NS_DEFINE_IID(kINetSupportIID, NS_INETSUPPORT_IID);
 static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
 static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
 #endif // NECKO
@@ -125,6 +136,7 @@ GlobalWindowImpl::GlobalWindowImpl()
   mLocation = nsnull;
   mFrames = nsnull;
   mOpener = nsnull;
+  mPrincipals = nsnull;
 
   mTimeouts = nsnull;
   mTimeoutInsertionPoint = nsnull;
@@ -139,6 +151,10 @@ GlobalWindowImpl::GlobalWindowImpl()
 
 GlobalWindowImpl::~GlobalWindowImpl() 
 {  
+  if (mPrincipals && mContext) {
+    JSPRINCIPALS_DROP((JSContext*)mContext->GetNativeContext(), mPrincipals);
+  }
+
   NS_IF_RELEASE(mContext);
   NS_IF_RELEASE(mDocument);
   NS_IF_RELEASE(mNavigator);
@@ -174,6 +190,11 @@ GlobalWindowImpl::QueryInterface(const nsIID& aIID,
   }
   if (aIID.Equals(kIScriptGlobalObjectIID)) {
     *aInstancePtrResult = (void*) ((nsIScriptGlobalObject*)this);
+    AddRef();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIScriptGlobalObjectDataIID)) {
+    *aInstancePtrResult = (void*) ((nsIScriptGlobalObjectData*)this);
     AddRef();
     return NS_OK;
   }
@@ -261,15 +282,54 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument *aDocument)
     return;
   }
   
-  ClearAllTimeouts();
+  if (mDocument) {
+    nsIDocument* doc;
+    nsIURI* docURL = 0;
+
+    if (mDocument && NS_SUCCEEDED(mDocument->QueryInterface(kIDocumentIID, (void**)&doc))) {
+      docURL = doc->GetDocumentURL();
+      NS_RELEASE(doc);
+    }
+
+    if (docURL) {
+#ifdef NECKO
+      char* str;
+      docURL->GetSpec(&str);
+#else
+      PRUnichar* str;
+      docURL->ToString(&str);
+#endif
+      nsAutoString url = str;
+
+      //about:blank URL's do not have ClearScope called on page change.
+      if (url != "about:blank") {
+        ClearAllTimeouts();
   
-  if ((nsnull != mScriptObject) && 
-      (nsnull != mContext) /* &&
-      (nsnull != aDocument) */ ) {
-    JS_ClearScope((JSContext *)mContext->GetNativeContext(),
-                  (JSObject *)mScriptObject);
+        if (mListenerManager) {
+          mListenerManager->RemoveAllListeners();
+        }
+
+        if ((nsnull != mScriptObject) && 
+            (nsnull != mContext) /* &&
+            (nsnull != aDocument) XXXbe why commented out? */ ) {
+          JS_ClearScope((JSContext *)mContext->GetNativeContext(),
+                        (JSObject *)mScriptObject);
+        }
+      }
+#ifdef NECKO
+      nsCRT::free(str);
+#else
+      delete[] str;
+#endif
+    }
   }
-  
+
+  //XXX Should this be outside the about:blank clearscope exception?
+  if (mPrincipals && mContext) {
+    JSPRINCIPALS_DROP((JSContext *)mContext->GetNativeContext(), mPrincipals);
+    mPrincipals = nsnull;
+  }
+
   if (nsnull != mDocument) {
     NS_RELEASE(mDocument);
   }
@@ -328,19 +388,13 @@ GlobalWindowImpl::SetWebShell(nsIWebShell *aWebShell)
     nsCOMPtr<nsIWebShell> chromeShell;
     mWebShell->GetContainingChromeShell(getter_AddRefs(chromeShell));
     if (chromeShell) {
-      // Convert the chrome shell to a DOM window.
-      nsCOMPtr<nsIScriptContextOwner> contextOwner = do_QueryInterface(chromeShell);
-      if (contextOwner) {
-        nsCOMPtr<nsIScriptGlobalObject> globalObject;
-        if (NS_OK == contextOwner->GetScriptGlobalObject(getter_AddRefs(globalObject))) {
-          nsCOMPtr<nsIDOMWindow> chromeWindow = do_QueryInterface(globalObject);
-          if (chromeWindow) {
-            nsCOMPtr<nsIDOMDocument> chromeDoc;
-            chromeWindow->GetDocument(getter_AddRefs(chromeDoc));
-            nsCOMPtr<nsIDocument> realDoc = do_QueryInterface(chromeDoc);
-            mChromeDocument = realDoc.get(); // Don't addref it
-          }
-        }
+      nsCOMPtr<nsIDOMWindow> chromeWindow;
+      WebShellToDOMWindow(chromeShell, getter_AddRefs(chromeWindow));
+      if (chromeWindow) {
+        nsCOMPtr<nsIDOMDocument> chromeDoc;
+        chromeWindow->GetDocument(getter_AddRefs(chromeDoc));
+        nsCOMPtr<nsIDocument> realDoc = do_QueryInterface(chromeDoc);
+        mChromeDocument = realDoc.get(); // Don't addref it
       }
     }
   }
@@ -589,20 +643,12 @@ GlobalWindowImpl::GetParent(nsIDOMWindow** aParent)
   
   *aParent = nsnull;
   if (nsnull != mWebShell) {
-    nsIWebShell *mParentWebShell;
-    mWebShell->GetParent(mParentWebShell);
+    nsIWebShell *parentWebShell;
+    mWebShell->GetParent(parentWebShell);
     
-    if (nsnull != mParentWebShell) {
-      nsIScriptContextOwner *mParentContextOwner;
-      if (NS_OK == mParentWebShell->QueryInterface(kIScriptContextOwnerIID, (void**)&mParentContextOwner)) {
-        nsIScriptGlobalObject *mParentGlobalObject;
-        if (NS_OK == mParentContextOwner->GetScriptGlobalObject(&mParentGlobalObject)) {
-          ret = mParentGlobalObject->QueryInterface(kIDOMWindowIID, (void**)aParent);
-          NS_RELEASE(mParentGlobalObject);
-        }
-        NS_RELEASE(mParentContextOwner);
-      }
-    NS_RELEASE(mParentWebShell);
+    if (nsnull != parentWebShell) {
+      ret = WebShellToDOMWindow(parentWebShell, aParent);
+      NS_RELEASE(parentWebShell);
     } 
     else {
       *aParent = this;
@@ -634,25 +680,33 @@ GlobalWindowImpl::GetTop(nsIDOMWindow** aTop)
 
   *aTop = nsnull;
   if (nsnull != mWebShell) {
-    nsIWebShell *mRootWebShell;
-    mWebShell->GetRootWebShell(mRootWebShell);
-    
-    
-    if (nsnull != mRootWebShell) {
-      nsIScriptContextOwner *mRootContextOwner;
-      if (NS_OK == mRootWebShell->QueryInterface(kIScriptContextOwnerIID, (void**)&mRootContextOwner)) {
-        nsIScriptGlobalObject *mRootGlobalObject;
-        if (NS_OK == mRootContextOwner->GetScriptGlobalObject(&mRootGlobalObject)) {
-          ret = mRootGlobalObject->QueryInterface(kIDOMWindowIID, (void**)aTop);
-          NS_RELEASE(mRootGlobalObject);
-        }
-        NS_RELEASE(mRootContextOwner);
-      }
-      NS_RELEASE(mRootWebShell);
+    nsIWebShell *rootWebShell;
+    mWebShell->GetRootWebShell(rootWebShell);
+    if (nsnull != rootWebShell) {
+      WebShellToDOMWindow(rootWebShell, aTop);
+      NS_RELEASE(rootWebShell);
     }
   }
 
   return ret;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetContent(nsIDOMWindow** aContent)
+{
+  nsresult rv;
+
+  *aContent = nsnull;
+
+  nsCOMPtr<nsIBrowserWindow> browser;
+  rv = GetBrowserWindowInterface(*getter_AddRefs(browser));
+  if (NS_SUCCEEDED(rv) && browser) {
+    nsCOMPtr<nsIWebShell> contentShell;
+    rv = browser->GetContentWebShell(getter_AddRefs(contentShell));
+    if (NS_SUCCEEDED(rv) && contentShell)
+      rv = WebShellToDOMWindow(contentShell, aContent);
+  }
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -714,12 +768,27 @@ GlobalWindowImpl::SetStatus(const nsString& aStatus)
 NS_IMETHODIMP
 GlobalWindowImpl::GetDefaultStatus(nsString& aDefaultStatus)
 {
+  nsIBrowserWindow *mBrowser;
+  if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
+    const PRUnichar *status;
+    mBrowser->GetDefaultStatus(&status);
+    aDefaultStatus = status;
+    NS_RELEASE(mBrowser);
+  }
+  else {
+    aDefaultStatus.Truncate();
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 GlobalWindowImpl::SetDefaultStatus(const nsString& aDefaultStatus)
 {
+  nsIBrowserWindow *mBrowser;
+  if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
+    mBrowser->SetDefaultStatus(aDefaultStatus.GetUnicode());
+    NS_RELEASE(mBrowser);
+  }
   return NS_OK;
 }
 
@@ -744,21 +813,39 @@ GlobalWindowImpl::SetName(const nsString& aName)
   return result;
 }
 
+
 NS_IMETHODIMP
 GlobalWindowImpl::GetInnerWidth(PRInt32* aInnerWidth)
 {
   nsIBrowserWindow *mBrowser;
-
-  if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
-    nsRect r;
-    mBrowser->GetBounds(r);
-    *aInnerWidth = r.width;
-    NS_RELEASE(mBrowser);
+  nsIDOMWindow* parent = nsnull;
+  
+  GetParent(&parent);
+  if (parent == this) {
+    // We are in a top level window.  Use browser window's bounds.
+    if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
+      nsRect r;
+      mBrowser->GetContentBounds(r);
+      *aInnerWidth = r.width;
+      NS_RELEASE(mBrowser);
+    }
+    else {
+      *aInnerWidth = 0;
+    }
   }
   else {
-    *aInnerWidth = 0;
+    // We are in an (i)frame.  Use webshell bounds.    
+    if (mWebShell) {
+      PRInt32 x,y,w,h;
+      mWebShell->GetBounds(x, y, w, h);
+      *aInnerWidth = w;
+    }
+    else {
+      *aInnerWidth = 0;
+    }    
   }
-
+  
+  NS_RELEASE(parent);
   return NS_OK;
 }
 
@@ -769,9 +856,9 @@ GlobalWindowImpl::SetInnerWidth(PRInt32 aInnerWidth)
 
   if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
     nsRect r;
-    mBrowser->GetBounds(r);
+    mBrowser->GetContentBounds(r);
 
-    mBrowser->SizeTo(aInnerWidth, r.height);
+    mBrowser->SizeContentTo(aInnerWidth, r.height);
     NS_RELEASE(mBrowser);
   }
   return NS_OK;
@@ -781,17 +868,34 @@ NS_IMETHODIMP
 GlobalWindowImpl::GetInnerHeight(PRInt32* aInnerHeight)
 {
   nsIBrowserWindow *mBrowser;
-
-  if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
-    nsRect r;
-    mBrowser->GetBounds(r);
-    *aInnerHeight = r.height;
-    NS_RELEASE(mBrowser);
+  nsIDOMWindow* parent = nsnull;
+  
+  GetParent(&parent);
+  if (parent == this) {
+    // We are in a top level window.  Use browser window's bounds.    
+    if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
+      nsRect r;
+      mBrowser->GetContentBounds(r);
+      *aInnerHeight = r.height;
+      NS_RELEASE(mBrowser);
+    }
+    else {
+      *aInnerHeight = 0;
+    }
   }
   else {
-    *aInnerHeight = 0;
+    // We are in an (i)frame.  Use webshell bounds.    
+    if (mWebShell) {
+      PRInt32 x,y,w,h;
+      mWebShell->GetBounds(x, y, w, h);
+      *aInnerHeight = h;
+    }
+    else {
+      *aInnerHeight = 0;
+    }    
   }
 
+  NS_RELEASE(parent);
   return NS_OK;
 }
 
@@ -802,9 +906,9 @@ GlobalWindowImpl::SetInnerHeight(PRInt32 aInnerHeight)
 
   if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
     nsRect r;
-    mBrowser->GetBounds(r);
+    mBrowser->GetContentBounds(r);
 
-    mBrowser->SizeTo(r.width, aInnerHeight);
+    mBrowser->SizeContentTo(r.width, aInnerHeight);
     NS_RELEASE(mBrowser);
   }
   return NS_OK;
@@ -813,8 +917,8 @@ GlobalWindowImpl::SetInnerHeight(PRInt32 aInnerHeight)
 NS_IMETHODIMP
 GlobalWindowImpl::GetOuterWidth(PRInt32* aOuterWidth)
 {
-  nsIBrowserWindow *mBrowser;
-
+  nsIBrowserWindow *mBrowser;  
+  
   if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
     nsRect r;
     mBrowser->GetWindowBounds(r);
@@ -837,7 +941,7 @@ GlobalWindowImpl::SetOuterWidth(PRInt32 aOuterWidth)
     nsRect r;
     mBrowser->GetWindowBounds(r);
 
-    mBrowser->SizeTo(aOuterWidth, r.height);
+    mBrowser->SizeWindowTo(aOuterWidth, r.height);
     NS_RELEASE(mBrowser);
   }
   return NS_OK;
@@ -847,7 +951,7 @@ NS_IMETHODIMP
 GlobalWindowImpl::GetOuterHeight(PRInt32* aOuterHeight)
 {
   nsIBrowserWindow *mBrowser;
-
+    
   if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
     nsRect r;
     mBrowser->GetWindowBounds(r);
@@ -857,7 +961,6 @@ GlobalWindowImpl::GetOuterHeight(PRInt32* aOuterHeight)
   else {
     *aOuterHeight = 0;
   }
-
   return NS_OK;
 }
 
@@ -870,7 +973,7 @@ GlobalWindowImpl::SetOuterHeight(PRInt32 aOuterHeight)
     nsRect r;
     mBrowser->GetWindowBounds(r);
 
-    mBrowser->SizeTo(r.width, aOuterHeight);
+    mBrowser->SizeWindowTo(r.width, aOuterHeight);
     NS_RELEASE(mBrowser);
   }
   return NS_OK;
@@ -969,6 +1072,17 @@ GlobalWindowImpl::Dump(const nsString& aStr)
 {
   char *cstr = aStr.ToNewCString();
   
+#ifdef XP_MAC
+  // have to convert \r to \n so that printing to the console works
+  char *c = cstr, *cEnd = cstr + aStr.Length();
+  while (c < cEnd)
+  {
+    if (*c == '\r')
+      *c = '\n';
+    c++;
+  }
+#endif
+
   if (nsnull != cstr) {
     printf("%s", cstr);
     delete [] cstr;
@@ -998,11 +1112,19 @@ GlobalWindowImpl::Alert(JSContext *cx, jsval *argv, PRUint32 argc)
       nsIWebShellContainer *rootContainer;
       ret = rootWebShell->GetContainer(rootContainer);
       if (nsnull != rootContainer) {
+#ifdef NECKO
+        nsIPrompt *prompter;
+        if (NS_OK == (ret = rootContainer->QueryInterface(nsIPrompt::GetIID(), (void**)&prompter))) {
+          ret = prompter->Alert(str.GetUnicode());
+          NS_RELEASE(prompter);
+        }
+#else
         nsINetSupport *support;
         if (NS_OK == (ret = rootContainer->QueryInterface(kINetSupportIID, (void**)&support))) {
           support->Alert(str);
           NS_RELEASE(support);
         }
+#endif
         NS_RELEASE(rootContainer);
       }
       NS_RELEASE(rootWebShell);
@@ -1032,11 +1154,19 @@ GlobalWindowImpl::Confirm(JSContext *cx, jsval *argv, PRUint32 argc, PRBool* aRe
       nsIWebShellContainer *rootContainer;
       ret = rootWebShell->GetContainer(rootContainer);
       if (nsnull != rootContainer) {
+#ifdef NECKO
+        nsIPrompt *prompter;
+        if (NS_OK == (ret = rootContainer->QueryInterface(nsIPrompt::GetIID(), (void**)&prompter))) {
+          ret = prompter->Confirm(str.GetUnicode(), aReturn);
+          NS_RELEASE(prompter);
+        }
+#else
         nsINetSupport *support;
         if (NS_OK == (ret = rootContainer->QueryInterface(kINetSupportIID, (void**)&support))) {
           *aReturn = support->Confirm(str);
           NS_RELEASE(support);
         }
+#endif
         NS_RELEASE(rootContainer);
       }
       NS_RELEASE(rootWebShell);
@@ -1070,6 +1200,22 @@ GlobalWindowImpl::Prompt(JSContext *cx, jsval *argv, PRUint32 argc, nsString& aR
       nsIWebShellContainer *rootContainer;
       ret = rootWebShell->GetContainer(rootContainer);
       if (nsnull != rootContainer) {
+#ifdef NECKO
+        nsIPrompt *prompter;
+        if (NS_OK == (ret = rootContainer->QueryInterface(nsIPrompt::GetIID(), (void**)&prompter))) {
+          PRBool b;
+          PRUnichar* uniResult = nsnull;
+          ret = prompter->Prompt(str.GetUnicode(), initial.GetUnicode(), &uniResult, &b);
+          aReturn = uniResult;
+          if (NS_FAILED(ret) || !b) {
+            // XXX Need to check return value and return null if the
+            // user hits cancel. Currently, we can only return a 
+            // string reference.
+            aReturn.SetString("");
+          }
+          NS_RELEASE(prompter);
+        }
+#else
         nsINetSupport *support;
         if (NS_OK == (ret = rootContainer->QueryInterface(kINetSupportIID, (void**)&support))) {
           if (!support->Prompt(str, initial, aReturn)) {
@@ -1080,6 +1226,7 @@ GlobalWindowImpl::Prompt(JSContext *cx, jsval *argv, PRUint32 argc, nsString& aR
           }
           NS_RELEASE(support);
         }
+#endif
         NS_RELEASE(rootContainer);
       }
       NS_RELEASE(rootWebShell);
@@ -1091,10 +1238,50 @@ GlobalWindowImpl::Prompt(JSContext *cx, jsval *argv, PRUint32 argc, nsString& aR
 NS_IMETHODIMP
 GlobalWindowImpl::Focus()
 {
-  nsresult result = NS_OK;
-  if (nsnull != mWebShell) {
-    result = mWebShell->SetFocus();
+  nsIBrowserWindow *browser;
+  if (NS_OK == GetBrowserWindowInterface(browser)) {
+    browser->Show();
+    NS_RELEASE( browser);
   }
+
+  nsresult result = NS_OK;
+
+  nsIContentViewer *viewer = nsnull;
+  mWebShell->GetContentViewer(&viewer);
+  if (viewer) {
+    nsIDocumentViewer* docv = nsnull;
+    viewer->QueryInterface(kIDocumentViewerIID, (void**) &docv);
+    if (nsnull != docv) {
+      nsIPresContext* cx = nsnull;
+      docv->GetPresContext(cx);
+      if (nsnull != cx) {
+        nsIPresShell  *shell = nsnull;
+        cx->GetShell(&shell);
+        if (nsnull != shell) {
+          nsIViewManager  *vm = nsnull;
+          shell->GetViewManager(&vm);
+          if (nsnull != vm) {
+            nsIView *rootview = nsnull;
+            vm->GetRootView(rootview);
+            if (rootview) {
+              nsIWidget* widget;
+              rootview->GetWidget(widget);
+              if (widget) {
+                result = widget->SetFocus();
+                NS_RELEASE(widget);
+              }
+            }
+            NS_RELEASE(vm);
+          }
+          NS_RELEASE(shell);
+        }
+        NS_RELEASE(cx);
+      }
+      NS_RELEASE(docv);
+    }
+    NS_RELEASE(viewer);
+  }
+
   return result;
 }
 
@@ -1111,14 +1298,15 @@ GlobalWindowImpl::Blur()
 NS_IMETHODIMP
 GlobalWindowImpl::Close()
 {
-  // Basic security check.  If window has opener and therefore was opened from JS it can be
-  // closed.  Need to add additional checks and privilege based closing
-  if (nsnull != mOpener) {
-    nsIBrowserWindow *mBrowser;
-    if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
-      mBrowser->Close();
-      NS_RELEASE(mBrowser);
-    }
+  // Note: the basic security check, rejecting windows not opened through JS,
+  // has been removed. This was approved long ago by ...you're going to call me
+  // on this, aren't you... well it was. And anyway, a better means is coming.
+  // In the new world of application-level interfaces being written in JS, this
+  // security check was causing problems.
+  nsIBrowserWindow *mBrowser;
+  if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
+    mBrowser->Close();
+    NS_RELEASE(mBrowser);
   }
   return NS_OK;
 }
@@ -1167,14 +1355,17 @@ GlobalWindowImpl::Home()
   }
 
   NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
-  if (NS_FAILED(rv) || (!prefs)) {
-      return rv;
+  if (NS_FAILED(rv) || !prefs) {
+    return rv;
   }
 
   // if we get here, we know prefs is not null
   rv = prefs->CopyCharPref(PREF_BROWSER_STARTUP_HOMEPAGE, &url);
   if (NS_FAILED(rv) || (!url)) {
     // if all else fails, use this
+#ifdef DEBUG_seth
+    printf("all else failed.  using %s as the home page\n",DEFAULT_HOME_PAGE);
+#endif
     homeURL = DEFAULT_HOME_PAGE;
   }
   else {
@@ -1248,7 +1439,7 @@ GlobalWindowImpl::ResizeTo(PRInt32 aWidth, PRInt32 aHeight)
   nsIBrowserWindow *mBrowser;
 
   if (NS_OK == GetBrowserWindowInterface(mBrowser)) {
-    mBrowser->SizeTo(aWidth, aHeight);
+    mBrowser->SizeWindowTo(aWidth, aHeight);
     NS_RELEASE(mBrowser);
   }
   return NS_OK;
@@ -1263,7 +1454,7 @@ GlobalWindowImpl::ResizeBy(PRInt32 aWidthDif, PRInt32 aHeightDif)
     nsRect r;
     mBrowser->GetWindowBounds(r);
 
-    mBrowser->SizeTo(r.width + aWidthDif, r.height + aHeightDif);
+    mBrowser->SizeWindowTo(r.width + aWidthDif, r.height + aHeightDif);
     NS_RELEASE(mBrowser);
   }
   return NS_OK;
@@ -1290,7 +1481,7 @@ GlobalWindowImpl::ClearTimeoutOrInterval(PRInt32 aTimerID)
   public_id = (PRUint32)aTimerID;
   if (!public_id)    /* id of zero is reserved for internal use */
     return NS_ERROR_FAILURE;
-  for (top = &mTimeouts; ((timeout = *top) != NULL); top = &timeout->next) {
+  for (top = &mTimeouts; (timeout = *top) != NULL; top = &timeout->next) {
     if (timeout->public_id == public_id) {
       if (mRunningTimeout == timeout) {
         /* We're running from inside the timeout.  Mark this
@@ -1364,7 +1555,8 @@ GlobalWindowImpl::HoldTimeout(nsTimeoutImpl *aTimeout)
 }
 
 void
-GlobalWindowImpl::DropTimeout(nsTimeoutImpl *aTimeout)
+GlobalWindowImpl::DropTimeout(nsTimeoutImpl *aTimeout,
+                              nsIScriptContext* aContext)
 {
   JSContext *cx;
   
@@ -1372,10 +1564,10 @@ GlobalWindowImpl::DropTimeout(nsTimeoutImpl *aTimeout)
     return;
   }
   
-  cx = (JSContext *)mContext->GetNativeContext();
+  cx = (JSContext *)(aContext ? aContext : mContext)->GetNativeContext();
   
   if (aTimeout->expr) {
-    PR_FREEIF(aTimeout->expr);
+    JS_RemoveRoot(cx, &aTimeout->expr);
   }
   else if (aTimeout->funobj) {
     JS_RemoveRoot(cx, &aTimeout->funobj);
@@ -1432,17 +1624,18 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
     jsval result;
     nsITimer *timer;
 
-    /* Make sure that we don't go away as a result of running timeouts */
+    /* Make sure that the window or the script context don't go away as 
+       a result of running timeouts */
     GlobalWindowImpl* temp = this;
     NS_ADDREF(temp);
+    nsIScriptContext* tempContext = mContext;
+    NS_ADDREF(tempContext);
 
     timer = aTimeout->timer;
     cx = (JSContext *)mContext->GetNativeContext();
 
-    /*
-     *   A native timer has gone off.  See which of our timeouts need
-     *   servicing
-     */
+    /* A native timer has gone off.  See which of our timeouts need
+       servicing */
     LL_I2L(now, PR_IntervalNow());
 
     /* The timeout list is kept in deadline order.  Discover the
@@ -1460,6 +1653,7 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
        eligible for execution yet.  Go away. */
     if (!last_expired_timeout) {
       NS_RELEASE(temp);
+      NS_RELEASE(tempContext);
       return PR_TRUE;
     }
 
@@ -1497,11 +1691,14 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
                                  timeout->filename,
                                  timeout->lineno, nsAutoString(""), &isundefined);
 #endif
-        JS_EvaluateScript(cx, (JSObject *)mScriptObject,
-                          timeout->expr, 
-                          PL_strlen(timeout->expr),
-                          timeout->filename, timeout->lineno, 
-                          &result);
+        JS_EvaluateUCScriptForPrincipals(cx,
+                                         (JSObject *)mScriptObject,
+                                         timeout->principals,
+                                         JS_GetStringChars(timeout->expr),
+                                         JS_GetStringLength(timeout->expr),
+                                         timeout->filename,
+                                         timeout->lineno,
+                                         &result);
       } 
       else {
         PRInt64 lateness64;
@@ -1518,18 +1715,19 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
                              timeout->argc + 1, timeout->argv, &result);
       }
 
-      mContext->ScriptEvaluated();
+      tempContext->ScriptEvaluated();
 
       mRunningTimeout = nsnull;
       /* If the temporary reference is the only one that is keeping
          the timeout around, the document was released and we should
          restart this function. */
       if (timeout->ref_count == 1) {
-        DropTimeout(timeout);
+        DropTimeout(timeout, tempContext);
         NS_RELEASE(temp);
+        NS_RELEASE(tempContext);
         return PR_FALSE;
       }
-      DropTimeout(timeout);
+      DropTimeout(timeout, tempContext);
 
       /* If we have a regular interval timer, we re-fire the
        *  timeout, accounting for clock drift.
@@ -1559,6 +1757,7 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
         nsresult err = NS_NewTimer(&timeout->timer);
         if (NS_OK != err) {
           NS_RELEASE(temp);
+          NS_RELEASE(tempContext);
           return PR_TRUE;
         } 
         
@@ -1566,6 +1765,7 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
                                    delay32);
         if (NS_OK != err) {
           NS_RELEASE(temp);
+          NS_RELEASE(tempContext);
           return PR_TRUE;
         } 
         // Increment ref_count to indicate that this timer is holding
@@ -1578,7 +1778,7 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
       next = timeout->next;
       mTimeouts = next;
       // Drop timeout struct since it's out of the list
-      DropTimeout(timeout);
+      DropTimeout(timeout, tempContext);
 
       /* Free the timeout if this is not a repeating interval
        *  timeout (or if it was an interval timeout, but we were
@@ -1595,8 +1795,10 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
     mTimeouts = dummy_timeout.next;
     mTimeoutInsertionPoint = nsnull;
 
-    /* Get rid of our temporary reference to ourselves */
+    /* Get rid of our temporary reference to ourselves and the 
+       script context */
     NS_RELEASE(temp);
+    NS_RELEASE(tempContext);
     return PR_TRUE;
 }
 
@@ -1610,113 +1812,121 @@ GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
                                        PRInt32* aReturn,
                                        PRBool aIsInterval)
 {
-  char *expr = nsnull;
+  JSString *expr = nsnull;
   JSObject *funobj = nsnull;
-  JSString *str;
   nsTimeoutImpl *timeout, **insertion_point;
   jsdouble interval;
   PRInt64 now, delta;
+  JSPrincipals* principals;
 
-  if (argc >= 2) {
-    if (!JS_ValueToNumber(cx, argv[1], &interval)) {
-      JS_ReportError(cx, "Second argument to %s must be a millisecond interval",
-                     aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
-      return NS_ERROR_ILLEGAL_VALUE;
-    }
+  if (NS_FAILED(GetPrincipals((void**)&principals))) {
+    return NS_ERROR_FAILURE;
+  }
 
-    switch (JS_TypeOfValue(cx, argv[0])) {
-      case JSTYPE_FUNCTION:
-        funobj = JSVAL_TO_OBJECT(argv[0]);
-        break;
-      case JSTYPE_STRING:
-      case JSTYPE_OBJECT:
-        if (!(str = JS_ValueToString(cx, argv[0])))
-            return NS_ERROR_FAILURE;
-        expr = PL_strdup(JS_GetStringBytes(str));
-        if (nsnull == expr)
-            return NS_ERROR_OUT_OF_MEMORY;
-        break;
-      default:
-        JS_ReportError(cx, "useless %s call (missing quotes around argument?)", aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
+  if (argc < 2) {
+    JS_ReportError(cx, "Function %s requires at least 2 parameters",
+                   aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
+    return NS_ERROR_FAILURE;
+  }
+
+  if (!JS_ValueToNumber(cx, argv[1], &interval)) {
+    JS_ReportError(cx,
+                   "Second argument to %s must be a millisecond interval",
+                   aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
+    return NS_ERROR_ILLEGAL_VALUE;
+  }
+
+  switch (JS_TypeOfValue(cx, argv[0])) {
+    case JSTYPE_FUNCTION:
+      funobj = JSVAL_TO_OBJECT(argv[0]);
+      break;
+    case JSTYPE_STRING:
+    case JSTYPE_OBJECT:
+      if (!(expr = JS_ValueToString(cx, argv[0])))
         return NS_ERROR_FAILURE;
-    }
+      if (nsnull == expr)
+        return NS_ERROR_OUT_OF_MEMORY;
+      argv[0] = STRING_TO_JSVAL(expr);
+      break;
+    default:
+      JS_ReportError(cx, "useless %s call (missing quotes around argument?)",
+                     aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
+      return NS_ERROR_FAILURE;
+  }
 
-    timeout = PR_NEWZAP(nsTimeoutImpl);
-    if (nsnull == timeout) {
-      PR_FREEIF(expr);
+  timeout = PR_NEWZAP(nsTimeoutImpl);
+  if (nsnull == timeout)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  // Initial ref_count to indicate that this timeout struct will
+  // be held as the closure of a timer.
+  timeout->ref_count = 1;
+  if (aIsInterval)
+    timeout->interval = (PRInt32)interval;
+  if (expr) {
+    if (!JS_AddNamedRoot(cx, &timeout->expr, "timeout.expr")) {
+      PR_DELETE(timeout);
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+    timeout->expr = expr;
+  }
+  else if (funobj) {
+    int i;
+
+    /* Leave an extra slot for a secret final argument that
+       indicates to the called function how "late" the timeout is. */
+    timeout->argv = (jsval *)PR_MALLOC((argc - 1) * sizeof(jsval));
+    if (nsnull == timeout->argv) {
+      DropTimeout(timeout);
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    // Initial ref_count to indicate that this timeout struct will
-    // be held as the closure of a timer.
-    timeout->ref_count = 1;
-    if (aIsInterval)
-        timeout->interval = (PRInt32)interval;
-    timeout->expr = expr;
+    if (!JS_AddNamedRoot(cx, &timeout->funobj, "timeout.funobj")) {
+      DropTimeout(timeout);
+      return NS_ERROR_FAILURE;
+    }
     timeout->funobj = funobj;
-    timeout->principals = nsnull;
-    if (expr) {
-      timeout->argv = 0;
-      timeout->argc = 0;
-    } 
-    else {
-      int i;
-      /* Leave an extra slot for a secret final argument that
-         indicates to the called function how "late" the timeout is. */
-      timeout->argv = (jsval *)PR_MALLOC((argc - 1) * sizeof(jsval));
-      if (nsnull == timeout->argv) {
-        DropTimeout(timeout);
-        return NS_ERROR_OUT_OF_MEMORY;
-      }
-      if (!JS_AddNamedRoot(cx, &timeout->funobj, "timeout.funobj")) {
+          
+    timeout->argc = 0;
+    for (i = 2; (PRUint32)i < argc; i++) {
+      timeout->argv[i - 2] = argv[i];
+      if (!JS_AddNamedRoot(cx, &timeout->argv[i - 2], "timeout.argv[i]")) {
         DropTimeout(timeout);
         return NS_ERROR_FAILURE;
       }
-      
-      timeout->argc = 0;
-      for (i = 2; (PRUint32)i < argc; i++) {
-        timeout->argv[i - 2] = argv[i];
-        if (!JS_AddNamedRoot(cx, &timeout->argv[i - 2], "timeout.argv[i]")) {
-          DropTimeout(timeout);
-          return NS_ERROR_FAILURE;
-        }
-        timeout->argc++;
-      }
+      timeout->argc++;
     }
-    
-    LL_I2L(now, PR_IntervalNow());
-    LL_D2L(delta, PR_MillisecondsToInterval((PRUint32)interval));
-    LL_ADD(timeout->when, now, delta);
-
-    nsresult err = NS_NewTimer(&timeout->timer);
-    if (NS_OK != err) {
-      DropTimeout(timeout);
-      return err;
-    } 
-    
-    err = timeout->timer->Init(nsGlobalWindow_RunTimeout, timeout, 
-                               (PRInt32)interval);
-    if (NS_OK != err) {
-      DropTimeout(timeout);
-      return err;
-    } 
-
-    timeout->window = this;
-    NS_ADDREF(this);
-
-    if (mTimeoutInsertionPoint == NULL)
-        insertion_point = &mTimeouts;
-    else
-        insertion_point = mTimeoutInsertionPoint;
-
-    InsertTimeoutIntoList(insertion_point, timeout);
-    timeout->public_id = ++mTimeoutPublicIdCounter;
-    *aReturn = timeout->public_id;
   }
-  else {
-    JS_ReportError(cx, "Function %s requires at least 2 parameters", aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
-    return NS_ERROR_FAILURE;
-  }
+
+  timeout->principals = principals;
+
+  LL_I2L(now, PR_IntervalNow());
+  LL_D2L(delta, PR_MillisecondsToInterval((PRUint32)interval));
+  LL_ADD(timeout->when, now, delta);
+
+  nsresult err = NS_NewTimer(&timeout->timer);
+  if (NS_OK != err) {
+    DropTimeout(timeout);
+    return err;
+  } 
+  
+  err = timeout->timer->Init(nsGlobalWindow_RunTimeout, timeout, 
+                             (PRInt32)interval);
+  if (NS_OK != err) {
+    DropTimeout(timeout);
+    return err;
+  } 
+
+  timeout->window = this;
+  NS_ADDREF(this);
+
+  insertion_point = (mTimeoutInsertionPoint == NULL)
+                    ? &mTimeouts
+                    : mTimeoutInsertionPoint;
+
+  InsertTimeoutIntoList(insertion_point, timeout);
+  timeout->public_id = ++mTimeoutPublicIdCounter;
+  *aReturn = timeout->public_id;
   
   return NS_OK;
 }
@@ -1763,7 +1973,7 @@ nsresult
 GlobalWindowImpl::OpenInternal(JSContext *cx,
                        jsval *argv, 
                        PRUint32 argc, 
-                       PRBool aAttachArguments,
+                       PRBool aDialog,
                        nsIDOMWindow** aReturn)
 {
   PRUint32 chromeFlags;
@@ -1779,7 +1989,7 @@ GlobalWindowImpl::OpenInternal(JSContext *cx,
     }
 
     nsAutoString mURL, mEmpty;
-    nsIURL* mDocURL = 0;
+    nsIURI* mDocURL = 0;
     nsIDocument* mDoc;
 
     mURL.SetString(JS_GetStringChars(mJSStrURL));
@@ -1795,20 +2005,13 @@ GlobalWindowImpl::OpenInternal(JSContext *cx,
     }
 #else
     nsresult rv;
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
     nsIURI *baseUri = nsnull;
     rv = mDocURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
     if (NS_FAILED(rv)) return rv;
 
-    char *absUrl = nsnull;
-    const char *urlSpec = mURL.GetBuffer();
-    rv = service->MakeAbsolute(urlSpec, baseUri, &absUrl);
+    rv = NS_MakeAbsoluteURI(mURL, baseUri, mAbsURL);
     NS_RELEASE(baseUri);
     if (NS_FAILED(rv)) return rv;
-    mAbsURL = absUrl;
-    delete [] absUrl;
 #endif // NECKO
 
   }
@@ -1836,7 +2039,7 @@ GlobalWindowImpl::OpenInternal(JSContext *cx,
     }
     options = JS_GetStringBytes(str);
   }
-  chromeFlags = CalculateChromeFlags(options);
+  chromeFlags = CalculateChromeFlags(options, aDialog);
 
   nsIWebShell *newOuterShell = nsnull;
   nsIWebShellContainer *webShellContainer;
@@ -1846,20 +2049,43 @@ GlobalWindowImpl::OpenInternal(JSContext *cx,
   if ((nsnull != mWebShell) && 
       (NS_OK == mWebShell->GetContainer(webShellContainer)) && 
       (nsnull != webShellContainer)) {
+
+    PRBool windowIsNew;
+    PRBool windowIsModal;
+    nsCOMPtr<nsIModalWindowSupport> modalWinSupport;
+
     // Check for existing window of same name.
+    windowIsNew = PR_FALSE;
+    windowIsModal = PR_FALSE;
     webShellContainer->FindWebShellWithName(name.GetUnicode(), newOuterShell);
     if (nsnull == newOuterShell) {
-			// No window of that name, and we are allowed to create a new one now.
+      windowIsNew = PR_TRUE;
+      if (chromeFlags & NS_CHROME_MODAL) {
+        GetModalWindowSupport(getter_AddRefs(modalWinSupport));
+        if (modalWinSupport && NS_SUCCEEDED(modalWinSupport->PrepareModality()))
+          windowIsModal = PR_TRUE;
+      }
+
+      // No window of that name, and we are allowed to create a new one now.
       webShellContainer->NewWebShell(chromeFlags, PR_FALSE, newOuterShell);
     }
 
     if (nsnull != newOuterShell) {
       if (NS_SUCCEEDED(ReadyOpenedWebShell(newOuterShell, aReturn))) {
-        if (aAttachArguments && argc > 3)
+        if (aDialog && argc > 3)
           AttachArguments(*aReturn, argv+3, argc-3);
         newOuterShell->SetName(name.GetUnicode());
         newOuterShell->LoadURL(mAbsURL.GetUnicode());
-        SizeAndShowOpenedWebShell(newOuterShell, options);
+        SizeAndShowOpenedWebShell(newOuterShell, options, windowIsNew, aDialog);
+        if (windowIsModal) {
+          nsIBrowserWindow *newWindow;
+          GetBrowserWindowInterface(newWindow, newOuterShell);
+          if (nsnull != newWindow) {
+            newWindow->ShowModally(PR_FALSE);
+            NS_RELEASE(newWindow);
+          }
+          modalWinSupport->FinishModality();
+        }
       }
       NS_RELEASE(newOuterShell);
     }
@@ -1908,34 +2134,93 @@ GlobalWindowImpl::AttachArguments(nsIDOMWindow *aWindow, jsval *argv, PRUint32 a
 }
 
 
+/**
+ * Calculate the chrome bitmask from a string list of features.
+ * @param aFeatures a string containing a list of named chrome features
+ * @param aDialog affects the assumptions made about unnamed features
+ * @return the chrome bitmask
+ */
 PRUint32
-GlobalWindowImpl::CalculateChromeFlags(char *aFeatures) {
+GlobalWindowImpl::CalculateChromeFlags(char *aFeatures, PRBool aDialog) {
 
-  PRUint32  chromeFlags = 0;
+  PRUint32  chromeFlags;
 
   if (nsnull == aFeatures)
-    return NS_CHROME_ALL_CHROME;
+    if (aDialog)
+      return NS_CHROME_ALL_CHROME |
+             NS_CHROME_OPEN_AS_DIALOG | NS_CHROME_OPEN_AS_CHROME;
+    else
+      return NS_CHROME_ALL_CHROME;
 
-  chromeFlags |= WinHasOption(aFeatures, "toolbar") ? NS_CHROME_TOOL_BAR_ON : 0;
-  chromeFlags |= WinHasOption(aFeatures, "location") ? NS_CHROME_LOCATION_BAR_ON : 0;
-  chromeFlags |= (WinHasOption(aFeatures, "directories") | WinHasOption(aFeatures, "personalbar"))
+  PRBool presenceFlag = PR_FALSE;
+
+  /* This function has become complicated since browser windows and
+     dialogs diverged. The difference is, browser windows assume all
+     chrome not explicitly mentioned is off, if the features string
+     is not null. Exceptions are some OS border chrome new with Mozilla.
+     Dialogs interpret a (mostly) empty features string to mean
+     "OS's choice," and also support an "all" flag explicitly disallowed
+     in the standards-compliant window.(normal)open. */
+
+  chromeFlags = NS_CHROME_WINDOW_BORDERS_ON;
+  if (aDialog && WinHasOption(aFeatures, "all", presenceFlag))
+    chromeFlags = NS_CHROME_ALL_CHROME;
+
+  /* Next, allow explicitly named options to override the initial settings */
+
+  chromeFlags |= WinHasOption(aFeatures, "titlebar", presenceFlag) ? NS_CHROME_TITLEBAR_ON : 0;
+  chromeFlags |= WinHasOption(aFeatures, "close", presenceFlag) ? NS_CHROME_WINDOW_CLOSE_ON : 0;
+  chromeFlags |= WinHasOption(aFeatures, "toolbar", presenceFlag) ? NS_CHROME_TOOL_BAR_ON : 0;
+  chromeFlags |= WinHasOption(aFeatures, "location", presenceFlag) ? NS_CHROME_LOCATION_BAR_ON : 0;
+  chromeFlags |= (WinHasOption(aFeatures, "directories", presenceFlag) | WinHasOption(aFeatures, "personalbar", presenceFlag))
     ? NS_CHROME_PERSONAL_TOOLBAR_ON : 0;
-  chromeFlags |= WinHasOption(aFeatures, "status") ? NS_CHROME_STATUS_BAR_ON : 0;
-  chromeFlags |= WinHasOption(aFeatures, "menubar") ? NS_CHROME_MENU_BAR_ON : 0;
-  chromeFlags |= WinHasOption(aFeatures, "scrollbars") ? NS_CHROME_SCROLLBARS_ON : 0;
-  chromeFlags |= WinHasOption(aFeatures, "resizable") ? NS_CHROME_WINDOW_RESIZE_ON : 0;
-  chromeFlags |= NS_CHROME_WINDOW_CLOSE_ON;
+  chromeFlags |= WinHasOption(aFeatures, "status", presenceFlag) ? NS_CHROME_STATUS_BAR_ON : 0;
+  chromeFlags |= WinHasOption(aFeatures, "menubar", presenceFlag) ? NS_CHROME_MENU_BAR_ON : 0;
+  chromeFlags |= WinHasOption(aFeatures, "scrollbars", presenceFlag) ? NS_CHROME_SCROLLBARS_ON : 0;
+  chromeFlags |= WinHasOption(aFeatures, "resizable", presenceFlag) ? NS_CHROME_WINDOW_RESIZE_ON : 0;
 
-  chromeFlags |= WinHasOption(aFeatures, "chrome") ? NS_CHROME_OPEN_AS_CHROME : 0;
+  /* OK.
+       Normal browser windows, in spite of a stated pattern of turning off
+     all chrome not mentioned explicitly, will want the new OS chrome (window
+     borders, titlebars, closebox) on, unless explicitly turned off.
+       Dialogs, on the other hand, take the absence of any explicit settings
+     to mean "OS' choice." */
+
+  // default titlebar and closebox to "on," if not mentioned at all
+  if (!PL_strcasestr(aFeatures, "titlebar"))
+    chromeFlags |= NS_CHROME_TITLEBAR_ON;
+  if (!PL_strcasestr(aFeatures, "close"))
+    chromeFlags |= NS_CHROME_WINDOW_CLOSE_ON;
+
+  if (aDialog && !presenceFlag)
+    chromeFlags = NS_CHROME_DEFAULT_CHROME;
+
+  /* Finally, once all the above normal chrome has been divined, deal
+     with the features that are more operating hints than appearance
+     instructions. (Note modality implies dependence.) */
+
+  chromeFlags |= WinHasOption(aFeatures, "chrome", presenceFlag) ? NS_CHROME_OPEN_AS_CHROME : 0;
+  chromeFlags |= WinHasOption(aFeatures, "dependent", presenceFlag) ? NS_CHROME_DEPENDENT : 0;
+  chromeFlags |= WinHasOption(aFeatures, "modal", presenceFlag) ? (NS_CHROME_MODAL | NS_CHROME_DEPENDENT) : 0;
+  chromeFlags |= WinHasOption(aFeatures, "dialog", presenceFlag) ? NS_CHROME_OPEN_AS_DIALOG : 0;
+
+  /* and dialogs need to have the last word. assume dialogs are dialogs,
+     and opened as chrome, unless explicitly told otherwise. */
+  if (aDialog) {
+    if (!PL_strcasestr(aFeatures, "dialog"))
+      chromeFlags |= NS_CHROME_OPEN_AS_DIALOG;
+    if (!PL_strcasestr(aFeatures, "chrome"))
+      chromeFlags |= NS_CHROME_OPEN_AS_CHROME;
+  }
 
   /*z-ordering, history, dependent
   chromeFlags->topmost         = WinHasOption(aFeatures, "alwaysRaised");
-  chromeFlags->bottommost              = WinHasOption(aFeatures, "alwaysLowered");
+  chromeFlags->bottommost      = WinHasOption(aFeatures, "alwaysLowered");
   chromeFlags->z_lock          = WinHasOption(aFeatures, "z-lock");
-  chromeFlags->is_modal            = WinHasOption(aFeatures, "modal");
+  chromeFlags->is_modal        = WinHasOption(aFeatures, "modal");
   chromeFlags->hide_title_bar  = !(WinHasOption(aFeatures, "titlebar"));
-  chromeFlags->dependent              = WinHasOption(aFeatures, "dependent");
-  chromeFlags->copy_history           = FALSE;
+  chromeFlags->dependent       = WinHasOption(aFeatures, "dependent");
+  chromeFlags->copy_history    = FALSE;
   */
 
   /* Allow disabling of commands only if there is no menubar */
@@ -1944,9 +2229,6 @@ GlobalWindowImpl::CalculateChromeFlags(char *aFeatures) {
       if (XP_STRCASESTR(aFeatures,"hotkeys")==NULL)
           chromeFlags->disable_commands = FALSE;
   }*/
-  /* If titlebar condition not specified, default to shown */
-  /*if (XP_STRCASESTR(aFeatures,"titlebar")==0)*/
-  chromeFlags |= NS_CHROME_TITLEBAR_ON;
 
   /* XXX Add security check on z-ordering, modal, hide title, disable hotkeys */
 
@@ -1958,7 +2240,8 @@ GlobalWindowImpl::CalculateChromeFlags(char *aFeatures) {
 
 // set the newly opened webshell's (window) size, and show it
 nsresult
-GlobalWindowImpl::SizeAndShowOpenedWebShell(nsIWebShell *aOuterShell, char *aFeatures)
+GlobalWindowImpl::SizeAndShowOpenedWebShell(nsIWebShell *aOuterShell,
+                  char *aFeatures, PRBool aNewWindow, PRBool aDialog)
 {
   if (nsnull == aOuterShell)
     return NS_ERROR_NULL_POINTER;
@@ -1969,44 +2252,95 @@ GlobalWindowImpl::SizeAndShowOpenedWebShell(nsIWebShell *aOuterShell, char *aFea
                    *openedWindow = nsnull;
 
   // use this window's size as the default
-  if (NS_SUCCEEDED(GetBrowserWindowInterface(thisWindow))) {
+  if (aNewWindow && NS_SUCCEEDED(GetBrowserWindowInterface(thisWindow))) {
     thisWindow->GetWindowBounds(defaultBounds);
     NS_RELEASE(thisWindow);
   }
 
   // get the nsIBrowserWindow corresponding to the given aOuterShell
-  nsIWebShell *rootShell;
-	aOuterShell->GetRootWebShellEvenIfChrome(rootShell);
-	if (nsnull != rootShell) {
-    nsIWebShellContainer *newContainer;
-		rootShell->GetContainer(newContainer);
-		if (nsnull != newContainer) {
-			if (NS_FAILED(newContainer->QueryInterface(kIBrowserWindowIID, (void**)&openedWindow)))
-        openedWindow = nsnull;
-			NS_RELEASE(newContainer);
-		}
-		NS_RELEASE(rootShell);
-	}
+  GetBrowserWindowInterface(openedWindow, aOuterShell);
 
   // set size
   if (nsnull != openedWindow) {
 
+    nsRect   contentOffsets; // constructor sets all values to 0
+    PRBool   sizeSpecified = PR_FALSE;
+    PRUint32 chromeFlags = CalculateChromeFlags(aFeatures, aDialog);
+    PRBool   openAsContent = (chromeFlags & NS_CHROME_OPEN_AS_CHROME) == 0;
+
+    // if it's an extant window, we are already our default size
+    if (!aNewWindow)
+      if (openAsContent) {
+        // defaultBounds are the content rect. also, save window size diffs
+        openedWindow->GetWindowBounds(contentOffsets);
+        openedWindow->GetContentBounds(defaultBounds);
+        contentOffsets.x -= defaultBounds.x;
+        contentOffsets.y -= defaultBounds.y;
+        contentOffsets.width -= defaultBounds.width;
+        contentOffsets.height -= defaultBounds.height;
+      } else
+        openedWindow->GetWindowBounds(defaultBounds);
+
     if (nsnull != aFeatures) {
-      width = WinHasOption(aFeatures, "innerWidth") | WinHasOption(aFeatures, "width");
-      height = WinHasOption(aFeatures, "innerHeight") | WinHasOption(aFeatures, "height");
+      PRBool   presenceFlag = PR_FALSE; // Unused. Yuck.
+      if (openAsContent) {
+        width = WinHasOption(aFeatures, "innerWidth", presenceFlag) | WinHasOption(aFeatures, "width", presenceFlag);
+        height = WinHasOption(aFeatures, "innerHeight", presenceFlag) | WinHasOption(aFeatures, "height", presenceFlag);
+      }
+      else {
+        // Chrome. Look for outerWidth, outerHeight, or width/height
+        width = WinHasOption(aFeatures, "outerWidth", presenceFlag) | WinHasOption(aFeatures, "width", presenceFlag);
+        height = WinHasOption(aFeatures, "outerHeight", presenceFlag) | WinHasOption(aFeatures, "height", presenceFlag);
+      }
 
-      // width = WinHasOption(aFeatures, "outerWidth");
-      // height = WinHasOption(aFeatures, "outerHeight");
+      left = WinHasOption(aFeatures, "left", presenceFlag) | WinHasOption(aFeatures, "screenX", presenceFlag);
+      top = WinHasOption(aFeatures, "top", presenceFlag) | WinHasOption(aFeatures, "screenY", presenceFlag);
 
-      left = WinHasOption(aFeatures, "left") | WinHasOption(aFeatures, "screenX");
-      top = WinHasOption(aFeatures, "top") | WinHasOption(aFeatures, "screenY");
+      if (left)
+        defaultBounds.x = left;
+      if (top)
+        defaultBounds.y = top;
+      if (width) {
+        sizeSpecified = PR_TRUE;
+        defaultBounds.width = width;
+      }
+      if (height) {
+        sizeSpecified = PR_TRUE;
+        defaultBounds.height = height;
+      }
     }
 
     // beard: don't resize/reposition the window if it is the same web shell.
     if (aOuterShell != mWebShell) {
-      openedWindow->SizeTo(width ? width : defaultBounds.width, height ? height : defaultBounds.height);
-      openedWindow->MoveTo(left ? left : defaultBounds.x, top ? top : defaultBounds.y);
-      openedWindow->Show();
+
+      // whimper. special treatment for windows which will be intrinsically sized.
+      // we can count on a Show() coming through at EndDocumentLoad time, and we
+      // can count on their size being wrong at this point, and flashing.  so
+      // delay some things, if this is true.
+      PRBool sizeLater = PR_FALSE;
+      openedWindow->IsIntrinsicallySized(sizeLater);
+
+      if (openAsContent) {
+        openedWindow->SizeWindowTo(defaultBounds.width + contentOffsets.width,
+                                   defaultBounds.height + contentOffsets.height);
+        // oy. sizing the content makes sense: that's what the user asked for,
+        // however, it doesn't have the desired effect because all sizing
+        // functions eventually end up sizing the window, and the subwindows
+        // used to calculate the appropriate deltas are different. here we use
+        // the HTML content area; the window uses the main webshell.  maybe
+        // i could calculate a triple offset, but commenting it out is easier,
+        // and probably effectively the same thing.
+//      openedWindow->SizeContentTo(defaultBounds.width, defaultBounds.height);
+      } else if (sizeSpecified)
+        openedWindow->SizeWindowTo(defaultBounds.width, defaultBounds.height);
+
+      openedWindow->MoveTo(defaultBounds.x + contentOffsets.x,
+                      defaultBounds.y + contentOffsets.y);
+
+      if (sizeLater)
+        openedWindow->ShowAfterCreation();
+      else
+        openedWindow->Show();
     }
 
     NS_RELEASE(openedWindow);
@@ -2038,18 +2372,40 @@ GlobalWindowImpl::ReadyOpenedWebShell(nsIWebShell *aWebShell, nsIDOMWindow **aDO
   return res;
 }
 
+// simple utility conversion routine
+nsresult
+GlobalWindowImpl::WebShellToDOMWindow(nsIWebShell *aWebShell, nsIDOMWindow **aDOMWindow)
+{
+  nsresult rv;
+
+  NS_ASSERTION(aWebShell, "null in param to WebShellToDOMWindow");
+  NS_ASSERTION(aDOMWindow, "null out param to WebShellToDOMWindow");
+
+  *aDOMWindow = nsnull;
+
+  nsCOMPtr<nsIScriptContextOwner> owner = do_QueryInterface(aWebShell, &rv);
+  if (owner) {
+    nsCOMPtr<nsIScriptGlobalObject> scriptobj;
+    rv = owner->GetScriptGlobalObject(getter_AddRefs(scriptobj));
+    if (NS_SUCCEEDED(rv) && scriptobj)
+      rv = scriptobj->QueryInterface(nsIDOMWindow::GetIID(), (void **) aDOMWindow);
+  }
+  return rv;
+}
+
 NS_IMETHODIMP
 GlobalWindowImpl::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, 
                               PRInt32 aXPos, PRInt32 aYPos, 
                               const nsString& aPopupType, 
-                              const nsString& anAnchorAlignment, const nsString& aPopupAlignment)
+                              const nsString& anAnchorAlignment, const nsString& aPopupAlignment,
+                              nsIDOMWindow** outPopup)
 {
   if (nsnull != mWebShell) {
     // Pass this off to the parent.
     nsCOMPtr<nsIWebShellContainer> webShellContainer = do_QueryInterface(mWebShell);
     if (webShellContainer) {
       webShellContainer->CreatePopup(aElement, aPopupContent, aXPos, aYPos, aPopupType,
-                                     anAnchorAlignment, aPopupAlignment, this);
+                                     anAnchorAlignment, aPopupAlignment, this, outPopup);
     }
   }
   return NS_OK;
@@ -2058,11 +2414,11 @@ GlobalWindowImpl::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupCont
 nsresult 
 GlobalWindowImpl::CheckWindowName(JSContext *cx, nsString& aName)
 {
-  PRInt32 index;
+  PRInt32 strIndex;
   PRUnichar mChar;
 
-  for (index = 0; index < aName.Length(); index++) {
-    mChar = aName.CharAt(index);
+  for (strIndex = 0; strIndex < aName.Length(); strIndex++) {
+    mChar = aName.CharAt(strIndex);
     if (!nsString::IsAlpha(mChar) && !nsString::IsDigit(mChar) && mChar != '_') {
       char* cp = aName.ToNewCString();
       JS_ReportError(cx,
@@ -2076,7 +2432,7 @@ GlobalWindowImpl::CheckWindowName(JSContext *cx, nsString& aName)
 }
 
 PRInt32 
-GlobalWindowImpl::WinHasOption(char *options, char *name)
+GlobalWindowImpl::WinHasOption(char *options, char *name, PRBool& aPresenceFlag)
 {
   char *comma, *equal;
   PRInt32 found = 0;
@@ -2087,6 +2443,7 @@ GlobalWindowImpl::WinHasOption(char *options, char *name)
     equal = strchr(options, '=');
     if (equal) *equal = '\0';
     if (nsCRT::strcasecmp(options, name) == 0) {
+      aPresenceFlag = PR_TRUE;
       if (!equal || nsCRT::strcasecmp(equal + 1, "yes") == 0)
         found = 1;
       else
@@ -2102,21 +2459,28 @@ GlobalWindowImpl::WinHasOption(char *options, char *name)
 }
 
 nsresult 
-GlobalWindowImpl::GetBrowserWindowInterface(nsIBrowserWindow*& aBrowser)
+GlobalWindowImpl::GetBrowserWindowInterface(
+                    nsIBrowserWindow*& aBrowser,
+                    nsIWebShell *aWebShell)
 {
   nsresult ret = NS_ERROR_FAILURE;
+  aBrowser = nsnull;
   
-  if (nsnull != mWebShell) {
-    nsIWebShell *mRootWebShell;
-    mWebShell->GetRootWebShellEvenIfChrome(mRootWebShell);
-    if (nsnull != mRootWebShell) {
-      nsIWebShellContainer *mRootContainer;
-      mRootWebShell->GetContainer(mRootContainer);
-      if (nsnull != mRootContainer) {
-        ret = mRootContainer->QueryInterface(kIBrowserWindowIID, (void**)&aBrowser);
-        NS_RELEASE(mRootContainer);
+  if (nsnull == aWebShell)
+    aWebShell = mWebShell;
+  if (nsnull != aWebShell) {
+    nsIWebShell *rootWebShell;
+    aWebShell->GetRootWebShellEvenIfChrome(rootWebShell);
+    if (nsnull != rootWebShell) {
+      nsIWebShellContainer *rootContainer;
+      rootWebShell->GetContainer(rootContainer);
+      if (nsnull != rootContainer) {
+        ret = rootContainer->QueryInterface(kIBrowserWindowIID, (void**)&aBrowser);
+        if (NS_FAILED(ret))
+          aBrowser = nsnull;
+        NS_RELEASE(rootContainer);
       }
-      NS_RELEASE(mRootWebShell);
+      NS_RELEASE(rootWebShell);
     }
   }
   return ret;
@@ -2164,7 +2528,8 @@ GlobalWindowImpl::CheckForEventListener(JSContext *aContext, nsString& aPropName
       }
     }
   }
-  else if (aPropName == "onsubmit" || aPropName == "onreset" || aPropName == "onchange") {
+  else if (aPropName == "onsubmit" || aPropName == "onreset" || aPropName == "onchange" ||
+           aPropName == "onselect") {
     if (NS_OK == GetListenerManager(&mManager)) {
       nsIScriptContext *mScriptCX = (nsIScriptContext *)JS_GetContextPrivate(aContext);
       if (NS_OK != mManager->RegisterScriptEventListener(mScriptCX, this, kIDOMFormListenerIID)) {
@@ -2223,72 +2588,114 @@ GlobalWindowImpl::DeleteProperty(JSContext *aContext, jsval aID, jsval *aVp)
 PRBool    
 GlobalWindowImpl::GetProperty(JSContext *aContext, jsval aID, jsval *aVp)
 {
-  if (JSVAL_IS_STRING(aID) && 
-      PL_strcmp("location", JS_GetStringBytes(JS_ValueToString(aContext, aID))) == 0) {
-    nsIDOMLocation *location;
+  if (JSVAL_IS_STRING(aID)) {
+    char* cString = JS_GetStringBytes(JS_ValueToString(aContext, aID));
+    if (PL_strcmp("location", cString) == 0) {
+      nsIDOMLocation *location;
     
-    if (NS_OK == GetLocation(&location)) {
-      if (location != nsnull) {
-        nsIScriptObjectOwner *owner = nsnull;
-        if (NS_OK == location->QueryInterface(kIScriptObjectOwnerIID, 
-                                              (void**)&owner)) {
-          JSObject *object = nsnull;
-          nsIScriptContext *script_cx = (nsIScriptContext *)JS_GetContextPrivate(aContext);
-          if (NS_OK == owner->GetScriptObject(script_cx, (void**)&object)) {
-            // set the return value
-            *aVp = OBJECT_TO_JSVAL(object);
+      if (NS_OK == GetLocation(&location)) {
+        if (location != nsnull) {
+          nsIScriptObjectOwner *owner = nsnull;
+          if (NS_OK == location->QueryInterface(kIScriptObjectOwnerIID, 
+                                                (void**)&owner)) {
+            JSObject *object = nsnull;
+            nsIScriptContext *script_cx = (nsIScriptContext *)JS_GetContextPrivate(aContext);
+            if (NS_OK == owner->GetScriptObject(script_cx, (void**)&object)) {
+              // set the return value
+              *aVp = OBJECT_TO_JSVAL(object);
+            }
+            NS_RELEASE(owner);
           }
-          NS_RELEASE(owner);
+          NS_RELEASE(location);
         }
-        NS_RELEASE(location);
+        else {
+          *aVp = JSVAL_NULL;
+        }
       }
       else {
-        *aVp = JSVAL_NULL;
+        return PR_FALSE;
       }
     }
-    else {
-      return PR_FALSE;
+    else if (PL_strcmp("title", cString) == 0) {
+      if (mWebShell) {
+        // See if we're a chrome shell.
+        nsWebShellType type;
+        mWebShell->GetWebShellType(type);
+        if (type == nsWebShellChrome) {
+          nsCOMPtr<nsIBrowserWindow> browser;
+          if (NS_OK == GetBrowserWindowInterface(*getter_AddRefs(browser)) && browser) {
+            // We got a browser window interface
+            const PRUnichar* title;
+            browser->GetTitle(&title);
+
+            JSString* jsString = JS_NewUCStringCopyZ(aContext, (const jschar*)title);
+            if (!jsString)
+              return PR_FALSE;
+              
+            *aVp = STRING_TO_JSVAL(jsString);
+          }
+        }
+      }
     }
   }
-
   return PR_TRUE;
 }
 
 PRBool
 GlobalWindowImpl::SetProperty(JSContext *aContext, jsval aID, jsval *aVp)
 {
+  PRBool result = PR_TRUE;
   if (JS_TypeOfValue(aContext, *aVp) == JSTYPE_FUNCTION && JSVAL_IS_STRING(aID)) {
     nsString mPropName;
     nsAutoString mPrefix;
     mPropName.SetString(JS_GetStringChars(JS_ValueToString(aContext, aID)));
     mPrefix.SetString(mPropName.GetUnicode(), 2);
     if (mPrefix == "on") {
-      return CheckForEventListener(aContext, mPropName);
+      result = CheckForEventListener(aContext, mPropName);
     }
   }
-  else if (JSVAL_IS_STRING(aID) && 
-           PL_strcmp("location", JS_GetStringBytes(JS_ValueToString(aContext, aID))) == 0) {
-    JSString *jsstring = JS_ValueToString(aContext, *aVp);
-
-    if (nsnull != jsstring) {
-      nsIDOMLocation *location;
-      nsAutoString locationStr;
+  else if (JSVAL_IS_STRING(aID)) {
+    char* cString = JS_GetStringBytes(JS_ValueToString(aContext, aID));
+    
+    if (PL_strcmp("location", cString) == 0) {
+      nsCOMPtr<nsIDOMLocation> location;
       
-      locationStr.SetString(JS_GetStringChars(jsstring));
-      if (NS_OK == GetLocation(&location)) {
-        if (NS_OK != location->SetHref(locationStr)) {
-          NS_RELEASE(location);
-          return PR_FALSE;
+      if (NS_OK == GetLocation(getter_AddRefs(location))) {
+        nsCOMPtr<nsIJSScriptObject> scriptObj = do_QueryInterface(location);
+        JSString* str = JS_NewStringCopyZ(aContext, "href");
+        
+        if (scriptObj && str) {
+          result = scriptObj->SetProperty(aContext, STRING_TO_JSVAL(str), aVp);
         }
-        NS_RELEASE(location);
       }
       else {
-        return PR_FALSE;
+        result = PR_FALSE;
+      }
+    }
+    else if (PL_strcmp("title", cString) == 0) {
+      if (mWebShell) {
+        // See if we're a chrome shell.
+        nsWebShellType type;
+        mWebShell->GetWebShellType(type);
+        if (type == nsWebShellChrome) {
+          nsCOMPtr<nsIBrowserWindow> browser;
+          if (NS_OK == GetBrowserWindowInterface(*getter_AddRefs(browser)) && browser) {
+            // We got a browser window interface
+            JSString *jsString = JS_ValueToString(aContext, *aVp);
+            if (!jsString) {
+              result = PR_FALSE;
+            }
+            else {
+              const PRUnichar* uniTitle = JS_GetStringChars(jsString);
+              browser->SetTitle(uniTitle);
+            }
+          }
+        }
       }
     }
   }
 
-  return PR_TRUE;
+  return result;
 }
 
 PRBool    
@@ -2398,6 +2805,7 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext& aPresContext,
 
   if (NS_EVENT_FLAG_INIT == aFlags) {
     aDOMEvent = &mDOMEvent;
+    aEvent->flags = NS_EVENT_FLAG_NONE;
   }
   
   //Capturing stage
@@ -2407,7 +2815,8 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext& aPresContext,
   }
 
   //Local handling stage
-  if (nsnull != mListenerManager) {
+  if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH)) {
+    aEvent->flags = aFlags;
     mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, aFlags, aEventStatus);
   }
 
@@ -2466,13 +2875,12 @@ GlobalWindowImpl::RemoveEventListenerByIID(nsIDOMEventListener *aListener, const
 
 nsresult
 GlobalWindowImpl::AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                   PRBool aPostProcess, PRBool aUseCapture)
+                                   PRBool aUseCapture)
 {
   nsIEventListenerManager *manager;
 
   if (NS_OK == GetListenerManager(&manager)) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     manager->AddEventListenerByType(aListener, aType, flags);
     NS_RELEASE(manager);
@@ -2483,11 +2891,10 @@ GlobalWindowImpl::AddEventListener(const nsString& aType, nsIDOMEventListener* a
 
 nsresult
 GlobalWindowImpl::RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                      PRBool aPostProcess, PRBool aUseCapture)
+                                      PRBool aUseCapture)
 {
   if (nsnull != mListenerManager) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     mListenerManager->RemoveEventListenerByType(aListener, aType, flags);
     return NS_OK;
@@ -2518,6 +2925,126 @@ GlobalWindowImpl::ReleaseEvent(const nsString& aType)
   return NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP
+GlobalWindowImpl::GetPrincipals(void** aPrincipals) 
+{
+  if (!mPrincipals) {
+    if (mContext) {
+      nsIScriptSecurityManager* secMan = nsnull;
+      mContext->GetSecurityManager(&secMan);
+      if (secMan) {
+        nsAutoString codebase;
+        if (NS_SUCCEEDED(GetOrigin(&codebase))) {
+          secMan->NewJSPrincipals(nsnull, nsnull, &codebase, &mPrincipals);
+        }
+        NS_RELEASE(secMan);
+      }
+    }
+
+    if (!mPrincipals) {
+      return NS_ERROR_FAILURE;
+    }
+    if (mContext) {
+      JSPRINCIPALS_HOLD((JSContext *)mContext->GetNativeContext(), mPrincipals);
+    }
+  }
+
+  *aPrincipals = (void*)mPrincipals;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::SetPrincipals(void* aPrincipals)
+{
+  if (mPrincipals && mContext) {
+    JSPRINCIPALS_DROP((JSContext *)mContext->GetNativeContext(), mPrincipals);
+  }
+
+  mPrincipals = (JSPrincipals*)aPrincipals;
+
+  if (mPrincipals && mContext) {
+    JSPRINCIPALS_HOLD((JSContext *)mContext->GetNativeContext(), mPrincipals);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetOrigin(nsString* aOrigin)
+{
+  nsIDocument* doc;
+  if (mDocument && NS_OK == mDocument->QueryInterface(kIDocumentIID, (void**)&doc)) {
+    nsIURI* docURL = doc->GetDocumentURL();
+    if (docURL) {
+#ifdef NECKO
+      char* str;
+      docURL->GetSpec(&str);
+#else
+      PRUnichar* str;
+      docURL->ToString(&str);
+#endif
+      *aOrigin = str;
+#ifdef NECKO
+      nsCRT::free(str);
+#else
+      delete [] str;
+#endif
+      NS_RELEASE(docURL);
+    }
+    NS_RELEASE(doc);
+  }
+
+
+#if 0
+  //Old code from 4.0 to show what funcitonality needs replicating
+  History_entry *he;
+  const char *address;
+  JSContext *aCx;
+  MochaDecoder *decoder;
+
+  he = SHIST_GetCurrent(&context->hist);
+  if (he) {
+    address = he->wysiwyg_url;
+    if (!address)
+      address = he->address;
+    switch (NET_URL_Type(address)) {
+      case MOCHA_TYPE_URL:
+        /* This type cannot name the true origin (server) of JS code. */
+        break;
+      case VIEW_SOURCE_TYPE_URL:
+        NS_ASSERTION(0, "Invalid url type");
+      default:
+        return address;
+    }
+  }
+
+  if (context->grid_parent) {
+    address = FindCreatorURL(context->grid_parent);
+    if (address)
+      return address;
+  }
+
+  aCx = context->mocha_context;
+  if (aCx) {
+    decoder = JS_GetPrivate(aCx, JS_GetGlobalObject(aCx));
+    if (decoder && decoder->opener) {
+      /* self.opener property is valid, check its MWContext. */
+      MochaDecoder *opener = JS_GetPrivate(aCx, decoder->opener);
+      if (!opener->visited) {
+        opener->visited = PR_TRUE;
+        address = opener->window_context
+                ? FindCreatorURL(opener->window_context)
+                : nsnull;
+        opener->visited = PR_FALSE;
+        if (address)
+          return address;
+      }
+    }
+  }
+#endif
+  return NS_OK;
+}
+
 extern "C" NS_DOM nsresult
 NS_NewScriptGlobalObject(nsIScriptGlobalObject **aResult)
 {
@@ -2535,6 +3062,8 @@ NS_NewScriptGlobalObject(nsIScriptGlobalObject **aResult)
   return global->QueryInterface(kIScriptGlobalObjectIID, (void **)aResult);
 }
 
+
+
 //
 //  Navigator class implementation 
 //
@@ -2548,8 +3077,8 @@ NavigatorImpl::NavigatorImpl()
 
 NavigatorImpl::~NavigatorImpl()
 {
-	NS_IF_RELEASE(mMimeTypes);
-	NS_IF_RELEASE(mPlugins);
+  NS_IF_RELEASE(mMimeTypes);
+  NS_IF_RELEASE(mPlugins);
 }
 
 NS_IMPL_ADDREF(NavigatorImpl)
@@ -2606,168 +3135,157 @@ NavigatorImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
 NS_IMETHODIMP
 NavigatorImpl::GetUserAgent(nsString& aUserAgent)
 {
-    nsresult res;
+  nsresult res;
 #ifndef NECKO
-    nsINetService *service = nsnull;
-    res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
+  nsINetService *service = nsnull;
+  res = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID,
+                                     (nsISupports **)&service);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    res = service->GetUserAgent(aUserAgent);
+    NS_RELEASE(service);
+  }
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    PRUnichar *ua = nsnull;
+    res = service->GetUserAgent(&ua);
+    aUserAgent = ua;
+    delete [] ua;
+  }
 #endif // NECKO
 
-    if ((NS_OK == res) && (nsnull != service)) {
-#ifndef NECKO
-        res = service->GetUserAgent(aUserAgent);
-#else
-        PRUnichar *ua = nsnull;
-        res = service->GetUserAgent(&ua);
-        aUserAgent = ua;
-        delete [] ua;
-#endif // NECKO
-        NS_RELEASE(service);
-    }
-    return res;
+  return res;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetAppCodeName(nsString& aAppCodeName)
 {
-    nsresult res;
+  nsresult res;
 #ifndef NECKO
-    nsINetService *service = nsnull;
-    res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
+  nsINetService *service = nsnull;
+  res = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID,
+                                     (nsISupports **)&service);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    res = service->GetAppCodeName(aAppCodeName);
+    NS_RELEASE(service);
+  }
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    PRUnichar *appName = nsnull;
+    res = service->GetAppCodeName(&appName);
+    aAppCodeName = appName;
+    delete [] appName;
+  }
 #endif // NECKO
 
-    if ((NS_OK == res) && (nsnull != service)) {
-#ifndef NECKO
-        res = service->GetAppCodeName(aAppCodeName);
-#else
-        PRUnichar *appName = nsnull;
-        res = service->GetAppCodeName(&appName);
-        aAppCodeName = appName;
-        delete [] appName;
-#endif // NECKO
-        NS_RELEASE(service);
-    }
-
-    return res;
+  return res;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetAppVersion(nsString& aAppVersion)
 {
-    nsresult res;
+  nsresult res;
 #ifndef NECKO
-    nsINetService *service = nsnull;
-    res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
+  nsINetService *service = nsnull;
+  res = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID,
+                                     (nsISupports **)&service);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    res = service->GetAppVersion(aAppVersion);
+    NS_RELEASE(service);
+  }
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    PRUnichar *appVer = nsnull;
+    res = service->GetAppVersion(&appVer);
+    aAppVersion = appVer;
+    delete [] appVer;
 #endif // NECKO
+  }
 
-    if ((NS_OK == res) && (nsnull != service)) {
-#ifndef NECKO
-        res = service->GetAppVersion(aAppVersion);
-#else
-        PRUnichar *appVer = nsnull;
-        res = service->GetAppVersion(&appVer);
-        aAppVersion = appVer;
-        delete [] appVer;
-#endif // NECKO
-        NS_RELEASE(service);
-    }
-
-    return res;
+  return res;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetAppName(nsString& aAppName)
 {
-    nsresult res;
+  nsresult res;
 #ifndef NECKO
-    nsINetService *service = nsnull;
-    res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
+  nsINetService *service = nsnull;
+  res = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID,
+                                     (nsISupports **)&service);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    res = service->GetAppName(aAppName);
+    NS_RELEASE(service);
+  }
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    PRUnichar *appName = nsnull;
+    res = service->GetAppName(&appName);
+    aAppName = appName;
+    delete [] appName;
+  }
 #endif // NECKO
 
-    if ((NS_OK == res) && (nsnull != service)) {
-#ifndef NECKO
-        res = service->GetAppName(aAppName);
-#else
-        PRUnichar *appName = nsnull;
-        res = service->GetAppName(&appName);
-        aAppName = appName;
-        delete [] appName;
-#endif // NECKO
-        NS_RELEASE(service);
-    }
-
-    return res;
+  return res;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetLanguage(nsString& aLanguage)
 {
-    nsresult res;
+  nsresult res;
 #ifndef NECKO
-    nsINetService *service = nsnull;
-    res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
+  nsINetService *service = nsnull;
+  res = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID,
+                                     (nsISupports **)&service);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    res = service->GetLanguage(aLanguage);
+    NS_RELEASE(service);
+  }
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    PRUnichar *lang = nsnull;
+    res = service->GetLanguage(&lang);
+    aLanguage = lang;
+    delete [] lang;
+  }
 #endif // NECKO
 
-    if ((NS_OK == res) && (nsnull != service)) {
-#ifndef NECKO
-        res = service->GetLanguage(aLanguage);
-#else
-        PRUnichar *lang = nsnull;
-        res = service->GetLanguage(&lang);
-        aLanguage = lang;
-        delete [] lang;
-#endif // NECKO
-        NS_RELEASE(service);
-    }
-
-    return res;
+  return res;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetPlatform(nsString& aPlatform)
 {
-    nsresult res;
+  nsresult res;
 #ifndef NECKO
-    nsINetService *service = nsnull;
-    res = nsServiceManager::GetService(kNetServiceCID,
-                                          kINetServiceIID,
-                                          (nsISupports **)&service);
+  nsINetService *service = nsnull;
+  res = nsServiceManager::GetService(kNetServiceCID,
+                                     kINetServiceIID,
+                                     (nsISupports **)&service);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    res = service->GetPlatform(aPlatform);
+    NS_RELEASE(service);
+  }
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &res);
+  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+    PRUnichar *plat = nsnull;
+    res = service->GetPlatform(&plat);
+    aPlatform = plat;
+    delete [] plat;
+  }
 #endif // NECKO
 
-    if ((NS_OK == res) && (nsnull != service)) {
-#ifndef NECKO
-        res = service->GetPlatform(aPlatform);
-#else
-        PRUnichar *plat = nsnull;
-        res = service->GetPlatform(&plat);
-        aPlatform = plat;
-        delete [] plat;
-#endif // NECKO
-        NS_RELEASE(service);
-    }
-
-    return res;
+  return res;
 }
 
 NS_IMETHODIMP
@@ -2812,13 +3330,34 @@ NavigatorImpl::JavaEnabled(PRBool* aReturn)
 
   // determine whether user has enabled java.
   NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
-  if (NS_FAILED(rv) || (prefs == nsnull)) {
-      return rv;
+  if (NS_FAILED(rv) || prefs == nsnull) {
+    return rv;
   }
   
   // if pref doesn't exist, map result to false.
   if (prefs->GetBoolPref("security.enable_java", aReturn) != NS_OK)
-      *aReturn = PR_FALSE;
+    *aReturn = PR_FALSE;
 
   return rv;
 }
+
+nsresult
+GlobalWindowImpl::GetModalWindowSupport(nsIModalWindowSupport **msw)
+{
+  NS_ASSERTION(msw, "null return param in GetModalWindowSupport");
+  *msw = nsnull;
+
+  if (nsnull == mWebShell)
+    return NS_ERROR_NULL_POINTER;
+
+  nsCOMPtr<nsIWebShell> rootWebShell;
+  mWebShell->GetRootWebShellEvenIfChrome(*getter_AddRefs(rootWebShell));
+  if (rootWebShell) {
+    nsCOMPtr<nsIWebShellContainer> rootContainer;
+    rootWebShell->GetContainer(*getter_AddRefs(rootContainer));
+    if (rootContainer)
+      rootContainer->QueryInterface(nsIModalWindowSupport::GetIID(), (void**)msw);
+  }
+  return NS_OK;
+}
+

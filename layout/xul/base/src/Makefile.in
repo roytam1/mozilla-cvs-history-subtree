@@ -36,14 +36,18 @@ LOCAL_INCLUDES = \
 
 # Note the sophisticated alphabetical ordering :-|
 CPPSRCS =				\
-    nsTabFrame.cpp \
-    nsDeckFrame.cpp \
-    nsBoxFrame.cpp \
-    nsProgressMeterFrame.cpp \
-	nsTitledButtonFrame.cpp \
-	nsToolbarFrame.cpp			\
-	nsToolboxFrame.cpp			\
+	nsSplitterFrame.cpp \
+	nsGrippyFrame.cpp \
+	nsTabFrame.cpp \
+	nsDeckFrame.cpp \
+	nsBoxFrame.cpp \
+	nsProgressMeterFrame.cpp      \
+	nsTitledButtonFrame.cpp   \
+	nsToolbarFrame.cpp        \
+	nsToolbarDragListener.cpp \
+	nsToolboxFrame.cpp        \
 	nsTreeFrame.cpp \
+	nsTreeRowGroupFrame.cpp \
 	nsTreeIndentationFrame.cpp \
 	nsTreeCellFrame.cpp \
 	nsTriStateCheckboxFrame.cpp \
@@ -53,6 +57,12 @@ CPPSRCS =				\
 	nsSliderFrame.cpp \
 	nsColorPickerFrame.cpp \
 	nsFontPickerFrame.cpp \
+	nsToolbarItemFrame.cpp \
+	nsMenuPopupFrame.cpp \
+	nsMenuFrame.cpp \
+	nsMenuBarFrame.cpp \
+	nsMenuBarListener.cpp \
+	nsPopupSetFrame.cpp \
 	$(NULL)
 
 include $(topsrcdir)/config/config.mk

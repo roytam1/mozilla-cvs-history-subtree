@@ -91,21 +91,21 @@ public:
 
     TestConsumer(nsITransport * transport);
 
-	void LoadURL(nsIURL * urlToLoad);
+	void LoadURL(nsIURI * urlToLoad);
 	nsresult Write(const char * writeData);
 
-    NS_IMETHOD GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info);
-    NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 Progress, PRUint32 ProgressMax);
-    NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-    NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-    NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUint32 length);
-    NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+    NS_IMETHOD GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* info);
+    NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 Progress, PRUint32 ProgressMax);
+    NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+    NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+    NS_IMETHOD OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream, PRUint32 length);
+    NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
 
 protected:
     ~TestConsumer();
 
 	nsITransport	  * m_transport;
-	nsIURL			  * m_url;
+	nsIURI			  * m_url;
 	nsIOutputStream	  * m_outputStream;
 	nsIStreamListener * m_outputConsumer;
 };
@@ -135,7 +135,7 @@ TestConsumer::TestConsumer(nsITransport * transport)
 	m_url = NULL;
 }
 
-void TestConsumer::LoadURL(nsIURL * urlToLoad)
+void TestConsumer::LoadURL(nsIURI * urlToLoad)
 {
 	// give the transport layer the url to load
 	m_transport->Open(urlToLoad);
@@ -193,7 +193,7 @@ nsresult TestConsumer::Write(const char * writeData)
 	return rv;
 }
 
-NS_IMETHODIMP TestConsumer::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info)
+NS_IMETHODIMP TestConsumer::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* info)
 {
     if (bTraceEnabled) {
         printf("\n+++ TestConsumer::GetBindInfo: URL: %p\n", aURL);
@@ -202,7 +202,7 @@ NS_IMETHODIMP TestConsumer::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info)
     return 0;
 }
 
-NS_IMETHODIMP TestConsumer::OnProgress(nsIURL* aURL, PRUint32 Progress, 
+NS_IMETHODIMP TestConsumer::OnProgress(nsIURI* aURL, PRUint32 Progress, 
                                        PRUint32 ProgressMax)
 {
     if (bTraceEnabled) {
@@ -212,7 +212,7 @@ NS_IMETHODIMP TestConsumer::OnProgress(nsIURL* aURL, PRUint32 Progress,
     return 0;
 }
 
-NS_IMETHODIMP TestConsumer::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+NS_IMETHODIMP TestConsumer::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 {
     if (bTraceEnabled) {
         printf("\n+++ TestConsumer::OnStatus: ");
@@ -226,17 +226,17 @@ NS_IMETHODIMP TestConsumer::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
     return 0;
 }
 
-NS_IMETHODIMP TestConsumer::OnStartBinding(nsIURL* aURL, const char *aContentType)
+NS_IMETHODIMP TestConsumer::OnStartRequest(nsIURI* aURL, const char *aContentType)
 {
     if (bTraceEnabled) {
-        printf("\n+++ TestConsumer::OnStartBinding: URL: %p, Content type: %s\n", aURL, aContentType);
+        printf("\n+++ TestConsumer::OnStartRequest: URL: %p, Content type: %s\n", aURL, aContentType);
     }
 
     return 0;
 }
 
 
-NS_IMETHODIMP TestConsumer::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUint32 length) 
+NS_IMETHODIMP TestConsumer::OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream, PRUint32 length) 
 {
     PRUint32 totalBytesRead, len = 0;
 
@@ -266,10 +266,10 @@ NS_IMETHODIMP TestConsumer::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStre
 }
 
 
-NS_IMETHODIMP TestConsumer::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg)
+NS_IMETHODIMP TestConsumer::OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg)
 {
     if (bTraceEnabled) {
-        printf("\n+++ TestConsumer::OnStopBinding... URL: %p status: %d\n", aURL, status);
+        printf("\n+++ TestConsumer::OnStopRequest... URL: %p status: %d\n", aURL, status);
     }
 
     /* The document has been loaded, so drop out of the message pump... */
@@ -338,7 +338,7 @@ int main()
 	}
 
 	        // Create the URL object...
-     nsIURL * pURL = NULL;
+     nsIURI * pURL = NULL;
 
 	 // prompt the user for port and host name 
 	 PRUint32 portToUse = 143; // default to imap...

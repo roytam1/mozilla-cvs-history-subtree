@@ -22,7 +22,7 @@
 #
 
 DEPTH=..\..\..\..
-MODULE=mimeemitter
+MODULE=emitter
 
 ################################################################################
 ## exports
@@ -35,7 +35,7 @@ EXPORTS =              			\
 ################################################################################
 ## library
 
-LIBNAME = .\$(OBJDIR)\mimeemitter
+LIBNAME = .\$(OBJDIR)\emitter
 DLL = $(LIBNAME).dll
 DEFINES= -NS_DEBUG
 
@@ -47,12 +47,9 @@ LLIBS=										\
 			$(LLIBS)						\
 			$(LIBNSPR)						\
 			$(DIST)\lib\xppref32.lib		\
-			$(DIST)\lib\mimetype.lib		\
 			$(DIST)\lib\xpcom.lib       	\
 			$(DIST)\lib\emitterutils_s.lib  \
 			$(NULL)
-
-MISCDEP=$(LLIBS)
 
 include <$(DEPTH)\config\rules.mak>
 

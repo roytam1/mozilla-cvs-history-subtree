@@ -183,13 +183,15 @@ PRInt32 DoWindowsReplaceExistingFileStuff(const char* currentName, const char* f
 
 
 
-
-REGERR DeleteFileNowOrSchedule(nsFileSpec& filename)
+REGERR DeleteFileNowOrSchedule(const nsFileSpec& filename)
 {
 
     REGERR result = 0;
+    char   szValue[512];
     
-    filename.Delete(false);
+    PL_strcpy(szValue, "Fix for bug #8818");
+
+    filename.Delete(PR_FALSE);
     
     if (filename.Exists())
     {
@@ -201,7 +203,7 @@ REGERR DeleteFileNowOrSchedule(nsFileSpec& filename)
             {
                 // FIX should be using nsPersistentFileDescriptor!!!
 
-                result = NR_RegSetEntry( reg, newkey, (char*)(const char*)filename.GetNativePathCString(), REGTYPE_ENTRY_FILE, nsnull, 0);
+                result = NR_RegSetEntry( reg, newkey, (char*)(const char*)filename.GetNativePathCString(), REGTYPE_ENTRY_FILE, szValue, strlen(szValue));
                 if (result == REGERR_OK)
                     result = nsInstall::REBOOT_NEEDED;
             }
@@ -224,15 +226,21 @@ REGERR ReplaceFileNowOrSchedule(nsFileSpec& replacementFile, nsFileSpec& doomedF
         return result;
     }
 
-    doomedFile.Delete(false);
+    doomedFile.Delete(PR_FALSE);
 
     if ( !doomedFile.Exists() )
     {
         // Now that we have removed the existing file, we can move the mExtracedFile or mPatchedFile into place.
         nsFileSpec parentofFinalFile;
+        nsFileSpec parentofReplacementFile;
 
         doomedFile.GetParent(parentofFinalFile);
-        result = replacementFile.Move(parentofFinalFile);
+        replacementFile.GetParent(parentofReplacementFile);
+        if(parentofReplacementFile != parentofFinalFile)
+            result = replacementFile.Move(parentofFinalFile);
+        else
+        	result = NS_OK;
+        	
         if ( NS_SUCCEEDED(result) )
         {
             char* leafName = doomedFile.GetLeafName();
@@ -285,7 +293,7 @@ void DeleteScheduledFiles(void)
     if (REGERR_OK == NR_RegOpen("", &reg))
     {
         RKEY    key;
-	    REGENUM state;
+	      REGENUM state = 0;
 
         /* perform scheduled file deletions and replacements (PC only) */
         if (REGERR_OK ==  NR_RegGetKey(reg, ROOTKEY_PRIVATE, REG_DELETE_LIST_KEY,&key))
@@ -305,7 +313,7 @@ void DeleteScheduledFiles(void)
             }
 
             /* delete list node if empty */
-			if (REGERR_NOMORE == NR_RegEnumEntries( reg, key, &state, buf, sizeof(buf), NULL ))
+			      if (REGERR_NOMORE == NR_RegEnumEntries( reg, key, &state, buf, sizeof(buf), NULL ))
             {
                 NR_RegDeleteKey(reg, ROOTKEY_PRIVATE, REG_DELETE_LIST_KEY);
             }
@@ -327,23 +335,23 @@ void ReplaceScheduledFiles(void)
         /* replace files if any listed */
         if (REGERR_OK ==  NR_RegGetKey(reg, ROOTKEY_PRIVATE, REG_REPLACE_LIST_KEY, &key))
         {
-            char tmpfile[MAXREGNAMELEN];
+            char dummyFile[MAXREGNAMELEN];
             char target[MAXREGNAMELEN];
 
             state = 0;
-            while (REGERR_OK == NR_RegEnumEntries(reg, key, &state, tmpfile, sizeof(tmpfile), NULL ))
+            while (REGERR_OK == NR_RegEnumEntries(reg, key, &state, dummyFile, sizeof(dummyFile), NULL ))
             {
 
-                nsFileSpec replaceFile(tmpfile);
+                nsFileSpec replaceFile(dummyFile);
 
                 if (! replaceFile.Exists() )
                 {
-                    NR_RegDeleteEntry( reg, key, tmpfile );
+                    NR_RegDeleteEntry( reg, key, dummyFile );
                 }
-                else if ( REGERR_OK != NR_RegGetEntryString( reg, key, tmpfile, target, sizeof(target) ) )
+                else if ( REGERR_OK != NR_RegGetEntryString( reg, key, dummyFile, target, sizeof(target) ) )
                 {
                     /* can't read target filename, corruption? */
-                    NR_RegDeleteEntry( reg, key, tmpfile );
+                    NR_RegDeleteEntry( reg, key, dummyFile );
                 }
                 else 
                 {
@@ -363,13 +371,13 @@ void ReplaceScheduledFiles(void)
                             replaceFile.Rename(leafName);
                             nsCRT::free(leafName);
                             
-                            NR_RegDeleteEntry( reg, key, tmpfile );
+                            NR_RegDeleteEntry( reg, key, dummyFile );
                         }
                     }
                 }
             }
             /* delete list node if empty */
-            if (REGERR_NOMORE == NR_RegEnumEntries(reg, key, &state, tmpfile, sizeof(tmpfile), NULL )) 
+            if (REGERR_NOMORE == NR_RegEnumEntries(reg, key, &state, dummyFile, sizeof(dummyFile), NULL )) 
             {
                 NR_RegDeleteKey(reg, ROOTKEY_PRIVATE, REG_REPLACE_LIST_KEY);
             }

@@ -23,8 +23,11 @@
 #include "nsIServiceManager.h"
 #include "nsGfxCIID.h"
 #include "nspr.h"
+
 #include "xlibrgb.h"
-#include "../ps/nsDeviceContextPS.h"
+
+#include "nsGfxPSCID.h"
+#include "nsIDeviceContextPS.h"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
@@ -45,6 +48,15 @@ nsDeviceContextXlib::nsDeviceContextXlib()
   mPaletteInfo.palette = NULL;
   mNumCells = 0;
   mSurface = nsnull;
+  mDisplay = nsnull;
+  mScreen = nsnull;
+  mVisual = nsnull;
+  mDepth = 0;
+
+  mWidthFloat = 0.0f;
+  mHeightFloat = 0.0f;
+  mWidth = -1;
+  mHeight = -1;
 }
 
 nsDeviceContextXlib::~nsDeviceContextXlib()
@@ -59,6 +71,27 @@ NS_IMETHODIMP nsDeviceContextXlib::Init(nsNativeWidget aNativeWidget)
   PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("nsDeviceContextXlib::Init()\n"));
 
   mWidget = aNativeWidget;
+
+  mDisplay = xlib_rgb_get_display();
+  mScreen = xlib_rgb_get_screen();
+  mVisual = xlib_rgb_get_visual();
+  mDepth = xlib_rgb_get_depth();
+
+
+#ifdef DEBUG
+  static PRBool once = PR_TRUE;
+
+  if (once)
+  {
+    once = PR_FALSE;
+
+    printf("nsDeviceContextXlib::Init(dpy=%p  screen=%p  visual=%p  depth=%d)\n",
+           mDisplay,
+           mScreen,
+           mVisual,
+           mDepth);
+  }
+#endif /* DEBUG */
 
   CommonInit();
 
@@ -85,8 +118,8 @@ nsDeviceContextXlib::CommonInit(void)
         }
         else {
           // Compute dpi of display
-          float screenWidth = float(WidthOfScreen(gScreen));
-          float screenWidthIn = float(WidthMMOfScreen(gScreen)) / 25.4f;
+          float screenWidth = float(WidthOfScreen(mScreen));
+          float screenWidthIn = float(WidthMMOfScreen(mScreen)) / 25.4f;
           dpi = nscoord(screenWidth / screenWidthIn);
         }
       }
@@ -98,6 +131,10 @@ nsDeviceContextXlib::CommonInit(void)
   mPixelsToTwips = 1.0f / mTwipsToPixels;
 
   PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("GFX: dpi=%d t2p=%g p2t=%g\n", dpi, mTwipsToPixels, mPixelsToTwips));
+
+
+  mWidthFloat = (float) WidthOfScreen(mScreen);
+  mHeightFloat = (float) HeightOfScreen(mScreen);
 
   DeviceContextImpl::CommonInit();
 }
@@ -116,8 +153,19 @@ NS_IMETHODIMP nsDeviceContextXlib::CreateRenderingContext(nsIRenderingContext *&
     NS_ADDREF(context);
     surface = new nsDrawingSurfaceXlib();
     if (nsnull != surface) {
-      GC gc = XCreateGC(gDisplay, (Drawable)mWidget, 0, NULL);
-      rv = surface->Init((Drawable)mWidget, gc);
+
+      GC gc = XCreateGC(mDisplay, 
+                        (Drawable) mWidget, 
+                        0, 
+                        NULL);
+
+      rv = surface->Init(mDisplay, 
+                         mScreen, 
+                         mVisual, 
+                         mDepth,
+                         (Drawable) mWidget, 
+                         gc);
+
       if (NS_OK == rv) {
         rv = context->Init(this, surface);
       }
@@ -149,8 +197,8 @@ NS_IMETHODIMP nsDeviceContextXlib::GetScrollBarDimensions(float &aWidth, float &
 {
   PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("nsDeviceContextXlib::GetScrollBarDimensions()\n"));
   // XXX Oh, yeah.  These are hard coded.
-  aWidth = 5 * mPixelsToTwips;
-  aHeight = 5 * mPixelsToTwips;
+  aWidth = 15 * mPixelsToTwips;
+  aHeight = 15 * mPixelsToTwips;
 
   return NS_OK;
 }
@@ -204,10 +252,10 @@ NS_IMETHODIMP nsDeviceContextXlib::GetSystemAttribute(nsSystemAttrID anID, Syste
     // Size
     //---------
     case eSystemAttr_Size_ScrollbarHeight:
-        aInfo->mSize = 20;
+        aInfo->mSize = 15;
         break;
     case eSystemAttr_Size_ScrollbarWidth: 
-        aInfo->mSize = 20;
+        aInfo->mSize = 15;
         break;
     case eSystemAttr_Size_WindowTitleHeight:
         aInfo->mSize = 0;
@@ -291,7 +339,7 @@ NS_IMETHODIMP nsDeviceContextXlib::CheckFontExistence(const nsString& aFontName)
               fontName, dpi, dpi);
   delete [] fontName;
   
-  fnames = ::XListFontsWithInfo(gDisplay, wildstring, 1, &numnames, &fonts);
+  fnames = ::XListFontsWithInfo(mDisplay, wildstring, 1, &numnames, &fonts);
   
   if (numnames > 0)
   {
@@ -305,20 +353,44 @@ NS_IMETHODIMP nsDeviceContextXlib::CheckFontExistence(const nsString& aFontName)
 
 NS_IMETHODIMP nsDeviceContextXlib::GetDeviceSurfaceDimensions(PRInt32 &aWidth, PRInt32 &aHeight)
 {
-  PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("nsDeviceContextXlib::GetDeviceSurfaceDimensions()\n"));
-  aWidth = 1;
-  aHeight = 1;
+  if (mWidth == -1)
+    mWidth = NSToIntRound(mWidthFloat * mDevUnitsToAppUnits);
+
+  if (mHeight == -1)
+    mHeight = NSToIntRound(mHeightFloat * mDevUnitsToAppUnits);
+
+  aWidth = mWidth;
+  aHeight = mHeight;
+
   return NS_OK;
 }
 
 NS_IMETHODIMP nsDeviceContextXlib::GetDeviceContextFor(nsIDeviceContextSpec *aDevice,
                                                         nsIDeviceContext *&aContext)
 {
-  PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("nsDeviceContextXlib::GetDeviceContextFor()\n"));
-  aContext = new nsDeviceContextPS();
-  ((nsDeviceContextPS *)aContext)->SetSpec(aDevice);
-  NS_ADDREF(aDevice);
-  return((nsDeviceContextPS *) aContext)->Init((nsIDeviceContext*)aContext, (nsIDeviceContext*)this);
+  static NS_DEFINE_CID(kCDeviceContextPS, NS_DEVICECONTEXTPS_CID);
+  
+  // Create a Postscript device context 
+  nsresult rv;
+  nsIDeviceContextPS *dcps;
+  
+  rv = nsComponentManager::CreateInstance(kCDeviceContextPS,
+                                          nsnull,
+                                          nsIDeviceContextPS::GetIID(),
+                                          (void **)&dcps);
+
+  NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create PS Device context");
+  
+  dcps->SetSpec(aDevice);
+  dcps->InitDeviceContextPS((nsIDeviceContext*)aContext,
+                            (nsIDeviceContext*)this);
+
+  rv = dcps->QueryInterface(nsIDeviceContext::GetIID(),
+                            (void **)&aContext);
+
+  NS_RELEASE(dcps);
+  
+  return rv;
 }
 
 NS_IMETHODIMP nsDeviceContextXlib::BeginDocument(void)

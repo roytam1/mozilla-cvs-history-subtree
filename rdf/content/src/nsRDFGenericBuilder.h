@@ -30,7 +30,6 @@
 #include "nsIDOMNodeObserver.h"
 #include "nsIDOMElementObserver.h"
 #include "nsITimer.h"
-#include "nsITimerCallback.h"
 #include "nsIXULSortService.h"
 
 class nsIRDFDocument;
@@ -44,12 +43,13 @@ class nsIRDFService;
 class RDFGenericBuilderImpl : public nsIRDFContentModelBuilder,
                               public nsIRDFObserver,
                               public nsIDOMNodeObserver,
-                              public nsIDOMElementObserver,
-                              public nsITimerCallback
+                              public nsIDOMElementObserver
 {
 public:
     RDFGenericBuilderImpl();
     virtual ~RDFGenericBuilderImpl();
+
+    nsresult Init();
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
@@ -66,18 +66,24 @@ public:
                              nsIRDFResource* aResource,
                              nsIContent** aResult);
 
-    NS_IMETHOD SetAllAttributesOnElement(nsIContent *aParentNode, nsIContent *aNode, nsIRDFResource *res);
-    NS_IMETHOD FindTemplateForResource(nsIRDFResource *aNode, nsIContent **theTemplate);
-    NS_IMETHOD IsTemplateRuleMatch(nsIRDFResource *aNode, nsIContent *aRule, PRBool *matchingRuleFound);
-    NS_IMETHOD PopulateWidgetItemSubtree(nsIContent *aTemplateRoot, nsIContent *aTemplate,
-                    nsIContent *treeCell, nsIContent* aElement, PRBool isUnique,
-                    nsIRDFResource* aProperty, nsIRDFResource* aValue, PRInt32 aNaturalOrderPos);
-    NS_IMETHOD CreateWidgetItem(nsIContent* aElement, nsIRDFResource* aProperty,
-				nsIRDFResource* aValue, PRInt32 aNaturalOrderPos);
-
     // nsIRDFObserver interface
-    NS_IMETHOD OnAssert(nsIRDFResource* aSubject, nsIRDFResource* aPredicate, nsIRDFNode* aObject);
-    NS_IMETHOD OnUnassert(nsIRDFResource* aSubject, nsIRDFResource* aPredicate, nsIRDFNode* aObjetct);
+    NS_IMETHOD OnAssert(nsIRDFResource* aSource,
+                        nsIRDFResource* aProperty,
+                        nsIRDFNode* aTarget);
+
+    NS_IMETHOD OnUnassert(nsIRDFResource* aSource,
+                          nsIRDFResource* aProperty,
+                          nsIRDFNode* aTarget);
+
+    NS_IMETHOD OnChange(nsIRDFResource* aSource,
+                        nsIRDFResource* aProperty,
+                        nsIRDFNode* aOldTarget,
+                        nsIRDFNode* aNewTarget);
+
+    NS_IMETHOD OnMove(nsIRDFResource* aOldSource,
+                      nsIRDFResource* aNewSource,
+                      nsIRDFResource* aProperty,
+                      nsIRDFNode* aTarget);
 
     // nsIDOMNodeObserver interface
     NS_DECL_IDOMNODEOBSERVER
@@ -87,44 +93,98 @@ public:
 
     // Implementation methods
     nsresult
+    FindTemplate(nsIContent* aElement,
+                 nsIRDFResource* aProperty,
+                 nsIRDFResource* aChild,
+                 nsIContent **theTemplate);
+
+    nsresult
+    IsTemplateRuleMatch(nsIContent* aElement,
+                        nsIRDFResource* aProperty,
+                        nsIRDFResource* aChild,
+                        nsIContent *aRule,
+                        PRBool *isMatch);
+
+    PRBool
+    IsIgnoreableAttribute(PRInt32 aNameSpaceID, nsIAtom* aAtom);
+
+    nsresult
+    GetSubstitutionText(nsIRDFResource* aResource,
+                        const nsString& aSubstitution,
+                        nsString& aResult);
+
+    nsresult
+    BuildContentFromTemplate(nsIContent *aTemplateNode,
+                             nsIContent *aRealNode,
+                             PRBool aIsUnique,
+                             nsIRDFResource* aChild,
+                             PRInt32 aNaturalOrderPos,
+                             PRBool aNotify);
+
+    nsresult
+    CreateWidgetItem(nsIContent* aElement,
+                     nsIRDFResource* aProperty,
+                     nsIRDFResource* aChild,
+                     PRInt32 aNaturalOrderPos,
+                     PRBool aNotify);
+
+    enum eUpdateAction { eSet, eClear };
+
+    PRBool
+    IsAttributePersisent(nsIContent *element, PRInt32 aNameSpaceID, nsIAtom* aAtom);
+
+    void
+    GetPersistentAttributes(nsIContent *realKid);
+
+    void
+    PersistAttribute(nsIContent *element,
+    			PRInt32 aNameSpaceID,
+    			nsIAtom* aAtom,
+    			nsString aValue,
+    			eUpdateAction action);
+
+    void
+    PersistProperty(nsIContent *element,
+    			nsIRDFResource *aProperty,
+    			nsIRDFNode *aTarget,
+    			eUpdateAction action);
+
+    nsresult
+    SynchronizeUsingTemplate(nsIContent *aTemplateNode,
+                             nsIContent* aRealNode,
+                             eUpdateAction aAction,
+                             nsIRDFResource* aProperty,
+                             nsIRDFNode* aValue);
+
+    nsresult
+    RemoveWidgetItem(nsIContent* aElement,
+                     nsIRDFResource* aProperty,
+                     nsIRDFResource* aValue,
+                     PRBool aNotify);
+
+    nsresult
+    CreateContainerContents(nsIContent* aElement, nsIRDFResource* aResource);
+
+    nsresult
+    CreateTemplateContents(nsIContent* aElement, const nsString& aTemplateID);
+
+    nsresult
     EnsureElementHasGenericChild(nsIContent* aParent,
                                  PRInt32 aNameSpaceID,
                                  nsIAtom* aTag,
                                  nsIContent** aResult);
 
-    nsresult
-    FindWidgetRootElement(nsIContent* aElement,
-                          nsIContent** aRootElement);
-
-    virtual nsresult
-    AddWidgetItem(nsIContent* aWidgetElement,
-                  nsIRDFResource* aProperty,
-                  nsIRDFResource* aValue, 
-                  PRInt32 naturalOrderPos) = 0;
-
-    virtual nsresult
-    RemoveWidgetItem(nsIContent* aWidgetElement,
-                     nsIRDFResource* aProperty,
-                     nsIRDFResource* aValue) = 0;
-
-    virtual nsresult
-    SetWidgetAttribute(nsIContent* aWidgetElement,
-                       nsIRDFResource* aProperty,
-                       nsIRDFNode* aValue) = 0;
-
-    virtual nsresult
-    UnsetWidgetAttribute(nsIContent* aWidgetElement,
-                         nsIRDFResource* aProperty,
-                         nsIRDFNode* aValue) = 0;
-
-    virtual PRBool
+    PRBool
     IsContainmentProperty(nsIContent* aElement, nsIRDFResource* aProperty);
 
-    virtual PRBool
+    PRBool
     IsIgnoredProperty(nsIContent* aElement, nsIRDFResource* aProperty);
 
     PRBool
     IsContainer(nsIContent* aParentElement, nsIRDFResource* aTargetResource);
+
+    PRBool
+    IsEmpty(nsIContent* aParentElement, nsIRDFResource* aContainer);
 
     PRBool
     IsOpen(nsIContent* aElement);
@@ -133,11 +193,8 @@ public:
     IsElementInWidget(nsIContent* aElement);
    
     PRBool
-    IsItemOrFolder(nsIContent* aElement);
+    IsResourceElement(nsIContent* aElement);
  
-    PRBool
-    IsWidgetInsertionRootElement(nsIContent* aElement);
-
     nsresult
     GetDOMNodeResource(nsIDOMNode* aNode, nsIRDFResource** aResource);
 
@@ -146,37 +203,41 @@ public:
                 nsIAtom* aNameAtom,
                 nsIRDFResource** aResource);
 
-    virtual nsresult
+    nsresult
     OpenWidgetItem(nsIContent* aElement);
 
-    virtual nsresult
+    nsresult
     CloseWidgetItem(nsIContent* aElement);
 
-    virtual nsresult
-    GetRootWidgetAtom(nsIAtom** aResult) = 0;
+    nsresult
+    RemoveAndRebuildGeneratedChildren(nsIContent* aElement);
 
-    virtual nsresult
-    GetWidgetItemAtom(nsIAtom** aResult) = 0;
+    // XXX. Urg. Hack until layout can batch reflows. See bug 10818.
+    PRBool
+    IsTreeWidgetItem(nsIContent* aElement);
 
-    virtual nsresult
-    GetWidgetFolderAtom(nsIAtom** aResult) = 0;
+    PRBool
+    IsReflowScheduled();
 
-    virtual nsresult
-    GetInsertionRootAtom(nsIAtom** aResult) = 0;
+    nsresult
+    ScheduleReflow();
 
-    virtual nsresult
-    GetItemAtomThatContainsTheChildren(nsIAtom** aResult) = 0;
-    // Well, you come up with a better name.
+    static void
+    ForceTreeReflow(nsITimer* aTimer, void* aClosure);
 
 protected:
-    nsIRDFDocument*            mDocument;
-    nsIRDFCompositeDataSource* mDB;
-    nsIContent*                mRoot;
+    nsIRDFDocument*            mDocument; // [WEAK]
 
-    nsITimer			*mTimer;
+    // We are an observer of the composite datasource. The cycle is
+    // broken by out-of-band SetDataBase(nsnull) call when document is
+    // destroyed.
+    nsCOMPtr<nsIRDFCompositeDataSource> mDB;
+    nsCOMPtr<nsIContent>                mRoot;
 
-    virtual void
-    Notify(nsITimer *timer) = 0;
+    nsCOMPtr<nsITimer> mTimer;
+
+    static nsIRDFDataSource	*mLocalstore;
+    static PRBool		persistLock;
 
     // pseudo-constants
     static nsrefcnt gRefCnt;
@@ -185,25 +246,33 @@ protected:
     static nsINameSpaceManager* gNameSpaceManager;
 
     static nsIAtom* kContainerAtom;
+    static nsIAtom* kLazyContentAtom;
     static nsIAtom* kIsContainerAtom;
+    static nsIAtom* kIsEmptyAtom;
     static nsIAtom* kXULContentsGeneratedAtom;
-    static nsIAtom* kItemContentsGeneratedAtom;
+    static nsIAtom* kTemplateContentsGeneratedAtom;
+    static nsIAtom* kContainerContentsGeneratedAtom;
     static nsIAtom* kNaturalOrderPosAtom;
     static nsIAtom* kIdAtom;
+    static nsIAtom* kPersistAtom;
     static nsIAtom* kOpenAtom;
+    static nsIAtom* kEmptyAtom;
     static nsIAtom* kResourceAtom;
     static nsIAtom* kURIAtom;
     static nsIAtom* kContainmentAtom;
     static nsIAtom* kIgnoreAtom;
+    static nsIAtom* kRefAtom;
+    static nsIAtom* kValueAtom;
 
-    static nsIAtom* kSubcontainmentAtom;
-    static nsIAtom* kRootcontainmentAtom;
-    static nsIAtom* kTreeTemplateAtom;
+    static nsIAtom* kTemplateAtom;
     static nsIAtom* kRuleAtom;
-    static nsIAtom* kTreeContentsGeneratedAtom;
     static nsIAtom* kTextAtom;
     static nsIAtom* kPropertyAtom;
     static nsIAtom* kInstanceOfAtom;
+
+    static nsIAtom* kTreeAtom;
+    static nsIAtom* kTreeChildrenAtom;
+    static nsIAtom* kTreeItemAtom;
 
     static PRInt32  kNameSpaceID_RDF;
     static PRInt32  kNameSpaceID_XUL;
@@ -213,6 +282,8 @@ protected:
     static nsIRDFResource* kNC_Column;
     static nsIRDFResource* kNC_Folder;
     static nsIRDFResource* kRDF_child;
+    static nsIRDFResource* kRDF_instanceOf;
+    static nsIRDFResource* kXUL_element;
 
     static nsIXULSortService	*XULSortService;
 };

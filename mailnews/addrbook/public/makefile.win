@@ -19,13 +19,17 @@ DEPTH=..\..\..
 MODULE=addrbook
 
 XPIDLSRCS =						 \
-			.\nsIAbBase.idl		 \
 			.\nsIAbListener.idl	 \
+			.\nsIAbBase.idl \
 			.\nsIAbDirectory.idl \
 			.\nsIAbCard.idl		 \
 			.\nsIAddrDBAnnouncer.idl	\
 			.\nsIAddrDBListener.idl		\
 			.\nsIAddrDatabase.idl		\
+			.\nsIAddressBook.idl		\
+			.\nsIAddrBookSession.idl		\
+			.\nsIAutoCompleteSession.idl		\
+			.\nsIAutoCompleteListener.idl		\
 			$(NULL)
 
 

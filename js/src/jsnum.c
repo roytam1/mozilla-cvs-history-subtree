@@ -198,7 +198,8 @@ num_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval v;
     jsdouble d;
-    jsint base, ival, dval;
+    jsint base, dval;
+    unsigned int ival;
     char *bp, buf[32];
     JSString *str;
 
@@ -219,14 +220,23 @@ num_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	    return JS_FALSE;
 	}
 	if (base != 10 && JSDOUBLE_IS_FINITE(d)) {
-	    ival = (jsint) js_DoubleToInteger(d);
+            JSBool isNegative = (d < 0);
+            if (isNegative)
+		d = -d;
+	    ival = (unsigned int) js_DoubleToInteger(d);
 	    bp = buf + sizeof buf;
-	    for (*--bp = '\0'; ival != 0 && --bp >= buf; ival /= base) {
+	    for (*--bp = '\0'; ival != 0 && bp > buf; ival /= base) {
 		dval = ival % base;
-		*bp = (char)((dval >= 10) ? 'a' - 10 + dval : '0' + dval);
+		*--bp = (char)((dval >= 10) ? 'a' - 10 + dval : '0' + dval);
 	    }
 	    if (*bp == '\0')
 		*--bp = '0';
+            if (isNegative)
+                if (bp > buf)
+                    *--bp = '-';
+                else
+                    /* sacrifice the leading digit or lose the '-' ?*/
+                    *bp = '-';
 	    str = JS_NewStringCopyZ(cx, bp);
 	} else {
 	    str = js_NumberToString(cx, d);
@@ -301,7 +311,10 @@ js_InitNumberClass(JSContext *cx, JSObject *obj)
 	/*where Netscape was calling control87 on Windows...                                        */
 	_control87(MCW_EM+PC_53+RC_NEAR,MCW_EM+MCW_PC+MCW_RC);
 #else
-	_control87(MCW_EM, MCW_EM);
+#if defined (_M_IX86)
+        /* On Alpha platform this is handled via Compiler option */
+        _control87(MCW_EM, MCW_EM);
+#endif
 #endif
 #endif
 
@@ -473,7 +486,7 @@ js_ValueToNumber(JSContext *cx, jsval v, jsdouble *dp)
 	*dp = JSVAL_TO_BOOLEAN(v) ? 1 : 0;
     } else {
 #if JS_BUG_FALLIBLE_TONUM
-	str = js_DecompileValueGenerator(cx, v, NULL);
+	str = js_DecompileValueGenerator(cx, JS_TRUE, v, NULL);
 badstr:
 	if (str) {
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_NAN,
@@ -559,7 +572,7 @@ js_ValueToInt32(JSContext *cx, jsval v, int32 *ip)
     if (!js_ValueToNumber(cx, v, &d))
 	return JS_FALSE;
     if (JSDOUBLE_IS_NaN(d) || d <= -2147483649.0 || 2147483648.0 <= d) {
-	str = js_DecompileValueGenerator(cx, v, NULL);
+	str = js_DecompileValueGenerator(cx, JS_TRUE, v, NULL);
 	if (str) {
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 				 JSMSG_CANT_CONVERT, JS_GetStringBytes(str));
@@ -655,7 +668,7 @@ js_strtod(JSContext *cx, const jschar *s, const jschar **ep, jsdouble *dp)
 		d = *cx->runtime->jsNegativeInfinity;
 #ifdef HPUX
         if (d == 0.0 && negative) {
-            /* 
+            /*
              * "-0", "-1e-2000" come out as positive zero
     		 * here on HPUX. Force a negative zero instead.
              */

@@ -28,7 +28,6 @@ EXPORTS = \
 	nsIFontSizeIterator.h \
 	nsIFontNameIterator.h \
 	nsIFontRetrieverService.h \
-	nsIFileChooser.h \
 	nsIFileListTransferable.h \
 	nsIMenuBar.h	\
 	nsIMenu.h		\
@@ -76,15 +75,18 @@ EXPORTS = \
 	nsIFontSizeIterator.h \
 	nsIFontRetrieverService.h \
 	nsIContextMenu.h \
+	nsIXlibWindowService.h \
 	$(NULL)
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
 
 MODULE = raptor
-XPILD_MODULE = widget
+XPIDL_MODULE = widget
 
-XPIDLSRCS = nsISound.idl \
-						$(NULL)
+XPIDLSRCS =				\
+	nsIFileSpecWithUI.idl		\
+	nsISound.idl			\
+	$(NULL)
 
 include $(topsrcdir)/config/config.mk
 

@@ -64,6 +64,8 @@
  *      so we can increase the stack size
  */
 #define ResDef(name,id,msg)	int __far name = (id);
+#elif defined(MOZ_STRIP_NOT_EXPORTED)
+#define ResDef(name,id,msg)	__attribute__ ((dllexport)) int name = (id);
 #else
 #define ResDef(name,id,msg)	int name = (id);
 #endif
@@ -76,7 +78,7 @@
 
 #ifndef MOZILLA_CLIENT
 #define RES_START
-#define BEGIN_STR(arg) static char * (arg) (int16 i) { switch (i) {
+#define BEGIN_STR(arg) static char * (arg) (int32 i) { switch (i) {
 #define ResDef(name,id,msg)	case (id)+RES_OFFSET: return (msg);
 #define END_STR(arg) } return NULL; }
 #else /* MOZILLA_CLIENT */
@@ -98,6 +100,7 @@
 /* END NEW_STRING_LIB */
 
 #elif defined(XP_UNIX)
+
 #ifdef RESOURCE_STR_X
 #define RES_START
 #define BEGIN_STR(arg) static char *(arg)(void) {
@@ -105,10 +108,18 @@
 #define END_STR(arg) }
 #else
 #define RES_START
-#define BEGIN_STR(arg) static char *(arg)(int16 i) { switch (i) {
+#define BEGIN_STR(arg) static char *(arg)(int32 i) { switch (i) {
 #define ResDef(name,id,msg)	case (id)+RES_OFFSET: return (msg);
 #define END_STR(arg) } return NULL; }
 #endif /* RESOURCE_STR_X */
+
+#elif defined(XP_BEOS)
+
+#define RES_START
+#define BEGIN_STR(arg) static char *(arg)(int32 i) { switch (i) {
+#define ResDef(name,id,msg)	case (id)+RES_OFFSET: return (msg);
+#define END_STR(arg) } return NULL; }
+
 #endif   /*  XP_WIN  */
 #endif /* RESOURCE_STR   */
 

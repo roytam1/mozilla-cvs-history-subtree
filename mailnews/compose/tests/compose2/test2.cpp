@@ -1,3 +1,21 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
 #include "msgCore.h"
 #include "nsMsgBaseCID.h"
 #include "nsMsgLocalCID.h"
@@ -16,7 +34,6 @@
 #include "nsIServiceManager.h"
 #include "nscore.h"
 #include "nsIMsgMailSession.h"
-#include "nsINetService.h"
 #include "nsIComponentManager.h"
 #include "nsString.h"
 #include "nsISmtpService.h"
@@ -25,14 +42,13 @@
 #include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
 #include "nsIFileLocator.h"
-#include "MsgCompGlue.h"
+#include "nsMsgTransition.h"
 #include "nsCRT.h"
 #include "prmem.h"
 #include "nsIMimeURLUtils.h"
 #include "nsFileStream.h"
 
 #ifdef XP_PC
-#define NETLIB_DLL "netlib.dll"
 #define XPCOM_DLL  "xpcom32.dll"
 #define PREF_DLL   "xppref32.dll"
 #define APPSHELL_DLL "nsappshell.dll"
@@ -41,7 +57,6 @@
 #ifdef XP_MAC
 #include "nsMacRepository.h"
 #else
-#define NETLIB_DLL "libnetlib"MOZ_DLL_SUFFIX
 #define XPCOM_DLL  "libxpcom"MOZ_DLL_SUFFIX
 #define PREF_DLL   "libpref"MOZ_DLL_SUFFIX
 #define APPCORES_DLL  "libappcores"MOZ_DLL_SUFFIX
@@ -55,7 +70,6 @@
 // Define keys for all of the interfaces we are going to require for this test
 /////////////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kSmtpServiceCID, NS_SMTPSERVICE_CID);
 static NS_DEFINE_CID(kFileLocatorCID, NS_FILELOCATOR_CID);
@@ -86,10 +100,12 @@ GetTheTempDirectoryOnTheSystem(void)
     GetWindowsDirectory(retPath, 1024);
 #endif 
 
-  // RICHIE - should do something better here!
-
-#ifdef XP_UNIX
-  PL_strncpy(retPath, "/tmp/", 1024);
+#if defined(XP_UNIX) || defined(XP_BEOS)
+  char *tPath = getenv("TEMP");
+  if (!tPath)
+    PL_strncpy(retPath, "/tmp/", TPATH_LEN);
+  else
+    PL_strncpy(retPath, tPath, TPATH_LEN);
 #endif
 
 #ifdef XP_MAC
@@ -97,6 +113,38 @@ GetTheTempDirectoryOnTheSystem(void)
 #endif
 
   return retPath;
+}
+
+nsIMsgIdentity *
+GetHackIdentity()
+{
+nsresult rv;
+
+  NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &rv);
+  if (NS_FAILED(rv)) 
+  {
+    printf("Failure on Mail Session Init!\n");
+    return nsnull;
+  }  
+
+  nsCOMPtr<nsIMsgIdentity>        identity = nsnull;
+  nsCOMPtr<nsIMsgAccountManager>  accountManager;
+
+  rv = mailSession->GetAccountManager(getter_AddRefs(accountManager));
+  if (NS_FAILED(rv)) 
+  {
+    printf("Failure getting account Manager!\n");
+    return nsnull;
+  }  
+
+  rv = mailSession->GetCurrentIdentity(getter_AddRefs(identity));
+  if (NS_FAILED(rv)) 
+  {
+    printf("Failure getting Identity!\n");
+    return nsnull;
+  }  
+
+  return identity;
 }
 
 //
@@ -128,28 +176,123 @@ nsMsgCreateTempFileSpec(char *tFileName)
   return tmpSpec;
 }
 
-nsresult
-CallMe(nsresult aExitCode, void *tagData, nsFileSpec *fs)
+////////////////////////////////////////////////////////////////////////////////////
+// This is the listener class for the send operation. We have to create this class 
+// to listen for message send completion and eventually notify the caller
+////////////////////////////////////////////////////////////////////////////////////
+PRBool keepOnRunning = PR_TRUE;
+class nsMsgSendLater;
+class SendOperationListener : public nsIMsgSendListener
 {
-  nsIMsgSend  *ptr = (nsIMsgSend  *)tagData;
-  
-  printf("Called ME!\n");
-  printf("Exit code = %d\n", aExitCode);
+public:
+  SendOperationListener(void);
+  virtual ~SendOperationListener(void);
 
-  ptr->Release();
+  // nsISupports interface
+  NS_DECL_ISUPPORTS
+
+  /* void OnStartSending (in string aMsgID, in PRUint32 aMsgSize); */
+  NS_IMETHOD OnStartSending(const char *aMsgID, PRUint32 aMsgSize);
+  
+  /* void OnProgress (in string aMsgID, in PRUint32 aProgress, in PRUint32 aProgressMax); */
+  NS_IMETHOD OnProgress(const char *aMsgID, PRUint32 aProgress, PRUint32 aProgressMax);
+  
+  /* void OnStatus (in string aMsgID, in wstring aMsg); */
+  NS_IMETHOD OnStatus(const char *aMsgID, const PRUnichar *aMsg);
+  
+  /* void OnStopSending (in string aMsgID, in nsresult aStatus, in wstring aMsg, in nsIFileSpec returnFileSpec); */
+  NS_IMETHOD OnStopSending(const char *aMsgID, nsresult aStatus, const PRUnichar *aMsg, 
+                           nsIFileSpec *returnFileSpec);
+  
+private:
+  nsMsgSendLater    *mSendLater;
+};
+
+////////////////////////////////////////////////////////////////////////////////////
+// This is the listener class for the send operation. We have to create this class 
+// to listen for message send completion and eventually notify the caller
+////////////////////////////////////////////////////////////////////////////////////
+NS_IMPL_ISUPPORTS(SendOperationListener, nsCOMTypeInfo<nsIMsgSendListener>::GetIID());
+
+SendOperationListener::SendOperationListener(void) 
+{ 
+  mSendLater = nsnull;
+  NS_INIT_REFCNT(); 
+}
+
+SendOperationListener::~SendOperationListener(void) 
+{
+}
+
+nsresult
+SendOperationListener::OnStartSending(const char *aMsgID, PRUint32 aMsgSize)
+{
+#ifdef NS_DEBUG
+  printf("SendOperationListener::OnStartSending()\n");
+#endif
+  return NS_OK;
+}
+  
+nsresult
+SendOperationListener::OnProgress(const char *aMsgID, PRUint32 aProgress, PRUint32 aProgressMax)
+{
+#ifdef NS_DEBUG
+  printf("SendOperationListener::OnProgress()\n");
+#endif
+  return NS_OK;
+}
+
+nsresult
+SendOperationListener::OnStatus(const char *aMsgID, const PRUnichar *aMsg)
+{
+#ifdef NS_DEBUG
+  printf("SendOperationListener::OnStatus()\n");
+#endif
 
   return NS_OK;
+}
+  
+nsresult
+SendOperationListener::OnStopSending(const char *aMsgID, nsresult aStatus, const PRUnichar *aMsg, 
+                                     nsIFileSpec *returnFileSpec)
+{
+  if (NS_SUCCEEDED(aStatus))
+  {
+    printf("Save Mail File Operation Completed Successfully!\n");
+  }
+  else
+  {
+    printf("Save Mail File Operation FAILED!\n");
+  }
+
+  keepOnRunning = PR_FALSE;
+  printf("Exit code = [%d]\n", aStatus);
+  return NS_OK;
+}
+
+nsIMsgSendListener **
+CreateListenerArray(nsIMsgSendListener *listener)
+{
+  if (!listener)
+    return nsnull;
+
+  nsIMsgSendListener **tArray = (nsIMsgSendListener **)PR_Malloc(sizeof(nsIMsgSendListener *) * 2);
+  if (!tArray)
+    return nsnull;
+  nsCRT::memset(tArray, 0, sizeof(nsIMsgSendListener *) * 2);
+  tArray[0] = listener;
+  return tArray;
 }
 
 char *email = {"\
 Message-ID: <375FF6D0.3070505@netscape.com>\
 \nDate: Thu, 10 Jun 1999 13:33:04 -0500\
-\nFrom: rhp@netscape.com\
+\nFrom: %s\
 \nUser-Agent: Mozilla 5.0 [en] (Win95; I)\
 \nX-Accept-Language: en\
 \nMIME-Version: 1.0\
 \nTo: rhp@netscape.com\
-\nSubject: [spam] test\
+\nSubject: %s\
 \nContent-Type: text/html; charset=\
 \nContent-Transfer-Encoding: 7bit\
 \n\
@@ -169,6 +312,22 @@ nsresult
 WriteTempMailFile(nsFileSpec *mailFile)
 {
   nsOutputFileStream      *outFile;         // the actual output file stream
+  nsIMsgIdentity *identity = GetHackIdentity();
+  const char *to = "rhp@netscape.com";
+  char  *aEmail = nsnull;
+  char  *aFullName = nsnull;
+  char  addr[256];
+  char  subject[256];
+  char  emailMessage[2048];
+  
+  identity->GetEmail(&aEmail);
+  identity->GetFullName(&aFullName);
+  PR_snprintf(addr, sizeof(addr), "%s <%s>", aFullName, aEmail);
+  PR_FREEIF(aEmail);
+  PR_FREEIF(aFullName);      
+  PR_snprintf(subject, sizeof(subject), "Spam from: %s", addr);
+  
+  PR_snprintf(emailMessage, sizeof(emailMessage), email, to, subject);
 
   outFile = new nsOutputFileStream(*mailFile);
 	if (! outFile->is_open()) 
@@ -176,7 +335,7 @@ WriteTempMailFile(nsFileSpec *mailFile)
 	    return NS_ERROR_FAILURE;
   }
 
-  outFile->write(email, PL_strlen(email));
+  outFile->write(emailMessage, PL_strlen(emailMessage));
   outFile->close();
   return NS_OK;
 }
@@ -191,13 +350,13 @@ int main(int argc, char *argv[])
   nsIMsgSend        *pMsgSend;
   nsresult          rv = NS_OK;
   nsFileSpec        *mailFile = nsnull;
+  nsIFileSpec       *mailIFile = nsnull;
 
-  nsComponentManager::RegisterComponent(kNetServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
-	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NULL, APPSHELL_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kMimeURLUtilsCID,  NULL, NULL, MIME_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
+  nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kMimeURLUtilsCID,  NULL, NULL, MIME_DLL, PR_FALSE, PR_FALSE);
 
   // Create the Event Queue for this thread...
 	NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &rv); 
@@ -222,55 +381,73 @@ int main(int argc, char *argv[])
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
   if (NS_FAILED(rv) || (prefs == nsnull)) 
   {
+    printf("Failed to get the prefs service...\n");
+    exit(rv);
+  }
+  if (NS_FAILED(prefs->ReadUserPrefs()))
+  {
+    printf("Failed on reading user prefs!\n");
     exit(rv);
   }
 
+
   NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &rv);
-  if (NS_FAILED(rv)) 
+  if (NS_FAILED(rv) || !mailSession) 
   {
     printf("Failure on Mail Session Init!\n");
     return rv;
   }  
 
-  rv = nsComponentManager::CreateInstance(kMsgCompFieldsCID, NULL, 
-                                           nsIMsgCompFields::GetIID(), (void **) &pMsgCompFields);   
-  if (rv == NS_OK && pMsgCompFields) { 
-    printf("We succesfully obtained a nsIMsgCompFields interface....\n");
-    printf("Releasing the interface now...\n");
-    pMsgCompFields->Release(); 
-  } 
-  
   printf("Creating temp mail file...\n");
-  mailFile = nsMsgCreateTempFileSpec("mailTest.tmp");
-
+  mailFile = nsMsgCreateTempFileSpec("mailTest.eml");
   if (NS_FAILED(WriteTempMailFile(mailFile)))
   {
     printf("Failed to create temp mail file!\n");
     return 0;
   }
 
+  NS_NewFileSpecWithSpec(*mailFile, &mailIFile);
+	if (!mailIFile)
+    return NS_ERROR_FAILURE;
+
   rv = nsComponentManager::CreateInstance(kMsgSendCID, NULL, kIMsgSendIID, (void **) &pMsgSend); 
-  if (rv == NS_OK && pMsgSend) 
+  if (NS_SUCCEEDED(rv) && pMsgSend) 
   { 
     printf("We succesfully obtained a nsIMsgSend interface....\n");    
     rv = nsComponentManager::CreateInstance(kMsgCompFieldsCID, NULL, kIMsgCompFieldsIID, 
                                              (void **) &pMsgCompFields); 
-    if (rv == NS_OK && pMsgCompFields)
+    if (NS_SUCCEEDED(rv) && pMsgCompFields)
     { 
-      pMsgCompFields->SetTo("rhp@netscape.com", NULL);
-      pMsgSend->SendMessageFile(pMsgCompFields, // nsIMsgCompFields                  *fields,
-                          mailFile,             // nsFileSpec                        *sendFileSpec,
+      // Create the listener for the send operation...
+      SendOperationListener *mSendListener = new SendOperationListener();
+      if (!mSendListener)
+      {
+        return NS_ERROR_FAILURE;
+      }
+      
+      // set this object for use on completion...
+      nsIMsgSendListener **tArray = CreateListenerArray(mSendListener);
+      if (!tArray)
+      {
+        printf("Error creating listener array.\n");
+        return NS_ERROR_FAILURE;
+      }
+
+      pMsgCompFields->SetTo(nsAutoString("rhp@netscape.com").GetUnicode());
+      pMsgSend->SendMessageFile(GetHackIdentity(),  // identity...
+                          pMsgCompFields, // nsIMsgCompFields                  *fields,
+                          mailIFile,             // nsFileSpec                        *sendFileSpec,
                           PR_TRUE,              // PRBool                            deleteSendFileOnCompletion,
 						              PR_FALSE,             // PRBool                            digest_p,
 						              nsMsgDeliverNow,      // nsMsgDeliverMode                  mode,
-                          CallMe,               // nsMsgSendCompletionCallback       completionCallback,
-                          pMsgSend);              // void                              *tagData);
+                  			  nsnull, // nsIMessage *msgToReplace
+                          tArray);              // nsIMsgSendListener array
     }    
   }
 
 #ifdef XP_PC
   printf("Sitting in an event processing loop ...Hit Cntl-C to exit...");
-  while (1)
+  while (keepOnRunning)
   {
     MSG msg;
     if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))

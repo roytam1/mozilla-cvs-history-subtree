@@ -93,6 +93,41 @@ XPCConvert::IsMethodReflectable(const nsXPTMethodInfo& info)
 
 /***************************************************************************/
 
+static JSBool
+ObjectHasPrivate(JSContext* cx, JSObject* obj)
+{
+    JSClass* jsclass =
+#ifdef JS_THREADSAFE
+            JS_GetClass(cx, obj);
+#else
+            JS_GetClass(obj);
+#endif
+    NS_ASSERTION(jsclass, "obj has no class");
+    return jsclass && (jsclass->flags & JSCLASS_HAS_PRIVATE);
+}        
+
+static JSBool
+GetISupportsFromJSObject(JSContext* cx, JSObject* obj, nsISupports** iface)
+{
+    JSClass* jsclass =
+#ifdef JS_THREADSAFE
+            JS_GetClass(cx, obj);
+#else
+            JS_GetClass(obj);
+#endif
+    NS_ASSERTION(jsclass, "obj has no class");
+    if(jsclass &&
+       (jsclass->flags & JSCLASS_HAS_PRIVATE) &&
+       (jsclass->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS))
+    {
+        *iface = (nsISupports*) JS_GetPrivate(cx, obj);
+        return JS_TRUE;
+    }
+    return JS_FALSE;
+}
+
+/***************************************************************************/
+
 /*
 * Support for 64 bit conversions were 'long long' not supported.
 * (from John Fairhurst <mjf35@cam.ac.uk>)
@@ -269,6 +304,7 @@ XPCConvert::NativeData2JS(JSContext* cx, jsval* d, const void* s,
                     NS_ASSERTION(owner,"QI succeeded but yielded NULL!");
                     if(NULL != (globalObject = 
                                     JS_GetGlobalObject(cx)) &&
+                       ObjectHasPrivate(cx, globalObject) &&
                        NULL != (domObject = (nsISupports*)
                                     JS_GetPrivate(cx, globalObject)))
                     {
@@ -321,26 +357,6 @@ XPCConvert::NativeData2JS(JSContext* cx, jsval* d, const void* s,
         }
     }
     return JS_TRUE;
-}
-
-static JSBool
-GetISupportsFromJSObject(JSContext* cx, JSObject* obj, nsISupports** iface)
-{
-    JSClass* jsclass =
-#ifdef JS_THREADSAFE
-            JS_GetClass(cx, obj);
-#else
-            JS_GetClass(obj);
-#endif
-    NS_ASSERTION(jsclass, "obj has no class");
-    if(jsclass &&
-       (jsclass->flags & JSCLASS_HAS_PRIVATE) &&
-       (jsclass->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS))
-    {
-        *iface = (nsISupports*) JS_GetPrivate(cx, obj);
-        return JS_TRUE;
-    }
-    return JS_FALSE;
 }
 
 /***************************************************************************/
@@ -434,7 +450,7 @@ XPCConvert::JSData2Native(JSContext* cx, void* d, jsval s,
             return JS_FALSE;
         break;
     case nsXPTType::T_BOOL   :
-        if(!JS_ValueToBoolean(cx, s, (PRBool*)d))
+        if(!JS_ValueToBoolean(cx, s, (JSBool*)d))
             return JS_FALSE;
         break;
     case nsXPTType::T_CHAR   :
@@ -656,6 +672,43 @@ XPCConvert::JSData2Native(JSContext* cx, void* d, jsval s,
             return JS_FALSE;
         }
     }
+    return JS_TRUE;
+}
+
+const char XPC_ARG_FORMATTER_FORMAT_STR[] = "%ip";
+
+JSBool JS_DLL_CALLBACK
+XPC_JSArgumentFormatter(JSContext *cx, const char *format,
+                        JSBool fromJS, jsval **vpp, va_list *app)
+{
+    jsval *vp;
+    va_list ap;
+
+    vp = *vpp;
+    ap = *app;
+
+    nsXPTType type = nsXPTType((uint8)(TD_INTERFACE_TYPE | XPT_TDP_POINTER));
+    nsISupports* iface;
+
+    if(fromJS)
+    {
+        if(!XPCConvert::JSData2Native(cx, &iface, vp[0], type, JS_FALSE,
+                                      &(NS_GET_IID(nsISupports)), nsnull))
+            return JS_FALSE;
+        *va_arg(ap, nsISupports **) = iface;
+    } 
+    else
+    {
+        const nsIID* iid;
+
+        iid  = va_arg(ap, const nsIID*);
+        iface = va_arg(ap, nsISupports *);
+
+        if(!XPCConvert::NativeData2JS(cx, &vp[0], &iface, type, iid, nsnull))
+            return JS_FALSE;
+    }
+    *vpp = vp + 1;
+    *app = ap;
     return JS_TRUE;
 }
 

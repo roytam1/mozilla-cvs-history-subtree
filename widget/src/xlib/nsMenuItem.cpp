@@ -192,6 +192,17 @@ nsEventStatus nsMenuItem::MenuDestruct(const nsMenuEvent & aMenuEvent)
   return nsEventStatus_eIgnore;
 }
 
+NS_METHOD nsMenuItem::SetDOMNode(nsIDOMNode * aDOMNode)
+{
+  return NS_OK;
+}
+    
+//-------------------------------------------------------------------------
+NS_METHOD nsMenuItem::GetDOMNode(nsIDOMNode ** aDOMNode)
+{
+  return NS_OK;
+}
+
 NS_METHOD nsMenuItem::SetDOMElement(nsIDOMElement * aDOMElement)
 {
   return NS_OK;
@@ -214,5 +225,32 @@ NS_METHOD nsMenuItem::SetCommand(const nsString & aStrCmd)
 
 NS_METHOD nsMenuItem::DoCommand()
 {
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMenuItem::SetShortcutChar(const nsString &aText)
+{
+  mKeyEquivalent = aText;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetShortcutChar(nsString &aText)
+{
+  aText = mKeyEquivalent;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetModifiers(PRUint8 aModifiers)
+{
+  mModifiers = aModifiers;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetModifiers(PRUint8 * aModifiers)
+{
+  *aModifiers = mModifiers; 
   return NS_OK;
 }

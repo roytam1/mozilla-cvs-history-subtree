@@ -32,7 +32,14 @@ EXPORT_RESOURCE_SAMPLES = \
 	$(srcdir)/messengercompose.xul \
 	$(srcdir)/MsgComposeCommands.js \
 	$(srcdir)/defaultTextBody.html \
+	$(srcdir)/defaultTextBody.txt \
 	$(srcdir)/defaultHtmlBody.html \
+	$(srcdir)/addressAutoComplete.js \
+	$(srcdir)/composebe_en.properties \
+	$(srcdir)/MsgAttachPage.xul	\
+	$(srcdir)/MsgAttachPage.js	\
+	$(srcdir)/addressingWidgetOverlay.js	\
+	$(srcdir)/addressingWidgetOverlay.xul	\
 	$(NULL)
 
 EXPORT_RESOURCE_SAMPLES_TO_REMOVE := $(addprefix $(SAMPLES_DIR)/, $(EXPORT_RESOURCE_SAMPLES))

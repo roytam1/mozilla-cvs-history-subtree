@@ -31,11 +31,12 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIDOMToolkitCore.h"
+#include "nsIBrowserWindow.h"
 #include "nsIWebShellWindow.h"
 #include "nsIWebShell.h"
 #include "nsIScriptContextOwner.h"
@@ -44,6 +45,8 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 // NSPR
 #include "prmem.h"
 #include "plstr.h"
+#include "prenv.h"
+#include "prlog.h"
 
 // Universal
 #include <AppleEvents.h>
@@ -139,6 +142,8 @@ private:
 	OSErr				AddToCommandLine(const char*	inOptionString,
 									const FSSpec&		inFileSpec);
 
+	void				AddToEnvironmentVars(const char* inArgText);
+	
 	OSErr				DispatchURLToNewBrowser(const char* url);
 	
 	OSErr 				HandleOpenURLEvent(const AppleEvent	&inAppleEvent,
@@ -489,6 +494,13 @@ OSErr nsAppleEventHandler::AddToCommandLine(const char* inArgText)
 }
 
 //----------------------------------------------------------------------------------------
+void nsAppleEventHandler::AddToEnvironmentVars(const char* inArgText)
+//----------------------------------------------------------------------------------------
+{
+	(void)PR_PutEnv(inArgText);
+}
+
+//----------------------------------------------------------------------------------------
 OSErr nsAppleEventHandler::HandleOpen1Doc(const FSSpec& inFileSpec, OSType inFileType)
 //----------------------------------------------------------------------------------------
 {
@@ -501,15 +513,40 @@ OSErr nsAppleEventHandler::HandleOpen1Doc(const FSSpec& inFileSpec, OSType inFil
 			nsInputFileStream s(inFileSpec);
 			if (s.is_open())
 			{
+				Boolean foundArgs = false;
+				Boolean foundEnv = false;
 				char chars[1024];
-				s.readline(chars, sizeof(chars));
-				// Does the text in it have the right prefix?
 				const char* kCommandLinePrefix = "ARGS:";
-				if (PL_strstr(chars, kCommandLinePrefix) == chars)
-				{
-					return AddToCommandLine(chars + PL_strlen(kCommandLinePrefix));
-					 // That's all we have to do.
-				}
+				const char* kEnvVarLinePrefix = "ENV:";
+				s.readline(chars, sizeof(chars));
+				
+				do
+				{	// See if there are any command line or environment var settings
+					if (PL_strstr(chars, kCommandLinePrefix) == chars)
+					{
+						(void)AddToCommandLine(chars + PL_strlen(kCommandLinePrefix));
+						foundArgs = true;
+					}
+					else if (PL_strstr(chars, kEnvVarLinePrefix) == chars)
+					{
+						(void)AddToEnvironmentVars(chars + PL_strlen(kEnvVarLinePrefix));
+						foundEnv = true;
+					}
+					
+					// Clear the buffer and get the next line from the command line file
+					chars[0] = '\0';
+					s.readline(chars, sizeof(chars));
+				} while (PL_strlen(chars));
+				
+				// If we found any environment vars we need to re-init NSPR's logging
+				// so that it knows what the new vars are
+				if (foundEnv)
+					PR_Init_Log();
+
+				// If we found a command line or environment vars we want to return now
+				// raather than trying to open the file as a URL
+				if (foundArgs || foundEnv)
+					return noErr;
 			}
 		}
 		// If it's not a command-line argument, and we are starting up the application,
@@ -983,19 +1020,19 @@ nsIWebShellWindow* FindWebShellWindow(nsIXULWindowCallbacks* inCallbacks)
 
 	const PRInt32 windowWidth  = 615;
 	const PRInt32 windowHeight = 650;
-	nsCOMPtr<nsIURL> urlObj;
+	nsCOMPtr<nsIURI> urlObj;
     char * urlStr = "chrome://navigator/content";
 #ifndef NECKO
 	rv = NS_NewURL(getter_AddRefs(urlObj), urlStr);
 #else
     NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv)) return nsnull;
 
     nsIURI *uri = nsnull;
     rv = service->NewURI(urlStr, nsnull, &uri);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv)) return nsnull;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
     NS_RELEASE(uri);
 #endif // NECKO
 	if (NS_FAILED(rv))
@@ -1004,12 +1041,12 @@ nsIWebShellWindow* FindWebShellWindow(nsIXULWindowCallbacks* inCallbacks)
 	nsIWebShellWindow *aWindow = nsnull;			// we will return the window AddRefed
 	rv = appShellService->CreateTopLevelWindow(
     	nsnull,
-    	urlObj, // nsIURL* of chrome
+    	urlObj, // nsIURI* of chrome
     	PR_TRUE,
-    	aWindow,
-        nsnull,
+        NS_CHROME_ALL_CHROME,
         inCallbacks, // callbacks
-        windowWidth, windowHeight);
+        NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+    	&aWindow);
 	if (NS_FAILED(rv))
 		return nsnull;
 	return aWindow;

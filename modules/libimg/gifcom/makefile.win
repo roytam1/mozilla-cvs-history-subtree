@@ -44,15 +44,12 @@ LCFLAGS		= $(LCFLAGS) -DDEBUG_GC
 LCFLAGS		= $(LCFLAGS) /TP 
 
 LLIBS= $(LIBNSPR)  \
-	$(DIST)\lib\plc3.lib	\
 	$(DIST)\lib\util.lib            \
 	$(DIST)\lib\xpcom.lib \
 !ifdef NU_CACHE
 	$(DIST)\lib\cache.lib \
 !endif
 	$(NULL)
-
-MISCDEP=$(LLIBS)
 
 LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
 LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
@@ -86,8 +83,8 @@ DEPTH=..\..\..
 
 LINCS=-I$(DEPTH)/dist/public/xpcom -I. -I$(DEPTH)/dist/public/raptor
 REQUIRES=nspr xpcom util raptor
-CPPSRCS=nsGIFCallback.cpp nsGIFDecoder.cpp dllcompat.cpp gif.cpp 
-CPP_OBJS= .\$(OBJDIR)\nsGIFDecoder.obj  .\$(OBJDIR)\nsGIFCallback.obj \
+CPPSRCS= nsGIFModule.cpp nsGIFDecoder.cpp dllcompat.cpp gif.cpp 
+CPP_OBJS=   .\$(OBJDIR)\nsGIFModule.obj .\$(OBJDIR)\nsGIFDecoder.obj \
          .\$(OBJDIR)\dllcompat.obj  .\$(OBJDIR)\gif.obj
 
 include <$(DEPTH)\config\rules.mak> 

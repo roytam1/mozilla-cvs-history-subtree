@@ -29,11 +29,11 @@
 
 #include "nsHTMLToTXTSinkStream.h"
 #include "nsHTMLTokens.h"
-#include <iostream.h>
 #include "nsString.h"
 #include "nsIParser.h"
 #include "nsHTMLEntities.h"
 #include "nsXIFDTD.h"
+#include "prprf.h"         // For PR_snprintf()
 
 #include "nsIUnicodeEncoder.h"
 #include "nsICharsetAlias.h"
@@ -45,6 +45,8 @@
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);                 
 static NS_DEFINE_IID(kIContentSinkIID, NS_ICONTENT_SINK_IID);
 static NS_DEFINE_IID(kIHTMLContentSinkIID, NS_IHTML_CONTENT_SINK_IID);
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 const  int               gTabSize=2;
 
@@ -61,11 +63,7 @@ static PRBool IsBlockLevel(eHTMLTags aTag);
  */
 nsresult nsHTMLToTXTSinkStream::InitEncoder(const nsString& aCharset)
 {
-
- 
-
   nsresult res = NS_OK;
-  
   
   // If the converter is ucs2, then do not use a converter
   nsString ucs2("ucs2");
@@ -96,7 +94,7 @@ nsresult nsHTMLToTXTSinkStream::InitEncoder(const nsString& aCharset)
 
     nsICharsetConverterManager * ccm = nsnull;
     res = nsServiceManager::GetService(kCharsetConverterManagerCID, 
-                                       kICharsetConverterManagerIID, 
+                                       nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(), 
                                        (nsISupports**)&ccm);
     if(NS_SUCCEEDED(res) && (nsnull != ccm))
     {
@@ -112,8 +110,6 @@ nsresult nsHTMLToTXTSinkStream::InitEncoder(const nsString& aCharset)
   }
   return res;
 }
-
-
 
 
 /**
@@ -163,13 +159,17 @@ NS_IMPL_RELEASE(nsHTMLToTXTSinkStream)
 NS_HTMLPARS nsresult
 NS_New_HTMLToTXT_SinkStream(nsIHTMLContentSink** aInstancePtrResult, 
                             nsIOutputStream* aStream,
-                            const nsString* aCharsetOverride) {
-
+                            const nsString* aCharsetOverride,
+                            PRUint32 aWrapColumn,
+                            PRBool aPrettyPrint)
+{
   NS_ASSERTION(aStream != nsnull, "a valid stream is required");
-  nsHTMLToTXTSinkStream* it = new nsHTMLToTXTSinkStream(aStream,nsnull);
+  nsHTMLToTXTSinkStream* it = new nsHTMLToTXTSinkStream(aStream, nsnull);
   if (nsnull == it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
+  it->SetWrapColumn(aWrapColumn);
+  it->DoPrettyPrint(aPrettyPrint);
   if (aCharsetOverride != nsnull)
     it->SetCharsetOverride(aCharsetOverride);
   return it->QueryInterface(kIHTMLContentSinkIID, (void **)aInstancePtrResult);
@@ -184,19 +184,25 @@ NS_New_HTMLToTXT_SinkStream(nsIHTMLContentSink** aInstancePtrResult,
  */
 NS_HTMLPARS nsresult
 NS_New_HTMLToTXT_SinkStream(nsIHTMLContentSink** aInstancePtrResult, 
-                            nsString* aString) {
-
+                            nsString* aString,
+                            PRUint32 aWrapColumn,
+                            PRBool aPrettyPrint)
+{
   NS_ASSERTION(aString != nsnull, "a valid stream is required");
-  nsHTMLToTXTSinkStream* it = new nsHTMLToTXTSinkStream(nsnull,aString);
+  nsHTMLToTXTSinkStream* it = new nsHTMLToTXTSinkStream(nsnull, aString);
   if (nsnull == it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
+  it->SetWrapColumn(aWrapColumn);
+  it->DoPrettyPrint(aPrettyPrint);
   nsString ucs2("ucs2");
   it->SetCharsetOverride(&ucs2);
   return it->QueryInterface(kIHTMLContentSinkIID, (void **)aInstancePtrResult);
 }
 
-
+// Someday may want to make this non-const:
+static const PRUint32 TagStackSize = 500;
+static const PRUint32 OLStackSize = 100;
 
 /**
  * Construct a content sink stream.
@@ -204,7 +210,9 @@ NS_New_HTMLToTXT_SinkStream(nsIHTMLContentSink** aInstancePtrResult,
  * @param 
  * @return
  */
-nsHTMLToTXTSinkStream::nsHTMLToTXTSinkStream(nsIOutputStream* aStream, nsString* aString)  {
+nsHTMLToTXTSinkStream::nsHTMLToTXTSinkStream(nsIOutputStream* aStream,
+                                             nsString* aString)
+{
   NS_INIT_REFCNT();
   mStream = aStream;
   mColPos = 0;
@@ -216,8 +224,17 @@ nsHTMLToTXTSinkStream::nsHTMLToTXTSinkStream(nsIOutputStream* aStream, nsString*
   mUnicodeEncoder = nsnull;
   mStream = aStream;
   mString = aString;
-}
+  mPrettyPrint = PR_FALSE;
+  mWrapColumn = 72;     // XXX magic number, we expect someone to reset this
 
+  // initialize the tag stack to zero:
+  mTagStack = new nsHTMLTag[TagStackSize];
+  mTagStackIndex = 0;
+
+  // initialize the OL stack, where numbers for ordered lists are kept:
+  mOLStack = new PRInt32[OLStackSize];
+  mOLStackIndex = 0;
+}
 
 
 /**
@@ -226,11 +243,13 @@ nsHTMLToTXTSinkStream::nsHTMLToTXTSinkStream(nsIOutputStream* aStream, nsString*
  * @param 
  * @return
  */
-nsHTMLToTXTSinkStream::~nsHTMLToTXTSinkStream() {
+nsHTMLToTXTSinkStream::~nsHTMLToTXTSinkStream()
+{
   delete [] mBuffer;
+  delete[] mTagStack;
+  delete[] mOLStack;
   NS_IF_RELEASE(mUnicodeEncoder);
 }
-
 
 /**
  * 
@@ -473,9 +492,9 @@ void nsHTMLToTXTSinkStream::EnsureBufferSize(PRInt32 aNewSize)
 
 void nsHTMLToTXTSinkStream::EncodeToBuffer(const nsString& aSrc)
 {
-  NS_ASSERTION(mUnicodeEncoder != nsnull,"The unicode encoder needs to be initialized");
   if (mUnicodeEncoder == nsnull)
   {
+    NS_WARNING("The unicode encoder needs to be initialized");
     char* str = aSrc.ToNewCString();
     EnsureBufferSize(aSrc.Length()+1);
     strcpy(mBuffer, str);
@@ -571,6 +590,17 @@ nsHTMLToTXTSinkStream::AddProcessingInstruction(const nsIParserNode& aNode){
 }
 
 /**
+ *  This gets called by the parser when it encounters
+ *  a DOCTYPE declaration in the HTML document.
+ */
+
+NS_IMETHODIMP
+nsHTMLToTXTSinkStream::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+{
+  return NS_OK;
+}
+
+/**
  *  This gets called by the parser when you want to add
  *  a comment node to the current container in the content
  *  model.
@@ -580,7 +610,10 @@ nsHTMLToTXTSinkStream::AddProcessingInstruction(const nsIParserNode& aNode){
  *  @return  
  */
 NS_IMETHODIMP
-nsHTMLToTXTSinkStream::AddComment(const nsIParserNode& aNode){
+nsHTMLToTXTSinkStream::AddComment(const nsIParserNode& aNode)
+{
+  // Skip comments in plaintext output
+  mDoOutput = PR_FALSE;
   return NS_OK;
 }
 
@@ -594,7 +627,8 @@ nsHTMLToTXTSinkStream::AddComment(const nsIParserNode& aNode){
   * @return PR_TRUE if successful. 
   */     
 NS_IMETHODIMP
-nsHTMLToTXTSinkStream::OpenContainer(const nsIParserNode& aNode){
+nsHTMLToTXTSinkStream::OpenContainer(const nsIParserNode& aNode)
+{
   eHTMLTags type = (eHTMLTags)aNode.GetNodeType();
   const nsString&   name = aNode.GetText();
   if (name.Equals("XIF_DOC_INFO"))
@@ -616,7 +650,66 @@ nsHTMLToTXTSinkStream::OpenContainer(const nsIParserNode& aNode){
   }
 
   if (type == eHTMLTag_body)
+  {
     mDoOutput = PR_TRUE;
+    return NS_OK;
+  }
+  if (!mDoOutput)
+    return NS_OK;
+
+  if (mTagStackIndex < TagStackSize)
+    mTagStack[mTagStackIndex++] = type;
+
+  if (type == eHTMLTag_ol)
+  {
+    if (mOLStackIndex < OLStackSize)
+      mOLStack[mOLStackIndex++] = 1;  // XXX should get it from the node!
+  }
+
+  if (type == eHTMLTag_li)
+  {
+    nsString temp("*");
+    if (mTagStackIndex > 1 && mTagStack[mTagStackIndex-2] == eHTMLTag_ol)
+    {
+      if (mOLStackIndex > 0)
+      {
+        // This is what nsBulletFrame does for OLs:
+        char cbuf[40];
+        PR_snprintf(cbuf, sizeof(cbuf), "%ld.", (mOLStack[mOLStackIndex-1])++);
+        temp = cbuf;
+      }
+      else
+        temp = "#";
+    }
+    Write(temp);
+    mColPos++;
+  }
+  else if (type == eHTMLTag_blockquote)
+    mIndent += gTabSize;
+  else if (type == eHTMLTag_pre)
+  {
+    nsString temp(NS_LINEBREAK);
+    Write(temp);
+    mColPos = 0;
+  }
+
+  // Finally, the list of tags before which we want some vertical space:
+  switch (type)
+  {
+    case eHTMLTag_table:
+    case eHTMLTag_ul:
+    case eHTMLTag_ol:
+    case eHTMLTag_p:
+    {
+      nsString temp(NS_LINEBREAK);
+      Write(temp);
+      mColPos = 0;
+      break;
+    }
+    default:
+      break;
+  }
+
   return NS_OK;
 }
 
@@ -629,25 +722,48 @@ nsHTMLToTXTSinkStream::OpenContainer(const nsIParserNode& aNode){
   * @return PR_TRUE if successful. 
   */     
 NS_IMETHODIMP
-nsHTMLToTXTSinkStream::CloseContainer(const nsIParserNode& aNode){
+nsHTMLToTXTSinkStream::CloseContainer(const nsIParserNode& aNode)
+{
   eHTMLTags type = (eHTMLTags)aNode.GetNodeType();
-  //const nsString&   name = aNode.GetText();
 
   if (type == eHTMLTag_body)
+  {
     mDoOutput = PR_FALSE;
+    return NS_OK;
+  }
 
+  else if (type == eHTMLTag_comment)
+  {
+    mDoOutput = PR_TRUE;
+    return NS_OK;
+  }
+  if (!mDoOutput)
+    return NS_OK;
+
+  if (mTagStackIndex > 0)
+    --mTagStackIndex;
+
+  else if (type == eHTMLTag_ol)
+    --mOLStackIndex;
+
+  else if (type == eHTMLTag_blockquote)
+    mIndent -= gTabSize;
+
+  // End current line if we're ending a block level tag
   if (IsBlockLevel(type))
   {
     if (mColPos != 0)
-    {  
-      nsString temp("\n");
-      Write(temp);
-      mColPos = 0;
+    {
+      if (mPrettyPrint)
+      {
+        nsString temp(NS_LINEBREAK);
+        Write(temp);
+        mColPos = 0;
+      }
     }
   }
   return NS_OK;
 }
-
 
 /**
   * This method is used to add a leaf to the currently 
@@ -658,7 +774,8 @@ nsHTMLToTXTSinkStream::CloseContainer(const nsIParserNode& aNode){
   * @return PR_TRUE if successful. 
   */     
 NS_IMETHODIMP
-nsHTMLToTXTSinkStream::AddLeaf(const nsIParserNode& aNode){
+nsHTMLToTXTSinkStream::AddLeaf(const nsIParserNode& aNode)
+{
    eHTMLTags type = (eHTMLTags)aNode.GetNodeType();
   
   nsString text = aNode.GetText();
@@ -666,48 +783,143 @@ nsHTMLToTXTSinkStream::AddLeaf(const nsIParserNode& aNode){
   if (mDoOutput == PR_FALSE)
     return NS_OK;
 
-  if (type == eHTMLTag_text) {
-    Write(text);
-    mColPos += text.Length();
+  if (type == eHTMLTag_text)
+  {
+    if (mColPos > mIndent)
+    {
+      nsString temp(" ");
+      Write(temp);
+      mColPos++;
+    }
+
+    if (mPrettyPrint)
+      WriteWrapped(text);
+    else
+    {
+      Write(text);
+      mColPos += text.Length();
+    }
   } 
   else if (type == eHTMLTag_entity)
   {
-    text = aNode.GetText();
-    EncodeToBuffer(text);
-    PRUnichar entity = NS_EntityToUnicode(mBuffer);
-    nsString temp;
+    PRUnichar entity = nsHTMLEntities::EntityToUnicode(aNode.GetText());
+
+    nsAutoString temp;
     
     temp.Append(entity);
     Write(temp);
 
     mColPos++;
   }
-  else if (type == eHTMLTag_whitespace)
+  else if (type == eHTMLTag_br)
   {
-    if (PR_TRUE)
+    if (mPrettyPrint)
+    {
+      nsString temp (NS_LINEBREAK);
+      Write(temp);
+      mColPos = 0;
+    }
+  }
+  // The only time we want to pass along whitespace from the original
+  // html source is if we're prettyprinting and we're inside a <pre>.
+  // Otherwise, either we're collapsing to minimal text, or we're
+  // prettyprinting to mimic the html format, and in neither case
+  // does the formatting of the html source help us.
+  else if (mPrettyPrint
+           && (mTagStackIndex > 0)
+           && (mTagStack[mTagStackIndex-1] == eHTMLTag_pre))
+  {
+    if (type == eHTMLTag_whitespace)
     {
       text = aNode.GetText();
       Write(text);
       mColPos += text.Length();
     }
+    else if (type == eHTMLTag_newline)
+    {
+      nsString temp(NS_LINEBREAK);
+      Write(temp);
+      mColPos = 0;
+    }
   }
-  else if (type == eHTMLTag_br)
-  {
-    nsString temp("\n");
-    Write(temp);
-    mColPos++;
-  }
-  else if (type == eHTMLTag_newline)
-  {
-    nsString temp("\n");
-    Write(text);
-    mColPos++;
-  }
-
 
   return NS_OK;
 }
 
+//
+// Write a string, wrapping appropriately to mWrapColumn.
+//
+void
+nsHTMLToTXTSinkStream::WriteWrapped(const nsString& aString)
+{
+  int totLen = aString.Length();
+  int charsLeft = totLen;
+  while (charsLeft > 0)     // Loop over lines
+  {
+    // Indent at the beginning of the line, if necessary
+    if (mColPos == 0 && mIndent > 0)
+    {
+      char* spaces = new char[mIndent+1];
+      for (int i=0; i<mIndent; ++i)
+        spaces[i] = ' ';
+      spaces[mIndent] = '\0';
+      nsString temp(spaces);
+      Write (temp);
+      mColPos += mIndent;
+      delete[] spaces;
+    }
+
+    // Write whatever chunk of the string we can fit:
+    int bol = totLen - charsLeft;
+    int eol = bol + mWrapColumn - mColPos;
+    if (eol > totLen)
+      eol = totLen;
+    else
+    {
+      // We need to wrap, so search backward to find last IsSpace char:
+      int lastSpace = eol;
+      while (lastSpace > bol && !nsString::IsSpace(aString[lastSpace]))
+        --lastSpace;
+      if (lastSpace == bol)
+      {
+        // If we reached the bol, it might just be because we were close
+        // to the end already and should have wrapped last time.
+        // In that case, write a linebreak and come around again.
+        if (mColPos > mIndent)
+        {
+          nsAutoString linebreak(NS_LINEBREAK);
+          Write(linebreak);
+          mColPos = 0;
+          continue;
+        }
+        // Else apparently we really can't break this line at whitespace --
+        // so scan forward to the next space (if any) and dump a long line:
+        while (eol > totLen && !nsString::IsSpace(aString[lastSpace]))
+          ++eol;
+      }
+      else if (lastSpace > bol && lastSpace < eol)
+        eol = lastSpace+1;
+#ifdef DEBUG_akkana
+      else
+        printf("Wrapping: bol = %d, eol = %d, lastSpace = %d, totLen = %d\n",
+               bol, eol, lastSpace, totLen);
+#endif
+    }
+
+    nsAutoString lineStr;
+    aString.Mid(lineStr, bol, eol-bol);
+
+    if (eol != totLen)      // we're wrapping
+    {
+      lineStr.Append(NS_LINEBREAK);
+      mColPos = 0;
+    }
+    else
+      mColPos += lineStr.Length();
+    Write(lineStr);
+    charsLeft = totLen - eol;
+  }
+}
 
 /**
   * This method gets called when the parser begins the process
@@ -804,6 +1016,7 @@ PRBool IsInline(eHTMLTags aTag)
     case  eHTMLTag_td:
     case  eHTMLTag_textarea:
     case  eHTMLTag_tt:
+    case  eHTMLTag_u:
     case  eHTMLTag_var:
     case  eHTMLTag_wbr:
            

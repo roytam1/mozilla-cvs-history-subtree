@@ -31,7 +31,6 @@
  * Section 5 - Utility Method Implementations
  *******************************************************************************/
 
-
 /*******************************************************************************
  * SECTION 1 - Includes
  ******************************************************************************/
@@ -39,6 +38,10 @@
 #include <string.h>
 #include "nsplugin.h"
 #include "nsIServiceManager.h"
+#include "nsISupports.h"
+#include "nsIFactory.h"
+#include "simpleCID.h"
+
 /*------------------------------------------------------------------------------
  * Windows Includes
  *----------------------------------------------------------------------------*/
@@ -49,10 +52,11 @@
  * UNIX includes
  *----------------------------------------------------------------------------*/
 #ifdef XP_UNIX
-#include <X11/Xlib.h>
-#include <X11/Intrinsic.h>
-#include <X11/StringDefs.h>
+//#include <X11/Xlib.h>
+//#include <X11/Intrinsic.h>
+//#include <X11/StringDefs.h>
 #endif /* XP_UNIX */
+
 
 /*******************************************************************************
  * SECTION 2 - Instance Structs
@@ -105,6 +109,28 @@ typedef struct _PlatformInstance
 #endif /* macintosh */
 
 
+// Define constants for easy use
+static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_IID(kIFactoryIID, NS_IFACTORY_IID);
+static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
+static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
+static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+static NS_DEFINE_IID(kIServiceManagerIID, NS_ISERVICEMANAGER_IID);
+static NS_DEFINE_IID(kIPluginStreamListenerIID, NS_IPLUGINSTREAMLISTENER_IID);
+
+static NS_DEFINE_CID(kPluginCID, NS_PLUGIN_CID);
+static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
+static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
+static NS_DEFINE_CID(kSimplePluginCID, NS_SIMPLEPLUGIN_CID);
+
+#define PLUGIN_NAME             "Simple Sample Plug-in"
+#define PLUGIN_DESCRIPTION      "Demonstrates a simple plug-in."
+#define PLUGIN_MIME_DESCRIPTION "application/x-simple:smp:Simple Sample Plug-in"
+#define PLUGIN_MIME_TYPE "application/x-simple"
+
+static const char* g_desc = "Sample XPCOM Plugin";
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Simple Plugin Classes
 ////////////////////////////////////////////////////////////////////////////////
@@ -149,6 +175,11 @@ public:
     NS_IMETHOD
     GetValue(nsPluginVariable variable, void *value);
 
+    NS_IMETHOD
+    CreatePluginInstance(nsISupports *aOuter, REFNSIID aIID, 
+                         const char* aPluginMIMEType,
+                         void **aResult);
+
     // The old NPP_New call has been factored into two plugin instance methods:
     //
     // CreateInstance -- called once, after the plugin instance is created. This 
@@ -163,7 +194,7 @@ public:
 
     // SimplePlugin specific methods:
 
-    SimplePlugin(nsISupports* aManager);
+    SimplePlugin();
     virtual ~SimplePlugin(void);
 
     NS_DECL_ISUPPORTS
@@ -228,31 +259,12 @@ public:
     NS_IMETHOD
     SetWindow(nsPluginWindow* window);
 
-#ifdef NEW_PLUGIN_STREAM_API
-
     NS_IMETHOD
     NewStream(nsIPluginStreamListener** listener);
-
-#else
-
-    // (Corresponds to NPP_NewStream.)
-    NS_IMETHOD
-    NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result);
-
-#endif // NEW_PLUGIN_STREAM_API
 
     // (Corresponds to NPP_Print.)
     NS_IMETHOD
     Print(nsPluginPrint* platformPrint);
-
-#ifndef NEW_PLUGIN_STREAM_API
-
-    // (Corresponds to NPP_URLNotify.)
-    NS_IMETHOD
-    URLNotify(const char* url, const char* target,
-              nsPluginReason reason, void* notifyData);
-
-#endif // NEW_PLUGIN_STREAM_API
 
     NS_IMETHOD
     GetValue(nsPluginInstanceVariable variable, void *value);
@@ -277,10 +289,6 @@ public:
     PluginWindowProc( HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 #endif
 
-#ifdef XP_UNIX
-	static void Redraw(Widget w, XtPointer closure, XEvent *event);
-#endif
-
 protected:
     nsIPluginInstancePeer*      fPeer;
     nsPluginWindow*             fWindow;
@@ -292,8 +300,6 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePluginStream represents the stream used by SimplePluginInstances
 // to receive data from the browser. 
-
-#ifdef NEW_PLUGIN_STREAM_API
 
 class SimplePluginStreamListener : public nsIPluginStreamListener {
 public:
@@ -311,7 +317,7 @@ public:
      * used to cancel the URL load..
      */
     NS_IMETHOD
-    OnStartBinding(const char* url, nsIPluginStreamInfo* pluginInfo);
+    OnStartBinding(nsIPluginStreamInfo* pluginInfo);
 
     /**
      * Notify the client that data is available in the input stream.  This
@@ -324,12 +330,12 @@ public:
      * @return The return value is currently ignored.
      */
     NS_IMETHOD
-    OnDataAvailable(const char* url, nsIInputStream* input,
-                    PRUint32 offset, PRUint32 length, 
-					nsIPluginStreamInfo* pluginInfo);
+    OnDataAvailable(nsIPluginStreamInfo* pluginInfo, 
+                                            nsIInputStream* input, 
+                                            PRUint32 length);
 
     NS_IMETHOD
-    OnFileAvailable(const char* url, const char* fileName);
+    OnFileAvailable(nsIPluginStreamInfo* pluginInfo, const char* fileName);
 
     /**
      * Notify the observer that the URL has finished loading.  This method is 
@@ -343,7 +349,7 @@ public:
      * @return The return value is currently ignored.
      */
     NS_IMETHOD
-    OnStopBinding(const char* url, nsresult status, nsIPluginStreamInfo* pluginInfo);
+    OnStopBinding(nsIPluginStreamInfo* pluginInfo, nsresult status);
 
     NS_IMETHOD
     OnNotify(const char* url, nsresult status);
@@ -362,69 +368,6 @@ protected:
 
 };
 
-#else // !NEW_PLUGIN_STREAM_API
-
-class SimplePluginStream : public nsIPluginStream {
-public:
-
-    ////////////////////////////////////////////////////////////////////////////
-    // from nsIBaseStream:
-
-    /** Close the stream. */
-    NS_IMETHOD
-    Close(void);
-
-    ////////////////////////////////////////////////////////////////////////////
-    // from nsIOutputStream:
-
-    /** Write data into the stream.
-     *  @param aBuf the buffer into which the data is read
-     *  @param aOffset the start offset of the data
-     *  @param aCount the maximum number of bytes to read
-     *  @param errorResult the error code if an error occurs
-     *  @return number of bytes read or -1 if error
-     */   
-    NS_IMETHOD
-    Write(const char* aBuf, PRUint32 aOffset, PRUint32 aCount, PRUint32 *aWriteCount); 
-
-    ////////////////////////////////////////////////////////////////////////////
-    // from nsIPluginStream:
-
-    // (Corresponds to NPP_NewStream's stype return parameter.)
-    NS_IMETHOD
-    GetStreamType(nsPluginStreamType *result);
-
-    // (Corresponds to NPP_StreamAsFile.)
-    NS_IMETHOD
-    AsFile(const char* fname);
-
-    ////////////////////////////////////////////////////////////////////////////
-    // nsSimplePluginStream specific methods:
-
-    SimplePluginStream(nsIPluginStreamPeer* peer);
-    virtual ~SimplePluginStream(void);
-
-    NS_DECL_ISUPPORTS
-
-protected:
-    nsIPluginStreamPeer*        fPeer;
-};
-
-#endif // !NEW_PLUGIN_STREAM_API
-
-// Interface IDs we'll need:
-static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
-static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
-static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
-static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
-static NS_DEFINE_IID(kIServiceManagerIID, NS_ISERVICEMANAGER_IID);
-
-#ifdef NEW_PLUGIN_STREAM_API
-static NS_DEFINE_IID(kIPluginStreamListenerIID, NS_IPLUGINSTREAMLISTENER_IID);
-#else // !NEW_PLUGIN_STREAM_API
-static NS_DEFINE_IID(kIPluginStreamIID, NS_IPLUGINSTREAM_IID);
-#endif // !NEW_PLUGIN_STREAM_API
-
 /*******************************************************************************
  * SECTION 3 - API Plugin Implementations
  ******************************************************************************/
@@ -441,28 +384,24 @@ static PRBool gPluginLocked = PR_FALSE;
 // SimplePlugin Methods
 ////////////////////////////////////////////////////////////////////////////////
 
-SimplePlugin::SimplePlugin(nsISupports* aService)
+SimplePlugin::SimplePlugin()
 {
     NS_INIT_REFCNT();
 
-	nsISupports* result;
-	aService->QueryInterface(kIServiceManagerIID, (void**)&mServiceManager);
+    if(nsComponentManager::CreateInstance(kCPluginManagerCID, 
+                                          NULL, kIPluginManagerIID, (void**)&mPluginManager) != NS_OK)
+        return;
 
-	if(mServiceManager->GetService(kCPluginManagerCID, kIPluginManagerIID, &result, NULL) != NS_OK)
-		return;
-
-	result->QueryInterface(kIPluginManagerIID, (void**) &mPluginManager);
- 
-	gPluginObjectCount++;
+    gPluginObjectCount++;
 }
 
 SimplePlugin::~SimplePlugin(void)
 {
-	if(mPluginManager)
-		mPluginManager->Release();
+    if(mPluginManager)
+        mPluginManager->Release();
 
-	if(mServiceManager)
-		mServiceManager->Release();
+    if(mServiceManager)
+        mServiceManager->Release();
 
     gPluginObjectCount--;
 }
@@ -473,22 +412,23 @@ SimplePlugin::~SimplePlugin(void)
 NS_METHOD
 SimplePlugin::QueryInterface(const nsIID& aIID, void** aInstancePtr) 
 {
-    if (NULL == aInstancePtr) {
-        return NS_ERROR_NULL_POINTER; 
-    }  
-    static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID); 
-    if (aIID.Equals(kIPluginIID)) {
-        *aInstancePtr = (void*) this; 
-        AddRef(); 
-        return NS_OK; 
-    } 
-    static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID); 
+    if (!aInstancePtr)
+        return NS_ERROR_NULL_POINTER;
+
     if (aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*) ((nsISupports*)this); 
-        AddRef(); 
-        return NS_OK; 
-    } 
-    return NS_NOINTERFACE; 
+        *aInstancePtr = NS_STATIC_CAST(nsISupports*,this);
+    } else if (aIID.Equals(kIFactoryIID)) {
+        *aInstancePtr = NS_STATIC_CAST(nsISupports*,NS_STATIC_CAST(nsIFactory*,this));
+    } else if (aIID.Equals(kIPluginIID)) {
+        *aInstancePtr = NS_STATIC_CAST(nsISupports*,NS_STATIC_CAST(nsIPlugin*,this));
+    } else {
+        *aInstancePtr = nsnull;
+        return NS_ERROR_NO_INTERFACE;
+    }
+
+    NS_ADDREF(NS_REINTERPRET_CAST(nsISupports*,*aInstancePtr));
+
+    return NS_OK;
 }
  
 NS_IMPL_ADDREF(SimplePlugin);
@@ -509,26 +449,39 @@ SimplePlugin* gPlugin = NULL;
 
 extern "C" NS_EXPORT nsresult
 NSGetFactory(nsISupports* serviceMgr,
-             const nsCID &aClass,
+             const nsCID &aCID,
              const char *aClassName,
              const char *aProgID,
-             nsIFactory **aFactory)
+             nsIFactory **aResult)
 {
-    if (aClass.Equals(kIPluginIID)) {
-        if (gPlugin) {
-            *aFactory = gPlugin;
-            return NS_OK;
-        }
+    if (!aResult)
+        return NS_ERROR_NULL_POINTER; 
 
-        SimplePlugin* fact = new SimplePlugin(serviceMgr);
-        if (fact == NULL) 
-            return NS_ERROR_OUT_OF_MEMORY;
-        fact->AddRef();
-        gPlugin = fact;
-        *aFactory = fact;
-        return NS_OK;
-    }
-    return NS_ERROR_FAILURE;    // XXX right error?
+    *aResult = nsnull; 
+
+    nsISupports *inst; 
+
+    if (aCID.Equals(kSimplePluginCID)) {
+        // Ok, we know this CID and here is the factory
+        // that can manufacture the objects
+        inst = new SimplePlugin(); 
+    } else if (aCID.Equals(kPluginCID)) { 
+        inst = new SimplePlugin(); 
+    } else {
+        return NS_ERROR_NO_INTERFACE; 
+    } 
+
+    if (!inst)
+        return NS_ERROR_OUT_OF_MEMORY; 
+
+    nsresult rv = inst->QueryInterface(kIFactoryIID, 
+                                       (void **) aResult); 
+
+    if (NS_FAILED(rv)) { 
+        delete inst; 
+    } 
+
+    return rv; 
 }
 
 extern "C" NS_EXPORT PRBool
@@ -536,6 +489,91 @@ NSCanUnload(nsISupports* serviceMgr)
 {
     return gPluginObjectCount == 1 && !gPluginLocked;
 }
+
+extern "C" NS_EXPORT nsresult 
+NSRegisterSelf(nsISupports *aServMgr, const char *path)
+{
+    nsresult rv = NS_OK;
+
+    char buf[255];    // todo: use a const
+
+    nsString2 progID(NS_INLINE_PLUGIN_PROGID_PREFIX);
+
+    // We will use the service manager to obtain the component
+    // manager, which will enable us to register a component
+    // with a ProgID (text string) instead of just the CID.
+
+    nsIServiceManager *sm;
+
+    // We can get the IID of an interface with the static GetIID() method as
+    // well.
+    
+    rv = aServMgr->QueryInterface(nsIServiceManager::GetIID(), (void **)&sm);
+
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsIComponentManager *cm;
+
+    rv = sm->GetService(kComponentManagerCID, nsIComponentManager::GetIID(), (nsISupports **)&cm);
+
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(sm);
+
+        return rv;
+    }
+
+    // Note the text string, we can access the hello component with just this
+    // string without knowing the CID
+
+    progID += PLUGIN_MIME_TYPE;
+    progID.ToCString(buf, 255);     // todo: need to use a const
+
+    rv = cm->RegisterComponent(kSimplePluginCID, g_desc, buf,
+		path, PR_TRUE, PR_TRUE);
+
+    sm->ReleaseService(kComponentManagerCID, cm);
+
+    NS_RELEASE(sm);
+
+#ifdef NS_DEBUG
+	printf("*** %s registered\n",g_desc);
+#endif
+
+	return rv;
+}
+
+extern "C" NS_EXPORT nsresult 
+NSUnregisterSelf(nsISupports* aServMgr, const char *path)
+{
+	nsresult rv = NS_OK;
+
+	nsIServiceManager *sm;
+
+	rv = aServMgr->QueryInterface(nsIServiceManager::GetIID(), (void **)&sm);
+
+	if (NS_FAILED(rv))
+		return rv;
+
+	nsIComponentManager *cm;
+
+	rv = sm->GetService(kComponentManagerCID, nsIComponentManager::GetIID(), (nsISupports **)&cm);
+
+	if (NS_FAILED(rv)) {
+		NS_RELEASE(sm);
+
+		return rv;
+	}
+
+	rv = cm->UnregisterComponent(kSimplePluginCID, path);
+
+	sm->ReleaseService(kComponentManagerCID, cm);
+
+	NS_RELEASE(sm);
+
+	return rv;
+}
+
 
 NS_METHOD
 SimplePlugin::CreateInstance(nsISupports *aOuter, REFNSIID aIID, void **aResult)
@@ -558,12 +596,20 @@ SimplePlugin::LockFactory(PRBool aLock)
 NS_METHOD
 SimplePlugin::Initialize()
 {
+#ifdef NS_DEBUG
+    printf("SimplePlugin::Initialize\n");
+#endif
+
     return NS_OK;
 }
 
 NS_METHOD
 SimplePlugin::Shutdown(void)
 {
+#ifdef NS_DEBUG
+    printf("SimplePlugin::Shutdown\n");
+#endif
+
     return NS_OK;
 }
 
@@ -574,7 +620,11 @@ SimplePlugin::Shutdown(void)
 NS_METHOD
 SimplePlugin::GetMIMEDescription(const char* *result)
 {
-    *result = "application/x-simple-plugin:smp:Simple LiveConnect Sample Plug-in";
+#ifdef NS_DEBUG
+    printf("SimplePlugin::GetMIMEDescription\n");
+#endif
+
+    *result = PLUGIN_MIME_DESCRIPTION;
     return NS_OK;
 }
 
@@ -582,12 +632,13 @@ SimplePlugin::GetMIMEDescription(const char* *result)
  * NPP_GetValue:
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-#define PLUGIN_NAME             "Simple LiveConnect Sample Plug-in"
-#define PLUGIN_DESCRIPTION      "Demonstrates a simple LiveConnected plug-in."
-
 NS_METHOD
 SimplePlugin::GetValue(nsPluginVariable variable, void *value)
 {
+#ifdef NS_DEBUG
+    printf("SimplePlugin::GetValue\n");
+#endif
+
     nsresult err = NS_OK;
     if (variable == nsPluginVariable_NameString)
         *((char **)value) = PLUGIN_NAME;
@@ -597,6 +648,18 @@ SimplePlugin::GetValue(nsPluginVariable variable, void *value)
         err = NS_ERROR_FAILURE;
 
     return err;
+}
+
+NS_IMETHODIMP
+SimplePlugin::CreatePluginInstance(nsISupports *aOuter, REFNSIID aIID, 
+                                      const char* aPluginMIMEType,
+                                      void **aResult)
+{
+#ifdef NS_DEBUG
+    printf("SimplePlugin::CreatePluginInstance\n");
+#endif
+
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -637,10 +700,40 @@ NS_IMPL_RELEASE(SimplePluginInstance);
 NS_METHOD
 SimplePluginInstance::Initialize(nsIPluginInstancePeer* peer)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::Initialize\n");
+#endif
+    
+    NS_ASSERTION(peer != NULL, "null peer");
+
     fPeer = peer;
+    nsIPluginTagInfo* taginfo;
+    const char* const* names = nsnull;
+    const char* const* values = nsnull;
+    PRUint16 count = 0;
+    nsresult result;
+
     peer->AddRef();
-    nsresult err = peer->GetMode(&fMode);
-    if (err) return err;
+    result = peer->GetMode(&fMode);
+    if (NS_FAILED(result)) return result;
+
+   result = peer->QueryInterface(nsIPluginTagInfo::GetIID(), (void **)&taginfo);
+
+    if (!NS_FAILED(result))
+    {
+        taginfo->GetAttributes(count, names, values);
+        NS_IF_RELEASE(taginfo);
+    }
+
+#ifdef NS_DEBUG
+    printf("Attribute count = %d\n", count);
+
+    for (int i = 0; i < count; i++)
+    {
+        printf("plugin param=%s, value=%s\n", names[i], values[i]);
+    }
+#endif
+
     PlatformNew(); 	/* Call Platform-specific initializations */
     return NS_OK;
 }
@@ -648,6 +741,10 @@ SimplePluginInstance::Initialize(nsIPluginInstancePeer* peer)
 NS_METHOD
 SimplePluginInstance::GetPeer(nsIPluginInstancePeer* *result)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::GetPeer\n");
+#endif
+
     fPeer->AddRef();
     *result = fPeer;
     return NS_OK;
@@ -656,20 +753,8 @@ SimplePluginInstance::GetPeer(nsIPluginInstancePeer* *result)
 NS_METHOD
 SimplePluginInstance::Start(void)
 {
-
-#ifdef NEW_PLUGIN_STREAM_API
-    // Try getting some streams:
-    gPlugin->GetPluginManager()->GetURL(this, "http://warp", NULL,
-                                        new SimplePluginStreamListener(this, "http://warp (Normal)"));
-
-    gPlugin->GetPluginManager()->GetURL(this, "http://home.netscape.com", NULL,
-                                        new SimplePluginStreamListener(this, "http://home.netscape.com (AsFile)"));
-
-    gPlugin->GetPluginManager()->GetURL(this, "http://warp/java", NULL,
-                                        new SimplePluginStreamListener(this, "http://warp/java (AsFileOnly)"));
-
-    gPlugin->GetPluginManager()->GetURL(this, "http://warp/java/oji", NULL,
-                                        new SimplePluginStreamListener(this, "http://warp/java/oji (Seek)"));
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::Start\n");
 #endif
 
     return NS_OK;
@@ -678,12 +763,20 @@ SimplePluginInstance::Start(void)
 NS_METHOD
 SimplePluginInstance::Stop(void)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::Stop\n");
+#endif
+
     return NS_OK;
 }
 
 NS_METHOD
 SimplePluginInstance::Destroy(void)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::Destroy\n");
+#endif
+
     return NS_OK;
 }
 
@@ -704,6 +797,10 @@ SimplePluginInstance::Destroy(void)
 NS_METHOD
 SimplePluginInstance::SetWindow(nsPluginWindow* window)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::SetWindow\n");
+#endif
+
     nsresult result;
 
     /*
@@ -718,41 +815,18 @@ SimplePluginInstance::SetWindow(nsPluginWindow* window)
     return result;
 }
 
-#ifdef NEW_PLUGIN_STREAM_API
-
 NS_METHOD
 SimplePluginInstance::NewStream(nsIPluginStreamListener** listener)
 {
-	if(listener != NULL)
-		*listener = new SimplePluginStreamListener(this, "http://warp");
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::NewStream\n");
+#endif
 
-	return NS_OK;
-}
-
-#else
-
-/*+++++++++++++++++++++++++++++++++++++++++++++++++
- * NewStream:
- * Notifies an instance of a new data stream and returns an error value. 
- * 
- * NewStream notifies the instance denoted by instance of the creation of
- * a new stream specifed by stream. The NPStream* pointer is valid until the
- * stream is destroyed. The MIME type of the stream is provided by the
- * parameter type. 
- +++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-NS_METHOD
-SimplePluginInstance::NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result)
-{ 
-    SimplePluginStream* strm = new SimplePluginStream(peer);
-    if (strm == NULL) 
-        return NS_ERROR_OUT_OF_MEMORY;
-    strm->AddRef();
-    *result = strm;
+    if(listener != NULL)
+        *listener = new SimplePluginStreamListener(this, "http://warp");
+    
     return NS_OK;
 }
-
-#endif // NEW_PLUGIN_STREAM_API
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
  * NPP_Print:
@@ -761,6 +835,9 @@ SimplePluginInstance::NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *res
 NS_METHOD
 SimplePluginInstance::Print(nsPluginPrint* printInfo)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::Print\n");
+#endif
 
     if (printInfo == NULL)
         return NS_ERROR_FAILURE;
@@ -783,11 +860,6 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
          *	etc.
          */
 
-        void* platformPrint =
-            printInfo->print.fullPrint.platformPrint;
-        PRBool printOne =
-            printInfo->print.fullPrint.printOne;
-			
         /* Do the default*/
         printInfo->print.fullPrint.pluginPrinted = PR_FALSE;
     }
@@ -803,11 +875,6 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
          *	Windows, platformPrint is the handle to the printing
          *	device context.
          */
-
-        nsPluginWindow* printWindow =
-            &(printInfo->print.embedPrint.window);
-        void* platformPrint =
-            printInfo->print.embedPrint.platformPrint;
     }
     return NS_OK;
 }
@@ -825,48 +892,23 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
 NS_METHOD
 SimplePluginInstance::HandleEvent(nsPluginEvent* event, PRBool* handled)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::HandleEvent\n");
+#endif
+
     *handled = (PRBool)PlatformHandleEvent(event);
     return NS_OK;
 }
 
-#ifndef NEW_PLUGIN_STREAM_API
-
-/*+++++++++++++++++++++++++++++++++++++++++++++++++
- * URLNotify:
- * Notifies the instance of the completion of a URL request. 
- * 
- * URLNotify is called when Netscape completes a GetURLNotify or
- * PostURLNotify request, to inform the plug-in that the request,
- * identified by url, has completed for the reason specified by reason. The most
- * common reason code is NPRES_DONE, indicating simply that the request
- * completed normally. Other possible reason codes are NPRES_USER_BREAK,
- * indicating that the request was halted due to a user action (for example,
- * clicking the "Stop" button), and NPRES_NETWORK_ERR, indicating that the
- * request could not be completed (for example, because the URL could not be
- * found). The complete list of reason codes is found in npapi.h. 
- * 
- * The parameter notifyData is the same plug-in-private value passed as an
- * argument to the corresponding GetURLNotify or PostURLNotify
- * call, and can be used by your plug-in to uniquely identify the request. 
- +++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-NS_METHOD
-SimplePluginInstance::URLNotify(const char* url, const char* target,
-                                nsPluginReason reason, void* notifyData)
-{
-    // Not used in the Simple plugin
-    return NS_OK;
-}
-
-#endif // NEW_PLUGIN_STREAM_API
-
 NS_METHOD
 SimplePluginInstance::GetValue(nsPluginInstanceVariable variable, void *value)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginInstance::GetValue\n");
+#endif
+
     return NS_ERROR_FAILURE;
 }
-
-#ifdef NEW_PLUGIN_STREAM_API
 
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePluginStreamListener Methods
@@ -895,32 +937,33 @@ SimplePluginStreamListener::~SimplePluginStreamListener(void)
 NS_IMPL_ISUPPORTS(SimplePluginStreamListener, kIPluginStreamListenerIID);
 
 NS_METHOD
-SimplePluginStreamListener::OnStartBinding(const char* url, 
-										   nsIPluginStreamInfo* pluginInfo)
+SimplePluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginStreamListener::OnStartBinding\n");
+#endif
+
     char msg[256];
     sprintf(msg, "### Opening plugin stream for %s\n", fMessageName);
     return NS_OK;
 }
 
 NS_METHOD
-SimplePluginStreamListener::OnDataAvailable(const char* url, nsIInputStream* input,
-                                            PRUint32 offset, PRUint32 length,
-											nsIPluginStreamInfo* pluginInfo)
+SimplePluginStreamListener::OnDataAvailable(nsIPluginStreamInfo* pluginInfo, 
+                                            nsIInputStream* input, 
+                                            PRUint32 length)
 {
-    if (strcmp(url, "http://warp/java/oji/") == 0 && offset != 0) {
-        // Try closing the stream prematurely
-        input->Close();
-        return NS_OK;
-    }
+#ifdef NS_DEBUG
+    printf("SimplePluginStreamListener::OnDataAvailable\n");
+#endif
 
     char* buffer = new char[length];
     if (buffer) {
         PRUint32 amountRead = 0;
-        nsresult rslt = input->Read(buffer, offset, length, &amountRead);
+        nsresult rslt = input->Read(buffer, length, &amountRead);
         if (rslt == NS_OK) {
             char msg[256];
-            sprintf(msg, "### Received %d bytes at %d for %s\n", length, offset, fMessageName);
+            sprintf(msg, "### Received %d bytes for %s\n", length, fMessageName);
         }
         delete buffer;
     }
@@ -928,17 +971,25 @@ SimplePluginStreamListener::OnDataAvailable(const char* url, nsIInputStream* inp
 }
 
 NS_METHOD
-SimplePluginStreamListener::OnFileAvailable(const char* url, const char* fileName)
+SimplePluginStreamListener::OnFileAvailable(nsIPluginStreamInfo* pluginInfo, 
+                                            const char* fileName)
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginStreamListener::OnFileAvailable\n");
+#endif
+
     char msg[256];
     sprintf(msg, "### File available for %s: %s\n", fMessageName, fileName);
     return NS_OK;
 }
 
 NS_METHOD
-SimplePluginStreamListener::OnStopBinding(const char* url, nsresult status, 
-										  nsIPluginStreamInfo* pluginInfo)
+SimplePluginStreamListener::OnStopBinding(nsIPluginStreamInfo* pluginInfo, nsresult status )
 {
+#ifdef NS_DEBUG
+    printf("SimplePluginStreamListener::OnStopBinding\n");
+#endif
+
     char msg[256];
     sprintf(msg, "### Closing plugin stream for %s\n", fMessageName);
     return NS_OK;
@@ -947,110 +998,27 @@ SimplePluginStreamListener::OnStopBinding(const char* url, nsresult status,
 NS_METHOD
 SimplePluginStreamListener::OnNotify(const char* url, nsresult status)
 {
-	return NS_OK;
+#ifdef NS_DEBUG
+    printf("SimplePluginStreamListener::OnNotify\n");
+#endif
+
+    return NS_OK;
 }
 
 NS_METHOD
 SimplePluginStreamListener::GetStreamType(nsPluginStreamType *result)
 {
-	*result = nsPluginStreamType_Normal;
-	return NS_OK;
-}
+#ifdef NS_DEBUG
+    printf("SimplePluginStreamListener::GetStreamType\n");
+#endif
 
-#else // !NEW_PLUGIN_STREAM_API
-
-////////////////////////////////////////////////////////////////////////////////
-// SimplePluginStream Methods
-////////////////////////////////////////////////////////////////////////////////
-
-SimplePluginStream::SimplePluginStream(nsIPluginStreamPeer* peer)
-    : fPeer(peer)
-{
-    gPluginObjectCount++;
-    NS_INIT_REFCNT();
-}
-
-SimplePluginStream::~SimplePluginStream(void)
-{
-    gPluginObjectCount--;
-}
-
-// These macros produce simple version of QueryInterface and AddRef.
-// See the nsISupports.h header file for details.
-
-NS_IMPL_QUERY_INTERFACE(SimplePluginStream, kIPluginStreamIID);
-NS_IMPL_ADDREF(SimplePluginStream);
-NS_IMPL_RELEASE(SimplePluginStream);
-
-NS_METHOD
-SimplePluginStream::Close(void)
-{
-    return NS_OK;
-}
-
-/*+++++++++++++++++++++++++++++++++++++++++++++++++
- * NPP_Write:
- * Delivers data from a stream and returns the number of bytes written. 
- * 
- * NPP_Write is called after a call to NPP_NewStream in which the plug-in
- * requested a normal-mode stream, in which the data in the stream is delivered
- * progressively over a series of calls to NPP_WriteReady and NPP_Write. The
- * function delivers a buffer buf of len bytes of data from the stream identified
- * by stream to the instance. The parameter offset is the logical position of
- * buf from the beginning of the data in the stream. 
- * 
- * The function returns the number of bytes written (consumed by the instance).
- * A negative return value causes an error on the stream, which will
- * subsequently be destroyed via a call to NPP_DestroyStream. 
- * 
- * Note that a plug-in must consume at least as many bytes as it indicated in the
- * preceeding NPP_WriteReady call. All data consumed must be either processed
- * immediately or copied to memory allocated by the plug-in: the buf parameter
- * is not persistent. 
- +++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-NS_METHOD
-SimplePluginStream::Write(const char* aBuf, PRUint32 aOffset, PRUint32 aCount, PRUint32 *aWriteCount)
-{
-    PR_ASSERT(aOffset == 0);    // XXX need to handle the non-sequential write case
-    *aWriteCount = aCount;		/* The number of bytes accepted */
-    return NS_OK;
-}
-
-/*******************************************************************************/
-
-NS_METHOD
-SimplePluginStream::GetStreamType(nsPluginStreamType *result)
-{
-    // XXX these should become subclasses
     *result = nsPluginStreamType_Normal;
     return NS_OK;
 }
 
-/*+++++++++++++++++++++++++++++++++++++++++++++++++
- * AsFile:
- * Provides a local file name for the data from a stream. 
- * 
- * AsFile provides the instance with a full path to a local file,
- * identified by fname, for the stream specified by stream. NPP_StreamAsFile is
- * called as a result of the plug-in requesting mode NP_ASFILEONLY or
- * NP_ASFILE in a previous call to NPP_NewStream. If an error occurs while
- * retrieving the data or writing the file, fname may be NULL. 
- +++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-NS_METHOD
-SimplePluginStream::AsFile(const char* fname)
-{ 
-    return NS_OK;
-}
-
-#endif // !NEW_PLUGIN_STREAM_API
-
-
 /*******************************************************************************
  * SECTION 5 - Utility Method Implementations
- *******************************************************************************
-
+ *******************************************************************************/
 
 /*------------------------------------------------------------------------------
  * Platform-Specific Implemenations
@@ -1093,18 +1061,6 @@ SimplePluginInstance::PlatformDestroy(void)
 nsresult
 SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
 {
-    Widget netscape_widget;
-
-    fPlatform.window = (Window) window->window;
-    fPlatform.x = window->x;
-    fPlatform.y = window->y;
-    fPlatform.width = window->width;
-    fPlatform.height = window->height;
-    fPlatform.display = ((nsPluginSetWindowCallbackStruct *)window->ws_info)->display;
-	
-    netscape_widget = XtWindowToWidget(fPlatform.display, fPlatform.window);
-    XtAddEventHandler(netscape_widget, ExposureMask, FALSE, (XtEventHandler)Redraw, this);
-    Redraw(netscape_widget, (XtPointer)this, NULL);
     return NS_OK;
 }
 
@@ -1119,29 +1075,6 @@ SimplePluginInstance::PlatformHandleEvent(nsPluginEvent* event)
 {
     /* UNIX Plugins do not use HandleEvent */
     return 0;
-}
-
-/*+++++++++++++++++++++++++++++++++++++++++++++++++
- * Redraw
- +++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-void
-SimplePluginInstance::Redraw(Widget w, XtPointer closure, XEvent *event)
-{
-    GC gc;
-    XGCValues gcv;
-    const char* text = "Hello World";
-	SimplePluginInstance* inst = (SimplePluginInstance*)closure;
-
-    XtVaGetValues(w, XtNbackground, &gcv.background,
-                  XtNforeground, &gcv.foreground, 0);
-    gc = XCreateGC(inst->fPlatform.display, inst->fPlatform.window, 
-                   GCForeground|GCBackground, &gcv);
-    XDrawRectangle(inst->fPlatform.display, inst->fPlatform.window, gc, 
-                   0, 0, inst->fPlatform.width-1, inst->fPlatform.height-1);
-    XDrawString(inst->fPlatform.display, inst->fPlatform.window, gc, 
-                inst->fPlatform.width/2 - 100, inst->fPlatform.height/2,
-                text, strlen(text));
 }
 #endif /* XP_UNIX */
 

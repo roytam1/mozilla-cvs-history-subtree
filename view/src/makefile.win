@@ -21,7 +21,6 @@ IGNORE_MANIFEST=1
 MAKE_OBJ_TYPE	= DLL
 DLLNAME = raptorview
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
-MISCDEP = $(LLIBS)
 
 MODULE=raptor 
 
@@ -48,6 +47,7 @@ LCFLAGS = \
 LLIBS=				\
  $(DIST)\lib\xpcom.lib	\
  $(DIST)\lib\raptorgfxwin.lib	\
+ $(DIST)\lib\timer_s.lib \
  $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>

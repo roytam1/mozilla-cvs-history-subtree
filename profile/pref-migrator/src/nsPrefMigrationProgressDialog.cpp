@@ -39,7 +39,7 @@
 #include "nsINetService.h"
 #else
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #endif // NECKO
 
 #include "nsIWebShell.h"
@@ -175,7 +175,7 @@ nsPrefMigrationProgressDialog::CreateProfileProgressDialog()
     if ( NS_SUCCEEDED( rv ) ) 
     {
         // Open "progress" dialog.
-        nsIURL *url;
+        nsIURI *url;
         char *urlString = "resource:/res/profile/progress_undetermined.xul";
 
 #ifndef NECKO
@@ -188,14 +188,16 @@ nsPrefMigrationProgressDialog::CreateProfileProgressDialog()
         }
 
         nsIURI *uri = nsnull;
-        const char *uriStr = urlString.GetBuffer();
+        char *uriStr = urlString.ToNewCString();
+        if (!uriStr) return NS_ERROR_OUT_OF_MEMORY;
         rv = service->NewURI(urlString, nsnull, &uri);
+        nsCRT::free(uriStr);
         if (NS_FAILED(rv)) {
             DEBUG_PRINTF(PR_STDOUT, "cannot get uri\n");
             return NS_OK;
         }
 
-        rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+        rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
         NS_RELEASE(uri);
 #endif // NECKO
         if ( NS_SUCCEEDED(rv) ) 

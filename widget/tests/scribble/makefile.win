@@ -30,16 +30,18 @@ OBJS =                                  \
 
 LINCS=-I$(PUBLIC)\raptor -I$(PUBLIC)\xpcom 
 
-MYLIBS=				\
+LLIBS=				\
  $(DIST)\lib\xpcom.lib	\
  $(LIBNSPR)			\
  $(DIST)\lib\raptorgfxwin.lib \
  $(DIST)\lib\raptorwidget.lib \
+!ifdef NECKO
+!else
  $(DIST)\lib\netlib.lib\
+!endif
  $(NULL)
 
-LLIBS= $(MYLIBS)		\
- -SUBSYSTEM:CONSOLE 
+LLFLAGS=-SUBSYSTEM:CONSOLE 
 
 include <$(DEPTH)\config\rules.mak>
 

@@ -16,7 +16,7 @@
  * Reserved.
  */
 
-/* Implementation of nsIInterfaceInfo. */
+/* Implementation of nsIInterfaceInfoManager. */
 
 #ifdef XP_MAC
 #include <stat.h>
@@ -32,6 +32,7 @@
 #include "nsIInterfaceInfo.h"
 #include "nsIServiceManager.h"
 #include "nsIAllocator.h"
+#include "nsHashtableEnumerator.h"
 
 #include "nsInterfaceInfoManager.h"
 #include "nsInterfaceInfo.h"
@@ -93,7 +94,7 @@ static NS_DEFINE_IID(kAllocatorCID, NS_ALLOCATOR_CID);
 static NS_DEFINE_IID(kIAllocatorIID, NS_IALLOCATOR_IID);
 
 nsInterfaceInfoManager::nsInterfaceInfoManager()
-    : allocator(NULL), typelibRecords(NULL), ctor_succeeded(PR_FALSE)
+    : typelibRecords(NULL), allocator(NULL), ctor_succeeded(PR_FALSE)
 {
     NS_INIT_REFCNT();
     NS_ADDREF_THIS();
@@ -137,7 +138,7 @@ XPTHeader *getHeader(const char *filename, nsIAllocator *al) {
     }
 
     if (flen > 0) {
-       	PRUint32 howmany = PR_Read(in, whole, flen);
+       	PRInt32 howmany = PR_Read(in, whole, flen);
        	if (howmany < 0) {
            	NS_ERROR("FAILED: reading typelib file");
            	goto out;
@@ -149,7 +150,7 @@ XPTHeader *getHeader(const char *filename, nsIAllocator *al) {
 		// less than flen bytes.
 		flen = howmany;
 #else
-		if (howmany < flen) {
+		if (PRUint32(howmany) < flen) {
 			NS_ERROR("typelib short read");
 			goto out;
 		}
@@ -188,6 +189,10 @@ nsInterfaceInfoManager::indexify_file(const char *filename)
     int limit = header->num_interfaces;
     nsTypelibRecord *tlrecord = new nsTypelibRecord(limit, this->typelibRecords,
                                                     header, this->allocator);
+    if (tlrecord == NULL) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
     this->typelibRecords = tlrecord; // add it to the list of typelibs
 
     for (int i = 0; i < limit; i++) {
@@ -195,21 +200,27 @@ nsInterfaceInfoManager::indexify_file(const char *filename)
 
         // find or create an interface record, and set the appropriate
         // slot in the nsTypelibRecord array.
-        nsID zero =
+        static const nsID zero =
         { 0x0, 0x0, 0x0, { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 } };
         nsInterfaceRecord *record = NULL;
 
         PRBool iidIsZero = current->iid.Equals(zero);
 
         // XXX fix bogus repetitive logic.
-        PRBool foundInIIDTable = PR_FALSE;
+        PRBool shouldAddToIDDTable = PR_TRUE;
 
         if (iidIsZero == PR_FALSE) {
             // prefer the iid.
             nsIDKey idKey(current->iid);
             record = (nsInterfaceRecord *)this->IIDTable->Get(&idKey);
+            // if it wasn't in the iid table then maybe it was already entered
+            // in the nametable. If so then we should reuse that record.
+            if (record == NULL) {
+                record = (nsInterfaceRecord *)
+                    PL_HashTableLookup(this->nameTable, current->name);
+            }
         } else {
-            foundInIIDTable = PR_TRUE;
+            shouldAddToIDDTable = PR_FALSE;
             // resort to using the name.  Warn?
             record = (nsInterfaceRecord *)PL_HashTableLookup(this->nameTable,
                                                              current->name);
@@ -233,7 +244,7 @@ nsInterfaceInfoManager::indexify_file(const char *filename)
             if (iidIsZero == PR_FALSE) {
                 // Add it to the iid table too, if we have an iid.
                 // don't check against old value, b/c we shouldn't have one.
-                foundInIIDTable = PR_TRUE;
+                shouldAddToIDDTable = PR_FALSE;
                 nsIDKey idKey(current->iid);
                 this->IIDTable->Put(&idKey, record);
             }
@@ -252,7 +263,7 @@ nsInterfaceInfoManager::indexify_file(const char *filename)
             record->typelibRecord = tlrecord;
             record->iid = current->iid;
 
-            if (foundInIIDTable == PR_FALSE) {
+            if (shouldAddToIDDTable == PR_TRUE) {
                 nsIDKey idKey(current->iid);
                 this->IIDTable->Put(&idKey, record);
             }
@@ -330,19 +341,19 @@ nsInterfaceInfoManager::initInterfaceTables()
     
 #ifdef XP_MAC
 	PRBool wasAlias;
-	sysdir.ResolveAlias(wasAlias);
+	sysdir.ResolveSymlink(wasAlias);
 #endif
 
 #ifdef DEBUG
     int which = 0;
 #endif
 
-	for (nsDirectoryIterator i(sysdir); i.Exists(); i++) {
+	for (nsDirectoryIterator i(sysdir, PR_FALSE); i.Exists(); i++) {
 		// XXX need to copy?
 		nsFileSpec spec = i.Spec();
 		
 #ifdef XP_MAC
-		spec.ResolveAlias(wasAlias);
+		spec.ResolveSymlink(wasAlias);
 #endif
 		
 		if (! spec.IsFile())
@@ -461,6 +472,56 @@ nsInterfaceInfoManager::GetNameForIID(const nsIID* iid, char** name)
     *name = p;
     return NS_OK;
 }    
+
+static
+NS_IMETHODIMP convert_interface_record(nsHashKey *key, void *data,
+                                       void *convert_data, nsISupports **retval)
+{
+    nsInterfaceRecord *rec = (nsInterfaceRecord *) data;
+    nsInterfaceInfo *iinfo;
+    nsresult rv;
+    
+    if(NS_FAILED(rv = rec->GetInfo(&iinfo)))
+    {
+#ifdef DEBUG
+        char *name;
+        rec->GetName(&name);
+        TRACE((stderr, "GetInfo failed for InterfaceRecord '%s'\n", name));
+        nsAllocator::Free(name);
+#endif
+        return NS_ERROR_FAILURE;
+    }
+    
+    rv = iinfo->QueryInterface(nsCOMTypeInfo<nsISupports>::GetIID(),
+                               (void **)retval);
+
+#ifdef DEBUG
+    if(NS_FAILED(rv))
+    {
+        char *name;
+        rec->GetName(&name);
+        TRACE((stderr, "QI[nsISupports] Failed for InterfaceInfo '%s'\n",
+               name));
+        nsAllocator::Free(name);
+    }
+#endif
+        
+    return rv;
+    
+}
+
+NS_IMETHODIMP
+nsInterfaceInfoManager::EnumerateInterfaces(nsIEnumerator** emumerator)
+{
+    if(!emumerator)
+    {
+        NS_ASSERTION(0, "null ptr");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    return NS_NewHashtableEnumerator(this->IIDTable, convert_interface_record,
+                                     nsnull, emumerator);
+}        
 
 XPTI_PUBLIC_API(nsIInterfaceInfoManager*)
 XPTI_GetInterfaceInfoManager()

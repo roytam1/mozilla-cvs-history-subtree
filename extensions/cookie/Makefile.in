@@ -15,7 +15,7 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-DEPTH=../../..
+DEPTH=../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
@@ -26,8 +26,7 @@ include $(topsrcdir)/config/config.mk
 
 LIBRARY_NAME = cookie
 
-CSRCS =				\
-    $(NULL)
+IS_COMPONENT = 1
 
 CPPSRCS =				\
 	nsCookieService.cpp			\
@@ -36,19 +35,28 @@ CPPSRCS =				\
     $(NULL)
 
 EXPORTS = \
+	nsICookieService.h \
+	nsCookieHTTPNotify.h \
+	nsCookie.h \
 	$(NULL)
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
 
+ifdef ENABLE_TESTS
+DIRS            = tests
+endif
+
 MODULE = cookie
 
-REQUIRES = js netlib xpcom xppref32  nspr
-
-MKSHLIB :=
-
-# we don't want the shared lib
-NO_SHARED_LIB=1
+REQUIRES = js netlib xpcom xppref32 nspr
 
 include $(topsrcdir)/config/config.mk
+
+# hack until necko lands
+ifndef NECKO
+PUBLIC=$(DEPTH)/netwerk/dist/include
+endif
+
+EXTRA_DSO_LDOPTS = -L$(DIST)/bin
 
 include $(topsrcdir)/config/rules.mk

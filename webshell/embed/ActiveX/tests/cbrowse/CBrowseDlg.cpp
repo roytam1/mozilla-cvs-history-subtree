@@ -266,7 +266,7 @@ HRESULT CBrowseDlg::CreateWebBrowser()
 
 //	GetDlgItem(IDC_BROWSER_MARKER)->DestroyWindow();
 
-	CControlSiteInstance::CreateInstance(&m_pControlSite);
+	CBrowserCtlSiteInstance::CreateInstance(&m_pControlSite);
 	if (m_pControlSite == NULL)
 	{
 		OutputString(_T("Error: could not create control site"));
@@ -308,6 +308,15 @@ HRESULT CBrowseDlg::CreateWebBrowser()
 	else
 	{
 		OutputString(_T("Sucessfully subscribed to events"));
+	}
+
+	CComPtr<IUnknown> spUnkBrowser;
+	m_pControlSite->GetControlUnknown(&spUnkBrowser);
+
+	CIPtr(IWebBrowser2) spWebBrowser = spUnkBrowser;
+	if (spWebBrowser)
+	{
+		spWebBrowser->put_RegisterAsDropTarget(VARIANT_TRUE);
 	}
 
 	return S_OK;

@@ -35,11 +35,11 @@ CPPSRCS= \
 	nsBaseDragService.cpp    \
 	nsBaseClipboard.cpp      \
 	nsFileListTransferable.cpp \
-	nsFileChooser.cpp \
+	nsFileSpecWithUIImpl.cpp \
 	$(NULL)
 
 LOCAL_INCLUDES := \
-	-I$(srcdir)/../$(MOZ_TOOLKIT) \
+	-I$(srcdir)/../$(MOZ_WIDGET_TOOLKIT) \
 	-I$(srcdir) \
 	$(NULL)
 

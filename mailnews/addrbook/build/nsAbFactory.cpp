@@ -18,7 +18,6 @@
 
 #include "nsIFactory.h"
 #include "nsISupports.h"
-#include "msgCore.h"  
 #include "nsAbBaseCID.h"
 #include "pratom.h"
 #include "nsIComponentManager.h"
@@ -35,14 +34,23 @@
 #include "nsAbDirectory.h"
 #include "nsAbCard.h"
 #include "nsAddrDatabase.h"
+#include "nsAddressBook.h"
+#include "nsAddrBookSession.h"
+#include "nsAbDirProperty.h"
+#include "nsAbAutoCompleteSession.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
+static NS_DEFINE_CID(kAddressBookCID, NS_ADDRESSBOOK_CID);
 static NS_DEFINE_CID(kAbDirectoryDataSourceCID, NS_ABDIRECTORYDATASOURCE_CID);
 static NS_DEFINE_CID(kAbDirectoryCID, NS_ABDIRECTORYRESOURCE_CID); 
 static NS_DEFINE_CID(kAbCardDataSourceCID, NS_ABCARDDATASOURCE_CID);
 static NS_DEFINE_CID(kAbCardCID, NS_ABCARDRESOURCE_CID); 
-static NS_DEFINE_CID(kAddressBookDB, NS_ADDRESSBOOKDB_CID);
+static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRESSBOOKDB_CID);
+static NS_DEFINE_CID(kAbCardPropertyCID, NS_ABCARDPROPERTY_CID);
+static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
+static NS_DEFINE_CID(kAbDirPropertyCID, NS_ABDIRPROPERTY_CID);
+static NS_DEFINE_CID(kAbAutoCompleteSessionCID ,NS_ABAUTOCOMPLETESESSION_CID);
 
 ////////////////////////////////////////////////////////////
 //
@@ -98,9 +106,9 @@ nsresult nsAbFactory::QueryInterface(const nsIID &aIID, void **aResult)
 	*aResult = NULL;   
 
 	// we support two interfaces....nsISupports and nsFactory.....
-	if (aIID.Equals(::nsISupports::GetIID()))    
+	if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
 		*aResult = (void *)(nsISupports*)this;   
-	else if (aIID.Equals(nsIFactory::GetIID()))   
+	else if (aIID.Equals(nsCOMTypeInfo<nsIFactory>::GetIID()))   
 		*aResult = (void *)(nsIFactory*)this;   
 
 	if (*aResult == NULL)
@@ -124,23 +132,27 @@ nsresult nsAbFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, voi
 	// ClassID check happens here
 	// Whenever you add a new class that supports an interface, plug it in here!!!
 	
-	if (mClassID.Equals(kAbDirectoryDataSourceCID)) 
+	if (mClassID.Equals(kAddressBookCID)) 
 	{
 		nsresult rv;
-		nsABDirectoryDataSource * directoryDataSource = new nsABDirectoryDataSource();
-		if (directoryDataSource)
-			rv = directoryDataSource->QueryInterface(aIID, aResult);
+		nsAddressBook * addressBook = new nsAddressBook();
+		if (addressBook)
+			rv = addressBook->QueryInterface(aIID, aResult);
 		else
-			rv = NS_ERROR_OUT_OF_MEMORY;
+			rv = NS_ERROR_NOT_INITIALIZED;
 
-		if (NS_FAILED(rv) && directoryDataSource)
-			delete directoryDataSource;
+		if (NS_FAILED(rv) && addressBook)
+			delete addressBook;
 		return rv;
+	}
+	else if (mClassID.Equals(kAbDirectoryDataSourceCID)) 
+	{
+		return NS_NewAbDirectoryDataSource(aIID, aResult);
 	}
 	else if (mClassID.Equals(kAbDirectoryCID)) 
 	{
 		nsresult rv;
-		nsABDirectory * directory = new nsABDirectory();
+		nsAbDirectory * directory = new nsAbDirectory();
 		if (directory)
 			rv = directory->QueryInterface(aIID, aResult);
 		else
@@ -150,23 +162,14 @@ nsresult nsAbFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, voi
 			delete directory;
 		return rv;
 	}
-	if (mClassID.Equals(kAbCardDataSourceCID)) 
+	else if (mClassID.Equals(kAbCardDataSourceCID)) 
 	{
-		nsresult rv;
-		nsABCardDataSource * cardDataSource = new nsABCardDataSource();
-		if (cardDataSource)
-			rv = cardDataSource->QueryInterface(aIID, aResult);
-		else
-			rv = NS_ERROR_OUT_OF_MEMORY;
-
-		if (NS_FAILED(rv) && cardDataSource)
-			delete cardDataSource;
-		return rv;
+		return NS_NewAbCardDataSource(aIID, aResult);
 	}
 	else if (mClassID.Equals(kAbCardCID)) 
 	{
 		nsresult rv;
-		nsABCard * card = new nsABCard();
+		nsAbCard * card = new nsAbCard();
 		if (card)
 			rv = card->QueryInterface(aIID, aResult);
 		else
@@ -176,7 +179,7 @@ nsresult nsAbFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, voi
 			delete card;
 		return rv;
 	}
-	else if (mClassID.Equals(kAddressBookDB)) 
+	else if (mClassID.Equals(kAddressBookDBCID)) 
 	{
 		nsresult rv;
 		nsAddrDatabase * abDatabase = new nsAddrDatabase();
@@ -188,6 +191,49 @@ nsresult nsAbFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, voi
 		if (NS_FAILED(rv) && abDatabase)
 			delete abDatabase;
 		return rv;
+	} 
+	else if (mClassID.Equals(kAbCardPropertyCID)) 
+	{
+		nsresult rv;
+		nsAbCardProperty * abCardProperty = new nsAbCardProperty();
+		if (abCardProperty)
+			rv = abCardProperty->QueryInterface(aIID, aResult);
+		else
+			rv = NS_ERROR_OUT_OF_MEMORY;
+
+		if (NS_FAILED(rv) && abCardProperty)
+			delete abCardProperty;
+		return rv;
+	} 
+	else if (mClassID.Equals(kAbDirPropertyCID)) 
+	{
+		nsresult rv;
+		nsAbDirProperty * abDirProperty = new nsAbDirProperty();
+		if (abDirProperty)
+			rv = abDirProperty->QueryInterface(aIID, aResult);
+		else
+			rv = NS_ERROR_OUT_OF_MEMORY;
+
+		if (NS_FAILED(rv) && abDirProperty)
+			delete abDirProperty;
+		return rv;
+	} 
+	else if (mClassID.Equals(kAddrBookSessionCID)) 
+	{
+		nsresult rv;
+		nsAddrBookSession * abSession = new nsAddrBookSession();
+		if (abSession)
+			rv = abSession->QueryInterface(aIID, aResult);
+		else
+			rv = NS_ERROR_OUT_OF_MEMORY;
+
+		if (NS_FAILED(rv) && abSession)
+			delete abSession;
+		return rv;
+	}  
+	else if (mClassID.Equals(kAbAutoCompleteSessionCID))
+	{
+		return NS_NewAbAutoCompleteSession(aIID, aResult);
 	}
 	return NS_NOINTERFACE;  
 }  
@@ -215,7 +261,7 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
 	*aFactory = new nsAbFactory(aClass, aClassName, aProgID);
 
 	if (aFactory)
-		return (*aFactory)->QueryInterface(nsIFactory::GetIID(), (void**)aFactory); // they want a Factory Interface so give it to them
+		return (*aFactory)->QueryInterface(nsCOMTypeInfo<nsIFactory>::GetIID(), (void**)aFactory); // they want a Factory Interface so give it to them
 	else
 		return NS_ERROR_OUT_OF_MEMORY;
 }
@@ -236,6 +282,12 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
 
 	NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID, &rv);
 	if (NS_FAILED(rv)) return rv;
+
+	rv = compMgr->RegisterComponent(kAddressBookCID,
+								  "Address Book DOM interaction object",
+								  "component://netscape/addressbook",
+								  path, PR_TRUE, PR_TRUE);
+	if (NS_FAILED(rv)) finalResult = rv;
 
 	// register our RDF datasources:
 	rv = compMgr->RegisterComponent(kAbDirectoryDataSourceCID, 
@@ -266,10 +318,39 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
 
 	if (NS_FAILED(rv)) finalResult = rv;
 	
-	rv = compMgr->RegisterComponent(kAddressBookDB, nsnull, nsnull,
-								  path, PR_TRUE, PR_TRUE);
+	rv = compMgr->RegisterComponent(kAddressBookDBCID, 
+								   "Mail/News Address Book Card Database", 
+								   "component://netscape/addressbook/carddatabase",
+								   path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv))finalResult = rv;
 
+	rv = compMgr->RegisterComponent(kAbCardPropertyCID,
+								  "Mail/News Address Book Card Property",
+								  "component://netscape/addressbook/cardproperty",
+								  path, PR_TRUE, PR_TRUE);
+
+	if (NS_FAILED(rv)) finalResult = rv;
+	
+	rv = compMgr->RegisterComponent(kAbDirPropertyCID,
+								  "Mail/News Address Book Directory Property",
+								  "component://netscape/addressbook/directoryproperty",
+								  path, PR_TRUE, PR_TRUE);
+
+	if (NS_FAILED(rv)) finalResult = rv;
+	
+	rv = compMgr->RegisterComponent(kAddrBookSessionCID,
+								  "Address Book Session",
+								  "component://netscape/addressbook/services/session",
+								  path, PR_TRUE, PR_TRUE);
+
+	if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->RegisterComponent(kAbAutoCompleteSessionCID,
+								  "Address Book Auto Completion Session",
+								  "component://netscape/messenger/autocomplete&type=addrbook",
+								  path, PR_TRUE, PR_TRUE);
+
+	if (NS_FAILED(rv)) finalResult = rv;
 	return finalResult;
 }
 
@@ -285,6 +366,9 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
 	NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID, &rv);
 	if (NS_FAILED(rv)) return rv;
 
+	rv = compMgr->UnregisterComponent(kAddressBookCID, path);
+	if (NS_FAILED(rv)) finalResult = rv;
+
 	rv = compMgr->UnregisterComponent(kAbDirectoryDataSourceCID, path);
 	if (NS_FAILED(rv)) finalResult = rv;
 
@@ -297,8 +381,20 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
 	rv = compMgr->UnregisterComponent(kAbCardCID, path);
 	if (NS_FAILED(rv)) finalResult = rv;
 	
-	rv = compMgr->UnregisterComponent(kAddressBookDB, path);
+	rv = compMgr->UnregisterComponent(kAddressBookDBCID, path);
 	if (NS_FAILED(rv)) finalResult = rv;
 
+	rv = compMgr->UnregisterComponent(kAbCardPropertyCID, path);
+	if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->UnregisterComponent(kAbDirPropertyCID, path);
+	if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->UnregisterComponent(kAddrBookSessionCID, path);
+	if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->UnregisterComponent(kAbAutoCompleteSessionCID, path);
+	if (NS_FAILED(rv)) finalResult = rv;
+	
 	return finalResult;
 }

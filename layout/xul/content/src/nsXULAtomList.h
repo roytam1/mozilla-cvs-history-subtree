@@ -86,7 +86,6 @@ XUL_ATOM(crop, "crop")
 XUL_ATOM(mode, "mode")
 XUL_ATOM(box, "box")
 XUL_ATOM(flex, "flex")
-XUL_ATOM(spring, "spring")
 
 XUL_ATOM(deck, "deck")
 XUL_ATOM(tabcontrol, "tabcontrol")

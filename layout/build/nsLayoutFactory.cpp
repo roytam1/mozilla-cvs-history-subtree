@@ -47,6 +47,12 @@
 #include "nsIHTMLElementFactory.h"
 #include "nsIDocumentEncoder.h"
 #include "nsCOMPtr.h"
+#include "nsIFrameSelection.h"
+
+#include "nsCSSKeywords.h"  // to addref/release table
+#include "nsCSSProps.h"  // to addref/release table
+#include "nsCSSAtoms.h"  // to addref/release table
+#include "nsColorNames.h"  // to addref/release table
 
 class nsIDocumentLoaderFactory;
 
@@ -63,7 +69,7 @@ static NS_DEFINE_IID(kHTMLImageElementCID, NS_HTMLIMAGEELEMENT_CID);
 static NS_DEFINE_IID(kHTMLOptionElementCID, NS_HTMLOPTIONELEMENT_CID);
 
 static NS_DEFINE_CID(kSelectionCID, NS_SELECTION_CID);
-static NS_DEFINE_IID(kRangeListCID, NS_RANGELIST_CID);
+static NS_DEFINE_IID(kFrameSelectionCID, NS_FRAMESELECTION_CID);
 static NS_DEFINE_IID(kRangeCID,     NS_RANGE_CID);
 static NS_DEFINE_IID(kContentIteratorCID, NS_CONTENTITERATOR_CID);
 static NS_DEFINE_IID(kSubtreeIteratorCID, NS_SUBTREEITERATOR_CID);
@@ -78,10 +84,9 @@ static NS_DEFINE_CID(kPrintPreviewContextCID, NS_PRINT_PREVIEW_CONTEXT_CID);
 static NS_DEFINE_CID(kLayoutDocumentLoaderFactoryCID, NS_LAYOUT_DOCUMENT_LOADER_FACTORY_CID);
 static NS_DEFINE_CID(kLayoutDebuggerCID, NS_LAYOUT_DEBUGGER_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID, NS_HTML_ELEMENT_FACTORY_CID);
-static NS_DEFINE_CID(kHTMLEncoderCID, NS_HTML_ENCODER_CID);
 static NS_DEFINE_CID(kTextEncoderCID, NS_TEXT_ENCODER_CID);
 
-extern nsresult NS_NewRangeList(nsIDOMSelection** aResult);
+extern nsresult NS_NewRangeList(nsIFrameSelection** aResult);
 extern nsresult NS_NewRange(nsIDOMRange** aResult);
 extern nsresult NS_NewContentIterator(nsIContentIterator** aResult);
 extern nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aResult);
@@ -128,11 +133,19 @@ nsLayoutFactory::nsLayoutFactory(const nsCID &aClass)
 {   
   mRefCnt = 0;
   mClassID = aClass;
+  nsCSSAtoms::AddRefAtoms();
+  nsCSSKeywords::AddRefTable();
+  nsCSSProps::AddRefTable();
+  nsColorNames::AddRefTable();
 }   
 
 nsLayoutFactory::~nsLayoutFactory()   
 {   
   NS_ASSERTION(mRefCnt == 0, "non-zero refcnt at destruction");   
+  nsColorNames::ReleaseTable();
+  nsCSSProps::ReleaseTable();
+  nsCSSKeywords::ReleaseTable();
+  nsCSSAtoms::ReleaseAtoms();
 }   
 
 nsresult
@@ -252,8 +265,8 @@ nsLayoutFactory::CreateInstance(nsISupports *aOuter,
     refCounted = PR_TRUE;
   }
 #endif
-  else if (mClassID.Equals(kRangeListCID)) {
-    res = NS_NewRangeList((nsIDOMSelection**)&inst);
+  else if (mClassID.Equals(kFrameSelectionCID)) {
+    res = NS_NewRangeList((nsIFrameSelection**)&inst);
     if (NS_FAILED(res)) {
       LOG_NEW_FAILURE("NS_NewRangeList", res);
       return res;
@@ -376,14 +389,6 @@ nsLayoutFactory::CreateInstance(nsISupports *aOuter,
     res = NS_NewHTMLElementFactory((nsIHTMLElementFactory**) &inst);
     if (NS_FAILED(res)) {
       LOG_NEW_FAILURE("NS_NewHTMLElementFactory", res);
-      return res;
-    }
-    refCounted = PR_TRUE;
-  }
-  else if (mClassID.Equals(kHTMLEncoderCID)) {
-    res = NS_NewHTMLEncoder((nsIDocumentEncoder**) &inst);
-    if (NS_FAILED(res)) {
-      LOG_NEW_FAILURE("NS_NewHTMLEncoder", res);
       return res;
     }
     refCounted = PR_TRUE;
@@ -667,10 +672,10 @@ NSRegisterSelf(nsISupports* aServMgr , const char* aPath)
       LOG_REGISTER_FAILURE("kRangeCID", rv);
       break;
     }
-    rv = cm->RegisterComponent(kRangeListCID, NULL, NULL, aPath,
+    rv = cm->RegisterComponent(kFrameSelectionCID, NULL, NULL, aPath,
                                PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) {
-      LOG_REGISTER_FAILURE("kRangeListCID", rv);
+      LOG_REGISTER_FAILURE("kFrameSelection", rv);
       break;
     }
     rv = cm->RegisterComponent(kContentIteratorCID, NULL, NULL, aPath,
@@ -709,20 +714,34 @@ NSRegisterSelf(nsISupports* aServMgr , const char* aPath)
       LOG_REGISTER_FAILURE("kHTMLElementFactoryCID", rv);
       break;
     }
-    rv = cm->RegisterComponent(kHTMLEncoderCID, NULL, NULL, aPath,
+    rv = cm->RegisterComponent(kTextEncoderCID, "HTML document encoder",
+                               NS_DOC_ENCODER_PROGID_BASE "text/html",
+                               aPath,
                                PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) {
-      LOG_REGISTER_FAILURE("kHTMLEncoderCID", rv);
+      LOG_REGISTER_FAILURE(NS_DOC_ENCODER_PROGID_BASE "text/html", rv);
       break;
     }
  
-    rv = cm->RegisterComponent(kTextEncoderCID, NULL, NULL, aPath,
+    rv = cm->RegisterComponent(kTextEncoderCID, "Plaintext document encoder",
+                               NS_DOC_ENCODER_PROGID_BASE "text/plain",
+                               aPath,
                                PR_TRUE, PR_TRUE);
    if (NS_FAILED(rv)) {
-      LOG_REGISTER_FAILURE("kTextEncoderCID", rv);
+      LOG_REGISTER_FAILURE(NS_DOC_ENCODER_PROGID_BASE "text/plain", rv);
       break;
     }    
-    break;
+
+   rv = cm->RegisterComponent(kTextEncoderCID, "XIF document encoder",
+                               NS_DOC_ENCODER_PROGID_BASE "text/xif",
+                               aPath,
+                               PR_TRUE, PR_TRUE);
+   if (NS_FAILED(rv)) {
+      LOG_REGISTER_FAILURE(NS_DOC_ENCODER_PROGID_BASE "text/xif", rv);
+      break;
+    }    
+
+   break;
   } while (PR_FALSE);
 
   servMgr->ReleaseService(kComponentManagerCID, cm);
@@ -762,12 +781,12 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* aPath)
   rv = cm->UnregisterComponent(kTextNodeCID, aPath);
   rv = cm->UnregisterComponent(kSelectionCID, aPath);
   rv = cm->UnregisterComponent(kRangeCID, aPath);
-  rv = cm->UnregisterComponent(kRangeListCID, aPath);
+  rv = cm->UnregisterComponent(kFrameSelectionCID, aPath);
   rv = cm->UnregisterComponent(kContentIteratorCID, aPath);
   rv = cm->UnregisterComponent(kSubtreeIteratorCID, aPath);
   rv = cm->UnregisterComponent(kFrameUtilCID, aPath);
   rv = cm->UnregisterComponent(kLayoutDebuggerCID, aPath);
-  rv = cm->UnregisterComponent(kHTMLEncoderCID, aPath);
+//rv = cm->UnregisterComponent(kHTMLEncoderCID, aPath);
   rv = cm->UnregisterComponent(kTextEncoderCID, aPath);
 
 // XXX why the heck are these exported???? bad bad bad bad

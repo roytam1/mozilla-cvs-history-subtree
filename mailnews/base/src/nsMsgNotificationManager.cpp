@@ -23,6 +23,7 @@
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
 #include "MailNewsTypes.h"
+#include "nsIAllocator.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,		NS_RDFINMEMORYDATASOURCE_CID); 
@@ -102,11 +103,11 @@ nsMsgNotificationManager::QueryInterface(REFNSIID iid, void** result)
 	{
 		*result = NS_STATIC_CAST(nsISupports*, this);
 	}
-	else if(iid.Equals(nsIFolderListener::GetIID()))
+	else if(iid.Equals(nsCOMTypeInfo<nsIFolderListener>::GetIID()))
 	{
 		*result = NS_STATIC_CAST(nsIFolderListener*, this);
 	}
-	else if(iid.Equals(nsIRDFDataSource::GetIID()))
+	else if(iid.Equals(nsCOMTypeInfo<nsIRDFDataSource>::GetIID()))
 	{
 		*result = mInMemoryDataSource;
 	}
@@ -139,7 +140,7 @@ nsresult nsMsgNotificationManager::Init()
 
 	rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID, 
                                           this, 
-                                          nsIRDFDataSource::GetIID(), 
+                                          nsCOMTypeInfo<nsIRDFDataSource>::GetIID(), 
                                           getter_AddRefs(mInMemoryDataSource));
 
 	if(NS_FAILED(rv))
@@ -233,9 +234,14 @@ nsresult nsMsgNotificationManager::AddNewMailNotification(nsIMsgFolder *folder)
 	//If there's currently a notification for this folder, remove it.
 	RemoveNewMailNotification(folder);
 
+	nsCAutoString newMailURI;
+	rv = BuildNewMailURI(folder, newMailURI);
+	if(NS_FAILED(rv))
+		return rv;
+
 
 	nsCOMPtr<nsIRDFResource> notificationResource;
-	rv = rdfService->GetResource("newmail:test", getter_AddRefs(notificationResource));
+	rv = rdfService->GetResource((const char *) newMailURI, getter_AddRefs(notificationResource));
 	if(NS_FAILED(rv))
 		return rv;
 
@@ -254,7 +260,7 @@ nsresult nsMsgNotificationManager::AddNewMailNotification(nsIMsgFolder *folder)
 	if(NS_SUCCEEDED(rv) && folderDescription)
 	{
 		sourceString = folderDescription;
-		PR_Free(folderDescription);
+		delete[] folderDescription;
 	}
 	rv = rdfService->GetLiteral(sourceString.GetUnicode(), getter_AddRefs(source));
 	if(NS_SUCCEEDED(rv))
@@ -277,9 +283,12 @@ nsresult nsMsgNotificationManager::AddNewMailNotification(nsIMsgFolder *folder)
 	}
 
 	//Supposedly rdf will convert this into a localized time string.
-	time_t currentTime = time(nsnull);
-	struct tm *localTime = localtime(&currentTime);
-	timeStampString = asctime(localTime);
+	PRExplodedTime explode;
+	PR_ExplodeTime( PR_Now(), PR_LocalTimeParameters, &explode);
+	char buffer[128];
+	PR_FormatTime(buffer, sizeof(buffer), "%m/%d/%Y %I:%M %p", &explode);
+	timeStampString = buffer;
+	
 	rv = rdfService->GetLiteral(timeStampString.GetUnicode(), getter_AddRefs(timeStamp));
 	if(NS_SUCCEEDED(rv))
 	{
@@ -303,8 +312,13 @@ nsresult nsMsgNotificationManager::RemoveNewMailNotification(nsIMsgFolder *folde
 	if(NS_FAILED(rv))
 		return rv;
 
+	nsCAutoString newMailURI;
+	rv = BuildNewMailURI(folder, newMailURI);
+	if(NS_FAILED(rv))
+		return rv;
+
 	nsCOMPtr<nsIRDFResource> notificationResource;
-	rv = rdfService->GetResource("newmail:test", getter_AddRefs(notificationResource));
+	rv = rdfService->GetResource(newMailURI, getter_AddRefs(notificationResource));
 	if(NS_FAILED(rv))
 		return rv;
 	RemoveOldValues(notificationResource);
@@ -343,4 +357,20 @@ nsresult nsMsgNotificationManager::RemoveOldValues(nsIRDFResource *notificationR
 
 }
 
+nsresult nsMsgNotificationManager::BuildNewMailURI(nsIMsgFolder *folder, nsCAutoString &newMailURI)
+{
+	nsresult rv;
+	nsCOMPtr<nsIRDFResource> folderResource = do_QueryInterface(folder);
+	if(!folderResource)
+		return NS_ERROR_NO_INTERFACE;
 
+	char *folderURI;
+	rv = folderResource->GetValue(&folderURI);
+	if(!(NS_SUCCEEDED(rv) && folderURI))
+		return rv;
+
+	newMailURI = "newmail:";
+	newMailURI += folderURI;
+	nsAllocator::Free(folderURI);
+	return NS_OK;
+}

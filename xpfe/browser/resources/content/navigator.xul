@@ -112,7 +112,7 @@ Contributor(s): ______________________________________. -->
   <broadcaster id="canPrint"/>
   <broadcaster id="Browser:LoadingProgress"/>
   <broadcaster id="Browser:Status"/>
-  <broadcaster id="Browser:ProtocolIcon" uri=""/>
+  <broadcaster id="Browser:Security" secure="false"/>
   <broadcaster id="Browser:Throbber" busy="false"/>
   <broadcaster id="args" value=""/>
 
@@ -323,10 +323,10 @@ Contributor(s): ______________________________________. -->
 		  <menuitem value="&appSpecificCmd.label;" onaction="BrowserReload();"/>
 		  <menuitem value="&appSpecificCmd.label;" onaction="BrowserReload();"/>
 		  <menuseparator />
-		  <menuitem value="&searchBookmarksHistoryCmd.label;" onaction="OpenSearch('find', null);"/>
-		  <menuitem value="&searchInternetCmd.label;" onaction="OpenSearch('internet', null);"/>
-		  <menuitem value="&searchAllMailCmd.label;" onaction="OpenSearch('mail', null);"/>
-		  <menuitem value="&searchAddressbookCmd.label;" onaction="OpenSearch('addressbook', null);"/>
+		  <menuitem value="&searchBookmarksHistoryCmd.label;" onaction="OpenSearch('find');"/>
+		  <menuitem value="&searchInternetCmd.label;" onaction="OpenSearch('internet');"/>
+		  <menuitem value="&searchAllMailCmd.label;" onaction="OpenSearch('mail');"/>
+		  <menuitem value="&searchAddressbookCmd.label;" onaction="OpenSearch('addressbook');"/>
 		  <menuseparator />
 		  <menuitem value="&searchComputerCmd.label;" onaction="BrowserReload();"/>
 	  </menupopup>
@@ -434,11 +434,10 @@ Contributor(s): ______________________________________. -->
         <menuitem value="&xptk3Cmd.label;" onaction="window.content.location.href='resource:/res/samples/treeTest1.xul'"/>
         <menuitem value="&xptk4Cmd.label;" onaction="window.content.location.href='resource:/res/samples/dexsimplemaster.xul'"/>
         <menuitem value="&xptk5Cmd.label;" onaction="window.content.location.href='resource:/res/samples/dexanimmaster.xul'"/>
-        <menuitem value="&xptk6Cmd.label;" onaction="window.content.location.href='resource:/res/samples/dexopenchrome.xul'"/>
-        <menuitem value="&xptk7Cmd.label;" onaction="BrowserReallyReload(0)"/>
-        <menuitem value="&xptk8Cmd.label;" onaction="window.content.location.href='resource:/res/samples/beeptest.html'"/>
-        <menuitem value="&xptk9Cmd.label;" onaction="window.content.location.href='resource:/res/samples/soundtest.html'"/>
-        <menuitem value="&xptk10Cmd.label;" onaction="window.content.location.href='resource:/res/samples/xpmenu.xul'"/>
+        <menuitem value="&xptk6Cmd.label;" onaction="BrowserReallyReload(0)"/>
+        <menuitem value="&xptk7Cmd.label;" onaction="window.content.location.href='resource:/res/samples/beeptest.html'"/>
+        <menuitem value="&xptk8Cmd.label;" onaction="window.content.location.href='resource:/res/samples/soundtest.html'"/>
+        <menuitem value="&xptk9Cmd.label;" onaction="window.content.location.href='resource:/res/samples/xpmenu.xul'"/>
        </menupopup>
 	  </menu>
      </menupopup>
@@ -499,8 +498,6 @@ Contributor(s): ______________________________________. -->
             <spring flex="100%"/>
           </box>
 
-			<titledbutton id="search-button" align="top" value="Search" onclick="OpenSearch('internet', document.getElementById('urlbar').value);" />
-
           <titledbutton id="print-button" align="top" value="&printButton.label;"  
                 onclick="BrowserPrint()">
             <observes element="canPrint" attribute="disabled"/>
@@ -525,7 +522,7 @@ Contributor(s): ______________________________________. -->
             <titledbutton id="home-button" align="left" value="&homeButton.label;" 
             onclick="BrowserHome()"/>
         <titledbutton id="netscape-button" align="left" value="&netscapeButton.label;" 
-            onclick="window.content.location.href='http://my.netscape.com'"/>
+            onclick="window.content.location.href='http://home.netscape.com'"/>
         <spring flex="100%"/>
     </toolbar>
   </toolbox>
@@ -540,7 +537,7 @@ Contributor(s): ______________________________________. -->
  
     <titledbutton value="&notifCom.label;" onclick="doTests()"/>
 
-    <box id="state-box" align="horizontal" flex="100%">
+    <box id="security-box" class="insecure" align="horizontal" flex="100%">
         <box align="vertical" style="width:100px">
             <spring flex="100%"/>
             <progressmeter id="statusbar-icon" mode="normal" align="horizontal" value="0" onclick="dumpProgress()">
@@ -557,9 +554,9 @@ Contributor(s): ______________________________________. -->
         <spring flex="100%"/>
 
         <titledbutton align="left" value="&buildId.label;" style="font-family:sans-serif;font-size:2.5mm;"/>
-           
-        <titledbutton id="protocol-icon" uri="..." src="" align="left" onclick="onProtocolClick()">     
-            <observes element="Browser:ProtocolIcon" attribute="uri" onchange="onProtocolChange()"/>         
+                
+        <titledbutton id="security-button" class="insecure" value="&security-button.label;" align="left">
+                    <observes element="Browser:Security" attribute="secure" onchange="onSecurity()"/>         
         </titledbutton>
 
      </box>

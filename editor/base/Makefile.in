@@ -27,29 +27,19 @@ IS_COMPONENT =  1
 
 CPPSRCS =                       \
     nsEditor.cpp                \
-    nsTextEditor.cpp            \
+    nsEditorUtils.cpp           \
+    nsEditorRegistration.cpp    \
     nsTextEditRules.cpp         \
     TextEditorTest.cpp          \
     nsHTMLEditRules.cpp         \
     nsEditorEventListeners.cpp  \
     nsEditProperty.cpp          \
-    nsEditFactory.cpp           \
-    nsHTMLEditFactory.cpp       \
+    nsEditorFactory.cpp         \
     nsHTMLEditor.cpp            \
-    nsTextEditFactory.cpp       \
     ChangeAttributeTxn.cpp      \
     EditTxn.cpp                 \
     EditAggregateTxn.cpp        \
     EditTable.cpp               \
-    InsertTableTxn.cpp          \
-    InsertTableCellTxn.cpp      \
-    InsertTableColumnTxn.cpp    \
-    InsertTableRowTxn.cpp       \
-    DeleteTableTxn.cpp          \
-    DeleteTableCellTxn.cpp      \
-    DeleteTableColumnTxn.cpp    \
-    DeleteTableRowTxn.cpp       \
-    JoinTableCellsTxn.cpp       \
     InsertTextTxn.cpp           \
     nsInsertHTMLTxn.cpp         \
     PlaceholderTxn.cpp          \
@@ -60,18 +50,27 @@ CPPSRCS =                       \
     DeleteRangeTxn.cpp          \
     SplitElementTxn.cpp         \
     JoinElementTxn.cpp          \
+    nsStyleSheetTxns.cpp        \
     TransactionFactory.cpp      \
+    TypeInState.cpp             \
     nsInternetCiter.cpp         \
     nsAOLCiter.cpp              \
+    nsInterfaceState.cpp        \
     nsEditorShell.cpp           \
     nsEditorShellFactory.cpp    \
+    IMETextTxn.cpp              \
+    IMECommitTxn.cpp            \
+    $(NULL)
+
+ifdef ENABLE_JS_EDITOR_LOG
+DEFINES += -DENABLE_JS_EDITOR_LOG
+CPPSRCS +=                       \
     nsJSEditorLog.cpp           \
     nsJSTxnLog.cpp              \
     $(NULL)
+endif
 
 MODULE = editor
-
-DEFINES += -DENABLE_JS_EDITOR_LOG
 
 include $(topsrcdir)/config/config.mk
 

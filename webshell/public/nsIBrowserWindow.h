@@ -36,18 +36,22 @@ struct nsRect;
  { 0xa6cf905d, 0x15b3, 0x11d2,{0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}}
 
 // Chrome mask
-#define NS_CHROME_WINDOW_BORDERS_ON   0x00000001
-#define NS_CHROME_WINDOW_CLOSE_ON     0x00000002
-#define NS_CHROME_WINDOW_RESIZE_ON    0x00000004
-#define NS_CHROME_MENU_BAR_ON         0x00000008
-#define NS_CHROME_TOOL_BAR_ON         0x00000010
-#define NS_CHROME_LOCATION_BAR_ON     0x00000020
-#define NS_CHROME_STATUS_BAR_ON       0x00000040
-#define NS_CHROME_PERSONAL_TOOLBAR_ON 0x00000080
-#define NS_CHROME_SCROLLBARS_ON       0x00000100
-#define NS_CHROME_TITLEBAR_ON         0x00000200
+#define NS_CHROME_DEFAULT_CHROME      0x00000001
+#define NS_CHROME_WINDOW_BORDERS_ON   0x00000002
+#define NS_CHROME_WINDOW_CLOSE_ON     0x00000004
+#define NS_CHROME_WINDOW_RESIZE_ON    0x00000008
+#define NS_CHROME_MENU_BAR_ON         0x00000010
+#define NS_CHROME_TOOL_BAR_ON         0x00000020
+#define NS_CHROME_LOCATION_BAR_ON     0x00000040
+#define NS_CHROME_STATUS_BAR_ON       0x00000080
+#define NS_CHROME_PERSONAL_TOOLBAR_ON 0x00000100
+#define NS_CHROME_SCROLLBARS_ON       0x00000200
+#define NS_CHROME_TITLEBAR_ON         0x00000400
+#define NS_CHROME_DEPENDENT           0x10000000
+#define NS_CHROME_MODAL               0x20000000
+#define NS_CHROME_OPEN_AS_DIALOG      0x40000000
 #define NS_CHROME_OPEN_AS_CHROME      0x80000000
-#define NS_CHROME_ALL_CHROME          0x000003FF
+#define NS_CHROME_ALL_CHROME          0x000007FE
 
 /**
  * API to a "browser window". A browser window contains a toolbar, a web shell
@@ -65,17 +69,23 @@ public:
 
   NS_IMETHOD MoveTo(PRInt32 aX, PRInt32 aY) = 0;
 
-  NS_IMETHOD SizeTo(PRInt32 aWidth, PRInt32 aHeight) = 0;
+  NS_IMETHOD SizeWindowTo(PRInt32 aWidth, PRInt32 aHeight) = 0;
+  NS_IMETHOD SizeContentTo(PRInt32 aWidth, PRInt32 aHeight) = 0;
 
-  NS_IMETHOD GetBounds(nsRect& aResult) = 0;
-
+  NS_IMETHOD GetContentBounds(nsRect& aResult) = 0;
   NS_IMETHOD GetWindowBounds(nsRect& aResult) = 0;
+
+  NS_IMETHOD IsIntrinsicallySized(PRBool& aResult) = 0;
+
+  NS_IMETHOD ShowAfterCreation() = 0;
 
   NS_IMETHOD Show() = 0;
 
   NS_IMETHOD Hide() = 0;
 
   NS_IMETHOD Close() = 0;
+
+  NS_IMETHOD ShowModally(PRBool aPrepare) = 0;
 
   NS_IMETHOD SetChrome(PRUint32 aNewChromeMask) = 0;
 
@@ -89,12 +99,16 @@ public:
 
   NS_IMETHOD GetStatus(const PRUnichar** aResult) = 0;
 
+  NS_IMETHOD SetDefaultStatus(const PRUnichar* aStatus) = 0;
+
+  NS_IMETHOD GetDefaultStatus(const PRUnichar** aResult) = 0;
+
   NS_IMETHOD SetProgress(PRInt32 aProgress, PRInt32 aProgressMax) = 0;
 
   NS_IMETHOD ShowMenuBar(PRBool aShow) = 0;
-  NS_IMETHOD IsMenuBarVisible(PRBool *aVisible) = 0;
 
   NS_IMETHOD GetWebShell(nsIWebShell*& aResult) = 0;
+  NS_IMETHOD GetContentWebShell(nsIWebShell **aResult) = 0;
 
   // XXX minimize, maximize
   // XXX event control: enable/disable window close box, stick to glass, modal

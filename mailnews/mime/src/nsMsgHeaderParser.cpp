@@ -81,7 +81,7 @@ NS_IMPL_ADDREF(nsMsgHeaderParser)
 NS_IMPL_RELEASE(nsMsgHeaderParser)
 NS_IMPL_QUERY_INTERFACE(nsMsgHeaderParser, nsIMsgHeaderParser::GetIID()); /* we need to pass in the interface ID of this interface */
 
-nsresult nsMsgHeaderParser::ParseHeaderAddresses (const char *charset, const char *line, char **names, char **addresses, PRUint32& numAddresses)
+nsresult nsMsgHeaderParser::ParseHeaderAddresses (const char *charset, const char *line, char **names, char **addresses, PRUint32 *numAddresses)
 {
   char *utf8Str, *outStrings;
 
@@ -89,14 +89,14 @@ nsresult nsMsgHeaderParser::ParseHeaderAddresses (const char *charset, const cha
     utf8Str = nsnull;
   }
   
-  numAddresses = msg_parse_Header_addresses((const char *) utf8Str, names, addresses);
+  *numAddresses = msg_parse_Header_addresses((const char *) utf8Str, names, addresses);
 
   PR_FREEIF(utf8Str);
 
   if (nsnull != names && nsnull != *names) {
     char *s = *names;
     PRInt32 i, len, len_all = 0, outStrLen;
-    for (i = 0; i < (PRInt32) numAddresses; i++) {
+    for (i = 0; i < (PRInt32) *numAddresses; i++) {
       len = PL_strlen(s) + 1;
       len_all += len;
       s += len;
@@ -110,7 +110,7 @@ nsresult nsMsgHeaderParser::ParseHeaderAddresses (const char *charset, const cha
   if (nsnull != addresses && nsnull != *addresses) {
     char *s = *addresses;
     PRInt32 i, len, len_all = 0, outStrLen;
-    for (i = 0; i < (PRInt32) numAddresses; i++) {
+    for (i = 0; i < (PRInt32) *numAddresses; i++) {
       len = PL_strlen(s) + 1;
       len_all += len;
       s += len;
@@ -1068,17 +1068,17 @@ msg_extract_Header_address_names(const char *line)
 	int status = msg_parse_Header_addresses(line, &names, &addrs);
 	if (status <= 0)
 		return 0;
-  PRUint32 j1, j2;
+  PRUint32 len1, len2;
 
 	s1 = names;
 	s2 = addrs;
 	for (i = 0; (int)i < status; i++)
 	{
-		j1 = PL_strlen(s1);
-		j2 = PL_strlen(s2);
-		s1 += j1 + 1;
-		s2 += j2 + 1;
-		size += (j1 ? j1 : j2) + 2;
+		len1 = PL_strlen(s1);
+		len2 = PL_strlen(s2);
+		s1 += len1 + 1;
+		s2 += len2 + 1;
+		size += (len1 ? len1 : len2) + 2;
 	}
 
 	result = (char *)PR_Malloc(size + 1);
@@ -1094,18 +1094,18 @@ msg_extract_Header_address_names(const char *line)
 	s2 = addrs;
 	for (i = 0; (int)i < status; i++)
 	{
-		j1 = PL_strlen(s1);
-		j2 = PL_strlen(s2);
+		len1 = PL_strlen(s1);
+		len2 = PL_strlen(s2);
 
-		if (j1)
+		if (len1)
 		{
-			nsCRT::memcpy(out, s1, j1);
-			out += j1;
+			nsCRT::memcpy(out, s1, len1);
+			out += len1;
 		}
 		else
 		{
-			nsCRT::memcpy(out, s2, j2);
-			out += j2;
+			nsCRT::memcpy(out, s2, len2);
+			out += len2;
 		}
 
 		if ((int)(i+1) < status)
@@ -1113,8 +1113,8 @@ msg_extract_Header_address_names(const char *line)
 			*out++ = ',';
 			*out++ = ' ';
 		}
-		s1 += j1 + 1;
-		s2 += j2 + 1;
+		s1 += len1 + 1;
+		s2 += len2 + 1;
 	}
 	*out = 0;
 
@@ -1165,7 +1165,7 @@ msg_format_Header_addresses (const char *names, const char *addrs,
 	const char *s1, *s2;
 	PRUint32 i, size = 0;
 	PRUint32 column = 10;
-  PRUint32    j1, j2;
+  PRUint32   len1, len2;
 
 	if (count <= 0)
 		return 0;
@@ -1174,11 +1174,11 @@ msg_format_Header_addresses (const char *names, const char *addrs,
 	s2 = addrs;
 	for (i = 0; (int)i < count; i++)
 	{
-		j1 = PL_strlen(s1);
-		j2 = PL_strlen(s2);
-		s1 += j1 + 1;
-		s2 += j2 + 1;
-		size += j1 + j2 + 10;
+		len1 = PL_strlen(s1);
+		len2 = PL_strlen(s2);
+		s1 += len1 + 1;
+		s2 += len2 + 1;
+		size += len1 + len2 + 10;
 	}
 
 	result = (char *)PR_Malloc(size + 1);
@@ -1191,11 +1191,11 @@ msg_format_Header_addresses (const char *names, const char *addrs,
 	for (i = 0; (int)i < count; i++)
 	{
 		char *o;
-		j1 = PL_strlen(s1);
-		j2 = PL_strlen(s2);
+		len1 = PL_strlen(s1);
+		len2 = PL_strlen(s2);
 
 		if (   wrap_lines_p && i > 0
-		    && (column + j1 + j2 + 3 + (((int)(i+1) < count) ? 2 : 0) > 76))
+		    && (column + len1 + len2 + 3 + (((int)(i+1) < count) ? 2 : 0) > 76))
 		{
 			if (out > result && out[-1] == ' ')
 				out--;
@@ -1207,16 +1207,16 @@ msg_format_Header_addresses (const char *names, const char *addrs,
 
 		o = out;
 
-		if (j1)
+		if (len1)
 		{
-			nsCRT::memcpy(out, s1, j1);
-			out += j1;
+			nsCRT::memcpy(out, s1, len1);
+			out += len1;
 			*out++ = ' ';
 			*out++ = '<';
 		}
-		nsCRT::memcpy(out, s2, j2);
-		out += j2;
-		if (j1)
+		nsCRT::memcpy(out, s2, len2);
+		out += len2;
+		if (len1)
 			*out++ = '>';
 
 		if ((int)(i+1) < count)
@@ -1224,8 +1224,8 @@ msg_format_Header_addresses (const char *names, const char *addrs,
 			*out++ = ',';
 			*out++ = ' ';
 		}
-		s1 += j1 + 1;
-		s2 += j2 + 1;
+		s1 += len1 + 1;
+		s2 += len2 + 1;
 
 		column += (out - o);
 	}
@@ -1302,22 +1302,22 @@ msg_remove_duplicate_addresses(const char *addrs, const char *other_addrs,
 	s2 = addrs1;
 	for (i = 0; i < count1; i++)
 	{
-		PRUint32 j1 = PL_strlen(s1);
-		PRUint32 j2 = PL_strlen(s2);
-		s1 += j1 + 1;
-		s2 += j2 + 1;
-		size1 += j1 + j2 + 10;
+		PRUint32 len1 = PL_strlen(s1);
+		PRUint32 len2 = PL_strlen(s2);
+		s1 += len1 + 1;
+		s2 += len2 + 1;
+		size1 += len1 + len2 + 10;
 	}
 
 	s1 = names2;
 	s2 = addrs2;
 	for (i = 0; i < count2; i++)
 	{
-		PRUint32 j1 = PL_strlen(s1);
-		PRUint32 j2 = PL_strlen(s2);
-		s1 += j1 + 1;
-		s2 += j2 + 1;
-		size2 += j1 + j2 + 10;
+		PRUint32 len1 = PL_strlen(s1);
+		PRUint32 len2 = PL_strlen(s2);
+		s1 += len1 + 1;
+		s2 += len2 + 1;
+		size2 += len1 + len2 + 10;
 	}
 
 	a_array1 = (char **)PR_Malloc(count1 * sizeof(char *));

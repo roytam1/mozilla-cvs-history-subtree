@@ -215,6 +215,10 @@ CToken* nsHTMLTokenizer::GetTokenAt(PRInt32 anIndex){
   return (CToken*)mTokenDeque.ObjectAt(anIndex);
 }
 
+nsresult nsHTMLTokenizer::WillTokenize(PRBool aIsFinalChunk)
+{
+  return NS_OK;
+}
 
 /**
  * 
@@ -236,6 +240,10 @@ void nsHTMLTokenizer::PrependTokens(nsDeque& aDeque){
 
 }
 
+nsresult nsHTMLTokenizer::DidTokenize(PRBool aIsFinalChunk)
+{
+  return NS_OK;
+}
 
 /**
  *  This method repeatedly called by the tokenizer. 
@@ -460,11 +468,11 @@ nsresult nsHTMLTokenizer::ConsumeStartTag(PRUnichar aChar,CToken*& aToken,nsScan
        */
       if(NS_SUCCEEDED(result))
         if((eHTMLTag_style==theTag) || (eHTMLTag_script==theTag)) {
-        nsAutoString endTag(NS_EnumToTag(theTag));
+        nsAutoString endTag(nsHTMLTags::GetStringValue(theTag));
         endTag.Insert("</",0,2);
-        endTag.Append(">");        
-        CToken* textToken=theRecycler->CreateTokenOfType(eToken_text,theTag,endTag);
-        result=((CTextToken*)textToken)->ConsumeUntil(0,PRBool(eHTMLTag_style==theTag),aScanner,endTag);  //tell new token to finish consuming text...    
+        CToken* textToken=theRecycler->CreateTokenOfType(eToken_text,theTag);
+        result=((CTextToken*)textToken)->ConsumeUntil(0,PR_TRUE,aScanner,endTag);  //tell new token to finish consuming text...    
+        //endTag.Append(">");
         CToken* endToken=theRecycler->CreateTokenOfType(eToken_end,theTag,endTag);
         AddToken(textToken,result,mTokenDeque,theRecycler);
         AddToken(endToken,result,mTokenDeque,theRecycler);
@@ -537,10 +545,8 @@ nsresult nsHTMLTokenizer::ConsumeEntity(PRUnichar aChar,CToken*& aToken,nsScanne
        return ConsumeText(temp,aToken,aScanner);
     }//if
     if(aToken){
-      char cbuf[30];
       nsString& theStr=aToken->GetStringValueXXX();
-      theStr.ToCString(cbuf, sizeof(cbuf)-1);
-      if((kHashsign!=theChar) && (-1==NS_EntityToUnicode(cbuf))){
+      if((kHashsign!=theChar) && (-1==nsHTMLEntities::EntityToUnicode(theStr))){
         //if you're here we have a bogus entity.
         //convert it into a text token.
         nsAutoString temp("&");

@@ -22,8 +22,8 @@
 #include "nsWidget.h"
 #include "nsIMenu.h"
 #include "nsISupportsArray.h"
+#include "nsIMenuListener.h"
 
-class nsIMenuListener;
 
 /**
  * Native Win32 button wrapper
@@ -56,6 +56,8 @@ public:
   NS_IMETHOD GetParent(nsISupports *&aParent);
   NS_IMETHOD GetLabel(nsString &aText);
   NS_IMETHOD SetLabel(const nsString &aText);
+  NS_IMETHOD GetAccessKey(nsString &aText);
+  NS_IMETHOD SetAccessKey(const nsString &aText);
 
   NS_IMETHOD AddItem(nsISupports * aItem);
 

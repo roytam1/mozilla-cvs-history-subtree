@@ -22,14 +22,15 @@ DEFINES=-D_IMPL_NS_UI
 MODULE=raptor 
 XPIDL_MODULE=widget
 
-XPIDLSRCS = .\nsISound.idl \
-						$(NULL)
+XPIDLSRCS =               \
+  .\nsIFileSpecWithUI.idl          \
+  .\nsISound.idl          \
+  $(NULL)
 
 EXPORTS=nsui.h \
   nsIFontSizeIterator.h \
   nsIFontNameIterator.h \
   nsIFontRetrieverService.h \
-  nsIFileChooser.h \
   nsIFileListTransferable.h \
   nsIFormatConverter.h \
   nsIClipboardOwner.h \

@@ -159,7 +159,7 @@ NS_IMETHODIMP nsXULCommand::DoCommand()
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
   event.eventStructType = NS_MOUSE_EVENT;
-  event.message = NS_MOUSE_LEFT_CLICK;
+  event.message = NS_MENU_ACTION;
 
   nsCOMPtr<nsIContent> contentNode;
   contentNode = do_QueryInterface(mDOMElement);
@@ -185,12 +185,6 @@ NS_IMETHODIMP nsXULCommand::SetDOMElement(nsIDOMElement * aDOMElement)
 {
   mDOMElement = aDOMElement;
   return NS_OK;
-}
-
-//----------------------------------------------------------------------
-NS_IMETHODIMP nsXULCommand::ExecuteJavaScriptString(nsIWebShell* aWebShell, nsString& aJavaScript)
-{
-  return NS_OK; // XXX Kill this method. It's worthless.
 }
 
 /////////////////////////////////////////////////////////////////////////

@@ -31,6 +31,7 @@
 // include files for components this factory creates...
 #include "nsImapUrl.h"
 #include "nsImapProtocol.h"
+#include "nsMsgImapCID.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kCImapUrl, NS_IMAPURL_CID);
@@ -89,7 +90,7 @@ nsresult nsImapFactory::QueryInterface(const nsIID &aIID, void **aResult)
 	*aResult = NULL;   
 
 	// we support two interfaces....nsISupports and nsFactory.....
-	if (aIID.Equals(::nsISupports::GetIID()))    
+	if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
 		*aResult = (void *)(nsISupports*)this;   
 	else if (aIID.Equals(nsIFactory::GetIID()))   
 		*aResult = (void *)(nsIFactory*)this;   
@@ -240,6 +241,13 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
 
 	rv = compMgr->RegisterComponent(kCImapService, nsnull, nsnull,
 									path, PR_TRUE, PR_TRUE);
+	if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->RegisterComponent(kCImapService,  
+                                    "Imap Protocol Handler",
+                                    NS_NETWORK_PROTOCOL_PROGID_PREFIX "imap",
+                                    path, PR_TRUE, PR_TRUE);
+
 	if (NS_FAILED(rv)) finalResult = rv;
 
 	rv = compMgr->RegisterComponent(kCImapMessageResource,

@@ -24,8 +24,9 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
+#include "nsNeckoUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsXIFConverter.h"
@@ -40,6 +41,8 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsIDocument.h"
 #include "nsINameSpaceManager.h"
 #include "nsHTMLAtoms.h"
+#include "nsIHTMLContent.h"
+#include "nsHTMLIIDs.h"
 
 class Area {
 public:
@@ -842,7 +845,7 @@ nsImageMap::AddArea(nsIContent* aArea)
 
 PRBool
 nsImageMap::IsInside(nscoord aX, nscoord aY,
-                     nsIURL* aDocURL,
+                     nsIURI* aDocURL,
                      nsString& aAbsURL,
                      nsString& aTarget,
                      nsString& aAltText,
@@ -863,21 +866,30 @@ nsImageMap::IsInside(nscoord aX, nscoord aY,
 
       if ((area->mBase).Length() > 0) {
         // use the area->base as the base uri
-        const char *uriStr = (area->mBase).GetBuffer();
+        char *uriStr = (area->mBase).ToNewCString();
+        if (!uriStr) {
+            return PR_FALSE;
+        }
         rv = service->NewURI(uriStr, nsnull, &baseUri);
+        delete [] uriStr;
       } else {
         rv = aDocURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
       }
       if (NS_FAILED(rv)) return PR_FALSE;
 
-      char *absUrlStr = nsnull;
-      const char *urlSpec = (area->mHREF).GetBuffer();
-      rv = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
+      NS_MakeAbsoluteURI(area->mHREF, baseUri, aAbsURL);
+
       NS_RELEASE(baseUri);
-      aAbsURL = absUrlStr;
-      delete [] absUrlStr;
 #endif // NECKO
       aTarget = area->mTarget;
+      if (mMap && (aTarget.Length() == 0)) {
+        nsIHTMLContent* content = nsnull;
+        nsresult result = mMap->QueryInterface(kIHTMLContentIID, (void**)&content);
+        if ((NS_OK == result) && content) {
+          content->GetBaseTarget(aTarget);
+          NS_RELEASE(content);
+        }
+      }
       aAltText = area->mAltText;
       *aSuppress = area->mSuppressFeedback;
       return PR_TRUE;

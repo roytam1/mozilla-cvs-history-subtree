@@ -23,12 +23,24 @@
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsIFactory.h"
+#include "nsIRegistry.h"
 #include "nsCOMPtr.h"
 #include "nsICharsetConverterInfo.h"
 #include "nsUCVJACID.h"
+#include "nsUCVJA2CID.h"
+
 #include "nsUCVJADll.h"
-#include "nsSJIS2Unicode.h"
+
+#include "nsJapaneseToUnicode.h"
+#include "nsSJIS2Unicode.h"			// To Be Obsoleted
 #include "nsUnicodeToSJIS.h"
+#include "nsEUCJPToUnicode.h"		// To Be Obsoleted
+#include "nsISO2022JPToUnicode.h"	// To Be Obsoleted
+#include "nsUnicodeToEUCJP.h"
+#include "nsUnicodeToISO2022JP.h"
+#include "nsUnicodeToJISx0201.h"
+#include "nsUnicodeToJISx0208.h"
+#include "nsUnicodeToJISx0212.h"
 
 // just for NS_IMPL_IDS; this is a good, central place to implement GUIDs
 #include "nsIUnicodeDecoder.h"
@@ -36,6 +48,8 @@
 #include "nsIUnicodeEncoder.h"
 #include "nsIUnicodeEncodeHelper.h"
 #include "nsICharsetConverterManager.h"
+#define DECODER_NAME_BASE "Unicode Decoder-"
+#define ENCODER_NAME_BASE "Unicode Encoder-"
 
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
@@ -46,6 +60,33 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
 PRInt32 g_InstanceCount = 0;
 PRInt32 g_LockCount = 0;
+
+// To Be Obsoleted
+PRUint16 g_ut0201Mapping[] = { 
+#include "jis0201.ut"
+};
+
+PRUint16 g_ut0208Mapping[] = {
+#include "jis0208.ut"
+};
+
+PRUint16 g_ut0212Mapping[] = {
+#include "jis0212.ut"
+};
+// End of To Be Obsoleted
+
+PRUint16 g_uf0201Mapping[] = {
+#include "jis0201.uf"
+};
+
+PRUint16 g_uf0208Mapping[] = {
+#include "jis0208.uf"
+};
+
+PRUint16 g_uf0212Mapping[] = {
+#include "jis0212.uf"
+};
+
 
 typedef nsresult (* fpCreateInstance) (nsISupports **);
 
@@ -61,15 +102,75 @@ FactoryData g_FactoryData[] =
 {
   {
     &kSJIS2UnicodeCID,
-    nsSJIS2Unicode::CreateInstance,
+    NEW_ShiftJISToUnicode,
     "Shift_JIS",
     "Unicode"
   },
+  {	// To Be Obsoleted
+    &kObsSJISToUnicodeCID,
+    nsSJIS2Unicode::CreateInstance,
+    "x-obsoleted-Shift_JIS",
+    "Unicode"
+  },// To Be Obsoleted
   {
     &kUnicodeToSJISCID,
     nsUnicodeToSJIS::CreateInstance,
     "Unicode",
     "Shift_JIS"
+  },
+  {
+    &kISO2022JPToUnicodeCID,
+    NEW_ISO2022JPToUnicode,
+    "ISO-2022-JP",
+    "Unicode"
+  },
+  {
+    &kEUCJPToUnicodeCID,
+    NEW_EUCJPToUnicode,
+    "EUC-JP",
+    "Unicode"
+  },
+  {// To Be Obsoleted
+    &kObsISO2022JPToUnicodeCID,
+    nsISO2022JPToUnicode::CreateInstance,
+    "x-obsoleted-ISO-2022-JP",
+    "Unicode"
+  },// To Be Obsoleted
+  {	// To Be Obsoleted
+    &kObsEUCJPToUnicodeCID,
+    nsEUCJPToUnicode::CreateInstance,
+    "x-obsoleted-EUC-JP",
+    "Unicode"
+  },// To Be Obsoleted
+  {	
+    &kUnicodeToEUCJPCID,
+    nsUnicodeToEUCJP::CreateInstance,
+    "Unicode",
+    "EUC-JP"
+  },
+  {
+    &kUnicodeToJISx0201CID,
+    nsUnicodeToJISx0201::CreateInstance,
+    "Unicode",
+    "jis_0201"
+  },
+  {
+    &kUnicodeToJISx0208CID,
+    nsUnicodeToJISx0208::CreateInstance,
+    "Unicode",
+    "jis_0208-1983"
+  },
+  {
+    &kUnicodeToJISx0212CID,
+    nsUnicodeToJISx0212::CreateInstance,
+    "Unicode",
+    "jis_0212-1990"
+  },
+  {
+    &kUnicodeToISO2022JPCID,
+    nsUnicodeToISO2022JP::CreateInstance,
+    "Unicode",
+    "ISO-2022-JP"
   }
 };
 
@@ -158,28 +259,77 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
   return NS_NOINTERFACE;
 }
 
-extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char * path)
+extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports * aServMgr, 
+                                             const char * path)
 {
-  nsresult rv;
+  nsresult res;
+  PRUint32 i;
+  nsIComponentManager * compMgr = NULL;
+  nsIRegistry * registry = NULL;
+  nsIRegistry::Key key;
+  char buff[1024];
 
-  nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &rv));
-  if (NS_FAILED(rv)) return rv;
+  // get the service manager
+  nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &res));
 
-  nsIComponentManager* compMgr;
-  rv = servMgr->GetService(kComponentManagerCID, 
-                           nsIComponentManager::GetIID(), 
-                           (nsISupports**)&compMgr);
-  if (NS_FAILED(rv)) return rv;
+  // get the component manager
+  res = servMgr->GetService(kComponentManagerCID, 
+                            nsIComponentManager::GetIID(), 
+                            (nsISupports**)&compMgr);
+  if (NS_FAILED(res)) goto done;
 
-  for (PRUint32 i=0; i<ARRAY_SIZE(g_FactoryData); i++) {
-    rv = compMgr->RegisterComponent(*(g_FactoryData[i].mCID), NULL, NULL,
+  // get the registry
+  res = servMgr->GetService(NS_REGISTRY_PROGID, 
+                            nsIRegistry::GetIID(), 
+                            (nsISupports**)&registry);
+  if (NS_FAILED(res)) goto done;
+
+  // open the registry
+  res = registry->OpenWellKnownRegistry(
+      nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(res)) goto done;
+
+  char name[128];
+  char progid[128];
+  for (i=0; i<ARRAY_SIZE(g_FactoryData); i++) {
+    if(0==PL_strcmp(g_FactoryData[i].mCharsetSrc,"Unicode"))
+    {
+       PL_strcpy(name, DECODER_NAME_BASE);
+       PL_strcat(name, g_FactoryData[i].mCharsetDest);
+       PL_strcpy(progid, NS_UNICODEDECODER_PROGID_BASE);
+       PL_strcat(progid, g_FactoryData[i].mCharsetDest);
+    } else {
+       PL_strcpy(name, ENCODER_NAME_BASE);
+       PL_strcat(name, g_FactoryData[i].mCharsetSrc);
+       PL_strcpy(progid, NS_UNICODEENCODER_PROGID_BASE);
+       PL_strcat(progid, g_FactoryData[i].mCharsetSrc);
+    }
+    // register component
+    res = compMgr->RegisterComponent(*(g_FactoryData[i].mCID), name, progid,
       path, PR_TRUE, PR_TRUE);
-    if(NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
+    if(NS_FAILED(res) && (NS_ERROR_FACTORY_EXISTS != res)) goto done;
+
+    // register component info
+    // XXX take these KONSTANTS out of here
+    // XXX free the string from "ToString()"
+    sprintf(buff, "%s/%s", "software/netscape/intl/uconv", (g_FactoryData[i].mCID -> ToString()));
+    res = registry -> AddSubtree(nsIRegistry::Common, buff, &key);
+    if (NS_FAILED(res)) goto done;
+    res = registry -> SetString(key, "source", g_FactoryData[i].mCharsetSrc);
+    if (NS_FAILED(res)) goto done;
+    res = registry -> SetString(key, "destination", g_FactoryData[i].mCharsetDest);
+    if (NS_FAILED(res)) goto done;
   }
 
-  done:
-  (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
-  return rv;
+done:
+  if (compMgr != NULL) 
+    (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
+  if (registry != NULL) {
+    registry -> Close();
+    (void)servMgr->ReleaseService(NS_REGISTRY_PROGID, registry);
+  }
+
+  return res;
 }
 
 extern "C" NS_EXPORT nsresult NSUnregisterSelf(nsISupports* aServMgr, const char * path)

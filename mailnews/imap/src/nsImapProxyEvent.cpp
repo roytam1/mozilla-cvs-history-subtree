@@ -480,7 +480,10 @@ nsImapMailFolderSinkProxy::FolderIsNoSelect(nsIImapProtocol* aProtocol,
         if(nsnull == ev)
             res = NS_ERROR_OUT_OF_MEMORY;
         else
+        {
+            ev->SetNotifyCompletion(PR_TRUE);
             ev->PostEvent(m_eventQueue);
+        }
     }
     else
     {
@@ -680,7 +683,10 @@ nsImapMessageSinkProxy::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
         if(nsnull == ev)
             res = NS_ERROR_OUT_OF_MEMORY;
         else
+        {
+            ev->SetNotifyCompletion(PR_TRUE);
             ev->PostEvent(m_eventQueue);
+        }
     }
     else
     {
@@ -1109,7 +1115,8 @@ nsImapExtensionSinkProxy::SetFolderAdminURL(nsIImapProtocol* aProtocol,
 NS_IMETHODIMP
 nsImapExtensionSinkProxy::SetCopyResponseUid(nsIImapProtocol* aProtocol,
                                              nsMsgKeyArray* aKeyArray,
-                                             const char* msgIdString)
+                                             const char* msgIdString,
+                                             nsISupports* copyState)
 {
     nsresult res = NS_OK;
     NS_PRECONDITION (aKeyArray, "Oops... null aKeyArray");
@@ -1120,17 +1127,80 @@ nsImapExtensionSinkProxy::SetCopyResponseUid(nsIImapProtocol* aProtocol,
     if (PR_GetCurrentThread() == m_thread)
     {
         SetCopyResponseUidProxyEvent *ev =
-            new SetCopyResponseUidProxyEvent(this, aKeyArray, msgIdString);
+            new SetCopyResponseUidProxyEvent(this, aKeyArray, msgIdString,
+                                             copyState);
         if(nsnull == ev)
             res = NS_ERROR_OUT_OF_MEMORY;
         else
+        {
+            ev->SetNotifyCompletion(PR_TRUE);
             ev->PostEvent(m_eventQueue);
+        }
     }
     else
     {
         res = m_realImapExtensionSink->SetCopyResponseUid(aProtocol,
                                                           aKeyArray,
-                                                          msgIdString);
+                                                          msgIdString,
+                                                          copyState);
+    }
+    return res;
+}
+
+NS_IMETHODIMP
+nsImapExtensionSinkProxy::SetAppendMsgUid(nsIImapProtocol* aProtocol,
+                                          nsMsgKey aKey,
+                                          nsISupports* copyState)
+{
+    nsresult res = NS_OK;
+    NS_ASSERTION (m_protocol == aProtocol, "Ooh ooh, wrong protocol");
+
+    if (PR_GetCurrentThread() == m_thread)
+    {
+        SetAppendMsgUidProxyEvent *ev =
+            new SetAppendMsgUidProxyEvent(this, aKey, copyState);
+        if(nsnull == ev)
+            res = NS_ERROR_OUT_OF_MEMORY;
+        else
+        {
+            ev->SetNotifyCompletion(PR_TRUE);
+            ev->PostEvent(m_eventQueue);
+        }
+    }
+    else
+    {
+        res = m_realImapExtensionSink->SetAppendMsgUid(aProtocol,
+                                                       aKey,
+                                                       copyState);
+    }
+    return res;
+}
+
+NS_IMETHODIMP
+nsImapExtensionSinkProxy::GetMessageId(nsIImapProtocol* aProtocol,
+                                       nsCString* messageId,
+                                       nsISupports* copyState)
+{
+    nsresult res = NS_OK;
+    NS_ASSERTION (m_protocol == aProtocol, "Ooh ooh, wrong protocol");
+
+    if (PR_GetCurrentThread() == m_thread)
+    {
+        GetMessageIdProxyEvent *ev =
+            new GetMessageIdProxyEvent(this, messageId, copyState);
+        if(nsnull == ev)
+            res = NS_ERROR_OUT_OF_MEMORY;
+        else
+        {
+            ev->SetNotifyCompletion(PR_TRUE);
+            ev->PostEvent(m_eventQueue);
+        }
+    }
+    else
+    {
+        res = m_realImapExtensionSink->GetMessageId(aProtocol,
+                                                    messageId,
+                                                    copyState);
     }
     return res;
 }
@@ -1532,18 +1602,15 @@ nsImapMiscellaneousSinkProxy::FEAlertFromServer(nsIImapProtocol* aProtocol,
 
 NS_IMETHODIMP
 nsImapMiscellaneousSinkProxy::ProgressStatus(nsIImapProtocol* aProtocol,
-                                         const char* statusMsg)
+                                         PRUint32 aMsgId)
 {
     nsresult res = NS_OK;
-    NS_PRECONDITION (statusMsg, "Oops... null statusMsg");
-    if(!statusMsg)
-        return NS_ERROR_NULL_POINTER;
     NS_ASSERTION (m_protocol == aProtocol, "Ooh ooh, wrong protocol");
 
     if (PR_GetCurrentThread() == m_thread)
     {
         ProgressStatusProxyEvent *ev =
-            new ProgressStatusProxyEvent(this, statusMsg);
+            new ProgressStatusProxyEvent(this, aMsgId);
         if(nsnull == ev)
             res = NS_ERROR_OUT_OF_MEMORY;
         else
@@ -1551,7 +1618,7 @@ nsImapMiscellaneousSinkProxy::ProgressStatus(nsIImapProtocol* aProtocol,
     }
     else
     {
-        res = m_realImapMiscellaneousSink->ProgressStatus(aProtocol, statusMsg);
+        res = m_realImapMiscellaneousSink->ProgressStatus(aProtocol, aMsgId);
     }
     return res;
 }
@@ -1738,6 +1805,67 @@ nsImapMiscellaneousSinkProxy::LoadNextQueuedUrl(nsIImapProtocol* aProtocol,
     else
     {
         res = m_realImapMiscellaneousSink->LoadNextQueuedUrl(aProtocol, aInfo);
+    }
+    return res;
+}
+
+NS_IMETHODIMP
+nsImapMiscellaneousSinkProxy::CopyNextStreamMessage(nsIImapProtocol* aProtocol,
+                                                    nsISupports* copyState)
+{
+    nsresult res = NS_OK;
+    NS_PRECONDITION (copyState, "Oops... null copyState");
+    if(!copyState)
+        return NS_ERROR_NULL_POINTER;
+    NS_ASSERTION (m_protocol == aProtocol, "Ooh ooh, wrong protocol");
+
+    if (PR_GetCurrentThread() == m_thread)
+    {
+        CopyNextStreamMessageProxyEvent *ev =
+            new CopyNextStreamMessageProxyEvent(this, copyState);
+        if(nsnull == ev)
+            res = NS_ERROR_OUT_OF_MEMORY;
+        else
+        {
+            ev->SetNotifyCompletion(PR_TRUE);
+            ev->PostEvent(m_eventQueue);
+        }
+    }
+    else
+    {
+        res = m_realImapMiscellaneousSink->CopyNextStreamMessage(aProtocol,
+                                                                 copyState);
+    }
+    return res;
+}
+
+NS_IMETHODIMP
+nsImapMiscellaneousSinkProxy::SetUrlState(nsIImapProtocol* aProtocol,
+                                          nsIMsgMailNewsUrl* aUrl,
+                                          PRBool isRunning,
+                                          nsresult statusCode)
+{
+    nsresult res = NS_OK;
+    NS_PRECONDITION (aUrl, "Oops... null url");
+    if(!aUrl)
+        return NS_ERROR_NULL_POINTER;
+    NS_ASSERTION (m_protocol == aProtocol, "Ooh ooh, wrong protocol");
+
+    if (PR_GetCurrentThread() == m_thread)
+    {
+        SetUrlStateProxyEvent *ev =
+            new SetUrlStateProxyEvent(this, aUrl, isRunning, statusCode);
+        if(nsnull == ev)
+            res = NS_ERROR_OUT_OF_MEMORY;
+        else
+        {
+            ev->PostEvent(m_eventQueue);
+        }
+    }
+    else
+    {
+        res = m_realImapMiscellaneousSink->SetUrlState(aProtocol, aUrl,
+                                                       isRunning, statusCode);
     }
     return res;
 }
@@ -2078,33 +2206,18 @@ FolderIsNoSelectProxyEvent::FolderIsNoSelectProxyEvent(
     nsImapMailFolderSinkProxyEvent(aProxy)
 {
     NS_ASSERTION (aInfo, "Ooops... null folder query info");
-    if (aInfo)
-    {
-        m_folderQueryInfo.name = PL_strdup(aInfo->name);
-        m_folderQueryInfo.hostName = PL_strdup(aInfo->hostName);
-        m_folderQueryInfo.rv = aInfo->rv;
-    }
-    else
-    {
-        m_folderQueryInfo.name = nsnull;
-        m_folderQueryInfo.hostName = nsnull;
-        m_folderQueryInfo.rv = PR_FALSE;
-    }
+    m_folderQueryInfo = aInfo;
 }
 
 FolderIsNoSelectProxyEvent::~FolderIsNoSelectProxyEvent()
 {
-    if (m_folderQueryInfo.name)
-        PL_strfree(m_folderQueryInfo.name);
-    if (m_folderQueryInfo.hostName)
-        PL_strfree(m_folderQueryInfo.hostName);
 }
 
 NS_IMETHODIMP
 FolderIsNoSelectProxyEvent::HandleEvent()
 {
     nsresult res = m_proxy->m_realImapMailFolderSink->FolderIsNoSelect(
-        m_proxy->m_protocol, &m_folderQueryInfo);
+        m_proxy->m_protocol, m_folderQueryInfo);
     if (m_notifyCompletion)
         m_proxy->m_protocol->NotifyFEEventCompletion();
     return res;
@@ -2130,7 +2243,7 @@ SetupHeaderParseStreamProxyEvent::SetupHeaderParseStreamProxyEvent(
             *m_streamInfo.boxSpec = *aStreamInfo->boxSpec;
             if (aStreamInfo->boxSpec->allocatedPathName)
                 m_streamInfo.boxSpec->allocatedPathName =
-                    PL_strdup(aStreamInfo->boxSpec->allocatedPathName); 
+				nsCRT::strdup(aStreamInfo->boxSpec->allocatedPathName); 
             if (aStreamInfo->boxSpec->namespaceForFolder)
                 m_streamInfo.boxSpec->namespaceForFolder = 
                     new nsIMAPNamespace(
@@ -2881,7 +2994,7 @@ SetFolderAdminURLProxyEvent::HandleEvent()
 
 SetCopyResponseUidProxyEvent::SetCopyResponseUidProxyEvent(
     nsImapExtensionSinkProxy* aProxy, nsMsgKeyArray* aKeyArray,
-    const char* msgIdString) :
+    const char* msgIdString, nsISupports* copyState) :
     nsImapExtensionSinkProxyEvent(aProxy), m_msgIdString(msgIdString, eOneByte)
 {
     NS_ASSERTION (aKeyArray, "Oops... a null key array");
@@ -2889,6 +3002,8 @@ SetCopyResponseUidProxyEvent::SetCopyResponseUidProxyEvent(
     {
         m_copyKeyArray.CopyArray(aKeyArray);
     }
+    if (copyState)
+      m_copyState = do_QueryInterface(copyState);
 }
 
 SetCopyResponseUidProxyEvent::~SetCopyResponseUidProxyEvent()
@@ -2899,7 +3014,53 @@ NS_IMETHODIMP
 SetCopyResponseUidProxyEvent::HandleEvent()
 {
     nsresult res = m_proxy->m_realImapExtensionSink->SetCopyResponseUid(
-        m_proxy->m_protocol, &m_copyKeyArray, m_msgIdString.GetBuffer()); 
+        m_proxy->m_protocol, &m_copyKeyArray, m_msgIdString.GetBuffer(),
+        m_copyState);
+    if (m_notifyCompletion)
+        m_proxy->m_protocol->NotifyFEEventCompletion();
+    return res;
+}
+
+SetAppendMsgUidProxyEvent::SetAppendMsgUidProxyEvent(
+    nsImapExtensionSinkProxy* aProxy, nsMsgKey aKey, nsISupports* copyState) :
+    nsImapExtensionSinkProxyEvent(aProxy), m_key(aKey)
+{
+  if (copyState)
+    m_copyState = do_QueryInterface(copyState);
+}
+
+SetAppendMsgUidProxyEvent::~SetAppendMsgUidProxyEvent()
+{
+}
+
+NS_IMETHODIMP
+SetAppendMsgUidProxyEvent::HandleEvent()
+{
+    nsresult res = m_proxy->m_realImapExtensionSink->SetAppendMsgUid(
+        m_proxy->m_protocol, m_key, m_copyState);
+    if (m_notifyCompletion)
+        m_proxy->m_protocol->NotifyFEEventCompletion();
+    return res;
+}
+
+GetMessageIdProxyEvent::GetMessageIdProxyEvent(
+    nsImapExtensionSinkProxy* aProxy, nsCString* messageId, 
+    nsISupports* copyState) :
+    nsImapExtensionSinkProxyEvent(aProxy), m_messageId(messageId)
+{
+  if (copyState)
+    m_copyState = do_QueryInterface(copyState);
+}
+
+GetMessageIdProxyEvent::~GetMessageIdProxyEvent()
+{
+}
+
+NS_IMETHODIMP
+GetMessageIdProxyEvent::HandleEvent()
+{
+    nsresult res = m_proxy->m_realImapExtensionSink->GetMessageId(
+        m_proxy->m_protocol, m_messageId, m_copyState);
     if (m_notifyCompletion)
         m_proxy->m_protocol->NotifyFEEventCompletion();
     return res;
@@ -3268,27 +3429,21 @@ FEAlertFromServerProxyEvent::HandleEvent()
 }
 
 ProgressStatusProxyEvent::ProgressStatusProxyEvent(
-    nsImapMiscellaneousSinkProxy* aProxy, const char* statusMsg) :
+    nsImapMiscellaneousSinkProxy* aProxy, PRUint32 aMsgId) :
     nsImapMiscellaneousSinkProxyEvent(aProxy)
 {
-    NS_ASSERTION (statusMsg, "Oops... a null statusMsg");
-    if (statusMsg)
-        m_statusMsg = PL_strdup(statusMsg);
-    else
-        m_statusMsg = nsnull;
+	m_statusMsgId = aMsgId;
 }
 
 ProgressStatusProxyEvent::~ProgressStatusProxyEvent()
 {
-    if (m_statusMsg)
-        PL_strfree(m_statusMsg);
 }
 
 NS_IMETHODIMP
 ProgressStatusProxyEvent::HandleEvent()
 {
     nsresult res = m_proxy->m_realImapMiscellaneousSink->ProgressStatus(
-        m_proxy->m_protocol, m_statusMsg);
+        m_proxy->m_protocol, m_statusMsgId);
     if (m_notifyCompletion)
         m_proxy->m_protocol->NotifyFEEventCompletion();
     return res;
@@ -3301,7 +3456,7 @@ PercentProgressProxyEvent::PercentProgressProxyEvent(
     NS_ASSERTION (aInfo, "Oops... a null progress info");
     if (aInfo)
     {
-        m_progressInfo.message = PL_strdup(aInfo->message);
+        m_progressInfo.message = (aInfo->message) ? nsCRT::strdup(aInfo->message) : nsnull;
         m_progressInfo.percent = aInfo->percent;
     }
     else
@@ -3314,7 +3469,7 @@ PercentProgressProxyEvent::PercentProgressProxyEvent(
 PercentProgressProxyEvent::~PercentProgressProxyEvent()
 {
     if (m_progressInfo.message)
-        PL_strfree(m_progressInfo.message);
+        PR_Free(m_progressInfo.message);
 }
 
 NS_IMETHODIMP
@@ -3487,3 +3642,52 @@ LoadNextQueuedUrlProxyEvent::HandleEvent()
         m_proxy->m_protocol->NotifyFEEventCompletion();
     return res;
 }
+
+CopyNextStreamMessageProxyEvent::CopyNextStreamMessageProxyEvent(
+    nsImapMiscellaneousSinkProxy* aProxy, nsISupports* copyState) :
+    nsImapMiscellaneousSinkProxyEvent(aProxy)
+{
+    NS_ASSERTION (copyState, "Oops... a null copy state");
+	// potential ownership/lifetime problem here, but incoming server
+	// shouldn't be deleted while urls are running.
+    m_copyState = do_QueryInterface(copyState);
+}
+
+CopyNextStreamMessageProxyEvent::~CopyNextStreamMessageProxyEvent()
+{
+}
+
+NS_IMETHODIMP
+CopyNextStreamMessageProxyEvent::HandleEvent()
+{
+    nsresult res = m_proxy->m_realImapMiscellaneousSink->CopyNextStreamMessage(
+        m_proxy->m_protocol, m_copyState);
+    if (m_notifyCompletion)
+        m_proxy->m_protocol->NotifyFEEventCompletion();
+    return res;
+}
+
+SetUrlStateProxyEvent::SetUrlStateProxyEvent(
+    nsImapMiscellaneousSinkProxy* aProxy, nsIMsgMailNewsUrl* aUrl,
+    PRBool isRunning, nsresult statusCode) :
+    nsImapMiscellaneousSinkProxyEvent(aProxy), m_isRunning(isRunning),
+    m_status(statusCode)
+{
+    NS_ASSERTION (aUrl, "Oops... a null url");
+    m_url = do_QueryInterface(aUrl);
+}
+
+SetUrlStateProxyEvent::~SetUrlStateProxyEvent()
+{
+}
+
+NS_IMETHODIMP
+SetUrlStateProxyEvent::HandleEvent()
+{
+    nsresult res = m_proxy->m_realImapMiscellaneousSink->SetUrlState(
+        m_proxy->m_protocol, m_url, m_isRunning, m_status);
+    if (m_notifyCompletion)
+        m_proxy->m_protocol->NotifyFEEventCompletion();
+    return res;
+}
+

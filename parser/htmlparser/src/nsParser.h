@@ -63,6 +63,7 @@
 #include "nsParserCIID.h"
 #include "nsITokenizer.h"
 #include "nsHTMLTags.h"
+#include "nsDTDUtils.h"
 
 class IContentSink;
 class nsIDTD;
@@ -75,7 +76,7 @@ class nsIProgressEventSink;
 
 #include <fstream.h>
 
-#ifndef XP_MAC
+#ifdef XP_WIN
 #pragma warning( disable : 4275 )
 #endif
 
@@ -173,7 +174,7 @@ friend class CTokenHandler;
      * @param   aListener is a listener to forward notifications to
      * @return  TRUE if all went well -- FALSE otherwise
      */
-    virtual nsresult Parse(nsIURL* aURL,nsIStreamObserver* aListener,PRBool aEnableVerify=PR_FALSE,void* aKey=0);
+    virtual nsresult Parse(nsIURI* aURL,nsIStreamObserver* aListener,PRBool aEnableVerify=PR_FALSE,void* aKey=0,eParseMode aMode=eParseMode_autodetect);
 
     /**
      * Cause parser to parse input from given stream 
@@ -181,7 +182,7 @@ friend class CTokenHandler;
      * @param   aStream is the i/o source
      * @return  TRUE if all went well -- FALSE otherwise
      */
-    virtual nsresult Parse(nsIInputStream& aStream,PRBool aEnableVerify=PR_FALSE,void* aKey=0);
+    virtual nsresult Parse(nsIInputStream& aStream,PRBool aEnableVerify=PR_FALSE,void* aKey=0,eParseMode aMode=eParseMode_autodetect);
 
     /**
      * @update	gess5/11/98
@@ -189,10 +190,10 @@ friend class CTokenHandler;
      * @param   appendTokens tells us whether we should insert tokens inline, or append them.
      * @return  TRUE if all went well -- FALSE otherwise
      */
-    virtual nsresult Parse(nsString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aEnableVerify=PR_FALSE,PRBool aLastCall=PR_FALSE);
+    virtual nsresult Parse(const nsString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aEnableVerify=PR_FALSE,PRBool aLastCall=PR_FALSE,eParseMode aMode=eParseMode_autodetect);
 
-    virtual PRBool    IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType);
-    virtual nsresult  ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType);
+    virtual PRBool    IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,eParseMode aMode=eParseMode_autodetect);
+    virtual nsresult  ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,eParseMode aMode=eParseMode_autodetect);
 
 
     /**
@@ -204,7 +205,8 @@ friend class CTokenHandler;
      *  @param   aState determines whether we parse/tokenize or just cache.
      *  @return  current state
      */
-    virtual PRBool EnableParser(PRBool aState);
+    virtual nsresult  EnableParser(PRBool aState);
+    virtual nsresult  Terminate(void);
 
     /**
      * Call this to query whether the parser is enabled or not.
@@ -231,7 +233,7 @@ friend class CTokenHandler;
      * @update	gess5/11/98
      * @return  TRUE if all went well, otherwise FALSE
      */
-    virtual nsresult ResumeParse(nsIDTD* mDefaultDTD=0);
+    virtual nsresult ResumeParse(nsIDTD* mDefaultDTD=0, PRBool aIsFinalChunk=PR_FALSE);
 
     void  DebugDumpSource(ostream& anOutput);
 
@@ -241,22 +243,20 @@ friend class CTokenHandler;
       //*********************************************
 #ifdef NECKO
     // nsIProgressEventSink methods:
-    NS_IMETHOD OnProgress(nsISupports* context, PRUint32 Progress, PRUint32 ProgressMax);
-    NS_IMETHOD OnStatus(nsISupports* context, const PRUnichar* aMmsg);
+    NS_IMETHOD OnProgress(nsIChannel* channel, nsISupports* context, PRUint32 Progress, PRUint32 ProgressMax);
+    NS_IMETHOD OnStatus(nsIChannel* channel, nsISupports* context, const PRUnichar* aMmsg);
     // nsIStreamObserver methods:
-    NS_IMETHOD OnStartBinding(nsISupports *ctxt);
-    NS_IMETHOD OnStopBinding(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
-    NS_IMETHOD OnStartRequest(nsISupports *ctxt);
-    NS_IMETHOD OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+    NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+    NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
     // nsIStreamListener methods:
-    NS_IMETHOD OnDataAvailable(nsISupports *ctxt, nsIBufferInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+    NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
 #else
-    NS_IMETHOD GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo);
-    NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 Progress, PRUint32 ProgressMax);
-    NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMmsg);
-    NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-    NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUint32 length);
-    NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+    NS_IMETHOD GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo);
+    NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 Progress, PRUint32 ProgressMax);
+    NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMmsg);
+    NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+    NS_IMETHOD OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream, PRUint32 length);
+    NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
 #endif
 
     void              PushContext(CParserContext& aContext);
@@ -278,6 +278,14 @@ friend class CTokenHandler;
      * @return  NS_OK if successful, or NS_HTMLPARSER_MEMORY_ERROR on error
      */
     virtual nsresult  CreateTagStack(nsITagStack** aTagStack);
+
+    /**
+     * Call this to access observer dictionary ( internal to parser )
+     * @update	harishd 06/27/99
+     * @param   
+     * @return  
+     */
+    CObserverDictionary& GetObserverDictionary(void) { return mObserverDictionary; }
 
 protected:
 
@@ -320,7 +328,7 @@ private:
      *  @param   
      *  @return  TRUE if it's ok to proceed
      */
-    PRBool WillTokenize();
+    PRBool WillTokenize(PRBool aIsFinalChunk = PR_FALSE);
 
    
     /**
@@ -331,7 +339,7 @@ private:
      *  @update  gess 3/25/98
      *  @return  error code 
      */
-    nsresult Tokenize();
+    nsresult Tokenize(PRBool aIsFinalChunk = PR_FALSE);
 
     /**
      *  This is the tail-end of the code sandwich for the
@@ -342,7 +350,7 @@ private:
      *  @param   
      *  @return  TRUE if all went well
      */
-    PRBool DidTokenize();
+    PRBool DidTokenize(PRBool aIsFinalChunk = PR_FALSE);
     
 
 protected:
@@ -369,6 +377,7 @@ protected:
     nsString            mCharset;
     nsCharsetSource     mCharsetSource;
     nsresult            mInternalState;
+    CObserverDictionary mObserverDictionary;
 };
 
 

@@ -112,13 +112,12 @@ NS_IMPL_RELEASE(nsExpatDTD)
  *  @param   
  *  @return  
  */
-nsExpatDTD::nsExpatDTD() : nsIDTD() {
+nsExpatDTD::nsExpatDTD() : nsIDTD(), mFilename("") {
   NS_INIT_REFCNT();
     
   mExpatParser=0;
   mParser=0;
   mSink=0;
-  mFilename;
   mLineNumber=0;
   mTokenizer=0;
 }
@@ -280,6 +279,20 @@ nsITokenRecycler* nsExpatDTD::GetTokenRecycler(void){
   return 0;
 }
 
+/**
+ * Use this id you want to stop the building content model
+ * --------------[ Sets DTD to STOP mode ]----------------
+ * It's recommended to use this method in accordance with
+ * the parser's terminate() method.
+ *
+ * @update	harishd 07/22/99
+ * @param 
+ * @return
+ */
+nsresult  nsExpatDTD::Terminate(void)
+{
+  return NS_ERROR_HTMLPARSER_STOPPARSING;
+}
 
 /**
  * Sets up the callbacks for the expat parser      
@@ -384,6 +397,15 @@ PRBool nsExpatDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const{
 }
 
 /**
+ * Give rest of world access to our tag enums, so that CanContain(), etc,
+ * become useful.
+ */
+NS_IMETHODIMP nsExpatDTD::StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/**
  *  This method gets called to determine whether a given 
  *  tag is itself a container
  *  
@@ -437,12 +459,12 @@ NS_IMETHODIMP nsExpatDTD::HandleToken(CToken* aToken,nsIParser* aParser) {
         if(0<attrCount){ //go collect the attributes...
           int attr=0;
           for(attr=0;attr<attrCount;attr++){
-            CToken* theToken=mTokenizer->PeekToken();
-            if(theToken)  {
-              eHTMLTokenTypes theType=eHTMLTokenTypes(theToken->GetTokenType());
-              if(eToken_attribute==theType){
+            CToken* theAttrToken=mTokenizer->PeekToken();
+            if(theAttrToken)  {
+              eHTMLTokenTypes theAttrType=eHTMLTokenTypes(theAttrToken->GetTokenType());
+              if(eToken_attribute==theAttrType){
                 mTokenizer->PopToken(); //pop it for real...
-                theNode.AddAttribute(theToken);
+                theNode.AddAttribute(theAttrToken);
               } 
             }
             else return kEOF;

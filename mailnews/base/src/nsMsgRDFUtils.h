@@ -52,16 +52,18 @@ typedef struct _nsMsgRDFNotification {
 #define NC_RDF_DELETE				"http://home.netscape.com/NC-rdf#Delete"
 #define NC_RDF_NEWFOLDER			"http://home.netscape.com/NC-rdf#NewFolder"
 #define NC_RDF_GETNEWMESSAGES		"http://home.netscape.com/NC-rdf#GetNewMessages"
+#define NC_RDF_COPY					"http://home.netscape.com/NC-rdf#Copy"
+#define NC_RDF_MOVE					"http://home.netscape.com/NC-rdf#Move"
+#define NC_RDF_MARKALLMESSAGESREAD  "http://home.netscape.com/NC-rdf#MarkAllMessagesRead"
+#define NC_RDF_COMPACT				"http://home.netscape.com/NC-rdf#Compact"
+#define NC_RDF_RENAME				"http://home.netscape.com/NC_rdf#Rename"
+#define NC_RDF_EMPTYTRASH   "http://home.netscape.com/NC_rdf#EmptyTrash"
 
 //Message Commands
 #define NC_RDF_MARKREAD				"http://home.netscape.com/NC-rdf#MarkRead"
 #define NC_RDF_MARKUNREAD			"http://home.netscape.com/NC-rdf#MarkUnread"
 #define NC_RDF_TOGGLEREAD			"http://home.netscape.com/NC-rdf#ToggleRead"
 
-
-//Returns PR_TRUE if r1 is equal to r2
-PRBool
-peq(nsIRDFResource* r1, nsIRDFResource* r2);
 
 //Returns PR_TRUE if r1 is equal to r2 and r2 is the sort property.
 PRBool
@@ -76,6 +78,9 @@ nsresult createNode(nsString& str, nsIRDFNode **node);
 
 //Given a PRUint32, create an nsiIRDFNode.
 nsresult createNode(PRUint32 value, nsIRDFNode **node);
+
+//Given a PRTime create an nsIRDFNode that is really a date literal.
+nsresult createDateNode(PRTime time, nsIRDFNode **node);
 
 //Has Assertion for a datasource that will just call GetTarget on property.  When all of our 
 //datasource derive from our datasource baseclass, this should be moved there and the first

@@ -15,25 +15,26 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
+ 
+#include "nsCOMPtr.h"
+
 #include "nsEditorMode.h"
 #include "nsString.h"
 #include "nsIDOMDocument.h"
 
+#include "nsIEditor.h"
 #include "nsIHTMLEditor.h"
-#include "nsITextEditor.h"
+#include "nsITableEditor.h"
+
 #include "nsEditorCID.h"
 
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "resources.h"
 
-static nsIHTMLEditor *gEditor;
+static nsIEditor *gEditor;
 
-static NS_DEFINE_IID(kITextEditorIID, NS_ITEXTEDITOR_IID);
-static NS_DEFINE_CID(kTextEditorCID, NS_TEXTEDITOR_CID);
-static NS_DEFINE_IID(kIHTMLEditorIID, NS_IHTMLEDITOR_IID);
 static NS_DEFINE_CID(kHTMLEditorCID, NS_HTMLEDITOR_CID);
-static NS_DEFINE_IID(kIEditorIID, NS_IEDITOR_IID);
 static NS_DEFINE_CID(kEditorCID, NS_EDITOR_CID);
 
 #ifdef XP_PC
@@ -41,7 +42,7 @@ static NS_DEFINE_CID(kEditorCID, NS_EDITOR_CID);
 #else
 #ifdef XP_MAC
 #define EDITOR_DLL "ENDER_DLL"
-#else // XP_UNIX
+#else // XP_UNIX || XP_BEOS
 #define EDITOR_DLL "libender"MOZ_DLL_SUFFIX
 #endif
 #endif
@@ -50,7 +51,7 @@ static NS_DEFINE_CID(kEditorCID, NS_EDITOR_CID);
 nsresult NS_InitEditorMode(nsIDOMDocument *aDOMDocument, nsIPresShell* aPresShell)
 {
   nsresult result = NS_OK;
-  static PRBool needsInit=PR_TRUE;
+
   // This is a big leak if called > once, but its only temp test code, correct?
   if (gEditor)
     gEditor=nsnull;
@@ -68,31 +69,36 @@ nsresult NS_InitEditorMode(nsIDOMDocument *aDOMDocument, nsIPresShell* aPresShel
 */
   result = nsComponentManager::CreateInstance(kHTMLEditorCID,
                                         nsnull,
-                                        kIHTMLEditorIID, (void **)&gEditor);
+                                        nsIEditor::GetIID(), (void **)&gEditor);
   if (NS_FAILED(result))
     return result;
   if (!gEditor) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  result = gEditor->Init(aDOMDocument, aPresShell);
+  result = gEditor->Init(aDOMDocument, aPresShell, 0);
   return result;
 }
 
 
-static nsresult PrintEditorOutput(nsIHTMLEditor* editor, PRInt32 aCommandID)
+static nsresult PrintEditorOutput(nsIEditor* editor, PRInt32 aCommandID)
 {
 	nsString		outString;
-	char*				cString;
+	char*			cString;
+	nsString		formatString;
+    PRUint32        flags;
 	
 	switch (aCommandID)
 	{
       case VIEWER_DISPLAYTEXT:
-        gEditor->OutputTextToString(outString);
+        formatString = "text/plain";
+        flags = nsIEditor::EditorOutputFormatted;
+        editor->OutputToString(outString, formatString, flags);
         break;
         
       case VIEWER_DISPLAYHTML:
-        gEditor->OutputHTMLToString(outString);
+        formatString = "text/html";
+        editor->OutputToString(outString, formatString, flags);
         break;
 	}
 
@@ -106,41 +112,44 @@ static nsresult PrintEditorOutput(nsIHTMLEditor* editor, PRInt32 aCommandID)
 
 nsresult NS_DoEditorTest(PRInt32 aCommandID)
 {
-  if (gEditor)
+  nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(gEditor);
+  nsCOMPtr<nsITableEditor> tableEditor = do_QueryInterface(gEditor);
+  if (htmlEditor && tableEditor)
   {
     switch(aCommandID)
     {
-      case VIEWER_EDIT_INSERT_TABLE:
-        // First param = number, 
-        // 2nd is TRUE to insert after, FALSE for before
-        gEditor->InsertTable();
-        break;    
+      case VIEWER_EDIT_SET_BGCOLOR_RED:
+        htmlEditor->SetBodyAttribute("bgcolor", "red");
+        break;
+      case VIEWER_EDIT_SET_BGCOLOR_YELLOW:
+        htmlEditor->SetBodyAttribute("bgcolor", "yellow");
+        break;
       case VIEWER_EDIT_INSERT_CELL:  
-        gEditor->InsertTableCell(1, PR_FALSE);
+        tableEditor->InsertTableCell(1, PR_FALSE);
         break;    
       case VIEWER_EDIT_INSERT_COLUMN:
-        gEditor->InsertTableColumn(1, PR_FALSE);
+        tableEditor->InsertTableColumn(1, PR_FALSE);
         break;    
       case VIEWER_EDIT_INSERT_ROW:    
-        gEditor->InsertTableRow(1, PR_FALSE);
+        tableEditor->InsertTableRow(1, PR_FALSE);
         break;    
       case VIEWER_EDIT_DELETE_TABLE:  
-        gEditor->DeleteTable();
+        tableEditor->DeleteTable();
         break;    
       case VIEWER_EDIT_DELETE_CELL:  
-        gEditor->DeleteTableCell(1);
+        tableEditor->DeleteTableCell(1);
         break;    
       case VIEWER_EDIT_DELETE_COLUMN:
-        gEditor->DeleteTableColumn(1);
+        tableEditor->DeleteTableColumn(1);
         break;    
       case VIEWER_EDIT_DELETE_ROW:
-        gEditor->DeleteTableRow(1);
+        tableEditor->DeleteTableRow(1);
         break;    
       case VIEWER_EDIT_JOIN_CELL_RIGHT:
-        gEditor->JoinTableCells(PR_TRUE);
+        tableEditor->JoinTableCells();
         break;    
       case VIEWER_EDIT_JOIN_CELL_BELOW:
-        gEditor->JoinTableCells(PR_FALSE);
+        tableEditor->JoinTableCells();
         break;
       case VIEWER_DISPLAYTEXT:
       case VIEWER_DISPLAYHTML:

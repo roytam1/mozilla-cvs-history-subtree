@@ -40,7 +40,7 @@ class nsIStyleContext;
 class nsIAtom;
 class nsString;
 class nsIEventStateManager;
-class nsIURL;
+class nsIURI;
 
 #define NS_IPRESCONTEXT_IID   \
 { 0x0a5d12e0, 0x944e, 0x11d1, \
@@ -53,7 +53,15 @@ enum nsCompatibility {
 
 enum nsWidgetRendering {
   eWidgetRendering_Native   = 1,
-  eWidgetRendering_Gfx      = 2
+  eWidgetRendering_Gfx      = 2,
+  eWidgetRendering_PartialGfx = 3
+};
+
+enum nsWidgetType {
+  eWidgetType_Button  	= 1,
+  eWidgetType_Checkbox	= 2,
+  eWidgetType_Radio			= 3,
+  eWidgetType_Text			= 4
 };
 
 // An interface for presentation contexts. Presentation contexts are
@@ -103,7 +111,7 @@ public:
   /** 
    * Get base url for presentation
    */
-  NS_IMETHOD GetBaseURL(nsIURL** aURLResult) = 0;
+  NS_IMETHOD GetBaseURL(nsIURI** aURLResult) = 0;
 
   /** 
    * Get medium of presentation

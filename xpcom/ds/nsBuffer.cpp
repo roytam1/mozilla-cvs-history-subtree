@@ -29,6 +29,7 @@ nsBuffer::nsBuffer()
     : mGrowBySize(0),
       mMaxSize(0),
       mAllocator(nsnull),
+      mObserver(nsnull),
       mBufferSize(0),
       mReadSegment(nsnull),
       mReadCursor(0),
@@ -59,6 +60,15 @@ nsBuffer::Init(PRUint32 growBySize, PRUint32 maxSize,
 
 nsBuffer::~nsBuffer()
 {
+  // Free any allocated pages...
+  while (!PR_CLIST_IS_EMPTY(&mSegments)) {
+    PRCList* header = (PRCList*)mSegments.next;
+    char* segment = (char*)header;
+
+    PR_REMOVE_LINK(header);     // unlink from mSegments
+    (void) mAllocator->Free(segment);
+  }
+
     NS_IF_RELEASE(mObserver);
     NS_IF_RELEASE(mAllocator);
 }
@@ -93,7 +103,7 @@ nsBuffer::PushWriteSegment()
             nsresult rv = mObserver->OnFull(this);
             if (NS_FAILED(rv)) return rv;
         }
-        return NS_ERROR_FAILURE;
+        return NS_BASE_STREAM_WOULD_BLOCK;
     }
 
     // allocate a new segment to write into
@@ -147,6 +157,7 @@ nsBuffer::PopReadSegment()
             rv = mObserver->OnEmpty(this);
             if (NS_FAILED(rv)) return rv;
         }
+        return NS_BASE_STREAM_WOULD_BLOCK;
     }
     else {
         mReadSegment = mSegments.next;
@@ -173,12 +184,8 @@ nsBuffer::ReadSegments(nsWriteSegmentFun writer, void* closure, PRUint32 count,
     *readCount = 0;
     while (count > 0) {
         rv = GetReadSegment(0, &readBuffer, &readBufferLen);
-        if (rv == NS_BASE_STREAM_EOF) {      // all we're going to get
+        if (NS_FAILED(rv) || readBufferLen == 0) {
             return *readCount == 0 ? rv : NS_OK;
-        }
-        NS_ASSERTION(NS_SUCCEEDED(rv), "GetReadSegment failed -- shouldn't happen");
-        if (readBufferLen == 0) {
-            return *readCount == 0 ? NS_BASE_STREAM_WOULD_BLOCK : NS_OK;
         }
 
         readBufferLen = PR_MIN(readBufferLen, count);
@@ -186,7 +193,7 @@ nsBuffer::ReadSegments(nsWriteSegmentFun writer, void* closure, PRUint32 count,
             PRUint32 writeCount;
             rv = writer(closure, readBuffer, *readCount, readBufferLen, &writeCount);
 			NS_ASSERTION(rv != NS_BASE_STREAM_EOF, "Write should not return EOF");
-            if (rv == NS_BASE_STREAM_WOULD_BLOCK || NS_FAILED(rv)) {
+            if (rv == NS_BASE_STREAM_WOULD_BLOCK || NS_FAILED(rv) || writeCount == 0) {
                 // if we failed to write just report what we were
                 // able to read so far
                 return *readCount == 0 ? rv : NS_OK;
@@ -237,15 +244,12 @@ nsBuffer::GetReadSegment(PRUint32 segmentLogicalOffset,
 {
     nsAutoCMonitor mon(this);
 
-    if (mCondition != NS_OK)    // XXX NS_FAILED?
-        return mCondition;
-
     // set the read segment and cursor if not already set
     if (mReadSegment == nsnull) {
         if (PR_CLIST_IS_EMPTY(&mSegments)) {
             *resultSegmentLen = 0;
             *resultSegment = nsnull;
-            return mCondition ? mCondition : NS_OK;
+            return mCondition;
         }
         else {
             mReadSegment = mSegments.next;
@@ -283,7 +287,7 @@ nsBuffer::GetReadSegment(PRUint32 segmentLogicalOffset,
                 // don't continue past the write segment
                 *resultSegmentLen = 0;
                 *resultSegment = nsnull;
-                return mCondition ? mCondition : NS_OK;
+                return mCondition;
             }
         }
         else {
@@ -300,7 +304,7 @@ nsBuffer::GetReadSegment(PRUint32 segmentLogicalOffset,
                     // been all the way around
                     *resultSegmentLen = 0;
                     *resultSegment = nsnull;
-                    return mCondition ? mCondition : NS_OK;
+                    return mCondition;
                 }
                 curSegEnd = (char*)curSeg + mGrowBySize;
                 curSegStart = (char*)curSeg + sizeof(PRCList);
@@ -318,17 +322,17 @@ nsBuffer::GetReadableAmount(PRUint32 *result)
     NS_ASSERTION(!mReaderClosed, "state change error");
 
     nsAutoCMonitor mon(this);
+    *result = 0; 
+
     // first set the read segment and cursor if not already set
     if (mReadSegment == nsnull) {
         if (PR_CLIST_IS_EMPTY(&mSegments)) {
-            *result = 0;
             return NS_OK;
         }
         else {
             mReadSegment = mSegments.next;
             mReadSegmentEnd = (char*)mReadSegment + mGrowBySize;
             mReadCursor = (char*)mReadSegment + sizeof(PRCList);
-            *result = mGrowBySize; 
         }
     }
 
@@ -368,7 +372,7 @@ nsBuffer::GetReadableAmount(PRUint32 *result)
     return NS_ERROR_FAILURE;
 }
 
-typedef PRInt32 (*compare_t)(const char*, const char*, PRUint32);
+#define COMPARE(s1, s2, i)	ignoreCase ? nsCRT::strncasecmp((const char *)s1, (const char *)s2, (PRUint32)i) : nsCRT::strncmp((const char *)s1, (const char *)s2, (PRUint32)i)
 
 NS_IMETHODIMP
 nsBuffer::Search(const char* string, PRBool ignoreCase, 
@@ -381,8 +385,6 @@ nsBuffer::Search(const char* string, PRBool ignoreCase,
     PRUint32 bufSegLen1;
     PRUint32 segmentPos = 0;
     PRUint32 strLen = nsCRT::strlen(string);
-    compare_t compare = 
-        ignoreCase ? (compare_t)nsCRT::strncasecmp : (compare_t)nsCRT::strncmp;
 
     rv = GetReadSegment(segmentPos, &bufSeg1, &bufSegLen1);
     if (NS_FAILED(rv) || bufSegLen1 == 0) {
@@ -395,7 +397,7 @@ nsBuffer::Search(const char* string, PRBool ignoreCase,
         PRUint32 i;
         // check if the string is in the buffer segment
         for (i = 0; i < bufSegLen1 - strLen + 1; i++) {
-            if (compare(&bufSeg1[i], string, strLen) == 0) {
+            if (COMPARE(&bufSeg1[i], string, strLen) == 0) {
                 *found = PR_TRUE;
                 *offsetSearchedTo = segmentPos + i;
                 return NS_OK;
@@ -423,8 +425,8 @@ nsBuffer::Search(const char* string, PRBool ignoreCase,
             PRUint32 strPart2Len = strLen - strPart1Len;
             const char* strPart2 = &string[strLen - strPart2Len];
             PRUint32 bufSeg1Offset = bufSegLen1 - strPart1Len;
-            if (compare(&bufSeg1[bufSeg1Offset], string, strPart1Len) == 0 &&
-                compare(bufSeg2, strPart2, strPart2Len) == 0) {
+            if (COMPARE(&bufSeg1[bufSeg1Offset], string, strPart1Len) == 0 &&
+                COMPARE(bufSeg2, strPart2, strPart2Len) == 0) {
                 *found = PR_TRUE;
                 *offsetSearchedTo = segmentPos - strPart1Len;
                 return NS_OK;
@@ -502,15 +504,21 @@ NS_IMETHODIMP
 nsBuffer::WriteSegments(nsReadSegmentFun reader, void* closure, PRUint32 count,
                         PRUint32 *writeCount)
 {
-    nsAutoCMonitor mon(this);
-    nsresult rv;
-    if (mReaderClosed)
-        return NS_BASE_STREAM_CLOSED;
+    nsresult rv = NS_OK;
 
-    if (NS_FAILED(mCondition))
-        return mCondition;
-
+    PR_CEnterMonitor(this);
     *writeCount = 0;
+
+    if (mReaderClosed) {
+        rv = NS_BASE_STREAM_CLOSED;
+        goto done;
+    }
+
+    if (NS_FAILED(mCondition)) {
+        rv = mCondition;
+        goto done;
+    }
+
     while (count > 0) {
         PRUint32 writeBufLen;
         char* writeBuf;
@@ -519,17 +527,19 @@ nsBuffer::WriteSegments(nsReadSegmentFun reader, void* closure, PRUint32 count,
             // if we failed to allocate a new segment, we're probably out
             // of memory, but we don't care -- just report what we were
             // able to write so far
-            return (*writeCount == 0) ? rv : NS_OK;
+            rv = (*writeCount == 0) ? rv : NS_OK;
+            goto done;
         }
 
         writeBufLen = PR_MIN(writeBufLen, count);
         while (writeBufLen > 0) {
-            PRUint32 readCount;
+            PRUint32 readCount = 0;
             rv = reader(closure, writeBuf, *writeCount, writeBufLen, &readCount);
-            if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
+            if (rv == NS_BASE_STREAM_WOULD_BLOCK || readCount == 0) {
                 // if the place we're putting the data would block (probably ran
                 // out of room) just return what we were able to write so far
-                return (*writeCount == 0) ? rv : NS_OK;
+                rv = (*writeCount == 0) ? rv : NS_OK;
+                goto done;
             }
             if (NS_FAILED(rv)) {
                 // save the failure condition so that we can get it again later
@@ -537,7 +547,8 @@ nsBuffer::WriteSegments(nsReadSegmentFun reader, void* closure, PRUint32 count,
                 NS_ASSERTION(NS_SUCCEEDED(rv2), "SetCondition failed");
                 // if we failed to read just report what we were
                 // able to write so far
-                return (*writeCount == 0) ? rv : NS_OK;
+                rv = (*writeCount == 0) ? rv : NS_OK;
+                goto done;
             }
             NS_ASSERTION(readCount <= writeBufLen, "reader returned bad readCount");
             writeBuf += readCount;
@@ -555,7 +566,13 @@ nsBuffer::WriteSegments(nsReadSegmentFun reader, void* closure, PRUint32 count,
                 mWriteCursor += readCount;
         }
     }
-    return NS_OK;
+done:
+    PR_CExitMonitor(this);
+
+    if (mObserver && *writeCount) {
+        mObserver->OnWrite(this, *writeCount);
+    }
+    return rv;
 }
 
 static NS_METHOD
@@ -607,7 +624,7 @@ nsBuffer::GetWriteSegment(char* *resultSegment,
     *resultSegment = nsnull;
     if (mWriteSegment == nsnull) {
         rv = PushWriteSegment();
-        if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv) || rv == NS_BASE_STREAM_WOULD_BLOCK) return rv;
 
         NS_ASSERTION(mWriteSegment != nsnull, "failed to allocate segment");
     }

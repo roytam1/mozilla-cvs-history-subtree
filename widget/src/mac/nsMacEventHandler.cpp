@@ -52,7 +52,8 @@ nsMacEventHandler::nsMacEventHandler(nsMacWindow* aTopLevelWidget)
 	
 	mTopLevelWidget			= aTopLevelWidget;
 	mLastWidgetHit			= nsnull;
-	mLastWidgetPointed		= nsnull;
+	mLastWidgetPointed	= nsnull;
+	mTSMDocument				= nsnull;
 	
 	//
 	// create a TSMDocument for this window.  We are allocating a TSM document for
@@ -170,7 +171,10 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 		focusedWidget = toolkit->GetFocus();
 	
 	if (!focusedWidget)
+	{
+	  NS_WARNING("Throwing away menu event because there is no focused widget");
 		return PR_FALSE;
+	}
 	
 	// nsEvent
 	nsMenuEvent menuEvent;
@@ -231,7 +235,6 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 //
 PRBool nsMacEventHandler::DragEvent ( unsigned int aMessage, Point aMouseGlobal, UInt16 aKeyModifiers )
 {
-printf("dispatching event %ld into Gecko\n", aMessage);
 	nsMouseEvent geckoEvent;
 
 	// convert the mouse to local coordinates. We have to do all the funny port origin
@@ -668,8 +671,11 @@ PRBool nsMacEventHandler::HandleKeyEvent(EventRecord& aOSEvent)
 		focusedWidget = toolkit->GetFocus();
 	
 	if (!focusedWidget)
+	{
+  	NS_WARNING("Throwing away key event because there is no focused widget");
 		return PR_FALSE;
-
+	}
+	
 	// nsEvent
 	nsKeyEvent	keyEvent;
 	switch (aOSEvent.what)
@@ -713,13 +719,15 @@ PRBool nsMacEventHandler::HandleActivateEvent(EventRecord& aOSEvent)
 			//
 			// Activate The TSMDocument associated with this handler
 			//
-			err = ::ActivateTSMDocument(mTSMDocument);
+			if (mTSMDocument)
+				err = ::ActivateTSMDocument(mTSMDocument);
 #if 0
 			NS_ASSERTION(err==noErr,"nsMacEventHandler::HandleActivateEvent: ActivateTSMDocument failed");
-#endif
 			printf("nsEventHandler::HandleActivateEvent: ActivateTSMDocument[%p]\n",mTSMDocument);
+#endif
 			
 			//¥TODO: retrieve the focused widget for that window
+			
 			nsWindow*	focusedWidget = mTopLevelWidget;
 			toolkit->SetFocus(focusedWidget);
 			nsIMenuBar* menuBar = focusedWidget->GetMenuBar();
@@ -745,21 +753,22 @@ PRBool nsMacEventHandler::HandleActivateEvent(EventRecord& aOSEvent)
 			//
 			// Deactivate the TSMDocument assoicated with this EventHandler
 			//
-			err = ::DeactivateTSMDocument(mTSMDocument);
+			if (mTSMDocument)
+				err = ::DeactivateTSMDocument(mTSMDocument);
 #if 0
 			NS_ASSERTION(err==noErr,"nsMacEventHandler::HandleActivateEvent: DeactivateTSMDocument failed");
-#endif
 			printf("nsEventHandler::HandleActivateEvent: DeactivateTSMDocument[%p]\n",mTSMDocument);
+#endif
 			
 			//¥TODO: save the focused widget for that window
 			toolkit->SetFocus(nsnull);
 	
-			nsIMenuBar* menuBarInterface = mTopLevelWidget->GetMenuBar();
-			if (menuBarInterface)
-			{
-				Handle menuBar = ::GetMenuBar(); // Get a copy of the menu list
-				menuBarInterface->SetNativeData((void*)menuBar);
-			}
+			//nsIMenuBar* menuBarInterface = mTopLevelWidget->GetMenuBar();
+			//if (menuBarInterface)
+			//{
+				//Handle menuBar = ::GetMenuBar(); // Get a copy of the menu list
+				//menuBarInterface->SetNativeData((void*)menuBar);
+			//}
 		}
 	}
 	return PR_TRUE;
@@ -1101,16 +1110,18 @@ PRBool nsMacEventHandler::HandleOffsetToPosition(long offset,Point* thePoint)
 // HandleUpdate Event
 //
 //-------------------------------------------------------------------------
- nsMacEventHandler::HandleUpdate(Handle textHandle,ScriptCode script,long fixedLength)
+ nsMacEventHandler::HandleUpdateInputArea(char* text,Size text_size, ScriptCode textScript,long fixedLength,TextRangeArray* textRangeList)
 {
 	TextToUnicodeInfo	textToUnicodeInfo;
 	TextEncoding		textEncodingFromScript;
-	ByteCount			text_size, source_read;
+	ByteCount			source_read;
+	ByteOffset			sourceOffset[2], destinationOffset[2];
+	ItemCount			destinationLength;
+	nsTextRangeArray	xpTextRangeArray;
 	PRBool				rv;
+	int					i;
 	OSErr				err;
 	
-	HLock(textHandle);
-
 	//
 	// if we aren't in composition mode alredy, signal the backing store w/ the mode change
 	//	
@@ -1122,47 +1133,89 @@ PRBool nsMacEventHandler::HandleOffsetToPosition(long offset,Point* thePoint)
 	//
 	// convert our script code (smKeyScript) to a TextEncoding 
 	//
-	err = ::UpgradeScriptInfoToTextEncoding(script,kTextLanguageDontCare,kTextRegionDontCare,nsnull,
+	err = ::UpgradeScriptInfoToTextEncoding(textScript,kTextLanguageDontCare,kTextRegionDontCare,nsnull,
 											&textEncodingFromScript);
-	NS_ASSERTION(err==noErr,"nsMacEventHandler::HandleUpdate: UpgradeScriptInfoToTextEncoding failed.");
-	if (err!=noErr) { ::HUnlock(textHandle); return PR_FALSE; }
+	NS_ASSERTION(err==noErr,"nsMacEventHandler::UpdateInputArea: UpgradeScriptInfoToTextEncoding failed.");
+	if (err!=noErr) { return PR_FALSE; }
 	
 	err = ::CreateTextToUnicodeInfoByEncoding(textEncodingFromScript,&textToUnicodeInfo);
-	NS_ASSERTION(err==noErr,"nsMacEventHandler::HandleUpdate: CreateUnicodeToTextInfoByEncoding failed.");
-	if (err!=noErr) { ::HUnlock(textHandle); return PR_FALSE; }
+	NS_ASSERTION(err==noErr,"nsMacEventHandler::UpdateInputArea: CreateUnicodeToTextInfoByEncoding failed.");
+	if (err!=noErr) { return PR_FALSE; }
 
 	
-	text_size = ::GetHandleSize(textHandle);
-	if (mIMECompositionStringSize < (text_size+1)*3) {
-		mIMECompositionStringSize = (text_size+1)*3;
+	if (mIMECompositionStringSize < text_size+32) {
+		mIMECompositionStringSize = text_size+32;
 		if (mIMECompositionString!=nsnull) delete [] mIMECompositionString;
-		mIMECompositionString = new PRUnichar[(text_size+1)*3];
+		mIMECompositionString = new PRUnichar[mIMECompositionStringSize];
 	}
 
 	//
-	// convert the text from the Update event into Unicode
+	// build up the nsGUIEvent text range array and convert the destination string to Unicode
 	//
-	err = ::ConvertFromTextToUnicode(textToUnicodeInfo,
-									text_size,*textHandle,
-									kUnicodeLooseMappingsMask,
-									0,NULL,NULL,NULL,
-									mIMECompositionStringSize*sizeof(PRUnichar),&source_read,
-									&mIMECompositionStringLength,mIMECompositionString);
-									
-	NS_ASSERTION(err==noErr,"nsMacEventHandler::HandleUpdate: ConverFromTextToUnicode failed.");
-	if (err!=noErr) { ::HUnlock(textHandle); ::DisposeTextToUnicodeInfo(&textToUnicodeInfo); return PR_FALSE; }
+	if (textRangeList!=NULL) {
+	
+		xpTextRangeArray = new nsTextRange[textRangeList->fNumOfRanges];
+		NS_ASSERTION(xpTextRangeArray!=NULL,"nsMacEventHandler::UpdateInputArea: xpTextRangeArray memory allocation failed.");
+		if (xpTextRangeArray==NULL) { ::DisposeTextToUnicodeInfo(&textToUnicodeInfo); return PR_FALSE; }
+
+		//
+		// the TEC offset mapping capabilities won't work here because you need to have unique, ordered offsets
+		//  so instead we iterate over the range list and map each range individually.  it's probably faster than
+		//  trying to do collapse all the ranges into a single offset list
+		//
+		for(i=0;i<textRangeList->fNumOfRanges;i++) {			
+			
+			sourceOffset[0] = textRangeList->fRange[i].fStart;
+			sourceOffset[1] = textRangeList->fRange[i].fEnd;
+			
+			err = ::ConvertFromTextToUnicode(textToUnicodeInfo,text_size,text,kUnicodeLooseMappingsMask,
+							2,sourceOffset,&destinationLength,destinationOffset,
+							mIMECompositionStringSize*sizeof(PRUnichar),
+							&source_read,&mIMECompositionStringLength,mIMECompositionString);
+			NS_ASSERTION(err==noErr,"nsMacEventHandler::UpdateInputArea: ConvertFromTextToUnicode failed.\n");
+			if (err!=noErr) { ::DisposeTextToUnicodeInfo(&textToUnicodeInfo); return PR_FALSE; }
+			
+			if (destinationLength==2) {
+				xpTextRangeArray[i].mStartOffset = destinationOffset[0]/sizeof(PRUnichar);
+				xpTextRangeArray[i].mEndOffset = destinationOffset[1]/sizeof(PRUnichar);
+				xpTextRangeArray[i].mRangeType = textRangeList->fRange[i].fHiliteStyle;
+			} else {
+				xpTextRangeArray[i].mStartOffset = destinationOffset[0]/sizeof(PRUnichar);
+				xpTextRangeArray[i].mEndOffset = destinationOffset[0]/sizeof(PRUnichar);
+				xpTextRangeArray[i].mRangeType = textRangeList->fRange[i].fHiliteStyle;
+			}			
+		}
+	} else {
+
+		err = ::ConvertFromTextToUnicode(textToUnicodeInfo,text_size,text,kUnicodeLooseMappingsMask,
+						0,NULL,NULL,NULL,
+						mIMECompositionStringSize*sizeof(PRUnichar),
+						&source_read,&mIMECompositionStringLength,mIMECompositionString);
+		NS_ASSERTION(err==noErr,"nsMacEventHandler::UpdateInputArea: ConvertFromTextToUnicode failed.\n");
+		if (err!=noErr) { ::DisposeTextToUnicodeInfo(&textToUnicodeInfo); return PR_FALSE; }
+
+		xpTextRangeArray = new nsTextRange[1];
+		xpTextRangeArray[0].mStartOffset = 0;
+		xpTextRangeArray[0].mEndOffset = (mIMECompositionStringLength/sizeof(PRUnichar));
+		xpTextRangeArray[0].mRangeType = NS_TEXTRANGE_RAWINPUT;		
+	}
 
 	//
 	// null terminate the string for the XP-stuff
 	//
 	mIMECompositionString[mIMECompositionStringLength/sizeof(PRUnichar)] = (PRUnichar)0;
-		
-	rv = HandleTextEvent();
-	
-	::HUnlock(textHandle);
-	::DisposeTextToUnicodeInfo(&textToUnicodeInfo);
 
-	if (fixedLength==-1 || fixedLength==text_size) {
+	if (textRangeList==NULL)
+		rv = HandleTextEvent(1,xpTextRangeArray);
+	else
+		rv = HandleTextEvent(textRangeList->fNumOfRanges,xpTextRangeArray);
+		
+	::DisposeTextToUnicodeInfo(&textToUnicodeInfo);
+	
+	//
+	// text_size incldues the null-terminator which isn't included in the fixedLength
+	//
+	if (fixedLength==-1 || fixedLength==text_size-1) {
 		HandleEndComposition();
 		mIMEIsComposing = PR_FALSE;
 	}
@@ -1186,8 +1239,11 @@ PRBool nsMacEventHandler::HandleStartComposition(void)
 		focusedWidget = toolkit->GetFocus();
 	
 	if (!focusedWidget)
+	{
+  	NS_WARNING("Throwing away start composition event because there is no focused widget");
 		return PR_FALSE;
-
+	}
+	
 	//
 	// create the nsCompositionEvent
 	//
@@ -1224,8 +1280,11 @@ PRBool nsMacEventHandler::HandleEndComposition(void)
 		focusedWidget = toolkit->GetFocus();
 	
 	if (!focusedWidget)
+	{
+  	NS_WARNING("Throwing away end composition event because there is no focused widget");
 		return PR_FALSE;
-
+	}
+	
 	//
 	// create the nsCompositionEvent
 	//
@@ -1251,7 +1310,7 @@ PRBool nsMacEventHandler::HandleEndComposition(void)
 // HandleTextEvent
 //
 //-------------------------------------------------------------------------
-PRBool nsMacEventHandler::HandleTextEvent(void)
+PRBool nsMacEventHandler::HandleTextEvent(PRUint32 textRangeCount, nsTextRangeArray textRangeArray)
 {
 	// 
 	// get the focused widget [tague: may need to rethink this later]
@@ -1262,8 +1321,11 @@ PRBool nsMacEventHandler::HandleTextEvent(void)
 		focusedWidget = toolkit->GetFocus();
 	
 	if (!focusedWidget)
+	{
+  	NS_WARNING("Throwing away text event because there is no focused widget");
 		return PR_FALSE;
-
+	}
+	
 	//
 	// create the nsCompositionEvent
 	//
@@ -1275,7 +1337,9 @@ PRBool nsMacEventHandler::HandleTextEvent(void)
 	textEvent.point.y = 0;
 	textEvent.time = PR_IntervalNow();
 	textEvent.theText = mIMECompositionString;
-
+	textEvent.rangeCount = textRangeCount;
+	textEvent.rangeArray = textRangeArray;
+	
 	//
 	// nsGUIEvent parts
 	//

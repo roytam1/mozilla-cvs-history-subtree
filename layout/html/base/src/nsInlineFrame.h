@@ -25,6 +25,9 @@
 
 class nsAnonymousBlockFrame;
 
+#define NS_INLINE_FRAME_CID \
+ { 0xa6cf90e0, 0x15b3, 0x11d2,{0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}}
+
 #define nsInlineFrameSuper nsHTMLContainerFrame
 
 class nsInlineFrame : public nsInlineFrameSuper
@@ -52,7 +55,7 @@ public:
                          nsIPresShell& aPresShell,
                          nsIAtom* aListName,
                          nsIFrame* aOldFrame);
-  NS_IMETHOD DeleteFrame(nsIPresContext& aPresContext);
+  NS_IMETHOD Destroy(nsIPresContext& aPresContext);
   NS_IMETHOD GetFrameName(nsString& aResult) const;
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
 
@@ -68,6 +71,8 @@ public:
                                     nsIRenderingContext& aRC,
                                     nscoord& aDeltaWidth);
 #endif
+
+  static nsIID kInlineFrameCID;
 
 protected:
   // Additional reflow state used during our reflow methods
@@ -106,8 +111,6 @@ protected:
       ? nsLineLayout::TreatFrameAsBlock(mFrames.FirstChild())
       : PR_FALSE;
   }
-
-  static nsIID kInlineFrameCID;
 
   static PRBool ParentIsInlineFrame(nsIFrame* aFrame, nsIFrame** aParent) {
     void* tmp;
@@ -246,7 +249,7 @@ extern nsresult NS_NewFirstLineFrame(nsIFrame** aNewFrame);
 class nsPositionedInlineFrame : public nsInlineFrame
 {
 public:
-  NS_IMETHOD DeleteFrame(nsIPresContext& aPresContext);
+  NS_IMETHOD Destroy(nsIPresContext& aPresContext);
 
   NS_IMETHOD SetInitialChildList(nsIPresContext& aPresContext,
                                  nsIAtom*        aListName,

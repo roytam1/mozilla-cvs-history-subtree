@@ -19,24 +19,23 @@
 #include "msgCore.h"    // precompiled header...
 #include "nsCOMPtr.h"
 
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
-
 #include "nsSmtpService.h"
 #include "nsIMsgMailSession.h"
 #include "nsIMsgIdentity.h"
 #include "nsMsgBaseCID.h"
+#include "nsMsgCompCID.h"
 
 #include "nsSmtpUrl.h"
 #include "nsSmtpProtocol.h"
-#include "nsMsgBaseCID.h"
+
+static NS_DEFINE_CID(kCSmtpUrlCID, NS_SMTPURL_CID);
+static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 // foward declarations...
 
 nsresult NS_MsgBuildMailtoUrl(const nsFilePath& aFilePath, const nsString& aHostName, const nsString& aSender, 
-							  const nsString& aRecipients, nsIUrlListener *, nsIURL ** aUrl);
-nsresult NS_MsgLoadMailtoUrl(nsIURL * aUrl, nsISupports * aConsumer);
+							  const nsString& aRecipients, nsIUrlListener *, nsIURI ** aUrl);
+nsresult NS_MsgLoadMailtoUrl(nsIURI * aUrl, nsISupports * aConsumer);
 
 nsSmtpService::nsSmtpService()
 {
@@ -46,15 +45,34 @@ nsSmtpService::nsSmtpService()
 nsSmtpService::~nsSmtpService()
 {}
 
-NS_IMPL_THREADSAFE_ISUPPORTS(nsSmtpService, nsISmtpService::GetIID());
+NS_IMPL_THREADSAFE_ADDREF(nsSmtpService);
+NS_IMPL_THREADSAFE_RELEASE(nsSmtpService);
 
+nsresult nsSmtpService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
+{
+    if (NULL == aInstancePtr)
+        return NS_ERROR_NULL_POINTER;
+    if (aIID.Equals(nsCOMTypeInfo<nsISmtpService>::GetIID()) || aIID.Equals(kISupportsIID))
+	{
+        *aInstancePtr = (void*) ((nsISmtpService*)this);
+        NS_ADDREF_THIS();
+        return NS_OK;
+    }
+	if (aIID.Equals(nsCOMTypeInfo<nsIProtocolHandler>::GetIID()))
+	{
+		*aInstancePtr = (void *) ((nsIProtocolHandler*) this);
+		NS_ADDREF_THIS();
+		return NS_OK;
+	}
+    return NS_NOINTERFACE;
+}
 
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
 
 nsresult nsSmtpService::SendMailMessage(const nsFilePath& aFilePath, const nsString& aRecipients, 
-										nsIUrlListener * aUrlListener, nsIURL ** aURL)
+										nsIUrlListener * aUrlListener, nsIURI ** aURL)
 {
-	nsIURL * urlToRun = nsnull;
+	nsIURI * urlToRun = nsnull;
 	nsresult rv = NS_OK;
 
 	NS_LOCK_INSTANCE();
@@ -104,16 +122,17 @@ nsresult nsSmtpService::SendMailMessage(const nsFilePath& aFilePath, const nsStr
 
 // short cut function for creating a mailto url...
 nsresult NS_MsgBuildMailtoUrl(const nsFilePath& aFilePath, const nsString& aHostName, const nsString& aSender, 
-							  const nsString& aRecipients, nsIUrlListener * aUrlListener, nsIURL ** aUrl)
+							  const nsString& aRecipients, nsIUrlListener * aUrlListener, nsIURI ** aUrl)
 {
 	// mscott: this function is a convience hack until netlib actually dispatches smtp urls.
 	// in addition until we have a session to get a password, host and other stuff from, we need to use default values....
 	// ..for testing purposes....
 	
 	nsresult rv = NS_OK;
-	nsSmtpUrl * smtpUrl = new nsSmtpUrl(nsnull, nsnull);
+	nsCOMPtr <nsISmtpUrl> smtpUrl;
+	rv = nsComponentManager::CreateInstance(kCSmtpUrlCID, NULL, nsCOMTypeInfo<nsISmtpUrl>::GetIID(), getter_AddRefs(smtpUrl));
 
-	if (smtpUrl)
+	if (NS_SUCCEEDED(rv) && smtpUrl)
 	{
 		// assemble a url spec...
 		char * recipients = aRecipients.ToNewCString();
@@ -125,19 +144,20 @@ nsresult NS_MsgBuildMailtoUrl(const nsFilePath& aFilePath, const nsString& aHost
 			delete [] hostName;
 		if (urlSpec)
 		{
-			smtpUrl->ParseURL(urlSpec);  // load the spec we were given...
+			nsCOMPtr<nsIMsgMailNewsUrl> url = do_QueryInterface(smtpUrl);
+			url->SetSpec(urlSpec);
 			smtpUrl->SetPostMessageFile(aFilePath);
-			smtpUrl->SetUserEmailAddress(aSender);
-			smtpUrl->RegisterListener(aUrlListener);
+			smtpUrl->SetUserEmailAddress(nsCAutoString(aSender));
+			url->RegisterListener(aUrlListener);
 			PR_Free(urlSpec);
 		}
-		rv = smtpUrl->QueryInterface(nsISmtpUrl::GetIID(), (void **) aUrl);
+		rv = smtpUrl->QueryInterface(nsCOMTypeInfo<nsIURI>::GetIID(), (void **) aUrl);
 	 }
 
 	 return rv;
 }
 
-nsresult NS_MsgLoadMailtoUrl(nsIURL * aUrl, nsISupports * aConsumer)
+nsresult NS_MsgLoadMailtoUrl(nsIURI * aUrl, nsISupports * aConsumer)
 {
 	// mscott: this function is pretty clumsy right now...eventually all of the dispatching
 	// and transport creation code will live in netlib..this whole function is just a hack
@@ -159,13 +179,55 @@ nsresult NS_MsgLoadMailtoUrl(nsIURL * aUrl, nsISupports * aConsumer)
 		smtpUrl->GetPostMessageFile(&fileName);
 
 		// almost there...now create a nntp protocol instance to run the url in...
-		smtpProtocol = new nsSmtpProtocol(smtpUrl);
+		smtpProtocol = new nsSmtpProtocol(aUrl);
 		if (smtpProtocol == nsnull)
 			rv = NS_ERROR_OUT_OF_MEMORY;
 		else
-			smtpProtocol->LoadUrl(smtpUrl); // protocol will get destroyed when url is completed...
+			smtpProtocol->LoadUrl(aUrl); // protocol will get destroyed when url is completed...
 	}
 
 	return rv;
 }
 
+NS_IMETHODIMP nsSmtpService::GetScheme(char * *aScheme)
+{
+	nsresult rv = NS_OK;
+	if (aScheme)
+		*aScheme = PL_strdup("mailto");
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 
+}
+
+NS_IMETHODIMP nsSmtpService::GetDefaultPort(PRInt32 *aDefaultPort)
+{
+	nsresult rv = NS_OK;
+	if (aDefaultPort)
+		*aDefaultPort = SMTP_PORT;
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 	
+}
+
+NS_IMETHODIMP nsSmtpService::MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval)
+{
+	// no such thing as relative urls for smtp.....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsSmtpService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
+{
+	// i just haven't implemented this yet...I will be though....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsSmtpService::NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIChannel **_retval)
+{
+	// mscott - right now, I don't like the idea of returning channels to the caller. They just want us
+	// to run the url, they don't want a channel back...I'm going to be addressing this issue with
+	// the necko team in more detail later on.
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}

@@ -25,23 +25,19 @@
 #include "nsIScriptContext.h"
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIDOMAppCoresManager.h"
-#include "nsIDOMDOMPropsCore.h"
 #include "nsIDOMToolkitCore.h"
 #include "nsIDOMProfileCore.h" 
 #include "nsIDOMRDFCore.h"
 #include "nsIDOMBrowserAppCore.h"
-#include "nsIDOMEditorAppCore.h"
 #include "nsAppCoresCIDs.h" 
 
 
 static NS_DEFINE_IID(kIScriptExternalNameSetIID, NS_ISCRIPTEXTERNALNAMESET_IID);
 static NS_DEFINE_IID(kAppCoresCID,           NS_APPCORESMANAGER_CID);
 static NS_DEFINE_IID(kToolkitCoreCID,        NS_TOOLKITCORE_CID);
-static NS_DEFINE_IID(kDOMPropsCoreCID,       NS_DOMPROPSCORE_CID);
 static NS_DEFINE_IID(kProfileCoreCID,        NS_PROFILECORE_CID); 
 static NS_DEFINE_IID(kRDFCoreCID,            NS_RDFCORE_CID);
 static NS_DEFINE_IID(kBrowserAppCoreCID,     NS_BROWSERAPPCORE_CID);
-static NS_DEFINE_IID(kEditorAppCoreCID,      NS_EDITORAPPCORE_CID);
 
 nsAppCoresNameSet::nsAppCoresNameSet()
 {
@@ -65,10 +61,8 @@ nsAppCoresNameSet::InitializeClasses(nsIScriptContext* aScriptContext)
     result = NS_InitAppCoresManagerClass(aScriptContext, nsnull);
     if (NS_OK != result) return result;
 
-    result = NS_InitDOMPropsCoreClass(aScriptContext, nsnull);
-      result = NS_InitProfileCoreClass(aScriptContext, nsnull); 
+    result = NS_InitProfileCoreClass(aScriptContext, nsnull); 
     result = NS_InitBrowserAppCoreClass(aScriptContext, nsnull);
-    //result = NS_InitEditorAppCoreClass(aScriptContext, nsnull);
     result = NS_InitToolkitCoreClass(aScriptContext, nsnull);
     result = NS_InitRDFCoreClass(aScriptContext, nsnull);
 
@@ -87,12 +81,6 @@ nsAppCoresNameSet::AddNameSet(nsIScriptContext* aScriptContext)
     result = aScriptContext->GetNameSpaceManager(&manager);
     if (NS_OK == result) 
     {
-        result = manager->RegisterGlobalName("DOMPropsCore", 
-                                             kDOMPropsCoreCID, 
-                                             PR_TRUE);
-
-        if (NS_OK != result) return result;
-
         result = manager->RegisterGlobalName("ProfileCore", 
                                              kProfileCoreCID, 
                                              PR_TRUE); 
@@ -118,13 +106,7 @@ nsAppCoresNameSet::AddNameSet(nsIScriptContext* aScriptContext)
                                              PR_TRUE);
 
         if (NS_OK != result) return result;
-/*
-        result = manager->RegisterGlobalName("EditorAppCore", 
-                                             kEditorAppCoreCID, 
-                                             PR_TRUE);
 
-        if (NS_OK != result) return result;
-*/
         result = manager->RegisterGlobalName("XPAppCoresManager", 
                                              kAppCoresCID, 
                                              PR_FALSE);

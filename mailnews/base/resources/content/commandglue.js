@@ -32,11 +32,46 @@ msgComposeService = msgComposeService.QueryInterface(Components.interfaces.nsIMs
 var RDF = Components.classes['component://netscape/rdf/rdf-service'].getService();
 RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService);
 
+var prefs = Components.classes['component://netscape/preferences'].getService();
+prefs = prefs.QueryInterface(Components.interfaces.nsIPref);
+var showPerformance = prefs.GetBoolPref('mail.showMessengerPerformance');
+
 //put this in a function so we can change the position in hierarchy if we have to.
 function GetFolderTree()
 {
-	var folderTree = frames[0].frames[0].document.getElementById('folderTree'); 
+	var folderTree = FindInSidebar(frames[0].frames[0], 'folderTree'); 
 	return folderTree;
+}
+
+function FindInSidebar(currentWindow, id)
+{
+	var item = currentWindow.document.getElementById(id);
+	if(item)
+		return item;
+
+	for(var i = 0; i < frames.length; i++)
+	{
+		var frameItem = FindInSidebar(currentWindow.frames[i], id);
+		if(frameItem)
+			return frameItem;
+	}
+}
+
+function GetThreadPane()
+{
+	return frames[0].frames[1].frames[0];
+}
+
+function GetThreadTree()
+{
+	var threadTree = GetThreadPane().document.getElementById('threadTree');
+	return threadTree;
+}
+
+function GetThreadTreeFolder()
+{
+  var tree = GetThreadTree();
+  return tree;
 }
 
 function FindMessenger()
@@ -53,7 +88,7 @@ function OpenURL(url)
 
 function ComposeMessage(type, format)
 //type: 0=new message, 1=reply, 2=reply all,
-//      3=forward inline, 4=forward quoted, 5=forward as attachment
+//      3=forward inline, 4=forward as attachment
 //
 //format: 0=default (use preference), 1=HTML, 2=plain text
 {
@@ -72,7 +107,7 @@ function ComposeMessage(type, format)
 		return;
 	}
 		
-	var tree = frames[0].frames[1].document.getElementById('threadTree');
+	var tree = GetThreadTree();
 	if (tree)
 	{
 		var nodeList = tree.getElementsByAttribute("selected", "true");
@@ -86,7 +121,9 @@ function ComposeMessage(type, format)
 		{
 			uri = "";
 			for (var i = 0; i < nodeList.length && i < 8; i ++)
-			{					
+			{	
+				dump('i = '+ i);
+				dump('\n');				
 				if (type == 1 || type == 2) //reply or reply all
 				{
 					if (appCore)
@@ -101,14 +138,15 @@ function ComposeMessage(type, format)
 				}
 			}
 			
-			if (type >= 3 && type <= 5) //forward
+			if (type == 3 || type == 4) //forward
 			{
 				if (appCore)
 					object = appCore.GetRDFResourceForMessage(tree, nodeList); //temporary
 				msgComposeService.OpenComposeWindow(null, uri, type, format, object);
 			}
 		}
-		dump("### nodeList is invalid\n");
+		else
+			dump("### nodeList is invalid\n");
 	}
 	else
 		dump("### tree is invalid\n");
@@ -123,7 +161,7 @@ function NewMessage()
 
 function GetNewMessages()
 {
-	var folderTree = frames[0].frames[0].document.getElementById('folderTree'); 
+	var folderTree = GetFolderTree();; 
 	var selectedFolderList = folderTree.getElementsByAttribute("selected", "true");
 	if(selectedFolderList.length > 0)
 	{
@@ -148,18 +186,26 @@ function ChangeFolderByDOMNode(folderNode)
 {
   var uri = folderNode.getAttribute('id');
   dump(uri + "\n");
-  ChangeFolderByURI(uri);
+  if(uri)
+	  ChangeFolderByURI(uri);
 }
 
 function ChangeFolderByURI(uri)
 {
-  var tree = frames[0].frames[1].document.getElementById('threadTree');
-  tree.childNodes[5].setAttribute('id', uri);
+  var folder = GetThreadTreeFolder();
+  var beforeTime = new Date();
+  folder.setAttribute('ref', uri);
+  var afterTime = new Date();
+  var timeToLoad = (afterTime.getTime() - beforeTime.getTime())/1000;
+  if(showPerformance)
+	  dump("Time to load " + uri + " is " +  timeToLoad + " seconds\n");
 }
 
 function SortThreadPane(column, sortKey)
 {
-	var node = frames[0].frames[1].document.getElementById(column);
+    var threadPane = GetThreadPane();
+
+	var node = threadPane.document.getElementById(column);
 	if(!node)
 		return false;
 
@@ -200,7 +246,7 @@ function MsgPreferences()
         prefwindow = Components.classes['component://netscape/prefwindow'].createInstance(Components.interfaces.nsIPrefWindow);
     }
 
-    prefwindow.showWindow("navigator.js", window, "chrome://pref/content/pref-mailnews.html");
+    prefwindow.showWindow("navigator.js", window, "chrome://pref/content/pref-mailnews.xul");
 }
 
 
@@ -229,3 +275,225 @@ function SetFolderCharset(folderResource, aCharset)
 
 	db2.Assert(folderResource, charsetProperty, charsetResource, true);
 }
+
+function RefreshThreadTreeView()
+{
+	var currentFolder = GetThreadTreeFolder();  
+	var currentFolderID = currentFolder.getAttribute('ref');
+	currentFolder.setAttribute('ref', currentFolderID);
+}
+
+function ToggleTwisty(treeItem)
+{
+
+	var openState = treeItem.getAttribute('open');
+	if(openState == 'true')
+	{
+		treeItem.removeAttribute('open');
+	}
+	else
+	{
+		treeItem.setAttribute('open', 'true');
+	}
+}
+
+function ToggleMessageRead(treeItem)
+{
+
+	var tree = GetThreadTree();
+	var status = treeItem.getAttribute('Status');
+	var unread = (status == "") || (status == "new");
+	messenger.MarkMessageRead(tree.database, treeItem, unread);
+}
+
+function ThreadPaneSelectionChange()
+{
+	var doc = GetThreadPane().document;
+	
+	var selArray = doc.getElementsByAttribute('selected', 'true');
+	if ( selArray && (selArray.length == 1) )
+		LoadMessage(selArray[0]);
+	else
+		ClearMessagePane();
+
+}
+
+function ClearMessagePane()
+{
+	messenger.OpenURL("about:blank");	
+
+}
+
+function GoNextMessage()
+{
+	var doc = GetThreadPane().document;
+	
+	var selArray = doc.getElementsByAttribute('selected', 'true');
+	if ( selArray && (selArray.length == 1) )
+	{
+		var nextMessage = GetNextMessage(selArray[0]);
+		if(nextMessage)
+		{
+			var selectedVal = selArray[0].getAttribute('selected');
+			dump('selectedVal = ' + selectedVal);
+
+			selArray[0].removeAttribute('selected');
+			nextMessage.setAttribute('selected', 'true');
+		}
+	}
+}
+
+function GoNextUnreadMessage()
+{
+	var doc = GetThreadPane().document;
+	
+	var selArray = doc.getElementsByAttribute('selected', 'true');
+	if ( selArray && (selArray.length == 1) )
+	{
+		var nextMessage = GetNextUnreadMessage(selArray[0]);
+		if(nextMessage)
+		{
+			var selectedVal = selArray[0].getAttribute('selected');
+			dump('selectedVal = ' + selectedVal);
+
+			selArray[0].removeAttribute('selected');
+			nextMessage.setAttribute('selected', 'true');
+		}
+	}
+}
+function GetNextMessage(currentMessage)
+{
+	var nextMessage = currentMessage.nextSibling;
+	if(!nextMessage)
+	{
+		dump('We need to start from the top\n');
+		var parent = currentMessage.parentNode;
+		nextMessage = parent.firstChild;
+		if(nextMessage == currentMessage)
+			nextMessage = null;
+	}
+
+	if(nextMessage)
+	{
+		var id = nextMessage.getAttribute('id');
+		dump(id + '\n');
+	}
+	else
+		dump('No next message\n');
+	return nextMessage;
+
+}
+
+function GetNextUnreadMessage(currentMessage)
+{
+	var foundMessage = false;
+
+	
+	var nextMessage = currentMessage.nextSibling;
+	while(nextMessage)
+	{
+		var status = nextMessage.getAttribute('Status');
+		dump('status = ' + status);
+		dump('\n');
+		if(status == '' || status == 'New')
+			break;
+		nextMessage = nextMessage.nextSibling;
+	}
+
+	if(!nextMessage)
+	{
+		dump('We need to start from the top\n');
+		var parent = currentMessage.parentNode;
+		nextMessage = parent.firstChild;
+		while(nextMessage)
+		{
+			if(nextMessage == currentMessage)
+			{
+				nextMessage = null;
+				break;
+			}
+			var status = nextMessage.getAttribute('Status');
+			dump('status = ' + status);
+			dump('\n');
+			if(status == '' || status == 'New')
+				break;
+			nextMessage = nextMessage.nextSibling;
+		}
+
+	}
+
+
+	if(nextMessage)
+	{
+		var id = nextMessage.getAttribute('id');
+		dump(id + '\n');
+	}
+	else
+		dump('No next message\n');
+	return nextMessage;
+
+}
+
+function OpenFolderTreeToFolder(folderURI)
+{
+	var tree = GetFolderTree();
+	return OpenToFolder(tree, folderURI);
+
+}
+
+function OpenToFolder(item, folderURI)
+{
+
+	if(item.nodeType != Node.ELEMENT_NODE)
+		return null;
+
+	var uri = item.getAttribute('id');
+	dump(uri);
+	dump('\n');
+	if(uri == folderURI)
+	{
+		dump('found folder: ' + uri);
+		dump('\n');
+		return item;
+	}
+
+	var children = item.childNodes;
+	var length = children.length;
+	var i;
+	dump('folder ' + uri);
+	dump('has ' + length);
+	dump('children\n');
+	for(i = 0; i < length; i++)
+	{
+		var child = children[i];
+		var folder = OpenToFolder(child, folderURI);
+		if(folder)
+		{
+			child.setAttribute('open', 'true');
+			return folder;
+		}
+	}
+	return null;
+}
+
+function IsSpecialFolderSelected(folderName)
+{
+	var selectedFolder = GetThreadTreeFolder();
+	var id = selectedFolder.getAttribute('ref');
+	var folderResource = RDF.GetResource(id);
+	if(!folderResource)
+		return false;
+
+	var folderTree = GetFolderTree();
+	var db = folderTree.database;
+	var db = db.QueryInterface(Components.interfaces.nsIRDFDataSource);
+
+	var property = RDF.GetResource('http://home.netscape.com/NC-rdf#SpecialFolder');
+	var result = db.GetTarget(folderResource, property , true);
+	result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
+	if(result.Value == folderName)
+		return true;
+
+	return false;
+}
+

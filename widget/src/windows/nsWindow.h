@@ -86,15 +86,15 @@ public:
     NS_IMETHOD              IsVisible(PRBool & aState);
     HWND                    mBorderlessParent;
 
-
-    NS_IMETHOD              Move(PRUint32 aX, PRUint32 aY);
-    NS_IMETHOD              Resize(PRUint32 aWidth,
-                                   PRUint32 aHeight,
+    NS_IMETHOD              CaptureMouse(PRBool aCapture);
+    NS_IMETHOD              Move(PRInt32 aX, PRInt32 aY);
+    NS_IMETHOD              Resize(PRInt32 aWidth,
+                                   PRInt32 aHeight,
                                    PRBool   aRepaint);
-    NS_IMETHOD              Resize(PRUint32 aX,
-                                   PRUint32 aY,
-                                   PRUint32 aWidth,
-                                   PRUint32 aHeight,
+    NS_IMETHOD              Resize(PRInt32 aX,
+                                   PRInt32 aY,
+                                   PRInt32 aWidth,
+                                   PRInt32 aHeight,
                                    PRBool   aRepaint);
     NS_IMETHOD              Enable(PRBool bState);
     NS_IMETHOD              SetFocus(void);
@@ -114,7 +114,6 @@ public:
     NS_IMETHOD              SetTitle(const nsString& aTitle); 
     NS_IMETHOD              SetMenuBar(nsIMenuBar * aMenuBar); 
     NS_IMETHOD              ShowMenuBar(PRBool aShow);
-    NS_IMETHOD              IsMenuBarVisible(PRBool *aVisible);
     NS_IMETHOD              SetTooltips(PRUint32 aNumberOfTips,nsRect* aTooltipAreas[]);   
     NS_IMETHOD              RemoveTooltips();
     NS_IMETHOD              UpdateTooltips(nsRect* aNewTips[]);
@@ -189,6 +188,7 @@ protected:
                                         LPARAM lParam);
     
     static PRBool ConvertStatus(nsEventStatus aStatus);
+    DWORD  GetWindowType(nsWindowType aWindowType);
     DWORD  GetBorderStyle(nsBorderStyle aBorderStyle);
 
     PRBool DispatchStandardEvent(PRUint32 aMsg);
@@ -196,9 +196,17 @@ protected:
     void RelayMouseEvent(UINT aMsg, WPARAM wParam, LPARAM lParam);
 
     void GetNonClientBounds(nsRect &aRect);
-	void HandleTextEvent(PRBool commit);
+	void HandleTextEvent(HIMC hIMEContext);
 	void HandleStartComposition(void);
 	void HandleEndComposition(void);
+	void MapDBCSAtrributeArrayToUnicodeOffsets(PRUint32* textRangeListLengthResult, nsTextRangeArray* textRangeListResult);
+
+private:
+
+#ifdef DEBUG
+  void DebugPrintEvent(nsGUIEvent &   aEvent,
+                       HWND           aWnd);
+#endif
 
 protected:
     static      nsWindow* gCurrentWindow;
@@ -232,8 +240,19 @@ protected:
 	PRBool		mIMEIsComposing;
 	char*		mIMECompositionString;
 	PRUnichar*	mIMECompositionUniString;
+	PRInt32		mIMECompositionUniStringSize;
 	PRInt32		mIMECompositionStringLength;
 	PRInt32		mIMECompositionStringSize;
+	char*		mIMEAttributeString;
+	PRInt32		mIMEAttributeStringLength;
+	PRInt32		mIMEAttributeStringSize;
+	char*		mIMECompClauseString;
+	PRInt32		mIMECompClauseStringLength;
+	PRInt32		mIMECompClauseStringSize;
+	long		mIMECursorPosition;
+
+  PRBool  mIsInMouseCapture;
+
 #if 1
 	BOOL		mHaveDBCSLeadByte;
 	unsigned char mDBCSLeadByte;

@@ -30,8 +30,10 @@
 #include "nsFileStream.h"
 #include "nsINntpIncomingServer.h" // need this for the IID
 #include "nsNewsUtils.h"
+#include "nsMsgLineBuffer.h"
+#include "nsMsgKeySet.h"
 
-class nsMsgNewsFolder : public nsMsgDBFolder, public nsIMsgNewsFolder
+class nsMsgNewsFolder : public nsMsgDBFolder, public nsIMsgNewsFolder, public nsMsgLineBuffer
 {
 public:
 	nsMsgNewsFolder(void);
@@ -61,13 +63,11 @@ public:
 
   NS_IMETHOD GetChildNamed(const char* name, nsISupports ** aChild);
 
-  // this override pulls the value from the db
-	NS_IMETHOD GetName(char ** name);   // Name of this folder (as presented to user).
-	NS_IMETHOD GetPrettyName(char ** prettyName);	// Override of the base, for top-level news folder
+	NS_IMETHOD GetPrettyName(PRUnichar ** prettyName);	// Override of the base, for top-level news folder
 
   NS_IMETHOD BuildFolderURL(char **url);
 
-	NS_IMETHOD UpdateSummaryTotals() ;
+	NS_IMETHOD UpdateSummaryTotals(PRBool force) ;
 
 	NS_IMETHOD GetExpungedBytesCount(PRUint32 *count);
 	NS_IMETHOD GetDeletable (PRBool *deletable); 
@@ -77,8 +77,8 @@ public:
 
 	NS_IMETHOD GetSizeOnDisk(PRUint32 *size);
 
-	NS_IMETHOD GetUsersName(char** userName);
-	NS_IMETHOD GetHostName(char** hostName);
+	NS_IMETHOD GetUsername(char** userName);
+	NS_IMETHOD GetHostname(char** hostName);
 	NS_IMETHOD UserNeedsToAuthenticateForFolder(PRBool displayOnly, PRBool *authenticate);
 	NS_IMETHOD RememberPassword(const char *password);
 	NS_IMETHOD GetRememberedPassword(char ** password);
@@ -90,36 +90,34 @@ public:
 	NS_IMETHOD CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, nsIMessage **message);
   NS_IMETHOD GetNewMessages();
 
-	// nsIMsgNewsFolder
-  NS_IMETHOD GetPath(nsNativeFileSpec& aPathName);
+  NS_IMETHOD GetPath(nsIFileSpec** aPathName);
+  
+  NS_IMETHOD GetUnreadSetStr(char * *aUnreadSetStr);
+  NS_IMETHOD SetUnreadSetStr(char * aUnreadSetStr);
 
 protected:
+  nsresult AbbreviatePrettyName(PRUnichar ** prettyName, PRInt32 fullwords);
 	nsresult ParseFolder(nsFileSpec& path);
 	nsresult CreateSubFolders(nsFileSpec &path);
 	nsresult AddDirectorySeparator(nsFileSpec &path);
 	nsresult GetDatabase();
   
-	/* Finds the directory associated with this folder.  That is if the path is
-	c:\Inbox, it will return c:\Inbox.sbd if it succeeds.  If that path doesn't
-	currently exist then it will create it
-	*/
 	nsresult CreateDirectoryForFolder(nsFileSpec &path);
 
 	//Creates a subfolder with the name 'name' and adds it to the list of children.
 	//Returns the child as well.
-	nsresult AddSubfolder(nsAutoString name, nsIMsgFolder **child);
+	nsresult AddSubfolder(nsAutoString name, nsIMsgFolder **child, char *setStr);
 
   PRBool isNewsHost(void);
   nsresult LoadNewsrcFileAndCreateNewsgroups(nsFileSpec &newsrcFile);
-  PRInt32 ProcessLine(char *line, PRUint32 line_size);
   PRInt32 RememberLine(char *line);
-  static PRInt32 ProcessLine_s(char *line, PRUint32 line_size, void *closure);
-  nsresult GetNewsrcFile(char *newshostname, nsFileSpec &path, nsFileSpec &newsrcFile);
-#ifdef USE_NEWSRC_MAP_FILE
-  nsresult MapHostToNewsrcFile(char *newshostname, nsFileSpec &fatFile, nsFileSpec &newsrcFile);
-#endif
-  virtual const nsIID& GetIncomingServerType() {return nsINntpIncomingServer::GetIID();}
+  nsresult ForgetLine(void);
+
+  PRInt32 HandleLine(char *line, PRUint32 line_size);
+  virtual const char *GetIncomingServerType() {return "nntp";}
   
+  nsByteArray		m_inputStream;
+
 protected:
 	nsNativeFileSpec *mPath;
 	PRUint32  mExpungedBytes;
@@ -128,6 +126,8 @@ protected:
 	nsISupportsArray *mMessages;
   char      *mOptionLines;
   char      *mHostname;
+  PRBool    mIsNewsHost;
+  PRBool    mIsNewsHostInitialized;
 };
 
 #endif // nsMsgNewsFolder_h__

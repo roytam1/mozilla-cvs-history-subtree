@@ -59,23 +59,6 @@ JNI_GEN_DIR=_jni
 !endif
 
 
-MANIFEST_LEVEL=MACROS
-!IF EXIST(manifest.mn) && !defined(IGNORE_MANIFEST)
-!IF "$(WINOS)" == "WIN95"
-!IF [$(DEPTH)\config\mantomak.exe manifest.mn manifest.mnw] == 0 
-!INCLUDE <manifest.mnw>
-!ELSE
-!ERROR ERROR:  Unable to generate manifest.mnw from manifest.mn
-!ENDIF
-!ELSE
-!IF ["$(DEPTH)\config\mantomak.exe manifest.mn manifest.mnw"] == 0 
-!INCLUDE <manifest.mnw>
-!ELSE
-!ERROR ERROR:  Unable to generate manifest.mnw from manifest.mn
-!ENDIF
-!ENDIF
-!ENDIF
-
 #//------------------------------------------------------------------------
 #//  Make sure that JDIRS is set after the manifest file is included
 #//  and before the rules for JDIRS get generated. We cannot put this line
@@ -355,14 +338,11 @@ clobber::
 !ifdef DIRS
      @$(W95MAKE) clobber $(MAKEDIR) $(DIRS)
 !endif
-    -$(RM_R) $(GARBAGE) $(OBJDIR) 2> NUL
 
 clobber_all::
 !ifdef DIRS
      @$(W95MAKE) clobber_all $(MAKEDIR) $(DIRS)
 !endif
-    -$(RM_R) *.OBJ $(TARGETS) $(GARBAGE) $(OBJDIR) 2> NUL
-
   
 export::
 !ifdef DIRS
@@ -455,6 +435,7 @@ depend:: $(OBJDIR)
 $(LINCS)
 $(LINCS_1)
 $(INCS)
+-I$(MAKEDIR)
 $(OBJS)
 <<
 
@@ -600,25 +581,39 @@ export:: $(JMC_STUBS) $(OBJDIR) $(JMC_OBJS)
 
 #//------------------------------------------------------------------------
 #//
-#// JMC
+#// EXPORTS
 #//
-#// EXPORTS Names of headers to be copied to MODULE
+#// Names of headers to be copied to common include directory
 #//
 #//------------------------------------------------------------------------
 !if "$(EXPORTS)" != "$(NULL)"
-export:: $(PUBLIC)
-    for %f in ($(EXPORTS)) do $(MAKE_INSTALL:/=\) %f $(XPDIST:/=\)\include
 
-clobber::
-    -for %g in ($(EXPORTS)) do $(RM) $(XPDIST:/=\)\include\%g
-clobber_all:: clobber
+export::
+    @echo +++ make: exporting headers
+ 	$(MAKE_INSTALL:/=\) $(MKCPYFLAGS) $(EXPORTS) $(PUBLIC)
+
+#// don't delete exported stuff on a local clobber, use clobber_all
+#clobber::
+#!if exist($(PUBLIC))
+#    @cd $(PUBLIC)
+#    -$(RM) $(EXPORTS)
+#    @cd $(MAKEDIR)
+#!endif # $(PUBLIC) exists
+
+clobber_all::
+!if exist($(PUBLIC))
+    @cd $(PUBLIC)
+    -$(RM) $(EXPORTS)
+    @cd $(MAKEDIR)
+!endif # $(PUBLIC) exists
+
 !endif # EXPORTS
 
 #//------------------------------------------------------------------------
 #//  These rules must follow all lines that define the macros they use
 #//------------------------------------------------------------------------
 !if defined(JAVA_OR_NSJVM)
-GARBAGE	= $(JMC_GEN_DIR) $(JMC_HEADERS) $(JMC_STUBS) \
+GARBAGE	= $(GARBAGE) $(JMC_GEN_DIR) $(JMC_HEADERS) $(JMC_STUBS) \
 	  $(JDK_STUB_DIR) $(JRI_GEN_DIR) $(JDK_GEN_DIR) $(JNI_GEN_DIR) 
 !endif
 
@@ -627,20 +622,23 @@ clean:: $(DIRS)
     -$(RM) $(OBJS) $(NOSUCHFILE) NUL 2> NUL
 
 clobber:: $(DIRS)
+!if defined(GARBAGE) || exist($(OBJDIR))
     -$(RM_R) $(GARBAGE) $(OBJDIR) 2> NUL
+!endif
 
 clobber_all:: $(DIRS)
-    -$(RM_R) *.OBJ $(TARGETS) $(GARBAGE) $(OBJDIR) 2> NUL
-
-MANIFEST_LEVEL=RULES
-!IF EXIST(manifest.mnw) && !defined(IGNORE_MANIFEST)
-!INCLUDE <manifest.mnw>
-!ENDIF
+!if defined(GARBAGE) || "$(TARGETS)" != "  " || exist($(OBJDIR))
+    -$(RM_R) $(TARGETS) $(GARBAGE) $(OBJDIR) 2> NUL
+!endif
 
 !if "$(MOZ_BITS)"=="32"
 CFLAGS = $(CFLAGS) -DNO_JNI_STUBS
 !endif
 
+
+#//------------------------------------------------------------------------
+#//  XPIDL rules
+#//------------------------------------------------------------------------
 !if "$(XPIDLSRCS)" != "$(NULL)"
 !if "$(MODULE)" != "$(NULL)"
 
@@ -697,13 +695,11 @@ $(XPDIST)\idl:
 
 export:: $(XPDIST)\idl
         @echo +++ make: exporting IDL files
-        @echo.
-        -for %i in ($(XPIDLSRCS:/=\)) do $(MAKE_INSTALL) %i $(XPDIST)\idl
+        $(MAKE_INSTALL) $(XPIDLSRCS:/=\) $(XPDIST)\idl
 
 export:: $(XPIDL_GEN_DIR) $(XPIDL_HEADERS) $(PUBLIC)
         @echo +++ make: exporting generated XPIDL header files
-        @echo.
-        -for %i in ($(XPIDL_HEADERS:/=\)) do $(MAKE_INSTALL) %i $(PUBLIC)
+        $(MAKE_INSTALL) $(XPIDL_HEADERS:/=\) $(PUBLIC)
 
 !ifndef NO_GEN_XPT
 install:: $(XPIDL_GEN_DIR) $(TYPELIB)
@@ -712,20 +708,144 @@ install:: $(XPIDL_GEN_DIR) $(TYPELIB)
         $(MAKE_INSTALL) $(TYPELIB) $(DIST)\bin\components
 !endif
 
-GARBAGE=$(GARBAGE) $(XPIDL_GEN_DIR) $(DIST)\bin\components\$(MODULE).xpt
-
 clobber::
-        -for %g in ($(XPIDLSRCS:.idl=.h)) do $(RM) $(XPDIST:/=\)\include\%g
-        -$(RM_R) $(GARBAGE) 2> NUL
-
+        -$(RM_R) $(XPIDL_GEN_DIR) 2> NUL
+        
 clobber_all::
-        -for %g in ($(XPIDLSRCS:.idl=.h)) do $(RM) $(XPDIST:/=\)\include\%g
-        -$(RM_R) $(GARBAGE) 2> NUL
-
-GARBAGE=$(GARBAGE) $(XPIDL_GEN_DIR) $(DIST)\bin\components\$(XPIDL_MODULE).xpt
+        -$(RM_R) $(XPIDL_GEN_DIR) 2> NUL
+!if exist($(PUBLIC))
+        @cd $(PUBLIC)
+        -$(RM) $(XPIDLSRCS:.idl=.h)
+        @cd $(MAKEDIR)
+!endif
+!if exist($(XPDIST:/=\)\idl)
+        @cd $(XPDIST:/=\)\idl
+        -$(RM) $(XPIDLSRCS)
+        @cd $(MAKEDIR)
+!endif
+!if exist($(DIST)\bin\components)
+        -$(RM) $(DIST)\bin\components\$(XPIDL_MODULE).xpt
+!endif
 
 !endif
 !endif
+
+
+# Generate chrome building rules.
+#
+# You need to set these in your makefile.win to utilize this support:
+#   CHROME_DIR - specifies the chrome subdirectory where your chrome files
+#                go; e.g., CHROME_DIR=navigator or CHROME_DIR=global
+#
+# Note:  All file listed in the next three macros MUST be prefaced with .\ (or ./)!
+#
+#   CHROME_CONTENT - list of chrome content files; these can be prefaced with
+#                arbitrary paths; e.g., CHROME_CONTENT=./content/default/foobar.xul
+#   CHROME_SKIN - list of skin files
+#   CHROME_L10N - list of localization files, e.g., CHROME_L10N=./locale/en-US/foobar.dtd
+#
+# These macros are optional, if not specified, each defaults to ".".
+#   CHROME_CONTENT_DIR - specifies chrome subdirectory where content files will be
+#                  installed; this path is inserted between $(CHROME_DIR) and
+#                  the path you specify in each $(CHROME_CONTENT) entry; i.e.,
+#                  for CHROME_CONTENT=./content/default/foobar.xul, it will be
+#                  installed into:
+#                    $(DIST)\bin\chrome\$(CHROME_DIR)\$(CHROME_CONTENT_DIR)\content\default\foobar.xul.
+#                  e.g., CHROME_DIR=global
+#                        CHROME_CONTENT_DIR=content\default
+#                        CHROME_CONTENT=.\foobar.xul
+#                  will install foobar.xul into content/default (even though it
+#                  resides in content/foobar.xul (no default) in the source tree.
+#                  But note that such usage must be put in a makefile.win that
+#                  itself resides in the content directory (i.e., it can't reside
+#                  up a level, since then CHROME_CONTENT=./content/foobar.xul which
+#                  would install into ...global\content\default\content\foobar.xul.
+#   CHROME_SKIN_DIR - Like above, but for skin files
+#   CHROME_L10N_DIR - Like above, but for localization files
+!if "$(CHROME_DIR)" != "$(NULL)"
+
+# Figure out root of chrome dist dir.
+CHROME_DIST=$(DIST)\bin\chrome\$(CHROME_DIR:/=\)
+
+# Content
+!if "$(CHROME_CONTENT)" != "$(NULL)"
+
+CHROME_CONTENT=$(CHROME_CONTENT:/=\)
+
+# Content goes to CHROME_DIR unless specified otherwise.
+!if "$(CHROME_CONTENT_DIR)" == "$(NULL)"
+CHROME_CONTENT_DIR=.
+!endif
+
+# Export content files by copying to dist.
+install:: $(CHROME_CONTENT:.\=INSTALL\.\)
+
+# Pseudo-target specifying how to install content files.
+$(CHROME_CONTENT:.\=INSTALL\.\):
+    $(MAKE_INSTALL) $(@:INSTALL\.=.) $(CHROME_DIST)\$(CHROME_CONTENT_DIR)\$(@D:INSTALL\.=.)
+
+# Clobber content files.
+clobber_all:: $(CHROME_CONTENT:.\=CLOBBER\.\)
+
+# Pseudo-target specifying how to clobber content files.
+$(CHROME_CONTENT:.\=CLOBBER\.\):
+    -@$(RM) $(CHROME_DIST)\$(CHROME_CONTENT_DIR)\$(@:CLOBBER\.=.)
+
+!endif # content
+
+# Skin
+!if "$(CHROME_SKIN)" != "$(NULL)"
+
+CHROME_SKIN=$(CHROME_SKIN:/=\)
+
+# Skin goes to CHROME_DIR unless specified otherwise.
+!if "$(CHROME_SKIN_DIR)" == "$(NULL)"
+CHROME_SKIN_DIR=.
+!endif
+
+# Export content files by copying to dist.
+install:: $(CHROME_SKIN:.\=INSTALL\.\)
+
+# Pseudo-target specifying how to install chrome files.
+$(CHROME_SKIN:.\=INSTALL\.\):
+    $(MAKE_INSTALL) $(@:INSTALL\.=.) $(CHROME_DIST)\$(CHROME_SKIN_DIR)\$(@D:INSTALL\.=.)
+
+# Clobber content files.
+clobber_all:: $(CHROME_SKIN:.\=CLOBBER\.\)
+
+# Pseudo-target specifying how to clobber content files.
+$(CHROME_SKIN:.\=CLOBBER\.\):
+    -@$(RM) $(CHROME_DIST)\$(CHROME_SKIN_DIR)\$(@:CLOBBER\.=.)
+
+!endif # skin
+
+# Localization.
+!if "$(CHROME_L10N)" != "$(NULL)"
+
+CHROME_L10N=$(CHROME_L10N:/=\)
+
+# L10n goes to CHROME_DIR unless specified otherwise.
+!if "$(CHROME_L10N_DIR)" == "$(NULL)"
+CHROME_L10N_DIR=.
+!endif
+
+# Export l10n files by copying to dist.
+install:: $(CHROME_L10N:.\=INSTALL\.\)
+
+# Pseudo-target specifying how to install l10n files.
+$(CHROME_L10N:.\=INSTALL\.\):
+    $(MAKE_INSTALL) $(@:INSTALL\.=.) $(CHROME_DIST)\$(CHROME_L10N_DIR)\$(@D:INSTALL\.=.)
+
+# Clobber l10n files.
+clobber_all:: $(CHROME_L10N:.\=CLOBBER\.\)
+
+# Pseudo-target specifying how to clobber l10n files.
+$(CHROME_L10N:.\=CLOBBER\.\):
+    -@$(RM) $(CHROME_DIST)\$(CHROME_L10N_DIR)\$(@:CLOBBER\.=.)
+
+!endif # localization
+
+!endif # chrome
 
 !endif # CONFIG_RULES_MAK
 

@@ -57,6 +57,10 @@ LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\js \
   -I..\..\content\src \
   -I$(PUBLIC)\netlib -I..\..\..\base\src -I$(PUBLIC)\pref
 
+!ifdef NECKO
+LINCS = $(LINCS) -I$(PUBLIC)\necko
+!endif
+
 LCFLAGS = \
         $(LCFLAGS) \
         $(DEFINES) \
@@ -67,7 +71,9 @@ include <$(DEPTH)\config\rules.mak>
 libs:: $(LIBRARY)
 	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
 	$(MAKE_INSTALL) ua.css $(DIST)\bin\res
+	$(MAKE_INSTALL) arrow.gif $(DIST)\bin\res
 
 clobber::
 	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
 	rm -f $(DIST)\bin\res\ua.css
+	rm -f $(DIST)\bin\res\arrow.gif

@@ -19,6 +19,7 @@
 #define _nsNewsDatabase_H_
 
 #include "nsMsgDatabase.h"
+#include "nsINewsDatabase.h"
 
 class nsIDBChangeListener;
 class nsMsgKeyArray;
@@ -26,36 +27,38 @@ class MSG_RetrieveArtInfo;
 class MSG_PurgeInfo;
 // news group database
 
-
-
-class nsNewsDatabase : public nsMsgDatabase
+class nsNewsDatabase : public nsMsgDatabase , public nsINewsDatabase
 {
 public:
   nsNewsDatabase();
   virtual ~nsNewsDatabase();
+
+  NS_DECL_ISUPPORTS_INHERITED 
+
   virtual  nsresult         MessageDBOpenUsingURL(const char * groupURL);
   char *GetGroupURL()       { return m_groupURL; }
-  NS_IMETHOD				Open(nsFileSpec &newsgroupName, PRBool create, nsIMsgDatabase** pMessageDB, PRBool upgrading /*=PR_FALSE*/);
+  NS_IMETHOD				Open(nsIFileSpec *newsgroupName, PRBool create, PRBool upgrading, nsIMsgDatabase** pMessageDB);
   NS_IMETHOD				Close(PRBool forceCommit);
   NS_IMETHOD				ForceClosed();
-  NS_IMETHOD				Commit(nsMsgDBCommitType commitType);
+  NS_IMETHOD				Commit(nsMsgDBCommit commitType);
   virtual PRUint32          GetCurVersion();
 
   // methods to get and set docsets for ids.
   NS_IMETHOD				MarkHdrRead(nsIMsgDBHdr *msgHdr, PRBool bRead,
                                         nsIDBChangeListener *instigator = NULL);
-#if 0
   NS_IMETHOD				IsRead(nsMsgKey key, PRBool *pRead);
-#endif
 
   virtual PRBool			IsArticleOffline(nsMsgKey key);
-  NS_IMETHOD				MarkAllRead(nsMsgKeyArray *thoseMarked = NULL);
   virtual nsresult          AddHdrFromXOver(const char * line,  nsMsgKey *msgId);
   NS_IMETHOD				AddHdrToDB(nsMsgHdr *newHdr, PRBool *newThread, PRBool notify = PR_FALSE);
   
   NS_IMETHOD				ListNextUnread(ListContext **pContext, nsMsgHdr **pResult);
   NS_IMETHOD                GetHighWaterArticleNum(nsMsgKey *key);
   NS_IMETHOD                GetLowWaterArticleNum(nsMsgKey *key);
+
+  // for nsINewsDatabase
+  NS_IMETHOD                GetUnreadSet(nsMsgKeySet **pSet);
+  NS_IMETHOD                SetUnreadSet(char * setStr);
   
   virtual nsresult		ExpireUpTo(nsMsgKey expireKey);
   virtual nsresult		ExpireRange(nsMsgKey startRange, nsMsgKey endRange);
@@ -88,6 +91,8 @@ protected:
   
   PRUint32				m_headerIndex;		// index of unthreaded headers
   // at a specified entry.
+
+  nsMsgKeySet           *m_unreadSet;
 };
 
 #endif

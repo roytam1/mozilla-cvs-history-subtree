@@ -326,6 +326,21 @@ public:
   NS_IMETHOD FillRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight) = 0;
 
   /**
+   * XOR Invert a rectangle in the current foreground color
+   * @param aRect The rectangle to draw
+   */
+  NS_IMETHOD InvertRect(const nsRect& aRect) = 0;
+
+  /**
+   * XOR Invert a rectangle in the current foreground color
+   * @param aX Horizontal left Coordinate in twips
+   * @param aY Vertical top Coordinate in twips
+   * @param aWidth Width of rectangle in twips
+   * @param aHeight Height of rectangle in twips
+   */
+  NS_IMETHOD InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight) = 0;
+
+  /**
    * Draw a poly in the current foreground color
    * @param aPoints points to use for the drawing, last must equal first
    * @param aNumPonts number of points in the polygon
@@ -562,6 +577,8 @@ public:
    */
   NS_IMETHOD CopyOffScreenBits(nsDrawingSurface aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags) = 0;
+  //~~~
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd) = 0;
 };
 
 //modifiers for text rendering

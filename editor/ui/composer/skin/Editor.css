@@ -1,6 +1,23 @@
-box#outer-box {
-  width: 100%;
-  height: 100%;
+iframe#content-frame { 
+  min-width: 100px; 
+  min-height: 20px;
+  height: 400px;
+} 
+
+toolbox#EditorToolbars {
+  min-width: 20px;
+}
+
+box#EditorStatusBar {
+  min-width: 50px;
+}
+
+box#EditorProgessBox {
+  min-width:30px;
+}
+
+window.popup {
+  border: 2px outset;
 }
 
 select.combobox {
@@ -10,7 +27,6 @@ select.combobox {
   border-left: 4px;
   border-right: 4px;
   border-style: outset;
-  //background: silver;
 }
 
 titledbutton#TextColorPopup {
@@ -20,3 +36,67 @@ titledbutton#TextColorPopup {
 titledbutton#BackColorPopup {
   margin-left: -3px;
 }
+
+titledbutton#boldButton {
+  min-width: 16px; 
+  font-size: 19px; 
+  font-weight: bold; 
+  font-family: times, serif, sans-serif;
+}
+
+titledbutton#boldButton:hover {
+  text-decoration: none;
+}
+
+titledbutton#italicButton {
+  min-width: 16px; 
+  font-size: 19px; 
+  font-weight: bold; 
+  font-family: times, serif, sans-serif; 
+  font-style:  italic;
+}
+
+titledbutton#italicButton:hover {
+  text-decoration: none;
+}
+
+titledbutton#underlineButton {
+  min-width: 16px; 
+  font-size: 19px; 
+  font-weight: normal; 
+  font-family: times, serif, sans-serif; 
+  text-decoration: underline;
+}
+
+button.PopupButton {
+  align: left;
+  margin: 0px;
+  min-width: 5em;
+  border: 1px solid transparent;
+}
+
+button.PopupButton:hover {
+  border: 1px outset white;
+  min-width: 5em;
+  text-decoration: none;
+}
+
+button.PopupButton:active {
+  min-width: 5em;
+  border: 1px inset;
+}
+
+titledbutton.PopupButton {
+  min-width: 50px;
+  min-height: 10px;
+  list-style-image: url(chrome://editor/skin/images/ED_Left.gif); 
+}
+
+titledbutton#SaveButton {
+  list-style-image:url(chrome://editor/skin/images/ED_SaveFile.gif); 
+}
+
+titledbutton#SaveButton[dirty="true"] {
+  list-style-image:url(chrome://editor/skin/images/ED_SaveMod.gif); 
+}
+

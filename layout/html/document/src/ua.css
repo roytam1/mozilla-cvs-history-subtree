@@ -103,14 +103,14 @@ layer {
 }
 listing {
   display: block;
-  font-family: monospace;
+  font-family: -moz-fixed;
   font-size: medium;
   white-space: pre;
   margin: 1em 0;
 }
 plaintext, xmp, pre {
   display: block;
-  font-family: monospace;
+  font-family: -moz-fixed;
   white-space: pre;
   margin: 1em 0;
 }
@@ -135,6 +135,7 @@ table {
 /* border-style: outset; */
   border-color: #c0c0c0;
   border-spacing: 2px; 
+  border-collapse: separate;
   margin-top: 0;
   margin-bottom: 0;
 }
@@ -241,7 +242,7 @@ i, cite, em, var {
 }
 tt, code, kbd, samp {
   display: inline;
-  font-family: monospace;
+  font-family: -moz-fixed;
 }
 u {
   display: inline;
@@ -313,12 +314,14 @@ ul, menu, dir {
   display: block;
   list-style-type: disc;
   margin: 1em 0 1em 40px;
+  counter-reset: -html-counter 0;
 }
 
 ol {
   display: block;
   list-style-type: decimal;
   margin: 1em 0 1em 40px;
+  counter-reset: -html-counter 0;
 }
 
 li {
@@ -379,6 +382,9 @@ dd {
   display: block;
   margin-left: 40px;
 }
+dl dl {
+  margin: 0 0 0 40px;
+}
 
 /* leafs */
 
@@ -413,29 +419,119 @@ iframe {
 }
 form {
   display: block;
+  margin: 1em 0;
 }
+
+
+/* button */
+input[type=button]:-moz-buttonlabel {
+  content:"   ";
+  font-family: sans-serif;
+  font-size: small;
+  background-color:inherit;
+}
+
+input[type=button][value]:-moz-buttonlabel {
+  content:attr(value);
+  font-family: sans-serif;
+  font-size: small;
+  background-color:inherit;
+}
+
+/* submit */
+input[type=submit]:-moz-buttonlabel {
+  content:"Submit Query";
+  font-family: sans-serif;
+  font-size: small;
+}
+
+input[type=submit][value]:-moz-buttonlabel {
+  content:attr(value);
+  font-family: sans-serif;
+  font-size: small;
+}
+
+/* reset */
+input[type=reset]:-moz-buttonlabel {
+  content:"Reset";
+  font-family: sans-serif;
+  font-size: small;
+}
+
+input[type=reset][value]:-moz-buttonlabel {
+  content:attr(value);
+  font-family: sans-serif;
+  font-size: small;
+}
+
 input {
   vertical-align: bottom;
-  border: 2px inset rgb(192, 192, 192);
-  background-color: white;
+  border: 2px inset rgb(204, 204, 204);
   color: black;
 }
 input[type=hidden] {
   border: none;
   visibility: hidden;
 }
+
+
+input[type=file] {
+  white-space: nowrap;
+  border:none;
+}
+
+/* browse button for file selector */
+input[type=file] input[type=button] {
+  height:inherit;
+}
+
+input[type=file] input[type=button]:-moz-buttonlabel {
+  content:"Browse...";
+  font-family: sans-serif;
+}
+
+
 input[type=radio] {
   /* these margins are for NavQuirks, we need a Standard ua.css */  
   margin-left:   3px;   
   margin-right:  5px;  
   margin-top:    3px; 
   margin-bottom: 3px; 
-  border: 2px inset rgb(192, 192, 192);
-  background-color:white;
+  border: 2px outset rgb(204, 204, 204);
+  background-color:rgb(204, 204, 204);
   color:black;
   width:12px;
   height:12px;
+  -moz-border-radius:6px;
 }
+
+input[type=radio][disabled] {
+  background-color:rgb(150, 150, 150);
+}
+
+input[type=radio]:active {
+  background-color:white;
+  border: 2px inset rgb(204, 204, 204);
+}
+
+input[type=radio][disabled]:hover {
+  background-color:rgb(150, 150, 150);
+  border: 2px outset rgb(204, 204, 204);
+}
+
+input[type=radio]:hover {
+  border : 2px solid black;
+}
+
+:-moz-radio {
+  background-color:black;
+  width:6px;
+  height:6px;
+  left:6px;
+  top:6px;
+  -moz-border-radius:3px;
+}
+
 
 input[type=checkbox] {
   /* these margins are for NavQuirks, we need a Standard ua.css */  
@@ -443,11 +539,34 @@ input[type=checkbox] {
   margin-right:  5px;  
   margin-top:    3px; 
   margin-bottom: 4px;
-  border: 2px inset rgb(192, 192, 192);
+  border: 1px outset rgb(153, 153, 153);
   width:11px;
   height:11px;
-  background-color:white;
+  background-color:rgb(204, 204, 204);
   color:black;
+/*  -moz-border-radius:1px; */
+}
+
+input[type=checkbox][disabled] {
+  background-color:rgb(150, 150, 150);
+}
+
+input[type=checkbox]:active {
+  background-color:gray;
+  border: 1px inset rgb(204, 204, 204);
+}
+
+input[type=checkbox][disabled]:active {
+  background-color:rgb(150, 150, 150);
+  border : 1px solid rgb(204, 204, 204);
+}
+
+input[type=checkbox]:hover {
+  border : 1px solid black;
+}
+
+input[type=checkbox][disabled]:hover {
+  border: 1px outset rgb(153, 153, 153);
 }
 
 input[type="submit"] { 
@@ -557,13 +676,11 @@ input[type="button"] {
   border: 2px outset rgb(156, 154, 156);
   background-color: rgb(206, 207, 206);
   color:black; 
-
   padding: 1px;
 }
 
 input[type="button"]:active {
   border-style: inset;
-
   padding-left: 2px;
   padding-right: 0px;
   padding-top: 2px;
@@ -599,7 +716,6 @@ input[type="button"]:focus:-moz-focus-inner {
    padding-right : 1px;
    padding-top   : 0px;
    padding-bottom: 0px;
- 
    margin: 0px;
    border : 1px dotted black;
 }
@@ -663,21 +779,8 @@ button:focus:-moz-focus-inner {
    border : 1px dotted black;
 }
 
-:-moz-file-button {
-  border: 2px outset rgb(192, 192, 192);
-  color:black;
-  background-color: rgb(192, 192, 192);
-}
-
-:-moz-file-text {
-  border: 2px inset rgb(192, 192, 192);
-  margin-right: 10px; 
-  background-color: white;
-  color: black;
-}
-
 input[type=text] {
-  border: 2px inset rgb(192, 192, 192);
+  border: 2px inset rgb(204, 204, 204);
   background-color: white;
   color: black;
 }
@@ -687,7 +790,7 @@ input[type=text][disabled] {
 }
 
 input[type=password] {
-  border: 2px inset rgb(192, 192, 192);
+  border: 2px inset rgb(204, 204, 204);
   background-color: white;
   color:black;
 }
@@ -700,27 +803,170 @@ label {
   padding-right: 3px;
 }
 
-select {
+/* Combo box style */
+select:-moz-dummy-option { 
+  visibility: hidden; 
+  content: "X"; 
+  display: block;
+}
+
+select, select[size="1"] {
   vertical-align: bottom;
-  border: 1px inset #c0c0c0;
-  background-color: white;
+  border: none;
+  background-color:rgb(204, 204, 204);  
   color:black;
   white-space:nowrap;
+  text-align: left; 
 }
+
+/* Listbox style */
+select[size] {
+  background-color: white;
+  border: 1px inset rgb(153, 153, 153);
+}
+
+select[size][disabled] {
+  background-color:rgb(204, 204, 204);  
+  border: 1px inset rgb(153, 153, 153);
+}
+
+select[multiple] {
+  background-color: white;
+  border: 1px inset rgb(153, 153, 153);
+}
+
+select[multiple][disabled] {
+  background-color:rgb(204, 204, 204);  
+  border: 1px inset rgb(153, 153, 153);
+}
+
+select[disabled] {
+  background-color: rgb(204, 204, 204);
+  border: 1px inset rgb(153, 153, 153);
+}
+
+select[multiple][size="1"] {
+  background-color: white;
+  border: 1px inset rgb(153, 153, 153);
+}
+
+select[size="1"] {
+  vertical-align: bottom;
+  border: none;
+  background-color:rgb(204, 204, 204);  
+  color:black;
+  white-space:nowrap;
+  text-align: left; 
+}
+
+
+/* combobox button */
+select input[type=button] {
+  border: outset 1px rgb(204, 204, 204);
+  background-image:url("arrow.gif");
+  background-repeat:no-repeat;
+  background-position:center;
+  width:12px;
+  height:12px;
+  -moz-border-radius:0px;
+}
+
+select[disabled] input[type=button] {
+  border: solid 1px rgb(204, 204, 204);
+}
+
+
+/* combobox display area */
+select input#-moz-display {
+  border: inset 1px rgb(204, 204, 204);
+  background-color: white;
+  background-image: none;
+  -moz-border-radius:0px;
+  padding-left: 0px;
+  padding-right: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
+
+select[disabled] input#-moz-display {
+  border: inset 1px rgb(204, 204, 204);
+  color: gray;
+  background-color: white;
+  background-image: none;
+  -moz-border-radius:0px;
+  padding-left: 0px;
+  padding-right: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
+
+/* combbox display area - active */
+select input#-moz-display:active {
+  border: inset 1px rgb(204, 204, 204);
+  background-color:white;
+  background-image: none;
+  -moz-border-radius:0px;
+  padding-left: 0px;
+  padding-right: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  background-color:white;
+}
+
+
 option {
   display:block;
+  padding-left:3px;
+  padding-right:3px;
 }
 
-option.selected {
-  border:   1px solid rgb(0,0,128);
-  background-color: rgb(0,0,128);
-  color: rgb(255,255,255);
+select[disabled] option {
+  color:rgb(153, 153, 153);
+  background-color:white; 
 }
 
-option[-moz-option-selected] {
+/* Combobox item style */
+select option[-moz-option-selected] {
+ color:black;
+ background-color:white; 
+}
+
+/* List box item selected style */
+select[size] option[-moz-option-selected] {
+ color:white;
+ background-color:rgb(51,51,102); 
+}
+
+select[size][disabled] option[-moz-option-selected] {
+  color:rgb(153,153,153); 
+  background-color:rgb(204,204,204); 
+}
+
+select[size="1"] option[-moz-option-selected] {
+  color:black;
+  background-color:white;
+}
+
+select[size="1"][disabled] option[-moz-option-selected] {
+  color:yellow;
+  background-color:green;
+}
+
+select[multiple] option[-moz-option-selected] {
   color:white;
-  background-color: rgb(0,0,128);
+  background-color:rgb(51,51,102); 
 }
+
+select[multiple][disabled] option[-moz-option-selected] {
+  color:rgb(153,153,153); 
+  background-color:rgb(204,204,204); 
+}
+
+select[multiple][size="1"] option[-moz-option-selected] {
+  color:white;
+  background-color:rgb(51,51,102); 
+}
+
 
 option.selectedfocus {
   border:   1px dotted white;
@@ -729,15 +975,23 @@ option.selectedfocus {
 }
 
 optgroup {
+  display:block;
   font-style:italic;
   font-weight:bold;
 }
 
-optgroup > option {
+optgroup option {
+  display:block;
   padding-left:20px;
   font-style:normal;
   font-weight:normal;
 }
+
+optgroup:before {
+  display:block;
+  content:attr(label);
+}
+
 
 textarea {
   vertical-align: bottom;
@@ -746,6 +1000,11 @@ textarea {
   color:black;
 }
 
+textarea[disabled] {
+  color: gray;
+}
+
+
 /* misc */
 
 applet {
@@ -753,6 +1012,9 @@ applet {
 }
 area {
   display: none;
+}
+map {
+  display: block;
 }
 base {
   display: none;
@@ -853,18 +1115,18 @@ sourcetext { /* XXX should not be in HTML namespace */
   height: 0;
 }
 
-:-moz-viewport {
+:viewport, :viewport-scroll {
   display: block;
   background-color: inherit;
 }
 
 /* XXX Temporary until @page is supported... */
-:-moz-page {
+:-moz-page, :-moz-page-sequence {
   background: none;
   display: block;
 }
 
-:root {
+:canvas {
   display: block;
   background-color: inherit;
 }
@@ -926,46 +1188,20 @@ sourcetext { /* XXX should not be in HTML namespace */
   display: none;
 }
 
-:-moz-dropdown-visible {
-  visibility: visible;
-}
-
-:-moz-dropdown-hidden {
-  visibility: hidden;
-}
-
-:-moz-dropdown-btn-out {
-  border: 2px outset #c0c0c0;
-  background-color: rgb(206, 207, 206);
-}
-
-:-moz-dropdown-btn-pressed {
-  border: 2px inset #c0c0c0;
-  background-color: rgb(206, 207, 206);
-}
-
+/* combobox dropdown list */
 :-moz-dropdown-list {
- position:absolute;
- background-color:white;
- border: 1px solid blue;
+  background-color:inherit;
+  border: 1px inset rgb(153, 153, 153);
 } 
 
-
-:-moz-combobox-text {
-  color: black;
-  padding-left: 2px;
+/* combobox dropdown list hidden */
+select:-moz-dropdown-list {
+  visibility:hidden;
 }
 
-:-moz-combobox-textselected {
-  background-color: rgb(0,0,128);
-  color: white;
-  border: 1px solid rgb(0,0,128);
-}
-
-:-moz-combobox-textselectedfocus {
-  background-color: rgb(0,0,128);
-  color: white;
-  border: 1px dotted white;
+/* combobox dropdown list visible */
+select[-moz-dropdown-active]:-moz-dropdown-list {
+  visibility: visible;
 }
 
 :-moz-anonymous-block {

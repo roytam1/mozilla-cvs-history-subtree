@@ -44,6 +44,8 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
         return NS_OK;
     }
 
+    // else...
+
     return mClass->DelegatedQueryInterface(this, aIID, aInstancePtr);
 }
 
@@ -140,7 +142,7 @@ nsXPCWrappedJS::GetNewOrUsedWrapper(XPCContext* xpcc,
             // just a root wrapper
             nsXPCWrappedJSClass* rootClazz;
             rootClazz = nsXPCWrappedJSClass::GetNewOrUsedClass(
-                                                    xpcc, nsISupports::GetIID());
+                                                    xpcc, nsCOMTypeInfo<nsISupports>::GetIID());
             if(!rootClazz)
                 goto return_wrapper;
 
@@ -234,13 +236,13 @@ nsXPCWrappedJS::~nsXPCWrappedJS()
 nsXPCWrappedJS*
 nsXPCWrappedJS::Find(REFNSIID aIID)
 {
-    if(aIID.Equals(nsISupports::GetIID()))
+    if(aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
         return mRoot;
 
     nsXPCWrappedJS* cur = mRoot;
     do
     {
-        if(aIID.Equals(GetIID()))
+        if(aIID.Equals(cur->GetIID()))
             return cur;
 
     } while(NULL != (cur = cur->mNext));

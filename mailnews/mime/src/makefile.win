@@ -24,6 +24,7 @@ include <$(DEPTH)\config\config.mak>
 
 EXPORTS =								\
 		nsMimeTypes.h		\
+		nsMimeStringResources.h		\
 		nsMimeObjectClassAccess.h		\
 		nsMimeConverter.h				\
 		mimetext.h						\
@@ -66,11 +67,11 @@ OBJS=											\
 # Code for stream converter interface to netlib...
 #
 		.\$(OBJDIR)\nsMimeAddress.obj		\
-		.\$(OBJDIR)\plugin_inst.obj			\
 		.\$(OBJDIR)\mimecont.obj			\
 		.\$(OBJDIR)\mimeebod.obj			\
 		.\$(OBJDIR)\mimeenc.obj				\
 		.\$(OBJDIR)\mimeeobj.obj			\
+		.\$(OBJDIR)\mimeobj.obj				\
 		.\$(OBJDIR)\mimehdrs.obj			\
 		.\$(OBJDIR)\mimei.obj				\
 		.\$(OBJDIR)\mimeiimg.obj			\
@@ -84,7 +85,6 @@ OBJS=											\
 		.\$(OBJDIR)\mimemsg.obj				\
 		.\$(OBJDIR)\mimemsig.obj			\
 		.\$(OBJDIR)\mimemult.obj			\
-		.\$(OBJDIR)\mimeobj.obj				\
 		.\$(OBJDIR)\mimepbuf.obj			\
 		.\$(OBJDIR)\mimesun.obj				\
 		.\$(OBJDIR)\mimetenr.obj			\
@@ -100,10 +100,7 @@ OBJS=											\
 		.\$(OBJDIR)\nsMsgHeaderParser.obj	\
 		.\$(OBJDIR)\nsMimeURLUtils.obj		\
 		.\$(OBJDIR)\nsStreamConverter.obj	\
-		.\$(OBJDIR)\nsMimeEmitter2.obj	\
-#
-# THIS WILL NEED WORK AFTER WE GET A LIBMSG MORE XP-COM-afied
-#			.\$(OBJDIR)\mimedrft.obj		\
+		.\$(OBJDIR)\mimedrft.obj		\
 # XP-COM BRIDGES
 		.\$(OBJDIR)\comi18n.obj				\
 # EXTERNAL (OLD) DEPENDENCIES - SHOULD EVENTUALLY BE REMOVED 
@@ -116,12 +113,9 @@ OBJS=											\
 LLIBS=										\
 			$(LLIBS)						\
 			$(LIBNSPR)						\
-			$(DIST)\lib\plc3.lib			\
 			$(DIST)\lib\js32$(VERSION_NUMBER).lib	\
 			$(DIST)\lib\xpcom.lib       	\
 			$(NULL)
-
-MISCDEP=$(LLIBS)
 
 include <$(DEPTH)/config/rules.mak>
 

@@ -16,12 +16,11 @@
 # This is a list of local files which get copied to the mozilla:dist:mailnews directory
 #
 
-nsIMsgDatabase.h
+nsINewsDatabase.h
 nsMsgDatabase.h
 nsMailDatabase.h
 nsImapMailDatabase.h
 nsNewsDatabase.h
 nsDBFolderInfo.h
 nsMsgHdr.h
-nsIDBChangeListener.h
 nsMsgThread.h

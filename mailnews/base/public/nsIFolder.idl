@@ -23,7 +23,8 @@
 interface nsIFolder : nsICollection {
 
         readonly attribute string URI;
-        attribute string name;
+        attribute wstring name;
+        attribute wstring prettyName;
 
         nsISupports GetChildNamed(in string name);
         attribute nsIFolder parent;

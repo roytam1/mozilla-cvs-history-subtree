@@ -22,14 +22,12 @@
 #include "nsIServiceManager.h"
 #include "nsIAppShellService.h"
 #include "nsAppShellCIDs.h"
-#include "nsINetService.h"
 #include "nsIWebShellWindow.h"
 #include "nsIWebShell.h"
 #include "nsAppCoresCIDs.h"
 #include "nsIDOMToolkitCore.h"
 
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kToolkitCoreCID, NS_TOOLKITCORE_CID);
 static NS_DEFINE_CID(kMsgComposeCID, NS_MSGCOMPOSE_CID);
 
@@ -57,7 +55,7 @@ nsMsgComposeService::~nsMsgComposeService()
 
 
 /* the following macro actually implement addref, release and query interface for our component. */
-NS_IMPL_ISUPPORTS(nsMsgComposeService, nsMsgComposeService::GetIID());
+NS_IMPL_ISUPPORTS(nsMsgComposeService, nsCOMTypeInfo<nsMsgComposeService>::GetIID());
 
 nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindowURL, const PRUnichar *originalMsgURI,
 	MSG_ComposeType type, MSG_ComposeFormat format, nsISupports *object)
@@ -107,14 +105,78 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
 	return rv;
 }
 
+nsresult nsMsgComposeService::OpenComposeWindowWithValues(const PRUnichar *msgComposeWindowURL,
+														  MSG_ComposeFormat format,
+														  const PRUnichar *to,
+														  const PRUnichar *cc,
+														  const PRUnichar *bcc,
+														  const PRUnichar *newsgroups,
+														  const PRUnichar *subject,
+														  const PRUnichar *body)
+{
+	nsAutoString args = "";
+	nsresult rv;
 
-nsresult nsMsgComposeService::InitCompose(nsIDOMWindow *aWindow, const PRUnichar *originalMsgURI, PRInt32 type, PRInt32 format, nsIMsgCompose **_retval)
+	NS_WITH_SERVICE(nsIDOMToolkitCore, toolkitCore, kToolkitCoreCID, &rv); 
+    if (NS_FAILED(rv))
+		return rv;
+
+	args.Append("format=");
+	args.Append(format);
+	
+	if (to)			{args.Append(",to="); args.Append(to);}
+	if (cc)			{args.Append(",cc="); args.Append(cc);}
+	if (bcc)		{args.Append(",bcc="); args.Append(bcc);}
+	if (newsgroups)	{args.Append(",newsgroups="); args.Append(newsgroups);}
+	if (subject)	{args.Append(",subject="); args.Append(subject);}
+	if (body)		{args.Append(",body="); args.Append(body);}
+
+	if (msgComposeWindowURL && *msgComposeWindowURL)
+		toolkitCore->ShowWindowWithArgs(msgComposeWindowURL, nsnull, args);
+	else
+		toolkitCore->ShowWindowWithArgs("chrome://messengercompose/content/", nsnull, args);
+	
+	return rv;
+}
+
+nsresult nsMsgComposeService::OpenComposeWindowWithCompFields(const PRUnichar *msgComposeWindowURL,
+														  MSG_ComposeFormat format,
+														  nsIMsgCompFields *compFields)
+{
+	nsAutoString args = "";
+	nsresult rv;
+
+	NS_WITH_SERVICE(nsIDOMToolkitCore, toolkitCore, kToolkitCoreCID, &rv); 
+    if (NS_FAILED(rv))
+		return rv;
+
+	args.Append("format=");
+	args.Append(format);
+	
+	if (compFields)
+	{
+		NS_ADDREF(compFields);
+		args.Append(",fieldsAddr="); args.Append((PRInt32)compFields, 10);
+	}
+
+	if (msgComposeWindowURL && *msgComposeWindowURL)
+		toolkitCore->ShowWindowWithArgs(msgComposeWindowURL, nsnull, args);
+	else
+		toolkitCore->ShowWindowWithArgs("chrome://messengercompose/content/", nsnull, args);
+
+    if (NS_FAILED(rv))
+		NS_IF_RELEASE(compFields);
+    	
+	return rv;
+}
+
+nsresult nsMsgComposeService::InitCompose(nsIDOMWindow *aWindow, const PRUnichar *originalMsgURI, PRInt32 type, PRInt32 format, PRInt32 compFieldsAddr, nsIMsgCompose **_retval)
 {
 	nsresult rv;
 	nsIMsgCompose * msgCompose = nsnull;
 	
 	rv = nsComponentManager::CreateInstance(kMsgComposeCID, nsnull,
-	                                        nsIMsgCompose::GetIID(),
+	                                        nsCOMTypeInfo<nsIMsgCompose>::GetIID(),
 	                                        (void **) &msgCompose);
 	if (NS_SUCCEEDED(rv) && msgCompose)
 	{
@@ -131,8 +193,12 @@ nsresult nsMsgComposeService::InitCompose(nsIDOMWindow *aWindow, const PRUnichar
 					break;
 				}
     	/*--- temporary hack ---*/
-	
-		msgCompose->Initialize(aWindow, originalMsgURI, type, format, object);
+		
+// ducarroz: I am not quiet sure than dynamic_cast is supported on all platforms/compilers!
+//		nsIMsgCompFields* compFields = dynamic_cast<nsIMsgCompFields *>((nsIMsgCompFields *)compFieldsAddr);
+		nsIMsgCompFields* compFields = (nsIMsgCompFields *)compFieldsAddr;
+		msgCompose->Initialize(aWindow, originalMsgURI, type, format, compFields, object);
+		NS_IF_RELEASE(compFields);
 		m_msgQueue->AppendElement(msgCompose);
 		*_retval = msgCompose;
 
@@ -152,7 +218,8 @@ nsresult nsMsgComposeService::DisposeCompose(nsIMsgCompose *compose, PRBool clos
 	{
 		m_msgQueue->RemoveElementAt(i);
 		
-		if (closeWindow)
+    // rhp: Commenting out for now to cleanup compile warning...
+		// if (closeWindow)
 			;//TODO
 
 

@@ -21,7 +21,10 @@
 
 #include "nsIXPBaseWindow.h"
 #include "nsIStreamListener.h"
+#ifdef NECKO
+#else
 #include "nsINetSupport.h"
+#endif
 #include "nsIWebShell.h"
 #include "nsIScriptContextOwner.h"
 #include "nsString.h"
@@ -43,7 +46,10 @@ class nsIPref;
  */
 class nsXPBaseWindow : public nsIXPBaseWindow,
                        public nsIStreamObserver,
+#ifdef NECKO
+#else
                        public nsINetSupport,
+#endif
                        public nsIWebShellContainer,
                        public nsIDOMMouseListener
 {
@@ -83,17 +89,24 @@ public:
 
   NS_IMETHOD LoadURL(const nsString &aURL);
 
+#ifdef NECKO
   // nsIStreamObserver
-  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-  NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-  NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-  NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+	NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+	NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, 
+                           nsresult status, const PRUnichar *errorMsg);
+#else
+  // nsIStreamObserver
+  NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+  NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+  NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
+#endif
 
   // nsIWebShellContainer
   NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason);
   NS_IMETHOD BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
   NS_IMETHOD ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax);
-  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus);
+  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsresult aStatus);
   NS_IMETHOD NewWebShell(PRUint32 aChromeMask,
                          PRBool aVisible,
                          nsIWebShell *&aNewWebShell);
@@ -102,10 +115,11 @@ public:
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow);
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup);
   NS_IMETHOD FindWebShellWithName(const PRUnichar* aName, nsIWebShell*& aResult);
   NS_IMETHOD FocusAvailable(nsIWebShell* aFocusedWebShell, PRBool& aFocusTaken);
 
+#ifndef NECKO
   // nsINetSupport
   NS_IMETHOD_(void) Alert(const nsString &aText);
   NS_IMETHOD_(PRBool) Confirm(const nsString &aText);
@@ -117,6 +131,7 @@ public:
                                             nsString &aPassword);
   NS_IMETHOD_(PRBool) PromptPassword(const nsString &aText,
                                      nsString &aPassword);
+#endif
 
   void Layout(PRInt32 aWidth, PRInt32 aHeight);
 

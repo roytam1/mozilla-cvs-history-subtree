@@ -26,7 +26,6 @@
  * Also supports LIFO allocation (JS_ARENA_MARK/JS_ARENA_RELEASE).
  */
 #include <stdlib.h>
-#include <string.h>
 #include "jstypes.h"
 #include "jscompat.h"
 
@@ -122,11 +121,11 @@ struct JSArenaPool {
 #define JS_UPTRDIFF(p,q)	((jsuword)(p) - (jsuword)(q))
 
 #ifdef DEBUG
-#define free_PATTERN         0xDA
+#define JS_FREE_PATTERN         0xDA
 #define JS_CLEAR_UNUSED(a)	(JS_ASSERT((a)->avail <= (a)->limit),         \
-				 memset((void*)(a)->avail, free_PATTERN,   \
+				 memset((void*)(a)->avail, JS_FREE_PATTERN,   \
 					(a)->limit - (a)->avail))
-#define JS_CLEAR_ARENA(a)       memset((void*)(a), free_PATTERN,           \
+#define JS_CLEAR_ARENA(a)       memset((void*)(a), JS_FREE_PATTERN,           \
 				       (a)->limit - (jsuword)(a))
 #else
 #define JS_CLEAR_UNUSED(a)	/* nothing */

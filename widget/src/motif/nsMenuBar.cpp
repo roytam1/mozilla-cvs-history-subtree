@@ -16,6 +16,8 @@
  * Reserved.
  */
 
+#include <Xm/RowColumn.h>
+
 #include "nsMenuBar.h"
 #include "nsMenuItem.h"
 #include "nsIComponentManager.h"
@@ -28,10 +30,6 @@
   
 #include "nsCOMPtr.h"
 #include "nsWidgetsCID.h"
-
-//#include "nsStringUtil.h"
-
-#include <Xm/RowColumn.h>
 
 static NS_DEFINE_CID(kMenuBarCID, NS_MENUBAR_CID);
 static NS_DEFINE_CID(kMenuCID, NS_MENU_CID);
@@ -51,16 +49,19 @@ nsresult nsMenuBar::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     NS_ADDREF_THIS();
     return NS_OK;
   }
+
   if (aIID.Equals(kISupportsIID)) {
     *aInstancePtr = (void*) ((nsISupports*)(nsIMenuBar*) this);
     NS_ADDREF_THIS();
     return NS_OK;
   }
-  if (aIID.Equals(kIMenuListenerIID)) {
+
+  if (aIID.Equals(nsIMenuListener::GetIID())) {
     *aInstancePtr = (void*) ((nsIMenuListener*)this);
     NS_ADDREF_THIS();
     return NS_OK;
   }
+
   return NS_NOINTERFACE;
 }
 
@@ -76,7 +77,7 @@ nsMenuBar::nsMenuBar() : nsIMenuBar(), nsIMenuListener()
 {
   NS_INIT_REFCNT();
   mNumMenus = 0;
-  mMenu     = nsnull;
+  mMenuBar  = nsnull;
   mParent   = nsnull;
   mIsMenuBarAdded = PR_FALSE;
   mWebShell = nsnull;
@@ -103,8 +104,8 @@ NS_METHOD nsMenuBar::Create(nsIWidget *aParent)
   SetParent(aParent);
   Widget parentWidget = (Widget)mParent->GetNativeData(NS_NATIVE_WIDGET);
   Widget mainWindow = XtParent(parentWidget);
-  mMenu = XmCreateMenuBar(mainWindow, "menubar", nsnull, 0);
-  XtManageChild(mMenu);
+  mMenuBar = XmCreateMenuBar(mainWindow, "menubar", nsnull, 0);
+  XtManageChild(mMenuBar);
   return NS_OK;
 }
 
@@ -118,7 +119,6 @@ NS_METHOD nsMenuBar::GetParent(nsIWidget *&aParent)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBar::SetParent(nsIWidget *aParent)
 {
-
   NS_IF_RELEASE(mParent);
   mParent = aParent;
   NS_IF_ADDREF(mParent);
@@ -182,7 +182,7 @@ NS_METHOD nsMenuBar::RemoveAll()
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBar::GetNativeData(void *& aData)
 {
-  aData = (void *)mMenu;
+  aData = (void *)mMenuBar;
   return NS_OK;
 }
 
@@ -252,7 +252,7 @@ nsEventStatus nsMenuBar::MenuConstruct(
           nsString menuName;
           menuElement->GetNodeName(menuNodeType);
           if (menuNodeType.Equals("menu")) {
-            menuElement->GetAttribute(nsAutoString("name"), menuName);
+            menuElement->GetAttribute(nsAutoString("value"), menuName);
             // Don't create the menu yet, just add in the top level names
       
             // Create nsMenu

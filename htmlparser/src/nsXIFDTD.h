@@ -35,7 +35,6 @@
 #include "nsIContentSink.h"
 #include "nsHTMLTokens.h"
 #include "nsVoidArray.h"
-#include <fstream.h>
 
 
 #define NS_XIF_DTD_IID      \
@@ -254,6 +253,24 @@ class nsXIFDTD : public nsIDTD {
      * @return
      */
     virtual PRBool Verify(nsString& aURLRef,nsIParser* aParser);
+
+    /**
+     * Use this id you want to stop the building content model
+     * --------------[ Sets DTD to STOP mode ]----------------
+     * It's recommended to use this method in accordance with
+     * the parser's terminate() method.
+     *
+     * @update	harishd 07/22/99
+     * @param 
+     * @return
+     */
+    virtual nsresult  Terminate(void);
+
+    /**
+     * Give rest of world access to our tag enums, so that CanContain(), etc,
+     * become useful.
+     */
+    NS_IMETHOD StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const;
 
     /**
      * Set this to TRUE if you want the DTD to verify its
@@ -515,6 +532,7 @@ private:
     void      BeginStartTag(const nsIParserNode& aNode);
     eHTMLTags GetStartTag(const nsIParserNode& aNode, nsString& aName);
     void      AddEndTag(const nsIParserNode& aNode);
+    void      AddEndCommentTag(const nsIParserNode& aNode);
 
     PRBool          StartTopOfStack();
     nsIParserNode*  PeekNode();

@@ -17,10 +17,16 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
-  mDecSize           = 56;
+  mDecSize           = 60;
   mDecArray          = new ConverterInfo [mDecSize];
 
   PRInt32 i =0;
+
+
+
+
+
+
 
   mDecArray[i++].mCID  = &kAsciiToUnicodeCID;
   mDecArray[i++].mCID  = &kISO88591ToUnicodeCID;
@@ -33,6 +39,7 @@
   mDecArray[i++].mCID  = &kISO88598ToUnicodeCID;
   mDecArray[i++].mCID  = &kISO88599ToUnicodeCID;
   mDecArray[i++].mCID  = &kISO885910ToUnicodeCID;
+  mDecArray[i++].mCID  = &kISO885913ToUnicodeCID;
   mDecArray[i++].mCID  = &kISO885914ToUnicodeCID;
   mDecArray[i++].mCID  = &kISO885915ToUnicodeCID;
   mDecArray[i++].mCID  = &kISOIR111ToUnicodeCID;
@@ -78,11 +85,22 @@
   mDecArray[i++].mCID  = &kUCS4LEToUnicodeCID;
   mDecArray[i++].mCID  = &kT61ToUnicodeCID;
   mDecArray[i++].mCID  = &kUserDefinedToUnicodeCID;
+  mDecArray[i++].mCID  = &kObsSJISToUnicodeCID;
+  mDecArray[i++].mCID  = &kObsEUCJPToUnicodeCID;
+  mDecArray[i++].mCID  = &kObsISO2022JPToUnicodeCID;
 
-  mEncSize           = 69;
+  mEncSize           = 72;
   mEncArray          = new ConverterInfo [mEncSize];
 
   i = 0;
+
+
+
+
+
+
+
+
   mEncArray[i++].mCID  = &kUnicodeToAsciiCID;
   mEncArray[i++].mCID  = &kUnicodeToISO88591CID;
   mEncArray[i++].mCID  = &kUnicodeToISO88592CID;
@@ -94,6 +112,7 @@
   mEncArray[i++].mCID  = &kUnicodeToISO88598CID;
   mEncArray[i++].mCID  = &kUnicodeToISO88599CID;
   mEncArray[i++].mCID  = &kUnicodeToISO885910CID;
+  mEncArray[i++].mCID  = &kUnicodeToISO885913CID;
   mEncArray[i++].mCID  = &kUnicodeToISO885914CID;
   mEncArray[i++].mCID  = &kUnicodeToISO885915CID;
   mEncArray[i++].mCID  = &kUnicodeToISOIR111CID;
@@ -152,4 +171,6 @@
   mEncArray[i++].mCID  = &kUnicodeToCNS11643p5CID;
   mEncArray[i++].mCID  = &kUnicodeToCNS11643p6CID;
   mEncArray[i++].mCID  = &kUnicodeToCNS11643p7CID;
+  mEncArray[i++].mCID  = &kUnicodeToSymbolCID;
+  mEncArray[i++].mCID  = &kUnicodeToZapfDingbatsCID;
 

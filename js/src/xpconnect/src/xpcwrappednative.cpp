@@ -36,8 +36,6 @@ nsXPCWrappedNative::AddRef(void)
     else if(2 == mRefCnt && NULL != (xpcc = mClass->GetXPCContext()))
         JS_AddNamedRoot(xpcc->GetJSContext(), &mJSObj, 
                         "nsXPCWrappedNative::mJSObj");
-//    XPC_LOG_DEBUG(("+++ AddRef  of %x with mJSObj %x and mRefCnt = %d",this,mJSObj, mRefCnt));
-
     return mRefCnt;
 }
 
@@ -49,20 +47,15 @@ nsXPCWrappedNative::Release(void)
 
     if(0 == --mRefCnt)
     {
-//        XPC_LOG_DEBUG(("--- Delete of wrapper %x with mJSObj %x and mRefCnt = %d",this,mJSObj, mRefCnt));
         NS_DELETEXPCOM(this);   // also unlinks us from chain
         return 0;
     }
     if(1 == mRefCnt)
     {
         XPCContext* xpcc;
-//        XPC_LOG_DEBUG(("--- Removing root of %x with mJSObj %x and mRefCnt = %d",this,mJSObj, mRefCnt));
         if(NULL != (xpcc = mClass->GetXPCContext()))
             JS_RemoveRoot(xpcc->GetJSContext(), &mJSObj);
     }
-
-//    XPC_LOG_DEBUG(("--- Release of %x with mJSObj %x and mRefCnt = %d",this,mJSObj, mRefCnt));
-
     return mRefCnt;
 }
 
@@ -89,6 +82,7 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
 {
     Native2WrappedNativeMap* map;
     nsISupports* rootObj = NULL;
+    nsISupports* realObj = NULL;
     nsXPCWrappedNative* root;
     nsXPCWrappedNative* wrapper = NULL;
     nsXPCWrappedNativeClass* clazz = NULL;
@@ -104,13 +98,16 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
     }
 
     // always find the native root
-    if(NS_FAILED(aObj->QueryInterface(nsISupports::GetIID(), (void**)&rootObj)))
-        return NULL;
+
+    if(NS_FAILED(aObj->QueryInterface(nsCOMTypeInfo<nsISupports>::GetIID(), (void**)&rootObj)))
+        goto return_wrapper;
 
     // look for the root wrapper
+
     root = map->Find(rootObj);
     if(root)
     {
+        // if we already have a wrapper for this interface then we're done.
         wrapper = root->Find(aIID);
         if(wrapper)
         {
@@ -119,13 +116,19 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
         }
     }
 
+    // do a QI to make sure the object passed in really supports the 
+    // interface it is claiming to support.
+
+    if(NS_FAILED(aObj->QueryInterface(aIID, (void**)&realObj)))
+        goto return_wrapper;
+
     // do the security check if necessary
 
     nsIXPCSecurityManager* sm;
     if(NULL != (sm = xpcc->GetSecurityManager()) &&
        (xpcc->GetSecurityManagerFlags() & 
         nsIXPCSecurityManager::HOOK_CREATE_WRAPPER) &&
-       NS_OK != sm->CanCreateWrapper(xpcc->GetJSContext(), aIID, aObj))
+       NS_OK != sm->CanCreateWrapper(xpcc->GetJSContext(), aIID, realObj))
     {
         // the security manager vetoed. It should have set an exception.
         goto return_wrapper;
@@ -141,10 +144,10 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
 
     if(!root)
     {
-        if(rootObj == aObj)
+        if(rootObj == realObj)
         {
             // the root will do double duty as the interface wrapper
-            wrapper = root = new nsXPCWrappedNative(aObj, clazz, NULL);
+            wrapper = root = new nsXPCWrappedNative(realObj, clazz, NULL);
             if(!wrapper)
                 goto return_wrapper;
             if(!wrapper->mJSObj)
@@ -161,7 +164,7 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
             // just a root wrapper
             nsXPCWrappedNativeClass* rootClazz;
             rootClazz = nsXPCWrappedNativeClass::GetNewOrUsedClass(
-                                                    xpcc, nsISupports::GetIID());
+                                                    xpcc, nsCOMTypeInfo<nsISupports>::GetIID());
             if(!rootClazz)
                 goto return_wrapper;
 
@@ -185,7 +188,7 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
 
     if(!wrapper)
     {
-        wrapper = new nsXPCWrappedNative(aObj, clazz, root);
+        wrapper = new nsXPCWrappedNative(realObj, clazz, root);
         if(!wrapper)
             goto return_wrapper;
         if(!wrapper->mJSObj)
@@ -195,12 +198,19 @@ nsXPCWrappedNative::GetNewOrUsedWrapper(XPCContext* xpcc,
         }
     }
 
+    // The logic above requires this. If not so then someone hacked it!
+    NS_ASSERTION(wrapper && wrapper != root ,"bad wrapper");
+
+    // splice into the wrapper chain
+
     wrapper->mNext = root->mNext;
     root->mNext = wrapper;
 
 return_wrapper:
     if(rootObj)
         NS_RELEASE(rootObj);
+    if(realObj)
+        NS_RELEASE(realObj);
     if(clazz)
         NS_RELEASE(clazz);
     return wrapper;
@@ -217,6 +227,7 @@ nsXPCWrappedNative::nsXPCWrappedNative(nsISupports* aObj,
       mJSObj(NULL),
       mClass(aClass),
       mDynamicScriptable(NULL),
+      mDynamicScriptableFlags(0),
       mRoot(root ? root : this),
       mNext(NULL),
       mFinalizeListener(NULL)
@@ -233,7 +244,9 @@ nsXPCWrappedNative::nsXPCWrappedNative(nsISupports* aObj,
         nsIXPCScriptable* ds;
         if(NS_SUCCEEDED(mObj->QueryInterface(nsIXPCScriptable::GetIID(),
                                              (void**)&ds)))
+        {
             mDynamicScriptable = ds;
+        }
     }
 
     mJSObj = aClass->NewInstanceJSObject(this);
@@ -249,7 +262,12 @@ nsXPCWrappedNative::nsXPCWrappedNative(nsISupports* aObj,
         if(NULL != (ds = GetDynamicScriptable()) &&
            NULL != (as = GetArbitraryScriptable()) &&
            NULL != (xpcc = GetClass()->GetXPCContext()))
+        {
             ds->Create(xpcc->GetJSContext(), GetJSObject(), this, as);
+            if(mRoot == this)
+                ds->GetFlags(xpcc->GetJSContext(), GetJSObject(), this, 
+                             &mDynamicScriptableFlags, as);
+        }
     }
 }
 
@@ -314,13 +332,13 @@ nsXPCWrappedNative::~nsXPCWrappedNative()
 nsXPCWrappedNative*
 nsXPCWrappedNative::Find(REFNSIID aIID)
 {
-    if(aIID.Equals(nsISupports::GetIID()))
+    if(aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
         return mRoot;
 
     nsXPCWrappedNative* cur = mRoot;
     do
     {
-        if(aIID.Equals(GetIID()))
+        if(aIID.Equals(cur->GetIID()))
             return cur;
 
     } while(NULL != (cur = cur->mNext));
@@ -417,6 +435,14 @@ nsXPCWrappedNative::SetFinalizeListener(nsIXPConnectFinalizeListener* aListener)
     if(mFinalizeListener)
         NS_ADDREF(mFinalizeListener);
     return NS_OK;
+}        
+
+NS_IMETHODIMP
+nsXPCWrappedNative::GetJSObjectPrototype(JSObject** aJSObj)
+{
+    NS_PRECONDITION(aJSObj, "bad param");
+    NS_PRECONDITION(mJSObj, "bad wrapper");
+    return NS_ERROR_NOT_IMPLEMENTED;
 }        
 
 NS_IMETHODIMP

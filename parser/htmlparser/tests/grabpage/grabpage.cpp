@@ -25,9 +25,7 @@
 #else
 #include "nsIIOService.h"
 #include "nsIChannel.h"
-#include "nsIEventQueueService.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_IEVENTQUEUESERVICE_CID);
 #endif // NECKO
 
 #include "nsString.h"
@@ -52,12 +50,12 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD GetBindInfo(nsIURL* aURL);
-  NS_IMETHOD OnProgress(nsIURL* aURL, PRInt32 Progress, PRInt32 ProgressMax);
-  NS_IMETHOD OnStatus(nsIURL* aURL, const nsString& aMsg);
-  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-  NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRInt32 length);
-  NS_IMETHOD OnStopBinding(nsIURL* aURL, PRInt32 status, const nsString& aMsg);
+  NS_IMETHOD GetBindInfo(nsIURI* aURL);
+  NS_IMETHOD OnProgress(nsIURI* aURL, PRInt32 Progress, PRInt32 ProgressMax);
+  NS_IMETHOD OnStatus(nsIURI* aURL, const nsString& aMsg);
+  NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+  NS_IMETHOD OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream, PRInt32 length);
+  NS_IMETHOD OnStopRequest(nsIURI* aURL, PRInt32 status, const nsString& aMsg);
 
   PRBool IsDone() const { return mDone; }
   PRBool HaveError() const { return mError; }
@@ -88,31 +86,31 @@ StreamToFile::~StreamToFile()
 }
 
 NS_IMETHODIMP
-StreamToFile::GetBindInfo(nsIURL* aURL)
+StreamToFile::GetBindInfo(nsIURI* aURL)
 {
   return 0;
 }
 
 NS_IMETHODIMP
-StreamToFile::OnProgress(nsIURL* aURL, PRInt32 Progress, PRInt32 ProgressMax)
+StreamToFile::OnProgress(nsIURI* aURL, PRInt32 Progress, PRInt32 ProgressMax)
 {
   return 0;
 }
 
 NS_IMETHODIMP
-StreamToFile::OnStatus(nsIURL* aURL, const nsString& aMsg)
+StreamToFile::OnStatus(nsIURI* aURL, const nsString& aMsg)
 {
   return 0;
 }
 
 NS_IMETHODIMP
-StreamToFile::OnStartBinding(nsIURL* aURL, const char *aContentType)
+StreamToFile::OnStartRequest(nsIURI* aURL, const char *aContentType)
 {
   return 0;
 }
 
 NS_IMETHODIMP
-StreamToFile::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream,
+StreamToFile::OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream,
                               PRInt32 length) 
 {
   PRUint32 len;
@@ -130,7 +128,7 @@ StreamToFile::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream,
 
 
 NS_IMETHODIMP
-StreamToFile::OnStopBinding(nsIURL* aURL, PRInt32 status, const nsString& aMsg)
+StreamToFile::OnStopRequest(nsIURI* aURL, PRInt32 status, const nsString& aMsg)
 {
   mDone = PR_TRUE;
   if (0 != status) {
@@ -208,10 +206,6 @@ PageGrabber::NextFile(const char* aExtension)
   return cname;
 }
 
-#ifdef NECKO
-static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
-#endif // NECKO
-
 nsresult
 PageGrabber::Grab(const nsString& aURL)
 {
@@ -228,7 +222,7 @@ PageGrabber::Grab(const nsString& aURL)
   printf(" to %s\n", cname);
         
   // Create the URL object...
-  nsIURL* url = NULL;
+  nsIURI* url = NULL;
   nsresult rv;
 
 #ifndef NECKO
@@ -248,45 +242,36 @@ PageGrabber::Grab(const nsString& aURL)
 
   // Start the URL load...
   StreamToFile* copier = new StreamToFile(fp);
-  NS_ADDREF(copier);
+  if(copier) {
+    NS_ADDREF(copier);
 
-#ifndef NECKO
-  rv = url->Open(copier);
-#else
-  nsIEventQueue *eventQ = nsnull;
-  NS_WITH_SERVICE(nsIEventQueueService, eqService, kEventQueueServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
+  #ifndef NECKO
+    rv = url->Open(copier);
+  #else
+    rv = channel->AsyncRead(0, -1, nsnull, copier);
+  #endif // NECKO
 
-  rv = eqService->CreateThreadEventQueue();
-  if (NS_FAILED(rv)) return rv;
-
-  rv = eqService->GetThreadEventQueue(PR_CurrentThread(), &eventQ);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = channel->AsyncRead(0, -1, nsnull, eventQ, copier);
-  NS_RELEASE(eventQ);
-#endif // NECKO
-
-  if (NS_OK != rv) {
-    NS_RELEASE(copier);
-    NS_RELEASE(url);
-    return rv;
-  }
-        
-  // Enter the message pump to allow the URL load to proceed.
-#ifdef XP_PC
-  MSG msg;
-  while ( !copier->IsDone() ) {
-    if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
+    if (NS_OK != rv) {
+      NS_RELEASE(copier);
+      NS_RELEASE(url);
+      return rv;
     }
-  }
-#endif
+        
+    // Enter the message pump to allow the URL load to proceed.
+  #ifdef XP_PC
+    MSG msg;
+    while ( !copier->IsDone() ) {
+      if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+    }
+  #endif
 
-  PRBool error = copier->HaveError();
+    PRBool error = copier->HaveError();
+    NS_RELEASE(copier);
+  }
   NS_RELEASE(url);
-  NS_RELEASE(copier);
   return error ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
 }
 
@@ -302,9 +287,11 @@ main(int argc, char **argv)
     return -1;
   }
   PageGrabber* grabber = new PageGrabber();
-  grabber->Init(argv[2]);
-  if (NS_OK != grabber->Grab(argv[1])) {
-    return -1;
+  if(grabber) {
+    grabber->Init(argv[2]);
+    if (NS_OK != grabber->Grab(argv[1])) {
+      return -1;
+    }
   }
   return 0;
 }

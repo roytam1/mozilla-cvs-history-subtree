@@ -19,33 +19,41 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
+
 #include "nsWidget.h"
 #include "nsAppShell.h"
+#include "nsKeyCode.h"
+
 #include "nsIWidget.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsITimer.h"
 
-static PRUint8 convertMaskToCount(unsigned long val);
-static PRUint8 getShiftForMask(unsigned long val);
+#ifdef TOOLKIT_EXORCISM
+#include "nsIXlibWindowService.h"
+#endif /* TOOLKIT_EXORCISM */
 
-static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+#include "xlibrgb.h"
+
+#define CHAR_BUF_SIZE 40
+
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_IID(kIEventQueueServiceIID, NS_IEVENTQUEUESERVICE_IID);
 
-extern "C"
-void
-xlib_rgb_init (Display *display, Screen *screen);
+#ifdef TOOLKIT_EXORCISM
+static NS_DEFINE_IID(kWindowServiceCID,NS_XLIB_WINDOW_SERVICE_CID);
+static NS_DEFINE_IID(kWindowServiceIID,NS_XLIB_WINDOW_SERVICE_IID);
+#endif /* TOOLKIT_EXORCISM */
 
-extern "C"
-Visual *
-xlib_rgb_get_visual (void);
-
-// this is so that we can get the timers in the base.  most widget
-// toolkits do this through some set of globals.  not here though.  we
-// don't have that luxury
+#ifndef TOOLKIT_EXORCISM
+// // this is so that we can get the timers in the base.  most widget
+// // toolkits do this through some set of globals.  not here though.  we
+// // don't have that luxury
 extern "C" int NS_TimeToNextTimeout(struct timeval *);
 extern "C" void NS_ProcessTimeouts(void);
+#endif /* TOOLKIT_EXORCISM */
 
+PRBool nsAppShell::DieAppShellDie = PR_FALSE;
 
 // For debugging.
 static char *event_names[] = {
@@ -86,6 +94,110 @@ static char *event_names[] = {
   "MappingNotify"
 };
 
+#ifdef TOOLKIT_EXORCISM
+static nsXlibTimeToNextTimeoutFunc GetTimeToNextTimeoutFunc(void)
+{
+  static nsXlibTimeToNextTimeoutFunc sFunc = nsnull;
+
+  if (!sFunc)
+  {
+    nsIXlibWindowService * xlibWindowService = nsnull;
+    
+    nsresult rv = nsServiceManager::GetService(kWindowServiceCID,
+                                               kWindowServiceIID,
+                                               (nsISupports **)&xlibWindowService);
+    
+    NS_ASSERTION(NS_SUCCEEDED(rv),"Couldn't obtain window service.");
+    
+    if (NS_OK == rv && nsnull != xlibWindowService)
+    {
+      xlibWindowService->GetTimeToNextTimeoutFunc(&sFunc);
+    
+      NS_ASSERTION(nsnull != sFunc,"Time to next timeout func is null.");
+
+      static int once = 1;
+
+      if (once && sFunc)
+      {
+        once = 0;
+
+        printf("YES! Time to next timeout func is good.\n");
+      }
+      
+      NS_RELEASE(xlibWindowService);
+    }
+  }
+
+  return sFunc;
+}
+
+static nsXlibProcessTimeoutsProc GetProcessTimeoutsProc(void)
+{
+  static nsXlibProcessTimeoutsProc sProc = nsnull;
+
+  if (!sProc)
+  {
+    nsIXlibWindowService * xlibWindowService = nsnull;
+    
+    nsresult rv = nsServiceManager::GetService(kWindowServiceCID,
+                                               kWindowServiceIID,
+                                               (nsISupports **)&xlibWindowService);
+    
+    NS_ASSERTION(NS_SUCCEEDED(rv),"Couldn't obtain window service.");
+    
+    if (NS_OK == rv && nsnull != xlibWindowService)
+    {
+      xlibWindowService->GetProcessTimeoutsProc(&sProc);
+    
+      NS_ASSERTION(nsnull != sProc,"process timeout proc is null.");
+
+      static int once = 1;
+
+      if (once && sProc)
+      {
+        once = 0;
+
+        printf("YES! Process timeout proc is good.\n");
+      }
+
+      NS_RELEASE(xlibWindowService);
+    }
+  }
+
+  return sProc;
+}
+#endif
+
+static int CallTimeToNextTimeoutFunc(struct timeval * aTimeval)
+{
+#ifndef TOOLKIT_EXORCISM
+  return NS_TimeToNextTimeout(aTimeval);
+#else
+  nsXlibTimeToNextTimeoutFunc func = GetTimeToNextTimeoutFunc();
+
+  if (func)
+  {
+    return (*func)(aTimeval);
+  }
+
+  return 0;
+#endif /* TOOLKIT_EXORCISM */
+}
+
+static void CallProcessTimeoutsProc(void)
+{
+#ifndef TOOLKIT_EXORCISM
+  NS_ProcessTimeouts();
+#else
+  nsXlibProcessTimeoutsProc proc = GetProcessTimeoutsProc();
+
+  if (proc)
+  {
+    (*proc)();
+  }
+#endif /* TOOLKIT_EXORCISM */
+}
+
 #define ALL_EVENTS ( KeyPressMask | KeyReleaseMask | ButtonPressMask | \
                      ButtonReleaseMask | EnterWindowMask | LeaveWindowMask | \
                      PointerMotionMask | PointerMotionHintMask | Button1MotionMask | \
@@ -104,6 +216,9 @@ nsAppShell::nsAppShell()
 { 
   NS_INIT_REFCNT();
   mDispatchListener = 0;
+
+  mDisplay = nsnull;
+  mScreen = nsnull;
 }
 
 nsresult nsAppShell::QueryInterface(const nsIID& aIID, void** aInstancePtr)
@@ -122,51 +237,28 @@ nsresult nsAppShell::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 
 NS_METHOD nsAppShell::Create(int* argc, char ** argv)
 {
-  int      num_visuals = 0;
-  XVisualInfo vis_template;
-  // open the display
-  if ((gDisplay = XOpenDisplay(NULL)) == NULL) {
+  // Open the display
+  mDisplay = XOpenDisplay(NULL);
+
+  if (mDisplay == NULL) 
+  {
     fprintf(stderr, "%s: Cannot connect to X server %s\n",
-            argv[0], XDisplayName(NULL));
+            argv[0], 
+            XDisplayName(NULL));
+    
     exit(1);
   }
+
   _Xdebug = 1;
-  gScreenNum = DefaultScreen(gDisplay);
-  gScreen = DefaultScreenOfDisplay(gDisplay);
-  // init the rgb layer.  this will provide
-  // the visual information for us.
-  xlib_rgb_init(gDisplay, gScreen);
-  gVisual = xlib_rgb_get_visual();
-  // set the static vars for this class so we can find our
-  // way around...
-  vis_template.visualid = XVisualIDFromVisual(gVisual);
-  gVisualInfo = XGetVisualInfo(gDisplay, VisualIDMask,
-                               &vis_template, &num_visuals);
-  if (gVisualInfo == NULL) {
-    printf("nsAppShell::Create(): Warning: Failed to get XVisualInfo\n");
-  }
-  if (num_visuals != 1) {
-    printf("nsAppShell:Create(): Warning: %d XVisualInfo structs were returned.\n", num_visuals);
-  }
-  // get the depth for this display
-  gDepth = gVisualInfo->depth;
-  // set up the color info for this display
-  // set up the masks
-  gRedMask = gVisualInfo->red_mask;
-  gGreenMask = gVisualInfo->green_mask;
-  gBlueMask = gVisualInfo->blue_mask;
-  gAlphaMask = 0;
-  // set up the number of bits in each
-  gRedCount = convertMaskToCount(gVisualInfo->red_mask);
-  gGreenCount = convertMaskToCount(gVisualInfo->green_mask);
-  gBlueCount = convertMaskToCount(gVisualInfo->blue_mask);
-  gAlphaCount = 0;
-  // set up the number of bits that you need to shift to get to
-  // a specific mask
-  gRedShift = getShiftForMask(gVisualInfo->red_mask);
-  gGreenShift = getShiftForMask(gVisualInfo->green_mask);
-  gBlueShift = getShiftForMask(gVisualInfo->blue_mask);
-  gAlphaShift = 0;
+
+  mScreen = DefaultScreenOfDisplay(mDisplay);
+
+  xlib_rgb_init(mDisplay, mScreen);
+
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsAppShell::Create(dpy=%p  screen=%p)\n",
+         mDisplay,
+         mScreen));
+
   return NS_OK;
 }
 
@@ -178,6 +270,7 @@ NS_METHOD nsAppShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
 
 nsresult nsAppShell::Run()
 {
+  NS_ADDREF_THIS();
   nsresult rv = NS_OK;
   nsIEventQueue *EQueue = nsnull;
   int xlib_fd = -1;
@@ -213,7 +306,7 @@ nsresult nsAppShell::Run()
   }    
  done:
   printf("Getting the xlib connection number.\n");
-  xlib_fd = ConnectionNumber(gDisplay);
+  xlib_fd = ConnectionNumber(mDisplay);
   queue_fd = EQueue->GetEventQueueSelectFD();
   if (xlib_fd >= queue_fd) {
     max_fd = xlib_fd + 1;
@@ -221,7 +314,7 @@ nsresult nsAppShell::Run()
     max_fd = queue_fd + 1;
   }
   // process events.
-  while (1) {
+  while (DieAppShellDie == PR_FALSE) {
     XEvent          event;
     struct timeval  cur_time;
     struct timeval *cur_time_ptr;
@@ -231,7 +324,8 @@ nsresult nsAppShell::Run()
     // add the queue and the xlib connection to the select set
     FD_SET(queue_fd, &select_set);
     FD_SET(xlib_fd, &select_set);
-    if (NS_TimeToNextTimeout(&cur_time) == 0) {
+
+    if (CallTimeToNextTimeoutFunc(&cur_time) == 0) {
       cur_time_ptr = NULL;
     }
     else {
@@ -262,21 +356,62 @@ nsresult nsAppShell::Run()
     // check to see if there's data avilable for
     // xlib
     if (FD_ISSET(xlib_fd, &select_set)) {
-      //printf("xlib data available.\n");
-      //XNextEvent(gDisplay, &event);
-      while (XCheckMaskEvent(gDisplay, ALL_EVENTS, &event)) {
-        DispatchEvent(&event);
+      while (XPending(mDisplay)) {
+        XNextEvent(mDisplay, &event);
+        DispatchXEvent(&event);
       }
     }
     if (please_run_timer_queue) {
       //printf("Running timer queue...\n");
-      NS_ProcessTimeouts();
+      CallProcessTimeoutsProc();
     }
     // make sure that any pending X requests are flushed.
-    XFlush(gDisplay);
+    XFlush(mDisplay);
   }
 
 	NS_IF_RELEASE(EQueue);
+  NS_IF_RELEASE(mEventQueueService);
+  Release();
+  return rv;
+}
+
+//-------------------------------------------------------------------------
+//
+// PushThreadEventQueue - begin processing events from a new queue
+//   note this is the Windows implementation and may suffice, but
+//   this is untested on xlib.
+//
+//-------------------------------------------------------------------------
+NS_METHOD nsAppShell::PushThreadEventQueue()
+{
+  nsresult rv;
+
+  // push a nested event queue for event processing from netlib
+  // onto our UI thread queue stack.
+  NS_WITH_SERVICE(nsIEventQueueService, eQueueService, kEventQueueServiceCID, &rv);
+  if (NS_SUCCEEDED(rv))
+    rv = eQueueService->PushThreadEventQueue();
+  else
+    NS_ERROR("Appshell unable to obtain eventqueue service.");
+  return rv;
+}
+
+//-------------------------------------------------------------------------
+//
+// PopThreadEventQueue - stop processing on a previously pushed event queue
+//   note this is the Windows implementation and may suffice, but
+//   this is untested on xlib.
+//
+//-------------------------------------------------------------------------
+NS_METHOD nsAppShell::PopThreadEventQueue()
+{
+  nsresult rv;
+
+  NS_WITH_SERVICE(nsIEventQueueService, eQueueService, kEventQueueServiceCID, &rv);
+  if (NS_SUCCEEDED(rv))
+    rv = eQueueService->PopThreadEventQueue();
+  else
+    NS_ERROR("Appshell unable to obtain eventqueue service.");
   return rv;
 }
 
@@ -295,11 +430,17 @@ nsAppShell::EventIsForModalWindow(PRBool aRealEvent, void *aEvent,
 
 nsresult nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
 {
+  if (aEvent == 0) {
+    return NS_ERROR_FAILURE;
+  }
+  XEvent *event = (XEvent *)aEvent;
+  DispatchXEvent(event);
   return NS_OK;
 }
 
 NS_METHOD nsAppShell::Exit()
 {
+  DieAppShellDie = PR_TRUE;
   return NS_OK;
 }
 
@@ -313,31 +454,78 @@ void* nsAppShell::GetNativeData(PRUint32 aDataType)
 }
 
 void
-nsAppShell::DispatchEvent(XEvent *event)
+nsAppShell::DispatchXEvent(XEvent *event)
 {
   nsWidget *widget;
-  widget = nsWidget::getWidgetForWindow(event->xany.window);
+  widget = nsWidget::GetWidgetForWindow(event->xany.window);
+
   // switch on the type of event
-  switch (event->type) {
+  switch (event->type) 
+  {
   case Expose:
-    HandleExposeEvent(event, widget);
+	HandleExposeEvent(event, widget);
     break;
+
   case ConfigureNotify:
     // we need to make sure that this is the LAST of the
     // config events.
-    while (XCheckWindowEvent(gDisplay, event->xany.window, StructureNotifyMask, event) == True);
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("DispatchEvent: ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+                                         event->xconfigure.window,
+                                         event->xconfigure.x, 
+                                         event->xconfigure.y,
+                                         event->xconfigure.width, 
+                                         event->xconfigure.height));
+
     HandleConfigureNotifyEvent(event, widget);
+
     break;
+
   case ButtonPress:
   case ButtonRelease:
+    HandleFocusInEvent(event, widget);
     HandleButtonEvent(event, widget);
     break;
+
   case MotionNotify:
     HandleMotionNotifyEvent(event, widget);
     break;
+
+  case KeyPress:
+    HandleKeyPressEvent(event, widget);
+    break;
+  case KeyRelease:
+    HandleKeyReleaseEvent(event, widget);
+    break;
+
+  case FocusIn:
+    HandleFocusInEvent(event, widget);
+    break;
+
+  case FocusOut:
+    HandleFocusOutEvent(event, widget);
+    break;
+
+  case EnterNotify:
+    HandleEnterEvent(event, widget);
+    break;
+
+  case LeaveNotify:
+    HandleLeaveEvent(event, widget);
+    break;
+
+  case NoExpose:
+    // these annoy me.
+    break;
+  case VisibilityNotify:
+    HandleVisibilityNotifyEvent(event, widget);
+    break;
+  case ClientMessage:
+    HandleClientMessageEvent(event, widget);
+    break;
   default:
-    printf("Unhandled window event: Window 0x%lx Got a %s event\n",
-           event->xany.window, event_names[event->type]);
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Unhandled window event: Window 0x%lx Got a %s event\n",
+                                         event->xany.window, event_names[event->type]));
+
     break;
   }
 }
@@ -361,9 +549,12 @@ void
 nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
 {
   nsMouseEvent mevent;
+  mevent.isShift = 0;
+  mevent.isControl = 0;
   PRUint32 eventType = 0;
-  printf("Button event for window 0x%lx button %d type %s\n",
-         event->xany.window, event->xbutton.button, (event->type == ButtonPress ? "ButtonPress" : "ButtonRelease"));
+
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Button event for window 0x%lx button %d type %s\n",
+         event->xany.window, event->xbutton.button, (event->type == ButtonPress ? "ButtonPress" : "ButtonRelease")));
   switch(event->type) {
   case ButtonPress:
     switch(event->xbutton.button) {
@@ -392,6 +583,7 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
     }
     break;
   }
+
   mevent.message = eventType;
   mevent.widget = aWidget;
   mevent.eventStructType = NS_MOUSE_EVENT;
@@ -408,14 +600,29 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
 void
 nsAppShell::HandleExposeEvent(XEvent *event, nsWidget *aWidget)
 {
-  printf("Expose event for window 0x%lx %d %d %d %d\n", event->xany.window,
-         event->xexpose.x, event->xexpose.y, event->xexpose.width, event->xexpose.height);
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Expose event for window 0x%lx %d %d %d %d\n", event->xany.window,
+                                       event->xexpose.x, event->xexpose.y, event->xexpose.width, event->xexpose.height));
+
+  nsRect *dirtyRect = new nsRect(event->xexpose.x, event->xexpose.y, 
+                                 event->xexpose.width, event->xexpose.height);
+
+  /* compress expose events...
+   */
+  if (event->xexpose.count!=0) {
+     XEvent txe;
+     do {
+        XWindowEvent(event->xany.display, event->xany.window, ExposureMask, (XEvent *)&txe);
+        dirtyRect->UnionRect(*dirtyRect, nsRect(txe.xexpose.x, txe.xexpose.y, 
+                                                txe.xexpose.width, txe.xexpose.height));
+     } while (txe.xexpose.count>0);
+  }
+
   nsPaintEvent pevent;
   pevent.message = NS_PAINT;
   pevent.widget = aWidget;
   pevent.eventStructType = NS_PAINT_EVENT;
-  pevent.rect = new nsRect (event->xexpose.x, event->xexpose.y,
-                            event->xexpose.width, event->xexpose.height);
+  pevent.rect = dirtyRect;
+
   // XXX fix this
   pevent.time = 0;
   NS_ADDREF(aWidget);
@@ -427,10 +634,30 @@ nsAppShell::HandleExposeEvent(XEvent *event, nsWidget *aWidget)
 void
 nsAppShell::HandleConfigureNotifyEvent(XEvent *event, nsWidget *aWidget)
 {
-  printf("ConfigureNotify event for window 0x%lx %d %d %d %d\n",
-         event->xconfigure.window,
-         event->xconfigure.x, event->xconfigure.y,
-         event->xconfigure.width, event->xconfigure.height);
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+                                       event->xconfigure.window,
+                                       event->xconfigure.x, event->xconfigure.y,
+                                       event->xconfigure.width, event->xconfigure.height));
+  XEvent    config_event;
+  while (XCheckWindowEvent(event->xany.display, 
+                           event->xany.window, 
+                           StructureNotifyMask, 
+                           &config_event) == True) {
+    // make sure that we don't get other types of events.  
+    // StructureNotifyMask includes other kinds of events, too.
+    if (config_event.type == ConfigureNotify) 
+      {
+        *event = config_event;
+        
+        PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("DispatchEvent: Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+                                             event->xconfigure.window,
+                                             event->xconfigure.x, 
+                                             event->xconfigure.y,
+                                             event->xconfigure.width, 
+                                             event->xconfigure.height));
+      }
+  }
+
   nsSizeEvent sevent;
   sevent.message = NS_SIZE;
   sevent.widget = aWidget;
@@ -449,30 +676,230 @@ nsAppShell::HandleConfigureNotifyEvent(XEvent *event, nsWidget *aWidget)
   delete sevent.windowSize;
 }
 
-static PRUint8 convertMaskToCount(unsigned long val)
+void
+nsAppShell::HandleKeyPressEvent(XEvent *event, nsWidget *aWidget)
 {
-  PRUint8 retval = 0;
-  PRUint8 cur_bit = 0;
-  // walk through the number, incrementing the value if
-  // the bit in question is set.
-  while (cur_bit < (sizeof(unsigned long) * 8)) {
-    if ((val >> cur_bit) & 0x1) {
-      retval++;
-    }
-    cur_bit++;
+  char string_buf[CHAR_BUF_SIZE];
+  int  len = 0;
+
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("KeyPress event for window 0x%lx\n",
+                                       event->xkey.window));
+
+  // Dont dispatch events for modifier keys pressed ALONE
+  if (nsKeyCode::KeyCodeIsModifier(event->xkey.keycode))
+  {
+    return;
   }
-  return retval;
+
+  nsKeyEvent keyEvent;
+
+  KeySym     keysym = nsKeyCode::ConvertKeyCodeToKeySym(event->xkey.display,
+                                                        event->xkey.keycode);
+  XComposeStatus compose;
+
+  len = XLookupString(&event->xkey, string_buf, CHAR_BUF_SIZE, &keysym, &compose);
+  string_buf[len] = '\0';
+
+  keyEvent.keyCode = nsKeyCode::ConvertKeySymToVirtualKey(keysym);
+  keyEvent.charCode = 0;
+  keyEvent.time = event->xkey.time;
+  keyEvent.isShift = event->xkey.state & ShiftMask;
+  keyEvent.isControl = event->xkey.state & ControlMask;
+  keyEvent.isAlt = event->xkey.state & Mod1Mask;
+  keyEvent.point.x = 0;
+  keyEvent.point.y = 0;
+  keyEvent.message = NS_KEY_DOWN;
+  keyEvent.widget = aWidget;
+  keyEvent.eventStructType = NS_KEY_EVENT;
+
+  //  printf("keysym = %x, keycode = %x, vk = %x\n",
+  //         keysym,
+  //         event->xkey.keycode,
+  //         keyEvent.keyCode);
+
+  aWidget->DispatchKeyEvent(keyEvent);
+
+  keyEvent.keyCode = nsKeyCode::ConvertKeySymToVirtualKey(keysym);
+  keyEvent.charCode = string_buf[0];
+  keyEvent.time = event->xkey.time;
+  keyEvent.isShift = event->xkey.state & ShiftMask;
+  keyEvent.isControl = event->xkey.state & ControlMask;
+  keyEvent.isAlt = event->xkey.state & Mod1Mask;
+  keyEvent.point.x = 0;
+  keyEvent.point.y = 0;
+  keyEvent.message = NS_KEY_PRESS;
+  keyEvent.widget = aWidget;
+  keyEvent.eventStructType = NS_KEY_EVENT;
+
+  aWidget->DispatchKeyEvent(keyEvent);
+
 }
 
-static PRUint8 getShiftForMask(unsigned long val)
+void
+nsAppShell::HandleKeyReleaseEvent(XEvent *event, nsWidget *aWidget)
 {
-  PRUint8 cur_bit = 0;
-  // walk through the number, looking for the first 1
-  while (cur_bit < (sizeof(unsigned long) * 8)) {
-    if ((val >> cur_bit) & 0x1) {
-      return cur_bit;
-    }
-    cur_bit++;
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("KeyRelease event for window 0x%lx\n",
+                                       event->xkey.window));
+
+  // Dont dispatch events for modifier keys pressed ALONE
+  if (nsKeyCode::KeyCodeIsModifier(event->xkey.keycode))
+  {
+    return;
   }
-  return cur_bit;
+
+  nsKeyEvent keyEvent;
+  KeySym     keysym = nsKeyCode::ConvertKeyCodeToKeySym(event->xkey.display,
+                                                        event->xkey.keycode);
+
+  keyEvent.keyCode = nsKeyCode::ConvertKeySymToVirtualKey(keysym);
+  keyEvent.charCode = 0;
+  keyEvent.time = event->xkey.time;
+  keyEvent.isShift = event->xkey.state & ShiftMask;
+  keyEvent.isControl = event->xkey.state & ControlMask;
+  keyEvent.isAlt = event->xkey.state & Mod1Mask;
+  keyEvent.point.x = event->xkey.x;
+  keyEvent.point.y = event->xkey.y;
+  keyEvent.message = NS_KEY_UP;
+  keyEvent.widget = aWidget;
+  keyEvent.eventStructType = NS_KEY_EVENT;
+
+  NS_ADDREF(aWidget);
+
+  aWidget->DispatchKeyEvent(keyEvent);
+
+  NS_RELEASE(aWidget);
+}
+
+void
+nsAppShell::HandleFocusInEvent(XEvent *event, nsWidget *aWidget)
+{
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("FocusIn event for window 0x%lx\n",
+                                       event->xfocus.window));
+  nsGUIEvent focusEvent;
+  
+  focusEvent.message = NS_GOTFOCUS;
+  focusEvent.widget  = aWidget;
+  
+  focusEvent.eventStructType = NS_GUI_EVENT;
+  
+  focusEvent.time = 0;
+  focusEvent.point.x = 0;
+  focusEvent.point.y = 0;
+  
+  NS_ADDREF(aWidget);
+  aWidget->DispatchWindowEvent(focusEvent);
+  NS_RELEASE(aWidget);
+}
+
+void
+nsAppShell::HandleFocusOutEvent(XEvent *event, nsWidget *aWidget)
+{
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("FocusOut event for window 0x%lx\n",
+                                       event->xfocus.window));
+  nsGUIEvent focusEvent;
+  
+  focusEvent.message = NS_LOSTFOCUS;
+  focusEvent.widget  = aWidget;
+  
+  focusEvent.eventStructType = NS_GUI_EVENT;
+  
+  focusEvent.time = 0;
+  focusEvent.point.x = 0;
+  focusEvent.point.y = 0;
+  
+  NS_ADDREF(aWidget);
+  aWidget->DispatchWindowEvent(focusEvent);
+  NS_RELEASE(aWidget);
+}
+
+void
+nsAppShell::HandleEnterEvent(XEvent *event, nsWidget *aWidget)
+{
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Enter event for window 0x%lx\n",
+                                       event->xcrossing.window));
+  nsMouseEvent enterEvent;
+
+  enterEvent.message = NS_MOUSE_ENTER;
+  enterEvent.widget  = aWidget;
+  
+  enterEvent.eventStructType = NS_MOUSE_EVENT;
+  
+  enterEvent.time = event->xcrossing.time;
+  enterEvent.point.x = nscoord(event->xcrossing.x);
+  enterEvent.point.y = nscoord(event->xcrossing.y);
+  
+  NS_ADDREF(aWidget);
+
+  aWidget->DispatchWindowEvent(enterEvent);
+
+  NS_RELEASE(aWidget);
+}
+
+void
+nsAppShell::HandleLeaveEvent(XEvent *event, nsWidget *aWidget)
+{
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Leave event for window 0x%lx\n",
+                                       event->xcrossing.window));
+
+  nsMouseEvent leaveEvent;
+  
+  leaveEvent.message = NS_MOUSE_EXIT;
+  leaveEvent.widget  = aWidget;
+  
+  leaveEvent.eventStructType = NS_MOUSE_EVENT;
+  
+  leaveEvent.time = event->xcrossing.time;
+  leaveEvent.point.x = nscoord(event->xcrossing.x);
+  leaveEvent.point.y = nscoord(event->xcrossing.y);
+  
+  NS_ADDREF(aWidget);
+
+  aWidget->DispatchWindowEvent(leaveEvent);
+
+  NS_RELEASE(aWidget);
+}
+
+void nsAppShell::HandleVisibilityNotifyEvent(XEvent *event, nsWidget *aWidget)
+{
+#ifdef DEBUG
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("VisibilityNotify event for window 0x%lx ",
+                                       event->xfocus.window));
+  switch(event->xvisibility.state) {
+  case VisibilityFullyObscured:
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Fully Obscured\n"));
+    break;
+  case VisibilityPartiallyObscured:
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Partially Obscured\n"));
+    break;
+  case VisibilityUnobscured:
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Unobscured\n"));
+  }
+#endif
+  aWidget->SetVisibility(event->xvisibility.state);
+}
+
+void nsAppShell::HandleMapNotifyEvent(XEvent *event, nsWidget *aWidget)
+{
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("MapNotify event for window 0x%lx\n",
+                                       event->xmap.window));
+  aWidget->SetMapStatus(PR_TRUE);
+}
+
+void nsAppShell::HandleUnmapNotifyEvent(XEvent *event, nsWidget *aWidget)
+{
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("UnmapNotifyEvent for window 0x%lx\n",
+                                       event->xunmap.window));
+  aWidget->SetMapStatus(PR_FALSE);
+}
+
+void nsAppShell::HandleClientMessageEvent(XEvent *event, nsWidget *aWidget)
+{
+  // check to see if it's a WM_DELETE message
+  printf("handling client message\n");
+  if (nsWidget::WMProtocolsInitialized) {
+    if ((Atom)event->xclient.data.l[0] == nsWidget::WMDeleteWindow) {
+      printf("got a delete window event\n");
+      aWidget->OnDeleteWindow();
+    }
+  }
 }

@@ -377,7 +377,6 @@ nsLineLayout::UpdateFrames()
   PerSpanData* psd = mRootSpan;
   if (NS_STYLE_DIRECTION_LTR == psd->mDirection) {
     if (PLACED_LEFT & mPlacedFloaters) {
-      PerSpanData* psd = mRootSpan;
       PerFrameData* pfd = psd->mFirstFrame;
       while (nsnull != pfd) {
         pfd->mBounds.x = psd->mX;
@@ -772,20 +771,20 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   // Setup reflow state for reflowing the frame
   nsHTMLReflowState reflowState(mPresContext, *psd->mReflowState, aFrame,
                                 availSize, reason);
-  reflowState.lineLayout = this;
+  reflowState.mLineLayout = this;
   reflowState.isTopOfPage = mIsTopOfPage;
   mUnderstandsWhiteSpace = PR_FALSE;
 
   // Stash copies of some of the computed state away for later
   // (vertical alignment, for example)
   pfd->mFrame = aFrame;
-  pfd->mMargin = reflowState.computedMargin;
+  pfd->mMargin = reflowState.mComputedMargin;
   pfd->mBorderPadding = reflowState.mComputedBorderPadding;
-  pfd->mFrameType = reflowState.frameType;
+  pfd->mFrameType = reflowState.mFrameType;
   pfd->mRelativePos =
     reflowState.mStylePosition->mPosition == NS_STYLE_POSITION_RELATIVE;
   if (pfd->mRelativePos) {
-    pfd->mOffsets = reflowState.computedOffsets;
+    pfd->mOffsets = reflowState.mComputedOffsets;
   }
 
   // We want to guarantee that we always make progress when
@@ -800,7 +799,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   // the state out. We need to know how to treat the current frame
   // when breaking.
   PRBool notSafeToBreak = CanPlaceFloaterNow() || InWord();
-  PRBool firstLetterOK = mFirstLetterStyleOK;
+//XXX  PRBool firstLetterOK = mFirstLetterStyleOK;
 
   // Apply left margins (as appropriate) to the frame computing the
   // new starting x,y coordinates for the frame.
@@ -973,8 +972,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         parent->DeleteChildsNextInFlow(mPresContext, aFrame);
       }
     }
-    if (firstLetterOK && !mFirstLetterStyleOK) {
-    }
+//XXX    if (firstLetterOK && !mFirstLetterStyleOK) {
+//XXX    }
 
     // See if we can place the frame. If we can't fit it, then we
     // return now.
@@ -1211,9 +1210,9 @@ nsLineLayout::PlaceFrame(PerFrameData* pfd, nsHTMLReflowMetrics& aMetrics)
   psd->mX = pfd->mBounds.XMost() + pfd->mMargin.right;
 
   // If the frame is a not aware of white-space and it takes up some
-  // area, disable leading white-space compression for the next frame
+  // width, disable leading white-space compression for the next frame
   // to be reflowed.
-  if (!mUnderstandsWhiteSpace && !emptyFrame) {
+  if (!mUnderstandsWhiteSpace && pfd->mBounds.width) {
     mEndsInWhiteSpace = PR_FALSE;
   }
 
@@ -1285,7 +1284,7 @@ nsLineLayout::VerticalAlignFrames(nsRect& aLineBoxResult,
   // Synthesize a PerFrameData for the block frame
   PerFrameData rootPFD;
   rootPFD.mFrame = mBlockReflowState->frame;
-  rootPFD.mFrameType = mBlockReflowState->frameType;
+  rootPFD.mFrameType = mBlockReflowState->mFrameType;
   rootPFD.mAscent = 0;
   rootPFD.mDescent = 0;
   mRootSpan->mFrame = &rootPFD;

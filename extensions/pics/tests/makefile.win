@@ -17,12 +17,13 @@
 
 
 DEPTH	= ..\..\..
+include <$(DEPTH)/config/config.mak>
 DEFINES=-D_IMPL_NS_PICS -DWIN32_LEAN_AND_MEAN
 MODULE=pics 
 
 MAKE_OBJ_TYPE = EXE
 
-LCFLAGS=-DUSE_NSREG
+LCFLAGS=-DUSE_NSREG -DNECKO
 
 EXENAME=TestPICS
 PDBFILE=TestPICS.pdb
@@ -46,7 +47,6 @@ LINCS = -I$(PUBLIC)/js \
 LLIBS=				\
  $(DIST)\lib\pics.lib	\
  $(DIST)\lib\xpcom.lib	\
- $(DIST)\lib\plc3.lib \
  $(LIBNSPR) \
 
 include <$(DEPTH)\config\rules.mak>

@@ -19,8 +19,7 @@
 /* Implement shared vtbl methods. */
 
 #include "xptcprivate.h"
-
-#if defined(LINUX) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__bsdi__) || defined(NTO) || defined(__BEOS__)
+#include "xptc_platforms_unixish_x86.h"
 
 static nsresult
 PrepareAndDispatch(nsXPTCStubBase* self, uint32 methodIndex, PRUint32* args)
@@ -110,7 +109,7 @@ nsresult nsXPTCStubBase::Stub##n() \
     "call   *%%edx"                    /* PrepareAndDispatch */ \
     : "=a" (result)     /* %0 */ \
     : "d" (method)      /* %1 */ \
-    : "ax", "dx", "cx", "memory" ); \
+    : "cx", "memory" ); \
     return result; \
 }
 
@@ -122,5 +121,3 @@ nsresult nsXPTCStubBase::Sentinel##n() \
 }
 
 #include "xptcstubsdef.inc"
-
-#endif

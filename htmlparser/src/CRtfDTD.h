@@ -102,7 +102,7 @@ class CRTFControlWord : public CToken {
 public:
                   CRTFControlWord(char* aKey);
   virtual PRInt32 GetTokenType();
-  virtual PRInt32 Consume(nsScanner& aScanner);
+  virtual nsresult Consume(PRUnichar aChar,nsScanner& aScanner);
 protected:
   nsString  mArgument;
 };
@@ -120,7 +120,7 @@ public:
   virtual PRInt32 GetTokenType();
   virtual void    SetGroupStart(PRBool aFlag);
   virtual PRBool  IsGroupStart();
-  virtual PRInt32 Consume(nsScanner& aScanner);
+  virtual nsresult Consume(PRUnichar aChar,nsScanner& aScanner);
 protected:
           PRBool  mStart;
 };
@@ -136,7 +136,7 @@ class CRTFContent: public CToken {
 public:
                   CRTFContent(PRUnichar* aValue);
   virtual PRInt32 GetTokenType();
-  virtual PRInt32 Consume(nsScanner& aScanner);
+  virtual nsresult Consume(PRUnichar aChar,nsScanner& aScanner);
 };
 
 
@@ -337,6 +337,25 @@ class CRtfDTD : public nsIDTD {
      * @return  ptr to recycler (or null)
      */
     virtual nsITokenRecycler* GetTokenRecycler(void);
+
+    /**
+     * Use this id you want to stop the building content model
+     * --------------[ Sets DTD to STOP mode ]----------------
+     * It's recommended to use this method in accordance with
+     * the parser's terminate() method.
+     *
+     * @update	harishd 07/22/99
+     * @param 
+     * @return
+     */
+    virtual nsresult  Terminate(void);
+
+    /**
+     * Give rest of world access to our tag enums, so that CanContain(), etc,
+     * become useful.
+     */
+    NS_IMETHOD StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const;
+
     
 protected:
     

@@ -21,6 +21,7 @@
 #include "nslayout.h"
 #include "nsISupports.h"
 #include "nsCoord.h"
+#include "nsIDOMSelection.h"
 
 class nsIContent;
 class nsIDocument;
@@ -33,22 +34,31 @@ class nsIReflowCommand;
 class nsIDeviceContext;
 class nsIRenderingContext;
 class nsIPageSequenceFrame;
-class nsIDOMSelection;
 class nsString;
 class nsStringArray;
 class nsICaret;
 class nsIStyleContext;
+class nsIFrameSelection;
+class nsIFrameManager;
 
 #define NS_IPRESSHELL_IID     \
 { 0x76e79c60, 0x944e, 0x11d1, \
   {0x93, 0x23, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
 
-#define NS_PRESSHELL_SCROLL_TOP      0x00000001
-#define NS_PRESSHELL_SCROLL_BOTTOM   0x00000002
-#define NS_PRESSHELL_SCROLL_LEFT     0x00000004
-#define NS_PRESSHELL_SCROLL_RIGHT    0x00000008
-#define NS_PRESSHELL_SCROLL_ANYWHERE 0x00000010
-#define NS_PRESSHELL_SCROLL_ENTIRE   0x00000020
+// Constants uses for ScrollFrameIntoView() function
+#define NS_PRESSHELL_SCROLL_TOP      0
+#define NS_PRESSHELL_SCROLL_BOTTOM   100
+#define NS_PRESSHELL_SCROLL_LEFT     0
+#define NS_PRESSHELL_SCROLL_RIGHT    100
+#define NS_PRESSHELL_SCROLL_CENTER   50
+#define NS_PRESSHELL_SCROLL_ANYWHERE -1
+
+typedef enum SelectionType{SELECTION_NORMAL = 0, 
+                   SELECTION_SPELLCHECK, 
+                   SELECTION_IME_SOLID, 
+                   SELECTION_IME_DASHED, 
+                   NUM_SELECTIONTYPES} SelectionType;
+
 
 /**
  * Presentation shell interface. Presentation shells are the
@@ -94,7 +104,13 @@ public:
    *
    * @param aSelection will hold the return value
    */
-  NS_IMETHOD GetSelection(nsIDOMSelection** aSelection) = 0;
+  NS_IMETHOD GetSelection(SelectionType aType, nsIDOMSelection** aSelection) = 0;
+
+  /**
+   * GetFrameSelection will return the Frame based selection API you 
+   *  cannot go back and forth anymore with QI with nsIDOM sel and nsIFrame sel.
+   */
+  NS_IMETHOD GetFrameSelection(nsIFrameSelection** aSelection) = 0;
 
   NS_IMETHOD EnterReflowLock() = 0;
 
@@ -135,7 +151,8 @@ public:
   NS_IMETHOD GetPageSequenceFrame(nsIPageSequenceFrame** aResult) const = 0;
 
   /**
-   * Returns the primary frame associated with the content object.
+   * Gets the primary frame associated with the content object. This is a
+   * helper function that just forwards the request to the frame manager.
    *
    * The primary frame is the frame that is most closely associated with the
    * content. A frame is more closely associated with the content that another
@@ -167,37 +184,35 @@ public:
                                 nsISupports** aResult) const = 0;
 
   /**
-   * Get/Set the placeholder frame associated with the specified frame.
-   *
-   * Out of flow frames (e.g., absolutely positioned frames and floated frames)
-   * can have placeholder frames that are inserted into the flow and indicate
-   * where the frame would be if it were part of the flow
+   * Gets the placeholder frame associated with the specified frame. This is
+   * a helper frame that forwards the request to the frame manager.
    */
   NS_IMETHOD GetPlaceholderFrameFor(nsIFrame*  aFrame,
                                     nsIFrame** aPlaceholderFrame) const = 0;
-  NS_IMETHOD SetPlaceholderFrameFor(nsIFrame* aFrame,
-                                    nsIFrame* aPlaceholderFrame) = 0;
 
+  /**
+   * Reflow commands
+   */
   NS_IMETHOD AppendReflowCommand(nsIReflowCommand* aReflowCommand) = 0;
-
   NS_IMETHOD CancelReflowCommand(nsIFrame* aTargetFrame) = 0;
-
   NS_IMETHOD ProcessReflowCommands() = 0;
 
   NS_IMETHOD ClearFrameRefs(nsIFrame* aFrame) = 0;
 
   /**
-   * Given a frame, cough up a rendering context suitable for use with
+   * Given a frame, create a rendering context suitable for use with
    * the frame.
    */
   NS_IMETHOD CreateRenderingContext(nsIFrame *aFrame,
                                     nsIRenderingContext** aContext) = 0;
 
-  // Notification that we were unable to render a replaced element.
-  // Called when the replaced element can not be rendered, and we should
-  // instead render the element's contents.
-  // The content object associated with aFrame should either be a IMG
-  // element, an OBJECT element, or an APPLET element
+  /**
+   * Notification that we were unable to render a replaced element.
+   * Called when the replaced element can not be rendered, and we should
+   * instead render the element's contents.
+   * The content object associated with aFrame should either be a IMG
+   * element, an OBJECT element, or an APPLET element
+   */
   NS_IMETHOD CantRenderReplacedElement(nsIPresContext* aPresContext,
                                        nsIFrame*       aFrame) = 0;
 
@@ -211,53 +226,46 @@ public:
   /**
    * Scrolls the view of the document so that the frame is displayed at the 
    * top of the window.
-   * @param aFrame           The frame to scroll into view
-   * @param aVOffsetPercent  The percentage to offset aFrame from the view vertically.  
-   *                         Interpretation of aVOffsetPercent is controlled by aVFlags, see below.
-   *                         Legal values are 0..100, with 0 
-   *                         being flush to the (eTop|eBottom) edge, 100 being flush to the other edge.
-   * @param aVFlags          The control flags for vertical scrolling.  
-   *                         Legal values are an OR combination of:
-   *                         NS_PRESSHELL_SCROLL_TOP
-   *                                      position the top of the frame aVOffsetPercent
-   *                                      from the top of the view
-   *                         NS_PRESSHELL_SCROLL_BOTTOM
-   *                                      position the bottom of the frame aVOffsetPercent
-   *                                      from the bottom of the view
-   *                         NS_PRESSHELL_SCROLL_ANYWHERE
-   *                                      if the (eTop|eBottom) of the frame is visible, do nothing 
-   *                                      else scroll the frame according to the other bits 
-   *                         NS_PRESSHELL_SCROLL_ENTIRE
-   *                                      Force the entire frame to be visible, using aVOffsetPercent 
-   *                                      as a starting point, but scrolling the (eTop|eBottom)
-   *                                      of the frame enough for the entire frame to fit in the view, 
-   *                                      if possible 
-   * @param aHOffsetPercent  The percentage to offset aFrame from the view horizontally.  
-   *                         Interpretation of aHOffsetPercent is controlled by aHFlags, see below.
-   *                         Legal values are 0..100, with 0 
-   *                         being flush to the (eLeft|eRight) edge, 100 being flush to the other edge.
-   * @param aHFlags          The control flags for vertical scrolling.  
-   *                         Legal values are an OR combination of:
-   *                         NS_PRESSHELL_SCROLL_LEFT
-   *                                      position the left of the frame aHOffsetPercent
-   *                                      from the left of the view
-   *                         NS_PRESSHELL_SCROLL_RIGHT
-   *                                      Position the right of the frame aHOffsetPercent
-   *                                      from the right of the view
-   *                         NS_PRESSHELL_SCROLL_ANYWHERE
-   *                                      If the (eLeft|eRight) of the frame is visible, do nothing 
-   *                                      else scroll the frame according to the other bits 
-   *                         NS_PRESSHELL_SCROLL_ENTIRE
-   *                                      Force the entire frame to be visible, using aVOffsetPercent 
-   *                                      as a starting point, but scrolling the (eLeft|eRight)
-   *                                      of the frame enough for the entire frame to fit in the view, 
-   *                                      if possible 
+   *
+   * @param aFrame    The frame to scroll into view
+   * @param aVPercent How to align the frame vertically. A value of 0
+   *                    (NS_PRESSHELL_SCROLL_TOP) means the frame's upper edge is
+   *                    aligned with the top edge of the visible area. A value of
+   *                    100 (NS_PRESSHELL_SCROLL_BOTTOM) means the frame's bottom
+   *                    edge is aligned with the bottom edge of the visible area.
+   *                    For values in between, the point "aVPercent" down the frame
+   *                    is placed at the point "aVPercent" down the visible area. A
+   *                    value of 50 (NS_PRESSHELL_SCROLL_CENTER) centers the frame
+   *                    vertically. A value of NS_PRESSHELL_SCROLL_ANYWHERE means move
+   *                    the frame the minimum amount necessary in order for the entire
+   *                    frame to be visible vertically (if possible)
+   * @param aHPercent How to align the frame horizontally. A value of 0
+   *                    (NS_PRESSHELL_SCROLL_LEFT) means the frame's left edge is
+   *                    aligned with the left edge of the visible area. A value of
+   *                    100 (NS_PRESSHELL_SCROLL_RIGHT) means the frame's right
+   *                    edge is aligned with the right edge of the visible area.
+   *                    For values in between, the point "aVPercent" across the frame
+   *                    is placed at the point "aVPercent" across the visible area.
+   *                    A value of 50 (NS_PRESSHELL_SCROLL_CENTER) centers the frame
+   *                    horizontally . A value of NS_PRESSHELL_SCROLL_ANYWHERE means move
+   *                    the frame the minimum amount necessary in order for the entire
+   *                    frame to be visible horizontally (if possible)
    */
   NS_IMETHOD ScrollFrameIntoView(nsIFrame *aFrame,
-                                 PRInt32   aVOffsetPercent, 
-                                 PRUint32  aVFlags,
-                                 PRInt32   aHOffsetPercent, 
-                                 PRUint32  aHFlags) const = 0;
+                                 PRIntn   aVPercent, 
+                                 PRIntn   aHPercent) const = 0;
+
+  /**
+   * Notification sent by a frame informing the pres shell that it is about to
+   * be destroyed.
+   * This allows any outstanding references to the frame to be cleaned up
+   */
+  NS_IMETHOD NotifyDestroyingFrame(nsIFrame* aFrame) = 0;
+
+  /**
+   * Returns the frame manager object
+   */
+  NS_IMETHOD GetFrameManager(nsIFrameManager** aFrameManager) const = 0;
 
   /**
    * Notify the Clipboard that we have something to copy.
@@ -267,20 +275,45 @@ public:
   /**
    * Get the caret, if it exists. AddRefs it.
    */
-  NS_IMETHOD GetCaret(nsICaret **outCaret) = 0;
+  NS_IMETHOD GetCaret(nsICaret **aOutCaret) = 0;
   
   /**
    * Set the caret as enabled or disabled. An enabled caret will
-   * draw orblink when made visible. A disabled caret will never show up.
+   * draw or blink when made visible. A disabled caret will never show up.
+   * Can be called any time.
+   * @param aEnable PR_TRUE to enable caret.  PR_FALSE to disable.
+   * @return always NS_OK
    */
-  NS_IMETHOD SetCaretEnabled(PRBool inEnable) = 0;
+  NS_IMETHOD SetCaretEnabled(PRBool aInEnable) = 0;
 
   /**
-   * Should the images have borders ect.
-  */
-  NS_IMETHOD SetDisplayNonTextSelection(PRBool inEnable) = 0;
+   * Gets the current state of the caret.
+   * @param aEnabled  [OUT] set to the current caret state, as set by SetCaretEnabled
+   * @return   if aOutEnabled==null, returns NS_ERROR_INVALID_ARG
+   *           else NS_OK
+   */
+  NS_IMETHOD GetCaretEnabled(PRBool *aOutEnabled) = 0;
 
-  NS_IMETHOD GetDisplayNonTextSelection(PRBool *inEnable) = 0;
+  /**
+   * Should the images have borders etc.  Actual visual effects are determined
+   * by the frames.  Visual effects may not effect layout, only display.
+   * Takes effect on next repaint, does not force a repaint itself.
+   *
+   * @param aEnabled  if PR_TRUE, visual selection effects are enabled
+   *                  if PR_FALSE visual selection effects are disabled
+   * @return  always NS_OK
+   */
+  NS_IMETHOD SetDisplayNonTextSelection(PRBool aInEnable) = 0;
+
+  /** 
+    * Gets the current state of non text selection effects
+    * @param aEnabled  [OUT] set to the current state of non text selection,
+    *                  as set by SetDisplayNonTextSelection
+    * @return   if aOutEnabled==null, returns NS_ERROR_INVALID_ARG
+    *           else NS_OK
+    */
+  NS_IMETHOD GetDisplayNonTextSelection(PRBool *aOutEnabled) = 0;
+
   // XXX events
   // XXX selection
 

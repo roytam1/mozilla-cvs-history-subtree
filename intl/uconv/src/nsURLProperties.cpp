@@ -24,8 +24,7 @@
 #ifndef NECKO
 #include "nsINetService.h"
 #else
-#include "nsIIOService.h"
-#include "nsIChannel.h"
+#include "nsNeckoUtil.h"
 #endif // NECKO
 
 static NS_DEFINE_IID(kIPersistentPropertiesIID, NS_IPERSISTENTPROPERTIES_IID);
@@ -33,16 +32,13 @@ static NS_DEFINE_IID(kIPersistentPropertiesIID, NS_IPERSISTENTPROPERTIES_IID);
 #ifndef NECKO
 static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
 static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
-#else
-static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 
 nsURLProperties::nsURLProperties(nsString& aUrl)
 {
   mDelegate = nsnull; 
   nsresult res = NS_OK;
-  nsIURL* url = nsnull;
+  nsIURI* url = nsnull;
   nsIInputStream* in = nsnull;
 
 #ifndef NECKO
@@ -58,26 +54,27 @@ nsURLProperties::nsURLProperties(nsString& aUrl)
   if(NS_SUCCEEDED(res)) 
     res = pNetService->OpenBlockingStream(url, nsnull, &in);
 #else
-  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &res);
+  res = NS_NewURI(&url, aUrl, nsnull);
   if (NS_FAILED(res)) return;
 
-  nsIChannel *channel = nsnull;
-  // XXX NECKO verb? sinkGetter?
-  const char *urlStr = aUrl.GetBuffer();
-  res = pNetService->NewChannel("load", urlStr, nsnull, nsnull, &channel);
+  res = NS_OpenURI(&in, url);
+  NS_RELEASE(url);
   if (NS_FAILED(res)) return;
-
-  res = channel->OpenInputStream(0, -1, &in);
-  NS_RELEASE(channel);
 #endif // NECKO
 
   if(NS_SUCCEEDED(res))
     res = nsComponentManager::CreateInstance(kPersistentPropertiesCID, NULL,
-                                         kIPersistentPropertiesIID, 
-                                         (void**)&mDelegate);
+                                             kIPersistentPropertiesIID, 
+                                             (void**)&mDelegate);
 
-  if(NS_SUCCEEDED(res))
-     res = mDelegate->Load(in);
+  if(NS_SUCCEEDED(res)) {
+     if(in) {
+       res = mDelegate->Load(in);
+     }
+     else {
+       res = NS_ERROR_FAILURE;
+     }
+  }
 
   if(NS_FAILED(res)) {
     NS_IF_RELEASE(mDelegate);

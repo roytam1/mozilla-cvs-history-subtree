@@ -22,7 +22,9 @@
 
 #include "nsISupports.h"
 #include "nsIFactory.h"
-#ifndef NECKO
+#ifdef NECKO
+#include "nsIChannel.h"
+#else
 #include "nsILoadAttribs.h"
 #endif // NECKO
 
@@ -40,6 +42,8 @@ class nsIWebShell;
 #define NS_SESSION_HISTORY_CID \
 { 0x68e73d52, 0x12eb, 0x11d3, { 0xbd, 0xc0, 0x0, 0x50, 0x4, 0xa, 0x9b, 0x44 } \
 }
+
+#define LOAD_HISTORY 10
 
 class nsISessionHistory : public nsISupports
 {
@@ -64,7 +68,11 @@ public:
   /**
    * Reload the current history entry
    */
-  NS_IMETHOD Reload(nsURLReloadType aReloadType) = 0;
+#ifdef NECKO
+  NS_IMETHOD Reload(nsIWebShell * aPrev, nsLoadFlags aReloadFlags) = 0;
+#else
+  NS_IMETHOD Reload(nsIWebShell * aPrev, nsURLReloadType aReloadType) = 0;
+#endif
 
   /**
    * whether you can go forward in History
@@ -84,7 +92,7 @@ public:
   /**
    * Goto to a particular point in history 
    */
-  NS_IMETHOD Goto(PRInt32 aHistoryIndex, nsIWebShell * prev) = 0;
+  NS_IMETHOD Goto(PRInt32 aHistoryIndex, nsIWebShell * prev, PRBool aIsReloading) = 0;
   /**
    * Get the length of the History list
    */
@@ -118,6 +126,17 @@ public:
    * Set the historyentry that is in the middle of loading a doc
    */
   NS_IMETHOD SetLoadingHistoryEntry(nsHistoryEntry * aHistoryEntry) = 0;
+
+  /**
+   * Get the URL of the index
+   */
+  NS_IMETHOD GetURLForIndex(PRInt32 aIndex, const PRUnichar ** aURL) = 0;
+
+
+  /**
+   * Set the URL of the index
+   */
+  NS_IMETHOD SetURLForIndex(PRInt32 aIndex, const PRUnichar * aURL) = 0;
 
 };
 

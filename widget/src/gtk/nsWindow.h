@@ -44,9 +44,8 @@ public:
     nsWindow();
     virtual ~nsWindow();
 
-    // nsIsupports
-    NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
-  
+    NS_IMETHOD WidgetToScreen(const nsRect &aOldRect, nsRect &aNewRect);
+    NS_IMETHOD ScreenToWidget(const nsRect &aOldRect, nsRect &aNewRect);  
 
     virtual void ConvertToDeviceCoordinates(nscoord &aX, nscoord &aY);
 
@@ -61,17 +60,28 @@ public:
     nsresult             SetIcon(GdkPixmap *window_pixmap, 
                                  GdkBitmap *window_mask);
     NS_IMETHOD           SetMenuBar(nsIMenuBar * aMenuBar);
+    NS_IMETHOD           Show(PRBool aShow);
     NS_IMETHOD           ShowMenuBar(PRBool aShow);
-    NS_IMETHOD           IsMenuBarVisible(PRBool *aVisible);
+    NS_IMETHOD           CaptureMouse(PRBool aCapture);
+
+    NS_IMETHOD           Move(PRInt32 aX, PRInt32 aY);
+
+    NS_IMETHOD           Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint);
+    NS_IMETHOD           Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+                                PRInt32 aHeight, PRBool aRepaint);
+
+    NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
+    NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
 
     NS_IMETHOD           SetTooltips(PRUint32 aNumberOfTips,nsRect* aTooltipAreas[]);
     NS_IMETHOD           UpdateTooltips(nsRect* aNewTips[]);
     NS_IMETHOD           RemoveTooltips();
 
-    NS_IMETHOD            BeginResizingChildren(void);
-    NS_IMETHOD            EndResizingChildren(void);
-    NS_IMETHOD            Destroy(void);
+    NS_IMETHOD           BeginResizingChildren(void);
+    NS_IMETHOD           EndResizingChildren(void);
+    NS_IMETHOD           Destroy(void);
 
+    gint                 ConvertBorderStyles(nsBorderStyle bs);
 
     virtual PRBool IsChild() const;
 
@@ -86,7 +96,6 @@ public:
      // Utility methods
     virtual  PRBool OnPaint(nsPaintEvent &event);
     PRBool   OnKey(nsKeyEvent &aEvent);
-    PRBool   DispatchFocus(nsGUIEvent &aEvent);
     virtual  PRBool OnScroll(nsScrollbarEvent & aEvent, PRUint32 cPos);
   // in nsWidget now
   //    virtual  PRBool OnResize(nsSizeEvent &aEvent);
@@ -111,6 +120,7 @@ protected:
                          gpointer       aData);
 
   virtual gint OnDrawSignal(GdkRectangle * aArea);
+  virtual void OnRealize();
 
   virtual void OnDestroySignal(GtkWidget* aGtkWidget);
 
@@ -125,8 +135,6 @@ protected:
   PRBool      mVisible;
   PRBool      mDisplayed;
   PRBool      mIsDestroyingWindow;
-
-  GtkWindowType mBorderStyle;
 
   // XXX Temporary, should not be caching the font
   nsFont *    mFont;

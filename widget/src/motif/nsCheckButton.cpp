@@ -184,7 +184,6 @@ void nsCheckButton::DisArmed()
 //-------------------------------------------------------------------------
 NS_METHOD nsCheckButton::SetState(const PRBool aState) 
 {
-  int state = aState;
   if (mIsArmed) {
     mNewValue    = aState;
     mValueWasSet = PR_TRUE;
@@ -248,25 +247,3 @@ NS_METHOD nsCheckButton::GetLabel(nsString& aBuffer)
   XmStringFree(str);
   return NS_OK;
 }
-
-//-------------------------------------------------------------------------
-//
-// move, paint, resizes message - ignore
-//
-//-------------------------------------------------------------------------
-PRBool nsCheckButton::OnMove(PRInt32, PRInt32)
-{
-  return PR_FALSE;
-}
-
-PRBool nsCheckButton::OnPaint(nsPaintEvent &aEvent)
-{
-  return PR_FALSE;
-}
-
-PRBool nsCheckButton::OnResize(nsSizeEvent &aEvent)
-{
-  return PR_FALSE;
-}
-
-

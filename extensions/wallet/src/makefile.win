@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 
 LIBRARY_NAME=wallet
 DLLNAME=walletlib
@@ -40,11 +41,12 @@ EXPORTS= $(NULL)
 LLIBS=$(LLIBS)  $(LIBNSPR)		\
 	$(WALLETLIBS)			\
 	$(DIST)\lib\secfreenav32.lib	\
-	$(DIST)\lib\plc3.lib	\
 	$(DIST)\lib\xppref32.lib	\
 	$(DIST)\lib\xpcom.lib		\
 	$(DIST)\lib\xplib.lib		\
-	$(DIST)\lib\netlib.lib		\
+!ifndef NECKO
+	$(DIST)\lib\netlib.lib \
+!endif
 	$(NULL)
 
 LINCS= \
@@ -52,7 +54,6 @@ LINCS= \
     -I$(PUBLIC)\xpcom	\
     -I$(PUBLIC)\dom	\
     -I$(PUBLIC)\js	\
-    -I$(PUBLIC)\netlib	\
     -I$(PUBLIC)\security\
     -I$(PUBLIC)\pref	\
     -I$(PUBLIC)\wallet	\
@@ -77,5 +78,8 @@ clobber::
 
 install:: $(DLL)
 		$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+		$(MAKE_INSTALL) FieldSchema.tbl $(DIST)\bin\res
+		$(MAKE_INSTALL) URLFieldSchema.tbl $(DIST)\bin\res
+		$(MAKE_INSTALL) SchemaConcat.tbl $(DIST)\bin\res
 		$(MAKE_INSTALL) cookie.properties $(DIST)\bin\res
 		$(MAKE_INSTALL) wallet.properties $(DIST)\bin\res

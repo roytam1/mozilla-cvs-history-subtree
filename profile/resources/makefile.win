@@ -37,8 +37,16 @@ FILES=\
 		profileManager.html				\
 		errorDialog.html				\
         common.css						\
-	pm.xul					\
-	pm.css					\
+		pm.xul							\
+		pm.css							\
+		pm.js							\
+		pmrename.xul					\
+	 	cpwPreg.xul						\
+		navStartPreg.xul				\
+		navFinishPreg.xul				\
+		preg.html						\
+		pmDelete.xul					\
+		pmMigrateAll.xul				\
         $(NULL)
 
 install::

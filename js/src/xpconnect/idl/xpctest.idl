@@ -1,8 +1,26 @@
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1999 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
 
 #include "nsISupports.idl"
+#include "xpcexception.idl"
 
-/* XXX should be built in */
-native nsID(nsID *);
+// forward declaration (to test that such things work)
+interface nsITestXPCSomeUselessThing;
 
 [scriptable, uuid(159E36D0-991E-11d2-AC3F-00C09300144B)]
 interface nsITestXPCFoo : nsISupports {
@@ -46,7 +64,7 @@ interface nsIEcho : nsISupports {
                        in boolean               p11,
                        in char                  p12,
                        in wchar                 p13,
-                       in nsID                  p14,
+                       in nsIDPtr               p14,
                        in string                p15,
                        in wstring               p16);
 
@@ -63,11 +81,11 @@ interface nsIEcho : nsISupports {
                             inout boolean               p11,
                             inout char                  p12,
                             inout wchar                 p13,
-                            inout nsID                  p14,
+                            inout nsIDPtr               p14,
                             inout string                p15,
                             inout wstring               p16);
     
-    void MethodWithNative(in long p1, in voidStar p2);
+    [noscript] void MethodWithNative(in long p1, in voidStar p2);
     void ReturnCode(in long code);
     void FailInJSTest(in long fail);
     void SharedString([retval, shared] out string str);
@@ -79,6 +97,11 @@ interface nsIEcho : nsISupports {
     void ReturnCode_NS_ERROR_OUT_OF_MEMORY();
 
     nsISupports ReturnInterface(in nsISupports obj);
+
+    nsIJSStackFrameLocation GetStack();
+    void SetReceiverReturnOldReceiver(inout nsIEcho aReceiver);
+
+    void MethodWithForwardDeclaredParam(in nsITestXPCSomeUselessThing sut);
 };
 
 /***************************************************************************/
@@ -99,3 +122,20 @@ interface nsIXPCTestOther : nsISupports {
     void method3(in short i, in short j, in short k);
 };
 
+[scriptable, uuid(1e4cf7b0-237a-11d3-9879-006008962422)]
+interface nsIXPCTestNoisy : nsISupports {
+    void squawk();
+};
+
+[scriptable, uuid(d970e910-30d8-11d3-9885-006008962422)]
+interface nsIXPCTestString : nsISupports {
+    string GetStringA();
+    void GetStringB(out string s);
+    void GetStringC([shared,retval] out string s);
+};
+
+[scriptable, uuid(0ff4faf0-439a-11d3-988c-006008962422)]
+interface nsIXPCTestOverloaded : nsISupports {
+    void Foo1(in PRInt32 p1);
+    void Foo2(in PRInt32 p1, in PRInt32 p2);
+};

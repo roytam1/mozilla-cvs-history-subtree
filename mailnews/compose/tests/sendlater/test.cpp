@@ -1,3 +1,21 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
 #include "msgCore.h"
 #include "nsCOMPtr.h"
 #include "nsMsgBaseCID.h"
@@ -19,11 +37,7 @@
 #include "nscore.h"
 #include "nsIMsgMailSession.h"
 #include "nsINetSupportDialogService.h"
-#include "nsIAppShellService.h"
-#include "nsAppShellCIDs.h"
 
-
-#include "nsINetService.h"
 #include "nsIComponentManager.h"
 #include "nsString.h"
 
@@ -34,16 +48,16 @@
 #include "nsIEventQueue.h"
 #include "nsIFileLocator.h"
 
-#include "MsgCompGlue.h"
+#include "nsMsgTransition.h"
 #include "nsCRT.h"
 #include "prmem.h"
 
 #include "nsIMimeURLUtils.h"
-#include "nsMsgSendLater.h"
+#include "nsIMsgSendLater.h"
+#include "nsIWebShellWindow.h"
 
 
 #ifdef XP_PC
-#define NETLIB_DLL "netlib.dll"
 #define XPCOM_DLL  "xpcom32.dll"
 #define PREF_DLL   "xppref32.dll"
 #define APPSHELL_DLL "nsappshell.dll"
@@ -52,7 +66,6 @@
 #ifdef XP_MAC
 #include "nsMacRepository.h"
 #else
-#define NETLIB_DLL "libnetlib"MOZ_DLL_SUFFIX
 #define XPCOM_DLL  "libxpcom"MOZ_DLL_SUFFIX
 #define PREF_DLL   "libpref"MOZ_DLL_SUFFIX
 #define APPCORES_DLL  "libappcores"MOZ_DLL_SUFFIX
@@ -64,8 +77,6 @@
 /////////////////////////////////////////////////////////////////////////////////
 // Define keys for all of the interfaces we are going to require for this test
 /////////////////////////////////////////////////////////////////////////////////
-
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kFileLocatorCID, NS_FILELOCATOR_CID);
 static NS_DEFINE_CID(kEventQueueCID, NS_EVENTQUEUE_CID);
@@ -73,8 +84,6 @@ static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kMimeURLUtilsCID, NS_IMIME_URLUTILS_CID);
 static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
-static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_IID(kIAppShellServiceIID, NS_IAPPSHELL_SERVICE_IID);
 static NS_DEFINE_IID(kIMsgSendLaterIID, NS_IMSGSENDLATER_IID); 
 static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
 
@@ -90,9 +99,11 @@ nsresult OnIdentityCheck()
 		result = mailSession->GetCurrentServer(&incomingServer);
 		if (NS_SUCCEEDED(result) && incomingServer)
 		{
+			PRUnichar * uniValue = nsnull;
 			char * value = nsnull;
-			incomingServer->GetPrettyName(&value);
-			printf("Server pretty name: %s\n", value ? value : "");
+			incomingServer->GetPrettyName(&uniValue);
+//			nsCString cPrettyname(value);
+			printf("Server pretty name: %s\n", uniValue ? (const char *) nsCAutoString(uniValue) : "");
 			incomingServer->GetUsername(&value);
 			printf("User Name: %s\n", value ? value : "");
 			incomingServer->GetHostName(&value);
@@ -118,27 +129,12 @@ nsresult OnIdentityCheck()
 int main(int argc, char *argv[]) 
 { 
   nsresult rv = NS_OK;
-  nsIAppShellService* appShell = nsnull;
-
-  nsComponentManager::RegisterComponent(kNetServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
-	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NULL, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kMimeURLUtilsCID,  NULL, NULL, MIME_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kNetSupportDialogCID,  NULL, NULL, APPSHELL_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kAppShellServiceCID,  NULL, NULL, APPSHELL_DLL, PR_FALSE, PR_FALSE);
-
-  /*
-   * Create the Application Shell instance...
-   */
-  nsCOMPtr<nsIWebShellWindow> newWindow;
-  rv = nsServiceManager::GetService(kAppShellServiceCID,
-                                    kIAppShellServiceIID,
-                                   (nsISupports**)&appShell);
-	if (NS_SUCCEEDED(rv)) 
-    appShell->CreateTopLevelWindow(nsnull, nsnull, PR_TRUE, *getter_AddRefs(newWindow),
-                nsnull, nsnull, 200, 200);
 
   // Create the Event Queue for this thread...
 	NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &rv); 
@@ -164,9 +160,15 @@ int main(int argc, char *argv[])
     if (NS_FAILED(rv) || (prefs == nsnull)) {
         exit(rv);
     }
+ if (NS_FAILED(prefs->ReadUserPrefs()))
+ {
+   printf("Failed on reading user prefs!\n");
+   exit(-1);
+ }
+
 
   NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &rv);
-  if (NS_FAILED(rv)) 
+  if (NS_FAILED(rv) || !mailSession) 
   {
     printf("Failure on Mail Session Init!\n");
     return rv;
@@ -201,7 +203,7 @@ int main(int argc, char *argv[])
   if (NS_SUCCEEDED(rv) && pMsgSendLater) 
   { 
     printf("We succesfully obtained a nsIMsgSendLater interface....\n");    
-    pMsgSendLater->SendUnsentMessages(identity, nsnull, nsnull);
+    pMsgSendLater->SendUnsentMessages(identity, nsnull);
   }
 
 #ifdef XP_PC

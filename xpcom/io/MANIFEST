@@ -1,6 +1,5 @@
 nsEscape.h
 nsFileSpec.h
-nsFileSpecImpl.h
 nsFileSpecStreaming.h
 nsFileStream.h
 nsIByteBufferInputStream.h
@@ -8,3 +7,4 @@ nsIFileStream.h
 nsIStringStream.h
 nsIUnicharInputStream.h
 nsSpecialSystemDirectory.h
+nsPipe2.h

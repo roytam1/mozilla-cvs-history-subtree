@@ -62,12 +62,14 @@ void nsSupportsArray::DeleteArray(void)
   }
 }
 
+#if 0
 NS_IMETHODIMP_(nsISupportsArray&) 
 nsISupportsArray::operator=(const nsISupportsArray& other)
 {
   NS_ASSERTION(0, "should be an abstract method");
   return *this; // bogus
 }
+#endif
 
 NS_IMETHODIMP_(nsISupportsArray&) 
 nsSupportsArray::operator=(nsISupportsArray const& aOther)
@@ -75,7 +77,8 @@ nsSupportsArray::operator=(nsISupportsArray const& aOther)
   PRUint32 otherCount = 0;
   nsresult rv = ((nsISupportsArray&)aOther).Count(&otherCount);
   NS_ASSERTION(NS_SUCCEEDED(rv), "this method should return an error!");
-
+  if (NS_FAILED(rv)) return *this;
+  
   if (otherCount > mArraySize) {
     DeleteArray();
     mArraySize = otherCount;
@@ -112,7 +115,7 @@ nsSupportsArray::Equals(const nsISupportsArray* aOther)
 NS_IMETHODIMP_(nsISupports*)
 nsSupportsArray::ElementAt(PRUint32 aIndex)
 {
-  if ((0 <= aIndex) && (aIndex < mCount)) {
+  if (aIndex < mCount) {
     nsISupports*  element = mArray[aIndex];
     NS_ADDREF(element);
     return element;
@@ -131,7 +134,7 @@ NS_IMETHODIMP_(PRInt32)
 nsSupportsArray::IndexOfStartingAt(const nsISupports* aPossibleElement,
                                    PRUint32 aStartIndex)
 {
-  if ((0 <= aStartIndex) && (aStartIndex < mCount)) {
+  if (aStartIndex < mCount) {
     const nsISupports** start = (const nsISupports**)mArray;  // work around goofy compiler behavior
     const nsISupports** ep = (start + aStartIndex);
     const nsISupports** end = (start + mCount);
@@ -163,7 +166,10 @@ nsSupportsArray::LastIndexOf(const nsISupports* aPossibleElement)
 NS_IMETHODIMP_(PRBool)
 nsSupportsArray::InsertElementAt(nsISupports* aElement, PRUint32 aIndex)
 {
-  if ((0 <= aIndex) && (aIndex <= mCount)) {
+  if (!aElement) {
+    return PR_FALSE;
+  }
+  if (aIndex <= mCount) {
     if (mArraySize < (mCount + 1)) {  // need to grow the array
       mArraySize += kGrowArrayBy;
       nsISupports** oldArray = mArray;
@@ -204,7 +210,7 @@ nsSupportsArray::InsertElementAt(nsISupports* aElement, PRUint32 aIndex)
 NS_IMETHODIMP_(PRBool)
 nsSupportsArray::ReplaceElementAt(nsISupports* aElement, PRUint32 aIndex)
 {
-  if ((0 <= aIndex) && (aIndex < mCount)) {
+  if (aIndex < mCount) {
     NS_ADDREF(aElement);  // addref first in case it's the same object!
     NS_RELEASE(mArray[aIndex]);
     mArray[aIndex] = aElement;
@@ -216,7 +222,7 @@ nsSupportsArray::ReplaceElementAt(nsISupports* aElement, PRUint32 aIndex)
 NS_IMETHODIMP_(PRBool)
 nsSupportsArray::RemoveElementAt(PRUint32 aIndex)
 {
-  if ((0 <= aIndex) && (aIndex < mCount)) {
+  if (aIndex < mCount) {
     NS_RELEASE(mArray[aIndex]);
     mCount--;
     PRInt32 slide = (mCount - aIndex);
@@ -232,7 +238,7 @@ nsSupportsArray::RemoveElementAt(PRUint32 aIndex)
 NS_IMETHODIMP_(PRBool)
 nsSupportsArray::RemoveElement(const nsISupports* aElement, PRUint32 aStartIndex)
 {
-  if ((0 <= aStartIndex) && (aStartIndex < mCount)) {
+  if (aStartIndex < mCount) {
     nsISupports** ep = mArray;
     nsISupports** end = ep + mCount;
     while (ep < end) {
@@ -280,7 +286,7 @@ nsSupportsArray::AppendElements(nsISupportsArray* aElements)
       }
       if (0 != oldArray) { // need to move old data
         if (0 < mCount) {
-          ::memcpy(mArray, oldArray, mCount);
+          ::memcpy(mArray, oldArray, mCount * sizeof(nsISupports*));
         }
         if (oldArray != &(mAutoArray[0])) {
           delete[] oldArray;

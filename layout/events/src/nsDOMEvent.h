@@ -23,6 +23,8 @@
 #include "nsIDOMNSUIEvent.h"
 #include "nsISupports.h"
 #include "nsIPrivateDOMEvent.h"
+#include "nsIPrivateTextEvent.h"
+#include "nsIPrivateTextRange.h"
 
 #include "nsIPresContext.h"
 #include "nsPoint.h"
@@ -31,7 +33,7 @@ class nsIContent;
 
 class nsIDOMRenderingContext;
 
-class nsDOMEvent : public nsIDOMUIEvent, public nsIDOMNSUIEvent, public nsIPrivateDOMEvent {
+class nsDOMEvent : public nsIDOMUIEvent, public nsIDOMNSUIEvent, public nsIPrivateDOMEvent, public nsIPrivateTextEvent {
 
 public:
   // Note: this enum must be kept in sync with mEventNames in nsDOMEvent.cpp
@@ -55,10 +57,12 @@ public:
     eDOMEvents_submit,
     eDOMEvents_reset,
     eDOMEvents_change,
+    eDOMEvents_select,
     eDOMEvents_paint,
 	  eDOMEvents_text,
-    eDOMEvents_construct,
-    eDOMEvents_destruct
+    eDOMEvents_create,
+    eDOMEvents_destroy,
+    eDOMEvents_action
   };
 
   nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent);
@@ -81,11 +85,6 @@ public:
 
   NS_IMETHOD    PreventDefault();
 
-  NS_IMETHOD	  GetText(nsString& aText);
-
-  NS_IMETHOD	  GetCommitText(PRBool* aCommitText);
-  NS_IMETHOD	  SetCommitText(PRBool aCommitText);
-
   NS_IMETHOD    GetScreenX(PRInt32* aScreenX);
 
   NS_IMETHOD    GetScreenY(PRInt32* aScreenY);
@@ -106,8 +105,10 @@ public:
 
   NS_IMETHOD    GetKeyCode(PRUint32* aKeyCode);
 
-  NS_IMETHOD    GetButton(PRUint32* aButton);
+  NS_IMETHOD    GetButton(PRUint16* aButton);
 
+  NS_IMETHOD    GetClickcount(PRUint16* aClickcount);  
+    
   // nsIDOMNSEvent interface
   NS_IMETHOD    GetLayerX(PRInt32* aLayerX);
 
@@ -129,15 +130,20 @@ public:
   NS_IMETHOD    DuplicatePrivateData();
   NS_IMETHOD    SetTarget(nsIDOMNode* aNode);
 
+  // nsIPrivateTextEvent interface
+	NS_IMETHOD GetText(nsString& aText);
+	NS_IMETHOD GetInputRange(nsIPrivateTextRangeList** aInputRange);
+	NS_IMETHOD GetEventReply(nsTextEventReply** aReply);
+
+
 protected:
 
   nsEvent* mEvent;
   nsIPresContext* mPresContext;
   nsIDOMNode* mTarget;
   nsString*	mText;
-  PRBool	mCommitText;
+  nsIPrivateTextRangeList*	mTextRange;
   const char* GetEventName(PRUint32 aEventType);
-
 };
 
 #endif // nsDOMEvent_h__

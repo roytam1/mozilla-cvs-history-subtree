@@ -24,7 +24,7 @@
 #include "nsISupports.h"
 
 class nsIDocument;
-class nsIURL;
+class nsIURI;
 class nsIWebShell;
 
 #define NS_IXMLCONTENT_SINK_IID \
@@ -56,6 +56,9 @@ class nsIWebShell;
 
 class nsIXMLContentSink : public nsIContentSink {
 public:
+
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXMLCONTENT_SINK_IID)
+
   /**
    * This method is called by the parser when it encounters
    * the XML declaration for a document.
@@ -63,16 +66,6 @@ public:
    * @param  nsIParserNode reference to parser node interface
    */
   NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode)=0;
-
-  /**
-   * This method is called by the parser when it encounters
-   * a document type declaration.
-   *
-   * XXX Should the parser also part the internal subset?
-   *
-   * @param  nsIParserNode reference to parser node interface
-   */
-  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode)=0;
 
   /**
    * This method is called by the parser when it encounters
@@ -116,7 +109,7 @@ public:
 
 extern nsresult NS_NewXMLContentSink(nsIXMLContentSink** aInstancePtrResult,
                                      nsIDocument* aDoc,
-                                     nsIURL* aURL,
+                                     nsIURI* aURL,
                                      nsIWebShell* aWebShell);
 
 #endif // nsIXMLContentSink_h___

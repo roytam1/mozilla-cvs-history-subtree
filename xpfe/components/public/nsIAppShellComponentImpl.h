@@ -92,6 +92,8 @@ public:
     // should not be registered with the Service Manager
     // when Initialize-d.
     virtual PRBool Is_Service() { return PR_TRUE; }
+    // Override this to perform initialization for your component.
+    NS_IMETHOD DoInitialization() { return NS_OK; }
     static nsresult SetServiceManager( nsISupports *aServiceMgr ) {
         nsresult rv = NS_OK;
         // Remember service manager first time we see it.
@@ -101,6 +103,17 @@ public:
                                               (void**)&mServiceMgr );
         }
         return rv;
+    }
+    static nsIAppShellService *GetAppShell() {
+        if ( !mAppShell ) {
+            if ( mServiceMgr ) {
+                nsCID cid = NS_APPSHELL_SERVICE_CID;
+                nsresult rv = mServiceMgr->GetService( cid,
+                                                       nsIAppShellService::GetIID(),
+                                                       (nsISupports**)&mAppShell );
+            }
+        }
+        return mAppShell;
     }
     static nsIServiceManager  *mServiceMgr;
     static nsIAppShellService *mAppShell;
@@ -130,7 +143,7 @@ nsAppShellComponentImpl::~nsAppShellComponentImpl() { \
 #define NS_IMPL_IAPPSHELLCOMPONENTIMPL_CTORDTOR(className)
 #endif
 
-#define NS_IMPL_IAPPSHELLCOMPONENT( className, interfaceName, progId ) \
+#define NS_IMPL_IAPPSHELLCOMPONENT( className, interfaceName, progId, autoInit ) \
 /* Define instance counter implementation stuff. */\
 NS_DEFINE_MODULE_INSTANCE_COUNTER() \
 /* Define component globals. */\
@@ -144,6 +157,9 @@ className::Initialize( nsIAppShellService *anAppShell, \
     mCmdLine  = aCmdLineService; \
     if ( mServiceMgr && Is_Service() ) { \
         rv = mServiceMgr->RegisterService( progId, this ); \
+    } \
+    if ( NS_SUCCEEDED( rv ) ) { \
+        rv = DoInitialization(); \
     } \
     return rv; \
 } \
@@ -181,7 +197,7 @@ className::QueryInterface( REFNSIID anIID, void **anInstancePtr ) { \
         } else if ( anIID.Equals( nsIAppShellComponent::GetIID() ) ) { \
             *anInstancePtr = (void*) ( (nsIAppShellComponent*)this ); \
             NS_ADDREF_THIS(); \
-        } else if ( anIID.Equals( nsISupports::GetIID() ) ) { \
+        } else if ( anIID.Equals( nsCOMTypeInfo<nsISupports>::GetIID() ) ) { \
             *anInstancePtr = (void*) ( (nsISupports*)this ); \
             NS_ADDREF_THIS(); \
         } else { \
@@ -221,7 +237,7 @@ className##Factory::QueryInterface( const nsIID &anIID, void **aResult ) { \
         } else if ( anIID.Equals( nsIFactory::GetIID() ) ) { \
             *aResult = (void*) (nsIFactory*)this; \
             NS_ADDREF_THIS(); \
-        } else if ( anIID.Equals( nsISupports::GetIID() ) ) { \
+        } else if ( anIID.Equals( nsCOMTypeInfo<nsISupports>::GetIID() ) ) { \
             *aResult = (void*) (nsISupports*)this; \
             NS_ADDREF_THIS(); \
         } else { \
@@ -285,33 +301,35 @@ NSRegisterSelf( nsISupports* aServiceMgr, const char* path ) { \
                                                   PR_TRUE ); \
             if ( NS_SUCCEEDED( rv ) ) { \
                 DEBUG_PRINTF( PR_STDOUT, #className " registration successful\n" ); \
-                /* Add to appshell component list. */\
-                nsIRegistry *registry; \
-                rv = className::mServiceMgr->GetService( NS_REGISTRY_PROGID, \
-                                                         nsIRegistry::GetIID(), \
-                                                         (nsISupports**)&registry ); \
-                if ( NS_SUCCEEDED( rv ) ) { \
-                    registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry); \
-                    char buffer[256]; \
-                    char *cid = className::GetCID().ToString(); \
-                    PR_snprintf( buffer, \
-                                 sizeof buffer, \
-                                 "%s/%s", \
-                                 NS_IAPPSHELLCOMPONENT_KEY, \
-                                 cid ? cid : "unknown" ); \
-                    delete [] cid; \
-                    nsIRegistry::Key key; \
-                    rv = registry->AddSubtree( nsIRegistry::Common, \
-                                               buffer, \
-                                               &key ); \
+                if ( autoInit ) { \
+                    /* Add to appshell component list. */\
+                    nsIRegistry *registry; \
+                    rv = className::mServiceMgr->GetService( NS_REGISTRY_PROGID, \
+                                                             nsIRegistry::GetIID(), \
+                                                             (nsISupports**)&registry ); \
                     if ( NS_SUCCEEDED( rv ) ) { \
-                        DEBUG_PRINTF( PR_STDOUT, #className " added to appshell component list\n" ); \
+                        registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry); \
+                        char buffer[256]; \
+                        char *cid = className::GetCID().ToString(); \
+                        PR_snprintf( buffer, \
+                                     sizeof buffer, \
+                                     "%s/%s", \
+                                     NS_IAPPSHELLCOMPONENT_KEY, \
+                                     cid ? cid : "unknown" ); \
+                        delete [] cid; \
+                        nsIRegistry::Key key; \
+                        rv = registry->AddSubtree( nsIRegistry::Common, \
+                                                   buffer, \
+                                                   &key ); \
+                        if ( NS_SUCCEEDED( rv ) ) { \
+                            DEBUG_PRINTF( PR_STDOUT, #className " added to appshell component list\n" ); \
+                        } else { \
+                            DEBUG_PRINTF( PR_STDOUT, #className " not added to appshell component list, rv=0x%X\n", (int)rv ); \
+                        } \
+                        className::mServiceMgr->ReleaseService( NS_REGISTRY_PROGID, registry ); \
                     } else { \
                         DEBUG_PRINTF( PR_STDOUT, #className " not added to appshell component list, rv=0x%X\n", (int)rv ); \
                     } \
-                    className::mServiceMgr->ReleaseService( NS_REGISTRY_PROGID, registry ); \
-                } else { \
-                    DEBUG_PRINTF( PR_STDOUT, #className " not added to appshell component list, rv=0x%X\n", (int)rv ); \
                 } \
             } else { \
                 DEBUG_PRINTF( PR_STDOUT, #className " registration failed, RegisterComponent rv=0x%X\n", (int)rv ); \

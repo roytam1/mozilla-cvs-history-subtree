@@ -17,6 +17,7 @@
 
 DEPTH=..\..\..
 
-DIRS=compose smtp
+DIRS=compose smtp sendpage
+DIRS=$(DIRS) compose2 geturl sendlater 
 
 include <$(DEPTH)\config\rules.mak>

@@ -32,6 +32,7 @@ XPIDL_MODULE = xpcom_base
 XPIDLSRCS =               \
 	nsrootidl.idl   \
 	nsISupports.idl \
+	nsIWeakReference.idl \
 	$(NULL)
 
 CPPSRCS =				\
@@ -40,6 +41,7 @@ CPPSRCS =				\
 	nsTraceRefcnt.cpp		\
 	nsCOMPtr.cpp			\
 	nsID.cpp			\
+	nsWeakReference.cpp			\
 	$(NULL)
 
 EXPORTS = \
@@ -54,6 +56,8 @@ EXPORTS = \
 	nsIPtr.h           \
         nsISupportsUtils.h \
         nsTraceRefcnt.h    \
+        nsWeakReference.h  \
+        nsWeakPtr.h        \
         nscore.h           \
 	$(NULL)
 

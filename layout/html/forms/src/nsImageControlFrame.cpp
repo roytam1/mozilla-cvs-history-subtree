@@ -117,6 +117,7 @@ public:
         // nsIFormControlFrame
   NS_IMETHOD SetProperty(nsIAtom* aName, const nsString& aValue);
   NS_IMETHOD GetProperty(nsIAtom* aName, nsString& aValue); 
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
 
 protected:
   void GetTranslatedRect(nsRect& aRect); // XXX this implementation is a copy of nsHTMLButtonControlFrame
@@ -210,6 +211,7 @@ nsImageControlFrame::Reflow(nsIPresContext&         aPresContext,
       // the view's size is not know yet, but its size will be kept in synch with our frame.
       nsRect boundBox(0, 0, 500, 500); 
       result = view->Init(viewMan, boundBox, parView, nsnull);
+      view->SetContentTransparency(PR_TRUE);
       viewMan->InsertChild(parView, view, 0);
       SetView(view);
 
@@ -268,10 +270,10 @@ void
 nsImageControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
 {
   mGotFocus = aOn;
-  if (aRepaint) {
+  /*if (aRepaint) {
     nsRect rect(0, 0, mRect.width, mRect.height);
     Invalidate(rect, PR_TRUE);
-  }
+  }*/
 }
 
 void
@@ -360,7 +362,20 @@ nsImageControlFrame::GetCursor(nsIPresContext& aPresContext,
                                nsPoint&        aPoint,
                                PRInt32&        aCursor)
 {
-  aCursor = NS_STYLE_CURSOR_POINTER;
+  // Use style defined cursor if one is provided, otherwise when
+  // the cursor style is "auto" we use the pointer cursor.
+  const nsStyleColor* styleColor;
+  GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)styleColor);
+  NS_ASSERTION(styleColor,"null color style struct");
+
+  if (styleColor) {
+    aCursor = styleColor->mCursor;
+    if (NS_STYLE_CURSOR_AUTO == aCursor) {
+      aCursor = NS_STYLE_CURSOR_POINTER;
+    }
+  } else {
+    aCursor = NS_STYLE_CURSOR_POINTER;
+  }
   return NS_OK;
 }
 
@@ -439,3 +454,11 @@ NS_IMETHODIMP nsImageControlFrame::GetProperty(nsIAtom* aName, nsString& aValue)
 {
   return NS_OK;
 }
+
+NS_IMETHODIMP nsImageControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
+{
+//  mSuggestedWidth = aWidth;
+//  mSuggestedHeight = aHeight;
+  return NS_OK;
+}
+

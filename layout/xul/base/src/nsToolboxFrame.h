@@ -39,6 +39,7 @@
 #ifndef nsToolBoxFrame_h___
 #define nsToolBoxFrame_h___
 
+#include "nsIDOMDragListener.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsIStyleContext.h"
 #include "nsIContent.h"
@@ -47,10 +48,12 @@
 #include "nsBoxFrame.h"
 
 
-class nsToolboxFrame : public nsBoxFrame
+class nsToolboxFrame : public nsBoxFrame, public nsIDOMDragListener
 {
 public:
   friend nsresult NS_NewToolboxFrame(nsIFrame** aNewFrame);
+
+  NS_DECL_ISUPPORTS
 
     // nsIHTMLReflow overrides
   NS_IMETHOD Reflow(nsIPresContext&          aPresContext,
@@ -81,6 +84,15 @@ public:
   NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint,
                               nsIFrame**     aFrame);
 
+/*BEGIN implementations of dragevent handler interface*/
+    virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+public:
+  virtual nsresult DragEnter(nsIDOMEvent* aDragEvent);
+  virtual nsresult DragOver(nsIDOMEvent* aDragEvent);
+  virtual nsresult DragExit(nsIDOMEvent* aDragEvent);
+  virtual nsresult DragDrop(nsIDOMEvent* aDragEvent);
+/*END implementations of dragevent handler interface*/
+
 protected:
   enum { kGrippyWidthInPixels = 10, kCollapsedGrippyHeightInPixels = 10, kCollapsedGrippyWidthInPixels = 50 } ;
   enum { kNoGrippyHilighted = -1 } ;
@@ -88,7 +100,11 @@ protected:
   struct TabInfo {
     TabInfo( nsIContent * inContent, PRBool inCollapsed, 
                const nsRect &inBounds = nsRect(0,0,0,0)) 
-       : mToolbar(inContent), mCollapsed(inCollapsed), mBoundingRect(inBounds) { } 
+       : mToolbar(inContent),
+         mBoundingRect(inBounds),
+         mCollapsed(inCollapsed)
+      {
+      } 
 
     void SetBounds(const nsRect &inBounds) { mBoundingRect = inBounds; }
 

@@ -19,8 +19,7 @@
 #ifndef nsFileWidget_h__
 #define nsFileWidget_h__
 
-#include "nsToolkit.h"
-#include "nsIWidget.h"
+//#include "nsIWidget.h"
 #include "nsIFileWidget.h"
 #include "nsWindow.h"
 
@@ -92,9 +91,11 @@ class nsFileWidget : public nsWindow, public nsIFileWidget
      const nsString*        mTitles;
      const nsString*        mFilters;
      nsString               mDefault;
+     XtAppContext           mAppContext;
 
      void GetFilterListArray(nsString& aFilterList);
 
+  
 };
 
 #endif // nsFileWidget_h__

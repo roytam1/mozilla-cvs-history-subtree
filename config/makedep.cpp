@@ -104,14 +104,14 @@ class CFileRecord {
 public:
     CString m_shortName;
     CString m_pathName;
-    CPtrArray m_includes;
+    CPtrArray m_includes;  // pointers to CFileRecords in fileMap
     BOOL m_bVisited;
     BOOL m_bSystem;
     BOOL m_bSource;
-    static CMapStringToPtr fileMap;
-	static CStringArray orderedFileNames;
-	static CMapStringToPtr includeMap;
-	static CMapStringToPtr noDependMap;
+    static CMapStringToPtr fileMap;      // contains all allocated CFileRecords
+    static CStringArray orderedFileNames;
+    static CMapStringToPtr includeMap;   // pointer to CFileRecords in fileMap
+    static CMapStringToPtr noDependMap;
 
     CFileRecord( const char *shortName, const char* pFullName, BOOL bSystem, BOOL bSource):
                 m_shortName( shortName ),
@@ -182,7 +182,11 @@ public:
 						pTemp += 7;						// skip the "include"
 						pTemp += strspn(pTemp, " \t");	// skip more whitespace
 						bSystem = (*pTemp == '<');		// mark if it's a system include or not
-						if (bSystem || (*pTemp == '"')) {
+                        // forget system files -- we just have to search all the paths
+                        // every time and never find them! This change alone speeds a full
+                        // depend run on my system from 5 minutes to 3:15
+						// if (bSystem || (*pTemp == '"')) {
+                        if (*pTemp == '"') {
 							LPSTR pStart = pTemp + 1;	// mark the start of the string
 							pTemp = pStart + strcspn(pStart, ">\" ");	// find the end of the string
 							*pTemp = 0;					// terminate the string
@@ -286,11 +290,14 @@ public:
 
 		char fullName[_MAX_PATH];
 		BOOL bFound = FALSE;
-		BOOL bFoundInInclude = FALSE;
 		CString foundName;
 		CString fixedShortName;
         CString s;
 
+        // normalize the name
+        fixedShortName = pShortName;
+        FixPathName(fixedShortName);
+        pShortName = fixedShortName;
 
         // if it is source, we might be getting an obj file.  If we do,
         //  convert it to a c or c++ file.
@@ -322,47 +329,40 @@ public:
 		// first check to see if we already have this exact file
 		CFileRecord *pRec = FindFileRecord(pFullName);
 
-		if (pRec) {
-			bFound = TRUE;
-		}
+        // if not found and not a source file check the header list --
+        // all files we've found in include directories are in the includeMap.
+        // we can save gobs of time by getting it from there
+        if (!pRec && !bSource)
+            includeMap.Lookup(fixedShortName, (void*&)pRec);
 
-		// check the fullname first
-		if (!bFound && FileExists(pFullName)) {
-			foundName = pFullName;
-			bFound = TRUE;
-		}
+        if (!pRec) {
+            // not in one of our lists, start scrounging on disk
 
-		// if still not found, search the include paths
-        if (!bFound) {
-			// all files we've found in include directories are in the includeMap
-			// we can see if we've already found it in the include path before and
-			// save time by getting it from there
-			fixedShortName = pShortName;
-			FixPathName(fixedShortName);		// normalize the name
-			includeMap.Lookup(fixedShortName, (void*&)pRec);
-			pShortName = fixedShortName;		// set this to point to the normalized name for when we add it to the include map
-			if (!pRec) {
-				int i = 0;
-				while( i < includeDirectories.GetSize() ){
-					if( FileExists( includeDirectories[i] + pShortName ) ){
-						foundName = includeDirectories[i] + pShortName;
-						bFound = TRUE;
-						bFoundInInclude = TRUE;
-						break;
-					}
-					i++;
-				}
-			}
+            // check the fullname first
+            if (FileExists(pFullName)) {
+                foundName = pFullName;
+                bFound = TRUE;
+            }
+            else {
+                // if still not found, search the include paths
+                int i = 0;
+                while( i < includeDirectories.GetSize() ){
+                    if( FileExists( includeDirectories[i] + pShortName ) ){
+                        foundName = includeDirectories[i] + pShortName;
+                        bFound = TRUE;
+                        break;
+                    }
+                    i++;
+                }
+            }
+        }
+        else {
+            // we found it
+            bFound = TRUE;
         }
 
-		// if we found it and don't already have a fileRecord for it
-		// see if this name is already in there
-		if (bFound && !pRec) {
-			pRec = FindFileRecord(foundName);
-		}
-
 		// source files are not allowed to be missing
-		if (!pRec && !bFound && bSource) {
+		if (bSource && !pRec && !bFound) {
 			fprintf(stderr, "Source file: %s doesn't exist\n", pFullName);
 			mainReturn = -1;		// exit with an error, don't write out the results
 		}
@@ -373,14 +373,15 @@ public:
 		}
 #endif
 
-		// if none of the above logic found it already in the list, must be a new file, add it to the list
+		// if none of the above logic found it already in the list, 
+        // must be a new file, add it to the list
         if (bFound && (pRec == NULL)) {
             pRec = new CFileRecord( pShortName, foundName, bSystem, bSource);
 
-			// if we found this one in the include path, add it to the includeMap 
+			// if this one isn't a source file add it to the includeMap
 			// for performance reasons (so we can find it there next time rather
 			// than having to search the file system again)
-			if (bFoundInInclude) {
+			if (!bSource) {
 				includeMap[pShortName] = pRec;
 			}
         }
@@ -648,10 +649,10 @@ public:
 
 };
 
-CMapStringToPtr CFileRecord::fileMap;
+CMapStringToPtr CFileRecord::fileMap;           // contains all allocated CFileRecords
 CStringArray CFileRecord::orderedFileNames;
-CMapStringToPtr CFileRecord::includeMap;
-CMapStringToPtr CFileRecord::noDependMap;
+CMapStringToPtr CFileRecord::includeMap;        // pointers to CFileRecords in fileMap
+CMapStringToPtr CFileRecord::noDependMap;       // no data, just an index
 
 int main( int argc, char** argv ){
     int i = 1;
@@ -847,5 +848,20 @@ int main( int argc, char** argv ){
 		}
 	}
 	iRecursion--;
+
+    if (iRecursion == 0 )
+    {
+        // last time through -- clean up allocated CFileRecords!
+        CFileRecord *pFRec;
+        CString     name;
+        POSITION    next;
+
+        next = CFileRecord::fileMap.GetStartPosition();
+        while( next ){
+            CFileRecord::fileMap.GetNextAssoc( next, name, *(void**)&pFRec );
+            delete pFRec;
+        }
+    }
+
     return mainReturn;
 }

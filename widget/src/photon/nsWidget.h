@@ -40,6 +40,9 @@ typedef struct DamageQueueEntry_s
   DamageQueueEntry_s  *next;
 }DamageQueueEntry;
 
+#define NS_TO_PH_RGB(ns) (ns & 0xff) << 16 | (ns & 0xff00) | ((ns >> 16) & 0xff)
+#define PH_TO_NS_RGB(ns) (ns & 0xff) << 16 | (ns & 0xff00) | ((ns >> 16) & 0xff)
+
 
 /**
  * Base of all Photon native widgets.
@@ -72,18 +75,20 @@ class nsWidget : public nsBaseWidget
     NS_IMETHOD Show(PRBool state);
     NS_IMETHOD IsVisible(PRBool &aState);
 
-    NS_IMETHOD Move(PRUint32 aX, PRUint32 aY);
-    NS_IMETHOD Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint);
-    NS_IMETHOD Resize(PRUint32 aX, PRUint32 aY, PRUint32 aWidth,
-		              PRUint32 aHeight, PRBool aRepaint);
+    NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);
+    NS_IMETHOD Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint);
+    NS_IMETHOD Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+		              PRInt32 aHeight, PRBool aRepaint);
 
     NS_IMETHOD Enable(PRBool aState);
     NS_IMETHOD SetFocus(void);
 
-    NS_IMETHOD GetBounds(nsRect &aRect);
+//    NS_IMETHOD GetBounds(nsRect &aRect);
 
     virtual PRBool OnResize(nsRect &aRect);
     virtual PRBool OnMove(PRInt32 aX, PRInt32 aY);
+
+    NS_IMETHOD SetBackgroundColor(const nscolor &aColor);
 
     nsIFontMetrics *GetFont(void);
     NS_IMETHOD SetFont(const nsFont &aFont);
@@ -110,7 +115,6 @@ class nsWidget : public nsBaseWidget
     NS_IMETHOD Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect);
     NS_IMETHOD SetMenuBar(nsIMenuBar *aMenuBar);
     NS_IMETHOD ShowMenuBar(PRBool aShow);
-    NS_IMETHOD IsMenuBarVisible(PRBool *aVisible);
 
     NS_IMETHOD Invalidate(PRBool aIsSynchronous);
     NS_IMETHOD Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
@@ -132,6 +136,8 @@ class nsWidget : public nsBaseWidget
     PRBool     DispatchKeyEvent(PhKeyEvent_t *aPhKeyEvent);
   // are we a "top level" widget?
     PRBool     mIsToplevel;
+    void       EnableDamage( PtWidget_t *widget, PRBool enable );
+    PRBool     GetParentClippedArea( nsRect &rect );
 
  protected:
     virtual void InitCallbacks(char * aName = nsnull);
@@ -152,10 +158,13 @@ class nsWidget : public nsBaseWidget
     PRBool            DispatchWindowEvent(nsGUIEvent* event);
     static PRBool     SetInstance( PtWidget_t *pWidget, nsWidget * inst );
     static nsWidget*  GetInstance( PtWidget_t *pWidget );
+    void              RemoveDamagedWidget(PtWidget_t *aWidget);
     void              QueueWidgetDamage();
     void              UpdateWidgetDamage();
     static int        WorkProc( void *data );
     void              InitDamageQueue();
+    static int        GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
+    static int        LostFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
 
     PtWidget_t *mWidget;
     nsIWidget  *mParent;

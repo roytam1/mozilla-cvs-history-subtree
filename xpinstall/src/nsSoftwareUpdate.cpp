@@ -82,8 +82,21 @@ static NS_DEFINE_IID(kInstallTrigger_CID, NS_SoftwareUpdateInstallTrigger_CID);
 static NS_DEFINE_IID(kIInstallVersion_IID, NS_IDOMINSTALLVERSION_IID);
 static NS_DEFINE_IID(kInstallVersion_CID, NS_SoftwareUpdateInstallVersion_CID);
 
-static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
-static NS_DEFINE_IID(kEventQueueServiceIID, NS_IEVENTQUEUESERVICE_IID);
+
+nsSoftwareUpdate* nsSoftwareUpdate::mInstance = nsnull;
+nsIFileSpec*      nsSoftwareUpdate::mProgramDir = nsnull;
+
+
+nsSoftwareUpdate *
+nsSoftwareUpdate::GetInstance()
+{
+    if (mInstance == NULL) 
+    {
+        mInstance = new nsSoftwareUpdate();
+    }
+    return mInstance;
+}
+
 
 
 nsSoftwareUpdate::nsSoftwareUpdate()
@@ -93,7 +106,8 @@ nsSoftwareUpdate::nsSoftwareUpdate()
 #endif
 
     NS_INIT_ISUPPORTS();
-    
+
+    mStubLockout = PR_FALSE;
      /***************************************/
     /* Create us a queue                   */
     /***************************************/
@@ -127,6 +141,8 @@ nsSoftwareUpdate::nsSoftwareUpdate()
     /* Perform Scheduled Tasks             */
     /***************************************/
 
+/* XXX Temporary workaround: see bugs 8849, 8971 */
+#ifndef XP_UNIX 
     PR_CreateThread(PR_USER_THREAD,
                     PerformScheduledTasks,
                     nsnull, 
@@ -134,41 +150,15 @@ nsSoftwareUpdate::nsSoftwareUpdate()
                     PR_GLOBAL_THREAD, 
                     PR_UNJOINABLE_THREAD,
                     0);  
+#endif
 
 
     /***************************************/
     /* Create a top level observer         */
     /***************************************/
 
-    mTopLevelObserver = new nsTopProgressNotifier();
-    
     nsLoggingProgressNotifier *logger = new nsLoggingProgressNotifier();
     RegisterNotifier(logger);
-
-//#if 0
-    nsInstallProgressDialog *dialog = new nsInstallProgressDialog();
-    nsInstallProgressDialog *proxy; 
-    nsISupports *dialogBase;
-
-    nsresult rv = dialog->QueryInterface(kISupportsIID, (void**)&dialogBase);
-
-    if (NS_SUCCEEDED(rv))
-    {
-        NS_WITH_SERVICE(nsIProxyObjectManager, manager, kProxyObjectManagerCID, &rv);
-
-        if (NS_SUCCEEDED(rv))
-        {
-            rv = manager->GetProxyObject(nsnull, nsIXPINotifier::GetIID(), dialogBase, PROXY_SYNC, (void**)&proxy);
-            if (NS_SUCCEEDED(rv))
-            {
-                RegisterNotifier(proxy);
-            }
-        }
-    }
-
-    if (dialog)
-        dialog->Release();
-//#endif
 }
 
 
@@ -197,13 +187,21 @@ nsSoftwareUpdate::~nsSoftwareUpdate()
         mJarInstallQueue = nsnull;
     }
     PR_Unlock(mLock);
-
     PR_DestroyLock(mLock);
+
     NR_ShutdownRegistry();
+
+    if (mProgramDir)
+        mProgramDir->Release();
 }
 
+
+//------------------------------------------------------------------------
+//  nsISupports implementation
+//------------------------------------------------------------------------
 NS_IMPL_ADDREF( nsSoftwareUpdate );
 NS_IMPL_RELEASE( nsSoftwareUpdate );
+
 
 NS_IMETHODIMP
 nsSoftwareUpdate::QueryInterface( REFNSIID anIID, void **anInstancePtr )
@@ -217,30 +215,26 @@ nsSoftwareUpdate::QueryInterface( REFNSIID anIID, void **anInstancePtr )
     }
     else
     {
-        /* Initialize result. */
-        *anInstancePtr = 0;
         /* Check for IIDs we support and cast this appropriately. */
         if ( anIID.Equals( nsISoftwareUpdate::GetIID() ) ) 
-        {
             *anInstancePtr = (void*) ( (nsISoftwareUpdate*)this );
-            NS_ADDREF_THIS();
-        }
         else if ( anIID.Equals( nsIAppShellComponent::GetIID() ) ) 
-        {
             *anInstancePtr = (void*) ( (nsIAppShellComponent*)this );
-            NS_ADDREF_THIS();
-        }
+        else if (anIID.Equals( nsPvtIXPIStubHook::GetIID() ) )
+            *anInstancePtr = (void*) ( (nsPvtIXPIStubHook*)this );
         else if ( anIID.Equals( kISupportsIID ) )
-        {
             *anInstancePtr = (void*) ( (nsISupports*) (nsISoftwareUpdate*) this );
-            NS_ADDREF_THIS();
-        }
         else
         {
-            /* Not an interface we support. */\
+            /* Not an interface we support. */
+            *anInstancePtr = 0;
             rv = NS_NOINTERFACE;
         }
     }
+
+    if (NS_SUCCEEDED(rv))
+        NS_ADDREF_THIS();
+
     return rv;
 }
 
@@ -249,6 +243,8 @@ NS_IMETHODIMP
 nsSoftwareUpdate::Initialize( nsIAppShellService *anAppShell, nsICmdLineService  *aCmdLineService ) 
 {
     nsresult rv;
+
+    mStubLockout = PR_TRUE;  // prevent use of nsPvtIXPIStubHook by browser
 
     rv = nsServiceManager::RegisterService( NS_IXPINSTALLCOMPONENT_PROGID, ( (nsISupports*) (nsISoftwareUpdate*) this ) );
 
@@ -260,7 +256,7 @@ nsSoftwareUpdate::Shutdown()
 {
     nsresult rv;
 
-    rv = nsServiceManager::ReleaseService( NS_IXPINSTALLCOMPONENT_PROGID, ( (nsISupports*) (nsISoftwareUpdate*) this ) );
+    rv = nsServiceManager::UnregisterService( NS_IXPINSTALLCOMPONENT_PROGID );
 
     return rv;
 }
@@ -273,22 +269,33 @@ nsSoftwareUpdate::RegisterNotifier(nsIXPINotifier *notifier)
     // register a notifier, you can not remove it.  This should at some
     // point be fixed.
 
-    (void) mTopLevelObserver->RegisterNotifier(notifier);
+    (void) mMasterNotifier.RegisterNotifier(notifier);
     
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSoftwareUpdate::GetTopLevelNotifier(nsIXPINotifier **notifier)
+nsSoftwareUpdate::GetMasterNotifier(nsIXPINotifier **notifier)
 {
-    *notifier = mTopLevelObserver;
-    NS_ADDREF(*notifier);
+    NS_ASSERTION(notifier, "getter has invalid return pointer");
+    if (!notifier)
+        return NS_ERROR_NULL_POINTER;
+
+    *notifier = &mMasterNotifier;
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
+nsSoftwareUpdate::SetActiveNotifier(nsIXPINotifier *notifier)
+{
+    mMasterNotifier.SetActiveNotifier(notifier);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsSoftwareUpdate::InstallJar(  nsIFileSpec* aLocalFile,
+                               const PRUnichar* aURL,
                                const PRUnichar* aArguments,
                                long flags,
                                nsIXPINotifier* aNotifier)
@@ -297,7 +304,7 @@ nsSoftwareUpdate::InstallJar(  nsIFileSpec* aLocalFile,
         return NS_ERROR_NULL_POINTER;
 
     nsInstallInfo *info =
-        new nsInstallInfo( aLocalFile, aArguments, flags, aNotifier );
+        new nsInstallInfo( aLocalFile, aURL, aArguments, flags, aNotifier );
     
     if (!info)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -310,67 +317,90 @@ nsSoftwareUpdate::InstallJar(  nsIFileSpec* aLocalFile,
     return NS_OK;
 }
 
-#if 0   // Can't see why we need this one
-NS_IMETHODIMP
-nsSoftwareUpdate::InstallPending(void)
-{
-    if (mInstalling || mJarInstallQueue->GetSize() > 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-#endif
 
 NS_IMETHODIMP
 nsSoftwareUpdate::InstallJarCallBack()
 {
     PR_Lock(mLock);
+
     nsInstallInfo *nextInstall = (nsInstallInfo*)mJarInstallQueue->Get(0);
-    
     if (nextInstall != nsnull)
         delete nextInstall;
-    
+
     mJarInstallQueue->Remove(0);
-    
     mInstalling = PR_FALSE;
+
     PR_Unlock(mLock);
 
     return RunNextInstall();
-
 }
 
 
 nsresult
 nsSoftwareUpdate::RunNextInstall()
 {
-    nsresult rv = NS_OK;
+    nsresult        rv = NS_OK;
+    nsInstallInfo*  info = nsnull;
 
     PR_Lock(mLock);
-    if (!mInstalling)
+    if (!mInstalling) 
     {
         if ( mJarInstallQueue->GetSize() > 0 )
         {
-            nsInstallInfo *info = (nsInstallInfo*)mJarInstallQueue->Get(0);
+            info = (nsInstallInfo*)mJarInstallQueue->Get(0);
 
             if ( info )
-            {
                 mInstalling = PR_TRUE;
-                RunInstall( info );
-            }
-            else
+            else 
+            {
+                NS_ERROR("leaking all nsInstallInfos left in queue");
                 rv = NS_ERROR_NULL_POINTER;
+                VR_Close();
+            }
         }
         else
-            ; // nothing more to do
+        {
+            // nothing more to do
+            VR_Close();
+        }
     }
     PR_Unlock(mLock);
 
+    // make sure to RunInstall() outside of locked section due to callbacks
+    if (info)
+        RunInstall( info );
+
     return rv;
 }
+
+
+NS_IMETHODIMP
+nsSoftwareUpdate::SetProgramDirectory(nsIFileSpec *aDir)
+{
+    if (mStubLockout)
+        return NS_ERROR_ABORT;
+    else if ( !aDir )
+        return NS_ERROR_NULL_POINTER;
+
+    // only allow once, it would be a mess if we've already started installing
+    mStubLockout = PR_TRUE;
+
+    // fix GetFolder return path
+    mProgramDir = aDir;
+    mProgramDir->AddRef();
+
+    // setup version registry path
+    char*    path;
+    nsresult rv = aDir->GetNativePath( &path );
+    if (NS_SUCCEEDED(rv))
+    {
+        VR_SetRegDirectory( path );
+        nsCRT::free( path );
+    }
+
+    return rv;
+}
+
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -387,6 +417,8 @@ nsSoftwareUpdateFactory::~nsSoftwareUpdateFactory(void)
 {
 }
 
+
+
 NS_IMPL_ISUPPORTS(nsSoftwareUpdateFactory,kIFactoryIID)
 
 NS_IMETHODIMP
@@ -399,7 +431,7 @@ nsSoftwareUpdateFactory::CreateInstance(nsISupports *aOuter, REFNSIID aIID, void
 
     *aResult = NULL;
 
-    nsSoftwareUpdate *inst = new nsSoftwareUpdate();
+    nsSoftwareUpdate *inst = nsSoftwareUpdate::GetInstance();
 
     if (inst == NULL)
         return NS_ERROR_OUT_OF_MEMORY;

@@ -34,37 +34,35 @@
 #include <Xm/CascadeBG.h>
 #include <Xm/SeparatoG.h>
 #include <Xm/RowColumn.h>
-#include <Xm/PushB.h>
 
 static NS_DEFINE_CID(kMenuCID,             NS_MENU_CID);
 static NS_DEFINE_CID(kMenuItemCID,         NS_MENUITEM_CID);
-   
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_IID(kISupportsIID,        NS_ISUPPORTS_IID);
 
-nsresult nsMenu::QueryInterface(REFNSIID aIID, void** aInstancePtr)      
-{                                                                        
-  if (NULL == aInstancePtr) {                                            
-    return NS_ERROR_NULL_POINTER;                                        
-  }                                                                      
-                                                                         
-  *aInstancePtr = NULL;                                                  
-                                                                                        
-  if (aIID.Equals(nsIMenu::GetIID())) {                                         
-    *aInstancePtr = (void*)(nsIMenu*) this;                                        
-    NS_ADDREF_THIS();                                                    
-    return NS_OK;                                                        
-  }                                                                      
-  if (aIID.Equals(kISupportsIID)) {                                      
-    *aInstancePtr = (void*)(nsISupports*)(nsIMenu*)this;                        
-    NS_ADDREF_THIS();                                                    
-    return NS_OK;                                                        
+nsresult nsMenu::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (NULL == aInstancePtr) {
+    return NS_ERROR_NULL_POINTER;
   }
-  if (aIID.Equals(kIMenuListenerIID)) {                                      
-    *aInstancePtr = (void*)(nsIMenuListener*)this;                        
-    NS_ADDREF_THIS();                                                    
-    return NS_OK;                                                        
-  }                                                     
-  return NS_NOINTERFACE;                                                 
+
+  *aInstancePtr = NULL;
+
+  if (aIID.Equals(nsIMenu::GetIID())) {
+    *aInstancePtr = (void*)(nsIMenu*) this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kISupportsIID)) {
+    *aInstancePtr = (void*)(nsISupports*)(nsIMenu*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIMenuListenerIID)) {
+    *aInstancePtr = (void*)(nsIMenuListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  return NS_NOINTERFACE;
 }
 
 NS_IMPL_ADDREF(nsMenu)
@@ -82,6 +80,13 @@ nsMenu::nsMenu() : nsIMenu()
   mMenu          = nsnull;
   mMenuParent    = nsnull;
   mMenuBarParent = nsnull;
+  mListener      = nsnull;
+  mConstructCalled = PR_FALSE;
+
+  mDOMNode       = nsnull;  
+  mWebShell      = nsnull;
+  mDOMElement    = nsnull;
+  mAccessKey     = "_";
 }
 
 //-------------------------------------------------------------------------
@@ -91,48 +96,16 @@ nsMenu::nsMenu() : nsIMenu()
 //-------------------------------------------------------------------------
 nsMenu::~nsMenu()
 {
-  NS_IF_RELEASE(mMenuBarParent);
-  NS_IF_RELEASE(mMenuParent);
-}
-
-//-------------------------------------------------------------------------
-//
-// Create the proper widget
-//
-//-------------------------------------------------------------------------
-void nsMenu::Create(Widget aParent, const nsString &aLabel)
-{
-  if (NULL == aParent) {
-    return;
-  }
-  mLabel = aLabel;
-
-  char * labelStr = mLabel.ToNewCString();
-
-  char wName[512];
-
-  sprintf(wName, "__pulldown_%s", labelStr);
-  mMenu = XmCreatePulldownMenu(aParent, wName, NULL, 0);
-
-  Widget casBtn;
-  XmString str;
-
-  str = XmStringCreateLocalized(labelStr);
-  casBtn = XtVaCreateManagedWidget(labelStr,
-                                   xmCascadeButtonGadgetClass, aParent,
-                                   XmNsubMenuId, mMenu,
-                                   XmNlabelString, str,
-                                   NULL);
-  XmStringFree(str);
-
-
-  delete[] labelStr;
+  NS_IF_RELEASE(mListener);
+  // Free our menu items
+  RemoveAll();
+  XtDestroyWidget(mMenu);
+  mMenu = nsnull;
 }
 
 //-------------------------------------------------------------------------
 Widget nsMenu::GetNativeParent()
 {
-
   void * voidData; 
   if (nsnull != mMenuParent) {
     mMenuParent->GetNativeData(&voidData);
@@ -142,25 +115,56 @@ Widget nsMenu::GetNativeParent()
     return NULL;
   }
   return (Widget)voidData;
-
 }
 
-
 //-------------------------------------------------------------------------
-//
-// Create the proper widget
-//
-//-------------------------------------------------------------------------
-//NS_METHOD nsMenu::Create(nsIMenuBar * aParent, const nsString &aLabel)
 NS_METHOD nsMenu::Create(nsISupports * aParent, const nsString &aLabel)
 {
-//  FIXME: This needs to be fixed. This doesn't work at all.  --ZuperDee
+  printf("nsMenu::Create called\n");
+  if(aParent)
+  {
+    nsIMenuBar * menubar = nsnull;
+    aParent->QueryInterface(nsIMenuBar::GetIID(), (void**) &menubar);
+    if(menubar)
+    {
+      mMenuBarParent = menubar;
+      NS_RELEASE(menubar);
+    }
+    else
+    {
+      nsIMenu * menu = nsnull;
+      aParent->QueryInterface(nsIMenu::GetIID(), (void**) &menu);
+      if(menu)
+      {
+        mMenuParent = menu;
+        NS_RELEASE(menu);
+      }
+    }
+  }
 
-//  mMenuBarParent = aParent;
-//  NS_ADDREF(mMenuBarParent);
-//  Create(GetNativeParent(), aLabel);
-//  NS_ASSERTION(0, "nsIMenu has changed.  fix me!");
-  //aParent->AddMenu(this);
+  mLabel = aLabel;
+
+  char * labelStr = mLabel.ToNewCString();
+
+  char wName[512];
+
+  sprintf(wName, "__pulldown_%s", labelStr);
+  NS_ADDREF(mMenuBarParent);
+  mMenu = XmCreatePulldownMenu(GetNativeParent(), wName, NULL, 0);
+
+  Widget casBtn;
+  XmString str;
+
+  str = XmStringCreateLocalized(labelStr);
+  casBtn = XtVaCreateManagedWidget(labelStr,
+                                   xmCascadeButtonGadgetClass, GetNativeParent(),
+                                   XmNsubMenuId, mMenu,
+                                   XmNlabelString, str,
+                                   NULL);
+  XmStringFree(str);
+
+  delete[] labelStr;
+
   return NS_OK;
 }
 
@@ -187,17 +191,51 @@ NS_METHOD nsMenu::GetLabel(nsString &aText)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::SetLabel(const nsString &aText)
 {
-   mLabel = aText;
-  
+  mLabel = aText;
   return NS_OK;
 }
 
-//-------------------------------------------------------------------------
-NS_METHOD nsMenu::AddItem(nsISupports* aItem)
+NS_METHOD nsMenu::GetAccessKey(nsString &aText)
 {
   return NS_OK;
 }
 
+NS_METHOD nsMenu::SetAccessKey(const nsString &aText)
+{
+  return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+NS_METHOD nsMenu::AddItem(nsISupports * aItem)
+{
+  printf("nsMenu::AddItem called\n");
+  if(aItem)
+  {
+    nsIMenuItem * menuitem = nsnull;
+    aItem->QueryInterface(nsIMenuItem::GetIID(),
+                          (void**)&menuitem);
+    if(menuitem)
+    {
+      AddMenuItem(menuitem); // nsMenu now owns this
+      NS_RELEASE(menuitem);
+    }      
+    else
+    { 
+      nsIMenu * menu = nsnull;
+      aItem->QueryInterface(nsIMenu::GetIID(),
+                            (void**)&menu);
+      if(menu)
+      {
+        AddMenu(menu); // nsMenu now owns this
+        NS_RELEASE(menu);
+      }
+    }
+  }
+
+  return NS_OK;
+}
+
+// local method used by nsMenu::AddItem
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::AddMenuItem(nsIMenuItem * aMenuItem)
 {
@@ -215,29 +253,9 @@ NS_METHOD nsMenu::AddMenu(nsIMenu * aMenu)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::AddSeparator() 
 {
-  // Create nsMenuItem
-  nsIMenuItem * pnsMenuItem = nsnull;
-  nsresult rv = nsComponentManager::CreateInstance(
-    kMenuItemCID, nsnull, nsIMenuItem::GetIID(), (void**)&pnsMenuItem);
-  if (NS_OK == rv) {
-    nsString tmp = "separator";
-    nsISupports * supports = nsnull;
-    QueryInterface(kISupportsIID, (void**) &supports);
-    pnsMenuItem->Create(supports, tmp, PR_TRUE);
-    NS_RELEASE(supports);
-
-    pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
-    AddItem(supports); // Parent should now own menu item
-    NS_RELEASE(supports);
-
-    NS_RELEASE(pnsMenuItem);
-  }
+  printf("nsMenu::AddSeparator() called\n");
+  XtVaCreateManagedWidget("__sep", xmSeparatorGadgetClass, mMenu, NULL);
   return NS_OK;
-
-//XXX:Delete this.
-//  Widget widget = XtVaCreateManagedWidget("__sep", xmSeparatorGadgetClass,
-//                                          mMenu,
-//                                          NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -259,12 +277,6 @@ NS_METHOD nsMenu::InsertItemAt(const PRUint32 aPos, nsISupports * aMenuItem)
 }
 
 //-------------------------------------------------------------------------
-NS_METHOD nsMenu::InsertSeparator(const PRUint32 aCount)
-{
-  return NS_OK;
-}
-
-//-------------------------------------------------------------------------
 NS_METHOD nsMenu::RemoveItem(const PRUint32 aCount)
 {
   return NS_OK;
@@ -278,38 +290,117 @@ NS_METHOD nsMenu::RemoveAll()
 
 NS_METHOD nsMenu::GetNativeData(void ** aData)
 {
-  aData = (void *)mMenu;
+  aData = (void **)mMenu;
   return NS_OK;
 }
 
 NS_METHOD nsMenu::AddMenuListener(nsIMenuListener * aMenuListener)
 {
-  //XXX:Implement this.
+  mListener = aMenuListener;
+  NS_ADDREF(mListener);
   return NS_OK;
 }
 
 NS_METHOD nsMenu::RemoveMenuListener(nsIMenuListener * aMenuListener)
 {
-  //XXX:Implement this.
+  if (aMenuListener == mListener) {
+    NS_IF_RELEASE(mListener);
+  }
   return NS_OK;
 }
 
 NS_METHOD nsMenu::SetDOMNode(nsIDOMNode * aMenuNode)
 {
-  //XXX:Implement this.
+  mDOMNode = aMenuNode;
   return NS_OK;
 }
 
 NS_METHOD nsMenu::SetDOMElement(nsIDOMElement * aMenuElement)
 { 
-  //XXX:Implement this.
+  mDOMElement = aMenuElement;
   return NS_OK;
 }
 
 NS_METHOD nsMenu::SetWebShell(nsIWebShell * aWebShell)
 {
-  //XXX:Implement this.
+  mWebShell = aWebShell;
   return NS_OK;
+}
+
+void nsMenu::LoadMenuItem(nsIMenu *       pParentMenu,
+                          nsIDOMElement * menuitemElement,
+                          nsIDOMNode *    menuitemNode,
+                          unsigned short  menuitemIndex,
+                          nsIWebShell *   aWebShell)
+{
+  //XXX:Implement this.
+  return;
+}
+
+void nsMenu::LoadSubMenu(nsIMenu *       pParentMenu,
+                         nsIDOMElement * menuElement,
+                         nsIDOMNode *    menuNode)
+{
+  nsString menuName;
+  menuElement->GetAttribute(nsAutoString("value"), menuName);
+  //printf("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
+  
+  // Create nsMenu
+  nsIMenu * pnsMenu = nsnull;
+  nsresult rv = nsComponentManager::CreateInstance(kMenuCID,
+                                                   nsnull,
+                                                   nsIMenu::GetIID(),
+                                                   (void**)&pnsMenu);
+  if (NS_OK == rv) {
+    // Call Create
+    nsISupports * supports = nsnull;
+    pParentMenu->QueryInterface(kISupportsIID, (void**) &supports);
+    pnsMenu->Create(supports, menuName);
+    NS_RELEASE(supports); // Balance QI
+  
+    // Set nsMenu Name
+    pnsMenu->SetLabel(menuName);
+                                                   
+    supports = nsnull;
+    pnsMenu->QueryInterface(kISupportsIID, (void**) &supports);
+    pParentMenu->AddItem(supports); // parent takes ownership
+    NS_RELEASE(supports);
+    
+    pnsMenu->SetWebShell(mWebShell);   
+    pnsMenu->SetDOMNode(menuNode);
+    
+    /*
+    // Begin menuitem inner loop                   
+    unsigned short menuIndex = 0;
+    
+    nsCOMPtr<nsIDOMNode> menuitemNode;
+    menuNode->GetFirstChild(getter_AddRefs(menuitemNode));
+    while (menuitemNode) {
+      nsCOMPtr<nsIDOMElement> menuitemElement(do_QueryInterface(menuitemNode));
+      if (menuitemElement) {
+        nsString menuitemNodeType;
+        menuitemElement->GetNodeName(menuitemNodeType);
+    
+#ifdef DEBUG_saari
+        printf("Type [%s] %d\n", menuitemNodeType.ToNewCString(), menuitemNodeType.Equals("menuseparator"));
+#endif
+    
+        if (menuitemNodeType.Equals("menuitem")) {
+          // Load a menuitem
+          LoadMenuItem(pnsMenu, menuitemElement, menuitemNode, menuIndex, mWebShell);
+        } else if (menuitemNodeType.Equals("menuseparator")) {
+          pnsMenu->AddSeparator();
+        } else if (menuitemNodeType.Equals("menu")) {
+          // Add a submenu
+          LoadSubMenu(pnsMenu, menuitemElement, menuitemNode);
+        }
+      }
+          ++menuIndex;
+      nsCOMPtr<nsIDOMNode> oldmenuitemNode(menuitemNode);
+      oldmenuitemNode->GetNextSibling(getter_AddRefs(menuitemNode));
+    } // end menu item innner loop
+    */
+  }
 }
 
 nsEventStatus nsMenu::MenuItemSelected(const nsMenuEvent & aMenuEvent)
@@ -324,18 +415,93 @@ nsEventStatus nsMenu::MenuSelected(const nsMenuEvent & aMenuEvent)
 
 nsEventStatus nsMenu::MenuDeselected(const nsMenuEvent & aMenuEvent)
 {
-  //XXX:Implement this.
+  if (nsnull != mListener) {
+    mListener->MenuDeselected(aMenuEvent);
+  }
   return nsEventStatus_eIgnore;
 }
 
-nsEventStatus nsMenu::MenuConstruct(const struct nsMenuEvent & aMenuEvent, nsIWidget * aParentWindow, void * menubarNode, void * aWebShell)
+nsEventStatus nsMenu::MenuConstruct(const nsMenuEvent & aMenuEvent,
+                                    nsIWidget         * aParentWindow,
+                                    void              * menuNode,
+                                    void              * aWebShell)
 {
-  //XXX:Implement this.
+  printf("nsMenu::MenuConstruct called\n");
+  if(menuNode){
+    SetDOMNode((nsIDOMNode*)menuNode);
+  }
+
+  if(!aWebShell){
+    aWebShell = mWebShell;
+  }
+                                    
+  // First open the menu.
+  nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(mDOMNode);
+  if (domElement)
+    domElement->SetAttribute("open", "true");
+
+  
+   /// Now get the kids. Retrieve our menupopup child.
+  nsCOMPtr<nsIDOMNode> menuPopupNode;
+  mDOMNode->GetFirstChild(getter_AddRefs(menuPopupNode));
+  while (menuPopupNode) {
+    nsCOMPtr<nsIDOMElement> menuPopupElement(do_QueryInterface(menuPopupNode));
+    if (menuPopupElement) {
+      nsString menuPopupNodeType;
+      menuPopupElement->GetNodeName(menuPopupNodeType);
+      if (menuPopupNodeType.Equals("menupopup"))
+        break;
+    }
+    nsCOMPtr<nsIDOMNode> oldMenuPopupNode(menuPopupNode);
+    oldMenuPopupNode->GetNextSibling(getter_AddRefs(menuPopupNode));
+  }
+
+  if (!menuPopupNode)
+    return nsEventStatus_eIgnore;
+
+  nsCOMPtr<nsIDOMNode> menuitemNode;
+  menuPopupNode->GetFirstChild(getter_AddRefs(menuitemNode));
+
+    unsigned short menuIndex = 0;   
+  
+    while (menuitemNode) {
+      nsCOMPtr<nsIDOMElement> menuitemElement(do_QueryInterface(menuitemNode));
+      if (menuitemElement) {
+        nsString menuitemNodeType;
+        nsString menuitemName; 
+        menuitemElement->GetNodeName(menuitemNodeType);
+        if (menuitemNodeType.Equals("menuitem")) {
+          // LoadMenuItem
+          LoadMenuItem(this,
+                       menuitemElement,
+                       menuitemNode,
+                       menuIndex,
+                       (nsIWebShell*)aWebShell);
+        } else if (menuitemNodeType.Equals("menuseparator")) {
+          AddSeparator();
+        } else if (menuitemNodeType.Equals("menu")) {  
+          // Load a submenu
+          LoadSubMenu(this, menuitemElement, menuitemNode);
+        }
+      }
+                       
+      ++menuIndex;
+                       
+      nsCOMPtr<nsIDOMNode> oldmenuitemNode(menuitemNode); 
+      oldmenuitemNode->GetNextSibling(getter_AddRefs(menuitemNode));
+    } // end menu item innner loop
   return nsEventStatus_eIgnore;
 }
 
 nsEventStatus nsMenu::MenuDestruct(const nsMenuEvent & aMenuEvent)
 {
-  //XXX:Implement this.
+  printf("nsMenu::MenuDestruct called\n");
+  // Close the node.   
+  nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(mDOMNode);
+  if (domElement)
+    domElement->RemoveAttribute("open");
+  
+  mConstructCalled = PR_FALSE;
+  RemoveAll();
   return nsEventStatus_eIgnore;
 }

@@ -21,7 +21,7 @@
  */
 
 
-#include "if_struct.h"
+#include "nsIImgDecoder.h" // include if_struct.h Needs to be first
 #include "prmem.h"
 #include "merrors.h"
 
@@ -29,9 +29,6 @@
 #include "dllcompat.h"
 #include "pngdec.h"
 #include "nsPNGDecoder.h"
-#include "nsImgDecCID.h"
-#include "nsIImgDecoder.h"  /* interface class */
-#include "nsImgDecoder.h"   /* factory */
 #include "nscore.h"
 
 /*--- needed for autoregistry ---*/
@@ -62,19 +59,19 @@ public:
   NS_IMETHOD ImgDComplete();
   NS_IMETHOD ImgDAbort();
 
-  il_container *SetContainer(il_container *ic){mContainer = ic; return ic;}
-  il_container *GetContainer() {return mContainer;}
+  NS_IMETHOD_(il_container *) SetContainer(il_container *ic){ilContainer = ic; return ic;}
+  NS_IMETHOD_(il_container *) GetContainer() {return ilContainer;}
 
   
 private:
-  il_container* mContainer;
+  il_container* ilContainer;
 };
 /*-------------------------------------------------*/
 
 PNGDecoder::PNGDecoder(il_container* aContainer)
 {
   NS_INIT_REFCNT();
-  mContainer = aContainer;
+  ilContainer = aContainer;
 };
 
 
@@ -91,10 +88,11 @@ PNGDecoder::QueryInterface(const nsIID& aIID, void** aInstPtr)
     return NS_ERROR_NULL_POINTER;
   }
 
-NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+  NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+  NS_DEFINE_IID(kIImgDecoderIID, NS_IIMGDECODER_IID);
 
   if (aIID.Equals(kPNGDecoderIID) ||  
-      aIID.Equals(kImgDecoderIID) ||
+      aIID.Equals(kIImgDecoderIID) ||
       aIID.Equals(kISupportsIID)) {
 	  *aInstPtr = (void*) this;
     NS_INIT_REFCNT();
@@ -125,7 +123,7 @@ protected:
 
 private:
 	nsCID mClassID;
-	il_container *mContainer;
+	il_container *ilContainer;
 };
 
 /*-----------------------------------------*/
@@ -163,7 +161,7 @@ NSRegisterSelf(nsISupports* aServMgr, const char *path)
                            (nsISupports**)&compMgr);
   if (NS_FAILED(rv)) return rv;
 
-     if ((rv = nsRepository::RegisterComponent(kPNGDecoderCID, 
+     if ((rv = compMgr->RegisterComponent(kPNGDecoderCID, 
        "Netscape PNGDec", 
        "component://netscape/image/decoder&type=image/png", path, PR_TRUE, PR_TRUE)
 				  ) != NS_OK) {
@@ -255,8 +253,8 @@ NSGetFactory(nsISupports* serviceMgr,
 NS_IMETHODIMP
 PNGDecoder::ImgDInit()
 {
-   if(mContainer != NULL) {
-     return(il_png_init(mContainer));
+   if(ilContainer != NULL) {
+     return(il_png_init(ilContainer));
   }
   else {
     return nsnull;
@@ -267,7 +265,7 @@ PNGDecoder::ImgDInit()
 NS_IMETHODIMP 
 PNGDecoder::ImgDWriteReady()
 {
-  if(mContainer != NULL) {
+  if(ilContainer != NULL) {
     /* see ImageConsumer::OnDataAvailable(). dummy return */ 
     return 1;
   }
@@ -277,8 +275,8 @@ PNGDecoder::ImgDWriteReady()
 NS_IMETHODIMP
 PNGDecoder::ImgDWrite(const unsigned char *buf, int32 len)
 {
-  if( mContainer != NULL ) {
-     return(il_png_write(mContainer, buf,len));
+  if( ilContainer != NULL ) {
+     return(il_png_write(ilContainer, buf,len));
   }
   return 0;
 }
@@ -286,8 +284,8 @@ PNGDecoder::ImgDWrite(const unsigned char *buf, int32 len)
 NS_IMETHODIMP 
 PNGDecoder::ImgDComplete()
 {
-  if( mContainer != NULL ) {
-     il_png_complete(mContainer);
+  if( ilContainer != NULL ) {
+     il_png_complete(ilContainer);
   }
   return 0;
 }
@@ -295,8 +293,8 @@ PNGDecoder::ImgDComplete()
 NS_IMETHODIMP 
 PNGDecoder::ImgDAbort()
 {
-  if( mContainer != NULL ) {
-    il_png_abort(mContainer);
+  if( ilContainer != NULL ) {
+    il_png_abort(ilContainer);
   }
   return 0;
 }

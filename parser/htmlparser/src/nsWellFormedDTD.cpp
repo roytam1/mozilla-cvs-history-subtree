@@ -34,6 +34,7 @@
 #include "nsDTDUtils.h"
 #include "nsIContentSink.h"
 #include "nsIHTMLContentSink.h"
+#include "nsIXMLContentSink.h"
 #include "nsHTMLTokenizer.h"
 #include "nsExpatTokenizer.h"
 
@@ -120,11 +121,10 @@ NS_IMPL_RELEASE(CWellFormedDTD)
  *  @param   
  *  @return  
  */
-CWellFormedDTD::CWellFormedDTD() : nsIDTD() {
+CWellFormedDTD::CWellFormedDTD() : nsIDTD(), mFilename("") {
   NS_INIT_REFCNT();
   mParser=0;
   mSink=0;
-  mFilename;
   mLineNumber=0;
   mTokenizer=0;
 }
@@ -322,6 +322,21 @@ nsITokenRecycler* CWellFormedDTD::GetTokenRecycler(void){
 }
 
 /**
+ * Use this id you want to stop the building content model
+ * --------------[ Sets DTD to STOP mode ]----------------
+ * It's recommended to use this method in accordance with
+ * the parser's terminate() method.
+ *
+ * @update	harishd 07/22/99
+ * @param 
+ * @return
+ */
+nsresult  CWellFormedDTD::Terminate(void)
+{
+  return NS_ERROR_HTMLPARSER_STOPPARSING;
+}
+
+/**
  * Retrieve the preferred tokenizer for use by this DTD.
  * @update	gess12/28/98
  * @param   none
@@ -329,7 +344,7 @@ nsITokenRecycler* CWellFormedDTD::GetTokenRecycler(void){
  */
 nsITokenizer* CWellFormedDTD::GetTokenizer(void) {
   if(!mTokenizer)
-    mTokenizer=(nsHTMLTokenizer*)new nsExpatTokenizer();
+    mTokenizer=(nsHTMLTokenizer*)new nsExpatTokenizer(&mFilename);
   return mTokenizer;
 }
 
@@ -399,6 +414,15 @@ PRBool CWellFormedDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const{
 }
 
 /**
+ * Give rest of world access to our tag enums, so that CanContain(), etc,
+ * become useful.
+ */
+NS_IMETHODIMP CWellFormedDTD::StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/**
  *  This method gets called to determine whether a given 
  *  tag is itself a container
  *  
@@ -409,6 +433,29 @@ PRBool CWellFormedDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const{
 PRBool CWellFormedDTD::IsContainer(PRInt32 aTag) const{
   PRBool result=PR_TRUE;
   return result;
+}
+
+/**
+ *  Helper method that filters out the PI from a given string. 
+ *  
+ *  
+ *  @update  harishd 06/27/99
+ *  @param   aPIString -- string that contains the PI.
+ *  @param   aPI -- PI that's filtered out from aPIString.
+ *  @return  
+ */
+
+void GetProcessingInstruction(const nsString& aPIString, char* a_PI) 
+{
+  static nsAutoString theWS2("\b\t\n ");
+
+  if(aPIString.Length() > 0) {
+    nsString temp;
+    PRInt32 theOffset = aPIString.FindCharInSet(theWS2,1);
+    aPIString.Mid(temp,1,theOffset);
+    temp.ToCString(a_PI,30);
+  }
+  return;
 }
 
 /**
@@ -442,8 +489,24 @@ NS_IMETHODIMP CWellFormedDTD::HandleToken(CToken* aToken,nsIParser* aParser) {
       break;
     
     case eToken_instruction:
-      result=mSink->AddProcessingInstruction(theNode); 
-      break;
+     {
+        char thePI[30]={0};
+        nsString& thePIString = theToken->GetStringValueXXX();
+        GetProcessingInstruction(thePIString,thePI);
+        // XXX - HACK - The current observer dictionary is tag based. Converting it to be string based
+        // might cause some overhead.  Until we figure out a better solution, in handling PIs and tags, I'm hardcoding
+        // a specific PI observer-list to be notified.
+        eHTMLTags theTag  = (nsCRT::strcasecmp(thePI,"?xml") == 0)? eHTMLTag_unknown:eHTMLTag_userdefined;
+        nsDeque*  theDeque= (mParser)? (mParser->GetObserverDictionary()).GetObserversForTag(theTag):nsnull;
+        if(theDeque) {
+          CParserContext* pc=mParser->PeekContext();
+          void* theDocID=(pc) ? pc-> mKey : 0; 
+          nsObserverNotifier theNotifier(thePIString.GetUnicode(),(PRUint32)theDocID); 
+          theDeque->FirstThat(theNotifier);
+        }
+        result=mSink->AddProcessingInstruction(theNode); 
+        break;
+      }
 
     case eToken_start:
       {
@@ -452,12 +515,12 @@ NS_IMETHODIMP CWellFormedDTD::HandleToken(CToken* aToken,nsIParser* aParser) {
         if(0<attrCount){ //go collect the attributes...
           int attr=0;
           for(attr=0;attr<attrCount;attr++){
-            CToken* theToken=mTokenizer->PeekToken();
-            if(theToken)  {
-              eHTMLTokenTypes theType=eHTMLTokenTypes(theToken->GetTokenType());
-              if(eToken_attribute==theType){
+            CToken* theInnerToken=mTokenizer->PeekToken();
+            if(theInnerToken)  {
+              eHTMLTokenTypes theInnerType=eHTMLTokenTypes(theInnerToken->GetTokenType());
+              if(eToken_attribute==theInnerType){
                 mTokenizer->PopToken(); //pop it for real...
-                theNode.AddAttribute(theToken);
+                theNode.AddAttribute(theInnerToken);
               } 
             }
             else return kEOF;
@@ -502,6 +565,9 @@ NS_IMETHODIMP CWellFormedDTD::HandleToken(CToken* aToken,nsIParser* aParser) {
 
         result = mSink->NotifyError(errTok->GetError());
       }
+      break;
+    case eToken_doctypeDecl:
+      result = mSink->AddDocTypeDecl(theNode, 0);
       break;
     case eToken_style:
     case eToken_skippedcontent:

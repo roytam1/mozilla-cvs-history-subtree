@@ -23,7 +23,6 @@
 #include "nsIURL.h"
 #include "nsIDOMElement.h"
 
-#include "nsCSSPropIDs.h"
 #include "nsCSSProps.h"
 #include "nsICSSStyleSheet.h"
 #include "nsICSSStyleRule.h"
@@ -51,10 +50,11 @@ nsMarkupDocument::~nsMarkupDocument()
 extern NS_LAYOUT nsresult
   NS_NewPresShell(nsIPresShell** aInstancePtrResult);
 
-nsresult nsMarkupDocument::CreateShell(nsIPresContext* aContext,
-                                       nsIViewManager* aViewManager,
-                                       nsIStyleSet* aStyleSet,
-                                       nsIPresShell** aInstancePtrResult)
+NS_IMETHODIMP
+nsMarkupDocument::CreateShell(nsIPresContext* aContext,
+                              nsIViewManager* aViewManager,
+                              nsIStyleSet* aStyleSet,
+                              nsIPresShell** aInstancePtrResult)
 {
   NS_PRECONDITION(nsnull != aInstancePtrResult, "null ptr");
   if (nsnull == aInstancePtrResult) {
@@ -114,7 +114,7 @@ void nsMarkupDocument::CSSDeclarationToXIF(nsXIFConverter& aConverter, nsICSSDec
   aDeclaration.ToString(list);
 
   PRInt32 start = 0;
-  PRInt32 semiColon = list.Find(';');
+  PRInt32 semiColon = list.FindChar(';');
 
   while (-1 < semiColon) {
     decl.Truncate();
@@ -124,7 +124,7 @@ void nsMarkupDocument::CSSDeclarationToXIF(nsXIFConverter& aConverter, nsICSSDec
       // XXX need to append comment
     }
     else {
-      PRInt32 colon = decl.Find(':');
+      PRInt32 colon = decl.FindChar(':');
       nsAutoString  property;
       nsAutoString  value;
 
@@ -140,7 +140,7 @@ void nsMarkupDocument::CSSDeclarationToXIF(nsXIFConverter& aConverter, nsICSSDec
     }
 
     start = ++semiColon;
-    semiColon = list.Find(';', start);
+    semiColon = list.FindChar(';', PR_FALSE,start);
   }
   aConverter.EndCSSDeclarationList();
 }
@@ -158,20 +158,27 @@ void nsMarkupDocument::StyleSheetsToXIF(nsXIFConverter& aConverter)
  
   PRInt32     count = GetNumberOfStyleSheets();
 
-  for (PRInt32 index = 0; index < count; index++)
+  for (PRInt32 indx = 0; indx < count; indx++)
   {
-    nsIStyleSheet*          sheet = GetStyleSheetAt(index);
+    nsIStyleSheet*          sheet = GetStyleSheetAt(indx);
     nsICSSStyleSheet*       cssSheet = nsnull;
     
     if (sheet != nsnull)
     {
-      nsIURL* sheetURL = nsnull;
+      nsIURI* sheetURL = nsnull;
       sheet->GetURL(sheetURL);
       
       if (nsnull == sheetURL) {
         break;
       }
-      if (!sheetURL->Equals(mDocumentURL)) {
+#ifdef NECKO
+      PRBool eq;
+      nsresult rv = sheetURL->Equals(mDocumentURL, &eq);
+      if (NS_FAILED(rv) || !eq)
+#else
+      if (!sheetURL->Equals(mDocumentURL))
+#endif
+      {
         NS_RELEASE(sheetURL);
         break;
       }
@@ -185,12 +192,14 @@ void nsMarkupDocument::StyleSheetsToXIF(nsXIFConverter& aConverter)
         nsICSSRule*   rule = nsnull;
 
         cssSheet->StyleRuleCount(ruleCount);
-        aConverter.BeginCSSStyleSheet();
-        for (ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++)
+        if (ruleCount > 0)
         {
-          if (NS_OK == cssSheet->GetStyleRuleAt(ruleIndex, rule))
+          aConverter.BeginCSSStyleSheet();
+          for (ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++)
           {
-            aConverter.BeginCSSRule();
+            if (NS_OK == cssSheet->GetStyleRuleAt(ruleIndex, rule))
+            {
+              aConverter.BeginCSSRule();
 
               if (nsnull != rule)
               {
@@ -210,10 +219,11 @@ void nsMarkupDocument::StyleSheetsToXIF(nsXIFConverter& aConverter)
                 NS_IF_RELEASE(rule);
               } // ruleAt
 
-            aConverter.EndCSSRule();
-          } // for loop
-        }
-        aConverter.EndCSSStyleSheet();
+              aConverter.EndCSSRule();
+            } // for loop
+          }
+          aConverter.EndCSSStyleSheet();
+        } // if ruleCount > 0
         NS_RELEASE(cssSheet);
       } // css_sheet
       NS_RELEASE(sheet);
@@ -248,42 +258,4 @@ void nsMarkupDocument::FinishConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode
   nsDocument::FinishConvertToXIF(aConverter,aNode);
 }
 
-void nsMarkupDocument::ToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
-{
-  nsIDOMSelection* sel = aConverter.GetSelection();
-
-  if (sel != nsnull)
-  {
-    nsIContent* content = nsnull;
-
-    if (NS_SUCCEEDED(aNode->QueryInterface(kIContentIID, (void**)&content)))
-    {
-      PRBool  isInSelection = IsInSelection(sel,content);
-      
-      if (isInSelection == PR_TRUE)
-      {
-        BeginConvertToXIF(aConverter,aNode);
-        ConvertChildrenToXIF(aConverter,aNode);
-        FinishConvertToXIF(aConverter,aNode);
-      }
-      else
-      {
-        ConvertChildrenToXIF(aConverter,aNode);
-      }
-      NS_RELEASE(content);
-    }
-  }
-  else
-  {
-    BeginConvertToXIF(aConverter,aNode);
-    ConvertChildrenToXIF(aConverter,aNode);
-    FinishConvertToXIF(aConverter,aNode);
-  }
-}
-
-
-void nsMarkupDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
-{
-  nsDocument::CreateXIF(aBuffer,aSelection);
-}
 

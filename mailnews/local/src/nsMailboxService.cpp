@@ -23,10 +23,10 @@
 #include <windows.h>    // for InterlockedIncrement
 #endif
 
-#include "nsINetService.h"
 #include "nsMailboxService.h"
 
 #include "nsMailboxUrl.h"
+#include "nsIMsgMailNewsUrl.h"
 #include "nsMailboxProtocol.h"
 #include "nsIMsgDatabase.h"
 #include "nsMsgDBCID.h"
@@ -60,15 +60,21 @@ nsresult nsMailboxService::QueryInterface(const nsIID &aIID, void** aInstancePtr
     if (aIID.Equals(nsIMailboxService::GetIID()) || aIID.Equals(kISupportsIID)) 
 	{
         *aInstancePtr = (void*) ((nsIMailboxService*)this);
-        AddRef();
+        NS_ADDREF_THIS();
         return NS_OK;
     }
     if (aIID.Equals(nsIMsgMessageService::GetIID())) 
 	{
         *aInstancePtr = (void*) ((nsIMsgMessageService*)this);
-        AddRef();
+        NS_ADDREF_THIS();
         return NS_OK;
     }
+	if (aIID.Equals(nsIProtocolHandler::GetIID()))
+	{
+        *aInstancePtr = (void*) ((nsIProtocolHandler*)this);
+        NS_ADDREF_THIS();
+        return NS_OK;
+	}
 
 #if defined(NS_DEBUG)
     /*
@@ -83,24 +89,25 @@ nsresult nsMailboxService::QueryInterface(const nsIID &aIID, void** aInstancePtr
 }
 
 nsresult nsMailboxService::ParseMailbox(nsFileSpec& aMailboxPath, nsIStreamListener *aMailboxParser, 
-										nsIUrlListener * aUrlListener, nsIURL ** aURL)
+										nsIUrlListener * aUrlListener, nsIURI ** aURL)
 {
-	nsCOMPtr<nsIMailboxUrl> url;
+	nsCOMPtr<nsIMailboxUrl> mailboxurl;
 	nsresult rv = NS_OK;
 	NS_LOCK_INSTANCE();
 
 	rv = nsComponentManager::CreateInstance(kCMailboxUrl,
                                             nsnull,
                                             nsIMailboxUrl::GetIID(),
-                                            (void **) getter_AddRefs(url));
-	if (NS_SUCCEEDED(rv) && url)
+                                            (void **) getter_AddRefs(mailboxurl));
+	if (NS_SUCCEEDED(rv) && mailboxurl)
 	{
+		nsCOMPtr<nsIMsgMailNewsUrl> url = do_QueryInterface(mailboxurl);
 		// okay now generate the url string
 		nsFilePath filePath(aMailboxPath); // convert to file url representation...
 		char * urlSpec = PR_smprintf("mailbox://%s", (const char *) filePath);
 		url->SetSpec(urlSpec);
 		PR_FREEIF(urlSpec);
-		url->SetMailboxParser(aMailboxParser);
+		mailboxurl->SetMailboxParser(aMailboxParser);
 		if (aUrlListener)
 			url->RegisterListener(aUrlListener);
 
@@ -122,29 +129,28 @@ nsresult nsMailboxService::CopyMessage(const char * aSrcMailboxURI,
                               nsIStreamListener * aMailboxCopyHandler,
                               PRBool moveMessage,
                               nsIUrlListener * aUrlListener,
-                              nsIURL **aURL)
+                              nsIURI **aURL)
 {
-	nsCOMPtr<nsIMailboxUrl> url;
+	nsCOMPtr<nsIMailboxUrl> mailboxurl;
 	nsresult rv = NS_OK;
 	NS_LOCK_INSTANCE();
 
-	nsMailboxAction mailboxAction = nsMailboxActionMoveMessage;
+	nsMailboxAction mailboxAction = nsIMailboxUrl::ActionMoveMessage;
 
-	rv = PrepareMessageUrl(aSrcMailboxURI, aUrlListener, mailboxAction, getter_AddRefs(url));
+	rv = PrepareMessageUrl(aSrcMailboxURI, aUrlListener, mailboxAction, getter_AddRefs(mailboxurl));
 
-	if (NS_SUCCEEDED(rv))
+	if (NS_SUCCEEDED(rv) && mailboxurl)
 	{
+
 		if (!moveMessage)
-			url->SetMailboxAction(nsMailboxActionCopyMessage);
-		url->SetMailboxCopyHandler(aMailboxCopyHandler);
+			mailboxurl->SetMailboxAction(nsIMailboxUrl::ActionCopyMessage);
+		mailboxurl->SetMailboxCopyHandler(aMailboxCopyHandler);
+		nsCOMPtr<nsIURI> url = do_QueryInterface(mailboxurl);
 		rv = RunMailboxUrl(url);
 	}
 
 	if (aURL)
-	{
-		*aURL = url;
-		NS_IF_ADDREF(*aURL);
-	}
+		mailboxurl->QueryInterface(nsIURI::GetIID(), (void **) aURL);
 
 	NS_UNLOCK_INSTANCE();
 
@@ -154,48 +160,45 @@ nsresult nsMailboxService::CopyMessage(const char * aSrcMailboxURI,
 nsresult nsMailboxService::DisplayMessage(const char* aMessageURI,
                                           nsISupports * aDisplayConsumer, 
 										  nsIUrlListener * aUrlListener,
-                                          nsIURL ** aURL)
+                                          nsIURI ** aURL)
 {
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIMailboxUrl> url;
+	nsCOMPtr<nsIMailboxUrl> mailboxurl;
 	NS_LOCK_INSTANCE();
 
-	rv = PrepareMessageUrl(aMessageURI, aUrlListener, nsMailboxActionDisplayMessage, getter_AddRefs(url));
+	rv = PrepareMessageUrl(aMessageURI, aUrlListener, nsIMailboxUrl::ActionDisplayMessage, getter_AddRefs(mailboxurl));
 
 	if (NS_SUCCEEDED(rv))
+	{
+		nsCOMPtr<nsIURI> url = do_QueryInterface(mailboxurl);
 		rv = RunMailboxUrl(url, aDisplayConsumer);
+	}
 
 	if (aURL)
-	{
-		*aURL = url;
-		NS_IF_ADDREF(*aURL);
-	}
-	
+		mailboxurl->QueryInterface(nsIURI::GetIID(), (void **) aURL);
 	NS_UNLOCK_INSTANCE();
 
 	return rv;
 }
 
 NS_IMETHODIMP nsMailboxService::SaveMessageToDisk(const char *aMessageURI, nsIFileSpec *aFile, 
-												  PRBool aAppendToFile, nsIUrlListener *aUrlListener, nsIURL **aURL)
+												  PRBool aAppendToFile, nsIUrlListener *aUrlListener, nsIURI **aURL)
 {
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIMailboxUrl> url;
+	nsCOMPtr<nsIMailboxUrl> mailboxurl;
 	NS_LOCK_INSTANCE();
 
-	rv = PrepareMessageUrl(aMessageURI, aUrlListener, nsMailboxActionSaveMessageToDisk, getter_AddRefs(url));
+	rv = PrepareMessageUrl(aMessageURI, aUrlListener, nsIMailboxUrl::ActionSaveMessageToDisk, getter_AddRefs(mailboxurl));
 
 	if (NS_SUCCEEDED(rv))
 	{
-		url->SetMessageFile(aFile);
+		mailboxurl->SetMessageFile(aFile);
+		nsCOMPtr<nsIURI> url = do_QueryInterface(mailboxurl);
 		rv = RunMailboxUrl(url);
 	}
 
 	if (aURL)
-	{
-		*aURL = url;
-		NS_IF_ADDREF(*aURL);
-	}
+		mailboxurl->QueryInterface(nsIURI::GetIID(), (void **) aURL);
 	
 	NS_UNLOCK_INSTANCE();
 	return rv;
@@ -205,7 +208,7 @@ nsresult nsMailboxService::DisplayMessageNumber(const char *url,
                                                 PRUint32 aMessageNumber,
                                                 nsISupports * aDisplayConsumer,
                                                 nsIUrlListener * aUrlListener,
-                                                nsIURL ** aURL)
+                                                nsIURI ** aURL)
 {
 	// mscott - this function is no longer supported...
 	NS_ASSERTION(0, "deprecated method");
@@ -214,7 +217,7 @@ nsresult nsMailboxService::DisplayMessageNumber(const char *url,
 
 // Takes a mailbox url, this method creates a protocol instance and loads the url
 // into the protocol instance.
-nsresult nsMailboxService::RunMailboxUrl(nsIMailboxUrl * aMailboxUrl, nsISupports * aDisplayConsumer)
+nsresult nsMailboxService::RunMailboxUrl(nsIURI * aMailboxUrl, nsISupports * aDisplayConsumer)
 {
 	// create a protocol instance to run the url..
 	nsresult rv = NS_OK;
@@ -245,8 +248,6 @@ nsresult nsMailboxService::PrepareMessageUrl(const char * aSrcMsgMailboxURI, nsI
 
 	if (NS_SUCCEEDED(rv) && aMailboxUrl && *aMailboxUrl)
 	{
-		nsIMailboxUrl * url = *aMailboxUrl; // no need to ref cnt..
-
 		// okay now generate the url string
 		char * urlSpec;
 		nsAutoString folderURI (eOneByte);
@@ -261,11 +262,12 @@ nsresult nsMailboxService::PrepareMessageUrl(const char * aSrcMsgMailboxURI, nsI
 			// set up the url spec and initialize the url with it.
 			nsFilePath filePath(folderPath); // convert to file url representation...
 			urlSpec = PR_smprintf("mailboxMessage://%s?number=%d", (const char *) filePath, msgKey);
+			nsCOMPtr <nsIMsgMailNewsUrl> url = do_QueryInterface(*aMailboxUrl);
 			url->SetSpec(urlSpec);
 			PR_FREEIF(urlSpec);
 
 			// set up the mailbox action
-			url->SetMailboxAction(aMailboxAction);
+			(*aMailboxUrl)->SetMailboxAction(aMailboxAction);
 
 			// set up the url listener
 			if (aUrlListener)
@@ -274,4 +276,47 @@ nsresult nsMailboxService::PrepareMessageUrl(const char * aSrcMsgMailboxURI, nsI
 	} // if we got a url
 
 	return rv;
+}
+
+NS_IMETHODIMP nsMailboxService::GetScheme(char * *aScheme)
+{
+	nsresult rv = NS_OK;
+	if (aScheme)
+		*aScheme = PL_strdup("mailbox");
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 
+}
+
+NS_IMETHODIMP nsMailboxService::GetDefaultPort(PRInt32 *aDefaultPort)
+{
+	nsresult rv = NS_OK;
+	if (aDefaultPort)
+		*aDefaultPort = -1;  // mailbox doesn't use a port!!!!!
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 	
+}
+
+NS_IMETHODIMP nsMailboxService::MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval)
+{
+	// no such thing as relative urls for smtp.....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsMailboxService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
+{
+	// i just haven't implemented this yet...I will be though....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsMailboxService::NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIChannel **_retval)
+{
+	// mscott - right now, I don't like the idea of returning channels to the caller. They just want us
+	// to run the url, they don't want a channel back...I'm going to be addressing this issue with
+	// the necko team in more detail later on.
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
 }

@@ -93,7 +93,7 @@ nsresult nsMsgLocalFactory::QueryInterface(const nsIID &aIID, void **aResult)
   *aResult = nsnull;   
 
   // we support two interfaces....nsISupports and nsFactory.....
-  if (aIID.Equals(::nsISupports::GetIID()))    
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
     *aResult = (void *)(nsISupports*)this;   
   else if (aIID.Equals(nsIFactory::GetIID()))   
     *aResult = (void *)(nsIFactory*)this;   
@@ -123,7 +123,7 @@ nsresult nsMsgLocalFactory::CreateInstance(nsISupports * /* aOuter */, const nsI
 	// do they want a local datasource ?
 	if (mClassID.Equals(kMailboxUrlCID)) 
 	{
-		nsMailboxUrl * url = new nsMailboxUrl(nsnull, nsnull);
+		nsMailboxUrl * url = new nsMailboxUrl();
 		if (url)
 			rv = url->QueryInterface(aIID, aResult);
 		else
@@ -134,14 +134,7 @@ nsresult nsMsgLocalFactory::CreateInstance(nsISupports * /* aOuter */, const nsI
 	}
 	else if (mClassID.Equals(kPop3UrlCID))
 	{
-		nsPop3URL * popUrl = new nsPop3URL(nsnull, nsnull);
-		if (popUrl)
-			rv = popUrl->QueryInterface(aIID, aResult);
-		else
-			rv = NS_ERROR_OUT_OF_MEMORY;
-		
-		if (NS_FAILED(rv) && popUrl)
-			delete popUrl;
+		rv = NS_NewPopUrl(nsIPop3URL::GetIID(), aResult);
 	}
 	else if (mClassID.Equals(kMailboxParserCID)) 
 	{
@@ -201,7 +194,7 @@ nsresult nsMsgLocalFactory::CreateInstance(nsISupports * /* aOuter */, const nsI
 	else if (mClassID.Equals(kParseMailMsgStateCID))
 		rv = NS_NewParseMailMessageState(aIID, aResult);
   else if (mClassID.Equals(kPop3IncomingServerCID))
-    rv = NS_NewPop3IncomingServer(nsISupports::GetIID(), aResult);
+    rv = NS_NewPop3IncomingServer(nsCOMTypeInfo<nsISupports>::GetIID(), aResult);
 	
   else
 		rv = NS_NOINTERFACE;
@@ -273,6 +266,12 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
+  rv = compMgr->RegisterComponent(kMailboxServiceCID,  
+                                    "Mailbox Protocol Handler",
+                                    NS_NETWORK_PROTOCOL_PROGID_PREFIX "mailbox",
+                                    path, PR_TRUE, PR_TRUE);
+  if (NS_FAILED(rv)) finalResult = rv;
+
   rv = compMgr->RegisterComponent(kMailboxParserCID, nsnull, nsnull,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
@@ -284,6 +283,13 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
   rv = compMgr->RegisterComponent(kPop3ServiceCID, nsnull, 
 								  "component://netscape/messenger/popservice",
 								  path, PR_TRUE, PR_TRUE);
+  if (NS_FAILED(rv)) finalResult = rv;
+
+  rv = compMgr->RegisterComponent(kPop3ServiceCID,  
+                                    "POP Protocol Handler",
+                                    NS_NETWORK_PROTOCOL_PROGID_PREFIX "pop3",
+                                    path, PR_TRUE, PR_TRUE);
+
   if (NS_FAILED(rv)) finalResult = rv;
 
   // register our RDF resource factories:

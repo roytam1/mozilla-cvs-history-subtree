@@ -16,12 +16,18 @@
  * Reserved.
  */
 
+#include "msgCore.h"
+#include "nsIMessage.h"
 #include "nsMsgDBFolder.h"
 #include "nsMsgFolderFlags.h"
 #include "nsIPref.h"
-
+#include "nsIMsgFolderCache.h"
+#include "nsIMsgFolderCacheElement.h"
+#include "nsIMsgMailSession.h"
+#include "nsMsgBaseCID.h"
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
+static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 
 NS_IMPL_ADDREF_INHERITED(nsMsgDBFolder, nsMsgFolder)
 NS_IMPL_RELEASE_INHERITED(nsMsgDBFolder, nsMsgFolder)
@@ -30,7 +36,7 @@ NS_IMETHODIMP nsMsgDBFolder::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
 	if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
 	*aInstancePtr = nsnull;
-	if (aIID.Equals(nsIDBChangeListener::GetIID()))
+	if (aIID.Equals(nsCOMTypeInfo<nsIDBChangeListener>::GetIID()))
 	{
 		*aInstancePtr = NS_STATIC_CAST(nsIDBChangeListener*, this);
 	}              
@@ -159,7 +165,7 @@ NS_IMETHODIMP nsMsgDBFolder::SetCharset(PRUnichar * aCharset)
 	{
 		nsString charset(aCharset);
 		rv = folderInfo->SetCharacterSet(&charset);
-		db->Commit(kLargeCommit);
+		db->Commit(nsMsgDBCommitType::kLargeCommit);
 	}
 	return rv;
 }
@@ -170,7 +176,35 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
 	// the DBs all the time, if we have to open it once, get everything
 	// we might need while we're here
 
-	nsresult result= NS_OK;
+	nsresult result;
+
+	nsCOMPtr <nsIMsgFolderCache> folderCache;
+
+	NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kMsgMailSessionCID, &result); 
+	if(NS_SUCCEEDED(result))
+	{
+		result = mailSession->GetFolderCache(getter_AddRefs(folderCache));
+		if (NS_SUCCEEDED(result) && folderCache)
+		{
+			char *uri;
+
+			result = GetURI(&uri);
+			if (NS_SUCCEEDED(result) && uri)
+			{
+				nsCOMPtr <nsIMsgFolderCacheElement> cacheElement;
+				result = folderCache->GetCacheElement(uri, PR_FALSE, getter_AddRefs(cacheElement));
+				if (NS_SUCCEEDED(result) && cacheElement)
+				{
+					result = ReadFromFolderCache(cacheElement);
+				}
+				PR_Free(uri);
+			}
+
+		}
+	}
+//	if (m_master->InitFolderFromCache (this))
+//		return err;
+
 	if (force || !(mPrefFlags & MSG_FOLDER_PREF_CACHED))
     {
         nsCOMPtr<nsIDBFolderInfo> folderInfo;
@@ -195,8 +229,15 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
 
 				folderInfo->GetCharacterSet(&mCharset);
         
-				if (db && !db->HasNew() && mNumPendingUnreadMessages <= 0)
-					ClearFlag(MSG_FOLDER_FLAG_GOT_NEW);
+				if (db) {
+					PRBool hasnew;
+					nsresult rv;
+					rv = db->HasNew(&hasnew);
+					if (NS_FAILED(rv)) return rv;
+					if (!hasnew && mNumPendingUnreadMessages <= 0) {
+						ClearFlag(MSG_FOLDER_FLAG_GOT_NEW);
+					}
+				}
             }
 
         }
@@ -222,12 +263,22 @@ nsresult nsMsgDBFolder::SendFlagNotifications(nsISupports *item, PRUint32 oldFla
 	return rv;
 }
 
+NS_IMETHODIMP
+nsMsgDBFolder::GetMsgDatabase(nsIMsgDatabase** aMsgDatabase)
+{
+    if (!aMsgDatabase || !mDatabase)
+        return NS_ERROR_NULL_POINTER;
+    *aMsgDatabase = mDatabase;
+    NS_ADDREF(*aMsgDatabase);
+    return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBFolder::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, PRUint32 aNewFlags, 
                          nsIDBChangeListener * aInstigator)
 {
 	nsCOMPtr<nsIMsgDBHdr> pMsgDBHdr;
 	nsresult rv = mDatabase->GetMsgHdrForKey(aKeyChanged, getter_AddRefs(pMsgDBHdr));
-	if(NS_SUCCEEDED(rv))
+	if(NS_SUCCEEDED(rv) && pMsgDBHdr)
 	{
 		nsCOMPtr<nsIMessage> message;
 		rv = CreateMessageFromMsgDBHdr(pMsgDBHdr, getter_AddRefs(message));
@@ -238,18 +289,18 @@ NS_IMETHODIMP nsMsgDBFolder::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlag
 			{
 				SendFlagNotifications(msgSupports, aOldFlags, aNewFlags);
 			}
-			UpdateSummaryTotals();
+			UpdateSummaryTotals(PR_TRUE);
 		}
 	}
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::OnKeyDeleted(nsMsgKey aKeyChanged, PRInt32 aFlags, 
+NS_IMETHODIMP nsMsgDBFolder::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey /* aParentKey */, PRInt32 aFlags, 
                           nsIDBChangeListener * aInstigator)
 {
 	nsCOMPtr<nsIMsgDBHdr> pMsgDBHdr;
 	nsresult rv = mDatabase->GetMsgHdrForKey(aKeyChanged, getter_AddRefs(pMsgDBHdr));
-	if(NS_SUCCEEDED(rv))
+	if(NS_SUCCEEDED(rv) && pMsgDBHdr)
 	{
 		nsCOMPtr<nsIMessage> message;
 		rv = CreateMessageFromMsgDBHdr(pMsgDBHdr, getter_AddRefs(message));
@@ -260,20 +311,20 @@ NS_IMETHODIMP nsMsgDBFolder::OnKeyDeleted(nsMsgKey aKeyChanged, PRInt32 aFlags,
 			{
 				NotifyItemDeleted(msgSupports);
 			}
-			UpdateSummaryTotals();
+			UpdateSummaryTotals(PR_TRUE);
 		}
 	}
 
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::OnKeyAdded(nsMsgKey aKeyChanged, PRInt32 aFlags, 
+NS_IMETHODIMP nsMsgDBFolder::OnKeyAdded(nsMsgKey aKeyChanged, nsMsgKey /* aParentKey */, PRInt32 aFlags, 
                         nsIDBChangeListener * aInstigator)
 {
 	nsresult rv;
 	nsCOMPtr<nsIMsgDBHdr> msgDBHdr;
 	rv = mDatabase->GetMsgHdrForKey(aKeyChanged, getter_AddRefs(msgDBHdr));
-	if(NS_SUCCEEDED(rv))
+	if(NS_SUCCEEDED(rv) && msgDBHdr)
 	{
 		nsCOMPtr<nsIMessage> message;
 		rv = CreateMessageFromMsgDBHdr(msgDBHdr, getter_AddRefs(message));
@@ -284,11 +335,18 @@ NS_IMETHODIMP nsMsgDBFolder::OnKeyAdded(nsMsgKey aKeyChanged, PRInt32 aFlags,
 			{
 				NotifyItemAdded(msgSupports);
 			}
-		//	UpdateSummaryTotals();
+			UpdateSummaryTotals(PR_TRUE);
 		}
 	}
 	return NS_OK;
 }
+
+NS_IMETHODIMP nsMsgDBFolder::OnParentChanged(nsMsgKey aKeyChanged, nsMsgKey oldParent, nsMsgKey newParent, 
+						nsIDBChangeListener * aInstigator)
+{
+	return NS_OK;
+}
+
 
 NS_IMETHODIMP nsMsgDBFolder::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *
 													 instigator)
@@ -300,3 +358,99 @@ NS_IMETHODIMP nsMsgDBFolder::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *
     }
     return NS_OK;
 }
+
+nsresult nsMsgDBFolder::ReadFromFolderCache(nsIMsgFolderCacheElement *element)
+{
+	nsresult rv = NS_OK;
+	char *charset;
+
+	element->GetInt32Property("flags", &mPrefFlags);
+	element->GetInt32Property("totalMsgs", &mNumTotalMessages);
+	element->GetInt32Property("totalUnreadMsgs", &mNumUnreadMessages);
+
+	element->GetStringProperty("charset", &charset);
+
+#ifdef DEBUG_bienvenu1
+	char *uri;
+
+	GetURI(&uri);
+	printf("read total %ld for %s\n", mNumTotalMessages, uri);
+	PR_Free(uri);
+#endif
+	mCharset = charset;
+	PR_FREEIF(charset);
+
+    mPrefFlags |= MSG_FOLDER_PREF_CACHED;
+	return rv;
+}
+
+NS_IMETHODIMP nsMsgDBFolder::WriteToFolderCache(nsIMsgFolderCache *folderCache)
+{
+	nsCOMPtr <nsIEnumerator> aEnumerator;
+
+	nsresult rv = GetSubFolders(getter_AddRefs(aEnumerator));
+	if(NS_FAILED(rv)) 
+		return rv;
+
+	char *uri = nsnull;
+	rv = GetURI(&uri);
+
+	if (folderCache)
+	{
+		nsCOMPtr <nsIMsgFolderCacheElement> cacheElement;
+		rv = folderCache->GetCacheElement(uri, PR_TRUE, getter_AddRefs(cacheElement));
+		if (NS_SUCCEEDED(rv) && cacheElement)
+			rv = WriteToFolderCacheElem(cacheElement);
+	}
+	PR_FREEIF(uri);
+
+	
+	nsCOMPtr<nsISupports> aItem;
+
+	rv = aEnumerator->First();
+	while(NS_SUCCEEDED(rv))
+	{
+		rv = aEnumerator->CurrentItem(getter_AddRefs(aItem));
+		if (NS_FAILED(rv)) break;
+		nsCOMPtr<nsIMsgFolder> aMsgFolder(do_QueryInterface(aItem, &rv));
+		if (NS_SUCCEEDED(rv))
+		{
+			if (folderCache)
+				rv = aMsgFolder->WriteToFolderCache(folderCache);
+		}
+		rv = aEnumerator->Next();
+	}
+	return rv;
+}
+
+NS_IMETHODIMP nsMsgDBFolder::WriteToFolderCacheElem(nsIMsgFolderCacheElement *element)
+{
+	nsresult rv = NS_OK;
+
+	element->SetInt32Property("flags", mPrefFlags);
+	element->SetInt32Property("totalMsgs", mNumTotalMessages);
+	element->SetInt32Property("totalUnreadMsgs", mNumUnreadMessages);
+
+	element->SetStringProperty("charset", (const char *) nsCAutoString(mCharset));
+
+#ifdef DEBUG_bienvenu1
+	char *uri;
+
+	GetURI(&uri);
+	printf("writing total %ld for %s\n", mNumTotalMessages, uri);
+	PR_Free(uri);
+#endif
+	return rv;
+}
+
+NS_IMETHODIMP
+nsMsgDBFolder::MarkAllMessagesRead(void)
+{
+	nsresult rv = GetDatabase();
+	
+	if(NS_SUCCEEDED(rv))
+		return mDatabase->MarkAllRead(nsnull);
+
+	return rv;
+}
+

@@ -25,7 +25,7 @@
 #include "OLE2.h"
 #include "URLMON.h"
 
-#if 1
+#if 0
 #define PRNTDEBUG(_x) printf(_x);
 #define PRNTDEBUG2(_x1, _x2) printf(_x1, _x2);
 #define PRNTDEBUG3(_x1, _x2, _x3) printf(_x1, _x2, _x3);
@@ -164,7 +164,7 @@ STDMETHODIMP nsDataObj::GetData(LPFORMATETC pFE, LPSTGMEDIUM pSTM)
 				  //case CF_METAFILEPICT:
 				  //	return GetMetafilePict(*pFE, *pSTM);
 				  default:
-            PRNTDEBUG2("***** nsDataObj::GetData - Unknown format %d\n", format);
+            PRNTDEBUG2("***** nsDataObj::GetData - Unknown format %x\n", format);
 					  return GetText(df, *pFE, *pSTM);
             break;
         } //switch
@@ -329,7 +329,7 @@ HRESULT nsDataObj::GetText(nsString * aDF, FORMATETC& aFE, STGMEDIUM& aSTG)
   char     * data;
   PRUint32   len;
 
-  // NOTE: Transferable keeps ownership of the memory
+  // NOTE: Transferable creates new memory, that needs to be deleted
   mTransferable->GetTransferData(aDF, (void **)&data, &len);
   if (0 == len) {
 	  return ResultFromScode(E_FAIL);
@@ -386,6 +386,9 @@ HRESULT nsDataObj::GetText(nsString * aDF, FORMATETC& aFE, STGMEDIUM& aSTG)
   }
 
   aSTG.hGlobal = hGlobalMemory;
+
+  // Now, delete the memory that was created by the transferable
+  delete [] data;
 
 	return ResultFromScode(S_OK);
 }

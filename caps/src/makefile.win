@@ -49,31 +49,26 @@ DLL=.\$(OBJDIR)\$(DLLNAME).dll
 #//------------------------------------------------------------------------
 
 C_OBJS=                                     \
-    .\$(OBJDIR)\nsZip.obj                   \
-    .\$(OBJDIR)\nsLoadZig.obj               \
     .\$(OBJDIR)\jpermission.obj             \
-    $(NULL)
+     $(NULL)
 
-
-CPP_OBJS=                                       \
-    .\$(OBJDIR)\nsUserDialogHelper.obj      \
-    .\$(OBJDIR)\nsZig.obj                   \
-    .\$(OBJDIR)\nsPrincipal.obj             \
-    .\$(OBJDIR)\nsPrivilege.obj             \
-    .\$(OBJDIR)\nsPrivilegeManager.obj      \
-    .\$(OBJDIR)\nsPrivilegeTable.obj        \
-    .\$(OBJDIR)\nsSystemPrivilegeTable.obj  \
-    .\$(OBJDIR)\nsTarget.obj                \
-    .\$(OBJDIR)\nsUserTarget.obj            \
-    .\$(OBJDIR)\admin.obj                   \
-    .\$(OBJDIR)\nsCaps.obj                  \
-    .\$(OBJDIR)\nsCCapsManager.obj          \
-    .\$(OBJDIR)\nsCCertPrincipal.obj        \
-    .\$(OBJDIR)\nsCCodebasePrincipal.obj    \
-    .\$(OBJDIR)\nsCCapsManagerFactory.obj   \
-    .\$(OBJDIR)\nsCCodeSourcePrincipal.obj  \
-    $(NULL)
-
+CPP_OBJS=                                    \
+    .\$(OBJDIR)\admin.obj                    \
+    .\$(OBJDIR)\nsCaps.obj                   \
+    .\$(OBJDIR)\nsCCapsManager.obj           \
+    .\$(OBJDIR)\nsCertificatePrincipal.obj   \
+    .\$(OBJDIR)\nsCodebasePrincipal.obj      \
+    .\$(OBJDIR)\nsPrincipalArray.obj         \
+    .\$(OBJDIR)\nsPrincipalManager.obj       \
+    .\$(OBJDIR)\nsPrivilege.obj              \
+    .\$(OBJDIR)\nsPrivilegeManager.obj       \
+    .\$(OBJDIR)\nsPrivilegeTable.obj         \
+    .\$(OBJDIR)\nsSecurityManagerFactory.obj \
+    .\$(OBJDIR)\nsSystemPrivilegeTable.obj   \
+    .\$(OBJDIR)\nsTarget.obj                 \
+    .\$(OBJDIR)\nsUserDialogHelper.obj       \
+    .\$(OBJDIR)\nsUserTarget.obj             \
+     $(NULL)
 
 #//------------------------------------------------------------------------
 #//
@@ -106,11 +101,10 @@ LINCS= $(LINCS) \
 		$(NULL)
 
 LLIBS = \
-	$(LIBNSPR)			\
-	$(DIST)\lib\plc3.lib	\
+	$(LIBNSPR)                    \
 	$(DIST)\lib\xpcom.lib         \
-	$(DIST)\lib\xplib.lib           \
-	$(DIST)\lib\zlib.lib \
+	$(DIST)\lib\xplib.lib         \
+	$(DIST)\lib\zlib.lib          \
 	$(NULL)
 
 
@@ -122,6 +116,10 @@ LLIBS = \
 include <$(DEPTH)/config/rules.mak>
 
 install::  $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+
+clobber::
+	rm -f $(DIST)\lib\$(DLLNAME).lib
+	rm -f $(DIST)\bin\components\$(DLLNAME).dll
 

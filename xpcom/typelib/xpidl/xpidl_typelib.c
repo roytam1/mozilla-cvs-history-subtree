@@ -195,66 +195,17 @@ find_interfaces(IDL_tree_func_data *tfd, gpointer user_data)
     return TRUE;
 }
 
-/* parse str and fill id */
-
-static const char nsIDFmt1[] =
-  "{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}";
-
-static const char nsIDFmt2[] =
-  "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
-
 #ifdef DEBUG_shaver
 /* for calling from gdb */
 static void
 print_IID(struct nsID *iid, FILE *file)
 {
-    fprintf(file, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-            (PRUint32) iid->m0, (PRUint32) iid->m1,(PRUint32) iid->m2,
-            (PRUint32) iid->m3[0], (PRUint32) iid->m3[1],
-            (PRUint32) iid->m3[2], (PRUint32) iid->m3[3],
-            (PRUint32) iid->m3[4], (PRUint32) iid->m3[5],
-            (PRUint32) iid->m3[6], (PRUint32) iid->m3[7]);
+    char iid_buf[UUID_LENGTH];
 
+    xpidl_sprint_iid(iid, iid_buf);
+    fprintf(file, "%s\n", iid_buf);
 }
 #endif
-
-/* we cannot link against libxpcom, so we re-implement nsID::Parse here. */
-static gboolean
-fill_iid(struct nsID *id, char *str)
-{
-    PRInt32 count = 0;
-    PRInt32 n1, n2, n3[8];
-    PRInt32 n0, i;
-
-    if (!str[0]) {
-        memset(id, 0, sizeof(*id));
-        return TRUE;
-    }
-#ifdef DEBUG_shaver_iid
-    fprintf(stderr, "parsing iid   %s\n", str);
-#endif
-
-    count = sscanf(str, (str[0] == '{' ? nsIDFmt1 : nsIDFmt2),
-                   &n0, &n1, &n2,
-                   &n3[0],&n3[1],&n3[2],&n3[3],
-                   &n3[4],&n3[5],&n3[6],&n3[7]);
-
-    id->m0 = (PRInt32) n0;
-    id->m1 = (PRInt16) n1;
-    id->m2 = (PRInt16) n2;
-    for (i = 0; i < 8; i++) {
-      id->m3[i] = (PRInt8) n3[i];
-    }
-
-#ifdef DEBUG_shaver_iid
-    if (count == 11) {
-        fprintf(stderr, "IID parsed to ");
-        print_IID(id, stderr);
-        fputs("\n", stderr);
-    }
-#endif
-    return (gboolean)(count == 11);
-}
 
 /* fill the interface_directory IDE table from the interface_map */
 static gboolean
@@ -264,18 +215,25 @@ fill_ide_table(gpointer key, gpointer value, gpointer user_data)
     NewInterfaceHolder *holder = (NewInterfaceHolder *) value;
     struct nsID id;
     XPTInterfaceDirectoryEntry *ide;
-    char *iid;
 
     XPT_ASSERT(holder);
-    iid = holder->iid ? holder->iid : "";
 
 #ifdef DEBUG_shaver_ifaces
     fprintf(stderr, "filling %s\n", holder->full_name);
 #endif
 
-    if (!fill_iid(&id, iid)) {
-        IDL_tree_error(state->tree, "cannot parse IID %s\n", iid);
-        return FALSE;
+    if (holder->iid) {
+        if (strlen(holder->iid) != 36) {
+            IDL_tree_error(state->tree, "IID %s is the wrong length\n",
+                           holder->iid);
+            return FALSE;
+        }
+        if (!xpidl_parse_iid(&id, holder->iid)) {
+            IDL_tree_error(state->tree, "cannot parse IID %s\n", holder->iid);
+            return FALSE;
+        }
+    } else {
+        memset(&id, 0, sizeof(id));
     }
 
     ide = &(HEADER(state)->interface_directory[IFACES(state)]);
@@ -661,8 +619,10 @@ handle_iid_is:
                 if (iid_is) {
                     int16 argnum = -1, count;
                     IDL_tree params = IDL_OP_DCL(IDL_NODE_UP(IDL_NODE_UP(state->tree))).parameter_dcls;
-                    for (count = 0; IDL_LIST(params).data;
-                         params = IDL_LIST(params).next, count++) {
+                    for (count = 0;
+                         params != NULL && IDL_LIST(params).data != NULL;
+                         params = IDL_LIST(params).next, count++)
+                    {
                         char *name;
                         name = IDL_IDENT(IDL_PARAM_DCL(IDL_LIST(params).data).simple_declarator).str;
                         if (!strcmp(name, iid_is)) {
@@ -672,7 +632,7 @@ handle_iid_is:
                         }
                     }
                     if (argnum < 0) {
-                        IDL_tree_error(type, "can't find matching arg for "
+                        IDL_tree_error(type, "can't find matching argument for "
                                        "[iid_is(%s)]\n", iid_is);
                         return FALSE;
                       }
@@ -899,8 +859,13 @@ typelib_op_dcl(TreeState *state)
     IDL_tree iter;
     uint16 num_args = 0;
     uint8 op_flags = 0;
-    gboolean op_notxpcom = !!IDL_tree_property_get(op->ident, "notxpcom");
-    gboolean op_noscript = !!IDL_tree_property_get(op->ident, "noscript");
+    gboolean op_notxpcom = (IDL_tree_property_get(op->ident, "notxpcom")
+                            != NULL);
+    gboolean op_noscript = (IDL_tree_property_get(op->ident, "noscript")
+                            != NULL);
+
+    if (!verify_method_declaration(state))
+        return FALSE;
 
     if (!XPT_InterfaceDescriptorAddMethods(id, 1))
         return FALSE;
@@ -912,10 +877,6 @@ typelib_op_dcl(TreeState *state)
     if (op->op_type_spec && !op_notxpcom)
         num_args++;             /* fake param for _retval */
 
-    /*
-     * don't look at op->f_noscript, because we want 'noscript' as a bare keyword
-     * to go away.  (it becomes __f_noscript in libIDL 0.6.8)
-     */
     if (op_noscript || op_notxpcom)
         op_flags |= XPT_MD_HIDDEN;
     if (op->f_varargs)
@@ -937,7 +898,7 @@ typelib_op_dcl(TreeState *state)
             return FALSE;
     }
 
-    /* XXX unless [nonxpcom] */
+    /* XXX unless [notxpcom] */
     if (!op_notxpcom) {
         if (op->op_type_spec) {
             if (!fill_pd_from_type(state, &meth->params[num_args],

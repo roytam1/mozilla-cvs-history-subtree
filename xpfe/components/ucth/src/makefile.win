@@ -24,6 +24,7 @@ IGNORE_MANIFEST=1
 #//
 #//------------------------------------------------------------------------
 DEPTH = ..\..\..\..
+include <$(DEPTH)/config/config.mak>
 
 #//------------------------------------------------------------------------
 #//
@@ -42,7 +43,6 @@ LINCS = \
 	-I$(PUBLIC)/xpcom \
 	-I$(PUBLIC)/xpfe/components \
 	-I$(PUBLIC)/raptor \
-	-I$(PUBLIC)/netlib \
 	-I$(PUBLIC)/rdf \
 	-I$(PUBLIC)/dom \
 	$(NULL)
@@ -50,7 +50,10 @@ LINCS = \
 LLIBS	= \
 	$(LIBNSPR) \
 	$(DIST)\lib\xpcom.lib \
+	$(DIST)\lib\js3250.lib \
+!ifndef NECKO
 	$(DIST)\lib\netlib.lib \
+!endif
 	$(NULL)
 
 #//------------------------------------------------------------------------

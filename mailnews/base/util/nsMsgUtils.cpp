@@ -16,6 +16,9 @@
  * Reserved.
  */
 
+#include "msgCore.h"
+#include "nsIMessage.h"
+#include "nsIMsgHdr.h"
 #include "nsMsgUtils.h"
 #include "nsString.h"
 #include "nsFileSpec.h"
@@ -23,13 +26,17 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 
+#if defined(DEBUG_sspitzer_) || defined(DEBUG_seth_)
+#define DEBUG_NS_MsgHashIfNecessary 1
+#endif
+
 nsresult GetMessageServiceProgIDForURI(const char *uri, nsString &progID)
 {
 
 	nsresult rv = NS_OK;
 	//Find protocol
 	nsString uriStr = uri;
-	PRInt32 pos = uriStr.Find(':');
+	PRInt32 pos = uriStr.FindChar(':');
 	if(pos == -1)
 		return NS_ERROR_FAILURE;
 	nsString protocol;
@@ -45,14 +52,14 @@ nsresult GetMessageServiceProgIDForURI(const char *uri, nsString &progID)
 nsresult GetMessageServiceFromURI(const char *uri, nsIMsgMessageService **messageService)
 {
 
-	nsAutoString progID (eOneByte);
+	nsAutoString progID;
 	nsresult rv;
 
 	rv = GetMessageServiceProgIDForURI(uri, progID);
 
 	if(NS_SUCCEEDED(rv))
 	{
-		rv = nsServiceManager::GetService(progID.GetBuffer(), nsIMsgMessageService::GetIID(),
+		rv = nsServiceManager::GetService((const char *) nsCAutoString(progID), nsCOMTypeInfo<nsIMsgMessageService>::GetIID(),
 		           (nsISupports**)messageService, nsnull);
 	}
 
@@ -62,17 +69,17 @@ nsresult GetMessageServiceFromURI(const char *uri, nsIMsgMessageService **messag
 
 nsresult ReleaseMessageServiceFromURI(const char *uri, nsIMsgMessageService *messageService)
 {
-	nsAutoString progID (eOneByte);
+	nsAutoString progID;
 	nsresult rv;
 
 	rv = GetMessageServiceProgIDForURI(uri, progID);
 	if(NS_SUCCEEDED(rv))
-		rv = nsServiceManager::ReleaseService(progID.GetBuffer(), messageService);
+		rv = nsServiceManager::ReleaseService(nsCAutoString(progID), messageService);
 	return rv;
 }
 
 
-NS_IMPL_ISUPPORTS(nsMessageFromMsgHdrEnumerator, nsIEnumerator::GetIID())
+NS_IMPL_ISUPPORTS(nsMessageFromMsgHdrEnumerator, nsCOMTypeInfo<nsIEnumerator>::GetIID())
 
 nsMessageFromMsgHdrEnumerator::nsMessageFromMsgHdrEnumerator(nsIEnumerator *srcEnumerator,
 															 nsIMsgFolder *folder)
@@ -188,7 +195,7 @@ nsresult NS_MsgGetPriorityFromString(const char *priority, nsMsgPriority *outPri
 }
 
 
-nsresult NS_MsgGetUntranslatedPriorityName (nsMsgPriority p, nsString2 *outName)
+nsresult NS_MsgGetUntranslatedPriorityName (nsMsgPriority p, nsString *outName)
 {
 	if (!outName)
 		return NS_ERROR_NULL_POINTER;
@@ -232,20 +239,20 @@ static PRUint32 StringHash(const char *ubuf)
   return h;
 }
 
-nsresult NS_MsgHashIfNecessary(nsString &name)
+nsresult NS_MsgHashIfNecessary(nsCAutoString &name)
 {
 #if defined(XP_WIN16) || defined(XP_OS2)
   const PRUint32 MAX_LEN = 8;
 #elif defined(XP_MAC)
   const PRUint32 MAX_LEN = 25;
-#elif defined(XP_UNIX) || defined(XP_PC)
+#elif defined(XP_UNIX) || defined(XP_PC) || defined(XP_BEOS)
   const PRUint32 MAX_LEN = 55;
 #else
 #error need_to_define_your_max_filename_length
 #endif
-  nsAutoString str(name, eOneByte);
+  nsCAutoString str(name);
 
-#ifdef DEBUG_sspitzer_
+#ifdef DEBUG_NS_MsgHashIfNecessary
   printf("in: %s\n",str.GetBuffer());
 #endif
 
@@ -266,7 +273,7 @@ nsresult NS_MsgHashIfNecessary(nsString &name)
                 (unsigned long) StringHash(str.GetBuffer()));
   }
   name = hashedname;
-#ifdef DEBUG_sspitzer_
+#ifdef DEBUG_NS_MsgHashIfNecessary
   printf("out: %s\n",hashedname);
 #endif
   

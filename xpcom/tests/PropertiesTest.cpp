@@ -33,6 +33,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIComponentManager.h"
 #include "nsIEnumerator.h"
+#include <iostream.h>  //BAD DOG -- no biscuit!
 
 #include "nsSpecialSystemDirectory.h"
 
@@ -84,8 +85,8 @@ NS_SetupRegistry()
     
 	pEventQService = nsnull;
     nsresult result = nsServiceManager::GetService(kEventQueueServiceCID,
-                                          kIEventQueueServiceIID,
-                                          (nsISupports **)&pEventQService);
+                                                   kIEventQueueServiceIID,
+                                                   (nsISupports **)&pEventQService);
     if (NS_SUCCEEDED(result)) {
       // XXX: What if this fails?
       result = pEventQService->CreateThreadEventQueue();
@@ -111,13 +112,14 @@ main(int argc, char* argv[])
 
 #ifndef NECKO
   nsINetService* pNetService = nsnull;
-  ret = nsServiceManager::GetService(kNetServiceCID, kINetServiceIID,
-    (nsISupports**) &pNetService);
+  ret = nsServiceManager::GetService(kNetServiceCID, 
+                                     kINetServiceIID,
+                                     (nsISupports**) &pNetService);
   if (NS_FAILED(ret) || (!pNetService)) {
     printf("cannot get net service\n");
     return 1;
   }
-  nsIURL *url = nsnull;
+  nsIURI *url = nsnull;
   ret = pNetService->CreateURL(&url, nsString(TEST_URL), nsnull, nsnull,
     nsnull);
   if (NS_FAILED(ret) || (!url)) {

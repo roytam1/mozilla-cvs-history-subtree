@@ -65,7 +65,7 @@ struct RTFEntry {
   eRTFTags  mTagID;
 };
 
-
+#if 0
 static RTFEntry gRTFTable[] = {
 
   {"$",eRTFCtrl_unknown},
@@ -111,8 +111,7 @@ static RTFEntry gRTFTable[] = {
  * @param 
  * @return
  */
-static
-const char* GetTagName(eRTFTags aTag) {
+static const char* GetTagName(eRTFTags aTag) {
   PRInt32  cnt=sizeof(gRTFTable)/sizeof(RTFEntry);
   PRInt32  low=0; 
   PRInt32  high=cnt-1;
@@ -128,6 +127,7 @@ const char* GetTagName(eRTFTags aTag) {
   }
   return "";
 }
+#endif
 
 /**
  *  This method gets called as part of our COM-like interfaces.
@@ -369,6 +369,15 @@ PRBool CRtfDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const{
 }
 
 /**
+ * Give rest of world access to our tag enums, so that CanContain(), etc,
+ * become useful.
+ */
+NS_IMETHODIMP CRtfDTD::StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/**
  *  
  *  @update  gess 3/25/98
  *  @param   aToken -- token object to be put into content model
@@ -469,6 +478,21 @@ nsITokenRecycler* CRtfDTD::GetTokenRecycler(void){
   return 0;
 }
 
+/**
+ * Use this id you want to stop the building content model
+ * --------------[ Sets DTD to STOP mode ]----------------
+ * It's recommended to use this method in accordance with
+ * the parser's terminate() method.
+ *
+ * @update	harishd 07/22/99
+ * @param 
+ * @return
+ */
+nsresult  CRtfDTD::Terminate(void)
+{
+  return NS_ERROR_HTMLPARSER_STOPPARSING;
+}
+
 /***************************************************************
   Heres's the RTFControlWord subclass...
  ***************************************************************/
@@ -481,18 +505,17 @@ PRInt32 CRTFControlWord::GetTokenType() {
   return eRTFToken_controlword;
 }
 
-
-PRInt32 CRTFControlWord::Consume(nsScanner& aScanner){
+nsresult CRTFControlWord::Consume(PRUnichar aChar,nsScanner& aScanner) {
   static nsString     gAlphaChars("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
   static nsAutoString gDigits("-0123456789");
 
   PRInt32 result=aScanner.ReadWhile(mTextValue,gAlphaChars,PR_TRUE,PR_FALSE);
   if(NS_OK==result) {
     //ok, now look for an option parameter...
-    PRUnichar ch;
-    result=aScanner.Peek(ch);
 
-    switch(ch) {
+    result=aScanner.Peek(aChar);
+
+    switch(aChar) {
       case '0': case '1': case '2': case '3': case '4': 
       case '5': case '6': case '7': case '8': case '9': 
       case kMinus:
@@ -531,7 +554,7 @@ PRBool CRTFGroup::IsGroupStart(){
   return mStart;
 }
 
-PRInt32 CRTFGroup::Consume(nsScanner& aScanner){
+nsresult CRTFGroup::Consume(PRUnichar aChar,nsScanner& aScanner) {
   PRInt32 result=NS_OK;
   if(PR_FALSE==mStart)
     result=aScanner.SkipWhitespace();
@@ -561,7 +584,8 @@ PRInt32 CRTFContent::GetTokenType() {
  * @return
  */
 static nsString textTerminators("\\{}");
-PRInt32 CRTFContent::Consume(nsScanner& aScanner){
+
+nsresult CRTFContent::Consume(PRUnichar aChar,nsScanner& aScanner) {
   PRInt32 result=aScanner.ReadUntil(mTextValue,textTerminators,PR_FALSE,PR_FALSE);
   return result;
 }

@@ -123,9 +123,6 @@
 	      const int VK_CLOSE_BRACKET  = 0xDD;
 	      const int VK_QUOTE          = 0xDE;
 
-		  readonly    attribute	  wstring		text;
-					  attribute	  boolean		commitText;
-
 		  readonly	  attribute   int		    screenX;
 		  readonly    attribute   int		    screenY;
 
@@ -140,7 +137,8 @@
 
 		  readonly	  attribute   unsigned long   charCode;
 		  readonly	  attribute   unsigned long   keyCode;
-		  readonly	  attribute   unsigned long   button;
+		  readonly	  attribute   unsigned short  button;
+      readonly    attribute   unsigned short  clickcount;
       };
 
       interface NSUIEvent {

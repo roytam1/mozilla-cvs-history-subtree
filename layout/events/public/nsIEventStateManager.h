@@ -40,6 +40,7 @@ class nsIView;
 class nsIEventStateManager : public nsISupports {
 
 public:
+  static const nsIID& GetIID() { static nsIID iid = NS_IEVENTSTATEMANAGER_IID; return iid; }
 
   NS_IMETHOD PreHandleEvent(nsIPresContext& aPresContext, 
                          nsGUIEvent *aEvent, 
@@ -57,9 +58,12 @@ public:
   NS_IMETHOD ClearFrameRefs(nsIFrame* aFrame) = 0;
 
   NS_IMETHOD GetEventTarget(nsIFrame **aFrame) = 0;
+  NS_IMETHOD GetEventTargetContent(nsIContent** aContent) = 0;
 
   NS_IMETHOD GetContentState(nsIContent *aContent, PRInt32& aState) = 0;
   NS_IMETHOD SetContentState(nsIContent *aContent, PRInt32 aState) = 0;
+
+  NS_IMETHOD GetFocusedContent(nsIContent **aContent) = 0;
 };
 
 #define NS_EVENT_STATE_UNSPECIFIED  0x0000

@@ -16,6 +16,7 @@
  * Reserved.
  */
 #include "nsHTMLParts.h"
+#include "nsCOMPtr.h"
 #include "nsImageFrame.h"
 #include "nsString.h"
 #include "nsIPresContext.h"
@@ -36,8 +37,9 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
+#include "nsNeckoUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIView.h"
@@ -46,6 +48,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "prprf.h"
 #include "nsIFontMetrics.h"
 #include "nsCSSRendering.h"
+#include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIDeviceContext.h"
 #include "nsINameSpaceManager.h"
@@ -90,14 +93,14 @@ nsImageFrame::~nsImageFrame()
 }
 
 NS_METHOD
-nsImageFrame::DeleteFrame(nsIPresContext& aPresContext)
+nsImageFrame::Destroy(nsIPresContext& aPresContext)
 {
   NS_IF_RELEASE(mImageMap);
 
   // Release image loader first so that it's refcnt can go to zero
   mImageLoader.StopAllLoadImages(&aPresContext);
 
-  return nsLeafFrame::DeleteFrame(aPresContext);
+  return nsLeafFrame::Destroy(aPresContext);
 }
 
 NS_IMETHODIMP
@@ -127,7 +130,7 @@ nsImageFrame::Init(nsIPresContext&  aPresContext,
   }
 
   // Set the image loader's source URL and base URL
-  nsIURL* baseURL = nsnull;
+  nsIURI* baseURL = nsnull;
   nsIHTMLContent* htmlContent;
   rv = mContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent);
   if (NS_SUCCEEDED(rv)) {
@@ -167,7 +170,6 @@ nsImageFrame::UpdateImage(nsIPresContext* aPresContext, PRUint32 aStatus)
   printf(": UpdateImage: status=%x\n", aStatus);
 #endif
   if (NS_IMAGE_LOAD_STATUS_ERROR & aStatus) {
-#ifdef XXX_troy_is_back_from_sabatical
     // We failed to load the image. Notify the pres shell
     nsIPresShell* presShell;
     aPresContext->GetShell(&presShell);
@@ -175,7 +177,6 @@ nsImageFrame::UpdateImage(nsIPresContext* aPresContext, PRUint32 aStatus)
       presShell->CantRenderReplacedElement(aPresContext, this);
       NS_RELEASE(presShell);
     }
-#endif
   }
   else if (NS_IMAGE_LOAD_STATUS_SIZE_AVAILABLE & aStatus) {
     // Now that the size is available, trigger a content-changed reflow
@@ -415,7 +416,7 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext&      aPresContext,
   aRenderingContext.GetDeviceContext(dc);
   nsIImage*         icon;
 
-  if (NS_SUCCEEDED(dc->LoadIconImage(aIconId, icon))) {
+  if (NS_SUCCEEDED(dc->LoadIconImage(aIconId, icon)) && icon) {
     aRenderingContext.DrawImage(icon, inner.x, inner.y);
 
     // Reduce the inner rect by the width of the icon, and leave an
@@ -571,14 +572,16 @@ PRBool
 nsImageFrame::IsServerImageMap()
 {
   nsAutoString ismap;
-  return NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::ismap, ismap);
+  return NS_CONTENT_ATTR_HAS_VALUE ==
+    mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::ismap, ismap);
 }
 
 PRIntn
 nsImageFrame::GetSuppress()
 {
   nsAutoString s;
-  if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::suppress, s)) {
+  if (NS_CONTENT_ATTR_HAS_VALUE ==
+      mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::suppress, s)) {
     if (s.EqualsIgnoreCase("true")) {
       return SUPPRESS;
     } else if (s.EqualsIgnoreCase("false")) {
@@ -586,6 +589,73 @@ nsImageFrame::GetSuppress()
     }
   }
   return DEFAULT_SUPPRESS;
+}
+
+//XXX the event come's in in view relative coords, but really should
+//be in frame relative coords by the time it hits our frame.
+
+// Translate an point that is relative to our view (or a containing
+// view) into a localized pixel coordinate that is relative to the
+// content area of this frame (inside the border+padding).
+void
+nsImageFrame::TranslateEventCoords(nsIPresContext& aPresContext,
+                                   const nsPoint& aPoint,
+                                   nsPoint& aResult)
+{
+  nscoord x = aPoint.x;
+  nscoord y = aPoint.y;
+
+  // If we have a view then the event coordinates are already relative
+  // to this frame; otherwise we have to adjust the coordinates
+  // appropriately.
+  nsIView* view;
+  GetView(&view);
+  if (nsnull == view) {
+    nsPoint offset;
+    GetOffsetFromView(offset, &view);
+    if (nsnull != view) {
+      x -= offset.x;
+      y -= offset.y;
+    }
+  }
+
+  // Subtract out border and padding here so that the coordinates are
+  // now relative to the content area of this frame.
+  nsRect inner;
+  GetInnerArea(&aPresContext, inner);
+  x -= inner.x;
+  y -= inner.y;
+
+  // Translate the coordinates from twips to pixels
+  float t2p;
+  aPresContext.GetTwipsToPixels(&t2p);
+  aResult.x = NSTwipsToIntPixels(x, t2p);
+  aResult.y = NSTwipsToIntPixels(y, t2p);
+}
+
+PRBool
+nsImageFrame::GetAnchorHREF(nsString& aResult)
+{
+  PRBool status = PR_FALSE;
+  aResult.Truncate();
+
+  // Walk up the content tree, looking for an nsIDOMAnchorElement
+  nsCOMPtr<nsIContent> content;
+  mContent->GetParent(*getter_AddRefs(content));
+  while (content) {
+    nsCOMPtr<nsIDOMHTMLAnchorElement> anchor(do_QueryInterface(content));
+    if (anchor) {
+      anchor->GetHref(aResult);
+      if (aResult.Length() > 0) {
+        status = PR_TRUE;
+      }
+      break;
+    }
+    nsCOMPtr<nsIContent> parent;
+    content->GetParent(*getter_AddRefs(parent));
+    content = parent;
+  }
+  return status;
 }
 
 // XXX what should clicks on transparent pixels do?
@@ -601,47 +671,26 @@ nsImageFrame::HandleEvent(nsIPresContext& aPresContext,
   case NS_MOUSE_MOVE:
     map = GetImageMap();
     if ((nsnull != map) || IsServerImageMap()) {
-      // Ask map if the x,y coordinates are in a clickable area
-      float t2p;
-      aPresContext.GetTwipsToPixels(&t2p);
+      nsPoint p;
+      TranslateEventCoords(aPresContext, aEvent->point, p);
       nsAutoString absURL, target, altText;
       PRBool suppress;
       if (nsnull != map) {
-        // Subtract out border and padding here so that we are looking
-        // at the right coordinates. Hit detection against area tags
-        // is done after the mouse wanders over the image, not over
-        // the image's borders.
-        nsRect inner;
-        GetInnerArea(&aPresContext, inner);
-
-        // XXX Event isn't in our local coordinate space like it should be...
-        nsIView*  view;
-        GetView(&view);
-        if (nsnull == view) {
-          nsPoint offset;
-          GetOffsetFromView(offset, &view);
-          if (nsnull != view) {
-            aEvent->point -= offset;
-          }
-        }
-
-        PRInt32 x = NSTwipsToIntPixels((aEvent->point.x - inner.x), t2p);
-        PRInt32 y = NSTwipsToIntPixels((aEvent->point.y - inner.y), t2p);
-        nsIURL* docURL = nsnull;
         nsIDocument* doc = nsnull;
         mContent->GetDocument(doc);
-        if (nsnull != doc) {
+        nsIURI* docURL = nsnull;
+        if (doc) {
           docURL = doc->GetDocumentURL();
           NS_RELEASE(doc);
         }
 
-        NS_ASSERTION(nsnull != docURL, "nsIDocument->GetDocumentURL() returning nsnull");
         PRBool inside = PR_FALSE;
-        if (nsnull != docURL) {
-           inside = map->IsInside(x, y, docURL, absURL, target, altText,
-                                        &suppress);
+        if (docURL) {
+          inside = map->IsInside(p.x, p.y, docURL, absURL, target, altText,
+                                 &suppress);
+          NS_RELEASE(docURL);
         }
-        NS_IF_RELEASE(docURL);
+
         if (inside) {
           // We hit a clickable area. Time to go somewhere...
           PRBool clicked = PR_FALSE;
@@ -654,9 +703,10 @@ nsImageFrame::HandleEvent(nsIPresContext& aPresContext,
       }
       else {
         suppress = GetSuppress();
-        nsIURL* baseURL = nsnull;
+        nsIURI* baseURL = nsnull;
         nsIHTMLContent* htmlContent;
-        if (NS_SUCCEEDED(mContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) {
+        if (NS_SUCCEEDED(mContent->QueryInterface(kIHTMLContentIID,
+                                                  (void**)&htmlContent))) {
           htmlContent->GetBaseURL(baseURL);
           NS_RELEASE(htmlContent);
         }
@@ -667,42 +717,36 @@ nsImageFrame::HandleEvent(nsIPresContext& aPresContext,
             NS_RELEASE(doc);
           }
         }
+
+        // Server side image maps use the href in a containing anchor
+        // element to provide the basis for the destination url.
         nsAutoString src;
-        nsString empty;
-        mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::src, src);
+        if (GetAnchorHREF(src)) {
 #ifndef NECKO
-        NS_MakeAbsoluteURL(baseURL, empty, src, absURL);
+          nsString empty;
+          NS_MakeAbsoluteURL(baseURL, empty, src, absURL);
 #else
-        nsresult rv;
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        nsIURI *baseUri = nsnull;
-        rv = baseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-        if (NS_FAILED(rv)) return rv;
-
-        char *absUrlStr = nsnull;
-        const char *baseSpec = src.GetBuffer();
-        rv = service->MakeAbsolute(baseSpec, baseUri, &absUrlStr);
-        NS_RELEASE(baseUri);
-        absURL = absUrlStr;
-        delete [] absUrlStr;
+          NS_MakeAbsoluteURI(src, baseURL, absURL);
 #endif // NECKO
-        NS_IF_RELEASE(baseURL);
+          NS_IF_RELEASE(baseURL);
 
-        // Note: We don't subtract out the border/padding here to remain
-        // compatible with navigator. [ick]
-        PRInt32 x = NSTwipsToIntPixels(aEvent->point.x, t2p);
-        PRInt32 y = NSTwipsToIntPixels(aEvent->point.y, t2p);
-        char cbuf[50];
-        PR_snprintf(cbuf, sizeof(cbuf), "?%d,%d", x, y);
-        absURL.Append(cbuf);
-        PRBool clicked = PR_FALSE;
-        if (aEvent->message == NS_MOUSE_LEFT_BUTTON_UP) {
-          aEventStatus = nsEventStatus_eConsumeDoDefault; 
-          clicked = PR_TRUE;
+          // XXX if the mouse is over/clicked in the border/padding area
+          // we should probably just pretend nothing happened. Nav4
+          // keeps the x,y coordinates positive as we do; IE doesn't
+          // bother. Both of them send the click through even when the
+          // mouse is over the border.
+          if (p.x < 0) p.x = 0;
+          if (p.y < 0) p.y = 0;
+          char cbuf[50];
+          PR_snprintf(cbuf, sizeof(cbuf), "?%d,%d", p.x, p.y);
+          absURL.Append(cbuf);
+          PRBool clicked = PR_FALSE;
+          if (aEvent->message == NS_MOUSE_LEFT_BUTTON_UP) {
+            aEventStatus = nsEventStatus_eConsumeDoDefault; 
+            clicked = PR_TRUE;
+          }
+          TriggerLink(aPresContext, absURL, target, clicked);
         }
-        TriggerLink(aPresContext, absURL, target, clicked);
       }
       break;
     }
@@ -713,35 +757,18 @@ nsImageFrame::HandleEvent(nsIPresContext& aPresContext,
   return nsLeafFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 }
 
+//XXX This will need to be rewritten once we have content for areas
 NS_METHOD
 nsImageFrame::GetCursor(nsIPresContext& aPresContext,
                         nsPoint& aPoint,
                         PRInt32& aCursor)
 {
-  //XXX This will need to be rewritten once we have content for areas
   nsImageMap* map = GetImageMap();
   if (nsnull != map) {
-    nsRect inner;
-    GetInnerArea(&aPresContext, inner);
+    nsPoint p;
+    TranslateEventCoords(aPresContext, aPoint, p);
     aCursor = NS_STYLE_CURSOR_DEFAULT;
-    float t2p;
-    aPresContext.GetTwipsToPixels(&t2p);
-
-    // XXX Event isn't in our local coordinate space like it should be...
-    nsPoint   pt = aPoint;
-    nsIView*  view;
-    GetView(&view);
-    if (nsnull == view) {
-      nsPoint offset;
-      GetOffsetFromView(offset, &view);
-      if (nsnull != view) {
-        pt -= offset;
-      }
-    }
-
-    PRInt32 x = NSTwipsToIntPixels((pt.x - inner.x), t2p);
-    PRInt32 y = NSTwipsToIntPixels((pt.y - inner.y), t2p);
-    if (map->IsInside(x, y)) {
+    if (map->IsInside(p.x, p.y)) {
       // Use style defined cursor if one is provided, otherwise when
       // the cursor style is "auto" we use the pointer cursor.
       const nsStyleColor* styleColor;
@@ -753,7 +780,6 @@ nsImageFrame::GetCursor(nsIPresContext& aPresContext,
     }
     return NS_OK;
   }
-
   return nsFrame::GetCursor(aPresContext, aPoint, aCursor);
 }
 

@@ -19,7 +19,7 @@
 /*
 	nsPluginsDirUNIX.cpp
 	
-	Windows implementation of the nsPluginsDir/nsPluginsFile classes.
+	UNIX implementation of the nsPluginsDir/nsPluginsFile classes.
 	
 	by Alex Musil
  */
@@ -50,36 +50,15 @@ static char* GetFileName(const char* pathname)
 static PRUint32 CalculateVariantCount(char* mimeTypes)
 {
         PRUint32 variants = 0;
-        char* index = mimeTypes;
-        while (*index)
+        char* ptr = mimeTypes;
+        while (*ptr)
         {
-                if (*index == '|')
+                if (*ptr == ';')
                         variants++;
 
-                ++index; 
+                ++ptr; 
         }
         return variants;
-}
-
-static char** MakeStringArray(PRUint32 variants, char* data)
-{
-        char** buffer = NULL;
-        char* index = data;
-        PRUint32 count = 0;
- 
-        buffer = (char **)PR_Malloc(variants * sizeof(char *));
-        buffer[count++] = index;
- 
-        while (*index && count<variants)
-        {
-                if (*index == '|')
-                {
-                  buffer[count++] = index + 1;
-                  *index = 0;
-                }
-                ++index; 
-        }
-        return buffer;  
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -115,9 +94,11 @@ nsPluginsDir::~nsPluginsDir()
 
 PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
 {
-        const char* pathname = fileSpec.GetCString();
+    const char* pathname = fileSpec.GetCString();
 
+#ifdef NS_DEBUG
 	printf("IsPluginFile(%s)\n", pathname);
+#endif
 
 	return PR_TRUE;
 }
@@ -144,32 +125,103 @@ nsPluginFile::~nsPluginFile()
 nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
 {
         const char* path = this->GetCString();
-        outLibrary = PR_LoadLibrary(path);
+        pLibrary = outLibrary = PR_LoadLibrary(path);
+
+#ifdef NS_DEBUG
+        printf("LoadPlugin() %s returned %lx\n",path,(unsigned long)pLibrary);
+#endif
+
         return NS_OK;
 }
+
+typedef char* (*UNIX_Plugin_GetMIMEDescription)();
+
 
 /**
  * Obtains all of the information currently available for this plugin.
  */
 nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 {
-#if 0
-    /*
-    ** XXX this needs to change to probe the plugin for mime types/descriptions/etc.
-    */
-
 	const char *path = this->GetCString();
+    char *mimedescr,*mdesc,*start,*nexttoc,*mtype,*exten,*descr;
+    int i,num;
+
+    UNIX_Plugin_GetMIMEDescription procedure = nsnull;
+    mimedescr=(char *)"";
+
+    if((procedure = (UNIX_Plugin_GetMIMEDescription)PR_FindSymbol(pLibrary,"NP_GetMIMEDescription")) != 0) {
+        mimedescr = procedure();
+    } else {
+#ifdef NS_DEBUG
+        printf("Cannot get plugin info: no GetMIMEDescription procedure!\n");
+#endif
+        return NS_ERROR_FAILURE;
+    }
 
 	info.fName = GetFileName(path);
-	info.fMimeType = "application/x-java-vm";
-	info.fMimeDescription = "OJI Plugin";
-	info.fExtensions = "class";
 
-    info.fVariantCount = CalculateVariantCount(info.fMimeType) + 1;
-    info.fMimeTypeArray = MakeStringArray(info.fVariantCount, info.fMimeType);
-    info.fMimeDescriptionArray = MakeStringArray(info.fVariantCount, info.fMimeDescription);
-    info.fExtensionArray = MakeStringArray(info.fVariantCount, info.fExtensions);
-    
+#ifdef NS_DEBUG
+    printf("GetMIMEDescription() %lx returned \"%s\"\n",
+           (unsigned long)procedure, mimedescr);
 #endif
+
+    // copy string
+    
+    mdesc = (char *)PR_Malloc(strlen(mimedescr)+1);
+    strcpy(mdesc,mimedescr);
+    num=CalculateVariantCount(mimedescr)+1;
+    info.fVariantCount = num;
+
+    info.fMimeTypeArray =(char **)PR_Malloc(num * sizeof(char *));
+    info.fMimeDescriptionArray =(char **)PR_Malloc(num * sizeof(char *));
+    info.fExtensionArray =(char **)PR_Malloc(num * sizeof(char *));
+
+    start=mdesc;
+    for(i=0;i<num && *start;i++) {
+        // search start of next token (separator is ';')
+
+        if(i+1 < num) {
+            if((nexttoc=PL_strchr(start, ';')) != 0)
+                *nexttoc++=0;
+            else
+                nexttoc=start+strlen(start);
+        } else
+            nexttoc=start+strlen(start);
+
+        // split string into: mime type ':' extensions ':' description
+
+        mtype=start;
+        exten=PL_strchr(start, ':');
+        if(exten) {
+            *exten++=0;
+            descr=PL_strchr(exten, ':');
+        } else
+            descr=NULL;
+
+        if(descr)
+            *descr++=0;
+
+#ifdef NS_DEBUG
+        printf("Registering plugin for: \"%s\",\"%s\",\"%s\"\n", mtype,descr ? descr : "null",exten ? exten : "null");
+#endif
+
+        if(i==0) {
+            info.fMimeType = mtype ? mtype : (char *)"";
+            info.fMimeDescription = descr ? descr : (char *)"";
+            info.fExtensions = exten ? exten : (char *)"";
+        }
+
+        if(!*mtype && !descr && !exten) {
+            i--;
+            info.fVariantCount--;
+        } else {
+            info.fMimeTypeArray[i] = mtype ? mtype : (char *)"";
+            info.fMimeDescriptionArray[i] = descr ? descr : (char *)"";
+            info.fExtensionArray[i] = exten ? exten : (char *)"";
+        }
+        start=nexttoc;
+    }
 	return NS_OK;
 }
+
+

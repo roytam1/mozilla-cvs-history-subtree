@@ -21,8 +21,10 @@
 
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
+#include "nsIOutputStream.h"
+#include "nsIEventQueue.h"
 #include "nsCOMPtr.h"
-#include "nsITransport.h"
+#include "nsIChannel.h"
 
 // This is a helper class used to encapsulate code shared between all of the
 // mailnews protocol objects (imap, news, pop, smtp, etc.) In particular,
@@ -40,27 +42,10 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
-
-	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
-	// OnDataAvailable. We then read and process the incoming data from the input stream. 
-	// a typical protocol shouldn't need to override this method
-	NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength);
-
-	// I expect most protocols to override this method AND call into the base class
-	// the base class takes the url and sets the state of the url passed in to be running
-	NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-
-	// stop binding is a "notification" informing us that the stream associated with aURL is going away.
-	// the base class implementation takes the url and sets the url state to NOT running.
-	NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
-
-	// Ideally, a protocol should only have to support the stream listener methods covered above. 
-	// However, we don't have this nsIStreamListenerLite interface defined yet. Until then, we are using
-	// nsIStreamListener so we need to add stubs for the heavy weight stuff we don't want to use.
-
-	NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax) { return NS_OK;}
-	NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg) { return NS_OK;}
-	NS_IMETHOD GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo) { return NS_OK;} ;
+	
+	NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+	NS_IMETHOD OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt);
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// End of nsIStreamListenerSupport
@@ -70,7 +55,7 @@ public:
 	// then calls the base class which opens the socket if it needs opened. If the socket is 
 	// already opened then we just call ProcessProtocolState to start the churning process.
 	// aConsumer is the consumer for the url. It can be null if this argument is not appropriate
-	virtual nsresult LoadUrl(nsIURL * aURL, nsISupports * aConsumer = nsnull);
+	virtual nsresult LoadUrl(nsIURI * aURL, nsISupports * aConsumer = nsnull);
 
 	// Flag manipulators
 	PRBool TestFlag  (PRUint32 flag) {return flag & m_flags;}
@@ -81,8 +66,8 @@ protected:
 	// methods for opening and closing a socket with core netlib....
 	// mscott -okay this is lame. I should break this up into a file protocol and a socket based
 	// protocool class instead of cheating and putting both methods here...
-	virtual nsresult OpenNetworkSocket(nsIURL * aURL, PRUint32 aPort, const char * aHostName); // open a connection on this url
-	virtual nsresult OpenFileSocket(nsIURL * aURL, const nsFileSpec * aFileSpec); // used to open a file socket connection
+	virtual nsresult OpenNetworkSocket(nsIURI * aURL); // open a connection on this url
+	virtual nsresult OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec, PRUint32 aStartPosition, PRInt32 aReadCount); // used to open a file socket connection
 
 	// a Protocol typically overrides this method. They free any of their own connection state and then
 	// they call up into the base class to free the generic connection objects
@@ -92,22 +77,25 @@ protected:
 
 	// ProcessProtocolState - This is the function that gets churned by calls to OnDataAvailable. 
 	// As data arrives on the socket, OnDataAvailable calls ProcessProtocolState.
-	virtual nsresult ProcessProtocolState(nsIURL * url, nsIInputStream * inputStream, PRUint32 length) = 0;
+	
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length) = 0;
 
 	// SendData -- Writes the data contained in dataBuffer into the current output stream. 
 	// It also informs the transport layer that this data is now available for transmission.
 	// Returns a positive number for success, 0 for failure (not all the bytes were written to the
 	// stream, etc). 
-	virtual PRInt32 SendData(nsIURL * aURL, const char * dataBuffer);
+	virtual PRInt32 SendData(nsIURI * aURL, const char * dataBuffer);
 
 	// Ouput stream for writing commands to the socket
-	nsCOMPtr<nsITransport>		m_transport; 
+	nsCOMPtr<nsIChannel>		m_channel; 
 	nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface
-	nsCOMPtr<nsIStreamListener> m_outputConsumer; // this will be obtained from the transport interface
 
 	PRBool	  m_socketIsOpen; // mscott: we should look into keeping this state in the nsSocketTransport...
 							  // I'm using it to make sure I open the socket the first time a URL is loaded into the connection
-	PRUint32  m_flags; // used to store flag information
+	PRUint32	m_flags; // used to store flag information
+	PRUint32	m_startPosition;
+	PRInt32		m_readCount;
 };
 
 #endif /* nsMsgProtocol_h__ */

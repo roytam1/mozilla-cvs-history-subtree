@@ -276,7 +276,7 @@ void nsHTMLFramesetFrame::Scale(nscoord  aDesired,
     actual += aItems[j];
   }
 
-  if (aDesired != actual) {
+  if ((aNumIndicies > 0) && (aDesired != actual)) {
     PRInt32 unit = (aDesired > actual) ? 1 : -1;
     i = 0;
     while (aDesired != actual) {
@@ -662,11 +662,11 @@ nsHTMLFramesetFrame::ParseRowColSpec(nsString&       aSpec,
   aSpec.Trim(" \n\r\t"); // remove leading and trailing whitespace  
   
   // Count the commas 
-  PRInt32 commaX = aSpec.Find(COMMA);
+  PRInt32 commaX = aSpec.FindChar(COMMA);
   PRInt32 count = 1;
   while (commaX >= 0) {
     count++;
-    commaX = aSpec.Find(COMMA, commaX + 1);
+    commaX = aSpec.FindChar(COMMA, PR_FALSE,commaX + 1);
   }
 
   if (count > aMaxNumValues) {
@@ -681,7 +681,7 @@ nsHTMLFramesetFrame::ParseRowColSpec(nsString&       aSpec,
 
   for (PRInt32 i = 0; i < count; i++) {
     // Find our comma
-    commaX = aSpec.Find(COMMA, start);
+    commaX = aSpec.FindChar(COMMA, PR_FALSE,start);
     PRInt32 end = (commaX < 0) ? specLen : commaX;
 
     // Note: If end == start then it means that the token has no
@@ -857,14 +857,9 @@ nscolor nsHTMLFramesetFrame::GetBorderColor()
   if (nsnull != content) {
     nsHTMLValue value;
     if (NS_CONTENT_ATTR_HAS_VALUE == (content->GetHTMLAttribute(nsHTMLAtoms::bordercolor, value))) {
-      if (value.GetUnit() == eHTMLUnit_Color) {
+      if ((eHTMLUnit_Color == value.GetUnit()) ||
+          (eHTMLUnit_ColorName == value.GetUnit())) {
         result = value.GetColorValue();
-      } else if (value.GetUnit() == eHTMLUnit_String) {
-        nsAutoString buffer;
-        value.GetStringValue(buffer);
-        char cbuf[40];
-        buffer.ToCString(cbuf, sizeof(cbuf));
-        NS_ColorNameToRGB(cbuf, &result);
       }
     }
     NS_RELEASE(content);
@@ -883,14 +878,9 @@ nscolor nsHTMLFramesetFrame::GetBorderColor(nsIContent* aContent)
   if (nsnull != content) {
     nsHTMLValue value;
     if (NS_CONTENT_ATTR_HAS_VALUE == (content->GetHTMLAttribute(nsHTMLAtoms::bordercolor, value))) {
-      if (value.GetUnit() == eHTMLUnit_Color) {
+      if ((eHTMLUnit_Color == value.GetUnit()) ||
+          (eHTMLUnit_ColorName == value.GetUnit())) {
         result = value.GetColorValue();
-      } else if (value.GetUnit() == eHTMLUnit_String) {
-        nsAutoString buffer;
-        value.GetStringValue(buffer);
-        char cbuf[40];
-        buffer.ToCString(cbuf, sizeof(cbuf));
-        NS_ColorNameToRGB(cbuf, &result);
       }
     }
     NS_RELEASE(content);
@@ -1080,7 +1070,8 @@ nsHTMLFramesetFrame::Reflow(nsIPresContext&          aPresContext,
         aPresContext.ResolvePseudoStyleContextFor(mContent, nsHTMLAtoms::framesetBlankPseudo,
                                                   mStyleContext, PR_FALSE,
                                                   &pseudoStyleContext);
-        blankFrame->Init(aPresContext, mContent, this, pseudoStyleContext, nsnull);
+        if(blankFrame)
+          blankFrame->Init(aPresContext, mContent, this, pseudoStyleContext, nsnull);
         NS_RELEASE(pseudoStyleContext);
 
         if (nsnull == lastChild) {

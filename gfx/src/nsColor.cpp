@@ -19,54 +19,44 @@
 #include "plstr.h"
 #include "nsColor.h"
 #include "nsColorNames.h"
+#include "nsString.h"
 
 static int ComponentValue(const char* aColorSpec, int aLen, int color, int dpc)
 {
   int component = 0;
-  if (((1 + color) * dpc) <= aLen) {
-    aColorSpec += (color * dpc);
-    while (--dpc >= 0) {
-      char ch = *aColorSpec++;
-      if ((ch == 'o') || (ch == 'O')) { // letter O == zero
-        component = component*16;
-      }
-      else if ((ch >= '0') && (ch <= '9')) {
-        component = component*16 + (ch - '0');
-      } else {
-        // "ch&7" handles lower and uppercase hex alphabetics
-        component = component*16 + (ch & 7) + 9;
-      }
+  int index = (color * dpc);
+  if (2 < dpc) {
+    dpc = 2;
+  }
+  while (--dpc >= 0) {
+    char ch = ((index < aLen) ? aColorSpec[index++] : '0');
+    if (('0' <= ch) && (ch <= '9')) {
+      component = (component * 16) + (ch - '0');
+    } else if ((('a' <= ch) && (ch <= 'f')) || 
+               (('A' <= ch) && (ch <= 'F'))) {
+      // "ch&7" handles lower and uppercase hex alphabetics
+      component = (component * 16) + (ch & 7) + 9;
+    }
+    else {  // not a hex digit, treat it like 0
+      component = (component * 16);
     }
   }
   return component;
 }
 
-// Note: This handles 9 digits of hex to be compatible with eric
-// bina's original code. However, it is pickyer with respect to what a
-// legal color is and will only return true for perfectly legal color
-// values.
-static PRBool HexToRGB(const char* aColorSpec, PRBool aStrict, nscolor* aResult)
+extern "C" NS_GFX_(PRBool) NS_HexToRGB(const nsString& aColorSpec, nscolor* aResult)
 {
-  NS_PRECONDITION(nsnull != aColorSpec, "null ptr");
-  if (nsnull == aColorSpec) {
-    return PR_FALSE;
-  }
+  char  buffer[10];
+  aColorSpec.ToCString(buffer, sizeof(buffer));
 
-  if (aColorSpec[0] == '#') {
-    aColorSpec++;
-  }
-
-  int nameLen = PL_strlen(aColorSpec);
-  if (((PR_TRUE == aStrict) && ((nameLen == 3) || (nameLen == 6) || (nameLen == 9))) ||
-      ((0 < nameLen) && (nameLen < 10))) {
+  int nameLen = PL_strlen(buffer);
+  if ((nameLen == 3) || (nameLen == 6)) {
     // Make sure the digits are legal
     for (int i = 0; i < nameLen; i++) {
-      char ch = aColorSpec[i];
+      char ch = buffer[i];
       if (((ch >= '0') && (ch <= '9')) ||
           ((ch >= 'a') && (ch <= 'f')) ||
-          ((ch >= 'A') && (ch <= 'F')) || 
-          ((! aStrict) && 
-           ((ch == 'o') || (ch == 'O')))) {  // Nav let Oh's == zeros, egads
+          ((ch >= 'A') && (ch <= 'F'))) {
         // Legal character
         continue;
       }
@@ -75,23 +65,17 @@ static PRBool HexToRGB(const char* aColorSpec, PRBool aStrict, nscolor* aResult)
     }
 
     // Convert the ascii to binary
-    int dpc = (nameLen / 3) + (((nameLen % 3) != 0) ? 1 : 0);
-
+    int dpc = ((3 == nameLen) ? 1 : 2);
     // Translate components from hex to binary
-    int r = ComponentValue(aColorSpec, nameLen, 0, dpc);
-    int g = ComponentValue(aColorSpec, nameLen, 1, dpc);
-    int b = ComponentValue(aColorSpec, nameLen, 2, dpc);
+    int r = ComponentValue(buffer, nameLen, 0, dpc);
+    int g = ComponentValue(buffer, nameLen, 1, dpc);
+    int b = ComponentValue(buffer, nameLen, 2, dpc);
     if (dpc == 1) {
       // Scale single digit component to an 8 bit value. Replicate the
       // single digit to compute the new value.
       r = (r << 4) | r;
       g = (g << 4) | g;
       b = (b << 4) | b;
-    } else if (dpc == 3) {
-      // Drop off the low digit from 12 bit values.
-      r = r >> 4;
-      g = g >> 4;
-      b = b >> 4;
     }
     NS_ASSERTION((r >= 0) && (r <= 255), "bad r");
     NS_ASSERTION((g >= 0) && (g <= 255), "bad g");
@@ -106,21 +90,49 @@ static PRBool HexToRGB(const char* aColorSpec, PRBool aStrict, nscolor* aResult)
   return PR_FALSE;
 }
 
-extern "C" NS_GFX_(PRBool) NS_HexToRGB(const char* aColorSpec, nscolor* aResult)
+// compatible with legacy Nav behavior
+extern "C" NS_GFX_(PRBool) NS_LooseHexToRGB(const nsString& aColorSpec, nscolor* aResult)
 {
-  return HexToRGB(aColorSpec, PR_TRUE, aResult);
+  char  buffer[30];
+  char* colorSpec = &(buffer[0]);
+  aColorSpec.ToCString(buffer, sizeof(buffer));
+
+  if ('#' == buffer[0]) {
+    colorSpec++;
+  }
+
+  int nameLen = PL_strlen(colorSpec);
+  if (3 < nameLen) {
+    // Convert the ascii to binary
+    int dpc = (nameLen / 3) + (((nameLen % 3) != 0) ? 1 : 0);
+    if (4 < dpc) {
+      dpc = 4;
+    }
+
+    // Translate components from hex to binary
+    int r = ComponentValue(colorSpec, nameLen, 0, dpc);
+    int g = ComponentValue(colorSpec, nameLen, 1, dpc);
+    int b = ComponentValue(colorSpec, nameLen, 2, dpc);
+    NS_ASSERTION((r >= 0) && (r <= 255), "bad r");
+    NS_ASSERTION((g >= 0) && (g <= 255), "bad g");
+    NS_ASSERTION((b >= 0) && (b <= 255), "bad b");
+    if (nsnull != aResult) {
+      *aResult = NS_RGB(r, g, b);
+    }
+  }
+  else {
+    if (nsnull != aResult) {
+      *aResult = NS_RGB(0, 0, 0);
+    }
+  }
+  return PR_TRUE;
 }
 
-extern "C" NS_GFX_(PRBool) NS_LooseHexToRGB(const char* aColorSpec, nscolor* aResult)
+extern "C" NS_GFX_(PRBool) NS_ColorNameToRGB(const nsString& aColorName, nscolor* aResult)
 {
-  return HexToRGB(aColorSpec, PR_FALSE, aResult);
-}
-
-extern "C" NS_GFX_(PRBool) NS_ColorNameToRGB(const char* aColorName, nscolor* aResult)
-{
-  PRInt32 id = nsColorNames::LookupName(aColorName);
-  if (id >= 0) {
-    NS_ASSERTION(id < COLOR_MAX, "LookupName mess up");
+  nsColorName id = nsColorNames::LookupName(aColorName);
+  if (eColorName_UNKNOWN < id) {
+    NS_ASSERTION(id < eColorName_COUNT, "LookupName mess up");
     if (nsnull != aResult) {
       *aResult = nsColorNames::kColors[id];
     }

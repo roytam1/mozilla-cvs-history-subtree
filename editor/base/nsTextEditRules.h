@@ -19,10 +19,12 @@
 #ifndef nsTextEditRules_h__
 #define nsTextEditRules_h__
 
-#include "nsIEditor.h"
-#include "nsEditRules.h"
 #include "nsCOMPtr.h"
+
+#include "nsHTMLEditor.h"
 #include "nsIDOMNode.h"
+
+#include "nsEditRules.h"
 #include "TypeInState.h"
 
 class PlaceholderTxn;
@@ -43,11 +45,11 @@ class nsTextEditRules : public nsEditRules
 {
 public:
 
-  nsTextEditRules();
-  virtual ~nsTextEditRules();
+              nsTextEditRules();
+  virtual     ~nsTextEditRules();
 
   // nsEditRules methods
-  NS_IMETHOD Init(nsIEditor *aEditor);
+  NS_IMETHOD Init(nsHTMLEditor *aEditor, PRUint32 aFlags);
   NS_IMETHOD WillDoAction(nsIDOMSelection *aSelection, nsRulesInfo *aInfo, PRBool *aCancel);
   NS_IMETHOD DidDoAction(nsIDOMSelection *aSelection, nsRulesInfo *aInfo, nsresult aResult);
   NS_IMETHOD GetFlags(PRUint32 *aFlags);
@@ -64,6 +66,7 @@ public:
     kDeleteSelection = 2001,
     kSetTextProperty = 2003,
     kRemoveTextProperty = 2004,
+    kOutputText      = 2005,
     // html only action
     kInsertBreak     = 3000,
     kMakeList        = 3001,
@@ -72,7 +75,8 @@ public:
     kAlign           = 3004,
     kMakeHeader      = 3005,
     kMakeAddress     = 3006,
-    kMakePRE         = 3007
+    kMakePRE         = 3007,
+    kInsertElement   = 3008
   };
   
 protected:
@@ -94,8 +98,12 @@ protected:
   nsresult WillInsert(nsIDOMSelection *aSelection, PRBool *aCancel);
   nsresult DidInsert(nsIDOMSelection *aSelection, nsresult aResult);
 
-  nsresult WillDeleteSelection(nsIDOMSelection *aSelection, PRBool *aCancel);
-  nsresult DidDeleteSelection(nsIDOMSelection *aSelection, nsresult aResult);
+  nsresult WillDeleteSelection(nsIDOMSelection *aSelection, 
+                               nsIEditor::ESelectionCollapseDirection aCollapsedAction, 
+                               PRBool *aCancel);
+  nsresult DidDeleteSelection(nsIDOMSelection *aSelection, 
+                              nsIEditor::ESelectionCollapseDirection aCollapsedAction, 
+                              nsresult aResult);
 
   nsresult WillSetTextProperty(nsIDOMSelection *aSelection, PRBool *aCancel);
   nsresult DidSetTextProperty(nsIDOMSelection *aSelection, nsresult aResult);
@@ -108,6 +116,10 @@ protected:
 
   nsresult WillRedo(nsIDOMSelection *aSelection, PRBool *aCancel);
   nsresult DidRedo(nsIDOMSelection *aSelection, nsresult aResult);
+
+  nsresult WillOutputText(nsIDOMSelection *aSelection, nsString *aOutText, PRBool *aCancel);
+  nsresult DidOutputText(nsIDOMSelection *aSelection, nsresult aResult);
+
 
   // helper functions
   
@@ -140,9 +152,13 @@ protected:
 
   /** creates a bogus text node if the document has no editable content */
   nsresult CreateBogusNodeIfNeeded(nsIDOMSelection *aSelection);
+
+  /** enforce selection must be inside PRE node */
+  nsresult PinSelectionInPRE(nsIDOMSelection *aSelection);
   
   // data
-  nsTextEditor *mEditor;  // note that we do not refcount the editor
+  nsHTMLEditor *mEditor;  // note that we do not refcount the editor
+  nsString      mPasswordText;  // a buffer we use to store the real value of password editors
   nsCOMPtr<nsIDOMNode> mBogusNode;  // magic node acts as placeholder in empty doc
   PRUint32 mFlags;
 };
@@ -153,8 +169,20 @@ class nsTextRulesInfo : public nsRulesInfo
 {
  public:
  
-  nsTextRulesInfo(int aAction) : nsRulesInfo(aAction),placeTxn(0),inString(0),outString(0),typeInState(),maxLength(-1),collapsedAction(nsIEditor::eDeleteRight) {}
-  virtual ~nsTextRulesInfo() {}
+  nsTextRulesInfo(int aAction) : 
+    nsRulesInfo(aAction),
+    placeTxn(0),
+    inString(0),
+    outString(0),
+    typeInState(),
+    maxLength(-1),
+    collapsedAction(nsIEditor::eDeleteNext),
+    bOrdered(PR_FALSE),
+    alignType(0),
+    insertElement(0)
+    {};
+
+  virtual ~nsTextRulesInfo() {};
   
   // kInsertText
   PlaceholderTxn **placeTxn;
@@ -164,13 +192,16 @@ class nsTextRulesInfo : public nsRulesInfo
   PRInt32 maxLength;
   
   // kDeleteSelection
-  nsIEditor::ECollapsedSelectionAction collapsedAction;
+  nsIEditor::ESelectionCollapseDirection collapsedAction;
   
   // kMakeList
   PRBool bOrdered;
   
   // kAlign
   const nsString *alignType;
+  
+  // kInsertElement
+  const nsIDOMElement* insertElement;
 };
 
 #endif //nsTextEditRules_h__

@@ -30,8 +30,9 @@
 
 static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 
-nsresult
-nsGetNewsRoot(const char *hostname, nsFileSpec &result)
+static nsresult
+nsGetNewsServer(const char* username, const char *hostname,
+                nsIMsgIncomingServer** aResult)
 {
   nsresult rv = NS_OK;
 
@@ -42,39 +43,16 @@ nsGetNewsRoot(const char *hostname, nsFileSpec &result)
   rv = session->GetAccountManager(getter_AddRefs(accountManager));
   if (NS_FAILED(rv)) return rv;                  
   
-  // find all news hosts matching the given hostname
-  nsCOMPtr<nsISupportsArray> hosts;
-  rv = accountManager->FindServersByHostname(hostname,
-                                            nsINntpIncomingServer::GetIID(),
-                                            getter_AddRefs(hosts));
+  // find the news host
+  nsCOMPtr<nsIMsgIncomingServer> server;
+  rv = accountManager->FindServer(username,
+                                  hostname,
+                                  "nntp",
+                                  getter_AddRefs(server));
   if (NS_FAILED(rv)) return rv; 
 
-  // use enumeration function to find the first nntp server
-  nsISupports *serverSupports = hosts->ElementAt(0);
-
-#ifdef DEBUG_NEWS
-  if (hosts->Count() <= 0)
-    printf("Augh, no nntp server named %s?\n", hostname);
-  if (!serverSupports)
-    printf("Huh, serverSupports returned nsnull\n");
-#endif
-
-  // if there are no nntp servers, how did we get here?
-  if (! serverSupports) return NS_ERROR_UNEXPECTED;
-
-  nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(serverSupports);
-
-  // this had better be a nsIMsgIncomingServer, otherwise
-  // FindServersByHostname is broken or we got some weird object back
-  PR_ASSERT(server);
-
-  // now ask the server what it's root is
-  char *localPath;
-  rv = server->GetLocalPath(&localPath);
-  if (NS_SUCCEEDED(rv)) {
-    result = localPath;
-    PL_strfree(localPath);
-  }
+  *aResult = server;
+  NS_ADDREF(*aResult);
   
   return rv;
 }
@@ -124,7 +102,7 @@ nsNewsURI2Path(const char* rootURI, const char* uriStr, nsFileSpec& pathResult)
   
   nsAutoString sep = PR_GetDirectorySeparator();
 
-  nsAutoString uri = uriStr;
+  nsCAutoString uri = uriStr;
   if (uri.Find(rootURI) != 0)     // if doesn't start with rootURI
     return NS_ERROR_FAILURE;
 
@@ -138,20 +116,35 @@ nsNewsURI2Path(const char* rootURI, const char* uriStr, nsFileSpec& pathResult)
   // the server name is the first component of the path, so extract it out
   PRInt32 hostStart = 0;
 
-  hostStart = uri.Find('/');
+  hostStart = uri.FindChar('/');
   if (hostStart <= 0) return NS_ERROR_FAILURE;
 
   // skip past all //
-  while (uri[hostStart]=='/') hostStart++;
+  while (uri.CharAt(hostStart) =='/') hostStart++;
   
-  // cut news://hostname/newsgroup -> hostname/newsgroup
-  nsAutoString hostname (eOneByte);
+  // cut news://[username@]hostname/newsgroup -> username@hostname/newsgroup
+  nsCAutoString hostname;
   uri.Right(hostname, uri.Length() - hostStart);
 
-  PRInt32 hostEnd = hostname.Find('/');
+  PRInt32 hostEnd = hostname.FindChar('/');
+
+  PRInt32 atPos = hostname.FindChar('@');
+  nsCAutoString username;
+
+  username = "";
+  // we have a username here
+  // XXX do this right, this doesn't work -alecf@netscape.com
+  if (atPos != -1) {
+
+    hostname.Left(username, hostEnd-atPos);
+    
+    username = "";
+    
+    hostEnd = hostname.FindChar('/');
+  }
 
   // newsgroup comes after the hostname, after the '/'
-  nsAutoString newsgroup (eOneByte);
+  nsCAutoString newsgroup;
  
   if (hostEnd != -1) {
     hostname.Right(newsgroup, hostname.Length() - hostEnd - 1);
@@ -163,61 +156,37 @@ nsNewsURI2Path(const char* rootURI, const char* uriStr, nsFileSpec& pathResult)
     hostname.Truncate(hostEnd);
   }
 
-  rv = nsGetNewsRoot(hostname.GetBuffer(), pathResult);
+  nsCOMPtr<nsIMsgIncomingServer> server;
+  rv = nsGetNewsServer(username.GetBuffer(),
+                       hostname.GetBuffer(), getter_AddRefs(server));
+  // now ask the server what it's root is
+  char *localPath = nsnull;
+  if (NS_SUCCEEDED(rv))
+    rv = server->GetLocalPath(&localPath);
+
+#ifdef DEBUG_NEWS
+  printf("local path = %s\n", localPath);
+#endif
+  if (NS_SUCCEEDED(rv)) {
+    pathResult = localPath;
+  }
+  // mismatched free?
+  if (localPath) PL_strfree(localPath);
 
   if (NS_FAILED(rv)) {
     pathResult = nsnull;
-#ifdef DEBUG_NEWS
-    printf("nsGetNewsRoot failed!\n");
-#endif
     return rv;
   }
 
-  // create pathResult if it doesn't exist
-  // at this point, pathResult should be something like
-  // .../News, ...\News, ...:News)
-  if (!pathResult.Exists())
-    pathResult.CreateDir();
-              
-  nsAutoString alteredHost ((const char *) "host-", eOneByte);
-  alteredHost += hostname;
-  
-  // can't do pathResult += "host-"; pathresult += hostname; 
-  // because += on a nsFileSpec inserts a separator
-  // so we'd end up with host-/hostname and not host-hostname
-  NS_MsgHashIfNecessary(alteredHost);
-  pathResult += alteredHost;
-
-  // create pathResult if it doesn't exist
-  // at this point, pathResult should be something like
-  // ../News/host-<hostname>, ...\News\host-<hostname>, ...:News:host-<hostname>
   if (!pathResult.Exists())
     pathResult.CreateDir();
   
-  if (newsgroup != "") {
+  if (!newsgroup.IsEmpty()) {
     NS_MsgHashIfNecessary(newsgroup);
-    pathResult += newsgroup;
+    pathResult += (const char *) newsgroup;
   }
 
-#ifdef DEBUG_NEWS
-  printf("nsGetNewsRoot(%s) = %s\n\tnewsgroup = %s\n",
-         hostname.GetBuffer(), (const char*)pathResult,
-         newsgroup.GetBuffer();
-#endif
-
   return NS_OK;
-}
-
-nsresult
-nsNewsURI2Name(const char* rootURI, const char* uriStr, nsString& name)
-{
-  nsAutoString uri = uriStr;
-  if (uri.Find(rootURI) != 0)     // if doesn't start with rootURI
-    return NS_ERROR_FAILURE;
-  PRInt32 pos = uri.RFind("/");
-  PRInt32 length = uri.Length();
-  PRInt32 count = length - (pos + 1);
-  return uri.Right(name, count);
 }
 
 /* parses NewsMessageURI */
@@ -228,7 +197,7 @@ nsParseNewsMessageURI(const char* uri, nsString& messageUriWithoutKey, PRUint32 
 		return NS_ERROR_NULL_POINTER;
 
 	nsAutoString uriStr = uri;
-	PRInt32 keySeparator = uriStr.Find('#');
+	PRInt32 keySeparator = uriStr.FindChar('#');
 	if(keySeparator != -1)
 	{
 		uriStr.Left(messageUriWithoutKey, keySeparator);
@@ -250,11 +219,17 @@ nsresult nsBuildNewsMessageURI(const char *baseURI, PRUint32 key, char** uri)
 		return NS_ERROR_NULL_POINTER;
   // need to convert news://hostname/.. to news_message://hostname/..
 
-  nsAutoString tailURI(baseURI, eOneByte);
+  nsCString tailURI(baseURI);
 
   // chop off news:/
+#if 0
   if (tailURI.Find(kNewsRootURI) == 0)
     tailURI.Cut(0, kNewsRootURILen);
+#else
+  PRInt32 strOffset = tailURI.Find(":/");
+  if (strOffset != -1)
+    tailURI.Cut(0, strOffset+2);
+#endif
   
 	*uri = PR_smprintf("%s%s#%d", kNewsMessageRootURI, tailURI.GetBuffer(), key);
   

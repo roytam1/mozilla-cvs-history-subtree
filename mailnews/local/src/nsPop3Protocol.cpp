@@ -17,7 +17,7 @@
  */
 
 #include "msgCore.h"    // precompiled header...
-
+#include "nsIMsgMailNewsUrl.h"
 #include "nsPop3Protocol.h"
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
@@ -26,39 +26,13 @@
 #include "plstr.h"
 #include "MailNewsTypes.h"
 #include "nsString.h"
-
-#include "nsINetService.h"
-#include "nsIMsgIncomingServer.h"
-
-#if 0
+#include "nsXPIDLString.h"
 #include "nsINetSupportDialogService.h"
+#include "nsIPrompt.h"
+#include "nsIMsgIncomingServer.h"
+#include "nsCOMPtr.h"
 
-static NS_DEFINE_CID(kCNetSupportDialog, NS_NETSUPPORTDIALOG_CID);
-#endif
-
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
-
-char * NET_SACopy (char **destination, const char *source)
-{
-	if(*destination)
-	  {
-	    PR_Free(*destination);
-		*destination = 0;
-	  }
-    if (! source)
-	  {
-        *destination = NULL;
-	  }
-    else 
-	  {
-        *destination = (char *) PR_Malloc (PL_strlen(source) + 1);
-        if (*destination == NULL) 
- 	        return(NULL);
-
-        PL_strcpy (*destination, source);
-      }
-    return *destination;
-}
+static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 
 /* km
  *
@@ -94,7 +68,7 @@ char * NET_SACopy (char **destination, const char *source)
 
 static PR_CALLBACK PRIntn
 net_pop3_check_for_hash_messages_marked_delete(PLHashEntry* he,
-				       						   PRIntn index, 
+				       						   PRIntn msgindex, 
 				       						   void *arg)
 {
 	char valueChar = (char) (int) he->value;
@@ -106,15 +80,6 @@ net_pop3_check_for_hash_messages_marked_delete(PLHashEntry* he,
 	
 	return HT_ENUMERATE_NEXT;		/* XP_Maphash will continue traversing the hash */
 }
-
-#if 0
-static int
-uidl_cmp (const void *obj1, const void *obj2)
-{
-  PR_ASSERT (obj1 && obj2);
-  return PL_strcmp ((char *) obj1, (char *) obj2);
-}
-#endif
 
 static void
 put_hash(Pop3UidlHost* host, PLHashTable* table, const char* key, char value)
@@ -231,7 +196,7 @@ net_pop3_load_state(const char* searchhost,
 }
 
 static PR_CALLBACK PRIntn
-hash_clear_mapper(PLHashEntry* he, PRIntn index, void* arg)
+hash_clear_mapper(PLHashEntry* he, PRIntn msgindex, void* arg)
 {
 #ifdef UNREADY_CODE   // mscott: the compiler won't take this line and I can't figure out why..=(
   PR_FREEIF( (char *)he->key );
@@ -240,7 +205,7 @@ hash_clear_mapper(PLHashEntry* he, PRIntn index, void* arg)
 }
 
 static PR_CALLBACK PRIntn
-hash_empty_mapper(PLHashEntry* he, PRIntn index, void* arg)
+hash_empty_mapper(PLHashEntry* he, PRIntn msgindex, void* arg)
 {
   *((PRBool*) arg) = PR_FALSE;
   return HT_ENUMERATE_STOP;
@@ -256,7 +221,7 @@ hash_empty(PLHashTable* hash)
 
 
 static PR_CALLBACK PRIntn
-net_pop3_write_mapper(PLHashEntry* he, PRIntn index, void* arg)
+net_pop3_write_mapper(PLHashEntry* he, PRIntn msgindex, void* arg)
 {
   nsOutputFileStream* file = (nsOutputFileStream*) arg;
   PR_ASSERT((he->value == ((void *) (int) KEEP)) ||
@@ -387,12 +352,12 @@ void KillPopData(char* data)
 
 // nsPop3Protocol class implementation
 
-nsPop3Protocol::nsPop3Protocol(nsIURL* aURL) : nsMsgLineBuffer(NULL, FALSE), m_username(eOneByte), m_password(eOneByte), m_commandResponse(eOneByte)
+nsPop3Protocol::nsPop3Protocol(nsIURI* aURL) : nsMsgLineBuffer(NULL, FALSE)
 {
 	Initialize(aURL);
 }
 
-void nsPop3Protocol::Initialize(nsIURL * aURL)
+void nsPop3Protocol::Initialize(nsIURI * aURL)
 {
 	nsresult rv = NS_OK;
     m_pop3ConData = nsnull;
@@ -413,12 +378,7 @@ void nsPop3Protocol::Initialize(nsIURL * aURL)
 		m_nsIPop3URL = do_QueryInterface(aURL);
 		if (m_nsIPop3URL)
 		{
-			const char * hostName = nsnull;
-			PRUint32 port = POP3_PORT;
-
-			m_nsIPop3URL->GetHost(&hostName);
-			m_nsIPop3URL->GetHostPort(&port);
-			rv = OpenNetworkSocket(aURL, port, hostName);
+			rv = OpenNetworkSocket(aURL);
 		}
 	} // if we got a url...
 
@@ -442,7 +402,6 @@ nsPop3Protocol::~nsPop3Protocol()
 	FreeMsgInfo();
 	PR_FREEIF(m_pop3ConData->only_uidl);
 	PR_FREEIF(m_pop3ConData->obuffer)
-	PR_FREEIF(m_pop3ConData->sender_info);
 	PR_Free(m_pop3ConData);
 
 	if (m_lineStreamBuffer)
@@ -456,6 +415,64 @@ void nsPop3Protocol::SetUsername(const char* name)
 		m_username = name;
 }
 
+const char * nsPop3Protocol::GetPassword()
+{
+	// okay, here's the scoop for this messs...
+	// (1) if we have a password already, go ahead and use it!
+	// (2) if we don't have a password, see if we've already asked the user
+	//	   for the password this session by checking with the server...If it has a pwd use it!!!
+	// (3) otherwise prompt the user for a password and then remember that password in the server
+
+	if (m_password.IsEmpty())
+	{
+		nsCOMPtr<nsIMsgIncomingServer> server;
+		nsCOMPtr<nsIMsgMailNewsUrl> msgUrl = do_QueryInterface(m_nsIPop3URL);
+		msgUrl->GetServer(getter_AddRefs(server));
+		nsXPIDLCString serverPassword;
+		server->GetPassword(getter_Copies(serverPassword));
+
+		// (2) see if the server already knows the password and use it if does...
+		if (serverPassword && nsCRT::strlen(serverPassword) > 0) 
+			m_password = serverPassword;
+		else
+		{	
+			// (3) prompt the user for the password
+			// we don't have one so ask the user for it.
+			nsresult rv = NS_OK;
+			NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);
+			if (NS_SUCCEEDED(rv))
+			{
+				PRUnichar * uniPassword;
+				PRBool okayValue = PR_TRUE;
+				char * promptText = nsnull;
+				nsXPIDLCString hostName;
+			
+				msgUrl->GetHost(getter_Copies(hostName));
+
+				// mscott - this is just a temporary hack using the raw string..this needs to be pushed into
+				// a string bundle!!!!!
+				if (hostName)
+					promptText = PR_smprintf("Enter your password for %s@%s.", (const char *) m_username, (const char *) hostName);
+				else
+					promptText = PL_strdup("Enter your password here: ");
+
+				dialog->PromptPassword(nsAutoString(promptText).GetUnicode(), &uniPassword, &okayValue);
+				PR_FREEIF(promptText);
+				
+				if (!okayValue) // if the user pressed cancel, just return NULL;
+					return nsnull;
+
+				m_password = uniPassword;
+				// this ugly cast is ok...there is a bug in the idl compiler that is preventing 
+				// the char * argument to SetPassword from being const.
+				server->SetPassword((char *) m_password.GetBuffer());
+			}
+		} // if the server doesn't know the password
+	}
+	
+	return m_password.GetBuffer();
+}
+
 void nsPop3Protocol::SetPassword(const char* passwd)
 {
     NS_ASSERTION(passwd, "no password specified!");
@@ -464,10 +481,8 @@ void nsPop3Protocol::SetPassword(const char* passwd)
 }
 
 
-nsresult nsPop3Protocol::LoadUrl(nsIURL* aURL, nsISupports * /* aConsumer */)
+nsresult nsPop3Protocol::LoadUrl(nsIURI* aURL, nsISupports * /* aConsumer */)
 {
-	const char* urlSpec = NULL;
-	const char* host = NULL;
 	nsresult rv = 0;
 
     if (aURL)
@@ -481,16 +496,24 @@ nsresult nsPop3Protocol::LoadUrl(nsIURL* aURL, nsISupports * /* aConsumer */)
 	// -*-*-*- To Do:
 	// Call SetUsername(accntName);
 	// Call SetPassword(aPassword);
-		
-	rv = aURL->GetSpec(&urlSpec);
+	const char * password = GetPassword();
+	// if we didn't get a password back, abort the entire operation!
+	if (!password)
+		return NS_ERROR_FAILURE;
+	
+	nsCOMPtr<nsIURL> url = do_QueryInterface(aURL, &rv);
+	if (NS_FAILED(rv)) return rv;
+
+	nsXPIDLCString queryPart;
+	rv = url->GetQuery(getter_Copies(queryPart));
 	NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get the url spect");
 
-	if (PL_strcasestr(urlSpec, "?check"))
+	if (PL_strcasestr(queryPart, "check"))
 		m_pop3ConData->only_check_for_new_mail = PR_TRUE;
     else
         m_pop3ConData->only_check_for_new_mail = PR_FALSE;
 
-	if (PL_strcasestr(urlSpec, "?gurl"))
+	if (PL_strcasestr(queryPart, "gurl"))
 		m_pop3ConData->get_url = PR_TRUE;
     else
         m_pop3ConData->get_url = PR_FALSE;
@@ -510,15 +533,13 @@ nsresult nsPop3Protocol::LoadUrl(nsIURL* aURL, nsISupports * /* aConsumer */)
 	}
 
 	// UIDL stuff
-	rv = aURL->GetHost(&host);
-	NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get the host from the url");
-
     m_nsIPop3URL->GetPop3Sink(getter_AddRefs(m_nsIPop3Sink));
 
 	nsCOMPtr<nsIPop3IncomingServer> popServer;
     char* mailDirectory = 0;
 
-
+	nsXPIDLCString host;
+	aURL->GetHost(getter_Copies(host));
     rv = m_nsIPop3Sink->GetPopServer(getter_AddRefs(popServer));
 
     nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(popServer);
@@ -530,7 +551,7 @@ nsresult nsPop3Protocol::LoadUrl(nsIURL* aURL, nsISupports * /* aConsumer */)
 
 	m_pop3ConData->biffstate = nsMsgBiffState_NoMail;
 
-	const char* uidl = PL_strcasestr(urlSpec, "?uidl=");
+	const char* uidl = PL_strcasestr(queryPart, "uidl=");
     PR_FREEIF(m_pop3ConData->only_uidl);
 		
     if (uidl)
@@ -653,11 +674,11 @@ nsPop3Protocol::Error(int err_code)
 	return(err_code);
 }
 
-PRInt32 nsPop3Protocol::SendData(nsIURL * aURL, const char * dataBuffer)
+PRInt32 nsPop3Protocol::SendData(nsIURI * aURL, const char * dataBuffer)
 {
 	PRInt32 result = nsMsgProtocol::SendData(aURL, dataBuffer);
 
-	if (result) // yeah this sucks...i need an error code....
+	if (result >= 0) // yeah this sucks...i need an error code....
 	{
 	    m_pop3ConData->pause_for_read = PR_TRUE;
         m_pop3ConData->next_state = POP3_WAIT_FOR_RESPONSE;
@@ -677,10 +698,11 @@ PRInt32 nsPop3Protocol::SendAuth()
     if(!m_pop3ConData->command_succeeded)
         return(Error(MK_POP3_SERVER_ERROR));
 
-	nsString command("AUTH"CRLF, eOneByte);
+	nsCAutoString command("AUTH"CRLF);
 
-    m_pop3ConData->next_state_after_response = POP3_AUTH_RESPONSE;
-	return SendData(m_nsIPop3URL, command.GetBuffer());
+  m_pop3ConData->next_state_after_response = POP3_AUTH_RESPONSE;
+  nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+	return SendData(url, command);
 }
 
 PRInt32 nsPop3Protocol::AuthResponse(nsIInputStream* inputStream, 
@@ -740,10 +762,10 @@ PRInt32 nsPop3Protocol::AuthLogin()
         return(Error(MK_POP3_SERVER_ERROR));
     }
 
-	nsString2 command("AUTH LOGIN" CRLF, eOneByte);
+	nsCAutoString command("AUTH LOGIN" CRLF);
     m_pop3ConData->next_state_after_response = POP3_AUTH_LOGIN_RESPONSE;
-
-    return SendData(m_nsIPop3URL, command.GetBuffer());
+	nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+    return SendData(url, command);
 }
 
 PRInt32 nsPop3Protocol::AuthLoginResponse()
@@ -786,16 +808,17 @@ PRInt32 nsPop3Protocol::SendUsername()
 	{
         PR_snprintf(m_pop3ConData->output_buffer, 
                     OUTPUT_BUFFER_SIZE, 
-                    "USER %.256s" CRLF, m_username.GetBuffer());
+                    "USER %.256s" CRLF, m_username);
     }
 #endif
     m_pop3ConData->next_state_after_response = POP3_SEND_PASSWORD;
 
-	nsAutoString cmd(eOneByte);
+	nsCAutoString cmd;
 	cmd = "USER ";
 	cmd += m_username;
 	cmd += CRLF;
-	return SendData(m_nsIPop3URL, cmd.GetBuffer());
+	nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+	return SendData(url, cmd);
 }
 
 PRInt32 nsPop3Protocol::SendPassword()
@@ -803,8 +826,8 @@ PRInt32 nsPop3Protocol::SendPassword()
     /* check username response */
     if (!m_pop3ConData->command_succeeded)
         return(Error(MK_POP3_USERNAME_FAILURE));
-    
-    if (!m_password.Length())
+    const char * password = GetPassword();
+    if (!password && !*password)
         return Error(MK_POP3_PASSWORD_UNDEFINED);
 
 #if 0
@@ -821,11 +844,12 @@ PRInt32 nsPop3Protocol::SendPassword()
     else
         m_pop3ConData->next_state_after_response = POP3_SEND_STAT;
 
-	nsAutoString cmd(eOneByte);
+	nsCAutoString cmd;
 	cmd = "PASS ";
-	cmd += m_password;
+	cmd += password;
 	cmd += CRLF;
-    return SendData(m_nsIPop3URL, cmd.GetBuffer());
+	nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+    return SendData(url, cmd);
 }
 
 PRInt32 nsPop3Protocol::SendStatOrGurl(PRBool sendStat)
@@ -899,7 +923,7 @@ PRInt32 nsPop3Protocol::SendStatOrGurl(PRBool sendStat)
     }
 #endif 
     
-	nsAutoString cmd (eOneByte);
+	nsCAutoString cmd;
     if (sendStat) 
 	{
 		cmd  = "STAT" CRLF;
@@ -910,8 +934,8 @@ PRInt32 nsPop3Protocol::SendStatOrGurl(PRBool sendStat)
 		cmd = "GURL" CRLF;
         m_pop3ConData->next_state_after_response = POP3_GURL_RESPONSE;
     }
-    
-    return SendData(m_nsIPop3URL, cmd.GetBuffer());
+    nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+    return SendData(url, cmd);
 }
 
 
@@ -939,7 +963,7 @@ nsPop3Protocol::GetStat()
      *
      *  grab the first and second arg of stat response
      */
-	oldStr = PL_strdup(m_commandResponse.GetBuffer());
+	oldStr = PL_strdup(m_commandResponse);
     num = nsCRT::strtok(oldStr, " ", &newStr);
 
     m_pop3ConData->number_of_messages = atol(num);
@@ -1025,7 +1049,7 @@ nsPop3Protocol::GurlResponse()
 		/// the xpidl file which is preventing SetMailAccountURL from taking
 		// const char *. When that is fixed, we can remove this cast.
         if (m_nsIPop3Sink)
-            m_nsIPop3Sink->SetMailAccountURL((char *) m_commandResponse.GetBuffer());
+            m_nsIPop3Sink->SetMailAccountURL((char *) m_commandResponse);
     }
     else {
         m_pop3CapabilityFlags &= ~POP3_HAS_GURL;
@@ -1041,7 +1065,8 @@ PRInt32 nsPop3Protocol::SendList()
     if (!m_pop3ConData->msg_info)
         return(MK_OUT_OF_MEMORY);
     m_pop3ConData->next_state_after_response = POP3_GET_LIST;
-    return SendData(m_nsIPop3URL, "LIST"CRLF);
+	nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+    return SendData(url, "LIST"CRLF);
 }
 
 
@@ -1111,7 +1136,8 @@ PRInt32 nsPop3Protocol::SendFakeUidlTop()
 	{
 		m_pop3ConData->next_state_after_response = POP3_GET_FAKE_UIDL_TOP;
 		m_pop3ConData->pause_for_read = PR_TRUE;
-		status = SendData(m_nsIPop3URL, cmd);
+		nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+		status = SendData(url, cmd);
 	}
 
 	PR_FREEIF(cmd);
@@ -1299,7 +1325,8 @@ PRInt32 nsPop3Protocol::SendXtndXlstMsgid()
         return StartUseTopForFakeUidl();
     m_pop3ConData->next_state_after_response = POP3_GET_XTND_XLST_MSGID;
     m_pop3ConData->pause_for_read = PR_TRUE;
-    return SendData(m_nsIPop3URL, "XTND XLST Message-Id" CRLF);
+	nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+    return SendData(url, "XTND XLST Message-Id" CRLF);
 }
 
 
@@ -1391,7 +1418,8 @@ PRInt32 nsPop3Protocol::SendUidlList()
 
     m_pop3ConData->next_state_after_response = POP3_GET_UIDL_LIST;
     m_pop3ConData->pause_for_read = PR_TRUE;
-    return SendData(m_nsIPop3URL,"UIDL" CRLF);
+	nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+    return SendData(url,"UIDL" CRLF);
 }
 
 
@@ -1732,8 +1760,9 @@ nsPop3Protocol::SendTop()
 		/* zero the bytes received in message in preparation for
 		* the next
 		*/
-		m_pop3ConData->bytes_received_in_message = 0;    
-		status = SendData(m_nsIPop3URL,cmd);
+		m_pop3ConData->bytes_received_in_message = 0;
+		nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+		status = SendData(url,cmd);
 	}
 	PR_FREEIF(cmd);
 	return status;
@@ -1748,7 +1777,8 @@ PRInt32 nsPop3Protocol::SendXsender()
 	if (cmd)
 	{  
 		m_pop3ConData->next_state_after_response = POP3_XSENDER_RESPONSE;
-		status = SendData(m_nsIPop3URL, cmd);
+		nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+		status = SendData(url, cmd);
 	}
 	PR_FREEIF(cmd);
 	return status;
@@ -1757,7 +1787,7 @@ PRInt32 nsPop3Protocol::SendXsender()
 PRInt32 nsPop3Protocol::XsenderResponse()
 {
     m_pop3ConData->seenFromHeader = PR_FALSE;
-    PR_FREEIF(m_pop3ConData->sender_info);
+	m_senderInfo = "";
     
     if (POP3_XSENDER_UNDEFINED & m_pop3CapabilityFlags)
         m_pop3CapabilityFlags &= ~POP3_XSENDER_UNDEFINED;
@@ -1765,7 +1795,7 @@ PRInt32 nsPop3Protocol::XsenderResponse()
     if (m_pop3ConData->command_succeeded) {
         if (m_commandResponse.Length() > 4)
         {
-            StrAllocCopy(m_pop3ConData->sender_info, m_commandResponse.GetBuffer());
+			m_senderInfo = m_commandResponse;
         }
         if (! (POP3_HAS_XSENDER & m_pop3CapabilityFlags))
             m_pop3CapabilityFlags |= POP3_HAS_XSENDER;
@@ -1823,8 +1853,8 @@ nsPop3Protocol::SendRetr()
         NET_Progress(ce->window_id, buf);
 #endif 
 		}
-		
-		status = SendData(m_nsIPop3URL, cmd);
+		nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+		status = SendData(url, cmd);
 	} // if cmd
 	PR_FREEIF(cmd);
     return status;
@@ -1888,7 +1918,7 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
         }
         else
 		{
-			char * oldStr = PL_strdup(m_commandResponse.GetBuffer());
+			char * oldStr = PL_strdup(m_commandResponse);
 	        m_pop3ConData->cur_msg_size =
                 atol(nsCRT::strtok(oldStr, " ", &newStr));
 			m_commandResponse = newStr;
@@ -1896,7 +1926,7 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
 		}
         /* RETR complete message */
 
-        if (m_pop3ConData->sender_info)
+        if (!m_senderInfo.IsEmpty())
             flags |= MSG_FLAG_SENDER_AUTHED;
         
         if(m_pop3ConData->cur_msg_size < 0)
@@ -1922,8 +1952,8 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
          */
         m_pop3ConData->real_new_counter++;		
         /* (rb) count only real messages being downloaded */
-
-        m_nsIPop3Sink->IncorporateBegin(uidl, m_nsIPop3URL, flags,
+		nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+        m_nsIPop3Sink->IncorporateBegin(uidl, url, flags,
                                         &m_pop3ConData->msg_closure);  
 
 #if 0
@@ -1988,7 +2018,7 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
 	buffer_size = status;  // status holds # bytes we've actually buffered so far...
   
     /* normal read. Yay! */
-    if (m_pop3ConData->bytes_received_in_message + buffer_size >
+    if ((PRInt32) (m_pop3ConData->bytes_received_in_message + buffer_size) >
         m_pop3ConData->cur_msg_size) 
         buffer_size = m_pop3ConData->cur_msg_size -
             m_pop3ConData->bytes_received_in_message; 
@@ -2095,13 +2125,13 @@ nsPop3Protocol::HandleLine(char *line, PRUint32 line_length)
 {
     int status;
     
-    PR_ASSERT(m_pop3ConData->msg_closure);
+    NS_ASSERTION(m_pop3ConData->msg_closure, "m_pop3ConData->msg_closure is null in nsPop3Protocol::HandleLine()");
     if (!m_pop3ConData->msg_closure)
         return -1;
     
-    if (m_pop3ConData->sender_info && !m_pop3ConData->seenFromHeader)
+    if (!m_senderInfo.IsEmpty() && !m_pop3ConData->seenFromHeader)
     {
-        if (line_length > 6 && !XP_MEMCMP("From: ", line, 6))
+        if (line_length > 6 && !PL_strncasecmp("From: ", line, 6))
         {
             /* Zzzzz PL_strstr only works with NULL terminated string. Since,
              * the last character of a line is either a carriage return
@@ -2112,7 +2142,7 @@ nsPop3Protocol::HandleLine(char *line, PRUint32 line_length)
             char ch = line[line_length-1];
             line[line_length-1] = 0;
             m_pop3ConData->seenFromHeader = PR_TRUE;
-            if (PL_strstr(line, m_pop3ConData->sender_info) == NULL)
+            if (PL_strstr(line, m_senderInfo) == NULL)
                 m_nsIPop3Sink->SetSenderAuthedFlag(m_pop3ConData->msg_closure,
                                                      PR_FALSE);
             line[line_length-1] = ch;
@@ -2151,7 +2181,8 @@ PRInt32 nsPop3Protocol::SendDele()
 	if (cmd)
 	{
    		m_pop3ConData->next_state_after_response = POP3_DELE_RESPONSE;
-		status = SendData(m_nsIPop3URL, cmd);
+		nsCOMPtr<nsIURI> url = do_QueryInterface(m_nsIPop3URL);
+		status = SendData(url, cmd);
 	}
 	PR_FREEIF(cmd);
 	return status;
@@ -2260,9 +2291,11 @@ nsPop3Protocol::CommitState(PRBool remove_last_entry)
  *
  * returns zero or more if the transfer needs to be continued.
  */
-nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aInputStream, PRUint32 aLength)
+nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aInputStream, 
+									      PRUint32 sourceOffset, PRUint32 aLength)
 {
     PRInt32 status = 0;
+	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(m_nsIPop3URL);
 
 #if 0
     TRACEMSG(("Entering NET_ProcessPop3"));
@@ -2294,9 +2327,10 @@ nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aIn
             /* If we're just checking for new mail (biff) then don't
                prompt the user for a password; just tell him we don't
                know whether he has new mail. */
+			nsCAutoString password = GetPassword();
             if ((m_pop3ConData->only_check_for_new_mail /* ||
                  MSG_Biff_Master_NikiCallingGetNewMail() */) && 
-                (m_password.IsEmpty() || m_username.IsEmpty())) 
+                (password.IsEmpty() || m_username.IsEmpty())) 
             {
                 status = MK_POP3_PASSWORD_UNDEFINED;
                 m_pop3ConData->biffstate = nsMsgBiffState_Unknown;
@@ -2375,8 +2409,8 @@ nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aIn
                 net_pop3_password_pending = PR_TRUE;
             }
 #endif 
-            
-           if (m_username.IsEmpty() || m_password.IsEmpty())
+           nsCAutoString pwd = GetPassword();
+           if (m_username.IsEmpty() || pwd.IsEmpty())
             {
                 // net_pop3_block = PR_FALSE;
                 return NS_OK;
@@ -2596,7 +2630,8 @@ nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aIn
                     }
                 }
             }
-            status = SendData(m_nsIPop3URL, "QUIT" CRLF);
+			
+			status = SendData(mailnewsurl, "QUIT" CRLF);
             m_pop3ConData->next_state = POP3_WAIT_FOR_RESPONSE;
 #ifdef POP_ALWAYS_USE_UIDL_FOR_DUPLICATES
             m_pop3ConData->next_state_after_response = POP3_QUIT_RESPONSE;
@@ -2635,18 +2670,14 @@ nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aIn
             if(m_pop3ConData->msg_del_started)
                 m_nsIPop3Sink->EndMailDelivery();
 
-            if (m_transport)
-                m_transport->OnStopBinding(m_nsIPop3URL, 0, nsnull);
-
-			if (m_nsIPop3URL)
-				m_nsIPop3URL->SetUrlState(PR_FALSE, NS_OK);
+			if (mailnewsurl)
+				mailnewsurl->SetUrlState(PR_FALSE, NS_OK);
 
             m_pop3ConData->next_state = POP3_FREE;
             break;
 
         case POP3_INTERRUPTED:
-				{
-					SendData(m_nsIPop3URL, "QUIT" CRLF);
+			SendData(mailnewsurl, "QUIT" CRLF);
 #if 0
             /*
               nnet_graceful_shutdown(ce->socket, PR_FALSE);
@@ -2654,8 +2685,7 @@ nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aIn
 #endif 
             m_pop3ConData->pause_for_read = PR_FALSE;
             m_pop3ConData->next_state = POP3_ERROR_DONE;
-				}
-				break;
+			break;
         
         case POP3_ERROR_DONE:
 
@@ -2702,13 +2732,10 @@ nsresult nsPop3Protocol::ProcessProtocolState (nsIURL* aURL, nsIInputStream* aIn
                 m_pop3ConData->next_state = POP3_READ_PASSWORD;
             else
                 /* Else we got a "real" error, so finish up. */
-                m_pop3ConData->next_state = POP3_FREE;
-            
-            if (m_transport)
-                m_transport->OnStopBinding(m_nsIPop3URL, 0, nsnull);
+                m_pop3ConData->next_state = POP3_FREE;       
 
-			if (m_nsIPop3URL)
-				m_nsIPop3URL->SetUrlState(PR_FALSE, NS_ERROR_FAILURE);
+			if (mailnewsurl)
+				mailnewsurl->SetUrlState(PR_FALSE, NS_ERROR_FAILURE);
 
             m_pop3ConData->pause_for_read = PR_FALSE;
             break;

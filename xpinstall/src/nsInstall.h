@@ -49,30 +49,44 @@
 
 #include "nsIStringBundle.h"
 #include "nsILocale.h"
+#ifndef NECKO
 #include "nsINetService.h"
+#endif
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIProperties.h"
+#include "nsIEnumerator.h"
+#include "nsIJAR.h"
 
 class nsInstallInfo
 {
   public:
     
-    nsInstallInfo(nsIFileSpec* aFile, const PRUnichar* aArgs, long flags, nsIXPINotifier* aNotifier);
+    nsInstallInfo( nsIFileSpec*     aFile, 
+                   const PRUnichar* aURL, 
+                   const PRUnichar* aArgs, 
+                   long             aFlags, 
+                   nsIXPINotifier*  aNotifier);
+
     virtual ~nsInstallInfo();
 
     void GetLocalFile(char** aPath);
 
+    void GetURL(nsString& aURL) { aURL = mURL; }
+
     void GetArguments(nsString& aArgs) { aArgs = mArgs; }
     
     long GetFlags() { return mFlags; }
+
+    nsIXPINotifier* GetNotifier() { return mNotifier; };
     
   private:
     
     nsresult  mError;
 
     long       mFlags;
+    nsString   mURL;
     nsString   mArgs;
 
     nsCOMPtr<nsIFileSpec>       mFile;
@@ -115,6 +129,12 @@ class nsInstall
             PATCH_BAD_CHECKSUM_RESULT   = -222,
             UNINSTALL_FAILED            = -223,
             PACKAGE_FOLDER_NOT_SET      = -224,
+            EXTRACTION_FAILED           = -225,
+            FILENAME_ALREADY_USED       = -226,
+            ABORT_INSTALL               = -227,
+            
+            OUT_OF_MEMORY               = -299,
+
             GESTALT_UNKNOWN_ERR         = -5550,
             GESTALT_INVALID_ARGUMENT    = -5551,
             
@@ -201,6 +221,8 @@ class nsInstall
         PRInt32    FileOpFileMacAliasCreate(nsFileSpec& aTarget, PRInt32 aFlags, PRInt32* aReturn);
         PRInt32    FileOpFileUnixLinkCreate(nsFileSpec& aTarget, PRInt32 aFlags, PRInt32* aReturn);
 
+        void       LogComment(nsString& aComment);
+
         PRInt32    ExtractFileFromJar(const nsString& aJarfile, nsFileSpec* aSuggestedName, nsFileSpec** aRealName);
         void       AddPatch(nsHashKey *aKey, nsFileSpec* fileName);
         void       GetPatch(nsHashKey *aKey, nsFileSpec** fileName);
@@ -211,6 +233,9 @@ class nsInstall
         void       GetInstallArguments(nsString& args);
         void       SetInstallArguments(const nsString& args);
 
+        void       GetInstallURL(nsString& url);
+        void       SetInstallURL(const nsString& url);
+
 
     private:
         JSObject*           mScriptObject;
@@ -219,9 +244,10 @@ class nsInstall
         JSObject*           mWinProfileObject;
         
         nsString            mJarFileLocation;
-        void*               mJarFileData;
+        nsIJAR*             mJarFileData;
         
         nsString            mInstallArguments;
+        nsString            mInstallURL;
         nsString            mPackageFolder;
 
         PRBool              mUserCancelled;
@@ -253,6 +279,7 @@ class nsInstall
         PRBool      BadRegName(const nsString& regName);
         PRInt32     SaveError(PRInt32 errcode);
 
+        void        InternalAbort(PRInt32 errcode);
         void        CleanUp();
 
         PRInt32     OpenJARFile(void);

@@ -30,13 +30,11 @@
 
 #include "nsHTMLContentSinkStream.h"
 #include "nsHTMLTokens.h"
-#include <iostream.h>
 #include <ctype.h>
 #include "nsString.h"
 #include "nsIParser.h"
 #include "nsHTMLEntities.h"
-#include "fe_proto.h"   // for LINEBREAK.  XXX fe_proto.h MUST DIE!
-
+#include "nsCRT.h"
 
 #include "nsIUnicodeEncoder.h"
 #include "nsICharsetAlias.h"
@@ -49,6 +47,8 @@
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);                 
 static NS_DEFINE_IID(kIContentSinkIID, NS_ICONTENT_SINK_IID);
 static NS_DEFINE_IID(kIHTMLContentSinkIID, NS_IHTML_CONTENT_SINK_IID);
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 static char*          gHeaderComment = "<!-- This page was created by the Gecko output system. -->";
 static char*          gDocTypeHeader = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2//EN\">";
@@ -198,9 +198,8 @@ static PRBool EatClose(eHTMLTags aTag);
 static PRBool PermitWSAfterOpen(eHTMLTags aTag);
 static PRBool PermitWSBeforeClose(eHTMLTags aTag);
 static PRBool PermitWSAfterClose(eHTMLTags aTag);
-#endif // OBSOLETE
-
 static PRBool IgnoreWS(eHTMLTags aTag);
+#endif // OBSOLETE
 
 
 /**
@@ -326,7 +325,7 @@ nsresult nsHTMLContentSinkStream::InitEncoder(const nsString& aCharset)
 
     nsICharsetConverterManager * ccm = nsnull;
     res = nsServiceManager::GetService(kCharsetConverterManagerCID, 
-                                       kICharsetConverterManagerIID, 
+                                       nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(), 
                                        (nsISupports**)&ccm);
     if(NS_SUCCEEDED(res) && (nsnull != ccm))
     {
@@ -368,6 +367,7 @@ nsHTMLContentSinkStream::nsHTMLContentSinkStream(nsIOutputStream* aOutStream,
   mUnicodeEncoder = nsnull;
   mStream = aOutStream;
   mString = aOutString;
+  mInBody = PR_FALSE;
   if (aCharsetOverride != nsnull)
     mCharsetOverride = *aCharsetOverride;
 }
@@ -437,7 +437,6 @@ void nsHTMLContentSinkStream::UnicodeToHTMLString(const nsString& aSrc,
 {
   PRInt32       length = aSrc.Length();
   PRUnichar     ch; 
-  const char*   entity = nsnull;
 
   if (mUnicodeEncoder == nsnull)
     InitEncoder("");
@@ -451,14 +450,11 @@ void nsHTMLContentSinkStream::UnicodeToHTMLString(const nsString& aSrc,
     {
       ch = aSrc.CharAt(i);
       
-      entity = NS_UnicodeToEntity(ch);
-      if (entity)
+      const nsCString& entity = nsHTMLEntities::UnicodeToEntity(ch);
+      if (0 < entity.Length())
       {
-        nsAutoString temp(entity);
-
-        temp.ToLowerCase();
         aDst.Append('&');
-        aDst.Append(temp);
+        aDst.Append(entity);
         aDst.Append(';');
       }
       else
@@ -479,8 +475,6 @@ void nsHTMLContentSinkStream::EncodeToBuffer(const nsString& aSrc)
   if (mUnicodeEncoder == nsnull)
     return;
 
-#define CH_NBSP 160
-
   PRInt32       length = htmlstr.Length();
   nsresult      result;
 
@@ -497,50 +491,48 @@ void nsHTMLContentSinkStream::EncodeToBuffer(const nsString& aSrc)
     if (NS_SUCCEEDED(result))
       result = mUnicodeEncoder->Finish(mBuffer,&temp);
 
-
+#if 0
+    // Do some conversions to make up for the unicode encoder's foibles:
+    PRInt32 nbsp = nsHTMLEntities::EntityToUnicode(nsCAutoString("nbsp"));
+    PRInt32 quot = nsHTMLEntities::EntityToUnicode(nsCAutoString("quot"));
     for (PRInt32 i = 0; i < mBufferLength; i++)
     {
-      if (mBuffer[i] == char(CH_NBSP))
+      if (mBuffer[i] == quot)
+        mBuffer[i] = '"';
+      // I don't know why this nbsp mapping was here ...
+      else if (mBuffer[i] == nbsp)
         mBuffer[i] = ' ';
     }
+#endif
   }
-  
 }
 
 
 void nsHTMLContentSinkStream::Write(const nsString& aString)
 {
+  // No need to re-encode strings, since they're going from UCS2 to UCS2
+  if (mString != nsnull)
+    mString->Append(aString);
+
+  if (!mStream)
+    return;
+
+  // Now handle the stream case:
+  nsOutputStream out(mStream);
 
   // If a encoder is being used then convert first convert the input string
-  if (mUnicodeEncoder != nsnull)
+  if (mUnicodeEncoder)
   {
     EncodeToBuffer(aString);
-    if (mStream != nsnull)
-    {
-      nsOutputStream out(mStream);
-      out.write(mBuffer,mBufferLength);
-    }
-    if (mString != nsnull)
-    {
-      mString->Append(mBuffer);
-    }
+    out.write(mBuffer, mBufferLength);
   }
+  // else just write the unicode
   else
   {
-    if (mStream != nsnull)
-    {
-      nsOutputStream out(mStream);
-      const PRUnichar* unicode = aString.GetUnicode();
-      PRUint32   length = aString.Length();
-      out.write(unicode,length);
-    }
-    else
-    {
-      mString->Append(aString);
-    }
+    const PRUnichar* unicode = aString.GetUnicode();
+    out.write(unicode, aString.Length());
   }
 }
-
 
 void nsHTMLContentSinkStream::Write(const char* aData)
 {
@@ -567,10 +559,6 @@ void nsHTMLContentSinkStream::Write(char aData)
     mString->Append(aData);
   }
 }
-
-
-
-
 
 
 /**
@@ -662,6 +650,10 @@ nsHTMLContentSinkStream::SetTitle(const nsString& aValue){
 }
 
 
+
+// XXX OpenHTML never gets called; AddStartTag gets called on
+// XXX the html tag from OpenContainer, from nsXIFDTD::StartTopOfStack,
+// XXX from nsXIFDTD::HandleStartToken.
 /**
   * This method is used to open the outer HTML container.
   *
@@ -871,6 +863,10 @@ void nsHTMLContentSinkStream::AddStartTag(const nsIParserNode& aNode)
   const nsString&   name = aNode.GetText();
   nsString          tagName;
 
+
+  if (tag == eHTMLTag_body)
+    mInBody = PR_TRUE;
+
   mHTMLTagStack[mHTMLStackPos++] = tag;
   tagName = name;
   
@@ -880,13 +876,13 @@ void nsHTMLContentSinkStream::AddStartTag(const nsIParserNode& aNode)
     tagName.ToUpperCase();
 
   
-  if (mColPos != 0 && BreakBeforeOpen(tag))
+  if ((mDoFormat || !mInBody) && mColPos != 0 && BreakBeforeOpen(tag))
   {
-    Write(LINEBREAK);
+    Write(NS_LINEBREAK);
     mColPos = 0;
   }
 
-  if (PermitWSBeforeOpen(tag))
+  if ((mDoFormat || !mInBody) && PermitWSBeforeOpen(tag))
     AddIndent();
 
   EnsureBufferSize(tagName.Length());
@@ -897,10 +893,10 @@ void nsHTMLContentSinkStream::AddStartTag(const nsIParserNode& aNode)
 
   mColPos += 1 + tagName.Length();
 
-  if (tag == eHTMLTag_style)
+  if (mDoFormat && tag == eHTMLTag_style)
   {
-    Write(">");
-    Write(LINEBREAK);
+    Write(kGreaterThan);
+    Write(NS_LINEBREAK);
     const   nsString& data = aNode.GetSkippedContent();
     PRInt32 size = data.Length();
     char*   buffer = new char[size+1];
@@ -917,9 +913,9 @@ void nsHTMLContentSinkStream::AddStartTag(const nsIParserNode& aNode)
     mColPos += 1;
   }
 
-  if (BreakAfterOpen(tag))
+  if ((mDoFormat && BreakAfterOpen(tag)) || (tag == eHTMLTag_pre))
   {
-    Write(LINEBREAK);
+    Write(NS_LINEBREAK);
     mColPos = 0;
   }
 
@@ -928,22 +924,26 @@ void nsHTMLContentSinkStream::AddStartTag(const nsIParserNode& aNode)
 }
 
 
-
-
 void nsHTMLContentSinkStream::AddEndTag(const nsIParserNode& aNode)
 {
   eHTMLTags         tag = (eHTMLTags)aNode.GetNodeType();
 //  const nsString&   name = aNode.GetText();
-  nsString          tagName;
+  nsAutoString      tagName;
+
+  if (tag == eHTMLTag_body)
+    mInBody = PR_FALSE;
 
   if (tag == eHTMLTag_unknown)
   {
     tagName = aNode.GetText();
   }
+  else if (tag == eHTMLTag_comment)
+  {
+    tagName = "--";
+  }
   else
   {
-    const char*  name =  NS_EnumToTag(tag);
-    tagName = name;
+    tagName = nsHTMLTags::GetStringValue(tag);
   }
   if (mLowerCaseTags == PR_TRUE)
     tagName.ToLowerCase();
@@ -953,11 +953,11 @@ void nsHTMLContentSinkStream::AddEndTag(const nsIParserNode& aNode)
   if (IndentChildren(tag))
     mIndent--;
 
-  if (BreakBeforeClose(tag))
+  if (mDoFormat && BreakBeforeClose(tag))
   {
     if (mColPos != 0)
     {
-      Write(LINEBREAK);
+      Write(NS_LINEBREAK);
       mColPos = 0;
     }
     AddIndent();
@@ -965,17 +965,21 @@ void nsHTMLContentSinkStream::AddEndTag(const nsIParserNode& aNode)
 
   EnsureBufferSize(tagName.Length());
   tagName.ToCString(mBuffer,mBufferSize);
-  
-  Write(kLessThan);
-  Write(kForwardSlash);
+
+  if (tag != eHTMLTag_comment)
+  {
+    Write(kLessThan);
+    Write(kForwardSlash);
+    mColPos += 1 + 1;
+  }
   Write(mBuffer);
   Write(kGreaterThan);
 
-  mColPos += 1 + 1 + strlen(mBuffer) + 1;
+  mColPos += strlen(mBuffer) + 1;
   
-  if (BreakAfterClose(tag))
+  if ((mDoFormat || !mInBody) && BreakAfterClose(tag))
   {
-    Write(LINEBREAK);
+    Write(NS_LINEBREAK);
     mColPos = 0;
   }
   mHTMLTagStack[--mHTMLStackPos] = eHTMLTag_unknown;
@@ -999,9 +1003,7 @@ nsHTMLContentSinkStream::AddLeaf(const nsIParserNode& aNode){
   if (mHTMLStackPos > 0)
     tag = mHTMLTagStack[mHTMLStackPos-1];
   
-  PRBool    preformatted = PR_FALSE;
-
-
+  PRBool preformatted = PR_FALSE;
 
   for (PRInt32 i = mHTMLStackPos-1; i >= 0; i--)
   {
@@ -1030,7 +1032,7 @@ nsHTMLContentSinkStream::AddLeaf(const nsIParserNode& aNode){
   else if (type == eHTMLTag_text)
   {
     const nsString& text = aNode.GetText();
-    if ((mDoFormat == PR_FALSE) || preformatted == PR_TRUE)
+    if (!mDoFormat || preformatted)
     {
       Write(text);
       mColPos += text.Length();
@@ -1063,7 +1065,7 @@ nsHTMLContentSinkStream::AddLeaf(const nsIParserNode& aNode){
           if (start < 0)
             start = 0;
           
-          indx = str.Find(' ',start);
+          indx = str.FindChar(' ',PR_FALSE,start);
 
           // if there is no break than just add it
           if (indx == kNotFound)
@@ -1081,7 +1083,7 @@ nsHTMLContentSinkStream::AddLeaf(const nsIParserNode& aNode){
             first.Truncate(indx);
   
             Write(first);
-            Write(LINEBREAK);
+            Write(NS_LINEBREAK);
             mColPos = 0;
   
             // cut the string from the beginning to the index
@@ -1094,7 +1096,7 @@ nsHTMLContentSinkStream::AddLeaf(const nsIParserNode& aNode){
   }
   else if (type == eHTMLTag_whitespace)
   {
-    if ((mDoFormat == PR_FALSE) || preformatted || IgnoreWS(tag) == PR_FALSE)
+    if (!mDoFormat || preformatted)
     {
       const nsString& text = aNode.GetText();
       Write(text);
@@ -1103,10 +1105,9 @@ nsHTMLContentSinkStream::AddLeaf(const nsIParserNode& aNode){
   }
   else if (type == eHTMLTag_newline)
   {
-    if ((mDoFormat == PR_FALSE) || preformatted)
+    if (!mDoFormat || preformatted)
     {
-      const nsString& text = aNode.GetText();
-      Write(text);
+      Write(NS_LINEBREAK);
       mColPos = 0;
     }
   }
@@ -1136,6 +1137,21 @@ nsHTMLContentSinkStream::AddProcessingInstruction(const nsIParserNode& aNode){
 }
 
 /**
+ *  This gets called by the parser when it encounters
+ *  a DOCTYPE declaration in the HTML document.
+ */
+
+NS_IMETHODIMP
+nsHTMLContentSinkStream::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+{
+#ifdef VERBOSE_DEBUG
+  DebugDump("<",aNode.GetText(),(mNodeStackPos)*2);
+#endif
+
+  return NS_OK;
+}
+
+/**
  *  This gets called by the parser when you want to add
  *  a comment node to the current container in the content
  *  model.
@@ -1150,6 +1166,8 @@ nsHTMLContentSinkStream::AddComment(const nsIParserNode& aNode){
 #ifdef VERBOSE_DEBUG
   DebugDump("<",aNode.GetText(),(mNodeStackPos)*2);
 #endif
+
+  Write("<!--");
 
   return NS_OK;
 }
@@ -1217,9 +1235,9 @@ nsHTMLContentSinkStream::WillBuildModel(void){
   mTabLevel=-1;
   if(mDoHeader) {
     Write(gHeaderComment);
-    Write(LINEBREAK);
+    Write(NS_LINEBREAK);
     Write(gDocTypeHeader);
-    Write(LINEBREAK);
+    Write(NS_LINEBREAK);
    }
   return NS_OK;
 }
@@ -1510,8 +1528,6 @@ PRBool PermitWSAfterClose(eHTMLTags aTag)  {
   return PR_TRUE;
 }
 
-#endif /* OBSOLETE */
-
 /** @see PermitWSBeforeOpen */
 PRBool IgnoreWS(eHTMLTags aTag)  {
   PRBool result = PR_FALSE;
@@ -1535,5 +1551,7 @@ PRBool IgnoreWS(eHTMLTags aTag)  {
 
   return result;
 }
+
+#endif /* OBSOLETE */
 
 

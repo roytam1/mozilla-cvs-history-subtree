@@ -23,7 +23,7 @@ srcdir		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= libreg
-LIBRARY_NAME	= reg
+LIBRARY_NAME	= mozreg
 
 REQUIRES	= libreg pref js
 
@@ -32,15 +32,20 @@ CSRCS		= reg.c VerReg.c vr_stubs.c
 BIN_SRCS	= VerReg.c reg.c vr_stubs.c
 BIN_OBJS	= $(addprefix $(OBJDIR)/R_,$(BIN_SRCS:.c=.o))
 
+# force the creation of a static lib.
+override NO_STATIC_LIB=
+
 include $(topsrcdir)/config/rules.mk
 
 # Override gtscc when building vreg on IRIX 5.3.
 ifeq ($(OS_ARCH)$(OS_RELEASE),IRIX5)
+ifneq ($(CC),gcc)
 CC		= cc
+endif
 endif
 
 INCLUDES	+= -I$(topsrcdir)/include
-GARBAGE		+= $(PROGRAM)
+GARBAGE		+= $(PROGRAM) $(BIN_OBJS)
 
 PROGRAM		= $(OBJDIR)/vreg$(BIN_SUFFIX)
 
@@ -53,8 +58,8 @@ ifeq ($(OS_ARCH), OSF1)
 	$(CC) -o $@ $(BIN_OBJS) $(LDFLAGS)
 else
 	$(CCF) -o $@ $(BIN_OBJS) $(LDFLAGS)
-endif	
-endif	
+endif
+endif
 
 $(OBJDIR)/R_VerReg.o:	VerReg.c
 	@$(MAKE_OBJDIR)
@@ -84,3 +89,4 @@ $(BIN_OBJS): $(BIN_SRCS)
 
 install:: $(PROGRAM)
 	$(INSTALL) -m 444 $(PROGRAM) $(DIST)/bin
+

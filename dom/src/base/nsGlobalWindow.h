@@ -27,11 +27,14 @@
 #include "nsIDOMWindow.h"
 #include "nsIDOMNavigator.h"
 #include "nsIDOMLocation.h"
+#include "nsIDOMNSLocation.h"
 #include "nsIDOMScreen.h"
 #include "nsITimer.h"
 #include "nsIJSScriptObject.h"
 #include "nsIDOMEventCapturer.h"
 #include "nsGUIEvent.h"
+#include "nsFrameList.h"
+#include "nsIScriptGlobalObjectData.h"
 #include "nsDOMWindowList.h"
 #include "nsIDOMEventTarget.h"
 
@@ -45,6 +48,7 @@ class nsIDocument;
 class nsIPresContext;
 class nsIDOMEvent;
 class nsIBrowserWindow;
+class nsIModalWindowSupport;
 
 #include "jsapi.h"
 
@@ -57,8 +61,8 @@ class ScreenImpl;
 class HistoryImpl;
 
 // Global object for scripting
-class GlobalWindowImpl : public nsIScriptObjectOwner, public nsIScriptGlobalObject, public nsIDOMWindow,
-                         public nsIJSScriptObject, public nsIDOMEventCapturer
+class GlobalWindowImpl : public nsIScriptObjectOwner, public nsIScriptGlobalObject, public nsIDOMWindow, 
+                         public nsIJSScriptObject, public nsIDOMEventCapturer, public nsIScriptGlobalObjectData
 {
 public:
   GlobalWindowImpl();
@@ -85,6 +89,7 @@ public:
   NS_IMETHOD    GetLocation(nsIDOMLocation** aLocation);
   NS_IMETHOD    GetParent(nsIDOMWindow** aOpener);
   NS_IMETHOD    GetTop(nsIDOMWindow** aTop);
+  NS_IMETHOD    GetContent(nsIDOMWindow** aContent);
   NS_IMETHOD    GetClosed(PRBool* aClosed);
   NS_IMETHOD    GetMenubar(nsIDOMBarProp** aMenubar);
   NS_IMETHOD    GetToolbar(nsIDOMBarProp** aToolbar);
@@ -164,7 +169,7 @@ public:
   NS_IMETHOD    CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, 
                             PRInt32 aXPos, PRInt32 aYPos, 
                             const nsString& aPopupType, const nsString& anAnchorAlignment,
-                            const nsString& aPopupAlignment);
+                            const nsString& aPopupAlignment, nsIDOMWindow** outPopup);
   
   // nsIDOMEventCapturer interface
   NS_IMETHOD    CaptureEvent(const nsString& aType);
@@ -178,9 +183,9 @@ public:
 
   // nsIDOMEventTarget interface
   NS_IMETHOD AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                            PRBool aPostProcess, PRBool aUseCapture);
+                            PRBool aUseCapture);
   NS_IMETHOD RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                               PRBool aPostProcess, PRBool aUseCapture);
+                               PRBool aUseCapture);
 
 
 
@@ -200,6 +205,11 @@ public:
   virtual PRBool    Convert(JSContext *aContext, jsval aID);
   virtual void      Finalize(JSContext *aContext);
   
+  // nsIScriptGlobalObjectData interface
+  NS_IMETHOD       GetPrincipals(void** aPrincipals);
+  NS_IMETHOD       SetPrincipals(void* aPrincipals);
+  NS_IMETHOD       GetOrigin(nsString* aOrigin);
+
   friend void nsGlobalWindow_RunTimeout(nsITimer *aTimer, void *aClosure);
 
 protected:
@@ -211,19 +221,25 @@ protected:
   void          InsertTimeoutIntoList(nsTimeoutImpl **aInsertionPoint,
                                       nsTimeoutImpl *aTimeout);
   void          ClearAllTimeouts();
-  void          DropTimeout(nsTimeoutImpl *aTimeout);
+  void          DropTimeout(nsTimeoutImpl *aTimeout,
+                            nsIScriptContext* aContext=nsnull);
   void          HoldTimeout(nsTimeoutImpl *aTimeout);
-  nsresult      GetBrowserWindowInterface(nsIBrowserWindow*& aBrowser);
+  nsresult      GetBrowserWindowInterface(nsIBrowserWindow*& aBrowser,
+                            nsIWebShell *aWebShell=nsnull);
   nsresult      CheckWindowName(JSContext *cx, nsString& aName);
-  PRInt32       WinHasOption(char *options, char *name);
+  PRInt32       WinHasOption(char *options, char *name, PRBool& aPresenceFlag);
   PRBool        CheckForEventListener(JSContext *aContext, nsString& aPropName);
 
   nsresult      OpenInternal(JSContext *cx, jsval *argv, PRUint32 argc, 
-                       PRBool aAttachArguments, nsIDOMWindow** aReturn);
+                             PRBool aDialog, nsIDOMWindow** aReturn);
   nsresult      AttachArguments(nsIDOMWindow *aWindow, jsval *argv, PRUint32 argc);
-  PRUint32      CalculateChromeFlags(char *aFeatures);
-  nsresult      SizeAndShowOpenedWebShell(nsIWebShell *aOuterShell, char *aFeatures);
+  PRUint32      CalculateChromeFlags(char *aFeatures, PRBool aDialog);
+  nsresult      SizeAndShowOpenedWebShell(nsIWebShell *aOuterShell,
+                  char *aFeatures, PRBool aNewWindow, PRBool aDialog);
   nsresult      ReadyOpenedWebShell(nsIWebShell *aWebShell, nsIDOMWindow **aDOMWindow);
+  nsresult      GetModalWindowSupport(nsIModalWindowSupport **msw);
+
+  static nsresult WebShellToDOMWindow(nsIWebShell *aWebShell, nsIDOMWindow **aDOMWindow);
 
   nsIScriptContext *mContext;
   void *mScriptObject;
@@ -234,6 +250,8 @@ protected:
   HistoryImpl *mHistory;
   nsIWebShell *mWebShell;
   nsIDOMWindow *mOpener;
+  JSPrincipals *mPrincipals;
+
   BarPropImpl *mMenubar;
   BarPropImpl *mToolbar;
   BarPropImpl *mLocationbar;
@@ -260,7 +278,7 @@ protected:
 struct nsTimeoutImpl {
   PRInt32             ref_count;      /* reference count to shared usage */
   GlobalWindowImpl    *window;        /* window for which this timeout fires */
-  char                *expr;          /* the JS expression to evaluate */
+  JSString            *expr;          /* the JS expression to evaluate */
   JSObject            *funobj;        /* or function to call, if !expr */
   nsITimer            *timer;         /* The actual timer object */
   jsval               *argv;          /* function actual arguments */
@@ -314,9 +332,13 @@ protected:
   nsIDOMPluginArray* mPlugins;
 };
 
-class nsIURL;
+class nsIURI;
 
-class LocationImpl : public nsIScriptObjectOwner, public nsIDOMLocation {
+class LocationImpl : public nsIScriptObjectOwner, 
+                     public nsIDOMLocation, 
+                     public nsIDOMNSLocation,
+                     public nsIJSScriptObject
+{
 
 protected:
 public:
@@ -330,6 +352,7 @@ public:
 
   NS_IMETHOD_(void)       SetWebShell(nsIWebShell *aWebShell);
 
+  // nsIDOMLocation
   NS_IMETHOD    GetHash(nsString& aHash);
   NS_IMETHOD    SetHash(const nsString& aHash);
   NS_IMETHOD    GetHost(nsString& aHost);
@@ -346,12 +369,31 @@ public:
   NS_IMETHOD    SetProtocol(const nsString& aProtocol);
   NS_IMETHOD    GetSearch(nsString& aSearch);
   NS_IMETHOD    SetSearch(const nsString& aSearch);
-  NS_IMETHOD    Reload(JSContext *cx, jsval *argv, PRUint32 argc);
+  NS_IMETHOD    Reload(PRBool aForceget);
   NS_IMETHOD    Replace(const nsString& aUrl);
   NS_IMETHOD    ToString(nsString& aReturn);
+  
+  // nsIDOMNSLocation
+  NS_IMETHOD    Reload(JSContext *cx, jsval *argv, PRUint32 argc);
+  NS_IMETHOD    Replace(JSContext *cx, jsval *argv, PRUint32 argc);
+
+  // nsIJSScriptObject
+  virtual PRBool    AddProperty(JSContext *aContext, jsval aID, jsval *aVp);
+  virtual PRBool    DeleteProperty(JSContext *aContext, jsval aID, jsval *aVp);
+  virtual PRBool    GetProperty(JSContext *aContext, jsval aID, jsval *aVp);
+  virtual PRBool    SetProperty(JSContext *aContext, jsval aID, jsval *aVp);
+  virtual PRBool    EnumerateProperty(JSContext *aContext);
+  virtual PRBool    Resolve(JSContext *aContext, jsval aID);
+  virtual PRBool    Convert(JSContext *aContext, jsval aID);
+  virtual void      Finalize(JSContext *aContext);
 
 protected:
-  nsresult SetURL(nsIURL* aURL);
+  nsresult SetURL(nsIURI* aURL);
+  nsresult SetHrefWithBase(const nsString& aHref, 
+                           nsIURI* aBase, 
+                           PRBool aReplace);
+  nsresult GetSourceURL(JSContext* cx,
+                        nsIURI** sourceURL);
 
   nsIWebShell *mWebShell;
   void *mScriptObject;

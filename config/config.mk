@@ -48,7 +48,7 @@ NOMD_CFLAGS	= $(CC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
 NOMD_CCFLAGS	= $(CCC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
 		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
 
-INCLUDES	= $(LOCAL_INCLUDES) -I$(DIST)/include -I$(XPDIST)/include -I$(topsrcdir)/include $(OS_INCLUDES) $(G++INCLUDES)
+INCLUDES	= $(LOCAL_INCLUDES) -I$(PUBLIC) -I$(DIST)/include -I$(XPDIST)/include -I$(topsrcdir)/include $(OS_INCLUDES) $(G++INCLUDES)
 
 LDFLAGS		= $(OS_LDFLAGS)
 
@@ -83,7 +83,7 @@ GARBAGE		+= $(DEPENDENCIES) core $(wildcard core.[0-9]*)
 LIBS_DIR	:= -L$(DIST)/bin -L$(DIST)/lib
 
 # all public include files go in subdirectories of PUBLIC:
-PUBLIC		:= $(XPDIST)/public
+PUBLIC		= $(XPDIST)/include
 
 DEPENDENCIES	= .md
 
@@ -106,11 +106,115 @@ ifneq (, $(filter $(MODULE), $(MOZ_DEBUG_MODULES)))
   OS_CXXFLAGS += -g
 endif
 
-OS_TEST	:= $(TARGET_CPU)
-OS_ARCH := $(TARGET_OS)
+#OS_TEST	:= $(TARGET_CPU)
+#OS_ARCH := $(TARGET_OS)
 
+#
+# Important internal static macros
+#
+OS_ARCH		:= $(subst /,_,$(shell uname -s))
+OS_RELEASE	:= $(shell uname -r)
+OS_TEST		:= $(shell uname -m)
 
+#
+# Tweak the default OS_ARCH and OS_RELEASE macros as needed.
+#
+ifeq ($(OS_ARCH),AIX)
+OS_RELEASE	:= $(shell uname -v).$(shell uname -r)
+endif
+ifeq ($(OS_ARCH),BSD_386)
+OS_ARCH		:= BSD_OS
+endif
+ifeq ($(OS_ARCH),dgux)
+OS_ARCH		:= DGUX
+endif
+ifeq ($(OS_ARCH),IRIX64)
+OS_ARCH		:= IRIX
+endif
+ifeq ($(OS_ARCH),UNIX_SV)
+ifneq ($(findstring NCR,$(shell grep NCR /etc/bcheckrc | head -1 )),)
+OS_ARCH		:= NCR
+else
+OS_ARCH		:= UNIXWARE
+OS_RELEASE	:= $(shell uname -v)
+endif
+endif
+ifeq ($(OS_ARCH),ncr)
+OS_ARCH		:= NCR
+endif
+# This is the only way to correctly determine the actual OS version on NCR boxes.
+ifeq ($(OS_ARCH),NCR)
+OS_RELEASE	:= $(shell awk '{print $$3}' /etc/.relid | sed 's/^\([0-9]\)\(.\)\(..\)\(.*\)$$/\2.\3/')
+endif
+ifeq ($(OS_ARCH),UNIX_System_V)
+OS_ARCH		:= NEC
+endif
+ifeq ($(OS_ARCH),OSF1)
+OS_SUB		:= $(shell uname -v)
+# Until I know the other possibilities, or an easier way to compute them, this is all there's gonna be.
+#ifeq ($(OS_SUB),240)
+#OS_RELEASE	:= V2.0
+#endif
+ifeq ($(OS_SUB),148)
+OS_RELEASE	:= V3.2C
+endif
+ifeq ($(OS_SUB),564)
+OS_RELEASE	:= V4.0B
+endif
+ifeq ($(OS_SUB),878)
+OS_RELEASE	:= V4.0D
+endif
+endif
+ifneq (,$(findstring OpenVMS,$(OS_ARCH)))
+OS_ARCH		:= OpenVMS
+OS_RELEASE	:= $(shell uname -v)
+CPU_ARCH	:= $(shell uname -Wh)
+CPU_ARCH_TAG	:= _$(CPU_ARCH)
+PERL		:= perl
+endif
+ifeq ($(OS_ARCH),QNX)
+ifeq ($(OS_TARGET),NTO)
+LD		:= qcc -Vgcc_ntox86 -nostdlib
+else
+OS_RELEASE	:= $(shell uname -v | sed 's/^\([0-9]\)\([0-9]*\)$$/\1.\2/')
+LD		:= $(CC)
+endif
+OS_TEST		:= x86
+endif
+ifeq ($(OS_ARCH),SCO_SV)
+OS_ARCH		:= SCOOS
+OS_RELEASE	:= 5.0
+endif
+ifneq (,$(filter SINIX-N SINIX-Y SINIX-Z ReliantUNIX-M,$(OS_ARCH)))
+OS_ARCH		:= SINIX
+OS_TEST		:= $(shell uname -p)
+endif
+ifeq ($(OS_ARCH),UnixWare)
+OS_ARCH		:= UNIXWARE
+OS_RELEASE	:= $(shell uname -v)
+endif
 
+#
+# Strip off the excessively long version numbers on these platforms,
+# but save the version to allow multiple versions of the same base
+# platform to be built in the same tree.
+#
+ifneq (,$(filter FreeBSD HP-UX IRIX Linux NetBSD OpenBSD OSF1 SunOS,$(OS_ARCH)))
+OS_VERS		:= $(suffix $(OS_RELEASE))
+OS_RELEASE	:= $(basename $(OS_RELEASE))
+
+# Allow the user to ignore the OS_VERSION, which is usually irrelevant.
+ifndef MOZILLA_CONFIG_IGNORE_OS_VERSION
+OS_VERSION	:= $(shell echo $(OS_VERS) | sed 's/-.*//')
+endif
+
+endif
+
+OS_CONFIG	:= $(OS_ARCH)$(OS_RELEASE)
+
+ifdef NECKO
+DEFINES += -DNECKO
+endif
 
 
 else # !USE_AUTOCONF_2
@@ -238,7 +342,6 @@ MY_RULES	:= $(DEPTH)/config/myrules.mk
 #
 ifneq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
 REVDEPTH	:= $(topsrcdir)/config/revdepth
-SRCDIR		= $(shell $(PERL) $(REVDEPTH).pl $(DEPTH))
 endif
 
 #
@@ -295,6 +398,7 @@ UNZIP_PROG	= $(LOCAL_BIN)/unzip
 ZIP_PROG	= $(LOCAL_BIN)/zip
 ZIP_COMPR	= 9
 ZIP_FLAGS	= -$(ZIP_COMPR)r
+MOC			= moc
 XPIDL_COMPILE 	= $(DIST)/bin/xpidl
 XPIDL_LINK	= $(DIST)/bin/xpt_link
 
@@ -351,7 +455,6 @@ WHOAMI		= /usr/bin/whoami
 endif
 endif
 
-# Temporary?
 ifeq ($(OS_ARCH),OpenVMS)
 include $(topsrcdir)/config/$(OS_ARCH).mk
 endif
@@ -427,7 +530,7 @@ endif
 # be put in the library directories where it belongs so that it can
 # get exported to dist properly.
 #
-INCLUDES	= $(LOCAL_INCLUDES) -I$(DIST)/include -I$(XPDIST)/include -I$(topsrcdir)/include $(OS_INCLUDES) $(G++INCLUDES)
+INCLUDES	= $(LOCAL_INCLUDES) -I$(PUBLIC) -I$(DIST)/include -I$(XPDIST)/include -I$(topsrcdir)/include $(OS_INCLUDES) $(G++INCLUDES)
 
 LIBNT		= $(DIST)/lib/libnt.$(LIB_SUFFIX)
 LIBAWT		= $(DIST)/lib/libawt.$(LIB_SUFFIX)
@@ -483,19 +586,10 @@ UNZIP_PROG		= $(ACUNZIP)
 WHOAMI			= $(ACWHOAMI)
 ZIP_PROG		= $(ACZIP)
 
-# Figure out where the binary code lives. It either lives in the src
-# tree (NSBUILDROOT is undefined) or somewhere else.
-ifdef NSBUILDROOT
-BUILD		= $(NSBUILDROOT)/$(OBJDIR_NAME)/build
-OBJDIR		= $(BUILD)/$(SRCDIR)
-XPDIST		= $(NSBUILDROOT)
-DIST		= $(NSBUILDROOT)/$(OBJDIR_NAME)/dist
-else
 BUILD		= $(OBJDIR_NAME)
 OBJDIR		= $(OBJDIR_NAME)
 XPDIST		= $(DEPTH)/dist
 DIST		= $(DEPTH)/dist/$(OBJDIR_NAME)
-endif
 
 # We need to know where to find the libraries we
 # put on the link line for binaries, and should
@@ -503,7 +597,7 @@ endif
 LIBS_DIR	= -L$(DIST)/bin -L$(DIST)/lib
 
 # all public include files go in subdirectories of PUBLIC:
-PUBLIC		= $(XPDIST)/public
+PUBLIC		= $(XPDIST)/include
 
 DEPENDENCIES	= .md
 
@@ -660,7 +754,7 @@ endif
 # For profiling
 ifdef MOZILLA_GPROF
 # Don't want profiling on build tools..
-ifneq ($(SRCDIR),config)
+ifneq ($(shell echo $(srcdir) | sed 's:\.\./::g'),config)
 PROF_FLAGS	= $(OS_GPROF_FLAGS) -DMOZILLA_GPROF
 endif
 endif

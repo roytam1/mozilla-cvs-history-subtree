@@ -23,6 +23,13 @@
 #include "prmem.h"
 #include "prlock.h"
 
+/* extra locking for the paranoid */
+/* #define EXTRA_THREADSAFE */
+#ifndef EXTRA_THREADSAFE
+#define PR_Lock(x)           (void)0
+#define PR_Unlock(x)         (void)0
+#endif
+
 /*-------------------------------- nsRegistry ----------------------------------
 | This class implements the nsIRegistry interface using the functions          |
 | provided by libreg (as declared in mozilla/modules/libreg/include/NSReg.h).  |
@@ -30,7 +37,14 @@
 | Since that interface is designed to match the libreg function, this class    |
 | is implemented with each member function being a simple wrapper for the      |
 | corresponding libreg function.                                               |
+|                                                                              |
+| #define EXTRA_THREADSAFE if you are worried about libreg thread safety.      |
+| It should not be necessary, but I'll leave in the code for the paranoid.     |
 ------------------------------------------------------------------------------*/
+
+
+
+
 struct nsRegistry : public nsIRegistry {
     // This class implements the nsISupports interface functions.
     NS_DECL_ISUPPORTS
@@ -77,8 +91,9 @@ struct nsRegistry : public nsIRegistry {
 
 protected:
     HREG   mReg; // Registry handle.
-    REGERR mErr; // Last libreg error code.
+#ifdef EXTRA_THREADSAFE
     PRLock *mregLock;	// libreg isn't threadsafe. Use locks to synchronize.
+#endif
 }; // nsRegistry
 
 
@@ -115,16 +130,20 @@ struct nsRegSubtreeEnumerator : public nsIEnumerator {
 
     // ctor/dtor
     nsRegSubtreeEnumerator( HREG hReg, RKEY rKey, PRBool all );
+    virtual ~nsRegSubtreeEnumerator();
 
 protected:
     NS_IMETHOD advance(); // Implementation file; does appropriate NR_RegEnum call.
     HREG    mReg;   // Handle to registry we're affiliated with.
     RKEY    mKey;   // Base key being enumerated.
+    char    mName[MAXREGPATHLEN]; // The name of the current key which is in mNext
     REGENUM mEnum;  // Corresponding libreg "enumerator".
     REGENUM mNext;  // Lookahead value.
     uint32  mStyle; // Style (indicates all or some);
     PRBool  mDone;  // Done flag.
-    REGERR  mErr;   // Last libreg error code.
+#ifdef EXTRA_THREADSAFE
+    PRLock *mregLock;
+#endif
 }; // nsRegSubtreeEnumerator
 
 
@@ -156,15 +175,20 @@ struct nsRegistryNode : public nsIRegistryNode {
     // This class implements the nsIRegistryNode interface functions.
     NS_IMETHOD GetName( char **result );
 
+    // Get the key associated with this node
+    NS_IMETHOD GetKey( nsIRegistry::Key *r_key );
+
     // ctor
-    nsRegistryNode( HREG hReg, RKEY key, REGENUM slot );
+    nsRegistryNode( HREG hReg, char *name, RKEY childKey );
+    virtual ~nsRegistryNode();
     
 protected:
     HREG    mReg;  // Handle to registry this node is part of.
-    RKEY    mKey;  // Key this node is under.
-    REGENUM mEnum; // Copy of corresponding content of parent enumerator.
-    REGERR  mErr;  // Last libreg error code.
     char    mName[MAXREGPATHLEN]; // Buffer to hold name.
+    RKEY    mChildKey;	// Key corresponding to mName
+#ifdef EXTRA_THREADSAFE
+    PRLock *mregLock;
+#endif
 }; // nsRegistryNode
 
 
@@ -183,15 +207,19 @@ struct nsRegistryValue : public nsIRegistryValue {
 
     // ctor
     nsRegistryValue( HREG hReg, RKEY key, REGENUM slot );
+    virtual ~nsRegistryValue();
 
 protected:
     nsresult getInfo(); // Get registry info.
     HREG    mReg;  // Handle to registry this node is part of.
     RKEY    mKey;  // Key this node is under.
     REGENUM mEnum; // Copy of corresponding content of parent enumerator.
-    REGERR  mErr;  // Last libreg error code.
     REGINFO mInfo; // Value info.
     char    mName[MAXREGNAMELEN]; // Buffer to hold name.
+    REGERR  mErr; // XXX This causes this class to be NON THREAD SAFE
+#ifdef EXTRA_THREADSAFE
+    PRLock *mregLock;
+#endif
 }; // nsRegistryValue
 
 
@@ -361,7 +389,9 @@ nsRegistry::nsRegistry()
         libregStarted = PR_TRUE;
     }
 
+#ifdef EXTRA_THREADSAFE
     mregLock = PR_NewLock();
+#endif
 
     return;
 }
@@ -373,9 +403,11 @@ nsRegistry::~nsRegistry() {
     if( mReg ) {
         Close();
     }
+#ifdef EXTRA_THREADSAFE
     if (mregLock) {
         PR_DestroyLock(mregLock);
     }
+#endif
     return;
 }
 
@@ -385,6 +417,7 @@ nsRegistry::~nsRegistry() {
 | it if so.                                                                    |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::Open( const char *regFile ) {
+    REGERR err = REGERR_OK;
     // Check for default.
     if( !regFile ) {
         return OpenDefault();
@@ -393,10 +426,10 @@ NS_IMETHODIMP nsRegistry::Open( const char *regFile ) {
     Close();
     // Open specified registry.
     PR_Lock(mregLock);
-    mErr = NR_RegOpen((char*)regFile, &mReg );
+    err = NR_RegOpen((char*)regFile, &mReg );
     PR_Unlock(mregLock);
     // Convert the result.
-    return regerr2nsresult( mErr );
+    return regerr2nsresult( err );
 }
 
 /*----------------------------- nsRegistry::OpenWellKnownRegistry --------------
@@ -404,20 +437,20 @@ NS_IMETHODIMP nsRegistry::Open( const char *regFile ) {
 | to see if a registry file is already open and close  it if so.               |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( uint32 regid ) {
+    REGERR err = REGERR_OK;
+
     // Ensure existing registry is closed.
     Close();
 
-    nsSpecialSystemDirectory reg(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+    nsSpecialSystemDirectory *registryLocation = NULL;
     PRBool foundReg = PR_FALSE;
     
     switch ( (WellKnownRegistry) regid ) {
       case ApplicationComponentRegistry:
-#ifdef XP_MAC
-        reg += "Component Registry";
-#else
-        reg += "component.reg";
-#endif /* XP_MAC */
-        foundReg = PR_TRUE;
+        registryLocation =
+          new nsSpecialSystemDirectory(nsSpecialSystemDirectory::XPCOM_CurrentProcessComponentRegistry);
+        if (registryLocation != NULL)
+          foundReg = PR_TRUE;
         break;
 
       default:
@@ -431,17 +464,19 @@ NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( uint32 regid ) {
     // WARNING:
     // regNSPRPath and regFile need to have the same scope
     // since the regFile will point to data in regNSPRPath
-    nsNSPRPath regNSPRPath(reg);
+    nsNSPRPath regNSPRPath(*registryLocation);
     const char *regFile = (const char *) regNSPRPath;
 
 #ifdef DEBUG_dp
     printf("nsRegistry: Opening std registry %s\n", regFile);
 #endif /* DEBUG_dp */
     PR_Lock(mregLock);
-    mErr = NR_RegOpen((char*)regFile, &mReg );
+    err = NR_RegOpen((char*)regFile, &mReg );
     PR_Unlock(mregLock);
+    // Cleanup
+    delete registryLocation;
     // Convert the result.
-    return regerr2nsresult( mErr );
+    return regerr2nsresult( err );
 }
 
 /*-------------------------- nsRegistry::OpenDefault ---------------------------
@@ -449,28 +484,29 @@ NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( uint32 regid ) {
 | that is done by passing a null file name pointer to NR_RegOpen.              |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::OpenDefault() {
+    REGERR err = REGERR_OK;
     // Ensure existing registry is closed.
     Close();
     // Open default registry.
     PR_Lock(mregLock);
-    mErr = NR_RegOpen( 0, &mReg );
+    err = NR_RegOpen( 0, &mReg );
     PR_Unlock(mregLock);
     // Convert the result.
-    return regerr2nsresult( mErr );
+    return regerr2nsresult( err );
 }
 
 /*----------------------------- nsRegistry::Close ------------------------------
 | Tests the mReg handle and if non-null, closes the registry via NR_RegClose.  |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::Close() {
-    mErr = REGERR_OK;
+    REGERR err = REGERR_OK;
     if( mReg ) {
         PR_Lock(mregLock);
-        mErr = NR_RegClose( mReg );
+        err = NR_RegClose( mReg );
         PR_Unlock(mregLock);
         mReg = 0;
     }
-    return regerr2nsresult( mErr );
+    return regerr2nsresult( err );
 }
 
 /*--------------------------- nsRegistry::GetString ----------------------------
@@ -479,62 +515,83 @@ NS_IMETHODIMP nsRegistry::Close() {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetString( Key baseKey, const char *path, char **result ) {
     nsresult rv = NS_OK;
-    // Make sure caller gave us place for result.
-    if( result ) {
-        *result = 0; // Clear result.
+    REGERR   err = REGERR_OK;
 
-        // Get info about the requested entry.
-        uint32 type, length;
-        rv = GetValueType( baseKey, path, &type );
-        if ( rv == NS_OK ) {
-            rv = GetValueLength( baseKey, path, &length );
-        }
+    // Make sure caller gave us place for result.
+    if ( !result )
+        return NS_ERROR_NULL_POINTER;
+
+    char   regStr[MAXREGPATHLEN];
+
+    // initialize the return value
+    *result = 0;
+
+    // Attempt to get string into our fixed buffer
+    PR_Lock(mregLock);
+    err = NR_RegGetEntryString( mReg,(RKEY)baseKey,(char*)path, regStr, sizeof regStr );
+    PR_Unlock(mregLock);
+
+    if ( err == REGERR_OK )
+    {
+        // Allocate buffer for return value
+        uint32 vallen = PL_strlen(regStr);
+        *result = (char*)PR_Malloc( vallen + 1 );
+        if (*result)
+            PL_strcpy(*result, regStr);
+        else
+            rv = NS_ERROR_OUT_OF_MEMORY;
+    }
+    else if ( err == REGERR_BUFTOOSMALL ) 
+    {
+        // find the real size and malloc it
+        uint32 length;
+        rv = GetValueLength( baseKey, path, &length );
         // See if that worked.
-        if( rv == NS_OK ) {
-            // Make sure the entry is a string.
-            if( type == String ) {
-                // Allocate space for result.
-                *result =(char*)PR_Malloc( length + 1 );
-                if( *result ) {
-                    // Get string from registry into result buffer.
-                    PR_Lock(mregLock);
-                    mErr = NR_RegGetEntryString( mReg,(RKEY)baseKey,(char*)path, *result, length+1 );
-                    PR_Unlock(mregLock);
-                    // Convert status.
-                    rv = regerr2nsresult( mErr );
-                    // Test result.
-                    if( rv != NS_OK ) {
-                        // Didn't get result, free buffer.
-                        PR_Free( *result );
-                        *result = 0;
-                    }
-                } else {
-                    // Couldn't allocate buffer.
-                    rv = NS_ERROR_OUT_OF_MEMORY;
+        if( rv == NS_OK ) 
+        {
+            *result =(char*)PR_Malloc( length + 1 );
+            if( *result ) 
+            {
+                // Get string from registry into result buffer.
+                PR_Lock(mregLock);
+                err = NR_RegGetEntryString( mReg,(RKEY)baseKey,(char*)path, *result, length+1 );
+                PR_Unlock(mregLock);
+
+                // Convert status.
+                rv = regerr2nsresult( err );
+                if ( rv != NS_OK )
+                {
+                    // Didn't get result, free buffer
+                    PR_Free( *result );
+                    *result = 0;
                 }
-            } else {
-                // They asked for the wrong type of value.
-                rv = regerr2nsresult( REGERR_BADTYPE );
+            }
+            else
+            {
+                rv = NS_ERROR_OUT_OF_MEMORY;
             }
         }
-    } else {
-        rv = NS_ERROR_NULL_POINTER;
     }
-    return rv;
+    else
+    {
+        // Convert status.
+        rv = regerr2nsresult( err );
+    }
+
+   return rv;
 }
 
 /*--------------------------- nsRegistry::SetString ----------------------------
 | Simply sets the registry contents using NR_RegSetEntryString.                |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::SetString( Key baseKey, const char *path, const char *value ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Set the contents.
     PR_Lock(mregLock);
-    mErr = NR_RegSetEntryString( mReg,(RKEY)baseKey,(char*)path,(char*)value );
+    err = NR_RegSetEntryString( mReg,(RKEY)baseKey,(char*)path,(char*)value );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 /*---------------------------- nsRegistry::GetInt ------------------------------
@@ -544,6 +601,7 @@ NS_IMETHODIMP nsRegistry::SetString( Key baseKey, const char *path, const char *
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetInt( Key baseKey, const char *path, int32 *result ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
 
     // Make sure caller gave us place for result.
     if( result ) {
@@ -557,10 +615,10 @@ NS_IMETHODIMP nsRegistry::GetInt( Key baseKey, const char *path, int32 *result )
                 uint32 len = sizeof *result;
                 // Get int from registry into result field.
                 PR_Lock(mregLock);
-                mErr = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, result, &len );
+                err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, result, &len );
                 PR_Unlock(mregLock);
                 // Convert status.
-                rv = regerr2nsresult( mErr );
+                rv = regerr2nsresult( err );
             } else {
                 // They asked for the wrong type of value.
                 rv = NS_ERROR_REG_BADTYPE;
@@ -576,10 +634,10 @@ NS_IMETHODIMP nsRegistry::GetInt( Key baseKey, const char *path, int32 *result )
 | Write out the value as a one-element int32 array, using NR_RegSetEntry.      |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::SetInt( Key baseKey, const char *path, int32 value ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Set the contents.
     PR_Lock(mregLock);
-    mErr = NR_RegSetEntry( mReg,
+    err = NR_RegSetEntry( mReg,
                 (RKEY)baseKey,
                 (char*)path,
                            REGTYPE_ENTRY_INT32_ARRAY,
@@ -587,8 +645,7 @@ NS_IMETHODIMP nsRegistry::SetInt( Key baseKey, const char *path, int32 value ) {
                            sizeof value );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 /*--------------------------- nsRegistry::GetBytes -----------------------------
@@ -596,6 +653,7 @@ NS_IMETHODIMP nsRegistry::SetInt( Key baseKey, const char *path, int32 value ) {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetBytes( Key baseKey, const char *path, void **result, uint32 *len ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
 
     // Make sure caller gave us place for result.
     if( result && len ) {
@@ -609,10 +667,10 @@ NS_IMETHODIMP nsRegistry::GetBytes( Key baseKey, const char *path, void **result
                 // Get bytes from registry into result field.
 				*result = PR_Malloc(*len);
                 PR_Lock(mregLock);
-                mErr = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, *result, len );
+                err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, *result, len );
                 PR_Unlock(mregLock);
                 // Convert status.
-                rv = regerr2nsresult( mErr );
+                rv = regerr2nsresult( err );
             } else {
                 // They asked for the wrong type of value.
                 rv = NS_ERROR_REG_BADTYPE;
@@ -628,15 +686,14 @@ NS_IMETHODIMP nsRegistry::GetBytes( Key baseKey, const char *path, void **result
 | Set the contents at the specified registry location, using NR_RegSetEntry.   |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::SetBytes( Key baseKey, const char *path, void *value, uint32 len ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Set contents.
     PR_Lock(mregLock);
-    mErr = NR_RegSetEntry( mReg,(RKEY)baseKey,(char*)path,
+    err = NR_RegSetEntry( mReg,(RKEY)baseKey,(char*)path,
                            REGTYPE_ENTRY_BYTES, value, len );
     PR_Unlock(mregLock);
     // Convert result;
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 /*-------------------------- nsRegistry::GetIntArray ---------------------------
@@ -646,6 +703,7 @@ NS_IMETHODIMP nsRegistry::SetBytes( Key baseKey, const char *path, void *value, 
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetIntArray( Key baseKey, const char *path, int32 **result, uint32 *len ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
 
     // Make sure caller gave us place for result.
     if( result && len ) {
@@ -666,14 +724,14 @@ NS_IMETHODIMP nsRegistry::GetIntArray( Key baseKey, const char *path, int32 **re
                 if( *result ) {
                     // Get array from registry into result field.
                     PR_Lock(mregLock);
-                    mErr = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, *result, len );
+                    err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, *result, len );
                     PR_Unlock(mregLock);
                     // Convert status.
-                    if( mErr == REGERR_OK ) {
+                    if( err == REGERR_OK ) {
                         // Convert size in bytes to array dimension.
                         *len /= sizeof(int32);
                     } else {
-                        rv = regerr2nsresult( mErr );
+                        rv = regerr2nsresult( err );
                         // Free buffer that we allocated(error will tell caller not to).
                         PR_Free( *result );
                         *result = 0;
@@ -698,45 +756,42 @@ NS_IMETHODIMP nsRegistry::GetIntArray( Key baseKey, const char *path, int32 **re
 | size in bytes in order to use NR_RegSetEntry.                                |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::SetIntArray( Key baseKey, const char *path, const int32 *value, uint32 len ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Convert array dimension to byte count.
     uint32 size = len * sizeof(int32);
     // Set contents.
     PR_Lock(mregLock);
-    mErr = NR_RegSetEntry( mReg,(RKEY)baseKey,(char*)path,
+    err = NR_RegSetEntry( mReg,(RKEY)baseKey,(char*)path,
                            REGTYPE_ENTRY_INT32_ARRAY,(void*)value, size );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 /*-------------------------- nsRegistry::AddSubtree ----------------------------
 | Add a new registry subkey with the specified name, using NR_RegAddKey.       |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::AddSubtree( Key baseKey, const char *path, Key *result ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Add the subkey.
     PR_Lock(mregLock);
-    mErr = NR_RegAddKey( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
+    err = NR_RegAddKey( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 /*-------------------------- nsRegistry::AddSubtreeRaw--------------------------
 | Add a new registry subkey with the specified name, using NR_RegAddKeyRaw     |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::AddSubtreeRaw( Key baseKey, const char *path, Key *result ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Add the subkey.
     PR_Lock(mregLock);
-    mErr = NR_RegAddKeyRaw( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
+    err = NR_RegAddKeyRaw( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 
@@ -744,14 +799,13 @@ NS_IMETHODIMP nsRegistry::AddSubtreeRaw( Key baseKey, const char *path, Key *res
 | Deletes the subtree at a given location using NR_RegDeleteKey.               |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::RemoveSubtree( Key baseKey, const char *path ) {
-    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Delete the subkey.
     PR_Lock(mregLock);
-    mErr = NR_RegDeleteKey( mReg,(RKEY)baseKey,(char*)path );
+    err = NR_RegDeleteKey( mReg,(RKEY)baseKey,(char*)path );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
-    return rv;
+    return regerr2nsresult( err );
 }
 
 
@@ -760,6 +814,7 @@ NS_IMETHODIMP nsRegistry::RemoveSubtree( Key baseKey, const char *path ) {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::RemoveSubtreeRaw( Key baseKey, const char *keyname ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
 
 	// libreg doesn't delete keys if there are subkeys under the key
 	// Hence we have to recurse through to delete the subtree
@@ -770,7 +825,7 @@ NS_IMETHODIMP nsRegistry::RemoveSubtreeRaw( Key baseKey, const char *keyname ) {
     REGENUM state = 0;
 
     PR_Lock(mregLock);
-    REGERR err = NR_RegGetKeyRaw(mReg, baseKey, (char *)keyname, &key);
+    err = NR_RegGetKeyRaw(mReg, baseKey, (char *)keyname, &key);
     PR_Unlock(mregLock);
     if (err != REGERR_OK)
 	{
@@ -811,14 +866,15 @@ NS_IMETHODIMP nsRegistry::RemoveSubtreeRaw( Key baseKey, const char *keyname ) {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetSubtree( Key baseKey, const char *path, Key *result ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Make sure we have a place for the result.
     if( result ) {
         // Get key.
         PR_Lock(mregLock);
-        mErr = NR_RegGetKey( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
+        err = NR_RegGetKey( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
         PR_Unlock(mregLock);
         // Convert result.
-        rv = regerr2nsresult( mErr );
+        rv = regerr2nsresult( err );
     } else {
         rv = NS_ERROR_NULL_POINTER;
     }
@@ -831,14 +887,15 @@ NS_IMETHODIMP nsRegistry::GetSubtree( Key baseKey, const char *path, Key *result
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetSubtreeRaw( Key baseKey, const char *path, Key *result ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Make sure we have a place for the result.
     if( result ) {
         // Get key.
         PR_Lock(mregLock);
-        mErr = NR_RegGetKeyRaw( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
+        err = NR_RegGetKeyRaw( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
         PR_Unlock(mregLock);
         // Convert result.
-        rv = regerr2nsresult( mErr );
+        rv = regerr2nsresult( err );
     } else {
         rv = NS_ERROR_NULL_POINTER;
     }
@@ -902,18 +959,19 @@ NS_IMETHODIMP nsRegistry::EnumerateAllSubtrees( Key baseKey, nsIEnumerator **res
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetValueType( Key baseKey, const char *path, uint32 *result ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Make sure we have a place to put the result.
     if( result ) {
         // Get registry info into local structure.
         REGINFO info = { sizeof info, 0, 0 };
         PR_Lock(mregLock);
-        mErr = NR_RegGetEntryInfo( mReg,(RKEY)baseKey,(char*)path, &info );
+        err = NR_RegGetEntryInfo( mReg,(RKEY)baseKey,(char*)path, &info );
         PR_Unlock(mregLock);
-        if( mErr == REGERR_OK ) {
+        if( err == REGERR_OK ) {
             // Copy info to user's result value.
             reginfo2DataType( info, *result );
         } else {
-            rv = regerr2nsresult( mErr );
+            rv = regerr2nsresult( err );
         }
     } else {
         rv = NS_ERROR_NULL_POINTER;
@@ -927,18 +985,19 @@ NS_IMETHODIMP nsRegistry::GetValueType( Key baseKey, const char *path, uint32 *r
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetValueLength( Key baseKey, const char *path, uint32 *result ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Make sure we have a place to put the result.
     if( result ) {
         // Get registry info into local structure.
         REGINFO info = { sizeof info, 0, 0 };
         PR_Lock(mregLock);
-        mErr = NR_RegGetEntryInfo( mReg,(RKEY)baseKey,(char*)path, &info );
+        err = NR_RegGetEntryInfo( mReg,(RKEY)baseKey,(char*)path, &info );
         PR_Unlock(mregLock);
-        if( mErr == REGERR_OK ) {
+        if( err == REGERR_OK ) {
             // Copy info to user's result value.
             reginfo2Length( info, *result );
         } else {
-            rv = regerr2nsresult( mErr );
+            rv = regerr2nsresult( err );
         }
     } else {
         rv = NS_ERROR_NULL_POINTER;
@@ -975,14 +1034,15 @@ NS_IMETHODIMP nsRegistry::EnumerateValues( Key baseKey, nsIEnumerator **result )
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetCurrentUserName( char **result ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Make sure we have a place to put the result.
     if( result ) {
         // Get the user name.
         PR_Lock(mregLock);
-        mErr = NR_RegGetUsername( result );
+        err = NR_RegGetUsername( result );
         PR_Unlock(mregLock);
         // Convert the result.
-        rv = regerr2nsresult( mErr );
+        rv = regerr2nsresult( err );
     } else {
         rv = NS_ERROR_NULL_POINTER;
     }
@@ -994,12 +1054,13 @@ NS_IMETHODIMP nsRegistry::GetCurrentUserName( char **result ) {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::SetCurrentUserName( const char *name ) {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Set the user name.
     PR_Lock(mregLock);
-    mErr = NR_RegSetUsername( name );
+    err = NR_RegSetUsername( name );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
+    rv = regerr2nsresult( err );
     return rv;
 }
 
@@ -1008,12 +1069,13 @@ NS_IMETHODIMP nsRegistry::SetCurrentUserName( const char *name ) {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::Pack() {
     nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
     // Pack the registry.
     PR_Lock(mregLock);
-    mErr = NR_RegPack( mReg, 0, 0 );
+    err = NR_RegPack( mReg, 0, 0 );
     PR_Unlock(mregLock);
     // Convert result.
-    rv = regerr2nsresult( mErr );
+    rv = regerr2nsresult( err );
     return rv;
 }
 
@@ -1023,9 +1085,25 @@ NS_IMETHODIMP nsRegistry::Pack() {
 ------------------------------------------------------------------------------*/
 nsRegSubtreeEnumerator::nsRegSubtreeEnumerator( HREG hReg, RKEY rKey, PRBool all )
     : mReg( hReg ), mKey( rKey ), mEnum( 0 ), mNext( 0 ),
-      mStyle( all ? REGENUM_DESCEND : 0 ), mDone( PR_FALSE ), mErr( -1 ) {
+      mStyle( all ? REGENUM_DESCEND : REGENUM_CHILDREN ), mDone( PR_FALSE ) {
     NS_INIT_REFCNT();
+
+    mName[0] = '\0';
+
+#ifdef EXTRA_THREADSAFE
+    // Create a registry lock
+    mregLock = PR_NewLock();
+#endif
     return;
+}
+
+nsRegSubtreeEnumerator::~nsRegSubtreeEnumerator()
+{
+#ifdef EXTRA_THREADSAFE
+    if (mregLock) {
+        PR_DestroyLock(mregLock);
+    }
+#endif
 }
 
 /*----------------------- nsRegSubtreeEnumerator::First ------------------------
@@ -1038,6 +1116,8 @@ nsRegSubtreeEnumerator::First() {
     nsresult rv = NS_OK;
     // Reset "done" flag.
     mDone = PR_FALSE;
+    // Clear Name
+    mName[0] = '\0';
     // Go to beginning.
     mEnum = mNext = 0;
     // Lookahead so mDone flag gets set for empty list.
@@ -1074,16 +1154,17 @@ nsRegSubtreeEnumerator::Next() {
 | there are no more subkeys.                                                   |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegSubtreeEnumerator::advance() {
-    char name[MAXREGPATHLEN];
-    uint32 len = sizeof name;
-    mErr = NR_RegEnumSubkeys( mReg, mKey, &mNext, name, len, mStyle );
+    REGERR err = REGERR_OK;
+    PR_Lock(mregLock);
+    err = NR_RegEnumSubkeys( mReg, mKey, &mNext, mName, sizeof mName, mStyle );
     // See if we ran off end.
-    if( mErr == REGERR_NOMORE ) {
+    if( err == REGERR_NOMORE ) {
         // Remember we've run off end.
         mDone = PR_TRUE;
     }
+    PR_Unlock(mregLock);
     // Convert result.
-    nsresult rv = regerr2nsresult( mErr );
+    nsresult rv = regerr2nsresult( err );
     return rv;
 };
 
@@ -1097,9 +1178,9 @@ nsRegSubtreeEnumerator::CurrentItem( nsISupports **result) {
     nsresult rv = NS_OK;
     // Make sure there is a place to put the result.
     if( result ) {
-        *result = new nsRegistryNode( mReg, mKey, mEnum );
+        *result = new nsRegistryNode( mReg, mName, (RKEY) mNext );
         if( *result ) {
- (*result)->AddRef();
+            (*result)->AddRef();
         } else {
             rv = NS_ERROR_OUT_OF_MEMORY;
         }
@@ -1154,17 +1235,20 @@ nsRegValueEnumerator::CurrentItem( nsISupports **result ) {
 | there are no more entries.                                                   |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegValueEnumerator::advance() {
+    REGERR err = REGERR_OK;
     char name[MAXREGNAMELEN];
     uint32 len = sizeof name;
     REGINFO info = { sizeof info, 0, 0 };
-    mErr = NR_RegEnumEntries( mReg, mKey, &mNext, name, len, &info );
+    PR_Lock(mregLock);
+    err = NR_RegEnumEntries( mReg, mKey, &mNext, name, len, &info );
     // See if we ran off end.
-    if( mErr == REGERR_NOMORE ) {
+    if( err == REGERR_NOMORE ) {
         // Remember we've run off end.
         mDone = PR_TRUE;
     }
+    PR_Unlock(mregLock);
     // Convert result.
-    nsresult rv = regerr2nsresult( mErr );
+    nsresult rv = regerr2nsresult( err );
     return rv;
 };
 
@@ -1174,44 +1258,52 @@ NS_IMETHODIMP nsRegValueEnumerator::advance() {
 | the other data members.  We defer the libreg calls till we're asked for      |
 | our name.  We use mErr==-1 to indicate we haven't fetched the name yet.      |
 ------------------------------------------------------------------------------*/
-nsRegistryNode::nsRegistryNode( HREG hReg, RKEY key, REGENUM slot )
-    : mReg( hReg ), mKey( key ), mEnum( slot ), mErr( -1 ) {
+nsRegistryNode::nsRegistryNode( HREG hReg, char *name, RKEY childKey )
+    : mReg( hReg ), mChildKey( childKey ) {
     NS_INIT_REFCNT();
+
+    PR_ASSERT(name != NULL);
+    strcpy(mName, name);
+
+#ifdef EXTRA_THREADSAFE
+    mregLock = PR_NewLock();
+#endif
+    
     return;
 }
 
+nsRegistryNode::~nsRegistryNode()
+{
+#ifdef EXTRA_THREADSAFE
+    if (mregLock) {
+        PR_DestroyLock(mregLock);
+    }
+#endif
+}
 
 /*-------------------------- nsRegistryNode::GetName ---------------------------
 | If we haven't fetched it yet, get the name of the corresponding subkey now,  |
 | using NR_RegEnumSubkeys.                                                     |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistryNode::GetName( char **result ) {
-    nsresult rv = NS_OK;
+    if (result == NULL) return NS_ERROR_NULL_POINTER;
     // Make sure there is a place to put the result.
-    if( result ) {
-        // Test whether we haven't tried to get it yet.
-        if( mErr == -1 ) {
-            REGENUM temp = mEnum;
-            // Get name.
-            mErr = NR_RegEnumSubkeys( mReg, mKey, &temp, mName, sizeof mName, PR_FALSE );
-        }
-        // Convert result from prior libreg call.
-        rv = regerr2nsresult( mErr );            
-        if( rv == NS_OK || rv == NS_ERROR_REG_NO_MORE ) {
-            // worked, return actual result.
-            *result = PR_strdup( mName );
-            if ( *result ) {
-                rv = NS_OK;
-            } else {
-                rv = NS_ERROR_OUT_OF_MEMORY;
-            }
-        }
-    } else {
-        rv = NS_ERROR_NULL_POINTER;
-    }
-    return rv;
+    *result = PR_strdup( mName );
+    if ( !*result ) return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
 }
 
+/*-------------------------- nsRegistryNode::GetKey ----------------------------
+| Get the subkey corresponding to this node                                    |						
+| using NR_RegEnumSubkeys.                                                     |
+------------------------------------------------------------------------------*/
+NS_IMETHODIMP nsRegistryNode::GetKey( nsIRegistry::Key *r_key ) {
+    nsresult rv = NS_OK;
+    if (r_key == NULL) return NS_ERROR_NULL_POINTER;
+    *r_key = mChildKey;
+    return rv;
+}
+    
 
 
 /*--------------------- nsRegistryValue::nsRegistryValue -----------------------
@@ -1220,7 +1312,19 @@ NS_IMETHODIMP nsRegistryNode::GetName( char **result ) {
 nsRegistryValue::nsRegistryValue( HREG hReg, RKEY key, REGENUM slot )
     : mReg( hReg ), mKey( key ), mEnum( slot ), mErr( -1 ) {
     NS_INIT_REFCNT();
+#ifdef EXTRA_THREADSAFE
+    mregLock = PR_NewLock();
+#endif
     return;
+}
+
+nsRegistryValue::~nsRegistryValue()
+{
+#ifdef EXTRA_THREADSAFE
+    if (mregLock) {
+        PR_DestroyLock(mregLock);
+    }
+#endif
 }
 
 /*------------------------- nsRegistryValue::GetName ---------------------------
@@ -1300,9 +1404,11 @@ nsresult nsRegistryValue::getInfo() {
     if( mErr == -1 ) {
         REGENUM temp = mEnum;
         // Get name and info.
+        PR_Lock(mregLock);
         mErr = NR_RegEnumEntries( mReg, mKey, &temp, mName, sizeof mName, &mInfo );
         // Convert result.
         rv = regerr2nsresult( mErr );            
+        PR_Unlock(mregLock);
     }
     return rv;
 }

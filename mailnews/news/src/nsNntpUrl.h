@@ -20,67 +20,31 @@
 #define nsNntpUrl_h__
 
 #include "nsINntpUrl.h"
-#include "nsIUrlListenerManager.h"
-#include "nsINetlibURL.h" /* this should be temporary until Network N2 project lands */
+#include "nsMsgMailNewsUrl.h"
 #include "nsINNTPNewsgroupPost.h"
 #include "nsFileSpec.h"
 
-class nsNntpUrl : public nsINntpUrl, public nsINetlibURL, public nsIMsgUriUrl
+class nsNntpUrl : public nsINntpUrl, public nsMsgMailNewsUrl, public nsIMsgUriUrl
 {
 public:
-	// nsIURL
-    NS_IMETHOD_(PRBool) Equals(const nsIURL *aURL) const;
-    NS_IMETHOD GetSpec(const char* *result) const;
-    NS_IMETHOD SetSpec(const char* spec);
-    NS_IMETHOD GetProtocol(const char* *result) const;
-    NS_IMETHOD SetProtocol(const char* protocol);
-    NS_IMETHOD GetHost(const char* *result) const;
-    NS_IMETHOD SetHost(const char* host);
-    NS_IMETHOD GetHostPort(PRUint32 *result) const;
-    NS_IMETHOD SetHostPort(PRUint32 port);
-    NS_IMETHOD GetFile(const char* *result) const;
-    NS_IMETHOD SetFile(const char* file);
-    NS_IMETHOD GetRef(const char* *result) const;
-    NS_IMETHOD SetRef(const char* ref);
-    NS_IMETHOD GetSearch(const char* *result) const;
-    NS_IMETHOD SetSearch(const char* search);
-    NS_IMETHOD GetContainer(nsISupports* *result) const;
-    NS_IMETHOD SetContainer(nsISupports* container);	
-    NS_IMETHOD GetLoadAttribs(nsILoadAttribs* *result) const;	// make obsolete
-    NS_IMETHOD SetLoadAttribs(nsILoadAttribs* loadAttribs);	// make obsolete
-    NS_IMETHOD GetURLGroup(nsIURLGroup* *result) const;	// make obsolete
-    NS_IMETHOD SetURLGroup(nsIURLGroup* group);	// make obsolete
-    NS_IMETHOD SetPostHeader(const char* name, const char* value);	// make obsolete
-    NS_IMETHOD SetPostData(nsIInputStream* input);	// make obsolete
-    NS_IMETHOD GetContentLength(PRInt32 *len);
-    NS_IMETHOD GetServerStatus(PRInt32 *status);  // make obsolete
-    NS_IMETHOD ToString(PRUnichar* *aString) const;
-  
-    // from nsINetlibURL:
-
-    NS_IMETHOD GetURLInfo(URL_Struct_ **aResult) const;
-    NS_IMETHOD SetURLInfo(URL_Struct_ *URL_s);
-
 	// From nsINntpUrl
 	NS_IMETHOD SetNntpHost (nsINNTPHost * newsHost);
-	NS_IMETHOD GetNntpHost (nsINNTPHost ** newsHost) const;
+	NS_IMETHOD GetNntpHost (nsINNTPHost ** newsHost);
 
 	NS_IMETHOD SetNntpArticleList (nsINNTPArticleList * articleList);
-	NS_IMETHOD GetNntpArticleList (nsINNTPArticleList ** articleList) const;
+	NS_IMETHOD GetNntpArticleList (nsINNTPArticleList ** articleList);
 
 	NS_IMETHOD SetNewsgroup (nsINNTPNewsgroup * newsgroup);
-	NS_IMETHOD GetNewsgroup (nsINNTPNewsgroup ** newsgroup) const;
+	NS_IMETHOD GetNewsgroup (nsINNTPNewsgroup ** newsgroup);
 
 	NS_IMETHOD SetOfflineNewsState (nsIMsgOfflineNewsState * offlineNews);
-	NS_IMETHOD GetOfflineNewsState (nsIMsgOfflineNewsState ** offlineNews) const ;
+	NS_IMETHOD GetOfflineNewsState (nsIMsgOfflineNewsState ** offlineNews);
 
 	NS_IMETHOD SetNewsgroupList (nsINNTPNewsgroupList * newsgroupList);
-	NS_IMETHOD GetNewsgroupList (nsINNTPNewsgroupList ** newsgroupList) const;
+	NS_IMETHOD GetNewsgroupList (nsINNTPNewsgroupList ** newsgroupList);
 
     NS_IMETHOD SetMessageToPost(nsINNTPNewsgroupPost *post);
     NS_IMETHOD GetMessageToPost(nsINNTPNewsgroupPost **post);
-    
-    NS_IMETHOD GetFilePath(const nsFileSpec ** aFilePath);
     
     NS_IMETHOD GetMessageHeader(nsIMsgDBHdr ** aMsgHdr);
     
@@ -91,53 +55,24 @@ public:
     // this should be an IDL attribute
     NS_IMETHOD SetNewsgroupName(char * aNewsgroupName);
     NS_IMETHOD GetNewsgroupName(char ** aNewsgroupName);
+
+	NS_IMETHOD SetUsername(const char *aUserName);
      
-	// from nsIMsgMailNewsUrl:
-	NS_IMETHOD SetUrlState(PRBool aRunningUrl, nsresult aExitCode);
-	NS_IMETHOD GetUrlState(PRBool * aRunningUrl);
-
-	NS_IMETHOD SetErrorMessage (char * errorMessage);
-	// caller must free using PR_FREE
-	NS_IMETHOD GetErrorMessage (char ** errorMessage) const;
-	NS_IMETHOD RegisterListener (nsIUrlListener * aUrlListener);
-	NS_IMETHOD UnRegisterListener (nsIUrlListener * aUrlListener);
-
 	// from nsIMsgUriUrl
 	NS_IMETHOD GetURI(char ** aURI); 
 
     // nsNntpUrl
-    nsNntpUrl(nsISupports* aContainer, nsIURLGroup* aGroup);
+    nsNntpUrl();
     virtual ~nsNntpUrl();
 
-    NS_DECL_ISUPPORTS
+    NS_DECL_ISUPPORTS_INHERITED
 
-	// protocol specific code to parse a url...
-    nsresult ParseURL(const nsString& aSpec, const nsIURL* aURL = nsnull);
-
-protected:
-
-    /* Here's our link to the netlib world.... */
-    URL_Struct *m_URL_s;
-
-    char		*m_spec;
-    char		*m_protocol;
-    char		*m_host;
-    char		*m_file;
-    char		*m_ref;
-    char		*m_search;
-	char		*m_errorMessage;
-    
-	PRBool		m_runningUrl;
-    
+protected:  
     nsINNTPNewsgroupPost *m_newsgroupPost;
+	virtual const char * GetUserName() { return m_userName.GetBuffer();}
     
     nsFileSpec	*m_filePath; 
-
-	// manager of all of current url listeners....
-	nsIUrlListenerManager * m_urlListeners;
-    
-	PRInt32 m_port;
-    nsISupports*    m_container;
+	nsCString m_userName;
 
 	/* NNTP specific event sinks */
 	nsINNTPHost				* m_newsHost;
@@ -146,9 +81,7 @@ protected:
 	nsIMsgOfflineNewsState	* m_offlineNews;
 	nsINNTPNewsgroupList	* m_newsgroupList;
     nsMsgKey	              m_messageKey;
-    char *                    m_newsgroupName;
-    
-	void ReconstructSpec(void);
+    char *                    m_newsgroupName;	
 };
 
 #endif // nsNntpUrl_h__

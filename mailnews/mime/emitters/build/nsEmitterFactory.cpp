@@ -28,11 +28,13 @@
 #include "nsMimeHtmlEmitter.h"
 #include "nsMimeRawEmitter.h"
 #include "nsMimeXmlEmitter.h"
+#include "nsMimeXULEmitter.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kHtmlMimeEmitterCID, NS_HTML_MIME_EMITTER_CID);
 static NS_DEFINE_CID(kRawMimeEmitterCID, NS_RAW_MIME_EMITTER_CID);
 static NS_DEFINE_CID(kXmlMimeEmitterCID, NS_XML_MIME_EMITTER_CID);
+static NS_DEFINE_CID(kXULMimeEmitterCID, NS_XUL_MIME_EMITTER_CID);
 
 ////////////////////////////////////////////////////////////
 //
@@ -90,7 +92,7 @@ nsresult nsMimeEmitterFactory::QueryInterface(const nsIID &aIID, void **aResult)
   *aResult = NULL;   
 
   // we support two interfaces....nsISupports and nsFactory.....
-  if (aIID.Equals(::nsISupports::GetIID()))    
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
     *aResult = (void *)(nsISupports*)this;   
   else if (aIID.Equals(nsIFactory::GetIID()))   
     *aResult = (void *)(nsIFactory*)this;   
@@ -116,7 +118,7 @@ nsresult nsMimeEmitterFactory::CreateInstance(nsISupports *aOuter,
 
 	*aResult = NULL;  
   
-	nsISupports *inst = nsnull;
+	//nsISupports *inst = nsnull;
 
 	// ClassID check happens here
 	// Whenever you add a new class that supports an interface, plug it in here!!!
@@ -128,6 +130,8 @@ nsresult nsMimeEmitterFactory::CreateInstance(nsISupports *aOuter,
 		res = NS_NewMimeRawEmitter(aIID, aResult);
 	else if (mClassID.Equals(kXmlMimeEmitterCID)) 
 		res = NS_NewMimeXmlEmitter(aIID, aResult);
+	else if (mClassID.Equals(kXULMimeEmitterCID)) 
+		res = NS_NewMimeXULEmitter(aIID, aResult);
 	return res;  
 }  
 
@@ -195,6 +199,11 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
                                    path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
+  rv = compMgr->RegisterComponent(kXULMimeEmitterCID,
+                                  "RFC822 Parser",
+                                   "component://netscape/messenger/mimeemitter;type=text/xul",
+                                   path, PR_TRUE, PR_TRUE);
+  if (NS_FAILED(rv)) finalResult = rv;
   
   return finalResult;
 }
@@ -215,6 +224,9 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
 	if (NS_FAILED(rv)) finalResult = rv;
 
 	rv = compMgr->UnregisterComponent(kXmlMimeEmitterCID, path);
+	if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->UnregisterComponent(kXULMimeEmitterCID, path);
 	if (NS_FAILED(rv)) finalResult = rv;
 
 	return finalResult;

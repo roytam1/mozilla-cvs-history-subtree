@@ -21,18 +21,16 @@
 #include "nsICSSStyleSheet.h"
 #include "nsICSSLoader.h"
 #include "nsIUnicharInputStream.h"
-#include "nsIUnicharStreamLoader.h"
 #include "nsIHTMLContent.h"
 #include "nsIHTMLContentContainer.h"
 #include "nsIURL.h"
+#include "nsIUnicharStreamLoader.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-#endif // NECKO
+#include "nsNeckoUtil.h"
+#else
 #include "nsIURLGroup.h"
 #include "nsIHttpURL.h"
+#endif // NECKO
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIViewManager.h"
@@ -67,7 +65,9 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsStyleConsts.h"
 #include "nsINameSpaceManager.h"
 #include "nsIDOMHTMLMapElement.h"
-
+#ifdef NECKO
+#include "nsIRefreshURI.h"
+#endif //NECKO
 #include "nsVoidArray.h"
 #include "nsIScriptContextOwner.h"
 #include "nsHTMLIIDs.h"
@@ -90,7 +90,9 @@ static NS_DEFINE_IID(kIDOMHTMLTextAreaElementIID, NS_IDOMHTMLTEXTAREAELEMENT_IID
 static NS_DEFINE_IID(kIDOMHTMLOptionElementIID, NS_IDOMHTMLOPTIONELEMENT_IID);
 static NS_DEFINE_IID(kIFormControlIID, NS_IFORMCONTROL_IID);
 static NS_DEFINE_IID(kIHTMLContentSinkIID, NS_IHTML_CONTENT_SINK_IID);
+#ifndef NECKO
 static NS_DEFINE_IID(kIHTTPURLIID, NS_IHTTPURL_IID);
+#endif
 static NS_DEFINE_IID(kIScrollableViewIID, NS_ISCROLLABLEVIEW_IID);
 static NS_DEFINE_IID(kIHTMLDocumentIID, NS_IHTMLDOCUMENT_IID);
 static NS_DEFINE_IID(kIHTMLContentContainerIID, NS_IHTMLCONTENTCONTAINER_IID);
@@ -129,7 +131,7 @@ SinkTraceNode(PRUint32 aBit,
     PRInt32 nt = aNode.GetNodeType();
     if ((nt > PRInt32(eHTMLTag_unknown)) &&
         (nt < PRInt32(eHTMLTag_text))) {
-      cp = NS_EnumToTag(nsHTMLTag(aNode.GetNodeType()));
+      cp = nsHTMLTags::GetStringValue(nsHTMLTag(aNode.GetNodeType()));
     } else {
       aNode.GetText().ToCString(cbuf, sizeof(cbuf));
       cp = cbuf;
@@ -155,7 +157,7 @@ public:
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
   nsresult Init(nsIDocument* aDoc,
-                nsIURL* aURL,
+                nsIURI* aURL,
                 nsIWebShell* aContainer);
 
   // nsISupports
@@ -166,8 +168,15 @@ public:
   NS_IMETHOD DidBuildModel(PRInt32 aQualityLevel);
   NS_IMETHOD WillInterrupt(void);
   NS_IMETHOD WillResume(void);
-  NS_IMETHOD SetParser(nsIParser* aParser);  
-  
+  NS_IMETHOD SetParser(nsIParser* aParser);
+  NS_IMETHOD OpenContainer(const nsIParserNode& aNode);
+  NS_IMETHOD CloseContainer(const nsIParserNode& aNode);
+  NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
+  NS_IMETHOD NotifyError(const nsParserError* aError);
+  NS_IMETHOD AddComment(const nsIParserNode& aNode);
+  NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
+
   // nsIHTMLContentSink
   NS_IMETHOD BeginContext(PRInt32 aID);
   NS_IMETHOD EndContext(PRInt32 aID);
@@ -184,18 +193,13 @@ public:
   NS_IMETHOD CloseFrameset(const nsIParserNode& aNode);
   NS_IMETHOD OpenMap(const nsIParserNode& aNode);
   NS_IMETHOD CloseMap(const nsIParserNode& aNode);
-  NS_IMETHOD OpenContainer(const nsIParserNode& aNode);
-  NS_IMETHOD CloseContainer(const nsIParserNode& aNode);
-  NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
-  NS_IMETHOD NotifyError(const nsParserError* aError);
-  NS_IMETHOD AddComment(const nsIParserNode& aNode);
-  NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+
   NS_IMETHOD DoFragment(PRBool aFlag);
 
   nsIDocument* mDocument;
   nsIHTMLDocument* mHTMLDocument;
-  nsIURL* mDocumentURL;
-  nsIURL* mDocumentBaseURL;
+  nsIURI* mDocumentURL;
+  nsIURI* mDocumentBaseURL;
   nsIWebShell* mWebShell;
   nsIParser* mParser;
 
@@ -265,10 +269,17 @@ public:
   nsresult EvaluateScript(nsString& aScript,
                           PRInt32 aLineNo);
 
+  void NotifyBody() {
+    PRInt32 currentCount;
+    mBody->ChildCount(currentCount);
+    if (mBodyChildCount < currentCount) {
+      mDocument->ContentAppended(mBody, mBodyChildCount);
+    }
+    mBodyChildCount = currentCount;
+  }
 #ifdef DEBUG
   void ForceReflow() {
-    mDocument->ContentAppended(mBody, mBodyChildCount);
-    mBody->ChildCount(mBodyChildCount);
+    NotifyBody();
     mDirty = PR_FALSE;
   }
 #endif
@@ -293,6 +304,8 @@ public:
   nsresult AddLeaf(const nsIParserNode& aNode);
   nsresult AddLeaf(nsIHTMLContent* aContent);
   nsresult AddComment(const nsIParserNode& aNode);
+  nsresult DemoteContainer(const nsIParserNode& aNode, 
+                           nsIHTMLContent*& aParent);
   nsresult End();
 
   nsresult GrowStack();
@@ -301,6 +314,8 @@ public:
   nsresult FlushTags();
 
   PRBool   IsCurrentContainer(nsHTMLTag mType);
+  PRBool   IsAncestorContainer(nsHTMLTag mType);
+  nsIHTMLContent* GetCurrentContainer();
 
   void MaybeMarkSinkDirty();
   void MaybeMarkSinkClean();
@@ -339,30 +354,30 @@ ReduceEntities(nsString& aString)
   // should we be doing that? If so then it needs to live in two places (bad)
   // so we should add a translate numeric entity method from the parser...
   char cbuf[100];
-  PRInt32 index = 0;
-  while (index < aString.Length()) {
+  PRInt32 i = 0;
+  while (i < aString.Length()) {
     // If we have the start of an entity (and it's not at the end of
     // our string) then translate the entity into it's unicode value.
-    if ((aString.CharAt(index++) == '&') && (index < aString.Length())) {
-      PRInt32 start = index - 1;
-      PRUnichar e = aString.CharAt(index);
+    if ((aString.CharAt(i++) == '&') && (i < aString.Length())) {
+      PRInt32 start = i - 1;
+      PRUnichar e = aString.CharAt(i);
       if (e == '#') {
         // Convert a numeric character reference
-        index++;
+        i++;
         char* cp = cbuf;
         char* limit = cp + sizeof(cbuf) - 1;
         PRBool ok = PR_FALSE;
         PRInt32 slen = aString.Length();
-        while ((index < slen) && (cp < limit)) {
-          PRUnichar e = aString.CharAt(index);
+        while ((i < slen) && (cp < limit)) {
+          e = aString.CharAt(i);
           if (e == ';') {
-            index++;
+            i++;
             ok = PR_TRUE;
             break;
           }
           if ((e >= '0') && (e <= '9')) {
             *cp++ = char(e);
-            index++;
+            i++;
             continue;
           }
           break;
@@ -381,23 +396,23 @@ ReduceEntities(nsString& aString)
 
         // Remove entity from string and replace it with the integer
         // value.
-        aString.Cut(start, index - start);
+        aString.Cut(start, i - start);
         aString.Insert(PRUnichar(ch), start);
-        index = start + 1;
+        i = start + 1;
       }
       else if (((e >= 'A') && (e <= 'Z')) ||
                ((e >= 'a') && (e <= 'z'))) {
         // Convert a named entity
-        index++;
+        i++;
         char* cp = cbuf;
         char* limit = cp + sizeof(cbuf) - 1;
         *cp++ = char(e);
         PRBool ok = PR_FALSE;
         PRInt32 slen = aString.Length();
-        while ((index < slen) && (cp < limit)) {
-          PRUnichar e = aString.CharAt(index);
+        while ((i < slen) && (cp < limit)) {
+          e = aString.CharAt(i);
           if (e == ';') {
-            index++;
+            i++;
             ok = PR_TRUE;
             break;
           }
@@ -405,7 +420,7 @@ ReduceEntities(nsString& aString)
               ((e >= 'A') && (e <= 'Z')) ||
               ((e >= 'a') && (e <= 'z'))) {
             *cp++ = char(e);
-            index++;
+            i++;
             continue;
           }
           break;
@@ -414,16 +429,16 @@ ReduceEntities(nsString& aString)
           continue;
         }
         *cp = '\0';
-        PRInt32 ch = NS_EntityToUnicode(cbuf);
+        PRInt32 ch = nsHTMLEntities::EntityToUnicode(nsSubsumeCStr(cbuf, PR_FALSE));
         if (ch < 0) {
           continue;
         }
 
         // Remove entity from string and replace it with the integer
         // value.
-        aString.Cut(start, index - start);
+        aString.Cut(start, i - start);
         aString.Insert(PRUnichar(ch), start);
-        index = start + 1;
+        i = start + 1;
       }
       else if (e == '{') {
         // Convert a script entity
@@ -607,6 +622,9 @@ MakeContentObject(nsHTMLTag aNodeType,
   case eHTMLTag_hr:
     rv = NS_NewHTMLHRElement(aResult, aAtom);
     break;
+  case eHTMLTag_html:
+    rv = NS_NewHTMLHtmlElement(aResult, aAtom);
+    break;
   case eHTMLTag_iframe:
     rv = NS_NewHTMLIFrameElement(aResult, aAtom);
     break;
@@ -775,7 +793,7 @@ CreateContentObject(const nsIParserNode& aNode,
     tmp.ToLowerCase();
   }
   else {
-    tmp.Append(NS_EnumToTag(aNodeType));
+    tmp.Append(nsHTMLTags::GetStringValue(aNodeType));
   }
   nsIAtom* atom = NS_NewAtom(tmp);
   if (nsnull == atom) {
@@ -800,17 +818,14 @@ nsresult
 NS_CreateHTMLElement(nsIHTMLContent** aResult, const nsString& aTag)
 {
   // Find tag in tag table
-  nsAutoString tmp(aTag);
-  tmp.ToLowerCase();
-  char cbuf[20];
-  tmp.ToCString(cbuf, sizeof(cbuf));
-  nsHTMLTag id = NS_TagToEnum(cbuf);
+  nsHTMLTag id = nsHTMLTags::LookupTag(aTag);
   if (eHTMLTag_userdefined == id) {
     return NS_ERROR_NOT_AVAILABLE;
   }
 
   // Create atom for tag and then create content object
-  nsIAtom* atom = NS_NewAtom(tmp);
+  const nsCString& tag = nsHTMLTags::GetStringValue(id);
+  nsIAtom* atom = NS_NewAtom((const char*)tag);
   nsresult rv = MakeContentObject(id, atom, nsnull, nsnull, aResult);
   NS_RELEASE(atom);
 
@@ -926,6 +941,29 @@ SinkContext::IsCurrentContainer(nsHTMLTag aTag)
   }
 }
 
+PRBool
+SinkContext::IsAncestorContainer(nsHTMLTag aTag)
+{
+  PRInt32 stackPos = mStackPos-1;
+
+  while (stackPos >= 0) {
+    if (aTag == mStack[stackPos].mType) {
+      return PR_TRUE;
+    }
+    stackPos--;
+  }
+
+  return PR_FALSE;
+}
+
+nsIHTMLContent*
+SinkContext::GetCurrentContainer()
+{
+  nsIHTMLContent* content = mStack[mStackPos-1].mContent;
+  NS_ADDREF(content);
+  return content;
+}
+
 void
 SinkContext::MaybeMarkSinkDirty()
 {
@@ -1023,6 +1061,7 @@ SinkContext::OpenContainer(const nsIParserNode& aNode)
 nsresult
 SinkContext::CloseContainer(const nsIParserNode& aNode)
 {
+  nsresult result = NS_OK;
   FlushText();
 
   SINK_TRACE_NODE(SINK_TRACE_CALLS,
@@ -1037,7 +1076,7 @@ SinkContext::CloseContainer(const nsIParserNode& aNode)
   if (0 == (mStack[mStackPos].mFlags & APPENDED)) {
     NS_ASSERTION(mStackPos > 0, "container w/o parent");
     nsIHTMLContent* parent = mStack[mStackPos-1].mContent;
-    parent->AppendChildTo(content, PR_FALSE);
+    result = parent->AppendChildTo(content, PR_FALSE);
   }
   NS_IF_RELEASE(content);
 
@@ -1046,6 +1085,19 @@ SinkContext::CloseContainer(const nsIParserNode& aNode)
   case eHTMLTag_table:
     mSink->mInMonolithicContainer--;
     break;
+  case eHTMLTag_form:
+    {
+      nsHTMLTag parserNodeType = nsHTMLTag(aNode.GetNodeType());
+      
+      // If there's a FORM on the stack, but this close tag doesn't
+      // close the form, then close out the form *and* close out the
+      // next container up. This is since the parser doesn't do fix up
+      // of forms. When the end FORM tag comes through, we'll ignore
+      // it.
+      if (parserNodeType != nodeType) {
+        result = CloseContainer(aNode);
+      }
+    }
   default:
     break;
   }
@@ -1060,7 +1112,94 @@ SinkContext::CloseContainer(const nsIParserNode& aNode)
   }
 #endif
 
-  return NS_OK;
+  return result;
+}
+
+static void
+SetDocumentInChildrenOf(nsIContent* aContent, 
+                        nsIDocument* aDocument)
+{
+  PRInt32 i, n;
+  aContent->ChildCount(n);
+  for (i = 0; i < n; i++) {
+    nsIContent* child;
+    aContent->ChildAt(i, child);
+    if (nsnull != child) {
+      child->SetDocument(aDocument, PR_TRUE);
+      NS_RELEASE(child);
+    }
+  }
+}
+
+nsresult
+SinkContext::DemoteContainer(const nsIParserNode& aNode, 
+                             nsIHTMLContent*& aParent)
+{
+  nsresult result = NS_OK;
+  nsHTMLTag nodeType = nsHTMLTag(aNode.GetNodeType());
+
+  aParent = nsnull;
+  // Search for the nearest container on the stack of the
+  // specified type
+  PRInt32 stackPos = mStackPos-1;
+  while ((stackPos > 0) && (nodeType != mStack[stackPos].mType)) {
+    stackPos--;
+  }
+  
+  // If we find such a container
+  if (stackPos > 0) {
+    nsIHTMLContent* container = mStack[stackPos].mContent;
+    
+    // See if it has a parent on the stack. It should for all the
+    // cases for which this is called, but put in a check anyway
+    if (stackPos > 1) {
+      nsIHTMLContent* parent = mStack[stackPos-1].mContent;
+      
+      // If the demoted container hasn't yet been appended to its
+      // parent, do so now.
+      if (0 == (mStack[stackPos].mFlags & APPENDED)) {
+        result = parent->AppendChildTo(container, PR_FALSE);
+      }
+      
+     if (NS_SUCCEEDED(result)) {
+       // Move all of the demoted containers children to its parent
+       PRInt32 i, count;
+       container->ChildCount(count);
+       
+       for (i = 0; i < count && NS_SUCCEEDED(result); i++) {
+         nsIContent* child;
+         
+         // Since we're removing as we go along, always get the
+         // first child
+         result = container->ChildAt(0, child);
+         if (NS_SUCCEEDED(result)) {
+           // Remove it from its old parent (the demoted container)
+           result = container->RemoveChildAt(0, PR_FALSE);
+           if (NS_SUCCEEDED(result)) {
+             result = parent->AppendChildTo(child, PR_FALSE);
+             SetDocumentInChildrenOf(child, mSink->mDocument);
+           }
+           NS_RELEASE(child);
+         }
+       }
+       
+       // Remove the current element from the context stack,
+       // since it's been demoted.
+       while (stackPos < mStackPos-1) {
+         mStack[stackPos].mType = mStack[stackPos+1].mType;
+         mStack[stackPos].mContent = mStack[stackPos+1].mContent;
+         mStack[stackPos].mFlags = mStack[stackPos+1].mFlags;
+         stackPos++;
+       }
+       mStackPos--;
+     }
+     aParent = parent;
+     NS_ADDREF(parent);
+    }
+    NS_RELEASE(container);
+  }
+  
+  return result;
 }
 
 nsresult
@@ -1126,6 +1265,10 @@ SinkContext::AddLeaf(const nsIParserNode& aNode)
         rv = AddText(aNode.GetText());
       }
       else {
+        // Map carriage returns to newlines
+        if (tmp.CharAt(0) == '\r') {
+          tmp = "\n";
+        }
         rv = AddText(tmp);
       }
     }
@@ -1361,7 +1504,7 @@ SinkContext::FlushText(PRBool* aDidFlush)
 nsresult
 NS_NewHTMLContentSink(nsIHTMLContentSink** aResult,
                       nsIDocument* aDoc,
-                      nsIURL* aURL,
+                      nsIURI* aURL,
                       nsIWebShell* aWebShell)
 {
   NS_PRECONDITION(nsnull != aResult, "null ptr");
@@ -1449,7 +1592,7 @@ NS_IMPL_ISUPPORTS(HTMLContentSink, kIHTMLContentSinkIID)
 
 nsresult
 HTMLContentSink::Init(nsIDocument* aDoc,
-                      nsIURL* aURL,
+                      nsIURI* aURL,
                       nsIWebShell* aContainer)
 {
   NS_PRECONDITION(nsnull != aDoc, "null ptr");
@@ -1503,12 +1646,18 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   mCurrentContext->Begin(eHTMLTag_html, mRoot);
   mContextStack.AppendElement(mCurrentContext);
 
+#ifdef NECKO
+  char* spec;
+#else
   const char* spec;
+#endif
   (void)aURL->GetSpec(&spec);
   SINK_TRACE(SINK_TRACE_CALLS,
              ("HTMLContentSink::Init: this=%p url='%s'",
               this, spec));
-
+#ifdef NECKO
+  nsCRT::free(spec);
+#endif
   return NS_OK;
 }
 
@@ -1545,8 +1694,7 @@ HTMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
   if (nsnull != mBody) {
     SINK_TRACE(SINK_TRACE_REFLOW,
                ("HTMLContentSink::DidBuildModel: layout final content"));
-    mDocument->ContentAppended(mBody, mBodyChildCount);
-    mBody->ChildCount(mBodyChildCount);
+    NotifyBody();
   }
   ScrollToRef();
 
@@ -1566,8 +1714,7 @@ HTMLContentSink::WillInterrupt()
     if (nsnull != mBody) {
       SINK_TRACE(SINK_TRACE_REFLOW,
                  ("HTMLContentSink::WillInterrupt: reflow content"));
-      mDocument->ContentAppended(mBody, mBodyChildCount);
-      mBody->ChildCount(mBodyChildCount);
+      NotifyBody();
     }
     mDirty = PR_FALSE;
   }
@@ -1656,7 +1803,10 @@ HTMLContentSink::SetTitle(const nsString& aValue)
     mTitle = new nsString(aValue);
   }
   else {
-    *mTitle = aValue;
+    // If the title was already set then don't try to overwrite it
+    // when a new title is encountered - For backwards compatiblity
+    //*mTitle = aValue;
+    return NS_OK;
   }
   ReduceEntities(*mTitle);
   mTitle->CompressWhitespace(PR_TRUE, PR_TRUE);
@@ -1793,8 +1943,7 @@ HTMLContentSink::CloseBody(const nsIParserNode& aNode)
 
   if (didFlush) {
     // Trigger a reflow for the flushed text
-    mDocument->ContentAppended(mBody, mBodyChildCount);
-    mBody->ChildCount(mBodyChildCount);
+    NotifyBody();
   }
 
   return NS_OK;
@@ -1803,33 +1952,59 @@ HTMLContentSink::CloseBody(const nsIParserNode& aNode)
 NS_IMETHODIMP
 HTMLContentSink::OpenForm(const nsIParserNode& aNode)
 {
+  nsresult result = NS_OK;
+  nsIHTMLContent* content = nsnull;
+  
   mCurrentContext->FlushText();
-
+  
   SINK_TRACE_NODE(SINK_TRACE_CALLS,
                   "HTMLContentSink::OpenForm", aNode);
-
-  // Close out previous form if it's there
+  
+  // Close out previous form if it's there. If there is one
+  // around, it's probably because the last one wasn't well-formed.
   NS_IF_RELEASE(mCurrentForm);
-
-  // set the current form
-  nsAutoString tmp("form");
-  nsIAtom* atom = NS_NewAtom(tmp);
-  nsIHTMLContent* iContent = nsnull;
-  nsresult rv = NS_NewHTMLFormElement(&iContent, atom);
-  if ((NS_OK == rv) && iContent) {
-    iContent->QueryInterface(kIDOMHTMLFormElementIID, (void**)&mCurrentForm);
-    NS_RELEASE(iContent);
+  
+  // Check if the parent is a table, tbody, thead, tfoot, tr, col or
+  // colgroup. If so, this is just going to be a leaf element.
+  // If so, we fix up by making the form leaf content.
+  if (mCurrentContext->IsCurrentContainer(eHTMLTag_table) ||
+      mCurrentContext->IsCurrentContainer(eHTMLTag_tbody) ||
+      mCurrentContext->IsCurrentContainer(eHTMLTag_thead) ||
+      mCurrentContext->IsCurrentContainer(eHTMLTag_tfoot) ||
+      mCurrentContext->IsCurrentContainer(eHTMLTag_tr) ||
+      mCurrentContext->IsCurrentContainer(eHTMLTag_col) ||
+      mCurrentContext->IsCurrentContainer(eHTMLTag_colgroup)) {
+    nsAutoString tmp("form");
+    nsIAtom* atom = NS_NewAtom(tmp);
+    result = NS_NewHTMLFormElement(&content, atom);
+    if (NS_SUCCEEDED(result) && content) {
+      content->QueryInterface(kIDOMHTMLFormElementIID, (void**)&mCurrentForm);
+      NS_RELEASE(content);
+    }
+    NS_RELEASE(atom);
+    
+    result = AddLeaf(aNode);
   }
-  NS_RELEASE(atom);
-
-  AddLeaf(aNode);
-
+  else {
+    // Otherwise the form can be a content parent.
+    result = mCurrentContext->OpenContainer(aNode);
+    if (NS_SUCCEEDED(result)) {
+        
+      content = mCurrentContext->GetCurrentContainer();
+      if (nsnull != content) {
+        result = content->QueryInterface(kIDOMHTMLFormElementIID, 
+                                         (void**)&mCurrentForm);
+        NS_RELEASE(content);
+      }
+    }
+  }
+   
   // add the form to the document
   if (mCurrentForm) {
     mHTMLDocument->AddForm(mCurrentForm);
   }
-
-  return NS_OK;
+  
+  return result;
 }
 
 // XXX MAYBE add code to place close form tag into the content model
@@ -1837,11 +2012,31 @@ HTMLContentSink::OpenForm(const nsIParserNode& aNode)
 NS_IMETHODIMP
 HTMLContentSink::CloseForm(const nsIParserNode& aNode)
 {
+  nsresult result = NS_OK;
+
   mCurrentContext->FlushText();
   SINK_TRACE_NODE(SINK_TRACE_CALLS,
                   "HTMLContentSink::CloseForm", aNode);
-  NS_IF_RELEASE(mCurrentForm);
-  return NS_OK;
+
+  if (nsnull != mCurrentForm) {
+    // Check if this is a well-formed form
+    if (mCurrentContext->IsCurrentContainer(eHTMLTag_form)) {
+      result = mCurrentContext->CloseContainer(aNode);
+    }
+    else if (mCurrentContext->IsAncestorContainer(eHTMLTag_form)) {
+      nsIHTMLContent* parent;
+      result = mCurrentContext->DemoteContainer(aNode, parent);
+      if (NS_SUCCEEDED(result)) {
+        if (parent == mBody) {
+          NotifyBody();
+        }
+        NS_IF_RELEASE(parent);
+      }
+    }
+    NS_RELEASE(mCurrentForm);
+  }
+
+  return result;
 }
 
 NS_IMETHODIMP
@@ -1982,6 +2177,18 @@ nsresult HTMLContentSink::AddProcessingInstruction(const nsIParserNode& aNode) {
   return result;
 }
 
+/**
+ *  This gets called by the parser when it encounters
+ *  a DOCTYPE declaration in the HTML document.
+ */
+
+NS_IMETHODIMP
+HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+{
+  return NS_OK;
+}
+
+
 void
 HTMLContentSink::StartLayout()
 {
@@ -2032,10 +2239,23 @@ HTMLContentSink::StartLayout()
 
   // If the document we are loading has a reference or it is a 
   // frameset document, disable the scroll bars on the views.
+#ifdef NECKO
+  char* ref;
+  nsIURL* url;
+  nsresult rv = mDocumentURL->QueryInterface(nsIURL::GetIID(), (void**)&url);
+  if (NS_SUCCEEDED(rv)) {
+    rv = url->GetRef(&ref);
+    NS_RELEASE(url);
+  }
+#else
   const char* ref;
   nsresult rv = mDocumentURL->GetRef(&ref);
+#endif
   if (rv == NS_OK) {
     mRef = new nsString(ref);
+#ifdef NECKO
+    nsCRT::free(ref);
+#endif
   }
 
   if ((nsnull != ref) || mFrameset) {
@@ -2043,7 +2263,7 @@ HTMLContentSink::StartLayout()
 
     // Get initial scroll preference and save it away; disable the
     // scroll bars.
-    PRInt32 i, ns = mDocument->GetNumberOfShells();
+    ns = mDocument->GetNumberOfShells();
     for (i = 0; i < ns; i++) {
       nsCOMPtr<nsIPresShell> shell(dont_AddRef(mDocument->GetShellAt(i)));
       if (shell) {
@@ -2434,7 +2654,7 @@ static void SplitMimeType(const nsString& aValue, nsString& aType, nsString& aPa
 {
   aType.Truncate();
   aParams.Truncate();
-  PRInt32 semiIndex = aValue.Find(PRUnichar(';'));
+  PRInt32 semiIndex = aValue.FindChar(PRUnichar(';'));
   if (-1 != semiIndex) {
     aValue.Left(aType, semiIndex);
     aValue.Right(aParams, (aValue.Length() - semiIndex) - 1);
@@ -2468,32 +2688,21 @@ HTMLContentSink::ProcessStyleLink(nsIHTMLContent* aElement,
     SplitMimeType(aType, mimeType, params);
 
     if ((0 == mimeType.Length()) || mimeType.EqualsIgnoreCase("text/css")) {
-      nsIURL* url = nsnull;
-      nsIURLGroup* urlGroup = nsnull;
-      mDocumentBaseURL->GetURLGroup(&urlGroup);
-      if (urlGroup) {
-        result = urlGroup->CreateURL(&url, mDocumentBaseURL, aHref, nsnull);
-        NS_RELEASE(urlGroup);
+      nsIURI* url = nsnull;
+#ifndef NECKO
+      nsILoadGroup* LoadGroup = nsnull;
+      mDocumentBaseURL->GetLoadGroup(&LoadGroup);
+      if (LoadGroup) {
+        result = LoadGroup->CreateURL(&url, mDocumentBaseURL, aHref, nsnull);
+        NS_RELEASE(LoadGroup);
       }
-      else {
+      else
+#endif
+      {
 #ifndef NECKO
         result = NS_NewURL(&url, aHref, mDocumentBaseURL);
 #else
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-        if (NS_FAILED(result)) return result;
-
-        nsIURI *uri = nsnull, *baseUri = nsnull;
-
-        result = mDocumentBaseURL->QueryInterface(nsIURL::GetIID(), (void**)&baseUri);
-        if (NS_FAILED(result)) return result;
-
-        const char *uriStr = aHref.GetBuffer();
-        result = service->NewURI(uriStr, baseUri, &uri);
-        NS_RELEASE(baseUri);
-        if (NS_FAILED(result)) return result;
-
-        result = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-        NS_RELEASE(uri);
+        result = NS_NewURI(&url, aHref, mDocumentBaseURL);
 #endif // NECKO
       }
       if (NS_OK != result) {
@@ -2533,7 +2742,7 @@ nsresult
 HTMLContentSink::ProcessLINKTag(const nsIParserNode& aNode)
 {
   nsresult  result = NS_OK;
-  PRInt32   index;
+  PRInt32   i;
   PRInt32   count = aNode.GetAttributeCount();
 
   nsAutoString href;
@@ -2543,26 +2752,26 @@ HTMLContentSink::ProcessLINKTag(const nsIParserNode& aNode)
   nsAutoString media; 
 
   nsIScriptContextOwner* sco = mDocument->GetScriptContextOwner();
-  for (index = 0; index < count; index++) {
-    const nsString& key = aNode.GetKeyAt(index);
+  for (i = 0; i < count; i++) {
+    const nsString& key = aNode.GetKeyAt(i);
     if (key.EqualsIgnoreCase("href")) {
-      GetAttributeValueAt(aNode, index, href, sco);
+      GetAttributeValueAt(aNode, i, href, sco);
       href.StripWhitespace();
     }
     else if (key.EqualsIgnoreCase("rel")) {
-      GetAttributeValueAt(aNode, index, rel, sco);
+      GetAttributeValueAt(aNode, i, rel, sco);
       rel.CompressWhitespace();
     }
     else if (key.EqualsIgnoreCase("title")) {
-      GetAttributeValueAt(aNode, index, title, sco);
+      GetAttributeValueAt(aNode, i, title, sco);
       title.CompressWhitespace();
     }
     else if (key.EqualsIgnoreCase("type")) {
-      GetAttributeValueAt(aNode, index, type, sco);
+      GetAttributeValueAt(aNode, i, type, sco);
       type.StripWhitespace();
     }
     else if (key.EqualsIgnoreCase("media")) {
-      GetAttributeValueAt(aNode, index, media, sco);
+      GetAttributeValueAt(aNode, i, media, sco);
       media.ToLowerCase(); // HTML4.0 spec is inconsistent, make it case INSENSITIVE
     }
   }
@@ -2610,7 +2819,7 @@ HTMLContentSink::ProcessMAPTag(const nsIParserNode& aNode,
   }
 
   // Strip out whitespace in the name for navigator compatability
-  // XXX NAV QUIRK
+  // XXX NAV QUIRK -- XXX this should be done in the content node, not the sink
   nsHTMLValue name;
   aContent->GetHTMLAttribute(nsHTMLAtoms::name, name);
   if (eHTMLUnit_String == name.GetUnit()) {
@@ -2658,10 +2867,12 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
       }
       mHead->AppendChildTo(it, PR_FALSE);
 
+#ifndef NECKO
       // If we are processing an HTTP url, handle meta http-equiv cases
       nsIHttpURL* httpUrl = nsnull;
       rv = mDocumentURL->QueryInterface(kIHTTPURLIID, (void **)&httpUrl);
- 
+#endif
+
       // set any HTTP-EQUIV data into document's header data as well as url
       nsAutoString header;
       it->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::httpEquiv, header);
@@ -2669,6 +2880,74 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
         nsAutoString result;
         it->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::content, result);
         if (result.Length() > 0) {
+#ifdef NECKO
+          // XXX necko isn't going to process headers coming in from the parser
+          //NS_WARNING("need to fix how necko adds mime headers (in HTMLContentSink::ProcessMETATag)");
+          
+          // see if we have a refresh "header".
+          if (!header.Compare("refresh", PR_TRUE)) {
+              // Refresh haders are parsed with the following format in mind
+              // <META HTTP-EQUIV=REFRESH CONTENT="5; URL=http://uri">
+              // By the time we are here, the following is true:
+              // header = "REFRESH"
+              // result = "5; URL=http://uri" // note the URL attribute is optional, if it
+              //   is absent, the currently loaded url is used.
+              const PRUnichar *uriCStr = nsnull;
+              nsAutoString uriAttribStr;
+
+              // first get our baseURI
+              rv = mWebShell->GetURL(&uriCStr);
+              if (NS_FAILED(rv)) return rv;
+
+              nsIURI *baseURI = nsnull;
+              rv = NS_NewURI(&baseURI, uriCStr, nsnull);
+              if (NS_FAILED(rv)) return rv;
+
+              // next get any uri provided as an attribute in the tag.
+              PRInt32 loc = result.Find("url", PR_TRUE);
+              PRInt32 urlLoc = loc;
+              if (loc > -1) {
+                  // there is a url attribute, let's use it.
+                  loc += 3; 
+                  // go past the '=' sign
+                  loc = result.Find("=", PR_TRUE, loc);
+                  if (loc > -1) {
+                      loc++; // leading/trailign spaces get trimmed in url creating code.
+                      result.Mid(uriAttribStr, loc, result.Length() - loc);
+                      uriCStr = uriAttribStr.GetUnicode();
+                  }
+              }
+
+              nsIURI *uri = nsnull;
+              rv = NS_NewURI(&uri, uriCStr, baseURI);
+              NS_RELEASE(baseURI);
+              if (NS_FAILED(rv)) return rv;
+
+              // the units of the numeric value contained in the result are seconds.
+              // we need them in milliseconds before handing off to the refresh interface.
+
+              PRInt32 millis;
+              if (urlLoc > 1) {
+                  nsString2 seconds;
+                  result.Left(seconds, urlLoc-2);
+                  millis = seconds.ToInteger(&loc) * 1000;
+              } else {
+                  millis = result.ToInteger(&loc) * 1000;
+              }
+
+              nsIRefreshURI *reefer = nsnull;
+              rv = mWebShell->QueryInterface(nsCOMTypeInfo<nsIRefreshURI>::GetIID(), (void**)&reefer);
+              if (NS_FAILED(rv)) {
+                  NS_RELEASE(uri);
+                  return rv;
+              };
+
+              rv = reefer->RefreshURI(uri, millis, PR_FALSE);
+              NS_RELEASE(uri);
+              NS_RELEASE(reefer);
+              if (NS_FAILED(rv)) return rv;
+          }
+#else
           if (nsnull != httpUrl) {
             char* value = result.ToNewCString(), *csHeader;
             if (!value) {
@@ -2685,6 +2964,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
             delete[] csHeader;
             delete[] value;
           }
+#endif
 
           header.ToLowerCase();
           nsIAtom* fieldAtom = NS_NewAtom(header);
@@ -2706,7 +2986,9 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
           NS_IF_RELEASE(fieldAtom);
         }
       }
+#ifndef NECKO
       NS_IF_RELEASE(httpUrl);
+#endif
 
       NS_RELEASE(it);
     }
@@ -2745,11 +3027,12 @@ IsJavaScriptLanguage(const nsString& aName)
 nsresult
 HTMLContentSink::ResumeParsing()
 {
+  nsresult result=NS_OK;
   if (nsnull != mParser) {
-    mParser->EnableParser(PR_TRUE);
+    result=mParser->EnableParser(PR_TRUE);
   }
   
-  return NS_OK;
+  return result;
 }
 
 PRBool
@@ -2758,7 +3041,8 @@ HTMLContentSink::PreEvaluateScript()
   // Cause frame creation and reflow of all body children that 
   // have thus far been appended. Note that if mDirty is true
   // then we know that the current body child has not yet been
-  // added to the content model. 
+  // added to the content model (and, hence, it's safe to create
+  // frames for all body children).
   // We don't want the current body child to be appended (and
   // have frames be constructed for it) since the current script
   // may add new content to the tree (and cause an immediate 
@@ -2771,12 +3055,14 @@ HTMLContentSink::PreEvaluateScript()
     if (nsnull != mBody) {
       SINK_TRACE(SINK_TRACE_REFLOW,
                  ("HTMLContentSink::PreEvaluateScript: reflow content"));
-      mDocument->ContentAppended(mBody, mBodyChildCount);
-      mBody->ChildCount(mBodyChildCount);
+      NotifyBody();
     }
     mDirty = PR_FALSE;
   }
 
+  // Now eagerly all pending elements (including the current body child)
+  // to the body (so that they can be seen by scripts). Note that frames
+  // have not yet been created for them (and shouldn't be).
   mCurrentContext->FlushTags();
   
   return (nsnull != mBody);
@@ -2821,8 +3107,12 @@ HTMLContentSink::EvaluateScript(nsString& aScript,
       }
       
       nsAutoString ret;
-      nsIURL* docURL = mDocument->GetDocumentURL();
+      nsIURI* docURL = mDocument->GetDocumentURL();
+#ifdef NECKO
+      char* url;
+#else
       const char* url;
+#endif
       if (docURL) {
         (void)docURL->GetSpec(&url);
       }
@@ -2903,39 +3193,71 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
     }
   }
 
+  // Create content object
+  NS_ASSERTION(mCurrentContext->mStackPos > 0, "leaf w/o container");
+  nsIHTMLContent* parent = mCurrentContext->mStack[mCurrentContext->mStackPos-1].mContent;
+  nsIScriptContextOwner* sco = mDocument->GetScriptContextOwner();
+  nsAutoString tag("SCRIPT");
+  nsIHTMLContent* element = nsnull;
+  rv = NS_CreateHTMLElement(&element, tag);
+  if (NS_SUCCEEDED(rv)) {
+    // Add in the attributes and add the style content object to the
+    // head container.
+    element->SetDocument(mDocument, PR_FALSE);
+    rv = AddAttributes(aNode, element, sco);
+    if (NS_FAILED(rv)) {
+      NS_RELEASE(element);
+      return rv;
+    }
+    parent->AppendChildTo(element, PR_FALSE);
+  }
+  else {
+    NS_IF_RELEASE(sco);
+    return rv;
+  }
+  NS_IF_RELEASE(sco);
+  
+  // Create a text node holding the content
+  // First, get the text content of the script tag
+  nsAutoString script;
+  script = aNode.GetSkippedContent();
+
+  if (script.Length() > 0) {
+    nsIContent* text;
+    rv = NS_NewTextNode(&text);
+    if (NS_OK == rv) {
+      nsIDOMText* tc;
+      rv = text->QueryInterface(kIDOMTextIID, (void**)&tc);
+      if (NS_OK == rv) {
+        tc->SetData(script);
+        NS_RELEASE(tc);
+      }
+      element->AppendChildTo(text, PR_FALSE);
+      text->SetDocument(mDocument, PR_FALSE);
+      NS_RELEASE(text);
+    }
+  }
+
   // Don't process scripts that aren't JavaScript
   if (isJavaScript) {
-    nsAutoString script;
-
     // If there is a SRC attribute...
     if (src.Length() > 0) {
       // Use the SRC attribute value to load the URL
-      nsIURL* url = nsnull;
-      nsIURLGroup* urlGroup = nsnull;
-      mDocumentBaseURL->GetURLGroup(&urlGroup);
-      if (urlGroup) {
-        rv = urlGroup->CreateURL(&url, mDocumentBaseURL, src, nsnull);
-        NS_RELEASE(urlGroup);
+      nsIURI* url = nsnull;
+#ifndef NECKO
+      nsILoadGroup* LoadGroup = nsnull;
+      mDocumentBaseURL->GetLoadGroup(&LoadGroup);
+      if (LoadGroup) {
+        rv = LoadGroup->CreateURL(&url, mDocumentBaseURL, src, nsnull);
+        NS_RELEASE(LoadGroup);
       }
-      else {
+      else
+#endif
+      {
 #ifndef NECKO
         rv = NS_NewURL(&url, src, mDocumentBaseURL);
 #else
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        nsIURI *uri = nsnull, *baseUri = nsnull;
-
-        rv = mDocumentBaseURL->QueryInterface(nsIURL::GetIID(), (void**)&baseUri);
-        if (NS_FAILED(rv)) return rv;
-
-        const char *uriStr = src.GetBuffer();
-        rv = service->NewURI(uriStr, baseUri, &uri);
-        NS_RELEASE(baseUri);
-        if (NS_FAILED(rv)) return rv;
-
-        rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-        NS_RELEASE(uri);
+        rv = NS_NewURI(&url, src, mDocumentBaseURL);
 #endif // NECKO
       }
       if (NS_OK != rv) {
@@ -2949,6 +3271,9 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
       nsIUnicharStreamLoader* loader;
       rv = NS_NewUnicharStreamLoader(&loader,
                                      url, 
+#ifdef NECKO
+                                     nsCOMPtr<nsILoadGroup>(mDocument->GetDocumentLoadGroup()),
+#endif
                                      (nsStreamCompleteFunc)nsDoneLoadingScript, 
                                      (void *)this);
       NS_RELEASE(url);
@@ -2958,9 +3283,6 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
     }
     else {
       PRBool bodyPresent = PreEvaluateScript();
-
-      // Otherwise, get the text content of the script tag
-      script = aNode.GetSkippedContent();
 
       PRUint32 lineNo = (PRUint32)aNode.GetSourceLineNumber();
 
@@ -2988,7 +3310,7 @@ nsresult
 HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
 {
   nsresult rv = NS_OK;
-  PRInt32 index, count = aNode.GetAttributeCount();
+  PRInt32 i, count = aNode.GetAttributeCount();
 
   nsAutoString src;
   nsAutoString title; 
@@ -2996,22 +3318,22 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
   nsAutoString media; 
 
   nsIScriptContextOwner* sco = mDocument->GetScriptContextOwner();
-  for (index = 0; index < count; index++) {
-    const nsString& key = aNode.GetKeyAt(index);
+  for (i = 0; i < count; i++) {
+    const nsString& key = aNode.GetKeyAt(i);
     if (key.EqualsIgnoreCase("src")) {
-      GetAttributeValueAt(aNode, index, src, sco);
+      GetAttributeValueAt(aNode, i, src, sco);
       src.StripWhitespace();
     }
     else if (key.EqualsIgnoreCase("title")) {
-      GetAttributeValueAt(aNode, index, title, sco);
+      GetAttributeValueAt(aNode, i, title, sco);
       title.CompressWhitespace();
     }
     else if (key.EqualsIgnoreCase("type")) {
-      GetAttributeValueAt(aNode, index, type, sco);
+      GetAttributeValueAt(aNode, i, type, sco);
       type.StripWhitespace();
     }
     else if (key.EqualsIgnoreCase("media")) {
-      GetAttributeValueAt(aNode, index, media, sco);
+      GetAttributeValueAt(aNode, i, media, sco);
       media.ToLowerCase(); // HTML4.0 spec is inconsistent, make it case INSENSITIVE
     }
   }
@@ -3059,6 +3381,22 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
 
     nsIUnicharInputStream* uin = nsnull;
     if (0 == src.Length()) {
+
+      // Create a text node holding the content
+      nsIContent* text;
+      rv = NS_NewTextNode(&text);
+      if (NS_OK == rv) {
+        nsIDOMText* tc;
+        rv = text->QueryInterface(kIDOMTextIID, (void**)&tc);
+        if (NS_OK == rv) {
+          tc->SetData(content);
+          NS_RELEASE(tc);
+        }
+        element->AppendChildTo(text, PR_FALSE);
+        text->SetDocument(mDocument, PR_FALSE);
+        NS_RELEASE(text);
+      }
+
       // Create a string to hold the data and wrap it up in a unicode
       // input stream.
       rv = NS_NewStringUnicharInputStream(&uin, new nsString(content));
@@ -3078,32 +3416,21 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
       // src with immediate style data doesn't add up
       // XXX what does nav do?
       // Use the SRC attribute value to load the URL
-      nsIURL* url = nsnull;
-      nsIURLGroup* urlGroup = nsnull;
-      mDocumentBaseURL->GetURLGroup(&urlGroup);
-      if (urlGroup) {
-        rv = urlGroup->CreateURL(&url, mDocumentBaseURL, src, nsnull);
-        NS_RELEASE(urlGroup);
+      nsIURI* url = nsnull;
+#ifndef NECKO
+      nsILoadGroup* LoadGroup = nsnull;
+      mDocumentBaseURL->GetLoadGroup(&LoadGroup);
+      if (LoadGroup) {
+        rv = LoadGroup->CreateURL(&url, mDocumentBaseURL, src, nsnull);
+        NS_RELEASE(LoadGroup);
       }
-      else {
+      else
+#endif
+      {
 #ifndef NECKO
         rv = NS_NewURL(&url, src, mDocumentBaseURL);
 #else
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        nsIURI *uri = nsnull, *baseUri = nsnull;
-
-        rv = mDocumentBaseURL->QueryInterface(nsIURL::GetIID(), (void**)&baseUri);
-        if (NS_FAILED(rv)) return rv;
-
-        const char *uriStr = src.GetBuffer();
-        rv = service->NewURI(uriStr, baseUri, &uri);
-        NS_RELEASE(baseUri);
-        if (NS_FAILED(rv)) return rv;
-
-        rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-        NS_RELEASE(uri);
+        rv = NS_NewURI(&url, src, mDocumentBaseURL);
 #endif // NECKO
       }
       if (NS_OK != rv) {

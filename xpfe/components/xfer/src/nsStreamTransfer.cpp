@@ -18,9 +18,13 @@
 #include "nsIStreamTransfer.h"
 
 #include "nsIAppShellComponentImpl.h"
-#include "nsDownloadProgressDialog.h"
+#include "nsStreamXferOp.h"
 #include "nsIFileWidget.h"
 #include "nsWidgetsCID.h"
+#include "nsIURL.h"
+#ifdef NECKO
+#include "nsNeckoUtil.h"
+#endif
 
 // {BEBA91C0-070F-11d3-8068-00600811A9C3}
 #define NS_STREAMTRANSFER_CID \
@@ -30,7 +34,8 @@ static NS_DEFINE_IID( kCFileWidgetCID, NS_FILEWIDGET_CID  );
 static NS_DEFINE_IID( kIFileWidgetIID, NS_IFILEWIDGET_IID );
 
 // Implementation of the stream transfer component interface.
-class nsStreamTransfer : public nsIStreamTransfer, public nsAppShellComponentImpl {
+class nsStreamTransfer : public nsIStreamTransfer,
+                         public nsAppShellComponentImpl {
 public:
     NS_DEFINE_STATIC_CID_ACCESSOR( NS_STREAMTRANSFER_CID );
 
@@ -59,25 +64,61 @@ private:
 }; // nsStreamTransfer
 
 NS_IMETHODIMP
-nsStreamTransfer::SelectFileAndTransferLocation( nsIURL *aURL ) {
+nsStreamTransfer::SelectFileAndTransferLocation( nsIURI *aURL, nsIDOMWindow *parent ) {
     // Prompt the user for the destination file.
     nsFileSpec outputFileName;
     nsresult rv = SelectFile( outputFileName );
 
     if ( NS_SUCCEEDED( rv ) ) {
         // Open a downloadProgress dialog.
-        nsDownloadProgressDialog *dialog = new nsDownloadProgressDialog( aURL,
-                                                                         outputFileName );
-        if ( dialog ) {
-            // Create dialog OK, show it.
-            rv = dialog->Show();
-            if ( NS_SUCCEEDED( rv ) ) {
-            } else {
-                DEBUG_PRINTF( PR_STDOUT, "Error showing dialog, rv=0x%X\n", (int)rv );
+#ifdef NECKO
+        char *source = 0;
+#else
+        const char *source = 0;
+#endif
+        aURL->GetSpec( &source );
+
+        nsStreamXferOp *p= new nsStreamXferOp( source, (const char*)outputFileName );
+        nsCOMPtr<nsIStreamTransferOperation> op = dont_QueryInterface( (nsIStreamTransferOperation*)p ); 
+
+#ifdef NECKO
+        nsCRT::free( source );
+#endif
+
+        if ( op ) {
+            // Open download progress dialog.
+            rv = p->OpenDialog( parent );
+            if ( NS_FAILED( rv ) ) {
+                DEBUG_PRINTF( PR_STDOUT, "%s %d : Error opening dialog, rv=0x%08X\n",
+                              (char *)__FILE__, (int)__LINE__, (int)rv );
             }
+        } else {
+            DEBUG_PRINTF( PR_STDOUT, "%s %d : Unable to create nsStreamXferOp\n",
+                          (char *)__FILE__, (int)__LINE__ );
+            rv = NS_ERROR_OUT_OF_MEMORY;
         }
     } else {
         DEBUG_PRINTF( PR_STDOUT, "Failed to select file, rv=0x%X\n", (int)rv );
+    }
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsStreamTransfer::SelectFileAndTransferLocationSpec( char const *aURL, nsIDOMWindow *parent ) {
+    nsresult rv = NS_OK;
+
+    // Construct URI from spec.
+    nsIURI *uri;
+#ifndef NECKO
+    rv = NS_NewURL( &uri, aURL );
+#else  // NECKO
+    rv = NS_NewURI( &uri, aURL );
+#endif // NECKO
+
+    if ( NS_SUCCEEDED( rv ) && uri ) {
+        rv = this->SelectFileAndTransferLocation( uri,parent );
+        NS_RELEASE( uri );
     }
 
     return rv;
@@ -114,4 +155,5 @@ nsStreamTransfer::SelectFile( nsFileSpec &aResult ) {
 // Generate base nsIAppShellComponent implementation.
 NS_IMPL_IAPPSHELLCOMPONENT( nsStreamTransfer,
                             nsIStreamTransfer,
-                            NS_ISTREAMTRANSFER_PROGID )
+                            NS_ISTREAMTRANSFER_PROGID,
+                            0 )

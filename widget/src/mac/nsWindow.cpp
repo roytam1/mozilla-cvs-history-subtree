@@ -39,6 +39,35 @@
 #include "nsplugindefs.h"
 #include "nsMacEventHandler.h"
 #include "nsMacResources.h"
+#include "nsRegionMac.h"
+
+
+class StRegionFromPool 
+{
+public:
+  StRegionFromPool();
+  ~StRegionFromPool();
+
+  operator RgnHandle() const { return mRegionH; }
+
+private:
+  RgnHandle mRegionH;
+}; 
+
+
+StRegionFromPool :: StRegionFromPool ( )
+{
+  mRegionH = sNativeRegionPool.GetNewRegion();
+} 
+
+StRegionFromPool :: ~StRegionFromPool ( )
+{
+  if ( mRegionH )
+    sNativeRegionPool.ReleaseRegion(mRegionH);
+}
+
+
+#pragma mark -
 
 
 //-------------------------------------------------------------------------
@@ -430,12 +459,6 @@ NS_IMETHODIMP nsWindow::ShowMenuBar(PRBool aShow)
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsWindow::IsMenuBarVisible(PRBool *aVisible)
-{
-  *aVisible = PR_TRUE; // likely to be true
-  return NS_OK;
-}
-
 //-------------------------------------------------------------------------
 //
 // Get the widget's MenuBar.
@@ -531,7 +554,7 @@ NS_IMETHODIMP nsWindow::GetBounds(nsRect &aRect)
 // Move this component
 // aX and aY are in the parent widget coordinate system
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWindow::Move(PRUint32 aX, PRUint32 aY)
+NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
 {
 	if ((mBounds.x != aX) || (mBounds.y != aY))
 	{
@@ -557,7 +580,7 @@ NS_IMETHODIMP nsWindow::Move(PRUint32 aX, PRUint32 aY)
 // Resize this component
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWindow::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
+NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
 	if ((mBounds.width != aWidth) || (mBounds.height != aHeight))
 	{
@@ -583,7 +606,7 @@ NS_IMETHODIMP nsWindow::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepain
 // Resize this component
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWindow::Resize(PRUint32 aX, PRUint32 aY, PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
+NS_IMETHODIMP nsWindow::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
 	nsWindow::Move(aX, aY);
 	nsWindow::Resize(aWidth, aHeight, aRepaint);
@@ -659,14 +682,11 @@ NS_IMETHODIMP nsWindow::Invalidate(const nsRect &aRect, PRBool aIsSynchronous)
 		LocalToWindowCoordinate(wRect);
 		nsRectToMacRect(wRect, macRect);
 
-		GrafPtr savePort;
-		::GetPort(&savePort);
+		StPortSetter	portSetter(mWindowPtr);
 #if TARGET_CARBON
-		::SetPortWindowPort(mWindowPtr);
 		Rect savePortRect;
 		::GetWindowPortBounds(mWindowPtr, &savePortRect);
 #else
-		::SetPort(mWindowPtr);
 		Rect savePortRect = mWindowPtr->portRect;
 #endif
 		::SetOrigin(0, 0);
@@ -676,7 +696,6 @@ NS_IMETHODIMP nsWindow::Invalidate(const nsRect &aRect, PRBool aIsSynchronous)
 		::InvalRect(&macRect);
 #endif
 //¥REVISIT		::SetOrigin(savePortRect.left, savePortRect.top);
-		::SetPort(savePort);
 	}
 	return NS_OK;
 }
@@ -817,13 +836,7 @@ NS_IMETHODIMP	nsWindow::Update()
 #endif
 
 		// draw the widget
-		GrafPtr savePort;
-		::GetPort(&savePort);
-#if TARGET_CARBON
-		::SetPortWindowPort(mWindowPtr);
-#else
-		::SetPort(mWindowPtr);
-#endif
+		StPortSetter	portSetter(mWindowPtr);
 
 		::BeginUpdate(mWindowPtr);
 		HandleUpdateEvent();
@@ -850,7 +863,6 @@ NS_IMETHODIMP	nsWindow::Update()
 #endif
 		::DisposeRgn(saveUpdateRgn);
 
-		::SetPort(savePort);
 		reentrant = PR_FALSE;
 	}
 
@@ -883,6 +895,9 @@ nsresult nsWindow::HandleUpdateEvent()
 	if (! mVisible)
 		return NS_OK;
 
+	// make sure the port is set
+	StPortSetter	portSetter(mWindowPtr);
+	
 	// get the damaged region from the OS
 #if TARGET_CARBON
 	RgnHandle damagedRgn = ::NewRgn();
@@ -902,7 +917,8 @@ nsresult nsWindow::HandleUpdateEvent()
 	nsRect bounds = mBounds;
 	LocalToWindowCoordinate(bounds);
 	::OffsetRgn(updateRgn, bounds.x, bounds.y);
-
+	
+	::SetOrigin(0, 0);
 	// check if the update region is visible
 	::SectRgn(damagedRgn, updateRgn, updateRgn);
 	if (!::EmptyRgn(updateRgn))
@@ -1003,6 +1019,134 @@ void nsWindow::UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext)
 }
 
 
+//
+// ScrollBits
+//
+// ::ScrollRect() unfortunately paints the invalidated area with the 
+// background pattern. This causes lots of ugly flashing and makes us look 
+// pretty bad. Instead, we roll our own ::ScrollRect() by using ::CopyBits() 
+// to scroll the image in the view and then set the update
+// rgn appropriately so that the compositor can blit it to the screen.
+//
+// This will also work with system floating windows over the area that is
+// scrolling.
+//
+// ¥¥¥¥ This routine really needs to be Carbonated!!!! It is nowhere close,
+// ¥¥¥¥ even though there are a couple of carbon ifdefs here already.
+//
+void
+nsWindow :: ScrollBits ( Rect & inRectToScroll, PRInt32 inLeftDelta, PRInt32 inTopDelta )
+{	
+	// these come in backwards to how we're used to thinking about them.
+	inLeftDelta *= -1;
+	inTopDelta *= -1;
+	
+	// Get Frame in local coords from clip rect (there might be a border around view)
+	StRegionFromPool clipRgn;
+	if ( !clipRgn )
+	  return;
+	::GetClip(clipRgn);
+#if TARGET_CARBON
+	Rect frame;
+	::GetRegionBounds(clipRgn, &frame);
+#else
+	Rect frame = (**clipRgn).rgnBBox;
+#endif
+	StRegionFromPool totalView;
+	if ( !totalView )
+	  return;
+	::RectRgn(totalView, &frame);
+	
+	Rect source = inRectToScroll;
+	if ( inTopDelta > 0 )
+		source.top += inTopDelta;
+	else if ( inTopDelta < 0 )
+		source.bottom -= inTopDelta;
+	if ( inLeftDelta > 0 )
+		source.left += inLeftDelta;
+	else if ( inLeftDelta < 0 )
+		source.right -= inLeftDelta;	
+	
+	// compute the destination of copybits (post-scroll)
+	Rect dest = source;
+	if ( inTopDelta ) {
+		dest.top -= inTopDelta;
+		dest.bottom -= inTopDelta;
+	}
+	if ( inLeftDelta ) {
+		dest.left -= inLeftDelta;
+		dest.right -= inLeftDelta;
+	}
+	
+	// compute the area that is to be updated by subtracting the dest from the visible area
+	StRegionFromPool updateRgn;
+	if ( !updateRgn )
+	  return;
+	::RectRgn(updateRgn, &frame);
+	StRegionFromPool destRgn;
+	if ( !destRgn )
+	  return;
+	::RectRgn(destRgn, &dest);		
+	::DiffRgn ( updateRgn, destRgn, updateRgn );
+		
+	if(::EmptyRgn(mWindowPtr->visRgn))		
+	{
+		::CopyBits ( 
+			&mWindowPtr->portBits, 
+			&mWindowPtr->portBits, 
+			&source, 
+			&dest, 
+			srcCopy, 
+			nil);
+	}
+	else
+	{
+		// compute the non-visable region
+		StRegionFromPool nonVisableRgn;
+		if ( !nonVisableRgn )
+		  return;
+		::DiffRgn ( totalView, mWindowPtr->visRgn, nonVisableRgn );
+		
+		// compute the extra area that may need to be updated
+		// scoll the non-visable region to determine what needs updating
+		::OffsetRgn ( nonVisableRgn, -inLeftDelta, -inTopDelta );
+		
+		// calculate a mask region to not copy the non-visble portions of the window from the port
+		StRegionFromPool copyMaskRgn;
+		if ( !copyMaskRgn )
+		  return;
+		::DiffRgn(totalView, nonVisableRgn, copyMaskRgn);
+		
+		// use copybits to simulate a ScrollRect()
+		RGBColor black = { 0, 0, 0 };
+		RGBColor white = { 0xFFFF, 0xFFFF, 0xFFFF } ;
+		::RGBForeColor(&black);
+		::RGBBackColor(&white);
+		::PenNormal();	
+
+		::CopyBits ( 
+			&mWindowPtr->portBits, 
+			&mWindowPtr->portBits, 
+			&source, 
+			&dest, 
+			srcCopy, 
+			copyMaskRgn);
+			
+		// union the update regions together and invalidate them
+		::UnionRgn(nonVisableRgn, updateRgn, updateRgn);
+	}
+	
+#if TARGET_CARBON
+	::InvalWindowRgn(mWindowPtr, updateRgn);
+#else
+	::InvalRgn(updateRgn);
+#endif
+
+  // NOTE: regions are cleaned up for us automagically by dtor's.
+  
+} // ScrollBits
+
+
 //-------------------------------------------------------------------------
 //
 // Scroll the bits of a window
@@ -1027,10 +1171,6 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 	Rect macRect;
 	nsRectToMacRect(scrollRect, macRect);
 
-	RgnHandle updateRgn = ::NewRgn();
-	if (updateRgn == nil)
-		return NS_ERROR_OUT_OF_MEMORY;
-
 	StartDraw();
 
 		// Clip to the windowRegion instead of the visRegion (note: the visRegion
@@ -1038,14 +1178,9 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 		// ScrollRect() scrolls the visible bits of this widget as well as its children.
 		::SetClip(mWindowRegion);
 
-		// Scroll the bits now
-		::ScrollRect(&macRect, aDx, aDy, updateRgn);
-#if TARGET_CARBON
-		::InvalWindowRgn(mWindowPtr, updateRgn);
-#else
-		::InvalRgn(updateRgn);
-#endif
-		::DisposeRgn(updateRgn);
+		// Scroll the bits now. We've rolled our own because ::ScrollRect looks ugly
+		ScrollBits(macRect,aDx,aDy);
+
 	EndDraw();
 
 	//--------
@@ -1446,25 +1581,85 @@ nsWindow*  nsWindow::FindWidgetHit(Point aThePoint)
 }
 
 #pragma mark -
+
+
 //-------------------------------------------------------------------------
-//
-// 
-//
+// WidgetToScreen
+//		Walk up the parent tree, converting the given rect to global coordinates.
+//      This is similiar to CalcOffset() but we can't use GetBounds() because it
+//      only knows how to give us local coordinates.
+//		@param aLocalRect  -- rect in local coordinates of this widget
+//		@param aGlobalRect -- |aLocalRect| in global coordinates
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
-{
-	NS_NOTYETIMPLEMENTED("nsWindow::WidgetToScreen");
+NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aLocalRect, nsRect& aGlobalRect)
+{	
+	aGlobalRect = aLocalRect;
+	nsIWidget* theParent = this->GetParent();
+	if ( theParent ) {
+		// Recursive case
+		//
+		// Convert the local rect to global, except for this level.
+		theParent->WidgetToScreen(aLocalRect, aGlobalRect);
+	  
+		// the offset from our parent is in the x/y of our bounding rect
+		nsRect myBounds;
+		GetBounds(myBounds);
+		aGlobalRect.MoveBy(myBounds.x, myBounds.y);
+	}
+	else {
+		// Base case of recursion
+		//
+		// When there is no parent, we're at the top level window. Use
+		// the origin (shifted into global coordinates) to find the offset.
+		StPortSetter	portSetter(mWindowPtr);
+		::SetOrigin(0,0);
+		
+		// convert origin into global coords and shift output rect by that ammount
+		Point origin = {0, 0};
+		::LocalToGlobal ( &origin );
+		aGlobalRect.MoveBy ( origin.h, origin.v );
+	}
+	
 	return NS_OK;
 }
 
+
+
 //-------------------------------------------------------------------------
-//
-// 
-//
+// ScreenToWidget
+//		Walk up the parent tree, converting the given rect to local coordinates.
+//		@param aGlobalRect  -- rect in screen coordinates 
+//		@param aLocalRect -- |aGlobalRect| in coordinates of this widget
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWindow::ScreenToWidget(const nsRect& aOldRect, nsRect& aNewRect)
+NS_IMETHODIMP nsWindow::ScreenToWidget(const nsRect& aGlobalRect, nsRect& aLocalRect)
 {
-	NS_NOTYETIMPLEMENTED("nsWindow::ScreenToWidget");
+	aLocalRect = aGlobalRect;
+	nsIWidget* theParent = this->GetParent();
+	if ( theParent ) {
+		// Recursive case
+		//
+		// Convert the local rect to global, except for this level.
+		theParent->WidgetToScreen(aGlobalRect, aLocalRect);
+	  
+		// the offset from our parent is in the x/y of our bounding rect
+		nsRect myBounds;
+		GetBounds(myBounds);
+		aLocalRect.MoveBy(myBounds.x, myBounds.y);
+	}
+	else {
+		// Base case of recursion
+		//
+		// When there is no parent, we're at the top level window. Use
+		// the origin (shifted into local coordinates) to find the offset.
+		StPortSetter	portSetter(mWindowPtr);
+		::SetOrigin(0,0);
+		
+		// convert origin into local coords and shift output rect by that ammount
+		Point origin = {0, 0};
+		::GlobalToLocal ( &origin );
+		aLocalRect.MoveBy ( origin.h, origin.v );
+	}
+	
 	return NS_OK;
 } 
 

@@ -28,18 +28,26 @@
 #ifndef nsBoxFrame_h___
 #define nsBoxFrame_h___
 
+#include "nsCOMPtr.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsIBox.h"
+#include "nsISpaceManager.h"
+
 class nsHTMLReflowCommand;
 
 class nsCalculatedBoxInfo : public nsBoxInfo {
 public:
     nsSize calculatedSize;
+    PRBool prefWidthIntrinsic;
+    PRBool prefHeightIntrinsic;
     PRBool sizeValid;
     PRBool needsReflow;
     PRBool needsRecalc;
+    PRBool collapsed;
+    PRBool isIncremental;
 
     nsCalculatedBoxInfo();
+    nsCalculatedBoxInfo(const nsBoxInfo& aInfo);
     virtual void clear();
 
 };
@@ -48,11 +56,11 @@ class nsBoxFrame : public nsHTMLContainerFrame, public nsIBox
 {
 public:
 
-  friend nsresult NS_NewBoxFrame(nsIFrame** aNewFrame);
+  friend nsresult NS_NewBoxFrame(nsIFrame** aNewFrame, PRUint32 aFlags = 0);
 
   // nsIBox methods
   NS_IMETHOD GetBoxInfo(nsIPresContext& aPresContext, const nsHTMLReflowState& aReflowState, nsBoxInfo& aSize);
-  NS_IMETHOD Dirty(const nsHTMLReflowState& aReflowState, nsIFrame*& incrementalChild);
+  NS_IMETHOD Dirty(const nsHTMLReflowState& aReflowState, nsIFrame*& aIncrementalChild);
 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr); 
 
@@ -69,6 +77,10 @@ public:
                               nsIAtom* aAttribute,
                               PRInt32 aHint);
 
+  NS_IMETHOD Paint ( nsIPresContext& aPresContext,
+                      nsIRenderingContext& aRenderingContext,
+                      const nsRect& aDirtyRect,
+                      nsFramePaintLayer aWhichLayer);
 
   NS_IMETHOD Reflow(nsIPresContext&          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -91,6 +103,8 @@ public:
                           nsIAtom*        aListName,
                           nsIFrame*       aOldFrame);
 
+  NS_IMETHOD GetFrameName(nsString& aResult) const;
+
   PRBool IsHorizontal() const { return mHorizontal; }
 
   
@@ -99,55 +113,48 @@ public:
 
 
 protected:
-    nsBoxFrame();
+    nsBoxFrame(PRUint32 aFlags = 0);
 
-    virtual void GetRedefinedMinPrefMax(nsIFrame* aFrame, nsBoxInfo& aSize);
-    virtual nsresult GetChildBoxInfo(nsIPresContext& aPresContext, const nsHTMLReflowState& aReflowState, nsIFrame* aFrame, nsBoxInfo& aSize);
+    virtual void GetRedefinedMinPrefMax(nsIFrame* aFrame, nsCalculatedBoxInfo& aSize);
+    virtual nsresult GetChildBoxInfo(nsIPresContext& aPresContext, const nsHTMLReflowState& aReflowState, nsIFrame* aFrame, nsCalculatedBoxInfo& aSize);
     virtual nsresult FlowChildren(nsIPresContext&   aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,
                      const nsHTMLReflowState& aReflowState,
                      nsReflowStatus&          aStatus,
-                     nsRect& availableSize,
-                     nsIFrame*& incrementalChild); 
+                     nsRect& availableSize); 
 
     virtual nsresult FlowChildAt(nsIFrame* frame, 
                      nsIPresContext& aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,
                      const nsHTMLReflowState& aReflowState,
                      nsReflowStatus&          aStatus,
-                     nscoord spring,
-                     nsIFrame*& incrementalChild);
+                     nsCalculatedBoxInfo&     aInfo,
+                     PRBool& needsRedraw,
+                     nsString& aReason);
 
     virtual nsresult PlaceChildren(nsRect& boxRect);
-
-
+    virtual void ChildResized(nsHTMLReflowMetrics& aDesiredSize, nsRect& aRect, nsCalculatedBoxInfo& aInfo, PRBool* aResized, nscoord& aChangedIndex, PRBool& aFinished, nscoord aIndex, nsString& aReason);
+    virtual void LayoutChildrenInRect(nsRect& size);
+    virtual void AddChildSize(nsBoxInfo& aInfo, nsBoxInfo& aChildInfo);
     virtual void BoundsCheck(const nsBoxInfo& aBoxInfo, nsRect& aRect);
-
-    /*
-	  virtual void GetDesiredSize(nsIPresContext* aPresContext,
-                              const nsHTMLReflowState& aReflowState,
-                              nsHTMLReflowMetrics& aDesiredSize);
-    */
+    virtual void InvalidateChildren();
+    virtual void AddSize(const nsSize& a, nsSize& b, PRBool largest);
 
     virtual PRIntn GetSkipSides() const { return 0; }
 
-    virtual void GetInset(nsMargin& margin);
-  
-    virtual void LayoutChildrenInRect(nsRect& size);
-
-    virtual void InvalidateChildren();
-
-    virtual void AddSize(const nsSize& a, nsSize& b, PRBool largest);
-
+    virtual void GetInset(nsMargin& margin); 
 
     PRBool mHorizontal;
+    nsCalculatedBoxInfo mSprings[100];
+    nscoord mSpringCount;
 
 private: 
   
     // XXX for the moment we can only handle 100 children.
     // Should use a dynamic array.
-    nsCalculatedBoxInfo mSprings[100];
-    nscoord mSpringCount;
+    nsCOMPtr<nsISpaceManager> mSpaceManager; // We own this [OWNER].
+    PRUint32 mFlags;
+
 }; // class nsBoxFrame
 
 

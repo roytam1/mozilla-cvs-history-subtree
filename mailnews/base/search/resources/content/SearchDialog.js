@@ -50,7 +50,7 @@ function addStringComparators(selWidget) {
     var opt1=createOption("contains", "contains");
     var opt2=createOption("doesn't contain", "nocontain");
 
-    print("adding " + opt1.text + "\n");
+    dump("adding " + opt1.text + "\n");
     selWidget.add(opt1, null);
     selWidget.add(opt2, null);
 }
@@ -154,3 +154,7 @@ function OnComparatorSelect(event) {
     
 }
 // onchange="OnFieldSelect(event);"
+
+function onOptions(event) {
+    window.openDialog("chrome://messenger/content/SearchOptions.xul", "options", "chrome,modal,height=100,width=70");
+}

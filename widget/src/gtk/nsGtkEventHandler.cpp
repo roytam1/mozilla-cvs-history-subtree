@@ -50,6 +50,7 @@ struct nsKeyConverter nsKeycodes[] = {
   { NS_VK_CANCEL,     GDK_Cancel },
   { NS_VK_BACK,       GDK_BackSpace },
   { NS_VK_TAB,        GDK_Tab },
+  { NS_VK_TAB,        GDK_ISO_Left_Tab },
   { NS_VK_CLEAR,      GDK_Clear },
   { NS_VK_RETURN,     GDK_Return },
   { NS_VK_SHIFT,      GDK_Shift_L },
@@ -311,30 +312,6 @@ void UninitKeyEvent(GdkEventKey *aGEK,
 {
 }
 
-//==============================================================
-void InitFocusEvent(GdkEventFocus *aGEF,
-                            gpointer   p,
-                            nsGUIEvent &anEvent,
-                            PRUint32   aEventType)
-{
-  anEvent.message = aEventType;
-  anEvent.widget  = (nsWidget *) p;
-
-  anEvent.eventStructType = NS_GUI_EVENT;
-
-  anEvent.time = 0;
-  anEvent.point.x = 0;
-  anEvent.point.y = 0;
-}
-
-//==============================================================
-void UninitFocusEvent(GdkEventFocus *aGEF,
-                              gpointer   p,
-                              nsGUIEvent &anEvent,
-                              PRUint32   aEventType)
-{
-}
-
 /*==============================================================
   ==============================================================
   =============================================================
@@ -439,38 +416,6 @@ gint handle_expose_event(GtkWidget *w, GdkEventExpose *event, gpointer p)
 
   UninitExposeEvent(event, p, pevent, NS_PAINT);
 
-  return PR_TRUE;
-}
-
-//==============================================================
-gint handle_focus_in_event(GtkWidget *w, GdkEventFocus * event, gpointer p)
-{
-  nsWindow *win = (nsWindow *)p;
-  if (!win->IsDestroying()) {
-    nsGUIEvent gevent;
-    InitFocusEvent(event, p, gevent, NS_GOTFOCUS);
-    win->AddRef();
-    win->DispatchFocus(gevent);
-    win->Release();
-    UninitFocusEvent(event, p, gevent, NS_GOTFOCUS);
-  }
-  return PR_TRUE;
-}
-
-//==============================================================
-gint handle_focus_out_event(GtkWidget *w, GdkEventFocus * event, gpointer p)
-{
-  nsWindow *win = (nsWindow *)p;
-  if (!win->IsDestroying()) {
-    nsGUIEvent gevent;
-    InitFocusEvent(event, p, gevent, NS_LOSTFOCUS);
-
-    win->AddRef();
-    win->DispatchFocus(gevent);
-    win->Release();
-
-    UninitFocusEvent(event, p, gevent, NS_LOSTFOCUS);
-  }
   return PR_TRUE;
 }
 
@@ -633,9 +578,7 @@ gint handle_key_release_event(GtkWidget *w, GdkEventKey* event, gpointer p)
   if (event->keyval == GDK_Shift_L
       || event->keyval == GDK_Shift_R
       || event->keyval == GDK_Control_L
-      || event->keyval == GDK_Control_R
-      || event->keyval == GDK_Alt_L
-      || event->keyval == GDK_Alt_R)
+      || event->keyval == GDK_Control_R)
     return PR_TRUE;
 
   nsKeyEvent kevent;
@@ -663,9 +606,7 @@ gint handle_key_press_event(GtkWidget *w, GdkEventKey* event, gpointer p)
   if (event->keyval == GDK_Shift_L
       || event->keyval == GDK_Shift_R
       || event->keyval == GDK_Control_L
-      || event->keyval == GDK_Control_R
-      || event->keyval == GDK_Alt_L
-      || event->keyval == GDK_Alt_R)
+      || event->keyval == GDK_Control_R)
     return PR_TRUE;
 
   win->AddRef();
@@ -702,9 +643,7 @@ gint handle_key_release_event(GtkWidget *w, GdkEventKey* event, gpointer p)
   if (event->keyval == GDK_Shift_L
       || event->keyval == GDK_Shift_R
       || event->keyval == GDK_Control_L
-      || event->keyval == GDK_Control_R
-      || event->keyval == GDK_Alt_L
-      || event->keyval == GDK_Alt_R)
+      || event->keyval == GDK_Control_R)
     return PR_TRUE;
 
   nsKeyEvent kevent;
@@ -728,9 +667,7 @@ gint handle_key_press_event(GtkWidget *w, GdkEventKey* event, gpointer p)
   if (event->keyval == GDK_Shift_L
       || event->keyval == GDK_Shift_R
       || event->keyval == GDK_Control_L
-      || event->keyval == GDK_Control_R
-      || event->keyval == GDK_Alt_L
-      || event->keyval == GDK_Alt_R)
+      || event->keyval == GDK_Control_R)
     return PR_TRUE;
 
   nsKeyEvent kevent;

@@ -23,18 +23,16 @@
 #include "nsIStyleContext.h"
 #include "nsIViewManager.h"
 #include "nsLayoutAtoms.h"
+#include "nsIReflowCommand.h"
+#include "nsIPresShell.h"
+#include "nsHTMLParts.h"
 
 static NS_DEFINE_IID(kAreaFrameIID, NS_IAREAFRAME_IID);
 
-void
-nsAbsoluteContainingBlock::DeleteFrames(nsIPresContext& aPresContext)
-{
-  mAbsoluteFrames.DeleteFrames(aPresContext);
-}
-
 nsresult
-nsAbsoluteContainingBlock::FirstChild(nsIAtom*   aListName,
-                                      nsIFrame** aFirstChild) const
+nsAbsoluteContainingBlock::FirstChild(const nsIFrame* aDelegatingFrame,
+                                      nsIAtom*        aListName,
+                                      nsIFrame**      aFirstChild) const
 {
   NS_PRECONDITION(nsLayoutAtoms::absoluteList == aListName, "unexpected child list name");
   *aFirstChild = mAbsoluteFrames.FirstChild();
@@ -42,17 +40,92 @@ nsAbsoluteContainingBlock::FirstChild(nsIAtom*   aListName,
 }
 
 nsresult
-nsAbsoluteContainingBlock::SetInitialChildList(nsIPresContext& aPresContext,
+nsAbsoluteContainingBlock::SetInitialChildList(nsIFrame*       aDelegatingFrame,
+                                               nsIPresContext& aPresContext,
                                                nsIAtom*        aListName,
                                                nsIFrame*       aChildList)
 {
   NS_PRECONDITION(nsLayoutAtoms::absoluteList == aListName, "unexpected child list name");
+#ifdef NS_DEBUG
+  nsFrame::VerifyDirtyBitSet(aChildList);
+#endif
   mAbsoluteFrames.SetFrames(aChildList);
   return NS_OK;
 }
 
 nsresult
-nsAbsoluteContainingBlock::Reflow(nsIPresContext&          aPresContext,
+nsAbsoluteContainingBlock::AppendFrames(nsIFrame*       aDelegatingFrame,
+                                        nsIPresContext& aPresContext,
+                                        nsIPresShell&   aPresShell,
+                                        nsIAtom*        aListName,
+                                        nsIFrame*       aFrameList)
+{
+  nsresult  rv = NS_OK;
+
+  // Append the frames to our list of absolutely positioned frames
+#ifdef NS_DEBUG
+  nsFrame::VerifyDirtyBitSet(aFrameList);
+#endif
+  mAbsoluteFrames.AppendFrames(nsnull, aFrameList);
+
+  // Generate a reflow command to reflow the dirty frames
+  nsIReflowCommand* reflowCmd;
+  rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, nsIReflowCommand::ReflowDirty);
+  if (NS_SUCCEEDED(rv)) {
+    reflowCmd->SetChildListName(nsLayoutAtoms::absoluteList);
+    aPresShell.AppendReflowCommand(reflowCmd);
+    NS_RELEASE(reflowCmd);
+  }
+
+  return rv;
+}
+
+nsresult
+nsAbsoluteContainingBlock::InsertFrames(nsIFrame*       aDelegatingFrame,
+                                        nsIPresContext& aPresContext,
+                                        nsIPresShell&   aPresShell,
+                                        nsIAtom*        aListName,
+                                        nsIFrame*       aPrevFrame,
+                                        nsIFrame*       aFrameList)
+{
+  nsresult  rv = NS_OK;
+
+  // Insert the new frames
+#ifdef NS_DEBUG
+  nsFrame::VerifyDirtyBitSet(aFrameList);
+#endif
+  mAbsoluteFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
+
+  // Generate a reflow command to reflow the dirty frames
+  nsIReflowCommand* reflowCmd;
+  rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, nsIReflowCommand::ReflowDirty);
+  if (NS_SUCCEEDED(rv)) {
+    reflowCmd->SetChildListName(nsLayoutAtoms::absoluteList);
+    aPresShell.AppendReflowCommand(reflowCmd);
+    NS_RELEASE(reflowCmd);
+  }
+
+  return rv;
+}
+
+nsresult
+nsAbsoluteContainingBlock::RemoveFrame(nsIFrame*       aDelegatingFrame,
+                                       nsIPresContext& aPresContext,
+                                       nsIPresShell&   aPresShell,
+                                       nsIAtom*        aListName,
+                                       nsIFrame*       aOldFrame)
+{
+  PRBool result = mAbsoluteFrames.DestroyFrame(aPresContext, aOldFrame);
+  NS_ASSERTION(result, "didn't find frame to delete");
+  // Because positioned frames aren't part of a flow, there's no additional
+  // work to do, e.g. reflowing sibling frames. And because positioned frames
+  // have a view, we don't need to repaint
+  return result ? NS_OK : NS_ERROR_FAILURE;
+}
+
+nsresult
+nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
+                                  nsIPresContext&          aPresContext,
                                   const nsHTMLReflowState& aReflowState)
 {
   // Make a copy of the reflow state. If the reason is eReflowReason_Incremental,
@@ -66,14 +139,15 @@ nsAbsoluteContainingBlock::Reflow(nsIPresContext&          aPresContext,
   for (kidFrame = mAbsoluteFrames.FirstChild(); nsnull != kidFrame; kidFrame->GetNextSibling(&kidFrame)) {
     // Reflow the frame
     nsReflowStatus  kidStatus;
-    ReflowAbsoluteFrame(aPresContext, reflowState, kidFrame, PR_FALSE,
-                        kidStatus);
+    ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, reflowState, kidFrame,
+                        PR_FALSE, kidStatus);
   }
   return NS_OK;
 }
 
 nsresult
-nsAbsoluteContainingBlock::IncrementalReflow(nsIPresContext&          aPresContext,
+nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatingFrame,
+                                             nsIPresContext&          aPresContext,
                                              const nsHTMLReflowState& aReflowState,
                                              PRBool&                  aWasHandled)
 {
@@ -88,60 +162,34 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIPresContext&          aPresConte
     nsIAtom*  listName;
     PRBool    isAbsoluteChild;
 
-    // It's targeted at us. See if the child frame is absolutely positioned
+    // It's targeted at us. See if it's for the positioned child frames
     aReflowState.reflowCommand->GetChildListName(listName);
     isAbsoluteChild = nsLayoutAtoms::absoluteList == listName;
     NS_IF_RELEASE(listName);
 
     if (isAbsoluteChild) {
       nsIReflowCommand::ReflowType  type;
-      nsIFrame*                     newFrames;
-      PRInt32                       numFrames = 0;
 
       // Get the type of reflow command
       aReflowState.reflowCommand->GetType(type);
 
-      // Handle each specific type
-      if (nsIReflowCommand::FrameAppended == type) {
-        // Add the frames to our list of absolutely position frames
-        aReflowState.reflowCommand->GetChildFrame(newFrames);
-        NS_ASSERTION(nsnull != newFrames, "null child list");
-        numFrames = nsContainerFrame::LengthOf(newFrames);
-        mAbsoluteFrames.AppendFrames(nsnull, newFrames);
+      // The only type of reflow command we expect is that we have dirty
+      // child frames to reflow
+      NS_ASSERTION(nsIReflowCommand::ReflowDirty, "unexpected reflow type");
 
-      } else if (nsIReflowCommand::FrameRemoved == type) {
-        // Get the new frame
-        nsIFrame* childFrame;
-        aReflowState.reflowCommand->GetChildFrame(childFrame);
+      // Walk the positioned frames and reflow the dirty frames
+      for (nsIFrame* f = mAbsoluteFrames.FirstChild(); f; f->GetNextSibling(&f)) {
+        nsFrameState  frameState;
 
-        PRBool result = mAbsoluteFrames.DeleteFrame(aPresContext, childFrame);
-        NS_ASSERTION(result, "didn't find frame to delete");
-
-      } else if (nsIReflowCommand::FrameInserted == type) {
-        // Get the previous sibling
-        nsIFrame* prevSibling;
-        aReflowState.reflowCommand->GetPrevSiblingFrame(prevSibling);
-
-        // Insert the new frames
-        aReflowState.reflowCommand->GetChildFrame(newFrames);
-        NS_ASSERTION(nsnull != newFrames, "null child list");
-        numFrames = nsContainerFrame::LengthOf(newFrames);
-        mAbsoluteFrames.InsertFrames(nsnull, prevSibling, newFrames);
-
-      } else {
-        NS_ASSERTION(PR_FALSE, "unexpected reflow type");
-      }
-
-      // For inserted and appended reflow commands we need to reflow the
-      // newly added frames
-      if ((nsIReflowCommand::FrameAppended == type) ||
-          (nsIReflowCommand::FrameInserted == type)) {
-
-        while (numFrames-- > 0) {
+        f->GetFrameState(&frameState);
+        if (frameState & NS_FRAME_IS_DIRTY) {
           nsReflowStatus  status;
 
-          ReflowAbsoluteFrame(aPresContext, aReflowState, newFrames, PR_TRUE, status);
-          newFrames->GetNextSibling(&newFrames);
+          // Note: the only reason the frame would be dirty would be if it had
+          // just been inserted or appended
+          NS_ASSERTION(frameState & NS_FRAME_FIRST_REFLOW, "unexpected frame state");
+          ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
+                              f, PR_TRUE, status);
         }
       }
 
@@ -161,19 +209,12 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIPresContext&          aPresConte
       aReflowState.reflowCommand->GetNext(nextFrame, PR_TRUE);
 
       nsReflowStatus  kidStatus;
-      ReflowAbsoluteFrame(aPresContext, aReflowState, nextFrame, PR_FALSE, kidStatus);
-      // XXX Make sure the frame is repainted. For the time being, since we
-      // have no idea what actually changed repaint it all...
-      nsIView*  view;
-      nextFrame->GetView(&view);
-      if (nsnull != view) {
-        nsIViewManager* viewMgr;
-        view->GetViewManager(viewMgr);
-        if (nsnull != viewMgr) {
-          viewMgr->UpdateView(view, (nsIRegion*)nsnull, NS_VMREFRESH_NO_SYNC);
-          NS_RELEASE(viewMgr);
-        }
-      }
+      ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
+                          nextFrame, PR_FALSE, kidStatus);
+      // We don't need to invalidate anything because the frame should
+      // invalidate any area within its frame that needs repainting, and
+      // because it has a view if it changes size the view manager will
+      // damage the dirty area
       aWasHandled = PR_TRUE;
     }
   }
@@ -181,11 +222,19 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIPresContext&          aPresConte
   return NS_OK;
 }
 
+void
+nsAbsoluteContainingBlock::DestroyFrames(nsIFrame*       aDelegatingFrame,
+                                         nsIPresContext& aPresContext)
+{
+  mAbsoluteFrames.DestroyFrames(aPresContext);
+}
+
 // XXX Optimize the case where it's a resize reflow and the absolutely
 // positioned child has the exact same size and position and skip the
 // reflow...
 nsresult
-nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIPresContext&          aPresContext,
+nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegatingFrame,
+                                               nsIPresContext&          aPresContext,
                                                const nsHTMLReflowState& aReflowState,
                                                nsIFrame*                aKidFrame,
                                                PRBool                   aInitialReflow,
@@ -195,14 +244,16 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIPresContext&          aPresCon
   nsMargin  border;
 
   // Get the border values
-  aReflowState.mStyleSpacing->GetBorder(border);
+  if (!aReflowState.mStyleSpacing->GetBorder(border)) {
+    NS_NOTYETIMPLEMENTED("percentage border");
+  }
   
   nsIHTMLReflow*  htmlReflow;
   rv = aKidFrame->QueryInterface(kIHTMLReflowIID, (void**)&htmlReflow);
   if (NS_SUCCEEDED(rv)) {
     htmlReflow->WillReflow(aPresContext);
 
-    nsSize              availSize(aReflowState.computedWidth, NS_UNCONSTRAINEDSIZE);
+    nsSize              availSize(aReflowState.mComputedWidth, NS_UNCONSTRAINEDSIZE);
     nsHTMLReflowMetrics kidDesiredSize(nsnull);
     nsHTMLReflowState   kidReflowState(aPresContext, aReflowState, aKidFrame,
                                        availSize);
@@ -215,18 +266,95 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIPresContext&          aPresCon
 
     rv = htmlReflow->Reflow(aPresContext, kidDesiredSize, kidReflowState, aStatus);
 
+    // Because we don't know the size of a replaced element until after we reflow
+    // it 'auto' margins must be computed now, and we need to take into account
+    // min-max information
+    if (NS_FRAME_IS_REPLACED(kidReflowState.mFrameType)) {
+      // Factor in any minimum and maximum size information
+      if (kidDesiredSize.width > kidReflowState.mComputedMaxWidth) {
+        kidDesiredSize.width = kidReflowState.mComputedMaxWidth;
+      } else if (kidDesiredSize.width < kidReflowState.mComputedMinWidth) {
+        kidDesiredSize.width = kidReflowState.mComputedMinWidth;
+      }
+      if (kidDesiredSize.height > kidReflowState.mComputedMaxHeight) {
+        kidDesiredSize.height = kidReflowState.mComputedMaxHeight;
+      } else if (kidDesiredSize.height < kidReflowState.mComputedMinHeight) {
+        kidDesiredSize.height = kidReflowState.mComputedMinHeight;
+      }
+
+      // Get the containing block width/height
+      nscoord containingBlockWidth, containingBlockHeight;
+      kidReflowState.ComputeContainingBlockRectangle(&aReflowState,
+                                                     containingBlockWidth,
+                                                     containingBlockHeight);
+
+      // XXX This code belongs in nsHTMLReflowState...
+      if ((NS_AUTOMARGIN == kidReflowState.mComputedMargin.left) ||
+          (NS_AUTOMARGIN == kidReflowState.mComputedMargin.right)) {
+        // Calculate the amount of space for margins
+        nscoord availMarginSpace = containingBlockWidth -
+          kidReflowState.mComputedOffsets.left - kidReflowState.mComputedBorderPadding.left -
+          kidDesiredSize.width - kidReflowState.mComputedBorderPadding.right -
+          kidReflowState.mComputedOffsets.right;
+
+        if (NS_AUTOMARGIN == kidReflowState.mComputedMargin.left) {
+          if (NS_AUTOMARGIN == kidReflowState.mComputedMargin.right) {
+            // Both 'margin-left' and 'margin-right' are 'auto', so they get
+            // equal values
+            kidReflowState.mComputedMargin.left = availMarginSpace / 2;
+            kidReflowState.mComputedMargin.right = availMarginSpace -
+              kidReflowState.mComputedMargin.left;
+          } else {
+            // Just 'margin-left' is 'auto'
+            kidReflowState.mComputedMargin.left = availMarginSpace -
+              kidReflowState.mComputedMargin.right;
+          }
+        } else {
+          // Just 'margin-right' is 'auto'
+          kidReflowState.mComputedMargin.right = availMarginSpace -
+            kidReflowState.mComputedMargin.left;
+        }
+      }
+      if ((NS_AUTOMARGIN == kidReflowState.mComputedMargin.top) ||
+          (NS_AUTOMARGIN == kidReflowState.mComputedMargin.bottom)) {
+        // Calculate the amount of space for margins
+        nscoord availMarginSpace = containingBlockHeight -
+          kidReflowState.mComputedOffsets.top - kidReflowState.mComputedBorderPadding.top -
+          kidDesiredSize.height - kidReflowState.mComputedBorderPadding.bottom -
+          kidReflowState.mComputedOffsets.bottom;
+
+        if (NS_AUTOMARGIN == kidReflowState.mComputedMargin.top) {
+          if (NS_AUTOMARGIN == kidReflowState.mComputedMargin.bottom) {
+            // Both 'margin-top' and 'margin-bottom' are 'auto', so they get
+            // equal values
+            kidReflowState.mComputedMargin.top = availMarginSpace / 2;
+            kidReflowState.mComputedMargin.bottom = availMarginSpace -
+              kidReflowState.mComputedMargin.top;
+          } else {
+            // Just 'margin-top' is 'auto'
+            kidReflowState.mComputedMargin.top = availMarginSpace -
+              kidReflowState.mComputedMargin.bottom;
+          }
+        } else {
+          // Just 'margin-bottom' is 'auto'
+          kidReflowState.mComputedMargin.bottom = availMarginSpace -
+            kidReflowState.mComputedMargin.top;
+        }
+      }
+    }
+
     // XXX If the child had a fixed height, then make sure it respected it...
-    if (NS_AUTOHEIGHT != kidReflowState.computedHeight) {
-      if (kidDesiredSize.height < kidReflowState.computedHeight) {
-        kidDesiredSize.height = kidReflowState.computedHeight;
+    if (NS_AUTOHEIGHT != kidReflowState.mComputedHeight) {
+      if (kidDesiredSize.height < kidReflowState.mComputedHeight) {
+        kidDesiredSize.height = kidReflowState.mComputedHeight;
         kidDesiredSize.height += kidReflowState.mComputedBorderPadding.top +
                                  kidReflowState.mComputedBorderPadding.bottom;
       }
     }
     
     // Position the child relative to our padding edge
-    nsRect  rect(border.left + kidReflowState.computedOffsets.left + kidReflowState.computedMargin.left,
-                 border.top + kidReflowState.computedOffsets.top + kidReflowState.computedMargin.top,
+    nsRect  rect(border.left + kidReflowState.mComputedOffsets.left + kidReflowState.mComputedMargin.left,
+                 border.top + kidReflowState.mComputedOffsets.top + kidReflowState.mComputedMargin.top,
                  kidDesiredSize.width, kidDesiredSize.height);
     aKidFrame->SetRect(rect);
   }
@@ -235,7 +363,9 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIPresContext&          aPresCon
 }
 
 nsresult
-nsAbsoluteContainingBlock::GetPositionedInfo(nscoord& aXMost, nscoord& aYMost) const
+nsAbsoluteContainingBlock::GetPositionedInfo(const nsIFrame* aDelegatingFrame,
+                                             nscoord&        aXMost,
+                                             nscoord&        aYMost) const
 {
   aXMost = aYMost = 0;
   for (nsIFrame* f = mAbsoluteFrames.FirstChild(); nsnull != f; f->GetNextSibling(&f)) {

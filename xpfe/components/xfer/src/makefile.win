@@ -24,7 +24,7 @@ IGNORE_MANIFEST=1
 #//
 #//------------------------------------------------------------------------
 DEPTH = ..\..\..\..
-
+include <$(DEPTH)/config/config.mak>
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
@@ -42,7 +42,11 @@ LINCS = \
 	-I$(PUBLIC)/xpcom \
 	-I$(PUBLIC)/xpfe/components \
 	-I$(PUBLIC)/raptor \
-	-I$(PUBLIC)/netlib \
+!ifdef NECKO
+        -I$(PUBLIC)\necko                 \
+!else
+        -I$(PUBLIC)\netlib                \
+!endif
 	-I$(PUBLIC)/rdf \
 	-I$(PUBLIC)/dom \
 	$(NULL)
@@ -50,7 +54,12 @@ LINCS = \
 LLIBS	= \
 	$(LIBNSPR) \
 	$(DIST)\lib\xpcom.lib \
-	$(DIST)\lib\netlib.lib \
+	$(DIST)\lib\js3250.lib \
+!ifdef NECKO
+        $(DIST)\lib\neckoutil_s.lib    \
+!else
+        $(DIST)\lib\netlib.lib         \
+!endif
 	$(NULL)
 
 #//------------------------------------------------------------------------
@@ -60,7 +69,7 @@ LLIBS	= \
 #//------------------------------------------------------------------------
 OBJS =	\
 	.\$(OBJDIR)\nsStreamTransfer.obj	\
-	.\$(OBJDIR)\nsDownloadProgressDialog.obj	\
+	.\$(OBJDIR)\nsStreamXferOp.obj	\
 	$(NULL)
 
 #//------------------------------------------------------------------------

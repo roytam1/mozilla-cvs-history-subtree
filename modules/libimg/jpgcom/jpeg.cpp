@@ -23,14 +23,10 @@
 
 
 
-#include "if_struct.h"
-
+#include "nsIImgDecoder.h" // include if_struct.h Needs to be first
+#include "nsIImgDCallbk.h"
 #include "dllcompat.h"
-#include "nsIImgDecoder.h"
-#include "nsImgDecCID.h"
 #include "nsJPGDecoder.h"
-#include "nsJPGCallback.h"
-
 #include "jpeg.h"
 #include "merrors.h"
 #include "il.h"
@@ -70,8 +66,9 @@ typedef enum {
 	JPEG_DECOMPRESS_SEQUENTIAL,           /* Output sequential pixels */
     JPEG_FINAL_PROGRESSIVE_SCAN_OUTPUT,
 	JPEG_DONE,
-    JPEG_SINK_NON_JPEG_TRAILER           /* Some image files have a */
+    JPEG_SINK_NON_JPEG_TRAILER,          /* Some image files have a */
                                          /* non-JPEG trailer */
+    JPEG_ERROR    
 } jstate;
 	
 typedef struct {
@@ -774,10 +771,12 @@ il_jpeg_write(il_container *ic, const unsigned char *buf, int32 len)
 
                 ic->imgdcb->ImgDCBSetupColorspaceConverter(); /* XXXM12N Should check
                                                        return code. */
-
-                js->rows_per_chunk =
-                    JPEG_OUTPUT_CHUNK_SIZE / img_header->widthBytes;
-
+				if(!img_header->widthBytes)
+					return JPEG_ERROR;
+				else
+                    js->rows_per_chunk =
+                                JPEG_OUTPUT_CHUNK_SIZE / img_header->widthBytes;
+				
 				/* FIXME -- Should reset dct_method and dither mode
 				 * for final pass of progressive JPEG
 				 */

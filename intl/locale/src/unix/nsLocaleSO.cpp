@@ -21,6 +21,7 @@
 #include "nsCOMPtr.h"
 #include "nsIFactory.h"
 
+#include "nsILocaleService.h"
 #include "nsILocaleFactory.h"
 #include "nsLocaleFactory.h"
 #include "nsLocaleCID.h"
@@ -28,6 +29,7 @@
 #include "nsPosixLocale.h"
 #include "nsPosixLocaleFactory.h"
 #include "nsCollationUnix.h"
+#include "nsIScriptableDateFormat.h"
 #include "nsDateTimeFormatUnix.h"
 #include "nsLocaleFactoryUnix.h"
 #include "nsDateTimeFormatCID.h"
@@ -44,6 +46,7 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 NS_DEFINE_IID(kLocaleFactoryCID, NS_LOCALEFACTORY_CID);
 NS_DEFINE_IID(kILocaleFactoryIID,NS_ILOCALEFACTORY_IID);
 NS_DEFINE_CID(kPosixLocaleFactoryCID, NS_POSIXLOCALEFACTORY_CID);
+NS_DEFINE_CID(kLocaleServiceCID, NS_LOCALESERVICE_CID);
 
 //
 // for the collation and formatting interfaces
@@ -56,6 +59,7 @@ NS_DEFINE_IID(kIDateTimeFormatIID, NS_IDATETIMEFORMAT_IID);
 NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
 NS_DEFINE_CID(kCollationCID, NS_COLLATION_CID);
 NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
+NS_DEFINE_CID(kScriptableDateFormatCID, NS_SCRIPTABLEDATEFORMAT_CID);
 
 
 extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* serviceMgr,
@@ -67,7 +71,10 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* serviceMgr,
 	nsIFactory*	factoryInstance;
 	nsresult		res;
 
-	if (aFactory == NULL) return NS_ERROR_NULL_POINTER;
+	if (aFactory == NULL) 
+             return NS_ERROR_NULL_POINTER;
+
+        *aFactory = NULL;
 
 	//
 	// first check for the nsILocaleFactory interfaces
@@ -75,6 +82,12 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* serviceMgr,
 	if (aClass.Equals(kLocaleFactoryCID))
 	{
 		nsLocaleFactory *factory = new nsLocaleFactory();
+    if (NULL==factory) 
+    {
+      *aFactory=NULL;
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
 		res = factory->QueryInterface(kILocaleFactoryIID, (void **) aFactory);
 
 		if (NS_FAILED(res))
@@ -85,9 +98,24 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* serviceMgr,
 
 			return res;
 	}
+
+  if (aClass.Equals(kLocaleServiceCID)) {
+    factoryInstance = new nsLocaleServiceFactory();
+    res = factoryInstance->QueryInterface(kIFactoryIID,(void**)aFactory);
+    if (NS_FAILED(res)) { *aFactory=NULL; delete factoryInstance; }
+    return res;
+  }
+
   if (aClass.Equals(kPosixLocaleFactoryCID))
   {
       nsPosixLocaleFactory *posix_factory = new nsPosixLocaleFactory();
+
+      if (NULL==posix_factory) 
+      {
+        *aFactory = NULL;
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+
       res = posix_factory->QueryInterface(kIFactoryIID,(void**)aFactory);
       if (NS_FAILED(res))
       {
@@ -137,9 +165,17 @@ extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char *
   //
   // register the generic factory
   //
-  rv = compMgr->RegisterComponent(kLocaleFactoryCID,NULL,NULL,path,PR_TRUE,PR_TRUE);
-  NS_ASSERTION(rv==NS_OK,"nsLocale: RegisterFactory failed.");
-  if(NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
+  rv = compMgr->RegisterComponent(kLocaleFactoryCID,"nsLocale component",
+                                  NS_LOCALE_PROGID,path,PR_TRUE,PR_TRUE);
+  NS_ASSERTION(rv==NS_OK,"nsLocaleTest: RegisterFactory failed.");
+  if (NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
+
+  //
+  // register the service 
+  //
+  rv = compMgr->RegisterComponent(kLocaleServiceCID,"nsLocaleService component",
+                                  NS_LOCALESERVICE_PROGID,path,PR_TRUE,PR_TRUE);
+  if (NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
 
   //
   // register the Posix factory
@@ -170,6 +206,14 @@ extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char *
   rv = compMgr->RegisterComponent(kDateTimeFormatCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
   NS_ASSERTION(rv==NS_OK,"nsLocale: Register DateTimeFormat failed.");
   if(NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
+
+	//
+	// register the scriptable date time formatter
+	//
+	rv = compMgr->RegisterComponent(kScriptableDateFormatCID, "Scriptable Date Format", 
+    NS_SCRIPTABLEDATEFORMAT_PROGID, path, PR_TRUE, PR_TRUE);
+	NS_ASSERTION(rv==NS_OK,"nsLocale: Register ScriptableDateFormat failed.");
+  if (NS_FAILED(rv) && (NS_ERROR_FACTORY_EXISTS != rv)) goto done;
 
   done:
   (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
@@ -207,6 +251,9 @@ extern "C" NS_EXPORT nsresult NSUnregisterSelf(nsISupports* aServMgr, const char
 
   rv = compMgr->UnregisterComponent(kDateTimeFormatCID, path);
   if (NS_FAILED(rv)) goto done;
+
+	rv = compMgr->UnregisterComponent(kScriptableDateFormatCID, path);
+	if (NS_FAILED(rv)) goto done;
 
   done:
   (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);

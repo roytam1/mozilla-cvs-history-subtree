@@ -28,20 +28,19 @@
 
 #include "nsIAppShellComponentImpl.h"
 
+#include "nsIBrowserWindow.h"
 #include "nsIServiceManager.h"
 #include "nsIDocumentViewer.h"
 #include "nsIContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsIContentViewer.h"
 #include "nsIDOMElement.h"
-#include "nsIURL.h"
 #ifndef NECKO
+#include "nsIURL.h"
 #include "nsINetService.h"
 #else
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
+#include "nsIURL.h"
 #endif // NECKO
 #include "nsIWebShell.h"
 #include "nsIWebShellWindow.h"
@@ -49,12 +48,10 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID( kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
 
-nsInstallProgressDialog::nsInstallProgressDialog()
+nsInstallProgressDialog::nsInstallProgressDialog(nsIXULWindowCallbacks* aManager)
+    : mManager(aManager)
 {
     NS_INIT_REFCNT();
-    mWindow = nsnull;
-    mDocument = nsnull;
-
 }
 
 nsInstallProgressDialog::~nsInstallProgressDialog()
@@ -100,44 +97,34 @@ nsInstallProgressDialog::QueryInterface(REFNSIID aIID,void** aInstancePtr)
 }
 
 NS_IMETHODIMP 
-nsInstallProgressDialog::BeforeJavascriptEvaluation()
+nsInstallProgressDialog::BeforeJavascriptEvaluation(const PRUnichar *URL)
 {
     return Open();
 }
 
 NS_IMETHODIMP 
-nsInstallProgressDialog::AfterJavascriptEvaluation()
+nsInstallProgressDialog::AfterJavascriptEvaluation(const PRUnichar *URL)
 {
     return Close();
 }
 
 NS_IMETHODIMP 
-nsInstallProgressDialog::InstallStarted(const char *UIPackageName)
+nsInstallProgressDialog::InstallStarted(const PRUnichar *URL, const PRUnichar *UIPackageName)
 {
-    return SetHeading( nsString(UIPackageName).GetUnicode() );
+    return SetHeading( UIPackageName );
 }
 
 NS_IMETHODIMP 
-nsInstallProgressDialog::ItemScheduled(const char *message)
+nsInstallProgressDialog::ItemScheduled(const PRUnichar *message)
 {
-    nsresult rv = SetActionText( nsString(message).GetUnicode() );
-
-    if (NS_SUCCEEDED(rv))
-    {
-        PRBool cancel;
-        rv = GetCancelStatus( &cancel );
-
-        if ( NS_SUCCEEDED(rv) && cancel)
-            return NS_ERROR_FAILURE;  // XXX: Not a COM failure! change interface to return val
-    }
-    return rv;
+    return SetActionText( message );
 }
 
 NS_IMETHODIMP 
-nsInstallProgressDialog::InstallFinalization(const char *message, PRInt32 itemNum, PRInt32 totNum)
+nsInstallProgressDialog::FinalizeProgress(const PRUnichar *message, PRInt32 itemNum, PRInt32 totNum)
 {
 
-    nsresult rv = SetActionText( nsString(message).GetUnicode() );
+    nsresult rv = SetActionText( message );
 
     if (NS_SUCCEEDED(rv))
         rv = SetProgress( itemNum, totNum );
@@ -146,12 +133,17 @@ nsInstallProgressDialog::InstallFinalization(const char *message, PRInt32 itemNu
 }
 
 NS_IMETHODIMP 
-nsInstallProgressDialog::InstallAborted()
+nsInstallProgressDialog::FinalStatus(const PRUnichar *URL, PRInt32 status)
 {
     return NS_OK;
 }
 
 
+NS_IMETHODIMP 
+nsInstallProgressDialog::LogComment(const PRUnichar* comment)
+{
+    return NS_OK;
+}
 
 
 // Do startup stuff from C++ side.
@@ -199,8 +191,22 @@ nsInstallProgressDialog::ConstructBeforeJavaScript(nsIWebShell *aWebShell)
                       __FILE__, (int)__LINE__, (int)rv );
     }
 
+    if (mManager)
+        mManager->ConstructBeforeJavaScript(aWebShell);
+
     return rv;
 }
+
+
+NS_IMETHODIMP
+nsInstallProgressDialog::ConstructAfterJavaScript(nsIWebShell *aWebShell) 
+{
+    if (mManager)
+        return mManager->ConstructAfterJavaScript(aWebShell);
+    else
+        return NS_OK;
+}
+
 
 
 NS_IMETHODIMP
@@ -209,49 +215,36 @@ nsInstallProgressDialog::Open()
     nsresult rv = NS_OK;
 
     // Get app shell service.
-    nsIAppShellService *appShell;
-    rv = nsServiceManager::GetService( kAppShellServiceCID,
-                                       nsIAppShellService::GetIID(),
-                                       (nsISupports**)&appShell );
+    NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv );
 
     if ( NS_SUCCEEDED( rv ) ) 
     {
         // Open "progress" dialog.
-        nsIURL *url;
+        nsIURI *url;
         char * urlStr = "resource:/res/xpinstall/progress.xul";
 #ifndef NECKO
         rv = NS_NewURL( &url, urlStr );
 #else
-        NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        nsIURI *uri = nsnull;
-        rv = service->NewURI(urlStr, nsnull, &uri);
-        if (NS_FAILED(rv)) return rv;
-
-        rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-        NS_RELEASE(uri);
+        rv = NS_NewURI( &url, urlStr );
 #endif // NECKO
         
         if ( NS_SUCCEEDED(rv) ) 
         {
-        
-            nsCOMPtr<nsIWebShellWindow> newWindow;
             rv = appShell->CreateTopLevelWindow( nsnull,
                                                  url,
                                                  PR_TRUE,
-                                                 *getter_AddRefs(newWindow),
-                                                 nsnull,
+                                                 NS_CHROME_ALL_CHROME,
                                                  this,  // callbacks??
                                                  0,
-                                                 0 );
+                                                 0,
+                                                 getter_AddRefs(mWindow));
 
             if ( NS_SUCCEEDED( rv ) ) 
             {
-                mWindow = newWindow;			// ownership?
-
-                 if (mWindow != nsnull)
+                if ( mWindow )
                     mWindow->Show(PR_TRUE);
+                else
+                    rv = NS_ERROR_NULL_POINTER;
             }
             else 
             {
@@ -259,14 +252,13 @@ nsInstallProgressDialog::Open()
             }
             NS_RELEASE( url );
         }
-        
-        nsServiceManager::ReleaseService( kAppShellServiceCID, appShell );
     } 
     else 
     {
         DEBUG_PRINTF( PR_STDOUT, "Unable to get app shell service, rv=0x%X\n", (int)rv );
     }
-    return NS_OK;
+
+    return rv;
 }
 
 NS_IMETHODIMP

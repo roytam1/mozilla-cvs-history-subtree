@@ -20,27 +20,23 @@
 #include "nsIMsgAccount.idl"
 #include "nsIMsgIdentity.idl"
 #include "nsIMsgIncomingServer.idl"
+#include "nsISupportsArray.idl"
 
-interface nsISupportsArray;
-
-%{C++
-#include "nsISupportsArray.h"
-%}
-
+interface nsIMsgFolderCache;
 
 [scriptable, uuid(6ed2cc00-e623-11d2-b7fc-00805f05ffa5)]
 interface nsIMsgAccountManager : nsISupports {
 
   /* createAccount creates a new account and assigns a new accountKey */
-  nsIMsgAccount createAccount(in nsIMsgIncomingServer server,
+  nsIMsgAccount CreateAccount(in nsIMsgIncomingServer server,
                               in nsIMsgIdentity identity);
 
   /* similar to createAccount, but we already know the account key */
-  nsIMsgAccount createAccountWithKey(in nsIMsgIncomingServer server,
+  nsIMsgAccount CreateAccountWithKey(in nsIMsgIncomingServer server,
                                      in nsIMsgIdentity identity,
                                      in string accountKey);
 
-  void addAccount(in nsIMsgAccount account);
+  void AddAccount(in nsIMsgAccount account);
 
   /* account list stuff */
 
@@ -48,20 +44,61 @@ interface nsIMsgAccountManager : nsISupports {
    * in the account manager. You can only set the defaultAccount to an
    * account already in the account manager */
   attribute nsIMsgAccount defaultAccount;
+
+  /* ordered list of all accounts
+   * array of nsIMsgAccount
+   */
   readonly attribute nsISupportsArray accounts;
 
   /* Each account will have a unique key, which should not change
    * for the life of the account. */
   string getAccountKey(in nsIMsgAccount account);
 
-  /* utility routines to enumerate elements in all accounts */
+  /* list of all identities in all accounts
+   * array of nsIMsgIdentity
+   */
   readonly attribute nsISupportsArray allIdentities;
+
+  /* list of all servers in all accounts
+   * array of nsIMsgIncomingServer
+   */
   readonly attribute nsISupportsArray allServers;
 
-  nsISupportsArray FindServersByHostname(in string hostname, in nsIIDRef iid);
+  /* given the preferences key for an identity, find the identity in the
+   * account manager */
+  nsIMsgIdentity GetIdentityByKey(in string key);
+
+  /*
+   * search for the server with the given username, hostname, and type
+   * the type is the same as is specified in the preferences,
+   * i.e. "imap", "pop3", or "nntp"
+   */
+  nsIMsgIncomingServer
+      FindServer(in string userName, in string hostname, in string type);
+
+  /* given a server, return all identities in accounts that have this server
+   * returns an array of nsIMsgIdentity
+   */
   nsISupportsArray GetIdentitiesForServer(in nsIMsgIncomingServer server);
+
+  /* given an identity, return all servers in accounts that have
+   * this identity
+   * returns an array of nsIMsgIncomingServer
+   */
   nsISupportsArray GetServersForIdentity(in nsIMsgIdentity identity);
-  
+
+  /* load accounts kicks off the creation of all accounts. You do not need
+   * to call this and all accounts should be loaded lazily if you use any
+   * of the above.
+   */
   void LoadAccounts();
+
+  /* unload accounts frees all the account manager data structures */
+  void UnloadAccounts();
+
+  void WriteToFolderCache(in nsIMsgFolderCache folderCache);
+
+  /* search for 4.x prefs, and migrate to 5.0 prefs */
+  void MigratePrefs();
 };
 

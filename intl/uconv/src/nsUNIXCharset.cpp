@@ -52,7 +52,7 @@ nsUNIXCharset::nsUNIXCharset()
   char* locale = setlocale(LC_CTYPE, NULL);
   if(locale) 
   {
-      nsAutoString propertyURL("resource://res/unixcharset.properties");
+      nsAutoString propertyURL("resource:/res/unixcharset.properties");
   
       nsURLProperties *info = new nsURLProperties( propertyURL );
       if( info )
@@ -64,7 +64,7 @@ nsUNIXCharset::nsUNIXCharset()
           if(NS_FAILED(res)) {
               nsAutoString localeKey("locale.all.");
               localeKey.Append(locale);
-              nsresult res = info->Get(localeKey, mCharset);
+              res = info->Get(localeKey, mCharset);
               if(NS_SUCCEEDED(res))  {
                   delete info;
                   return; // succeeded

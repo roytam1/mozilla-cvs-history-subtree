@@ -60,7 +60,7 @@ int main() {
   nsIMsgAccountManager *accountManager;
   rv = nsComponentManager::CreateInstance(kMsgAccountManagerCID,
                                           nsnull,
-                                          nsIMsgAccountManager::GetIID(),
+                                          nsCOMTypeInfo<nsIMsgAccountManager>::GetIID(),
                                           (void **)&accountManager);
 
   if (NS_FAILED(rv)) {
@@ -174,10 +174,12 @@ printIncomingServer(nsIMsgIncomingServer *server)
   char *value;
   nsresult rv;
 
+#if 0
   value=nsnull;
-  rv = server->GetPrettyName(&value);
+  rv = server->GetPrettyName((PRUnichar **)&value);
   if (NS_SUCCEEDED(rv) && value) printf("\tPrettyName: %s\n", value);
-
+#endif
+  
   value=nsnull;
   rv = server->GetHostName(&value);
   if (NS_SUCCEEDED(rv) && value) printf("\tHostName: %s\n", value);

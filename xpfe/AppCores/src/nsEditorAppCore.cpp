@@ -45,7 +45,7 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIWidget.h"
@@ -746,7 +746,7 @@ nsEditorAppCore::CreateWindowWithURL(const char* urlStr)
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIURL> url = nsnull;
+  nsCOMPtr<nsIURI> url = nsnull;
   nsIWebShellWindow* newWindow = nsnull;
 
 #ifndef NECKO  
@@ -759,7 +759,7 @@ nsEditorAppCore::CreateWindowWithURL(const char* urlStr)
   rv = service->NewURI(urlStr, nsnull, &uri);
   if (NS_FAILED(rv)) return rv;
 
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+  rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
   NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv) || !url)
@@ -849,7 +849,7 @@ static NS_DEFINE_IID(kCFileWidgetCID, NS_FILEWIDGET_CID);
                                           getter_AddRefs(toolkitCore));
         if (NS_SUCCEEDED(result) && toolkitCore)
         {
-          // at some point we need to be passing nsFileSpecs around. When nsIUrl is fileSpec-
+          // at some point we need to be passing nsFileSpecs around. When nsIURI is fileSpec-
           // savvy, we should use that.
           result = toolkitCore->ShowWindowWithArgs("chrome://editor/content", nsnull, fileURLString/*fileURL.GetAsString()*/);
         }
@@ -2154,13 +2154,13 @@ nsEditorAppCore::RunUnitTests()
 
 // nsIDocumentLoaderObserver methods
 NS_IMETHODIMP
-nsEditorAppCore::OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURL* aURL, const char* aCommand)
+nsEditorAppCore::OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand)
 {
    return NS_OK;
 }
 
 NS_IMETHODIMP
-nsEditorAppCore::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURL *aUrl, PRInt32 aStatus,
+nsEditorAppCore::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURI *aUrl, PRInt32 aStatus,
 								   nsIDocumentLoaderObserver * aObserver)
 {
    return PrepareDocumentForEditing();
@@ -2168,7 +2168,7 @@ nsEditorAppCore::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURL *aUrl, PRIn
 
 NS_IMETHODIMP
 nsEditorAppCore::OnStartURLLoad(nsIDocumentLoader* loader, 
-                                 nsIURL* aURL, const char* aContentType,
+                                 nsIURI* aURL, const char* aContentType,
                                  nsIContentViewer* aViewer)
 {
 
@@ -2177,7 +2177,7 @@ nsEditorAppCore::OnStartURLLoad(nsIDocumentLoader* loader,
 
 NS_IMETHODIMP
 nsEditorAppCore::OnProgressURLLoad(nsIDocumentLoader* loader, 
-                                    nsIURL* aURL, PRUint32 aProgress, 
+                                    nsIURI* aURL, PRUint32 aProgress, 
                                     PRUint32 aProgressMax)
 {
   return NS_OK;
@@ -2185,21 +2185,21 @@ nsEditorAppCore::OnProgressURLLoad(nsIDocumentLoader* loader,
 
 NS_IMETHODIMP
 nsEditorAppCore::OnStatusURLLoad(nsIDocumentLoader* loader, 
-                                  nsIURL* aURL, nsString& aMsg)
+                                  nsIURI* aURL, nsString& aMsg)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsEditorAppCore::OnEndURLLoad(nsIDocumentLoader* loader, 
-                               nsIURL* aURL, PRInt32 aStatus)
+                               nsIURI* aURL, PRInt32 aStatus)
 {
    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsEditorAppCore::HandleUnknownContentType(nsIDocumentLoader* loader, 
-                                           nsIURL *aURL,
+                                           nsIURI *aURL,
                                            const char *aContentType,
                                            const char *aCommand )
 {

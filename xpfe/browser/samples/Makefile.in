@@ -30,10 +30,13 @@ EXPORT_RESOURCE_SAMPLES = \
 	$(srcdir)/dexanimdialog.xul \
 	$(srcdir)/dexparammaster.xul \
 	$(srcdir)/dexparamdialog.xul \
+	$(srcdir)/dexparamdialog.html \
 	$(srcdir)/dexsimplemaster.xul \
 	$(srcdir)/dexsimpledialog.xul \
+	$(srcdir)/dexopenchrome.xul \
 	$(srcdir)/tab.xul \
-	$(NULL)
+        $(srcdir)/xpmenu.xul \
+        $(NULL)
 
 install:: 
 	$(INSTALL) $(EXPORT_RESOURCE_SAMPLES) $(DIST)/bin/res/samples

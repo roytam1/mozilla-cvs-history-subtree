@@ -20,7 +20,6 @@ DEPTH=..\..\..
 EXPORTS =				\
 	nslayout.h			\
 	nsICaret.h			\
-	nsCaretProperties.h		\
 	nsIContent.h			\
 	nsIContentIterator.h		\
 	nsIDiskDocument.h	\
@@ -32,6 +31,7 @@ EXPORTS =				\
 	nsIFocusTracker.h		\
 	nsIFrame.h			\
 	nsIFrameImageLoader.h		\
+	nsIFrameManager.h		\
 	nsILayoutDebugger.h		\
 	nsINameSpace.h			\
 	nsINameSpaceManager.h		\
@@ -52,6 +52,7 @@ EXPORTS =				\
 	nsIStyleSheetLinkingElement.h	\
 	nsITextContent.h		\
 	nsLayoutAtoms.h			\
+	nsLayoutAtomList.h			\
 	nsFrameList.h			\
 	nsFrameTraversal.h		\
 	nsStyleChangeList.h		\

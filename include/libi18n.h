@@ -36,6 +36,9 @@
 #ifdef XP_WIN32
 #define UNICVTAPI __declspec(dllexport)
 
+#elif defined(MOZ_STRIP_NOT_EXPORTED)
+#define UNICVTAPI __attribute__ ((dllexport))
+
 #else
 #define UNICVTAPI
 #endif
@@ -2746,7 +2749,7 @@ typedef enum INTL_TimeFormatSelector {
  * 
  * @param	localeID		Specification for the Locale conventions to use.
  * @param	formatSelector	Specification for the type of format to select
- * @param	time			time
+ * @param	timeToFormat	time
  * @param	utf8Buffer		result buffer (in utf8)
  * @param	bufferLength	length of result buffer
  * @return	PRSuccess when succesful, PRFailure otherwise 
@@ -2754,7 +2757,7 @@ typedef enum INTL_TimeFormatSelector {
 PUBLIC PRStatus	INTL_FormatTime(INTLLocaleID localeID,
 									INTL_DateFormatSelector dateFormatSelector,
 									INTL_TimeFormatSelector	timeFormatSelector,
-									time_t	time,
+									time_t	timeToFormat,
 									unsigned char* utf8Buffer,
 									PRUint32 bufferLength);
 /** 
@@ -2765,7 +2768,7 @@ PUBLIC PRStatus	INTL_FormatTime(INTLLocaleID localeID,
  * 
  * @param	localeID		Specification for the Locale conventions to use.
  * @param	formatSelector	Specification for the type of format to select
- * @param	time			time
+ * @param	timeToFormat	time
  * @param	utf8Buffer		result buffer (in utf8)
  * @param	bufferLength	length of result buffer
  * @return	PRSuccess when succesful, PRFailure otherwise 
@@ -2773,7 +2776,7 @@ PUBLIC PRStatus	INTL_FormatTime(INTLLocaleID localeID,
 PUBLIC PRStatus INTL_FormatTMTime(INTLLocaleID localeID,
 									  INTL_DateFormatSelector dateFormatSelector,
 									  INTL_TimeFormatSelector	timeFormatSelector,
-									  const struct tm* time,
+									  const struct tm* timeToFormat,
 									  unsigned char* utf8Buffer,
 									  PRUint32 bufferLength);
 

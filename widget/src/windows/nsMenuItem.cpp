@@ -87,6 +87,7 @@ nsMenuItem::nsMenuItem() : nsIMenuItem()
   mIsSeparator = PR_FALSE;
   mWebShell    = nsnull;
   mDOMElement  = nsnull;
+  mModifiers   = knsMenuItemNoModifier;
 }
 
 //-------------------------------------------------------------------------
@@ -301,6 +302,18 @@ NS_METHOD nsMenuItem::GetChecked(PRBool *aIsEnabled)
 }
 
 //----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetDOMNode(nsIDOMNode ** aDOMNode)
+{
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetDOMNode(nsIDOMNode * aDOMNode)
+{
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
 NS_IMETHODIMP nsMenuItem::GetDOMElement(nsIDOMElement ** aDOMElement)
 {
   *aDOMElement = mDOMElement;
@@ -349,7 +362,7 @@ NS_IMETHODIMP nsMenuItem::DoCommand()
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
   event.eventStructType = NS_MOUSE_EVENT;
-  event.message = NS_MOUSE_LEFT_CLICK;
+  event.message = NS_MENU_ACTION;
 
   nsCOMPtr<nsIContent> contentNode;
   contentNode = do_QueryInterface(mDOMElement);
@@ -374,6 +387,34 @@ NS_IMETHODIMP nsMenuItem::SetWebShell(nsIWebShell * aWebShell)
 NS_IMETHODIMP nsMenuItem::SetDOMElement(nsIDOMElement * aDOMElement)
 {
   mDOMElement = aDOMElement;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetShortcutChar(const nsString &aText)
+{
+  mKeyEquivalent = aText;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetShortcutChar(nsString &aText)
+{
+  aText = mKeyEquivalent;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetModifiers(PRUint8 aModifiers)
+{
+  mModifiers = aModifiers;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetModifiers(PRUint8 * aModifiers)
+{
+  *aModifiers = mModifiers; 
   return NS_OK;
 }
 

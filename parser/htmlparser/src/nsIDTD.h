@@ -50,7 +50,7 @@ enum eAutoDetectResult {
 class nsIParser;
 class CToken;
 class nsIDTDDebug;
-class nsIURL;
+class nsIURI;
 class nsString;
 class nsITagHandler;
 class nsIContentSink;
@@ -59,6 +59,7 @@ class nsIContentSink;
 class nsIDTD : public nsISupports {
   public:
 
+    static const nsIID& GetIID() { static nsIID iid = NS_IDTD_IID; return iid; }
   
     /**
      * Default constructor
@@ -198,6 +199,27 @@ class nsIDTD : public nsISupports {
      * @return
      */
     virtual PRBool Verify(nsString& aURLRef,nsIParser* aParser)=0;
+
+    /**
+     * Use this id you want to stop the building content model
+     * --------------[ Sets DTD to STOP mode ]----------------
+     * It's recommended to use this method in accordance with
+     * the parser's terminate() method.
+     *
+     * @update	harishd 07/22/99
+     * @param 
+     * @return
+     */
+    virtual nsresult  Terminate(void) = 0;
+
+/* XXX Temporary measure, pending further work by RickG  */
+    
+    /**
+     * Give rest of world access to our tag enums, so that CanContain(), etc,
+     * become useful.
+     */
+    NS_IMETHOD StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const =0;
+
 };
 
 

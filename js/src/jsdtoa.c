@@ -210,7 +210,12 @@ extern void *MALLOC(size_t);
 Exactly one of IEEE_8087, IEEE_MC68k, VAX, or IBM should be defined.
 #endif
 
-#ifdef IEEE_8087
+/* Stefan Hanske <sh990154@mail.uni-greifswald.de> reports:
+ *  ARM is a little endian architecture but 64 bit double words are stored
+ * differently: the 32 bit words are in little endian byte order, the two words
+ * are stored in big endian`s way.
+ */
+#if defined (IEEE_8087) && !defined(__arm)
 #define word0(x) ((ULong *)&x)[1]
 #define word1(x) ((ULong *)&x)[0]
 #else
@@ -2525,7 +2530,7 @@ ret1:
 **   '+' or '-' after the 'e' in scientific notation
 */
 JS_FRIEND_API(void)
-JS_cnvtf(char *buf,int bufsz, int prcsn,double fval)
+JS_cnvtf(char *buf, size_t bufsz, int prcsn, double fval)
 {
     intN decpt,sign,numdigits;
     char *num, *nump;

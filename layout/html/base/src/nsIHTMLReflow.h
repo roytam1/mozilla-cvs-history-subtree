@@ -119,6 +119,7 @@ typedef PRUint32  nsCSSFrameType;
 
 #define NS_INTRINSICSIZE  NS_UNCONSTRAINEDSIZE
 #define NS_AUTOHEIGHT     NS_UNCONSTRAINEDSIZE
+#define NS_AUTOMARGIN     NS_UNCONSTRAINEDSIZE
 
 /**
  * HTML version of the reflow state.
@@ -128,12 +129,12 @@ typedef PRUint32  nsCSSFrameType;
 struct nsHTMLReflowState : nsReflowState {
   // The type of frame, from css's perspective. This value is
   // initialized by the Init method below.
-  nsCSSFrameType   frameType;
+  nsCSSFrameType   mFrameType;
 
-  nsISpaceManager* spaceManager;
+  nsISpaceManager* mSpaceManager;
 
   // LineLayout object (only for inline reflow; set to NULL otherwise)
-  nsLineLayout*    lineLayout;
+  nsLineLayout*    mLineLayout;
 
   // The computed width specifies the frame's content width, and it does not
   // apply to inline non-replaced elements
@@ -142,9 +143,8 @@ struct nsHTMLReflowState : nsReflowState {
   // use your intrinsic width as the computed width
   //
   // For block-level frames, the computed width is based on the width of the
-  // containing block and the margin/border/padding areas and the min/max
-  // width
-  nscoord          computedWidth; 
+  // containing block, the margin/border/padding areas, and the min/max width
+  nscoord          mComputedWidth; 
 
   // The computed height specifies the frame's content height, and it does
   // not apply to inline non-replaced elements
@@ -159,10 +159,10 @@ struct nsHTMLReflowState : nsReflowState {
   //
   // For replaced block-level frames, a value of NS_INTRINSICSIZE
   // means you use your intrinsic height as the computed height
-  nscoord          computedHeight;
+  nscoord          mComputedHeight;
 
   // Computed margin values
-  nsMargin         computedMargin;
+  nsMargin         mComputedMargin;
 
   // Cached copy of the border values
   nsMargin         mComputedBorderPadding;
@@ -172,7 +172,7 @@ struct nsHTMLReflowState : nsReflowState {
 
   // Computed values for 'left/top/right/bottom' offsets. Only applies to
   // 'positioned' elements
-  nsMargin         computedOffsets;
+  nsMargin         mComputedOffsets;
 
   // Computed values for 'min-width/max-width' and 'min-height/max-height'
   nscoord          mComputedMinWidth, mComputedMaxWidth;
@@ -234,13 +234,6 @@ struct nsHTMLReflowState : nsReflowState {
                     const nsSize&            aAvailableSpace);
 
   /**
-   * Returns PR_TRUE if the specified width or height has an value other
-   * than 'auto'
-   */
-  PRBool HaveFixedContentWidth() const;
-  PRBool HaveFixedContentHeight() const;
-
-  /**
    * Get the containing block reflow state, starting from a frames
    * <B>parent</B> reflow state (the parent reflow state may or may not end
    * up being the containing block reflow state)
@@ -286,6 +279,10 @@ struct nsHTMLReflowState : nsReflowState {
 
   static nsCSSFrameType DetermineFrameType(nsIFrame* aFrame);
 
+  void ComputeContainingBlockRectangle(const nsHTMLReflowState* aContainingBlockRS,
+                                       nscoord& aContainingBlockWidth,
+                                       nscoord& aContainingBlockHeight);
+
 protected:
   // This method initializes various data members. It is automatically
   // called by the various constructors
@@ -297,10 +294,6 @@ protected:
                                const nsHTMLReflowState* cbrs,
                                nscoord aContainingBlockWidth,
                                nscoord aContainingBlockHeight);
-
-  void ComputeContainingBlockRectangle(const nsHTMLReflowState* aContainingBlockRS,
-                                       nscoord& aContainingBlockWidth,
-                                       nscoord& aContainingBlockHeight);
 
   void ComputeRelativeOffsets(const nsHTMLReflowState* cbrs,
                               nscoord aContainingBlockWidth,

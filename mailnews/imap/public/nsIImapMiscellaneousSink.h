@@ -23,6 +23,7 @@
 #include "nsImapCore.h"
 #include "nsIImapProtocol.h"
 #include "MailNewsTypes.h"
+#include "nsIMsgMailNewsUrl.h"
 
 class nsIImapIncomingServer;
 
@@ -67,8 +68,7 @@ public:
 										 const char* aString) = 0;
 	NS_IMETHOD FEAlertFromServer(nsIImapProtocol* aProtocol,
 															 const char* aString) = 0;
-	NS_IMETHOD ProgressStatus(nsIImapProtocol* aProtocol,
-														const char* statusMsg) = 0;
+	NS_IMETHOD ProgressStatus(nsIImapProtocol* aProtocol, PRUint32 aMsgId) = 0;
 	NS_IMETHOD PercentProgress(nsIImapProtocol* aProtocol,
 														 ProgressInfo* aInfo) = 0;
 	NS_IMETHOD PastPasswordCheck(nsIImapProtocol* aProtocol) = 0;
@@ -82,6 +82,12 @@ public:
 													 TunnelInfo *aInfo) = 0;
 	NS_IMETHOD LoadNextQueuedUrl(nsIImapProtocol* aProtocol,
 													 nsIImapIncomingServer *incomingServer) = 0;
+  NS_IMETHOD CopyNextStreamMessage(nsIImapProtocol* aProtocol,
+                                   nsISupports* copyState) = 0;
+  NS_IMETHOD SetUrlState(nsIImapProtocol* aProtocol,
+                         nsIMsgMailNewsUrl* aUrl,
+                         PRBool isRunning,
+                         nsresult statusCode) = 0;
 };
 
 

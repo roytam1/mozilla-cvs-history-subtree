@@ -42,17 +42,34 @@
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "prlog.h"
+#include "prtime.h"
 #include "rdf.h"
 #include "rdfutil.h"
+
+#include "nsILocale.h"
+#include "nsLocaleCID.h"
+#include "nsILocaleFactory.h"
+
+#include "nsIDateTimeFormat.h"
+#include "nsDateTimeFormatCID.h"
+#include "nsIScriptableDateFormat.h"
 
 static NS_DEFINE_IID(kIContentIID,     NS_ICONTENT_IID);
 static NS_DEFINE_IID(kIRDFResourceIID, NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,  NS_IRDFLITERAL_IID);
+static NS_DEFINE_IID(kIRDFIntIID,      NS_IRDFINT_IID);
+static NS_DEFINE_IID(kIRDFDateIID,     NS_IRDFDATE_IID);
 static NS_DEFINE_IID(kITextContentIID, NS_ITEXT_CONTENT_IID); // XXX grr...
 static NS_DEFINE_CID(kTextNodeCID,     NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,   NS_RDFSERVICE_CID);
 
+static NS_DEFINE_CID(kLocaleFactoryCID, NS_LOCALEFACTORY_CID);
+static NS_DEFINE_IID(kILocaleFactoryIID, NS_ILOCALEFACTORY_IID);
+static NS_DEFINE_CID(kLocaleCID, NS_LOCALE_CID);
+static NS_DEFINE_IID(kILocaleIID, NS_ILOCALE_IID);
 
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
+static NS_DEFINE_CID(kDateTimeFormatIID, NS_IDATETIMEFORMAT_IID);
 
 nsresult
 nsRDFContentUtils::AttachTextNode(nsIContent* parent, nsIRDFNode* value)
@@ -123,11 +140,9 @@ nsRDFContentUtils::FindChildByTag(nsIContent* aElement,
 
 
 nsresult
-nsRDFContentUtils::FindChildByTagAndResource(nsIContent* aElement,
-                                             PRInt32 aNameSpaceID,
-                                             nsIAtom* aTag,
-                                             nsIRDFResource* aResource,
-                                             nsIContent** aResult)
+nsRDFContentUtils::FindChildByResource(nsIContent* aElement,
+                                       nsIRDFResource* aResource,
+                                       nsIContent** aResult)
 {
     nsresult rv;
 
@@ -140,28 +155,12 @@ nsRDFContentUtils::FindChildByTagAndResource(nsIContent* aElement,
         if (NS_FAILED(rv = aElement->ChildAt(i, *getter_AddRefs(kid))))
             return rv; // XXX fatal
 
-        // Make sure it's a <xul:treecell>
-        PRInt32 nameSpaceID;
-        if (NS_FAILED(rv = kid->GetNameSpaceID(nameSpaceID)))
-            return rv; // XXX fatal
-
-        if (nameSpaceID != aNameSpaceID)
-            continue; // wrong namespace
-
-        nsCOMPtr<nsIAtom> tag;
-        if (NS_FAILED(rv = kid->GetTag(*getter_AddRefs(tag))))
-            return rv; // XXX fatal
-
-        if (tag.get() != aTag)
-            continue; // wrong tag
-
         // Now get the resource ID from the RDF:ID attribute. We do it
         // via the content model, because you're never sure who
         // might've added this stuff in...
         nsCOMPtr<nsIRDFResource> resource;
         rv = GetElementResource(kid, getter_AddRefs(resource));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "severe error retrieving resource");
-        if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv)) continue;
 
         if (resource.get() != aResource)
             continue; // not the resource we want
@@ -202,14 +201,18 @@ nsRDFContentUtils::GetElementResource(nsIContent* aElement, nsIRDFResource** aRe
     if (! doc)
         return NS_ERROR_FAILURE;
 
-    nsAutoString uri;
+    char buf[256];
+    nsCAutoString uri;
+    nsStr::Initialize(uri, buf, sizeof(buf) - 1, 0, eOneByte, PR_FALSE);
+    buf[0] = 0;
+
     rv = nsRDFContentUtils::MakeElementURI(doc, id, uri);
     if (NS_FAILED(rv)) return rv;
 
     NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv = rdf->GetUnicodeResource(uri.GetUnicode(), aResult);
+    rv = rdf->GetResource(uri, aResult);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create resource");
     if (NS_FAILED(rv)) return rv;
 
@@ -237,7 +240,7 @@ nsRDFContentUtils::GetElementRefResource(nsIContent* aElement, nsIRDFResource** 
         rv = aElement->GetDocument(*getter_AddRefs(doc));
         if (NS_FAILED(rv)) return rv;
 
-        nsCOMPtr<nsIURL> url = dont_AddRef( doc->GetDocumentURL() );
+        nsCOMPtr<nsIURI> url = dont_AddRef( doc->GetDocumentURL() );
         NS_ASSERTION(url != nsnull, "element has no document");
         if (! url)
             return NS_ERROR_UNEXPECTED;
@@ -258,30 +261,58 @@ nsRDFContentUtils::GetElementRefResource(nsIContent* aElement, nsIRDFResource** 
 }
 
 
+
+/*
+	Note: this routine is similiar, yet distinctly different from, nsBookmarksService::GetTextForNode
+*/
+
 nsresult
 nsRDFContentUtils::GetTextForNode(nsIRDFNode* aNode, nsString& aResult)
 {
-    nsresult rv;
-    nsIRDFResource* resource;
-    nsIRDFLiteral* literal;
+    nsresult		rv;
+    nsCOMPtr <nsIRDFResource>	resource;
+    nsCOMPtr <nsIRDFLiteral>	literal;
+    nsCOMPtr <nsIRDFDate>	dateLiteral;
+    nsCOMPtr <nsIRDFInt>	intLiteral;
 
     if (! aNode) {
         aResult.Truncate();
         rv = NS_OK;
     }
-    else if (NS_SUCCEEDED(rv = aNode->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
+    else if (NS_SUCCEEDED(rv = aNode->QueryInterface(kIRDFResourceIID, getter_AddRefs(resource)))) {
         nsXPIDLCString p;
         if (NS_SUCCEEDED(rv = resource->GetValue( getter_Copies(p) ))) {
             aResult = p;
         }
-        NS_RELEASE(resource);
     }
-    else if (NS_SUCCEEDED(rv = aNode->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
+    else if (NS_SUCCEEDED(rv = aNode->QueryInterface(kIRDFDateIID, getter_AddRefs(dateLiteral)))) {
+	PRInt64		theDate;
+        if (NS_SUCCEEDED(rv = dateLiteral->GetValue( &theDate ))) {
+		// XXX can we cache this somehow instead of creating/destroying it all the time?
+		nsCOMPtr <nsIDateTimeFormat> aDateTimeFormat;
+		rv = nsComponentManager::CreateInstance(kDateTimeFormatCID, NULL,
+			      nsIDateTimeFormat::GetIID(), getter_AddRefs(aDateTimeFormat));
+		if (NS_SUCCEEDED(rv) && aDateTimeFormat)
+		{
+			rv = aDateTimeFormat->FormatPRTime(nsnull /* nsILocale* locale */, kDateFormatShort, kTimeFormatSeconds, (PRTime)theDate, aResult);
+			if (NS_FAILED(rv)) {
+				aResult.Truncate();
+			}
+		}
+        }
+    }
+    else if (NS_SUCCEEDED(rv = aNode->QueryInterface(kIRDFIntIID, getter_AddRefs(intLiteral)))) {
+	PRInt32		theInt;
+	aResult.Truncate();
+        if (NS_SUCCEEDED(rv = intLiteral->GetValue( &theInt ))) {
+        	aResult.Append(theInt, 10);
+        }
+    }
+    else if (NS_SUCCEEDED(rv = aNode->QueryInterface(kIRDFLiteralIID, getter_AddRefs(literal)))) {
         nsXPIDLString p;
         if (NS_SUCCEEDED(rv = literal->GetValue( getter_Copies(p) ))) {
             aResult = p;
         }
-        NS_RELEASE(literal);
     }
     else {
         NS_ERROR("not a resource or a literal");
@@ -405,29 +436,37 @@ nsRDFContentUtils::GetAttributeLogString(nsIContent* aElement, PRInt32 aNameSpac
 
 
 nsresult
-nsRDFContentUtils::MakeElementURI(nsIDocument* aDocument, const nsString& aElementID, nsString& aURI)
+nsRDFContentUtils::MakeElementURI(nsIDocument* aDocument, const nsString& aElementID, nsCString& aURI)
 {
     // Convert an element's ID to a URI that can be used to refer to
     // the element in the XUL graph.
 
-    if (aElementID.Find(':') > 0) {
+    if (aElementID.FindChar(':') > 0) {
         // Assume it's absolute already. Use as is.
         aURI = aElementID;
     }
     else {
         nsresult rv;
 
-        nsCOMPtr<nsIURL> docURL;
+        nsCOMPtr<nsIURI> docURL;
         rv = aDocument->GetBaseURL(*getter_AddRefs(docURL));
         if (NS_FAILED(rv)) return rv;
 
+#ifdef NECKO
+        char* spec;
+#else
         const char* spec;
+#endif
         docURL->GetSpec(&spec);
         if (! spec)
             return NS_ERROR_FAILURE;
 
         aURI = spec;
-        if (aElementID.First() != PRUnichar('#')) {
+
+#ifdef NECKO
+        nsCRT::free(spec);
+#endif
+        if (aElementID.First() != '#') {
             aURI += '#';
         }
         aURI += aElementID;
@@ -445,11 +484,15 @@ nsRDFContentUtils::MakeElementID(nsIDocument* aDocument, const nsString& aURI, n
     // DOM APIs.
     nsresult rv;
 
-    nsCOMPtr<nsIURL> docURL;
+    nsCOMPtr<nsIURI> docURL;
     rv = aDocument->GetBaseURL(*getter_AddRefs(docURL));
     if (NS_FAILED(rv)) return rv;
 
+#ifdef NECKO
+    char* spec;
+#else
     const char* spec;
+#endif
     docURL->GetSpec(&spec);
     if (! spec)
         return NS_ERROR_FAILURE;
@@ -461,6 +504,30 @@ nsRDFContentUtils::MakeElementID(nsIDocument* aDocument, const nsString& aURI, n
     else {
         aElementID = aURI;
     }
+#ifdef NECKO
+    nsCRT::free(spec);
+#endif
 
     return NS_OK;
 }
+
+PRBool
+nsRDFContentUtils::IsContainedBy(nsIContent* aElement, nsIContent* aContainer)
+{
+    nsCOMPtr<nsIContent> element( dont_QueryInterface(aElement) );
+    while (element) {
+        nsresult rv;
+
+        nsCOMPtr<nsIContent> parent;
+        rv = element->GetParent(*getter_AddRefs(parent));
+        if (NS_FAILED(rv)) return PR_FALSE;
+
+        if (parent.get() == aContainer)
+            return PR_TRUE;
+
+        element = parent;
+    }
+
+    return PR_FALSE;
+}
+

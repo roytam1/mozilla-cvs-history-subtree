@@ -16,13 +16,18 @@
 # Reserved.
 
 DEPTH=..\..\..
-MODULE=msgcompose
+MODULE=msgcompo
 
 XPIDLSRCS =										\
 				.\nsIMsgComposeService.idl		\
 				.\nsIMsgCompose.idl				\
 				.\nsIMsgCompFields.idl			\
 				.\nsIMsgQuote.idl			\
+				.\nsIMsgSendListener.idl		\
+				.\nsIMsgSendLaterListener.idl		\
+				.\nsIMsgSend.idl		\
+				.\nsIMsgSendLater.idl		\
+				.\nsIMsgDraft.idl			\
 				$(NULL)
 
 ################################################################################
@@ -31,14 +36,10 @@ XPIDLSRCS =										\
 EXPORTS =										\
 				nsMsgComposeFact.h				\
 				nsMsgCompFieldsFact.h			\
-				nsIMsgSend.h					\
 				nsMsgSendFact.h					\
 				nsMsgSendLaterFact.h			\
 				nsISmtpUrl.h					\
 				nsISmtpService.h				\
-				MsgCompGlue.h					\
-				nsMsgComposeBE.h				\
-				nsIMsgSendLater.h				\
 				$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

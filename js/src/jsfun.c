@@ -821,19 +821,19 @@ fun_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     /* Find the top-most non-native activation record, which must be fun's. */
     for (fp = cx->fp; ; fp = fp->down) {
 	if (!fp)
-	    goto _readonly;
+	    goto read_only;
 	if (fp->fun == fun) {
 	    if (!fp->debugging)
 		break;
 	} else {
 	    if (fp->script)
-		goto _readonly;
+		goto read_only;
 	}
     }
 
     /* Set only if unqualified: 'arguments = ...' not 'fun.arguments = ...'. */
     if (!fp->pc || (js_CodeSpec[*fp->pc].format & JOF_MODEMASK) != JOF_NAME)
-	goto _readonly;
+	goto read_only;
 
     /* Get a Call object for fp and set its arguments property to vp. */
     callobj = js_GetCallObject(cx, fp, NULL, NULL);
@@ -843,8 +843,7 @@ fun_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 			  (jsid)cx->runtime->atomState.argumentsAtom,
 			  vp);
 
-/* "readonly" can be a language extension on OSF */
-_readonly:
+read_only:
     if (JSVERSION_IS_ECMA(cx->version))
 	return fun_getProperty(cx, obj, id, vp);
     JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_READ_ONLY,
@@ -1069,18 +1068,19 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
 	return JS_FALSE;
 
     if (xdr->mode == JSXDR_DECODE) {
+	*objp = fun->object;
 	if (atomstr) {
 	    fun->atom = js_AtomizeString(xdr->cx, atomstr, 0);
 	    if (!fun->atom)
 		return JS_FALSE;
+
+	    if (!OBJ_DEFINE_PROPERTY(xdr->cx, xdr->cx->globalObject,
+				     (jsid)fun->atom, OBJECT_TO_JSVAL(*objp),
+				     NULL, NULL, JSPROP_ENUMERATE,
+				     (JSProperty **)&sprop))
+		return JS_FALSE;
+	    JS_UNLOCK_OBJ(xdr->cx, xdr->cx->globalObject);
 	}
-	*objp = fun->object;
-	if (!OBJ_DEFINE_PROPERTY(xdr->cx, xdr->cx->globalObject,
-				 (jsid)fun->atom, OBJECT_TO_JSVAL(*objp),
-				 NULL, NULL, JSPROP_ENUMERATE,
-				 (JSProperty **)&sprop))
-	    return JS_FALSE;
-        JS_UNLOCK_OBJ(xdr->cx, xdr->cx->globalObject);
     }
 
     return JS_TRUE;
@@ -1117,7 +1117,7 @@ fun_hasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
      * Throw a runtime error if instanceof is called on a function
      * that has a non-Object as its .prototype value.
      */
-    str = js_DecompileValueGenerator(cx, OBJECT_TO_JSVAL(obj), NULL);
+    str = js_DecompileValueGenerator(cx, JS_TRUE, OBJECT_TO_JSVAL(obj), NULL);
     if (str) {
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_BAD_PROTOTYPE,
 			     JS_GetStringBytes(str));
@@ -1152,25 +1152,26 @@ fun_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     uint32 indent;
     JSString *str;
 
-    fval = argv[-1];    
+    fval = argv[-1];
     if (!JSVAL_IS_FUNCTION(cx, fval)) {
-/*
-    if we don't have a function to start off with, try converting the
-    object to a function. If that doesn't work, complain.
-*/
+	/*
+	 * If we don't have a function to start off with, try converting the
+	 * object to a function.  If that doesn't work, complain.
+	 */
         if (JSVAL_IS_OBJECT(fval)) {
             obj = JSVAL_TO_OBJECT(fval);
-            if (!OBJ_GET_CLASS(cx, obj)->convert(cx, obj, 
-                                                    JSTYPE_FUNCTION, &fval))
+            if (!OBJ_GET_CLASS(cx, obj)->convert(cx, obj, JSTYPE_FUNCTION,
+						 &fval)) {
 	        return JS_FALSE;
+	    }
         }
         if (!JSVAL_IS_FUNCTION(cx, fval)) {
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                  JSMSG_INCOMPATIBLE_PROTO,
-                                 "Function", "toString", 
+                                 "Function", "toString",
                                  JS_GetTypeName(cx, JS_TypeOfValue(cx, fval)));
             return JS_FALSE;
-        }        
+        }
     }
 
     obj = JSVAL_TO_OBJECT(fval);
@@ -1204,10 +1205,10 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (!JSVAL_IS_FUNCTION(cx, fval)) {
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                              JSMSG_INCOMPATIBLE_PROTO,
-                             "Function", "call", 
+                             "Function", "call",
                              JS_GetStringBytes(JS_ValueToString(cx, fval)));
         return JS_FALSE;
-    }        
+    }
 
     if (argc == 0) {
 	/* Call fun with its parent as the 'this' parameter if no args. */
@@ -1235,7 +1236,7 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     fp = cx->fp;
     oldsp = fp->sp;
     fp->sp = sp;
-    ok = js_Invoke(cx, argc, JS_FALSE);
+    ok = js_Invoke(cx, argc, JSINVOKE_INTERNAL);
 
     /* Store rval and pop stack back to our frame's sp. */
     *rval = fp->sp[-1];
@@ -1271,10 +1272,11 @@ fun_apply(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (!JSVAL_IS_FUNCTION(cx, fval)) {
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                              JSMSG_INCOMPATIBLE_PROTO,
-                             "Function", "apply", 
+                             "Function", "apply",
                              JS_GetStringBytes(JS_ValueToString(cx, fval)));
         return JS_FALSE;
-    }        
+    }
+
     /* Convert the first arg to 'this' and skip over it. */
     if (!js_ValueToObject(cx, argv[0], &obj))
 	return JS_FALSE;
@@ -1299,7 +1301,7 @@ fun_apply(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     fp = cx->fp;
     oldsp = fp->sp;
     fp->sp = sp;
-    ok = js_Invoke(cx, argc, JS_FALSE);
+    ok = js_Invoke(cx, argc, JSINVOKE_INTERNAL);
 
     /* Store rval and pop stack back to our frame's sp. */
     *rval = fp->sp[-1];
@@ -1746,32 +1748,32 @@ js_ValueToFunction(JSContext *cx, jsval *vp, JSBool constructing)
 void
 js_ReportIsNotFunction(JSContext *cx, jsval *vp, JSBool constructing)
 {
+    JSType type;
+    JSString *fallback;
     JSStackFrame *fp;
     JSString *str;
-    const char *typeName;
-    JSString *fallback;
 
-    fp = cx->fp;
     /*
-     * We provide the typename as the fallback to handle the case
-     * when valueOf is not a function, which prevents ValueToString
-     * from being called as the default case inside 
-     * js_DecompileValueGenerator (and so recursing back to here).
+     * We provide the typename as the fallback to handle the case when
+     * valueOf is not a function, which prevents ValueToString from being
+     * called as the default case inside js_DecompileValueGenerator (and
+     * so recursing back to here).
      */
-    typeName = JS_GetTypeName(cx, JS_TypeOfValue(cx, *vp));
-    fallback = JS_InternString(cx, typeName);
+    type = JS_TypeOfValue(cx, *vp);
+    fallback = ATOM_TO_STRING(cx->runtime->atomState.typeAtoms[type]);
+    fp = cx->fp;
     if (fp) {
         jsval *sp = fp->sp;
         fp->sp = vp;
-        str = js_DecompileValueGenerator(cx, *vp, fallback);
+        str = js_DecompileValueGenerator(cx, JS_TRUE, *vp, fallback);
         fp->sp = sp;
     } else {
-        str = js_DecompileValueGenerator(cx, *vp, fallback);
+        str = js_DecompileValueGenerator(cx, JS_TRUE, *vp, fallback);
     }
     if (str) {
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-			     constructing ? JSMSG_NOT_CONSTRUCTOR
-					  : JSMSG_NOT_FUNCTION,
+			     (uintN)(constructing ? JSMSG_NOT_CONSTRUCTOR
+						  : JSMSG_NOT_FUNCTION),
 			     JS_GetStringBytes(str));
     }
 }

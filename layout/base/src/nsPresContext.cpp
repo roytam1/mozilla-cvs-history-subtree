@@ -27,7 +27,11 @@
 #include "nsIRenderingContext.h"
 #include "nsEventStateManager.h"
 #include "nsIURL.h"
+#ifdef NECKO
+#include "nsILoadGroup.h"
+#else
 #include "nsIURLGroup.h"
+#endif
 #include "nsIDocument.h"
 #include "nsIStyleContext.h"
 #include "nsLayoutAtoms.h"
@@ -62,9 +66,11 @@ nsPresContext::nsPresContext()
                       NSIntPointsToTwips(10))
 {
   NS_INIT_REFCNT();
-  nsLayoutAtoms::AddrefAtoms();
-  mCompatibilityMode = eCompatibility_NavQuirks;
-  mWidgetRenderingMode = eWidgetRendering_Native;  // to be changed to _Gfx soon!
+  nsLayoutAtoms::AddRefAtoms();
+  mCompatibilityMode = eCompatibility_Standard;
+  mCompatibilityLocked = PR_FALSE;
+  mWidgetRenderingMode = eWidgetRendering_PartialGfx; 
+ 
 
 #ifdef _WIN32
   // XXX This needs to be elsewhere, e.g., part of nsIDeviceContext
@@ -180,7 +186,24 @@ nsPresContext::GetUserPreferences()
   }
 
   if (NS_OK == mPrefs->GetIntPref("nglayout.compatibility.mode", &prefInt)) {
-    mCompatibilityMode = (enum nsCompatibility)prefInt;  // bad cast
+    // XXX this should really be a state on the webshell instead of using prefs
+    switch (prefInt) {
+      case 1: 
+        mCompatibilityLocked = PR_TRUE;  
+        mCompatibilityMode = eCompatibility_Standard;   
+        break;
+      case 2: 
+        mCompatibilityLocked = PR_TRUE;  
+        mCompatibilityMode = eCompatibility_NavQuirks;  
+        break;
+      case 0:   // auto
+      default:
+        mCompatibilityLocked = PR_FALSE;  
+        break;
+    }
+  }
+  else {
+    mCompatibilityLocked = PR_FALSE;  // auto
   }
 
   if (NS_OK == mPrefs->GetIntPref("nglayout.widget.mode", &prefInt)) {
@@ -312,7 +335,9 @@ nsPresContext::GetCompatibilityMode(nsCompatibility* aResult)
 NS_IMETHODIMP
 nsPresContext::SetCompatibilityMode(nsCompatibility aMode)
 {
-  mCompatibilityMode = aMode;
+  if (! mCompatibilityLocked) {
+    mCompatibilityMode = aMode;
+  }
   return NS_OK;
 }
 
@@ -338,7 +363,7 @@ nsPresContext::SetWidgetRenderingMode(nsWidgetRendering aMode)
 
 
 NS_IMETHODIMP
-nsPresContext::GetBaseURL(nsIURL** aResult)
+nsPresContext::GetBaseURL(nsIURI** aResult)
 {
   NS_PRECONDITION(nsnull != aResult, "null ptr");
   if (nsnull == aResult) {
@@ -700,10 +725,20 @@ nsPresContext::GetImageGroup(nsIImageGroup** aResult)
     }
 
     // Initialize the image group
-    nsCOMPtr<nsIURLGroup> urlGroup;
-    rv = mBaseURL->GetURLGroup(getter_AddRefs(urlGroup));
+    nsCOMPtr<nsILoadGroup> loadGroup;
+#ifdef NECKO
+    nsCOMPtr<nsIDocument> doc;
+    if (NS_SUCCEEDED(mShell->GetDocument(getter_AddRefs(doc)))) {
+      NS_ASSERTION(doc, "expect document here");
+      if (doc) {
+        loadGroup = doc->GetDocumentLoadGroup();
+      }
+    }
+#else
+    rv = mBaseURL->GetLoadGroup(getter_AddRefs(loadGroup));
+#endif
     if (rv == NS_OK)
-      rv = mImageGroup->Init(mDeviceContext, urlGroup);
+      rv = mImageGroup->Init(mDeviceContext, loadGroup);
     if (NS_OK != rv) {
       return rv;
     }

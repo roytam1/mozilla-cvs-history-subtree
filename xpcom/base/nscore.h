@@ -72,6 +72,14 @@ typedef PRUint16 PRUnichar;
 #define NS_EXPORT __declspec(export)
 #define NS_EXPORT_(type) __declspec(export) type
 
+#elif defined(MOZ_STRIP_NOT_EXPORTED)
+
+#define NS_IMPORT
+#define NS_IMPORT_(type) type
+
+#define NS_EXPORT __attribute__ ((dllexport))
+#define NS_EXPORT_(type) __attribute__ ((dllexport)) type
+
 #else
 /* XXX do something useful? */
 #define NS_IMPORT
@@ -142,11 +150,9 @@ typedef PRUint16 PRUnichar;
 /* ------------------------------------------------------------------------ */
 /* Casting macros for hiding C++ features from older compilers */
 
-/* unix now determines this automatically */
-#ifndef XP_UNIX
-#ifndef HAVE_CPP_NEW_CASTS
+/* unix and beos now determine this automatically */
+#if ! defined XP_UNIX && ! defined XP_BEOS
 #define HAVE_CPP_NEW_CASTS /* we'll be optimistic. */
-#endif
 #endif
 
 #if defined(HAVE_CPP_NEW_CASTS)

@@ -28,20 +28,20 @@ XPIDLSRCS = \
 		nsIMsgCompose.idl	\
 		nsIMsgCompFields.idl	\
 		nsIMsgQuote.idl	\
+		nsIMsgSendListener.idl	\
+		nsIMsgSendLaterListener.idl	\
+		nsIMsgSend.idl	\
+		nsIMsgSendLater.idl	\
+		nsIMsgDraft.idl	\
 		$(NULL)
 
 EXPORTS = \
 		nsMsgComposeFact.h \
 		nsMsgCompFieldsFact.h	\
-		nsIMsgSend.h \
 		nsMsgSendFact.h \
 		nsMsgSendLaterFact.h \
 		nsISmtpUrl.h	\
-		nsIMsgSend.h	\
 		nsISmtpService.h \
-		MsgCompGlue.h \
-		nsMsgComposeBE.h	\
-		nsIMsgSendLater.h	\
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk

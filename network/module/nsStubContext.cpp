@@ -86,7 +86,7 @@ static nsINetSupport *getNetSupport(URL_Struct *URL_s)
   if ((nsnull != URL_s) && (nsnull != URL_s->fe_data)) {
     nsConnectionInfo *pConn = (nsConnectionInfo *)URL_s->fe_data;
 
-    /* Now get the nsIURL held by the nsConnectionInfo... */
+    /* Now get the nsIURL.held by the nsConnectionInfo... */
     if ((nsnull != pConn) && (nsnull != pConn->pURL)) {
       nsISupports *container;
 
@@ -231,8 +231,8 @@ public:
   NS_DECL_ISUPPORTS
 
   /* nsIBlockingNotification interface... */
-  NS_IMETHOD IsBlocked(nsIURL *aURL, PRBool *aResult);
-  NS_IMETHOD Resume(nsIURL *aUrl, void *aExtraInfo);
+  NS_IMETHOD IsBlocked(nsIURI *aURL, PRBool *aResult);
+  NS_IMETHOD Resume(nsIURI *aUrl, void *aExtraInfo);
 };
 
 nsDefaultNotification::nsDefaultNotification()
@@ -248,14 +248,14 @@ NS_IMPL_RELEASE(nsDefaultNotification);
 NS_IMPL_QUERY_INTERFACE(nsDefaultNotification, kIBlockingNotificationIID);
 
 NS_IMETHODIMP
-nsDefaultNotification::IsBlocked(nsIURL *aURL, PRBool *aResult)
+nsDefaultNotification::IsBlocked(nsIURI *aURL, PRBool *aResult)
 {
   nsresult rv = NS_NOTIFY_BLOCKED;
   return rv;
 }
 
 NS_IMETHODIMP
-nsDefaultNotification::Resume(nsIURL *aURL, void *aExtraInfo)
+nsDefaultNotification::Resume(nsIURI *aURL, void *aExtraInfo)
 {
   nsresult rv = NS_NOTIFY_SUCCEEDED;
   NET_ResumeWithAuth((void *) aExtraInfo);
@@ -301,7 +301,7 @@ _stub_PromptUsernameAndPassword(MWContext *context,
   nsIBlockingNotification *caller;
   nsConnectionInfo *pConn = nsnull; 
   URL_Struct *URL_s = context->modular_data; 
-  nsIURL *base = nsnull;
+  nsIURI *base = nsnull;
   nsresult rv; 
   
   printf ("stub_PromptUsernameAndPassword()\n");
@@ -321,7 +321,7 @@ _stub_PromptUsernameAndPassword(MWContext *context,
 	if ( ! caller )
 		return FALSE;
 #endif
-  // build an nsIURL
+  // build an nsIURI
   rv = NS_NewURL(&base, URL_s->address);
   if (NS_FAILED(rv)) {
     return FALSE;
@@ -518,7 +518,7 @@ PRIVATE void stub_GraphProgressDestroy(MWContext  *context,
     /*
      * XXX: Currently this function never calls OnProgress(...) because
      *      netlib calls FE_GraphProgressDestroy(...) after closing the
-     *      stream...  So, OnStopBinding(...) has already been called and
+     *      stream...  So, OnStopRequest(...) has already been called and
      *      the nsConnectionInfo->pConsumer has been released and NULLed...
      */
     nsIStreamListener *pListener;
@@ -769,7 +769,7 @@ void stub_complete(NET_StreamClass *stream)
     /* Notify the Data Consumer that the Binding has completed... */
     if (pConn->pConsumer) {
         nsAutoString status;
-        pConn->pConsumer->OnStopBinding(pConn->pURL, NS_BINDING_SUCCEEDED, status.GetUnicode());
+        pConn->pConsumer->OnStopRequest(pConn->pURL, NS_BINDING_SUCCEEDED, status.GetUnicode());
         pConn->mStatus = nsConnectionSucceeded;
     }
 
@@ -808,12 +808,12 @@ void stub_abort(NET_StreamClass *stream, int status)
     if (pConn->pConsumer) {
         nsAutoString status;
 
-		// mscott --> this code used to pass in NS_BINDING_ABORTED into the OnStopBinding
+		// mscott --> this code used to pass in NS_BINDING_ABORTED into the OnStopRequest
 		// call. But NS_BINDING_ABORTED is an error code!!! And aborting a stream
-		// is NOT an error condition. nsDocumentLoader::OnStopBinding was issuing
+		// is NOT an error condition. nsDocumentLoader::OnStopRequest was issuing
 		// printfs complaining that the status code was a failure code.
 		// I'm going to pass in NS_BINDING_SUCCEEDED instead.
-        pConn->pConsumer->OnStopBinding(pConn->pURL, NS_BINDING_SUCCEEDED, status.GetUnicode());
+        pConn->pConsumer->OnStopRequest(pConn->pURL, NS_BINDING_SUCCEEDED, status.GetUnicode());
         pConn->mStatus = nsConnectionAborted;
     }
 
@@ -961,9 +961,9 @@ NET_NGLayoutConverter(FO_Present_Types format_out,
             if (nsnull != pConn->pConsumer) {
                 nsresult rv;
 
-                rv = pConn->pConsumer->OnStartBinding(pConn->pURL, URL_s->content_type);
+                rv = pConn->pConsumer->OnStartRequest(pConn->pURL, URL_s->content_type);
                 /*
-                 * If OnStartBinding fails, then tear down the NET_StreamClass
+                 * If OnStartRequest fails, then tear down the NET_StreamClass
                  * and release all references...
                  */
                 if (NS_OK != rv) {

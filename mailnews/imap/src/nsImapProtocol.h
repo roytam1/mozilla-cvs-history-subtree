@@ -23,11 +23,9 @@
 #include "nsIImapUrl.h"
 
 #include "nsIStreamListener.h"
-#include "nsITransport.h"
-
 #include "nsIOutputStream.h"
 #include "nsImapCore.h"
-#include "nsString2.h"
+#include "nsString.h"
 #include "nsCOMPtr.h"
 
 #include "nsImapServerResponseParser.h"
@@ -53,6 +51,8 @@ class nsIWebShell;
 
 #define IMAP_RECEIVED_GREETING		0x00000001  /* should we pause for the next read */
 #define IMAP_FIRST_PASS_IN_THREAD   0x00000002  /* entering thread for the first time? */
+#define	IMAP_CONNECTION_IS_OPEN		0x00000004  /* is the connection currently open? */
+#define IMAP_WAITING_FOR_DATA		0x00000008
 
 class nsImapProtocol : public nsIImapProtocol
 {
@@ -67,7 +67,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////////////
 	// we support the nsIImapProtocol interface
 	//////////////////////////////////////////////////////////////////////////////////
-	NS_IMETHOD LoadUrl(nsIURL * aURL, nsISupports * aConsumer);
+	NS_IMETHOD LoadUrl(nsIURI * aURL, nsISupports * aConsumer);
 	NS_IMETHOD IsBusy(PRBool & aIsConnectionBusy, PRBool &isInboxConnection);
 	NS_IMETHOD CanHandleUrl(nsIImapUrl * aImapUrl, PRBool & aCanRunUrl,
                             PRBool & hasToWait);
@@ -76,28 +76,18 @@ public:
     // Notify FE Event has been completed
     NS_IMETHOD NotifyFEEventCompletion();
 
+	NS_IMETHOD GetRunningImapURL(nsIImapUrl **aImapUrl);
 	////////////////////////////////////////////////////////////////////////////////////////
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
-
-	// mscott; I don't think we need to worry about this yet so I'll leave it stubbed out for now
-	NS_IMETHOD GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo) { return NS_OK;} ;
 	
 	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
 	// OnDataAvailable. We then read and process the incoming data from the input stream. 
-	NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength);
-
-	NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-
+	NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+	NS_IMETHOD OnStartRequest(nsIChannel * aChannel,nsISupports *ctxt);
 	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
 
-	// Ideally, a protocol should only have to support the stream listener methods covered above. 
-	// However, we don't have this nsIStreamListenerLite interface defined yet. Until then, we are using
-	// nsIStreamListener so we need to add stubs for the heavy weight stuff we don't want to use.
-
-	NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax) { return NS_OK;}
-	NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg) { return NS_OK;}
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel,nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg);
 
 	// This is evil, I guess, but this is used by libmsg to tell a running imap url
 	// about headers it should download to update a local database.
@@ -107,9 +97,10 @@ public:
 	NS_IMETHOD GetFlagsForUID(PRUint32 uid, PRBool *foundIt, imapMessageFlagsType *flags);
 	NS_IMETHOD GetSupportedUserFlags(PRUint16 *flags);
 
-	NS_IMETHOD GetDisplayStream (nsIWebShell **webShell);
+	NS_IMETHOD GetStreamConsumer (nsISupports **aSupport);
+    NS_IMETHOD GetRunningUrl(nsIURI **aUrl);
     // Tell thread to die. This can only be called by imap service
-    NS_IMETHOD TellThreadToDie(PRBool isSafeToDie);
+    NS_IMETHOD TellThreadToDie(PRBool isSafeToClose);
     // Get last active time stamp
     NS_IMETHOD GetLastActiveTimeStamp(PRTime *aTimeStamp);
 	////////////////////////////////////////////////////////////////////////////////////////
@@ -123,26 +114,26 @@ public:
 
 	// message id string utilities.
 	PRUint32		CountMessagesInIdString(const char *idString);
-	PRUint32		CountMessagesInIdString(nsString2 &idString);
+	PRUint32		CountMessagesInIdString(nsCString &idString);
 	static	PRBool	HandlingMultipleMessages(const char *messageIdString);
-	static	PRBool	HandlingMultipleMessages(nsString2 &messageIdString);
+	static	PRBool	HandlingMultipleMessages(nsCString &messageIdString);
 
 	// used to start fetching a message.
     PRBool GetShouldDownloadArbitraryHeaders();
     char *GetArbitraryHeadersToDownload();
     virtual void AdjustChunkSize();
-    virtual void FetchMessage(nsString2 &messageIds, 
+    virtual void FetchMessage(nsCString &messageIds, 
                               nsIMAPeFetchFields whatToFetch,
                               PRBool idAreUid,
 							  PRUint32 startByte = 0, PRUint32 endByte = 0,
 							  char *part = 0);
-	void FetchTryChunking(nsString2 &messageIds,
+	void FetchTryChunking(nsCString &messageIds,
                                             nsIMAPeFetchFields whatToFetch,
                                             PRBool idIsUid,
 											char *part,
 											PRUint32 downloadSize,
 											PRBool tryChunking);
-	virtual void PipelinedFetchMessageParts(nsString2 &uid, nsIMAPMessagePartIDArray *parts);
+	virtual void PipelinedFetchMessageParts(nsCString &uid, nsIMAPMessagePartIDArray *parts);
 
 	// used when streaming a message fetch
     virtual void BeginMessageDownLoad(PRUint32 totalSize, // for user, headers and body
@@ -166,7 +157,7 @@ public:
 	PRBool  GetPseudoInterrupted();
 	void	PseudoInterrupt(PRBool the_interrupt);
 
-	PRUint32 GetMessageSize(nsString2 &messageId, PRBool idsAreUids);
+	PRUint32 GetMessageSize(nsCString &messageId, PRBool idsAreUids);
     PRBool GetSubscribingNow();
 
 	PRBool	DeathSignalReceived();
@@ -202,24 +193,27 @@ public:
 	void ProgressEventFunctionUsingId(PRUint32 aMsgId);
 	void ProgressEventFunctionUsingIdWithString(PRUint32 aMsgId, const char *
                                                 aExtraInfo);
-	void PercentProgressUpdateEvent(char *message, PRInt32 percent);
+	void PercentProgressUpdateEvent(PRUnichar *message, PRInt32 percent);
 
 	// utility function calls made by the server
 	char * CreateUtf7ConvertedString(const char * aSourceString, PRBool
                                      aConvertToUtf7Imap);
 
-	void Copy(nsString2 &messageList, const char *destinationMailbox, 
+	PRUnichar * CreatePRUnicharStringFromUTF7(const char * aSourceString);
+
+	void Copy(nsCString &messageList, const char *destinationMailbox, 
                                     PRBool idsAreUid);
-	void Search(nsString2 &searchCriteria,  PRBool useUID, 
+	void Search(nsCString &searchCriteria,  PRBool useUID, 
 									  PRBool notifyHit = PR_TRUE);
 	// imap commands issued by the parser
-	void Store(nsString2 &aMessageList, const char * aMessageData, PRBool
+	void Store(nsCString &aMessageList, const char * aMessageData, PRBool
                aIdsAreUid);
-	void ProcessStoreFlags(nsString2 &messageIds,
+	void ProcessStoreFlags(nsCString &messageIds,
                              PRBool idsAreUids,
                              imapMessageFlagsType flags,
                              PRBool addFlags);
 	void Expunge();
+    void UidExpunge(const char* messageSet);
 	void Close();
 	void Check();
 	void SelectMailbox(const char *mailboxName);
@@ -282,12 +276,12 @@ private:
     PRUint32        m_curReadIndex;  // current read index
 
 	// Ouput stream for writing commands to the socket
-	nsCOMPtr<nsITransport>	  m_transport; 
-	nsCOMPtr<nsIInputStream>  m_inputStream;	// this is the stream netlib writes data into for us to read.
-	nsCOMPtr<nsIOutputStream> m_outputStream;   // this will be obtained from the transport interface
-	nsCOMPtr<nsIStreamListener> m_outputConsumer; // this will be obtained from the transport interface
+	nsCOMPtr<nsIChannel>		m_channel; 
+	nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface
+	nsCOMPtr<nsIInputStream>    m_inputStream;
+	nsCOMPtr<nsIStreamListener> m_outputConsumer;
+	nsCOMPtr<nsISupports>	  m_streamConsumer; // if we are displaying an article this is the rfc-822 display sink...
 
-	nsCOMPtr<nsIWebShell>	  m_displayConsumer; // if we are displaying an article this is the rfc-822 display sink...
 
 	// this is a method designed to buffer data coming from the input stream and efficiently extract out 
 	// a line on each call. We read out as much of the stream as we can and store the extra that doesn't
@@ -317,6 +311,8 @@ private:
     void ImapThreadMainLoop(void);
     PRBool ImapThreadIsRunning();
     PRInt32				 m_connectionStatus;
+
+	PRBool			m_nextUrlReadyToRun;
     nsCOMPtr<nsIMsgIncomingServer>  m_server;
 
     nsCOMPtr<nsIImapLog>			m_imapLog;
@@ -331,7 +327,7 @@ private:
 
     PRBool GetDeleteIsMoveToTrash();
     PRMonitor *GetDataMemberMonitor();
-    nsString2 m_currentCommand;
+    nsCString m_currentCommand;
     nsImapServerResponseParser m_parser;
     nsImapServerResponseParser& GetServerStateParser() { return m_parser; };
 
@@ -352,11 +348,17 @@ private:
 	void FolderMsgDumpLoop(PRUint32 *msgUids, PRUint32 msgCount, nsIMAPeFetchFields fields);
 	void WaitForPotentialListOfMsgsToFetch(PRUint32 **msgIdList, PRUint32 &msgCount);
 	void WaitForPotentialListOfBodysToFetch(PRUint32 **msgIdList, PRUint32 &msgCount);
-	void AllocateImapUidString(PRUint32 *msgUids, PRUint32 msgCount, nsString2 &returnString);
+	void AllocateImapUidString(PRUint32 *msgUids, PRUint32 msgCount, nsCString &returnString);
 	void HeaderFetchCompleted();
+    void UploadMessageFromFile(nsIFileSpec* fileSpec, const char* mailboxName,
+                               imapMessageFlagsType flags);
 
 	// mailbox name utilities.
 	char *CreateEscapedMailboxName(const char *rawName);
+    void SetupMessageFlagsString(nsCString & flagString,
+                                 imapMessageFlagsType flags,
+                                 PRUint16 userFlags);
+                                 
 
 	// header listing data
 	PRBool		m_fetchMsgListIsNew;
@@ -367,7 +369,7 @@ private:
 	PRUint32	*m_fetchBodyIdList;
 
 	// initialization function given a new url and transport layer
-	nsresult  SetupWithUrl(nsIURL * aURL, nsISupports* aConsumer);
+	nsresult  SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer);
 	void ReleaseUrlState(); // release any state that is stored on a per action basis.
 
 	////////////////////////////////////////////////////////////////////////////////////////
@@ -408,6 +410,7 @@ private:
 	void OnOfflineToOnlineMove();
 	void OnAppendMsgFromFile();
 	char * OnCreateServerSourceFolderPathString();
+    char * OnCreateServerDestinationFolderPathString();
 	void OnCreateFolder(const char * aSourceMailbox);
 	void OnSubscribe(const char * aSourceMailbox);
 	void OnUnsubscribe(const char * aSourceMailbox);
@@ -421,7 +424,22 @@ private:
 	void OnMoveFolderHierarchy(const char * aSourceMailbox);
 	void FindMailboxesIfNecessary();
 	void CreateMailbox(const char *mailboxName);
+    void DeleteMailbox(const char *mailboxName);
+    void RenameMailbox(const char *existingName, const char *newName);
 	PRBool CreateMailboxRespectingSubscriptions(const char *mailboxName);
+    PRBool DeleteMailboxRespectingSubscriptions(const char *mailboxName);
+    PRBool  RenameMailboxRespectingSubscriptions(const char *existingName, 
+                                                 const char *newName, 
+                                                 PRBool reallyRename);
+    // notify the fe that a folder was deleted
+    void FolderDeleted(const char *mailboxName);
+	// notify the fe that a folder creation failed
+	void FolderNotCreated(const char *mailboxName);
+    // notify the fe that a folder was deleted
+    void FolderRenamed(const char *oldName,
+                       const char *newName);
+    
+	PRBool	MailboxIsNoSelectMailbox(const char *mailboxName);
 	char * CreatePossibleTrashName(const char *prefix);
 	PRBool FolderNeedsACLInitialized(const char *folderName);
 	void DiscoverMailboxList();
@@ -429,6 +447,11 @@ private:
     void NthLevelChildList(const char *onlineMailboxPrefix, PRInt32 depth);
 	void Lsub(const char *mailboxPattern, PRBool addDirectoryIfNecessary);
 	void List(const char *mailboxPattern, PRBool addDirectoryIfNecessary);
+	void Subscribe(const char *mailboxName);
+	void Unsubscribe(const char *mailboxName);
+    PRBool DeleteSubFolders(const char* mailboxName);
+	PRBool  RenameHierarchyByHand(const char *oldParentMailboxName, 
+                                  const char *newParentMailboxName);
 
 
 	// End Process AuthenticatedState Url helper methods
@@ -462,6 +485,7 @@ private:
 	PRBool m_needNoop;
 	PRInt32 m_noopCount;
 	PRInt32 m_promoteNoopToCheckCount;
+    PRBool  m_autoSubscribe, m_autoUnsubscribe, m_autoSubscribeOnOpen;
     PRBool m_closeNeededBeforeSelect;
     enum EMailboxHierarchyNameState {
         kNoOperationInProgress,
@@ -476,7 +500,7 @@ private:
     PRBool m_onlineBaseFolderExists;
     EMailboxDiscoverStatus m_discoveryStatus;
     nsVoidArray m_listedMailboxList;
-    nsVoidArray m_deletableChildren;
+    nsVoidArray* m_deletableChildren;
 };
 
 #endif  // nsImapProtocol_h___

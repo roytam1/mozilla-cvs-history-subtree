@@ -102,12 +102,14 @@ extensions/pics/tests/Makefile
 gfx/Makefile
 gfx/public/Makefile
 gfx/src/Makefile
+gfx/src/beos/Makefile
 gfx/src/gtk/Makefile
 gfx/src/ps/Makefile
 gfx/src/motif/Makefile
 gfx/src/photon/Makefile
 gfx/src/rhapsody/Makefile
 gfx/src/xlib/Makefile
+gfx/src/xlibrgb/Makefile
 gfx/tests/Makefile
 htmlparser/Makefile
 htmlparser/robot/Makefile
@@ -126,13 +128,13 @@ intl/uconv/src/Makefile
 intl/uconv/tests/Makefile
 intl/uconv/ucvja/Makefile
 intl/uconv/ucvlatin/Makefile
-intl/uconv/ucvja2/Makefile
 intl/uconv/ucvcn/Makefile
 intl/uconv/ucvtw/Makefile
 intl/uconv/ucvtw2/Makefile
 intl/uconv/ucvko/Makefile
 intl/locale/Makefile
 intl/locale/public/Makefile
+intl/locale/idl/Makefile
 intl/locale/src/Makefile
 intl/locale/src/unix/Makefile
 intl/locale/tests/Makefile
@@ -288,6 +290,8 @@ profile/Makefile
 profile/src/Makefile
 profile/public/Makefile
 profile/resources/Makefile
+profile/defaults/Makefile
+profile/idlservices/Makefile
 rdf/Makefile
 rdf/base/Makefile
 rdf/base/idl/Makefile
@@ -313,6 +317,8 @@ rdf/datasource/Makefile
 rdf/datasource/public/Makefile
 rdf/datasource/src/Makefile
 rdf/tests/Makefile
+rdf/tests/domds/Makefile
+rdf/tests/domds/resources/Makefile
 rdf/tests/localfile/Makefile
 rdf/tests/rdfsink/Makefile
 rdf/tests/rdfcat/Makefile
@@ -323,8 +329,9 @@ sun-java/stubs/include/Makefile
 sun-java/stubs/jri/Makefile
 sun-java/stubs/src/Makefile
 caps/Makefile
+caps/idl/Makefile
 caps/include/Makefile
-caps/public/Makefile
+# caps/public/Makefile
 caps/src/Makefile
 view/Makefile
 view/public/Makefile
@@ -339,16 +346,31 @@ webshell/embed/Makefile
 widget/Makefile
 widget/public/Makefile
 widget/src/Makefile
+widget/src/beos/Makefile
 widget/src/build/Makefile
 widget/src/gtk/Makefile
 widget/src/motif/Makefile
+widget/src/motif/app_context/Makefile
 widget/src/photon/Makefile
 widget/src/rhapsody/Makefile
+widget/src/unix_services/Makefile
+widget/src/unix_services/toolkit_service/Makefile
 widget/src/xlib/Makefile
+widget/src/xlib/window_service/Makefile
 widget/src/xpwidgets/Makefile
 widget/tests/Makefile
 widget/tests/scribble/Makefile
 widget/tests/widget/Makefile
+widget/timer/Makefile
+widget/timer/public/Makefile
+widget/timer/src/Makefile
+widget/timer/src/beos/Makefile
+widget/timer/src/photon/Makefile
+widget/timer/src/rhapsody/Makefile
+widget/timer/src/unix/Makefile
+widget/timer/src/unix/gtk/Makefile
+widget/timer/src/unix/motif/Makefile
+widget/timer/src/unix/xlib/Makefile
 #
 # New xpcom hiearchy
 #
@@ -398,7 +420,9 @@ xpcom/tools/registry/Makefile
 silentdl/Makefile
 xpinstall/Makefile
 xpinstall/public/Makefile
+xpinstall/res/Makefile
 xpinstall/src/Makefile
+xpinstall/notifier/Makefile
 xpfe/Makefile
 xpfe/AppCores/Makefile
 xpfe/AppCores/public/Makefile
@@ -434,10 +458,14 @@ xpfe/components/prefwindow/public/Makefile
 xpfe/components/prefwindow/resources/Makefile
 xpfe/components/prefwindow/resources/content/Makefile
 xpfe/components/prefwindow/resources/skin/Makefile
+xpfe/components/prefwindow/resources/locale/Makefile
+xpfe/components/prefwindow/resources/locale/en-US/Makefile
 xpfe/components/related/Makefile
 xpfe/components/related/src/Makefile
 xpfe/components/related/public/Makefile
 xpfe/components/related/resources/Makefile
+xpfe/components/sidebar/Makefile
+xpfe/components/sidebar/resources/Makefile
 xpfe/components/xfer/Makefile
 xpfe/components/xfer/public/Makefile
 xpfe/components/xfer/src/Makefile
@@ -452,22 +480,34 @@ xpfe/appshell/public/Makefile
 xpfe/bootstrap/Makefile
 xpfe/browser/Makefile
 xpfe/browser/src/Makefile
+xpfe/browser/resources/Makefile
+xpfe/browser/resources/content/Makefile
+xpfe/browser/resources/skin/Makefile
+xpfe/browser/resources/locale/Makefile
+xpfe/browser/resources/locale/en-US/Makefile
+xpfe/global/Makefile
+xpfe/global/resources/Makefile
+xpfe/global/resources/skin/Makefile
+xpfe/global/resources/content/Makefile
+xpfe/global/resources/locale/Makefile
+
 # xpfe/browser/public/Makefile
 END_NGMAKEFILES
 
 if [ "$MOZ_EDITOR" ]; then
   add_makefiles <<END_EDITOR_MAKEFILES
 editor/base/Makefile
-editor/guimgr/Makefile
-editor/guimgr/src/Makefile
-editor/guimgr/public/Makefile
 editor/ui/Makefile
 editor/ui/composer/Makefile
 editor/ui/composer/content/Makefile
 editor/ui/composer/skin/Makefile
+editor/ui/composer/locale/Makefile
+editor/ui/composer/locale/en-US/Makefile
 editor/ui/dialogs/Makefile
 editor/ui/dialogs/content/Makefile
 editor/ui/dialogs/skin/Makefile
+editor/ui/dialogs/locale/Makefile
+editor/ui/dialogs/locale/en-US/Makefile
 
 END_EDITOR_MAKEFILES
 fi
@@ -476,6 +516,11 @@ if [ "$MOZ_MAIL_NEWS" ]; then
   add_makefiles < ${srcdir}/mailnews/makefiles
 fi
 
-if [ -d ${srcdir}/netwerk ]; then
+if [ "$NECKO" ]; then
   add_makefiles < ${srcdir}/netwerk/makefiles
+  add_makefiles <<END_NECKO_MAKEFILES
+  extensions/cookie/Makefile
+  extensions/cookie/tests/Makefile
+  htmlparser/robot/test/Makefile
+END_NECKO_MAKEFILES
 fi

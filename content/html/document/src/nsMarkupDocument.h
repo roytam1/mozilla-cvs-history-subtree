@@ -49,15 +49,13 @@ public:
     * NOTE: we may way to place the result in a stream,
     * but we will use a string for now -- gpk
   */
-  virtual void CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection);
-  virtual void ToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode);
   virtual void FinishConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode);
   
   // XXX Temp hack: moved from nsDocument
-  virtual nsresult CreateShell(nsIPresContext* aContext,
-                               nsIViewManager* aViewManager,
-                               nsIStyleSet* aStyleSet,
-                               nsIPresShell** aInstancePtrResult);
+  NS_IMETHOD CreateShell(nsIPresContext* aContext,
+                         nsIViewManager* aViewManager,
+                         nsIStyleSet* aStyleSet,
+                         nsIPresShell** aInstancePtrResult);
 
 protected:
   virtual void CSSSelectorsToXIF(nsXIFConverter& aConverter, nsICSSStyleRule& aRule);

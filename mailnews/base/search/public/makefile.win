@@ -18,18 +18,25 @@
 DEPTH=..\..\..\..
 
 XPIDLSRCS =							\
+			.\nsIMsgFilter.idl \
+			.\nsIMsgFilterService.idl \
+			.\nsIMsgFilterHitNotify.idl \
+			.\nsIMsgFilterList.idl \
+			.\nsIMsgSearchSession.idl \
+			.\nsIMsgSearchAdapter.idl \
+			.\nsMsgFilterCore.idl \
+			.\nsMsgSearchCore.idl \
 			$(NULL)
 
 EXPORTS =	 						\
-			nsIMsgFilter.h \
-			nsIMsgFilterService.h \
-			nsMsgFilterCore.h \
-			nsIMsgFilterHitNotify.h \
-			nsIMsgFilterList.h \
-			nsIMsgSearchSession.h \
-			nsIMsgSearchAdapter.h \
 			nsMsgSearchAdapter.h \
-			nsMsgSearchCore.h \
+		        nsMsgBodyHandler.h      \
+       			nsMsgResultElement.h    \
+        		nsMsgSearchArray.h      \
+        		nsMsgSearchBoolExpression.h \
+        		nsMsgSearchScopeTerm.h  \
+        		nsMsgSearchTerm.h       \
+        		nsMsgSearchAdapter.h \
 			$(NULL)
 
 MODULE=msgsearch

@@ -40,7 +40,6 @@
 #include "nsIMenuListener.h"
 #include "nsIComponentManager.h"
 
-
 #include "nsWidgetsCID.h"
 static NS_DEFINE_IID(kMenuBarCID,          NS_MENUBAR_CID);
 static NS_DEFINE_IID(kMenuCID,             NS_MENU_CID);
@@ -139,11 +138,9 @@ nsMenu::~nsMenu()
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::Create(nsISupports * aParent, const nsString &aLabel)
 {
-#ifdef DEBUG
  char *str=aLabel.ToNewCString();
  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::Create with nsISupports aLabel=<%s> this=<%p>\n", str, this));
  delete [] str;
-#endif
  
   PtArg_t       arg[5];
   void         *voidData  = nsnull;
@@ -224,22 +221,11 @@ NS_METHOD nsMenu::Create(nsISupports * aParent, const nsString &aLabel)
        PtAddCallback(mMenuButton, Pt_CB_ARM, SubMenuMenuItemArmCb, this);
 
        mIsSubMenu = PR_TRUE;
-#if 0
-       /* Now Create the Photon Menu that is attached to the mMenuButton */
-       PtSetArg(&arg[0], Pt_ARG_MENU_FLAGS, Pt_MENU_CHILD | Pt_MENU_AUTO, 0xFFFFFFFF);
-       PtSetArg(&arg[1], Pt_ARG_USER_DATA, &me, sizeof(void *) );
-       PtSetArg(&arg[2], Pt_ARG_FLAGS, Pt_DELAY_REALIZE, Pt_DELAY_REALIZE);
-       mMenu = PtCreateWidget (PtMenu, mMenuButton, 3, arg);
-       if (!mMenu)
-       {
-         PR_LOG(PhWidLog, PR_LOG_ERROR, ("nsMenu::Create failed to create menu for menubutton\n"));  
-         return NS_ERROR_FAILURE;
-       }
-#endif
 	   NS_RELEASE(menu);
 	 }
    }
  }
+
   if (mMenu)
   {
     /* Set the Call back on each menu */
@@ -260,7 +246,7 @@ NS_METHOD nsMenu::GetParent(nsISupports*& aParent)
   if (nsnull != mMenuParent)
   {
       PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::GetParent is menu=<%p>\n", aParent));
-       return mMenuParent->QueryInterface(kISupportsIID,(void**)&aParent);
+      return mMenuParent->QueryInterface(kISupportsIID,(void**)&aParent);
   }
   else if (nsnull != mMenuBarParent)
   {
@@ -274,7 +260,7 @@ NS_METHOD nsMenu::GetParent(nsISupports*& aParent)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::GetLabel(nsString &aText)
 {
-#ifdef DEBUG
+#if 1
   char *str = mLabel.ToNewCString();
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::GetLabel mLabel=<%s>\n", str));
   delete [] str;
@@ -289,7 +275,7 @@ NS_METHOD nsMenu::SetLabel(const nsString &aText)
 {
   mLabel = aText;
     
-#ifdef DEBUG
+#if 1
   char * labelStr = mLabel.ToNewCString();
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::SetLabel to this=<%p> <%s>\n", this, labelStr));
   delete [] labelStr;
@@ -299,9 +285,24 @@ NS_METHOD nsMenu::SetLabel(const nsString &aText)
 }
 
 //-------------------------------------------------------------------------
+NS_METHOD nsMenu::GetAccessKey(nsString &aText)
+{
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::GetAccessKey - Not Implemented\n"));
+  return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+NS_METHOD nsMenu::SetAccessKey(const nsString &aText)
+{
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::SetAccessKey - Not Implemented\n"));
+  return NS_OK;
+}
+
+
+//-------------------------------------------------------------------------
 NS_METHOD nsMenu::AddItem(nsISupports* aItem)
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddItem with nsISupports - not implemented this=<%p> aIten=<%p>.\n", this, aItem));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddItem with nsISupports - this=<%p> aIten=<%p>.\n", this, aItem));
 
  if(aItem)
  {
@@ -331,52 +332,24 @@ NS_METHOD nsMenu::AddItem(nsISupports* aItem)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::AddMenuItem(nsIMenuItem * aMenuItem)
 {
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddItem nsIMenuItem this=<%p> aMenuItem=<%p> - not implemented.\n", this, aMenuItem));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddItem nsIMenuItem this=<%p> aMenuItem=<%p>\n", this, aMenuItem));
 
   return mItems->AppendElement((nsISupports *) aMenuItem);
 }
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::AddMenu(nsIMenu * aMenu)
-{
+{  
+#if 1
   nsString Label;
-  PtWidget_t *item = nsnull, *newmenu=nsnull;
-  char *labelStr;
-  void *voidData   = nsnull;
   
   aMenu->GetLabel(Label);
-
-  labelStr = Label.ToNewCString();
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddMenu this=<%p> aMenu=<%p> label=<%s> - not implemented.\n", this, aMenu, labelStr));
-
-#if 1
-  mItems->AppendElement((nsISupports *) aMenu);
-#else
-  // Create nsMenuItem
-  nsIMenuItem * pnsMenuItem = nsnull;
-  nsresult rv = nsComponentManager::CreateInstance(kMenuItemCID, nsnull, kIMenuItemIID, (void**)&pnsMenuItem);
-  if (NS_OK == rv)
-  {
-    pnsMenuItem->Create(this, labelStr, PR_FALSE); //PR_TRUE);
-	nsISupports * supports = nsnull;
-	pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
-	AddItem(supports); // Parent should now own menu item
-	NS_RELEASE(supports);
-	
-	void * menuitem = nsnull;
-	pnsMenuItem->GetNativeData(menuitem);
-	
-	voidData = NULL;
-	aMenu->GetNativeData(&voidData);
-	newmenu = (PtWidget_t *) voidData;
-	
-//	gtk_menu_item_set_submenu (GTK_MENU_ITEM (menuitem), newmenu);
-	NS_RELEASE(pnsMenuItem);
-  }
-#endif											
-
+  char *labelStr = Label.ToNewCString();
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddMenu this=<%p> aMenu=<%p> label=<%s>\n", this, aMenu, labelStr));
   delete[] labelStr;
-  return NS_OK;
+#endif
+
+  return mItems->AppendElement((nsISupports *) aMenu);
 }
 
 //-------------------------------------------------------------------------
@@ -384,17 +357,11 @@ NS_METHOD nsMenu::AddSeparator()
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::AddSeparater this=<%p>\n", this));
 
-/* REVISIT this could be broken in regard to ref count */
-
   // Create nsMenuItem
   nsIMenuItem * pnsMenuItem = nsnull;
   nsresult rv = nsComponentManager::CreateInstance(kMenuItemCID, nsnull, kIMenuItemIID, (void**)&pnsMenuItem);
   if (NS_OK == rv)
   {
-//    nsString tmp = "separator";
-//	  nsString tmp;
-//    pnsMenuItem->Create((nsISupports *) this, tmp, PR_TRUE);
-
     nsISupports * supports = nsnull;
     QueryInterface(kISupportsIID, (void**) &supports);
     pnsMenuItem->Create(supports, "", PR_TRUE);
@@ -541,7 +508,7 @@ nsEventStatus nsMenu::MenuItemSelected(const nsMenuEvent & aMenuEvent)
 nsEventStatus nsMenu::MenuSelected(const nsMenuEvent & aMenuEvent)
 {
   char *labelStr = mLabel.ToNewCString();
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuSelected  mLabel=<%s>\n", labelStr));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuSelected  mLabel=<%s> mConstruct=<%d>\n", labelStr, mConstruct));
   delete [] labelStr;
 
   if(mConstruct)
@@ -589,8 +556,8 @@ nsEventStatus nsMenu::MenuConstruct(
 {
   char *str=mLabel.ToNewCString();
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuConstruct for <%s>\n", str));
-//  delete [] str;
-  
+  delete [] str;
+
   if(menuNode)
   {
     SetDOMNode((nsIDOMNode*) menuNode);
@@ -601,47 +568,56 @@ nsEventStatus nsMenu::MenuConstruct(
     aWebShell = mWebShell;
   }
 
-   // Begin menuitem inner loop
-    nsCOMPtr<nsIDOMNode> menuitemNode;
-    ((nsIDOMNode*)mDOMNode)->GetFirstChild(getter_AddRefs(menuitemNode));
- 
-    unsigned short menuIndex = 0;
+  // Open the node.
+  nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(mDOMNode);
+  if (domElement)
+    domElement->SetAttribute("open", "true");
 
-    while (menuitemNode)
-	{
-      nsCOMPtr<nsIDOMElement> menuitemElement(do_QueryInterface(menuitemNode));
-      if (menuitemElement)
-	  {
-        nsString menuitemNodeType;
-        nsString menuitemName;
-        menuitemElement->GetNodeName(menuitemNodeType);
+  
+   /// Now get the kids. Retrieve our menupopup child.
+  nsCOMPtr<nsIDOMNode> menuPopupNode;
+  mDOMNode->GetFirstChild(getter_AddRefs(menuPopupNode));
+  while (menuPopupNode) {
+    nsCOMPtr<nsIDOMElement> menuPopupElement(do_QueryInterface(menuPopupNode));
+    if (menuPopupElement) {
+      nsString menuPopupNodeType;
+      menuPopupElement->GetNodeName(menuPopupNodeType);
+      if (menuPopupNodeType.Equals("menupopup"))
+        break;
+    }
+    nsCOMPtr<nsIDOMNode> oldMenuPopupNode(menuPopupNode);
+    oldMenuPopupNode->GetNextSibling(getter_AddRefs(menuPopupNode));
+  }
 
-        if (menuitemNodeType.Equals("menuitem"))
-		{
-          // LoadMenuItem
-          LoadMenuItem(this, menuitemElement, menuitemNode, menuIndex, (nsIWebShell*)aWebShell);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuConstruct menuitem for <%s> mRefCnt=<%d>\n", str, mRefCnt));
+  if (!menuPopupNode)
+    return nsEventStatus_eIgnore;
 
-        }
-		else if (menuitemNodeType.Equals("separator"))
-		{
-          AddSeparator();
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuConstruct seperator for <%s> mRefCnt=<%d>\n", str, mRefCnt));
-        } 
-		else if (menuitemNodeType.Equals("menu"))
-		{
-          // Load a submenu
-          LoadSubMenu(this, menuitemElement, menuitemNode);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuConstruct menu for <%s> mRefCnt=<%d>\n", str, mRefCnt));
+  nsCOMPtr<nsIDOMNode> menuitemNode;
+  menuPopupNode->GetFirstChild(getter_AddRefs(menuitemNode));
 
-        }
+
+	unsigned short menuIndex = 0;
+
+  while (menuitemNode) {
+    nsCOMPtr<nsIDOMElement> menuitemElement(do_QueryInterface(menuitemNode));
+    if (menuitemElement) {
+      nsString menuitemNodeType;
+      nsString menuitemName;
+      menuitemElement->GetNodeName(menuitemNodeType);
+      if (menuitemNodeType.Equals("menuitem")) {
+        // LoadMenuItem
+        LoadMenuItem(this, menuitemElement, menuitemNode, menuIndex, (nsIWebShell*)aWebShell);
+      } else if (menuitemNodeType.Equals("menuseparator")) {
+        AddSeparator();
+      } else if (menuitemNodeType.Equals("menu")) {
+        // Load a submenu
+        LoadSubMenu(this, menuitemElement, menuitemNode);
       }
-      
-      ++menuIndex;
-      
-      nsCOMPtr<nsIDOMNode> oldmenuitemNode(menuitemNode);
-      oldmenuitemNode->GetNextSibling(getter_AddRefs(menuitemNode));
-    } // end menu item innner loop
+    }
+	++menuIndex;
+    nsCOMPtr<nsIDOMNode> oldmenuitemNode(menuitemNode);
+    oldmenuitemNode->GetNextSibling(getter_AddRefs(menuitemNode));
+  } // end menu item innner loop
 
   return nsEventStatus_eIgnore;
 }
@@ -653,9 +629,12 @@ nsEventStatus nsMenu::MenuDestruct(const nsMenuEvent & aMenuEvent)
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuDestruct called for <%s> mRefCnt=<%d>\n", str, this->mRefCnt));
   delete [] str;
 
-  // We cannot call RemoveAll() yet because menu item selection may need it
-  //RemoveAll();
+  // Close the node.
+  nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(mDOMNode);
+  if (domElement)
+    domElement->RemoveAttribute("open");
 
+  // Now remove the kids
   while (PR_TRUE)
   {
     PRUint32 cnt;
@@ -672,6 +651,7 @@ nsEventStatus nsMenu::MenuDestruct(const nsMenuEvent & aMenuEvent)
     PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::MenuDestruct called for SubMenu\n"));
     PtDestroyWidget(mMenu);
 	mMenu = nsnull;  
+	NS_RELEASE_THIS();	/* Release the ref. I added in SubMenuMenuItemArm */
   }
   
   return nsEventStatus_eIgnore;
@@ -727,71 +707,54 @@ void nsMenu::LoadMenuItem(
   nsString menuitemCmd;
 
   menuitemElement->GetAttribute(nsAutoString("disabled"), disabled);
-  menuitemElement->GetAttribute(nsAutoString("name"), menuitemName);
+  menuitemElement->GetAttribute(nsAutoString("value"), menuitemName);
   menuitemElement->GetAttribute(nsAutoString("cmd"), menuitemCmd);
 
+#if 1
   char *str = menuitemName.ToNewCString();
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -1- Label=<%s> mRefCnt=<%d> this=<%p>\n",str, mRefCnt, this));
   delete [] str; 
+#endif
         
   // Create nsMenuItem
   nsIMenuItem * pnsMenuItem = nsnull;
   nsresult rv = nsComponentManager::CreateInstance(kMenuItemCID, nsnull, kIMenuItemIID, (void**)&pnsMenuItem);
-
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -2- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-
   if (NS_OK == rv)
   {
     pnsMenuItem->Create(pParentMenu, menuitemName, PR_FALSE);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -3- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
                      
     nsISupports * supports = nsnull;
     pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -4- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
     pParentMenu->AddItem(supports); // Parent should now own menu item
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -5- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-
     NS_RELEASE(supports);
             
-    if (disabled == NS_STRING_TRUE )
-	{
-      pnsMenuItem->SetEnabled(PR_FALSE);
-    }
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -6- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-  
     // Create MenuDelegate - this is the intermediator inbetween 
     // the DOM node and the nsIMenuItem
     // The nsWebShellWindow wacthes for Document changes and then notifies the 
     // the appropriate nsMenuDelegate object
     nsCOMPtr<nsIDOMElement> domElement(do_QueryInterface(menuitemNode));
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -7- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-
     if (!domElement)
 	{
 		return;
     }
     
-    nsAutoString cmdAtom("onclick");
+    nsAutoString cmdAtom("onaction");
     nsString cmdName;
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -8- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
 
     domElement->GetAttribute(cmdAtom, cmdName);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -9- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-
     pnsMenuItem->SetCommand(cmdName);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -10- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-
-   // DO NOT use passed in webshell because of messed up windows dynamic loading
-   // code. 
     pnsMenuItem->SetWebShell(mWebShell);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -11- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-
     pnsMenuItem->SetDOMElement(domElement);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -12- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
+
+#if 1
+	if(disabled == NS_STRING_TRUE )
+	{
+		/* REVISIT: need to disable the item?? */
+		pnsMenuItem->SetEnabled(PR_FALSE);
+	}
+#endif
 
     NS_RELEASE(pnsMenuItem);
-//PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadMenuItem  -13- Label=<%s> mRefCnt=<%d>\n",str, mRefCnt));
-    
   } 
   return;
 }
@@ -803,7 +766,7 @@ void nsMenu::LoadSubMenu(
   nsIDOMNode *    menuNode)
 {
   nsString menuName;
-  menuElement->GetAttribute(nsAutoString("name"), menuName);
+  menuElement->GetAttribute(nsAutoString("value"), menuName);
 
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::LoadSubMenu <%s>\n", menuName.ToNewCString()));
 
@@ -823,15 +786,14 @@ void nsMenu::LoadSubMenu(
 
     supports = nsnull;
     pnsMenu->QueryInterface(kISupportsIID, (void**) &supports);
-
     pParentMenu->AddItem(supports); // parent takes ownership
-
     NS_RELEASE(supports);
 
     pnsMenu->SetWebShell(mWebShell);
     pnsMenu->SetDOMNode(menuNode);
     pnsMenu->SetDOMElement(menuElement);
 
+	// We're done with the menu
     NS_RELEASE(pnsMenu);
   }     
 }
@@ -891,11 +853,15 @@ int nsMenu::SubMenuMenuItemArmCb (PtWidget_t *widget, void *aNSMenu, PtCallbackI
   nsMenu *aMenu = (nsMenu *) aNSMenu;
 
   char *labelStr = aMenu->mLabel.ToNewCString();
-  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::SubMenuMenuItemArmCb - mLabel=<%s> mRefCnt=<%d>\n", labelStr, aMenu->mRefCnt));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::SubMenuMenuItemArmCb - mLabel=<%s> mRefCnt=<%d> aMenu->mMenu=<%p> Reason=<%d>\n",
+  	labelStr, aMenu->mRefCnt, aMenu->mMenu, cbinfo->reason));
   delete [] labelStr;
 
   if (aMenu->mMenu == nsnull)
   {
+
+	NS_ADDREF(aMenu); 	/* Make sure the aMenu hangs around till its destructed */
+	
     /* Now Create the Photon Menu that is attached to the mMenuButton */
     PtSetArg(&arg[0], Pt_ARG_MENU_FLAGS, Pt_MENU_CHILD | Pt_MENU_AUTO, 0xFFFFFFFF);
     PtSetArg(&arg[1], Pt_ARG_USER_DATA, &aNSMenu, sizeof(void *) );
@@ -904,7 +870,7 @@ int nsMenu::SubMenuMenuItemArmCb (PtWidget_t *widget, void *aNSMenu, PtCallbackI
     /* Set the Call back on each menu */
 //  PtAddCallback(aMenu->mMenu, Pt_CB_REALIZED, MenuRealizedCb, aMenu);
     PtAddCallback(aMenu->mMenu, Pt_CB_UNREALIZED, MenuUnRealizedCb, aMenu);
-  }
+
   	   
   if ((aMenu) && (aMenu->mMenu))
   {
@@ -935,14 +901,22 @@ int nsMenu::SubMenuMenuItemArmCb (PtWidget_t *widget, void *aNSMenu, PtCallbackI
 	}
   }
 
-  if ((aMenu) && aMenu->mMenu)
-  {
-    PtPositionMenu ( aMenu->mMenu, NULL);
-	PtRealizeWidget( aMenu->mMenu);  
   }
+  
+  if ((aMenu) && (aMenu->mMenu))
+  {
+	int err;
+    PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::SubMenuMenuItemArmCb - Showing Menu\n"));
 
+    PtPositionMenu ( aMenu->mMenu, NULL);
+	err=PtRealizeWidget( aMenu->mMenu);  
+    if (err != 0)
+      PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenu::SubMenuMenuItemArmCb - Error Showing Menu after PtRealizeWidget\n"));
+  }
+ 
   return( Pt_CONTINUE );
 }
+
 //-------------------------------------------------------------------------
 int nsMenu::MenuRealizedCb (PtWidget_t *widget, void *aNSMenu, PtCallbackInfo_t *cbinfo)
 {
@@ -963,6 +937,7 @@ int nsMenu::MenuRealizedCb (PtWidget_t *widget, void *aNSMenu, PtCallbackInfo_t 
 int nsMenu::MenuUnRealizedCb (PtWidget_t *widget, void *aNSMenu, PtCallbackInfo_t *cbinfo)
 {
   nsMenu *aMenu = (nsMenu *) aNSMenu;
+
   if ((aMenu) && aMenu->mMenu)
   {
     char *labelStr = aMenu->mLabel.ToNewCString();
@@ -970,7 +945,7 @@ int nsMenu::MenuUnRealizedCb (PtWidget_t *widget, void *aNSMenu, PtCallbackInfo_
     delete [] labelStr;
   }
   
-  
+  /* This starts the destruction sequence the menus and submenus */
   if ((aMenu) && aMenu->mMenu)
   {
     nsIMenuListener *menuListener = nsnull;
@@ -992,6 +967,7 @@ int nsMenu::MenuUnRealizedCb (PtWidget_t *widget, void *aNSMenu, PtCallbackInfo_
 	  }
 	}  
   }
+
   return( Pt_CONTINUE );
 }
 

@@ -35,7 +35,7 @@
 #include "nsIAtom.h"
 #include "nsVoidArray.h"
 
-class nsIURL;
+class nsIURI;
 
 struct nsClassList {
   nsClassList(nsIAtom* aAtom)
@@ -108,9 +108,9 @@ public:
 
     // Publicly exposed to make life easier. This is a private class
     // anyway.
-    PRInt32     mNameSpaceID;
-    nsIAtom*    mName;
-    nsString    mValue;
+    PRInt32      mNameSpaceID;
+    nsIAtom*     mName;
+    nsAutoString mValue;
 
 private:
     nsIContent* mContent;
@@ -152,7 +152,7 @@ public:
     nsresult HasClass(nsIAtom* aClass) const;
 
     nsresult UpdateClassList(const nsString& aValue);
-    nsresult UpdateStyleRule(nsIURL* aDocURL, const nsString& aValue);
+    nsresult UpdateStyleRule(nsIURI* aDocURL, const nsString& aValue);
     nsresult GetInlineStyleRule(nsIStyleRule*& aRule);
 
 private:

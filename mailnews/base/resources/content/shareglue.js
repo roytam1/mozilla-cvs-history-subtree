@@ -27,9 +27,6 @@ function NewBrowserWindow() {}
 function NewBlankPage() {} 
 function TemplatePage() {}
 function WizardPage() {}
-function PageSetup() {}
-function PrintPreview() {}
-function Print() {}
 
 function OnLoadMessenger()
 {
@@ -51,6 +48,20 @@ function OnLoadMessenger()
 	messenger.SetWindow(window);
 	dump("start message pane with: " + startpage + "\n");
 	window.frames["messagepane"].location = startpage;
+
+	//Load StartFolder
+	if(pref)
+	{
+		try
+		{
+			var startFolder = pref.CopyCharPref("mailnews.start_folder");
+			ChangeFolderByURI(startFolder);
+		//	var folder = OpenFolderTreeToFolder(startFolder);
+		}
+		catch(ex)
+		{
+		}
+	}
 }
 
 function OnUnloadMessenger()
@@ -65,12 +76,6 @@ function CloseMessenger()
 	messenger.Close();
 }
 
-function Exit()
-{
-  dump("\nExit from XUL\n");
-  messenger.Exit();
-}
-
 function CharacterSet(){}
 
 function MessengerSetDefaultCharacterSet(aCharset)
@@ -79,65 +84,25 @@ function MessengerSetDefaultCharacterSet(aCharset)
     messenger.SetDocumentCharset(aCharset);
 	var folderResource = GetSelectedFolderResource();
 	SetFolderCharset(folderResource, aCharset);
+	RefreshThreadTreeView();
     MsgReload();
 }
 
-function NavigatorWindow()
-{
-	var toolkitCore = XPAppCoresManager.Find("ToolkitCore");
-	if (!toolkitCore)
-	{
-		toolkitCore = new ToolkitCore();
-		if (toolkitCore)
-		{
-			toolkitCore.Init("ToolkitCore");
-		}
-    }
-
-    if (toolkitCore)
-	{
-      toolkitCore.ShowWindow("chrome://navigator/content/",
-                             window);
-    }
-
-
+function Print() {
+	dump("Print()\n");
+	try {
+		messenger.DoPrint();
+	}
+	catch (ex) {
+		dump("failed to print\n");
+	}
 }
-function MessengerWindow() {}
-function ComposerWindow() {}
-function AIMService() {}
-function AddBookmark() {}
-function FileBookmark() {}
-function EditBookmark() {}
-function Newsgroups() {}
-function AddressBook() 
-{
-	var toolkitCore = XPAppCoresManager.Find("ToolkitCore");
-	if (!toolkitCore)
-	{
-		toolkitCore = new ToolkitCore();
-		if (toolkitCore)
-		{
-			toolkitCore.Init("ToolkitCore");
-		}
-    }
-
-    if (toolkitCore)
-	{
-      toolkitCore.ShowWindow("chrome://addressbook/content/",
-                             window);
-    }
-
+function PrintPreview() {
+	dump("PrintPreview()\n");
+	try {
+		messenger.DoPrintPreview();
+	}
+	catch (ex) {
+		dump("failed to print preview\n");
+	}
 }
-
-function History() {}
-function SecurityInfo() {}
-function MessengerCenter() {}
-function JavaConsole() {}
-function PageService() {}
-function MailAccount() {}
-function MaillingList() {}
-function FolderPermission() {}
-function ManageNewsgroup() {}
-function WindowList() {}
-function Help() {}
-function About() {}

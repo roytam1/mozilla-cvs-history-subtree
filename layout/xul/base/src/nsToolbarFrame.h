@@ -23,7 +23,7 @@
 //
 // nsToolbarFrame is a layout object that contains items (specified as
 // children in the DOM). The layout for toolbars is a little complicated, but
-// it basically just lays out its children in order. Toolbars themselves
+// it basically just lays out its children in as a box. Toolbars themselves
 // don't know anything about grippies (as in 4.x) but are associated with them
 // through toolboxes. This allows a developer to create a standalone toolbar
 // (for inclusion in a webpage), which obviously doesn't need to have a grippy.
@@ -39,8 +39,18 @@
 #ifndef nsToolbarFrame_h__
 #define nsToolbarFrame_h__
 
+#define TOOLBARITEM_MIME "moz/toolbaritem"
+#define TOOLBAR_MIME     "moz/toolbar"
 
+
+#include "nsCOMPtr.h"
 #include "nsBoxFrame.h"
+#include "nsIStyleContext.h"
+
+class nsIContent;
+class nsIPresContext;
+class nsIFrame;
+class nsToolbarDragListener;
 
 
 class nsToolbarFrame : public nsBoxFrame
@@ -48,23 +58,37 @@ class nsToolbarFrame : public nsBoxFrame
 public:
   friend nsresult NS_NewToolbarFrame(nsIFrame** aNewFrame);
 
+  NS_IMETHOD  Init(nsIPresContext&  aPresContext,
+                   nsIContent*      aContent,
+                   nsIFrame*        aParent,
+                   nsIStyleContext* aContext,
+                   nsIFrame*        asPrevInFlow);
+
     // nsIHTMLReflow overrides
-  NS_IMETHOD Reflow(nsIPresContext&          aPresContext,
-                    nsHTMLReflowMetrics&     aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&          aStatus);
   NS_IMETHOD  Paint(nsIPresContext& aPresContext,
                     nsIRenderingContext& aRenderingContext,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer);
 
+    // nsFrame overrides
   NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, // Overridden to capture events
                               nsIFrame**     aFrame);
   NS_IMETHOD  HandleEvent(nsIPresContext& aPresContext, 
                           nsGUIEvent*     aEvent,
                           nsEventStatus&  aEventStatus);
 
+#if WTF_IS_THIS
+    //еее not sure at all where this comes from. I asked rods, no reply yet.
+  virtual void ReResolveStyles(nsIPresContext& aPresContext,
+                               PRInt32 aParentChange,
+                               nsStyleChangeList* aChangeList,
+                               PRInt32* aLocalChange);
+#endif
+
+  void SetDropfeedbackLocation(nscoord aX)  { mXDropLoc = aX; }
+
 protected:
+
   nsToolbarFrame();
   virtual ~nsToolbarFrame();
 
@@ -73,6 +97,15 @@ protected:
   nsToolbarFrame ( const nsToolbarFrame& aFrame ) ;	            // DO NOT IMPLEMENT
   nsToolbarFrame& operator= ( const nsToolbarFrame& aFrame ) ;  // DO NOT IMPLEMENT
   
+    // our event handler registered with the content model. See the discussion
+    // in Init() for why this is a weak ref.
+  nsToolbarDragListener* mDragListener;
+
+    // only used during drag and drop for drop feedback. These are not
+    // guaranteed to be meaningful when no drop is underway.
+  PRInt32 mXDropLoc;
+  nsCOMPtr<nsIStyleContext> mMarkerStyle;
+
 }; // class nsToolbarFrame
 
 #endif

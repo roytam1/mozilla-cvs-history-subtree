@@ -144,9 +144,11 @@ nsProxyObject::Post( PRUint32 methodIndex, nsXPTMethodInfo *methodInfo, nsXPTCMi
     ///////////////////////////////////////////////////////////////////////
     // Auto-proxification
     ///////////////////////////////////////////////////////////////////////
-    AutoProxyParameterList(methodInfo, params, interfaceInfo, convertInParameters);
+    nsresult rv = AutoProxyParameterList(methodInfo, params, interfaceInfo, convertInParameters);
     ///////////////////////////////////////////////////////////////////////
-
+    
+    if (NS_FAILED(rv))
+        return rv;
 
     // convert the nsXPTCMiniVariant to a nsXPTCVariant
 
@@ -172,11 +174,13 @@ nsProxyObject::Post( PRUint32 methodIndex, nsXPTMethodInfo *methodInfo, nsXPTCMi
     if (event == nsnull) 
     {
         mDestQueue->ExitMonitor();
-        return NS_ERROR_OUT_OF_MEMORY;   
+            return NS_ERROR_OUT_OF_MEMORY;   
     }
 
     nsProxyObjectCallInfo *proxyInfo = new nsProxyObjectCallInfo(this, methodIndex, fullParam, paramCount, event);
     
+    if (proxyInfo == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;  
 
     PL_InitEvent(event, 
                  proxyInfo,
@@ -187,13 +191,13 @@ nsProxyObject::Post( PRUint32 methodIndex, nsXPTMethodInfo *methodInfo, nsXPTCMi
     {
         mDestQueue->PostSynchronousEvent(event, nsnull);
         
-        nsresult rv = proxyInfo->GetResult();
+        rv = proxyInfo->GetResult();
         delete proxyInfo;
 
         ///////////////////////////////////////////////////////////////////////
         // Auto-proxification
         ///////////////////////////////////////////////////////////////////////
-        AutoProxyParameterList(methodInfo, params, interfaceInfo, convertOutParameters);
+        rv = AutoProxyParameterList(methodInfo, params, interfaceInfo, convertOutParameters);
         ///////////////////////////////////////////////////////////////////////
         
         mDestQueue->ExitMonitor();
@@ -212,10 +216,12 @@ nsProxyObject::Post( PRUint32 methodIndex, nsXPTMethodInfo *methodInfo, nsXPTCMi
 }
 
 
-void
+nsresult
 nsProxyObject::AutoProxyParameterList(nsXPTMethodInfo *methodInfo, nsXPTCMiniVariant * params, 
                                       nsIInterfaceInfo *interfaceInfo, AutoProxyConvertTypes convertType)
 {
+    nsresult rv = NS_OK;
+
     uint8 paramCount = methodInfo->GetParamCount();
 
     for (PRUint32 i = 0; i < paramCount; i++)
@@ -245,7 +251,7 @@ nsProxyObject::AutoProxyParameterList(nsXPTMethodInfo *methodInfo, nsXPTCMiniVar
                 continue;
 
             nsISupports *aProxyObject;
-            nsresult rv = anInterface->QueryInterface(kProxyObject_Identity_Class_IID, (void**)&aProxyObject);
+            rv = anInterface->QueryInterface(kProxyObject_Identity_Class_IID, (void**)&aProxyObject);
         
             if (NS_FAILED(rv))
             {
@@ -262,20 +268,27 @@ nsProxyObject::AutoProxyParameterList(nsXPTMethodInfo *methodInfo, nsXPTCMiniVar
 
                     interfaceInfo->GetIIDForParam(&paramInfo, &iid);
 
-                    manager->GetProxyObject( GetQueue(), 
-                                             *iid,
-                                             anInterface, 
-                                             GetProxyType(), 
-                                             (void**) &aProxyObject);
+                    rv = manager->GetProxyObject(GetQueue(), 
+                                                 *iid,
+                                                 anInterface, 
+                                                 GetProxyType(), 
+                                                 (void**) &aProxyObject);
 
                     nsAllocator::Free((void*)iid);
-                    
+                    NS_RELEASE(manager);
+
+                    if (NS_FAILED(rv))
+                        return rv;
+
                     if (paramInfo.IsOut())
                         *((void**)params[i].val.p) = ((void*)aProxyObject);
                     else
                         (params[i].val.p)  = ((void*)aProxyObject);                    
-
-                    NS_RELEASE(manager);
+                }
+                else
+                {   
+                    // Could not get nsIProxyObjectManager
+                    return rv;
                 }
             } 
             else
@@ -284,6 +297,7 @@ nsProxyObject::AutoProxyParameterList(nsXPTMethodInfo *methodInfo, nsXPTCMiniVar
             }
         }
     }
+    return rv;
 }
 
 void DestroyHandler(PLEvent *self) 

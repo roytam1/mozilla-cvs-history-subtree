@@ -29,6 +29,7 @@
 #define IL_JPEG    3
 #define IL_PPM     4
 #define IL_PNG     5
+#define IL_ART     6
 
 #define IL_NOTFOUND 256
 

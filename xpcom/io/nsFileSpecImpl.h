@@ -88,6 +88,15 @@ class NS_COM nsFileSpecImpl
 
 	/* boolean exists (); */
 	NS_IMETHOD exists(PRBool *_retval);
+    
+    /* boolean isHidden (); */
+	NS_IMETHOD isHidden(PRBool *_retval);
+
+    /* boolean isSymlink (); */
+	NS_IMETHOD isSymlink(PRBool *_retval);
+
+    /* void resolveSymlink (); */
+	NS_IMETHOD resolveSymlink();
 
 	/* readonly attribute unsigned long FileSize; */
 	NS_IMETHOD GetFileSize(PRUint32 *aFileSize);
@@ -100,6 +109,9 @@ class NS_COM nsFileSpecImpl
 
 	/* void createDir (); */
 	NS_IMETHOD createDir();
+
+	/* void touch (); */
+	NS_IMETHOD touch();
 
 	/* void rename ([const] in string newLeafName); */
 	NS_IMETHOD rename(const char *newLeafName);
@@ -135,6 +147,7 @@ class NS_COM nsFileSpecImpl
 	NS_IMETHOD SetFileContents(char*);
 
 	NS_IMETHOD GetFileSpec(nsFileSpec *aFileSpec);
+    NS_IMETHOD setFromFileSpec(const nsFileSpec& aFileSpec);
 
 	/* boolean eof (); */
 	NS_IMETHOD eof(PRBool *_retval);
@@ -199,7 +212,7 @@ public:
 
 	NS_DECL_ISUPPORTS
 
-	NS_IMETHOD Init(nsIFileSpec *parent);
+	NS_IMETHOD Init(nsIFileSpec *parent, PRBool resolveSymlink);
 
 	NS_IMETHOD exists(PRBool *_retval);
 

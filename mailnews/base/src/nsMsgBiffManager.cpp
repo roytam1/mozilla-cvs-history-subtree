@@ -18,10 +18,6 @@
 
 #include "nsMsgBiffManager.h"
 
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-//There's no GetIID for this.
-static NS_DEFINE_IID(kITimerCallbackIID, NS_ITIMERCALLBACK_IID);
-
 NS_BEGIN_EXTERN_C
 
 nsresult
@@ -45,13 +41,13 @@ nsMsgBiffManager::QueryInterface(REFNSIID iid, void** result)
         return NS_ERROR_NULL_POINTER;
 
     *result = nsnull;
-    if (iid.Equals(nsIMsgBiffManager::GetIID()) ||
-        iid.Equals(kISupportsIID)) {
+    if (iid.Equals(nsCOMTypeInfo<nsIMsgBiffManager>::GetIID()) ||
+        iid.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *result = NS_STATIC_CAST(nsIMsgBiffManager*, this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
-	else if(iid.Equals(kITimerCallbackIID))
+	else if(iid.Equals(nsCOMTypeInfo<nsITimerCallback>::GetIID()))
 	{
 		*result = NS_STATIC_CAST(nsITimerCallback*, this);
 		NS_ADDREF_THIS();
@@ -69,7 +65,9 @@ nsMsgBiffManager::nsMsgBiffManager()
 
 nsMsgBiffManager::~nsMsgBiffManager()
 {
-	mBiffTimer->Cancel();
+	if (mBiffTimer) {
+		mBiffTimer->Cancel();
+	}
 	NS_IF_RELEASE(mBiffTimer);
 
 	PRInt32 count = mBiffArray->Count();
@@ -107,6 +105,15 @@ NS_IMETHODIMP nsMsgBiffManager::AddServerBiff(nsIMsgIncomingServer *server)
 
 NS_IMETHODIMP nsMsgBiffManager::RemoveServerBiff(nsIMsgIncomingServer *server)
 {
+	PRInt32 pos = FindServer(server);
+	if(pos != -1)
+	{
+		mBiffArray->RemoveElementAt(pos);
+		//Need to release mBiffArray's ref on server.
+		NS_IF_RELEASE(server);
+	}
+
+	//Should probably reset biff time if this was the server that gets biffed next.
 	return NS_OK;
 }
 

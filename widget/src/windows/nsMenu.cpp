@@ -16,6 +16,12 @@
  * Reserved.
  */
 
+#include "nsCOMPtr.h"
+#include "nsIDOMDocument.h"
+#include "nsIDocument.h"
+#include "nsIContent.h"
+#include "nsIDOMXULDocument.h"
+
 #include "nsMenu.h"
 #include "nsIMenu.h"
 #include "nsIMenuItem.h"
@@ -97,6 +103,7 @@ nsMenu::nsMenu() : nsIMenu()
   mDOMElement     = nsnull;
   mWebShell       = nsnull;
   mConstructed    = false;
+  mLabel          = " ";
 }
 
 //-------------------------------------------------------------------------
@@ -172,7 +179,21 @@ NS_METHOD nsMenu::GetLabel(nsString &aText)
 NS_METHOD nsMenu::SetLabel(const nsString &aText)
 
 {
-   mLabel = aText;
+  mLabel = aText;
+  return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+NS_METHOD nsMenu::GetAccessKey(nsString &aText)
+{
+  aText = mAccessKey;
+  return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+NS_METHOD nsMenu::SetAccessKey(const nsString &aText)
+{
+  mAccessKey = aText;
   return NS_OK;
 }
 
@@ -295,9 +316,56 @@ NS_METHOD nsMenu::InsertItemAt(const PRUint32 aCount, nsISupports * aMenuItem)
   nsCOMPtr<nsIMenuItem> menuItem(do_QueryInterface(aMenuItem));
   if (menuItem) {
     menuItem->GetLabel(name);
+	printf("%s \n", name.ToNewCString());
     nsIWidget * win = GetParentWidget();
     PRInt32 id = ((nsWindow *)win)->GetNewCmdMenuId();
-    ((nsMenuItem *)((nsIMenuItem *)menuItem))->SetCmdId(id);
+    ((nsMenuItem *)((nsIMenuItem *)menuItem))->SetCmdId(id);   
+
+	//NS_ASSERTION(false, "get debugger");
+
+	PRUint8 modifiers = knsMenuItemNoModifier;
+    menuItem->GetModifiers(&modifiers);
+
+    if(modifiers != knsMenuItemNoModifier) {
+          //strcat the shortcut to the end of the name
+          nsString shortcut = "\t";
+  
+          name.Append(shortcut);
+
+          //Ctrl + Alt + Shift
+          PRBool isFirst = PR_TRUE;
+          if((knsMenuItemCommandModifier & modifiers) || (knsMenuItemControlModifier & modifiers))
+		  {
+            isFirst = PR_FALSE;
+		  }
+
+          if(knsMenuItemAltModifier & modifiers)
+		  {
+	        if(isFirst)
+	 	      isFirst = PR_FALSE;
+	        else
+		      name.Append(" + ");
+
+            name.Append("Alt");
+		  }
+
+          if(knsMenuItemShiftModifier & modifiers)
+		  {
+	        if(isFirst)
+		      isFirst = PR_FALSE;
+	        else
+		      name.Append(" + ");
+
+	        name.Append("Shift");
+		  }
+        
+          menuItem->GetShortcutChar(shortcut);
+
+          if(!isFirst)
+            name.Append(" + ");
+
+          name.Append(shortcut);
+	}
 
     char * nameStr = GetACPString(name);
 
@@ -490,9 +558,26 @@ nsEventStatus nsMenu::MenuConstruct(
   if (domElement)
     domElement->SetAttribute("open", "true");
 
-  // Now get the kids
+  // Now get the kids. Retrieve our menupopup child.
+  nsCOMPtr<nsIDOMNode> menuPopupNode;
+  mDOMNode->GetFirstChild(getter_AddRefs(menuPopupNode));
+  while (menuPopupNode) {
+    nsCOMPtr<nsIDOMElement> menuPopupElement(do_QueryInterface(menuPopupNode));
+    if (menuPopupElement) {
+      nsString menuPopupNodeType;
+      menuPopupElement->GetNodeName(menuPopupNodeType);
+      if (menuPopupNodeType.Equals("menupopup"))
+        break;
+    }
+    nsCOMPtr<nsIDOMNode> oldMenuPopupNode(menuPopupNode);
+    oldMenuPopupNode->GetNextSibling(getter_AddRefs(menuPopupNode));
+  }
+
+  if (!menuPopupNode)
+    return nsEventStatus_eIgnore;
+
   nsCOMPtr<nsIDOMNode> menuitemNode;
-  mDOMNode->GetFirstChild(getter_AddRefs(menuitemNode));
+  menuPopupNode->GetFirstChild(getter_AddRefs(menuitemNode));
 
 	unsigned short menuIndex = 0;
 
@@ -505,7 +590,7 @@ nsEventStatus nsMenu::MenuConstruct(
       if (menuitemNodeType.Equals("menuitem")) {
         // LoadMenuItem
         LoadMenuItem(this, menuitemElement, menuitemNode, menuIndex, (nsIWebShell*)aWebShell);
-      } else if (menuitemNodeType.Equals("separator")) {
+      } else if (menuitemNodeType.Equals("menuseparator")) {
         AddSeparator();
       } else if (menuitemNodeType.Equals("menu")) {
         // Load a submenu
@@ -559,7 +644,7 @@ void nsMenu::LoadMenuItem(
   nsString menuitemCmd;
 
   menuitemElement->GetAttribute(nsAutoString("disabled"), disabled);
-  menuitemElement->GetAttribute(nsAutoString("name"), menuitemName);
+  menuitemElement->GetAttribute(nsAutoString("value"), menuitemName);
   menuitemElement->GetAttribute(nsAutoString("cmd"), menuitemCmd);
   // Create nsMenuItem
   nsIMenuItem * pnsMenuItem = nsnull;
@@ -567,10 +652,7 @@ void nsMenu::LoadMenuItem(
   if (NS_OK == rv) {
     pnsMenuItem->Create(pParentMenu, menuitemName, 0);   
 	
-    nsISupports * supports = nsnull;
-    pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
-    pParentMenu->AddItem(supports); // Parent should now own menu item
-    NS_RELEASE(supports);
+
           
     // Create MenuDelegate - this is the intermediator inbetween 
     // the DOM node and the nsIMenuItem
@@ -581,10 +663,11 @@ void nsMenu::LoadMenuItem(
 		return;
     }
     
-    nsAutoString cmdAtom("onclick");
+    nsAutoString cmdAtom("onaction");
     nsString cmdName;
 
     domElement->GetAttribute(cmdAtom, cmdName);
+    printf("%s \n", cmdName.ToNewCString());
 
     pnsMenuItem->SetCommand(cmdName);
 	// DO NOT use passed in wehshell because of messed up windows dynamic loading
@@ -592,8 +675,72 @@ void nsMenu::LoadMenuItem(
     pnsMenuItem->SetWebShell(mWebShell);
     pnsMenuItem->SetDOMElement(domElement);
 
+	//NS_ASSERTION(false, "get debugger");
+    // Set key shortcut and modifiers
+    nsAutoString keyAtom("key");
+    nsString keyValue;
+    domElement->GetAttribute(keyAtom, keyValue);
+
+    // Try to find the key node.
+    nsCOMPtr<nsIDocument> document;
+    nsCOMPtr<nsIContent> content = do_QueryInterface(domElement);
+    if (NS_FAILED(rv = content->GetDocument(*getter_AddRefs(document)))) {
+      NS_ERROR("Unable to retrieve the document.");
+      return; //rv;
+    }
+
+    // Turn the document into a XUL document so we can use getElementById
+    nsCOMPtr<nsIDOMXULDocument> xulDocument = do_QueryInterface(document);
+    if (xulDocument == nsnull) {
+      NS_ERROR("not XUL!");
+      return; //NS_ERROR_FAILURE;
+    }
+  
+    nsIDOMElement * keyElement = nsnull;
+    xulDocument->GetElementById(keyValue, &keyElement);
+    
+    if(keyElement){
+        PRUint8 modifiers = knsMenuItemNoModifier;
+	    nsAutoString shiftAtom("shift");
+	    nsAutoString altAtom("alt");
+	    nsAutoString commandAtom("command");
+	    nsString shiftValue;
+	    nsString altValue;
+	    nsString commandValue;
+		nsString controlValue;
+	    nsString keyChar = " ";
+	    
+	    keyElement->GetAttribute(keyAtom, keyChar);
+	    keyElement->GetAttribute(shiftAtom, shiftValue);
+	    keyElement->GetAttribute(altAtom, altValue);
+	    keyElement->GetAttribute(commandAtom, commandValue);
+	    
+		if(keyChar != " ") 
+	      pnsMenuItem->SetShortcutChar(keyChar);
+	      
+		if(shiftValue == "true") 
+		  modifiers |= knsMenuItemShiftModifier;
+	    
+	    if(altValue == "true")
+	      modifiers |= knsMenuItemAltModifier;
+	    
+	    if(commandValue == "true")
+	      modifiers |= knsMenuItemCommandModifier;
+
+		if(controlValue == "true")
+	      modifiers |= knsMenuItemControlModifier;
+	      
+        pnsMenuItem->SetModifiers(modifiers);
+    }
+
+
 	if(disabled == NS_STRING_TRUE )
 		::EnableMenuItem(mMenu, menuitemIndex, MF_BYPOSITION | MF_GRAYED);
+
+	nsISupports * supports = nsnull;
+    pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
+    pParentMenu->AddItem(supports); // Parent should now own menu item
+    NS_RELEASE(supports);
 
 	NS_RELEASE(pnsMenuItem);
   } 
@@ -607,7 +754,7 @@ void nsMenu::LoadSubMenu(
   nsIDOMNode *    menuNode)
 {
   nsString menuName;
-  menuElement->GetAttribute(nsAutoString("name"), menuName);
+  menuElement->GetAttribute(nsAutoString("value"), menuName);
   //printf("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
 
   // Create nsMenu

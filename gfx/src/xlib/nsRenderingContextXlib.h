@@ -46,7 +46,7 @@ class nsRenderingContextXlib : public nsIRenderingContext,
 {
  public:
   nsRenderingContextXlib();
-  ~nsRenderingContextXlib();
+  virtual ~nsRenderingContextXlib();
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
@@ -101,8 +101,12 @@ class nsRenderingContextXlib : public nsIRenderingContext,
 
   NS_IMETHOD DrawRect(const nsRect& aRect);
   NS_IMETHOD DrawRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
+
   NS_IMETHOD FillRect(const nsRect& aRect);
   NS_IMETHOD FillRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
+
+  NS_IMETHOD InvertRect(const nsRect& aRect);
+  NS_IMETHOD InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
 
   NS_IMETHOD DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
   NS_IMETHOD FillPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
@@ -150,6 +154,7 @@ class nsRenderingContextXlib : public nsIRenderingContext,
 
   NS_IMETHOD CopyOffScreenBits(nsDrawingSurface aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
   // nsIScriptObjectOwner
   NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
@@ -172,6 +177,10 @@ private:
   float                    mP2T;
   void                    *mScriptObject;
   nscolor                  mCurrentColor;
+  Display *                mDisplay;
+  Screen *                 mScreen;
+  Visual *                 mVisual;
+  int                      mDepth;
 
   // graphics state stuff
   nsVoidArray             *mStateCache;

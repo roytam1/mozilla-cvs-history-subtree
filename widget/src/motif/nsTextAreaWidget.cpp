@@ -16,14 +16,10 @@
  * Reserved.
  */
 
-#include "nsTextAreaWidget.h"
-#include "nsToolkit.h"
-#include "nsColor.h"
-#include "nsGUIEvent.h"
-#include "nsString.h"
-#include "nsXtEventHandler.h"
-
 #include <Xm/Text.h>
+
+#include "nsTextAreaWidget.h"
+#include "nsString.h"
 
 #define DBG 0
 
@@ -62,7 +58,7 @@ NS_METHOD nsTextAreaWidget::Create(nsIWidget *aParent,
   aParent->AddChild(this);
   Widget parentWidget = nsnull;
 
-  if (DBG) fprintf(stderr, "aParent 0x%x\n", aParent);
+  if (DBG) fprintf(stderr, "aParent 0x%x\n", (unsigned int)aParent);
 
   if (aParent) {
     parentWidget = (Widget) aParent->GetNativeData(NS_NATIVE_WIDGET);
@@ -73,7 +69,7 @@ NS_METHOD nsTextAreaWidget::Create(nsIWidget *aParent,
   InitToolkit(aToolkit, aParent);
   InitDeviceContext(aContext, parentWidget);
 
-  if (DBG) fprintf(stderr, "Parent 0x%x\n", parentWidget);
+  if (DBG) fprintf(stderr, "Parent 0x%x\n", (unsigned int)parentWidget);
 
   mWidget = ::XtVaCreateManagedWidget("button",
                                     xmTextWidgetClass, 
@@ -136,21 +132,4 @@ nsresult nsTextAreaWidget::QueryInterface(const nsIID& aIID, void** aInstancePtr
   }
 
   return nsWindow::QueryInterface(aIID, aInstancePtr);
-}
-
-//-------------------------------------------------------------------------
-//
-// paint, resizes message - ignore
-//
-//-------------------------------------------------------------------------
-PRBool nsTextAreaWidget::OnPaint(nsPaintEvent & aEvent)
-{
-  return PR_FALSE;
-}
-
-
-//--------------------------------------------------------------
-PRBool nsTextAreaWidget::OnResize(nsSizeEvent &aEvent)
-{
-  return PR_FALSE;
 }

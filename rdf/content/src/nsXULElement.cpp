@@ -74,11 +74,11 @@
 #include "nsIDOMPaintListener.h"
 #include "nsIDOMKeyListener.h"
 #include "nsIDOMFormListener.h"
+#include "nsIDOMMenuListener.h"
 #include "nsIScriptContextOwner.h"
 #include "nsIStyledContent.h"
 #include "nsIStyleRule.h"
 #include "nsIURL.h"
-#include "nsXULTreeElement.h"
 #include "rdfutil.h"
 #include "prlog.h"
 #include "rdf.h"
@@ -121,19 +121,20 @@ static NS_DEFINE_CID(kRDFServiceCID,           NS_RDFSERVICE_CID);
 static NS_DEFINE_IID(kIXULPopupListenerIID, NS_IXULPOPUPLISTENER_IID);
 static NS_DEFINE_CID(kXULPopupListenerCID, NS_XULPOPUPLISTENER_CID);
 
-static NS_DEFINE_IID(kIDOMMouseListenerIID, NS_IDOMMOUSELISTENER_IID);
-static NS_DEFINE_IID(kIDOMKeyListenerIID, NS_IDOMKEYLISTENER_IID);
+static NS_DEFINE_IID(kIDOMMouseListenerIID,       NS_IDOMMOUSELISTENER_IID);
+static NS_DEFINE_IID(kIDOMKeyListenerIID,         NS_IDOMKEYLISTENER_IID);
 static NS_DEFINE_IID(kIDOMMouseMotionListenerIID, NS_IDOMMOUSEMOTIONLISTENER_IID);
-static NS_DEFINE_IID(kIDOMFocusListenerIID, NS_IDOMFOCUSLISTENER_IID);
-static NS_DEFINE_IID(kIDOMFormListenerIID, NS_IDOMFORMLISTENER_IID);
-static NS_DEFINE_IID(kIDOMLoadListenerIID, NS_IDOMLOADLISTENER_IID);
-static NS_DEFINE_IID(kIDOMPaintListenerIID, NS_IDOMPAINTLISTENER_IID);
+static NS_DEFINE_IID(kIDOMFocusListenerIID,       NS_IDOMFOCUSLISTENER_IID);
+static NS_DEFINE_IID(kIDOMFormListenerIID,        NS_IDOMFORMLISTENER_IID);
+static NS_DEFINE_IID(kIDOMLoadListenerIID,        NS_IDOMLOADLISTENER_IID);
+static NS_DEFINE_IID(kIDOMPaintListenerIID,       NS_IDOMPAINTLISTENER_IID);
+static NS_DEFINE_IID(kIDOMMenuListenerIID,        NS_IDOMMENULISTENER_IID);
 
 ////////////////////////////////////////////////////////////////////////
 
 struct XULBroadcastListener
 {
-	nsString mAttribute;
+	nsAutoString mAttribute;
 	nsCOMPtr<nsIDOMElement> mListener;
 
 	XULBroadcastListener(const nsString& attr, nsIDOMElement* listen)
@@ -223,9 +224,8 @@ public:
     * Get a hint that tells the style system what to do when 
     * an attribute on this node changes.
     */
-    NS_IMETHOD GetStyleHintForAttributeChange(
-      const nsIAtom* aAttribute,
-      PRInt32 *aHint) const;
+    NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                        PRInt32& aHint) const;
 
     // nsIXMLContent
     NS_IMETHOD SetContainingNameSpace(nsINameSpace* aNameSpace);
@@ -242,9 +242,9 @@ public:
 
     // nsIDOMEventTarget interface
     NS_IMETHOD AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                PRBool aPostProcess, PRBool aUseCapture);
+                                PRBool aUseCapture);
     NS_IMETHOD RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                   PRBool aPostProcess, PRBool aUseCapture);
+                                   PRBool aUseCapture);
 
 
     // nsIJSScriptObject
@@ -261,6 +261,7 @@ public:
     NS_DECL_IDOMXULELEMENT
 
     // Implementation methods
+	nsresult GetIdResource(nsIRDFResource** aResult);
     nsresult GetRefResource(nsIRDFResource** aResult);
 
     nsresult EnsureContentsGenerated(void) const;
@@ -296,7 +297,7 @@ private:
     static nsIAtom*             kRefAtom;
     static nsIAtom*             kClassAtom;
     static nsIAtom*             kStyleAtom;
-    static nsIAtom*             kContainerAtom;
+    static nsIAtom*             kLazyContentAtom;
     static nsIAtom*             kTreeAtom;
 
     static nsIAtom*             kPopupAtom;
@@ -316,8 +317,8 @@ private:
     PRBool                 mContentsMustBeGenerated;
     nsVoidArray*		   mBroadcastListeners; // [WEAK]
     nsIDOMXULElement*      mBroadcaster;        // [OWNER]
-    nsXULElement*          mInnerXULElement;    // [OWNER]
     nsIController*         mController;         // [OWNER]
+    nsCOMPtr<nsIRDFCompositeDataSource> mDatabase; // [OWNER]
 };
 
 
@@ -328,13 +329,59 @@ nsIAtom*             RDFElementImpl::kIdAtom;
 nsIAtom*             RDFElementImpl::kRefAtom;
 nsIAtom*             RDFElementImpl::kClassAtom;
 nsIAtom*             RDFElementImpl::kStyleAtom;
-nsIAtom*             RDFElementImpl::kContainerAtom;
+nsIAtom*             RDFElementImpl::kLazyContentAtom;
 nsIAtom*             RDFElementImpl::kTreeAtom;
 nsIAtom*             RDFElementImpl::kPopupAtom;
 nsIAtom*             RDFElementImpl::kTooltipAtom;
 nsIAtom*             RDFElementImpl::kContextAtom;
 PRInt32              RDFElementImpl::kNameSpaceID_RDF;
 PRInt32              RDFElementImpl::kNameSpaceID_XUL;
+
+// This is a simple datastructure that maps an event handler attribute
+// name to an appropriate IID. Atoms are computed to improve
+// comparison efficiency. We do this because SetAttribute() ends up
+// being a pretty hot method.
+struct EventHandlerMapEntry {
+    const char*  mAttributeName;
+    nsIAtom*     mAttributeAtom;
+    const nsIID* mHandlerIID;
+};
+
+static EventHandlerMapEntry kEventHandlerMap[] = {
+    { "onclick",       nsnull, &kIDOMMouseListenerIID       },
+    { "ondblclick",    nsnull, &kIDOMMouseListenerIID       },
+    { "onmousedown",   nsnull, &kIDOMMouseListenerIID       },
+    { "onmouseup",     nsnull, &kIDOMMouseListenerIID       },
+    { "onmouseover",   nsnull, &kIDOMMouseListenerIID       },
+    { "onmouseout",    nsnull, &kIDOMMouseListenerIID       },
+
+    { "onmousemove",   nsnull, &kIDOMMouseMotionListenerIID },
+
+    { "onkeydown",     nsnull, &kIDOMKeyListenerIID         },
+    { "onkeyup",       nsnull, &kIDOMKeyListenerIID         },
+    { "onkeypress",    nsnull, &kIDOMKeyListenerIID         },
+
+    { "onload",        nsnull, &kIDOMLoadListenerIID        },
+    { "onunload",      nsnull, &kIDOMLoadListenerIID        },
+    { "onabort",       nsnull, &kIDOMLoadListenerIID        },
+    { "onerror",       nsnull, &kIDOMLoadListenerIID        },
+
+    { "oncreate",      nsnull, &kIDOMMenuListenerIID        },
+    { "ondestroy",     nsnull, &kIDOMMenuListenerIID        },
+    { "onaction",      nsnull, &kIDOMMenuListenerIID        },
+
+    { "onfocus",       nsnull, &kIDOMFocusListenerIID       },
+    { "onblur",        nsnull, &kIDOMFocusListenerIID       },
+
+    { "onsubmit",      nsnull, &kIDOMFormListenerIID        },
+    { "onreset",       nsnull, &kIDOMFormListenerIID        },
+    { "onchange",      nsnull, &kIDOMFormListenerIID        },
+    { "onselect",      nsnull, &kIDOMFormListenerIID        },
+
+    { "onpaint",       nsnull, &kIDOMPaintListenerIID       },
+
+    { nsnull,          nsnull, nsnull                       }
+};
 
 ////////////////////////////////////////////////////////////////////////
 // RDFElementImpl
@@ -351,8 +398,7 @@ RDFElementImpl::RDFElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag)
       mContentsMustBeGenerated(PR_FALSE),
       mBroadcastListeners(nsnull),
       mBroadcaster(nsnull),
-      mController(nsnull),
-      mInnerXULElement(nsnull)
+      mController(nsnull)
 {
     NS_INIT_REFCNT();
     NS_ADDREF(aTag);
@@ -365,15 +411,21 @@ RDFElementImpl::RDFElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag)
 
         NS_VERIFY(NS_SUCCEEDED(rv), "unable to get RDF service");
 
-        kIdAtom        = NS_NewAtom("id");
-        kRefAtom       = NS_NewAtom("ref");
-        kClassAtom     = NS_NewAtom("class");
-        kStyleAtom     = NS_NewAtom("style");
-        kContainerAtom = NS_NewAtom("container");
-        kTreeAtom      = NS_NewAtom("tree");
-        kPopupAtom     = NS_NewAtom("popup");
-        kTooltipAtom   = NS_NewAtom("tooltip");
-        kContextAtom   = NS_NewAtom("context");
+        kIdAtom          = NS_NewAtom("id");
+        kRefAtom         = NS_NewAtom("ref");
+        kClassAtom       = NS_NewAtom("class");
+        kStyleAtom       = NS_NewAtom("style");
+        kLazyContentAtom = NS_NewAtom("lazycontent");
+        kTreeAtom        = NS_NewAtom("tree");
+        kPopupAtom       = NS_NewAtom("popup");
+        kTooltipAtom     = NS_NewAtom("tooltip");
+        kContextAtom     = NS_NewAtom("context");
+
+        EventHandlerMapEntry* entry = kEventHandlerMap;
+        while (entry->mAttributeName) {
+            entry->mAttributeAtom = NS_NewAtom(entry->mAttributeName);
+            ++entry;
+        }
 
         rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
                                           nsnull,
@@ -449,15 +501,19 @@ RDFElementImpl::~RDFElementImpl()
         NS_IF_RELEASE(kRefAtom);
         NS_IF_RELEASE(kClassAtom);
         NS_IF_RELEASE(kStyleAtom);
-        NS_IF_RELEASE(kContainerAtom);
+        NS_IF_RELEASE(kLazyContentAtom);
         NS_IF_RELEASE(kTreeAtom);
         NS_IF_RELEASE(kPopupAtom);
         NS_IF_RELEASE(kContextAtom);
         NS_IF_RELEASE(kTooltipAtom);
         NS_IF_RELEASE(gNameSpaceManager);
-    }
 
-    delete mInnerXULElement;
+        EventHandlerMapEntry* entry = kEventHandlerMap;
+        while (entry->mAttributeName) {
+            NS_IF_RELEASE(entry->mAttributeAtom);
+            ++entry;
+        }
+    }
 }
 
 
@@ -517,16 +573,6 @@ RDFElementImpl::QueryInterface(REFNSIID iid, void** result)
     }
     else if (iid.Equals(kIJSScriptObjectIID)) {
         *result = NS_STATIC_CAST(nsIJSScriptObject*, this);
-    }
-    else if (iid.Equals(nsIDOMXULTreeElement::GetIID()) &&
-             (mNameSpaceID == kNameSpaceID_XUL) &&
-             (mTag == kTreeAtom)) {
-        if (! mInnerXULElement) {
-            if ((mInnerXULElement = new nsXULTreeElement(this)) == nsnull)
-                return NS_ERROR_OUT_OF_MEMORY;
-        }
-
-        return mInnerXULElement->QueryInterface(iid, result);
     }
     else {
         *result = nsnull;
@@ -608,26 +654,28 @@ RDFElementImpl::GetChildNodes(nsIDOMNodeList** aChildNodes)
     if (NS_FAILED(rv)) return rv;
 
     PRInt32 count;
-    if (NS_SUCCEEDED(rv = ChildCount(count))) {
-        for (PRInt32 i = 0; i < count; ++i) {
-            nsCOMPtr<nsIContent> child;
-            rv = ChildAt(i, *getter_AddRefs(child));
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get child");
-            if (NS_FAILED(rv))
-                break;
+    rv = ChildCount(count);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get child count");
+    if (NS_FAILED(rv)) return rv;
 
-            nsCOMPtr<nsIDOMNode> domNode;
-            rv = child->QueryInterface(kIDOMNodeIID, (void**) getter_AddRefs(domNode));
-            if (NS_FAILED(rv)) {
-                NS_WARNING("child content doesn't support nsIDOMNode");
-                continue;
-            }
+    for (PRInt32 i = 0; i < count; ++i) {
+        nsCOMPtr<nsIContent> child;
+        rv = ChildAt(i, *getter_AddRefs(child));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get child");
+        if (NS_FAILED(rv))
+            break;
 
-            rv = children->AppendNode(domNode);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to append node to list");
-            if (NS_FAILED(rv))
-                break;
+        nsCOMPtr<nsIDOMNode> domNode;
+        rv = child->QueryInterface(kIDOMNodeIID, (void**) getter_AddRefs(domNode));
+        if (NS_FAILED(rv)) {
+            NS_WARNING("child content doesn't support nsIDOMNode");
+            continue;
         }
+
+        rv = children->AppendNode(domNode);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to append node to list");
+        if (NS_FAILED(rv))
+            break;
     }
 
     // Create() addref'd for us
@@ -640,18 +688,17 @@ NS_IMETHODIMP
 RDFElementImpl::GetFirstChild(nsIDOMNode** aFirstChild)
 {
     nsresult rv;
-    nsIContent* child;
-    if (NS_SUCCEEDED(rv = ChildAt(0, child))) {
-	if (nsnull == child) return(NS_ERROR_FAILURE);
+    nsCOMPtr<nsIContent> child;
+    rv = ChildAt(0, *getter_AddRefs(child));
+
+    if (NS_SUCCEEDED(rv) && (child != nsnull)) {
         rv = child->QueryInterface(kIDOMNodeIID, (void**) aFirstChild);
         NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
-        NS_RELEASE(child); // balance the AddRef in ChildAt()
         return rv;
     }
-    else {
-        *aFirstChild = nsnull;
-        return NS_OK;
-    }
+
+    *aFirstChild = nsnull;
+    return NS_OK;
 }
 
 
@@ -660,23 +707,24 @@ RDFElementImpl::GetLastChild(nsIDOMNode** aLastChild)
 {
     nsresult rv;
     PRInt32 count;
-    if (NS_FAILED(rv = ChildCount(count))) {
-        NS_ERROR("unable to get child count");
-        return rv;
-    }
-    if (count) {
-        nsIContent* child;
-        if (NS_SUCCEEDED(rv = ChildAt(count - 1, child))) {
+    rv = ChildCount(count);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get child count");
+
+    if (NS_SUCCEEDED(rv) && (count != 0)) {
+        nsCOMPtr<nsIContent> child;
+        rv = ChildAt(count - 1, *getter_AddRefs(child));
+
+        NS_ASSERTION(child != nsnull, "no child");
+
+        if (child) {
             rv = child->QueryInterface(kIDOMNodeIID, (void**) aLastChild);
             NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
-            NS_RELEASE(child); // balance the AddRef in ChildAt()
+            return rv;
         }
-        return rv;
     }
-    else {
-        *aLastChild = nsnull;
-        return NS_OK;
-    }
+
+    *aLastChild = nsnull;
+    return NS_OK;
 }
 
 
@@ -687,12 +735,11 @@ RDFElementImpl::GetPreviousSibling(nsIDOMNode** aPreviousSibling)
         PRInt32 pos;
         mParent->IndexOf(NS_STATIC_CAST(nsIStyledContent*, this), pos);
         if (pos > -1) {
-            nsIContent* prev;
-            mParent->ChildAt(--pos, prev);
+            nsCOMPtr<nsIContent> prev;
+            mParent->ChildAt(--pos, *getter_AddRefs(prev));
             if (prev) {
                 nsresult rv = prev->QueryInterface(kIDOMNodeIID, (void**) aPreviousSibling);
                 NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
-                NS_RELEASE(prev); // balance the AddRef in ChildAt()
                 return rv;
             }
         }
@@ -712,16 +759,16 @@ RDFElementImpl::GetNextSibling(nsIDOMNode** aNextSibling)
         PRInt32 pos;
         mParent->IndexOf(NS_STATIC_CAST(nsIStyledContent*, this), pos);
         if (pos > -1) {
-            nsIContent* next;
-            mParent->ChildAt(++pos, next);
-            if (nsnull != next) {
+            nsCOMPtr<nsIContent> next;
+            mParent->ChildAt(++pos, *getter_AddRefs(next));
+            if (next) {
                 nsresult res = next->QueryInterface(kIDOMNodeIID, (void**) aNextSibling);
                 NS_ASSERTION(NS_OK == res, "not a DOM Node");
-                NS_RELEASE(next); // balance the AddRef in ChildAt()
                 return res;
             }
         }
     }
+
     // XXX Nodes that are just below the document (their parent is the
     // document) need to go to the document to find their next sibling.
     *aNextSibling = nsnull;
@@ -1149,13 +1196,12 @@ RDFElementImpl::RemoveEventListenerByIID(nsIDOMEventListener *aListener, const n
 
 NS_IMETHODIMP
 RDFElementImpl::AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                 PRBool aPostProcess, PRBool aUseCapture)
+                                 PRBool aUseCapture)
 {
   nsIEventListenerManager *manager;
 
   if (NS_OK == GetListenerManager(&manager)) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     manager->AddEventListenerByType(aListener, aType, flags);
     NS_RELEASE(manager);
@@ -1166,11 +1212,10 @@ RDFElementImpl::AddEventListener(const nsString& aType, nsIDOMEventListener* aLi
 
 NS_IMETHODIMP
 RDFElementImpl::RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                    PRBool aPostProcess, PRBool aUseCapture)
+                                    PRBool aUseCapture)
 {
   if (nsnull != mListenerManager) {
-    PRInt32 flags = (aPostProcess ? NS_EVENT_FLAG_POST_PROCESS : NS_EVENT_FLAG_NONE) |
-                    (aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE);
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
     mListenerManager->RemoveEventListenerByType(aListener, aType, flags);
     return NS_OK;
@@ -1219,16 +1264,8 @@ RDFElementImpl::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject
     if (! mScriptObject) {
         nsIScriptGlobalObject *global = aContext->GetGlobalObject();
 
-        nsresult (*fn)(nsIScriptContext* aContext, nsISupports* aSupports, nsISupports* aParent, void** aReturn);
+        rv = NS_NewScriptXULElement(aContext, (nsIDOMXULElement*) this, global, (void**) &mScriptObject);
 
-        if (mTag == kTreeAtom) {
-            fn = NS_NewScriptXULTreeElement;
-        }
-        else {
-            fn = NS_NewScriptXULElement;
-        }
-
-        rv = fn(aContext, (nsIDOMXULElement*) this, global, (void**) &mScriptObject);
         NS_RELEASE(global);
 
         // Ensure that a reference exists to this element
@@ -1353,10 +1390,10 @@ RDFElementImpl::SetDocument(nsIDocument* aDocument, PRBool aDeep)
         nsCOMPtr<nsIRDFDocument> rdfdoc = do_QueryInterface(mDocument);
         NS_ASSERTION(rdfdoc != nsnull, "ack! not in an RDF document");
         if (rdfdoc) {
-            // Need to do a GetResource() here, because changing the document
+            // Need to do a GetIdResource() here, because changing the document
             // may actually change the element's URI.
             nsCOMPtr<nsIRDFResource> resource;
-            GetResource(getter_AddRefs(resource));
+            GetIdResource(getter_AddRefs(resource));
 
             // Remove this element from the RDF resource-to-element map in
             // the old document.
@@ -1395,10 +1432,10 @@ RDFElementImpl::SetDocument(nsIDocument* aDocument, PRBool aDeep)
         nsCOMPtr<nsIRDFDocument> rdfdoc = do_QueryInterface(mDocument);
         NS_ASSERTION(rdfdoc != nsnull, "ack! not in an RDF document");
         if (rdfdoc) {
-            // Need to do a GetResource() here, because changing the document
+            // Need to do a GetIdResource() here, because changing the document
             // may actually change the element's URI.
             nsCOMPtr<nsIRDFResource> resource;
-            GetResource(getter_AddRefs(resource));
+            GetIdResource(getter_AddRefs(resource));
 
             // Add this element to the RDF resource-to-element map in the
             // new document.
@@ -1442,7 +1479,7 @@ RDFElementImpl::SetDocument(nsIDocument* aDocument, PRBool aDeep)
 
     if (aDeep && mChildren) {
         PRUint32 cnt;
-        nsresult rv = mChildren->Count(&cnt);
+        rv = mChildren->Count(&cnt);
         if (NS_FAILED(rv)) return rv;
         for (PRInt32 i = cnt - 1; i >= 0; --i) {
             // XXX this entire block could be more rigorous about
@@ -1496,7 +1533,7 @@ RDFElementImpl::ChildCount(PRInt32& aResult) const
 
     if (mChildren) {
         PRUint32 cnt;
-        nsresult rv = mChildren->Count(&cnt);
+        rv = mChildren->Count(&cnt);
         if (NS_FAILED(rv)) return rv;
         aResult = cnt;
     }
@@ -1556,9 +1593,9 @@ RDFElementImpl::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
     // Make sure that we're not trying to insert the same child
     // twice. If we do, the DOM APIs (e.g., GetNextSibling()), will
     // freak out.
-    PRInt32 index = mChildren->IndexOf(aKid);
-    NS_ASSERTION(index < 0, "element is already a child");
-    if (index >= 0)
+    PRInt32 i = mChildren->IndexOf(aKid);
+    NS_ASSERTION(i < 0, "element is already a child");
+    if (i >= 0)
         return NS_ERROR_FAILURE;
 
     PRBool insertOk = mChildren->InsertElementAt(aKid, aIndex);/* XXX fix up void array api to use nsresult's*/
@@ -1603,9 +1640,9 @@ RDFElementImpl::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
     // Make sure that we're not trying to insert the same child
     // twice. If we do, the DOM APIs (e.g., GetNextSibling()), will
     // freak out.
-    PRInt32 index = mChildren->IndexOf(aKid);
-    NS_ASSERTION(index < 0, "element is already a child");
-    if (index >= 0)
+    PRInt32 i = mChildren->IndexOf(aKid);
+    NS_ASSERTION(i < 0, "element is already a child");
+    if (i >= 0)
         return NS_ERROR_FAILURE;
 
     PRBool replaceOk = mChildren->ReplaceElementAt(aKid, aIndex);
@@ -1638,9 +1675,9 @@ RDFElementImpl::AppendChildTo(nsIContent* aKid, PRBool aNotify)
     // Make sure that we're not trying to insert the same child
     // twice. If we do, the DOM APIs (e.g., GetNextSibling()), will
     // freak out.
-    PRInt32 index = mChildren->IndexOf(aKid);
-    NS_ASSERTION(index < 0, "element is already a child");
-    if (index >= 0)
+    PRInt32 i = mChildren->IndexOf(aKid);
+    NS_ASSERTION(i < 0, "element is already a child");
+    if (i >= 0)
         return NS_ERROR_FAILURE;
 
     PRBool appendOk = mChildren->AppendElement(aKid);
@@ -1650,14 +1687,10 @@ RDFElementImpl::AppendChildTo(nsIContent* aKid, PRBool aNotify)
         aKid->SetDocument(mDocument, PR_TRUE);
         if (aNotify && ElementIsInDocument()) {
             PRUint32 cnt;
-            nsresult rv = mChildren->Count(&cnt);
+            rv = mChildren->Count(&cnt);
             if (NS_FAILED(rv)) return rv;
-#if 0
-            // XXX Can't do this because of the tree frame trickery, I think.
+            
             mDocument->ContentAppended(NS_STATIC_CAST(nsIStyledContent*, this), cnt - 1);
-#else
-            mDocument->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, cnt - 1);
-#endif
         }
     }
     return NS_OK;
@@ -1723,11 +1756,11 @@ RDFElementImpl::ParseAttributeString(const nsString& aStr,
                                      nsIAtom*& aName, 
                                      PRInt32& aNameSpaceID)
 {
-static char kNameSpaceSeparator[] = ":";
+static char kNameSpaceSeparator = ':';
 
     nsAutoString prefix;
     nsAutoString name(aStr);
-    PRInt32 nsoffset = name.Find(kNameSpaceSeparator);
+    PRInt32 nsoffset = name.FindChar(kNameSpaceSeparator);
     if (-1 != nsoffset) {
         name.Left(prefix, nsoffset);
         name.Cut(0, nsoffset+1);
@@ -1814,7 +1847,7 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
     // know about the StyleRule change.
     if (mDocument && (aNameSpaceID == kNameSpaceID_None) && aName == kStyleAtom) {
 
-        nsIURL* docURL = nsnull;
+        nsIURI* docURL = nsnull;
         if (nsnull != mDocument) {
             mDocument->GetBaseURL(docURL);
         }
@@ -1851,7 +1884,7 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
 
         // Add the popup as a listener on this element.
         nsCOMPtr<nsIDOMEventListener> eventListener = do_QueryInterface(popupListener);
-        AddEventListener("mousedown", eventListener, PR_FALSE, PR_FALSE);  
+        AddEventListener("mousedown", eventListener, PR_FALSE);  
         
         NS_IF_RELEASE(popupListener);
     }
@@ -1910,56 +1943,28 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
     }
         
 
-    // Check for event handlers
-    nsString attributeName;
-    aName->ToString(attributeName);
-
-    if (attributeName.EqualsIgnoreCase("onclick") ||
-        attributeName.EqualsIgnoreCase("ondblclick") ||
-        attributeName.EqualsIgnoreCase("onmousedown") ||
-        attributeName.EqualsIgnoreCase("onmouseup") ||
-        attributeName.EqualsIgnoreCase("onmouseover") ||
-        attributeName.EqualsIgnoreCase("onmouseout"))
-        AddScriptEventListener(aName, aValue, kIDOMMouseListenerIID);
-    else if (attributeName.EqualsIgnoreCase("onkeydown") ||
-             attributeName.EqualsIgnoreCase("onkeyup") ||
-             attributeName.EqualsIgnoreCase("onkeypress"))
-        AddScriptEventListener(aName, aValue, kIDOMKeyListenerIID);
-    else if (attributeName.EqualsIgnoreCase("onmousemove"))
-        AddScriptEventListener(aName, aValue, kIDOMMouseMotionListenerIID); 
-    else if (attributeName.EqualsIgnoreCase("onload") ||
-             attributeName.EqualsIgnoreCase("onunload") ||
-             attributeName.EqualsIgnoreCase("onabort") ||
-             attributeName.EqualsIgnoreCase("onerror") ||
-             attributeName.EqualsIgnoreCase("oncreate") ||
-             attributeName.EqualsIgnoreCase("ondestroy"))
-        AddScriptEventListener(aName, aValue, kIDOMLoadListenerIID);
-    else if (attributeName.EqualsIgnoreCase("onfocus") ||
-             attributeName.EqualsIgnoreCase("onblur"))
-        AddScriptEventListener(aName, aValue, kIDOMFocusListenerIID);
-    else if (attributeName.EqualsIgnoreCase("onsubmit") ||
-             attributeName.EqualsIgnoreCase("onreset") ||
-             attributeName.EqualsIgnoreCase("onchange"))
-        AddScriptEventListener(aName, aValue, kIDOMFormListenerIID);
-    else if (attributeName.EqualsIgnoreCase("onpaint"))
-        AddScriptEventListener(aName, aValue, kIDOMPaintListenerIID); 
+    // Check for event handlers and add a script listener if necessary.
+    EventHandlerMapEntry* entry = kEventHandlerMap;
+    while (entry->mAttributeAtom) {
+        if (entry->mAttributeAtom == aName) {
+            AddScriptEventListener(aName, aValue, *entry->mHandlerIID);
+            break;
+        }
+        ++entry;
+    }
 
     // Notify any broadcasters that are listening to this node.
     if (mBroadcastListeners != nsnull)
     {
+        nsAutoString attribute;
+        aName->ToString(attribute);
         count = mBroadcastListeners->Count();
         for (i = 0; i < count; i++) {
             XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners->ElementAt(i);
-            nsString aString;
-            aName->ToString(aString);
-            if (xulListener->mAttribute == aString) {
-                nsCOMPtr<nsIDOMElement> element;
-                element = do_QueryInterface(xulListener->mListener);
-                if (element) {
-                    // First we set the attribute in the observer.
-                    element->SetAttribute(aString, aValue);
-                    ExecuteOnChangeHandler(element, aString);
-                }
+            if ((xulListener->mAttribute == attribute) && (xulListener->mListener != nsnull)) {
+                // First we set the attribute in the observer.
+                xulListener->mListener->SetAttribute(attribute, aValue);
+                ExecuteOnChangeHandler(xulListener->mListener, attribute);
             }
         }
     }
@@ -1971,8 +1976,8 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
     // Check to see if this is the RDF:container property; if so, and
     // the value is "true", then remember to generate our kids on
     // demand.
-    if ((aNameSpaceID == kNameSpaceID_RDF) &&
-        (aName == kContainerAtom) &&
+    if ((aNameSpaceID == kNameSpaceID_None) &&
+        (aName == kLazyContentAtom) &&
         (aValue.EqualsIgnoreCase("true"))) {
         mContentsMustBeGenerated = PR_TRUE;
     }
@@ -1991,6 +1996,10 @@ RDFElementImpl::AddScriptEventListener(nsIAtom* aName, const nsString& aValue, R
     nsIScriptContextOwner* owner;
 
     owner = mDocument->GetScriptContextOwner();
+
+    // This can happen normally as part of teardown code.
+    if (! owner)
+        return NS_OK;
 
     nsAutoString tagStr;
     mTag->ToString(tagStr);
@@ -2017,12 +2026,12 @@ RDFElementImpl::AddScriptEventListener(nsIAtom* aName, const nsString& aValue, R
       else {
         nsIEventListenerManager *manager;
         if (NS_OK == GetListenerManager(&manager)) {
-            nsIScriptObjectOwner* owner;
+            nsIScriptObjectOwner* owner2;
             if (NS_OK == QueryInterface(kIScriptObjectOwnerIID,
-                                        (void**) &owner)) {
-                ret = manager->AddScriptEventListener(context, owner,
+                                        (void**) &owner2)) {
+                ret = manager->AddScriptEventListener(context, owner2,
                                                       aName, aValue, aIID);
-                NS_RELEASE(owner);
+                NS_RELEASE(owner2);
             }
             NS_RELEASE(manager);
         }
@@ -2095,7 +2104,7 @@ RDFElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRBool aNot
     
     if (mDocument && (aNameSpaceID == kNameSpaceID_None) && aName == kStyleAtom) {
 
-        nsIURL* docURL = nsnull;
+        nsIURI* docURL = nsnull;
         if (nsnull != mDocument) {
             mDocument->GetBaseURL(docURL);
         }
@@ -2129,14 +2138,14 @@ RDFElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRBool aNot
         for (PRInt32 i = 0; i < count; i++)
         {
             XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners->ElementAt(i);
-            nsString aString;
-            aName->ToString(aString);
-            if (xulListener->mAttribute == aString) {
+            nsAutoString str;
+            aName->ToString(str);
+            if (xulListener->mAttribute == str) {
                 // Unset the attribute in the broadcast listener.
                 nsCOMPtr<nsIDOMElement> element;
                 element = do_QueryInterface(xulListener->mListener);
                 if (element)
-                  element->RemoveAttribute(aString);
+                  element->RemoveAttribute(str);
             }
         }
       }
@@ -2305,10 +2314,11 @@ RDFElementImpl::HandleDOMEvent(nsIPresContext& aPresContext,
     nsIDOMEvent* domEvent = nsnull;
     if (NS_EVENT_FLAG_INIT == aFlags) {
         aDOMEvent = &domEvent;
+        aEvent->flags = NS_EVENT_FLAG_NONE;
         // In order for the event to have a proper target for menus (which have no corresponding
         // frame target in the visual model), we have to explicitly set the target of the
         // event to prevent it from trying to retrieve the target from a frame.
-        nsString tagName;
+        nsAutoString tagName;
         GetTagName(tagName);
         if (tagName == "menu" || tagName == "menuitem" ||
             tagName == "menubar" || tagName == "key" || tagName == "keyset") {
@@ -2344,7 +2354,8 @@ RDFElementImpl::HandleDOMEvent(nsIPresContext& aPresContext,
     }
 
     //Local handling stage
-    if (nsnull != mListenerManager) {
+    if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH)) {
+        aEvent->flags = aFlags;
         mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, aFlags, aEventStatus);
     }
 
@@ -2434,7 +2445,7 @@ RDFElementImpl::AddBroadcastListener(const nsString& attr, nsIDOMElement* anElem
   nsCOMPtr<nsIContent> listener( do_QueryInterface(anElement) );
 
   // Find out if the attribute is even present at all.
-  nsString attrValue;
+  nsAutoString attrValue;
   nsIAtom* kAtom = NS_NewAtom(attr);
 	nsresult result = GetAttribute(kNameSpaceID_None, kAtom, attrValue);
 	PRBool attrPresent = (result == NS_CONTENT_ATTR_NO_VALUE ||
@@ -2487,6 +2498,54 @@ RDFElementImpl::RemoveBroadcastListener(const nsString& attr, nsIDOMElement* anE
 NS_IMETHODIMP
 RDFElementImpl::GetResource(nsIRDFResource** aResource)
 {
+	nsresult rv;
+	rv = GetRefResource(aResource);
+	if (NS_FAILED(rv)) return rv;
+
+	if (! *aResource) {
+		rv = GetIdResource(aResource);
+		if (NS_FAILED(rv)) return rv;
+	}
+
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+RDFElementImpl::GetDatabase(nsIRDFCompositeDataSource** aDatabase)
+{
+    NS_PRECONDITION(aDatabase != nsnull, "null ptr");
+    if (! aDatabase)
+        return NS_ERROR_NULL_POINTER;
+
+    *aDatabase = mDatabase;
+    NS_IF_ADDREF(*aDatabase);
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+RDFElementImpl::SetDatabase(nsIRDFCompositeDataSource* aDatabase)
+{
+    // XXX maybe someday you'll be allowed to change it.
+    NS_PRECONDITION(mDatabase == nsnull, "already initialized");
+    if (mDatabase)
+        return NS_ERROR_ALREADY_INITIALIZED;
+
+    mDatabase = aDatabase;
+
+    // XXX reconstruct the entire tree now!
+
+    return NS_OK;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+// Implementation methods
+
+nsresult
+RDFElementImpl::GetIdResource(nsIRDFResource** aResource)
+{
     if (mAttributes) {
         for (PRInt32 i = mAttributes->Count() - 1; i >= 0; --i) {
             const nsXULAttribute* attr = (const nsXULAttribute*) mAttributes->ElementAt(i);
@@ -2502,8 +2561,6 @@ RDFElementImpl::GetResource(nsIRDFResource** aResource)
     return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////
-// Implementation methods
 
 nsresult
 RDFElementImpl::GetRefResource(nsIRDFResource** aResource)
@@ -2525,7 +2582,7 @@ RDFElementImpl::GetRefResource(nsIRDFResource** aResource)
             nsresult rv;
 
             // ...now resolve it to an absolute URI.
-            nsCOMPtr<nsIURL> base = dont_AddRef(mDocument->GetDocumentURL());
+            nsCOMPtr<nsIURI> base = dont_AddRef(mDocument->GetDocumentURL());
 
             nsAutoString uri(attr->mValue);
             rv = rdf_MakeAbsoluteURI(base, uri);
@@ -2824,7 +2881,7 @@ RDFElementImpl::GetElementsByAttribute(nsIDOMNode* aNode,
 NS_IMETHODIMP
 RDFElementImpl::GetID(nsIAtom*& aResult) const
 {
-  nsString value;
+  nsAutoString value;
   GetAttribute(kNameSpaceID_None, kIdAtom, value);
 
   aResult = NS_NewAtom(value); // The NewAtom call does the AddRef.
@@ -2871,15 +2928,10 @@ RDFElementImpl::GetInlineStyleRules(nsISupportsArray* aRules)
 }
 
 NS_IMETHODIMP
-RDFElementImpl::GetStyleHintForAttributeChange(const nsIAtom* aAttribute, PRInt32 *aHint) const
+RDFElementImpl::GetMappedAttributeImpact(const nsIAtom* aAttribute, 
+                                         PRInt32& aHint) const
 {
-  *aHint = NS_STYLE_HINT_CONTENT;
-  if (mNameSpaceID == kNameSpaceID_XUL)
-  {
-      // We are a XUL tag and need to specify a style hint.
-      *aHint = NS_STYLE_HINT_CONTENT;
-  }
-
+  aHint = NS_STYLE_HINT_CONTENT;  // we never map attribtes to style
   return NS_OK;
 }
 

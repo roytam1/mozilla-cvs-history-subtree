@@ -20,8 +20,7 @@
 #include "nsIWebShell.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsFileSpec.h"
 #include "nsIDocumentLoader.h"
@@ -283,7 +282,7 @@ GtkMozillaContainer::EndLoadURL(nsIWebShell* aShell,
 
 
 nsresult
-GtkMozillaContainer::CreateContentViewer(nsIURL* aURL, 
+GtkMozillaContainer::CreateContentViewer(nsIURI* aURL, 
                                          const char* aContentType, 
                                          const char *aCommand,
                                          nsIContentViewerContainer* aContainer,
@@ -362,7 +361,8 @@ GtkMozillaContainer::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupC
                                  const nsString& aPopupType, 
                                  const nsString& anAnchorAlignment,
                                  const nsString& aPopupAlignment,
-                                 nsIDOMWindow* aWindow)
+                                 nsIDOMWindow* aWindow,
+                                 nsIDOMWindow** outPopup)
 {
   printf("CreatePopup\n");
   return NS_ERROR_FAILURE;
@@ -404,23 +404,14 @@ GtkMozillaContainer::StartStream(const char *base_url, const char *action,
 {
   nsresult rv = NS_OK;
   nsString url_str(base_url);
-  nsIURL* url = nsnull;
+  nsIURI* url = nsnull;
   nsIContentViewer* viewer = nsnull;
   nsIStreamListener* listener = nsnull;
 
 #ifndef NECKO  
   rv = NS_NewURL(&url, url_str, NULL, mWebShell);
 #else
-  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  nsIURI *uri = nsnull;
-  const char *uriStr = url_str.GetBuffer();
-  rv = service->NewURI(uriStr, nsnull, &uri);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-  NS_RELEASE(uri);
+  rv = NS_NewURI(&url, url_str, NULL);  // XXX where should the container go? (mWebShell)
 #endif // NECKO
 
   if (NS_FAILED(rv)) {
@@ -451,10 +442,10 @@ GtkMozillaContainer::StartStream(const char *base_url, const char *action,
   }
 
   /*
-   * Pass the OnStartBinding(...) notification out to the document 
+   * Pass the OnStartRequest(...) notification out to the document 
    * IStreamListener.
    */
-  rv = listener->OnStartBinding(url, content_type);
+  rv = listener->OnStartRequest(url, content_type);
   if (NS_FAILED(rv)) {
     goto done;
   }
@@ -504,7 +495,7 @@ GtkMozillaContainer::EndStream(void)
   if (NS_FAILED(rv))
     return;
   
-  rv = mListener->OnStopBinding(mStreamURL, NS_OK, NULL);
+  rv = mListener->OnStopRequest(mStreamURL, NS_OK, NULL);
   if (NS_FAILED(rv))
     return;
   

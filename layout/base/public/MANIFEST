@@ -16,6 +16,8 @@ nsIFrame.h
 nsIFrameSelection.h
 nsIFrameUtil.h
 nsIFrameImageLoader.h
+nsIFrameManager.h
+nsIFrameReflow.h
 nsILayoutDebugger.h
 nsINameSpace.h
 nsINameSpaceManager.h
@@ -27,6 +29,7 @@ nsISpaceManager.h
 nsFrameList.h
 nsFrameTraversal.h
 nsLayoutAtoms.h
+nsLayoutAtomList.h
 nsStyleChangeList.h
 nsStyleCoord.h
 nsStyleStruct.h

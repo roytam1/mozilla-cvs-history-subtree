@@ -7,6 +7,7 @@
   xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   xmlns="http://www.w3.org/TR/REC-html40">
 
+<html:div flex="100%">
 
 <script>
 function InitializeValues()
@@ -58,4 +59,5 @@ Email Address if available
 Please click Next to continue
 </p>
 
+</html:div>
 </xul:window>

@@ -23,7 +23,6 @@
 #include "nsFileSpec.h"
 
 #include "nsIURL.h"
-#include "nsIMsgMailNewsUrl.h"
 
 #include "nsISupports.h"
 
@@ -53,7 +52,7 @@
 // we'll just bring up the  compose window.
 // mscott --> we could break this down into two SMTP url classes....
 //////////////////////////////////////////////////////////////////////////////////////
-class nsISmtpUrl : public nsIMsgMailNewsUrl
+class nsISmtpUrl : public nsISupports
 {
 public:
     static const nsIID& GetIID() { static nsIID iid = NS_ISMTPURL_IID; return iid; }
@@ -105,10 +104,7 @@ public:
 	// particularly when it came to parsing the user name and extracting the domain.....so I'm going to
 	// change the get value to a const char **...
 	NS_IMETHOD GetUserEmailAddress(const char ** aUserName) = 0;
-	NS_IMETHOD SetUserEmailAddress(const nsString& aUserName) = 0;
-
-	NS_IMETHOD GetUserPassword(const nsString ** aUserPassword) = 0;
-	NS_IMETHOD SetUserPassword(const nsString& aUserPassword) = 0;
+	NS_IMETHOD SetUserEmailAddress(const char * aUserName) = 0;
 
 	/////////////////////////////////////////////////////////////////////////////// 
 	// Getters and Setters for the smtp specific event sinks to bind to to your url

@@ -557,6 +557,8 @@ IdlAttribute* IdlParser::MaybeParseAttribute(IdlSpecification &aSpecification, i
     if ((token->id != READONLY_TOKEN) && (token->id != ATTRIBUTE_TOKEN)) {
       return NULL;
     }
+    mScanner->NextToken();
+    aTokenID = token->id;
   }
   
   return ParseAttribute(aSpecification, aTokenID, isNoScript);
@@ -900,21 +902,21 @@ IdlParameter* IdlParser::ParseFunctionParameter(IdlSpecification &aSpecification
   switch(token->id) {
     // base type
     case INPUT_PARAM_TOKEN:
-#if defined XP_UNIX || defined XP_MAC
+#if defined XP_UNIX || defined XP_MAC || defined XP_BEOS
       argObj->SetAttribute(IdlParameter::INPUT);
 #else
       argObj->SetAttribute(IdlParameter.INPUT);
 #endif
       break;
     case OUTPUT_PARAM_TOKEN:
-#if defined XP_UNIX || defined XP_MAC
+#if defined XP_UNIX || defined XP_MAC || defined XP_BEOS
       argObj->SetAttribute(IdlParameter::OUTPUT);
 #else
       argObj->SetAttribute(IdlParameter.OUTPUT);
 #endif
       break;
     case INOUT_PARAM_TOKEN:
-#if defined XP_UNIX || defined XP_MAC
+#if defined XP_UNIX || defined XP_MAC || defined XP_BEOS
       argObj->SetAttribute(IdlParameter::INOUT);
 #else
       argObj->SetAttribute(IdlParameter.INOUT);

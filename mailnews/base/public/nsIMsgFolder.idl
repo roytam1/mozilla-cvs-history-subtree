@@ -20,16 +20,22 @@
 #include "nsIFolder.idl"
 #include "nsIMsgThread.idl"
 #include "nsIMsgIncomingServer.idl"
+#include "nsIFileSpec.idl"
+#include "nsISupportsArray.idl"
+#include "nsIMsgCopyServiceListener.idl"
 
 %{ C++
-#include "nsFileSpec.h"
-#include "nsISupportsArray.h"
-#include "nsIMessage.h"
 #include "nsITransactionManager.h"
+#include "nsIMsgDatabase.h"
+#include "nsMsgKeyArray.h"
 %}
-interface nsISupportsArray;
+
 interface nsIMessage;
 interface nsITransactionManager;
+interface nsIMsgDatabase;
+interface nsMsgKeyArray;
+
+interface nsIMsgFolderCacheElement;
 
 [scriptable, uuid(85e39ff0-b248-11d2-b7ef-00805f05ffa5)]
 interface nsIMsgFolder : nsIFolder {
@@ -39,17 +45,16 @@ interface nsIMsgFolder : nsIFolder {
   /*	void SetName(in string name); */
 
 
-        /* XXX should these 2 go on nsIFolder or nsICollection? */
-        void AddUnique(in nsISupports element);
-        void ReplaceElement(in nsISupports element, in nsISupports newElement);
-
+  /* XXX should these 2 go on nsIFolder or nsICollection? */
+  void AddUnique(in nsISupports element);
+  void ReplaceElement(in nsISupports element, in nsISupports newElement);
+  
 	nsIEnumerator GetMessages();
 	nsIEnumerator GetThreads();
 	nsIMsgThread GetThreadForMessage(in nsIMessage message);
 	boolean HasMessage(in nsIMessage message);
   nsIEnumerator GetVisibleSubFolders();
-	attribute string prettyName;
-	readonly attribute string prettiestName;
+	readonly attribute wstring prettiestName;
 	string BuildFolderURL();
 
 	readonly attribute boolean deleteIsMoveToTrash;
@@ -66,6 +71,9 @@ interface nsIMsgFolder : nsIFolder {
 
 	void CreateSubfolder(in string folderName);
 
+  void Compact();
+  void EmptyTrash();
+
 	void Rename(in string name);
 	void Adopt(in nsIMsgFolder srcFolder, out unsigned long outPos);
 
@@ -76,7 +84,7 @@ interface nsIMsgFolder : nsIFolder {
 
 	attribute unsigned long depth;
 
-	void UpdateSummaryTotals();
+	void UpdateSummaryTotals(in boolean force);
 	void SummaryChanged();
 	long GetNumUnread(in boolean deep);
 	long GetTotalMessages(in boolean deep);
@@ -100,8 +108,8 @@ interface nsIMsgFolder : nsIFolder {
 	void RememberPassword(in string password);
 	string GetRememberedPassword();
 	boolean UserNeedsToAuthenticateForFolder(in boolean displayOnly);
-	string GetUsersName();
-	string GetHostName();
+	string GetUsername();
+	string GetHostname();
 
   
 	void SetFlag(in unsigned long flag);
@@ -117,21 +125,40 @@ interface nsIMsgFolder : nsIFolder {
 
 	void GetExpansionArray(in nsISupportsArray expansionArray);
 
-	void DeleteMessages(in nsISupportsArray message, in nsITransactionManager txnMgr,in boolean deleteStorage);
+	void DeleteMessages(in nsISupportsArray message, in nsITransactionManager
+                      txnMgr,in boolean deleteStorage);
 
-    void AcquireSemaphore (in nsISupports semHolder);
-    void ReleaseSemaphore (in nsISupports semHolder);
-    boolean TestSemaphore (in nsISupports semHolder);
-    boolean IsLocked();
+  void CopyMessages(in nsIMsgFolder srcFolder, in nsISupportsArray messages,
+                    in boolean isMove, in nsITransactionManager txnMgr,
+                    in nsIMsgCopyServiceListener listener);
+
+  void CopyFileMessage(in nsIFileSpec fileSpec, in nsIMessage msgToReplace,
+                       in boolean isDraft, in nsITransactionManager txnMgr,
+                       in nsIMsgCopyServiceListener listener);
+
+  void AcquireSemaphore (in nsISupports semHolder);
+  void ReleaseSemaphore (in nsISupports semHolder);
+  boolean TestSemaphore (in nsISupports semHolder);
+  boolean IsLocked();
 
 	nsIMessage CreateMessageFromMsgDBHdr(in nsIMsgDBHdr msgDBHdr);
 	void GetNewMessages();
+
+	void WriteToFolderCache(in nsIMsgFolderCache folderCache);
 	attribute wstring charset;
 	attribute unsigned long BiffState;
 	attribute long NumNewMessages;
 
 	readonly attribute wstring NewMessagesNotificationDescription;
 	readonly attribute nsIMsgFolder RootFolder;
+  readonly attribute nsIMsgDatabase msgDatabase;
+
+	readonly attribute nsIFileSpec Path;
+
+	void MarkMessagesRead(in nsISupportsArray messages, in boolean markRead);
+	void MarkAllMessagesRead();
+
+	nsIMsgFolder GetChildWithURI(in string uri, in boolean deep);
 };
 
 
@@ -142,7 +169,7 @@ interface nsIMsgLocalMailFolder : nsISupports {
 
 [scriptable, uuid(3716abe4-f6d4-11d2-86d5-004005263078)]
 interface nsIMsgNewsFolder : nsISupports {
-
+  attribute string unreadSetStr;
 };
 
 [scriptable, uuid(FBFEBE79-C1DD-11d2-8A40-0060B0FC04D2)]

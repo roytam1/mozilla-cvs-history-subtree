@@ -17,17 +17,12 @@
  */
 
 #include "msgCore.h"    // precompiled header...
-
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
+#include "nsMsgImapCID.h"
 
 #include "nsIEventQueueService.h"
 
 #include "nsIURL.h"
 #include "nsImapUrl.h"
-
-#include "nsINetService.h"
 #include "nsIMsgMailSession.h"
 #include "nsIIMAPHostSessionList.h"
 #include "nsIMAPGenericParser.h"
@@ -39,54 +34,33 @@
 #include "nsCOMPtr.h"
 #include "nsIImapIncomingServer.h"
 #include "nsMsgBaseCID.h"
+#include "nsImapUtils.h"
+#include "nsXPIDLString.h"
 
-// we need this because of an egcs 1.0 (and possibly gcc) compiler bug
-// that doesn't allow you to call ::nsISupports::GetIID() inside of a class
-// that multiply inherits from nsISupports
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_CID(kUrlListenerManagerCID, NS_URLLISTENERMANAGER_CID);
 static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 static NS_DEFINE_CID(kCImapHostSessionListCID, NS_IIMAPHOSTSESSIONLIST_CID);
 
 nsImapUrl::nsImapUrl()
 {
-    NS_INIT_REFCNT();
-
-	m_errorMessage = nsnull;
-	m_server = nsnull;
-	
-	// nsINetLibUrl specific state
-    m_URL_s = nsnull;
- 
-	// nsIURL specific state
-    m_protocol = nsnull;
-    m_host = nsnull;
-    m_port = IMAP_PORT;
-    m_spec = nsnull;
-    m_search = nsnull;
-	m_file = nsnull;
-	
 	m_listOfMessageIds = nsnull;
 	m_sourceCanonicalFolderPathSubString = nsnull;
 	m_destinationCanonicalFolderPathSubString = nsnull;
 	m_listOfMessageIds = nsnull;
     m_tokenPlaceHolder = nsnull;
-
-	m_runningUrl = PR_FALSE;
 	m_idsAreUids = PR_FALSE;
 	m_mimePartSelectorDetected = PR_FALSE;
 	m_allowContentChange = PR_TRUE;	// assume we can do MPOD.
 	m_validUrl = PR_TRUE;	// assume the best.
 	m_flags = 0;
 	m_userName = nsnull;
-	m_onlineSubDirSeparator = '\0'; 
-	nsComponentManager::CreateInstance(kUrlListenerManagerCID, nsnull, nsIUrlListenerManager::GetIID(), 
-									   (void **) getter_AddRefs(m_urlListeners));
+	m_onlineSubDirSeparator = '/'; 
+    m_copyState = nsnull;
 }
 
 nsresult nsImapUrl::Initialize(const char * aUserName)
 {
 	nsresult rv = NS_OK;
+    PR_FREEIF(m_userName);
 	if (aUserName)
 		m_userName = PL_strdup(aUserName);
 	else
@@ -96,64 +70,31 @@ nsresult nsImapUrl::Initialize(const char * aUserName)
  
 nsImapUrl::~nsImapUrl()
 {
-	PR_FREEIF(m_errorMessage);
-
-    PR_FREEIF(m_spec);
-    PR_FREEIF(m_protocol);
-    PR_FREEIF(m_host);
-    PR_FREEIF(m_search);
-	PR_FREEIF(m_file);
 	PR_FREEIF(m_listOfMessageIds);
 	PR_FREEIF(m_userName);
-
 }
   
-NS_IMPL_THREADSAFE_ADDREF(nsImapUrl);
-NS_IMPL_THREADSAFE_RELEASE(nsImapUrl);
+NS_IMPL_ADDREF_INHERITED(nsImapUrl, nsMsgMailNewsUrl)
+NS_IMPL_RELEASE_INHERITED(nsImapUrl, nsMsgMailNewsUrl)
 
-NS_IMETHODIMP nsImapUrl::QueryInterface(const nsIID &aIID, void** aInstancePtr)
+NS_IMETHODIMP
+nsImapUrl::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
-    if (NULL == aInstancePtr) {
-        return NS_ERROR_NULL_POINTER;
-    }
- 
-    if (aIID.Equals(nsIImapUrl::GetIID()) || aIID.Equals(kISupportsIID)) 
-	{
-        *aInstancePtr = (void*) ((nsIImapUrl*)this);
-        AddRef();
-        return NS_OK;
-    }
-    if (aIID.Equals(nsIURL::GetIID())) 
-	{
-        *aInstancePtr = (void*) ((nsIURL*)this);
-        AddRef();
-        return NS_OK;
-    }
-    if (aIID.Equals(nsINetlibURL::GetIID())) 
-	{
-        *aInstancePtr = (void*) ((nsINetlibURL*)this);
-        AddRef();
-        return NS_OK;
-    }
-	if (aIID.Equals(nsIMsgMailNewsUrl::GetIID()))
-	{
-		*aInstancePtr = (void*) ((nsIMsgMailNewsUrl*) this);
-		AddRef();
-		return NS_OK;
-	}
+    if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
+    *aInstancePtr = nsnull;
+    if (aIID.Equals(nsIImapUrl::GetIID()))
+        *aInstancePtr = NS_STATIC_CAST(nsIImapUrl*, this);
+    else if (aIID.Equals(nsIMsgUriUrl::GetIID()))
+        *aInstancePtr = NS_STATIC_CAST(nsIMsgUriUrl*, this);
 
-#if defined(NS_DEBUG)
-    /*
-     * Check for the debug-only interface indicating thread-safety
-     */
-    static NS_DEFINE_IID(kIsThreadsafeIID, NS_ISTHREADSAFE_IID);
-    if (aIID.Equals(kIsThreadsafeIID)) {
+    if(*aInstancePtr)
+    {
+        NS_ADDREF_THIS();
         return NS_OK;
     }
-#endif
- 
-    return NS_NOINTERFACE;
+    return nsMsgMailNewsUrl::QueryInterface(aIID, aInstancePtr);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Begin nsIImapUrl specific support
@@ -173,20 +114,6 @@ NS_IMETHODIMP nsImapUrl::GetRequiredImapState(nsImapState * aImapUrlState)
 	}
 
 	return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetServer(nsIMsgIncomingServer **aServer)
-{
-    nsresult rv = NS_ERROR_NULL_POINTER;
-	if (aServer) // valid argument to return result in?
-	{
-		*aServer = m_server;
-		NS_IF_ADDREF(*aServer);
-		if (m_server)
-			rv = NS_OK;  // only return ok if we have non null server...
-	} // if aMsgIdentity
-
-	return rv;
 }
 
 NS_IMETHODIMP nsImapUrl::GetImapLog(nsIImapLog ** aImapLog)
@@ -291,477 +218,32 @@ NS_IMETHODIMP nsImapUrl::SetImapMiscellaneousSink(nsIImapMiscellaneousSink  *
 // End nsIImapUrl specific support
 ////////////////////////////////////////////////////////////////////////////////////
 
-// url listener registration details...
-	
-NS_IMETHODIMP nsImapUrl::RegisterListener (nsIUrlListener * aUrlListener)
+NS_IMETHODIMP nsImapUrl::SetSpec(char * aSpec)
 {
-	NS_LOCK_INSTANCE();
-	nsresult rv = NS_OK;
-	if (m_urlListeners)
-		rv = m_urlListeners->RegisterListener(aUrlListener);
-    NS_UNLOCK_INSTANCE();
-	return rv;
-}
-	
-NS_IMETHODIMP nsImapUrl::UnRegisterListener (nsIUrlListener * aUrlListener)
-{
-	NS_LOCK_INSTANCE();
-	nsresult rv = NS_OK;
-	if (m_urlListeners)
-		rv = m_urlListeners->UnRegisterListener(aUrlListener);
-	NS_UNLOCK_INSTANCE();
+	nsresult rv = nsMsgMailNewsUrl::SetSpec(aSpec);
+	if (NS_SUCCEEDED(rv))
+		rv = ParseUrl();
 	return rv;
 }
 
-NS_IMETHODIMP nsImapUrl::GetUrlState(PRBool * aRunningUrl)
+nsresult nsImapUrl::ParseUrl()
 {
+	nsresult rv = NS_OK;
 	NS_LOCK_INSTANCE();
-	if (aRunningUrl)
-		*aRunningUrl = m_runningUrl;
 
-	NS_UNLOCK_INSTANCE();
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetUrlState(PRBool aRunningUrl, nsresult aExitCode)
-{
-	NS_LOCK_INSTANCE();
-	m_runningUrl = aRunningUrl;
-	if (m_urlListeners)
+	char * imapPartOfUrl = nsnull;
+	rv = GetPath(&imapPartOfUrl);
+	if (NS_SUCCEEDED(rv) && imapPartOfUrl && imapPartOfUrl+1)
 	{
-		if (m_runningUrl)
-			m_urlListeners->OnStartRunningUrl(this);
-		else
-			m_urlListeners->OnStopRunningUrl(this, aExitCode);
-	}
-	NS_UNLOCK_INSTANCE();
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetErrorMessage (char * errorMessage)
-{
-	NS_LOCK_INSTANCE();
-	if (errorMessage)
-	{
-		PR_FREEIF(m_errorMessage);
-		m_errorMessage = errorMessage;
-	}
-	NS_UNLOCK_INSTANCE();
-	return NS_OK;
-}
-
-// caller must free using PR_FREE
-NS_IMETHODIMP nsImapUrl::GetErrorMessage (char ** errorMessage) const
-{
-	NS_LOCK_INSTANCE();
-	if (errorMessage)
-	{
-		if (m_errorMessage)
-			*errorMessage = nsCRT::strdup(m_errorMessage);
-		else
-			*errorMessage = nsnull;
-	}
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// Begin nsINetlibURL support
-////////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP nsImapUrl::SetURLInfo(URL_Struct *URL_s)
-{
-    nsresult result = NS_OK;
-    /* Hook us up with the world. */
-    m_URL_s = URL_s;
-    return result;
-}
-  
-NS_IMETHODIMP nsImapUrl::GetURLInfo(URL_Struct_** aResult) const
-{
-  nsresult rv;
-
-  if (nsnull == aResult) 
-    rv = NS_ERROR_NULL_POINTER;
-  else 
-  {
-    /* XXX: Should the URL be reference counted here?? */
-    *aResult = m_URL_s;
-    rv = NS_OK;
-  }
-
-  return rv;
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// End nsINetlibURL support
-////////////////////////////////////////////////////////////////////////////////////
-
-nsresult nsImapUrl::ParseURL(const nsString& aSpec, const nsIURL* aURL)
-{
-#ifdef DEBUG_mscott
-	// mscott - i just added a new method for intialization, I'm adding a quick
-	// check here to verify that initialize was called on this class...this is
-	// really for debugging purposes so I can find out if I missed a spot where
-	// I needed to initialize the url before using it.
-	NS_ASSERTION(m_userName, "oops...looks like we didn't initialize the url.");
-#endif
-
-    // XXX hack!
-    char* cSpec = aSpec.ToNewCString();
-
-    const char* uProtocol = nsnull;
-    const char* uHost = nsnull;
-    const char* uFile = nsnull;
-    PRUint32 uPort;
-    if (nsnull != aURL) 
-	{
-        nsresult rslt = aURL->GetProtocol(&uProtocol);
-        if (rslt != NS_OK) return rslt;
-        rslt = aURL->GetHost(&uHost);
-        if (rslt != NS_OK) return rslt;
-        rslt = aURL->GetFile(&uFile);
-        if (rslt != NS_OK) return rslt;
-        rslt = aURL->GetHostPort(&uPort);
-        if (rslt != NS_OK) return rslt;
-    }
-
-    NS_LOCK_INSTANCE();
-
-    PR_FREEIF(m_protocol);
-    PR_FREEIF(m_host);
-    PR_FREEIF(m_search);
-	PR_FREEIF(m_file);
-    m_port = IMAP_PORT;
-
-	// mscott -> eventually we'll replace all of this duplicate host and port parsing code with a url parser
-	// class..this should come with N2 Landing...
-
-    if (nsnull == cSpec) 
-	{
-        if (nsnull == aURL) 
-		{
-            NS_UNLOCK_INSTANCE();
-            return NS_ERROR_ILLEGAL_VALUE;
-        }
-        
-		m_protocol = (nsnull != uProtocol) ? PL_strdup(uProtocol) : nsnull;
-        m_host = (nsnull != uHost) ? PL_strdup(uHost) : nsnull;
-        m_port = uPort;
-
-        NS_UNLOCK_INSTANCE();
-        return NS_OK;
-    }
-
-    // The URL is considered absolute if and only if it begins with a
-    // protocol spec. A protocol spec is an alphanumeric string of 1 or
-    // more characters that is terminated with a colon.
-    PRBool isAbsolute = PR_FALSE;
-    char* cp = nsnull;
-	char *imapPartOfUrl = nsnull;
-
-    char* ap = cSpec;
-    char ch;
-    while (0 != (ch = *ap)) 
-	{
-        if (((ch >= 'a') && (ch <= 'z')) ||
-            ((ch >= 'A') && (ch <= 'Z')) ||
-            ((ch >= '0') && (ch <= '9'))) 
-		{
-            ap++;
-            continue;
-        }
-        if ((ch == ':') && (ap - cSpec >= 2)) 
-		{
-            isAbsolute = PR_TRUE;
-            cp = ap;
-            break;
-        }
-        break;
-    }
-
-    PRInt32 slen = aSpec.Length();
-    m_spec = (char *) PR_Malloc(slen + 1);
-    aSpec.ToCString(m_spec, slen+1);
-
-    // get protocol first
-    PRInt32 plen = cp - cSpec;
-    m_protocol = (char*) PR_Malloc(plen + 1);
-    PL_strncpy(m_protocol, cSpec, plen);
-    m_protocol[plen] = 0;
-    cp++;                               // eat : in protocol
-    
-	// skip over one, two or three slashes
-    if (*cp == '/') 
-	{
-		cp++;
-        if (*cp == '/') 
-		{
-			cp++;
-			if (*cp == '/') 
-				cp++;
-        }
-	} 
-	else 
-	{
-		delete [] cSpec;
-		NS_UNLOCK_INSTANCE();
-        return NS_ERROR_ILLEGAL_VALUE;
-    }
-
-	// Host name follows protocol for http style urls
-	const char* cp0 = cp;
-	cp = PL_strpbrk(cp, "/:");
-	if (nsnull == cp) 
-	{
-		// There is only a host name
-		PRInt32 hlen = PL_strlen(cp0);
-        m_host = (char*) PR_Malloc(hlen + 1);
-        PL_strcpy(m_host, cp0);
-	}
-    else 
-	{
-		PRInt32 hlen = cp - cp0;
-        m_host = (char*) PR_Malloc(hlen + 1);
-        PL_strncpy(m_host, cp0, hlen);        
-        m_host[hlen] = 0;
-
-		if (':' == *cp) 
-		{
-			// We have a port number
-            cp0 = cp+1;
-            cp = PL_strchr(cp, '/');
-            m_port = strtol(cp0, (char **)nsnull, 10 /* base 10 */);
-        }
-		imapPartOfUrl = cp + 1; // #### probably not quite right - should check for "/"??
-        cp = PL_strchr(cp, '?');
-        if (cp)
-        {
-            cp++;
-            PRInt32 cplen = PL_strlen(cp);
-            m_search = (char*) PR_Malloc(cplen+1);
-            PL_strcpy(m_search, cp);
-        }
+		ParseImapPart(imapPartOfUrl+1);  // GetPath leaves leading '/' in the path!!!
+		nsCRT::free(imapPartOfUrl);
 	}
 
-	if (imapPartOfUrl)
-		m_file = PL_strdup(imapPartOfUrl);
-
-	ParseImapPart(imapPartOfUrl);
-
-    delete [] cSpec;
-
-    if (m_host)
-    {
-        nsresult rv = NS_OK;
-        NS_WITH_SERVICE(nsIMsgMailSession, session, kMsgMailSessionCID, &rv); 
-        if (NS_FAILED(rv)) return rv;
-        
-        nsCOMPtr<nsIMsgAccountManager> accountManager;
-        rv = session->GetAccountManager(getter_AddRefs(accountManager));
-        if(NS_FAILED(rv)) return rv;
-        
-        nsCOMPtr<nsISupportsArray> servers;
-        rv = accountManager->FindServersByHostname(m_host,
-                              nsIImapIncomingServer::GetIID(),
-                                       getter_AddRefs(servers));
-        if (NS_FAILED(rv)) return rv;
-        nsCOMPtr<nsISupports> aSupport =
-            getter_AddRefs(servers->ElementAt(0));
-        nsCOMPtr<nsIMsgIncomingServer> server (do_QueryInterface(aSupport));
-        if (NS_FAILED(rv)) return rv;
-		m_server = do_QueryInterface(server);
-    }
-
     NS_UNLOCK_INSTANCE();
     return NS_OK;
 }
 
-void nsImapUrl::ReconstructSpec(void)
-{
-    PR_FREEIF(m_spec);
-
-    char portBuffer[10];
-    if (0 != m_port)
-        PR_snprintf(portBuffer, 10, ":%d", m_port);
-    else
-        portBuffer[0] = '\0';
-
-    PRInt32 plen = PL_strlen(m_protocol) + PL_strlen(m_host) +
-        PL_strlen(portBuffer) + 4;
-
-	if (m_file)
-		plen += 1 + PL_strlen(m_file);
-
-    if (m_search)
-        plen += 1 + PL_strlen(m_search);
-
-    m_spec = (char *) PR_Malloc(plen + 1);
-    PR_snprintf(m_spec, plen, "%s://%s%s", 
-                m_protocol, ((nsnull != m_host) ? m_host : ""), portBuffer);
-
-	if (m_file)
-	{
-		PL_strcat(m_spec, "/");
-		PL_strcat(m_spec, m_file);
-	}
-    if (m_search) 
-	{
-        PL_strcat(m_spec, "?");
-        PL_strcat(m_spec, m_search);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-PRBool nsImapUrl::Equals(const nsIURL* aURL) const 
-{
-    PRBool bIsEqual;
-    nsImapUrl* other = nsnull;
-    NS_LOCK_INSTANCE();
-	// are they both imap urls?? if yes...for now just compare the pointers until 
-	// I figure out if we need to check any of the guts for 
-    if (((nsIURL*)aURL)->QueryInterface(nsIImapUrl::GetIID(), (void**)&other) == NS_OK)
-        bIsEqual = other == this; // compare the pointers...
-    else
-        bIsEqual = PR_FALSE;
-    NS_UNLOCK_INSTANCE();
-    return bIsEqual;
-}
-
-NS_IMETHODIMP nsImapUrl::GetProtocol(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_protocol;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetProtocol(const char *aNewProtocol)
-{
-    NS_LOCK_INSTANCE();
-    m_protocol = nsCRT::strdup(aNewProtocol);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetHost(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_host;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetHost(const char *aNewHost)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_host = nsCRT::strdup(aNewHost);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetFile(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = nsnull;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetFile(const char *aNewFile)
-{
-	// imap doesn't have a file portion to the url yet...
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetSpec(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_spec;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetSpec(const char *aNewSpec)
-{
-    // XXX is this right, or should we call ParseURL?
-    nsresult rv = NS_OK;
-    NS_LOCK_INSTANCE();
-    rv = ParseURL(aNewSpec);
-    NS_UNLOCK_INSTANCE();
-    return rv;
-}
-
-NS_IMETHODIMP nsImapUrl::GetRef(const char* *result) const
-{
-    *result = nsnull;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetRef(const char *aNewRef)
-{
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetHostPort(PRUint32 *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_port;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetHostPort(PRUint32 aNewPort)
-{
-    NS_LOCK_INSTANCE();
-    m_port = aNewPort;
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetSearch(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_search;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetSearch(const char *aNewSearch)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_search = nsCRT::strdup(aNewSearch);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetContainer(nsISupports* *result) const
-{
-    *result = nsnull;
-    return NS_OK;
-}
-  
-NS_IMETHODIMP nsImapUrl::SetContainer(nsISupports* container)
-{
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetContentLength(PRInt32 *len)
-{
-    NS_LOCK_INSTANCE();
-    *len = m_URL_s->content_length;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::CreateSearchCriteriaString(nsString2 *aResult)
+NS_IMETHODIMP nsImapUrl::CreateSearchCriteriaString(nsCString *aResult)
 {
 	if (nsnull == aResult || !m_searchCriteriaString) 
 		return  NS_ERROR_NULL_POINTER;
@@ -773,7 +255,7 @@ NS_IMETHODIMP nsImapUrl::CreateSearchCriteriaString(nsString2 *aResult)
 }
 
 
-NS_IMETHODIMP nsImapUrl::CreateListOfMessageIdsString(nsString2 *aResult) 
+NS_IMETHODIMP nsImapUrl::CreateListOfMessageIdsString(nsCString *aResult) 
 {
 	if (nsnull == aResult || !m_listOfMessageIds) 
 		return  NS_ERROR_NULL_POINTER;
@@ -795,78 +277,14 @@ NS_IMETHODIMP nsImapUrl::CreateListOfMessageIdsString(nsString2 *aResult)
 	// since that can specify an IMAP MIME part
 	char *wherePart = PL_strstr(m_listOfMessageIds, "/;section=");
 	if (wherePart)
-		bytesToCopy = MIN(bytesToCopy, wherePart - m_listOfMessageIds);
+		bytesToCopy = PR_MIN(bytesToCopy, wherePart - m_listOfMessageIds);
 
 	aResult->Assign(m_listOfMessageIds, bytesToCopy);
 
     NS_UNLOCK_INSTANCE();
 	return NS_OK;
 }
-
-////////////////////////////////////////////////////////////////////////////////////
-// End of nsIURL support
-////////////////////////////////////////////////////////////////////////////////////
- 
-
-////////////////////////////////////////////////////////////////////////////////////
-// The following set of functions should become obsolete once we take them out of
-// nsIURL.....
-////////////////////////////////////////////////////////////////////////////////////
-NS_IMETHODIMP nsImapUrl::GetLoadAttribs(nsILoadAttribs* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = NULL;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
   
-NS_IMETHODIMP nsImapUrl::SetLoadAttribs(nsILoadAttribs* aLoadAttribs)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetPostHeader(const char* name, const char* value)
-{
-    NS_LOCK_INSTANCE();
-    // XXX
-    PR_ASSERT(0);
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::SetPostData(nsIInputStream* input)
-{
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetURLGroup(nsIURLGroup* *result) const
-{
-    return NS_OK;
-}
-  
-NS_IMETHODIMP nsImapUrl::SetURLGroup(nsIURLGroup* group)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsImapUrl::GetServerStatus(PRInt32 *status)
-{
-    NS_LOCK_INSTANCE();
-    *status = m_URL_s->server_status;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-
-NS_IMETHODIMP nsImapUrl::ToString(PRUnichar* *aString) const
-{ 
-	if (aString)
-		*aString = nsnull; 
-	return NS_OK;
-}
-
 NS_IMETHODIMP nsImapUrl::GetImapPartToFetch(char **result) 
 {
     NS_LOCK_INSTANCE();
@@ -961,7 +379,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 		m_imapAction   					 = nsImapMsgFetch;
 		ParseUidChoice();
 		ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-		ParseListofMessageIds();
+		ParseListOfMessageIds();
 	}
 	else /* if (fInternal) no concept of internal - not sure there will be one */
 	{
@@ -970,21 +388,20 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapMsgHeader;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "deletemsg"))
 		{
 			m_imapAction   					 = nsImapDeleteMsg;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "uidexpunge"))
 		{
 			m_imapAction   					 = nsImapUidExpunge;
-			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "deleteallmsgs"))
 		{
@@ -996,7 +413,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapAddMsgFlags;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseMsgFlags();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "subtractmsgflags"))
@@ -1004,7 +421,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapSubtractMsgFlags;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseMsgFlags();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "setmsgflags"))
@@ -1012,7 +429,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapSetMsgFlags;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseMsgFlags();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "onlinecopy"))
@@ -1020,7 +437,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapOnlineCopy;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseFolderPath(&m_destinationCanonicalFolderPathSubString);
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "onlinemove"))
@@ -1028,7 +445,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapOnlineMove;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseFolderPath(&m_destinationCanonicalFolderPathSubString);
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "onlinetoofflinecopy"))
@@ -1036,7 +453,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapOnlineToOfflineCopy;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseFolderPath(&m_destinationCanonicalFolderPathSubString);
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "onlinetoofflinemove"))
@@ -1044,7 +461,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapOnlineToOfflineMove;
 			ParseUidChoice();
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 			ParseFolderPath(&m_destinationCanonicalFolderPathSubString);
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "offlinetoonlinecopy"))
@@ -1068,7 +485,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 			m_imapAction   					 = nsImapSelectFolder;
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
 			if (m_tokenPlaceHolder && *m_tokenPlaceHolder)
-				ParseListofMessageIds();
+				ParseListOfMessageIds();
 			else
 				m_listOfMessageIds = PL_strdup("");
 		}
@@ -1140,7 +557,7 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 		{
 			m_imapAction   					 = nsImapBiff;
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
-			ParseListofMessageIds();
+			ParseListOfMessageIds();
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "netscape"))
 		{
@@ -1153,8 +570,13 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "appenddraftfromfile"))
 		{
-			m_imapAction					 = nsImapAppendMsgFromFile;
+			m_imapAction					 = nsImapAppendDraftFromFile;
 			ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
+            ParseUidChoice();
+            if (m_tokenPlaceHolder && *m_tokenPlaceHolder)
+                ParseListOfMessageIds();
+            else
+                m_listOfMessageIds = PL_strdup("");
 		}
 		else if (!PL_strcasecmp(m_urlidSubString, "subscribe"))
 		{
@@ -1277,17 +699,20 @@ NS_IMETHODIMP nsImapUrl::AllocateServerPath(const char * canonicalPath, char onl
 	return retVal;
 }
 
-
+// Converts the real online name on the server to canonical format:
+// result is hierarchy is indicated by '/' and all real slashes ('/') are escaped.
+// The caller has already converted m-utf-7 to 8 bit ascii, which is a problem.
 NS_IMETHODIMP nsImapUrl::AllocateCanonicalPath(const char *serverPath, char onlineDelimiter, char **allocatedPath ) 
 {
     nsresult rv = NS_ERROR_NULL_POINTER;
     char *canonicalPath = nsnull;
 	char delimiterToUse = onlineDelimiter;
-    const char* hostName = nsnull;
+    nsXPIDLCString hostName;
     char* userName = nsnull;
     nsString aString;
 	char *currentPath = (char *) serverPath;
     char *onlineDir = nsnull;
+	nsCOMPtr<nsIMsgIncomingServer> server;
 
 	NS_LOCK_INSTANCE();
 
@@ -1302,14 +727,15 @@ NS_IMETHODIMP nsImapUrl::AllocateCanonicalPath(const char *serverPath, char onli
 
 	NS_ASSERTION (serverPath, "Oops... null serverPath");
 
-	if (!serverPath)
+	if (!serverPath || NS_FAILED(rv))
 		goto done;
 
-    if (NS_FAILED(rv))
-        goto done;
+    GetHost(getter_Copies(hostName));
+	rv = GetServer(getter_AddRefs(server));
+	if (NS_FAILED(rv))
+		goto done;
 
-    GetHost(&hostName);
-    m_server->GetUsername(&userName);
+	server->GetUsername(&userName);
 
     hostSessionList->GetOnlineDirForHost(hostName, userName, aString); 
     // First we have to check to see if we should strip off an online server
@@ -1417,6 +843,51 @@ NS_IMETHODIMP nsImapUrl::SetAllowContentChange(PRBool allowContentChange)
 	return NS_OK;
 }
 
+NS_IMETHODIMP nsImapUrl::SetCopyState(nsISupports* copyState)
+{
+    if (!copyState) return NS_ERROR_NULL_POINTER;
+    NS_LOCK_INSTANCE();
+    m_copyState = null_nsCOMPtr();
+    m_copyState = do_QueryInterface(copyState);
+    NS_UNLOCK_INSTANCE();
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsImapUrl::GetCopyState(nsISupports** copyState)
+{
+    if (!copyState) return NS_ERROR_NULL_POINTER;
+    NS_LOCK_INSTANCE();
+    *copyState = m_copyState;
+    NS_IF_ADDREF(*copyState);
+    NS_UNLOCK_INSTANCE();
+    if (*copyState) return NS_OK;
+    return NS_ERROR_NULL_POINTER;
+}
+
+NS_IMETHODIMP
+nsImapUrl::SetMsgFileSpec(nsIFileSpec* fileSpec)
+{
+    nsresult rv = NS_OK;
+    NS_LOCK_INSTANCE();
+    if (fileSpec)
+        m_fileSpec = do_QueryInterface(fileSpec, &rv);
+    else
+        m_fileSpec = null_nsCOMPtr();
+    NS_UNLOCK_INSTANCE();
+    return rv;
+}
+
+NS_IMETHODIMP
+nsImapUrl::GetMsgFileSpec(nsIFileSpec** fileSpec)
+{
+    if (!fileSpec) return NS_ERROR_NULL_POINTER;
+    NS_LOCK_INSTANCE();
+    *fileSpec = m_fileSpec;
+    NS_ADDREF(*fileSpec);
+    NS_UNLOCK_INSTANCE();
+    return NS_OK;
+}
+
 NS_IMETHODIMP nsImapUrl::GetAllowContentChange(PRBool *result)
 {
 	if (!result)
@@ -1427,6 +898,22 @@ NS_IMETHODIMP nsImapUrl::GetAllowContentChange(PRBool *result)
 	return NS_OK;
 }
 
+NS_IMETHODIMP
+nsImapUrl::GetURI(char** aURI)
+{
+    nsresult rv = NS_ERROR_NULL_POINTER;
+    if (aURI)
+    {
+        *aURI = nsnull;
+        PRUint32 key = m_listOfMessageIds ? atoi(m_listOfMessageIds) : 0;
+		nsXPIDLCString theFile;
+		// mscott --> this is probably wrong (the part about getting the file part)
+		// we may need to extract it from a different part of the uri.
+		GetFileName(getter_Copies(theFile));
+        return nsBuildImapMessageURI(theFile, key, aURI);
+    }
+    return rv;
+}
 
 char *nsImapUrl::ReplaceCharsInCopiedString(const char *stringToCopy, char oldChar, char newChar)
 {	
@@ -1448,7 +935,7 @@ char *nsImapUrl::ReplaceCharsInCopiedString(const char *stringToCopy, char oldCh
 
 
 ////////////////////////////////////////////////////////////////////////////////////
-// End of functions which should be made obsolete after modifying nsIURL
+// End of functions which should be made obsolete after modifying nsIURI
 ////////////////////////////////////////////////////////////////////////////////////
 
 void nsImapUrl::ParseFolderPath(char **resultingCanonicalPath)
@@ -1518,7 +1005,7 @@ void nsImapUrl::ParseMsgFlags()
 		m_flags = 0;
 }
 
-void nsImapUrl::ParseListofMessageIds()
+void nsImapUrl::ParseListOfMessageIds()
 {
 	m_listOfMessageIds = m_tokenPlaceHolder ? nsIMAPGenericParser::Imapstrtok_r(nil, IMAP_URL_TOKEN_SEPARATOR, &m_tokenPlaceHolder) : (char *)NULL;
 	if (!m_listOfMessageIds)

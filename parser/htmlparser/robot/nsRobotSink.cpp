@@ -22,7 +22,7 @@
 #include "nsString.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
 #include "nsIIOService.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -74,6 +74,7 @@ public:
   NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
   NS_IMETHOD AddComment(const nsIParserNode& aNode);
   NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
   NS_IMETHOD WillBuildModel(void) { return NS_OK; }
   NS_IMETHOD DidBuildModel(PRInt32 aQualityLevel) { return NS_OK; }
   NS_IMETHOD WillInterrupt(void) { return NS_OK; }
@@ -85,21 +86,23 @@ public:
   NS_IMETHOD EndContext(PRInt32 aPosition){ return NS_OK; }
 
   // nsIRobotSink
-  NS_IMETHOD Init(nsIURL* aDocumentURL);
+  NS_IMETHOD Init(nsIURI* aDocumentURL);
   NS_IMETHOD AddObserver(nsIRobotSinkObserver* aObserver);
   NS_IMETHOD RemoveObserver(nsIRobotSinkObserver* aObserver);
 
   void ProcessLink(const nsString& aLink);
 
 protected:
-  nsIURL* mDocumentURL;
+  nsIURI* mDocumentURL;
   nsVoidArray mObservers;
 };
 
 nsresult NS_NewRobotSink(nsIRobotSink** aInstancePtrResult)
 {
   RobotSink* it = new RobotSink();
-  return it->QueryInterface(kIRobotSinkIID, (void**) aInstancePtrResult);
+  if(it)
+    return it->QueryInterface(kIRobotSinkIID, (void**) aInstancePtrResult);
+  return NS_OK;
 }
 
 RobotSink::RobotSink()
@@ -286,7 +289,18 @@ NS_IMETHODIMP RobotSink::AddProcessingInstruction(const nsIParserNode& aNode) {
   return result;
 }
 
-NS_IMETHODIMP RobotSink::Init(nsIURL* aDocumentURL)
+/**
+ *  This gets called by the parser when it encounters
+ *  a DOCTYPE declaration in the HTML document.
+ */
+
+NS_IMETHODIMP
+RobotSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP RobotSink::Init(nsIURI* aDocumentURL)
 {
   NS_IF_RELEASE(mDocumentURL);
   mDocumentURL = aDocumentURL;
@@ -319,9 +333,9 @@ void RobotSink::ProcessLink(const nsString& aLink)
 
   // Make link absolute
   // XXX base tag handling
-  nsIURL* docURL = mDocumentURL;
+  nsIURI* docURL = mDocumentURL;
   if (nsnull != docURL) {
-    nsIURL* absurl;
+    nsIURI* absurl;
     nsresult rv;
 #ifndef NECKO
     rv = NS_NewURL(&absurl, aLink, docURL);
@@ -334,22 +348,31 @@ void RobotSink::ProcessLink(const nsString& aLink)
     rv = mDocumentURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
     if (NS_FAILED(rv)) return;
 
-    const char *uriStr = aLink.GetBuffer();
+    char *uriStr = aLink.ToNewCString();
+    if (!uriStr) return;
     rv = service->NewURI(uriStr, baseUri, &uri);
+    nsCRT::free(uriStr);
     NS_RELEASE(baseUri);
     if (NS_FAILED(rv)) return;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&absurl);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&absurl);
     NS_RELEASE(uri);
 #endif // NECKO
 
     if (NS_OK == rv) {
       absURLSpec.Truncate();
+#ifdef NECKO
+      char* str;
+      absurl->GetSpec(&str);
+      absURLSpec = str;
+      nsCRT::free(str);
+#else
       PRUnichar* str;
       absurl->ToString(&str);
       absURLSpec = str;
       NS_RELEASE(absurl);
       delete str;
+#endif
     }
   }
 

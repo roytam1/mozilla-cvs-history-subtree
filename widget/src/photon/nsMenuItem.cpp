@@ -124,7 +124,6 @@ void nsMenuItem::Create(nsIWidget      *aMBParent,
   PtArg_t  arg[5];
   void     *me        = (void *) this;
 
-
   mTarget  = aMBParent;
   mLabel   = aLabel;
   
@@ -173,7 +172,6 @@ NS_METHOD nsMenuItem::Create(nsIMenu * aParent)
 {
   PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::Create Separator with nsIMenu\n"));
 
-  /* New M5 Way */
   mMenuParent = aParent;
   mIsSeparator = PR_TRUE;
 
@@ -252,8 +250,8 @@ nsIWidget * nsMenuItem::GetMenuBarParent(nsISupports * aParent)
       if (NS_OK != menuBar->GetParent(widget)) {
         widget =  nsnull;
       } 
-      NS_RELEASE(menuBar);
       NS_RELEASE(parent);
+      NS_RELEASE(menuBar);
       return widget;
     } else {
       NS_RELEASE(parent);
@@ -271,7 +269,7 @@ NS_METHOD nsMenuItem::Create(nsISupports     *aParent,
   char *str=aLabel.ToNewCString();
   PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::Create with nsIMenu this=<%p>, aParent=<%p> aLabel=<%s> aIsSep=<%d>\n",this, aParent, str, aIsSeparator));
   delete [] str;
-  
+
   if (nsnull == aParent)
   {
     return NS_ERROR_FAILURE;
@@ -297,9 +295,11 @@ NS_METHOD nsMenuItem::Create(nsIPopUpMenu   *aParent,
                              PRUint32        aCommand)
 {
 
-  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::Create with nsIPopUpMenu, Never Tested\n"));
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::Create with nsIPopUpMenu - Not Implemented\n"));
 
   mPopUpParent = aParent;
+  mCommand = aCommand;
+  mLabel = aLabel;
 
   nsIWidget * widget = nsnull;
   if (NS_OK != aParent->GetParent(widget))
@@ -434,8 +434,9 @@ nsEventStatus nsMenuItem::MenuSelected(const nsMenuEvent & aMenuEvent)
 nsEventStatus nsMenuItem::MenuDeselected(const nsMenuEvent & aMenuEvent)
 {
   PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::MenuDeSelected - Not Implemented\n"));
- if(mListener)
-   return mListener->MenuDeselected(aMenuEvent);
+
+  if(mListener)
+    return mListener->MenuDeselected(aMenuEvent);
 
   return nsEventStatus_eIgnore;
 }
@@ -526,7 +527,7 @@ NS_METHOD nsMenuItem::DoCommand()
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
   event.eventStructType = NS_MOUSE_EVENT;
-  event.message = NS_MOUSE_LEFT_CLICK;
+  event.message = NS_MENU_ACTION;
 
   nsCOMPtr<nsIContent> contentNode;
   contentNode = do_QueryInterface(mDOMElement);
@@ -538,7 +539,19 @@ NS_METHOD nsMenuItem::DoCommand()
   rv = contentNode->HandleDOMEvent(*presContext, &event, nsnull, NS_EVENT_FLAG_INIT, status);
   return rv;
 }
-
+//-------------------------------------------------------------------------
+NS_METHOD nsMenuItem::SetDOMNode(nsIDOMNode * aDOMNode)
+{
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::SetDOMNode\n"));
+  return NS_OK;
+}
+    
+//-------------------------------------------------------------------------
+NS_METHOD nsMenuItem::GetDOMNode(nsIDOMNode ** aDOMNode)
+{
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::GetDOMNode\n"));
+  return NS_OK;
+}
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItem::SetDOMElement(nsIDOMElement * aDOMElement)
 {
@@ -558,16 +571,55 @@ NS_METHOD nsMenuItem::GetDOMElement(nsIDOMElement ** aDOMElement)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItem::SetWebShell(nsIWebShell * aWebShell)
 {
-  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::SetWebShell - Not Implemented\n"));
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::SetWebShell\n"));
   mWebShell = aWebShell;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetShortcutChar(const nsString &aText)
+{
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::SetShortcut - Not Implemented\n"));
+
+  mKeyEquivalent = aText;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetShortcutChar(nsString &aText)
+{
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::GetShortcut - Not Implemented\n"));
+
+  aText = mKeyEquivalent;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::SetModifiers(PRUint8 aModifiers)
+{
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::SetModifiers - Not Implemented\n"));
+
+  mModifiers = aModifiers;
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+NS_IMETHODIMP nsMenuItem::GetModifiers(PRUint8 * aModifiers)
+{
+  PR_LOG(PhWidLog, PR_LOG_ERROR,("nsMenuItem::GetModifiers - Not Implemented\n"));
+
+  *aModifiers = mModifiers; 
   return NS_OK;
 }
 
 
 
 
-
-
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//------- Native Photon  Routines needed for nsMenuItem
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
 
 int nsMenuItem::MenuItemActivateCb (PtWidget_t *widget, void *nsClassPtr, PtCallbackInfo_t *cbinfo)
 {
@@ -576,9 +628,12 @@ int nsMenuItem::MenuItemActivateCb (PtWidget_t *widget, void *nsClassPtr, PtCall
   nsMenuItem    *aMenuItem = (nsMenuItem *) nsClassPtr;
   
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsMenuItem::MenuItemActivate Callback aMenuItem=<%p>\n", aMenuItem));
-    
+
+  
   if (aMenuItem != nsnull)
   {
+//    NS_ADDREF(aMenuItem);					/* HACK, maybe this will work! */
+
     /* Fill out the event structure */
     event.message = NS_MENU_SELECTED;
     event.eventStructType = NS_MENU_EVENT;

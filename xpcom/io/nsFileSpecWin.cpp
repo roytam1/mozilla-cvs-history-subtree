@@ -28,6 +28,16 @@
 
 #include "windows.h"
 
+#if (_MSC_VER == 1100)
+#define INITGUID
+#include "objbase.h"
+DEFINE_OLEGUID(IID_IPersistFile, 0x0000010BL, 0, 0);
+#endif
+
+#include "shlobj.h"
+#include "shellapi.h"
+#include "shlguid.h"
+
 #ifdef UNICODE
 #define CreateDirectoryW  CreateDirectory
 #else
@@ -221,6 +231,134 @@ PRBool nsFileSpec::IsDirectory() const
 } // nsFileSpec::IsDirectory
 
 //----------------------------------------------------------------------------------------
+PRBool nsFileSpec::IsHidden() const
+//----------------------------------------------------------------------------------------
+{
+    PRBool hidden = PR_FALSE;
+    if (!mPath.IsEmpty())
+    {
+        DWORD attr = GetFileAttributes(mPath);
+        if (FILE_ATTRIBUTE_HIDDEN & attr)
+            hidden = PR_TRUE;
+    }
+    return hidden;
+}
+// nsFileSpec::IsHidden
+
+//----------------------------------------------------------------------------------------
+PRBool nsFileSpec::IsSymlink() const
+//----------------------------------------------------------------------------------------
+{
+    HRESULT hres; 
+    IShellLink* psl; 
+    
+    PRBool isSymlink = PR_FALSE;
+    
+    CoInitialize(NULL);
+    // Get a pointer to the IShellLink interface. 
+    hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl); 
+    if (SUCCEEDED(hres)) 
+    { 
+        IPersistFile* ppf; 
+        
+        // Get a pointer to the IPersistFile interface. 
+        hres = psl->QueryInterface(IID_IPersistFile, (void**)&ppf); 
+        
+        if (SUCCEEDED(hres)) 
+        {
+            WORD wsz[MAX_PATH]; 
+            // Ensure that the string is Unicode. 
+            MultiByteToWideChar(CP_ACP, 0, mPath, -1, wsz, MAX_PATH); 
+ 
+            // Load the shortcut. 
+            hres = ppf->Load(wsz, STGM_READ); 
+            if (SUCCEEDED(hres)) 
+            {
+                isSymlink = PR_TRUE;
+            }
+            
+            // Release the pointer to the IPersistFile interface. 
+            ppf->Release(); 
+        }
+        
+        // Release the pointer to the IShellLink interface. 
+        psl->Release();
+    }
+
+    CoUninitialize();
+
+    return isSymlink;
+}
+
+
+//----------------------------------------------------------------------------------------
+nsresult nsFileSpec::ResolveSymlink(PRBool& wasSymlink)
+//----------------------------------------------------------------------------------------
+{
+    wasSymlink = PR_FALSE;  // assume failure
+
+    HRESULT hres; 
+    IShellLink* psl; 
+
+    CoInitialize(NULL);
+
+    // Get a pointer to the IShellLink interface. 
+    hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl); 
+    if (SUCCEEDED(hres)) 
+    { 
+        IPersistFile* ppf; 
+        
+        // Get a pointer to the IPersistFile interface. 
+        hres = psl->QueryInterface(IID_IPersistFile, (void**)&ppf); 
+        
+        if (SUCCEEDED(hres)) 
+        {
+            WORD wsz[MAX_PATH]; 
+            // Ensure that the string is Unicode. 
+            MultiByteToWideChar(CP_ACP, 0, mPath, -1, wsz, MAX_PATH); 
+ 
+            // Load the shortcut. 
+            hres = ppf->Load(wsz, STGM_READ); 
+            if (SUCCEEDED(hres)) 
+            {
+                wasSymlink = PR_TRUE;
+
+                // Resolve the link. 
+                hres = psl->Resolve(nsnull, SLR_NO_UI ); 
+                if (SUCCEEDED(hres)) 
+                { 
+                    char szGotPath[MAX_PATH]; 
+                    WIN32_FIND_DATA wfd; 
+
+                    // Get the path to the link target. 
+                    hres = psl->GetPath( szGotPath, MAX_PATH, &wfd, SLGP_UNCPRIORITY ); 
+
+                    if (SUCCEEDED(hres))
+                    {
+                        // Here we modify the nsFileSpec;
+                        mPath = szGotPath;
+                        mError = NS_OK;
+                    }
+                } 
+            }
+            // Release the pointer to the IPersistFile interface. 
+            ppf->Release(); 
+        }
+        // Release the pointer to the IShellLink interface. 
+        psl->Release();
+    }
+
+    CoUninitialize();
+
+    if (SUCCEEDED(hres))
+        return NS_OK;
+
+    return NS_FILE_FAILURE;
+}
+
+
+
+//----------------------------------------------------------------------------------------
 void nsFileSpec::GetParent(nsFileSpec& outSpec) const
 //----------------------------------------------------------------------------------------
 {
@@ -267,7 +405,7 @@ void nsFileSpec::Delete(PRBool inRecursive) const
     {
 	    if (inRecursive)
         {
-            for (nsDirectoryIterator i(*this); i.Exists(); i++)
+            for (nsDirectoryIterator i(*this, PR_FALSE); i.Exists(); i++)
                 {
                     nsFileSpec& child = (nsFileSpec&)i;
                     child.Delete(inRecursive);
@@ -281,6 +419,50 @@ void nsFileSpec::Delete(PRBool inRecursive) const
     }
 } // nsFileSpec::Delete
 
+
+//----------------------------------------------------------------------------------------
+void nsFileSpec::RecursiveCopy(nsFileSpec newDir) const
+//----------------------------------------------------------------------------------------
+{
+    if (IsDirectory())
+    {
+		if (!(newDir.Exists()))
+		{
+			newDir.CreateDirectory();
+		}
+
+		for (nsDirectoryIterator i(*this, PR_FALSE); i.Exists(); i++)
+		{
+			nsFileSpec& child = (nsFileSpec&)i;
+
+			if (child.IsDirectory())
+			{
+				nsFileSpec tmpDirSpec(newDir);
+
+				char *leafname = child.GetLeafName();
+				tmpDirSpec += leafname;
+				nsCRT::free(leafname);
+
+				child.RecursiveCopy(tmpDirSpec);
+			}
+			else
+			{
+   				child.RecursiveCopy(newDir);
+			}
+		}
+    }
+    else if (!mPath.IsEmpty())
+    {
+		nsFileSpec& filePath = (nsFileSpec&) *this;
+
+		if (!(newDir.Exists()))
+		{
+			newDir.CreateDirectory();
+		}
+
+        filePath.Copy(newDir);
+    }
+} // nsFileSpec::RecursiveCopy
 
 //----------------------------------------------------------------------------------------
 nsresult nsFileSpec::Rename(const char* inNewName)
@@ -415,16 +597,17 @@ PRUint32 nsFileSpec::GetDiskSpaceAvailable() const
 //========================================================================================
 
 //----------------------------------------------------------------------------------------
-nsDirectoryIterator::nsDirectoryIterator(
-	const nsFileSpec& inDirectory
-,	int inIterateDirection)
+nsDirectoryIterator::nsDirectoryIterator(const nsFileSpec& inDirectory, PRBool resolveSymlink)
 //----------------------------------------------------------------------------------------
 	: mCurrent(inDirectory)
 	, mDir(nsnull)
+    , mStarting(inDirectory)
 	, mExists(PR_FALSE)
+    , mResoveSymLinks(resolveSymlink)
 {
     mDir = PR_OpenDir(inDirectory);
 	mCurrent += "dummy";
+    mStarting += "dummy";
     ++(*this);
 } // nsDirectoryIterator::nsDirectoryIterator
 
@@ -447,7 +630,13 @@ nsDirectoryIterator& nsDirectoryIterator::operator ++ ()
 	if (entry)
     {
       mExists = PR_TRUE;
+      mCurrent = mStarting;
       mCurrent.SetLeafName(entry->name);
+      if (mResoveSymLinks)
+      {   
+          PRBool ignore;
+          mCurrent.ResolveSymlink(ignore);
+      }
     }
 	return *this;
 } // nsDirectoryIterator::operator ++

@@ -20,6 +20,7 @@
 #include "nsSoftwareUpdate.h"
 #include "nsXPInstallManager.h"
 #include "nsInstallTrigger.h"
+#include "nsInstallVersion.h"
 #include "nsIDOMInstallTriggerGlobal.h"
 
 #include "nscore.h"
@@ -33,6 +34,8 @@
 #include "nsIServiceManager.h"
 
 #include "nsSpecialSystemDirectory.h"
+
+#include "VerReg.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID, NS_IFACTORY_IID);
@@ -160,8 +163,15 @@ NS_IMETHODIMP
 nsInstallTrigger::Install(nsXPITriggerInfo* aTrigger, PRBool* aReturn)
 {
     nsresult rv;
-
     *aReturn = PR_FALSE;
+
+    PRBool enabled;
+    UpdateEnabled(&enabled);
+    if (!enabled) 
+    {
+        delete aTrigger;
+        return NS_OK;
+    }
 
     nsXPInstallManager *mgr = new nsXPInstallManager();
     if (mgr)
@@ -172,7 +182,10 @@ nsInstallTrigger::Install(nsXPITriggerInfo* aTrigger, PRBool* aReturn)
             *aReturn = PR_TRUE;
     }
     else
+    {
+        delete aTrigger;
         rv = NS_ERROR_OUT_OF_MEMORY;
+    }
 
 
     return rv;
@@ -180,11 +193,18 @@ nsInstallTrigger::Install(nsXPITriggerInfo* aTrigger, PRBool* aReturn)
 
 
 NS_IMETHODIMP    
-nsInstallTrigger::StartSoftwareUpdate(const nsString& aURL, PRInt32 aFlags, PRInt32* aReturn)
+nsInstallTrigger::StartSoftwareUpdate(const nsString& aURL, PRInt32 aFlags, PRBool* aReturn)
 {
+    PRBool enabled;
     nsresult rv = NS_ERROR_OUT_OF_MEMORY;
+    *aReturn = PR_FALSE;
 
-    // The Install manager will delete itself when done
+    UpdateEnabled(&enabled);
+    if (!enabled)
+        return NS_OK;
+
+    // The Install manager will delete itself when done, once we've called
+    // InitManager. Before then **WE** must delete it
     nsXPInstallManager *mgr = new nsXPInstallManager();
     if (mgr)
     {
@@ -200,15 +220,13 @@ nsInstallTrigger::StartSoftwareUpdate(const nsString& aURL, PRInt32 aFlags, PRIn
             }
             else
             {
-                rv = NS_ERROR_OUT_OF_MEMORY;
                 delete trigger;
+                delete mgr;
             }
         }
         else
-            rv = NS_ERROR_OUT_OF_MEMORY;
+            delete mgr;
     }
-    else
-        rv = NS_ERROR_OUT_OF_MEMORY;
 
     *aReturn = NS_OK;  // maybe we should do something more.
     return rv;
@@ -217,60 +235,169 @@ nsInstallTrigger::StartSoftwareUpdate(const nsString& aURL, PRInt32 aFlags, PRIn
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, PRInt32 aDiffLevel, const nsString& aVersion, PRInt32 aMode, PRInt32* aReturn)
 {
-    return NS_OK;
+    nsInstallVersion inVersion;
+    inVersion.Init(aVersion);
+    return ConditionalSoftwareUpdate(aURL, aRegName, aDiffLevel, &inVersion, aMode, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, PRInt32 aDiffLevel, nsIDOMInstallVersion* aVersion, PRInt32 aMode, PRInt32* aReturn)
 {
+    PRBool needJar = PR_FALSE;
+
+    PRBool enabled;
+
+    UpdateEnabled(&enabled);
+    if (!enabled)
+        return NS_OK;
+
+    if (aURL == "" || aVersion == nsnull)
+    {
+        needJar = PR_TRUE;
+    }
+    else
+    {
+        char * regNameCString = aRegName.ToNewCString();
+
+        REGERR status = VR_ValidateComponent( regNameCString );
+        
+        if ( status == REGERR_NOFIND || status == REGERR_NOFILE )
+        {
+            // either component is not in the registry or it's a file
+            // node and the physical file is missing
+            needJar = PR_TRUE;
+        }
+        else
+        {
+            VERSION oldVersion;
+            PRInt32 diffValue;
+
+            status = VR_GetVersion( regNameCString, &oldVersion );
+            nsInstallVersion oldInstallVersion;
+
+            oldInstallVersion.Init(oldVersion.major, 
+                                oldVersion.minor, 
+                                oldVersion.release, 
+                                oldVersion.build);
+
+
+            if ( status != REGERR_OK )
+                needJar = PR_TRUE;
+            else if ( aDiffLevel < 0 )
+            {
+                aVersion->CompareTo(&oldInstallVersion, &diffValue); 
+                needJar = (diffValue <= aDiffLevel);
+            }
+            else
+            {
+                aVersion->CompareTo(&oldInstallVersion, &diffValue);
+                needJar = (diffValue >= aDiffLevel);
+            }
+        }
+    }
+
+    if (needJar)
+        return StartSoftwareUpdate(aURL, aMode, aReturn);
+    else
+        *aReturn = 0;
+
     return NS_OK;
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, nsIDOMInstallVersion* aVersion, PRInt32 aMode, PRInt32* aReturn)
 {
-    return NS_OK;
+    return ConditionalSoftwareUpdate(aURL, aRegName, BLD_DIFF, aVersion, aMode, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, const nsString& aVersion, PRInt32 aMode, PRInt32* aReturn)
 {
-    return NS_OK;
+    nsInstallVersion inVersion;
+    inVersion.Init(aVersion);
+    return ConditionalSoftwareUpdate(aURL, aRegName, BLD_DIFF, &inVersion, aMode, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, const nsString& aVersion, PRInt32* aReturn)
 {
-    return NS_OK;
+    nsInstallVersion inVersion;
+    inVersion.Init(aVersion);;
+    return ConditionalSoftwareUpdate(aURL, aRegName, BLD_DIFF, &inVersion, 0, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, nsIDOMInstallVersion* aVersion, PRInt32* aReturn)
 {
-    return NS_OK;
+    return ConditionalSoftwareUpdate(aURL, aRegName, BLD_DIFF, aVersion, 0, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::CompareVersion(const nsString& aRegName, PRInt32 aMajor, PRInt32 aMinor, PRInt32 aRelease, PRInt32 aBuild, PRInt32* aReturn)
 {
-    return NS_OK;
+    nsInstallVersion inVersion;
+    inVersion.Init(aMajor, aMinor, aRelease, aBuild);
+
+    return CompareVersion(aRegName, &inVersion, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::CompareVersion(const nsString& aRegName, const nsString& aVersion, PRInt32* aReturn)
 {
-    return NS_OK;
+    nsInstallVersion inVersion;
+    inVersion.Init(aVersion);
+
+    return CompareVersion(aRegName, &inVersion, aReturn);
 }
 
 NS_IMETHODIMP    
 nsInstallTrigger::CompareVersion(const nsString& aRegName, nsIDOMInstallVersion* aVersion, PRInt32* aReturn)
 {
+    *aReturn = EQUAL;  // assume failure.
+
+    PRBool enabled;
+
+    UpdateEnabled(&enabled);
+    if (!enabled)
+        return NS_OK;
+
+    VERSION              cVersion;
+    char*                tempCString;
+    REGERR               status;
+    
+    tempCString = aRegName.ToNewCString();
+
+    status = VR_GetVersion( tempCString, &cVersion );
+
+    /* if we got the version */
+    if ( status == REGERR_OK ) 
+    {
+        nsInstallVersion regNameVersion;
+
+        if ( VR_ValidateComponent( tempCString ) == REGERR_NOFILE ) 
+        {
+            regNameVersion.Init(0,0,0,0);
+        }
+        else
+        {
+            regNameVersion.Init(cVersion.major, 
+                                cVersion.minor, 
+                                cVersion.release, 
+                                cVersion.build);
+        }
+
+        regNameVersion.CompareTo( aVersion, aReturn );
+    }
+        
+    if (tempCString)
+        delete [] tempCString;
+    
     return NS_OK;
 }
 
 
 
-// this will take a nsIUrl, and create a temporary file.  If it is local, we just us it.
+// this will take a nsIURI, and create a temporary file.  If it is local, we just us it.
  
 void
 nsInstallTrigger::CreateTempFileFromURL(const nsString& aURL, nsString& tempFileString)
@@ -285,14 +412,14 @@ nsInstallTrigger::CreateTempFileFromURL(const nsString& aURL, nsString& tempFile
     {
         nsSpecialSystemDirectory tempFile(nsSpecialSystemDirectory::OS_TemporaryDirectory);
     
-        PRInt32 result = aURL.RFind("/");
+        PRInt32 result = aURL.RFindChar('/');
         if (result != -1)
         {    
             nsString jarName;
                        
             aURL.Right(jarName, (aURL.Length() - result) );
             
-            PRInt32 argOffset = jarName.RFind("?");
+            PRInt32 argOffset = jarName.RFindChar('?');
 
             if (argOffset != -1)
             {
@@ -323,7 +450,7 @@ nsInstallTrigger::CreateTempFileFromURL(const nsString& aURL, nsString& tempFile
 
 nsInstallTriggerFactory::nsInstallTriggerFactory(void)
 {
-    NS_INIT_REFCNT();
+    NS_INIT_ISUPPORTS();
 }
 
 nsInstallTriggerFactory::~nsInstallTriggerFactory(void)

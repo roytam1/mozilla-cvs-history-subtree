@@ -24,11 +24,13 @@ MODULE = xpcom
 ## exports
 
 EXPORTS =                          \
-        nsBTree.h                  \
+        nsAVLTree.h                \
+        nsCppSharedAllocator.h     \
         nsCRT.h                    \
         nsDeque.h                  \
         nsEnumeratorUtils.h        \
         nsHashtable.h              \
+        nsHashtableEnumerator.h    \
         nsIArena.h                 \
         nsIAtom.h                  \
         nsIBuffer.h                \
@@ -38,15 +40,14 @@ EXPORTS =                          \
         nsIProperties.h            \
         nsISimpleEnumerator.h      \
         nsISizeOfHandler.h         \
-        nsISupportsArray.h         \
         nsIUnicharBuffer.h         \
         nsIVariant.h               \
         nsInt64.h                  \
         nsQuickSort.h              \
-        nsRBTree.h                 \
         nsStr.h                    \
         nsString.h                 \
         nsString2.h                \
+        nsSupportsPrimitives.h     \
         nsTime.h                   \
         nsUnitConversion.h         \
         nsVector.h                 \
@@ -62,6 +63,8 @@ XPIDLSRCS =                 \
         .\nsIEnumerator.idl \
 		.\nsIObserver.idl   \
 		.\nsIObserverService.idl   \
+	.\nsISupportsArray.idl	\
+	.\nsISupportsPrimitives.idl	\
         $(NULL)
 
 ################################################################################
@@ -80,7 +83,7 @@ LCFLAGS = -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
 CPP_OBJS =                                        \
         .\$(OBJDIR)\nsArena.obj                   \
         .\$(OBJDIR)\nsAtomTable.obj               \
-        .\$(OBJDIR)\nsBTree.obj                   \
+        .\$(OBJDIR)\nsAVLTree.obj                 \
         .\$(OBJDIR)\nsBuffer.obj                  \
         .\$(OBJDIR)\nsByteBuffer.obj              \
         .\$(OBJDIR)\nsCRT.obj                     \
@@ -89,19 +92,20 @@ CPP_OBJS =                                        \
         .\$(OBJDIR)\nsEmptyEnumerator.obj         \
         .\$(OBJDIR)\nsEnumeratorUtils.obj         \
         .\$(OBJDIR)\nsHashtable.obj               \
+        .\$(OBJDIR)\nsHashtableEnumerator.obj     \
         .\$(OBJDIR)\nsObserver.obj                \
         .\$(OBJDIR)\nsObserverList.obj            \
         .\$(OBJDIR)\nsObserverService.obj         \
         .\$(OBJDIR)\nsPageMgr.obj                 \
         .\$(OBJDIR)\nsProperties.obj              \
         .\$(OBJDIR)\nsQuickSort.obj               \
-        .\$(OBJDIR)\nsRBTree.obj                  \
         .\$(OBJDIR)\nsSizeOfHandler.obj           \
         .\$(OBJDIR)\nsStr.obj                     \
         .\$(OBJDIR)\nsString.obj                  \
         .\$(OBJDIR)\nsString2.obj                 \
         .\$(OBJDIR)\nsSupportsArray.obj           \
         .\$(OBJDIR)\nsSupportsArrayEnumerator.obj \
+        .\$(OBJDIR)\nsSupportsPrimitives.obj      \
         .\$(OBJDIR)\nsUnicharBuffer.obj           \
         .\$(OBJDIR)\nsVariant.obj                 \
         .\$(OBJDIR)\nsVoidArray.obj               \

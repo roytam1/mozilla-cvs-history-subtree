@@ -41,7 +41,7 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsRDFCID.h"
@@ -236,18 +236,26 @@ rdf_MakeAbsoluteURI(const nsString& aBaseURI, nsString& aURI)
     NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsIURI *baseUri = nsnull;
+    nsCOMPtr<nsIURI> baseUri;
 
-    const char *uriStr = aBaseURI.GetBuffer();
-    rv = service->NewURI(uriStr, nsnull, &baseUri);
+    char *uriStr = aBaseURI.ToNewCString();
+    if (! uriStr)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = service->NewURI(uriStr, nsnull, getter_AddRefs(baseUri));
+    delete[] uriStr;
+
     if (NS_FAILED(rv)) return rv;
 
-    char *absUrlStr = nsnull;
-    const char *urlSpec = aURI.GetBuffer();
-    rv = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
-    NS_RELEASE(baseUri);
-    result = absUrlStr;
-    delete [] absUrlStr;
+    nsXPIDLCString absUrlStr;
+    char *urlSpec = aURI.ToNewCString();
+    if (! urlSpec)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = service->MakeAbsolute(urlSpec, baseUri, getter_Copies(absUrlStr));
+    delete[] urlSpec;
+
+    result = (const char*) absUrlStr;
 #endif // NECKO
     if (NS_SUCCEEDED(rv)) {
         aURI = result;
@@ -263,7 +271,7 @@ rdf_MakeAbsoluteURI(const nsString& aBaseURI, nsString& aURI)
 
 
 nsresult
-rdf_MakeAbsoluteURI(nsIURL* aURL, nsString& aURI)
+rdf_MakeAbsoluteURI(nsIURI* aURL, nsString& aURI)
 {
     nsresult rv;
     nsAutoString result;
@@ -279,8 +287,7 @@ rdf_MakeAbsoluteURI(nsIURL* aURL, nsString& aURI)
     if (NS_FAILED(rv)) return rv;
 
     char *absUrlStr = nsnull;
-    const char *urlSpec = aURI.GetBuffer();
-    rv = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
+    rv = service->MakeAbsolute(nsCAutoString(aURI), baseUri, &absUrlStr);
     NS_RELEASE(baseUri);
     result = absUrlStr;
     delete [] absUrlStr;

@@ -19,64 +19,43 @@
 #ifndef _NS_CODEBASE_PRINCIPAL_H_
 #define _NS_CODEBASE_PRINCIPAL_H_
 
-#include "jsapi.h"
 #include "nsIPrincipal.h"
-#include "nsIURI.h"
-#include "nsJSPrincipals.h"
-
-#define NS_CODEBASEPRINCIPAL_CID \
-{ 0x7ee2a400, 0x0b91, 0xaad3, \
-{ 0xba, 0x18, 0xd7, 0x60, 0xb0, 0xf1, 0x99, 0xa2 }}
 
 class nsCodebasePrincipal : public nsICodebasePrincipal {
 public:
 
-  NS_DEFINE_STATIC_CID_ACCESSOR(NS_CODEBASEPRINCIPAL_CID)
+	NS_DECL_ISUPPORTS
 
-  NS_DECL_ISUPPORTS
+	NS_IMETHOD
+	GetURL(char ** cburl);
 
-  nsCodebasePrincipal();
+	NS_IMETHOD 
+	IsCodebaseExact(PRBool * result);
 
-  NS_IMETHOD
-  Init(PRInt16 type, nsIURI * uri);
+	NS_IMETHOD
+	IsCodebaseRegex(PRBool * result);
 
-  virtual ~nsCodebasePrincipal(void);
+	NS_IMETHOD
+	GetType(PRInt16 * type);
 
-  NS_IMETHOD
-  GetURLString(char ** cburl);
-  
-  NS_IMETHOD
-  GetURL(nsIURI * * url);
+	NS_IMETHOD
+	IsSecure(PRBool * result);
 
-  NS_IMETHOD 
-  IsCodebaseExact(PRBool * result);
+	NS_IMETHOD
+	ToString(char ** result);
 
-  NS_IMETHOD
-  IsCodebaseRegex(PRBool * result);
+	NS_IMETHOD
+	HashCode(PRUint32 * code);
 
-  NS_IMETHOD
-  ToJSPrincipal(JSPrincipals * * jsprin);
-  
-  NS_IMETHOD
-  GetType(PRInt16 * type);
+	NS_IMETHOD
+	Equals(nsIPrincipal * other, PRBool * result);
 
-  NS_IMETHOD
-  IsSecure(PRBool * result);
-
-  NS_IMETHOD
-  ToString(char ** result);
-
-  NS_IMETHOD
-  HashCode(PRUint32 * code);
-
-  NS_IMETHOD
-  Equals(nsIPrincipal * other, PRBool * result);
+	nsCodebasePrincipal(PRInt16 type, const char *codebaseURL);
+	virtual ~nsCodebasePrincipal(void);
 
 protected:
-  nsIURI * itsURL;
-  PRInt16 itsType;
-  nsJSPrincipals itsJSPrincipals;
-
+	const char * itsCodeBaseURL;
+	PRInt16 itsType;
 };
 
 #endif // _NS_CODEBASE_PRINCIPAL_H_

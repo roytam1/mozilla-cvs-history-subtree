@@ -50,6 +50,7 @@ struct JSStackFrame {
     JSPackedBool    constructing;   /* true if called via new operator */
     uint8           overrides;      /* bit-set of overridden Call properties */
     JSPackedBool    debugging;      /* true if for JS_EvaluateInStackFrame */
+    JSPackedBool    reserved;       /* reserved for future use */
     JSStackFrame    *dormantNext;   /* next dormant frame chain */
 };
 
@@ -195,11 +196,18 @@ extern JSBool
 js_SetLocalVariable(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
 
 extern JS_FRIEND_API(JSBool)
-js_Invoke(JSContext *cx, uintN argc, JSBool constructing);
+js_Invoke(JSContext *cx, uintN argc, uintN flags);
+
+/*
+ * Consolidated js_Invoke flags.  NB: JSINVOKE_CONSTRUCT must be 1 or JS_TRUE
+ * (see js_Invoke's initialization of frame.constructing).
+ */
+#define JSINVOKE_CONSTRUCT      0x1     /* construct object rather than call */
+#define JSINVOKE_INTERNAL       0x2     /* internal call, not from a script */
 
 extern JSBool
-js_CallFunctionValue(JSContext *cx, JSObject *obj, jsval fval,
-		     uintN argc, jsval *argv, jsval *rval);
+js_InternalCall(JSContext *cx, JSObject *obj, jsval fval,
+		uintN argc, jsval *argv, jsval *rval);
 
 extern JSBool
 js_Execute(JSContext *cx, JSObject *chain, JSScript *script, JSFunction *fun,

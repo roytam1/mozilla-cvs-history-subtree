@@ -107,7 +107,19 @@ NS_IMETHODIMP nsRenderingContextGTK::Init(nsIDeviceContext* aContext,
     // we want to ref the window here so that we can unref in the drawing surface.
     // otherwise, we can not unref and that causes windows that are created in the
     // drawing surface not to be freed.
-    GdkDrawable *win = (GdkDrawable*)gdk_window_ref((GdkWindow *)aWindow->GetNativeData(NS_NATIVE_WINDOW));
+    GdkDrawable *win = (GdkDrawable*)aWindow->GetNativeData(NS_NATIVE_WINDOW);
+    if (win)
+      gdk_window_ref((GdkWindow*)win);
+    else
+    {
+      GtkWidget *w = (GtkWidget *) aWindow->GetNativeData(NS_NATIVE_WIDGET);
+
+      win = gdk_pixmap_new(nsnull,
+                           w->allocation.width,
+                           w->allocation.height,
+                           gdk_rgb_get_visual()->depth);
+    }
+
 #else
     GdkDrawable *win = (GdkDrawable *)aWindow->GetNativeData(NS_NATIVE_WINDOW);
 #endif
@@ -729,6 +741,40 @@ NS_IMETHODIMP nsRenderingContextGTK::FillRect(nscoord aX, nscoord aY, nscoord aW
   ::gdk_draw_rectangle(mSurface->GetDrawable(), mSurface->GetGC(),
                        TRUE,
                        x, y, w, h);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextGTK::InvertRect(const nsRect& aRect)
+{
+  return InvertRect(aRect.x, aRect.y, aRect.width, aRect.height);
+}
+
+NS_IMETHODIMP nsRenderingContextGTK::InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+{
+  if (nsnull == mTMatrix || nsnull == mSurface) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nscoord x,y,w,h;
+
+  x = aX;
+  y = aY;
+  w = aWidth;
+  h = aHeight;
+
+  mTMatrix->TransformCoord(&x,&y,&w,&h);
+
+  // Set XOR drawing mode
+  ::gdk_gc_set_function(mSurface->GetGC(),GDK_XOR);  
+
+  // Fill the rect
+  ::gdk_draw_rectangle(mSurface->GetDrawable(), mSurface->GetGC(),
+                       TRUE,
+                       x, y, w, h);
+
+  // Back to normal copy drawing mode
+  ::gdk_gc_set_function(mSurface->GetGC(),GDK_COPY);
 
   return NS_OK;
 }
@@ -1448,5 +1494,10 @@ nsRenderingContextGTK::CopyOffScreenBits(nsDrawingSurface aSrcSurf,
                          drect.width, drect.height);
                      
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextGTK::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+{
   return NS_OK;
 }

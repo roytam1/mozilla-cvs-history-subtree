@@ -52,9 +52,11 @@ public:
   NS_IMETHOD ClearFrameRefs(nsIFrame* aFrame);
 
   NS_IMETHOD GetEventTarget(nsIFrame **aFrame);
+  NS_IMETHOD GetEventTargetContent(nsIContent** aContent);
 
   NS_IMETHOD GetContentState(nsIContent *aContent, PRInt32& aState);
   NS_IMETHOD SetContentState(nsIContent *aContent, PRInt32 aState);
+  NS_IMETHOD GetFocusedContent(nsIContent **aContent);
 
 protected:
   void UpdateCursor(nsIPresContext& aPresContext, nsPoint& aPoint, nsIFrame* aTargetFrame, nsEventStatus& aStatus);

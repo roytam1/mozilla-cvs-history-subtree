@@ -28,6 +28,7 @@
 #include "nsIMAPBodyShell.h"
 #include "nsImapFlagAndUidState.h"
 #include "nsIMAPNamespace.h"
+#include "nsImapStringBundle.h"
 ////////////////// nsImapServerResponseParser /////////////////////////
 
 extern PRLogModuleInfo* IMAP;
@@ -64,6 +65,7 @@ nsImapServerResponseParser::nsImapServerResponseParser(nsImapProtocol &imapProto
 	fCapabilityFlag = kCapabilityUndefined; 
 	fLastAlert = nsnull;
 	fDownloadingHeaders = PR_FALSE;
+	fFolderUIDValidity = 0;
 }
 
 nsImapServerResponseParser::~nsImapServerResponseParser()
@@ -156,6 +158,9 @@ void nsImapServerResponseParser::InitializeState()
 void nsImapServerResponseParser::ParseIMAPServerResponse(const char *currentCommand)
 {
 
+    NS_ASSERTION(currentCommand && *currentCommand != '\r' && 
+                 *currentCommand != '\n' && *currentCommand != ' ', 
+                 "Invailid command string");
 	// Reinitialize the parser
 	SetConnected(PR_TRUE);
 	SetSyntaxError(PR_FALSE);
@@ -785,6 +790,7 @@ void nsImapServerResponseParser::mailbox_list(PRBool discoveredFromLsub)
 		}
 	}
 
+	nsCRT::free(boxSpec->hostName);
 	PR_FREEIF(boxSpec); // mscott - do we have any fields we need to release?
 }
 
@@ -845,6 +851,8 @@ void nsImapServerResponseParser::mailbox(mailbox_spec *boxSpec)
 
     	char *convertedName =
             fServerConnection.CreateUtf7ConvertedString(boxname, PR_FALSE);
+		PRUnichar *unicharName;
+        unicharName = fServerConnection.CreatePRUnicharStringFromUTF7(boxname);
     	PL_strfree(boxname);
     	boxname = convertedName;
     }
@@ -861,7 +869,11 @@ void nsImapServerResponseParser::mailbox(mailbox_spec *boxSpec)
 		//boxSpec->hostName = nsnull;
 		//if (boxSpec->connection && boxSpec->connection->GetCurrentUrl())
 		boxSpec->connection->GetCurrentUrl()->AllocateCanonicalPath(boxname, boxSpec->hierarchySeparator, &boxSpec->allocatedPathName);
-		boxSpec->connection->GetCurrentUrl()->GetHost(&boxSpec->hostName);
+		nsIURI * aURL = nsnull;
+		boxSpec->connection->GetCurrentUrl()->QueryInterface(nsIURI::GetIID(), (void **) &aURL);
+		if (aURL)
+			aURL->GetHost(&boxSpec->hostName);
+		NS_IF_RELEASE(aURL);
         if (boxname)
             PL_strfree( boxname);
 		// storage for the boxSpec is now owned by server connection
@@ -1435,8 +1447,10 @@ void nsImapServerResponseParser::resp_text_code()
 			fNextToken = GetNextToken();
 			if (ContinueParse())
 			{
-				fFolderUIDValidity = atoi(fNextToken);
-				fHighestRecordedUID = 0;
+                // ** jt -- the returned uidvalidity is the destination folder
+                // uidvalidity; don't use it for current folder
+				// fFolderUIDValidity = atoi(fNextToken);
+				// fHighestRecordedUID = 0; ??? this should be wrong
 				fNextToken = GetNextToken();
 				if (ContinueParse())
 				{
@@ -1450,8 +1464,8 @@ void nsImapServerResponseParser::resp_text_code()
 			fNextToken = GetNextToken();
 			if (ContinueParse())
 			{
-				fFolderUIDValidity = atoi(fNextToken);
-				fHighestRecordedUID = 0;
+                // ** jt -- destination folder uidvalidity
+				// fFolderUIDValidity = atoi(fNextToken);
                 // original message set; ignore it
 				fNextToken = GetNextToken();
 				if (ContinueParse())
@@ -1827,7 +1841,7 @@ void nsImapServerResponseParser::namespace_data()
 							SetSyntaxError(PR_TRUE);
 						}
 					}
-					delete [] namespacePrefix;
+					PR_FREEIF(namespacePrefix);
 				}
 			}
 		}
@@ -2150,7 +2164,7 @@ PRBool nsImapServerResponseParser::msg_fetch_literal(PRBool chunk, PRInt32 origi
 				charsReadSoFar += nsCRT::strlen(fCurrentLine);
 				if (!fDownloadingHeaders && fCurrentCommandIsSingleMessageFetch)
 				{
-					fServerConnection.ProgressEventFunctionUsingId(kImapDownloadingMessage);
+					fServerConnection.ProgressEventFunctionUsingId(IMAP_DOWNLOADING_MESSAGE);
 					if (fTotalDownloadSize > 0)
 						fServerConnection.PercentProgressUpdateEvent(0,(100*(charsReadSoFar + origin))/fTotalDownloadSize);
 				}
@@ -2261,7 +2275,7 @@ struct mailbox_spec *nsImapServerResponseParser::CreateCurrentMailboxSpec(const 
 			const char *host = 				
                 fServerConnection.GetImapHostName();
 			nsIMAPNamespace *ns = nsnull;
-			if (host != nsnull && fHostSessionList)
+			if (host && fHostSessionList)
 			{
                 const char* userName = fServerConnection.GetImapUserName();
 				fHostSessionList->GetNamespaceForMailboxForHost(host, 
@@ -2293,7 +2307,15 @@ struct mailbox_spec *nsImapServerResponseParser::CreateCurrentMailboxSpec(const 
 		returnSpec->allocatedPathName = convertedMailboxName;
 		returnSpec->connection = &fServerConnection;
 		if (returnSpec->connection)
-			returnSpec->connection->GetCurrentUrl()->GetHost(&returnSpec->hostName);
+		{
+			nsIURI * aUrl = nsnull;
+			nsresult rv = NS_OK;
+			returnSpec->connection->GetCurrentUrl()->QueryInterface(nsIURI::GetIID(), (void **) &aUrl);
+			if (NS_SUCCEEDED(rv) && aUrl)
+				aUrl->GetHost(&returnSpec->hostName);
+			NS_IF_RELEASE(aUrl);
+			
+		}
 		else
 			returnSpec->hostName = nsnull;
 		if (fFlagState)

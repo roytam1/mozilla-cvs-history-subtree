@@ -23,12 +23,8 @@
 #include "nsIHTMLEditor.h"
 
 #include "nsEditorShell.h"
-#include "nsEditorShell.h"
 #include "nsEditorShellFactory.h"
 
-#ifdef ENABLE_EDITOR_API_LOG
-#include "nsHTMLEditorLog.h"
-#endif // ENABLE_EDITOR_API_LOG
 #include "nsHTMLEditor.h"
 #include "nsEditor.h"
 
@@ -119,12 +115,7 @@ nsEditorFactory::CreateInstance(nsISupports *aOuter, REFNSIID aIID, void **aResu
   {
     //Need to cast to interface first to avoid "ambiguous conversion..." error
     //  because of multiple nsISupports in the class hierarchy
-
-#ifdef ENABLE_EDITOR_API_LOG
-    obj = (nsISupports *)(nsIHTMLEditor*)new nsHTMLEditorLog();
-#else
     obj = (nsISupports *)(nsIHTMLEditor*)new nsHTMLEditor();
-#endif // ENABLE_EDITOR_API_LOG
   }
 
   if (obj && NS_FAILED(obj->QueryInterface(aIID, (void**)aResult)) ) 

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -54,6 +54,13 @@ nsresult CWebShellContainer::QueryInterface(const nsIID& aIID, void** aInstanceP
 
 	*aInstancePtrResult = NULL;
 
+	if (aIID.Equals(kIBrowserWindowIID))
+	{
+		*aInstancePtrResult = (void*) ((nsIBrowserWindow*)this);
+		AddRef();
+		return NS_OK;
+	}
+
 	if (aIID.Equals(kIStreamObserverIID))
 	{
 		*aInstancePtrResult = (void*) ((nsIStreamObserver*)this);
@@ -84,6 +91,214 @@ nsresult CWebShellContainer::QueryInterface(const nsIID& aIID, void** aInstanceP
 
 	return NS_NOINTERFACE;
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+// nsIBrowserWindow implementation
+
+NS_IMETHODIMP
+CWebShellContainer::Init(nsIAppShell* aAppShell, nsIPref* aPrefs, const nsRect& aBounds, PRUint32 aChromeMask, PRBool aAllowPlugins)
+{
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::MoveTo(PRInt32 aX, PRInt32 aY)
+{
+	NG_TRACE_METHOD(CWebShellContainer::MoveTo);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::SizeTo(PRInt32 aWidth, PRInt32 aHeight)
+{
+	NG_TRACE_METHOD(CWebShellContainer::SizeTo);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::SizeWindowTo(PRInt32 aWidth, PRInt32 aHeight)
+{
+	NG_TRACE_METHOD(CWebShellContainer::SizeWindowTo);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::SizeContentTo(PRInt32 aWidth, PRInt32 aHeight)
+{
+	NG_TRACE_METHOD(CWebShellContainer::SizeContentTo);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetContentBounds(nsRect& aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetContentBounds);
+	return NS_OK;
+}
+
+
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetBounds(nsRect& aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetBounds);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetWindowBounds(nsRect& aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetWindowBounds);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::IsIntrinsicallySized(PRBool& aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::IsIntrinsicallySized);
+    aResult = PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+CWebShellContainer::ShowAfterCreation()
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+CWebShellContainer::Show()
+{
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::Hide()
+{
+	NG_TRACE_METHOD(CWebShellContainer::Hide);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::Close()
+{
+	NG_TRACE_METHOD(CWebShellContainer::Close);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP ShowModally(PRBool aPrepare)
+{
+	NG_TRACE_METHOD(CWebShellContainer::ShowModally);
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+CWebShellContainer::SetChrome(PRUint32 aNewChromeMask)
+{
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetChrome(PRUint32& aChromeMaskResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetChrome);
+	aChromeMaskResult = 0;
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::SetTitle(const PRUnichar* aTitle)
+{
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetTitle(const PRUnichar** aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetTitle);
+	*aResult = nsnull;
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::SetStatus(const PRUnichar* aStatus)
+{
+	NG_TRACE_METHOD(CWebShellContainer::SetStatus);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetStatus(const PRUnichar** aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetStatus);
+	*aResult = nsnull;
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+CWebShellContainer::SetDefaultStatus(const PRUnichar* aStatus)
+{
+	NG_TRACE_METHOD(CWebShellContainer::SetDefaultStatus);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetDefaultStatus(const PRUnichar** aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetDefaultStatus);
+	*aResult = nsnull;
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+CWebShellContainer::SetProgress(PRInt32 aProgress, PRInt32 aProgressMax)
+{
+	NG_TRACE_METHOD(CWebShellContainer::SetProgress);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::ShowMenuBar(PRBool aShow)
+{
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetWebShell(nsIWebShell*& aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetWebShell);
+	return NS_OK;
+}
+
+
+NS_IMETHODIMP
+CWebShellContainer::GetContentWebShell(nsIWebShell **aResult)
+{
+	NG_TRACE_METHOD(CWebShellContainer::GetContentWebShell);
+	*aResult = nsnull;
+	return NS_OK;
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -222,7 +437,7 @@ CWebShellContainer::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt
 NS_IMETHODIMP
 CWebShellContainer::NewWebShell(PRUint32 aChromeMask, PRBool aVisible, nsIWebShell *&aNewWebShell)
 {
-	NG_TRACE(_T("CWebShellContainer::NewWebShell()\n"));
+	NG_TRACE_METHOD(CWebShellContainer::NewWebShell);
 	nsresult rv = NS_ERROR_OUT_OF_MEMORY;
 	return rv;
 }
@@ -251,7 +466,7 @@ CWebShellContainer::FindWebShellWithName(const PRUnichar* aName, nsIWebShell*& a
 NS_IMETHODIMP
 CWebShellContainer::FocusAvailable(nsIWebShell* aFocusedWebShell, PRBool& aFocusTaken)
 {
-	NG_TRACE(_T("CWebShellContainer::FocusAvailable()\n"));
+	NG_TRACE_METHOD(CWebShellContainer::FocusAvailable);
 	return NS_OK;
 }
 
@@ -259,35 +474,137 @@ CWebShellContainer::FocusAvailable(nsIWebShell* aFocusedWebShell, PRBool& aFocus
 NS_IMETHODIMP
 CWebShellContainer::ContentShellAdded(nsIWebShell* aWebShell, nsIContent* frameNode)
 {
+	NG_TRACE_METHOD(CWebShellContainer::ContentShellAdded);
 	nsresult rv = NS_OK;
 	return rv;
 }
+
 
 NS_IMETHODIMP
 CWebShellContainer::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupContent, 
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow)
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup)
 {
-  return NS_OK;
+	NG_TRACE_METHOD(CWebShellContainer::CreatePopup);
+	HMENU hMenu = ::CreatePopupMenu();
+    *outPopup = NULL;
+	InsertMenu(hMenu, 0, MF_BYPOSITION, 1, _T("TODO"));
+	TrackPopupMenu(hMenu, TPM_LEFTALIGN, aXPos, aYPos, NULL, NULL, NULL);
+	return NS_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsIStreamObserver implementation
+#ifdef NECKO
+NS_IMETHODIMP
+CWebShellContainer::OnStartRequest(nsIChannel* aChannel, nsISupports* aContext)
+{
+	USES_CONVERSION;
+	NG_TRACE(_T("CWebShellContainer::OnStartRequest(...)\n"));
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+CWebShellContainer::OnStopRequest(nsIChannel* aChannel, nsISupports* aContext, nsresult aStatus, const PRUnichar* aMsg)
+{
+	USES_CONVERSION;
+	NG_TRACE(_T("CWebShellContainer::OnStopRequest(..., %d, \"%s\")\n"), (int) aStatus, W2T((PRUnichar *) aMsg));
+
+	// Fire a DownloadComplete event
+	m_pEvents1->Fire_DownloadComplete();
+	m_pEvents2->Fire_DownloadComplete();
+
+	return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsIDocumentLoaderObserver implementation 
+
 
 
 NS_IMETHODIMP
-CWebShellContainer::OnStartBinding(nsIURL* aURL, const char *aContentType)
+CWebShellContainer::OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand)
+{ 
+	return NS_OK; 
+} 
+
+// we need this to fire the document complete 
+NS_IMETHODIMP
+CWebShellContainer::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIChannel *aChannel, nsresult aStatus, nsIDocumentLoaderObserver * aObserver)
+{
+	char* aString = nsnull;    
+    nsIURI* uri = nsnull;
+
+    aChannel->GetURI(&uri);
+    if (uri) {
+      uri->GetSpec(&aString);
+    }
+	if (aString == NULL)
+	{
+		return NS_ERROR_NULL_POINTER;
+	}
+
+	USES_CONVERSION; 
+	BSTR bstrURL = SysAllocString(A2OLE((CHAR *) aString)); 
+		
+	delete [] aString; // clean up. 
+
+	// Fire a DocumentComplete event
+	CComVariant vURL(bstrURL);
+	m_pEvents2->Fire_DocumentComplete(m_pOwner, &vURL);
+	SysFreeString(bstrURL);
+
+	return NS_OK; 
+} 
+
+NS_IMETHODIMP
+CWebShellContainer::OnStartURLLoad(nsIDocumentLoader* loader, nsIChannel* aChannel, nsIContentViewer* aViewer)
+{ 
+	return NS_OK; 
+} 
+
+NS_IMETHODIMP
+CWebShellContainer::OnProgressURLLoad(nsIDocumentLoader* loader, nsIChannel* aChannel, PRUint32 aProgress, PRUint32 aProgressMax)
+{ 
+	return NS_OK; 
+} 
+
+// we don't care about these. 
+NS_IMETHODIMP
+CWebShellContainer::OnStatusURLLoad(nsIDocumentLoader* loader, nsIChannel* aChannel, nsString& aMsg)
+{ 
+	return NS_OK; 
+} 
+
+
+NS_IMETHODIMP
+CWebShellContainer::OnEndURLLoad(nsIDocumentLoader* loader, nsIChannel* aChannel, PRInt32 aStatus)
+{
+	return NS_OK; 
+} 
+
+
+NS_IMETHODIMP 
+CWebShellContainer::HandleUnknownContentType(nsIDocumentLoader* loader, nsIChannel *aChannel, const char *aContentType, const char *aCommand ) 
+{ 
+	return NS_OK; 
+} 
+
+#else // !NECKO
+
+NS_IMETHODIMP
+CWebShellContainer::OnStartRequest(nsIURI* aURL, const char *aContentType)
 {
 	USES_CONVERSION;
-	NG_TRACE(_T("CWebShellContainer::OnStartBinding(..., \"%s\")\n"), A2CT(aContentType));
+	NG_TRACE(_T("CWebShellContainer::OnStartRequest(..., \"%s\")\n"), A2CT(aContentType));
 	return NS_OK;
 }
 
 
 NS_IMETHODIMP
-CWebShellContainer::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
+CWebShellContainer::OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
 {
 	USES_CONVERSION;
 	NG_TRACE(_T("CWebShellContainer::OnProgress(..., \"%d\", \"%d\")\n"), (int) aProgress, (int) aProgressMax);
@@ -296,7 +613,7 @@ CWebShellContainer::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgr
 
 
 NS_IMETHODIMP
-CWebShellContainer::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+CWebShellContainer::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 {
 	USES_CONVERSION;
 	NG_TRACE(_T("CWebShellContainer::OnStatus(..., \"%s\")\n"), W2T((PRUnichar *) aMsg));
@@ -311,10 +628,10 @@ CWebShellContainer::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
 
 
 NS_IMETHODIMP
-CWebShellContainer::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg)
+CWebShellContainer::OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg)
 {
 	USES_CONVERSION;
-	NG_TRACE(_T("CWebShellContainer::OnStopBinding(..., %d, \"%s\")\n"), (int) aStatus, W2T((PRUnichar *) aMsg));
+	NG_TRACE(_T("CWebShellContainer::OnStopRequest(..., %d, \"%s\")\n"), (int) aStatus, W2T((PRUnichar *) aMsg));
 
 	// Fire a DownloadComplete event
 	m_pEvents1->Fire_DownloadComplete();
@@ -323,21 +640,20 @@ CWebShellContainer::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnicha
 	return NS_OK;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // nsIDocumentLoaderObserver implementation 
 
 
 
 NS_IMETHODIMP
-CWebShellContainer::OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURL* aURL, const char* aCommand)
+CWebShellContainer::OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand)
 { 
 	return NS_OK; 
 } 
 
 // we need this to fire the document complete 
 NS_IMETHODIMP
-CWebShellContainer::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURL *aUrl, PRInt32 aStatus, nsIDocumentLoaderObserver * aObserver)
+CWebShellContainer::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURI *aUrl, nsresult aStatus, nsIDocumentLoaderObserver * aObserver)
 {
 	PRUnichar* wString = nsnull;    
 
@@ -361,34 +677,36 @@ CWebShellContainer::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURL *aUrl, P
 } 
 
 NS_IMETHODIMP
-CWebShellContainer::OnStartURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, const char* aContentType, nsIContentViewer* aViewer)
+CWebShellContainer::OnStartURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aContentType, nsIContentViewer* aViewer)
 { 
 	return NS_OK; 
 } 
 
 NS_IMETHODIMP
-CWebShellContainer::OnProgressURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
+CWebShellContainer::OnProgressURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
 { 
 	return NS_OK; 
 } 
 
 // we don't care about these. 
 NS_IMETHODIMP
-CWebShellContainer::OnStatusURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, nsString& aMsg)
+CWebShellContainer::OnStatusURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, nsString& aMsg)
 { 
 	return NS_OK; 
 } 
 
 
 NS_IMETHODIMP
-CWebShellContainer::OnEndURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, PRInt32 aStatus)
+CWebShellContainer::OnEndURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, nsresult aStatus)
 {
 	return NS_OK; 
 } 
 
 
 NS_IMETHODIMP 
-CWebShellContainer::HandleUnknownContentType(nsIDocumentLoader* loader, nsIURL *aURL, const char *aContentType, const char *aCommand ) 
+CWebShellContainer::HandleUnknownContentType(nsIDocumentLoader* loader, nsIURI *aURL, const char *aContentType, const char *aCommand ) 
 { 
 	return NS_OK; 
 } 
+#endif // ! NECKO
+

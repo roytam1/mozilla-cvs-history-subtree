@@ -60,7 +60,14 @@ public:
   NS_IMETHOD WillInterrupt(void);
   NS_IMETHOD WillResume(void);
   NS_IMETHOD SetParser(nsIParser* aParser);  
-  
+  NS_IMETHOD OpenContainer(const nsIParserNode& aNode);
+  NS_IMETHOD CloseContainer(const nsIParserNode& aNode);
+  NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
+  NS_IMETHOD NotifyError(const nsParserError* aError);
+  NS_IMETHOD AddComment(const nsIParserNode& aNode);
+  NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
+
   // nsIHTMLContentSink
   NS_IMETHOD BeginContext(PRInt32 aID);
   NS_IMETHOD EndContext(PRInt32 aID);
@@ -77,12 +84,7 @@ public:
   NS_IMETHOD CloseFrameset(const nsIParserNode& aNode);
   NS_IMETHOD OpenMap(const nsIParserNode& aNode);
   NS_IMETHOD CloseMap(const nsIParserNode& aNode);
-  NS_IMETHOD OpenContainer(const nsIParserNode& aNode);
-  NS_IMETHOD CloseContainer(const nsIParserNode& aNode);
-  NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
-  NS_IMETHOD NotifyError(const nsParserError* aError);
-  NS_IMETHOD AddComment(const nsIParserNode& aNode);
-  NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+
   NS_IMETHOD DoFragment(PRBool aFlag);
 
   // nsIHTMLFragmentContentSink
@@ -99,6 +101,7 @@ public:
   nsresult FlushText();
 
   PRBool mHitSentinel;
+  PRBool mSeenBody;
 
   nsIContent* mRoot;
   nsIParser* mParser;
@@ -132,6 +135,7 @@ nsHTMLFragmentContentSink::nsHTMLFragmentContentSink()
 {
   NS_INIT_REFCNT();
   mHitSentinel = PR_FALSE;
+  mSeenBody = PR_TRUE;
   mRoot = nsnull;
   mParser = nsnull;
   mCurrentForm = nsnull;
@@ -144,15 +148,18 @@ nsHTMLFragmentContentSink::nsHTMLFragmentContentSink()
 
 nsHTMLFragmentContentSink::~nsHTMLFragmentContentSink()
 {
+  // Should probably flush the text buffer here, just to make sure:
+  //FlushText();
+
   NS_IF_RELEASE(mRoot);
   NS_IF_RELEASE(mParser);
   NS_IF_RELEASE(mCurrentForm);
   NS_IF_RELEASE(mCurrentMap);
   if (nsnull != mContentStack) {
     // there shouldn't be anything here except in an error condition
-    PRInt32 index = mContentStack->Count();
-    while (0 < index--) {
-      nsIContent* content = (nsIContent*)mContentStack->ElementAt(index);
+    PRInt32 indx = mContentStack->Count();
+    while (0 < indx--) {
+      nsIContent* content = (nsIContent*)mContentStack->ElementAt(indx);
       NS_RELEASE(content);
     }
     delete mContentStack;
@@ -216,6 +223,12 @@ nsHTMLFragmentContentSink::WillBuildModel(void)
 NS_IMETHODIMP 
 nsHTMLFragmentContentSink::DidBuildModel(PRInt32 aQualityLevel)
 {
+  FlushText();
+
+  // Drop our reference to the parser to get rid of a circular
+  // reference.
+  NS_IF_RELEASE(mParser);
+
   return NS_OK;
 }
 
@@ -287,7 +300,15 @@ nsHTMLFragmentContentSink::CloseHead(const nsIParserNode& aNode)
 NS_IMETHODIMP 
 nsHTMLFragmentContentSink::OpenBody(const nsIParserNode& aNode)
 {
-  return OpenContainer(aNode);
+  // Ignore repeated BODY elements. The DTD is just sending them
+  // to us for compatibility reasons that don't apply here.
+  if (!mSeenBody) {
+    mSeenBody = PR_TRUE;
+    return OpenContainer(aNode);
+  }
+  else {
+    return NS_OK;
+  }
 }
 
 NS_IMETHODIMP 
@@ -476,6 +497,17 @@ nsHTMLFragmentContentSink::AddProcessingInstruction(const nsIParserNode& aNode)
   return NS_OK;
 }
 
+/**
+ *  This gets called by the parser when it encounters
+ *  a DOCTYPE declaration in the HTML document.
+ */
+
+NS_IMETHODIMP
+nsHTMLFragmentContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP 
 nsHTMLFragmentContentSink::DoFragment(PRBool aFlag)
 {
@@ -498,8 +530,8 @@ nsIContent*
 nsHTMLFragmentContentSink::GetCurrentContent()
 {
   if (nsnull != mContentStack) {
-    PRInt32 index = mContentStack->Count() - 1;
-    return (nsIContent *)mContentStack->ElementAt(index);
+    PRInt32 indx = mContentStack->Count() - 1;
+    return (nsIContent *)mContentStack->ElementAt(indx);
   }
   return nsnull;
 }
@@ -520,9 +552,9 @@ nsHTMLFragmentContentSink::PopContent()
 {
   nsIContent* content = nsnull;
   if (nsnull != mContentStack) {
-    PRInt32 index = mContentStack->Count() - 1;
-    content = (nsIContent *)mContentStack->ElementAt(index);
-    mContentStack->RemoveElementAt(index);
+    PRInt32 indx = mContentStack->Count() - 1;
+    content = (nsIContent *)mContentStack->ElementAt(indx);
+    mContentStack->RemoveElementAt(indx);
   }
   return content;
 }
@@ -635,30 +667,30 @@ GetAttributeValueAt(const nsIParserNode& aNode,
   // should we be doing that? If so then it needs to live in two places (bad)
   // so we should add a translate numeric entity method from the parser...
   char cbuf[100];
-  PRInt32 index = 0;
-  while (index < aResult.Length()) {
+  PRInt32 indx = 0;
+  while (indx < aResult.Length()) {
     // If we have the start of an entity (and it's not at the end of
     // our string) then translate the entity into it's unicode value.
-    if ((aResult.CharAt(index++) == '&') && (index < aResult.Length())) {
-      PRInt32 start = index - 1;
-      PRUnichar e = aResult.CharAt(index);
+    if ((aResult.CharAt(indx++) == '&') && (indx < aResult.Length())) {
+      PRInt32 start = indx - 1;
+      PRUnichar e = aResult.CharAt(indx);
       if (e == '#') {
         // Convert a numeric character reference
-        index++;
+        indx++;
         char* cp = cbuf;
         char* limit = cp + sizeof(cbuf) - 1;
         PRBool ok = PR_FALSE;
         PRInt32 slen = aResult.Length();
-        while ((index < slen) && (cp < limit)) {
-          PRUnichar e = aResult.CharAt(index);
+        while ((indx < slen) && (cp < limit)) {
+          e = aResult.CharAt(indx);
           if (e == ';') {
-            index++;
+            indx++;
             ok = PR_TRUE;
             break;
           }
           if ((e >= '0') && (e <= '9')) {
             *cp++ = char(e);
-            index++;
+            indx++;
             continue;
           }
           break;
@@ -677,23 +709,23 @@ GetAttributeValueAt(const nsIParserNode& aNode,
 
         // Remove entity from string and replace it with the integer
         // value.
-        aResult.Cut(start, index - start);
+        aResult.Cut(start, indx - start);
         aResult.Insert(PRUnichar(ch), start);
-        index = start + 1;
+        indx = start + 1;
       }
       else if (((e >= 'A') && (e <= 'Z')) ||
                ((e >= 'a') && (e <= 'z'))) {
         // Convert a named entity
-        index++;
+        indx++;
         char* cp = cbuf;
         char* limit = cp + sizeof(cbuf) - 1;
         *cp++ = char(e);
         PRBool ok = PR_FALSE;
         PRInt32 slen = aResult.Length();
-        while ((index < slen) && (cp < limit)) {
-          PRUnichar e = aResult.CharAt(index);
+        while ((indx < slen) && (cp < limit)) {
+          e = aResult.CharAt(indx);
           if (e == ';') {
-            index++;
+            indx++;
             ok = PR_TRUE;
             break;
           }
@@ -701,7 +733,7 @@ GetAttributeValueAt(const nsIParserNode& aNode,
               ((e >= 'A') && (e <= 'Z')) ||
               ((e >= 'a') && (e <= 'z'))) {
             *cp++ = char(e);
-            index++;
+            indx++;
             continue;
           }
           break;
@@ -710,16 +742,16 @@ GetAttributeValueAt(const nsIParserNode& aNode,
           continue;
         }
         *cp = '\0';
-        PRInt32 ch = NS_EntityToUnicode(cbuf);
+        PRInt32 ch = nsHTMLEntities::EntityToUnicode(nsSubsumeCStr(cbuf, PR_FALSE));
         if (ch < 0) {
           continue;
         }
 
         // Remove entity from string and replace it with the integer
         // value.
-        aResult.Cut(start, index - start);
+        aResult.Cut(start, indx - start);
         aResult.Insert(PRUnichar(ch), start);
-        index = start + 1;
+        indx = start + 1;
       }
       else if (e == '{') {
         // Convert a script entity

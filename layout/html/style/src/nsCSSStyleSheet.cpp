@@ -23,8 +23,9 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
+#include "nsNeckoUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsISupportsArray.h"
@@ -75,7 +76,7 @@ NS_DEF_PTR(nsIHTMLContent);
 NS_DEF_PTR(nsIContent);
 NS_DEF_PTR(nsIStyleRule);
 NS_DEF_PTR(nsICSSStyleRule);
-NS_DEF_PTR(nsIURL);
+NS_DEF_PTR(nsIURI);
 NS_DEF_PTR(nsISupportsArray);
 NS_DEF_PTR(nsICSSStyleSheet);
 
@@ -376,7 +377,7 @@ public:
 
   nsVoidArray           mSheets;
 
-  nsIURL*               mURL;
+  nsIURI*               mURL;
 
   nsISupportsArray*     mOrderedRules;
   nsHashtable*          mMediumCascadeTable;
@@ -429,8 +430,8 @@ public:
   NS_IMETHOD_(nsrefcnt) Release();
 
   // basic style sheet data
-  NS_IMETHOD Init(nsIURL* aURL);
-  NS_IMETHOD GetURL(nsIURL*& aURL) const;
+  NS_IMETHOD Init(nsIURI* aURL);
+  NS_IMETHOD GetURL(nsIURI*& aURL) const;
   NS_IMETHOD GetTitle(nsString& aTitle) const;
   NS_IMETHOD SetTitle(const nsString& aTitle);
   NS_IMETHOD GetType(nsString& aType) const;
@@ -464,7 +465,7 @@ public:
   NS_IMETHOD HasStateDependentStyle(nsIPresContext* aPresContext,
                                     nsIContent*     aContent);
 
-  NS_IMETHOD  ContainsStyleSheet(nsIURL* aURL) const;
+  NS_IMETHOD  ContainsStyleSheet(nsIURI* aURL) const;
 
   NS_IMETHOD AppendStyleSheet(nsICSSStyleSheet* aSheet);
   NS_IMETHOD InsertStyleSheetAt(nsICSSStyleSheet* aSheet, PRInt32 aIndex);
@@ -1068,11 +1069,11 @@ CSSStyleSheetImpl::CSSStyleSheetImpl()
     mDocument(nsnull),
     mOwningNode(nsnull),
     mDisabled(PR_FALSE),
-    mScriptObject(nsnull),
-    mDirty(PR_FALSE)
+    mDirty(PR_FALSE),
+    mScriptObject(nsnull)
 {
   NS_INIT_REFCNT();
-  nsCSSAtoms::AddrefAtoms();
+  nsCSSAtoms::AddRefAtoms();
 
   mInner = new CSSStyleSheetInner(this);
 
@@ -1094,12 +1095,12 @@ CSSStyleSheetImpl::CSSStyleSheetImpl(const CSSStyleSheetImpl& aCopy)
     mDocument(aCopy.mDocument),
     mOwningNode(aCopy.mOwningNode),
     mDisabled(aCopy.mDisabled),
+    mDirty(PR_FALSE),
     mScriptObject(nsnull),
-    mInner(aCopy.mInner),
-    mDirty(PR_FALSE)
+    mInner(aCopy.mInner)
 {
   NS_INIT_REFCNT();
-  nsCSSAtoms::AddrefAtoms();
+  nsCSSAtoms::AddRefAtoms();
 
   mInner->AddSheet(this);
 
@@ -1381,7 +1382,7 @@ static PRBool SelectorMatches(nsIPresContext* aPresContext,
     }
     if ((PR_TRUE == result) &&
         (nsnull != aSelector->mPseudoClassList)) {  // test for pseudo class match
-      // first-child, lang, active, focus, hover, link, outOfDate, visited
+      // first-child, root, lang, active, focus, hover, link, outOfDate, visited
       // XXX disabled, enabled, selected, selection
       nsAtomList* pseudoClass = aSelector->mPseudoClassList;
       PRInt32 eventState = NS_EVENT_STATE_UNSPECIFIED;
@@ -1419,6 +1420,17 @@ static PRBool SelectorMatches(nsIPresContext* aPresContext,
           result = PRBool(aContent == firstChild);
           NS_IF_RELEASE(firstChild);
         }
+        else if (nsCSSAtoms::rootPseudo == pseudoClass->mAtom) {
+          nsIContent* parent;
+          aContent->GetParent(parent);
+          if (parent) {
+            NS_RELEASE(parent);
+            result = PR_FALSE;
+          }
+          else {
+            result = PR_TRUE;
+          }
+        }
         else if (nsCSSAtoms::langPseudo == pseudoClass->mAtom) {
           // XXX not yet implemented
           result = PR_FALSE;
@@ -1440,11 +1452,9 @@ static PRBool SelectorMatches(nsIPresContext* aPresContext,
             else if (nsCSSAtoms::hoverPseudo == pseudoClass->mAtom) {
               result = PRBool(0 != (eventState & NS_EVENT_STATE_HOVER));
             }
-/*  XXX Rod, uncomment this to enable the drag over pseudo-class
             else if (nsCSSAtoms::dragOverPseudo == pseudoClass->mAtom) {
-              result = PRBool(0 != (eventState & NS_EVENT_STATE_DRAG_OVER));
+              result = PRBool(0 != (eventState & NS_EVENT_STATE_DRAGOVER));
             }
-*/
           }
         }
         else if (IsLinkPseudo(pseudoClass->mAtom)) {
@@ -1458,7 +1468,7 @@ static PRBool SelectorMatches(nsIPresContext* aPresContext,
                   nsresult attrState = aContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::href, href);
 
                   if (NS_CONTENT_ATTR_HAS_VALUE == attrState) {
-                    nsIURL* docURL = nsnull;
+                    nsIURI* docURL = nsnull;
                     nsIHTMLContent* htmlContent;
                     if (NS_SUCCEEDED(aContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) {
                       htmlContent->GetBaseURL(docURL);
@@ -1478,19 +1488,12 @@ static PRBool SelectorMatches(nsIPresContext* aPresContext,
                     NS_MakeAbsoluteURL(docURL, base, href, absURLSpec);
 #else
                     nsresult rv;
-                    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-                    if (NS_FAILED(rv)) return PR_FALSE;
-
                     nsIURI *baseUri = nsnull;
                     rv = docURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
                     if (NS_FAILED(rv)) return PR_FALSE;
 
-                    char *absUrlStr = nsnull;
-                    const char *urlSpec = href.GetBuffer();
-                    rv = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
+                    NS_MakeAbsoluteURI(href, baseUri, absURLSpec);
                     NS_RELEASE(baseUri);
-                    absURLSpec = absUrlStr;
-                    delete [] absUrlStr;
 #endif // NECKO
                     NS_IF_RELEASE(docURL);
 
@@ -1647,8 +1650,6 @@ PRInt32 CSSStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
   NS_PRECONDITION(nsnull != aResults, "null arg");
 
   PRInt32 matchCount = 0;
-
-  if (!aPresContext || !aContent || !aResults) return matchCount;
 
   nsIAtom* presMedium = nsnull;
 
@@ -1856,7 +1857,7 @@ CSSStyleSheetImpl::HasStateDependentStyle(nsIPresContext* aPresContext,
 
 
 NS_IMETHODIMP
-CSSStyleSheetImpl::Init(nsIURL* aURL)
+CSSStyleSheetImpl::Init(nsIURI* aURL)
 {
   NS_PRECONDITION(aURL, "null ptr");
   if (! aURL)
@@ -1871,7 +1872,15 @@ CSSStyleSheetImpl::Init(nsIURL* aURL)
     return NS_ERROR_ALREADY_INITIALIZED;
 
   if (mInner->mURL) {
+#ifdef NECKO
+#ifdef DEBUG
+    PRBool eq;
+    nsresult rv = mInner->mURL->Equals(aURL, &eq);
+    NS_ASSERTION(NS_SUCCEEDED(rv) && eq, "bad inner");
+#endif
+#else
     NS_ASSERTION(mInner->mURL->Equals(aURL), "bad inner");
+#endif
   }
   else {
     mInner->mURL = aURL;
@@ -1881,10 +1890,10 @@ CSSStyleSheetImpl::Init(nsIURL* aURL)
 }
 
 NS_IMETHODIMP
-CSSStyleSheetImpl::GetURL(nsIURL*& aURL) const
+CSSStyleSheetImpl::GetURL(nsIURI*& aURL) const
 {
-  const nsIURL* url = ((mInner) ? mInner->mURL : nsnull);
-  aURL = (nsIURL*)url;
+  const nsIURI* url = ((mInner) ? mInner->mURL : nsnull);
+  aURL = (nsIURI*)url;
   NS_IF_ADDREF(aURL);
   return NS_OK;
 }
@@ -2038,11 +2047,17 @@ CSSStyleSheetImpl::SetOwningNode(nsIDOMNode* aOwningNode)
 }
 
 NS_IMETHODIMP
-CSSStyleSheetImpl::ContainsStyleSheet(nsIURL* aURL) const
+CSSStyleSheetImpl::ContainsStyleSheet(nsIURI* aURL) const
 {
   NS_PRECONDITION(nsnull != aURL, "null arg");
 
+#ifdef NECKO
+  PRBool result;
+  nsresult rv = mInner->mURL->Equals(aURL, &result);
+  if (NS_FAILED(rv)) result = PR_FALSE;
+#else
   PRBool result = mInner->mURL->Equals(aURL);
+#endif
 
   const CSSStyleSheetImpl*  child = mFirstChild;
   while ((PR_FALSE == result) && (nsnull != child)) {
@@ -2348,7 +2363,6 @@ static PRBool ListCascade(nsHashKey* aKey, void* aValue, void* aClosure)
 void CSSStyleSheetImpl::List(FILE* out, PRInt32 aIndent) const
 {
 
-  PRUnichar* buffer;
   PRInt32 index;
 
   // Indent
@@ -2360,21 +2374,34 @@ void CSSStyleSheetImpl::List(FILE* out, PRInt32 aIndent) const
   }
 
   fputs("CSS Style Sheet: ", out);
-  mInner->mURL->ToString(&buffer);
-  nsAutoString as(buffer,0);
-  delete [] buffer;
-  fputs(as, out);
+#ifdef NECKO
+  char* urlSpec = nsnull;
+  nsresult rv = mInner->mURL->GetSpec(&urlSpec);
+  if (urlSpec) {
+    fputs(urlSpec, out);
+    nsCRT::free(urlSpec);
+  }
+#else
+  PRUnichar* urlSpec = nsnull;
+  mInner->mURL->ToString(&urlSpec);
+  if (urlSpec) {
+    nsAutoString buffer(urlSpec);
+    delete [] urlSpec;
+    fputs(buffer, out);
+  }
+#endif
 
   if (mMedia) {
     fputs(" media: ", out);
-    PRUint32 index = 0;
+    index = 0;
     PRUint32 count;
     mMedia->Count(&count);
-    while (index < count) {
+    nsAutoString  buffer;
+    while (index < PRInt32(count)) {
       nsIAtom* medium = (nsIAtom*)mMedia->ElementAt(index++);
-      medium->ToString(as);
-      fputs(as, out);
-      if (index < count) {
+      medium->ToString(buffer);
+      fputs(buffer, out);
+      if (index < PRInt32(count)) {
         fputs(", ", out);
       }
       NS_RELEASE(medium);
@@ -2448,6 +2475,7 @@ PRBool IsStateSelector(nsCSSSelector& aSelector)
   nsAtomList* pseudoClass = aSelector.mPseudoClassList;
   while (pseudoClass) {
     if ((pseudoClass->mAtom == nsCSSAtoms::activePseudo) ||
+        (pseudoClass->mAtom == nsCSSAtoms::checkedPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::disabledPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::dragOverPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::dragPseudo) || 
@@ -2456,7 +2484,6 @@ PRBool IsStateSelector(nsCSSSelector& aSelector)
         (pseudoClass->mAtom == nsCSSAtoms::hoverPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::linkPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::outOfDatePseudo) ||
-        (pseudoClass->mAtom == nsCSSAtoms::selectedPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::selectionPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::visitedPseudo)) {
       return PR_TRUE;
@@ -2605,6 +2632,7 @@ CSSStyleSheetImpl::SlowCascadeRulesInto(nsIAtom* aMedium, nsISupportsArray* aRul
 }
 #endif
 
+#ifdef FAST_CASCADE
 static PRInt32
 CompareStyleRuleWeight(nsISupports* aRule1, nsISupports* aRule2, void* aData)
 {
@@ -2612,6 +2640,7 @@ CompareStyleRuleWeight(nsISupports* aRule1, nsISupports* aRule2, void* aData)
   nsICSSStyleRule* rule2 = (nsICSSStyleRule*)aRule2;
   return (rule2->GetWeight() - rule1->GetWeight());
 }
+#endif
 
 nsresult
 CSSStyleSheetImpl::CascadeRulesInto(nsIAtom* aMedium, nsISupportsArray* aRules)
@@ -2731,10 +2760,19 @@ NS_IMETHODIMP
 CSSStyleSheetImpl::GetHref(nsString& aHref)
 {
   if (mInner && mInner->mURL) {
+#ifdef NECKO
+    char* str = nsnull;
+    mInner->mURL->GetSpec(&str);
+    aHref = str;
+    if (str) {
+      nsCRT::free(str);
+    }
+#else
     PRUnichar* str;
     mInner->mURL->ToString(&str);
     aHref = str;
     delete [] str;
+#endif
   }
   else {
     aHref.SetLength(0);
@@ -2888,7 +2926,7 @@ CSSStyleSheetImpl::SetScriptObject(void* aScriptObject)
 
 // XXX for backwards compatibility and convenience
 NS_HTML nsresult
-  NS_NewCSSStyleSheet(nsICSSStyleSheet** aInstancePtrResult, nsIURL* aURL)
+  NS_NewCSSStyleSheet(nsICSSStyleSheet** aInstancePtrResult, nsIURI* aURL)
 {
   nsICSSStyleSheet* sheet;
   nsresult rv;

@@ -22,6 +22,7 @@
 #include "pratom.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
+#include "nsIRegistry.h"
 #include "nsIFactory.h"
 #include "nsCOMPtr.h"
 #include "nsICharsetConverterInfo.h"
@@ -38,6 +39,7 @@
 #include "nsISO88598ToUnicode.h"
 #include "nsISO88599ToUnicode.h"
 #include "nsISO885910ToUnicode.h"
+#include "nsISO885913ToUnicode.h"
 #include "nsISO885914ToUnicode.h"
 #include "nsISO885915ToUnicode.h"
 #include "nsISOIR111ToUnicode.h"
@@ -87,6 +89,7 @@
 #include "nsUnicodeToISO88598.h"
 #include "nsUnicodeToISO88599.h"
 #include "nsUnicodeToISO885910.h"
+#include "nsUnicodeToISO885913.h"
 #include "nsUnicodeToISO885914.h"
 #include "nsUnicodeToISO885915.h"
 #include "nsUnicodeToISOIR111.h"
@@ -125,6 +128,8 @@
 #include "nsUnicodeToUCS4LE.h"
 #include "nsUnicodeToT61.h"
 #include "nsUnicodeToUserDefined.h"
+#include "nsUnicodeToSymbol.h"
+#include "nsUnicodeToZapfDingbat.h"
 
 // just for NS_IMPL_IDS; this is a good, central place to implement GUIDs
 #include "nsIUnicodeDecoder.h"
@@ -134,6 +139,8 @@
 #include "nsIUnicodeEncodeHelper.h"
 #include "nsICharsetConverterManager.h"
 
+#define DECODER_NAME_BASE "Unicode Decoder-"
+#define ENCODER_NAME_BASE "Unicode Encoder-"
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
 
@@ -220,6 +227,12 @@ FactoryData g_FactoryData[] =
     &kISO885910ToUnicodeCID,
     nsISO885910ToUnicode::CreateInstance,
     "ISO-8859-10",
+    "Unicode"
+  },
+  {
+    &kISO885913ToUnicodeCID,
+    nsISO885913ToUnicode::CreateInstance,
+    "ISO-8859-13",
     "Unicode"
   },
   {
@@ -517,6 +530,12 @@ FactoryData g_FactoryData[] =
     "ISO-8859-10"
   },
   {
+    &kUnicodeToISO885913CID,
+    nsUnicodeToISO885913::CreateInstance,
+    "Unicode",
+    "ISO-8859-13"
+  },
+  {
     &kUnicodeToISO885914CID,
     nsUnicodeToISO885914::CreateInstance,
     "Unicode",
@@ -743,6 +762,18 @@ FactoryData g_FactoryData[] =
     nsUnicodeToUserDefined::CreateInstance,
     "Unicode",
     "x-user-defined"
+  },
+  {
+    &kUnicodeToSymbolCID,
+    nsUnicodeToSymbol::CreateInstance,
+    "Unicode",
+    "Adobe-Symbol-Encoding"
+  },
+  {
+    &kUnicodeToZapfDingbatsCID,
+    nsUnicodeToZapfDingbat::CreateInstance,
+    "Unicode",
+    "x-zapf-dingbats"
   }
 };
 
@@ -831,7 +862,80 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
   return NS_NOINTERFACE;
 }
 
-extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char * path)
+extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports * aServMgr, 
+                                             const char * path)
+{
+  nsresult res;
+  PRUint32 i;
+  nsIComponentManager * compMgr = NULL;
+  nsIRegistry * registry = NULL;
+  nsIRegistry::Key key;
+  char buff[1024];
+
+  // get the service manager
+  nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &res));
+
+  // get the component manager
+  res = servMgr->GetService(kComponentManagerCID, 
+                            nsIComponentManager::GetIID(), 
+                            (nsISupports**)&compMgr);
+  if (NS_FAILED(res)) goto done;
+
+  // get the registry
+  res = servMgr->GetService(NS_REGISTRY_PROGID, 
+                            nsIRegistry::GetIID(), 
+                            (nsISupports**)&registry);
+  if (NS_FAILED(res)) goto done;
+
+  // open the registry
+  res = registry->OpenWellKnownRegistry(
+      nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(res)) goto done;
+
+  char name[128];
+  char progid[128];
+  for (i=0; i<ARRAY_SIZE(g_FactoryData); i++) {
+    if(0==PL_strcmp(g_FactoryData[i].mCharsetSrc,"Unicode"))
+    {
+       PL_strcpy(name, DECODER_NAME_BASE);
+       PL_strcat(name, g_FactoryData[i].mCharsetDest);
+       PL_strcpy(progid, NS_UNICODEDECODER_PROGID_BASE);
+       PL_strcat(progid, g_FactoryData[i].mCharsetDest);
+    } else {
+       PL_strcpy(name, ENCODER_NAME_BASE);
+       PL_strcat(name, g_FactoryData[i].mCharsetSrc);
+       PL_strcpy(progid, NS_UNICODEENCODER_PROGID_BASE);
+       PL_strcat(progid, g_FactoryData[i].mCharsetSrc);
+    }
+    // register component
+    res = compMgr->RegisterComponent(*(g_FactoryData[i].mCID), name, progid,
+      path, PR_TRUE, PR_TRUE);
+    if(NS_FAILED(res) && (NS_ERROR_FACTORY_EXISTS != res)) goto done;
+
+    // register component info
+    // XXX take these KONSTANTS out of here
+    // XXX free the string from "ToString()"
+    sprintf(buff, "%s/%s", "software/netscape/intl/uconv", (g_FactoryData[i].mCID -> ToString()));
+    res = registry -> AddSubtree(nsIRegistry::Common, buff, &key);
+    if (NS_FAILED(res)) goto done;
+    res = registry -> SetString(key, "source", g_FactoryData[i].mCharsetSrc);
+    if (NS_FAILED(res)) goto done;
+    res = registry -> SetString(key, "destination", g_FactoryData[i].mCharsetDest);
+    if (NS_FAILED(res)) goto done;
+  }
+
+done:
+  if (compMgr != NULL) 
+    (void)servMgr->ReleaseService(kComponentManagerCID, compMgr);
+  if (registry != NULL) {
+    registry -> Close();
+    (void)servMgr->ReleaseService(NS_REGISTRY_PROGID, registry);
+  }
+
+  return res;
+}
+
+extern "C" NS_EXPORT nsresult NSRegisterSelf_0(nsISupports* aServMgr, const char * path)
 {
   nsresult rv;
 

@@ -23,18 +23,20 @@
 #include "nsIWidget.h"
 #include "nsIScrollableView.h"
 #include "nsIContentViewerContainer.h"
-#ifndef NECKO
+#ifdef NECKO
+#include "nsIChannel.h"
+#else
 #include "nsILoadAttribs.h"
 #endif // NECKO
 #include "nsIScrollableView.h"
 #include "nsIParser.h" // for nsCharsetSource only
 #include "nsISessionHistory.h"
-
+#include "nsIUrlDispatcher.h"
 
 class nsIDOMElement;
 class nsIDOMWindow;
 class nsIFactory;
-class nsIPostData;
+//class nsIPostData;
 class nsIStreamObserver;
 class nsIDocumentLoader;
 class nsIDocumentLoaderObserver;
@@ -90,7 +92,7 @@ public:
  
    NS_IMETHOD EndLoadURL(nsIWebShell* aShell,
                          const PRUnichar* aURL,
-                         PRInt32 aStatus) = 0;
+                         nsresult aStatus) = 0;
  
  //instances
 
@@ -109,7 +111,7 @@ public:
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow) = 0;
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup) = 0;
 
   /**
    * Notify the WebShellContainer that a contained webshell is
@@ -330,12 +332,21 @@ public:
   NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult) = 0;
 
   /**
+   * Lets us know if the webshell document fired off a load
+   */  
+  NS_IMETHOD IsBusy(PRBool& aResult) = 0;
+
+  /**
    * Load the document associated with the specified URL into the WebShell.
    */
   NS_IMETHOD LoadURL(const PRUnichar *aURLSpec,
-                     nsIPostData* aPostData=nsnull,
+                     nsIInputStream* aPostDataStream=nsnull,
                      PRBool aModifyHistory=PR_TRUE,
+#ifdef NECKO
+                     nsLoadFlags aType = nsIChannel::LOAD_NORMAL,
+#else
                      nsURLReloadType aType=nsURLReload,
+#endif
                      const PRUint32 aLocalIP=0) = 0;
 
   /**
@@ -343,9 +354,13 @@ public:
    */
   NS_IMETHOD LoadURL(const PRUnichar *aURLSpec,
                      const char* aCommand, 
-                     nsIPostData* aPostData=nsnull,
+                     nsIInputStream* aPostDataStream=nsnull,
                      PRBool aModifyHistory=PR_TRUE,
+#ifdef NECKO
+                     nsLoadFlags aType = nsIChannel::LOAD_NORMAL,
+#else
                      nsURLReloadType aType=nsURLReload,
+#endif
                      const PRUint32 aLocalIP=0) = 0;
 
 
@@ -357,7 +372,11 @@ public:
   /**
    * Reload the current document.
    */
+#ifdef NECKO
+  NS_IMETHOD Reload(nsLoadFlags aType) = 0;
+#else
   NS_IMETHOD Reload(nsURLReloadType aType) = 0;
+#endif
 
   //
   // History api's
@@ -437,6 +456,10 @@ public:
   /* Set & Get Session History details */
   NS_IMETHOD SetIsInSHist(PRBool aIsFrame)       = 0;
   NS_IMETHOD GetIsInSHist(PRBool& aIsFrame)      = 0;
+
+    /* Get and set the URL Dispatcher for the webshell */
+  NS_IMETHOD SetUrlDispatcher(nsIUrlDispatcher * anObserver) = 0;
+  NS_IMETHOD GetUrlDispatcher(nsIUrlDispatcher *& aResult)=0;
 
 };
 

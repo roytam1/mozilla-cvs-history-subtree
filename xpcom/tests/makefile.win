@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..
+include <$(DEPTH)/config/config.mak>
 
 IGNORE_MANIFEST=1
 
@@ -38,6 +39,7 @@ PROG13 = .\$(OBJDIR)\TestThreads.exe
 PROG14 = .\$(OBJDIR)\TestObserverService.exe
 PROG15 = .\$(OBJDIR)\TestBuffers.exe
 PROG16 = .\$(OBJDIR)\TestPipes.exe
+PROG17 = .\$(OBJDIR)\TestShutdown.exe
 
 RESFILE = timer.res
 
@@ -54,26 +56,34 @@ PROGRAMS = $(PROG1) $(PROG2) $(PROG3) $(PROG4) $(PROG5) \
         $(PROG14) \
         $(PROG15) \
         $(PROG16) \
+        $(PROG17) \
 	$(NULL)
 
-LCFLAGS=-DUSE_NSREG -GX
+LCFLAGS=-DUSE_NSREG -GX -DNECKO
 
 REQUIRES=libreg
 
 LINCS=                     \
         -Iservices         \
+!ifdef NECKO
+        -I$(PUBLIC)\necko  \
+!else
 !ifdef MODULAR_NETLIB
         -I$(PUBLIC)\netlib \
+!endif
 !endif
         -I$(PUBLIC)\xpcom
 
 LLIBS=                         \
         $(DIST)\lib\xpcom.lib  \
+!ifdef NECKO
+        $(DIST)\lib\neckoutil_s.lib \
+!else
 !ifdef MODULAR_NETLIB
         $(DIST)\lib\netlib.lib \
 !endif
-        $(LIBNSPR)             \
-        $(DIST)\lib\plc3.lib
+!endif
+        $(LIBNSPR)
 
 !if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
 LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
@@ -84,24 +94,8 @@ include <$(DEPTH)\config\rules.mak>
 install:: $(PROGRAMS)
 	-for %p in ($(PROGRAMS)) do $(MAKE_INSTALL) %p $(DIST)\bin
 
-xoclobber::
+clobber::
 	-for %p in ($(PROGRAMS)) do $(RM) %p $(DIST)\bin\%p
-
-# Move this into config/obj.inc when it's allowed
-.cpp{.\$(OBJDIR)\}.exe:
-    $(CC) @<<$(CFGFILE)
-        $(CFLAGS)
-        $(LCFLAGS)
-        $(LINCS)
-        $(LINCS_1)
-        $(INCS)
-        $(LLIBS)
-        $(OS_LIBS)
-        -Fd$(PDBFILE)
-        -Fe.\$(OBJDIR)\
-        -Fo.\$(OBJDIR)\
-        $(CURDIR)$(*B).cpp
-<<KEEP
 
 $(PROG1): $(OBJDIR) TestFactory.cpp
 $(PROG2): $(OBJDIR) RegFactory.cpp
@@ -132,3 +126,5 @@ $(PROG14): $(OBJDIR) TestObserverService.cpp
 $(PROG15): $(OBJDIR) TestBuffers.cpp
 
 $(PROG16): $(OBJDIR) TestPipes.cpp
+
+$(PROG17): $(OBJDIR) TestShutdown.cpp

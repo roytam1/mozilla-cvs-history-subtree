@@ -16,11 +16,12 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 
 DEFINES=-D_IMPL_NS_DOM
 
 MODULE=raptor 
-REQUIRES=xpcom raptor dom
+REQUIRES=xpcom raptor dom caps oji
 
 CPPSRCS = nsDOMFactory.cpp      	\
 	  nsHTMLTagsEnums.cpp		\
@@ -33,27 +34,17 @@ CPP_OBJS = .\$(OBJDIR)\nsDOMFactory.obj			\
 	   .\$(OBJDIR)\nsScriptNameSpaceManager.obj 
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \
-	-I$(PUBLIC)\dom -I$(PUBLIC)\js -I..\base -I$(PUBLIC)\jsurl
+	-I$(PUBLIC)\dom -I$(PUBLIC)\js -I..\base 
+
+!ifdef NECKO
+LINCS = $(LINCS) -I..\jsurl 
+!else
+LINCS = $(LINCS) -I$(PUBLIC)\jsurl 
+!endif
 
 MAKE_OBJ_TYPE = DLL
 DLLNAME = jsdom
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
-
-MISCDEP =						\
-	$(DIST)\lib\jsdombase_s.lib			\
-	$(DIST)\lib\jsdomcore_s.lib			\
-	$(DIST)\lib\jsdomevents_s.lib			\
-	$(DIST)\lib\jsdomrange_s.lib			\
-	$(DIST)\lib\jsdomhtml_s.lib			\
-	$(DIST)\lib\jsdomcss_s.lib			\
-	$(DIST)\lib\jsurl.lib				\
-	$(DIST)\lib\raptorgfxwin.lib			\
-	$(DIST)\lib\netlib.lib				\
-	$(DIST)\lib\js32$(VERSION_NUMBER).lib		\
-	$(DIST)\lib\xpcom.lib				\
-	$(DIST)\lib\plds3.lib			\
-	$(DIST)\lib\plc3.lib			\
-	$(LIBNSPR)
 
 LCFLAGS = \
         $(LCFLAGS) \
@@ -70,11 +61,18 @@ LLIBS=							\
 	$(DIST)\lib\jsdomcss_s.lib			\
 	$(DIST)\lib\jsurl.lib				\
 	$(DIST)\lib\raptorgfxwin.lib			\
+!ifdef NECKO
+	$(DIST)\lib\neckoutil_s.lib			\
+!else
 	$(DIST)\lib\netlib.lib				\
+!endif
 	$(DIST)\lib\js32$(VERSION_NUMBER).lib		\
 	$(DIST)\lib\xpcom.lib				\
 	$(DIST)\lib\plds3.lib			\
 	$(DIST)\lib\plc3.lib			\
+	$(DIST)\lib\caps.lib				\
+	$(DIST)\lib\oji.lib				\
+	$(DIST)\lib\timer_s.lib				\
 	$(LIBNSPR)
 
 include <$(DEPTH)\config\rules.mak>

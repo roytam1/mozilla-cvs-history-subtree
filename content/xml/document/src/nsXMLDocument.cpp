@@ -43,6 +43,10 @@
 #include "nsExpatDTD.h"
 #include "nsINameSpaceManager.h"
 #include "nsICSSLoader.h"
+#ifdef NECKO
+#include "nsCOMPtr.h"
+#include "nsIURI.h"
+#endif
 
 // XXX The XML world depends on the html atoms
 #include "nsHTMLAtoms.h"
@@ -73,6 +77,8 @@ NS_LAYOUT nsresult
 NS_NewXMLDocument(nsIDocument** aInstancePtrResult)
 {
   nsXMLDocument* doc = new nsXMLDocument();
+  if (doc == nsnull)
+    return NS_ERROR_OUT_OF_MEMORY;
   return doc->QueryInterface(kIDocumentIID, (void**) aInstancePtrResult);
 }
 
@@ -84,16 +90,19 @@ nsXMLDocument::nsXMLDocument()
   mCSSLoader = nsnull;
   
   // XXX The XML world depends on the html atoms
-  nsHTMLAtoms::AddrefAtoms();
+  nsHTMLAtoms::AddRefAtoms();
 #ifdef INCLUDE_XUL
   // XUL world lives within XML world until it gets a place of its own
-  nsXULAtoms::AddrefAtoms();
+  nsXULAtoms::AddRefAtoms();
+#endif
+#ifdef XSL
+  mTransformMediator = nsnull;
 #endif
 }
 
 nsXMLDocument::~nsXMLDocument()
 {
-  NS_IF_RELEASE(mParser);
+  NS_IF_RELEASE(mParser);  
   if (nsnull != mAttrStyleSheet) {
     mAttrStyleSheet->SetOwningDocument(nsnull);
     NS_RELEASE(mAttrStyleSheet);
@@ -108,6 +117,9 @@ nsXMLDocument::~nsXMLDocument()
   }
 #ifdef INCLUDE_XUL
   nsXULAtoms::ReleaseAtoms();
+#endif
+#ifdef XSL
+  NS_IF_RELEASE(mTransformMediator);
 #endif
 }
 
@@ -142,9 +154,20 @@ nsrefcnt nsXMLDocument::Release()
 }
 
 nsresult
-nsXMLDocument::Reset(nsIURL* aURL)
+#ifdef NECKO
+nsXMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
+#else
+nsXMLDocument::Reset(nsIURI* aURL)
+#endif
 {
+#ifdef NECKO
+  nsresult result = nsDocument::Reset(aChannel, aLoadGroup);
+  nsCOMPtr<nsIURI> aURL;
+  result = aChannel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(result)) return result;
+#else
   nsresult result = nsDocument::Reset(aURL);
+#endif
   if (NS_FAILED(result)) {
     return result;
   }
@@ -180,20 +203,35 @@ nsXMLDocument::GetContentType(nsString& aContentType) const
 }
 
 NS_IMETHODIMP 
-nsXMLDocument::StartDocumentLoad(nsIURL *aUrl, 
-                                 nsIContentViewerContainer* aContainer,
-                                 nsIStreamListener **aDocListener,
-                                 const char* aCommand)
+nsXMLDocument::StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                               nsIChannel* aChannel,
+                               nsILoadGroup* aLoadGroup,
+#else
+                               nsIURI *aUrl, 
+#endif
+                               nsIContentViewerContainer* aContainer,
+                               nsIStreamListener **aDocListener)
 {
-  nsresult rv = nsDocument::StartDocumentLoad(aUrl, 
+  nsresult rv = nsDocument::StartDocumentLoad(aCommand,
+#ifdef NECKO
+                                              aChannel, aLoadGroup,
+#else
+                                              aUrl, 
+#endif
                                               aContainer, 
-                                              aDocListener,
-                                              aCommand);
+                                              aDocListener);
   if (NS_FAILED(rv)) {
     return rv;
   }
 
   nsIWebShell* webShell;
+
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aUrl;
+  rv = aChannel->GetURI(getter_AddRefs(aUrl));
+  if (NS_FAILED(rv)) return rv;
+#endif
 
   static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
   static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
@@ -351,8 +389,6 @@ nsXMLDocument::CreateProcessingInstruction(const nsString& aTarget,
   return rv;
 }
  
-static char kNameSpaceSeparator[] = ":";
-
 NS_IMETHODIMP    
 nsXMLDocument::CreateElement(const nsString& aTagName, 
                               nsIDOMElement** aReturn)
@@ -459,6 +495,17 @@ nsXMLDocument::GetContentById(const nsString& aName, nsIContent** aContent)
   return NS_OK;
 }
 
+#ifdef XSL
+NS_IMETHODIMP 
+nsXMLDocument::SetTransformMediator(nsITransformMediator* aMediator)
+{
+  NS_ASSERTION(nsnull == mTransformMediator, "nsXMLDocument::SetTransformMediator(): \
+    Cannot set a second transform mediator\n");
+  mTransformMediator = aMediator;
+  NS_IF_ADDREF(mTransformMediator);
+  return NS_OK;
+}
+#endif
 
 NS_IMETHODIMP
 nsXMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
@@ -468,6 +515,7 @@ nsXMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
     result = NS_NewCSSLoader(this, &mCSSLoader);
     if (mCSSLoader) {
       mCSSLoader->SetCaseSensitive(PR_TRUE);
+      mCSSLoader->SetQuirkMode(PR_FALSE); // No quirks in XML
     }
   }
   aLoader = mCSSLoader;

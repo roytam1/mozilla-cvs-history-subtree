@@ -25,7 +25,11 @@
 #include "nsIFactory.h"
 #include "nsIComponentManager.h"
 #ifdef XP_MAC
+#ifdef NECKO
+#include "nsIPrompt.h"
+#else
 #include "nsINetSupport.h"
+#endif
 #include "nsIStreamListener.h"
 #endif /* XP_MAC */
 #include "nsIServiceManager.h"
@@ -190,7 +194,7 @@ public:
     NS_IMETHOD DeleteBranch(const char *branchName);
 
 	NS_IMETHOD CreateChildList(const char* parent_node, char **child_list);
-	NS_IMETHOD NextChild(const char *child_list, PRInt16 *index, char **listchild);
+	NS_IMETHOD NextChild(const char *child_list, PRInt16 *indx, char **listchild);
 
 protected:
 
@@ -267,7 +271,13 @@ nsresult nsPref::useDefaultPrefFile()
     {
 	    // There is no locator component. Or perhaps there is a locator, but the
 	    // locator couldn't find where to put it. So put it in the cwd (NB, viewer comes here.)
-	    prefsFile = NS_CreateFileSpec();
+        // #include nsIComponentManager.h
+        rv = nsComponentManager::CreateInstance(
+        	(const char*)NS_FILESPEC_PROGID,
+        	(nsISupports*)nsnull,
+        	(const nsID&)nsIFileSpec::GetIID(),
+        	(void**)&prefsFile);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "ERROR: Could not make a file spec.");
 	    if (!prefsFile)
 	    	return NS_ERROR_FAILURE;
 	    prefsFile->SetUnixStyleFilePath("default_prefs.js"); // in default working directory.
@@ -298,10 +308,12 @@ nsresult nsPref::useDefaultPrefFile()
 #elif defined(XP_WIN)
     char* imapDirStr = PR_smprintf("c:\\program files\\netscape\\users\\%s\\ImapMail",currProfileName);
     char* newsDirStr = PR_smprintf("c:\\program files\\netscape\\users\\%s\\News",currProfileName);
+#elif defined(XP_BEOS)
+    char* imapDirStr = PR_smprintf("/boot/home/config/settings/mozilla/%s/ImapMail", currProfileName);
+    char* newsDirStr = PR_smprintf("/boot/home/config/settings/mozilla/%s/News", currProfileName);
 #else
 #error you_need_to_edit_this_file_for_your_freak_os
 #endif /* XP_FOO */
-    SetCharPref("browser.startup.homepage", "http://www.mozilla.org");
     SetCharPref("mail.accountmanager.accounts", "account0,account1");
     SetCharPref("mail.account.account0.identities", "id1");
     SetCharPref("mail.account.account0.server", "server0");
@@ -312,8 +324,7 @@ nsresult nsPref::useDefaultPrefFile()
     SetCharPref("mail.identity.id1.smtp_name", currProfileName);
     SetCharPref("mail.identity.id1.smtp_server", "nsmail-2");
     SetCharPref("mail.identity.id1.useremail", emailStr);
-    SetBoolPref("mail.identity.id1.send_html", PR_TRUE);
-    SetIntPref("mail.identity.id1.wrap_column", 72);
+    SetBoolPref("mail.identity.id1.compose_html", PR_TRUE);
     SetCharPref("mail.server.server0.directory", imapDirStr);
     SetCharPref("mail.server.server0.hostname", "nsmail-2");
     SetCharPref("mail.server.server0.password", "clear text password");
@@ -322,8 +333,6 @@ nsresult nsPref::useDefaultPrefFile()
     SetCharPref("mail.server.server1.directory", newsDirStr);
     SetCharPref("mail.server.server1.hostname", "news.mozilla.org");
     SetCharPref("mail.server.server1.type", "nntp");
-    SetIntPref("news.max_articles",50);
-    SetBoolPref("news.mark_old_read",PR_FALSE);
     PR_FREEIF(imapDirStr);
     PR_FREEIF(newsDirStr);
     PR_FREEIF(emailStr);
@@ -870,7 +879,12 @@ NS_IMETHODIMP nsPref::GetFilePref(const char *pref_name, nsIFileSpec** value)
     if (!value)
         return NS_ERROR_NULL_POINTER;        
 
-    *value = NS_CreateFileSpec();
+        nsresult rv = nsComponentManager::CreateInstance(
+        	(const char*)NS_FILESPEC_PROGID,
+        	(nsISupports*)nsnull,
+        	(const nsID&)nsIFileSpec::GetIID(),
+        	(void**)value);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "ERROR: Could not make a file spec.");
     if (!*value)
       return NS_ERROR_FAILURE;
 
@@ -896,9 +910,15 @@ NS_IMETHODIMP nsPref::SetFilePref(const char *pref_name,
     {
         // nsPersistentFileDescriptor requires an existing
         // object. Make it first. COM makes this difficult, of course...
-	    nsIFileSpec* tmp = NS_CreateFileSpec();
+	    nsIFileSpec* tmp = nsnull;
+        rv = nsComponentManager::CreateInstance(
+        	(const char*)NS_FILESPEC_PROGID,
+        	(nsISupports*)nsnull,
+        	(const nsID&)nsIFileSpec::GetIID(),
+        	(void**)&tmp);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "ERROR: Could not make a file spec.");
 	    if (!tmp)
-	      return NS_ERROR_FAILURE;
+	    	return NS_ERROR_FAILURE;
 		tmp->fromFileSpec(value);
         tmp->createDir();
         NS_RELEASE(tmp);
@@ -1058,13 +1078,13 @@ NS_IMETHODIMP nsPref::CreateChildList(const char* parent_node, char **child_list
 	return (pcs.childList == NULL) ? PREF_OUT_OF_MEMORY : PREF_OK;
 }
 
-NS_IMETHODIMP nsPref::NextChild(const char *child_list, PRInt16 *index, char **listchild)
+NS_IMETHODIMP nsPref::NextChild(const char *child_list, PRInt16 *indx, char **listchild)
 {
-	char* temp = (char*)&child_list[*index];
+	char* temp = (char*)&child_list[*indx];
 	char* child = strtok(temp, ";");
 	if (child)
 	{
-		*index += strlen(child) + 1;
+		*indx += strlen(child) + 1;
 		*listchild = child;
 		return NS_OK;
 	}
@@ -1144,12 +1164,17 @@ extern "C" NS_EXPORT nsresult NSGetFactory(
 
     if (aClass.Equals(kPrefCID))
     {
+        nsresult res = NS_OK;
         nsPrefFactory *factory = new nsPrefFactory();
-        nsresult res = factory->QueryInterface(kFactoryIID, (void **) aFactory);
-        if (NS_FAILED(res))
-        {
-            *aFactory = NULL;
-            delete factory;
+        if (factory) {
+            res = factory->QueryInterface(kFactoryIID, (void **) aFactory);
+            if (NS_FAILED(res))
+            {
+                *aFactory = NULL;
+                delete factory;
+            }
+        } else {
+            res = NS_ERROR_OUT_OF_MEMORY;
         }
         return res;
     }
@@ -1324,8 +1349,14 @@ extern "C" JSBool pref_InitInitialObjects()
 	int k;
 	JSBool worked = JS_FALSE;
 	// Parse all the random files that happen to be in the components directory.
-    nsIDirectoryIterator* i = NS_CreateDirectoryIterator();
-    if (!i || NS_FAILED(i->Init(componentsDir)))
+    nsIDirectoryIterator* i = nsnull;
+    rv = nsComponentManager::CreateInstance(
+        	(const char*)NS_DIRECTORYITERATOR_PROGID,
+        	(nsISupports*)nsnull,
+        	(const nsID&)nsIDirectoryIterator::GetIID(),
+        	(void**)&i);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "ERROR: Could not make a directory iterator.");
+    if (!i || NS_FAILED(i->Init(componentsDir, PR_TRUE)))
     	return JS_FALSE;
 
 	// Get any old child of the components directory. Warning: aliases get resolved, so
@@ -1365,7 +1396,7 @@ extern "C" JSBool pref_InitInitialObjects()
 		// Skip files in the special list.
 		if (shouldParse)
 		{
-			for (int j = 0; j < sizeof(specialFiles) / sizeof(char*); j++)
+			for (int j = 0; j < (int) (sizeof(specialFiles) / sizeof(char*)); j++)
 				if (strcmp(leafName, specialFiles[j]) == 0)
 					shouldParse = PR_FALSE;
 		}
@@ -1384,7 +1415,7 @@ extern "C" JSBool pref_InitInitialObjects()
 		NS_IF_RELEASE(child);
 	}
 	// Finally, parse any other special files (platform-specific ones).
-	for (k = 1; k < sizeof(specialFiles) / sizeof(char*); k++)
+	for (k = 1; k < (int) (sizeof(specialFiles) / sizeof(char*)); k++)
 	{
         nsIFileSpec* specialChild2;
         if (NS_FAILED(locator->GetFileLocation(nsSpecialFileSpec::App_ComponentsDirectory, &specialChild2)))

@@ -20,12 +20,10 @@
 #include "nsIComponentManager.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsIWidget.h"
+#include "nsIBrowserWindow.h"
 #include "nsIWebShellWindow.h"
 #include "nsIPref.h"
 #include "plevent.h"
@@ -46,6 +44,11 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsFileLocations.h"
 #include "nsFileStream.h"
 #include "nsSpecialSystemDirectory.h"
+#include "nsIWalletService.h"
+#ifdef NECKO
+#include "nsICookieService.h"
+#endif // NECKO
+
 
 // Temporary stuff.
 #include "nsIDOMToolkitCore.h"
@@ -70,15 +73,17 @@ static struct MacInitializer { MacInitializer() { InitializeMacToolbox(); } } gI
 #endif // XP_MAC
 
 /* Define Class IDs */
-static NS_DEFINE_IID(kAppShellServiceCID,   NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_IID(kCmdLineServiceCID,    NS_COMMANDLINE_SERVICE_CID);
+static NS_DEFINE_CID(kAppShellServiceCID,   NS_APPSHELL_SERVICE_CID);
+static NS_DEFINE_CID(kCmdLineServiceCID,    NS_COMMANDLINE_SERVICE_CID);
 static NS_DEFINE_CID(kPrefCID,              NS_PREF_CID);
 static NS_DEFINE_CID(kFileLocatorCID,       NS_FILELOCATOR_CID);
+static NS_DEFINE_IID(kWalletServiceCID,     NS_WALLETSERVICE_CID);
 
-/* Define Interface IDs */
-static NS_DEFINE_IID(kIAppShellServiceIID,  NS_IAPPSHELL_SERVICE_IID);
-static NS_DEFINE_IID(kICmdLineServiceIID,   NS_ICOMMANDLINE_SERVICE_IID);
-static NS_DEFINE_IID(kIFileLocatorIID,      NS_IFILELOCATOR_IID);
+static NS_DEFINE_IID(kIWalletServiceIID, NS_IWALLETSERVICE_IID);
+
+#ifdef NECKO
+static NS_DEFINE_CID(kCookieServiceCID,    NS_COOKIESERVICE_CID);
+#endif // NECKO
 
 // defined for profileManager
 #if defined(NS_USING_PROFILES)
@@ -93,8 +98,7 @@ static NS_DEFINE_CID(kProfileCID,           NS_PROFILE_CID);
 #include "nsIDOMAppCoresManager.h"
 
 //static nsIDOMAppCoresManager *appCoresManager = nsnull;
-static NS_DEFINE_IID(kIDOMAppCoresManagerIID, NS_IDOMAPPCORESMANAGER_IID);
-static NS_DEFINE_IID(kAppCoresManagerCID,     NS_APPCORESMANAGER_CID);
+static NS_DEFINE_CID(kAppCoresManagerCID,     NS_APPCORESMANAGER_CID);
 
 /*********************************************/
 
@@ -142,9 +146,14 @@ static PRBool CheckAndRunPrefs(nsICmdLineService* cmdLineArgs)
   return PR_FALSE;
 } // CheckandRunPrefs
 
-int main(int argc, char* argv[])
+int main1(int argc, char* argv[])
 {
   nsresult rv;
+
+#ifndef XP_MAC
+  // Unbuffer debug output (necessary for automated QA performance scripts).
+  setbuf( stdout, 0 );
+#endif
   
   nsICmdLineService *  cmdLineArgs = nsnull;
   NS_VERIFY(NS_SUCCEEDED(nsIThread::SetMainThread()), "couldn't set main thread");
@@ -164,11 +173,12 @@ int main(int argc, char* argv[])
 
   nsIAppShellService* appShell = nsnull;
   nsIDOMAppCoresManager *appCoresManager = nsnull;
-  nsIURL* url = nsnull;
+  nsIURI* url = nsnull;
   nsIPref *prefs = nsnull;
+  nsIWalletService *walletService;
+
 #ifdef NECKO
-  nsIIOService* service = nsnull;
-  nsIURI *uri = nsnull;
+  nsICookieService *cookieService = nsnull;
 #endif // NECKO
 
   // initialization for Full Circle
@@ -213,6 +223,7 @@ int main(int argc, char* argv[])
 	PRBool profileDirSet = PR_FALSE;
 	nsIProfile *profileService = nsnull;
 	char *profstr = nsnull;
+	int numProfiles = 0;
 #endif // defined(NS_USING_PROFILES)
 
   char* cmdResult = nsnull;
@@ -244,13 +255,6 @@ int main(int argc, char* argv[])
   // XXX: This call will be replaced by a registry initialization...
   NS_SetupRegistry_1();
 
-  nsIFileLocator* locator = nsnull;
-  rv = nsServiceManager::GetService(kFileLocatorCID, kIFileLocatorIID, (nsISupports**)&locator);
-  if (NS_FAILED(rv))
-      return rv;
-  if (!locator)
-      return NS_ERROR_FAILURE;
-
   // get and start the ProfileManager service
 #if defined(NS_USING_PROFILES)
   rv = nsServiceManager::GetService(kProfileCID, 
@@ -262,9 +266,8 @@ int main(int argc, char* argv[])
     goto done;			// don't use goto in C++!
   }
   profileService->Startup(nsnull);
-
+  profileService->GetProfileCount(&numProfiles); 
 #endif // defined(NS_USING_PROFILES)
-
 
 
   /*
@@ -273,7 +276,7 @@ int main(int argc, char* argv[])
    */
 
   rv = nsServiceManager::GetService(kCmdLineServiceCID,
-                                    kICmdLineServiceIID,
+                                    nsICmdLineService::GetIID(),
                                     (nsISupports **)&cmdLineArgs);
   if (NS_FAILED(rv)) {
     fprintf(stderr, "Could not obtain CmdLine processing service\n");
@@ -304,6 +307,8 @@ int main(int argc, char* argv[])
   if (nsnull == urlstr){
 
 #if defined(NS_USING_PROFILES)
+
+	printf("Profile Manager : Command Line Options : Begin\n");
 	// check for command line arguments for profile manager
   //	
 	// -P command line option works this way:
@@ -351,9 +356,11 @@ int main(int argc, char* argv[])
 			{
 				// No directory name provided. Get File Locator
 				nsIFileLocator* locator = nsnull;
-				rv = nsServiceManager::GetService(kFileLocatorCID, kIFileLocatorIID, (nsISupports**)&locator);
-				if (NS_FAILED(rv) || !locator)
-					return NS_ERROR_FAILURE;
+				rv = nsServiceManager::GetService(kFileLocatorCID, nsIFileLocator::GetIID(), (nsISupports**)&locator);
+        if (NS_FAILED(rv))
+          return rv;
+        if (!locator)
+          return NS_ERROR_FAILURE;
 				
 				// Get current profile, make the new one a sibling...
 				nsIFileSpec* spec;
@@ -383,7 +390,7 @@ int main(int argc, char* argv[])
     if (NS_SUCCEEDED(rv))
     {		
 		if (cmdResult) {
-			profstr = "resource:/res/profile/profileManagerContainer.xul"; 
+			profstr = "resource:/res/profile/pm.xul"; 
 		}
     }
 
@@ -402,21 +409,48 @@ int main(int argc, char* argv[])
     {		
 		if (cmdResult) {
 #ifdef XP_PC
-			profileService->MigrateProfileInfo(); 
+			profileService->MigrateProfileInfo();
+
+			int num4xProfiles = 0;
+			profileService->Get4xProfileCount(&num4xProfiles); 
+
+			if (num4xProfiles == 0 && numProfiles == 0) {
+				profstr = "resource:/res/profile/cpw.xul"; 
+			}
+			else if (num4xProfiles == 1) {
+				profileService->MigrateAllProfiles();
+				profileService->GetProfileCount(&numProfiles);
+			}
+			else if (num4xProfiles > 1) {
+				profstr = "resource:/res/profile/pm.xul";
+			}
 #endif
-			profstr = "resource:/res/profile/profileManagerContainer.xul";
 		}
     }
 
+    printf("Profile Manager : Command Line Options : End\n");
+
 #endif // defined(NS_USING_PROFILES)
     
-    rv = cmdLineArgs->GetCmdLineValue("-editor", &cmdResult);
+    rv = cmdLineArgs->GetCmdLineValue("-edit", &cmdResult);
     if (NS_SUCCEEDED(rv))
     {
       if (cmdResult && (strcmp("1",cmdResult)==0)) {
         urlstr = "chrome://editor/content/";
         useArgs = PR_TRUE;
         withArgs = "chrome://editor/content/EditorInitPage.html";
+      }
+    }
+    // Check for -editor -- this will eventually go away
+    if (nsnull == urlstr)
+    {
+      rv = cmdLineArgs->GetCmdLineValue("-editor", &cmdResult);
+      if (NS_SUCCEEDED(rv))
+      {
+        if (cmdResult && (strcmp("1",cmdResult)==0)) {
+          printf(" -editor no longer supported, use -edit instead!\n");
+          goto done;			// don't use goto in C++!
+        }
       }
     }
     if (nsnull == urlstr)
@@ -426,6 +460,37 @@ int main(int argc, char* argv[])
       {
         if (cmdResult && (strcmp("1",cmdResult)==0))
           urlstr = "chrome://messenger/content/";
+      }
+    }
+    if (nsnull == urlstr)
+    {
+      rv = cmdLineArgs->GetCmdLineValue("-news", &cmdResult);
+      if (NS_SUCCEEDED(rv))
+      {
+        if (cmdResult && (strcmp("1",cmdResult)==0))
+          urlstr = "chrome://messenger/content/";
+      }
+    }
+    if (nsnull == urlstr)
+    {
+      rv = cmdLineArgs->GetCmdLineValue("-compose", &cmdResult);
+      if (NS_SUCCEEDED(rv))
+      {
+        if (cmdResult && (strcmp("1",cmdResult)==0))
+        {
+          urlstr = "chrome://messengercompose/content/";
+          useArgs = PR_TRUE;
+          withArgs = "chrome://editor/content/EditorInitPage.html";
+       }
+     }
+    }
+    if (nsnull == urlstr)
+    {
+      rv = cmdLineArgs->GetCmdLineValue("-addressbook", &cmdResult);
+      if (NS_SUCCEEDED(rv))
+      {
+        if (cmdResult && (strcmp("1",cmdResult)==0))
+          urlstr = "chrome://addressbook/content/";
       }
     }
     if (nsnull == urlstr) { 
@@ -450,9 +515,6 @@ int main(int argc, char* argv[])
   }
   if (width) {
     PR_sscanf(width, "%d", &widthVal);
-    fprintf(stderr, "Width is set to %d\n", widthVal);
-  } else {
-    fprintf(stderr, "width was not set\n");
   }
   
   // Get the value of -height option
@@ -462,9 +524,6 @@ int main(int argc, char* argv[])
   }
   if (height) {
     PR_sscanf(height, "%d", &heightVal);
-    fprintf(stderr, "height is set to %d\n", heightVal);
-  } else {
-    fprintf(stderr, "height was not set\n");
   }
   
   /*
@@ -480,7 +539,7 @@ int main(int argc, char* argv[])
    * Create the Application Shell instance...
    */
   rv = nsServiceManager::GetService(kAppShellServiceCID,
-                                    kIAppShellServiceIID,
+                                    nsIAppShellService::GetIID(),
                                     (nsISupports**)&appShell);
   if (NS_FAILED(rv)) {
     goto done;			// don't use goto in C++!
@@ -506,75 +565,35 @@ int main(int argc, char* argv[])
 #ifndef NECKO
   rv = NS_NewURL(&url, urlstr);
 #else
-  rv = nsServiceManager::GetService(kIOServiceCID, 
-                                    nsIIOService::GetIID(), 
-                                    (nsISupports **)&service);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = service->NewURI(urlstr, nsnull, &uri);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-  NS_RELEASE(uri);
+  rv = NS_NewURI(&url, urlstr);
 #endif // NECKO
 
   if (NS_FAILED(rv)) {
     goto done;			// don't use goto in C++!
   }
 
-  /* ********************************************************************* */
-  /* This is a temporary hack to get mail working with autoregistration
-   * This won't succeed unless messenger was found
-   * through autoregistration, and will go away when the service manager
-     * is accessable from JavaScript
-     */
-  /* Comments/questions to alecf@netscape.com */
+
+  // Support the "-pref" command-line option, which just puts up the pref window, so that
+  // apprunner becomes a "control panel". The "OK" and "Cancel" buttons will quit
+  // the application.
+  rv = cmdLineArgs->GetCmdLineValue("-pref", &cmdResult);
+  if (NS_SUCCEEDED(rv) && cmdResult && (strcmp("1",cmdResult) == 0))
   {
-	/*MESSENGER*/
-    nsCOMPtr<nsIAppShellComponent> messenger;
-    //const char *messengerProgID = "component://netscape/messenger";
-    nsresult result;
-
-    /* this is so ugly, but ProgID->CLSID mapping seems to be broken -alecf */
-#define NS_MESSENGERBOOTSTRAP_CID                 \
-    { /* 4a85a5d0-cddd-11d2-b7f6-00805f05ffa5 */      \
-      0x4a85a5d0, 0xcddd, 0x11d2,                     \
-      {0xb7, 0xf6, 0x00, 0x80, 0x5f, 0x05, 0xff, 0xa5}}
-
-    NS_DEFINE_CID(kCMessengerBootstrapCID, NS_MESSENGERBOOTSTRAP_CID);
-    
-    result = nsComponentManager::CreateInstance(kCMessengerBootstrapCID,
-                                                nsnull,
-                                                nsIAppShellComponent::GetIID(),
-                                                getter_AddRefs(messenger));
-    if (NS_SUCCEEDED(result)) 
-      result = messenger->Initialize(appShell, cmdLineArgs);
- 
-	/*COMPOSER*/
-    nsCOMPtr<nsIAppShellComponent> composer;
-      //const char *composerProgID = "component://netscape/composer";
-
-    /* this is so ugly, but ProgID->CLSID mapping seems to be broken -alecf */
-#define NS_COMPOSERBOOTSTRAP_CID                 \
-	{ /* 82041531-D73E-11d2-82A9-00805F2A0107 */      \
-		0x82041531, 0xd73e, 0x11d2,                     \
-		{0x82, 0xa9, 0x0, 0x80, 0x5f, 0x2a, 0x1, 0x7}}
-
-    NS_DEFINE_CID(kCComposerBootstrapCID, NS_COMPOSERBOOTSTRAP_CID);
-    
-    result = nsComponentManager::CreateInstance(kCComposerBootstrapCID,
-                                                nsnull,
-                                                nsIAppShellComponent::GetIID(),
-                                                getter_AddRefs(composer));
-    if (NS_SUCCEEDED(result)) 
-		result = composer->Initialize(appShell, cmdLineArgs);
+    nsIPrefWindow* prefWindow;
+    rv = nsComponentManager::CreateInstance(
+	  NS_PREFWINDOW_PROGID,
+      nsnull,
+      nsIPrefWindow::GetIID(),
+      (void **)&prefWindow);
+	if (NS_SUCCEEDED(rv))
+	  prefWindow->showWindow(nsString("Apprunner::main()").GetUnicode(), nsnull, nsnull);
+	NS_IF_RELEASE(prefWindow);
+	goto done;
   }
-  /* End of mailhack */
-  /* ********************************************************************* */
 
   // Kick off appcores
   rv = nsServiceManager::GetService(kAppCoresManagerCID,
-                                    kIDOMAppCoresManagerIID,
+                                    nsIDOMAppCoresManager::GetIID(),
                                     (nsISupports**)&appCoresManager);
 	if (NS_SUCCEEDED(rv)) {
 		if (appCoresManager->Startup() != NS_OK) {
@@ -584,13 +603,16 @@ int main(int argc, char* argv[])
   }
 
 #if defined (NS_USING_PROFILES)
+
+
+    	printf("Profile Manager : Profile Wizard and Manager activites : Begin\n");
+
 	/* 
 	 * If default profile is current, launch CreateProfile Wizard. 
 	 */ 
 	if (!profileDirSet)
 	{
-		int numProfiles = 0; 
-		nsIURL* profURL = nsnull;
+		nsIURI* profURL = nsnull;
 
 		PRInt32 profWinWidth  = 615;
 		PRInt32 profWinHeight = 500;
@@ -601,12 +623,16 @@ int main(int argc, char* argv[])
 	 	 * Create the Application Shell instance...
 		 */
 		rv = nsServiceManager::GetService(kAppShellServiceCID,
-                                    kIAppShellServiceIID,
+                                    nsIAppShellService::GetIID(),
                                     (nsISupports**)&profAppShell);
 		if (NS_FAILED(rv))
 			goto done;
 
-		profileService->GetProfileCount(&numProfiles); 
+		char *isPregInfoSet = nsnull;
+		profileService->IsPregCookieSet(&isPregInfoSet); 
+		
+		PRBool pregPref = PR_FALSE;
+		rv = prefs->GetBoolPref(PREG_PREF, &pregPref);
 
 		if (!profstr)
 		{
@@ -614,22 +640,39 @@ int main(int argc, char* argv[])
 			// profile UI to come up. But we need the UI anyway if there
 			// are no profiles yet, or if there is more than one.
 			if (numProfiles == 0)
-				profstr = "resource:/res/profile/cpw.xul"; 
+			{
+				if (pregPref)
+					profstr = "resource:/res/profile/cpwPreg.xul"; 
+				else
+					profstr = "resource:/res/profile/cpw.xul"; 
+			}
 			else if (numProfiles > 1)
-				profstr = "resource:/res/profile/profileManagerContainer.xul"; 
+				profstr = "resource:/res/profile/pm.xul"; 
 		}
+
+
+		// Provide Preg information
+		if (pregPref && (PL_strcmp(isPregInfoSet, "true") != 0))
+			profstr = "resource:/res/profile/cpwPreg.xul"; 
+
 
 		if (profstr)
 		{
+#ifdef NECKO
+			rv = NS_NewURI(&profURL, profstr);
+#else
 			rv = NS_NewURL(&profURL, profstr);
+#endif
 	
 			if (NS_FAILED(rv)) {
 				goto done;
 			} 
 
-		  nsCOMPtr<nsIWebShellWindow>  profWindow;
-			rv = profAppShell->CreateTopLevelWindow(nsnull, profURL, PR_TRUE, *getter_AddRefs(profWindow),
-				       nsnull, nsnull, profWinWidth, profWinHeight);
+	 		nsCOMPtr<nsIWebShellWindow>  profWindow;
+			rv = profAppShell->CreateTopLevelWindow(nsnull, profURL,
+				PR_TRUE, NS_CHROME_ALL_CHROME,
+				nsnull, profWinWidth, profWinHeight,
+				getter_AddRefs(profWindow));
 
 			NS_RELEASE(profURL);
 		
@@ -643,7 +686,11 @@ int main(int argc, char* argv[])
 			 */	
 			rv = profAppShell->Run();
 		}
+
+		if (pregPref && PL_strcmp(isPregInfoSet, "true") != 0)
+			profileService->ProcessPRegCookie();
 	}
+    	printf("Profile Manager : Profile Wizard and Manager activites : End\n");
 #endif
 
   // Now we have the right profile, read the user-specific prefs.
@@ -655,10 +702,29 @@ int main(int argc, char* argv[])
   if (CheckAndRunPrefs(cmdLineArgs))
     goto done;
 
+#ifdef NECKO
+  // fire up an instance of the cookie manager.
+  // I'm doing this using the serviceManager for convenience's sake.
+  // Presumably an application will init it's own cookie service a 
+  // different way (this way works too though).
+  rv = nsServiceManager::GetService(kCookieServiceCID,
+                                    nsCOMTypeInfo<nsICookieService>::GetIID(),
+                                    (nsISupports **)&cookieService);
+#ifndef XP_MAC
+// Until the cookie manager actually exists on the Mac we don't want to bail here
+  if (NS_FAILED(rv))
+      goto done;
+#endif // XP_MAC
+#endif // NECKO
+
+ 
+
   if ( !useArgs ) {
       nsCOMPtr<nsIWebShellWindow> newWindow;
-      rv = appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, *getter_AddRefs(newWindow),
-                       nsnull, nsnull, widthVal, heightVal);
+      rv = appShell->CreateTopLevelWindow(nsnull, url,
+                               PR_TRUE, NS_CHROME_ALL_CHROME,
+                               nsnull, NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+                               getter_AddRefs(newWindow));
   } else {
       nsIDOMToolkitCore* toolkit = nsnull;
       rv = nsServiceManager::GetService(kToolkitCoreCID,
@@ -680,7 +746,15 @@ int main(int argc, char* argv[])
     goto done;
   }
 
+  // Fire up the walletService
+  rv = nsServiceManager::GetService(kWalletServiceCID,
+                                    kIWalletServiceIID,
+                                     (nsISupports **)&walletService);
  
+  if (NS_SUCCEEDED(rv)) {
+      walletService->WALLET_FetchFromNetCenter();
+  }
+
   /*
    * Start up the main event loop...
    */
@@ -699,6 +773,15 @@ done:
     nsServiceManager::ReleaseService(kCmdLineProcessorCID, cmdLineArgs);
   }
 #endif
+
+#ifdef NECKO
+  if (nsnull != cookieService)
+    nsServiceManager::ReleaseService(kCookieServiceCID, cookieService);
+#endif // NECKO
+
+  if (nsnull != walletService)
+    nsServiceManager::ReleaseService(kWalletServiceCID, walletService);
+
 
   /* Release the shell... */
   if (nsnull != appShell) {
@@ -726,8 +809,6 @@ done:
   }
 #endif // defined(NS_USING_PROFILES)
 
-    nsServiceManager::ReleaseService(kFileLocatorCID, locator);
-
 #ifdef XP_MAC
 	(void)CloseTSMAwareApplication();
 #endif
@@ -735,9 +816,21 @@ done:
    * Translate the nsresult into an appropriate platform-specific return code.
    */
 
-#ifdef NECKO
-    nsServiceManager::ReleaseService(kIOServiceCID, service);
-#endif // NECKO
-
   return TranslateReturnValue(rv);
+}
+
+int main(int argc, char* argv[])
+{
+    nsresult rv;
+    rv = NS_InitXPCOM(NULL);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "NS_InitXPCOM failed");
+
+    int result = main1(argc, argv);
+
+    // calling this explicitly will cut down on a large number of leaks we're
+    // seeing:
+    rv = NS_ShutdownXPCOM(NULL);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "NS_ShutdownXPCOM failed");
+
+    return result;
 }

@@ -17,6 +17,7 @@
 
 
 DEPTH	= ..\..\..
+include <$(DEPTH)/config/config.mak>
 MODULE=rdfcat
 
 MAKE_OBJ_TYPE=EXE
@@ -32,8 +33,11 @@ OBJS=           .\$(OBJDIR)\rdfcat.obj
 LLIBS=				\
  $(DIST)\lib\rdf.lib            \
  $(DIST)\lib\xpcom.lib	\
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib    \
+!else
  $(DIST)\lib\netlib.lib         \
- $(DIST)\lib\plc3.lib           \
+!endif
  $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>

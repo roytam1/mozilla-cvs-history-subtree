@@ -28,6 +28,7 @@
 #include "prmem.h"
 #include "plstr.h"
 #include "prprf.h"
+#include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kCPop3ServiceCID, NS_POP3SERVICE_CID);
 
@@ -55,9 +56,15 @@ public:
 
 	NS_IMETHOD PerformBiff();
 
+	// Override the implementations of Get/Set Password in 
+	// nsMsgIncomingServer. We don't want to get the password
+	// from preferences
+	NS_IMETHOD GetPassword(char * *aPassword);
+	NS_IMETHOD SetPassword(char * aPassword);
     
 private:
     char *m_rootFolderPath;
+	nsCString m_password;
     PRBool m_leaveOnServer;
     PRBool m_deleteMailLeftOnServer;
 };
@@ -81,6 +88,28 @@ nsPop3IncomingServer::~nsPop3IncomingServer()
     PR_FREEIF(m_rootFolderPath);
 }
 
+NS_IMETHODIMP nsPop3IncomingServer::GetPassword(char * *aPassword)
+{
+	nsresult rv = NS_OK;
+	if (aPassword) 
+		*aPassword = m_password.ToNewCString();
+	else 
+		rv = NS_ERROR_NULL_POINTER;
+
+	return rv;	
+}
+
+NS_IMETHODIMP nsPop3IncomingServer::SetPassword(char * aPassword)
+{
+	nsresult rv = NS_OK;
+	if (aPassword)
+		m_password = aPassword;
+	else
+		rv = NS_ERROR_NULL_POINTER;
+
+	return rv;
+}
+
 NS_IMPL_SERVERPREF_STR(nsPop3IncomingServer,
                        RootFolderPath,
                        "directory")
@@ -97,14 +126,18 @@ nsresult
 nsPop3IncomingServer::GetServerURI(char **uri)
 {
     nsresult rv;
-    char *hostname;
-    
-    rv = GetHostName(&hostname);
+
+    nsXPIDLCString username;
+    rv = GetUsername(getter_Copies(username));
     if (NS_FAILED(rv)) return rv;
 
-    *uri = PR_smprintf("mailbox://%s", hostname);
+    nsXPIDLCString hostname;
+    rv = GetHostName(getter_Copies(hostname));
+    if (NS_FAILED(rv)) return rv;
 
-    PR_Free(hostname);
+    *uri = PR_smprintf("mailbox://%s@%s",
+                       (const char *)username,
+                       (const char *)hostname);
     return rv;
 }
 
@@ -115,7 +148,7 @@ NS_IMETHODIMP nsPop3IncomingServer::PerformBiff()
 	NS_WITH_SERVICE(nsIPop3Service, pop3Service, kCPop3ServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-	nsIMsgFolder *inbox = nsnull;
+	nsCOMPtr<nsIMsgFolder> inbox;
 	nsCOMPtr<nsIFolder> rootFolder;
 	rv = GetRootFolder(getter_AddRefs(rootFolder));
 	if(NS_SUCCEEDED(rv))
@@ -124,7 +157,7 @@ NS_IMETHODIMP nsPop3IncomingServer::PerformBiff()
 		if(rootMsgFolder)
 		{
 			PRUint32 numFolders;
-			rv = rootMsgFolder->GetFoldersWithFlag(MSG_FOLDER_FLAG_INBOX, &inbox, 1, &numFolders);
+			rv = rootMsgFolder->GetFoldersWithFlag(MSG_FOLDER_FLAG_INBOX, getter_AddRefs(inbox), 1, &numFolders);
 		}
 	}
 

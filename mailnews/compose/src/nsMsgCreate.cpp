@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -15,732 +15,444 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#include "rosetta_mailnews.h"
-#include "nsMsgSend.h"
-#include "nsMsgSendPart.h"
+#include "nsCOMPtr.h"
+#include "nsIURL.h"
+#include "nsIEventQueueService.h"
+#include "nsIInputStream.h"
+#include "nsIOutputStream.h"
+#include "nsIGenericFactory.h"
+#include "nsIServiceManager.h"
+#include "nsIStreamListener.h"
+#include "nsIStreamConverter2.h"
+#include "nsIMimeStreamConverter.h"
+#include "nsFileStream.h"
+#include "nsFileSpec.h"
+#include "nsMimeTypes.h"
 #include "nsIPref.h"
-#include "nsMsgCompPrefs.h"
-#include "nsMsgCreate.h"
+#include "nsICharsetConverterManager.h"
+#include "prprf.h"
+#include "nsMsgCreate.h" 
+#include "nsMsgCompUtils.h"
+#include "nsIMsgMessageService.h"
+#include "nsMsgUtils.h"
+#include "nsMsgDeliveryListener.h"
+#include "nsIMsgMailSession.h"
+#include "nsIMsgIdentity.h"
+#include "nsIEnumerator.h"
+#include "nsIMessage.h"
+#include "nsIRDFResource.h"
+#include "nsMsgBaseCID.h"
+#include "nsMsgCopy.h"
+#include "nsIRDFService.h"
+#include "nsRDFCID.h"
 
-static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+// CID's needed
+static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
+static NS_DEFINE_CID(kPrefCID,            NS_PREF_CID);
+static NS_DEFINE_CID(kRDFServiceCID,      NS_RDFSERVICE_CID);
 
-
-static void
-msg_delete_attached_files(struct nsMsgAttachedFile *attachments)
+//
+// Implementation...
+//
+nsMsgDraft::nsMsgDraft()
 {
-	struct nsMsgAttachedFile *tmp;
-	if (!attachments) return;
-	for (tmp = attachments; tmp->orig_url; tmp++) {
-		PR_FREEIF(tmp->orig_url);
-		PR_FREEIF(tmp->type);
-		PR_FREEIF(tmp->real_name);
-		PR_FREEIF(tmp->encoding);
-		PR_FREEIF(tmp->description);
-		PR_FREEIF(tmp->x_mac_type);
-		PR_FREEIF(tmp->x_mac_creator);
-		if (tmp->file_name) {
-			PR_Delete(tmp->file_name);
-			PR_Free(tmp->file_name);
-		}
-	}
-	PR_FREEIF(attachments);
+	NS_INIT_REFCNT();
+
+  mTmpFileSpec = nsnull;
+  mTmpIFileSpec = nsnull;
+  mURI = nsnull;
+  mMessageService = nsnull;
+  mOutType = nsMimeOutput::nsMimeMessageDraftOrTemplate;
 }
 
-/**************
-
-PRInt32
-CreateVcardAttachment()
+nsMsgDraft::~nsMsgDraft()
 {
-  nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
-
-	nsMsgCompPrefs pCompPrefs;
-	char* name;
-	int status = 0;
-
-	if (!m_haveAttachedVcard && AB_UserHasVCard() ) // don't attach a vcard if the user does not have a vcard
-	{
-
-		char * vCard = NULL;
-		char * filename = NULL;
-		AB_LoadIdentityVCard(&vCard);
-		if (vCard)
-		{
-			AB_ExportVCardToTempFile (vCard, &filename);
-			if (vCard)
-				PR_Free(vCard); // free our allocated VCardString...
-			char buf [ 2 * kMaxFullNameLength ];
-			if (pCompPrefs.GetUserFullName()) 
-				name = PL_strdup (pCompPrefs.GetUserFullName());
-			// write out a content description string
-#ifdef UNREADY_CODE
-			PR_snprintf(buf, sizeof(buf), XP_GetString (MK_ADDR_BOOK_CARD), name);
-#endif
-			PR_FREEIF(name);
-
-
-			char* temp = WH_FileName(filename, xpFileToPost);
-			char * fileurl = NULL;
-			if (temp)
-			{
-				fileurl = XP_PlatformFileToURL (temp);
-				PR_Free(temp);
-			}
-			else
-				return -1;	
-
-			// Send the vCard out with a filename which distinguishes this user. e.g. jsmith.vcf
-			// The main reason to do this is for interop with Eudora, which saves off 
-			// the attachments separately from the message body
-			char *vCardFileName = NULL;
-			char *mailIdentityUserEmail = NULL;
-			char *atSign = NULL;
-      if (NS_SUCCEEDED(rv) && prefs)
-  			prefs->CopyCharPref("mail.identity.useremail", &mailIdentityUserEmail);
-			if (mailIdentityUserEmail)
-			{
-				atSign = PL_strchr(mailIdentityUserEmail, '@');
-				if (atSign) *atSign = 0;
-				vCardFileName = PR_smprintf ("%s.vcf", mailIdentityUserEmail);
-				PR_Free(mailIdentityUserEmail);
-			}
-			if (!vCardFileName)
-			{
-				vCardFileName = PL_strdup("vcard.vcf");
-				if (!vCardFileName)
-					return MK_OUT_OF_MEMORY;
-			}
-
-			char * origurl = XP_PlatformFileToURL (vCardFileName);
-			int datacount = 0, filecount = 0;
-			for (nsMsgAttachmentData *tmp1 = m_attachData; tmp1 && tmp1->url; tmp1++) datacount++;
-			for (nsMsgAttachedFile *tmp = m_attachedFiles; tmp && tmp->orig_url; tmp++) filecount++;
-
-			nsMsgAttachmentData *alist;
-			if (datacount) {
-				alist = (nsMsgAttachmentData *)
-				PR_REALLOC(m_attachData, (datacount + 2) * sizeof(nsMsgAttachmentData));
-			}
-			else {
-				alist = (nsMsgAttachmentData *)
-					PR_Malloc((datacount + 2) * sizeof(nsMsgAttachmentData));
-			}
-			if (!alist)
-				return MK_OUT_OF_MEMORY;
-			m_attachData = alist;
-			memset (m_attachData + datacount, 0, 2 * sizeof (nsMsgAttachmentData));
-			m_attachData[datacount].url = fileurl;
-			m_attachData[datacount].real_type = PL_strdup(vCardMimeFormat);
-			m_attachData[datacount].description = PL_strdup (buf);
-			m_attachData[datacount].real_name = PL_strdup (vCardFileName);
-			m_attachData[datacount + 1].url = NULL;
-			
-			nsMsgAttachedFile *aflist;
-			if (filecount) {
-				aflist = (struct nsMsgAttachedFile *)
-				PR_REALLOC(m_attachedFiles, (filecount + 2) * sizeof(nsMsgAttachedFile));
-			}
-			else {
-				aflist = (struct nsMsgAttachedFile *)
-					PR_Malloc((filecount + 2) * sizeof(nsMsgAttachedFile));
-			}
-
-			if (!aflist)
-				return MK_OUT_OF_MEMORY;
-
-			m_attachedFiles = aflist;
-			memset (m_attachedFiles + filecount, 0, 2 * sizeof (nsMsgAttachedFile));
-			m_attachedFiles[filecount].orig_url = origurl;
-			m_attachedFiles[filecount].file_name = filename;
-			m_attachedFiles[filecount].type = PL_strdup(vCardMimeFormat);
-			m_attachedFiles[filecount].description = PL_strdup (buf);
-			m_attachedFiles[filecount].real_name = PL_strdup (vCardFileName);
-			m_attachedFiles[filecount + 1].orig_url = NULL;
-
-			m_haveAttachedVcard = PR_TRUE;
-
-			PR_Free(vCardFileName);
-		}
-	}
-	return status;
-}
-
-
-
-char*
-FigureBcc(PRBool newsBcc)
-{
-  nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
-
-	nsMsgCompPrefs pCompPrefs;
-	char* result = NULL;
-	PRBool useBcc, mailBccSelf, newsBccSelf = PR_FALSE;
-
-	if (newsBcc)
+  if (mMessageService)
   {
-    if (NS_SUCCEEDED(rv) && prefs)
-    {
-  		prefs->GetBoolPref("news.use_default_cc", &useBcc);
-    }
+    ReleaseMessageServiceFromURI(mURI, mMessageService);
+    mMessageService = nsnull;
   }
+
+  PR_FREEIF(mURI);
+}
+
+/* the following macro actually implement addref, release and query interface for our component. */
+NS_IMPL_ISUPPORTS(nsMsgDraft, nsCOMTypeInfo<nsIMsgDraft>::GetIID());
+
+/* this function will be used by the factory to generate an Message Compose Fields Object....*/
+nsresult 
+NS_NewMsgDraft(const nsIID &aIID, void ** aInstancePtrResult)
+{
+	/* note this new macro for assertions...they can take a string describing the assertion */
+	NS_PRECONDITION(nsnull != aInstancePtrResult, "nsnull ptr");
+	if (nsnull != aInstancePtrResult)
+	{
+		nsMsgDraft *pQuote = new nsMsgDraft();
+		if (pQuote)
+			return pQuote->QueryInterface(aIID, aInstancePtrResult);
+		else
+			return NS_ERROR_OUT_OF_MEMORY; /* we couldn't allocate the object */
+	}
 	else
-  {
-    if (NS_SUCCEEDED(rv) && prefs)
-    {
-  		prefs->GetBoolPref("mail.use_default_cc", &useBcc);
-    }
+		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
+}
+
+
+// stream converter
+static NS_DEFINE_CID(kStreamConverterCID,    NS_STREAM_CONVERTER_CID);
+
+////////////////////////////////////////////////////////////////////////////////////
+// THIS IS A TEMPORARY CLASS THAT MAKES A DISK FILE LOOK LIKE A nsIInputStream 
+// INTERFACE...this may already exist, but I didn't find it. Eventually, you would
+// just plugin a Necko stream when they are all rewritten to be new style streams
+////////////////////////////////////////////////////////////////////////////////////
+class DraftFileInputStreamImpl : public nsIInputStream
+{
+public:
+  DraftFileInputStreamImpl(void) 
+  { 
+    NS_INIT_REFCNT(); 
+    mBufLen = 0;
+    mInFile = nsnull;
   }
-		
-  prefs->GetBoolPref("mail.cc_self", &mailBccSelf);
-  prefs->GetBoolPref("news.cc_self", &newsBccSelf);
+  virtual ~DraftFileInputStreamImpl(void) 
+  {
+    if (mInFile) delete mInFile;
+  }
+  
+  // nsISupports interface
+  NS_DECL_ISUPPORTS
+    
+  // nsIBaseStream interface
+  NS_IMETHOD Close(void) 
+  {
+    if (mInFile)
+      mInFile->close();  
+    return NS_OK;
+  }
+  
+  // nsIInputStream interface
+  NS_IMETHOD GetLength(PRUint32 *_retval)
+  {
+    *_retval = mBufLen;
+    return NS_OK;
+  }
+  
+  /* unsigned long Read (in charStar buf, in unsigned long count); */
+  NS_IMETHOD Read(char * buf, PRUint32 count, PRUint32 *_retval)
+  {
+    nsCRT::memcpy(buf, mBuf, mBufLen);
+    *_retval = mBufLen;
+    return NS_OK;
+  }
+  
+  NS_IMETHOD OpenDiskFile(nsFileSpec fs);
+  NS_IMETHOD PumpFileStream();
 
-	if (useBcc || mailBccSelf || newsBccSelf )
-	{
-		const char* tmp = useBcc ?
-			GetPrefs()->GetDefaultHeaderContents(
-				newsBcc ? MSG_NEWS_BCC_HEADER_MASK : MSG_BCC_HEADER_MASK) : NULL;
+private:
+  PRUint32        mBufLen;
+  char            mBuf[8192];
+  nsIOFileStream  *mInFile;
+};
 
-		if (! (mailBccSelf || newsBccSelf) ) 
-    {
-			result = PL_strdup(tmp ? tmp : "");
-		} 
-    else if (!tmp || !*tmp) 
-    {
-			result = PL_strdup(pCompPrefs.GetUserEmail());
-		} 
-    else 
-    {
-			result = PR_smprintf("%s, %s", pCompPrefs.GetUserEmail(), tmp);
-		}
-	}
-	return result;
+nsresult
+DraftFileInputStreamImpl::OpenDiskFile(nsFileSpec fs)
+{
+  mInFile = new nsIOFileStream(fs);
+  if (!mInFile)
+    return NS_ERROR_NULL_POINTER;
+  mInFile->seek(0);
+  return NS_OK;
 }
 
-void
-InitializeHeaders(MWContext* old_context, const nsIMsgCompFields* fields)
+nsresult
+DraftFileInputStreamImpl::PumpFileStream()
 {
-  nsresult rv;
+  if (mInFile->eof())
+    return NS_BASE_STREAM_EOF;
+  
+  mBufLen = mInFile->read(mBuf, sizeof(mBuf));
+  if (mBufLen > 0)
+    return NS_OK;
+  else
+    return NS_BASE_STREAM_EOF;
+}
+
+NS_IMPL_ISUPPORTS(DraftFileInputStreamImpl, nsCOMTypeInfo<nsIInputStream>::GetIID());
+
+////////////////////////////////////////////////////////////////////////////////////
+// End of DraftFileInputStreamImpl()
+////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////
+
+nsresult
+SaveDraftMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData)
+{
+  nsresult        rv = NS_OK;
+
+  if (!tagData)
+  {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  nsMsgDraft *ptr = (nsMsgDraft *) tagData;
+  if (ptr->mMessageService)
+  {
+    ReleaseMessageServiceFromURI(ptr->mURI, ptr->mMessageService);
+    ptr->mMessageService = nsnull;
+  }
+
+  /* mscott - the NS_BINDING_ABORTED is a hack to get around a problem I have
+     with the necko code...it returns this and treats it as an error when
+	 it really isn't an error! I'm trying to get them to change this.
+   */
+  if (NS_FAILED(aExitCode) && aExitCode != NS_BINDING_ABORTED)
+  {
+    NS_RELEASE(ptr);
+    return aExitCode;
+  }
+
+  // Create a mime parser (nsIStreamConverter)!
+  nsCOMPtr<nsIStreamConverter2> mimeParser;
+  rv = nsComponentManager::CreateInstance(kStreamConverterCID, 
+                                          NULL, nsCOMTypeInfo<nsIStreamConverter2>::GetIID(), 
+                                          (void **) getter_AddRefs(mimeParser)); 
+  if (NS_FAILED(rv) || !mimeParser)
+  {
+    NS_RELEASE(ptr);
+    printf("Failed to create MIME stream converter...\n");
+    return rv;
+  }
+  
+  // This is the producer stream that will deliver data from the disk file...
+  // ...someday, we'll just get streams from Necko.
+  // mscott --> the type for a nsCOMPtr needs to be an interface.
+  // but this class (which is only temporary anyway) is mixing and matching
+  // interface calls and implementation calls....so you really can't use a
+  // com ptr. to get around it, I'm using fileStream to make calls on the
+  // methods that aren't supported by the nsIInputStream and "in" for
+  // methods that are supported as part of the interface...
+  DraftFileInputStreamImpl * fileStream = new DraftFileInputStreamImpl();
+  nsCOMPtr<nsIInputStream> in = do_QueryInterface(fileStream);
+  if (!in || !fileStream)
+  {
+    NS_RELEASE(ptr);
+    printf("Failed to create nsIInputStream\n");
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  if (NS_FAILED(fileStream->OpenDiskFile(*(ptr->mTmpFileSpec))))
+  {
+    NS_RELEASE(ptr);
+    printf("Unable to open input file\n");
+    return NS_ERROR_FAILURE;
+  }
+  
+  // Set us as the output stream for HTML data from libmime...
+  nsCOMPtr<nsIMimeStreamConverter> mimeConverter = do_QueryInterface(mimeParser);
+  if (mimeConverter)
+	  mimeConverter->SetMimeOutputType(ptr->mOutType);  // Set the type of output for libmime
+  if (NS_FAILED(mimeParser->Init(aURL, nsnull /* no listener necessary */, nsnull /* the channel */)))
+  {
+    NS_RELEASE(ptr);
+    printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  // Assuming this is an RFC822 message...
+  mimeParser->OnStartRequest(nsnull, aURL);
+
+  // Just pump all of the data from the file into libmime...
+  while (NS_SUCCEEDED(fileStream->PumpFileStream()))
+  {
+    PRUint32    len;
+    in->GetLength(&len);
+    mimeParser->OnDataAvailable(nsnull, aURL, in, 0, len);
+  }
+
+  mimeParser->OnStopRequest(nsnull, aURL, NS_OK, nsnull);
+  in->Close();
+  ptr->mTmpFileSpec->Delete(PR_FALSE);
+  NS_RELEASE(ptr);
+  return NS_OK;
+}
+
+nsIMessage *
+GetIMessageFromURI(const PRUnichar *msgURI)
+{
+  nsresult                  rv;
+  nsIRDFResource            *myRDFNode = nsnull;
+  nsCAutoString              convertString(msgURI);
+
+  char                      *tmpURI = nsnull;
+  nsIMessage                *returnMessage;
+
+  NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
+	if (NS_FAILED(rv) || (!rdfService))
+		return nsnull;
+
+  rdfService->GetResource(convertString, &myRDFNode);
+  if (!myRDFNode)
+    return nsnull;
+
+  myRDFNode->QueryInterface(nsCOMTypeInfo<nsIMessage>::GetIID(), (void **)&returnMessage);
+  NS_IF_RELEASE(myRDFNode);
+  return returnMessage;
+}
+
+nsresult    
+nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutputType aOutType, 
+                                            nsIMessage **aMsgToReplace)
+{
+nsresult  rv;
+
+  mOutType = aOutType;
+
+  if (!msgURI)
+    return NS_ERROR_INVALID_ARG;
+
+  mTmpFileSpec = nsMsgCreateTempFileSpec("nsdraft.tmp"); 
+	if (!mTmpFileSpec)
+    return NS_ERROR_FAILURE;
+
+  NS_NewFileSpecWithSpec(*mTmpFileSpec, &mTmpIFileSpec);
+	if (!mTmpIFileSpec)
+    return NS_ERROR_FAILURE;
+
+  nsString                convertString(msgURI);
+  mURI = convertString.ToNewCString();
+
+  if (!mURI)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  rv = GetMessageServiceFromURI(mURI, &mMessageService);
+  if (NS_FAILED(rv) && !mMessageService)
+  {
+    return rv;
+  }
+
+  NS_ADDREF(this);
+  nsMsgDeliveryListener *sendListener = new nsMsgDeliveryListener(SaveDraftMessageCompleteCallback, 
+                                                                  nsFileSaveDelivery, this);
+  if (!sendListener)
+  {
+    ReleaseMessageServiceFromURI(mURI, mMessageService);
+    mMessageService = nsnull;
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  // Make sure we return this if requested!
+  if (aMsgToReplace)
+    *aMsgToReplace = GetIMessageFromURI(msgURI);
+
+  return mMessageService->SaveMessageToDisk(mURI, mTmpIFileSpec, PR_FALSE, sendListener, nsnull);
+}
+
+nsresult
+nsMsgDraft::OpenDraftMsg(const PRUnichar *msgURI, nsIMessage **aMsgToReplace)
+{
+PRUnichar     *HackUpAURIToPlayWith(void);      // RICHIE - forward declare for now
+
+  if (!msgURI)
+  {
+    printf("RICHIE: DO THIS UNTIL THE FE CAN REALLY SUPPORT US!\n");
+    msgURI = HackUpAURIToPlayWith();
+  }
+
+  return ProcessDraftOrTemplateOperation(msgURI, nsMimeOutput::nsMimeMessageDraftOrTemplate, 
+                                         aMsgToReplace);
+}
+
+nsresult
+nsMsgDraft::OpenEditorTemplate(const PRUnichar *msgURI, nsIMessage **aMsgToReplace)
+{
+  return ProcessDraftOrTemplateOperation(msgURI, nsMimeOutput::nsMimeMessageEditorTemplate, 
+                                         aMsgToReplace);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// RICHIE - This is a temp routine to get a URI from the Drafts folder and use that
+// for loading into the compose window.
+//////////////////////////////////////////////////////////////////////////////////////////
+// RICHIE - EVERYTHING AFTER THIS COMMENT IS A TEMP HACK!!!
+//////////////////////////////////////////////////////////////////////////////////////////
+PRUnichar *
+HackUpAURIToPlayWith(void)
+{
+  //PRUnichar           *playURI = nsnull;
+  char                *folderURI = nsnull;
+  nsresult            rv = NS_OK;
+
+  // temporary hack to get the current identity
+  NS_WITH_SERVICE(nsIMsgMailSession, mailSession, kCMsgMailSessionCID, &rv);
+  if (NS_FAILED(rv)) 
+    return nsnull;
+  
+  nsCOMPtr<nsIMsgIdentity> identity = nsnull;
+  rv = mailSession->GetCurrentIdentity(getter_AddRefs(identity));
+  if (NS_FAILED(rv)) 
+    return nsnull;
+
+  // 
+  // Find the users drafts folder...
+  //
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
-	nsMsgCompPrefs pCompPrefs;
+  if (NS_SUCCEEDED(rv) && prefs)
+    prefs->CopyCharPref("mail.default_drafts_uri", &folderURI);
 
-	PR_ASSERT(m_fields == NULL);
-	PR_ASSERT(m_initfields == NULL);
+  // 
+  // Now, get the drafts folder...
+  //
+  nsIMsgFolder *folder = LocateMessageFolder(identity, nsMsgSaveAsDraft, folderURI);
+  PR_FREEIF(folderURI);
+  if (!folder)
+    return nsnull;
 
-	const char *real_addr = pCompPrefs.GetUserEmail();
-	char *real_return_address;
-	const char* sig;
-	PRBool forward_quoted;
-	forward_quoted = PR_FALSE;
+  nsIEnumerator           *enumerator;
+  rv = folder->GetMessages(&enumerator);
+  if (NS_FAILED(rv) || (!enumerator))
+  {
+    // RICHIE - Possible bug that will bite us in this hack...
+    printf("*** NOTICE *** If you failed, more than likely, this is the problem\ndescribed by Bug #10344.\n\7");    
+    return nsnull;
+  }
 
-	m_fields = new nsMsgCompFields;
-	if (!m_fields)
-		return;
-	m_fields->AddRef();
-	if (fields)
-		m_fields->Copy((nsIMsgCompFields*)fields);
-	m_fields->SetOwner(this);
+  enumerator->First();
+  if (enumerator->IsDone() == NS_OK) 
+  {
+    NS_IF_RELEASE(enumerator);
+    return nsnull;
+  }
 
-	m_oldContext = old_context;
-	// hack for forward quoted.  Checks the attachment field for a cookie
-	// string indicating that this is a forward quoted operation.  If a cookie
-	// is found, the attachment string is slid back down over the cookie.  This
-	// will put the original string back in tact. 
+  nsCOMPtr<nsISupports>   currentItem;
+  rv = enumerator->CurrentItem(getter_AddRefs(currentItem));
+  if (NS_FAILED(rv))
+  {
+    NS_IF_RELEASE(enumerator);
+    return nsnull;
+  }
 
-	const char* attachment = m_fields->GetAttachments();
+  nsCOMPtr<nsIMessage>      message;
+  message = do_QueryInterface(currentItem); 
+  if (!message)
+  {
+    NS_IF_RELEASE(enumerator);
+    return nsnull;
+  }
 
-	if (attachment && *attachment) {
-		if (!PL_strncmp(attachment, MSG_FORWARD_COOKIE,
-						PL_strlen(MSG_FORWARD_COOKIE))) {
-			attachment += PL_strlen(MSG_FORWARD_COOKIE);
-			forward_quoted = PR_TRUE;      // set forward with quote flag 
-			m_fields->SetAttachments((char *)attachment, NULL);
-			attachment = m_fields->GetAttachments();
-		}
-	}
+  nsCOMPtr<nsIRDFResource>  myRDFNode;
+  myRDFNode = do_QueryInterface(message, &rv);
+  if (NS_FAILED(rv) || (!myRDFNode))
+  {
+    NS_IF_RELEASE(enumerator);
+    return nsnull;
+  }
 
-	m_status = -1;
-
-	if (MISC_ValidateReturnAddress(old_context, real_addr) < 0) {
-		return;
-	}
-
-//JFD
-//	real_return_address = MIME_MakeFromField(old_context->win_csid);
-// real_return_address = (char *)pCompPrefs.GetUserEmail();
-
-  PR_ASSERT (m_context->type == MWContextMessageComposition);
-	PR_ASSERT (XP_FindContextOfType(0, MWContextMessageComposition));
-	PR_ASSERT (!m_context->msg_cframe);
-
-
-	PRInt32 count = m_fields->GetNumForwardURL();
-	if (count > 0) {
-		// if forwarding one or more messages
-		PR_ASSERT(*attachment == '\0');
-		nsMsgAttachmentData *alist = (struct nsMsgAttachmentData *)
-			PR_Malloc((count + 1) * sizeof(nsMsgAttachmentData));
-		if (alist) {
-			memset(alist, 0, (count + 1) * sizeof(*alist));
-			for (count--; count >= 0; count--) {
-				alist[count].url = (char*) m_fields->GetForwardURL(count);
-				alist[count].real_name = (char*) m_fields->GetForwardURL(count);
-			}
-			SetAttachmentList(alist);
-			// Don't call msg_free_attachment_list because we are not duplicating
-			// url & real_name
-			PR_Free(alist);;
-		}
-	} else if (*attachment) {
-		// forwarding a single url
-		// typically a web page
-		nsMsgAttachmentData *alist;
-		count = 1;
-		alist = (struct nsMsgAttachmentData *)
-			PR_Malloc((count + 1) * sizeof(nsMsgAttachmentData));
-		if (alist) {
-			memset(alist, 0, (count + 1) * sizeof(*alist));
-			alist[0].url = (char *)attachment;
-			alist[0].real_name = (char *)attachment;
-			SetAttachmentList(alist);
-			// Don't call msg_free_attachment_list because we are not duplicating
-			// url & real_name
-			PR_Free(alist);
-		}
-	}	// else if (*attachment)
-
-	if (*attachment) {
-		if (*attachment != '(') {
-			m_defaultUrl = PL_strdup(attachment);
-		}
-	}
-	else if (old_context) {
-		History_entry *h = SHIST_GetCurrent(&old_context->hist);
-		if (h && h->address) {
-			m_defaultUrl = PL_strdup(h->address);
-		}
-		if (m_defaultUrl)
-		{
-			MSG_Pane *msg_pane = MSG_FindPane(old_context,
-											  MSG_MESSAGEPANE);
-			if (msg_pane)
-				m_fields->SetHTMLPart((char *)msg_pane->GetHTMLPart(), NULL);
-		}
-	}
-
-	if (!*m_fields->GetFrom()) {
-		m_fields->SetFrom(real_return_address, NULL);
-	}
-
-	// Guess what kind of reply this is based on the headers we passed in.
-	 
-
-	const char* newsgroups = m_fields->GetNewsgroups();
-	const char* to = m_fields->GetTo();
-	const char* cc = m_fields->GetCc();
-	const char* references = m_fields->GetReferences();
-
-	if (count > 0 || *attachment) {
-		// if an attachment exists and the forward_quoted flag is set, this
-		   is a forward quoted operation. 
-		if (forward_quoted) {
-			m_replyType = MSG_ForwardMessageQuoted;
-			// clear out the attachment list for forward quoted messages. 
-			SetAttachmentList(NULL);
-			m_pendingAttachmentsCount = 0;
-		} else {
-			m_replyType = MSG_ForwardMessageAttachment;
-		}
-	} else if (*references && *newsgroups && (*to || *cc)) {
-		m_replyType = MSG_PostAndMailReply;
-	} else if (*references && *newsgroups) {
-		m_replyType = MSG_PostReply;
-	} else if (*references && *cc) {
-		m_replyType = MSG_ReplyToAll;
-	} else if (*references && *to) {
-		m_replyType = MSG_ReplyToSender;
-	} else if (*newsgroups) {
-		m_replyType = MSG_PostNew;
-	} else {
-		m_replyType = MSG_MailNew;
-	}
-
-
-#ifdef UNREADY_CODE
-	HJ77855
-#endif
-
-	if (!*m_fields->GetOrganization()) {
-		m_fields->SetOrganization((char *)pCompPrefs.GetOrganization(), NULL);
-	}
-
-	if (!*m_fields->GetReplyTo()) {
-		m_fields->
-			SetReplyTo((char *)GetPrefs()->
-					   GetDefaultHeaderContents(MSG_REPLY_TO_HEADER_MASK), NULL);
-	}
-	if (!*m_fields->GetFcc()) 
-	{
-		PRBool useDefaultFcc = PR_TRUE;
-		// int prefError =   
-    if (NS_SUCCEEDED(rv) && prefs)
-    {
-      prefs->GetBoolPref(*newsgroups ? "news.use_fcc" : "mail.use_fcc",
-            &useDefaultFcc);
-    }
-
-		if (useDefaultFcc)
-		{
-			m_fields->SetFcc((char *)GetPrefs()->
-				GetDefaultHeaderContents(*newsgroups ? 
-					 MSG_NEWS_FCC_HEADER_MASK : MSG_FCC_HEADER_MASK), NULL);
-		}
-	}
-	if (!*m_fields->GetBcc()) {
-		char* bcc = FigureBcc(*newsgroups);
-		m_fields->SetBcc(bcc, NULL);
-		PR_FREEIF(bcc);
-	}
-
-	m_fields->SetFcc((char *)CheckForLosingFcc(m_fields->GetFcc()), NULL);
-
-	{
-		const char *body = m_fields->GetDefaultBody();
-		if (body && *body)
-		{
-			m_fields->AppendBody((char *)body);
-			m_fields->AppendBody(MSG_LINEBREAK);
-			//  m_bodyEdited = PR_TRUE; 
-		}
-	}
-
-	sig = FE_UsersSignature ();
-	if (sig && *sig) {
-	    m_fields->AppendBody(MSG_LINEBREAK);
-		//If the sig doesn't begin with "--" followed by whitespace or a
-		// newline, insert "-- \n" (the pseudo-standard sig delimiter.) 
-		if (sig[0] != '-' || sig[1] != '-' ||
-			(sig[2] != ' ' && sig[2] != CR && sig[2] != LF)) {
-			m_fields->AppendBody("-- " MSG_LINEBREAK);
-		}
-		m_fields->AppendBody((char *)sig);
-	}
-
-	PR_FREEIF (real_return_address);
-
-
-	if (m_context)
-		FE_SetDocTitle(m_context, (char*) GetWindowTitle());
-
-
-	m_initfields = new nsMsgCompFields;
-	if (m_initfields) {
-		m_initfields->AddRef();
-		m_fields->Copy((nsIMsgCompFields*)m_fields);
-		m_initfields->SetOwner(this);
-	}
+  NS_IF_RELEASE(enumerator);
+  char    *tURI;
+  myRDFNode->GetValue(&tURI);
+  nsString   workURI(tURI);
+  return workURI.ToNewUnicode(); 
 }
-
-PRBool 
-ShouldAutoQuote() {
-      if (m_haveQuoted) return PR_FALSE;
-	if (m_replyType == MSG_ForwardMessageQuoted ||
-		    GetPrefs()->GetAutoQuoteReply()) {
-		switch (m_replyType) {
-		case MSG_ForwardMessageQuoted:
-		case MSG_PostAndMailReply:
-		case MSG_PostReply:
-		case MSG_ReplyToAll:
-		case MSG_ReplyToSender:
-			return PR_TRUE;
-
-        default:
-            break;
-		}
-	}
-	return PR_FALSE;
-}
-
-
-PRBool nsMsgCompose::SanityCheckNewsgroups (const char *newsgroups)
-{
-	// This function just does minor syntax checking on the names of newsgroup 
-	// to make sure they conform to Son Of 1036: 
-	// http://www.stud.ifi.uio.no/~larsi/notes/son-of-rfc1036.txt
-	//
-	// It isn't really possible to tell whether the group actually exists,
-	// so we're not going to try.
-	//
-	// According to the URL given above, uppercase characters A-Z are not
-	// allowed in newsgroup names, but when we tried to enforce that, we got
-	// bug reports from people who were trying to post to groups with capital letters
-
-	PRBool valid = PR_TRUE;
-	if (newsgroups)
-	{
-		while (*newsgroups && valid)
-		{
-			if (!(*newsgroups >= 'a' && *newsgroups <= 'z') && !(*newsgroups >= 'A' && *newsgroups <= 'Z'))
-			{
-				if (!(*newsgroups >= '0' && *newsgroups <= '9'))
-				{
-					switch (*newsgroups)
-					{
-					case '+':
-					case '-':
-					case '/':
-					case '_':
-					case '=':
-					case '?':
-					case '.':
-						break; // valid char
-					case ' ':
-					case ',':
-						break; // ok to separate names in list
-					default:
-						valid = PR_FALSE;
-					}
-				}
-			}
-			newsgroups++;
-		}
-	}
-	return valid;
-}
-
-int
-MungeThroughRecipients(PRBool* someNonHTML,
-											 PRBool* groupNonHTML)
-{
-  nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
-
-	PRBool foo;
-	if (!someNonHTML) someNonHTML = &foo;
-	if (!groupNonHTML) groupNonHTML = &foo;
-	*someNonHTML = PR_FALSE;
-	*groupNonHTML = PR_FALSE;
-	int status = 0;
-	char* names = NULL;
-	char* addresses = NULL;
-	const char* groups;
-	char* name = NULL;
-	char* end;
-	PRBool match = PR_FALSE;
-	m_host = NULL;				// Pure paranoia, in case we some day actually
-								// have a UI that lets people change this.
-
-	static PRInt32 masks[] = {
-		MSG_TO_HEADER_MASK,
-		MSG_CC_HEADER_MASK,
-		MSG_BCC_HEADER_MASK
-	};
-	char* domainlist = NULL;
-
-	delete m_htmlrecip;
-	m_htmlrecip = new nsMsgHTMLRecipients();
-	if (!m_htmlrecip) return MK_OUT_OF_MEMORY;
-
-  PRUint32 i;
-	for (i=0 ; i < sizeof(masks) / sizeof(masks[0]) ; i++) {
-		const char* orig = m_fields->GetHeader(masks[i]);
-		if (!orig || !*orig) continue;
-		char* value = NULL;
-		value = PL_strdup(orig);
-		if (!value) {
-			status = MK_OUT_OF_MEMORY;
-			goto FAIL;
-		}
-		
-		int num  = 0 // JFD = MSG_ParseRFC822Addresses(value, &names, &addresses);
-		PR_Free(value);
-		value = NULL;
-		char* addr = NULL;
-		for (int j=0 ; j<num ; j++) {
-			if (addr) {
-				addr = addr + PL_strlen(addr) + 1;
-				name = name + PL_strlen(name) + 1;
-			} else {
-				addr = addresses;
-				name = names;
-			}
-			if (!addr || !*addr) continue;
-
-			// Need to check for a address book entry for this person and if so,
-      // we have to see if this person can receive MHTML mail.
-      match = AB_GetHTMLCapability(this, addr);
-
-      char* at = PL_strchr(addr, '@');
-			char* tmp = MSG_MakeFullAddress(name, addr);
-			status = m_htmlrecip->AddOne(tmp, addr, Address, match);
-			if (status < 0) goto FAIL;
-			PR_Free(tmp);
-			tmp = NULL;
-
-			if (!at) {
-				// ###tw We got to decide what to do in these cases.  But
-				// for now, I'm just gonna ignore them.  Which is probably
-				// exactly the wrong thing.  Fortunately, these cases are
-				// now very rare, as we have code that inserts a default
-				// domain.
-				continue;
-			}
-			if (!domainlist) {
-				if (NS_SUCCEEDED(rv) && prefs)
-          prefs->CopyCharPref("mail.htmldomains", &domainlist);
-			}
-			char* domain = at + 1;
-			for (;;) {
-				char* dot = PL_strchr(domain, '.');
-				if (!dot) break;
-				PRInt32 domainlength = PL_strlen(domain);
-				char* ptr;
-				char* endptr = NULL;
-				PRBool found = PR_FALSE;
-				for (ptr = domainlist ; ptr && *ptr ; ptr = endptr) {
-					endptr = PL_strchr(ptr, ',');
-					int length;
-					if (endptr) {
-						length = endptr - ptr;
-						endptr++;
-					} else {
-						length = PL_strlen(ptr);
-					}
-					if (length == domainlength) {
-						if (PL_strncasecmp(domain, ptr, length) == 0) {
-							found = PR_TRUE;
-							match = PR_TRUE;
-							break;
-						}
-					}
-				}
-#ifdef UNREADY_CODE
-				char* tmp = PR_smprintf("%s@%s",
-										XP_GetString(MK_MSG_EVERYONE),
-										domain);
-#endif
-				if (!tmp) return MK_OUT_OF_MEMORY;
-				status = m_htmlrecip->AddOne(domain, tmp, Domain, found);
-				PR_Free(tmp);
-				if (status < 0) goto FAIL;
-				domain = dot + 1;
-			}
-			if (!match) *someNonHTML = PR_TRUE;
-		}
-	}
-
-	groups = m_fields->GetHeader(MSG_NEWSGROUPS_HEADER_MASK);
-	if (groups && *groups && !m_host)
-	{
-		m_host = InferNewsHost (groups);
-		if (!m_host)
-			goto FAIL;
-	}
-
-	end = NULL;
-	for ( ; groups && *groups ; groups = end) {
-		end = PL_strchr(groups, ',');
-		if (end) *end = '\0';
-		name = PL_strdup(groups);
-		if (end) *end++ = ',';
-		if (!name) {
-			status = MK_OUT_OF_MEMORY;
-			goto FAIL;
-		}
-		char* group = XP_StripLine(name);
-		match = m_host->IsHTMLOKGroup(group);
-
-		status = m_htmlrecip->AddOne(group, group, Newsgroup, match);
-		if (status < 0) goto FAIL;
-		char* tmp = PL_strdup(group);
-		if (!tmp) {
-			status = MK_OUT_OF_MEMORY;
-			goto FAIL;
-		}
-		
-		for (;;) {
-			PRBool found = m_host->IsHTMLOKTree(tmp);
-
-			char* desc = PR_smprintf("%s.*", tmp);
-			if (!desc) {
-				status = MK_OUT_OF_MEMORY;
-				goto FAIL;
-			}
-			status = m_htmlrecip->AddOne(tmp, desc, GroupHierarchy, found);
-
-			PR_Free(desc);
-			if (status < 0) {
-				PR_Free(tmp);
-				tmp = NULL;
-				goto FAIL;
-			}
-			if (found) match = PR_TRUE;
-
-			char* p = PL_strrchr(tmp, '.');
-			if (p) *p = '\0';
-			else break;
-		}
-		PR_Free(tmp);
-		tmp = NULL;
-		if (!match) {
-			*someNonHTML = PR_TRUE;
-			*groupNonHTML = PR_TRUE;
-		}
-	}
-
- FAIL:
-	PR_FREEIF(names);
-	PR_FREEIF(domainlist);
-	PR_FREEIF(addresses);
-	PR_FREEIF(name);
-	return status;
-}
-
-
-
-MSG_HTMLComposeAction
-DetermineHTMLAction()
-{
-  nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
-
-	PRBool someNonHTML, groupNonHTML;
-	int status;
-
-	MSG_HTMLComposeAction result = GetHTMLAction();
-
-
-	if (result == MSG_HTMLAskUser) {
-		// Well, before we ask, see if we can figure out what to do for
-		// ourselves.
-
-		status = MungeThroughRecipients(&someNonHTML, &groupNonHTML);
-		if (status < 0) return MSG_HTMLAskUser; // ###
-		if (!someNonHTML) return MSG_HTMLSendAsHTML;
-		if (HasNoMarkup()) {
-			// No point in sending this message as HTML; send it plain.
-			return MSG_HTMLConvertToPlaintext;
-		}
-		// See if a preference has been set to tell us what to do.  Note that
-		// we do not honor that preference for newsgroups, only for e-mail
-		// addresses.
-		if (!groupNonHTML) {
-			PRInt32 value = 0;
-      if (NS_SUCCEEDED(rv) && prefs)
-        prefs->GetIntPref("mail.default_html_action", &value);
-			if (value >= 0) {
-				switch (value) {
-				case 1:				// Force plaintext.
-					return MSG_HTMLConvertToPlaintext;
-				case 2:				// Force HTML.
-					return MSG_HTMLSendAsHTML;
-				case 3:				// Force multipart/alternative.
-					return MSG_HTMLUseMultipartAlternative;
-				}
-			}
-		}
-	}
-	return result;
-}	
-**/
-

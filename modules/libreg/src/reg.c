@@ -361,7 +361,7 @@ static REGERR nr_OpenFile(char *path, FILEHANDLE *fh)
 #else
         case EACCES:    /* file in use */
 #endif
-            /* DVNOTE: should we try read only? */
+            /* try read only */
             (*fh) = vr_fileOpen(path, XP_FILE_READ_BIN);
             if ( VALID_FILEHANDLE(*fh) )
                 return REGERR_READONLY;
@@ -532,7 +532,6 @@ static REGERR nr_UnlockRange(FILEHANDLE fh, REGOFF offset, int32 len)
 {
     /* TODO: Implement XP unlock function with built-in retry. */
 
-    XP_FileFlush( fh );
     return REGERR_OK;
 
 }   /* UnlockRange */

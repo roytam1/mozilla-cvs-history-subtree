@@ -94,24 +94,40 @@ nsInstallFolder::nsInstallFolder(const nsString& aFolderID, const nsString& aRel
     mFileSpec = nsnull;
 
     /*
-        aFolderID can be either a Folder enum in which case we merely pass it to SetDirectoryPath, or
-        it can be a Directory.  If it is the later, it must already exist and of course be a directory
-        not a file.  
+        aFolderID can be either a Folder enum in which case we merely pass it
+        to SetDirectoryPath, or it can be a Directory.  If it is the later, it
+        must already exist and of course be a directory not a file.  
     */
-    
-    nsFileSpec dirCheck(aFolderID);
-    if ( (dirCheck.Error() == NS_OK) && (dirCheck.IsDirectory()) && (dirCheck.Exists()))
-    {
-        nsString tempString = aFolderID;
-        tempString += aRelativePath;
-        mFileSpec = new nsFileSpec(tempString);
 
-        // make sure that the directory is created.
-        nsFileSpec(mFileSpec->GetCString(), PR_TRUE);
-    }
-    else
+    SetDirectoryPath( aFolderID, aRelativePath );
+
+    // check to see if that worked
+    if ( !mFileSpec )
     {
-        SetDirectoryPath( aFolderID, aRelativePath);
+        // it didn't, so aFolderID is not one of the magic strings.
+        // maybe it's already a pathname? If so it had better be a directory
+        // if it already exists...
+        nsFileSpec dirCheck(aFolderID);
+        if ( (dirCheck.Error() == NS_OK) && 
+             ( dirCheck.IsDirectory() || !dirCheck.Exists() ) )
+        {
+            mFileSpec = new nsFileSpec( dirCheck );
+
+            if (mFileSpec && aRelativePath.Length() > 0 )
+            {
+                // we've got a subdirectory to tack on
+                nsString morePath(aRelativePath);
+
+                if ( morePath.Last() != '/' || morePath.Last() != '\\' )
+                    morePath += '/';
+
+                *mFileSpec += morePath;
+            }
+
+            // make sure that the directory is created. 
+            // XXX: **why** are we creating these? they might not be used!
+            nsFileSpec(mFileSpec->GetCString(), PR_TRUE);
+        }
     }
 }
 
@@ -149,22 +165,54 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
     }
     else
     {
+        nsresult rv = NS_OK;
         PRInt32 folderDirSpecID = MapNameToEnum(aFolderID);
         
         switch (folderDirSpecID) 
 		{
             case 100: ///////////////////////////////////////////////////////////  Plugins
-                SetAppShellDirectory(nsSpecialFileSpec::App_PluginsDirectory );
+                if (!nsSoftwareUpdate::GetProgramDirectory())
+                {
+                    SetAppShellDirectory(nsSpecialFileSpec::App_PluginsDirectory );
+                }
+                else
+                {
+                    mFileSpec = new nsFileSpec();
+                    if ( !mFileSpec )
+                        rv = NS_ERROR_OUT_OF_MEMORY;
+                    else
+                        rv = nsSoftwareUpdate::GetProgramDirectory()->GetFileSpec(mFileSpec);
+
+                    if (NS_SUCCEEDED(rv))
+                    {
+#ifdef XP_MAC
+                        *mFileSpec += "Plugins";
+#else
+                        *mFileSpec += "plugins";
+#endif
+                    }
+                    else
+                        mFileSpec = nsnull;
+                }
                 break; 
 
             case 101: ///////////////////////////////////////////////////////////  Program
-                mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::OS_CurrentProcessDirectory ));
+            case 102: ///////////////////////////////////////////////////////////  Communicator
+                if (!nsSoftwareUpdate::GetProgramDirectory())
+                    mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::OS_CurrentProcessDirectory ));
+                else
+                {
+                    mFileSpec = new nsFileSpec();
+                    if ( !mFileSpec )
+                        rv = NS_ERROR_OUT_OF_MEMORY;
+                    else
+                        rv = nsSoftwareUpdate::GetProgramDirectory()->GetFileSpec(mFileSpec);
+
+                    if (!NS_SUCCEEDED(rv))
+                        mFileSpec = nsnull;
+                }
                 break;
             
-            case 102: ///////////////////////////////////////////////////////////  Communicator
-                mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::OS_CurrentProcessDirectory ));
-                break;
-
             case 103: ///////////////////////////////////////////////////////////  User Pick
                 // we should never be here.
                 mFileSpec = nsnull;
@@ -193,18 +241,68 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 109: ///////////////////////////////////////////////////////////  File URL
                 {
+                    if (aRelativePath.IsEmpty())
+                    {
+                        mFileSpec = nsnull;
+                        return;
+                    }
+
                     nsString tempFileURLString = aFolderID;
                     tempFileURLString += aRelativePath;
                     mFileSpec = new nsFileSpec( nsFileURL(tempFileURLString) );
+
+                    // file:// is a special case where it returns and does not
+                    // go to the standard relative path code below.  This is
+                    // so that nsFile(Spec|Path) will work properly.  (ie. Passing
+                    // just "file://" to the nsFileSpec && nsFileURL is wrong).
+
+                    return;
+
                 }
                 break;
 
             case 110: ///////////////////////////////////////////////////////////  Components
-                SetAppShellDirectory(nsSpecialFileSpec::App_ComponentsDirectory );
+                if (!nsSoftwareUpdate::GetProgramDirectory())
+                    SetAppShellDirectory(nsSpecialFileSpec::App_ComponentsDirectory );
+                else
+                {
+                    mFileSpec = new nsFileSpec();
+                    if ( !mFileSpec )
+                        rv = NS_ERROR_OUT_OF_MEMORY;
+                    else
+                        rv = nsSoftwareUpdate::GetProgramDirectory()->GetFileSpec(mFileSpec);
+
+                    if (NS_SUCCEEDED(rv))
+                    {
+#ifdef XP_MAC
+                        *mFileSpec += "Components";
+#else
+                        *mFileSpec += "components";
+#endif
+                    }
+                }
                 break;
             
             case 111: ///////////////////////////////////////////////////////////  Chrome
-                SetAppShellDirectory(nsSpecialFileSpec::App_ChromeDirectory );
+                if (!nsSoftwareUpdate::GetProgramDirectory())
+                    SetAppShellDirectory(nsSpecialFileSpec::App_ChromeDirectory );
+                else
+                {
+                    mFileSpec = new nsFileSpec();
+                    if ( !mFileSpec )
+                        rv = NS_ERROR_OUT_OF_MEMORY;
+                    else
+                        rv = nsSoftwareUpdate::GetProgramDirectory()->GetFileSpec(mFileSpec);
+
+                    if (NS_SUCCEEDED(rv))
+                    {
+#ifdef XP_MAC
+                        *mFileSpec += "Chrome";
+#else
+                        *mFileSpec += "chrome";
+#endif
+                    }
+                }
                 break;
 
             case 200: ///////////////////////////////////////////////////////////  Win System
@@ -273,8 +371,8 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 mFileSpec = nsnull;
 			   return;
 		}
-#ifndef XP_MAC
-        if (aRelativePath.Length() > 0)
+
+        if (aRelativePath.Length() > 0 && mFileSpec)
         {
             nsString tempPath(aRelativePath);
 
@@ -283,9 +381,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             *mFileSpec += tempPath;
         }
-#endif
-            // make sure that the directory is created.
-        nsFileSpec(mFileSpec->GetCString(), PR_TRUE);
     }
 }
 

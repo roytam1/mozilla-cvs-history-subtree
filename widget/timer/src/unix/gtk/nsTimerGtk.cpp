@@ -130,17 +130,12 @@ nsTimerGtk::Cancel()
 {
   //printf("nsTimerGtk::Cancel called for %p\n", this);
 
-  //nsTimerGtk *me = this;
+  nsTimerGtk *me = this;
 
   if (mTimerId)
     gtk_timeout_remove(mTimerId);
 
-  //
-  // This is reported as a leak by purify, but it also causes a 
-  // crash on startup if uncommented.  Need to dig deeper.
-  //
-  //NS_RELEASE(me);
-  //
+//  NS_RELEASE(me);
 }
 
 gint nsTimerExpired(gpointer aCallData)
@@ -151,7 +146,7 @@ gint nsTimerExpired(gpointer aCallData)
   return 0;
 }
 
-#ifdef MOZ_MONOLITHIC_TOOLKIT
+#ifndef TOOLKIT_EXORCISM
 nsresult NS_NewTimer(nsITimer** aInstancePtrResult)
 {
     NS_PRECONDITION(nsnull != aInstancePtrResult, "null ptr");
@@ -175,4 +170,4 @@ int NS_TimeToNextTimeout(struct timeval *aTimer)
 void NS_ProcessTimeouts(void) 
 {
 }
-#endif /* MOZ_MONOLITHIC_TOOLKIT */
+#endif /* TOOLKIT_EXORCISM */

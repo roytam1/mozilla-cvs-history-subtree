@@ -32,6 +32,11 @@
   // for |nsresult|, |NS_ADDREF|, et al
 #endif
 
+#ifndef __gen_nsIWeakReference_h__
+#include "nsIWeakReference.h"
+	// for |nsIWeakReference|
+#endif
+
 /*
   Public things defined in this file:
 
@@ -69,7 +74,6 @@
   
     + Improve internal documentation
       + mention *&
-      + alternatives for comparison
       + do_QueryInterface
 */
 
@@ -114,9 +118,30 @@
     // under VC++, we win by inlining StartAssignment
 #endif
 
-#define NSCAP_FEATURE_ALLOW_RAW_POINTERS
-#define NSCAP_FEATURE_ALLOW_COMPARISONS
 #define NSCAP_FEATURE_FACTOR_DESTRUCTOR
+
+#ifdef NS_DEBUG
+	#define NSCAP_FEATURE_TEST_DONTQUERY_CASES
+	#define NSCAP_FEATURE_DEBUG_PTR_TYPES
+#endif
+
+	/*
+		|...TEST_DONTQUERY_CASES| and |...DEBUG_PTR_TYPES| introduce some code that is 
+		problematic on a select few of our platforms, e.g., QNX.  Therefore, I'm providing
+		a mechanism by which these features can be explicitly disabled from the command-line.
+	*/
+
+#ifdef NSCAP_DISABLE_TEST_DONTQUERY_CASES
+	#undef NSCAP_FEATURE_TEST_DONTQUERY_CASES
+#endif
+
+#if defined(NSCAP_DISABLE_DEBUG_PTR_TYPES) || !defined(NS_DEBUG)
+	#undef NSCAP_FEATURE_DEBUG_PTR_TYPES
+#endif
+
+#ifdef NSCAP_FEATURE_DEBUG_PTR_TYPES
+	#undef NSCAP_FEATURE_FACTOR_DESTRUCTOR
+#endif
 
 
   /*
@@ -171,6 +196,8 @@ class nsDerivedSafe : public T
       on a |nsCOMPtr|.  DO NOT USE THIS TYPE DIRECTLY IN YOUR CODE.
 
       See |nsCOMPtr::operator->|, |nsCOMPtr::operator*|, et al.
+
+			This type should be a nested class inside |nsCOMPtr<T>|.
     */
   {
     private:
@@ -185,8 +212,23 @@ class nsDerivedSafe : public T
       void operator delete( void*, size_t );                  // NOT TO BE IMPLEMENTED
         // declaring |operator delete| private makes calling delete on an interface pointer a compile error
 
-      nsDerivedSafe<T>& operator=( const nsDerivedSafe<T>& ); // NOT TO BE IMPLEMENTED
+				/*
+					The new way (not commented-out, below) didn't work until I chopped |operator=()| out of
+					|nsISupportsArray|.  I have tested this on as many platforms as I can, I'm switching it on now.
+					I'm leaving the old way commented out, but visible so we can switch back if there is any
+					problem.
+				*/
+
+//    nsDerivedSafe<T>& operator=( const nsDerivedSafe<T>& ); // NOT TO BE IMPLEMENTED
+    	nsDerivedSafe<T>& operator=( const T& );                // NOT TO BE IMPLEMENTED
         // you may not call |operator=()| through a dereferenced |nsCOMPtr|, because you'd get the wrong one
+
+				/*
+					Compiler warnings and errors: nsDerivedSafe operator=() hides inherited operator=().
+					If you see that, that means somebody checked in a (XP)COM interface class that declares an
+					|operator=()|, and that's _bad_.  So bad, in fact, that this declaration exists explicitly
+					to stop people from doing it.
+				*/
   };
 
 #if !defined(HAVE_CPP_USING) && defined(NEED_CPP_UNUSED_IMPLEMENTATIONS)
@@ -215,6 +257,8 @@ struct nsDontQueryInterface
       ...
 
       DO NOT USE THIS TYPE DIRECTLY IN YOUR CODE.  Use |dont_QueryInterface()| instead.
+
+			This type should be a nested class inside |nsCOMPtr<T>|.
     */
   {
     explicit
@@ -236,26 +280,63 @@ dont_QueryInterface( T* aRawPtr )
   }
 
 
+#if 1
 
+	template <class T>
+	struct
+	nsCOMPtrQueryRequest
+		{
+			T*				mRawPtr;
+			nsresult*	mErrorPtr;
 
-struct nsQueryInterface
-    /*
-      ...
+			explicit
+			nsCOMPtrQueryRequest( T* aRawPtr, nsresult* error = 0 )
+					: mRawPtr(aRawPtr),
+						mErrorPtr(error)
+				{
+					// nothing else to do here
+				}
+		};
 
-      DO NOT USE THIS TYPE DIRECTLY IN YOUR CODE.  Use |do_QueryInterface()| instead.
-    */
-  {
-    explicit
-    nsQueryInterface( nsISupports* aRawPtr, nsresult* error = 0 )
-        : mRawPtr(aRawPtr),
-          mErrorPtr(error)
-      {
-        // nothing else to do here
-      }
+	typedef nsCOMPtrQueryRequest<nsISupports>				nsQueryInterface;
+	typedef nsCOMPtrQueryRequest<nsIWeakReference>	nsQueryReferent;
 
-    nsISupports* mRawPtr;
-    nsresult*    mErrorPtr;
-  };
+#else
+
+	struct nsQueryInterface
+	    /*
+	      ...
+
+	      DO NOT USE THIS TYPE DIRECTLY IN YOUR CODE.  Use |do_QueryInterface()| instead.
+	    */
+	  {
+	    explicit
+	    nsQueryInterface( nsISupports* aRawPtr, nsresult* error = 0 )
+	        : mRawPtr(aRawPtr),
+	          mErrorPtr(error)
+	      {
+	        // nothing else to do here
+	      }
+
+	    nsISupports* mRawPtr;
+	    nsresult*    mErrorPtr;
+	  };
+
+	struct nsQueryReferent
+		{
+			explicit
+			nsQueryReferent( nsIWeakReference* aRawPtr, nsresult* error = 0 )
+					: mRawPtr(aRawPtr),
+						mErrorPtr(error)
+				{
+					// nothing else to do here
+				}
+
+			nsIWeakReference* mRawPtr;
+			nsresult*					mErrorPtr;
+		};
+
+#endif
 
 inline
 const nsQueryInterface
@@ -264,26 +345,15 @@ do_QueryInterface( nsISupports* aRawPtr, nsresult* error = 0 )
     return nsQueryInterface(aRawPtr, error);
   }
 
-#ifdef NSCAP_FEATURE_ALLOW_RAW_POINTERS
+inline
+const nsQueryReferent
+do_QueryReferent( nsIWeakReference* aRawPtr, nsresult* error = 0 )
+	{
+		return nsQueryReferent(aRawPtr, error);
+	}
 
-  #define null_nsCOMPtr() (0)
 
-#else
-
-  inline
-  const nsQueryInterface
-  null_nsCOMPtr()
-      /*
-        You can use this to assign |NULL| into an |nsCOMPtr|, e.g.,
-
-          myPtr = null_nsCOMPtr();
-      */
-    {
-      typedef nsISupports* nsISupports_Ptr;
-      return nsQueryInterface(nsISupports_Ptr(0));
-    }
-
-#endif
+#define null_nsCOMPtr() (0)
 
 
 
@@ -299,6 +369,8 @@ struct nsDontAddRef
       |dont_AddRef()| instead.
 
       See also |getter_AddRefs()|, |dont_AddRef()|, and |class nsGetterAddRefs|.
+
+			This type should be a nested class inside |nsCOMPtr<T>|.
     */
   {
     explicit
@@ -336,6 +408,15 @@ dont_AddRef( T* aRawPtr )
 class nsCOMPtr_base
     /*
       ...factors implementation for all template versions of |nsCOMPtr|.
+
+			This should really be an |nsCOMPtr<nsISupports>|, but this wouldn't work
+			because unlike the
+
+			Here's the way people normally do things like this
+			
+				template <class T> class Foo { ... };
+				template <> class Foo<void*> { ... };
+				template <class T> class Foo<T*> : private Foo<void*> { ... };
     */
   {
     public:
@@ -350,33 +431,41 @@ class nsCOMPtr_base
      NS_EXPORT ~nsCOMPtr_base();
 #endif
 
-#if 0
-     ~nsCOMPtr_base()
-        {
-          if ( mRawPtr )
-            NSCAP_RELEASE(mRawPtr);
-        }
-#endif
-
       NS_EXPORT void    assign_with_AddRef( nsISupports* );
       NS_EXPORT void    assign_with_QueryInterface( nsISupports*, const nsIID&, nsresult* );
+      NS_EXPORT void    assign_with_QueryReferent( nsIWeakReference*, const nsIID&, nsresult* );
       NS_EXPORT void**  begin_assignment();
 
     protected:
       nsISupports* mRawPtr;
   };
 
-
+// template <class T> class nsGetterAddRefs;
 
 template <class T>
-class nsCOMPtr : private nsCOMPtr_base
-    /*
-      ...
-    */
+class nsCOMPtr
+#ifndef NSCAP_FEATURE_DEBUG_PTR_TYPES
+		: private nsCOMPtr_base
+#endif
   {
+#ifdef NSCAP_FEATURE_DEBUG_PTR_TYPES
+		private:
+			void		assign_with_AddRef( nsISupports* );
+			void		assign_with_QueryInterface( nsISupports*, const nsIID&, nsresult* );
+			void		assign_with_QueryReferent( nsIWeakReference*, const nsIID&, nsresult* );
+			void**	begin_assignment();
+
+		private:
+			T* mRawPtr;
+
+	#define NSCAP_CTOR_BASE(x) mRawPtr(x)
+#else
+	#define NSCAP_CTOR_BASE(x) nsCOMPtr_base(x)
+#endif
+
     public:
       typedef T element_type;
-
+      
 #ifndef NSCAP_FEATURE_FACTOR_DESTRUCTOR
      ~nsCOMPtr()
         {
@@ -386,57 +475,92 @@ class nsCOMPtr : private nsCOMPtr_base
 #endif
 
       nsCOMPtr()
-          // : nsCOMPtr_base(0)
+      		: NSCAP_CTOR_BASE(0)
         {
           // nothing else to do here
         }
 
       nsCOMPtr( const nsQueryInterface& aSmartPtr )
-          // : nsCOMPtr_base(0)
+      		: NSCAP_CTOR_BASE(0)
         {
-          assign_with_QueryInterface(aSmartPtr.mRawPtr, T::GetIID(), aSmartPtr.mErrorPtr);
+          assign_with_QueryInterface(aSmartPtr.mRawPtr, nsCOMTypeInfo<T>::GetIID(), aSmartPtr.mErrorPtr);
         }
 
+			nsCOMPtr( const nsQueryReferent& aSmartPtr )
+					: NSCAP_CTOR_BASE(0)
+				{
+					assign_with_QueryReferent(aSmartPtr.mRawPtr, nsCOMTypeInfo<T>::GetIID(), aSmartPtr.mErrorPtr);
+				}
+
+#ifdef NSCAP_FEATURE_TEST_DONTQUERY_CASES
+			void
+			Assert_NoQueryNeeded()
+				{
+          if ( mRawPtr )
+          	{
+							T* query_result = 0;
+							nsresult status = CallQueryInterface(mRawPtr, &query_result);
+							NS_ASSERTION(query_result == mRawPtr, "QueryInterface needed");
+							if ( NS_SUCCEEDED(status) )
+								NSCAP_RELEASE(query_result);
+						}
+				}
+
+			#define NSCAP_ASSERT_NO_QUERY_NEEDED();		Assert_NoQueryNeeded();
+#else
+			#define NSCAP_ASSERT_NO_QUERY_NEEDED();
+#endif
+
       nsCOMPtr( const nsDontAddRef<T>& aSmartPtr )
-          : nsCOMPtr_base(aSmartPtr.mRawPtr)
+      		: NSCAP_CTOR_BASE(aSmartPtr.mRawPtr)
         {
-          // nothing else to do here
+					NSCAP_ASSERT_NO_QUERY_NEEDED();
         }
 
       nsCOMPtr( const nsDontQueryInterface<T>& aSmartPtr )
-          : nsCOMPtr_base(aSmartPtr.mRawPtr)
+      		: NSCAP_CTOR_BASE(aSmartPtr.mRawPtr)
         {
           if ( mRawPtr )
             NSCAP_ADDREF(mRawPtr);
+
+					NSCAP_ASSERT_NO_QUERY_NEEDED();
         }
 
       nsCOMPtr( const nsCOMPtr<T>& aSmartPtr )
-          : nsCOMPtr_base(aSmartPtr.mRawPtr)
+      		: NSCAP_CTOR_BASE(aSmartPtr.mRawPtr)
         {
           if ( mRawPtr )
             NSCAP_ADDREF(mRawPtr);
         }
 
-#ifdef NSCAP_FEATURE_ALLOW_RAW_POINTERS
       nsCOMPtr( T* aRawPtr )
-          : nsCOMPtr_base(aRawPtr)
+      		: NSCAP_CTOR_BASE(aRawPtr)
         {
           if ( mRawPtr )
             NSCAP_ADDREF(mRawPtr);
+
+					NSCAP_ASSERT_NO_QUERY_NEEDED();
         }
 
       nsCOMPtr<T>&
       operator=( T* rhs )
         {
           assign_with_AddRef(rhs);
+					NSCAP_ASSERT_NO_QUERY_NEEDED();
           return *this;
         }
-#endif
 
       nsCOMPtr<T>&
       operator=( const nsQueryInterface& rhs )
         {
-          assign_with_QueryInterface(rhs.mRawPtr, T::GetIID(), rhs.mErrorPtr);
+          assign_with_QueryInterface(rhs.mRawPtr, nsCOMTypeInfo<T>::GetIID(), rhs.mErrorPtr);
+          return *this;
+        }
+
+      nsCOMPtr<T>&
+      operator=( const nsQueryReferent& rhs )
+        {
+          assign_with_QueryReferent(rhs.mRawPtr, nsCOMTypeInfo<T>::GetIID(), rhs.mErrorPtr);
           return *this;
         }
 
@@ -446,6 +570,8 @@ class nsCOMPtr : private nsCOMPtr_base
           if ( mRawPtr )
             NSCAP_RELEASE(mRawPtr);
           mRawPtr = rhs.mRawPtr;
+
+					NSCAP_ASSERT_NO_QUERY_NEEDED();
           return *this;
         }
 
@@ -453,6 +579,7 @@ class nsCOMPtr : private nsCOMPtr_base
       operator=( const nsDontQueryInterface<T>& rhs )
         {
           assign_with_AddRef(rhs.mRawPtr);
+					NSCAP_ASSERT_NO_QUERY_NEEDED();
           return *this;
         }
 
@@ -494,16 +621,6 @@ class nsCOMPtr : private nsCOMPtr_base
 #if 0
     private:
       friend class nsGetterAddRefs<T>;
-
-      /*
-        In a perfect world, the following member function, |StartAssignment|, would be private.
-        It is and should be only accessed by the closely related class |nsGetterAddRefs<T>|.
-
-        Unfortunately, some compilers---most notably VC++5.0---fail to grok the
-        friend declaration above or in any alternate acceptable form.  So, physically
-        it will be public (until our compilers get smarter); but it is not to be
-        considered part of the logical public interface.
-      */
 #endif
 
       T**
@@ -519,6 +636,68 @@ class nsCOMPtr : private nsCOMPtr_base
 #endif
         }
   };
+
+#ifdef NSCAP_FEATURE_DEBUG_PTR_TYPES
+template <class T>
+void
+nsCOMPtr<T>::assign_with_AddRef( nsISupports* rawPtr )
+	{
+    if ( rawPtr )
+    	NSCAP_ADDREF(rawPtr);
+    if ( mRawPtr )
+      NSCAP_RELEASE(mRawPtr);
+    mRawPtr = NS_REINTERPRET_CAST(T*, rawPtr);
+	}
+
+template <class T>
+void
+nsCOMPtr<T>::assign_with_QueryInterface( nsISupports* rawPtr, const nsIID& iid, nsresult* result )
+  {
+    nsresult status = NS_ERROR_NULL_POINTER;
+    T* newPtr;
+    if ( !rawPtr || !NS_SUCCEEDED( status = rawPtr->QueryInterface(iid, NSCAP_REINTERPRET_CAST(void**, &newPtr)) ) )
+      newPtr = 0;
+
+    if ( mRawPtr )
+      NSCAP_RELEASE(mRawPtr);
+
+    mRawPtr = newPtr;
+
+    if ( result )
+      *result = status;
+  }
+
+template <class T>
+void
+nsCOMPtr<T>::assign_with_QueryReferent( nsIWeakReference* rawPtr, const nsIID& iid, nsresult* result )
+	{
+    nsresult status = NS_ERROR_NULL_POINTER;
+    T* newPtr;
+    if ( !rawPtr || !NS_SUCCEEDED( status = rawPtr->QueryReferent(iid, NSCAP_REINTERPRET_CAST(void**, &newPtr)) ) )
+      newPtr = 0;
+
+    if ( mRawPtr )
+      NSCAP_RELEASE(mRawPtr);
+
+    mRawPtr = newPtr;
+
+    if ( result )
+      *result = status;
+	}
+
+template <class T>
+void**
+nsCOMPtr<T>::begin_assignment()
+  {
+    if ( mRawPtr )
+    	{
+	      NSCAP_RELEASE(mRawPtr);
+	    	mRawPtr = 0;
+    	}
+
+    return NSCAP_REINTERPRET_CAST(void**, &mRawPtr);
+  }
+#endif
 
 
 template <class T>
@@ -537,6 +716,8 @@ class nsGetterAddRefs
       When initialized with a |nsCOMPtr|, as in the example above, it returns
       a |void**| (or |T**| if needed) that the outer call (|QueryInterface| in this
       case) can fill in.
+
+			This type should be a nested class inside |nsCOMPtr<T>|.
     */
   {
     public:
@@ -580,7 +761,7 @@ getter_AddRefs( nsCOMPtr<T>& aSmartPtr )
   }
 
 
-#ifdef NSCAP_FEATURE_ALLOW_COMPARISONS
+class NSCAP_Zero;
 
 template <class T, class U>
 inline
@@ -609,7 +790,7 @@ operator==( const U* lhs, const nsCOMPtr<T>& rhs )
 template <class T>
 inline
 NSCAP_BOOL
-operator==( const nsCOMPtr<T>& lhs, int rhs )
+operator==( const nsCOMPtr<T>& lhs, NSCAP_Zero* rhs )
     // specifically to allow |smartPtr == 0|
   {
     return NSCAP_STATIC_CAST(const void*, lhs.get()) == NSCAP_REINTERPRET_CAST(const void*, rhs);
@@ -618,7 +799,7 @@ operator==( const nsCOMPtr<T>& lhs, int rhs )
 template <class T>
 inline
 NSCAP_BOOL
-operator==( int lhs, const nsCOMPtr<T>& rhs )
+operator==( NSCAP_Zero* lhs, const nsCOMPtr<T>& rhs )
     // specifically to allow |0 == smartPtr|
   {
     return NSCAP_REINTERPRET_CAST(const void*, lhs) == NSCAP_STATIC_CAST(const void*, rhs.get());
@@ -651,7 +832,7 @@ operator!=( const U* lhs, const nsCOMPtr<T>& rhs )
 template <class T>
 inline
 NSCAP_BOOL
-operator!=( const nsCOMPtr<T>& lhs, int rhs )
+operator!=( const nsCOMPtr<T>& lhs, NSCAP_Zero* rhs )
     // specifically to allow |smartPtr != 0|
   {
     return NSCAP_STATIC_CAST(const void*, lhs.get()) != NSCAP_REINTERPRET_CAST(const void*, rhs);
@@ -660,7 +841,7 @@ operator!=( const nsCOMPtr<T>& lhs, int rhs )
 template <class T>
 inline
 NSCAP_BOOL
-operator!=( int lhs, const nsCOMPtr<T>& rhs )
+operator!=( NSCAP_Zero* lhs, const nsCOMPtr<T>& rhs )
     // specifically to allow |0 != smartPtr|
   {
     return NSCAP_REINTERPRET_CAST(const void*, lhs) != NSCAP_STATIC_CAST(const void*, rhs.get());
@@ -673,8 +854,6 @@ SameCOMIdentity( nsISupports* lhs, nsISupports* rhs )
     return nsCOMPtr<nsISupports>( do_QueryInterface(lhs) ) == nsCOMPtr<nsISupports>( do_QueryInterface(rhs) );
   }
 
-#endif // defined(NSCAP_FEATURE_ALLOW_COMPARISONS)
-
 
 template <class DestinationType>
 inline
@@ -682,11 +861,8 @@ nsresult
 CallQueryInterface( nsISupports* aSource, nsCOMPtr<DestinationType>* aDestination )
     // a type-safe shortcut for calling the |QueryInterface()| member function
   {
-    NS_PRECONDITION(aSource, "null parameter");
-    NS_PRECONDITION(aDestination, "null parameter");
-
-    return aSource->QueryInterface(DestinationType::GetIID(), (void**)getter_AddRefs(*aDestination));
+    return CallQueryInterface(aSource, getter_AddRefs(*aDestination));
+    	// this calls the _other_ |CallQueryInterface|
   }
-
 
 #endif // !defined(nsCOMPtr_h___)

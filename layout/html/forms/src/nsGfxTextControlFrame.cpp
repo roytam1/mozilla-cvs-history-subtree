@@ -50,6 +50,7 @@
 #include "nsINameSpaceManager.h"
 #include "nsIPref.h"
 #include "nsIView.h"
+#include "nsIScrollableView.h"
 #include "nsIDocumentViewer.h"
 #include "nsViewsCID.h"
 #include "nsWidgetsCID.h"
@@ -64,15 +65,8 @@
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMEventReceiver.h"
-
-#ifdef SingleSignon
-#include "prmem.h"
-#include "nsIURL.h"
-#include "nsIWalletService.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_IID(kIWalletServiceIID, NS_IWALLETSERVICE_IID);
-static NS_DEFINE_IID(kWalletServiceCID, NS_WALLETSERVICE_CID);
-#endif
+#include "nsIDOMUIEvent.h"
+#include "nsIPresShell.h"
 
 static NS_DEFINE_IID(kIFormControlIID, NS_IFORMCONTROL_IID);
 static NS_DEFINE_IID(kTextCID, NS_TEXTFIELD_CID);
@@ -94,20 +88,33 @@ static NS_DEFINE_IID(kCChildCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kIStreamObserverIID, NS_ISTREAMOBSERVER_IID);
 static NS_DEFINE_IID(kIDocumentObserverIID, NS_IDOCUMENT_OBSERVER_IID);
 
-static NS_DEFINE_IID(kITextEditorIID, NS_ITEXTEDITOR_IID);
-static NS_DEFINE_CID(kTextEditorCID, NS_TEXTEDITOR_CID);
-static NS_DEFINE_IID(kIHTMLEditorIID, NS_IHTMLEDITOR_IID);
 static NS_DEFINE_CID(kHTMLEditorCID, NS_HTMLEDITOR_CID);
-static NS_DEFINE_IID(kIEditorIID, NS_IEDITOR_IID);
-static NS_DEFINE_CID(kEditorCID, NS_EDITOR_CID);
+
 static NS_DEFINE_IID(kIDocumentViewerIID, NS_IDOCUMENT_VIEWER_IID);
 static NS_DEFINE_IID(kIDOMEventReceiverIID, NS_IDOMEVENTRECEIVER_IID);
 static NS_DEFINE_IID(kIDOMKeyListenerIID,   NS_IDOMKEYLISTENER_IID);
+//static NS_DEFINE_IID(kIDOMMouseListenerIID, NS_IDOMMOUSELISTENER_IID);
+static NS_DEFINE_IID(kIDOMFocusListenerIID, NS_IDOMFOCUSLISTENER_IID);
 
 
+#ifndef NECKO   // about:blank is broken in netlib
 #define EMPTY_DOCUMENT "resource:/res/html/empty_doc.html"
+#else           // but works great in the new necko lib
+#define EMPTY_DOCUMENT "about:blank"
+#endif
 
 //#define NOISY
+
+
+/************************************** MODULE NOTES ***********************************
+7/28/99 buster
+Mouse listeners are commented out.  HTML does not define mouse event notifications 
+for text fields, so I've disabled them.  Just as well, there was no mapping of
+event coordinates in the mouse events yet. 
+7/28/99 buster
+There has been no testing of the single signon code that is/was in here.  It was 
+simply carried over as is from native text control frame.
+****************************************************************************************/
 
 extern nsresult NS_NewNativeTextControlFrame(nsIFrame** aNewFrame); 
 
@@ -132,6 +139,17 @@ NS_NewGfxTextControlFrame(nsIFrame** aNewFrame)
 }
 
 NS_IMETHODIMP
+nsGfxTextControlFrame::Init(nsIPresContext&  aPresContext,
+                            nsIContent*      aContent,
+                            nsIFrame*        aParent,
+                            nsIStyleContext* aContext,
+                            nsIFrame*        aPrevInFlow)
+{
+  mFramePresContext = &aPresContext;
+  return (nsTextControlFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow));
+}
+
+NS_IMETHODIMP
 nsGfxTextControlFrame::InitTextControl()
 {
   nsresult result = NS_OK;
@@ -150,29 +168,14 @@ nsGfxTextControlFrame::InitTextControl()
   mDocObserver->SetFrame(this);
   NS_ADDREF(mDocObserver);
 
-  if (PR_TRUE==IsPlainTextControl())
-  {
-    nsCOMPtr<nsITextEditor> theEditor;
-    result = nsComponentManager::CreateInstance(kTextEditorCID,
-                                                nsnull,
-                                                kITextEditorIID, 
-                                                getter_AddRefs(theEditor));
-    if (NS_FAILED(result)) { return result; }
-    if (!theEditor) { return NS_ERROR_OUT_OF_MEMORY; }
-    mEditor = do_QueryInterface(theEditor);
-    if (!mEditor) { return NS_ERROR_NO_INTERFACE; }
-  }
-  else
-  {
-    nsCOMPtr<nsIHTMLEditor> theEditor;
-    result = nsComponentManager::CreateInstance(kHTMLEditorCID,
-                                                nsnull,
-                                                kIHTMLEditorIID, getter_AddRefs(theEditor));
-    if (NS_FAILED(result)) { return result; }
-    if (!theEditor) { return NS_ERROR_OUT_OF_MEMORY; }
-    mEditor = do_QueryInterface(theEditor);
-    if (!mEditor) { return NS_ERROR_NO_INTERFACE; }
-  }
+  nsCOMPtr<nsIHTMLEditor> theEditor;
+  result = nsComponentManager::CreateInstance(kHTMLEditorCID,
+                                              nsnull,
+                                              nsIHTMLEditor::GetIID(), getter_AddRefs(theEditor));
+  if (NS_FAILED(result)) { return result; }
+  if (!theEditor) { return NS_ERROR_OUT_OF_MEMORY; }
+  mEditor = do_QueryInterface(theEditor);
+  if (!mEditor) { return NS_ERROR_NO_INTERFACE; }
 
   // allocate mDummy here to self-check native text control impl. vs. ender text control impl.
   //NS_NewNativeTextControlFrame((nsIFrame **)&mDummyFrame); //DUMMY
@@ -190,30 +193,49 @@ nsGfxTextControlFrame::nsGfxTextControlFrame()
 
 nsGfxTextControlFrame::~nsGfxTextControlFrame()
 {
+  nsresult result;
   if (mTempObserver)
   {
     mTempObserver->SetFrame(nsnull);
     NS_RELEASE(mTempObserver);
   }
-  if (mKeyListener) 
+  if (mSelectionListener)
   {
-    nsCOMPtr<nsIEditor>editor = do_QueryInterface(mEditor);
-    NS_ASSERTION(editor, "bad QI to nsIEditor from mEditor");
-    if (editor)
+    if (mEditor)
     {
-      nsCOMPtr<nsIDOMDocument>domDoc;
-      nsresult result = editor->GetDocument(getter_AddRefs(domDoc));
-      if (NS_SUCCEEDED(result) && domDoc)
+      nsCOMPtr<nsIDOMSelection>selection;
+      result = mEditor->GetSelection(getter_AddRefs(selection));
+      if (NS_SUCCEEDED(result) && selection) 
       {
-        nsCOMPtr<nsIDOMEventReceiver> er;
-        result = domDoc->QueryInterface(kIDOMEventReceiverIID, getter_AddRefs(er));
-        if (NS_SUCCEEDED(result) && er) {
-          er->RemoveEventListenerByIID(mKeyListener, kIDOMKeyListenerIID);
+        nsCOMPtr<nsIDOMSelectionListener>listener;
+        listener = do_QueryInterface(mSelectionListener);
+        if (mSelectionListener) {
+          selection->RemoveSelectionListener(listener); 
+        }
+      }
+      if (mKeyListener || /*mMouseListener || */mFocusListener) 
+      {
+        nsCOMPtr<nsIDOMDocument>domDoc;
+        result = mEditor->GetDocument(getter_AddRefs(domDoc));
+        if (NS_SUCCEEDED(result) && domDoc)
+        {
+          nsCOMPtr<nsIDOMEventReceiver> er;
+          result = domDoc->QueryInterface(kIDOMEventReceiverIID, getter_AddRefs(er));
+          if (NS_SUCCEEDED(result) && er) 
+          {
+            if (mKeyListener)
+              er->RemoveEventListenerByIID(mKeyListener, kIDOMKeyListenerIID);
+            /*if (mMouseListener)
+              er->RemoveEventListenerByIID(mMouseListener, kIDOMMouseListenerIID);*/
+            if (mFocusListener)
+              er->RemoveEventListenerByIID(mFocusListener, kIDOMFocusListenerIID);
+          }
         }
       }
     }
   }
-  mEditor = do_QueryInterface(nsnull);  // editor must be destroyed before the webshell!
+
+  mEditor = 0;  // editor must be destroyed before the webshell!
   if (nsnull != mWebShell) 
   {
     mWebShell->Destroy();    
@@ -221,6 +243,11 @@ nsGfxTextControlFrame::~nsGfxTextControlFrame()
   }
   if (mDocObserver)
   {
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDoc);
+    if (doc)
+    {
+      doc->RemoveObserver(mDocObserver);
+    }
     mDocObserver->SetFrame(nsnull);
     NS_RELEASE(mDocObserver);
   }
@@ -270,7 +297,8 @@ nsGfxTextControlFrame::GetText(nsString* aText, PRBool aInitialValue)
     else
     {
       if (PR_TRUE==IsInitialized()) {
-        result = mEditor->OutputTextToString(*aText);
+        nsString format ("text/plain");
+        mEditor->OutputToString(*aText, format, 0);
       }
       else {
         result = nsFormControlHelper::GetInputElementValue(mContent, aText, aInitialValue);
@@ -297,9 +325,9 @@ nsGfxTextControlFrame::GetText(nsString* aText, PRBool aInitialValue)
 
 NS_IMETHODIMP
 nsGfxTextControlFrame::AttributeChanged(nsIPresContext* aPresContext,
-                                          nsIContent*     aChild,
-                                          nsIAtom*        aAttribute,
-                                          PRInt32         aHint)
+                                        nsIContent*     aChild,
+                                        nsIAtom*        aAttribute,
+                                        PRInt32         aHint)
 {
   if (PR_FALSE==IsInitialized()) {return NS_ERROR_NOT_INITIALIZED;}
   nsresult result = NS_OK;
@@ -317,16 +345,66 @@ nsGfxTextControlFrame::AttributeChanged(nsIPresContext* aPresContext,
   {
     PRInt32 maxLength;
     nsresult rv = GetMaxLength(&maxLength);
-    if (NS_CONTENT_ATTR_NOT_THERE != rv) {
-      mEditor->SetMaxTextLength(maxLength);
+    
+    nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+    if (htmlEditor)
+    {
+    if (NS_CONTENT_ATTR_NOT_THERE != rv) 
+    {  // set the maxLength attribute
+        htmlEditor->SetMaxTextLength(maxLength);
+      // if maxLength>docLength, we need to truncate the doc content
+    }
+    else { // unset the maxLength attribute
+        htmlEditor->SetMaxTextLength(-1);
+      }
     }
   } 
   else if (nsHTMLAtoms::readonly == aAttribute) 
   {
-    PRBool readOnly = nsFormFrame::GetReadonly(this);
+    nsCOMPtr<nsIPresShell> presShell;
+    aPresContext->GetShell(getter_AddRefs(presShell));     
+    nsresult rv = DoesAttributeExist(nsHTMLAtoms::readonly);
     PRUint32 flags;
     mEditor->GetFlags(&flags);
-    flags |= readOnly;
+    if (NS_CONTENT_ATTR_NOT_THERE != rv) 
+    { // set readonly
+      flags |= nsIHTMLEditor::eEditorReadonlyMask;
+      presShell->SetCaretEnabled(PR_FALSE);
+    }
+    else 
+    { // unset readonly
+      flags &= ~(nsIHTMLEditor::eEditorReadonlyMask);
+      presShell->SetCaretEnabled(PR_TRUE);
+    }    
+    mEditor->SetFlags(flags);
+  }
+  else if (nsHTMLAtoms::disabled == aAttribute) 
+  {
+    nsCOMPtr<nsIPresShell> presShell;
+    aPresContext->GetShell(getter_AddRefs(presShell));     
+    nsresult rv = DoesAttributeExist(nsHTMLAtoms::disabled);
+    PRUint32 flags;
+    mEditor->GetFlags(&flags);
+    if (NS_CONTENT_ATTR_NOT_THERE != rv) 
+    { // set readonly
+      flags |= nsIHTMLEditor::eEditorDisabledMask;
+      presShell->SetCaretEnabled(PR_FALSE);
+      nsCOMPtr<nsIDocument> doc; 
+      presShell->GetDocument(getter_AddRefs(doc));
+      NS_ASSERTION(doc, "null document");
+      if (!doc) { return NS_ERROR_NULL_POINTER; }
+      doc->SetDisplaySelection(PR_FALSE);
+    }
+    else 
+    { // unset readonly
+      flags &= ~(nsIHTMLEditor::eEditorDisabledMask);
+      presShell->SetCaretEnabled(PR_TRUE);
+      nsCOMPtr<nsIDocument> doc; 
+      presShell->GetDocument(getter_AddRefs(doc));
+      NS_ASSERTION(doc, "null document");
+      if (!doc) { return NS_ERROR_NULL_POINTER; }
+      doc->SetDisplaySelection(PR_TRUE);
+    }    
     mEditor->SetFlags(flags);
   }
   else if (nsHTMLAtoms::size == aAttribute) {
@@ -342,16 +420,32 @@ nsGfxTextControlFrame::AttributeChanged(nsIPresContext* aPresContext,
   if (mDummyFrame)
   {
     nsresult dummyResult = mDummyFrame->AttributeChanged(aPresContext, aChild, aAttribute, aHint);
+    NS_ASSERTION((NS_SUCCEEDED(dummyResult)), "dummy frame attribute changed failed.");
   }
 // END DUMMY
 
   return result;
 }
 
+NS_IMETHODIMP
+nsGfxTextControlFrame::DoesAttributeExist(nsIAtom *aAtt)
+{
+  nsresult result = NS_CONTENT_ATTR_NOT_THERE;
+  nsIHTMLContent* content = nsnull;
+  mContent->QueryInterface(kIHTMLContentIID, (void**) &content);
+  if (nsnull != content) 
+  {
+    nsHTMLValue value;
+    result = content->GetHTMLAttribute(aAtt, value);
+    NS_RELEASE(content);
+  }
+  return result;
+}
+
 void 
 nsGfxTextControlFrame::PostCreateWidget(nsIPresContext* aPresContext,
-                                          nscoord& aWidth, 
-                                          nscoord& aHeight)
+                                        nscoord& aWidth, 
+                                        nscoord& aHeight)
 {
   nsresult rv;
   // initialize the webshell, if it hasn't already been constructed
@@ -400,15 +494,18 @@ nsGfxTextControlFrame::Reset()
 {
   nsAutoString value;
   nsresult valStatus = GetText(&value, PR_TRUE);
-  // XXX: error checking
-  SetTextControlFrameState(value);
+  NS_ASSERTION((NS_SUCCEEDED(valStatus)), "GetText failed");
+  if (NS_SUCCEEDED(valStatus))
+  {
+    SetTextControlFrameState(value);
+  }
 }  
 
 NS_METHOD 
 nsGfxTextControlFrame::Paint(nsIPresContext& aPresContext,
-                               nsIRenderingContext& aRenderingContext,
-                               const nsRect& aDirtyRect,
-                               nsFramePaintLayer aWhichLayer)
+                             nsIRenderingContext& aRenderingContext,
+                             const nsRect& aDirtyRect,
+                             nsFramePaintLayer aWhichLayer)
 {
   if (mWebShell)
   {
@@ -444,11 +541,11 @@ nsGfxTextControlFrame::PaintTextControlBackground(nsIPresContext& aPresContext,
 
 void 
 nsGfxTextControlFrame::PaintTextControl(nsIPresContext& aPresContext,
-                                          nsIRenderingContext& aRenderingContext,
-                                          const nsRect& aDirtyRect, 
-                                          nsString& aText,
-                                          nsIStyleContext* aStyleContext,
-                                          nsRect& aRect)
+                                        nsIRenderingContext& aRenderingContext,
+                                        const nsRect& aDirtyRect, 
+                                        nsString& aText,
+                                        nsIStyleContext* aStyleContext,
+                                        nsRect& aRect)
 {
   // XXX: aText is currently unused!
   const nsStyleDisplay* disp = (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
@@ -467,8 +564,10 @@ nsGfxTextControlFrame::PaintTextControl(nsIPresContext& aPresContext,
 void nsGfxTextControlFrame::GetTextControlFrameState(nsString& aValue)
 {
   aValue = "";  // initialize out param
+  
   if (PR_TRUE==IsInitialized()) {
-    mEditor->OutputTextToString(aValue);
+    nsString format ("text/plain");
+    mEditor->OutputToString(aValue, format, nsIEditor::EditorOutputNoDoctype);
   }
 }     
 
@@ -477,7 +576,8 @@ void nsGfxTextControlFrame::SetTextControlFrameState(const nsString& aValue)
   if (PR_TRUE==IsInitialized()) 
   {
     nsAutoString currentValue;
-    nsresult result = mEditor->OutputTextToString(currentValue);
+    nsString format ("text/plain");
+    nsresult result = mEditor->OutputToString(currentValue, format, 0);
     if (PR_TRUE==IsSingleLineTextControl()) {
       RemoveNewlines(currentValue); 
     }
@@ -499,7 +599,10 @@ void nsGfxTextControlFrame::SetTextControlFrameState(const nsString& aValue)
             nsAutoString bodyTag = "body";
             result = GetFirstNodeOfType(bodyTag, domDoc, getter_AddRefs(bodyNode));
             SelectAllTextContent(bodyNode, selection);
-            mEditor->InsertText(aValue);
+            
+            nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+            if (htmlEditor)
+              htmlEditor->InsertText(aValue);
           }
         }
       }
@@ -516,7 +619,7 @@ NS_IMETHODIMP nsGfxTextControlFrame::SetProperty(nsIAtom* aName, const nsString&
     mEditor->EnableUndo(PR_TRUE);       // fire up a new txn stack
   }
   else {
-    return nsFormControlFrame::SetProperty(aName, aValue);
+    return Inherited::SetProperty(aName, aValue);
   }
   return NS_OK;
 }      
@@ -530,19 +633,66 @@ NS_IMETHODIMP nsGfxTextControlFrame::GetProperty(nsIAtom* aName, nsString& aValu
     GetTextControlFrameState(aValue);
   }
   else {
-    return nsFormControlFrame::GetProperty(aName, aValue);
+    return Inherited::GetProperty(aName, aValue);
   }
 
   return NS_OK;
 }  
 
+void nsGfxTextControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
+{
+  if (mWebShell) {
+    if (aOn) {
+      nsresult result = NS_OK;
+
+      nsIContentViewer *viewer = nsnull;
+      mWebShell->GetContentViewer(&viewer);
+      if (viewer) {
+        nsIDocumentViewer* docv = nsnull;
+        viewer->QueryInterface(kIDocumentViewerIID, (void**) &docv);
+        if (nsnull != docv) {
+          nsIPresContext* cx = nsnull;
+          docv->GetPresContext(cx);
+          if (nsnull != cx) {
+            nsIPresShell  *shell = nsnull;
+            cx->GetShell(&shell);
+            if (nsnull != shell) {
+              nsIViewManager  *vm = nsnull;
+              shell->GetViewManager(&vm);
+              if (nsnull != vm) {
+                nsIView *rootview = nsnull;
+                vm->GetRootView(rootview);
+                if (rootview) {
+                  nsIWidget* widget;
+                  rootview->GetWidget(widget);
+                  if (widget) {
+                    result = widget->SetFocus();
+                    NS_RELEASE(widget);
+                  }
+                }
+                NS_RELEASE(vm);
+              }
+              NS_RELEASE(shell);
+            }
+            NS_RELEASE(cx);
+          }
+          NS_RELEASE(docv);
+        }
+        NS_RELEASE(viewer);
+      }
+    }
+    else {
+      mWebShell->RemoveFocus();
+    }
+  }
+}
 
 /* --------------------- Ender methods ---------------------- */
 
 
 nsresult
 nsGfxTextControlFrame::CreateWebShell(nsIPresContext& aPresContext,
-                                        const nsSize& aSize)
+                                      const nsSize& aSize)
 {
   nsresult rv;
   nsIContent* content;
@@ -560,7 +710,8 @@ nsGfxTextControlFrame::CreateWebShell(nsIPresContext& aPresContext,
   mWebShell->SetMarginHeight(0);
   nsCompatibility mode;
   aPresContext.GetCompatibilityMode(&mode);
-  mWebShell->SetScrolling(NS_STYLE_OVERFLOW_AUTO);
+ 
+#if 0
   mWebShell->SetIsFrame(PR_TRUE);
   
   /* XXX
@@ -569,6 +720,7 @@ nsGfxTextControlFrame::CreateWebShell(nsIPresContext& aPresContext,
     mWebShell->SetName(frameName.GetUnicode());
   }
   */
+#endif
 
   // If our container is a web-shell, inform it that it has a new
   // child. If it's not a web-shell then some things will not operate
@@ -579,7 +731,10 @@ nsGfxTextControlFrame::CreateWebShell(nsIPresContext& aPresContext,
   {
     nsIWebShell* outerShell = nsnull;
     container->QueryInterface(kIWebShellIID, (void**) &outerShell);
-    if (nsnull != outerShell) {
+
+    if (nsnull != outerShell) 
+    {
+/* test
       outerShell->AddChild(mWebShell);
 
       // connect the container...
@@ -589,28 +744,7 @@ nsGfxTextControlFrame::CreateWebShell(nsIPresContext& aPresContext,
         mWebShell->SetContainer(outerContainer);
         NS_RELEASE(outerContainer);
       }
-
-#ifdef INCLUDE_XUL
-      nsWebShellType parentType;
-      outerShell->GetWebShellType(parentType);
-      nsIAtom* typeAtom = NS_NewAtom("type");
-	    nsAutoString value;
-	    content->GetAttribute(kNameSpaceID_None, typeAtom, value);
-	    if (value.EqualsIgnoreCase("content")) {
-		    // The web shell's type is content.
-		    mWebShell->SetWebShellType(nsWebShellContent);
-        nsCOMPtr<nsIWebShellContainer> shellAsContainer;
-				shellAsContainer = do_QueryInterface(mWebShell);
-				shellAsContainer->ContentShellAdded(mWebShell, content);
-      }
-      else {
-        // Inherit our type from our parent webshell.  If it is
-		    // chrome, we'll be chrome.  If it is content, we'll be
-		    // content.
-		    mWebShell->SetWebShellType(parentType);
-      }
-#endif // INCLUDE_XUL 
-
+*/
       nsIPref*  outerPrefs = nsnull;  // connect the prefs
       outerShell->GetPrefs(outerPrefs);
       if (nsnull != outerPrefs) 
@@ -682,9 +816,9 @@ nsGfxTextControlFrame::CreateWebShell(nsIPresContext& aPresContext,
 
 NS_IMETHODIMP
 nsGfxTextControlFrame::Reflow(nsIPresContext& aPresContext,
-                                nsHTMLReflowMetrics& aMetrics,
-                                const nsHTMLReflowState& aReflowState,
-                                nsReflowStatus& aStatus)
+                              nsHTMLReflowMetrics& aMetrics,
+                              const nsHTMLReflowState& aReflowState,
+                              nsReflowStatus& aStatus)
 {
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                  ("enter nsGfxTextControlFrame::Reflow: aMaxSize=%d,%d",
@@ -692,7 +826,7 @@ nsGfxTextControlFrame::Reflow(nsIPresContext& aPresContext,
 
   NS_PRECONDITION(mState & NS_FRAME_IN_REFLOW, "frame is not in reflow");
 
-  nsresult rv = nsFormControlFrame::Reflow(aPresContext, aMetrics, aReflowState, aStatus);
+  nsresult rv = Inherited::Reflow(aPresContext, aMetrics, aReflowState, aStatus);
 #ifdef NOISY
   printf ("exit nsGfxTextControlFrame::Reflow: size=%d,%d",
            aMetrics.width, aMetrics.height);
@@ -744,6 +878,7 @@ nsGfxTextControlFrame::Reflow(nsIPresContext& aPresContext,
     nsHTMLReflowState reflowState = aReflowState;
     nsReflowStatus status = aStatus;
     nsresult dummyResult = mDummyFrame->Reflow(aPresContext, metrics, reflowState, status);
+    NS_ASSERTION((NS_SUCCEEDED(dummyResult)), "dummy frame reflow failed.");
     if (aMetrics.width != metrics.width) 
     { 
       printf("CT: different widths\n"); 
@@ -903,38 +1038,106 @@ nsGfxTextControlFrame::InstallEditor()
     result = GetPresShellFor(mWebShell, getter_AddRefs(presShell));
     if (NS_FAILED(result)) { return result; }
     if (!presShell) { return NS_ERROR_NULL_POINTER; }
-    nsCOMPtr<nsIDOMDocument> domDoc; 
+
+    // set the scrolling behavior
+    if (PR_TRUE==IsSingleLineTextControl())
+    {
+      nsCOMPtr<nsIViewManager> vm;
+      presShell->GetViewManager(getter_AddRefs(vm));
+      if (vm) 
+      {
+        nsIScrollableView *sv=nsnull;
+        vm->GetRootScrollableView(&sv);
+        if (sv) {
+          sv->SetScrollPreference(nsScrollPreference_kNeverScroll);
+          // views are not refcounted
+        }
+      }
+    }
+
     nsCOMPtr<nsIDocument> doc; 
     presShell->GetDocument(getter_AddRefs(doc));
     NS_ASSERTION(doc, "null document");
     if (!doc) { return NS_ERROR_NULL_POINTER; }
-    domDoc = do_QueryInterface(doc);
-    if (!domDoc) { return NS_ERROR_NULL_POINTER; }
-
+    mDoc = do_QueryInterface(doc);
+    if (!mDoc) { return NS_ERROR_NULL_POINTER; }
     if (mDocObserver) {
       doc->AddObserver(mDocObserver);
     }
 
-    // we need to hook up our key listener before the editor is initialized
-    result = NS_NewEnderKeyListener(getter_AddRefs(mKeyListener));
-    if (NS_SUCCEEDED(result) && mKeyListener)
+    PRUint32 editorFlags = 0;
+    if (IsPlainTextControl())
+      editorFlags |= nsIHTMLEditor::eEditorPlaintextMask;
+    if (IsSingleLineTextControl())
+      editorFlags |= nsIHTMLEditor::eEditorSingleLineMask;
+    if (IsPasswordTextControl())
+      editorFlags |= nsIHTMLEditor::eEditorPasswordMask;
+      
+    result = mEditor->Init(mDoc, presShell, editorFlags);
+    if (NS_SUCCEEDED(result)) {
+      result = InitializeTextControl(presShell, mDoc);
+    }
+    if (NS_SUCCEEDED(result)) {
+      result = InstallEventListeners();
+    }
+  }
+  return result;
+}
+
+NS_IMETHODIMP
+nsGfxTextControlFrame::InstallEventListeners()
+{
+  nsresult result;
+
+  // get the DOM event receiver
+  nsCOMPtr<nsIDOMEventReceiver> er;
+  result = mDoc->QueryInterface(kIDOMEventReceiverIID, getter_AddRefs(er));
+  if (!er) { result = NS_ERROR_NULL_POINTER; }
+  nsCOMPtr<nsIEnderEventListener> eL;
+
+  // we need to hook up our listeners before the editor is initialized
+  result = NS_NewEnderKeyListener(getter_AddRefs(mKeyListener));
+  if (NS_SUCCEEDED(result) && mKeyListener)
+  {
+    eL = do_QueryInterface(mKeyListener);
+    if (eL)
     {
-      mKeyListener->SetFrame(this);
-      // get the DOM event receiver
-      nsCOMPtr<nsIDOMEventReceiver> er;
-      result = domDoc->QueryInterface(kIDOMEventReceiverIID, getter_AddRefs(er));
-      if (!er) { result = NS_ERROR_NULL_POINTER; }
-      if (NS_SUCCEEDED(result)) {
-        result = er->AddEventListenerByIID(mKeyListener, kIDOMKeyListenerIID);
-      }
-      if (NS_FAILED(result)) { // either we couldn't get er, or we couldn't add the listener
-        mKeyListener = do_QueryInterface(nsnull); // null out the listener, it's useless
+      eL->SetFrame(this);
+      eL->SetPresContext(mFramePresContext);
+    }
+    result = er->AddEventListenerByIID(mKeyListener, kIDOMKeyListenerIID);
+    if (NS_FAILED(result)) { //we couldn't add the listener
+      mKeyListener = do_QueryInterface(nsnull); // null out the listener, it's useless
+    }
+  }
+  /*
+  result = NS_NewEnderMouseListener(getter_AddRefs(mMouseListener));
+  if (NS_SUCCEEDED(result) && mMouseListener)
+  {
+    eL = do_QueryInterface(mMouseListener);
+    if (eL)
+    {
+      eL->SetFrame(this);
+      eL->SetPresContext(mFramePresContext);
+      result = er->AddEventListenerByIID(mMouseListener, kIDOMMouseListenerIID);
+      if (NS_FAILED(result)) { //we couldn't add the listener
+        mMouseListener = do_QueryInterface(nsnull); // null out the listener, it's useless
       }
     }
-
-    result = mEditor->Init(domDoc, presShell);
-    if (NS_SUCCEEDED(result)) {
-      result = InitializeTextControl(presShell, domDoc);
+  }
+  */
+  result = NS_NewEnderFocusListener(getter_AddRefs(mFocusListener));
+  if (NS_SUCCEEDED(result) && mFocusListener)
+  {
+    eL = do_QueryInterface(mFocusListener);
+    if (eL)
+    {
+      eL->SetFrame(this);
+      eL->SetPresContext(mFramePresContext);
+      result = er->AddEventListenerByIID(mFocusListener, kIDOMFocusListenerIID);
+      if (NS_FAILED(result)) { //we couldn't add the listener
+        mFocusListener = do_QueryInterface(nsnull); // null out the listener, it's useless
+      }
     }
   }
   return result;
@@ -946,25 +1149,30 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
   nsresult result;
   if (!aPresShell || !aDoc) { return NS_ERROR_NULL_POINTER; }
 
-  nsIFrame *htmlFrame;
-  nsAutoString htmlTag("body");
-  result = GetFirstFrameForType(htmlTag, aPresShell, aDoc, &htmlFrame);
-  if (NS_SUCCEEDED(result) && htmlFrame)
+  /* needing a frame here is a hack.  We can't remove this hack until we can
+   * set presContext info before style resolution on the webshell
+   */
+  nsIFrame *frame;
+  result = aPresShell->GetRootFrame(&frame);
+  if (NS_SUCCEEDED(result) && frame)
   {
     PRInt32 type;
     GetType(&type);
+
+    nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+    if (!htmlEditor)  { return NS_ERROR_NO_INTERFACE; }
 
     nsCOMPtr<nsIPresContext>presContext;
     aPresShell->GetPresContext(getter_AddRefs(presContext));
     NS_ASSERTION(presContext, "null presentation context");
     if (!presContext) { return NS_ERROR_NULL_POINTER; }
 
-    /* this is the code for setting the pres context, which is MUCH better
-     * than grabbing the imbedded HTML frame and setting it.
-     * alas, the mechanisms for doing this are not yet in place.
-     * what I want to do is hand the webshell my pres context at creation
+    /* set all style that propogates from the text control to its content
+	 * into the presContext for the webshell.
+     * what I would prefer to do is hand the webshell my own 
+	 * pres context at creation, rather than having it create its own.
      */
-    /*
+
     nsFont font(presContext->GetDefaultFixedFontDeprecated()); 
     GetFont(presContext, font);
     const nsStyleFont* controlFont;
@@ -980,135 +1188,29 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
     presContext->SetDefaultBackgroundImageAttachment(controlColor->mBackgroundAttachment);
     presContext->SetDefaultBackgroundImageOffset(controlColor->mBackgroundXPosition, controlColor->mBackgroundYPosition);
     presContext->SetDefaultBackgroundImage(controlColor->mBackgroundImage);
-    */
 
-    nsIStyleContext* bodySC = nsnull;
-    htmlFrame->GetStyleContext(&bodySC);
-    nsStyleSpacing* bodySpacing = nsnull;
-    bodySpacing = (nsStyleSpacing*)bodySC->GetMutableStyleData(eStyleStruct_Spacing);
-    nsStyleCoord zero(0);
-    bodySpacing->mMargin.SetLeft(zero);
-    bodySpacing->mMargin.SetRight(zero);
-    bodySpacing->mMargin.SetTop(zero);
-    bodySpacing->mMargin.SetBottom(zero);
-    bodySpacing->mPadding.SetLeft(zero);
-    bodySpacing->mPadding.SetRight(zero);
-    bodySpacing->mPadding.SetTop(zero);
-    bodySpacing->mPadding.SetBottom(zero);
-    bodySpacing->mBorder.SetLeft(zero);
-    bodySpacing->mBorder.SetRight(zero);
-    bodySpacing->mBorder.SetTop(zero);
-    bodySpacing->mBorder.SetBottom(zero);
-
-    nsStylePosition* bodyPosition = nsnull;
-    bodyPosition = (nsStylePosition*)bodySC->GetMutableStyleData(eStyleStruct_Position);
-    const nsStylePosition* controlPosition;
-    GetStyleData(eStyleStruct_Position,  (const nsStyleStruct *&)controlPosition);
-    *bodyPosition = *controlPosition;
-/* qqq
-    if (NS_FORM_INPUT_TEXT == type || NS_FORM_INPUT_PASSWORD == type) {
-      bodyPosition->mWidth.SetIntValue(10000, eStyleUnit_Chars);
-    }
-*/
-
-    nsStyleFont* bodyFont = nsnull;
-    bodyFont = (nsStyleFont*)bodySC->GetMutableStyleData(eStyleStruct_Font);
-    //const nsStyleFont* controlFont;
-    //GetStyleData(eStyleStruct_Font,  (const nsStyleStruct *&)controlFont);
-    //*bodyFont = *controlFont;
-    nsFont font(presContext->GetDefaultFixedFontDeprecated()); 
-    GetFont(presContext, font);
-    bodyFont->mFont = font;
-    bodyFont->mFixedFont = font;
-
-    nsStyleColor* bodyColor = nsnull;
-    bodyColor = (nsStyleColor*)bodySC->GetMutableStyleData(eStyleStruct_Color);
-    const nsStyleColor* controlColor;
-    GetStyleData(eStyleStruct_Color,  (const nsStyleStruct *&)controlColor);
-    *bodyColor = *controlColor;
-
-    nsStyleText* bodyText = nsnull;
-    bodyText = (nsStyleText*)bodySC->GetMutableStyleData(eStyleStruct_Text);
-    const nsStyleText* controlText;
-    GetStyleData(eStyleStruct_Text,  (const nsStyleStruct *&)controlText);
-    *bodyText = *controlText;
-    if (NS_FORM_INPUT_TEXT == type || NS_FORM_INPUT_PASSWORD == type) {
-      // qqq bodyText->mWhiteSpace = NS_STYLE_WHITESPACE_MOZ_PRE_WRAP;
-      bodyText->mWhiteSpace = NS_STYLE_WHITESPACE_PRE;
-    }
-    bodyText->mTextAlign = NS_STYLE_TEXT_ALIGN_LEFT;
-
-    bodySC->RecalcAutomaticData(presContext);
-    NS_RELEASE(bodySC);
+    /* HACK:
+	 * since I don't yet have a hook for setting info on the pres context before style is
+     * resolved, I need to call remap style on the root frame's style context.
+     * The above code for setting presContext data should happen on a presContext that
+     * I create and pass into the webshell, rather than having the webshell create its own
+     */
+    nsIStyleContext* sc = nsnull;
+    result = frame->GetStyleContext(&sc);
+    if (NS_FAILED(result)) { return result; }
+    if (nsnull==sc) { return NS_ERROR_NULL_POINTER; }
+    sc->RemapStyle(presContext);
+	// end HACK
 
     // now that the style context is initialized, initialize the content
-
     nsAutoString value;
-
-    nsITextAreaWidget* textArea = nsnull;
-    nsITextWidget* text = nsnull;
-    if (PR_TRUE == IsSingleLineTextControl()) 
-    {
-  #ifdef SingleSignon
-      // get name of text 
-      PRBool failed = PR_TRUE;
-      nsAutoString name;
-      GetName(&name);
-
-      // get url name 
-      char *URLName = nsnull;
-      nsIURL* docURL = nsnull;
-      nsIDocument* doc = nsnull;
-      mContent->GetDocument(doc);
-      if (nsnull != doc) {
-        docURL = doc->GetDocumentURL();
-        NS_RELEASE(doc);
-        if (nsnull != docURL) {
-          const char* spec;
-          (void)docURL->GetSpec(&spec);
-          if (nsnull != spec) {
-            URLName = (char*)PR_Malloc(PL_strlen(spec)+1);
-            PL_strcpy(URLName, spec);
-          }
-          NS_RELEASE(docURL);
-        }
-      }
-
-      if (nsnull != URLName) {
-        // invoke single-signon to get previously-used value of text 
-        nsIWalletService *service;
-        nsresult res = nsServiceManager::GetService(kWalletServiceCID,
-                                                    kIWalletServiceIID,
-                                                    (nsISupports **)&service);
-        if ((NS_OK == res) && (nsnull != service)) {
-          char* valueString = NULL;
-          char* nameString = name.ToNewCString();
-          res = service->SI_RestoreSignonData(URLName, nameString, &valueString);
-          delete[] nameString;
-          NS_RELEASE(service);
-          PR_FREEIF(URLName);
-          if (valueString && *valueString) {
-            value = valueString;
-            failed = PR_FALSE;
-          }
-        }
-      }
-      if (failed) {
-        GetText(&value, PR_TRUE);
-      }
-  #else
-      GetText(&value, PR_TRUE);
-  #endif
-    }
-    else {
-      GetText(&value, PR_TRUE);
-    }
+    GetText(&value, PR_TRUE);
     mEditor->EnableUndo(PR_FALSE);
 
     PRInt32 maxLength;
-    nsresult result = GetMaxLength(&maxLength);
+    result = GetMaxLength(&maxLength);
     if (NS_CONTENT_ATTR_NOT_THERE != result) {
-      mEditor->SetMaxTextLength(maxLength);
+      htmlEditor->SetMaxTextLength(maxLength);
     }
 
     nsCOMPtr<nsIEditor>editor = do_QueryInterface(mEditor);
@@ -1129,7 +1231,7 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
           {
             if (0!=value.Length())
             {
-              result = mEditor->InsertText(value);
+              result = htmlEditor->InsertText(value);
               result = SelectAllTextContent(bodyNode, selection);
             }
             selection->ClearSelection();
@@ -1155,13 +1257,13 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
     {
       PRUint32 flags=0;
       if (IsPlainTextControl()) {
-        flags |= TEXT_EDITOR_FLAG_PLAINTEXT;
+        flags |= nsIHTMLEditor::eEditorPlaintextMask;
       }
       if (IsSingleLineTextControl()) {
-        flags |= TEXT_EDITOR_FLAG_SINGLELINE;
+        flags |= nsIHTMLEditor::eEditorSingleLineMask;
       }
       if (IsPasswordTextControl()) {
-        flags |= TEXT_EDITOR_FLAG_PASSWORD;
+        flags |= nsIHTMLEditor::eEditorPasswordMask;
       }
       nsCOMPtr<nsIContent> content;
       result = mContent->QueryInterface(nsIContent::GetIID(), getter_AddRefs(content));
@@ -1172,13 +1274,13 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
         nsAutoString resultValue;
         result = content->GetAttribute(nameSpaceID, nsHTMLAtoms::readonly, resultValue);
         if (NS_CONTENT_ATTR_NOT_THERE != result) {
-          flags |= TEXT_EDITOR_FLAG_READONLY;
+          flags |= nsIHTMLEditor::eEditorReadonlyMask;
           aPresShell->SetCaretEnabled(PR_FALSE);
         }
         result = content->GetAttribute(nameSpaceID, nsHTMLAtoms::disabled, resultValue);
         if (NS_CONTENT_ATTR_NOT_THERE != result) 
         {
-          flags |= TEXT_EDITOR_FLAG_DISABLED;
+          flags |= nsIHTMLEditor::eEditorDisabledMask;
           aPresShell->SetCaretEnabled(PR_FALSE);
           nsCOMPtr<nsIDocument>doc = do_QueryInterface(aDoc);
           if (doc) {
@@ -1187,6 +1289,31 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
         }
       }
       mEditor->SetFlags(flags);
+
+      // now add the selection listener
+      nsCOMPtr<nsIDOMSelection>selection;
+      if (mEditor)
+      {
+        result = mEditor->GetSelection(getter_AddRefs(selection));
+        if (NS_SUCCEEDED(result) && selection) 
+        {
+          result = NS_NewEnderSelectionListener(getter_AddRefs(mSelectionListener));
+          if (NS_SUCCEEDED(result) && mSelectionListener)
+          {
+            nsCOMPtr<nsIEnderEventListener> eL;
+            eL = do_QueryInterface(mSelectionListener);
+            if (eL)
+            {
+              eL->SetFrame(this);
+              eL->SetPresContext(mFramePresContext);
+            }
+            selection->AddSelectionListener(mSelectionListener); 
+            if (NS_FAILED(result)) { //we couldn't add the listener
+              mSelectionListener = do_QueryInterface(nsnull); // null out the listener, it's useless
+            }
+          }
+        }
+      }
     }
   }
   else { result = NS_ERROR_NULL_POINTER; }
@@ -1194,16 +1321,17 @@ nsGfxTextControlFrame::InitializeTextControl(nsIPresShell *aPresShell, nsIDOMDoc
 }
 
 NS_IMETHODIMP
-nsGfxTextControlFrame::ContentChanged()
+nsGfxTextControlFrame::InternalContentChanged()
 {
-  if (PR_FALSE==IsInitialized()) { return NS_ERROR_NOT_INITIALIZED; }
-  nsAutoString value;
+  if (!IsInitialized()) { return NS_ERROR_NOT_INITIALIZED; }
+  nsAutoString textValue;
   // XXX: need to check here if we're an HTML edit field or a text edit field
-  mEditor->OutputTextToString(value);
-  if (PR_TRUE==IsSingleLineTextControl()) {
-    RemoveNewlines(value); 
+  nsString format ("text/plain");
+  mEditor->OutputToString(textValue, format, 0);
+  if (IsSingleLineTextControl()) {
+    RemoveNewlines(textValue); 
   }
-  SetTextControlFrameState(value);   // set new text value
+  SetTextControlFrameState(textValue);   // set new text value
   return NS_OK;
 }
 
@@ -1252,22 +1380,30 @@ NS_IMPL_ISUPPORTS(EnderFrameLoadingInfo,kISupportsIID);
 NS_IMPL_ADDREF(nsEnderDocumentObserver);
 NS_IMPL_RELEASE(nsEnderDocumentObserver);
 
+nsEnderDocumentObserver::nsEnderDocumentObserver()
+{ 
+  NS_INIT_REFCNT(); 
+}
+
+nsEnderDocumentObserver::~nsEnderDocumentObserver() 
+{
+}
 
 nsresult
 nsEnderDocumentObserver::QueryInterface(const nsIID& aIID,
-                                        void** aInstancePtrResult)
+                                        void** aInstancePtr)
 {
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-  if (nsnull == aInstancePtrResult) {
+  NS_PRECONDITION(nsnull != aInstancePtr, "null pointer");
+  if (nsnull == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
   if (aIID.Equals(kIDocumentObserverIID)) {
-    *aInstancePtrResult = (void*) ((nsIStreamObserver*)this);
+    *aInstancePtr = (void*) ((nsIStreamObserver*)this);
     AddRef();
     return NS_OK;
   }
   if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtrResult = (void*) ((nsISupports*)((nsIDocumentObserver*)this));
+    *aInstancePtr = (void*) ((nsISupports*)((nsIDocumentObserver*)this));
     AddRef();
     return NS_OK;
   }
@@ -1317,7 +1453,7 @@ NS_IMETHODIMP nsEnderDocumentObserver::ContentChanged(nsIDocument *aDocument,
 {
   nsresult result = NS_OK;
   if (mFrame) {
-    result = mFrame->ContentChanged();
+    result = mFrame->InternalContentChanged();
   }
   return result;
 }
@@ -1338,7 +1474,7 @@ NS_IMETHODIMP nsEnderDocumentObserver::ContentAppended(nsIDocument *aDocument,
 {
   nsresult result = NS_OK;
   if (mFrame) {
-    result = mFrame->ContentChanged();
+    result = mFrame->InternalContentChanged();
   }
   return result;
 }
@@ -1350,7 +1486,7 @@ NS_IMETHODIMP nsEnderDocumentObserver::ContentInserted(nsIDocument *aDocument,
 {
   nsresult result = NS_OK;
   if (mFrame) {
-    result = mFrame->ContentChanged();
+    result = mFrame->InternalContentChanged();
   }
   return result;
 }
@@ -1363,7 +1499,7 @@ NS_IMETHODIMP nsEnderDocumentObserver::ContentReplaced(nsIDocument *aDocument,
 {
   nsresult result = NS_OK;
   if (mFrame) {
-    result = mFrame->ContentChanged();
+    result = mFrame->InternalContentChanged();
   }
   return result;
 }
@@ -1375,7 +1511,7 @@ NS_IMETHODIMP nsEnderDocumentObserver::ContentRemoved(nsIDocument *aDocument,
 {
   nsresult result = NS_OK;
   if (mFrame) {
-    result = mFrame->ContentChanged();
+    result = mFrame->InternalContentChanged();
   }
   return result;
 }
@@ -1403,8 +1539,11 @@ NS_IMETHODIMP nsEnderDocumentObserver::StyleRuleRemoved(nsIDocument *aDocument,
                                                         nsIStyleSheet* aStyleSheet,
                                                         nsIStyleRule* aStyleRule)
 { return NS_OK; }
+
 NS_IMETHODIMP nsEnderDocumentObserver::DocumentWillBeDestroyed(nsIDocument *aDocument)
-{ return NS_OK; }
+{ 
+  return NS_OK; 
+}
 
 
 
@@ -1413,18 +1552,39 @@ NS_IMETHODIMP nsEnderDocumentObserver::DocumentWillBeDestroyed(nsIDocument *aDoc
  ******************************************************************************/
 
 nsresult 
-NS_NewEnderKeyListener(nsEnderKeyListener ** aInstancePtrResult)
+NS_NewEnderKeyListener(nsIDOMKeyListener ** aInstancePtr)
 {
   nsEnderKeyListener* it = new nsEnderKeyListener();
   if (nsnull == it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  return it->QueryInterface(kIDOMKeyListenerIID, (void **) aInstancePtrResult);   
+  return it->QueryInterface(kIDOMKeyListenerIID, (void **) aInstancePtr);   
 }
 
 NS_IMPL_ADDREF(nsEnderKeyListener)
 
 NS_IMPL_RELEASE(nsEnderKeyListener)
+
+
+nsEnderKeyListener::nsEnderKeyListener()
+{
+  NS_INIT_REFCNT();
+}
+
+nsEnderKeyListener::~nsEnderKeyListener()
+{
+}
+
+NS_IMETHODIMP
+nsEnderKeyListener::SetFrame(nsGfxTextControlFrame *aFrame)
+{
+  mFrame = aFrame;
+  if (mFrame)
+  {
+    mFrame->GetContent(getter_AddRefs(mContent));
+  }
+  return NS_OK;
+}
 
 nsresult
 nsEnderKeyListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
@@ -1434,7 +1594,9 @@ nsEnderKeyListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   static NS_DEFINE_IID(kIDOMEventListenerIID, NS_IDOMEVENTLISTENER_IID);
   if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtr = (void*)(nsISupports*)this;
+    nsIDOMKeyListener *tmp = this;
+    nsISupports *tmp2 = tmp;
+    *aInstancePtr = (void*) tmp2;
     NS_ADDREF_THIS();
     return NS_OK;
   }
@@ -1445,6 +1607,11 @@ nsEnderKeyListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   if (aIID.Equals(kIDOMKeyListenerIID)) {
     *aInstancePtr = (void*)(nsIDOMKeyListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(nsIEnderEventListener::GetIID())) {
+    *aInstancePtr = (void*)(nsIEnderEventListener*)this;
     NS_ADDREF_THIS();
     return NS_OK;
   }
@@ -1460,45 +1627,531 @@ nsEnderKeyListener::HandleEvent(nsIDOMEvent* aEvent)
 nsresult
 nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
 {
-  PRUint32 keyCode;
-
   nsCOMPtr<nsIDOMUIEvent>uiEvent;
   uiEvent = do_QueryInterface(aKeyEvent);
   if (!uiEvent) { //non-key event passed to keydown.  bad things.
     return NS_OK;
   }
 
-  if (NS_SUCCEEDED(uiEvent->GetKeyCode(&keyCode)))
+  if (mFrame && mContent)
   {
-    if (nsIDOMUIEvent::VK_RETURN==keyCode) 
-    {
-      if (mFrame)
-      {
-        // need the pres context.  could save it from some other function, but that seems so wrong
-        //mFrame->EnterPressed(presContext);
-        return nsEventStatus_eConsumeNoDefault;
-      }
-    }
+    // Dispatch the NS_FORM_CHANGE event
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsKeyEvent event;
+    event.eventStructType = NS_KEY_EVENT;
+    event.widget = nsnull;
+    event.message = NS_KEY_DOWN;
+    event.flags = NS_EVENT_FLAG_INIT;
+    uiEvent->GetKeyCode(&(event.keyCode));
+    uiEvent->GetCharCode(&(event.charCode));
+    uiEvent->GetShiftKey(&(event.isShift));
+    uiEvent->GetCtrlKey(&(event.isControl));
+    uiEvent->GetAltKey(&(event.isAlt));
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+
   }
   
-  return nsEventStatus_eIgnore;
+  return NS_OK;
 }
 
 nsresult
 nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
 {
-  return nsEventStatus_eIgnore;
+  nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  uiEvent = do_QueryInterface(aKeyEvent);
+  if (!uiEvent) { //non-key event passed to keydown.  bad things.
+    return NS_OK;
+  }
+
+  if (mFrame && mContent)
+  {
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsKeyEvent event;
+    event.eventStructType = NS_KEY_EVENT;
+    event.widget = nsnull;
+    event.message = NS_KEY_UP;
+    event.flags = NS_EVENT_FLAG_INIT;
+    uiEvent->GetKeyCode(&(event.keyCode));
+    uiEvent->GetCharCode(&(event.charCode));
+    uiEvent->GetShiftKey(&(event.isShift));
+    uiEvent->GetCtrlKey(&(event.isControl));
+    uiEvent->GetAltKey(&(event.isAlt));
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+  }
+  return NS_OK;
 }
 
 nsresult
 nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
 {
-  return nsEventStatus_eIgnore;
+  nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  uiEvent = do_QueryInterface(aKeyEvent);
+  if (!uiEvent) { //non-key event passed to keydown.  bad things.
+    return NS_OK;
+  }
+
+  if (mFrame && mContent)
+  {
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsKeyEvent event;
+    event.eventStructType = NS_KEY_EVENT;
+    event.widget = nsnull;
+    event.message = NS_KEY_PRESS;
+    event.flags = NS_EVENT_FLAG_INIT;
+    uiEvent->GetKeyCode(&(event.keyCode));
+    uiEvent->GetCharCode(&(event.charCode));
+    uiEvent->GetShiftKey(&(event.isShift));
+    uiEvent->GetCtrlKey(&(event.isControl));
+    uiEvent->GetAltKey(&(event.isAlt));
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+  }
+  return NS_OK;
 }
 
 
 
+/*******************************************************************************
+ * nsEnderMouseListener
+ ******************************************************************************/
+/*
+nsresult 
+NS_NewEnderMouseListener(nsIDOMMouseListener ** aInstancePtr)
+{
+  nsEnderMouseListener* it = new nsEnderMouseListener();
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  return it->QueryInterface(kIDOMMouseListenerIID, (void **) aInstancePtr);   
+}
 
+NS_IMPL_ADDREF(nsEnderMouseListener)
+
+NS_IMPL_RELEASE(nsEnderMouseListener)
+
+
+nsEnderMouseListener::nsEnderMouseListener()
+{
+  NS_INIT_REFCNT();
+}
+
+nsEnderMouseListener::~nsEnderMouseListener()
+{
+}
+
+NS_IMETHODIMP
+nsEnderMouseListener::SetFrame(nsGfxTextControlFrame *aFrame)
+{
+  mFrame = aFrame;
+  if (mFrame)
+  {
+    mFrame->GetContent(getter_AddRefs(mContent));
+  }
+  return NS_OK;
+}
+
+nsresult
+nsEnderMouseListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (nsnull == aInstancePtr) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  static NS_DEFINE_IID(kIDOMEventListenerIID, NS_IDOMEVENTLISTENER_IID);
+  if (aIID.Equals(kISupportsIID)) {
+    nsIDOMMouseListener *tmp = this;
+    nsISupports *tmp2 = tmp;
+    *aInstancePtr = (void*) tmp2;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIDOMEventListenerIID)) {
+    *aInstancePtr = (void*)(nsIDOMEventListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIDOMMouseListenerIID)) {
+    *aInstancePtr = (void*)(nsIDOMMouseListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(nsIEnderEventListener::GetIID())) {
+    *aInstancePtr = (void*)(nsIEnderEventListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  return NS_NOINTERFACE;
+}
+
+nsresult
+nsEnderMouseListener::HandleEvent(nsIDOMEvent* aEvent)
+{
+  return NS_OK;
+}
+
+nsresult
+nsEnderMouseListener::MouseDown(nsIDOMEvent* aEvent)
+{
+  nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  uiEvent = do_QueryInterface(aEvent);
+  if (!uiEvent) { //non-key event passed in.  bad things.
+    return NS_OK;
+  }
+
+  if (mFrame && mContent)
+  {
+    // Dispatch the event
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsMouseEvent event;
+    event.eventStructType = NS_MOUSE_EVENT;
+    event.widget = nsnull;
+    event.flags = NS_EVENT_FLAG_INIT;
+    uiEvent->GetShiftKey(&(event.isShift));
+    uiEvent->GetCtrlKey(&(event.isControl));
+    uiEvent->GetAltKey(&(event.isAlt));
+    PRUint16 clickCount;
+    uiEvent->GetClickcount(&clickCount);
+    NS_ASSERTION(clickCount>0 && clickCount<3, "bad click count");
+    if (!(clickCount>0 && clickCount<3))
+      return NS_OK;
+    event.clickCount = clickCount;
+    PRUint16 button;
+    uiEvent->GetButton(&button);
+    switch(button)
+    {
+      case 1: //XXX: I can't believe there isn't a symbol for this!
+        if (1==clickCount)
+          event.message = NS_MOUSE_LEFT_BUTTON_DOWN;
+        else if (2==clickCount)
+          event.message = NS_MOUSE_LEFT_DOUBLECLICK;
+        break;
+      case 2: //XXX: I can't believe there isn't a symbol for this!
+        if (1==clickCount)
+          event.message = NS_MOUSE_MIDDLE_BUTTON_DOWN;
+        else if (2==clickCount)
+          event.message = NS_MOUSE_MIDDLE_DOUBLECLICK;
+        break;
+      case 3: //XXX: I can't believe there isn't a symbol for this!
+        if (1==clickCount)
+          event.message = NS_MOUSE_RIGHT_BUTTON_DOWN;
+        else if (2==clickCount)
+          event.message = NS_MOUSE_RIGHT_DOUBLECLICK;
+        break;
+      default:
+        NS_ASSERTION(0, "bad button type");
+        return NS_OK;
+    }
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+
+  }
+  
+  return NS_OK;
+}
+
+nsresult
+nsEnderMouseListener::MouseUp(nsIDOMEvent* aEvent)
+{
+  //XXX write me!
+  return NS_OK;
+}
+
+nsresult
+nsEnderMouseListener::MouseClick(nsIDOMEvent* aEvent)
+{
+  //XXX write me!
+  return NS_OK;
+}
+
+nsresult
+nsEnderMouseListener::MouseDblClick(nsIDOMEvent* aEvent)
+{
+  //XXX write me!
+  return NS_OK;
+}
+
+
+nsresult
+nsEnderMouseListener::MouseOver(nsIDOMEvent* aEvent)
+{
+  //XXX write me!
+  return NS_OK;
+}
+
+
+nsresult
+nsEnderMouseListener::MouseOut(nsIDOMEvent* aEvent)
+{
+  //XXX write me!
+  return NS_OK;
+}
+
+*/
+
+/*******************************************************************************
+ * nsEnderFocusListener
+ ******************************************************************************/
+
+nsresult 
+NS_NewEnderFocusListener(nsIDOMFocusListener ** aInstancePtr)
+{
+  nsEnderFocusListener* it = new nsEnderFocusListener();
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  return it->QueryInterface(kIDOMFocusListenerIID, (void **) aInstancePtr);   
+}
+
+NS_IMPL_ADDREF(nsEnderFocusListener)
+
+NS_IMPL_RELEASE(nsEnderFocusListener)
+
+
+nsEnderFocusListener::nsEnderFocusListener()
+{
+  NS_INIT_REFCNT();
+}
+
+nsEnderFocusListener::~nsEnderFocusListener()
+{
+}
+
+NS_IMETHODIMP
+nsEnderFocusListener::SetFrame(nsGfxTextControlFrame *aFrame)
+{
+  mFrame = aFrame;
+  if (mFrame)
+  {
+    mFrame->GetContent(getter_AddRefs(mContent));
+  }
+  return NS_OK;
+}
+
+nsresult
+nsEnderFocusListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (nsnull == aInstancePtr) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  static NS_DEFINE_IID(kIDOMEventListenerIID, NS_IDOMEVENTLISTENER_IID);
+  if (aIID.Equals(kISupportsIID)) {
+    nsIDOMFocusListener *tmp = this;
+    nsISupports *tmp2 = tmp;
+    *aInstancePtr = (void*) tmp2;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIDOMEventListenerIID)) {
+    *aInstancePtr = (void*)(nsIDOMEventListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIDOMFocusListenerIID)) {
+    *aInstancePtr = (void*)(nsIDOMFocusListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(nsIEnderEventListener::GetIID())) {
+    *aInstancePtr = (void*)(nsIEnderEventListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  return NS_NOINTERFACE;
+}
+
+nsresult
+nsEnderFocusListener::HandleEvent(nsIDOMEvent* aEvent)
+{
+  return NS_OK;
+}
+
+nsresult
+nsEnderFocusListener::Focus(nsIDOMEvent* aEvent)
+{
+  nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  uiEvent = do_QueryInterface(aEvent);
+  if (!uiEvent) { 
+    return NS_OK;
+  }
+
+  if (mFrame && mContent)
+  {
+    mTextValue = "";
+    mFrame->GetText(&mTextValue, PR_FALSE);
+    // Dispatch the event
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsGUIEvent event;
+    event.eventStructType = NS_GUI_EVENT;
+    event.widget = nsnull;
+    event.message = NS_FOCUS_CONTENT;
+    event.flags = NS_EVENT_FLAG_INIT;
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+  }
+  return NS_OK;
+}
+
+nsresult
+nsEnderFocusListener::Blur(nsIDOMEvent* aEvent)
+{
+  nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  uiEvent = do_QueryInterface(aEvent);
+  if (!uiEvent) {
+    return NS_OK;
+  }
+
+  if (mFrame && mContent)
+  {
+    nsString currentValue;
+    mFrame->GetText(&currentValue, PR_FALSE);
+    if (PR_FALSE==currentValue.Equals(mTextValue))
+    {
+      // Dispatch the change event
+      nsEventStatus status = nsEventStatus_eIgnore;
+      nsGUIEvent event;
+      event.eventStructType = NS_GUI_EVENT;
+      event.widget = nsnull;
+      event.message = NS_FORM_CHANGE;
+      event.flags = NS_EVENT_FLAG_INIT;
+
+      // Have the content handle the event.
+      mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+      // Now have the frame handle the event
+      mFrame->HandleEvent(*mContext, &event, status);
+    }
+
+    // Dispatch the blur event
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsGUIEvent event;
+    event.eventStructType = NS_GUI_EVENT;
+    event.widget = nsnull;
+    event.message = NS_BLUR_CONTENT;
+    event.flags = NS_EVENT_FLAG_INIT;
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+  }
+  return NS_OK;
+}
+
+
+/*******************************************************************************
+ * nsEnderSelectionListener
+ ******************************************************************************/
+
+nsresult 
+NS_NewEnderSelectionListener(nsIDOMSelectionListener ** aInstancePtr)
+{
+  nsEnderSelectionListener* it = new nsEnderSelectionListener();
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  return it->QueryInterface(nsIDOMSelectionListener::GetIID(), (void **) aInstancePtr);   
+}
+
+NS_IMPL_ADDREF(nsEnderSelectionListener)
+
+NS_IMPL_RELEASE(nsEnderSelectionListener)
+
+
+nsEnderSelectionListener::nsEnderSelectionListener()
+{
+  NS_INIT_REFCNT();
+}
+
+nsEnderSelectionListener::~nsEnderSelectionListener()
+{
+}
+
+NS_IMETHODIMP
+nsEnderSelectionListener::SetFrame(nsGfxTextControlFrame *aFrame)
+{
+  mFrame = aFrame;
+  if (mFrame)
+  {
+    mFrame->GetContent(getter_AddRefs(mContent));
+  }
+  return NS_OK;
+}
+
+nsresult
+nsEnderSelectionListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (nsnull == aInstancePtr) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  static NS_DEFINE_IID(kIDOMEventListenerIID, NS_IDOMEVENTLISTENER_IID);
+  if (aIID.Equals(kISupportsIID)) {
+    nsIDOMSelectionListener *tmp = this;
+    nsISupports *tmp2 = tmp;
+    *aInstancePtr = (void*) tmp2;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIDOMEventListenerIID)) {
+    *aInstancePtr = (void*)(nsIDOMEventListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(nsIDOMSelectionListener::GetIID())) {
+    *aInstancePtr = (void*)(nsIDOMSelectionListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(nsIEnderEventListener::GetIID())) {
+    *aInstancePtr = (void*)(nsIEnderEventListener*)this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  return NS_NOINTERFACE;
+}
+
+NS_IMETHODIMP
+nsEnderSelectionListener::NotifySelectionChanged()
+{
+  if (mFrame && mContent)
+  {
+    // Dispatch the event
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsGUIEvent event;
+    event.eventStructType = NS_GUI_EVENT;
+    event.widget = nsnull;
+    event.message = NS_FORM_SELECTED;
+    event.flags = NS_EVENT_FLAG_INIT;
+
+    // Have the content handle the event.
+    mContent->HandleDOMEvent(*mContext, &event, nsnull, NS_EVENT_FLAG_INIT, status); 
+    
+    // Now have the frame handle the event
+    mFrame->HandleEvent(*mContext, &event, status);
+  }
+  return NS_OK;
+}
 
 
 /*******************************************************************************
@@ -1509,21 +2162,25 @@ nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
 NS_IMPL_ADDREF(EnderTempObserver);
 NS_IMPL_RELEASE(EnderTempObserver);
 
+EnderTempObserver::~EnderTempObserver()
+{
+}
+
 nsresult
 EnderTempObserver::QueryInterface(const nsIID& aIID,
-                            void** aInstancePtrResult)
+                                  void** aInstancePtr)
 {
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-  if (nsnull == aInstancePtrResult) {
+  NS_PRECONDITION(nsnull != aInstancePtr, "null pointer");
+  if (nsnull == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
   if (aIID.Equals(kIStreamObserverIID)) {
-    *aInstancePtrResult = (void*) ((nsIStreamObserver*)this);
+    *aInstancePtr = (void*) ((nsIStreamObserver*)this);
     AddRef();
     return NS_OK;
   }
   if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtrResult = (void*) ((nsISupports*)((nsIDocumentObserver*)this));
+    *aInstancePtr = (void*) ((nsISupports*)((nsIDocumentObserver*)this));
     AddRef();
     return NS_OK;
   }
@@ -1531,26 +2188,37 @@ EnderTempObserver::QueryInterface(const nsIID& aIID,
 }
 
 
+#ifndef NECKO
 NS_IMETHODIMP
-EnderTempObserver::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
+EnderTempObserver::OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-EnderTempObserver::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+EnderTempObserver::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
+{
+  return NS_OK;
+}
+#endif
+
+NS_IMETHODIMP
+#ifdef NECKO
+EnderTempObserver::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+EnderTempObserver::OnStartRequest(nsIURI* aURL, const char *aContentType)
+#endif
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-EnderTempObserver::OnStartBinding(nsIURL* aURL, const char *aContentType)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-EnderTempObserver::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg)
+#ifdef NECKO
+EnderTempObserver::OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status,
+                                 const PRUnichar *errorMsg)
+#else
+EnderTempObserver::OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg)
+#endif
 {
   if (PR_TRUE==mFirstCall)
   {

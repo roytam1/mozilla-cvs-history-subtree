@@ -24,12 +24,10 @@ MODULE=appcores
 EXPORTS=  \
 		nsIDOMAppCoresManager.h		\
 		nsIDOMBaseAppCore.h		\
-		nsIDOMDOMPropsCore.h		\
 		nsIDOMProfileCore.h		\
 		nsIDOMRDFCore.h			\
 		nsIDOMToolkitCore.h		\
 		nsIDOMBrowserAppCore.h		\
-		nsIDOMEditorAppCore.h		\
 		nsAppCoresCIDs.h       
 
 include <$(DEPTH)\config\rules.mak>

@@ -46,7 +46,7 @@ class nsIContentSink;
 class nsIStreamObserver;
 class nsIParserFilter;
 class nsString;
-class nsIURL;
+class nsIURI;
 
 
 enum  eParseMode {
@@ -95,8 +95,10 @@ public:
  *  
  *  @update  gess 3/25/98
  */
-class nsIParser : public nsISupports {
+CLASS_EXPORT_HTMLPARS nsIParser : public nsISupports {
   public:
+
+    static const nsIID& GetIID() { static nsIID iid = NS_IPARSER_IID; return iid; }
 
     /**
      *  Call this method if you have a DTD that you want to share with the parser.
@@ -163,14 +165,15 @@ class nsIParser : public nsISupports {
      *  until you wind up being emitted to the given contentsink (which may or may not
 	   *  be a proxy for the NGLayout content model).
      ******************************************************************************************/
-    virtual PRBool    EnableParser(PRBool aState) = 0;
+    virtual nsresult  EnableParser(PRBool aState) = 0;
     virtual PRBool    IsParserEnabled() = 0;
-    virtual nsresult  Parse(nsIURL* aURL,nsIStreamObserver* aListener = nsnull,PRBool aEnableVerify=PR_FALSE, void* aKey=0) = 0;
-    virtual nsresult	Parse(nsIInputStream& aStream, PRBool aEnableVerify=PR_FALSE, void* aKey=0) = 0;
-    virtual nsresult  Parse(nsString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aEnableVerify,PRBool aLastCall) = 0;
+    virtual nsresult  Parse(nsIURI* aURL,nsIStreamObserver* aListener = nsnull,PRBool aEnableVerify=PR_FALSE, void* aKey=0,eParseMode aMode=eParseMode_autodetect) = 0;
+    virtual nsresult	Parse(nsIInputStream& aStream, PRBool aEnableVerify=PR_FALSE, void* aKey=0,eParseMode aMode=eParseMode_autodetect) = 0;
+    virtual nsresult  Parse(const nsString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aEnableVerify,PRBool aLastCall,eParseMode aMode=eParseMode_autodetect) = 0;
+    virtual nsresult  Terminate(void) = 0;
 
-    virtual PRBool    IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType)=0;
-    virtual nsresult  ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType)=0;
+    virtual PRBool    IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,eParseMode aMode=eParseMode_autodetect)=0;
+    virtual nsresult  ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,eParseMode aMode=eParseMode_autodetect)=0;
 
     /**
      * This method gets called when the tokens have been consumed, and it's time
@@ -218,14 +221,14 @@ class nsIParser : public nsISupports {
 #define NS_ERROR_HTMLPARSER_CONTINUE              NS_OK
 
 
-const PRInt32   kEOF              = NS_ERROR_HTMLPARSER_EOF;
-const PRInt32   kUnknownError     = NS_ERROR_HTMLPARSER_UNKNOWN;
-const PRInt32   kCantPropagate    = NS_ERROR_HTMLPARSER_CANTPROPAGATE;
-const PRInt32   kContextMismatch  = NS_ERROR_HTMLPARSER_CONTEXTMISMATCH;
-const PRInt32   kBadFilename      = NS_ERROR_HTMLPARSER_BADFILENAME;
-const PRInt32   kBadURL           = NS_ERROR_HTMLPARSER_BADURL;
-const PRInt32   kInvalidParserContext = NS_ERROR_HTMLPARSER_INVALIDPARSERCONTEXT;
-const PRInt32   kBlocked          = NS_ERROR_HTMLPARSER_BLOCK;
+const PRUint32  kEOF              = NS_ERROR_HTMLPARSER_EOF;
+const PRUint32  kUnknownError     = NS_ERROR_HTMLPARSER_UNKNOWN;
+const PRUint32  kCantPropagate    = NS_ERROR_HTMLPARSER_CANTPROPAGATE;
+const PRUint32  kContextMismatch  = NS_ERROR_HTMLPARSER_CONTEXTMISMATCH;
+const PRUint32  kBadFilename      = NS_ERROR_HTMLPARSER_BADFILENAME;
+const PRUint32  kBadURL           = NS_ERROR_HTMLPARSER_BADURL;
+const PRUint32  kInvalidParserContext = NS_ERROR_HTMLPARSER_INVALIDPARSERCONTEXT;
+const PRUint32  kBlocked          = NS_ERROR_HTMLPARSER_BLOCK;
 
 const PRUint32  kNewLine          = '\n';
 const PRUint32  kCR               = '\r';

@@ -781,7 +781,7 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 	if(max_number_of_connections < 1)
 		max_number_of_connections = 1;
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
 	signal(SIGPIPE, SIG_IGN);
 #endif
 	
@@ -3322,8 +3322,10 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type) {
             } /* end while() */
 
 			if(!ready_fd) {
-                /* couldn't find the active socket.  Shouldn't ever happen */
-                PR_ASSERT(0);
+#ifdef DEBUG
+                printf("couldn't find the active socket.  Shouldn't ever happen");
+#endif
+		/* PR_ASSERT(0); */
                 LIBNET_UNLOCK_AND_RETURN(XP_ListIsEmpty(net_EntryList) ? 0 : 1);
             }
         } /* end if(fd_type == NET_SOCKET_FD) */

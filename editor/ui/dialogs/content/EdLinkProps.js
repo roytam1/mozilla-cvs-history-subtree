@@ -1,41 +1,33 @@
-var editorShell;
 var anchorElement = null;
+var imageElement = null;
 var insertNew = true;
 var needLinkText = false;
-var selection;
 var insertLinkAroundSelection = false;
+var linkTextInput;
+var hrefInput;
+var linkMessage;
 
-// NOTE: Use "HREF" instead of "A" to distinguish from Named Anchor
-// The returned node is has an "A" tagName
-var tagName = "HREF";
-var dialog;
+// NOTE: Use "href" instead of "a" to distinguish from Named Anchor
+// The returned node is has an "a" tagName
+var tagName = "href";
 
 // dialog initialization code
 function Startup()
 {
-  dump("Doing Startup...\n");
-
-  // get the editor shell from the parent window
-  editorShell = window.opener.editorShell;
-  editorShell = editorShell.QueryInterface(Components.interfaces.nsIEditorShell);
-
-  if(!editorShell) {
-    dump("editorShell not found!!!\n");
-    window.close();
-    return;  
-  }
+  if (!InitEditorShell())
+    return;
+  dump("Starting Link Properties Dialog\n");
   
-  // Create dialog object to store controls for easy access
-  dialog = new Object;
-  dialog.linkTextInput    = document.getElementById("linkTextInput");
-  dialog.hrefInput        = document.getElementById("hrefInput");
+  // Message was wrapped in a <label> or <div>, so actual text is a child text node
+  linkCaption      = (document.getElementById("linkTextCaption")).firstChild;
+  linkMessage      = (document.getElementById("linkTextMessage")).firstChild;
+  linkTextInput    = document.getElementById("linkTextInput");
+  hrefInput        = document.getElementById("hrefInput");
 
-  // Kinda clunky: Message was wrapped in a <p>, so actual message is a child text node
-  dialog.linkMessage      = (document.getElementById("linkMessage")).firstChild;
-
-  if (null == dialog.linkTextInput || 
-      null == dialog.hrefInput ||
-      null == dialog.linkMessage )
+  if (!linkTextInput || 
+      !hrefInput ||
+      !linkMessage ||
+      !linkCaption)
   {
     dump("Not all dialog controls were found!!!\n");
   }
@@ -47,17 +39,18 @@ function Startup()
 
   if (insertNew) {
     dump("Setting focus to linkTextInput\n");
-    dialog.linkTextInput.focus();
+    // We will be using the HREF inputbox, so text message
+    linkTextInput.focus();
   } else {
     dump("Setting focus to linkTextInput\n");
-    dialog.hrefInput.focus();
+    hrefInput.focus();
 
     // We will not insert a new link at caret, so remove link text input field
-    parentNode = dialog.linkTextInput.parentNode;
+    parentNode = linkTextInput.parentNode;
     if (parentNode) {
       dump("Removing link text input field.\n");
-      parentNode.removeChild(dialog.linkTextInput);
-      dialog.linkTextInput = null;
+      parentNode.removeChild(linkTextInput);
+      linkTextInput = null;
     }
   }
 }
@@ -67,7 +60,7 @@ function initDialog()
   // Get a single selected anchor element
   anchorElement = editorShell.GetSelectedElement(tagName);
 
-  selection = editorShell.editorSelection;
+  var selection = editorShell.editorSelection;
   if (selection) {
     dump("There is a selection: collapsed = "+selection.isCollapsed+"\n");
   } else {
@@ -75,33 +68,68 @@ function initDialog()
   }
 
   if (anchorElement) {
-    dump("found anchor element\n");
     // We found an element and don't need to insert one
+    dump("found anchor element\n");
     insertNew = false;
-  } else {
-    // We don't have an element selected, 
-    //  so create one with default attributes
-    dump("Element not selected - calling createElementWithDefaults\n");
-    anchorElement = editorShell.CreateElementWithDefaults(tagName);
 
-    // We will insert a new link at caret location if there's no selection
-    // TODO: This isn't entirely correct. If selection doesn't have any text
-    //   or an image, then shouldn't we clear the selection and insert new text?
-    insertNew = selection.isCollapsed;
-    dump("insertNew is " + insertNew + "\n");
+    // We get the anchor if any of the selection (or just caret)
+    //  is enclosed by the link. Select the entire link
+    //  so we can show the selection text
+    editorShell.SelectElement(anchorElement);
+    selection = editorShell.editorSelection;
+
+    hrefInput.value = anchorElement.getAttribute("href");
+    dump("Current HREF: "+hrefInput.value+"\n");
+  } else {
+    // See if we have a selected image instead of text
+    imageElement = editorShell.GetSelectedElement("img");
+    if (imageElement) {
+      // See if the image is a child of a link
+      dump("Image element found - check if its a link...\n");
+      dump("Image Parent="+parent);
+      parent = imageElement.parentNode;
+        dump("Parent="+parent+" nodeName="+parent.nodeName+"\n");
+      if (parent) {
+        anchorElement = parent;
+        insertNew = false;
+        // GET THIS FROM STRING BUNDLE
+        linkCaption.data = "Link image:"
+        // Link source string is the source URL of image
+        // TODO: THIS STILL DOESN'T HANDLE MULTIPLE SELECTED IMAGES!
+        linkMessage.data = imageElement.getAttribute("src");;
+      }
+    } else {
+      // We don't have an element selected, 
+      //  so create one with default attributes
+      dump("Element not selected - calling createElementWithDefaults\n");
+      anchorElement = editorShell.CreateElementWithDefaults(tagName);
+
+      // We will insert a new link at caret location if there's no selection
+      // TODO: This isn't entirely correct. If selection doesn't have any text
+      //   or an image, then shouldn't we clear the selection and insert new text?
+      insertNew = selection.isCollapsed;
+      dump("insertNew is " + insertNew + "\n");
+      linkCaption.data = "Enter text for the link:"
+      linkMessage.data = "";
+    }
   }
   if(!anchorElement)
   {
     dump("Failed to get selected element or create a new one!\n");
     window.close();
-  } else if (!insertNew) {
-      dump("Need to get selected text\n");
+  } else if (!insertNew && !imageElement) {
 
     // Replace the link message with the link source string
-    // TODO: Get the text of the selection WHAT ABOUT IMAGES?
-    //  Maybe have a special method "GetLinkSource" that resolves images as
-    //   their URL? E.g.: "Link source [image:http://myimage.gif]"
-    dialog.linkMessage.data = "[Link source text or image URL goes here]";
+    selectedText = GetSelectionAsText();
+    if (selectedText.length > 0) {
+      // Use just the first 50 characters and add "..."
+      selectedText = TruncateStringAtWordEnd(selectedText, 50, true);
+    } else {
+      dump("Selected text for link source not found. Non-text elements selected?\n");
+    }
+    linkMessage.data = selectedText;
+    // The label above the selected text:
+    linkCaption.data = "Link text:"
   }
 
   if (!selection.isCollapsed)
@@ -117,46 +145,66 @@ function initDialog()
   }
 }
 
-function chooseFile()
+function ChooseFile()
 {
   // Get a local file, converted into URL format
   fileName = editorShell.GetLocalFileURL(window, "html");
-  if (fileName != "") {
-    dialog.hrefInput.value = fileName;
+  if (StringExists(fileName)) {
+    hrefInput.value = fileName;
   }
   // Put focus into the input field
-  dialog.hrefInput.focus();
+  hrefInput.focus();
+}
+
+function RemoveLink()
+{
+  // Simple clear the input field!
+  hrefInput.value = "";
 }
 
 function onOK()
 {
   // TODO: VALIDATE FIELDS BEFORE COMMITING CHANGES
 
-  // Coalesce into one undo transaction
-  editorShell.BeginBatchChanges();
+  href = TrimString(hrefInput.value);
+  if (href.length > 0) {
+    // Coalesce into one undo transaction
+    editorShell.BeginBatchChanges();
 
-  // Set the HREF directly on the editor document's anchor node
-  //  or on the newly-created node if insertNew is true
-  dump(anchorElement + "\n");
-  anchorElement.setAttribute("href",dialog.hrefInput.value);
+    // Set the HREF directly on the editor document's anchor node
+    //  or on the newly-created node if insertNew is true
+    anchorElement.setAttribute("href",href);
 
-  // Get text to use for a new link
-  if (insertNew) {
-    // Append the link text as the last child node 
-    //   of the anchor node
-    dump("Creating text node\n");
-    textNode = editorShell.editorDocument.createTextNode(dialog.linkTextInput.value);
-    if (textNode) {
-      anchorElement.appendChild(textNode);
+    // Get text to use for a new link
+    if (insertNew) {
+      // Append the link text as the last child node 
+      //   of the anchor node
+      dump("Creating text node\n");
+      newText = TrimString(linkTextInput.value);
+      if (newText.length == 0) {
+        ShowInputErrorMessage("You must enter some text for this link.");
+        linkTextInput.focus();
+        return;
+      }
+      textNode = editorShell.editorDocument.createTextNode(newText);
+      if (textNode) {
+        anchorElement.appendChild(textNode);
+      }
+      dump("Inserting\n");
+      editorShell.InsertElement(anchorElement, false);
+    } else if (insertLinkAroundSelection) {
+      // Text was supplied by the selection,
+      //  so insert a link node as parent of this text
+      dump("Setting link around selected text\n");
+      editorShell.InsertLinkAroundSelection(anchorElement);
     }
-    dump("Inserting\n");
-    editorShell.InsertElement(anchorElement, true);
-  } else if (insertLinkAroundSelection) {
-    dump("Setting link around selected text\n");
-    editorShell.InsertLinkAroundSelection(anchorElement);
+    editorShell.EndBatchChanges();
+  } else if (!insertNew) {
+    // We already had a link, but empty HREF means remove it
+    editorShell.RemoveTextProperty("a", "");
   }
-  editorShell.EndBatchChanges();
-
+  // Note: if HREF is empty and we were inserting a new link, do nothing
+  
   window.close();
 }
 

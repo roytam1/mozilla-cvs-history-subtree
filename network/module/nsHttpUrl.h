@@ -26,13 +26,13 @@
 #include "nsIPostToServer.h"
 #include "nsCOMPtr.h"
 
-class nsHttpUrlImpl : public nsIURL, public nsINetlibURL, public nsIHttpURL,
+class nsHttpUrlImpl : public nsIURI, public nsINetlibURL, public nsIHttpURL,
                       public nsIPostToServer    // XXX for now
 {
 public:
-    // from nsIURL:
+    // from nsIURI:
 
-    NS_IMETHOD_(PRBool) Equals(const nsIURL *aURL) const;
+    NS_IMETHOD_(PRBool) Equals(const nsIURI *aURL) const;
     NS_IMETHOD GetSpec(const char* *result) const;
     NS_IMETHOD SetSpec(const char* spec);
     NS_IMETHOD GetProtocol(const char* *result) const;
@@ -51,8 +51,8 @@ public:
     NS_IMETHOD SetContainer(nsISupports* container);
     NS_IMETHOD GetLoadAttribs(nsILoadAttribs* *result) const;
     NS_IMETHOD SetLoadAttribs(nsILoadAttribs* loadAttribs);
-    NS_IMETHOD GetURLGroup(nsIURLGroup* *result) const;
-    NS_IMETHOD SetURLGroup(nsIURLGroup* group);
+    NS_IMETHOD GetLoadGroup(nsILoadGroup* *result) const;
+    NS_IMETHOD SetLoadGroup(nsILoadGroup* group);
     NS_IMETHOD SetPostHeader(const char* name, const char* value);
     NS_IMETHOD SetPostData(nsIInputStream* input);
     NS_IMETHOD GetContentLength(PRInt32 *len);
@@ -73,7 +73,7 @@ public:
         Send_DataFromFile
     } SendType;
 
-    nsHttpUrlImpl(nsISupports* aContainer, nsIURLGroup* aGroup);
+    nsHttpUrlImpl(nsISupports* aContainer, nsILoadGroup* aGroup);
 
     NS_DECL_ISUPPORTS
 
@@ -87,7 +87,7 @@ public:
     /* Handle http-equiv meta tags. */
     NS_IMETHOD  AddMimeHeader(const char *name, const char *value);
 
-    nsresult ParseURL(const nsString& aSpec, const nsIURL* aURL = nsnull);
+    nsresult ParseURL(const nsString& aSpec, const nsIURI* aURL = nsnull);
 
 protected:
     virtual ~nsHttpUrlImpl();
@@ -113,7 +113,7 @@ protected:
     nsCOMPtr<nsIInputStream> mPostData;
     nsISupports*             mContainer;    // explicitly changed to no longer own its container
     nsCOMPtr<nsILoadAttribs> mLoadAttribs;
-    nsIURLGroup*             mURLGroup;     // explicitly changed to no longer own its group
+    nsILoadGroup*             mLoadGroup;     // explicitly changed to no longer own its group
 };
 
 #endif // nsHttpUrl_h__

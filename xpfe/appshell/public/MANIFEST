@@ -4,13 +4,10 @@
 
 nsAppleEvents.h
 nsAppShellCIDs.h
-nsIAppShellService.h
 nsICmdLineService.h
 nsIWebShellWindow.h
-nsIWidgetController.h
 nsFileLocations.h
 nsIXULWindowCallbacks.h
 nsIDOMXPConnectFactory.h
 nsINetSupportDialogService.h
-nsIWindowMediator.h
 nsISessionHistory.h

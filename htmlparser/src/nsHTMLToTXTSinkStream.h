@@ -37,13 +37,11 @@
 #ifndef  NS_HTMLTOTEXTSINK_STREAM
 #define  NS_HTMLTOTEXTSINK_STREAM
 
-#include "nsIParserNode.h"
 #include "nsIHTMLContentSink.h"
-#include "nshtmlpars.h"
-#include "nsHTMLTokens.h"
 
+#include "nsHTMLTags.h"
 
-#define NS_HTMLTOTEXTSINK_STREAM_IID  \
+#define NS_HTMLTOTEXTSINK_STREAM_CID  \
   {0xa39c6bff, 0x15f0, 0x11d2, \
   {0x80, 0x41, 0x0, 0x10, 0x4b, 0x98, 0x3f, 0xd4}}
 
@@ -51,14 +49,15 @@
 class nsIUnicodeEncoder;
 class nsIOutputStream;
 
-class nsHTMLToTXTSinkStream : public nsIHTMLContentSink {
+class nsHTMLToTXTSinkStream : public nsIHTMLContentSink
+{
   public:
 
   /**
    * Standard constructor
    * @update	gpk02/03/99
    */
-  nsHTMLToTXTSinkStream(nsIOutputStream* aOutStream, nsString* aOutString); 
+  nsHTMLToTXTSinkStream(nsIOutputStream* aOutStream, nsString* aOutString);
 
   /**
    * virtual destructor
@@ -87,6 +86,7 @@ class nsHTMLToTXTSinkStream : public nsIHTMLContentSink {
   NS_IMETHOD NotifyError(const nsParserError* aError);
   NS_IMETHOD AddComment(const nsIParserNode& aNode);
   NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
 
   /*******************************************************************
    * The following methods are inherited from nsIHTMLContentSink.
@@ -109,47 +109,59 @@ class nsHTMLToTXTSinkStream : public nsIHTMLContentSink {
   NS_IMETHOD BeginContext(PRInt32 aPosition);
   NS_IMETHOD EndContext(PRInt32 aPosition);
 
-
-
-protected:
-
-    
-    void EnsureBufferSize(PRInt32 aNewSize);
-
-    nsresult InitEncoder(const nsString& aCharset);
-
-    void Write(const nsString& aString);
-    void EncodeToBuffer(const nsString& aString);
-    
-
-
+  /*******************************************************************
+   * The following methods are specific to this class.
+   *******************************************************************/
+  NS_IMETHOD SetWrapColumn(PRUint32 aWrapCol)   { mWrapColumn = aWrapCol; return NS_OK; };
+  NS_IMETHOD DoPrettyPrint(PRBool aPP)          { mPrettyPrint = aPP; return NS_OK; };
 
 protected:
-    nsIOutputStream* mStream;
-    nsString*        mString;
+  void EnsureBufferSize(PRInt32 aNewSize);
 
-    PRInt32         mIndent;
-    PRInt32         mColPos;
-    PRBool          mDoOutput;
+  nsresult InitEncoder(const nsString& aCharset);
 
-    char*           mBuffer;
-    PRInt32         mBufferLength;  // The length of the data in the buffer
-    PRInt32         mBufferSize;    // The actual size of the buffer, regardless of the data
+  void Write(const nsString& aString);
+  void WriteWrapped(const nsString& aString);
+  void EncodeToBuffer(const nsString& aString);
 
-    nsIUnicodeEncoder*  mUnicodeEncoder;
-    nsString            mCharsetOverride;
-   
+protected:
+  nsIOutputStream* mStream;
+  nsString*        mString;
 
+  PRInt32          mIndent;
+  PRInt32          mColPos;
+  PRBool           mDoOutput;
+  PRBool           mPrettyPrint;
+  PRUint32         mWrapColumn;
+
+  // The tag stack: the stack of tags we're operating on, so we can nest:
+  nsHTMLTag       *mTagStack;
+  PRUint32         mTagStackIndex;
+
+  // The stack for ordered lists:
+  PRInt32         *mOLStack;
+  PRUint32         mOLStackIndex;
+
+  char*            mBuffer;
+  PRInt32          mBufferLength;  // The length of the data in the buffer
+  PRInt32          mBufferSize;    // The actual size of the buffer, regardless of the data
+
+  nsIUnicodeEncoder*  mUnicodeEncoder;
+  nsString            mCharsetOverride;
 };
 
 extern NS_HTMLPARS nsresult
 NS_New_HTMLToTXT_SinkStream(nsIHTMLContentSink** aInstancePtrResult, 
                             nsIOutputStream* aOutStream,
-                            const nsString* aCharsetOverride=nsnull);
+                            const nsString* aCharsetOverride=nsnull,
+                            PRUint32 aWrapColumn=0,
+                            PRBool aPrettyPrint=PR_FALSE);
 
 extern NS_HTMLPARS nsresult
 NS_New_HTMLToTXT_SinkStream(nsIHTMLContentSink** aInstancePtrResult, 
-                            nsString* aOutString);
+                            nsString* aOutString,
+                            PRUint32 aWrapColumn=0,
+                            PRBool aPrettyPrint=PR_FALSE);
 
 #endif
 

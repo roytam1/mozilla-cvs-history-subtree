@@ -36,6 +36,25 @@ class nsIToolkit;
 #undef NOISY_DESTROY
 #endif
 
+
+#define NSRECT_TO_GDKRECT(ns,gdk) \
+  PR_BEGIN_MACRO \
+  gdk.x = ns.x; \
+  gdk.y = ns.y; \
+  gdk.width = ns.width; \
+  gdk.height = ns.height; \
+  PR_END_MACRO
+
+#define NSCOLOR_TO_GDKCOLOR(n,g) \
+  PR_BEGIN_MACRO \
+  g.red = 256 * NS_GET_R(n); \
+  g.green = 256 * NS_GET_G(n); \
+  g.blue = 256 * NS_GET_B(n); \
+  PR_END_MACRO
+
+#define NS_TO_GDK_RGB(ns) (ns & 0xff) << 16 | (ns & 0xff00) | ((ns >> 16) & 0xff)
+
+
 /**
  * Base of all GTK+ native widgets.
  */
@@ -67,11 +86,12 @@ class nsWidget : public nsBaseWidget
     NS_IMETHOD SetModal(void);
     NS_IMETHOD Show(PRBool state);
     NS_IMETHOD IsVisible(PRBool &aState);
+    NS_IMETHOD CaptureMouse(PRBool aCapture);
 
-    NS_IMETHOD Move(PRUint32 aX, PRUint32 aY);
-    NS_IMETHOD Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint);
-    NS_IMETHOD Resize(PRUint32 aX, PRUint32 aY, PRUint32 aWidth,
-		      PRUint32 aHeight, PRBool aRepaint);
+    NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);
+    NS_IMETHOD Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint);
+    NS_IMETHOD Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+		      PRInt32 aHeight, PRBool aRepaint);
 
     NS_IMETHOD Enable(PRBool aState);
     NS_IMETHOD SetFocus(void);
@@ -95,6 +115,8 @@ class nsWidget : public nsBaseWidget
     void ReleaseNativeData(PRUint32 aDataType);
 #endif
 
+
+    NS_IMETHOD GetAbsoluteBounds(nsRect &aRect);
     NS_IMETHOD WidgetToScreen(const nsRect &aOldRect, nsRect &aNewRect);
     NS_IMETHOD ScreenToWidget(const nsRect &aOldRect, nsRect &aNewRect);
 
@@ -111,7 +133,6 @@ class nsWidget : public nsBaseWidget
     NS_IMETHOD Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect);
     NS_IMETHOD SetMenuBar(nsIMenuBar *aMenuBar);
     NS_IMETHOD ShowMenuBar(PRBool aShow);
-    NS_IMETHOD IsMenuBarVisible(PRBool *aVisible);
 
     NS_IMETHOD Invalidate(PRBool aIsSynchronous);
     NS_IMETHOD Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
@@ -125,6 +146,8 @@ class nsWidget : public nsBaseWidget
     PRBool     ConvertStatus(nsEventStatus aStatus);
     PRBool     DispatchMouseEvent(nsMouseEvent& aEvent);
     PRBool     DispatchStandardEvent(PRUint32 aMsg);
+    PRBool     DispatchFocus(nsGUIEvent &aEvent);
+
   // are we a "top level" widget?
     PRBool     mIsToplevel;
 
@@ -154,12 +177,24 @@ class nsWidget : public nsBaseWidget
   // Return the Gdk window whose background should change
   virtual GdkWindow * GetWindowForSetBackground();
 
+  // Sets font for widgets
+  virtual void SetFontNative(GdkFont *aFont);
+  // Sets backround for widgets
+  virtual void SetBackgroundColorNative(GdkColor *aColorNor,
+                                        GdkColor *aColorBri,
+                                        GdkColor *aColorDark);
+
   //////////////////////////////////////////////////////////////////
   //
   // GTK signal installers
   //
   //////////////////////////////////////////////////////////////////
   void InstallMotionNotifySignal(GtkWidget * aWidget);
+
+  void InstallDragMotionSignal(GtkWidget * aWidget);
+  void InstallDragLeaveSignal(GtkWidget * aWidget);
+  void InstallDragBeginSignal(GtkWidget * aWidget);
+  void InstallDragDropSignal(GtkWidget * aWidget);
 
   void InstallEnterNotifySignal(GtkWidget * aWidget);
 
@@ -168,6 +203,10 @@ class nsWidget : public nsBaseWidget
   void InstallButtonPressSignal(GtkWidget * aWidget);
 
   void InstallButtonReleaseSignal(GtkWidget * aWidget);
+
+  void InstallFocusInSignal(GtkWidget * aWidget);
+
+  void InstallFocusOutSignal(GtkWidget * aWidget);
 
   void InstallRealizeSignal(GtkWidget * aWidget);
 
@@ -180,10 +219,28 @@ class nsWidget : public nsBaseWidget
   //
   //////////////////////////////////////////////////////////////////
   virtual void OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent);
+  virtual void OnDragMotionSignal(GdkDragContext *aGdkDragContext,
+                                  gint            x,
+                                  gint            y,
+                                  guint           time);
+/* OnDragEnterSignal is not a real signal.. it is only called from OnDragMotionSignal */
+  virtual void OnDragEnterSignal(GdkDragContext *aGdkDragContext,
+                                 gint            x,
+                                 gint            y,
+                                 guint           time);
+  virtual void OnDragLeaveSignal(GdkDragContext   *context,
+                                 guint             time);
+  virtual void OnDragBeginSignal(GdkDragContext *aGdkDragContext);
+  virtual void OnDragDropSignal(GdkDragContext *aGdkDragContext,
+                                gint            x,
+                                gint            y,
+                                guint           time);
   virtual void OnEnterNotifySignal(GdkEventCrossing * aGdkCrossingEvent);
   virtual void OnLeaveNotifySignal(GdkEventCrossing * aGdkCrossingEvent);
   virtual void OnButtonPressSignal(GdkEventButton * aGdkButtonEvent);
   virtual void OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent);
+  virtual void OnFocusInSignal(GdkEventFocus * aGdkFocusEvent);
+  virtual void OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent);
   virtual void OnRealize();
 
   virtual void OnDestroySignal(GtkWidget* aGtkWidget);
@@ -203,6 +260,34 @@ private:
   static gint MotionNotifySignal(GtkWidget *       aWidget,
                                  GdkEventMotion *  aGdkMotionEvent,
                                  gpointer          aData);
+
+  static gint DragMotionSignal(GtkWidget *       aWidget,
+                               GdkDragContext   *context,
+                               gint             x,
+                               gint             y,
+                               guint            time,
+                               void             *data);
+
+  static void DragLeaveSignal(GtkWidget *      aWidget,
+                              GdkDragContext   *aDragContext,
+                              guint            time,
+                              void             *aData);
+
+  static gint DragBeginSignal(GtkWidget *       aWidget,
+                              GdkDragContext   *context,
+                              gint             x,
+                              gint             y,
+                              guint            time,
+                              void             *data);
+
+  static gint DragDropSignal(GtkWidget *      aWidget,
+                             GdkDragContext   *context,
+                             gint             x,
+                             gint             y,
+                             guint            time,
+                             void             *data);
+
+
 
   static gint EnterNotifySignal(GtkWidget *        aWidget, 
                                 GdkEventCrossing * aGdkCrossingEvent, 
@@ -224,6 +309,14 @@ private:
                             gpointer         aData);
 
 
+  static gint FocusInSignal(GtkWidget *      aWidget, 
+                            GdkEventFocus *  aGdkFocusEvent, 
+                            gpointer         aData);
+
+  static gint FocusOutSignal(GtkWidget *      aWidget, 
+                             GdkEventFocus *  aGdkFocusEvent, 
+                             gpointer         aData);
+
 protected:
 
   //////////////////////////////////////////////////////////////////
@@ -243,9 +336,8 @@ protected:
                       PRUint32         aEventType);
 
 #ifdef DEBUG
-  void DebugPrintMouseEvent(nsMouseEvent & aEvent,
-                            char *         sMessage,
-                            GtkWidget *    aGtkWidget);
+  void DebugPrintEvent(nsGUIEvent &   aEvent,
+                       GtkWidget *    aGtkWidget);
 #endif
 
     GtkWidget *mWidget;
@@ -259,8 +351,9 @@ protected:
 
     PRUint32 mPreferredWidth, mPreferredHeight;
 private:
-    static nsILookAndFeel *sLookAndFeel;
-    static PRUint32 sWidgetCount;
+  PRBool mIsDragDest;
+  static nsILookAndFeel *sLookAndFeel;
+  static PRUint32 sWidgetCount;
 
   //
   // Keep track of the last widget being "dragged"

@@ -27,15 +27,11 @@ include $(topsrcdir)/config/config.mk
 include $(topsrcdir)/config/rules.mk
 
 FILES = \
-	dialog.js						\
-	dialog.xul						\
-	dialogFrame.html				\
-	dialogSidebar.js				\
-	dialogSidebar.xul				\
-	dialogWindow.xul				\
-	sidebar-registry.rdf			\
-	document.gif			\
-	dom-test-1.css			\
+	article.gif \
+	document.gif \
+	folder-closed.gif \
+	folder-open.gif \
+	loading.gif \
 	dom-test-1.xul			\
 	dom-test-2.xul			\
 	dom-test-3.xul			\
@@ -44,25 +40,8 @@ FILES = \
 	dom-test-5.xul			\
 	dom-test-6.xul			\
 	dom-test-7.xul			\
-	flash-registry.rdf		\
-	flash.css			\
-	flash.js			\
-	flash.xul			\
-	flames.gif			\
-	folder-closed.gif		\
-	folder-open.gif			\
+	dom-test-8.xul			\
 	ignore-test.xul			\
-	loading.gif			\
-	online.gif			\
-	remote-flash-1.rdf		\
-	remote-flash-2.rdf		\
-	remote-flash-3.rdf		\
-	sidebar.css			\
-	sidebar.js			\
-	sidebar-browser.rdf		\
-	sidebar-browser.xul		\
-	stock.gif			\
-	unread.gif			\
 	xpidl-test-1.xul		\
 	$(NULL)
 

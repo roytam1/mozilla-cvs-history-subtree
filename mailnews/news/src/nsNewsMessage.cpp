@@ -18,6 +18,8 @@
 
 
 #include "msgCore.h"    // precompiled header...
+#include "nsIMsgHdr.h"
+#include "nsIMsgFolder.h"
 #include "nsNewsMessage.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
@@ -65,34 +67,32 @@ nsresult nsNewsMessage::GetFolderFromURI(nsIMsgFolder **folder)
 {
 	nsresult rv;
 	nsXPIDLCString uri;
-	nsIRDFResource *resource;
-	if(NS_SUCCEEDED( rv = QueryInterface(nsIRDFResource::GetIID(), (void**)&resource)))
+	nsCOMPtr <nsIRDFResource> resource;
+	if(NS_SUCCEEDED( rv = QueryInterface(nsIRDFResource::GetIID(), getter_AddRefs(resource))))
 	{
 		resource->GetValue( getter_Copies(uri) );
 		nsString messageFolderURIStr;
 		nsMsgKey key;
 		nsParseNewsMessageURI(uri, messageFolderURIStr, &key);
-		nsAutoString folderOnly, folderURIStr (eOneByte);
+		nsString folderOnly(eOneByte);
+		nsString folderURIStr(eOneByte);
 
 		if (messageFolderURIStr.Find(kNewsMessageRootURI) != ((PRInt32)-1))			{
 			messageFolderURIStr.Right(folderOnly, messageFolderURIStr.Length() - kNewsMessageRootURILen);
 			folderURIStr = kNewsRootURI;
 			folderURIStr+= folderOnly;
-			nsIRDFResource *folderResource;
+			nsCOMPtr <nsIRDFResource> folderResource;
 
 			NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
 			if (NS_SUCCEEDED(rv))   // always check this before proceeding 
 			{
-				rv = rdfService->GetResource(folderURIStr.GetBuffer(), &folderResource);
+				rv = rdfService->GetResource(folderURIStr.GetBuffer(), getter_AddRefs(folderResource));
 				if(NS_SUCCEEDED(rv))
 				{
 					rv = NS_SUCCEEDED(folderResource->QueryInterface(nsIMsgFolder::GetIID(), (void**)folder));
-					NS_RELEASE(folderResource);
 				}
 			}
 		}
-
-		NS_RELEASE(resource);
 	}
 	return rv;
 }

@@ -22,21 +22,22 @@ IGNORE_MANIFEST=1
 MODULE=raptor 
 XPIDL_MODULE=appshell 
 
-XPIDLSRCS =                       \
-       .\nsIFileLocator.idl       \
+XPIDLSRCS =                        \
+        .\nsIFileLocator.idl       \
+        .\nsIAppShellService.idl   \
+       	.\nsIWindowMediator.idl	   \
+       	.\nsICommonDialogs.idl  \
+		.\nsIDialogParamBlock.idl \
         $(NULL)
 
 EXPORTS =                         \
         nsIWebShellWindow.h       \
         nsAppShellCIDs.h          \
-        nsIAppShellService.h      \
         nsICmdLineService.h       \
-        nsIWidgetController.h     \
         nsIXULWindowCallbacks.h   \
         nsIDOMXPConnectFactory.h  \
         nsFileLocations.h         \
         nsINetSupportDialogService.h	\
-        nsIWindowMediator.h \
         nsISessionHistory.h \
         $(NULL)
 

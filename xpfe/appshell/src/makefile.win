@@ -16,6 +16,8 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
+
 IGNORE_MANIFEST=1
 
 DEFINES=-D_IMPL_NS_APPSHELL -DWIN32_LEAN_AND_MEAN
@@ -35,6 +37,8 @@ CPPSRCS=                                \
  nsDefaultHelper.cpp	\
  nsWindowMediator.cpp \
  nsSessionHistory.cpp \
+ nsDialogParamBlock.cpp \
+ nsCommonDialogs.cpp \
  $(NULL)
 
 CPP_OBJS=                               \
@@ -51,6 +55,8 @@ CPP_OBJS=                               \
    .\$(OBJDIR)\nsDefaultHelper.obj        \
      .\$(OBJDIR)\nsWindowMediator.obj        \
      .\$(OBJDIR)\nsSessionHistory.obj \
+    .\$(OBJDIR)\nsDialogParamBlock.obj \
+	.\$(OBJDIR)\nsCommonDialogs.obj \
  $(NULL)
 
 LINCS=-I$(PUBLIC)\raptor                \
@@ -60,13 +66,20 @@ LINCS=-I$(PUBLIC)\raptor                \
       -I$(PUBLIC)\dom                   \
       -I$(PUBLIC)\js                    \
       -I$(PUBLIC)\pref                  \
- 	 -I$(PUBLIC)\profile               \
+      -I$(PUBLIC)\profile               \
       -I$(PUBLIC)\appcores              \
+!ifdef NECKO
+      -I$(PUBLIC)\necko		\
+!else
       -I$(PUBLIC)\netlib		\
+!endif
       -I$(PUBLIC)\rdf			\
-	  -I$(PUBLIC)\pics \
-	  -I$(PUBLIC)\xpfe\components \
-	  $(NULL)
+      -I$(PUBLIC)\pics \
+      -I$(PUBLIC)\xpfe\components \
+!ifdef MOZ_FULLCIRCLE
+      -I$(MOZ_TOOLS)\include \
+!endif
+     $(NULL)
 
 MAKE_OBJ_TYPE = DLL
 DLLNAME = nsappshell
@@ -81,12 +94,18 @@ LCFLAGS = \
 LLIBS=                          \
  $(DIST)\lib\xpcom.lib        \
  $(DIST)\lib\raptorgfxwin.lib   \
- $(DIST)\lib\plc3.lib       \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib         \
+!else
  $(DIST)\lib\netlib.lib         \
-  $(DIST)\lib\js3250.lib        \
-  $(DIST)\lib\jsdombase_s.lib   \
-  $(DIST)\lib\jsdomevents_s.lib   \
+!endif
+ $(DIST)\lib\js3250.lib        \
+ $(DIST)\lib\jsdombase_s.lib   \
+ $(DIST)\lib\jsdomevents_s.lib   \
  $(LIBNSPR)                     \
+!ifdef MOZ_FULLCIRCLE
+ $(MOZ_TOOLS)\lib\fulls32.lib \
+!endif
  $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

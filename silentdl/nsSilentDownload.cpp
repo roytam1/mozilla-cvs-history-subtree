@@ -146,26 +146,23 @@ GetSilentDownloadDefaults(PRBool* enabled, PRInt32 *bytes_range, PRInt32 *interv
 nsFileSpec * 
 CreateOutFileLocation(const nsString& url, const nsString& directory)
 {
-    nsSpecialSystemDirectory *outFileLocation =  
-        new nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+    nsSpecialSystemDirectory outFileLocation(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
     
-    //*outFileLocation += directory;
-
-    PRInt32 result = url.RFind('/');
+    PRInt32 result = url.RFindChar('/');
     if (result != -1)
     {            
         nsString fileName;
         url.Right(fileName, (url.Length() - result) );        
-        *outFileLocation += fileName;
+        outFileLocation += fileName;
     }
     else
     {   
-        *outFileLocation += "sdl";
+        outFileLocation += "sdl";
     }
 
-    outFileLocation->MakeUnique();
+    outFileLocation.MakeUnique();
 
-    return outFileLocation;
+    return new nsSpecialSystemDirectory(outFileLocation);
 }
 
 
@@ -835,7 +832,7 @@ nsSilentDownloadTask::DownloadSelf(PRInt32 range)
 {
     long result=0;
     char*                byteRangeString=NULL;
-    nsIURL               *pURL;
+    nsIURI               *pURL;
     nsILoadAttribs       *loadAttr;
     
     if (mState != nsIDOMSilentDownloadTask::SDL_STARTED &&
@@ -856,11 +853,13 @@ nsSilentDownloadTask::DownloadSelf(PRInt32 range)
     if (NS_FAILED(result)) return result;
 
     nsIURI *uri = nsnull;
-    const char *uriStr = mUrl.GetBuffer();
+    char *uriStr = mUrl.ToNewCString();
+    if (!uriStr) return NS_ERROR_OUT_OF_MEMORY;
     result = service->NewURI(uriStr, nsnull, &uri);
+    nsCRT::free(uriStr);
     if (NS_FAILED(result)) return result;
 
-    result = uri->QueryInterface(nsIURL::GetIID(), (void**)&pURL);
+    result = uri->QueryInterface(nsIURI::GetIID(), (void**)&pURL);
     NS_RELEASE(uri);
 #endif // NECKO
 
@@ -1087,13 +1086,13 @@ nsSilentDownloadListener::~nsSilentDownloadListener()
 NS_IMPL_ISUPPORTS( nsSilentDownloadListener, kIStreamListenerIID )
 
 NS_IMETHODIMP
-nsSilentDownloadListener::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info)
+nsSilentDownloadListener::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* info)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSilentDownloadListener::OnProgress( nsIURL* aURL,
+nsSilentDownloadListener::OnProgress( nsIURI* aURL,
 			              PRUint32 Progress,
 			              PRUint32 ProgressMax)
 {
@@ -1101,21 +1100,21 @@ nsSilentDownloadListener::OnProgress( nsIURL* aURL,
 }
 
 NS_IMETHODIMP
-nsSilentDownloadListener::OnStatus(nsIURL* aURL, 
+nsSilentDownloadListener::OnStatus(nsIURI* aURL, 
 			           const PRUnichar* aMsg)
 { 
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSilentDownloadListener::OnStartBinding(nsIURL* aURL, 
+nsSilentDownloadListener::OnStartRequest(nsIURI* aURL, 
 				             const char *aContentType)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSilentDownloadListener::OnStopBinding(nsIURL* aURL,
+nsSilentDownloadListener::OnStopRequest(nsIURI* aURL,
 				            nsresult status,
 				            const PRUnichar* aMsg)
 {
@@ -1177,7 +1176,7 @@ nsSilentDownloadListener::OnStopBinding(nsIURL* aURL,
 
 
 NS_IMETHODIMP
-nsSilentDownloadListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUint32 length)
+nsSilentDownloadListener::OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream, PRUint32 length)
 {
     PRUint32 len;
     PRInt32 nextByte;

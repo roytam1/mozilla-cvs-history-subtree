@@ -17,6 +17,7 @@
 
 DEPTH=..\..\..
 IGNORE_MANIFEST=1
+include <$(DEPTH)\config\config.mak>
 
 LIBRARY_NAME=strres
 
@@ -52,8 +53,12 @@ LCFLAGS = \
 # These are the libraries we need to link with to create the dll
 LLIBS=				\
  $(DIST)\lib\xpcom.lib	\
- $(DIST)\lib\plc3.lib       \
  $(LIBNSPR)  
+
+!ifdef NECKO
+LLIBS=$(LLIBS) $(DIST)\lib\neckoutil_s.lib
+!endif
+
 !if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
 LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
 !endif
@@ -61,7 +66,7 @@ LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
 
 include <$(DEPTH)\config\rules.mak>
 
-libs:: $(DLL)
+install:: $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 

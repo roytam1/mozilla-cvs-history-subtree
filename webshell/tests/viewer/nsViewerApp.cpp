@@ -54,6 +54,10 @@
 #include "nsUnitConversion.h"
 #include "nsIDeviceContext.h"
 
+// Charset converter
+#include "nsMetaCharsetCID.h"
+#include "nsIMetaCharsetService.h"
+
 #define DIALOG_FONT      "Helvetica"
 #define DIALOG_FONT_SIZE 10
 
@@ -89,6 +93,8 @@ static NS_DEFINE_IID(kIBrowserWindowIID, NS_IBROWSER_WINDOW_IID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIXPBaseWindowIID, NS_IXPBASE_WINDOW_IID);
 
+static NS_DEFINE_IID(kMetaCharsetCID, NS_META_CHARSET_CID);
+static NS_DEFINE_IID(kIMetaCharsetServiceIID, NS_IMETA_CHARSET_SERVICE_IID);
 
 #define DEFAULT_WIDTH 620
 #define DEFAULT_HEIGHT 400
@@ -116,10 +122,6 @@ nsViewerApp::nsViewerApp()
 nsViewerApp::~nsViewerApp()
 {
   Destroy();
-  if (nsnull != mPrefs) {
-    mPrefs->ShutDown();
-    NS_RELEASE(mPrefs);
-  }
 }
 
 NS_IMPL_THREADSAFE_ADDREF(nsViewerApp)
@@ -160,37 +162,24 @@ nsViewerApp::Destroy()
   // Release the crawler
   NS_IF_RELEASE(mCrawler);
 
+#ifndef NECKO
   // Only shutdown if Initialize has been called...
   if (PR_TRUE == mIsInitialized) {
-#ifndef NECKO
     NS_ShutdownINetService();
     mIsInitialized = PR_FALSE;
+  }
 #endif // NECKO
+  if (nsnull != mPrefs) {
+    mPrefs->ShutDown();
+    NS_RELEASE(mPrefs);
   }
 }
 
 nsresult
 nsViewerApp::AutoregisterComponents()
 {
-  // Autoregister components to populate registry
-  // All this logic is in nsSpecialFileSpec in apprunner.
-  // But hey this is viewer a different app.
-
-  nsresult rv = NS_ERROR_FAILURE;
-
-  nsSpecialSystemDirectory sysdir(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-#ifdef XP_MAC
-  sysdir += "Components";
-#else
-  sysdir += "components";
-#endif /* XP_MAC */
-  nsNSPRPath componentsDir(sysdir);
-  const char *componentsDirPath = (const char *) componentsDir;
-  if (componentsDirPath != NULL)
-  {
-    rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, componentsDirPath);
-  }
-
+  nsresult rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup,
+                                                 NULL /* default */);
   return rv;
 }
 
@@ -198,9 +187,22 @@ nsViewerApp::AutoregisterComponents()
 nsresult
 nsViewerApp::SetupRegistry()
 {
+  nsresult rv;
   AutoregisterComponents();
 
   NS_SetupRegistry();
+
+  nsIMetaCharsetService* metacharset;
+  rv = nsServiceManager::GetService(kMetaCharsetCID,
+                                    kIMetaCharsetServiceIID,
+                                    (nsISupports **) &metacharset);
+  if(!NS_FAILED(rv)) {
+    rv = metacharset->Start();
+  }
+
+  if(!NS_FAILED(rv)) {
+    rv = nsServiceManager::ReleaseService(kMetaCharsetCID, metacharset);
+  }
 
   // Register our browser window factory
   nsIFactory* bwf;
@@ -560,9 +562,8 @@ nsViewerApp::ProcessArguments(int argc, char** argv)
       else if (PL_strcmp(argv[i], "-M") == 0) {
         mShowLoadTimes = PR_TRUE;
       }
-      else {
+      else if (PL_strcmp(argv[i], "-?") == 0) {
         PrintHelpInfo(argv);
-        exit(-1);
       }
     }
     else
@@ -570,7 +571,7 @@ nsViewerApp::ProcessArguments(int argc, char** argv)
   }
   if (i < argc) {
     mStartURL = argv[i];
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
     if (argv[i][0] == '/') {
       mStartURL.Insert("file:", 0);
     }
@@ -720,7 +721,7 @@ static char    gVerifyDir[_MAX_PATH];
 static PRBool  gVisualDebug = PR_TRUE;
 
 // Robot
-static nsIBrowserWindow * mRobotDialog = nsnull;
+static nsIWidget      * mRobotDialog = nsnull;
 static nsIButton      * mCancelBtn;
 static nsIButton      * mStartBtn;
 static nsITextWidget  * mVerDirTxt;
@@ -728,7 +729,7 @@ static nsITextWidget  * mStopAfterTxt;
 static nsICheckButton * mUpdateChkBtn;
 
 // Site
-static nsIBrowserWindow * mSiteDialog = nsnull;
+static nsIWidget * mSiteDialog = nsnull;
 static nsIButton      * mSiteCancelBtn;
 static nsIButton      * mSitePrevBtn;
 static nsIButton      * mSiteNextBtn;
@@ -740,6 +741,7 @@ static NS_DEFINE_IID(kTextFieldCID,   NS_TEXTFIELD_CID);
 static NS_DEFINE_IID(kWindowCID,      NS_WINDOW_CID);
 static NS_DEFINE_IID(kCheckButtonCID, NS_CHECKBUTTON_CID);
 static NS_DEFINE_IID(kLabelCID,       NS_LABEL_CID);
+
 
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 static NS_DEFINE_IID(kIButtonIID,      NS_IBUTTON_IID);
@@ -838,7 +840,7 @@ nsEventStatus PR_CALLBACK HandleRobotEvent(nsGUIEvent *aEvent)
     case NS_PAINT: 
 #ifndef XP_UNIX
         // paint the background
-      if (aEvent->widget->GetNativeData(NS_NATIVE_WIDGET) == mRobotDialog ) {
+        if (aEvent->widget == mRobotDialog ) {
           nsIRenderingContext *drawCtx = ((nsPaintEvent*)aEvent)->renderingContext;
           drawCtx->SetColor(aEvent->widget->GetBackgroundColor());
           drawCtx->FillRect(*(((nsPaintEvent*)aEvent)->rect));
@@ -846,6 +848,7 @@ nsEventStatus PR_CALLBACK HandleRobotEvent(nsGUIEvent *aEvent)
           return nsEventStatus_eIgnore;
       }
 #endif
+      return nsEventStatus_eIgnore;
       break;
 
     default:
@@ -885,9 +888,16 @@ PRBool CreateRobotDialog(nsIWidget * aParent)
   nsRect rect;
   rect.SetRect(0, 0, dialogWidth, 162);  
 
-  nsComponentManager::CreateInstance(kBrowserWindowCID, nsnull, kIBrowserWindowIID, (void**)&mRobotDialog);
+  nsComponentManager::CreateInstance(kWindowCID, nsnull, kIWidgetIID, (void**)&mRobotDialog);
   if (nsnull == mRobotDialog)
   	return PR_FALSE;
+
+  nsIWidget* dialogWidget = nsnull;
+  if (NS_OK == mRobotDialog->QueryInterface(kIWidgetIID,(void**)&dialogWidget))
+  {
+    dialogWidget->Create(aParent, rect, HandleRobotEvent, NULL);
+    NS_RELEASE(dialogWidget);
+  }
   
   //mRobotDialog->SetLabel("Debug Robot Options");
 
@@ -1001,7 +1011,11 @@ nsViewerApp::CreateRobot(nsBrowserWindow* aWindow)
       nsCOMPtr<nsIDocument> doc;
       shell->GetDocument(getter_AddRefs(doc));
       if (doc) {
+#ifdef NECKO
+        char * str;
+#else
         const char * str;
+#endif
         nsresult rv = doc->GetDocumentURL()->GetSpec(&str);
         if (NS_FAILED(rv)) {
           return rv;
@@ -1015,6 +1029,9 @@ nsViewerApp::CreateRobot(nsBrowserWindow* aWindow)
           gDebugRobotLoads, 
           PL_strdup(gVerifyDir),
           yieldProc);
+#endif
+#ifdef NECKO
+        nsCRT::free(str);
 #endif
       }
     }
@@ -1262,14 +1279,14 @@ PRBool CreateSiteDialog(nsIWidget * aParent)
     rect.SetRect(0, 0, dialogWidth, 125);  
 
     nsIWidget* widget = nsnull;
-    nsComponentManager::CreateInstance(kBrowserWindowCID, nsnull, 
-                                       kIBrowserWindowIID, (void**)&mSiteDialog);
+    nsComponentManager::CreateInstance(kWindowCID, nsnull, 
+                                       kIWidgetIID, (void**)&mSiteDialog);
     if (nsnull == mSiteDialog)
       return PR_FALSE;
     
     if (NS_OK == mSiteDialog->QueryInterface(kIWidgetIID,(void**)&widget))
     {
-      widget->Create(aParent, rect, HandleSiteEvent, NULL);
+      widget->Create((nsIWidget *) nsnull, rect, HandleSiteEvent, NULL);
       //mSiteDialog->SetLabel("Top 100 Site Walker");
     }
     //mSiteDialog->SetClientData(this);
@@ -1341,8 +1358,8 @@ nsViewerApp::CreateSiteWalker(nsBrowserWindow* aWindow)
   if (nsnull == gWinData) {
     gWinData = aWindow;
     NS_ADDREF(aWindow);
-    CreateSiteDialog(aWindow->mWindow);
   }
+  CreateSiteDialog(aWindow->mWindow);
   return NS_OK;
 }
 

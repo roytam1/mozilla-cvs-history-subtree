@@ -38,6 +38,7 @@ class nsIContent;
 class nsIListControlFrame : public nsISupports {
 
 public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILISTCONTROLFRAME_IID)
 
   /**
    * Sets the ComboBoxFrame
@@ -52,16 +53,22 @@ public:
   NS_IMETHOD GetSelectedItem(nsString & aStr) = 0;
 
   /**
-   * Tells the list it is about to drop down
-   *
-   */
-  NS_IMETHOD AboutToDropDown() = 0;
-
-  /**
    * Initiates mouse capture for the listbox
    *
    */
   NS_IMETHOD CaptureMouseEvents(PRBool aGrabMouseEvents) = 0;
+
+  /**
+   * Returns the maximum width and height of an item in the listbox
+   */
+
+  NS_IMETHOD GetMaximumSize(nsSize &aSize) = 0;
+
+  /**
+   * Returns the number of options in the listbox
+   */
+
+  NS_IMETHOD GetNumberOfOptions(PRInt32* aNumOptions) = 0; 
 
 
 };

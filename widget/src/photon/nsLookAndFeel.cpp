@@ -31,13 +31,15 @@ nsLookAndFeel::nsLookAndFeel() : nsILookAndFeel()
 
 nsLookAndFeel::~nsLookAndFeel()
 {
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsLookAndFeel::~nsLookAndFeel - %p destroyed\n", this));
+
 }
 
 NS_IMETHODIMP nsLookAndFeel::GetColor(const nsColorID aID, nscolor &aColor)
 {
   nsresult res = NS_OK;
 
-//  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsLookAndFeel::GetColor - Not Implemented!\n"));
+  PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsLookAndFeel::GetColor mRefCnt=<%d>\n", mRefCnt));
 
   switch( aID )
   {
@@ -156,6 +158,12 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
     break;
   case eMetric_ListVerticalInsidePadding:
     aMetric = 0; // REVISIT - HACK!
+    break;
+	case eMetric_CaretBlinkTime:
+    aMetric = 500;
+    break;
+	case eMetric_CaretWidthTwips:
+    aMetric = 20;
     break;
   default:
     aMetric = -1;

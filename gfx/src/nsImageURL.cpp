@@ -26,10 +26,8 @@
 #include "nsIURLGroup.h"
 #include "nsILoadAttribs.h"
 #else
-#include "nsIServiceManager.h"
-#include "nsIIOService.h"
-#include "nsIURI.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsIURL.h"
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsString.h"
 #include "il_strm.h"
@@ -44,7 +42,11 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  nsresult Init(const char *aURL, nsIURLGroup* aURLGroup);
+#ifdef NECKO
+  nsresult Init(const char *aURL);
+#else
+  nsresult Init(const char *aURL, nsILoadGroup* aLoadGroup);
+#endif
 
   virtual void SetReader(ilINetReader *aReader);
 
@@ -52,7 +54,11 @@ public:
 
   virtual int GetContentLength();
 
+#ifdef NECKO
+  virtual char* GetAddress();
+#else
   virtual const char* GetAddress();
+#endif
 
   virtual time_t GetExpires();
 
@@ -63,7 +69,11 @@ public:
   virtual void SetOwnerId(int aOwnderId);
 
 private:
-  nsIURL *mURL;
+#ifdef NECKO
+  nsIURI *mURL;
+#else
+  nsIURI *mURL;
+#endif
   ilINetReader *mReader;
 };
 
@@ -74,25 +84,25 @@ ImageURLImpl::ImageURLImpl(void)
 }
 
 nsresult 
-ImageURLImpl::Init(const char *aURL, nsIURLGroup* aURLGroup)
+#ifdef NECKO
+ImageURLImpl::Init(const char *aURL)
+#else
+ImageURLImpl::Init(const char *aURL, nsILoadGroup* aLoadGroup)
+#endif
 {
   nsresult rv;
-  if (nsnull != aURLGroup) {
-    rv = aURLGroup->CreateURL(&mURL, nsnull, aURL, nsnull);
-  } else {
 #ifndef NECKO
-    rv = NS_NewURL(&mURL, aURL);
+  if (nsnull != aLoadGroup) {
+    rv = aLoadGroup->CreateURL(&mURL, nsnull, aURL, nsnull);
+  }
+  else
+#endif
+  {
+#ifdef NECKO
+    rv = NS_NewURI(&mURL, aURL);
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    nsIURI *uri = nsnull;
-    rv = service->NewURI(aURL, nsnull, &uri);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&mURL);
-    NS_RELEASE(uri);
-#endif // NECKO
+    rv = NS_NewURL(&mURL, aURL);
+#endif
   }
   return rv;
 }
@@ -114,11 +124,13 @@ ImageURLImpl::QueryInterface(const nsIID& aIID,
   static NS_DEFINE_IID(kClassIID, kIImageURLIID); 
   static NS_DEFINE_IID(kURLIID, NS_IURL_IID);
 
+  // xxx I think this is wrong -- this class isn't aggregated with nsIURI!
   if (aIID.Equals(kURLIID)) {
     *aInstancePtr = (void*) mURL;
     NS_ADDREF(mURL);
     return NS_OK;
   }
+
   if (aIID.Equals(kClassIID)) {
     *aInstancePtr = (void*) this;
     NS_ADDREF_THIS();
@@ -167,11 +179,19 @@ ImageURLImpl::GetContentLength()
     return 0;
 }
 
+#ifdef NECKO
+char* 
+#else
 const char* 
+#endif
 ImageURLImpl::GetAddress()
 {
     if (mURL != nsnull) {
+#ifdef NECKO
+        char* spec;
+#else
         const char* spec;
+#endif
         mURL->GetSpec(&spec);
         return spec;
     }
@@ -189,6 +209,9 @@ ImageURLImpl::GetExpires()
 void 
 ImageURLImpl::SetBackgroundLoad(PRBool aBgload)
 {
+#ifdef NECKO
+  // XXX help!
+#else
   nsILoadAttribs* loadAttributes;
 
   if (nsnull != mURL) {
@@ -202,6 +225,7 @@ ImageURLImpl::SetBackgroundLoad(PRBool aBgload)
       NS_RELEASE(loadAttributes);
     }
   }
+#endif
 }
 
 int
@@ -216,8 +240,8 @@ ImageURLImpl::SetOwnerId(int aOwnerId)
 }
 
 extern "C" NS_GFX_(nsresult)
-NS_NewImageURL(ilIURL **aInstancePtrResult, const char *aURL, 
-               nsIURLGroup* aURLGroup)
+NS_NewImageURL(ilIURL **aInstancePtrResult, const char *aURL,
+               nsILoadGroup* aLoadGroup)
 {
   NS_PRECONDITION(nsnull != aInstancePtrResult, "null ptr");
   if (nsnull == aInstancePtrResult) {
@@ -228,7 +252,11 @@ NS_NewImageURL(ilIURL **aInstancePtrResult, const char *aURL,
   if (url == nsnull) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  nsresult rv = url->Init(aURL, aURLGroup);
+#ifdef NECKO
+  nsresult rv = url->Init(aURL);
+#else
+  nsresult rv = url->Init(aURL, aLoadGroup);
+#endif
   if (rv != NS_OK) {
     delete url;
     return rv;

@@ -20,7 +20,6 @@
 
 #include "nsIFileStream.h"
 #include "nsFileStream.h"
-#include "nsIComponentManager.h"	// For CreateInstance()
 
 #include "prmem.h"
 
@@ -302,6 +301,32 @@ NS_IMETHODIMP nsFileSpecImpl::exists(PRBool *_retval)
 }
 
 //----------------------------------------------------------------------------------------
+NS_IMETHODIMP nsFileSpecImpl::isHidden(PRBool *_retval)
+//----------------------------------------------------------------------------------------
+{
+	TEST_OUT_PTR(_retval)
+	*_retval = mFileSpec.IsHidden();
+	return mFileSpec.Error();
+}
+
+//----------------------------------------------------------------------------------------
+NS_IMETHODIMP nsFileSpecImpl::isSymlink(PRBool *_retval)
+//----------------------------------------------------------------------------------------
+{
+	TEST_OUT_PTR(_retval)
+	*_retval = mFileSpec.IsSymlink();
+	return mFileSpec.Error();
+}
+
+//----------------------------------------------------------------------------------------
+NS_IMETHODIMP nsFileSpecImpl::resolveSymlink()
+//----------------------------------------------------------------------------------------
+{
+    PRBool ignore;
+	return mFileSpec.ResolveSymlink(ignore);
+}
+
+//----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecImpl::GetFileSize(PRUint32 *aFileSize)
 //----------------------------------------------------------------------------------------
 {
@@ -325,6 +350,18 @@ NS_IMETHODIMP nsFileSpecImpl::AppendRelativeUnixPath(const char *relativePath)
 {
 	mFileSpec += relativePath;
 	return mFileSpec.Error();
+}
+
+//----------------------------------------------------------------------------------------
+NS_IMETHODIMP nsFileSpecImpl::touch()
+//----------------------------------------------------------------------------------------
+{
+	// create an empty file, like the UNIX touch command.
+	nsresult rv;
+	rv = openStreamForReadingAndWriting();
+	if (NS_FAILED(rv)) return rv;
+	rv = closeStream();
+	return rv;
 }
 
 //----------------------------------------------------------------------------------------
@@ -416,8 +453,10 @@ NS_IMETHODIMP nsFileSpecImpl::GetInputStream(nsIInputStream** _retval)
 //----------------------------------------------------------------------------------------
 {
 	TEST_OUT_PTR(_retval)
-	if (!mInputStream)
-		openStreamForReading();
+	if (!mInputStream) {
+		nsresult rv = openStreamForReading();
+		if (NS_FAILED(rv)) return rv;
+	}
 	*_retval = mInputStream;
 	NS_IF_ADDREF(mInputStream);
 	return NS_OK;
@@ -428,8 +467,10 @@ NS_IMETHODIMP nsFileSpecImpl::GetOutputStream(nsIOutputStream** _retval)
 //----------------------------------------------------------------------------------------
 {
 	TEST_OUT_PTR(_retval)
-	if (!mOutputStream)
-		openStreamForWriting();
+	if (!mOutputStream) {
+		nsresult rv = openStreamForWriting();
+		if (NS_FAILED(rv)) return rv;
+	}
 	*_retval = mOutputStream;
 	NS_IF_ADDREF(mOutputStream);
 	return NS_OK;
@@ -440,8 +481,7 @@ NS_IMETHODIMP nsFileSpecImpl::SetFileContents(char* inString)
 //----------------------------------------------------------------------------------------
 {
 	nsresult rv = openStreamForWriting();
-	if (NS_FAILED(rv))
-		return rv;
+	if (NS_FAILED(rv)) return rv;
 	PRInt32 count;
 	rv = write(inString, PL_strlen(inString), &count);
 	nsresult rv2 = closeStream();
@@ -455,8 +495,7 @@ NS_IMETHODIMP nsFileSpecImpl::GetFileContents(char** _retval)
 	TEST_OUT_PTR(_retval)
 	*_retval = nsnull;
 	nsresult rv = openStreamForReading();
-	if (NS_FAILED(rv))
-		return rv;
+	if (NS_FAILED(rv)) return rv;
 	PRInt32 theSize;
 	rv = GetFileSize((PRUint32*)&theSize);
 	if (NS_SUCCEEDED(rv))
@@ -473,6 +512,14 @@ NS_IMETHODIMP nsFileSpecImpl::GetFileSpec(nsFileSpec *aFileSpec)
 {
 	TEST_OUT_PTR(aFileSpec)
 	*aFileSpec = mFileSpec;
+	return NS_OK;
+}
+
+//----------------------------------------------------------------------------------------
+NS_IMETHODIMP nsFileSpecImpl::setFromFileSpec(const nsFileSpec& aFileSpec)
+//----------------------------------------------------------------------------------------
+{
+	mFileSpec = aFileSpec;
 	return NS_OK;
 }
 
@@ -494,8 +541,10 @@ NS_IMETHODIMP nsFileSpecImpl::read(char** buffer, PRInt32 requestedCount, PRInt3
 {
 	TEST_OUT_PTR(_retval)
 	TEST_OUT_PTR(buffer)
-	if (!mInputStream)
-		openStreamForReading();
+	if (!mInputStream) {
+		nsresult rv = openStreamForReading();
+		if (NS_FAILED(rv)) return rv;
+	}
 	if (!*buffer)
 		*buffer = (char*)PR_Malloc(requestedCount + 1);
 	if (!mInputStream)
@@ -511,14 +560,16 @@ NS_IMETHODIMP nsFileSpecImpl::readLine(char** line, PRInt32 bufferSize, PRBool *
 {
 	TEST_OUT_PTR(wasTruncated)
 	TEST_OUT_PTR(line)
-	if (!mInputStream)
-		openStreamForReading();
+	if (!mInputStream) {
+		nsresult rv = openStreamForReading();
+		if (NS_FAILED(rv)) return rv;
+	}
 	if (!*line)
 		*line = (char*)PR_Malloc(bufferSize + 1);
 	if (!mInputStream)
 		return NS_ERROR_NULL_POINTER;
 	nsInputFileStream s(mInputStream);
-	*wasTruncated = s.readline(*line, bufferSize);
+	*wasTruncated = !s.readline(*line, bufferSize);
 	return s.error();
 }
 
@@ -527,10 +578,12 @@ NS_IMETHODIMP nsFileSpecImpl::write(const char * data, PRInt32 requestedCount, P
 //----------------------------------------------------------------------------------------
 {
 	TEST_OUT_PTR(_retval)
-	if (!mOutputStream)
-		return NS_ERROR_NULL_POINTER;
-	if (!mOutputStream)
-		openStreamForWriting();
+	//if (!mOutputStream)
+	//	return NS_ERROR_NULL_POINTER;
+	if (!mOutputStream) {
+		nsresult rv=openStreamForWriting();
+		if (NS_FAILED(rv)) return rv;
+	}
 	nsOutputFileStream s(mOutputStream);
 	*_retval = s.write(data, requestedCount);
 	return s.error();
@@ -606,11 +659,11 @@ nsDirectoryIteratorImpl::~nsDirectoryIteratorImpl()
 }
 
 //----------------------------------------------------------------------------------------
-NS_IMETHODIMP nsDirectoryIteratorImpl::Init(nsIFileSpec *parent)
+NS_IMETHODIMP nsDirectoryIteratorImpl::Init(nsIFileSpec *parent, PRBool resolveSymlink)
 //----------------------------------------------------------------------------------------
 {
 	delete mDirectoryIterator;
-	mDirectoryIterator = new nsDirectoryIterator(FILESPEC(parent));
+	mDirectoryIterator = new nsDirectoryIterator(FILESPEC(parent), resolveSymlink);
 	if (!mDirectoryIterator)
 		return NS_ERROR_OUT_OF_MEMORY;
 	return NS_OK;
@@ -687,7 +740,7 @@ NS_METHOD nsFileSpecImpl::Create(nsISupports* outer, const nsIID& aIID, void* *a
 }
 
 //----------------------------------------------------------------------------------------
-nsresult NS_NewFileSpecWithSpec(nsFileSpec aSrcFileSpec, nsIFileSpec **result)
+nsresult NS_NewFileSpecWithSpec(const nsFileSpec& aSrcFileSpec, nsIFileSpec **result)
 //----------------------------------------------------------------------------------------
 {
 	if (!result)
@@ -708,34 +761,5 @@ nsresult NS_NewDirectoryIterator(nsIDirectoryIterator** result)
 //----------------------------------------------------------------------------------------
 {
 	return nsDirectoryIteratorImpl::Create(nsnull, nsIDirectoryIterator::GetIID(), (void**)result);
-}
-
-//----------------------------------------------------------------------------------------
-// Convinence functions for creating instances
-//----------------------------------------------------------------------------------------
-nsIFileSpec* NS_CreateFileSpec()
-{
-    // #include nsIComponentManager.h
-    nsIFileSpec* spec = nsnull;
-    nsresult rv = nsComponentManager::CreateInstance(
-    	(const char*)NS_FILESPEC_PROGID,
-    	(nsISupports*)nsnull,
-    	(const nsID&)nsIFileSpec::GetIID(),
-    	(void**)&spec);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "ERROR: Could not make a file spec.");
-    return spec;
-}
-
-nsIDirectoryIterator* NS_CreateDirectoryIterator()
-{
-    // #include nsIComponentManager.h
-    nsIDirectoryIterator* iter = nsnull;
-    nsresult rv = nsComponentManager::CreateInstance(
-    	(const char*)NS_DIRECTORYITERATOR_PROGID,
-    	(nsISupports*)nsnull,
-    	(const nsID&)nsIDirectoryIterator::GetIID(),
-    	(void**)&iter);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "ERROR: Could not make a directory iterator.");
-    return iter;
 }
 

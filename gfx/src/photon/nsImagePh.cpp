@@ -136,12 +136,12 @@ nsresult nsImagePh :: Init(PRInt32 aWidth, PRInt32 aHeight, PRInt32 aDepth,nsMas
     mAlphaHeight = 0;
     break;
 								
-	case nsMaskRequirements_kNeeds1Bit:
-	  mARowBytes = (aWidth + 7) / 8;
-	  mAlphaDepth = 1;
+  case nsMaskRequirements_kNeeds1Bit:
+    mARowBytes = (aWidth + 7) / 8;
+    mAlphaDepth = 1;
 
-	  // 32-bit align each row
-	  mARowBytes = (mARowBytes + 3) & ~0x3;
+    // 32-bit align each row
+    mARowBytes = (mARowBytes + 3) & ~0x3;
     mAlphaBits = new unsigned char[mARowBytes * aHeight];
     mAlphaWidth = aWidth;
     mAlphaHeight = aHeight;
@@ -151,8 +151,12 @@ nsresult nsImagePh :: Init(PRInt32 aWidth, PRInt32 aHeight, PRInt32 aDepth,nsMas
     mAlphaBits = nsnull;
     mAlphaWidth = 0;
     mAlphaHeight = 0;
-//    printf("TODO: want an 8bit mask for an image..\n");
+    printf("TODO: want an 8bit mask for an image..\n");
     PR_LOG(PhGfxLog, PR_LOG_DEBUG,("nsImagePh::Init - 8 bit mask not implemented.\n" ));
+    break;
+
+  default:
+    printf("TODO: want a mask for an image.\n");
     break;
   }
 
@@ -311,6 +315,7 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
 {
   PR_LOG(PhGfxLog, PR_LOG_DEBUG,("nsImagePh::Draw2 (%p) (%ld,%ld,%ld,%ld)\n", this, aX, aY, aWidth, aHeight ));
 
+//printf ("kedl: draw2\n");
   // REVISIT - this is a brute-force implementation. We currently have no h/w blit
   // capabilities.
 
@@ -340,30 +345,7 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
  */
 nsresult nsImagePh :: Optimize(nsIDeviceContext* aContext)
 {
-  PR_LOG(PhGfxLog, PR_LOG_DEBUG,("nsImagePh::Optimize - Not Implemented\n" ));
-
-#if 0
-  // REVISIT - we only need to fix images for the screen device (not printers, etc)
-  // Fix the RGB ordering for 24-bit images (swap red and blue values)...
-
-  if( mImageBits && ( mNumBytesPixel == 3 ))
-  {
-    int x,off,off2,xm;
-    char c;
-    xm = mWidth*3;
-    for(off=0;off<mSizeImage;off+=mRowBytes)
-    {
-      off2 = off+2;
-      for(x=0;x<xm;x+=3)
-      {
-        c = mImageBits[off+x];
-        mImageBits[off+x] = mImageBits[off2+x];
-        mImageBits[off2+x] = c;
-      }
-    }
-    mIsOptimized = PR_TRUE;
-  }
-#endif
+  PR_LOG(PhGfxLog, PR_LOG_DEBUG,("nsImagePh::Optimize\n" ));
 
   return NS_OK;
 }

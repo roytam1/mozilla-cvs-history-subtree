@@ -78,7 +78,7 @@ typedef enum JSOp {
 #define ATOM_INDEX_LEN          2
 #define ATOM_INDEX_HI(index)    ((jsbytecode)((index) >> 8))
 #define ATOM_INDEX_LO(index)    ((jsbytecode)(index))
-#define GET_ATOM_INDEX(pc)      (((pc)[1] << 8) | (pc)[2])
+#define GET_ATOM_INDEX(pc)      ((jsatomid)(((pc)[1] << 8) | (pc)[2]))
 #define SET_ATOM_INDEX(pc,index)((pc)[1] = ATOM_INDEX_HI(index),              \
 				 (pc)[2] = ATOM_INDEX_LO(index))
 #define GET_ATOM(cx,script,pc)  js_GetAtom((cx), &(script)->atomMap,          \
@@ -88,7 +88,7 @@ typedef enum JSOp {
 
 #define ARGC_HI(argc)           ((jsbytecode)((argc) >> 8))
 #define ARGC_LO(argc)           ((jsbytecode)(argc))
-#define GET_ARGC(pc)            (((pc)[1] << 8) | (pc)[2])
+#define GET_ARGC(pc)            ((uintN)(((pc)[1] << 8) | (pc)[2]))
 #define ARGC_LIMIT              ((uint32)1 << 16)
 
 /* Synonyms for quick JOF_QARG and JOF_QVAR bytecodes. */
@@ -181,10 +181,12 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun, JSBool newlines);
 /*
  * Find the source expression that resulted in v, and return a new string
  * containing it.  Fall back on v's string conversion if we can't find the
- * bytecode that generated and pushed v on the operand stack.
+ * bytecode that generated and pushed v on the operand stack.  Don't look
+ * for v on the stack if checkStack is false.
  */
 extern JSString *
-js_DecompileValueGenerator(JSContext *cx, jsval v, JSString *fallback);
+js_DecompileValueGenerator(JSContext *cx, JSBool checkStack, jsval v,
+			   JSString *fallback);
 
 JS_END_EXTERN_C
 

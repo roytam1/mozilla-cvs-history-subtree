@@ -81,7 +81,7 @@ nsMimeEmitter2::SetOutputStream(nsIOutputStream *outStream)
 // anything to the stream since these may be image data
 // output streams, etc...
 nsresult       
-nsMimeEmitter2::Initialize(nsIURL *url)
+nsMimeEmitter2::Initialize(nsIURI *url)
 {
   // set the url
   mURL = url;
@@ -149,10 +149,12 @@ nsMimeEmitter2::StartHeader(PRBool rootMailHeader, PRBool headerOnly, const char
   {
     if ( (!headerOnly) && (outCharset) && (*outCharset) )
     {
-      // This seems to choke Ender so I am going to leave it out for now.
-      //UtilityWrite("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=");
-      //UtilityWrite(outCharset);
-      //UtilityWrite("\">");
+      UtilityWrite("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=");
+      UtilityWrite(outCharset);
+      UtilityWrite("\">");
+#ifdef NS_DEBUG
+printf("Warning: <META HTTP-EQUIV> with charset defined chokes Ender!\n");
+#endif
     }
     UtilityWrite("<BLOCKQUOTE><table BORDER=0>");
   }  
@@ -432,7 +434,7 @@ nsMimeEmitter2::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten)
     mBufferMgr->ReduceBuffer(written);
     nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
     if (inputStream)
-      mOutListener->OnDataAvailable(mURL, inputStream, written);
+      mOutListener->OnDataAvailable(nsnull, mURL, inputStream, written);
     *amountWritten = written;
 
     // if we couldn't write all the old data, buffer the new data
@@ -456,7 +458,7 @@ nsMimeEmitter2::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten)
     mBufferMgr->IncreaseBuffer(buf+written, (size-written));
     nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
     if (inputStream)
-      mOutListener->OnDataAvailable(mURL, inputStream, written);
+      mOutListener->OnDataAvailable(nsnull, mURL, inputStream, written);
   }
 
   return rc;

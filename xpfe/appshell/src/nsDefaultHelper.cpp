@@ -46,7 +46,7 @@ struct NotificationEvent : public PLEvent
 {
   NotificationEvent(nsDefaultProtocolHelper *aSelf,
                     nsIBlockingNotification *aCaller, 
-                    nsIURL *aUrl, 
+                    nsIURI *aUrl, 
                     PRInt32 aCode, 
                     nsISupports *aExtraInfo);
   ~NotificationEvent();
@@ -57,7 +57,7 @@ struct NotificationEvent : public PLEvent
 
   nsDefaultProtocolHelper *mSelf;
   nsIBlockingNotification *mCaller;
-  nsIURL *mUrl;
+  nsIURI *mUrl;
   PRInt32 mCode;
   nsISupports *mExtraInfo;
 };
@@ -77,16 +77,16 @@ public:
 
   /* nsIBlockingNotificationObserver interface... */
   NS_IMETHOD Notify(nsIBlockingNotification *aCaller,
-                    nsIURL *aUrl,
+                    nsIURI *aUrl,
                     PRThread *aThread,
                     PRInt32 aCode,
                     void *aExtraInfo);
 
-  NS_IMETHOD CancelNotify(nsIURL *aUrl);
+  NS_IMETHOD CancelNotify(nsIURI *aUrl);
 
   /* class methods... */
   nsresult HandleNotification(nsIBlockingNotification *aCaller,
-                              nsIURL *aUrl,
+                              nsIURI *aUrl,
                               PRInt32 aCode,
                               void *aExtraInfo);
 
@@ -136,7 +136,7 @@ NS_IMPL_QUERY_INTERFACE(nsDefaultProtocolHelper, kIBlockingNotificationObserverI
  */
 NS_IMETHODIMP
 nsDefaultProtocolHelper::Notify(nsIBlockingNotification *aCaller,
-                                nsIURL *aUrl,
+                                nsIURI *aUrl,
                                 PRThread *aThread,
                                 PRInt32 aCode,
                                 void *aExtraInfo)
@@ -206,7 +206,7 @@ nsDefaultProtocolHelper::Notify(nsIBlockingNotification *aCaller,
 
 
 NS_IMETHODIMP
-nsDefaultProtocolHelper::CancelNotify(nsIURL *aUrl)
+nsDefaultProtocolHelper::CancelNotify(nsIURI *aUrl)
 {
   /* XXX: does not support interrupting a notification yet... */
   return NS_ERROR_FAILURE;
@@ -214,7 +214,7 @@ nsDefaultProtocolHelper::CancelNotify(nsIURL *aUrl)
 
 
 nsresult nsDefaultProtocolHelper::HandleNotification(nsIBlockingNotification *aCaller,
-                                                     nsIURL *aUrl,
+                                                     nsIURI *aUrl,
                                                      PRInt32 aCode,
                                                      void *aExtraInfo)
 {
@@ -240,13 +240,29 @@ nsresult nsDefaultProtocolHelper::HandleNotification(nsIBlockingNotification *aC
  	PRInt32 result;
   nsresult rv;
   
+#ifdef NECKO
+  NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);
+#else
   NS_WITH_SERVICE(nsINetSupportDialogService, dialog, kNetSupportDialogCID, &rv);
+#endif
   
  	if (NS_FAILED(rv))
  		return NS_ERROR_FAILURE;
-  if ( dialog )
-   	dialog->PromptUserAndPassword( aText, aUser, aPass, &result );                  
-  
+  if ( dialog ) {
+#ifdef NECKO
+    PRUnichar* usr;
+    PRUnichar* pwd;
+   	rv = dialog->PromptUsernameAndPassword(aText.GetUnicode(), &usr, &pwd, &result); 
+    if (NS_SUCCEEDED(rv)) {
+      aUser = usr;
+      delete[] usr;
+      aPass = pwd;
+      delete[] pwd;
+    }
+#else
+   	dialog->PromptUserAndPassword( aText, aUser, aPass, &result ); 
+#endif
+  }
   if ( result == 1 )
   	bResult =  NS_NOTIFY_SUCCEEDED;
   else
@@ -274,7 +290,7 @@ nsresult nsDefaultProtocolHelper::HandleNotification(nsIBlockingNotification *aC
 
 NotificationEvent::NotificationEvent(nsDefaultProtocolHelper *aSelf,
                                      nsIBlockingNotification *aCaller,
-                                     nsIURL *aUrl,
+                                     nsIURI *aUrl,
                                      PRInt32 aCode,
                                      nsISupports *aExtraInfo)
 {

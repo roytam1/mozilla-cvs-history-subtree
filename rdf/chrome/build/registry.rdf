@@ -3,44 +3,75 @@
 <RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns="http://chrome.mozilla.org/rdf#"> 
 
-	<chrome about="chrome://global/">
+  <chrome about="chrome://global/">
 	
     <skin> 
       <RDF:Description about="chrome://global/skin/">
-	    <base>resource:/res/samples/</base>
+	    <base>resource:/chrome/global/skin/default/</base>
         <main>xul.css</main> 
       </RDF:Description> 
     </skin> 
 	
-	</chrome>
+    <content> 
+      <RDF:Description about="chrome://global/content/">
+	    <base>resource:/chrome/global/content/default/</base>
+        <main>globalOverlay.xul</main> 
+      </RDF:Description> 
+    </content> 
+
+    <locale> 
+      <RDF:Description about="chrome://global/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
+  </chrome>
 	
 
   <chrome about="chrome://navigator/"> 
 
     <skin> 
       <RDF:Description about="chrome://navigator/skin/">
-	    <base>resource:/res/samples/</base>
+	    <base>resource:/chrome/navigator/skin/default/</base>
         <main>navigator.css</main> 
       </RDF:Description> 
     </skin> 
 
     <content> 
       <RDF:Description about="chrome://navigator/content/">
-	    <base>resource:/res/samples/</base>
+	    <base>resource:/chrome/navigator/content/default/</base>
         <main>navigator.xul</main> 
       </RDF:Description> 
     </content> 
+
+    <locale> 
+      <RDF:Description about="chrome://navigator/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
 
   </chrome> 
 
   <chrome about="chrome://sidebar/"> 
 
+    <content> 
+      <RDF:Description about="chrome://sidebar/content/">
+	    <base>resource:/chrome/sidebar/content/default/</base>
+      </RDF:Description> 
+    </content> 
+
     <skin> 
       <RDF:Description about="chrome://sidebar/skin/">
-        <base>resource:/res/rdf/</base>
+        <base>resource:/chrome/sidebar/skin/default/</base>
         <main>sidebar.css</main> 
       </RDF:Description> 
     </skin> 
+
+    <locale> 
+      <RDF:Description about="chrome://sidebar/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
 
   </chrome> 
 
@@ -60,6 +91,12 @@
       </RDF:Description> 
     </content> 
 
+    <locale> 
+      <RDF:Description about="chrome://messenger/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
   </chrome> 
 
   <chrome about="chrome://messengercompose/"> 
@@ -78,41 +115,38 @@
       </RDF:Description> 
     </content> 
 
+    <locale> 
+      <RDF:Description about="chrome://messengercompose/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
   </chrome>  
   
   <chrome about="chrome://editor/">
   
     <content> 
       <RDF:Description about="chrome://editor/content/">
-	    <base>resource:/chrome/editor/composer/content/default/</base>
+	    <base>resource:/chrome/editor/content/default/</base>
         <main>EditorAppShell.xul</main> 
       </RDF:Description> 
     </content> 
   
     <skin> 
       <RDF:Description about="chrome://editor/skin/">
-	    <base>resource:/chrome/editor/composer/skin/default/</base>
+	    <base>resource:/chrome/editor/skin/default/</base>
         <main>Editor.css</main> 
       </RDF:Description> 
     </skin> 
 
+    <locale> 
+      <RDF:Description about="chrome://editor/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
   </chrome>
   
-  <chrome about="chrome://editordlgs/">
-    <skin> 
-      <RDF:Description about="chrome://editordlgs/skin/">
-	    <base>resource:/chrome/editor/dialogs/skin/default/</base>
-        <main>EditorDialog.css</main> 
-      </RDF:Description> 
-    </skin> 
-
-    <content> 
-      <RDF:Description about="chrome://editordlgs/content/">
-	    <base>resource:/chrome/editor/dialogs/content/default/</base>
-      </RDF:Description>
-    </content> 
-  </chrome>
- 
   <chrome about="chrome://addressbook/"> 
 
     <skin> 
@@ -125,9 +159,15 @@
     <content> 
       <RDF:Description about="chrome://addressbook/content/">
 	    <base>resource:/chrome/addressbook/content/default/</base>
-        <main>addressbook.xul</main> 
+         <main>addressbook.xul</main> 
       </RDF:Description> 
     </content> 
+
+    <locale> 
+      <RDF:Description about="chrome://addressbook/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
 
   </chrome> 
 
@@ -147,8 +187,83 @@
       </RDF:Description> 
     </content> 
 
+    <locale> 
+      <RDF:Description about="chrome://pref/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
   </chrome> 
 
+  <chrome about="chrome://bookmarks/"> 
+
+    <content> 
+      <RDF:Description about="chrome://bookmarks/content/">
+	    <base>resource:/chrome/bookmarks/content/default/</base>
+         <main>bookmarks.xul</main> 
+      </RDF:Description> 
+    </content> 
+
+    <skin> 
+      <RDF:Description about="chrome://bookmarks/skin/">
+        <base>resource:/chrome/bookmarks/skin/default/</base>
+        <main>bookmarks.css</main> 
+      </RDF:Description> 
+    </skin> 
+
+    <locale> 
+      <RDF:Description about="chrome://bookmarks/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
+  </chrome> 
+
+  <chrome about="chrome://history/"> 
+
+    <content> 
+      <RDF:Description about="chrome://history/content/">
+	    <base>resource:/chrome/history/content/default/</base>
+         <main>history.xul</main> 
+      </RDF:Description> 
+    </content> 
+
+    <skin> 
+      <RDF:Description about="chrome://history/skin/">
+	    <base>resource:/chrome/history/skin/default/</base>
+        <main>history.css</main> 
+      </RDF:Description> 
+    </skin> 
+
+    <locale> 
+      <RDF:Description about="chrome://history/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
+  </chrome> 
+
+  <chrome about="chrome://related/"> 
+
+    <content> 
+      <RDF:Description about="chrome://related/content/">
+	    <base>resource:/chrome/related/content/default/</base>
+      </RDF:Description> 
+    </content> 
+
+    <skin> 
+      <RDF:Description about="chrome://related/skin/">
+	    <base>resource:/chrome/related/skin/default/</base>
+      </RDF:Description> 
+    </skin> 
+
+    <locale> 
+      <RDF:Description about="chrome://related/locale/">
+        <name>en-US</name>
+      </RDF:Description> 
+    </locale> 
+
+  </chrome> 
 </RDF:RDF> 
 
 

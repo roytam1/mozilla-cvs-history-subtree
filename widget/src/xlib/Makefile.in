@@ -15,7 +15,6 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-
 DEPTH = ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
@@ -23,48 +22,72 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-include $(topsrcdir)/config/config.mk
-
-LIBRARY_NAME = raptorwidgetxlib_s
-
-MODULE=widget
+LIBRARY_NAME = widget_xlib
 
 REQUIRES=util img xpcom raptor netlib
 
-DEFINES += -D_IMPL_NS_WIDGET 
-
-INCLUDES+= -I$(srcdir)/../xpwidgets -I$(srcdir)/../xlib -I$(srcdir)/.
-
-INCLUDES += $(TK_CFLAGS)
-
-CPPSRCS= nsWidgetFactory.cpp \
-	nsWidget.cpp \
-	nsWindow.cpp \
+CPPSRCS = \
+	$(topsrcdir)/widget/src/build/nsWidgetSupport.cpp \
+	nsAppShell.cpp \
 	nsButton.cpp \
 	nsCheckButton.cpp \
 	nsComboBox.cpp \
-	nsRadioButton.cpp \
 	nsFileWidget.cpp \
-	nsListBox.cpp \
-	nsScrollBar.cpp \
-	nsTextHelper.cpp \
-	nsTextAreaWidget.cpp \
-	nsTextWidget.cpp \
-	nsTabWidget.cpp \
-	nsTooltipWidget.cpp \
-	nsAppShell.cpp \
-	nsToolkit.cpp \
-	nsLookAndFeel.cpp \
+	nsKeyCode.cpp \
 	nsLabel.cpp \
-	nsMenuBar.cpp \
+	nsListBox.cpp \
+	nsLookAndFeel.cpp \
 	nsMenu.cpp \
+	nsMenuBar.cpp \
 	nsMenuItem.cpp \
 	nsPopUpMenu.cpp \
+	nsRadioButton.cpp \
+	nsScrollBar.cpp \
+	nsTabWidget.cpp \
+	nsTextAreaWidget.cpp \
+	nsTextHelper.cpp \
+	nsTextWidget.cpp \
+	nsToolkit.cpp \
+	nsTooltipWidget.cpp \
+	nsWidget.cpp \
+	nsWidgetFactory.cpp \
+	nsWindow.cpp \
+	nsXUtils.cpp \
 	$(NULL)
 
-TARGETS = $(LIBRARY)
+DIRS =\
+	window_service \
+	$(NULL)
 
-MKSHLIB :=
+SHARED_LIBRARY_LIBS =			    \
+	$(DIST)/lib/libraptorbasewidget_s.a \
+	$(NULL)
+
+EXTRA_DSO_LDOPTS+=	       \
+	$(MKSHLIB_FORCE_ALL)   \
+	$(SHARED_LIBRARY_LIBS) \
+	$(MKSHLIB_UNFORCE_ALL) \
+	$(NULL)
+
+ifdef TOOLKIT_EXORCISM
+EXTRA_DSO_LDOPTS += -L$(DIST)/bin -lxlibrgb $(MOZ_XLIB_LDFLAGS)
+else
+EXTRA_DSO_LDOPTS += $(TK_LIBS)
+endif
 
 include $(topsrcdir)/config/rules.mk
 
+ifdef TOOLKIT_EXORCISM
+CXXFLAGS += $(MOZ_XLIB_CFLAGS)
+else
+CXXFLAGS += $(TK_CFLAGS)
+endif
+
+DEFINES		+= -D_IMPL_NS_WIDGET
+
+INCLUDES	+= \
+		-I$(srcdir)/../xpwidgets \
+		-I$(srcdir)/. \
+		$(NULL)
+
+$(LIBRARY) $(SHARED_LIBRARY): $(SHARED_LIBRARY_LIBS) Makefile

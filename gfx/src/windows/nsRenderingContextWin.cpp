@@ -1202,6 +1202,35 @@ NS_IMETHODIMP nsRenderingContextWin :: FillRect(nscoord aX, nscoord aY, nscoord 
   return NS_OK;
 }
 
+NS_IMETHODIMP nsRenderingContextWin :: InvertRect(const nsRect& aRect)
+{
+  RECT nr;
+	nsRect tr;
+
+	tr = aRect;
+	mTMatrix->TransformCoord(&tr.x,&tr.y,&tr.width,&tr.height);
+  ConditionRect(tr, nr);
+  ::InvertRect(mDC, &nr);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextWin :: InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+{
+  RECT nr;
+	nsRect	tr;
+
+	mTMatrix->TransformCoord(&aX,&aY,&aWidth,&aHeight);
+	nr.left = aX;
+	nr.top = aY;
+	nr.right = aX+aWidth;
+	nr.bottom = aY+aHeight;
+
+  ::InvertRect(mDC, &nr);
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsRenderingContextWin :: DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
   // First transform nsPoint's into POINT's; perform coordinate space
@@ -1778,6 +1807,14 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsDrawingSurface aSrcSu
   return NS_OK;
 }
 
+//~~~
+NS_IMETHODIMP nsRenderingContextWin::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+{
+  if(ngd != nsnull)
+    *ngd = (PRUint32)mDC;
+  return NS_OK;
+}
+
 #ifdef NS_DEBUG
 //these are used with the routines below
 //to see how our state caching is working... MMP
@@ -1982,12 +2019,10 @@ NS_IMETHODIMP
 nsRenderingContextWin::SetColor(const nsString& aColor)
 {
   nscolor rgb;
-  char cbuf[40];
-  aColor.ToCString(cbuf, sizeof(cbuf));
-  if (NS_ColorNameToRGB(cbuf, &rgb)) {
+  if (NS_ColorNameToRGB(aColor, &rgb)) {
     SetColor(rgb);
   }
-  else if (NS_HexToRGB(cbuf, &rgb)) {
+  else if (NS_HexToRGB(aColor, &rgb)) {
     SetColor(rgb);
   }
   return NS_OK;

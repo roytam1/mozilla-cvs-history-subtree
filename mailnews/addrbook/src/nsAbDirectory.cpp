@@ -16,66 +16,46 @@
  * Reserved.
  */
 
-#include "msgCore.h"    // precompiled header...
-
 #include "nsAbDirectory.h"	 
 #include "nsIRDFService.h"
+#include "nsIRDFResource.h"
 #include "nsIServiceManager.h"
 #include "nsRDFCID.h"
 #include "nsXPIDLString.h"
 #include "nsCOMPtr.h"
 #include "nsAbBaseCID.h"
 #include "nsAbCard.h"
+#include "nsAddrDatabase.h"
+#include "nsIAbListener.h"
+#include "nsIAddrBookSession.h"
 
 #include "nsIFileSpec.h"
 #include "nsIFileLocator.h"
 #include "nsFileLocations.h"
 #include "mdb.h"
-	 
+#include "prlog.h"
+#include "prprf.h"
+#include "prmem.h"
+
+/* The definition is nsAddressBook.cpp */
+extern const char *kDirectoryDataSourceRoot;
+
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-
 static NS_DEFINE_CID(kAbCardCID, NS_ABCARDRESOURCE_CID);
-static NS_DEFINE_CID(kAddressBookDB, NS_ADDRESSBOOKDB_CID);
+static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRESSBOOKDB_CID);
 static NS_DEFINE_CID(kFileLocatorCID, NS_FILELOCATOR_CID);
+static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
 
-// we need this because of an egcs 1.0 (and possibly gcc) compiler bug
-// that doesn't allow you to call ::nsISupports::GetIID() inside of a class
-// that multiply inherits from nsISupports
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-
-nsABDirectory::nsABDirectory(void)
-  :  nsRDFResource(), mListeners(nsnull),
-     mInitialized(PR_FALSE), mCardInitialized(PR_FALSE),
-     mCsid(0), mDepth(0), mPrefFlags(0), mDatabase(nsnull)
+nsAbDirectory::nsAbDirectory(void)
+  :  nsAbRDFResource(),
+     mInitialized(PR_FALSE)
 {
-//  NS_INIT_REFCNT(); done by superclass
-
 	NS_NewISupportsArray(getter_AddRefs(mSubDirectories));
-	NS_NewISupportsArray(getter_AddRefs(mSubCards));
-
-	//The rdf:addressdirectory datasource is going to be a listener to all nsIAbDirectory, so add
-	//it as a listener
-    nsresult rv; 
-    NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
-    if (NS_SUCCEEDED(rv))
-	{
-		nsCOMPtr<nsIRDFDataSource> datasource;
-		rv = rdfService->GetDataSource("rdf:addressdirectory", getter_AddRefs(datasource));
-		if(NS_SUCCEEDED(rv))
-		{   /*
-			nsCOMPtr<nsIAbListener> directoryListener(do_QueryInterface(datasource, &rv));
-			if(NS_SUCCEEDED(rv))
-			{
-				AddAddrBookListener(directoryListener);
-			}*/
-
-		}
-	} 
 }
 
-nsABDirectory::~nsABDirectory(void)
+nsAbDirectory::~nsAbDirectory(void)
 {
-	if(mSubDirectories)
+	if (mSubDirectories)
 	{
 		PRUint32 count;
 		nsresult rv = mSubDirectories->Count(&count);
@@ -85,101 +65,102 @@ nsABDirectory::~nsABDirectory(void)
 			mSubDirectories->RemoveElementAt(i);
 	}
 
-	if(mSubCards)
-	{
-		PRUint32 count;
-		nsresult rv = mSubCards->Count(&count);
-		NS_ASSERTION(NS_SUCCEEDED(rv), "Count failed");
-		PRInt32 i;
-		for (i = count - 1; i >= 0; i--)
-			mSubCards->RemoveElementAt(i);
-	}
-
-	if (mDatabase)
-	{
-//		mDatabase->RemoveListener(this);
-		mDatabase->Close(PR_TRUE);
-		mDatabase = null_nsCOMPtr();
-	}
-
-	if (mListeners) 
-	{
-		PRInt32 i;
-		for (i = mListeners->Count() - 1; i >= 0; --i) 
-			mListeners->RemoveElementAt(i);
-		delete mListeners;
-	}
-
 }
 
-NS_IMPL_ISUPPORTS_INHERITED(nsABDirectory, nsRDFResource, nsIAbDirectory)
+NS_IMPL_ISUPPORTS_INHERITED(nsAbDirectory, nsAbRDFResource, nsIAbDirectory)
 
 ////////////////////////////////////////////////////////////////////////////////
-
-typedef PRBool
-(*nsArrayFilter)(nsISupports* element, void* data);
-
-#if 0
-static nsresult
-nsFilterBy(nsISupportsArray* array, nsArrayFilter filter, void* data,
-           nsISupportsArray* *result)
+NS_IMETHODIMP nsAbDirectory::OnCardAttribChange(PRUint32 abCode, nsIAddrDBListener *instigator)
 {
-  nsCOMPtr<nsISupportsArray> f;
-  nsresult rv = NS_NewISupportsArray(getter_AddRefs(f));
-  if (NS_FAILED(rv)) return rv;
-  PRUint32 count;
-  rv = array->Count(&count);
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Count failed");
-  PRInt32 i;
-  for (i = 0; i < count; i++) {
-    nsCOMPtr<nsISupports> element = getter_AddRefs(array->ElementAt(i));
-    if (filter(element, data)) {
-      rv = f->AppendElement(element);
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
-    }
-  }
-  *result = f;
   return NS_OK;
 }
 
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP 
-nsABDirectory::AddUnique(nsISupports* element)
+NS_IMETHODIMP nsAbDirectory::OnCardEntryChange
+(PRUint32 abCode, nsIAbCard *card, nsIAddrDBListener *instigator)
 {
-  // XXX fix this
-  return mSubDirectories->AppendElement(element);
+	nsresult rv = NS_OK;
+	if (abCode == AB_NotifyInserted && card)
+	{ 
+		NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
+
+		if(NS_FAILED(rv))
+			return rv;
+
+		char* cardURI = nsnull;
+		rv = card->GetCardURI(&cardURI);
+		if (NS_FAILED(rv) || !cardURI)
+			return NS_ERROR_NULL_POINTER;
+
+		nsCOMPtr<nsIRDFResource> res;
+		rv = rdf->GetResource(cardURI, getter_AddRefs(res));
+		if(cardURI)
+			PR_smprintf_free(cardURI);
+		if (NS_SUCCEEDED(rv))
+		{
+			nsCOMPtr<nsIAbCard> personCard = do_QueryInterface(res);
+			if (personCard)
+			{
+				personCard->CopyCard(card);
+				if (mDatabase)
+				{
+					personCard->SetAbDatabase(mDatabase);
+					nsCOMPtr<nsIAddrDBListener> listener(do_QueryInterface(personCard, &rv));
+					if (NS_FAILED(rv)) 
+						return NS_ERROR_NULL_POINTER;
+					mDatabase->AddListener(listener);
+				}
+				nsCOMPtr<nsISupports> cardSupports(do_QueryInterface(personCard));
+				if (cardSupports)
+					NotifyItemAdded(cardSupports);
+			}
+		}
+	}
+	else if (abCode == AB_NotifyDeleted && card)
+	{
+		nsCOMPtr<nsISupports> cardSupports(do_QueryInterface(card, &rv));
+		if(NS_SUCCEEDED(rv))
+			NotifyItemDeleted(cardSupports);
+	}
+	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsABDirectory::ReplaceElement(nsISupports* element, nsISupports* newElement)
-{
-  PR_ASSERT(0);
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsABDirectory::GetChildNodes(nsIEnumerator* *result)
+NS_IMETHODIMP nsAbDirectory::GetChildNodes(nsIEnumerator* *result)
 {
   if (!mInitialized) 
   {
-    if (!PL_strcmp(mURI, "abdirectory:/") && GetDirList())
+    if (!PL_strcmp(mURI, kDirectoryDataSourceRoot) && GetDirList())
 	{
 		PRInt32 count = GetDirList()->Count();
-		/* check :set count = 1 for personal addressbook only for now*/
-		/* count = 1; */
+		/* check: only show personal address book for now */
+		/* not showing 4.x address book unitl we have the converting done */
 		PRInt32 i;
 		for (i = 0; i < count; i++)
 		{
 			DIR_Server *server = (DIR_Server *)GetDirList()->ElementAt(i);
-			nsCOMPtr<nsIAbDirectory> childDir;
-			nsAutoString currentDirStr = "Pab";
-			currentDirStr.Append(server->position, 10);
-			AddSubDirectory(currentDirStr, getter_AddRefs(childDir));
+
+			if (server->dirType == PABDirectory)
+			{
+				nsString name(server->fileName);
+				PRInt32 pos = name.Find("na2");
+				if (pos >= 0) /* check: this is a 4.x file, remove when conversion is done */
+					continue;
+
+				char* uriStr = nsnull;
+				uriStr = PR_smprintf("%s%s", mURI, server->fileName);
+				if (uriStr == nsnull) 
+					return NS_ERROR_OUT_OF_MEMORY;
+
+				nsCOMPtr<nsIAbDirectory> childDir;
+				AddDirectory(uriStr, getter_AddRefs(childDir));
+				if (uriStr)
+					PR_smprintf_free(uriStr);
+
+				if (childDir)
+				{
+					childDir->SetDirName(server->description);
+					childDir->SetServer(server);
+				}
+			}
 		}
 	}
     mInitialized = PR_TRUE;
@@ -187,9 +168,9 @@ nsABDirectory::GetChildNodes(nsIEnumerator* *result)
   return mSubDirectories->Enumerate(result);
 }
 
-nsresult nsABDirectory::AddSubDirectory(nsAutoString name, nsIAbDirectory **childDir)
+NS_IMETHODIMP nsAbDirectory::AddDirectory(const char *uriName, nsIAbDirectory **childDir)
 {
-	if(!childDir)
+	if (!childDir || !uriName)
 		return NS_ERROR_NULL_POINTER;
 
 	nsresult rv = NS_OK;
@@ -198,110 +179,76 @@ nsresult nsABDirectory::AddSubDirectory(nsAutoString name, nsIAbDirectory **chil
 	if(NS_FAILED(rv))
 		return rv;
 	
-	nsAutoString uri;
-	uri.Append(mURI);
-	uri.Append("/");
-
-	uri.Append(name);
-	char* uriStr = uri.ToNewCString();
-	if (uriStr == nsnull) 
-		return NS_ERROR_OUT_OF_MEMORY;
-
 	nsCOMPtr<nsIRDFResource> res;
-	rv = rdf->GetResource(uriStr, getter_AddRefs(res));
+	rv = rdf->GetResource(uriName, getter_AddRefs(res));
 	if (NS_FAILED(rv))
 		return rv;
+
 	nsCOMPtr<nsIAbDirectory> directory(do_QueryInterface(res, &rv));
 	if (NS_FAILED(rv))
 		return rv;        
-	delete[] uriStr;
 
 	mSubDirectories->AppendElement(directory);
 	*childDir = directory;
-	NS_ADDREF(*childDir);
+	NS_IF_ADDREF(*childDir);
 	 
-    (void)nsServiceManager::ReleaseService(kRDFServiceCID, rdf);
-
 	return rv;
 }
 
-nsresult nsABDirectory::GetAbDatabase()
+NS_IMETHODIMP nsAbDirectory::GetChildCards(nsIEnumerator* *result)
 {
-	// find out which database, which directory to add
-	// get RDF directory selected node
-
-	nsresult openAddrDB = NS_OK;
-	if (!mDatabase)
-	{
-		nsresult rv = NS_ERROR_FAILURE;
-
-		NS_WITH_SERVICE(nsIFileLocator, locator, kFileLocatorCID, &rv);
-		if (NS_FAILED(rv))
-			return rv;
-
-		nsIFileSpec* userdir;
-		rv = locator->GetFileLocation(nsSpecialFileSpec::App_UserProfileDirectory50, &userdir);
-		if (NS_FAILED(rv))
-			return rv;
-		nsServiceManager::ReleaseService(kFileLocatorCID, locator);
-		
-		nsFileSpec dbPath;
-		userdir->GetFileSpec(&dbPath);
-		dbPath += "abook.mab";
-
-		nsCOMPtr<nsIAddrDatabase> addrDBFactory;
-		rv = nsComponentManager::CreateInstance(kAddressBookDB, nsnull, nsIAddrDatabase::GetIID(), 
-												(void **) getter_AddRefs(addrDBFactory));
-		if (NS_SUCCEEDED(rv) && addrDBFactory)
-			openAddrDB = addrDBFactory->Open(dbPath, PR_TRUE, getter_AddRefs(mDatabase), PR_TRUE);
-
-//		if (mDatabase)
-//			mDatabase->AddListener(this);
-	}
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsABDirectory::GetChildCards(nsIEnumerator* *result)
-{
-	if (!mCardInitialized) 
-	{
-		if (!PL_strcmp(mURI, "abdirectory://Pab1") ||
-			!PL_strcmp(mURI, "abdirectory://Pab2") ||
-			!PL_strcmp(mURI, "abdirectory://Pab3"))
-		{
-			PRInt32 j;
-			for (j = 0; j < 2; j++)
-			{   
-				nsAutoString currentCardStr;
-				if (!PL_strcmp(mURI, "abdirectory://Pab1"))
-                    currentCardStr.Append("abcard://Pab1/Card");	
-				if (!PL_strcmp(mURI, "abdirectory://Pab2"))
-                    currentCardStr.Append("abcard://Pab2/Card");	
-				if (!PL_strcmp(mURI, "abdirectory://Pab3"))
-                    currentCardStr.Append("abcard://Pab3/Card");	
-				nsCOMPtr<nsIAbCard> childCard;
-				if (j == 0) currentCardStr.Append('1');
-				if (j == 1) currentCardStr.Append('2');
-				AddChildCards(currentCardStr, getter_AddRefs(childCard));
-			}
-		}
-		mCardInitialized = PR_TRUE;
-	}
-//	return mSubCards->Enumerate(result);
-	return mSubDirectories->Enumerate(result);
-
-#ifdef HOOK_UP_DB
 	nsresult rv = GetAbDatabase();
 
 	if (NS_SUCCEEDED(rv) && mDatabase)
 	{
-		rv = mDatabase->EnumerateCards(result);
+		rv = mDatabase->EnumerateCards(this, result);
 	}
 	return rv;
-#endif
 }
 
-nsresult nsABDirectory::AddChildCards(nsAutoString name, nsIAbCard **childCard)
+NS_IMETHODIMP nsAbDirectory::GetMailingList(nsIEnumerator **mailingList)
+{
+	nsresult rv = GetAbDatabase();
+
+	if (NS_SUCCEEDED(rv) && mDatabase)
+	{
+		rv = mDatabase->EnumerateMailingLists(this, mailingList);
+	}
+	return rv;
+}
+
+NS_IMETHODIMP nsAbDirectory::CreateNewDirectory(const char *dirName)
+{
+	if (!dirName)
+		return NS_ERROR_NULL_POINTER;
+
+	DIR_Server * server = nsnull;
+	nsresult rv = DIR_AddNewAddressBook(dirName, &server);
+
+	nsCOMPtr<nsIAbDirectory> newDir;
+	char *uri = PR_smprintf("%s%s", kDirectoryDataSourceRoot, server->fileName);
+	if (uri)
+	{
+		rv = AddDirectory(uri, getter_AddRefs(newDir));
+		PR_smprintf_free(uri);
+		if (NS_SUCCEEDED(rv) && newDir)
+		{
+			newDir->SetDirName(server->description);
+			newDir->SetServer(server);
+
+			nsCOMPtr<nsISupports> dirSupports(do_QueryInterface(newDir, &rv));
+
+			if (NS_SUCCEEDED(rv))
+				NotifyItemAdded(newDir);
+			return rv;
+		}
+		else
+			return NS_ERROR_NULL_POINTER;
+	}
+	return NS_ERROR_NULL_POINTER;
+}
+
+NS_IMETHODIMP nsAbDirectory::AddChildCards(const char *uriName, nsIAbCard **childCard)
 {
 	if(!childCard)
 		return NS_ERROR_NULL_POINTER;
@@ -312,7 +259,7 @@ nsresult nsABDirectory::AddChildCards(nsAutoString name, nsIAbCard **childCard)
 	if(NS_FAILED(rv))
 		return rv;
 
-	nsAutoString uri(name);
+	nsAutoString uri(uriName);
 	char* uriStr = uri.ToNewCString();
 	if (uriStr == nsnull) 
 		return NS_ERROR_OUT_OF_MEMORY;
@@ -327,7 +274,7 @@ nsresult nsABDirectory::AddChildCards(nsAutoString name, nsIAbCard **childCard)
 	nsCOMPtr<nsIAbCard> personCard(do_QueryInterface(res, &rv));
 	if (NS_FAILED(rv))
 	{
-		rv = nsComponentManager::CreateInstance(kAbCardCID, nsnull, nsIAbCard::GetIID(), getter_AddRefs(personCard));
+		rv = nsComponentManager::CreateInstance(kAbCardCID, nsnull, nsCOMTypeInfo<nsIAbCard>::GetIID(), getter_AddRefs(personCard));
 		if (NS_FAILED(rv) || !personCard)
 		{
 			delete[] uriStr;
@@ -336,205 +283,119 @@ nsresult nsABDirectory::AddChildCards(nsAutoString name, nsIAbCard **childCard)
 	}
 	delete[] uriStr;
 
-//	mSubCards->AppendElement(personCard);
-	mSubDirectories->AppendElement(personCard);
 	*childCard = personCard;
 	NS_ADDREF(*childCard);
 
 	return rv;
 }
 
-
-NS_IMETHODIMP nsABDirectory::CreateCardFromDirectory(nsIAbCard* *result)
+NS_IMETHODIMP nsAbDirectory::DeleteCards(nsISupportsArray *cards)
 {
-	return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsABDirectory::AddAddrBookListener(nsIAbListener * listener)
-{
-  if (! mListeners)
-	{
-		mListeners = new nsVoidArray();
-		if(!mListeners)
-			return NS_ERROR_OUT_OF_MEMORY;
-  }
-  mListeners->AppendElement(listener);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsABDirectory::RemoveAddrBookListener(nsIAbListener * listener)
-{
-  if (! mListeners)
-    return NS_OK;
-  mListeners->RemoveElement(listener);
-  return NS_OK;
-
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP nsABDirectory::GetName(char **name)
-{
-	if(!name)
-		return NS_ERROR_NULL_POINTER;
-
-	if (!PL_strcmp(mURI, "abdirectory://Pab1/Card1"))
-		SetName("Person1");
-	if (!PL_strcmp(mURI, "abdirectory://Pab1/Card2"))
-		SetName("Person2");
-	if (!PL_strcmp(mURI, "abdirectory://Pab2/Card1"))
-		SetName("Person3");
-	if (!PL_strcmp(mURI, "abdirectory://Pab2/Card2"))
-		SetName("Person4");
-	if (!PL_strcmp(mURI, "abdirectory://Pab3/Card1"))
-		SetName("Person5");
-	if (!PL_strcmp(mURI, "abdirectory://Pab3/Card2"))
-		SetName("Person6");
-	else if (GetDirList())
-	{
-		PRInt32 count = GetDirList()->Count();
-		PRInt32 i;
-		/* check :set count = 1 for personal addressbook only for now*/
-		/* count = 1; */
-		for (i = 0; i < count; i++)
-		{
-			DIR_Server *server = (DIR_Server *)GetDirList()->ElementAt(i);
-			nsCOMPtr<nsIAbDirectory> childDir;
-			nsAutoString currentDirStr = "abdirectory://Pab";
-			currentDirStr.Append(server->position, 10);
-			char* dirUrl = currentDirStr.ToNewCString();
-			if (dirUrl == nsnull) 
-				return NS_ERROR_OUT_OF_MEMORY;
-			if (!PL_strcmp(mURI, dirUrl))
-				SetName(server->description);
-			delete[] dirUrl;
-		}
-	}
-	*name = mDirName.ToNewCString();
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsABDirectory::SetName(char * name)
-{
-	mDirName = name;
-	return NS_OK;
-}
-
-NS_IMETHODIMP nsABDirectory::GetParent(nsIAbBase* *parent)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsABDirectory::SetParent(nsIAbBase *parent)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsABDirectory::GetChildNamed(const char* name, nsISupports* *result)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsABDirectory::ContainsChildNamed(const char *name, PRBool* containsChild)
-{
-	nsCOMPtr<nsISupports> child;
-	
-	if(containsChild)
-	{
-		*containsChild = PR_FALSE;
-		if(NS_SUCCEEDED(GetChildNamed(name, getter_AddRefs(child))))
-		{
-			*containsChild = child != nsnull;
-		}
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-NS_IMETHODIMP nsABDirectory::FindParentOf(nsIAbDirectory * aDirectory, nsIAbDirectory ** aParent)
-{
-	if(!aParent)
-		return NS_ERROR_NULL_POINTER;
-
-	nsresult rv;
-
-	*aParent = nsnull;
-
-	PRUint32 i, j, count;
-	rv = mSubDirectories->Count(&count);
-	NS_ASSERTION(NS_SUCCEEDED(rv), "Count failed");
-	nsCOMPtr<nsISupports> supports;
-	nsCOMPtr<nsIAbDirectory> child;
-
-	for (i = 0; i < count && *aParent == NULL; i++)
-	{
-		supports = getter_AddRefs(mSubDirectories->ElementAt(i));
-		child = do_QueryInterface(supports, &rv);
-		if(NS_SUCCEEDED(rv) && child)
-		{
-			if (aDirectory == child.get())
-			{
-				*aParent = this;
-				NS_ADDREF(*aParent);
-				return NS_OK;
-			}
-		}
-	}
-
-	for (j = 0; j < count && *aParent == NULL; j++)
-	{
-/*
-		supports = getter_AddRefs(mSubDirectories->ElementAt(j));
-		child = do_QueryInterface(supports, &rv);
-		if(NS_SUCCEEDED(rv) && child)
-		{
-			rv = child->FindParentOf(aDirectory, aParent);
-			if(NS_SUCCEEDED(rv))
-				return rv;
-		}
-*/
-	}
-
-	return rv;
-
-}
-
-NS_IMETHODIMP nsABDirectory::IsParentOf(nsIAbDirectory *child, PRBool deep, PRBool *isParent)
-{
-	if(!isParent)
-		return NS_ERROR_NULL_POINTER;
-	
 	nsresult rv = NS_OK;
 
-	PRUint32 i, count;
-	rv = mSubDirectories->Count(&count);
-	NS_ASSERTION(NS_SUCCEEDED(rv), "Count failed");
+	if (!mDatabase)
+		rv = GetAbDatabase();
 
-	for (i = 0; i < count; i++)
+	if (NS_SUCCEEDED(rv) && mDatabase)
 	{
-		nsCOMPtr<nsISupports> supports = getter_AddRefs(mSubDirectories->ElementAt(i));
-		nsCOMPtr<nsIAbDirectory> directory(do_QueryInterface(supports, &rv));
-		if(NS_SUCCEEDED(rv))
+		PRUint32 cardCount;
+		rv = cards->Count(&cardCount);
+		if (NS_FAILED(rv)) return rv;
+		for(PRUint32 i = 0; i < cardCount; i++)
 		{
-			if (directory.get() == child )
-				*isParent = PR_TRUE;
-			else if(deep)
-			{;
-//				directory->IsParentOf(child, deep, isParent);
+			nsCOMPtr<nsISupports> cardSupports;
+			nsCOMPtr<nsIAbCard> card;
+			cardSupports = getter_AddRefs(cards->ElementAt(i));
+			card = do_QueryInterface(cardSupports, &rv);
+			if (card)
+			{
+				mDatabase->DeleteCard(card, PR_TRUE);
 			}
 		}
-		if(*isParent)
-			return NS_OK;
-    }
-	*isParent = PR_FALSE;
+		mDatabase->Commit(kLargeCommit);
+	}
 	return rv;
 }
 
+NS_IMETHODIMP nsAbDirectory::DeleteDirectories(nsISupportsArray *dierctories)
+{
+	nsresult rv = NS_ERROR_FAILURE;
 
-#ifdef HAVE_DB
-NS_IMETHOD GetTotalPersonsInDB(PRUint32 *totalPersons) const;					// How many messages in database.
-#endif
-	
+	PRUint32 i, dirCount;
+	rv = dierctories->Count(&dirCount);
+	if (NS_FAILED(rv)) return rv;
+	for (i = 0; i < dirCount; i++)
+	{
+		nsCOMPtr<nsISupports> dirSupports;
+		nsCOMPtr<nsIAbDirectory> directory;
+		dirSupports = getter_AddRefs(dierctories->ElementAt(i));
+		directory = do_QueryInterface(dirSupports, &rv);
+		if (NS_SUCCEEDED(rv) && directory)
+		{
+			DIR_Server *server = nsnull;
+			rv = directory->GetServer(&server);
+			if (server)
+			{
+				DIR_DeleteServerFromList(server);
+
+				rv = mSubDirectories->RemoveElement(directory);
+				NotifyItemDeleted(directory);
+			}
+		}
+	}
+
+	return rv;
+}
+
+NS_IMETHODIMP nsAbDirectory::HasCard(nsIAbCard *cards, PRBool *hasCard)
+{
+	if(!hasCard)
+		return NS_ERROR_NULL_POINTER;
+
+	nsresult rv = NS_OK;
+	if (!mDatabase)
+		rv = GetAbDatabase();
+
+	if(NS_SUCCEEDED(rv) && mDatabase)
+	{
+		if(NS_SUCCEEDED(rv))
+			rv = mDatabase->ContainsCard(cards, hasCard);
+	}
+	return rv;
+}
+
+NS_IMETHODIMP nsAbDirectory::HasDirectory(nsIAbDirectory *dir, PRBool *hasDir)
+{
+	if (!hasDir)
+		return NS_ERROR_NULL_POINTER;
+
+	DIR_Server* dirServer = nsnull;
+	dir->GetServer(&dirServer);
+	nsresult rv = DIR_ContainsServer(dirServer, hasDir);
+	return rv;
+}
+
+nsresult nsAbDirectory::NotifyPropertyChanged(char *property, char* oldValue, char* newValue)
+{
+  return NS_OK;
+}
+
+nsresult nsAbDirectory::NotifyItemAdded(nsISupports *item)
+{
+	nsresult rv = NS_OK;
+	NS_WITH_SERVICE(nsIAddrBookSession, abSession, kAddrBookSessionCID, &rv); 
+	if(NS_SUCCEEDED(rv))
+		abSession->NotifyDirectoryItemAdded(this, item);
+	return NS_OK;
+}
+
+nsresult nsAbDirectory::NotifyItemDeleted(nsISupports *item)
+{
+	nsresult rv = NS_OK;
+	NS_WITH_SERVICE(nsIAddrBookSession, abSession, kAddrBookSessionCID, &rv); 
+	if(NS_SUCCEEDED(rv))
+		abSession->NotifyDirectoryItemDeleted(this, item);
+
+	return NS_OK;
+}
 

@@ -19,11 +19,11 @@
 #ifndef nsParseMailbox_H
 #define nsParseMailbox_H
 
+#include "nsIURI.h"
 #include "nsIMsgParseMailMsgState.h"
 #include "nsMsgKeyArray.h"
 #include "nsVoidArray.h"
 #include "nsIStreamListener.h"
-#include "nsITransport.h"
 #include "nsMsgLineBuffer.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIMsgDatabase.h"
@@ -75,7 +75,7 @@ public:
 	// nsIMsgParseMailMsgState support
 	NS_IMETHOD SetMailDB(nsIMsgDatabase * aDatabase);
 	NS_IMETHOD Clear();
-	NS_IMETHOD SetState(MBOX_PARSE_STATE aState);
+	NS_IMETHOD SetState(nsMailboxParseState aState);
 	NS_IMETHOD SetEnvelopePos(PRUint32 aEnvelopePos);
 	NS_IMETHOD ParseAFolderLine(const char *line, PRUint32 lineLength);
 	NS_IMETHOD GetNewMsgHdr(nsIMsgDBHdr ** aMsgHeader);
@@ -100,7 +100,7 @@ public:
 	nsCOMPtr<nsIMsgDBHdr>		m_newMsgHdr;		/* current message header we're building */
 	nsCOMPtr<nsIMsgDatabase>	m_mailDB;
 
-	MBOX_PARSE_STATE m_state;
+	nsMailboxParseState m_state;
 	PRUint32			m_position;
 	PRUint32			m_envelope_pos;
 	PRUint32			m_headerstartpos;
@@ -168,25 +168,9 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
-
-	// mscott; I don't think we need to worry about this yet so I'll leave it stubbed out for now
-	NS_IMETHOD GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo) { return NS_OK;} ;
-	
-	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
-	// OnDataAvailable. We then read and process the incoming data from the input stream. 
-	NS_IMETHOD OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength);
-
-	NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-
-	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
-
-	// Ideally, a protocol should only have to support the stream listener methods covered above. 
-	// However, we don't have this nsIStreamListenerLite interface defined yet. Until then, we are using
-	// nsIStreamListener so we need to add stubs for the heavy weight stuff we don't want to use.
-
-	NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax) { return NS_OK;}
-	NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg) { return NS_OK;}
+	NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+	NS_IMETHOD OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt);
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
 
 	void			SetDB (nsIMsgDatabase *mailDB) {m_mailDB = dont_QueryInterface(mailDB); }
 	char			*GetMailboxName() {return m_mailboxName;}
@@ -196,7 +180,7 @@ public:
 	PRBool			GetIsRealMailFolder() {return m_isRealMailFolder;}
 
 	// message socket libnet callbacks, which come through folder pane
-	virtual int ProcessMailboxInputStream(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength);
+	virtual int ProcessMailboxInputStream(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength);
 
 	virtual void	DoneParsingFolder();
 	virtual void	AbortNewHeader();
@@ -272,6 +256,8 @@ public:
 #endif // DOING_FILTERS
 protected:
 	virtual PRInt32	PublishMsgHeader();
+	char				*m_tmpdbName;				// Temporary filename of new database
+	PRBool				m_usingTempDB;
 #ifdef DOING_FILTERS
 	virtual void	ApplyFilters(PRBool *pMoved);
 	virtual nsresult GetTrashFolder(nsIMsgFolder **pTrashFolder);
@@ -287,8 +273,6 @@ protected:
 	nsIOFileStream		*m_inboxFileStream;
 	nsFileSpec			m_inboxFileSpec;
 #endif // DOING_FILTERS
-	char				*m_tmpdbName;				// Temporary filename of new database
-	PRBool				m_usingTempDB;
 	PRBool				m_disableFilters;
 	PRBool				m_msgMovedByFilter;
 };

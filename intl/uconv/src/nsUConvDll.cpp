@@ -33,6 +33,7 @@
 #include "nsUConvDll.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
@@ -56,11 +57,17 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
                                            const char *aProgID,
                                            nsIFactory **aFactory)
 {
-  if (aFactory == NULL) return NS_ERROR_NULL_POINTER;
+  if (aFactory == NULL) 
+      return NS_ERROR_NULL_POINTER;
 
+  *aFactory = NULL; 
   // the converter manager
   if (aClass.Equals(kCharsetConverterManagerCID)) {
     nsManagerFactory *factory = new nsManagerFactory();
+
+    if(nsnull == factory)
+       return NS_ERROR_OUT_OF_MEMORY;
+
     nsresult res = factory->QueryInterface(kIFactoryIID, (void **) aFactory);
 
     if (NS_FAILED(res)) {
@@ -74,6 +81,8 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
   // the Unicode Decode helper
   if (aClass.Equals(kUnicodeDecodeHelperCID)) {
     nsDecodeHelperFactory *factory = new nsDecodeHelperFactory();
+    if(nsnull == factory)
+       return NS_ERROR_OUT_OF_MEMORY;
     nsresult res = factory->QueryInterface(kIFactoryIID, (void **) aFactory);
 
     if (NS_FAILED(res)) {
@@ -87,6 +96,8 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
   // the Unicode Encode helper
   if (aClass.Equals(kUnicodeEncodeHelperCID)) {
     nsEncodeHelperFactory *factory = new nsEncodeHelperFactory();
+    if(nsnull == factory)
+       return NS_ERROR_OUT_OF_MEMORY;
     nsresult res = factory->QueryInterface(kIFactoryIID, (void **) aFactory);
 
     if (NS_FAILED(res)) {

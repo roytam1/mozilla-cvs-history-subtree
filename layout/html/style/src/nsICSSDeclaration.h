@@ -25,6 +25,7 @@
 #include "nsString.h"
 #include "nsCoord.h"
 #include "nsCSSValue.h"
+#include "nsCSSProps.h"
 
 
 struct nsCSSStruct {
@@ -77,6 +78,10 @@ struct nsCSSStruct {
 #define NS_CSS_CONTENT_SID  \
 {0x1629ef70, 0x5a3b, 0x11d2, {0x80, 0x3b, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
 
+// SID for the nsCSSUserInterface struct {4397c3a0-3efe-11d3-8060-006008159b5a}
+#define NS_CSS_USER_INTERFACE_SID  \
+{0x4397c3a0, 0x3efe, 0x11d3, {0x80, 0x60, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
+
 // SID for the nsCSSAural struct {166d2bb0-5a3b-11d2-803b-006008159b5a}
 #define NS_CSS_AURAL_SID  \
 {0x166d2bb0, 0x5a3b, 0x11d2, {0x80, 0x3b, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
@@ -127,7 +132,6 @@ struct nsCSSColor : public nsCSSStruct  {
   nsCSSValue      mBackAttachment;
   nsCSSValue      mBackPositionX;
   nsCSSValue      mBackPositionY;
-  nsCSSValue      mBackFilter;
   nsCSSValueList* mCursor;
   nsCSSValue      mOpacity;
 };
@@ -168,8 +172,8 @@ struct nsCSSText : public nsCSSStruct  {
 struct nsCSSRect {
   nsCSSRect(void);
   nsCSSRect(const nsCSSRect& aCopy);
-  void List(FILE* out = 0, PRInt32 aPropID = -1, PRInt32 aIndent = 0) const;
-  void List(FILE* out, PRInt32 aIndent, PRIntn aTRBL[]) const;
+  void List(FILE* out = 0, nsCSSProperty aPropID = eCSSProperty_UNKNOWN, PRInt32 aIndent = 0) const;
+  void List(FILE* out, PRInt32 aIndent, const nsCSSProperty aTRBL[]) const;
 
   nsCSSValue mTop;
   nsCSSValue mRight;
@@ -192,7 +196,6 @@ struct nsCSSDisplay : public nsCSSStruct  {
   nsCSSRect* mClip;
   nsCSSValue mOverflow;
   nsCSSValue mVisibility;
-  nsCSSValue mFilter;
 };
 
 struct nsCSSMargin : public nsCSSStruct  {
@@ -205,13 +208,14 @@ struct nsCSSMargin : public nsCSSStruct  {
 
   nsCSSRect*  mMargin;
   nsCSSRect*  mPadding;
-  nsCSSRect*  mBorderWidth; // CHANGED
-  nsCSSRect*  mBorderColor; // CHANGED
-  nsCSSRect*  mBorderStyle; // CHANGED
-  nsCSSValue  mBorderRadius;  // NEW (extension)
-  nsCSSValue  mOutlineWidth; // NEW
-  nsCSSValue  mOutlineColor; // NEW
-  nsCSSValue  mOutlineStyle; // NEW 
+  nsCSSRect*  mBorderWidth;
+  nsCSSRect*  mBorderColor;
+  nsCSSRect*  mBorderStyle;
+  nsCSSValue  mBorderRadius;  // (extension)
+  nsCSSValue  mOutlineWidth;
+  nsCSSValue  mOutlineColor;
+  nsCSSValue  mOutlineStyle;
+  nsCSSValue  mFloatEdge; // NEW
 };
 
 struct nsCSSPosition : public nsCSSStruct  {
@@ -224,12 +228,13 @@ struct nsCSSPosition : public nsCSSStruct  {
 
   nsCSSValue  mPosition;
   nsCSSValue  mWidth;
-  nsCSSValue  mMinWidth; // NEW
-  nsCSSValue  mMaxWidth; // NEW
+  nsCSSValue  mMinWidth;
+  nsCSSValue  mMaxWidth;
   nsCSSValue  mHeight;
-  nsCSSValue  mMinHeight; // NEW
-  nsCSSValue  mMaxHeight; // NEW
-  nsCSSRect*  mOffset;  // NEW
+  nsCSSValue  mMinHeight;
+  nsCSSValue  mMaxHeight;
+  nsCSSValue  mBoxSizing; // NEW
+  nsCSSRect*  mOffset;
   nsCSSValue  mZIndex;
 };
 
@@ -311,7 +316,7 @@ struct nsCSSQuotes {
   nsCSSQuotes*  mNext;
 };
 
-struct nsCSSContent : public nsCSSStruct  { // NEW
+struct nsCSSContent : public nsCSSStruct  {
   nsCSSContent(void);
   nsCSSContent(const nsCSSContent& aCopy);
   virtual ~nsCSSContent(void);
@@ -324,6 +329,23 @@ struct nsCSSContent : public nsCSSStruct  { // NEW
   nsCSSCounterData* mCounterReset;
   nsCSSValue        mMarkerOffset;
   nsCSSQuotes*      mQuotes;
+};
+
+struct nsCSSUserInterface : public nsCSSStruct  { // NEW
+  nsCSSUserInterface(void);
+  nsCSSUserInterface(const nsCSSUserInterface& aCopy);
+  virtual ~nsCSSUserInterface(void);
+
+  const nsID& GetID(void);
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+
+  nsCSSValue      mUserInput;
+  nsCSSValue      mModifyContent;
+  nsCSSValue      mSelectionStyle;
+  nsCSSValue      mAutoSelect;
+  nsCSSValueList* mKeyEquivalent;
+  nsCSSValue      mAutoTab;
+  nsCSSValue      mResizer;
 };
 
 struct nsCSSAural : public nsCSSStruct  { // NEW
@@ -360,19 +382,19 @@ public:
   NS_IMETHOD GetData(const nsID& aIID, nsCSSStruct** aData) = 0;
   NS_IMETHOD EnsureData(const nsID& aSID, nsCSSStruct** aData) = 0;
 
-  NS_IMETHOD AppendValue(PRInt32 aProperty, const nsCSSValue& aValue) = 0;
-  NS_IMETHOD AppendStructValue(PRInt32 aProperty, void* aStruct) = 0;
-  NS_IMETHOD SetValueImportant(PRInt32 aProperty) = 0;
+  NS_IMETHOD AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue) = 0;
+  NS_IMETHOD AppendStructValue(nsCSSProperty aProperty, void* aStruct) = 0;
+  NS_IMETHOD SetValueImportant(nsCSSProperty aProperty) = 0;
   NS_IMETHOD AppendComment(const nsString& aComment) = 0;
 
 // XXX make nscolor a struct to avoid type conflicts
-  NS_IMETHOD GetValue(PRInt32 aProperty, nsCSSValue& aValue) = 0;
+  NS_IMETHOD GetValue(nsCSSProperty aProperty, nsCSSValue& aValue) = 0;
 
-  NS_IMETHOD GetValue(PRInt32 aProperty, nsString& aValue) = 0;
+  NS_IMETHOD GetValue(nsCSSProperty aProperty, nsString& aValue) = 0;
   NS_IMETHOD GetValue(const nsString& aProperty, nsString& aValue) = 0;
 
   NS_IMETHOD GetImportantValues(nsICSSDeclaration*& aResult) = 0;
-  NS_IMETHOD GetValueIsImportant(PRInt32 aProperty, PRBool& aIsImportant) = 0;
+  NS_IMETHOD GetValueIsImportant(nsCSSProperty aProperty, PRBool& aIsImportant) = 0;
   NS_IMETHOD GetValueIsImportant(const nsString& aProperty, PRBool& aIsImportant) = 0;
 
   NS_IMETHOD Count(PRUint32* aCount) = 0;

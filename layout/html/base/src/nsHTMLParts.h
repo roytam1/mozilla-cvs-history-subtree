@@ -29,7 +29,7 @@ class nsIHTMLContent;
 class nsIHTMLContentSink;
 class nsIHTMLFragmentContentSink;
 class nsITextContent;
-class nsIURL;
+class nsIURI;
 class nsString;
 class nsIWebShell;
 
@@ -245,26 +245,25 @@ NS_CreateHTMLElement(nsIHTMLContent** aResult,
 #define NS_BLOCK_MARGIN_ROOT     0x4
 #define NS_BLOCK_DOCUMENT_ROOT   0x8
 #define NS_AREA_NO_SPACE_MGR     0x10
-#define NS_AREA_WRAP_HEIGHT      0x20
+#define NS_AREA_WRAP_SIZE        0x20
 
 // Create a basic area frame. By default, area frames will extend
 // their height to cover any children that "stick out".
 extern nsresult NS_NewAreaFrame(nsIFrame** aNewFrame,
-                                PRUint32 aFlags = NS_AREA_WRAP_HEIGHT);
+                                PRUint32 aFlags = NS_AREA_WRAP_SIZE);
 
 // These AreaFrame's shrink wrap around their contents
 inline nsresult NS_NewTableCellInnerFrame(nsIFrame** aNewFrame) {
-  return NS_NewAreaFrame(aNewFrame, NS_AREA_WRAP_HEIGHT);
+  return NS_NewAreaFrame(aNewFrame, NS_AREA_WRAP_SIZE);
 }
 inline nsresult NS_NewTableCaptionFrame(nsIFrame** aNewFrame) {
-  return NS_NewAreaFrame(aNewFrame, NS_AREA_WRAP_HEIGHT);
+  return NS_NewAreaFrame(aNewFrame, NS_AREA_WRAP_SIZE);
 }
 
-// This type of AreaFrame shrink wraps, and is the document root and is a
-// margin root for margin collapsing.
+// This type of AreaFrame is the document root and is a margin root for
+// margin collapsing.
 inline nsresult NS_NewDocumentElementFrame(nsIFrame** aNewFrame) {
-  return NS_NewAreaFrame(aNewFrame, NS_BLOCK_DOCUMENT_ROOT |
-                         NS_BLOCK_MARGIN_ROOT | NS_BLOCK_SHRINK_WRAP);
+  return NS_NewAreaFrame(aNewFrame, NS_BLOCK_DOCUMENT_ROOT|NS_BLOCK_MARGIN_ROOT);
 }
 
 // This type of AreaFrame is a margin root, but does not shrink wrap
@@ -274,7 +273,7 @@ inline nsresult NS_NewAbsoluteItemWrapperFrame(nsIFrame** aNewFrame) {
 
 // This type of AreaFrame shrink wraps
 inline nsresult NS_NewFloatingItemWrapperFrame(nsIFrame** aNewFrame) {
-  return NS_NewAreaFrame(aNewFrame, NS_AREA_WRAP_HEIGHT|NS_BLOCK_SHRINK_WRAP);
+  return NS_NewAreaFrame(aNewFrame, NS_AREA_WRAP_SIZE|NS_BLOCK_SHRINK_WRAP);
 }
 
 // This type of AreaFrame doesn't use its own space manager and
@@ -316,18 +315,21 @@ extern nsresult NS_NewFirstLineFrame(nsIFrame** aNewFrame);
 
 // forms
 extern nsresult NS_NewFormFrame(nsIFrame** aResult);
-extern nsresult NS_NewButtonControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewGfxButtonControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewNativeButtonControlFrame(nsIFrame** aResult);
 extern nsresult NS_NewImageControlFrame(nsIFrame** aResult);
 extern nsresult NS_NewHTMLButtonControlFrame(nsIFrame** aResult);
-extern nsresult NS_NewCheckboxControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewGfxCheckboxControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewNativeCheckboxControlFrame(nsIFrame** aResult);
 extern nsresult NS_NewFieldSetFrame(nsIFrame** aResult);
 extern nsresult NS_NewFileControlFrame(nsIFrame** aResult);
 extern nsresult NS_NewLabelFrame(nsIFrame** aResult);
 extern nsresult NS_NewLegendFrame(nsIFrame** aResult);
 extern nsresult NS_NewNativeTextControlFrame(nsIFrame** aNewFrame);
 extern nsresult NS_NewGfxTextControlFrame(nsIFrame** aNewFrame);
-extern nsresult NS_NewRadioControlFrame(nsIFrame** aResult);
-extern nsresult NS_NewSelectControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewGfxRadioControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewNativeRadioControlFrame(nsIFrame** aResult);
+extern nsresult NS_NewNativeSelectControlFrame(nsIFrame** aResult);
 extern nsresult NS_NewListControlFrame(nsIFrame** aResult);
 extern nsresult NS_NewComboboxControlFrame(nsIFrame** aResult);
 
@@ -343,7 +345,7 @@ extern nsresult NS_NewTableCellFrame(nsIFrame** aResult);
 // XXX passing aWebShell into this is wrong
 extern nsresult NS_NewHTMLContentSink(nsIHTMLContentSink** aInstancePtrResult,
                                       nsIDocument* aDoc,
-                                      nsIURL* aURL,
+                                      nsIURI* aURL,
                                       nsIWebShell* aWebShell);
 extern nsresult NS_NewHTMLFragmentContentSink(nsIHTMLFragmentContentSink** aInstancePtrResult);
 

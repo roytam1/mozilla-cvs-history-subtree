@@ -31,11 +31,10 @@
 #include "nsAppShellCIDs.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsIDOMHTMLInputElement.h"
+#include "nsIBrowserWindow.h"
 #include "nsIWebShellWindow.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIURL.h"
@@ -52,7 +51,9 @@ static NS_DEFINE_IID(kIAppShellServiceIID,       NS_IAPPSHELL_SERVICE_IID);
 
 static NS_DEFINE_IID(kIDOMMouseListenerIID,   NS_IDOMMOUSELISTENER_IID);
 static NS_DEFINE_IID(kIDOMEventReceiverIID,   NS_IDOMEVENTRECEIVER_IID);
+#ifndef NECKO
 static NS_DEFINE_IID(kINetSupportDialogIID,   NS_INETSUPPORTDIALOGSERVICE_IID);
+#endif
 static NS_DEFINE_IID(kIFactoryIID,         NS_IFACTORY_IID);
 // Copy and paste
 #define APP_DEBUG 1
@@ -82,9 +83,9 @@ static nsresult setAttribute( nsIWebShell *shell,
                         // Set the text attribute.
                         rv = elem->SetAttribute( name, value );
                         if ( APP_DEBUG ) {
-                            char *p = value.ToNewCString();
+                          //char *p = value.ToNewCString();
                             //printf( "Set %s %s=\"%s\", rv=0x%08X\n", id, name, p, (int)rv );
-                            delete [] p;
+                          //delete [] p;
                         }
                         if ( rv != NS_OK ) {
                             if (APP_DEBUG) printf("SetAttribute failed, rv=0x%X\n",(int)rv);
@@ -302,6 +303,9 @@ nsNetSupportDialog::nsNetSupportDialog()
 
 nsNetSupportDialog::~nsNetSupportDialog()
 {
+  // just making sure I understand what I'm doing...
+  NS_ASSERTION( !mWebShellWindow, "webshell window still exists in ~nsNetSupportDialog" );
+
 	NS_IF_RELEASE( mWebShell );
 	NS_IF_RELEASE( mWebShellWindow );
 	NS_IF_RELEASE( mOKButton );
@@ -310,7 +314,6 @@ nsNetSupportDialog::~nsNetSupportDialog()
 
 void nsNetSupportDialog::Init()
 {
-	
 	mDefault = NULL;
 	mUser = NULL;
 	mPassword = NULL;
@@ -319,80 +322,188 @@ void nsNetSupportDialog::Init()
 	mOKButton = NULL;
 	mCancelButton = NULL;
 	mCheckValue = NULL;
-	mCheckMsg = NULL;
+ 	mCheckMsg = NULL;
   mWebShell = NULL;
   mWebShellWindow = NULL;
 }
 
+#ifdef NECKO
+NS_IMETHODIMP nsNetSupportDialog::Alert(const PRUnichar *text)
+#else
 NS_IMETHODIMP nsNetSupportDialog::Alert( const nsString &aText )
+#endif
 {
 	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+#endif
 	mMsg = &aText;
-	nsString  url( "resource:/res/samples/NetSupportAlert.xul") ;
+	nsString  url( "chrome://navigator/content/NetSupportAlert.xul") ;
 	DoDialog( url );
 	return NS_OK;
 }
 
+#ifdef NECKO
+NS_IMETHODIMP nsNetSupportDialog::Confirm(const PRUnichar *text, PRBool *returnValue)
+#else
 NS_IMETHODIMP nsNetSupportDialog::Confirm( const nsString &aText, PRInt32* returnValue )
+#endif
 {
 	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+#endif
 	mMsg = &aText;
 	mReturnValue = returnValue;
-	nsString  url( "resource:/res/samples/NetSupportConfirm.xul") ; 
+	nsString  url( "chrome://navigator/content/NetSupportConfirm.xul") ; 
 	DoDialog( url  );
 	return NS_OK;	
 }
 
+#ifdef NECKO
+NS_IMETHODIMP	nsNetSupportDialog::ConfirmCheck(const PRUnichar *text, 
+                                               const PRUnichar *checkMsg, 
+                                               PRBool *checkValue, 
+                                               PRBool *returnValue)
+#else
 NS_IMETHODIMP	nsNetSupportDialog::ConfirmCheck( const nsString &aText, const nsString& aCheckMsg, PRInt32* returnValue, PRBool* checkValue )
+#endif
 {
 	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+  nsAutoString aCheckMsg(checkMsg);
+#endif
 	mMsg = &aText;
 	mReturnValue = returnValue;
 	mCheckValue = checkValue;
 	mCheckMsg = &aCheckMsg;
-	nsString  url( "resource:/res/samples/NetSupportConfirmCheck.xul") ; 
+	nsString  url( "chrome://navigator/content/NetSupportConfirmCheck.xul") ; 
 	DoDialog( url  );
 	return NS_OK;	
 }
 
-NS_IMETHODIMP nsNetSupportDialog::Prompt(	const nsString &aText, const nsString &aDefault,nsString &aResult, PRInt32* returnValue )
+#ifdef NECKO
+NS_IMETHODIMP nsNetSupportDialog::ConfirmYN(const PRUnichar *text, PRBool *returnValue)
+#else
+NS_IMETHODIMP nsNetSupportDialog::ConfirmYN( const nsString &aText, PRInt32* returnValue )
+#endif
 {
-    Init();
+	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+#endif
+	mMsg = &aText;
+	mReturnValue = returnValue;
+	nsString  url( "chrome://navigator/content/NetSupportConfirmYN.xul") ; 
+	DoDialog( url  );
+	return NS_OK;	
+}
+
+#ifdef NECKO
+NS_IMETHODIMP	nsNetSupportDialog::ConfirmCheckYN(const PRUnichar *text, 
+                                               const PRUnichar *checkMsg, 
+                                               PRBool *checkValue, 
+                                               PRBool *returnValue)
+#else
+NS_IMETHODIMP	nsNetSupportDialog::ConfirmCheckYN( const nsString &aText, const nsString& aCheckMsg, PRInt32* returnValue, PRBool* checkValue )
+#endif
+{
+	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+  nsAutoString aCheckMsg(checkMsg);
+#endif
+	mMsg = &aText;
+	mReturnValue = returnValue;
+	mCheckValue = checkValue;
+	mCheckMsg = &aCheckMsg;
+	nsString  url( "chrome://navigator/content/NetSupportConfirmCheckYN.xul") ; 
+	DoDialog( url  );
+	return NS_OK;	
+}
+
+#ifdef NECKO
+NS_IMETHODIMP nsNetSupportDialog::Prompt(const PRUnichar *text,
+                                         const PRUnichar *defaultText, 
+                                         PRUnichar **resultText,
+                                         PRBool *returnValue)
+#else
+NS_IMETHODIMP nsNetSupportDialog::Prompt(	const nsString &aText, const nsString &aDefault,nsString &aResult, PRInt32* returnValue )
+#endif
+{
+  Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+  nsAutoString aDefault(defaultText);
+  nsAutoString aResult;
+#endif
 	mMsg = &aText;
 	mDefault = &aDefault;
 	mUser	= &aResult;
 	mReturnValue = returnValue;
-	nsString  url( "resource:/res/samples/NetSupportPrompt.xul")  ;
+	nsString  url( "chrome://navigator/content/NetSupportPrompt.xul")  ;
 	DoDialog( url );
+#ifdef NECKO
+  *resultText = aResult.ToNewUnicode();
+#endif
 	return NS_OK;	
 }
 
+#ifdef NECKO
+NS_IMETHODIMP nsNetSupportDialog::PromptUsernameAndPassword(const PRUnichar *text,
+                                                            PRUnichar **user,
+                                                            PRUnichar **pwd,
+                                                            PRBool *returnValue)
+#else
 NS_IMETHODIMP nsNetSupportDialog::PromptUserAndPassword(  const nsString &aText,
                                         nsString &aUser,
                                         nsString &aPassword,PRInt32* returnValue )
-                                       
+#endif
 {
 	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+  nsAutoString aUser;
+  nsAutoString aPassword;
+#endif
 	mMsg = &aText;
 	mUser = &aUser;
 	mPassword	= &aPassword;
 	mReturnValue = returnValue;
-	nsString  url( "resource:/res/samples/NetSupportUserPassword.xul")  ;
+	nsString  url( "chrome://navigator/content/NetSupportUserPassword.xul")  ;
 	DoDialog( url );
+#ifdef NECKO
+  *user = aUser.ToNewUnicode();
+  *pwd = aPassword.ToNewUnicode();
+#endif
 	return NS_OK;	
 }
 
+#ifdef NECKO
+NS_IMETHODIMP nsNetSupportDialog::PromptPassword(const PRUnichar *text, 
+                                                 PRUnichar **pwd, 
+                                                 PRBool *returnValue)
+#else
 NS_IMETHODIMP nsNetSupportDialog::PromptPassword( 	const nsString &aText,
                                      	nsString &aPassword, PRInt32* returnValue )
+#endif
 {
  	Init();
+#ifdef NECKO
+  nsAutoString aText(text);
+  nsAutoString aPassword;
+#endif
 	mMsg = &aText;
 	mPassword	= &aPassword;
 	mReturnValue = returnValue;
-	nsString  url( "resource:/res/samples/NetSupportPassword.xul")  ;
+	nsString  url( "chrome://navigator/content/NetSupportPassword.xul")  ;
 	DoDialog( url );
+#ifdef NECKO
+  *pwd = aPassword.ToNewUnicode();
+#endif
  	return NS_OK;	
- }
+}
 
 
 
@@ -404,11 +515,11 @@ nsresult nsNetSupportDialog::ConstructBeforeJavaScript(nsIWebShell *aWebShell)
 	 mWebShell = aWebShell;
 	 mWebShell->AddRef();
 	
-	 if ( mMsg )
-	 	setAttribute( aWebShell, "NetDialog:Message", "text", *mMsg );
+   if ( mMsg )
+     setAttribute( aWebShell, "NetDialog:Message", "text", *mMsg );
+   if( mCheckMsg )
+     setAttribute( aWebShell, "NetDialog:CheckMessage", "text", *mCheckMsg );
 	 	
-	if( mCheckMsg )
-		setAttribute( aWebShell, "NetDialog:CheckMessage", "text", *mCheckMsg );
 	// Hook up the event listeners
 	 findDOMNode( mWebShell,"OKButton", &mOKButton );
 	 findDOMNode( mWebShell,"CancelButton", &mCancelButton );
@@ -428,50 +539,46 @@ nsresult nsNetSupportDialog::ConstructAfterJavaScript(nsIWebShell *aWebShell)
 
 nsresult nsNetSupportDialog::DoDialog(  nsString& inXULURL  )
 {
-	nsresult result;
+  nsresult result;
+  nsIWebShellWindow *dialogWindow;
+
  	// Create the Application Shell instance...
   NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID, &result);
 
-	if ( !NS_SUCCEEDED ( result ) )
-  	return result;
+  if ( !NS_SUCCEEDED ( result ) )
+    return result;
 
-	nsIURL* dialogURL;
+  nsIURI* dialogURL;
 #ifndef NECKO
-    result = NS_NewURL(&dialogURL, inXULURL );
+  result = NS_NewURL(&dialogURL, inXULURL );
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-    if (NS_FAILED(result)) return result;
-
-    nsIURI *uri = nsnull;
-    const char *uriStr = inXULURL.GetBuffer();
-    result = service->NewURI(uriStr, nsnull, &uri);
-    if (NS_FAILED(result)) return result;
-
-    result = uri->QueryInterface(nsIURL::GetIID(), (void**)&dialogURL);
-    NS_RELEASE(uri);
+  result = NS_NewURI(&dialogURL, inXULURL );
 #endif // NECKO
- 	if (!NS_SUCCEEDED (result) )
- 	{
- 		appShellService->Release();
- 		return result;
-    }
+  if (!NS_SUCCEEDED (result) )
+  {
+    appShellService->Release();
+    return result;
+  }
 
- 	NS_IF_RELEASE( mWebShellWindow );
- 	appShellService->RunModalDialog( nsnull, dialogURL, mWebShellWindow, nsnull, this, 300, 200);
+  result = appShellService->CreateTopLevelWindow(nsnull, dialogURL, PR_TRUE,
+                              NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                              this, 300, 200, &dialogWindow);
+  mWebShellWindow = dialogWindow;
 
-	// cleanup
-	if ( mOKButton )
-		RemoveEventListener( mOKButton );
-	if ( mCancelButton )
-		RemoveEventListener( mCancelButton );
-	dialogURL->Release();
+  if (NS_SUCCEEDED(result))
+    appShellService->RunModalDialog(&dialogWindow, nsnull, dialogURL,
+                       NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                       this, 300, 200);
 
-  // save pointer to window for later access, just in case.  note this is dangerous, since
-  // the window has been closed and partially destroyed at this point.  but here we are.
-  // it seems necessary to first release any old window we may be holding, since this is
-  // a service, and can therefore remain active between actual invocations.
+  // cleanup
+  if ( mOKButton )
+    RemoveEventListener( mOKButton );
+  if ( mCancelButton )
+    RemoveEventListener( mCancelButton );
+  dialogURL->Release();
+  NS_RELEASE( mWebShellWindow );
 
- 	return NS_OK;	
+  return NS_OK;	
 }
 
 // Event Handlers which should be called using XPConnect eventually
@@ -562,12 +669,21 @@ NS_IMETHODIMP nsNetSupportDialog::QueryInterface(REFNSIID aIID,void** aInstanceP
   // Always NULL result, in case of failure
   *aInstancePtr = NULL;
 
+#ifdef NECKO
+  if ( aIID.Equals( nsIPrompt::GetIID() ) )
+  {
+    *aInstancePtr = (void*) ((nsIPrompt*)this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+#else
   if ( aIID.Equals( kINetSupportDialogIID ) )
   {
     *aInstancePtr = (void*) ((nsINetSupportDialogService*)this);
-    AddRef();
+    NS_ADDREF_THIS();
     return NS_OK;
   }
+#endif
   else if (aIID.Equals(kIDOMMouseListenerIID))
   {
     NS_ADDREF_THIS(); // Increase reference count for caller

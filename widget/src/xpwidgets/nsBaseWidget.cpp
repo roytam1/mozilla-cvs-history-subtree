@@ -25,17 +25,15 @@
 #include "nsGfxCIID.h"
 #include "nsWidgetsCID.h"
 
-static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
-
 #ifndef LOG_ADDREF_RELEASE
-NS_IMPL_ISUPPORTS(nsBaseWidget, kIWidgetIID)
+NS_IMPL_ISUPPORTS(nsBaseWidget, nsCOMTypeInfo<nsIWidget>::GetIID())
 #else
 extern "C" {
   void __log_addref(void* p, int oldrc, int newrc);
   void __log_release(void* p, int oldrc, int newrc);
 }
 
-NS_IMPL_QUERY_INTERFACE(nsBaseWidget, kIWidgetIID)
+NS_IMPL_QUERY_INTERFACE(nsBaseWidget, nsCOMTypeInfo<nsIWidget>::GetIID())
 
 nsrefcnt nsBaseWidget::AddRef(void)
 {
@@ -65,9 +63,9 @@ nsBaseWidget::Enumerator::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   if (NULL == aInstancePtr)
     return NS_ERROR_NULL_POINTER; 
 
-  if (aIID.Equals(nsIBidirectionalEnumerator::GetIID()) || 
-      aIID.Equals(nsIEnumerator::GetIID()) || 
-      aIID.Equals(nsISupports::GetIID())) {
+  if (aIID.Equals(nsCOMTypeInfo<nsIBidirectionalEnumerator>::GetIID()) || 
+      aIID.Equals(nsCOMTypeInfo<nsIEnumerator>::GetIID()) || 
+      aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
     *aInstancePtr = (void*) this; 
     NS_ADDREF_THIS(); 
     return NS_OK; 
@@ -217,6 +215,11 @@ void nsBaseWidget::BaseCreate(nsIWidget *aParent,
     }
 }
 
+NS_IMETHODIMP nsBaseWidget::CaptureMouse(PRBool aCapture)
+{
+  return NS_OK;
+}
+
 //-------------------------------------------------------------------------
 //
 // Accessor functions to get/set the client data
@@ -279,7 +282,7 @@ nsIEnumerator* nsBaseWidget::GetChildren()
 {
   nsIEnumerator* children = nsnull;
 
-  unsigned int itemCount = 0;
+  PRUint32 itemCount = 0;
   mChildren->Count(&itemCount);
   if ( itemCount ) {
     children = new Enumerator(*this);
@@ -474,7 +477,7 @@ nsBaseWidget::Enumerator::Next()
 {
   PRUint32 itemCount = 0;
   mParent.mChildren->Count(&itemCount);
-  if (mCurrentPosition < itemCount -1 )
+  if (mCurrentPosition < itemCount - 1 )
     mCurrentPosition ++;
   else
     return NS_ERROR_FAILURE;
@@ -503,7 +506,7 @@ nsBaseWidget::Enumerator::CurrentItem(nsISupports **aItem)
 
   PRUint32 itemCount = 0;
   mParent.mChildren->Count(&itemCount);
-  if (mCurrentPosition >= 0 && mCurrentPosition < itemCount ) {
+  if ( mCurrentPosition < itemCount ) {
     nsISupports* widget = mParent.mChildren->ElementAt(mCurrentPosition);
 //  NS_IF_ADDREF(widget);		already addref'd in nsSupportsArray::ElementAt()
     *aItem = widget;
@@ -536,7 +539,7 @@ nsBaseWidget::Enumerator::First()
 NS_IMETHODIMP
 nsBaseWidget::Enumerator::Last()
 {
-  unsigned int itemCount = 0;
+  PRUint32 itemCount = 0;
   mParent.mChildren->Count(&itemCount);
   if ( itemCount ) {
     mCurrentPosition = itemCount - 1;
@@ -553,10 +556,10 @@ nsBaseWidget::Enumerator::Last()
 NS_IMETHODIMP
 nsBaseWidget::Enumerator::IsDone()
 {
-  unsigned int itemCount = 0;
+  PRUint32 itemCount = 0;
   mParent.mChildren->Count(&itemCount);
 
-  if ((mCurrentPosition == (itemCount -1)) || itemCount <= 0 ){ //empty lists always return done
+  if ((mCurrentPosition == itemCount-1) || (itemCount == 0) ){ //empty lists always return done
     return NS_OK;
   }
   else {
@@ -566,11 +569,19 @@ nsBaseWidget::Enumerator::IsDone()
 }
 
 
-NS_METHOD nsBaseWidget::SetBorderStyle(nsBorderStyle aBorderStyle) 
+NS_METHOD nsBaseWidget::SetWindowType(nsWindowType aWindowType) 
 {
-  mBorderStyle = aBorderStyle; 
+  mWindowType = aWindowType;
   return NS_OK;
-} 
+}
+
+
+NS_METHOD nsBaseWidget::SetBorderStyle(nsBorderStyle aBorderStyle)
+{
+  mBorderStyle = aBorderStyle;
+  return NS_OK;
+}
+
 
 NS_METHOD nsBaseWidget::SetTitle(const nsString& aTitle) 
 {
@@ -638,6 +649,7 @@ NS_METHOD nsBaseWidget::GetBounds(nsRect &aRect)
   aRect = mBounds;
   return NS_OK;
 }
+
 
 /**
 * If the implementation of nsWindow supports borders this method MUST be overridden
@@ -788,3 +800,93 @@ NS_METHOD nsBaseWidget::SetModal(void)
 {
   return NS_ERROR_FAILURE;
 }
+
+#ifdef DEBUG
+//
+// Convert a GUI event message code to a string.
+// Makes it a lot easier to debug events.
+//
+// See gtk/nsWidget.cpp and windows/nsWindow.cpp
+// for a DebugPrintEvent() function that uses
+// this.
+//
+nsAutoString
+nsBaseWidget::GuiEventToString(nsGUIEvent & aEvent)
+{
+  nsString eventName = "UNKNOWN";
+
+#define _ASSIGN_eventName(_value,_name)\
+case _value: eventName = _name ; break
+
+  switch(aEvent.message)
+  {
+    _ASSIGN_eventName(NS_BLUR_CONTENT,"NS_BLUR_CONTENT");
+    _ASSIGN_eventName(NS_CONTROL_CHANGE,"NS_CONTROL_CHANGE");
+    _ASSIGN_eventName(NS_CREATE,"NS_CREATE");
+    _ASSIGN_eventName(NS_DESTROY,"NS_DESTROY");
+    _ASSIGN_eventName(NS_DRAGDROP_DROP,"NS_DRAGDROP_DROP");
+    _ASSIGN_eventName(NS_DRAGDROP_ENTER,"NS_DRAGDROP_ENTER");
+    _ASSIGN_eventName(NS_DRAGDROP_EXIT,"NS_DRAGDROP_EXIT");
+    _ASSIGN_eventName(NS_DRAGDROP_OVER,"NS_DRAGDROP_OVER");
+    _ASSIGN_eventName(NS_FOCUS_CONTENT,"NS_FOCUS_CONTENT");
+    _ASSIGN_eventName(NS_FORM_SELECTED,"NS_FORM_SELECTED");
+    _ASSIGN_eventName(NS_FORM_CHANGE,"NS_FORM_CHANGE");
+    _ASSIGN_eventName(NS_FORM_RESET,"NS_FORM_RESET");
+    _ASSIGN_eventName(NS_FORM_SUBMIT,"NS_FORM_SUBMIT");
+    _ASSIGN_eventName(NS_GOTFOCUS,"NS_GOTFOCUS");
+    _ASSIGN_eventName(NS_HIDE_TOOLTIP,"NS_HIDE_TOOLTIP");
+    _ASSIGN_eventName(NS_IMAGE_ABORT,"NS_IMAGE_ABORT");
+    _ASSIGN_eventName(NS_IMAGE_ERROR,"NS_IMAGE_ERROR");
+    _ASSIGN_eventName(NS_IMAGE_LOAD,"NS_IMAGE_LOAD");
+    _ASSIGN_eventName(NS_KEY_DOWN,"NS_KEY_DOWN");
+    _ASSIGN_eventName(NS_KEY_PRESS,"NS_KEY_PRESS");
+    _ASSIGN_eventName(NS_KEY_UP,"NS_KEY_UP");
+    _ASSIGN_eventName(NS_LOSTFOCUS,"NS_LOSTFOCUS");
+    _ASSIGN_eventName(NS_MENU_SELECTED,"NS_MENU_SELECTED");
+    _ASSIGN_eventName(NS_MOUSE_ENTER,"NS_MOUSE_ENTER");
+    _ASSIGN_eventName(NS_MOUSE_EXIT,"NS_MOUSE_EXIT");
+    _ASSIGN_eventName(NS_MOUSE_LEFT_BUTTON_DOWN,"NS_MOUSE_LEFT_BUTTON_DOWN");
+    _ASSIGN_eventName(NS_MOUSE_LEFT_BUTTON_UP,"NS_MOUSE_LEFT_BUTTON_UP");
+    _ASSIGN_eventName(NS_MOUSE_LEFT_CLICK,"NS_MOUSE_LEFT_CLICK");
+    _ASSIGN_eventName(NS_MOUSE_LEFT_DOUBLECLICK,"NS_MOUSE_LEFT_DOUBLECLICK");
+    _ASSIGN_eventName(NS_MOUSE_MIDDLE_BUTTON_DOWN,"NS_MOUSE_MIDDLE_BUTTON_DOWN");
+    _ASSIGN_eventName(NS_MOUSE_MIDDLE_BUTTON_UP,"NS_MOUSE_MIDDLE_BUTTON_UP");
+    _ASSIGN_eventName(NS_MOUSE_MIDDLE_CLICK,"NS_MOUSE_MIDDLE_CLICK");
+    _ASSIGN_eventName(NS_MOUSE_MIDDLE_DOUBLECLICK,"NS_MOUSE_MIDDLE_DOUBLECLICK");
+    _ASSIGN_eventName(NS_MOUSE_MOVE,"NS_MOUSE_MOVE");
+    _ASSIGN_eventName(NS_MOUSE_RIGHT_BUTTON_DOWN,"NS_MOUSE_RIGHT_BUTTON_DOWN");
+    _ASSIGN_eventName(NS_MOUSE_RIGHT_BUTTON_UP,"NS_MOUSE_RIGHT_BUTTON_UP");
+    _ASSIGN_eventName(NS_MOUSE_RIGHT_CLICK,"NS_MOUSE_RIGHT_CLICK");
+    _ASSIGN_eventName(NS_MOUSE_RIGHT_DOUBLECLICK,"NS_MOUSE_RIGHT_DOUBLECLICK");
+    _ASSIGN_eventName(NS_MOVE,"NS_MOVE");
+    _ASSIGN_eventName(NS_PAGE_LOAD,"NS_PAGE_LOAD");
+    _ASSIGN_eventName(NS_PAGE_UNLOAD,"NS_PAGE_UNLOAD");
+    _ASSIGN_eventName(NS_PAINT,"NS_PAINT");
+    _ASSIGN_eventName(NS_MENU_CREATE,"NS_MENU_CREATE");
+    _ASSIGN_eventName(NS_MENU_DESTROY,"NS_MENU_DESTROY");
+    _ASSIGN_eventName(NS_MENU_ACTION, "NS_MENU_ACTION");
+    _ASSIGN_eventName(NS_SCROLLBAR_LINE_NEXT,"NS_SCROLLBAR_LINE_NEXT");
+    _ASSIGN_eventName(NS_SCROLLBAR_LINE_PREV,"NS_SCROLLBAR_LINE_PREV");
+    _ASSIGN_eventName(NS_SCROLLBAR_PAGE_NEXT,"NS_SCROLLBAR_PAGE_NEXT");
+    _ASSIGN_eventName(NS_SCROLLBAR_PAGE_PREV,"NS_SCROLLBAR_PAGE_PREV");
+    _ASSIGN_eventName(NS_SCROLLBAR_POS,"NS_SCROLLBAR_POS");
+    _ASSIGN_eventName(NS_SHOW_TOOLTIP,"NS_SHOW_TOOLTIP");
+    _ASSIGN_eventName(NS_SIZE,"NS_SIZE");
+    _ASSIGN_eventName(NS_TABCHANGE,"NS_TABCHANGE");
+
+#undef _ASSIGN_eventName
+
+  default: 
+    {
+      char buf[32];
+      
+      sprintf(buf,"UNKNOWN: %d",aEvent.message);
+      
+      eventName = buf;
+    }
+    break;
+  }
+
+  return nsAutoString(eventName);
+}
+#endif

@@ -22,18 +22,22 @@ DIRS = windows
 
 LIBRARY_NAME=raptorgfx_s
 MODULE=raptor 
-REQUIRES=util img xpcom raptor netlib
+!ifdef NECKO
+REQUIRES=util img xpcom raptor necko timer
+!else
+REQUIRES=util img xpcom raptor netlib timer
+!endif
 
 DEFINES=-D_IMPL_NS_GFX -DWIN32_LEAN_AND_MEAN
 
-CPPSRCS=nsColor.cpp nsColorNames.cpp nsColorNamesRGB.cpp nsFont.cpp \
+CPPSRCS=nsColor.cpp nsColorNames.cpp nsFont.cpp \
     nsImageGroup.cpp nsImageManager.cpp nsImageNetContextAsync.cpp \
     nsImageRenderer.cpp nsImageRequest.cpp nsImageSystemServices.cpp \
     nsImageURL.cpp nsRect.cpp nsTransform2D.cpp nsBlender.cpp \
 	nsDeviceContext.cpp nsImageNetContextSync.cpp
 
 CPP_OBJS=.\$(OBJDIR)\nsColor.obj .\$(OBJDIR)\nsColorNames.obj \
-    .\$(OBJDIR)\nsColorNamesRGB.obj .\$(OBJDIR)\nsFont.obj \
+    .\$(OBJDIR)\nsFont.obj \
     .\$(OBJDIR)\nsImageGroup.obj .\$(OBJDIR)\nsImageManager.obj \
     .\$(OBJDIR)\nsImageNetContextAsync.obj .\$(OBJDIR)\nsImageRenderer.obj \
     .\$(OBJDIR)\nsImageRequest.obj .\$(OBJDIR)\nsImageSystemServices.obj \
@@ -46,7 +50,11 @@ CPP_OBJS=.\$(OBJDIR)\nsColor.obj .\$(OBJDIR)\nsColorNames.obj \
 
 LINCS=-I$(PUBLIC)\util -I$(PUBLIC)\img \
     -I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \
+!ifdef NECKO
+    -I$(PUBLIC)\necko \
+!else
     -I$(PUBLIC)\netlib \
+!endif
 	-I$(PUBLIC)\dom \
 	-I$(PUBLIC)\js \
 	$(NULL)
@@ -64,7 +72,7 @@ libs:: $(LIBRARY)
 install::
 	$(MAKE_INSTALL) icon_0.gif $(DIST)\bin\res\gfx
 	$(MAKE_INSTALL) icon_1.gif $(DIST)\bin\res\gfx
-	
+
 clobber::
 	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
 	rm -f $(PDBFILE).pdb

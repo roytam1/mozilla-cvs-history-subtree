@@ -171,6 +171,7 @@ static void GetDefaultUserProfileRoot(nsFileSpec& outSpec)
     cwd += ".mozilla";
     if (!cwd.Exists())
         cwd.CreateDir();
+
 #elif defined(XP_PC)
     // set its directory an aunt of the executable.
     nsSpecialSystemDirectory cwd(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
@@ -183,11 +184,33 @@ static void GetDefaultUserProfileRoot(nsFileSpec& outSpec)
     if (!cwd.Exists())
         cwd.CreateDir();
 
+#elif defined(XP_BEOS)
+    nsSpecialSystemDirectory cwd(nsSpecialSystemDirectory::BeOS_SettingsDirectory);
+    cwd += "mozilla";
+    if (!cwd.Exists())
+        cwd.CreateDir();
+
 #else
 #error dont_know_how_to_do_profiles_on_your_platform
 #endif
     outSpec = cwd;
 } // GetDefaultUserProfileRoot
+
+
+//----------------------------------------------------------------------------------------
+static void GetProfileDefaultsFolder(nsFileSpec& outSpec)
+//----------------------------------------------------------------------------------------
+{
+    nsSpecialSystemDirectory cwd(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+
+#if defined(XP_MAC)
+    cwd += "Defaults";
+#else
+    cwd += "defaults";
+#endif
+
+    outSpec = cwd;
+} // GetProfileDefaultsFolder
 
 
 //========================================================================================
@@ -226,6 +249,17 @@ void nsSpecialFileSpec::operator = (Type aType)
                 break;
             }
         
+        case App_ResDirectory:
+            {
+                *this = nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+#ifdef XP_MAC
+                *this += "Res";
+#else
+                *this += "res";
+#endif
+            }
+            break;
+
         case App_ComponentsDirectory:
             {
                 *this = nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
@@ -273,13 +307,22 @@ void nsSpecialFileSpec::operator = (Type aType)
         case App_DefaultUserProfileRoot50:
             GetDefaultUserProfileRoot(*this);
             break;    
+
+        case App_ProfileDefaultsFolder30:
+        case App_ProfileDefaultsFolder40:
+            NS_NOTYETIMPLEMENTED("Write me!");
+            break;    
+        case App_ProfileDefaultsFolder50:
+            GetProfileDefaultsFolder(*this);
+            break;    
+            
             
         case App_PreferencesFile30:
             {
                 *this = nsSpecialFileSpec(App_PrefsDirectory30);
             #ifdef XP_MAC
                 *this += "Netscape Preferences";
-            #elif defined(XP_UNIX)
+            #elif defined(XP_UNIX) || defined(XP_BEOS)
                 *this += "preferences.js";
             #else
                 *this += "prefs.js";
@@ -291,7 +334,7 @@ void nsSpecialFileSpec::operator = (Type aType)
                 *this = nsSpecialFileSpec(App_PrefsDirectory40);
             #ifdef XP_MAC
                 *this += "Netscape Preferences";
-            #elif defined(XP_UNIX)
+            #elif defined(XP_UNIX) || defined(XP_BEOS)
                 *this += "preferences.js";
             #else
                 *this += "prefs.js";
@@ -301,7 +344,7 @@ void nsSpecialFileSpec::operator = (Type aType)
         case App_PreferencesFile50:
             {
                 *this = nsSpecialFileSpec(App_PrefsDirectory50);
-                *this += "prefs50.js";
+                *this += "prefs.js";
                 break;
             }
             break;    

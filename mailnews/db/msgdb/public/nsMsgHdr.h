@@ -26,7 +26,7 @@
 #include "mdb.h"
 
 class nsMsgDatabase;
-class nsString2;
+class nsCString;
 
 class nsMsgHdr : public nsIMsgDBHdr {
 public:
@@ -39,9 +39,9 @@ public:
     NS_IMETHOD GetUint32Property(const char *propertyName, PRUint32 *pResult);
     NS_IMETHOD SetUint32Property(const char *propertyName, PRUint32 propertyVal);
     NS_IMETHOD GetNumReferences(PRUint16 *result);
-    NS_IMETHOD GetStringReference(PRInt32 refNum, nsString2 &resultReference);
-    NS_IMETHOD GetDate(time_t *result);
-    NS_IMETHOD SetDate(time_t date);
+    NS_IMETHOD GetStringReference(PRInt32 refNum, nsCString &resultReference);
+    NS_IMETHOD GetDate(PRTime *result);
+    NS_IMETHOD SetDate(PRTime date);
     NS_IMETHOD SetMessageId(const char *messageId);
     NS_IMETHOD SetReferences(const char *references);
     NS_IMETHOD SetCCList(const char *ccList);
@@ -52,20 +52,20 @@ public:
     NS_IMETHOD SetSubject(const char *subject);
     NS_IMETHOD SetStatusOffset(PRUint32 statusOffset);
 
-	NS_IMETHOD GetAuthor(nsString &resultAuthor);
-	NS_IMETHOD GetSubject(nsString &resultSubject);
-	NS_IMETHOD GetRecipients(nsString &resultRecipients);
-	NS_IMETHOD GetMessageId(nsString &resultMessageId);
+	NS_IMETHOD GetAuthor(nsString *resultAuthor);
+	NS_IMETHOD GetSubject(nsString *resultSubject);
+	NS_IMETHOD GetRecipients(nsString *resultRecipients);
+	NS_IMETHOD GetMessageId(nsCString *resultMessageId);
 
-	NS_IMETHOD GetMime2EncodedAuthor(nsString &resultAuthor);
-	NS_IMETHOD GetMime2EncodedSubject(nsString &resultSubject);
-	NS_IMETHOD GetMime2EncodedRecipients(nsString &resultRecipients);
+	NS_IMETHOD GetMime2DecodedAuthor(nsString *resultAuthor);
+	NS_IMETHOD GetMime2DecodedSubject(nsString *resultSubject);
+	NS_IMETHOD GetMime2DecodedRecipients(nsString *resultRecipients);
 
-	NS_IMETHOD GetAuthorCollationKey(nsString &resultAuthor);
-	NS_IMETHOD GetSubjectCollationKey(nsString &resultSubject);
-	NS_IMETHOD GetRecipientsCollationKey(nsString &resultRecipients);
+	NS_IMETHOD GetAuthorCollationKey(nsString *resultAuthor);
+	NS_IMETHOD GetSubjectCollationKey(nsString *resultSubject);
+	NS_IMETHOD GetRecipientsCollationKey(nsString *resultRecipients);
 
-	NS_IMETHOD GetCCList(nsString &ccList);
+	NS_IMETHOD GetCCList(nsString *ccList);
     // flag handling routines
     NS_IMETHOD GetFlags(PRUint32 *result);
     NS_IMETHOD SetFlags(PRUint32 flags);
@@ -87,8 +87,10 @@ public:
     NS_IMETHOD SetPriority(const char *priority);
     NS_IMETHOD GetMessageOffset(PRUint32 *result);
     NS_IMETHOD GetStatusOffset(PRUint32 *result); 
-	NS_IMETHOD GetCharSet(nsString &result);
+	NS_IMETHOD GetCharSet(nsString *result);
 	NS_IMETHOD GetPriority(nsMsgPriority *msgPriority);
+    NS_IMETHOD GetThreadParent(nsMsgKey *result);
+    NS_IMETHOD SetThreadParent(nsMsgKey inKey);
     ////////////////////////////////////////////////////////////////////////////
     // nsMsgHdr methods:
     nsMsgHdr(nsMsgDatabase *db, nsIMdbRow *dbRow);
@@ -100,24 +102,26 @@ public:
     NS_DECL_ISUPPORTS
 
     nsIMdbRow		*GetMDBRow() {return m_mdbRow;}
+	PRBool			IsParentOf(nsIMsgDBHdr *possibleChild);
 protected:
     nsresult	SetStringColumn(const char *str, mdb_token token);
     nsresult	SetUInt32Column(PRUint32 value, mdb_token token);
     nsresult	GetUInt32Column(mdb_token token, PRUint32 *pvalue);
 
 	// reference and threading stuff.
-	const char*	GetNextReference(const char *startNextRef, nsString2 &reference);
-	const char* GetPrevReference(const char *prevRef, nsString2 &reference);
+	const char*	GetNextReference(const char *startNextRef, nsCString &reference);
+	const char* GetPrevReference(const char *prevRef, nsCString &reference);
 
     nsMsgKey	m_threadId; 
     nsMsgKey	m_messageKey; 	//news: article number, mail mbox offset, imap uid...
-    time_t  		m_date;                         
+	nsMsgKey	m_threadParent;	// message this is a reply to, in thread.
+    PRTime  		m_date;                         
     PRUint32		m_messageSize;	// lines for news articles, bytes for mail messages
     PRUint32		m_statusOffset;	// offset in a local mail message of the mozilla status hdr
     PRUint32		m_flags;
     PRUint16		m_numReferences;	// x-ref header for threading
     PRInt16			m_csID;			// cs id of message
-	nsString2		m_charSet;		// OK, charset of headers, since cs id's aren't supported.
+	nsCString		m_charSet;		// OK, charset of headers, since cs id's aren't supported.
     nsMsgPriority	m_priority;
 
     // nsMsgHdrs will have to know what db and row they belong to, since they are really

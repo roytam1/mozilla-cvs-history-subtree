@@ -44,7 +44,7 @@ function toggle_open_close() {
   if (is_sidebar_open)
   {
     // Close it
-    sidebar.setAttribute('style','visibility: hidden; width: 1px');
+    sidebar.setAttribute('style','width: 0px');
     sidebar.setAttribute('src','about:blank');
 
     grippy.setAttribute('open','');
@@ -53,9 +53,8 @@ function toggle_open_close() {
   }
   else
   {
-    dump("Open it\n");
-   
-    sidebar.setAttribute('style', 'visibility: visible;width:' + sidebar_width + 'px');
+    // Open it
+    sidebar.setAttribute('style', 'width:' + sidebar_width + 'px');
     sidebar.setAttribute('src',   sidebar_uri);
 
     grippy.setAttribute('open','true');

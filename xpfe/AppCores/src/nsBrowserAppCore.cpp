@@ -28,7 +28,7 @@
 #include "nsAppCoresCIDs.h"
 #include "nsIDOMAppCoresManager.h"
 
-#include "nsIFileChooser.h"
+#include "nsIFileSpecWithUI.h"
 
 #include "nsIScriptContext.h"
 #include "nsIScriptContextOwner.h"
@@ -49,7 +49,7 @@
 #include "nsINetService.h"
 #else
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIWidget.h"
@@ -94,6 +94,12 @@ static NS_DEFINE_IID(kWalletServiceCID, NS_WALLETSERVICE_CID);
 
 // Stuff to implement find/findnext
 #include "nsIFindComponent.h"
+#ifdef DEBUG_warren
+#include "prlog.h"
+#if defined(DEBUG) || defined(FORCE_PR_LOG)
+static PRLogModuleInfo* gTimerLog = nsnull;
+#endif /* DEBUG || FORCE_PR_LOG */
+#endif
 
 static NS_DEFINE_IID(kIDocumentViewerIID, NS_IDOCUMENT_VIEWER_IID);
 
@@ -112,7 +118,10 @@ static NS_DEFINE_IID(kISupportsIID,              NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIBrowserAppCoreIID,        NS_IDOMBROWSERAPPCORE_IID);
 static NS_DEFINE_IID(kIDOMDocumentIID,           nsIDOMDocument::GetIID());
 static NS_DEFINE_IID(kIDocumentIID,              nsIDocument::GetIID());
+#ifdef NECKO
+#else
 static NS_DEFINE_IID(kINetSupportIID,            NS_INETSUPPORT_IID);
+#endif
 static NS_DEFINE_IID(kIStreamObserverIID,        NS_ISTREAMOBSERVER_IID);
 static NS_DEFINE_IID(kIWebShellWindowIID,        NS_IWEBSHELL_WINDOW_IID);
 static NS_DEFINE_IID(kIGlobalHistoryIID,       NS_IGLOBALHISTORY_IID);
@@ -147,7 +156,6 @@ nsBrowserAppCore::nsBrowserAppCore()
   mWebShellWin          = nsnull;
   mWebShell             = nsnull;
   mContentAreaWebShell  = nsnull;
-  mGHistory             = nsnull;
   mSHistory             = nsnull;
   IncInstanceCount();
   NS_INIT_REFCNT();
@@ -164,6 +172,7 @@ nsBrowserAppCore::~nsBrowserAppCore()
   //NS_IF_RELEASE(mWebShellWin);
   //NS_IF_RELEASE(mWebShell);
   //NS_IF_RELEASE(mContentAreaWebShell);
+  NS_IF_RELEASE(mSHistory);
 
   DecInstanceCount();  
 }
@@ -188,11 +197,7 @@ nsBrowserAppCore::QueryInterface(REFNSIID aIID,void** aInstancePtr)
     AddRef();
     return NS_OK;
   }
-  if (aIID.Equals(kINetSupportIID)) {
-    *aInstancePtr = (void*) ((nsINetSupport*)this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
+
   /* This isn't supported any more
   if (aIID.Equals(kIStreamObserverIID)) {
     *aInstancePtr = (void*) ((nsIStreamObserver*)this);
@@ -275,22 +280,16 @@ nsBrowserAppCore::Init(const nsString& aId)
   nsresult rv = nsServiceManager::GetService(kAppCoresManagerCID,
                                              kIDOMAppCoresManagerIID,
                                              (nsISupports**)&appCoreManager);
-  if (NS_OK == rv) {
+  if (NS_SUCCEEDED(rv)) {
 	  appCoreManager->Add((nsIDOMBaseAppCore *)(nsBaseAppCore *)this);
     nsServiceManager::ReleaseService(kAppCoresManagerCID, appCoreManager);
   }
-
-  // Get the Global history service  
-  nsServiceManager::GetService(kCGlobalHistoryCID, kIGlobalHistoryIID,
-					(nsISupports **)&mGHistory);
 
   rv = nsComponentManager::CreateInstance(kCSessionHistoryCID,
                                           nsnull,
                                           kISessionHistoryIID,
                                           (void **) &mSHistory);
-
-  if (!mSHistory)
-     printf("********** Couldn't initialize Session History *********\n");
+  if (NS_FAILED(rv)) return rv;
 
   BeginObserving();
 
@@ -325,14 +324,23 @@ nsBrowserAppCore::Back()
 }
 
 NS_IMETHODIMP
-nsBrowserAppCore::Reload(nsURLReloadType aType)
+#ifdef NECKO
+nsBrowserAppCore::Reload(nsLoadFlags flags)
+#else
+nsBrowserAppCore::Reload(PRInt32  aType)
+#endif
 {
-	printf("fix me!\n");
-	NS_ASSERTION(0,"fix me!");
+#ifdef  NECKO
+	if (mContentAreaWebShell)
+	   Reload(mContentAreaWebShell, flags);
+#else
+	if (mContentAreaWebShell)
+	   Reload(mContentAreaWebShell, (nsURLReloadType) aType);
+#endif /* NECKO */
 	return NS_OK;
 }   
 
-NS_IMETHODIMP    
+NS_IMETHODIMP
 nsBrowserAppCore::Forward()
 {
   GoForward(mContentAreaWebShell);
@@ -363,6 +371,201 @@ nsresult ProfileDirectory(nsFileSpec& dirSpec) {
   return spec->GetFileSpec(&dirSpec);
 }
 
+
+
+NS_IMETHODIMP
+nsBrowserAppCore::GotoHistoryIndex(PRInt32 aIndex)
+{
+    printf("In nsBrowserAppCOre::gotoHistoryIndex\n");
+    //	Goto(aIndex, mContentAreaWebShell, PR_FALSE);
+	return NS_OK;
+
+}
+
+NS_IMETHODIMP
+nsBrowserAppCore::BackButtonPopup()
+{
+
+  printf("In BrowserAppCore::Backbuttonpopup\n");
+
+#ifdef NOT_YET
+ // Get handle to the "backbuttonpopup" element
+  nsCOMPtr<nsIDOMElement>   backPopupElement;
+  rv = FindNamedXULElement(mWebShell, "backbuttonpopup", &backPopupElement);
+
+  if (!NS_SUCCEEDED(rv) ||  !backPopupElement)
+  {
+     return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIDOMNode> backPopupNode(do_QueryInterface(backPopupElement)); 
+  if (!backPopupNode) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsString  name;
+  backPopupNode->GetNodeName(name);
+  printf("Popup Node name = %s\n", name.ToNewCString());
+
+  
+  //get handle to the Menu item under popup
+  nsCOMPtr<nsIDOMNode>   menu;
+  backPopupNode->GetFirstChild(getter_AddRefs(menu));
+  if (!menu) {
+	  printf("Call to GetFirstChild failed\n");
+     return NS_ERROR_FAILURE;
+  }
+  
+  /*
+  //Get a nsIMenu out of the menu node
+  nsIMenu *  menuNode = nsnull;
+  rv = menu->QueryInterface(kIMenuIID, (void **)&menuNode);
+
+  if (!NS_SUCCEEDED(rv) || !menuNode) {
+	  printf("QueryInterface to nsIMenu failed\n");
+	  return NS_ERROR_FAILURE;
+  }
+*/
+  menu->GetNodeName(name);
+  printf("First child name = %s\n", name.ToNewCString());
+  PRBool hasChildren=PR_FALSE;
+
+  // Check of menu has children. If so, remove them.
+  menu->HasChildNodes(&hasChildren);
+  if (hasChildren) {
+     nsIDOMNodeList *   childList=nsnull;
+
+     //Get handle to the children list
+     rv = menu->GetChildNodes(&childList);
+     if (NS_SUCCEEDED(rv) && childList) {
+        PRInt32 ccount=0;
+        childList->GetLength((unsigned int *)&ccount);
+
+        // Remove the children one after one.
+        for (PRInt32 i=0; i<ccount; i++) {
+            nsIDOMNode * child=nsnull;
+            rv = childList->Item(i, &child);
+            nsIDOMNode * ret=nsnull;
+			if (NS_SUCCEEDED(rv) && child) {
+              rv = menu->RemoveChild(child, &ret);
+			  if (NS_SUCCEEDED(rv)) {
+				if (ret) {
+				  printf("Child %x removed from the popuplist \n", child);
+			      //Child was removed. release it.
+                  NS_IF_RELEASE(child);
+				}
+				else {
+					printf("Child %x was not removed from popuplist\n", child);
+				}
+			  }
+			  else
+			  {
+				 printf("Child %x was not removed from popuplist\n", child);
+                 return NS_ERROR_FAILURE;
+			  }
+			}  //child
+        } //(for)
+     }   // if (childList)
+	 
+  }    // hasChildren
+  else {
+
+	  printf("Menu has no children\n");
+  }
+	 
+             
+      /* Now build the popup list */
+
+  if (!mSHistory) {
+	  printf("mSHistory is null\n");
+     return NS_ERROR_FAILURE;
+	 }
+  
+  //Get current index in Session History
+  mSHistory->getCurrentIndex(index);
+
+  //Decide on the # of items in the popup list 
+  if (index > SHISTORY_POPUP_LIST)
+     i  = index-SHISTORY_POPUP_LIST;
+
+  for (PRInt32 j=i;j<index;j++) {
+      const PRUnichar * url=nsnull, *title=nsnull;
+
+      mSHistory->GetURLForIndex(j, &url);
+      nsAutoString  histURL(url);
+      mSHistory->GetTitleForIndex(j, &title);
+      nsAutoString  histTitle(title);
+      printf("URL = %s, TITLE = %s\n", histURL.ToNewCString(), histTitle.ToNewCString());
+      CreateMenuItem(menu, j, title);
+     }
+
+
+  NS_RELEASE(menuNode);
+#endif  /* NOT_YET */
+
+  return NS_OK;
+
+}
+
+
+
+NS_IMETHODIMP nsBrowserAppCore::CreateMenuItem(
+  nsIDOMNode *    aParentMenu,
+  PRInt32      aIndex,
+  const PRUnichar *  aName)
+{
+   printf("In CreateMenuItem\n");
+
+#ifdef  NOT_YET
+     nsString menuitemName(aName);
+
+  nsISupports * supports = nsnull;
+  rv = aparentMenu->QueryInterface(kISupportsIID, (void**) &supports);
+  if (!NS_SUCCEEDED(rv) && !supports)
+	  return NS_ERROR_FAILURE;
+
+  printf("In CreateMenuItem\n");
+  // Create nsMenuItem
+  nsIMenuItem * pnsMenuItem = nsnull;
+  nsresult rv = nsComponentManager::CreateInstance(kMenuItemCID, nsnull, kIMenuItemIID, (void**)&pnsMenuItem);
+
+  if (NS_OK == rv) {
+    pnsMenuItem->Create(supports, menuitemName, 0);                 
+    
+    // Make nsMenuItem a child of nsMenu
+    nsISupports * supports = nsnull;
+    pnsMenuItem->QueryInterface(kISupportsIID, (void**) &supports);
+    aParentMenu->AppendChild(supports);
+    NS_RELEASE(supports);
+	
+    nsString menuitemCmd("gotoHistoryIndex(");
+	menuitemCmd += (aIndex);
+	menuitemCmd += ");";
+    
+    pnsMenuItem->SetCommand(menuitemCmd);
+    pnsMenuItem->SetWebShell(mWebShell);
+   
+   
+    // The parent owns us, so we can release
+    NS_RELEASE(pnsMenuItem);
+  } 
+#endif  /* NOT_YET */
+  return NS_OK;
+}
+
+
+
+NS_IMETHODIMP
+nsBrowserAppCore::ForwardButtonPopup()
+{
+     printf("Inside ForwardButtonPopup\n");
+	 return NS_OK;
+
+}
+
+
+
+
 PRInt32
 newWind(char* urlName)
 {
@@ -389,7 +592,7 @@ newWind(char* urlName)
    * deal with GUI initialization...
    */
   ///write me...
-  nsIURL* url;
+  nsIURI* url;
   
 #ifndef NECKO
   rv = NS_NewURL(&url, urlstr);
@@ -401,14 +604,15 @@ newWind(char* urlName)
   rv = service->NewURI(urlstr, nsnull, &uri);
   if (NS_FAILED(rv)) return rv;
 
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+  rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
   NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIWebShellWindow> newWindow;
-  appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, *getter_AddRefs(newWindow),
-              nsnull, nsnull, 615, 480);
+  appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, NS_CHROME_ALL_CHROME,
+              nsnull, NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+              getter_AddRefs(newWindow));
 
   NS_RELEASE(url);
   
@@ -445,7 +649,7 @@ nsBrowserAppCore::WalletEditor(nsIDOMWindow* aWin)
 
     window = nsnull;
 
-    nsCOMPtr<nsIURL> urlObj;
+    nsCOMPtr<nsIURI> urlObj;
     char *urlstr = "resource:/res/samples/WalletEditor.html";
 #ifndef NECKO
     rv = NS_NewURL(getter_AddRefs(urlObj), urlstr);
@@ -457,7 +661,7 @@ nsBrowserAppCore::WalletEditor(nsIDOMWindow* aWin)
     rv = service->NewURI(urlstr, nsnull, &uri);
     if (NS_FAILED(rv)) return rv;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
     NS_RELEASE(uri);
 #endif // NECKO
     if (NS_FAILED(rv))
@@ -474,23 +678,17 @@ nsBrowserAppCore::WalletEditor(nsIDOMWindow* aWin)
 
     nsCOMPtr<nsIWebShellWindow> parent;
     DOMWindowToWebShellWindow(aWin, &parent);
-    appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
-                                 nsnull, cb, 504, 436);
+    window = nsnull;
+    appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, 
+                              NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                              cb, 504, 436, &window);
+    if (window != nsnull) {
+      appShell->RunModalDialog(&window, parent, nsnull, NS_CHROME_ALL_CHROME,
+                               cb, 504, 436);
+      NS_RELEASE(window);
+    }
     nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 
-    if (window != nsnull) {
-        nsCOMPtr<nsIWidget> parentWindowWidgetThing;
-        nsresult gotParent;
-        gotParent = parent ? parent->GetWidget(*getter_AddRefs(parentWindowWidgetThing)) :
-                             NS_ERROR_FAILURE;
-        // Windows OS is the only one that needs the parent disabled, or cares
-        // arguably this should be done by the new window, within ShowModal...
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_FALSE);
-        window->ShowModal();
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_TRUE);
-    }
     return rv;
 }
 
@@ -504,7 +702,7 @@ nsBrowserAppCore::SignonViewer(nsIDOMWindow* aWin)
 
     window = nsnull;
 
-    nsCOMPtr<nsIURL> urlObj;
+    nsCOMPtr<nsIURI> urlObj;
     char * urlstr = "resource:/res/samples/SignonViewer.html";
 #ifndef NECKO
     rv = NS_NewURL(getter_AddRefs(urlObj), urlstr);
@@ -516,7 +714,7 @@ nsBrowserAppCore::SignonViewer(nsIDOMWindow* aWin)
     rv = service->NewURI(urlstr, nsnull, &uri);
     if (NS_FAILED(rv)) return rv;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
     NS_RELEASE(uri);
 #endif // NECKO
     if (NS_FAILED(rv))
@@ -533,23 +731,16 @@ nsBrowserAppCore::SignonViewer(nsIDOMWindow* aWin)
 
     nsCOMPtr<nsIWebShellWindow> parent;
     DOMWindowToWebShellWindow(aWin, &parent);
-    appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
-                                 nsnull, cb, 504, 436);
-    nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
-
+    window = nsnull;
+    appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE,
+                                 NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                                 cb, 504, 436, &window);
     if (window != nsnull) {
-        nsCOMPtr<nsIWidget> parentWindowWidgetThing;
-        nsresult gotParent;
-        gotParent = parent ? parent->GetWidget(*getter_AddRefs(parentWindowWidgetThing)) :
-                             NS_ERROR_FAILURE;
-        // Windows OS is the only one that needs the parent disabled, or cares
-        // arguably this should be done by the new window, within ShowModal...
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_FALSE);
-        window->ShowModal();
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_TRUE);
+      appShell->RunModalDialog(&window, parent, nsnull, NS_CHROME_ALL_CHROME,
+                               cb, 504, 436);
+      NS_RELEASE(window);
     }
+    nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
     return rv;
 }
 
@@ -563,7 +754,7 @@ nsBrowserAppCore::CookieViewer(nsIDOMWindow* aWin)
 
     window = nsnull;
 
-    nsCOMPtr<nsIURL> urlObj;
+    nsCOMPtr<nsIURI> urlObj;
     char *urlstr = "resource:/res/samples/CookieViewer.html";
 #ifndef NECKO
     rv = NS_NewURL(getter_AddRefs(urlObj), urlstr);
@@ -575,7 +766,7 @@ nsBrowserAppCore::CookieViewer(nsIDOMWindow* aWin)
     rv = service->NewURI(urlstr, nsnull, &uri);
     if (NS_FAILED(rv)) return rv;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
     NS_RELEASE(uri);
 #endif // NECKO
     if (NS_FAILED(rv))
@@ -592,23 +783,18 @@ nsBrowserAppCore::CookieViewer(nsIDOMWindow* aWin)
 
     nsCOMPtr<nsIWebShellWindow> parent;
     DOMWindowToWebShellWindow(aWin, &parent);
-    appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
-                                 nsnull, cb, 504, 436);
-    nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
+    window = nsnull;
+    appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE,
+                              NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                              cb, 504, 436, &window);
 
     if (window != nsnull) {
-        nsCOMPtr<nsIWidget> parentWindowWidgetThing;
-        nsresult gotParent;
-        gotParent = parent ? parent->GetWidget(*getter_AddRefs(parentWindowWidgetThing)) :
-                             NS_ERROR_FAILURE;
-        // Windows OS is the only one that needs the parent disabled, or cares
-        // arguably this should be done by the new window, within ShowModal...
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_FALSE);
-        window->ShowModal();
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_TRUE);
+      appShell->RunModalDialog(&window, parent, nsnull, NS_CHROME_ALL_CHROME,
+                               cb, 504, 436);
+      NS_RELEASE(window);
     }
+
+    nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
     return rv;
 }
 
@@ -665,7 +851,7 @@ nsBrowserAppCore::WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm)
 
     window = nsnull;
 
-    nsCOMPtr<nsIURL> urlObj;
+    nsCOMPtr<nsIURI> urlObj;
     char * urlstr = "resource:/res/samples/WalletPreview.html";
 #ifndef NECKO
     rv = NS_NewURL(getter_AddRefs(urlObj), urlstr);
@@ -677,7 +863,7 @@ nsBrowserAppCore::WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm)
     rv = service->NewURI(urlstr, nsnull, &uri);
     if (NS_FAILED(rv)) return rv;
 
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+    rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
     NS_RELEASE(uri);
 #endif // NECKO
     if (NS_FAILED(rv))
@@ -694,23 +880,17 @@ nsBrowserAppCore::WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm)
 
     nsCOMPtr<nsIWebShellWindow> parent;
     DOMWindowToWebShellWindow(aWin, &parent);
-    appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
-                                 nsnull, cb, 504, 436);
+    window = nsnull;
+    appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE,
+                              NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                              cb, 504, 436, &window);
+    if (window != nsnull) {
+      appShell->RunModalDialog(&window, parent, nsnull, NS_CHROME_ALL_CHROME,
+                               cb, 504, 436);
+      NS_RELEASE(window);
+    }
     nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 
-    if (window != nsnull) {
-        nsCOMPtr<nsIWidget> parentWindowWidgetThing;
-        nsresult gotParent;
-        gotParent = parent ? parent->GetWidget(*getter_AddRefs(parentWindowWidgetThing)) :
-                             NS_ERROR_FAILURE;
-        // Windows OS is the only one that needs the parent disabled, or cares
-        // arguably this should be done by the new window, within ShowModal...
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_FALSE);
-        window->ShowModal();
-        if (NS_SUCCEEDED(gotParent))
-            parentWindowWidgetThing->Enable(PR_TRUE);
-    }
     return rv;
 }
 
@@ -796,6 +976,7 @@ nsBrowserAppCore::WalletSafeFillin(nsIDOMWindow*, nsIDOMWindow*) {
 NS_IMETHODIMP    
 nsBrowserAppCore::LoadUrl(const nsString& aUrl)
 {
+  nsresult rv = NS_OK;
   char * urlstr = nsnull;
   urlstr = aUrl.ToNewCString();
 
@@ -807,15 +988,15 @@ nsBrowserAppCore::LoadUrl(const nsString& aUrl)
   GetId(id);
   if ( id.Find("ViewSource") == 0 ) {
     // Viewing source, load with "view-source" command.
-    mContentAreaWebShell->LoadURL(nsString(urlstr).GetUnicode(), "view-source", nsnull, PR_FALSE );
+    rv = mContentAreaWebShell->LoadURL(nsString(urlstr).GetUnicode(), "view-source", nsnull, PR_FALSE );
   } else {
     // Normal browser.
-    mContentAreaWebShell->LoadURL(nsString(urlstr).GetUnicode());
+    rv = mContentAreaWebShell->LoadURL(nsString(urlstr).GetUnicode());
   }
 
   delete[] urlstr;
 
-  return NS_OK;
+  return rv;
 }
 
 NS_IMETHODIMP    
@@ -826,11 +1007,16 @@ nsBrowserAppCore::LoadInitialPage(void)
   nsresult rv;
   nsICmdLineService * cmdLineArgs;
 
+  
   // Examine content URL.
   if ( mContentAreaWebShell ) {
       const PRUnichar *url = 0;
       rv = mContentAreaWebShell->GetURL( 0, &url );
-      if ( NS_SUCCEEDED( rv ) ) {
+	  /* Check whether url is valid. Otherwise we compare 0x00 with 
+	   * "about:blank" and there by return from here with out 
+	   * loading the command line url or default home page.
+	   */
+      if ( NS_SUCCEEDED( rv ) && url ) {
           if ( nsString(url) != "about:blank" ) {
               // Something has already been loaded (probably via window.open),
               // leave it be.
@@ -1052,7 +1238,7 @@ static nsresult setAttribute( nsIWebShell *shell,
 // nsIDocumentLoaderObserver methods
 
 NS_IMETHODIMP
-nsBrowserAppCore::OnStartDocumentLoad(nsIDocumentLoader* aLoader, nsIURL* aURL, const char* aCommand)
+nsBrowserAppCore::OnStartDocumentLoad(nsIDocumentLoader* aLoader, nsIURI* aURL, const char* aCommand)
 {
   NS_PRECONDITION(aLoader != nsnull, "null ptr");
   if (! aLoader)
@@ -1069,11 +1255,18 @@ nsBrowserAppCore::OnStartDocumentLoad(nsIDocumentLoader* aLoader, nsIURL* aURL, 
   NS_WITH_SERVICE(nsIObserverService, observer, NS_OBSERVERSERVICE_PROGID, &rv);
   if (NS_FAILED(rv)) return rv;
 
+#ifdef NECKO
+  char* url;
+#else
   const char* url;
+#endif
   rv = aURL->GetSpec(&url);
   if (NS_FAILED(rv)) return rv;
 
   nsAutoString urlStr(url);
+#ifdef NECKO
+  nsCRT::free(url);
+#endif
 
   nsAutoString kStartDocumentLoad("StartDocumentLoad");
   rv = observer->Notify(mContentWindow,
@@ -1083,33 +1276,54 @@ nsBrowserAppCore::OnStartDocumentLoad(nsIDocumentLoader* aLoader, nsIURL* aURL, 
   // XXX Ignore rv for now. They are using nsIEnumerator instead of
   // nsISimpleEnumerator.
 
+#ifdef DEBUG_warren
+  char* urls;
+  aURL->GetSpec(&urls);
+  if (gTimerLog == nsnull)
+    gTimerLog = PR_NewLogModule("Timer");
+  mLoadStartTime = PR_IntervalNow();
+  PR_LOG(gTimerLog, PR_LOG_DEBUG, 
+         (">>>>> Starting timer for %s\n", urls));
+  printf(">>>>> Starting timer for %s\n", urls);
+  nsCRT::free(urls);
+#endif
+
   // Kick start the throbber
   setAttribute( mWebShell, "Browser:Throbber", "busy", "true" );
 
   // Enable the Stop buton
-  setAttribute( mWebShell, "canStop", "disabled", "false" );
+  setAttribute( mWebShell, "canStop", "disabled", "" );
+
+  //Disable the reload button
+  setAttribute(mWebShell, "canReload", "disabled", "true");
 
   return NS_OK;
 }
 
 
 NS_IMETHODIMP
-nsBrowserAppCore::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIURL *aUrl, PRInt32 aStatus,
+#ifdef NECKO
+nsBrowserAppCore::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIChannel* channel, nsresult aStatus,
 									nsIDocumentLoaderObserver * aObserver)
+#else
+nsBrowserAppCore::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIURI *aUrl, PRInt32 aStatus,
+									nsIDocumentLoaderObserver * aObserver)
+#endif
 {
   NS_PRECONDITION(aLoader != nsnull, "null ptr");
   if (! aLoader)
     return NS_ERROR_NULL_POINTER;
 
+#ifdef NECKO
+  NS_PRECONDITION(channel != nsnull, "null ptr");
+  if (! channel)
+    return NS_ERROR_NULL_POINTER;
+#else
   NS_PRECONDITION(aUrl != nsnull, "null ptr");
   if (! aUrl)
     return NS_ERROR_NULL_POINTER;
+#endif
 
-  const char* spec =nsnull;
-
-  aUrl->GetSpec(&spec);
-
- 
   nsresult rv;
 
   nsIWebShell * aWebShell= nsnull, * parent = nsnull;
@@ -1119,7 +1333,14 @@ nsBrowserAppCore::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIURL *aUrl, PR
   NS_WITH_SERVICE(nsIObserverService, observer, NS_OBSERVERSERVICE_PROGID, &rv);
   if (NS_FAILED(rv)) return rv;
 
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aUrl;
+  rv = channel->GetURI(getter_AddRefs(aUrl));
+  if (NS_FAILED(rv)) return rv;
+  char* url;
+#else
   const char* url;
+#endif
   rv = aUrl->GetSpec(&url);
   if (NS_FAILED(rv)) return rv;
 
@@ -1151,24 +1372,6 @@ nsBrowserAppCore::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIURL *aUrl, PR
   // XXX Ignore rv for now. They are using nsIEnumerator instead of
   // nsISimpleEnumerator.
 
-  // Update global history.
-  //NS_ASSERTION(mGHistory != nsnull, "history not initialized");
-  if (mGHistory && mWebShell) {
-    nsresult rv;
-
-    do {
-      rv = mGHistory->AddPage(url, /* XXX referrer? */ nsnull, PR_Now());
-      if (NS_FAILED(rv)) break;
-
-      const PRUnichar* title;
-      rv = mWebShell->GetTitle(&title);
-      if (NS_FAILED(rv)) break;
-
-      rv = mGHistory->SetPageTitle(url, title);
-      if (NS_FAILED(rv)) break;
-    } while (0);
-  }
-
 done:
   // Stop the throbber and set the urlbar string
 	if (aStatus == NS_OK)
@@ -1176,37 +1379,67 @@ done:
 
 	    /* To satisfy a request from the QA group */
 	if (aStatus == NS_OK) {
-      fprintf(stdout, "Document %s loaded successfully\n", spec);
+      fprintf(stdout, "Document %s loaded successfully\n", url);
       fflush(stdout);
 	}
 	else {
-      fprintf(stdout, "Error loading URL %s \n", spec);
+      fprintf(stdout, "Error loading URL %s \n", url);
       fflush(stdout);
 	}
 
 end:
 
-    setAttribute( mWebShell, "Browser:Throbber", "busy", "false" );
-    PRBool result=PR_TRUE;
-    // Check with sessionHistory if you can go forward
-    canForward(result);
-    setAttribute(mWebShell, "canGoForward", "disabled", (result == PR_TRUE) ? "" : "true");
+#ifdef DEBUG_warren
+  nsCOMPtr<nsIURI> aURL;
+  channel->GetURI(getter_AddRefs(aURL));
+  char* urls;
+  aURL->GetSpec(&urls);
+  if (gTimerLog == nsnull)
+    gTimerLog = PR_NewLogModule("Timer");
+  PRIntervalTime end = PR_IntervalNow();
+  PRIntervalTime diff = end - mLoadStartTime;
+  PR_LOG(gTimerLog, PR_LOG_DEBUG, 
+         (">>>>> Stopping timer for %s. Elapsed: %.3f\n", 
+          urls, PR_IntervalToMilliseconds(diff) / 1000.0));
+  printf(">>>>> Stopping timer for %s. Elapsed: %.3f\n", 
+         urls, PR_IntervalToMilliseconds(diff) / 1000.0);
+  nsCRT::free(urls);
+#endif
+
+  setAttribute( mWebShell, "Browser:Throbber", "busy", "false" );
+  PRBool result=PR_TRUE;
+  // Check with sessionHistory if you can go forward
+  canForward(result);
+  setAttribute(mWebShell, "canGoForward", "disabled", (result == PR_TRUE) ? "" : "true");
 
     // Check with sessionHistory if you can go back
-    canBack(result);
-    setAttribute(mWebShell, "canGoBack", "disabled", (result == PR_TRUE) ? "" : "true");
+  canBack(result);
+  setAttribute(mWebShell, "canGoBack", "disabled", (result == PR_TRUE) ? "" : "true");
 
-	//Disable the Stop button
-	setAttribute( mWebShell, "canStop", "disabled", "true" );
+    //Disable the Stop button
+  setAttribute( mWebShell, "canStop", "disabled", "true" );
 
-    return NS_OK;
+	//Enable the reload button
+	setAttribute(mWebShell, "canReload", "disabled", "");
+#ifdef NECKO
+  nsCRT::free(url);
+#endif
+  return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsBrowserAppCore::HandleUnknownContentType(nsIDocumentLoader* loader, 
-                                           nsIURL *aURL,
+                                           nsIChannel* channel,
                                            const char *aContentType,
-                                           const char *aCommand ) {
+                                           const char *aCommand )
+#else
+nsBrowserAppCore::HandleUnknownContentType(nsIDocumentLoader* loader, 
+                                           nsIURI *aURL,
+                                           const char *aContentType,
+                                           const char *aCommand )
+#endif
+{
     nsresult rv = NS_OK;
 
     // Turn off the indicators in the chrome.
@@ -1220,7 +1453,22 @@ nsBrowserAppCore::HandleUnknownContentType(nsIDocumentLoader* loader,
 
     if ( NS_SUCCEEDED( rv ) ) {
         /* Have handler take care of this. */
-        rv = handler->HandleUnknownContentType( aURL, aContentType, loader );
+        // Get DOM window.
+        nsCOMPtr<nsIDOMWindow> domWindow;
+        rv = mWebShellWin->ConvertWebShellToDOMWindow( mWebShell,
+                                                       getter_AddRefs( domWindow ) );
+        if ( NS_SUCCEEDED( rv ) && domWindow ) {
+#ifdef NECKO
+            rv = handler->HandleUnknownContentType( channel, aContentType, domWindow );
+#else
+            rv = handler->HandleUnknownContentType( aURL, aContentType, domWindow );
+#endif
+        } else {
+            #ifdef NS_DEBUG
+            printf( "%s %d: ConvertWebShellToDOMWindow failed, rv=0x%08X\n",
+                    __FILE__, (int)__LINE__, (int)rv );
+            #endif
+        }
 
         // Release the unknown content type handler service object.
         nsServiceManager::ReleaseService( NS_IUNKNOWNCONTENTTYPEHANDLER_PROGID, handler );
@@ -1235,30 +1483,57 @@ nsBrowserAppCore::HandleUnknownContentType(nsIDocumentLoader* loader,
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsBrowserAppCore::OnStartURLLoad(nsIDocumentLoader* loader, 
-                                 nsIURL* aURL, const char* aContentType,
+                                 nsIChannel* channel,
                                  nsIContentViewer* aViewer)
+#else
+nsBrowserAppCore::OnStartURLLoad(nsIDocumentLoader* loader, 
+                                 nsIURI* aURL, const char* aContentType,
+                                 nsIContentViewer* aViewer)
+#endif
 {
 
    return NS_OK;
 }
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsBrowserAppCore::OnProgressURLLoad(nsIDocumentLoader* loader, 
-                                    nsIURL* aURL, PRUint32 aProgress, 
+                                    nsIChannel* channel, PRUint32 aProgress, 
                                     PRUint32 aProgressMax)
+#else
+nsBrowserAppCore::OnProgressURLLoad(nsIDocumentLoader* loader, 
+                                    nsIURI* aURL, PRUint32 aProgress, 
+                                    PRUint32 aProgressMax)
+#endif
 {
   nsresult rv = NS_OK;
   PRUint32 progress = aProgressMax ? ( aProgress * 100 ) / aProgressMax : 0;
+#ifdef NECKO
+  nsCOMPtr<nsIURI> aURL;
+  rv = channel->GetURI(getter_AddRefs(aURL));
+  if (NS_FAILED(rv)) return rv;
+  char *urlString = 0;
+#else
   const char *urlString = 0;
+#endif
   aURL->GetSpec( &urlString );
+#ifdef NECKO
+  nsCRT::free(urlString);
+#endif
   return rv;
 }
 
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsBrowserAppCore::OnStatusURLLoad(nsIDocumentLoader* loader, 
-                                  nsIURL* aURL, nsString& aMsg)
+                                  nsIChannel* channel, nsString& aMsg)
+#else
+nsBrowserAppCore::OnStatusURLLoad(nsIDocumentLoader* loader, 
+                                  nsIURI* aURL, nsString& aMsg)
+#endif
 {
   nsresult rv = setAttribute( mWebShell, "Browser:Status", "value", aMsg );
    return rv;
@@ -1266,8 +1541,13 @@ nsBrowserAppCore::OnStatusURLLoad(nsIDocumentLoader* loader,
 
 
 NS_IMETHODIMP
+#ifdef NECKO
 nsBrowserAppCore::OnEndURLLoad(nsIDocumentLoader* loader, 
-                               nsIURL* aURL, PRInt32 aStatus)
+                               nsIChannel* channel, nsresult aStatus)
+#else
+nsBrowserAppCore::OnEndURLLoad(nsIDocumentLoader* loader, 
+                               nsIURI* aURL, PRInt32 aStatus)
+#endif
 {
 
    return NS_OK;
@@ -1296,6 +1576,18 @@ nsBrowserAppCore::GoForward(nsIWebShell * aPrev)
 	return NS_OK;
 }
 
+NS_IMETHODIMP
+#ifndef NECKO
+nsBrowserAppCore::Reload(nsIWebShell * aPrev, nsURLReloadType aType)
+#else
+nsBrowserAppCore::Reload(nsIWebShell * aPrev, nsLoadFlags aType)
+#endif // NECKO
+{
+
+	if (mSHistory)
+		mSHistory->Reload(aPrev, aType);
+	return NS_OK;
+}
 
 NS_IMETHODIMP
 nsBrowserAppCore::add(nsIWebShell * aWebShell)
@@ -1307,11 +1599,11 @@ nsBrowserAppCore::add(nsIWebShell * aWebShell)
 }
 
 NS_IMETHODIMP
-nsBrowserAppCore::Goto(PRInt32 aGotoIndex, nsIWebShell * aPrev)
+nsBrowserAppCore::Goto(PRInt32 aGotoIndex, nsIWebShell * aPrev, PRBool aIsReloading)
 {
    nsresult rv;
    if (mSHistory) 
-     rv = mSHistory->Goto(aGotoIndex, aPrev);
+     rv = mSHistory->Goto(aGotoIndex, aPrev, PR_FALSE);
    return rv;
 }
 
@@ -1385,6 +1677,23 @@ nsBrowserAppCore::getCurrentIndex(PRInt32 & aResult)
 
 }
 
+NS_IMETHODIMP
+nsBrowserAppCore::GetURLForIndex(PRInt32 aIndex, const PRUnichar** aURL)
+{
+
+   if (mSHistory)
+     return  mSHistory->GetURLForIndex(aIndex, aURL);
+   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBrowserAppCore::SetURLForIndex(PRInt32 aIndex, const PRUnichar* aURL)
+{
+   if (mSHistory)
+      mSHistory->SetURLForIndex(aIndex, aURL);
+   return NS_OK;
+}
+
 /*
 NS_IMETHODIMP
 cloneHistory(nsISessionHistory * aSessionHistory) {
@@ -1423,7 +1732,7 @@ nsBrowserAppCore::NewWindow()
    * deal with GUI initialization...
    */
   ///write me...
-  nsIURL* url;
+  nsIURI* url;
 
 #ifndef NECKO  
   rv = NS_NewURL(&url, urlstr);
@@ -1435,14 +1744,15 @@ nsBrowserAppCore::NewWindow()
   rv = service->NewURI(urlstr, nsnull, &uri);
   if (NS_FAILED(rv)) return rv;
 
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+  rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&url);
   NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIWebShellWindow> newWindow;
-  appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, *getter_AddRefs(newWindow),
-              nsnull, nsnull, 615, 480);
+  appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, NS_CHROME_ALL_CHROME,
+              nsnull, NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+              getter_AddRefs(newWindow));
   NS_RELEASE(url);
   
   return NS_OK;
@@ -1478,19 +1788,18 @@ static void BuildFileURL(const char * aFileName, nsString & aFileURL)
 NS_IMETHODIMP nsBrowserAppCore::OpenWindow()
 //----------------------------------------------------------------------------------------
 {  
-  nsCOMPtr<nsIFileChooser> fileChooser;
-  nsresult rv = NS_NewFileChooser(getter_AddRefs(fileChooser));
-  if (NS_FAILED(rv))
-  	return rv;
+  nsCOMPtr<nsIFileSpecWithUI> fileSpec(getter_AddRefs(NS_CreateFileSpecWithUI()));
+  if (!fileSpec)
+  	return NS_ERROR_FAILURE;
 
-  rv = fileChooser->ChooseInputFile(
-  	"Open File", nsIFileChooser::eAllStandardFilters, nsnull, nsnull);
+  nsresult rv = fileSpec->chooseInputFile(
+  	"Open File", nsIFileSpecWithUI::eAllStandardFilters, nsnull, nsnull);
   if (NS_FAILED(rv))
     return rv;
   
   char buffer[1024];
   char* urlString;
-  rv = fileChooser->GetURLString(&urlString);
+  rv = fileSpec->GetURLString(&urlString);
   if (NS_FAILED(rv))
     return rv;
   PR_snprintf( buffer, sizeof buffer, "OpenFile(\"%s\")", urlString);
@@ -1553,13 +1862,17 @@ nsBrowserAppCore::Close()
 { 
   EndObserving();
 
-  if (nsnull != mGHistory) {
-    nsServiceManager::ReleaseService(kCGlobalHistoryCID, mGHistory);
+  // Undo other stuff we did in SetContentWindow.
+  if ( mContentAreaWebShell ) {
+      mContentAreaWebShell->SetDocLoaderObserver( 0 );
+      mContentAreaWebShell->SetSessionHistory( 0 );
   }
-  mGHistory = nsnull;
 
-	// session history is an instance, not a service
+  // session history is an instance, not a service
   NS_IF_RELEASE(mSHistory);
+
+  // Release search context.
+  mSearchContext = 0;
 
   return NS_OK;
 }
@@ -1685,12 +1998,9 @@ nsBrowserAppCore::DoDialog()
 {
   // (adapted from nsToolkitCore)
   nsresult           rv;
-  nsIWebShellWindow  *window;
 
-  window = nsnull;
-
-  nsCOMPtr<nsIURL> urlObj;
-  char * urlstr = "resource://res/samples/Password.html";
+  nsCOMPtr<nsIURI> urlObj;
+  char * urlstr = "resource:/res/samples/Password.html";
 #ifndef NECKO
   rv = NS_NewURL(getter_AddRefs(urlObj), urlstr);
 #else
@@ -1701,7 +2011,7 @@ nsBrowserAppCore::DoDialog()
   rv = service->NewURI(urlstr, nsnull, &uri);
   if (NS_FAILED(rv)) return rv;
 
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
+  rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&urlObj);
   NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv))
@@ -1711,57 +2021,14 @@ nsBrowserAppCore::DoDialog()
   if (NS_FAILED(rv))
     return rv;
 
-  rv = appShell->RunModalDialog(mWebShellWin, urlObj, window, nsnull, nsnull, 300, 200);
-  if (NS_SUCCEEDED(rv))
-    NS_RELEASE(window);
+  rv = appShell->RunModalDialog(nsnull, mWebShellWin, urlObj,
+                               NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                               nsnull, 300, 200);
   return rv;
 }
 
 //----------------------------------------------------------------------
 
-NS_IMETHODIMP_(void)
-nsBrowserAppCore::Alert(const nsString &aText)
-{
-  if (APP_DEBUG) printf("Alert\n");
-}
-
-NS_IMETHODIMP_(PRBool)
-nsBrowserAppCore::Confirm(const nsString &aText)
-{
-  PRBool bResult = PR_FALSE;
-  if (APP_DEBUG) printf("Confirm\n");
-  return bResult;
-}
-
-NS_IMETHODIMP_(PRBool)
-nsBrowserAppCore::Prompt(const nsString &aText,
-                   const nsString &aDefault,
-                   nsString &aResult)
-{
-  PRBool bResult = PR_FALSE;
-  if (APP_DEBUG) printf("Prompt\n");
-  return bResult;
-}
-
-NS_IMETHODIMP_(PRBool) 
-nsBrowserAppCore::PromptUserAndPassword(const nsString &aText,
-                                  nsString &aUser,
-                                  nsString &aPassword)
-{
-  PRBool bResult = PR_FALSE;
-  if (APP_DEBUG) printf("PromptUserAndPassword\n");
-  DoDialog();
-  return bResult;
-}
-
-NS_IMETHODIMP_(PRBool) 
-nsBrowserAppCore::PromptPassword(const nsString &aText,
-                           nsString &aPassword)
-{
-  PRBool bResult = PR_FALSE;
-  if (APP_DEBUG) printf("PromptPassword\n");
-  return bResult;
-}
 
 
 static nsresult

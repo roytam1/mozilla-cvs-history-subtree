@@ -536,7 +536,7 @@ MimeDecoderDestroy (MimeDecoderData *data, PRBool abort_p)
 	  data->token[0] != '=')
 	{
 	  if (data->encoding == mime_Base64)
-		while (data->token_size < sizeof (data->token))
+		while ((unsigned int)data->token_size < sizeof (data->token))
 		  data->token [data->token_size++] = '=';
 
 	  status = data->write_buffer (data->token, data->token_size,
@@ -549,7 +549,7 @@ MimeDecoderDestroy (MimeDecoderData *data, PRBool abort_p)
 
 
 static MimeDecoderData *
-mime_decoder_init (enum mime_encoding which,
+mime_decoder_init (mime_encoding which,
 				   int (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {
@@ -1055,7 +1055,7 @@ MimeEncoderDestroy (MimeEncoderData *data, PRBool abort_p)
 
 
 static MimeEncoderData *
-mime_encoder_init (enum mime_encoding which,
+mime_encoder_init (mime_encoding which,
 				   int (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {

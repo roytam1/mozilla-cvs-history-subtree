@@ -20,13 +20,12 @@
 #include "nsMailboxProtocol.h"
 #include "nscore.h"
 #include "nsIOutputStream.h"
-#include "nsINetService.h"
 #include "nsIMsgDatabase.h"
 #include "nsIMsgHdr.h"
 #include "nsMsgLineBuffer.h"
 #include "nsIMessage.h"
 #include "nsMsgDBCID.h"
-
+#include "nsIMsgMailNewsUrl.h"
 #include "rosetta.h"
 
 #include "allxpstr.h"
@@ -38,7 +37,6 @@
 
 #define ENABLE_SMOKETEST  1
 
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_IID(kIWebShell, NS_IWEB_SHELL_IID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 
@@ -54,7 +52,7 @@ static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
  */
 #define OUTPUT_BUFFER_SIZE (4096*2)
 
-nsMailboxProtocol::nsMailboxProtocol(nsIURL * aURL)
+nsMailboxProtocol::nsMailboxProtocol(nsIURI * aURL)
 {
 	Initialize(aURL);
 }
@@ -65,17 +63,36 @@ nsMailboxProtocol::~nsMailboxProtocol()
 	delete m_lineStreamBuffer;
 }
 
-void nsMailboxProtocol::Initialize(nsIURL * aURL)
+void nsMailboxProtocol::Initialize(nsIURI * aURL)
 {
 	NS_PRECONDITION(aURL, "invalid URL passed into MAILBOX Protocol");
+	nsresult rv = NS_OK;
 	if (aURL)
 	{
-		nsresult rv = aURL->QueryInterface(nsIMailboxUrl::GetIID(), (void **) getter_AddRefs(m_runningUrl));
+		rv = aURL->QueryInterface(nsIMailboxUrl::GetIID(), (void **) getter_AddRefs(m_runningUrl));
 		if (NS_SUCCEEDED(rv) && m_runningUrl)
 		{
-			const nsFileSpec * fileSpec = nsnull;
+			rv = m_runningUrl->GetMailboxAction(&m_mailboxAction); 
+			nsFileSpec * fileSpec = nsnull;
 			m_runningUrl->GetFilePath(&fileSpec);
-			rv = OpenFileSocket(aURL, fileSpec);
+			if (m_mailboxAction == nsIMailboxUrl::ActionParseMailbox)
+				rv = OpenFileSocket(aURL, fileSpec, 0, -1 /* read in all the bytes in the file */);
+			else
+			{
+				// we need to specify a byte range to read in so we read in JUST the message we want.
+				SetupMessageExtraction();
+				nsMsgKey aMsgKey;
+				PRUint32 aMsgSize = 0;
+				rv = m_runningUrl->GetMessageKey(&aMsgKey);
+				NS_ASSERTION(NS_SUCCEEDED(rv), "oops....i messed something up");
+				rv = m_runningUrl->GetMessageSize(&aMsgSize);
+				NS_ASSERTION(NS_SUCCEEDED(rv), "oops....i messed something up");
+
+				// mscott -- oops...impedence mismatch between aMsgSize and the desired
+				// argument type!
+				rv = OpenFileSocket(aURL, fileSpec, (PRUint32) aMsgKey, aMsgSize);
+				NS_ASSERTION(NS_SUCCEEDED(rv), "oops....i messed something up");
+			}
 		}
 	}
 
@@ -92,7 +109,7 @@ void nsMailboxProtocol::Initialize(nsIURL * aURL)
 // we suppport the nsIStreamListener interface 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsMailboxProtocol::OnStartBinding(nsIURL* aURL, const char *aContentType)
+NS_IMETHODIMP nsMailboxProtocol::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
 	// extract the appropriate event sinks from the url and initialize them in our protocol data
 	// the URL should be queried for a nsINewsURL. If it doesn't support a news URL interface then
@@ -101,26 +118,25 @@ NS_IMETHODIMP nsMailboxProtocol::OnStartBinding(nsIURL* aURL, const char *aConte
 	if (m_nextState == MAILBOX_READ_FOLDER && m_mailboxParser)
 	{
 		// we need to inform our mailbox parser that it's time to start...
-		m_mailboxParser->OnStartBinding(aURL, aContentType);
-
+		m_mailboxParser->OnStartRequest(aChannel, ctxt);
 	}
 	else if(m_mailboxCopyHandler) 
-		m_mailboxCopyHandler->OnStartBinding(aURL, aContentType); 
+		m_mailboxCopyHandler->OnStartRequest(aChannel, ctxt); 
 
 	return NS_OK;
 
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsMailboxProtocol::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsMailboxProtocol::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
 	if (m_nextState == MAILBOX_READ_FOLDER && m_mailboxParser)
 	{
 		// we need to inform our mailbox parser that there is no more incoming data...
-		m_mailboxParser->OnStopBinding(aURL, 0, nsnull);
+		m_mailboxParser->OnStopRequest(aChannel, ctxt, 0, nsnull);
 	}
 	else if (m_mailboxCopyHandler) 
-		m_mailboxCopyHandler->OnStopBinding(aURL, 0, nsnull); 
+		m_mailboxCopyHandler->OnStopRequest(aChannel, ctxt, 0, nsnull); 
 	else if (m_nextState == MAILBOX_READ_MESSAGE) 
 	{
 		DoneReadingMessage();
@@ -148,7 +164,13 @@ NS_IMETHODIMP nsMailboxProtocol::OnStopBinding(nsIURL* aURL, nsresult aStatus, c
 	// is coming from netlib so they are never going to ping us again with on data available. This means
 	// we'll never be going through the Process loop...
 
-	nsMsgProtocol::OnStopBinding(aURL, aStatus, aMsg);
+  /* mscott - the NS_BINDING_ABORTED is a hack to get around a problem I have
+     with the necko code...it returns this and treats it as an error when
+	 it really isn't an error! I'm trying to get them to change this.
+   */
+	if (aStatus == NS_BINDING_ABORTED)
+		aStatus = NS_OK;
+	nsMsgProtocol::OnStopRequest(aChannel, ctxt, aStatus, aMsg);
 	return CloseSocket(); 
 }
 
@@ -164,13 +186,13 @@ PRInt32 nsMailboxProtocol::DoneReadingMessage()
 		rv = m_tempMessageFile->closeStream();
 
 	// disply hack: run a file url on the temp file
-	if (m_mailboxAction == nsMailboxActionDisplayMessage && m_displayConsumer)
+	if (m_mailboxAction == nsIMailboxUrl::ActionDisplayMessage && m_displayConsumer)
 	{
 		nsFilePath filePath(MESSAGE_PATH);
 		nsFileURL  fileURL(filePath);
 		char * message_path_url = PL_strdup(fileURL.GetAsString());
 
-		rv = m_displayConsumer->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReload, 0);
+		rv = m_displayConsumer->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE);
 
 		PR_FREEIF(message_path_url);
 
@@ -207,10 +229,9 @@ PRInt32 nsMailboxProtocol::SetupMessageExtraction()
 // Begin protocol state machine functions...
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-nsresult nsMailboxProtocol::LoadUrl(nsIURL * aURL, nsISupports * aConsumer)
+nsresult nsMailboxProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 {
 	nsresult rv = NS_OK;
-	HG77067
 	if (aURL)
 	{
 		m_runningUrl = do_QueryInterface(aURL);
@@ -226,32 +247,30 @@ nsresult nsMailboxProtocol::LoadUrl(nsIURL * aURL, nsISupports * aConsumer)
 			{
 				switch (m_mailboxAction)
 				{
-				case nsMailboxActionParseMailbox:
+				case nsIMailboxUrl::ActionParseMailbox:
 					// extract the mailbox parser..
 					rv = m_runningUrl->GetMailboxParser(getter_AddRefs(m_mailboxParser));
 					m_nextState = MAILBOX_READ_FOLDER;
 					break;
-				case nsMailboxActionSaveMessageToDisk:
+				case nsIMailboxUrl::ActionSaveMessageToDisk:
 					// ohhh, display message already writes a msg to disk (as part of a hack)
 					// so we can piggy back off of that!! We just need to change m_tempMessageFile
 					// to be the name of our save message to disk file. Since save message to disk
 					// urls are run without a webshell to display the msg into, we won't be trying
 					// to display the message after we write it to disk...
 					m_runningUrl->GetMessageFile(getter_AddRefs(m_tempMessageFile));
-				case nsMailboxActionDisplayMessage:
+				case nsIMailboxUrl::ActionDisplayMessage:
 					// create a temp file to write the message into. We need to do this because
 					// we don't have pluggable converters yet. We want to let mkfile do the work of 
 					// converting the message from RFC-822 to HTML before displaying it...
 					ClearFlag(MAILBOX_MSG_PARSE_FIRST_LINE);
 					m_tempMessageFile->openStreamForWriting();
-					SetupMessageExtraction();
 					m_nextState = MAILBOX_READ_MESSAGE;
 					break;
 
-				case nsMailboxActionCopyMessage:
-				case nsMailboxActionMoveMessage:
+				case nsIMailboxUrl::ActionCopyMessage:
+				case nsIMailboxUrl::ActionMoveMessage:
 					rv = m_runningUrl->GetMailboxCopyHandler(getter_AddRefs(m_mailboxCopyHandler));
-					SetupMessageExtraction();
 					m_nextState = MAILBOX_READ_MESSAGE;
 					break;
 
@@ -268,7 +287,7 @@ nsresult nsMailboxProtocol::LoadUrl(nsIURL * aURL, nsISupports * aConsumer)
 	return rv;
 }
 	
-PRInt32 nsMailboxProtocol::ReadFolderResponse(nsIInputStream * inputStream, PRUint32 length)
+PRInt32 nsMailboxProtocol::ReadFolderResponse(nsIInputStream * inputStream, PRUint32 sourceOffset, PRUint32 length)
 {
 	// okay we are doing a folder read in 8K chunks of a mail folder....
 	// this is almost too easy....we can just forward the data in this stream on to our
@@ -277,7 +296,10 @@ PRInt32 nsMailboxProtocol::ReadFolderResponse(nsIInputStream * inputStream, PRUi
 	nsresult rv = NS_OK;
 
 	if (m_mailboxParser)
-		rv = m_mailboxParser->OnDataAvailable(m_runningUrl, inputStream, length); // let the parser deal with it...
+	{
+		nsCOMPtr <nsIURI> url = do_QueryInterface(m_runningUrl);
+		rv = m_mailboxParser->OnDataAvailable(nsnull, url, inputStream, sourceOffset, length); // let the parser deal with it...
+	}
 
 	if (NS_FAILED(rv))
 	{
@@ -290,13 +312,13 @@ PRInt32 nsMailboxProtocol::ReadFolderResponse(nsIInputStream * inputStream, PRUi
 
 	// leave our state alone so when the next chunk of the mailbox comes in we jump to this state
 	// and repeat....how does this process end? Well when the file is done being read in, core net lib
-	// will issue an ::OnStopBinding to us...we'll use that as our sign to drop out of this state and to
+	// will issue an ::OnStopRequest to us...we'll use that as our sign to drop out of this state and to
 	// close the protocol instance...
 
 	return 0; 
 }
 
-PRInt32 nsMailboxProtocol::ReadMessageResponse(nsIInputStream * inputStream, PRUint32 length)
+PRInt32 nsMailboxProtocol::ReadMessageResponse(nsIInputStream * inputStream, PRUint32 sourceOffset, PRUint32 length)
 {
 	char *line = nsnull;
 	PRUint32 status = 0;
@@ -305,10 +327,13 @@ PRInt32 nsMailboxProtocol::ReadMessageResponse(nsIInputStream * inputStream, PRU
 	// if we are doing a move or a copy, forward the data onto the copy handler...
 	// if we want to display the message then parse the incoming data...
 
-	if (m_mailboxAction == nsMailboxActionCopyMessage || m_mailboxAction == nsMailboxActionMoveMessage) 
+	if (m_mailboxAction == nsIMailboxUrl::ActionCopyMessage || m_mailboxAction == nsIMailboxUrl::ActionMoveMessage) 
 	{
 		if (m_mailboxCopyHandler)
-			rv = m_mailboxCopyHandler->OnDataAvailable(m_runningUrl, inputStream, length);
+		{
+			nsCOMPtr <nsIURI> url = do_QueryInterface(m_runningUrl);
+			rv = m_mailboxCopyHandler->OnDataAvailable(nsnull, url, inputStream, sourceOffset, length);
+		}
 	}
 	else
 	{
@@ -363,7 +388,7 @@ PRInt32 nsMailboxProtocol::ReadMessageResponse(nsIInputStream * inputStream, PRU
  *
  * returns zero or more if the transfer needs to be continued.
  */
-nsresult nsMailboxProtocol::ProcessProtocolState(nsIURL * url, nsIInputStream * inputStream, PRUint32 length)
+nsresult nsMailboxProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, PRUint32 offset, PRUint32 length)
 {
     PRInt32 status = 0;
     ClearFlag(MAILBOX_PAUSE_FOR_READ); /* already paused; reset */
@@ -377,18 +402,21 @@ nsresult nsMailboxProtocol::ProcessProtocolState(nsIURL * url, nsIInputStream * 
 				if (inputStream == nsnull)
 					SetFlag(MAILBOX_PAUSE_FOR_READ);
 				else
-					status = ReadMessageResponse(inputStream, length);
+					status = ReadMessageResponse(inputStream, offset, length);
 				break;
 			case MAILBOX_READ_FOLDER:
 				if (inputStream == nsnull)
 					SetFlag(MAILBOX_PAUSE_FOR_READ);   // wait for file socket to read in the next chunk...
 				else
-					status = ReadFolderResponse(inputStream, length);
+					status = ReadFolderResponse(inputStream, offset, length);
 				break;
 			case MAILBOX_DONE:
 			case MAILBOX_ERROR_DONE:
-				m_runningUrl->SetUrlState(PR_FALSE, NS_OK);
-	            m_nextState = MAILBOX_FREE;
+				{
+					nsCOMPtr <nsIMsgMailNewsUrl> url = do_QueryInterface(m_runningUrl);
+					url->SetUrlState(PR_FALSE, NS_OK);
+					m_nextState = MAILBOX_FREE;
+				}
 				break;
         
 			case MAILBOX_FREE:

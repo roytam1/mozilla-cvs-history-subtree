@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 
 MAKE_OBJ_TYPE	= EXE
 PROG1 = .\$(OBJDIR)\TestCSSScanner.exe
@@ -36,7 +37,11 @@ LINCS=				\
   -I$(PUBLIC)\raptor		\
   -I$(PUBLIC)\dom		\
   -I$(PUBLIC)\js		\
+!ifdef NECKO
+  -I$(PUBLIC)\necko		\
+!else
   -I$(PUBLIC)\netlib		\
+!endif
   -I..\base\src			\
   -I..\style\src		\
   -I..\..\css\layout\src	\
@@ -57,9 +62,13 @@ LLIBS=				\
  $(DIST)\lib\util.lib		\
  $(DIST)\lib\xpcom.lib	\
  $(DIST)\lib\jsdom.lib		        \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib		        \
+!else
  $(DIST)\lib\netlib.lib		        \
+!endif
+ $(DIST)\lib\timer_s.lib \
  $(LIBNSPR)			\
- $(DIST)\lib\plc3.lib	\
  $(DIST)\lib\js32$(VERSION_NUMBER).lib	
 
 include <$(DEPTH)\config\rules.mak>
@@ -76,22 +85,6 @@ clobber::
 	rm -f $(DIST)\bin\TestCSSParser.exe
 	rm -f $(DIST)\bin\TestAttributes.exe
 	rm -f $(DIST)\bin\TestInlineFrame.exe
-
-# Move this into config/obj.inc when it's allowed
-.cpp{.\$(OBJDIR)\}.exe:
-    -$(CC) @<<$(CFGFILE)
-        $(CFLAGS)
-        $(LCFLAGS)
-        $(LINCS)
-        $(LINCS_1)
-        $(INCS)
-        $(LLIBS)
-        $(OS_LIBS)
-        -Fd.\$(OBJDIR)\
-        -Fe.\$(OBJDIR)\
-        -Fo.\$(OBJDIR)\
-        $(CURDIR)$(*B).cpp
-<<KEEP
 
 $(PROG1): $(OBJDIR) TestCSSScanner.cpp
 

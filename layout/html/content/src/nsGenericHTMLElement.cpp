@@ -44,11 +44,10 @@
 #include "nsISupportsArray.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-#endif // NECKO
+#include "nsNeckoUtil.h"
+#else
 #include "nsIURLGroup.h"
+#endif // NECKO
 #include "nsStyleConsts.h"
 #include "nsXIFConverter.h"
 #include "nsFrame.h"
@@ -74,6 +73,9 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "prprf.h"
 #include "prmem.h"
 #include "nsIFormControlFrame.h"  
+#include "nsIForm.h"
+#include "nsIFormControl.h"
+#include "nsIDOMHTMLFormElement.h"
 
 // XXX todo: add in missing out-of-memory checks
 NS_DEFINE_IID(kIDOMHTMLElementIID, NS_IDOMHTMLELEMENT_IID);
@@ -91,6 +93,7 @@ static NS_DEFINE_IID(kIDOMDocumentIID, NS_IDOMNODE_IID);
 static NS_DEFINE_IID(kIDOMDocumentFragmentIID, NS_IDOMDOCUMENTFRAGMENT_IID);
 static NS_DEFINE_IID(kIHTMLContentContainerIID, NS_IHTMLCONTENTCONTAINER_IID);
 static NS_DEFINE_IID(kIFormControlFrameIID, NS_IFORMCONTROLFRAME_IID);
+static NS_DEFINE_IID(kIDOMHTMLFormElementIID, NS_IDOMHTMLFORMELEMENT_IID);
 
 //----------------------------------------------------------------------
 
@@ -103,10 +106,8 @@ public:
   virtual void DropReference();
   virtual nsresult GetCSSDeclaration(nsICSSDeclaration **aDecl,
                                      PRBool aAllocate);
-  virtual nsresult StylePropertyChanged(const nsString& aPropertyName,
-                                        PRInt32 aHint);
+  virtual nsresult ParseDeclaration(const nsString& aDecl);
   virtual nsresult GetParent(nsISupports **aParent);
-  virtual nsresult GetBaseURL(nsIURL** aURL);
 
 protected:
   nsIHTMLContent *mContent;  
@@ -174,19 +175,57 @@ nsDOMCSSAttributeDeclaration::GetCSSDeclaration(nsICSSDeclaration **aDecl,
 }
 
 nsresult 
-nsDOMCSSAttributeDeclaration::StylePropertyChanged(const nsString& aPropertyName,
-                                                   PRInt32 aHint)
+nsDOMCSSAttributeDeclaration::ParseDeclaration(const nsString& aDecl)
 {
-  nsresult result = NS_OK;
-  if (nsnull != mContent) {
-    nsIDocument *doc;
+  nsICSSDeclaration *decl;
+  nsresult result = GetCSSDeclaration(&decl, PR_TRUE);
+
+  if (NS_SUCCEEDED(result) && (decl)) {
+    nsICSSLoader* cssLoader = nsnull;
+    nsICSSParser* cssParser = nsnull;
+    nsIURI* baseURI = nsnull;
+    nsIDocument*  doc = nsnull;
+
     result = mContent->GetDocument(doc);
     if (NS_SUCCEEDED(result) && (nsnull != doc)) {
-      result = doc->AttributeChanged(mContent, nsHTMLAtoms::style, aHint);
-      NS_RELEASE(doc);
+      doc->GetBaseURL(baseURI);
+
+      nsIHTMLContentContainer* htmlContainer;
+      result = doc->QueryInterface(kIHTMLContentContainerIID, (void**)&htmlContainer);
+      if (NS_SUCCEEDED(result)) {
+        result = htmlContainer->GetCSSLoader(cssLoader);
+        NS_RELEASE(htmlContainer);
+      }
     }
+
+    if (cssLoader) {
+      result = cssLoader->GetParserFor(nsnull, &cssParser);
+    }
+    else {
+      result = NS_NewCSSParser(&cssParser);
+    }
+
+    if (NS_SUCCEEDED(result)) {
+      PRInt32 hint;
+      result = cssParser->ParseAndAppendDeclaration(aDecl, baseURI, decl, &hint);
+      if (NS_SUCCEEDED(result)) {
+        if (doc) {
+          doc->AttributeChanged(mContent, nsHTMLAtoms::style, hint);
+        }
+      }
+      if (cssLoader) {
+        cssLoader->RecycleParser(cssParser);
+      }
+      else {
+        NS_RELEASE(cssParser);
+      }
+    }
+    NS_IF_RELEASE(cssLoader);
+    NS_IF_RELEASE(baseURI);
+    NS_IF_RELEASE(doc);
+    NS_RELEASE(decl);
   }
-  
+
   return result;
 }
 
@@ -200,29 +239,10 @@ nsDOMCSSAttributeDeclaration::GetParent(nsISupports **aParent)
   return NS_OK;
 }
 
-nsresult 
-nsDOMCSSAttributeDeclaration::GetBaseURL(nsIURL** aURL)
-{
-  NS_ASSERTION(nsnull != aURL, "null pointer");
-
-  nsresult result = NS_ERROR_NULL_POINTER;
-
-  if (nsnull != aURL) {
-    *aURL = nsnull;
-    if (nsnull != mContent) {
-      nsIDocument *doc;
-      result = mContent->GetDocument(doc);
-      if (NS_SUCCEEDED(result) && (nsnull != doc)) {
-        doc->GetBaseURL(*aURL);
-        NS_RELEASE(doc);
-      }
-    }
-  }
-  return result;
-}
-
 //----------------------------------------------------------------------
 
+// this function is a holdover from when attributes were shared
+// leaving it in place in case we need to go back to that model
 static nsresult EnsureWritableAttributes(nsIHTMLContent* aContent,
                                          nsIHTMLAttributes*& aAttributes, PRBool aCreate)
 {
@@ -230,29 +250,7 @@ static nsresult EnsureWritableAttributes(nsIHTMLContent* aContent,
 
   if (nsnull == aAttributes) {
     if (PR_TRUE == aCreate) {
-      nsMapAttributesFunc fontMapFunc;
-      nsMapAttributesFunc mapFunc;
-      result = aContent->GetAttributeMappingFunctions(fontMapFunc, mapFunc);
-      if (NS_OK == result) {
-        result = NS_NewHTMLAttributes(&aAttributes, nsnull, fontMapFunc, mapFunc);
-        if (NS_OK == result) {
-          aAttributes->AddContentRef();
-        }
-      }
-    }
-  }
-  else {
-    PRInt32 contentRefCount;
-    aAttributes->GetContentRefCount(contentRefCount);
-    if (1 < contentRefCount) {
-      nsIHTMLAttributes*  attrs;
-      result = aAttributes->Clone(&attrs);
-      if (NS_OK == result) {
-        aAttributes->ReleaseContentRef();
-        NS_RELEASE(aAttributes);
-        aAttributes = attrs;
-        aAttributes->AddContentRef();
-      }
+      result = NS_NewHTMLAttributes(&aAttributes);
     }
   }
   return result;
@@ -260,7 +258,7 @@ static nsresult EnsureWritableAttributes(nsIHTMLContent* aContent,
 
 static void ReleaseAttributes(nsIHTMLAttributes*& aAttributes)
 {
-  aAttributes->ReleaseContentRef();
+//  aAttributes->ReleaseContentRef();
   NS_RELEASE(aAttributes);
 }
 
@@ -284,9 +282,7 @@ nsGenericHTMLElement::CopyInnerTo(nsIContent* aSrcContent,
   nsresult result = NS_OK;
   
   if (nsnull != mAttributes) {
-    aDst->mAttributes = mAttributes;
-    NS_ADDREF(mAttributes);
-    mAttributes->AddContentRef();
+    result = mAttributes->Clone(&(aDst->mAttributes));
   }
 
   return result;
@@ -418,6 +414,9 @@ static nsIHTMLStyleSheet* GetAttrStyleSheet(nsIDocument* aDocument)
 nsresult
 nsGenericHTMLElement::SetDocument(nsIDocument* aDocument, PRBool aDeep)
 {
+  if (aDocument == mDocument) {
+    return NS_OK; // short circuit useless work
+  }
   nsresult result = nsGenericElement::SetDocument(aDocument, aDeep);
   
   if (NS_OK != result) {
@@ -435,12 +434,105 @@ nsGenericHTMLElement::SetDocument(nsIDocument* aDocument, PRBool aDeep)
     nsIHTMLStyleSheet*  sheet = GetAttrStyleSheet(mDocument);
     if (nsnull != sheet) {
       mAttributes->SetStyleSheet(sheet);
-      sheet->SetAttributesFor(htmlContent, mAttributes); // sync attributes with sheet
+//      sheet->SetAttributesFor(htmlContent, mAttributes); // sync attributes with sheet
       NS_RELEASE(sheet);
     }
   }
 
   NS_RELEASE(htmlContent);
+  return result;
+}
+
+static nsresult
+FindFormParent(nsIContent* aParent,
+               nsIFormControl* aControl)
+{
+  nsresult result = NS_OK;
+  nsIContent* parent = aParent;
+  nsIDOMHTMLFormElement* form;
+    
+  // Will be released below
+  NS_IF_ADDREF(parent);
+  while (nsnull != parent) {
+    nsIAtom* tag;
+    PRInt32 nameSpaceID;
+    nsIContent* tmp;
+    
+    parent->GetTag(tag);
+    parent->GetNameSpaceID(nameSpaceID);
+      
+    // If the current ancestor is a form, set it as our form
+    if ((tag == nsHTMLAtoms::form) && (kNameSpaceID_HTML == nameSpaceID)) {
+      result = parent->QueryInterface(kIDOMHTMLFormElementIID, 
+                                      (void**)&form);
+      if (NS_SUCCEEDED(result)) {
+        result = aControl->SetForm(form);
+        NS_RELEASE(form);
+      }
+      NS_IF_RELEASE(tag);
+      NS_RELEASE(parent);
+      break;
+    }
+    NS_IF_RELEASE(tag);
+      
+    tmp = parent;
+    parent->GetParent(parent);
+    NS_RELEASE(tmp);
+  }
+
+  return result;
+}
+
+
+nsresult
+nsGenericHTMLElement::SetParentForFormControls(nsIContent* aParent,
+                                               nsIFormControl* aControl,
+                                               nsIForm* aForm)
+{
+  nsresult result = NS_OK;
+
+  if ((nsnull == aParent) && (nsnull != aForm)) {
+    result = aControl->SetForm(nsnull);
+  }
+  // If we have a new parent and either we had an old parent or we
+  // don't have a form, search for a containing form.  If we didn't
+  // have an old parent, but we do have a form, we shouldn't do the
+  // search. In this case, someone (possibly the content sink) has
+  // already set the form for us.
+  else if ((nsnull != mDocument) && (nsnull != aParent) && 
+           ((nsnull != mParent) || (nsnull == aForm))) {
+    result = FindFormParent(aParent, aControl);
+  }
+
+  if (NS_SUCCEEDED(result)) {
+    result = SetParent(aParent);
+  }
+   
+  return result;
+}
+
+nsresult 
+nsGenericHTMLElement::SetDocumentForFormControls(nsIDocument* aDocument,
+                                                 PRBool aDeep,
+                                                 nsIFormControl* aControl,
+                                                 nsIForm* aForm)
+{
+  nsresult result = NS_OK;
+  if ((nsnull != aDocument) && (nsnull != mParent) && (nsnull == aForm)) {
+    // XXX Do this check since anonymous frame content was also being
+    // added to the form. To make sure that the form control isn't
+    // anonymous, we ask the parent if it knows about it.
+    PRInt32 index;
+    mParent->IndexOf(mContent, index);
+    if (-1 != index) {
+      result = FindFormParent(mParent, aControl);
+    }
+  }
+
+  if (NS_SUCCEEDED(result)) {
+    result = SetDocument(aDocument, aDeep);
+  }
+
   return result;
 }
 
@@ -462,14 +554,6 @@ nsGenericHTMLElement::GetNameSpaceID(PRInt32& aID) const
 //    mAttributes->SizeOf(aHandler);
 //  }
 //}
-
-#if 0
-static nsGenericHTMLElement::EnumTable kDirTable[] = {
-  { "ltr", NS_STYLE_DIRECTION_LTR },
-  { "rtl", NS_STYLE_DIRECTION_RTL },
-  { 0 }
-};
-#endif
 
 nsresult 
 nsGenericHTMLElement::ParseAttributeString(const nsString& aStr, 
@@ -539,7 +623,7 @@ nsGenericHTMLElement::SetAttribute(PRInt32 aNameSpaceID,
         return result;
       }
 
-      nsIURL* docURL = nsnull;
+      nsIURI* docURL = nsnull;
       if (nsnull != mDocument) {
         mDocument->GetBaseURL(docURL);
       }
@@ -590,7 +674,8 @@ nsGenericHTMLElement::SetAttribute(PRInt32 aNameSpaceID,
       AddScriptEventListener(aAttribute, aValue, kIDOMFocusListenerIID); 
     else if ((nsHTMLAtoms::onsubmit == aAttribute) ||
              (nsHTMLAtoms::onreset == aAttribute) ||
-             (nsHTMLAtoms::onchange == aAttribute))
+             (nsHTMLAtoms::onchange == aAttribute) ||
+             (nsHTMLAtoms::onselect == aAttribute))
       AddScriptEventListener(aAttribute, aValue, kIDOMFormListenerIID); 
     else if (nsHTMLAtoms::onpaint == aAttribute)
       AddScriptEventListener(aAttribute, aValue, kIDOMPaintListenerIID); 
@@ -611,11 +696,27 @@ nsGenericHTMLElement::SetAttribute(PRInt32 aNameSpaceID,
     return result;
   }
   else {
+    if (ParseCommonAttribute(aAttribute, aValue, val)) {
+      // string value was mapped to nsHTMLValue, set it that way
+      result = SetHTMLAttribute(aAttribute, val, aNotify);
+      NS_RELEASE(htmlContent);
+      return result;
+    }
+    if (0 == aValue.Length()) { // if empty string
+      val.SetEmptyValue();
+      result = SetHTMLAttribute(aAttribute, val, aNotify);
+      NS_RELEASE(htmlContent);
+      return result;
+    }
     // set as string value to avoid another string copy
+    PRBool  impact = NS_STYLE_HINT_NONE;
+    htmlContent->GetMappedAttributeImpact(aAttribute, impact);
     if (nsnull != mDocument) {  // set attr via style sheet
       nsIHTMLStyleSheet*  sheet = GetAttrStyleSheet(mDocument);
       if (nsnull != sheet) {
-        result = sheet->SetAttributeFor(aAttribute, aValue, htmlContent, mAttributes);
+        result = sheet->SetAttributeFor(aAttribute, aValue, 
+                                        (NS_STYLE_HINT_CONTENT < impact), 
+                                        htmlContent, mAttributes);
         NS_RELEASE(sheet);
       }
     }
@@ -623,7 +724,9 @@ nsGenericHTMLElement::SetAttribute(PRInt32 aNameSpaceID,
       result = EnsureWritableAttributes(htmlContent, mAttributes, PR_TRUE);
       if (nsnull != mAttributes) {
         PRInt32   count;
-        result = mAttributes->SetAttribute(aAttribute, aValue, count);
+        result = mAttributes->SetAttributeFor(aAttribute, aValue, 
+                                              (NS_STYLE_HINT_CONTENT < impact),
+                                              htmlContent, nsnull, count);
         if (0 == count) {
           ReleaseAttributes(mAttributes);
         }
@@ -673,34 +776,38 @@ nsGenericHTMLElement::SetHTMLAttribute(nsIAtom* aAttribute,
   if (NS_OK != result) {
     return result;
   }
+  PRBool  impact = NS_STYLE_HINT_NONE;
+  htmlContent->GetMappedAttributeImpact(aAttribute, impact);
   if (nsnull != mDocument) {  // set attr via style sheet
-    PRInt32 hint = NS_STYLE_HINT_UNKNOWN;
     if (aNotify && (nsHTMLAtoms::style == aAttribute)) {
       nsHTMLValue oldValue;
-      PRInt32 oldHint = NS_STYLE_HINT_NONE;
+      PRInt32 oldImpact = NS_STYLE_HINT_NONE;
       if (NS_CONTENT_ATTR_NOT_THERE != GetHTMLAttribute(aAttribute, oldValue)) {
-        oldHint = GetStyleImpactFrom(oldValue);
+        oldImpact = GetStyleImpactFrom(oldValue);
       }
-      hint = GetStyleImpactFrom(aValue);
-      if (hint < oldHint) {
-        hint = oldHint;
+      impact = GetStyleImpactFrom(aValue);
+      if (impact < oldImpact) {
+        impact = oldImpact;
       }
     }
     nsIHTMLStyleSheet*  sheet = GetAttrStyleSheet(mDocument);
     if (nsnull != sheet) {
-        result = sheet->SetAttributeFor(aAttribute, aValue, htmlContent,
-                                        mAttributes);
+        result = sheet->SetAttributeFor(aAttribute, aValue, 
+                                        (NS_STYLE_HINT_CONTENT < impact), 
+                                        htmlContent, mAttributes);
         NS_RELEASE(sheet);
     }
     if (aNotify) {
-      mDocument->AttributeChanged(mContent, aAttribute, hint);
+      mDocument->AttributeChanged(mContent, aAttribute, impact);
     }
   }
   else {  // manage this ourselves and re-sync when we connect to doc
     result = EnsureWritableAttributes(htmlContent, mAttributes, PR_TRUE);
     if (nsnull != mAttributes) {
       PRInt32   count;
-      result = mAttributes->SetAttribute(aAttribute, aValue, count);
+      result = mAttributes->SetAttributeFor(aAttribute, aValue, 
+                                            (NS_STYLE_HINT_CONTENT < impact), 
+                                            htmlContent, nsnull, count);
       if (0 == count) {
         ReleaseAttributes(mAttributes);
       }
@@ -708,25 +815,6 @@ nsGenericHTMLElement::SetHTMLAttribute(nsIAtom* aAttribute,
   }
   NS_RELEASE(htmlContent);
   return result;
-}
-
-/**
- * Handle attributes common to all html elements
- */
-void
-nsGenericHTMLElement::MapCommonAttributesInto(nsIHTMLAttributes* aAttributes, 
-                                              nsIStyleContext* aStyleContext,
-                                              nsIPresContext* aPresContext)
-{
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      nsStyleDisplay* display = (nsStyleDisplay*)
-        aStyleContext->GetMutableStyleData(eStyleStruct_Display);
-      display->mDirection = value.GetIntValue();
-    }
-  }
 }
 
 nsresult
@@ -752,14 +840,14 @@ nsGenericHTMLElement::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aAttribute, 
     return result;
   }
   if (nsnull != mDocument) {  // set attr via style sheet
-    PRInt32 hint = NS_STYLE_HINT_UNKNOWN;
+    PRInt32 impact = NS_STYLE_HINT_UNKNOWN;
     if (aNotify && (nsHTMLAtoms::style == aAttribute)) {
       nsHTMLValue oldValue;
       if (NS_CONTENT_ATTR_NOT_THERE != GetHTMLAttribute(aAttribute, oldValue)) {
-        hint = GetStyleImpactFrom(oldValue);
+        impact = GetStyleImpactFrom(oldValue);
       }
       else {
-        hint = NS_STYLE_HINT_NONE;
+        impact = NS_STYLE_HINT_NONE;
       }
     }
     nsIHTMLStyleSheet*  sheet = GetAttrStyleSheet(mDocument);
@@ -768,14 +856,14 @@ nsGenericHTMLElement::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aAttribute, 
       NS_RELEASE(sheet);
     }
     if (aNotify) {
-      mDocument->AttributeChanged(mContent, aAttribute, hint);
+      mDocument->AttributeChanged(mContent, aAttribute, impact);
     }
   }
   else {  // manage this ourselves and re-sync when we connect to doc
     result = EnsureWritableAttributes(htmlContent, mAttributes, PR_FALSE);
     if (nsnull != mAttributes) {
       PRInt32 count;
-      result = mAttributes->UnsetAttribute(aAttribute, count);
+      result = mAttributes->UnsetAttributeFor(aAttribute, htmlContent, nsnull, count);
       if (0 == count) {
         ReleaseAttributes(mAttributes);
       }
@@ -823,12 +911,13 @@ nsGenericHTMLElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom *aAttribute,
 
     // Provide default conversions for most everything
     switch (value.GetUnit()) {
+    case eHTMLUnit_Null:
     case eHTMLUnit_Empty:
       aResult.Truncate();
       break;
 
     case eHTMLUnit_String:
-    case eHTMLUnit_Null:
+    case eHTMLUnit_ColorName:
       value.GetStringValue(aResult);
       break;
 
@@ -843,7 +932,7 @@ nsGenericHTMLElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom *aAttribute,
       break;
 
     case eHTMLUnit_Percent:
-      aResult.Truncate(0);
+      aResult.Truncate();
       aResult.Append(PRInt32(value.GetPercentValue() * 100.0f), 10);
       aResult.Append('%');
       break;
@@ -852,7 +941,7 @@ nsGenericHTMLElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom *aAttribute,
       color = nscolor(value.GetColorValue());
       PR_snprintf(cbuf, sizeof(cbuf), "#%02x%02x%02x",
                   NS_GET_R(color), NS_GET_G(color), NS_GET_B(color));
-      aResult.Truncate(0);
+      aResult.Truncate();
       aResult.Append(cbuf);
       break;
 
@@ -931,15 +1020,15 @@ nsGenericHTMLElement::HasClass(nsIAtom* aClass) const
 nsresult
 nsGenericHTMLElement::GetContentStyleRules(nsISupportsArray* aRules)
 {
-  nsresult result = NS_ERROR_NULL_POINTER;
-  nsIStyleRule* rule = nsnull;
+  nsresult result = NS_OK;
 
-  if (aRules && mAttributes) {
-    result = mAttributes->QueryInterface(kIStyleRuleIID, (void**)&rule);
+  if (aRules) {
+    if (mAttributes) {
+      result = mAttributes->GetMappedAttributeStyleRules(aRules);
+    }
   }
-  if (rule) {
-    aRules->AppendElement(rule);
-    NS_RELEASE(rule);
+  else {
+    result = NS_ERROR_NULL_POINTER;
   }
   return result;
 }
@@ -968,61 +1057,51 @@ nsGenericHTMLElement::GetInlineStyleRules(nsISupportsArray* aRules)
 }
 
 nsresult
-nsGenericHTMLElement::GetBaseURL(nsIURL*& aBaseURL) const
+nsGenericHTMLElement::GetBaseURL(nsIURI*& aBaseURL) const
 {
-  return GetBaseURL(mAttributes, mDocument, &aBaseURL);
+  nsHTMLValue baseHref;
+  if (mAttributes) {
+    mAttributes->GetAttribute(nsHTMLAtoms::_baseHref, baseHref);
+  }
+  return GetBaseURL(baseHref, mDocument, &aBaseURL);
 }
 
 nsresult
-nsGenericHTMLElement::GetBaseURL(nsIHTMLAttributes* aAttributes,
+nsGenericHTMLElement::GetBaseURL(const nsHTMLValue& aBaseHref,
                                  nsIDocument* aDocument,
-                                 nsIURL** aBaseURL)
+                                 nsIURI** aBaseURL)
 {
   nsresult result = NS_OK;
 
-  nsIURL* docBaseURL = nsnull;
+  nsIURI* docBaseURL = nsnull;
   if (nsnull != aDocument) {
     result = aDocument->GetBaseURL(docBaseURL);
   }
   *aBaseURL = docBaseURL;
-//  NS_IF_RELEASE(docBaseURL);
 
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    if (NS_CONTENT_ATTR_HAS_VALUE == aAttributes->GetAttribute(nsHTMLAtoms::_baseHref, value)) {
-      if (eHTMLUnit_String == value.GetUnit()) {
-        nsAutoString baseHref;
-        value.GetStringValue(baseHref);
+  if (eHTMLUnit_String == aBaseHref.GetUnit()) {
+    nsAutoString baseHref;
+    aBaseHref.GetStringValue(baseHref);
 
-        nsIURL* url = nsnull;
-        nsIURLGroup* urlGroup = nsnull;
-        docBaseURL->GetURLGroup(&urlGroup);
-        if (urlGroup) {
-          result = urlGroup->CreateURL(&url, docBaseURL, baseHref, nsnull);
-          NS_RELEASE(urlGroup);
-        }
-        else {
+    nsIURI* url = nsnull;
 #ifndef NECKO
-          result = NS_NewURL(&url, baseHref, docBaseURL);
-#else
-          NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-          if (NS_FAILED(result)) return result;
-
-          nsIURI *uri = nsnull, *baseUri = nsnull;
-          result = docBaseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-          if (NS_FAILED(result)) return result;
-
-          const char *uriStr = baseHref.GetBuffer();
-          result = service->NewURI(uriStr, baseUri, &uri);
-          NS_RELEASE(baseUri);
-          if (NS_FAILED(result)) return result;
-
-          result = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-#endif // NECKO
-        }
-        *aBaseURL = url;
-      }
+    nsILoadGroup* LoadGroup = nsnull;
+    docBaseURL->GetLoadGroup(&LoadGroup);
+    if (LoadGroup) {
+      result = LoadGroup->CreateURL(&url, docBaseURL, baseHref, nsnull);
+      NS_RELEASE(LoadGroup);
     }
+    else
+#endif
+    {
+#ifndef NECKO
+      result = NS_NewURL(&url, baseHref, docBaseURL);
+#else
+      result = NS_NewURI(&url, baseHref, docBaseURL);
+#endif // NECKO
+    }
+    NS_IF_RELEASE(docBaseURL);
+    *aBaseURL = url;
   }
   return result;
 }
@@ -1031,7 +1110,6 @@ nsresult
 nsGenericHTMLElement::GetBaseTarget(nsString& aBaseTarget) const
 {
   nsresult  result = NS_OK;
-  PRBool    hasLocal = PR_FALSE;
 
   if (nsnull != mAttributes) {
     nsHTMLValue value;
@@ -1304,8 +1382,6 @@ nsGenericHTMLElement::ParseValueOrPercent(const nsString& aString,
     return PR_TRUE;
   }
 
-  // Illegal values are mapped to empty
-  aResult.SetEmptyValue();
   return PR_FALSE;
 }
 
@@ -1314,7 +1390,7 @@ nsGenericHTMLElement::ParseValueOrPercent(const nsString& aString,
  *   percent  (n%),
  *   or proportional (n*)
  */
-void
+PRBool
 nsGenericHTMLElement::ParseValueOrPercentOrProportional(const nsString& aString,
                                                         nsHTMLValue& aResult, 
                                                         nsHTMLUnit aValueUnit)
@@ -1337,7 +1413,9 @@ nsGenericHTMLElement::ParseValueOrPercentOrProportional(const nsString& aString,
         aResult.SetIntValue(val, aValueUnit);
       }
     }
+    return PR_TRUE;
   }
+  return PR_FALSE;
 }
 
 PRBool
@@ -1404,8 +1482,6 @@ nsGenericHTMLElement::ParseValue(const nsString& aString, PRInt32 aMin,
     return PR_TRUE;
   }
 
-  // Illegal values are mapped to empty
-  aResult.SetEmptyValue();
   return PR_FALSE;
 }
 
@@ -1427,59 +1503,51 @@ nsGenericHTMLElement::ParseValue(const nsString& aString, PRInt32 aMin,
     return PR_TRUE;
   }
 
-  // Illegal values are mapped to empty
-  aResult.SetEmptyValue();
   return PR_FALSE;
 }
 
 PRBool
 nsGenericHTMLElement::ParseColor(const nsString& aString,
+                                 nsIDocument* aDocument,
                                  nsHTMLValue& aResult)
 {
   if (aString.Length() > 0) {
     nsAutoString  colorStr (aString);
     colorStr.CompressWhitespace();
-    char cbuf[40];
-    colorStr.ToCString(cbuf, sizeof(cbuf));
     nscolor color = 0;
-    if (NS_ColorNameToRGB(cbuf, &color)) {
-      aResult.SetStringValue(colorStr);
+    if (NS_ColorNameToRGB(colorStr, &color)) {
+      aResult.SetStringValue(colorStr, eHTMLUnit_ColorName);
       return PR_TRUE;
     }
-    if (NS_LooseHexToRGB(cbuf, &color)) {
-      aResult.SetColorValue(color);
-      return PR_TRUE;
-    }
-
-    // We failed to match the color value as either a color name or a hex
-    // number
-    if ('#' == cbuf[0]) {
-#if 0
+    nsDTDMode mode = eDTDMode_NoQuirks;
+    if (aDocument) {
       nsIHTMLDocument* htmlDoc;
       nsresult         result;
-
-      result = mDocument->QueryInterface(kIHTMLDocumentIID, (void**)&htmlDoc);
+      result = aDocument->QueryInterface(kIHTMLDocumentIID, (void**)&htmlDoc);
       if (NS_SUCCEEDED(result)) {
-        nsDTDMode mode;
-
         // Check the compatibility mode
-        result = htmlDoc->GetDTDMode(&mode);
+        result = htmlDoc->GetDTDMode(mode);
         NS_RELEASE(htmlDoc);
+      }
+    }
 
-        if (NS_SUCCEEDED(result) && (eDTDMode_Nav == mode)) {
-#endif
-          // Nav treats illegal hex numbers as 0
-          aResult.SetColorValue(0);
+    if (eDTDMode_NoQuirks == mode) {
+      if (colorStr.CharAt(0) == '#') {
+        colorStr.Cut(0, 1);
+        if (NS_HexToRGB(colorStr, &color)) {
+          aResult.SetColorValue(color);
           return PR_TRUE;
-#if 0
         }
       }
-#endif
+    }
+    else {
+      if (NS_LooseHexToRGB(aString, &color)) {  // no space compression
+        aResult.SetColorValue(color);
+        return PR_TRUE;
+      }
     }
   }
 
-  // Illegal values are mapped to empty
-  aResult.SetEmptyValue();
   return PR_FALSE;
 }
 
@@ -1496,12 +1564,9 @@ nsGenericHTMLElement::ColorToString(const nsHTMLValue& aValue,
     aResult.Append(buf);
     return PR_TRUE;
   }
-  if (aValue.GetUnit() == eHTMLUnit_String) {
+  if ((aValue.GetUnit() == eHTMLUnit_ColorName) || 
+      (aValue.GetUnit() == eHTMLUnit_String)) {
     aValue.GetStringValue(aResult);
-    return PR_TRUE;
-  }
-  if (aValue.GetUnit() == eHTMLUnit_Empty) {  // was illegal
-    aResult.Truncate();
     return PR_TRUE;
   }
   return PR_FALSE;
@@ -1535,6 +1600,12 @@ nsGenericHTMLElement::GetPrimaryFrame(nsIHTMLContent* aContent,
 }         
           
 // XXX check all mappings against ebina's usage
+static nsGenericHTMLElement::EnumTable kDirTable[] = {
+  { "ltr", NS_STYLE_DIRECTION_LTR },
+  { "rtl", NS_STYLE_DIRECTION_RTL },
+  { 0 }
+};
+
 static nsGenericHTMLElement::EnumTable kAlignTable[] = {
   { "left", NS_STYLE_TEXT_ALIGN_LEFT },
   { "right", NS_STYLE_TEXT_ALIGN_RIGHT },
@@ -1623,6 +1694,17 @@ static nsGenericHTMLElement::EnumTable kTableVAlignTable[] = {
   { 0 }
 };
 
+PRBool 
+nsGenericHTMLElement::ParseCommonAttribute(nsIAtom* aAttribute, 
+                                           const nsString& aValue, 
+                                           nsHTMLValue& aResult) 
+{
+  if (nsHTMLAtoms::dir == aAttribute) {
+    return ParseEnumValue(aValue, kDirTable, aResult);
+  }
+  return PR_FALSE;
+}
+
 PRBool
 nsGenericHTMLElement::ParseAlignValue(const nsString& aString,
                                       nsHTMLValue& aResult)
@@ -1694,14 +1776,12 @@ nsGenericHTMLElement::ParseImageAttribute(nsIAtom* aAttribute,
 {
   if ((aAttribute == nsHTMLAtoms::width) ||
       (aAttribute == nsHTMLAtoms::height)) {
-    ParseValueOrPercent(aString, aResult, eHTMLUnit_Pixel);
-    return PR_TRUE;
+    return ParseValueOrPercent(aString, aResult, eHTMLUnit_Pixel);
   }
   else if ((aAttribute == nsHTMLAtoms::hspace) ||
            (aAttribute == nsHTMLAtoms::vspace) ||
            (aAttribute == nsHTMLAtoms::border)) {
-    ParseValue(aString, 0, aResult, eHTMLUnit_Pixel);
-    return PR_TRUE;
+    return ParseValue(aString, 0, aResult, eHTMLUnit_Pixel);
   }
   return PR_FALSE;
 }
@@ -1769,91 +1849,134 @@ nsGenericHTMLElement::ScrollingValueToString(PRBool aStandardMode,
   }
 }
 
+/**
+ * Handle attributes common to all html elements
+ */
 void
-nsGenericHTMLElement::MapImageAttributesInto(nsIHTMLAttributes* aAttributes, 
-                                             nsIStyleContext* aContext, 
-                                             nsIPresContext* aPresContext)
+nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAttributes, 
+                                              nsIStyleContext* aStyleContext,
+                                              nsIPresContext* aPresContext)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nsStylePosition* pos = (nsStylePosition*)
-      aContext->GetMutableStyleData(eStyleStruct_Position);
-    nsStyleSpacing* spacing = (nsStyleSpacing*)
-      aContext->GetMutableStyleData(eStyleStruct_Spacing);
-
-    // width: value
-    aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-    if (value.GetUnit() == eHTMLUnit_Pixel) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mWidth.SetCoordValue(twips);
-    }
-    else if (value.GetUnit() == eHTMLUnit_Percent) {
-      pos->mWidth.SetPercentValue(value.GetPercentValue());
-    }
-
-    // height: value
-    aAttributes->GetAttribute(nsHTMLAtoms::height, value);
-    if (value.GetUnit() == eHTMLUnit_Pixel) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mHeight.SetCoordValue(twips);
-    }
-    else if (value.GetUnit() == eHTMLUnit_Percent) {
-      pos->mHeight.SetPercentValue(value.GetPercentValue());
-    }
-
-    // hspace: value
-    aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
-    if (value.GetUnit() == eHTMLUnit_Pixel) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      nsStyleCoord c(twips);
-      spacing->mMargin.SetLeft(c);
-      spacing->mMargin.SetRight(c);
-    }
-    else if (value.GetUnit() == eHTMLUnit_Percent) {
-      nsStyleCoord c(value.GetPercentValue(), eStyleUnit_Coord);
-      spacing->mMargin.SetLeft(c);
-      spacing->mMargin.SetRight(c);
-    }
-
-    // vspace: value
-    aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
-    if (value.GetUnit() == eHTMLUnit_Pixel) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      nsStyleCoord c(twips);
-      spacing->mMargin.SetTop(c);
-      spacing->mMargin.SetBottom(c);
-    }
-    else if (value.GetUnit() == eHTMLUnit_Percent) {
-      nsStyleCoord c(value.GetPercentValue(), eStyleUnit_Coord);
-      spacing->mMargin.SetTop(c);
-      spacing->mMargin.SetBottom(c);
-    }
+  nsHTMLValue value;
+  aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
+  if (value.GetUnit() == eHTMLUnit_Enumerated) {
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aStyleContext->GetMutableStyleData(eStyleStruct_Display);
+    display->mDirection = value.GetIntValue();
   }
 }
 
+PRBool
+nsGenericHTMLElement::GetCommonMappedAttributesImpact(const nsIAtom* aAttribute,
+                                                      PRInt32& aHint)
+{
+  if (nsHTMLAtoms::dir == aAttribute) {
+    aHint = NS_STYLE_HINT_REFLOW;  // XXX really? possibly FRAMECHANGE?
+    return PR_TRUE;
+  }
+  else if (nsHTMLAtoms::_baseHref == aAttribute) {
+    aHint = NS_STYLE_HINT_VISUAL; // at a minimum, elements may need to override
+    return PR_TRUE;
+  }
+  return PR_FALSE;
+}
+
 void
-nsGenericHTMLElement::MapImageAlignAttributeInto(nsIHTMLAttributes* aAttributes,
+nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAttributes, 
+                                             nsIStyleContext* aContext, 
+                                             nsIPresContext* aPresContext)
+{
+  nsHTMLValue value;
+
+  float p2t;
+  aPresContext->GetScaledPixelsToTwips(&p2t);
+  nsStylePosition* pos = (nsStylePosition*)
+    aContext->GetMutableStyleData(eStyleStruct_Position);
+  nsStyleSpacing* spacing = (nsStyleSpacing*)
+    aContext->GetMutableStyleData(eStyleStruct_Spacing);
+
+  // width: value
+  aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+  if (value.GetUnit() == eHTMLUnit_Pixel) {
+    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+    pos->mWidth.SetCoordValue(twips);
+  }
+  else if (value.GetUnit() == eHTMLUnit_Percent) {
+    pos->mWidth.SetPercentValue(value.GetPercentValue());
+  }
+
+  // height: value
+  aAttributes->GetAttribute(nsHTMLAtoms::height, value);
+  if (value.GetUnit() == eHTMLUnit_Pixel) {
+    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+    pos->mHeight.SetCoordValue(twips);
+  }
+  else if (value.GetUnit() == eHTMLUnit_Percent) {
+    pos->mHeight.SetPercentValue(value.GetPercentValue());
+  }
+
+  // hspace: value
+  aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
+  if (value.GetUnit() == eHTMLUnit_Pixel) {
+    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+    nsStyleCoord c(twips);
+    spacing->mMargin.SetLeft(c);
+    spacing->mMargin.SetRight(c);
+  }
+  else if (value.GetUnit() == eHTMLUnit_Percent) {
+    nsStyleCoord c(value.GetPercentValue(), eStyleUnit_Percent);
+    spacing->mMargin.SetLeft(c);
+    spacing->mMargin.SetRight(c);
+  }
+
+  // vspace: value
+  aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
+  if (value.GetUnit() == eHTMLUnit_Pixel) {
+    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+    nsStyleCoord c(twips);
+    spacing->mMargin.SetTop(c);
+    spacing->mMargin.SetBottom(c);
+  }
+  else if (value.GetUnit() == eHTMLUnit_Percent) {
+    nsStyleCoord c(value.GetPercentValue(), eStyleUnit_Percent);
+    spacing->mMargin.SetTop(c);
+    spacing->mMargin.SetBottom(c);
+  }
+}
+
+PRBool 
+nsGenericHTMLElement::GetImageMappedAttributesImpact(const nsIAtom* aAttribute,
+                                                     PRInt32& aHint)
+{
+  if ((nsHTMLAtoms::width == aAttribute) ||
+      (nsHTMLAtoms::height == aAttribute) ||
+      (nsHTMLAtoms::hspace == aAttribute) ||
+      (nsHTMLAtoms::vspace == aAttribute)) {
+    aHint = NS_STYLE_HINT_REFLOW;
+    return PR_TRUE;
+  }
+  return PR_FALSE;
+}
+
+void
+nsGenericHTMLElement::MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
                                                  nsIStyleContext* aContext,
                                                  nsIPresContext* aPresContext)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      PRUint8 align = value.GetIntValue();
-      nsStyleDisplay* display = (nsStyleDisplay*)
-        aContext->GetMutableStyleData(eStyleStruct_Display);
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-      nsStyleSpacing* spacing = (nsStyleSpacing*)
-        aContext->GetMutableStyleData(eStyleStruct_Spacing);
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
-      nsStyleCoord three(NSIntPixelsToTwips(3, p2t));
-      switch (align) {
+  nsHTMLValue value;
+  aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+  if (value.GetUnit() == eHTMLUnit_Enumerated) {
+    PRUint8 align = (PRUint8)(value.GetIntValue());
+    nsStyleDisplay* display = (nsStyleDisplay*)
+      aContext->GetMutableStyleData(eStyleStruct_Display);
+    nsStyleText* text = (nsStyleText*)
+      aContext->GetMutableStyleData(eStyleStruct_Text);
+    nsStyleSpacing* spacing = (nsStyleSpacing*)
+      aContext->GetMutableStyleData(eStyleStruct_Spacing);
+    float p2t;
+    aPresContext->GetScaledPixelsToTwips(&p2t);
+    nsStyleCoord three(NSIntPixelsToTwips(3, p2t));
+    switch (align) {
       case NS_STYLE_TEXT_ALIGN_LEFT:
         display->mFloats = NS_STYLE_FLOAT_LEFT;
         spacing->mMargin.SetLeft(three);
@@ -1867,45 +1990,58 @@ nsGenericHTMLElement::MapImageAlignAttributeInto(nsIHTMLAttributes* aAttributes,
       default:
         text->mVerticalAlign.SetIntValue(align, eStyleUnit_Enumerated);
         break;
-      }
     }
   }
 }
 
-void
-nsGenericHTMLElement::MapImageBorderAttributesInto(nsIHTMLAttributes* aAttributes, 
-                                                   nsIStyleContext* aContext, 
-                                                   nsIPresContext* aPresContext,
-                                                   nscolor aBorderColors[4])
+PRBool
+nsGenericHTMLElement::GetImageAlignAttributeImpact(const nsIAtom* aAttribute,
+                                                   PRInt32& aHint)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
+  if ((nsHTMLAtoms::align == aAttribute)) {
+    aHint = NS_STYLE_HINT_REFLOW;
+    return PR_TRUE;
+  }
+  return PR_FALSE;
+}
 
-    // border: pixels
-    aAttributes->GetAttribute(nsHTMLAtoms::border, value);
-    if (value.GetUnit() != eHTMLUnit_Pixel) {
-      if (nsnull == aBorderColors) {
-        return;
-      }
-      // If no border is defined and we are forcing a border, force
-      // the size to 2 pixels.
-      value.SetPixelValue(2);
+
+void
+nsGenericHTMLElement::MapImageBorderAttributeInto(const nsIHTMLMappedAttributes* aAttributes, 
+                                                  nsIStyleContext* aContext, 
+                                                  nsIPresContext* aPresContext,
+                                                  nscolor aBorderColors[4])
+{
+  nsHTMLValue value;
+
+  // border: pixels
+  aAttributes->GetAttribute(nsHTMLAtoms::border, value);
+  if (value.GetUnit() == eHTMLUnit_Null) {
+    if (nsnull == aBorderColors) {
+      return;
     }
+    // If no border is defined and we are forcing a border, force
+    // the size to 2 pixels.
+    value.SetPixelValue(2);
+  }
+  else if (value.GetUnit() != eHTMLUnit_Pixel) {  // something other than pixels
+    value.SetPixelValue(0);
+  }
 
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+  float p2t;
+  aPresContext->GetScaledPixelsToTwips(&p2t);
+  nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
 
-    // Fixup border-padding sums: subtract out the old size and then
-    // add in the new size.
-    nsStyleSpacing* spacing = (nsStyleSpacing*)
-      aContext->GetMutableStyleData(eStyleStruct_Spacing);
-    nsStyleCoord coord;
-    coord.SetCoordValue(twips);
-    spacing->mBorder.SetTop(coord);
-    spacing->mBorder.SetRight(coord);
-    spacing->mBorder.SetBottom(coord);
-    spacing->mBorder.SetLeft(coord);
+  // Fixup border-padding sums: subtract out the old size and then
+  // add in the new size.
+  nsStyleSpacing* spacing = (nsStyleSpacing*)
+    aContext->GetMutableStyleData(eStyleStruct_Spacing);
+  nsStyleCoord coord;
+  coord.SetCoordValue(twips);
+  spacing->mBorder.SetTop(coord);
+  spacing->mBorder.SetRight(coord);
+  spacing->mBorder.SetBottom(coord);
+  spacing->mBorder.SetLeft(coord);
     
 	spacing->SetBorderStyle(0,NS_STYLE_BORDER_STYLE_SOLID);
 	spacing->SetBorderStyle(1,NS_STYLE_BORDER_STYLE_SOLID);
@@ -1913,29 +2049,40 @@ nsGenericHTMLElement::MapImageBorderAttributesInto(nsIHTMLAttributes* aAttribute
 	spacing->SetBorderStyle(3,NS_STYLE_BORDER_STYLE_SOLID);
 
 
-    // Use supplied colors if provided, otherwise use color for border
-    // color
-    if (nsnull != aBorderColors) {
-        spacing->SetBorderColor(0, aBorderColors[0]);
-		spacing->SetBorderColor(1, aBorderColors[1]);
-		spacing->SetBorderColor(2, aBorderColors[2]);
-		spacing->SetBorderColor(3, aBorderColors[3]);
-    }
-    else {
-      // Color is inherited from "color"
-      const nsStyleColor* styleColor = (const nsStyleColor*)
-        aContext->GetStyleData(eStyleStruct_Color);
-      nscolor color = styleColor->mColor;
-      spacing->SetBorderColor(0, color);
-      spacing->SetBorderColor(1, color);
-      spacing->SetBorderColor(2, color);
-      spacing->SetBorderColor(3, color);
-    }
+  // Use supplied colors if provided, otherwise use color for border
+  // color
+  if (nsnull != aBorderColors) {
+    spacing->SetBorderColor(0, aBorderColors[0]);
+  	spacing->SetBorderColor(1, aBorderColors[1]);
+	  spacing->SetBorderColor(2, aBorderColors[2]);
+	  spacing->SetBorderColor(3, aBorderColors[3]);
+  }
+  else {
+    // Color is inherited from "color"
+    const nsStyleColor* styleColor = (const nsStyleColor*)
+      aContext->GetStyleData(eStyleStruct_Color);
+    nscolor color = styleColor->mColor;
+    spacing->SetBorderColor(0, color);
+    spacing->SetBorderColor(1, color);
+    spacing->SetBorderColor(2, color);
+    spacing->SetBorderColor(3, color);
   }
 }
 
+PRBool
+nsGenericHTMLElement::GetImageBorderAttributeImpact(const nsIAtom* aAttribute,
+                                                    PRInt32& aHint)
+{
+  if ((nsHTMLAtoms::border == aAttribute)) {
+    aHint = NS_STYLE_HINT_REFLOW;
+    return PR_TRUE;
+  }
+  return PR_FALSE;
+}
+
+
 void
-nsGenericHTMLElement::MapBackgroundAttributesInto(nsIHTMLAttributes* aAttributes, 
+nsGenericHTMLElement::MapBackgroundAttributesInto(const nsIHTMLMappedAttributes* aAttributes, 
                                                   nsIStyleContext* aContext,
                                                   nsIPresContext* aPresContext)
 {
@@ -1956,25 +2103,15 @@ nsGenericHTMLElement::MapBackgroundAttributesInto(nsIHTMLAttributes* aAttributes
           nsCOMPtr<nsIDocument> doc;
           rv = shell->GetDocument(getter_AddRefs(doc));
           if (NS_SUCCEEDED(rv) && doc) {
-            nsCOMPtr<nsIURL> docURL;
-            nsGenericHTMLElement::GetBaseURL(aAttributes, doc,
+            nsCOMPtr<nsIURI> docURL;
+            nsHTMLValue baseHref;
+            aAttributes->GetAttribute(nsHTMLAtoms::_baseHref, baseHref);
+            nsGenericHTMLElement::GetBaseURL(baseHref, doc,
                                              getter_AddRefs(docURL));
 #ifndef NECKO
             rv = NS_MakeAbsoluteURL(docURL, "", spec, absURLSpec);
 #else
-            NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-            if (NS_FAILED(rv)) return;
-
-            nsIURI *baseUri = nsnull;
-            rv = docURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-            if (NS_FAILED(rv)) return;
-
-            char *absUrlStr = nsnull;
-            const char *urlSpec = spec.GetBuffer();
-            rv = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
-            NS_RELEASE(baseUri);
-            absURLSpec = absUrlStr;
-            delete [] absUrlStr;
+            rv = NS_MakeAbsoluteURI(spec, docURL, absURLSpec);
 #endif // NECKO
             if (NS_SUCCEEDED(rv)) {
               nsStyleColor* color = (nsStyleColor*)
@@ -1991,90 +2128,28 @@ nsGenericHTMLElement::MapBackgroundAttributesInto(nsIHTMLAttributes* aAttributes
 
   // bgcolor
   if (NS_CONTENT_ATTR_HAS_VALUE == aAttributes->GetAttribute(nsHTMLAtoms::bgcolor, value)) {
-    if (eHTMLUnit_Color == value.GetUnit()) {
+    if ((eHTMLUnit_Color == value.GetUnit()) ||
+        (eHTMLUnit_ColorName == value.GetUnit())) {
       nsStyleColor* color = (nsStyleColor*)
         aContext->GetMutableStyleData(eStyleStruct_Color);
       color->mBackgroundColor = value.GetColorValue();
       color->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
     }
-    else if (eHTMLUnit_String == value.GetUnit()) {
-      nsAutoString buffer;
-      value.GetStringValue(buffer);
-      char cbuf[40];
-      buffer.ToCString(cbuf, sizeof(cbuf));
-
-      nscolor backgroundColor;
-      if (NS_ColorNameToRGB(cbuf, &backgroundColor)) {
-        nsStyleColor* color = (nsStyleColor*)
-          aContext->GetMutableStyleData(eStyleStruct_Color);
-        color->mBackgroundColor = backgroundColor;        
-        color->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
-      }
-    }
   }
-}
-
-static PRBool AttributeChangeRequiresRepaint(const nsIAtom* aAttribute)
-{
-  // these are attributes that always require a restyle and a repaint, but not a reflow
-  // regardless of the tag they are associated with
-  return (PRBool)
-    (aAttribute==nsHTMLAtoms::bgcolor ||
-     aAttribute==nsHTMLAtoms::color);
-}
-
-static PRBool AttributeChangeRequiresReflow(const nsIAtom* aAttribute)
-{
-    // these are attributes that always require a restyle and reflow
-    // regardless of the tag they are associated with
-  return (PRBool)
-    (aAttribute==nsHTMLAtoms::align        ||
-     aAttribute==nsHTMLAtoms::border       ||
-     aAttribute==nsHTMLAtoms::cellpadding  ||
-     aAttribute==nsHTMLAtoms::cellspacing  ||
-     aAttribute==nsHTMLAtoms::ch           ||
-     aAttribute==nsHTMLAtoms::choff        ||
-     aAttribute==nsHTMLAtoms::colspan      ||
-     aAttribute==nsHTMLAtoms::face         ||
-     aAttribute==nsHTMLAtoms::frame        ||
-     aAttribute==nsHTMLAtoms::height       ||
-     aAttribute==nsHTMLAtoms::nowrap       ||
-     aAttribute==nsHTMLAtoms::rowspan      ||
-     aAttribute==nsHTMLAtoms::rules        ||
-     aAttribute==nsHTMLAtoms::span         ||
-     aAttribute==nsHTMLAtoms::valign       ||
-     aAttribute==nsHTMLAtoms::width);
-}
-
-static PRBool AttributeChangeRequiresReframe(const nsIAtom* aAttribute)
-{
-  return (PRBool)
-    (aAttribute==nsHTMLAtoms::id           ||
-     aAttribute==nsHTMLAtoms::kClass       ||
-     aAttribute==nsHTMLAtoms::dir);
 }
 
 PRBool
-nsGenericHTMLElement::GetStyleHintForCommonAttributes(const nsIContent* aNode,
-                                                      const nsIAtom* aAttribute,
-                                                      PRInt32* aHint)
+nsGenericHTMLElement::GetBackgroundAttributesImpact(const nsIAtom* aAttribute,
+                                                    PRInt32& aHint)
 {
-  PRBool setHint = PR_TRUE;
-  if (PR_TRUE == AttributeChangeRequiresReframe(aAttribute)) {
-    *aHint = NS_STYLE_HINT_FRAMECHANGE;
+  if ((nsHTMLAtoms::background == aAttribute) ||
+      (nsHTMLAtoms::bgcolor == aAttribute)) {
+    aHint = NS_STYLE_HINT_VISUAL;
+    return PR_TRUE;
   }
-  else if (PR_TRUE == AttributeChangeRequiresReflow(aAttribute)) {
-    *aHint = NS_STYLE_HINT_REFLOW;
-  }
-  else if (PR_TRUE == AttributeChangeRequiresRepaint(aAttribute)) {
-    *aHint = NS_STYLE_HINT_VISUAL;
-  }
-  else {
-    *aHint = NS_STYLE_HINT_CONTENT; // only frames will get notified...
-    setHint = PR_FALSE;
-  }
-  return setHint;
+  return PR_FALSE;
 }
+
 
 //----------------------------------------------------------------------
 
@@ -2429,7 +2504,7 @@ nsGenericHTMLContainerElement::ReplaceChild(nsIDOMNode* aNewChild,
     IndexOf(content, pos);
     if (pos >= 0) {
       nsIContent* newContent = nsnull;
-      nsresult res = aNewChild->QueryInterface(kIContentIID, (void**)&newContent);
+      res = aNewChild->QueryInterface(kIContentIID, (void**)&newContent);
       NS_ASSERTION(NS_OK == res, "Must be an nsIContent");
       if (NS_OK == res) {
         // Check if this is a document fragment. If it is, we need

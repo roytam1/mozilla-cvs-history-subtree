@@ -20,28 +20,38 @@ DEPTH=..\..\..\..
 include <$(DEPTH)\config\rules.mak>
 
 install:: 
-	$(MAKE_INSTALL) addressbook.xul	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) dirPane.xul	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) resultPane.xul  $(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) cardviewPane.xul	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) addresspanes.html 	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) editcard.xul 	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) addressbook.js 	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) selectaddress.xul 	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) selectaddress.html 	$(DIST)\bin\chrome\addressbook\content\default
-	$(MAKE_INSTALL) addressbucket.xul 	$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abAddressBookNameDialog.js	$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abAddressBookNameDialog.xul	$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abCardOverlay.js			$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abCardOverlay.xul			$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abCardViewOverlay.js		$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abCardViewOverlay.xul		$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abCommon.js			 		$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abDirTreeOverlay.xul		$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abEditCardDialog.xul		$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abNewCardDialog.xul			$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abResultsTreeOverlay.xul	$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abSelectAddressesDialog.js	$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) abSelectAddressesDialog.xul	$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) addressbook.js				$(DIST)\bin\chrome\addressbook\content\default
+	$(MAKE_INSTALL) addressbook.xul				$(DIST)\bin\chrome\addressbook\content\default
 
 clobber::
-	rm -f $(DIST)\chrome\addressbook\content\default\addressbook.xul
-	rm -f $(DIST)\chrome\addressbook\content\default\dirPane.xul
-	rm -f $(DIST)\chrome\addressbook\content\default\resultPane.xul
-	rm -f $(DIST)\chrome\addressbook\content\default\cardviewPane.xul
-	rm -f $(DIST)\chrome\addressbook\content\default\addresspanes.html
-	rm -f $(DIST)\chrome\addressbook\content\default\editcard.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abAddressBookNameDialog.js
+	rm -f $(DIST)\chrome\addressbook\content\default\abAddressBookNameDialog.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abCardOverlay.js
+	rm -f $(DIST)\chrome\addressbook\content\default\abCardOverlay.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abCardViewOverlay.js
+	rm -f $(DIST)\chrome\addressbook\content\default\abCardViewOverlay.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abCommon.js
+	rm -f $(DIST)\chrome\addressbook\content\default\abDirTreeOverlay.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abEditCardDialog.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abNewCardDialog.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abResultsTreeOverlay.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\abSelectAddressesDialog.js
+	rm -f $(DIST)\chrome\addressbook\content\default\abSelectAddressesDialog.xul
 	rm -f $(DIST)\chrome\addressbook\content\default\addressbook.js
-	rm -f $(DIST)\chrome\addressbook\content\default\selectaddress.xul
-	rm -f $(DIST)\chrome\addressbook\content\default\selectaddress.html
-	rm -f $(DIST)\chrome\addressbook\content\default\addressbucket.xul
+	rm -f $(DIST)\chrome\addressbook\content\default\addressbook.xul
 
 
 

@@ -26,7 +26,7 @@ nsIScriptEventListener.h
 nsIDOMScriptObjectFactory.h
 nsIDOMNativeObjectRegistry.h
 nsDOMCID.h
-nsIScriptSecurityManager.h
+nsIScriptGlobalObjectData.h
 nsIScriptNameSetRegistry.h
 nsIScriptExternalNameSet.h
 nsIScriptNameSpaceManager.h

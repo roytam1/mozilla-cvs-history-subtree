@@ -139,26 +139,27 @@ nsGIFModule::~nsGIFModule(void)
 //
 NS_IMETHODIMP
 nsGIFModule::GetClassObject(nsIComponentManager *aCompMgr, const nsCID & aClass,
-                            const nsIID &aIID, void **r_classObj)
+                            nsISupports **r_classObj)
 {
-    nsresult rv;
-
     if( !aClass.Equals(kGIFDecoderCID))
 		return NS_ERROR_FACTORY_NOT_REGISTERED;
 
     // If this aint the first time, return the cached class object
-    if (mClassObject == NULL)
+    if (mClassObject)
     {
-        nsCOMPtr<nsIGenericFactory> fact;
-        rv = NS_NewGenericFactory(getter_AddRefs(fact), nsGIFDecoderCreateInstance);
-        if (NS_FAILED(rv)) return rv;
-    
-        // Store the class object in our global
-        rv = fact->QueryInterface(NS_GET_IID(nsISupports), (void **)&mClassObject);
-        if (NS_FAILED(rv)) return rv;
+        NS_ADDREF(mClassObject);
+        *r_classObj = mClassObject;
+        return NS_OK;
     }
 
-    rv = mClassObject->QueryInterface(aIID, r_classObj);
+    nsCOMPtr<nsIGenericFactory> fact;
+    nsresult rv = NS_NewGenericFactory(getter_AddRefs(fact), nsGIFDecoderCreateInstance);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = fact->QueryInterface(nsIFactory::GetIID(), (void **)&mClassObject);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = fact->QueryInterface(kISupportsIID, (void **)r_classObj);
     return rv;
 }
 

@@ -32,6 +32,7 @@
 #include "nsTextWidget.h"
 #include "nsLabel.h"
 #include "nsFileWidget.h"
+#include "nsFileSpecWithUIImpl.h"
 #include "nsScrollbar.h"
 #include "nsMenuBar.h"
 #include "nsMenu.h"
@@ -50,7 +51,7 @@
 
 #include "nsIComponentManager.h"
 
-#include "nsISound.h"
+#include "nsSound.h"
 
 // NOTE the following does not match MAC_STATIC actually used below in this file!
 #define MACSTATIC
@@ -91,7 +92,7 @@ static NS_DEFINE_IID(kCDragService,   NS_DRAGSERVICE_CID);
 
 // Sound services (just Beep for now)
 static NS_DEFINE_CID(kCSound,   NS_SOUND_CID);
-
+static NS_DEFINE_CID(kCFileSpecWithUI,   NS_FILESPECWITHUI_CID);
 
 //-------------------------------------------------------------------------
 //
@@ -259,18 +260,16 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports *aOuter,
     	NS_NewSound(&aSound);
         inst = (nsISupports*) aSound;
     }
-    else if (mClassID.Equals(kCTransferable)) {
+    else if (mClassID.Equals(kCFileSpecWithUI))
+    	inst = (nsISupports*) (nsIFileSpecWithUI *) new nsFileSpecWithUIImpl;
+    else if (mClassID.Equals(kCTransferable))
         inst = (nsISupports*)new nsTransferable();
-    }
-    else if (mClassID.Equals(kCXIFFormatConverter)) {
+    else if (mClassID.Equals(kCXIFFormatConverter))
         inst = (nsISupports*)new nsXIFFormatConverter();
-    }
-    else if (mClassID.Equals(kCClipboard)) {
+    else if (mClassID.Equals(kCClipboard))
         inst = (nsISupports*)new nsClipboard();
-    }
-    else if (mClassID.Equals(kCDragService)) {
+    else if (mClassID.Equals(kCDragService))
         inst = (nsISupports*)NS_STATIC_CAST(nsIDragService*, new nsDragService());
-    }
   
     if (inst == NULL) {  
         return NS_ERROR_OUT_OF_MEMORY;  

@@ -40,10 +40,6 @@ CPPSRCS = \
 
 CXXFLAGS += $(TK_CFLAGS)
 
-EXPORTS =\
-	nsIXlibWindowService.h \
-	$(NULL)
-
 EXTRA_DSO_LDOPTS += $(TOOLKIT_TK_LIBS)
 
 #MKSHLIB =

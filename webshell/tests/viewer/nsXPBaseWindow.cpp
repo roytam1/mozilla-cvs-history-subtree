@@ -28,7 +28,11 @@
 #include "nsXPBaseWindow.h"
 #endif
 
+#ifdef NECKO
+#include "nsIPrompt.h"
+#else
 #include "nsINetSupport.h"
+#endif
 #include "nsIAppShell.h"
 #include "nsIWidget.h"
 #include "nsIDOMDocument.h"
@@ -86,7 +90,10 @@ static NS_DEFINE_IID(kIDOMEventReceiverIID,   NS_IDOMEVENTRECEIVER_IID);
 static NS_DEFINE_IID(kIDOMElementIID, NS_IDOMELEMENT_IID);
 static NS_DEFINE_IID(kIDOMHTMLDocumentIID, NS_IDOMHTMLDOCUMENT_IID);
 
+#ifdef NECKO
+#else
 static NS_DEFINE_IID(kINetSupportIID, NS_INETSUPPORT_IID);
+#endif
 
 //----------------------------------------------------------------------
 nsXPBaseWindow::nsXPBaseWindow() :
@@ -136,11 +143,14 @@ nsresult nsXPBaseWindow::QueryInterface(const nsIID& aIID,
     NS_ADDREF_THIS();
     return NS_OK;
   }
+#ifdef NECKO
+#else
   if (aIID.Equals(kINetSupportIID)) {
     *aInstancePtrResult = (void*) ((nsINetSupport*)this);
     NS_ADDREF_THIS();
     return NS_OK;
   }
+#endif
   if (aIID.Equals(kIDOMMouseListenerIID)) {
     NS_ADDREF_THIS(); // Increase reference count for caller
     *aInstancePtrResult = (void *)((nsIDOMMouseListener*)this);
@@ -223,7 +233,8 @@ nsresult nsXPBaseWindow::Init(nsXPBaseWindowType aType,
   mWindow->SetClientData(this);
 
   nsWidgetInitData initData;
-  initData.mBorderStyle = eBorderStyle_window;
+  initData.mWindowType = eWindowType_toplevel;
+  initData.mBorderStyle = eBorderStyle_default;
 
   nsRect r(0, 0, aBounds.width, aBounds.height);
   mWindow->Create((nsIWidget*)NULL, r, HandleXPDialogEvent,
@@ -403,7 +414,7 @@ NS_IMETHODIMP nsXPBaseWindow::ProgressLoadURL(nsIWebShell* aShell, const PRUnich
 }
 
 //-----------------------------------------------------------------
-NS_IMETHODIMP nsXPBaseWindow::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus)
+NS_IMETHODIMP nsXPBaseWindow::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsresult aStatus)
 {
   // Find the Root Conent Node for this Window
   nsIPresShell* shell;
@@ -566,7 +577,7 @@ nsXPBaseWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupConten
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow)
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup)
 {
   return NS_OK;
 }
@@ -574,9 +585,9 @@ nsXPBaseWindow::CreatePopup(nsIDOMElement* aElement, nsIDOMElement* aPopupConten
 //----------------------------------------
 
 // Stream observer implementation
-
+#ifndef NECKO
 NS_IMETHODIMP
-nsXPBaseWindow::OnProgress(nsIURL* aURL,
+nsXPBaseWindow::OnProgress(nsIURI* aURL,
                            PRUint32 aProgress,
                            PRUint32 aProgressMax)
 {
@@ -584,23 +595,34 @@ nsXPBaseWindow::OnProgress(nsIURL* aURL,
 }
 
 //----------------------------------------
-NS_IMETHODIMP nsXPBaseWindow::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+NS_IMETHODIMP nsXPBaseWindow::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
+{
+  return NS_OK;
+}
+#endif
+
+//----------------------------------------
+#ifdef NECKO
+NS_IMETHODIMP nsXPBaseWindow::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+NS_IMETHODIMP nsXPBaseWindow::OnStartRequest(nsIURI* aURL, const char *aContentType)
+#endif
 {
   return NS_OK;
 }
 
 //----------------------------------------
-NS_IMETHODIMP nsXPBaseWindow::OnStartBinding(nsIURL* aURL, const char *aContentType)
+#ifdef NECKO
+NS_IMETHODIMP nsXPBaseWindow::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+                                            nsresult status, const PRUnichar *errorMsg)
+#else
+NS_IMETHODIMP nsXPBaseWindow::OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg)
+#endif
 {
   return NS_OK;
 }
 
-//----------------------------------------
-NS_IMETHODIMP nsXPBaseWindow::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg)
-{
-  return NS_OK;
-}
-
+#ifndef NECKO
 //----------------------------------------
 NS_IMETHODIMP_(void) nsXPBaseWindow::Alert(const nsString &aText)
 {
@@ -691,7 +713,7 @@ NS_IMETHODIMP_(PRBool) nsXPBaseWindow::PromptPassword(const nsString &aText,
   return PR_TRUE;
 }
 
-
+#endif // NECKO
 
 
 //----------------------------------------------------------------------

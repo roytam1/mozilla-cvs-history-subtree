@@ -30,16 +30,9 @@
 #include "nsIStreamListener.h"
 #include "nsFileSpec.h"
 #include "nsIFileSpec.h"
+#include "nsIProtocolHandler.h"
 
-
-////////////////////////////////////////////////////////////////////////////////////////
-// The Mailbox Service is an interface designed to make building and running mailbox urls
-// easier. I'm not sure if this service will go away when the new networking model comes
-// on line (as part of the N2 project). So I reserve the right to change my mind and take
-// this service away =).
-////////////////////////////////////////////////////////////////////////////////////////
-
-class nsMailboxService : public nsIMailboxService, public nsIMsgMessageService
+class nsMailboxService : public nsIMailboxService, public nsIMsgMessageService, public nsIProtocolHandler
 {
 public:
 
@@ -53,14 +46,14 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 
 	NS_IMETHOD ParseMailbox(nsFileSpec& aMailboxPath, nsIStreamListener * aMailboxParser, 
-							nsIUrlListener * aUrlListener, nsIURL ** aURL);
+							nsIUrlListener * aUrlListener, nsIURI ** aURL);
 	
 
 	NS_IMETHOD DisplayMessageNumber(const char *url,
                                     PRUint32 aMessageNumber,
                                     nsISupports * aDisplayConsumer,
 									nsIUrlListener * aUrlListener,
-                                    nsIURL ** aURL);
+                                    nsIURI ** aURL);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// End suppport for the nsIMailboxService Interface
@@ -70,20 +63,34 @@ public:
 	// we suppport the nsIMsgMessageService Interface 
 	////////////////////////////////////////////////////////////////////////////////////////
 	NS_IMETHOD CopyMessage(const char * aSrcMailboxURI, nsIStreamListener * aMailboxCopy, PRBool moveMessage,
-						   nsIUrlListener * aUrlListener, nsIURL **aURL);
+						   nsIUrlListener * aUrlListener, nsIURI **aURL);
 
 	NS_IMETHOD DisplayMessage(const char* aMessageURI, nsISupports * aDisplayConsumer, 
-							  nsIUrlListener * aUrlListener, nsIURL ** aURL);
+							  nsIUrlListener * aUrlListener, nsIURI ** aURL);
 
 	NS_IMETHOD SaveMessageToDisk(const char *aMessageURI, nsIFileSpec *aFile, PRBool aAppendToFile, 
-								 nsIUrlListener *aUrlListener, nsIURL **aURL);
+								 nsIUrlListener *aUrlListener, nsIURI **aURL);
+
+	////////////////////////////////////////////////////////////////////////////////////////
+	// we suppport the nsIProtocolHandler Interface 
+	////////////////////////////////////////////////////////////////////////////////////////
+	NS_IMETHOD GetScheme(char * *aScheme);
+	NS_IMETHOD GetDefaultPort(PRInt32 *aDefaultPort);
+	NS_IMETHOD MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval);
+	NS_IMETHOD NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval);
+	NS_IMETHOD NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIChannel **_retval);
+	
+	////////////////////////////////////////////////////////////////////////////////////////
+	// End support of nsIProtocolHandler interface 
+	////////////////////////////////////////////////////////////////////////////////////////
+
 
 protected:
 	// helper functions used by the service
 	nsresult PrepareMessageUrl(const char * aSrcMsgMailboxURI, nsIUrlListener * aUrlListener,
 							   nsMailboxAction aMailboxAction, nsIMailboxUrl ** aMailboxUrl);
 	
-	nsresult RunMailboxUrl(nsIMailboxUrl * aMailboxUrl, nsISupports * aDisplayConsumer = nsnull);
+	nsresult RunMailboxUrl(nsIURI * aMailboxUrl, nsISupports * aDisplayConsumer = nsnull);
 };
 
 #endif /* nsMailboxService_h___ */

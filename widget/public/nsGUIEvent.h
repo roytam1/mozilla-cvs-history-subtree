@@ -53,7 +53,9 @@ struct nsEvent {
   // in widget relative coordinates, not modified by layout code.
   nsPoint     refPoint;               
   /// elapsed time, in milliseconds, from the time the system was started to the time the message was created
-  PRUint32    time;                                                
+  PRUint32    time;      
+  // flags to hold event flow stage and capture/bubble cancellation status
+  PRUint32    flags;
 };
 
 /**
@@ -137,18 +139,38 @@ struct nsKeyEvent : public nsInputEvent {
 };
 
 /**
- * Tooltip event
+ * IME Related Events
  */
+struct nsTextRange {
+	PRUint32	mStartOffset;
+	PRUint32	mEndOffset;
+	PRUint32	mRangeType;
+};
+
+typedef struct nsTextRange nsTextRange;
+typedef nsTextRange* nsTextRangeArray;
+
+struct nsTextEventReply {
+	nsPoint		mCursorPosition;
+	PRBool		mCursorIsCollapsed;
+};
+
+typedef struct nsTextEventReply nsTextEventReply;
 
 struct nsTextEvent : public nsInputEvent {
 	PRUnichar*			theText;
-	PRBool				commitText;
+	nsTextEventReply	theReply;
+	PRUint32			rangeCount;
+	nsTextRangeArray	rangeArray;
 };
 
 struct nsCompositionEvent : public nsInputEvent {
 	PRUint32			compositionMessage;
 };
 
+/**
+ * Tooltip event
+ */
 struct nsTooltipEvent : public nsGUIEvent {
                 /// Index of tooltip area which generated the event. @see SetTooltips in nsIWidget
     PRUint32        tipIndex;           
@@ -278,6 +300,7 @@ enum nsDragDropEventStatus {
 #define NS_FORM_SUBMIT                  (NS_FORM_EVENT_START)
 #define NS_FORM_RESET                   (NS_FORM_EVENT_START + 1)
 #define NS_FORM_CHANGE                  (NS_FORM_EVENT_START + 2)
+#define NS_FORM_SELECTED                (NS_FORM_EVENT_START + 3)
 
 //Need separate focus/blur notifications for non-native widgets
 #define NS_FOCUS_EVENT_START            1300
@@ -292,9 +315,10 @@ enum nsDragDropEventStatus {
 #define NS_DRAGDROP_DROP                (NS_DRAGDROP_EVENT_START + 3)
 
 // Events for popups
-#define NS_POPUP_EVENT_START            1500
-#define NS_POPUP_CONSTRUCT              (NS_POPUP_EVENT_START)
-#define NS_POPUP_DESTRUCT               (NS_POPUP_EVENT_START+1)
+#define NS_MENU_EVENT_START            1500
+#define NS_MENU_CREATE                (NS_MENU_EVENT_START)
+#define NS_MENU_DESTROY               (NS_MENU_EVENT_START+1)
+#define NS_MENU_ACTION                (NS_MENU_EVENT_START+2)
 
 //@}
 
@@ -451,7 +475,15 @@ enum nsDragDropEventStatus {
 #define NS_EVENT_FLAG_INIT          0x0001
 #define NS_EVENT_FLAG_BUBBLE        0x0002
 #define NS_EVENT_FLAG_CAPTURE       0x0004
-#define NS_EVENT_FLAG_POST_PROCESS  0x0008
+#define NS_EVENT_FLAG_STOP_DISPATCH 0x0008
+#define NS_EVENT_FLAG_NO_DEFAULT    0x0010
+
+// IME Constants  -- keep in synch with nsIDOMTextRange.h
+#define NS_TEXTRANGE_CARETPOSITION				0x01
+#define NS_TEXTRANGE_RAWINPUT					0X02
+#define NS_TEXTRANGE_SELECTEDRAWTEXT			0x03
+#define NS_TEXTRANGE_CONVERTEDTEXT				0x04
+#define NS_TEXTRANGE_SELECTEDCONVERTEDTEXT		0x05
 
 #endif // nsGUIEvent_h__
 

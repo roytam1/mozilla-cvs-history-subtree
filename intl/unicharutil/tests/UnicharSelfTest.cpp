@@ -25,7 +25,7 @@
 NS_DEFINE_CID(kUnicharUtilCID, NS_UNICHARUTIL_CID);
 NS_DEFINE_IID(kCaseConversionIID, NS_ICASECONVERSION_IID);
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
 #define UNICHARUTIL_DLL_NAME "libunicharutil"MOZ_DLL_SUFFIX
 #else
 #define UNICHARUTIL_DLL_NAME "UNICHARUTIL_DLL"
@@ -263,7 +263,6 @@ void TestCaseConversion()
      int i;
      PRUnichar ch;
      PRUnichar buf[256];
-     nsresult res;
 
     cout << "Test 2 - ToUpper(PRUnichar, PRUnichar*):\n";
     for(i=0;i < T2LEN ; i++)

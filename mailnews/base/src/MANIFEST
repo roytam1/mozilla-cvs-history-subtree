@@ -21,6 +21,7 @@ nsMessengerBootstrap.h
 nsMsgKeyArray.h
 nsUrlListenerManager.h
 nsMsgMailSession.h
+nsMsgFolderCache.h
 nsMsgFolderDataSource.h
 nsMsgMessageDataSource.h
 nsMessageViewDataSource.h
@@ -30,5 +31,6 @@ nsMsgRDFDataSource.h
 nsMsgBiffManager.h
 nsMsgNotificationManager.h
 nsCopyMessageStreamListener.h
+nsMsgCopyService.h
 
 

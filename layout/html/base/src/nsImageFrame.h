@@ -26,7 +26,7 @@
 class nsIFrame;
 class nsImageMap;
 class nsIImage;
-class nsIURL;
+class nsIURI;
 struct nsHTMLReflowState;
 struct nsHTMLReflowMetrics;
 struct nsSize;
@@ -35,7 +35,7 @@ struct nsSize;
 
 class nsImageFrame : public ImageFrameSuper {
 public:
-  NS_IMETHOD DeleteFrame(nsIPresContext& aPresContext);
+  NS_IMETHOD Destroy(nsIPresContext& aPresContext);
   NS_IMETHOD Init(nsIPresContext&  aPresContext,
                   nsIContent*      aContent,
                   nsIFrame*        aParent,
@@ -77,6 +77,12 @@ protected:
                    PRBool aClick);
 
   PRBool IsServerImageMap();
+
+  void TranslateEventCoords(nsIPresContext& aPresContext,
+                            const nsPoint& aPoint,
+                            nsPoint& aResult);
+
+  PRBool GetAnchorHREF(nsString& aResult);
 
   PRIntn GetSuppress();
 

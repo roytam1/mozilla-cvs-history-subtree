@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..
+include <$(DEPTH)/config/config.mak>
 
 DEFINES=-D_IMPL_NS_HTML 
 
@@ -38,29 +39,6 @@ MAKE_OBJ_TYPE = DLL
 DLLNAME = raptorhtml
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
 
-MISCDEP =				\
- $(DIST)\lib\raptorlayout_s.lib		\
- $(DIST)\lib\raptorhtmlbase_s.lib	\
- $(DIST)\lib\nglhtmlcon_s.lib		\
- $(DIST)\lib\raptorhtmldoc_s.lib	\
- $(DIST)\lib\raptorhtmlforms_s.lib	\
- $(DIST)\lib\raptorhtmlstyle_s.lib	\
- $(DIST)\lib\raptorhtmltable_s.lib	\
- $(DIST)\lib\raptorxmlcontent_s.lib	\
- $(DIST)\lib\raptorxmldoc_s.lib		\
- $(DIST)\lib\raptorxulbase_s.lib	\
- $(DIST)\lib\raptorxulcontent_s.lib	\
- $(DIST)\lib\raptorevents_s.lib		\
- $(DIST)\lib\xpcom.lib		\
- $(DIST)\lib\raptorgfxwin.lib		\
- $(DIST)\lib\raptorhtmlpars.lib		\
- $(DIST)\lib\jsdom.lib		        \
- $(DIST)\lib\plc3.lib			\
- $(DIST)\lib\js3250.lib			\
- $(DIST)\lib\oji.lib			\
- $(DIST)\lib\jsj3250.lib                \
- $(LIBNSPR)
-
 LCFLAGS = \
         $(LCFLAGS) \
         $(DEFINES) \
@@ -68,7 +46,12 @@ LCFLAGS = \
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\dom \
 	-I$(PUBLIC)\js -I..\..\style\src -I..\html\base\src -I..\base\src \
-	-I$(PUBLIC)\netlib -I$(PUBLIC)\rdf
+!ifdef NECKO
+	-I$(PUBLIC)\necko \
+!else
+	-I$(PUBLIC)\netlib \
+!endif
+        -I$(PUBLIC)\rdf
 
 # These are the libraries we need to link with to create the dll
 LLIBS=					\
@@ -81,15 +64,22 @@ LLIBS=					\
  $(DIST)\lib\raptorhtmltable_s.lib	\
  $(DIST)\lib\raptorxmlcontent_s.lib	\
  $(DIST)\lib\raptorxmldoc_s.lib		\
+!if defined(MOZ_XSL)
+ $(DIST)\lib\raptorxsldoc_s.lib		\
+!endif
  $(DIST)\lib\raptorxulbase_s.lib \
  $(DIST)\lib\raptorxulcontent_s.lib	\
  $(DIST)\lib\raptorevents_s.lib		\
  $(DIST)\lib\xpcom.lib		\
  $(DIST)\lib\raptorgfxwin.lib		\
+ $(DIST)\lib\timer_s.lib \
  $(DIST)\lib\raptorhtmlpars.lib		\
  $(DIST)\lib\jsdom.lib		        \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib	        \
+!else
  $(DIST)\lib\netlib.lib		        \
- $(DIST)\lib\plc3.lib		\
+!endif
  $(DIST)\lib\js32$(VERSION_NUMBER).lib	\
 !if defined(MOZ_DEBUG) && defined(GLOWCODE) && "$(MOZ_BITS)"=="32"
  $(GLOWDIR)\glowcode.lib                \

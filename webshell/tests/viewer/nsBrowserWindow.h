@@ -21,7 +21,11 @@
 
 #include "nsIBrowserWindow.h"
 #include "nsIStreamListener.h"
+#ifdef NECKO
+#include "nsIProgressEventSink.h"
+#else
 #include "nsINetSupport.h"
+#endif
 #include "nsIWebShell.h"
 #include "nsIScriptContextOwner.h"
 #include "nsIDocumentLoaderObserver.h"
@@ -58,7 +62,11 @@ class nsWebCrawler;
  */
 class nsBrowserWindow : public nsIBrowserWindow,
                         public nsIStreamObserver,
+#ifdef NECKO
+                        public nsIProgressEventSink,
+#else
                         public nsINetSupport,
+#endif
                         public nsIWebShellContainer
 {
 public:
@@ -79,34 +87,53 @@ public:
   
   // nsIBrowserWindow
   NS_IMETHOD MoveTo(PRInt32 aX, PRInt32 aY);
-  NS_IMETHOD SizeTo(PRInt32 aWidth, PRInt32 aHeight);
-  NS_IMETHOD GetBounds(nsRect& aBounds);
+  NS_IMETHOD SizeContentTo(PRInt32 aWidth, PRInt32 aHeight);
+  NS_IMETHOD SizeWindowTo(PRInt32 aWidth, PRInt32 aHeight);
+  NS_IMETHOD GetContentBounds(nsRect& aBounds);
   NS_IMETHOD GetWindowBounds(nsRect& aBounds);
+  NS_IMETHOD IsIntrinsicallySized(PRBool& aResult);
+  NS_IMETHOD ShowAfterCreation() { return Show(); }
   NS_IMETHOD Show();
   NS_IMETHOD Hide();
   NS_IMETHOD Close();
+  NS_IMETHOD ShowModally(PRBool aPrepare);
   NS_IMETHOD SetChrome(PRUint32 aNewChromeMask);
   NS_IMETHOD GetChrome(PRUint32& aChromeMaskResult);
   NS_IMETHOD SetTitle(const PRUnichar* aTitle);
   NS_IMETHOD GetTitle(const PRUnichar** aResult);
   NS_IMETHOD SetStatus(const PRUnichar* aStatus);
   NS_IMETHOD GetStatus(const PRUnichar** aResult);
+  NS_IMETHOD SetDefaultStatus(const PRUnichar* aStatus);
+  NS_IMETHOD GetDefaultStatus(const PRUnichar** aResult);
   NS_IMETHOD SetProgress(PRInt32 aProgress, PRInt32 aProgressMax);
   NS_IMETHOD ShowMenuBar(PRBool aShow);
-  NS_IMETHOD IsMenuBarVisible(PRBool *aVisible);
   NS_IMETHOD GetWebShell(nsIWebShell*& aResult);
+  NS_IMETHOD GetContentWebShell(nsIWebShell **aResult);
 
+#ifdef NECKO
   // nsIStreamObserver
-  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-  NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-  NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-  NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+                           nsresult status, const PRUnichar *errorMsg);
+
+  // nsIProgressEventSink
+  NS_IMETHOD OnProgress(nsIChannel* channel, nsISupports *ctxt,
+                        PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatus(nsIChannel* channel, nsISupports *ctxt, const PRUnichar *aMsg);
+
+#else
+  // nsIStreamObserver
+  NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+  NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+  NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
+#endif
 
   // nsIWebShellContainer
   NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason);
   NS_IMETHOD BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
   NS_IMETHOD ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax);
-  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus);
+  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsresult aStatus);
   NS_IMETHOD NewWebShell(PRUint32 aChromeMask,
                          PRBool aVisible,
                          nsIWebShell *&aNewWebShell);
@@ -115,7 +142,7 @@ public:
                          PRInt32 aXPos, PRInt32 aYPos, 
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment,
-                         nsIDOMWindow* aWindow);
+                         nsIDOMWindow* aWindow, nsIDOMWindow** outPopup);
   NS_IMETHOD FindWebShellWithName(const PRUnichar* aName, nsIWebShell*& aResult);
   NS_IMETHOD FocusAvailable(nsIWebShell* aFocusedWebShell, PRBool& aFocusTaken);
 
@@ -156,7 +183,6 @@ public:
   nsIPresShell* GetPresShell();
 
   void DoFind();
-  void DoSelectAll();
   NS_IMETHOD FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound);
   NS_IMETHOD ForceRefresh();
 

@@ -20,8 +20,9 @@
 #include <Xm/FileSB.h>
 #include "nsXtEventHandler.h"
 #include "nsStringUtil.h"
+#include "nsAppShell.h"
 
-extern XtAppContext gAppContext;
+#include "xlibrgb.h"
 
 NS_IMPL_ADDREF(nsFileWidget)
 NS_IMPL_RELEASE(nsFileWidget)
@@ -35,6 +36,7 @@ nsFileWidget::nsFileWidget() : nsWindow(), nsIFileWidget()
 {
   NS_INIT_REFCNT();
   mNumberOfFilters = 0;
+  mAppContext = NULL;
 }
 
 NS_METHOD nsFileWidget::Create(nsIWidget        *aParent,
@@ -63,6 +65,8 @@ NS_METHOD   nsFileWidget:: Create(nsIWidget  *aParent,
   mTitle.SetLength(0);
   mTitle.Append(aTitle);
   mMode = aMode;
+
+  mAppContext = nsAppShell::GetAppContext();
 
   Widget parentWidget = nsnull;
 
@@ -155,14 +159,12 @@ NS_METHOD nsFileWidget::OnCancel()
 //-------------------------------------------------------------------------
 PRBool nsFileWidget::Show()
 {
-  nsresult result = nsEventStatus_eIgnore;
   XtManageChild(mWidget);
 
-  // XXX Kludge: gAppContext is a global set in nsAppShell
   XEvent event;
   mIOwnEventLoop = PR_TRUE;
   while (mIOwnEventLoop) {
-    XtAppNextEvent(gAppContext, &event);
+    XtAppNextEvent(mAppContext, &event);
     XtDispatchEvent(&event);
   }
 
@@ -182,22 +184,22 @@ PRBool nsFileWidget::Show()
  return PR_TRUE;
 }
 
-// FIXME: Need to implement.  --ZuperDee
 nsFileDlgResults nsFileWidget::GetFile(class nsIWidget *, const class nsString &, class nsFileSpec &)
 {
-  return NS_OK;
+  //XXX:Implement this.
+  return nsFileDlgResults_Cancel;
 }
 
-// FIXME: Need to implement.  --ZuperDee
 nsFileDlgResults nsFileWidget::GetFolder(class nsIWidget *, const class nsString &, class nsFileSpec &)
 {
-  return NS_OK;
+  //XXX:Implement this.
+  return nsFileDlgResults_Cancel;
 }
 
-// FIXME: Need to implement.  --ZuperDee
 nsFileDlgResults nsFileWidget::PutFile(class nsIWidget *, const class nsString &, class nsFileSpec &)
 {
-  return NS_OK;
+  //XXX:Implement this.
+  return nsFileDlgResults_Cancel;
 }
 
 //-------------------------------------------------------------------------
@@ -235,9 +237,9 @@ NS_METHOD nsFileWidget::SetFilterList(PRUint32 aNumberOfFilters,const nsString a
   return NS_OK;
 }
 
-// FIXME: Need to implement. --ZuperDee
 NS_METHOD nsFileWidget::GetSelectedType(PRInt16& theType)
 {
+//XXX:Implement this.
   return NS_OK;
 }
 
@@ -265,15 +267,15 @@ NS_METHOD nsFileWidget::SetDefaultString(const nsString& aString)
   return NS_OK;
 }
 
-// FIXME: Need to implement. --ZuperDee
 NS_METHOD nsFileWidget::SetDisplayDirectory(const nsFileSpec& aDirectory)
 {
+//XXX:Implement this.
   return NS_OK;
 }
 
-// FIXME: Need to implement. --ZuperDee
 NS_METHOD nsFileWidget::GetDisplayDirectory(nsFileSpec& aDirectory)
 {
+//XXX:Implement this.
   return NS_OK;
 }
 
@@ -285,4 +287,3 @@ NS_METHOD nsFileWidget::GetDisplayDirectory(nsFileSpec& aDirectory)
 nsFileWidget::~nsFileWidget()
 {
 }
-

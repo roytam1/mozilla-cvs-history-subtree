@@ -23,7 +23,7 @@
 
 class nsIAtom;
 class nsString;
-class nsIURL;
+class nsIURI;
 class nsICSSParser;
 class nsICSSStyleSheet;
 class nsIPresContext;
@@ -46,6 +46,7 @@ public:
   NS_IMETHOD DropDocumentReference(void) = 0; // notification that doc is going away
 
   NS_IMETHOD SetCaseSensitive(PRBool aCaseSensitive) = 0;
+  NS_IMETHOD SetQuirkMode(PRBool aQuirkMode) = 0;
   NS_IMETHOD SetPreferredSheet(const nsString& aTitle) = 0;
 
   // Get/Recycle a CSS parser for general use
@@ -73,7 +74,7 @@ public:
   // - if aCompleted is PR_FALSE, the sheet is still loading and 
   //   will be inserted in the document when complete
   NS_IMETHOD LoadStyleLink(nsIContent* aElement,
-                           nsIURL* aURL, 
+                           nsIURI* aURL, 
                            const nsString& aTitle, 
                            const nsString& aMedia, 
                            PRInt32 aDefaultNameSpaceID,
@@ -83,7 +84,7 @@ public:
 
   // Load a child style sheet (@import)
   NS_IMETHOD LoadChildSheet(nsICSSStyleSheet* aParentSheet,
-                            nsIURL* aURL, 
+                            nsIURI* aURL, 
                             const nsString& aMedia,
                             PRInt32 aDefaultNameSpaceID,
                             PRInt32 aSheetIndex) = 0;
@@ -93,7 +94,7 @@ public:
   // - if aCompleted is PR_TRUE, the sheet is fully loaded
   // - if aCompleted is PR_FALSE, the sheet is still loading and 
   //   aCAllback will be called when the sheet is complete
-  NS_IMETHOD LoadAgentSheet(nsIURL* aURL, 
+  NS_IMETHOD LoadAgentSheet(nsIURI* aURL, 
                             nsICSSStyleSheet*& aSheet,
                             PRBool& aCompleted,
                             nsCSSLoaderCallbackFunc aCallback,

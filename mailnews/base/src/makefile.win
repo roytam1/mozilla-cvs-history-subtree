@@ -31,6 +31,7 @@ EXPORTS=						\
 	nsUrlListenerManager.h		\
 	nsMsgMailSession.h			\
 	nsMsgFolderDataSource.h		\
+	nsMsgFolderCache.h \
 	nsMsgMessageDataSource.h	\
 	nsMessageViewDataSource.h	\
     nsMsgAccount.h				\
@@ -43,6 +44,7 @@ EXPORTS=						\
 	nsMsgBiffManager.h			\
 	nsMsgNotificationManager.h	\
 	nsCopyMessageStreamListener.h \
+	nsMsgCopyService.h \
 	$(NULL)
 
 
@@ -62,6 +64,8 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsMsgAccountManager.obj		\
 	.\$(OBJDIR)\nsMsgAccount.obj			\
 	.\$(OBJDIR)\nsMsgFolderDataSource.obj	\
+	.\$(OBJDIR)\nsMsgFolderCache.obj		\
+	.\$(OBJDIR)\nsMsgFolderCacheElement.obj		\
 	.\$(OBJDIR)\nsMsgMessageDataSource.obj	\
 	.\$(OBJDIR)\nsMsgRDFUtils.obj			\
 	.\$(OBJDIR)\nsMsgRDFDataSource.obj		\
@@ -71,6 +75,8 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsMsgServerDataSource.obj	\
 	.\$(OBJDIR)\nsMsgBiffManager.obj		\
 	.\$(OBJDIR)\nsMsgNotificationManager.obj \
+	.\$(OBJDIR)\nsMsgCopyService.obj		\
+	.\$(OBJDIR)\nsMsgStatusFeedback.obj		\
 	$(NULL)
 
 

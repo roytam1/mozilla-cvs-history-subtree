@@ -34,7 +34,6 @@
 #include "nsCRT.h"
 #include "nsDeque.h"
 #include "nsIDTD.h"
-#include <fstream.h>
 #include "nsITokenizer.h"
 #include "nsString.h"
 #include "nsIElementObserver.h"
@@ -119,7 +118,8 @@ public:
   nsDeque       mSkipped; //each entry will hold a deque full of skipped tokens...
   nsDeque       mStyles;  //each entry will hold a tagstack full of style tags...
 #ifdef  NS_DEBUG
-  eHTMLTags   mTags[100];
+  enum { eMaxTags = 100 };
+  eHTMLTags   mTags[eMaxTags];
 #endif
 };
 
@@ -186,11 +186,11 @@ public:
  * @return
  */
 inline PRInt32 IndexOfTagInSet(PRInt32 aTag,const eHTMLTags aTagSet[],PRInt32 aCount)  {
-  PRInt32 index;
+  PRInt32 theIndex;
 
-  for(index=0;index<aCount;index++)
-    if(aTag==aTagSet[index]) {
-      return index;
+  for(theIndex=0;theIndex<aCount;theIndex++)
+    if(aTag==aTagSet[theIndex]) {
+      return theIndex;
     }
   return kNotFound;
 }
@@ -247,12 +247,44 @@ public:
   CObserverDictionary();
   ~CObserverDictionary();
 
-  void      RegisterObservers();
+  void      RegisterObservers(nsString& aTopicList);
   void      UnregisterObservers();
   nsDeque*  GetObserversForTag(eHTMLTags aTag);
 
 protected:
-  nsDeque*  mObservers[NS_HTML_TAG_MAX];
+  nsDeque*  mObservers[NS_HTML_TAG_MAX + 1];
+};
+
+/************************************************************** 
+  Define the a functor used to notify observers... 
+ **************************************************************/ 
+class nsObserverNotifier: public nsDequeFunctor{ 
+public: 
+  nsObserverNotifier(const PRUnichar* aTagName,PRUint32 aUniqueKey,PRUint32 aCount=0,
+                     const PRUnichar** aKeys=nsnull,const PRUnichar** aValues=nsnull){ 
+    mCount=aCount; 
+    mKeys=aKeys; 
+    mValues=aValues; 
+    mUniqueKey=aUniqueKey; 
+    mTagName=aTagName; 
+  } 
+
+  virtual void* operator()(void* anObject) { 
+    nsIElementObserver* theObserver= (nsIElementObserver*)anObject; 
+    if(theObserver) { 
+      mResult = theObserver->Notify(mUniqueKey,mTagName,mCount,mKeys,mValues); 
+    } 
+    if(NS_OK==mResult) 
+      return 0; 
+    return anObject; 
+  } 
+
+  const PRUnichar** mKeys; 
+  const PRUnichar** mValues; 
+  PRUint32          mCount; 
+  PRUint32          mUniqueKey; 
+  nsresult          mResult; 
+  const PRUnichar*  mTagName; 
 };
 
 #endif

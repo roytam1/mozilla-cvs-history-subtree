@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 IGNORE_MANIFEST=1
 
 DEFINES=-D_IMPL_NS_PICS -DWIN32_LEAN_AND_MEAN
@@ -55,7 +56,11 @@ LINCS = -I$(PUBLIC)/js \
 		-I$(PUBLIC)\xpcom \
 		-I$(PUBLIC)\raptor \
 		-I$(PUBLIC)\pref \
-		-I$(PUBLIC)\netlib \
+!ifdef NECKO
+                -I$(PUBLIC)\necko                 \
+!else
+                -I$(PUBLIC)\netlib                \
+!endif
 		-I$(DEPTH)\include \
 
 MAKE_OBJ_TYPE = DLL
@@ -70,10 +75,13 @@ LCFLAGS = \
 
 # These are the libraries we need to link with to create the dll
 LLIBS	= \
- $(DIST)\lib\plc3.lib \
  $(LIBNSPR) \
  $(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
- $(DIST)\lib\netlib.lib \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib    \
+!else
+ $(DIST)\lib\netlib.lib         \
+!endif
  $(DIST)\lib\xpcom.lib \
  $(DIST)\lib\xppref32.lib \
  $(DIST)\lib\xpcom.lib \

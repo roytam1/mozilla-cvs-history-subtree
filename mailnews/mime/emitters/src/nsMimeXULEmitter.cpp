@@ -31,16 +31,9 @@
 #include "nsFileStream.h"
 #include "nsMimeStringResources.h"
 #include "msgCore.h"
-#include "nsIMsgHeaderParser.h"
-#include "nsIComponentManager.h"
-#include "nsEmitterUtils.h"
-#include "nsFileSpec.h"
-#include "nsIRegistry.h"
-#include "nsIMimeMiscStatus.h"
 
 // For the new pref API's
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
-static NS_DEFINE_CID(kMsgHeaderParserCID,		NS_MSGHEADERPARSER_CID); 
 
 nsresult NS_NewMimeXULEmitter(const nsIID& iid, void **result)
 {
@@ -66,7 +59,6 @@ nsMimeXULEmitter::nsMimeXULEmitter()
 {
   NS_INIT_REFCNT(); 
 
-  mCutoffValue = 3;
   mBufferMgr = NULL;
   mTotalWritten = 0;
   mTotalRead = 0;
@@ -97,19 +89,7 @@ nsMimeXULEmitter::nsMimeXULEmitter()
     return;
 
   if ((mPrefs && NS_SUCCEEDED(rv)))
-  {
     mPrefs->GetIntPref("mail.show_headers", &mHeaderDisplayType);
-    mPrefs->GetIntPref("mailnews.max_header_display_length", &mCutoffValue);
-  }
-
-  mMiscStatusArray = new nsVoidArray();
-  BuildListOfStatusProviders();
-
-  rv = nsComponentManager::CreateInstance(kMsgHeaderParserCID, 
-                                          NULL, nsIMsgHeaderParser::GetIID(), 
-                                          (void **) getter_AddRefs(mHeaderParser));
-  if (NS_FAILED(rv))
-    mHeaderParser = null_nsCOMPtr();
 }
 
 nsMimeXULEmitter::~nsMimeXULEmitter(void)
@@ -143,20 +123,6 @@ nsMimeXULEmitter::~nsMimeXULEmitter(void)
       PR_FREEIF(headerInfo->value);
     }
     delete mHeaderArray;
-  }
-
-  if (mMiscStatusArray)
-  {
-    for (i=0; i<mMiscStatusArray->Count(); i++)
-    {
-      miscStatusType *statusInfo = (miscStatusType *)mHeaderArray->ElementAt(i);
-      if (!statusInfo)
-        continue;
-    
-      NS_IF_RELEASE(statusInfo->obj);
-    }
-
-    delete mMiscStatusArray;
   }
 
   if (mBufferMgr)
@@ -267,47 +233,9 @@ nsMimeXULEmitter::WriteBody(const char *buf, PRUint32 size, PRUint32 *amountWrit
   return NS_OK;
 }
 
-#define TEMP_FILE_PREFIX    "nsMimeBody"
-
-//
-// RICHIE - We need to find a way to tell the webshell to delete the file once it is
-// loaded. Until then, we will continually cleaup behind ourselves....ugh..
-nsresult
-nsMimeXULEmitter::OhTheHumanityCleanupTempFileHack()
-{
-  // Age old question, where to store temp files....ugh!
-  char  *tDir = GetTheTempDirectoryOnTheSystem();
-  if (!tDir)
-    return NS_OK;
-
-  nsFileSpec tempDir(tDir);
-  if (tempDir.Exists())
-  {
-    for (nsDirectoryIterator i(tempDir, PR_FALSE); i.Exists(); i++) 
-    {
-      nsFileSpec possibleTempFile = i.Spec();
-      char       *filename = possibleTempFile.GetLeafName();
-    
-      if ((PL_strncmp(TEMP_FILE_PREFIX, filename, PL_strlen(TEMP_FILE_PREFIX)) == 0) && 
-          (PL_strlen(filename) > PL_strlen(TEMP_FILE_PREFIX)))
-      {
-        possibleTempFile.Delete(PR_FALSE);
-      }
-
-      nsCRT::free(filename);
-      filename = nsnull;
-    }
-  }
-
-  PR_FREEIF(tDir);
-  return NS_OK;
-}
-
 nsresult
 nsMimeXULEmitter::EndBody()
 {
-  OhTheHumanityCleanupTempFileHack();
-
   mBody.Append("</HTML>");
   mBodyStarted = PR_FALSE;
 
@@ -411,7 +339,7 @@ nsMimeXULEmitter::UtilityWriteCRLF(const char *buf)
   PRUint32    written;
 
   Write(buf, tmpLen, &written);
-  Write(CRLF, 2, &written);
+  Write(MSG_LINEBREAK, MSG_LINEBREAK_LEN, &written);
 
   return NS_OK;
 }
@@ -548,13 +476,10 @@ nsMimeXULEmitter::WriteXULHeader(const char *msgID)
   UtilityWriteCRLF("xmlns:html=\"http://www.w3.org/TR/REC-html40\" ");
   UtilityWriteCRLF("xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" ");
   UtilityWriteCRLF("xmlns=\"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul\" ");
-  DoWindowStatusProcessing();
   UtilityWriteCRLF("align=\"vertical\"> ");
 
   // Now, the JavaScript...
   UtilityWriteCRLF("<html:script language=\"javascript\" src=\"chrome://messenger/content/attach.js\"/>");
-  UtilityWriteCRLF("<html:script language=\"javascript\" src=\"chrome://messenger/content/mime.js\"/>");
-  DoGlobalStatusProcessing();
 
   return NS_OK;
 }
@@ -633,6 +558,59 @@ nsMimeXULEmitter::EndHeader()
   // on Complete().
 
   return NS_OK; 
+}
+
+//
+// This is a header tag (i.e. tagname: "From", value: rhp@netscape.com. Do the right 
+// thing here to display this header in the XUL output.
+//
+nsresult
+nsMimeXULEmitter::WriteXULTag(const char *tagName, const char *value)
+{
+  if ( (!value) || (!*value) )
+    return NS_OK;
+
+  char  *upCaseTag = NULL;
+  char  *newValue = nsEscapeHTML(value);
+  if (!newValue) 
+    return NS_OK;
+
+  nsString  newTagName(tagName);
+  newTagName.CompressWhitespace(PR_TRUE, PR_TRUE);
+
+  newTagName.ToUpperCase();
+  upCaseTag = newTagName.ToNewCString();
+
+  UtilityWrite("<header field=\"");
+  UtilityWrite(upCaseTag);
+  UtilityWrite("\">");
+
+  // Here is where we are going to try to L10N the tagName so we will always
+  // get a field name next to an emitted header value. Note: Default will always
+  // be the name of the header itself.
+  //
+  UtilityWrite("<headerdisplayname>");
+  char *l10nTagName = LocalizeHeaderName(upCaseTag, tagName);
+  if ( (!l10nTagName) || (!*l10nTagName) )
+    UtilityWrite(tagName);
+  else
+  {
+    UtilityWrite(l10nTagName);
+    PR_FREEIF(l10nTagName);
+  }
+
+  UtilityWrite("</headerdisplayname>");
+
+  // Now write out the actual value itself and move on!
+  //
+  UtilityWrite(": ");
+  UtilityWrite(newValue);
+  UtilityWrite("</header>");
+
+  delete[] upCaseTag;
+  PR_FREEIF(newValue);
+
+  return NS_OK;
 }
 
 //
@@ -734,49 +712,11 @@ nsMimeXULEmitter::DumpAttachmentMenu()
 }
 
 nsresult
-nsMimeXULEmitter::DumpAddBookIcon(char *fromLine)
+nsMimeXULEmitter::DumpAddBookIcon()
 {
-  char        *email = nsnull;
-  char        *name = nsnull;
-  PRUint32    numAddresses;
-	char	      *names;
-	char	      *addresses;
-  nsresult    rv;
-  char        *newName;
-
   UtilityWriteCRLF("<box align=\"horizontal\">");
-
-  if (mHeaderParser)
-    rv = mHeaderParser->ParseHeaderAddresses ("UTF-8", fromLine, 
-                                              &names, &addresses, &numAddresses);  
-  if (NS_SUCCEEDED(rv))
-  {
-	  name = names;
-    email = addresses;
-  }
-  else
-  {
-    name = fromLine;
-    email = fromLine;
-  }
-
-  // Strip off extra quotes...
-  nsString  workString(name);
-  workString.Trim("\"");
-  newName = workString.ToNewCString();    
-
-  UtilityWrite("<titledbutton src=\"chrome://messenger/skin/addcard.gif\" ");
-  UtilityWrite("onclick=\"AddToAddressBook('");
-  UtilityWrite(email);
-  UtilityWrite("', '");
-  UtilityWrite(newName);
-  UtilityWriteCRLF("');\"/>");
-
+  UtilityWriteCRLF("<titledbutton src=\"chrome://messenger/skin/addcard.gif\"/>");
   UtilityWriteCRLF("</box>");
-
-  PR_FREEIF(newName);
-  PR_FREEIF(names);
-  PR_FREEIF(addresses);
   return NS_OK;
 }
 
@@ -788,7 +728,7 @@ nsMimeXULEmitter::DumpBody()
   //
   char  *url = nsnull;
   if (mBodyFileSpec)
-    url = nsMimePlatformFileToURL(*mBodyFileSpec);
+    url = nsMimePlatformFileToURL(mBodyFileSpec->GetNativePathCString());
 
   UtilityWrite("<html:iframe id=\"mail-body-frame\" src=\"");
   UtilityWrite(url);
@@ -805,7 +745,7 @@ nsMimeXULEmitter::OutputGenericHeader(const char *aHeaderVal)
 
   if (val)
   {
-    UtilityWriteCRLF("<box>");
+    UtilityWriteCRLF("<box style=\"padding: 2px;\">");
     rv = WriteXULTag(aHeaderVal, val);
     UtilityWriteCRLF("</box>");
     return rv;
@@ -836,7 +776,7 @@ nsMimeXULEmitter::DumpSubjectFromDate()
       UtilityWriteCRLF("<spring flex=\"1\"/>");
 
         // Now the addbook and attachment icons need to be displayed
-        DumpAddBookIcon(GetHeaderValue(HEADER_FROM));
+        DumpAddBookIcon();
         DumpAttachmentMenu();
 
       UtilityWriteCRLF("<spring flex=\"1\"/>");
@@ -891,7 +831,7 @@ nsMimeXULEmitter::DumpRestOfHeaders()
              (!PL_strcasecmp(HEADER_CC, headerInfo->name)) )
            continue;
 
-        UtilityWriteCRLF("<box>");
+        UtilityWriteCRLF("<box style=\"padding: 2px;\">");
         WriteXULTag(headerInfo->name, headerInfo->value);
         UtilityWriteCRLF("</box>");
       }
@@ -900,468 +840,4 @@ nsMimeXULEmitter::DumpRestOfHeaders()
 
   UtilityWriteCRLF("</toolbar>");
   return NS_OK;
-}
-
-//
-// This is a general routine that will dispatch the writing of headers to
-// the correct method
-//
-nsresult
-nsMimeXULEmitter::WriteXULTag(const char *tagName, const char *value)
-{
-  if ( (!PL_strcasecmp(HEADER_FROM, tagName)) ||
-       (!PL_strcasecmp(HEADER_CC, tagName)) ||
-       (!PL_strcasecmp(HEADER_TO, tagName)) ||
-       (!PL_strcasecmp(HEADER_BCC, tagName)) )
-    return WriteEmailAddrXULTag(tagName, value);
-  else
-    return WriteMiscXULTag(tagName, value);
-}
-
-
-nsresult
-nsMimeXULEmitter::WriteXULTagPrefix(const char *tagName, const char *value)
-{
-  char  *upCaseTag = NULL;
-
-  nsString  newTagName(tagName);
-  newTagName.CompressWhitespace(PR_TRUE, PR_TRUE);
-
-  newTagName.ToUpperCase();
-  upCaseTag = newTagName.ToNewCString();
-
-  UtilityWrite("<header field=\"");
-  UtilityWrite(upCaseTag);
-  UtilityWrite("\">");
-
-  // Here is where we are going to try to L10N the tagName so we will always
-  // get a field name next to an emitted header value. Note: Default will always
-  // be the name of the header itself.
-  //
-  UtilityWriteCRLF("<html:table BORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" >");  
-  UtilityWriteCRLF("<html:tr VALIGN=\"TOP\">");
-  UtilityWriteCRLF("<html:td>");
-
-  UtilityWrite("<headerdisplayname>");
-  char *l10nTagName = LocalizeHeaderName(upCaseTag, tagName);
-  if ( (!l10nTagName) || (!*l10nTagName) )
-    UtilityWrite(tagName);
-  else
-  {
-    UtilityWrite(l10nTagName);
-    PR_FREEIF(l10nTagName);
-  }
-
-  UtilityWrite(": ");
-  UtilityWriteCRLF("</headerdisplayname>");
-
-  UtilityWriteCRLF("</html:td>");
-  
-  delete[] upCaseTag;
-  return NS_OK;
-}
-
-nsresult
-nsMimeXULEmitter::WriteXULTagPostfix(const char *tagName, const char *value)
-{
-  UtilityWriteCRLF("</html:tr>");
-  UtilityWriteCRLF("</html:table>");
-
-  // Finalize and write out end of headers...
-  UtilityWriteCRLF("</header>");
-  return NS_OK;
-}
-
-//
-// This is the routine that is responsible for parsing and writing email
-// header. (i.e. From:, CC:, etc...) This will parse apart the addresses
-// and do things like make them links for easy adding to the address book
-//
-nsresult
-nsMimeXULEmitter::WriteEmailAddrXULTag(const char *tagName, const char *value)
-{
-char  *upCaseTag = NULL;
-
-  if ( (!value) || (!*value) )
-    return NS_OK;
-
-  nsString  newTagName(tagName);
-  newTagName.CompressWhitespace(PR_TRUE, PR_TRUE);
-  newTagName.ToUpperCase();
-  upCaseTag = newTagName.ToNewCString();
-
-  WriteXULTagPrefix(tagName, value);
-
-  // Ok, now this is where we need to loop through all of the addresses and
-  // do interesting things with the contents.
-  //
-  UtilityWriteCRLF("<html:td>"); 
-  OutputEmailAddresses(upCaseTag, value);
-  UtilityWriteCRLF("</html:td>");
-
-  PR_FREEIF(upCaseTag);
-  WriteXULTagPostfix(tagName, value);
-  return NS_OK;
-}
-
-//
-// This is a header tag (i.e. tagname: "From", value: rhp@netscape.com. Do the right 
-// thing here to display this header in the XUL output.
-//
-nsresult
-nsMimeXULEmitter::WriteMiscXULTag(const char *tagName, const char *value)
-{
-  if ( (!value) || (!*value) )
-    return NS_OK;
-
-  WriteXULTagPrefix(tagName, value);
-
-  UtilityWriteCRLF("<html:td>");
-
-  // Now write out the actual value itself and move on!
-  char  *newValue = nsEscapeHTML(value);
-  if (newValue) 
-    UtilityWrite(newValue);
-  else
-    UtilityWrite(value);
-  PR_FREEIF(newValue);
-  ////
-
-  UtilityWriteCRLF("</html:td>");
-
-  WriteXULTagPostfix(tagName, value);
-  return NS_OK;
-}
-
-nsresult
-nsMimeXULEmitter::DoGlobalStatusProcessing()
-{
-  char    *retval = nsnull;
-
-  if (mMiscStatusArray)
-  {
-    for (PRInt32 i=0; i<mMiscStatusArray->Count(); i++)
-    {
-      retval = nsnull;
-      miscStatusType *statusInfo = (miscStatusType *)mMiscStatusArray->ElementAt(i);
-      if (statusInfo->obj)
-      {
-        if (NS_SUCCEEDED(statusInfo->obj->GetGlobalXULandJS(&retval)))
-        {
-          if ( (retval) && (*retval) )
-            UtilityWriteCRLF(retval);
-
-          PR_FREEIF(retval);
-        }
-      }
-    }
-  }
-
-  return NS_OK;
-}
-
-nsresult
-nsMimeXULEmitter::DoWindowStatusProcessing()
-{
-  char    *retval = nsnull;
-
-  if (mMiscStatusArray)
-  {
-    for (PRInt32 i=0; i<mMiscStatusArray->Count(); i++)
-    {
-      retval = nsnull;
-      miscStatusType *statusInfo = (miscStatusType *)mMiscStatusArray->ElementAt(i);
-      if (statusInfo->obj)
-      {
-        if (NS_SUCCEEDED(statusInfo->obj->GetWindowXULandJS(&retval)))
-        {
-          if ( (retval) && (*retval) )
-            UtilityWriteCRLF(retval);
-
-          PR_FREEIF(retval);
-        }
-      }
-    }
-  }
-
-  return NS_OK;
-}
-
-nsresult       
-nsMimeXULEmitter::OutputEmailAddresses(const char *aHeader, const char *aEmailAddrs)
-{
-	PRUint32    numAddresses;
-	char	      *names;
-	char	      *addresses;
-  char        *newValue = nsEscapeHTML(aEmailAddrs);
- 
-  if ( (!mHeaderParser) ||
-       NS_FAILED(mHeaderParser->ParseHeaderAddresses ("UTF-8", aEmailAddrs, 
-                 &names, &addresses, &numAddresses)) )
-  {
-    if (newValue) 
-      UtilityWrite(newValue);
-
-    PR_FREEIF(newValue);
-    return NS_OK;
-  }
-
-	char        *curName = names;
-  char        *curAddress = addresses;
-
-  if (numAddresses > (PRUint32) mCutoffValue)
-  {
-    UtilityWrite("<html:div id=\"SHORT");
-    UtilityWrite(aHeader);
-    UtilityWriteCRLF("\" style=\"display: block;\">");
-
-    for (PRUint32 i = 0; i < (PRUint32) mCutoffValue; i++)
-    {
-      ProcessSingleEmailEntry(aHeader, curName, curAddress);
-      
-      if (i != (numAddresses-1))
-        UtilityWrite(",&#160;");
-      
-      if ( ( ((i+1) % 2) == 0) && ((i+1) != (PRUint32) mCutoffValue))
-      {
-        UtilityWrite("<html:BR/>");
-      }
-      
-      curName += strlen(curName) + 1;
-      curAddress += strlen(curAddress) + 1;
-    }
-
-    UtilityWrite("<titledbutton class=\"SHORT");
-    UtilityWrite(aHeader);
-    UtilityWrite("_button\" src=\"chrome://messenger/skin/more.gif\" onclick=\"ShowLong('");
-    UtilityWrite(aHeader);
-    UtilityWriteCRLF("');\" style=\"vertical-align: text-top;\"/>");
-  
-    UtilityWrite("</html:div>");
-    UtilityWrite("<html:div id=\"LONG");
-    UtilityWrite(aHeader);
-    UtilityWriteCRLF("\" style=\"display: none;\">");
-  }
-
-	curName = names;
-  curAddress = addresses;
-  for (PRUint32 i = 0; i < numAddresses; i++)
-  {
-    ProcessSingleEmailEntry(aHeader, curName, curAddress);
-
-    if (i != (numAddresses-1))
-      UtilityWrite(",&#160;");
-
-    if ( ( ((i+1) % 2) == 0) && (i != (numAddresses-1)))
-    {
-      UtilityWrite("<html:BR/>");
-    }
-
-    curName += strlen(curName) + 1;
-    curAddress += strlen(curAddress) + 1;
-  }
-
-  if (numAddresses > (PRUint32) mCutoffValue)
-  {
-    UtilityWrite("<titledbutton class=\"LONG");
-    UtilityWrite(aHeader);
-    UtilityWrite("_button\" src=\"chrome://messenger/skin/less.gif\" onclick=\"ShowShort('");
-    UtilityWrite(aHeader);
-    UtilityWriteCRLF("');\" style=\"vertical-align: text-top;\"/>");
-
-    UtilityWriteCRLF("</html:div>");
-  }
-
-  PR_FREEIF(addresses);
-  PR_FREEIF(names);
-
-  return NS_OK;
-}
-
-nsresult
-nsMimeXULEmitter::ProcessSingleEmailEntry(const char *curHeader, char *curName, char *curAddress)
-{
-char      *link = nsnull;
-char      *tLink = nsnull;
-char      *workName = nsnull;
-char      *workAddr = nsnull;
-
-  if ( (curName) && (*curName) )
-  {
-    nsString  workString(curName);
-    
-    workString.Trim("\"");
-    workName = workString.ToNewCString();    
-  }
-
-  if ( (curAddress) && (*curAddress) )
-  {
-    nsString  workString2(curAddress);
-    
-    workString2.Trim("\"");
-    workAddr = workString2.ToNewCString();    
-  }
-
-  // tLink = PR_smprintf("addbook:add?vcard=begin%%3Avcard%%0Afn%%3A%s%%0Aemail%%3Binternet%%3A%s%%0Aend%%3Avcard%%0A", 
-  //                    (workName ? workName : workAddr), workAddr);
-  tLink = PR_smprintf("mailto:%s", workAddr); 
-  if (tLink)
-    link = nsEscapeHTML(tLink);
-  if (link)
-  {
-    UtilityWrite("<html:a href=\"");
-    UtilityWrite(link);
-    UtilityWrite("\">");
-  }
-
-  if (workName)
-    UtilityWrite(workName);
-  else
-    UtilityWrite(curName);
-  UtilityWrite(" ");
-
-  UtilityWrite("&lt;");
-  UtilityWrite(curAddress);
-  UtilityWrite("&gt;");
-  
-  // End link stuff here...
-  if (link)
-    UtilityWriteCRLF("</html:a>");
-
-  PR_FREEIF(link);
-  PR_FREEIF(tLink);
-
-  // Misc here
-  char    *xul;
-  if (mMiscStatusArray)
-  {
-    for (PRInt32 i=0; i<mMiscStatusArray->Count(); i++)
-    {
-      xul = nsnull;
-      miscStatusType *statusInfo = (miscStatusType *)mMiscStatusArray->ElementAt(i);
-      if (statusInfo->obj)
-      {
-        if (NS_SUCCEEDED(statusInfo->obj->GetIndividualXUL(curHeader, workName, workAddr, &xul)))
-        {
-          if ( (xul) && (*xul) )
-            UtilityWriteCRLF(xul);
-
-          PR_FREEIF(xul);
-        }
-      }
-    }
-  }
-
-  PR_FREEIF(workName);
-  PR_FREEIF(workAddr);
-  return NS_OK;  
-}
-
-nsresult
-nsMimeXULEmitter::BuildListOfStatusProviders() 
-{
-  nsresult rv;
-
-  // enumerate the registry subkeys
-  nsIRegistry           *registry = nsnull;
-  nsIRegistry::Key      key;
-  nsIEnumerator         *components = nsnull;
-  miscStatusType        *newInfo = nsnull;
-
-  rv = nsServiceManager::GetService(NS_REGISTRY_PROGID,
-                                    nsCOMTypeInfo<nsIRegistry>::GetIID(),
-                                    (nsISupports**)&registry);
-  if (NS_FAILED(rv)) 
-    return rv;
-  
-  rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
-  if (NS_FAILED(rv)) 
-    return rv;
-  
-  rv = registry->GetSubtree(nsIRegistry::Common, NS_IMIME_MISC_STATUS_KEY, &key);
-  if (NS_FAILED(rv)) 
-    return rv;
-  
-  rv = registry->EnumerateSubtrees(key, &components);
-  if (NS_FAILED(rv)) 
-    return rv;
-  
-  // go ahead and enumerate through.
-  nsString2 actualProgID("", eOneByte);
-  rv = components->First();
-  while (NS_SUCCEEDED(rv) && !components->IsDone()) 
-  {
-    nsISupports *base = nsnull;
-    
-    rv = components->CurrentItem(&base);
-    if (NS_FAILED(rv)) 
-      return rv;
-    
-    nsIRegistryNode *node = nsnull;
-    nsIID nodeIID = NS_IREGISTRYNODE_IID;
-    rv = base->QueryInterface(nodeIID, (void**)&node);
-    if (NS_FAILED(rv)) 
-      return rv;
-    
-    char *name = nsnull;
-    rv = node->GetName(&name);
-    if (NS_FAILED(rv)) 
-      return rv;
-    
-    actualProgID = NS_IMIME_MISC_STATUS_KEY;
-    actualProgID.Append(name);
-    
-    // now we've got the PROGID, let's add it to the list...
-    newInfo = (miscStatusType *)PR_NEWZAP(miscStatusType);
-    if (newInfo)
-    {
-      newInfo->obj = GetStatusObjForProgID(actualProgID);
-      if (newInfo->obj)
-      {
-        newInfo->progID = actualProgID;
-        mMiscStatusArray->AppendElement(newInfo);
-      }
-    }
-    
-    // cleanup
-    nsCRT::free(name);
-    NS_RELEASE(node);
-    NS_RELEASE(base);
-    rv = components->Next();
-  }
-  
-  registry->Close();
-  NS_IF_RELEASE( components );
-  nsServiceManager::ReleaseService( NS_REGISTRY_PROGID, registry );
-  
-  return NS_OK;
-}
-
-nsIMimeMiscStatus *
-nsMimeXULEmitter::GetStatusObjForProgID(nsString aProgID)
-{
-  nsresult            rv;
-  nsIComponentManager *comMgr;
-  nsIMimeMiscStatus   *returnObj = nsnull;
-  nsISupports         *obj = nsnull;
-
-  rv = NS_GetGlobalComponentManager(&comMgr);
-  if (NS_FAILED(rv)) 
-    return nsnull;
-  
-  nsCID         cid;
-  rv = comMgr->ProgIDToCLSID(aProgID.GetBuffer(), &cid);
-  if (NS_FAILED(rv))
-    return nsnull;
-
-  rv = comMgr->CreateInstance(cid, nsnull, nsCOMTypeInfo<nsIMimeMiscStatus>::GetIID(), (void**)&obj);  
-  if (NS_FAILED(rv))
-    return nsnull;
-
-  rv = obj->QueryInterface(nsCOMTypeInfo<nsIMimeMiscStatus>::GetIID(), (void**)&returnObj);
-  NS_RELEASE(obj);
-  if (NS_FAILED(rv)) 
-    return nsnull;
-  else
-    return returnObj;
 }

@@ -31,6 +31,9 @@
 #include "nsMessenger.h"
 #include "nsMsgGroupRecord.h"
 
+#include "nsIAppShellComponent.h"
+#include "nsIRegistry.h"
+
 
 /* Include all of the interfaces our factory can generate components for */
 
@@ -53,8 +56,11 @@
 #include "nsMsgNotificationManager.h"
 
 #include "nsCopyMessageStreamListener.h"
+#include "nsMsgCopyService.h"
 
-#ifdef DEBUG_bienvenu
+#include "nsMsgFolderCache.h"
+
+#ifdef DOING_FILTERS
 #include "nsMsgFilterService.h"
 #endif
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
@@ -94,8 +100,12 @@ static NS_DEFINE_CID(kMsgBiffManagerCID, NS_MSGBIFFMANAGER_CID);
 static NS_DEFINE_CID(kMsgNotificationManagerCID, NS_MSGNOTIFICATIONMANAGER_CID);
 
 // Copy
-static NS_DEFINE_CID(kCopyMessageStreamListenerCID, NS_COPYMESSAGESTREAMLISTENER_CID);
+static NS_DEFINE_CID(kCopyMessageStreamListenerCID,
+                     NS_COPYMESSAGESTREAMLISTENER_CID);
+static NS_DEFINE_CID(kMsgCopyServiceCID, NS_MSGCOPYSERVICE_CID);
 
+// Msg Folder Cache stuff
+static NS_DEFINE_CID(kMsgFolderCacheCID, NS_MSGFOLDERCACHE_CID);
 ////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////
@@ -154,9 +164,9 @@ nsMsgFactory::QueryInterface(const nsIID &aIID, void **aResult)
   *aResult = NULL;   
 
   // we support two interfaces....nsISupports and nsFactory.....
-  if (aIID.Equals(::nsISupports::GetIID()))    
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
     *aResult = (void *)NS_STATIC_CAST(nsISupports*,this);
-  else if (aIID.Equals(nsIFactory::GetIID()))   
+  else if (aIID.Equals(nsCOMTypeInfo<nsIFactory>::GetIID()))   
     *aResult = (void *)NS_STATIC_CAST(nsIFactory*,this);
 
   if (*aResult == NULL)
@@ -207,14 +217,7 @@ nsMsgFactory::CreateInstance(nsISupports * /* aOuter */,
 	}
 	else if (mClassID.Equals(kCMsgMailSessionCID))
 	{
-		nsMsgMailSession * session = new nsMsgMailSession();
-		if (session == nsnull)
-			rv = NS_ERROR_OUT_OF_MEMORY;
-    else {
-      rv = session->QueryInterface(aIID,  aResult);
-      if (NS_FAILED(rv))
-        delete session;
-    }
+		rv = NS_NewMsgMailSession(aIID, aResult);
 	}
 	else if (mClassID.Equals(kCMessengerCID)) 
 	{
@@ -244,36 +247,15 @@ nsMsgFactory::CreateInstance(nsISupports * /* aOuter */,
   }
 	else if (mClassID.Equals(kMailNewsFolderDataSourceCID)) 
 	{
-		nsMsgFolderDataSource * folderDataSource = new nsMsgFolderDataSource();
-		if (folderDataSource == nsnull)
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    else {
-      rv = folderDataSource->QueryInterface(aIID, aResult);
-      if (NS_FAILED(rv))
-        delete folderDataSource;
-    }
+		rv = NS_NewMsgFolderDataSource(aIID, aResult);
 	}
 	else if (mClassID.Equals(kMailNewsMessageDataSourceCID)) 
 	{
-		nsMsgMessageDataSource * messageDataSource = new nsMsgMessageDataSource();
-		if (messageDataSource == nsnull)
-      return NS_ERROR_OUT_OF_MEMORY;
-    else {
-      rv = messageDataSource->QueryInterface(aIID, aResult);
-      if (NS_FAILED(rv))
-        delete messageDataSource;
-    }
+		rv = NS_NewMsgMessageDataSource(aIID, aResult);
 	}
  	else if (mClassID.Equals(kCMessageViewDataSourceCID))
 	{
-		nsMessageViewDataSource * msgView = new nsMessageViewDataSource();
-		if (msgView == nsnull)
-			rv = NS_ERROR_OUT_OF_MEMORY;
-    else {
-      rv =  msgView->QueryInterface(aIID, aResult);
-      if (NS_FAILED(rv))
-        delete msgView;
-    }
+		rv = NS_NewMessageViewDataSource(aIID, aResult);
 	}
 
   // account manager RDF datasources
@@ -289,7 +271,7 @@ nsMsgFactory::CreateInstance(nsISupports * /* aOuter */,
   else if (mClassID.Equals(kMsgServerDataSourceCID)) {
     rv = NS_NewMsgServerDataSource(aIID, aResult);
   }
-#ifdef DEBUG_bienvenu
+#ifdef DOING_FILTERS
   else if (mClassID.Equals(kMsgFilterServiceCID)) {
     rv = NS_NewMsgFilterService(aIID, aResult);
   }
@@ -302,6 +284,21 @@ nsMsgFactory::CreateInstance(nsISupports * /* aOuter */,
   }
   else if (mClassID.Equals(kCopyMessageStreamListenerCID)){
     rv = NS_NewCopyMessageStreamListener(aIID, aResult);
+  }
+  else if (mClassID.Equals(kMsgCopyServiceCID)) {
+      rv = NS_NewMsgCopyService(aIID, aResult);
+  }
+  else if (mClassID.Equals(kMsgFolderCacheCID)) {
+	  nsMsgFolderCache * folderCache = nsnull;
+	  folderCache = new nsMsgFolderCache ();
+	  if (folderCache == nsnull)
+		rv = NS_ERROR_OUT_OF_MEMORY;
+		else 
+		{
+		  rv = folderCache->QueryInterface(aIID, aResult);
+		  if (NS_FAILED(rv))
+			delete folderCache;
+		}
   }
 
   return rv;
@@ -332,7 +329,7 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* /*aServMgr */,
 
   *aFactory = new nsMsgFactory(aClass, aClassName, aProgID);
   if (aFactory)
-    return (*aFactory)->QueryInterface(nsIFactory::GetIID(),
+    return (*aFactory)->QueryInterface(nsCOMTypeInfo<nsIFactory>::GetIID(),
                                        (void**)aFactory);
   else
     return NS_ERROR_OUT_OF_MEMORY;
@@ -362,48 +359,72 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
   if (NS_FAILED(rv)) finalResult = rv;
   rv = compMgr->RegisterComponent(kCUrlListenerManagerCID,
                                        "UrlListenerManager",
-                                       "component://netscape/messenger/urlListenerManager",
+                                       NS_URLLISTENERMANAGER_PROGID,
                                        path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
   rv = compMgr->RegisterComponent(kCMessengerBootstrapCID,
                                   "Netscape Messenger Bootstrapper",
-                                  "component://netscape/appshell/component/messenger",
+                                  NS_MESSENGERBOOTSTRAP_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
-  if (NS_FAILED(rv)) finalResult = rv;
+  if ( NS_SUCCEEDED( rv ) ) {
+  /* Add to appshell component list. */
+	NS_WITH_SERVICE(nsIRegistry, registry, NS_REGISTRY_PROGID, &rv); 
+
+    if ( NS_SUCCEEDED( rv ) ) { 
+      registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+      char buffer[256]; 
+      char *cid = kCMessengerBootstrapCID.ToString();
+      PR_snprintf( buffer, 
+                   sizeof buffer, 
+                   "%s/%s", 
+                   NS_IAPPSHELLCOMPONENT_KEY, 
+                   cid ? cid : "unknown" ); 
+                    delete [] cid; 
+                    nsIRegistry::Key key; 
+                    rv = registry->AddSubtree( nsIRegistry::Common, 
+                                               buffer, 
+                                               &key ); 
+	}
+  }
+  else finalResult = rv;
 
   rv = compMgr->RegisterComponent(kCMessengerCID,
                                   "Messenger DOM interaction object",
-                                  "component://netscape/messenger",
+                                  NS_MESSENGER_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
+
 
   rv = compMgr->RegisterComponent(kMsgAccountManagerCID,
                                   "Messenger Account Manager",
-                                  "component://netscape/messenger/account-manager",
+                                  NS_MSGACCOUNTMANAGER_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
+
+	
+
   rv = compMgr->RegisterComponent(kMsgAccountCID,
                                   "Messenger User Account",
-                                  "component://netscape/messenger/account",
+                                  NS_MSGACCOUNT_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
   rv = compMgr->RegisterComponent(kMsgIdentityCID,
                                   "Messenger User Identity",
-                                  "component://netscape/messenger/identity",
+                                  NS_MSGIDENTITY_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
   
   rv = compMgr->RegisterComponent(kCMsgMailSessionCID,
                                   "Mail Session",
-                                  "component://netscape/messenger/services/session",
+                                  NS_MSGMAILSESSION_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
@@ -411,20 +432,20 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
   // register our RDF datasources:
   rv = compMgr->RegisterComponent(kMailNewsFolderDataSourceCID, 
                                   "Mail/News Folder Data Source",
-                                  NS_RDF_DATASOURCE_PROGID_PREFIX "mailnewsfolders",
+                                  NS_MAILNEWSFOLDERDATASOURCE_PROGID,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
   // register our RDF datasources:
   rv = compMgr->RegisterComponent(kMailNewsMessageDataSourceCID, 
                                   "Mail/News Message Data Source",
-                                  NS_RDF_DATASOURCE_PROGID_PREFIX "mailnewsmessages",
+                                  NS_MAILNEWSMESSAGEDATASOURCE_PROGID,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
   rv = compMgr->RegisterComponent(kCMessageViewDataSourceCID, 
                                   "Mail/News Message View Data Source",
-                                  NS_RDF_DATASOURCE_PROGID_PREFIX "mail-messageview",
+                                  NS_MESSAGEVIEWDATASOURCE_PROGID,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
@@ -450,37 +471,45 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
-#ifdef DEBUG_bienvenu  
+#ifdef DOING_FILTERS  
   printf("register filter service\n");
   rv = compMgr->RegisterComponent(kMsgFilterServiceCID,
                                   "Message Filter Service",
-                                  "component://netscape/messenger/services/filters",
+                                  NS_MSGFILTERSERVICE_PROGID,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 #endif   
   
   rv = compMgr->RegisterComponent(kMsgBiffManagerCID,
                                   "Messenger Biff Manager",
-                                  "component://netscape/messenger/biffManager",
+                                  NS_MSGBIFFMANAGER_PROGID,
                                   path,
                                   PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
 	rv = compMgr->RegisterComponent(kMsgNotificationManagerCID,
                                   "Mail/News Notification Manager",
-                                  NS_RDF_DATASOURCE_PROGID_PREFIX "msgnotifications",
+                                  NS_MSGNOTIFICATIONMANAGER_PROGID,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
 	rv = compMgr->RegisterComponent(kCopyMessageStreamListenerCID,
                                   "Mail/News CopyMessage Stream Listener",
-                                  "component://netscape/messenger/copymessagestreamlistener",
+                                  NS_COPYMESSAGESTREAMLISTENER_PROGID,
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
-#ifdef NS_DEBUG
-  printf("mailnews registering from %s\n",path);
-#endif
+	rv = compMgr->RegisterComponent(kMsgCopyServiceCID,
+                                  "Mail/News Message Copy Service",
+                                  NS_MSGCOPYSERVICE_PROGID,
+                                  path, PR_TRUE, PR_TRUE);
+  if (NS_FAILED(rv)) finalResult = rv;
+
+	rv = compMgr->RegisterComponent(kMsgFolderCacheCID,
+                                  "Mail/News Folder Cache",
+                                  NS_MSGFOLDERCACHE_PROGID,
+                                  path, PR_TRUE, PR_TRUE);
+  if (NS_FAILED(rv)) finalResult = rv;
 
   return finalResult;
 }
@@ -521,7 +550,7 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
   if (NS_FAILED(rv)) finalResult = rv;
   rv = compMgr->UnregisterComponent(kMsgServerDataSourceCID, path);
   if (NS_FAILED(rv)) finalResult = rv;
-#ifdef DEBUG_bienvenu
+#ifdef DOING_FILTERS
   rv = compMgr->UnregisterComponent(kMsgFilterServiceCID, path);
   if (NS_FAILED(rv)) finalResult = rv;
 #endif
@@ -534,6 +563,13 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
 
   rv = compMgr->UnregisterComponent(kCopyMessageStreamListenerCID, path);
   if (NS_FAILED(rv)) finalResult = rv;
+
+  rv = compMgr->UnregisterComponent(kMsgCopyServiceCID, path);
+  if (NS_FAILED(rv)) finalResult = rv;
+
+  rv = compMgr->UnregisterComponent(kMsgFolderCacheCID, path);
+  if (NS_FAILED(rv)) finalResult = rv;
+
   return finalResult;
 }
 

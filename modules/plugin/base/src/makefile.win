@@ -16,6 +16,7 @@
 # Reserved.
 
 DEPTH=..\..\..
+include <$(DEPTH)/config/config.mak>
 IGNORE_MANIFEST=1
 
 EXPORTS =	\
@@ -26,7 +27,6 @@ EXPORTS =	\
 MAKE_OBJ_TYPE	= DLL
 DLLNAME = raptorplugin
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
-MISCDEP = $(OURLIBS)
 
 MODULE=raptor 
 
@@ -47,7 +47,11 @@ LINCS = \
         -I$(PUBLIC)\xpcom \
         -I$(PUBLIC)\plugin \
         -I$(PUBLIC)\java \
+!ifdef NECKO
+        -I$(PUBLIC)\necko \
+!else
         -I$(PUBLIC)\netlib \
+!endif
         -I$(PUBLIC)\oji \
 	-I$(PUBLIC)\cache \
 	-I$(PUBLIC)\pref	\
@@ -66,17 +70,19 @@ CACHELIBNAME=cache.lib
 CACHELIBNAME=netcache.lib
 !endif
 
-OURLIBS = \
+LLIBS = \
  $(DIST)\lib\xpcom.lib \
- $(DIST)\lib\plc3.lib \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib	\
+!else
  $(DIST)\lib\netlib.lib	\
  $(DIST)\lib\$(CACHELIBNAME) \
+!endif
  $(DIST)\lib\xppref32.lib \
  $(DIST)\lib\dbm32.lib \
  $(LIBNSPR)  
 
-LLIBS = \
-  $(OURLIBS) \
+WIN_LIBS = \
   version.lib
 
 include <$(DEPTH)\config\rules.mak>

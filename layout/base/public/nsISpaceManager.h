@@ -43,17 +43,17 @@ struct nsSize;
 struct nsBandTrapezoid {
   enum State {Available, Occupied, OccupiedMultiple};
 
-  nscoord   yTop, yBottom;            // top and bottom y-coordinates
-  nscoord   xTopLeft, xBottomLeft;    // left edge x-coordinates
-  nscoord   xTopRight, xBottomRight;  // right edge x-coordinates
-  State     state;                    // state of the space
+  nscoord   mTopY, mBottomY;            // top and bottom y-coordinates
+  nscoord   mTopLeftX, mBottomLeftX;    // left edge x-coordinates
+  nscoord   mTopRightX, mBottomRightX;  // right edge x-coordinates
+  State     mState;                     // state of the space
   union {
-    nsIFrame*          frame;  // single frame occupying the space
-    const nsVoidArray* frames; // list of frames occupying the space
+    nsIFrame*          mFrame;  // single frame occupying the space
+    const nsVoidArray* mFrames; // list of frames occupying the space
   };
 
   // Get the height of the trapezoid
-  nscoord GetHeight() const {return yBottom - yTop;}
+  nscoord GetHeight() const {return mBottomY - mTopY;}
 
   // Get the bouding rect of the trapezoid
   void    GetRect(nsRect& aRect) const;
@@ -67,9 +67,9 @@ struct nsBandTrapezoid {
  * @see #GetBandData()
  */
 struct nsBandData {
-  PRInt32          count;      // [out] actual number of trapezoids in the band data
-  PRInt32          size;       // [in] the size of the array (number of trapezoids)
-  nsBandTrapezoid* trapezoids; // [out] array of length 'size'
+  PRInt32          mCount;      // [out] actual number of trapezoids in the band data
+  PRInt32          mSize;       // [in] the size of the array (number of trapezoids)
+  nsBandTrapezoid* mTrapezoids; // [out] array of length 'size'
 };
 
 /**
@@ -80,6 +80,8 @@ struct nsBandData {
  */
 class nsISpaceManager : public nsISupports {
 public:
+  static const nsIID& GetIID() { static nsIID iid = NS_ISPACEMANAGER_IID; return iid; }
+
   /**
    * Get the frame that's associated with the space manager. This frame created
    * the space manager, and the world coordinate space is relative to this frame.
@@ -101,7 +103,10 @@ public:
   NS_IMETHOD GetTranslation(nscoord& aX, nscoord& aY) const = 0;
 
   /**
-   * Returns the y-most of the bottommost band, or 0 if there are no bands.
+   * Returns the y-most of the bottommost band or 0 if there are no bands.
+   *
+   * @return  NS_OK if there are bands and NS_COMFALSE if there are
+   *          no bands
    */
   NS_IMETHOD YMost(nscoord& aYMost) const = 0;
 
@@ -133,16 +138,12 @@ public:
    * Add a rectangular region of unavailable space. The space is relative to
    * the local coordinate system.
    *
-   * The region is tagged with a frame. When translated to world coordinates
-   * the origin of the rect MUST be within the defined coordinate space, i.e.
-   * the x-offset and y-offset must be >= 0
+   * The region is tagged with a frame
    *
    * @param   aFrame the frame used to identify the region. Must not be NULL
    * @param   aUnavailableSpace the bounding rect of the unavailable space
    * @return  NS_OK if successful
    *          NS_ERROR_FAILURE if there is already a region tagged with aFrame
-   *          NS_ERROR_INVALID_ARG if the rect translated to world coordinates
-   *            is not within the defined coordinate space
    */
   NS_IMETHOD AddRectRegion(nsIFrame*     aFrame,
                            const nsRect& aUnavailableSpace) = 0;
@@ -153,8 +154,7 @@ public:
    * rect. You specify whether the width change applies to the left or right edge
    *
    * Returns NS_OK if successful, NS_ERROR_INVALID_ARG if there is no region
-   * tagged with aFrame, and NS_ERROR_FAILURE if the new offset when translated
-   * to world coordinates is outside the defined coordinate space
+   * tagged with aFrame
    */
   enum AffectedEdge {LeftEdge, RightEdge};
   NS_IMETHOD ResizeRectRegion(nsIFrame*    aFrame,
@@ -166,8 +166,7 @@ public:
    * Offset the region associated with aFrame by the specified amount.
    *
    * Returns NS_OK if successful, NS_ERROR_INVALID_ARG if there is no region
-   * tagged with aFrame, and NS_ERROR_FAILURE if the new offset when translated
-   * to world coordinates is outside the defined coordinate space
+   * tagged with aFrame
    */
   NS_IMETHOD OffsetRegion(nsIFrame* aFrame, nscoord dx, nscoord dy) = 0;
 
@@ -187,18 +186,18 @@ public:
 
 inline void nsBandTrapezoid::GetRect(nsRect& aRect) const
 {
-  aRect.x = PR_MIN(xTopLeft, xBottomLeft);
-  aRect.y = yTop;
-  aRect.width = PR_MAX(xTopRight, xBottomRight) - aRect.x;
-  aRect.height = yBottom - yTop;
+  aRect.x = PR_MIN(mTopLeftX, mBottomLeftX);
+  aRect.y = mTopY;
+  aRect.width = PR_MAX(mTopRightX, mBottomRightX) - aRect.x;
+  aRect.height = mBottomY - mTopY;
 }
 
 inline void nsBandTrapezoid::operator=(const nsRect& aRect)
 {
-  xTopLeft = xBottomLeft = aRect.x;
-  xTopRight = xBottomRight = aRect.XMost();
-  yTop = aRect.y;
-  yBottom = aRect.YMost();
+  mTopLeftX = mBottomLeftX = aRect.x;
+  mTopRightX = mBottomRightX = aRect.XMost();
+  mTopY = aRect.y;
+  mBottomY = aRect.YMost();
 }
 
 #endif /* nsISpaceManager_h___ */

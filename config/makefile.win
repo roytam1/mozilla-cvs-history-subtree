@@ -26,10 +26,25 @@
 #//------------------------------------------------------------------------
 #//
 #// Specify the depth of the current directory relative to the
-#// root of NS
+#// root of MOZILLA
 #//
 #//------------------------------------------------------------------------
 DEPTH = ..
+
+#// Specify any "command" targets. (ie. DIRS, INSTALL_FILES, ...)
+#// (these must come before the common makefiles are included)
+#// 
+#// DIRS          - There is a subdirectory to process
+#// INSTALL_FILES - Files to be installed in the distribution area
+#//
+#//------------------------------------------------------------------------
+
+!ifdef MOZ_FULLCIRCLE
+INSTALL_FILE_LIST=$(MOZ_TOOLS)\bin\fullsoft.dll $(MOZ_TOOLS)\bin\talkback.cnt $(MOZ_TOOLS)\bin\talkback.exe $(MOZ_TOOLS)\bin\talkback.hlp
+INSTALL_DIR=$(DIST)\bin
+!endif
+
+GARBAGE = *.obj *.sbr *.pdb
 
 #//------------------------------------------------------------------------
 #//
@@ -38,40 +53,55 @@ DEPTH = ..
 #//------------------------------------------------------------------------
 include <$(DEPTH)/config/rules.mak>
 
-#// Rule to set the timebomb on official mozilla builds
-!ifdef MOZILLA_OFFICIAL
-export:: build_number
-    $(PERL) set-timebomb.pl 0 30
-!endif
-
-#//
-#// Rule to build makedir.exe
-#//
-makecopy.exe:: makecopy.c
-    $(CC) -O2 -MD makecopy.c
-
-mangle.exe:: mangle.c
-    $(CC) -O2 -MD mangle.c
-
-mantomak.exe:: mantomak.c
-    $(CC) -O2 -MD mantomak.c
-
-bin2rc.exe:: bin2rc.c
-    $(CC) -O2 -MD bin2rc.c
-
-makedep.exe:: makedep.cpp
-    @cl -MT makedep.cpp 
-    
-export:: makecopy.exe mangle.exe mantomak.exe bin2rc.exe makedep.exe build_number
-
 # update build number from within make script
-build_number:: FORCE
+build_number::
+!ifdef MOZILLA_OFFICIAL
     $(RM) $@
     $(PERL) bdate.pl > $@
     echo Setting build number...
-    $(PERL) aboutime.pl $(DEPTH)/xpfe/browser/src/navigator.xul $@
+    $(PERL) aboutime.pl $(DEPTH)/xpfe/browser/resources/content/navigator.xul $@
+    $(PERL) aboutime.pl $(DEPTH)/xpfe/browser/resources/content/viewSource.xul $@
+!endif
 
 
-install:: export
+#// Rule to set the timebomb on official mozilla builds
+
+
+#//
+#// Rules to build make utils
+#//
+
+#CFLAGS = /FR /Zi -MDd /W4
+CFLAGS = /O2 /GB /MD
+
+makecopy.exe:: makecopy.cpp
+    $(CC) $(CFLAGS) $**
+
+mangle.exe:: mangle.c
+    $(CC) $(CFLAGS) $**
+
+mantomak.exe:: mantomak.c
+    $(CC) $(CFLAGS) $**
+
+bin2rc.exe:: bin2rc.c
+    $(CC) $(CFLAGS) $**
+
+makedep.exe:: makedep.cpp
+    $(CC) -MT /O2 /GB $**
+
+export:: makecopy.exe mangle.exe mantomak.exe bin2rc.exe makedep.exe build_number
+
+!ifdef MOZ_FULLCIRCLE
+
+master.pl: build_number
+        $(PERL) build-number.pl
+
+master.ini: master.pl
+	$(RM) $@
+	$(PERL) master.pl
+
+install:: master.ini
+	$(MAKE_INSTALL) master.ini $(DIST)\bin\
+!endif
 
 FORCE::

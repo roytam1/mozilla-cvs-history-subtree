@@ -30,13 +30,19 @@ CPPSRCS		= \
 		$(NULL)
 
 BASE_LIBS	= \
+		-lpref \
+		$(ZLIB_LIBS) \
 		-lmozreg \
 		-lmozjs \
 		-lxpcom \
+		-lsecfree \
 		-lmozutil \
 		$(NULL)
 
 GECKO_LIBS	= \
+		-lraptorhtmlpars \
+		-lexpat \
+		-lxmltok \
 		-ljsdom \
 		-lraptorplugin \
 		$(NULL)

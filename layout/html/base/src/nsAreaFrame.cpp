@@ -30,6 +30,8 @@
 #include "nsHTMLParts.h"
 #include "nsLayoutAtoms.h"
 
+#undef NOISY_MAX_ELEMENT_SIZE
+
 static NS_DEFINE_IID(kAreaFrameIID, NS_IAREAFRAME_IID);
 
 nsresult
@@ -92,6 +94,9 @@ nsAreaFrame::Init(nsIPresContext&  aPresContext,
   // Create a space manager if requested
   if (0 == (mFlags & NS_AREA_NO_SPACE_MGR)) {
     mSpaceManager = new nsSpaceManager(this);
+    if (!mSpaceManager) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
     NS_ADDREF(mSpaceManager);
   }
 
@@ -99,10 +104,10 @@ nsAreaFrame::Init(nsIPresContext&  aPresContext,
 }
 
 NS_IMETHODIMP
-nsAreaFrame::DeleteFrame(nsIPresContext& aPresContext)
+nsAreaFrame::Destroy(nsIPresContext& aPresContext)
 {
-  mAbsoluteContainer.DeleteFrames(aPresContext);
-  return nsBlockFrame::DeleteFrame(aPresContext);
+  mAbsoluteContainer.DestroyFrames(this, aPresContext);
+  return nsBlockFrame::Destroy(aPresContext);
 }
 
 NS_IMETHODIMP
@@ -113,9 +118,65 @@ nsAreaFrame::SetInitialChildList(nsIPresContext& aPresContext,
   nsresult  rv;
 
   if (nsLayoutAtoms::absoluteList == aListName) {
-    rv = mAbsoluteContainer.SetInitialChildList(aPresContext, aListName, aChildList);
+    rv = mAbsoluteContainer.SetInitialChildList(this, aPresContext, aListName, aChildList);
   } else {
     rv = nsBlockFrame::SetInitialChildList(aPresContext, aListName, aChildList);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsAreaFrame::AppendFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aFrameList)
+{
+  nsresult  rv;
+
+  if (nsLayoutAtoms::absoluteList == aListName) {
+    rv = mAbsoluteContainer.AppendFrames(this, aPresContext, aPresShell, aListName,
+                                         aFrameList);
+  } else {
+    rv = nsBlockFrame::AppendFrames(aPresContext, aPresShell, aListName,
+                                    aFrameList);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsAreaFrame::InsertFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aPrevFrame,
+                          nsIFrame*       aFrameList)
+{
+  nsresult  rv;
+
+  if (nsLayoutAtoms::absoluteList == aListName) {
+    rv = mAbsoluteContainer.InsertFrames(this, aPresContext, aPresShell, aListName,
+                                         aPrevFrame, aFrameList);
+  } else {
+    rv = nsBlockFrame::InsertFrames(aPresContext, aPresShell, aListName,
+                                    aPrevFrame, aFrameList);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsAreaFrame::RemoveFrame(nsIPresContext& aPresContext,
+                         nsIPresShell&   aPresShell,
+                         nsIAtom*        aListName,
+                         nsIFrame*       aOldFrame)
+{
+  nsresult  rv;
+
+  if (nsLayoutAtoms::absoluteList == aListName) {
+    rv = mAbsoluteContainer.RemoveFrame(this, aPresContext, aPresShell, aListName, aOldFrame);
+  } else {
+    rv = nsBlockFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
   }
 
   return rv;
@@ -143,7 +204,7 @@ nsAreaFrame::FirstChild(nsIAtom* aListName, nsIFrame** aFirstChild) const
 {
   NS_PRECONDITION(nsnull != aFirstChild, "null OUT parameter pointer");
   if (aListName == nsLayoutAtoms::absoluteList) {
-    return mAbsoluteContainer.FirstChild(aListName, aFirstChild);
+    return mAbsoluteContainer.FirstChild(this, aListName, aFirstChild);
   }
 
   return nsBlockFrame::FirstChild(aListName, aFirstChild);
@@ -185,10 +246,10 @@ nsAreaFrame::Paint(nsIPresContext&      aPresContext,
         PRInt32 i;
         for (i = 0; i < band.GetTrapezoidCount(); i++) {
           const nsBandTrapezoid* trapezoid = band.GetTrapezoid(i);
-          if (nsBandTrapezoid::Available != trapezoid->state) {
+          if (nsBandTrapezoid::Available != trapezoid->mState) {
             nsRect r;
             trapezoid->GetRect(r);
-            if (nsBandTrapezoid::OccupiedMultiple == trapezoid->state) {
+            if (nsBandTrapezoid::OccupiedMultiple == trapezoid->mState) {
               aRenderingContext.SetColor(NS_RGB(0,255,128));
             }
             else {
@@ -212,7 +273,25 @@ nsAreaFrame::Paint(nsIPresContext&      aPresContext,
 NS_IMETHODIMP
 nsAreaFrame::GetPositionedInfo(nscoord& aXMost, nscoord& aYMost) const
 {
-  return mAbsoluteContainer.GetPositionedInfo(aXMost, aYMost);
+  nsresult  rv = mAbsoluteContainer.GetPositionedInfo(this, aXMost, aYMost);
+
+  // If we have child frames that stick outside of our box, and they should
+  // be visible, then include them too so the total size is correct
+  if (mState & NS_FRAME_OUTSIDE_CHILDREN) {
+    const nsStyleDisplay* display = (const nsStyleDisplay*)
+      mStyleContext->GetStyleData(eStyleStruct_Display);
+
+    if (NS_STYLE_OVERFLOW_VISIBLE == display->mOverflow) {
+      if (mCombinedArea.XMost() > aXMost) {
+        aXMost = mCombinedArea.XMost();
+      }
+      if (mCombinedArea.YMost() > aYMost) {
+        aYMost = mCombinedArea.YMost();
+      }
+    }
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -234,7 +313,7 @@ nsAreaFrame::Reflow(nsIPresContext&          aPresContext,
     // Give the absolute positioning code a chance to handle it
     PRBool  handled;
     
-    mAbsoluteContainer.IncrementalReflow(aPresContext, aReflowState, handled);
+    mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState, handled);
 
     // If the incremental reflow command was handled by the absolute positioning
     // code, then we're all done
@@ -251,11 +330,11 @@ nsAreaFrame::Reflow(nsIPresContext&          aPresContext,
     }
   }
 
-  // If we have one then set the space manager
+  // If we have a space manager, then set it in the reflow state
   if (nsnull != mSpaceManager) {
-    // Modify the reflow state and set the space manager
+    // Modify the existing reflow state
     nsHTMLReflowState&  reflowState = (nsHTMLReflowState&)aReflowState;
-    reflowState.spaceManager = mSpaceManager;
+    reflowState.mSpaceManager = mSpaceManager;
 
     // Clear the spacemanager's regions.
     mSpaceManager->ClearRegions();
@@ -265,76 +344,40 @@ nsAreaFrame::Reflow(nsIPresContext&          aPresContext,
   rv = nsBlockFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
 
   // Let the absolutely positioned container reflow any absolutely positioned
-  // child frames that need to be reflowed
+  // child frames that need to be reflowed, e.g., elements with a percentage
+  // based width/height
   if (NS_SUCCEEDED(rv)) {
-    rv = mAbsoluteContainer.Reflow(aPresContext, aReflowState);
+    rv = mAbsoluteContainer.Reflow(this, aPresContext, aReflowState);
   }
 
-  // Compute our desired size taking into account floaters that stick outside
-  // our box. Note that if this frame has a height specified by CSS then we
-  // don't do this
-  if ((mFlags & NS_AREA_WRAP_HEIGHT) &&
-      (NS_UNCONSTRAINEDSIZE == aReflowState.computedHeight) &&
-      (NS_FRAME_OUTSIDE_CHILDREN & mState)) {
-    nscoord contentYMost = aDesiredSize.height;
-    nscoord yMost = aDesiredSize.mCombinedArea.YMost();
-    if (yMost > contentYMost) {
-      // retain the border+padding for this element after the bottom
-      // most object.
-      aDesiredSize.height = yMost;
-    }
-  }
-
-  // XXX This code is really temporary; the lower level frame
-  // classes need to contribute to the area that needs damage
-  // repair. This class should only worry about damage repairing
-  // it's border+padding area.
-  nsRect  damageArea(0, 0, 0, 0);
-
-  // Decide how much to repaint based on the reflow type.
-  // Note: we don't have to handle the initial reflow case and the
-  // resize reflow case, because they're handled by the scroll frame
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    nsIReflowCommand::ReflowType  reflowType;
-    aReflowState.reflowCommand->GetType(reflowType);
-
-    // For append reflow commands that target the flowed frames just
-    // repaint the newly added part of the frame.
-    if (nsIReflowCommand::FrameAppended == reflowType) {
-      //this blows. we're repainting everything, but we have no choice
-      //since we don't know how we got here. see the XXX above for a
-      //real fix.
-#if 1
-      damageArea.y = 0;
-      damageArea.height = aDesiredSize.height;
-      damageArea.width = aDesiredSize.width;
-#else
-      // It's an append reflow command
-      damageArea.y = mRect.YMost();
-      damageArea.width = aDesiredSize.width;
-      damageArea.height = aDesiredSize.height - mRect.height;
-      if ((damageArea.height < 0) ||
-          (aDesiredSize.height == mRect.height)) {
-        // Since we don't know what changed, assume it all changed.
-        damageArea.y = 0;
-        damageArea.height = aDesiredSize.height;
+  if (mFlags & NS_AREA_WRAP_SIZE) {
+    // When the area frame is supposed to wrap around all in-flow
+    // children, make sure its big enough to include those that stick
+    // outside the box.
+    if (NS_FRAME_OUTSIDE_CHILDREN & mState) {
+      nscoord xMost = aDesiredSize.mCombinedArea.XMost();
+      if (xMost > aDesiredSize.width) {
+        aDesiredSize.width = xMost;
       }
-#endif
-    } else {
-      // Ideally the frame that is the target of the reflow command
-      // (or its parent frame) would generate a damage rect, but
-      // since none of the frame classes know how to do this then
-      // for the time being just repaint the entire frame
-      damageArea.width = aDesiredSize.width;
-      // If the new height is smaller than the old height then make
-      // sure we erase whatever used to be displayed
-      damageArea.height = PR_MAX(aDesiredSize.height, mRect.height);
+      nscoord yMost = aDesiredSize.mCombinedArea.YMost();
+      if (yMost > aDesiredSize.height) {
+        aDesiredSize.height = yMost;
+      }
     }
   }
 
-  // If this is really the body, force a repaint of the damage area
-  if ((NS_BLOCK_DOCUMENT_ROOT & mFlags) && !damageArea.IsEmpty()) {
-    Invalidate(damageArea);
+#ifdef NOISY_MAX_ELEMENT_SIZE
+  ListTag(stdout);
+  printf(": maxElementSize=%d,%d desiredSize=%d,%d\n",
+         aDesiredSize.maxElementSize ? aDesiredSize.maxElementSize->width : 0,
+         aDesiredSize.maxElementSize ? aDesiredSize.maxElementSize->height : 0,
+         aDesiredSize.width, aDesiredSize.height);
+#endif
+
+  // If we have children that stick outside our box, then remember the
+  // combined area, because we'll need it later when sizing our view
+  if (mState & NS_FRAME_OUTSIDE_CHILDREN) {
+    mCombinedArea = aDesiredSize.mCombinedArea;
   }
 
   return rv;
@@ -347,6 +390,57 @@ nsAreaFrame::GetFrameType(nsIAtom** aType) const
   *aType = nsLayoutAtoms::areaFrame; 
   NS_ADDREF(*aType);
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAreaFrame::DidReflow(nsIPresContext& aPresContext,
+                       nsDidReflowStatus aStatus)
+{
+  if (NS_FRAME_REFLOW_FINISHED == aStatus) {
+    // If we should position our view, and we have child frames that stick
+    // outside our box, then we need to size our view large enough to include
+    // those child frames
+    if ((mState & NS_FRAME_SYNC_FRAME_AND_VIEW) &&
+        (mState & NS_FRAME_OUTSIDE_CHILDREN)) {
+      
+      nsIView*              view;
+      const nsStyleDisplay* display = (const nsStyleDisplay*)
+        mStyleContext->GetStyleData(eStyleStruct_Display);
+
+      GetView(&view);
+      if (view && (NS_STYLE_OVERFLOW_VISIBLE == display->mOverflow)) {
+        // Don't let our base class position the view since we're doing it
+        mState &= ~NS_FRAME_SYNC_FRAME_AND_VIEW;
+  
+        // Set the view's bit that indicates that it has transparent content
+        nsIViewManager* vm;
+        
+        view->GetViewManager(vm);
+        vm->SetViewContentTransparency(view, PR_TRUE);
+      
+        // Position and size view relative to its parent, not relative to our
+        // parent frame (our parent frame may not have a view).
+        nsIView*  parentWithView;
+        nsPoint   origin;
+
+        // XXX We need to handle the case where child frames stick out on the
+        // left and top edges as well...
+        GetOffsetFromView(origin, &parentWithView);
+        vm->ResizeView(view, mCombinedArea.XMost(), mCombinedArea.YMost());
+        vm->MoveViewTo(view, origin.x, origin.y);
+        NS_RELEASE(vm);
+  
+        // Call our base class
+        nsresult  rv = nsBlockFrame::DidReflow(aPresContext, aStatus);
+  
+        // Set the flag again...
+        mState |= NS_FRAME_SYNC_FRAME_AND_VIEW;
+        return rv;
+      }
+    }
+  }
+
+  return nsBlockFrame::DidReflow(aPresContext, aStatus);
 }
 
 /////////////////////////////////////////////////////////////////////////////

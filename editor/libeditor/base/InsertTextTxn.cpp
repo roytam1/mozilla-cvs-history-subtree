@@ -23,7 +23,6 @@
 #include "nsIPresShell.h"
 #include "EditAggregateTxn.h"
 
-static NS_DEFINE_IID(kInsertTextTxnIID, INSERT_TEXT_TXN_IID);
 static NS_DEFINE_IID(kIDOMSelectionIID, NS_IDOMSELECTION_IID);
 
 #ifdef NS_DEBUG
@@ -55,6 +54,14 @@ NS_IMETHODIMP InsertTextTxn::Init(nsIDOMCharacterData *aElement,
                                   const nsString      &aStringToInsert,
                                   nsIPresShell        *aPresShell)
 {
+#if 0 //def DEBUG_cmanske
+      nsString text;
+      aElement->GetData(text);
+      printf("InsertTextTxn: Offset to insert at = %d. Text of the node to insert into:\n", aOffset);
+      wprintf(text.GetUnicode());
+      printf("\n");
+#endif
+
   mElement = do_QueryInterface(aElement);
   mOffset = aOffset;
   mStringToInsert = aStringToInsert;
@@ -67,7 +74,7 @@ NS_IMETHODIMP InsertTextTxn::Do(void)
   if (gNoisy) { printf("Do Insert Text element = %p\n", mElement.get()); }
   // advance caret: This requires the presentation shell to get the selection.
   nsCOMPtr<nsIDOMSelection> selection;
-  nsresult result = mPresShell->GetSelection(getter_AddRefs(selection));
+  nsresult result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
   NS_ASSERTION(selection,"Could not get selection in InsertTextTxn::Do\n");
   if (NS_SUCCEEDED(result) && selection) {
     result = mElement->InsertData(mOffset, mStringToInsert);
@@ -88,7 +95,7 @@ NS_IMETHODIMP InsertTextTxn::Undo(void)
   if (NS_SUCCEEDED(result))
   { // set the selection to the insertion point where the string was removed
     nsCOMPtr<nsIDOMSelection> selection;
-    result = mPresShell->GetSelection(getter_AddRefs(selection));
+    result = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
     if (NS_SUCCEEDED(result) && selection) {
       result = selection->Collapse(mElement, mOffset);
       NS_ASSERTION((NS_SUCCEEDED(result)), "selection could not be collapsed after undo of insert.");
@@ -107,21 +114,24 @@ NS_IMETHODIMP InsertTextTxn::Merge(PRBool *aDidMerge, nsITransaction *aTransacti
   {
     // if aTransaction isa InsertTextTxn, and if the selection hasn't changed, 
     // then absorb it
-    nsCOMPtr<InsertTextTxn> otherTxn( do_QueryInterface(aTransaction) );
-    if (otherTxn)
+    InsertTextTxn *otherInsTxn = nsnull;
+    aTransaction->QueryInterface(InsertTextTxn::GetCID(), (void **)&otherInsTxn);
+    if (otherInsTxn)
     {
-      if (PR_TRUE==IsSequentialInsert(otherTxn))
+      if (PR_TRUE==IsSequentialInsert(otherInsTxn))
       {
         nsAutoString otherData;
-        otherTxn->GetData(otherData);
+        otherInsTxn->GetData(otherData);
         mStringToInsert += otherData;
         *aDidMerge = PR_TRUE;
         if (gNoisy) { printf("InsertTextTxn assimilated %p\n", aTransaction); }
       }
+      NS_RELEASE(otherInsTxn);
     }
     else
     { // the next InsertTextTxn might be inside an aggregate that we have special knowledge of
-      nsCOMPtr<EditAggregateTxn> otherTxn( do_QueryInterface(aTransaction) );
+      EditAggregateTxn *otherTxn = nsnull;
+      aTransaction->QueryInterface(EditAggregateTxn::GetCID(), (void **)&otherTxn);
       if (otherTxn)
       {
         nsCOMPtr<nsIAtom> txnName;
@@ -149,6 +159,7 @@ NS_IMETHODIMP InsertTextTxn::Merge(PRBool *aDidMerge, nsITransaction *aTransacti
             }
           }
         }
+        NS_RELEASE(otherTxn);
       }
     }
   }
@@ -188,7 +199,7 @@ InsertTextTxn::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   if (nsnull == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
-  if (aIID.Equals(kInsertTextTxnIID)) {
+  if (aIID.Equals(InsertTextTxn::GetCID())) {
     *aInstancePtr = (void*)(InsertTextTxn*)this;
     NS_ADDREF_THIS();
     return NS_OK;
@@ -213,8 +224,8 @@ PRBool InsertTextTxn::IsSequentialInsert(InsertTextTxn *aOtherTxn)
     if (aOtherTxn->mElement == mElement)
     {
       // here, we need to compare offsets.
-      PRInt32 strlen = mStringToInsert.Length();
-      if (aOtherTxn->mOffset==(mOffset+strlen))
+      PRInt32 length = mStringToInsert.Length();
+      if (aOtherTxn->mOffset==(mOffset+length))
       {
         result = PR_TRUE;
       }

@@ -25,13 +25,19 @@
 #include "nscore.h"
 #include "nsFileSpec.h"
 #include "nsVector.h"
+#include "pratom.h"
 
 #include "nsISupports.h"
 #include "nsIServiceManager.h"
 
 #include "nsIURL.h"
+#ifdef NECKO
+#include "nsNeckoUtil.h"
+#include "nsIBufferInputStream.h"
+#else
 #include "nsINetlibURL.h"
 #include "nsINetService.h"
+#endif
 #include "nsIInputStream.h"
 #include "nsIStreamListener.h"
 
@@ -46,16 +52,15 @@
 #include "nsProxyObjectManager.h"
 
 #include "nsIAppShellComponentImpl.h"
+#include "nsIPrompt.h"
 
 
-static NS_DEFINE_IID(kISoftwareUpdateIID, NS_ISOFTWAREUPDATE_IID);
-static NS_DEFINE_IID(kSoftwareUpdateCID,  NS_SoftwareUpdate_CID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
 static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 nsXPInstallManager::nsXPInstallManager()
-  :  mTriggers(0), mItem(0), mNextItem(0)
+  : mTriggers(0), mItem(0), mNextItem(0), mNumJars(0), mFinalizing(PR_FALSE)
 {
     NS_INIT_ISUPPORTS();
 
@@ -79,13 +84,15 @@ NS_IMPL_RELEASE( nsXPInstallManager );
 NS_IMETHODIMP 
 nsXPInstallManager::QueryInterface(REFNSIID aIID,void** aInstancePtr)
 {
-  if (!aInstancePtr == NULL)
+  if (!aInstancePtr)
     return NS_ERROR_NULL_POINTER;
 
   if (aIID.Equals(nsIXPINotifier::GetIID()))
     *aInstancePtr = NS_STATIC_CAST(nsIXPINotifier*,this);
   else if (aIID.Equals(nsIStreamListener::GetIID()))
     *aInstancePtr = NS_STATIC_CAST(nsIStreamListener*,this);
+  else if (aIID.Equals(nsIXULWindowCallbacks::GetIID()))
+    *aInstancePtr = NS_STATIC_CAST(nsIXULWindowCallbacks*,this);
   else if (aIID.Equals(kISupportsIID))
     *aInstancePtr = NS_STATIC_CAST( nsISupports*, NS_STATIC_CAST(nsIXPINotifier*,this));
   else
@@ -114,41 +121,52 @@ nsXPInstallManager::InitManager(nsXPITriggerInfo* aTriggers)
     if ( !mTriggers || mTriggers->Size() == 0 )
         rv = NS_ERROR_INVALID_POINTER;
 
-    //
-    // XXX Need modal confirmation dialog here...
-    //
+    //-----------------------------------------------------
+    // confirm that install is OK... use stock Confirm()
+    // dialog for now, later we'll want a fancier one.
+    //-----------------------------------------------------
+    PRBool OKtoInstall = PR_FALSE;
+
+    NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv );
+    if ( NS_SUCCEEDED( rv ) ) 
+    {
+        nsCOMPtr<nsIWebShellWindow> wbwin;
+        rv = appShell->GetHiddenWindow(getter_AddRefs(wbwin));
+        if ( NS_SUCCEEDED(rv) )
+        {
+            nsCOMPtr<nsIPrompt> prompt( do_QueryInterface(wbwin, &rv) );
+            if ( NS_SUCCEEDED(rv) && prompt )
+            {
+                nsString msg("Attempting to download and install software. "
+                             "Do you feel lucky, punk?");
+                prompt->Confirm( msg.GetUnicode(), &OKtoInstall);
+            }
+        }
+    }
+
 
     // --- create and open the progress dialog
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv) && OKtoInstall)
     {
         nsInstallProgressDialog* dlg;
         nsCOMPtr<nsISupports>    Idlg;
-        NS_NEWXPCOM( dlg, nsInstallProgressDialog );
+
+        dlg = new nsInstallProgressDialog(this);
 
         if ( dlg )
         {
-            rv = dlg->QueryInterface( nsIXPIProgressDlg::GetIID(), getter_AddRefs(Idlg) );
+            rv = dlg->QueryInterface( nsIXPIProgressDlg::GetIID(), getter_AddRefs(mDlg) );
             if (NS_SUCCEEDED(rv))
             {
-                NS_WITH_SERVICE( nsIProxyObjectManager, pmgr, kProxyObjectManagerCID, &rv);
-                if (NS_SUCCEEDED(rv))
-                {
-                    rv = pmgr->GetProxyObject( 0, nsIXPIProgressDlg::GetIID(),
-                        Idlg, PROXY_SYNC, getter_AddRefs(mDlg) );
-
-                    if (NS_SUCCEEDED(rv))
-                        rv = mDlg->Open();
-                }
+                rv = mDlg->Open();
             }
         }
         else
             rv = NS_ERROR_OUT_OF_MEMORY;
     }
 
-    // --- start the first download (or clean up on error)
-    if (NS_SUCCEEDED(rv))
-        rv = DownloadNext();
-    else 
+    // --- clean up on error
+    if (!NS_SUCCEEDED(rv))
         NS_RELEASE_THIS();
 
     return rv;
@@ -168,16 +186,19 @@ nsresult nsXPInstallManager::DownloadNext()
         NS_ASSERTION( mItem->mURL.Length() > 0, "bogus trigger");
         if ( !mItem || mItem->mURL.Length() == 0 )
         {
-            // serious problem with trigger! try to carry on
+            // XXX serious problem with trigger! try to carry on
             rv = DownloadNext();
         }
         else if ( mItem->IsFileURL() )
         {
-            // don't need to download local files, just point at them
+            // don't need to download, just point at local file
             rv = NS_NewFileSpecWithSpec( nsFileSpec(nsFileURL(mItem->mURL)),
                     getter_AddRefs(mItem->mFile) );
             if (NS_FAILED(rv))
+            {
+                // XXX serious problem with trigger! try to carry on
                 mItem->mFile = 0;
+            }
 
             rv = DownloadNext();
         }
@@ -187,7 +208,7 @@ nsresult nsXPInstallManager::DownloadNext()
 
             // --- figure out a temp file name
             nsSpecialSystemDirectory temp(nsSpecialSystemDirectory::OS_TemporaryDirectory);
-            PRInt32 pos = mItem->mURL.RFind('/');
+            PRInt32 pos = mItem->mURL.RFindChar('/');
             if ( pos != -1 )
             {
                 nsString jarleaf;
@@ -195,7 +216,7 @@ nsresult nsXPInstallManager::DownloadNext()
                 temp += jarleaf;
             }
             else
-                temp += "xpinstall.jar";
+                temp += "xpinstall.xpi";
 
             temp.MakeUnique();
 
@@ -203,10 +224,20 @@ nsresult nsXPInstallManager::DownloadNext()
             if (NS_SUCCEEDED(rv))
             {
                 // --- start the download
-                nsIURL  *pURL;
+                nsIURI  *pURL;
+#ifdef NECKO
+                rv = NS_NewURI(&pURL, mItem->mURL);
+#else
                 rv = NS_NewURL(&pURL, mItem->mURL);
-                if (NS_SUCCEEDED(rv))
+#endif
+                if (NS_SUCCEEDED(rv)) {
+#ifdef NECKO
+                    rv = NS_OpenURI( this, nsnull, pURL );
+                    NS_RELEASE(pURL);
+#else
                     rv = NS_OpenURL( pURL, this );
+#endif
+                }
             }
 
             if (NS_FAILED(rv))
@@ -220,43 +251,71 @@ nsresult nsXPInstallManager::DownloadNext()
     }
     else
     {
-        NS_WITH_SERVICE(nsISoftwareUpdate, softupdate, nsSoftwareUpdate::GetCID(), &rv);
         // all downloaded, queue them for installation
-        for (PRUint32 i = 0; i < mTriggers->Size(); ++i)
+
+        NS_WITH_SERVICE(nsISoftwareUpdate, softupdate, nsSoftwareUpdate::GetCID(), &rv);
+        if (NS_SUCCEEDED(rv))
         {
-            mItem = (nsXPITriggerItem*)mTriggers->Get(i);
-            if ( mItem )
+            for (PRUint32 i = 0; i < mTriggers->Size(); ++i)
             {
-                if (NS_SUCCEEDED(rv) && mItem->mFile )
+                mItem = (nsXPITriggerItem*)mTriggers->Get(i);
+                if ( mItem && mItem->mFile )
                 {
-                    softupdate->InstallJar( mItem->mFile,
-                                            mItem->mArguments.GetUnicode(),
-                                            mItem->mFlags,
-                                            this );
+                    rv = softupdate->InstallJar(mItem->mFile,
+                                                mItem->mURL.GetUnicode(),
+                                                mItem->mArguments.GetUnicode(),
+                                                mItem->mFlags,
+                                                this );
+                    if (NS_SUCCEEDED(rv))
+                        PR_AtomicIncrement(&mNumJars);
                 }
                 else
                     ; // XXX announce failure
             }
+        }
+        else
+        {
+            ; // XXX gotta clean up all those files...
+        }
+
+        if ( mNumJars == 0 )
+        {
+            // We must clean ourself up now -- we won't be called back
+            Shutdown();
         }
     }
 
     return rv;
 }
 
+void nsXPInstallManager::Shutdown()
+{
+    if (mProxy)
+    {
+        // proxy exists: we're being called from script thread
+        mProxy->Close();
+        mProxy = 0;
+    }
+    else if (mDlg)
+        mDlg->Close();
+
+    mDlg = 0;
+    NS_RELEASE_THIS();
+}
 
 
 
 
 // IStreamListener methods
-
+#ifndef NECKO
 NS_IMETHODIMP
-nsXPInstallManager::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* info)
+nsXPInstallManager::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* info)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsXPInstallManager::OnProgress( nsIURL* aURL,
+nsXPInstallManager::OnProgress( nsIURI* aURL,
                           PRUint32 Progress,
                           PRUint32 ProgressMax)
 {
@@ -264,7 +323,7 @@ nsXPInstallManager::OnProgress( nsIURL* aURL,
 }
 
 NS_IMETHODIMP
-nsXPInstallManager::OnStatus(nsIURL* aURL, 
+nsXPInstallManager::OnStatus(nsIURI* aURL, 
                        const PRUnichar* aMsg)
 { 
     if (mDlg)
@@ -272,19 +331,29 @@ nsXPInstallManager::OnStatus(nsIURL* aURL,
     else
         return NS_ERROR_NULL_POINTER;
 }
+#endif
 
 NS_IMETHODIMP
-nsXPInstallManager::OnStartBinding(nsIURL* aURL, 
+#ifdef NECKO
+nsXPInstallManager::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+nsXPInstallManager::OnStartRequest(nsIURI* aURL, 
                              const char *aContentType)
+#endif
 {
     mItem->mFile->openStreamForWriting();
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsXPInstallManager::OnStopBinding(nsIURL* aURL,
+#ifdef NECKO
+nsXPInstallManager::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+                                  nsresult status, const PRUnichar *errorMsg)
+#else
+nsXPInstallManager::OnStopRequest(nsIURI* aURL,
                                         nsresult status,
                                         const PRUnichar* aMsg)
+#endif
 {
     nsresult rv;
     switch( status ) 
@@ -314,7 +383,16 @@ nsXPInstallManager::OnStopBinding(nsIURL* aURL,
 #define BUF_SIZE 1024
 
 NS_IMETHODIMP
-nsXPInstallManager::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUint32 length)
+#ifdef NECKO
+nsXPInstallManager::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt, 
+                                    nsIInputStream *pIStream,
+                                    PRUint32 sourceOffset, 
+                                    PRUint32 length)
+#else
+nsXPInstallManager::OnDataAvailable(nsIURI* aURL,
+                                    nsIInputStream *pIStream,
+                                    PRUint32 length)
+#endif
 {
     PRUint32 len;
     PRInt32  result;
@@ -341,145 +419,89 @@ nsXPInstallManager::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUi
 }
 
 
+
+
 // IXPINotifier methods
 
 NS_IMETHODIMP 
-nsXPInstallManager::BeforeJavascriptEvaluation()
+nsXPInstallManager::BeforeJavascriptEvaluation(const PRUnichar *URL)
 {
     nsresult rv = NS_OK;
-#if 0
-    // Get app shell service.
-    nsIAppShellService *appShell;
-    rv = nsServiceManager::GetService( kAppShellServiceCID,
-                                       nsIAppShellService::GetIID(),
-                                       (nsISupports**)&appShell );
 
-    if ( NS_SUCCEEDED( rv ) ) 
+    mFinalizing = PR_FALSE;
+
+    if ( !mProxy )
     {
-        // Open "progress" dialog.
-        nsIURL *url;
-        rv = NS_NewURL( &url, "resource:/res/xpinstall/progress.xul" );
-        
-        if ( NS_SUCCEEDED(rv) ) 
+        NS_WITH_SERVICE( nsIProxyObjectManager, pmgr, kProxyObjectManagerCID, &rv);
+        if (NS_SUCCEEDED(rv))
         {
-        
-            nsCOMPtr<nsIWebShellWindow> newWindow;
-            rv = appShell->CreateTopLevelWindow( nsnull,
-                                                 url,
-                                                 PR_TRUE,
-                                                 *getter_AddRefs(newWindow),
-                                                 nsnull,
-                                                 this,  // callbacks??
-                                                 0,
-                                                 0 );
+            rv = pmgr->GetProxyObject( 0, nsIXPIProgressDlg::GetIID(),
+                    mDlg, PROXY_SYNC, getter_AddRefs(mProxy) );
 
-            if ( NS_SUCCEEDED( rv ) ) 
-            {
-                mWindow = newWindow;			// ownership ?
-                 if (mWindow != nsnull)
-                    mWindow->Show(PR_TRUE);
-            }
-            else 
-            {
-                DEBUG_PRINTF( PR_STDOUT, "Error creating progress dialog, rv=0x%X\n", (int)rv );
-            }
-            NS_RELEASE( url );
         }
-        
-        nsServiceManager::ReleaseService( kAppShellServiceCID, appShell );
-    } 
-    else 
-    {
-        DEBUG_PRINTF( PR_STDOUT, "Unable to get app shell service, rv=0x%X\n", (int)rv );
     }
-#endif
+
+    return rv;
+}
+
+NS_IMETHODIMP 
+nsXPInstallManager::AfterJavascriptEvaluation(const PRUnichar *URL)
+{
+    PR_AtomicDecrement( &mNumJars );
+    if ( mNumJars == 0 )
+        Shutdown();
+
     return NS_OK;
 }
 
 NS_IMETHODIMP 
-nsXPInstallManager::AfterJavascriptEvaluation()
+nsXPInstallManager::InstallStarted(const PRUnichar *URL, const PRUnichar *UIPackageName)
 {
-#if 0
-    if (mWindow)
+    return mProxy->SetHeading( nsString(UIPackageName).GetUnicode() );
+}
+
+NS_IMETHODIMP 
+nsXPInstallManager::ItemScheduled(const PRUnichar *message)
+{
+    return mProxy->SetActionText( nsString(message).GetUnicode() );
+}
+
+NS_IMETHODIMP 
+nsXPInstallManager::FinalizeProgress(const PRUnichar *message, PRInt32 itemNum, PRInt32 totNum)
+{
+    if (!mFinalizing)
     {
-        mWindow->Close();
+        mFinalizing = PR_TRUE;
+        mProxy->SetActionText( nsString("Finishing install... please wait").GetUnicode() );
     }
-#endif
+    return mProxy->SetProgress( itemNum, totNum );
+}
+
+NS_IMETHODIMP 
+nsXPInstallManager::FinalStatus(const PRUnichar *URL, PRInt32 status)
+{
+    mTriggers->SendStatus( URL, status );
     return NS_OK;
 }
 
 NS_IMETHODIMP 
-nsXPInstallManager::InstallStarted(const char *UIPackageName)
+nsXPInstallManager::LogComment(const PRUnichar* comment)
 {
-//    setDlgAttribute( mDocument, "dialog.uiPackageName", "value", nsString(UIPackageName) );
     return NS_OK;
 }
 
-NS_IMETHODIMP 
-nsXPInstallManager::ItemScheduled(const char *message)
+
+
+// nsIXULWindowCallbacks
+
+NS_IMETHODIMP
+nsXPInstallManager::ConstructBeforeJavaScript(nsIWebShell *aWebShell)
 {
-#if 0
-    PRInt32 maxChars = 40;
-
-    nsString theMessage(message);
-    PRInt32 len = theMessage.Length();
-    if (len > maxChars)
-    {
-        PRInt32 offset = (len/2) - ((len - maxChars)/2);
-        PRInt32 count  = (len - maxChars);
-        theMessage.Cut(offset, count); 
-        theMessage.Insert(nsString("..."), offset);
-    }
-    setDlgAttribute( mDocument, "dialog.currentAction", "value", theMessage );
-    
-    nsString aValue;
-    getAttribute( mDocument, "data.canceled", "value", aValue );
-
-    if (aValue.EqualsIgnoreCase("true"))
-        return -1;
-#endif
     return NS_OK;
 }
 
-NS_IMETHODIMP 
-nsXPInstallManager::InstallFinalization(const char *message, PRInt32 itemNum, PRInt32 totNum)
+NS_IMETHODIMP
+nsXPInstallManager::ConstructAfterJavaScript(nsIWebShell *aWebShell)
 {
-#if 0
-    PRInt32 maxChars = 40;
-
-    nsString theMessage(message);
-    PRInt32 len = theMessage.Length();
-    if (len > maxChars)
-    {
-        PRInt32 offset = (len/2) - ((len - maxChars)/2);
-        PRInt32 count  = (len - maxChars);
-        theMessage.Cut(offset, count);  
-        theMessage.Insert(nsString("..."), offset);
-    }
-
-    setDlgAttribute( "dialog.currentAction", "value", theMessage );
-
-    nsresult rv = NS_OK;
-    char buf[16];
-    
-    PR_snprintf( buf, sizeof buf, "%lu", totNum );
-    setDlgAttribute( "dialog.progress", "max", buf );
-   
-    if (totNum != 0)
-    {
-        PR_snprintf( buf, sizeof buf, "%lu", ((totNum-itemNum)/totNum) );
-    }
-    else
-    {
-        PR_snprintf( buf, sizeof buf, "%lu", 0 );
-    }
-    setDlgAttribute( "dialog.progress", "value", buf );
-#endif
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsXPInstallManager::InstallAborted()
-{
-    return NS_OK;
+    return DownloadNext();
 }

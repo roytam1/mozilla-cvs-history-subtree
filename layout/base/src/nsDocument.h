@@ -34,10 +34,10 @@
 
 class nsIEventListenerManager;
 class nsDOMStyleSheetCollection;
-class nsIDOMSelection;
 class nsIOutputStream;
 class nsDocument;
 
+#if 0
 class nsPostData : public nsIPostData {
 public:
   nsPostData(PRBool aIsFile, char* aData);
@@ -55,6 +55,7 @@ protected:
   char*   mData;
   PRInt32 mDataLen;
 };
+#endif
 
 class nsDocHeaderData
 {
@@ -111,10 +112,15 @@ public:
 
   virtual nsIArena* GetArena();
 
-  NS_IMETHOD StartDocumentLoad(nsIURL *aUrl, 
+  NS_IMETHOD StartDocumentLoad(const char* aCommand,
+#ifdef NECKO
+                               nsIChannel* aChannel,
+                               nsILoadGroup* aLoadGroup,
+#else
+                               nsIURI *aUrl, 
+#endif
                                nsIContentViewerContainer* aContainer,
-                               nsIStreamListener **aDocListener,
-                               const char* aCommand);
+                               nsIStreamListener **aDocListener);
 
   /**
    * Return the title of the document. May return null.
@@ -124,7 +130,7 @@ public:
   /**
    * Return the URL for the document. May return null.
    */
-  virtual nsIURL* GetDocumentURL() const;
+  virtual nsIURI* GetDocumentURL() const;
 
   /**
    * Return the content (mime) type of this document.
@@ -132,14 +138,14 @@ public:
   NS_IMETHOD GetContentType(nsString& aContentType) const;
 
   /**
-   * Return the URLGroup for the document. May return null.
+   * Return the LoadGroup for the document. May return null.
    */
-  virtual nsIURLGroup* GetDocumentURLGroup() const;
+  virtual nsILoadGroup* GetDocumentLoadGroup() const;
 
   /**
    * Return the base URL for realtive URLs in the document. May return null (or the document URL).
    */
-  NS_IMETHOD GetBaseURL(nsIURL*& aURL) const;
+  NS_IMETHOD GetBaseURL(nsIURI*& aURL) const;
 
   /**
    * Return a standard name for the document's character set. This will
@@ -170,10 +176,10 @@ public:
    */
 #if 0
   // XXX Temp hack: moved to nsMarkupDocument
-  virtual nsresult CreateShell(nsIPresContext* aContext,
-                               nsIViewManager* aViewManager,
-                               nsIStyleSet* aStyleSet,
-                               nsIPresShell** aInstancePtrResult);
+  NS_IMETHOD CreateShell(nsIPresContext* aContext,
+                         nsIViewManager* aViewManager,
+                         nsIStyleSet* aStyleSet,
+                         nsIPresShell** aInstancePtrResult);
 #endif
   virtual PRBool DeleteShell(nsIPresShell* aShell);
   virtual PRInt32 GetNumberOfShells();
@@ -281,15 +287,6 @@ public:
                               nsIStyleRule* aStyleRule);
 
   /**
-    * Returns the Selection Object
-   */
-  NS_IMETHOD GetSelection(nsIDOMSelection ** aSelection);
-  /**
-    * Selects all the Content
-   */
-  NS_IMETHOD SelectAll();
-
-  /**
     * Finds text in content
    */
   NS_IMETHOD FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound);
@@ -376,9 +373,9 @@ public:
 
   // nsIDOMEventTarget interface
   NS_IMETHOD AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                              PRBool aPostProcess, PRBool aUseCapture);
+                              PRBool aUseCapture);
   NS_IMETHOD RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
-                                 PRBool aPostProcess, PRBool aUseCapture);
+                                 PRBool aUseCapture);
 
 
   NS_IMETHOD HandleDOMEvent(nsIPresContext& aPresContext, 
@@ -388,9 +385,7 @@ public:
                             nsEventStatus& aEventStatus);
 
 
-  virtual PRBool IsInRange(const nsIContent *aStartContent, const nsIContent* aEndContent, const nsIContent* aContent) const;
   virtual PRBool IsInSelection(nsIDOMSelection* aSelection, const nsIContent *aContent) const;
-  virtual PRBool IsBefore(const nsIContent *aNewContent, const nsIContent* aCurrentContent) const;
   virtual nsIContent* GetPrevContent(const nsIContent *aContent) const;
   virtual nsIContent* GetNextContent(const nsIContent *aContent) const;
   virtual void SetDisplaySelection(PRBool aToggle);
@@ -424,7 +419,11 @@ protected:
   nsIContent* FindContent(const nsIContent* aStartNode,
                           const nsIContent* aTest1, 
                           const nsIContent* aTest2) const;
-  virtual nsresult Reset(nsIURL* aURL);
+#ifdef NECKO
+  virtual nsresult Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+#else
+  virtual nsresult Reset(nsIURI* aURL);
+#endif
 
 	// this enum is temporary; there should be no knowledge of HTML in
 	// nsDocument. That will be fixed when content sink stream factories
@@ -447,8 +446,8 @@ protected:
 
   nsIArena* mArena;
   nsString* mDocumentTitle;
-  nsIURL* mDocumentURL;
-  nsIURLGroup* mDocumentURLGroup;
+  nsIURI* mDocumentURL;
+  nsILoadGroup* mDocumentLoadGroup;
   nsString mCharacterSet;
   nsIDocument* mParentDocument;
   nsVoidArray mSubDocuments;

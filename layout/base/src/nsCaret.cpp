@@ -22,6 +22,7 @@
 #include "nsITimer.h"
 #include "nsITimerCallback.h"
 
+#include "nsIComponentManager.h"
 #include "nsIFrameSelection.h"
 #include "nsIFrame.h"
 #include "nsIDOMNode.h"
@@ -35,21 +36,23 @@
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsIPresContext.h"
-
-#include "nsCaretProperties.h"
+#include "nsILookAndFeel.h"
+#include "nsWidgetsCID.h"			// for NS_LOOKANDFEEL_CID
 
 #include "nsCaret.h"
 
 
 static NS_DEFINE_IID(kISupportsIID, 		NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIDOMSelectionIID, NS_IDOMSELECTION_IID);
 static NS_DEFINE_IID(kICaretID, NS_ICARET_IID);
+
+static NS_DEFINE_IID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
 
 //-----------------------------------------------------------------------------
 nsCaret::nsCaret()
 :	mPresShell(nsnull)
 ,	mBlinkTimer(nsnull)
 ,	mBlinkRate(500)
+, mCaretWidth(20)
 ,	mVisible(PR_FALSE)
 ,	mReadOnly(PR_TRUE)
 ,	mDrawn(PR_FALSE)
@@ -68,24 +71,31 @@ nsCaret::~nsCaret()
 }
 
 //-----------------------------------------------------------------------------
-NS_IMETHODIMP nsCaret::Init(nsIPresShell *inPresShell, nsCaretProperties *inCaretProperties)
+NS_IMETHODIMP nsCaret::Init(nsIPresShell *inPresShell)
 {
 	if (!inPresShell)
-		return NS_ERROR_NULL_POINTER;
-
-	if (!inCaretProperties)
 		return NS_ERROR_NULL_POINTER;
 	
 	mPresShell = inPresShell;		// the presshell owns us, so no addref
 	
-	mBlinkRate = inCaretProperties->GetCaretBlinkRate();
-	mCaretWidth = inCaretProperties->GetCaretWidth();
-	
+  nsILookAndFeel* touchyFeely;
+  if (NS_SUCCEEDED(nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, nsILookAndFeel::GetIID(), (void**)&touchyFeely)))
+  {
+    PRInt32	tempInt;
+    
+    if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_CaretWidthTwips, tempInt)))
+      mCaretWidth = (nscoord)tempInt;
+    if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_CaretBlinkTime, tempInt)))
+      mBlinkRate = (PRUint32)tempInt;
+    
+    NS_RELEASE(touchyFeely);
+  }
+  
 	// get the selection from the pres shell, and set ourselves up as a selection
 	// listener
 	
   nsCOMPtr<nsIDOMSelection> domSelection;
-  if (NS_SUCCEEDED(mPresShell->GetSelection(getter_AddRefs(domSelection))))
+  if (NS_SUCCEEDED(mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(domSelection))))
   {
 		domSelection->AddSelectionListener(this);
 	}
@@ -177,7 +187,7 @@ NS_IMETHODIMP nsCaret::GetWindowRelativeCoordinates(nsPoint& outCoordinates, PRB
 		return NS_ERROR_NOT_INITIALIZED;
 		
 	nsCOMPtr<nsIDOMSelection> domSelection;
-	nsresult err = mPresShell->GetSelection(getter_AddRefs(domSelection));
+	nsresult err = mPresShell->GetSelection(SELECTION_NORMAL,getter_AddRefs(domSelection));
 	if (NS_FAILED(err))
 		return err;
 		
@@ -401,7 +411,7 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
 	}
 	
 	nsCOMPtr<nsIDOMSelection> domSelection;
-	nsresult err = mPresShell->GetSelection(getter_AddRefs(domSelection));
+	nsresult err = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(domSelection));
 	if (!NS_SUCCEEDED(err) || !domSelection)
 		return PR_FALSE;
 
@@ -411,39 +421,56 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
 	{
 		// start and end parent should be the same since we are collapsed
 		nsCOMPtr<nsIDOMNode>	focusNode;
-		PRInt32	focusOffset;
+		PRInt32	contentOffset;
 		
 		if (NS_SUCCEEDED(domSelection->GetFocusNode(getter_AddRefs(focusNode))) && focusNode &&
-				NS_SUCCEEDED(domSelection->GetFocusOffset(&focusOffset)))
+				NS_SUCCEEDED(domSelection->GetFocusOffset(&contentOffset)))
 		{
-			// is this a text node?
-			nsCOMPtr<nsIDOMCharacterData>	nodeAsText = do_QueryInterface(focusNode);
-			
-			if (PR_TRUE || nodeAsText)
+			nsCOMPtr<nsIContent>contentNode = do_QueryInterface(focusNode);
+      
+			if (contentNode)
 			{
-				nsCOMPtr<nsIContent>contentNode = do_QueryInterface(focusNode);
-	      
-				if (contentNode)
+			  PRBool  canContainChildren;
+			  
+	      // see if we have an offset between child nodes, or an offset into a text
+	      // node.
+			  if (NS_SUCCEEDED(contentNode->CanContainChildren(canContainChildren)) && canContainChildren)
+			  {
+			    // point the caret to the start of the child node
+			    nsCOMPtr<nsIContent> childNode;
+			    contentNode->ChildAt(contentOffset, *getter_AddRefs(childNode));
+			    if (childNode)
+			    {
+			      contentNode = childNode;
+			      contentOffset = 0;
+			    }
+			  }
+			  else
+			  {
+			    //nsCOMPtr<nsIDOMCharacterData>	nodeAsText = do_QueryInterface(focusNode);
+          //NS_ASSERTION(nodeAsText, "Should have a text node here");
+          
+          // we can be in a text node, or a BR node here.
+			  }
+			
+				nsIFrame*	theFrame = nsnull;
+				PRInt32 	focusOffset;
+				
+				if (NS_SUCCEEDED(mPresShell->GetPrimaryFrameFor(contentNode, &theFrame)) &&
+					 theFrame && NS_SUCCEEDED(theFrame->GetChildFrameContainingOffset(contentOffset, &focusOffset, &theFrame)))
 				{
-					nsIFrame*	theFrame = nsnull;
-					PRInt32 	contentOffset = focusOffset;
-					
-					if (NS_SUCCEEDED(mPresShell->GetPrimaryFrameFor(contentNode, &theFrame)) &&
-						 theFrame && NS_SUCCEEDED(theFrame->GetChildFrameContainingOffset(focusOffset, &focusOffset, &theFrame)))
-					{
 
-						// mark the frame, so we get notified on deletion.
-						// frames are never unmarked, which means that we'll touch every frame we visit.
-						// this is not ideal.
-						nsFrameState state;
-						theFrame->GetFrameState(&state);
-						state |= NS_FRAME_EXTERNAL_REFERENCE;
-						theFrame->SetFrameState(state);
-						
-						mLastCaretFrame = theFrame;
-						mLastContentOffset = contentOffset;
-						return PR_TRUE;
-					}
+					// mark the frame, so we get notified on deletion.
+					// frames are never unmarked, which means that we'll touch every frame we visit.
+					// this is not ideal.
+					nsFrameState state;
+					theFrame->GetFrameState(&state);
+					state |= NS_FRAME_EXTERNAL_REFERENCE;
+					theFrame->SetFrameState(state);
+					
+					mLastCaretFrame = theFrame;
+					mLastContentOffset = contentOffset;
+					return PR_TRUE;
 				}
 			}
 		}
@@ -533,17 +560,12 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext& inRendContext)
 		frameRect.width = mCaretWidth;
 		mCaretRect = frameRect;
 		
-		if (mDrawn)
-		{
+		/*
 		if (mReadOnly)
 			inRendContext.SetColor(NS_RGB(85, 85, 85));		// we are drawing it; gray
-		else
-			inRendContext.SetColor(NS_RGB(0, 0, 0));			// we are drawing it; black
-		}
-		else
-		inRendContext.SetColor(NS_RGB(255, 255, 255));	// we are erasing it; white
-
-		inRendContext.FillRect(mCaretRect);
+	  */
+	  
+		inRendContext.InvertRect(mCaretRect);
 	}
 	
 	PRBool dummy;

@@ -17,10 +17,13 @@
 #
 
 nsIEditor.h
-nsITextEditor.h
 nsEditorCID.h
-nsIContextLoader.h
-nsIHTMLEditor.h
-nsIEditRules.h
+# nsIEditRules.h
 nsIEditActionListener.h
 nsICiter.h
+nsIEditorIMESupport.h
+nsIEditorLogging.h
+nsIEditorMailSupport.h
+nsIEditorStyleSheets.h
+nsIHTMLEditor.h
+nsITableEditor.h

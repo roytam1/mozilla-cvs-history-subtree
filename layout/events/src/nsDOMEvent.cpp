@@ -26,6 +26,8 @@
 #include "nsIWidget.h"
 #include "nsIWebShell.h"
 #include "nsIPresShell.h"
+#include "nsPrivateTextRange.h"
+#include "nsIDocument.h"
 
 static NS_DEFINE_IID(kIDOMNodeIID, NS_IDOMNODE_IID);
 static NS_DEFINE_IID(kIFrameIID, NS_IFRAME_IID);
@@ -34,14 +36,15 @@ static NS_DEFINE_IID(kIDOMEventIID, NS_IDOMEVENT_IID);
 static NS_DEFINE_IID(kIDOMUIEventIID, NS_IDOMUIEVENT_IID);
 static NS_DEFINE_IID(kIDOMNSUIEventIID, NS_IDOMNSUIEVENT_IID);
 static NS_DEFINE_IID(kIPrivateDOMEventIID, NS_IPRIVATEDOMEVENT_IID);
+static NS_DEFINE_IID(kIPrivateTextEventIID, NS_IPRIVATETEXTEVENT_IID);
 static NS_DEFINE_IID(kIWebShellIID, NS_IWEB_SHELL_IID);
 
 static char* mEventNames[] = {
   "mousedown", "mouseup", "click", "dblclick", "mouseover",
   "mouseout", "mousemove", "keydown", "keyup", "keypress",
   "focus", "blur", "load", "unload", "abort", "error",
-  "submit", "reset", "change", "paint" ,"text",
-  "create", "destroy"
+  "submit", "reset", "change", "select", "paint" ,"text",
+  "create", "destroy", "action"
 };
 
 nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent) {
@@ -50,10 +53,32 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent) {
   mEvent = aEvent;
   mTarget = nsnull;
   mText = nsnull;
+  mTextRange = nsnull;
 
   if (aEvent->eventStructType ==NS_TEXT_EVENT) {
+	  //
+	  // extract the IME composition string
+	  //
 	  mText = new nsString(((nsTextEvent*)aEvent)->theText);
-	  mCommitText = ((nsTextEvent*)aEvent)->commitText;
+	  //
+	  // build the range list -- ranges need to be DOM-ified since the IME transaction
+	  //  will hold a ref, the widget representation isn't persistent
+	  //
+	  nsIPrivateTextRange** tempTextRangeList = new nsIPrivateTextRange*[((nsTextEvent*)aEvent)->rangeCount];
+	  if (tempTextRangeList!=nsnull) {
+		for(PRUint16 i=0;i<((nsTextEvent*)aEvent)->rangeCount;i++) {
+			nsPrivateTextRange* tempPrivateTextRange = new nsPrivateTextRange((((nsTextEvent*)aEvent)->rangeArray[i]).mStartOffset,
+														(((nsTextEvent*)aEvent)->rangeArray[i]).mEndOffset,
+														(((nsTextEvent*)aEvent)->rangeArray[i]).mRangeType);
+			if (tempPrivateTextRange!=nsnull) {
+				tempPrivateTextRange->AddRef();
+				tempTextRangeList[i] = (nsIPrivateTextRange*)tempPrivateTextRange;
+			}
+		}
+		
+		mTextRange = (nsIPrivateTextRangeList*) new nsPrivateTextRangeList(((nsTextEvent*)aEvent)->rangeCount,tempTextRangeList);
+		if (mTextRange!=nsnull)  mTextRange->AddRef();
+	  }
   }
 
   NS_INIT_REFCNT();
@@ -62,8 +87,10 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent) {
 nsDOMEvent::~nsDOMEvent() {
   NS_RELEASE(mPresContext);
   NS_IF_RELEASE(mTarget);
+  NS_IF_RELEASE(mTextRange);
 
-  delete mText;
+  if (mText!=nsnull)
+	delete mText;
 }
 
 NS_IMPL_ADDREF(nsDOMEvent)
@@ -96,6 +123,11 @@ nsresult nsDOMEvent::QueryInterface(const nsIID& aIID,
     AddRef();
     return NS_OK;
   }
+  if (aIID.Equals(kIPrivateTextEventIID)) {
+	*aInstancePtrResult=(void*)((nsIPrivateTextEvent*)this);
+	AddRef();
+	return NS_OK;
+  }
   return NS_NOINTERFACE;
 }
 
@@ -121,20 +153,36 @@ NS_METHOD nsDOMEvent::GetTarget(nsIDOMNode** aTarget)
   }
   
   nsIEventStateManager *manager;
-  nsIFrame *targetFrame;
   nsIContent *targetContent;
 
   if (NS_OK == mPresContext->GetEventStateManager(&manager)) {
-    manager->GetEventTarget(&targetFrame);
+    manager->GetEventTargetContent(&targetContent);
     NS_RELEASE(manager);
   }
   
-  if (NS_OK == targetFrame->GetContent(&targetContent) && nsnull != targetContent) {    
+  if (targetContent) {    
     if (NS_OK == targetContent->QueryInterface(kIDOMNodeIID, (void**)&mTarget)) {
       *aTarget = mTarget;
       NS_ADDREF(mTarget);
     }
     NS_RELEASE(targetContent);
+  }
+  else {
+    //Always want a target.  Use document if nothing else.
+    nsIPresShell* presShell;
+    nsIDocument* doc;
+    if (NS_SUCCEEDED(mPresContext->GetShell(&presShell))) {
+      presShell->GetDocument(&doc);
+      NS_RELEASE(presShell);
+    }
+
+    if (doc) {
+      if (NS_OK == doc->QueryInterface(kIDOMNodeIID, (void**)&mTarget)) {
+        *aTarget = mTarget;
+        NS_ADDREF(mTarget);
+      }      
+      NS_RELEASE(doc);
+    }
   }
 
   return NS_OK;
@@ -150,25 +198,44 @@ nsDOMEvent::GetCurrentNode(nsIDOMNode** aCurrentNode)
 NS_IMETHODIMP
 nsDOMEvent::GetEventPhase(PRUint16* aEventPhase)
 {
-  *aEventPhase = 0;
+  if (mEvent->flags & NS_EVENT_FLAG_CAPTURE) {
+    *aEventPhase = CAPTURING_PHASE;
+  }
+  else if (mEvent->flags & NS_EVENT_FLAG_BUBBLE) {
+    *aEventPhase = BUBBLING_PHASE;
+  }
+  else if (mEvent->flags & NS_EVENT_FLAG_INIT) {
+    *aEventPhase = AT_TARGET;
+  }
+  else {
+    *aEventPhase = 0;
+  }
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMEvent::PreventBubble()
 {
+  if (mEvent->flags & NS_EVENT_FLAG_BUBBLE || mEvent->flags & NS_EVENT_FLAG_INIT) {
+    mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMEvent::PreventCapture()
 {
+  if (mEvent->flags & NS_EVENT_FLAG_CAPTURE) {
+    mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMEvent::PreventDefault()
 {
+  mEvent->flags |= NS_EVENT_FLAG_NO_DEFAULT;
   return NS_OK;
 }
 
@@ -182,60 +249,55 @@ NS_METHOD nsDOMEvent::GetText(nsString& aText)
 	return NS_ERROR_FAILURE;
 }
 
-NS_METHOD nsDOMEvent::GetCommitText(PRBool* aCommitText)
+NS_METHOD nsDOMEvent::GetInputRange(nsIPrivateTextRangeList** aInputRange)
 {
 	if (mEvent->message == NS_TEXT_EVENT) {
-		*aCommitText = mCommitText;
+		*aInputRange = mTextRange;
 		return NS_OK;
 	}
-	
+
 	return NS_ERROR_FAILURE;
 }
 
-NS_METHOD nsDOMEvent::SetCommitText(PRBool aCommitText)
-{	
+NS_METHOD nsDOMEvent::GetEventReply(nsTextEventReply** aReply)
+{
+	if (mEvent->message==NS_TEXT_EVENT) {
+			*aReply = &(((nsTextEvent*)mEvent)->theReply);
+			return NS_OK;
+	}
+
 	return NS_ERROR_FAILURE;
 }
 
 NS_METHOD nsDOMEvent::GetScreenX(PRInt32* aScreenX)
 {
+  // pinkerton -- i don't understand how we can assume that mEvent
+  // is a nsGUIEvent, but we are.
+  if ( !mEvent || !((nsGUIEvent*)mEvent)->widget )
+    return NS_ERROR_FAILURE;
+    
   nsRect bounds, offset;
-  offset.x = 0;
-
-  nsIWidget* parent = ((nsGUIEvent*)mEvent)->widget;
-  //Add extra since loop will free one.
-  NS_ADDREF(parent);
-  nsIWidget* tmp;
-  while (nsnull != parent) {
-    parent->GetBounds(bounds);
-    offset.x += bounds.x;
-    tmp = parent;
-    parent = tmp->GetParent();
-    NS_RELEASE(tmp);
-  }
-
-  *aScreenX = mEvent->refPoint.x + offset.x;
+  bounds.x = mEvent->refPoint.x;
+  
+  ((nsGUIEvent*)mEvent)->widget->WidgetToScreen ( bounds, offset );
+  *aScreenX = offset.x;
+  
   return NS_OK;
 }
 
 NS_METHOD nsDOMEvent::GetScreenY(PRInt32* aScreenY)
 {
+  // pinkerton -- i don't understand how we can assume that mEvent
+  // is a nsGUIEvent, but we are.
+  if ( !mEvent || !((nsGUIEvent*)mEvent)->widget )
+    return NS_ERROR_FAILURE;
+
   nsRect bounds, offset;
-  offset.y = 0;
-
-  nsIWidget* parent = ((nsGUIEvent*)mEvent)->widget;
-  //Add extra since loop will free one.
-  NS_ADDREF(parent);
-  nsIWidget* tmp;
-  while (nsnull != parent) {
-    parent->GetBounds(bounds);
-    offset.y += bounds.y;
-    tmp = parent;
-    parent = tmp->GetParent();
-    NS_RELEASE(tmp);
-  }
-
-  *aScreenY = mEvent->refPoint.y + offset.y;
+  bounds.y = mEvent->refPoint.y;
+  
+  ((nsGUIEvent*)mEvent)->widget->WidgetToScreen ( bounds, offset );
+  *aScreenY = offset.y;
+  
   return NS_OK;
 }
 
@@ -385,7 +447,7 @@ NS_METHOD nsDOMEvent::GetKeyCode(PRUint32* aKeyCode)
   return NS_OK;
 }
 
-NS_METHOD nsDOMEvent::GetButton(PRUint32* aButton)
+NS_METHOD nsDOMEvent::GetButton(PRUint16* aButton)
 {
   switch (mEvent->message) {
   case NS_MOUSE_LEFT_BUTTON_UP:
@@ -409,6 +471,13 @@ NS_METHOD nsDOMEvent::GetButton(PRUint32* aButton)
   default:
     break;
   }
+  return NS_OK;
+}
+
+NS_METHOD nsDOMEvent::GetClickcount(PRUint16* aClickcount) 
+{
+  //XXX implement me.
+  *aClickcount = 1;
   return NS_OK;
 }
 
@@ -445,7 +514,11 @@ NS_METHOD nsDOMEvent::GetWhich(PRUint32* aWhich)
   case NS_KEY_EVENT:
     return GetKeyCode(aWhich);
   case NS_MOUSE_EVENT:
-    return GetButton(aWhich);
+    {
+      PRUint16 button;
+      nsresult ret = GetButton(&button);
+      *aWhich = button;
+    }
   }
   return NS_OK;
 }
@@ -573,14 +646,18 @@ const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
     return mEventNames[eDOMEvents_reset];
   case NS_FORM_CHANGE:
     return mEventNames[eDOMEvents_change];
+  case NS_FORM_SELECTED:
+    return mEventNames[eDOMEvents_select];
   case NS_PAINT:
     return mEventNames[eDOMEvents_paint];
   case NS_TEXT_EVENT:
 	  return mEventNames[eDOMEvents_text];
-  case NS_POPUP_CONSTRUCT:
-    return mEventNames[eDOMEvents_construct];
-  case NS_POPUP_DESTRUCT:
-    return mEventNames[eDOMEvents_destruct];
+  case NS_MENU_CREATE:
+    return mEventNames[eDOMEvents_create];
+  case NS_MENU_DESTROY:
+    return mEventNames[eDOMEvents_destroy];
+  case NS_MENU_ACTION:
+    return mEventNames[eDOMEvents_action];
   default:
     break;
   }

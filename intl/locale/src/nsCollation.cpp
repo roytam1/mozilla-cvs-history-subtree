@@ -29,6 +29,7 @@
 
 NS_DEFINE_IID(kICollationFactoryIID, NS_ICOLLATIONFACTORY_IID);
 NS_DEFINE_CID(kCollationCID, NS_COLLATION_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 NS_IMPL_ISUPPORTS(nsCollationFactory, kICollationFactoryIID);
 
@@ -129,7 +130,10 @@ nsresult nsCollation::CreateSortKey(nsICollation *inst, const nsCollationStrengt
     if (nsnull != aKey) {
       res = inst->CreateRawSortKey(strength, stringIn, aKey, &aLength);
       if (NS_SUCCEEDED(res)) {
-        key.SetString((PRUnichar *) aKey, aLength / sizeof(PRUnichar));
+        // set as char* makes every byte to be casted to PRUnichar
+        // which doubles the key size, use CreateRawSortKey instead 
+        // to avoid this to happen
+        key.SetString((char *) aKey, aLength / sizeof(char));
       }
       delete [] aKey;
     }
@@ -194,7 +198,7 @@ nsresult nsCollation::UnicodeToChar(const nsString& src, char** dst, const nsStr
   nsresult res;
 
   res = nsServiceManager::GetService(kCharsetConverterManagerCID, 
-                                     kICharsetConverterManagerIID, 
+                                     nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(), 
                                      (nsISupports**)&ccm);
   if(NS_SUCCEEDED(res) && (nsnull != ccm)) {
     nsIUnicodeEncoder* encoder = nsnull;

@@ -57,6 +57,7 @@ typedef nodeHandler *(*nodeHandlerFactory)();
 extern nodeHandler *xpidl_header_dispatch(void);
 extern nodeHandler *xpidl_typelib_dispatch(void);
 extern nodeHandler *xpidl_doc_dispatch(void);
+extern nodeHandler *xpidl_java_dispatch(void);
 
 /*
  * nodeHandler that reports an error.
@@ -123,5 +124,56 @@ xpidl_process_node(TreeState *state);
  */
 void
 xpidl_write_comment(TreeState *state, int indent);
+
+
+
+/*
+ * Functions for parsing and printing UUIDs.
+ */
+#include "xpt_struct.h"
+
+/*
+ * How large should the buffer supplied to xpidl_sprint_IID be?
+ */
+#define UUID_LENGTH 37
+
+/*
+ * Print an iid to into a supplied buffer; the buffer should be at least
+ * UUID_LENGTH bytes.
+ */
+gboolean
+xpidl_sprint_iid(struct nsID *iid, char iidbuf[]);
+
+/*
+ * Parse a uuid string into an nsID struct.  We cannot link against libxpcom,
+ * so we re-implement nsID::Parse here.
+ */
+gboolean
+xpidl_parse_iid(nsID *id, const char *str);
+
+
+/* Try to common a little node-handling stuff. */
+
+/* is this node from an aggregate type (interface)? */
+#define UP_IS_AGGREGATE(node)                                                 \
+    (IDL_NODE_UP(node) &&                                                     \
+     (IDL_NODE_TYPE(IDL_NODE_UP(node)) == IDLN_INTERFACE ||                   \
+      IDL_NODE_TYPE(IDL_NODE_UP(node)) == IDLN_FORWARD_DCL))
+
+#define UP_IS_NATIVE(node)                                                    \
+    (IDL_NODE_UP(node) &&                                                     \
+     IDL_NODE_TYPE(IDL_NODE_UP(node)) == IDLN_NATIVE)
+
+/* is this type output in the form "<foo> *"? */
+#define STARRED_TYPE(node) (IDL_NODE_TYPE(node) == IDLN_TYPE_STRING ||        \
+                            IDL_NODE_TYPE(node) == IDLN_TYPE_WIDE_STRING ||   \
+                            (IDL_NODE_TYPE(node) == IDLN_IDENT &&             \
+                             UP_IS_AGGREGATE(node)))
+
+/*
+ * Perform various validation checks on methods.
+ */
+gboolean
+verify_method_declaration(TreeState *state);
 
 #endif /* __xpidl_h */

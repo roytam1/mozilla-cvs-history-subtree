@@ -22,6 +22,9 @@
 #include "pratom.h"
 #include "nsString.h"
 #include "nsIComponentManager.h"
+#include "nsIRegistry.h"
+#include "nsIEnumerator.h"
+#include "nsIServiceManager.h"
 #include "nsICharsetConverterManager.h"
 #include "nsICharsetConverterInfo.h"
 #include "nsIUnicodeEncoder.h"
@@ -46,9 +49,10 @@ struct ConverterInfo
   nsString      * mCharset;
   const nsCID   * mCID;
 
-  ConverterInfo() {}
+  ConverterInfo()
+  :  mCharset(nsnull), mCID(nsnull) {}
 
-  virtual ~ConverterInfo()
+  ~ConverterInfo()
   {
     if (mCharset != NULL) delete mCharset;
   }
@@ -168,7 +172,7 @@ public:
 //----------------------------------------------------------------------
 // Class nsCharsetConverterManager [implementation]
 
-NS_IMPL_ISUPPORTS(nsCharsetConverterManager, kICharsetConverterManagerIID);
+NS_IMPL_ISUPPORTS(nsCharsetConverterManager, nsCOMTypeInfo<nsICharsetConverterManager>::GetIID());
 
 nsICharsetConverterManager * nsCharsetConverterManager::mInstance = NULL;
 
@@ -206,10 +210,105 @@ nsresult nsCharsetConverterManager::CreateMapping()
 {
   mMappingDone = PR_TRUE;
 
-  nsresult res = CreateConvertersList();
-  if NS_FAILED(res) return res;
+  nsresult res = NS_OK;
+  nsIRegistry * registry = NULL;
+  nsIEnumerator * components = NULL;
+  nsIRegistry::Key uconvKey, key;
+  char buff[1024];
 
-  return GatherConvertersInfo();
+  // XXX hack; make these dynamic
+  mEncArray = new ConverterInfo [100];
+  mDecArray = new ConverterInfo [100];
+  mEncSize = mDecSize = 0;
+
+  // get the registry
+  res = nsServiceManager::GetService(NS_REGISTRY_PROGID, 
+                                     nsIRegistry::GetIID(), 
+                                     (nsISupports**)&registry);
+  if (NS_FAILED(res)) goto done;
+
+  // open the registry
+  res = registry->OpenWellKnownRegistry(
+      nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(res)) goto done;
+
+  // get subtree
+  res = registry -> GetSubtree(nsIRegistry::Common, 
+                               "software/netscape/intl/uconv", 
+                               &uconvKey);
+  if (NS_FAILED(res)) goto done;
+
+  // enumerate subtrees
+  res = registry -> EnumerateSubtrees(uconvKey, &components);
+  if (NS_FAILED(res)) goto done;
+  res = components -> First();
+  if (NS_FAILED(res)) goto done;
+
+  // XXX take these KONSTANTS out of here
+  // XXX check return values, free stuff
+  // XXX bit hacky, clean me up
+  while (!components -> IsDone()) {
+    nsISupports * base;
+    res = components -> CurrentItem(&base);
+    if (NS_SUCCEEDED(res)) {
+      nsIRegistryNode * node;
+      nsIID nodeIID = NS_IREGISTRYNODE_IID;
+      res = base->QueryInterface (nodeIID, (void**)&node);
+      if (NS_FAILED(res)) continue;
+
+      char *name;
+      res = node->GetName(&name);
+      if (NS_FAILED(res)) continue;
+
+      nsCID * cid = new nsCID();
+      char * src;
+      char * dest;
+      if (!cid->Parse(name)) continue;
+
+      res = node->GetKey(&key);
+      if (NS_FAILED(res)) continue;
+
+      res = registry->GetString(key, "source", &src);
+      if (NS_FAILED(res)) continue;
+      res = registry->GetString(key, "destination", &dest);
+      if (NS_FAILED(res)) {
+          nsCRT::free(src);
+          continue;
+      }
+
+      nsAutoString str;
+
+      if (!strcmp(src, "Unicode")) {
+        str.Assign(dest);
+        GetCharsetName(&str,&mEncArray[mEncSize].mCharset);
+        mEncArray[mEncSize].mCID = cid;
+        mEncSize++;
+      } else if (!strcmp(dest, "Unicode")) {
+        str.Assign(src);
+        GetCharsetName(&str,&mDecArray[mDecSize].mCharset);
+        mDecArray[mDecSize].mCID = cid;
+        mDecSize++;
+      }
+
+      nsCRT::free(src);
+      nsCRT::free(dest);
+      nsCRT::free(name);
+      NS_RELEASE(node);
+      NS_RELEASE(base);
+    }
+
+    res = components->Next();
+  }
+
+done:
+  if (registry != NULL) {
+    registry -> Close();
+    nsServiceManager::ReleaseService(NS_REGISTRY_PROGID, registry);
+  }
+
+  NS_IF_RELEASE(components);
+
+  return res;
 }
 
 // XXX Hack! These lists should be obtained from the Repository, in a Component 
@@ -447,7 +546,7 @@ NS_IMETHODIMP nsManagerFactory::CreateInstance(nsISupports *aDelegate,
 
   nsresult res = NS_OK;
 
-  if (aIID.Equals(kICharsetConverterManagerIID))
+  if (aIID.Equals(nsCOMTypeInfo<nsICharsetConverterManager>::GetIID()))
   {
     nsICharsetConverterManager * t = nsCharsetConverterManager::GetInstance();  
     if (t == NULL) return NS_ERROR_OUT_OF_MEMORY;

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -26,7 +26,7 @@
 
 #include "nsIDOMBrowserAppCore.h"
 #include "nsBaseAppCore.h"
-#include "nsINetSupport.h"
+
 #include "nsIStreamObserver.h"
 #include "nsIDocumentLoaderObserver.h"
 #include "nsIObserver.h"
@@ -36,9 +36,8 @@ class nsIBrowserWindow;
 class nsIWebShell;
 class nsIScriptContext;
 class nsIDOMWindow;
-class nsIURL;
+class nsIURI;
 class nsIWebShellWindow;
-class nsIGlobalHistory;
 class nsIFindComponent;
 
 
@@ -48,7 +47,6 @@ class nsIFindComponent;
 
 class nsBrowserAppCore : public nsBaseAppCore, 
                          public nsIDOMBrowserAppCore,
-                         public nsINetSupport,
                          //     public nsIStreamObserver,
                          public nsIDocumentLoaderObserver,
                          public nsIObserver,
@@ -67,8 +65,15 @@ class nsBrowserAppCore : public nsBaseAppCore,
 
     NS_IMETHOD    Back();
     NS_IMETHOD    Forward();
-    NS_IMETHOD    Reload(nsURLReloadType aType);
+#ifdef NECKO
+    NS_IMETHOD    Reload(nsLoadFlags aType);
+#else
+    NS_IMETHOD    Reload(PRInt32 aType);
+#endif
     NS_IMETHOD    Stop();
+    NS_IMETHOD    BackButtonPopup();
+    NS_IMETHOD    ForwardButtonPopup();
+    NS_IMETHOD    GotoHistoryIndex(PRInt32 aIndex);
 
     NS_IMETHOD    WalletPreview(nsIDOMWindow* aWin, nsIDOMWindow* aForm);
     NS_IMETHOD    SignonViewer(nsIDOMWindow* aWin);
@@ -95,47 +100,46 @@ class nsBrowserAppCore : public nsBaseAppCore,
     NS_IMETHOD    LoadInitialPage();
 
     // nsIDocumentLoaderObserver
-    NS_IMETHOD OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURL* aURL, const char* aCommand);
-    NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURL *aUrl, PRInt32 aStatus,
+#ifdef NECKO
+    NS_IMETHOD OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand);
+    NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus, nsIDocumentLoaderObserver* aObserver);
+    NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsIContentViewer* aViewer);
+    NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, PRUint32 aProgress, PRUint32 aProgressMax);
+    NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsString& aMsg);
+    NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus);
+    NS_IMETHOD HandleUnknownContentType(nsIDocumentLoader* loader, nsIChannel* channel, const char *aContentType,const char *aCommand );		
+#else
+    NS_IMETHOD OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand);
+    NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, nsIURI *aUrl, PRInt32 aStatus,
 								 nsIDocumentLoaderObserver * aObserver);
 
-    NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, const char* aContentType, 
+    NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aContentType, 
                             nsIContentViewer* aViewer);
-    NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, PRUint32 aProgress, 
+    NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, PRUint32 aProgress, 
                                PRUint32 aProgressMax);
-    NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, nsString& aMsg);
-    NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIURL* aURL, PRInt32 aStatus);
+    NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, nsString& aMsg);
+    NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, PRInt32 aStatus);
     NS_IMETHOD HandleUnknownContentType(nsIDocumentLoader* loader,
-                                        nsIURL *aURL,
+                                        nsIURI *aURL,
                                         const char *aContentType,
                                         const char *aCommand );
+#endif
 
 
-    // nsINetSupport
-    NS_IMETHOD_(void) Alert(const nsString &aText);
-  
-    NS_IMETHOD_(PRBool) Confirm(const nsString &aText);
-
-
-    NS_IMETHOD_(PRBool) Prompt(const nsString &aText,
-                               const nsString &aDefault,
-                               nsString &aResult);
-
-    NS_IMETHOD_(PRBool) PromptUserAndPassword(const nsString &aText,
-                                              nsString &aUser,
-                                              nsString &aPassword);
-
-    NS_IMETHOD_(PRBool) PromptPassword(const nsString &aText,
-                                       nsString &aPassword);  
 
     // nsIObserver
     NS_DECL_IOBSERVER
 
 
 	// nsISessionHistory methods 
-    NS_IMETHOD GoForward(nsIWebShell * prev);
+    NS_IMETHOD GoForward(nsIWebShell * aPrev);
 
-    NS_IMETHOD GoBack(nsIWebShell * prev);
+    NS_IMETHOD GoBack(nsIWebShell * aPrev);
+#ifdef NECKO
+	NS_IMETHOD Reload(nsIWebShell * aPrev, nsLoadFlags aType);
+#else
+	NS_IMETHOD Reload(nsIWebShell * aPrev, nsURLReloadType aType);
+#endif  /* NECKO */
 
     NS_IMETHOD canForward(PRBool &aResult);
 
@@ -143,7 +147,7 @@ class nsBrowserAppCore : public nsBaseAppCore,
 
     NS_IMETHOD add(nsIWebShell * aWebShell);
 
-    NS_IMETHOD Goto(PRInt32 aHistoryIndex, nsIWebShell * prev);
+    NS_IMETHOD Goto(PRInt32 aHistoryIndex, nsIWebShell * aPrev, PRBool aIsReloading);
 
     NS_IMETHOD getHistoryLength(PRInt32 & aResult);
 
@@ -157,6 +161,10 @@ class nsBrowserAppCore : public nsBaseAppCore,
 
     NS_IMETHOD SetLoadingHistoryEntry(nsHistoryEntry * aHistoryEntry);
 
+    NS_IMETHOD GetURLForIndex(PRInt32 aIndex, const PRUnichar ** aURL);
+
+
+    NS_IMETHOD SetURLForIndex(PRInt32 aIndex, const PRUnichar * aURL);
 
   protected:
     NS_IMETHOD DoDialog();
@@ -165,6 +173,7 @@ class nsBrowserAppCore : public nsBaseAppCore,
     void InitializeSearch(nsIFindComponent*);
     void BeginObserving();
     void EndObserving();
+    NS_IMETHOD CreateMenuItem(nsIDOMNode * , PRInt32,const PRUnichar * );
 
     nsIScriptContext   *mToolbarScriptContext;			// weak reference
     nsIScriptContext   *mContentScriptContext;			// weak reference
@@ -176,10 +185,12 @@ class nsBrowserAppCore : public nsBaseAppCore,
     nsIWebShell *       mWebShell;									// weak reference
     nsIWebShell *       mContentAreaWebShell;				// weak reference
 
-    nsIGlobalHistory*   mGHistory;			           // this is a service
-	  nsISessionHistory*  mSHistory;			           // this is a service
+    nsISessionHistory*  mSHistory;			           // this is a service
 
     nsCOMPtr<nsISupports>  mSearchContext;				// at last, something we really own
+#ifdef DEBUG_warren
+    PRIntervalTime      mLoadStartTime;
+#endif
 };
 
 #endif // nsBrowserAppCore_h___

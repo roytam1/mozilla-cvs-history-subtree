@@ -28,14 +28,17 @@
 #include "nsIPtr.h"
 #include "nsString.h"
 #include "nsIDOMLocation.h"
+#include "nsIDOMNSLocation.h"
 
 
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIJSScriptObjectIID, NS_IJSSCRIPTOBJECT_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
 static NS_DEFINE_IID(kILocationIID, NS_IDOMLOCATION_IID);
+static NS_DEFINE_IID(kINSLocationIID, NS_IDOMNSLOCATION_IID);
 
 NS_DEF_PTR(nsIDOMLocation);
+NS_DEF_PTR(nsIDOMNSLocation);
 
 //
 // Location property ids
@@ -44,11 +47,10 @@ enum Location_slots {
   LOCATION_HASH = -1,
   LOCATION_HOST = -2,
   LOCATION_HOSTNAME = -3,
-  LOCATION_HREF = -4,
-  LOCATION_PATHNAME = -5,
-  LOCATION_PORT = -6,
-  LOCATION_PROTOCOL = -7,
-  LOCATION_SEARCH = -8
+  LOCATION_PATHNAME = -4,
+  LOCATION_PORT = -5,
+  LOCATION_PROTOCOL = -6,
+  LOCATION_SEARCH = -7
 };
 
 /***********************************************************************/
@@ -81,7 +83,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetHash(prop)) {
+        if (NS_SUCCEEDED(a->GetHash(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -97,7 +99,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetHost(prop)) {
+        if (NS_SUCCEEDED(a->GetHost(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -113,23 +115,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetHostname(prop)) {
-          nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
-        }
-        else {
-          return JS_FALSE;
-        }
-        break;
-      }
-      case LOCATION_HREF:
-      {
-        secMan->CheckScriptAccess(scriptCX, obj, "location.href", &ok);
-        if (!ok) {
-          //Need to throw error here
-          return JS_FALSE;
-        }
-        nsAutoString prop;
-        if (NS_OK == a->GetHref(prop)) {
+        if (NS_SUCCEEDED(a->GetHostname(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -145,7 +131,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetPathname(prop)) {
+        if (NS_SUCCEEDED(a->GetPathname(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -161,7 +147,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetPort(prop)) {
+        if (NS_SUCCEEDED(a->GetPort(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -177,7 +163,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetProtocol(prop)) {
+        if (NS_SUCCEEDED(a->GetProtocol(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -193,7 +179,7 @@ GetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
           return JS_FALSE;
         }
         nsAutoString prop;
-        if (NS_OK == a->GetSearch(prop)) {
+        if (NS_SUCCEEDED(a->GetSearch(prop))) {
           nsJSUtils::nsConvertStringToJSVal(prop, cx, vp);
         }
         else {
@@ -274,20 +260,6 @@ SetLocationProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         nsJSUtils::nsConvertJSValToString(prop, cx, *vp);
       
         a->SetHostname(prop);
-        
-        break;
-      }
-      case LOCATION_HREF:
-      {
-        secMan->CheckScriptAccess(scriptCX, obj, "location.href", &ok);
-        if (!ok) {
-          //Need to throw error here
-          return JS_FALSE;
-        }
-        nsAutoString prop;
-        nsJSUtils::nsConvertJSValToString(prop, cx, *vp);
-      
-        a->SetHref(prop);
         
         break;
       }
@@ -391,29 +363,29 @@ ResolveLocation(JSContext *cx, JSObject *obj, jsval id)
 
 
 //
-// Native method Reload
+// Native method ToString
 //
 PR_STATIC_CALLBACK(JSBool)
-LocationReload(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+LocationToString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMLocation *nativeThis = (nsIDOMLocation*)nsJSUtils::nsGetNativeThis(cx, obj);
-  JSBool rBool = JS_FALSE;
+  nsAutoString nativeRet;
 
   *rval = JSVAL_NULL;
 
   nsIScriptContext *scriptCX = (nsIScriptContext *)JS_GetContextPrivate(cx);
   nsIScriptSecurityManager *secMan;
-  if (NS_OK == scriptCX->GetSecurityManager(&secMan)) {
+  if (NS_OK != scriptCX->GetSecurityManager(&secMan)) {
+    return JS_FALSE;
+  }
+  {
     PRBool ok;
-    secMan->CheckScriptAccess(scriptCX, obj, "location.reload", &ok);
+    secMan->CheckScriptAccess(scriptCX, obj, "location.tostring", &ok);
     if (!ok) {
       //Need to throw error here
       return JS_FALSE;
     }
     NS_RELEASE(secMan);
-  }
-  else {
-    return JS_FALSE;
   }
 
   // If there's no private data, this must be the prototype, so ignore
@@ -421,17 +393,62 @@ LocationReload(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
   }
 
-  if (argc >= 0) {
+  {
+
+    if (NS_OK != nativeThis->ToString(nativeRet)) {
+      return JS_FALSE;
+    }
+
+    nsJSUtils::nsConvertStringToJSVal(nativeRet, cx, rval);
+  }
+
+  return JS_TRUE;
+}
+
+
+//
+// Native method Reload
+//
+PR_STATIC_CALLBACK(JSBool)
+NSLocationReload(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+  nsIDOMLocation *privateThis = (nsIDOMLocation*)nsJSUtils::nsGetNativeThis(cx, obj);
+  nsIDOMNSLocation *nativeThis = nsnull;
+  if (NS_OK != privateThis->QueryInterface(kINSLocationIID, (void **)&nativeThis)) {
+    JS_ReportError(cx, "Object must be of type NSLocation");
+    return JS_FALSE;
+  }
+
+
+  *rval = JSVAL_NULL;
+
+  nsIScriptContext *scriptCX = (nsIScriptContext *)JS_GetContextPrivate(cx);
+  nsIScriptSecurityManager *secMan;
+  if (NS_OK != scriptCX->GetSecurityManager(&secMan)) {
+    return JS_FALSE;
+  }
+  {
+    PRBool ok;
+    secMan->CheckScriptAccess(scriptCX, obj, "nslocation.reload", &ok);
+    if (!ok) {
+      //Need to throw error here
+      return JS_FALSE;
+    }
+    NS_RELEASE(secMan);
+  }
+
+  // If there's no private data, this must be the prototype, so ignore
+  if (nsnull == nativeThis) {
+    return JS_TRUE;
+  }
+
+  {
 
     if (NS_OK != nativeThis->Reload(cx, argv+0, argc-0)) {
       return JS_FALSE;
     }
 
     *rval = JSVAL_VOID;
-  }
-  else {
-    JS_ReportError(cx, "Function reload requires 0 parameters");
-    return JS_FALSE;
   }
 
   return JS_TRUE;
@@ -442,27 +459,31 @@ LocationReload(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 // Native method Replace
 //
 PR_STATIC_CALLBACK(JSBool)
-LocationReplace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+NSLocationReplace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMLocation *nativeThis = (nsIDOMLocation*)nsJSUtils::nsGetNativeThis(cx, obj);
-  JSBool rBool = JS_FALSE;
-  nsAutoString b0;
+  nsIDOMLocation *privateThis = (nsIDOMLocation*)nsJSUtils::nsGetNativeThis(cx, obj);
+  nsIDOMNSLocation *nativeThis = nsnull;
+  if (NS_OK != privateThis->QueryInterface(kINSLocationIID, (void **)&nativeThis)) {
+    JS_ReportError(cx, "Object must be of type NSLocation");
+    return JS_FALSE;
+  }
+
 
   *rval = JSVAL_NULL;
 
   nsIScriptContext *scriptCX = (nsIScriptContext *)JS_GetContextPrivate(cx);
   nsIScriptSecurityManager *secMan;
-  if (NS_OK == scriptCX->GetSecurityManager(&secMan)) {
+  if (NS_OK != scriptCX->GetSecurityManager(&secMan)) {
+    return JS_FALSE;
+  }
+  {
     PRBool ok;
-    secMan->CheckScriptAccess(scriptCX, obj, "location.replace", &ok);
+    secMan->CheckScriptAccess(scriptCX, obj, "nslocation.replace", &ok);
     if (!ok) {
       //Need to throw error here
       return JS_FALSE;
     }
     NS_RELEASE(secMan);
-  }
-  else {
-    return JS_FALSE;
   }
 
   // If there's no private data, this must be the prototype, so ignore
@@ -470,68 +491,13 @@ LocationReplace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
+  {
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->Replace(b0)) {
+    if (NS_OK != nativeThis->Replace(cx, argv+0, argc-0)) {
       return JS_FALSE;
     }
 
     *rval = JSVAL_VOID;
-  }
-  else {
-    JS_ReportError(cx, "Function replace requires 1 parameters");
-    return JS_FALSE;
-  }
-
-  return JS_TRUE;
-}
-
-
-//
-// Native method ToString
-//
-PR_STATIC_CALLBACK(JSBool)
-LocationToString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-  nsIDOMLocation *nativeThis = (nsIDOMLocation*)nsJSUtils::nsGetNativeThis(cx, obj);
-  JSBool rBool = JS_FALSE;
-  nsAutoString nativeRet;
-
-  *rval = JSVAL_NULL;
-
-  nsIScriptContext *scriptCX = (nsIScriptContext *)JS_GetContextPrivate(cx);
-  nsIScriptSecurityManager *secMan;
-  if (NS_OK == scriptCX->GetSecurityManager(&secMan)) {
-    PRBool ok;
-    secMan->CheckScriptAccess(scriptCX, obj, "location.tostring", &ok);
-    if (!ok) {
-      //Need to throw error here
-      return JS_FALSE;
-    }
-    NS_RELEASE(secMan);
-  }
-  else {
-    return JS_FALSE;
-  }
-
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
-  }
-
-  if (argc >= 0) {
-
-    if (NS_OK != nativeThis->ToString(nativeRet)) {
-      return JS_FALSE;
-    }
-
-    nsJSUtils::nsConvertStringToJSVal(nativeRet, cx, rval);
-  }
-  else {
-    JS_ReportError(cx, "Function toString requires 0 parameters");
-    return JS_FALSE;
   }
 
   return JS_TRUE;
@@ -564,7 +530,6 @@ static JSPropertySpec LocationProperties[] =
   {"hash",    LOCATION_HASH,    JSPROP_ENUMERATE},
   {"host",    LOCATION_HOST,    JSPROP_ENUMERATE},
   {"hostname",    LOCATION_HOSTNAME,    JSPROP_ENUMERATE},
-  {"href",    LOCATION_HREF,    JSPROP_ENUMERATE},
   {"pathname",    LOCATION_PATHNAME,    JSPROP_ENUMERATE},
   {"port",    LOCATION_PORT,    JSPROP_ENUMERATE},
   {"protocol",    LOCATION_PROTOCOL,    JSPROP_ENUMERATE},
@@ -578,9 +543,9 @@ static JSPropertySpec LocationProperties[] =
 //
 static JSFunctionSpec LocationMethods[] = 
 {
-  {"reload",          LocationReload,     0},
-  {"replace",          LocationReplace,     1},
   {"toString",          LocationToString,     0},
+  {"reload",          NSLocationReload,     0},
+  {"replace",          NSLocationReplace,     0},
   {0}
 };
 

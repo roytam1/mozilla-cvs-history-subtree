@@ -20,16 +20,18 @@
 #define nsHTMLEditRules_h__
 
 #include "nsTextEditRules.h"
+#include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 
 class nsISupportsArray;
+class nsVoidArray;
 
 class nsHTMLEditRules : public nsTextEditRules
 {
 public:
 
-  nsHTMLEditRules();
-  virtual ~nsHTMLEditRules();
+            nsHTMLEditRules();
+  virtual   ~nsHTMLEditRules();
 
   // nsEditRules methods
   NS_IMETHOD WillDoAction(nsIDOMSelection *aSelection, nsRulesInfo *aInfo, PRBool *aCancel);
@@ -59,7 +61,7 @@ protected:
                             TypeInState     typeInState,
                             PRInt32         aMaxLength);
   nsresult WillInsertBreak(nsIDOMSelection *aSelection, PRBool *aCancel);
-  nsresult WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECollapsedSelectionAction aAction, PRBool *aCancel);
+  nsresult WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESelectionCollapseDirection aAction, PRBool *aCancel);
   nsresult WillMakeList(nsIDOMSelection *aSelection, PRBool aOrderd, PRBool *aCancel);
   nsresult WillIndent(nsIDOMSelection *aSelection, PRBool *aCancel);
   nsresult WillOutdent(nsIDOMSelection *aSelection, PRBool *aCancel);
@@ -87,14 +89,26 @@ protected:
   static PRBool IsBreak(nsIDOMNode *aNode);
   static PRBool IsBody(nsIDOMNode *aNode);
   static PRBool IsBlockquote(nsIDOMNode *aNode);
+  static PRBool IsDiv(nsIDOMNode *aNode);
 
-  static PRBool IsFirstNode(nsIDOMNode *aNode);
-  static PRBool IsLastNode(nsIDOMNode *aNode);
-  static nsresult GetPromotedPoint(RulesEndpoint aWhere, nsIDOMNode *aNode, PRInt32 aOffset, 
-                                  PRInt32 actionID, nsCOMPtr<nsIDOMNode> *outNode, PRInt32 *outOffset);
+  nsresult IsEmptyBlock(nsIDOMNode *aNode, PRBool *outIsEmptyBlock);
+  PRBool IsFirstNode(nsIDOMNode *aNode);
+  PRBool IsLastNode(nsIDOMNode *aNode);
+  nsresult GetPromotedPoint(RulesEndpoint aWhere, nsIDOMNode *aNode, PRInt32 aOffset, 
+                            PRInt32 actionID, nsCOMPtr<nsIDOMNode> *outNode, PRInt32 *outOffset);
+
+  nsresult GetPromotedRanges(nsIDOMSelection *inSelection, 
+                             nsCOMPtr<nsISupportsArray> *outArrayOfRanges, 
+                             PRInt32 inOperationType);
+  static nsresult GetNodesForOperation(nsISupportsArray *inArrayOfRanges, 
+                                   nsCOMPtr<nsISupportsArray> *outArrayOfNodes, 
+                                   PRInt32 inOperationType);
+  static nsresult MakeTransitionList(nsISupportsArray *inArrayOfNodes, 
+                                   nsVoidArray *inTransitionArray);
   
   nsresult ReplaceContainer(nsIDOMNode *inNode, nsCOMPtr<nsIDOMNode> *outNode, nsString &aNodeType);
-  nsresult InsertContainer(nsIDOMNode *inNode, nsCOMPtr<nsIDOMNode> *outNode, nsString &aNodeType);
+  nsresult RemoveContainer(nsIDOMNode *inNode);
+  nsresult InsertContainerAbove(nsIDOMNode *inNode, nsCOMPtr<nsIDOMNode> *outNode, nsString &aNodeType);
 
 };
 

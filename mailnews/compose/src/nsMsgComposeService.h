@@ -32,8 +32,15 @@ public:
 	/* void OpenComposeWindow (in wstring msgComposeWindowURL, in wstring originalMsgURI, in long type, in long format); */
 	NS_IMETHOD OpenComposeWindow(const PRUnichar *msgComposeWindowURL, const PRUnichar *originalMsgURI, PRInt32 type, PRInt32 format, nsISupports *object);
 
-	/* nsIMsgCompose InitCompose (in nsIDOMWindow aWindow, in wstring originalMsgURI, in MSG_ComposeType type, in MSG_ComposeFormat format); */
-	NS_IMETHOD InitCompose(nsIDOMWindow *aWindow, const PRUnichar *originalMsgURI, MSG_ComposeType type, MSG_ComposeFormat format, nsIMsgCompose **_retval);
+	/* void OpenComposeWindowWithValues (in wstring msgComposeWindowURL, in MSG_ComposeFormat format, in wstring to, in wstring cc, in wstring bcc, in wstring newsgroups, in wstring subject, in wstring body); */
+	NS_IMETHOD OpenComposeWindowWithValues(const PRUnichar *msgComposeWindowURL, MSG_ComposeFormat format, const PRUnichar *to, const PRUnichar *cc, const PRUnichar *bcc, const PRUnichar *newsgroups,
+											const PRUnichar *subject, const PRUnichar *body);
+
+	/* void OpenComposeWindowWithCompFields (in wstring msgComposeWindowURL, in MSG_ComposeFormat format, in nsIMsgCompFields compFields); */
+	NS_IMETHOD OpenComposeWindowWithCompFields(const PRUnichar *msgComposeWindowURL, MSG_ComposeFormat format, nsIMsgCompFields *compFields);
+
+	/* nsIMsgCompose InitCompose (in nsIDOMWindow aWindow, in wstring originalMsgURI, in long type, in long format, in long compFieldsAddr); */
+	NS_IMETHOD InitCompose(nsIDOMWindow *aWindow, const PRUnichar *originalMsgURI, PRInt32 type, PRInt32 format, PRInt32 compFieldsAddr, nsIMsgCompose **_retval);
 
 	/* void DisposeCompose (in nsIMsgCompose compose, in boolean closeWindow); */
 	NS_IMETHOD DisposeCompose(nsIMsgCompose *compose, PRBool closeWindow);
@@ -45,5 +52,3 @@ private:
 	nsString		hack_uri[16];
 	nsISupports*	hack_object[16];
 };
-
-

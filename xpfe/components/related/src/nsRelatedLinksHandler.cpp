@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4; c-file-style: "stroustrup" -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -36,9 +36,8 @@
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
+#include "nsIBufferInputStream.h"
 #endif // NECKO
 #include "nsRDFCID.h"
 #include "nsString.h"
@@ -94,22 +93,35 @@ public:
 	 NS_DECL_ISUPPORTS
 
 			RelatedLinksStreamListener(nsIRDFDataSource *ds);
-	 virtual	~RelatedLinksStreamListener(void);
+	 virtual	~RelatedLinksStreamListener();
 
 	 NS_METHOD	Init();
 	 NS_METHOD	CreateAnonymousResource(const nsString& aPrefixURI, nsCOMPtr<nsIRDFResource>* aResult);
 
-	 // stream observer
+#ifdef NECKO
+	// nsIStreamObserver
+	NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+	NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status, 
+							 const PRUnichar *errorMsg);
 
-	 NS_IMETHOD	OnStartBinding(nsIURL *aURL, const char *aContentType);
-	 NS_IMETHOD	OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-	 NS_IMETHOD	OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-	 NS_IMETHOD	OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg);
+	// nsIStreamListener
+	NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports *ctxt,
+							   nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+
+#else
+	// stream observer
+
+	NS_IMETHOD	OnStartRequest(nsIURI *aURL, const char *aContentType);
+	NS_IMETHOD	OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+	NS_IMETHOD	OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+	NS_IMETHOD	OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg);
 
 	 // stream listener
-	 NS_IMETHOD	GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo);
-	 NS_IMETHOD	OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, 
-				PRUint32 aLength);
+	NS_IMETHOD	GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo);
+	NS_IMETHOD	OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, 
+								PRUint32 aLength);
+#endif
+
 };
 
 PRInt32			RelatedLinksStreamListener::gRefCnt;
@@ -146,6 +158,8 @@ NS_NewRelatedLinksStreamListener(nsIRDFDataSource* aDataSource,
 	 return NS_OK;
 }
 
+
+
 RelatedLinksStreamListener::RelatedLinksStreamListener(nsIRDFDataSource *aDataSource)
 	 : mDataSource(dont_QueryInterface(aDataSource)),
 	   mLine(nsnull)
@@ -176,6 +190,7 @@ RelatedLinksStreamListener::~RelatedLinksStreamListener()
 }
 
 
+
 NS_METHOD
 RelatedLinksStreamListener::Init()
 {
@@ -201,6 +216,7 @@ RelatedLinksStreamListener::Init()
 }
 
 
+
 NS_METHOD
 RelatedLinksStreamListener::CreateAnonymousResource(const nsString& aPrefixURI,
 						     nsCOMPtr<nsIRDFResource>* aResult)
@@ -214,6 +230,8 @@ RelatedLinksStreamListener::CreateAnonymousResource(const nsString& aPrefixURI,
 	 return gRDFService->GetUnicodeResource(uri.GetUnicode(), getter_AddRefs(*aResult));
 }
 
+
+
 // nsISupports interface
 NS_IMPL_ISUPPORTS(RelatedLinksStreamListener, nsIStreamListener::GetIID());
 
@@ -224,7 +242,11 @@ NS_IMPL_ISUPPORTS(RelatedLinksStreamListener, nsIStreamListener::GetIID());
 
 
 NS_IMETHODIMP
-RelatedLinksStreamListener::OnStartBinding(nsIURL *aURL, const char *aContentType)
+#ifdef NECKO
+RelatedLinksStreamListener::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+RelatedLinksStreamListener::OnStartRequest(nsIURI *aURL, const char *aContentType)
+#endif
 {
 	 nsAutoString		trueStr("true");
 	 nsIRDFLiteral		*literal = nsnull;
@@ -238,9 +260,9 @@ RelatedLinksStreamListener::OnStartBinding(nsIURL *aURL, const char *aContentTyp
 }
 
 
-
+#ifndef NECKO
 NS_IMETHODIMP
-RelatedLinksStreamListener::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax) 
+RelatedLinksStreamListener::OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax) 
 {
 	 return(NS_OK);
 }
@@ -248,15 +270,20 @@ RelatedLinksStreamListener::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint3
 
 
 NS_IMETHODIMP
-RelatedLinksStreamListener::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+RelatedLinksStreamListener::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 {
 	 return(NS_OK);
 }
-
+#endif
 
 
 NS_IMETHODIMP
-RelatedLinksStreamListener::OnStopBinding(nsIURL* aURL, nsresult aStatus, const PRUnichar* aMsg) 
+#ifdef NECKO
+RelatedLinksStreamListener::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+										  nsresult status, const PRUnichar *errorMsg) 
+#else
+RelatedLinksStreamListener::OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg) 
+#endif
 {
 	 nsAutoString		trueStr("true");
 	 nsIRDFLiteral		*literal = nsnull;
@@ -274,37 +301,54 @@ RelatedLinksStreamListener::OnStopBinding(nsIURL* aURL, nsresult aStatus, const 
 // stream listener methods
 
 
-
+#ifndef NECKO
 NS_IMETHODIMP
-RelatedLinksStreamListener::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo)
+RelatedLinksStreamListener::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo)
 {
 	return(NS_OK);
 }
-
+#endif
 
 
 NS_IMETHODIMP
-RelatedLinksStreamListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStream, PRUint32 aLength)
+#ifdef NECKO
+RelatedLinksStreamListener::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt,
+											nsIInputStream *aIStream,
+											PRUint32 sourceOffset,
+											PRUint32 aLength)
+#else
+RelatedLinksStreamListener::OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength)
+#endif
 {
 	nsresult	rv = NS_OK;
 
 	if (aLength > 0)
 	{
-		nsString	line;
-		if (mLine)	line += mLine;
-
-		char		c;
-		for (PRUint32 loop=0; loop<aLength; loop++)
+		nsAutoString	line;
+		if (mLine)
 		{
-			PRUint32	count;
-			if (NS_FAILED(rv = aIStream->Read(&c, 1, &count)))
+			line += mLine;
+			delete	[]mLine;
+			mLine = nsnull;
+		}
+
+		char	buffer[257];
+		while (aLength > 0)
+		{
+			PRUint32	count=0, numBytes = (aLength > sizeof(buffer)-1 ? sizeof(buffer)-1 : aLength);
+			if (NS_FAILED(rv = aIStream->Read(buffer, numBytes, &count)))
 			{
 				printf("Related Links datasource read failure.\n");
 				break;
 			}
-
-			if (count != 1)	break;
-			line += c;
+			if (numBytes != count)
+			{
+				printf("Related Links datasource read # of bytes failure.\n");
+				break;
+			}
+			buffer[count] = '\0';
+			line += buffer;
+			aLength -= count;
 		}
 
 		while (PR_TRUE)
@@ -312,18 +356,26 @@ RelatedLinksStreamListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStre
 			PRInt32 eol = line.FindCharInSet("\r\n");
 			if (eol < 0)
 			{
-				if (mLine)	delete []mLine;
+				if (mLine)
+				{
+					delete []mLine;
+					mLine = nsnull;
+				}
 				mLine = line.ToNewCString();
 				break;
 			}
 
 			nsAutoString	oneLiner("");
-			if (eol > 0)
+			if (eol >= 0)
 			{
 				line.Left(oneLiner, eol);
+				line.Cut(0, eol+1);
 			}
-			line.Cut(0, eol+1);
-			if (mLine)	delete []mLine;
+			if (mLine)
+			{
+				delete []mLine;
+				mLine = nsnull;
+			}
 			mLine = line.ToNewCString();
 			if (oneLiner.Length() < 1)	return(rv);
 
@@ -353,7 +405,7 @@ RelatedLinksStreamListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStre
 				{
 					theStart += PL_strlen("name=\"");
 					oneLiner.Cut(0, theStart);
-					PRInt32 theEnd = oneLiner.Find("\"");
+					theEnd = oneLiner.Find("\"");
 					if (theEnd > 0)
 					{
 						oneLiner.Mid(title, 0, theEnd);
@@ -492,6 +544,7 @@ RelatedLinksStreamListener::OnDataAvailable(nsIURL* aURL, nsIInputStream *aIStre
 }
 
 
+
 ////////////////////////////////////////////////////////////////////////
 // RelatedLinksHanlderImpl
 
@@ -513,8 +566,9 @@ private:
 
 	nsCOMPtr<nsIRDFDataSource> mInner;
 
-			RelatedLinksHandlerImpl(void);
-	virtual		~RelatedLinksHandlerImpl(void);
+				RelatedLinksHandlerImpl();
+	virtual		~RelatedLinksHandlerImpl();
+	nsresult	Init();
 
 	friend NS_IMETHODIMP
 	NS_NewRelatedLinksHandler(nsISupports* aOuter, REFNSIID aIID, void** aResult);
@@ -529,7 +583,6 @@ public:
 
 	// nsIRDFDataSource methods
 
-	NS_IMETHOD	Init(const char *uri);
 	NS_IMETHOD	GetURI(char **uri);
 	NS_IMETHOD	GetSource(nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -554,6 +607,14 @@ public:
 	NS_IMETHOD	Unassert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target);
+	NS_IMETHOD Change(nsIRDFResource* aSource,
+					  nsIRDFResource* aProperty,
+					  nsIRDFNode* aOldTarget,
+					  nsIRDFNode* aNewTarget);
+	NS_IMETHOD Move(nsIRDFResource* aOldSource,
+					nsIRDFResource* aNewSource,
+					nsIRDFResource* aProperty,
+					nsIRDFNode* aTarget);
 	NS_IMETHOD	HasAssertion(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -566,9 +627,10 @@ public:
 	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
-	NS_IMETHOD	Flush();
 	NS_IMETHOD	GetAllCommands(nsIRDFResource* source,
 				nsIEnumerator/*<nsIRDFResource>*/** commands);
+	NS_IMETHOD	GetAllCmds(nsIRDFResource* source,
+				nsISimpleEnumerator/*<nsIRDFResource>*/** commands);
 	NS_IMETHOD	IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
 				nsIRDFResource*   aCommand,
 				nsISupportsArray/*<nsIRDFResource>*/* aArguments,
@@ -590,8 +652,7 @@ nsIRDFResource		*RelatedLinksHandlerImpl::kRDF_type;
 
 
 
-
-RelatedLinksHandlerImpl::RelatedLinksHandlerImpl(void)
+RelatedLinksHandlerImpl::RelatedLinksHandlerImpl()
 	: mURI(nsnull),
 	  mRelatedLinksURL(nsnull),
 	  mPerformQuery(PR_FALSE)
@@ -601,7 +662,7 @@ RelatedLinksHandlerImpl::RelatedLinksHandlerImpl(void)
 
 
 
-RelatedLinksHandlerImpl::~RelatedLinksHandlerImpl (void)
+RelatedLinksHandlerImpl::~RelatedLinksHandlerImpl()
 {
 	if (mRelatedLinksURL)
 	{
@@ -623,6 +684,35 @@ RelatedLinksHandlerImpl::~RelatedLinksHandlerImpl (void)
 
 
 
+nsresult
+RelatedLinksHandlerImpl::Init()
+{
+	nsresult rv;
+
+	if (gRefCnt++ == 0)
+	{
+		rv = nsServiceManager::GetService(kRDFServiceCID,
+                                                  nsIRDFService::GetIID(),
+                                                  (nsISupports**) &gRDFService);
+		if (NS_FAILED(rv)) return rv;
+
+		gRDFService->GetResource(kURINC_RelatedLinksRoot, &kNC_RelatedLinksRoot);
+		gRDFService->GetResource(NC_NAMESPACE_URI  "child", &kNC_Child);
+		gRDFService->GetResource(NC_NAMESPACE_URI  "Name", &kNC_Name);
+		gRDFService->GetResource(RDF_NAMESPACE_URI "type", &kRDF_type);
+	}
+
+	rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
+											nsnull,
+											nsIRDFDataSource::GetIID(),
+											getter_AddRefs(mInner));
+	if (NS_FAILED(rv)) return rv;
+
+	return NS_OK;
+}
+
+
+
 NS_IMETHODIMP
 NS_NewRelatedLinksHandler(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 {
@@ -640,7 +730,7 @@ NS_NewRelatedLinksHandler(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 	if (! result)
 		return NS_ERROR_OUT_OF_MEMORY;
 
-	rv = result->Init("rdf:relatedlinks");
+	rv = result->Init();
 	if (NS_SUCCEEDED(rv)) {
 		rv = result->QueryInterface(aIID, aResult);
 	}
@@ -653,6 +743,7 @@ NS_NewRelatedLinksHandler(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 
 	return rv;
 }
+
 
 
 // nsISupports interface
@@ -690,6 +781,7 @@ RelatedLinksHandlerImpl::QueryInterface(REFNSIID aIID, void** aResult)
 }
 
 
+
 // nsIRelatedLinksHandler interface
 
 NS_IMETHODIMP
@@ -699,15 +791,18 @@ RelatedLinksHandlerImpl::GetURL(char** aURL)
 	if (! aURL)
 		return NS_ERROR_NULL_POINTER;
 
-	if (mRelatedLinksURL) {
+	if (mRelatedLinksURL)
+	{
 		*aURL = nsXPIDLCString::Copy(mRelatedLinksURL);
 		return *aURL ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 	}
-	else {
+	else
+	{
 		*aURL = nsnull;
 		return NS_OK;
 	}
 }
+
 
 
 NS_IMETHODIMP
@@ -743,19 +838,11 @@ RelatedLinksHandlerImpl::SetURL(char* aURL)
 	if (! queryURL)
 		return NS_ERROR_OUT_OF_MEMORY;
 
-	nsCOMPtr<nsIURL> url;
+	nsCOMPtr<nsIURI> url;
 #ifndef NECKO
 	rv = NS_NewURL(getter_AddRefs(url), queryURL);
 #else
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    nsIURI *uri = nsnull;
-    rv = service->NewURI(queryURL, nsnull, &uri);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-    NS_RELEASE(uri);
+	rv = NS_NewURI(getter_AddRefs(url), queryURL);
 #endif // NECKO
 
 	if (NS_FAILED(rv)) return rv;
@@ -765,55 +852,36 @@ RelatedLinksHandlerImpl::SetURL(char* aURL)
 	rv = NS_NewRelatedLinksStreamListener(mInner, getter_AddRefs(listener));
 	if (NS_FAILED(rv)) return rv;
 
+#ifdef NECKO
+	rv = NS_OpenURI(listener, nsnull, url);
+#else
 	rv = NS_OpenURL(url, listener);
+#endif
 	if (NS_FAILED(rv)) return rv;
 
 	return NS_OK;
 }
+
 
 
 // nsIRDFDataSource interface
-
-NS_IMETHODIMP
-RelatedLinksHandlerImpl::Init(const char *aURI)
-{
-	NS_PRECONDITION(aURI != nsnull, "null ptr");
-	if (! aURI)
-		return NS_ERROR_NULL_POINTER;
-
-	nsresult rv;
-
-	if (gRefCnt++ == 0)
-	{
-		rv = nsServiceManager::GetService(kRDFServiceCID,
-                                                  nsIRDFService::GetIID(),
-                                                  (nsISupports**) &gRDFService);
-		if (NS_FAILED(rv)) return rv;
-
-		gRDFService->GetResource(kURINC_RelatedLinksRoot, &kNC_RelatedLinksRoot);
-		gRDFService->GetResource(NC_NAMESPACE_URI  "child", &kNC_Child);
-		gRDFService->GetResource(NC_NAMESPACE_URI  "Name", &kNC_Name);
-		gRDFService->GetResource(RDF_NAMESPACE_URI "type", &kRDF_type);
-	}
-
-	rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
-						nsnull,
-						nsIRDFDataSource::GetIID(),
-						getter_AddRefs(mInner));
-	if (NS_FAILED(rv)) return rv;
-
-	rv = mInner->Init(mURI);
-	if (NS_FAILED(rv)) return rv;
-
-	return NS_OK;
-}
-
 
 
 NS_IMETHODIMP
 RelatedLinksHandlerImpl::GetURI(char **aURI)
 {
-	return mInner->GetURI(aURI);
+	NS_PRECONDITION(aURI != nsnull, "null ptr");
+	if (! aURI)
+		return NS_ERROR_NULL_POINTER;
+
+	// XXX We could munge in the current URL that we're looking at I
+	// suppose. Not critical because this datasource shouldn't be
+	// registered with the RDF service.
+	*aURI = nsXPIDLCString::Copy("rdf:related-links");
+	if (! *aURI)
+		return NS_ERROR_OUT_OF_MEMORY;
+
+	return NS_OK;
 }
 
 
@@ -851,8 +919,6 @@ RelatedLinksHandlerImpl::GetTarget(nsIRDFResource *aSource,
 
 
 
-
-
 NS_IMETHODIMP
 RelatedLinksHandlerImpl::GetTargets(nsIRDFResource* aSource,
 				    nsIRDFResource* aProperty,
@@ -879,6 +945,28 @@ NS_IMETHODIMP
 RelatedLinksHandlerImpl::Unassert(nsIRDFResource *aSource,
 				  nsIRDFResource *aProperty,
 				  nsIRDFNode *aTarget)
+{
+	return NS_RDF_ASSERTION_REJECTED;
+}
+
+
+
+NS_IMETHODIMP
+RelatedLinksHandlerImpl::Change(nsIRDFResource* aSource,
+								nsIRDFResource* aProperty,
+								nsIRDFNode* aOldTarget,
+								nsIRDFNode* aNewTarget)
+{
+	return NS_RDF_ASSERTION_REJECTED;
+}
+
+
+
+NS_IMETHODIMP
+RelatedLinksHandlerImpl::Move(nsIRDFResource* aOldSource,
+							  nsIRDFResource* aNewSource,
+							  nsIRDFResource* aProperty,
+							  nsIRDFNode* aTarget)
 {
 	return NS_RDF_ASSERTION_REJECTED;
 }
@@ -940,18 +1028,19 @@ RelatedLinksHandlerImpl::RemoveObserver(nsIRDFObserver *aObserver)
 
 
 NS_IMETHODIMP
-RelatedLinksHandlerImpl::Flush()
+RelatedLinksHandlerImpl::GetAllCommands(nsIRDFResource* aSource,
+					nsIEnumerator/*<nsIRDFResource>*/** aCommands)
 {
-	return mInner->Flush();
+	return mInner->GetAllCommands(aSource, aCommands);
 }
 
 
 
 NS_IMETHODIMP
-RelatedLinksHandlerImpl::GetAllCommands(nsIRDFResource* aSource,
-					nsIEnumerator/*<nsIRDFResource>*/** aCommands)
+RelatedLinksHandlerImpl::GetAllCmds(nsIRDFResource* aSource,
+					nsISimpleEnumerator/*<nsIRDFResource>*/** aCommands)
 {
-	return mInner->GetAllCommands(aSource, aCommands);
+	return mInner->GetAllCmds(aSource, aCommands);
 }
 
 
@@ -974,6 +1063,8 @@ RelatedLinksHandlerImpl::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSource
 {
 	return mInner->DoCommand(aSources, aCommand, aArguments);
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // Component Exports
@@ -1033,8 +1124,8 @@ NSRegisterSelf(nsISupports* aServMgr , const char* aPath)
 	if (NS_FAILED(rv)) return rv;
 
 	rv = compMgr->RegisterComponent(kRelatedLinksHandlerCID, "Related Links Handler",
-					NS_RELATEDLINKSHANDLER_PROGID,
-					aPath, PR_TRUE, PR_TRUE);
+									NS_RELATEDLINKSHANDLER_PROGID,
+									aPath, PR_TRUE, PR_TRUE);
 
 	return NS_OK;
 }
@@ -1056,5 +1147,3 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* aPath)
 
 	return NS_OK;
 }
-
-

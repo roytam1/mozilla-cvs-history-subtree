@@ -21,46 +21,88 @@
 #define nsWalletService_h___
 
 #include "nsIWalletService.h"
+#include "nsIObserver.h"
+#include "nsIFormSubmitObserver.h"
+#include "nsIDocumentLoaderObserver.h"
 
-class nsWalletlibService : public nsIWalletService {
+class nsWalletlibService : public nsIWalletService,
+                           public nsIObserver,
+                           public nsIFormSubmitObserver,
+                           public nsIDocumentLoaderObserver {
 
 public:
-    NS_DECL_ISUPPORTS
-    nsWalletlibService();
+  NS_DECL_ISUPPORTS
+  nsWalletlibService();
 
-    /* Implementation of the nsIWalletService interface */
-    NS_IMETHOD WALLET_ChangePassword();
-    NS_IMETHOD WALLET_PreEdit(nsAutoString& walletList);
-    NS_IMETHOD WALLET_PostEdit(nsAutoString walletList);
-    NS_IMETHOD WALLET_Prefill(nsIPresShell* shell, nsString url, PRBool quick);
-    NS_IMETHOD WALLET_Capture
-      (nsIDocument* doc, nsString name, nsString value, nsString vcard);
-    NS_IMETHOD WALLET_OKToCapture(PRBool* result, PRInt32 count, char* URLName);
-    NS_IMETHOD WALLET_PrefillReturn(nsAutoString results);
+  /* Implementation of the nsIWalletService interface */
+  NS_IMETHOD WALLET_PreEdit(nsAutoString& walletList);
+  NS_IMETHOD WALLET_PostEdit(nsAutoString walletList);
+  NS_IMETHOD WALLET_ChangePassword();
+  NS_IMETHOD WALLET_Prefill(nsIPresShell* shell, nsString url, PRBool quick);
+  NS_IMETHOD WALLET_PrefillReturn(nsAutoString results);
+  NS_IMETHOD WALLET_FetchFromNetCenter();
 
-    NS_IMETHOD SI_DisplaySignonInfoAsHTML();
-    NS_IMETHOD SI_SignonViewerReturn(nsAutoString results);
-    NS_IMETHOD SI_GetSignonListForViewer(nsString& aSignonList);
-    NS_IMETHOD SI_GetRejectListForViewer(nsString& aRejectList);
-    NS_IMETHOD WALLET_GetNopreviewListForViewer(nsString& aNopreviewList);
-    NS_IMETHOD WALLET_GetNocaptureListForViewer(nsString& aNocaptureList);
-    NS_IMETHOD WALLET_GetPrefillListForViewer(nsString& aPrefillList);
+  NS_IMETHOD SI_PromptUsernameAndPassword
+      (char *prompt, char **username, char **password, char *URLName, PRBool &status);
+  NS_IMETHOD SI_PromptPassword
+      (char *prompt, char **password, char *URLName, PRBool pickFirstUser);
+  NS_IMETHOD SI_Prompt
+      (char *prompt, char **username, char *URLName);
 
-    NS_IMETHOD SI_RememberSignonData
-        (char* URLName, char** name_array, char** value_array, char** type_array, PRInt32 value_cnt);
-    NS_IMETHOD SI_RestoreSignonData
-        (char* URLNAME, char* name, char** value);
-    NS_IMETHOD SI_PromptUsernameAndPassword
-        (char *prompt, char **username, char **password, char *URLName, PRBool &status);
-    NS_IMETHOD SI_PromptPassword
-        (char *prompt, char **password, char *URLName, PRBool pickFirstUser);
-    NS_IMETHOD SI_Prompt
-        (char *prompt, char **username, char *URLName);
+  NS_IMETHOD WALLET_GetNopreviewListForViewer(nsString& aNopreviewList);
+  NS_IMETHOD WALLET_GetNocaptureListForViewer(nsString& aNocaptureList);
+  NS_IMETHOD WALLET_GetPrefillListForViewer(nsString& aPrefillList);
+  NS_IMETHOD SI_GetSignonListForViewer(nsString& aSignonList);
+  NS_IMETHOD SI_GetRejectListForViewer(nsString& aRejectList);
+  NS_IMETHOD SI_SignonViewerReturn(nsAutoString results);
+
+  // nsIObserver
+  NS_DECL_IOBSERVER
+  NS_IMETHOD Notify(nsIContent* formNode);
+
+  // nsIDocumentLoaderObserver
+#ifdef NECKO
+  NS_IMETHOD OnStartDocumentLoad
+    (nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand);
+  NS_IMETHOD OnEndDocumentLoad
+    (nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus,
+     nsIDocumentLoaderObserver* aObserver);
+  NS_IMETHOD OnStartURLLoad
+    (nsIDocumentLoader* loader, nsIChannel* channel, nsIContentViewer* aViewer);
+  NS_IMETHOD OnProgressURLLoad
+    (nsIDocumentLoader* loader, nsIChannel* channel, PRUint32 aProgress,
+     PRUint32 aProgressMax);
+  NS_IMETHOD OnStatusURLLoad
+    (nsIDocumentLoader* loader, nsIChannel* channel, nsString& aMsg);
+  NS_IMETHOD OnEndURLLoad
+    (nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus);
+  NS_IMETHOD HandleUnknownContentType
+    (nsIDocumentLoader* loader, nsIChannel* channel, const char *aContentType,
+     const char *aCommand );		
+#else
+  NS_IMETHOD OnStartDocumentLoad
+    (nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand);
+  NS_IMETHOD OnEndDocumentLoad
+    (nsIDocumentLoader* loader, nsIURI *aUrl, PRInt32 aStatus,
+     nsIDocumentLoaderObserver * aObserver);
+  NS_IMETHOD OnStartURLLoad
+    (nsIDocumentLoader* loader, nsIURI* aURL, const char* aContentType,
+     nsIContentViewer* aViewer);
+  NS_IMETHOD OnProgressURLLoad
+    (nsIDocumentLoader* loader, nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, nsString& aMsg);
+  NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIURI* aURL, PRInt32 aStatus);
+  NS_IMETHOD HandleUnknownContentType(nsIDocumentLoader* loader,
+                                        nsIURI *aURL,
+                                        const char *aContentType,
+                                        const char *aCommand );
+#endif
 
 protected:
-    virtual ~nsWalletlibService();
+  virtual ~nsWalletlibService();
 
 private:
+  void    Init();
 };
 
 

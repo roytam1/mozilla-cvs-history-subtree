@@ -25,7 +25,6 @@
 #include "nsScanner.h"
 #include "prenv.h"  //this is here for debug reasons...
 #include "plstr.h"
-#include <fstream.h>
 #include "nsIParserFilter.h"
 #include "nshtmlpars.h"
 #include "CNavDTD.h"
@@ -51,7 +50,7 @@ static NS_DEFINE_IID(kIParserIID, NS_IPARSER_IID);
 static NS_DEFINE_IID(kIStreamListenerIID, NS_ISTREAMLISTENER_IID);
 
 static const char* kNullURL = "Error: Null URL given";
-static const char* kOnStartNotCalled = "Error: OnStartBinding() must be called before OnDataAvailable()";
+static const char* kOnStartNotCalled = "Error: OnStartRequest() must be called before OnDataAvailable()";
 static const char* kBadListenerInit  = "Error: Parser's IStreamListener API was not setup correctly in constructor.";
 
 //-------------------------------------------------------------------
@@ -244,7 +243,15 @@ nsresult nsParser::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   else if(aIID.Equals(kIParserIID)) {  //do IParser base class...
     *aInstancePtr = (nsIParser*)(this);                                        
   }
-  else if(aIID.Equals(kIStreamListenerIID)) {  //do IStreamListener base class...
+#ifdef NECKO
+  else if(aIID.Equals(nsIProgressEventSink::GetIID())) {
+    *aInstancePtr = (nsIStreamListener*)(this);                                        
+  }
+#endif
+  else if(aIID.Equals(nsIStreamObserver::GetIID())) {
+    *aInstancePtr = (nsIStreamObserver*)(this);                                        
+  }
+  else if(aIID.Equals(nsIStreamListener::GetIID())) {
     *aInstancePtr = (nsIStreamListener*)(this);                                        
   }
   else if(aIID.Equals(kClassIID)) {  //do this class...
@@ -444,7 +451,7 @@ eParseMode DetermineParseMode(nsParser& aParser) {
 
     if(kNotFound<theIndex) {
       //good, we found "DOCTYPE" -- now go find it's end delimiter '>'
-      PRInt32 theSubIndex=theBufCopy.Find(kGreaterThan,theIndex+1);
+      PRInt32 theSubIndex=theBufCopy.FindChar(kGreaterThan,theIndex+1);
       theBufCopy.Truncate(theSubIndex);
       theSubIndex=theBufCopy.Find("HTML 4.0");
       if(kNotFound<theSubIndex) {
@@ -568,6 +575,21 @@ void nsParser::SetUnusedInput(nsString& aBuffer) {
   mUnusedInput=aBuffer;
 }
 
+/**
+ *  Call this when you want to *force* the parser to terminate the
+ *  parsing process altogether. This is binary -- so once you terminate
+ *  you can't resume without restarting altogether.
+ *  
+ *  @update  gess 7/4/99
+ *  @return  should return NS_OK once implemented
+ */
+nsresult nsParser::Terminate(void){
+  nsresult result=NS_OK;
+  if(mParserContext && mParserContext->mDTD)
+    result=mParserContext->mDTD->Terminate();
+  mInternalState=result;
+  return result;
+}
 
 /**
  *  Call this when you want control whether or not the parser will parse
@@ -578,7 +600,7 @@ void nsParser::SetUnusedInput(nsString& aBuffer) {
  *  @param   aState determines whether we parse/tokenize or just cache.
  *  @return  current state
  */
-PRBool nsParser::EnableParser(PRBool aState){
+nsresult nsParser::EnableParser(PRBool aState){
   nsIParser* me = nsnull;
 
   // If the stream has already finished, there's a good chance
@@ -592,12 +614,17 @@ PRBool nsParser::EnableParser(PRBool aState){
 
   // If we're reenabling the parser
   mParserContext->mParserEnabled=aState;
-  nsresult result=(aState) ? ResumeParse() : NS_OK;
+  nsresult result=NS_OK;
+  if(aState) {
+    result=ResumeParse();
+    if(result!=NS_OK) 
+      result=mInternalState;
+  }
 
   // Release reference if we added one at the top of this routine
   NS_IF_RELEASE(me);
 
-  return aState;
+  return result;
 }
 
 /**
@@ -624,7 +651,7 @@ nsParser::IsParserEnabled()
  *  @param   aFilename -- const char* containing file to be parsed.
  *  @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::Parse(nsIURL* aURL,nsIStreamObserver* aListener,PRBool aVerifyEnabled, void* aKey) {
+nsresult nsParser::Parse(nsIURI* aURL,nsIStreamObserver* aListener,PRBool aVerifyEnabled, void* aKey,eParseMode aMode) {
   NS_PRECONDITION(0!=aURL,kNullURL);
 
   nsresult result=kBadURL;
@@ -663,7 +690,7 @@ nsresult nsParser::Parse(nsIURL* aURL,nsIStreamObserver* aListener,PRBool aVerif
  * @param   aStream is the i/o source
  * @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::Parse(nsIInputStream& aStream,PRBool aVerifyEnabled, void* aKey){
+nsresult nsParser::Parse(nsIInputStream& aStream,PRBool aVerifyEnabled, void* aKey,eParseMode aMode){
 
   mDTDVerification=aVerifyEnabled;
   nsresult  result=NS_ERROR_OUT_OF_MEMORY;
@@ -672,7 +699,7 @@ nsresult nsParser::Parse(nsIInputStream& aStream,PRBool aVerifyEnabled, void* aK
   nsAutoString theUnknownFilename("unknown");
 
   nsInputStream input(&aStream);
-  CParserContext* pc=new CParserContext(new nsScanner(theUnknownFilename, input, mCharset, mCharsetSource,PR_FALSE),aKey,0);
+  CParserContext* pc=new CParserContext(new nsScanner(theUnknownFilename, input, mCharset, mCharsetSource),aKey,0);
   if(pc) {
     PushContext(*pc);
     pc->mSourceType=kHTMLTextContentType;
@@ -701,15 +728,8 @@ nsresult nsParser::Parse(nsIInputStream& aStream,PRBool aVerifyEnabled, void* aK
  * @param   aContentType tells us what type of content to expect in the given string
  * @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::Parse(nsString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aVerifyEnabled,PRBool aLastCall){
+nsresult nsParser::Parse(const nsString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aVerifyEnabled,PRBool aLastCall,eParseMode aMode){
  
-#ifdef _rickgdebug
-  {
-    fstream out("c:/temp/parseout.file",ios::trunc);
-    aSourceBuffer.DebugDump(out);
-  }
-#endif
-
   //NOTE: Make sure that updates to this method don't cause 
   //      bug #2361 to break again!
 
@@ -767,7 +787,7 @@ nsresult nsParser::Parse(nsString& aSourceBuffer,void* aKey,const nsString& aCon
  *  @param   aContentType tells us what kind of stuff you're inserting
  *  @return  TRUE if valid, otherwise FALSE
  */
-PRBool nsParser::IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType){
+PRBool nsParser::IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,eParseMode aMode){
 
   /************************************************************************************
     This method works like this:
@@ -820,7 +840,7 @@ PRBool nsParser::IsValidFragment(const nsString& aSourceBuffer,nsITagStack& aSta
  *  @param   
  *  @return  
  */
-nsresult nsParser::ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType){
+nsresult nsParser::ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,eParseMode aMode){
 
   nsresult result=NS_OK;
   nsAutoString  theContext;
@@ -854,31 +874,32 @@ nsresult nsParser::ParseFragment(const nsString& aSourceBuffer,void* aKey,nsITag
  *  @param   
  *  @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::ResumeParse(nsIDTD* aDefaultDTD) {
+nsresult nsParser::ResumeParse(nsIDTD* aDefaultDTD, PRBool aIsFinalChunk) {
   
   nsresult result=NS_OK;
-  if(mParserContext->mParserEnabled && !mParserContext->mParserTerminated) {
+  if(mParserContext->mParserEnabled && mInternalState!=NS_ERROR_HTMLPARSER_STOPPARSING) {
     result=WillBuildModel(mParserContext->mScanner->GetFilename(),aDefaultDTD);
     if(mParserContext->mDTD) {
       mParserContext->mDTD->WillResumeParse();
-      if(NS_OK==result) {
-     
-        result=Tokenize();
+      if(NS_OK==result) {     
+        result=Tokenize(aIsFinalChunk);
         result=BuildModel();
+        
+        if(result==NS_ERROR_HTMLPARSER_STOPPARSING) mInternalState=result;
 
-        if((!mParserContext->mMultipart) || (mParserContext->mParserTerminated) || 
+        if((!mParserContext->mMultipart) || (mInternalState==NS_ERROR_HTMLPARSER_STOPPARSING) || 
           ((eOnStop==mParserContext->mStreamListenerState) && (NS_OK==result))){
           DidBuildModel(mStreamStatus);
+          return mInternalState;
         }
         else {
           mParserContext->mDTD->WillInterruptParse();
         // If we're told to block the parser, we disable
         // all further parsing (and cache any data coming
         // in) until the parser is enabled.
-          PRUint32 b1=NS_ERROR_HTMLPARSER_BLOCK;
+          //PRUint32 b1=NS_ERROR_HTMLPARSER_BLOCK;
           if(NS_ERROR_HTMLPARSER_BLOCK==result) {
-            EnableParser(PR_FALSE);
-            result=NS_OK;
+            result=EnableParser(PR_FALSE);
           }
         }//if
       }//if
@@ -916,11 +937,8 @@ nsresult nsParser::BuildModel() {
     }
 
     nsIDTD* theRootDTD=theRootContext->mDTD;
-    if(theRootDTD) {
+    if(theRootDTD)
       result=theRootDTD->BuildModel(this,theTokenizer,mTokenObserver,mSink);
-      if(NS_ERROR_HTMLPARSER_STOPPARSING==result)
-        mParserContext->mParserTerminated=PR_TRUE;
-    }
   }
   else{
     mInternalState=result=NS_ERROR_HTMLPARSER_BADTOKENIZER;
@@ -955,7 +973,7 @@ nsITokenizer* nsParser::GetTokenizer(void) {
  *  @param   
  *  @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo){
+nsresult nsParser::GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo){
   nsresult result=0;
   return result;
 }
@@ -970,15 +988,15 @@ nsresult nsParser::GetBindInfo(nsIURL* aURL, nsStreamBindingInfo* aInfo){
  */
 nsresult
 #ifdef NECKO
-nsParser::OnProgress(nsISupports* aContext, PRUint32 aProgress, PRUint32 aProgressMax)
+nsParser::OnProgress(nsIChannel* channel, nsISupports* aContext, PRUint32 aProgress, PRUint32 aProgressMax)
 #else
-nsParser::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
+nsParser::OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
 #endif
 {
   nsresult result=0;
 #ifdef NECKO
   if (nsnull != mProgressEventSink) {
-    mProgressEventSink->OnProgress(aContext, aProgress, aProgressMax);
+    mProgressEventSink->OnProgress(channel, aContext, aProgress, aProgressMax);
   }
 #else
   if (nsnull != mObserver) {
@@ -997,15 +1015,15 @@ nsParser::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
  */
 nsresult
 #ifdef NECKO
-nsParser::OnStatus(nsISupports* aContext, const PRUnichar* aMsg)
+nsParser::OnStatus(nsIChannel* channel, nsISupports* aContext, const PRUnichar* aMsg)
 #else
-nsParser::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+nsParser::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 #endif
 {
   nsresult result=0;
 #ifdef NECKO
   if (nsnull != mProgressEventSink) {
-    mProgressEventSink->OnStatus(aContext, aMsg);
+    mProgressEventSink->OnStatus(channel, aContext, aMsg);
   }
 #else
   if (nsnull != mObserver) {
@@ -1016,6 +1034,7 @@ nsParser::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
 }
 
 #ifdef rickgdebug
+#include <fstream.h>
   fstream* gDumpFile;
 #endif
 
@@ -1027,18 +1046,18 @@ nsParser::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
  *  @return  error code -- 0 if ok, non-zero if error.
  */
 #ifdef NECKO
-nsresult nsParser::OnStartBinding(nsISupports* aContext)
+nsresult nsParser::OnStartRequest(nsIChannel* channel, nsISupports* aContext)
 #else
-nsresult nsParser::OnStartBinding(nsIURL* aURL, const char *aSourceType)
+nsresult nsParser::OnStartRequest(nsIURI* aURL, const char *aSourceType)
 #endif
 {
   NS_PRECONDITION((eNone==mParserContext->mStreamListenerState),kBadListenerInit);
 
   if (nsnull != mObserver) {
 #ifdef NECKO
-    mObserver->OnStartBinding(aContext);
+    mObserver->OnStartRequest(channel, aContext);
 #else
-    mObserver->OnStartBinding(aURL, aSourceType);
+    mObserver->OnStartRequest(aURL, aSourceType);
 #endif
   }
   mParserContext->mStreamListenerState=eOnStart;
@@ -1046,15 +1065,16 @@ nsresult nsParser::OnStartBinding(nsIURL* aURL, const char *aSourceType)
   mParserContext->mDTD=0;
 #ifdef NECKO
   nsresult rv;
-  nsIChannel* channel;
-  rv = aContext->QueryInterface(nsIChannel::GetIID(), (void**)&channel);
-  if (NS_SUCCEEDED(rv)) {
-    char* contentType;
-    (void)channel->GetContentType(&contentType); // XXX ignore error?
+  char* contentType = nsnull;
+  rv = channel->GetContentType(&contentType);
+  if (NS_SUCCEEDED(rv))
+  {
     mParserContext->mSourceType = contentType;
-    nsCRT::free(contentType);
-    NS_RELEASE(channel);
+	nsCRT::free(contentType);
   }
+  else
+    NS_ASSERTION(contentType, "parser needs a content type to find a dtd");
+
 #else
   mParserContext->mSourceType=aSourceType;
 #endif
@@ -1066,20 +1086,6 @@ nsresult nsParser::OnStartBinding(nsIURL* aURL, const char *aSourceType)
   return NS_OK;
 }
 
-#ifdef NECKO
-NS_IMETHODIMP
-nsParser::OnStartRequest(nsISupports *ctxt)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsParser::OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-#endif // NECKO
-
 /**
  *  
  *  
@@ -1089,9 +1095,10 @@ nsParser::OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *err
  *  @return  error code (usually 0)
  */
 #ifdef NECKO
-nsresult nsParser::OnDataAvailable(nsISupports* aContext, nsIBufferInputStream *pIStream, PRUint32 sourceOffset, PRUint32 aLength)
+nsresult nsParser::OnDataAvailable(nsIChannel* channel, nsISupports* aContext,
+                                   nsIInputStream *pIStream, PRUint32 sourceOffset, PRUint32 aLength)
 #else
-nsresult nsParser::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUint32 aLength)
+nsresult nsParser::OnDataAvailable(nsIURI* aURL, nsIInputStream *pIStream, PRUint32 aLength)
 #endif
 {
 /*  if (nsnull != mListener) {
@@ -1131,6 +1138,15 @@ nsresult nsParser::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUin
       if(mParserFilter)
          mParserFilter->RawBuffer(mParserContext->mTransferBuffer, &theNumRead);
 
+      // XXX Hack --- NULL character(s) is(are) seen in the middle of the buffer!!!
+      // For now, I'm conditioning the raw buffer by removing the unwanted null chars.
+      // Problem could be NECKO related
+
+      for(PRUint32 i=0;i<theNumRead;i++) {
+        if(mParserContext->mTransferBuffer[i]==kNullCh)
+          mParserContext->mTransferBuffer[i]=kSpace;
+      }
+
 #ifdef  NS_DEBUG
       int index=0;
       for(index=0;index<10;index++)
@@ -1139,7 +1155,7 @@ nsresult nsParser::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUin
 
       mParserContext->mScanner->Append(mParserContext->mTransferBuffer,theNumRead);
       nsString& theBuffer=mParserContext->mScanner->GetBuffer();
-      theBuffer.ToUCS2(theStartPos);
+      // theBuffer.ToUCS2(theStartPos);
 
 #ifdef rickgdebug
       (*gDumpFile) << mParserContext->mTransferBuffer;
@@ -1162,9 +1178,10 @@ nsresult nsParser::OnDataAvailable(nsIURL* aURL, nsIInputStream *pIStream, PRUin
  *  @return  
  */
 #ifdef NECKO
-nsresult nsParser::OnStopBinding(nsISupports* aContext, nsresult status, const PRUnichar* aMsg)
+nsresult nsParser::OnStopRequest(nsIChannel* channel, nsISupports* aContext,
+                                 nsresult status, const PRUnichar* aMsg)
 #else
-nsresult nsParser::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg)
+nsresult nsParser::OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg)
 #endif
 {
   mParserContext->mStreamListenerState=eOnStop;
@@ -1173,7 +1190,8 @@ nsresult nsParser::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar*
   if(mParserFilter)
      mParserFilter->Finish();
 
-  nsresult result=ResumeParse();
+  mParserContext->mScanner->SetIncremental(PR_FALSE);
+  nsresult result=ResumeParse(nsnull, PR_TRUE);
   // If the parser isn't enabled, we don't finish parsing till
   // it is reenabled.
 
@@ -1182,9 +1200,9 @@ nsresult nsParser::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar*
   // parser isn't yet enabled?
   if (nsnull != mObserver) {
 #ifdef NECKO
-    mObserver->OnStopBinding(aContext, status, aMsg);
+    mObserver->OnStopRequest(channel, aContext, status, aMsg);
 #else
-    mObserver->OnStopBinding(aURL, status, aMsg);
+    mObserver->OnStopRequest(aURL, status, aMsg);
 #endif
   }
 
@@ -1213,9 +1231,13 @@ nsresult nsParser::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar*
  *  @param   
  *  @return  TRUE if it's ok to proceed
  */
-PRBool nsParser::WillTokenize(){
-  PRBool result=PR_TRUE;
-  return result;
+PRBool nsParser::WillTokenize(PRBool aIsFinalChunk){
+  nsresult rv = NS_OK;
+  nsITokenizer* theTokenizer=mParserContext->mDTD->GetTokenizer();
+  if (theTokenizer) {
+    rv = theTokenizer->WillTokenize(aIsFinalChunk);
+  }  
+  return rv;
 }
 
 
@@ -1227,7 +1249,7 @@ PRBool nsParser::WillTokenize(){
  *  @update  gess 01/04/99
  *  @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::Tokenize(){
+nsresult nsParser::Tokenize(PRBool aIsFinalChunk){
 
   nsresult result=NS_OK;
 
@@ -1235,7 +1257,7 @@ nsresult nsParser::Tokenize(){
 
   nsITokenizer* theTokenizer=mParserContext->mDTD->GetTokenizer();
   if(theTokenizer){
-    WillTokenize();
+    WillTokenize(aIsFinalChunk);
     while(NS_SUCCEEDED(result)) {
       mParserContext->mScanner->Mark();
       ++mMinorIteration;
@@ -1247,10 +1269,10 @@ nsresult nsParser::Tokenize(){
           break;
         }
         else if(NS_ERROR_HTMLPARSER_STOPPARSING==result)
-          mParserContext->mParserTerminated=PR_TRUE;
+          return Terminate();
       }
     } 
-    DidTokenize();
+    DidTokenize(aIsFinalChunk);
   } 
   else{
     result=mInternalState=NS_ERROR_HTMLPARSER_BADTOKENIZER;
@@ -1267,21 +1289,22 @@ nsresult nsParser::Tokenize(){
  *  @param   
  *  @return  TRUE if all went well
  */
-PRBool nsParser::DidTokenize(){
+PRBool nsParser::DidTokenize(PRBool aIsFinalChunk){
   PRBool result=PR_TRUE;
 
-  if(mTokenObserver) {
-    nsITokenizer* theTokenizer=mParserContext->mDTD->GetTokenizer();
-    if(theTokenizer) {
+  nsITokenizer* theTokenizer=mParserContext->mDTD->GetTokenizer();
+  if (theTokenizer) {
+    result = theTokenizer->DidTokenize(aIsFinalChunk);
+    if(mTokenObserver) {
       PRInt32 theCount=theTokenizer->GetCount();
       PRInt32 theIndex;
       for(theIndex=0;theIndex<theCount;theIndex++){
         if((*mTokenObserver)(theTokenizer->GetTokenAt(theIndex))){
           //add code here to pull unwanted tokens out of the stack...
         }
-      }//for
+      }//for      
     }//if
-  }//if
+  }
   return result;
 }
 

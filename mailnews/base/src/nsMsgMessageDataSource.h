@@ -37,20 +37,16 @@ private:
   
 	nsIRDFService* mRDFService;
 	nsIMsgHeaderParser *mHeaderParser;
-	nsCOMPtr<nsILocale> mApplicationLocale;
-	nsCOMPtr<nsIDateTimeFormat> mDateTimeFormat;
   
 public:
   
-	NS_DECL_ISUPPORTS
+	NS_DECL_ISUPPORTS_INHERITED
 
 	nsMsgMessageDataSource(void);
 	virtual ~nsMsgMessageDataSource (void);
-
+	virtual nsresult Init();
 
 	// nsIRDFDataSource methods
-	NS_IMETHOD Init(const char* uri);
-
 	NS_IMETHOD GetURI(char* *uri);
 
 	NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -96,10 +92,10 @@ public:
 
 	NS_IMETHOD GetAllResources(nsISimpleEnumerator** aCursor);
 
-	NS_IMETHOD Flush();
-
 	NS_IMETHOD GetAllCommands(nsIRDFResource* source,
 							nsIEnumerator/*<nsIRDFResource>*/** commands);
+	NS_IMETHOD GetAllCmds(nsIRDFResource* source,
+							nsISimpleEnumerator/*<nsIRDFResource>*/** commands);
 
 	NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
 							  nsIRDFResource*   aCommand,
@@ -140,13 +136,19 @@ protected:
 								 nsIRDFNode **target);
 	nsresult createMessageStatusNode(nsIMessage *message,
 								   nsIRDFNode **target);
-	nsresult createStatusStringFromFlag(PRUint32 flags, nsAutoString &statusStr);
+	nsresult createStatusStringFromFlag(PRUint32 flags, nsCAutoString &statusStr);
 
-	nsresult DoMarkMessageRead(nsIMessage *message, PRBool markRead);
+	nsresult DoMarkMessagesRead(nsISupportsArray *messages, PRBool markRead);
 
 	nsresult NotifyPropertyChanged(nsIRDFResource *resource,
 								  nsIRDFResource *propertyResource,
 								  const char *oldValue, const char *newValue);
+
+	nsresult DoMessageHasAssertion(nsIMessage *message, nsIRDFResource *property, nsIRDFNode *target,
+													 PRBool tv, PRBool *hasAssertion);
+
+	nsresult GetMessagesAndFirstFolder(nsISupportsArray *messages, nsIMsgFolder **folder,
+														   nsISupportsArray **messageArray);
 
 	static nsresult getMessageArcLabelsOut(nsIMessage *message,
                                          nsISupportsArray **arcs);
@@ -164,3 +166,6 @@ protected:
 
 
 };
+
+PR_EXTERN(nsresult)
+NS_NewMsgMessageDataSource(const nsIID& iid, void **result);

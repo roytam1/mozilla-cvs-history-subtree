@@ -45,9 +45,13 @@ LIBS		= \
 		-lpwcac \
 		-lmozdbm \
 		-lxp \
+		-lpref \
 		-lmozjs \
 		-ljsdom \
 		-ljsurl \
+		-lsecfree \
+		$(ZLIB_LIBS) \
+		$(NSPR_LIBS) \
 		-lraptorgfx \
 		-limg \
 		-lmozutil \

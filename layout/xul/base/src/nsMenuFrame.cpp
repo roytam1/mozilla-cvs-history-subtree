@@ -979,17 +979,14 @@ nsMenuFrame::RemoveFrame(nsIPresContext& aPresContext,
   for (int i=0; i < mSpringCount; i++) 
     mSprings[i].clear();
 
-  nsresult  rv;
-
   if (mPopupFrames.ContainsFrame(aOldFrame)) {
     // Go ahead and remove this frame.
+    nsHTMLContainerFrame::RemoveFrame(aPresContext, aPresShell, nsLayoutAtoms::popupList, aOldFrame);
     mPopupFrames.DestroyFrame(aPresContext, aOldFrame);
-    rv = GenerateDirtyReflowCommand(aPresContext, aPresShell);
-  } else {
-    rv = nsBoxFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
+    return NS_OK;
   }
 
-  return rv;
+  return nsBoxFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
 }
 
 NS_IMETHODIMP
@@ -1007,17 +1004,11 @@ nsMenuFrame::InsertFrames(nsIPresContext& aPresContext,
   aFrameList->GetContent(getter_AddRefs(frameChild));
 
   nsCOMPtr<nsIAtom> tag;
-  nsresult          rv;
-
   frameChild->GetTag(*getter_AddRefs(tag));
   if (tag && tag.get() == nsXULAtoms::menupopup) {
     mPopupFrames.InsertFrames(nsnull, nsnull, aFrameList);
-    rv = GenerateDirtyReflowCommand(aPresContext, aPresShell);
-  } else {
-    rv = nsBoxFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList);  
   }
-
-  return rv;
+  return nsHTMLContainerFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList);  
 }
 
 NS_IMETHODIMP
@@ -1037,15 +1028,10 @@ nsMenuFrame::AppendFrames(nsIPresContext& aPresContext,
   aFrameList->GetContent(getter_AddRefs(frameChild));
 
   nsCOMPtr<nsIAtom> tag;
-  nsresult          rv;
-
   frameChild->GetTag(*getter_AddRefs(tag));
   if (tag && tag.get() == nsXULAtoms::menupopup) {
     mPopupFrames.AppendFrames(nsnull, aFrameList);
-    rv = GenerateDirtyReflowCommand(aPresContext, aPresShell);
-  } else {
-    rv = nsBoxFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 
   }
-
-  return rv;
+  
+  return nsHTMLContainerFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 
 }

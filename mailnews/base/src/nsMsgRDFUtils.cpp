@@ -26,17 +26,6 @@
  
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 
-PRBool
-peq(nsIRDFResource* r1, nsIRDFResource* r2)
-{
-  PRBool result;
-  if (NS_SUCCEEDED(r1->EqualsResource(r2, &result)) && result) {
-    return PR_TRUE;
-  } else {
-    return PR_FALSE;
-  }
-}
-
 static PRBool
 peqWithParameter(nsIRDFResource *r1, nsIRDFResource *r2, PRBool *isParameter, const char *parameter)
 {
@@ -52,7 +41,7 @@ peqWithParameter(nsIRDFResource *r1, nsIRDFResource *r2, PRBool *isParameter, co
 	nsAllocator::Free(r1Str);
 
 	//Look to see if there are any parameters
-	PRInt32 paramStart = r2nsStr.Find('?');
+	PRInt32 paramStart = r2nsStr.FindChar('?');
 	//If not, then just return whether or not the strings are equal.
 	if(paramStart == -1)
 	{
@@ -125,6 +114,21 @@ nsresult createNode(PRUint32 value, nsIRDFNode **node)
 	return rv;
 }
 
+nsresult createDateNode(PRTime time, nsIRDFNode **node)
+{
+	*node = nsnull;
+	nsresult rv; 
+	NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv); 
+	if (NS_FAILED(rv)) return rv;  
+	nsCOMPtr<nsIRDFDate> date;
+	rv = rdf->GetDateLiteral(time, getter_AddRefs(date));
+	if(NS_SUCCEEDED(rv)) {
+		*node = date;
+		NS_IF_ADDREF(*node);
+	}
+	return rv;
+}
+
 nsresult GetTargetHasAssertion(nsIRDFDataSource *dataSource, nsIRDFResource* folderResource,
 							   nsIRDFResource *property,PRBool tv, nsIRDFNode *target,PRBool* hasAssertion)
 {
@@ -141,7 +145,7 @@ nsresult GetTargetHasAssertion(nsIRDFDataSource *dataSource, nsIRDFResource* fol
 		nsCOMPtr<nsIRDFLiteral> value2(do_QueryInterface(currentTarget));
 		if(value1 && value2)
 			//If the two values are equal then it has this assertion
-			rv = value1->EqualsLiteral(value2, hasAssertion);
+			*hasAssertion = (value1 == value2);
 	}
 	else
 		rv = NS_NOINTERFACE;

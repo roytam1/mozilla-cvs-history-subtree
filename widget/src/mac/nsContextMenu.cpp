@@ -211,10 +211,21 @@ NS_METHOD nsContextMenu::AddMenuItem(nsIMenuItem * aMenuItem)
 	  mMenuItemVoidArray.AppendElement(supports);
       
 	  nsString label;
+	  nsString labelHack = " ";
+	  nsString tmp = "-";
 	  aMenuItem->GetLabel(label);
-	  char* menuLabel = label.ToNewCString();
+	  PRUnichar slash = tmp.CharAt(0);
+	  char* menuLabel;
+	  if(label[0] == slash) {
+	    labelHack.Append(label);
+	    menuLabel = labelHack.ToNewCString();
+	  } else {
+	    menuLabel = label.ToNewCString();
+	  }
+	    
 	  mNumMenuItems++;
-	  ::InsertMenuItem(mMacMenuHandle, c2pstr(menuLabel), mNumMenuItems);
+	  ::InsertMenuItem(mMacMenuHandle, (const unsigned char *)" ", mNumMenuItems);
+	  ::SetMenuItemText(mMacMenuHandle, mNumMenuItems, c2pstr(menuLabel));
 	  delete[] menuLabel;
 	}
   }
@@ -464,7 +475,7 @@ nsEventStatus nsContextMenu::MenuConstruct(
         if (menuitemNodeType.Equals("menuitem")) {
           // LoadMenuItem
           LoadMenuItem(this, menuitemElement, menuitemNode, menuIndex, (nsIWebShell*)aWebShell);
-        } else if (menuitemNodeType.Equals("separator")) {
+        } else if (menuitemNodeType.Equals("menuseparator")) {
           AddSeparator();
         } else if (menuitemNodeType.Equals("menu")) {
           // Load a submenu
@@ -545,7 +556,7 @@ void nsContextMenu::LoadMenuItem(
   nsString menuitemCmd;
 
   menuitemElement->GetAttribute(nsAutoString("disabled"), disabled);
-  menuitemElement->GetAttribute(nsAutoString("name"), menuitemName);
+  menuitemElement->GetAttribute(nsAutoString("value"), menuitemName);
   menuitemElement->GetAttribute(nsAutoString("cmd"), menuitemCmd);
   // Create nsMenuItem
   nsIMenuItem * pnsMenuItem = nsnull;
@@ -567,7 +578,7 @@ void nsContextMenu::LoadMenuItem(
 		return;
     }
     
-    nsAutoString cmdAtom("onclick");
+    nsAutoString cmdAtom("onaction");
     nsString cmdName;
 
     domElement->GetAttribute(cmdAtom, cmdName);
@@ -577,10 +588,13 @@ void nsContextMenu::LoadMenuItem(
 	// code. 
     pnsMenuItem->SetWebShell(mWebShell);
     pnsMenuItem->SetDOMElement(domElement);
+    pnsMenuItem->SetDOMNode(menuitemNode);
 
 	if(disabled == NS_STRING_TRUE )
-		//::EnableMenuItem(mMacMenuHandle, menuitemIndex, MF_BYPOSITION | MF_GRAYED);
-
+		::DisableMenuItem(mMacMenuHandle, menuitemIndex + 1);
+    else
+    	::EnableMenuItem(mMacMenuHandle, menuitemIndex + 1);
+		
 	NS_RELEASE(pnsMenuItem);
   } 
   return;
@@ -593,7 +607,7 @@ void nsContextMenu::LoadSubMenu(
   nsIDOMNode    * menuNode)
 {
   nsString menuName;
-  menuElement->GetAttribute(nsAutoString("name"), menuName);
+  menuElement->GetAttribute(nsAutoString("value"), menuName);
   //printf("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
 
   // Create nsMenu

@@ -29,7 +29,7 @@
 #include "nsError.h"
 #include "prio.h"   /* for PR_Rename */
 
-#if defined(SCO_SV)
+#if defined(_SCO_DS)
 #define _SVID3  /* for statvfs.h */
 #endif
 
@@ -54,7 +54,16 @@
 #else
 #define STATFS	statfs
 #endif
+
+#ifndef MAXPATHLEN
+#define MAXPATHLEN	1024  /* Guessing this is okay.  Works for SCO. */
+#endif
  
+#if defined(__QNX__)
+#include <unix.h>	/* for realpath */
+#define f_bavail	f_bfree
+#endif
+
 #if defined(SUNOS4)
 extern "C" int statfs(char *, struct statfs *);
 #endif
@@ -175,6 +184,72 @@ PRBool nsFileSpec::IsDirectory() const
 } // nsFileSpec::IsDirectory
 
 //----------------------------------------------------------------------------------------
+PRBool nsFileSpec::IsHidden() const
+//----------------------------------------------------------------------------------------
+{
+    PRBool hidden = PR_TRUE;
+    char *leafname = GetLeafName();
+    if (nsnull != leafname)
+    {
+        if ((!strcmp(leafname, ".")) || (!strcmp(leafname, "..")))
+        {
+            hidden = PR_FALSE;
+        }
+        nsCRT::free(leafname);
+    }
+    return hidden;
+} // nsFileSpec::IsHidden
+
+//----------------------------------------------------------------------------------------
+PRBool nsFileSpec::IsSymlink() const
+//----------------------------------------------------------------------------------------
+{
+    struct stat st;
+    if (!mPath.IsEmpty() && stat(mPath, &st) == 0 && S_ISLNK(st.st_mode))
+        return PR_TRUE;
+
+    return PR_FALSE;
+} // nsFileSpec::IsSymlink
+
+//----------------------------------------------------------------------------------------
+nsresult nsFileSpec::ResolveSymlink(PRBool& wasAliased)
+//----------------------------------------------------------------------------------------
+{
+    wasAliased = PR_FALSE;
+
+    char resolvedPath[MAXPATHLEN];
+    int charCount = readlink(mPath, (char*)&resolvedPath, MAXPATHLEN);
+    if (0 < charCount)
+    {
+        if (MAXPATHLEN > charCount)
+            resolvedPath[charCount] = '\0';
+        
+        wasAliased = PR_TRUE;
+
+	/* if it's not an absolute path,
+		replace the leaf with what got resolved */  
+        if (resolvedPath[0] != '/') {
+		SetLeafName(resolvedPath);
+        }
+        else {
+        	mPath = (char*)&resolvedPath;
+        }
+	
+	char* canonicalPath = realpath((const char *)mPath, resolvedPath);
+	NS_ASSERTION(canonicalPath, "realpath failed");
+	if (canonicalPath) {
+		mPath = (char*)&resolvedPath;
+	}
+	else {
+		return NS_ERROR_FAILURE;
+	}
+    }
+    
+    return NS_OK;
+} // nsFileSpec::ResolveSymlink
+
+
+//----------------------------------------------------------------------------------------
 void nsFileSpec::GetParent(nsFileSpec& outSpec) const
 //----------------------------------------------------------------------------------------
 {
@@ -220,7 +295,7 @@ void nsFileSpec::Delete(PRBool inRecursive) const
     {
         if (inRecursive)
         {
-            for (nsDirectoryIterator i(*this); i.Exists(); i++)
+            for (nsDirectoryIterator i(*this, PR_FALSE); i.Exists(); i++)
             {
                 nsFileSpec& child = (nsFileSpec&)i;
                 child.Delete(inRecursive);
@@ -231,6 +306,51 @@ void nsFileSpec::Delete(PRBool inRecursive) const
     else if (!mPath.IsEmpty())
         remove(mPath);
 } // nsFileSpec::Delete
+
+//----------------------------------------------------------------------------------------
+void nsFileSpec::RecursiveCopy(nsFileSpec newDir) const
+//----------------------------------------------------------------------------------------
+{
+    if (IsDirectory())
+    {
+		if (!(newDir.Exists()))
+		{
+			newDir.CreateDirectory();
+		}
+
+		for (nsDirectoryIterator i(*this, PR_FALSE); i.Exists(); i++)
+		{
+			nsFileSpec& child = (nsFileSpec&)i;
+
+			if (child.IsDirectory())
+			{
+				nsFileSpec tmpDirSpec(newDir);
+
+				char *leafname = child.GetLeafName();
+				tmpDirSpec += leafname;
+				nsCRT::free(leafname);
+
+				child.RecursiveCopy(tmpDirSpec);
+			}
+			else
+			{
+   				child.RecursiveCopy(newDir);
+			}
+		}
+    }
+    else if (!mPath.IsEmpty())
+    {
+		nsFileSpec& filePath = (nsFileSpec&) *this;
+
+		if (!(newDir.Exists()))
+		{
+			newDir.CreateDirectory();
+		}
+
+        filePath.Copy(newDir);
+    }
+} // nsFileSpec::RecursiveCopy
+
 
 //----------------------------------------------------------------------------------------
 nsresult nsFileSpec::Rename(const char* inNewName)
@@ -374,6 +494,9 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
 PRUint32 nsFileSpec::GetDiskSpaceAvailable() const
 //----------------------------------------------------------------------------------------
 {
+
+#if defined(HAVE_SYS_STATFS_H) || defined(HAVE_SYS_STATVFS_H)
+
     char curdir [MAXPATHLEN];
     if (mPath.IsEmpty())
     {
@@ -385,14 +508,28 @@ PRUint32 nsFileSpec::GetDiskSpaceAvailable() const
         sprintf(curdir, "%.200s", (const char*)mPath);
  
     struct STATFS fs_buf;
+#if defined(__QNX__) && !defined(HAVE_STATVFS) /* Maybe this should be handled differently? */
+    if (STATFS(curdir, &fs_buf, 0, 0) < 0)
+#else
     if (STATFS(curdir, &fs_buf) < 0)
+#endif
         return ULONG_MAX; /* hope for the best as we did in cheddar */
  
 #ifdef DEBUG_DISK_SPACE
     printf("DiskSpaceAvailable: %d bytes\n", 
        fs_buf.f_bsize * (fs_buf.f_bavail - 1));
 #endif
+
     return fs_buf.f_bsize * (fs_buf.f_bavail - 1);
+
+#else 
+    /*
+    ** This platform doesn't have statfs or statvfs, so we don't have much
+    ** choice but to "hope for the best as we did in cheddar".
+    */
+    return ULONG_MAX;
+#endif /* HAVE_SYS_STATFS_H or HAVE_SYS_STATVFS_H */
+
 } // nsFileSpec::GetDiskSpace()
 
 //========================================================================================
@@ -400,14 +537,16 @@ PRUint32 nsFileSpec::GetDiskSpaceAvailable() const
 //========================================================================================
 
 //----------------------------------------------------------------------------------------
-nsDirectoryIterator::nsDirectoryIterator(
-    const nsFileSpec& inDirectory
-,   int /*inIterateDirection*/)
+nsDirectoryIterator::nsDirectoryIterator(const nsFileSpec& inDirectory, PRBool resolveSymLinks)
 //----------------------------------------------------------------------------------------
     : mCurrent(inDirectory)
     , mExists(PR_FALSE)
+    , mResoveSymLinks(resolveSymLinks)
+    , mStarting(inDirectory)
     , mDir(nsnull)
+
 {
+    mStarting += "sysygy"; // save off the starting directory 
     mCurrent += "sysygy"; // prepare the path for SetLeafName
     mDir = opendir((const char*)nsFilePath(inDirectory));
     ++(*this);
@@ -438,7 +577,13 @@ nsDirectoryIterator& nsDirectoryIterator::operator ++ ()
     if (entry)
     {
         mExists = PR_TRUE;
+	mCurrent = mStarting;	// restore mCurrent to be the starting directory.  ResolveSymlink() may have taken us to another directory
         mCurrent.SetLeafName(entry->d_name);
+        if (mResoveSymLinks)
+        {   
+            PRBool ignore;
+            mCurrent.ResolveSymlink(ignore);
+        }
     }
     return *this;
 } // nsDirectoryIterator::operator ++

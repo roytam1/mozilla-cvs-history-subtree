@@ -36,9 +36,11 @@
 #include "nsIView.h"
 #include "nsStyleUtil.h"
 #include "nsLayoutAtoms.h"
+#include "nsCOMPtr.h"
+#include "nsIHTMLTableCellElement.h"
 
 NS_DEF_PTR(nsIStyleContext);
-
+static NS_DEFINE_IID(kIHTMLTableCellElementIID, NS_IHTMLTABLECELLELEMENT_IID);
 
 #ifdef NS_DEBUG
 static PRBool gsDebug = PR_FALSE;
@@ -75,18 +77,47 @@ nsTableCellFrame::Init(nsIPresContext&  aPresContext,
   return rv;
 }
 
+NS_IMETHODIMP
+nsTableCellFrame::AppendFrames(nsIPresContext& aPresContext,
+                               nsIPresShell&   aPresShell,
+                               nsIAtom*        aListName,
+                               nsIFrame*       aFrameList)
+{
+  NS_PRECONDITION(PR_FALSE, "unsupported operation");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsTableCellFrame::InsertFrames(nsIPresContext& aPresContext,
+                               nsIPresShell&   aPresShell,
+                               nsIAtom*        aListName,
+                               nsIFrame*       aPrevFrame,
+                               nsIFrame*       aFrameList)
+{
+  NS_PRECONDITION(PR_FALSE, "unsupported operation");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsTableCellFrame::RemoveFrame(nsIPresContext& aPresContext,
+                              nsIPresShell&   aPresShell,
+                              nsIAtom*        aListName,
+                              nsIFrame*       aOldFrame)
+{
+  NS_PRECONDITION(PR_FALSE, "unsupported operation");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 void nsTableCellFrame::InitCellFrame(PRInt32 aColIndex)
 {
   NS_PRECONDITION(0<=aColIndex, "bad col index arg");
-  mColIndex = aColIndex;
+  SetColIndex(aColIndex); // this also sets the contents col index
   mBorderEdges.mOutsideEdge=PR_FALSE;
   nsTableFrame* tableFrame=nsnull;  // I should be checking my own style context, but border-collapse isn't inheriting correctly
   nsresult rv = nsTableFrame::GetTableFrame(this, tableFrame);
   if ((NS_SUCCEEDED(rv)) && (nsnull!=tableFrame))
   {
-    const nsStyleTable* tableStyle;
-    tableFrame->GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)tableStyle)); 
-    if (NS_STYLE_BORDER_COLLAPSE==tableStyle->mBorderCollapse)
+    if (NS_STYLE_BORDER_COLLAPSE == tableFrame->GetBorderCollapseStyle())
     {
       PRInt32 rowspan = GetRowSpan();
       PRInt32 i;
@@ -110,6 +141,33 @@ void nsTableCellFrame::InitCellFrame(PRInt32 aColIndex)
   }
 }
 
+nsresult nsTableCellFrame::SetColIndex(PRInt32 aColIndex)
+{  
+  mColIndex = aColIndex;
+  // for style context optimization, set the content's column index if possible.
+  // this can only be done if we really have an nsTableCell.  
+  // other tags mapped to table cell display won't benefit from this optimization
+  // see nsHTMLStyleSheet::RulesMatching
+
+  //nsIContent* cell;
+  //kidFrame->GetContent(&cell);
+  nsCOMPtr<nsIContent> cell;
+  nsresult rv = GetContent(getter_AddRefs(cell));
+  if (NS_FAILED(rv) || !cell)
+    return rv;
+
+  nsIHTMLTableCellElement* cellContent = nsnull;
+  rv = cell->QueryInterface(kIHTMLTableCellElementIID, 
+                            (void **)&cellContent);  // cellContent: REFCNT++
+  if (cellContent && NS_SUCCEEDED(rv)) { // it's a table cell
+    cellContent->SetColIndex(aColIndex);
+    if (gsDebug) printf("%p : set cell content %p to col index = %d\n", this, cellContent, aColIndex);
+    NS_RELEASE(cellContent);
+  }
+  return rv;
+}
+
+      
 void nsTableCellFrame::SetBorderEdgeLength(PRUint8 aSide, 
                                            PRInt32 aIndex, 
                                            nscoord aLength)
@@ -171,7 +229,7 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext& aPresContext,
         {
           const nsStyleTable* tableStyle;
           tableFrame->GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)tableStyle)); 
-          if (NS_STYLE_BORDER_SEPARATE==tableStyle->mBorderCollapse)
+          if (NS_STYLE_BORDER_SEPARATE == tableFrame->GetBorderCollapseStyle())
           {
             nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
                                         aDirtyRect, rect, *mySpacing, mStyleContext, skipSides);
@@ -410,6 +468,8 @@ void DebugCheckChildSize(nsIFrame*            aChild,
                          nsSize&              aAvailSize,
                          PRBool               aIsPass2Reflow)
 {
+
+/* approved for commenting out by rickg
   if (aMet.width > aAvailSize.width) {
     nsAutoString tmp;
     aChild->GetFrameName(tmp);
@@ -418,6 +478,7 @@ void DebugCheckChildSize(nsIFrame*            aChild,
     printf(" content has desired width %d given avail width %d\n",
             aMet.width, aAvailSize.width);
   }
+*/
   if (aIsPass2Reflow) {
     if ((aMet.width < 0) || (aMet.width > 60000)) {
       printf("WARNING: cell content %p has large width %d \n", aChild, aMet.width);
@@ -896,13 +957,14 @@ void nsTableCellFrame::MapVAlignAttribute(nsIPresContext* aPresContext, nsTableF
   PRInt32 colIndex;
   GetColIndex(colIndex);
   aTableFrame->GetColumnFrame(colIndex, colFrame);
-  const nsStyleText* colTextStyle;
-  colFrame->GetStyleData(eStyleStruct_Text,(const nsStyleStruct *&)colTextStyle);
-  if (colTextStyle->mVerticalAlign.GetUnit() == eStyleUnit_Enumerated)
-  {
-    nsStyleText* mutableTextStyle = (nsStyleText*)mStyleContext->GetMutableStyleData(eStyleStruct_Text);
-    mutableTextStyle->mVerticalAlign.SetIntValue(colTextStyle->mVerticalAlign.GetIntValue(), eStyleUnit_Enumerated);
-    return; // valign set from COL info
+  if (colFrame) {
+    const nsStyleText* colTextStyle;
+    colFrame->GetStyleData(eStyleStruct_Text,(const nsStyleStruct *&)colTextStyle);
+    if (colTextStyle->mVerticalAlign.GetUnit() == eStyleUnit_Enumerated) {
+      nsStyleText* mutableTextStyle = (nsStyleText*)mStyleContext->GetMutableStyleData(eStyleStruct_Text);
+      mutableTextStyle->mVerticalAlign.SetIntValue(colTextStyle->mVerticalAlign.GetIntValue(), eStyleUnit_Enumerated);
+      return; // valign set from COL info
+	}
   }
 
   // otherwise, set the vertical align attribute to the HTML default
@@ -943,13 +1005,15 @@ void nsTableCellFrame::MapHAlignAttribute(nsIPresContext* aPresContext, nsTableF
   PRInt32 colIndex;
   GetColIndex(colIndex);
   aTableFrame->GetColumnFrame(colIndex, colFrame);
-  const nsStyleText* colTextStyle;
-  colFrame->GetStyleData(eStyleStruct_Text,(const nsStyleStruct *&)colTextStyle);
-  if (colTextStyle->mTextAlign.GetUnit() == eStyleUnit_Enumerated)
-  {
-    nsStyleText* mutableTextStyle = (nsStyleText*)mStyleContext->GetMutableStyleData(eStyleStruct_Text);
-    mutableTextStyle->mTextAlign.SetIntValue(colTextStyle->mTextAlign.GetIntValue(), eStyleUnit_Enumerated);
-    return; // halign set from COL info
+  if (colFrame) {
+    const nsStyleText* colTextStyle;
+    colFrame->GetStyleData(eStyleStruct_Text,(const nsStyleStruct *&)colTextStyle);
+    if (colTextStyle->mTextAlign.GetUnit() == eStyleUnit_Enumerated)
+	{
+      nsStyleText* mutableTextStyle = (nsStyleText*)mStyleContext->GetMutableStyleData(eStyleStruct_Text);
+      mutableTextStyle->mTextAlign.SetIntValue(colTextStyle->mTextAlign.GetIntValue(), eStyleUnit_Enumerated);
+      return; // halign set from COL info
+	}
   }
 
   // otherwise, set the vertical align attribute to the HTML default (center for TH, left for TD and all others)
@@ -976,9 +1040,37 @@ NS_METHOD nsTableCellFrame::DidSetStyleContext(nsIPresContext* aPresContext)
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS_INHERITED(nsTableCellFrame, nsHTMLContainerFrame, nsITableCellLayout)
-
 /* ----- global methods ----- */
+
+NS_IMPL_ADDREF_INHERITED(nsTableCellFrame, nsHTMLContainerFrame)
+NS_IMPL_RELEASE_INHERITED(nsTableCellFrame, nsHTMLContainerFrame)
+
+nsresult nsTableCellFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+{
+  if (NULL == aInstancePtr) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  if (aIID.Equals(nsITableCellLayout::GetIID())) {
+    *aInstancePtr = (void*) (nsITableCellLayout *)this;
+    return NS_OK;
+  } else {
+    return nsHTMLContainerFrame::QueryInterface(aIID, aInstancePtr);
+  }
+}
+
+/* This is primarily for editor access via nsITableLayout */
+NS_IMETHODIMP
+nsTableCellFrame::GetCellIndexes(PRInt32 &aRowIndex, PRInt32 &aColIndex)
+{
+  nsresult res = GetRowIndex(aRowIndex);
+  if (NS_FAILED(res))
+  {
+    aColIndex = 0;
+    return res;
+  }
+  aColIndex = mColIndex;
+  return  NS_OK;
+}
 
 nsresult 
 NS_NewTableCellFrame(nsIFrame** aNewFrame)

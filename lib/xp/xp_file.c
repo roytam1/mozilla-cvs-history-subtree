@@ -33,6 +33,10 @@
 #include "prefapi.h"
 #endif
 
+#ifdef XP_BEOS
+#include <FindDirectory.h>
+#endif
+
 #ifdef XP_MAC
 #include "xp_file_mac.h"
 #endif
@@ -43,7 +47,7 @@
 XP_BEGIN_PROTOS
 
 
-#if defined (XP_MAC) || defined(XP_UNIX)
+#if defined (XP_MAC) || defined(XP_UNIX) || defined(XP_BEOS)
 /* Now that Mac is using stdio, we can share some of this.  Yay.
    Presumably Windows can share this too, but they keep these
    functions in the FE, so I don't know.
@@ -66,7 +70,7 @@ XP_File XP_FileOpen( const char* name, XP_FileType type,
 {
   char* newName = WH_FileName(name, type);
   XP_File result;
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
   XP_StatStruct st;
   XP_Bool make_private_p = FALSE;
 #endif
@@ -78,7 +82,7 @@ XP_File XP_FileOpen( const char* name, XP_FileType type,
   if (newName == NULL)
 	return NULL;
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
   switch (type)
 	{
 	  /* These files are always private: if the user chmods them, we
@@ -187,9 +191,9 @@ XP_File XP_FileOpen( const char* name, XP_FileType type,
  	}
 #endif  
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
   if (make_private_p && result)
-#ifdef SCO_SV
+#if defined(SCO_SV) || defined(XP_BEOS)
 	chmod (newName, S_IRUSR | S_IWUSR); /* rw only by owner */
 #else
 	fchmod (fileno (result), S_IRUSR | S_IWUSR); /* rw only by owner */
@@ -218,7 +222,9 @@ extern XP_Bool XP_FileNameContainsBadChars (const char *name)
 #endif
 #endif /* XP_MAC || XP_UNIX */
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
+
+#include <unistd.h>		/* for fsync & getpid */
 
 /* This is just like fclose(), except that it does fflush() and fsync() first,
    to ensure that the bits have made it to the disk before we return.
@@ -258,9 +264,7 @@ int XP_FileClose(XP_File file)
 
 XP_END_PROTOS
 
-#ifdef XP_UNIX
-
-#include <unistd.h>		/* for getpid */
+#if defined(XP_UNIX) || defined(XP_BEOS)
 
 #ifdef TRACE
 #define Debug 1
@@ -478,12 +482,12 @@ int XP_FileTruncate(const char* name, XP_FileType type, int32 length)
  */
 int XP_FileWrite (const void* source, int32 count, XP_File file)
 {
-    int32		realCount;
+    uint32		realCount;
 
     if ( count < 0 )
         realCount = XP_STRLEN( source );
     else
-        realCount = count;
+        realCount = (uint32)count;
 
 	return( fwrite( source, 1, realCount, file ) );
 }
@@ -533,7 +537,7 @@ xp_unix_sprintf_stat( char * buf,
 
     while (--len > 0 && dirName[len] == '/')
 	/* do nothing */;		/* strip trailing slashes */
-    strncpy(buf, dirName, ++len);
+    strncpy(buf, dirName, (unsigned int) ++len);
     buf[len++] = '/';
     buf[len]   =  0;
     if (lang != NULL && *lang == 0)
@@ -715,18 +719,18 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		const char *newsrc_dir = ((FE_UserNewsRC && *FE_UserNewsRC)
 								  ? FE_UserNewsRC
 								  : (home ? home : ""));
-		const char *basename = (type == xpSNewsRC ? ".snewsrc" : ".newsrc");
+		const char *rcbasename = (type == xpSNewsRC ? ".snewsrc" : ".newsrc");
 		const char *suffix = (type == xpTemporaryNewsRC ? ".tmp" : "");
 		if (*name)
 		  sprintf (buf, "%.800s%.1s%.8s-%.128s%.4s",
 				   newsrc_dir,
 				   (newsrc_dir[XP_STRLEN(newsrc_dir)-1] == '/' ? "" : "/"),
-				   basename, name, suffix);
+				   rcbasename, name, suffix);
 		else
 		  sprintf (buf, "%.800s%.1s%.128s%.4s",
 				   newsrc_dir,
 				   (newsrc_dir[XP_STRLEN(newsrc_dir)-1] == '/' ? "" : "/"),
-				   basename, suffix);
+				   rcbasename, suffix);
 
 		name = buf;
 		break;
@@ -863,7 +867,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		if (name) XP_ASSERT (name[0] == '/');
 		XP_ASSERT (slash);
 		if (!slash) return 0;
-		XP_MEMCPY (buf, name, slash - name + 1);
+		XP_MEMCPY (buf, name,(unsigned int)(slash - name + 1));
 		buf [slash - name + 1] = '.';
 		XP_STRCPY (buf + (slash - name) + 2, slash + 1);
 		XP_STRCAT (buf, ".summary");
@@ -903,7 +907,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		  if (dot) {
 
 			  len = dot - name + 1;
-			  PL_strncpyz(buf, name, len);
+			  PL_strncpyz(buf, name, (unsigned int)len);
 		  }/* if */
 
 		  XP_STRCAT (buf, ".nab");
@@ -945,7 +949,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		  dot = XP_STRRCHR(name, '.');
 		  if (dot) {
 			  len = dot - name + 1;
-			  PL_strncpyz(buf, name, len);
+			  PL_strncpyz(buf, name, (unsigned int)len);
 		  }/* if */
 
 		  XP_STRCAT (buf, ".vcf");
@@ -981,7 +985,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		  dot = XP_STRRCHR(name, '.');
 		  if (dot) {
 			  len = dot - name + 1;
-			  PL_strncpyz(buf, name, len);
+			  PL_strncpyz(buf, name, (unsigned int)len);
 		  }/* if */
 
 		  XP_STRCAT (buf, ".ldif");
@@ -1125,7 +1129,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
      {
          extern void fe_GetProgramDirectory(char *path, int len);
          char *policyFN = "moz40p3";
-         char *mozHome  = getenv("MOZILLA_FIVE_HOME");
+         char *mozHome  = PR_GetEnv("MOZILLA_FIVE_HOME");
          char *lang     = getenv("LANG");
          char  dirName[1024];
 
@@ -1142,7 +1146,6 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
          sprintf(buf, "%.900s/%s", conf_dir, policyFN);
          break;
      }
-#endif /* MOZ_SECURITY */
 
 	case xpSecurityModule:
      	{
@@ -1159,6 +1162,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
     	HG06196
 	break;
 	}
+#endif /* MOZ_SECURITY */
 
 	case xpPKCS12File:
 	  /* Convert /a/b/c/foo to /a/b/c/foo.p12 (note leading dot) */
@@ -1174,7 +1178,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 
 				/* include NULL in length */
 				len = XP_STRLEN(name) + 1;
-				PL_strncpyz(buf, name, len);
+				PL_strncpyz(buf, name, (unsigned int)len);
 
 				/* we want to concatenate ".p12" if it is not the
 				 * last 4 characters of the name already.  
@@ -1343,7 +1347,7 @@ xp_TempName (XP_FileType type, const char * prefix, char* buf, char* buf2, unsig
 
 	  /* The name of the subdirectory is the bottom 5 bits of the time part,
 		 in hex (giving a total of 32 directories.) */
-	  sprintf (s, "%02X", (now & 0x1F));
+	  sprintf (s, "%02X", (unsigned int)(now & 0x1F));
 
 	  if (XP_Stat (buf, &st, xpURL))		/* create the dir if necessary */
 		XP_MakeDirectory (buf, type);
@@ -1547,7 +1551,7 @@ XP_Dir XP_OpenDir(const char * name, XP_FileType type)
 #endif
 #endif /* XP_UNIX */
 
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS)
 
 /*
  * Make all the directories specified in the path
@@ -1562,7 +1566,7 @@ int XP_MakeDirectoryR(const char* name, XP_FileType type)
 #ifdef XP_WIN
 	separator = '\\';
     skipfirst = 3;
-#elif defined XP_UNIX
+#elif defined(XP_UNIX) || defined(XP_BEOS)
 	separator = '/';
     skipfirst = 1;
 #endif
@@ -1720,6 +1724,27 @@ WH_TempName(XP_FileType type, const char * prefix)
 #define MOZ_USER_DIR ".mozilla"
 #endif
 
+#if defined XP_BEOS
+char *fe_GetConfigDir(void)
+{
+	char	path[1024];
+	if(find_directory(B_USER_SETTINGS_DIRECTORY, -1, false, path, sizeof(path)) == B_OK)
+	{
+		char	*config_dir;
+
+	    int len = strlen(path);
+	    len += strlen("/mozilla") + 1;
+
+	    config_dir = (char *)XP_CALLOC(len, sizeof(char));
+	    /* we really should use XP_STRN*_SAFE but this is MODULAR_NETLIB */
+	    XP_STRCPY(config_dir, path);
+	    XP_STRCAT(config_dir, "/mozilla");
+		return config_dir;
+	}
+
+	return strdup("/tmp");
+}
+#else
 char *fe_GetConfigDir(void) {
   char *home = getenv("HOME");
   if (home) {
@@ -1728,7 +1753,7 @@ char *fe_GetConfigDir(void) {
     int len = strlen(home);
     len += strlen("/") + strlen(MOZ_USER_DIR) + 1;
 
-    config_dir = (char *)XP_CALLOC(len, sizeof(char));
+    config_dir = (char *)XP_CALLOC((unsigned int)len, sizeof(char));
     /* we really should use XP_STRN*_SAFE but this is MODULAR_NETLIB */
     XP_STRCPY(config_dir, home);
     XP_STRCAT(config_dir, "/");
@@ -1739,6 +1764,6 @@ char *fe_GetConfigDir(void) {
   return strdup("/tmp");
 }
 
-
+#endif /* XP_BEOS */
 
 /******************************************************************************/

@@ -215,7 +215,7 @@ PRInt32 nsDTDContext::GetCount(void) {
  */
 void nsDTDContext::Push(eHTMLTags aTag) {
 #ifdef  NS_DEBUG
-  if(mStack.mCount<sizeof(mTags))
+  if(mStack.mCount < eMaxTags)
     mTags[mStack.mCount]=aTag;
 #endif
 
@@ -227,7 +227,7 @@ void nsDTDContext::Push(eHTMLTags aTag) {
  */
 eHTMLTags nsDTDContext::Pop() {
 #ifdef  NS_DEBUG
-  if(mStack.mCount>0)
+  if ((mStack.mCount>0) && (mStack.mCount <= eMaxTags))
     mTags[mStack.mCount-1]=eHTMLTag_unknown;
 #endif
 
@@ -461,10 +461,8 @@ void CTokenRecycler::RecycleToken(CToken* aToken) {
   if(aToken) {
     PRInt32 theType=aToken->GetTokenType();
     CTokenFinder finder(aToken);
-    CToken* theMatch=(CToken*)mTokenCache[theType-1]->FirstThat(finder);
-    if(theMatch) {
-      int x=5;
-    }
+    CToken* theMatch;
+    theMatch=(CToken*)mTokenCache[theType-1]->FirstThat(finder);
     mTokenCache[theType-1]->Push(aToken);
   }
 }
@@ -488,19 +486,21 @@ CToken* CTokenRecycler::CreateTokenOfType(eHTMLTokenTypes aType,eHTMLTags aTag, 
     mTotals[aType-1]++;
 #endif
     switch(aType){
-      case eToken_start:      result=new CStartToken(aTag); break;
-      case eToken_end:        result=new CEndToken(aTag); break;
-      case eToken_comment:    result=new CCommentToken(); break;
-      case eToken_entity:     result=new CEntityToken(aString); break;
-      case eToken_whitespace: result=new CWhitespaceToken(); break;
-      case eToken_newline:    result=new CNewlineToken(); break;
-      case eToken_text:       result=new CTextToken(aString); break;
-      case eToken_attribute:  result=new CAttributeToken(); break;
-      case eToken_script:     result=new CScriptToken(); break;
-      case eToken_style:      result=new CStyleToken(); break;
-      case eToken_skippedcontent: result=new CSkippedContentToken(aString); break;
-      case eToken_instruction:result=new CInstructionToken(); break;
-      case eToken_cdatasection:result=new CCDATASectionToken(); break;
+      case eToken_start:            result=new CStartToken(aTag); break;
+      case eToken_end:              result=new CEndToken(aTag); break;
+      case eToken_comment:          result=new CCommentToken(); break;
+      case eToken_entity:           result=new CEntityToken(aString); break;
+      case eToken_whitespace:       result=new CWhitespaceToken(); break;
+      case eToken_newline:          result=new CNewlineToken(); break;
+      case eToken_text:             result=new CTextToken(aString); break;
+      case eToken_attribute:        result=new CAttributeToken(); break;
+      case eToken_script:           result=new CScriptToken(); break;
+      case eToken_style:            result=new CStyleToken(); break;
+      case eToken_skippedcontent:   result=new CSkippedContentToken(aString); break;
+      case eToken_instruction:      result=new CInstructionToken(); break;
+      case eToken_cdatasection:     result=new CCDATASectionToken(); break;
+      case eToken_error:            result=new CErrorToken(); break;
+      case eToken_doctypeDecl:      result=new CDoctypeDeclToken(); break;
         default:
           break;
     }
@@ -541,6 +541,7 @@ CToken* CTokenRecycler::CreateTokenOfType(eHTMLTokenTypes aType,eHTMLTags aTag) 
       case eToken_instruction:      result=new CInstructionToken(); break;
       case eToken_cdatasection:     result=new CCDATASectionToken(); break;
       case eToken_error:            result=new CErrorToken(); break;
+      case eToken_doctypeDecl:      result=new CDoctypeDeclToken(); break;
         default:
           break;
     }
@@ -549,6 +550,10 @@ CToken* CTokenRecycler::CreateTokenOfType(eHTMLTokenTypes aType,eHTMLTags aTag) 
 }
 
 void DebugDumpContainmentRules(nsIDTD& theDTD,const char* aFilename,const char* aTitle) {
+#ifdef RICKG_DEBUG
+
+#include <fstream.h>
+
   const char* prefix="     ";
   fstream out(aFilename,ios::out);
   out << "==================================================" << endl;
@@ -557,7 +562,7 @@ void DebugDumpContainmentRules(nsIDTD& theDTD,const char* aFilename,const char* 
   int i,j=0;
   int written;
   for(i=1;i<eHTMLTag_text;i++){
-    const char* tag=NS_EnumToTag((eHTMLTags)i);
+    const char* tag=nsHTMLTags::GetStringValue((eHTMLTags)i);
     out << endl << endl << "Tag: <" << tag << ">" << endl;
     out << prefix;
     written=0;
@@ -568,7 +573,7 @@ void DebugDumpContainmentRules(nsIDTD& theDTD,const char* aFilename,const char* 
           written=0;
         }
         if(theDTD.CanContain(i,j)){
-          tag=NS_EnumToTag((eHTMLTags)j);
+          tag=nsHTMLTags::GetStringValue((eHTMLTags)j);
           if(tag) {
             out<< tag << ", ";
             written++;
@@ -578,6 +583,7 @@ void DebugDumpContainmentRules(nsIDTD& theDTD,const char* aFilename,const char* 
     }
     else out<<"(not container)" << endl;
   }
+#endif
 }
 
 
@@ -635,8 +641,15 @@ PRUint32 AccumulateCRC(PRUint32 crc_accum, char *data_blk_ptr, int data_blk_size
  ******************************************************************************/
 
 CObserverDictionary::CObserverDictionary() {
+
   nsCRT::zero(mObservers,sizeof(mObservers));
-  RegisterObservers();
+
+  nsAutoString theHTMLTopic("htmlparser");
+  RegisterObservers(theHTMLTopic);
+
+  nsAutoString theXMLTopic("xmlparser");
+  RegisterObservers(theXMLTopic);
+
 }
 
 CObserverDictionary::~CObserverDictionary() {
@@ -658,24 +671,23 @@ public:
 void CObserverDictionary::UnregisterObservers() {
   int theIndex=0;
   nsObserverReleaser theReleaser;
-  for(theIndex=0;theIndex<NS_HTML_TAG_MAX;theIndex++){
+  for(theIndex=0;theIndex<=NS_HTML_TAG_MAX;theIndex++){
     if(mObservers[theIndex]){
-      nsIElementObserver* theElementObserver=0;
+      //nsIElementObserver* theElementObserver=0;
       mObservers[theIndex]->ForEach(theReleaser);
       delete mObservers[theIndex];
     }
   }
 }
 
-void CObserverDictionary::RegisterObservers() {
+void CObserverDictionary::RegisterObservers(nsString& aTopic) {
   nsresult result = NS_OK;
   nsIObserverService* theObserverService = nsnull;
   result = nsServiceManager::GetService(NS_OBSERVERSERVICE_PROGID, nsIObserverService::GetIID(),
                                       (nsISupports**) &theObserverService, nsnull);
   if(result == NS_OK){
-    nsString  theTopic("htmlparser");
     nsIEnumerator* theEnum;
-    result = theObserverService->EnumerateObserverList(theTopic.GetUnicode(), &theEnum);
+    result = theObserverService->EnumerateObserverList(aTopic.GetUnicode(), &theEnum);
     if(result == NS_OK){
       nsIElementObserver* theElementObserver;
       nsISupports *inst;
@@ -689,8 +701,12 @@ void CObserverDictionary::RegisterObservers() {
           PRUint32 theTagIndex = 0;
           theTagStr = theElementObserver->GetTagNameAt(theTagIndex);
           while (theTagStr != nsnull) {
-            eHTMLTags theTag = NS_TagToEnum(theTagStr);
-            if(eHTMLTag_userdefined!=theTag){
+            // XXX - HACK - Hardcoding PI for simplification.  PI handling should not
+            // happen along with ** tags **. For now the specific PI, ?xml, is treated
+            // as an unknown tag in the dictionary!!!!
+            eHTMLTags theTag = (nsCRT::strcmp(theTagStr,"?xml") == 0) ? eHTMLTag_unknown :
+                                  nsHTMLTags::LookupTag(nsCAutoString(theTagStr));
+            if((eHTMLTag_userdefined!=theTag) && (theTag <= NS_HTML_TAG_MAX)){
               if(mObservers[theTag] == nsnull) {
                  mObservers[theTag] = new nsDeque(0);
               }
@@ -707,5 +723,7 @@ void CObserverDictionary::RegisterObservers() {
 }
 
 nsDeque* CObserverDictionary::GetObserversForTag(eHTMLTags aTag) {
-  return mObservers[aTag];
+  if(aTag <= NS_HTML_TAG_MAX)
+      return mObservers[aTag];
+  return nsnull;
 }

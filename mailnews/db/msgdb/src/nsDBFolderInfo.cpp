@@ -197,7 +197,7 @@ nsresult nsDBFolderInfo::InitFromExistingDB()
 					if (ret == NS_OK)
 					{
 						ret = rowCursor->NextRow(m_mdb->GetEnv(), &m_mdbRow, &rowPos);
-						rowCursor->Release();
+						rowCursor->CutStrongRef(m_mdb->GetEnv());
 						if (ret == NS_OK && m_mdbRow)
 						{
 							LoadMemberVariables();
@@ -299,7 +299,7 @@ NS_IMETHODIMP	nsDBFolderInfo::SetFolderSize(PRUint32 size)
 }
 
 NS_IMETHODIMP
-nsDBFolderInfo::GetFolderDate(PRInt32 *folderDate)
+nsDBFolderInfo::GetFolderDate(PRUint32 *folderDate)
 {
   if (!folderDate) 
 	  return NS_ERROR_NULL_POINTER;
@@ -307,7 +307,7 @@ nsDBFolderInfo::GetFolderDate(PRInt32 *folderDate)
   return NS_OK;
 }
 
-NS_IMETHODIMP	nsDBFolderInfo::SetFolderDate(PRInt32 folderDate)
+NS_IMETHODIMP	nsDBFolderInfo::SetFolderDate(PRUint32 folderDate)
 {
 	m_folderDate = folderDate;
 	return SetUint32PropertyWithToken(m_folderDateColumnToken, folderDate);
@@ -339,8 +339,11 @@ nsDBFolderInfo::ChangeExpungedBytes(PRInt32 delta)
     return NS_OK;
 }
 
-PRBool nsDBFolderInfo::AddLaterKey(nsMsgKey key, time_t *until)
+PRBool nsDBFolderInfo::AddLaterKey(nsMsgKey key, PRTime until)
 {
+	//ducarroz: if until represente a folder time stamp,
+	//          therefore it should be declared as a PRInt32.
+	//          Else, it should be a PRTime.
 	return PR_FALSE;
 }
 
@@ -349,8 +352,11 @@ PRInt32	nsDBFolderInfo::GetNumLatered()
 	return 0;
 }
 
-nsMsgKey	nsDBFolderInfo::GetLateredAt(PRInt32 laterIndex, time_t *pUntil)
+nsMsgKey	nsDBFolderInfo::GetLateredAt(PRInt32 laterIndex, PRTime pUntil)
 {
+	//ducarroz: if until represente a folder time stamp,
+	//          therefore it should be declared as a PRInt32.
+	//          Else, it should be a PRTime.
 	return nsMsgKey_None;
 }
 
@@ -697,7 +703,7 @@ nsresult	nsDBFolderInfo::SetUint32PropertyWithToken(mdb_token aProperty, PRUint3
 nsresult	nsDBFolderInfo::SetInt32PropertyWithToken(mdb_token aProperty, PRInt32 propertyValue)
 {
 	nsString propertyStr;
-	propertyStr.Append(propertyValue, 10);
+	propertyStr.Append(propertyValue, 16);
 	return SetPropertyWithToken(aProperty, &propertyStr);
 }
 

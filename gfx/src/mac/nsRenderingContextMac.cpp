@@ -1389,3 +1389,34 @@ NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImage *aImage, const nsRect& a
 	EndDraw();
 	return result;
 }
+
+NS_IMETHODIMP nsRenderingContextMac::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextMac::InvertRect(const nsRect& aRect)
+{
+	return InvertRect(aRect.x, aRect.y, aRect.width, aRect.height);
+}
+
+NS_IMETHODIMP nsRenderingContextMac::InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+{
+	StartDraw();
+
+	nscoord x,y,w,h;
+	Rect	therect;
+
+	x = aX;
+	y = aY;
+	w = aWidth;
+	h = aHeight;
+
+	mGS->mTMatrix.TransformCoord(&x, &y, &w, &h);
+	::SetRect(&therect, pinToShort(x), pinToShort(y), pinToShort(x + w), pinToShort(y + h));
+	::InvertRect(&therect);
+
+	EndDraw();
+	return NS_OK;
+}
+

@@ -58,8 +58,6 @@ NS_NewSplitterFrame ( nsIFrame** aNewFrame )
   
 } // NS_NewSplitterFrame
 
-nsresult NS_CreateAnonymousNode(nsIContent* aParent, nsIAtom* aTag, PRInt32 aNameSpaceId, nsCOMPtr<nsIContent>& aNewNode);
-
 /**
  * Anonymous interface
  */
@@ -71,19 +69,31 @@ nsSplitterFrame::CreateAnonymousContent(nsISupportsArray& aAnonymousChildren)
   mContent->ChildCount(count); 
 
   if (count == 0) {
+    // get the document
+    nsCOMPtr<nsIDocument> idocument;
+    mContent->GetDocument(*getter_AddRefs(idocument));
+    nsCOMPtr<nsIDOMDocument> document(do_QueryInterface(idocument));
 
-    nsCOMPtr<nsIContent> content;
-    NS_CreateAnonymousNode(mContent, nsXULAtoms::spring, nsXULAtoms::nameSpaceID, content);
-    content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_FALSE);
+    // create a spring
+    nsCOMPtr<nsIDOMElement> node;
+    document->CreateElement("spring",getter_AddRefs(node));
+    nsCOMPtr<nsIXMLContent> content;
+    content = do_QueryInterface(node);
+    content->SetNameSpaceID(nsXULAtoms::nameSpaceID);
+    content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_TRUE);
     aAnonymousChildren.AppendElement(content);
 
     // a grippy
-    NS_CreateAnonymousNode(mContent, nsXULAtoms::grippy, nsXULAtoms::nameSpaceID, content);
+    document->CreateElement("grippy",getter_AddRefs(node));
+    content = do_QueryInterface(node);
+    content->SetNameSpaceID(nsXULAtoms::nameSpaceID);
     aAnonymousChildren.AppendElement(content);
 
     // create a spring
-    NS_CreateAnonymousNode(mContent, nsXULAtoms::spring, nsXULAtoms::nameSpaceID, content);
-    content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_FALSE);
+    document->CreateElement("spring",getter_AddRefs(node));
+    content = do_QueryInterface(node);
+    content->SetNameSpaceID(nsXULAtoms::nameSpaceID);
+    content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_TRUE);
     aAnonymousChildren.AppendElement(content);
   }
 

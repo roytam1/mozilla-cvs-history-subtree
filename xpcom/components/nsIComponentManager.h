@@ -25,10 +25,15 @@
 #include "nsError.h"
 #include "nsISupports.h"
 #include "nsIFactory.h"
+#include "nsIFileSpec.h"
+#include "nsIEnumerator.h"
 
+#ifndef OBSOLETE_MODULE_LOADING
 /*
  * Prototypes for dynamic library export functions. Your DLL/DSO needs to export
  * these methods to play in the component world.
+ *
+ * THIS IS OBSOLETE. Look at nsIModule.idl
  */
 
 extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
@@ -48,6 +53,7 @@ typedef nsresult (*nsFactoryProc)(nsISupports* aServMgr,
 typedef PRBool   (*nsCanUnloadProc)(nsISupports* aServMgr);
 typedef nsresult (*nsRegisterProc)(nsISupports* aServMgr, const char *path);
 typedef nsresult (*nsUnregisterProc)(nsISupports* aServMgr, const char *path);
+#endif /* OBSOLETE_MODULE_LOADING */
 
 #define NS_ICOMPONENTMANAGER_IID                     \
 { /* 8458a740-d5dc-11d2-92fb-00e09805570f */         \
@@ -107,20 +113,53 @@ public:
                              PRBool aReplace) = 0;
 
   // Manually register a dynamically loaded component.
+  // The libraryPersistentDescriptor is what gets passed to the library
+  // self register function from ComponentManager. The format of this string
+  // is the same as nsIFileSpec::GetPersistentDescriptorString()
+  //
+  // WARNING: OBSOLETE
+  // This function will go away in favour of RegisterComponentSpec. In fact,
+  // it internally turns around and calls RegisterComponentSpec.
   NS_IMETHOD RegisterComponent(const nsCID &aClass,
                                const char *aClassName,
                                const char *aProgID,
-                               const char *aLibrary,
+                               const char *aLibraryPersistentDescriptor,
                                PRBool aReplace,
                                PRBool aPersist) = 0;
 
+  // Register a component using its FileSpec as its identification
+  // This is the more prevalent use.
+  NS_IMETHOD RegisterComponentSpec(const nsCID &aClass,
+                                   const char *aClassName,
+                                   const char *aProgID,
+                                   nsIFileSpec *aLibrary,
+                                   PRBool aReplace,
+                                   PRBool aPersist) = 0;
+  
+  // Register a component using its dllName. This could be a dll name with
+  // no path so that LD_LIBRARY_PATH on unix or PATH on win can load it. Or
+  // this could be a code fragment name on the Mac.
+  NS_IMETHOD RegisterComponentLib(const nsCID &aClass,
+                                  const char *aClassName,
+                                  const char *aProgID,
+                                  const char *adllName,
+                                  PRBool aReplace,
+                                  PRBool aPersist) = 0;
+  
   // Manually unregister a factory for a class
   NS_IMETHOD UnregisterFactory(const nsCID &aClass,
                                nsIFactory *aFactory) = 0;
 
   // Manually unregister a dynamically loaded component
+  //
+  // WARNING: OBSOLETE
+  // This function will go away in favour of UnregisterComponentSpec.
   NS_IMETHOD UnregisterComponent(const nsCID &aClass,
                                  const char *aLibrary) = 0;
+
+  // Manually unregister a dynamically loaded component
+  NS_IMETHOD UnregisterComponentSpec(const nsCID &aClass,
+                                     nsIFileSpec *aLibrarySpec) = 0;
 
   // Unload dynamically loaded factories that are not in use
   NS_IMETHOD FreeLibraries(void) = 0;
@@ -147,8 +186,19 @@ public:
 	NS_Timer = 2
   };
 
-  NS_IMETHOD AutoRegister(RegistrationTime when, const char* directory) = 0;
-  NS_IMETHOD AutoRegisterComponent(RegistrationTime when, const char *fullname) = 0;
+  NS_IMETHOD AutoRegister(RegistrationTime when, nsIFileSpec* directory) = 0;
+  NS_IMETHOD AutoRegisterComponent(RegistrationTime when, nsIFileSpec *component) = 0;
+
+  // Is the given CID currently registered?
+  NS_IMETHOD IsRegistered(const nsCID &aClass,
+                          PRBool *aRegistered) = 0;
+
+  // Get an enumeration of all the CIDs
+  NS_IMETHOD EnumerateCLSIDs(nsIEnumerator** aEmumerator) = 0;
+    
+  // Get an enumeration of all the ProgIDs
+  NS_IMETHOD EnumerateProgIDs(nsIEnumerator** aEmumerator) = 0;
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -198,12 +248,38 @@ public:
                                   PRBool aReplace);
 
   // Manually register a dynamically loaded component.
+  // The libraryPersistentDescriptor is what gets passed to the library
+  // self register function from ComponentManager. The format of this string
+  // is the same as nsIFileSpec::GetPersistentDescriptorString()
+  //
+  // This function will go away in favour of RegisterComponentSpec. In fact,
+  // it internally turns around and calls RegisterComponentSpec.
   static nsresult RegisterComponent(const nsCID &aClass,
-                                    const char *aClassName,
-                                    const char *aProgID,
-                                    const char *aLibrary,
-                                    PRBool aReplace,
-                                    PRBool aPersist);
+                               const char *aClassName,
+                               const char *aProgID,
+                               const char *aLibraryPersistentDescriptor,
+                               PRBool aReplace,
+                               PRBool aPersist);
+
+  // Register a component using its FileSpec as its identification
+  // This is the more prevalent use.
+  static nsresult RegisterComponentSpec(const nsCID &aClass,
+                                   const char *aClassName,
+                                   const char *aProgID,
+                                   nsIFileSpec *aLibrary,
+                                   PRBool aReplace,
+                                   PRBool aPersist);
+
+  // Register a component using its dllName. This could be a dll name with
+  // no path so that LD_LIBRARY_PATH on unix or PATH on win can load it. Or
+  // this could be a code fragment name on the Mac.
+  static nsresult RegisterComponentLib(const nsCID &aClass,
+                                       const char *aClassName,
+                                       const char *aProgID,
+                                       const char *adllName,
+                                       PRBool aReplace,
+                                       PRBool aPersist);
+  
 
   // Manually unregister a factory for a class
   static nsresult UnregisterFactory(const nsCID &aClass,
@@ -213,15 +289,32 @@ public:
   static nsresult UnregisterComponent(const nsCID &aClass,
                                       const char *aLibrary);
 
+  // Manually unregister a dynamically loaded component
+  static nsresult UnregisterComponentSpec(const nsCID &aClass,
+                                          nsIFileSpec *aLibrarySpec);
+
   // Unload dynamically loaded factories that are not in use
   static nsresult FreeLibraries(void);
-
   //////////////////////////////////////////////////////////////////////////////
   // DLL registration support
+
+  // If directory is NULL, then AutoRegister will try registering components
+  // in the default components directory which is got by
+  // nsSpecialSystemDirectory(XPCOM_CurrentProcessComponentDirectory)
   static nsresult AutoRegister(nsIComponentManager::RegistrationTime when,
-                               const char* directory);
+                               nsIFileSpec* directory);
   static nsresult AutoRegisterComponent(nsIComponentManager::RegistrationTime when,
-                                        const char *fullname);
+                                        nsIFileSpec *component);
+
+  // Is the given CID currently registered?
+  static nsresult IsRegistered(const nsCID &aClass,
+                               PRBool *aRegistered);
+
+  // Get an enumeration of all the CIDs
+  static nsresult EnumerateCLSIDs(nsIEnumerator** aEmumerator);
+    
+  // Get an enumeration of all the ProgIDs
+  static nsresult EnumerateProgIDs(nsIEnumerator** aEmumerator);
 
 };
 

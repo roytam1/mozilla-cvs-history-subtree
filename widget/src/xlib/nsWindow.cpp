@@ -18,12 +18,18 @@
 
 #include "nsWindow.h"
 
+#include "xlibrgb.h"
 
+#include "nsFileSpec.h" // for nsAutoCString
 
 nsWindow::nsWindow() : nsWidget()
 {
   NS_INIT_REFCNT();
-  name = "nsWindow";
+  mName = "nsWindow";
+  mBackground = NS_RGB(255, 255, 255);
+  mBackgroundPixel = xlib_rgb_xpixel_from_rgb(mBackground);
+  mBorderRGB = NS_RGB(255,255,255);
+  mBorderPixel = xlib_rgb_xpixel_from_rgb(mBorderRGB);
 }
 
 nsWindow::~nsWindow()
@@ -34,29 +40,27 @@ void
 nsWindow::DestroyNative(void)
 {
   if (mGC)
-    XFreeGC(gDisplay, mGC);
+    XFreeGC(mDisplay, mGC);
   if (mBaseWindow) {
-    XDestroyWindow(gDisplay, mBaseWindow);
+    XDestroyWindow(mDisplay, mBaseWindow);
     DeleteWindowCallback(mBaseWindow);
   }
 }
 
-
-void
-nsWindow::CreateNative(Window aParent, nsRect aRect)
+#if 0
+void nsWindow::CreateNative(Window aParent, nsRect aRect)
 {
   XSetWindowAttributes attr;
-  unsigned long        attr_mask;
-  int width;
-  int height;
+  unsigned long attr_mask;
+
   // on a window resize, we don't want to window contents to
   // be discarded...
   attr.bit_gravity = NorthWestGravity;
   // make sure that we listen for events
-  attr.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
+  attr.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | KeyPressMask | KeyReleaseMask | FocusChangeMask | VisibilityChangeMask;
   // set the default background color and border to that awful gray
-  attr.background_pixel = bg_pixel;
-  attr.border_pixel = border_pixel;
+  attr.background_pixel = mBackgroundPixel;
+  attr.border_pixel = mBorderPixel;
   // set the colormap
   attr.colormap = xlib_rgb_get_cmap();
   // here's what's in the struct
@@ -65,52 +69,43 @@ nsWindow::CreateNative(Window aParent, nsRect aRect)
   if (attr.colormap)
     attr_mask |= CWColormap;
 
-  printf("Creating XWindow: x %d y %d w %d h %d\n",
-         aRect.x, aRect.y, aRect.width, aRect.height);
-  if (aRect.width <= 0) {
-    printf("*** Fixing width from %d...\n", aRect.width);
-    width = 1;
-  }
-  else {
-    width = aRect.width;
-  }
-  if (aRect.height <= 0) {
-    printf("*** Fixing height from %d...\n", aRect.height);
-    height = 1;
-  }
-  else {
-    height = aRect.height;
-  }
-  
-  mBaseWindow = XCreateWindow(gDisplay,
-                              aParent,
-                              aRect.x, aRect.y,
-                              width, height,
-                              0, // border width
-                              gDepth,
-                              InputOutput,    // class
-                              gVisual,        // get the visual from xlibrgb
-                              attr_mask,
-                              &attr);
-  printf("nsWindow Created window 0x%lx with parent 0x%lx\n",
-         mBaseWindow, aParent);
-  // XXX when we stop getting lame values for this remove it.
-  // sometimes the dimensions have been corrected by the code above.
-  mBounds.height = height;
-  mBounds.width = width;
-  // add the callback for this
-  AddWindowCallback(mBaseWindow, this);
+  CreateNativeWindow(aParent, mBounds, attr, attr_mask);
+  CreateGC();
+
 }
+#endif
+
+/* virtual */ long
+nsWindow::GetEventMask()
+{
+	long event_mask;
+
+	event_mask = 
+    ButtonMotionMask |
+    ButtonPressMask | 
+    ButtonReleaseMask | 
+    EnterWindowMask |
+    ExposureMask | 
+    FocusChangeMask |
+    KeyPressMask | 
+    KeyReleaseMask | 
+    LeaveWindowMask |
+    PointerMotionMask |
+    StructureNotifyMask | 
+    VisibilityChangeMask;
+  return event_mask;
+}
+
 
 NS_IMETHODIMP nsWindow::Invalidate(PRBool aIsSynchronous)
 {
-  printf("nsWindow::Invalidate(sync)\n");
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsWindow::Invalidate(sync)\n"));
   nsPaintEvent pevent;
   pevent.message = NS_PAINT;
   pevent.widget = this;
   pevent.eventStructType = NS_PAINT_EVENT;
   pevent.rect = new nsRect (mBounds.x, mBounds.y,
-                            mBounds.height, mBounds.width);
+                            mBounds.width, mBounds.height);
   // XXX fix this
   pevent.time = 0;
   AddRef();
@@ -122,7 +117,8 @@ NS_IMETHODIMP nsWindow::Invalidate(PRBool aIsSynchronous)
 
 NS_IMETHODIMP nsWindow::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
 {
-  printf("nsWindow::Invalidate(rect, sync)\n");
+  PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsWindow::Invalidate(rect, sync)\n"));
+
   nsPaintEvent pevent;
   pevent.message = NS_PAINT;
   pevent.widget = this;
@@ -134,13 +130,14 @@ NS_IMETHODIMP nsWindow::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
   OnPaint(pevent);
   Release();
   // XXX will this leak?
-  //delete pevent.rect;
+  delete pevent.rect;
   return NS_OK;
 }
 
 NS_IMETHODIMP nsWindow::Update()
 {
-  printf("nsWindow::Update()\n");
+  //PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsWindow::Update()\n"));
+
   nsPaintEvent pevent;
   pevent.message = NS_PAINT;
   pevent.widget = this;
@@ -156,7 +153,52 @@ NS_IMETHODIMP nsWindow::Update()
   return NS_OK;
 }
 
+NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
+{
+  PR_LOG(XlibScrollingLM, PR_LOG_DEBUG, ("nsWindow::Scroll()\n"));
+  
+  //--------
+  // Scroll the children
+  nsCOMPtr<nsIEnumerator> children ( getter_AddRefs(GetChildren()) );
+  if (children)
+    {
+      children->First();
+      do
+        {
+          nsISupports* child;
+          if (NS_SUCCEEDED(children->CurrentItem(&child)))
+            {
+              nsWidget* childWindow = NS_STATIC_CAST(nsWidget*,child);
+              NS_RELEASE(child);
+              
+              nsRect bounds;
+              childWindow->GetRequestedBounds(bounds);
+              bounds.x += aDx;
+              bounds.y += aDy;
+              PR_LOG(XlibScrollingLM, PR_LOG_DEBUG, ("nsWindow::Scroll moving child to %d, %d\n", bounds.x, bounds.y));
+              childWindow->Move(bounds.x, bounds.y);
+            }
+        } while (NS_SUCCEEDED(children->Next()));                       
+    }
+  
+  if (aClipRect)
+    Invalidate(*aClipRect, PR_TRUE);
+  else 
+    Invalidate(PR_TRUE);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsWindow::SetTitle(const nsString& aTitle)
+{
+  if(!mBaseWindow)
+    return NS_ERROR_FAILURE;
+
+  XStoreName(mDisplay, mBaseWindow, (const char *) nsAutoCString(aTitle));
+
+  return NS_OK;
+}
+
 ChildWindow::ChildWindow(): nsWindow()
 {
-  name = "nsChildWindow";
+  mName = "nsChildWindow";
 }

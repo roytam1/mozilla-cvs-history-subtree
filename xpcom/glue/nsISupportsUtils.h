@@ -26,14 +26,25 @@
 #include "nsID.h"
 #include "nsIID.h"
 #include "nsError.h"
+#include "pratom.h" /* needed for PR_AtomicIncrement and PR_AtomicDecrement */
 
 #if defined(NS_MT_SUPPORTED)
 #include "prcmon.h"
 #endif  /* NS_MT_SUPPORTED */
 
-#if defined(XPIDL_JS_STUBS)
-struct JSObject;
-struct JSContext;
+  // under Metrowerks (Mac), we don't have autoconf yet
+#ifdef __MWERKS__
+  #define HAVE_CPP_SPECIALIZATION
+#endif
+
+  // under VC++ (Windows), we don't have autoconf yet
+#if defined(_MSC_VER) && (_MSC_VER>=1100)
+		// VC++ 5.0 and greater implement template specialization, 4.2 is unknown
+  #define HAVE_CPP_SPECIALIZATION
+#endif
+
+#ifdef HAVE_CPP_SPECIALIZATION
+	#define NSCAP_FEATURE_HIDE_NSISUPPORTS_GETIID
 #endif
 
 /*@{*/
@@ -68,24 +79,18 @@ typedef PRUint32 nsrefcnt;
 #include "nsTraceRefcnt.h"
 
 /**
- * Base class for all XPCOM objects to use. This macro forces the C++
- * compiler to use a compatible vtable layout for all XPCOM objects.
- */
-#ifdef XP_MAC
-#define XPCOM_OBJECT : public __comobject
-#else
-#define XPCOM_OBJECT
-#endif
-
-/**
  * Basic component object model interface. Objects which implement
  * this interface support runtime interface discovery (QueryInterface)
  * and a reference counted memory model (AddRef/Release). This is
  * modelled after the win32 IUnknown API.
  */
-class nsISupports XPCOM_OBJECT {
+class nsISupports {
 public:
+
+#ifndef NSCAP_FEATURE_HIDE_NSISUPPORTS_GETIID
   static const nsIID& GetIID() { static nsIID iid = NS_ISUPPORTS_IID; return iid; }
+#endif
+
   /**
    * @name Methods
    */
@@ -97,7 +102,7 @@ public:
    * @param aInstancePtr [out] A pointer to an interface pointer to
    * receive the result.
    * @return <b>NS_OK</b> if the interface is supported by the associated
-   * instance, <b>NS_NOINTERFACE</b> if it is not. 
+   * instance, <b>NS_NOINTERFACE</b> if it is not.
    * <b>NS_ERROR_INVALID_POINTER</b> if <i>aInstancePtr</i> is <b>NULL</b>.
    */
   NS_IMETHOD QueryInterface(REFNSIID aIID,
@@ -215,11 +220,11 @@ NS_IMETHODIMP_(nsrefcnt) _class::Release(void)         \
  * Some convenience macros for implementing QueryInterface
  */
 
-/** 
+/**
  * This implements query interface with two assumptions: First, the
- * class in question implements nsISupports and it's own interface and
+ * class in question implements nsISupports and its own interface and
  * nothing else. Second, the implementation of the class's primary
- * inheritance chain leads to it's own interface.
+ * inheritance chain leads to its own interface.
  *
  * @param _class The name of the class implementing the method
  * @param _classiiddef The name of the #define symbol that defines the IID
@@ -241,8 +246,35 @@ NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
     NS_ADDREF_THIS();                                                    \
     return NS_OK;                                                        \
   }                                                                      \
-  if (aIID.Equals(nsISupports::GetIID())) {                              \
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {               \
     *aInstancePtr = (void*) ((nsISupports*)this);                        \
+    NS_ADDREF_THIS();                                                    \
+    return NS_OK;                                                        \
+  }                                                                      \
+  return NS_NOINTERFACE;                                                 \
+}
+
+#define NS_IMPL_QUERY_INTERFACE2(_class, _c1, _c2)                       \
+NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr) \
+{                                                                        \
+  if (NULL == aInstancePtr) {                                            \
+    return NS_ERROR_NULL_POINTER;                                        \
+  }                                                                      \
+                                                                         \
+  *aInstancePtr = NULL;                                                  \
+                                                                         \
+  if (aIID.Equals(nsCOMTypeInfo<_c1>::GetIID())) {                       \
+    *aInstancePtr = (void*) ((_c1*)this);                                \
+    NS_ADDREF_THIS();                                                    \
+    return NS_OK;                                                        \
+  }                                                                      \
+  if (aIID.Equals(nsCOMTypeInfo<_c2>::GetIID())) {                       \
+    *aInstancePtr = (void*) ((_c2*)this);                                \
+    NS_ADDREF_THIS();                                                    \
+    return NS_OK;                                                        \
+  }                                                                      \
+  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {               \
+    *aInstancePtr = (void*) ((_c1*)this);                                \
     NS_ADDREF_THIS();                                                    \
     return NS_OK;                                                        \
   }                                                                      \
@@ -262,16 +294,21 @@ NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
   NS_IMPL_RELEASE(_class)                      \
   NS_IMPL_QUERY_INTERFACE(_class,_classiiddef)
 
+#define NS_IMPL_ISUPPORTS2(_class, _c1, _c2) \
+  NS_IMPL_ADDREF(_class)                     \
+  NS_IMPL_RELEASE(_class)                    \
+  NS_IMPL_QUERY_INTERFACE2(_class, _c1, _c2)
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Declare that you're going to inherit from something that already
  * implements nsISupports, but also implements an additional interface, thus
- * causing an ambiguity. In this case you don't need another mRefCnt, you 
+ * causing an ambiguity. In this case you don't need another mRefCnt, you
  * just need to forward the definitions to the appropriate superclass. E.g.
  *
  * class Bar : public Foo, public nsIBar {  // both provide nsISupports
- * public: 
+ * public:
  *   NS_DECL_ISUPPORTS_INHERITED
  *   ...other nsIBar and Bar methods...
  * };
@@ -286,7 +323,7 @@ public:                                                                     \
 /**
  * These macros can be used in conjunction with NS_DECL_ISUPPORTS_INHERITED
  * to implement the nsISupports methods, forwarding the invocations to a
- * superclass that already implements nsISupports. 
+ * superclass that already implements nsISupports.
  *
  * Note that I didn't make these inlined because they're virtual methods.
  */
@@ -351,59 +388,31 @@ NS_IMETHODIMP Class::QueryInterface(REFNSIID aIID, void** aInstancePtr)         
  * Use this macro to implement the AddRef method for a given <i>_class</i>
  * @param _class The name of the class implementing the method
  */
-#if defined(XP_PC)
-#define NS_IMPL_THREADSAFE_ADDREF(_class)                                   \
-NS_IMETHODIMP_(nsrefcnt) _class::AddRef(void)                                               \
-{                                                                           \
-  NS_PRECONDITION(PRInt32(mRefCnt) >= 0, "illegal refcnt");                 \
-  return InterlockedIncrement((LONG*)&mRefCnt);                             \
-}
 
-#else /* ! XP_PC */
 #define NS_IMPL_THREADSAFE_ADDREF(_class)                                   \
-nsrefcnt _class::AddRef(void)                                               \
+NS_IMETHODIMP_(nsrefcnt) _class::AddRef(void)                               \
 {                                                                           \
-  nsrefcnt count;                                                           \
-  NS_LOCK_INSTANCE();                                                       \
   NS_PRECONDITION(PRInt32(mRefCnt) >= 0, "illegal refcnt");                 \
-  count = ++mRefCnt;                                                        \
-  NS_UNLOCK_INSTANCE();                                                     \
-  return count;                                                             \
+  return PR_AtomicIncrement((PRInt32*)&mRefCnt);                            \
 }
-#endif /* ! XP_PC */
 
 /**
  * Use this macro to implement the Release method for a given <i>_class</i>
  * @param _class The name of the class implementing the method
  */
-#if defined(XP_PC)
-#define NS_IMPL_THREADSAFE_RELEASE(_class)             \
-NS_IMETHODIMP_(nsrefcnt) _class::Release(void)                         \
-{                                                      \
-  NS_PRECONDITION(0 != mRefCnt, "dup release");        \
-  if (0 == InterlockedDecrement((LONG*)&mRefCnt)) {    \
-    NS_DELETEXPCOM(this);                              \
-    return 0;                                          \
-  }                                                    \
-  return mRefCnt; /* Not threadsafe but who cares. */  \
-}
 
-#else /* ! XP_PC */
 #define NS_IMPL_THREADSAFE_RELEASE(_class)             \
 nsrefcnt _class::Release(void)                         \
 {                                                      \
   nsrefcnt count;                                      \
   NS_PRECONDITION(0 != mRefCnt, "dup release");        \
-  NS_LOCK_INSTANCE();                                  \
-  count = --mRefCnt;                                   \
-  NS_UNLOCK_INSTANCE();                                \
+  count = PR_AtomicDecrement((PRInt32 *)&mRefCnt);     \
   if (0 == count) {                                    \
     NS_DELETEXPCOM(this);                              \
     return 0;                                          \
   }                                                    \
   return count;                                        \
 }
-#endif /* ! XP_PC */
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -411,11 +420,11 @@ nsrefcnt _class::Release(void)                         \
  * Some convenience macros for implementing QueryInterface
  */
 
-/** 
+/**
  * This implements query interface with two assumptions: First, the
- * class in question implements nsISupports and it's own interface and
+ * class in question implements nsISupports and its own interface and
  * nothing else. Second, the implementation of the class's primary
- * inheritance chain leads to it's own interface.
+ * inheritance chain leads to its own interface.
  *
  * @param _class The name of the class implementing the method
  * @param _classiiddef The name of the #define symbol that defines the IID
@@ -666,17 +675,19 @@ NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
 #ifdef MOZ_TRACE_XPCOM_REFCNT
 #define NS_IF_RELEASE(_ptr)                                         \
   PR_BEGIN_MACRO                                                    \
-    ((0 != (_ptr))                                                  \
-    ? ((nsrefcnt) nsTraceRefcnt::Release((_ptr), (_ptr)->Release(), \
-                                          __FILE__, __LINE__))      \
-    : 0);                                                           \
-    (_ptr) = 0;                                                     \
+    if (_ptr) {                                                     \
+      (nsrefcnt) nsTraceRefcnt::Release((_ptr), (_ptr)->Release(),  \
+                                        __FILE__, __LINE__);        \
+      (_ptr) = 0;                                                   \
+    }                                                               \
   PR_END_MACRO
 #else
-#define NS_IF_RELEASE(_ptr)                   \
-  PR_BEGIN_MACRO                              \
-    ((0 != (_ptr)) ? (_ptr)->Release() : 0);  \
-    (_ptr) = 0;                               \
+#define NS_IF_RELEASE(_ptr)                                         \
+  PR_BEGIN_MACRO                                                    \
+    if (_ptr) {                                                     \
+      (_ptr)->Release();                                            \
+      (_ptr) = 0;                                                   \
+    }                                                               \
   PR_END_MACRO
 #endif
 
@@ -702,6 +713,22 @@ extern "C++" {
 
 class nsISupports;
 
+template <class T>
+struct nsCOMTypeInfo
+	{
+		static const nsIID& GetIID() { return T::GetIID(); }
+	};
+
+#ifdef NSCAP_FEATURE_HIDE_NSISUPPORTS_GETIID
+	template <>
+	struct nsCOMTypeInfo<nsISupports>
+		{
+			static const nsIID& GetIID() { static nsIID iid = NS_ISUPPORTS_IID; return iid; }
+		};
+#endif
+
+#define NS_GET_IID(T) nsCOMTypeInfo<T>::GetIID()
+
 template <class DestinationType>
 inline
 nsresult
@@ -709,8 +736,9 @@ CallQueryInterface( nsISupports* aSource, DestinationType** aDestination )
 		// a type-safe shortcut for calling the |QueryInterface()| member function
 	{
 		NS_PRECONDITION(aSource, "null parameter");
+    NS_PRECONDITION(aDestination, "null parameter");
 
-		return aSource->QueryInterface(DestinationType::GetIID(), (void**)aDestination);
+		return aSource->QueryInterface(nsCOMTypeInfo<DestinationType>::GetIID(), (void**)aDestination);
 	}
 
 } // extern "C++"

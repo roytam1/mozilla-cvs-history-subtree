@@ -138,7 +138,7 @@ public:
 
 protected:
 	PRBool m_childrenListed;
-	nsString2 m_mailboxName;
+	nsCString m_mailboxName;
 	char m_delimiter;
 };
 
@@ -152,8 +152,9 @@ struct mailbox_spec {
 	PRUint32			box_flags;
 	
 	char          *allocatedPathName;
+	PRUnichar		*unicharPathName;
 	char			hierarchySeparator;
-	const char		*hostName;
+	char			*hostName;
 	
 	nsImapProtocol *connection;	// do we need this? It seems evil.
 	nsImapFlagAndUidState     *flagState;
@@ -187,7 +188,7 @@ typedef struct _StreamInfo {
 } StreamInfo;
 
 typedef struct _ProgressInfo {
-	char *message;
+	PRUnichar *message;
 	int percent;
 } ProgressInfo;
 

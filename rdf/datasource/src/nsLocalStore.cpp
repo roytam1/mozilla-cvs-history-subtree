@@ -27,7 +27,7 @@
 #include "nsIComponentManager.h"
 #include "nsILocalStore.h"
 #include "nsIRDFDataSource.h"
-#include "nsIRDFXMLDataSource.h"
+#include "nsIRDFRemoteDataSource.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsRDFCID.h"
@@ -36,19 +36,27 @@
 #include "plstr.h"
 #include "rdf.h"
 
+#include "nsIProfile.h"
+
+static NS_DEFINE_CID(kProfileCID,               NS_PROFILE_CID);
+
 ////////////////////////////////////////////////////////////////////////
 
 class LocalStoreImpl : public nsILocalStore,
-                       public nsIRDFDataSource
+                       public nsIRDFDataSource,
+                       public nsIRDFRemoteDataSource
 {
 private:
-    nsIRDFXMLDataSource* mInner;
-    char* mURI;
+    nsCOMPtr<nsIRDFDataSource> mInner;
 
-public:
     LocalStoreImpl();
     virtual ~LocalStoreImpl();
+    nsresult Init();
 
+    friend nsresult
+    NS_NewLocalStore(nsILocalStore** aResult);
+
+public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
@@ -56,8 +64,6 @@ public:
 
     // nsIRDFDataSource interface. Most of these are just delegated to
     // the inner, in-memory datasource.
-    NS_IMETHOD Init(const char* aURI);
-
     NS_IMETHOD GetURI(char* *aURI);
 
     NS_IMETHOD GetSource(nsIRDFResource* aProperty,
@@ -101,6 +107,20 @@ public:
         return mInner->Unassert(aSource, aProperty, aTarget);
     }
 
+    NS_IMETHOD Change(nsIRDFResource* aSource,
+                      nsIRDFResource* aProperty,
+                      nsIRDFNode* aOldTarget,
+                      nsIRDFNode* aNewTarget) {
+        return mInner->Change(aSource, aProperty, aOldTarget, aNewTarget);
+    }
+
+    NS_IMETHOD Move(nsIRDFResource* aOldSource,
+                    nsIRDFResource* aNewSource,
+                    nsIRDFResource* aProperty,
+                    nsIRDFNode* aTarget) {
+        return mInner->Move(aOldSource, aNewSource, aProperty, aTarget);
+    }
+
     NS_IMETHOD HasAssertion(nsIRDFResource* aSource,
                             nsIRDFResource* aProperty,
                             nsIRDFNode* aTarget,
@@ -131,12 +151,11 @@ public:
         return mInner->GetAllResources(aResult);
     }
 
-    NS_IMETHOD Flush(void) {
-        return mInner->Flush();
-    }
-
     NS_IMETHOD GetAllCommands(nsIRDFResource* aSource,
                               nsIEnumerator/*<nsIRDFResource>*/** aCommands);
+
+    NS_IMETHOD GetAllCmds(nsIRDFResource* aSource,
+                              nsISimpleEnumerator/*<nsIRDFResource>*/** aCommands);
 
     NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
                                 nsIRDFResource*   aCommand,
@@ -147,6 +166,9 @@ public:
                          nsIRDFResource*   aCommand,
                          nsISupportsArray/*<nsIRDFResource>*/* aArguments);
 
+	NS_IMETHOD Init(const char *uri);
+	NS_IMETHOD Flush();
+	NS_IMETHOD Refresh(PRBool sync);
 };
 
 
@@ -154,20 +176,16 @@ public:
 
 
 LocalStoreImpl::LocalStoreImpl(void)
-    : mInner(nsnull), mURI(nsnull)
 {
     NS_INIT_ISUPPORTS();
 }
 
 LocalStoreImpl::~LocalStoreImpl(void)
 {
-    Flush();
-    NS_IF_RELEASE(mInner);
-    PL_strfree(mURI);
 }
 
 
-PR_IMPLEMENT(nsresult)
+nsresult
 NS_NewLocalStore(nsILocalStore** aResult)
 {
     NS_PRECONDITION(aResult != nsnull, "null ptr");
@@ -177,6 +195,26 @@ NS_NewLocalStore(nsILocalStore** aResult)
     LocalStoreImpl* impl = new LocalStoreImpl();
     if (! impl)
         return NS_ERROR_OUT_OF_MEMORY;
+
+    nsresult rv;
+    rv = impl->Init();
+    if (NS_FAILED(rv)) {
+        delete impl;
+        return rv;
+    }
+
+    // We need to read this synchronously.
+    rv = impl->Refresh(PR_TRUE);
+
+    if (NS_FAILED(rv)) {
+
+#ifdef	DEBUG
+	printf("\n\nRDF: NS_NewLocalStore::Refresh() failed.\n\n");
+#endif
+
+        delete impl;
+        return rv;
+    }
 
     NS_ADDREF(impl);
     *aResult = impl;
@@ -205,6 +243,9 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
     else if (aIID.Equals(nsIRDFDataSource::GetIID())) {
         *aResult = NS_STATIC_CAST(nsIRDFDataSource *, this);
     }
+    else if (aIID.Equals(nsIRDFRemoteDataSource::GetIID())) {
+        *aResult = NS_STATIC_CAST(nsIRDFRemoteDataSource *, this);
+    }
     else {
         *aResult = nsnull;
         return NS_NOINTERFACE;
@@ -221,38 +262,85 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 // nsIRDFDataSource interface
 
-NS_IMETHODIMP
-LocalStoreImpl::Init(const char* aURI)
+nsresult
+LocalStoreImpl::Init(const char *uri)
+{
+	return(NS_OK);
+}
+
+nsresult
+LocalStoreImpl::Flush()
+{
+	nsCOMPtr<nsIRDFRemoteDataSource>	remote = do_QueryInterface(mInner);
+	nsresult				rv = NS_OK;
+	if (remote)
+	{
+		rv = remote->Flush();
+	}
+	return(rv);
+}
+
+nsresult
+LocalStoreImpl::Refresh(PRBool sync)
+{
+	nsCOMPtr<nsIRDFRemoteDataSource>	remote = do_QueryInterface(mInner);
+	nsresult				rv = NS_OK;
+	if (remote)
+	{
+		rv = remote->Refresh(sync);
+	}
+	return(rv);
+}
+
+nsresult
+LocalStoreImpl::Init()
 {
 static NS_DEFINE_CID(kRDFXMLDataSourceCID, NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,       NS_RDFSERVICE_CID);
 
     nsresult rv;
 
-    // XXX use profile dir or something
-    nsSpecialSystemDirectory spec(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-    spec += "localstore.rdf";
+	// Look for localstore.rdf in the current profile
+	// directory. This is as convoluted as it seems because we
+	// want to 1) not break viewer (which has no profiles), and 2)
+	// still deal reasonably (in the short term) when no
+	// localstore.rdf is installed in the profile directory.
 
-    if (! spec.Exists()) {
-        nsOutputFileStream os(spec);
-        os << "<?xml version=\"1.0\"?>" << nsEndl;
-        os << "<RDF:RDF xmlns:RDF=\"" << RDF_NAMESPACE_URI << "\"" << nsEndl;
-        os << "         xmlns:NC=\""  << NC_NAMESPACE_URI  << "\">" << nsEndl;
-        os << "  <!-- Empty -->" << nsEndl;
-        os << "</RDF:RDF>" << nsEndl;
+	nsFileSpec spec;
+	do {
+		NS_WITH_SERVICE(nsIProfile, profile, kProfileCID, &rv);
+		if (NS_FAILED(rv)) break;
+
+        rv = profile->GetCurrentProfileDir(&spec);
+        if (NS_FAILED(rv)) break;
+    } while (0);
+
+    if (NS_FAILED(rv)) {
+        // XXX We should probably tell the user that we're doing this.
+        spec = nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_TemporaryDirectory);
     }
 
-    mURI = PL_strdup(aURI);
-    if (! mURI)
-        return NS_ERROR_OUT_OF_MEMORY;
+    spec += "localstore.rdf";
+
+	if (! spec.Exists())
+	{
+		nsOutputFileStream	os(spec);
+		os << "<?xml version=\"1.0\"?>" << nsEndl;
+		os << "<RDF:RDF xmlns:RDF=\"" << RDF_NAMESPACE_URI << "\"" << nsEndl;
+		os << "         xmlns:NC=\""  << NC_NAMESPACE_URI  << "\">" << nsEndl;
+		os << "  <!-- Empty -->" << nsEndl;
+		os << "</RDF:RDF>" << nsEndl;
+	}
 
     rv = nsComponentManager::CreateInstance(kRDFXMLDataSourceCID,
                                             nsnull,
-                                            nsIRDFXMLDataSource::GetIID(),
+                                            nsIRDFDataSource::GetIID(),
                                             (void**) &mInner);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mInner->Init((const char*) nsFileURL(spec));
+    nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(mInner);
+
+    rv = remote->Init((const char*) nsFileURL(spec));
     if (NS_FAILED(rv)) return rv;
 
     // register this as a named data source with the RDF service
@@ -279,7 +367,7 @@ LocalStoreImpl::GetURI(char* *aURI)
     if (! aURI)
         return NS_ERROR_NULL_POINTER;
 
-    *aURI = nsXPIDLCString::Copy(mURI);
+    *aURI = nsXPIDLCString::Copy("rdf:localstore");
     if (! *aURI)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -295,6 +383,13 @@ LocalStoreImpl::GetAllCommands(nsIRDFResource* aSource,
     // XXX Although this is the wrong thing to do, it works. I'll file a
     // bug to fix it.
     return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+LocalStoreImpl::GetAllCmds(nsIRDFResource* aSource,
+                               nsISimpleEnumerator/*<nsIRDFResource>*/** aCommands)
+{
+	return(NS_NewEmptyEnumerator(aCommands));
 }
 
 NS_IMETHODIMP

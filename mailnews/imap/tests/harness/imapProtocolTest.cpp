@@ -56,6 +56,7 @@
 #include "nsIEventQueue.h"
 #include "nsFileSpec.h"
 #include "nsMsgDBCID.h"
+#include "nsMsgImapCID.h"
 
 #include "nsMsgDatabase.h"
 #include "nsLocalFolderSummarySpec.h"
@@ -63,6 +64,7 @@
 #include "nsParseMailbox.h"
 #include "nsImapMailFolder.h"
 #include "nsIRDFResource.h"
+#include "nsIMsgMailNewsUrl.h"
 #include "nsCOMPtr.h"
 #include "nsMsgBaseCID.h"
 
@@ -89,6 +91,11 @@
 
 #ifdef XP_UNIX
 #define ARTICLE_PATH "/usr/tmp/tempArticle.eml"
+#define ARTICLE_PATH_URL ARTICLE_PATH
+#endif
+
+#ifdef XP_BEOS
+#define ARTICLE_PATH "/tmp/tempArticle.eml"
 #define ARTICLE_PATH_URL ARTICLE_PATH
 #endif
 
@@ -128,8 +135,8 @@ public:
 	NS_DECL_ISUPPORTS
 
 	// nsIUrlListener support
-	NS_IMETHOD OnStartRunningUrl(nsIURL * aUrl);
-	NS_IMETHOD OnStopRunningUrl(nsIURL * aUrl, nsresult aExitCode);
+	NS_IMETHOD OnStartRunningUrl(nsIURI * aUrl);
+	NS_IMETHOD OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode);
 
 	// nsIImapLog support
 	NS_IMETHOD HandleImapLogData (const char * aLogData);
@@ -243,7 +250,7 @@ nsIMAP4TestDriver::~nsIMAP4TestDriver()
 	NS_IF_RELEASE(m_eventQueue);
 	NS_IF_RELEASE(m_url);
 	if (m_mailDB)
-		m_mailDB->Commit(kLargeCommit);
+		m_mailDB->Commit(nsMsgDBCommitType::kLargeCommit);
 	NS_IF_RELEASE(m_mailDB);
     NS_IF_RELEASE (m_inbox);
 }
@@ -336,14 +343,14 @@ nsresult nsIMAP4TestDriver::ListCommands()
 // Begin protocol specific command url generation code...gee that's a mouthful....
 ///////////////////////////////////////////////////////////////////////////////////
 
-nsresult nsIMAP4TestDriver::OnStartRunningUrl(nsIURL * aUrl)
+nsresult nsIMAP4TestDriver::OnStartRunningUrl(nsIURI * aUrl)
 {
 	NS_PRECONDITION(aUrl, "just a sanity check since this is a test program");
 	m_runningURL = PR_TRUE;
 	return NS_OK;
 }
 
-nsresult nsIMAP4TestDriver::OnStopRunningUrl(nsIURL * aUrl, nsresult aExitCode)
+nsresult nsIMAP4TestDriver::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
 {
 	NS_PRECONDITION(aUrl, "just a sanity check since this is a test program");
 	nsresult rv = NS_OK;
@@ -430,7 +437,8 @@ nsIMAP4TestDriver::SetupInbox()
                 rdfResource(do_QueryInterface(m_inbox, &rv));
             if (NS_SUCCEEDED(rv))
                 rdfResource->Init("imap:/Inbox");
-            m_inbox->SetName("Inbox");
+			nsString inboxName("Inbox");
+            m_inbox->SetName((PRUnichar *) inboxName.GetUnicode());
 		}
     }
 }
@@ -446,7 +454,7 @@ nsresult nsIMAP4TestDriver::OnSelectFolder()
 	{
 		SetupInbox();
         if (NS_SUCCEEDED(rv) && m_inbox)
-            rv = imapService->SelectFolder(m_eventQueue, m_inbox /* imap folder sink */, this /* url listener */, nsnull);
+            rv = imapService->SelectFolder(m_eventQueue, m_inbox /* imap folder sink */, this /* url listener */, nsnull, nsnull);
 		m_runningURL = PR_TRUE; // we are now running a url...
 	}
 
@@ -498,20 +506,21 @@ nsresult nsIMAP4TestDriver::OnRunIMAPCommand()
 	// create a url to process the request.
     rv = nsComponentManager::CreateInstance(kImapUrlCID, nsnull,
                                             nsIImapUrl::GetIID(), (void **)
+
                                             &m_url);
+	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(m_url);
 	if (NS_SUCCEEDED(rv) && m_url)
     {
         m_url->SetImapLog(this);
-
-		rv = m_url->SetSpec(m_urlString); // reset spec
-		m_url->RegisterListener(this);
+		rv = mailnewsurl->SetSpec(m_urlString); // reset spec
+		mailnewsurl->RegisterListener(this);
 
     }
 	
 	if (NS_SUCCEEDED(rv))
 	{
         nsCOMPtr<nsIMsgIncomingServer> aServer;
-        rv = m_url->GetServer(getter_AddRefs(aServer));
+        rv = mailnewsurl->GetServer(getter_AddRefs(aServer));
         if (NS_SUCCEEDED(rv))
         {
             nsCOMPtr<nsIImapIncomingServer>
@@ -632,13 +641,14 @@ nsresult nsIMAP4TestDriver::OnTestUrlParsing()
 		else
 			urlSpec = PR_smprintf("imap://%s", hostName);
 
-		imapUrl->SetSpec("imap://nsmail-2.mcom.com:143/test");
+		nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(imapUrl);
+		mailnewsurl->SetSpec("imap://nsmail-2.mcom.com:143/test");
 		
-		const char * urlHost = nsnull;
-		PRUint32 urlPort = 0;
+		char * urlHost = nsnull;
+		PRInt32 urlPort = 0;
 
-		imapUrl->GetHost(&urlHost);
-		imapUrl->GetHostPort(&urlPort);
+		mailnewsurl->GetHost(&urlHost);
+		mailnewsurl->GetPort(&urlPort);
 
 		printf("Host name test: %s\n", PL_strcmp(urlHost, hostName) == 0 ? "PASSED." : "FAILED!");
 		if (port > 0) // did the user try to test the port?
@@ -664,14 +674,24 @@ int main()
 	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
 	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NULL, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+	
+	result = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
 
-	// IMAP Service goes here?
-    nsComponentManager::RegisterComponent(kImapUrlCID, nsnull, nsnull,
-                                          MSGIMAP_DLL, PR_FALSE, PR_FALSE);
-
-    nsComponentManager::RegisterComponent(kImapProtocolCID, nsnull, nsnull,
-                                          MSGIMAP_DLL, PR_FALSE, PR_FALSE);
+	// make sure prefs get initialized and loaded..
+	// mscott - this is just a bad bad bad hack right now until prefs
+	// has the ability to take nsnull as a parameter. Once that happens,
+	// prefs will do the work of figuring out which prefs file to load...
+	NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &result); 
+    if (NS_FAILED(result) || (prefs == nsnull)) {
+        exit(result);
+    }
+	prefs->StartUp();
+    if (NS_FAILED(prefs->ReadUserPrefs()))
+    {
+      printf("Failed on reading user prefs!\n");
+      exit(-1);
+    }
 
 	// Create the Event Queue for the test app thread...a standin for the ui thread
 	NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &result); 

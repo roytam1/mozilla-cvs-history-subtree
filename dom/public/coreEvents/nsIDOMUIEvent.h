@@ -148,11 +148,6 @@ public:
     VK_QUOTE = 222
   };
 
-  NS_IMETHOD    GetText(nsString& aText)=0;
-
-  NS_IMETHOD    GetCommitText(PRBool* aCommitText)=0;
-  NS_IMETHOD    SetCommitText(PRBool aCommitText)=0;
-
   NS_IMETHOD    GetScreenX(PRInt32* aScreenX)=0;
 
   NS_IMETHOD    GetScreenY(PRInt32* aScreenY)=0;
@@ -173,14 +168,13 @@ public:
 
   NS_IMETHOD    GetKeyCode(PRUint32* aKeyCode)=0;
 
-  NS_IMETHOD    GetButton(PRUint32* aButton)=0;
+  NS_IMETHOD    GetButton(PRUint16* aButton)=0;
+
+  NS_IMETHOD    GetClickcount(PRUint16* aClickcount)=0;
 };
 
 
 #define NS_DECL_IDOMUIEVENT   \
-  NS_IMETHOD    GetText(nsString& aText);  \
-  NS_IMETHOD    GetCommitText(PRBool* aCommitText);  \
-  NS_IMETHOD    SetCommitText(PRBool aCommitText);  \
   NS_IMETHOD    GetScreenX(PRInt32* aScreenX);  \
   NS_IMETHOD    GetScreenY(PRInt32* aScreenY);  \
   NS_IMETHOD    GetClientX(PRInt32* aClientX);  \
@@ -191,14 +185,12 @@ public:
   NS_IMETHOD    GetMetaKey(PRBool* aMetaKey);  \
   NS_IMETHOD    GetCharCode(PRUint32* aCharCode);  \
   NS_IMETHOD    GetKeyCode(PRUint32* aKeyCode);  \
-  NS_IMETHOD    GetButton(PRUint32* aButton);  \
+  NS_IMETHOD    GetButton(PRUint16* aButton);  \
+  NS_IMETHOD    GetClickcount(PRUint16* aClickcount);  \
 
 
 
 #define NS_FORWARD_IDOMUIEVENT(_to)  \
-  NS_IMETHOD    GetText(nsString& aText) { return _to GetText(aText); } \
-  NS_IMETHOD    GetCommitText(PRBool* aCommitText) { return _to GetCommitText(aCommitText); } \
-  NS_IMETHOD    SetCommitText(PRBool aCommitText) { return _to SetCommitText(aCommitText); } \
   NS_IMETHOD    GetScreenX(PRInt32* aScreenX) { return _to GetScreenX(aScreenX); } \
   NS_IMETHOD    GetScreenY(PRInt32* aScreenY) { return _to GetScreenY(aScreenY); } \
   NS_IMETHOD    GetClientX(PRInt32* aClientX) { return _to GetClientX(aClientX); } \
@@ -209,7 +201,8 @@ public:
   NS_IMETHOD    GetMetaKey(PRBool* aMetaKey) { return _to GetMetaKey(aMetaKey); } \
   NS_IMETHOD    GetCharCode(PRUint32* aCharCode) { return _to GetCharCode(aCharCode); } \
   NS_IMETHOD    GetKeyCode(PRUint32* aKeyCode) { return _to GetKeyCode(aKeyCode); } \
-  NS_IMETHOD    GetButton(PRUint32* aButton) { return _to GetButton(aButton); } \
+  NS_IMETHOD    GetButton(PRUint16* aButton) { return _to GetButton(aButton); } \
+  NS_IMETHOD    GetClickcount(PRUint16* aClickcount) { return _to GetClickcount(aClickcount); } \
 
 
 extern "C" NS_DOM nsresult NS_InitUIEventClass(nsIScriptContext *aContext, void **aPrototype);

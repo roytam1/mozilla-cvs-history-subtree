@@ -27,10 +27,7 @@
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsIDocument.h"
 #include "nsIView.h"
@@ -75,11 +72,17 @@ public:
   // nsISupports
   NS_DECL_ISUPPORTS
 
+#ifdef NECKO
+  // nsIStreamObserver methods:
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports *ctxt);
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+#else
   // nsIStreamObserver
-  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
-  NS_IMETHOD OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
-  NS_IMETHOD OnStatus(nsIURL* aURL, const PRUnichar* aMsg);
-  NS_IMETHOD OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg);
+  NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
+  NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg);
+  NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg);
+#endif
 
 protected:
 
@@ -281,14 +284,14 @@ nsHTMLFrameOuterFrame::GetDesiredSize(nsIPresContext* aPresContext,
 
   // XXX this needs to be changed from (200,200) to a better default
   // for inline frames
-  if (NS_UNCONSTRAINEDSIZE != aReflowState.computedWidth) {
-    aDesiredSize.width = aReflowState.computedWidth;
+  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedWidth) {
+    aDesiredSize.width = aReflowState.mComputedWidth;
   }
   else {
     aDesiredSize.width = NSIntPixelsToTwips(200, p2t);
   }
-  if (NS_UNCONSTRAINEDSIZE != aReflowState.computedHeight) {
-    aDesiredSize.height = aReflowState.computedHeight;
+  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) {
+    aDesiredSize.height = aReflowState.mComputedHeight;
   }
   else {
     aDesiredSize.height = NSIntPixelsToTwips(200, p2t);
@@ -686,7 +689,7 @@ nsHTMLFrameInnerFrame::GetParentContent(nsIContent*& aContent)
 static
 void TempMakeAbsURL(nsIContent* aContent, nsString& aRelURL, nsString& aAbsURL)
 {
-  nsIURL* baseURL = nsnull;
+  nsIURI* baseURL = nsnull;
   nsIHTMLContent* htmlContent;
   if (NS_SUCCEEDED(aContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) {
     htmlContent->GetBaseURL(baseURL);
@@ -704,20 +707,8 @@ void TempMakeAbsURL(nsIContent* aContent, nsString& aRelURL, nsString& aAbsURL)
 #ifndef NECKO
   NS_MakeAbsoluteURL(baseURL, empty, aRelURL, aAbsURL);
 #else
-  nsresult result;
-  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-  if (NS_FAILED(result)) return;
-
-  nsIURI *baseUri = nsnull;
-  result = baseURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-  if (NS_FAILED(result)) return;
-
-  char *absUrlStr = nsnull;
-  const char *urlSpec = aRelURL.GetBuffer();
-  result = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
-  NS_RELEASE(baseUri);
-  aAbsURL= absUrlStr;
-  delete [] absUrlStr;
+  nsresult rv = NS_MakeAbsoluteURI(aRelURL, baseURL, aAbsURL);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "XXX make this function return an nsresult, like it should!");
 #endif // NECKO
   NS_IF_RELEASE(baseURL);
 }
@@ -800,20 +791,32 @@ nsHTMLFrameInnerFrame::CreateWebShell(nsIPresContext& aPresContext,
       nsWebShellType parentType;
       outerShell->GetWebShellType(parentType);
       nsIAtom* typeAtom = NS_NewAtom("type");
-	    nsAutoString value;
-	    content->GetAttribute(kNameSpaceID_None, typeAtom, value);
-	    if (value.EqualsIgnoreCase("content")) {
-		    // The web shell's type is content.
-		    mWebShell->SetWebShellType(nsWebShellContent);
-        nsCOMPtr<nsIWebShellContainer> shellAsContainer;
-				shellAsContainer = do_QueryInterface(mWebShell);
-				shellAsContainer->ContentShellAdded(mWebShell, content);
+      nsAutoString value, valuePiece;
+      PRBool isContent;
+
+      isContent = PR_FALSE;
+      if (NS_SUCCEEDED(content->GetAttribute(kNameSpaceID_None, typeAtom, value))) {
+
+        // we accept "content" and "content-xxx" values.
+        // at time of writing, we expect "xxx" to be "primary", but
+        // someday it might be an integer expressing priority
+        value.Left(valuePiece, 7);
+        if (valuePiece.EqualsIgnoreCase("content") &&
+           (value.Length() == 7 ||
+              value.Mid(valuePiece, 7, 1) == 1 && valuePiece.Equals("-")))
+            isContent = PR_TRUE;
       }
-      else {
+      if (isContent) {
+        // The web shell's type is content.
+        mWebShell->SetWebShellType(nsWebShellContent);
+        nsCOMPtr<nsIWebShellContainer> shellAsContainer;
+        shellAsContainer = do_QueryInterface(mWebShell);
+        shellAsContainer->ContentShellAdded(mWebShell, content);
+      } else {
         // Inherit our type from our parent webshell.  If it is
-		    // chrome, we'll be chrome.  If it is content, we'll be
-		    // content.
-		    mWebShell->SetWebShellType(parentType);
+        // chrome, we'll be chrome.  If it is content, we'll be
+        // content.
+        mWebShell->SetWebShellType(parentType);
       }
 
       // Make sure all shells have links back to the nearest enclosing chrome
@@ -824,8 +827,9 @@ nsHTMLFrameInnerFrame::CreateWebShell(nsIPresContext& aPresContext,
       outerShell->GetWebShellType(chromeShellType);
       if (chromeShellType == nsWebShellChrome)
         chromeShell = dont_QueryInterface(outerShell);
-      else outerShell->GetContainingChromeShell(getter_AddRefs(chromeShell));
-      
+      else
+        outerShell->GetContainingChromeShell(getter_AddRefs(chromeShell));
+
       mWebShell->SetContainingChromeShell(chromeShell);
       
 #endif // INCLUDE_XUL 
@@ -946,6 +950,10 @@ nsHTMLFrameInnerFrame::Reflow(nsIPresContext&          aPresContext,
   aDesiredSize.height = aReflowState.availableHeight;
   aDesiredSize.ascent = aDesiredSize.height;
   aDesiredSize.descent = 0;
+  if (nsnull != aDesiredSize.maxElementSize) {
+    aDesiredSize.maxElementSize->width = aDesiredSize.width;
+    aDesiredSize.maxElementSize->height = aDesiredSize.height;
+  }
 
   aStatus = NS_FRAME_COMPLETE;
 
@@ -1058,9 +1066,9 @@ TempObserver::QueryInterface(const nsIID& aIID,
   return NS_NOINTERFACE;
 }
 
-
+#ifndef NECKO
 NS_IMETHODIMP
-TempObserver::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
+TempObserver::OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
 {
 #if 0
   fputs("[progress ", stdout);
@@ -1072,7 +1080,7 @@ TempObserver::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax
 }
 
 NS_IMETHODIMP
-TempObserver::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
+TempObserver::OnStatus(nsIURI* aURL, const PRUnichar* aMsg)
 {
 #if 0
   fputs("[status ", stdout);
@@ -1082,9 +1090,14 @@ TempObserver::OnStatus(nsIURL* aURL, const PRUnichar* aMsg)
 #endif
   return NS_OK;
 }
+#endif
 
 NS_IMETHODIMP
-TempObserver::OnStartBinding(nsIURL* aURL, const char *aContentType)
+#ifdef NECKO
+TempObserver::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+#else
+TempObserver::OnStartRequest(nsIURI* aURL, const char *aContentType)
+#endif
 {
 #if 0
   fputs("Loading ", stdout);
@@ -1095,7 +1108,12 @@ TempObserver::OnStartBinding(nsIURL* aURL, const char *aContentType)
 }
 
 NS_IMETHODIMP
-TempObserver::OnStopBinding(nsIURL* aURL, nsresult status, const PRUnichar* aMsg)
+#ifdef NECKO
+TempObserver::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+                            nsresult status, const PRUnichar *errorMsg)
+#else
+TempObserver::OnStopRequest(nsIURI* aURL, nsresult status, const PRUnichar* aMsg)
+#endif
 {
 #if 0
   fputs("Done loading ", stdout);

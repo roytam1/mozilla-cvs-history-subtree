@@ -16,7 +16,6 @@
  * Reserved.
  */
 
-
 #include "xp_core.h"			//this is a hack to get it to build. MMP
 #include "nsRenderingContextMotif.h"
 #include "nsDeviceContextMotif.h"
@@ -27,10 +26,8 @@
 #include "nsRegionMotif.h"
 #include "nsGfxCIID.h"
 
-#include "X11/Xlib.h"
-#include "X11/Xutil.h"
-
-
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 
 /*
   Some Implementation Notes
@@ -301,19 +298,22 @@ NS_IMETHODIMP nsRenderingContextMotif :: PushState(void)
   GraphicsState * state = new GraphicsState();
 
   // Push into this state object, add to vector
-  state->mMatrix = mTMatrix;
+  if(state) {
+    state->mMatrix = mTMatrix;
 
-  mStateCache->AppendElement(state);
+    mStateCache->AppendElement(state);
 
-  if (nsnull == mTMatrix)
-    mTMatrix = new nsTransform2D();
-  else
-    mTMatrix = new nsTransform2D(mTMatrix);
+    if (nsnull == mTMatrix)
+      mTMatrix = new nsTransform2D();
+    else
+      mTMatrix = new nsTransform2D(mTMatrix);
 
-  PRBool clipState;
-  GetClipRect(state->mLocalClip, clipState);
+    PRBool clipState;
+    GetClipRect(state->mLocalClip, clipState);
 
-  state->mClipRegion = mRegion;
+    state->mClipRegion = mRegion;
+  }
+  else return NS_ERROR_OUT_OF_MEMORY;
 
   if (nsnull != state->mClipRegion) {
     mRegion = ::XCreateRegion();
@@ -538,26 +538,57 @@ NS_IMETHODIMP nsRenderingContextMotif :: SetClipRegion(const nsIRegion& aRegion,
 
 NS_IMETHODIMP nsRenderingContextMotif :: GetClipRegion(nsIRegion **aRegion)
 {
-  nsIRegion * pRegion ;
+//   nsIRegion * pRegion ;
 
-  static NS_DEFINE_IID(kCRegionCID, NS_REGION_CID);
-  static NS_DEFINE_IID(kIRegionIID, NS_IREGION_IID);
+//   static NS_DEFINE_IID(kCRegionCID, NS_REGION_CID);
+//   static NS_DEFINE_IID(kIRegionIID, NS_IREGION_IID);
 
-  nsresult rv = nsComponentManager::CreateInstance(kCRegionCID, 
-					     nsnull, 
-					     kIRegionIID, 
-					     (void **)aRegion);
+//   nsresult rv = nsComponentManager::CreateInstance(kCRegionCID, 
+// 					     nsnull, 
+// 					     kIRegionIID, 
+// 					     (void **)aRegion);
 
-  if (NS_OK == rv) {
-    nsRect rect;
-    PRBool clipState;
-    pRegion = (nsIRegion *)&aRegion;
-    pRegion->Init();    
-    GetClipRect(rect, clipState);
-    pRegion->Union(rect.x,rect.y,rect.width,rect.height);
+//   if (NS_OK == rv) {
+//     nsRect rect;
+//     PRBool clipState;
+//     pRegion = (nsIRegion *)&aRegion;
+//     pRegion->Init();    
+//     GetClipRect(rect, clipState);
+//     pRegion->Union(rect.x,rect.y,rect.width,rect.height);
+//   }
+
+//   return NS_OK;
+
+  nsresult  rv = NS_OK;
+
+  NS_ASSERTION(!(nsnull == aRegion), "no region ptr");
+
+  if (nsnull == *aRegion)
+  {
+    nsRegionMotif *rgn = new nsRegionMotif();
+
+    if (nsnull != rgn)
+    {
+      NS_ADDREF(rgn);
+
+      rv = rgn->Init();
+
+      if (NS_OK == rv)
+        *aRegion = rgn;
+      else
+        NS_RELEASE(rgn);
+    }
+    else
+      rv = NS_ERROR_OUT_OF_MEMORY;
   }
 
-  return NS_OK;
+//   if (rv == NS_OK)
+//     (*aRegion)->SetTo(*mClipRegion);
+
+//   if (rv == NS_OK)
+//     (*aRegion)->SetTo(*mClipRegion);
+
+  return rv;
 }
 
 NS_IMETHODIMP nsRenderingContextMotif :: SetColor(nscolor aColor)
@@ -812,21 +843,26 @@ NS_IMETHODIMP nsRenderingContextMotif :: CreateDrawingSurface(nsRect *aBounds, P
 
   nsDrawingSurfaceMotif * surface = new nsDrawingSurfaceMotif();
 
-  surface->drawable = p ;
-  surface->display  = mRenderingSurface->display;
-  surface->gc       = mRenderingSurface->gc;
-  surface->visual   = mRenderingSurface->visual;
-  surface->depth    = mRenderingSurface->depth;
+  if(surface) {
+    surface->drawable = p ;
+    surface->display  = mRenderingSurface->display;
+    surface->gc       = mRenderingSurface->gc;
+    surface->visual   = mRenderingSurface->visual;
+    surface->depth    = mRenderingSurface->depth;
 
 #ifdef MITSHM
 
-  surface->shmInfo = mRenderingSurface->shmInfo;
-  surface->shmImage = mRenderingSurface->shmImage;
-  mRenderingSurface->shmInfo.shmaddr = nsnull;
-  mRenderingSurface->shmImage = nsnull;
+    surface->shmInfo = mRenderingSurface->shmInfo;
+    surface->shmImage = mRenderingSurface->shmImage;
+    mRenderingSurface->shmInfo.shmaddr = nsnull;
+    mRenderingSurface->shmImage = nsnull;
 
 #endif
-
+  }
+  else {
+    aSurface = nsnull;
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
   aSurface = (nsDrawingSurface)surface;
 
   return NS_OK;
@@ -956,6 +992,21 @@ NS_IMETHODIMP nsRenderingContextMotif :: FillRect(nscoord aX, nscoord aY, nscoor
   return NS_OK;
 }
 
+NS_IMETHODIMP 
+nsRenderingContextMotif :: InvertRect(const nsRect& aRect)
+{
+	NS_NOTYETIMPLEMENTED("nsRenderingContextMotif::InvertRect");
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsRenderingContextMotif :: InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+{
+	NS_NOTYETIMPLEMENTED("nsRenderingContextMotif::InvertRect");
+
+  return NS_OK;
+}
 
 NS_IMETHODIMP nsRenderingContextMotif::DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
@@ -1405,5 +1456,10 @@ nsRenderingContextMotif :: CopyOffScreenBits(nsDrawingSurface aSrcSurf,
 	            x, y, drect.width, drect.height,
               drect.x, drect.y);
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextMotif::RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+{
   return NS_OK;
 }

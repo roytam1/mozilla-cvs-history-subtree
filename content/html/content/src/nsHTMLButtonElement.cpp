@@ -87,7 +87,7 @@ public:
   NS_IMPL_IDOMEVENTRECEIVER_USING_GENERIC(mInner)
 
   // nsIContent
-  NS_IMPL_ICONTENT_USING_GENERIC(mInner)
+  NS_IMPL_ICONTENT_NO_SETPARENT_NO_SETDOCUMENT_USING_GENERIC(mInner)
 
   // nsIHTMLContent
   NS_IMPL_IHTMLCONTENT_USING_GENERIC(mInner)
@@ -204,6 +204,20 @@ nsHTMLButtonElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   return it->QueryInterface(kIDOMNodeIID, (void**) aReturn);
 }
 
+// nsIContent
+
+NS_IMETHODIMP
+nsHTMLButtonElement::SetParent(nsIContent* aParent)
+{
+  return mInner.SetParentForFormControls(aParent, this, mForm);
+}
+
+NS_IMETHODIMP
+nsHTMLButtonElement::SetDocument(nsIDocument* aDocument, PRBool aDeep)
+{
+  return mInner.SetDocumentForFormControls(aDocument, aDeep, this, mForm);
+}
+
 NS_IMETHODIMP
 nsHTMLButtonElement::GetForm(nsIDOMHTMLFormElement** aForm)
 {
@@ -308,11 +322,12 @@ nsHTMLButtonElement::StringToAttribute(nsIAtom* aAttribute,
                                        nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::tabindex) {
-    nsGenericHTMLElement::ParseValue(aValue, 0, 32767, aResult,
-                                     eHTMLUnit_Integer);
-    return NS_CONTENT_ATTR_HAS_VALUE;
+    if (nsGenericHTMLElement::ParseValue(aValue, 0, 32767, aResult,
+                                         eHTMLUnit_Integer)) {
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
   }
-  if (aAttribute == nsHTMLAtoms::type) {
+  else if (aAttribute == nsHTMLAtoms::type) {
     nsGenericHTMLElement::EnumTable *table = kButtonTypeTable;
     while (nsnull != table->tag) { 
       if (aValue.EqualsIgnoreCase(table->tag)) {
@@ -345,11 +360,21 @@ nsHTMLButtonElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(nsIHTMLAttributes* aAttributes,
+MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
+}
+
+NS_IMETHODIMP
+nsHTMLButtonElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                              PRInt32& aHint) const
+{
+  if (! nsGenericHTMLElement::GetCommonMappedAttributesImpact(aAttribute, aHint)) {
+    aHint = NS_STYLE_HINT_CONTENT;
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -397,7 +422,7 @@ nsHTMLButtonElement::HandleDOMEvent(nsIPresContext& aPresContext,
         if (activeLink == this) {
           if (nsEventStatus_eConsumeNoDefault != aEventStatus) {
             nsAutoString href, target, disabled;
-            nsIURL* baseURL = nsnull;
+            nsIURI* baseURL = nsnull;
             GetBaseURL(baseURL);
             GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::href, href);
             GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::target, target);
@@ -483,11 +508,3 @@ nsHTMLButtonElement::SetForm(nsIDOMHTMLFormElement* aForm)
   return result;
 }
 
-NS_IMETHODIMP
-nsHTMLButtonElement::GetStyleHintForAttributeChange(
-    const nsIAtom* aAttribute,
-    PRInt32 *aHint) const
-{
-  nsGenericHTMLElement::GetStyleHintForCommonAttributes(this, aAttribute, aHint);
-  return NS_OK;
-}

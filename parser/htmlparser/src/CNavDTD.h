@@ -86,6 +86,7 @@
 #include "nsVoidArray.h"
 #include "nsDeque.h"
 
+
 #define NS_INAVHTML_DTD_IID      \
   {0x5c5cce40, 0xcfd6,  0x11d1,  \
   {0xaa, 0xda, 0x00,    0x80, 0x5f, 0x8a, 0x3e, 0x14}}
@@ -94,12 +95,12 @@
 class nsIHTMLContentSink;
 class nsIDTDDebug;
 class nsIParserNode;
-class nsCParserNode;
 class CITokenHandler;
 class nsParser;
 class nsDTDContext;
 class nsEntryStack;
 class nsITokenizer;
+class nsCParserNode;
 
 /***************************************************************
   Now the main event: CNavDTD.
@@ -368,6 +369,24 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
      */
     virtual PRInt32 GetTopmostIndexOf(eHTMLTags aTagSet[],PRInt32 aCount) const;
 
+    /**
+     * Use this id you want to stop the building content model
+     * --------------[ Sets DTD to STOP mode ]----------------
+     * It's recommended to use this method in accordance with
+     * the parser's terminate() method.
+     *
+     * @update	harishd 07/22/99
+     * @param 
+     * @return
+     */
+    virtual nsresult  Terminate(void) { return mDTDState=NS_ERROR_HTMLPARSER_STOPPARSING; }
+
+    /**
+     * Give rest of world access to our tag enums, so that CanContain(), etc,
+     * become useful.
+     */
+    NS_IMETHOD StringTagToIntTag(nsString &aTag, PRInt32* aIntTag) const;
+
 
     /** 
      * The following methods are use to create and manage
@@ -490,12 +509,14 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
 
 protected:
 
-		nsresult    CollectAttributes(nsCParserNode& aNode,eHTMLTags aTag,PRInt32 aCount);
-		nsresult    CollectSkippedContent(nsCParserNode& aNode,PRInt32& aCount);
-    nsresult    WillHandleStartTag(CToken* aToken,eHTMLTags aChildTag,nsCParserNode& aNode);
-    nsresult    DidHandleStartTag(nsCParserNode& aNode,eHTMLTags aChildTag);
-    nsresult    HandleOmittedTag(CToken* aToken,eHTMLTags aChildTag,eHTMLTags aParent,nsIParserNode& aNode);
-    nsresult    HandleSavedTokensAbove(eHTMLTags aTag);
+		nsresult        CollectAttributes(nsCParserNode& aNode,eHTMLTags aTag,PRInt32 aCount);
+		nsresult        CollectSkippedContent(nsCParserNode& aNode,PRInt32& aCount);
+    nsresult        WillHandleStartTag(CToken* aToken,eHTMLTags aChildTag,nsCParserNode& aNode);
+    nsresult        DidHandleStartTag(nsCParserNode& aNode,eHTMLTags aChildTag);
+    nsresult        HandleOmittedTag(CToken* aToken,eHTMLTags aChildTag,eHTMLTags aParent,nsIParserNode& aNode);
+    nsresult        HandleSavedTokensAbove(eHTMLTags aTag);
+    nsCParserNode*  CreateNode(void);
+    void            RecycleNode(nsCParserNode* aNode);
 
     nsIHTMLContentSink* mSink;
 
@@ -509,7 +530,8 @@ protected:
     PRBool              mHasOpenMap;
     PRInt32             mHasOpenHead;
     PRBool              mHasOpenBody;
-    PRBool              mHadBodyOrFrameset;
+    PRBool              mHadFrameset;
+    PRBool              mHadBody;
     nsString            mFilename;
     nsIDTDDebug*		    mDTDDebug;
     PRInt32             mLineNumber;
@@ -520,6 +542,8 @@ protected:
     PRBool              mHasOpenScript;
     PRBool              mSaveBadTokens;
     eHTMLTags           mSkipTarget;
+    nsDeque             mSharedNodes;
+    nsresult            mDTDState;
 
     PRUint32            mComputedCRC32;
     PRUint32            mExpectedCRC32;

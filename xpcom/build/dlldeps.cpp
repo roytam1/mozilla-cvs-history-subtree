@@ -42,14 +42,33 @@
 #include "xptcall.h"
 #include "nsIFileSpec.h"
 #include "nsIGenericFactory.h"
+#include "nsAVLTree.h"
+#include "nsHashtableEnumerator.h"
+#include "nsPipe2.h"
+#include "nsWeakReference.h"
 
+class dummyComparitor: public nsAVLNodeComparitor {
+public:
+  virtual PRInt32 operator()(void* anItem1,void* anItem2)
+  {
+    return 0;
+  }
+}; 
+
+#ifdef DEBUG
+extern NS_COM void
+TestSegmentedBuffer();
+#endif
 
 void XXXNeverCalled()
 {
+    dummyComparitor dummy;
     nsVoidArray();
+    nsAVLTree(dummy, nsnull);
     NS_GetNumberOfAtoms();
     nsFileURL(NULL);
     NS_NewPipe(NULL, NULL, 0, 0, 0, NULL);
+    NS_NewPipe(NULL, NULL, NULL, 0, 0);
     nsFileSpec s;
     NS_NewIOFileStream(NULL, s, 0, 0);
     nsInputFileStream(s, 0, 0);
@@ -80,4 +99,9 @@ void XXXNeverCalled()
     xptc_dummy2();
     XPTI_GetInterfaceInfoManager();
     NS_NewGenericFactory(NULL, NULL, NULL);
+    NS_NewHashtableEnumerator(NULL, NULL, NULL, NULL);
+    NS_GetWeakReference(NULL);
+#ifdef DEBUG
+    TestSegmentedBuffer();
+#endif
 }

@@ -181,7 +181,14 @@ public:
                                  FolderQueryInfo* aInfo);
     NS_IMETHOD SetCopyResponseUid(nsIImapProtocol* aProtocol,
                                   nsMsgKeyArray* aKeyArray,
-                                  const char* msgIdString);
+                                  const char* msgIdString,
+                                  nsISupports* copyState);
+    NS_IMETHOD SetAppendMsgUid(nsIImapProtocol* aProtocol,
+                               nsMsgKey aKey,
+                               nsISupports* copyState);
+    NS_IMETHOD GetMessageId(nsIImapProtocol* aProtocol,
+                            nsCString* messageId,
+                            nsISupports* copyState);
     
     nsIImapExtensionSink* m_realImapExtensionSink;
 };
@@ -225,7 +232,7 @@ public:
     NS_IMETHOD FEAlertFromServer(nsIImapProtocol* aProtocol,
                                  const char* aString);
     NS_IMETHOD ProgressStatus(nsIImapProtocol* aProtocol,
-                              const char* statusMsg);
+                              PRUint32 statusMsgId);
     NS_IMETHOD PercentProgress(nsIImapProtocol* aProtocol,
                                ProgressInfo* aInfo);
     NS_IMETHOD PastPasswordCheck(nsIImapProtocol* aProtocol);
@@ -240,6 +247,14 @@ public:
 
     NS_IMETHOD LoadNextQueuedUrl(nsIImapProtocol* aProtocol,
                              nsIImapIncomingServer *aInfo);
+    NS_IMETHOD CopyNextStreamMessage(nsIImapProtocol* aProtocl,
+                                     nsISupports* copyState);
+
+    NS_IMETHOD SetUrlState(nsIImapProtocol* aProtocol,
+                           nsIMsgMailNewsUrl* aUrl,
+                           PRBool isRunning,
+                           nsresult statusCode);
+
     nsIImapMiscellaneousSink* m_realImapMiscellaneousSink;
 };
 
@@ -371,7 +386,7 @@ struct FolderIsNoSelectProxyEvent : public nsImapMailFolderSinkProxyEvent
                                FolderQueryInfo* aInfo);
     virtual ~FolderIsNoSelectProxyEvent();
     NS_IMETHOD HandleEvent();
-    FolderQueryInfo m_folderQueryInfo;
+    FolderQueryInfo* m_folderQueryInfo;
 };
 
 struct SetupHeaderParseStreamProxyEvent : public nsImapMailFolderSinkProxyEvent
@@ -580,11 +595,33 @@ struct SetCopyResponseUidProxyEvent : nsImapExtensionSinkProxyEvent
 {
     SetCopyResponseUidProxyEvent(nsImapExtensionSinkProxy* aProxy,
                                  nsMsgKeyArray* aKeyArray, 
-                                 const char* msgIdString);
+                                 const char* msgIdString,
+                                 nsISupports* copyState);
     virtual ~SetCopyResponseUidProxyEvent();
     NS_IMETHOD HandleEvent();
     nsMsgKeyArray m_copyKeyArray;
-    nsString2 m_msgIdString;
+    nsCString m_msgIdString;
+    nsCOMPtr<nsISupports> m_copyState;
+};
+
+struct SetAppendMsgUidProxyEvent : nsImapExtensionSinkProxyEvent
+{
+    SetAppendMsgUidProxyEvent(nsImapExtensionSinkProxy* aProxy,
+                              nsMsgKey aKey, nsISupports* copyState);
+    virtual ~SetAppendMsgUidProxyEvent();
+    NS_IMETHOD HandleEvent();
+    nsMsgKey m_key;
+    nsCOMPtr<nsISupports> m_copyState;
+};
+
+struct GetMessageIdProxyEvent : nsImapExtensionSinkProxyEvent
+{
+    GetMessageIdProxyEvent(nsImapExtensionSinkProxy* aProxy,
+                           nsCString* messageId, nsISupports* copyState);
+    virtual ~GetMessageIdProxyEvent();
+    NS_IMETHOD HandleEvent();
+    nsCString* m_messageId;
+    nsCOMPtr<nsISupports> m_copyState;
 };
 
 struct nsImapMiscellaneousSinkProxyEvent : public nsImapEvent
@@ -719,10 +756,10 @@ struct FEAlertFromServerProxyEvent : public nsImapMiscellaneousSinkProxyEvent
 struct ProgressStatusProxyEvent : public nsImapMiscellaneousSinkProxyEvent
 {
     ProgressStatusProxyEvent(nsImapMiscellaneousSinkProxy* aProxy,
-                             const char* statusMsg);
+                            PRUint32 statusMsgId);
     virtual ~ProgressStatusProxyEvent();
     NS_IMETHOD HandleEvent();
-    char* m_statusMsg;
+    PRUint32 m_statusMsgId;
 };
 
 struct PercentProgressProxyEvent : public nsImapMiscellaneousSinkProxyEvent
@@ -786,5 +823,25 @@ struct LoadNextQueuedUrlProxyEvent : public nsImapMiscellaneousSinkProxyEvent
     nsCOMPtr <nsIImapIncomingServer> m_imapIncomingServer;
 };
 
+struct CopyNextStreamMessageProxyEvent : public nsImapMiscellaneousSinkProxyEvent
+{
+    CopyNextStreamMessageProxyEvent(nsImapMiscellaneousSinkProxy* aProxy,
+                                    nsISupports* copyState);
+    virtual ~CopyNextStreamMessageProxyEvent();
+    NS_IMETHOD HandleEvent();
+    nsCOMPtr<nsISupports> m_copyState;
+};
+
+struct SetUrlStateProxyEvent : public nsImapMiscellaneousSinkProxyEvent
+{
+    SetUrlStateProxyEvent(nsImapMiscellaneousSinkProxy* aProxy,
+                          nsIMsgMailNewsUrl* aUrl, PRBool isRunning, 
+                          nsresult statusCode);
+    virtual ~SetUrlStateProxyEvent();
+    NS_IMETHOD HandleEvent();
+    nsCOMPtr<nsIMsgMailNewsUrl> m_url;
+    PRBool m_isRunning;
+    nsresult m_status;
+};
 
 #endif

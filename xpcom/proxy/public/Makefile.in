@@ -14,20 +14,28 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-DEPTH		= ../../..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
+DEPTH       = ../../..
+topsrcdir   = @top_srcdir@
+srcdir      = @srcdir@
+VPATH       = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= xpcom
+MODULE      = xpcom
 
-EXPORTS		= nsProxyEvent.h        \
-		  nsProxyObjectManager.h\
-		  $(NULL)
+XPIDL_MODULE = proxyObjInst
 
-EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
+XPIDLSRCS =                        \
+        nsIProxyCreateInstance.idl \
+        $(NULL)
+
+EXPORTS     =	\
+	nsProxyEvent.h        	\
+	nsProxyObjectManager.h	\
+	nsProxiedService.h	\
+	$(NULL)
+
+EXPORTS     := $(addprefix $(srcdir)/, $(EXPORTS))
 
 include $(topsrcdir)/config/config.mk
 

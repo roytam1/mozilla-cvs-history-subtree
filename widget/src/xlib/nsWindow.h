@@ -21,6 +21,8 @@
 
 #include "nsWidget.h"
 
+#include "nsString.h"
+
 class nsWindow : public nsWidget
 {
  public:
@@ -29,9 +31,16 @@ class nsWindow : public nsWidget
   NS_IMETHOD Invalidate(PRBool aIsSynchronous);
   NS_IMETHOD Invalidate(const nsRect & aRect, PRBool aIsSynchronous);
   NS_IMETHOD Update();
+  NS_IMETHOD Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect);
+  NS_IMETHOD SetTitle(const nsString& aTitle);
 protected:
-  void CreateNative(Window aParent, nsRect aRect);
-  void DestroyNative(void);
+  virtual void DestroyNative(void);
+
+  virtual long GetEventMask();
+
+#if 0
+  virtual void CreateNative(Window aParent, nsRect aRect);
+#endif
 };
 
 class ChildWindow : public nsWindow

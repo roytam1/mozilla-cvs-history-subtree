@@ -45,12 +45,26 @@ static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
 static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
 
+PRMonitor*   nsRange::mMonitor = nsnull;
 nsVoidArray* nsRange::mStartAncestors = nsnull;      
 nsVoidArray* nsRange::mEndAncestors = nsnull;        
 nsVoidArray* nsRange::mStartAncestorOffsets = nsnull; 
 nsVoidArray* nsRange::mEndAncestorOffsets = nsnull;  
 
 nsresult NS_NewContentIterator(nsIContentIterator** aInstancePtrResult);
+
+
+/******************************************************
+ * stack based utilty class for managing monitor
+ ******************************************************/
+
+class nsAutoRangeLock
+{
+  public:
+    nsAutoRangeLock()  { nsRange::Lock(); }
+    ~nsAutoRangeLock() { nsRange::Unlock(); }
+};
+
 
 /******************************************************
  * non members
@@ -60,7 +74,9 @@ nsresult
 NS_NewRange(nsIDOMRange** aInstancePtrResult)
 {
   nsRange * range = new nsRange();
-  return range->QueryInterface(nsIDOMRange::GetIID(), (void**) aInstancePtrResult);
+  if (range)
+    return range->QueryInterface(nsIDOMRange::GetIID(), (void**) aInstancePtrResult);
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 
@@ -71,12 +87,14 @@ PRInt32 ComparePoints(nsIDOMNode* aParent1, PRInt32 aOffset1,
 {
   if (aParent1 == aParent2 && aOffset1 == aOffset2)
     return 0;
-  nsRange* range = new nsRange;
+  nsIDOMRange* range;
+  if (NS_FAILED(NS_NewRange(&range)))
+    return 0;
   nsresult res = range->SetStart(aParent1, aOffset1);
   if (NS_FAILED(res))
     return 0;
   res = range->SetEnd(aParent2, aOffset2);
-  delete range;
+  NS_RELEASE(range);
   if (NS_SUCCEEDED(res))
     return -1;
   else
@@ -393,30 +411,36 @@ nsresult nsRange::DoSetRange(nsIDOMNode* aStartN, PRInt32 aStartOffset,
     aStartOffset = aEndOffset;
   }
   
+  if (mStartParent && (mStartParent.get() != aStartN) && (mStartParent.get() != aEndN))
+  {
+    // if old start parent no longer involved, remove range from that
+    // node's range list.
+    RemoveFromListOf(mStartParent);
+  }
+  if (mEndParent && (mEndParent.get() != aStartN) && (mEndParent.get() != aEndN))
+  {
+    // if old end parent no longer involved, remove range from that
+    // node's range list.
+    RemoveFromListOf(mEndParent);
+  }
+ 
+ 
   if (mStartParent.get() != aStartN)
   {
-    if (mStartParent) // if it had a former start node, take it off it's list
-    {
-      RemoveFromListOf(mStartParent);
-    }
     mStartParent = do_QueryInterface(aStartN);
     if (mStartParent) // if it has a new start node, put it on it's list
     {
-      AddToListOf(mStartParent);
+      AddToListOf(mStartParent);  // AddToList() detects duplication for us
     }
   }
   mStartOffset = aStartOffset;
 
   if (mEndParent.get() != aEndN)
   {
-    if (mEndParent) // if it had a former end node, take it off it's list
-    {
-      RemoveFromListOf(mEndParent);
-    }
     mEndParent = do_QueryInterface(aEndN);
     if (mEndParent) // if it has a new end node, put it on it's list
     {
-      AddToListOf(mEndParent);
+      AddToListOf(mEndParent);  // AddToList() detects duplication for us
     }
   }
   mEndOffset = aEndOffset;
@@ -453,20 +477,21 @@ PRBool nsRange::IsIncreasing(nsIDOMNode* aStartN, PRInt32 aStartOffset,
       return PR_TRUE;
   }
   
-  // XXX - therad safety - need locks around here to end of routine
+  // thread safety - need locks around here to end of routine to protect use of static members
+  nsAutoRangeLock lock;
   
   // lazy allocation of static arrays
   if (!mStartAncestors)
   {
     mStartAncestors = new nsVoidArray();
+    if (!mStartAncestors) return NS_ERROR_OUT_OF_MEMORY;
     mStartAncestorOffsets = new nsVoidArray();
+    if (!mStartAncestorOffsets) return NS_ERROR_OUT_OF_MEMORY;
     mEndAncestors = new nsVoidArray();
+    if (!mEndAncestors) return NS_ERROR_OUT_OF_MEMORY;
     mEndAncestorOffsets = new nsVoidArray();
+    if (!mEndAncestorOffsets) return NS_ERROR_OUT_OF_MEMORY;
   }
-
-  // XXX Threading alert - these array structures are shared across all ranges
-  // access to ranges is assumed to be from only one thread.  Add monitors (or
-  // stop sharing these) if that changes
 
   // refresh ancestor data
   mStartAncestors->Clear();
@@ -796,12 +821,14 @@ nsresult nsRange::PopRanges(nsIDOMNode* aDestNode, PRInt32 aOffset, nsIContent* 
               // promote start point up to replacement point
               res = theRange->SetStart(aDestNode, aOffset);
               NS_POSTCONDITION(NS_SUCCEEDED(res), "nsRange::PopRanges() got error from SetStart()");
+              if (NS_FAILED(res)) return res;
             }
             if (theRange->mEndParent == domNode)
             {
               // promote end point up to replacement point
               res = theRange->SetEnd(aDestNode, aOffset);
               NS_POSTCONDITION(NS_SUCCEEDED(res), "nsRange::PopRanges() got error from SetEnd()");
+              if (NS_FAILED(res)) return res;
             }          
           }
           // must refresh theRangeList - it might have gone away!
@@ -1132,10 +1159,10 @@ nsresult nsRange::DeleteContents()
   res = iter->Init(this);
   if (NS_FAILED(res))  return res;
 
-
-  // XXX Note that this chunk is also thread unsafe, since we
+  // thread safety - need locks around here to end of routine since we
   // aren't ADDREFing nodes as we put them on the delete list
-  // and then releasing them wehn we take them off
+  // and then releasing them when we take them off
+  nsAutoRangeLock lock;
   
   nsVoidArray deleteList;
   nsCOMPtr<nsIContent> cN;
@@ -1149,7 +1176,7 @@ nsresult nsRange::DeleteContents()
   while (cN && (NS_COMFALSE == iter->IsDone()))
   {
     // if node is not an ancestor of start node, delete it
-    if (mStartAncestors->IndexOf(NS_STATIC_CAST(void*,cN)) == -1)
+    if (startAncestorList.IndexOf(NS_STATIC_CAST(void*,cN)) == -1)
     {
       deleteList.AppendElement(NS_STATIC_CAST(void*,cN));
     }
@@ -1253,7 +1280,7 @@ nsresult nsRange::CompareEndPoints(PRUint16 how, nsIDOMRange* srcRange,
 
   if ((node1 == node2) && (offset1 == offset2))
     *aCmpRet = 0;
-  else if (IsIncreasing(node1, offset2, node2, offset2))
+  else if (IsIncreasing(node1, offset1, node2, offset2))
     *aCmpRet = 1;
   else
     *aCmpRet = -1;
@@ -1551,9 +1578,9 @@ nsresult nsRange::OwnerChildInserted(nsIContent* aParentNode, PRInt32 aOffset)
   if (NS_FAILED(res))  return res;
   if (!domNode) return NS_ERROR_UNEXPECTED;
 
-  PRInt32		loop = 0;
-  nsRange*	theRange; 
-  while ((theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop)))) != nsnull)
+  PRInt32  loop = 0;
+  nsRange* theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop))); 
+  while (theRange)
   {
     // sanity check - do range and content agree over ownership?
     res = theRange->ContentOwnsUs(domNode);
@@ -1573,6 +1600,7 @@ nsresult nsRange::OwnerChildInserted(nsIContent* aParentNode, PRInt32 aOffset)
       NS_PRECONDITION(NS_SUCCEEDED(res), "error updating range list");
     }
     loop++;
+    theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop)));
   }
   return NS_OK;
 }
@@ -1598,8 +1626,8 @@ nsresult nsRange::OwnerChildRemoved(nsIContent* aParentNode, PRInt32 aOffset, ns
   if (!domNode) return NS_ERROR_UNEXPECTED;
 
   PRInt32		loop = 0;
-  nsRange*	theRange; 
-  while ((theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop)))) != nsnull)
+  nsRange* theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop))); 
+  while (theRange)
   {
     // sanity check - do range and content agree over ownership?
     res = theRange->ContentOwnsUs(domNode);
@@ -1621,6 +1649,7 @@ nsresult nsRange::OwnerChildRemoved(nsIContent* aParentNode, PRInt32 aOffset, ns
       }
     }
     loop++;
+    theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop)));
   }
   
   // any ranges in the content subtree rooted by aRemovedNode need to
@@ -1673,8 +1702,8 @@ nsresult nsRange::TextOwnerChanged(nsIContent* aTextNode, PRInt32 aStartChanged,
   if (!domNode) return NS_ERROR_UNEXPECTED;
 
   PRInt32		loop = 0;
-  nsRange*	theRange; 
-  while ((theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop)))) != nsnull)
+  nsRange* theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop))); 
+  while (theRange)
   {
     // sanity check - do range and content agree over ownership?
     res = theRange->ContentOwnsUs(domNode);
@@ -1711,6 +1740,7 @@ nsresult nsRange::TextOwnerChanged(nsIContent* aTextNode, PRInt32 aStartChanged,
       }
     }
     loop++;
+    theRange = NS_STATIC_CAST(nsRange*, (theRangeList->ElementAt(loop)));
   }
   
   return NS_OK;
@@ -1758,17 +1788,25 @@ nsRange::CreateContextualFragment(const nsString& aFragment,
               nsCOMPtr<nsIDOMNode> temp;
               nsAutoString tagName;
               PRUnichar* name = nsnull;
-              
-              parent->GetNodeName(tagName);
-              // XXX Wish we didn't have to allocate here
-              name = tagName.ToNewUnicode();
-              if (nsnull != name) {
-                tagStack->Push(name);
-                temp = parent;
-                result = temp->GetParentNode(getter_AddRefs(parent));
+              PRUint16 nodeType;
+
+              parent->GetNodeType(&nodeType);
+              if (nsIDOMNode::ELEMENT_NODE == nodeType) {
+                parent->GetNodeName(tagName);
+                // XXX Wish we didn't have to allocate here
+                name = tagName.ToNewUnicode();
+                if (name) {
+                  tagStack->Push(name);
+                  temp = parent;
+                  result = temp->GetParentNode(getter_AddRefs(parent));
+                }
+                else {
+                  result = NS_ERROR_OUT_OF_MEMORY;
+                }
               }
               else {
-                result = NS_ERROR_OUT_OF_MEMORY;
+                temp = parent;
+                result = temp->GetParentNode(getter_AddRefs(parent));
               }
             }
             
@@ -1799,7 +1837,7 @@ nsRange::CreateContextualFragment(const nsString& aFragment,
       // XXX Ick! Delete strings we allocated above.
       PRUnichar* str = nsnull;
       str = tagStack->Pop();
-      while (nsnull != str) {
+      while (str) {
         delete[] str;
         str = tagStack->Pop();
       }
@@ -1855,7 +1893,7 @@ nsRange::IsValidFragment(const nsString& aFragment, PRBool* aReturn)
               parent->GetNodeName(tagName);
               // XXX Wish we didn't have to allocate here
               name = tagName.ToNewUnicode();
-              if (nsnull != name) {
+              if (name) {
                 tagStack->Push(name);
                 temp = parent;
                 result = temp->GetParentNode(getter_AddRefs(parent));
@@ -1880,7 +1918,7 @@ nsRange::IsValidFragment(const nsString& aFragment, PRBool* aReturn)
       // XXX Ick! Delete strings we allocated above.
       PRUnichar* str = nsnull;
       str = tagStack->Pop();
-      while (nsnull != str) {
+      while (str) {
         delete[] str;
         str = tagStack->Pop();
       }
@@ -1900,7 +1938,7 @@ nsRange::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
   nsresult res = NS_OK;
   nsIScriptGlobalObject *globalObj = aContext->GetGlobalObject();
 
-  if (nsnull == mScriptObject) {
+  if (!mScriptObject) {
     res = NS_NewScriptRange(aContext, (nsISupports *)(nsIDOMRange *)this, globalObj, (void**)&mScriptObject);
   }
   *aScriptObject = mScriptObject;
@@ -1917,3 +1955,25 @@ nsRange::SetScriptObject(void *aScriptObject)
 }
 
 // END nsIScriptContextOwner interface implementations
+
+nsresult
+nsRange::Lock()
+{
+  if (!mMonitor)
+    mMonitor = ::PR_NewMonitor();
+
+  if (mMonitor)
+    PR_EnterMonitor(mMonitor);
+
+  return NS_OK;
+}
+
+nsresult
+nsRange::Unlock()
+{
+  if (mMonitor)
+    PR_ExitMonitor(mMonitor);
+
+  return NS_OK;
+}
+

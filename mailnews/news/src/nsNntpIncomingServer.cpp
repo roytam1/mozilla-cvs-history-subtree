@@ -17,6 +17,7 @@
  */
 
 #include "nsNntpIncomingServer.h"
+#include "nsXPIDLString.h"
 
 NS_IMPL_ISUPPORTS_INHERITED(nsNntpIncomingServer,
                             nsMsgIncomingServer,
@@ -24,33 +25,42 @@ NS_IMPL_ISUPPORTS_INHERITED(nsNntpIncomingServer,
 
                             
 
-nsNntpIncomingServer::nsNntpIncomingServer() :
-    m_rootFolderPath(0)
+nsNntpIncomingServer::nsNntpIncomingServer()
 {    
     NS_INIT_REFCNT();
 }
 
 nsNntpIncomingServer::~nsNntpIncomingServer()
 {
-    PR_FREEIF(m_rootFolderPath);
 }
 
 NS_IMPL_SERVERPREF_STR(nsNntpIncomingServer,
                        RootFolderPath,
                        "directory")
+    
+NS_IMPL_SERVERPREF_STR(nsNntpIncomingServer,
+                       NewsrcFilePath,
+                       "newsrc.file")
 
 nsresult
 nsNntpIncomingServer::GetServerURI(char **uri)
 {
     nsresult rv;
-    char *hostname;
+
+    nsXPIDLCString hostname;
+    rv = GetHostName(getter_Copies(hostname));
+
+    nsXPIDLCString username;
+    rv = GetUsername(getter_Copies(username));
     
-    rv = GetHostName(&hostname);
     if (NS_FAILED(rv)) return rv;
 
-    *uri = PR_smprintf("news://%s", hostname);
+    if ((const char*)username)
+        *uri = PR_smprintf("news://%s@%s", (const char*)username,
+                           (const char*)hostname);
+    else
+        *uri = PR_smprintf("news://%s", (const char*)hostname);
 
-    PR_Free(hostname);
     return rv;
 }
 

@@ -19,4 +19,11 @@
 MsgComposeCommands.js
 defaultHtmlBody.html
 defaultTextBody.html
+defaultTextBody.txt
 messengercompose.xul
+composebe_en.properties
+addressAutoComplete.js
+MsgAttachPage.js
+MsgAttachPage.xul
+addressingWidgetOverlay.js
+addressingWidgetOverlay.xul

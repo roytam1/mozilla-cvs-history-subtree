@@ -28,7 +28,7 @@
 #include "nsIFormControlFrame.h"
 #include "nsFormControlFrame.h"
 #include "nsFileControlFrame.h"
-#include "nsRadioControlFrame.h"
+#include "nsRadioControlGroup.h"
 
 #include "nsIForm.h"
 #include "nsIFormControl.h"
@@ -38,7 +38,6 @@
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
-#include "nsLeafFrame.h"
 #include "nsCSSRendering.h"
 #include "nsHTMLIIDs.h"
 #include "nsDebug.h"
@@ -50,7 +49,8 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
+#include "nsNeckoUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
 #include "nsIDocument.h"
@@ -60,7 +60,6 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsDocument.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMNSHTMLFormElement.h"
-#include "nsLeafFrame.h"
 #include "nsHTMLParts.h"
 #include "nsIReflowCommand.h"
 
@@ -71,6 +70,13 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 #include "nsIUnicodeEncoder.h"
 
+// FormSubmit observer notification
+#include "nsIFormSubmitObserver.h"
+#include "nsIObserverService.h"
+#include "nsIServiceManager.h"
+
+// Get base target for submission
+#include "nsIHTMLContent.h"
 
 #include "net.h"
 #include "xp_file.h"
@@ -81,38 +87,12 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #define SPECIFY_CHARSET_IN_CONTENT_TYPE
 #define FIX_NON_ASCII_MULTIPART
 
-#if defined(ClientWallet) || defined(SingleSignon) || defined(CookieManagement)
-#include "nsIServiceManager.h"
-#endif
-
 // GetParentHTMLFrameDocument
 static NS_DEFINE_IID(kIWebshellIID, NS_IWEB_SHELL_IID);
 static NS_DEFINE_IID(kIContentViewerContainerIID, NS_ICONTENT_VIEWER_CONTAINER_IID);
 static NS_DEFINE_IID(kIDocumentViewerIID, NS_IDOCUMENT_VIEWER_IID);
 
-#ifdef SingleSignon
-#define FORM_TYPE_TEXT          1
-#define FORM_TYPE_PASSWORD      7
-#endif
-
-#if defined(ClientWallet) || defined(SingleSignon)
-#include "nsIWalletService.h"
-static NS_DEFINE_IID(kIWalletServiceIID, NS_IWALLETSERVICE_IID);
-static NS_DEFINE_IID(kWalletServiceCID, NS_WALLETSERVICE_CID);
-#endif
-
-#if defined(CookieManagement)
-
-#ifndef NECKO
-#include "nsINetService.h"
-static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
-static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
-#else
-#include "nsIURL.h"
-#endif // NECKO
-
-
-#endif
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 //----------------------------------------------------------------------
 
@@ -134,7 +114,7 @@ nsFormFrame::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     *aInstancePtr = (void*)(nsIFormManager*)this;
     return NS_OK;
   }
-  return nsLeafFrame::QueryInterface(aIID, aInstancePtr);
+  return nsBlockFrame::QueryInterface(aIID, aInstancePtr);
 }
 
 nsrefcnt nsFormFrame::AddRef(void)
@@ -150,7 +130,7 @@ nsrefcnt nsFormFrame::Release(void)
 }
 
 nsFormFrame::nsFormFrame()
-  : nsLeafFrame()
+  : nsBlockFrame()
 {
   mTextSubmitter = nsnull;
 }
@@ -171,21 +151,6 @@ nsFormFrame::CanSubmit(nsFormControlFrame& aFrame)
     return PR_TRUE;
   }
   return PR_FALSE;
-}
-
-void 
-nsFormFrame::GetDesiredSize(nsIPresContext* aPresContext,
-                            const nsHTMLReflowState& aReflowState,
-                            nsHTMLReflowMetrics& aDesiredSize)
-{
-  aDesiredSize.width   = 0;
-  aDesiredSize.height  = 0;
-  aDesiredSize.ascent  = 0;
-  aDesiredSize.descent = 0;
-  if (aDesiredSize.maxElementSize) {
-    aDesiredSize.maxElementSize->width  = 0;
-    aDesiredSize.maxElementSize->height = 0;
-  }
 }
 
 NS_IMETHODIMP
@@ -212,6 +177,14 @@ nsFormFrame::GetTarget(nsString* aTarget)
     result = mContent->QueryInterface(kIDOMHTMLFormElementIID, (void**)&form);
     if ((NS_OK == result) && form) {
       form->GetTarget(*aTarget);
+      if ((*aTarget).Length() == 0) {
+        nsIHTMLContent* content = nsnull;
+	result = form->QueryInterface(kIHTMLContentIID, (void**)&content);
+	if ((NS_OK == result) && content) {
+	  content->GetBaseTarget(*aTarget);
+	  NS_RELEASE(content);
+	}
+      }
       NS_RELEASE(form);
     }
   }
@@ -262,17 +235,6 @@ nsFormFrame::GetEnctype(PRInt32* aEnctype)
   }
   *aEnctype = NS_FORM_ENCTYPE_URLENCODED;
   return result;
-}
-
-NS_IMETHODIMP
-nsFormFrame::Reflow(nsIPresContext&      aPresContext,
-                    nsHTMLReflowMetrics& aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&      aStatus)
-{
-  GetDesiredSize(&aPresContext, aReflowState, aDesiredSize);
-  aStatus = NS_FRAME_COMPLETE;
-  return NS_OK;
 }
 
 NS_IMETHODIMP 
@@ -469,7 +431,30 @@ nsFormFrame::OnSubmit(nsIPresContext* aPresContext, nsIFrame* aFrame)
   if (aFrame != nsnull) {
     aFrame->QueryInterface(kIFormControlFrameIID, (void**)&fcFrame);
   }
-  
+
+  // Notify observers that the form is being submitted.
+  nsresult result = NS_OK;
+  NS_WITH_SERVICE(nsIObserverService, service, NS_OBSERVERSERVICE_PROGID, &result);
+  if (NS_FAILED(result)) return result;
+
+  nsString  theTopic(NS_FORMSUBMIT_SUBJECT);
+  nsIEnumerator* theEnum;
+  result = service->EnumerateObserverList(theTopic.GetUnicode(), &theEnum);
+  if (NS_SUCCEEDED(result) && theEnum){
+    nsIFormSubmitObserver* formSubmitObserver;
+    nsISupports *inst;
+      
+    for (theEnum->First(); theEnum->IsDone() != NS_OK; theEnum->Next()) {
+      result = theEnum->CurrentItem(&inst);
+      if (NS_SUCCEEDED(result) && inst) {
+        result = inst->QueryInterface(nsIFormSubmitObserver::GetIID(),(void**)&formSubmitObserver);
+        if (NS_SUCCEEDED(result) && formSubmitObserver) {
+          formSubmitObserver->Notify(mContent);
+	}
+      }
+    }
+  }
+
   if (isURLEncoded) {
     ProcessAsURLEncoded(isPost, data, fcFrame);
   }
@@ -488,7 +473,7 @@ nsFormFrame::OnSubmit(nsIPresContext* aPresContext, nsIFrame* aFrame)
     }
 
     // Resolve url to an absolute url
-    nsIURL* docURL = nsnull;
+    nsIURI* docURL = nsnull;
     nsIDocument* doc = nsnull;
     mContent->GetDocument(doc);
     while (doc && !docURL) {
@@ -507,44 +492,36 @@ nsFormFrame::OnSubmit(nsIPresContext* aPresContext, nsIFrame* aFrame)
       href.Append(data);
     }
     nsAutoString absURLSpec;
-    nsAutoString base;
 #ifndef NECKO
-    NS_MakeAbsoluteURL(docURL, base, href, absURLSpec);
+    nsAutoString base;
+    result = NS_MakeAbsoluteURL(docURL, base, href, absURLSpec);
 #else
-    nsresult result;
-    NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &result);
-    if (NS_FAILED(result)) return result;
-
-    nsIURI *baseUri = nsnull;
-    result = docURL->QueryInterface(nsIURI::GetIID(), (void**)&baseUri);
-    if (NS_FAILED(result)) return result;
-
-    char *absUrlStr = nsnull;
-    const char *urlSpec = href.GetBuffer();
-    result = service->MakeAbsolute(urlSpec, baseUri, &absUrlStr);
-    NS_RELEASE(baseUri);
-    absURLSpec = absUrlStr;
-    delete [] absUrlStr;
+    result = NS_MakeAbsoluteURI(href, docURL, absURLSpec);
 #endif // NECKO
     NS_IF_RELEASE(docURL);
+    if (NS_FAILED(result)) return result;
 
     // Now pass on absolute url to the click handler
-    nsIPostData* postData = nsnull;
+    nsIInputStream* postDataStream = nsnull;
     if (isPost) {
       nsresult rv;
       char* postBuffer = data.ToNewCString();
 
-      rv = NS_NewPostData(!isURLEncoded, postBuffer, &postData);
+      rv = NS_NewPostDataStream(!isURLEncoded, postBuffer, 0, &postDataStream);
+
       if (NS_OK != rv) {
         delete [] postBuffer;
       }
 
       /* The postBuffer is now owned by the IPostData instance */
     }    
-    if (handler) 
-      handler->OnLinkClick(mContent, eLinkVerb_Replace, absURLSpec.GetUnicode(), target.GetUnicode(), postData);
-    NS_IF_RELEASE(postData);
-    NS_RELEASE(handler);
+    if (handler) {
+      handler->OnLinkClick(mContent, eLinkVerb_Replace,
+                           absURLSpec.GetUnicode(),
+                           target.GetUnicode(), postDataStream);
+    }
+    NS_IF_RELEASE(postDataStream);
+    NS_IF_RELEASE(handler);
 
 DebugPrint("url", absURLSpec);
 DebugPrint("data", data);
@@ -591,7 +568,6 @@ char* UnicodeToNewBytes(const PRUnichar* aSrc, PRUint32 aLen, nsIUnicodeEncoder*
    char* res = nsnull;
    if(NS_SUCCEEDED(encoder->Reset()))
    {
-      nsresult rv = NS_OK;
       PRInt32 maxByteLen = 0;
       if(NS_SUCCEEDED(encoder->GetMaxLength(aSrc, (PRInt32) aLen, &maxByteLen))) 
       {
@@ -692,14 +668,13 @@ NS_IMETHODIMP nsFormFrame::GetEncoder(nsIUnicodeEncoder** encoder)
 {
   *encoder = nsnull;
   nsAutoString charset;
-  nsIDocument* doc = nsnull;
   nsresult rv = NS_OK;
   GetSubmitCharset(charset);
   
   // Get Charset, get the encoder.
   nsICharsetConverterManager * ccm = nsnull;
   rv = nsServiceManager::GetService(kCharsetConverterManagerCID ,
-                                    kICharsetConverterManagerIID,
+                                    nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(),
                                     (nsISupports**)&ccm);
   if(NS_SUCCEEDED(rv) && (nsnull != ccm)) {
      rv = ccm->GetUnicodeEncoder(&charset, encoder);
@@ -709,99 +684,12 @@ NS_IMETHODIMP nsFormFrame::GetEncoder(nsIUnicodeEncoder** encoder)
   return NS_OK;
 }
 
-#ifdef ClientWallet
-void
-GetVcardName(nsIFormControlFrame& aFormControlFrame, nsString& aVCardName) 
-{
-  aVCardName = "";
-  nsIFrame* frame = nsnull;
-  nsresult rv = aFormControlFrame.QueryInterface(kIFrameIID, (void**)&frame);
-  if (NS_SUCCEEDED(rv) && frame) {
-    nsIContent* content = nsnull;
-    rv = frame->GetContent(&content);
-    if (NS_SUCCEEDED(rv) && content) {
-      nsIHTMLContent* htmlContent = nsnull;
-      rv = content->QueryInterface(kIHTMLContentIID, (void**)&htmlContent);
-      if (NS_SUCCEEDED(rv) && htmlContent) {
-        nsHTMLValue value;
-        if (NS_CONTENT_ATTR_HAS_VALUE == htmlContent->GetHTMLAttribute(nsHTMLAtoms::vcard_name, value)) {
-          if (eHTMLUnit_String == value.GetUnit()) {
-            value.GetStringValue(aVCardName);
-          }
-        }
-        NS_RELEASE(htmlContent);
-      }
-      NS_RELEASE(content);
-    }
-  }
-}
-#endif
-
 #define CRLF "\015\012"   
 void nsFormFrame::ProcessAsURLEncoded(PRBool isPost, nsString& aData, nsIFormControlFrame* aFrame)
 {
   nsString buf;
   PRBool firstTime = PR_TRUE;
   PRUint32 numChildren = mFormControls.Count();
-
-
-#if defined(ClientWallet) || defined(SingleSignon)
-  /* get url name as ascii string */
-  char *URLName = nsnull;
-  nsIURL* docURL = nsnull;
-  nsIDocument* doc = nsnull;
-  mContent->GetDocument(doc);
-
-  const char* spec;
-  while (doc) {
-    docURL = doc->GetDocumentURL();
-    if (nsnull != docURL) {
-      (void)docURL->GetSpec(&spec);
-      if (PL_strcmp(spec, "about:blank")) {
-        break;
-      }
-    }
-    doc = GetParentHTMLFrameDocument(doc);
-  }
-  if (nsnull != docURL) {
-    URLName = (char*)PR_Malloc(PL_strlen(spec)+1);
-    PL_strcpy(URLName, spec);
-    NS_IF_RELEASE(docURL);
-  }
-#endif
-
-#ifdef SingleSignon
-#define MAX_ARRAY_SIZE 500
-  char* name_array[MAX_ARRAY_SIZE];
-  char* value_array[MAX_ARRAY_SIZE];
-  uint8 type_array[MAX_ARRAY_SIZE];
-  PRInt32 value_cnt = 0;
-#endif
-
-#ifdef ClientWallet
-  /* determine if form is significant enough to capture data for */
-  PRBool OKToCapture = FALSE;
-  PRInt32 count = 0;
-  PRUint32 numChildren2 = mFormControls.Count();
-  for (PRUint32 childX2 = 0; childX2 < numChildren2; childX2++) {
-    nsIFormControlFrame* child = (nsIFormControlFrame*) mFormControls.ElementAt(childX2);
-    if (child && child->IsSuccessful(aFrame)) {
-      PRInt32 type;
-      child->GetType(&type);
-      if (type == NS_FORM_INPUT_TEXT) {
-        count++;
-      }
-    }
-  }
-  nsIWalletService *service2;
-  nsresult res2 = nsServiceManager::GetService(kWalletServiceCID,
-    kIWalletServiceIID,
-    (nsISupports **)&service2);
-  if ((NS_OK == res2) && (nsnull != service2)) {
-    service2->WALLET_OKToCapture(&OKToCapture, count, URLName);
-    NS_RELEASE(service2);
-  }
-#endif
 
   nsIUnicodeEncoder *encoder = nsnull;
   if(NS_FAILED( GetEncoder(&encoder) ) )
@@ -819,40 +707,6 @@ void nsFormFrame::ProcessAsURLEncoded(PRBool isPost, nsString& aData, nsIFormCon
 		  nsString* names = new nsString[maxNumValues];
 		  nsString* values = new nsString[maxNumValues];
 			if (PR_TRUE == child->GetNamesValues(maxNumValues, numValues, values, names)) {
-#if defined(ClientWallet) || defined(SingleSignon)
-				PRInt32 type;
-				child->GetType(&type);
-#endif
-#ifdef ClientWallet
-        if (OKToCapture && (NS_FORM_INPUT_TEXT == type)) {
-          nsString vcard("");
-          GetVcardName(*child, vcard);
-          nsIWalletService *service;
-          nsresult res = nsServiceManager::GetService(kWalletServiceCID,
-                                                      kIWalletServiceIID,
-                                                      (nsISupports **)&service);
-          if ((NS_OK == res) && (nsnull != service)) {
-            res = service->WALLET_Capture(doc, *names, *values, vcard);
-            NS_RELEASE(service);
-          }
-        }
-#endif
-#ifdef SingleSignon
-				if ((type == NS_FORM_INPUT_PASSWORD) || (type == NS_FORM_INPUT_TEXT)) {
-					if (value_cnt < MAX_ARRAY_SIZE) {
-						if (type == NS_FORM_INPUT_PASSWORD) {
-							type_array[value_cnt] = FORM_TYPE_PASSWORD;
-						} else {
-							type_array[value_cnt] = FORM_TYPE_TEXT;
-						}
-						value_array[value_cnt] =
-							values[0].ToNewCString();
-						name_array[value_cnt] =
-							names[0].ToNewCString();
-						value_cnt++;
-					}
-				}
-#endif
 				for (int valueX = 0; valueX < numValues; valueX++) {
 				  if (PR_TRUE == firstTime) {
 					  firstTime = PR_FALSE;
@@ -874,29 +728,24 @@ void nsFormFrame::ProcessAsURLEncoded(PRBool isPost, nsString& aData, nsIFormCon
 	}
   NS_IF_RELEASE(encoder);
 
-#ifdef SingleSignon
-  nsIWalletService *service;
-  nsresult res = nsServiceManager::GetService(kWalletServiceCID,
-                                          kIWalletServiceIID,
-                                          (nsISupports **)&service);
-  if ((NS_OK == res) && (nsnull != service)) {
-	  res = service->SI_RememberSignonData
-		(URLName, (char**)name_array, (char**)value_array, (char**)type_array, value_cnt);
-	  NS_RELEASE(service);
-  }
-  while (value_cnt--) {
-	PR_FREEIF(name_array[value_cnt]);
-	PR_FREEIF(value_array[value_cnt]);
-  }
-#endif
-#if defined(ClientWallet) || defined(SingleSignon)
-  if (nsnull != doc) {
-        NS_RELEASE(doc);
-  }
-  if (nsnull != URLName) {
-        PR_FREEIF(URLName);
-  }
-#endif
+    // Use the base URL as a referer for now
+    nsIURI* docURL = nsnull;
+    nsIDocument* doc = nsnull;
+    mContent->GetDocument(doc);
+    while (doc && !docURL) {
+      doc->GetBaseURL(docURL);
+      if (!docURL) {
+        doc = GetParentHTMLFrameDocument(doc);
+        if (!doc) break;
+      }
+    }
+    NS_IF_RELEASE(doc);
+	char* spec = nsnull;
+	if (docURL)
+	{
+		docURL->GetSpec(&spec);
+	}
+	NS_IF_RELEASE(docURL);
 
   aData.SetLength(0);
   if (isPost) {
@@ -910,6 +759,13 @@ void nsFormFrame::ProcessAsURLEncoded(PRBool isPost, nsString& aData, nsIFormCon
     aData += charset;
 #endif
     aData += CRLF;
+	if (spec)
+	{
+		aData += "Referer: ";
+		aData += spec;
+		nsCRT::free(spec);
+		aData += CRLF;
+	}
     aData += "Content-Length: ";
     aData += size;
     aData += CRLF;
@@ -994,6 +850,9 @@ void nsFormFrame::Temp_GetContentType(char* aPathName, char* aContentType)
   else if ((0 == nsCRT::strcasecmp(fileExt, ".jpeg")) ||
            (0 == nsCRT::strcasecmp(fileExt, ".jpg"))) {
     strcpy(aContentType, "image/jpeg");
+  }
+  else if (0 == nsCRT::strcasecmp(fileExt, ".art")){
+    strcpy(aContentType, "image/x-art");
   }
   else { // don't bother trying to do the others here
     strcpy(aContentType, "unknown");

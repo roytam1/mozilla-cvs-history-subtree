@@ -17,6 +17,7 @@
  */
 
 #include "nsLookAndFeel.h"
+#include "nsWidget.h"
 
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 
@@ -25,23 +26,24 @@ NS_IMPL_ISUPPORTS(nsLookAndFeel, kILookAndFeelIID)
 nsLookAndFeel::nsLookAndFeel() : nsILookAndFeel()
 {
     NS_INIT_REFCNT();
-    printf("nsLookAndFeel::nsLookAndFeel()\n");
+
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsLookAndFeel::nsLookAndFeel()\n"));
 }
 
 nsLookAndFeel::~nsLookAndFeel()
 {
-    printf("nsLookAndFeel::~nsLookAndFeel()\n");
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsLookAndFeel::~nsLookAndFeel()\n"));
 }
 
 NS_IMETHODIMP nsLookAndFeel::GetColor(const nsColorID aID, nscolor &aColor)
 {
-    printf("nsLookAndFeel::GetColor()\n");
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsLookAndFeel::GetColor()\n"));
     return NS_OK;
 }
 
 NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
 {
-    printf("nsLookAndFeel::GetMetric()\n");
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsLookAndFeel::GetMetric()\n"));
     // XXX These are not complete!
     nsresult res = NS_OK;
     switch (aID) { 
@@ -96,6 +98,12 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
     case eMetric_ListVerticalInsidePadding:
         aMetric = 0;
         break;
+    case eMetric_CaretBlinkTime:
+        aMetric = 500;
+        break;
+    case eMetric_CaretWidthTwips:
+        aMetric = 20;
+        break;
     default:
         aMetric = -1;
         res = NS_ERROR_FAILURE;
@@ -105,7 +113,8 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
 
 NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricFloatID aID, float & aMetric)
 {
-    printf("nsLookAndFeel::GetMetric()\n");
+    PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsLookAndFeel::GetMetric()\n"));
+
     // XXX this is not complete
     nsresult res = NS_OK;
     switch (aID) {

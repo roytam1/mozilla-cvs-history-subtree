@@ -17,9 +17,10 @@
  */
 
 #include "msgCore.h"
+#include "nsMsgImapCID.h"
 #include "nsImapMailFolder.h"
 #include "nsImapMoveCoalescer.h"
-#include "nsMsgKeySet.h"
+#include "nsMsgKeyArray.h"
 #include "nsImapService.h"
 
 static NS_DEFINE_CID(kCImapService, NS_IMAPSERVICE_CID);
@@ -34,9 +35,9 @@ nsImapMoveCoalescer::nsImapMoveCoalescer(nsImapMailFolder *sourceFolder)
 nsImapMoveCoalescer::~nsImapMoveCoalescer()
 {
 	NS_IF_RELEASE(m_sourceFolder);
-	for (PRInt32 i = 0; i < m_sourceKeySets.Count(); i++)
+	for (PRInt32 i = 0; i < m_sourceKeyArrays.Count(); i++)
 	{
-		nsMsgKeySet *keys = (nsMsgKeySet *) m_sourceKeySets.ElementAt(i);
+		nsMsgKeyArray *keys = (nsMsgKeyArray *) m_sourceKeyArrays.ElementAt(i);
 		delete keys;
 	}
 }
@@ -48,19 +49,23 @@ nsresult nsImapMoveCoalescer::AddMove(nsIMsgFolder *folder, nsMsgKey key)
 	if (m_destFolders)
 	{
 		PRInt32 folderIndex = m_destFolders->IndexOf(folder);
-		nsMsgKeySet *keysToAdd;
+		nsMsgKeyArray *keysToAdd=nsnull;
 		if (folderIndex >= 0)
 		{
-			keysToAdd = (nsMsgKeySet *) m_sourceKeySets.ElementAt(folderIndex);
+			keysToAdd = (nsMsgKeyArray *) m_sourceKeyArrays.ElementAt(folderIndex);
 		}
 		else
 		{
-			m_destFolders->AppendElement(folder);
-			keysToAdd = nsMsgKeySet::Create();
-			if (!keysToAdd)
-				return NS_ERROR_OUT_OF_MEMORY;
+			nsCOMPtr <nsISupports> supports = do_QueryInterface(folder);
+			if (supports)
+			{
+				m_destFolders->AppendElement(supports);
+				keysToAdd = new nsMsgKeyArray;
+				if (!keysToAdd)
+					return NS_ERROR_OUT_OF_MEMORY;
 
-			m_sourceKeySets.AppendElement(keysToAdd);
+				m_sourceKeyArrays.AppendElement(keysToAdd);
+			}
 		}
 		if (keysToAdd)
 			keysToAdd->Add(key);
@@ -82,30 +87,27 @@ nsresult nsImapMoveCoalescer::PlaybackMoves(nsIEventQueue *eventQueue)
 	m_destFolders->Count(&numFolders);
 	for (PRUint32 i = 0; i < numFolders; i++)
 	{
-		nsCOMPtr <nsISupports> myISupports = getter_AddRefs(m_destFolders->ElementAt(i));
-		nsCOMPtr <nsIMsgFolder> destFolder(do_QueryInterface(myISupports));
+		nsCOMPtr <nsISupports> destSupports = getter_AddRefs(m_destFolders->ElementAt(i));
+		nsCOMPtr <nsIMsgFolder> destFolder(do_QueryInterface(destSupports));
         NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
         if (NS_SUCCEEDED(rv) && imapService)
 		{
-			nsMsgKeySet *keysToAdd = (nsMsgKeySet *) m_sourceKeySets.ElementAt(i);
+			nsMsgKeyArray *keysToAdd = (nsMsgKeyArray *) m_sourceKeyArrays.ElementAt(i);
 			if (keysToAdd)
 			{
-				char *messageIds = keysToAdd->Output();
-				if (messageIds)
-				{
-					nsCOMPtr <nsISupports> myISupports = do_QueryInterface((nsIMsgImapMailFolder *) m_sourceFolder, &rv);
-					nsCOMPtr <nsIUrlListener> urlListener(do_QueryInterface(myISupports));
-					rv = imapService->OnlineMessageCopy(eventQueue,
-													m_sourceFolder, messageIds,
-													destFolder, PR_TRUE, PR_TRUE,
-													urlListener, nsnull);
-					delete [] messageIds;
-				}
-				else
-				{
-					rv = NS_ERROR_OUT_OF_MEMORY;
-					break;
-				}
+				nsCString messageIds;
+
+				nsImapMailFolder::AllocateUidStringFromKeyArray(*keysToAdd, messageIds);
+
+				destFolder->SetNumNewMessages(keysToAdd->GetSize());
+				destFolder->SetBiffState(nsMsgBiffState_NewMail);
+
+				nsCOMPtr <nsISupports> sourceSupports = do_QueryInterface((nsIMsgImapMailFolder *) m_sourceFolder, &rv);
+				nsCOMPtr <nsIUrlListener> urlListener(do_QueryInterface(sourceSupports));
+				rv = imapService->OnlineMessageCopy(eventQueue,
+												m_sourceFolder, messageIds.GetBuffer(),
+												destFolder, PR_TRUE, PR_TRUE,
+												urlListener, nsnull, nsnull);
 			}
 		}
 	}

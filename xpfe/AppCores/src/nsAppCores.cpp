@@ -17,18 +17,17 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
+#include <stdio.h>
+
 #include "nsAppCoresCIDs.h"
 #include "nsAppCoresManagerFactory.h"
-#include "nsDOMPropsCoreFactory.h"
 #include "nsProfileCoreFactory.h" 
 #include "nsRDFCoreFactory.h"
 #include "nsBrowserAppCoreFactory.h"
-#include "nsEditorAppCoreFactory.h"
 #include "nsToolkitCoreFactory.h"
 #include "nsIFactory.h"
 #include "nsIComponentManager.h"
 #include "pratom.h"
-#include <stdio.h>
 #include "nsIServiceManager.h"
 
 static PRInt32 gLockCnt = 0;
@@ -36,12 +35,10 @@ static PRInt32 gInstanceCnt = 0;
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_IID(kIFactoryIID,        NS_IFACTORY_IID);
-static NS_DEFINE_IID(kDOMPropsCoreCID,    NS_DOMPROPSCORE_CID);
 static NS_DEFINE_IID(kProfileCoreCID,     NS_PROFILECORE_CID); 
 static NS_DEFINE_IID(kRDFCoreCID,         NS_RDFCORE_CID);
 static NS_DEFINE_IID(kToolkitCoreCID,     NS_TOOLKITCORE_CID);
 static NS_DEFINE_IID(kBrowserAppCoreCID,  NS_BROWSERAPPCORE_CID);
-static NS_DEFINE_IID(kEditorAppCoreCID,   NS_EDITORAPPCORE_CID);
 static NS_DEFINE_IID(kAppCoresManagerCID, NS_APPCORESMANAGER_CID);
 
 
@@ -60,12 +57,11 @@ NSRegisterSelf(nsISupports* serviceMgr, const char *path)
 {
     printf("*** AppCores object is being registered\n");
     nsComponentManager::RegisterComponent(kAppCoresManagerCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
-    nsComponentManager::RegisterComponent(kDOMPropsCoreCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
     nsComponentManager::RegisterComponent(kProfileCoreCID, NULL, NULL, path, PR_TRUE, PR_TRUE); 
     nsComponentManager::RegisterComponent(kRDFCoreCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
     nsComponentManager::RegisterComponent(kToolkitCoreCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
     nsComponentManager::RegisterComponent(kBrowserAppCoreCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
-    //nsComponentManager::RegisterComponent(kEditorAppCoreCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
+
     return NS_OK;
 }
 
@@ -75,12 +71,10 @@ NSUnregisterSelf(nsISupports* serviceMgr, const char *path)
     printf("*** AppCores object is being unregistered\n");
     
     nsComponentManager::UnregisterComponent(kAppCoresManagerCID, path);
-    nsComponentManager::UnregisterComponent(kDOMPropsCoreCID, path);
     nsComponentManager::UnregisterComponent(kProfileCoreCID, path); 
     nsComponentManager::UnregisterComponent(kRDFCoreCID, path);
     nsComponentManager::UnregisterComponent(kToolkitCoreCID, path);
     nsComponentManager::UnregisterComponent(kBrowserAppCoreCID, path);
-    //nsComponentManager::UnregisterComponent(kEditorAppCoreCID, path);
     
     return NS_OK;
 }
@@ -106,10 +100,6 @@ NSGetFactory(nsISupports* serviceMgr,
     {
         inst = new nsAppCoresManagerFactory();        
     }
-    else if ( aClass.Equals(kDOMPropsCoreCID) )
-    {
-        inst = new nsDOMPropsCoreFactory();      
-    }
     else if ( aClass.Equals(kProfileCoreCID) ) 
     { 
         inst = new nsProfileCoreFactory(); 
@@ -126,12 +116,6 @@ NSGetFactory(nsISupports* serviceMgr,
     {
         inst = new nsBrowserAppCoreFactory();      
     }
-/*
-    else if ( aClass.Equals(kEditorAppCoreCID) )
-    {
-        inst = new nsEditorAppCoreFactory();      
-    }
-*/
     else
     {
         return NS_ERROR_ILLEGAL_VALUE;

@@ -23,7 +23,6 @@
  *     Douglas Turner <dougt@netscape.com>
  */
 
-
 #ifndef __SCHEDULEDTASKS_H__
 #define __SCHEDULEDTASKS_H__
 
@@ -32,7 +31,7 @@
 #include "nsFileSpec.h"
 
 
-REGERR DeleteFileNowOrSchedule(nsFileSpec& filename);
+REGERR DeleteFileNowOrSchedule(const nsFileSpec& filename);
 REGERR ReplaceFileNowOrSchedule(nsFileSpec& tmpfile, nsFileSpec& target );
 
 

@@ -16,9 +16,10 @@
  * Reserved.
  */
 
-#include "Xm/Xm.h"
+#include <Xm/Xm.h>
+#include <X11/keysym.h>
+#include <X11/keysymdef.h>
 #include "nsXtEventHandler.h"
-#include "X11/keysym.h"
 
 #include "nsWindow.h"
 #include "nsTextWidget.h"
@@ -37,86 +38,88 @@ struct nsKeyConverter {
   XID keysym; // X keysym key code
 };
 
-struct nsKeyConverter nsKeycodes[] = { 
-  NS_VK_CANCEL,     XK_Cancel, 
-  NS_VK_BACK,       XK_BackSpace,
-  NS_VK_TAB,        XK_Tab,
-  NS_VK_CLEAR,      XK_Clear,
-  NS_VK_RETURN,     XK_Return,
-  NS_VK_SHIFT,      XK_Shift_L,      
-  NS_VK_SHIFT,      XK_Shift_R,      
-  NS_VK_CONTROL,    XK_Control_L,
-  NS_VK_CONTROL,    XK_Control_R,
-  NS_VK_ALT,        XK_Alt_L,
-  NS_VK_ALT,        XK_Alt_R,
-  NS_VK_PAUSE,      XK_Pause,
-  NS_VK_CAPS_LOCK,  XK_Caps_Lock,
-  NS_VK_ESCAPE,     XK_Escape,
-  NS_VK_SPACE,      XK_space,
-  NS_VK_PAGE_UP,    XK_Page_Up,
-  NS_VK_PAGE_DOWN,  XK_Page_Down,
-  NS_VK_END,        XK_End,
-  NS_VK_HOME,       XK_Home,
-  NS_VK_LEFT,       XK_Left,
-  NS_VK_UP,         XK_Up,
-  NS_VK_RIGHT,      XK_Right,
-  NS_VK_DOWN,       XK_Down, 
-  NS_VK_PRINTSCREEN, XK_Print,
-  NS_VK_INSERT,     XK_Insert,
-  NS_VK_DELETE,     XK_Delete,
+struct nsKeyConverter nsKeycodes[] = {
+  { NS_VK_CANCEL,     XK_Cancel },
+  { NS_VK_BACK,       XK_BackSpace },
+  { NS_VK_TAB,        XK_Tab },
+#ifdef  XK_ISO_Left_Tab
+  { NS_VK_TAB,        XK_ISO_Left_Tab }, // SunOs 5.5.1 doesnt have it
+#endif
+  { NS_VK_CLEAR,      XK_Clear },
+  { NS_VK_RETURN,     XK_Return },
+  { NS_VK_SHIFT,      XK_Shift_L },
+  { NS_VK_SHIFT,      XK_Shift_R },
+  { NS_VK_CONTROL,    XK_Control_L },
+  { NS_VK_CONTROL,    XK_Control_R },
+  { NS_VK_ALT,        XK_Alt_L },
+  { NS_VK_ALT,        XK_Alt_R },
+  { NS_VK_PAUSE,      XK_Pause },
+  { NS_VK_CAPS_LOCK,  XK_Caps_Lock },
+  { NS_VK_ESCAPE,     XK_Escape },
+  { NS_VK_SPACE,      XK_space },
+  { NS_VK_PAGE_UP,    XK_Page_Up },
+  { NS_VK_PAGE_DOWN,  XK_Page_Down },
+  { NS_VK_END,        XK_End },
+  { NS_VK_HOME,       XK_Home },
+  { NS_VK_LEFT,       XK_Left },
+  { NS_VK_UP,         XK_Up },
+  { NS_VK_RIGHT,      XK_Right },
+  { NS_VK_DOWN,       XK_Down },
+  { NS_VK_PRINTSCREEN, XK_Print },
+  { NS_VK_INSERT,     XK_Insert },
+  { NS_VK_DELETE,     XK_Delete },
 
-  NS_VK_NUMPAD0,    XK_KP_0, 
-  NS_VK_NUMPAD1,    XK_KP_1,
-  NS_VK_NUMPAD2,    XK_KP_2,
-  NS_VK_NUMPAD3,    XK_KP_3,
-  NS_VK_NUMPAD4,    XK_KP_4,
-  NS_VK_NUMPAD5,    XK_KP_5,
-  NS_VK_NUMPAD6,    XK_KP_6,
-  NS_VK_NUMPAD7,    XK_KP_7,
-  NS_VK_NUMPAD8,    XK_KP_8,
-  NS_VK_NUMPAD9,    XK_KP_9,
+  { NS_VK_NUMPAD0,    XK_KP_0 },
+  { NS_VK_NUMPAD1,    XK_KP_1 },
+  { NS_VK_NUMPAD2,    XK_KP_2 },
+  { NS_VK_NUMPAD3,    XK_KP_3 },
+  { NS_VK_NUMPAD4,    XK_KP_4 },
+  { NS_VK_NUMPAD5,    XK_KP_5 },
+  { NS_VK_NUMPAD6,    XK_KP_6 },
+  { NS_VK_NUMPAD7,    XK_KP_7 },
+  { NS_VK_NUMPAD8,    XK_KP_8 },
+  { NS_VK_NUMPAD9,    XK_KP_9 },
 
-  NS_VK_MULTIPLY,   XK_KP_Multiply,
-  NS_VK_ADD,        XK_KP_Add,
-  NS_VK_SEPARATOR,  XK_KP_Separator,
-  NS_VK_SUBTRACT,   XK_KP_Subtract,
-  NS_VK_DECIMAL,    XK_KP_Decimal,
-  NS_VK_DIVIDE,     XK_KP_Divide,
-  NS_VK_F1,         XK_F1,
-  NS_VK_F2,         XK_F2,
-  NS_VK_F3,         XK_F3,
-  NS_VK_F4,         XK_F4,
-  NS_VK_F5,         XK_F5,
-  NS_VK_F6,         XK_F6,
-  NS_VK_F7,         XK_F7,
-  NS_VK_F8,         XK_F8,
-  NS_VK_F9,         XK_F9,
-  NS_VK_F10,        XK_F10,
-  NS_VK_F11,        XK_F11,
-  NS_VK_F12,        XK_F12,
-  NS_VK_F13,        XK_F13,
-  NS_VK_F14,        XK_F14,
-  NS_VK_F15,        XK_F15,
-  NS_VK_F16,        XK_F16,
-  NS_VK_F17,        XK_F17,
-  NS_VK_F18,        XK_F18,
-  NS_VK_F19,        XK_F19,
-  NS_VK_F20,        XK_F20,
-  NS_VK_F21,        XK_F21,
-  NS_VK_F22,        XK_F22,
-  NS_VK_F23,        XK_F23,
-  NS_VK_F24,        XK_F24,
+  { NS_VK_MULTIPLY,   XK_KP_Multiply },
+  { NS_VK_ADD,        XK_KP_Add },
+  { NS_VK_SEPARATOR,  XK_KP_Separator },
+  { NS_VK_SUBTRACT,   XK_KP_Subtract },
+  { NS_VK_DECIMAL,    XK_KP_Decimal },
+  { NS_VK_DIVIDE,     XK_KP_Divide },
+  { NS_VK_F1,         XK_F1 },
+  { NS_VK_F2,         XK_F2 },
+  { NS_VK_F3,         XK_F3 },
+  { NS_VK_F4,         XK_F4 },
+  { NS_VK_F5,         XK_F5 },
+  { NS_VK_F6,         XK_F6 },
+  { NS_VK_F7,         XK_F7 },
+  { NS_VK_F8,         XK_F8 },
+  { NS_VK_F9,         XK_F9 },
+  { NS_VK_F10,        XK_F10 },
+  { NS_VK_F11,        XK_F11 },
+  { NS_VK_F12,        XK_F12 },
+  { NS_VK_F13,        XK_F13 },
+  { NS_VK_F14,        XK_F14 },
+  { NS_VK_F15,        XK_F15 },
+  { NS_VK_F16,        XK_F16 },
+  { NS_VK_F17,        XK_F17 },
+  { NS_VK_F18,        XK_F18 },
+  { NS_VK_F19,        XK_F19 },
+  { NS_VK_F20,        XK_F20 },
+  { NS_VK_F21,        XK_F21 },
+  { NS_VK_F22,        XK_F22 },
+  { NS_VK_F23,        XK_F23 },
+  { NS_VK_F24,        XK_F24 },
 
-  NS_VK_COMMA,      XK_comma,
-  NS_VK_PERIOD,     XK_period, 
-  NS_VK_SLASH,      XK_slash, 
+  { NS_VK_COMMA,      XK_comma },
+  { NS_VK_PERIOD,     XK_period },
+  { NS_VK_SLASH,      XK_slash },
 //XXX: How do you get a BACK_QUOTE?  NS_VK_BACK_QUOTE, XK_backquote, 
-  NS_VK_OPEN_BRACKET, XK_bracketleft, 
-  NS_VK_CLOSE_BRACKET, XK_bracketright, 
-  NS_VK_QUOTE, XK_quotedbl
-  
-}; 
+  { NS_VK_OPEN_BRACKET, XK_bracketleft },
+  { NS_VK_CLOSE_BRACKET, XK_bracketright },
+  { NS_VK_QUOTE, XK_quotedbl }
 
+};
 
 int nsConvertKey(XID keysym)
 {
@@ -190,28 +193,6 @@ typedef struct COLLAPSE_INFO {
 } CollapseInfo;
 
 //==============================================================
-static Bool checkForExpose(Display *dpy, XEvent *evt, XtPointer client_data) 
-{
-    CollapseInfo *cinfo = (CollapseInfo*)client_data; 
-
-    if ((evt->type == Expose && evt->xexpose.window == cinfo->win &&
-         INTERSECTS(cinfo->r->x, cinfo->r->width, cinfo->r->y, cinfo->r->height,
-                    evt->xexpose.x, evt->xexpose.y, 
-                    evt->xexpose.x + evt->xexpose.width, 
-                    evt->xexpose.y + evt->xexpose.height)) ||
-         (evt->type == GraphicsExpose && evt->xgraphicsexpose.drawable == cinfo->win &&
-         INTERSECTS(cinfo->r->x, cinfo->r->width, cinfo->r->y, cinfo->r->height,
-                    evt->xgraphicsexpose.x, evt->xgraphicsexpose.y, 
-                    evt->xgraphicsexpose.x + evt->xgraphicsexpose.width, 
-                    evt->xgraphicsexpose.y + evt->xgraphicsexpose.height))) {
-
-        return True;
-    }
-    return False;
-}
-
-
-//==============================================================
 void nsXtWidget_ExposureMask_EventHandler(Widget w, XtPointer p, XEvent * event, Boolean * b)
 {
   nsWindow * widgetWindow = (nsWindow *) p ;
@@ -271,8 +252,7 @@ void nsXtWidget_ButtonReleaseMask_EventHandler(Widget w, XtPointer p, XEvent * e
 //==============================================================
 void nsXtWidget_ButtonMotionMask_EventHandler(Widget w, XtPointer p, XEvent * event, Boolean * b)
 {
-  nsPaintEvent pevent ;
-  nsWindow * widgetWindow = (nsWindow *) p ;
+  nsWindow * widgetWindow = (nsWindow *) p;
   nsMouseEvent mevent;
   nsXtWidget_InitNSMouseEvent(event, p, mevent, NS_MOUSE_MOVE);
   widgetWindow->DispatchMouseEvent(mevent);
@@ -319,19 +299,9 @@ void nsXtWidget_Focus_Callback(Widget w, XtPointer p, XtPointer call_data)
 }
 
 //==============================================================
-void nsXtWidget_Toggle_Callback(Widget w, XtPointer p, XtPointer call_data)
-{
-  nsWindow * widgetWindow = (nsWindow *) p ;
-  if (DBG) fprintf(stderr, "***************** nsXtWidget_Scrollbar_Callback\n");
-
-  nsScrollbarEvent sevent;
-  XmToggleButtonCallbackStruct * cbs = (XmToggleButtonCallbackStruct*)call_data;
-}
-
-//==============================================================
 void nsXtWidget_Toggle_ArmCallback(Widget w, XtPointer p, XtPointer call_data)
 {
-  nsCheckButton * checkBtn = (nsCheckButton *) p ;
+  nsCheckButton * checkBtn = (nsCheckButton *) p;
 
   XmToggleButtonCallbackStruct * cbs = (XmToggleButtonCallbackStruct*)call_data;
   
@@ -343,9 +313,7 @@ void nsXtWidget_Toggle_ArmCallback(Widget w, XtPointer p, XtPointer call_data)
 //==============================================================
 void nsXtWidget_Toggle_DisArmCallback(Widget w, XtPointer p, XtPointer call_data)
 {
-  nsCheckButton * checkBtn = (nsCheckButton *) p ;
-  nsScrollbarEvent sevent;
-  XmToggleButtonCallbackStruct * cbs = (XmToggleButtonCallbackStruct*)call_data;
+  nsCheckButton * checkBtn = (nsCheckButton *) p;
   checkBtn->DisArmed();
 }
 
@@ -364,7 +332,6 @@ void nsXtWidget_RadioButton_ArmCallback(Widget w, XtPointer p, XtPointer call_da
 void nsXtWidget_RadioButton_DisArmCallback(Widget w, XtPointer p, XtPointer call_data)
 {
   nsRadioButton * radioBtn = (nsRadioButton *) p ;
-  nsScrollbarEvent sevent;
   XmToggleButtonCallbackStruct * cbs = (XmToggleButtonCallbackStruct*)call_data;
   radioBtn->DisArmed();
   nsMouseEvent mevent;
@@ -449,7 +416,6 @@ void nsXtWidget_Resize_Callback(Widget w, XtPointer p, XtPointer call_data)
 //==============================================================
 void nsXtWidget_Text_Callback(Widget w, XtPointer p, XtPointer call_data)
 {
-  nsWindow * widgetWindow = (nsWindow *) p ;
   int len;
   XmTextVerifyCallbackStruct *cbs = (XmTextVerifyCallbackStruct *) call_data;
   PasswordData * data;
@@ -507,7 +473,6 @@ void nsXtWidget_FSBOk_Callback(Widget w, XtPointer p, XtPointer call_data)
 //==============================================================
 void nsXtWidget_InitNSKeyEvent(int aEventType, nsKeyEvent& aKeyEvent, Widget w, XtPointer p, XEvent * event, Boolean * b)
 {
-  nsWindow * widgetWindow = (nsWindow *) p ;
   Modifiers modout = 0;
   KeySym res;
 
@@ -569,4 +534,3 @@ void nsXtWidget_Menu_Callback(Widget w, XtPointer p, XtPointer call_data)
     mevent.widget->DispatchEvent((nsGUIEvent *)&mevent, status);
   }
 }
-

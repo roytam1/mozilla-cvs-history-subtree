@@ -24,7 +24,7 @@
 #include "nsIMsgFolder.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
-#include "nsVoidArray.h"
+#include "nsISupportsArray.h"
 #include "nsIEnumerator.h"
 #include "nsIMessage.h"
 #include "nsIMsgThread.h"
@@ -37,8 +37,7 @@ class nsMessageViewDataSource : public nsIRDFCompositeDataSource, public nsIMess
 								public nsIRDFObserver
 {
 private:
-	char*			mURI;
-	nsVoidArray*	mObservers;
+	nsCOMPtr<nsISupportsArray> mObservers;
 	PRBool			mInitialized;
 	nsIRDFService * mRDFService;
 
@@ -48,11 +47,10 @@ public:
 
 	nsMessageViewDataSource(void);
 	virtual ~nsMessageViewDataSource (void);
+  virtual nsresult Init();
 
 
 	// nsIRDFDataSource methods
-	NS_IMETHOD Init(const char* uri);
-
 	NS_IMETHOD GetURI(char* *uri);
 
 	NS_IMETHOD GetSource(nsIRDFResource* property,
@@ -84,6 +82,16 @@ public:
 					  nsIRDFResource* property,
 					  nsIRDFNode* target);
 
+	NS_IMETHOD Change(nsIRDFResource* aSource,
+                    nsIRDFResource* aProperty,
+                    nsIRDFNode* aOldTarget,
+                    nsIRDFNode* aNewTarget);
+
+	NS_IMETHOD Move(nsIRDFResource* aOldSource,
+                  nsIRDFResource* aNewSource,
+                  nsIRDFResource* aProperty,
+                  nsIRDFNode* aTarget);
+
 	NS_IMETHOD HasAssertion(nsIRDFResource* source,
 						  nsIRDFResource* property,
 						  nsIRDFNode* target,
@@ -102,10 +110,10 @@ public:
 
 	NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult);
 
-	NS_IMETHOD Flush();
-
 	NS_IMETHOD GetAllCommands(nsIRDFResource* source,
 							nsIEnumerator/*<nsIRDFResource>*/** commands);
+	NS_IMETHOD GetAllCmds(nsIRDFResource* source,
+							nsISimpleEnumerator/*<nsIRDFResource>*/** commands);
 
 	NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
 							  nsIRDFResource*   aCommand,
@@ -131,6 +139,15 @@ public:
                           nsIRDFResource* predicate,
                           nsIRDFNode* object);
 
+    NS_IMETHOD OnChange(nsIRDFResource* aSource,
+                        nsIRDFResource* aProperty,
+                        nsIRDFNode* aOldTarget,
+                        nsIRDFNode* aNewTarget);
+
+    NS_IMETHOD OnMove(nsIRDFResource* aOldSource,
+                      nsIRDFResource* aNewSource,
+                      nsIRDFResource* aProperty,
+                      nsIRDFNode* aTarget);
 	//nsIMessageView
 	NS_IMETHOD SetShowAll();
 	NS_IMETHOD SetShowUnread();
@@ -138,6 +155,13 @@ public:
 	NS_IMETHOD SetShowWatched();
 	NS_IMETHOD SetShowThreads(PRBool showThreads);
 
+protected:
+	nsresult createMessageNode(nsIMessage *message, nsIRDFResource *property, nsIRDFNode **target);
+	nsresult createUnreadNode(nsIMessage *message, nsIRDFNode **target);
+	nsresult createTotalNode(nsIMessage *message, nsIRDFNode **target);
+	nsresult GetMessageFolderAndThread(nsIMessage *message, nsIMsgFolder **folder,
+										nsIMsgThread **thread);
+	PRBool IsThreadsFirstMessage(nsIMsgThread *thread, nsIMessage *message);
 
  
 	// caching frequently used resources
@@ -152,6 +176,8 @@ protected:
 	static nsIRDFResource* kNC_Date;
 	static nsIRDFResource* kNC_Sender;
 	static nsIRDFResource* kNC_Status;
+	static nsIRDFResource* kNC_Unread;
+	static nsIRDFResource* kNC_Total;
 
 };
 
@@ -236,3 +262,7 @@ protected:
 
 };
 #endif
+
+
+PR_EXTERN(nsresult)
+NS_NewMessageViewDataSource(const nsIID& iid, void **result);

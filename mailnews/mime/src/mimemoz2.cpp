@@ -46,11 +46,17 @@
 #include "nsMimeTransition.h"
 #include "comi18n.h"
 #include "nsIStringBundle.h"
-#include "nsINetService.h"
 #include "nsString.h"
 #include "nsIEventQueueService.h"
 #include "nsMimeStringResources.h"
 #include "nsStreamConverter.h"
+#include "nsIMsgSend.h"
+
+#include "nsIIOService.h"
+#include "nsIURI.h"
+
+// Define CIDs...
+static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 
 #ifdef MOZ_SECURITY
 #include HG01944
@@ -79,6 +85,213 @@ static MimeHeadersState MIME_HeaderType;
 static PRBool MIME_NoInlineAttachments;
 static PRBool MIME_WrapLongLines;
 static PRBool MIME_VariableWidthPlaintext;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Attachment handling routines
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+MimeObject    *mime_get_main_object(MimeObject* obj);
+
+extern "C" nsresult
+MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachmentData **data)
+{
+  extern nsresult       nsMimeNewURI(nsIURI** aInstancePtrResult, const char *aSpec);
+  MimeContainer         *cobj;
+  nsMsgAttachmentData   *tmp;
+  PRInt32               n;
+  PRInt32               i;
+  char                  *disp;
+  PRBool                isMsgBody = PR_FALSE, isAlternativeOrRelated = PR_FALSE;
+  MimeObject            *obj;
+
+  if (!data) 
+    return 0;
+  *data = NULL;
+
+  obj = mime_get_main_object(tobj);
+  if ( (obj) && (!mime_subclass_p(obj->clazz, (MimeObjectClass*) &mimeContainerClass)) )
+    return 0;
+
+  isMsgBody = MimeObjectChildIsMessageBody(obj, &isAlternativeOrRelated);
+  if (isAlternativeOrRelated)
+    return 0;
+  
+  cobj = (MimeContainer*) obj;
+  n = cobj->nchildren;          /* This is often too big, but that's OK. */
+  if (n <= 0) 
+    return n;
+
+  *data = (nsMsgAttachmentData *)PR_Malloc( (n + 1) * sizeof(MSG_AttachmentData));
+  if (!*data) 
+    return MIME_OUT_OF_MEMORY;
+
+  nsCRT::memset(*data, 0, (n + 1) * sizeof(MSG_AttachmentData));
+
+  tmp = *data;
+  
+  // let's figure out where to start..
+  if (isMsgBody)
+    i = 1;
+  else
+    i = 0;
+  
+  for (; i<cobj->nchildren ; i++, tmp++) 
+  {
+    MimeObject    *child = cobj->children[i];
+    char          *part = mime_part_address(child);
+    char          *imappart = NULL;
+
+    if (!part) 
+      return MIME_OUT_OF_MEMORY;
+
+    if (obj->options->missing_parts)
+      imappart = mime_imap_part_address(child);
+
+    char *urlSpec = nsnull;
+    if (imappart)
+    {
+      urlSpec = mime_set_url_imap_part(aMessageURL, imappart, part);
+    }
+    else
+    {
+      urlSpec = mime_set_url_part(aMessageURL, part, PR_TRUE);
+    }
+  
+    if (!urlSpec)
+      return MIME_OUT_OF_MEMORY;
+
+    nsresult rv = nsMimeNewURI(&(tmp->url), urlSpec);
+
+    if ( (NS_FAILED(rv)) || (!tmp->url) )
+      return MIME_OUT_OF_MEMORY;
+
+    tmp->real_type = child->content_type ? PL_strdup(child->content_type) : NULL;
+    tmp->real_encoding = child->encoding ? PL_strdup(child->encoding) : NULL;
+    disp = MimeHeaders_get(child->headers, HEADER_CONTENT_DISPOSITION, PR_FALSE, PR_FALSE);
+
+    if (disp) 
+    {
+      tmp->real_name = MimeHeaders_get_parameter(disp, "filename", NULL, NULL);
+      if (tmp->real_name)
+      {
+        char *fname = NULL;
+        fname = mime_decode_filename(tmp->real_name);
+        if (fname && fname != tmp->real_name)
+        {
+          PR_FREEIF(tmp->real_name);
+          tmp->real_name = fname;
+        }
+      }
+
+      PR_FREEIF(disp);
+    }
+
+    disp = MimeHeaders_get(child->headers, HEADER_CONTENT_TYPE, PR_FALSE, PR_FALSE);
+    if (disp)
+    {
+      tmp->x_mac_type   = MimeHeaders_get_parameter(disp, PARAM_X_MAC_TYPE, NULL, NULL);
+      tmp->x_mac_creator= MimeHeaders_get_parameter(disp, PARAM_X_MAC_CREATOR, NULL, NULL);
+      if (!tmp->real_name || *tmp->real_name == 0)
+      {
+        PR_FREEIF(tmp->real_name);
+        tmp->real_name = MimeHeaders_get_parameter(disp, "name", NULL, NULL);
+        if (tmp->real_name)
+        {
+          char *fname = NULL;
+          fname = mime_decode_filename(tmp->real_name);
+          if (fname && fname != tmp->real_name)
+          {
+            PR_Free(tmp->real_name);
+            tmp->real_name = fname;
+          }
+        }
+      }
+      PR_FREEIF(disp);
+    }
+
+    tmp->description = MimeHeaders_get(child->headers, HEADER_CONTENT_DESCRIPTION, PR_FALSE, PR_FALSE);
+    if (tmp->real_type && !PL_strcasecmp(tmp->real_type, MESSAGE_RFC822) && 
+       (!tmp->real_name || *tmp->real_name == 0))
+    {
+      mime_SACopy(&(tmp->real_name), "forward.msg");
+    }
+  }
+
+  return NS_OK;
+}
+
+extern "C" void
+MimeFreeAttachmentList(nsMsgAttachmentData *data)
+{
+  if (data) 
+  {
+    nsMsgAttachmentData   *tmp;
+    for (tmp = data ; tmp->url ; tmp++) 
+    {
+      /* Can't do PR_FREEIF on `const' values... */
+      if (tmp->url) delete (tmp->url);
+      if (tmp->real_type) PR_Free((char *) tmp->real_type);
+      if (tmp->real_encoding) PR_Free((char *) tmp->real_encoding);
+      if (tmp->real_name) PR_Free((char *) tmp->real_name);
+      if (tmp->x_mac_type) PR_Free((char *) tmp->x_mac_type);
+      if (tmp->x_mac_creator) PR_Free((char *) tmp->x_mac_creator);
+      if (tmp->description) PR_Free((char *) tmp->description);
+      tmp->url = 0;
+      tmp->real_type = 0;
+      tmp->real_name = 0;
+      tmp->description = 0;
+    }
+    PR_Free(data);
+  }
+}
+
+extern "C" void
+NotifyEmittersOfAttachmentList(MimeDisplayOptions     *opt,
+                               nsMsgAttachmentData    *data)
+{
+  PRInt32     i = 0;
+  struct      nsMsgAttachmentData  *tmp = data;
+
+  // RICHIE SHERRY - this will go away once we cutover...
+  nsIPref *pref = GetPrefServiceManager(opt);   // Pref service manager
+  PRBool      mimeXULOutput = PR_FALSE;
+  
+  if (pref)
+    pref->GetBoolPref("mail.mime_xul_output", &mimeXULOutput);
+  if (!mimeXULOutput)
+    return;
+
+  if ( (!tmp) || (!tmp->real_name) )
+    return;
+
+  while ( (tmp) && (tmp->real_name) )
+  {
+    char  *spec;
+
+    spec = nsnull;
+    if ( tmp->url ) 
+      tmp->url->GetSpec(&spec);
+
+    mimeEmitterStartAttachment(opt, tmp->real_name, tmp->real_type, spec);
+    mimeEmitterAddAttachmentField(opt, HEADER_X_MOZILLA_PART_URL, spec);
+
+    /* RICHIE SHERRY - for now, just leave these here, but they are really
+       not necessary
+    printf("URL for Part      : %s\n", spec);
+    printf("Real Name         : %s\n", tmp->real_name);
+	  printf("Desired Type      : %s\n", tmp->desired_type);
+    printf("Real Type         : %s\n", tmp->real_type);
+	  printf("Real Encoding     : %s\n", tmp->real_encoding); 
+    printf("Description       : %s\n", tmp->description);
+    printf("Mac Type          : %s\n", tmp->x_mac_type);
+    printf("Mac Creator       : %s\n", tmp->x_mac_creator);
+    */
+
+    mimeEmitterEndAttachment(opt);
+    ++i;
+    ++tmp;
+  }
+}
 
 extern "C" char *
 GetOSTempFile(const char *name)
@@ -145,7 +358,7 @@ mime_type_icon(const char *type, void *stream_closure)
 }
 
 static int
-mime_convert_charset (const char *input_line, PRInt32 input_length,
+mime_convert_charset (const PRBool input_autodetect, const char *input_line, PRInt32 input_length,
                       const char *input_charset, const char *output_charset,
                       char **output_ret, PRInt32 *output_size_ret,
                       void *stream_closure)
@@ -155,7 +368,7 @@ mime_convert_charset (const char *input_line, PRInt32 input_length,
   // Now do conversion to UTF-8 for output
   char  *convertedString = NULL;
   PRInt32 convertedStringLen;
-  PRInt32 res = MIME_ConvertCharset(PR_TRUE, input_charset, "UTF-8", input_line, input_length, 
+  PRInt32 res = MIME_ConvertCharset(input_autodetect, input_charset, "UTF-8", input_line, input_length, 
                                     &convertedString, &convertedStringLen);
   if (res != 0)
   {
@@ -231,7 +444,7 @@ mime_output_fn(char *buf, PRInt32 size, void *stream_closure)
 {
   PRUint32  written = 0;
   struct mime_stream_data *msd = (struct mime_stream_data *) stream_closure;
-  if ( ( (!msd->pluginObj) && (!msd->pluginObj2)) && ( (!msd->output_emitter) && (msd->output_emitter2)) )
+  if ( (!msd->pluginObj2) && (!msd->output_emitter) )
     return -1;
   
   // Now, write to the WriteBody method if this is a message body and not
@@ -242,20 +455,12 @@ mime_output_fn(char *buf, PRInt32 size, void *stream_closure)
     {
       msd->output_emitter->WriteBody(buf, (PRUint32) size, &written);
     }
-    else if (msd->output_emitter2)
-    {
-      msd->output_emitter2->WriteBody(buf, (PRUint32) size, &written);
-    }
   }
   else
   {
     if (msd->output_emitter)
     {
       msd->output_emitter->Write(buf, (PRUint32) size, &written);
-    }
-    else if (msd->output_emitter2)
-    {
-      msd->output_emitter2->Write(buf, (PRUint32) size, &written);
     }
   }
   return written;
@@ -309,10 +514,32 @@ mime_display_stream_complete (nsMIMESession *stream)
   MimeObject *obj = (msd ? msd->obj : 0);  
   if (obj)
   {
-    int status;
-    status = obj->clazz->parse_eof(obj, PR_FALSE);
+    int       status;
+    PRBool    abortNow = PR_FALSE;
+
+    if ((obj->options) && (obj->options->headers == MimeHeadersOnly))
+      abortNow = PR_TRUE;
+
+    status = obj->clazz->parse_eof(obj, abortNow);
     obj->clazz->parse_end(obj, (status < 0 ? PR_TRUE : PR_FALSE));
-    
+  
+    //
+    // Ok, now we are going to process the attachment data by getting all
+    // of the attachment info and then driving the emitter with this data.
+    //
+    if (!msd->options->part_to_load)
+    {
+      extern void  mime_dump_attachments ( nsMsgAttachmentData *attachData );
+
+      nsMsgAttachmentData *attachments;
+      nsresult rv = MimeGetAttachmentList(obj, msd->url_name, &attachments);
+      if (NS_SUCCEEDED(rv))
+      {
+        NotifyEmittersOfAttachmentList(msd->options, attachments);
+        MimeFreeAttachmentList(attachments);
+      }
+    }
+
 #ifdef HAVE_MIME_DATA_SLOT
     if (msd &&
       msd->context &&
@@ -379,8 +606,8 @@ mime_display_stream_complete (nsMIMESession *stream)
 #endif /* LOCK_LAST_CACHED_MESSAGE */
   
   // Release the prefs service
-  if (msd->prefs)
-    nsServiceManager::ReleaseService(kPrefCID, msd->prefs);
+  if ( (obj) && (obj->options) && (obj->options->prefs) )
+    nsServiceManager::ReleaseService(kPrefCID, obj->options->prefs);
 
   PR_Free(msd);
 }
@@ -428,7 +655,7 @@ mime_display_stream_abort (nsMIMESession *stream, int status)
   if (msd)
   {
     // RICHIE - context stuff
-    if (msd->pluginObj)
+    if (msd->pluginObj2)
     {
       if (msd->context && msd->context->mime_data && msd->context->mime_data->last_parsed_object)
         msd->context->mime_data->last_parsed_object->showAttachmentIcon = PR_FALSE;      
@@ -498,8 +725,8 @@ mime_insert_html_abort(nsMIMESession *stream, int status)
 #endif
 
 static int
-mime_insert_html_convert_charset (const char *input_line, PRInt32 input_length,
-                                  const char *input_charset,
+mime_insert_html_convert_charset (const PRBool input_autodetect, const char *input_line, 
+                                  PRInt32 input_length, const char *input_charset, 
                                   const char *output_charset,
                                   char **output_ret, PRInt32 *output_size_ret,
                                   void *stream_closure)
@@ -521,7 +748,7 @@ mime_insert_html_convert_charset (const char *input_line, PRInt32 input_length,
     msd->outcsid = 0;
   }
   INTL_SetCSIDocCSID(csi, msd->lastcsid);
-  status = mime_convert_charset (input_line, input_length,
+  status = mime_convert_charset (input_autodetect, input_line, input_length,
                                  input_charset, output_charset,
                                  output_ret, output_size_ret,
                                  stream_closure);
@@ -541,7 +768,7 @@ mime_output_init_fn (const char *type,
   
   // Now, all of this stream creation is done outside of libmime, so this
   // is just a check of the pluginObj member and returning accordingly.
-  if ( (!msd->pluginObj) && (!msd->pluginObj2))
+  if (!msd->pluginObj2)
     return -1;
   else
     return 0;
@@ -589,6 +816,8 @@ mime_image_begin(const char *image_url, const char *content_type,
      In that case, return the mid, but leave it empty (returning 0
      here is interpreted as out-of-memory.)
    */
+/* rhp --> i commented these out...(mscott) */
+#if 0
   if (msd->format_out != FO_NGLAYOUT &&
       msd->format_out != FO_CACHE_AND_NGLAYOUT &&
       msd->format_out != FO_PRINT &&
@@ -596,6 +825,7 @@ mime_image_begin(const char *image_url, const char *content_type,
       msd->format_out != FO_SAVE_AS_POSTSCRIPT &&
       msd->format_out != FO_CACHE_AND_SAVE_AS_POSTSCRIPT)
     return mid;
+#endif
 
   if ( (msd->context) && (!msd->context->img_cx) )
       /* If there is no image context, e.g. if this is a Text context or a
@@ -626,10 +856,7 @@ mime_image_begin(const char *image_url, const char *content_type,
   // RICHIE_URL     return 0;
   // RICHIE_URL   }
 
-  if (msd->pluginObj)
-    mid->istream = (nsMIMESession *) msd->pluginObj;
-  else
-    mid->istream = (nsMIMESession *) msd->pluginObj2;
+  mid->istream = (nsMIMESession *) msd->pluginObj2;
   return mid;
 }
 
@@ -718,8 +945,8 @@ mime_image_write_buffer(char *buf, PRInt32 size, void *image_closure)
                 (struct mime_image_stream_data *) image_closure;
   struct mime_stream_data *msd = mid->msd;
 
-  if ( ( (!msd->pluginObj) && (!msd->output_emitter) ) &&
-       ( (!msd->pluginObj2) && (!msd->output_emitter2) ) )
+  if ( ( (!msd->output_emitter) ) &&
+       ( (!msd->pluginObj2)     ) )
     return -1;
 
   //
@@ -753,7 +980,7 @@ mime_find_text_html_part_1(MimeObject* obj)
 
 /* Finds the main object of the message -- generally a multipart/mixed,
    text/plain, or text/html. */
-static MimeObject*
+MimeObject*
 mime_get_main_object(MimeObject* obj)
 {
   MimeContainer* cobj;
@@ -815,139 +1042,6 @@ MimeGetAttachmentCount(MWContext* context)
 #ifdef MOZ_SECURITY
 HG56025
 #endif
-
-/* Guessing the filename to use in "Save As", given a URL which may point
-   to a MIME part that we've recently displayed.  (Kloooooge!)
- */
-#ifdef HAVE_MIME_DATA_SLOT
-
-//
-// Leaving this here for now for possible code reuse!
-//
-int
-MimeGetAttachmentList(MWContext* context, MSG_AttachmentData** data)
-{
-  MimeObject* obj;
-  MimeContainer* cobj;
-  MSG_AttachmentData* tmp;
-  PRInt32 n;
-  PRInt32 i;
-  char* disp;
-  char c;
-  PRBool isMsgBody = PR_FALSE, isAlternativeOrRelated = PR_FALSE;
-
-  if (!data) return 0;
-  *data = NULL;
-  PR_ASSERT(context);
-  if (!context ||
-      !context->mime_data ||
-      !context->mime_data->last_parsed_object) {
-    return 0;
-  }
-  obj = mime_get_main_object(context->mime_data->last_parsed_object);
-  if (!mime_subclass_p(obj->clazz, (MimeObjectClass*) &mimeContainerClass)) {
-    return 0;
-  }
-  isMsgBody = MimeObjectChildIsMessageBody(obj,
-										   &isAlternativeOrRelated);
-  if (isAlternativeOrRelated)
-	  return 0;
-
-  cobj = (MimeContainer*) obj;
-  n = cobj->nchildren;          /* This is often too big, but that's OK. */
-  if (n <= 0) return n;
-  *data = (MSG_AttachmentData *) PR_Calloc(n + 1, sizeof(MSG_AttachmentData));
-  if (!*data) return MIME_OUT_OF_MEMORY;
-  tmp = *data;
-  c = '?';
-  if (PL_strchr(context->mime_data->last_parsed_url, '?')) {
-    c = '&';
-  }
-
-  /* let's figure out where to start */
-  if (isMsgBody)
-	  i = 1;
-  else
-	  i = 0;
-
-  for ( ; i<cobj->nchildren ; i++, tmp++) {
-    MimeObject* child = cobj->children[i];
-    char* part = mime_part_address(child);
-	char* imappart = NULL;
-    if (!part) return MIME_OUT_OF_MEMORY;
-	if (obj->options->missing_parts)
-		imappart = mime_imap_part_address (child);
-	if (imappart)
-	{
-		tmp->url = mime_set_url_imap_part(context->mime_data->last_parsed_url, imappart, part);
-	}
-	else
-	{
-		tmp->url = mime_set_url_part(context->mime_data->last_parsed_url, part, PR_TRUE);
-	}
-	/*
-	tmp->url = PR_smprintf("%s%cpart=%s", context->mime_data->last_parsed_url,
-                           c, part);
-	*/
-    if (!tmp->url) return MIME_OUT_OF_MEMORY;
-    tmp->real_type = child->content_type ?
-      PL_strdup(child->content_type) : NULL;
-    tmp->real_encoding = child->encoding ? PL_strdup(child->encoding) : NULL;
-    disp = MimeHeaders_get(child->headers, HEADER_CONTENT_DISPOSITION,
-                           PR_FALSE, PR_FALSE);
-    if (disp) {
-      tmp->real_name = MimeHeaders_get_parameter(disp, "filename", NULL, NULL);
-	  if (tmp->real_name)
-	  {
-		char *fname = NULL;
-		fname = mime_decode_filename(tmp->real_name);
-		if (fname && fname != tmp->real_name)
-		{
-			PR_Free(tmp->real_name);
-			tmp->real_name = fname;
-		}
-	  }
-      PR_Free(disp);
-    }
-    disp = MimeHeaders_get(child->headers, HEADER_CONTENT_TYPE,
-                       PR_FALSE, PR_FALSE);
-    if (disp)
-    {
-      tmp->x_mac_type   = MimeHeaders_get_parameter(disp, PARAM_X_MAC_TYPE, NULL, NULL);
-      tmp->x_mac_creator= MimeHeaders_get_parameter(disp, PARAM_X_MAC_CREATOR, NULL, NULL);
-	  if (!tmp->real_name || *tmp->real_name == 0)
-	  {
-		PR_FREEIF(tmp->real_name);
-		tmp->real_name = MimeHeaders_get_parameter(disp, "name", NULL, NULL);
-		if (tmp->real_name)
-		{
-			char *fname = NULL;
-			fname = mime_decode_filename(tmp->real_name);
-			if (fname && fname != tmp->real_name)
-			{
-				PR_Free(tmp->real_name);
-				tmp->real_name = fname;
-			}
-		}
-	  }
-      PR_Free(disp);
-    }
-    tmp->description = MimeHeaders_get(child->headers,
-                                       HEADER_CONTENT_DESCRIPTION,
-                                       PR_FALSE, PR_FALSE);
-    if (tmp->real_type && !PL_strcasecmp(tmp->real_type, MESSAGE_RFC822) &&
-        (!tmp->real_name || *tmp->real_name == 0))
-    {
-      char *tString = MimeGetStringByID(MIME_FORWARDED_MESSAGE_ATTACHMENT);
-      mime_SACopy(&(tmp->real_name), tString);
-      PR_FREEIF(tString);
-    }
-  }
-  return 0;
-}
-
-#endif /* !HAVE_MIME_DATA_SLOT */
-
 
 PRBool MimeObjectChildIsMessageBody(MimeObject *obj, 
 									 PRBool *isAlternativeOrRelated)
@@ -1033,35 +1127,21 @@ extern int MIME_HasAttachments(MWContext *context)
 nsIPref *
 GetPrefServiceManager(MimeDisplayOptions *opt)
 {
-  mime_stream_data  *msd = (mime_stream_data *)opt->stream_closure;
-  if (!msd) 
-    return NULL;
+  if (!opt) 
+    return nsnull;
 
-  nsIPref     *prefs = (nsIPref *)(msd->prefs);
-  return prefs;
+  return opt->prefs;
 }
 
 ////////////////////////////////////////////////////////////////
 // Bridge routines for new stream converter XP-COM interface 
 ////////////////////////////////////////////////////////////////
-void
-mime_bridge_destroy_stream(void *newStream)
-{
-  /*  mime_stream_data  *msd = (mime_stream_data *)((nsMIMESession *)newStream)->data_object; */
-  nsMIMESession     *stream = (nsMIMESession *)newStream;
-  if (!stream)
-    return;
-  
-  PR_FREEIF(stream);
-}
-
-void  *
-mime_bridge_create_stream(MimePluginInstance  *newPluginObj, 
+extern "C" void  *
+mime_bridge_create_display_stream(
                           nsIMimeEmitter      *newEmitter,
                           nsStreamConverter   *newPluginObj2,
-                          nsMimeEmitter2      *newEmitter2,
-                          const char          *urlString,
-                          int                 format_out)
+                          nsIURI              *uri,
+                          nsMimeOutputType    format_out)
 {
   int                       status = 0;
   MimeObject                *obj;
@@ -1076,17 +1156,12 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
   * SHERRY - MAKE THESE GO AWAY!
   ***/
 
-  if (format_out == FO_MAIL_MESSAGE_TO || format_out == FO_CACHE_AND_MAIL_MESSAGE_TO)
-  {
-    /* Bad news -- this would cause an endless loop. */
-    PR_ASSERT(0);
-    return NULL;
-  }
-  
+  if (!uri)
+    return nsnull;
+
   msd = PR_NEWZAP(struct mime_stream_data);
   if (!msd) 
     return NULL;
-
 
   /* RICHIE_URL
   msd->url = PR_NEWZAP( URL_Struct );
@@ -1097,33 +1172,33 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
   }
   *****/
 
-  nsresult rv = nsServiceManager::GetService(kPrefCID, kIPrefIID, (nsISupports**)&(msd->prefs));
-  if (! (msd->prefs && NS_SUCCEEDED(rv)))
-	{
-    PR_FREEIF(msd);
-    return NULL;
-  }
-
   // Assign the new mime emitter - will handle output operations
   msd->output_emitter = newEmitter;
-  msd->output_emitter2 = newEmitter2;
   
   // RICHIE_URL (msd->url)->address = PL_strdup(urlString);
 
-  if (urlString)
+  char *urlString;
+  if (NS_SUCCEEDED(uri->GetSpec(&urlString)))
   {
-    msd->url_name = PL_strdup(urlString);
-    if (!(msd->url_name))
+    if ((urlString) && (*urlString))
     {
-      // RICHIE_URL PR_FREEIF(msd->url);
-      PR_FREEIF(msd);
-      return NULL;
+      msd->url_name = PL_strdup(urlString);
+      if (!(msd->url_name))
+      {
+        // RICHIE_URL PR_FREEIF(msd->url);
+        PR_FREEIF(msd);
+        return NULL;
+      }
+
+      PR_FREEIF(urlString);
     }
   }
   
   msd->context = context;           // SHERRY - need to wax this soon
+
+
+
   msd->format_out = format_out;     // output format
-  msd->pluginObj = newPluginObj;    // the plugin object pointer 
   msd->pluginObj2 = newPluginObj2;    // the plugin object pointer 
   
   msd->options = PR_NEW(MimeDisplayOptions);
@@ -1133,6 +1208,14 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
     return 0;
   }
   memset(msd->options, 0, sizeof(*msd->options));
+  msd->options->format_out = format_out;     // output format
+
+  nsresult rv = nsServiceManager::GetService(kPrefCID, kIPrefIID, (nsISupports**)&(msd->options->prefs));
+  if (! (msd->options->prefs && NS_SUCCEEDED(rv)))
+	{
+    PR_FREEIF(msd);
+    return nsnull;
+  }
 
   /* handle the case where extracting attachments from nested messages */
 #ifdef RICHIE
@@ -1162,44 +1245,50 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
   }
 #endif
    
-  /* Set the defaults, based on the context, and the output-type.
-  */
-  if (format_out == FO_NGLAYOUT ||
-      format_out == FO_CACHE_AND_NGLAYOUT ||
-      format_out == FO_PRINT ||
-      format_out == FO_CACHE_AND_PRINT ||
-      format_out == FO_SAVE_AS_POSTSCRIPT ||
-      format_out == FO_CACHE_AND_SAVE_AS_POSTSCRIPT)
-    msd->options->fancy_headers_p = PR_TRUE;
-  
-  if (format_out == FO_NGLAYOUT ||
-      format_out == FO_CACHE_AND_NGLAYOUT)
-    msd->options->output_vcard_buttons_p = PR_TRUE;
-  
-  if (format_out == FO_NGLAYOUT ||
-      format_out == FO_CACHE_AND_NGLAYOUT) 
+  //
+  // Set the defaults, based on the context, and the output-type.
+  //
+  switch (format_out) 
   {
-    msd->options->fancy_links_p = PR_TRUE;
+		case nsMimeOutput::nsMimeMessageSplitDisplay:   // the wrapper HTML output to produce the split header/body display
+		case nsMimeOutput::nsMimeMessageHeaderDisplay:  // the split header/body display
+		case nsMimeOutput::nsMimeMessageBodyDisplay:    // the split header/body display
+    case nsMimeOutput::nsMimeMessageXULDisplay:
+      msd->options->fancy_headers_p = PR_TRUE;
+      msd->options->output_vcard_buttons_p = PR_TRUE;
+      msd->options->fancy_links_p = PR_TRUE;
+      break;
+
+		case nsMimeOutput::nsMimeMessageQuoting:        // all HTML quoted output
+      msd->options->fancy_headers_p = PR_TRUE;
+      msd->options->fancy_links_p = PR_TRUE;
+      break;
+
+    case nsMimeOutput::nsMimeMessageRaw:              // the raw RFC822 data (view source) and attachments
+		case nsMimeOutput::nsMimeMessageDraftOrTemplate:  // Loading drafts & templates
+		case nsMimeOutput::nsMimeMessageEditorTemplate:   // Loading templates into editor
+      break;
   }
-  
+
   msd->options->headers = MimeHeadersAll;
   
   // Get the libmime prefs...
   MIME_NoInlineAttachments = PR_TRUE;   // false - display as links 
                                         // true - display attachment
-  if (msd->prefs)
-    msd->prefs->GetBoolPref("mail.inline_attachments", &MIME_NoInlineAttachments);
+
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.inline_attachments", &MIME_NoInlineAttachments);
   MIME_NoInlineAttachments = !MIME_NoInlineAttachments;
 
   /* This pref is written down in with the
   opposite sense of what we like to use... */
   MIME_WrapLongLines = PR_TRUE;
-  if (msd->prefs)
-    msd->prefs->GetBoolPref("mail.wrap_long_lines", &MIME_WrapLongLines);
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.wrap_long_lines", &MIME_WrapLongLines);
 
   MIME_VariableWidthPlaintext = PR_TRUE;
-  if (msd->prefs)
-    msd->prefs->GetBoolPref("mail.fixed_width_messages", &MIME_VariableWidthPlaintext);
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.fixed_width_messages", &MIME_VariableWidthPlaintext);
   MIME_VariableWidthPlaintext = !MIME_VariableWidthPlaintext;
 
   msd->options->no_inline_p = MIME_NoInlineAttachments;
@@ -1229,37 +1318,7 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
     PL_strncmp(msd->url_name, "snews:", 6) != 0))
     )
     msd->options->headers = MimeHeadersMicroPlus;
-  
-  if (format_out == FO_QUOTE_MESSAGE ||
-    format_out == FO_CACHE_AND_QUOTE_MESSAGE
-    || format_out == FO_QUOTE_HTML_MESSAGE
-    )
-  {
-    msd->options->headers = MimeHeadersCitation;
-    msd->options->fancy_headers_p = PR_FALSE;
-    if (format_out == FO_QUOTE_HTML_MESSAGE) {
-      msd->options->nice_html_only_p = PR_TRUE;
-    }
-  }
-  
-  else if (msd->options->headers == MimeHeadersSome &&
-    (format_out == FO_PRINT ||
-    format_out == FO_CACHE_AND_PRINT ||
-    format_out == FO_SAVE_AS_POSTSCRIPT ||
-    format_out == FO_CACHE_AND_SAVE_AS_POSTSCRIPT ||
-    format_out == FO_SAVE_AS_TEXT ||
-    format_out == FO_CACHE_AND_SAVE_AS_TEXT))
-    msd->options->headers = MimeHeadersSomeNoRef;
-  
-    /* If we're attaching a message (for forwarding) then we must eradicate all
-    traces of xlateion from it, since forwarding someone else a message
-    that wasn't xlated for them doesn't work.  We have to dexlate it
-    before sending it.
-  */
-  if ((format_out == FO_MAIL_TO || format_out == FO_CACHE_AND_MAIL_TO) &&
-    msd->options->write_html_p == PR_FALSE)
-    msd->options->dexlate_p = PR_TRUE;
-  
+
   // RICHIE_URL msd->options->url                   = msd->url->address;
   msd->options->url = msd->url_name;
   msd->options->write_html_p          = PR_TRUE;
@@ -1276,11 +1335,16 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
     msd->options->output_fn           = mime_output_fn;
   
   msd->options->set_html_state_fn     = mime_set_html_state_fn;
-  if (format_out == FO_QUOTE_HTML_MESSAGE) {
+
+  //
+  // For quoting, don't mess with citatation...
+  if (format_out == nsMimeOutput::nsMimeMessageQuoting)
+  {
     msd->options->charset_conversion_fn = mime_insert_html_convert_charset;
     msd->options->dont_touch_citations_p = PR_TRUE;
-  } else 
-    msd->options->charset_conversion_fn = mime_convert_charset;
+  }
+
+  msd->options->charset_conversion_fn = mime_convert_charset;
   msd->options->rfc1522_conversion_fn = mime_convert_rfc1522;
   msd->options->reformat_date_fn      = mime_reformat_date;
   msd->options->file_type_fn          = mime_file_type;
@@ -1307,7 +1371,8 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
   //
   msd->options->force_user_charset = PR_FALSE;
 
-  msd->prefs->GetBoolPref("mail.force_user_charset", &(msd->options->force_user_charset));
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.force_user_charset", &(msd->options->force_user_charset));
   if (msd->options->force_user_charset)
   {
     /* For now, we are not going to do this, but I am leaving the code here just in case
@@ -1320,20 +1385,11 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
     ****/
   }
 
-  /* ### mwelch We want FO_EDT_SAVE_IMAGE to behave like *_SAVE_AS here
-  because we're spooling untranslated raw data. */
-  if (format_out == FO_SAVE_AS ||
-    format_out == FO_CACHE_AND_SAVE_AS ||
-    format_out == FO_MAIL_TO ||
-    format_out == FO_CACHE_AND_MAIL_TO ||
-#ifdef FO_EDT_SAVE_IMAGE
-    format_out == FO_EDT_SAVE_IMAGE ||
-#endif
-    msd->options->part_to_load)
+  // If this is a part, then we should emit the HTML to render the data
+  // (i.e. embedded images)
+  if (msd->options->part_to_load)
     msd->options->write_html_p = PR_FALSE;
-  
-  //  PR_ASSERT(!msd->stream);
-  
+
   obj = mime_new ((MimeObjectClass *)&mimeMessageClass,
     (MimeHeaders *) NULL,
     MESSAGE_RFC822);
@@ -1386,34 +1442,16 @@ mime_bridge_create_stream(MimePluginInstance  *newPluginObj,
 
 /* This is the next generation string retrieval call */
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
-#define MIME_URL       "resource:/res/mailnews/messenger/mime.properties"
+#define MIME_URL "resource:/res/mailnews/messenger/mime.properties"
 
 extern "C" 
 char *
 MimeGetStringByIDREAL(PRInt32 stringID)
 {
-  nsresult    res;
+  nsresult    res = NS_OK;
   char*       propertyURL;
-
-/***************************************     
-    // Father forgive me...
-    NS_WITH_SERVICE(nsIEventQueueService, pEventQueueService, kEventQueueServiceCID, &res); 
-//    nsresult ret = nsServiceManager::GetService(kEventQueueServiceCID,
-//      kIEventQueueServiceIID, (nsISupports**) &pEventQueueService);
-    if (NS_FAILED(res)) {
-      printf("cannot get event queue service\n");
-      return "xx";
-    }
-    res = pEventQueueService->CreateThreadEventQueue();
-    if (NS_FAILED(res)) 
-    {
-      printf("CreateThreadEventQueue failed\n");
-      return "xx";
-    }
-****************************************/
 
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &res); 
   if (NS_SUCCEEDED(res) && prefs)
@@ -1422,37 +1460,38 @@ MimeGetStringByIDREAL(PRInt32 stringID)
   if (!NS_SUCCEEDED(res) || !prefs)
     propertyURL = MIME_URL;
 
-  NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &res); 
-  if (!NS_SUCCEEDED(res) || (nsnull == pNetService)) 
+  nsCOMPtr<nsIURI> pURI;
+  NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &res);
+  if (NS_FAILED(res)) 
   {
-      return PL_strdup("???");   // Don't I18N this string...failsafe return value
+    if (propertyURL != MIME_URL)
+      PR_FREEIF(propertyURL);
+    return PL_strdup("???");   // Don't I18N this string...failsafe return value
   }
+
+  res = pService->NewURI(propertyURL, nsnull, getter_AddRefs(pURI));
 
   NS_WITH_SERVICE(nsIStringBundleService, sBundleService, kStringBundleServiceCID, &res); 
   if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
   {
-    nsIURL      *url = nsnull;
     nsILocale   *locale = nsnull;
-
-    res = pNetService->CreateURL(&url, nsString(propertyURL), nsnull, nsnull, nsnull);
-    // Cleanup property URL
-    if (propertyURL != MIME_URL)
-      PR_FREEIF(propertyURL);
-
-    if (NS_FAILED(res)) 
-    {
-      return PL_strdup("???");   // Don't I18N this string...failsafe return value
-    }
-
     nsIStringBundle* sBundle = nsnull;
-    res = sBundleService->CreateBundle(url, locale, &sBundle);
+    res = sBundleService->CreateBundle(propertyURL, locale, &sBundle);
+
     if (NS_FAILED(res)) 
     {
       return PL_strdup("???");   // Don't I18N this string...failsafe return value
     }
 
     nsAutoString v("");
+#if 1
+    PRUnichar *ptrv = nsnull;
+    res = sBundle->GetStringFromID(stringID, &ptrv);
+    v = ptrv;
+#else
     res = sBundle->GetStringFromID(stringID, v);
+#endif
+ 
     if (NS_FAILED(res)) 
     {
       char    buf[128];
@@ -1548,173 +1587,178 @@ GetMSD(MimeDisplayOptions *opt)
   return msd;
 }
 
+PRBool
+NoEmitterProcessing(nsMimeOutputType    format_out)
+{
+  if ( (format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
+       (format_out == nsMimeOutput::nsMimeMessageEditorTemplate) )
+    return PR_TRUE;
+  else
+    return PR_FALSE;
+}
+
 extern "C" nsresult
 mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const char *value)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->AddAttachmentField(field, value);
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->AddAttachmentField(field, value);
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char *value)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->AddHeaderField(field, value);
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->AddHeaderField(field, value);
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char *contentType, const char *url)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->StartAttachment(name, contentType, url);
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->StartAttachment(name, contentType, url);
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterEndAttachment(MimeDisplayOptions *opt)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
-    return emitter->EndAttachment();
-  }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->EndAttachment();
+    if (emitter)
+      return emitter->EndAttachment();
+    else
+      return NS_OK;
   }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterStartBody(MimeDisplayOptions *opt, PRBool bodyOnly, const char *msgID, const char *outCharset)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->StartBody(bodyOnly, msgID, outCharset);
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->StartBody(bodyOnly, msgID, outCharset);
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterEndBody(MimeDisplayOptions *opt)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->EndBody();
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->EndBody();
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterEndHeader(MimeDisplayOptions *opt)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->EndHeader();
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->EndHeader();
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 extern "C" nsresult     
 mimeEmitterStartHeader(MimeDisplayOptions *opt, PRBool rootMailHeader, PRBool headerOnly, const char *msgID,
                        const char *outCharset)
 {
+  // Check for draft processing...
+  if (NoEmitterProcessing(opt->format_out))
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
-    return -1;
+    return NS_ERROR_FAILURE;
 
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
     return emitter->StartHeader(rootMailHeader, headerOnly, msgID, outCharset);
   }
-  else if (msd->output_emitter2)
-  {
-    nsMimeEmitter2 *emitter2 = (nsMimeEmitter2 *)msd->output_emitter2;
-    return emitter2->StartHeader(rootMailHeader, headerOnly, msgID, outCharset);
-  }
 
-  return -1;
+  return NS_ERROR_FAILURE;
 }
 
 
@@ -1736,3 +1780,8 @@ mimeSetNewURL(nsMIMESession *stream, char *url)
   msd->url_name = PL_strdup(tmpPtr);
   return NS_OK;
 }
+
+
+
+
+

@@ -19,10 +19,7 @@
 #include "nsIUnicharInputStream.h"
 #include "nsIURL.h"
 #ifdef NECKO
-#include "nsIIOService.h"
-#include "nsIURI.h"
-#include "nsIServiceManager.h"
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#include "nsNeckoUtil.h"
 #endif // NECKO
 #include "nsCRT.h"
 #include "nsString.h"
@@ -50,20 +47,12 @@ int main(int argc, char** argv)
 
   // Create url object
   char* urlName = argv[1];
-  nsIURL* url;
+  nsIURI* url;
   nsresult rv;
 #ifndef NECKO
   rv = NS_NewURL(&url, urlName);
 #else
-  NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  nsIURI *uri = nsnull;
-  rv = service->NewURI(urlName, nsnull, &uri);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
-  NS_RELEASE(uri);
+  rv = NS_NewURI(&url, urlName);
 #endif // NECKO
   if (NS_OK != rv) {
     printf("invalid URL: '%s'\n", urlName);
@@ -73,7 +62,11 @@ int main(int argc, char** argv)
   // Get an input stream from the url
   nsresult ec;
   nsIInputStream* in;
+#ifndef NECKO
   ec = NS_OpenURL(url, &in);
+#else
+  ec = NS_OpenURI(&in, url);
+#endif // NECKO
   if (nsnull == in) {
     printf("open of url('%s') failed: error=%x\n", urlName, ec);
     return -1;

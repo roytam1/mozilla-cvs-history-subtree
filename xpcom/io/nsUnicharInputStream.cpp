@@ -33,6 +33,7 @@
 #endif
 
 static NS_DEFINE_IID(kIUnicharInputStreamIID, NS_IUNICHAR_INPUT_STREAM_IID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 class StringUnicharInputStream : public nsIUnicharInputStream {
 public:
@@ -142,8 +143,8 @@ NS_NewB2UConverter(nsIUnicodeDecoder** aInstancePtrResult,
   nsAutoString defaultCharset("ISO-8859-1");
 
   if (aCharSet == nsnull) aCharSet = &defaultCharset;
-  res = nsServiceManager::GetService(kCharsetConverterManagerCID, 
-      kICharsetConverterManagerIID, (nsISupports**)&ccm);
+  res = nsServiceManager::GetService(kCharsetConverterManagerCID,
+      nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(), (nsISupports**)&ccm);
   if (NS_FAILED(res)) return res;
 
   res = ccm->GetUnicodeDecoder(aCharSet, aInstancePtrResult);
@@ -190,8 +191,11 @@ ConverterInputStream::ConverterInputStream(nsIInputStream* aStream,
   if (aBufferSize == 0) {
     aBufferSize = 8192;
   }
-  nsresult rv1 = NS_NewByteBuffer(&mByteData, nsnull, aBufferSize);
-  nsresult rv2 = NS_NewUnicharBuffer(&mUnicharData, nsnull, aBufferSize);
+
+  // XXX what if these fail?
+  NS_NewByteBuffer(&mByteData, nsnull, aBufferSize);
+  NS_NewUnicharBuffer(&mUnicharData, nsnull, aBufferSize);
+
   mByteDataOffset = 0;
   mUnicharDataOffset = 0;
   mUnicharDataLength = 0;

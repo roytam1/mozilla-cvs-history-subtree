@@ -1404,11 +1404,11 @@ net_build_http_request (URL_Struct * URL_s,
             if(CLEAR_CACHE_BIT(format_out) != FO_INTERNAL_IMAGE)
             {
                 /* send Accept: *(slash)* as well as the others */
-                sprintf(line_buffer, "Accept: %s, %s, %s, %s, %s, %s, %s, */*" CRLF, 
-                    TEXT_HTML, TEXT_XML, IMAGE_PNG, IMAGE_GIF, IMAGE_XBM, IMAGE_JPG, IMAGE_PJPG);
+                sprintf(line_buffer, "Accept: %s, %s, %s, %s, %s, %s, */*" CRLF, 
+                    TEXT_HTML, TEXT_XML, IMAGE_PNG, IMAGE_GIF, IMAGE_JPG, IMAGE_PJPG);
             } else {
-                sprintf(line_buffer, "Accept: %s, %s, %s, %s, %s" CRLF, 
-                    IMAGE_PNG, IMAGE_GIF, IMAGE_XBM, IMAGE_JPG, IMAGE_PJPG);
+                sprintf(line_buffer, "Accept: %s, %s, %s, %s" CRLF, 
+                    IMAGE_PNG, IMAGE_GIF, IMAGE_JPG, IMAGE_PJPG);
             }
 
             tmpSize = PL_strlen(line_buffer);
@@ -1968,7 +1968,8 @@ net_parse_http_mime_headers (ActiveEntry *ce)
 /* setup HTTP/1.1 specific protocol defaults */
 PRIVATE void
 net_setup_http11_defaults(ActiveEntry *ce) {
-    HTTPConData * cd = (HTTPConData *)ce->con_data;
+    HTTPConData * cd;
+    cd = (HTTPConData *)ce->con_data;
     ce->URL_s->can_reuse_connection = TRUE;
     return;
 }

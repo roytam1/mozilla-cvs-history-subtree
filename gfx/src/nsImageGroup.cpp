@@ -29,7 +29,11 @@
 #include "il_util.h"
 #include "nsIDeviceContext.h"
 #include "nsIStreamListener.h"
+#ifdef NECKO
+#include "nsILoadGroup.h"
+#else
 #include "nsIURLGroup.h"
+#endif
 
 static NS_DEFINE_IID(kIImageGroupIID, NS_IIMAGEGROUP_IID);
 
@@ -40,7 +44,7 @@ public:
   ImageGroupImpl(nsIImageManager *aManager);
   virtual ~ImageGroupImpl();
 
-  nsresult Init(nsIDeviceContext *aDeviceContext, nsIURLGroup* aURLGroup);
+  nsresult Init(nsIDeviceContext *aDeviceContext, nsILoadGroup* aLoadGroup);
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
@@ -74,7 +78,7 @@ public:
   nsIDeviceContext *mDeviceContext;
   ilINetContext* mNetContext;
   nsIStreamListener** mListenerRequest;
-  nsIURLGroup* mURLGroup;
+  nsILoadGroup* mLoadGroup;
 };
 
 ImageGroupImpl::ImageGroupImpl(nsIImageManager *aManager)
@@ -107,7 +111,9 @@ ImageGroupImpl::~ImageGroupImpl()
   
   NS_IF_RELEASE(mManager);
   NS_IF_RELEASE(mNetContext);
-  NS_IF_RELEASE(mURLGroup);
+#ifndef NECKO
+  NS_IF_RELEASE(mLoadGroup);
+#endif
 }
 
 NS_IMPL_ISUPPORTS(ImageGroupImpl, kIImageGroupIID)
@@ -162,7 +168,7 @@ ReconnectHack(void* arg, nsIStreamListener* aListener)
 }
 
 nsresult 
-ImageGroupImpl::Init(nsIDeviceContext *aDeviceContext, nsIURLGroup* aURLGroup)
+ImageGroupImpl::Init(nsIDeviceContext *aDeviceContext, nsILoadGroup* aLoadGroup)
 {
   ilIImageRenderer *renderer;
   nsresult result;
@@ -177,13 +183,11 @@ ImageGroupImpl::Init(nsIDeviceContext *aDeviceContext, nsIURLGroup* aURLGroup)
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-#ifndef NECKO
-  mURLGroup = aURLGroup;
-  NS_IF_ADDREF(mURLGroup);
-#endif // NECKO
+  mLoadGroup = aLoadGroup;
+  NS_IF_ADDREF(mLoadGroup);
 
   // Create an async net context
-  result = NS_NewImageNetContext(&mNetContext, mURLGroup, ReconnectHack, this);
+  result = NS_NewImageNetContext(&mNetContext, mLoadGroup, ReconnectHack, this);
   if (NS_OK != result) {
     return result;
   }

@@ -512,25 +512,18 @@ nsJSEditorLog::InsertHTML(const nsString &aInputString)
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::OutputTextToString(nsString& aOutputString)
+nsJSEditorLog::OutputToString(nsString& aOutputString,
+                              const nsString& aFormatType,
+                              PRUint32 aFlags)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::OutputHTMLToString(nsString& aOutputString)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsJSEditorLog::OutputTextToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsJSEditorLog::OutputHTMLToStream(nsIOutputStream* aOutputStream, nsString* aCharsetOverride)
+nsJSEditorLog::OutputToStream(nsIOutputStream* aOutputStream,
+                              const nsString& aFormatType,
+                              const nsString* aCharsetOverride,
+                              PRUint32 aFlags)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -602,54 +595,6 @@ nsJSEditorLog::RemoveParent(const nsString &aParentTag)
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::InsertLink(nsString& aURL)
-{
-  if (mLocked)
-    return NS_OK;
-
-  PrintSelection();
-
-  Write("window.editorShell.InsertLink(\"");
-  PrintUnicode(aURL);
-  Write("\");\n");
-  Flush();
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsJSEditorLog::InsertImage(nsString& aURL, nsString& aWidth, nsString& aHeight,
-                           nsString& aHspace, nsString& aVspace, nsString& aBorder,
-                           nsString& aAlt, nsString& aAlignment)
-{
-  if (mLocked)
-    return NS_OK;
-
-  PrintSelection();
-
-  Write("window.editorShell.InsertImage(\"");
-  PrintUnicode(aURL);
-  Write("\", \"");
-  PrintUnicode(aWidth);
-  Write("\", \"");
-  PrintUnicode(aHeight);
-  Write("\", \"");
-  PrintUnicode(aHspace);
-  Write("\", \"");
-  PrintUnicode(aVspace);
-  Write("\", \"");
-  PrintUnicode(aBorder);
-  Write("\", \"");
-  PrintUnicode(aAlt);
-  Write("\", \"");
-  PrintUnicode(aAlignment);
-  Write("\");\n");
-  Flush();
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsJSEditorLog::InsertList(const nsString& aListType)
 {
   if (mLocked)
@@ -664,6 +609,24 @@ nsJSEditorLog::InsertList(const nsString& aListType)
 
   return NS_OK;
 }
+
+
+NS_IMETHODIMP
+nsJSEditorLog::InsertHeader(const nsString& aHeaderType)
+{
+  if (mLocked)
+    return NS_OK;
+
+  PrintSelection();
+
+  Write("window.editorShell.InsertHeader(\"");
+  PrintUnicode(aHeaderType);
+  Write("\");\n");
+  Flush();
+
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP
 nsJSEditorLog::Indent(const nsString& aIndent)
@@ -695,6 +658,12 @@ nsJSEditorLog::Align(const nsString& aAlign)
   Flush();
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsJSEditorLog::GetElementOrParentByTagName(const nsString &aTagName, nsIDOMNode *aNode, nsIDOMElement** aReturn)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -768,7 +737,7 @@ nsJSEditorLog::SetCaretAfterElement(nsIDOMElement* aElement)
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::InsertTable()
+nsJSEditorLog::GetEmbeddedObjects(nsISupportsArray** aNodeList)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -816,7 +785,38 @@ nsJSEditorLog::DeleteTableRow(PRInt32 aNumber)
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::JoinTableCells(PRBool aCellToRight)
+nsJSEditorLog::JoinTableCells()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsJSEditorLog::NormalizeTable(nsIDOMElement *aTable)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsJSEditorLog::GetCellIndexes(nsIDOMElement *aCell, PRInt32 &aColIndex, PRInt32 &aRowIndex)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsJSEditorLog::GetTableSize(nsIDOMElement *aTable, PRInt32 &aRowCount, PRInt32 &aColCount)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsJSEditorLog::GetCellAt(nsIDOMElement* aTable, PRInt32 aRowIndex, PRInt32 aColIndex, nsIDOMElement* &aCell)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsJSEditorLog::GetCellDataAt(nsIDOMElement* aTable, PRInt32 aRowIndex, PRInt32 aColIndex, nsIDOMElement* &aCell, 
+                            PRInt32& aStartRowIndex, PRInt32& aStartColIndex, PRInt32& aRowSpan, PRInt32& aColSpan, PRBool& aIsSelected)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -828,7 +828,7 @@ nsJSEditorLog::BeginComposition(void)
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::SetCompositionString(const nsString& aCompositionString)
+nsJSEditorLog::SetCompositionString(const nsString& aCompositionString,nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -837,6 +837,18 @@ NS_IMETHODIMP
 nsJSEditorLog::EndComposition(void)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsJSEditorLog::ApplyStyleSheet(const nsString& aURL)
+{
+  Write("window.editorShell.ApplyStyleSheet(\"");
+  PrintUnicode(aURL);
+  Write("\");\n");
+
+  Flush();
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -947,7 +959,7 @@ nsJSEditorLog::PrintSelection()
   if (NS_FAILED(result))
     return result;
 
-  result = presShell->GetSelection(getter_AddRefs(selection));
+  result = presShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(selection));
 
   if (NS_FAILED(result))
     return result;
@@ -1108,7 +1120,7 @@ nsJSEditorLog::PrintElementNode(nsIDOMNode *aNode, PRInt32 aDepth)
     result = PrintAttributeNode(attr, aDepth);
 
     if (NS_FAILED(result))
-      result;
+      return result;
   }
 
   result = PrintNodeChildren(aNode, aDepth);

@@ -32,17 +32,21 @@
 #include "nsIDOMPaintListener.h"
 #include "nsIDOMTextListener.h"
 #include "nsIDOMCompositionListener.h"
+#include "nsIDOMMenuListener.h"
 #include "nsIEventStateManager.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsIScriptObjectOwner.h"
 #include "nsIScriptEventListener.h"
 #include "nsDOMEventsIIDs.h"
 #include "prmem.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIScriptGlobalObjectData.h"
 
 static NS_DEFINE_IID(kIEventListenerManagerIID, NS_IEVENTLISTENERMANAGER_IID);
 static NS_DEFINE_IID(kIDOMEventListenerIID, NS_IDOMEVENTLISTENER_IID);
 static NS_DEFINE_IID(kIDOMEventIID, NS_IDOMEVENT_IID);
 static NS_DEFINE_IID(kIScriptEventListenerIID, NS_ISCRIPTEVENTLISTENER_IID);
+static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
 
 nsEventListenerManager::nsEventListenerManager() 
 {
@@ -57,22 +61,24 @@ nsEventListenerManager::nsEventListenerManager()
   mPaintListeners = nsnull;
   mTextListeners = nsnull;
   mCompositionListeners = nsnull;
+  mMenuListeners = nsnull;
   NS_INIT_REFCNT();
 }
 
 nsEventListenerManager::~nsEventListenerManager() 
 {
-  ReleaseListeners(mEventListeners);
-  ReleaseListeners(mMouseListeners);
-  ReleaseListeners(mMouseMotionListeners);
-  ReleaseListeners(mKeyListeners);
-  ReleaseListeners(mLoadListeners);
-  ReleaseListeners(mFocusListeners);
-  ReleaseListeners(mFormListeners);
-  ReleaseListeners(mDragListeners);
-  ReleaseListeners(mPaintListeners);
-  ReleaseListeners(mTextListeners);
-  ReleaseListeners(mCompositionListeners);
+  ReleaseListeners(&mEventListeners);
+  ReleaseListeners(&mMouseListeners);
+  ReleaseListeners(&mMouseMotionListeners);
+  ReleaseListeners(&mKeyListeners);
+  ReleaseListeners(&mLoadListeners);
+  ReleaseListeners(&mFocusListeners);
+  ReleaseListeners(&mFormListeners);
+  ReleaseListeners(&mDragListeners);
+  ReleaseListeners(&mPaintListeners);
+  ReleaseListeners(&mTextListeners);
+  ReleaseListeners(&mCompositionListeners);
+  ReleaseListeners(&mMenuListeners);
 }
 
 NS_IMPL_ADDREF(nsEventListenerManager)
@@ -125,23 +131,27 @@ nsVoidArray** nsEventListenerManager::GetListenersByIID(const nsIID& aIID)
   else if (aIID.Equals(kIDOMCompositionListenerIID)) {
 	return &mCompositionListeners;
   }
+  else if (aIID.Equals(kIDOMMenuListenerIID)) {
+	return &mMenuListeners;
+  }
   return nsnull;
 }
 
-void nsEventListenerManager::ReleaseListeners(nsVoidArray* aListeners)
+void nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners)
 {
-  if (nsnull != aListeners) {
-    PRInt32 i, count = aListeners->Count();
+  if (nsnull != *aListeners) {
+    PRInt32 i, count = (*aListeners)->Count();
     nsListenerStruct *ls;
     for (i = 0; i < count; i++) {
-      ls = (nsListenerStruct*)aListeners->ElementAt(i);
+      ls = (nsListenerStruct*)(*aListeners)->ElementAt(i);
       if (ls != nsnull) {
         NS_IF_RELEASE(ls->mListener);
         PR_DELETE(ls);
       }
     }
-    delete aListeners;
+    delete *aListeners;
   }
+  *aListeners = nsnull;
 }
 
 nsresult nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners, const nsIID& aIID)
@@ -320,6 +330,10 @@ nsresult nsEventListenerManager::GetIdentifiersForType(const nsString& aType, ns
     aIID = kIDOMFormListenerIID;
     *aFlags = NS_EVENT_BITS_FORM_CHANGE;
   }
+  else if (aType == "select") {
+    aIID = kIDOMFormListenerIID;
+    *aFlags = NS_EVENT_BITS_FORM_SELECT;
+  }
   else if (aType == "load") {
     aIID = kIDOMLoadListenerIID;
     *aFlags = NS_EVENT_BITS_LOAD_LOAD;
@@ -341,12 +355,16 @@ nsresult nsEventListenerManager::GetIdentifiersForType(const nsString& aType, ns
     *aFlags = NS_EVENT_BITS_PAINT_PAINT;
   } // extened this to handle IME related events
   else if (aType == "create") {
-    aIID = kIDOMLoadListenerIID;
-    *aFlags = NS_EVENT_BITS_LOAD_CONSTRUCT;
+    aIID = kIDOMMenuListenerIID; 
+    *aFlags = NS_EVENT_BITS_MENU_CREATE;
   }
   else if (aType == "destroy") {
-    aIID = kIDOMLoadListenerIID;
-    *aFlags = NS_EVENT_BITS_LOAD_DESTRUCT;
+    aIID = kIDOMMenuListenerIID; 
+    *aFlags = NS_EVENT_BITS_MENU_DESTROY;
+  }
+  else if (aType == "action") {
+    aIID = kIDOMMenuListenerIID; 
+    *aFlags = NS_EVENT_BITS_MENU_ACTION;
   }
   else {
     return NS_ERROR_FAILURE;
@@ -413,6 +431,20 @@ nsresult nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aConte
                                 nsIAtom *aName, const nsString& aFunc, REFNSIID aIID)
 {
   JSObject *mScriptObject;
+  nsIScriptGlobalObject *global;
+  nsIScriptGlobalObjectData *globalData;
+  JSPrincipals* principals = nsnull;
+
+  global = aContext->GetGlobalObject();
+  if (global && NS_SUCCEEDED(global->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData))) {
+    if (NS_FAILED(globalData->GetPrincipals((void**)&principals))) {
+      NS_RELEASE(global);
+      NS_RELEASE(globalData);
+      return NS_ERROR_FAILURE;
+    }
+    NS_RELEASE(globalData);
+  }
+  NS_IF_RELEASE(global);
   
   if (NS_OK == aScriptObjectOwner->GetScriptObject(aContext, (void**)&mScriptObject)) {
     JSContext* mJSContext = (JSContext*)aContext->GetNativeContext();
@@ -423,8 +455,9 @@ nsresult nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aConte
     mName.ToLowerCase(mLowerName);
     mCharName = mLowerName.ToNewCString();
 
+
     if (nsnull != mCharName) {
-      JS_CompileUCFunction(mJSContext, mScriptObject, mCharName,
+      JS_CompileUCFunctionForPrincipals(mJSContext, mScriptObject, principals, mCharName,
 		           1, mEventArgv, (jschar*)aFunc.GetUnicode(), aFunc.Length(),
 		           nsnull, 0);
       delete[] mCharName;
@@ -483,7 +516,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
           for (int i=0; i<mMouseListeners->Count(); i++) {
             nsListenerStruct *ls;
             nsIDOMMouseListener *mMouseListener;
-            nsIScriptEventListener *scriptListener;
 
             ls = (nsListenerStruct*)mMouseListeners->ElementAt(i);
 
@@ -570,7 +602,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
@@ -615,65 +646,63 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
       break;
 	
-	case NS_COMPOSITION_START:
-	case NS_COMPOSITION_END:
+	  case NS_COMPOSITION_START:
+	  case NS_COMPOSITION_END:
 #if DEBUG_TAGUE
-		printf("DOM: got composition event\n");
+		  printf("DOM: got composition event\n");
 #endif
-		if (nsnull != mCompositionListeners) {
-			if (nsnull == *aDOMEvent) {
-				ret = NS_NewDOMUIEvent(aDOMEvent,aPresContext,aEvent);
-			}
-			if (NS_OK == ret) {
-				for(int i=0;i<mTextListeners->Count();i++) {
-					nsListenerStruct *ls;
-					nsIDOMCompositionListener* mCompositionListener;
-					ls =(nsListenerStruct*)mCompositionListeners->ElementAt(i);
+		  if (nsnull != mCompositionListeners) {
+			  if (nsnull == *aDOMEvent) {
+				  ret = NS_NewDOMUIEvent(aDOMEvent,aPresContext,aEvent);
+			  }
+			  if (NS_OK == ret) {
+				  for(int i=0;i<mTextListeners->Count();i++) {
+					  nsListenerStruct *ls;
+					  nsIDOMCompositionListener* mCompositionListener;
+					  ls =(nsListenerStruct*)mCompositionListeners->ElementAt(i);
 
-					if (ls->mFlags & aFlags) {
-					  if (NS_OK == ls->mListener->QueryInterface(kIDOMCompositionListenerIID, (void**)&mCompositionListener)) {
-						  if (aEvent->message==NS_COMPOSITION_START) {
-							ret = mCompositionListener->HandleStartComposition(*aDOMEvent);
+					  if (ls->mFlags & aFlags) {
+					    if (NS_OK == ls->mListener->QueryInterface(kIDOMCompositionListenerIID, (void**)&mCompositionListener)) {
+						    if (aEvent->message==NS_COMPOSITION_START) {
+							    ret = mCompositionListener->HandleStartComposition(*aDOMEvent);
+						    }
+						    if (aEvent->message==NS_COMPOSITION_END) {
+							    ret = mCompositionListener->HandleEndComposition(*aDOMEvent);
+						    }
 						  }
-						  if (aEvent->message==NS_COMPOSITION_END) {
-							ret = mCompositionListener->HandleEndComposition(*aDOMEvent);
-						  }
-						}
-						NS_RELEASE(mCompositionListener);
+						  NS_RELEASE(mCompositionListener);
 					  }
 					  else {
-						PRBool correctSubType = PR_FALSE;
-						switch(aEvent->message) {
-						  case NS_COMPOSITION_START:
-							if (ls->mSubType & NS_EVENT_BITS_COMPOSITION_START) {
-							  correctSubType = PR_TRUE;
-							}
-							break;
-						  case NS_COMPOSITION_END:
-							if (ls->mSubType & NS_EVENT_BITS_COMPOSITION_END) {
-							  correctSubType = PR_TRUE;
-							}
-							break;
-						  default:
-							break;
-						}
-						if (correctSubType || ls->mSubType == NS_EVENT_BITS_NONE) {
-						  ret = ls->mListener->HandleEvent(*aDOMEvent);
-						}
+						  PRBool correctSubType = PR_FALSE;
+						  switch(aEvent->message) {
+						    case NS_COMPOSITION_START:
+							    if (ls->mSubType & NS_EVENT_BITS_COMPOSITION_START) {
+							      correctSubType = PR_TRUE;
+							    }
+							    break;
+						    case NS_COMPOSITION_END:
+							    if (ls->mSubType & NS_EVENT_BITS_COMPOSITION_END) {
+							      correctSubType = PR_TRUE;
+							    }
+							    break;
+						    default:
+							    break;
+						  }
+						  if (correctSubType || ls->mSubType == NS_EVENT_BITS_NONE) {
+						    ret = ls->mListener->HandleEvent(*aDOMEvent);
+						  }
 					  }
 					}
-					aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
-				  }
 				}
+			}
 			break;
 
-	case NS_TEXT_EVENT:
+	  case NS_TEXT_EVENT:
 #if DEBUG_TAGUE
   		printf("DOM: got text event\n");
 #endif
@@ -703,11 +732,10 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-          aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
-				}
-			}
-		}
-		break;
+				  }
+			  }
+		  }
+		  break;
 
     case NS_KEY_UP:
     case NS_KEY_DOWN:
@@ -766,7 +794,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
@@ -820,7 +847,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
@@ -829,6 +855,7 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
     case NS_FORM_SUBMIT:
     case NS_FORM_RESET:
     case NS_FORM_CHANGE:
+    case NS_FORM_SELECTED:
       if (nsnull != mFormListeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, aEvent);
@@ -851,6 +878,9 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                     break;
                   case NS_FORM_CHANGE:
                     ret = mFormListener->Change(*aDOMEvent);
+                    break;
+                  case NS_FORM_SELECTED:
+                    ret = mFormListener->Select(*aDOMEvent);
                     break;
                   default:
                     break;
@@ -875,6 +905,11 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                       correctSubType = PR_TRUE;
                     }
                     break;
+                  case NS_FORM_SELECTED:
+                    if (ls->mSubType & NS_EVENT_BITS_FORM_SELECT) {
+                      correctSubType = PR_TRUE;
+                    }
+                    break;
                   default:
                     break;
                 }
@@ -883,7 +918,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
@@ -891,8 +925,7 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
 
     case NS_PAGE_LOAD:
     case NS_PAGE_UNLOAD:
-    case NS_POPUP_CONSTRUCT:
-    case NS_POPUP_DESTRUCT:
+    
       if (nsnull != mLoadListeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, aEvent);
@@ -931,16 +964,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                       correctSubType = PR_TRUE;
                     }
                     break;
-                  case NS_POPUP_CONSTRUCT:
-                    if (ls->mSubType & NS_EVENT_BITS_LOAD_CONSTRUCT) {
-                      correctSubType = PR_TRUE;
-                    }
-                    break;
-                  case NS_POPUP_DESTRUCT:
-                    if (ls->mSubType & NS_EVENT_BITS_LOAD_DESTRUCT) {
-                      correctSubType = PR_TRUE;
-                    }
-                    break;
                   default:
                     break;
                 }
@@ -949,7 +972,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret) ? aEventStatus : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
@@ -983,9 +1005,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 }
               }
             }
-            aEventStatus = (NS_OK == ret)
-              ? aEventStatus
-              : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
@@ -1030,18 +1049,86 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext& aPresContext,
                 ret = ls->mListener->HandleEvent(*aDOMEvent);
               }
             }
-            aEventStatus = (NS_OK == ret)
-              ? aEventStatus
-              : nsEventStatus_eConsumeNoDefault;
           }
         }
       }
       break;
 
+    case NS_MENU_CREATE:
+    case NS_MENU_DESTROY:
+    case NS_MENU_ACTION:
+      if (nsnull != mMenuListeners) {
+        if (nsnull == *aDOMEvent) {
+          ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, aEvent);
+        }
+        if (NS_OK == ret) {
+          for (int i=0; i<mMenuListeners->Count(); i++) {
+            nsListenerStruct *ls;
+            nsIDOMMenuListener *mMenuListener;
+
+            ls = (nsListenerStruct*)mMenuListeners->ElementAt(i);
+
+            if (ls->mFlags & aFlags) {
+              if (NS_OK == ls->mListener->QueryInterface(kIDOMMenuListenerIID, (void**)&mMenuListener)) {
+                switch(aEvent->message) {
+                  case NS_MENU_CREATE:
+                    ret = mMenuListener->Create(*aDOMEvent);
+                    break;
+                  case NS_MENU_DESTROY:
+                    ret = mMenuListener->Destroy(*aDOMEvent);
+                    break;
+                  case NS_MENU_ACTION:
+                    ret = mMenuListener->Action(*aDOMEvent);
+                    break;
+                  default:
+                    break;
+                }
+                NS_RELEASE(mMenuListener);
+              }
+              else {
+                PRBool correctSubType = PR_FALSE;
+                switch(aEvent->message) {
+                  case NS_MENU_CREATE:
+                    if (ls->mSubType & NS_EVENT_BITS_MENU_CREATE) {
+                      correctSubType = PR_TRUE;
+                    }
+                    break;
+                  case NS_MENU_DESTROY:
+                    if (ls->mSubType & NS_EVENT_BITS_MENU_DESTROY) {
+                      correctSubType = PR_TRUE;
+                    }
+                    break;
+                  case NS_MENU_ACTION:
+                    if (ls->mSubType & NS_EVENT_BITS_MENU_ACTION) {
+                      correctSubType = PR_TRUE;
+                    }
+                    break;
+                  default:
+                    break;
+                }
+                if (correctSubType || ls->mSubType == NS_EVENT_BITS_NONE) {
+                  ret = ls->mListener->HandleEvent(*aDOMEvent);
+                }
+              }
+            }
+          }
+        }
+      }
+      break;
 
     default:
       break;
   }
+  //XXX This is going away
+  aEventStatus = (NS_OK == ret)
+    ? aEventStatus
+    : nsEventStatus_eConsumeNoDefault;
+
+  // This is correct
+  aEventStatus = (aEvent->flags & NS_EVENT_FLAG_NO_DEFAULT)
+    ? nsEventStatus_eConsumeNoDefault
+    : aEventStatus;
+
   return NS_OK;
 }
 
@@ -1073,6 +1160,23 @@ nsresult nsEventListenerManager::CaptureEvent(nsIDOMEventListener *aListener)
 
 nsresult nsEventListenerManager::ReleaseEvent(nsIDOMEventListener *aListener)
 {
+  return NS_OK;
+}
+
+nsresult nsEventListenerManager::RemoveAllListeners()
+{
+  ReleaseListeners(&mEventListeners);
+  ReleaseListeners(&mMouseListeners);
+  ReleaseListeners(&mMouseMotionListeners);
+  ReleaseListeners(&mKeyListeners);
+  ReleaseListeners(&mLoadListeners);
+  ReleaseListeners(&mFocusListeners);
+  ReleaseListeners(&mFormListeners);
+  ReleaseListeners(&mDragListeners);
+  ReleaseListeners(&mPaintListeners);
+  ReleaseListeners(&mTextListeners);
+  ReleaseListeners(&mCompositionListeners);
+
   return NS_OK;
 }
 

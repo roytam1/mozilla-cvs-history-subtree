@@ -20,6 +20,7 @@
 
 #include "nsMsgFolder.h"	 
 #include "nsMsgFolderFlags.h"
+#include "nsIMessage.h"
 #include "prprf.h"
 #include "nsMsgKeyArray.h"
 #include "nsMsgDatabase.h"
@@ -33,15 +34,12 @@
 #include "nsCOMPtr.h"
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
+#include "nsIAllocator.h"
 
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kMsgMailSessionCID,					NS_MSGMAILSESSION_CID);
 
 
-// we need this because of an egcs 1.0 (and possibly gcc) compiler bug
-// that doesn't allow you to call ::nsISupports::GetIID() inside of a class
-// that multiply inherits from nsISupports
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 nsMsgFolder::nsMsgFolder(void)
   : nsRDFResource(),
@@ -71,6 +69,7 @@ nsMsgFolder::nsMsgFolder(void)
 
 	mListeners = new nsVoidArray();
 
+	m_server = nsnull;
 }
 
 nsMsgFolder::~nsMsgFolder(void)
@@ -96,7 +95,7 @@ NS_IMETHODIMP nsMsgFolder::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
 	if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
 	*aInstancePtr = nsnull;
-	if (aIID.Equals(nsIMsgFolder::GetIID()) || aIID.Equals(nsIFolder::GetIID()))
+	if (aIID.Equals(nsCOMTypeInfo<nsIMsgFolder>::GetIID()) || aIID.Equals(nsCOMTypeInfo<nsIFolder>::GetIID()))
 	{
 		*aInstancePtr = NS_STATIC_CAST(nsIMsgFolder*, this);
 	}              
@@ -174,7 +173,7 @@ nsMsgFolder::FindSubFolder(const char *subFolderName, nsIFolder **aFolder)
 	if(NS_FAILED(rv)) 
 		return rv;
 
-	nsString2 uri(eOneByte);
+	nsCAutoString uri;
 	uri.Append(mURI);
 	uri.Append('/');
 
@@ -306,21 +305,28 @@ NS_IMETHODIMP nsMsgFolder::GetServer(nsIMsgIncomingServer ** aServer)
 		rv = session->GetAccountManager(getter_AddRefs(accountManager));
 		if(NS_FAILED(rv)) return rv;
 
-		char * hostname = nsnull;
-		rv = GetHostName(&hostname);
+    char * hostname = nsnull;
+		rv = GetHostname(&hostname);
 		if(NS_FAILED(rv)) return rv;
 
-		nsCOMPtr<nsISupportsArray> servers;
-		rv = accountManager->FindServersByHostname(hostname,
-                                               GetIncomingServerType(),
-                                               getter_AddRefs(servers));
+    char * username = nsnull;
+    rv = GetUsername(&username);
+    if (NS_FAILED(rv)) return rv;
+    
+    nsIMsgIncomingServer *server;
+		rv = accountManager->FindServer(username,
+                                    hostname,
+                                    GetIncomingServerType(),
+                                    &server);
+    PR_FREEIF(username);
 		PR_FREEIF(hostname);
 		if (NS_FAILED(rv)) return rv;
-
-		// mscott: this is pretty bogus....we should be required by FindServers
-		// to pass in enough information to uniquely identify ONE
-		// server. we need at least the user name and host name.
-		m_server = do_QueryInterface(servers->ElementAt(0));
+	
+		m_server = server;
+		// release because we don't wan't to keep a reference.
+		// the server keeps a reference to the folder, and if the
+		// folder keeps one back to the server, we'd get a cycle.
+		NS_IF_RELEASE(server);
 	}
 
 	if (aServer)
@@ -334,40 +340,49 @@ NS_IMETHODIMP nsMsgFolder::GetServer(nsIMsgIncomingServer ** aServer)
 	return rv;
 }
 
-NS_IMETHODIMP nsMsgFolder::GetPrettyName(char ** name)
+NS_IMETHODIMP nsMsgFolder::GetPrettyName(PRUnichar ** name)
 {
-  char *cmName = mName.ToNewCString();
-	if(cmName)
-	{
-		if (name) *name = PL_strdup(cmName);
-		delete[] cmName;
-	  return NS_OK;
-	}
-	else
-		return NS_ERROR_OUT_OF_MEMORY;
+	if (!name)
+		return NS_ERROR_NULL_POINTER;
+	*name = mName.ToNewUnicode();
+	return (*name) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
-NS_IMETHODIMP nsMsgFolder::SetPrettyName(char *name)
+NS_IMETHODIMP nsMsgFolder::SetPrettyName(PRUnichar *name)
 {
   mName = name;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgFolder::GetName(char **name)
+NS_IMETHODIMP nsMsgFolder::GetName(PRUnichar **name)
 {
-  char *cmName = mName.ToNewCString();
-	if(cmName)
-	{
-		if (name) *name = PL_strdup(cmName);
-		delete[] cmName;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_OUT_OF_MEMORY;
+	if (!name)
+		return NS_ERROR_NULL_POINTER;
+  
+  *name = nsnull;
+
+  // cache the name in mName
+  if (mName.IsEmpty()) {
+    // return the leaf of this URI
+    char *lastSlash = PL_strrchr(mURI, '/');
+    if (lastSlash) {
+      lastSlash++;
+      mName = lastSlash;
+    } else {
+      // no slashes, return the whole URI
+      mName = mURI;
+    }
+  }
+
+  *name = mName.ToNewUnicode();
+  
+  if (!(*name)) return NS_ERROR_OUT_OF_MEMORY;
+	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgFolder::SetName(char * name)
+NS_IMETHODIMP nsMsgFolder::SetName(PRUnichar * name)
 {
+  // override the URI-generated name
 	mName = name;
 	return NS_OK;
 }
@@ -382,8 +397,8 @@ NS_IMETHODIMP nsMsgFolder::GetChildNamed(const char *name, nsISupports ** aChild
 	nsCOMPtr<nsIMsgFolder> folder;
 
 	PRUint32 count;
-  rv = mSubFolders->Count(&count);
-  if (NS_FAILED(rv)) return rv;
+	rv = mSubFolders->Count(&count);
+	if (NS_FAILED(rv)) return rv;
 
 	for (PRUint32 i = 0; i < count; i++)
 	{
@@ -391,24 +406,70 @@ NS_IMETHODIMP nsMsgFolder::GetChildNamed(const char *name, nsISupports ** aChild
 		folder = do_QueryInterface(supports, &rv);
 		if(NS_SUCCEEDED(rv))
 		{
-			char *folderName;
+			PRUnichar *folderName;
 
 			folder->GetName(&folderName);
 			// case-insensitive compare is probably LCD across OS filesystems
-			if (folderName && PL_strcasecmp(name, folderName)!=0)
+			if (folderName && nsCRT::strcasecmp(folderName, name)==0)
 			{
 				*aChild = folder;
 				delete[] folderName;
 				return NS_OK;
 			}
-		delete[] folderName;
+			delete[] folderName;
+		}
+	}
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgFolder::GetChildWithURI(const char *uri, PRBool deep, nsIMsgFolder ** child)
+{
+	NS_ASSERTION(child, "NULL child");
+	nsresult rv;
+	// will return nsnull if we can't find it
+	*child = nsnull;
+
+
+	PRUint32 count;
+	rv = mSubFolders->Count(&count);
+	if (NS_FAILED(rv)) return rv;
+
+	for (PRUint32 i = 0; i < count; i++)
+	{
+		nsCOMPtr<nsISupports> supports = getter_AddRefs(mSubFolders->ElementAt(i));
+		nsCOMPtr<nsIRDFResource> folderResource = do_QueryInterface(supports);
+		nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(supports);
+		if(folderResource  && folder)
+		{
+			char *folderURI;
+			rv = folderResource->GetValue(&folderURI);
+			if(NS_FAILED(rv))
+				return rv;
+
+			// case-insensitive compare is probably LCD across OS filesystems
+			PRBool equal = (folderURI && nsCRT::strcasecmp(folderURI, uri)==0);
+			nsAllocator::Free(folderURI);
+			if (equal)
+			{
+				*child = folder;
+				NS_ADDREF(*child);
+				return NS_OK;
+			}
+			else if(deep)
+			{
+				rv = folder->GetChildWithURI(uri, deep, child);
+				if(NS_FAILED(rv))
+					return rv;
+
+				if(*child)
+					return NS_OK;
+			}
 		}
   }
   return NS_OK;
 }
 
-
-NS_IMETHODIMP nsMsgFolder::GetPrettiestName(char **name)
+NS_IMETHODIMP nsMsgFolder::GetPrettiestName(PRUnichar **name)
 {
   if (NS_SUCCEEDED(GetPrettyName(name)))
     return NS_OK;
@@ -592,11 +653,21 @@ NS_IMETHODIMP nsMsgFolder::CreateSubfolder(const char *folderName)
 
 }
 
+NS_IMETHODIMP nsMsgFolder::Compact()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgFolder::EmptyTrash()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 NS_IMETHODIMP nsMsgFolder::Rename(const char *name)
 {
     nsresult status = NS_OK;
-	status = SetName((char*)name);
+	nsAutoString2 unicharString(name);
+	status = SetName((PRUnichar *) unicharString.GetUnicode());
 	//After doing a SetName we need to make sure that broadcasting this message causes a
 	//new sort to happen.
 #ifdef HAVE_MASTER
@@ -718,7 +789,7 @@ NS_IMETHODIMP nsMsgFolder::SetDepth(PRUint32 depth)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgFolder::UpdateSummaryTotals()
+NS_IMETHODIMP nsMsgFolder::UpdateSummaryTotals(PRBool /* force */)
 {
 	//We don't support this
 	return NS_OK;
@@ -726,7 +797,7 @@ NS_IMETHODIMP nsMsgFolder::UpdateSummaryTotals()
 
 NS_IMETHODIMP nsMsgFolder::SummaryChanged()
 {
-	UpdateSummaryTotals();
+	UpdateSummaryTotals(PR_FALSE);
 #ifdef HAVE_MASTER
     if (mMaster)
         mMaster->BroadcastFolderChanged(this);
@@ -912,6 +983,7 @@ NS_IMETHODIMP nsMsgFolder::GetFoldersWithFlag(PRUint32 flags, nsIMsgFolder **res
 	if ((flags & mFlags) == flags) {
 		if (result && (num < resultsize)) {
 			result[num] = this;
+			NS_IF_ADDREF(result[num]);
 		}
 		num++;
 	}
@@ -921,10 +993,11 @@ NS_IMETHODIMP nsMsgFolder::GetFoldersWithFlag(PRUint32 flags, nsIMsgFolder **res
 	PRUint32 cnt;
   rv = mSubFolders->Count(&cnt);
   if (NS_SUCCEEDED(rv)) {
-    for (PRUint32 i=0; i < cnt; i++) {
-      nsCOMPtr<nsISupports> supports = getter_AddRefs(mSubFolders->ElementAt(i));
-      folder = do_QueryInterface(supports, &rv);
-      if(NS_SUCCEEDED(rv))
+    for (PRUint32 i=0; i < cnt; i++) 
+	{
+		nsCOMPtr<nsISupports> supports = getter_AddRefs(mSubFolders->ElementAt(i));
+		folder = do_QueryInterface(supports, &rv);
+      if(NS_SUCCEEDED(rv) && folder)
       {
         // CAREFUL! if NULL is passed in for result then the caller
         // still wants the full count!  Otherwise, the result should be at most the
@@ -1248,7 +1321,8 @@ NS_IMETHODIMP nsMsgFolder::UserNeedsToAuthenticateForFolder(PRBool displayOnly, 
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgFolder::GetUsersName(char **userName)
+#if 0
+NS_IMETHODIMP nsMsgFolder::GetUsername(char **userName)
 {
 	if(!userName)
 		return NS_ERROR_NULL_POINTER;
@@ -1257,7 +1331,7 @@ NS_IMETHODIMP nsMsgFolder::GetUsersName(char **userName)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgFolder::GetHostName(char **hostName)
+NS_IMETHODIMP nsMsgFolder::GetHostname(char **hostName)
 {
 	if(!hostName)
 		return NS_ERROR_NULL_POINTER;
@@ -1265,6 +1339,7 @@ NS_IMETHODIMP nsMsgFolder::GetHostName(char **hostName)
 	*hostName = "";
 	return NS_OK;
 }
+#endif
 
 NS_IMETHODIMP nsMsgFolder::GetNewMessages()
 {
@@ -1286,7 +1361,7 @@ NS_IMETHODIMP nsMsgFolder::SetBiffState(PRUint32 aBiffState)
 		PRUint32 oldBiffState = mBiffState;
 		mBiffState = aBiffState;
 		nsCOMPtr<nsISupports> supports;
-		if(NS_SUCCEEDED(QueryInterface(kISupportsIID, getter_AddRefs(supports))))
+		if(NS_SUCCEEDED(QueryInterface(nsCOMTypeInfo<nsISupports>::GetIID(), getter_AddRefs(supports))))
 			NotifyPropertyFlagChanged(supports, "BiffState", oldBiffState, mBiffState);
 	}
 	return NS_OK;
@@ -1324,23 +1399,27 @@ NS_IMETHODIMP nsMsgFolder::GetNewMessagesNotificationDescription(PRUnichar * *aD
 	nsString description("");
 	nsCOMPtr<nsIMsgIncomingServer> server;
 	rv = GetServer(getter_AddRefs(server));
+  
 	if(NS_SUCCEEDED(rv))
 	{
-		char *serverName = nsnull;
-		rv = server->GetPrettyName(&serverName);
-		if(NS_SUCCEEDED(rv) && PL_strcmp(serverName, ""))
-			description = serverName;
-		else
+		if (!(mFlags & MSG_FOLDER_FLAG_INBOX))
 		{
-			if(serverName)
-				PR_Free(serverName);
-			rv = server->GetHostName(&serverName);
-			if(NS_SUCCEEDED(rv))
-				description = serverName;
+			nsXPIDLString folderName;
+			rv = GetPrettyName(getter_Copies(folderName));
+			if (NS_SUCCEEDED(rv) && folderName)
+				description = folderName;
 		}
-		if(serverName)
-		  PR_Free(serverName);
 
+    // append the server name
+    nsXPIDLString serverName;
+		rv = server->GetPrettyName(getter_Copies(serverName));
+		if(NS_SUCCEEDED(rv)) {
+      // put this test here because we don't want to just put "folder name on"
+      // in case the above failed
+      if (!(mFlags & MSG_FOLDER_FLAG_INBOX))
+        description += " on ";
+			description += serverName;
+    }
 	}
 	*aDescription = description.ToNewUnicode();
 	return NS_OK;
@@ -1363,13 +1442,84 @@ NS_IMETHODIMP nsMsgFolder::GetRootFolder(nsIMsgFolder * *aRootFolder)
 	if(NS_FAILED(rv) || !aRoot)
 		return rv;
 
-	return aRoot->QueryInterface(nsIMsgFolder::GetIID(), (void**)aRootFolder);
+	return aRoot->QueryInterface(nsCOMTypeInfo<nsIMsgFolder>::GetIID(), (void**)aRootFolder);
+}
+
+NS_IMETHODIMP
+nsMsgFolder::GetMsgDatabase(nsIMsgDatabase** aMsgDatabase)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMsgFolder::GetPath(nsIFileSpec * *aPath)
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMsgFolder::MarkMessagesRead(nsISupportsArray *messages, PRBool markRead)
+{
+	PRUint32 count;
+	nsresult rv;
+
+	rv = messages->Count(&count);
+	if(NS_FAILED(rv))
+		return rv;
+
+	for(PRUint32 i = 0; i < count; i++)
+	{
+		nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(i));
+		nsCOMPtr<nsIMessage> message = do_QueryInterface(msgSupports);
+
+		if(message)
+			rv = message->MarkRead(markRead);
+
+		if(NS_FAILED(rv))
+			return rv;
+
+	}
+	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMsgFolder::MarkAllMessagesRead(void)
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMsgFolder::CopyMessages(nsIMsgFolder* srcFolder,
+                          nsISupportsArray *messages,
+                          PRBool isMove,
+                          nsITransactionManager* txnMgr,
+                          nsIMsgCopyServiceListener* listener)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMsgFolder::CopyFileMessage(nsIFileSpec* fileSpec,
+                             nsIMessage* messageToReplace,
+                             PRBool isDraftOrTemplate,
+                             nsITransactionManager* txnMgr,
+                             nsIMsgCopyServiceListener* listener)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgFolder::MatchName(nsString *name, PRBool *matches)
+{
+	if (!matches)
+		return NS_ERROR_NULL_POINTER;
+	*matches = mName.EqualsIgnoreCase(*name);
+	return NS_OK;
 }
 
 nsresult nsMsgFolder::NotifyPropertyChanged(char *property, char *oldValue, char* newValue)
 {
 	nsCOMPtr<nsISupports> supports;
-	if(NS_SUCCEEDED(QueryInterface(kISupportsIID, getter_AddRefs(supports))))
+	if(NS_SUCCEEDED(QueryInterface(nsCOMTypeInfo<nsISupports>::GetIID(), getter_AddRefs(supports))))
 	{
 		PRInt32 i;
 		for(i = 0; i < mListeners->Count(); i++)

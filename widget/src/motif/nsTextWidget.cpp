@@ -16,14 +16,15 @@
  * Reserved.
  */
 
+#include <Xm/Text.h>
+
 #include "nsTextWidget.h"
 #include "nsToolkit.h"
 #include "nsColor.h"
 #include "nsGUIEvent.h"
+#include "xlibrgb.h"
 #include "nsString.h"
 #include "nsXtEventHandler.h"
-
-#include <Xm/Text.h>
 
 #define DBG 0
 
@@ -42,6 +43,10 @@ nsTextWidget::nsTextWidget() : nsTextHelper(),
   mMakeReadOnly(PR_FALSE),
   mMakePassword(PR_FALSE)
 {
+  mBackground = NS_RGB(127, 127, 127);
+  mForeground = NS_RGB(255, 255, 255);
+  mBackgroundPixel = xlib_rgb_xpixel_from_rgb(mBackground);
+  mForegroundPixel = xlib_rgb_xpixel_from_rgb(mForeground);
 }
 
 //-------------------------------------------------------------------------
@@ -55,17 +60,18 @@ nsTextWidget::~nsTextWidget()
 
 //-------------------------------------------------------------------------
 NS_METHOD nsTextWidget::Create(nsIWidget *aParent,
-                      const nsRect &aRect,
-                      EVENT_CALLBACK aHandleEventFunction,
-                      nsIDeviceContext *aContext,
-                      nsIAppShell *aAppShell,
-                      nsIToolkit *aToolkit,
-                      nsWidgetInitData *aInitData) 
+                               const nsRect &aRect,
+                               EVENT_CALLBACK aHandleEventFunction,
+                               nsIDeviceContext *aContext,
+                               nsIAppShell *aAppShell,
+                               nsIToolkit *aToolkit,
+                               nsWidgetInitData *aInitData)
 {
+  printf("nsTextWidget::Create called\n");
   aParent->AddChild(this);
   Widget parentWidget = nsnull;
 
-  if (DBG) fprintf(stderr, "aParent 0x%x\n", aParent);
+  if (DBG) fprintf(stderr, "aParent 0x%x\n", (unsigned int)aParent);
 
   if (aParent) {
     parentWidget = (Widget) aParent->GetNativeData(NS_NATIVE_WIDGET);
@@ -76,17 +82,19 @@ NS_METHOD nsTextWidget::Create(nsIWidget *aParent,
   InitToolkit(aToolkit, aParent);
   InitDeviceContext(aContext, parentWidget);
 
-  mWidget = ::XtVaCreateManagedWidget("button",
-                                    xmTextWidgetClass, 
-                                    parentWidget,
-                                    XmNwidth, aRect.width,
-                                    XmNheight, aRect.height,
-                                    XmNrecomputeSize, False,
-                                    XmNhighlightOnEnter, False,
-                                    XmNeditable, mMakeReadOnly?False:True,
-		                    XmNx, aRect.x,
-		                    XmNy, aRect.y, 
-                                    nsnull);
+  mWidget = ::XtVaCreateManagedWidget("nsTextWidget",
+                                      xmTextWidgetClass, 
+                                      parentWidget,
+                                      XmNwidth, aRect.width,
+                                      XmNheight, aRect.height,
+                                      XmNrecomputeSize, False,
+                                      XmNbackground, mBackgroundPixel,
+                                      XmNforeground, mForegroundPixel,
+                                      XmNhighlightOnEnter, False,
+                                      XmNeditable, mMakeReadOnly?False:True,
+                                      XmNx, aRect.x,
+                                      XmNy, aRect.y, 
+                                      nsnull);
 
   // save the event callback function
   mEventCallback = aHandleEventFunction;
@@ -110,7 +118,10 @@ NS_METHOD nsTextWidget::Create(nsIWidget *aParent,
   if (mMakePassword) {
     SetPassword(PR_TRUE);
     PasswordData * data = new PasswordData();
-    data->mPassword = "";
+    if (data) {
+      data->mPassword = "";
+    }
+    else return NS_ERROR_OUT_OF_MEMORY;
     XtVaSetValues(mWidget, XmNuserData, data, NULL);
   }
   return NS_OK;
@@ -133,37 +144,6 @@ nsresult nsTextWidget::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     }
 
     return result;
-}
-
-
-//-------------------------------------------------------------------------
-NS_METHOD nsTextWidget::Create(nsNativeWidget aParent,
-                      const nsRect &aRect,
-                      EVENT_CALLBACK aHandleEventFunction,
-                      nsIDeviceContext *aContext,
-                      nsIAppShell *aAppShell,
-                      nsIToolkit *aToolkit,
-                      nsWidgetInitData *aInitData)
-{
-  return NS_ERROR_FAILURE;
-}
-
-
-//-------------------------------------------------------------------------
-//
-// paint, resizes message - ignore
-//
-//-------------------------------------------------------------------------
-PRBool nsTextWidget::OnPaint(nsPaintEvent & aEvent)
-{
-  return PR_FALSE;
-}
-
-
-//--------------------------------------------------------------
-PRBool nsTextWidget::OnResize(nsSizeEvent &aEvent)
-{
-  return PR_FALSE;
 }
 
 //--------------------------------------------------------------
@@ -190,5 +170,3 @@ NS_METHOD nsTextWidget::SetPassword(PRBool aIsPassword)
   nsTextHelper::SetPassword(aIsPassword);
   return NS_OK;
 }
-
-

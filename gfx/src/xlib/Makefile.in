@@ -24,30 +24,42 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
-LIBRARY_NAME = gfxxlib
+LIBRARY_NAME = gfx_xlib
 
 MODULE=raptor 
 
 REQUIRES=util img xpcom raptor netlib ps
 
-DEFINES += -D_IMPL_NS_GFXONXP -DUSE_MOZILLA_TYPES
-CXXFLAGS += $(TK_CFLAGS)
-INCLUDES += $(TK_CFLAGS)
-EXTRA_DSO_LDOPTS += $(TOOLKIT_LIBS) $(XLDFLAGS) $(XLIBS)
-
-CPPSRCS = nsFontMetricsXlib.cpp \
-	nsDeviceContextXlib.cpp \
-	nsDrawingSurfaceXlib.cpp \
-	nsRegionXlib.cpp \
-	nsImageXlib.cpp \
-	nsRenderingContextXlib.cpp \
+CPPSRCS =\
 	nsDeviceContextSpecFactoryX.cpp \
 	nsDeviceContextSpecXlib.cpp \
-	nsTimer.cpp \
-	nsGfxFactoryXlib.cpp
+	nsDeviceContextXlib.cpp \
+	nsDrawingSurfaceXlib.cpp \
+	nsFontMetricsXlib.cpp \
+	nsGfxFactoryXlib.cpp \
+	nsImageXlib.cpp \
+	nsRegionXlib.cpp \
+	nsRenderingContextXlib.cpp \
+	$(NULL)
 
-CSRCS = xlibrgb.c
+ifdef TOOLKIT_EXORCISM
+EXTRA_DSO_LDOPTS += -L$(DIST)/bin -lxlibrgb $(MOZ_XLIB_LDFLAGS)
+else
+EXTRA_DSO_LDOPTS += $(TK_LIBS)
+endif
 
 include $(topsrcdir)/config/rules.mk
 
+ifdef TOOLKIT_EXORCISM
+CXXFLAGS += $(MOZ_XLIB_CFLAGS)
+else
+CXXFLAGS += $(TK_CFLAGS)
+endif
+
+DEFINES		+= -D_IMPL_NS_GFXNONXP
+
+INCLUDES	+= \
+		-I$(srcdir)/. \
+		-I$(srcdir)/.. \
+		$(NULL)
 

@@ -20,6 +20,7 @@
 
 #include "nscore.h"
 #include "nsHTMLContainerFrame.h"
+#include "nsITableLayout.h"
 
 struct OuterTableReflowState;
 struct nsStyleText;
@@ -32,15 +33,13 @@ struct nsStyleText;
  * main frame for an nsTable content object, 
  * the nsTableOuterFrame contains 0 or one caption frame, and a nsTableFrame
  * psuedo-frame (referred to as the "inner frame').
- * <P> Unlike other frames that handle continuing across breaks, nsTableOuterFrame
- * has no notion of "unmapped" children.  All children (caption and inner table)
- * have frames created in Pass 1, so from the layout process' point of view, they
- * are always mapped
- *
  */
-class nsTableOuterFrame : public nsHTMLContainerFrame
+class nsTableOuterFrame : public nsHTMLContainerFrame, public nsITableLayout
 {
 public:
+
+  // nsISupports
+  NS_DECL_ISUPPORTS_INHERITED
 
   /** instantiate a new instance of nsTableOuterFrame.
     * @param aResult    the new object is returned in this out-param
@@ -54,6 +53,20 @@ public:
   NS_IMETHOD  SetInitialChildList(nsIPresContext& aPresContext,
                                   nsIAtom*        aListName,
                                   nsIFrame*       aChildList);
+
+  NS_IMETHOD AppendFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD InsertFrames(nsIPresContext& aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aPrevFrame,
+                          nsIFrame*       aFrameList);
+  NS_IMETHOD RemoveFrame(nsIPresContext& aPresContext,
+                         nsIPresShell&   aPresShell,
+                         nsIAtom*        aListName,
+                         nsIFrame*       aOldFrame);
 
   /** @see nsIFrame::Paint */
   NS_IMETHOD Paint(nsIPresContext& aPresContext,
@@ -87,6 +100,18 @@ public:
     * The return value is only meaningful after the caption has had a pass1 reflow.
     */
   nscoord GetMinCaptionWidth();
+
+  /*---------------- nsITableLayout methods ------------------------*/
+
+  /** @see nsITableFrame::GetCellDataAt */
+  NS_IMETHOD GetCellDataAt(PRInt32 aRowIndex, PRInt32 aColIndex, 
+                           nsIDOMElement* &aCell,   //out params
+                           PRInt32& aStartRowIndex, PRInt32& aStartColIndex, 
+                           PRInt32& aRowSpan, PRInt32& aColSpan,
+                           PRBool& aIsSelected);
+
+  /** @see nsITableFrame::GetTableSize */
+  NS_IMETHOD GetTableSize(PRInt32& aRowCount, PRInt32& aColCount);
 
 protected:
 
@@ -197,15 +222,13 @@ protected:
   NS_IMETHOD IR_CaptionInserted(nsIPresContext&        aPresContext,
                                 nsHTMLReflowMetrics&   aDesiredSize,
                                 OuterTableReflowState& aReflowState,
-                                nsReflowStatus&        aStatus,
-                                nsIFrame *             aCaptionFrame,
-                                PRBool                 aReplace);
+                                nsReflowStatus&        aStatus);
 
-  /** handle incremental reflow notification that a caption was deleted. */
-  NS_IMETHOD IR_CaptionRemoved(nsIPresContext&        aPresContext,
-                               nsHTMLReflowMetrics&   aDesiredSize,
-                               OuterTableReflowState& aReflowState,
-                               nsReflowStatus&        aStatus);
+  /** handle incremental reflow notification that we have dirty child frames */
+  NS_IMETHOD IR_ReflowDirty(nsIPresContext&        aPresContext,
+                            nsHTMLReflowMetrics&   aDesiredSize,
+                            OuterTableReflowState& aReflowState,
+                            nsReflowStatus&        aStatus);
 
   /** handle incremental reflow notification that the caption style was changed
     * such that it is now left|right instead of top|bottom, or vice versa.

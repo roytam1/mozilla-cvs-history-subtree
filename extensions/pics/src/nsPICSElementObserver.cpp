@@ -25,7 +25,7 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIServiceManager.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
@@ -130,15 +130,29 @@ NS_IMETHODIMP nsPICSElementObserver::Notify(PRUint32 aDocumentID, eHTMLTags aTag
                     PRUint32 numOfAttributes, const PRUnichar* nameArray[], 
                     const PRUnichar* valueArray[]) 
 {
+  if(aTag == eHTMLTag_meta) {
+      return Notify(aDocumentID, numOfAttributes, nameArray, valueArray);
+  }
+  return NS_OK;
+}
+NS_IMETHODIMP nsPICSElementObserver::Notify(PRUint32 aDocumentID, const PRUnichar* aTag, 
+                    PRUint32 numOfAttributes, const PRUnichar* nameArray[], 
+                    const PRUnichar* valueArray[]) 
+{
+  return Notify(aDocumentID, numOfAttributes, nameArray, valueArray);
+}
+NS_IMETHODIMP nsPICSElementObserver::Notify(PRUint32 aDocumentID,  
+                    PRUint32 numOfAttributes, const PRUnichar* nameArray[], 
+                    const PRUnichar* valueArray[]) 
+{
   nsresult rv;
   int status;
   nsIWebShellServices* ws;
 //  nsString theURL(aSpec);
 // char* url = aSpec.ToNewCString();
-  nsIURL* uaURL = nsnull;
+  nsIURI* uaURL = nsnull;
 //  rv = NS_NewURL(&uaURL, nsString(aSpec));
  
-  if(aTag == eHTMLTag_meta) {
     if(numOfAttributes >= 2) {
       const nsString& theValue1=valueArray[0];
       char *val1 = theValue1.ToNewCString();
@@ -159,7 +173,7 @@ NS_IMETHODIMP nsPICSElementObserver::Notify(PRUint32 aDocumentID, eHTMLTags aTag
           rv = service->NewURI(uriStr, nsnull, &uri);
           if (NS_FAILED(rv)) return rv;
 
-          rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&uaURL);
+          rv = uri->QueryInterface(nsIURI::GetIID(), (void**)&uaURL);
           NS_RELEASE(uri);
           if (NS_FAILED(rv)) return rv;
 #endif // NECKO
@@ -180,7 +194,7 @@ NS_IMETHODIMP nsPICSElementObserver::Notify(PRUint32 aDocumentID, eHTMLTags aTag
               if(ws) {
                 char * text = PR_GetEnv("NGLAYOUT_HOME");
                 nsString mtemplateURL = text ? text : "resource:/res/samples/picstest1.html";
-              //  ws->LoadURL(mtemplateURL, nsnull, nsnull);
+                //  ws->LoadURL(mtemplateURL, nsnull, nsnull);
                 nsCharsetSource s;
                 ws->SetRendering(PR_TRUE);
                 ws->StopDocumentLoad();
@@ -191,7 +205,6 @@ NS_IMETHODIMP nsPICSElementObserver::Notify(PRUint32 aDocumentID, eHTMLTags aTag
         } 
       }
     }
-  }
   return NS_OK;
     
 }

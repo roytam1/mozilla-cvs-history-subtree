@@ -28,7 +28,7 @@
 
 #include "nsIRDFContentSink.h"
 
-class nsIURL;
+class nsIURI;
 class nsVoidArray;
 class nsIRDFResource;
 class nsIRDFDataSource;
@@ -67,10 +67,10 @@ public:
     NS_IMETHOD AddComment(const nsIParserNode& aNode);
     NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
     NS_IMETHOD NotifyError(nsresult aErrorResult);
+    NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
 
     // nsIXMLContentSink
-    NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode);
-    NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode);
+    NS_IMETHOD AddXMLDecl(const nsIParserNode& aNode);    
     NS_IMETHOD AddCharacterData(const nsIParserNode& aNode);
     NS_IMETHOD AddUnparsedEntity(const nsIParserNode& aNode);
     NS_IMETHOD AddNotation(const nsIParserNode& aNode);
@@ -79,7 +79,7 @@ public:
     // nsIRDFContentSink
     NS_IMETHOD SetDataSource(nsIRDFDataSource* ds);
     NS_IMETHOD GetDataSource(nsIRDFDataSource*& ds);
-    NS_IMETHOD Init(nsIURL* aURL, nsINameSpaceManager* aNameSpaceManager);
+    NS_IMETHOD Init(nsIURI* aURL, nsINameSpaceManager* aNameSpaceManager);
 
 protected:
     // Text management
@@ -129,7 +129,7 @@ protected:
 
     nsVoidArray* mContextStack;
 
-    nsIURL*      mDocumentURL;
+    nsIURI*      mDocumentURL;
     PRUint32     mGenSym; // for generating anonymous resources
 };
 

@@ -25,6 +25,11 @@
 
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
+#include "nsCOMPtr.h"
+#include "nsIMsgFolder.h"
+#include "nsIMsgFolderCache.h"
+#include "nsIMsgFolderCacheElement.h"
+#include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
@@ -57,7 +62,7 @@ nsMsgIncomingServer::SetKey(char * serverKey)
     // in order to actually make use of the key, we need the prefs
     if (!m_prefs)
         rv = nsServiceManager::GetService(kPrefServiceCID,
-                                          nsIPref::GetIID(),
+                                          nsCOMTypeInfo<nsIPref>::GetIID(),
                                           (nsISupports**)&m_prefs);
 
     PR_FREEIF(m_serverKey);
@@ -94,6 +99,18 @@ nsMsgIncomingServer::PerformBiff()
 	return NS_ERROR_NOT_IMPLEMENTED;	
 }
 
+NS_IMETHODIMP nsMsgIncomingServer::WriteToFolderCache(nsIMsgFolderCache *folderCache)
+{
+	nsresult rv = NS_OK;
+	if (m_rootFolder)
+	{
+		nsCOMPtr <nsIMsgFolder> msgFolder = do_QueryInterface(m_rootFolder, &rv);
+		if (NS_SUCCEEDED(rv) && msgFolder)
+			rv = msgFolder->WriteToFolderCache(folderCache);
+	}
+	return rv;
+}
+
 char *
 nsMsgIncomingServer::getPrefName(const char *serverKey,
                                  const char *fullPrefName)
@@ -128,7 +145,7 @@ nsresult
 nsMsgIncomingServer::getDefaultBoolPref(const char *prefname,
                                         PRBool *val) {
   
-  char *fullPrefName = getDefaultPrefName(m_serverKey);
+  char *fullPrefName = getDefaultPrefName(prefname);
   nsresult rv = m_prefs->GetBoolPref(fullPrefName, val);
   PR_Free(fullPrefName);
 
@@ -178,7 +195,7 @@ nsresult
 nsMsgIncomingServer::getDefaultIntPref(const char *prefname,
                                         PRInt32 *val) {
   
-  char *fullPrefName = getDefaultPrefName(m_serverKey);
+  char *fullPrefName = getDefaultPrefName(prefname);
   nsresult rv = m_prefs->GetIntPref(fullPrefName, val);
   PR_Free(fullPrefName);
 
@@ -228,7 +245,7 @@ nsresult
 nsMsgIncomingServer::getDefaultCharPref(const char *prefname,
                                         char **val) {
   
-  char *fullPrefName = getDefaultPrefName(m_serverKey);
+  char *fullPrefName = getDefaultPrefName(prefname);
   nsresult rv = m_prefs->CopyCharPref(fullPrefName, val);
   PR_Free(fullPrefName);
 
@@ -241,7 +258,7 @@ nsMsgIncomingServer::getDefaultCharPref(const char *prefname,
 
 nsresult
 nsMsgIncomingServer::setCharPref(const char *prefname,
-                                 char * val)
+                                 const char * val)
 {
   nsresult rv;
   char *fullPrefName = getPrefName(m_serverKey, prefname);
@@ -262,27 +279,46 @@ nsMsgIncomingServer::setCharPref(const char *prefname,
 
 // pretty name is the display name to show to the user
 NS_IMETHODIMP
-nsMsgIncomingServer::GetPrettyName(char **retval) {
+nsMsgIncomingServer::GetPrettyName(PRUnichar **retval) {
 
-  char *val;
+  char *val=nsnull;
   nsresult rv = getCharPref("name", &val);
   if (NS_FAILED(rv)) return rv;
 
-  // if there's no pretty name, then just return the hostname
-  if (!val)
-    return GetHostName(retval);
+  nsString prettyName;
+  
+  // if there's no name, then just return the hostname
+  if (val) {
+    prettyName = val;
+  } else {
+    
+    nsXPIDLCString username;
+    rv = GetUsername(getter_Copies(username));
+    if (NS_FAILED(rv)) return rv;
+    if ((const char*)username &&
+        PL_strcmp((const char*)username, "")!=0) {
+      prettyName = username;
+      prettyName += " on ";
+    }
+    
+    nsXPIDLCString hostname;
+    rv = GetHostName(getter_Copies(hostname));
+    if (NS_FAILED(rv)) return rv;
+
+
+    prettyName += hostname;
+  }
+
+  *retval = prettyName.ToNewUnicode();
   
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsMsgIncomingServer::SetPrettyName(char *value) {
-  return setCharPref("name", value);
-}
-
-NS_IMETHODIMP
-nsMsgIncomingServer::GetType(char* *aType) {
-  return getCharPref("type", aType);
+nsMsgIncomingServer::SetPrettyName(PRUnichar *value) {
+  // this is lossy. Not sure what to do.
+  nsCString str(value);
+  return setCharPref("name", str.GetBuffer());
 }
 
 // use the convenience macros to implement the accessors
@@ -292,8 +328,10 @@ NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, Password, "password");
 NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, DoBiff, "check_new_mail");
 NS_IMPL_SERVERPREF_INT(nsMsgIncomingServer, BiffMinutes, "check_time");
 NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, RememberPassword, "remember_password");
-NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, LocalPath, "directory")
-
+NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, LocalPath, "directory");
+NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, Type, "type");
 
 /* what was this called in 4.x? */
+// pref("mail.pop3_gets_new_mail",				true);
+
 NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, DownloadOnBiff, "download_on_biff");

@@ -147,7 +147,10 @@ static void DebugDump(nsString& aString, ostream& aStream) {
   aStream.flush();
   printf("%s\n", oOutputStr);
 #else
- aString.DebugDump(aStream);
+  for (int i = 0; i < aString.Length(); i++) {
+    aStream << (char) aString[i];
+  }
+  aStream << "\n";
 #endif
 }
 
@@ -197,7 +200,6 @@ static void TestCollation(nsILocale *locale)
      PRUint8 *aKey1, *aKey2, *aKey3;
      PRUint32 i;
      PRInt32 result;
-     nsresult res;
 
       cout << "String data used:\n";
       cout << "string1: ";
@@ -438,6 +440,17 @@ static int compare1( const void *arg1, const void *arg2 )
   res = g_collationInst->CreateSortKey(g_CollationStrength, string2, key2);
   NS_ASSERTION(NS_SUCCEEDED(res), "CreateSortKey");
 
+  // dump collation keys
+  if (g_verbose) {
+    int i;
+    for (i = 0; i < key1.Length(); i++) 
+      printf("%.2x", key1[i]);
+    printf(" ");
+    for (i = 0; i < key2.Length(); i++) 
+      printf("%.2x", key2[i]);
+    printf("\n");
+  }
+
   res = g_collationInst->CompareSortKey(key1, key2, &result);
   NS_ASSERTION(NS_SUCCEEDED(res), "CreateSortKey");
   NS_ASSERTION(NS_SUCCEEDED((PRBool)(result == result2)), "result unmatch");
@@ -663,12 +676,59 @@ static void TestSort(nsILocale *locale, nsCollationStrength collationStrength, F
 //
 static void TestDateTimeFormat(nsILocale *locale)
 {
+  nsresult res;
+
+  cout << "==============================\n";
+  cout << "Start nsIScriptableDateFormat Test \n";
+  cout << "==============================\n";
+
+  nsIScriptableDateFormat *aScriptableDateFormat;
+  res = nsComponentManager::CreateInstance(kDateTimeFormatCID,
+                                           NULL,
+                                           nsIScriptableDateFormat::GetIID(),
+                                           (void**) &aScriptableDateFormat);
+  if(NS_FAILED(res) || ( aScriptableDateFormat == NULL ) ) {
+    cout << "\tnsIScriptableDateFormat CreateInstance failed\n";
+  }
+
+  const PRUnichar *aUnichar;
+  nsString aString;
+  PRUnichar aLocaleUnichar[1];
+  *aLocaleUnichar = 0;
+  res = aScriptableDateFormat->FormatDateTime(aLocaleUnichar, kDateFormatShort, kTimeFormatSeconds,
+                        1999, 
+                        7, 
+                        31, 
+                        8, 
+                        21, 
+                        58,
+                        &aUnichar);
+  aString.SetString(aUnichar);
+  DebugDump(aString, cout);
+
+  res = aScriptableDateFormat->FormatDate(aLocaleUnichar, kDateFormatLong,
+                        1970, 
+                        4, 
+                        20, 
+                        &aUnichar);
+  aString.SetString(aUnichar);
+  DebugDump(aString, cout);
+
+  res = aScriptableDateFormat->FormatTime(aLocaleUnichar, kTimeFormatSecondsForce24Hour,
+                        13, 
+                        59, 
+                        31,
+                        &aUnichar);
+  aString.SetString(aUnichar);
+  DebugDump(aString, cout);
+
+  aScriptableDateFormat->Release();
+
   cout << "==============================\n";
   cout << "Start nsIDateTimeFormat Test \n";
   cout << "==============================\n";
 
   nsIDateTimeFormat *t = NULL;
-  nsresult res;
   res = nsComponentManager::CreateInstance(kDateTimeFormatCID,
                                            NULL,
                                            nsIDateTimeFormat::GetIID(),
@@ -965,7 +1025,6 @@ int main(int argc, char** argv) {
 
   res = localeFactory->GetApplicationLocale(&locale);
   if (NS_FAILED(res) || locale == nsnull) cout << "GetApplicationLocale failed\n";
-
 	localeFactory->Release();
   
   // --------------------------------------------
@@ -1008,6 +1067,19 @@ int main(int argc, char** argv) {
       NS_IF_RELEASE(locale);
       res = NewLocale(&localeName, &locale);  // reset the locale
     }
+
+    // print locale string
+    PRUnichar *localeUnichar;
+    nsString aLocaleString, aCategory("NSILOCALE_COLLATE");
+    locale->GetCategory(aCategory.GetUnicode(), &localeUnichar);
+    aLocaleString.SetString(localeUnichar);
+    cout << "locale setting for collation is ";
+    DebugDump(aLocaleString, cout);
+    aCategory.SetString("NSILOCALE_TIME");
+    locale->GetCategory(aCategory.GetUnicode(), &localeUnichar);
+    aLocaleString.SetString(localeUnichar);
+    cout << "locale setting for time is ";
+    DebugDump(aLocaleString, cout);
 
     while (argc--) {
       if (!strcmp(argv[argc], "-col"))

@@ -30,9 +30,10 @@
 #include "nsIURL.h"
 #ifdef NECKO
 #include "nsIIOService.h"
-#include "nsIURI.h"
+#include "nsIURL.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #endif // NECKO
+#include "nsIBrowserWindow.h"
 #include "nsIWebShell.h"
 #include "nsIWebShellWindow.h"
 #include "nsIWidget.h"
@@ -148,20 +149,14 @@ nsToolkitCore::ShowDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   window = nsnull;
 
-  nsCOMPtr<nsIURL> urlObj;
+  nsCOMPtr<nsIURI> urlObj;
 #ifndef NECKO
   rv = NS_NewURL(getter_AddRefs(urlObj), aUrl);
 #else
   NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
-
-  nsIURI *uri = nsnull;
-  const char *uriStr = aUrl.GetBuffer();
-  rv = service->NewURI(uriStr, nsnull, &uri);
+  rv = service->NewURI(nsCAutoString(aUrl), nsnull, getter_AddRefs(urlObj));
   if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
-  NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv))
     return rv;
@@ -172,8 +167,10 @@ nsToolkitCore::ShowDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
-  appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
-                               nsnull, nsnull, 615, 480);
+  window = nsnull;
+  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE,
+                               NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                               nsnull, 615, 480, &window);
 
   if (window != nsnull)
     window->Show(PR_TRUE);
@@ -186,21 +183,15 @@ nsToolkitCore::ShowWindow(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsresult           rv;
 
-  nsCOMPtr<nsIURL> urlObj;
+  nsCOMPtr<nsIURI> urlObj;
 
 #ifndef NECKO
   rv = NS_NewURL(getter_AddRefs(urlObj), aUrl);
 #else
   NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
-
-  nsIURI *uri = nsnull;
-  const char *uriStr = aUrl.GetBuffer();
-  rv = service->NewURI(uriStr, nsnull, &uri);
+  rv = service->NewURI(nsCAutoString(aUrl), nsnull, getter_AddRefs(urlObj));
   if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
-  NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv))
     return rv;
@@ -212,11 +203,9 @@ nsToolkitCore::ShowWindow(const nsString& aUrl, nsIDOMWindow* aParent) {
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
   nsCOMPtr<nsIWebShellWindow> window;
-  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, *getter_AddRefs(window),
-                               nsnull, nsnull, 615, 480);
-
-  if (window)
-    window->Show(PR_TRUE);
+  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, NS_CHROME_ALL_CHROME,
+                               nsnull, NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+                               getter_AddRefs(window));
 
   return rv;
 }
@@ -309,20 +298,14 @@ nsToolkitCore::ShowWindowWithArgs(const nsString& aUrl,
 
   nsresult           rv;
 
-  nsCOMPtr<nsIURL> urlObj;
+  nsCOMPtr<nsIURI> urlObj;
 #ifndef NECKO
   rv = NS_NewURL(getter_AddRefs(urlObj), aUrl);
 #else
   NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
-
-  nsIURI *uri = nsnull;
-  const char *uriStr = aUrl.GetBuffer();
-  rv = service->NewURI(uriStr, nsnull, &uri);
+  rv = service->NewURI(nsCAutoString(aUrl), nsnull, getter_AddRefs(urlObj));
   if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
-  NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv))
     return rv;
@@ -337,11 +320,9 @@ nsToolkitCore::ShowWindowWithArgs(const nsString& aUrl,
   cb = nsDontQueryInterface<nsArgCallbacks>( new nsArgCallbacks( aArgs ) );
 
   nsCOMPtr<nsIWebShellWindow>  window;
-  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, *getter_AddRefs(window),
-                               nsnull, cb, 615, 650);
-
-  if (window)
-    window->Show(PR_TRUE);
+  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, NS_CHROME_ALL_CHROME,
+                               cb, NS_SIZETOCONTENT, NS_SIZETOCONTENT,
+                               getter_AddRefs(window));
 
   return rv;
 }
@@ -350,24 +331,15 @@ NS_IMETHODIMP
 nsToolkitCore::ShowModalDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsresult           rv;
-  nsIWebShellWindow  *window;
 
-  window = nsnull;
-
-  nsCOMPtr<nsIURL> urlObj;
+  nsCOMPtr<nsIURI> urlObj;
 #ifndef NECKO
   rv = NS_NewURL(getter_AddRefs(urlObj), aUrl);
 #else
   NS_WITH_SERVICE(nsIIOService, service, kIOServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
-
-  nsIURI *uri = nsnull;
-  const char *uriStr = aUrl.GetBuffer();
-  rv = service->NewURI(uriStr, nsnull, &uri);
+  rv = service->NewURI(nsCAutoString(aUrl), nsnull, getter_AddRefs(urlObj));
   if (NS_FAILED(rv)) return rv;
-
-  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&urlObj);
-  NS_RELEASE(uri);
 #endif // NECKO
   if (NS_FAILED(rv))
     return rv;
@@ -378,9 +350,9 @@ nsToolkitCore::ShowModalDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
-  rv = appShell->RunModalDialog(parent, urlObj, window, nsnull, nsnull, 615, 480);
-  if (NS_SUCCEEDED(rv))
-    NS_RELEASE(window);
+  rv = appShell->RunModalDialog(nsnull, parent, urlObj,
+                                NS_CHROME_ALL_CHROME | NS_CHROME_OPEN_AS_DIALOG,
+                                nsnull, 615, 480);
   return rv;
 }
 

@@ -70,8 +70,8 @@ class nsHTMLContentSinkStream : public nsIHTMLContentSink {
   nsHTMLContentSinkStream(nsIOutputStream* aOutStream, 
                           nsString* aOutString,
                           const nsString* aCharsetOverride,
-                          PRBool aDoFormat = PR_TRUE, 
-                          PRBool aDoHeader = PR_TRUE); 
+                          PRBool aDoFormat, 
+                          PRBool aDoHeader);
 
   /**
    * virtual destructor
@@ -95,8 +95,9 @@ class nsHTMLContentSinkStream : public nsIHTMLContentSink {
   NS_IMETHOD CloseContainer(const nsIParserNode& aNode);
   NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
   NS_IMETHOD NotifyError(const nsParserError* aError);
-  NS_IMETHOD AddComment(const nsIParserNode& aNode);
+  NS_IMETHOD AddComment(const nsIParserNode& aNode);  
   NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
 
   /*******************************************************************
    * The following methods are inherited from nsIHTMLContentSink.
@@ -154,6 +155,7 @@ protected:
     PRInt32   mHTMLStackPos;
     eHTMLTags mHTMLTagStack[1024];  // warning: hard-coded nesting level
     PRInt32   mColPos;
+    PRBool    mInBody;
 
     PRBool    mDoFormat;
     PRBool    mDoHeader;
@@ -171,14 +173,14 @@ extern NS_HTMLPARS nsresult
 NS_New_HTML_ContentSinkStream(nsIHTMLContentSink** aInstancePtrResult, 
                               nsIOutputStream* aOutStream,
                               const nsString* aCharsetOverride=nsnull,
-                              PRBool aDoFormat = PR_TRUE,
-                              PRBool aDoHeader = PR_TRUE);
+                              PRBool aDoFormat = PR_FALSE,
+                              PRBool aDoHeader = PR_FALSE);
 
 extern NS_HTMLPARS nsresult
 NS_New_HTML_ContentSinkStream(nsIHTMLContentSink** aInstancePtrResult, 
                               nsString* aOutString, 
-                              PRBool aDoFormat = PR_TRUE,
-                              PRBool aDoHeader = PR_TRUE);
+                              PRBool aDoFormat = PR_FALSE,
+                              PRBool aDoHeader = PR_FALSE);
 
 
 #endif

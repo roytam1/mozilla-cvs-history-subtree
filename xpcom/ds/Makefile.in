@@ -36,12 +36,13 @@ XPIDLSRCS =			\
     nsIObserver.idl        \
     nsIObserverService.idl \
 	nsISupportsArray.idl	\
+	nsISupportsPrimitives.idl	\
 	$(NULL)
 
 CPPSRCS =				\
 	nsArena.cpp                   \
 	nsAtomTable.cpp               \
-	nsBTree.cpp                   \
+	nsAVLTree.cpp                 \
 	nsBuffer.cpp                  \
 	nsByteBuffer.cpp              \
 	nsCRT.cpp                     \
@@ -50,19 +51,20 @@ CPPSRCS =				\
 	nsEmptyEnumerator.cpp         \
 	nsEnumeratorUtils.cpp         \
 	nsHashtable.cpp               \
+	nsHashtableEnumerator.cpp     \
 	nsObserver.cpp                \
 	nsObserverList.cpp            \
 	nsObserverService.cpp         \
 	nsPageMgr.cpp                 \
 	nsProperties.cpp              \
 	nsQuickSort.cpp               \
-	nsRBTree.cpp                  \
 	nsSizeOfHandler.cpp           \
 	nsStr.cpp                     \
 	nsString.cpp                  \
 	nsString2.cpp                 \
 	nsSupportsArray.cpp           \
 	nsSupportsArrayEnumerator.cpp \
+	nsSupportsPrimitives.cpp      \
 	nsUnicharBuffer.cpp           \
 	nsVariant.cpp                 \
 	nsVoidArray.cpp               \
@@ -71,11 +73,13 @@ CPPSRCS =				\
 	$(NULL)
 
 EXPORTS = \
-	nsBTree.h                  \
+	nsAVLTree.h                \
+	nsCppSharedAllocator.h		 \
 	nsCRT.h                    \
 	nsDeque.h                  \
 	nsEnumeratorUtils.h        \
 	nsHashtable.h              \
+	nsHashtableEnumerator.h    \
 	nsIArena.h                 \
 	nsIAtom.h                  \
 	nsIBuffer.h                \
@@ -89,10 +93,10 @@ EXPORTS = \
 	nsIVariant.h               \
 	nsInt64.h                  \
 	nsQuickSort.h              \
-	nsRBTree.h                 \
 	nsStr.h                    \
 	nsString.h                 \
 	nsString2.h                \
+	nsSupportsPrimitives.h     \
 	nsTime.h                   \
 	nsUnitConversion.h         \
 	nsVector.h                 \

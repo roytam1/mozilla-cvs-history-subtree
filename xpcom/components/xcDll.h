@@ -26,6 +26,11 @@
 
 #include "prio.h"
 #include "prlink.h"
+#include "nsISupports.h"
+
+class nsIFileSpec;
+class nsIModule;
+class nsIServiceManager;
 
 typedef enum nsDllStatus
 {
@@ -39,16 +44,31 @@ typedef enum nsDllStatus
 class nsDll
 {
 private:
-	char *m_fullpath;		// system format full filename of dll
-	PRTime m_lastModTime;	// last modified time
-	PRUint32 m_size;		// size of the dynamic library
+    char *m_dllName;			// Mac only. Stores the dllName to load.
+
+    nsIFileSpec *m_dllSpec;	// Filespec representing the component
+	PRUint32 m_modDate;		// last modified time at creation of this object
+	PRUint32 m_size;		// size of the dynamic library at creation of this object
+
 	PRLibrary *m_instance;	// Load instance
-	nsDllStatus m_status;		// holds current status
+	nsDllStatus m_status;	// holds current status
+    nsIModule *m_moduleObject;
+
+    // Cache frequent queries
+    char *m_persistentDescriptor;
+    char *m_nativePath;
+
+    PRBool m_markForUnload;
+
+    void Init(nsIFileSpec *dllSpec);
+    void Init(const char *persistentDescriptor);
 
 public:
  
-	nsDll(const char *libFullPath);
-	nsDll(const char *libFullPath, PRTime lastModTime, PRUint32 fileSize);
+	nsDll(nsIFileSpec *dllSpec);
+	nsDll(const char *persistentDescriptor);
+	nsDll(const char *persistentDescriptor, PRUint32 modDate, PRUint32 fileSize);
+    nsDll(const char *dll, int type /* dummy */);
 
 	~nsDll(void);
 
@@ -62,10 +82,22 @@ public:
 	{
 		return ((m_instance != 0) ? PR_TRUE : PR_FALSE);
 	}
+    void MarkForUnload(PRBool mark) { m_markForUnload = mark; }
+    PRBool IsMarkedForUnload(void) { return m_markForUnload; }
+
 	void *FindSymbol(const char *symbol);
 	
-	const char *GetFullPath(void) { return (m_fullpath); }
-	PRTime GetLastModifiedTime(void) { return(m_lastModTime); }
+    PRBool HasChanged(void);
+
+    // WARNING: DONT FREE string returned.
+	const char *GetNativePath(void);
+    // WARNING: DONT FREE string returned.
+    const char *GetPersistentDescriptorString(void);
+	PRUint32 GetLastModifiedTime(void) { return(m_modDate); }
 	PRUint32 GetSize(void) { return(m_size); }
 	PRLibrary *GetInstance(void) { return (m_instance); }
+
+    // NS_RELEASE() is required to be done on objects returned
+    nsresult GetDllSpec(nsIFileSpec **dllSpec);
+    nsresult GetModule(nsISupports *servMgr, nsIModule **mobj);
 };

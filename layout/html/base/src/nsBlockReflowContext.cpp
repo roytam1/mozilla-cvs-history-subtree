@@ -27,6 +27,7 @@
 #include "nsHTMLContainerFrame.h"
 #include "nsBlockFrame.h"
 #include "nsIDOMHTMLParagraphElement.h"
+#include "nsCOMPtr.h"
 
 #ifdef NS_DEBUG
 #undef  NOISY_MAX_ELEMENT_SIZE
@@ -53,18 +54,13 @@ PRBool
 nsBlockReflowContext::IsHTMLParagraph(nsIFrame* aFrame)
 {
   PRBool result = PR_FALSE;
-  nsIContent* content;
-  nsresult rv = aFrame->GetContent(&content);
-  if (NS_SUCCEEDED(rv) && (nsnull != content)) {
-    static NS_DEFINE_IID(kIDOMHTMLParagraphElementIID, NS_IDOMHTMLPARAGRAPHELEMENT_IID);
-    nsIDOMHTMLParagraphElement* p;
-    nsresult rv = content->QueryInterface(kIDOMHTMLParagraphElementIID,
-                                          (void**) &p);
-    if (NS_SUCCEEDED(rv) && p) {
+  nsCOMPtr<nsIContent> content;
+  nsresult rv = aFrame->GetContent(getter_AddRefs(content));
+  if (NS_SUCCEEDED(rv) && content) {
+    nsCOMPtr<nsIDOMHTMLParagraphElement> p(do_QueryInterface(content));
+    if (p) {
       result = PR_TRUE;
-      NS_RELEASE(p);
     }
-    NS_RELEASE(content);
   }
   return result;
 }
@@ -74,7 +70,7 @@ nsBlockReflowContext::ComputeCollapsedTopMargin(nsIPresContext* aPresContext,
                                                 nsHTMLReflowState& aRS)
 {
   // Get aFrame's top margin
-  nscoord topMargin = aRS.computedMargin.top;
+  nscoord topMargin = aRS.mComputedMargin.top;
 
   // Calculate aFrame's generational top-margin from its child
   // blocks. Note that if aFrame has a non-zero top-border or
@@ -94,7 +90,7 @@ nsBlockReflowContext::ComputeCollapsedTopMargin(nsIPresContext* aPresContext,
         // child blocks margin and so in so that we can look into
         // it. For its margins to be computed we need to have a reflow
         // state for it.
-        nsSize availSpace(aRS.computedWidth, aRS.computedHeight);
+        nsSize availSpace(aRS.mComputedWidth, aRS.mComputedHeight);
         nsHTMLReflowState reflowState(*aPresContext, aRS, childFrame,
                                       availSpace);
         generationalTopMargin =
@@ -151,8 +147,8 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
   nsSize availSpace(aSpace.width, aSpace.height);
   nsHTMLReflowState reflowState(*mPresContext, mOuterReflowState, aFrame,
                                 availSpace, reason);
-  aComputedOffsets = reflowState.computedOffsets;
-  reflowState.lineLayout = nsnull;
+  aComputedOffsets = reflowState.mComputedOffsets;
+  reflowState.mLineLayout = nsnull;
   if (!aIsAdjacentWithTop) {
     reflowState.isTopOfPage = PR_FALSE;  // make sure this is cleared
   }
@@ -187,7 +183,7 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
   // Compute x/y coordinate where reflow will begin. Use the rules
   // from 10.3.3 to determine what to apply. At this point in the
   // reflow auto left/right margins will have a zero value.
-  mMargin = reflowState.computedMargin;
+  mMargin = reflowState.mComputedMargin;
   mStyleSpacing = reflowState.mStyleSpacing;
   nscoord x = aSpace.x + mMargin.left;
   nscoord y = aSpace.y + topMargin;
@@ -222,10 +218,10 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
   // border+padding before translating.
   nscoord tx = x - mOuterReflowState.mComputedBorderPadding.left;
   nscoord ty = y - mOuterReflowState.mComputedBorderPadding.top;
-  mOuterReflowState.spaceManager->Translate(tx, ty);
+  mOuterReflowState.mSpaceManager->Translate(tx, ty);
   rv = htmlReflow->Reflow(*mPresContext, mMetrics, reflowState,
                           aFrameReflowStatus);
-  mOuterReflowState.spaceManager->Translate(-tx, -ty);
+  mOuterReflowState.mSpaceManager->Translate(-tx, -ty);
 
 #ifdef DEBUG
   if (!NS_INLINE_IS_BREAK_BEFORE(aFrameReflowStatus)) {
@@ -343,7 +339,9 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
   PRBool fits = PR_TRUE;
   nscoord x = mX;
   nscoord y = mY;
-  if (0 == mMetrics.height) {
+  // When deciding whether it's an empty paragraph we also need to take into
+  // account the combined area
+  if ((0 == mMetrics.height) && (0 == mMetrics.mCombinedArea.height)) {
     if (IsHTMLParagraph(mFrame)) {
       // Special "feature" for HTML compatability - empty paragraphs
       // collapse into nothingness, including their margins.
@@ -381,13 +379,13 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
       // downward, just below another floater?
       nscoord dy = mSpace.y - mY;
       htmlReflow->MoveInSpaceManager(mPresContext,
-                                     mOuterReflowState.spaceManager, 0, dy);
+                                     mOuterReflowState.mSpaceManager, 0, dy);
     }
     y = mSpace.y;
 
     // Empty blocks do not have anything special done to them and they
-    // always fit.
-    nsRect r(x, y, 0, 0);
+    // always fit. Note: don't force the width to 0
+    nsRect r(x, y, mMetrics.width, 0);
     mFrame->SetRect(r);
     aInFlowBounds = r;
 
@@ -415,19 +413,19 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
       // doesn't use it all of the available width then we need to
       // align it using the text-align property.
       if (NS_UNCONSTRAINEDSIZE != mSpace.width) {
-        nscoord remainder = mSpace.XMost() -
+        nscoord remainingSpace = mSpace.XMost() -
           (x + mMetrics.width + mMargin.right);
-        if (remainder > 0) {
+        if (remainingSpace > 0) {
           // The block frame didn't use all of the available
           // space. Synthesize margins for its horizontal placement.
           if (eStyleUnit_Auto == leftUnit) {
             if (eStyleUnit_Auto == rightUnit) {
               // When both margins are auto, we center the block
-              x += remainder / 2;
+              x += remainingSpace / 2;
             }
             else {
               // When the left margin is auto we right align the block
-              x += remainder;
+              x += remainingSpace;
             }
           }
           else if (eStyleUnit_Auto != rightUnit) {
@@ -443,11 +441,11 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
               // compatability cases.
               switch (styleText->mTextAlign) {
                 case NS_STYLE_TEXT_ALIGN_MOZ_RIGHT:
-                  x += remainder;
+                  x += remainingSpace;
                   doCSS = PR_FALSE;
                   break;
                 case NS_STYLE_TEXT_ALIGN_MOZ_CENTER:
-                  x += remainder / 2;
+                  x += remainingSpace / 2;
                   doCSS = PR_FALSE;
                   break;
               }
@@ -459,7 +457,7 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
               PRUint8 direction = mOuterReflowState.mStyleDisplay->mDirection;
               if (NS_STYLE_DIRECTION_RTL == direction) {
                 // The left margin becomes auto
-                x += remainder;
+                x += remainingSpace;
               }
               else {
                 // The right margin becomes auto which is a no-op
@@ -509,7 +507,7 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
           // If the child has any floaters that impact the space manager,
           // slide them now
           htmlReflow->MoveInSpaceManager(mPresContext,
-                                         mOuterReflowState.spaceManager,
+                                         mOuterReflowState.mSpaceManager,
                                          dx, dy);
         }
       }

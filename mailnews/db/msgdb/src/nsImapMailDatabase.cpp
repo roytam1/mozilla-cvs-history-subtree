@@ -29,19 +29,20 @@ nsImapMailDatabase::~nsImapMailDatabase()
 {
 }
 
-NS_IMETHODIMP nsImapMailDatabase::Open(nsFileSpec &folderName, PRBool create, nsIMsgDatabase** pMessageDB, PRBool upgrading /*=PR_FALSE*/)
+NS_IMETHODIMP nsImapMailDatabase::Open(nsIFileSpec *aFolderName, PRBool create, PRBool upgrading, nsIMsgDatabase** pMessageDB)
 {
 	nsImapMailDatabase	*mailDB;
 	PRBool			summaryFileExists;
 	struct stat		st;
 	PRBool			newFile = PR_FALSE;
+	if (!aFolderName)
+		return NS_ERROR_NULL_POINTER;
+
+	nsFileSpec		folderName;
+	aFolderName->GetFileSpec(&folderName);
+
 	nsLocalFolderSummarySpec	summarySpec(folderName);
 
-#ifdef DEBUG_bienvenu
-    printf("nsImapMailDatabase::Open(%s, %s, %p, %s) -> %s\n",
-           (const char*)folderName, create ? "TRUE":"FALSE",
-           pMessageDB, upgrading ? "TRUE":"FALSE", (const char*)folderName);
-#endif
 	nsIDBFolderInfo	*folderInfo = NULL;
 
 	*pMessageDB = NULL;
@@ -55,6 +56,11 @@ NS_IMETHODIMP nsImapMailDatabase::Open(nsFileSpec &folderName, PRBool create, ns
 		return(NS_OK);
 	}
 
+#ifdef DEBUG_bienvenu
+    printf("really opening db in nsImapMailDatabase::Open(%s, %s, %p, %s) -> %s\n",
+           (const char*)folderName, create ? "TRUE":"FALSE",
+           pMessageDB, upgrading ? "TRUE":"FALSE", (const char*)folderName);
+#endif
 	// if the old summary doesn't exist, we're creating a new one.
 	if (!summarySpec.Exists() && create)
 		newFile = PR_TRUE;
@@ -142,7 +148,7 @@ NS_IMETHODIMP	nsImapMailDatabase::SetSummaryValid(PRBool /* valid */)
 }
 	
 // IMAP does not set local file flags, override does nothing
-void	nsImapMailDatabase::UpdateFolderFlag(nsMsgHdr * /* msgHdr */, PRBool /* bSet */, 
+void	nsImapMailDatabase::UpdateFolderFlag(nsIMsgDBHdr * /* msgHdr */, PRBool /* bSet */, 
 									 MsgFlags /* flag */, nsIOFileStream ** /* ppFileStream */)
 {
 }

@@ -861,7 +861,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		    return JS_FALSE;
 		if (caseNoteIndex >= 0) {
 		    /* off is the previous JSOP_CASE's bytecode offset. */
-		    if (!js_SetSrcNoteOffset(cx, cg, caseNoteIndex, 0,
+		    if (!js_SetSrcNoteOffset(cx, cg, (uintN)caseNoteIndex, 0,
 					     CG_OFFSET(cg) - off)) {
 			return JS_FALSE;
 		    }
@@ -877,8 +877,10 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		pn3->pn_offset = off;
 		if (pn3 == pn2->pn_head) {
 		    /* Switch note's second offset is to first JSOP_CASE. */
-		    if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 1, off - top))
+		    if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 1,
+					     off - top)) {
 			return JS_FALSE;
+		    }
 		}
 	    }
 
@@ -927,7 +929,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 
 	/* Set the SRC_SWITCH note's offset operand to tell end of switch. */
 	off = CG_OFFSET(cg) - top;
-	if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 0, off))
+	if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0, off))
 	    return JS_FALSE;
 
 	if (switchop == JSOP_TABLESWITCH) {
@@ -1094,10 +1096,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		break;
 	      case TOK_LB:
                 /*
-                    we separate out the initialization and incrementing
-                    in order to avoid unwanted side-effects from the 
-                    index expression
-                */
+                 * We separate the first/next bytecode from the enumerator
+		 * variable binding to avoid any side-effects in the index
+                 * expression (e.g., for (x[i++] in {}) should not bind x[i]
+		 * or increment i at all).
+                 */
                 if (!js_Emit1(cx, cg, JSOP_FORELEM2))
                     return JS_FALSE;
 	        beq = js_Emit3(cx, cg, JSOP_IFEQ, 0, 0);
@@ -1137,13 +1140,13 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	    SET_STATEMENT_TOP(&stmtInfo, top);
 	    if (!pn2->pn_kid2) {
 		/* No loop condition: flag this fact in the source notes. */
-		if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 0, 0))
+		if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0, 0))
 		    return JS_FALSE;
 		beq = 0;
 	    } else {
 		if (!js_EmitTree(cx, cg, pn2->pn_kid2))
 		    return JS_FALSE;
-		if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 0,
+		if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0,
 					 (ptrdiff_t)(CG_OFFSET(cg) - top))) {
 		    return JS_FALSE;
 		}
@@ -1160,7 +1163,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	if (pn2->pn_type != TOK_IN) {
 	    /* Set the second note offset so we can find the update part. */
 	    JS_ASSERT(noteIndex != -1);
-	    if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 1,
+	    if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 1,
 				     (ptrdiff_t)(CG_OFFSET(cg) - top))) {
 		return JS_FALSE;
 	    }
@@ -1189,7 +1192,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	    }
 
 	    /* The third note offset helps us find the loop-closing jump. */
-	    if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 2,
+	    if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 2,
 				     (ptrdiff_t)(CG_OFFSET(cg) - top))) {
 		return JS_FALSE;
 	    }
@@ -1585,7 +1588,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	    EMIT_ATOM_INDEX_OP(op, atomIndex);
 	    tmp = CG_OFFSET(cg);
 	    if (noteIndex >= 0) {
-		if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 0, tmp - off))
+		if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0, tmp-off))
 		    return JS_FALSE;
 	    }
 	    if (!pn2->pn_next)
@@ -1679,7 +1682,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		return JS_FALSE;
 	    tmp = CG_OFFSET(cg);
 	    if (noteIndex >= 0) {
-		if (!js_SetSrcNoteOffset(cx, cg, noteIndex, 0, tmp - off))
+		if (!js_SetSrcNoteOffset(cx, cg, (uintN)noteIndex, 0, tmp-off))
 		    return JS_FALSE;
 	    }
 	    if (!pn2->pn_next)
@@ -1701,7 +1704,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	 */
 	pn2 = pn->pn_left;
 	JS_ASSERT(pn2->pn_type != TOK_RP);
-	atomIndex = -1;
+	atomIndex = (jsatomid) -1; /* Suppress warning. */
 	switch (pn2->pn_type) {
 	  case TOK_NAME:
 	    if (pn2->pn_slot >= 0) {
@@ -1990,6 +1993,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	if (!js_EmitTree(cx, cg, pn2))
 	    return JS_FALSE;
 
+        /* Remember start of callable-object bytecode for decompilation hint. */
+        off = pn2->pn_offset;
+
 	/*
 	 * Push the virtual machine's "obj" register, which was set by a name,
 	 * property, or element get (or set) bytecode.
@@ -2007,7 +2013,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		return JS_FALSE;
 	}
 	argc = pn->pn_count - 1;
-	if (js_Emit3(cx, cg, op, ARGC_HI(argc), ARGC_LO(argc)) < 0)
+        if (js_NewSrcNote2(cx, cg, SRC_PCBASE,
+                           (ptrdiff_t)(CG_OFFSET(cg) - off)) < 0 ||
+            js_Emit3(cx, cg, op, ARGC_HI(argc), ARGC_LO(argc)) < 0)
 	    return JS_FALSE;
 	break;
 

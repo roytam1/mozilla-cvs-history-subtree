@@ -25,6 +25,10 @@
 #include "nsParser.h"
 #include "nsParserNode.h"
 #include "nsWellFormedDTD.h"
+#include "CNavDTD.h"
+
+#include "nsHTMLTags.h"
+#include "nsHTMLEntities.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
@@ -33,6 +37,7 @@ static NS_DEFINE_IID(kCParser,          NS_PARSER_IID);
 static NS_DEFINE_IID(kCParserNode,      NS_PARSER_NODE_IID);
 static NS_DEFINE_IID(kLoggingSinkCID,   NS_LOGGING_SINK_IID);
 static NS_DEFINE_CID(kWellFormedDTDCID, NS_WELLFORMEDDTD_CID);
+static NS_DEFINE_CID(kCNavDTDCID,		NS_CNAVDTD_CID);
 
 class nsParserFactory : public nsIFactory
 {   
@@ -62,11 +67,15 @@ nsParserFactory::nsParserFactory(const nsCID &aClass)
 {   
   mRefCnt = 0;
   mClassID = aClass;
+  nsHTMLTags::AddRefTable();
+  nsHTMLEntities::AddRefTable();
 }   
 
 nsParserFactory::~nsParserFactory()   
 {   
   NS_ASSERTION(mRefCnt == 0, "non-zero refcnt at destruction");   
+  nsHTMLEntities::ReleaseTable();
+  nsHTMLTags::ReleaseTable();
 }   
 
 nsresult nsParserFactory::QueryInterface(const nsIID &aIID,   
@@ -140,6 +149,12 @@ nsresult nsParserFactory::CreateInstance(nsISupports *aOuter,
   }
   else if (mClassID.Equals(kWellFormedDTDCID)) {
     nsresult rv = NS_NewWellFormed_DTD((nsIDTD**) &inst);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+  }
+  else if (mClassID.Equals(kCNavDTDCID)) {
+    nsresult rv = NS_NewNavHTMLDTD((nsIDTD**) &inst);
     if (NS_FAILED(rv)) {
       return rv;
     }

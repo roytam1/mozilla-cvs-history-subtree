@@ -21,15 +21,15 @@
 #include "prmem.h"
 #include "prmon.h"
 #include "prlog.h"
-
 #include "nsCaps.h"
+#include "nsPrincipalManager.h"
 #include "nsPrivilegeManager.h"
-#include "nsPrivilege.h"
+#include "nsIPrincipal.h"
+#include "nsCertificatePrincipal.h"
+#include "nsIPrivilege.h"
 #include "nsPrivilegeTable.h"
-#include "nsPrincipal.h"
-#include "nsTarget.h"
+#include "nsITarget.h"
 #include "nsCCapsManager.h"
-#include "nsCCapsManagerFactory.h"
 
 /* 
  * With the introduction of '-reg_mode' flag, 
@@ -43,8 +43,6 @@ PRBool registrationModeFlag = PR_FALSE;
 
 PR_BEGIN_EXTERN_C
 
-static PRBool bNSCapsInitialized_g = PR_FALSE;
-
 /* 
  *             C  API  FOR  JS
  *
@@ -53,226 +51,181 @@ static PRBool bNSCapsInitialized_g = PR_FALSE;
  */
 
 /* wrappers for nsPrivilegeManager object */
+/*
 PR_IMPLEMENT(PRBool) 
 nsCapsInitialize() 
 {
-  if(bNSCapsInitialized_g == PR_TRUE)
-  {
-     return PR_TRUE;
-  }
-  bNSCapsInitialized_g = PR_TRUE;
+	if(bNSCapsInitialized_g == PR_TRUE) return PR_TRUE;
+	bNSCapsInitialized_g = PR_TRUE;
+	nsIPrincipal * sysPrin = NULL;
 #if defined(_WIN32)
-  nsPrincipal *sysPrin = CreateSystemPrincipal("java/classes/java40.jar", "java/lang/Object.class");
+//	sysPrin = CreateSystemPrincipal("java/classes/java40.jar", "java/lang/Object.class");
 #else
-  nsPrincipal *sysPrin = CreateSystemPrincipal("java40.jar", "java/lang/Object.class");
+//	sysPrin = CreateSystemPrincipal("java40.jar", "java/lang/Object.class");
 #endif
-  if (sysPrin == NULL) {
-    sysPrin = new nsPrincipal(nsPrincipalType_Cert, "52:54:45:4e:4e:45:54:49", 
-                                         strlen("52:54:45:4e:4e:45:54:49"));
-  }
-  
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if (nsPrivManager == NULL) {
-    nsPrivilegeManagerInitialize();
-    nsPrivilegeInitialize();
-    nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  }
-  PR_ASSERT(nsPrivManager != NULL);
-  nsPrivManager->registerSystemPrincipal(sysPrin);
+//	if (sysPrin == NULL) {
+//		nsresult res;
+//		sysPrin = new nsCertificatePrincipal((PRInt16 *)nsIPrincipal::PrincipalType_Certificate,(const unsigned char **) "52:54:45:4e:4e:45:54:49", 
+//									(unsigned int *)strlen("52:54:45:4e:4e:45:54:49"),1,& res);
+//  }
+	nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::GetPrivilegeManager();
+	if (nsPrivManager == NULL) nsPrivilegeManagerInitialize();
+	PR_ASSERT(nsPrivManager != NULL);
+	nsPrincipalManager * nsPrinManager = nsPrincipalManager::GetPrincipalManager();
+	if (nsPrinManager == NULL) nsPrincipalManagerInitialize();
+	nsPrinManager->RegisterSystemPrincipal(sysPrin);
   // New a class factory object and the constructor will register itself
   // as the factory object in the repository. All other modules should
   // FindFactory and use createInstance to create a instance of nsCCapsManager
   // and ask for nsICapsManager interface.
-  /*
-  nsCCapsManagerFactory *pNSCCapsManagerFactory = new nsCCapsManagerFactory();
-  if ( pNSCCapsManagerFactory == NULL )
-  {
-     return PR_FALSE;
-  }
-  */
   return PR_TRUE;
 }
-
+*/
 
 /* wrappers for nsPrivilegeManager object */
 PR_IMPLEMENT(PRBool) 
-nsCapsRegisterPrincipal(struct nsPrincipal *principal) 
+nsCapsRegisterPrincipal(class nsIPrincipal *principal) 
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return PR_FALSE; 
-  nsPrivManager->registerPrincipal(principal);
+  nsPrincipalManager * nsPrinManager = nsPrincipalManager::GetPrincipalManager();
+  if(nsPrinManager == NULL) return PR_FALSE; 
+  nsPrinManager->RegisterPrincipal(principal);
   return PR_TRUE;
 }
 
 PR_IMPLEMENT(PRBool) 
-nsCapsEnablePrivilege(void* context, struct nsTarget *target, PRInt32 callerDepth)
+nsCapsEnablePrivilege(void * context, class nsITarget * target, PRInt32 callerDepth)
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return PR_FALSE; 
-  return nsPrivManager->enablePrivilege(context, target, callerDepth);
+	if (nsPrivilegeManager::GetPrivilegeManager() == NULL) return PR_FALSE;
+	else {
+		PRBool result;
+		nsPrivilegeManager::GetPrivilegeManager()->EnablePrivilege((nsIScriptContext *)context, target, NULL, callerDepth,& result);
+		return result;
+	}
 }
 
 PR_IMPLEMENT(PRBool) 
-nsCapsIsPrivilegeEnabled(void* context, struct nsTarget *target, PRInt32 callerDepth)
+nsCapsIsPrivilegeEnabled(void* context, class nsITarget *target, PRInt32 callerDepth)
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return PR_FALSE; 
-  return nsPrivManager->isPrivilegeEnabled(context, target, callerDepth);
+	if (nsPrivilegeManager::GetPrivilegeManager() == NULL) return PR_FALSE;
+	else {
+		PRBool result;
+		nsPrivilegeManager::GetPrivilegeManager()->IsPrivilegeEnabled((nsIScriptContext *)context, target, callerDepth,& result);
+		return result;
+	}
 }
 
 PR_IMPLEMENT(PRBool) 
-nsCapsRevertPrivilege(void* context, struct nsTarget *target, PRInt32 callerDepth)
+nsCapsRevertPrivilege(void* context, class nsITarget * target, PRInt32 callerDepth)
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return PR_FALSE; 
-  return nsPrivManager->revertPrivilege(context, target, callerDepth);
+	if (nsPrivilegeManager::GetPrivilegeManager() == NULL ) return PR_FALSE;
+	else {
+		PRBool result;
+		nsPrivilegeManager::GetPrivilegeManager()->RevertPrivilege((nsIScriptContext *)context, target, callerDepth,& result);
+		return result;
+	}
 }
 
 PR_IMPLEMENT(PRBool) 
-nsCapsDisablePrivilege(void* context, struct nsTarget *target, PRInt32 callerDepth)
+nsCapsDisablePrivilege(void* context, class nsITarget * target, PRInt32 callerDepth)
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return PR_FALSE; 
-  return nsPrivManager->disablePrivilege(context, target, callerDepth);
+	if (nsPrivilegeManager::GetPrivilegeManager() == NULL) return PR_FALSE;
+	else {
+		PRBool result;
+		nsPrivilegeManager::GetPrivilegeManager()->DisablePrivilege((nsIScriptContext *)context, target, callerDepth,& result);
+		return result;
+	}
 }
 
 PR_IMPLEMENT(void*) 
 nsCapsGetClassPrincipalsFromStack(void* context, PRInt32 callerDepth)
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return NULL; 
-  return (void *)nsPrivManager->getClassPrincipalsFromStack(context, callerDepth);
+	nsPrincipalManager * nsPrinManager = nsPrincipalManager::GetPrincipalManager();
+	return (nsPrinManager == NULL) ? NULL 
+	: (void *)nsPrinManager->GetClassPrincipalsFromStack((nsIScriptContext *)context, callerDepth);
 }
 
-PR_IMPLEMENT(nsSetComparisonType) 
-nsCapsComparePrincipalArray(void* prin1Array, void* prin2Array)
-{
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return nsSetComparisonType_NoSubset; 
-  return nsPrivManager->comparePrincipalArray((nsPrincipalArray*)prin1Array, 
-                                              (nsPrincipalArray*)prin2Array);
-}
+//PR_IMPLEMENT(PRInt16) 
+//nsCapsComparePrincipalArray(void * prin1Array, void * prin2Array)
+//{
+//	nsPrivilegeManager * nsPrivManager = nsPrivilegeManager::GetPrivilegeManager();
+//	return (nsPrivManager == NULL) ? nsPrivilegeManager::SetComparisonType_NoSubset 
+//	: nsPrivManager->ComparePrincipalArray((nsPrincipalArray*)prin1Array, (nsPrincipalArray*)prin2Array);
+//}
 
-PR_IMPLEMENT(void*) 
-nsCapsIntersectPrincipalArray(void* prin1Array, void* prin2Array)
-{
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return NULL; 
-  return nsPrivManager->intersectPrincipalArray((nsPrincipalArray*)prin1Array, 
-                                                (nsPrincipalArray*)prin2Array);
-}
+//PR_IMPLEMENT(void*) 
+//nsCapsIntersectPrincipalArray(void* prin1Array, void* prin2Array)
+//{
+//	nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::GetPrivilegeManager();
+//	return (nsPrivManager == NULL) ? NULL 
+//	: nsPrivManager->IntersectPrincipalArray((nsPrincipalArray*)prin1Array, (nsPrincipalArray*)prin2Array);
+//}
 
 PR_IMPLEMENT(PRBool) 
 nsCapsCanExtendTrust(void* from, void* to)
 {
-  nsPrivilegeManager *nsPrivManager = nsPrivilegeManager::getPrivilegeManager();
-  if( nsPrivManager == NULL )
-   return PR_FALSE; 
-  return nsPrivManager->canExtendTrust((nsPrincipalArray*)from, 
-                                       (nsPrincipalArray*)to);
+	nsPrincipalManager * nsPrinManager = nsPrincipalManager::GetPrincipalManager();
+	PRBool result = PR_FALSE;
+	if (nsPrinManager != NULL) nsPrinManager->CanExtendTrust((nsIPrincipalArray *)from, (nsIPrincipalArray *)to,& result);
+	return result;
 }
 
 /* wrappers for nsPrincipal object */
-PR_IMPLEMENT(struct nsPrincipal *) 
-nsCapsNewPrincipal(nsPrincipalType type, void * key, 
-                   PRUint32 key_len, void *zig)
+/*
+PR_IMPLEMENT(class nsIPrincipal *) 
+nsCapsNewPrincipal(PRInt16 prinType, void * key, PRUint32 key_len, void *zig)
 {
-  return new nsPrincipal(type, key, key_len, zig);
+// XXX ARIEL FIX:
+// this is absolutely wrong, must be fixed ASAP
+//  return new nsIPrincipal(prinType, key, key_len, zig);
+	return NULL;
 }
+*/
 
 PR_IMPLEMENT(const char *) 
-nsCapsPrincipalToString(struct nsPrincipal *principal)
+nsCapsPrincipalToString(class nsIPrincipal *principal)
 {
-  return principal->toString();
+	char * prinStr;
+	principal->ToString(& prinStr);
+	return prinStr;
 }
 
 PR_IMPLEMENT(PRBool) 
-nsCapsIsCodebaseExact(struct nsPrincipal *principal)
+nsCapsIsCodebaseExact(class nsIPrincipal *principal)
 {
-  return principal->isCodebaseExact();
+	PRInt16 prinType;
+	principal->GetType(& prinType);
+	return (prinType == (PRInt16) nsIPrincipal::PrincipalType_CodebaseExact) ? PR_TRUE : PR_FALSE;
 }
-
+/*
 PR_IMPLEMENT(const char *) 
-nsCapsPrincipalGetVendor(struct nsPrincipal *principal)
+nsCapsPrincipalGetVendor(class nsIPrincipal *principal)
 {
-  return principal->getVendor();
+	//deprecated returning NULL
+	//return principal->getVendor();
+	return NULL;
 }
-
-PR_EXTERN(void *) 
-nsCapsNewPrincipalArray(PRUint32 count)
-{
-  nsPrincipalArray *prinArray = new nsPrincipalArray();
-  prinArray->SetSize(count, 1);
-  return prinArray;
-}
-
-PR_EXTERN(void) 
-nsCapsFreePrincipalArray(void *prinArrayArg)
-{
-  nsPrincipalArray *prinArray = (nsPrincipalArray *)prinArrayArg;
-  if (prinArray) {
-    prinArray->RemoveAll();
-    delete prinArray;
-  }
-}
-
-PR_EXTERN(void *) 
-nsCapsGetPrincipalArrayElement(void *prinArrayArg, PRUint32 index)
-{
-  nsPrincipalArray *prinArray = (nsPrincipalArray *)prinArrayArg;
-  if (prinArray == NULL) {
-    return NULL;
-  }
-  return prinArray->Get(index);
-}
-
-PR_EXTERN(void) 
-nsCapsSetPrincipalArrayElement(void *prinArrayArg, PRUint32 index, void *element)
-{
-  nsPrincipalArray *prinArray = (nsPrincipalArray *)prinArrayArg;
-  if (prinArray == NULL) {
-    return;
-  }
-  prinArray->Set(index, element);
-}
-
-PR_EXTERN(PRUint32) 
-nsCapsGetPrincipalArraySize(void *prinArrayArg) 
-{
-  nsPrincipalArray *prinArray = (nsPrincipalArray *)prinArrayArg;
-  if (prinArray == NULL) {
-    return 0;
-  }
-  return prinArray->GetSize();
-}
-
+*/
 /* wrappers for nsTarget object */
-PR_IMPLEMENT(struct nsTarget *) 
-nsCapsFindTarget(char *name)
+PR_IMPLEMENT(class nsITarget *) 
+nsCapsFindTarget(char * name)
 {
-  return nsTarget::findTarget(name);
+  return nsTarget::FindTarget(name);
 }
 
 /* wrappers for nsPrivilege object */
-PR_IMPLEMENT(nsPermissionState) 
-nsCapsGetPermission(struct nsPrivilege *privilege)
+PR_IMPLEMENT(PRInt16) 
+nsCapsGetPermission(nsIPrivilege * privilege)
 {
-  return privilege->getPermission();
+	PRInt16 privState;
+	privilege->GetState(& privState);
+	return privState;
 }
 
 /* wrappers for nsPrivilegeTable object */
-PR_IMPLEMENT(struct nsPrivilege *)
-nsCapsGetPrivilege(struct nsPrivilegeTable *annotation, struct nsTarget *target)
+PR_IMPLEMENT(nsIPrivilege *)
+nsCapsGetPrivilege(nsPrivilegeTable * annotation, class nsITarget * target)
 {
-  return annotation->get(target);
+	return annotation->Get(target);
 }
 
 
@@ -284,14 +237,12 @@ setNewNSJSJavaFrameWrapperCallback(struct NSJSJavaFrameWrapper * (*fp)(void *))
     nsCapsNewNSJSJavaFrameWrapperCallback = fp;
 }
 
-
 void (*nsCapsFreeNSJSJavaFrameWrapperCallback)(struct NSJSJavaFrameWrapper *);
 PR_IMPLEMENT(void)
 setFreeNSJSJavaFrameWrapperCallback(void (*fp)(struct NSJSJavaFrameWrapper *))
 {
     nsCapsFreeNSJSJavaFrameWrapperCallback = fp;
 }
-
 
 void (*nsCapsGetStartFrameCallback)(struct NSJSJavaFrameWrapper *);
 PR_IMPLEMENT(void)
@@ -307,14 +258,12 @@ setIsEndOfFrameCallback(PRBool (*fp)(struct NSJSJavaFrameWrapper *))
     nsCapsIsEndOfFrameCallback = fp;
 }
 
-
 PRBool (*nsCapsIsValidFrameCallback)(struct NSJSJavaFrameWrapper *);
 PR_IMPLEMENT(void)
 setIsValidFrameCallback(PRBool (*fp)(struct NSJSJavaFrameWrapper *))
 {
     nsCapsIsValidFrameCallback = fp;
 }
-
 
 void * (*nsCapsGetNextFrameCallback)(struct NSJSJavaFrameWrapper *, int *);
 PR_IMPLEMENT(void)
@@ -323,28 +272,25 @@ setGetNextFrameCallback(void * (*fp)(struct NSJSJavaFrameWrapper *, int *))
     nsCapsGetNextFrameCallback = fp;
 }
 
-
 void * (*nsCapsGetPrincipalArrayCallback)(struct NSJSJavaFrameWrapper *);
 PR_IMPLEMENT(void)
 setOJIGetPrincipalArrayCallback(void * (*fp)(struct NSJSJavaFrameWrapper *))
 {
-    nsCapsGetPrincipalArrayCallback = fp;
+	nsCapsGetPrincipalArrayCallback = fp;
 }
-
 
 void * (*nsCapsGetAnnotationCallback)(struct NSJSJavaFrameWrapper *);
 PR_IMPLEMENT(void)
 setOJIGetAnnotationCallback(void * (*fp)(struct NSJSJavaFrameWrapper *))
 {
-    nsCapsGetAnnotationCallback = fp;
+	nsCapsGetAnnotationCallback = fp;
 }
-
 
 void * (*nsCapsSetAnnotationCallback)(struct NSJSJavaFrameWrapper *, void *);
 PR_IMPLEMENT(void)
 setOJISetAnnotationCallback(void * (*fp)(struct NSJSJavaFrameWrapper *, void *))
 {
-    nsCapsSetAnnotationCallback = fp;
+	nsCapsSetAnnotationCallback = fp;
 }
 
 /* 
@@ -358,7 +304,6 @@ nsCapsEnableRegistrationModeFlag(void)
 {
 	registrationModeFlag = PR_TRUE;
 }
-
 
 /*
  * This function disables the registration mode flag.
@@ -384,3 +329,4 @@ nsCapsGetRegistrationModeFlag(void)
 }
 
 PR_END_EXTERN_C
+

@@ -23,10 +23,11 @@
 #include "nsMsgFolder.h" 
 #include "nsIDBFolderInfo.h"
 #include "nsIMsgDatabase.h"
+#include "nsIMessage.h"
 #include "nsCOMPtr.h"
 #include "nsIDBChangeListener.h"
 
-
+class nsIMsgFolderCacheElement;
  /* 
   * nsMsgDBFolder
   * class derived from nsMsgFolder for those folders that use an nsIMsgDatabase
@@ -44,21 +45,31 @@ public:
 	NS_IMETHOD GetCharset(PRUnichar * *aCharset);
 	NS_IMETHOD SetCharset(PRUnichar * aCharset);
 
+  NS_IMETHOD GetMsgDatabase(nsIMsgDatabase** aMsgDatabase);
+
 	//nsIDBChangeListener
 	NS_IMETHOD OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, PRUint32 aNewFlags, 
                          nsIDBChangeListener * aInstigator);
-	NS_IMETHOD OnKeyDeleted(nsMsgKey aKeyChanged, PRInt32 aFlags, 
+	NS_IMETHOD OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                           nsIDBChangeListener * aInstigator);
-	NS_IMETHOD OnKeyAdded(nsMsgKey aKeyChanged, PRInt32 aFlags, 
+	NS_IMETHOD OnKeyAdded(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                         nsIDBChangeListener * aInstigator);
+	NS_IMETHOD OnParentChanged(nsMsgKey aKeyChanged, nsMsgKey oldParent, nsMsgKey newParent, 
+						nsIDBChangeListener * aInstigator);
 	NS_IMETHOD OnAnnouncerGoingAway(nsIDBChangeAnnouncer * instigator);
 
 	NS_DECL_ISUPPORTS_INHERITED
+
+	NS_IMETHOD WriteToFolderCache(nsIMsgFolderCache *folderCache);
+	NS_IMETHOD WriteToFolderCacheElem(nsIMsgFolderCacheElement *element);
+
+	NS_IMETHOD MarkAllMessagesRead(void);
 
 protected:
 	virtual nsresult ReadDBFolderInfo(PRBool force);
 	virtual nsresult GetDatabase() = 0;
 	virtual nsresult SendFlagNotifications(nsISupports *item, PRUint32 oldFlags, PRUint32 newFlags);
+	nsresult ReadFromFolderCache(nsIMsgFolderCacheElement *element);
 
 protected:
 	nsCOMPtr<nsIMsgDatabase> mDatabase;  

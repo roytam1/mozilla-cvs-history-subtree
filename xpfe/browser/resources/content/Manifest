@@ -6,6 +6,12 @@ navigator.xul
 navigator.js
 openLocation.xul
 viewSource.xul
+NetSupportConfirm.xul
 NetSupportConfirmYN.xul
+NetSupportAlert.xul
+NetSupportConfirmCheck.xul
 NetSupportConfirmCheckYN.xul
+NetSupportPassword.xul
+NetSupportUserPassword.xul
+NetSupportPassword.xul
 tooltip.js

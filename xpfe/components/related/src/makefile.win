@@ -17,6 +17,7 @@
 
 DEPTH=..\..\..\..
 MODULE=related
+include <$(DEPTH)/config/config.mak>
 
 CPP_OBJS=                               \
  .\$(OBJDIR)\nsRelatedLinksHandler.obj  \
@@ -34,8 +35,11 @@ LCFLAGS = \
 # These are the libraries we need to link with to create the DLL
 LLIBS=                          \
  $(DIST)\lib\xpcom.lib          \
+!ifdef NECKO
+ $(DIST)\lib\neckoutil_s.lib    \
+!else
  $(DIST)\lib\netlib.lib         \
- $(DIST)\lib\plc3.lib           \
+!endif
  $(LIBNSPR)                     \
  $(NULL)
 
