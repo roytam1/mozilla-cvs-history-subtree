@@ -1,5 +1,7 @@
 1999-08-19  Leif Hedstrom  <leif@netscape.com>
 
+	* Changed version numbering again, just called this plain v1.4.
+
 	* Entry.pm (FIRSTKEY): Bug fix, we'd crap out if there are no
 	attributes in the returned entry.
 	(NEXTKEY): Ditto.
