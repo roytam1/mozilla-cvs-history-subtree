@@ -997,7 +997,6 @@ il_jpeg_complete(il_container *ic)
 {
     il_jpeg_abort(ic);
     ic->imgdcb->ImgDCBHaveImageAll();
-    ic->imgdcb->ImgDCBHaveImageFrame();
 }
 
 #ifdef PROFILE
