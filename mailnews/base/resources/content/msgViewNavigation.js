@@ -42,7 +42,7 @@ function FindNextFolder(originalFolderURI)
          var element = subFolderEnumerator.currentItem();
          var currentSubFolder = element.QueryInterface(Components.interfaces.nsIMsgFolder);
 
-         // don't land in the Trash folder.
+         // don't land in the Trash folder. 
          if(!IsSpecialFolder(currentSubFolder, MSG_FOLDER_FLAG_TRASH)) {
            if (currentSubFolder.getNumUnread(false /* don't descend */) > 0) {
              // if the child has unread, use it.
