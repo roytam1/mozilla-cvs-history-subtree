@@ -92,13 +92,17 @@ SVG_BRANCH_MODIFIED_FILES = \
 	content/svg/content/src/Makefile.in                   \
 	content/svg/content/src/nsISVGValue.h                 \
 	content/svg/content/src/nsSVGAnimatedLength.cpp       \
+	content/svg/content/src/nsSVGAttributes.cpp           \
+	content/svg/content/src/nsSVGAttributes.h             \
 	content/svg/content/src/nsSVGCircleElement.cpp        \
 	content/svg/content/src/nsSVGElement.cpp              \
 	content/svg/content/src/nsSVGElement.h                \
 	content/svg/content/src/nsSVGElementFactory.cpp       \
 	content/svg/content/src/nsSVGEllipseElement.cpp       \
 	content/svg/content/src/nsSVGForeignObjectElement.cpp \
+	content/svg/content/src/nsSVGGElement.cpp             \
 	content/svg/content/src/nsSVGGraphicElement.cpp       \
+	content/svg/content/src/nsSVGGraphicElement.h         \
 	content/svg/content/src/nsSVGLength.cpp               \
 	content/svg/content/src/nsSVGLength.h                 \
 	content/svg/content/src/nsSVGLineElement.cpp          \

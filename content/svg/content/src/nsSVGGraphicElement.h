@@ -57,8 +57,11 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMSVGLOCATABLE
   NS_DECL_NSIDOMSVGTRANSFORMABLE
-  
+
 protected:
+  virtual PRBool IsPresentationAttribute(const nsIAtom* name)const;
+
+  
   nsCOMPtr<nsIDOMSVGAnimatedTransformList> mTransforms;
 };
 

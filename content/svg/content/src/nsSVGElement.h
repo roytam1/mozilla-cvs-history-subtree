@@ -169,6 +169,7 @@ protected:
 
   nsresult CopyNode(nsSVGElement* dest, PRBool deep);
   virtual void ParentChainChanged(){}; 
+  virtual PRBool IsPresentationAttribute(const nsIAtom* name)const{ return PR_FALSE; }
   
   nsVoidArray                  mChildren;   
   nsSVGAttributes*             mAttributes;

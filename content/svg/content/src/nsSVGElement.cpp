@@ -463,6 +463,10 @@ nsSVGElement::GetID(nsIAtom*& aId)const
 NS_IMETHODIMP
 nsSVGElement::WalkContentStyleRules(nsRuleWalker* aRuleWalker)
 {
+  nsCOMPtr<nsIStyleRule> rule;
+  mAttributes->GetContentStyleRule(getter_AddRefs(rule));
+  if (rule)  
+    aRuleWalker->Forward(rule);
   return NS_OK;
 }
 
@@ -476,17 +480,23 @@ NS_IMETHODIMP
 nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
                                        nsChangeHint& aHint) const
 {
-  // we don't rely on the cssframeconstructor to map attribute changes
-  // to changes in our frames. an exception is css.
-  // style_hint_content will trigger a re-resolve of the style context
-  // if the attribute is used in a css selector:
-  aHint = NS_STYLE_HINT_CONTENT;
+  // We only need the cssframeconstructor to handle changes on
+  // style-related attributes, such as the 'style'-attribute and the
+  // svg presentation attributes. Other 'interesting' attributes get
+  // handled by a listener mechanism specific to the SVG
+  // implementation.
+  // For style-related attributes we'll return NS_STYLE_HINT_VISUAL
+  // which will always re-resolve the style context. For any other
+  // attributes we'll return NS_STYLE_HINT_CONTENT which will only
+  // re-resolve the style context if the attribute is used in a css
+  // selector.
 
-  // ... and we special case the style attribute
-  if (aAttribute == nsSVGAtoms::style) {
+  if (aAttribute==nsSVGAtoms::style ||
+      IsPresentationAttribute(aAttribute))
     aHint = NS_STYLE_HINT_VISUAL;
-//    aHint = NS_STYLE_HINT_FRAMECHANGE;
-  }
+  else
+    aHint = NS_STYLE_HINT_CONTENT;
+  
   
   return NS_OK;
 }
