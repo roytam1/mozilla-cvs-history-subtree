@@ -4216,6 +4216,8 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 				}
 				if (node->parent)
 				{
+					htCopyReference(node->node, gNavCenter->RDF_Clipboard, emptyClipboard);
+					emptyClipboard = PR_FALSE;
 					htRemoveChild(node->parent, node, true);
 					needRefresh = true;
 				}
