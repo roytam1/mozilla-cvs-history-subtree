@@ -28,7 +28,9 @@
 
 #include "nsIDOMInstallVersion.h"
 
+#ifdef WIN32
 extern JSClass WinRegClass;
+#endif
 
 //
 // Install property ids
@@ -1056,8 +1058,10 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 
   *rval = JSVAL_NULL;
 
+#ifdef WIN32
   // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
+  if(nsnull == nativeThis)
+  {
     return JS_TRUE;
   }
 
@@ -1074,6 +1078,7 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     JS_ReportError(cx, "Function GetWinRegistry requires 0 parameters");
     return JS_FALSE;
   }
+#endif
 
   return JS_TRUE;
 }
@@ -1623,6 +1628,7 @@ PRInt32 InitXPInstallObjects(JSContext *jscontext, JSObject *global, const char*
   JS_SetPrivate(jscontext, installObject, nativeInstallObject);
   nativeInstallObject->SetScriptObject(installObject);
  
+#ifdef WIN32
   if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
   {
       return NS_ERROR_FAILURE;
@@ -1634,6 +1640,7 @@ PRInt32 InitXPInstallObjects(JSContext *jscontext, JSObject *global, const char*
 //       return NS_ERROR_FAILURE;
 //   }
 //   nativeInstallObject->SaveWinProfilePrototype(winProfilePrototype);
+#endif
  
   return NS_OK;
 }
