@@ -28,6 +28,10 @@
 # cause a memory leak (or can fix one)
 #
 # char *:
+#    INPUT:
+#       Changed the standard T_PV INPUT mapping to translate "undef"
+#       (sv_undev) to NULL.  I don't know if this will screw anything
+#       up - this needs to be tested CAREFULLY.
 #    OUTPUT:
 #       Most the of functions returning a char * malloc() the char *
 #       and return it.  char * is mapped to a SvPv * on the way out.
@@ -143,6 +147,11 @@ struct timeval		T_timeval
 
 #########
 INPUT
+T_PV
+	if ( $arg  == &sv_undef )
+           $var = NULL;
+	else
+	   $var = ($type)SvPV($arg,na)
 T_timeval
 	$var.tv_sec = atof((char *)SvPV($arg,na));
 	$var.tv_usec = 0
