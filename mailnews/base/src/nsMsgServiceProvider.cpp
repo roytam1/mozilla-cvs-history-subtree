@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  * Alec Flett <alecf@netscape.com>
+ * Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -51,7 +52,9 @@
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
 
-static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
+#include "nsIMsgAccountManager.h"
+#include "rdf.h"
+
 static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID, NS_RDFXMLDATASOURCE_CID);
 
@@ -62,8 +65,6 @@ nsMsgServiceProviderService::nsMsgServiceProviderService()
 
 nsMsgServiceProviderService::~nsMsgServiceProviderService()
 {
-
-
 }
 
 NS_IMPL_ISUPPORTS1(nsMsgServiceProviderService, nsIRDFDataSource)
@@ -72,7 +73,7 @@ nsresult
 nsMsgServiceProviderService::Init()
 {
   nsresult rv;
-  nsCOMPtr<nsIRDFService> rdf = do_GetService(kRDFServiceCID, &rv);
+  nsCOMPtr<nsIRDFService> rdf = do_GetService("@mozilla.org/rdf/rdf-service;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
   
   mInnerDataSource = do_CreateInstance(kRDFCompositeDataSourceCID, &rv);
@@ -153,4 +154,121 @@ nsMsgServiceProviderService::LoadDataSource(const char *aURI)
     rv = mInnerDataSource->AddDataSource(ds);
 
     return rv;
+}
+
+NS_IMETHODIMP
+nsMsgServiceProviderService::HasAssertion(nsIRDFResource *aSource,
+                                            nsIRDFResource *aProperty,
+                                            nsIRDFNode *aTarget,
+                                            PRBool aTruthValue,
+                                            PRBool *_retval)
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsIRDFService> rdfService = do_GetService("@mozilla.org/rdf/rdf-service;1", &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  if (!mCanCreateAccountProperty) {
+    rv = rdfService->GetResource(NC_NAMESPACE_URI "canCreateAccount", getter_AddRefs(mCanCreateAccountProperty));
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  if (aProperty != mCanCreateAccountProperty.get()) {
+    // for all other properties besides "canCreateAccount", forward on to the inner datasource
+    return mInnerDataSource->HasAssertion(aSource, aProperty, aTarget, aTruthValue, _retval);
+  }
+
+  if (!mMaxAccountsProperty) {
+    rv = rdfService->GetResource(NC_NAMESPACE_URI "maxAccountsWithThisRedirectorType", getter_AddRefs(mMaxAccountsProperty));
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  int maxAccounts = -1;  // by default, no limit to the number of accounts you can create
+  
+  // find out the max number of accounts
+  nsCOMPtr <nsIRDFNode> maxAccountsNode;
+  rv = GetTarget(aSource, mMaxAccountsProperty, aTruthValue, getter_AddRefs(maxAccountsNode));
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr <nsIRDFLiteral> maxAccountsLiteral = do_QueryInterface(maxAccountsNode);
+    if (maxAccountsLiteral) {
+      const PRUnichar *maxAccountsStr;
+      rv = maxAccountsLiteral->GetValueConst(&maxAccountsStr);
+      NS_ENSURE_SUCCESS(rv,rv);
+
+      if (maxAccountsStr) {
+        maxAccounts = atoi(NS_LossyConvertUCS2toASCII(maxAccountsStr).get());
+        if ((maxAccounts <= 0) && maxAccounts != -1) {
+          NS_ASSERTION(0, "bad value for maxAccounts");
+          maxAccounts = -1;
+        }
+      }
+    }
+  }
+
+  // no limit to the number of accounts
+  // so canCreateAccount is "true"
+  if (maxAccounts == -1) {
+    *_retval = PR_TRUE;
+    return NS_OK;
+  }
+
+  if (!mRedirectorTypeProperty) {
+    rv = rdfService->GetResource(NC_NAMESPACE_URI "redirectorType", getter_AddRefs(mRedirectorTypeProperty));
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  const PRUnichar *redirectorTypeStr = nsnull;
+
+  // find out the redirectorType
+  nsCOMPtr <nsIRDFNode> redirectorTypeNode;
+  rv = GetTarget(aSource, mRedirectorTypeProperty, aTruthValue, getter_AddRefs(redirectorTypeNode));
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr <nsIRDFLiteral> redirectorTypeLiteral = do_QueryInterface(redirectorTypeNode);
+    if (redirectorTypeLiteral) {
+      rv = redirectorTypeLiteral->GetValueConst(&redirectorTypeStr);
+      NS_ENSURE_SUCCESS(rv,rv);
+    }
+  }
+
+  // no redirectorTypeStr, bail out
+  if (!redirectorTypeStr) {
+    NS_ASSERTION(0, "check your .rdf file, you need a redirectorType");
+    *_retval = PR_TRUE;
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIMsgAccountManager> accountMgr = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsISupportsArray> allServers;
+  rv = accountMgr->GetAllServers(getter_AddRefs(allServers));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  PRUint32 numServers;
+  rv = allServers->Count(&numServers);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  int numExistingAccountsWithMatchingRedirectorType = 0;
+  for (PRUint32 serverIndex=0; serverIndex < numServers; serverIndex++) {
+    nsCOMPtr <nsISupports> serverSupports = getter_AddRefs(allServers->ElementAt(serverIndex));
+    nsCOMPtr <nsIMsgIncomingServer> server = do_QueryInterface(serverSupports, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsXPIDLCString redirectorType;
+    rv = server->GetRedirectorType(getter_Copies(redirectorType));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    if (redirectorType.Equals(NS_LossyConvertUCS2toASCII(redirectorTypeStr))) {
+      numExistingAccountsWithMatchingRedirectorType++;
+      
+      // check if we've hit the max.
+      if (numExistingAccountsWithMatchingRedirectorType == maxAccounts) {
+        *_retval = PR_FALSE;
+        return NS_OK;
+      }
+    }
+  }
+
+  *_retval = PR_TRUE;
+  return NS_OK;
 }

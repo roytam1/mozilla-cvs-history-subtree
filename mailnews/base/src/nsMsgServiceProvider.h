@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  * Alec Flett <alecf@netscape.com>
+ * Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -54,14 +55,42 @@ class nsMsgServiceProviderService : public nsIRDFDataSource
   nsresult Init();
   
   NS_DECL_ISUPPORTS
-  NS_FORWARD_NSIRDFDATASOURCE(mInnerDataSource->)
+
+  // we can't use NS_FORWARD_NSIRDFDATASOURCE(mInnerDataSource->)
+  // since we need to override HasAssertion();
+  NS_IMETHOD GetURI(char * *aURI) { return mInnerDataSource->GetURI(aURI); }
+  NS_IMETHOD GetSource(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFResource **_retval) { return mInnerDataSource->GetSource(aProperty, aTarget, aTruthValue, _retval); } 
+  NS_IMETHOD GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsISimpleEnumerator **_retval) { return mInnerDataSource->GetSources(aProperty, aTarget, aTruthValue, _retval); } 
+  NS_IMETHOD GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsISimpleEnumerator **_retval) { return mInnerDataSource->GetTargets(aSource, aProperty, aTruthValue, _retval); } 
+  NS_IMETHOD Assert(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue) { return mInnerDataSource->Assert(aSource, aProperty, aTarget, aTruthValue); } 
+  NS_IMETHOD Unassert(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget) { return mInnerDataSource->Unassert(aSource, aProperty, aTarget); } 
+  NS_IMETHOD Change(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aOldTarget, nsIRDFNode *aNewTarget) { return mInnerDataSource->Change(aSource, aProperty, aOldTarget, aNewTarget); } 
+  NS_IMETHOD Move(nsIRDFResource *aOldSource, nsIRDFResource *aNewSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget) { return mInnerDataSource->Move(aOldSource, aNewSource, aProperty, aTarget); } 
+  NS_IMETHOD AddObserver(nsIRDFObserver *aObserver) { return mInnerDataSource->AddObserver(aObserver); } 
+  NS_IMETHOD RemoveObserver(nsIRDFObserver *aObserver) { return mInnerDataSource->RemoveObserver(aObserver); } 
+  NS_IMETHOD ArcLabelsIn(nsIRDFNode *aNode, nsISimpleEnumerator **_retval) { return mInnerDataSource->ArcLabelsIn(aNode, _retval); } 
+  NS_IMETHOD ArcLabelsOut(nsIRDFResource *aSource, nsISimpleEnumerator **_retval) { return mInnerDataSource->ArcLabelsOut(aSource, _retval); } 
+  NS_IMETHOD GetAllResources(nsISimpleEnumerator **_retval) { return mInnerDataSource->GetAllResources(_retval); } 
+  NS_IMETHOD GetAllCommands(nsIRDFResource *aSource, nsIEnumerator **_retval) { return mInnerDataSource->GetAllCommands(aSource, _retval); } 
+  NS_IMETHOD IsCommandEnabled(nsISupportsArray *aSources, nsIRDFResource *aCommand, nsISupportsArray *aArguments, PRBool *_retval) { return mInnerDataSource->IsCommandEnabled(aSources, aCommand, aArguments, _retval); } 
+  NS_IMETHOD DoCommand(nsISupportsArray *aSources, nsIRDFResource *aCommand, nsISupportsArray *aArguments) { return mInnerDataSource->DoCommand(aSources, aCommand, aArguments); } 
+  NS_IMETHOD GetAllCmds(nsIRDFResource *aSource, nsISimpleEnumerator **_retval) { return mInnerDataSource->GetAllCmds(aSource, _retval); } 
+  NS_IMETHOD HasArcIn(nsIRDFNode *aNode, nsIRDFResource *aArc, PRBool *_retval) { return mInnerDataSource->HasArcIn(aNode, aArc, _retval); } 
+  NS_IMETHOD HasArcOut(nsIRDFResource *aSource, nsIRDFResource *aArc, PRBool *_retval) { return mInnerDataSource->HasArcOut(aSource, aArc, _retval); } 
+  NS_IMETHOD GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFNode **target) { return mInnerDataSource->GetTarget(aSource, aProperty, aTruthValue, target); }
+
+  // override HasAssertion() so I can properly handle the canCreateAccount property
+  NS_IMETHOD HasAssertion(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, PRBool *_retval);
   
  private:
 
   nsCOMPtr<nsIRDFCompositeDataSource> mInnerDataSource;
 
   nsresult LoadDataSource(const char *aURL);
-  
+
+  nsCOMPtr <nsIRDFResource> mCanCreateAccountProperty;
+  nsCOMPtr <nsIRDFResource> mMaxAccountsProperty;
+  nsCOMPtr <nsIRDFResource> mRedirectorTypeProperty;
 };
 
 

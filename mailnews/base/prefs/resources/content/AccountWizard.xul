@@ -57,7 +57,7 @@ Rights Reserved.
               id="ispBox"
               ref="NC:ispinfo">
           <template>
-            <rule nc:wizardShow="true">
+            <rule nc:wizardShow="true" nc:canCreateAccount="true">
               <radio uri="..."
                      value="rdf:http://home.netscape.com/NC-rdf#wizardShortName"
                      label="rdf:http://home.netscape.com/NC-rdf#wizardLongName"/>
