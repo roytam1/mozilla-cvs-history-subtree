@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -34,7 +34,7 @@ interface nsISHEntry;
 
 typedef long nsDocShellInfoLoadType;
 
-[scriptable, uuid(33636F98-0635-11d4-9877-00C04FA0D27A)]
+[scriptable, uuid(4f813a88-7aca-4607-9896-d97270cdf15e)]
 interface nsIDocShellLoadInfo : nsISupports
 {
     /** This is the referrer for the load. */
@@ -77,4 +77,9 @@ interface nsIDocShellLoadInfo : nsISupports
 
     /** Additional headers */
     attribute nsIInputStream headersStream;
+
+    /** True if the referrer should be sent, false if it shouldn't be
+     *  sent, even if it's available. This attribute defaults to true.
+     */
+    attribute boolean sendReferrer;
 };

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 3; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -37,23 +37,24 @@
 class nsDocShellLoadInfo : public nsIDocShellLoadInfo
 {
 public:
-   nsDocShellLoadInfo();
+  nsDocShellLoadInfo();
 
-   NS_DECL_ISUPPORTS
-   NS_DECL_NSIDOCSHELLLOADINFO
-
-protected:
-   virtual ~nsDocShellLoadInfo();
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDOCSHELLLOADINFO
 
 protected:
-   nsCOMPtr<nsIURI>                 mReferrer;
-   nsCOMPtr<nsISupports>            mOwner;
-   PRBool                           mInheritOwner;
-   nsDocShellInfoLoadType           mLoadType;
-   nsCOMPtr<nsISHEntry>             mSHEntry;
-   nsString                         mTarget;
-   nsCOMPtr<nsIInputStream>         mPostDataStream;
-   nsCOMPtr<nsIInputStream>         mHeadersStream;
+  virtual ~nsDocShellLoadInfo();
+
+protected:
+  nsCOMPtr<nsIURI>                 mReferrer;
+  nsCOMPtr<nsISupports>            mOwner;
+  PRPackedBool                     mInheritOwner;
+  PRPackedBool                     mSendReferrer;
+  nsDocShellInfoLoadType           mLoadType;
+  nsCOMPtr<nsISHEntry>             mSHEntry;
+  nsString                         mTarget;
+  nsCOMPtr<nsIInputStream>         mPostDataStream;
+  nsCOMPtr<nsIInputStream>         mHeadersStream;
 };
 
 #endif /* nsDocShellLoadInfo_h__ */
