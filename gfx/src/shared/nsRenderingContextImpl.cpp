@@ -40,7 +40,7 @@ PRInt32 PR_CALLBACK compare_active(const void *u,const void *v){return ((Edge*)u
  */
 nsRenderingContextImpl :: nsRenderingContextImpl()
 #ifdef IBMBIDI
-  : mBidiEnabled(0)
+  : mBidiInfo(0)
 #endif // IBMBIDI
 {
 }

@@ -178,18 +178,11 @@ nsRenderingContextWin :: nsRenderingContextWin()
 {
   NS_INIT_REFCNT();
 
-#ifdef IBMBIDI
-  OSVERSIONINFO os;
-    os.dwOSVersionInfoSize = sizeof(os);
-    ::GetVersionEx(&os);
-#endif // IBMBIDI
   // The first time in we initialize gIsWIN95 flag
   if (NOT_SETUP == gIsWIN95) {
-#ifndef IBMBIDI
     OSVERSIONINFO os;
     os.dwOSVersionInfoSize = sizeof(os);
     ::GetVersionEx(&os);
-#endif // IBMBIDI
     // XXX This may need tweaking for win98
     if (VER_PLATFORM_WIN32_NT == os.dwPlatformId) {
       gIsWIN95 = PR_FALSE;
@@ -226,14 +219,6 @@ nsRenderingContextWin :: nsRenderingContextWin()
   PushState();
 
   mP2T = 1.0f;
-#ifdef IBMBIDI
-  mBidiEnabled = (::GetSystemMetrics(SM_MIDEASTENABLED) & IS_REORDERING_SYSTEM);
-  if (mBidiEnabled) {
-    if ( (os.dwMajorVersion >= 5) || (1256 == ::GetACP() ) ) {
-      mBidiEnabled |= IS_SHAPING_SYSTEM;
-    }
-  }
-#endif // IBMBIDI
 }
 
 nsRenderingContextWin :: ~nsRenderingContextWin()
@@ -453,6 +438,9 @@ nsresult nsRenderingContextWin :: SetupDC(HDC aOldDC, HDC aNewDC)
     prevbrush = gStockWhiteBrush;
     prevfont = gStockSystemFont;
     prevpen = gStockBlackPen;
+#ifdef IBMBIDI
+  mBidiInfo = ::GetFontLanguageInfo(aNewDC);
+#endif // IBMBIDI
   }
 
   mOrigSolidBrush = (HBRUSH)::SelectObject(aNewDC, prevbrush);
@@ -3859,6 +3847,30 @@ PRBool nsRenderingContextWin::IsNeedShaping()
  // rv= !IsBidiSystem() && !mContext->mIsVisual;
 	 rv= !isBidi && !mContext->mIsVisual;
   return rv;
+}
+
+/**
+ *  Examine whether the platfrom provides Bidi support
+ *  
+ */
+
+nsresult
+nsRenderingContextWin::IsReorderingSystem(PRBool& aIsBidi)
+{
+  aIsBidi = mBidiInfo & GCP_REORDER;
+  return NS_OK;
+}
+
+/**
+ *  Examine whether the platfrom provides Arabic support
+ *  
+ */
+
+nsresult
+nsRenderingContextWin::IsShapingSystem(PRBool& aIsBidi)
+{
+  aIsBidi = mBidiInfo & GCP_GLYPHSHAPE;
+  return NS_OK;
 }
 
 /**
