@@ -381,6 +381,30 @@ nsScriptSecurityManager::CheckSameOrigin(JSContext* cx,
                                    0, PR_FALSE /* do not check for privileges */);
 }
 
+NS_IMETHODIMP
+nsScriptSecurityManager::CheckSameOriginURI(nsIURI* aSourceURI,
+                                            nsIURI* aTargetURI)
+{
+    nsresult rv;
+
+    // Create a principal from aSourceURI
+    nsCOMPtr<nsIPrincipal> sourcePrincipal;
+    rv = GetCodebasePrincipal(aSourceURI, getter_AddRefs(sourcePrincipal));
+    if (NS_FAILED(rv))
+        return rv;
+
+    // Create a principal from aTargetURI
+    // XXX factor out the Equals function so this isn't necessary
+    nsCOMPtr<nsIPrincipal> targetPrincipal;
+    rv = GetCodebasePrincipal(aTargetURI, getter_AddRefs(targetPrincipal));
+    if (NS_FAILED(rv))
+        return rv;
+
+    // Compare origins
+    return CheckSameOriginInternal(sourcePrincipal, targetPrincipal,
+                                   0, PR_FALSE /* do not check for privileges */);
+}
+
 nsresult
 nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
                                                  nsIXPCNativeCallContext* aCallContext,
