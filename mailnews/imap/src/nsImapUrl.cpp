@@ -1003,6 +1003,10 @@ nsImapUrl::GetURI(char** aURI)
         fullFolderPath += '/';
         fullFolderPath += theFile;
 
+        printf("FULLFOLDERPATH: ");
+        printf(fullFolderPath.GetBuffer());
+        printf("\n");
+
 		PR_FREEIF(hostName);
 
         return nsBuildImapMessageURI(fullFolderPath, key, aURI);
