@@ -48,7 +48,7 @@
 
 nsReflowPath::~nsReflowPath()
 {
-    for (PRInt32 i = mChildren.Count(); i >= 0; --i)
+    for (PRInt32 i = mChildren.Count() - 1; i >= 0; --i)
         delete NS_STATIC_CAST(nsReflowPath *, mChildren[i]);
 
     delete mReflowCommand;
