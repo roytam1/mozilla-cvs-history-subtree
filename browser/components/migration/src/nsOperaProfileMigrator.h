@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Ben Goodger <ben@bengoodger.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -33,30 +34,38 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+ 
+#ifndef operaprofilemigrator___h___
+#define operaprofilemigrator___h___
 
-#include "nsISupports.idl"
+#include "nsIBrowserProfileMigrator.h"
+#include "nsCOMPtr.h"
 
-[scriptable, uuid(6c64bc4a-881f-4fd8-8f19-3b4125dcee50)]
-interface nsIBrowserProfileMigrator : nsISupports 
+class nsILocalFile;
+
+class nsOperaProfileMigrator : public nsIBrowserProfileMigrator
 {
-  /**
-   * profile items to migrate. use with migrate().
-   */
-  const unsigned long ALL         = 0x0000;
-  const unsigned long SETTINGS	  = 0x0001;
-  const unsigned long COOKIES     = 0x0002;
-  const unsigned long HISTORY     = 0x0004;
-  const unsigned long FORMDATA    = 0x0008;
-  const unsigned long PASSWORDS   = 0x0010;
-  const unsigned long BOOKMARKS   = 0x0020;
-  const unsigned long DOWNLOADS   = 0x0040;
+public:
+  NS_DECL_NSIBROWSERPROFILEMIGRATOR
+  NS_DECL_ISUPPORTS
 
-  /**
-   * Copy user profile information to the current active profile.
-   * @param aItems   list of data items to migrate. see above for values.
-   * @param aReplace replace or append current data where applicable. 
-   * @param aProfile profile to migrate from, if there is more than one.
-   */
-  void migrate(in unsigned long aItems, in boolean aReplace, in wstring aProfile);
-};  
+  nsOperaProfileMigrator();
+  virtual ~nsOperaProfileMigrator();
+
+protected:
+  nsresult CopyPreferences(PRBool aReplace);
+  nsresult CopyCookies(PRBool aReplace);
+  nsresult CopyHistory(PRBool aReplace);
+  nsresult CopyFormData(PRBool aReplace);
+  nsresult CopyPasswords(PRBool aReplace);
+  nsresult CopyHotlist(PRBool aReplace);
+  nsresult CopyDownloads(PRBool aReplace);
+
+  void     GetOperaProfile(const PRUnichar* aProfile, nsILocalFile** aFile);
+
+private:
+  nsCOMPtr<nsILocalFile> mOperaProfile;
+};
+
+#endif
 

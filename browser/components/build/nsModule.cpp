@@ -41,11 +41,13 @@
 #include "nsBrowserCompsCID.h"
 #include "nsBookmarksService.h"
 #include "nsProfileMigrator.h"
+#include "nsOperaProfileMigrator.h"
 
 /////////////////////////////////////////////////////////////////////////////
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileMigrator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsOperaProfileMigrator)
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -64,7 +66,12 @@ static const nsModuleComponentInfo components[] =
   { "Profile Migrator", 
     NS_PROFILEMIGRATOR_CID, 
     NS_PROFILEMIGRATOR_CONTRACTID,
-    nsProfileMigratorConstructor }
+    nsProfileMigratorConstructor },
+
+  { "Opera (Windows) Profile Migrator",
+    NS_OPERAPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera",
+    nsOperaProfileMigratorConstructor }
 };
 
 NS_IMPL_NSGETMODULE(nsBrowserCompsModule, components)

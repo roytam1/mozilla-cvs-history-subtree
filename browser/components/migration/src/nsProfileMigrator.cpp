@@ -57,7 +57,7 @@ nsProfileMigrator::Migrate()
   GetDefaultBrowserMigrator(getter_AddRefs(bpm));
 
   if (bpm)
-    return bpm->Migrate(nsIBrowserProfileMigrator::ALL, PR_TRUE);
+    return bpm->Migrate(nsIBrowserProfileMigrator::ALL, PR_TRUE, NS_LITERAL_STRING("").get());
   
   return NS_OK;
 }

@@ -48,7 +48,7 @@ REQUIRES	= xpcom \
 		  string \
 		  $(NULL)
 
-CPPSRCS		= nsProfileMigrator.cpp
+CPPSRCS		= nsProfileMigrator.cpp nsOperaProfileMigrator.cpp
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

@@ -23,17 +23,19 @@ var MigrationWizard = {
   _source: "",
   _itemsFlags: 0,
   _selectedIndices: [],
+  _profiles: [],
+  _selectedProfile: null,
+  _wiz: null,
 
   init: function ()
   {
-    var importSource = document.getElementById("importSource");
-    importSource.selectedItem = document.getElementById("ie");
-
     var os = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
     os.addObserver(this, "Migration:Started", false);
     os.addObserver(this, "Migration:ItemBeforeMigrate", false);
     os.addObserver(this, "Migration:ItemAfterMigrate", false);
     os.addObserver(this, "Migration:Ended", false);
+    
+    this._wiz = document.documentElement;
   },
   
   uninit: function ()
@@ -45,43 +47,38 @@ var MigrationWizard = {
     os.removeObserver(this, "Migration:Ended");
   },
   
-  migrate: function ()
+  // 1 - Import Source
+  onImportSourcePageShow: function ()
   {
-    setTimeout(this._migrate, 0, this);
+    var importSourceGroup = document.getElementById("importSourceGroup");
+    importSourceGroup.selectedItem = document.getElementById(this._source == "" ? "ie" : this._source);
   },
   
-  _migrate: function(aOuter) 
+  onImportSourcePageAdvanced: function ()
   {
-    var me = aOuter
-    var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=";
-    contractID += me._source;
-    
-    const nsIBPM = Components.interfaces.nsIBrowserProfileMigrator;
-    var bpm = Components.classes[contractID].createInstance(nsIBPM);
-    bpm.migrate(me._itemsFlags, true);
-  },
-  
-  sourceSelected: function ()
-  {
-    this._source = document.getElementById("importSource").selectedItem.id;
+    this._source = document.getElementById("importSourceGroup").selectedItem.id;
     this._initDataSources();
-  },
-  
-  itemsSelected: function ()
-  {
-    var dataSources = document.getElementById("dataSources");
-    var params = 0;
-    this._selectedIndices = [];
-    for (var i = 0; i < dataSources.childNodes.length; ++i) {
-      var checkbox = dataSources.childNodes[i];
-      if (checkbox.localName == "checkbox") {
-        if (checkbox.checked) {
-          params |= parseInt(checkbox.id);
-          this._selectedIndices.push(i);
-        }
+
+    if (this._source == "opera") {
+      // check for more than one Opera profile
+      var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"].getService(Components.interfaces.nsIProperties);
+      var operaAppData = fileLocator.get("AppData", Components.interfaces.nsILocalFile);
+      operaAppData.append("Opera");
+      
+      var e = operaAppData.directoryEntries;
+      while (e.hasMoreElements()) {
+        var temp = e.getNext().QueryInterface(Components.interfaces.nsILocalFile);
+        if (temp.isDirectory())
+          this._profiles.push(temp.leafName);
       }
+      
+      this._wiz.goTo((this._profiles.length > 1) ? "selectProfile" : "importItems");
     }
-    this._itemsFlags = params;
+    else {
+      // Don't show the Select Profile page for sources that don't support
+      // multiple profiles
+      this._wiz.goTo("importItems");
+    }
   },
   
   _initDataSources: function ()
@@ -102,7 +99,59 @@ var MigrationWizard = {
       checkbox.checked = true;
     }
   },
+
+  // 2 - [Profile Selection]
+  onSelectProfilePageShow: function ()
+  {
+    var profiles = document.getElementById("profiles");
+    while (profiles.hasChildNodes()) 
+      profiles.removeChild(profiles.firstChild);
+      
+    for (var i = 0; i < this._profiles.length; ++i) {
+      var item = document.createElement("radio");
+      item.id = this._profiles[i];
+      item.setAttribute("label", this._profiles[i]);
+      profiles.appendChild(item);
+    }
+    
+    profiles.selectedItem = profiles.firstChild;
+  },
   
+  onSelectProfilePageAdvanced: function ()
+  {
+    var profiles = document.getElementById("profiles");
+    this._selectedProfile = profiles.selectedItem.id;
+  },
+  
+  // 3 - ImportItems
+  onImportItemsPageAdvanced: function ()
+  {
+    var dataSources = document.getElementById("dataSources");
+    var params = 0;
+    this._selectedIndices = [];
+    for (var i = 0; i < dataSources.childNodes.length; ++i) {
+      var checkbox = dataSources.childNodes[i];
+      if (checkbox.localName == "checkbox") {
+        if (checkbox.checked) {
+          params |= parseInt(checkbox.id);
+          this._selectedIndices.push(i);
+        }
+      }
+    }
+    this._itemsFlags = params;
+  },
+  
+  // 4 - Migrating
+  onMigratingPageShow: function ()
+  {
+    var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=";
+    contractID += this._source;
+    
+    const nsIBPM = Components.interfaces.nsIBrowserProfileMigrator;
+    var bpm = Components.classes[contractID].createInstance(nsIBPM);
+    bpm.migrate(this._itemsFlags, true, this._selectedProfile);
+  },
+
   observe: function (aSubject, aTopic, aData)
   {
     var itemToIndex = { "settings": 0, "cookies": 1, "history": 2, "formdata": 3, "passwords": 4, "bookmarks": 5, "downloads": 6 };
@@ -127,20 +176,22 @@ var MigrationWizard = {
       var index = itemToIndex[aData];
       var item = this._items[index];
       var checkbox = document.getElementById(item._key);
-      checkbox.setAttribute("style", "font-weight: bold");
+      if (checkbox)
+        checkbox.setAttribute("style", "font-weight: bold");
       break;
     case "Migration:ItemAfterMigrate":
       dump("*** item was migrated...\n");
       var index = itemToIndex[aData];
       var item = this._items[index];
       var checkbox = document.getElementById(item._key);
-      checkbox.removeAttribute("style");
+      if (checkbox)
+        checkbox.removeAttribute("style");
       break;
     case "Migration:Ended":
       dump("*** migration ended\n");
       break;
     }
-  },
+  }
 };
 
 # ***** BEGIN LICENSE BLOCK *****

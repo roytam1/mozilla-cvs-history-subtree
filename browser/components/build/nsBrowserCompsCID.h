@@ -44,3 +44,6 @@
 
 #define NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "@mozilla.org/profile/migrator;1?app=browser&type="
 
+#define NS_OPERAPROFILEMIGRATOR_CID \
+{ 0xf34ff792, 0x722e, 0x4490, { 0xb1, 0x95, 0x47, 0xd2, 0x42, 0xed, 0xca, 0x1c } }
+
