@@ -213,7 +213,7 @@ int main(PRInt32 argc, char *argv[])
 
     // Get the transaction service
     printf("tmModuleTest: getting transaction service\n");
-    nsCOMPtr<ipcITransactionService> transServ(do_GetService("@mozilla.org/transaction/service;1", &rv));
+    nsCOMPtr<ipcITransactionService> transServ(do_GetService("@mozilla.org/ipc/transaction-service;1", &rv));
     RETURN_IF_FAILED(rv, "do_GetService(transServ)");
     NS_ADDREF(gTransServ = transServ);
 
