@@ -1745,12 +1745,10 @@ DumpFamily(nsFontFamily* aFamily)
 }
 
 static PRIntn
-DumpFamilyEnum(PLHashEntry* he, PRIntn i, void* arg)
+DumpFamilyEnum(const char* key, void *obj, void*)
 {
-  char buf[256];
-  ((nsString*) he->key)->ToCString(buf, sizeof(buf));
-  printf("family: %s\n", buf);
-  nsFontFamily* family = (nsFontFamily*) he->value;
+  printf("family: %s\n", key);
+  nsFontFamily* family = (nsFontFamily*) obj;
   DumpFamily(family);
 
   return HT_ENUMERATE_NEXT;
@@ -1759,7 +1757,7 @@ DumpFamilyEnum(PLHashEntry* he, PRIntn i, void* arg)
 static void
 DumpTree(void)
 {
-  PL_HashTableEnumerateEntries(gFamilies, DumpFamilyEnum, nsnull);
+  gFamilies->Enumerate(DumpFamilyEnum, nsnull);
 }
 
 #endif /* DEBUG_DUMP_TREE */
