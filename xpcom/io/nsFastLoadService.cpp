@@ -93,15 +93,13 @@ nsFastLoadService::NewInputStream(nsIInputStream* aSrcStream,
     nsresult rv;
     nsAutoLock lock(mLock);
 
-    rv = NS_NewFastLoadFileReader(getter_AddRefs(mObjectInputStream),
-                                  aSrcStream);
+    nsCOMPtr<nsIObjectInputStream> stream;
+    rv = NS_NewFastLoadFileReader(getter_AddRefs(stream), aSrcStream);
     if (NS_FAILED(rv)) return rv;
 
-    mObjectOutputStream = nsnull;
-
-    nsIObjectInputStream* stream = mObjectInputStream.get();
+    nsIObjectInputStream* rawptr = stream.get();
     nsFastLoadFileReader* reader = NS_STATIC_CAST(nsFastLoadFileReader*,
-                                                  stream);
+                                                  rawptr);
 
     *aCheckSum = reader->GetChecksum();
     NS_ADDREF(*aResult = stream);
@@ -112,16 +110,30 @@ NS_IMETHODIMP
 nsFastLoadService::NewOutputStream(nsIOutputStream* aDestStream,
                                    nsIObjectOutputStream* *aResult)
 {
-    nsresult rv;
     nsAutoLock lock(mLock);
 
-    rv = NS_NewFastLoadFileWriter(getter_AddRefs(mObjectOutputStream),
-                                  aDestStream);
-    if (NS_FAILED(rv)) return rv;
+    return NS_NewFastLoadFileWriter(aResult, aDestStream);
+}
 
-    mObjectInputStream = nsnull;
+NS_IMETHODIMP
+nsFastLoadService::SetInputStream(nsIObjectInputStream* aSrcStream,
+                                  nsIObjectInputStream* *aResult)
+{
+    nsCOMPtr<nsIObjectInputStream> oldStream = mObjectInputStream;
 
-    NS_ADDREF(*aResult = mObjectOutputStream);
+    mObjectInputStream = aSrcStream;
+    NS_IF_ADDREF(*aResult = oldStream);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::SetOutputStream(nsIObjectOutputStream* aDestStream,
+                                   nsIObjectOutputStream* *aResult)
+{
+    nsCOMPtr<nsIObjectOutputStream> oldStream = mObjectOutputStream;
+
+    mObjectOutputStream = aDestStream;
+    NS_IF_ADDREF(*aResult = oldStream);
     return NS_OK;
 }
 
@@ -132,9 +144,9 @@ nsFastLoadService::AppendDependency(const char* aFileName)
     if (!mObjectOutputStream)
         return NS_OK;
 
-    nsIObjectOutputStream* stream = mObjectOutputStream.get();
+    nsIObjectOutputStream* rawptr = mObjectOutputStream.get();
     nsFastLoadFileWriter* writer = NS_STATIC_CAST(nsFastLoadFileWriter*,
-                                                  stream);
+                                                  rawptr);
     if (!writer->AppendDependency(aFileName))
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
@@ -149,9 +161,9 @@ nsFastLoadService::MaxDependencyModifiedTime(PRTime *aTime)
     if (!mObjectOutputStream)
         return NS_OK;
 
-    nsIObjectOutputStream* stream = mObjectOutputStream.get();
+    nsIObjectOutputStream* rawptr = mObjectOutputStream.get();
     nsFastLoadFileWriter* writer = NS_STATIC_CAST(nsFastLoadFileWriter*,
-                                                  stream);
+                                                  rawptr);
 
     for (PRUint32 i = 0, n = writer->GetDependencyCount(); i < n; i++) {
         PRFileInfo info;

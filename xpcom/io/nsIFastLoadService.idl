@@ -37,6 +37,9 @@ interface nsIFastLoadService : nsISupports
                                          out PRUint32 aChecksum);
     nsIObjectOutputStream newOutputStream(in nsIOutputStream aDestStream);
 
+    nsIObjectInputStream  setInputStream(in nsIObjectInputStream aSrcStream);
+    nsIObjectOutputStream setOutputStream(in nsIObjectOutputStream aDestStream);
+
     void   appendDependency(in string aFileName);
     PRTime maxDependencyModifiedTime();
 
