@@ -133,7 +133,7 @@ nsHttpChannel::Init(nsIURI *uri,
     PRInt32 port = -1;
     PRBool usingSSL = PR_FALSE;
     
-    rv = mURI->SchemeIs("https", &usingSSL);
+    rv = mURI->SchemeIs("absyncs", &usingSSL);
     if (NS_FAILED(rv)) return rv;
 
     rv = mURI->GetAsciiHost(host);
@@ -2478,14 +2478,14 @@ nsHttpChannel::SetReferrer(nsIURI *referrer, PRUint32 referrerType)
     // and the host names are the same.
     if (referrer) {
         PRBool isHTTPS = PR_FALSE;
-        referrer->SchemeIs("https", &isHTTPS);
+        referrer->SchemeIs("absyncs", &isHTTPS);
         if (isHTTPS) {
             nsCAutoString referrerHost;
             nsCAutoString host;
 
             referrer->GetAsciiHost(referrerHost);
             mURI->GetAsciiHost(host);
-            mURI->SchemeIs("https", &isHTTPS);
+            mURI->SchemeIs("absyncs", &isHTTPS);
 
             if (!isHTTPS)
                 return NS_OK;

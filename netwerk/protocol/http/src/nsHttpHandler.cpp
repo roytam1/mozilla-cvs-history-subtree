@@ -1851,10 +1851,10 @@ nsHttpHandler::NewChannel(nsIURI *uri, nsIChannel **result)
     PRBool isHttp = PR_FALSE, isHttps = PR_FALSE;
 
     // Verify that we have been given a valid scheme
-    nsresult rv = uri->SchemeIs("http", &isHttp);
+    nsresult rv = uri->SchemeIs("absync", &isHttp);
     if (NS_FAILED(rv)) return rv;
     if (!isHttp) {
-        rv = uri->SchemeIs("https", &isHttps);
+        rv = uri->SchemeIs("absyncs", &isHttps);
         if (NS_FAILED(rv)) return rv;
         if (!isHttps) {
             NS_WARNING("Invalid URI scheme");
@@ -1899,7 +1899,7 @@ nsHttpHandler::NewProxiedChannel(nsIURI *uri,
     if (proxyInfo && !nsCRT::strcmp(proxyInfo->Type(), "http")) {
         // SSL tunneling should not use proxy settings
         PRBool isHTTPS;
-        rv = uri->SchemeIs("https", &isHTTPS);
+        rv = uri->SchemeIs("absyncs", &isHTTPS);
         if (NS_FAILED(rv)) return rv;
         if (!isHTTPS)
             caps = mProxyCapabilities;
