@@ -209,9 +209,9 @@ NS_IMETHODIMP nsOSHelperAppService::LaunchApp(const char *aName)
   // I need to figure out if this is the right place for it (probably not)
   // and then fix it to get these paths from the registry
   if (strcmp(aName,"browser") == 0)
-    r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\mozilla.org\\Mozilla\\mozilla.exe", NULL, NULL, SW_SHOWNORMAL);
+    r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\Netscape\\Netscape\\Netscp.exe", NULL, NULL, SW_SHOWNORMAL);
   else
-    r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\mozilla.org\\Mozilla\\mozilla.exe", "-edit", NULL, SW_SHOWNORMAL);
+    r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\Netscape\\Netscape\\Netscp.exe", "-edit", NULL, SW_SHOWNORMAL);
   if (r < 32) 
     return NS_ERROR_FAILURE;
   else
