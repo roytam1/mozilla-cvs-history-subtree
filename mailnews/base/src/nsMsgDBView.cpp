@@ -1109,6 +1109,9 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   if ((mDeleteModel == nsMsgImapDeleteModels::IMAPDelete) && (flags & MSG_FLAG_IMAP_DELETED)) 
     properties->AppendElement(kImapDeletedMsgAtom);
 
+  if (mRedirectorTypeAtom)
+    properties->AppendElement(mRedirectorTypeAtom);
+
   if (mIsNews)
     properties->AppendElement(kNewsMsgAtom);
 
@@ -1594,6 +1597,16 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
     nsXPIDLCString type;
     rv = server->GetType(getter_Copies(type));
     NS_ENSURE_SUCCESS(rv,rv);
+
+    // turn the redirector type into an atom
+    nsXPIDLCString redirectorType;
+    rv = server->GetRedirectorType(getter_Copies(redirectorType));
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (redirectorType.IsEmpty())
+      mRedirectorTypeAtom = nsnull;
+    else
+      mRedirectorTypeAtom = getter_AddRefs(NS_NewAtom(redirectorType.get()));
+
     mIsNews = !nsCRT::strcmp("nntp",type.get());
     GetImapDeleteModel(nsnull);
     // for sent, unsent and draft folders, be sure to set mIsSpecialFolder so we'll show the recipient field
