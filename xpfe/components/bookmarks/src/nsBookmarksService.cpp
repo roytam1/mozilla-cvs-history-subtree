@@ -2106,15 +2106,11 @@ nsBookmarksService::FireTimer(nsITimer* aTimer, void* aClosure)
         if (NS_SUCCEEDED(rv = bmks->GetBookmarkToPing(getter_AddRefs(bookmark))) && (bookmark))
         {
             bmks->busyResource = bookmark;
-
-            nsAutoString url;
-            rv = bmks->GetURLFromResource(bookmark, url);
-            if (NS_FAILED(rv))
-                return;
+            const char      *url = nsnull;
+            bookmark->GetValueConst(&url);
 
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
-            printf("nsBookmarksService::FireTimer - Pinging '%s'\n",
-                   NS_ConvertUCS2toUTF8(url).get());
+            printf("nsBookmarksService::FireTimer - Pinging '%s'\n", url);
 #endif
 
             nsCOMPtr<nsIURI>    uri;
@@ -2169,13 +2165,13 @@ NS_IMETHODIMP
 nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                     nsresult status)
 {
-    nsresult rv;
+    nsresult        rv;
 
-    nsAutoString url;
-    if (NS_SUCCEEDED(rv = GetURLFromResource(busyResource, url)))
+    const char      *uri = nsnull;
+    if (NS_SUCCEEDED(rv = busyResource->GetValueConst(&uri)) && (uri))
     {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
-        printf("Finished polling '%s'\n", NS_ConvertUCS2toUTF8(url).get());
+        printf("Finished polling '%s'\n", uri);
 #endif
     }
     nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
@@ -2203,7 +2199,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                 if (!eTagValue.IsEmpty())
                 {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
-                    printf("eTag: '%s'\n", NS_ConvertUCS2toUTF8(eTagValue).get());
+                    printf("eTag: '%s'\n", NS_LossyConvertASCIItoUCS2(eTagValue).get());
 #endif
                     nsAutoString        eTagStr;
                     nsCOMPtr<nsIRDFNode>    currentETagNode;
@@ -2469,7 +2465,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                             }
                         }
                     }
-                    promptStr.Append(url);
+                    promptStr.AppendWithConversion(uri);
                     
                     nsAutoString    temp;
                     getLocaleString("WebPageAskDisplay", temp);
@@ -2515,20 +2511,20 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
             nsCOMPtr<nsISupportsArray> suppArray;
             rv = NS_NewISupportsArray(getter_AddRefs(suppArray));
             if (NS_FAILED(rv)) return rv;
-            nsCOMPtr<nsISupportsString> suppString(do_CreateInstance("@mozilla.org/supports-string;1", &rv));
+            nsCOMPtr<nsISupportsCString> suppString(do_CreateInstance("@mozilla.org/supports-cstring;1", &rv));
             if (!suppString) return rv;
-            rv = suppString->SetData(url);
+            rv = suppString->SetData(nsDependentCString(uri));
             if (NS_FAILED(rv)) return rv;
             suppArray->AppendElement(suppString);
     
             nsCOMPtr<nsICmdLineHandler> handler(do_GetService("@mozilla.org/commandlinehandler/general-startup;1?type=browser", &rv));    
             if (NS_FAILED(rv)) return rv;
    
-            nsXPIDLCString chromeUrl;
-            rv = handler->GetChromeUrlForTask(getter_Copies(chromeUrl));
+            nsXPIDLCString url;
+            rv = handler->GetChromeUrlForTask(getter_Copies(url));
             if (NS_FAILED(rv)) return rv;
 
-            wwatch->OpenWindow(0, chromeUrl, "_blank", "chrome,dialog=no,all", 
+            wwatch->OpenWindow(0, url, "_blank", "chrome,dialog=no,all", 
                                suppArray, getter_AddRefs(newWindow));
                     }
                 }
@@ -2979,33 +2975,6 @@ nsBookmarksService::SortFolder(nsIRDFResource* aFolder,
 #endif
 
     return rv;
-}
-
-nsresult
-nsBookmarksService::GetURLFromResource(nsIRDFResource* aResource,
-                                       nsAString& aURL)
-{
-    NS_ENSURE_ARG(aResource);
-
-    nsCOMPtr<nsIRDFNode> urlNode;
-    nsresult rv = mInner->GetTarget(aResource, kNC_URL, PR_TRUE, getter_AddRefs(urlNode));
-    if (NS_FAILED(rv))
-        return rv;
-
-    if (urlNode) {
-        nsCOMPtr<nsIRDFLiteral> urlLiteral = do_QueryInterface(urlNode, &rv);
-        if (NS_FAILED(rv))
-            return rv;
-
-        const PRUnichar* url = nsnull;
-        rv = urlLiteral->GetValueConst(&url);
-        if (NS_FAILED(rv))
-            return rv;
-
-        aURL.Assign(url);
-    }
-
-    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -3622,14 +3591,22 @@ nsBookmarksService::ResolveKeyword(const PRUnichar *aUserInput, char **aShortcut
         return rv;
 
     if (source) {
-        nsAutoString url;
-        rv = GetURLFromResource(source, url);
+        nsCOMPtr<nsIRDFNode> urlNode;
+        rv = GetTarget(source, kNC_URL, PR_TRUE, getter_AddRefs(urlNode));
         if (NS_FAILED(rv))
            return rv;
 
-        if (!url.IsEmpty()) {
-            *aShortcutURL = ToNewUTF8String(url);
-            return NS_OK;
+        if (urlNode) {
+            nsCOMPtr<nsIRDFLiteral> urlLiteral = do_QueryInterface(urlNode);
+            if (urlLiteral) {
+                const PRUnichar* value;
+                rv = urlLiteral->GetValueConst(&value);
+                if (NS_FAILED(rv))
+                    return rv;
+
+                *aShortcutURL = ToNewUTF8String(nsDependentString(value));
+                return NS_OK;
+            }
         }
     }
 
