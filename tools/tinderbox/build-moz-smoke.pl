@@ -377,7 +377,7 @@ sub BuildIt {
 	if ( $UseTimeStamp ) {
 	    $CVSCO = $SaveCVSCO;
 	} else {
-	    $CVSCO .= ' -A';
+	    $CVSCO = $SaveCVSCO . ' -A';
 	}
 	$StartTime = time - 60 * 10;
 	$StartTimeStr = &CVSTime($StartTime);
