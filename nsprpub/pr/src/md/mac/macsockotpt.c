@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /*
  * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
+ * Version 1.1 (the "NPL"); you may not use this file except in
  * compliance with the NPL.  You may obtain a copy of the NPL at
  * http://www.mozilla.org/NPL/
  * 
@@ -213,7 +213,6 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
     PRThread *    thread   = NULL;
     _PRCPU *      cpu      = _PR_MD_CURRENT_CPU(); 
 	OSStatus      err;
-    TDiscon       discon;
 	OTResult	  resultOT;
 
     switch (code)
@@ -249,10 +248,8 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
 			return;
 
         case T_DISCONNECT:  // A disconnect is available
-            memset(&discon, 0 , sizeof(discon));
-            err = OTRcvDisconnect(endpoint, &discon);
+            err = OTRcvDisconnect(endpoint, NULL);
             PR_ASSERT(err == kOTNoError);
-            macsock_map_error(discon.reason);
             fd->secret->md.exceptReady     = PR_TRUE;
             fd->secret->md.connectionOpen  = PR_FALSE;
             break;
@@ -1716,6 +1713,9 @@ int _MD_mac_get_nonblocking_connect_error(PRInt32 osfd)
             return 0;
         case T_IDLE:
             return -1;
+        case T_INREL:
+        	macsock_map_error(ENOTCONN);
+        	return -1;
         default:
             PR_ASSERT(0);
             return -1;
