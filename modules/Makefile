@@ -30,23 +30,26 @@ DIRS		= \
 	rdf \
 	xml \
 	schedulr \
-	security \
 	$(NULL)
 
-ifdef MOZ_JAVA
+ifdef NO_SECURITY
+DIRS +=	security
+endif
+
+ifdef JAVA_OR_OJI
 DIRS		+= libreg softupdt zlib li progress
 
 ifdef EDITOR
 DIRS		+= edtplug spellchk
 endif
 
-else  # MOZ_JAVA
+else  # JAVA_OR_OJI
 DIRS            += zlib li progress
 ifdef EDITOR
 DIRS		+= spellchk
 endif
 
-endif # MOZ_JAVA
+endif # JAVA_OR_OJI
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
 DIRS	+= spellchk
