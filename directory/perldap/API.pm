@@ -247,11 +247,11 @@ require AutoLoader;
 # Add Everything in %EXPORT_TAGS to @EXPORT_OK
 Exporter::export_ok_tags(keys %EXPORT_TAGS);
 
-$VERSION = '1.2.1';
+$VERSION = '1.4';
 
 # The XS 'constant' routine returns an integer.  There are all constants
 # we want to return something else.
-my %OVERRIDE_CONST = (
+my (%OVERRIDE_CONST) = (
    "LDAP_ALL_USER_ATTRS","*",
    "LDAP_CONTROL_ENTRYCHANGE","2.16.840.1.113730.3.4.7",
    "LDAP_CONTROL_MANAGEDSAIT","2.16.840.1.113730.3.4.2",
@@ -271,13 +271,14 @@ my %OVERRIDE_CONST = (
 );
 
 sub AUTOLOAD {
+    my ($constname);
+    my ($val);
+
     # This AUTOLOAD is used to 'autoload' constants from the constant()
     # XS function.  If a constant is not found then control is passed
     # to the AUTOLOAD in AutoLoader.
 
-    my $constname;
     ($constname = $AUTOLOAD) =~ s/.*:://;
-    my $val;
     if (($val = $OVERRIDE_CONST{$constname}))
     {
         eval "sub $AUTOLOAD { $val }";
