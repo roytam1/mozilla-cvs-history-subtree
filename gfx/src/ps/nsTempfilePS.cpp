@@ -59,6 +59,12 @@ nsTempfilePS::nsTempfilePS()
     // filenames.
     LL_L2UI(mCount, PR_Now());
 
+#ifdef VMS
+    // On OpenVMS we can't use a subdirectory because the temp print file
+    // can not be deleted until after the print job has completed, and this
+    // would orphan the temp subdirectory.
+    mTempDir = nsnull;
+#else
     // Append an arbitrary subdirectory name to the temp dir...
     rv = mTempDir->Append(
             NS_ConvertASCIItoUCS2(nsPrintfCString("%lx.tmp", mCount++)));
@@ -71,6 +77,7 @@ nsTempfilePS::nsTempfilePS()
     rv = mTempDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
     if (NS_FAILED(rv))
         mTempDir = nsnull;
+#endif /* VMS */
 }
 
 nsTempfilePS::~nsTempfilePS()
