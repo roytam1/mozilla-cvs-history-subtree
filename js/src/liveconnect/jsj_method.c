@@ -1058,7 +1058,9 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
     JSObject *js_obj;
     
     js_type = compute_jsj_type(cx, js_val);
-    
+    rank1 = rank_table[js_type][(int)descriptor1->type - 2];
+    rank2 = rank_table[js_type][(int)descriptor2->type - 2];
+
     /*
      * Special logic is required for matching the classes of wrapped
      * Java objects.
@@ -1078,9 +1080,9 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
 
         /*
          * For JavaObject arguments, any compatible reference type is preferable
-         * to any primitive Java type.
+         * to any primitive Java type or to java.lang.String.
          */
-        if (IS_PRIMITIVE_TYPE(descriptor1->type))
+        if (rank2 < rank1)
             return JSJPREF_SECOND_ARG;
         
         /*
@@ -1097,10 +1099,7 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
         return JSJPREF_AMBIGUOUS;
     }
     
-    /* Fast path for conversion from most JS types */
-    rank1 = rank_table[js_type][(int)descriptor1->type - 2];
-    rank2 = rank_table[js_type][(int)descriptor2->type - 2];
-    
+    /* Fast path for conversion from most JS types */  
     if (rank1 < rank2)
         return JSJPREF_FIRST_ARG;
     
@@ -1233,6 +1232,15 @@ resolve_overloaded_method(JSContext *cx, JNIEnv *jEnv,
      * method that is just as preferred.
      */
     if (!JS_CLIST_IS_EMPTY(&ambiguous_methods)) {
+        /* Add the best_method_match to the list of ambiguous methods */
+	method_list_element =
+	    (MethodListElement*)JS_malloc(cx, sizeof(MethodListElement));
+	if (!method_list_element)
+	    goto error;
+	method_list_element->method = best_method_match;
+	JS_APPEND_LINK(&method_list_element->linkage, &ambiguous_methods);
+
+	/* Report the problem */
         report_ambiguous_method_match(cx, member_descriptor, class_descriptor,
                                       &ambiguous_methods, is_static_method, argc, argv);
         goto error;
