@@ -47,7 +47,7 @@ BEGIN {
 	if ($@) {
 	    warn $complaint;
 	    die "Can't use MIME::Base64";
-# Get a copy from http://www.perl.com/CPAN-local/modules/by-module/MIME/
+# Get a copy from http://www.perl.com/CPAN/modules/by-module/MIME/
 # and install it.  If you have trouble, try simply putting Base64.pm
 # in a subdirectory named MIME, in one of the directories named in @INC
 # (site_perl is a good choice).
@@ -1199,7 +1199,7 @@ For example, B<unpack_LDIF>("abc") outputs this warning, and returns ("abc", und
 (F) The MIME::Base64 module isn't installed, and
 Mozilla::LDAP::Utils can't be used (as an inferior substitute).
 To rectify this, get a copy of MIME::Base64 from
-http://www.perl.com/CPAN-local/modules/by-module/MIME/ and install it.
+http://www.perl.com/CPAN/modules/by-module/MIME/ and install it.
 If you have trouble, try simply putting Base64.pm in a subdirectory named MIME,
 in one of the directories named in @INC (site_perl is a good choice).
 You'll get a correct, but relatively slow implementation.
