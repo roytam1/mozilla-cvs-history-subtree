@@ -67,7 +67,7 @@ protected:
 	// mscott -okay this is lame. I should break this up into a file protocol and a socket based
 	// protocool class instead of cheating and putting both methods here...
 	virtual nsresult OpenNetworkSocket(nsIURI * aURL); // open a connection on this url
-	virtual nsresult OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec); // used to open a file socket connection
+	virtual nsresult OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec, PRUint32 aStartPosition, PRInt32 aReadCount); // used to open a file socket connection
 
 	// a Protocol typically overrides this method. They free any of their own connection state and then
 	// they call up into the base class to free the generic connection objects
@@ -93,7 +93,9 @@ protected:
 
 	PRBool	  m_socketIsOpen; // mscott: we should look into keeping this state in the nsSocketTransport...
 							  // I'm using it to make sure I open the socket the first time a URL is loaded into the connection
-	PRUint32  m_flags; // used to store flag information
+	PRUint32	m_flags; // used to store flag information
+	PRUint32	m_startPosition;
+	PRInt32		m_readCount;
 };
 
 #endif /* nsMsgProtocol_h__ */
