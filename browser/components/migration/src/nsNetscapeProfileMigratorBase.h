@@ -59,6 +59,7 @@ public:
     char*         targetPrefName;
     prefConverter prefGetterFunc;
     prefConverter prefSetterFunc;
+    PRBool        prefHasValue;
     union {
       PRInt32     intValue;
       PRBool      boolValue;
@@ -75,10 +76,6 @@ public:
   static nsresult SetInt(void* aTransform, nsIPrefBranch* aBranch);
 
 protected:
-  nsresult TransformPreferences(PREFTRANSFORM* aTransforms, 
-                                const nsAString& aSourcePrefFileName,
-                                const nsAString& aTargetPrefFileName);
-
   nsresult CreateTemplateProfile(const PRUnichar* aSuggestedName);
   void     GetUniqueProfileName(nsIFile* aProfilesDir, const PRUnichar* aSuggestedName, PRUnichar** aUniqueName);
 

@@ -62,6 +62,8 @@ public:
 
 protected:
   nsresult CopyPreferences(PRBool aReplace);
+  nsresult TransformPreferences(const nsAString& aSourcePrefFileName,
+                                const nsAString& aTargetPrefFileName);
   
   nsresult CopyCookies(PRBool aReplace);
 #ifdef NEED_TO_FIX_4X_COOKIES
@@ -69,6 +71,7 @@ protected:
 #endif
 
   nsresult CopyBookmarks(PRBool aReplace);
+  nsresult MigrateDogbertBookmarks();
 
 private:
   nsCOMPtr<nsISupportsArray> mProfiles;

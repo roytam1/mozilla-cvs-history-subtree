@@ -125,93 +125,72 @@ nsNetscapeProfileMigratorBase::GetUniqueProfileName(nsIFile* aProfilesDir,
   *aUniqueName = ToNewUnicode(profileNameStr);
 }
 
+#define GETPREF(xform, method, value) \
+  nsresult rv = aBranch->method(xform->sourcePrefName, value); \
+  if (NS_SUCCEEDED(rv)) \
+    xform->prefHasValue = PR_TRUE; \
+  return rv;
+
+#define SETPREF(xform, method, value) \
+  if (xform->prefHasValue) { \
+    return aBranch->method(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, value); \
+  } \
+  return NS_OK;
+
 nsresult 
 nsNetscapeProfileMigratorBase::GetString(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->GetCharPref(xform->sourcePrefName, &xform->stringValue);
+  GETPREF(xform, GetCharPref, &xform->stringValue);
 }
 
 nsresult 
 nsNetscapeProfileMigratorBase::SetString(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->SetCharPref(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, xform->stringValue);
+  SETPREF(xform, SetCharPref, xform->stringValue);
 }
 
 nsresult 
 nsNetscapeProfileMigratorBase::SetWString(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  nsCOMPtr<nsIPrefLocalizedString> pls(do_CreateInstance("@mozilla.org/pref-localizedstring;1"));
-  nsAutoString data; data.AssignWithConversion(xform->stringValue);
-  pls->SetData(data.get());
-  return aBranch->SetComplexValue(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, NS_GET_IID(nsIPrefLocalizedString), pls);
+  if (xform->prefHasValue) {
+    nsCOMPtr<nsIPrefLocalizedString> pls(do_CreateInstance("@mozilla.org/pref-localizedstring;1"));
+    nsAutoString data; data.AssignWithConversion(xform->stringValue);
+    pls->SetData(data.get());
+    return aBranch->SetComplexValue(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, NS_GET_IID(nsIPrefLocalizedString), pls);
+  }
+  return NS_OK;
 }
 
 nsresult 
 nsNetscapeProfileMigratorBase::GetBool(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->GetBoolPref(xform->sourcePrefName, &xform->boolValue);
+  GETPREF(xform, GetBoolPref, &xform->boolValue);
 }
 
 nsresult 
 nsNetscapeProfileMigratorBase::SetBool(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->SetBoolPref(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, xform->boolValue);
+  SETPREF(xform, SetBoolPref, xform->boolValue);
 }
 
 nsresult 
 nsNetscapeProfileMigratorBase::GetInt(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->GetIntPref(xform->sourcePrefName, &xform->intValue);
+  GETPREF(xform, GetIntPref, &xform->intValue);
 }
 
 nsresult 
 nsNetscapeProfileMigratorBase::SetInt(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->SetIntPref(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, xform->intValue);
+  SETPREF(xform, SetIntPref, xform->intValue);
 }
-
-nsresult
-nsNetscapeProfileMigratorBase::TransformPreferences(PREFTRANSFORM* aTransforms, 
-                                                    const nsAString& aSourcePrefFileName,
-                                                    const nsAString& aTargetPrefFileName)
-{
-  PREFTRANSFORM* transform;
-  PREFTRANSFORM* end = aTransforms + sizeof(aTransforms)/sizeof(PREFTRANSFORM);
-
-  // Load the source pref file
-  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  psvc->ResetPrefs();
-
-  nsCOMPtr<nsIFile> sourcePrefsFile;
-  mSourceProfile->Clone(getter_AddRefs(sourcePrefsFile));
-  sourcePrefsFile->Append(aSourcePrefFileName);
-  psvc->ReadUserPrefs(sourcePrefsFile);
-
-  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
-  for (transform = aTransforms; transform < end; ++transform)
-    transform->prefGetterFunc(transform, branch);
-
-  // Now that we have all the pref data in memory, load the target pref file,
-  // and write it back out
-  psvc->ResetPrefs();
-  for (transform = aTransforms; transform < end; ++transform)
-    transform->prefSetterFunc(transform, branch);
-
-  nsCOMPtr<nsIFile> targetPrefsFile;
-  mTargetProfile->Clone(getter_AddRefs(targetPrefsFile));
-  targetPrefsFile->Append(aTargetPrefFileName);
-  psvc->SavePrefFile(targetPrefsFile);
-
-  return NS_OK;
-}
-
 
 nsresult
 nsNetscapeProfileMigratorBase::CopyFile(const nsAString& aSourceFileName, const nsAString& aTargetFileName)

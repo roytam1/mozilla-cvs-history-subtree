@@ -183,37 +183,71 @@ nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 
 nsDogbertProfileMigrator::PREFTRANSFORM gTransforms[] = {
   // Simple Copy Prefs
-  { "browser.anchor_color",           0, F(GetString),   F(SetString), -1 },
-  { "browser.visited_color",          0, F(GetString),   F(SetString), -1 },
-  { "browser.startup.homepage",       0, F(GetString),   F(SetString), -1 },
-  { "security.enable_java",           0, F(GetBool),     F(SetBool),   -1 },
-  { "network.cookie.cookieBehavior",  0, F(GetInt),      F(SetInt),    -1 },
-  { "network.cookie.warnAboutCookies",0, F(GetBool),     F(SetBool),   -1 },
-  { "javascript.enabled",             0, F(GetBool),     F(SetBool),   -1 },
-  { "network.proxy.type",             0, F(GetInt),      F(SetInt),    -1 },
-  { "network.proxy.no_proxies_on",    0, F(GetString),   F(SetString), -1 },
-  { "network.proxy.autoconfig_url",   0, F(GetString),   F(SetString), -1 },
-  { "network.proxy.ftp",              0, F(GetString),   F(SetString), -1 },
-  { "network.proxy.ftp_port",         0, F(GetInt),      F(SetInt),    -1 },
-  { "network.proxy.gopher",           0, F(GetString),   F(SetString), -1 },
-  { "network.proxy.gopher_port",      0, F(GetInt),      F(SetInt),    -1 },
-  { "network.proxy.http",             0, F(GetString),   F(SetString), -1 },
-  { "network.proxy.http_port",        0, F(GetInt),      F(SetInt),    -1 },
-  { "network.proxy.ssl",              0, F(GetString),   F(SetString), -1 },
-  { "network.proxy.ssl_port",         0, F(GetInt),      F(SetInt),    -1 },
-  
+  { "browser.anchor_color",           0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "browser.visited_color",          0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "browser.startup.homepage",       0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "security.enable_java",           0, F(GetBool),     F(SetBool),   PR_FALSE, -1 },
+  { "network.cookie.cookieBehavior",  0, F(GetInt),      F(SetInt),    PR_FALSE, -1 },
+  { "network.cookie.warnAboutCookies",0, F(GetBool),     F(SetBool),   PR_FALSE, -1 },
+  { "javascript.enabled",             0, F(GetBool),     F(SetBool),   PR_FALSE, -1 },
+  { "network.proxy.type",             0, F(GetInt),      F(SetInt),    PR_FALSE, -1 },
+  { "network.proxy.no_proxies_on",    0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "network.proxy.autoconfig_url",   0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "network.proxy.ftp",              0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "network.proxy.ftp_port",         0, F(GetInt),      F(SetInt),    PR_FALSE, -1 },
+  { "network.proxy.gopher",           0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "network.proxy.gopher_port",      0, F(GetInt),      F(SetInt),    PR_FALSE, -1 },
+  { "network.proxy.http",             0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "network.proxy.http_port",        0, F(GetInt),      F(SetInt),    PR_FALSE, -1 },
+  { "network.proxy.ssl",              0, F(GetString),   F(SetString), PR_FALSE, -1 },
+  { "network.proxy.ssl_port",         0, F(GetInt),      F(SetInt),    PR_FALSE, -1 },
+
   // Prefs with Different Names
-  { "network.hosts.socks_server",           "network.proxy.socks",                F(GetString),   F(SetString),  -1 },
-  { "network.hosts.socks_serverport",       "network.proxy.socks_port",           F(GetInt),      F(SetInt),     -1 },
-  { "browser.background_color",             "browser.display.background_color",   F(GetString),   F(SetString),  -1 },
-  { "browser.foreground_color",             "browser.display.foreground_color",   F(GetString),   F(SetString),  -1 },
-  { "browser.wfe.use_windows_colors",       "browser.display.use_system_colors",  F(GetBool),     F(SetBool),    -1 },
-  { "browser.use_document_colors",          "browser.display.use_document_colors",F(GetBool),     F(SetBool),    -1 },
-  { "browser.use_document.fonts",           "browser.display.use_document_fonts", F(GetInt),      F(SetInt),     -1 },
-  { "browser.link_expiration",              "browser.history_expire_days",        F(GetInt),      F(SetInt),     -1 },
-  { "browser.startup.page",                 "browser.startup.homepage",           F(GetHomepage), F(SetWString), -1 },
-  { "general.always_load_images",           "network.image.imageBehavior",        F(GetImagePref),F(SetInt),     -1 },
+  { "network.hosts.socks_server",           "network.proxy.socks",                F(GetString),   F(SetString),  PR_FALSE, -1 },
+  { "network.hosts.socks_serverport",       "network.proxy.socks_port",           F(GetInt),      F(SetInt),     PR_FALSE, -1 },
+  { "browser.background_color",             "browser.display.background_color",   F(GetString),   F(SetString),  PR_FALSE, -1 },
+  { "browser.foreground_color",             "browser.display.foreground_color",   F(GetString),   F(SetString),  PR_FALSE, -1 },
+  { "browser.wfe.use_windows_colors",       "browser.display.use_system_colors",  F(GetBool),     F(SetBool),    PR_FALSE, -1 },
+  { "browser.use_document_colors",          "browser.display.use_document_colors",F(GetBool),     F(SetBool),    PR_FALSE, -1 },
+  { "browser.use_document.fonts",           "browser.display.use_document_fonts", F(GetInt),      F(SetInt),     PR_FALSE, -1 },
+  { "browser.link_expiration",              "browser.history_expire_days",        F(GetInt),      F(SetInt),     PR_FALSE, -1 },
+  { "browser.startup.page",                 "browser.startup.homepage",           F(GetHomepage), F(SetWString), PR_FALSE, -1 },
+  { "general.always_load_images",           "network.image.imageBehavior",        F(GetImagePref),F(SetInt),     PR_FALSE, -1 },
 };
+
+nsresult
+nsDogbertProfileMigrator::TransformPreferences(const nsAString& aSourcePrefFileName,
+                                               const nsAString& aTargetPrefFileName)
+{
+  PREFTRANSFORM* transform;
+  PREFTRANSFORM* end = gTransforms + sizeof(gTransforms)/sizeof(PREFTRANSFORM);
+
+  // Load the source pref file
+  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  psvc->ResetPrefs();
+
+  nsCOMPtr<nsIFile> sourcePrefsFile;
+  mSourceProfile->Clone(getter_AddRefs(sourcePrefsFile));
+  sourcePrefsFile->Append(aSourcePrefFileName);
+  psvc->ReadUserPrefs(sourcePrefsFile);
+
+  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+  for (transform = gTransforms; transform < end; ++transform)
+    transform->prefGetterFunc(transform, branch);
+
+  // Now that we have all the pref data in memory, load the target pref file,
+  // and write it back out
+  psvc->ResetPrefs();
+  for (transform = gTransforms; transform < end; ++transform)
+    transform->prefSetterFunc(transform, branch);
+
+  nsCOMPtr<nsIFile> targetPrefsFile;
+  mTargetProfile->Clone(getter_AddRefs(targetPrefsFile));
+  targetPrefsFile->Append(aTargetPrefFileName);
+  psvc->SavePrefFile(targetPrefsFile);
+
+  return NS_OK;
+}
 
 nsresult
 nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
@@ -221,7 +255,7 @@ nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
   nsresult rv = NS_OK;
 
   // 1) Copy Preferences
-  TransformPreferences(gTransforms, PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
+  TransformPreferences(PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
 
   // 2) Copy Certficates
   rv |= CopyFile(PSM_CERT7_DB,      PSM_CERT7_DB);
@@ -237,8 +271,10 @@ nsDogbertProfileMigrator::GetHomepage(void* aTransform, nsIPrefBranch* aBranch)
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
   PRInt32 val;
   nsresult rv = aBranch->GetIntPref(xform->sourcePrefName, &val);
-  if (NS_SUCCEEDED(rv) && val == 0)
+  if (NS_SUCCEEDED(rv) && val == 0) {
     xform->stringValue = "about:blank";
+    xform->prefHasValue = PR_TRUE;
+  }
   return rv;
 }
 
@@ -248,7 +284,10 @@ nsDogbertProfileMigrator::GetImagePref(void* aTransform, nsIPrefBranch* aBranch)
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
   PRBool loadImages;
   nsresult rv = aBranch->GetBoolPref(xform->sourcePrefName, &loadImages);
-  xform->intValue = loadImages ? 0 : 2;
+  if (NS_SUCCEEDED(rv)) {
+    xform->intValue = loadImages ? 0 : 2;
+    xform->prefHasValue = PR_TRUE;
+  }
   return rv;
 }
 
@@ -349,7 +388,7 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
 {
   // If we're blowing away existing content, just copy the file, don't do fancy importing.
   if (aReplace)
-    return CopyFile(BOOKMARKS_FILE_NAME_IN_4x, BOOKMARKS_FILE_NAME_IN_5x);
+    return MigrateDogbertBookmarks();
 
   nsCOMPtr<nsIFile> bookmarksFile;
   mSourceProfile->Clone(getter_AddRefs(bookmarksFile));
@@ -393,3 +432,75 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
   return ds->DoCommand(sources, importCmd, params);
 }
 
+nsresult
+nsDogbertProfileMigrator::MigrateDogbertBookmarks()
+{
+  nsresult rv;
+
+  // Find out what the personal toolbar folder was called, this is stored in a pref
+  // in 4.x
+  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  psvc->ResetPrefs();
+
+  nsCOMPtr<nsIFile> dogbertPrefsFile;
+  mSourceProfile->Clone(getter_AddRefs(dogbertPrefsFile));
+  dogbertPrefsFile->Append(PREF_FILE_NAME_IN_4x);
+  psvc->ReadUserPrefs(dogbertPrefsFile);
+
+  nsXPIDLCString toolbarName;
+  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+  rv = branch->GetCharPref("custtoolbar.personal_toolbar_folder", getter_Copies(toolbarName));
+  // If the pref wasn't set in the user's 4.x preferences, there's no way we can "Fix" the
+  // file when importing it to set the personal toolbar folder correctly, so don't bother
+  // with the more involved file correction procedure and just copy the file over. 
+  if (NS_FAILED(rv))
+    return CopyFile(BOOKMARKS_FILE_NAME_IN_4x, BOOKMARKS_FILE_NAME_IN_5x);
+
+  // Now read the 4.x bookmarks file, correcting the Personal Toolbar Folder line
+  // and writing to the new location.
+  nsCOMPtr<nsIFile> sourceBookmarksFile;
+  mSourceProfile->Clone(getter_AddRefs(sourceBookmarksFile));
+  sourceBookmarksFile->Append(BOOKMARKS_FILE_NAME_IN_4x);
+
+  nsCOMPtr<nsIInputStream> fileInputStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileInputStream), sourceBookmarksFile);
+  if (!fileInputStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsIFile> targetBookmarksFile;
+  mTargetProfile->Clone(getter_AddRefs(targetBookmarksFile));
+  targetBookmarksFile->Append(BOOKMARKS_FILE_NAME_IN_5x);
+
+  nsCOMPtr<nsIOutputStream> outputStream;
+  NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), targetBookmarksFile);
+  if (!outputStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsILineInputStream> lineInputStream(do_QueryInterface(fileInputStream));
+  nsAutoString sourceBuffer;
+  nsCAutoString targetBuffer;
+  PRBool moreData = PR_FALSE;
+  PRUint32 bytesWritten = 0;
+  do {
+    nsresult rv = lineInputStream->ReadLine(sourceBuffer, &moreData);
+    if (NS_FAILED(rv)) return rv;
+
+    if (!moreData)
+      break;
+
+    PRInt32 nameOffset = sourceBuffer.Find(toolbarName);
+    if (nameOffset >= 0) {
+      // Found the personal toolbar name on a line, check to make sure it's actually a folder. 
+      NS_NAMED_LITERAL_STRING(folderPrefix, "<DT><H3 ");
+      PRInt32 folderPrefixOffset = sourceBuffer.Find(folderPrefix);
+      if (folderPrefixOffset >= 0)
+        sourceBuffer.Insert(NS_LITERAL_STRING("PERSONAL_TOOLBAR_FOLDER=\"true\" "), 
+                            folderPrefixOffset + folderPrefix.Length());
+    }
+
+    targetBuffer.Assign(NS_ConvertUCS2toUTF8(sourceBuffer));
+    targetBuffer.Append("\r\n");
+    outputStream->Write(targetBuffer.get(), targetBuffer.Length(), &bytesWritten);
+  }
+  while (moreData);
+
+  return NS_OK;
+}
