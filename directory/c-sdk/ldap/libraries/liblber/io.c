@@ -388,11 +388,7 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 			/* fake error if write was not atomic */
 			if (rc < towrite) {
 #if !defined( macintosh ) && !defined( DOS )
-#if !defined(WINCE)
 			    errno = EMSGSIZE;  /* For Win32, see portable.h */
-#else
-                wince_set_errno(EMSGSIZE);
-#endif
 #endif
 			    return( -1 );
 			}

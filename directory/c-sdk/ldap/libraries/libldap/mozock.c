@@ -53,8 +53,10 @@ enum SockProc	{
 	sp_WSAAsyncGetHostByName = 0,
 	sp_WSAAsyncSelect,
 	sp_WSACleanup,
+#if !defined(WINCE)
 	sp_WSAGetLastError,
 	sp_WSASetLastError,
+#endif
 	sp_WSAStartup,
 	sp___WSAFDIsSet,
 	sp_accept,
@@ -93,8 +95,10 @@ char *spName[(int)sp_MaxProcs] =	{
         "WSAAsyncGetHostByName",
         "WSAAsyncSelect",
         "WSACleanup",
+#if !defined(WINCE)
         "WSAGetLastError",
         "WSASetLastError",
+#endif
         "WSAStartup",
         "__WSAFDIsSet",
         "accept",
@@ -375,6 +379,7 @@ int PASCAL FAR WSAAsyncSelect(SOCKET s, HWND hWnd, unsigned int wMsg, long lEven
 	return(SOCKET_ERROR);
 }
 
+#if !defined(WINCE)
 int PASCAL FAR WSAGetLastError(void)	{
 	//	See if someone else can handle.
 	if(IsWinsockLoaded(sp_WSAGetLastError)) {
@@ -411,6 +416,7 @@ void PASCAL FAR WSASetLastError(int iError)	{
 	return;
 #endif
 }
+#endif
 
 int PASCAL FAR __WSAFDIsSet(SOCKET fd, fd_set FAR *set) {
 	int i;

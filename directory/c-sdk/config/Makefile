@@ -34,9 +34,8 @@
 # 
 
 MOD_DEPTH	= ..
-topsrcdir	= /cygdrive/c/home/blythe/wce_debug/1/mozilla/directory/c-sdk
-srcdir		= /cygdrive/c/home/blythe/wce_debug/1/mozilla/directory/c-sdk/config
-VPATH		= /cygdrive/c/home/blythe/wce_debug/1/mozilla/directory/c-sdk/config
+topsrcdir	= ..
+srcdir		= .
 
 include $(MOD_DEPTH)/config/autoconf.mk
 

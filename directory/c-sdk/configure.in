@@ -681,6 +681,12 @@ if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINNT"; then
         USE_DEBUG_RTL=1
     fi
 fi
+if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINCE"; then
+    OS_TARGET=WINCE
+    if test -n "$MOZ_DEBUG"; then
+        USE_DEBUG_RTL=1
+    fi
+fi
 if test -z "$OS_TARGET"; then
     OS_TARGET=$OS_ARCH
 fi
@@ -1254,7 +1260,11 @@ case "$target" in
         fi
 
         if test -n "$MOZ_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -MD"
+            if test "$OS_TARGET" = "WINCE"; then
+                CFLAGS="$CFLAGS -Zl"
+            else
+                CFLAGS="$CFLAGS -MD"
+            fi
             _OPTIMIZE_FLAGS=-O2
             DLLFLAGS='-OUT:"$@"'
 
@@ -1264,10 +1274,14 @@ case "$target" in
                 LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             fi
         else
-            if test -n "$USE_DEBUG_RTL"; then
-                CFLAGS="$CFLAGS -MDd"
+            if test "$OS_TARGET" = "WINCE"; then
+                CFLAGS="$CFLAGS -Zl"
             else
-                CFLAGS="$CFLAGS -MD"
+                if test -n "$USE_DEBUG_RTL"; then
+                    CFLAGS="$CFLAGS -MDd"
+                else
+                    CFLAGS="$CFLAGS -MD"
+                fi
             fi
             _DEBUG_FLAGS="-Od -Z7"
             DLLFLAGS='-DEBUG -DEBUGTYPE:CV -OUT:"$@"'

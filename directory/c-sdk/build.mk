@@ -39,7 +39,7 @@ ifndef VENDOR_VERSION
 VENDOR_VERSION = $(DEFAULT_VENDOR_VERSION)
 endif
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 	COMPONENT_PULL_METHOD=FTP
 endif
 
@@ -47,7 +47,7 @@ endif
 include $(COMPVERSIONDIR)/component_versions.mk
 
 # Ldap library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 LDAP_LIBNAME	= nsldap32v$(LDAPVERS)
 else
 LDAP_LIBNAME	= ldap$(LDAPVERS)
@@ -56,42 +56,42 @@ DIR_VERSION     = $(LDAPVERS_SUFFIX)
 DIRSDK_VERSION  = $(LDAPVERS_SUFFIX)
 
 # PrLdap library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 PRLDAP_LIBNAME	= nsldappr32v$(PRLDAPVERS)
 else
 PRLDAP_LIBNAME	= prldap$(PRLDAPVERS)
 endif
 
 # lber library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 LBER_LIBNAME	= nslber32v$(LBERVERS)
 else
 LBER_LIBNAME	= lber$(LBERVERS)
 endif
 
 # ldif library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 LDIF_LIBNAME	= nsldif32v$(LDIFVERS)
 else
 LDIF_LIBNAME	= ldif$(LDIFVERS)
 endif
 
 # iutil library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 IUTIL_LIBNAME	= nsiutil32v$(IUTILVERS)
 else
 IUTIL_LIBNAME	= iutil$(IUTILVERS)
 endif
 
 # util library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 UTIL_LIBNAME	= nsutil32v$(UTILVERS)
 else
 UTIL_LIBNAME	= util$(UTILVERS)
 endif
 
 # ssl library
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 SSLDAP_LIBNAME	= nsldapssl32v$(SSLDAPVERS)
 else
 SSLDAP_LIBNAME	= ssldap$(SSLDAPVERS)
@@ -149,7 +149,7 @@ NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 #
 # NLS library
 #
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 NSCNV_LIBNAME	=nscnv32$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSJPN_LIBNAME	=nsjpn32$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSCCK_LIBNAME	=nscck32$(NLS_LIBVERSION).$(LIB_SUFFIX)
@@ -216,13 +216,13 @@ DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(HAVELIBNLS) \
 		  $(NSDOMESTIC) $(LDAPSSLIO)
 
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 DIRVER_PROG=$(COMMON_OBJDIR)/dirver.exe
 else
 DIRVER_PROG=$(COMMON_OBJDIR)/dirver
 endif
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 EXE_SUFFIX=.exe
 RSC=rc
 OFFLAG=/Fo
@@ -234,7 +234,7 @@ ifeq ($(OS_ARCH), Linux)
 DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
 endif
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 DLLEXPORTS_PREFIX=/DEF:
 USE_DLL_EXPORTS_FILE	= 1
 endif
@@ -352,14 +352,24 @@ endif # Linux
 # Link to produce a console/windows exe on Windows
 #
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 
 DEBUG_LINK_OPT=/DEBUG:FULL
 ifeq ($(BUILD_OPT), 1)
   DEBUG_LINK_OPT=
 endif
 
+ifneq ($(OS_TARGET),WINCE)
 SUBSYSTEM=CONSOLE
+else
+SUBSYSTEM=WINDOWSCE,3.00
+ifeq ($(TARGETCPU),X86)
+DLL_LDFLAGS+=-MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib
+else
+DLL_LDFLAGS+=-MACHINE:ARM -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib
+endif
+endif
+
 LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
     /NODEFAULTLIB:MSVCRTD /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
@@ -464,7 +474,7 @@ PERL ?= perl
 #
 # shared library symbol export definitions
 #
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 GENEXPORTS=cmd /c  $(PERL) $(LDAP_SRC)/build/genexports.pl
 else
 GENEXPORTS=$(PERL) $(LDAP_SRC)/build/genexports.pl

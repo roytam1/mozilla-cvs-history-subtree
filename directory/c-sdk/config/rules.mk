@@ -99,13 +99,13 @@ endif
 #
 
 ifdef LIBRARY_NAME
-ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
 
 #
 # Win95, Win16, and OS/2 require library names conforming to the 8.3 rule.
 # other platforms do not.
 #
-ifeq (,$(filter-out WIN95 WIN16 OS2,$(OS_TARGET)))
+ifeq (,$(filter-out WINCE WIN95 WIN16 OS2,$(OS_TARGET)))
 LIBRARY		= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
@@ -130,7 +130,7 @@ endif
 endif
 
 ifndef TARGETS
-ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
 else
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY)
@@ -162,7 +162,7 @@ ifeq ($(OS_TARGET), WIN16)
 	W16DEF = $(notdir $(basename $(SHARED_LIBRARY))).DEF
 endif
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 ifneq ($(OS_TARGET), WIN16)
 OBJS += $(RES)
 endif
@@ -286,7 +286,7 @@ $(NFSPWD):
 
 $(PROGRAM): $(OBJS)
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH),WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -335,7 +335,7 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	$(LD) $(XCFLAGS) -o $@ $(OBJS) -bE:$(OBJDIR)/lib$(LIBRARY_NAME)_syms \
 		-bM:SRE -bnoentry $(OS_LIBS) $(EXTRA_LIBS)
 else	# AIX 4.1
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 ifeq ($(OS_TARGET), WIN16)
 	echo system windows dll initinstance >w16link
 	echo option map >>w16link
@@ -383,7 +383,7 @@ endif	# AIX 4.1
 endif   # USE_AUTOCONF
 
 
-ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2 WINCE,$(OS_ARCH)))
 $(RES): $(RESNAME)
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_TARGET),OS2)
@@ -397,7 +397,7 @@ endif
 
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 	$(CCC) -Fo$@ -c $(CCCFLAGS) $<
 else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -412,7 +412,7 @@ WCCFLAGS2 = $(subst -I,-i=,$(WCCFLAGS1))
 WCCFLAGS3 = $(subst -D,-d,$(WCCFLAGS2))
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.c
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH), WINNT)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
 ifeq ($(OS_TARGET), WIN16)
 #	$(MOD_DEPTH)/config/w16opt $(WCCFLAGS3)
 	echo $(WCCFLAGS3) >w16wccf

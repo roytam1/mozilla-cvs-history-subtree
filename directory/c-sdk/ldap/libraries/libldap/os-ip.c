@@ -372,11 +372,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #ifdef _WINDOWS
 	if ((n = select(sockfd +1, &rset, &wset, &eset,
 		(msec != LDAP_X_IO_TIMEOUT_NO_TIMEOUT) ? &tval : NULL)) == 0) {
-#if !defined(WINCE)
 		errno = WSAETIMEDOUT;
-#else
-        wince_set_errno(WSAETIMEDOUT);
-#endif
 		return (-1);
 	}
 	/* if wset is set, the connect worked */
@@ -429,11 +425,7 @@ done:
 #endif /* _WINDOWS */
 
 	if (error) {
-#if !defined(WINCE)
 		errno = error;
-#else
-        wince_set_errno(error);
-#endif
 		return (-1);
 	}
 
