@@ -55,4 +55,5 @@ interface nsIDOMJSWindow : nsISupports
   // This is the script version of nsIDOMWindowInternal::open() that
   // takes 3 optional arguments
   nsIDOMWindow              open();
+  nsIDOMWindow              openDialog();
 };

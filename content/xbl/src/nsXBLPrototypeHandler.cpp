@@ -30,7 +30,6 @@
 #include "nsIDOMMouseEvent.h"
 #include "nsINameSpaceManager.h"
 #include "nsIScriptContext.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
@@ -54,6 +53,8 @@
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
+#include "nsIXPConnect.h"
+
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
@@ -287,7 +288,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
       aEvent->PreventDefault(); // Preventing default for XUL key handlers
     }
   }
-  
+
   // Compile the handler and bind it to the element.
   nsCOMPtr<nsIScriptGlobalObject> boundGlobal;
   nsCOMPtr<nsPIWindowRoot> winRoot(do_QueryInterface(aReceiver));
@@ -308,7 +309,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
     boundGlobal = do_QueryInterface(rootWin);
   }
   else boundGlobal = do_QueryInterface(aReceiver);
-  
+
   if (!boundGlobal) {
     nsCOMPtr<nsIDocument> boundDocument(do_QueryInterface(aReceiver));
     if (!boundDocument) {
@@ -327,23 +328,39 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
   nsCOMPtr<nsIScriptContext> boundContext;
   boundGlobal->GetContext(getter_AddRefs(boundContext));
 
-  nsCOMPtr<nsIScriptObjectOwner> owner;
-  if (winRoot)
-    owner = do_QueryInterface(boundGlobal);
-  else owner = do_QueryInterface(aReceiver);
-  
-  void* scriptObject;
-  owner->GetScriptObject(boundContext, &scriptObject);
-  
+  JSObject* scriptObject = nsnull;
+
+  if (winRoot) {
+    scriptObject = boundGlobal->GetGlobalJSObject();
+  } else {
+    JSObject *global = boundGlobal->GetGlobalJSObject();
+    JSContext *cx = (JSContext *)boundContext->GetNativeContext();
+
+    nsresult rv;
+    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+
+    // root
+    nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+
+    // XXX: Don't use the global object!
+    rv = xpc->WrapNative(cx, global, aReceiver, NS_GET_IID(nsISupports),
+                         getter_AddRefs(wrapper));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = wrapper->GetJSObject(&scriptObject);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
   boundContext->CompileEventHandler(scriptObject, onEventAtom, handlerText,
-                               PR_TRUE, &handler);
+                                    PR_TRUE, &handler);
 
   // Temporarily bind it to the bound element
   boundContext->BindCompiledEventHandler(scriptObject, onEventAtom, handler);
 
   // Execute it.
   nsCOMPtr<nsIDOMEventListener> eventListener;
-  //  NS_NewJSEventListener(getter_AddRefs(eventListener), boundContext, owner);
+  NS_NewJSEventListener(getter_AddRefs(eventListener), boundContext,
+                        boundGlobal);
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
   jsListener->SetEventName(onEventAtom);

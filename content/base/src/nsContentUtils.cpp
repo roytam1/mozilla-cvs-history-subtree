@@ -39,6 +39,11 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsContentUtils.h"
+#include "nsVoidArray.h"
+
+
+nsVoidArray *nsContentUtils::sKungFuDeathGripArray = nsnull;
+
 
 // static 
 nsresult 
@@ -270,4 +275,44 @@ nsContentUtils::CopyNewlineNormalizedUnicodeTo(nsReadingIterator<PRUnichar>& aSr
   CopyNormalizeNewlines<sink_traits> normalizer(&dest_traits);
   copy_string(aSrcStart, aSrcEnd, normalizer);
   return normalizer.GetCharsWritten();
+}
+
+// static
+nsresult
+nsContentUtils::ReleaseOnShutdown(nsISupports **aPointer)
+{
+  NS_ENSURE_ARG_POINTER(aPointer);
+  NS_ENSURE_TRUE(*aPointer, NS_ERROR_UNEXPECTED);
+
+  if (!sKungFuDeathGripArray) {
+    sKungFuDeathGripArray = new nsVoidArray;
+    NS_ENSURE_TRUE(sKungFuDeathGripArray, NS_ERROR_OUT_OF_MEMORY);
+  }
+
+  NS_ADDREF(*aPointer);
+
+  sKungFuDeathGripArray->AppendElement(aPointer);
+
+  return NS_OK;
+}
+
+// static
+void
+nsContentUtils::Shutdown()
+{
+  if (!sKungFuDeathGripArray)
+    return;
+
+  PRInt32 count = sKungFuDeathGripArray->Count();
+
+  while (count--) {
+    nsISupports **ptr =
+      NS_STATIC_CAST(nsISupports **, sKungFuDeathGripArray->ElementAt(count));
+
+    NS_RELEASE(*ptr);
+  }
+
+  delete sKungFuDeathGripArray;
+
+  sKungFuDeathGripArray = nsnull;
 }

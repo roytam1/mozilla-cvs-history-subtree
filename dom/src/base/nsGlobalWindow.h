@@ -18,7 +18,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
- *    Travis Bogard <travis@netscape.com> 
+ *    Travis Bogard <travis@netscape.com>
  */
 #ifndef nsGlobalWindow_h___
 #define nsGlobalWindow_h___
@@ -78,13 +78,14 @@ class nsIDocShellLoadInfo;
 
 //*****************************************************************************
 // GlobalWindowImpl: Global Object for Scripting
-//*****************************************************************************   
+//*****************************************************************************
+
 class GlobalWindowImpl : public nsIScriptGlobalObject,
                          public nsIDOMWindowInternalEx,
                          public nsIDOMJSWindow,
                          public nsIScriptObjectPrincipal,
                          public nsIDOMEventReceiver,
-                         public nsPIDOMWindow, 
+                         public nsPIDOMWindow,
                          public nsIDOMViewCSS,
                          public nsSupportsWeakReference,
                          public nsIDOMEventProp,
@@ -104,8 +105,9 @@ public:
   NS_IMETHOD SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner);
   NS_IMETHOD GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner);
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
-                            nsIDOMEvent** aDOMEvent, PRUint32 aFlags, 
+                            nsIDOMEvent** aDOMEvent, PRUint32 aFlags,
                             nsEventStatus* aEventStatus);
+  NS_IMETHOD_(JSObject *) GetGlobalJSObject();
 
   // nsIScriptObjectPrincipal
   NS_IMETHOD GetPrincipal(nsIPrincipal **prin);
@@ -125,13 +127,13 @@ public:
   XPC_DECLARE_IXPCSCRIPTABLE
 
   // nsIJSScriptObject
-  virtual PRBool AddProperty(JSContext *aContext, JSObject *aObj, 
+  virtual PRBool AddProperty(JSContext *aContext, JSObject *aObj,
                              jsval aID, jsval *aVp);
-  virtual PRBool DeleteProperty(JSContext *aContext, JSObject *aObj, 
+  virtual PRBool DeleteProperty(JSContext *aContext, JSObject *aObj,
                                 jsval aID, jsval *aVp);
-  virtual PRBool GetProperty(JSContext *aContext, JSObject *aObj, 
+  virtual PRBool GetProperty(JSContext *aContext, JSObject *aObj,
                              jsval aID, jsval *aVp);
-  virtual PRBool SetProperty(JSContext *aContext, JSObject *aObj, 
+  virtual PRBool SetProperty(JSContext *aContext, JSObject *aObj,
                              jsval aID, jsval *aVp);
   virtual PRBool EnumerateProperty(JSContext *aContext, JSObject *aObj);
   virtual PRBool Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
@@ -140,18 +142,18 @@ public:
   virtual void   Finalize(JSContext *aContext, JSObject *aObj);
 
   // nsIDOMEventTarget
-  NS_IMETHOD AddEventListener(const nsAReadableString& aType, 
+  NS_IMETHOD AddEventListener(const nsAReadableString& aType,
                               nsIDOMEventListener* aListener,
                               PRBool aUseCapture);
-  NS_IMETHOD RemoveEventListener(const nsAReadableString& aType, 
+  NS_IMETHOD RemoveEventListener(const nsAReadableString& aType,
                                  nsIDOMEventListener* aListener,
                                  PRBool aUseCapture);
   NS_IMETHOD DispatchEvent(nsIDOMEvent* aEvent);
 
   // nsIDOMEventReceiver
-  NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, 
+  NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener,
                                    const nsIID& aIID);
-  NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener, 
+  NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener,
                                       const nsIID& aIID);
   NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
   NS_IMETHOD GetNewListenerManager(nsIEventListenerManager **aInstancePtrResult);
@@ -161,8 +163,6 @@ public:
   NS_IMETHOD GetPrivateParent(nsPIDOMWindow** aResult);
   NS_IMETHOD GetPrivateRoot(nsIDOMWindowInternal** aResult);
 
-  NS_IMETHOD SetObjectProperty(const PRUnichar* aProperty,
-                               nsISupports* aObject);
   NS_IMETHOD GetObjectProperty(const PRUnichar* aProperty,
                                nsISupports** aObject);
 
@@ -176,11 +176,6 @@ public:
   NS_IMETHOD SetMutationListeners(PRUint32 aEventType);
 
   NS_IMETHOD GetRootFocusController(nsIFocusController** aResult);
-
-  NS_IMETHOD SetPositionAndSize(PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy,
-                                PRBool fRepaint);
-  NS_IMETHOD GetPositionAndSize(PRInt32 *x, PRInt32 *y, PRInt32 *cx,
-                                PRInt32 *cy);
 
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
@@ -199,17 +194,17 @@ protected:
   // Object Management
   virtual ~GlobalWindowImpl();
   void CleanUp();
-   
+
   // Window Control Functions
   NS_IMETHOD OpenInternal(const nsAReadableString& aUrl,
                           const nsAReadableString& aName,
                           const nsAReadableString& aOptions,
-                          PRBool aDialog, nsISupportsArray *aArgsArray,
+                          PRBool aDialog, jsval *argv, PRUint32 argc,
                           nsIDOMWindow **aReturn);
-  NS_IMETHOD AttachArguments(nsIDOMWindowInternal* aWindow, jsval* argv,
-                             PRUint32 argc);
-  NS_IMETHOD AttachArguments(nsIDOMWindowInternal* aWindow,
-                             nsISupportsArray *aArgsArray);
+  NS_IMETHOD AttachArguments(nsIDOMWindowInternal* aWindow, JSContext *cx,
+                             jsval* argv, PRUint32 argc);
+  NS_IMETHOD SupportsArrayTojsvals(jsval **aArgv, PRUint32 *aArgc,
+                                   nsISupportsArray *aArgsArray);
   PRUint32 CalculateChromeFlags(const char* aFeatures, PRBool aDialog);
   NS_IMETHOD SizeOpenedDocShellItem(nsIDocShellTreeItem* aDocShellItem,
                                     const char* aFeatures,
@@ -228,7 +223,7 @@ protected:
   void HoldTimeout(nsTimeoutImpl *aTimeout);
   nsresult ClearTimeoutOrInterval(PRInt32 aTimerID);
   void ClearAllTimeouts();
-  void InsertTimeoutIntoList(nsTimeoutImpl **aInsertionPoint, 
+  void InsertTimeoutIntoList(nsTimeoutImpl **aInsertionPoint,
                              nsTimeoutImpl *aTimeout);
   friend void nsGlobalWindow_RunTimeout(nsITimer *aTimer, void *aClosure);
 
@@ -257,7 +252,7 @@ protected:
   nsCOMPtr<nsIControllers>      mControllers;
   nsCOMPtr<nsIEventListenerManager> mListenerManager;
   nsCOMPtr<nsISidebar>          mSidebar;
-  void*                         mScriptObject;
+  JSObject*                     mScriptObject;
   NavigatorImpl*                mNavigator;
   ScreenImpl*                   mScreen;
   HistoryImpl*                  mHistory;
@@ -340,7 +335,7 @@ struct nsTimeoutImpl {
 
 //*****************************************************************************
 // NavigatorImpl: Script "navigator" object
-//*****************************************************************************   
+//*****************************************************************************
 
 class NavigatorImpl : public nsIDOMNavigator
 {
@@ -363,7 +358,7 @@ class nsIURI;
 
 //*****************************************************************************
 // LocationImpl: Script "location" object
-//*****************************************************************************   
+//*****************************************************************************
 
 class LocationImpl : public nsIDOMLocation
 {
@@ -389,8 +384,8 @@ public:
 
 protected:
   nsresult SetURL(nsIURI* aURL);
-  nsresult SetHrefWithBase(const nsAReadableString& aHref, 
-                           nsIURI* aBase, 
+  nsresult SetHrefWithBase(const nsAReadableString& aHref,
+                           nsIURI* aBase,
                            PRBool aReplace);
   nsresult GetSourceURL(JSContext* cx,
                         nsIURI** sourceURL);

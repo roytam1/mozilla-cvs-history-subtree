@@ -45,6 +45,7 @@ CPPSRCS =				\
 	nsDOMAttributeMap.cpp		\
 	nsDOMClassInfo.cpp		\
 	nsDOMDocumentType.cpp		\
+	nsDOMScriptableHelper.cpp	\
 	nsGeneratedIterator.cpp		\
 	nsNameSpaceManager.cpp		\
 	nsNodeInfo.cpp			\
@@ -82,6 +83,7 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsDOMAttributeMap.obj	\
 	.\$(OBJDIR)\nsDOMClassInfo.obj		\
 	.\$(OBJDIR)\nsDOMDocumentType.obj	\
+	.\$(OBJDIR)\nsDOMScriptableHelper.obj	\
 	.\$(OBJDIR)\nsGeneratedIterator.obj 	\
 	.\$(OBJDIR)\nsNameSpaceManager.obj	\
 	.\$(OBJDIR)\nsNodeInfo.obj		\

@@ -109,7 +109,10 @@
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
 #include "nsIJSContextStack.h"
+#include "nsDOMScriptableHelper.h"
+
 #include "nsContentCID.h"
+
 static NS_DEFINE_CID(kHTMLStyleSheetCID,NS_HTMLSTYLESHEET_CID);
 
 
@@ -355,6 +358,9 @@ nsHTMLDocument::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     NS_ADDREF_THIS();
     *aInstancePtr = (void**) (nsIHTMLContentContainer *)this;
     return NS_OK;
+  }
+  if (aIID.Equals(NS_GET_IID(nsIXPCScriptable))) {
+    return nsDOMScriptableHelper::GetHTMLDocHelper(aInstancePtr);
   }
   return nsDocument::QueryInterface(aIID, aInstancePtr);
 }

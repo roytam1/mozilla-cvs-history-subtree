@@ -25,6 +25,7 @@
 #include "nsCOMPtr.h"
 #include "nsContentModule.h"
 #include "nsContentCID.h"
+#include "nsContentUtils.h"
 #include "nsIComponentManager.h"
 #include "nsNetUtil.h"
 #include "nsICSSStyleSheet.h"
@@ -37,7 +38,6 @@
 #include "nsLayoutAtoms.h"
 #include "nsDOMCID.h"
 #include "nsIScriptContext.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsINameSpaceManager.h"
 #include "nsIScriptNameSetRegistry.h"
 #include "nsIScriptNameSpaceManager.h"
@@ -130,35 +130,28 @@ ContentScriptNameSet::InitializeClasses(nsIScriptContext* aScriptContext)
 NS_IMETHODIMP
 ContentScriptNameSet::AddNameSet(nsIScriptContext* aScriptContext)
 {
-  nsresult result = NS_OK;
-  nsIScriptNameSpaceManager* manager;
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIScriptNameSpaceManager> manager;
   static NS_DEFINE_IID(kHTMLImageElementCID, NS_HTMLIMAGEELEMENT_CID);
   static NS_DEFINE_IID(kHTMLOptionElementCID, NS_HTMLOPTIONELEMENT_CID);
 
-  result = aScriptContext->GetNameSpaceManager(&manager);
-  if (NS_OK == result) {
-    result = manager->RegisterGlobalName(NS_ConvertToString("HTMLImageElement"),
-                                         NS_GET_IID(nsIScriptObjectOwner),
-                                         kHTMLImageElementCID,
-                                         PR_TRUE);
-    if (NS_FAILED(result)) {
-      NS_RELEASE(manager);
-      return result;
-    }
+  rv = aScriptContext->GetNameSpaceManager(getter_AddRefs(manager));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    result = manager->RegisterGlobalName(NS_ConvertToString("HTMLOptionElement"),
-                                         NS_GET_IID(nsIScriptObjectOwner),
-                                         kHTMLOptionElementCID,
-                                         PR_TRUE);
-    if (NS_FAILED(result)) {
-      NS_RELEASE(manager);
-      return result;
-    }
-        
-    NS_RELEASE(manager);
+  rv = manager->RegisterGlobalName(NS_ConvertToString("HTMLImageElement"),
+                                   NS_GET_IID(nsISupports),
+                                   kHTMLImageElementCID,
+                                   PR_TRUE);
+  if (NS_FAILED(rv)) {
+    return rv;
   }
-  
-  return result;
+
+  rv = manager->RegisterGlobalName(NS_ConvertToString("HTMLOptionElement"),
+                                   NS_GET_IID(nsISupports),
+                                   kHTMLOptionElementCID,
+                                   PR_TRUE);
+
+  return rv;
 }
 
 //----------------------------------------------------------------------
@@ -247,6 +240,8 @@ nsContentModule::Shutdown()
 
   NS_IF_RELEASE(gRegistry);
   NS_IF_RELEASE(gUAStyleSheet);
+
+  nsContentUtils::Shutdown();
 }
 
 NS_IMETHODIMP

@@ -26,6 +26,7 @@
 #include "nsISupports.h"
 
 class nsIDOMEventListener;
+class nsIScriptContext;
 
 /*
  * Event listener interface.

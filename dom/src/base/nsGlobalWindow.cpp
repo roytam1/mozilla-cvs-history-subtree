@@ -37,6 +37,7 @@
 #include "prmem.h"
 #include "jsdbgapi.h"           // for JS_ClearWatchPointsForObject
 #include "nsReadableUtils.h"
+#include "nsISupportsPrimitives.h"
 
 // Other Classes
 #include "nsIEventListenerManager.h"
@@ -533,9 +534,12 @@ NS_IMETHODIMP GlobalWindowImpl::SetContext(nsIScriptContext* aContext)
   if (!aContext) {
     NS_WARNING("Possibly early removal of script object, see bug #41608");
     mContext->RemoveReference(&mScriptObject, mScriptObject);
+  } else {
+    mScriptObject = ::JS_GetGlobalObject((JSContext *)aContext->GetNativeContext());
   }
 
   mContext = aContext;
+
   return NS_OK;
 }
 
@@ -573,8 +577,8 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
   // a GC run that finds them to be garbage.
 
   if (mContext && mScriptObject)
-    ::JS_ClearWatchPointsForObject((JSContext *) mContext->GetNativeContext(),
-                                   (JSObject *) mScriptObject);
+    ::JS_ClearWatchPointsForObject((JSContext *)mContext->GetNativeContext(),
+                                   mScriptObject);
 
   if (mFirstDocumentLoad) {
     if (aDocument) {
@@ -651,8 +655,8 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
 //      not doing this unless there's a new document prevents a closed window's
 //      JS properties from going away (that's good) and causes everything,
 //      and I mean everything, to be leaked (that's bad)
-          ::JS_ClearScope((JSContext *) mContext->GetNativeContext(),
-                          (JSObject *) mScriptObject);
+          ::JS_ClearScope((JSContext *)mContext->GetNativeContext(),
+                          mScriptObject);
         }
       }
       nsCRT::free(str);
@@ -702,8 +706,8 @@ NS_IMETHODIMP GlobalWindowImpl::SetDocShell(nsIDocShell* aDocShell)
       // Indicate that the window is now closed. Since we've
       // cleared scope, we have to explicitly set a property.
       jsval val = BOOLEAN_TO_JSVAL(JS_TRUE);
-      ::JS_SetProperty((JSContext *) mContext->GetNativeContext(),
-                       (JSObject *) mScriptObject, "closed", &val);
+      ::JS_SetProperty((JSContext *)mContext->GetNativeContext(),
+                       mScriptObject, "closed", &val);
       // hand off our reference to mContext
       mContext->SetRootedScriptObject(mScriptObject);
       mContext->RemoveReference(&mScriptObject, mScriptObject);
@@ -893,6 +897,13 @@ NS_IMETHODIMP GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
 
   return ret;
 }
+
+JSObject *
+GlobalWindowImpl::GetGlobalJSObject()
+{
+  return mScriptObject;
+}
+
 
 //*****************************************************************************
 // GlobalWindowImpl::nsIScriptObjectPrincipal
@@ -2363,7 +2374,7 @@ GlobalWindowImpl::Open(const nsAReadableString& aUrl,
                        const nsAReadableString& aOptions,
                        nsIDOMWindow **_retval)
 {
-  return OpenInternal(aUrl, aName, aOptions, PR_FALSE, nsnull, _retval);
+  return OpenInternal(aUrl, aName, aOptions, PR_FALSE, nsnull, 0, _retval);
 }
 
 NS_IMETHODIMP
@@ -2406,7 +2417,7 @@ GlobalWindowImpl::Open(nsIDOMWindow **_retval)
     }
   }
 
-  return OpenInternal(url, name, options, PR_FALSE, nsnull, _retval);
+  return OpenInternal(url, name, options, PR_FALSE, nsnull, 0, _retval);
 }
 
 // like Open, but attaches to the new window any extra parameters past 
@@ -2418,7 +2429,64 @@ GlobalWindowImpl::OpenDialog(const nsAReadableString& aUrl,
                              nsISupportsArray* aArgsArray,
                              nsIDOMWindow** _retval)
 {
-  return OpenInternal(aUrl, aName, aOptions, PR_TRUE, aArgsArray, _retval);
+  jsval *argv = nsnull;
+  PRUint32 argc;
+
+  nsresult rv = SupportsArrayTojsvals(&argv, &argc, aArgsArray);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = OpenInternal(aUrl, aName, aOptions, PR_TRUE, argv, argc, _retval);
+
+  if (argv) {
+    nsMemory::Free(argv);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::OpenDialog(nsIDOMWindow** _retval)
+{
+  NS_ENSURE_STATE(sXPConnect);
+
+  JSContext *cx = GetCurrentContext();
+
+  if (!cx) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+  rv = sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!ncc)
+    return NS_ERROR_NOT_AVAILABLE;
+
+  nsAutoString url, name, options;
+
+  PRUint32 argc;
+  jsval *argv = nsnull;
+
+  ncc->GetArgc(&argc);
+  ncc->GetArgvPtr(&argv);
+
+  if (argc > 0) {
+    nsJSUtils::nsConvertJSValToString(url, cx, argv[0]);
+
+    if (argc > 1) {
+      nsJSUtils::nsConvertJSValToString(name, cx, argv[1]);
+
+      if (argc > 2) {
+        nsJSUtils::nsConvertJSValToString(options, cx, argv[2]);
+      }
+    }
+  }
+
+  return OpenInternal(url, name, options, PR_TRUE,
+                      argc > 3 ? argv + 3 : nsnull, argc > 3 ? argc - 3 : 0,
+                      _retval);
 }
 
 NS_IMETHODIMP
@@ -2733,7 +2801,7 @@ PRBool GlobalWindowImpl::Resolve(JSContext* aContext, JSObject* aObj,
             }
             // Okay, if we now have a childObj, we can define it and proceed.
             if (childObj) {
-              if (!::JS_DefineUCProperty(aContext, (JSObject *) mScriptObject,
+              if (!::JS_DefineUCProperty(aContext, mScriptObject,
                                          chars, ::JS_GetStringLength(str),
                                          OBJECT_TO_JSVAL(childObj), nsnull,
                                          nsnull, 0)) {
@@ -2972,39 +3040,6 @@ NS_IMETHODIMP GlobalWindowImpl::GetLocation(nsIDOMLocation ** aLocation)
   return NS_OK;
 }
 
-NS_IMETHODIMP GlobalWindowImpl::SetObjectProperty(const PRUnichar *aProperty,
-                                                  nsISupports *aObject)
-{
-  // Get JSContext from stack.
-  nsCOMPtr<nsIThreadJSContextStack>
-    stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1"));
-  NS_ENSURE_TRUE(stack, NS_ERROR_FAILURE);
-
-  JSContext *cx;
-  NS_ENSURE_SUCCESS(stack->Peek(&cx), NS_ERROR_FAILURE);
-
-  if (!cx) {
-    stack->GetSafeJSContext(&cx);
-    NS_ENSURE_TRUE(cx, NS_ERROR_FAILURE);
-  }
-
-  jsval propertyVal = nsnull;
-
-  NS_IF_ADDREF(aObject);        // Convert Releases it (I know it's bad)
-  nsJSUtils::nsConvertXPCObjectToJSVal(aObject, NS_GET_IID(nsISupports),
-                                       cx, (JSObject *) mScriptObject,
-                                       &propertyVal);
-
-  NS_ENSURE_TRUE(::JS_SetUCProperty(cx, (JSObject *) mScriptObject,
-                                    NS_REINTERPRET_CAST(const jschar *,
-                                                        aProperty),
-                                    nsCRT::strlen(aProperty),
-                                    &propertyVal),
-                   NS_ERROR_FAILURE);
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP GlobalWindowImpl::GetObjectProperty(const PRUnichar *aProperty,
                                                   nsISupports ** aObject)
 {
@@ -3023,7 +3058,7 @@ NS_IMETHODIMP GlobalWindowImpl::GetObjectProperty(const PRUnichar *aProperty,
 
   jsval propertyVal;
 
-  if (!::JS_LookupUCProperty(cx, (JSObject *) mScriptObject,
+  if (!::JS_LookupUCProperty(cx, mScriptObject,
                              NS_REINTERPRET_CAST(const jschar *, aProperty),
                              nsCRT::strlen(aProperty), &propertyVal)) {
     return NS_ERROR_FAILURE;
@@ -3184,28 +3219,6 @@ GlobalWindowImpl::SetMutationListeners(PRUint32 aType)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-GlobalWindowImpl::SetPositionAndSize(PRInt32 x, PRInt32 y, PRInt32 cx,
-                                     PRInt32 cy, PRBool fRepaint)
-{
-  nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
-  GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
-  NS_ENSURE_TRUE(treeOwnerAsWin, NS_ERROR_FAILURE);
-
-  return treeOwnerAsWin->SetPositionAndSize(x, y, cx, cy, fRepaint);
-}
-
-NS_IMETHODIMP
-GlobalWindowImpl::GetPositionAndSize(PRInt32 *x, PRInt32 *y, PRInt32 *cx,
-                                     PRInt32 *cy)
-{
-  nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
-  GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
-  NS_ENSURE_TRUE(treeOwnerAsWin, NS_ERROR_FAILURE);
-
-  return treeOwnerAsWin->GetPositionAndSize(x, y, cx, cy);
-}
-
 //*****************************************************************************
 // GlobalWindowImpl::nsIDOMViewCSS
 //*****************************************************************************
@@ -3268,7 +3281,7 @@ NS_IMETHODIMP
 GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
                                const nsAReadableString& aName,
                                const nsAReadableString& aOptions,
-                               PRBool aDialog, nsISupportsArray *aArgsArray,
+                               PRBool aDialog, jsval *argv, PRUint32 argc,
                                nsIDOMWindow **aReturn)
 {
 #if 0
@@ -3503,7 +3516,7 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
 
 
       /*
-      nsJSUtils::nsGetStaticScriptContext(cx, (JSObject *) mScriptObject,
+      nsJSUtils::nsGetStaticScriptContext(cx, mScriptObject,
                                           getter_AddRefs(scriptCX));
       if (!scriptCX ||
           NS_FAILED(scriptCX->GetSecurityManager(getter_AddRefs(secMan))) ||
@@ -3609,8 +3622,10 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
 // named "arguments"
 NS_IMETHODIMP
 GlobalWindowImpl::AttachArguments(nsIDOMWindowInternal *aWindow,
-                                  jsval *argv, PRUint32 argc)
+                                  JSContext *cx, jsval *argv, PRUint32 argc)
 {
+  NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
   if (argc == 0)
     return NS_OK;
 
@@ -3646,47 +3661,257 @@ GlobalWindowImpl::AttachArguments(nsIDOMWindowInternal *aWindow,
   return NS_OK;
 }
 
-// attach the elements in a given nsISupportsArray to the given
-// window, as both a property array named "arguments" and as an
-// nsISupportsArray acessable through
-// nsIDOMWindowInternal::GetArgumentsArray()
-NS_IMETHODIMP
-GlobalWindowImpl::AttachArguments(nsIDOMWindowInternal *aWindow,
-                                  nsISupportsArray *aArgsArray)
+class nsAutoFree
 {
-#if 0
-  if (argc == 0)
+public:
+  nsAutoFree(void *aPtr) : mPtr(aPtr)
+  {
+  }
+
+  ~nsAutoFree()
+  {
+    if (mPtr)
+      nsMemory::Free(mPtr);
+  }
+
+  void Invalidate()
+  {
+    mPtr = nsnull;
+  }
+
+private:
+  void *mPtr;
+};
+
+// Get the elements in a nsISupportsArray and convert them into
+// jsval's for use as argv & argc
+NS_IMETHODIMP
+GlobalWindowImpl::SupportsArrayTojsvals(jsval **aArgv, PRUint32 *aArgc,
+                                        nsISupportsArray *aArgsArray)
+{
+  *aArgv = nsnull;
+  *aArgc = 0;
+
+  // copy the elements in aArgsArray into the JS array
+  // window.arguments in the new window
+
+  if (!aArgsArray)
     return NS_OK;
 
-  // copy the extra parameters into a JS Array and attach it
-  nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(aWindow));
-  if (!scriptGlobal)
+  PRUint32 i, argc;
+
+  aArgsArray->Count(&argc);
+
+  if (!argc) {
+    return NS_OK;
+  }
+
+  if (!mContext)
     return NS_OK;
 
-  nsCOMPtr<nsIScriptContext> scriptContext;
-  scriptGlobal->GetContext(getter_AddRefs(scriptContext));
-  if (!scriptContext)
-    return NS_OK;
+  JSContext *cx = (JSContext *)mContext->GetNativeContext();
 
-  JSContext *jsContext;
-  jsContext = (JSContext *) scriptContext->GetNativeContext();
-  //  nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(aWindow));
-  //  if (!owner)
-  //    return NS_OK;
+  jsval *argv = NS_STATIC_CAST(jsval *, nsMemory::Alloc(argc * sizeof(jsval)));
+  NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
 
-  JSObject *scriptObject = nsnull;
-  //  owner->GetScriptObject(scriptContext, (void **) &scriptObject);
+  nsAutoFree autoFreer(argv);
 
-  JSObject *args;
-  args = ::JS_NewArrayObject(jsContext, argc, argv);
-  if (!args)
-    return NS_OK;
+  for (i = 0; i < argc; i++) {
+    nsCOMPtr<nsISupports> s(dont_AddRef(aArgsArray->ElementAt(i)));
 
-  jsval argsVal = OBJECT_TO_JSVAL(args);
-  // ::JS_DefineProperty(jsContext, scriptObject, "arguments",
-  // argsVal, NULL, NULL, JSPROP_PERMANENT);
-  ::JS_SetProperty(jsContext, scriptObject, "arguments", &argsVal);
-#endif
+    if (!s) {
+      argv[i] = JSVAL_NULL;
+
+      continue;
+    }
+
+    nsCOMPtr<nsISupportsPrimitive> sp(do_QueryInterface(s));
+
+    if (sp) {
+      PRUint16 type;
+
+      sp->GetType(&type);
+
+      switch(type) {
+      case nsISupportsPrimitive::TYPE_STRING :
+        {
+          nsCOMPtr<nsISupportsString> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          char *data;
+
+          p->GetData(&data);
+
+          JSString *str = ::JS_NewString(cx, data, nsCRT::strlen(data));
+          NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+          argv[i] = STRING_TO_JSVAL(str);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_WSTRING :
+        {
+          nsCOMPtr<nsISupportsWString> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRUnichar *data;
+
+          p->GetData(&data);
+
+          JSString *str = ::JS_NewUCString(cx, data, nsCRT::strlen(data));
+          NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+          argv[i] = STRING_TO_JSVAL(str);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_PRBOOL :
+        {
+          nsCOMPtr<nsISupportsPRBool> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRBool data;
+
+          p->GetData(&data);
+
+          argv[i] = BOOLEAN_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_PRUINT8 :
+        {
+          nsCOMPtr<nsISupportsPRUint8> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRUint8 data;
+
+          p->GetData(&data);
+
+          argv[i] = INT_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_PRUINT16 :
+        {
+          nsCOMPtr<nsISupportsPRUint16> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRUint16 data;
+
+          p->GetData(&data);
+
+          argv[i] = INT_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_PRUINT32 :
+        {
+          nsCOMPtr<nsISupportsPRUint32> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRUint32 data;
+
+          p->GetData(&data);
+
+          argv[i] = INT_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_CHAR :
+        {
+          nsCOMPtr<nsISupportsChar> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          char data;
+
+          p->GetData(&data);
+
+          JSString *str = ::JS_NewStringCopyN(cx, &data, 1);
+          NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+          argv[i] = STRING_TO_JSVAL(str);
+          argv[i] = INT_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_PRINT16 :
+        {
+          nsCOMPtr<nsISupportsPRInt16> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRInt16 data;
+
+          p->GetData(&data);
+
+          argv[i] = INT_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_PRINT32 :
+        {
+          nsCOMPtr<nsISupportsPRInt32> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          PRInt32 data;
+
+          p->GetData(&data);
+
+          argv[i] = INT_TO_JSVAL(data);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_FLOAT :
+        {
+          nsCOMPtr<nsISupportsFloat> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          float data;
+
+          p->GetData(&data);
+
+          jsdouble *d = ::JS_NewDouble(cx, data);
+
+          argv[i] = DOUBLE_TO_JSVAL(d);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_DOUBLE :
+        {
+          nsCOMPtr<nsISupportsDouble> p(do_QueryInterface(sp));
+          NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+          double data;
+
+          p->GetData(&data);
+
+          jsdouble *d = ::JS_NewDouble(cx, data);
+
+          argv[i] = DOUBLE_TO_JSVAL(d);
+
+          continue;
+        }
+      case nsISupportsPrimitive::TYPE_ID :
+      case nsISupportsPrimitive::TYPE_PRUINT64 :
+      case nsISupportsPrimitive::TYPE_PRINT64 :
+      case nsISupportsPrimitive::TYPE_PRTIME :
+      case nsISupportsPrimitive::TYPE_VOID :
+        {
+          NS_WARNING("Unsupported primitive type used");
+          break; // Fall through and wrap the primitive interface
+        }
+      default :
+        {
+          NS_WARNING("Unknown primitive type used");
+          break; // Fall through and wrap the primitive interface
+        }
+      }
+    }
+  }
+
+  autoFreer.Invalidate();
+
+  *aArgv = argv;
+  *aArgc = argc;
 
   return NS_OK;
 }
@@ -4346,8 +4571,7 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
                                                 ::JS_GetStringChars(timeout->expr)));
         nsAutoString blank;
         PRBool isUndefined;
-        rv = mContext->EvaluateString(script,
-                                      mScriptObject,
+        rv = mContext->EvaluateString(script, mScriptObject,
                                       timeout->principal,
                                       timeout->filename,
                                       timeout->lineno,
@@ -5333,7 +5557,7 @@ NS_IMETHODIMP NavigatorImpl::Preference(nsISupports** aReturn)
 
   *aReturn = JSVAL_NULL;
 
-  JSObject *self = (JSObject *) mScriptObject;
+  JSObject *self = mScriptObject;
   if (!self)
     return NS_ERROR_FAILURE;
 

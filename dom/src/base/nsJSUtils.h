@@ -50,38 +50,38 @@ public:
                                         nsresult aResult,
                                         const char* aMessage=nsnull);
 
-  static NS_EXPORT PRBool nsCallJSScriptObjectGetProperty(nsISupports* aSupports,
-                                                JSContext* aContext,
-                                                JSObject* aObj,
-                                                jsval aId,
-                                                jsval* aReturn);
+  //static NS_EXPORT PRBool nsCallJSScriptObjectGetProperty(nsISupports* aSupports,
+  //                                              JSContext* aContext,
+  //                                              JSObject* aObj,
+  //                                              jsval aId,
+  //                                              jsval* aReturn);
 
-  static NS_EXPORT PRBool nsCallJSScriptObjectSetProperty(nsISupports* aSupports,
-                                                JSContext* aContext,
-                                                JSObject* aObj,
-                                                jsval aId,
-                                                jsval* aReturn);
+  //static NS_EXPORT PRBool nsCallJSScriptObjectSetProperty(nsISupports* aSupports,
+  //                                              JSContext* aContext,
+  //                                              JSObject* aObj,
+  //                                              jsval aId,
+  //                                              jsval* aReturn);
 
-  static NS_EXPORT void nsConvertObjectToJSVal(nsISupports* aSupports,
-                                     JSContext* aContext,
-                                     JSObject* aObj,
-                                     jsval* aReturn);
+  //static NS_EXPORT void nsConvertObjectToJSVal(nsISupports* aSupports,
+  //                                   JSContext* aContext,
+  //                                   JSObject* aObj,
+  //                                   jsval* aReturn);
 
-  static NS_EXPORT void nsConvertXPCObjectToJSVal(nsISupports* aSupports,
-                                                  const nsIID& aIID,
-                                                  JSContext* aContext,
-                                                  JSObject* aScope,
-                                                  jsval* aReturn);
+  //static NS_EXPORT void nsConvertXPCObjectToJSVal(nsISupports* aSupports,
+  //                                                const nsIID& aIID,
+  //                                                JSContext* aContext,
+  //                                                JSObject* aScope,
+  //                                                jsval* aReturn);
 
   static NS_EXPORT void nsConvertStringToJSVal(const nsString& aProp,
                                                JSContext* aContext,
                                                jsval* aReturn);
 
-  static NS_EXPORT PRBool nsConvertJSValToObject(nsISupports** aSupports,
-                                       REFNSIID aIID,
-                                       const nsString& aTypeName,
-                                       JSContext* aContext,
-                                       jsval aValue);
+  //static NS_EXPORT PRBool nsConvertJSValToObject(nsISupports** aSupports,
+  //                                     REFNSIID aIID,
+  //                                     const nsString& aTypeName,
+  //                                     JSContext* aContext,
+  //                                     jsval aValue);
 
   static NS_EXPORT PRBool nsConvertJSValToXPCObject(nsISupports** aSupports,
                                                     REFNSIID aIID,
@@ -92,9 +92,9 @@ public:
                                                JSContext* aContext,
                                                jsval aValue);
 
-  static NS_EXPORT PRBool nsConvertJSValToBool(PRBool* aProp,
-                                               JSContext* aContext,
-                                               jsval aValue);
+  //static NS_EXPORT PRBool nsConvertJSValToBool(PRBool* aProp,
+  //                                             JSContext* aContext,
+  //                                             jsval aValue);
 
   static NS_EXPORT PRBool nsConvertJSValToUint32(PRUint32* aProp,
                                                  JSContext* aContext,
@@ -105,25 +105,25 @@ public:
                                                JSObject* aObj,
                                                jsval aValue);
 
-  static NS_EXPORT void PR_CALLBACK nsGenericFinalize(JSContext* aContext,
-                                                      JSObject* aObj);
+  //static NS_EXPORT void PR_CALLBACK nsGenericFinalize(JSContext* aContext,
+  //                                                    JSObject* aObj);
 
-  static NS_EXPORT JSBool nsGenericEnumerate(JSContext* aContext,
-                                             JSObject* aObj,
-                                             JSPropertySpec* aLazyPropSpec);
+  //static NS_EXPORT JSBool nsGenericEnumerate(JSContext* aContext,
+  //                                           JSObject* aObj,
+  //                                           JSPropertySpec* aLazyPropSpec);
 
-  static NS_EXPORT JSBool nsGlobalResolve(JSContext* aContext,
-                                          JSObject* aObj, 
-                                          jsval aId,
-                                          JSPropertySpec* aLazyPropSpec);
+  //static NS_EXPORT JSBool nsGlobalResolve(JSContext* aContext,
+  //                                        JSObject* aObj, 
+  //                                        jsval aId,
+  //                                        JSPropertySpec* aLazyPropSpec);
 
-  static NS_EXPORT JSBool nsGenericResolve(JSContext* aContext,
-                                           JSObject* aObj, 
-                                           jsval aId,
-                                           JSPropertySpec* aLazyPropSpec);
+  //static NS_EXPORT JSBool nsGenericResolve(JSContext* aContext,
+  //                                         JSObject* aObj, 
+  //                                         jsval aId,
+  //                                         JSPropertySpec* aLazyPropSpec);
 
-  static NS_EXPORT nsISupports* nsGetNativeThis(JSContext* aContext,
-                                                JSObject* aObj);
+  //static NS_EXPORT nsISupports* nsGetNativeThis(JSContext* aContext,
+  //                                              JSObject* aObj);
   
   static NS_EXPORT nsresult nsGetStaticScriptGlobal(JSContext* aContext,
                                     JSObject* aObj,

@@ -47,6 +47,7 @@ DLL_CFLAGS = \
 # These are the libraries we need to link with to create the dll
 LLIBS=							\
 	$(DIST)\lib\jsdombase_s.lib			\
+	$(DIST)\lib\jsdomevents_s.lib			\
 	$(DIST)\lib\gkgfxwin.lib			\
 	$(DIST)\lib\js32$(VERSION_NUMBER).lib		\
 	$(DIST)\lib\xpcom.lib				\

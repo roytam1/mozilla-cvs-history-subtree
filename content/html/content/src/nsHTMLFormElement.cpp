@@ -46,7 +46,7 @@
 #include "nsHashtable.h"
 #include "nsContentList.h"
 
-#include "nsIScriptObjectOwner.h"
+
 
 
 
@@ -134,7 +134,7 @@ public:
   // nsIDOMNSHTMLFormControlList interface
   NS_DECL_NSIDOMNSHTMLFORMCONTROLLIST
 
-  nsresult GetNamedObject(JSContext* aContext, jsval aID, JSObject** aObj);
+  //  nsresult GetNamedObject(JSContext* aContext, jsval aID, JSObject** aObj);
 
   nsresult AddElementToTable(nsIFormControl* aChild,
                              const nsAReadableString& aName);
@@ -523,36 +523,19 @@ NS_IMETHODIMP
 nsHTMLFormElement::NamedItem(const nsAReadableString& aName,
                              nsISupports **_retval)
 {
-#if 0
-  nsresult result = mControls->NamedItem(cx, argv, argc, aReturn);
-  if (NS_FAILED(result)) {
-    return result;
-  }
+  nsresult rv = mControls->NamedItem(aName, _retval);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // If we couldn't find it in our controls list, it may be
   // a different type of element (IMG, OBJECT, etc.)
-  if (!*aReturn && mDocument && (argc > 0)) {
-    PRUnichar* str = NS_REINTERPRET_CAST(PRUnichar *, JS_GetStringChars(JS_ValueToString(cx, argv[0])));
-
-    nsCOMPtr<nsIScriptContext> scriptContext;
-    nsCOMPtr<nsIScriptGlobalObject> globalObject;
-
-    mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
-
-    if (globalObject) {
-      result = globalObject->GetContext(getter_AddRefs(scriptContext));
-    }
-    
+  if (!*_retval && mDocument) {
     nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(mDocument));
 
     if (htmlDoc) {
       nsCOMPtr<nsIDOMNodeList> list;
 
-      result = htmlDoc->GetElementsByName(nsLiteralString(str),
-                                          getter_AddRefs(list));
-      if (NS_FAILED(result)) {
-        return result;
-      }
+      rv = htmlDoc->GetElementsByName(aName, getter_AddRefs(list));
+      NS_ENSURE_SUCCESS(rv, rv);
     
       if (list) {
         PRUint32 count;
@@ -561,28 +544,14 @@ nsHTMLFormElement::NamedItem(const nsAReadableString& aName,
         if (count > 0) {
           nsCOMPtr<nsIDOMNode> node;
           
-          result = list->Item(0, getter_AddRefs(node));
+          rv = list->Item(0, getter_AddRefs(node));
+          NS_ENSURE_SUCCESS(rv, rv);
 
-          if (NS_FAILED(result)) {
-            return result;
-          }
-
-          if (node) {
-            nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(node);
-            JSObject* obj;
-            
-            result = owner->GetScriptObject(scriptContext, (void**)&obj);
-            if (NS_FAILED(result)) {
-              return result;
-            }
-
-            *aReturn = OBJECT_TO_JSVAL(obj);
-          }
+          *_retval = node;
         }
       }
     }
   }
-#endif
 
   return NS_OK;
 }
@@ -780,6 +749,7 @@ nsFormControlList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
   return NS_OK;
 }
 
+#if 0
 nsresult
 nsFormControlList::GetNamedObject(JSContext* aContext, jsval aID,
                                   JSObject** aObj) 
@@ -842,6 +812,7 @@ nsFormControlList::GetNamedObject(JSContext* aContext, jsval aID,
 
   return owner->GetScriptObject(scriptContext, (void**)aObj);
 }
+#endif
 
 NS_IMETHODIMP 
 nsFormControlList::NamedItem(const nsAReadableString& aName,

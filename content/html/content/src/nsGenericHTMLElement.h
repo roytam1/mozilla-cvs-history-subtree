@@ -61,8 +61,8 @@ public:
 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
 
-  static nsresult DOMQueryInterface(nsIDOMHTMLElement *aElement,
-                                    REFNSIID aIID, void **aInstancePtr);
+  nsresult DOMQueryInterface(nsIDOMHTMLElement *aElement, REFNSIID aIID,
+                             void **aInstancePtr);
 
   NS_METHOD CopyInnerTo(nsIContent* aSrcContent,
                         nsGenericHTMLElement* aDest,

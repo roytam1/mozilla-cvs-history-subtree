@@ -78,7 +78,6 @@
 #include "nsIRDFObserver.h"
 #include "nsIRDFRemoteDataSource.h"
 #include "nsIRDFService.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
 #include "nsISecurityCheckedComponent.h"
@@ -6640,20 +6639,23 @@ nsXULTemplateBuilder::InitHTMLTemplateRoot()
     if (! jscontext)
         return NS_ERROR_UNEXPECTED;
 
-    nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(mRoot);
-    NS_ASSERTION(owner != nsnull, "unable to get script object owner");
-    if (! owner)
-        return NS_ERROR_UNEXPECTED;
+    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
+
+    // root
+    nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+    rv = xpc->WrapNative(jscontext, ::JS_GetGlobalObject(jscontext),
+                         mRoot, NS_GET_IID(nsISupports),
+                         getter_AddRefs(wrapper));
+
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to xpconnect-wrap database");
+    if (NS_FAILED(rv))
+        return rv;
 
     JSObject* jselement;
-    rv = owner->GetScriptObject(context, (void**) &jselement);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get element's script object");
-    if (NS_FAILED(rv)) return rv;
-
-    static NS_DEFINE_CID(kXPConnectCID, NS_XPCONNECT_CID);
-    NS_WITH_SERVICE(nsIXPConnect, xpc, kXPConnectCID, &rv);
-
-    if (NS_FAILED(rv)) return rv;
+    rv = wrapper->GetJSObject(&jselement);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get jsobj from xpconnect wrapper");
+    if (NS_FAILED(rv))
+        return rv;
 
     {
         // database
@@ -6675,7 +6677,7 @@ nsXULTemplateBuilder::InitHTMLTemplateRoot()
         jsval jsdatabase = OBJECT_TO_JSVAL(jsobj);
 
         PRBool ok;
-        ok = JS_SetProperty(jscontext, jselement, "database", &jsdatabase);
+        ok = ::JS_SetProperty(jscontext, jselement, "database", &jsdatabase);
         NS_ASSERTION(ok, "unable to set database property");
         if (! ok)
             return NS_ERROR_FAILURE;

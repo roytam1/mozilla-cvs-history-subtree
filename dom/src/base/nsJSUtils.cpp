@@ -162,6 +162,7 @@ nsJSUtils::nsReportError(JSContext* aContext,
   return JS_FALSE;
 }
 
+#if 0
 NS_EXPORT PRBool 
 nsJSUtils::nsCallJSScriptObjectGetProperty(nsISupports* aSupports,
                                            JSContext* aContext,
@@ -201,7 +202,9 @@ nsJSUtils::nsCallJSScriptObjectSetProperty(nsISupports* aSupports,
 
   return JS_TRUE;
 }
+#endif
 
+#if 0
 NS_EXPORT void 
 nsJSUtils::nsConvertObjectToJSVal(nsISupports* aSupports,
                                   JSContext* aContext,
@@ -260,6 +263,7 @@ nsJSUtils::nsConvertXPCObjectToJSVal(nsISupports* aSupports,
     NS_RELEASE(aSupports);
   }
 }
+#endif
 
 NS_EXPORT void 
 nsJSUtils::nsConvertStringToJSVal(const nsString& aProp,
@@ -272,6 +276,7 @@ nsJSUtils::nsConvertStringToJSVal(const nsString& aProp,
 }
 
 
+#if 0
 NS_EXPORT PRBool 
 nsJSUtils::nsConvertJSValToObject(nsISupports** aSupports,
                                   REFNSIID aIID,
@@ -310,6 +315,7 @@ nsJSUtils::nsConvertJSValToObject(nsISupports** aSupports,
 
   return JS_TRUE;
 }
+#endif
 
 NS_EXPORT PRBool
 nsJSUtils::nsConvertJSValToXPCObject(nsISupports** aSupports,
@@ -351,6 +357,7 @@ nsJSUtils::nsConvertJSValToString(nsAWritableString& aString,
   }
 }
 
+#if 0
 NS_EXPORT PRBool
 nsJSUtils::nsConvertJSValToBool(PRBool* aProp,
                                 JSContext* aContext,
@@ -368,6 +375,7 @@ nsJSUtils::nsConvertJSValToBool(PRBool* aProp,
   return JS_TRUE;
 }
 
+#endif
 NS_EXPORT PRBool
 nsJSUtils::nsConvertJSValToUint32(PRUint32* aProp,
                                   JSContext* aContext,
@@ -419,6 +427,7 @@ nsJSUtils::nsConvertJSValToFunc(nsIDOMEventListener** aListener,
   return JS_TRUE;
 }
 
+#if 0
 NS_EXPORT void PR_CALLBACK
 nsJSUtils::nsGenericFinalize(JSContext* aContext,
                              JSObject* aObj)
@@ -670,6 +679,7 @@ nsJSUtils::nsGetNativeThis(JSContext* aContext, JSObject* aObj)
   }
   return nsnull;
 }
+#endif
 
 NS_EXPORT nsresult 
 nsJSUtils::nsGetStaticScriptGlobal(JSContext* aContext,

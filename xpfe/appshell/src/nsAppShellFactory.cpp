@@ -39,7 +39,6 @@
 #include "nsCommandLineService.h"  
 #include "nsNetSupportDialog.h"
 #include "nsAppShellService.h"
-#include "nsXPConnectFactory.h"
 #include "nsWindowMediator.h"
 #include "nsCommonDialogs.h"
 #include "nsDialogParamBlock.h"
@@ -56,11 +55,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsInternetConfigService);
 
 /* extern the factory entry points for each component... */
 nsresult NS_NewAppShellServiceFactory(nsIFactory** aFactory);
-nsresult NS_NewXPConnectFactoryFactory(nsIFactory** aResult);
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCmdLineService);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppShellService);
-NS_GENERIC_FACTORY_CONSTRUCTOR(XPConnectFactoryImpl);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsNetSupportDialog);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindowMediator);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCommonDialogs);
@@ -79,11 +76,6 @@ static nsModuleComponentInfo gAppShellModuleInfo[] =
     NS_COMMANDLINE_SERVICE_CID,
     "@mozilla.org/appshell/commandLineService;1",
     nsCmdLineServiceConstructor,
-  },
-  { "XPConnect Factory?",
-    NS_XPCONNECTFACTORY_CID,
-    NULL,
-    XPConnectFactoryImplConstructor,
   },
   { "Net Support Dialogs",
     NS_NETSUPPORTDIALOG_CID,

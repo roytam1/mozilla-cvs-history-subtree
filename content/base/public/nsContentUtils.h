@@ -39,10 +39,11 @@
 
 #include "nslayout.h"
 #include "jspubtd.h"
-#include "nsAReadableString.h"
+#include "nsAWritableString.h"
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
+class nsVoidArray;
 
 class nsContentUtils
 {
@@ -70,6 +71,13 @@ public:
                                                  PRUint32 aLength);
 
   static PRUint32 CopyNewlineNormalizedUnicodeTo(nsReadingIterator<PRUnichar>& aSrcStart, const nsReadingIterator<PRUnichar>& aSrcEnd, nsAWritableString& aDest);
+
+  static nsresult ReleaseOnShutdown(nsISupports **aPointer);
+
+  static void Shutdown();
+
+private:
+  static nsVoidArray *sKungFuDeathGripArray;
 };
 
 #endif /* nsContentUtils_h___ */

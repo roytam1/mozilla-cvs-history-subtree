@@ -23,8 +23,7 @@ DEPTH=..\..
 
 include <$(DEPTH)\config\config.mak>
 
-DIRS = base jsurl build
+DIRS = base jsurl events build
 
-DIRS = $(DIRS) build
 
 include <$(DEPTH)\config\rules.mak>

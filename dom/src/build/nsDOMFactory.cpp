@@ -231,6 +231,7 @@ void XXXDomNeverCalled();
 void XXXDomNeverCalled()
 {
   NS_CreateScriptContext(nsnull, nsnull);
+  NS_NewJSEventListener(nsnull, nsnull, nsnull);
 
   //  nsJSContext* jcx = new nsJSContext(0);
   //  if (jcx) {

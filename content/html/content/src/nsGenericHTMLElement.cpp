@@ -35,6 +35,8 @@
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMDocumentFragment.h"
+#include "nsIDOMNSHTMLElement.h"
+#include "nsIDOMElementCSSInlineStyle.h"
 #include "nsIEventListenerManager.h"
 #include "nsIHTMLAttributes.h"
 #include "nsIHTMLStyleSheet.h"
@@ -105,6 +107,9 @@
 #include "nsIHTMLContentSink.h"
 #include "nsLayoutCID.h"
 #include "nsContentCID.h"
+
+#include "nsDOMScriptableHelper.h"
+
 static NS_DEFINE_CID(kPresStateCID,  NS_PRESSTATE_CID);
 // XXX todo: add in missing out-of-memory checks
 
@@ -112,6 +117,8 @@ static NS_DEFINE_CID(kPresStateCID,  NS_PRESSTATE_CID);
 
 NS_BEGIN_DOM_CLASSINFO_IMPL(nsGenericHTMLElement)
   NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMHTMLElement)
+  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMNSHTMLElement)
+  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMElementCSSInlineStyle)
   NS_DOM_CLASSINFO_BASECLASS_IIDS(nsGenericElement)
 NS_END_DOM_CLASSINFO_IMPL
 
@@ -398,6 +405,56 @@ static int gGenericHTMLElementCount = 0;
 static nsILanguageAtomService* gLangService = nsnull;
 
 
+class nsGenericHTMLElementTearoff : public nsIDOMNSHTMLElement,
+                                    public nsIDOMElementCSSInlineStyle
+{
+  NS_DECL_ISUPPORTS
+
+  nsGenericHTMLElementTearoff(nsGenericHTMLElement *aElement)
+    : mElement(aElement)
+  {
+    NS_INIT_REFCNT();
+    NS_ADDREF(mElement);
+  }
+
+  ~nsGenericHTMLElementTearoff()
+  {
+    NS_RELEASE(mElement);
+  }
+
+  NS_FORWARD_NSIDOMNSHTMLELEMENT(mElement->)
+  NS_FORWARD_NSIDOMELEMENTCSSINLINESTYLE(mElement->)
+
+private:
+  nsGenericHTMLElement *mElement;
+};
+
+
+NS_IMPL_ADDREF(nsGenericHTMLElementTearoff)
+NS_IMPL_RELEASE(nsGenericHTMLElementTearoff)
+
+NS_IMETHODIMP
+nsGenericHTMLElementTearoff::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  NS_ENSURE_ARG_POINTER(aInstancePtr);
+
+  nsISupports *inst = nsnull;
+
+  if (aIID.Equals(NS_GET_IID(nsIDOMNSHTMLElement))) {
+    inst = NS_STATIC_CAST(nsIDOMNSHTMLElement *, this);
+  } else if (aIID.Equals(NS_GET_IID(nsIDOMElementCSSInlineStyle))) {
+    inst = NS_STATIC_CAST(nsIDOMElementCSSInlineStyle *, this);
+  } else {
+    return mElement->QueryInterface(aIID, aInstancePtr);
+  }
+
+  NS_ADDREF(inst);
+
+  *aInstancePtr = inst;
+
+  return NS_OK;
+}
+
 nsGenericHTMLElement::nsGenericHTMLElement()
 {
   mAttributes = nsnull;
@@ -424,6 +481,8 @@ nsGenericHTMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
   if (aIID.Equals(NS_GET_IID(nsIHTMLContent))) {
     inst = NS_STATIC_CAST(nsIHTMLContent *, this);
+  } else if (aIID.Equals(NS_GET_IID(nsIXPCScriptable))) {
+    return nsDOMScriptableHelper::GetDefaultHelper(aInstancePtr);
   } else {
     return NS_NOINTERFACE;
   }
@@ -447,6 +506,14 @@ nsGenericHTMLElement::DOMQueryInterface(nsIDOMHTMLElement *aElement,
     inst = NS_STATIC_CAST(nsIDOMElement *, aElement);
   } else if (aIID.Equals(NS_GET_IID(nsIDOMHTMLElement))) {
     inst = NS_STATIC_CAST(nsIDOMHTMLElement *, aElement);
+  } else if (aIID.Equals(NS_GET_IID(nsIDOMNSHTMLElement))) {
+    inst = NS_STATIC_CAST(nsIDOMNSHTMLElement *,
+                          new nsGenericHTMLElementTearoff(this));
+    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
+  } else if (aIID.Equals(NS_GET_IID(nsIDOMElementCSSInlineStyle))) {
+    inst = NS_STATIC_CAST(nsIDOMElementCSSInlineStyle *,
+                          new nsGenericHTMLElementTearoff(this));
+    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
   } else {
     return NS_NOINTERFACE;
   }

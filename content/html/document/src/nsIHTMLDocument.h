@@ -55,8 +55,6 @@ public:
 
   NS_IMETHOD AddForm(nsIDOMHTMLFormElement* aForm) = 0;
 
-  NS_IMETHOD GetForms(nsIDOMHTMLCollection** aForms) = 0;
-
   NS_IMETHOD SetBaseURL(const nsAReadableString& aURLSpec) = 0;
 
   NS_IMETHOD GetBaseTarget(nsAWritableString& aTarget) const = 0;

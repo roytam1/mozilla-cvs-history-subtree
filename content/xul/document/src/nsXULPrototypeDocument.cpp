@@ -47,8 +47,7 @@
 #include "nsIConsoleService.h"
 #include "nsIScriptError.h"
 
-class nsXULPDGlobalObject : public nsIScriptObjectOwner,
-                            public nsIScriptGlobalObject,
+class nsXULPDGlobalObject : public nsIScriptGlobalObject,
                             public nsIScriptObjectPrincipal
 {
 public:
@@ -56,10 +55,6 @@ public:
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
-
-    // nsIScriptObjectOwner methods
-    NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void **aObject);
-    NS_IMETHOD SetScriptObject(void *aObject);
 
     // nsIScriptGlobalObject methods
     NS_IMETHOD SetContext(nsIScriptContext *aContext);
@@ -75,6 +70,7 @@ public:
                               nsIDOMEvent** aDOMEvent,
                               PRUint32 aFlags,
                               nsEventStatus* aEventStatus);
+    NS_IMETHOD_(JSObject *) GetGlobalJSObject();
 
     // nsIScriptObjectPrincipal methods
     NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
@@ -418,58 +414,9 @@ NS_IMPL_ADDREF(nsXULPDGlobalObject)
 NS_IMPL_RELEASE(nsXULPDGlobalObject)
 
 NS_INTERFACE_MAP_BEGIN(nsXULPDGlobalObject)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
     NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
     NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
 NS_INTERFACE_MAP_END
-
-//----------------------------------------------------------------------
-//
-// nsIScriptObjectOwner methods
-//
-
-NS_IMETHODIMP
-nsXULPDGlobalObject::GetScriptObject(nsIScriptContext *aContext, void **aObject)
-{
-    // The prototype document has its own special secret script object
-    // that can be used to compile scripts and event handlers.
-    nsresult rv;
-
-    nsCOMPtr<nsIScriptContext> context;
-
-    if (mScriptContext && aContext != mScriptContext.get()) {
-        rv = GetContext(getter_AddRefs(context));
-        if (NS_FAILED(rv)) return rv;
-    }
-    else {
-        context = aContext;
-    }
-
-    if (! mScriptObject) {
-        JSContext* cx = NS_REINTERPRET_CAST(JSContext*, context->GetNativeContext());
-        if (! cx)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        mScriptObject = JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
-        if (! mScriptObject)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        // Add an owning reference from JS back to us. This'll be
-        // released when the JSObject is finalized.
-        ::JS_SetPrivate(cx, mScriptObject, this);
-        NS_ADDREF(this);
-    }
-
-    *aObject = mScriptObject;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXULPDGlobalObject::SetScriptObject(void *aObject)
-{
-    mScriptObject = (JSObject *)aObject;
-    return NS_OK;
-}
 
 //----------------------------------------------------------------------
 //
@@ -491,7 +438,7 @@ nsXULPDGlobalObject::GetContext(nsIScriptContext **aContext)
     // GetContext() will be called before GetScriptObject() is.
     if (! mScriptContext) {
         nsresult rv;
-        //        rv = NS_CreateScriptContext(this, getter_AddRefs(mScriptContext));
+        rv = NS_CreateScriptContext(this, getter_AddRefs(mScriptContext));
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -559,6 +506,36 @@ nsXULPDGlobalObject::HandleDOMEvent(nsIPresContext* aPresContext,
 {
     NS_NOTREACHED("waaah!");
     return NS_ERROR_UNEXPECTED;
+}
+
+
+JSObject *
+nsXULPDGlobalObject::GetGlobalJSObject()
+{
+    // The prototype document has its own special secret script object
+    // that can be used to compile scripts and event handlers.
+
+    if (! mScriptObject) {
+        if (!mScriptContext)
+            return nsnull;
+
+        JSContext* cx =
+            NS_REINTERPRET_CAST(JSContext*,
+                                mScriptContext->GetNativeContext());
+        if (! cx)
+            return nsnull;
+
+        mScriptObject = JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
+        if (! mScriptObject)
+            return nsnull;
+
+        // Add an owning reference from JS back to us. This'll be
+        // released when the JSObject is finalized.
+        ::JS_SetPrivate(cx, mScriptObject, this);
+        NS_ADDREF(this);
+    }
+
+    return mScriptObject;
 }
 
 //----------------------------------------------------------------------

@@ -1832,9 +1832,7 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAReadableString& aV
         rv = receiver->GetListenerManager(getter_AddRefs(manager));
         if (NS_FAILED(rv)) return rv;
 
-        nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(global);
-            
-        rv = manager->AddScriptEventListener(context, owner, aName,
+        rv = manager->AddScriptEventListener(context, global, aName,
                                              aValue, aIID, PR_FALSE);
     }
     else {
@@ -2005,7 +2003,7 @@ nsXULElement::HandleEvent(nsIDOMEvent *aEvent)
 
 
 //----------------------------------------------------------------------
-// nsIScriptObjectOwner interface
+
 
 #if 0
 NS_IMETHODIMP
@@ -2181,12 +2179,10 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         if (NS_FAILED(rv)) return rv;
 
         // Use the prototype script's special scope object
-        nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(global);
-        if (! owner)
+
+        scopeObject = global->GetGlobalJSObject();
+        if (!scopeObject)
             return NS_ERROR_UNEXPECTED;
-    
-        rv = owner->GetScriptObject(context, (void**) &scopeObject);
-        if (NS_FAILED(rv)) return rv;
     }
     else {
         // We don't have a prototype; do a one-off compile.
@@ -4633,12 +4629,9 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
         if (! context)
             return NS_ERROR_UNEXPECTED;
 
-        nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(global);
-        if (! owner)
+        scopeObject = global->GetGlobalJSObject();
+        if (!scopeObject)
             return NS_ERROR_UNEXPECTED;
-    
-        rv = owner->GetScriptObject(context, (void**) &scopeObject);
-        if (NS_FAILED(rv)) return rv;
     }
 
     // Use the enclosing document's principal

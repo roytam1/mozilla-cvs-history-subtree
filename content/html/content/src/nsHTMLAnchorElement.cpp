@@ -665,6 +665,12 @@ nsHTMLAnchorElement::GetText(nsAWritableString& aText)
 }
 
 NS_IMETHODIMP
+nsHTMLAnchorElement::ToString(nsAWritableString& aSource)
+{
+  return GetHref(aSource);
+}
+
+NS_IMETHODIMP
 nsHTMLAnchorElement::GetLinkState(nsLinkState &aState)
 {
   aState = mLinkState;

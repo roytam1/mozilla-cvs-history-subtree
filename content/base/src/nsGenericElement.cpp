@@ -79,10 +79,7 @@
 
 
 NS_BEGIN_DOM_CLASSINFO_IMPL(nsGenericElement)
-  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMElement)
 NS_END_DOM_CLASSINFO_IMPL
-
-#include "nsIScriptObjectOwner.h"
 
 //----------------------------------------------------------------------
 
@@ -2584,11 +2581,8 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     receiver->GetListenerManager(getter_AddRefs(manager));
 
     if (manager) {
-      nsCOMPtr<nsIScriptObjectOwner> objOwner(do_QueryInterface(global));
-      if (objOwner) {
-        ret = manager->AddScriptEventListener(context, objOwner, aAttribute,
-                                              aValue, aIID, PR_FALSE);
-      }
+      ret = manager->AddScriptEventListener(context, global, aAttribute,
+                                            aValue, aIID, PR_FALSE);
     }
   }
   else {
@@ -2596,8 +2590,8 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     GetListenerManager(getter_AddRefs(manager));
 
     if (manager) {
-      //      ret = manager->AddScriptEventListener(context, this, aAttribute, aValue,
-      //                                            aIID, PR_TRUE);
+      ret = manager->AddScriptEventListener(context, this, aAttribute, aValue,
+                                            aIID, PR_TRUE);
     }
   }
 
