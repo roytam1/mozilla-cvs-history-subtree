@@ -285,6 +285,7 @@ struct protoent* getprotobynumber(int number);
 #define _MD_CLOSE_DIR _MD_close_dir
 #define _MD_MAKE_NONBLOCK _MD_make_nonblock
 #define _MD_OPEN _MD_open
+#define _MD_OPEN_FILE _MD_open
 #define _MD_CLOSE_FILE _MD_close_file
 #define _MD_READ _MD_read
 #define _MD_WRITE _MD_write

@@ -603,6 +603,9 @@ NSPR_API(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode);
 **
 */
 
+NSPR_API(PRFileDesc*) PR_OpenFile(
+    const char *name, PRIntn flags, PRIntn mode);
+
 /*
  **************************************************************************
  * FUNCTION: PR_Close

@@ -889,6 +889,8 @@ _PR_MD_INIT_IO()
         PR_ASSERT(filetime.prt == _pr_filetime_offset);
     }
 #endif /* DEBUG */
+
+    _PR_NT_InitSids();
 }
 
 /* --- SOCKET IO --------------------------------------------------------- */
@@ -2190,6 +2192,106 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode)
     }
 }
 
+PRInt32
+_PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode)
+{
+    HANDLE file;
+    PRInt32 access = 0;
+    PRInt32 flags = 0;
+    PRInt32 flag6 = 0;
+    SECURITY_ATTRIBUTES sa;
+    LPSECURITY_ATTRIBUTES lpSA = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    PACL pACL = NULL;
+
+    if (osflags & PR_CREATE_FILE) {
+        if (_PR_NT_MakeSecurityDescriptorACL(mode, &pSD, &pACL)
+                == PR_SUCCESS) {
+            sa.nLength = sizeof(sa);
+            sa.lpSecurityDescriptor = pSD;
+            sa.bInheritHandle = FALSE;
+            lpSA = &sa;
+        }
+    }
+    
+    if (osflags & PR_SYNC) flag6 = FILE_FLAG_WRITE_THROUGH;
+ 
+    if (_nt_use_async)
+    {
+        if (osflags & PR_RDONLY || osflags & PR_RDWR) access |= GENERIC_READ;
+        if (osflags & PR_WRONLY || osflags & PR_RDWR) access |= GENERIC_WRITE;
+
+        if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
+            flags = CREATE_NEW;
+        else if (osflags & PR_CREATE_FILE)
+            flags = (0 != (osflags & PR_TRUNCATE)) ? CREATE_ALWAYS : OPEN_ALWAYS;
+        else if (osflags & PR_TRUNCATE) flags = TRUNCATE_EXISTING;
+        else flags = OPEN_EXISTING;
+
+        
+        flag6 |= FILE_FLAG_OVERLAPPED;
+
+        file = CreateFile(name, 
+                          access, 
+                          FILE_SHARE_READ|FILE_SHARE_WRITE,
+                          lpSA,
+                          flags, 
+                          flag6,
+                          NULL);
+        if (file == INVALID_HANDLE_VALUE) {
+            _PR_MD_MAP_OPEN_ERROR(GetLastError());
+            return -1;
+        }
+
+        if (osflags & PR_APPEND) {
+            if ( SetFilePointer(file, 0, 0, FILE_END) == 0xFFFFFFFF ) {
+                _PR_MD_MAP_LSEEK_ERROR(GetLastError());
+                CloseHandle(file);
+                return -1;
+            }
+        }
+    }
+    else
+    {
+   
+        if (osflags & PR_RDONLY || osflags & PR_RDWR)
+            access |= GENERIC_READ;
+        if (osflags & PR_WRONLY || osflags & PR_RDWR)
+            access |= GENERIC_WRITE;
+
+        if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
+            flags = CREATE_NEW;
+        else if (osflags & PR_CREATE_FILE) {
+            if (osflags & PR_TRUNCATE)
+                flags = CREATE_ALWAYS;
+            else
+                flags = OPEN_ALWAYS;
+        } else {
+            if (osflags & PR_TRUNCATE)
+                flags = TRUNCATE_EXISTING;
+            else
+                flags = OPEN_EXISTING;
+        }
+
+        file = CreateFile(name,
+                          access,
+                          FILE_SHARE_READ|FILE_SHARE_WRITE,
+                          &sa,
+                          flags,
+                          flag6,
+                          NULL);
+        if (file == INVALID_HANDLE_VALUE) {
+            _PR_MD_MAP_OPEN_ERROR(GetLastError());
+            return -1; 
+        }
+    }
+
+    if (lpSA != NULL) {
+        _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
+    }
+    return (PRInt32)file;
+}
+
 PRInt32 
 _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
 {
@@ -2661,7 +2763,7 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
             HANDLE_FLAG_INHERIT,
             inheritable ? HANDLE_FLAG_INHERIT : 0);
     if (0 == rv) {
-        PR_SetError(PR_UNKNOWN_ERROR, GetLastError());
+        _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
         return PR_FAILURE;
     }
     return PR_SUCCESS;

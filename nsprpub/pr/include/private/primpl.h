@@ -1030,6 +1030,9 @@ extern void _PR_MD_MAKE_NONBLOCK(PRFileDesc *fd);
 extern PRInt32 _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode);
 #define    _PR_MD_OPEN _MD_OPEN
 
+extern PRInt32 _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode);
+#define    _PR_MD_OPEN_FILE _MD_OPEN_FILE
+
 extern PRInt32 _PR_MD_CLOSE_FILE(PRInt32 osfd);
 #define    _PR_MD_CLOSE_FILE _MD_CLOSE_FILE
 

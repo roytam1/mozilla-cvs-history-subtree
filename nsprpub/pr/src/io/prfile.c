@@ -348,6 +348,26 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
     return fd;
 }
 
+PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
+    const char *name, PRIntn flags, PRIntn mode)
+{
+    PRInt32 osfd;
+    PRFileDesc *fd = 0;
+
+    if (!_pr_initialized) _PR_ImplicitInitialization();
+
+    /* Map pr open flags and mode to os specific flags */
+
+    osfd = _PR_MD_OPEN_FILE(name, flags, mode);
+    if (osfd != -1) {
+        fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
+        if (!fd) {
+            (void) _PR_MD_CLOSE_FILE(osfd);
+        }
+    }
+    return fd;
+}
+
 PRInt32 PR_GetSysfdTableMax(void)
 {
 #if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)

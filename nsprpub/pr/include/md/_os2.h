@@ -182,6 +182,7 @@ struct _MDProcess {
 /* --- IO stuff --- */
 
 #define _MD_OPEN                      (_PR_MD_OPEN)
+#define _MD_OPEN_FILE                 (_PR_MD_OPEN)
 #define _MD_READ                      (_PR_MD_READ)
 #define _MD_WRITE                     (_PR_MD_WRITE)
 #define _MD_WRITEV                    (_PR_MD_WRITEV)

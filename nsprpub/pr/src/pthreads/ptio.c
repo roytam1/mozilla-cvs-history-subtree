@@ -2635,7 +2635,8 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 /****************************** I/O public methods ***************************/
 /*****************************************************************************/
 
-PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
+PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
+    const char *name, PRIntn flags, PRIntn mode)
 {
     PRFileDesc *fd = NULL;
     PRIntn syserrno, osfd = -1, osflags = 0;;
@@ -2676,6 +2677,11 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
         if (fd == NULL) close(osfd);  /* $$$ whoops! this is bad $$$ */
     }
     return fd;
+}  /* PR_OpenFile */
+
+PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
+{
+    return PR_OpenFile(name, flags, mode);
 }  /* PR_Open */
 
 PR_IMPLEMENT(PRStatus) PR_Delete(const char *name)

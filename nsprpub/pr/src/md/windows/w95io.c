@@ -72,6 +72,8 @@ _PR_MD_INIT_IO()
         PR_ASSERT(filetime.prt == _pr_filetime_offset);
     }
 #endif /* DEBUG */
+
+    _PR_NT_InitSids();
 }
 
 PRStatus
@@ -173,6 +175,67 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, int mode)
                       flags,
                       flag6,
                       NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+		_PR_MD_MAP_OPEN_ERROR(GetLastError());
+        return -1; 
+	}
+
+    return (PRInt32)file;
+}
+
+PRInt32
+_PR_MD_OPEN_FILE(const char *name, PRIntn osflags, int mode)
+{
+    HANDLE file;
+    PRInt32 access = 0;
+    PRInt32 flags = 0;
+    PRInt32 flag6 = 0;
+    SECURITY_ATTRIBUTES sa;
+    LPSECURITY_ATTRIBUTES lpSA = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    PACL pACL = NULL;
+
+    if (osflags & PR_CREATE_FILE) {
+        if (_PR_NT_MakeSecurityDescriptorACL(mode, &pSD, &pACL)
+                == PR_SUCCESS) {
+            sa.nLength = sizeof(sa);
+            sa.lpSecurityDescriptor = pSD;
+            sa.bInheritHandle = FALSE;
+            lpSA = &sa;
+        }
+    }
+    
+    if (osflags & PR_SYNC) flag6 = FILE_FLAG_WRITE_THROUGH;
+ 
+    if (osflags & PR_RDONLY || osflags & PR_RDWR)
+        access |= GENERIC_READ;
+    if (osflags & PR_WRONLY || osflags & PR_RDWR)
+        access |= GENERIC_WRITE;
+
+    if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
+        flags = CREATE_NEW;
+    else if (osflags & PR_CREATE_FILE) {
+        if (osflags & PR_TRUNCATE)
+            flags = CREATE_ALWAYS;
+        else
+            flags = OPEN_ALWAYS;
+    } else {
+        if (osflags & PR_TRUNCATE)
+            flags = TRUNCATE_EXISTING;
+        else
+            flags = OPEN_EXISTING;
+    }
+
+    file = CreateFile(name,
+                      access,
+                      FILE_SHARE_READ|FILE_SHARE_WRITE,
+                      lpSA,
+                      flags,
+                      flag6,
+                      NULL);
+    if (lpSA != NULL) {
+        _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
+    }
     if (file == INVALID_HANDLE_VALUE) {
 		_PR_MD_MAP_OPEN_ERROR(GetLastError());
         return -1; 

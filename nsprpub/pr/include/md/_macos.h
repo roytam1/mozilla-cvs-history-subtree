@@ -318,6 +318,7 @@ typedef enum IOOperation {
 #define _MD_INIT_IO()
 
 #define _MD_OPEN 					_MD_Open
+#define _MD_OPEN_FILE 				_MD_Open
 #define _MD_CLOSE_FILE 				FSClose
 #define _MD_READ(fd,buf,amount) 	ReadWriteProc(fd,buf,amount,READ_ASYNC)
 #define _MD_WRITE(fd,buf,amount) 	ReadWriteProc(fd,buf,amount,WRITE_ASYNC)

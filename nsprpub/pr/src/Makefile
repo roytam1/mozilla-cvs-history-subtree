@@ -141,7 +141,7 @@ endif
 
 ifeq ($(OS_ARCH),WINNT)
 ifneq ($(OS_TARGET),WIN16)
-OS_LIBS		= wsock32.lib winmm.lib
+OS_LIBS		= advapi32.lib wsock32.lib winmm.lib
 endif
 endif
 
@@ -289,6 +289,7 @@ OBJS +=	md/windows/$(OBJDIR)/w95io.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/ntgc.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/ntmisc.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/ntinrval.$(OBJ_SUFFIX) \
+	md/windows/$(OBJDIR)/ntsec.$(OBJ_SUFFIX)	\
 	md/windows/$(OBJDIR)/ntsem.$(OBJ_SUFFIX)	\
 	md/windows/$(OBJDIR)/win32_errors.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/w32ipcsem.$(OBJ_SUFFIX)	\
@@ -303,6 +304,7 @@ OBJS +=	md/windows/$(OBJDIR)/ntdllmn.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/ntthread.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/ntmisc.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/ntinrval.$(OBJ_SUFFIX) \
+	md/windows/$(OBJDIR)/ntsec.$(OBJ_SUFFIX)	\
 	md/windows/$(OBJDIR)/ntsem.$(OBJ_SUFFIX)	\
 	md/windows/$(OBJDIR)/win32_errors.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/w32ipcsem.$(OBJ_SUFFIX) \

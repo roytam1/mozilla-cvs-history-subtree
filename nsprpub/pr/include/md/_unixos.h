@@ -334,7 +334,8 @@ extern PRStatus _MD_UnlockFile(PRInt32 osfd);
 #define _MD_OPEN_DIR(dir, name)		    _MD_open_dir(dir, name)
 #define _MD_CLOSE_DIR(dir)		        _MD_close_dir(dir)
 #define _MD_READ_DIR(dir, flags)	    _MD_read_dir(dir, flags)
-#define _MD_OPEN(name, osflags, mode    )	_MD_open(name, osflags, mode)
+#define _MD_OPEN(name, osflags, mode)	_MD_open(name, osflags, mode)
+#define _MD_OPEN_FILE(name, osflags, mode)	_MD_open(name, osflags, mode)
 extern PRInt32 _MD_read(PRFileDesc *fd, void *buf, PRInt32 amount);
 #define _MD_READ(fd,buf,amount)		    _MD_read(fd,buf,amount)
 extern PRInt32 _MD_write(PRFileDesc *fd, const void *buf, PRInt32 amount);
