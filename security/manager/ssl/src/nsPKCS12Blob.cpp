@@ -303,7 +303,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file)
   }
   for (i=0; i<numCerts; i++) {
     nsNSSCertificate *cert;
-    nrv = mCertArray->GetElementAt(i, &NS_STATIC_CAST(nsISupports*,cert));
+    nrv = mCertArray->GetElementAt(i, (nsISupports**)&cert);
     if (NS_FAILED(nrv)) {
       PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("FAILED getting el %d", i));
       goto finish;
