@@ -170,6 +170,7 @@ protected:
   LONG mCachedIndex;
 
   virtual void GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc);
+  IAccessible *Accessible::NewAccessible(nsIAccessible *aNSAcc, nsIDOMNode *aNode, HWND aWnd);
 
 private:
   /// the accessible library and cached methods

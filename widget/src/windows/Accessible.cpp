@@ -22,6 +22,7 @@
 
 #include "nsIAccessible.h"
 #include "nsIAccessibleDocument.h"
+#include "nsIAccessibleDocumentInternal.h"
 #include "Accessible.h"
 #include "nsIWidget.h"
 #include "nsWindow.h"
@@ -127,9 +128,12 @@ LPFNLRESULTFROMOBJECT Accessible::gmLresultFromObject = 0;
 
 LPFNNOTIFYWINEVENT Accessible::gmNotifyWinEvent = 0;
 
+
+
 //-----------------------------------------------------
 // IAccessible methods
 //-----------------------------------------------------
+
 
 STDMETHODIMP Accessible::AccessibleObjectFromWindow(
   HWND hwnd,
@@ -205,7 +209,7 @@ STDMETHODIMP Accessible::get_accParent( IDispatch __RPC_FAR *__RPC_FAR *ppdispPa
   mAccessible->GetAccParent(getter_AddRefs(parent));
 
   if (parent) {
-    IAccessible* a = new Accessible(parent, nsnull, mWnd);
+    IAccessible* a = NewAccessible(parent, nsnull, mWnd);
     a->AddRef();
     *ppdispParent = a;
     return S_OK;
@@ -256,7 +260,7 @@ STDMETHODIMP Accessible::get_accChild(
     }
       
     // create a new one.
-    IAccessible* ia = new Accessible(a, nsnull, mWnd);
+    IAccessible* ia = NewAccessible(a, nsnull, mWnd);
     ia->AddRef();
     *ppdispChild = ia;
     return S_OK;
@@ -406,7 +410,7 @@ STDMETHODIMP Accessible::get_accFocus(
   nsCOMPtr<nsIAccessible> focusedAccessible;
   if (NS_SUCCEEDED(mAccessible->GetAccFocused(getter_AddRefs(focusedAccessible)))) {
     pvarChild->vt = VT_DISPATCH;
-    pvarChild->pdispVal = new Accessible(focusedAccessible, nsnull, mWnd);
+    pvarChild->pdispVal = NewAccessible(focusedAccessible, nsnull, mWnd);
     pvarChild->pdispVal->AddRef();
     return S_OK;
   }
@@ -529,7 +533,7 @@ STDMETHODIMP Accessible::accNavigate(
   }
 
   if (acc) {
-     IAccessible* a = new Accessible(acc, nsnull, mWnd);
+     IAccessible* a = NewAccessible(acc, nsnull, mWnd);
      a->AddRef();
      pvarEndUpAt->vt = VT_DISPATCH;
      pvarEndUpAt->pdispVal = a;
@@ -564,7 +568,7 @@ STDMETHODIMP Accessible::accHitTest(
       pvarChild->lVal = CHILDID_SELF;
     } else { // its not create an Accessible for it.
       pvarChild->vt = VT_DISPATCH;
-      pvarChild->pdispVal = new Accessible(a, nsnull, mWnd);
+      pvarChild->pdispVal = NewAccessible(a, nsnull, mWnd);
       pvarChild->pdispVal->AddRef();
     }
   } else {
@@ -631,6 +635,24 @@ STDMETHODIMP Accessible::Invoke(DISPID dispIdMember, REFIID riid,
 
         
 //------- Helper methods ---------
+
+IAccessible *Accessible::NewAccessible(nsIAccessible *aNSAcc, nsIDOMNode *aNode, HWND aWnd)
+{
+  IAccessible *retval = nsnull;
+  if (aNSAcc) {
+    nsCOMPtr<nsIAccessibleDocumentInternal> nsAccDoc(do_QueryInterface(aNSAcc));
+    if (nsAccDoc) {
+      nsCOMPtr<nsIDocument> doc;
+      nsAccDoc->GetDocument(getter_AddRefs(doc));
+      nsCOMPtr<nsIDOMNode> node(do_QueryInterface(doc));
+      retval = new DocAccessible(aNSAcc, node, aWnd);
+    }
+    else 
+      retval = new Accessible(aNSAcc, aNode, aWnd);
+  }
+  return retval;
+}
+
 
 void Accessible::GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc)
 {

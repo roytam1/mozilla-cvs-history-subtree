@@ -38,6 +38,10 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsHTMLLinkAccessible.obj    \
   $(NULL)
 
+EXPORTS = \
+  .\nsRootAccessible.h \
+  $(NULL)
+
 LINCS=                                  \
   -I..\..\layout\html\forms\public \
   -I..\..\layout\html\forms\src \

@@ -330,14 +330,10 @@ ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
   accService->GetAccessibleFor(wr, node, getter_AddRefs(nsAcc));
   if (nsAcc) {
     nsCOMPtr<nsIAccessibleDocument> nsAccDoc(do_QueryInterface(nsAcc));
-    if (nsAccDoc) {
-      DocAccessible *accDoc = new DocAccessible(nsAcc, node, mWnd);
-      accDoc->QueryInterface(IID_ISimpleDOMNode, (void**)&newNode);
-    }
-    else {
-      Accessible *acc = new Accessible(nsAcc, node, mWnd);
-      acc->QueryInterface(IID_ISimpleDOMNode, (void**)&newNode);
-    }
+    if (nsAccDoc) 
+      newNode = new DocAccessible(nsAcc, node, mWnd);
+    else 
+      newNode = new Accessible(nsAcc, node, mWnd);
   }
   else if (!content) {  // We're on a the root frame
     IAccessible * pAcc = NULL;

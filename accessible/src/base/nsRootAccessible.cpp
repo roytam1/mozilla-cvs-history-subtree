@@ -43,6 +43,7 @@
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocumentInternal)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFormListener)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMFormListener)
@@ -306,7 +307,6 @@ NS_IMETHODIMP nsRootAccessible::Select(nsIDOMEvent* aEvent) { return NS_OK; }
 // gets Input events when text is entered or deleted in a textarea or input
 NS_IMETHODIMP nsRootAccessible::Input(nsIDOMEvent* aEvent) { return NS_OK; }
 
-
 // ------- nsIAccessibleDocument Methods (5) ---------------
 
 NS_IMETHODIMP nsRootAccessible::GetURL(PRUnichar **aURL)
@@ -334,10 +334,11 @@ NS_IMETHODIMP nsRootAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUni
   return nsDocAccessible::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
 }
 
+NS_IMETHODIMP nsRootAccessible::GetDocument(nsIDocument **doc)
+{
+  return nsDocAccessible::GetDocument(doc);
+}
 
-
-// ---------- nsDocAccessible ----------
-// This is a helper for nsRootAccessible, and nsHTMLIFrameAccessible
 
 nsDocAccessible::nsDocAccessible(nsIDocument *aDoc):mDocument(aDoc)
 {
@@ -424,4 +425,14 @@ NS_IMETHODIMP nsDocAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnic
   return NS_ERROR_FAILURE;
 }
 
+
+NS_IMETHODIMP nsDocAccessible::GetDocument(nsIDocument **doc)
+{
+  *doc = mDocument;
+  if (mDocument) {
+    NS_IF_ADDREF(*doc);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
 

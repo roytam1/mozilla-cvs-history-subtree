@@ -30,6 +30,7 @@
 #include "nsIDOMFormListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDocument.h"
+#include "nsIAccessibleDocumentInternal.h"
 
 class nsDocAccessible
 {
@@ -37,27 +38,23 @@ class nsDocAccessible
     nsDocAccessible(nsIDocument *doc);
     nsDocAccessible(nsIWeakReference *aShell);
     virtual ~nsDocAccessible();
-    
-    // ----- nsIAccessibleDocument ------------------------
-    NS_IMETHOD GetURL(PRUnichar **aURL);
-    NS_IMETHOD GetTitle(PRUnichar **aTitle);
-    NS_IMETHOD GetMimeType(PRUnichar **aMimeType);
-    NS_IMETHOD GetDocType(PRUnichar **aDocType);
-    NS_IMETHOD GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI);
+
+    NS_DECL_NSIACCESSIBLEDOCUMENT
+    NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 
   protected:
     nsCOMPtr<nsIDocument> mDocument;
 };
 
 class nsRootAccessible : public nsAccessible,
-                         public nsIAccessibleDocument,
                          public nsDocAccessible,
+                         public nsIAccessibleDocument,
+                         public nsIAccessibleDocumentInternal,
                          public nsIAccessibleEventReceiver,
                          public nsIDOMFocusListener,
                          public nsIDOMFormListener
 
 {
-  
   NS_DECL_ISUPPORTS_INHERITED
 
   public:
@@ -89,23 +86,18 @@ class nsRootAccessible : public nsAccessible,
     NS_IMETHOD Select(nsIDOMEvent* aEvent);
     NS_IMETHOD Input(nsIDOMEvent* aEvent);
 
-  public:
-    // ----- nsIAccessibleDocument ------------------------
-    NS_IMETHOD GetURL(PRUnichar **aURL);
-    NS_IMETHOD GetTitle(PRUnichar **aTitle);
-    NS_IMETHOD GetMimeType(PRUnichar **aMimeType);
-    NS_IMETHOD GetDocType(PRUnichar **aDocType);
-    NS_IMETHOD GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI);
+    NS_DECL_NSIACCESSIBLEDOCUMENT
+    NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 
   protected:
-  virtual void GetBounds(nsRect& aRect, nsIFrame** aRelativeFrame);
-  virtual nsIFrame* GetFrame();
+    virtual void GetBounds(nsRect& aRect, nsIFrame** aRelativeFrame);
+    virtual nsIFrame* GetFrame();
 
-  // not a com pointer. We don't own the listener
-  // it is the callers responsibility to remove the listener
-  // otherwise we will get into circular referencing problems
-  nsIAccessibleEventListener* mListener;
-  nsCOMPtr<nsIContent> mCurrentFocus;
+    // not a com pointer. We don't own the listener
+    // it is the callers responsibility to remove the listener
+    // otherwise we will get into circular referencing problems
+    nsIAccessibleEventListener* mListener;
+    nsCOMPtr<nsIContent> mCurrentFocus;
 };
 
 

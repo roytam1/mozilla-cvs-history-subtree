@@ -31,4 +31,8 @@ XPIDLSRCS =               \
   .\nsIAccessibleEventListener.idl \
   $(NULL)
 
+EXPORTS = \
+  .\nsIAccessibleDocumentInternal.h \
+  $(NULL)
+
 include <$(DEPTH)\config\rules.mak>

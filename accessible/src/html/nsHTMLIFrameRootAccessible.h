@@ -30,9 +30,15 @@
 class nsIWebShell;
 class nsIWeakReference;
 
-class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible, public nsIAccessibleDocument, public nsDocAccessible
+class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible, 
+                               public nsDocAccessible,
+                               public nsIAccessibleDocument,
+                               public nsIAccessibleDocumentInternal
 {
-    NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_NSIACCESSIBLEDOCUMENT
+  NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
+
   public:
     nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell, nsIDocument *doc);
 
@@ -43,20 +49,14 @@ class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible, public nsIAccessibl
     NS_IMETHOD GetAccValue(PRUnichar * *aAccValue);
     NS_IMETHOD GetAccRole(PRUint32 *aAccRole);
 
-    // ----- nsIAccessibleDocument ------------------------
-    NS_IMETHOD GetURL(PRUnichar **aURL);
-    NS_IMETHOD GetTitle(PRUnichar **aTitle);
-    NS_IMETHOD GetMimeType(PRUnichar **aMimeType);
-    NS_IMETHOD GetDocType(PRUnichar **aDocType);
-    NS_IMETHOD GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI);
-
   protected:
     nsCOMPtr<nsIAccessible> mRootAccessible;
 };
 
 class nsHTMLIFrameRootAccessible : public nsRootAccessible
 {
-  
+  NS_DECL_ISUPPORTS_INHERITED
+
   public:
     nsHTMLIFrameRootAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
     virtual ~nsHTMLIFrameRootAccessible();
@@ -71,7 +71,6 @@ class nsHTMLIFrameRootAccessible : public nsRootAccessible
     NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
 
   protected:
-
     NS_IMETHOD GetHTMLIFrameAccessible(nsIAccessible** aAcc);
     nsCOMPtr<nsIDOMNode> mRealDOMNode;
 };

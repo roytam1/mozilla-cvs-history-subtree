@@ -36,7 +36,20 @@
 #include "nsINameSpaceManager.h"
 #include "nsReadableUtils.h"
 
-NS_IMPL_ISUPPORTS1(nsHTMLIFrameAccessible, nsIAccessibleDocument);
+// NS_IMPL_ISUPPORTS1(nsHTMLIFrameAccessible, nsIAccessibleDocument);
+
+NS_INTERFACE_MAP_BEGIN(nsHTMLIFrameRootAccessible)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMFormListener)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMFormListener)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIDOMEventListener, nsIDOMFormListener)
+NS_INTERFACE_MAP_END_INHERITING(nsRootAccessible)
+
+NS_IMPL_ADDREF_INHERITED(nsHTMLIFrameRootAccessible, nsRootAccessible);
+NS_IMPL_RELEASE_INHERITED(nsHTMLIFrameRootAccessible, nsRootAccessible);
+
+NS_IMPL_ISUPPORTS2(nsHTMLIFrameAccessible, nsIAccessibleDocument, nsIAccessibleDocumentInternal);
+
 
 nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell, nsIDocument *aDoc):
   nsHTMLBlockAccessible(aNode, aShell), mRootAccessible(aRoot), nsDocAccessible(aDoc)
@@ -79,7 +92,6 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
   return NS_OK;
 }
 
-
 // ------- nsIAccessibleDocument Methods (5) ---------------
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetURL(PRUnichar **aURL)
@@ -107,9 +119,10 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID,
   return nsDocAccessible::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
 }
 
-
-
-
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetDocument(nsIDocument **doc)
+{
+  return nsDocAccessible::GetDocument(doc);
+}
 
 //=============================//
 // nsHTMLIFrameRootAccessible  //
