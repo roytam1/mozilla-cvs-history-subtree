@@ -51,31 +51,32 @@ public:
     inline XPCContext* Find(JSContext* cx)
     {
         NS_PRECONDITION(cx,"bad param");
-        return (XPCContext*) JS_HashTableLookup(mHashtable, cx);
+        return (XPCContext*) JS_HashTableLookup(mTable, cx);
     }
 
-    inline void Add(XPCContext* xpcc)
+    inline XPCContext* Add(XPCContext* xpcc)
     {
         NS_PRECONDITION(xpcc,"bad param");
-        JS_HashTableAdd(mHashtable, xpcc->GetJSContext(), xpcc);
+        JSHashEntry* he = JS_HashTableAdd(mTable, xpcc->GetJSContext(), xpcc);
+        return he ? (XPCContext*) he->value : nsnull;
     }
 
     inline void Remove(XPCContext* xpcc)
     {
         NS_PRECONDITION(xpcc,"bad param");
-        JS_HashTableRemove(mHashtable, xpcc->GetJSContext());
+        JS_HashTableRemove(mTable, xpcc->GetJSContext());
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~JSContext2XPCContextMap();
 private:
     JSContext2XPCContextMap();    // no implementation
     JSContext2XPCContextMap(int size);
 private:
-    JSHashTable *mHashtable;
+    JSHashTable *mTable;
 };
 
 /*************************/
@@ -88,31 +89,32 @@ public:
     inline nsXPCWrappedJS* Find(JSObject* Obj)
     {
         NS_PRECONDITION(Obj,"bad param");
-        return (nsXPCWrappedJS*) JS_HashTableLookup(mHashtable, Obj);
+        return (nsXPCWrappedJS*) JS_HashTableLookup(mTable, Obj);
     }
 
-    inline void Add(nsXPCWrappedJS* Wrapper)
+    inline nsXPCWrappedJS* Add(nsXPCWrappedJS* Wrapper)
     {
         NS_PRECONDITION(Wrapper,"bad param");
-        JS_HashTableAdd(mHashtable, Wrapper->GetJSObject(), Wrapper);
+        JSHashEntry* he = JS_HashTableAdd(mTable, Wrapper->GetJSObject(), Wrapper);
+        return he ? (nsXPCWrappedJS*) he->value : nsnull;
     }
 
     inline void Remove(nsXPCWrappedJS* Wrapper)
     {
         NS_PRECONDITION(Wrapper,"bad param");
-        JS_HashTableRemove(mHashtable, Wrapper->GetJSObject());
+        JS_HashTableRemove(mTable, Wrapper->GetJSObject());
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~JSObject2WrappedJSMap();
 private:
     JSObject2WrappedJSMap();    // no implementation
     JSObject2WrappedJSMap(int size);
 private:
-    JSHashTable *mHashtable;
+    JSHashTable *mTable;
 };
 
 /*************************/
@@ -125,31 +127,32 @@ public:
     inline XPCWrappedNative* Find(nsISupports* Obj)
     {
         NS_PRECONDITION(Obj,"bad param");
-        return (XPCWrappedNative*) JS_HashTableLookup(mHashtable, Obj);
+        return (XPCWrappedNative*) JS_HashTableLookup(mTable, Obj);
     }
 
-    inline void Add(XPCWrappedNative* Wrapper)
+    inline XPCWrappedNative* Add(XPCWrappedNative* Wrapper)
     {
         NS_PRECONDITION(Wrapper,"bad param");
-        JS_HashTableAdd(mHashtable, Wrapper->GetIdentityObject(), Wrapper);
+        JSHashEntry* he = JS_HashTableAdd(mTable, Wrapper->GetIdentityObject(), Wrapper);
+        return he ? (XPCWrappedNative*) he->value : nsnull;
     }
 
     inline void Remove(XPCWrappedNative* Wrapper)
     {
         NS_PRECONDITION(Wrapper,"bad param");
-        JS_HashTableRemove(mHashtable, Wrapper->GetIdentityObject());
+        JS_HashTableRemove(mTable, Wrapper->GetIdentityObject());
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~Native2WrappedNativeMap();
 private:
     Native2WrappedNativeMap();    // no implementation
     Native2WrappedNativeMap(int size);
 private:
-    JSHashTable *mHashtable;
+    JSHashTable *mTable;
 };
 
 /*************************/
@@ -161,31 +164,32 @@ public:
 
     inline nsXPCWrappedJSClass* Find(REFNSIID iid)
     {
-        return (nsXPCWrappedJSClass*) JS_HashTableLookup(mHashtable, &iid);
+        return (nsXPCWrappedJSClass*) JS_HashTableLookup(mTable, &iid);
     }
 
-    inline void Add(nsXPCWrappedJSClass* Class)
+    inline nsXPCWrappedJSClass* Add(nsXPCWrappedJSClass* Class)
     {
         NS_PRECONDITION(Class,"bad param");
-        JS_HashTableAdd(mHashtable, &Class->GetIID(), Class);
+        JSHashEntry* he = JS_HashTableAdd(mTable, &Class->GetIID(), Class);
+        return he ? (nsXPCWrappedJSClass*) he->value : nsnull;
     }
 
     inline void Remove(nsXPCWrappedJSClass* Class)
     {
         NS_PRECONDITION(Class,"bad param");
-        JS_HashTableRemove(mHashtable, &Class->GetIID());
+        JS_HashTableRemove(mTable, &Class->GetIID());
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~IID2WrappedJSClassMap();
 private:
     IID2WrappedJSClassMap();    // no implementation
     IID2WrappedJSClassMap(int size);
 private:
-    JSHashTable *mHashtable;
+    JSHashTable *mTable;
 };
 
 /*************************/
@@ -197,31 +201,32 @@ public:
 
     inline XPCNativeInterface* Find(REFNSIID iid)
     {
-        return (XPCNativeInterface*) JS_HashTableLookup(mHashtable, &iid);
+        return (XPCNativeInterface*) JS_HashTableLookup(mTable, &iid);
     }
 
-    inline void Add(XPCNativeInterface* Interface)
+    inline XPCNativeInterface* Add(XPCNativeInterface* Interface)
     {
         NS_PRECONDITION(Interface,"bad param");
-        JS_HashTableAdd(mHashtable, Interface->GetIID(), Interface);
+        JSHashEntry* he = JS_HashTableAdd(mTable, Interface->GetIID(), Interface);
+        return he ? (XPCNativeInterface*) he->value : nsnull;
     }
 
     inline void Remove(XPCNativeInterface* Interface)
     {
         NS_PRECONDITION(Interface,"bad param");
-        JS_HashTableRemove(mHashtable, Interface->GetIID());
+        JS_HashTableRemove(mTable, Interface->GetIID());
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~IID2NativeInterfaceMap();
 private:
     IID2NativeInterfaceMap();    // no implementation
     IID2NativeInterfaceMap(int size);
 private:
-    JSHashTable*        mHashtable;
+    JSHashTable*        mTable;
 };
 
 /*************************/
@@ -233,31 +238,32 @@ public:
 
     inline XPCNativeSet* Find(nsIClassInfo* Info)
     {
-        return (XPCNativeSet*) JS_HashTableLookup(mHashtable, Info);
+        return (XPCNativeSet*) JS_HashTableLookup(mTable, Info);
     }
 
-    inline void Add(nsIClassInfo* Info, XPCNativeSet* Set)
+    inline XPCNativeSet* Add(nsIClassInfo* Info, XPCNativeSet* Set)
     {
         NS_PRECONDITION(Info,"bad param");
-        JS_HashTableAdd(mHashtable, Info, Set);
+        JSHashEntry* he = JS_HashTableAdd(mTable, Info, Set);
+        return he ? (XPCNativeSet*) he->value : nsnull;
     }
 
     inline void Remove(nsIClassInfo* Info)
     {
         NS_PRECONDITION(Info,"bad param");
-        JS_HashTableRemove(mHashtable, Info);
+        JS_HashTableRemove(mTable, Info);
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~ClassInfo2NativeSetMap();
 private:
     ClassInfo2NativeSetMap();    // no implementation
     ClassInfo2NativeSetMap(int size);
 private:
-    JSHashTable*        mHashtable;
+    JSHashTable*        mTable;
 };
 
 /*************************/
@@ -269,31 +275,32 @@ public:
 
     inline XPCWrappedNativeProto* Find(nsIClassInfo* Info)
     {
-        return (XPCWrappedNativeProto*) JS_HashTableLookup(mHashtable, Info);
+        return (XPCWrappedNativeProto*) JS_HashTableLookup(mTable, Info);
     }
 
-    inline void Add(nsIClassInfo* Info, XPCWrappedNativeProto* Proto)
+    inline XPCWrappedNativeProto* Add(nsIClassInfo* Info, XPCWrappedNativeProto* Proto)
     {
         NS_PRECONDITION(Info,"bad param");
-        JS_HashTableAdd(mHashtable, Info, Proto);
+        JSHashEntry* he = JS_HashTableAdd(mTable, Info, Proto);
+        return he ? (XPCWrappedNativeProto*) he->value : nsnull;
     }
 
     inline void Remove(nsIClassInfo* Info)
     {
         NS_PRECONDITION(Info,"bad param");
-        JS_HashTableRemove(mHashtable, Info);
+        JS_HashTableRemove(mTable, Info);
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~ClassInfo2WrappedNativeProtoMap();
 private:
     ClassInfo2WrappedNativeProtoMap();    // no implementation
     ClassInfo2WrappedNativeProtoMap(int size);
 private:
-    JSHashTable*        mHashtable;
+    JSHashTable*        mTable;
 };
 
 /*************************/
@@ -305,22 +312,27 @@ public:
 
     inline XPCNativeSet* Find(XPCNativeSetKey* Key)
     {
-        return (XPCNativeSet*) JS_HashTableLookup(mHashtable, Key);
+        return (XPCNativeSet*) JS_HashTableLookup(mTable, Key);
     }
 
-    inline void Add(const XPCNativeSetKey* Key, XPCNativeSet* Set)
+    inline XPCNativeSet* Add(const XPCNativeSetKey* Key, XPCNativeSet* Set)
     {
         NS_PRECONDITION(Key,"bad param");
         NS_PRECONDITION(Set,"bad param");
-        JSHashEntry* entry = JS_HashTableAdd(mHashtable, Key, Set);
-        if(entry)
-            entry->key = Set;
+        JSHashEntry* he = JS_HashTableAdd(mTable, Key, Set);
+        if(!he)
+            return nsnull;
+        XPCNativeSet* setInTable = (XPCNativeSet*) he->value;
+        if(setInTable != Set)
+            return setInTable;
+        he->key = Set;
+        return Set;
     }
 
-    inline void Add(XPCNativeSet* Set)
+    inline XPCNativeSet* Add(XPCNativeSet* Set)
     {
         XPCNativeSetKey Key(Set, nsnull, 0);
-        Add(&Key, Set);
+        return Add(&Key, Set);
     }
 
     inline void Remove(XPCNativeSet* Set)
@@ -328,19 +340,19 @@ public:
         NS_PRECONDITION(Set,"bad param");
 
         XPCNativeSetKey Key(Set, nsnull, 0);
-        JS_HashTableRemove(mHashtable, &Key);
+        JS_HashTableRemove(mTable, &Key);
     }
 
-    inline uint32 Count() {return mHashtable->nentries;}
+    inline uint32 Count() {return mTable->nentries;}
     inline intN Enumerate(JSHashEnumerator f, void *arg)
-        {return JS_HashTableEnumerateEntries(mHashtable, f, arg);}
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
 
     ~NativeSetMap();
 private:
     NativeSetMap();    // no implementation
     NativeSetMap(int size);
 private:
-    JSHashTable*        mHashtable;
+    JSHashTable*        mTable;
 };
 
 #endif /* xpcmaps_h___ */

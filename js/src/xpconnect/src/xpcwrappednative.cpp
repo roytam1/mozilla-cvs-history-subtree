@@ -165,15 +165,19 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
         // Deal with the case where the wrapper got created as a side effect
         // of one of our calls out of this code (or on another thread).
-        XPCWrappedNative* wrapper2 = map->Find(identity);
-        if(wrapper2)
+        XPCWrappedNative* wrapper2 = map->Add(wrapper);
+        if(!wrapper2)
+        {
+            NS_ERROR("failed to add our wrapper!");
+            wrapperToKill = wrapper;
+            wrapper = nsnull;    
+        }
+        else if(wrapper2 != wrapper)
         {
             NS_ADDREF(wrapper2);
             wrapperToKill = wrapper;
             wrapper = wrapper2;
         }
-        else
-            map->Add(wrapper);
     }
 
     if(wrapperToKill)

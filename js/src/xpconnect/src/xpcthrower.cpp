@@ -131,8 +131,6 @@ XPCThrower::ThrowBadParam(nsresult rv, uintN paramNum, XPCCallContext& ccx)
     char* sz;
     const char* format;
 
-    JSContext* cx = ccx.GetJSContext();
-
     if(!nsXPCException::NameAndFormatForNSResult(rv, nsnull, &format))
         format = "";
 
@@ -141,7 +139,7 @@ XPCThrower::ThrowBadParam(nsresult rv, uintN paramNum, XPCCallContext& ccx)
     if(sz && sVerbose)
         Verbosify(ccx, &sz, PR_TRUE);
 
-    BuildAndThrowException(cx, rv, sz);
+    BuildAndThrowException(ccx, rv, sz);
 
     if(sz)
         JS_smprintf_free(sz);

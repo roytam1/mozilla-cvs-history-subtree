@@ -66,7 +66,7 @@ JSContext2XPCContextMap*
 JSContext2XPCContextMap::newMap(int size)
 {
     JSContext2XPCContextMap* map = new JSContext2XPCContextMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -74,15 +74,15 @@ JSContext2XPCContextMap::newMap(int size)
 
 JSContext2XPCContextMap::JSContext2XPCContextMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_root,
-                                 JS_CompareValues, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_root,
+                             JS_CompareValues, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 JSContext2XPCContextMap::~JSContext2XPCContextMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 /***************************************************************************/
@@ -93,7 +93,7 @@ JSObject2WrappedJSMap*
 JSObject2WrappedJSMap::newMap(int size)
 {
     JSObject2WrappedJSMap* map = new JSObject2WrappedJSMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -101,15 +101,15 @@ JSObject2WrappedJSMap::newMap(int size)
 
 JSObject2WrappedJSMap::JSObject2WrappedJSMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_root,
-                                 JS_CompareValues, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_root,
+                             JS_CompareValues, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 JSObject2WrappedJSMap::~JSObject2WrappedJSMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 /***************************************************************************/
@@ -120,7 +120,7 @@ Native2WrappedNativeMap*
 Native2WrappedNativeMap::newMap(int size)
 {
     Native2WrappedNativeMap* map = new Native2WrappedNativeMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -128,15 +128,15 @@ Native2WrappedNativeMap::newMap(int size)
 
 Native2WrappedNativeMap::Native2WrappedNativeMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_root,
-                                 JS_CompareValues, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_root,
+                             JS_CompareValues, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 Native2WrappedNativeMap::~Native2WrappedNativeMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 /***************************************************************************/
@@ -147,7 +147,7 @@ IID2WrappedJSClassMap*
 IID2WrappedJSClassMap::newMap(int size)
 {
     IID2WrappedJSClassMap* map = new IID2WrappedJSClassMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -155,15 +155,15 @@ IID2WrappedJSClassMap::newMap(int size)
 
 IID2WrappedJSClassMap::IID2WrappedJSClassMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_IID,
-                                 compare_IIDs, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_IID,
+                             compare_IIDs, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 IID2WrappedJSClassMap::~IID2WrappedJSClassMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 
@@ -175,7 +175,7 @@ IID2NativeInterfaceMap*
 IID2NativeInterfaceMap::newMap(int size)
 {
     IID2NativeInterfaceMap* map = new IID2NativeInterfaceMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -183,15 +183,15 @@ IID2NativeInterfaceMap::newMap(int size)
 
 IID2NativeInterfaceMap::IID2NativeInterfaceMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_IID,
-                                 compare_IIDs, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_IID,
+                             compare_IIDs, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 IID2NativeInterfaceMap::~IID2NativeInterfaceMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 /***************************************************************************/
@@ -202,7 +202,7 @@ ClassInfo2NativeSetMap*
 ClassInfo2NativeSetMap::newMap(int size)
 {
     ClassInfo2NativeSetMap* map = new ClassInfo2NativeSetMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -210,15 +210,15 @@ ClassInfo2NativeSetMap::newMap(int size)
 
 ClassInfo2NativeSetMap::ClassInfo2NativeSetMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_root,
-                                 JS_CompareValues, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_root,
+                             JS_CompareValues, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 ClassInfo2NativeSetMap::~ClassInfo2NativeSetMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 /***************************************************************************/
@@ -229,7 +229,7 @@ ClassInfo2WrappedNativeProtoMap*
 ClassInfo2WrappedNativeProtoMap::newMap(int size)
 {
     ClassInfo2WrappedNativeProtoMap* map = new ClassInfo2WrappedNativeProtoMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -237,15 +237,15 @@ ClassInfo2WrappedNativeProtoMap::newMap(int size)
 
 ClassInfo2WrappedNativeProtoMap::ClassInfo2WrappedNativeProtoMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_root,
-                                 JS_CompareValues, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_root,
+                             JS_CompareValues, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 ClassInfo2WrappedNativeProtoMap::~ClassInfo2WrappedNativeProtoMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
 /***************************************************************************/
@@ -358,7 +358,7 @@ NativeSetMap*
 NativeSetMap::newMap(int size)
 {
     NativeSetMap* map = new NativeSetMap(size);
-    if(map && map->mHashtable)
+    if(map && map->mTable)
         return map;
     delete map;
     return nsnull;
@@ -366,14 +366,14 @@ NativeSetMap::newMap(int size)
 
 NativeSetMap::NativeSetMap(int size)
 {
-    mHashtable = JS_NewHashTable(size, hash_NativeKey,
-                                 compare_NativeKeyToSet, JS_CompareValues,
-                                 nsnull, nsnull);
+    mTable = JS_NewHashTable(size, hash_NativeKey,
+                             compare_NativeKeyToSet, JS_CompareValues,
+                             nsnull, nsnull);
 }
 
 NativeSetMap::~NativeSetMap()
 {
-    if(mHashtable)
-        JS_HashTableDestroy(mHashtable);
+    if(mTable)
+        JS_HashTableDestroy(mTable);
 }
 
