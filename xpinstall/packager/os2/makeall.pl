@@ -180,6 +180,7 @@ foreach $package (keys %gPackages) {
   MozParser::Preprocess::add($parser);
   MozParser::Optional::add($parser);
   MozParser::Exec::add($parser);
+  $parser->addCommand('staticcomp', \&MozParser::Ignore::ignoreFunc);
   $parser->addMapping('dist/bin', 'bin');
   $parser->addMapping('xpiroot/', '');
   my @packages = map(MozPackages::getPackagesFor($_), split(' ', $package));

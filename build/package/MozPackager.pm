@@ -963,6 +963,49 @@ sub getIgnoreList {
 sub ignoreFunc {
 }
 
+package MozParser::StaticComp;
+
+sub add {
+    my ($parser) = @_;
+
+    $parser->{'staticcomps'} = { };
+    $parser->addCommand("staticcomp", \&_commandFunc);
+}
+
+# this method gets a list of the static components
+# the return value is a list of hash references of the form:
+# { 'name' => blah,
+#   'lib'  => blah }
+# in the future, this hash might be extended to include
+# other information such as dependent libs
+
+sub getComponents {
+    my ($parser) = @_;
+
+    if (! scalar(keys %{$parser->{'staticcomps'}})) {
+        return ( );
+    }
+
+    return map( { 'name' => $_,
+                  %{$parser->{'staticcomps'}->{$_}} },
+                keys %{$parser->{'staticcomps'}} );
+}
+
+sub _commandFunc {
+    my ($parser, $args, $file, $filename) = @_;
+
+    my ($compName, $compLib, $extra) = split ' ', $args, 3;
+
+    die("At $filename, line $.: unrecognized staticcomp options \"$args\".")
+        if (!$compName || $extra);
+
+
+    MozParser::_checkFile("dist/lib/components/$compLib", $filename, $.);
+    MozPackager::_verbosePrint(2, "Static Component: $compName library $compLib");
+
+    $parser->{'staticcomps'}->{$compName} = { 'lib' => $compLib };
+}
+
 package MozStage;
 
 use Cwd;

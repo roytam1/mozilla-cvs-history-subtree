@@ -49,8 +49,8 @@ Usage
 
   -c, --command-handler=handler[,handler...]
     Specify a comma-separated list of command handlers. Currently
-    recognized handlers are xptmerge, xptdist, touch, preproces, and
-    optional
+    recognized handlers are xptmerge, xptdist, touch, preprocess,
+    optional, exec, and staticcomp.
 
   -d, --compute-disk-space
     This sets environment variables before preprocessing based on
@@ -207,6 +207,10 @@ HANDLER: foreach my $handler (@handlers) {
     if ($handler eq "exec") {
         MozParser::Exec::add($parser);
         $doExec = 1;
+        next HANDLER;
+    }
+    if ($handler eq "staticcomp") {
+        $parser->addCommand('staticcomp', \&MozParser::Ignore::ignoreFunc);
         next HANDLER;
     }
     die("Unrecognized command-handler $handler");

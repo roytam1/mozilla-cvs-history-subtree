@@ -136,6 +136,7 @@ foreach my $package (keys %MozPackages::packages) {
     MozParser::Optional::add($parser);
     MozParser::Ignore::add($parser);
     MozParser::Exec::add($parser);
+    MozParser::StaticComp::add($parser);
     $parser->addCommand('error', \&MozParser::Ignore::ignoreFunc);
     $parser->addMapping("dist/bin", "dist/bin");
     $parser->addMapping("dist/lib", "dist/lib");
@@ -149,6 +150,13 @@ foreach my $package (keys %MozPackages::packages) {
     my $files = $parser->{'files'};
     foreach my $result (keys %$files) {
         print "$files->{$result}\t$result";
+    }
+    print "";
+
+    @staticComps = MozParser::StaticComp::getComponents($parser);
+    print "Static Components: ". scalar(@staticComps);
+    foreach my $staticComp (@staticComps) {
+        print "$staticComp->{'name'} ($staticComp->{'lib'})";
     }
     print "";
 

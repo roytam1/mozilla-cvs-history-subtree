@@ -179,6 +179,7 @@ foreach $package (keys %gPackages) {
   MozParser::Preprocess::add($parser);
   MozParser::Optional::add($parser);
   MozParser::Exec::add($parser);
+  $parser->addCommand('staticcomp', \&MozParser::Ignore::ignoreFunc);
   $parser->addMapping('dist/bin', 'bin');
   $parser->addMapping('xpiroot/', '');
   $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor($package));
@@ -208,7 +209,9 @@ MozPackager::doCopy("$gDirInstall/uninstall.exe", "$gDirDistGre/uninstall");
 MozPackager::_verbosePrint(1, "Building self-extracting uninstaller ($seuFileNameSpecific).");
 MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirStageProduct/$seuFileNameSpecific");
 
-MozPackager::system("$gDirInstall/nsztool.exe $gDirStageProduct/$seuFileNameSpecific $gDirDistGre/uninstall/*.*");
+MozPackager::system("$gDirInstall/nsztool.exe ".
+                    MozPackager::makeWinPath("$gDirStageProduct/$seuFileNameSpecific"). " ".
+                    MozPackager::makeWinPath("$gDirDistGre/uninstall/*.*"));
 
 MakeExeZip($gDirStageProduct, $seuFileNameSpecific, "$gDirDistGre/xpi/$seuzFileNameSpecific");
 unlink "$gDirStageProduct/$seuFileNameSpecific";
@@ -232,7 +235,9 @@ MozPackager::doCopy("$topsrcdir/LICENSE", "$gDirDistGre/setup/license.txt");
 MozPackager::_verbosePrint(1, "Creating self-extracting stub installer: $gDirDistGre/$seiFileNameSpecificStub");
 
 MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistGre/$seiFileNameSpecificStub");
-MozPackager::system("$gDirInstall/nsztool.exe $gDirDistGre/$seiFileNameSpecificStub $gDirDistGre/setup/*.*");
+MozPackager::system("$gDirInstall/nsztool.exe ".
+                    MozPackager::makeWinPath("$gDirDistGre/$seiFileNameSpecificStub"). " ".
+                    MozPackager::makeWinPath("$gDirDistGre/setup/*.*"));
 
 #
 # create the big self extracting .exe installer
@@ -240,7 +245,10 @@ MozPackager::system("$gDirInstall/nsztool.exe $gDirDistGre/$seiFileNameSpecificS
 MozPackager::_verbosePrint(1, "Creating self-extracting stub installer: $gDirDistGre/$seiFileNameSpecific");
 
 MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistGre/$seiFileNameSpecific");
-MozPackager::system("$gDirInstall/nsztool.exe $gDirDistGre/$seiFileNameSpecific $gDirDistGre/setup/*.* $gDirDistGre/xpi/*.*");
+MozPackager::system("$gDirInstall/nsztool.exe ".
+                    MozPackager::makeWinPath("$gDirDistGre/$seiFileNameSpecific"). " ".
+                    MozPackager::makeWinPath("$gDirDistGre/setup/*.*"). " ".
+                    MozPackager::makeWinPath("$gDirDistGre/xpi/*.*"));
 
 exit(0);
 
