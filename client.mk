@@ -55,12 +55,10 @@
 
 # pull the SVG mini-branch:
 MOZ_CO_TAG = SVG_20020806_BRANCH
-# we pull the head revision if a file is not tagged: 
-ifndef MOZ_CO_FLAGS
-MOZ_CO_FLAGS= -f
-else
-MOZ_CO_FLAGS= $(MOZ_CO_FLAGS) -f
-endif
+# Not all files are tagged.
+# By adding '-f' to CVS_CO_FLAGS, below, we pull the head revision if 
+# a file is not tagged.
+
 
 # lists of all tagged files on the svg mini-branch. used for the
 # branch maintenance targets below.
@@ -290,7 +288,7 @@ CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ifdef MOZ_CO_TAG
-  CVS_CO_FLAGS := -r $(MOZ_CO_TAG)
+  CVS_CO_FLAGS := -f -r $(MOZ_CO_TAG)
 endif
 
 ####################################
