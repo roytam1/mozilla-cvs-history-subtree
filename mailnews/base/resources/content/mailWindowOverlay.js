@@ -303,6 +303,12 @@ function IsNewsMessage(messageUri)
     return (messageUri.substring(0,14) == "news-message:/")
 }
 
+function IsImapMessage(messageUri)
+{
+    if (!messageUri) return false;
+    return (messageUri.substring(0,14) == "imap-message:/")
+}
+
 function SetMenuItemLabel(menuItemId, customLabel)
 {
     var menuItem = document.getElementById(menuItemId);
@@ -1581,6 +1587,8 @@ function SetupUndoRedoCommand(command)
 function OnMsgLoaded(folder, msgURI)
 {
     var currentMsgFolder = folder.QueryInterface(Components.interfaces.nsIMsgFolder);
+    if (!IsImapMessage(msgURI))
+      return;
     var imapServer = currentMsgFolder.server.QueryInterface(Components.interfaces.nsIImapIncomingServer);
     var storeReadMailInPFC = imapServer.storeReadMailInPFC;
     if (storeReadMailInPFC)
