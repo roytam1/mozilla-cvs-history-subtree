@@ -47,7 +47,6 @@ EXPORTS		=				\
 		nsReadableUtils.h		\
 		nsSharableString.h		\
 		nsString.h			\
-		nsString2.h			\
 		nsStringFwd.h			\
 		nsStringIterator.h		\
 		nsSubstring.h			\

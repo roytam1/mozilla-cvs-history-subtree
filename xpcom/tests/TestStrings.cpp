@@ -307,6 +307,18 @@ PRBool test_xpidl_string()
     return PR_TRUE;
   }
 
+PRBool test_empty_assign()
+  {
+    nsCString a;
+    a = NS_LITERAL_CSTRING("");
+
+    a += NS_LITERAL_CSTRING("");
+
+    nsCString b;
+    b.SetCapacity(0);
+    return PR_TRUE;
+  }
+
 //----
 
 typedef PRBool (*TestFunc)();
@@ -336,6 +348,7 @@ tests[] =
     { "test_concat", test_concat },
     { "test_concat_2", test_concat_2 },
     { "test_xpidl_string", test_xpidl_string },
+    { "test_empty_assign", test_empty_assign },
     { nsnull, nsnull }
   };
 
