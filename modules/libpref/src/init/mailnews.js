@@ -288,6 +288,7 @@ pref("mail.identity.default.directoryServer","");
 pref("mail.identity.default.overrideGlobal_Pref", false);
 
 
+// don't collect incoming by default.  it's all spam anyways
 pref("mail.collect_email_address_incoming", false);
 pref("mail.collect_email_address_outgoing", true);
 pref("mail.collect_email_address_newsgroup", false);

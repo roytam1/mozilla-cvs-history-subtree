@@ -3,7 +3,7 @@
 <!ENTITY  releaseURL            "http://www.beonex.com/communicator/version/0.8/release-notes">
 <!-- releaseURL is actually release-notes -->
 <!ENTITY  getNewThemesURL       "http://www.beonex.com/communicator/version/0.8/add-ons/themes/">
-<!ENTITY  content.version       "1.0.1rc1">
+<!ENTITY  content.version       "1.0.2">
 <!-- I bet that Mozilla looks here for theme/locale versions, and refuses
      to use the locale, if we change that. So, keep Mozilla version for
      compatibility. -->
