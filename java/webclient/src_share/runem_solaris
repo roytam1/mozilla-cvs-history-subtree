@@ -10,13 +10,7 @@ fi
 
 echo "args = $script_args"
 
-if [ "$JDKHOME" = "" ]; then
-   echo "Set JDKHOME to your Java 1.3.0_01 directory before \
-         running this script"
-   exit 1
-else
-   echo "$JDKHOME"
-fi
+JDKHOME=`pwd`/../../java
 
 ARCH=`uname -p` 
 
