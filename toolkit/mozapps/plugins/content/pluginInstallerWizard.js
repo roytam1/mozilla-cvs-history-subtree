@@ -495,7 +495,7 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
 } 
 
 nsPluginInstallerWizard.prototype.loadURL = function (aUrl){
-  window.open(aUrl);
+  window.opener.open(aUrl);
 }
 
 nsPluginInstallerWizard.prototype.getString = function (aName){
