@@ -201,10 +201,10 @@ void NP_EXPORT
 npn_status(NPP npp, const char *message);
 
 void NP_EXPORT
-npn_registerwindow(struct nsIEventHandler* handler, void* window);
+npn_registerwindow(struct nsIEventHandler* handler, nsPluginPlatformWindowRef window);
 
 void NP_EXPORT
-npn_unregisterwindow(struct nsIEventHandler* handler, void* window);
+npn_unregisterwindow(struct nsIEventHandler* handler, nsPluginPlatformWindowRef window);
 
 #if 0
 int16 NP_EXPORT
@@ -470,7 +470,7 @@ public:
     nsPluginInstancePeer(NPP npp);
     virtual ~nsPluginInstancePeer(void);
 
-    NS_DECL_AGGREGATED
+    NS_DECL_ISUPPORTS
 
     void SetPluginInstance(nsIPluginInstance* inst);
     nsIPluginInstance* GetPluginInstance(void);

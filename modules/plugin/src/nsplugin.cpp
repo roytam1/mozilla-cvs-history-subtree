@@ -325,6 +325,7 @@ nsPluginManager::NotifyStatusChange(nsIPlugin* plugin, nsresult errorStatus)
     return NS_OK;
 }
 
+#if 0
 static NPP getNPPFromHandler(nsIEventHandler* handler)
 {
 	NPP npp = NULL;
@@ -339,6 +340,7 @@ static NPP getNPPFromHandler(nsIEventHandler* handler)
     }
     return npp;
 }
+#endif
 
 NS_METHOD
 nsPluginManager::RegisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
@@ -584,7 +586,8 @@ nsFileUtilities::NewTempFileName(const char* prefix, PRUint32 bufLen, char* resu
 nsPluginInstancePeer::nsPluginInstancePeer(NPP npp)
     : fNPP(npp), fPluginInst(NULL), fTagInfo(NULL)
 {
-    NS_INIT_AGGREGATED(NULL);
+//    NS_INIT_AGGREGATED(NULL);
+    NS_INIT_REFCNT();
     fTagInfo = new nsPluginTagInfo(npp);
     fTagInfo->AddRef();
 }
@@ -597,10 +600,11 @@ nsPluginInstancePeer::~nsPluginInstancePeer(void)
     }
 }
 
-NS_IMPL_AGGREGATED(nsPluginInstancePeer);
+NS_IMPL_ADDREF(nsPluginInstancePeer);
+NS_IMPL_RELEASE(nsPluginInstancePeer);
 
 NS_METHOD
-nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
+nsPluginInstancePeer::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
@@ -753,7 +757,7 @@ nsPluginInstancePeer::GetMWContext(void)
 // Plugin Tag Info Interface
 
 nsPluginTagInfo::nsPluginTagInfo(NPP npp)
-    : npp(npp), fUniqueID(0), fJVMPluginTagInfo(NULL)
+    : fJVMPluginTagInfo(NULL), npp(npp), fUniqueID(0)
 {
     NS_INIT_AGGREGATED(NULL);
 }
@@ -780,8 +784,6 @@ nsPluginTagInfo::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
 #ifdef OJI
     // Aggregates...
     if (fJVMPluginTagInfo == NULL) {
-        np_instance* instance = (np_instance*) npp->ndata;
-        MWContext* cx = instance->cx;
         nsresult result =
             nsJVMPluginTagInfo::Create((nsISupports*)this, kISupportsIID,
                                        (void**)&fJVMPluginTagInfo, this);

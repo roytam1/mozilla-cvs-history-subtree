@@ -118,7 +118,7 @@ nsJVMMgr::~nsJVMMgr()
     }
     delete fClassPathAdditions;
     if (fJVM) {
-        nsrefcnt c = fJVM->Release();   // Release for QueryInterface in GetJVM
+        /*nsrefcnt c =*/ fJVM->Release();   // Release for QueryInterface in GetJVM
         // XXX unload plugin if c == 1 ? (should this be done inside Release?)
     }
 }
@@ -189,7 +189,6 @@ PR_IMPLEMENT(JSContext *)
 map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
 {
     JSContext *cx    = lm_crippled_context;
-    PRBool    mayscript = PR_FALSE;
     PRBool    jvmMochaPrefsEnabled = PR_FALSE;
 
     *errp = NULL;
@@ -623,6 +622,8 @@ nsJVMMgr::StartupJVM(void)
         return nsJVMStatus_Disabled;
       case nsJVMStatus_Running:
         return nsJVMStatus_Running;
+      default:
+        break;
     }
 
     nsIJVMPlugin* jvm = GetJVMPlugin();

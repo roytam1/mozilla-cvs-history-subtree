@@ -17,14 +17,14 @@
 
 DEPTH		= ../../..
 
-MODULE		= plug
+MODULE		= plugimpl
 LIBRARY_NAME	= plug
 
 CSRCS		= npassoc.c
 
 CPPSRCS		= nsplugin.cpp npglue.cpp
 
-EXPORTS		= nppg.h npupp.h npglue.h nppriv.h
+EXPORTS		= nppg.h npglue.h nppriv.h
 
 REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom netcnvts plugin oji ojiimpl
 

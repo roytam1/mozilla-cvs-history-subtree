@@ -19,6 +19,7 @@
 #ifndef jvmmgr_h___
 #define jvmmgr_h___
 
+#include "xp_core.h"    // include first because of Bool problem
 #include "nsjvm.h"
 #include "nsAgg.h"
 #include "jsjava.h"

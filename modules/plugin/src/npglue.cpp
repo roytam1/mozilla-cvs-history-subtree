@@ -4051,7 +4051,7 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
     return 0;
 }
 
-void npn_registerwindow(nsIEventHandler* handler, void* window)
+void npn_registerwindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
 {
 #ifdef XP_MAC
 #if 1
@@ -4065,7 +4065,7 @@ void npn_registerwindow(nsIEventHandler* handler, void* window)
 #endif
 }
 
-void npn_unregisterwindow(nsIEventHandler* handler, void* window)
+void npn_unregisterwindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
 {
 #ifdef XP_MAC
 #if 1
