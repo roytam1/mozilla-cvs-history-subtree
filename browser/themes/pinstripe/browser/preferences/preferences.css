@@ -36,7 +36,7 @@
 # ***** END LICENSE BLOCK *****
 */
 prefwindow {
-  padding: none;
+  padding: 0 !important;
 }
 
 prefpane {
@@ -136,23 +136,40 @@ prefpane button {
 }
 
 prefpane .groupbox-body {
-  border-top: 1px solid #bebebe !important;
-  border-right: none !important;
-  border-bottom: none !important;
-  border-left: none !important;
+  border: none !important;
   -moz-border-radius: 0px !important;
   background-image: none !important;
   padding: 8px 4px 4px 4px;
   
 }
 
+prefpane .groupbox-title {
+  background: url("chrome://global/skin/50pct_transparent_grey.png") repeat-x bottom left;
+  margin-bottom: 4px;
+}
+
 caption {
-  padding: 4px 0px !important;
-  
+  border-bottom: 1px solid #ECECEC;
+  padding: 4px 4px 0px 0px !important;
 }
 
-#paneContent .groupbox-body {
-  border-top: none !important;
+#paneContent {
+  padding-top: 8px;
 }
 
+#paneContent row {
+  padding: 0 4px;
+}
+
+#browserUseCurrent, #browserUseBookmark, #browserUseBlank {
+  margin-top: 10px;
+}
+
+#advancedPrefs {
+  margin: 0 8px;
+}
+
+#browserStartupHomepage {
+  padding: 0;
+}
 
