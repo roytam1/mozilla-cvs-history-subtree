@@ -69,6 +69,7 @@ ProcessorState::ProcessorState(Document& xslDocument, Document& resultDocument) 
  * Destroys this ProcessorState
 **/
 ProcessorState::~ProcessorState() {
+
   if (dfWildCardTemplate)
       delete dfWildCardTemplate;
   if (dfTextTemplate)
@@ -839,28 +840,34 @@ void ProcessorState::sortByDocumentOrder(NodeSet* nodes) {
     if ((!nodes) || (nodes->size() < 2)) return;
 
     NodeSet sorted(nodes->size());
+    sorted.setDuplicateChecking(MB_FALSE);
     sorted.add(nodes->get(0));
 
     int i = 1;
     for ( ; i < nodes->size(); i++) {
         Node* node = nodes->get(i);
-        for (int k = 0; k < sorted.size(); k++) {
+        for (int k = i-1; k >= 0; k--) {
             Node* tmpNode = sorted.get(k);
-            if (domHelper.appearsFirst(node, tmpNode) == node) {
-                sorted.add(k, node);
+            if (domHelper.appearsFirst(node, tmpNode) == tmpNode) {
+                if (k == i-1) sorted.add(node);
+                else sorted.add(k, node);
                 break;
             }
-            else if (k == sorted.size()-1) {
-                sorted.add(node);
+            else if (k == 0) {
+                sorted.add(0, node);
                 break;
             }
         }
     }
 
+    //-- save current state of duplicates checking
+    MBool checkDuplicates = nodes->getDuplicateChecking();
+    nodes->setDuplicateChecking(MB_FALSE);
     nodes->clear();
-    for (i = 0; i < sorted.size(); i++)
+    for (i = 0; i < sorted.size(); i++) {
         nodes->add(sorted.get(i));
-
+    }
+    nodes->setDuplicateChecking(checkDuplicates);
     sorted.clear();
 
 } //-- sortByDocumentOrder
