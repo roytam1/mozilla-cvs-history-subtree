@@ -65,7 +65,7 @@ CPPSRCS		= \
 		$(NULL)
 
 ifdef MOZ_SERIALIZE 
-CPPSCRS		+= \
+CPPSRCS		+= \
 		nsAutoCopy.cpp \
 		nsCopySupport.cpp \
 		$(NULL)
