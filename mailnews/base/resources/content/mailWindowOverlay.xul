@@ -1054,10 +1054,12 @@ Rights Reserved.
     <menuitem value="&killThreadMenu.label;"
         accesskey="&killThreadMenu.accesskey;"
         key="key_killThread"
+        id="killThread"
         observes="cmd_killThread"/>
     <menuitem value="&watchThreadMenu.label;"
         accesskey="&watchThreadMenu.accesskey;"
         key="key_watchThread"
+        id="watchThread"
         observes="cmd_watchThread"/>
 	</menupopup>
 </menu>

@@ -111,6 +111,18 @@ function InitMessageMenu()
         replySenderMenuItem.setAttribute("hidden", isNews ? "" : "true");
     }
 
+    // we only kill and watch threads for news
+    var killThreadMenuItem = document.getElementById("killThread");
+    if (killThreadMenuItem) {
+        killThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
+    }
+    var watchThreadMenuItem = document.getElementById("watchThread");
+    if (watchThreadMenuItem) {
+        watchThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
+    }
+
+    dump("aMessage == " + aMessage + "\n");
+
     //disable the move and copy menus only if there are no messages selected.
     var moveMenu = document.getElementById("moveMenu");
     if(moveMenu)
