@@ -905,57 +905,58 @@ function MsgViewAllMsgs()
 	}
 }
 
-
-function FillInFolderTooltip(cellNode)
+function FillInFolderTooltip(tooltipNode)
 {
-  dump('In FillInFolderTooltip\n');
-  dump('cellNode:'+cellNode+'\n');
-  return;
-	var folderNode = cellNode.parentNode.parentNode;
-	var uri = folderNode.getAttribute('id');
-	var folderTree = GetFolderOutliner();
+    dump('In FillInFolderTooltip\n');
 
-	var name = GetFolderNameFromUri(uri, folderTree);
+/*
+    var folderOutliner = GetFolderOutliner();
+    var row = { };
+    var col = { };
+    var elt = { };
+    dump(event.clientX +' '+ event.clientY+'\n');
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
 
-	var folderResource = RDF.GetResource(uri);
-	var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-	var unreadCount = msgFolder.getNumUnread(false);
-	if(unreadCount < 0)
-		unreadCount = 0;
+    dump(row.value);
+    var folderResource = GetFolderResource(row.value);
 
-	var totalCount = msgFolder.getTotalMessages(false);
-	if(totalCount < 0)
-		totalCount = 0;
+    var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    var unreadCount = msgFolder.getNumUnread(false);
+    if(unreadCount < 0)
+        unreadCount = 0;
 
-	var textNode = document.getElementById("foldertooltipText");
-	var folderTooltip = name;
-	if(!msgFolder.isServer)
-		folderTooltip += " ("  + unreadCount + "/" + totalCount +")";
-	textNode.setAttribute('value', folderTooltip);
-	return true;
-	
+    var totalCount = msgFolder.getTotalMessages(false);
+    if(totalCount < 0)
+        totalCount = 0;
 
+    var folderTooltip = GetFolderAttribute(folderResource, 'Name');
+    if(!msgFolder.isServer)
+        folderTooltip += ' ('  + unreadCount + '/' + totalCount +')';
+    var textNode = document.getElementById('foldertooltipText');
+    textNode.setAttribute('value', folderTooltip);
+
+    return true;
+*/
 }
 
 function GetFolderNameFromUri(uri, outliner)
 {
-  dump('In GetFolderNameFromUri\n');
-	var folderResource = RDF.GetResource(uri);
+    dump('In GetFolderNameFromUri\n');
 
-	var db = outliner.outlinerBoxObject.outlinerBody.database;
+    var folderResource = RDF.GetResource(uri);
+    var db = outliner.outlinerBoxObject.outlinerBody.database;
+    var nameProperty = RDF.GetResource('http://home.netscape.com/NC-rdf#Name');
 
-	var nameProperty = RDF.GetResource('http://home.netscape.com/NC-rdf#Name');
+    var nameResult;
+    try {
+        nameResult = db.GetTarget(folderResource, nameProperty , true);
+    }
+    catch (ex) {
+        return "";
+    }
 
-	var nameResult;
-	try {
-		nameResult = db.GetTarget(folderResource, nameProperty , true);
-	}
-	catch (ex) {
-		return "";
-	}
-
-	nameResult = nameResult.QueryInterface(Components.interfaces.nsIRDFLiteral);
-	return nameResult.Value;
+    nameResult = nameResult.QueryInterface(Components.interfaces.nsIRDFLiteral);
+    return nameResult.Value;
 }
 
 function SwitchPaneFocus(direction)

@@ -106,7 +106,9 @@
                  label="&nameColumn.label;"
                  primary="true"
                  sort="true"/>
-    <outlinerbody id="folderOutlinerBody" flex="1"
+    <outlinerbody id="folderOutlinerBody"
+                  flex="1"
+                  tooltip="folderTooltip"
                   datasources="rdf:null"
                   onselect="top.FolderPaneSelectionChange();">
       <template>
