@@ -39,7 +39,6 @@ EXPORTS		= \
 		nsIPopUpMenu.h \
 		nsIFileWidget.h \
 		nsStringUtil.h \
-		nsIWidget.h \
 		nsIKBStateControl.h \
 		nsIButton.h \
 		nsICheckButton.h \
@@ -81,6 +80,8 @@ XPIDLSRCS	= \
 		nsIClipboard.idl \
 		nsIClipboardOwner.idl \
 		nsIRollupListener.idl \
+		nsIWidget.idl \
+		nsIWindow.idl \
 		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
