@@ -269,7 +269,6 @@ function InitDialog()
   if (applyButton)
   {
     applyButton.label = GetString("Apply");
-    applyButton.removeAttribute("collapsed");
   }
   
   // Get Table attributes
