@@ -20,7 +20,7 @@ dist/bin/defaults/pref/macprefs.js
 dist/bin/defaults/pref/winpref.js
 #else
 #if MOZ_WIDGET_TOOLKIT==os2
-dist/bin/defaults/pref/os2prefs.js
+dist/bin/defaults/pref/os2pref.js
 #else
 #if MOZ_WIDGET_TOOLKIT==beos
 dist/bin/defaults/pref/beos.js
