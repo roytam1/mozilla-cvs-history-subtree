@@ -844,6 +844,13 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libnet\mkabook.cpp
+	$(DEPTH)\lib\libnet\mkimap4.cpp
+	$(DEPTH)\lib\libnet\imappars.cpp
+	$(DEPTH)\lib\libnet\imaphier.cpp
+	$(DEPTH)\lib\libnet\imapearl.cpp
+	$(DEPTH)\lib\libnet\imapbody.cpp
+	$(DEPTH)\lib\libnet\imap4url.c
+	$(DEPTH)\lib\libnet\mkldap.cpp
 !endif
 
 	$(DEPTH)\lib\libnet\cvactive.c
