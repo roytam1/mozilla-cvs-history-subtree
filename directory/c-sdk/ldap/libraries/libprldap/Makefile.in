@@ -181,12 +181,6 @@ $(LIBPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS) $(DEF_FILE)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-ifeq ($(OS_ARCH), OpenVMS)
-	@if test ! -f VMSuni.opt; then \
-	    echo "Creating universal symbol option file VMSuni.opt"; \
-	    create_opt_uni $(OBJS); \
-	fi
-endif
 ifeq ($(OS_ARCH),OS2)
 # create import library for OS/2
 	rm -f $@
@@ -199,6 +193,12 @@ $(DLLPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS) $(DEF_FILE)
 	@echo ======= making $(DLLPRLDAP)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
+endif
+ifeq ($(OS_ARCH), OpenVMS)
+	@if test ! -f VMSuni.opt; then \
+	    echo "Creating universal symbol option file VMSuni.opt"; \
+	    create_opt_uni $(OBJS); \
+	fi
 endif
 	$(LINK_DLL) $(PRLDAP_EXPORT_FLAGS) $(EXTRA_LIBS) $(DEF_FILE)
 
