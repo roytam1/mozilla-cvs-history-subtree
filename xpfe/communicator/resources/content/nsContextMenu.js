@@ -80,7 +80,7 @@ nsContextMenu.prototype = {
         this.initMetadataItems();
     },
     initOpenItems : function () {
-        this.showItem( "context-openlink", this.onSaveableLink || ( this.inDirList && this.onLink ) );
+        //this.showItem( "context-openlink", this.onSaveableLink || ( this.inDirList && this.onLink ) );
         this.showItem( "context-openlinkintab", this.onSaveableLink || ( this.inDirList && this.onLink ) );
 
         this.showItem( "context-sep-open", this.onSaveableLink || ( this.inDirList && this.onLink ) );
@@ -429,11 +429,6 @@ nsContextMenu.prototype = {
             // so we won't be able to save it anyway
             return false;
         }
-    },
-    // Open linked-to URL in a new window.
-    openLink : function () {
-        // Determine linked-to URL.
-        openNewWindowWith( this.linkURL() );
     },
     // Open linked-to URL in a new tab.
     openLinkInTab : function () {
