@@ -27,7 +27,7 @@
 #define TRANSFRMX_DOCUMENT_HANDLER_H
 
 
-#include "String.h"
+#include "TxString.h"
 
 
 #ifndef UNICODE_CHAR

@@ -31,7 +31,7 @@
 **/
 
 #include <iostream.h>
-#include "String.h"
+#include "TxString.h"
 #include "Expr.h"
 #include "ExprLexer.h"
 #include "ExprParser.h"

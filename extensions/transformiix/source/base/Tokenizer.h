@@ -37,7 +37,7 @@
 
 
 #include "baseutils.h"
-#include "String.h"
+#include "TxString.h"
 
 
 #ifndef MITRE_TOKENIZER_H

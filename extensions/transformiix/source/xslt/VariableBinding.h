@@ -28,7 +28,7 @@
 #define MITREXSL_VARIABLE_H
 
 #include "MITREObject.h"
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 #include "ExprResult.h"
 

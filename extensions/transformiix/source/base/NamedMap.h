@@ -33,7 +33,7 @@
 #ifndef TRANSFRMX_NAMEDMAP_H
 #define TRANSFRMX_NAMEDMAP_H
 
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 #include "MITREObject.h"
 #include "StringList.h"

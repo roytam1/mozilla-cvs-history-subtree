@@ -23,7 +23,7 @@
  * $Id$
  */
 
- #include "String.h"
+ #include "TxString.h"
  #include "TxObject.h"
 
  #ifndef TRANSFRMX_STRING_COMPARATOR_H

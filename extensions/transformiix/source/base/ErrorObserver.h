@@ -28,7 +28,7 @@
 #define MITRE_ERROROBSERVER_H
 
 #include "baseutils.h"
-#include "String.h"
+#include "TxString.h"
 #include "iostream.h"
 
 /**

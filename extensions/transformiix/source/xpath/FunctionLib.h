@@ -32,7 +32,7 @@
 #ifndef MITREXSL_FUNCTIONLIB_H
 #define MITREXSL_FUNCTIONLIB_H
 
-#include "String.h"
+#include "TxString.h"
 #include "primitives.h"
 #include "NodeSet.h"
 #include "List.h"

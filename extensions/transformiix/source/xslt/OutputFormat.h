@@ -26,7 +26,7 @@
 #ifndef TRANSFRMX_OUTPUTFORMAT_H
 #define TRANSFRMX_OUTPUTFORMAT_H
 
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 
 /**

@@ -32,7 +32,7 @@
 #ifndef MITREXSL_EXPRLEXER_H
 #define MITREXSL_EXPRLEXER_H
 
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 #include <iostream.h>
 

@@ -53,7 +53,7 @@
 #include "Names.h"
 #include "NodeSet.h"
 #include "ProcessorState.h"
-#include "String.h"
+#include "TxString.h"
 #include "Tokenizer.h"
 #include "ErrorObserver.h"
 #include "List.h"

@@ -34,7 +34,7 @@
 #define MITREXSL_NUMBERING_H
 
 #include "baseutils.h"
-#include "String.h"
+#include "TxString.h"
 #include "dom.h"
 #include "ProcessorState.h"
 #include "Expr.h"

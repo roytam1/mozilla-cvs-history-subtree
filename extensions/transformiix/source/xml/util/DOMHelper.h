@@ -26,7 +26,7 @@
 #define TRANSFRMX_DOMHELPER_H
 
 #include "baseutils.h"
-#include "String.h"
+#include "TxString.h"
 #include "List.h"
 #include "dom.h"
 #include "HashTable.h"

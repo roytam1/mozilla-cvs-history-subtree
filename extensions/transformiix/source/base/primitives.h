@@ -37,7 +37,7 @@
 
 #include "MITREObject.h"
 #include "baseutils.h"
-#include "String.h"
+#include "TxString.h"
 #include  <math.h>
 
 #ifdef WIN32

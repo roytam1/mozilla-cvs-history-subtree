@@ -24,7 +24,7 @@
  * $Id$
  */
 
-#include "String.h"
+#include "TxString.h"
 
 #ifndef TRANSFRMX_NAMES_H
 #define TRANSFRMX_NAMES_H

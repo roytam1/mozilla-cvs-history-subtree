@@ -28,7 +28,7 @@
 
 
 #include "dom.h"
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 #include "NamedMap.h"
 #include <iostream.h>

@@ -39,7 +39,7 @@
 #define TRANSFRMX_EXPR_H
 
 #include <math.h>
-#include "String.h"
+#include "TxString.h"
 #include "ErrorObserver.h"
 #include "NodeSet.h"
 #include "List.h"

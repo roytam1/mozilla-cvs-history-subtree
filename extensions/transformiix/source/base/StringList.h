@@ -32,7 +32,7 @@
  * @version $Revision$ $Date$
 **/
 
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 
 #ifndef TRANSFRMX_STRINGLIST_H

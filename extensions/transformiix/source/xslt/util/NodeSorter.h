@@ -24,7 +24,7 @@
  */
 
 
-#include "String.h"
+#include "TxString.h"
 #include "StringComparator.h"
 #include "NamedMap.h"
 #include "dom.h"

@@ -34,7 +34,7 @@
  * $Id$
  */
 
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 #include <iostream.h>
 #include <fstream.h>
