@@ -46,6 +46,7 @@
 #include "nsILocalFile.h"
 #include "nsINIParser.h"
 #include "nsIObserverService.h"
+#include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
 #include "nsIProperties.h"
 #include "nsIServiceManager.h"
@@ -170,7 +171,7 @@ nsOperaProfileMigrator::PREFTRANSFORM gTransforms[] = {
   { nsnull, "Allow script to change status", _OPM(BOOL), "dom.disable_window_status_change", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Home URL", _OPM(STRING), "browser.startup.homepage", _OPM(SetWString), PR_FALSE, -1 },
   { nsnull, "Ignore Unrequested Popups", _OPM(BOOL), "dom.disable_open_during_load", _OPM(SetBool), PR_FALSE, -1 },
-  { nsnull, "Load Figures", _OPM(BOOL), "network.image.imageBehavior", _OPM(SetInt), PR_FALSE, -1 },
+  { nsnull, "Load Figures", _OPM(BOOL), "network.image.imageBehavior", _OPM(SetImageBehavior), PR_FALSE, -1 },
 
   { "Visited link", nsnull, _OPM(COLOR), "browser.visited_color", _OPM(SetString), PR_FALSE, -1 },
   { "Link", nsnull, _OPM(COLOR), "browser.anchor_color", _OPM(SetString), PR_FALSE, -1 },
@@ -187,37 +188,56 @@ nsOperaProfileMigrator::PREFTRANSFORM gTransforms[] = {
 nsresult 
 nsOperaProfileMigrator::SetFile(void* aTransform, nsIPrefBranch* aBranch)
 {
-  return NS_OK;
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  nsCOMPtr<nsILocalFile> lf(do_CreateInstance("@mozilla.org/file/local;1"));
+  lf->InitWithNativePath(nsDependentCString(xform->stringValue));
+  return aBranch->SetComplexValue(xform->targetPrefName, NS_GET_IID(nsILocalFile), lf);
 }
 
 nsresult 
 nsOperaProfileMigrator::SetCookieBehavior(void* aTransform, nsIPrefBranch* aBranch)
 {
-  return NS_OK;
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  PRInt32 val = (xform->intValue == 3) ? 0 : (xform->intValue == 0) ? 2 : 1;
+  return aBranch->SetIntPref(xform->targetPrefName, val);
+}
+
+nsresult 
+nsOperaProfileMigrator::SetImageBehavior(void* aTransform, nsIPrefBranch* aBranch)
+{
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  return aBranch->SetIntPref(xform->targetPrefName, xform->boolValue ? 0 : 2);
 }
 
 nsresult 
 nsOperaProfileMigrator::SetBool(void* aTransform, nsIPrefBranch* aBranch)
 {
-  return NS_OK;
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  return aBranch->SetBoolPref(xform->targetPrefName, xform->intValue);
 }
 
 nsresult 
 nsOperaProfileMigrator::SetWString(void* aTransform, nsIPrefBranch* aBranch)
 {
-  return NS_OK;
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  nsCOMPtr<nsIPrefLocalizedString> pls(do_CreateInstance("@mozilla.org/pref-localizedstring;1"));
+  nsAutoString data; data.AssignWithConversion(xform->stringValue);
+  pls->SetData(data.get());
+  return aBranch->SetComplexValue(xform->targetPrefName, NS_GET_IID(nsIPrefLocalizedString), pls);
 }
 
 nsresult 
 nsOperaProfileMigrator::SetInt(void* aTransform, nsIPrefBranch* aBranch)
 {
-  return NS_OK;
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  return aBranch->SetIntPref(xform->targetPrefName, xform->intValue);
 }
 
 nsresult 
 nsOperaProfileMigrator::SetString(void* aTransform, nsIPrefBranch* aBranch)
 {
-  return NS_OK;
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  return aBranch->SetCharPref(xform->targetPrefName, xform->stringValue);
 }
 
 nsresult

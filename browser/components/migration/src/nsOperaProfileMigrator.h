@@ -80,6 +80,7 @@ public:
 
   static nsresult SetFile(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetCookieBehavior(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetImageBehavior(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetBool(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetWString(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetInt(void* aTransform, nsIPrefBranch* aBranch);
