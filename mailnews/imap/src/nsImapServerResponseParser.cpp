@@ -1376,9 +1376,27 @@ void nsImapServerResponseParser::xaolenvelope_data()
 				parse_address(fromLine);
 				fServerConnection.HandleMessageDownLoadLine(fromLine.get(), PR_FALSE);
 				if (ContinueParse())
-					fNextToken = GetNextToken();	// skip attachment size
+                                {
+					fNextToken = GetNextToken();	// ge attachment size
+                                        PRInt32 attachmentSize = atoi(fNextToken);
+                                        if (attachmentSize != 0)
+                                        {
+                                          nsCAutoString attachmentLine("X-attachment-size: ");
+                                          attachmentLine.AppendInt(attachmentSize);
+                			  fServerConnection.HandleMessageDownLoadLine(attachmentLine.get(), PR_FALSE);
+                                        }
+                                }
 				if (ContinueParse())
+                                {
 					fNextToken = GetNextToken();	// skip image size
+                                        PRInt32 imageSize = atoi(fNextToken);
+                                        if (imageSize != 0)
+                                        {
+                                          nsCAutoString imageLine("X-image-size: ");
+                                          imageLine.AppendInt(imageSize);
+                			  fServerConnection.HandleMessageDownLoadLine(imageLine.get(), PR_FALSE);
+                                        }
+                                }
 				if (ContinueParse())
 					fNextToken = GetNextToken();	// skip )
 			}

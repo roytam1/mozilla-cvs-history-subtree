@@ -116,6 +116,8 @@ static NS_DEFINE_CID(kMsgCopyServiceCID,    NS_MSGCOPYSERVICE_CID);
 static NS_DEFINE_CID(kCopyMessageStreamListenerCID, NS_COPYMESSAGESTREAMLISTENER_CID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
+nsIAtom* nsImapMailFolder::mImapHdrDownloadedAtom=nsnull;
+
 #define FOUR_K 4096
 #define MAILNEWS_CUSTOM_HEADERS "mailnews.customHeaders"
 
@@ -200,7 +202,9 @@ nsImapMailFolder::nsImapMailFolder() :
     m_downloadingFolderForOfflineUse(PR_FALSE)
 {
       MOZ_COUNT_CTOR(nsImapMailFolder); // double count these for now.
-      
+
+      if (mImapHdrDownloadedAtom == nsnull)
+        mImapHdrDownloadedAtom = NS_NewAtom("ImapHdrDownloaded");
       m_appendMsgMonitor = nsnull;  // since we're not using this (yet?) make it null.
       // if we do start using it, it should be created lazily
       
@@ -228,6 +232,9 @@ nsImapMailFolder::~nsImapMailFolder()
     if (m_appendMsgMonitor)
         PR_DestroyMonitor(m_appendMsgMonitor);
 
+  // I think our destructor gets called before the base class...
+  if (mInstanceCount == 1)
+    NS_IF_RELEASE(mImapHdrDownloadedAtom);
   if (m_moveCoalescer)
     delete m_moveCoalescer;
   delete m_pathName;
@@ -2537,6 +2544,7 @@ NS_IMETHODIMP nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol*
     char *headers;
     PRInt32 headersSize;
 
+    NotifyFolderEvent(mImapHdrDownloadedAtom);
     newMsgHdr->SetMessageKey(m_curMsgUid);
     TweakHeaderFlags(aProtocol, newMsgHdr);
     m_msgMovedByFilter = PR_FALSE;
@@ -3177,6 +3185,13 @@ NS_IMETHODIMP nsImapMailFolder::GetAdminUrl(char **aResult)
 NS_IMETHODIMP nsImapMailFolder::SetAdminUrl(const char *adminUrl)
 {
   m_adminUrl = adminUrl;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImapMailFolder::GetHdrParser(nsIMsgParseMailMsgState **aHdrParser)
+{
+  NS_ENSURE_ARG_POINTER(aHdrParser);
+  NS_IF_ADDREF(*aHdrParser = m_msgParser);
   return NS_OK;
 }
 

@@ -40,6 +40,7 @@
 
 interface nsIMsgWindow;
 interface nsIImapIncomingServer;
+interface nsIMsgParseMailMsgState;
 
 // this is a simple interface which allows the imap folder to update some values
 // that the folder props js code will use to update the sharing tab in the folder props.
@@ -93,5 +94,6 @@ interface nsIMsgImapMailFolder : nsISupports {
   readonly attribute boolean canIOpenThisFolder;
   attribute string adminUrl;
   readonly attribute boolean hasAdminUrl;
+  readonly attribute nsIMsgParseMailMsgState hdrParser;
 };
 

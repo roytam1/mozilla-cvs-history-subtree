@@ -471,6 +471,8 @@ protected:
 
   nsCOMPtr<nsISupports> mSupportsToRelease;
 
+  static nsIAtom* mImapHdrDownloadedAtom;
+
   // offline imap support
   PRBool m_downloadMessageForOfflineUse;
   PRBool m_downloadingFolderForOfflineUse;
