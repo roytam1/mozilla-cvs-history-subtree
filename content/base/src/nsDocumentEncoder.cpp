@@ -325,13 +325,19 @@ nsDocumentEncoder::FlushText(nsAWritableString& aString, PRBool aForce)
   return rv;
 }
 
-static nsresult ChildAt(nsIDOMNode* aNode, PRInt32 aIndex, nsIDOMNode** aChild)
+static nsresult ChildAt(nsIDOMNode* aNode, PRInt32 aIndex, nsIDOMNode*& aChild)
 {
-  nsCOMPtr<nsIDOMNodeList> children;
-  aNode->GetChildNodes(getter_AddRefs(children));
-  NS_ENSURE_TRUE(children, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIContent> node(do_QueryInterface(aNode));
+  nsCOMPtr<nsIContent> child;
 
-  children->Item(aIndex, aChild);
+  aChild = nsnull;
+
+  NS_ENSURE_TRUE(node, NS_ERROR_FAILURE);
+
+  node->ChildAt(aIndex, *getter_AddRefs(child));
+
+  if (child)
+    child->QueryInterface(NS_GET_IID(nsIDOMNode), (void **)&aChild);
 
   return NS_OK;
 }
@@ -341,7 +347,7 @@ static PRInt32 IndexOf(nsIDOMNode* aParent, nsIDOMNode* aChild)
   nsCOMPtr<nsIContent> parent(do_QueryInterface(aParent));
   nsCOMPtr<nsIContent> child(do_QueryInterface(aChild));
 
-  if (!aParent || !aChild)
+  if (!parent || !child)
     return -1;
 
   PRInt32 indx = 0;
@@ -361,7 +367,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
   aNode->HasChildNodes(&hasChildren);
 
   if (hasChildren && aDirection > 0) {
-    ChildAt(aNode, 0, &aNextNode);
+    ChildAt(aNode, 0, aNextNode);
     NS_ENSURE_TRUE(aNextNode, NS_ERROR_FAILURE);
 
     aIndexArray.AppendElement((void *)1);
@@ -373,9 +379,6 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     NS_ADDREF(aNextNode);
 
     aDirection = -1;
-
-    PRInt32 count = aIndexArray.Count();
-    aIndexArray.RemoveElementAt(count - 1);
   } else {
     nsCOMPtr<nsIDOMNode> parent;
 
@@ -387,7 +390,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     if (count) {
       PRInt32 indx = (PRInt32)aIndexArray.ElementAt(count - 1);
 
-      ChildAt(parent, indx, &aNextNode);
+      ChildAt(parent, indx, aNextNode);
 
       if (aNextNode)
         aIndexArray.ReplaceElementAt((void *)(indx + 1), count - 1);
@@ -396,10 +399,12 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     } else {
       PRInt32 indx = IndexOf(parent, aNode);
 
-      ChildAt(parent, indx + 1, &aNextNode);
+      if (indx >= 0) {
+        ChildAt(parent, indx + 1, aNextNode);
 
-      if (aNextNode)
-        aIndexArray.AppendElement((void *)(indx + 1));
+        if (aNextNode)
+          aIndexArray.AppendElement((void *)(indx + 2));
+      }
     }
 
     if (aNextNode) {
@@ -443,7 +448,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   aStart->GetNodeType(&type);
 
   if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
-    rv = ChildAt(aStart, aStartOffset, getter_AddRefs(start));
+    rv = ChildAt(aStart, aStartOffset, *getter_AddRefs(start));
     NS_ENSURE_SUCCESS(rv, rv);
 
     aStartOffset = 0;
@@ -454,7 +459,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   aEnd->GetNodeType(&type);
 
   if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
-    rv = ChildAt(aEnd, aEndOffset, getter_AddRefs(end));
+    rv = ChildAt(aEnd, aEndOffset, *getter_AddRefs(end));
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (!end) {
