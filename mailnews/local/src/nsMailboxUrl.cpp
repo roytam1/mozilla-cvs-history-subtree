@@ -339,8 +339,8 @@ NS_IMETHODIMP nsMailboxUrl::SetURLInfo(URL_Struct *URL_s)
 
 nsresult nsMailboxUrl::ParseSearchPart()
 {
-	char * searchPart = nsnull;
-	nsresult rv = GetQuery(&searchPart);
+	nsXPIDLCString searchPart;
+	nsresult rv = GetQuery(getter_Copies(searchPart));
 	// add code to this function to decompose everything past the '?'.....
 	if (NS_SUCCEEDED(rv) && searchPart && *searchPart)
 	{
@@ -352,8 +352,6 @@ nsresult nsMailboxUrl::ParseSearchPart()
 			// the action for this mailbox must be a display message...
 			m_mailboxAction = nsIMailboxUrl::ActionDisplayMessage;
 		PR_FREEIF(messageKey);
-
-		nsCRT::free(searchPart);
 	}
 	else
 		m_mailboxAction = nsIMailboxUrl::ActionParseMailbox;
