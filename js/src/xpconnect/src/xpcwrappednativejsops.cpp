@@ -584,11 +584,11 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
     XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
     for(PRUint16 i = 0; i < interface_count; i++)
     {
-        XPCNativeInterface* interface = interfaceArray[i];
-        PRUint16 member_count = interface->GetMemberCount();
+        XPCNativeInterface* _interface = interfaceArray[i];
+        PRUint16 member_count = _interface->GetMemberCount();
         for(PRUint16 k = 0; k < member_count; k++)
         {
-            XPCNativeMember* member = interface->GetMemberAt(k);
+            XPCNativeMember* member = _interface->GetMemberAt(k);
             jsval name = member->GetName();
 
             // Skip if this member is going to come from the proto.

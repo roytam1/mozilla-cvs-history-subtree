@@ -26,6 +26,10 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# WINCE skips due to lack of iostreams.
+# Trivial conversion to stdio possible if desired.
+ifneq ($(OS_TARGET),WINCE)
+
 PROGRAM		= UnicharSelfTest$(BIN_SUFFIX)
 REQUIRES	= xpcom \
 		  string \
@@ -36,10 +40,16 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= UnicharSelfTest.cpp 
 
+endif # WINCE
+
 LIBS		= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
+
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif
 
 include $(topsrcdir)/config/rules.mk
 

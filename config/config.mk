@@ -474,7 +474,12 @@ XPIDL_COMPILE 	= $(DIST)/bin/xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(DIST)/bin/xpt_link$(BIN_SUFFIX)
 endif
 endif
+
+ifeq ($(OS_TARGET),WINCE)
+MIDL = midl /D WINCE=1 /D UNDER_CE=300 /D _WIN32_WCE=300
+else
 MIDL		= midl
+endif
 
 ifeq ($(OS_ARCH),OS2)
 PATH_SEPARATOR	:= \;

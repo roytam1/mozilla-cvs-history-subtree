@@ -2455,7 +2455,7 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
     PRUnichar* oldStr;
     PRUnichar* newStr;
     XPCNativeMember* member;
-    XPCNativeInterface* interface;
+    XPCNativeInterface* _interface;
 
     /* PRUnichar->char->PRUnichar hack is to avoid pulling in i18n code. */
     if(JSVAL_IS_STRING(name) &&
@@ -2470,11 +2470,11 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
         newJSStr = JS_NewUCStringCopyZ(ccx, (const jschar*)newStr);
         nsCRT::free(newStr);
         if(newJSStr && (set ?
-             set->FindMember(STRING_TO_JSVAL(newJSStr), &member, &interface) :
+             set->FindMember(STRING_TO_JSVAL(newJSStr), &member, &_interface) :
                         (JSBool)NS_PTR_TO_INT32(iface->FindMember(STRING_TO_JSVAL(newJSStr)))))
         {
             // found it!
-            const char* ifaceName = interface->GetNameString();
+            const char* ifaceName = _interface->GetNameString();
             const char* goodName = JS_GetStringBytes(newJSStr);
             const char* badName = JS_GetStringBytes(oldJSStr);
             char* locationStr = nsnull;
