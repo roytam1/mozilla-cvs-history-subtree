@@ -1259,6 +1259,8 @@ NPError OSCALL NP_Initialize(NPNetscapeFuncs* pFuncs);
 
 NPError OSCALL NP_Shutdown();
 
+char*	NP_GetMIMEDescription();
+
 #ifdef __cplusplus
 }
 #endif
