@@ -364,8 +364,8 @@ nsresult
 nsMemoryCacheDevice::EvictEntries(const char * clientID)
 {
     nsCacheEntry * entry;
-    PRUint32 prefixLength = clientID ? nsCRT::strlen(clientID) : 0;
-    
+    PRUint32 prefixLength = (clientID ? nsCRT::strlen(clientID) : 0);
+
     PRCList * elem = PR_LIST_HEAD(&mEvictionList);
     while (elem != &mEvictionList) {
         entry = (nsCacheEntry *)elem;

@@ -664,6 +664,14 @@ nsDiskCacheDevice::Init()
     gFileTransportService = do_GetService("@mozilla.org/network/file-transport-service;1", &rv);
     if (NS_FAILED(rv)) return rv;
     
+    // delete "Cache.Trash" folder
+    nsCOMPtr<nsIFile> cacheTrashDir;
+    rv = mCacheDirectory->Clone(getter_AddRefs(cacheTrashDir));
+    if (NS_FAILED(rv))  return rv;
+    rv = cacheTrashDir->SetLeafName("Cache.Trash");
+    if (NS_FAILED(rv))  return rv;
+    (void) cacheTrashDir->Delete(PR_TRUE);  // ignore errors, we tried...
+
     // XXX read in persistent information about the cache. this can fail, if
     // no cache directory has ever existed before.
     rv = readCacheMap();
@@ -956,7 +964,6 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
     return NS_OK;
 }
 
-
 nsresult
 nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
@@ -970,12 +977,20 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
     rv = updateDiskCacheEntries();
     if (NS_FAILED(rv)) return rv;
     
+    nsDiskCacheRecord records[nsDiskCacheMap::kRecordsPerBucket];
     for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
-        nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
-        for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
-            nsDiskCacheRecord* record = bucket++;
+        // XXX copy the i-th bucket from the cache map. GetBucket()
+        // should probably be changed to do this.
+        PRUint32 j, count = 0;
+        const nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
+        for (j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
+            const nsDiskCacheRecord* record = bucket++;
             if (record->HashNumber() == 0)
                 break;
+            records[count++] = *record;
+        }
+        for (j = 0; j < count; ++j) {
+            nsDiskCacheRecord* record = &records[j];
 
             // if the entry is currently in use, then doom it rather than evicting right here.
             nsDiskCacheEntry* diskEntry = mBoundEntries.GetEntry(record->HashNumber());
@@ -986,7 +1001,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
             
             // delete the metadata file.
             nsCOMPtr<nsIFile> metaFile;
-            rv = getFileForHashNumber(record->HashNumber(), PR_TRUE, 0, getter_AddRefs(metaFile));
+            rv = getFileForHashNumber(record->HashNumber(), PR_TRUE, record->FileGeneration(), getter_AddRefs(metaFile));
             if (NS_SUCCEEDED(rv)) {
                 if (clientID) {
                     // if filtering by clientID, make sure key prefix and clientID match.
@@ -1011,7 +1026,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
 
             // delete the data file
             nsCOMPtr<nsIFile> dataFile;
-            rv = getFileForHashNumber(record->HashNumber(), PR_FALSE, 0, getter_AddRefs(dataFile));
+            rv = getFileForHashNumber(record->HashNumber(), PR_FALSE, record->FileGeneration(), getter_AddRefs(dataFile));
             if (NS_SUCCEEDED(rv)) {
                 PRInt64 fileSize;
                 rv = dataFile->GetFileSize(&fileSize);
@@ -1543,7 +1558,45 @@ nsresult nsDiskCacheDevice::clobberDiskCache()
     
     // recursively delete the disk cache directory.
     rv = mCacheDirectory->Delete(PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv)) {
+        // try moving it aside
+        
+        // get parent directory of cache directory
+        nsCOMPtr<nsIFile> cacheParentDir;
+        rv = mCacheDirectory->GetParent(getter_AddRefs(cacheParentDir));
+        if (NS_FAILED(rv))  return rv;
+        
+        // create "Cache.Trash" directory if necessary
+        nsCOMPtr<nsIFile> oldCacheDir;
+        rv = cacheParentDir->Clone(getter_AddRefs(oldCacheDir));
+        if (NS_FAILED(rv))  return rv;
+        rv = oldCacheDir->Append("Cache.Trash");
+        if (NS_FAILED(rv))  return rv;
+        
+        PRBool exists = PR_FALSE;
+        rv = oldCacheDir->Exists(&exists);
+        if (NS_FAILED(rv))  return rv;
+        
+        if (!exists) {
+            // create the "Cache.Trash" directory
+            rv = oldCacheDir->Create(nsIFile::DIRECTORY_TYPE,0777);
+            if (NS_FAILED(rv))  return rv;
+        }
+        
+        // create a directory with unique name to contain existing cache directory
+        rv = oldCacheDir->Append("Cache");
+        if (NS_FAILED(rv))  return rv;
+        rv = oldCacheDir->CreateUnique(nsnull,nsIFile::DIRECTORY_TYPE, 0777); 
+        if (NS_FAILED(rv))  return rv;
+        
+        // move existing cache directory into profileDir/Cache.Trash/CacheUnique
+        nsCOMPtr<nsIFile> existingCacheDir;
+        rv = mCacheDirectory->Clone(getter_AddRefs(existingCacheDir));
+        if (NS_FAILED(rv))  return rv;
+        rv = existingCacheDir->MoveTo(oldCacheDir, nsnull);
+        if (NS_FAILED(rv))  return rv;
+    }
+    
     rv = mCacheDirectory->Create(nsIFile::DIRECTORY_TYPE, 0777);
     if (NS_FAILED(rv)) return rv;
     

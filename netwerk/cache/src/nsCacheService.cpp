@@ -37,7 +37,9 @@
 #include "nsIEventQueue.h"
 #include "nsProxiedService.h"
 #include "nsIObserverService.h"
-#include "nsIPref.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefBranchInternal.h"
 
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
@@ -82,19 +84,25 @@ nsresult
 nsCachePrefObserver::Install()
 {
     nsresult rv, rv2;
-    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv = prefs->AddObserver(ENABLE_MEMORY_CACHE_PREF, this);
+    nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = prefInternal->AddObserver(ENABLE_MEMORY_CACHE_PREF, this);
     if (NS_FAILED(rv)) rv2 = rv;
 
-    rv = prefs->AddObserver(ENABLE_DISK_CACHE_PREF, this);
+    rv = prefInternal->AddObserver(ENABLE_DISK_CACHE_PREF, this);
     if (NS_FAILED(rv)) rv2 = rv;
 
-    rv = prefs->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mDiskCacheEnabled);
+    nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = prefBranch->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mDiskCacheEnabled);
     if (NS_FAILED(rv)) rv2 = rv;
 
-    rv = prefs->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mMemoryCacheEnabled);
+    rv = prefBranch->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mMemoryCacheEnabled);
     // if (NS_FAILED(rv)) rv2 = rv;
 
     if (NS_SUCCEEDED(rv)) rv = rv2;
@@ -107,11 +115,14 @@ nsCachePrefObserver::Remove()
 {
     nsresult rv, rv2;
 
-    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv  = prefs->RemoveObserver(ENABLE_DISK_CACHE_PREF, this);
-    rv2 = prefs->RemoveObserver(ENABLE_MEMORY_CACHE_PREF, this);
+    nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv  = prefInternal->RemoveObserver(ENABLE_DISK_CACHE_PREF, this);
+    rv2 = prefInternal->RemoveObserver(ENABLE_MEMORY_CACHE_PREF, this);
 
     if (NS_SUCCEEDED(rv)) rv = rv2;
     return rv;
@@ -126,7 +137,7 @@ nsCachePrefObserver::Observe(nsISupports *     subject,
     nsresult rv;
 
     if (NS_LITERAL_STRING("nsPref:changed").Equals(topic)) {
-        nsCOMPtr<nsIPref> prefs = do_QueryInterface(subject, &rv);
+        nsCOMPtr<nsIPrefBranch> prefs = do_QueryInterface(subject, &rv);
         if (NS_FAILED(rv)) return rv;
 
         // which preference changed?
@@ -211,11 +222,14 @@ nsCacheService::Init()
     rv = mActiveEntries.Init();
     if (NS_FAILED(rv)) goto error;
     
-    { // scope nsCOMPtr<nsIPref>
-        nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+    { // scope nsCOMPtr<nsIPrefService> and  nsCOMPtr<nsIPrefBranch>
+        nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(prefs, &rv);
         if (NS_SUCCEEDED(rv)) {
-            rv = prefs->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mEnableDiskDevice);
-            rv = prefs->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mEnableMemoryDevice);
+            rv = prefBranch->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mEnableDiskDevice);
+            rv = prefBranch->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mEnableMemoryDevice);
             // ignore errors
         }
     }
@@ -355,9 +369,6 @@ nsCacheService::EvictEntriesForClient(const char *          clientID,
     nsAutoLock lock(mCacheServiceLock);
     nsresult rv = NS_OK;
 
-    printf("### nsCacheService::EvictEntriesForClient(%s, %d)\n",
-           (clientID ? clientID : "nsnull"), storagePolicy);
-
     if (storagePolicy == nsICache::STORE_ANYWHERE ||
         storagePolicy == nsICache::STORE_ON_DISK) {
 
@@ -436,7 +447,13 @@ nsCacheService::CreateDiskDevice()
 
     nsresult rv = mDiskDevice->Init();
     if (NS_FAILED(rv)) {
-        // XXX log error
+#if DEBUG
+        printf("###\n");
+        printf("### mDiskDevice->Init() failed (0x%.8x)\n", rv);
+        printf("###    - disabling disk cache for this session.\n");
+        printf("###\n");
+#endif        
+        mEnableDiskDevice = PR_FALSE;
         delete mDiskDevice;
         mDiskDevice = nsnull;
     }
@@ -1071,9 +1088,7 @@ nsCacheService::DeactivateAndClearEntry(PLDHashTable *    table,
     entry->DetachDescriptors();
     gService->DeactivateEntry(entry);
     
-    ((nsCacheEntryHashTableEntry *)hdr)->keyHash    = 1; // mark removed
-    ((nsCacheEntryHashTableEntry *)hdr)->cacheEntry = nsnull;
-    return PL_DHASH_NEXT;
+    return PL_DHASH_REMOVE; // and continue enumerating
 }
 
 
