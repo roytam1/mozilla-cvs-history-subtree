@@ -260,8 +260,6 @@ CompositeEnumeratorImpl::HasMoreElements(PRBool* aResult)
 
     // Otherwise, we'll need to find a next target, switching cursors
     // if necessary.
-    PRBool hasMore = PR_FALSE;
-
     while (mNext < mCompositeDataSource->mDataSources.Count()) {
         if (! mCurrent) {
             // We don't have a current enumerator, so create a new one on
@@ -276,6 +274,7 @@ CompositeEnumeratorImpl::HasMoreElements(PRBool* aResult)
         do {
             PRInt32 i;
 
+            PRBool hasMore;
             rv = mCurrent->HasMoreElements(&hasMore);
             if (NS_FAILED(rv)) return rv;
 
