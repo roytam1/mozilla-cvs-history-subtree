@@ -110,7 +110,7 @@ function Transfer(download, serial,
   if (!savepw)
     savepw = false;
   this.savePassword = savepw; //savepw is when the user checked the checkbox
-  this.saveLogin = false;     //savelogin is when we will write to disk
+  this.saveLogin = false;     //savelogin is when we will need to write to disk
   this.sitename = uri.host;
 
   this.files = new Array();
@@ -152,7 +152,6 @@ function Transfer(download, serial,
 }
 Transfer.prototype =
 {
-
   /* Called when all files finished
      @param  success  bool  no file failed
   */
@@ -250,9 +249,9 @@ Transfer.prototype =
         baseURL.password = this.password;
       var localURL = ioserv.newURI(this.localDir, null, null);
       var channel = ioserv.newChannel(file.filename, null, baseURL);
-      this.files[id].channel = channel;
+      file.channel = channel;
       var progress = new TransferProgressListener(this, id);
-      this.files[id].progressListener = progress;
+      file.progressListener = progress;
       channel.notificationCallbacks = progress;
       ddumpCont("Trying to "+ (this.download ? "download from" : "upload to"));
       ddumpCont(" remote URL <" + channel.URI.spec + "> ");
@@ -270,9 +269,14 @@ Transfer.prototype =
                    .classes["@mozilla.org/network/simple-stream-listener;1"]
                    .createInstance(Components.interfaces
                                    .nsISimpleStreamListener);
-        var lf = ioserv.newURI(file.filename, null, localURL)
+        /* Download to temporary local location first, in case something
+           goes wrong, e.g. failed auth (in that case, necko overwrites
+           the file with nothing! :-( ). Moved to final location in
+           fileFinished(). */
+        var lf = ioserv.newURI(file.filename + ".tmp", null, localURL)
                        .QueryInterface(Components.interfaces.nsIFileURL)
-                       .file; // readonly
+                       .file.clone();
+        file.localFile = lf;
         ddump("to local file " + lf.path);
         try
         {
@@ -345,10 +349,21 @@ Transfer.prototype =
       this.nextFile();
 
     var file = this.files[filei];
+
+    // flush
     if (file.fos) // only for download
       file.fos.flush();
     if (file.bos) // dito
       file.bos.flush();
+
+    // move to final location
+    if (this.download && file.localFile && file.localFile.exists())
+    {
+      if (file.status == "done")
+        file.localFile.moveTo(null, file.filename)
+      else
+        file.localFile.remove(false);
+    }
 
     // check, if we're all done
     var done = true;
@@ -375,7 +390,8 @@ Transfer.prototype =
     // network stuff
     for (var i = 0, l = this.files.length; i < l; i++)
     {
-      if (this.files[i].status != "done")
+      if (this.files[i].status != "done" &&
+          this.files[i].status != "failed")
       {
         this.files[i].setStatus("failed", kErrorAbort);
         var channel = this.files[i].channel;
@@ -537,15 +553,15 @@ Transfer.prototype =
   */
   getSaveLogin : function()
   {
-  	if (this.saveLogin)
-  	  return this.savePassword ? 1 : 2;
-  	else
-  	  return 0;
+    if (this.saveLogin)
+      return this.savePassword ? 1 : 2;
+    else
+      return 0;
   },
 
   getPassword : function()
   {
-  	if (this.getSaveLogin() == 1)
+    if (this.getSaveLogin() == 1)
       return this.password;
     else
       return null;
@@ -553,12 +569,24 @@ Transfer.prototype =
 
   getUsername : function()
   {
-  	if (this.getSaveLogin() == 1)
+    if (this.getSaveLogin() == 1)
       return this.username;
     else
       return null;
   },
 
+
+  // helpful functions for callers
+
+  // returns an array of TransferFiles with all files with a certain status
+  filesWithStatus : function(status)
+  {
+    var result = new Array();
+    for (var i = 0, l = this.files.length; i < l; i++)
+      if (this.files[i].status == status)
+        result.push(this.files[i]);
+    return result;
+  },
 
   // utility/debug
 
@@ -630,6 +658,7 @@ function TransferFile(transfer, filei, // hooks to owner
   this.progressListener = null;
   this.fos = null;
   this.bos = null;
+  this.localFile = null;
 
   this.transfer = transfer;
   this.filei = filei;
@@ -1314,7 +1343,7 @@ TransferProgressListener.prototype =
 
   QueryInterface : function(aIID)
   {
-    ddump("QI: " + aIID.toString() + "\n");
+    // ddump("QI: " + aIID.toString() + "\n");
     if (aIID.equals(Components.interfaces.nsIProgressEventSink)
      || aIID.equals(Components.interfaces.nsIRequestObserver)
      || aIID.equals(Components.interfaces.nsIStreamListener)

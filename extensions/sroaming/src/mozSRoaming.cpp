@@ -471,6 +471,13 @@ void mozSRoaming::Decrypt(/*inout*/ nsAString& )
 {
 }
 
+/* A workaround for the fact that the network library is shut down during
+   profile shutdown (for dynamic profile changing), *before* the
+   app is told to write down profile changes and thus before we try to upload,
+   so our upload will fail.
+   So, I just power netlib up again and then power it down again by sending
+   the corresponding profile change notification. Might not be the
+   best solution, but has small impact on existing code and WFM. */
 nsresult mozSRoaming::RestoreCloseNet(PRBool restore)
 {
   const char* topic = restore ? "profile-change-net-restore"

@@ -92,7 +92,10 @@ function ErrorMessageForException(e)
 function ErrorMessageForFile(aFile)
 {
   if (aFile.statusCode == kStatusHTTP)
-    return GetStringWithFile("HTTPResponse", aFile.filename)
+    return GetStringWithFile(aFile.status == "done"
+                             ? "HTTPResponseSucceeded"
+                             : "HTTPResponseFailed",
+                             aFile.filename)
            .replace(/%responsecode%/, aFile.httpResponse)
            .replace(/%responsetext%/, aFile.statusText);
   else if (aFile.statusCode == kErrorFailure && aFile.statusText) // FTP

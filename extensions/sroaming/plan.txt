@@ -2,19 +2,15 @@
   - listing transfer
     - progress feedback and error reporting
   - some files failed (see XXX - update: eh, where was that?)
-  - data in dialog wrong
   - fix dialog
     - column headings
     - width
-- resize progress dialog for new listing.xml entry
 - Bugs
-  - overwriting local files, if login is incorrect?
   - some files never "finish" (compare feedback below)
     - ftp upload: ok -> busy [4]
 - error handling
-  - files deleted on server / server changed. listing-uploaded no longer true
-  - (local profile) files missing
-  - pressing cancel after finished with failed, all files are set to abort
+  - (local profile) files missing, also adjust listing.xml
+  - pressing cancel after finished with failed, all files are set to abort v
   - copy protocol
     - no remote files yet
 - world gone
@@ -42,7 +38,6 @@ Enhance
 - rewrite progress dialog
 - no upload at switch profile
 - don't transfer files that didn't change (server = local)
-  (actually happens in RL?)
 
 roaming urls
  <ftp://user@ftp-server//path/to/dir/>

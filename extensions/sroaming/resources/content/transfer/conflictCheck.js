@@ -72,8 +72,8 @@
           - if they match, then we already have the newest version locally and
             don't need to download and don't have a problem/conflict either,
             even if the local files don't match listing.xml from server.
-            We can just copy listing.xml to listing-downloaded (XXX?)
-            and be done.
+            We can just copy the listing.xml from server to
+            listing-downloaded and be done.
           - if they don't match, then either
             - another instanceuploaded after
               we ran the last time, which is not a problem in itself, but we
@@ -86,8 +86,14 @@
                   decided above that we don't have a problem)
        3. If there were conflicts, ask the user what to do
        4. Download files
-       5. Check local files against listing.xml from server.
-          XXX needed?
+       5. If transfer succeeded, move listing.xml to listing-downloaded.
+          Note that we do that independent of the choices in conflict
+          resolution. If the user made his choice, we assume that we doesn't
+          care about the other files, so here we just pretend that we used
+          them, so that conflict resolution in later runs doesn't come up
+          for the same conflict anymore.
+       5. Unused: (not sure, if needed or even a good idea)
+          Check local files against listing.xml.
           - if they match (esp. filesizes), all went fine. Move listing.xml
             to listing-downloaded.
           - if they don't match, we have a severe problem. We just overwrote
@@ -116,10 +122,15 @@
                   we last uploaded, and we didn't get that info yet, so we have
                   a conflict.
        3. If there were conflicts, ask the user what to do        
-       4. Create listing file from local files
-       5. Upload files incl. listing file
-          - if there are any problems during upload, note them in listing-local
-       6. mv listing to listing-uploaded
+       4. Upload profile files
+       5  Create listing file for server based on conflict choices and
+          upload success
+       6. Upload listing file (created in step 6)
+       7. Create listing-uploaded, not containing those files for which
+          the user selected the server version (otherwise, we would think
+          in the next download run that we have them already in the local
+          profile, not download them and then overwrite the server file
+          during the next upload)
   */
 
 
@@ -171,7 +182,7 @@ function checkAndTransfer(transfer, listingProgress)
 
   gLocalDir = transfer.localDir;
 
-  /* A few nested callbacks follow. Asyncronous processing... :-/
+  /* A few nested callbacks follow. Asyncronous processing fun... :-/
      Some need local vars, I don't want to use global vars for that. */
 
   ddump("Step 1: Downloading listing file from server");
@@ -193,6 +204,7 @@ function checkAndTransfer(transfer, listingProgress)
     transfer.username = listingTransfer.username;
     transfer.password = listingTransfer.password;
     transfer.savePassword = listingTransfer.savePassword;
+    transfer.saveLogin = listingTransfer.saveLogin;
     ddump("loading remote listing file");
 
     var remoteListingResult = loadAndReadListingFile(success
@@ -210,9 +222,10 @@ function checkAndTransfer(transfer, listingProgress)
     });
   }, function()
   {
+    // XXX progress callback
   });
+  //gTransfers.push(listingTransfer);
   listingTransfer.transfer();
-  // XXX progress callback
 }
 
 
@@ -223,6 +236,7 @@ function download(transfer, remoteListing)
   var listingUploadedResult = loadAndReadListingFile(kListingUploadedFilename,
                                                      function()
   {
+    var localFiles;
     var listingUploaded = listingUploadedResult.value;
     ddump("Step 2: Comparing these listing files");
     var comparisonStep2 = compareFiles(transfer.files,
@@ -231,8 +245,10 @@ function download(transfer, remoteListing)
     if (comparisonStep2.mismatches.length == 0)
       // Match: files didn't change on the server since our last upload
     {
-      ddump("Step 3: Skipped, because no conflict found");
-      // nothing to be done
+      ddump("Server files didn't change since last upload from here, so");
+      ddump("we're done, no need to actually download.");
+      move(kListingTransferFilename, kListingDownloadedFilename);
+      onCancel();
     }
     else // Mismatch
     {
@@ -242,7 +258,7 @@ function download(transfer, remoteListing)
          goofy going on. XXX is this also true, if local files didn't exist
          yet? */
       ddump("Step 2a: Comparing local files with listing-uploaded");
-      var localFiles = localFilesStats(transfer.files);
+      localFiles = localFilesStats(transfer.files);
       var comparisonStep2a = compareFiles(transfer.files,
                                           localFiles,
                                           listingUploaded);
@@ -269,13 +285,12 @@ function download(transfer, remoteListing)
         transfer.files = extractFiles(answer.server, transfer.files);
                /* only transfer those files that the user explicitly selected
                   for transfer, saving the rest from being overwritten. */
+        transfer.filesChanged();
       }
     }
 
     ddump("Step 4: Downloading profile files");
-    transfer.filesChanged();
-    window.sizeToContent(); // violation of backend/frontend separation
-    transfer.finishedCallbacks.push(function()
+    transfer.finishedCallbacks.push(function(success)
     {
       /*
       ddumpCont("Step 5: Check local files (incl. downloaded one) against ");
@@ -284,11 +299,13 @@ function download(transfer, remoteListing)
       checkFailedFiles(transfer);
       */
 
-      /* Profile files should now match the listing.xml from the server.
-         Move listing.xml from server to listing-downloaded, to prevent
-         overwriting during the next update and to record, which is the
-         last version we got from the server, for future checks. */
-      move(kListingTransferFilename, kListingDownloadedFilename);
+      ddump("Step 5");
+      if (success)
+        /* Profile files should now match the listing.xml from the server.
+           Move listing.xml from server to listing-downloaded, to prevent
+           overwriting during the next update and to record, which is the
+           last version we got from the server, for future checks. */
+        move(kListingTransferFilename, kListingDownloadedFilename);
 
       ddump("transfer done");
 
@@ -321,7 +338,7 @@ function upload(transfer, remoteListing)
       // Match: files didn't change on the server since our last download
     {
       ddump("Step 3: Skipped, because no conflict found");
-      uploadStep4(transfer, localFiles);
+      uploadStep4(transfer, localFiles, remoteListing, null);
     }
     else // Mismatch
     {
@@ -364,45 +381,59 @@ function upload(transfer, remoteListing)
           transfer.files = extractFiles(answer.local, transfer.files);
                  /* only transfer those files that the user explicitly selected
                     for transfer, saving the rest from being overwritten. */
+          transfer.filesChanged();
         }
-        uploadStep4(transfer, localFiles);
+        uploadStep4(transfer, localFiles, remoteListing, answer.server);
       }, false);
     }
   }, false);
 }
 
-function uploadStep4(transfer, localFiles)
+function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
 {
-    ddump("Step 4: Creating listing file from local files");
-    remove(kListingTransferFilename);
-    createListingFile(localFiles, kListingTransferFilename);
-
-    ddump("Step 5: Uploading profile files and listing file");
-    // add listing file to the files to be uploaded
-    var listingEntry = new TransferFile(transfer,
-                                        0, // corrected with filesChanged()
-                                        kListingTransferFilename,
-                                        kListingMimetype,
-                                        undefined);
-    transfer.files.push(listingEntry);
-
-    transfer.filesChanged();
-    window.sizeToContent(); // violation of backend/frontend separation
+    ddump("Step 4: Uploading profile files");
     transfer.finishedCallbacks.push(function(success)
     {
-      if (success)
+      ddump("Step 5: Generating listing file based on facts");
+      /* the entries from the server's listing file for those files
+         which we chose not to upload /plus/ the entries for those local files
+         which successfully uploaded */
+      var filesDone = extractFiles(transfer.filesWithStatus("done"),
+                                   localFiles);
+      createListingFile(filesDone.concat(
+                        substractFiles(remoteFiles, filesDone)),
+                        kListingTransferFilename);
+
+      ddump("Step 6: Uploading listing file to server");
+      var filesListing = new Array();
+      filesListing[0] = new Object();
+      filesListing[0].filename = kListingTransferFilename;
+      filesListing[0].mimetype = kListingMimetype;
+      filesListing[0].size = undefined;
+      var listingTransfer = new Transfer(false, // upload
+                                         transfer.serial,
+                                         transfer.localDir, transfer.remoteDir,
+                                         transfer.password,
+                                         transfer.savePassword,
+                                         filesListing,
+                                         function(success)
       {
-        ddump("Step 6: mv listing to listing-uploaded");
-        move(kListingTransferFilename, kListingUploadedFilename);
-      }
-      else
-        ddump("Step 6: Skipped, because transfer failed");
+        ddump("Step 7: Generate listing-uploaded");
+        remove(kListingTransferFilename);
+        createListingFile(substractFiles(localFiles, keepServerVersionFiles),
+                          kListingUploadedFilename);
 
-      ddump("transfer done");
+        ddump("transfer done");
 
-      CloseIfPossible();
+        CloseIfPossible();
             /* in case there were no files to be transferred and
                the progress callback in progressDialog.js thus didn't fire. */
+      }, function()
+      {
+        // XXX progress
+      });
+      //gTransfers.push(listingTransfer);
+      listingTransfer.transfer();
     });
     transfer.transfer();
 }
@@ -466,7 +497,6 @@ function compareFiles(filesList, files1, files2)
 
 
 /*
-  Utility function.
   For each entry in filesList, it returns the corresponding entry in files1,
   if existiant.
 
@@ -493,9 +523,40 @@ function extractFiles(filesList, files1)
   return result;
 }
 
+/*
+  Returns files1 - filesList, i.e. returns all entries of files1 which
+  do *not* have a corresponding entry in filesList.
+
+  @param files1  FilesStats
+  @param filesList  FilesList
+  @result  FilesStats  Subset of files1
+*/
+function substractFiles(files1, filesList)
+{
+  var result = new Array();
+
+  // sanitize input
+  if (!filesList)
+    filesList = new Array();
+  if (!files1)
+    files1 = new Array();
+
+  for (var i = 0, l = files1.length; i < l; i++)
+  {
+    var f = findEntry(files1[i].filename, filesList);
+    if (!f)
+      result.push(files1[i]);
+  }
+
+  ddump("substract A - B = C");
+  dumpObject(files1, "  A", 1);
+  dumpObject(filesList, "  B", 1);
+  dumpObject(result, "  C", 1);
+  return result;
+}
+
 
 /*
-   Utility function.
    Returns |files|'s entry which matches |filename|.
 
    Would probably be more efficient to use the filename as index/property,
@@ -546,14 +607,14 @@ function findEntry(filename, files)
 function loadAndReadListingFile(filename, loadedCallback)
 {
   var result = new Object();
-/*result.value = new Array(); /* passing back just the array seems to pass
+  result.value = new Array(); /* passing back just the array seems to pass
                                  by value, while the property value seems
                                  to be passed by reference. We need to pass
                                  by reference, because it will be filled,
                                  as described above. */
   var domdoc = document.implementation.createDocument("", filename, null);
   ddump("loading and reading " + filename);
-  
+
   var loaded = function()
   {
     result.value = readListingFile(domdoc);
@@ -570,13 +631,13 @@ function loadAndReadListingFile(filename, loadedCallback)
     }
     catch(e)
     {
-   ddump("error during load: " + e);
+      ddump("error during load: " + e);
       setTimeout(loaded, 0); // see below
     }
   }
   else
   {
-   ddump("no filename");
+    ddump("no filename");
     setTimeout(loaded, 0);
       /* using timeout, so that we first return (to deliver domdoc to the
          caller) before we invoke loadedCallback, so that loadedCallback
@@ -690,6 +751,7 @@ function printtree(domnode, indent)
 function createListingFile(files, filename)
 {
   // create content as string
+  // XXX xml namespace/dtd
   var content = "<?xml version=\"1.0\"?>\n<listing>\n";
                                      // content of the file to be written
   for (var i = 0, l = files.length; i < l; i++)
@@ -719,7 +781,7 @@ function createListingFile(files, filename)
   fos.init(lf, -1, -1, 0); //odd params from NS_NewLocalFileOutputStream
   bos.init(fos, 32768);
   bos.write(content, content.length);
-  bos.close(); // needed? throwing?
+  bos.close(); // throwing?
   fos.close(); // dito
 }
 

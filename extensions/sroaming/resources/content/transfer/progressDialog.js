@@ -27,7 +27,11 @@
    see mozSRoamingStream.cpp for the reasons.
 */
 
-var gTransfer;
+var gTransfer; // main |Transfer| object, for the main files to be tranferred
+/*var gTransfers = new Array(); /* all |Transfer| objects, incl. support stuff,
+                                 e.g. listing files. Needed for Cancel.
+                                 XXX bad solution. too bad. don't care for,
+                                 let the XPCOM excpetion fly! ;-P */
 var gDialog = {};
 var gInProgress = true;
 var gTotalFileCount = 0;
@@ -51,7 +55,6 @@ function Startup()
   try
   {
     GetParams(); // dialog params -> gTransfer
-    //gTransfer.transfer(); // non-blocking
     checkAndTransfer(gTransfer, null); // half-blocking
   }
   catch (e)
@@ -60,7 +63,7 @@ function Startup()
        this is the main last backstop for unexpected or fatal errors,
        esp. those not related to a certain file. */
     SetGlobalStatusMessage(ErrorMessageForException(e));
-  	return;
+    return;
   }
 
   gDialog.FileList           = document.getElementById("FileList");
@@ -165,6 +168,7 @@ function GetParams()
                            password, savepw,
                            files,
                            undefined, SetProgressStatus);
+  //gTransfers.push(gTransfer);
 }
 
 function PassBackParams()
@@ -233,7 +237,7 @@ function SetProgressStatus(filei)
         var oldstat = li.getAttribute("progress");
         ddump("  Setting "+filename+" from "+oldstat+" to "+status); 
         li.setAttribute("progress", status);
-        CloseIfPossible();
+        //CloseIfPossible(); -- called by controller (conflictCheck.js)
       }
       return true;
     }
@@ -354,10 +358,24 @@ function CloseIfPossible()
     CloseDialog();
 }
 
-function CloseDialog()
+function CleanUpDialog()
 {
+  if (gTimerID)
+  {
+    clearTimeout(gTimerID);
+    gTimerID = null;
+  }
+  if (!gFinished)
+  {
+    gTransfer.cancel();
+  }
   SaveWindowLocation();
   PassBackParams();
+}
+
+function CloseDialog()
+{
+  CleanUpDialog();
   try {
     window.close();
   } catch (e) {}
@@ -365,27 +383,13 @@ function CloseDialog()
 
 function onClose()
 {
-  if (gTimerID)
-  {
-    clearTimeout(gTimerID);
-    gTimerID = null;
-  }
-
-  if (!gFinished)
-  {
-    gTransfer.cancel();
-  }
-  SaveWindowLocation();
-  PassBackParams();
-
+  CleanUpDialog();
   return true;
 }
-
 
 // called, if the user presses Cancel in the conflict resolve dialog
 function onCancel()
 {
-  onClose();
   CloseDialog();
 }
 
