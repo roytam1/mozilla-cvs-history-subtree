@@ -91,6 +91,7 @@ CPPSRCS		= \
 		nsMsgI18N.cpp \
 		nsMsgUtf7Utils.cpp \
 		nsAdapterEnumerator.cpp \
+		nsImapMoveCoalescer.cpp \
 		$(NULL)
 
 EXPORTS		= \
@@ -112,6 +113,7 @@ EXPORTS		= \
 		nsMsgI18N.h \
 		nsMsgUtf7Utils.h \
 		nsAdapterEnumerator.h \
+		nsImapMoveCoalescer.h \
 		$(NULL)
 
 ifndef MOZ_STATIC_MAIL_BUILD
