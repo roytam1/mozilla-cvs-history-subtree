@@ -25,6 +25,7 @@ REQUIRES	= xpcom \
 		  string \
 		  intl \
 		  appstartup \
+		  xpinstall \
 		  $(NULL)
 
 EXPORTS =                  \

@@ -26,7 +26,7 @@
 #include "nsIComponentRegistrar.h"
 #include "nsIAppStartupNotifier.h"
 #include "nsIStringBundle.h"
-
+#include "nsISoftwareUpdate.h"
 #include "nsIDirectoryService.h"
 
 #include "nsEmbedAPI.h"
@@ -93,28 +93,40 @@ nsresult NS_InitEmbedding(nsILocalFile *mozBinDirectory,
     // Register components
     if (!sRegistryInitializedFlag)
     {
-        nsCOMPtr<nsIComponentRegistrar> registrar = do_QueryInterface(sServiceManager, &rv);
-        if (NS_FAILED(rv))
+        // Only autoreg if we're a debug build, or the registry key is set.
+        PRBool needAutoReg;
+#ifdef DEBUG
+        needAutoReg = PR_TRUE;
+#else
+        needAutoReg = NS_SoftwareUpdateNeedsAutoReg();
+#endif
+
+        if (needAutoReg)
         {
-            NS_ASSERTION(PR_FALSE, "Could not QI to registrar");
-            return rv;
+            nsCOMPtr<nsIComponentRegistrar> registrar = do_QueryInterface(sServiceManager, &rv);
+            if (NS_FAILED(rv))
+            {
+                NS_ASSERTION(PR_FALSE, "Could not QI to registrar");
+                return rv;
+            }
+
+            rv = registrar->AutoRegister(nsnull);
+
+            if (NS_FAILED(rv))
+            {
+                NS_ASSERTION(PR_FALSE, "Could not AutoRegister");
+                return rv;
+            }
+
+            NS_SoftwareUpdateDidAutoReg();
+            sRegistryInitializedFlag = PR_TRUE;
         }
-
-        rv = registrar->AutoRegister(nsnull);
-
-        if (NS_FAILED(rv))
-        {
-            NS_ASSERTION(PR_FALSE, "Could not AutoRegister");
-            return rv;
-        }
-
-        sRegistryInitializedFlag = PR_TRUE;
     }
 
-	nsCOMPtr<nsIObserver> mStartupNotifier = do_CreateInstance(NS_APPSTARTUPNOTIFIER_CONTRACTID, &rv);
-	if(NS_FAILED(rv))
-		return rv;
-	mStartupNotifier->Observe(nsnull, APPSTARTUP_TOPIC, nsnull);
+    nsCOMPtr<nsIObserver> mStartupNotifier = do_CreateInstance(NS_APPSTARTUPNOTIFIER_CONTRACTID, &rv);
+    if(NS_FAILED(rv))
+        return rv;
+    mStartupNotifier->Observe(nsnull, APPSTARTUP_TOPIC, nsnull);
 
 #ifdef HACK_AROUND_THREADING_ISSUES
     // XXX force certain objects to be created on the main thread

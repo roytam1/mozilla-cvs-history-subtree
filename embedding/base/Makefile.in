@@ -39,6 +39,7 @@ REQUIRES	= xpcom \
 		  intl \
 		  embedcomponents \
 		  timer \
+		  xpinstall \
 		  $(NULL)
 
 EXPORTS         = \
