@@ -5172,7 +5172,9 @@ nsresult nsPluginHostImpl::FindPlugins(PRBool aCreatePluginList, PRBool * aPlugi
   if (aCreatePluginList)
   NS_TIMELINE_START_TIMER("LoadPlugins");
 
+#ifdef NS_DEBUG
   printf("nsPluginHostImpl::FindPlugins here.\n");
+#endif
 
 #ifdef CALL_SAFETY_ON
   // check preferences on whether or not we want to try safe calls to plugins
@@ -5220,7 +5222,9 @@ nsresult nsPluginHostImpl::FindPlugins(PRBool aCreatePluginList, PRBool * aPlugi
   // 1. Scan the app-defined list of plugin dirs.
   rv = dirService->Get(NS_APP_PLUGINS_DIR_LIST, NS_GET_IID(nsISimpleEnumerator), getter_AddRefs(dirList));
   if (NS_SUCCEEDED(rv)) {
+#ifdef NS_DEBUG
     printf("scanning plugins directory list.\n");
+#endif
     ScanPluginsDirectoryList(dirList, compManager, aCreatePluginList, &pluginschanged);
 
     if (pluginschanged)
@@ -6118,14 +6122,14 @@ nsresult nsPluginHostImpl::NewEmbededPluginStream(nsIURI* aURL,
                                                   nsIPluginInstanceOwner *aOwner,
                                                   nsIPluginInstance* aInstance)
 {
+  if (!aURL)
+    return NS_OK;
+
   nsPluginStreamListenerPeer  *listener = (nsPluginStreamListenerPeer *)new nsPluginStreamListenerPeer();
   if (listener == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
 
   nsresult rv;
-
-  if (!aURL)
-    return NS_OK;
 
   // if we have an instance, everything has been set up
   // if we only have an owner, then we need to pass it in
@@ -6145,6 +6149,7 @@ nsresult nsPluginHostImpl::NewEmbededPluginStream(nsIURI* aURL,
 
   //NS_RELEASE(aURL);
 
+  delete listener;
   return rv;
 }
 
