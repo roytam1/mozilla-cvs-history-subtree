@@ -973,9 +973,11 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   PRBool bidiEnabled;
   mPresContext->BidiEnabled(bidiEnabled);
   PRBool visual;
-  nsIFrame* formFrame = nsnull;
+  PRBool setMode = PR_FALSE;
 
   if (bidiEnabled) {
+    nsIFrame* formFrame;
+  
     if (frameType == nsLayoutAtoms::textFrame) {
       aFrame->GetOffsets(start, end);
       if (start < end) {
@@ -991,25 +993,12 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       nsBidiOptions options;
     	mPresContext->GetBidi(&options);
 
-      if (IBMBIDI_CONTROLSTEXTMODE_VISUAL == options.mcontrolstextmode) {
-        mPresContext->SetVisualMode(PR_TRUE);
-      }
-      else if (IBMBIDI_CONTROLSTEXTMODE_LOGICAL == options.mcontrolstextmode) {
-        mPresContext->SetVisualMode(PR_FALSE);
-      }
-      else { // IBMBIDI_CONTROLSTEXTMODE_CONTAINER
-        nsILanguageAtom* lang;
-        if (NS_SUCCEEDED(mPresContext->GetLanguage(&lang) ) && lang) {
-          static const PRUnichar buffer[] = 
-            {0x0068, 0x0065, 0x002d, 0x0069, 0x006c, 0x0000}; // he-il
-          PRBool hebrew;
-          lang->LanguageIs(buffer, &hebrew);
-          if (hebrew) {
-            // Ensure logical text type for Hebrew
-            mPresContext->SetVisualMode(PR_FALSE);
-          }
-        }
-        NS_IF_RELEASE(lang);
+      if ( (IBMBIDI_CONTROLSTEXTMODE_VISUAL == options.mcontrolstextmode
+            && !visual)
+          || (IBMBIDI_CONTROLSTEXTMODE_LOGICAL == options.mcontrolstextmode
+            && visual) ) {
+        mPresContext->SetVisualMode(!visual);
+        setMode = PR_TRUE;
       }
     }
   }
@@ -1017,7 +1006,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   aFrame->Reflow(mPresContext, metrics, reflowState, aReflowStatus);
 
 #ifdef IBMBIDI
-  if (formFrame) {
+  if (setMode) {
     mPresContext->SetVisualMode(visual);
   }
 #endif // IBMBIDI
@@ -2430,11 +2419,6 @@ PRBool
 nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
                                        nscoord* aDeltaWidth)
 {
-#ifdef IBMBIDI
-  PRBool isVisual;
-  mPresContext->IsVisualMode(isVisual);
-  if (isVisual)
-#endif // IBMBIDI
 // XXX what about NS_STYLE_DIRECTION_RTL?
   if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
     *aDeltaWidth = 0;
@@ -2676,6 +2660,14 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
 #endif
   if (remainingWidth > 0) {
     nscoord dx = 0;
+#ifdef IBMBIDI
+    PerFrameData* lastPfd = psd->mLastFrame;
+    PerFrameData* bulletPfd = nsnull;
+    if (lastPfd->GetFlag(PFD_ISBULLET) ) {
+      bulletPfd = lastPfd;
+      lastPfd = lastPfd->mPrev;
+    }
+#endif // IBMBIDI
     switch (mTextAlign) {
       case NS_STYLE_TEXT_ALIGN_DEFAULT:
         if (NS_STYLE_DIRECTION_LTR == psd->mDirection) {
@@ -2735,7 +2727,7 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
       }
       mPresContext->IsVisualMode(visualRTL);
     }
-    if ( (0 != dx) || (visualRTL) ) {
+    if ( (0 != dx) || visualRTL) {
 #else
     if (0 != dx) {
 #endif // IBMBIDI
@@ -2745,25 +2737,44 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         return PR_FALSE;
       }
 
-      PerFrameData* pfd = psd->mFirstFrame;
+      PerFrameData* pfd = 
 #ifdef IBMBIDI
-      PRUint32 maxX = psd->mLastFrame->mBounds.x
-          + psd->mLastFrame->mBounds.width + dx;
+        (visualRTL) ? lastPfd :
 #endif // IBMBIDI
-      while (nsnull != pfd) {
-        pfd->mBounds.x += dx;
+        psd->mFirstFrame;
 #ifdef IBMBIDI
-        if (visualRTL) {
-          maxX = pfd->mBounds.x = maxX - pfd->mBounds.width;
+      aLineBounds.width += dx;
+
+      if (bulletPfd) {
+        if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
+          dx -= bulletPfd->mBounds.width;
         }
+      }
+      while ( (nsnull != pfd) && (bulletPfd != pfd) ) {
+#else
+      while (nsnull != pfd) {
 #endif // IBMBIDI
+        pfd->mBounds.x += dx;
         pfd->mFrame->SetRect(mPresContext, pfd->mBounds);
+#ifdef IBMBIDI
+        if (visualRTL)
+          pfd = pfd->mPrev;
+        else
+#endif // IBMBIDI
         pfd = pfd->mNext;
       }
+#ifndef IBMBIDI
       aLineBounds.width += dx;
+#endif
     }
 
-#ifndef IBMBIDI
+#ifdef IBMBIDI
+    if (bulletPfd && (NS_STYLE_DIRECTION_RTL == psd->mDirection) ) {
+      bulletPfd->mBounds.x = aLineBounds.x + aLineBounds.width
+        - bulletPfd->mBounds.width;
+      bulletPfd->mFrame->SetRect(mPresContext, bulletPfd->mBounds);
+    }
+#else
     if ((NS_STYLE_DIRECTION_RTL == psd->mDirection) &&
         !psd->mChangedFrameDirection) {
       psd->mChangedFrameDirection = PR_TRUE;

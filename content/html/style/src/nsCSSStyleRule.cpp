@@ -55,6 +55,10 @@
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
 
+#ifdef IBMBIDI
+#include "nsIPresShell.h"
+#endif // IBMBIDI
+
 // #define DEBUG_REFS
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -1853,6 +1857,22 @@ MapDeclarationTextInto(nsICSSDeclaration* aDeclaration,
       // word-spacing: normal, length, inherit
       SetCoord(ourText->mWordSpacing, text->mWordSpacing, parentText->mWordSpacing,
                SETCOORD_LH | SETCOORD_NORMAL, aFont->mFont, aPresContext);
+
+#ifdef IBMBIDI
+      // unicode-bidi: enum, normal, inherit
+      // normal means that override prohibited
+      if (eCSSUnit_Normal == ourText->mUnicodeBidi.GetUnit() ) {
+        text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_NORMAL;
+      }
+      else {
+        if (eCSSUnit_Enumerated == ourText->mUnicodeBidi.GetUnit() ) {
+          text->mUnicodeBidi = ourText->mUnicodeBidi.GetIntValue();
+        }
+        if (NS_STYLE_UNICODE_BIDI_INHERIT == text->mUnicodeBidi) {
+          text->mUnicodeBidi = parentText->mUnicodeBidi;
+        }
+      }
+#endif // IBMBIDI
     }
   }
 }

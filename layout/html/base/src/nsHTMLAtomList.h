@@ -65,6 +65,9 @@ HTML_ATOM(area, "area")
 HTML_ATOM(axis, "axis")
 HTML_ATOM(background, "background")
 HTML_ATOM(below, "below")
+#ifdef IBMBIDI
+HTML_ATOM(bdo, "bdo")
+#endif // IBMBIDI
 HTML_ATOM(bgcolor, "bgcolor")
 HTML_ATOM(body, "body")
 HTML_ATOM(border, "border")

@@ -1129,7 +1129,7 @@ void StyleTextImpl::ResetFrom(const nsStyleText* aParent, nsIPresContext* aPresC
     mTextIndent.SetCoordValue(0);
     mWordSpacing.SetNormalValue();
 #ifdef IBMBIDI
-    mUnicodeBidi = NS_STYLE_UNICODE_BIDI_NORMAL;
+    mUnicodeBidi = NS_STYLE_UNICODE_BIDI_INHERIT;
 #endif // IBMBIDI
   }
 }

@@ -509,7 +509,7 @@ pref("bidi.texttype", 1);
 // 1 = logicalcontrolstextmodeBidiCmd
 // 2 = visiualcontrolstextmodeBidi
 // 3 = containercontrolstextmodeBidi *
-pref("bidi.controlstextmode", 3);
+pref("bidi.controlstextmode", 1);
 // ------------------
 //  Clipboard Text Mode
 // ------------------

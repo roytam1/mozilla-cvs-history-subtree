@@ -138,6 +138,25 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
 }
 
+#ifdef IBMBIDI
+static void
+MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
+                     nsIMutableStyleContext* aContext,
+                     nsIPresContext* aPresContext)
+{
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);
+
+  nsStyleDisplay* display = (nsStyleDisplay*)
+    aContext->GetMutableStyleData(eStyleStruct_Display);
+
+  if (display->mExplicitDirection != NS_STYLE_DIRECTION_INHERIT) {
+    nsStyleText* text = (nsStyleText*)
+      aContext->GetMutableStyleData(eStyleStruct_Text);
+    text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_OVERRIDE;
+  }
+}
+#endif // IBMBIDI
+
 NS_IMETHODIMP
 nsHTMLSpanElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                             PRInt32& aHint) const
@@ -154,10 +173,20 @@ nsHTMLSpanElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFun
                                                 nsMapAttributesFunc& aMapFunc) const
 {
   aFontMapFunc = nsnull;
+
+#ifdef IBMBIDI
+  // Instead, we could derive class nsHTMLBdoElement : public nsHTMLSpanElement
+  // But this would add more code...
+  nsCOMPtr<nsIAtom> tag;
+  GetTag(*getter_AddRefs(tag) ); 
+
+  if (nsHTMLAtoms::bdo == tag)
+    aMapFunc = &MapBdoAttributesInto;
+  else
+#endif // IBMBIDI
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }
-
 
 NS_IMETHODIMP
 nsHTMLSpanElement::HandleDOMEvent(nsIPresContext* aPresContext,

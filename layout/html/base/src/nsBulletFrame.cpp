@@ -906,6 +906,14 @@ nsBulletFrame::GetListItemText(nsIPresContext* aCX,
       CharListToText(mOrdinal, result, gCJKEarthlyBranchChars, CJK_EARTHLY_BRANCH_CHARS_SIZE);
       break;
   }
+#ifdef IBMBIDI
+  const nsStyleDisplay* display;
+  GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+
+  if (NS_STYLE_DIRECTION_RTL == display->mDirection)
+    result.InsertWithConversion(".", 0, 1);
+  else
+#endif // IBMBIDI
   result.AppendWithConversion(".");
 }
 
