@@ -124,6 +124,8 @@ struct berval ** avref2berptrptr(SV *avref)
    {
       current_val = av_fetch((AV *)SvRV(avref),ix_av,0);
       tmp_ber[ix_av]->bv_val = strdup(SvPV(*current_val,na));
+      /* tmp_ber[ix_av]->bv_val = malloc(na+1); */
+      /* Copy(tmp_ber[ix_av]->bv_val,current_val,na); */
       tmp_ber[ix_av]->bv_len = na;
    }
    tmp_ber[ix_av] = NULL;
@@ -443,6 +445,20 @@ void
 ldap_ber_free(ber,freebuf)
 	BerElement *	ber
 	int		freebuf
+
+int
+ldap_bind(ld,dn,passwd,authmethod)
+	LDAP *		ld
+	const char *	dn
+	const char *	passwd
+	int		authmethod
+
+int
+ldap_bind_s(ld,dn,passwd,authmethod)
+	LDAP *		ld
+	const char *	dn
+	const char *	passwd
+	int		authmethod
 
 int
 ldap_compare(ld,dn,attr,value)
@@ -1467,6 +1483,8 @@ ldapssl_client_init(certdbpath,certdbhandle)
 	const char *	certdbpath
 	void *		certdbhandle
 
+#ifdef LDAPV3
+
 int
 ldapssl_clientauth_init(certdbpath,certdbhandle,needkeydb,keydbpath,keydbhandle)
 	char *		certdbpath
@@ -1481,6 +1499,8 @@ ldapssl_enable_clientauth(ld,keynickname,keypasswd,certnickname)
 	char *		keynickname
 	char *		keypasswd
 	char *		certnickname
+
+#endif
 
 LDAP *
 ldapssl_init(host,port,secure)
