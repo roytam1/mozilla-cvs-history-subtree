@@ -31,7 +31,11 @@ else
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
 OSDIR		= win
 else
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+OSDIR		= mac
+else
 OSDIR		= unix
+endif
 endif
 endif
 
@@ -55,7 +59,19 @@ REQUIRES	= xpcom \
 		  intl \
 		  $(NULL)
 
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+REQUIRES		+= windowwatcher \
+	             $(NULL)
+endif
+
 OSHELPER	= nsOSHelperAppService.cpp
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+OSHELPER		+= nsInternetConfig.cpp \
+		nsInternetConfigService.cpp \
+		nsMacMIMEDataSource.cpp \
+			$(NULL)
+endif
 
 EXPORTS = 	nsExternalHelperAppService.h \
 		nsExternalProtocolHandler.h \
@@ -68,6 +84,10 @@ XPIDLSRCS = \
 	nsIExternalProtocolService.idl \
 	nsIExternalHelperAppService.idl	\
 	$(NULL)
+	
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+XPIDLSRCS		+= nsIInternetConfigService.idl
+endif
 
 CPPSRCS	= \
 	nsExternalHelperAppService.cpp	\
