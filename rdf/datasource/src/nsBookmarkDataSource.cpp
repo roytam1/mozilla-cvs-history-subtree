@@ -732,7 +732,7 @@ public:
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFAssertionCursor** sources) {
+                          nsIRDFEnumerator** sources) {
         return mInner->GetSources(property, target, tv, sources);
     }
 
@@ -744,7 +744,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFAssertionCursor** targets) {
+                          nsIRDFEnumerator** targets) {
         return mInner->GetTargets(source, property, tv, targets);
     }
 
@@ -774,17 +774,17 @@ public:
     }
 
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFArcsInCursor** labels) {
+                           nsIRDFEnumerator** labels) {
         return mInner->ArcLabelsIn(node, labels);
     }
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFArcsOutCursor** labels) {
+                            nsIRDFEnumerator** labels) {
         return mInner->ArcLabelsOut(source, labels);
     }
 
-    NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor) {
-        return mInner->GetAllResources(aCursor);
+    NS_IMETHOD GetAllResources(nsIRDFEnumerator** aResult) {
+        return mInner->GetAllResources(aResult);
     }
 
     NS_IMETHOD Flush(void);

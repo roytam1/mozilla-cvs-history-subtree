@@ -60,12 +60,12 @@ public:
 	NS_IMETHOD GetSources(nsIRDFResource* property,
 						nsIRDFNode* target,
 						PRBool tv,
-						nsIRDFAssertionCursor** sources);
+						nsIRDFEnumerator** sources);
 
 	NS_IMETHOD GetTargets(nsIRDFResource* source,
 						nsIRDFResource* property,    
 						PRBool tv,
-						nsIRDFAssertionCursor** targets);
+						nsIRDFEnumerator** targets);
 
 	NS_IMETHOD Assert(nsIRDFResource* source,
 					nsIRDFResource* property, 
@@ -87,12 +87,12 @@ public:
 	NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
 	NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-						 nsIRDFArcsInCursor** labels);
+						 nsIRDFEnumerator** labels);
 
 	NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-						  nsIRDFArcsOutCursor** labels); 
+						  nsIRDFEnumerator** labels); 
 
-	NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor);
+	NS_IMETHOD GetAllResources(nsIRDFEnumerator** aCursor);
 
 	NS_IMETHOD Flush();
 

@@ -57,10 +57,10 @@ public:
   NS_IMETHOD GetTargets(nsIRDFResource *source,
                         nsIRDFResource *aProperty,
                         PRBool aTruthValue,
-                        nsIRDFAssertionCursor **_retval);
+                        nsIRDFEnumerator **_retval);
 
-  /* nsIRDFArcsOutCursor ArcLabelsOut (in nsIRDFResource aSource); */
-  NS_IMETHOD ArcLabelsOut(nsIRDFResource *source, nsIRDFArcsOutCursor **_retval);
+  /* nsIRDFEnumerator ArcLabelsOut (in nsIRDFResource aSource); */
+  NS_IMETHOD ArcLabelsOut(nsIRDFResource *source, nsIRDFEnumerator **_retval);
 
 protected:
 
@@ -169,12 +169,12 @@ nsMsgAccountDataSource::GetTarget(nsIRDFResource *source,
   return rv;
 }
 
-/* nsIRDFAssertionCursor GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
+/* nsIRDFEnumerator GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
 NS_IMETHODIMP
 nsMsgAccountDataSource::GetTargets(nsIRDFResource *source,
                                    nsIRDFResource *property,
                                    PRBool aTruthValue,
-                                   nsIRDFAssertionCursor **_retval)
+                                   nsIRDFEnumerator **_retval)
 {
   nsresult rv = NS_RDF_NO_VALUE;
 
@@ -191,10 +191,10 @@ nsMsgAccountDataSource::GetTargets(nsIRDFResource *source,
 }
 
 
-/* nsIRDFArcsOutCursor ArcLabelsOut (in nsIRDFResource aSource); */
+/* nsIRDFEnumerator ArcLabelsOut (in nsIRDFResource aSource); */
 NS_IMETHODIMP
 nsMsgAccountDataSource::ArcLabelsOut(nsIRDFResource *source,
-                                     nsIRDFArcsOutCursor **_retval)
+                                     nsIRDFEnumerator **_retval)
 {
   nsresult rv = NS_RDF_NO_VALUE;
 

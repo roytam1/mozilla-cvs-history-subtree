@@ -113,9 +113,9 @@ nsMsgRDFDataSource::GetSource(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PR
 }
 
 
-/* nsIRDFAssertionCursor GetSources (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
+/* nsIRDFEnumerator GetSources (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
 NS_IMETHODIMP
-nsMsgRDFDataSource::GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFAssertionCursor **_retval)
+nsMsgRDFDataSource::GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFEnumerator **_retval)
 {
     return NS_RDF_NO_VALUE;
 }
@@ -129,9 +129,9 @@ nsMsgRDFDataSource::GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty
 }
 
 
-/* nsIRDFAssertionCursor GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
+/* nsIRDFEnumerator GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
 NS_IMETHODIMP
-nsMsgRDFDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFAssertionCursor **_retval)
+nsMsgRDFDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFEnumerator **_retval)
 {
     return NS_RDF_NO_VALUE;
 }
@@ -185,25 +185,25 @@ nsMsgRDFDataSource::RemoveObserver(nsIRDFObserver *aObserver)
 }
 
 
-/* nsIRDFArcsInCursor ArcLabelsIn (in nsIRDFNode aNode); */
+/* nsIRDFEnumerator ArcLabelsIn (in nsIRDFNode aNode); */
 NS_IMETHODIMP
-nsMsgRDFDataSource::ArcLabelsIn(nsIRDFNode *aNode, nsIRDFArcsInCursor **_retval)
+nsMsgRDFDataSource::ArcLabelsIn(nsIRDFNode *aNode, nsIRDFEnumerator **_retval)
 {
     return NS_RDF_NO_VALUE;
 }
 
 
-/* nsIRDFArcsOutCursor ArcLabelsOut (in nsIRDFResource aSource); */
+/* nsIRDFEnumerator ArcLabelsOut (in nsIRDFResource aSource); */
 NS_IMETHODIMP
-nsMsgRDFDataSource::ArcLabelsOut(nsIRDFResource *aSource, nsIRDFArcsOutCursor **_retval)
+nsMsgRDFDataSource::ArcLabelsOut(nsIRDFResource *aSource, nsIRDFEnumerator **_retval)
 {
     return NS_RDF_NO_VALUE;
 }
 
 
-/* nsIRDFResourceCursor GetAllResources (); */
+/* nsIRDFEnumerator GetAllResources (); */
 NS_IMETHODIMP
-nsMsgRDFDataSource::GetAllResources(nsIRDFResourceCursor **_retval)
+nsMsgRDFDataSource::GetAllResources(nsIRDFEnumerator **_retval)
 {
     return NS_RDF_NO_VALUE;
 }
