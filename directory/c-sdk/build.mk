@@ -25,13 +25,22 @@ ifdef HAVE_CCONF
 NSPR_RELEASE_TAG=v4.1.2
 NSS_RELEASE_TAG	=NSS_3_3_RTM
 SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM
+# NSPR, NSS, and SVRCORE already had existing Solaris 5.8 symbolic
+# link to a Solaris 5.6 version.  Hence, the new respun components
+# were put in in a forte6 directory in each of the component 
+# respectively.  For Solaris 5.8 only we have to pick up the components
+# from the forte6 directory.  As we move forward with new components,
+# we can take the mess below out        
+# Michael.....
 ifeq ($(OS_ARCH), SunOS)
 ifneq ($(USE_64), 1)
 OS_VERS         := $(shell uname -r)
 ifeq ($(OS_VERS),5.8)
+ifneq ($(OS_TEST),i86pc)
 NSPR_RELEASE_TAG=v4.1.2/forte6
 NSS_RELEASE_TAG	=NSS_3_3_RTM/forte6
 SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM/forte6
+endif
 endif
 endif
 endif
