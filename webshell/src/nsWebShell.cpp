@@ -797,22 +797,6 @@ nsWebShell::GetDocumentLoader(nsIDocumentLoader*& aResult)
 static void convertFileToURL(nsString &aIn, nsString &aOut)
 {
 #ifdef XP_PC
-  PRInt32 colon, fSlash;
-  PRUnichar port;
-  nsAutoString urlSpec(aURLSpec);
-
-  fSlash=urlSpec.Find('/');
-
-  // if no scheme (protocol) is found, assume http.
-  if ( ((colon=urlSpec.Find(':')) == -1) // no colon at all
-      || ( (fSlash > -1) && (colon > fSlash) ) // the only colon comes after the first slash
-      || ( (colon < urlSpec.Length()-1) // the first char after the first colon is a digit (i.e. a port)
-            && ((port=urlSpec.CharAt(colon+1)) < '9')
-            && (port > '0') )
-      ) {
-    nsString httpDef("http://");
-    urlSpec.Insert(httpDef, 0, 7);
-  }
   char szFile[1000];
   aIn.ToCString(szFile, sizeof(szFile));
   if (PL_strchr(szFile, '\\')) {
@@ -845,9 +829,24 @@ NS_IMETHODIMP
 nsWebShell::LoadURL(const PRUnichar* aURLSpec,
                     nsIPostData* aPostData)
 {
-  nsAutoString urlSpec;
   nsresult rv;
+  PRInt32 colon, fSlash;
+  PRUnichar port;
+  nsAutoString urlSpec;
   convertFileToURL(nsString(aURLSpec), urlSpec);
+
+  fSlash=urlSpec.Find('/');
+
+  // if no scheme (protocol) is found, assume http.
+  if ( ((colon=urlSpec.Find(':')) == -1) // no colon at all
+      || ( (fSlash > -1) && (colon > fSlash) ) // the only colon comes after the first slash
+      || ( (colon < urlSpec.Length()-1) // the first char after the first colon is a digit (i.e. a port)
+            && ((port=urlSpec.CharAt(colon+1)) < '9')
+            && (port > '0') )
+      ) {
+    nsString httpDef("http://");
+    urlSpec.Insert(httpDef, 0, 7);
+  }
 
   // Give web-shell-container right of refusal
   if (nsnull != mContainer) {
