@@ -20,6 +20,9 @@
 
 static NS_DEFINE_IID(kISupportsArrayIID, NS_ISUPPORTSARRAY_IID);
 
+static const PRInt32 kGrowArrayBy = 8;
+static const PRInt32 kAutoArraySize = 4;
+
 class SupportsArrayImpl : public nsISupportsArray {
 public:
   SupportsArrayImpl(void);
@@ -54,12 +57,16 @@ public:
 
   NS_IMETHOD_(void)   Compact(void);
 
+  NS_IMETHOD_(PRBool) EnumerateForwards(nsISupportsArrayEnumFunc aFunc, void* aData);
+  NS_IMETHOD_(PRBool) EnumerateBackwards(nsISupportsArrayEnumFunc aFunc, void* aData);
+
 protected:
   void DeleteArray(void);
 
   nsISupports** mArray;
   PRInt32 mArraySize;
   PRInt32 mCount;
+  nsISupports*  mAutoArray[kAutoArraySize];
 
 private:
   // Copy constructors are not allowed
@@ -67,15 +74,11 @@ private:
 };
 
 
-
-
-static PRInt32 kGrowArrayBy = 8;
-
 SupportsArrayImpl::SupportsArrayImpl()
 {
   NS_INIT_REFCNT();
-  mArray = 0;
-  mArraySize = 0;
+  mArray = &(mAutoArray[0]);
+  mArraySize = kAutoArraySize;
   mCount = 0;
 }
 
@@ -88,11 +91,11 @@ NS_IMPL_ISUPPORTS(SupportsArrayImpl, kISupportsArrayIID);
 
 void SupportsArrayImpl::DeleteArray(void)
 {
-  if (0 != mArray) {
-    Clear();
+  Clear();
+  if (mArray != &(mAutoArray[0])) {
     delete[] mArray;
-    mArray = 0;
-    mArraySize = 0;
+    mArray = &(mAutoArray[0]);
+    mArraySize = kAutoArraySize;
   }
 }
 
@@ -192,7 +195,9 @@ PRBool SupportsArrayImpl::InsertElementAt(nsISupports* aElement, PRInt32 aIndex)
         if (0 < slide) {
           ::memcpy(mArray + aIndex + 1, oldArray + aIndex, slide * sizeof(nsISupports*));
         }
-        delete[] oldArray;
+        if (oldArray != &(mAutoArray[0])) {
+          delete[] oldArray;
+        }
       }
     }
     else {
@@ -274,19 +279,48 @@ void SupportsArrayImpl::Clear(void)
 
 void SupportsArrayImpl::Compact(void)
 {
-  if (mArraySize != mCount) {
+  if ((mArraySize != mCount) && (kAutoArraySize < mArraySize)) {
     nsISupports** oldArray = mArray;
-    mArray = new nsISupports*[mCount];
+    PRInt32 oldArraySize = mArraySize;
+    if (mCount <= kAutoArraySize) {
+      mArray = &(mAutoArray[0]);
+      mArraySize = kAutoArraySize;
+    }
+    else {
+      mArray = new nsISupports*[mCount];
+      mArraySize = mCount;
+    }
     if (0 == mArray) {
       mArray = oldArray;
+      mArraySize = oldArraySize;
       return;
     }
     ::memcpy(mArray, oldArray, mCount * sizeof(nsISupports*));
     delete[] oldArray;
-    mArraySize = mCount;
   }
 }
 
+PRBool SupportsArrayImpl::EnumerateForwards(nsISupportsArrayEnumFunc aFunc, void* aData)
+{
+  PRInt32 index = -1;
+  PRBool  running = PR_TRUE;
+
+  while (running && (++index < mCount)) {
+    running = (*aFunc)(mArray[index], aData);
+  }
+  return running;
+}
+
+PRBool SupportsArrayImpl::EnumerateBackwards(nsISupportsArrayEnumFunc aFunc, void* aData)
+{
+  PRInt32 index = mCount;
+  PRBool  running = PR_TRUE;
+
+  while (running && (0 <= --index)) {
+    running = (*aFunc)(mArray[index], aData);
+  }
+  return running;
+}
 
 
 NS_COM nsresult

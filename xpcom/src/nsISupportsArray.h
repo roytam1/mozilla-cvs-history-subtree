@@ -27,6 +27,9 @@
 {0x791eafa0, 0xb9e6, 0x11d1,  \
     {0x80, 0x31, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
 
+// Enumerator callback function. Return PR_FALSE to stop
+typedef PRBool (*nsISupportsArrayEnumFunc)(nsISupports* aElement, void *aData);
+
 class nsISupportsArray : public nsISupports {
 public:
   NS_IMETHOD_(nsISupportsArray&) operator=(const nsISupportsArray& other) = 0;
@@ -53,6 +56,9 @@ public:
   NS_IMETHOD_(void)   Clear(void) = 0;
 
   NS_IMETHOD_(void)   Compact(void) = 0;
+
+  NS_IMETHOD_(PRBool) EnumerateForwards(nsISupportsArrayEnumFunc aFunc, void* aData) = 0;
+  NS_IMETHOD_(PRBool) EnumerateBackwards(nsISupportsArrayEnumFunc aFunc, void* aData) = 0;
 
 private:
   // Copy constructors are not allowed
