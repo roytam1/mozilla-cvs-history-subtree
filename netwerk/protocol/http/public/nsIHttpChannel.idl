@@ -79,6 +79,18 @@ interface nsIHttpChannel : nsIChannel
     readonly attribute ACString responseStatusText;
 
     /**
+     * Returns true if the HTTP response code indicates success.  The value of
+     * nsIRequest::status will be NS_OK even when processing a 404 response
+     * because a 404 response may include a message body that (in some cases)
+     * should be shown to the user.
+     *
+     * Use this attribute to distinguish server error pages from normal pages,
+     * instead of comparing the response status manually against the set of
+     * valid response codes, if that is required by your application.
+     */
+    readonly attribute boolean requestSucceeded;
+
+    /**
      * Header strings are case insensitive
      */
     ACString getResponseHeader(in ACString header);
