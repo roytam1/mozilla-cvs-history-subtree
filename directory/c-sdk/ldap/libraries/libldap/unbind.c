@@ -71,7 +71,6 @@ int
 ldap_ld_free( LDAP *ld, LDAPControl **serverctrls,
     LDAPControl **clientctrls, int close )
 {
-	int		i;
 	LDAPMessage	*lm, *next;
 	int		err = LDAP_SUCCESS;
 	LDAPRequest	*lr, *nextlr;
@@ -161,11 +160,10 @@ ldap_ld_free( LDAP *ld, LDAPControl **serverctrls,
 		ldap_memcache_set( ld, NULL );
 	}
 
-        for( i=0; i<LDAP_MAX_LOCK; i++ ) {
-		LDAP_MUTEX_FREE( ld, ld->ld_mutex[i] );
-	}
-
+	/* free all mutexes we have allocated */
+	nsldapi_mutex_free_all( ld );
 	NSLDAPI_FREE( ld->ld_mutex );
+
 	NSLDAPI_FREE( (char *) ld );
 
 	return( err );

@@ -99,8 +99,9 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	}
 
 	rc = 0;
-	if ( ld != &nsldapi_ld_defaults &&
-		option != LDAP_OPT_EXTRA_THREAD_FN_PTRS) {
+	if ( ld != &nsldapi_ld_defaults
+		&& option != LDAP_OPT_EXTRA_THREAD_FN_PTRS
+		&& option != LDAP_OPT_THREAD_FN_PTRS ) {
 	    LDAP_MUTEX_LOCK( ld, LDAP_OPTION_LOCK );
 	}
 	switch( option ) {
@@ -212,19 +213,20 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 
 	/* thread function pointers */
 	case LDAP_OPT_THREAD_FN_PTRS:
+		/*
+		 * It is only safe to set the thread function pointers
+		 * when one thread is using the LDAP session handle.
+		 */
+		/* free existing mutexes (some are allocated by ldap_init()) */
+		nsldapi_mutex_free_all( ld );
+
 		/* struct copy */
 		ld->ld_thread = *((struct ldap_thread_fns *) optdata);
-		if ( ld->ld_mutex_alloc_fn != NULL &&
-		    ld != &nsldapi_ld_defaults &&
-		    ld->ld_mutex != NULL ) {
-			for( i=0; i<LDAP_MAX_LOCK; i++ ) {
-				ld->ld_mutex[i] = (ld->ld_mutex_alloc_fn)();
-			}
-		}
-		/*
-		 * Because we have just replaced the locking functions,
-		 * we return here without unlocking the LDAP_OPTION_LOCK.
-		 */
+
+		/* allocate new mutexes */
+		nsldapi_mutex_alloc_all( ld );
+
+		/* LDAP_OPTION_LOCK was never locked... so just return */
 		return (rc);
 
 	/* extra thread function pointers */
@@ -247,6 +249,7 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
                 ld->ld_mutex_refcnt[i] = 0;
             }
 
+	/* LDAP_OPTION_LOCK was never locked... so just return */
 	    return (rc);
 
 	/* DNS function pointers */

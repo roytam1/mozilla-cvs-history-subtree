@@ -484,7 +484,6 @@ LDAP_CALL
 ldap_init( const char *defhost, int defport )
 {
 	LDAP	*ld;
-	int	i;
 
 	if ( !nsldapi_initialized ) {
 		nsldapi_initialize_defaults();
@@ -562,16 +561,40 @@ ldap_init( const char *defhost, int defport )
 	}
 
 	/* allocate mutexes */
-	for( i=0; i<LDAP_MAX_LOCK; i++ ) {
-		ld->ld_mutex[i] = LDAP_MUTEX_ALLOC( ld );
-		ld->ld_mutex_threadid[i] = (void *) -1; 
-		ld->ld_mutex_refcnt[i] = 0; 
-	} 
+	nsldapi_mutex_alloc_all( ld );
 
 	/* set default port */
 	ld->ld_defport = ( defport == 0 ) ? LDAP_PORT : defport;
 
 	return( ld );
+}
+
+
+void
+nsldapi_mutex_alloc_all( LDAP *ld )
+{
+	int	i;
+
+	if ( ld != &nsldapi_ld_defaults && ld->ld_mutex != NULL ) {
+		for ( i = 0; i<LDAP_MAX_LOCK; i++ ) {
+			ld->ld_mutex[i] = LDAP_MUTEX_ALLOC( ld );
+			ld->ld_mutex_threadid[i] = (void *) -1; 
+			ld->ld_mutex_refcnt[i] = 0; 
+		}
+	} 
+}
+
+
+void
+nsldapi_mutex_free_all( LDAP *ld )
+{
+	int	i;
+
+	if ( ld != &nsldapi_ld_defaults && ld->ld_mutex != NULL ) {
+		for ( i = 0; i<LDAP_MAX_LOCK; i++ ) {
+			LDAP_MUTEX_FREE( ld, ld->ld_mutex[i] );
+		}
+	}
 }
 
 

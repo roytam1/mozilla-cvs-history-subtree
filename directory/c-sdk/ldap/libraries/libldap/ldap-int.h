@@ -640,6 +640,8 @@ int nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber,
  * in open.c
  */
 void nsldapi_initialize_defaults( void );
+void nsldapi_mutex_alloc_all( LDAP *ld );
+void nsldapi_mutex_free_all( LDAP *ld );
 int nsldapi_open_ldap_defconn( LDAP *ld );
 char *nsldapi_strdup( const char *s );  /* if s is NULL, returns NULL */
 
