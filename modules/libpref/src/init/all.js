@@ -184,15 +184,9 @@ pref("capability.policy.default.HTMLDocument.write", "allAccess");
 pref("capability.policy.default.HTMLDocument.writeln", "allAccess");
 
 pref("capability.policy.default.Location.hash.set", "allAccess");
-pref("capability.policy.default.Location.host.set", "allAccess");
-pref("capability.policy.default.Location.hostname.set", "allAccess");
 pref("capability.policy.default.Location.href.set", "allAccess");
-pref("capability.policy.default.Location.pathname.set", "allAccess");
-pref("capability.policy.default.Location.port.set", "allAccess");
-pref("capability.policy.default.Location.protocol.set", "allAccess");
 pref("capability.policy.default.Location.reload", "allAccess");
 pref("capability.policy.default.Location.replace", "allAccess");
-pref("capability.policy.default.Location.search.set", "allAccess");
 
 pref("capability.policy.default.Navigator.preference", "allAccess");
 pref("capability.policy.default.Navigator.preferenceinternal.get", "UniversalPreferencesRead");
