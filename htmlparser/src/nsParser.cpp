@@ -1207,9 +1207,11 @@ nsParser::WillBuildModel(nsString& aFilename)
   if (eUnknownDetect != mParserContext->mAutoDetectStatus)
     return NS_OK;
 
-  nsAutoString theBuffer;
+  PRUnichar buf[1025];
+  nsFixedString theBuffer(buf, 1024, 0);
+
   // XXXVidur Make a copy and only check in the first 1k
-  mParserContext->mScanner->Peek(theBuffer, 1024);
+  mParserContext->mScanner->Peek(theBuffer, 1024, mParserContext->mScanner->FirstNonWhitespacePosition());
 
   if (eDTDMode_unknown == mParserContext->mDTDMode ||
       eDTDMode_autodetect == mParserContext->mDTDMode)
@@ -2360,7 +2362,7 @@ ParserWriteFunc(nsIInputStream* in,
 
   if(pws->mParserFilter) 
     pws->mParserFilter->RawBuffer(buf, &theNumRead); 
-  
+
   result = pws->mScanner->Append(buf, theNumRead);
   if (NS_SUCCEEDED(result)) {
     *writeCount = count;
@@ -2423,7 +2425,11 @@ NS_PRECONDITION((eOnStart == mParserContext->mStreamListenerState ||
       return result;
     }
 
-    result=ResumeParse(); 
+    // Don't bother to start parsing until we've seen some
+    // non-whitespace data
+    if (theContext->mScanner->FirstNonWhitespacePosition() >= 0) {
+      result = ResumeParse();
+    }
   }
 
   return result; 

@@ -131,7 +131,7 @@ class nsScanner {
        */
       nsresult Peek(PRUnichar& ch, PRUint32 aOffset=0);
 
-      nsresult Peek(nsAString& aStr, PRInt32 aNumChars);
+      nsresult Peek(nsAString& aStr, PRInt32 aNumChars, PRInt32 aOffset = 0);
 
       /**
        *  Skip over chars as long as they're in aSkipSet
@@ -352,6 +352,11 @@ class nsScanner {
       PRBool    IsIncremental(void) {return mIncremental;}
       void      SetIncremental(PRBool anIncrValue) {mIncremental=anIncrValue;}
 
+      PRBool FirstNonWhitespacePosition()
+      {
+        return mFirstNonWhitespacePosition;
+      }
+
   protected:
 
 
@@ -379,6 +384,7 @@ class nsScanner {
                                        // from the scanner buffer
       PRUint32        mTotalRead;
       PRPackedBool    mIncremental;
+      PRInt32         mFirstNonWhitespacePosition;
       PRInt32         mCharsetSource;
       nsCString       mCharset;
       nsIUnicodeDecoder *mUnicodeDecoder;
