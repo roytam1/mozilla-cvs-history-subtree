@@ -72,6 +72,7 @@
 #define ID_EDIT_ABOOKNAME               1036
 #define ID_EDIT_FNAME                   1037
 #define ID_EDIT_FINDLDIF                1039
+#define ID_EDIT_FINDID                  1040
 #define FIRSTNAME                       1041
 #define LASTNAME                        1042
 #define NOTES                           1043

@@ -1362,12 +1362,11 @@ NAB_FindAddressBookEntry(NABConnectionID id, NABAddrBookDescType *addrBook,
     return(NAB_INVALID_ABOOK);
   ***/
 
-  if (!ValidNonNullString(ldifSearchAttribute))
-    return(NAB_INVALID_SEARCH_ATTRIB);
+  if (ValidNonNullString(ldifSearchAttribute))
+    *userID = 0;
 
   // Reset time
   *updTime = 0;
-  *userID = 0;
 
   //
   // This call locates a Communicator Window, if one is not running,
@@ -1420,6 +1419,11 @@ NAB_FindAddressBookEntry(NABConnectionID id, NABAddrBookDescType *addrBook,
   findPtr->abookName[0] = '\0';
   findPtr->abookFileName[0] = '\0';
 
+  if (!ValidNonNullString(ldifSearchAttribute))
+  {
+    findPtr->userID = *userID;
+  }
+
   if (addrBook)
   {
     if (ValidNonNullString(addrBook->description))
@@ -1429,8 +1433,11 @@ NAB_FindAddressBookEntry(NABConnectionID id, NABAddrBookDescType *addrBook,
     }
   }
 
-  lstrcpy(findPtr->ldifSearchAttribute, CheckNullString(ldifSearchAttribute));
-  
+  if (ValidNonNullString(ldifSearchAttribute))
+    lstrcpy(findPtr->ldifSearchAttribute, CheckNullString(ldifSearchAttribute));
+  else
+    findPtr->ldifSearchAttribute[0] = '\0';  
+
   //
   // Now set the size of the shared memory segment for the 
   // WM_COPYDATA argument that will be sent across.

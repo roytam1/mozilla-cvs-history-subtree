@@ -587,7 +587,7 @@ FindValueForIDInLine(MSG_Pane  *addressBookPane, LONG userIndex,
 }
 
 BOOL
-SearchABForAttrib(AB_ContainerInfo  *abContainer,                         
+SearchABForAttrib(AB_ContainerInfo  *abContainer,
                   LPSTR             searchAttrib,
                   LPSTR             ldifInfo,
                   NABUserID         *userID, 
@@ -614,6 +614,45 @@ SearchABForAttrib(AB_ContainerInfo  *abContainer,
   LONG          lineCount = MSG_GetNumLines(addressBookPane);
   LPSTR         searchValue = NULL;
   BOOL          found = FALSE;
+
+  //
+  // Support lookups by ABID's...
+  if ((searchAttrib == NULL) || (searchAttrib[0] == '\0'))
+  {
+    while ( currentLocation < lineCount )    
+    {
+      ABID    id;
+
+      // Get the ABID...
+      int result = AB_GetABIDForIndex(addressBookPane, currentLocation, &id);
+      if (result != 0)
+      {
+        ++currentLocation;
+        continue;
+      }
+
+      if (id == *userID)
+      {
+        found = TRUE;
+        if (!GetLDIFLineForUser(addressBookPane, currentLocation, ldifInfo, userID, updtTime))
+        {
+          found = FALSE;
+          currentLocation++;
+          continue;
+        }
+
+        break;
+      }
+      
+      // Increment for next call...
+      currentLocation++;
+    }
+    
+    AB_ClosePane(addressBookPane);
+    return found;
+  }
+  // Support lookups by ABID's...
+  //
 
   if (!GetIDSearchField(searchAttrib, &id, &searchValue))
   {

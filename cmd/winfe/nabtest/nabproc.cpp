@@ -813,21 +813,31 @@ DoNAB_FindAddressBookEntry(HWND hWnd)
     return;
   }
 
-  char                  ldif[256];
+  char                  ldif[256] = "";
   char                  msg[256];
   NABAddrBookDescType   abookDesc; 
-
-  GetDlgItemText(hWnd, ID_EDIT_FINDLDIF, ldif, sizeof(ldif));
-  if (ldif[0] == '\0')
-  {
-    ShowMessage(hWnd, "Enter an LDIF search criteria!");
-    return;
-  }
+  char                  abid[32] = "";
 
   NABUserID       userID;
   char            *ldifEntry;
   NABUpdateTime   updTime;    
   NABError        rc;
+
+
+  GetDlgItemText(hWnd, ID_EDIT_FINDID, abid, sizeof(abid));
+  if (abid[0] != '\0')
+  {
+    userID = atoi(abid);  
+  }
+  else
+  {
+    GetDlgItemText(hWnd, ID_EDIT_FINDLDIF, ldif, sizeof(ldif));
+    if (ldif[0] == '\0')
+    {
+      ShowMessage(hWnd, "Enter an LDIF search criteria!");
+      return;
+    }
+  }
 
   ListBox_ResetContent(GetDlgItem(hWnd, ID_LIST_USERS));      
 

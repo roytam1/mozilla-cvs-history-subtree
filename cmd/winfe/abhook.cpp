@@ -1565,9 +1565,11 @@ ProcessNAB_FindAddressBookEntry(NAB_FindAddressBookEntryType *shmPtr)
   TRACE("NAB: ProcessNAB_FindAddressBookEntry() Connection ID = [%d]\n", shmPtr->abConnection);
 
   // Reset some values...
-  shmPtr->userID = 0;
-  shmPtr->updateTime = 0;
   shmPtr->userInfo[0] = '\0';
+  shmPtr->updateTime = 0;
+  
+  if (shmPtr->ldifSearchAttribute[0] != '\0')
+    shmPtr->userID = 0;
   
   //
   // Verify the session handle...
