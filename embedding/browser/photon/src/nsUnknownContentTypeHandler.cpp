@@ -45,80 +45,99 @@
 #include "nsIDocShell.h"
 #include "mimetype/nsIMIMEInfo.h"
 #include "nsIURI.h"
-#include "nsIFile.h"
+#include "nsILocalFile.h"
 
 #include "EmbedPrivate.h"
 #include "PtMozilla.h"
 
-#include <photon/PtWebClient.h>
-
 nsUnknownContentTypeHandler::nsUnknownContentTypeHandler( ) {
 	NS_INIT_ISUPPORTS();
+///* ATENTIE */ printf( "In nsUnknownContentTypeHandler constructor\n" );
 	}
 
-nsUnknownContentTypeHandler::~nsUnknownContentTypeHandler( ) { }
+nsUnknownContentTypeHandler::~nsUnknownContentTypeHandler( )
+{
+///* ATENTIE */ printf( "In nsUnknownContentTypeHandler destr\n" );
+}
 
 
-NS_IMETHODIMP nsUnknownContentTypeHandler::Show( nsIHelperAppLauncher *aLauncher, nsISupports *aContext, PRBool aForced ) {
-	nsresult rv = NS_OK;
-/* ATENTIE */ //printf("Show!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n");
+NS_IMETHODIMP nsUnknownContentTypeHandler::Show( nsIHelperAppLauncher *aLauncher, nsISupports *aContext, PRBool aForced )
+{
+	return aLauncher->SaveToDisk( nsnull, PR_FALSE );
+}
+
+NS_IMETHODIMP nsUnknownContentTypeHandler::PromptForSaveToFile( nsIHelperAppLauncher* aLauncher,
+                                                                nsISupports *aWindowContext,
+                                                                const PRUnichar *aDefaultFile,
+                                                                const PRUnichar *aSuggestedFileExtension,
+                                                                nsILocalFile **_retval )
+{
+///* ATENTIE */ printf("PromptForSaveToFile!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n");
+	NS_ENSURE_ARG_POINTER(_retval);
+	*_retval = nsnull;
 
 	/* try to get the PtMozillawidget_t* pointer form the aContext - use the fact the the WebBrowserContainer is
 		registering itself as nsIDocumentLoaderObserver ( SetDocLoaderObserver ) */
-
-	nsCOMPtr<nsIDOMWindow> domw( do_GetInterface( aContext ) );
+	nsCOMPtr<nsIDOMWindow> domw( do_GetInterface( aWindowContext ) );
 	nsIDOMWindow *parent;
 	domw->GetParent( &parent );
 	PtWidget_t *w = GetWebBrowser( parent );
 	PtMozillaWidget_t *moz = ( PtMozillaWidget_t * ) w;
 
-	/* go ahead and start the downloading process */
-//	nsCOMPtr<nsIWebProgressListener> listener = NS_CAST(nsIWebProgressListener *, moz->EmbedRef->mProgress );
-	nsCOMPtr<nsIWebProgressListener> listener;
-	listener = NS_STATIC_CAST(nsIWebProgressListener *, listener);
-	aLauncher->SetWebProgressListener( listener );
-//	moz->MyBrowser->WebBrowserContainer->mSkipOnState = 0; /* reinstate nsIWebProgressListener's CWebBrowserContainer::OnStateChange() */
+	/* get the suggested filename */
+	NS_ConvertUCS2toUTF8 theUnicodeString( aDefaultFile );
+	const char *filename = theUnicodeString.get( );
 
-	/* get the mime type - need to provide it in the callback info */
+	/* get the url */
+	nsCOMPtr<nsIURI> aSourceUrl;
+	aLauncher->GetSource( getter_AddRefs(aSourceUrl) );
+	const char *url;
+	nsCAutoString specString;
+	aSourceUrl->GetSpec(specString);
+	url = specString.get();
+
+	/* get the mime type */
 	nsCOMPtr<nsIMIMEInfo> mimeInfo;
 	aLauncher->GetMIMEInfo( getter_AddRefs(mimeInfo) );
 	char *mimeType;
 	mimeInfo->GetMIMEType( &mimeType );
 
-	nsCOMPtr<nsIURI> aSourceUrl;
-	nsCOMPtr<nsIFile> aFile;
-	aLauncher->GetSource( getter_AddRefs(aSourceUrl) );
-	aLauncher->GetTargetFile( getter_AddRefs(aFile) );
-
-	char *url;
-	nsCAutoString specString;
-	aSourceUrl->GetSpec(specString);
-	url	= (char *) specString.get();
 
 	PtCallbackInfo_t cbinfo;
-	PtWebUnknownCallback_t cb;
+	PtWebUnknownWithNameCallback_t cb;
 
 	memset( &cbinfo, 0, sizeof( cbinfo ) );
 	cbinfo.reason = Pt_CB_MOZ_UNKNOWN;
 	cbinfo.cbdata = &cb;
 	cb.action = Pt_WEB_ACTION_OK;
-
-	/* pass extra information to the mozilla widget, so that it will know what to do when Pt_ARG_MOZ_UNKNOWN_RESP comes */
-	moz->EmbedRef->app_launcher = aLauncher;
-	moz->EmbedRef->context = aContext;
-
 	cb.content_type = mimeType;
-	cb.url = url;
+	cb.url = (char *)url;
 	cb.content_length = strlen( cb.url );
-	PtInvokeCallbackList( moz->web_unknown_cb, (PtWidget_t *)moz, &cbinfo);
-	return rv;
-	}
+	cb.suggested_filename = (char*)filename;
+	PtInvokeCallbackList( moz->web_unknown_cb, (PtWidget_t *)moz, &cbinfo );
+	/* this will modal wait for a Pt_ARG_WEB_UNKNOWN_RESP, in mozserver */
 
-/* only Show() method is used - remove this code */
-NS_IMETHODIMP nsUnknownContentTypeHandler::PromptForSaveToFile(nsIHelperAppLauncher * aLauncher, nsISupports * aWindowContext, const PRUnichar * aDefaultFile, const PRUnichar * aSuggestedFileExtension, nsILocalFile ** aNewFile ) {
-/* ATENTIE */ //printf("PromptForSaveToFile!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n");
+	/* we have the result in moz->moz_unknown_ctrl */
+	if( moz->moz_unknown_ctrl->response != Pt_WEB_RESPONSE_OK ) return NS_ERROR_ABORT;
+
+	/* the user chosen filename is moz->moz_unknown_ctrl->filename */
+	nsCOMPtr<nsILocalFile> file(do_CreateInstance("@mozilla.org/file/local;1"));
+	NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
+
+	nsCString s ( moz->moz_unknown_ctrl->filename );
+	file->InitWithNativePath( s );
+	if( !file ) return NS_ERROR_FAILURE;
+
+	*_retval = file;
+	NS_ADDREF( *_retval );
+
+	/* add this download to our list */
+	EmbedDownload *download = new EmbedDownload( moz, moz->moz_unknown_ctrl->download_ticket, url );
+	download->mLauncher = aLauncher;
+	aLauncher->SetWebProgressListener( download );
+
 	return NS_OK;
-	}
+}
 
 
 PtWidget_t *nsUnknownContentTypeHandler::GetWebBrowser(nsIDOMWindow *aWindow)
@@ -148,39 +167,6 @@ PtWidget_t *nsUnknownContentTypeHandler::GetWebBrowser(nsIDOMWindow *aWindow)
   return val;
 }
 
-
-//###########################################################################
-NS_IMPL_ISUPPORTS2(nsWebProgressListener, nsIWebProgressListener, nsISupportsWeakReference)
-
-nsWebProgressListener::nsWebProgressListener() {
-  NS_INIT_ISUPPORTS();
-	}
-
-nsWebProgressListener::~nsWebProgressListener() { }
-
-
-/* nsIWebProgressListener interface */
-/* void onProgressChange (in nsIWebProgress aProgress, in nsIRequest aRequest, in long curSelfProgress, in long maxSelfProgress, in long curTotalProgress, in long maxTotalProgress); */
-NS_IMETHODIMP nsWebProgressListener::OnProgressChange(nsIWebProgress *aProgress, nsIRequest *aRequest, PRInt32 curSelfProgress, PRInt32 maxSelfProgress, PRInt32 curTotalProgress, PRInt32 maxTotalProgress) {
-
-/* ATENTIE */ //printf("OnProgressChange curSelfProgress=%d maxSelfProgress=%d curTotalProgress=%d maxTotalProgress=%d\n",
-//curSelfProgress, maxSelfProgress, curTotalProgress, maxTotalProgress );
-
-	return NS_OK;
-	}
-NS_IMETHODIMP nsWebProgressListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 aStateFlags, nsresult aStatus) {
-	return NS_OK;
-	}
-NS_IMETHODIMP nsWebProgressListener::OnLocationChange(nsIWebProgress* aWebProgress, nsIRequest* aRequest, nsIURI *location) {
-	return NS_OK;
-	}
-NS_IMETHODIMP nsWebProgressListener::OnStatusChange(nsIWebProgress* aWebProgress, nsIRequest* aRequest, nsresult aStatus, const PRUnichar* aMessage) {
-	return NS_OK;
-	}
-NS_IMETHODIMP nsWebProgressListener::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 state) {
-	return NS_OK;
-	}
-
 //#######################################################################################
 
 #define className             nsUnknownContentTypeHandler
@@ -196,7 +182,7 @@ NS_IMPL_RELEASE( className )
 /* QueryInterface implementation for this class. */
 NS_IMETHODIMP className::QueryInterface( REFNSIID anIID, void **anInstancePtr ) { 
 	nsresult rv = NS_OK; 
-/* ATENTIE */ //printf("QueryInterface!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n");
+///* ATENTIE */ printf("QueryInterface!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n");
 
 	/* Check for place to return result. */
 	if( !anInstancePtr ) rv = NS_ERROR_NULL_POINTER;
@@ -219,10 +205,12 @@ NS_GENERIC_FACTORY_CONSTRUCTOR( nsUnknownContentTypeHandler )
 
 // The list of components we register
 static nsModuleComponentInfo info[] = {
-	"nsUnknownContentTypeHandler",
-	NS_IHELPERAPPLAUNCHERDIALOG_IID,
-	NS_IHELPERAPPLAUNCHERDLG_CONTRACTID,
-	nsUnknownContentTypeHandlerConstructor
+		{
+			"nsUnknownContentTypeHandler",
+			NS_IHELPERAPPLAUNCHERDIALOG_IID,
+			NS_IHELPERAPPLAUNCHERDLG_CONTRACTID,
+			nsUnknownContentTypeHandlerConstructor
+		}
 	};
 
 int Init_nsUnknownContentTypeHandler_Factory( ) {

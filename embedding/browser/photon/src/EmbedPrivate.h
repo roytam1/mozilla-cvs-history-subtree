@@ -81,8 +81,6 @@ class EmbedPrivate {
   void        SelectAll  (void);
   void        Clear  (void);
   int    	  SaveAs(char *fname,char *dirname);
-  int 		  SaveURI(char *uri, char *fname);
-  void 		  CancelSaveURI();
   void 		  Print(PpPrintContext_t *pc);
   PRBool 	  CanGoBack();
   PRBool 	  CanGoForward();
@@ -91,9 +89,6 @@ class EmbedPrivate {
   nsresult OpenStream         (const char *aBaseURI, const char *aContentType);
   nsresult AppendToStream     (const char *aData, PRInt32 aLen);
   nsresult CloseStream        (void);
-
-	nsCOMPtr<nsIHelperAppLauncher> app_launcher;
-nsCOMPtr<nsISupports> context;
 
   // This function will find the specific EmbedPrivate object for a
   // given nsIWebBrowserChrome.
@@ -137,7 +132,6 @@ nsCOMPtr<nsISupports> context;
   nsCOMPtr<nsISupports>          mPrintGuard;
 
   nsCOMPtr<nsIWebNavigation>     mNavigation;
-  nsCOMPtr<nsIURIFixup>     mFixup;
   nsCOMPtr<nsISHistory>          mSessionHistory;
 
   // our event receiver
