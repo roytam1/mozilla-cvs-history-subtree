@@ -142,7 +142,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     return ( *xm_str != NULL );
 #endif
 }
-
+#endif
 
 /*
  * PREF_GetUrl
