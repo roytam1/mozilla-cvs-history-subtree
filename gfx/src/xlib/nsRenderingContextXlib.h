@@ -193,6 +193,9 @@ class nsRenderingContextXlib : public nsRenderingContextImpl
 #endif
   NS_IMETHOD DrawTile(nsIImage *aImage,nscoord aX, nscoord aY, const nsRect&);
 
+  NS_IMETHOD GetBackbuffer(const nsRect &aRequestedSize, const nsRect &aMaxSize, nsDrawingSurface &aBackbuffer);
+  NS_IMETHOD ReleaseBackbuffer(void);
+
   NS_IMETHOD CopyOffScreenBits(nsDrawingSurface aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
   NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
