@@ -1120,7 +1120,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
             genExpr(i->op);
             ExprPairList *p = i->pairs;
-            uint32 argCount = 0;
+            int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -1218,7 +1218,7 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
             genExpr(i->op);
             ExprPairList *p = i->pairs;
-            uint32 argCount = 0;
+            int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -1428,7 +1428,7 @@ PreXcrement:
             Reference *readRef;
             Reference *writeRef;            
             genReferencePair(u->op, readRef, writeRef);
-            uint32 baseDepth = readRef->baseExpressionDepth();
+            int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
@@ -1462,7 +1462,7 @@ PostXcrement:
             Reference *readRef;
             Reference *writeRef;
             genReferencePair(u->op, readRef, writeRef);
-            uint32 baseDepth = readRef->baseExpressionDepth();
+            int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, baseDepth);
@@ -1531,7 +1531,7 @@ BinaryOpEquals:
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
 
-            uint32 baseDepth = readRef->baseExpressionDepth();
+            int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
                 if (baseDepth > 1) {
                     addOp(DupNOp);
@@ -1558,7 +1558,7 @@ BinaryOpEquals:
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
 
-            uint32 baseDepth = readRef->baseExpressionDepth();
+            int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
@@ -1590,7 +1590,7 @@ BinaryOpEquals:
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
 
-            uint32 baseDepth = readRef->baseExpressionDepth();
+            int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
@@ -1622,7 +1622,7 @@ BinaryOpEquals:
             Reference *writeRef;
             genReferencePair(b->op1, readRef, writeRef);
 
-            uint32 baseDepth = readRef->baseExpressionDepth();
+            int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
@@ -1756,7 +1756,7 @@ BinaryOpEquals:
             JSType *type = genExpr(i->op);
 
             ExprPairList *p = i->pairs;
-            uint32 argCount = 0;
+            int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -1790,7 +1790,7 @@ BinaryOpEquals:
             ref->emitInvokeSequence(this);
 
             ExprPairList *p = i->pairs;
-            uint32 argCount = 0;
+            int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -1945,7 +1945,7 @@ BinaryOpEquals:
             addPointer(currentClass->mSuperType->getDefaultConstructor());
 
             ExprPairList *p = i->pairs;
-            uint32 argCount = 1;
+            int32 argCount = 1;
             addOp(LoadThisOp);
             while (p) {
                 genExpr(p->value);

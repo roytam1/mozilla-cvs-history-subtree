@@ -320,7 +320,7 @@ void Context::buildRuntime(StmtNode *p)
     mScopeChain->popScope();
 }
 
-JS2Runtime::ByteCodeModule *Context::genCode(StmtNode *p, String sourceName)
+JS2Runtime::ByteCodeModule *Context::genCode(StmtNode *p, String /*sourceName*/)
 {
     mScopeChain->addScope(getGlobalObject());
     JS2Runtime::ByteCodeGen bcg(this, mScopeChain);
@@ -1797,17 +1797,17 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
 }
 
-JSValue numberPlus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue numberPlus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     return JSValue(argv[0].f64 + argv[1].f64);
 }
 
-JSValue numberMinus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue numberMinus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     return JSValue(argv[0].f64 - argv[1].f64);
 }
 
-JSValue objectPlus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1850,28 +1850,28 @@ JSValue objectPlus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 
     }
 }
 
-JSValue objectMinus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 - r2.toNumber(cx).f64);
 }
 
-JSValue objectMultiply(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 * r2.toNumber(cx).f64);
 }
 
-JSValue objectDivide(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 / r2.toNumber(cx).f64);
 }
 
-JSValue objectRemainder(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectRemainder(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1880,42 +1880,42 @@ JSValue objectRemainder(Context *cx, const JSValue& thisValue, JSValue *argv, ui
 
 
 
-JSValue objectShiftLeft(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-JSValue objectShiftRight(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-JSValue objectUShiftRight(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-JSValue objectBitAnd(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) & (int32)(r2.toInt32(cx).f64) ));
 }
 
-JSValue objectBitXor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectBitXor(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) ^ (int32)(r2.toInt32(cx).f64) ));
 }
 
-JSValue objectBitOr(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectBitOr(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1925,7 +1925,7 @@ JSValue objectBitOr(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
 //
 // implements r1 < r2, returning true or false or undefined
 //
-JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
+static JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
 {
     JSValue r1p = r1.toPrimitive(cx, JSValue::NumberHint);
     JSValue r2p = r2.toPrimitive(cx, JSValue::NumberHint);
@@ -1943,7 +1943,7 @@ JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
 
 }
 
-JSValue objectLess(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectLess(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1954,7 +1954,7 @@ JSValue objectLess(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 
         return result;
 }
 
-JSValue objectLessEqual(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectLessEqual(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1965,7 +1965,7 @@ JSValue objectLessEqual(Context *cx, const JSValue& thisValue, JSValue *argv, ui
         return kTrueValue;
 }
 
-JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
+static JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
 {
     if (r1.getType() != r2.getType()) {
         if (r1.isNull() && r2.isUndefined())
@@ -2015,7 +2015,7 @@ JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
     }
 }
 
-JSValue objectEqual(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue objectEqual(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue r1 = argv[0];
     JSValue r2 = argv[1];
@@ -2063,7 +2063,7 @@ void Context::initOperators()
     }
 }
 
-JSValue Object_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Object_Constructor(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     JSValue thatValue = thisValue;
     if (thatValue.isNull())
@@ -2072,7 +2072,7 @@ JSValue Object_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv,
     return thatValue;
 }
 
-JSValue Object_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Object_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     if (thisValue.isObject())
         return JSValue(new String(widenCString("[object ") + widenCString("Object") + widenCString("]")));
@@ -2085,7 +2085,7 @@ JSValue Object_toString(Context *cx, const JSValue& thisValue, JSValue *argv, ui
         }
 }
 
-JSValue Function_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Function_Constructor(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     JSValue thatValue = thisValue;
     if (thatValue.isNull())
@@ -2095,13 +2095,13 @@ JSValue Function_Constructor(Context *cx, const JSValue& thisValue, JSValue *arg
     return thatValue;
 }
 
-JSValue Function_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Function_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isFunction());
     return JSValue(new String(widenCString("function () { }")));
 }
 
-JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue thatValue = thisValue;
     if (thatValue.isNull())
@@ -2115,7 +2115,7 @@ JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv,
     return thatValue;
 }
 
-JSValue Number_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Number_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -2124,7 +2124,7 @@ JSValue Number_toString(Context *cx, const JSValue& thisValue, JSValue *argv, ui
 
 
 
-JSValue Boolean_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Boolean_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue thatValue = thisValue;
     if (thatValue.isNull())
@@ -2138,7 +2138,7 @@ JSValue Boolean_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv
     return thatValue;
 }
 
-JSValue Boolean_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Boolean_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -2305,7 +2305,7 @@ JSValue JSValue::valueToString(Context *cx, const JSValue& value)
 
 }
 
-JSValue JSValue::toPrimitive(Context *cx, Hint hint) const
+JSValue JSValue::toPrimitive(Context *, Hint) const
 {
     JSObject *obj;
     switch (tag) {
@@ -2415,7 +2415,7 @@ int JSValue::operator==(const JSValue& value) const
 }
 
 
-JSValue JSValue::valueToInt32(Context *cx, const JSValue& value)
+JSValue JSValue::valueToInt32(Context *, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2448,7 +2448,7 @@ JSValue JSValue::valueToInt32(Context *cx, const JSValue& value)
         return JSValue((float64)d);    
 }
 
-JSValue JSValue::valueToUInt32(Context *cx, const JSValue& value)
+JSValue JSValue::valueToUInt32(Context *, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2481,7 +2481,7 @@ JSValue JSValue::valueToUInt32(Context *cx, const JSValue& value)
     return JSValue((float64)d);
 }
 
-JSValue JSValue::valueToUInt16(Context *cx, const JSValue& value)
+JSValue JSValue::valueToUInt16(Context *, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {

@@ -161,8 +161,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
         int32 getOffset(int index) const            { return *((int32 *)&mCodeBase[index]); }
-        const String *getString(int index) const    { return &mStringPoolContents[index]; }
-        float64 getNumber(int index) const          { return mNumberPoolContents[index]; }
+        const String *getString(uint32 index) const { return &mStringPoolContents[index]; }
+        float64 getNumber(uint32 index) const       { return mNumberPoolContents[index]; }
 
 
         uint32 mLocalsCount;        // number of local vars to allocate space for
@@ -273,7 +273,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             ASSERT(mStackTop >= 0);
         }
 
-        void adjustStack(uint32 n)
+        void adjustStack(int32 n)
         {
             mStackTop += n;
             ASSERT(mStackTop >= 0);
@@ -281,9 +281,9 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         // these routines assume the depth is being reduced
         // i.e. they don't reset mStackMax
-        void addOpAdjustDepth(uint8 op, uint32 depth)        
+        void addOpAdjustDepth(uint8 op, int32 depth)        
                                     { addByte(op); mStackTop += depth; ASSERT(mStackTop >= 0); }
-        void addOpSetDepth(uint8 op, uint32 depth)        
+        void addOpSetDepth(uint8 op, int32 depth)        
                                     { addByte(op); mStackTop = depth; ASSERT(mStackTop >= 0); }
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
@@ -323,7 +323,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         uint32 getTopLabel(Label::LabelKind kind, const StringAtom *name)
         {
-            uint32 result = -1;
+            uint32 result = uint32(-1);
             for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
                                 end = mLabelStack.rend();
                                 (i != end); i++)
