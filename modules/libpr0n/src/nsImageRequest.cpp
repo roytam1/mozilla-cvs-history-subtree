@@ -98,7 +98,7 @@ NS_IMETHODIMP nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, 
 {
   mObservers.RemoveElement(NS_STATIC_CAST(void*, observer));
 
-  if (mObservers.Count() == 0)
+  if ((mObservers.Count() == 0) && mChannel)
     mChannel->Cancel(status);
 
   return NS_OK;
@@ -112,7 +112,14 @@ NS_IMETHODIMP nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, 
 /* void cancel (in nsresult status); */
 NS_IMETHODIMP nsImageRequest::Cancel(nsresult status)
 {
-  return mChannel->Cancel(status);
+  // XXX this method should not ever get called
+
+  nsresult rv = NS_OK;
+  if (mChannel) {
+    nsresult rv = mChannel->Cancel(status);
+    mChannel = nsnull;
+  }
+  return rv;
 }
 
 /* readonly attribute nsIImage image; */
@@ -292,6 +299,8 @@ NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ct
   nsresult rv = mDecoder->Close();
 
   mDecoder = nsnull; // release the decoder so that it can rest peacefully ;)
+
+  mChannel = nsnull; // we no longer need the channel
 
   return rv;
 }
