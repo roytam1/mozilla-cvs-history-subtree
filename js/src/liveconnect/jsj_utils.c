@@ -241,47 +241,51 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                     (*jEnv)->GetObjectField(jEnv, java_exception, 
                                             njJSException_wrappedException);
 
-                java_class = (*jEnv)->GetObjectClass(jEnv, java_obj); 
-                class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_class); 
-                (*jEnv)->DeleteLocalRef(jEnv, java_class); 
-
-                /* Convert native JS values back to native types. */
-                switch(wrapped_exception_type) {
-                case JSTYPE_NUMBER:
-                    if (!jsj_ConvertJavaObjectToJSNumber(cx, jEnv,
-                                                         class_descriptor,
-                                                         java_obj, 
-                                                         &js_exception))
-                        goto do_report;
-                    break;
-                case JSTYPE_BOOLEAN:
-                    if (!jsj_ConvertJavaObjectToJSBoolean(cx, jEnv,
-                                                          class_descriptor,
-                                                          java_obj, 
-                                                          &js_exception))
-                        goto do_report;
-                    break;
-                case JSTYPE_STRING:
-                    if (!jsj_ConvertJavaObjectToJSString(cx, jEnv,
-                                                         class_descriptor,
-                                                         java_obj, 
-                                                         &js_exception))
-                        goto do_report;
-                    break;
-                case JSTYPE_VOID:
-                    js_exception = JSVAL_VOID;
-                    break;
-                case JSTYPE_OBJECT:
-                case JSTYPE_FUNCTION:
-                default:
-                    if ((*jEnv)->IsInstanceOf(jEnv, java_obj, njJSObject)) {
-                        js_exception = OBJECT_TO_JSVAL(jsj_UnwrapJSObjectWrapper(jEnv, java_obj));
-                        if (!js_exception)
-                            goto do_report;                        
-                    } else {
-                        if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
-                                                            &js_exception)) 
+                if ((java_obj == NULL) && 
+                    (wrapped_exception_type == JSTYPE_OBJECT)) {
+                    js_exception = JSVAL_NULL;
+                } else { 
+                    java_class = (*jEnv)->GetObjectClass(jEnv, java_obj); 
+                    class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_class); 
+                    
+                    /* Convert native JS values back to native types. */
+                    switch(wrapped_exception_type) {
+                    case JSTYPE_NUMBER:
+                        if (!jsj_ConvertJavaObjectToJSNumber(cx, jEnv,
+                                                             class_descriptor,
+                                                             java_obj, 
+                                                             &js_exception))
                             goto do_report;
+                        break;
+                    case JSTYPE_BOOLEAN:
+                        if (!jsj_ConvertJavaObjectToJSBoolean(cx, jEnv,
+                                                              class_descriptor,
+                                                              java_obj, 
+                                                              &js_exception))
+                            goto do_report;
+                        break;
+                    case JSTYPE_STRING:
+                        if (!jsj_ConvertJavaObjectToJSString(cx, jEnv,
+                                                             class_descriptor,
+                                                             java_obj, 
+                                                             &js_exception))
+                            goto do_report;
+                        break;
+                    case JSTYPE_VOID:
+                        js_exception = JSVAL_VOID;
+                        break;
+                    case JSTYPE_OBJECT:
+                    case JSTYPE_FUNCTION:
+                    default:
+                        if ((*jEnv)->IsInstanceOf(jEnv, java_obj, njJSObject)) {
+                            js_exception = OBJECT_TO_JSVAL(jsj_UnwrapJSObjectWrapper(jEnv, java_obj));
+                            if (!js_exception)
+                                goto do_report;                        
+                        } else {
+                            if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
+                                                                &js_exception)) 
+                                goto do_report;
+                        }
                     }
                 }
             }
@@ -307,6 +311,8 @@ do_report:
 done:
 
     (*jEnv)->ExceptionClear(jEnv);
+    if (java_class)
+        (*jEnv)->DeleteLocalRef(jEnv, java_class);         
     if (class_descriptor)
         jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
     if (java_obj)
