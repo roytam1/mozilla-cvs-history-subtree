@@ -55,7 +55,7 @@ protected:
   // these are used to save off the previous view so that bopping back and forth
   // between two views is quick (e.g., threaded and flat sorted by date).
 	PRBool		m_havePrevView;
-	nsMsgKeyArray		m_prevIdArray;
+	nsMsgKeyArray		m_prevKeys;
 	nsUInt32Array m_prevFlags;
 	nsUint8Array m_prevLevels;
   nsCOMPtr <nsISimpleEnumerator> m_threadEnumerator;

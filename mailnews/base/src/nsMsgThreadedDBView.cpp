@@ -61,7 +61,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 	m_keys.RemoveAll();
 	m_flags.RemoveAll();
 	m_levels.RemoveAll(); 
-	m_prevIdArray.RemoveAll();
+	m_prevKeys.RemoveAll();
 	m_prevFlags.RemoveAll();
 	m_prevLevels.RemoveAll();
 	m_havePrevView = PR_FALSE;
@@ -127,10 +127,53 @@ NS_IMETHODIMP nsMsgThreadedDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, con
 
 NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
 {
-    nsresult rv;
-    rv = nsMsgDBView::Sort(sortType,sortOrder);
-    NS_ENSURE_SUCCESS(rv,rv);
-    return rv;
+	// if the client wants us to forget our cached id arrays, they
+	// should build a new view. If this isn't good enough, we
+	// need a method to do that.
+	if (sortType != m_sortType || !m_sortValid)
+	{
+		if (sortType == nsMsgViewSortType::byThread)
+		{
+			m_sortType = sortType;
+			if ( m_havePrevView)
+			{
+				// restore saved id array and flags array
+				m_keys.RemoveAll();
+				m_keys.InsertAt(0, &m_prevKeys);
+				m_flags.RemoveAll();
+				m_flags.InsertAt(0, &m_prevFlags);
+				m_levels.RemoveAll();
+				m_levels.InsertAt(0, &m_prevLevels);
+//				m_messageDB->SetSortInfo(sortType, sortOrder);
+				m_sortValid = PR_TRUE;
+				return NS_OK;
+			}
+			else
+			{
+				// set sort info in anticipation of what Init will do.
+				Init(nsnull);	// build up thread list.
+				if (sortOrder != nsMsgViewSortOrder::ascending)
+					Sort(sortType, sortOrder);
+				return NS_OK;
+			}
+		}
+		else if (sortType  != nsMsgViewSortType::byThread && m_sortType == nsMsgViewSortType::byThread /* && !m_havePrevView*/)
+		{
+		// going from SortByThread to non-thread sort - must build new key, level,and flags arrays 
+			m_prevKeys.RemoveAll();
+			m_prevKeys.InsertAt(0, &m_keys);
+			m_prevFlags.RemoveAll();
+			m_prevFlags.InsertAt(0, &m_flags);
+			m_prevLevels.RemoveAll();
+			m_prevLevels.InsertAt(0, &m_levels);
+			ExpandAll();
+//			m_idArray.RemoveAll();
+//			m_flags.RemoveAll();
+			m_havePrevView = PR_TRUE;
+		}
+	}
+  // call the base class in case we're not sorting by thread
+  return nsMsgDBView::Sort(sortType, sortOrder);
 }
 
 
@@ -267,7 +310,7 @@ void	nsMsgThreadedDBView::OnExtraFlagChanged(nsMsgViewIndex index, PRUint32 extr
 	if (IsValidIndex(index) && m_havePrevView)
 	{
 		nsMsgKey keyChanged = m_keys[index];
-		nsMsgViewIndex prevViewIndex = m_prevIdArray.FindIndex(keyChanged);
+		nsMsgViewIndex prevViewIndex = m_prevKeys.FindIndex(keyChanged);
 		if (prevViewIndex != nsMsgViewIndex_None)
 		{
 			PRUint32 prevFlag = m_prevFlags.GetAt(prevViewIndex);
@@ -301,7 +344,7 @@ void nsMsgThreadedDBView::OnHeaderAddedOrDeleted()
 
 void nsMsgThreadedDBView::ClearPrevIdArray()
 {
-  m_prevIdArray.RemoveAll();
+  m_prevKeys.RemoveAll();
   m_prevFlags.RemoveAll();
   m_havePrevView = PR_FALSE;
 }
