@@ -276,7 +276,7 @@ NS_IMETHODIMP nsMetaCharsetObserver::Notify(
 
          if (nsnull == charsetValue) 
          {
-			 nsAutoString contentPart1(contentValue+10); // after "text/html;"
+			 nsAutoString contentPart1(contentValue+9); // after "text/html;"
 			 PRInt32 start = contentPart1.RFind("charset=", PR_TRUE ) ;
 			 if(kNotFound != start) 
 	         {	
