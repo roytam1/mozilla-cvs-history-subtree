@@ -38,10 +38,26 @@ function debug(msg)
 function Init() {
     var tree = document.getElementById("bookmarksTree");
     debug("adding controller to tree");
-    tree.controllers.appendController(BookmarksController);
+    killUndoMacWankering();
+	tree.controllers.appendController(BookmarksController);
     var children = document.getElementById('treechildren-bookmarks');
     tree.selectItem(children.firstChild);
     tree.focus();
+}
+
+
+function killUndoMacWankering() {
+	// All Mac apps have an Undo menu item under the Edit menu, even if its disabled;
+	// for non Mac platforms, just remove the Undo menuitem (until its implemented)
+	if(navigator.appVersion.indexOf("Macintosh") < 0)
+	{
+	var undoItem = document.getElementById("menu_undo");
+	var undoItem1 = document.getElementById("menu_undo_separator");
+	var parentNode = undoItem.parentNode;
+	parentNode.removeChild(undoItem);
+	parentNode.removeChild(undoItem1);
+	}
+
 }
 
 var BookmarksController = {
