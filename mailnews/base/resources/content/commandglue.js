@@ -170,12 +170,11 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 
   
   //if it's a server, clear the threadpane and don't bother trying to load.
-  if(msgfolder.isServer)
-  {
-        ClearThreadPane();
+  if(msgfolder.isServer) {
+    ClearThreadPane();
 
-        // Load AccountCentral page here.
-        ShowAccountCentral(); 
+    // Load AccountCentral page here.
+    ShowAccountCentral(); 
 	return;
   }
 
@@ -218,7 +217,7 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 	gCurrentLoadingFolderViewFlags = 0;  // is this correct?
 	gCurrentLoadingFolderSortType = 0;  // is this correct?
 	gCurrentLoadingFolderSortOrder = 0;  // is this correct?
-  gCurrentLoadingFolderViewType = 0;  // is this correct?
+    gCurrentLoadingFolderViewType = 0;  // is this correct?
 	RerootFolder(uri, msgfolder, viewType, viewFlags, sortType, sortOrder);
 
 	//Need to do this after rerooting folder.  Otherwise possibility of receiving folder loaded
@@ -425,17 +424,17 @@ function ConvertColumnIDToSortType(columnID)
     case "dateCol":
       sortKey = nsMsgViewSortType.byDate;
       break;
-		case "senderCol":
-	    sortKey = nsMsgViewSortType.byAuthor;
+    case "senderCol":
+      sortKey = nsMsgViewSortType.byAuthor;
       break;
-		case "subjectCol":
-	    sortKey = nsMsgViewSortType.bySubject;
+    case "subjectCol":
+      sortKey = nsMsgViewSortType.bySubject;
       break;
-		case "unreadButtonColHeader":
-	    sortKey = nsMsgViewSortType.byUnread;
+    case "unreadButtonColHeader":
+      sortKey = nsMsgViewSortType.byUnread;
       break;
-		case "statusCol":
- 	    sortKey = nsMsgViewSortType.byStatus;
+    case "statusCol":
+      sortKey = nsMsgViewSortType.byStatus;
       break;
     case "sizeCol":
       sortKey = nsMsgViewSortType.bySize;
@@ -450,7 +449,7 @@ function ConvertColumnIDToSortType(columnID)
       sortKey = nsMsgViewSortType.byThread;
       break;
     default:
-      dump("unsupported sort\n");
+      dump("unsupported sort: " + columnID + "\n");
       sortKey = 0;
       break;
   }
@@ -461,21 +460,24 @@ function ConvertSortTypeToColumnID(sortKey)
 {
   var columnID;
 
+  // hack to turn this into an integer, if it was a string;
+  sortKey = sortKey - 0;
+
   switch (sortKey) {
     case nsMsgViewSortType.byDate:
-		  columnID = "dateCol";
+      columnID = "dateCol";
       break;
-	  case nsMsgViewSortType.byAuthor:
-		  columnID = "senderCol";
+    case nsMsgViewSortType.byAuthor:
+      columnID = "senderCol";
       break;
-	  case nsMsgViewSortType.bySubject:
-		  columnID = "subjectCol";
+    case nsMsgViewSortType.bySubject:
+      columnID = "subjectCol";
       break;
-	  case nsMsgViewSortType.byUnread:
-		  columnID = "unreadButtonColHeader";
+    case nsMsgViewSortType.byUnread:
+      columnID = "unreadButtonColHeader";
       break;
- 	  case nsMsgViewSortType.byStatus:
-		  columnID = "statusCol";
+    case nsMsgViewSortType.byStatus:
+      columnID = "statusCol";
       break;
     case nsMsgViewSortType.bySize:
       columnID = "sizeCol";
@@ -490,7 +492,7 @@ function ConvertSortTypeToColumnID(sortKey)
       columnID = "threadCol";
       break;
     default:
-      dump("unsupported sort\n");
+      dump("unsupported sort: " + sortKey + "\n");
       columnID = null;
       break;
   }
