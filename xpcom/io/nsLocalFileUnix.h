@@ -73,7 +73,7 @@
 inline nsresult
 nsresultForErrno(int err)
 {
-    switch(err) {
+    switch (err) {
       case 0:
         return NS_OK;
       case ENOENT:
@@ -86,7 +86,9 @@ nsresultForErrno(int err)
 #endif /* ENOLINK */
       case EEXIST:
         return NS_ERROR_FILE_ALREADY_EXISTS;
+      case EPERM:
       case EACCES:
+        return NS_ERROR_FILE_ACCESS_DENIED;
       default:
         return NS_ERROR_FAILURE;
     }
@@ -127,6 +129,8 @@ protected:
     void InvalidateCache() { mHaveCachedStat = PR_FALSE; }
     nsresult FillStatCache();
 
+    nsresult CreateAndKeepOpen(PRUint32 type, PRIntn flags,
+                               PRUint32 permissions, PRFileDesc **_retval);
 };
 
 #endif /* _nsLocalFileUNIX_H_ */
