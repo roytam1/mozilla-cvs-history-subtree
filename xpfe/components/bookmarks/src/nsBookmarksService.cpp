@@ -5256,6 +5256,15 @@ nsBookmarksService::WriteBookmarkProperties(nsIRDFDataSource *ds, nsOutputFileSt
         nsAutoString    literalString;
         if (NS_SUCCEEDED(rv = GetTextForNode(node, literalString)))
         {
+            if (property == kNC_URL) {
+                // Now do properly replace %22's; this is particularly important for javascript: URLs
+                PRInt32 offset;
+                while ((offset = literalString.FindChar('\"')) >= 0) {
+                    literalString.Cut(offset, 1);
+                    literalString.Insert(NS_LITERAL_STRING("%22"), offset);
+                }
+            }
+
             char        *attribute = ToNewUTF8String(literalString);
             if (nsnull != attribute)
             {
@@ -5263,6 +5272,7 @@ nsBookmarksService::WriteBookmarkProperties(nsIRDFDataSource *ds, nsOutputFileSt
                 {
                     strm << " ";
                 }
+
                 if (property == kNC_Description)
                 {
                     if (!literalString.IsEmpty())
