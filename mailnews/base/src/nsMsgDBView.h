@@ -82,6 +82,7 @@ protected:
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
   PRUint32 mNumSelectedRows; // we cache this to determine when to push command status notifications.
 
+  virtual const char * GetViewName(void) {return "MsgDBView"; }
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchSubject(nsIMsgHdr * aMsgHdr, PRUint32 aFlags, PRUnichar ** aValue);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);

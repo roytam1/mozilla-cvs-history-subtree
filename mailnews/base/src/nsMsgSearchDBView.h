@@ -34,7 +34,7 @@ public:
 
 	NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIMSGSEARCHNOTIFY
-	const char * GetViewName(void) {return "SearchView"; }
+	virtual const char * GetViewName(void) {return "SearchView"; }
   NS_IMETHOD Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, 
         nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount);
   // override to get location

@@ -41,6 +41,7 @@ public:
   NS_IMETHOD GetViewType(nsMsgViewTypeValue *aViewType);
 
 protected:
+  virtual const char * GetViewName(void) {return "ThreadedDBView"; }
   nsresult InitThreadedView(PRInt32 *pCount);
   virtual nsresult OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, PRBool ensureListed);
   virtual nsresult AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed);

@@ -738,8 +738,11 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
           nsAutoString formattedCountString;
           PRUint32 numUnreadChildren;
           thread->GetNumUnreadChildren(&numUnreadChildren);
-          formattedCountString.AppendInt(numUnreadChildren);
-          *aValue = formattedCountString.ToNewUnicode();
+          if (numUnreadChildren > 0)
+          {
+            formattedCountString.AppendInt(numUnreadChildren);
+            *aValue = formattedCountString.ToNewUnicode();
+          }
         }
       }
     }
@@ -2848,7 +2851,11 @@ NS_IMETHODIMP nsMsgDBView::OnParentChanged (nsMsgKey aKeyChanged, nsMsgKey oldPa
 NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
 {
   ClearHdrCache();
-  m_db = nsnull;
+  if (m_db)
+  {
+    m_db->RemoveListener(this);
+    m_db = nsnull;
+  }
   return NS_OK;
 }
 

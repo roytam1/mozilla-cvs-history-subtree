@@ -30,7 +30,7 @@ class nsMsgThreadsWithUnreadDBView : public nsMsgThreadedDBView
 public:
 	nsMsgThreadsWithUnreadDBView();
 	virtual ~nsMsgThreadsWithUnreadDBView();
-	const char * GetViewName(void) {return "ThreadsWithUnreadView"; }
+	virtual const char * GetViewName(void) {return "ThreadsWithUnreadView"; }
     NS_IMETHOD Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount);
     NS_IMETHOD GetViewType(nsMsgViewTypeValue *aViewType);
 
@@ -44,7 +44,7 @@ class nsMsgWatchedThreadsWithUnreadDBView : public nsMsgThreadedDBView
 {
 public:
     NS_IMETHOD GetViewType(nsMsgViewTypeValue *aViewType);
-	const char * GetViewName(void) {return "WatchedThreadsWithUnreadView"; }
+	virtual const char * GetViewName(void) {return "WatchedThreadsWithUnreadView"; }
 	virtual PRBool		WantsThisThread(nsIMsgThread *threadHdr);
 protected:
   virtual nsresult AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed);
@@ -58,7 +58,7 @@ public:
 						nsMsgCachelessView();
     NS_IMETHOD GetViewType(nsMsgViewTypeValue *aViewType);
 	virtual 			~nsMsgCachelessView();
-	const char * 		GetViewName(void) {return "nsMsgCachelessView"; }
+	virtual const char * 		GetViewName(void) {return "nsMsgCachelessView"; }
 	NS_IMETHOD Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *count);
 	nsresult				SetViewSize(PRInt32 setSize); // Override
 	virtual nsresult		AddNewMessages() ;
