@@ -10,7 +10,9 @@
           tbattr="toolbar-grippy" class="toolbar-primary-grippy"/>
       <xul:hbox class="toolbar-holder toolbar-primary-holder" flex="1" inherits="orient=tborient">
         <xul:image class="toolbar-primary-icon"/>
-        <children/>
+        <xul:hbox class="toolbar-button-box" flex="1">
+          <children/>
+        </xul:hbox>
       </xul:hbox>
     </content>
   </binding>
