@@ -64,7 +64,7 @@ PR_BEGIN_EXTERN_C
 
 PRBool CMGetBoolPref(char * pref_name) 
 {
-  XP_Bool pref;
+  PRBool pref;
 
   if (PREF_GetBoolPref(pref_name, &pref) >=0) {
     return pref;
