@@ -389,6 +389,10 @@ ifeq ($(OS_ARCH), OSF1)
 SO_FILES_TO_REMOVE=so_locations
 endif
 
+ifeq ($(OS_ARCH),Darwin)
+LINK_DLL	= $(MKSHLIB) $(OBJS)
+endif
+
 ifeq ($(OS_ARCH), HP-UX)
 # On HPUX, we need a couple of changes:
 # 1) Use the C++ compiler for linking, which will pass the +eh flag on down to the

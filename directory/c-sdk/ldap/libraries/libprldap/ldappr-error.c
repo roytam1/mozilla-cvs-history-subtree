@@ -197,7 +197,7 @@ static struct prldap_errormap_entry prldap_errormap[] = {
     {  PR_CONNECT_RESET_ERROR, ECONNRESET },
     {  PR_RANGE_ERROR, ERANGE },
     {  PR_DEADLOCK_ERROR, EDEADLK },
-#if defined(HPUX11) || defined(AIX4_3) || defined(OSF1)
+#if defined(HPUX11) || defined(AIX4_3) || defined(OSF1) || defined(DARWIN)
     {  PR_FILE_IS_LOCKED_ERROR, -1 },	/* XXX: correct mapping ? */
 #else
     {  PR_FILE_IS_LOCKED_ERROR, EDEADLOCK },	/* XXX: correct mapping ? */

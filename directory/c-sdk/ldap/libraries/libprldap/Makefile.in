@@ -115,6 +115,11 @@ EXTRA_LIBS += -L$(dist_libdir) $(DYNAMICNSPR)
 EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
 endif
 
+ifeq ($(OS_ARCH), Darwin)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME)
+EXTRA_LIBS += -L$(dist_libdir) $(DYNAMICNSPR)
+endif
+
 OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################

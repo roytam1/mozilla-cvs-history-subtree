@@ -188,6 +188,10 @@ EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 EXTRA_LIBS += -ldld -lm -lpthread
 endif
 
+ifeq ($(OS_ARCH), Darwin)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
+endif
+
 ###########################################################################
 
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)

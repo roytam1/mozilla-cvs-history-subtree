@@ -133,6 +133,16 @@ EXTRA_LIBS += -l$(SSL_LIBNAME) -l $(PRLDAP_LIBNAME)
 EXTRA_LIBS += $(OS_LIBS) -lc
 endif
 
+ifeq ($(OS_ARCH), Darwin)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME) -l$(PRLDAP_LIBNAME)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += -l$(SOFTOKN_LIBNAME)
+endif
+EXTRA_LIBS += -l$(SSL_LIBNAME) -l$(NSS_LIBNAME)
+EXTRA_LIBS += $(DYNAMICNSPR) 
+EXTRA_LIBS += $(OS_LIBS)
+endif
+
 OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################
