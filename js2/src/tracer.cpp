@@ -139,8 +139,7 @@ void trace_dump(JavaScript::Formatter& f)
 namespace JavaScript {
 namespace Shell {
 
-
-static void do_dikdik(Formatter &f)
+void do_dikdik(JavaScript::Formatter &f)
 {
 
     

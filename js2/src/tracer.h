@@ -39,6 +39,6 @@
 void trace_alloc(char *owner, size_t s, void *p);
 void trace_release(char *owner, void *p);
 void trace_dump(JavaScript::Formatter& f);
-
+void do_dikdik(JavaScript::Formatter &f);
 #endif
 
