@@ -128,13 +128,12 @@ nsSVGElement::Init()
 //----------------------------------------------------------------------
 // nsIContent methods
 
-NS_IMETHODIMP
+NS_IMETHODIMP_(void)
 nsSVGElement::SetParent(nsIContent* aParent)
 {
-  nsresult rv = nsGenericElement::SetParent(aParent);
+  nsGenericElement::SetParent(aParent);
 
   ParentChainChanged();
-  return rv;
 }
 
 NS_IMETHODIMP_(PRBool)

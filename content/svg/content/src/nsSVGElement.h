@@ -77,7 +77,7 @@ public:
   // NS_IMETHOD SetDocument(nsIDocument* aDocument, PRBool aDeep,
   //                       PRBool aCompileEventHandlers);
   // NS_IMETHOD GetParent(nsIContent** aResult) const;
-  NS_IMETHOD SetParent(nsIContent* aParent);
+  NS_IMETHOD_(void) SetParent(nsIContent* aParent);
   // NS_IMETHOD GetNameSpaceID(PRInt32& aNameSpaceID) const;
   // NS_IMETHOD GetTag(nsIAtom** aResult) const;
   // NS_IMETHOD GetNodeInfo(nsINodeInfo** aResult) const;
