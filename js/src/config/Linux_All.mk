@@ -19,8 +19,8 @@
 # Config for all versions of Linux
 #
 
-CC = gcc
-CCC = g++
+CC = /usr/bin/gcc
+CCC = /usr/bin/g++
 CFLAGS +=  -Wall -Wno-format
 
 RANLIB = echo
