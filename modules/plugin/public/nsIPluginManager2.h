@@ -137,7 +137,7 @@ public:
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID, PRBool *result);
+    HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID, PRBool *result) = 0;
 
 	/**
      * This operation causes the next browser event to be processed. This is
