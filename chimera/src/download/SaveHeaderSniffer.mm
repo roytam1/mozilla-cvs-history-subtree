@@ -330,13 +330,7 @@ nsresult nsHeaderSniffer::InitiateDownload(nsISupports* inSourceData, nsString& 
   rv = downloader->Init(inOriginalURI, destFile, inFileName.get(), nsString().get(), timeNow, webPersist);
   if (NS_FAILED(rv)) return rv;
     
-  PRInt32 flags = nsIWebBrowserPersist::PERSIST_FLAGS_NO_CONVERSION | 
-                  nsIWebBrowserPersist::PERSIST_FLAGS_REPLACE_EXISTING_FILES;
-  if (mBypassCache)
-    flags |= nsIWebBrowserPersist::PERSIST_FLAGS_BYPASS_CACHE;
-  else
-    flags |= nsIWebBrowserPersist::PERSIST_FLAGS_FROM_CACHE;
-  
+  PRInt32 flags = nsIWebBrowserPersist::PERSIST_FLAGS_REPLACE_EXISTING_FILES;
   webPersist->SetPersistFlags(flags);
   
   if (sourceURI)
