@@ -2530,6 +2530,7 @@ NS_IMETHODIMP VirtualFolderChangeListener::OnHdrChange(nsIMsgDBHdr *aHdrChanged,
     nsCOMPtr <nsIDBFolderInfo> dbFolderInfo;
 
     rv = m_virtualFolder->GetDBFolderInfoAndDB(getter_AddRefs(dbFolderInfo), getter_AddRefs(virtDatabase));
+    NS_ENSURE_SUCCESS(rv, rv);
     PRInt32 totalDelta = 0,  unreadDelta = 0;
     if (oldMatch != newMatch)
     {
