@@ -613,13 +613,16 @@ protected:
     nsCOMPtr<nsIURI> mCurrentScriptURL;
 
     /**
-     * Create a XUL template builder on the specified node.
-     * @return The template builder.
+     * Create a XUL template builder on the specified node if a 'datasources'
+     * attribute is present.
      */
-    nsresult CreateTemplateBuilder(nsIContent* aElement,
-                                   const nsString& aDataSources,
-                                   nsCOMPtr<nsIRDFContentModelBuilder>* aResult);
+    static nsresult
+    CheckTemplateBuilder(nsIContent* aElement);
 
+    /**
+     * Check the specified node and perform broadcaster/observer hookup,
+     * if necessary.
+     */
     nsresult CheckBroadcasterHookup(nsIContent* aElement);
 
     /**

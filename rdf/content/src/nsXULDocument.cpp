@@ -4216,7 +4216,7 @@ nsXULDocument::ResumeWalk()
             if (NS_FAILED(rv)) return rv;
 
             if (indx >= proto->mNumChildren) {
-                if (element) {
+                if (element && ((mState == eState_Master) || (mContextStack.Depth() > 1))) {
                     // We've processed all of the prototype's children.
                     // Check the element for a 'datasources' attribute, in
                     // which case we'll need to create a template builder
@@ -4227,20 +4227,14 @@ nsXULDocument::ResumeWalk()
                     // have been created: this ensures that there'll be a
                     // <template> tag available when we try to build that
                     // first ply of generated elements.
-                    nsAutoString datasources;
-                    rv = element->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
-
-                    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                        nsCOMPtr<nsIRDFContentModelBuilder> builder;
-                        rv = CreateTemplateBuilder(element, datasources, &builder);
-                        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasources");
-                        if (NS_FAILED(rv)) return rv;
-
-                        // Force construction of immediate template sub-content _now_.
-                        rv = builder->CreateContents(element);
-                        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create template contents");
-                        if (NS_FAILED(rv)) return rv;
-                    }
+                    //
+                    // N.B. that we do -not- do this if we are dealing
+                    // with an 'overlay element'; that is, an element
+                    // in the first ply of an overlay
+                    // document. OverlayForwardReference::Merge() will
+                    // handle that case.
+                    rv = CheckTemplateBuilder(element);
+                    if (NS_FAILED(rv)) return rv;
                 }
 
                 // Now pop the context stack back up to the parent
@@ -4679,11 +4673,29 @@ nsXULDocument::AddAttributes(nsXULPrototypeElement* aPrototype, nsIContent* aEle
 
 
 nsresult
-nsXULDocument::CreateTemplateBuilder(nsIContent* aElement,
-                                              const nsString& aDataSources,
-                                              nsCOMPtr<nsIRDFContentModelBuilder>* aResult)
+nsXULDocument::CheckTemplateBuilder(nsIContent* aElement)
 {
+    // Check aElement for a 'datasources' attribute, and if it has
+    // one, create and initialize a template builder.
     nsresult rv;
+
+    nsAutoString datasources;
+    rv = aElement->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
+    if (NS_FAILED(rv)) return rv;
+
+    if (rv != NS_CONTENT_ATTR_HAS_VALUE)
+        return NS_OK;
+
+    // Get the document and its URL
+    nsCOMPtr<nsIDocument> doc;
+    rv = aElement->GetDocument(*getter_AddRefs(doc));
+    if (NS_FAILED(rv)) return rv;
+
+    NS_ASSERTION(doc != nsnull, "no document");
+    if (! doc)
+        return NS_ERROR_UNEXPECTED;
+
+    nsCOMPtr<nsIURI> docurl = dont_AddRef(doc->GetDocumentURL());
 
     // construct a new builder
     nsCOMPtr<nsIRDFContentModelBuilder> builder;
@@ -4727,25 +4739,25 @@ nsXULDocument::CreateTemplateBuilder(nsIContent* aElement,
     PRInt32 first = 0;
 
     while(1) {
-        while (first < aDataSources.Length() && nsString::IsSpace(aDataSources.CharAt(first)))
+        while (first < datasources.Length() && nsString::IsSpace(datasources.CharAt(first)))
             ++first;
 
-        if (first >= aDataSources.Length())
+        if (first >= datasources.Length())
             break;
 
         PRInt32 last = first;
-        while (last < aDataSources.Length() && !nsString::IsSpace(aDataSources.CharAt(last)))
+        while (last < datasources.Length() && !nsString::IsSpace(datasources.CharAt(last)))
             ++last;
 
         nsAutoString uri;
-        aDataSources.Mid(uri, first, last - first);
+        datasources.Mid(uri, first, last - first);
         first = last + 1;
 
         // A special 'dummy' datasource
         if (uri.Equals("rdf:null"))
             continue;
 
-        rv = rdf_MakeAbsoluteURI(mDocumentURL, uri);
+        rv = rdf_MakeAbsoluteURI(docurl, uri);
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsIRDFDataSource> ds;
@@ -4771,7 +4783,11 @@ nsXULDocument::CreateTemplateBuilder(nsIContent* aElement,
     }
 
     // add it to the set of builders in use by the document
-    rv = AddContentModelBuilder(builder);
+    nsCOMPtr<nsIXULDocument> xuldoc = do_QueryInterface(doc);
+    if (! xuldoc)
+        return NS_ERROR_UNEXPECTED;
+
+    rv = xuldoc->AddContentModelBuilder(builder);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add builder to the document");
     if (NS_FAILED(rv)) return rv;
 
@@ -4779,7 +4795,11 @@ nsXULDocument::CreateTemplateBuilder(nsIContent* aElement,
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set builder's database");
     if (NS_FAILED(rv)) return rv;
 
-    *aResult = builder;
+    // Force construction of immediate template sub-content _now_.
+    rv = builder->CreateContents(aElement);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create template contents");
+    if (NS_FAILED(rv)) return rv;
+
     return NS_OK;
 }
 
@@ -4886,7 +4906,7 @@ nsXULDocument::OverlayForwardReference::Merge(nsIContent* aTargetNode,
     nsresult rv;
 
     {
-        // Whack the attributes from aOverlayNode onto aOriginalNode
+        // Whack the attributes from aOverlayNode onto aTargetNode
         PRInt32 count;
         rv = aOverlayNode->GetAttributeCount(count);
         if (NS_FAILED(rv)) return rv;
@@ -4929,9 +4949,13 @@ nsXULDocument::OverlayForwardReference::Merge(nsIContent* aTargetNode,
             if (NS_FAILED(rv)) return rv;
         }
 
-        // Ok, now we _don't_ need to add these to the
-        // document-to-element map because normal construction of the
-        // nodes will have done this.
+        // N.B. that kids will have been added to the document map
+        // already.
+
+        // Now check for a 'datasources' attribute, and build a
+        // template builder if necessary.
+        rv = CheckTemplateBuilder(aTargetNode);
+        if (NS_FAILED(rv)) return rv;
     }
 
     return NS_OK;
