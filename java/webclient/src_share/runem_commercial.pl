@@ -115,7 +115,8 @@ if ($SEP eq "/") {
   $cmd = $cmd . " -native";
 }
 #tack on the java library path
-$cmd = $cmd . " -Djava.library.path=" . $BINDIR;
+$cmd = $cmd . " -Djava.library.path=" . $BINDIR . $CPSEP . $BINDIR . $SEP .
+          "javadev" . $SEP . "lib";
 #tack on the classpath, class name, and bin dir
 $cmd = $cmd . " -classpath " . $ENV{"CLASSPATH"} . " " . $CLASSNAME . " " . 
   $BINDIR;
