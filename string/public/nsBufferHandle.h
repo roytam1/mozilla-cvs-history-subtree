@@ -163,13 +163,14 @@ class nsSharedBufferHandle
     protected:
       enum
         {
-          kIsShared                       = 1<<31,
-          kIsSingleAllocationWithBuffer   = 1<<30,  // handle and buffer are one piece, no separate deallocation is possible for the buffer
-          kIsStorageDefinedSeparately     = 1<<29,  // i.e., we're using the ``flex'' structure defined below
-          kIsUserAllocator                = 1<<28,  // can't |delete|, call a hook instead
+          kIsShared                       = 0x8000000,
+          kIsSingleAllocationWithBuffer   = 0x4000000,  // handle and buffer are one piece, no separate deallocation is possible for the buffer
+          kIsStorageDefinedSeparately     = 0x2000000,  // i.e., we're using the ``flex'' structure defined below
+          kIsUserAllocator                = 0x1000000,  // can't |delete|, call a hook instead
 
-          kFlagsMask                      = kIsShared | kIsSingleAllocationWithBuffer | kIsStorageDefinedSeparately | kIsUserAllocator,
-          kRefCountMask                   = ~kFlagsMask
+          kImplementationFlagsMask        = 0x0F00000,
+          kFlagsMask                      = 0xFF00000,
+          kRefCountMask                   = 0x00FFFFF
         };
 
     public:
@@ -201,6 +202,18 @@ class nsSharedBufferHandle
       IsReferenced() const
         {
           return get_refcount() != 0;
+        }
+
+      PRUint32
+      GetImplementationFlags() const
+        {
+          return mFlags & kImplementationFlagsMask;
+        }
+
+      void
+      SetImplementationFlags( PRUint32 aNewFlags )
+        {
+          mFlags = (mFlags & ~kImplementationFlagsMask) | (aNewFlags & kImplementationFlagsMask);
         }
 
     protected:

@@ -30,24 +30,28 @@
 #endif
 
   /**
-   * This class is (will be) part of the machinery that makes
+   * This class is part of the machinery that makes
    * most string implementations in this family share their underlying buffers
    * when convenient.  It is _not_ part of the abstract string interface,
    * though other machinery interested in sharing buffers will know about it.
+   *
+   * Normal string clients must _never_ call routines from this interface.
    */
 template <class CharT>
 class nsPrivateSharableString
   {
     public:
+      virtual ~nsPrivateSharableString() {}
+
+      virtual PRUint32                            GetImplementationFlags() const;
       virtual const nsBufferHandle<CharT>*        GetBufferHandle() const;
       virtual const nsSharedBufferHandle<CharT>*  GetSharedBufferHandle() const;
 
         /**
-         * |GetBufferHandle()| will return either |0|, |1|, or a reasonable pointer.
+         * |GetBufferHandle()| will return either |0|, or a reasonable pointer.
          * The meaning of |0| is that the string points to a non-contiguous or else empty representation.
-         * The meaning of |1| is implementation dependant.
-         * Otherwise |GetBufferHandle()| returns a pointer to the single contiguous hunk of characters
-         * that makes up this string.
+         * Otherwise |GetBufferHandle()| returns a handle that points to the single contiguous hunk of characters
+         * that make up this string.
          */
   };
 
@@ -63,6 +67,17 @@ const nsBufferHandle<CharT>*
 nsPrivateSharableString<CharT>::GetBufferHandle() const
   {
     return GetSharedBufferHandle();
+  }
+
+template <class CharT>
+PRUint32
+nsPrivateSharableString<CharT>::GetImplementationFlags() const
+  {
+    PRUint32 flags = 0;
+    const nsSharedBufferHandle<CharT>* handle = GetSharedBufferHandle();
+    if ( handle )
+      flags = handle->GetImplementationFlags();
+    return flags;
   }
 
 #endif // !defined(nsPrivateSharableString_h___)
