@@ -805,6 +805,9 @@ nsHTTPHandler::~nsHTTPHandler()
     CRTFREEIF (mAcceptEncodings);
 }
 
+static  PRInt32 sTotalRequested = 0;
+static  PRInt32 sTotalReleased  = 0;
+
 nsresult nsHTTPHandler::RequestTransport (nsIURI* i_Uri,
                                          nsHTTPChannel* i_Channel,
                                          PRUint32 bufferSegmentSize,
@@ -825,6 +828,8 @@ nsresult nsHTTPHandler::RequestTransport (nsIURI* i_Uri,
     // Ask the channel for proxy info... since that overrides
     PRBool usingProxy = PR_FALSE;
     i_Channel -> GetUsingProxy (&usingProxy);
+
+    PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::RequestTransport (), requested=%d, released=%d,flags=%d\n", ++sTotalRequested, sTotalReleased, flags));
 
     if (usingProxy)
     {
@@ -933,7 +938,8 @@ nsresult nsHTTPHandler::RequestTransport (nsIURI* i_Uri,
                 PR_LOG (gHTTPLog, PR_LOG_ALWAYS, 
                        ("nsHTTPHandler::RequestTransport.""\tAll socket transports are busy."
                         "\tAdding nsHTTPChannel [%x] to pending list.\n",
-                        i_Channel));       
+                        i_Channel));
+                sTotalRequested--;
                 return NS_ERROR_BUSY;
             }
         }
@@ -989,11 +995,14 @@ nsresult nsHTTPHandler::CreateTransport(const char* host,
     return rv;
 }
 
-nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabilities)
+nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabilities, PRBool aDontRestartChannels)
 {
     nsresult rv;
     PRUint32 count = 0, transportsInUseCount = 0;
+
     PRUint32 capabilities = (mCapabilities & aCapabilities);
+
+    PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::ReleaseTransport (), requested=%d, released=%d\n", sTotalRequested, ++sTotalReleased));
 
     PR_LOG (gHTTPLog, PR_LOG_ALWAYS, 
            ("nsHTTPHandler::ReleaseTransport."
@@ -1001,7 +1010,8 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
             i_pTrans));
 
     // ruslan: now update capabilities for this specific host
-    setCapabilities (i_pTrans, aCapabilities);
+    if (! (aCapabilities & DONTRECORD_CAPABILITIES) )
+        setCapabilities (i_pTrans, aCapabilities);
 
     if (capabilities & (ALLOW_KEEPALIVE|ALLOW_PROXY_KEEPALIVE))
     {
@@ -1036,13 +1046,18 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
     NS_ASSERTION(NS_SUCCEEDED(rv), "Transport not in table...");
 
     // Now trigger an additional one from the pending list
-    while (1) {
+    while (!aDontRestartChannels)
+    {
         // There's no guarantee that a channel will re-request a transport once
         // it's taken off the pending list, so we loop until there are no
         // pending channels or all transports are in use
 
         mPendingChannelList->Count(&count);
         mTransportList->Count(&transportsInUseCount);
+
+        PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::ReleaseTransport ():"
+                "pendingChannels=%d, InUseCount=%d\n", count, transportsInUseCount));
+
         if (!count || (transportsInUseCount >= (PRUint32) mMaxConnections))
             return NS_OK;
 
@@ -1055,10 +1070,8 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
         mPendingChannelList->RemoveElement(item);
         channel = (nsHTTPChannel*)(nsIRequest*)(nsISupports*)item;
 
-        PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
-               ("nsHTTPHandler::ReleaseTransport."
-                "\tRestarting nsHTTPChannel [%x]\n",
-                channel));
+        PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::ReleaseTransport."
+                "\tRestarting nsHTTPChannel [%x]\n", channel));
         
         channel->Open();
     }

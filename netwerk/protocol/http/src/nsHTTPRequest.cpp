@@ -561,6 +561,8 @@ nsHTTPPipelinedRequest::WriteRequest ()
     PRUint32 count = 0;
     PRUint32 index;
 
+    PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPPipelinedRequest::WriteRequest ()[%x], mOnStopDone=%d, mTransport=%x\n", this, mOnStopDone, mTransport));
+
     if (!mRequests)
         return NS_ERROR_FAILURE;
 
@@ -672,7 +674,6 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     nsresult rv;
     nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (mTransport, &rv);
     
-    mOnStopDone = PR_TRUE;
     nsHTTPRequest * req = (nsHTTPRequest *) mRequests -> ElementAt (0);
     
     rv = iStatus;
@@ -722,6 +723,7 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
                         rv = NS_ERROR_OUT_OF_MEMORY;
                 }
 
+                mOnStopDone = PR_TRUE;
                 WriteRequest ();    // write again to see if anything else is queued up
             }
         }
@@ -745,7 +747,7 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     //
     if (NS_FAILED (rv))
     {
-        if (mTotalProcessed == 0 && mAttempts == 0)
+        if (mTotalProcessed == 0 && mAttempts == 0  && mTotalWritten)
         {
             // the pipeline just started - we still can attempt to recover
 
@@ -754,14 +756,16 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
             if (trans)
                 trans  -> GetReuseCount (&wasKeptAlive);
 
-            mHandler   -> ReleaseTransport (mTransport, 0);
-            mTransport = null_nsCOMPtr ();
-
             if (wasKeptAlive)
             {
+                mMustCommit = PR_TRUE;
                 mAttempts++;
                 mTotalWritten = 0;
 
+                mHandler   -> ReleaseTransport (mTransport, nsIHTTPProtocolHandler::DONTRECORD_CAPABILITIES, PR_TRUE);
+                mTransport = null_nsCOMPtr ();
+
+                mOnStopDone = PR_TRUE;
                 rv = WriteRequest ();
             
                 if (NS_SUCCEEDED (rv))
@@ -771,9 +775,10 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
                 }
             }
         }
-        else
+
+        if (mTransport)
         {
-            mHandler   -> ReleaseTransport (mTransport, 0);
+            mHandler   -> ReleaseTransport (mTransport, nsIHTTPProtocolHandler::DONTRECORD_CAPABILITIES);
             mTransport = null_nsCOMPtr ();
         }
 
@@ -791,6 +796,7 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     //
     // mRequestBuffer.Truncate ();
     mPostDataStream = null_nsCOMPtr ();
+    mOnStopDone = PR_TRUE;
 
     return rv;
 }
@@ -812,6 +818,9 @@ nsHTTPPipelinedRequest::RestartRequest ()
         if (trans)
             trans  -> GetReuseCount (&wasKeptAlive);
 
+
+        PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("\nnsHTTPPipelinedRequest::RestartRequest () [this=%x], wasKepAlive=%u, mAttempts=%d, mOnStopDone=%d\n", this, wasKeptAlive, mAttempts, mOnStopDone));
+
         if (wasKeptAlive && mAttempts == 0)
         {
             rv = NS_OK;
@@ -819,12 +828,13 @@ nsHTTPPipelinedRequest::RestartRequest ()
 
             if (mOnStopDone)
             {
-                mHandler   -> ReleaseTransport (mTransport, 0);
+                mTotalWritten = 0;
+                mAttempts++;
+                mMustCommit = PR_TRUE;
+
+                mHandler   -> ReleaseTransport (mTransport, nsIHTTPProtocolHandler::DONTRECORD_CAPABILITIES, PR_TRUE);
                 mTransport = null_nsCOMPtr ();
 
-                mTotalWritten = 0;
-
-                mAttempts++;
                 rv = WriteRequest ();
             }
         }

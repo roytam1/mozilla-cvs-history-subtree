@@ -528,7 +528,7 @@ nsHTTPServerListener::OnStopRequest (nsIChannel* channel, nsISupports* i_pContex
            ("nsHTTPServerListener::OnStopRequest [this=%x]."
             "\tStatus = %x\n", this, i_Status));
 
-    if (!mDataReceived)
+    if (NS_SUCCEEDED (i_Status) && !mDataReceived)
     {
         // no data has been received from the channel at all - must be due to the fact that the
         // server has dropped the connection on keep-alive
@@ -541,7 +541,7 @@ nsHTTPServerListener::OnStopRequest (nsIChannel* channel, nsISupports* i_pContex
         }
     }
 
-    if (NS_SUCCEEDED(rv) && !mHeadersDone)
+    if (NS_SUCCEEDED (i_Status) && !mHeadersDone)
     {
         //
         // Oh great!!  The server has closed the connection without sending 
