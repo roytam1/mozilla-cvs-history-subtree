@@ -1,6 +1,0 @@
-nsIPrincipal.idl
-nsICodebasePrincipal.idl
-nsICertificatePrincipal.idl
-nsICodeSourcePrincipal.idl
-nsIScriptSecurityManager.idl
-nsICapsSecurityCallbacks.idl
