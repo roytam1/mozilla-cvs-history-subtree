@@ -22,9 +22,9 @@
 #include "jsapi.h"
 #include "nsIPrincipal.h"
 #include "nsIURI.h"
+#include "nsJSPrincipals.h"
 
-class nsCodebasePrincipal : JSPrincipals,
-                            public nsICodebasePrincipal {
+class nsCodebasePrincipal : public nsICodebasePrincipal {
 public:
 
   NS_DECL_ISUPPORTS
@@ -43,7 +43,6 @@ public:
 
   NS_IMETHOD
   ToJSPrincipal(JSPrincipals * * jsprin);
-
   
   NS_IMETHOD
   GetType(PRInt16 * type);
@@ -67,6 +66,8 @@ public:
 protected:
   nsIURI * itsURL;
   PRInt16 itsType;
+  nsJSPrincipals *itsJSPrincipals;
+
 private:
   void Init(PRInt16 type, nsIURI * uri);
 };

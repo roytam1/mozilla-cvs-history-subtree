@@ -35,6 +35,7 @@ EXPORTS=                           \
         nsCCapsManager.h           \
         nsCertificatePrincipal.h   \
         nsCodebasePrincipal.h      \
+        nsJSPrincipals.h           \
         nsPrincipalArray.h         \
         nsPrincipalManager.h       \
         nsPrivilege.h              \

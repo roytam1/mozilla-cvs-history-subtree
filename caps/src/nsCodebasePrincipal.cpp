@@ -45,11 +45,18 @@ nsCodebasePrincipal::Release(void)
 NS_IMETHODIMP
 nsCodebasePrincipal::ToJSPrincipal(JSPrincipals * * jsprin)
 {
-  char * cb;
+    if (itsJSPrincipals.refcount == 0) {
+        this->AddRef();
+    }
+    *jsprin = &itsJSPrincipals.jsPrincipals;
+    return NS_OK;
+/*
+    char * cb;
   this->GetURLString(& cb);
   * jsprin = NS_STATIC_CAST(JSPrincipals *,this);
   (* jsprin)->codebase = PL_strdup(cb);
   return NS_OK;
+  */
 }
 
 NS_IMETHODIMP
@@ -130,11 +137,8 @@ nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, const char * codeBaseURL)
   NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
   if (!NS_SUCCEEDED(rv)) 
     compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void * *)& uri);
-  char * spec = PL_strdup(codeBaseURL);
-  uri->SetSpec(spec);
+  uri->SetSpec((char *) codeBaseURL);
   this->Init(type,uri);
-  PL_strfree(spec);
-  NS_ADDREF(itsURL);
 }
 
 nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, nsIURI * url)
@@ -142,7 +146,7 @@ nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, nsIURI * url)
   this->Init(type,url);
 }
 
-void
+void // nsresult
 nsCodebasePrincipal::Init(PRInt16 type, nsIURI * uri)
 {
   NS_INIT_REFCNT();
@@ -152,6 +156,8 @@ nsCodebasePrincipal::Init(PRInt16 type, nsIURI * uri)
   {
     NS_ADDREF(this->itsURL);
   }
+  itsJSPrincipals = new nsJSPrincipals(this);
+  // XXX check result
 }
 
 nsCodebasePrincipal::~nsCodebasePrincipal(void)
