@@ -1367,10 +1367,7 @@ sub run_all_tests {
     # $Settings::MozProfileName and will live in $build_dir/.mozilla.
     # Also assuming only one profile here.
     #
-    # MacOSX/Darwin stores profiles in ~/Library/Mozilla/Profiles.
     my $cp_result = 0;
-
-    print "XXXX profiledir = $profiledir\n";
 
     unless (-d "$profiledir") {
         print_log "No profile found, creating profile.\n";
