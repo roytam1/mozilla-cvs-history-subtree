@@ -14,6 +14,11 @@
 	    <children/>
 	  </xul:outlinerrows>
 	</content>
+  <implementation>
+    <property name="outlinerBoxObject"
+                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject);"
+                readonly="true"/>
+  </implementation>
   </binding>
 
   <binding id="outlinerrows" extends="xul:box">
@@ -31,6 +36,9 @@
       <xul:text class="outlinercol-text" inherits="crop,value" flex="1" crop="right"/>
       <xul:image class="outlinercol-sortdirection"/>
     </content>
+    <handlers>
+      <handler event="click" action="this.parentNode.outlinerBoxObject.view.cycleHeader(this);"/>
+    </handlers>
   </binding>
 
 </bindings>
