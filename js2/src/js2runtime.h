@@ -1459,6 +1459,7 @@ static const double two31 = 2147483648.0;
         struct ProtoFunDef {
             char *name;
             JSType *result;
+            uint32 length;
             JSFunction::NativeCode *imp;
         };
         class PrototypeFunctions {

@@ -105,46 +105,16 @@ void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
     result.failure = false;
 }
 
-
-JSValue String_toLowerCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
-
-    String *result = new String(*S.string);
-    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
-        *i = toLower(*i);
-
-    return JSValue(result);
-}
-
-JSValue String_toUpperCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
-
-    String *result = new String(*S.string);
-    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
-        *i = toUpper(*i);
-
-    return JSValue(result);
-}
-
 JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
     JSValue S = thisValue->toString(cx);
 
     JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
-    JSValue separatorV;
-    JSValue limitV;
     uint32 lim;
-
-    if (argc > 0)
-        separatorV = argv[0];
-    if (argc > 1)
-        limitV = argv[1];
-    
+    JSValue separatorV = (argc > 0) ? argv[0] : kUndefinedValue;
+    JSValue limitV = (argc > 1) ? argv[1] : kUndefinedValue;
+        
     if (limitV.isUndefined())
         lim = (uint32)two32minus1;
     else
@@ -153,7 +123,7 @@ JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
     uint32 s = S.string->size();
     uint32 p = 0;
 
-    // if separatorV.isRegExp() -->
+    // XXX if separatorV.isRegExp() -->
 
     const String *R = separatorV.toString(cx).string;
 
@@ -207,32 +177,107 @@ step11:
 
 JSValue String_valueOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    if (thisValue->isString())
+        return *thisValue;
+    else
+        throw Exception(Exception::typeError, "String.valueOf called on");
 }
 
 JSValue String_charAt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    const String *str = thisValue->toString(cx).string;
+
+    uint32 pos = 0;
+    if (argc > 0)
+        pos = (uint32)(argv[0].toInt32(cx).f64);
+
+    if ((pos < 0) || (pos >= str->size()))
+        return JSValue(new String());       // have an empty string kValue somewhere?
+    else
+        return JSValue(new String(1, (*str)[pos]));
+    
 }
 
 JSValue String_charCodeAt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    const String *str = thisValue->toString(cx).string;
+
+    uint32 pos = 0;
+    if (argc > 0)
+        pos = (uint32)(argv[0].toInt32(cx).f64);
+
+    if ((pos < 0) || (pos >= str->size()))
+        return kNaNValue;
+    else
+        return JSValue((float64)(*str)[pos]);
 }
 
 JSValue String_concat(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    const String *str = thisValue->toString(cx).string;
+    String *result = new String(*str);
+
+    for (uint32 i = 0; i < argc; i++) {
+        *result += *argv[i].toString(cx).string;
+    }
+
+    return JSValue(result);
 }
 
 JSValue String_indexOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    if (argc == 0)
+        return JSValue(-1.0);
+
+    const String *str = thisValue->toString(cx).string;
+    const String *searchStr = argv[0].toString(cx).string;
+    int32 pos = 0;
+
+    if (argc > 1) {
+        pos = argv[1].toInt32(cx).f64;
+        if (pos < 0)
+            pos = 0;
+        else
+            if (pos >= str->size()) 
+                pos = str->size();
+    }
+    pos = str->find(*searchStr, pos);
+    if (pos == String::npos)
+        return JSValue(-1.0);
+    return JSValue((float64)pos);
 }
 
 JSValue String_lastIndexOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    if (argc == 0)
+        return JSValue(-1.0);
+
+    const String *str = thisValue->toString(cx).string;
+    const String *searchStr = argv[0].toString(cx).string;
+    int32 pos = 0;
+
+    if (argc > 1) {
+        float64 fpos = argv[1].toNumber(cx).f64;
+        if (fpos != fpos) 
+            pos = pos = str->size();
+        else {
+            if (pos < 0) 
+                pos = 0;
+            else
+                if (pos >= str->size()) 
+                    pos = str->size();
+        }
+    }
+    pos = str->rfind(*searchStr, pos);
+    if (pos == String::npos)
+        return JSValue(-1.0);
+    return JSValue((float64)pos);
 }
 
 JSValue String_localeCompare(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
@@ -240,14 +285,91 @@ JSValue String_localeCompare(Context *cx, JSValue *thisValue, JSValue *argv, uin
     return kUndefinedValue;
 }
 
-JSValue String_splice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_toLowerCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    JSValue S = thisValue->toString(cx);
+
+    String *result = new String(*S.string);
+    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
+        *i = toLower(*i);
+
+    return JSValue(result);
+}
+
+JSValue String_toUpperCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue->isObject());
+    JSValue S = thisValue->toString(cx);
+
+    String *result = new String(*S.string);
+    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
+        *i = toUpper(*i);
+
+    return JSValue(result);
+}
+
+JSValue String_slice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue->isObject());
+    const String *sourceString = thisValue->toString(cx).string;
+
+    uint32 sourceLength = sourceString->size();
+    int32 start = (argc > 0) ? (int32)(argv[0].toInt32(cx).f64) : 0;
+    int32 end = (argc > 1) ? (int32)(argv[1].toInt32(cx).f64) : sourceLength;
+
+    if (start < 0) {
+        start = sourceLength + start;
+        if (start < 0)
+            start = 0;
+    }
+    else {
+        if (start >= sourceLength)
+            start = sourceLength;
+    }
+    if (end < 0) {
+        end = sourceLength + end;
+        if (end < 0)
+            end = 0;
+    }
+    else {
+        if (end >= sourceLength)
+            end = sourceLength;
+    }    
+    if (start > end)
+        return JSValue(new String());
+    return JSValue(new String(sourceString->substr(start, end - start)));
 }
 
 JSValue String_substring(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    const String *sourceString = thisValue->toString(cx).string;
+
+    uint32 sourceLength = sourceString->size();
+    int32 start = (argc > 0) ? (int32)(argv[0].toInt32(cx).f64) : 0;
+    int32 end = (argc > 1) ? (int32)(argv[1].toInt32(cx).f64) : sourceLength;
+
+    if (start < 0)
+        start = 0;
+    else {
+        if (start >= sourceLength)
+            start = sourceLength;
+    }
+    if (end < 0)
+        end = 0;
+    else {
+        if (end >= sourceLength)
+            end = sourceLength;
+    }
+
+    if (start > end) {
+        int32 t = start;
+        start = end;
+        end = t;
+    }
+        
+    return JSValue(new String(sourceString->substr(start, end - start)));
 }
 
 
@@ -255,22 +377,22 @@ Context::PrototypeFunctions *getStringProtos()
 {
     Context::ProtoFunDef stringProtos[] = 
     {
-        { "toString",           String_Type, String_toString },
-        { "valueof",            String_Type, String_valueOf },
-        { "charAt",             String_Type, String_charAt },
-        { "charCodeAt",         Number_Type, String_charCodeAt },
-        { "concat",             String_Type, String_concat },
-        { "indexOf",            Number_Type, String_indexOf },
-        { "lastIndexOf",        Number_Type, String_lastIndexOf },
-        { "localeCompare",      Number_Type, String_localeCompare },
-        { "slice",              String_Type, String_splice },
-        { "split",              Array_Type,  String_split },
-        { "substring",          String_Type, String_substring },
-        { "toSource",           String_Type, String_toString },
-        { "toLocaleUpperCase",  String_Type, String_toUpperCase },  // (sic)
-        { "toLocaleLowerCase",  String_Type, String_toLowerCase },  // (sic)
-        { "toUpperCase",        String_Type, String_toUpperCase },
-        { "toLowerCase",        String_Type, String_toLowerCase },
+        { "toString",           String_Type, 0, String_toString },
+        { "valueof",            String_Type, 0, String_valueOf },
+        { "charAt",             String_Type, 1, String_charAt },
+        { "charCodeAt",         Number_Type, 1, String_charCodeAt },
+        { "concat",             String_Type, 1, String_concat },
+        { "indexOf",            Number_Type, 1, String_indexOf },
+        { "lastIndexOf",        Number_Type, 1, String_lastIndexOf },
+        { "localeCompare",      Number_Type, 1, String_localeCompare },
+        { "slice",              String_Type, 2, String_slice },
+        { "split",              Array_Type,  2, String_split },
+        { "substring",          String_Type, 2, String_substring },
+        { "toSource",           String_Type, 0, String_toString },
+        { "toLocaleUpperCase",  String_Type, 0, String_toUpperCase },  // (sic)
+        { "toLocaleLowerCase",  String_Type, 0, String_toLowerCase },  // (sic)
+        { "toUpperCase",        String_Type, 0, String_toUpperCase },
+        { "toLowerCase",        String_Type, 0, String_toLowerCase },
         { NULL }
     };
     return new Context::PrototypeFunctions(&stringProtos[0]);

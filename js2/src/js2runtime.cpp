@@ -2494,10 +2494,12 @@ void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFu
     type->setDefaultConstructor(new JSFunction(this, cdef->defCon, Object_Type));
     if (pdef) {
         for (uint32 i = 0; i < pdef->mCount; i++) {
+            JSFunction *fun = new JSFunction(this, pdef->mDef[i].imp, pdef->mDef[i].result);
+            fun->mExpectedArgs = pdef->mDef[i].length;
             type->mPrototype->defineVariable(widenCString(pdef->mDef[i].name), 
                                                NULL, 
                                                pdef->mDef[i].result, 
-                                               JSValue(new JSFunction(this, pdef->mDef[i].imp, pdef->mDef[i].result)));
+                                               JSValue(fun));
         }
     }
     type->completeClass(this, mScopeChain, super);
@@ -2674,29 +2676,29 @@ void Context::initBuiltins()
 
     ProtoFunDef objectProtos[] = 
     {
-        { "toString", String_Type, Object_toString },
-        { "toSource", String_Type, Object_toString },
+        { "toString", String_Type, 0, Object_toString },
+        { "toSource", String_Type, 0, Object_toString },
         { NULL }
     };
     ProtoFunDef numberProtos[] = 
     {
-        { "toString", String_Type, Number_toString },
-        { "toSource", String_Type, Number_toString },
+        { "toString", String_Type, 0, Number_toString },
+        { "toSource", String_Type, 0, Number_toString },
         { NULL }
     };
 
     ProtoFunDef arrayProtos[] = 
     {
-        { "toString", String_Type, Array_toString },
-        { "toSource", String_Type, Array_toSource },
-        { "push",     Number_Type, Array_push },
-        { "pop",      Object_Type, Array_pop },
+        { "toString", String_Type, 0, Array_toString },
+        { "toSource", String_Type, 0, Array_toSource },
+        { "push",     Number_Type, 1, Array_push },
+        { "pop",      Object_Type, 0, Array_pop },
         { NULL }
     };
     ProtoFunDef booleanProtos[] = 
     {
-        { "toString", String_Type, Boolean_toString },
-        { "toSource", String_Type, Boolean_toString },
+        { "toString", String_Type, 0, Boolean_toString },
+        { "toSource", String_Type, 0, Boolean_toString },
         { NULL }
     };
 
