@@ -129,6 +129,14 @@ nsAbAutoCompleteSession::AddToResult(const PRUnichar* pNickNameStr,
   nsresult rv;
   PRUnichar* fullAddrStr = nsnull;
 
+  // XXX la la la. Hacks are fun!  Don't try this at home.
+  // Right now we set the nickname as the screenname. This is wrong.
+  // It should just be a third email address, set as the primary if applicable.
+  // Right now even if the person's screenname isn't their primary address,
+  // we'll autocomplete to it
+  if (!pEmailStr || pEmailStr[0] == 0)
+   pEmailStr = pNickNameStr;
+
   if (type == DEFAULT_MATCH)
   {
     if (mDefaultDomain[0] == 0)
@@ -438,19 +446,26 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
             rv = card->GetPrimaryEmail(getter_Copies(pEmailStr));
 						if (NS_FAILED(rv))
 							continue;
-						// Don't bother with card without an email address
-						if (!(const PRUnichar*)pEmailStr || ((const PRUnichar*)pEmailStr)[0] == 0)
-							continue;
-						//...and does it looks like a valid address?
-						PRInt32 i;
-						for (i = 0; ((const PRUnichar*)pEmailStr)[i] != 0 &&
-								((const PRUnichar*)pEmailStr)[i] != '@'; i ++)
-							;
-						if (((const PRUnichar*)pEmailStr)[i] == 0)
-							continue;
+            
+            rv = card->GetNickName(getter_Copies(pNickNameStr));
+            if (NS_FAILED(rv))
+                continue;
+  
+            if (!(const PRUnichar*)pNickNameStr || ((const PRUnichar*)pNickNameStr)[0] == 0) {
+						  // Don't bother with card without an email address and a screenname
+						  if (!(const PRUnichar*)pEmailStr || ((const PRUnichar*)pEmailStr)[0] == 0)
+						  	continue;
+						  //...and does it looks like a valid address?
+						  PRInt32 i;
+						  for (i = 0; ((const PRUnichar*)pEmailStr)[i] != 0 &&
+						  		((const PRUnichar*)pEmailStr)[i] != '@'; i ++)
+						  	;
+						  if (((const PRUnichar*)pEmailStr)[i] == 0)
+						  	continue;
+            }
 					}
             
-            //Now, retrive the user name and nickname
+          // Now, retrieve the user name
           rv = card->GetDisplayName(getter_Copies(pDisplayNameStr));
           if (NS_FAILED(rv))
              	continue;
@@ -458,9 +473,6 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
           if (NS_FAILED(rv))
              	continue;
           rv = card->GetLastName(getter_Copies(pLastNameStr));
-          if (NS_FAILED(rv))
-             	continue;
-          rv = card->GetNickName(getter_Copies(pNickNameStr));
           if (NS_FAILED(rv))
              	continue;
             
