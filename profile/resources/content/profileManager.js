@@ -211,56 +211,6 @@ function ConfirmMigrateAll()
     return false;
 }
 
-function SwitchProfileManagerMode()
-{
-  var prattleIndex  = null;
-  var captionLine   = null;
-  var buttonDisplay = null;
-  var selItems      = [];
-  
-  if( profileManagerMode == "selection" )
-  {
-    prattleIndex = 1;                                       // need to switch to manager's index
-    
-    try {
-      captionLine = gProfileManagerBundle.getString("pm_title"); // get manager's caption
-    } catch(e) {
-      captionLine = "Manage Profiles *";
-    }
-    
-    var manage = document.getElementById( "manage" );       // hide the manage profiles button...
-    var manageParent = manage.parentNode;
-    manageParent.removeChild( manage );
-    profileManagerMode = "manager";                         // swap the mode
-  } 
-  else {
-    prattleIndex = 0;
-    try {
-      captionLine = gProfileManagerBundle.getString("ps_title");
-    } catch(e) {
-      captionLine = "Select Profile *";
-    }
-    profileManagerMode = "selection";
-  }
-
-  // swap deck  
-  var deck = document.getElementById( "prattle" );
-  deck.setAttribute( "selectedIndex", prattleIndex )
-    
-  // swap caption
-  ChangeCaption( captionLine );
-  
-  set = !set;
-}
-
-// change the title of the profile manager/selection window.
-function ChangeCaption( aCaption )
-{
-  var caption = document.getElementById( "header" );
-  caption.setAttribute( "value", aCaption );
-  window.title = aCaption;
-}
-
 // do button enabling based on listbox selection
 function DoEnabling()
 {
