@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /*
  * Copyright (c) 1990 Regents of the University of Michigan.
@@ -103,8 +88,6 @@ static int nslberi_extwrite_compat( int s, const void *buf, int len,
 static unsigned long get_tag( Sockbuf *sb, BerElement *ber);
 static unsigned long get_ber_len( BerElement *ber);
 static unsigned long read_len_in_ber( Sockbuf *sb, BerElement *ber);
-static int get_and_check_length( BerElement *ber,
-		unsigned long length, Sockbuf *sock );
 
 /*
  * internal global structure for memory allocation callback functions
@@ -591,7 +574,6 @@ get_tag( Sockbuf *sb, BerElement *ber)
                 return( LBER_DEFAULT );
         }
 
-	/* we only handle small (one byte) tags */
         if ( (xbyte & LBER_BIG_TAG_MASK) == LBER_BIG_TAG_MASK ) {
                 return( LBER_DEFAULT );
         }
@@ -667,16 +649,11 @@ read_len_in_ber( Sockbuf *sb, BerElement *ber)
 }
 
 
-/*
- * Returns the tag of the message or LBER_DEFAULT if an error occurs.
- * To check for EWOULDBLOCK or other temporary errors, the system error
- * number (errno) should be consulted.
- */
 unsigned long
 LDAP_CALL
 ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 {
-	unsigned long	toread;
+	unsigned long	tag, toread, newlen;
 	long		rc;
 
 #ifdef LDAP_DEBUG
@@ -691,10 +668,7 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 
 	if ( ber->ber_rwptr == NULL ) {
 	  /* read the tag */
-	  unsigned long tag = get_tag(sb, ber);
-	  unsigned long newlen;
-
-	  if (tag == LBER_DEFAULT ) {
+	  if ((tag = get_tag(sb, ber)) == LBER_DEFAULT ) {
 	    return( LBER_DEFAULT );
 	  }
 
@@ -703,6 +677,8 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 	    return( LBER_DEFAULT);
           }
 
+	  ber->ber_tag_contents[0] = (char)tag; /* we only handle 1 byte tags */
+	  
 	  /* read the length */
 	  if ((newlen = read_len_in_ber(sb, ber)) == LBER_DEFAULT ) {
 	    return( LBER_DEFAULT );
@@ -743,20 +719,20 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 
 	/* OK, we've malloc-ed the buffer; now read the rest of the expected length */
 	toread = (unsigned long)ber->ber_end - (unsigned long)ber->ber_rwptr;
-	while ( toread > 0 ) {
+	do {
 	  if ( (rc = BerRead( sb, ber->ber_rwptr, (long)toread )) <= 0 ) {
 	    return( LBER_DEFAULT );
 	  }
 	  
 	  toread -= rc;
 	  ber->ber_rwptr += rc;
-	}
+	} while ( toread > 0 );
 	
 #ifdef LDAP_DEBUG
 	if ( lber_debug ) {
 	  char msg[80];
 	  sprintf( msg, "ber_get_next: tag 0x%lx len %ld contents:\n",
-		   ber->ber_tag_contents[0], ber->ber_len );
+		   tag, ber->ber_len );
 	  ber_err_print( msg );
 	  if ( lber_debug > 1 )
 	    ber_dump( ber, 1 );
@@ -764,8 +740,9 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 #endif
 		
 	ber->ber_rwptr = NULL;
-	*len = ber->ber_struct[BER_STRUCT_VAL].ldapiov_len = ber->ber_len;
-	return(ber->ber_tag_contents[0]);
+	*len = newlen;
+	ber->ber_struct[BER_STRUCT_VAL].ldapiov_len = newlen;
+	return(tag);
 }
 
 Sockbuf *
@@ -1099,9 +1076,6 @@ ber_special_free(void* buf, BerElement *ber)
 	NSLBERI_FREE( buf );
 }
 
-/* Copy up to bytes_to_read bytes from b into return_buffer.
- * Returns a count of bytes copied (always >= 0).
- */
 static int
 read_bytes(byte_buffer *b, unsigned char *return_buffer, int bytes_to_read)
 {
@@ -1115,9 +1089,11 @@ read_bytes(byte_buffer *b, unsigned char *return_buffer, int bytes_to_read)
 	}
 	if (1 == bytes_to_copy) {
 		*return_buffer = *(b->p+b->offset++);
-	} else if (bytes_to_copy <= 0) {
-		bytes_to_copy = 0;	/* never return a negative result */
-	} else {
+	} else 
+	if (0 == bytes_to_copy) {
+		;
+	} else
+	{
 		memcpy(return_buffer,b->p+b->offset,bytes_to_copy);
 		b->offset += bytes_to_copy;
 	}
@@ -1176,25 +1152,6 @@ ber_get_next_buffer( void *buffer, size_t buffer_size, unsigned long *len,
 		Bytes_Scanned, NULL));
 }
 
-/*
- * Returns the tag of the message or LBER_DEFAULT if an error occurs. There
- * are two cases where LBER_DEFAULT is returned:
- *
- * 1) There was not enough data in the buffer to complete the message; this
- *    is a "soft" error. In this case, *Bytes_Scanned is set to a positive
- *    number.
- *
- * 2) A "fatal" error occurs. In this case, *Bytes_Scanned is set to zero.
- *    To check for specific errors, the system error number (errno) must
- *    be consulted.  These errno values are explicitly set by this
- *    function; other errno values may be set by underlying OS functions:
- *
- *    EINVAL   - LBER_SOCKBUF_OPT_VALID_TAG option set but tag does not match.
- *    EMSGSIZE - length was not represented as <= sizeof(long) bytes or the
- *                  LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE option was set and the
- *                  message is longer than the maximum. *len will be set in
- *                  the latter situation.
- */
 unsigned long
 LDAP_CALL
 ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
@@ -1205,7 +1162,6 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 	long		rc;
 	int		noctets, diff;
 	byte_buffer sb = {0};
-	int rcnt = 0;
 
 
 	/*
@@ -1227,17 +1183,16 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 
 	sb.p = buffer;
 	sb.length = buffer_size;
-	*len = netlen = 0;
 
-	if ( ber->ber_rwptr == NULL || ber->ber_tag == LBER_DEFAULT ) {
+	if ( ber->ber_rwptr == NULL ) {
 		/*
 		 * First, we read the tag.
 		 */
 
-		/* if we have been called before with a fragment not
-		 * containing a complete length, we have no rwptr but
+                /* if we have been called before with a fragment not
+		 * containing a comlete length, we have no rwptr but
 	 	 * a tag already
-		*/
+                 */
 		if ( ber->ber_tag == LBER_DEFAULT ) {
 			if ( (tag = get_buffer_tag( &sb )) == LBER_DEFAULT ) {
 				goto premature_exit;
@@ -1247,10 +1202,8 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 
 		if((sock->sb_options & LBER_SOCKBUF_OPT_VALID_TAG) &&
 		  (tag != sock->sb_valid_tag)) {
-#if !defined( macintosh ) && !defined( DOS )
-			errno = EINVAL;
-#endif
-			goto error_exit;
+			*Bytes_Scanned=0;
+			return( LBER_DEFAULT);
 		}
 
 		/*
@@ -1261,99 +1214,58 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 		 * long.
 		 */
 
+                /* if the length is in long form and we don't get it in one
+                 * fragment, we should handle this (TBD).
+                 */
+
+		*len = netlen = 0;
 		if ( read_bytes( &sb, &lc, 1 ) != 1 ) {
 			goto premature_exit;
 		}
 		if ( lc & 0x80 ) {
 			noctets = (lc & 0x7f);
-			if ( noctets > sizeof(unsigned long) ) {
-#if !defined( macintosh ) && !defined( DOS )
-				errno = EMSGSIZE;
-#endif
-				goto error_exit;
-			}
+			if ( noctets > sizeof(unsigned long) )
+				goto premature_exit;
 			diff = sizeof(unsigned long) - noctets;
-			rcnt = read_bytes( &sb, (unsigned char *)&netlen + diff, noctets );
-			if ( rcnt != noctets ) {
-				/* keep the read bytes in buffer for the next round */
-				if ( ber->ber_end - ber->ber_buf < rcnt + 1 ) {
-					if ( nslberi_ber_realloc( ber, rcnt + 1 ) != 0 )
-						/* errno set by realloc() */
-						goto error_exit;
-					ber->ber_end = ber->ber_buf + rcnt + 1;
-				}
-				ber->ber_ptr = ber->ber_buf;
-				ber->ber_buf[0] = lc;
-				if ( rcnt > 0 ) {
-					SAFEMEMCPY( &ber->ber_buf[1],
-								(const char *)&netlen + diff, rcnt );
-				}
-
-				/* The way how ber_rwptr is used here is exceptional.
-				 * Here, ber_rwptr is set after the buffer contents,
-				 * not to the next byte to be read.
-				 * This is b/c we need the number of bytes that were read (rcnt)
-				 * in the next process [ in "else if (0 == ber->ber_len)" ]
-				 */
-				ber->ber_rwptr = ber->ber_buf + rcnt + 1;
+			if ( read_bytes( &sb, (unsigned char *)&netlen + diff,
+			    noctets ) != noctets ) {
 				goto premature_exit;
 			}
 			*len = LBER_NTOHL( netlen );
 		} else {
 			*len = lc;
 		}
+		ber->ber_len = *len;
 
-		if ( 0 != get_and_check_length(ber, *len, sock)) {
-			/* errno set by get_and_check_length() */
-			goto error_exit;
+		/*
+		 * Finally, malloc a buffer for the contents and read it in.
+		 * It's this buffer that's passed to all the other ber decoding
+		 * routines.
+		 */
+
+#if defined( DOS ) && !defined( _WIN32 )
+		if ( *len > 65535 ) {	/* DOS can't allocate > 64K */
+			goto premature_exit;
 		}
-	} else if (0 == ber->ber_len) {
-		/* Still waiting to receive the length */
-		lc = ber->ber_buf[0];
-		if ( lc & 0x80 ) {
-			int prevcnt = ber->ber_rwptr - ber->ber_buf - 1/* lc */;
+#endif /* DOS && !_WIN32 */
 
-			if ( prevcnt < 0 ) { /* This is unexpected */
-				ber_reset( ber, 0 );
-				ber->ber_tag = LBER_DEFAULT;
-#if !defined( macintosh ) && !defined( DOS )
-				errno = EMSGSIZE;	/* kind of a guess */
-#endif
-				goto error_exit;
-			}
+                if ( (sock != NULL)  &&
+		    ( sock->sb_options & LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE )
+                    && (*len > sock->sb_max_incoming) ) {
+                        return( LBER_DEFAULT );
+                }
 
-			noctets = (lc & 0x7f);
-			diff = sizeof(unsigned long) - noctets;
-			SAFEMEMCPY( (char *)&netlen + diff, &ber->ber_buf[1], prevcnt );
-			rcnt = read_bytes( &sb, (unsigned char *)&netlen + diff + prevcnt,
-				noctets - prevcnt );
-			if ( rcnt != noctets - prevcnt) {
-				/* keep the read bytes in buffer for the next round */
-				if ( ber->ber_end - ber->ber_rwptr < rcnt ) {
-					if ( nslberi_ber_realloc( ber, prevcnt + rcnt + 1 ) != 0 )
-						/* errno set by realloc() */
-						goto error_exit;
-					ber->ber_end = ber->ber_rwptr + rcnt;
-				}
-				SAFEMEMCPY( ber->ber_rwptr,
-					(const char *)&netlen + diff + prevcnt, rcnt );
-				/* ditto */
-				ber->ber_rwptr += rcnt;
+		if ( ber->ber_buf + *len > ber->ber_end ) {
+			if ( nslberi_ber_realloc( ber, *len ) != 0 )
 				goto premature_exit;
-			}
-			*len = LBER_NTOHL( netlen );
-		} else {
-			*len = lc;	/* should not come here */
 		}
-
-		if ( 0 != get_and_check_length(ber, *len, sock)) {
-			/* errno set by get_and_check_length() */
-			goto error_exit;
-		}
+		ber->ber_ptr = ber->ber_buf;
+		ber->ber_end = ber->ber_buf + *len;
+		ber->ber_rwptr = ber->ber_buf;
 	}
 
 	toread = (unsigned long)ber->ber_end - (unsigned long)ber->ber_rwptr;
-	while ( toread > 0 ) {
+	do {
 		if ( (rc = read_bytes( &sb, (unsigned char *)ber->ber_rwptr,
 		    (long)toread )) <= 0 ) {
 			goto premature_exit;
@@ -1361,67 +1273,19 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 
 		toread -= rc;
 		ber->ber_rwptr += rc;
-	}
+	} while ( toread > 0 );
 
 	*len = ber->ber_len;
 	*Bytes_Scanned = sb.offset;
 	return( ber->ber_tag );
 
-error_exit:
-	*Bytes_Scanned = 0;
-	return(LBER_DEFAULT);
-
 premature_exit:
 	/*
 	 * we're here because we hit the end of the buffer before seeing
-	 * all of the PDU (but no error occurred; we just need more data).
+	 * all of the PDU
 	 */
 	*Bytes_Scanned = sb.offset;
 	return(LBER_DEFAULT);
-}
-
-
-/*
- * Returns 0 if successful and -1 if not.
- * Sets errno if not successful; see the comment above ber_get_next_buffer_ext()
- * Always sets ber->ber_len = length.
- */
-static int
-get_and_check_length( BerElement *ber, unsigned long length, Sockbuf *sock )
-{
-	/*
-	 * malloc a buffer for the contents and read it in.  This buffer
-	 * is passed to all the other ber decoding routines.
-	 */
-	ber->ber_len = length;
-
-#if defined( DOS ) && !defined( _WIN32 )
-	if ( length > 65535 ) {	/* DOS can't allocate > 64K */
-		/* no errno on Win16 */
-		return( -1 );
-	}
-#endif /* DOS && !_WIN32 */
-
-	if ( (sock != NULL)  &&
-		( sock->sb_options & LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE )
-		&& (length > sock->sb_max_incoming) ) {
-#if !defined( macintosh ) && !defined( DOS )
-		errno = EMSGSIZE;
-#endif
-		return( -1 );
-	}
-
-	if ( ber->ber_buf + length > ber->ber_end ) {
-		if ( nslberi_ber_realloc( ber, length ) != 0 ) {
-			/* errno is set by realloc() */
-			return( -1 );
-		}
-	}
-	ber->ber_ptr = ber->ber_buf;
-	ber->ber_end = ber->ber_buf + length;
-	ber->ber_rwptr = ber->ber_buf;
-
-	return 0;
 }
 
 

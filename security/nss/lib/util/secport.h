@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 /*
  * secport.h - portability interfaces for security libraries
@@ -134,7 +131,6 @@ extern void PORT_FreeBlock(void *ptr);
 extern void *PORT_ZAlloc(size_t len);
 extern void PORT_Free(void *ptr);
 extern void PORT_ZFree(void *ptr, size_t len);
-extern char *PORT_Strdup(const char *s);
 extern time_t PORT_Time(void);
 extern void PORT_SetError(int value);
 extern int PORT_GetError(void);
@@ -170,7 +166,35 @@ extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
 #define PORT_ArenaZNewArray(poolp, type, num)	\
 		(type*) PORT_ArenaZAlloc (poolp, sizeof(type)*(num))
 
-/* Please, keep these defines sorted alphabetically.  Thanks! */
+/* Please, keep these defines sorted alphbetically.  Thanks! */
+
+#ifdef XP_STRING_FUNCS
+
+#define PORT_Atoi 	XP_ATOI
+
+#define PORT_Memcmp 	XP_MEMCMP
+#define PORT_Memcpy 	XP_MEMCPY
+#define PORT_Memmove 	XP_MEMMOVE
+#define PORT_Memset 	XP_MEMSET
+
+#define PORT_Strcasecmp XP_STRCASECMP
+#define PORT_Strcat 	XP_STRCAT
+#define PORT_Strchr 	XP_STRCHR
+#define PORT_Strrchr	XP_STRRCHR
+#define PORT_Strcmp 	XP_STRCMP
+#define PORT_Strcpy 	XP_STRCPY
+#define PORT_Strdup 	XP_STRDUP
+#define PORT_Strlen(s) 	XP_STRLEN(s)
+#define PORT_Strncasecmp XP_STRNCASECMP
+#define PORT_Strncat 	strncat
+#define PORT_Strncmp 	XP_STRNCMP
+#define PORT_Strncpy 	strncpy
+#define PORT_Strstr 	XP_STRSTR
+#define PORT_Strtok 	XP_STRTOK_R
+
+#define PORT_Tolower 	XP_TO_LOWER
+
+#else /* XP_STRING_FUNCS */
 
 #define PORT_Atoi 	atoi
 
@@ -189,6 +213,7 @@ extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
 #define PORT_Strrchr    strrchr
 #define PORT_Strcmp 	strcmp
 #define PORT_Strcpy 	strcpy
+extern char *PORT_Strdup(const char *s);
 #define PORT_Strlen(s) 	strlen(s)
 #define PORT_Strncasecmp PL_strncasecmp
 #define PORT_Strncat 	strncat
@@ -199,6 +224,8 @@ extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
 #define PORT_Strtok 	strtok
 
 #define PORT_Tolower 	tolower
+
+#endif /* XP_STRING_FUNCS */
 
 typedef PRBool (PR_CALLBACK * PORTCharConversionWSwapFunc) (PRBool toUnicode,
 			unsigned char *inBuf, unsigned int inBufLen,
