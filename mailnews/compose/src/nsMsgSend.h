@@ -268,7 +268,7 @@ public:
   //
   // Attachment processing...
   //
-  int         HackAttachments(const struct nsMsgAttachmentData *attachments,
+  nsresult    HackAttachments(const struct nsMsgAttachmentData *attachments,
 					                    const struct nsMsgAttachedFile *preloaded_attachments);
   nsresult    CountCompFieldAttachments();
   nsresult    AddCompFieldLocalAttachments();
