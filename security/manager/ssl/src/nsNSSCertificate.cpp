@@ -637,7 +637,6 @@ nsNSSCertificate::nsNSSCertificate(char *certDER, int derLen) :
   {
       mCert->dbhandle = CERT_GetDefaultCertDB();
   }
-  
 }
 
 nsNSSCertificate::nsNSSCertificate(CERTCertificate *cert) : 

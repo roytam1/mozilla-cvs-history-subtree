@@ -44,6 +44,8 @@
 //For the NS_CRYPTO_CONTRACTID define
 #include "nsDOMCID.h"
 
+#include "nsCMSMessage.h"  // and nsCMSManager
+#include "nsCMSDecoder.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNSSComponent, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSecureBrowserUIImpl)
@@ -57,7 +59,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsNSSCertificateDB)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCertOutliner)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCrypto)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsPkcs11)
-
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCMSMessage, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSManager)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSDecoder)
 
 static nsModuleComponentInfo components[] =
 {
@@ -192,9 +196,28 @@ static nsModuleComponentInfo components[] =
     NS_CRYPTO_CID,
     NS_CRYPTO_CONTRACTID,
     nsCryptoConstructor
-  }
+  },
 
+  {
+    NS_CMSMESSAGE_CLASSNAME,
+    NS_CMSMESSAGE_CID,
+    NS_CMSMESSAGE_CONTRACTID,
+    nsCMSMessageConstructor
+  },
 
+  {
+    NS_CMSMANAGER_CLASSNAME,
+    NS_CMSMANAGER_CID,
+    NS_CMSMANAGER_CONTRACTID,
+    nsCMSManagerConstructor
+  },
+
+  {
+    NS_CMSDECODER_CLASSNAME,
+    NS_CMSDECODER_CID,
+    NS_CMSDECODER_CONTRACTID,
+    nsCMSDecoderConstructor
+  },
 };
 
 NS_IMPL_NSGETMODULE(NSS, components);

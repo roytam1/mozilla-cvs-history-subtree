@@ -42,7 +42,8 @@
 #include "mimemapl.h"	/*   |     |     |--- MimeMultipartAppleDouble		*/
 #include "mimesun.h"	/*   |     |     |--- MimeSunAttachment				*/
 #include "mimemsig.h"	/*   |     |     |--- MimeMultipartSigned (abstract)*/
-
+#include "mimecryp.h"	/*   |     |--- MimeEncrypted (abstract)			*/
+#include "mimecms.h"	/*   |     |     |--- MimeEncryptedPKCS7			*/
 
 #include "mimemsg.h"	/*   |     |--- MimeMessage							*/
 #include "mimeunty.h"	/*   |     |--- MimeUntypedText						*/
@@ -406,7 +407,7 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
           PR_FREEIF(proto);
         PR_FREEIF(micalg);
         PR_FREEIF(ct);
-      }
+      } 
       
       if (!clazz && !exact_match_p)
         /* Treat all unknown multipart subtypes as "multipart/mixed" */
@@ -444,7 +445,9 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
 #ifdef MOZ_SECURITY
     HG01555
 #endif
-      
+    else if (!nsCRT::strcasecmp(content_type, APPLICATION_XPKCS7_MIME))
+	        clazz = (MimeObjectClass *)&mimeEncryptedCMSClass;
+
     /* A few types which occur in the real world and which we would otherwise
     treat as non-text types (which would be bad) without this special-case...
     */
@@ -1362,3 +1365,4 @@ MimeObject_output_init(MimeObject *obj, const char *content_type)
 	}
   return 0;
 }
+

@@ -57,6 +57,7 @@ LINCS = $(LINCS)     \
 
 
 SUB_LIBRARIES   = \
+    $(DIST)/lib/smime.lib \
     $(DIST)/lib/crmf.lib \
     $(DIST)/lib/ssl.lib \
     $(DIST)/lib/nss.lib \
@@ -99,6 +100,8 @@ OBJS = \
     .\$(OBJDIR)\nsCrypto.obj \
     .\$(OBJDIR)\nsPKCS11Slot.obj \
     .\$(OBJDIR)\nsKeygenThread.obj \
+    .\$(OBJDIR)\nsCMSMessage.obj \
+    .\$(OBJDIR)\nsCMSDecoder.obj \
     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
