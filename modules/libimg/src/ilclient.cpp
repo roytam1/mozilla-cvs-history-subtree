@@ -644,9 +644,6 @@ il_delete_container(il_container *ic)
             il_destroy_pixmap(ic->img_cb, ic->mask);
         NS_RELEASE(ic->img_cb);
 
-        NS_IF_RELEASE(ic->imgdcb);
-        NS_IF_RELEASE(ic->imgdec);
-
         FREE_IF_NOT_NULL(ic->comment);
         FREE_IF_NOT_NULL(ic->url_address);
         FREE_IF_NOT_NULL(ic->fetch_url);
