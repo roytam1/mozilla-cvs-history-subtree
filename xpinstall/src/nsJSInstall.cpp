@@ -393,6 +393,46 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
+  else if(argc >= 5)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+    nsCvrtJSValToStr(b4, cx, argv[4]);
+
+    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(nativeRet);
+  }
+  else if(argc >= 4)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+
+    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(nativeRet);
+  }
+  else if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+
+    if(NS_OK != nativeThis->AddDirectory(b0, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(nativeRet);
+  }
   else
   {
     JS_ReportError(cx, "Function AddSubcomponent requires 6 parameters");
@@ -553,6 +593,17 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
+  else if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+
+    if(NS_OK != nativeThis->Execute(b0, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(nativeRet);
+  }
   else
   {
     JS_ReportError(cx, "Function Execute requires 2 parameters");
@@ -669,6 +720,17 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
     nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
+  else if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+
+    if(NS_OK != nativeThis->GetComponentFolder(b0, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    nsCvrtStrToJSVal(*nativeRet, cx, rval);
+  }
   else
   {
     JS_ReportError(cx, "Function GetComponentFolder requires 2 parameters");
@@ -704,6 +766,17 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
     if(NS_OK != nativeThis->GetFolder(b0, b1, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    nsCvrtStrToJSVal(*nativeRet, cx, rval);
+  }
+  else if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+
+    if(NS_OK != nativeThis->GetFolder(b0, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -874,6 +947,20 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
+  else if(argc >= 4)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+
+    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(nativeRet);
+  }
   else
   {
     JS_ReportError(cx, "Function Patch requires 5 parameters");
@@ -990,6 +1077,18 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     }
 
     if(NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet))
+    {
+      return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(nativeRet);
+  }
+  else if(argc >= 2)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+
+    if(NS_OK != nativeThis->StartInstall(b0, b1, &nativeRet))
     {
       return JS_FALSE;
     }
