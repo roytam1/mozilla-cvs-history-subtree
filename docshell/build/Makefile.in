@@ -49,6 +49,7 @@ REQUIRES	= xpcom \
 		  chardet \
 		  appcomps \
 		  find \
+		  commandhandler \
 		  $(NULL)
 
 CPPSRCS		= \

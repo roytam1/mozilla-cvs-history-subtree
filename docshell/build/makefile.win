@@ -38,6 +38,7 @@ REQUIRES	= xpcom \
 		  chardet \
 		  appcomps \
 		  find \
+		  commandhandler \
 		  raptor \
 		  gfx \
 		  history \
