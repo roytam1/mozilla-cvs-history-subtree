@@ -268,10 +268,11 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                                                          &js_exception))
                         goto do_report;
                     break;
-                case JSTYPE_OBJECT:
                 case JSTYPE_VOID:
+                    js_exception = JSVAL_VOID;
+                    break;
+                case JSTYPE_OBJECT:
                 case JSTYPE_FUNCTION:
-                case JSTYPE_LIMIT:
                 default:
                     if ((*jEnv)->IsInstanceOf(jEnv, java_obj, njJSObject)) {
                         js_exception = OBJECT_TO_JSVAL(jsj_UnwrapJSObjectWrapper(jEnv, java_obj));
