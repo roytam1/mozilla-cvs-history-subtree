@@ -27,10 +27,6 @@ String::String()
 {
 }
 
-String::String(const String& aSource) : mString(aSource.mString)
-{
-}
-
 String::String(const nsAString& aSource) : mString(aSource)
 {
 }
@@ -84,11 +80,6 @@ UNICODE_CHAR String::charAt(const PRUint32 aIndex) const
 void String::clear()
 {
   mString.Truncate();
-}
-
-void String::ensureCapacity(const PRUint32 aCapacity)
-{
-  mString.SetCapacity(aCapacity);
 }
 
 PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const

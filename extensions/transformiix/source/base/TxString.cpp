@@ -42,9 +42,10 @@ String::String(const String& aSource) : mBuffer(aSource.toUnicode()),
 {
 }
 
-String::String(UNICODE_CHAR* aSource, const PRUint32 aLength) : mBuffer(0),
-                                                                mBufferLength(0),
-                                                                mLength(0)
+String::String(const UNICODE_CHAR* aSource,
+               const PRUint32 aLength) : mBuffer(0),
+                                         mBufferLength(0),
+                                         mLength(0)
 {
   if (!aSource) {
     return;
@@ -192,7 +193,7 @@ PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const
     }
     ++searchIndex;
   }
-  return NOT_FOUND;
+  return kNotFound;
 }
 
 PRInt32 String::indexOf(const String& aData, const PRInt32 aOffset) const
@@ -207,7 +208,7 @@ PRInt32 String::indexOf(const String& aData, const PRInt32 aOffset) const
     }
     ++searchIndex;
   }
-  return NOT_FOUND;
+  return kNotFound;
 }
 
 MBool String::isEqual(const String& aData) const
@@ -374,7 +375,7 @@ PRInt32 String::indexOf(const char aData, const PRInt32 aOffset) const
 PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const
 {
   if (aOffset < 0) {
-     return NOT_FOUND;
+     return kNotFound;
   }
 
   PRUint32 searchIndex = mLength - aOffset;
@@ -383,7 +384,7 @@ PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const
       return searchIndex;
     }
   }
-  return NOT_FOUND;
+  return kNotFound;
 }
 
 MBool String::isEqual(const char* aData) const

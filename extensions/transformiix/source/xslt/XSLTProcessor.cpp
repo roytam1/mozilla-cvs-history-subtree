@@ -1367,7 +1367,7 @@ void XSLTProcessor::processAction(Node* aNode,
                 processChildrenAsValue(aNode, actionElement, aPs, MB_TRUE, value);
                 PRInt32 pos = 0;
                 PRUint32 length = value.length();
-                while ((pos = value.indexOf('-', pos)) != NOT_FOUND) {
+                while ((pos = value.indexOf('-', pos)) != kNotFound) {
                     ++pos;
                     if ((pos == length) || (value.charAt(pos) == '-'))
                         value.insert(pos++, ' ');

@@ -208,7 +208,7 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg1);
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg2);
             PRInt32 idx = arg1.indexOf(arg2);
-            if (idx != NOT_FOUND) {
+            if (idx != kNotFound) {
                 PRUint32 len = arg2.length();
                 arg1.subString(idx + len, arg2);
                 return new StringResult(arg2);
@@ -224,7 +224,7 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg1);
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg2);
             PRInt32 idx = arg1.indexOf(arg2);
-            if (idx != NOT_FOUND) {
+            if (idx != kNotFound) {
                 arg2.clear();
                 arg1.subString(0, idx, arg2);
                 return new StringResult(arg2);
@@ -247,7 +247,7 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             PRUint32 i;
             for (i = 0; i < src.length(); i++) {
                 PRInt32 idx = oldChars.indexOf(src.charAt(i));
-                if (idx != NOT_FOUND) {
+                if (idx != kNotFound) {
                     if (idx < newChars.length())
                         dest.append(newChars.charAt(idx));
                 }

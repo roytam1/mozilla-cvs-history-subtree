@@ -34,38 +34,57 @@
 #ifdef TX_EXE
 #include <iostream.h>
 typedef unsigned short UNICODE_CHAR;
-#define NOT_FOUND -1
+#define kNotFound -1
 #else
 #include "nsString.h"
 typedef PRUnichar UNICODE_CHAR;
-#define NOT_FOUND kNotFound
 #endif
 
 class String : public TxObject
 {
 public:
+    /*
+     * Default constructor.
+     */
     String();
-    String(const String& aSource);
+
 #ifdef TX_EXE
-    String(UNICODE_CHAR* aSource, const PRUint32 aLength = 0);
+    /*
+     * Copying constructor.
+     */
+    String(const String& aSource);
+
+    /*
+     * Constructor, allocates a buffer and copies the supplied string buffer.
+     * If aLength is zero it computes the length from the supplied string.
+     */
+    explicit String(const UNICODE_CHAR* aSource, const PRUint32 aLength = 0);
 #else
     explicit String(const nsAString& aSource);
 #endif
     ~String();
 
-    // Append aSource to this string
+    /*
+     * Append aSource to this string.
+     */
     void append(const UNICODE_CHAR aSource);
     void append(const String& aSource);
 
-    // Insert aSource at aOffset in this string
+    /*
+     * Insert aSource at aOffset in this string.
+     */
     void insert(const PRUint32 aOffset, const UNICODE_CHAR aSource);
     void insert(const PRUint32 aOffset, const String& aSource);
 
-    // Replace characters starting at aOffset with aSource
+    /*
+     * Replace characters starting at aOffset with aSource.
+     */
     void replace(const PRUint32 aOffset, const UNICODE_CHAR aSource);
     void replace(const PRUint32 aOffset, const String& aSource);
 
-    // Delete aCount characters starting at aOffset
+    /*
+     * Delete aCount characters starting at aOffset.
+     */
     void deleteChars(const PRUint32 aOffset, const PRUint32 aCount);
 
     /*
@@ -74,56 +93,75 @@ public:
      */
     UNICODE_CHAR charAt(const PRUint32 aIndex) const;
 
-    // Clear the string
+    /*
+     * Clear the string.
+     */
     void clear();
 
-    // Make sure the string buffer can hold aCapacity characters
-    void ensureCapacity(const PRUint32 aCapacity);
-
-    // Returns index of first occurrence of aData
+    /*
+     * Returns index of first occurrence of aData.
+     */
     PRInt32 indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset = 0) const;
     PRInt32 indexOf(const String& data, const PRInt32 aOffset = 0) const;
 
-    // Check equality between strings
+    /*
+     * Check equality between strings.
+     */
     MBool isEqual(const String& aData) const;
+
+    /*
+     * Check equality (ignoring case) between strings.
+     */
     MBool isEqualIgnoreCase(const String& aData) const;
 
-    // Check whether the string is empty
+    /*
+     * Check whether the string is empty.
+     */
     MBool isEmpty() const;
 
-    // Return the length of the string
+    /*
+     * Return the length of the string.
+     */
     PRUint32 length() const;
 
-    /**
-     * Sets the Length of this String, if length is less than 0, it will
-     * be set to 0; if length > current length, the string will be extended
-     * and padded with '\0' null characters. Otherwise the String
-     * will be truncated
-    **/
+    /*
+     * Sets the length of this string.
+     */
     void setLength(const PRUint32 aLength);
 
-    /**
+    /*
      * Returns a substring starting at start
      * Note: the dest String is cleared before use
-    **/
+     */
     String& subString(const PRUint32 aStart, String& aDest) const;
 
-    /**
+    /*
      * Returns the subString starting at start and ending at end
      * Note: the dest String is cleared before use
-    **/
+     */
     String& subString(const PRUint32 aStart, const PRUint32 aEnd, String& aDest) const;
 
-    // Convert string to lowercase
+    /*
+     * Convert string to lowercase.
+     */
     void toLowerCase();
 
-    // Convert string to uppercase
+    /*
+     * Convert string to uppercase.
+     */
     void toUpperCase();
 
 #ifdef TX_EXE
     String& operator = (const String& aSource);
 #else
+    /*
+     * Return a reference to this string's nsString.
+     */
     nsString& getNSString();
+
+    /*
+     * Return a const reference to this string's nsString.
+     */
     const nsString& getConstNSString() const;
 #endif
 
@@ -131,6 +169,27 @@ private:
 #ifndef TX_EXE
     nsString mString;
 #else
+    /*
+     * Make sure the string buffer can hold aCapacity characters.
+     */
+    void ensureCapacity(const PRUint32 aCapacity);
+
+    /*
+     * Allocate a new UNICODE_CHAR buffer and copy this string's
+     * buffer into it.
+     */
+    UNICODE_CHAR* toUnicode() const;
+
+    /*
+     * Compute the unicode length of aData.
+     */
+    static PRUint32 unicodeLength(const UNICODE_CHAR* aData);
+
+    /*
+     * Translate UNICODE_CHARs to Chars and output to the provided stream.
+     */
+    friend ostream& operator << (ostream& aOutput, const String& aSource);
+
     UNICODE_CHAR* mBuffer;
     PRUint32 mBufferLength;
     PRUint32 mLength;
@@ -146,18 +205,11 @@ public:
     PRInt32 lastIndexOf(const char aData, const PRInt32 aOffset = 0) const;
     MBool isEqual(const char* aData) const;
     char* toCharArray() const;
-private:
-#ifdef TX_EXE
-    UNICODE_CHAR* toUnicode() const;
-    PRUint32 unicodeLength(const UNICODE_CHAR* aData);
-    //Translate UNICODE_CHARs to Chars and output to the provided stream
-    friend ostream& operator<<(ostream& aOutput, const String& aSource);
-#endif
 // XXX DEPRECATED
 };
 
 #ifdef TX_EXE
-ostream& operator<<(ostream& aOutput, const String& aSource);
+ostream& operator << (ostream& aOutput, const String& aSource);
 #endif
 
 #endif // txString_h__
