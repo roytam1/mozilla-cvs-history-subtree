@@ -1183,7 +1183,7 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIContent* aOuter,
           stateManager->SetContentState(nsnull, NS_EVENT_STATE_HOVER);
           NS_RELEASE(stateManager);
         }
-        *aEventStatus = nsEventStatus_eConsumeNoDefault; s
+        *aEventStatus = nsEventStatus_eConsumeNoDefault;
 
         nsAutoString empty;
         ret = TriggerLink(aPresContext, eLinkVerb_Replace, nsnull, empty, empty, PR_FALSE);
