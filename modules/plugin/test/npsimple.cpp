@@ -174,7 +174,7 @@ public:
 
     NS_DECL_ISUPPORTS
 
-    nsIPluginManager* GetPluginManager(void);
+    nsIServiceManager* GetServiceManager(void) { return mServMgr; }
     nsresult Cleanup(void);
 
     // This counter is used to keep track of the number of outstanding objects.
@@ -190,8 +190,6 @@ public:
 
 protected:
     nsIServiceManager* mServMgr;
-    nsIPluginManager* mPluginMgr;
-    SimplePluginShutdownListener* mPluginMgrShutdownListener;
     SimplePluginShutdownListener* mEnvShutdownListener;
 };
 
@@ -478,8 +476,7 @@ JRIEnv* SimplePlugin::gEnv = NULL;
 ////////////////////////////////////////////////////////////////////////////////
 
 SimplePlugin::SimplePlugin(nsIServiceManager* servMgr)
-    : mServMgr(servMgr), mPluginMgr(NULL),
-      mPluginMgrShutdownListener(NULL), mEnvShutdownListener(NULL)
+    : mServMgr(servMgr), mEnvShutdownListener(NULL)
 {
     NS_INIT_REFCNT();
     gPluginObjectCount++;
@@ -597,25 +594,7 @@ SimplePlugin::Cleanup(void)
         mServMgr->ReleaseService(kJRIEnvCID, (nsISupports*)gEnv, mEnvShutdownListener);
         gEnv = NULL;
     }
-    if (mPluginMgr) {
-        mServMgr->ReleaseService(kPluginManagerCID, mPluginMgr, mPluginMgrShutdownListener);
-        mPluginMgr = NULL;
-    }
     return NS_OK;
-}
-
-nsIPluginManager*
-SimplePlugin::GetPluginManager(void)
-{
-    if (mPluginMgr == NULL) {
-        mPluginMgrShutdownListener = new SimplePluginShutdownListener(this);
-        // mPluginMgrShutdownListener->AddRef() done by GetService
-        nsresult err = mServMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
-                                            (nsISupports**)&mPluginMgr,
-                                            mPluginMgrShutdownListener);
-        if (err != NS_OK) return NULL;
-    }
-    return mPluginMgr;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -793,20 +772,28 @@ SimplePluginInstance::Start(void)
 
 #ifdef NEW_PLUGIN_STREAM_API
     // Try getting some streams:
-    gPlugin->GetPluginManager()->GetURL(this, "http://warp", NULL,
-                                        new SimplePluginStreamListener(this, "http://warp (Normal)"));
+    nsIPluginManager* pMgr = NULL;
+    nsIServiceManager* servMgr = gPlugin->GetServiceManager();
+    nsresult err = servMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
+                                       (nsISupports**)&pMgr);
+    if (err == NS_OK) {
+        pMgr->GetURL(this, "http://warp", NULL,
+                     new SimplePluginStreamListener(this, "http://warp (Normal)"));
 
-    gPlugin->GetPluginManager()->GetURL(this, "http://home.netscape.com", NULL,
-                                        new SimplePluginStreamListener(this, "http://home.netscape.com (AsFile)"),
-                                        nsPluginStreamType_AsFile);
+        pMgr->GetURL(this, "http://home.netscape.com", NULL,
+                     new SimplePluginStreamListener(this, "http://home.netscape.com (AsFile)"),
+                     nsPluginStreamType_AsFile);
 
-    gPlugin->GetPluginManager()->GetURL(this, "http://warp/java", NULL,
-                                        new SimplePluginStreamListener(this, "http://warp/java (AsFileOnly)"),
-                                        nsPluginStreamType_AsFileOnly);
+        pMgr->GetURL(this, "http://warp/java", NULL,
+                     new SimplePluginStreamListener(this, "http://warp/java (AsFileOnly)"),
+                     nsPluginStreamType_AsFileOnly);
 
-    gPlugin->GetPluginManager()->GetURL(this, "http://warp/java/oji", NULL,
-                                        new SimplePluginStreamListener(this, "http://warp/java/oji (Seek)"),
-                                        nsPluginStreamType_Seek);
+        pMgr->GetURL(this, "http://warp/java/oji", NULL,
+                     new SimplePluginStreamListener(this, "http://warp/java/oji (Seek)"),
+                     nsPluginStreamType_Seek);
+
+        servMgr->ReleaseService(kPluginManagerCID, pMgr);
+    }
 #endif
 
     return NS_OK;
