@@ -51,12 +51,6 @@
 #include "nsINNTPArticleList.h"
 #include "nsMsgKeySet.h"
 
-#include "nsINNTPNewsgroup.h"
-#include "nsNNTPNewsgroup.h"
-
-#include "nsINNTPHost.h"
-#include "nsNNTPHost.h"
-
 #include "nntpCore.h"
 #include "nsIStringBundle.h"
 
@@ -91,11 +85,6 @@ extern PRInt32 net_NewsChunkSize;
 nsNNTPNewsgroupList::nsNNTPNewsgroupList()
 {
     NS_INIT_REFCNT();
-
-	m_username = nsnull;
-	m_hostname = nsnull;
-	m_uri = nsnull;
-	m_groupName = nsnull;
 }
 
 
@@ -108,36 +97,17 @@ NS_IMPL_ISUPPORTS1(nsNNTPNewsgroupList, nsINNTPNewsgroupList)
 
 
 nsresult
-nsNNTPNewsgroupList::Initialize(nsINNTPHost *host, nsINntpUrl *runningURL, nsINNTPNewsgroup *newsgroup, const char *username, const char *hostname, const char *groupname)
+nsNNTPNewsgroupList::Initialize(nsINntpUrl *runningURL, nsIMsgNewsFolder *newsFolder)
 {
-	m_newsDB = nsnull;
-
-	if (groupname) {
-		m_groupName = PL_strdup(groupname);
-	}
-	if (hostname) {
-		m_hostname = PL_strdup(hostname);
-	}
-
-	if (username) {
-		m_username = PL_strdup(username);
-		m_uri = PR_smprintf("%s/%s@%s/%s",kNewsRootURI,username,hostname,groupname);
-	}
-    else {
-		m_uri = PR_smprintf("%s/%s/%s",kNewsRootURI,hostname,groupname);
-	}
-
-	m_lastProcessedNumber = 0;
+    m_newsDB = nsnull;
+    m_lastProcessedNumber = 0;
 	m_lastMsgNumber = 0;
 	m_set = nsnull;
 
     m_finishingXover = PR_FALSE;
 
 	memset(&m_knownArts, 0, sizeof(m_knownArts));
-	m_knownArts.group_name = m_groupName;
-	m_host = host;
-	m_newsgroup = newsgroup;
-	m_knownArts.host = m_host;
+	m_newsFolder = newsFolder;
 	m_knownArts.set = nsMsgKeySet::Create();
 	m_getOldMessages = PR_FALSE;
 	m_promptedAlready = PR_FALSE;
@@ -150,22 +120,21 @@ nsNNTPNewsgroupList::Initialize(nsINNTPHost *host, nsINntpUrl *runningURL, nsINN
 }
 
 nsresult
-nsNNTPNewsgroupList::CleanUp() {
-	PR_FREEIF(m_username);
-	PR_FREEIF(m_hostname);
-	PR_FREEIF(m_uri);
-	PR_FREEIF(m_groupName);
-    
+nsNNTPNewsgroupList::CleanUp() 
+{
 	if (m_newsDB) {
 		m_newsDB->Commit(nsMsgDBCommitType::kSessionCommit);
 		m_newsDB->Close(PR_TRUE);
-		NS_RELEASE(m_newsDB);
-	}
+        m_newsDB = nsnull;
+  	}
 
 	if (m_knownArts.set) {
 		delete m_knownArts.set;
 		m_knownArts.set = nsnull;
 	}
+
+    m_newsFolder = nsnull;
+    m_runningURL = nsnull;
     
     return NS_OK;
 }
@@ -175,42 +144,6 @@ void	nsNNTPNewsgroupList::OnAnnouncerGoingAway (ChangeAnnouncer *instigator)
 {
 }
 #endif
-
-nsresult 
-nsNNTPNewsgroupList::GetDatabase(const char *uri, nsIMsgDatabase **db)
-{
-    if (*db == nsnull) {
-        nsFileSpec path;
-		nsresult rv = nsNewsURI2Path(kNewsRootURI, uri, path);
-		if (NS_FAILED(rv)) return rv;
-
-        nsresult newsDBOpen = NS_OK;
-        nsCOMPtr <nsIMsgDatabase> newsDBFactory;
-
-        rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(newsDBFactory));
-        if (NS_SUCCEEDED(rv) && newsDBFactory) {
-				nsCOMPtr <nsIFileSpec> dbFileSpec;
-				NS_NewFileSpecWithSpec(path, getter_AddRefs(dbFileSpec));
-                newsDBOpen = newsDBFactory->Open(dbFileSpec, PR_TRUE, PR_FALSE, (nsIMsgDatabase **) db);
-#ifdef DEBUG_NEWS
-                if (NS_SUCCEEDED(newsDBOpen)) {
-                    printf ("newsDBFactory->Open() succeeded\n");
-                }
-                else {
-                    printf ("newsDBFactory->Open() failed\n");
-                }
-#endif /* DEBUG_NEWS */
-                return rv;
-        }
-#ifdef DEBUG_NEWS
-        else {
-            printf("nsComponentManager::CreateInstance(kCNewsDB,...) failed\n");
-        }
-#endif
-    }
-    
-    return NS_OK;
-}
 
 static nsresult 
 openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL, nsINewsDownloadDialogArgs *param) 
@@ -264,8 +197,6 @@ openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL, nsINewsDownloadDialo
 
 nsresult
 nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
-                                              /*nsINNTPHost* host,
-                                                const char* group_name,*/
                                               PRInt32 first_possible,
                                               PRInt32 last_possible,
                                               PRInt32 maxextra,
@@ -273,7 +204,7 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
                                               PRInt32* last,
                                               PRInt32 *status)
 {
-	PRBool emptyGroup_p = PR_FALSE;
+	nsresult rv = NS_OK;
 
 	NS_ASSERTION(first && last, "no first or no last");
 	if (!first || !last) return NS_MSG_FAILURE;
@@ -281,126 +212,87 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
 	*first = 0;
 	*last = 0;
 
+    nsCOMPtr <nsIMsgFolder> folder = do_QueryInterface(m_newsFolder, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
 	if (!m_newsDB) {
-		nsresult err;
-		if ((err = GetDatabase(GetURI(), &m_newsDB)) != NS_OK) {
-            return err;
-        }
-		else {
-			nsresult rv = NS_OK;
-
-            nsCOMPtr<nsINewsDatabase> db(do_QueryInterface(m_newsDB, &rv));
-            if (NS_FAILED(rv)) return rv;
-            
-	    rv = db->GetReadSet(&m_set);
-            if (NS_FAILED(rv) || !m_set) {
-                return rv;
-            }
-            
-			m_set->SetLastMember(last_possible);	// make sure highwater mark is valid.
-			nsCOMPtr <nsIDBFolderInfo> newsGroupInfo;
-			rv = m_newsDB->GetDBFolderInfo(getter_AddRefs(newsGroupInfo));
-			if (NS_SUCCEEDED(rv) && newsGroupInfo)
-			{
-				nsAutoString knownArtsString;
-                nsMsgKey mark;
-				newsGroupInfo->GetKnownArtsSet(&knownArtsString);
-                
-                rv = newsGroupInfo->GetHighWater(&mark);
-                if (NS_FAILED(rv)) {
-                    return rv;
-                }
-				if (last_possible < ((PRInt32)mark))
-					newsGroupInfo->SetHighWater(last_possible, PR_TRUE);
-				if (m_knownArts.set) {
-					delete m_knownArts.set;
-				}
-        nsCAutoString knownartstringC;
-        knownartstringC.AssignWithConversion(knownArtsString);
-				m_knownArts.set = nsMsgKeySet::Create(knownartstringC);
-			}
-			else
-			{	
-				if (m_knownArts.set) {
-					delete m_knownArts.set;
-				}
-				m_knownArts.set = nsMsgKeySet::Create();
-                nsMsgKey low, high;
-                rv = m_newsDB->GetLowWaterArticleNum(&low);
-                if (NS_FAILED(rv)) return rv;
-                rv = m_newsDB->GetHighWaterArticleNum(&high);
-                if (NS_FAILED(rv)) return rv;
-                
-				m_knownArts.set->AddRange(low,high);
-            }
-#ifdef HAVE_PANES
-			m_pane->StartingUpdate(MSG_NotifyNone, 0, 0);
-			m_newsDB->ExpireUpTo(first_possible, m_pane->GetContext());
-			m_pane->EndingUpdate(MSG_NotifyNone, 0, 0);
-#endif /* HAVE_PANES */
-			if (m_knownArts.set->IsMember(last_possible))	{
-                nsXPIDLString statusString;
-                nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
-                NS_ENSURE_SUCCESS(rv, rv);
-
-                nsCOMPtr<nsIStringBundle> bundle;
-                rv = bundleService->CreateBundle(NEWS_MSGS_URL, nsnull, getter_AddRefs(bundle));
-                NS_ENSURE_SUCCESS(rv, rv);
-
-                rv = bundle->GetStringFromName(NS_LITERAL_STRING("noNewMessages"), getter_Copies(statusString));
-                NS_ENSURE_SUCCESS(rv, rv);
-				SetProgressStatus(statusString);
-			}
-		}
+      rv = folder->GetMsgDatabase(nsnull /* msgWindow */, getter_AddRefs(m_newsDB));
 	}
+	
+    nsCOMPtr<nsINewsDatabase> db(do_QueryInterface(m_newsDB, &rv));
+    NS_ENSURE_SUCCESS(rv,rv);
+            
+	rv = db->GetReadSet(&m_set);
+    if (NS_FAILED(rv) || !m_set) {
+       return rv;
+    }
+            
+	m_set->SetLastMember(last_possible);	// make sure highwater mark is valid.
+
+    nsCOMPtr <nsIDBFolderInfo> newsGroupInfo;
+	rv = m_newsDB->GetDBFolderInfo(getter_AddRefs(newsGroupInfo));
+	if (NS_SUCCEEDED(rv) && newsGroupInfo) {
+      nsAutoString knownArtsString;
+      nsMsgKey mark;
+      newsGroupInfo->GetKnownArtsSet(&knownArtsString);
+      
+      rv = newsGroupInfo->GetHighWater(&mark);
+      NS_ENSURE_SUCCESS(rv,rv);
+
+      if (last_possible < ((PRInt32)mark))
+        newsGroupInfo->SetHighWater(last_possible, PR_TRUE);
+      if (m_knownArts.set) {
+        delete m_knownArts.set;
+      }
+      nsCAutoString knownartstringC;
+      knownartstringC.AssignWithConversion(knownArtsString);
+      m_knownArts.set = nsMsgKeySet::Create(knownartstringC);
+    }
+    else
+    {	
+      if (m_knownArts.set) {
+        delete m_knownArts.set;
+      }
+      m_knownArts.set = nsMsgKeySet::Create();
+      nsMsgKey low, high;
+      rv = m_newsDB->GetLowWaterArticleNum(&low);
+      NS_ENSURE_SUCCESS(rv,rv);
+      rv = m_newsDB->GetHighWaterArticleNum(&high);
+      NS_ENSURE_SUCCESS(rv,rv);
+      
+      m_knownArts.set->AddRange(low,high);
+    }
+    
+    if (m_knownArts.set->IsMember(last_possible))	{
+      nsXPIDLString statusString;
+      nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+      
+      nsCOMPtr<nsIStringBundle> bundle;
+      rv = bundleService->CreateBundle(NEWS_MSGS_URL, nsnull, getter_AddRefs(bundle));
+      NS_ENSURE_SUCCESS(rv, rv);
+      
+      rv = bundle->GetStringFromName(NS_LITERAL_STRING("noNewMessages"), getter_Copies(statusString));
+      NS_ENSURE_SUCCESS(rv, rv);
+      SetProgressStatus(statusString);
+    }
     
 	if (maxextra <= 0 || last_possible < first_possible || last_possible < 1) 
 	{
-		emptyGroup_p = PR_TRUE;
-	}
-
-    // this is just a temporary hack. these used to be parameters
-    // to this function, but then we were mutually dependant between this
-    // class and nsNNTPHost
-    nsINNTPHost *host=m_knownArts.host;
-    const char* group_name = m_knownArts.group_name;
-    if (m_knownArts.host != host ||
-	  m_knownArts.group_name == NULL ||
-	  PL_strcmp(m_knownArts.group_name, group_name) != 0 ||
-	  !m_knownArts.set) 
-	{
-	/* We're displaying some other group.  Clear out that display, and set up
-	   everything to return the proper first chunk. */
-    		NS_ASSERTION(0, "todo - need new way of doing");
-            if (emptyGroup_p) {
-                if (status) *status=0;
-                return NS_OK;
-            }
-	}
-	else
-	{
-        if (emptyGroup_p) {
-            if (status) *status=0;
-            return NS_OK;
-        }
+	  if (status) *status=0;
+      return NS_OK;
 	}
 
 	m_knownArts.first_possible = first_possible;
 	m_knownArts.last_possible = last_possible;
 
-    nsresult rv = NS_OK;
-
-	// get the incoming msg server
-	NS_WITH_SERVICE(nsIMsgAccountManager, accountManager, NS_MSGACCOUNTMANAGER_CONTRACTID, &rv)
-	if (NS_FAILED(rv)) return rv;
-	nsCOMPtr<nsIMsgIncomingServer> server;
-	rv = accountManager->FindServer(m_username,m_hostname,"nntp", getter_AddRefs(server));
-	if (NS_FAILED(rv)) return rv;
+    nsCOMPtr <nsIMsgIncomingServer> server;
+    rv = folder->GetServer(getter_AddRefs(server));
+    NS_ENSURE_SUCCESS(rv,rv);
 		
 	// QI to get the nntp incoming msg server
-	nsCOMPtr<nsINntpIncomingServer> nntpServer;
-	rv = server->QueryInterface(NS_GET_IID(nsINntpIncomingServer), getter_AddRefs(nntpServer));
-	if (NS_FAILED(rv)) return rv;
+	nsCOMPtr<nsINntpIncomingServer> nntpServer = do_QueryInterface(server, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
 
 	/* Determine if we only want to get just new articles or more messages.
 	If there are new articles at the end we haven't seen, we always want to get those first.  
@@ -441,7 +333,11 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
                 rv = args->SetArticleCount(*last - *first + 1);
                 NS_ENSURE_SUCCESS(rv,rv);
         
-                rv = args->SetGroupName((const char *)m_groupName);
+                nsXPIDLCString groupName;
+                rv = m_newsFolder->GetAsciiName(getter_Copies(groupName));
+                NS_ENSURE_SUCCESS(rv,rv);
+
+                rv = args->SetGroupName((const char *)groupName);
                 NS_ENSURE_SUCCESS(rv,rv);
 
 				// get the server key
@@ -503,24 +399,12 @@ nsresult
 nsNNTPNewsgroupList::AddToKnownArticles(PRInt32 first, PRInt32 last)
 {
 	int		status;
-    // another temporary hack
-    nsINNTPHost *host = m_knownArts.host;
-    const char* group_name = m_knownArts.group_name;
-    
-	if (m_knownArts.host != host ||
-	  m_knownArts.group_name == NULL ||
-	  PL_strcmp(m_knownArts.group_name, group_name) != 0 ||
-	  !m_knownArts.set) 
+   
+    if (!m_knownArts.set) 
 	{
-		m_knownArts.host = host;
-		PR_FREEIF(m_knownArts.group_name);
-		m_knownArts.group_name = PL_strdup(group_name);
-		if (m_knownArts.set) {
-			delete m_knownArts.set;
-		}
 		m_knownArts.set = nsMsgKeySet::Create();
 
-		if (!m_knownArts.group_name || !m_knownArts.set) {
+		if (!m_knownArts.set) {
 		  return NS_ERROR_OUT_OF_MEMORY;
 		}
 
@@ -536,7 +420,7 @@ nsNNTPNewsgroupList::AddToKnownArticles(PRInt32 first, PRInt32 last)
 			char *output;
       status = m_knownArts.set->Output(&output);
 			if (output) {
-				nsString str; str.AssignWithConversion(output);
+				nsAutoString str; str.AssignWithConversion(output);
 				newsGroupInfo->SetKnownArtsSet(&str);
         nsMemory::Free(output);
 			}
@@ -919,48 +803,16 @@ nsNNTPNewsgroupList::FinishXOVERLINE(int status, int *newstatus)
 
             SetProgressStatus(statusString);
 		}
-#ifdef HAVE_PANES
-		nsINNTPNewsgroup *newsFolder =
-            (m_pane) ?
-            savePane->GetMaster()->FindNewsFolder(m_host, m_groupName, PR_FALSE) :
-            0;
-		FE_PaneChanged(m_pane, PR_FALSE, MSG_PaneNotifyFolderLoaded, (PRUint32)newsFolder);
-#endif
 	}
     if (newstatus) *newstatus=0;
     return NS_OK;
 	// nsNNTPNewsgroupList object gets deleted by the master when a new one is created.
 }
 
-// this used to be in the master:
-// void MSG_Master::ClearListNewsGroupState(MSG_NewsHost* host,
-//                                          const char *newsGroupName)
-//   {
-//     MSG_FolderInfoNews *newsFolder = FindNewsFolder(host, newsGroupName);
-//     ListNewsGroupState *state = (newsFolder) ? newsFolder->GetListNewsGroupState
-//     if (state != NULL)
-//     {
-//         delete state;
-//         newsFolder->SetListNewsGroupState(NULL);
-//     }
-// }
-
 nsresult
 nsNNTPNewsgroupList::ClearXOVERState()
 {
     return NS_OK;
-}
-
-nsresult
-nsNNTPNewsgroupList::GetGroupName(char **_retval)
-{
-	if (_retval) {
-		*_retval = m_groupName;
-		return NS_OK;
-	}
-	else {
-		return NS_ERROR_NULL_POINTER;
-	}
 }
 
 void

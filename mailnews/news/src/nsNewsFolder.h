@@ -134,6 +134,9 @@ protected:
  	char 		*mGroupUsername;
 	char		*mGroupPassword;
 
+  // the name of the newsgroup.
+  char    *mAsciiName;
+
 private:
     nsresult CreateNewsgroupUsernameUrlForSignon(const char *inUriStr, char **result);
     nsresult CreateNewsgroupPasswordUrlForSignon(const char *inUriStr, char **result);

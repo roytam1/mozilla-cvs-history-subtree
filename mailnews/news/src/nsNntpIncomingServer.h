@@ -102,7 +102,9 @@ private:
 	PRTime mFirstNewDate;
 	PRInt32 mUniqueId;	
 	PRBool mPushAuth;
+    PRUint32 mLastUpdatedTime;
 	PRInt32 mVersion;
+    PRBool mPostingAllowed;
 
     nsCOMPtr<nsITimer> mNewsrcSaveTimer;
 	nsCOMPtr <nsIMsgWindow> mMsgWindow;

@@ -27,6 +27,7 @@
 #include "prlog.h"
 
 #include "msgCore.h"    // precompiled header...
+#include "nntpCore.h"
 
 #include "nsNewsFolder.h"	 
 #include "nsMsgFolderFlags.h"
@@ -71,12 +72,13 @@
 
 #include "nsReadableUtils.h"
 #include "nsNewsDownloader.h"
+#include "nsIStringBundle.h"
+
 // we need this because of an egcs 1.0 (and possibly gcc) compiler bug
 // that doesn't allow you to call ::nsISupports::GetIID() inside of a class
 // that multiply inherits from nsISupports
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kNntpServiceCID,	NS_NNTPSERVICE_CID);
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
@@ -100,7 +102,7 @@ static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 nsMsgNewsFolder::nsMsgNewsFolder(void) : nsMsgLineBuffer(nsnull, PR_FALSE),
      mExpungedBytes(0), mGettingNews(PR_FALSE),
     mInitialized(PR_FALSE), mOptionLines(""), mUnsubscribedNewsgroupLines(""), 
-    m_downloadMessageForOfflineUse(PR_FALSE), mCachedNewsrcLine(nsnull), mGroupUsername(nsnull), mGroupPassword(nsnull)
+    m_downloadMessageForOfflineUse(PR_FALSE), mCachedNewsrcLine(nsnull), mGroupUsername(nsnull), mGroupPassword(nsnull), mAsciiName(nsnull)
 {
   MOZ_COUNT_CTOR(nsNewsFolder); // double count these for now.
   /* we're parsing the newsrc file, and the line breaks are platform specific.
@@ -120,6 +122,7 @@ nsMsgNewsFolder::~nsMsgNewsFolder(void)
   PR_FREEIF(mCachedNewsrcLine);
   PR_FREEIF(mGroupUsername);
   PR_FREEIF(mGroupPassword);
+  PR_FREEIF(mAsciiName);
 }
 
 NS_IMPL_ADDREF_INHERITED(nsMsgNewsFolder, nsMsgDBFolder)
@@ -902,30 +905,58 @@ NS_IMETHODIMP nsMsgNewsFolder::GetSizeOnDisk(PRUint32 *size)
 }
 
 /* this is news, so remember that DeleteMessage is really CANCEL */
-NS_IMETHODIMP nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages,
-                                              nsIMsgWindow *aMsgWindow, PRBool deleteStorage,
-											  PRBool isMove)
+NS_IMETHODIMP 
+nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages, nsIMsgWindow *aMsgWindow, 
+                                PRBool deleteStorage, PRBool isMove)
 {
   nsresult rv = NS_OK;
+ 
+  NS_ENSURE_ARG_POINTER(messages);
+  NS_ENSURE_ARG_POINTER(aMsgWindow);
+ 
+  PRUint32 count = 0;
+  rv = messages->Count(&count);
+  NS_ENSURE_SUCCESS(rv,rv);
   
-  if (!messages) {
-    // nothing to CANCEL
-    return NS_ERROR_NULL_POINTER;
-  }
+  if (count != 1) {
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-  NS_WITH_SERVICE(nsINntpService, nntpService, kNntpServiceCID, &rv);
+    nsCOMPtr<nsIStringBundle> bundle;
+    rv = bundleService->CreateBundle(NEWS_MSGS_URL, nsnull, getter_AddRefs(bundle));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsXPIDLString alertText;
+    rv = bundle->GetStringFromName(NS_LITERAL_STRING("onlyCancelOneMessage"), getter_Copies(alertText));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIPrompt> dialog;
+    rv = aMsgWindow->GetPromptDialog(getter_AddRefs(dialog));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    if (dialog) {
+      rv = dialog->Alert(nsnull, (const PRUnichar *) alertText);
+      NS_ENSURE_SUCCESS(rv,rv);
+    }
+    // return failure, since the cancel failed
+    return NS_ERROR_FAILURE;
+  }
   
-  if (NS_SUCCEEDED(rv) && nntpService) {
-    nsXPIDLCString hostname;
-    rv = GetHostname(getter_Copies(hostname));
-    if (NS_FAILED(rv)) return rv;
+  nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-    nsXPIDLCString newsgroupname;
-    rv = GetAsciiName(getter_Copies(newsgroupname));
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = nntpService->CancelMessages((const char *)hostname, (const char *)newsgroupname, messages, nsnull /* consumer */, nsnull, aMsgWindow, nsnull);
-  }
+  nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(0));
+  nsCOMPtr<nsIMsgDBHdr> msgHdr(do_QueryInterface(msgSupports));
+
+  nsXPIDLCString messageUri;
+  rv = GetUriForMsg(msgHdr, getter_Copies(messageUri));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCAutoString cancelUrl((const char *)messageUri);
+  cancelUrl += "?cancel";
+
+  rv = nntpService->CancelMessage(cancelUrl.get(), nsnull /* consumer */, nsnull, aMsgWindow, nsnull);
+  NS_ENSURE_SUCCESS(rv,rv);
   
   return rv;
 }
@@ -957,8 +988,8 @@ nsresult nsMsgNewsFolder::GetNewsMessages(nsIMsgWindow *aMsgWindow, PRBool aGetO
 		return NS_OK;
   }
 
-  NS_WITH_SERVICE(nsINntpService, nntpService, kNntpServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
+  nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
   
   nsCOMPtr<nsINntpIncomingServer> nntpServer;
   rv = GetNntpServer(getter_AddRefs(nntpServer));
@@ -1595,15 +1626,21 @@ nsMsgNewsFolder::GetAsciiName(char **asciiName)
 {
 	nsresult rv;
 
-	if (!asciiName) return NS_ERROR_NULL_POINTER;
+  NS_ENSURE_ARG_POINTER(asciiName);
+  if (!mAsciiName) {
+	  nsXPIDLString name;
+	  rv = GetName(getter_Copies(name));
+    NS_ENSURE_SUCCESS(rv,rv);
 
-	nsXPIDLString name;
-	rv = GetName(getter_Copies(name));
-	if (NS_FAILED(rv)) return rv;
+    // convert to ASCII
+	  nsCAutoString tmpStr;
+	  tmpStr.AssignWithConversion(name);
 
-	nsCAutoString tmpStr;
-	tmpStr.AssignWithConversion(name);
-	*asciiName = nsCRT::strdup((const char *)tmpStr);
+    mAsciiName = nsCRT::strdup(tmpStr.get());
+    if (!mAsciiName) return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+	*asciiName = nsCRT::strdup(mAsciiName);
 	if (!*asciiName) return NS_ERROR_OUT_OF_MEMORY;
 
 	return NS_OK;
@@ -1753,4 +1790,3 @@ NS_IMETHODIMP nsMsgNewsFolder::Compact(nsIUrlListener *aListener)
   }
   return rv;
 }
-

@@ -24,11 +24,7 @@
 #include "MailNewsTypes2.idl"
 
 %{ C++
-#include "nsINNTPHost.h"
-#include "nsINNTPArticleList.h"
-#include "nsINNTPNewsgroup.h"
 #include "nsIMsgOfflineNewsState.h"
-#include "nsINNTPNewsgroupList.h"  
 #include "nsINNTPNewsgroupPost.h"
 #include "nsIMsgMailNewsUrl.h"
 
@@ -37,26 +33,16 @@
 %}
 
 interface nsIMsgDBHdr;
-interface nsINNTPHost;
-interface nsINNTPArticleList;
-interface nsINNTPNewsgroup;
 interface nsIMsgOfflineNewsState;
-interface nsINNTPNewsgroupList;
 interface nsINNTPNewsgroupPost;
 
 typedef long nsNewsAction;
 
 [scriptable, uuid(BDD12930-A682-11d2-804C-006008128C4E)]
 interface nsINntpUrl : nsISupports {
-  attribute nsINNTPHost nntpHost;
-  attribute nsINNTPArticleList nntpArticleList;
-  attribute nsINNTPNewsgroup newsgroup;
   attribute nsIMsgOfflineNewsState offlineNewsState;
-  attribute nsINNTPNewsgroupList newsgroupList;
   attribute nsINNTPNewsgroupPost messageToPost;
   readonly attribute nsIMsgDBHdr messageHeader;
-  attribute nsMsgKey messageKey;
-  attribute string newsgroupName;
   attribute nsNewsAction newsAction;
   attribute boolean getOldMessages;
 

@@ -61,7 +61,6 @@
 #define HOSTINFO_FILE_BUFFER_SIZE 1024
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);                            
-static NS_DEFINE_CID(kNntpServiceCID, NS_NNTPSERVICE_CID);
 static NS_DEFINE_CID(kSubscribableServerCID, NS_SUBSCRIBABLESERVER_CID);
 
 NS_IMPL_ADDREF_INHERITED(nsNntpIncomingServer, nsMsgIncomingServer)
@@ -92,6 +91,9 @@ nsNntpIncomingServer::nsNntpIncomingServer() : nsMsgLineBuffer(nsnull, PR_FALSE)
   mUniqueId = 0;
   mPushAuth = PR_FALSE;
   mHasSeenBeginGroups = PR_FALSE;
+  mPostingAllowed = PR_FALSE;
+  mLastUpdatedTime = 0;
+
   SetupNewsrcSaveTimer();
 }
 
@@ -566,16 +568,12 @@ NS_IMETHODIMP
 nsNntpIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
 {
 	nsresult rv;
-#ifdef DEBUG_NEWS
-	printf("PerformExpand for nntp\n");
-#endif
 
-	nsCOMPtr<nsINntpService> nntpService = do_GetService(kNntpServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-	if (!nntpService) return NS_ERROR_FAILURE;
+	nsCOMPtr<nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
 	rv = nntpService->UpdateCounts(this, aMsgWindow);
-    if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv,rv);
 	return NS_OK;
 }
 
@@ -965,9 +963,8 @@ nsNntpIncomingServer::StartPopulating(nsIMsgWindow *aMsgWindow, PRBool aForceToS
   rv = SetShowFullName(PR_TRUE);
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsINntpService> nntpService = do_GetService(kNntpServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-  if (!nntpService) return NS_ERROR_FAILURE; 
+	nsCOMPtr<nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   mHostInfoLoaded = PR_FALSE;
   mVersion = INVALID_VERSION;
@@ -1387,3 +1384,153 @@ nsNntpIncomingServer::ForgetPassword()
     return return_rv;
 }
 
+NS_IMETHODIMP
+nsNntpIncomingServer::GetSupportsExtensions(PRBool *aSupportsExtensions)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::SetSupportsExtensions(PRBool aSupportsExtensions)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::AddExtension(const char *extension)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+   
+NS_IMETHODIMP
+nsNntpIncomingServer::QueryExtension(const char *extension, PRBool *result)
+{
+#ifdef DEBUG_seth
+  printf("no extension support yet\n");
+#endif
+  *result = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::GetPostingAllowed(PRBool *aPostingAllowed)
+{
+  *aPostingAllowed = mPostingAllowed;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::SetPostingAllowed(PRBool aPostingAllowed)
+{
+  mPostingAllowed = aPostingAllowed;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::GetPushAuth(PRBool *aPushAuth)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::SetPushAuth(PRBool aPushAuth)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::GetLastUpdatedTime(PRUint32 *aLastUpdatedTime)
+{
+  *aLastUpdatedTime = mLastUpdatedTime;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::SetLastUpdatedTime(PRUint32 aLastUpdatedTime)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::AddPropertyForGet(const char *name, const char *value)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::QueryPropertyForGet(const char *name, char **value)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+  
+NS_IMETHODIMP
+nsNntpIncomingServer::AddSearchableGroup(const char *name)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::QuerySearchableGroup(const char *name, PRBool *result)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::AddSearchableHeader(const char *name)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::QuerySearchableHeader(const char *name, PRBool *result)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+  
+NS_IMETHODIMP
+nsNntpIncomingServer::FindGroup(const char *name, nsIMsgNewsFolder **result)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::GetFirstGroupNeedingExtraInfo(char **result)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::SetGroupNeedsExtraInfo(const char *name, PRBool needsExtraInfo)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+nsNntpIncomingServer::GroupNotFound(const char *name, PRBool opening)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNntpIncomingServer::SetPrettyName(const char *name, const char *prettyName)
+{
+  NS_ASSERTION(0,"not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}

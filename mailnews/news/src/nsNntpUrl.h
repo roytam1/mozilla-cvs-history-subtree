@@ -59,13 +59,7 @@ protected:
   nsresult GetMsgFolder(nsIMsgFolder **msgFolder);
 
 	/* NNTP specific event sinks */
-	nsINNTPHost				    * m_newsHost;
-	nsINNTPArticleList		* m_articleList;
-	nsINNTPNewsgroup		  * m_newsgroup;
 	nsIMsgOfflineNewsState* m_offlineNews;
-	nsINNTPNewsgroupList	* m_newsgroupList;
-  nsMsgKey	              m_messageKey;
-  nsCString m_newsgroupName;	
   nsCString mURI; // the RDF URI associated with this url.
   nsString mCharsetOverride; // used by nsIMsgI18NUrl...
 	PRBool				m_getOldMessages;

@@ -133,7 +133,8 @@ static nsresult openWindow( const char *chrome, nsIMsgComposeParams *params )
   return rv;
 }
 
-nsresult nsMsgComposeService::OpenComposeWindow(const char *msgComposeWindowURL, const char *originalMsgURI,
+NS_IMETHODIMP
+nsMsgComposeService::OpenComposeWindow(const char *msgComposeWindowURL, const char *originalMsgURI,
 	MSG_ComposeType type, MSG_ComposeFormat format, nsIMsgIdentity * identity)
 {
 	nsresult rv;
@@ -201,9 +202,12 @@ nsresult nsMsgComposeService::OpenComposeWindow(const char *msgComposeWindowURL,
       pMsgComposeParams->SetComposeFields(pMsgCompFields);
 
 #ifdef MSGCOMP_TRACE_PERFORMANCE
-      char buff[256];
-      sprintf(buff, "Start opening the window, message size = %d", GetMessageSizeFromURI(originalMsgURI));
-      TimeStamp(buff, PR_TRUE);
+      // ducarroz, properly fix this in the case of new message (not a reply)
+      if (type != nsIMsgCompType::NewsPost) {
+        char buff[256];
+        sprintf(buff, "Start opening the window, message size = %d", GetMessageSizeFromURI(originalMsgURI));
+        TimeStamp(buff, PR_TRUE);
+      }
 #endif
       rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
     }

@@ -63,7 +63,6 @@ CPP_OBJS=   .\$(OBJDIR)\nsMsgCompFields.obj             \
                         .\$(OBJDIR)\nsSmtpService.obj           \
                         .\$(OBJDIR)\nsMsgComposeService.obj     \
                         .\$(OBJDIR)\nsMsgComposeParams.obj     \
-                        .\$(OBJDIR)\nsMsgComposeService.obj     \
                         .\$(OBJDIR)\nsMsgComposeContentHandler.obj     \
                         .\$(OBJDIR)\nsMsgCompose.obj            \
                         .\$(OBJDIR)\nsMsgCreate.obj \

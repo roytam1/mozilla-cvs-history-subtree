@@ -22,11 +22,12 @@
 
 #include "msgCore.h"    // precompiled header...
 
+#include "nsCOMPtr.h"
 #include "nsNNTPNewsgroupList.h"
-#include "nsINNTPHost.h"
 #include "nsINNTPArticleList.h"
 #include "nsMsgKeySet.h"
 #include "nsNNTPArticleList.h"
+#include "nsIMsgFolder.h"
 
 NS_IMPL_ISUPPORTS1(nsNNTPArticleList, nsINNTPArticleList)
 
@@ -36,53 +37,37 @@ nsNNTPArticleList::nsNNTPArticleList()
 }
 
 nsresult
-nsNNTPArticleList::Initialize(nsINNTPHost * newsHost,
-                              nsINNTPNewsgroup* newsgroup)
+nsNNTPArticleList::Initialize(nsIMsgNewsFolder *newsFolder)
 {
-	m_host = newsHost;
-    m_newsgroup = newsgroup;
-#ifdef HAVE_PANES
-	m_pane = pane;
-#endif
-#ifdef HAVE_NEWSDB
-	m_newsDB = NULL;
-#endif
-	m_idsOnServer.set = nsMsgKeySet::Create();
-#ifdef HAVE_PANES
-	nsINNTPNewsgroup *newsFolder = m_pane->GetMaster()->FindNewsFolder(host, groupName, PR_FALSE);
-	if (newsFolder)
-	{
-		char *url = newsFolder->BuildUrl(NULL, nsMsgKey_None);
-#ifdef HAVE_NEWSDB
-		if (url)
-			NewsGroupDB::Open(url, m_pane->GetMaster(), &m_newsDB);
-		if (m_newsDB)
-			m_newsDB->ListAllIds(m_idsInDB);
-#endif
-		m_dbIndex = 0;
+    nsresult rv;
+    
+    m_newsFolder = newsFolder;
 
-		PR_FREEIF(url);
-	}
-#endif
-    return NS_MSG_SUCCESS;
+    nsCOMPtr <nsIMsgFolder> folder = do_QueryInterface(m_newsFolder, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = folder->GetMsgDatabase(nsnull /* msgWindow */, getter_AddRefs(m_newsDB));
+    NS_ENSURE_SUCCESS(rv,rv);
+    return NS_OK;
 }
 
 nsNNTPArticleList::~nsNNTPArticleList()
 {
-#ifdef HAVE_NEWSDB
-	if (m_newsDB)
-		m_newsDB->Close();
-#endif
+  if (m_newsDB) {
+		m_newsDB->Commit(nsMsgDBCommitType::kSessionCommit);
+        m_newsDB->Close(PR_TRUE);
+        m_newsDB = nsnull;
+  }
 }
 
 nsresult
 nsNNTPArticleList::AddArticleKey(PRInt32 key)
 {
 #ifdef DEBUG_NEWS
-	char * groupname = nsnull;
-	if (m_newsgroup)
-		m_newsgroup->GetName(&groupname);
-	printf("Adding article key %d for group %s.\n", key, groupname ? groupname : "unspecified");
+	nsXPIDLCString groupname
+	if (m_newsFolder)
+		m_newsFolder->GetAsciiName(getter_Copies(groupname));
+	printf("Adding article key %d for group %s.\n", key, (const char *)groupname);
 	PR_FREEIF(groupname);
 #endif
 	m_idsOnServer.set->Add(key);

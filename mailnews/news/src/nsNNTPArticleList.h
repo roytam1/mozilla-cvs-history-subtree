@@ -23,10 +23,10 @@
 #ifndef nsNNTPArticleList_h___
 #define nsNNTPArticleList_h___
 
+#include "nsCOMPtr.h"
 #include "nsINNTPArticleList.h"
-
-/* XXX - temporary hack so this will compile */
-typedef PRUint32 nsMsgKey;
+#include "nsIMsgNewsFolder.h"
+#include "nsIMsgDatabase.h"
 
 class nsNNTPArticleList : public nsINNTPArticleList
 #ifdef HAVE_CHANGELISTENER
@@ -43,15 +43,11 @@ public:
     // other stuff
 protected:
 	struct MSG_NewsKnown	m_idsOnServer;
-#ifdef HAVE_PANES
-	MSG_Pane				*m_pane;
-#endif
-  /* formerly m_groupName */
-	nsINNTPNewsgroup		*m_newsgroup;
-	const nsINNTPHost			*m_host;
-#ifdef HAVE_NEWSDB
-	NewsGroupDB				*m_newsDB;
-#endif
+
+    /* formerly m_groupName */
+	nsCOMPtr <nsIMsgNewsFolder> m_newsFolder;
+    nsCOMPtr <nsIMsgDatabase> m_newsDB;
+
 #ifdef HAVE_IDARRAY
 	IDArray					m_idsInDB;
 #ifdef DEBUG_bienvenu

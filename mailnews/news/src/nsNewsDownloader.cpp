@@ -33,8 +33,6 @@
 
 // This file contains the news article download state machine.
 
-static NS_DEFINE_CID(kNntpServiceCID,	NS_NNTPSERVICE_CID);
-
 
 // if pIds is not null, download the articles whose id's are passed in. Otherwise,
 // which articles to download is determined by nsNewsDownloader object,
@@ -108,7 +106,7 @@ nsresult nsNewsDownloader::DownloadNext(PRBool firstTimeP)
 
 	StartDownload();
 	m_wroteAnyP = PR_FALSE;
-  NS_WITH_SERVICE(nsINntpService, nntpService, kNntpServiceCID, &rv);
+  nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID,&rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   return nntpService->FetchMessage(m_folder, m_keyToDownload, m_window, nsnull, this, nsnull);

@@ -76,11 +76,13 @@ protected:
   nsresult FindServerWithNewsgroup(nsCString &host, nsCString &groupName);
   
   // a convience routine used to put together news urls.
-  nsresult ConstructNntpUrl(const char * urlString, const char * newsgroupName, nsMsgKey key, nsIUrlListener *aUrlListener,  nsIMsgWindow * aMsgWindow, nsIURI ** aUrl);
+  nsresult ConstructNntpUrl(const char * urlString, nsIUrlListener *aUrlListener,  nsIMsgWindow * aMsgWindow, nsIURI ** aUrl);
   nsresult CreateNewsAccount(const char *username, const char *hostname, PRBool isSecure, PRInt32 port, nsIMsgIncomingServer **server);
   nsresult GetProtocolForUri(nsIURI *aUri, nsIMsgWindow *aMsgWindow, nsINNTPProtocol **aProtocol);
   // a convience routine to run news urls
   nsresult RunNewsUrl (nsIURI * aUrl, nsIMsgWindow *aMsgWindow, nsISupports * aConsumer);
+  // a convience routine to go from folder uri to msg folder
+  nsresult GetFolderFromUri(const char *uri, nsIMsgFolder **folder);
   static PRBool findNewsServerWithGroup(nsISupports *aElement, void *data);
   nsresult DecomposeNewsMessageURI(const char * aMessageURI, nsIMsgFolder ** aFolder, nsMsgKey *aMsgKey);
 

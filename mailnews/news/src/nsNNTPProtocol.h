@@ -36,8 +36,6 @@
 
 #include "nsINNTPNewsgroupList.h"
 #include "nsINNTPArticleList.h"
-#include "nsINNTPHost.h"
-#include "nsINNTPNewsgroup.h"
 #include "nsIMsgOfflineNewsState.h"
 #include "nsIMsgNewsFolder.h"
 #include "nsIMsgWindow.h"
@@ -192,8 +190,6 @@ private:
 	// News Event Sinks
   nsCOMPtr <nsINNTPNewsgroupList> m_newsgroupList;
   nsCOMPtr <nsINNTPArticleList> m_articleList;
-	nsCOMPtr <nsINNTPHost>	 m_newsHost;
-	nsCOMPtr <nsINNTPNewsgroup>	m_newsgroup;
 	nsCOMPtr <nsIMsgOfflineNewsState> m_offlineNewsState;
 
   nsCOMPtr <nsIMsgNewsFolder> m_newsFolder;
@@ -397,7 +393,7 @@ private:
 	nsresult SetProgressStatus(const PRUnichar *aMessage);
     nsresult SetCheckingForNewNewsStatus(PRInt32 current, PRInt32 total);
   nsresult MarkCurrentMsgRead(); // marks the message corresponding to the currently running url read.
-	nsresult SetNewsFolder();		/* sets m_newsFolder, if not already set */
+	nsresult SetNewsFolderAndMsgKey();		/* sets m_newsFolder (if not already set) and m_key from the running url */
 	nsresult CreateNewsFolderURI (const char *username, const char *hostname, const char *newsgroupname, char **uri);
 	nsresult InitializeNewsFolderFromUri(const char *uri);
 	void TimerCallback();
@@ -408,6 +404,8 @@ private:
     PRInt32 mBytesReceivedSinceLastStatusUpdate;
     PRTime m_startTime;
     PRInt32 mNumGroupsListed;
+    nsMsgKey m_key;
+    
 };
 
 NS_BEGIN_EXTERN_C
