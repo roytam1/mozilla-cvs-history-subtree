@@ -75,6 +75,29 @@ void List::add(void* objPtr) {
     insert(itemCount, objPtr);
 } //-- add
 
+/**
+ * Returns the object located at the given index. This may
+ * be slow or fast depending on the implementation.
+ * Note:
+ * Currently this list is implemented via a linked list, so
+ * this method will be slow (unless the list only has a couple
+ * members) as it will need traverse the links each time
+ * @return the object located at the given index
+**/
+void* List::get(int index) {
+
+    if ((index < 0) || (index >= itemCount)) return 0;
+
+    int c = 0;
+    ListItem* item = firstItem;
+    while (c != index) {
+        item = item->nextItem;
+        ++c;
+    }
+
+    return item->objPtr;
+} //-- get(int)
+
 List::ListItem* List::getFirstItem() {
     return firstItem;
 } //-- getFirstItem
