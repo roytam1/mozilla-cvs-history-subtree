@@ -411,7 +411,14 @@ jsj_DiscardJavaClassReflections(JNIEnv *jEnv)
            Java and back into JS.  Invoke a callback to obtain/create a
            JSContext for us to use. */
         if (JSJ_callbacks->map_jsj_thread_to_js_context) {
-            cx = JSJ_callbacks->map_jsj_thread_to_js_context(jsj_env, jEnv, &err_msg);
+#ifdef OJI
+            cx = JSJ_callbacks->map_jsj_thread_to_js_context(jsj_env,
+                                                             NULL /* FIXME: What should this argument be ? */
+                                                             jEnv, &err_msg);
+#else
+            cx = JSJ_callbacks->map_jsj_thread_to_js_context(jsj_env,
+                                                             jEnv, &err_msg);
+#endif
 	    JS_ASSERT(cx);
             if (!cx)
                 return;
