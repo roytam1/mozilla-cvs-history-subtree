@@ -2025,6 +2025,11 @@ js_NewFileObjectFromFILE(JSContext *cx, FILE *nativehandle, char *filename,
     if(!file) return NULL;
 
     file->nativehandle = nativehandle;
+
+    /* free result of RESOLVE_PATH from file_init. */
+    JS_ASSERT(file->path != NULL);
+    JS_free(cx, file->path);
+
     file->path = strdup(filename);
     file->isOpen = open;
     file->mode = mode;
