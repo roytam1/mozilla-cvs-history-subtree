@@ -37,13 +37,6 @@
 #include "plstr.h"
 #include "prmem.h"
 
-static NS_DEFINE_IID(kIDateTimeFormatIID, NS_IDATETIMEFORMAT_IID);
-static NS_DEFINE_CID(kMacLocaleFactoryCID, NS_MACLOCALEFACTORY_CID);
-static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
-static NS_DEFINE_CID(kLocaleServiceCID, NS_LOCALESERVICE_CID); 
-static NS_DEFINE_CID(kPlatformCharsetCID, NS_PLATFORMCHARSET_CID);
-
-
 ////////////////////////////////////////////////////////////////////////////////
 
 static Intl1Hndl GetItl1Resource(short scriptcode, short regioncode)
@@ -221,7 +214,7 @@ static void AbbrevWeekdayString(DateTimeRec &dateTime, Str255 weekdayString, Int
 ////////////////////////////////////////////////////////////////////////////////
 
 
-NS_IMPL_THREADSAFE_ISUPPORTS(nsDateTimeFormatMac, kIDateTimeFormatIID);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsDateTimeFormatMac, nsIDateTimeFormat);
 
 nsresult nsDateTimeFormatMac::Initialize(nsILocale* locale)
 {
@@ -253,7 +246,8 @@ nsresult nsDateTimeFormatMac::Initialize(nsILocale* locale)
   
 
   // get application locale
-  NS_WITH_SERVICE(nsILocaleService, localeService, kLocaleServiceCID, &res);
+  nsCOMPtr<nsILocaleService> localeService = 
+           do_GetService(NS_LOCALESERVICE_CONTRACTID, &res);
   if (NS_SUCCEEDED(res)) {
     nsILocale *appLocale;
     res = localeService->GetApplicationLocale(&appLocale);
@@ -281,7 +275,7 @@ nsresult nsDateTimeFormatMac::Initialize(nsILocale* locale)
     mLocale.Assign(aLocaleUnichar); // cache locale name
     nsMemory::Free(aLocaleUnichar);
 
-    nsCOMPtr <nsIMacLocale> macLocale = do_GetService(kMacLocaleFactoryCID, &res);
+    nsCOMPtr <nsIMacLocale> macLocale = do_GetService(NS_MACLOCALE_CONTRACTID, &res);
     if (NS_SUCCEEDED(res)) {
       res = macLocale->GetPlatformLocale(&mLocale, &mScriptcode, &mLangcode, &mRegioncode);
     }
