@@ -90,14 +90,6 @@ treechildren::-moz-tree-cell-text(selected, focus) {
   color: HighlightText;
 }
 
-treechildren::-moz-tree-cell-text(leaf, linkTree) {
-  text-decoration: underline;
-  color: blue;
-}
-
-treechildren::-moz-tree-cell(leaf, linkTree, selected, focus) {
-  background-color: -moz-dialog;
-}
 
 /* ::::: lines connecting cells ::::: */
 
