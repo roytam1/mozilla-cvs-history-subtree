@@ -61,6 +61,7 @@
 // General helper includes
 #include "nsIContent.h"
 #include "nsIDocument.h"
+#include "nsINodeInfo.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMXMLDocument.h"
 #include "nsIDOMNSDocument.h"
@@ -4306,28 +4307,43 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
   if (content) {
     content->GetDocument(*getter_AddRefs(doc));
+
+    // If the content node doesn't have a document, it's either a node
+    // that's not yet in a document, or the node is part of a document
+    // that's being torn down. In the latter case it's important to
+    // *not* use globalObj as the nodes parent since that would give
+    // the node the principal of globalObj (i.e. the principal of the
+    // document that's being loaded) and not the principal of the
+    // document that's being unloaded. So when there's no document for
+    // the node, try to reach the original document through the node's
+    // nodeinfo, or through the nodeinfo for the node's parent (in
+    // case the node is a text node).
+    //
+    // See http://bugzilla.mozilla.org/show_bug.cgi?id=227417
+    //
+    // XXX: nsIDOMNode::GetOwnerDocument() should do all of this for
+    // us, but it doesn't yet, so until it does, we'll need to do this
+    // by hand. http://bugzilla.mozilla.org/show_bug.cgi?id=227421
+    if (!doc) {
+      nsCOMPtr<nsINodeInfo> ni;
+      content->GetNodeInfo(*getter_AddRefs(ni));
+
+      if (!ni) {
+        nsCOMPtr<nsIContent> parent;
+        content->GetParent(*getter_AddRefs(parent));
+
+        if (parent) {
+          parent->GetNodeInfo(*getter_AddRefs(ni));
+        }
+      }
+
+      if (ni) {
+        ni->GetDocument(*getter_AddRefs(doc));
+      }
+    }
   }
 
   if (!doc) {
-#if 0
-    // Once nsIDOMNode::GetOwnerDocument() does the right thing we
-    // could call it here to get to the document even if the node is
-    // not in a document.
-
-    nsCOMPtr<nsIDOMNode> node(do_QueryInterface(nativeObj));
-    NS_WARN_IF_FALSE(node, "nativeObj not a node!");
-
-    nsCOMPtr<nsIDOMDocument> owner_doc;
-
-    node->GetOwnerDocument(getter_AddRefs(owner_doc));
-
-    doc = do_QueryInterface(owner_doc);
-
-    if (!doc) {
-      ...
-    }
-#endif
-
     doc = do_QueryInterface(nativeObj);
 
     if (!doc) {
