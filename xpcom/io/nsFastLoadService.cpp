@@ -56,10 +56,12 @@ nsFastLoadService::nsFastLoadService()
 nsFastLoadService::~nsFastLoadService()
 {
     gFastLoadService_ = nsnull;
+
     if (mObjectInputStream)
         mObjectInputStream->Close();
     if (mObjectOutputStream)
         mObjectOutputStream->Close();
+
     if (mFastLoadPtrMap)
         PL_DHashTableDestroy(mFastLoadPtrMap);
     if (mLock)
@@ -238,22 +240,11 @@ nsFastLoadService::GetFastLoadReferent(nsISupports* *aPtrAddr)
     nsresult rv;
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mObjectInputStream));
 
-    PRUint32 saveOffset;
-    rv = seekable->Tell(&saveOffset);
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, entry->mOffset);
     if (NS_FAILED(rv)) return rv;
-
-    if (saveOffset != entry->mOffset) {
-        rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, entry->mOffset);
-        if (NS_FAILED(rv)) return rv;
-    }
 
     rv = mObjectInputStream->ReadObject(PR_TRUE, aPtrAddr);
     if (NS_FAILED(rv)) return rv;
-
-    if (saveOffset != entry->mOffset) {
-        rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, saveOffset);
-        if (NS_FAILED(rv)) return rv;
-    }
 
     // Shrink the table if half the entries are removed sentinels.
     PRUint32 size = PR_BIT(mFastLoadPtrMap->sizeLog2);
