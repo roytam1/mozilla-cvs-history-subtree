@@ -659,7 +659,7 @@ const gPopupBlockerObserver = {
         else
           message = bundle_browser.getFormattedString("popupWarning", [brandShortName]);
         gBrowser.showMessage(gBrowser.selectedBrowser, "chrome://browser/skin/Info.png", 
-                            message, "", null, null, "blockedPopupOptions", "top");
+                             message, "", null, null, "blockedPopupOptions", "top");
       }
     }
     else
@@ -845,6 +845,19 @@ const gXPInstallObserver = {
     }
     return null;
   },
+  
+  _getBrowser: function (aDocShell) 
+  {
+    var tabbrowser = getBrowser();
+    for (var i = 0; i < tabbrowser.browsers.length; ++i) {
+      var browser = tabbrowser.getBrowserAtIndex(i);
+      var soughtShell = aDocShell;
+      var shell = this._findChildShell(browser.docShell, soughtShell);
+      if (shell)
+        return browser;
+    }
+    return null;
+  },
 
   observe: function (aSubject, aTopic, aData)
   {
@@ -852,45 +865,41 @@ const gXPInstallObserver = {
     var browserBundle = document.getElementById("bundle_browser");
     switch (aTopic) {
     case "xpinstall-install-blocked":
-      var tabbrowser = getBrowser();
-      for (var i = 0; i < tabbrowser.browsers.length; ++i) {
-        var browser = tabbrowser.getBrowserAtIndex(i);
-        var soughtShell = aSubject.QueryInterface(Components.interfaces.nsIDocShell);
-        var shell = this._findChildShell(browser.docShell, soughtShell);
-        if (shell) {
-          var host = browser.docShell.QueryInterface(Components.interfaces.nsIWebNavigation).currentURI.host;
-          var brandShortName = brandBundle.getString("brandShortName");
-          var iconURL, messageKey, buttonKey;
-          if (aData == "install-chrome") {
-            // XXXben - use regular software install warnings for now until we can
-            // properly differentiate themes. It's likely in fact that themes won't
-            // be blocked so this code path will only be reached for extensions.
-            iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
-            messageKey = "xpinstallWarning";
-            buttonKey = "xpinstallWarningButton";
-          }
-          else {
-            iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
-            messageKey = "xpinstallWarning";
-            buttonKey = "xpinstallWarningButton";
-          }
-
-          if (!gPrefService.getBoolPref("xpinstall.enabled")) {
-            var messageString = browserBundle.getFormattedString("xpinstallDisabledWarning", 
-                                                                 [brandShortName, host]);
-            var buttonString = browserBundle.getString("xpinstallDisabledWarningButton");
-            tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
-                                   "", "xpinstall-install-edit-prefs",
+      var shell = aSubject.QueryInterface(Components.interfaces.nsIDocShell);
+      var browser = this._getBrowser(shell);
+      if (browser) {
+        var host = browser.docShell.QueryInterface(Components.interfaces.nsIWebNavigation).currentURI.host;
+        var brandShortName = brandBundle.getString("brandShortName");
+        var iconURL, messageKey, buttonKey;
+        if (aData == "install-chrome") {
+          // XXXben - use regular software install warnings for now until we can
+          // properly differentiate themes. It's likely in fact that themes won't
+          // be blocked so this code path will only be reached for extensions.
+          iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
+          messageKey = "xpinstallWarning";
+          buttonKey = "xpinstallWarningButton";
+        }
+        else {
+          iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
+          messageKey = "xpinstallWarning";
+          buttonKey = "xpinstallWarningButton";
+        }
+        
+        if (!gPrefService.getBoolPref("xpinstall.enabled")) {
+          var messageString = browserBundle.getFormattedString("xpinstallDisabledWarning", 
+                                                                [brandShortName, host]);
+          var buttonString = browserBundle.getString("xpinstallDisabledWarningButton");
+          getBrowser().showMessage(browser, iconURL, messageString, buttonString, 
+                                   null, "xpinstall-install-edit-prefs",
                                    null, "top");
-          }
-          else {            
-            var messageString = browserBundle.getFormattedString(messageKey, [brandShortName, host]);
-            var buttonString = browserBundle.getString(buttonKey);
-            var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
-            tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
-                                   webNav.currentURI, "xpinstall-install-edit-permissions",
+        }
+        else {            
+          var messageString = browserBundle.getFormattedString(messageKey, [brandShortName, host]);
+          var buttonString = browserBundle.getString(buttonKey);
+          var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
+          getBrowser().showMessage(browser, iconURL, messageString, buttonString, 
+                                   shell, "xpinstall-install-edit-permissions",
                                    null, "top");
-          }
         }
       }
       break;
@@ -909,25 +918,29 @@ const gXPInstallObserver = {
       tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
       break;
     case "xpinstall-install-edit-permissions":
-      var uri = aSubject.QueryInterface(Components.interfaces.nsIURI);
-      var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                         .getService(Components.interfaces.nsIWindowMediator);
-      var existingWindow = wm.getMostRecentWindow("exceptions");
-      if (existingWindow) {
-        existingWindow.setHost(uri.host);
-        existingWindow.focus();
+      var browser = this._getBrowser(aSubject.QueryInterface(Components.interfaces.nsIDocShell));
+      if (browser) {
+        var webNav = aSubject.QueryInterface(Components.interfaces.nsIWebNavigation);
+        var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                          .getService(Components.interfaces.nsIWindowMediator);
+        var existingWindow = wm.getMostRecentWindow("exceptions");
+        dump("*** edit-perms, existingWindow = " + existingWindow + "\n");
+        if (existingWindow) {
+          existingWindow.setHost(webNav.currentURI.host);
+          existingWindow.focus();
+        }
+        else {
+          var params = { blockVisible:    false,
+                         allowVisible:    true,
+                         prefilledHost:   webNav.currentURI.host,
+                         permissionType:  "install" };
+          window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=install",
+                            "_blank", "chrome,modal,resizable=yes", params);
+        }
+              
+        var tabbrowser = getBrowser();
+        tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
       }
-      else {
-        var params = { blockVisible:    false,
-                       allowVisible:    true,
-                       prefilledHost:   uri.host,
-                       permissionType:  "install" };
-        window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=install",
-                          "_blank", "chrome,modal,resizable=yes", params);
-      }
-            
-      var tabbrowser = getBrowser();
-      tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
       break;
     }
   }
@@ -1037,7 +1050,7 @@ function Startup()
     document.documentElement.setAttribute("width", defaultWidth);
     document.documentElement.setAttribute("height", defaultHeight);
   }
-    
+  
   setTimeout(delayedStartup, 0);
 }
 
@@ -1109,8 +1122,8 @@ function delayedStartup()
   // We have to do this because we manually hook up history for the first browser in prepareForStartup
   os.addObserver(gBrowser.browsers[0], "browser:purge-session-history", false);
   os.addObserver(gXPInstallObserver, "xpinstall-install-blocked", false);
-  os.addObserver(gXPInstallObserver, "xpinstall-install-edit-permissions", false);
   os.addObserver(gXPInstallObserver, "xpinstall-install-edit-prefs", false);
+  os.addObserver(gXPInstallObserver, "xpinstall-install-edit-permissions", false);
 
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
                               .getService(Components.interfaces.nsIPrefService);
@@ -3306,9 +3319,13 @@ nsBrowserStatusHandler.prototype =
     // - which fires a onLocationChange message to uri + '#'...
     if (this.lastURI) {
       var oldSpec = this.lastURI.spec;
-      oldSpec = oldSpec.substr(0, oldSpec.indexOf("#"));
+      var oldIndexOfHash = oldSpec.indexOf("#");
+      if (oldIndexOfHash != -1)
+        oldSpec = oldSpec.substr(0, oldIndexOfHash);
       var newSpec = aLocation.spec;
-      newSpec = newSpec.substr(0, newSpec.indexOf("#"));
+      var newIndexOfHash = newSpec.indexOf("#");
+      if (newIndexOfHash != -1)
+        newSpec = newSpec.substr(0, newSpec.indexOf("#"));
       if (newSpec == oldSpec) {
         var tabbrowser = getBrowser();
         tabbrowser.hideMessage(tabbrowser.selectedBrowser, "both");
