@@ -1083,5 +1083,5 @@ jsj_init_JavaObject(JSContext *cx, JSObject *global_obj)
     return JS_InitClass(cx, global_obj,
                         0, &JavaObject_class, 0, 0,
                         0, 0,
-                        0, 0);
+                        0, 0) != 0;
 }
