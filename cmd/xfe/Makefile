@@ -445,7 +445,7 @@ ifdef USE_ABCOM
 DEFINES		+= -DUSE_ABCOM
 endif
 
-INCLUDES	+= -Isrc -I. -I$(DEPTH)/dist/public/nls
+INCLUDES	+= -Isrc -I. -I$(DEPTH)/dist/public/nls -I$(DEPTH)/dist/public/security
 
 
 #######################################################################
