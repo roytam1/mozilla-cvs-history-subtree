@@ -52,6 +52,9 @@ static struct ResultMap
 #define XPC_MSG_DEF(val, format) \
     {(val), #val, format},
 #include "xpc.msg"
+#ifdef XPC_IDISPATCH_SUPPORT
+#include "idisp.msg"
+#endif
 #undef XPC_MSG_DEF
     {0,0,0}   // sentinel to mark end of array
 };
