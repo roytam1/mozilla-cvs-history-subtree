@@ -310,6 +310,10 @@ BASIC_LIBS	+= \
 		  $(NULL)
 endif
 
+ifdef MOZ_LDAP
+BASIC_LIBS	+= $(DIST)/lib/libldap.a $(DIST)/lib/liblber.a 
+endif
+
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= $(DIST)/lib/libnntpurl.a \
 		  $(DIST)/lib/libsmtpurl.a	\
@@ -432,10 +436,6 @@ endif
 
 ifndef MOZ_SECURITY
 EXPORT_LIB	+= $(DIST)/lib/libsecfree.a 
-endif
-
-ifdef MOZ_LDAP
-BASIC_LIBS	+= $(DIST)/lib/libldap.a $(DIST)/lib/liblber.a 
 endif
 
 LOCALES		= $(LOCALE_MAP) $(MAIL_IM_HACK) $(NEWS_IM_HACK)
