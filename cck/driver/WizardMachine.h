@@ -79,6 +79,7 @@ public:
 	//{{AFX_VIRTUAL(CWizardMachineApp)
 	public:
 	virtual BOOL InitInstance();
+  virtual int ExitInstance();
 	//}}AFX_VIRTUAL
 
 // Implementation
