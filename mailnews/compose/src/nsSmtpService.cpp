@@ -343,7 +343,7 @@ NS_IMETHODIMP nsMailtoChannel::AsyncRead(nsIStreamListener *listener, nsISupport
   return listener->OnStartRequest(this, ctxt);
 }
 
-NS_IMETHODIMP nsMailtoChannel::AsyncWrite(nsIInputStream *fromStream, nsIStreamObserver *observer, nsISupports *ctxt,
+NS_IMETHODIMP nsMailtoChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
                                           PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     NS_NOTREACHED("AsyncWrite");
