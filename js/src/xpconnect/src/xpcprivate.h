@@ -510,6 +510,8 @@ public:
 
     void SystemIsBeingShutDown();
 
+    operator JSContext*() const {return GetJSContext();}
+
 private:
 
     // no copy ctor or assignment allowed
@@ -1656,6 +1658,8 @@ public:
                              XPCNativeInterface** pInterface) const;
 
     inline JSBool HasInterface(XPCNativeInterface* aInterface) const;
+
+    inline XPCNativeInterface* FindInterfaceWithIID(const nsIID& iid) const;
 
     inline XPCNativeInterface* FindNamedInterface(jsval name) const;
 

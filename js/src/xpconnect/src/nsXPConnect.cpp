@@ -301,18 +301,13 @@ nsXPConnect::IsISupportsDescendant(nsIInterfaceInfo* info)
     nsCOMPtr<nsIInterfaceInfo> parent;
 
     while(NS_SUCCEEDED(oldest->GetParent(getter_AddRefs(parent))) && parent)
-    {
         oldest = parent;
-    }
 
-    JSBool retval = JS_FALSE;
-    nsID* iid;
-    if(NS_SUCCEEDED(oldest->GetIID(&iid)))
-    {
-        retval = iid->Equals(NS_GET_IID(nsISupports));
-        nsMemory::Free(iid);
-    }
-    return retval;
+    JSBool match;
+    
+    if(NS_FAILED(oldest->IsIID(&NS_GET_IID(nsISupports), &match)))
+        return JS_FALSE;
+    return match;
 }
 
 JSBool 

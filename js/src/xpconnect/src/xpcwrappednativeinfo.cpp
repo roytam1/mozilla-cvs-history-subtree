@@ -44,7 +44,6 @@
 XPCCallableInfo*
 XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
 {
-    JSContext* cx;
     JSFunction* fun;
     JSObject* realFunObj;
     jsid id;
@@ -52,12 +51,11 @@ XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
 
     // We expect funobj to be a clone, we need the real funobj.
 
-    cx = ccx.GetJSContext();
-    fun = (JSFunction*) JS_GetPrivate(cx, funobj);
+    fun = (JSFunction*) JS_GetPrivate(ccx, funobj);
     realFunObj = JS_GetFunctionObject(fun);
     id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
-    if(OBJ_GET_PROPERTY(cx, realFunObj, id, &val) && JSVAL_IS_INT(val))
+    if(OBJ_GET_PROPERTY(ccx, realFunObj, id, &val) && JSVAL_IS_INT(val))
         return (XPCCallableInfo*) JSVAL_TO_PRIVATE(val);
 
     return nsnull;
@@ -306,9 +304,11 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     // Find out how often we create these objects w/o really looking at
     // (or using) the members.
 
-    JSContext* cx = ccx.GetJSContext();
+    PRBool canScript;
+    if(NS_FAILED(aInfo->IsScriptable(&canScript)) || !canScript)
+        return nsnull;
 
-    if(!cx)
+    if(!nsXPConnect::IsISupportsDescendant(aInfo))
         return nsnull;
 
     if(NS_FAILED(aInfo->GetMethodCount(&methodCount)) ||
@@ -347,7 +347,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
         if(!XPCConvert::IsMethodReflectable(*info))
             continue;
 
-        str = JS_InternString(cx, info->GetName());
+        str = JS_InternString(ccx, info->GetName());
         if(!str)
         {
             NS_ASSERTION(0,"bad method name");
@@ -390,7 +390,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
                 break;
             }
 
-            str = JS_InternString(cx, constant->GetName());
+            str = JS_InternString(ccx, constant->GetName());
             if(!str)
             {
                 NS_ASSERTION(0,"bad constant name");
@@ -412,7 +412,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     {
         const char* bytes;
         if(NS_FAILED(aInfo->GetNameShared(&bytes)) || !bytes ||
-           nsnull == (str = JS_InternString(cx, bytes)))
+           nsnull == (str = JS_InternString(ccx, bytes)))
         {
             failed = JS_TRUE;
         }

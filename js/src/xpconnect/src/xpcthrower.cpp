@@ -56,8 +56,6 @@ XPCThrower::Throw(nsresult rv, XPCCallContext& ccx)
     char* sz;
     const char* format;
 
-    JSContext* cx = ccx.GetJSContext();
-
     if(!nsXPCException::NameAndFormatForNSResult(rv, nsnull, &format))
         format = "";
 
@@ -66,7 +64,7 @@ XPCThrower::Throw(nsresult rv, XPCCallContext& ccx)
     if(sz && sVerbose)
         Verbosify(ccx, &sz, PR_FALSE);
 
-    BuildAndThrowException(cx, rv, sz);
+    BuildAndThrowException(ccx, rv, sz);
 
     if(sz && sz != format)
         JS_smprintf_free(sz);
@@ -80,8 +78,6 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
     char* sz;
     const char* format;
     const char* name;
-
-    JSContext* cx = ccx.GetJSContext();
 
     /*
     *  If there is a pending exception when the native call returns and
@@ -102,8 +98,8 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
             nsresult e_result;
             if(NS_SUCCEEDED(e->GetResult(&e_result)) && e_result == result)
             {
-                if(!ThrowExceptionObject(cx, e))
-                    JS_ReportOutOfMemory(cx);
+                if(!ThrowExceptionObject(ccx, e))
+                    JS_ReportOutOfMemory(ccx);
                 return;
             }
         }
@@ -122,7 +118,7 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
     if(sz && sVerbose)
         Verbosify(ccx, &sz, PR_TRUE);
 
-    BuildAndThrowException(cx, result, sz);
+    BuildAndThrowException(ccx, result, sz);
 
     if(sz)
         JS_smprintf_free(sz);

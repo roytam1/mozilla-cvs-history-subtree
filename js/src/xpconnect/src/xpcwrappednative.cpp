@@ -101,7 +101,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     {
         JSObject* plannedParent = parent;
         if(NS_FAILED(siWrapper.GetScriptable()->
-            PreCreate(identity, ccx.GetJSContext(), parent, &parent)))
+            PreCreate(identity, ccx, parent, &parent)))
         {
             return nsnull;
         }
@@ -314,15 +314,13 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
     // Do double addref first. So failure here means object can be deleted
     // by double release.
 
-    JSContext* cx = ccx.GetJSContext();
-
     // Hacky double initial addrefs to get the JSObject rooted w/o creating
     // another call context (as would happen in AddRef)
     mRefCnt++;
     NS_LOG_ADDREF(this, mRefCnt, "XPCWrappedNative", sizeof(*this));
     mRefCnt++;
     NS_LOG_ADDREF(this, mRefCnt, "XPCWrappedNative", sizeof(*this));
-    JS_AddNamedRoot(cx, &mFlatJSObject, "XPCWrappedNative::mFlatJSObject");
+    JS_AddNamedRoot(ccx, &mFlatJSObject, "XPCWrappedNative::mFlatJSObject");
 
     // setup our scriptable info...
     
@@ -366,14 +364,14 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
                  jsclazz->convert &&
                  jsclazz->finalize, "bad class");
 
-    mFlatJSObject = JS_NewObject(cx, jsclazz,
+    mFlatJSObject = JS_NewObject(ccx, jsclazz,
                                  mProto->GetJSProtoObject(),
                                  parent);
-    if(!mFlatJSObject || !JS_SetPrivate(cx, mFlatJSObject, this))
+    if(!mFlatJSObject || !JS_SetPrivate(ccx, mFlatJSObject, this))
         return JS_FALSE;
 
     if(mScriptableInfo && mScriptableInfo->WantCreate())
-        mScriptableInfo->GetScriptable()->Create(this, cx, mFlatJSObject);
+        mScriptableInfo->GetScriptable()->Create(this, ccx, mFlatJSObject);
 
     // XXX and so on....
     return JS_TRUE;
@@ -449,7 +447,7 @@ XPCWrappedNative::AddRef(void)
     {
         XPCCallContext ccx(NATIVE_CALLER);
         if(ccx.IsValid())
-            JS_AddNamedRoot(ccx.GetJSContext(), &mFlatJSObject,
+            JS_AddNamedRoot(ccx, &mFlatJSObject,
                             "XPCWrappedNative::mFlatJSObject");
     }
     return cnt;
@@ -525,7 +523,7 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     // We leak mIdentity.
 
     // short circuit future finalization
-    JS_SetPrivate(ccx.GetJSContext(), mFlatJSObject, nsnull);
+    JS_SetPrivate(ccx, mFlatJSObject, nsnull);
     mFlatJSObject = nsnull; // This makes 'IsValid()' return false.
     
     // We *must* leak mScriptableInfo (if in use and not shared) because it
@@ -546,7 +544,7 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
         {
             if(to->GetJSObject())
             {
-                JS_SetPrivate(ccx.GetJSContext(), to->GetJSObject(), nsnull);
+                JS_SetPrivate(ccx, to->GetJSObject(), nsnull);
                 to->SetJSObject(nsnull);
                 // We leak the tearoff mNative
             }
@@ -676,12 +674,11 @@ JSBool
 XPCWrappedNative::InitTearOffJSObject(XPCCallContext& ccx, 
                                       XPCWrappedNativeTearOff* to)
 {
-    JSContext* cx = ccx.GetJSContext();
-    JSObject* obj = JS_NewObject(cx, &XPC_WN_Tearoff_JSClass,
+    JSObject* obj = JS_NewObject(ccx, &XPC_WN_Tearoff_JSClass,
                                  GetScope()->GetPrototypeJSObject(),
                                  mFlatJSObject);
     
-    if(!obj || !JS_SetPrivate(cx, obj, to))
+    if(!obj || !JS_SetPrivate(ccx, obj, to))
         return JS_FALSE;
     to->SetJSObject(obj);
     return JS_TRUE;
@@ -715,7 +712,6 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
     JSString* newJSStr;
     PRUnichar* oldStr;
     PRUnichar* newStr;
-    JSContext* cx = ccx.GetJSContext();
     XPCNativeMember* member;
     XPCNativeInterface* interface;
 
@@ -727,7 +723,7 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
        nsnull != (newStr = nsCRT::strdup(oldStr)))
     {
         newStr[0] = nsCRT::ToLower(newStr[0]);
-        newJSStr = JS_NewUCStringCopyZ(cx, (const jschar*)newStr);
+        newJSStr = JS_NewUCStringCopyZ(ccx, (const jschar*)newStr);
         nsCRT::free(newStr);
         if(newJSStr && (set ? 
              set->FindMember(STRING_TO_JSVAL(newJSStr), &member, &interface) :
@@ -797,7 +793,7 @@ static void ThrowBadResult(nsresult result, XPCCallContext& ccx)
 
 static JSBool ReportOutOfMemory(XPCCallContext& ccx)
 {
-    JS_ReportOutOfMemory(ccx.GetJSContext());
+    JS_ReportOutOfMemory(ccx);
     return JS_FALSE;
 }
 
@@ -917,7 +913,6 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
     nsIXPCSecurityManager* sm;
     JSBool foundDependentParam;
 
-    JSContext* cx = ccx.GetJSContext();
     XPCJSRuntime* rt = ccx.GetRuntime();
     nsXPConnect* xpc = ccx.GetXPConnect();
     XPCContext* xpcc = ccx.GetXPCContext();
@@ -950,7 +945,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         case CALL_METHOD:
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_CALL_METHOD);
-            if(sm && NS_OK != sm->CanCallMethod(cx, iid, callee,
+            if(sm && NS_OK != sm->CanCallMethod(ccx, iid, callee,
                                                 ifaceInfo, vtblIndex, name))
             {
                 // the security manager vetoed. It should have set an exception.
@@ -961,7 +956,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         case CALL_GETTER:
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_GET_PROPERTY);
-            if(sm && NS_OK != sm->CanGetProperty(cx, iid, callee,
+            if(sm && NS_OK != sm->CanGetProperty(ccx, iid, callee,
                                                  ifaceInfo, vtblIndex, name))
             {
                 // the security manager vetoed. It should have set an exception.
@@ -972,7 +967,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         case CALL_SETTER:
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_SET_PROPERTY);
-            if(sm && NS_OK != sm->CanSetProperty(cx, iid, callee,
+            if(sm && NS_OK != sm->CanSetProperty(ccx, iid, callee,
                                                  ifaceInfo, vtblIndex, name))
             {
                 // the security manager vetoed. It should have set an exception.
@@ -1006,7 +1001,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
     {
         if(!(dispatchParams = new nsXPTCVariant[paramCount]))
         {
-            JS_ReportOutOfMemory(cx);
+            JS_ReportOutOfMemory(ccx);
             goto done;
         }
     }
@@ -1057,7 +1052,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
 
             if(!paramInfo.IsRetval() &&
                (JSVAL_IS_PRIMITIVE(argv[i]) ||
-                !OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(argv[i]),
+                !OBJ_GET_PROPERTY(ccx, JSVAL_TO_OBJECT(argv[i]),
                                   rt->GetStringID(XPCJSRuntime::IDX_VALUE),
                                   &src)))
             {
@@ -1096,7 +1091,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
                         // JSData2Native
                         if(!(dp->val.p = new nsString()))
                         {
-                            JS_ReportOutOfMemory(cx);
+                            JS_ReportOutOfMemory(ccx);
                             goto done;
                         }
                         continue;
@@ -1193,7 +1188,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
 
                 if(!paramInfo.IsRetval() &&
                    (JSVAL_IS_PRIMITIVE(argv[i]) ||
-                    !OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(argv[i]),
+                    !OBJ_GET_PROPERTY(ccx, JSVAL_TO_OBJECT(argv[i]),
                         rt->GetStringID(XPCJSRuntime::IDX_VALUE), &src)))
                 {
                     ThrowBadParam(NS_ERROR_XPC_NEED_OUT_OBJECT, i, ccx);
@@ -1397,7 +1392,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         {
             // we actually assured this before doing the invoke
             NS_ASSERTION(JSVAL_IS_OBJECT(argv[i]), "out var is not object");
-            if(!OBJ_SET_PROPERTY(cx, JSVAL_TO_OBJECT(argv[i]),
+            if(!OBJ_SET_PROPERTY(ccx, JSVAL_TO_OBJECT(argv[i]),
                         rt->GetStringID(XPCJSRuntime::IDX_VALUE), &v))
             {
                 ThrowBadParam(NS_ERROR_XPC_CANT_SET_OUT_VAL, i, ccx);

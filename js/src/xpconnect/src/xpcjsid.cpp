@@ -39,29 +39,6 @@
 #include "xpcprivate.h"
 
 /***************************************************************************/
-// stuff used by all
-
-static void ThrowException(uintN errNum, JSContext* cx)
-{
-    XPCThrower::Throw(errNum, cx);
-}
-
-static nsresult ThrowAndFail(nsresult errNum, JSContext* cx, JSBool* retval)
-{
-    XPCThrower::Throw(errNum, cx);
-    *retval = JS_FALSE;
-    return NS_OK;
-}
-
-static nsresult ThrowBadResultAndFail(nsresult errNum, nsresult result,
-                                      XPCCallContext& ccx, JSBool* retval)
-{
-    XPCThrower::ThrowBadResult(errNum, result, ccx);
-    *retval = JS_FALSE;
-    return NS_OK;
-}
-
-/***************************************************************************/
 // nsJSID
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsJSID, nsIJSID)

@@ -86,13 +86,11 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx,
                             &XPC_WN_ModsAllowed_Proto_JSClass :
                             &XPC_WN_NoMods_Proto_JSClass;
 
-    mJSProtoObject = JS_NewObject(ccx.GetJSContext(),
-                                  jsclazz,
+    mJSProtoObject = JS_NewObject(ccx, jsclazz,
                                   mScope->GetPrototypeJSObject(),
                                   mScope->GetGlobalJSObject());
 
-    JSBool retval = mJSProtoObject &&
-                    JS_SetPrivate(ccx.GetJSContext(), mJSProtoObject, this); 
+    JSBool retval = mJSProtoObject && JS_SetPrivate(ccx, mJSProtoObject, this); 
 
     if(retval)
         AddRef();
@@ -136,7 +134,7 @@ XPCWrappedNativeProto::SystemIsBeingShutDown(XPCCallContext& ccx)
     if(mJSProtoObject)
     {
         // short circuit future finalization
-        JS_SetPrivate(ccx.GetJSContext(), mJSProtoObject, nsnull);
+        JS_SetPrivate(ccx, mJSProtoObject, nsnull);
         mJSProtoObject = nsnull;
         // We *must* leak the scriptable because it holds a dynamically 
         // allocated JSClass that the JS engine might try to use.
