@@ -5,6 +5,7 @@
 nsIJSContextStack.idl
 nsIJSRuntimeService.idl
 nsIXPConnect.idl
+nsIXPCScriptable.idl
 nsIXPCSecurityManager.idl
 xpccomponents.idl
 xpcexception.idl
