@@ -1,105 +1,154 @@
 <html>
-  <head>
-    <title>gfx2 timeline</title>
-  </head>
+ <head>
+  <title>gfx2 timeline</title>
+  <style type="text/css">
+    body { color: black; background: white; }
+    h1 { background: black; color: white; padding: 0.2em 0.6em; letter-spacing: 0.1em; }
+    table { border-spacing: 0; }
+    td, th { vertical-align: top; text-align: left; }
+    th { font-size: 1.5em; border-bottom: solid; }
+    td { padding: 1em 1em 1em 0; border-bottom: solid thin; }
+    tbody.subsection > tr > td { border: none; }
+    tbody.subsection > tr:first-child > td { padding-bottom: 0.25em; }
+    tbody.subsection > tr + tr > td { padding: 0.25em 1em 0.25em 0; }
+    tbody.subsection > tr + tr > td:first-child { padding-left: 1em; }
+    tbody.subsection > tr:last-node > td { border-bottom: solid thin; padding-bottom: 1em; } /* moz only hack */
+    tr + tr th, tbody + tbody > tr:first-child > th { padding-top: 2em; }    
+    ul { margin: 0; padding: 0; }
+    li { margin: 0 0 0 2em; }
+    .time { width: 10em; }
+    .footnote { font-size: 0.6em; vertical-align: text-top; }
+    .footnote:before { content: '['; }
+    .footnote:after { content: ']'; }
+    .status { display: block; }
+    .footnotes:before { display: block; content: 'Footnotes'; font-style: normal; font-size: 1.1em; }
+    .footnotes { font-size: 0.9em; margin: 2em 0 0 0; }
+  </style>
+ </head>
 
-  <body>
-    <h1>gfx2 timeline</h1>
+ <body>
+  <h1>gfx2 timeline</h1>
 
-    <div>
-      <table>
-        <tr><th colspan="2">Stage 1</th></tr>
-        <tr>
-          <td>additional review/planning
-            <p>
-              <ul>
-                <li>Stuart</li>
-                <li>Robert O'Callihan</li>
-                <li>Alex Larson</li>
-                <li>Kevin Mcclusky</li>
-              </ul>
-            </p>
-          </td>
-          <td>2 weeks</td>
-        </tr>
+  <table>
+   <colgroup><colgroup><colgroup class="time">
+   <tbody>
 
-        <tr>
-          <td>make changes to the tree to use new apis
-            <ul>
-              <li>removing twips</li>
-              <li>make things compile :-)</li>
-            </ul>
-            <p>People
-              <ul>
-                <li>Stuart</li>
-              </ul>
-            </p>
-          </td>
-          <td>1 week (85% complete)  (this assumes that no <strong>major</strong> changes come out of the additional review and planning.</td>
-        </tr>
+    <tr><th colspan="3">Stage 1</th></tr>
 
-        <tr>
-          <td>debug and resolve problems in layout
-            <p>People
-              <ul>
-                <li>Stuart</li>
-                <li>Kevin</li>
-                <li>etc</li>
-                <li>whoever else we need to help with changes to their code</li>
-              </p>
-            </ul>
-          </td>
-          <td>2 weeks (this assumes that no <strong>major</strong> changes come out of the additional review and planning.</td>
-        </tr>
+    <tr>
+     <td>Additional review/planning</td>
+     <td>
+       <ul>
+        <li>Stuart</li>
+        <li>Robert O'Callihan</li>
+        <li>Alex Larson</li>
+        <li>Kevin Mcclusky</li>
+       </ul>
+     </td>
+     <td>2 weeks</td>
+    </tr>
 
-        <tr><th colspan="2">initial platform fu</th></tr>
-        <tr>
-          <td>X
-            <p>People
-              <ul>
-                <li>Stuart</li>
-                <li>Blizzard</li>
-              </ul>
-            </p>
-          </td>
-          <td>1.2 weeks (40% complete)</td>
-        </tr>
-        <tr>
-          <td>windows
-            <p>People
-              <ul>
-                <li>Kevin</li>
-                <li>????</li>
-              </ul>
-            </p>
-          </td>
-          <td>2 weeks</td>
-        </tr>
-        <tr>
-          <td>mac
-            <p>People
-              <ul>
-                <li>Saari?</li>
-                <li>Beard?</li>
-                <li>???????</li>
-              </ul>
-            </p>
-          </td>
-          <td>1.2 weeks</td>
-        </tr>
-        <tr>
-          <td>adapter layer
-            <p>People
-              <ul>
-                <li>everyone</li>
-              </ul>
-            </p>
-          </td>
-          <td>2 weeks</td>
-        </tr>
-      </table>
-    </div>
-    
+    <tr>
+     <td>Make changes to the tree to use new apis
+      <ul>
+       <li>removing twips</li>
+       <li>make things compile :-)</li>
+      </ul>
+     </td>
+     <td>
+      <ul>
+       <li>Stuart</li>
+      </ul>
+     </td>
+     <td>1 week <span class="footnote"><a href="#footnote1">1</a></span> <span class="status">(85% complete)</span></td>
+    </tr>
 
-  </body>
+    <tr>
+     <td>Debug and resolve problems in layout</td>
+     <td>
+      <ul>
+       <li>Stuart</li>
+       <li>Kevin</li>
+       <li>etc</li>
+       <li>whoever else we need to help with changes to their code</li>
+      </ul>
+     </td>
+     <td>2 weeks <span class="footnote"><a href="#footnote1">1</a></span></td>
+    </tr>
+
+   </tbody>
+
+   <tbody class="subsection">
+
+    <tr>
+     <td colspan="3">Initial Platform Fu</td>
+    </tr>
+
+    <tr>
+     <td>X Windows</td>
+     <td>
+      <ul>
+       <li>Stuart</li>
+       <li>Blizzard</li>
+      </ul>
+     </td>
+     <td>1.2 weeks <span class="status">(40% complete)</span></td>
+    </tr>
+
+    <tr>
+      <td>Microsoft Windows</td>
+      <td>
+       <ul>
+        <li>Kevin</li>
+        <li>????</li>
+       </ul>
+      </td>
+      <td>2 weeks</td>
+    </tr>
+
+    <tr>
+      <td>Mac</td>
+      <td>
+       <ul>
+        <li>Saari?</li>
+        <li>Beard?</li>
+        <li>???????</li>
+       </ul>
+      </td>
+      <td>1.2 weeks</td>
+    </tr>
+
+    <tr>
+      <td>Adapter Layer</td>
+      <td>
+       <ul>
+        <li>everyone</li>
+       </ul>
+      </td>
+      <td>2 weeks</td>
+    </tr>
+
+  </tbody>
+
+  <tbody>
+
+    <tr><th colspan="3">Stage 12</th></tr>
+
+    <tr>
+     <td>Merge</td>
+     <td>
+       <ul>
+        <li>Stuart</li>
+       </ul>
+     </td>
+     <td>18 months</td>
+    </tr>
+
+   </tbody>
+
+  </table>
+
+  <p class="footnotes"><a name="footnote1">1</a>: this assumes that no <em>major</em> changes come out of the additional review and planning.</p>
+
+ </body>
 </html>
