@@ -60,6 +60,8 @@
 #include "nsICommonDialogs.h"
 #include "nsIScriptGlobalObject.h"
 
+#include "nsIStreamContentInfo.h"
+
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
 static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
@@ -455,7 +457,8 @@ NS_IMETHODIMP nsXPInstallManager::DownloadNext()
                 
                     if (NS_SUCCEEDED(rv))
                     {
-                        rv = channel->AsyncRead(this, nsnull);
+                        nsCOMPtr<nsIRequest> request;
+                        rv = channel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(request));
                     }
                 }
             }
@@ -692,7 +695,7 @@ nsXPInstallManager::GetDestinationFile(nsString& url, nsILocalFile* *file)
 
 
 NS_IMETHODIMP
-nsXPInstallManager::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
+nsXPInstallManager::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 {
     nsresult rv = NS_ERROR_FAILURE;
 
@@ -716,7 +719,7 @@ nsXPInstallManager::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
             if (NS_SUCCEEDED(rv)) 
             {                          
                 // Open output stream.
-                rv = outChannel->OpenOutputStream( getter_AddRefs( mItem->mOutStream ) );
+                rv = outChannel->OpenOutputStream(0, -1,  getter_AddRefs( mItem->mOutStream ) );
             }
         }
     }
@@ -724,7 +727,7 @@ nsXPInstallManager::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
 }
 
 NS_IMETHODIMP
-nsXPInstallManager::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
+nsXPInstallManager::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
                                   nsresult status, const PRUnichar *errorMsg)
 {
     nsresult rv;
@@ -780,7 +783,7 @@ nsXPInstallManager::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
 
 
 NS_IMETHODIMP
-nsXPInstallManager::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt, 
+nsXPInstallManager::OnDataAvailable(nsIRequest* request, nsISupports *ctxt, 
                                     nsIInputStream *pIStream,
                                     PRUint32 sourceOffset, 
                                     PRUint32 length)
@@ -818,7 +821,7 @@ nsXPInstallManager::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP 
-nsXPInstallManager::OnProgress(nsIChannel *channel, nsISupports *ctxt, PRUint32 aProgress, PRUint32 aProgressMax)
+nsXPInstallManager::OnProgress(nsIRequest* request, nsISupports *ctxt, PRUint32 aProgress, PRUint32 aProgressMax)
 {
     nsresult rv = NS_OK;
     
@@ -826,8 +829,9 @@ nsXPInstallManager::OnProgress(nsIChannel *channel, nsISupports *ctxt, PRUint32 
     if (!mCancelled && TimeToUpdate(now))
     {
         if (mContentLength < 1) {
-            NS_ASSERTION(channel, "should have a channel");
-            rv = channel->GetContentLength(&mContentLength);
+            nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
+            NS_ASSERTION(contentInfo, "should have a channel");
+            rv = contentInfo->GetContentLength(&mContentLength);
             if (NS_FAILED(rv)) return rv;
         }
         mLastUpdate = now;
@@ -838,7 +842,7 @@ nsXPInstallManager::OnProgress(nsIChannel *channel, nsISupports *ctxt, PRUint32 
 }
 
 NS_IMETHODIMP 
-nsXPInstallManager::OnStatus(nsIChannel *channel, nsISupports *ctxt, 
+nsXPInstallManager::OnStatus(nsIRequest* request, nsISupports *ctxt, 
                              nsresult aStatus, const PRUnichar *aStatusArg)
 {
     nsresult rv;
