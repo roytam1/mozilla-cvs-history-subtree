@@ -310,7 +310,7 @@ int icalfileset_unlock(icalfileset *cluster)
 }
 
 #ifdef ICAL_SAFESAVES
-int icalfileset_safe_saves=0;
+int icalfileset_safe_saves=1;
 #else
 int icalfileset_safe_saves=0;
 #endif
@@ -334,7 +334,11 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
     }
     
     if(icalfileset_safe_saves == 1){
+#ifndef WIN32
 	snprintf(tmp,ICAL_PATH_MAX,"cp %s %s.bak",impl->path,impl->path);
+#else
+	snprintf(tmp,ICAL_PATH_MAX,"copy %s %s.bak",impl->path,impl->path);
+#endif
 	
 	if(system(tmp) < 0){
 	    icalerror_set_errno(ICAL_FILE_ERROR);

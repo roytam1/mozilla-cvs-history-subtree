@@ -541,7 +541,7 @@ char* icalparser_get_line(icalparser *parser,
 	*(line_p) = '\0';
     }
 
-	while ( *line_p == '\0' || iswspace(*line_p) )
+	while ( (*line_p == '\0' || iswspace(*line_p)) && line_p > line )
 	{
 		*line_p = '\0';
 		line_p--;

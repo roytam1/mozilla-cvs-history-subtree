@@ -98,7 +98,9 @@ libical_la_SOURCES =		\
 	sspm.h			\
 	vsnprintf.c		\
 	icallangbind.h		\
-	icallangbind.c
+	icallangbind.c \
+	caldate.c \
+	astime.h
 
 libicalincludedir = $(includedir)
 
