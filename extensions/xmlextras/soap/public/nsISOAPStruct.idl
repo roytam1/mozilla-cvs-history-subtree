@@ -53,3 +53,12 @@ interface nsISOAPStruct : nsISupports {
    */
   void setMember(in nsISOAPParameter member);
 };
+
+%{ C++
+#define NS_SOAPSTRUCT_CID                             \
+{ /* 1e4f58ce-1dd2-11b2-9cab-9cc4b9f560b4 */        \
+  0x1e4f58ce, 1dd2, 0x11b2,                       \
+ {0x9c, 0xab, 0x9c, 0xc4, 0xb9, 0xf5, 0x60, 0xb4} }
+#define NS_SOAPSTRUCT_CONTRACTID \
+"@mozilla.org/xmlextras/soap/struct;1"
+%}
