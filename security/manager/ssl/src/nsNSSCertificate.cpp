@@ -1889,7 +1889,7 @@ ProcessSECAlgorithmID(SECAlgorithmID *algID,
   *retSequence = nsnull;
   nsString text;
   GetOIDText(&algID->algorithm, nssComponent, text);
-  if (algID->parameters.data[0] == nsIASN1Object::ASN1_NULL) {
+  if (!algID->parameters.len || algID->parameters.data[0] == nsIASN1Object::ASN1_NULL) {
     sequence->SetDisplayValue(text.get());
     sequence->SetProcessObjects(PR_FALSE);
   } else {
