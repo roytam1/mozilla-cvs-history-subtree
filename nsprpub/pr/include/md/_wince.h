@@ -501,57 +501,8 @@ extern PRStatus _MD_CloseFileMap(struct PRFileMap *fmap);
 
 
 /*
- * WINCE LIBC support missing some integral parts
+ *  Couple of missing functions for wince.
  */
-
-
-/*
- * Missing types.
- */
-typedef long _off_t; /* file offset value */
-
-/*
- * struct stat
- *
- * Assumed by NSPR in a place or two.
- */
-struct stat {
-    unsigned short st_mode;
-    _off_t st_size;
-    time_t st_atime;
-    time_t st_mtime;
-    time_t st_ctime;
-};
-
-/*
- * Missing function oldnames.
- */
-#define stricmp             _stricmp
-#define strcmpi             _stricmp
-#define strdup              _strdup
-
-/*
- * Missing constants.
- */
-#define HINSTANCE_ERROR 1 /* LoadLibrary, NULL on failure for WinCE */
-#define _S_IFDIR    0040000 /* stat, is a directory */
-#define _S_IFREG    0100000 /* stat, is a normal file */
-#define _S_IREAD    0000400 /* stat, can read */
-#define _S_IWRITE   0000200 /* stat, can write */
-#define ENOMEM 12 /* errno, out of memory */
-
-/*
- * struct protoent is actually defined, but the functions that use it are not.
- *
- * And related windows specific functions to mimic these absent sockets funcs.
- */
-#if 0
-struct protoent {
-    char* p_name;
-    char** p_aliases;
-    short p_proto;
-};
-#endif
 extern struct protoent* Wingetprotobyname(const char* inName);
 extern struct protoent* Wingetprotobynumber(int inNumber);
 

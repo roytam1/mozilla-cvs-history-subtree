@@ -38,7 +38,7 @@
 
 /* Win32 x86 code for stack walking, symbol resolution, and function hooking */
 
-#if defined(_WIN32) && defined(_M_IX86)
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE)
 // This is the .cpp file where the globals live
 #define DHW_IMPLEMENT_GLOBALS
 #include <stdio.h>

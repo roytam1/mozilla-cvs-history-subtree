@@ -121,7 +121,7 @@ PR_STATIC_CALLBACK(PRBool) DeleteSystemDirKeys(nsHashKey *aKey, void *aData, voi
 #define NS_SYSTEMDIR_HASH_NUM (10)
 static nsHashtable *systemDirectoriesLocations = NULL;
 #if defined (XP_WIN)
-typedef BOOL (WINAPI * GetSpecialPathProc) (HWND hwndOwner, LPSTR lpszPath, int nFolder, BOOL fCreate);
+typedef BOOL (WINAPI * GetSpecialPathProc) (HWND hwndOwner, LPTSTR lpszPath, int nFolder, BOOL fCreate);
 GetSpecialPathProc gGetSpecialPathProc = NULL;
 static HINSTANCE gShell32DLLInst = NULL;
 #endif
@@ -135,11 +135,11 @@ NS_COM void StartupSpecialSystemDirectory()
        support the older way of file location lookup on systems that do not have
        IE4. 
     */ 
-    gShell32DLLInst = LoadLibrary("shfolder.dll");
+    gShell32DLLInst = LoadLibrary(_T("shfolder.dll"));
     if(gShell32DLLInst)
     {
         gGetSpecialPathProc  = (GetSpecialPathProc) GetProcAddress(gShell32DLLInst, 
-                                                                   "SHGetSpecialFolderPath");
+                                                                   _T("SHGetSpecialFolderPath"));
     }
     
     if (!gGetSpecialPathProc)
@@ -147,11 +147,11 @@ NS_COM void StartupSpecialSystemDirectory()
         if (gShell32DLLInst)
             FreeLibrary(gShell32DLLInst);
 
-        gShell32DLLInst = LoadLibrary("Shell32.dll");
+        gShell32DLLInst = LoadLibrary(_T("Shell32.dll"));
         if(gShell32DLLInst)
         {
             gGetSpecialPathProc  = (GetSpecialPathProc) GetProcAddress(gShell32DLLInst, 
-                                                                       "SHGetSpecialFolderPath");
+                                                                       _T("SHGetSpecialFolderPath"));
         }
     }
 #endif
@@ -291,8 +291,8 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
 //----------------------------------------------------------------------------------------
 {
 #if defined (XP_WIN)
-    char buf[MAX_PATH];
-    if ( ::GetModuleFileName(0, buf, sizeof(buf)) ) {
+    TCHAR buf[MAX_PATH];
+    if ( ::GetModuleFileName(0, buf, sizeof(buf) / sizeof(TCHAR)) ) {
         // chop of the executable name by finding the rightmost backslash
         char* lastSlash = PL_strrchr(buf, '\\');
         if (lastSlash)
@@ -518,7 +518,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         case OS_TemporaryDirectory:
 #if defined (XP_WIN)
         {
-            char path[_MAX_PATH];
+            TCHAR path[_MAX_PATH];
             DWORD len = GetTempPath(_MAX_PATH, path);
             *this = MakeUpperCase(path);
         }

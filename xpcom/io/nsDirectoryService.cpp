@@ -151,14 +151,18 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
 
 
 #ifdef XP_WIN
-    char buf[MAX_PATH];
-    if ( ::GetModuleFileName(0, buf, sizeof(buf)) ) {
+    TCHAR buf[MAX_PATH];
+    if ( ::GetModuleFileName(0, buf, sizeof(buf) / sizeof(TCHAR)) ) {
         // chop of the executable name by finding the rightmost backslash
-        char* lastSlash = PL_strrchr(buf, '\\');
+        LPTSTR lastSlash = _tcsrchr(buf, _T('\\'));
         if (lastSlash)
-            *(lastSlash + 1) = '\0';
+            *(lastSlash + 1) = _T('\0');
         
+#if defined(UNICODE)
+        localFile->InitWithPath(nsDependentString(buf));
+#else
         localFile->InitWithNativePath(nsDependentCString(buf));
+#endif
         *aFile = localFile;
         return NS_OK;
     }

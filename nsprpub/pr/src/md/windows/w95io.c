@@ -39,10 +39,8 @@
  */
 
 #include "primpl.h"
-#if !defined(WINCE)
 #include <direct.h>
 #include <mbstring.h>
-#endif
 
 
 struct _MDLock               _pr_ioq_lock;
@@ -482,11 +480,7 @@ void FlipSlashes(char *cp, int len)
         if (cp[0] == '/') {
             cp[0] = PR_DIRECTORY_SEPARATOR;
         }
-#if !defined(WINCE)
         cp = _mbsinc(cp);
-#else
-        cp++;
-#endif
     }
 } /* end FlipSlashes() */
 
@@ -681,7 +675,6 @@ _PR_MD_STAT(const char *fn, struct stat *info)
 {
     PRInt32 rv;
 
-#if !defined(WINCE)
     rv = _stat(fn, (struct _stat *)info);
     if (-1 == rv) {
         /*
@@ -710,85 +703,6 @@ _PR_MD_STAT(const char *fn, struct stat *info)
     if (-1 == rv) {
         _PR_MD_MAP_STAT_ERROR(errno);
     }
-#else
-    HANDLE readHandle = NULL;
-
-    /*
-     * Initialize the out arguments.
-     */
-    memset(info, 0, sizeof(struct stat));
-    rv = 0;
-
-    /*
-     * Attempt to fill in relevant parts of the struct.
-     * In order to do this we'll need read access to the file.
-     * We won't mind sharing the file.
-     */
-    readHandle = 
-#if !defined(WINCE)
-                 CreateFile
-#else
-                 _MD_CreateFileA
-#endif
-                           (
-                            fn,
-                            GENERIC_READ,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-                            NULL,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
-                            NULL);
-    if(NULL == readHandle)
-    {
-        rv = -1;
-    }
-    else
-    {
-        BOOL bRes = FALSE;
-        BY_HANDLE_FILE_INFORMATION fileInfo;
-
-        bRes = GetFileInformationByHandle(readHandle, &fileInfo);
-        if(FALSE == bRes)
-        {
-            rv = -1;
-        }
-        else
-        {
-            /*
-             * Access Times
-             */
-            _MD_FILETIME_2_time_t(info->st_ctime, fileInfo.ftCreationTime);
-            _MD_FILETIME_2_time_t(info->st_atime, fileInfo.ftLastAccessTime);
-            _MD_FILETIME_2_time_t(info->st_mtime, fileInfo.ftLastWriteTime);
-
-            /*
-             * Size.
-             * Note, this is not stat64.
-             */
-            info->st_size = (_off_t)fileInfo.nFileSizeLow;
-
-            /*
-             * Mode.
-             */
-            info->st_mode |= _S_IREAD;
-            if(0 == (FILE_ATTRIBUTE_READONLY & fileInfo.dwFileAttributes))
-            {
-                info->st_mode |= _S_IWRITE;
-            }
-            if(FILE_ATTRIBUTE_DIRECTORY & fileInfo.dwFileAttributes)
-            {
-                info->st_mode |= _S_IFDIR;
-            }
-            else
-            {
-                info->st_mode |= _S_IFREG;
-            }
-        }
-
-        CloseHandle(readHandle);
-        readHandle = NULL;
-    }
-#endif
 
     return rv;
 }
@@ -908,13 +822,7 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
      * FindFirstFile() expands wildcard characters.  So
      * we make sure the pathname contains no wildcard.
      */
-    if (NULL !=
-#if !defined(WINCE)
-        _mbspbrk(fn, "?*")
-#else
-        strpbrk(fn, "?*")
-#endif
-        ) {
+    if (NULL != _mbspbrk(fn, "?*")) {
         PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
         return -1;
     }
@@ -954,13 +862,7 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
          * If the pathname does not contain ., \, and /, it cannot be
          * a root directory or a pathname that ends in a slash.
          */
-        if (NULL ==
-#if !defined(WINCE)
-            _mbspbrk(fn, ".\\/")
-#else
-            strpbrk(fn, ".\\/")
-#endif
-            ) {
+        if (NULL == _mbspbrk(fn, ".\\/")) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
         } 

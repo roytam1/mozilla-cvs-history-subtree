@@ -61,6 +61,9 @@
 #define jstypes_h___
 
 #include <stddef.h>
+#if defined(WINCE)
+#include "wince_missing.h"
+#endif
 
 /***********************************************************************
 ** MACROS:      JS_EXTERN_API

@@ -851,7 +851,7 @@ static void InitTraceLog(void)
 
 #endif
 
-#if defined(_WIN32) && defined(_M_IX86) // WIN32 x86 stack walking code
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE) // WIN32 x86 stack walking code
 #include "imagehlp.h"
 #include <stdio.h>
 #include "nsStackFrameWin.h"
@@ -1606,7 +1606,7 @@ nsTraceRefcnt::LoadLibrarySymbols(const char* aLibraryName,
                                   void* aLibrayHandle)
 {
 #ifdef NS_BUILD_REFCNT_LOGGING
-#if defined(_WIN32) && defined(_M_IX86) /* Win32 x86 only */
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE) /* Win32 x86 only */
   if (!gInitialized)
     InitTraceLog();
 

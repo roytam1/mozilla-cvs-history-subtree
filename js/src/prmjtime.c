@@ -307,7 +307,7 @@ PRMJ_Now(void)
 {
 #ifdef XP_PC
     JSInt64 s, us, ms2us, s2us;
-#ifndef __MWERKS__
+#if !defined(__MWERKS__) && !defined(WINCE)
     struct timeb b;
 #else
     SYSTEMTIME time;
@@ -327,7 +327,7 @@ PRMJ_Now(void)
 #endif /* XP_MAC */
 
 #ifdef XP_PC
-#ifndef __MWERKS__
+#if !defined(__MWERKS__) && !defined(WINCE)
     ftime(&b);
     JSLL_UI2L(ms2us, PRMJ_USEC_PER_MSEC);
     JSLL_UI2L(s2us, PRMJ_USEC_PER_SEC);

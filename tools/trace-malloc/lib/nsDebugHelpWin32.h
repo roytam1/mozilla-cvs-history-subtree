@@ -41,7 +41,7 @@
 #ifndef __nsDebugHelpWin32_h__
 #define __nsDebugHelpWin32_h__
 
-#if defined(_WIN32) && defined(_M_IX86)
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE)
   #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN
   #endif

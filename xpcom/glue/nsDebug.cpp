@@ -140,12 +140,12 @@ PRBool InDebugger()
 {
    PRBool fReturn = PR_FALSE;
    LPFNISDEBUGGERPRESENT lpfnIsDebuggerPresent = NULL;
-   HINSTANCE hKernel = LoadLibrary("Kernel32.dll");
+   HINSTANCE hKernel = LoadLibrary(_T("Kernel32.dll"));
 
    if(hKernel)
       {
       lpfnIsDebuggerPresent = 
-         (LPFNISDEBUGGERPRESENT)GetProcAddress(hKernel, "IsDebuggerPresent");
+         (LPFNISDEBUGGERPRESENT)GetProcAddress(hKernel, _T("IsDebuggerPresent"));
       if(lpfnIsDebuggerPresent)
          {
          fReturn = (*lpfnIsDebuggerPresent)();
@@ -208,8 +208,13 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
        */
       PROCESS_INFORMATION pi;
       STARTUPINFO si;
-      char executable[MAX_PATH];
-      char* pName;
+      TCHAR executable[MAX_PATH];
+      LPTSTR pName;
+#if defined(UNICODE) && defined(WINCE)
+      TCHAR tbuf[1024];
+
+      a2w_buffer(buf, -1, tbuf, sizeof(tbuf) / sizeof(TCHAR));
+#endif
 
       memset(&pi, 0, sizeof(pi));
 
@@ -218,12 +223,18 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
       si.wShowWindow = SW_SHOW;
 
       if(GetModuleFileName(NULL, executable, MAX_PATH) &&
-         NULL != (pName = strrchr(executable, '\\')) &&
-         NULL != strcpy(pName+1, "windbgdlg.exe") &&
+         NULL != (pName = _tcsrchr(executable, _T('\\'))) &&
+         NULL != _tcscpy(pName+1, _T("windbgdlg.exe")) &&
 #ifdef DEBUG_jband
          (printf("Launching %s\n", executable), PR_TRUE) &&
 #endif         
-         CreateProcess(executable, buf, NULL, NULL, PR_FALSE,
+         CreateProcess(executable,
+#if defined(UNICODE) && defined(WINCE)
+                       tbuf,
+#else
+                       buf,
+#endif
+                       NULL, NULL, PR_FALSE,
                        DETACHED_PROCESS | NORMAL_PRIORITY_CLASS,
                        NULL, NULL, &si, &pi) &&
          WAIT_OBJECT_0 == WaitForSingleObject(pi.hProcess, INFINITE) &&

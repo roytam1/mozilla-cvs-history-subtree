@@ -84,7 +84,7 @@
 #ifndef MAX_PATH
 #define MAX_PATH 260
 #endif
-#elif defined(WIN32)
+#elif defined(WIN32) && !defined(MAX_PATH)
 #define MAX_PATH _MAX_PATH
 #elif defined(XP_BEOS)
 #include <limits.h>

@@ -466,8 +466,13 @@ ifdef CROSS_COMPILE
 XPIDL_COMPILE 	= $(DIST)/host/bin/host_xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(DIST)/host/bin/host_xpt_link$(BIN_SUFFIX)
 else
+ifeq ($(OS_TARGET),WINCE)
+XPIDL_COMPILE 	= $(MOZ_TOOLS_DIR)/bin/xpidl$(BIN_SUFFIX)
+XPIDL_LINK	= $(MOZ_TOOLS_DIR)/bin/xpt_link$(BIN_SUFFIX)
+else
 XPIDL_COMPILE 	= $(DIST)/bin/xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(DIST)/bin/xpt_link$(BIN_SUFFIX)
+endif
 endif
 MIDL		= midl
 
