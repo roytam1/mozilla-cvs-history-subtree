@@ -296,15 +296,15 @@ sub nextEntry
   $dn = ldap_get_dn($self->{"ld"}, $self->{"ldentry"});
   $obj->{"dn"} = $dn;
   $self->{"dn"} = $dn;
-  $attr = ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
+  $attr = lc ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
   return (bless \%entry, Mozilla::LDAP::Entry) unless $attr;
 
   @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
   $obj->{$attr} = [@vals];
   push(@ocorder, $attr);
 
-  while ($attr = ldap_next_attribute($self->{"ld"},
-				     $self->{"ldentry"}, $ber))
+  while ($attr = lc ldap_next_attribute($self->{"ld"},
+					$self->{"ldentry"}, $ber))
     {
       @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
       $obj->{$attr} = [@vals];
