@@ -1,4 +1,5 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE bookmarks SYSTEM "http://www.mozilla.org/DTDs/ChimeraBookmarks.dtd">
 <bookmarks xmlns="http://chimera.mozdev.org/bookmarks/">
 	<folder name="Toolbar Bookmarks" type="toolbar" open="true">
 		<folder name="Chimera Info">
@@ -17,7 +18,7 @@
 			<bookmark name="MacInTouch: Mac news, information and analysis" href="http://www.macintouch.com/" />
 			<bookmark name="MacCentral Online" href="http://www.maccentral.com/" />
 		</folder>
-		<bookmark name="Google" href="http://www.google.com/" />
+		<bookmark name="Google" href="http://www.google.com/" keyword="google" id="google" description="" />
 	</folder>
 	<folder name="Apple Stuff">
 		<bookmark name="Apple" href="http://www.apple.com/" />
