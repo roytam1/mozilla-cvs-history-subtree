@@ -47,7 +47,7 @@ nsStubListener::OnInstallStart(const PRUnichar *URL)
 }
 
 NS_IMETHODIMP
-nsStubListener::OnPackageNameSet(const PRUnichar *URL, const PRUnichar* UIPackageName, const PRUnichar* aVersion)
+nsStubListener::OnPackageNameSet(const PRUnichar *URL, const PRUnichar* UIPackageName)
 {
     // we're not interested in this one
     return NS_OK;

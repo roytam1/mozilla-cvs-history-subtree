@@ -29,6 +29,7 @@
 #include "nsIComponentRegistrar.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
+#include "nsSpecialSystemDirectory.h" 
 #include "nsILocalFile.h"
 
 #include "nscore.h"
@@ -96,6 +97,8 @@ PR_PUBLIC_API(nsresult) XPI_Init(
 {
     nsresult              rv;
     nsCOMPtr<nsIFileSpec> nsIfsDirectory;
+    nsFileSpec            nsfsDirectory;
+    nsFileSpec            nsfsRegFile;
 
     //--------------------------------------------------------------------
     // Initialize XPCOM and AutoRegister() its components
@@ -178,6 +181,7 @@ PR_PUBLIC_API(nsresult) XPI_Init(
     // is Mozilla. Use the given directory as the "Program" folder.
     //--------------------------------------------------------------------
     nsCOMPtr<nsPIXPIStubHook>   hook = do_QueryInterface(gXPI);
+    nsFileSpec                  dirSpec( aProgramDir );
     nsCOMPtr<nsILocalFile>      iDirSpec;
   
 #if XP_MAC

@@ -92,6 +92,7 @@ var err;
 var szUninstall;
 var fProgram;
 var fWindowsSystem;
+var fileTemp;
 var fileComponentReg;
 var fileComponentRegStr;
 var fileMsvcrt;
@@ -131,13 +132,14 @@ if(verifyDiskSpace(fProgram, srDest))
     // install msvcrt.dll *only* if it does not exist
     // we don't care if addFile() fails (if the file does not exist in the archive)
     // bacause it will still install
-    fileMsvcrt = getFolder(fWindowsSystem, "msvcrt.dll");
+    fileTemp   = fWindowsSystem + "msvcrt.dll";
+    fileMsvcrt = getFolder("file:///", fileTemp);
     rv         = File.exists(fileMsvcrt);
     logComment("fileExists() returned: " + rv);
     if(rv == false)
     {
       logComment("File not found: " + fileMsvcrt);
-      addFile("/Microsoft/Shared/msvcrt.dll",
+      addFile("/Microsoft/Shared",
               "$Version$",
               "msvcrt.dll",         // dir name in jar to extract 
               fWindowsSystem,       // Where to put this file (Returned from getFolder) 
@@ -153,13 +155,14 @@ if(verifyDiskSpace(fProgram, srDest))
     // install msvcirt.dll *only* if it does not exist
     // we don't care if addFile() fails (if the file does not exist in the archive)
     // bacause it will still install
-    fileMsvcirt = getFolder(fWindowsSystem, "msvcirt.dll");
+    fileTemp    = fWindowsSystem + "msvcirt.dll";
+    fileMsvcirt = getFolder("file:///", fileTemp);
     rv          = File.exists(fileMsvcirt);
     logComment("fileExists() returned: " + rv);
     if(rv == false)
     {
       logComment("File not found: " + fileMsvcirt);
-      addFile("/Microsoft/Shared/msvcirt.dll",
+      addFile("/Microsoft/Shared",
               "$Version$",
               "msvcirt.dll",        // dir name in jar to extract 
               fWindowsSystem,       // Where to put this file (Returned from getFolder) 
