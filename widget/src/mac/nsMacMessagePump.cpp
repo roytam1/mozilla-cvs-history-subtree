@@ -635,7 +635,11 @@ void nsMacMessagePump::DoMouseDown(EventRecord &anEvent)
         nsCOMPtr<nsIWidget> topWidget;
         PRBool              enabled;
         nsToolkit::GetTopWidget(whichWindow, getter_AddRefs(topWidget));
-        if (!topWidget || NS_FAILED(topWidget->IsEnabled(&enabled)) || enabled ||
+        if (
+#if TARGET_CARBON
+            nsToolkit::OnMacOSX() ||
+#endif
+            !topWidget || NS_FAILED(topWidget->IsEnabled(&enabled)) || enabled ||
             (anEvent.modifiers & cmdKey)) {
           Rect screenRect;
           ::GetRegionBounds(::GetGrayRgn(), &screenRect);
