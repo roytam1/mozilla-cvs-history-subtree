@@ -146,6 +146,13 @@ typedef struct {
 // group
 #define SYNC_ESCAPE_DELGROUP            "op%3DgrpDel"
 
+// Various protocol ids.
+#define SYNC_ESCAPE_ID                  "%26id%3D"
+#define SYNC_ESCAPE_CID                 "%26cid%3D"
+#define SYNC_ESCAPE_LIST_ID             "%26list_id%3D"
+#define SYNC_ESCAPE_EMAIL_STRING        "%26email_string%3D"
+#define SYNC_ESCAPE_CONTACT_REC_ID      "%26contact_record_id%3D"
+
 // Duplicate detection (for resync)
 #define SYNC_DUP_DETECTION              "dupDetect=on"
 

@@ -579,10 +579,10 @@ void nsAbSync::GenerateEmailStringUpdateProtocol(PRInt32 listID, nsString emailS
 
   NS_ASSERTION((listServerID>0),"ab sync:  GenerateEmailStringUpdateProtocol(), serer id should be positive.");
 
-  protLine.Append(NS_LITERAL_STRING("%26list_id%3D"));
+  protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_LIST_ID));
   protLine.AppendInt(listServerID);
 
-  protLine.Append(NS_LITERAL_STRING("%26email_string%3D") + emailString);
+  protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_EMAIL_STRING) + emailString);
 }
 
 void nsAbSync::AddAListMememerToProtocolLine(PRUint32 listKey, PRUint32 memberKey, PRUint32 cid, nsString &protLine)
@@ -600,14 +600,14 @@ void nsAbSync::AddAListMememerToProtocolLine(PRUint32 listKey, PRUint32 memberKe
     recordID = memberKey * -1;
 
   // Now build the protocol line.
-  protLine.Append(NS_LITERAL_STRING("%26contact_record_id%3D"));
+  protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_CONTACT_REC_ID));
   protLine.AppendInt(recordID);
 
-  protLine.Append(NS_LITERAL_STRING("%26list_id%3D"));
+  protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_LIST_ID));
   protLine.AppendInt(listID);
 
   // cid for member list is not really used by us so we just use the member seq number here.
-  protLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+  protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_CID));
   protLine.AppendInt(((cid+1) * -1));
 }
 
@@ -759,9 +759,9 @@ void nsAbSync::CheckDeletedMembers(syncListMappingRecord *listRecord, nsString &
       // Construct protocol cmd header for deleting list members,
       AppendProtocolCmdHeader(protLine, SYNC_ESCAPE_DEL_LIST_CONTACT);
 
-      protLine.Append(NS_LITERAL_STRING("%26list_id%3D"));
+      protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_LIST_ID));
       protLine.AppendInt(listRecord->serverID);
-      protLine.Append(NS_LITERAL_STRING("%26contact_record_id%3D"));
+      protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_CONTACT_REC_ID));
       protLine.AppendInt(listRecord->memServerID.GetAt(i));
     }
 }

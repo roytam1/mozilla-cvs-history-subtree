@@ -847,7 +847,7 @@ nsAbSync::GenerateProtocolForList(nsIAbCard *aCard, PRBool aAddId, nsString &pro
     if (NS_FAILED(dbcard->GetKey(&key)))
       return NS_ERROR_FAILURE;
 
-    tProtLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+    tProtLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_CID));
     tProtLine.AppendInt((key * -1));
   }
  
@@ -899,7 +899,7 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
 #ifdef DEBUG_ABSYNC
   printf("ABSYNC: GENERATING PROTOCOL FOR CARD - Address Book Card Key: %d\n", key);
 #endif
-    tProtLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+    tProtLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_CID));
     tProtLine.AppendInt((key * -1));
   }
 
@@ -1156,7 +1156,7 @@ nsAbSync::ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *newSyncRecord,
         return PR_FALSE;
 
       // Needs to be negative, so make it so!
-      protLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+      protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_CID));
       protLine.AppendInt((key * -1));
       protLine.Append(tempProtocolLine);
     }
@@ -1165,10 +1165,10 @@ nsAbSync::ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *newSyncRecord,
       // If 'aCard' is a mailing list then use 'list_id' instead of 'id' for the protocol.
       newSyncRecord->flags |= SYNC_MODIFIED;
 
-        if (cardIsUser)
-        protLine.Append(NS_LITERAL_STRING("%26id%3D"));
-        else
-        protLine.Append(NS_LITERAL_STRING("%26list_id%3D"));
+      if (cardIsUser)
+        protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_ID));
+      else
+        protLine.Append(NS_LITERAL_STRING(SYNC_ESCAPE_LIST_ID));
       protLine.AppendInt(historyRecord->serverID);
       protLine.Append(tempProtocolLine);
     }
@@ -3459,11 +3459,11 @@ void nsAbSync::CheckDeletedRecords()
       // AOL group use 'grpDel' cmd instead of 'del' cmd. Use 'id=' in both cases.
       // All members will be deleted once the list is removed.
       if (mOldSyncMapingTable[readCount].flags & SYNC_IS_AOL_GROUPS)
-        mPostString.Append(NS_ConvertASCIItoUCS2(SYNC_ESCAPE_DELGROUP) + NS_LITERAL_STRING("%26id="));
+        mPostString.Append(NS_ConvertASCIItoUCS2(SYNC_ESCAPE_DELGROUP) + NS_LITERAL_STRING(SYNC_ESCAPE_ID));
       else if (mOldSyncMapingTable[readCount].flags & SYNC_IS_CARD)
-        mPostString.Append(NS_ConvertASCIItoUCS2(SYNC_ESCAPE_DEL) + NS_LITERAL_STRING("%26id="));
+        mPostString.Append(NS_ConvertASCIItoUCS2(SYNC_ESCAPE_DEL) + NS_LITERAL_STRING(SYNC_ESCAPE_ID));
       else if (mOldSyncMapingTable[readCount].flags & SYNC_IS_LIST)
-        mPostString.Append(NS_ConvertASCIItoUCS2(SYNC_ESCAPE_DELLIST) + NS_LITERAL_STRING("%26list_id="));
+        mPostString.Append(NS_ConvertASCIItoUCS2(SYNC_ESCAPE_DELLIST) + NS_LITERAL_STRING(SYNC_ESCAPE_LIST_ID));
       // Now append the server id for this card
       mPostString.AppendInt(mOldSyncMapingTable[readCount].serverID);
 
