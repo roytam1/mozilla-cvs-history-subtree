@@ -1050,7 +1050,7 @@ nsNntpService::CancelMessage(const char *cancelURL, const char *messageURI, nsIS
   NS_ENSURE_ARG_POINTER(messageURI);
 
   nsCOMPtr<nsIURI> url;
-  // the url should have "?cancel" already on it
+  // the url should be "news://host/message-id?cancel"
   rv = ConstructNntpUrl(cancelURL, aUrlListener,  aMsgWindow, getter_AddRefs(url));
   NS_ENSURE_SUCCESS(rv,rv);
 
@@ -1059,10 +1059,11 @@ nsNntpService::CancelMessage(const char *cancelURL, const char *messageURI, nsIS
 
   rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionCancelArticle);
   NS_ENSURE_SUCCESS(rv,rv);
-    
-  // note, we don't set the OriginalMessageURI on the nntpUrl
-  // cancel must be left as news://host/message-id?cancel
-
+   
+  // later used by nsNNTPProtocol::ParseURL()
+  rv = nntpUrl->SetOriginalMessageURI(messageURI);
+  NS_ENSURE_SUCCESS(rv,rv);
+ 
   rv = RunNewsUrl(url, aMsgWindow, aConsumer);  
   NS_ENSURE_SUCCESS(rv,rv);
 

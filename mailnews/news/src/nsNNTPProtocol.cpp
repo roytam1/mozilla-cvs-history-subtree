@@ -1195,11 +1195,14 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
         m_newsFolder = do_QueryInterface(folder, &rv);
         NS_ENSURE_SUCCESS(rv,rv);
 
-        // do we need to set aGroup?
-        return NS_OK;
+        // if we are cancelling, we aren't done.  we still need to parse out the messageID from the url
+        // later, we'll use m_newsFolder and m_key to delete the message from the DB, if the cancel is successful.
+        if (m_newsAction != nsINntpUrl::ActionCancelArticle) {
+            return NS_OK;
+        }
     }
     else {
-        // clear this, we'll figure it out later.
+        // clear this, we'll set it later.
         m_newsFolder = nsnull;
     }
 
