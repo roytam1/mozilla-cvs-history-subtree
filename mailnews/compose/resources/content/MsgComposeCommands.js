@@ -276,6 +276,7 @@ var progressListener = {
       if (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_START)
       {
         document.getElementById('compose-progressmeter').setAttribute( "mode", "undetermined" );
+        document.getElementById('progress-panel').removeAttribute('hidden');
       }
       
       if (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP)
@@ -283,6 +284,7 @@ var progressListener = {
         gSendOrSaveOperationInProgress = false;
         document.getElementById('compose-progressmeter').setAttribute( "mode", "normal" );
         document.getElementById('compose-progressmeter').setAttribute( "value", 0 );
+        document.getElementById('progress-panel').setAttribute('hidden', 'true');
         document.getElementById('statusText').setAttribute('label', '');
       }
     },
