@@ -810,7 +810,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintRow(int aRowIndex, const nsRect& aRowRec
 
   return NS_OK;
 }
-  
+
 NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex, 
                                              nsOutlinerColumn*    aColumn,
                                              const nsRect& aCellRect,
@@ -866,9 +866,56 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex,
     currX += mIndentation*level;
     remainingWidth -= mIndentation*level;
 
-    // XXX Paint the twisty.
-  }
+    // Resolve style for line.
+    nsCOMPtr<nsIStyleContext> lineContext;
+    GetPseudoStyleContext(aPresContext, nsXULAtoms::mozoutlinerline, getter_AddRefs(lineContext));
+    const nsStyleDisplay* displayStyle = (const nsStyleDisplay*)lineContext->GetStyleData(eStyleStruct_Display);
+    
+    if (displayStyle->IsVisibleOrCollapsed() && level) {
+      // Paint lines to show a connections between rows
+      aRenderingContext.PushState();
 
+      const nsStyleBorder* borderStyle = (const nsStyleBorder*)lineContext->GetStyleData(eStyleStruct_Border);
+      nscolor color;
+      borderStyle->GetBorderColor(NS_SIDE_LEFT, color);
+      aRenderingContext.SetColor(color);
+      PRUint8 style;
+      style = borderStyle->GetBorderStyle(NS_SIDE_LEFT);
+      if (style == NS_STYLE_BORDER_STYLE_DOTTED)
+        aRenderingContext.SetLineStyle(nsLineStyle_kDotted);
+      else if (style == NS_STYLE_BORDER_STYLE_DASHED)
+        aRenderingContext.SetLineStyle(nsLineStyle_kDashed);
+      else
+        aRenderingContext.SetLineStyle(nsLineStyle_kSolid);
+
+      PRInt32 y = (aRowIndex - mTopRowIndex) * mRowHeight;
+
+      PRInt32 i;
+      PRInt32 currentParent = aRowIndex;
+      for (i = level; i > 0; i--) {
+        PRBool hasNextSibling;
+        mView->HasNextSibling(currentParent, aRowIndex, &hasNextSibling);
+        if (hasNextSibling)
+          aRenderingContext.DrawLine(aCellRect.x + (i - 1) * mIndentation, y, aCellRect.x + (i - 1) * mIndentation, y + mRowHeight);
+        else if (i == level)
+          aRenderingContext.DrawLine(aCellRect.x + (i - 1) * mIndentation, y, aCellRect.x + (i - 1) * mIndentation, y + mRowHeight / 2);
+        PRInt32 parent;
+        mView->GetParentIndex(currentParent, &parent);
+	if (parent == -1)
+	  break;
+	currentParent = parent;
+      }
+
+      aRenderingContext.DrawLine(aCellRect.x + (level - 1) * mIndentation, y + mRowHeight / 2, aCellRect.x + level * mIndentation, aCellRect.y + mRowHeight /2);
+
+      PRBool clipState;
+      aRenderingContext.PopState(clipState);
+    }
+
+    // XXX Paint the twisty.
+  
+  }
+  
   // XXX Now paint the various images.
 
   // Now paint our text, but only if we aren't a cycler column.
