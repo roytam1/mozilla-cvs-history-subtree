@@ -187,13 +187,15 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
 
 // NOTE: this walks it's way down the tree.  Since we have to deal
 // with a tree now and not a list, we need to recurse (or use a more complex
-// treewalk setup.  Keep state minimal so recursing is cheap.
+// treewalk setup).  Keep state minimal so recursing is cheap.
 void
 nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
 {
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aCommand->GetCurrentReflowNode());
+  NS_ASSERTION(reflowIterator.CurrentNode(),
+               "NULL reflowIterator.CurrentNode() in UnWind(); we're crashing");
   nsIFrame* currFrame = reflowIterator.CurrentNode()->GetFrame();
 
   {
@@ -265,13 +267,17 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
         // the target is deep inside html we will have to honor this one.
         // mark us as dirty so we don't post
         // a dirty reflow
-        state = 0;
+        state = 0; // XXX why?
         nsIFrame* frame;
         aBox->GetFrame(&frame);
         frame->GetFrameState(&state);
         state |= NS_FRAME_HAS_DIRTY_CHILDREN;
         frame->SetFrameState(state);
         
+        currFrame->GetFrameState(&state);
+        state &= ~NS_FRAME_IS_DIRTY;
+        currFrame->SetFrameState(state);
+
         // mark the adaptor dirty
         ibox->MarkDirty(*this);      
         
