@@ -5766,7 +5766,7 @@ nsHTMLDocumentSH::DocumentAllGetProperty(JSContext *cx, JSObject *obj,
 
         if (nodeList) {
           // Get the second node in the list, if found, we know
-          // there's more than one node (this is chaper than getting
+          // there's more than one node (this is cheaper than getting
           // the length of the collection since that requires walking
           // the whole DOM tree in all cases, all we care about is if
           // there's more than one item in the collection, or if
@@ -5892,6 +5892,8 @@ nsHTMLDocumentSH::DocumentAllNewResolve(JSContext *cx, JSObject *obj, jsval id,
   return ok;
 }
 
+// Finalize hook used by document related JS objects, but also by
+// sGlobalScopePolluterClass!
 void JS_DLL_CALLBACK
 nsHTMLDocumentSH::ReleaseDocument(JSContext *cx, JSObject *obj)
 {
