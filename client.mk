@@ -323,6 +323,7 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/libart/nsSVGFill.cpp \
 	layout/svg/renderer/src/libart/nsSVGFill.h \
 	layout/svg/renderer/src/libart/nsSVGLibartBitmapDefault.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartBitmapGdk.cpp \
 	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.cpp \
 	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.h \
 	layout/svg/renderer/src/libart/nsSVGLibartCanvas.cpp \

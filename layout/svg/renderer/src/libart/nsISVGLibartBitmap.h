@@ -90,7 +90,7 @@ public:
 // nsSVGLibartBitmapMac
 // XXX
 
-#if defined(MOZ_ENABLE_GTK) || defined(MOZ_ENABLE_GTK2)
+#if defined(MOZ_ENABLE_GTK2)
 nsresult
 NS_NewSVGLibartBitmapGdk(nsISVGLibartBitmap **result,
                          nsIRenderingContext *ctx,
