@@ -644,7 +644,8 @@ nsNntpService::RunNewsUrl(nsString& urlString, nsString &newsgroupName, nsMsgKey
   nsCOMPtr <nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
   // don't worry this cast is really okay...there'a bug in XPIDL compiler that is preventing
   // a "cont char *" in paramemter for uri SetSpec...
-  mailnewsurl->SetSpec((char *) urlString.GetBuffer());
+  mailnewsurl->SetSpec(nsCAutoString(urlString));
+  mailnewsurl->SetPort(NEWS_PORT);
 
   if (newsgroupName != "") {
     nsCOMPtr <nsINNTPNewsgroup> newsgroup;
