@@ -31,6 +31,9 @@ use Getopt::Std;			# To parse command line arguments.
 use Mozilla::LDAP::Conn;		# Main "OO" layer for LDAP
 use Mozilla::LDAP::Utils;		# LULU, utilities.
 
+use strict;
+no strict "vars";
+
 
 #############################################################################
 # Constants, shouldn't have to edit these...
