@@ -39,8 +39,10 @@ const nsISupports              = Components.interfaces.nsISupporst;
 
 const nsICommandLine           = Components.interfaces.nsICommandLine;
 const nsICommandLineHandler    = Components.interfaces.nsICommandLineHandler;
+const nsIDOMWindowInternal     = Components.interfaces.nsIDOMWindowInternal;
 const nsIFactory               = Components.interfaces.nsIFactory;
 const nsISupportsString        = Components.interfaces.nsISupportsString;
+const nsIWindowMediator        = Components.interfaces.nsIWindowMediator;
 const nsIWindowWatcher         = Components.interfaces.nsIWindowWatcher;
 
 var nsMailDefaultHandler = {
@@ -93,25 +95,43 @@ var nsMailDefaultHandler = {
       }
     }
 
+    if (!uri && cmdLine.preventDefault)
+      return;
+
     // xxxbsmedberg: This should be using nsIURILoader.openURI, which is what
     // the 1.0 branch does (see nsAppShellService.cpp, revision 1.212.6.6).
     // However, nsIURILoader.openURI is async, which means that the event loop
     // sometimes is not run when it is supposed to, and other badness. Fix
     // this for 1.1!
 
-    if (uri || !cmdLine.preventDefault) {
-      var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(nsIWindowWatcher);
+    if (!uri && cmdLine.state != STATE_INITIAL_LAUNCH) {
+      try {
+        var wmed = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                             .getService(nsIWindowMediator);
 
-      var argstring;
-      if (uri) {
-        argstring = Components.classes["@mozilla.org/supports-string;1"]
-                              .createInstance(nsISupportsString);
-        argstring.data = uri;
+        var wlist = wmed.getEnumerator("mail:3pane");
+        if (wlist.hasMoreElements()) {
+          var window = wlist.getNext().QueryInterface(nsIDOMWindowInternal);
+          window.focus();
+          return;
+        }
       }
-      wwatch.openWindow(null, "chrome://messenger/content/", "_blank",
-                        "chrome,modal=no,all", argstring);
+      catch (e) {
+        dump(e);
+      }
     }
+
+    var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                           .getService(nsIWindowWatcher);
+
+    var argstring;
+    if (uri) {
+      argstring = Components.classes["@mozilla.org/supports-string;1"]
+                            .createInstance(nsISupportsString);
+      argstring.data = uri;
+    }
+    wwatch.openWindow(null, "chrome://messenger/content/", "_blank",
+                      "chrome,modal=no,all", argstring);
   },
 
   helpInfo : "",
