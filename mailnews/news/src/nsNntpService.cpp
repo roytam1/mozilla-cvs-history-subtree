@@ -430,31 +430,37 @@ nsNntpService::findNewsServerWithGroup(nsISupports *aElement, void *data)
 	}
 }
 
-void 
+nsresult
 nsNntpService::FindServerWithNewsgroup(nsCString &host, nsCString &groupName)
 {
 	nsresult rv;
 
- 	NS_WITH_SERVICE(nsIMsgAccountManager, accountManager, kMsgAccountManagerCID, &rv);
-	if (NS_FAILED(rv)) return;
+    nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
 	nsCOMPtr<nsISupportsArray> servers;
 	
 	rv = accountManager->GetAllServers(getter_AddRefs(servers));
-	if (NS_FAILED(rv)) return;
+    NS_ENSURE_SUCCESS(rv,rv);
 
 	findNewsServerEntry serverInfo;
 	serverInfo.server = nsnull;
   	serverInfo.newsgroup = (const char *)groupName;
+
+#ifdef DEBUG_seth
+    printf("this only looks at the list of subscribed newsgroups.  fix to use the hostinfo.dat information\n");
+#endif
 
 	servers->EnumerateForwards(findNewsServerWithGroup, (void *)&serverInfo);
 	if (serverInfo.server) {
 		nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(serverInfo.server);
 		nsXPIDLCString thisHostname;
   		rv = server->GetHostName(getter_Copies(thisHostname));
-		if (NS_FAILED(rv)) return;
+        NS_ENSURE_SUCCESS(rv,rv);
 
 		host = (const char *)thisHostname;
 	}
+    
+    return NS_OK;
 }
 
 nsresult nsNntpService::FindHostFromGroup(nsCString &host, nsCString &groupName)
@@ -464,30 +470,11 @@ nsresult nsNntpService::FindHostFromGroup(nsCString &host, nsCString &groupName)
   NS_ASSERTION(host.IsEmpty(), "host is not empty");
   if (!host.IsEmpty()) return NS_ERROR_FAILURE;
  
-  FindServerWithNewsgroup(host, groupName);
+  rv = FindServerWithNewsgroup(host, groupName);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  if (host.IsEmpty()) {
-    NS_WITH_SERVICE(nsIPref, prefs, kCPrefServiceCID, &rv);
-    if (NS_FAILED(rv) || (!prefs)) {
-      return rv;
-    } 
-    
-    nsXPIDLCString default_nntp_server;
-    // if we get here, we know prefs is not null
-    rv = prefs->CopyCharPref(PREF_NETWORK_HOSTS_NNTP_SERVER, getter_Copies(default_nntp_server));
-    if (NS_SUCCEEDED(rv) && ((const char *)default_nntp_server) && (PL_strlen((const char *)default_nntp_server))) {
-        host = (const char *)default_nntp_server;
-    }
-    else {
-      // if all else fails, use "news" as the default_nntp_server
-      host = "news";
-    }
-  }
-  
-  if (host.IsEmpty())
-    return NS_ERROR_FAILURE;
-  else 
-    return NS_OK;
+  // host can be empty
+  return NS_OK;
 }
 
 nsresult 
@@ -499,23 +486,11 @@ nsNntpService::SetUpNntpUrlForPosting(nsINntpUrl *nntpUrl, const char *newsgroup
   if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
   if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
 
-#ifdef DEBUG_NEWS
-  printf("newsgroupsNames == %s\n",newsgroupsNames);
-#endif
-  
   // newsgroupsNames can be a comma seperated list of these:
   // news://host/group
   // news://group
   // host/group
   // group
-  //
-  // we are not going to allow the user to cross post to multiple hosts.
-  // so as soon as we determine the host from newsgroupsNames, we can stop.
-  //
-  // 1) explict (news://host/group or host/group)
-  // 2) context (if you reply to a message when reading it on host x, reply to that host.
-  // 3) no context look up news://group or group in the various newsrc files to determine host, with PREF_NETWORK_HOSTS_NNTP_SERVER being the first newrc file searched each time
-  // 4) use the default nntp server
 
   //nsCRT::strtok is going destroy what we pass to it, so we need to make a copy of newsgroupsNames.
   char *list = nsCRT::strdup(newsgroupsNames);
@@ -531,9 +506,6 @@ nsNntpService::SetUpNntpUrlForPosting(nsINntpUrl *nntpUrl, const char *newsgroup
     str.StripWhitespace();
 
     if (!str.IsEmpty()) {
-#ifdef DEBUG_NEWS
-      printf("value = %s\n", str.GetBuffer());
-#endif
       nsCAutoString theRest;
       nsCAutoString currentHost;
       
@@ -544,9 +516,7 @@ nsNntpService::SetUpNntpUrlForPosting(nsINntpUrl *nntpUrl, const char *newsgroup
         str.Right(theRest, str.Length() - kNewsRootURILen /* for news:/ */ - 1 /* for the slash */);
       }
       else if (str.Find(":/") != -1) {
-#ifdef DEBUG_NEWS
-	printf("we have x:/y where x != news. this is bad, return failure\n");
-#endif
+        // we have x:/y where x != news. this is bad, return failure
         CRTFREEIF(list);
         return NS_ERROR_FAILURE;
       }
@@ -554,64 +524,66 @@ nsNntpService::SetUpNntpUrlForPosting(nsINntpUrl *nntpUrl, const char *newsgroup
         theRest = str;
       }
       
-#ifdef DEBUG_NEWS
-      printf("theRest == %s\n",theRest.GetBuffer());
-#endif
-      
       // theRest is "group" or "host/group"
       PRInt32 slashpos = theRest.FindChar('/');
       if (slashpos > 0 ) {
         // theRest is "host/group"
         theRest.Left(currentHost, slashpos);
         theRest.Right(currentGroup, slashpos);
-#ifdef DEBUG_NEWS
-        printf("currentHost == %s\n", currentHost.GetBuffer());
-#endif
       }
-      else if (newshost && nsCRT::strlen(newshost) > 0)
-      {
+      else if (newshost && nsCRT::strlen(newshost) > 0) {
         currentHost.Assign(newshost);
       }
       else {
-        // theRest is "group"
+        // str is "group"
         rv = FindHostFromGroup(currentHost, str);
         currentGroup = str;
         if (NS_FAILED(rv)) {
-        CRTFREEIF(list);
-		return rv;
-	}
+          CRTFREEIF(list);
+		  return rv;
+	    }
       }
 
       numGroups++;
-      if (host.IsEmpty()) {
-        host = currentHost;
-
-        //we have our host, we're done.
-        //break;
-      }
-      else {
-        if (!host.Equals(currentHost)) {
-          printf("todo, implement an alert:  no cross posting to multiple hosts!\n"); 
-          CRTFREEIF(list);
-          return NS_ERROR_FAILURE;
+      if (!currentHost.IsEmpty()) {
+        if (host.IsEmpty()) {
+          host = currentHost;
+        }
+        else {
+          if (!host.Equals(currentHost)) {
+            // yikes, we are trying to cross post
+            CRTFREEIF(list);
+            return NS_ERROR_NNTP_NO_CROSS_POSTING;
+          }
         }
       }
       
       str = "";
       currentHost = "";
     }
-#ifdef DEBUG_NEWS
-    else {
-        printf("nothing between two commas. ignore and keep going...\n");
-    }
-#endif
     token = nsCRT::strtok(rest, ",", &rest);
   }    
   CRTFREEIF(list);
   
-  if (host.IsEmpty())
-    return NS_ERROR_FAILURE;
+  // if we don't have a news host, find the first news server and use it
+  if (host.IsEmpty()) {
+    nsCOMPtr<nsIMsgIncomingServer> server;
+    nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = accountManager->FindServer("","","nntp", getter_AddRefs(server));
+    if (NS_SUCCEEDED(rv) && server) {
+        nsXPIDLCString newsHostName;
+        rv = server->GetHostName(getter_Copies(newsHostName));
+        if (NS_SUCCEEDED(rv)) {
+            host = (const char *)newsHostName;
+        }
+    }
+  }
 
+  // if we *still* don't have a hostname, use "news"
+  if (host.IsEmpty()) {
+    host = "news";
+  }
 
   // if the user tried to post to one newsgroup, set that information in the 
   // nntp url.  this can save them an authentication, if they've already logged in
@@ -664,9 +636,6 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
     str.StripWhitespace();
 
     if (!str.IsEmpty()) {
-#ifdef DEBUG_NEWS
-      printf("value = %s\n", str.GetBuffer());
-#endif
       nsCAutoString currentHost;
       nsCAutoString theRest;
 
@@ -677,19 +646,13 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
         str.Right(theRest, str.Length() - kNewsRootURILen /* for news:/ */ - 1 /* for the slash */);
       }
       else if (str.Find(":/") != -1) {
-#ifdef DEBUG_NEWS
-	printf("we have x:/y where x != news. this is bad, return failure\n");
-#endif
+        // we have x:/y where x != news. this is bad, return failure
         CRTFREEIF(list);
         return NS_ERROR_FAILURE;
       }
       else {
         theRest = str;
       }
-      
-#ifdef DEBUG_NEWS
-      printf("theRest == %s\n",theRest.GetBuffer());
-#endif
       
       // theRest is "group" or "host/group"
       PRInt32 slashpos = theRest.FindChar('/');
@@ -699,9 +662,6 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
         // theRest is "host/group"
         theRest.Left(currentHost, slashpos);
         
-#ifdef DEBUG_NEWS
-        printf("currentHost == %s\n", currentHost.GetBuffer());
-#endif
         // from "host/group", put "group" into currentGroup;
         theRest.Right(currentGroup, theRest.Length() - currentHost.Length() - 1);
 
@@ -718,7 +678,7 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
         retvalStr += currentGroup;
       }
       else {
-        // theRest is "group"
+        // str is "group"
         rv = FindHostFromGroup(currentHost, str);
         if (NS_FAILED(rv)) {
             CRTFREEIF(list);
@@ -732,38 +692,21 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
         retvalStr += str;
       }
 
-      if (currentHost.IsEmpty()) {
-#ifdef DEBUG_NEWS
-        printf("empty current host!\n");
-#endif
-        CRTFREEIF(list);
-        return NS_ERROR_FAILURE;
-      }
-      
-      if (host.IsEmpty()) {
-#ifdef DEBUG_NEWS
-        printf("got a host, set it\n");
-#endif
-        host = currentHost;
-      }
-      else {
-        if (!host.Equals(currentHost)) {
-#ifdef DEBUG_NEWS
-          printf("no cross posting to multiple hosts!\n");
-#endif
-          CRTFREEIF(list);
-          return NS_ERROR_NNTP_NO_CROSS_POSTING;
+      if (!currentHost.IsEmpty()) {
+        if (host.IsEmpty()) {
+          host = currentHost;
+        }
+        else {
+          if (!host.Equals(currentHost)) {
+            CRTFREEIF(list);
+            return NS_ERROR_NNTP_NO_CROSS_POSTING;
+          }
         }
       }
 
       str = "";
       currentHost = "";
     }
-#ifdef DEBUG_NEWS
-    else {
-        printf("nothing between two commas. ignore and keep going...\n");
-    }
-#endif
     token = nsCRT::strtok(rest, ",", &rest);
   }
   CRTFREEIF(list);
@@ -771,10 +714,6 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
   *_retval = nsCRT::strdup(retvalStr.GetBuffer());
   if (!*_retval) return NS_ERROR_OUT_OF_MEMORY;
   
-#ifdef DEBUG_NEWS
-  printf("Newsgroups header = %s\n", *_retval);
-#endif
-
   return NS_OK;
 }
 
@@ -892,9 +831,7 @@ nsNntpService::CreateNewsAccount(const char *username, const char *hostname, PRB
 	if (!hostname || !server) return NS_ERROR_NULL_POINTER;
 	
 	nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
-	if (NS_FAILED(rv)) return rv;
-	if (!accountManager) return NS_ERROR_FAILURE;
-
+    NS_ENSURE_SUCCESS(rv,rv);
 
 	nsCOMPtr <nsIMsgAccount> account;
 	rv = accountManager->CreateAccount(getter_AddRefs(account));
@@ -948,8 +885,7 @@ nsNntpService::GetProtocolForUri(nsIURI *aUri, nsIMsgWindow *aMsgWindow, nsINNTP
   rv = aUri->GetPath(getter_Copies(path));
 
   nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) return rv;
-  if (!accountManager) return NS_ERROR_FAILURE;
+  NS_ENSURE_SUCCESS(rv,rv);
 
   // find the incoming server, it if exists.
   // migrate if necessary, before searching for it.

@@ -73,7 +73,7 @@ protected:
   
   nsresult SetUpNntpUrlForPosting(nsINntpUrl * nntpUrl, const char *newsgroupNames, const char *newshost, char **newsUrlSpec);
   nsresult FindHostFromGroup(nsCString &host, nsCString &groupName);
-  void FindServerWithNewsgroup(nsCString &host, nsCString &groupName);
+  nsresult FindServerWithNewsgroup(nsCString &host, nsCString &groupName);
   
   // a convience routine used to put together news urls.
   nsresult ConstructNntpUrl(const char * urlString, const char * newsgroupName, nsMsgKey key, nsIUrlListener *aUrlListener,  nsIMsgWindow * aMsgWindow, nsIURI ** aUrl);
