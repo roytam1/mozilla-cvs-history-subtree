@@ -70,9 +70,9 @@ typedef int (*SECU_PPFunc)(FILE *out, SECItem *item, char *msg, int level);
 
 typedef struct {
     enum {
-	PW_NONE = 0,
-	PW_FROMFILE = 1,
-	PW_PLAINTEXT = 2
+	PW_NONE,
+	PW_FROMFILE,
+	PW_PLAINTEXT
     } source;
     char *data;
 } secuPWData;
@@ -338,8 +338,6 @@ char *SECU_ErrorString(int16 err);
 
 /* Return informative error string. Does not call XP_GetString */
 char *SECU_ErrorStringRaw(int16 err);
-
-void printflags(char *trusts, unsigned int flags);
 
 #ifndef XP_UNIX
 extern int ffs(unsigned int i);

@@ -36,6 +36,7 @@
 #ifndef _PK11FUNC_H_
 #define _PK11FUNC_H_
 #include "plarena.h"
+#include "mcom_db.h"
 #include "seccomon.h"
 #include "secoidt.h"
 #include "secdert.h"
@@ -387,8 +388,6 @@ SECStatus PK11_TraverseCertsForNicknameInSlot(SECItem *nickname,
 	void *arg);
 SECStatus PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
        SECStatus(* callback)(CERTCertificate*, void *), void *arg);
-CERTCertList *
-PK11_ListCerts(PK11CertListType type, void *pwarg);
 
 
 /**********************************************************************

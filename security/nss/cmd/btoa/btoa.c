@@ -34,7 +34,6 @@
 #include "plgetopt.h"
 #include "secutil.h"
 #include "nssb64.h"
-#include <errno.h>
 
 #if defined(XP_WIN) || (defined(__sun) && !defined(SVR4))
 #if !defined(WIN32)

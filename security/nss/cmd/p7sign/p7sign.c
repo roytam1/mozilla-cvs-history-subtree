@@ -44,8 +44,7 @@
 #include "secpkcs7.h"
 #include "cert.h"
 #include "certdb.h"
-#include "sechash.h"	/* for HASH_GetHashObject() */
-#include "nss.h"
+#include "cdbhdl.h"
 
 #if defined(XP_UNIX)
 #include <unistd.h>
@@ -59,6 +58,9 @@ extern int fread(char *, size_t, size_t, FILE*);
 extern int fwrite(char *, size_t, size_t, FILE*);
 extern int fprintf(FILE *, char *, ...);
 #endif
+
+extern void SEC_Init(void);		/* XXX */
+
 
 static void
 Usage(char *progName)
@@ -79,6 +81,40 @@ Usage(char *progName)
     exit(-1);
 }
 
+static SECKEYKeyDBHandle *
+OpenKeyDB(char *progName)
+{
+    SECKEYKeyDBHandle *keyHandle;
+
+    keyHandle = SECU_OpenKeyDB(PR_FALSE);
+    if (keyHandle == NULL) {
+        SECU_PrintError(progName, "could not open key database");
+	return NULL;
+    }
+
+    return(keyHandle);
+}
+
+static CERTCertDBHandle certHandleStatic;	/* avoid having to allocate */
+
+static CERTCertDBHandle *
+OpenCertDB(char *progName)
+{
+    CERTCertDBHandle *certHandle;
+    SECStatus rv;
+
+    certHandle = &certHandleStatic;
+    rv = CERT_OpenCertDB(certHandle, PR_FALSE, SECU_CertDBNameCallback, NULL);
+    if (rv != SECSuccess) {
+        SECU_PrintError(progName, "could not open cert database");
+	return NULL;
+    } else {
+	CERT_SetDefaultCertDB(certHandle);
+    }
+
+    return certHandle;
+}
+
 static void
 SignOut(void *arg, const char *buf, unsigned long len)
 {
@@ -91,11 +127,11 @@ SignOut(void *arg, const char *buf, unsigned long len)
 static int
 CreateDigest(SECItem *data, char *digestdata, unsigned int *len, unsigned int maxlen)
 {
-    const SECHashObject *hashObj;
+    SECHashObject *hashObj;
     void *hashcx;
 
     /* XXX probably want to extend interface to allow other hash algorithms */
-    hashObj = HASH_GetHashObject(HASH_AlgSHA1);
+    hashObj = &SECHashObjects[HASH_AlgSHA1];
 
     hashcx = (* hashObj->create)();
     if (hashcx == NULL)
@@ -156,7 +192,7 @@ SignFile(FILE *outFile, PRFileDesc *inFile, CERTCertificate *cert,
     }
 
     rv = SEC_PKCS7Encode (cinfo, SignOut, outFile, NULL,
-			  NULL, NULL);
+			  SECU_GetPassword, NULL);
 
     SEC_PKCS7DestroyContentInfo (cinfo);
 
@@ -173,6 +209,7 @@ main(int argc, char **argv)
     FILE *outFile;
     PRFileDesc *inFile;
     char *keyName;
+    SECKEYKeyDBHandle *keyHandle;
     CERTCertDBHandle *certHandle;
     CERTCertificate *cert;
     PRBool encapsulated = PR_FALSE;
@@ -236,9 +273,27 @@ main(int argc, char **argv)
 
     /* Call the initialization routines */
     PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
-    NSS_Init(SECU_ConfigDirectory(NULL));
+    SECU_PKCS11Init(PR_FALSE);
+    SEC_Init();
+
+    /* open key database */
+    keyHandle = OpenKeyDB(progName);
+    if (keyHandle == NULL) {
+	return -1;
+    }
+
+#if 0
+    /* check if key actually exists */
+    if (! SECU_CheckKeyNameExists(keyHandle, keyName)) {
+	SECU_PrintError(progName, "the key \"%s\" does not exist", keyName);
+	return -1;
+    }
+#endif
+
+    SECKEY_SetDefaultKeyDB(keyHandle);
+
     /* open cert database */
-    certHandle = CERT_GetDefaultCertDB();
+    certHandle = OpenCertDB(progName);
     if (certHandle == NULL) {
 	return -1;
     }
@@ -251,6 +306,8 @@ main(int argc, char **argv)
 			keyName);
 	return -1;
     }
+
+    CERT_SetDefaultCertDB(certHandle);
 
     if (SignFile(outFile, inFile, cert, encapsulated)) {
 	SECU_PrintError(progName, "problem signing data");

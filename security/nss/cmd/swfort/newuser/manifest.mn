@@ -42,4 +42,3 @@ REQUIRES = security nspr dbm seccmd
 
 PROGRAM = newuser
 
-USE_STATIC_LIBS = 1

@@ -43,7 +43,7 @@
 #include "secpkcs7.h"
 #include "cert.h"
 #include "certdb.h"
-#include "nss.h"
+#include "cdbhdl.h"
 
 #if defined(XP_UNIX)
 #include <unistd.h>
@@ -57,6 +57,7 @@ extern int fwrite(char *, size_t, size_t, FILE*);
 extern int fprintf(FILE *, char *, ...);
 #endif
 
+extern void SEC_Init(void);		/* XXX */
 
 
 static void
@@ -73,6 +74,38 @@ Usage(char *progName)
     fprintf(stderr, "%-20s Define an output file to use (default is stdout)\n",
 	    "-o output");
     exit(-1);
+}
+
+static SECKEYKeyDBHandle *
+OpenKeyDB(char *progName)
+{
+    SECKEYKeyDBHandle *keyHandle;
+
+    keyHandle = SECU_OpenKeyDB(PR_FALSE);
+    if (keyHandle == NULL) {
+        SECU_PrintError(progName, "could not open key database");
+	return NULL;
+    }
+
+    return(keyHandle);
+}
+
+static CERTCertDBHandle certHandleStatic;	/* avoid having to allocate */
+
+static CERTCertDBHandle *
+OpenCertDB(char *progName)
+{
+    CERTCertDBHandle *certHandle;
+    SECStatus rv;
+
+    certHandle = &certHandleStatic;
+    rv = CERT_OpenCertDB(certHandle, PR_FALSE, SECU_CertDBNameCallback, NULL);
+    if (rv != SECSuccess) {
+        SECU_PrintError(progName, "could not open cert database");
+	return NULL;
+    }
+
+    return certHandle;
 }
 
 static PRBool saw_content;
@@ -117,7 +150,7 @@ DecodeAndPrintFile(FILE *out, PRFileDesc *in, char *progName)
     fprintf(out, "\n---------------------------------------------\n");
 
     saw_content = PR_FALSE;
-    dcx = SEC_PKCS7DecoderStart(PrintBytes, out, NULL, NULL,
+    dcx = SEC_PKCS7DecoderStart(PrintBytes, out, SECU_GetPassword, NULL,
 				NULL, NULL, decryption_allowed);
     if (dcx != NULL) {
 #if 0	/* Test that decoder works when data is really streaming in. */
@@ -201,6 +234,8 @@ main(int argc, char **argv)
     char *progName;
     FILE *outFile;
     PRFileDesc *inFile;
+    SECKEYKeyDBHandle *keyHandle;
+    CERTCertDBHandle *certHandle;
     PLOptState *optstate;
     PLOptStatus status;
 
@@ -251,7 +286,22 @@ main(int argc, char **argv)
 
     /* Call the initialization routines */
     PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
-    NSS_Init(SECU_ConfigDirectory(NULL));
+    SECU_PKCS11Init(PR_FALSE);
+    SEC_Init();
+
+    /* open key database */
+    keyHandle = OpenKeyDB(progName);
+    if (keyHandle == NULL) {
+	return -1;
+    }
+    SECKEY_SetDefaultKeyDB(keyHandle);
+
+    /* open cert database */
+    certHandle = OpenCertDB(progName);
+    if (certHandle == NULL) {
+	return -1;
+    }
+    CERT_SetDefaultCertDB(certHandle);
 
     if (DecodeAndPrintFile(outFile, inFile, progName)) {
 	SECU_PrintError(progName, "problem decoding data");

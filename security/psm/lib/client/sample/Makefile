@@ -115,14 +115,14 @@ link:
 		echo "rm $(PROGRAM)";	\
 		rm $(PROGRAM);		\
 	fi;				\
-	$(MAKE)				\
+	gmake				\
 
 build_sample:
 ifneq ($(OS_ARCH),WINNT)
-	cd $(CORE_DEPTH)/coreconf; $(MAKE)
+	cd $(CORE_DEPTH)/coreconf; gmake
 endif
-	cd $(CORE_DEPTH)/security; $(MAKE) import; $(MAKE) export
-	cd ../../protocol; $(MAKE)
-	cd ..; $(MAKE)
-	$(MAKE)
+	cd $(CORE_DEPTH)/security; gmake import; gmake export
+	cd ../../protocol; gmake
+	cd ..; gmake
+	gmake
 

@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #ifndef nspr_win32_defs_h___
@@ -66,10 +50,6 @@
 #define _PR_HAVE_ATOMIC_OPS
 #define _PR_HAVE_ATOMIC_CAS
 #define PR_HAVE_WIN32_NAMED_SHARED_MEMORY
-#define _PR_HAVE_PEEK_BUFFER
-#define _PR_PEEK_BUFFER_MAX (32 * 1024)
-#define _PR_FD_NEED_EMULATE_MSG_PEEK(fd) \
-    (!(fd)->secret->nonblocking && (fd)->secret->inheritable != _PR_TRI_TRUE)
 
 /* --- Common User-Thread/Native-Thread Definitions --------------------- */
 
@@ -267,8 +247,6 @@ extern PRInt32 _PR_MD_CLOSE(PRInt32 osfd, PRBool socket);
 
 #define _MD_INIT_FILEDESC(fd)
 #define _MD_MAKE_NONBLOCK             _PR_MD_MAKE_NONBLOCK
-#define _MD_INIT_FD_INHERITABLE       _PR_MD_INIT_FD_INHERITABLE
-#define _MD_QUERY_FD_INHERITABLE      _PR_MD_QUERY_FD_INHERITABLE
 #define _MD_SHUTDOWN                  _PR_MD_SHUTDOWN
 #define _MD_LISTEN                    _PR_MD_LISTEN
 #define _MD_CLOSE_SOCKET(s)           _PR_MD_CLOSE(s, PR_TRUE)
@@ -535,9 +513,6 @@ struct _MDFileMap {
 
 extern PRStatus _MD_CreateFileMap(struct PRFileMap *fmap, PRInt64 size);
 #define _MD_CREATE_FILE_MAP _MD_CreateFileMap
-
-extern PRInt32 _MD_GetMemMapAlignment(void);
-#define _MD_GET_MEM_MAP_ALIGNMENT _MD_GetMemMapAlignment
 
 extern void * _MD_MemMap(struct PRFileMap *fmap, PRInt64 offset,
         PRUint32 len);

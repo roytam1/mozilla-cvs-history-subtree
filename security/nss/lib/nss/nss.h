@@ -41,32 +41,6 @@
 #include "seccomon.h"
 
 SEC_BEGIN_PROTOS
-
-/*
- * NSS's major version, minor version, patch level, and whether
- * this is a beta release.
- *
- * The format of the version string should be
- *     "<major version>.<minor version>[.<patch level>] [<Beta>]"
- */
-#define NSS_VERSION  "3.2 Beta"
-#define NSS_VMAJOR   3
-#define NSS_VMINOR   2
-#define NSS_VPATCH   0
-#define NSS_BETA     PR_TRUE
-
-/*
- * Return a boolean that indicates whether the underlying library
- * will perform as the caller expects.
- *
- * The only argument is a string, which should be the verson
- * identifier of the NSS library. That string will be compared
- * against a string that represents the actual build version of
- * the NSS library.  It also invokes the version checking functions
- * of the dependent libraries such as NSPR.
- */
-extern PRBool NSS_VersionCheck(const char *importedVersion);
-
 /*
  * Open the Cert, Key, and Security Module databases, read only.
  * Initialize the Random Number Generator.
@@ -82,23 +56,6 @@ extern SECStatus NSS_Init(const char *configdir);
  * Default policy settings disallow all ciphers.
  */
 extern SECStatus NSS_InitReadWrite(const char *configdir);
-
-/*
- * Open the Cert, Key, and Security Module databases, read/write.
- * Initialize the Random Number Generator.
- * Does not initialize the cipher policies or enables.
- * Default policy settings disallow all ciphers.
- *
- * This allows using application defined prefixes for the cert and key db's
- * and an alternate name for the secmod database. NOTE: In future releases,
- * the database prefixes my not necessarily map to database names.
- *
- * Also NOTE: This is not the recommended method for initializing NSS. 
- * The prefered method is NSS_init().
- */
-extern SECStatus NSS_Initialize(const char *configdir, 
-	const char *certPrefix, const char *keyPrefix, const char *secmodName,
-	PRBool readonly);
 
 /*
  * initialize NSS without a creating cert db's, key db's, or secmod db's.

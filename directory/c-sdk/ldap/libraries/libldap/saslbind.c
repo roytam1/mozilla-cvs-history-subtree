@@ -42,7 +42,7 @@ ldap_sasl_bind(
     LDAP		*ld,
     const char		*dn,
     const char		*mechanism,
-    struct berval	*cred,
+    const struct berval	*cred,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     int			*msgidp
@@ -119,7 +119,7 @@ ldap_sasl_bind(
 		}
 		rc = ber_printf( ber, "{it{isto}", msgid, LDAP_REQ_BIND,
 		    ldapversion, dn, LDAP_AUTH_SIMPLE, cred->bv_val,
-		    cred->bv_len );
+		    (int)cred->bv_len /* XXX lossy cast */ );
 
 	} else {		/* SASL bind; requires LDAPv3 or better */
 		if ( cred == NULL ) {
@@ -129,7 +129,8 @@ ldap_sasl_bind(
 		} else {
 			rc = ber_printf( ber, "{it{ist{so}}", msgid,
 			    LDAP_REQ_BIND, ldapversion, dn, LDAP_AUTH_SASL,
-			    mechanism, cred->bv_val, cred->bv_len );
+			    mechanism, cred->bv_val,
+			    (int)cred->bv_len /* XXX lossy cast */ );
 		}
 	}
 
@@ -170,7 +171,7 @@ ldap_sasl_bind_s(
     LDAP		*ld,
     const char		*dn,
     const char		*mechanism,
-    struct berval	*cred,
+    const struct berval	*cred,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     struct berval	**servercredp

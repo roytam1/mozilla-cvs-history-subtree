@@ -103,6 +103,9 @@ endif
 ifdef IMPORT_LIBRARY
 	$(INSTALL) -m 775 $(IMPORT_LIBRARY) $(SOURCE_LIB_DIR)
 endif
+ifdef PURE_LIBRARY
+	$(INSTALL) -m 775 $(PURE_LIBRARY) $(SOURCE_LIB_DIR)
+endif
 ifdef PROGRAM
 	$(INSTALL) -m 775 $(PROGRAM) $(SOURCE_BIN_DIR)
 endif
@@ -240,6 +243,9 @@ endif
 ifdef IMPORT_LIBRARY
 	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(IMPORT_LIBRARY)
 endif
+ifdef PURE_LIBRARY
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(PURE_LIBRARY)
+endif
 ifdef PROGRAM
 	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(PROGRAM)
 endif
@@ -261,6 +267,9 @@ ifdef SHARED_LIBRARY
 endif
 ifdef IMPORT_LIBRARY
 	$(INSTALL) -m 555 $(IMPORT_LIBRARY) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_LIB_DIR)
+endif
+ifdef PURE_LIBRARY
+	$(INSTALL) -m 555 $(PURE_LIBRARY) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_LIB_DIR)
 endif
 ifdef PROGRAM
 	$(INSTALL) -m 555 $(PROGRAM) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)
@@ -303,9 +312,6 @@ ifneq ($(POLICY),)
 	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $@
 endif
 
-get_objs:
-	@echo $(OBJS)
-
 $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
@@ -317,11 +323,7 @@ $(IMPORT_LIBRARY): $(SHARED_LIBRARY)
 	wlib +$(SHARED_LIBRARY)
 endif
 
-ifdef SHARED_LIBRARY_LIBS
-SUB_SHLOBJS = $(foreach dir,$(SHARED_LIBRARY_DIRS),$(addprefix $(dir)/,$(shell $(MAKE) -C $(dir) --no-print-directory get_objs)))
-endif
-
-$(SHARED_LIBRARY): $(OBJS) $(MAPFILE)
+$(SHARED_LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
@@ -348,10 +350,10 @@ ifeq ($(OS_TARGET), WIN16)
 	$(LINK) @w16link.
 	rm w16link
 else
-	$(LINK_DLL) -MAP $(DLLBASE) $(OBJS) $(SUB_SHLOBJS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS) $(LD_LIBS)
+	$(LINK_DLL) -MAP $(DLLBASE) $(OBJS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS) $(LD_LIBS)
 endif
 else
-	$(MKSHLIB) -o $@ $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS)
+	$(MKSHLIB) -o $@ $(OBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS)
 	chmod +x $@
 endif
 endif
@@ -359,37 +361,19 @@ ifneq ($(POLICY),)
 	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $@
 endif
 
+$(PURE_LIBRARY):
+	rm -f $@
+ifneq ($(OS_ARCH), WINNT)
+	$(AR) $(OBJS)
+endif
+	$(RANLIB) $@
+
 ifeq ($(OS_ARCH), WINNT)
 $(RES): $(RESNAME)
 	@$(MAKE_OBJDIR)
-# The resource compiler does not understand the -U option.
-	$(RC) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
+	$(RC) -Fo$(RES) $(RESNAME)
 	@echo $(RES) finished
 endif
-
-$(MAPFILE): $(LIBRARY_NAME).def
-ifeq ($(OS_ARCH),SunOS)
-	grep -v ';-' $(LIBRARY_NAME).def | \
-	 sed -e 's,;+,,' -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,;,' > $@
-endif
-ifeq ($(OS_ARCH),Linux)
-	grep -v ';-' $(LIBRARY_NAME).def | \
-	 sed -e 's,;+,,' -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,;,' > $@
-endif
-ifeq ($(OS_ARCH),AIX)
-	grep -v ';+' $(LIBRARY_NAME).def | grep -v ';-' | \
-		sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' > $@
-endif
-ifeq ($(OS_ARCH), HP-UX)
-	grep -v ';+' $(LIBRARY_NAME).def | grep -v ';-' | \
-	 sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,^,+e ,' > $@
-endif
-ifeq ($(OS_ARCH), OSF1)
-	grep -v ';+' $(LIBRARY_NAME).def | grep -v ';-' | \
- sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,^,-exported_symbol ,' > $@
-endif
-
-
 
 $(OBJDIR)/$(PROG_PREFIX)%$(PROG_SUFFIX): $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
@@ -399,6 +383,16 @@ ifeq ($(OS_ARCH),WINNT)
 else
 	$(MKPROG) -o $@ $(OBJDIR)/$(PROG_PREFIX)$*$(OBJ_SUFFIX) \
 	$(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
+endif
+
+ifdef HAVE_PURIFY
+$(OBJDIR)/$(PROG_PREFIX)%.pure: $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX)
+	@$(MAKE_OBJDIR)
+ifeq ($(OS_ARCH),WINNT)
+	$(PURIFY) $(CC) -Fo$@ -c $(CFLAGS) $(OBJDIR)/$(PROG_PREFIX)$*$(OBJ_SUFFIX) $(PURELDFLAGS)
+else
+	$(PURIFY) $(CC) -o $@ $(CFLAGS) $(OBJDIR)/$(PROG_PREFIX)$*$(OBJ_SUFFIX) $(PURELDFLAGS)
+endif
 endif
 
 WCCFLAGS1 := $(subst /,\\,$(CFLAGS))

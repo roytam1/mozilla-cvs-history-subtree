@@ -37,7 +37,6 @@
 #include "cmmfi.h"
 #include "secitem.h"
 #include "keyhi.h"
-#include "secder.h"
 
 CRMFEncryptedKeyChoice
 CRMF_EncryptedKeyGetChoice(CRMFEncryptedKey *inEncrKey)

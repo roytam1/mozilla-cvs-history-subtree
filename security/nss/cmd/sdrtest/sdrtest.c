@@ -46,7 +46,6 @@
 
 #include "plgetopt.h"
 #include "pk11sdr.h"
-#include "secrng.h"
 
 #define DEFAULT_VALUE "Test"
 
@@ -100,7 +99,8 @@ main (int argc, char **argv)
 {
     int		 retval = 0;  /* 0 - test succeeded.  -1 - test failed */
     SECStatus	 rv;
-    const char	*certDir = ".";
+    CERTCertDBHandle *certHandle = NULL;
+    PK11SlotInfo *slot = 0;
     PLOptState	*optstate;
     char	*program_name;
     const char  *input_file = NULL; 	/* read encrypted data from here (or create) */
@@ -156,12 +156,30 @@ main (int argc, char **argv)
     }
 
     /*
-     * Initialize the Security libraries.
+     * Initialize the NSPR and Security libraries.
      */
     PK11_SetPasswordFunc(SECU_GetModulePassword);
 
-    rv = NSS_Init(certDir);
-    if (rv != SECSuccess) goto prdone;
+    /*  Initialize NSPR and NSS.  */
+    PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
+    certHandle = SECU_OpenCertDB(PR_FALSE);
+    if (!certHandle) goto prdone;
+
+    SECU_PKCS11Init(PR_FALSE);
+    SEC_Init();
+
+    /* Initialize random number source: this uses only
+     * system information, but that is sufficient for
+     * testing the basic capabilities of SDR
+     */
+    RNG_SystemInfoForRNG();
+
+    slot = PK11_GetInternalKeySlot();
+    if (PK11_NeedUserInit(slot))
+    {
+      if (verbose) printf("Initializing new key database\n");
+      PK11_InitPin(slot, 0, 0);
+    }
 
     /* Convert value into an item */
     data.data = (unsigned char *)value;
@@ -274,6 +292,7 @@ file_loser:
 loser:
     if (text.data) free(text.data);
     if (result.data) free(result.data);
+    if (certHandle) CERT_ClosePermCertDB(certHandle);
     NSS_Shutdown();
 
 prdone:

@@ -46,9 +46,6 @@
 
 #define SALT_LENGTH	16
 
-SEC_ASN1_MKSUB(SECKEY_PrivateKeyInfoTemplate)
-SEC_ASN1_MKSUB(sgn_DigestInfoTemplate)
-
 /* helper functions */
 /* returns proper bag type template based upon object type tag */
 const SEC_ASN1Template *
@@ -72,7 +69,7 @@ sec_pkcs12_choose_bag_type_old(void *src_or_dest, PRBool encoding)
 
     switch (oiddata->offset) {
 	default:
-	    theTemplate = SEC_ASN1_GET(SEC_PointerToAnyTemplate);
+	    theTemplate = SEC_PointerToAnyTemplate;
 	    break;
 	case SEC_OID_PKCS12_KEY_BAG_ID:
 	    theTemplate = SEC_PointerToPKCS12KeyBagTemplate;
@@ -108,7 +105,7 @@ sec_pkcs12_choose_bag_type(void *src_or_dest, PRBool encoding)
 
     switch (oiddata->offset) {
 	default:
-	    theTemplate = SEC_ASN1_GET(SEC_AnyTemplate);
+	    theTemplate = SEC_AnyTemplate;
 	    break;
 	case SEC_OID_PKCS12_KEY_BAG_ID:
 	    theTemplate = SEC_PKCS12PrivateKeyBagTemplate;
@@ -144,7 +141,7 @@ sec_pkcs12_choose_cert_crl_type_old(void *src_or_dest, PRBool encoding)
 
     switch (oiddata->offset) {
 	default:
-	    theTemplate = SEC_ASN1_GET(SEC_PointerToAnyTemplate);
+	    theTemplate = SEC_PointerToAnyTemplate;
 	    break;
 	case SEC_OID_PKCS12_X509_CERT_CRL_BAG:
 	    theTemplate = SEC_PointerToPKCS12X509CertCRLTemplate_OLD;
@@ -176,7 +173,7 @@ sec_pkcs12_choose_cert_crl_type(void *src_or_dest, PRBool encoding)
 
     switch (oiddata->offset) {
 	default:
-	    theTemplate = SEC_ASN1_GET(SEC_PointerToAnyTemplate);
+	    theTemplate = SEC_PointerToAnyTemplate;
 	    break;
 	case SEC_OID_PKCS12_X509_CERT_CRL_BAG:
 	    theTemplate = SEC_PointerToPKCS12X509CertCRLTemplate;
@@ -209,11 +206,11 @@ sec_pkcs12_choose_shroud_type(void *src_or_dest, PRBool encoding)
 
     switch (oiddata->offset) {
 	default:
-	    theTemplate = SEC_ASN1_GET(SEC_PointerToAnyTemplate);
+	    theTemplate = SEC_PointerToAnyTemplate;
 	    break;
 	case SEC_OID_PKCS12_PKCS8_KEY_SHROUDING:
 	   theTemplate = 
-		SEC_ASN1_GET(SECKEY_PointerToEncryptedPrivateKeyInfoTemplate);
+		SECKEY_PointerToEncryptedPrivateKeyInfoTemplate;
 	    break;
     }
     return theTemplate;
@@ -942,7 +939,7 @@ sec_pkcs12_convert_item_to_unicode(PRArenaPool *arena, SECItem *dest,
 }
 
 /* pkcs 12 templates */
-static const SEC_ASN1TemplateChooserPtr sec_pkcs12_shroud_chooser =
+static SEC_ChooseASN1TemplateFunc sec_pkcs12_shroud_chooser =
     sec_pkcs12_choose_shroud_type;
 
 const SEC_ASN1Template SEC_PKCS12CodedSafeBagTemplate[] =
@@ -1004,9 +1001,8 @@ const SEC_ASN1Template SEC_PKCS12PVKAdditionalDataTemplate[] =
 const SEC_ASN1Template SEC_PKCS12PVKSupportingDataTemplate_OLD[] =
 {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SEC_PKCS12PVKSupportingData) },
-    { SEC_ASN1_SET_OF | SEC_ASN1_XTRN , 
-        offsetof(SEC_PKCS12PVKSupportingData, assocCerts),
-	SEC_ASN1_SUB(sgn_DigestInfoTemplate) },
+    { SEC_ASN1_SET_OF, offsetof(SEC_PKCS12PVKSupportingData, assocCerts),
+	sgn_DigestInfoTemplate },
     { SEC_ASN1_OPTIONAL | SEC_ASN1_BOOLEAN, 
 	offsetof(SEC_PKCS12PVKSupportingData, regenerable) },
     { SEC_ASN1_PRINTABLE_STRING, 
@@ -1019,9 +1015,8 @@ const SEC_ASN1Template SEC_PKCS12PVKSupportingDataTemplate_OLD[] =
 const SEC_ASN1Template SEC_PKCS12PVKSupportingDataTemplate[] =
 {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SEC_PKCS12PVKSupportingData) },
-    { SEC_ASN1_SET_OF | SEC_ASN1_XTRN , 
-        offsetof(SEC_PKCS12PVKSupportingData, assocCerts),
-	SEC_ASN1_SUB(sgn_DigestInfoTemplate) },
+    { SEC_ASN1_SET_OF, offsetof(SEC_PKCS12PVKSupportingData, assocCerts),
+	sgn_DigestInfoTemplate },
     { SEC_ASN1_OPTIONAL | SEC_ASN1_BOOLEAN, 
 	offsetof(SEC_PKCS12PVKSupportingData, regenerable) },
     { SEC_ASN1_BMP_STRING, 
@@ -1055,10 +1050,10 @@ const SEC_ASN1Template SEC_PKCS12BaggageTemplate_OLD[] =
 	SEC_PKCS12ESPVKItemTemplate_OLD },
 };
 
-static const SEC_ASN1TemplateChooserPtr sec_pkcs12_bag_chooser =
+static SEC_ChooseASN1TemplateFunc sec_pkcs12_bag_chooser =
 	sec_pkcs12_choose_bag_type;
 
-static const SEC_ASN1TemplateChooserPtr sec_pkcs12_bag_chooser_old =
+static SEC_ChooseASN1TemplateFunc sec_pkcs12_bag_chooser_old =
 	sec_pkcs12_choose_bag_type_old;
 
 const SEC_ASN1Template SEC_PKCS12SafeBagTemplate_OLD[] =
@@ -1103,9 +1098,8 @@ const SEC_ASN1Template SEC_PKCS12PrivateKeyTemplate[] =
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SEC_PKCS12PrivateKey) },
     { SEC_ASN1_INLINE, offsetof(SEC_PKCS12PrivateKey, pvkData),
 	SEC_PKCS12PVKSupportingDataTemplate },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN, 
-        offsetof(SEC_PKCS12PrivateKey, pkcs8data),
-	SEC_ASN1_SUB(SECKEY_PrivateKeyInfoTemplate) },
+    { SEC_ASN1_INLINE, offsetof(SEC_PKCS12PrivateKey, pkcs8data),
+	SECKEY_PrivateKeyInfoTemplate },
     { 0 }
 };
 
@@ -1122,9 +1116,8 @@ const SEC_ASN1Template SEC_PKCS12X509CertCRLTemplate_OLD[] =
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SEC_PKCS12X509CertCRL) },
     { SEC_ASN1_INLINE, offsetof(SEC_PKCS12X509CertCRL, certOrCRL),
 	sec_PKCS7ContentInfoTemplate },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN , 
-        offsetof(SEC_PKCS12X509CertCRL, thumbprint),
-	SEC_ASN1_SUB(sgn_DigestInfoTemplate) },
+    { SEC_ASN1_INLINE, offsetof(SEC_PKCS12X509CertCRL, thumbprint),
+	sgn_DigestInfoTemplate },
     { 0 }
 };
 
@@ -1143,10 +1136,10 @@ const SEC_ASN1Template SEC_PKCS12SDSICertTemplate[] =
     { 0 }
 };
 
-static const SEC_ASN1TemplateChooserPtr sec_pkcs12_cert_crl_chooser_old =
+static SEC_ChooseASN1TemplateFunc sec_pkcs12_cert_crl_chooser_old =
 	sec_pkcs12_choose_cert_crl_type_old;
 
-static const SEC_ASN1TemplateChooserPtr sec_pkcs12_cert_crl_chooser =
+static SEC_ChooseASN1TemplateFunc sec_pkcs12_cert_crl_chooser =
 	sec_pkcs12_choose_cert_crl_type;
 
 const SEC_ASN1Template SEC_PKCS12CertAndCRLTemplate_OLD[] =
@@ -1225,8 +1218,8 @@ const SEC_ASN1Template SEC_PKCS12SecretBagTemplate[] =
 const SEC_ASN1Template SEC_PKCS12MacDataTemplate[] =
 {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SEC_PKCS12PFXItem) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN , offsetof(SEC_PKCS12MacData, safeMac),
-	SEC_ASN1_SUB(sgn_DigestInfoTemplate) },
+    { SEC_ASN1_INLINE, offsetof(SEC_PKCS12MacData, safeMac),
+	sgn_DigestInfoTemplate },
     { SEC_ASN1_BIT_STRING, offsetof(SEC_PKCS12MacData, macSalt) },
     { 0 }
 };
@@ -1247,9 +1240,8 @@ const SEC_ASN1Template SEC_PKCS12PFXItemTemplate_OLD[] =
 {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SEC_PKCS12PFXItem) },
     { SEC_ASN1_OPTIONAL |
-	SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0, 
-	offsetof(SEC_PKCS12PFXItem, old_safeMac), 
-	SEC_ASN1_SUB(sgn_DigestInfoTemplate) },
+	SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 0, 
+	offsetof(SEC_PKCS12PFXItem, old_safeMac), sgn_DigestInfoTemplate },
     { SEC_ASN1_OPTIONAL | SEC_ASN1_BIT_STRING,
 	offsetof(SEC_PKCS12PFXItem, old_macSalt) },
     { SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 1, 

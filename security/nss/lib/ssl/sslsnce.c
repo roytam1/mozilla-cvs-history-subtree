@@ -93,7 +93,6 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
 #include "unix_err.h"
 
 #else /* XP_WIN32 */
@@ -110,7 +109,7 @@
 #include "nspr.h"
 #include "nsslocks.h"
 
-static PZLock *cacheLock;
+static PRLock *cacheLock;
 
 /*
 ** The server session-id cache uses a simple flat cache. The cache is
@@ -963,13 +962,13 @@ IOError(int rv, char *type)
 static void 
 lock_cache(void)
 {
-    PZ_Lock(cacheLock);
+    PR_Lock(cacheLock);
 }
 
 static void 
 unlock_cache(void)
 {
-    PZ_Unlock(cacheLock);
+    PR_Unlock(cacheLock);
 }
 
 /*
@@ -1348,7 +1347,7 @@ InitSessionIDCache(int maxCacheEntries, PRUint32 timeout,
 #endif /* XP_UNIX */
 
     if (!cacheLock)
-	nss_InitLock(&cacheLock, nssILockCache);
+	nss_InitLock(&cacheLock);
     if (!cacheLock) {
 	SET_ERROR_CODE
 	goto loser;
@@ -1402,7 +1401,7 @@ InitSessionIDCache(int maxCacheEntries, PRUint32 timeout,
 	destroyServerCacheSemaphore();
 #endif
     if (cacheLock) {
-	PZ_DestroyLock(cacheLock);
+	PR_DestroyLock(cacheLock);
 	cacheLock = NULL;
     }
     PORT_Free(cfn);
@@ -1697,7 +1696,7 @@ SSL_InheritMPServerSIDCache(const char * envString)
 #endif
 
     if (!cacheLock) {
-	nss_InitLock(&cacheLock, nssILockCache);
+	nss_InitLock(&cacheLock);
 	if (!cacheLock) 
 	    goto loser;
     }

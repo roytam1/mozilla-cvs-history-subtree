@@ -46,7 +46,6 @@
 #include "secoid.h"
 #include "pk11func.h"
 #include "secerr.h"
-#include "sechash.h"
 
 /*
  * NSS_CMSArray_SortByDER - sort array of objects by objects' DER encoding
@@ -196,11 +195,11 @@ NSS_CMSAlgArray_GetIndexByAlgTag(SECAlgorithmID **algorithmArray, SECOidTag algt
     return i;
 }
 
-const SECHashObject *
+SECHashObject *
 NSS_CMSUtil_GetHashObjByAlgID(SECAlgorithmID *algid)
 {
     SECOidData *oiddata;
-    const SECHashObject *digobj;
+    SECHashObject *digobj;
 
     /* here are the algorithms we know */
     oiddata = SECOID_FindOID(&(algid->algorithm));
@@ -209,13 +208,13 @@ NSS_CMSUtil_GetHashObjByAlgID(SECAlgorithmID *algid)
     } else {
 	switch (oiddata->offset) {
 	case SEC_OID_MD2:
-	    digobj = HASH_GetHashObject(HASH_AlgMD2);
+	    digobj = &SECHashObjects[HASH_AlgMD2];
 	    break;
 	case SEC_OID_MD5:
-	    digobj = HASH_GetHashObject(HASH_AlgMD5);
+	    digobj = &SECHashObjects[HASH_AlgMD5];
 	    break;
 	case SEC_OID_SHA1:
-	    digobj = HASH_GetHashObject(HASH_AlgSHA1);
+	    digobj = &SECHashObjects[HASH_AlgSHA1];
 	    break;
 	default:
 	    digobj = NULL;

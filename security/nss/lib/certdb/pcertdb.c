@@ -48,7 +48,7 @@
 
 #include "secasn1.h"
 #include "secerr.h"
-#include "nssilock.h"
+#include "prlock.h"
 #include "prmon.h"
 #include "nsslocks.h"
 #include "base64.h"
@@ -57,21 +57,17 @@
 
 #include "cdbhdl.h"
 
-/* forward declaration */
-CERTCertificate *
-CERT_FindCertByDERCertNoLocking(CERTCertDBHandle *handle, SECItem *derCert);
-
 /*
  * the following functions are wrappers for the db library that implement
  * a global lock to make the database thread safe.
  */
-static PZLock *dbLock = NULL;
+static PRLock *dbLock = NULL;
 
 void
 certdb_InitDBLock(void)
 {
     if (dbLock == NULL) {
-	nss_InitLock(&dbLock, nssILockCertDB);
+	nss_InitLock(&dbLock);
 	PORT_Assert(dbLock != NULL);
     }
 
@@ -85,11 +81,11 @@ certdb_Get(DB *db, DBT *key, DBT *data, unsigned int flags)
     int ret;
     
     PORT_Assert(dbLock != NULL);
-    PZ_Lock(dbLock);
+    PR_Lock(dbLock);
     
     ret = (* db->get)(db, key, data, flags);
 
-    prstat = PZ_Unlock(dbLock);
+    prstat = PR_Unlock(dbLock);
 
     return(ret);
 }
@@ -101,11 +97,11 @@ certdb_Put(DB *db, DBT *key, DBT *data, unsigned int flags)
     int ret;
 
     PORT_Assert(dbLock != NULL);
-    PZ_Lock(dbLock);
+    PR_Lock(dbLock);
 
     ret = (* db->put)(db, key, data, flags);
     
-    prstat = PZ_Unlock(dbLock);
+    prstat = PR_Unlock(dbLock);
 
     return(ret);
 }
@@ -117,11 +113,11 @@ certdb_Sync(DB *db, unsigned int flags)
     int ret;
 
     PORT_Assert(dbLock != NULL);
-    PZ_Lock(dbLock);
+    PR_Lock(dbLock);
 
     ret = (* db->sync)(db, flags);
     
-    prstat = PZ_Unlock(dbLock);
+    prstat = PR_Unlock(dbLock);
 
     return(ret);
 }
@@ -133,11 +129,11 @@ certdb_Del(DB *db, DBT *key, unsigned int flags)
     int ret;
 
     PORT_Assert(dbLock != NULL);
-    PZ_Lock(dbLock);
+    PR_Lock(dbLock);
 
     ret = (* db->del)(db, key, flags);
     
-    prstat = PZ_Unlock(dbLock);
+    prstat = PR_Unlock(dbLock);
 
     return(ret);
 }
@@ -149,11 +145,11 @@ certdb_Seq(DB *db, DBT *key, DBT *data, unsigned int flags)
     int ret;
     
     PORT_Assert(dbLock != NULL);
-    PZ_Lock(dbLock);
+    PR_Lock(dbLock);
     
     ret = (* db->seq)(db, key, data, flags);
 
-    prstat = PZ_Unlock(dbLock);
+    prstat = PR_Unlock(dbLock);
 
     return(ret);
 }
@@ -164,11 +160,11 @@ certdb_Close(DB *db)
     PRStatus prstat;
 
     PORT_Assert(dbLock != NULL);
-    PZ_Lock(dbLock);
+    PR_Lock(dbLock);
 
     (* db->close)(db);
     
-    prstat = PZ_Unlock(dbLock);
+    prstat = PR_Unlock(dbLock);
 
     return;
 }
@@ -1189,8 +1185,7 @@ loser:
 }
 
 static SECStatus
-DecodeDBNicknameEntry(certDBEntryNickname *entry, SECItem *dbentry,
-                      char *nickname)
+DecodeDBNicknameEntry(certDBEntryNickname *entry, SECItem *dbentry)
 {
     /* is record long enough for header? */
     if ( dbentry->len < DB_NICKNAME_ENTRY_HEADER_LEN ) {
@@ -1217,12 +1212,6 @@ DecodeDBNicknameEntry(certDBEntryNickname *entry, SECItem *dbentry,
     PORT_Memcpy(entry->subjectName.data,
 	      &dbentry->data[DB_NICKNAME_ENTRY_HEADER_LEN],
 	      entry->subjectName.len);
-    
-    entry->nickname = (char *)PORT_ArenaAlloc(entry->common.arena, 
-                                              PORT_Strlen(nickname)+1);
-    if ( entry->nickname ) {
-	PORT_Strcpy(entry->nickname, nickname);
-    }
     
     return(SECSuccess);
 
@@ -1374,7 +1363,7 @@ ReadDBNicknameEntry(CERTCertDBHandle *handle, char *nickname)
 	goto loser;
     }
 
-    rv = DecodeDBNicknameEntry(entry, &dbentry, nickname);
+    rv = DecodeDBNicknameEntry(entry, &dbentry);
     if ( rv != SECSuccess ) {
 	goto loser;
     }
@@ -3956,12 +3945,12 @@ UpdateV5DB(CERTCertDBHandle *handle, DB *updatedb)
     SECStatus rv;
     
     updatehandle.permCertDB = updatedb;
-    updatehandle.dbMon = PZ_NewMonitor(nssILockCertDB);
+    updatehandle.dbMon = PR_NewMonitor();
     
     rv = SEC_TraversePermCerts(&updatehandle, updateV5Callback,
 			       (void *)handle);
     
-    PZ_DestroyMonitor(updatehandle.dbMon);
+    PR_DestroyMonitor(updatehandle.dbMon);
     
     return(rv);
 }
@@ -4792,7 +4781,7 @@ CERT_OpenCertDB(CERTCertDBHandle *handle, PRBool readOnly,
 
     certdb_InitDBLock();
     
-    handle->dbMon = PZ_NewMonitor(nssILockCertDB);
+    handle->dbMon = PR_NewMonitor();
     PORT_Assert(handle->dbMon != NULL);
 
     handle->spkDigestInfo = NULL;
@@ -4977,20 +4966,20 @@ NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert, char *nickname,
     PRArenaPool *arena = NULL;
     SECItem keyitem;
     SECStatus rv;
-
-    if ( lockdb ) {
-	CERT_LockDB(handle);
-    }
-
+    
     if ( isperm == PR_FALSE ) {
-	cert = CERT_FindCertByDERCertNoLocking(handle, derCert);
+	cert = CERT_FindCertByDERCert(handle, derCert);
 	if ( cert ) {
-	    goto winner;
+	    return(cert);
 	}
 
 	nickname = NULL;
     }
 
+    if ( lockdb ) {
+	CERT_LockDB(handle);
+    }
+    
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if ( arena == NULL ) {
 	goto loser;
@@ -5057,8 +5046,6 @@ NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert, char *nickname,
     cert->istemp = PR_TRUE;
     
     PORT_FreeArena(arena, PR_FALSE);
-
-winner:
 
     if ( lockdb ) {
 	CERT_UnlockDB(handle);
@@ -5489,37 +5476,6 @@ loser:
 }
 
 /*
- * look for the given DER certificate in the database
- */
-CERTCertificate *
-CERT_FindCertByDERCertNoLocking(CERTCertDBHandle *handle, SECItem *derCert)
-{
-    PRArenaPool *arena;
-    SECItem certKey;
-    SECStatus rv;
-    CERTCertificate *cert = NULL;
-    
-    /* create a scratch arena */
-    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    if ( arena == NULL ) {
-	return(NULL);
-    }
-    
-    /* extract the database key from the cert */
-    rv = CERT_KeyFromDERCert(arena, derCert, &certKey);
-    if ( rv != SECSuccess ) {
-	goto loser;
-    }
-
-    /* find the certificate */
-    cert = CERT_FindCertByKeyNoLocking(handle, &certKey);
-    
-loser:
-    PORT_FreeArena(arena, PR_FALSE);
-    return(cert);
-}
-
-/*
  * The following is bunch of types and code to allow looking up a certificate
  * by a hash of its subject public key.  Because the words "hash" and "key"
  * are overloaded and thus terribly confusing, I tried to disambiguate things.
@@ -5655,10 +5611,10 @@ InitDBspkDigestInfo(CERTCertDBHandle *handle)
     return(SECSuccess);
 }
 
-static const SECHashObject *
+static SECHashObject *
 OidTagToRawDigestObject(SECOidTag digestAlg)
 {
-    const SECHashObject *rawDigestObject;
+    SECHashObject *rawDigestObject;
 
     switch (digestAlg) {
       case SEC_OID_MD2:
@@ -5689,7 +5645,7 @@ SECItem *
 CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
 			   SECOidTag digestAlg, SECItem *fill)
 {
-    const SECHashObject *digestObject;
+    SECHashObject *digestObject;
     void *digestContext;
     SECItem *result = NULL;
     void *mark = NULL;
@@ -6962,9 +6918,7 @@ CERT_FindSMimeProfile(CERTCertificate *cert)
     entry = ReadDBSMimeEntry(cert->dbhandle, cert->emailAddr);
 
     if ( entry ) {
-	/*  May not be for this cert...  */
-	if (SECITEM_ItemsAreEqual(&cert->derSubject, &entry->subjectName))
-	    retitem = SECITEM_DupItem(&entry->smimeOptions);
+	retitem = SECITEM_DupItem(&entry->smimeOptions);
 	DestroyDBEntry((certDBEntry *)entry);
     }
 

@@ -35,9 +35,7 @@
  # $Id$
  */
 
-#include <ctype.h>
 #include "seccomon.h"
-#include "prinit.h"
 #include "prprf.h"
 #include "prmem.h"
 #include "cert.h"
@@ -49,7 +47,6 @@
 #include "nss.h"
 #include "secrng.h"
 #include "cdbhdl.h"	/* ??? */
-#include "pk11func.h"
 
 
 
@@ -75,10 +72,10 @@ nss_certdb_name_cb(void *arg, int dbVersion)
 	break;
     }
 
-    return PR_smprintf("%scert%s.db", configdir, dbver);
+    return PR_smprintf("%s/cert%s.db", configdir, dbver);
 }
     
-static char *
+char *
 nss_keydb_name_cb(void *arg, int dbVersion)
 {
     const char *configdir = (const char *)arg;
@@ -94,28 +91,24 @@ nss_keydb_name_cb(void *arg, int dbVersion)
 	break;
     }
 
-    return PR_smprintf("%skey%s.db", configdir, dbver);
+    return PR_smprintf("%s/key%s.db", configdir, dbver);
 }
 
-static SECStatus 
-nss_OpenCertDB(const char * configdir,  const char *prefix, PRBool readOnly)
+SECStatus 
+nss_OpenCertDB(const char * configdir, PRBool readOnly)
 {
     CERTCertDBHandle *certdb;
     SECStatus         status;
-    char * name = NULL;
 
     certdb = CERT_GetDefaultCertDB();
     if (certdb)
     	return SECSuccess;	/* idempotency */
 
-    name = PR_smprintf("%s/%s",configdir,prefix);
-    if (name == NULL) goto loser;
-
     certdb = (CERTCertDBHandle*)PORT_ZAlloc(sizeof(CERTCertDBHandle));
     if (certdb == NULL) 
     	goto loser;
 
-    status = CERT_OpenCertDB(certdb, readOnly, nss_certdb_name_cb, (void *)name);
+    status = CERT_OpenCertDB(certdb, readOnly, nss_certdb_name_cb, (void *)configdir);
     if (status == SECSuccess)
 	CERT_SetDefaultCertDB(certdb);
     else {
@@ -123,31 +116,26 @@ nss_OpenCertDB(const char * configdir,  const char *prefix, PRBool readOnly)
 loser: 
 	status = SECFailure;
     }
-    if (name) PORT_Free(name);
     return status;
 }
 
-static SECStatus
-nss_OpenKeyDB(const char * configdir, const char *prefix, PRBool readOnly)
+SECStatus
+nss_OpenKeyDB(const char * configdir, PRBool readOnly)
 {
     SECKEYKeyDBHandle *keydb;
-    char * name = NULL;
 
     keydb = SECKEY_GetDefaultKeyDB();
     if (keydb)
     	return SECSuccess;
-    name = PR_smprintf("%s/%s",configdir,prefix);
-    if (name == NULL) 
-	return SECFailure;
-    keydb = SECKEY_OpenKeyDB(readOnly, nss_keydb_name_cb, (void *)name);
+    keydb = SECKEY_OpenKeyDB(readOnly, nss_keydb_name_cb, (void *)configdir);
     if (keydb == NULL)
 	return SECFailure;
     SECKEY_SetDefaultKeyDB(keydb);
     return SECSuccess;
 }
 
-static SECStatus
-nss_OpenSecModDB(const char * configdir,const char *dbname)
+SECStatus
+nss_OpenSecModDB(const char * configdir)
 {
     static char *secmodname;
 
@@ -157,78 +145,33 @@ nss_OpenSecModDB(const char * configdir,const char *dbname)
      */
     if (secmodname)
     	return SECSuccess;
-    secmodname = PR_smprintf("%s/%s", configdir,dbname);
+    secmodname = PR_smprintf("%s/secmod.db", configdir);
     if (secmodname == NULL)
 	return SECFailure;
     SECMOD_init(secmodname);
     return SECSuccess;
 }
 
-static CERTCertDBHandle certhandle = { 0 };
-
-static SECStatus
-nss_OpenVolatileCertDB() {
-      SECStatus rv = SECSuccess;
-      /* now we want to verify the signature */
-      /*  Initialize the cert code */
-      rv = CERT_OpenVolatileCertDB(&certhandle);
-      if (rv != SECSuccess) {
-	   return rv;
-      }
-      CERT_SetDefaultCertDB(&certhandle);
-      return rv;
-}
-
-static SECStatus
-nss_OpenVolatileSecModDB() {
-      SECStatus rv = SECSuccess;
-      SECMODModule *module;
-
-      PK11_InitSlotLists();
-
-      module = SECMOD_NewInternal();
-      if (module == NULL) {
-	   return SECFailure;
-      }
-      rv = SECMOD_LoadModule(module);
-      if (rv != SECSuccess) {
-	   return rv;
-      }
-
-      SECMOD_SetInternalModule(module);
-      return rv;
-}
-
-static SECStatus
-nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix, const char *secmodName, PRBool readOnly, PRBool nodb)
+SECStatus
+nss_Init(const char *configdir, PRBool readOnly)
 {
     SECStatus status;
     SECStatus rv      = SECFailure;
 
-    status = RNG_RNGInit();     	/* initialize random number generator */
-    if (status != SECSuccess)
-	goto loser;
+    RNG_RNGInit();     		/* initialize random number generator */
     RNG_SystemInfoForRNG();
 
-    status = nss_OpenCertDB(configdir, certPrefix, readOnly);
-    if (status != SECSuccess) {
-	if (!nodb) goto loser;
-	status = nss_OpenVolatileCertDB();
-	if (status != SECSuccess) {
-	    goto loser;
-	}
-    }
-
-    status = nss_OpenKeyDB(configdir, keyPrefix, readOnly);
-    if (status != SECSuccess) {
-	if (!nodb) goto loser;
-    }
-
-
-    status = nss_OpenSecModDB(configdir, secmodName);
-    if (status != SECSuccess) {
+    status = nss_OpenCertDB(configdir, readOnly);
+    if (status != SECSuccess)
 	goto loser;
-    }
+
+    status = nss_OpenKeyDB(configdir, readOnly);
+    if (status != SECSuccess)
+	goto loser;
+
+    status = nss_OpenSecModDB(configdir);
+    if (status != SECSuccess)
+	goto loser;
 
     rv = SECSuccess;
 
@@ -241,20 +184,13 @@ loser:
 SECStatus
 NSS_Init(const char *configdir)
 {
-    return nss_Init(configdir, "", "", "secmod.db", PR_TRUE, PR_FALSE);
+    return nss_Init(configdir, PR_TRUE);
 }
 
 SECStatus
 NSS_InitReadWrite(const char *configdir)
 {
-    return nss_Init(configdir, "", "", "secmod.db", PR_FALSE, PR_FALSE);
-}
-
-SECStatus
-NSS_Initialize(const char *configdir, const char *certPrefix, const char *keyPrefix, const char *secmodName, PRBool readonly)
-{
-    return nss_Init(configdir, certPrefix, keyPrefix, 
-						secmodName, readonly, PR_TRUE);
+    return nss_Init(configdir, PR_FALSE);
 }
 
 /*
@@ -264,22 +200,32 @@ SECStatus
 NSS_NoDB_Init(const char * configdir)
 {
           
+      CERTCertDBHandle certhandle = { 0 };
       SECStatus rv = SECSuccess;
       SECMODModule *module;
 
-     
-      rv = RNG_RNGInit();
+      /* now we want to verify the signature */
+      /*  Initialize the cert code */
+      rv = CERT_OpenVolatileCertDB(&certhandle);
       if (rv != SECSuccess) {
 	   return rv;
       }
+      CERT_SetDefaultCertDB(&certhandle);
+
+      RNG_RNGInit();
       RNG_SystemInfoForRNG();
+      PK11_InitSlotLists();
 
-      rv = nss_OpenVolatileCertDB();
+      module = SECMOD_NewInternal();
+      if (module == NULL) {
+	   return SECFailure;
+      }
+      rv = SECMOD_LoadModule(module);
       if (rv != SECSuccess) {
 	   return rv;
       }
-      rv = nss_OpenVolatileSecModDB();
 
+      SECMOD_SetInternalModule(module);
       return rv;
 }
 
@@ -303,52 +249,3 @@ NSS_Shutdown(void)
      */
 }
 
-PRBool
-NSS_VersionCheck(const char *importedVersion)
-{
-    /*
-     * This is the secret handshake algorithm.
-     *
-     * This release has a simple version compatibility
-     * check algorithm.  This release is not backward
-     * compatible with previous major releases.  It is
-     * not compatible with future major, minor, or
-     * patch releases.
-     */
-    int vmajor = 0, vminor = 0, vpatch = 0;
-    const char *ptr = importedVersion;
-
-    while (isdigit(*ptr)) {
-        vmajor = 10 * vmajor + *ptr - '0';
-        ptr++;
-    }
-    if (*ptr == '.') {
-        ptr++;
-        while (isdigit(*ptr)) {
-            vminor = 10 * vminor + *ptr - '0';
-            ptr++;
-        }
-        if (*ptr == '.') {
-            ptr++;
-            while (isdigit(*ptr)) {
-                vpatch = 10 * vpatch + *ptr - '0';
-                ptr++;
-            }
-        }
-    }
-
-    if (vmajor != NSS_VMAJOR) {
-        return PR_FALSE;
-    }
-    if (vmajor == NSS_VMAJOR && vminor > NSS_VMINOR) {
-        return PR_FALSE;
-    }
-    if (vmajor == NSS_VMAJOR && vminor == NSS_VMINOR && vpatch > NSS_VPATCH) {
-        return PR_FALSE;
-    }
-    /* Check dependent libraries */
-    if (PR_VersionCheck(PR_VERSION) == PR_FALSE) {
-        return PR_FALSE;
-    }
-    return PR_TRUE;
-}

@@ -73,7 +73,7 @@ null_hash_destroy_context(void *v, PRBool b)
 }
 
 
-const SECHashObject SECRawHashObjects[] = {
+SECHashObject SECRawHashObjects[] = {
   { 0,
     (void * (*)(void)) null_hash_new_context,
     (void * (*)(void *)) null_hash_clone_context,

@@ -36,7 +36,6 @@
 #include <plstr.h>
 #include "secrng.h"
 #include "certdb.h" /* for CERT_DB_FILE_VERSION */
-#include "nss.h"
 
 static void install_error(char *message);
 static char* PR_fgets(char *buf, int size, PRFileDesc *file);
@@ -81,7 +80,6 @@ typedef enum {
 	CIPHERS_ARG,
 	CREATE_ARG,
 	DBDIR_ARG,
-	DBPREFIX_ARG,
 	DEFAULT_ARG,
 	DELETE_ARG,
 	DISABLE_ARG,
@@ -110,7 +108,6 @@ static char *optionStrings[] = {
 	"-ciphers",
 	"-create",
 	"-dbdir",
-	"-dbprefix",
 	"-default",
 	"-delete",
 	"-disable",
@@ -146,7 +143,6 @@ static char* slotName = NULL;
 static char* tokenName = NULL;
 static char* libFile = NULL;
 static char* dbdir = NULL;
-static char* dbprefix = "";
 static char* mechanisms = NULL;
 static char* ciphers = NULL;
 static char* fipsArg = NULL;
@@ -243,13 +239,6 @@ parse_args(int argc, char *argv[])
 				return OPTION_NEEDS_ARG_ERR;
 			}
 			dbdir = argv[i];
-			break;
-		case DBPREFIX_ARG:
-			if(TRY_INC(i, argc)) {
-				PR_fprintf(PR_STDERR, errStrings[OPTION_NEEDS_ARG_ERR], arg);
-				return OPTION_NEEDS_ARG_ERR;
-			}
-			dbprefix = argv[i];
 			break;
 		case UNDEFAULT_ARG:
 		case DEFAULT_ARG:
@@ -497,11 +486,8 @@ verify_params()
 static Error
 init_crypto(PRBool create, PRBool readOnly)
 {
-	char *dir;
-#ifdef notdef
-	char *moddbname=NULL, *keydbname, *certdbname;
+	char *moddbname=NULL, *dir, *keydbname, *certdbname;
 	PRBool free_moddbname = PR_FALSE;
-#endif
 	Error retval;
 
 	if(SECU_ConfigDirectory(dbdir)[0] == '\0') {
@@ -509,7 +495,10 @@ init_crypto(PRBool create, PRBool readOnly)
 		retval=NO_DBDIR_ERR;
 		goto loser;
 	}
+	moddbname = SECU_SECModDBName(); /* this changes later in the function */
 	dir = SECU_ConfigDirectory(NULL);
+	keydbname = SECU_KeyDBNameCallback(NULL, PRIVATE_KEY_DB_FILE_VERSION);
+	certdbname = SECU_CertDBNameCallback(NULL, CERT_DB_FILE_VERSION);
 
 	/* Make sure db directory exists and is readable */
 	if(PR_Access(dir, PR_ACCESS_EXISTS) != PR_SUCCESS) {
@@ -526,7 +515,6 @@ init_crypto(PRBool create, PRBool readOnly)
 	if(create) {
 		/* Make sure dbs don't already exist, and the directory is
 			writeable */
-#ifdef notdef
 		if(PR_Access(moddbname, PR_ACCESS_EXISTS)==PR_SUCCESS) {
 			PR_fprintf(PR_STDERR, errStrings[FILE_ALREADY_EXISTS_ERR],
 			  moddbname);
@@ -540,15 +528,12 @@ init_crypto(PRBool create, PRBool readOnly)
 			PR_fprintf(PR_STDERR, errStrings[FILE_ALREADY_EXISTS_ERR],certdbname);
 			retval=FILE_ALREADY_EXISTS_ERR;
 			goto loser;
-		} else 
-#endif
-		if(PR_Access(dir, PR_ACCESS_WRITE_OK) != PR_SUCCESS) {
+		} else if(PR_Access(dir, PR_ACCESS_WRITE_OK) != PR_SUCCESS) {
 			PR_fprintf(PR_STDERR, errStrings[DIR_NOT_WRITEABLE_ERR], dir);
 			retval=DIR_NOT_WRITEABLE_ERR;
 			goto loser;
 		}
 	} else {
-#ifdef notdef
 		/* Make sure dbs are readable and writeable */
 		if(PR_Access(moddbname, PR_ACCESS_READ_OK) != PR_SUCCESS) {
 #ifndef XP_PC
@@ -579,11 +564,9 @@ init_crypto(PRBool create, PRBool readOnly)
 				goto loser;
 			}
 		}
-#endif
 
 		/* Check for write access if we'll be making changes */
 		if( !readOnly ) {
-#ifdef notdef
 			if(PR_Access(moddbname, PR_ACCESS_WRITE_OK) != PR_SUCCESS) {
 				PR_fprintf(PR_STDERR, errStrings[FILE_NOT_WRITEABLE_ERR],
 				  moddbname);
@@ -606,23 +589,50 @@ init_crypto(PRBool create, PRBool readOnly)
 					goto loser;
 				}
 			}
-#endif
 		}
 		PR_fprintf(PR_STDOUT, msgStrings[USING_DBDIR_MSG],
 		  SECU_ConfigDirectory(NULL));
 	}
+	SEC_Init();
 
 	/* Open/create key database */
-	NSS_Initialize(SECU_ConfigDirectory(NULL), dbprefix, dbprefix,
-	               "secmod.db", readOnly);
+	RNG_RNGInit(); /* This is required before SECU_OpenKeyDB */
+	RNG_SystemInfoForRNG();
+	if(!nocertdb) {
+		if(create) PR_fprintf(PR_STDOUT, msgStrings[CREATING_DB_MSG],
+		  keydbname);
+		if(SECU_OpenKeyDB(readOnly) == NULL) {
+			PR_fprintf(PR_STDERR, "\n");
+			PR_fprintf(PR_STDERR, errStrings[DB_ACCESS_ERR], keydbname);
+			retval=DB_ACCESS_ERR;
+			goto loser;
+		}
+		if(create) PR_fprintf(PR_STDOUT, msgStrings[DONE_MSG]);
+	}
+
+	/* Open/create cert database */
+	if(!nocertdb) {
+		if(create) PR_fprintf(PR_STDOUT, msgStrings[CREATING_DB_MSG],
+		  certdbname);
+		if(SECU_OpenCertDB(readOnly) == NULL) {
+			PR_fprintf(PR_STDERR, "\n");
+			PR_fprintf(PR_STDERR, errStrings[DB_ACCESS_ERR], certdbname);
+			retval=DB_ACCESS_ERR;
+			goto loser;
+		}
+		if(create) PR_fprintf(PR_STDOUT, msgStrings[DONE_MSG]);
+	}
+
+	/* Open/create module database */
+	if(create) PR_fprintf(PR_STDOUT, msgStrings[CREATING_DB_MSG], moddbname);
+	SECMOD_init(moddbname);
+	if(create) PR_fprintf(PR_STDOUT, msgStrings[DONE_MSG]);
 
 	retval=SUCCESS;
 loser:
-#ifdef notdef
 	if(free_moddbname) {
 		PR_Free(moddbname);
 	}
-#endif
 	return retval;
 }
 
@@ -677,7 +687,6 @@ usage()
 "                             OPTIONS\n"
 "---------------------------------------------------------------------------\n"
 "-dbdir DIR                       Directory DIR contains the security databases\n"
-"-dbprefix prefix                 Prefix for the security databases\n"
 "-nocertdb                        Do not load certificate or key databases. No\n"
 "                                 verification will be performed on JAR files.\n"
 "---------------------------------------------------------------------------\n"

@@ -637,7 +637,7 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     }
 
     /* make sure the key exchange is recognized */
-    if ((kea >= kt_kea_size) || (kea < kt_null)) {
+    if ((kea > kt_kea_size) || (kea < kt_null)) {
 	PORT_SetError(SEC_ERROR_UNSUPPORTED_KEYALG);
 	return SECFailure;
     }
@@ -912,6 +912,65 @@ ssl_SecureConnect(sslSocket *ss, const PRNetAddr *sa)
     }
     
     return rv;
+}
+
+int
+ssl_SecureSocksConnect(sslSocket *ss, const PRNetAddr *sa)
+{
+    int rv;
+
+    PORT_Assert((ss->socks != 0) && (ss->sec != 0));
+
+    /* First connect to socks daemon */
+    rv = ssl_SocksConnect(ss, sa);
+    if (rv < 0) {
+	return rv;
+    }
+
+    if ( ss->handshakeAsServer ) {
+	ss->securityHandshake = ssl2_BeginServerHandshake;
+    } else {
+	ss->securityHandshake = ssl2_BeginClientHandshake;
+    }
+    
+    return 0;
+}
+
+PRFileDesc *
+ssl_SecureSocksAccept(sslSocket *ss, PRNetAddr *addr)
+{
+#if 0
+    sslSocket *ns;
+    int rv;
+    PRFileDesc *newfd, *fd;
+
+    newfd = ssl_SocksAccept(ss, addr);
+    if (newfd == NULL) {
+	return newfd;
+    }
+
+    /* Create new socket */
+    ns = ssl_FindSocket(newfd);
+    PORT_Assert(ns != NULL);
+
+    /* Make an NSPR socket to give back to app */
+    fd = ssl_NewPRSocket(ns, newfd);
+    if (fd == NULL) {
+	ssl_FreeSocket(ns);
+	PR_Close(newfd);
+	return NULL;
+    }
+
+    if ( ns->handshakeAsClient ) {
+	ns->handshake = ssl2_BeginClientHandshake;
+    } else {
+	ns->handshake = ssl2_BeginServerHandshake;
+    }
+
+    return fd;
+#else
+    return NULL;
+#endif
 }
 
 int

@@ -1,35 +1,19 @@
+#
+# The contents of this file are subject to the Netscape Public License
+# Version 1.1 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
 # 
-# The contents of this file are subject to the Mozilla Public
-# License Version 1.1 (the "License"); you may not use this file
-# except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/MPL/
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
 # 
-# Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# rights and limitations under the License.
-# 
-# The Original Code is the Netscape Portable Runtime (NSPR).
-# 
-# The Initial Developer of the Original Code is Netscape
-# Communications Corporation.  Portions created by Netscape are 
-# Copyright (C) 1998-2000 Netscape Communications Corporation.  All
-# Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the
-# terms of the GNU General Public License Version 2 or later (the
-# "GPL"), in which case the provisions of the GPL are applicable 
-# instead of those above.  If you wish to allow use of your 
-# version of this file only under the terms of the GPL and not to
-# allow others to use your version of this file under the MPL,
-# indicate your decision by deleting the provisions above and
-# replace them with the notice and other provisions required by
-# the GPL.  If you do not delete the provisions above, a recipient
-# may use your version of this file under either the MPL or the
-# GPL.
-# 
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
+#
 
 #! gmake
 
@@ -55,12 +39,10 @@ endif
 CSRCS =             \
 	accept.c		\
 	acceptread.c	\
-	acceptreademu.c	\
 	addrstr.c		\
 	affinity.c		\
 	alarm.c			\
 	anonfm.c		\
-	append.c		\
 	atomic.c		\
 	attach.c		\
 	bigfile.c		\
@@ -74,9 +56,7 @@ CSRCS =             \
 	dceemu.c		\
 	dlltest.c		\
 	dtoa.c			\
-	env.c           \
 	errcodes.c		\
-	errset.c		\
 	exit.c  		\
 	fdcach.c		\
 	fileio.c		\
@@ -89,7 +69,6 @@ CSRCS =             \
 	initclk.c		\
 	inrval.c		\
 	instrumt.c      \
-	intrio.c        \
 	intrupt.c       \
 	io_timeout.c    \
 	ioconthr.c      \
@@ -116,7 +95,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c        \
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\
@@ -125,12 +103,9 @@ CSRCS =             \
 	op_nofil.c		\
 	openfile.c		\
 	parent.c    	\
-	peek.c    		\
 	perf.c    		\
 	pipeping.c		\
-	pipeping2.c		\
 	pipepong.c		\
-	pipepong2.c		\
 	pipeself.c		\
 	poll_er.c		\
 	poll_nm.c		\
@@ -139,11 +114,9 @@ CSRCS =             \
 	prftest.c		\
 	prftest1.c		\
 	prftest2.c		\
-	primblok.c		\
 	priotest.c		\
 	provider.c		\
 	prpoll.c		\
-	prpollml.c		\
 	ranfile.c       \
 	randseed.c      \
 	rwlocktest.c    \
@@ -152,7 +125,6 @@ CSRCS =             \
 	selct_nm.c	    \
 	selct_to.c	    \
 	select2.c  		\
-	selintr.c  		\
 	sem.c 	  		\
 	sema.c 	  		\
 	semaerr.c 		\

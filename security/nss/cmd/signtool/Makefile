@@ -52,16 +52,20 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
 
-include ../platlibs.mk
+include $(CORE_DEPTH)/security/cmd/platlibs.mk
 
 # can't do this in manifest.mn because OS_ARCH isn't defined there.
 ifeq ($(OS_ARCH), WINNT)
 
-EXTRA_LIBS += \
+EXTRA_LIBS = \
 	$(DIST)/lib/jar.lib \
 	$(DIST)/lib/zlib.lib \
 	$(NULL)
 
+#OS_LIBS += \
+#	wsock32.lib \
+#	winmm.lib \
+#	$(NULL)
 else
 
 EXTRA_LIBS += \
@@ -83,5 +87,3 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
-
-include ../platrules.mk

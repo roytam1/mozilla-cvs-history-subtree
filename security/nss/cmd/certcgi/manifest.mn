@@ -46,5 +46,3 @@ CSRCS = certcgi.c
 
 PROGRAM	= certcgi
 
-USE_STATIC_LIBS = 1
-

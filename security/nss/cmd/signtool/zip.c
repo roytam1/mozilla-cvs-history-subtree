@@ -34,7 +34,6 @@
 #include "signtool.h"
 #include "zip.h"
 #include "zlib.h"
-#include "prmem.h"
 
 static void inttox (int in, char *out);
 static void longtox (long in, char *out);
@@ -158,7 +157,7 @@ JzipAdd(char *fullname, char *filename, ZIPfile *zipfile, int compression_level)
 	PRFileDesc *readfp;
 	PRFileDesc *zipfp;
 	int num;
-	Bytef inbuf[BUFSIZ], outbuf[BUFSIZ];
+	char inbuf[BUFSIZ], outbuf[BUFSIZ];
 	unsigned long crc;
 	z_stream zstream;
 	int err;
@@ -403,9 +402,9 @@ JzipAdd(char *fullname, char *filename, ZIPfile *zipfile, int compression_level)
 	}
 
 	/* If there's any output left, write it out. */
-	if(zstream.next_out != outbuf) {
-		if( PR_Write(zipfp, outbuf, zstream.next_out-outbuf) < 
-			zstream.next_out-outbuf) {
+	if((char*)zstream.next_out != outbuf) {
+		if( PR_Write(zipfp, outbuf, (char*)zstream.next_out-outbuf) < 
+			(char*)zstream.next_out-outbuf) {
 			char *nsprErr;
 			if(PR_GetErrorTextLength()) {
 				nsprErr = PR_Malloc(PR_GetErrorTextLength());

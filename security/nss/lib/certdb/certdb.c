@@ -37,7 +37,7 @@
  * $Id$
  */
 
-#include "nssilock.h"
+#include "prlock.h"
 #include "prmon.h"
 #include "prtime.h"
 #include "cert.h"
@@ -207,7 +207,7 @@ const SEC_ASN1Template CERT_CertKeyTemplate[] = {
     { 0 }
 };
 
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_CertificateTemplate)
+
 
 SECStatus
 CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer, SECItem *sn,
@@ -1175,7 +1175,7 @@ CERT_OpenVolatileCertDB(CERTCertDBHandle *handle)
 	goto loser;
     }
 
-    handle->dbMon = PZ_NewMonitor(nssILockCertDB);
+    handle->dbMon = PR_NewMonitor();
     PORT_Assert(handle->dbMon != NULL);
 
     handle->spkDigestInfo = NULL;
@@ -2007,31 +2007,6 @@ loser:
     return(SECFailure);
 }
 
-SECStatus
-CERT_AddCertToListHead(CERTCertList *certs, CERTCertificate *cert)
-{
-    CERTCertListNode *node;
-    CERTCertListNode *head;
-    
-    head = CERT_LIST_HEAD(certs);
-
-    if (head == NULL) return CERT_AddCertToListTail(certs,cert);
-
-    node = (CERTCertListNode *)PORT_ArenaZAlloc(certs->arena,
-						sizeof(CERTCertListNode));
-    if ( node == NULL ) {
-	goto loser;
-    }
-    
-    PR_INSERT_BEFORE(&node->links, &head->links);
-    /* certs->count++; */
-    node->cert = cert;
-    return(SECSuccess);
-    
-loser:
-    return(SECFailure);
-}
-
 /*
  * Sort callback function to determine if cert a is newer than cert b.
  * Not valid certs are considered older than valid certs.
@@ -2237,7 +2212,7 @@ loser:
 void
 CERT_LockDB(CERTCertDBHandle *handle)
 {
-    PZ_EnterMonitor(handle->dbMon);
+    PR_EnterMonitor(handle->dbMon);
     return;
 }
 
@@ -2249,14 +2224,14 @@ CERT_UnlockDB(CERTCertDBHandle *handle)
 {
     PRStatus prstat;
     
-    prstat = PZ_ExitMonitor(handle->dbMon);
+    prstat = PR_ExitMonitor(handle->dbMon);
     
     PORT_Assert(prstat == PR_SUCCESS);
     
     return;
 }
 
-static PZLock *certRefCountLock = NULL;
+static PRLock *certRefCountLock = NULL;
 
 /*
  * Acquire the cert reference count lock
@@ -2268,11 +2243,11 @@ void
 CERT_LockCertRefCount(CERTCertificate *cert)
 {
     if ( certRefCountLock == NULL ) {
-	nss_InitLock(&certRefCountLock, nssILockRefLock);
+	nss_InitLock(&certRefCountLock);
 	PORT_Assert(certRefCountLock != NULL);
     }
     
-    PZ_Lock(certRefCountLock);
+    PR_Lock(certRefCountLock);
     return;
 }
 
@@ -2286,14 +2261,14 @@ CERT_UnlockCertRefCount(CERTCertificate *cert)
 
     PORT_Assert(certRefCountLock != NULL);
     
-    prstat = PZ_Unlock(certRefCountLock);
+    prstat = PR_Unlock(certRefCountLock);
     
     PORT_Assert(prstat == PR_SUCCESS);
 
     return;
 }
 
-static PZLock *certTrustLock = NULL;
+static PRLock *certTrustLock = NULL;
 
 /*
  * Acquire the cert trust lock
@@ -2305,11 +2280,11 @@ void
 CERT_LockCertTrust(CERTCertificate *cert)
 {
     if ( certTrustLock == NULL ) {
-	nss_InitLock(&certTrustLock, nssILockCertDB);
+	nss_InitLock(&certTrustLock);
 	PORT_Assert(certTrustLock != NULL);
     }
     
-    PZ_Lock(certTrustLock);
+    PR_Lock(certTrustLock);
     return;
 }
 
@@ -2323,7 +2298,7 @@ CERT_UnlockCertTrust(CERTCertificate *cert)
 
     PORT_Assert(certTrustLock != NULL);
     
-    prstat = PZ_Unlock(certTrustLock);
+    prstat = PR_Unlock(certTrustLock);
     
     PORT_Assert(prstat == PR_SUCCESS);
 

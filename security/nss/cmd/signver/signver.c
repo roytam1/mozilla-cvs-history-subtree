@@ -33,9 +33,9 @@
 
 #include "secutil.h"
 #include "secmod.h"
+#include "cdbhdl.h"
 #include "cert.h"
 #include "secoid.h"
-#include "nss.h"
 
 /* NSPR 2.0 header files */
 #include "prinit.h"
@@ -44,7 +44,6 @@
 #include "prmem.h"
 /* Portable layer header files */
 #include "plstr.h"
-#include "sechash.h"	/* for HASH_GetHashObject() */
 
 static int debugInfo = 0;
 
@@ -119,10 +118,10 @@ DigestData (unsigned char *digest, unsigned char *data,
 			unsigned int *len, unsigned int maxLen,
 			HASH_HashType hashType)
 {
-	const SECHashObject *hashObj;
+	SECHashObject *hashObj;
 	void *hashcx;
 
-	hashObj = HASH_GetHashObject(hashType);
+	hashObj = &SECHashObjects[hashType];
 	hashcx = (* hashObj->create)();
 	if (hashcx == NULL)
 	return -1;
@@ -302,7 +301,8 @@ int main(int argc, char **argv)
 	} 
 
 	PR_SetError(0, 0); /* PR_Init("pp", 1, 1, 0);*/
-	NSS_Init(SECU_ConfigDirectory(NULL));
+	SECU_PKCS11Init(PR_FALSE);
+	SEC_Init();
 
 	rv = SECU_ReadDERFromFile(&der, signFile, 
 	                          signver.options[opt_ASCII].activated);
@@ -348,6 +348,8 @@ int main(int argc, char **argv)
 					rv = SECU_FileToItem(&data, dataFile);
 					dataToVerify = data.data;
 					if (dataToVerify) {
+						SECKEYKeyDBHandle *keyHandle;
+						CERTCertDBHandle *certHandle;
 						                   /*certUsageObjectSigner;*/
 						SECCertUsage usage = certUsageEmailSigner; 
 						
@@ -373,6 +375,19 @@ int main(int argc, char **argv)
 						}
 #endif
 
+						keyHandle = SECKEY_GetDefaultKeyDB();
+						if (keyHandle == NULL) {
+							PR_fprintf(PR_STDERR, ": %s\n", SECU_ErrorString((int16)PORT_GetError()));
+							return -1;
+						}
+
+						/* open cert database */
+						certHandle = SECU_OpenCertDB(PR_TRUE);
+						if (certHandle == NULL) {
+							PR_fprintf(PR_STDERR, "%s Problem open the cert dbase\n",
+										progName);
+							return -1;
+						}
 
 						if (signver.commands[cmd_VerifySignedObj].activated)
 							fprintf(outFile, "signatureValid=");

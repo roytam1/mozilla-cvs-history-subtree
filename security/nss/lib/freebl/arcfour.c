@@ -44,12 +44,17 @@
 #define CONVERT_TO_WORDS
 #endif
 
+/* this case is failing for 3.1.  See bug #55234.  */
+#if (defined(SOLARIS) || defined(HPUX)) && defined(NSS_USE_64)
+#undef CONVERT_TO_WORDS
+#endif
+
 #if defined(AIX) || defined(OSF1)
 /* Treat array variables as longs, not bytes */
 #define USE_LONG
 #endif
 
-#if defined(NSS_USE_HYBRID) && !defined(SOLARIS) && !defined(NSS_USE_64) 
+#ifdef NSS_USE_64
 typedef unsigned long long WORD;
 #else
 typedef unsigned long WORD;
@@ -63,8 +68,6 @@ typedef PRUint8 Stype;
 #endif
 
 #define ARCFOUR_STATE_SIZE 256
-
-#define MASK1BYTE (WORD)(0xff)
 
 #define SWAP(a, b) \
 	tmp = a; \
@@ -185,11 +188,10 @@ RC4_DestroyContext(RC4Context *cx, PRBool freeit)
 	cx->S[tmpj] = tmpSi; \
 	t = tmpSi + tmpSj;
 
-#ifdef CONVERT_TO_WORDS
 /*
  * Straight RC4 op.  No optimization.
  */
-static SECStatus 
+SECStatus 
 rc4_no_opt(RC4Context *cx, unsigned char *output,
            unsigned int *outputLen, unsigned int maxOutputLen,
            const unsigned char *input, unsigned int inputLen)
@@ -198,7 +200,7 @@ rc4_no_opt(RC4Context *cx, unsigned char *output,
 	Stype tmpSi, tmpSj;
 	register PRUint8 tmpi = cx->i;
 	register PRUint8 tmpj = cx->j;
-	unsigned int index;
+	int index;
 	PORT_Assert(maxOutputLen >= inputLen);
 	if (maxOutputLen < inputLen) {
 		PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -215,13 +217,11 @@ rc4_no_opt(RC4Context *cx, unsigned char *output,
 	cx->j = tmpj;
 	return SECSuccess;
 }
-#endif
 
-#ifndef CONVERT_TO_WORDS
 /*
  * Byte-at-a-time RC4, unrolling the loop into 8 pieces.
  */
-static SECStatus 
+SECStatus 
 rc4_unrolled(RC4Context *cx, unsigned char *output,
              unsigned int *outputLen, unsigned int maxOutputLen,
              const unsigned char *input, unsigned int inputLen)
@@ -290,7 +290,6 @@ rc4_unrolled(RC4Context *cx, unsigned char *output,
 	*outputLen = inputLen;
 	return SECSuccess;
 }
-#endif
 
 #ifdef IS_LITTLE_ENDIAN
 #define ARCFOUR_NEXT4BYTES_L(n) \
@@ -306,7 +305,7 @@ rc4_unrolled(RC4Context *cx, unsigned char *output,
 	ARCFOUR_NEXT_BYTE(); streamWord |= (WORD)cx->S[t] << (n     );
 #endif
 
-#if (defined(NSS_USE_HYBRID) && !defined(SOLARIS)) || defined(NSS_USE_64)
+#ifdef NSS_USE_64
 /* 64-bit wordsize */
 #ifdef IS_LITTLE_ENDIAN
 #define ARCFOUR_NEXT_WORD() \
@@ -334,12 +333,11 @@ rc4_unrolled(RC4Context *cx, unsigned char *output,
 #define LSH <<
 #endif
 
-#ifdef CONVERT_TO_WORDS
 /*
  * Convert input and output buffers to words before performing
  * RC4 operations.
  */
-static SECStatus 
+SECStatus 
 rc4_wordconv(RC4Context *cx, unsigned char *output,
              unsigned int *outputLen, unsigned int maxOutputLen,
              const unsigned char *input, unsigned int inputLen)
@@ -397,8 +395,8 @@ rc4_wordconv(RC4Context *cx, unsigned char *output,
 #endif
 			ARCFOUR_NEXT_BYTE();
 			streamWord |= (WORD)(cx->S[t]) << 8*i;
-			mask |= MASK1BYTE << 8*i;
-		} /* } */
+			mask |= 0xff << 8*i;
+		}
 		inWord = *pInWord++;
 		/* If buffers are relatively misaligned, shift the bytes in inWord
 		 * to be aligned to the output buffer.
@@ -513,14 +511,13 @@ rc4_wordconv(RC4Context *cx, unsigned char *output,
 #endif
 		ARCFOUR_NEXT_BYTE();
 		streamWord |= (WORD)(cx->S[t]) << 8*i;
-		mask |= MASK1BYTE << 8*i;
-	} /* } */
+		mask |= 0xff << 8*i;
+	}
 	*pOutWord = (*pOutWord & ~mask) | ((inWord ^ streamWord) & mask);
 	cx->i = tmpi;
 	cx->j = tmpj;
 	return SECSuccess;
 }
-#endif
 
 SECStatus 
 RC4_Encrypt(RC4Context *cx, unsigned char *output,

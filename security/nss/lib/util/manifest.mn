@@ -38,7 +38,6 @@ EXPORTS = \
 	nssb64.h \
 	nssb64t.h \
 	nsslocks.h \
-	nssilock.h \
 	nssrwlk.h \
 	nssrwlkt.h \
 	portreg.h \
@@ -71,7 +70,6 @@ CSRCS = \
 	nssb64d.c \
 	nssb64e.c \
 	nssrwlk.c \
-	nssilock.c \
 	nsslocks.c \
 	portreg.c \
 	pqgutil.c \
