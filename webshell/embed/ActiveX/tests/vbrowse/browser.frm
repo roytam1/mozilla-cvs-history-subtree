@@ -32,6 +32,14 @@ Private Sub Browser1_NavigateComplete(ByVal URL As String)
     frmToolBar.Browser_NavigateComplete URL
 End Sub
 
+Private Sub Browser1_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
+    frmToolBar.Browser_BeforeNavigate2 pDisp, URL, Flags, TargetFrameName, PostData, Headers, Cancel
+End Sub
+
+Private Sub Browser1_NavigateComplete2(ByVal pDisp As Object, URL As Variant)
+    frmToolBar.Browser_NavigateComplete2 pDisp, URL
+End Sub
+
 Private Sub Browser1_ProgressChange(ByVal Progress As Long, ByVal ProgressMax As Long)
     frmToolBar.Browser_ProgressChange Progress, ProgressMax
 End Sub

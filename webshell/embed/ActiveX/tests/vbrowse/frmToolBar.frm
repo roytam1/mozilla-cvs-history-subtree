@@ -142,12 +142,14 @@ Begin VB.Form frmToolBar
             AutoSize        =   1
             Object.Width           =   11404
             MinWidth        =   2646
+            TextSave        =   ""
             Object.Tag             =   ""
          EndProperty
          BeginProperty Panel2 {0713E89F-850A-101B-AFC0-4210102A8DA7} 
             Alignment       =   2
             Object.Width           =   2117
             MinWidth        =   2117
+            TextSave        =   ""
             Object.Tag             =   ""
          EndProperty
       EndProperty
@@ -227,15 +229,30 @@ Private Sub Form_Load()
 End Sub
 
 Sub Browser_BeforeNavigate(ByVal URL As String, ByVal Flags As Long, ByVal TargetFrameName As String, PostData As Variant, ByVal Headers As String, Cancel As Boolean)
+    Debug.Print "Browser_BeforeNavigate " & URL
     StatusBar1.Panels(1).Text = "Loading " & URL
 End Sub
 
 Sub Browser_NavigateComplete(ByVal URL As String)
+    Debug.Print "Browser_NavigateComplete " & URL
+    StatusBar1.Panels(1).Text = "Loaded " & URL
+    StatusBar1.Panels(2).Text = ""
+End Sub
+
+Sub Browser_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
+    Debug.Print "Browser_BeforeNavigate2 " & URL
+    StatusBar1.Panels(1).Text = "Loaded " & URL
+    StatusBar1.Panels(2).Text = ""
+End Sub
+
+Sub Browser_NavigateComplete2(ByVal pDisp As Object, URL As Variant)
+    Debug.Print "Browser_NavigateComplete2 " & URL
     StatusBar1.Panels(1).Text = "Loaded " & URL
     StatusBar1.Panels(2).Text = ""
 End Sub
 
 Sub Browser_StatusTextChange(ByVal Text As String)
+    Debug.Print "Browser_StatusTextChange " & Text
     StatusBar1.Panels(1).Text = Text
 End Sub
 

@@ -1,5 +1,5 @@
 VERSION 5.00
-Object = "{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}#1.1#0"; "shdocvw.dll"
+Object = "{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}#1.1#0"; "SHDOCVW.DLL"
 Begin VB.Form frmExplorer 
    Caption         =   "Internet Explorer Control"
    ClientHeight    =   5550
@@ -51,4 +51,13 @@ Private Sub Form_Resize()
     Browser1.Width = ScaleWidth
     Browser1.Height = ScaleHeight
 End Sub
+
+Private Sub Browser1_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
+    frmToolBar.Browser_BeforeNavigate2 pDisp, URL, Flags, TargetFrameName, PostData, Headers, Cancel
+End Sub
+
+Private Sub Browser1_NavigateComplete2(ByVal pDisp As Object, URL As Variant)
+    frmToolBar.Browser_NavigateComplete2 pDisp, URL
+End Sub
+
 
