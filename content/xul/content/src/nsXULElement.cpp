@@ -2174,7 +2174,7 @@ nsXULElement::SetAttrAndNotify(PRInt32 aNamespaceID,
     }
     else {
         nsCOMPtr<nsINodeInfo> ni;
-        rv = NodeInfo()->NodeInfoManager()->GetNodeInfo(aAttribute, nsnull,
+        rv = NodeInfo()->NodeInfoManager()->GetNodeInfo(aAttribute, aPrefix,
                                                         aNamespaceID,
                                                         getter_AddRefs(ni));
         NS_ENSURE_SUCCESS(rv, rv);
