@@ -17,6 +17,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "nsISupportsArray.h"
 
 // {9e70a320-be02-11d1-8031-006008159b5a}
