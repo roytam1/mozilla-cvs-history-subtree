@@ -524,13 +524,8 @@ var BookmarksCommand = {
                "centerscreen,chrome,modal=yes,dialog=yes,resizable=yes", null, null, null, null, "selectFolder", rv);
     if (!rv.target)
       return;
-    
-    // XXXvladimir - temp hack until we can get the bookmarksTree to filter
-    // out livemark containers when showing folders only
-    var target = rv.target;
-    var ttype = BookmarksUtils.resolveType(target);
-    if (ttype != "Livemark")
-      BookmarksUtils.moveSelection("move", aSelection, target);
+
+    BookmarksUtils.moveAndCheckSelection("move", aSelection, rv.target);
   },
 
   openBookmark: function (aSelection, aTargetBrowser, aDS) 
