@@ -35,7 +35,8 @@ const nsAtomService_CONTRACTID = "@mozilla.org/atom-service;1";
 var gDateService = null;
 
 function numMatchingChars(str1, str2) {
-  for (var i = 0; ((i < Math.min(str1.length, str2.length)) && (str1[i] == str2[i])); i++);
+  var minLength = Math.min(str1.length, str2.length);
+  for (var i = 0; ((i < minLength) && (str1[i] == str2[i])); i++);
   return i;
 }
 
