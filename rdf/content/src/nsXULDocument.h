@@ -700,6 +700,12 @@ protected:
     nsresult PrepareToWalk();
 
     /**
+     * Add overlays from the chrome registry to the set of unprocessed
+     * overlays still to do.
+     */
+    nsresult AddChromeOverlays();
+
+    /**
      * Resume (or initiate) an interrupted (or newly prepared)
      * prototype walk.
      */

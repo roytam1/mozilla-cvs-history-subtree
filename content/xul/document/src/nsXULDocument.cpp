@@ -50,6 +50,7 @@
 
 #include "nsDOMCID.h"
 #include "nsIBrowserWindow.h"
+#include "nsIChromeRegistry.h"
 #include "nsIComponentManager.h"
 #include "nsIContentViewer.h"
 #include "nsIDOMEvent.h"
@@ -123,6 +124,7 @@ static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CI
 static NS_DEFINE_CID(kHTMLElementFactoryCID,     NS_HTML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kHTMLStyleSheetCID,         NS_HTMLSTYLESHEET_CID);
 static NS_DEFINE_CID(kHTMLCSSStyleSheetCID,      NS_HTML_CSS_STYLESHEET_CID);
+static NS_DEFINE_CID(kChromeRegistryCID,         NS_CHROMEREGISTRY_CID);
 static NS_DEFINE_CID(kCSSLoaderCID,              NS_CSS_LOADER_CID);
 static NS_DEFINE_CID(kNameSpaceManagerCID,       NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kParserCID,                 NS_PARSER_IID); // XXX
@@ -3737,7 +3739,7 @@ nsXULDocument::PrepareToLoad(nsIContentViewerContainer* aContainer,
 
     // Get the document's URL
     if (aChannel) {
-        rv = aChannel->GetURI(getter_AddRefs(mDocumentURL));
+        rv = aChannel->GetOriginalURI(getter_AddRefs(mDocumentURL));
         if (NS_FAILED(rv)) return rv;
     }
     else {
@@ -4110,6 +4112,10 @@ nsXULDocument::PrepareToWalk()
         mUnloadedOverlays->AppendElement(NS_REINTERPRET_CAST(nsIURI*, overlays[i]));
     }
 
+
+    // Now check the chrome registry for any additional overlays.
+    rv = AddChromeOverlays();
+
     // Get the prototype's root element and initialize the context
     // stack for the prototype walk.
     nsXULPrototypeElement* proto;
@@ -4179,6 +4185,47 @@ nsXULDocument::PrepareToWalk()
     
     rv = mContextStack.Push(proto, root);
     if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+
+nsresult
+nsXULDocument::AddChromeOverlays()
+{
+    nsresult rv;
+    NS_WITH_SERVICE(nsIChromeRegistry, reg, kChromeRegistryCID, &rv);
+
+    if (NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIURI> uri;
+    rv = mCurrentPrototype->GetURI(getter_AddRefs(uri));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISimpleEnumerator> oe;
+    reg->GetOverlays(uri, getter_AddRefs(oe));
+
+    if (!oe)
+        return NS_OK;
+
+    PRBool moreElements;
+    oe->HasMoreElements(&moreElements);
+
+    while (moreElements) {
+        nsCOMPtr<nsISupports> next;
+        oe->GetNext(getter_AddRefs(next));
+        if (!next)
+            return NS_OK;
+
+        nsCOMPtr<nsIURI> uri = do_QueryInterface(next);
+        if (!uri)
+            return NS_OK;
+
+        mUnloadedOverlays->AppendElement(uri);
+
+        oe->HasMoreElements(&moreElements);
+    }
 
     return NS_OK;
 }
