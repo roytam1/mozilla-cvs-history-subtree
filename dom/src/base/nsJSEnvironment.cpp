@@ -1011,6 +1011,7 @@ nsJSContext::GetGlobalObject()
       }
     }
   }
+
   return nsnull;
 }
 
