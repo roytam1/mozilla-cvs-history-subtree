@@ -571,6 +571,9 @@ NS_METHOD RootContentFrame::HandleEvent(nsIPresContext& aPresContext,
     case NS_MOUSE_EXIT:
       //Don't know if this is actually hooked up.
       {
+        /*
+         * This is a bit unstable and not really necessary right now
+         * 
         //Fire of mouseout to the last content object.
         nsIEventStateManager *mStateManager;
         nsIContent *mLastContent;
@@ -588,7 +591,7 @@ NS_METHOD RootContentFrame::HandleEvent(nsIPresContext& aPresContext,
             NS_RELEASE(mLastContent);
           }
           NS_RELEASE(mStateManager);
-        }
+        }*/
       }
       break;
     }
