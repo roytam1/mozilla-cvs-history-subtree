@@ -25,7 +25,7 @@
 
 #include <X11/cursorfont.h>
 
-NS_IMPL_ISUPPORTS2(nsCursor, nsICursor, nsPICursorXlib)
+NS_IMPL_ISUPPORTS1(nsCursor, nsICursor)
 
 #include "nsRunAppRun.h"
 
@@ -111,11 +111,4 @@ NS_IMETHODIMP nsCursor::SetCursor(PRInt32 aCursor)
 NS_IMETHODIMP nsCursor::SetToImage(nsIImage *aImage)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* nsPICursorXlib interface */
-NS_IMETHODIMP nsCursor::GetNativeCursor(Cursor *aResult)
-{
-  *aResult = mCursor;
-  return NS_OK;
 }

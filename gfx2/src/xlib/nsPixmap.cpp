@@ -23,7 +23,7 @@
 
 #include "nsPixmap.h"
 
-#include "nsIWindow.h"
+#include "nsWindow.h"
 
 #include "nsCOMPtr.h"
 
@@ -57,11 +57,7 @@ NS_IMETHODIMP nsPixmap::Init(nsIWindow *aParent, gfx_dimension width, gfx_dimens
   Screen *screen = DefaultScreenOfDisplay(mDisplay);
 
   if (aParent) {
-    nsCOMPtr<nsPIDrawableXlib> dx(do_QueryInterface(aParent));
-    if (!dx)
-      return NS_ERROR_FAILURE;
-
-    dx->GetNativeDrawable(&parent);
+    parent = NS_STATIC_CAST(nsWindow*, aParent)->mDrawable;
   } else {
     parent = RootWindowOfScreen(screen);
   }

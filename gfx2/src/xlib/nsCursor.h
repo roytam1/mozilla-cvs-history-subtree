@@ -25,7 +25,6 @@
 #define nsCursor_h___
 
 #include "nsICursor.h"
-#include "nsPICursorXlib.h"
 
 #include <X11/Xlib.h>
 
@@ -37,13 +36,13 @@
     {0xa4, 0xc5, 0xd5, 0x50, 0x9b, 0xa7, 0x47, 0x03} \
 }
 
-class nsCursor : public nsICursor,
-                 public nsPICursorXlib
+class nsCursor : public nsICursor
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICURSOR
-  NS_DECL_NSPICURSORXLIB
+
+  friend class nsWindow;
 
   nsCursor();
   virtual ~nsCursor();

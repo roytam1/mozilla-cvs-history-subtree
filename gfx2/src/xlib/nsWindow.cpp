@@ -24,8 +24,7 @@
 #include "nsWindow.h"
 #include "nsWindowHelper.h"
 
-#include "nsICursor.h"
-#include "nsPICursorXlib.h"
+#include "nsCursor.h"
 
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
@@ -98,11 +97,7 @@ NS_IMETHODIMP nsWindow::SetParent(nsIWindow * aParent)
   if (aParent) {
     mParent = getter_AddRefs(NS_GetWeakReference(aParent));
 
-    nsCOMPtr<nsPIWindowXlib> wx(do_QueryInterface(aParent));
-    if (!wx)
-      return NS_ERROR_FAILURE;
-
-    wx->GetNativeWindow(&newParent);
+    newParent = NS_STATIC_CAST(nsWindow*, aParent)->mWindow;
   }
 
   ::XReparentWindow(mDisplay, mWindow, newParent, 0, 0);
@@ -201,11 +196,10 @@ NS_IMETHODIMP nsWindow::GetCursor(nsICursor * *aCursor)
 }
 NS_IMETHODIMP nsWindow::SetCursor(nsICursor * aCursor)
 {
-  Cursor cursor = 0;
-  nsCOMPtr<nsPICursorXlib> cx(do_QueryInterface(aCursor));
-  if (cx) {
-    cx->GetNativeCursor(&cursor);
-  }
+  if (!aCursor)
+    return NS_ERROR_FAILURE;
+
+  Cursor cursor = NS_STATIC_CAST(nsCursor*, aCursor)->mCursor;
 
   ::XDefineCursor(mDisplay, mWindow, cursor);
 

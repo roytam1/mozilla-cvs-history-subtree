@@ -25,7 +25,6 @@
 #define nsDrawable_h___
 
 #include "nsIDrawable.h"
-#include "nsPIDrawableXlib.h"
 
 #include "nsCOMPtr.h"
 
@@ -39,13 +38,13 @@ class xGC;
 
 #include <X11/Xlib.h>
 
-class nsDrawable : public nsIDrawable,
-                   public nsPIDrawableXlib
+class nsDrawable : public nsIDrawable
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDRAWABLE
-  NS_DECL_NSPIDRAWABLEXLIB
+
+  friend class nsPixmap;
 
   nsDrawable();
   virtual ~nsDrawable();

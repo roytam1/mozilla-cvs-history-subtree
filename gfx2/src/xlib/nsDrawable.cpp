@@ -31,7 +31,7 @@
 
 nsGCCache *nsDrawable::sGCCache = new nsGCCache();
 
-NS_IMPL_ISUPPORTS2(nsDrawable, nsIDrawable, nsPIDrawableXlib)
+NS_IMPL_ISUPPORTS1(nsDrawable, nsIDrawable)
 
 nsDrawable::nsDrawable() :
   mDisplay(nsnull),
@@ -242,12 +242,8 @@ NS_IMETHODIMP nsDrawable::CopyTo(nsIDrawable *aDest,
 {
   UpdateGC();
 
-  nsCOMPtr<nsPIDrawableXlib> dx(do_QueryInterface(aDest));
-  if (!dx)
-    return NS_ERROR_FAILURE;
-
-  Drawable dest;
-  dx->GetNativeDrawable(&dest);
+  // XXX should you be able to copy to another nsIDrawable that isn't this real class?
+  Drawable dest = NS_STATIC_CAST(nsDrawable*, aDest)->mDrawable;
 
   ::XCopyArea(mDisplay,
               mDrawable, dest,
@@ -433,14 +429,6 @@ NS_IMETHODIMP nsDrawable::ChangeClipRegion(nsIRegion *aRegion, PRInt16 clipOpera
 }
 
 
-
-
-/* nsPIDrawableXlib interface */
-NS_IMETHODIMP nsDrawable::GetNativeDrawable(Drawable *aResult)
-{
-  *aResult = mDrawable;
-  return NS_OK;
-}
 
 
 /* local helper methods */

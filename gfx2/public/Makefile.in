@@ -58,8 +58,6 @@ XPIDLSRCS	= \
 		nsIPopupWindow.idl \
 		nsITopLevelWindow.idl \
 		nsIOutputDevice.idl \
-		nsPICursorXlib.idl \
-		nsPIDrawableXlib.idl \
 		nsPIWindowXlib.idl \
 		$(NULL)
 
