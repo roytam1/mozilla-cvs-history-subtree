@@ -69,9 +69,9 @@ public:
 
   NS_IMETHOD  Destroy();
   NS_IMETHOD  GetViewManager(nsIViewManager *&aViewMgr) const;
-  NS_IMETHOD  Paint(nsIRenderingContext& rc, const nsRect& rect,
+  NS_IMETHOD  Paint(nsIDrawable* aDrawable, const nsRect& rect,
                     PRUint32 aPaintFlags, PRBool &aResult);
-  NS_IMETHOD  Paint(nsIRenderingContext& rc, const nsIRegion& region,
+  NS_IMETHOD  Paint(nsIDrawable* aDrawable, nsIRegion *region,
                     PRUint32 aPaintFlags, PRBool &aResult);
   NS_IMETHOD  HandleEvent(nsGUIEvent *event, 
                           PRUint32 aEventFlags,
@@ -105,15 +105,15 @@ public:
   NS_IMETHOD  RemoveChild(nsIView *child);
   NS_IMETHOD  GetChildCount(PRInt32 &aCount) const;
   NS_IMETHOD  GetChild(PRInt32 index, nsIView*& aChild) const;
-  NS_IMETHOD  SetTransform(nsTransform2D &aXForm);
-  NS_IMETHOD  GetTransform(nsTransform2D &aXForm) const;
+  NS_IMETHOD  SetTransform(nsTransform &aXForm);
+  NS_IMETHOD  GetTransform(nsTransform &aXForm) const;
   NS_IMETHOD  SetOpacity(float opacity);
   NS_IMETHOD  GetOpacity(float &aOpacity) const;
   NS_IMETHOD  HasTransparency(PRBool &aTransparent) const;
   NS_IMETHOD  SetContentTransparency(PRBool aTransparent);
   NS_IMETHOD  SetClientData(void *aData);
   NS_IMETHOD  GetClientData(void *&aData) const;
-  NS_IMETHOD  GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow *aWidget);
+  NS_IMETHOD  GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow **aWidget);
   NS_IMETHOD  GetDirtyRegion(nsIRegion*& aRegion) const;
   NS_IMETHOD  CreateWidget(const char *contractid);
   NS_IMETHOD  SetWidget(nsIWindow *aWidget);
@@ -166,7 +166,7 @@ protected:
   PRInt32           mNumKids;
   nsRect            mBounds;
   nsViewClip        mChildClip;
-  nsTransform2D     *mXForm;
+  nsTransform       *mXForm;
   float             mOpacity;
   PRUint32          mVFlags;
   nsIRegion*        mDirtyRegion;

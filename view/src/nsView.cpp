@@ -31,6 +31,7 @@
 #include "nsVoidArray.h"
 #include "nsIRegion.h"
 #include "nsIClipView.h"
+#include "nsTransform.h"
 
 //mmptemp
 
@@ -156,7 +157,6 @@ nsView :: ~nsView()
   if (nsnull != mWindow)
   {
     mWindow->SetClientData(nsnull);
-    mWindow->Destroy();
     NS_RELEASE(mWindow);
   }
   NS_IF_RELEASE(mDirtyRegion);
@@ -266,7 +266,7 @@ NS_IMETHODIMP nsView :: GetViewManager(nsIViewManager *&aViewMgr) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: Paint(nsIRenderingContext& rc, const nsRect& rect,
+NS_IMETHODIMP nsView :: Paint(nsIDrawable* aDrawable, const nsRect& rect,
                               PRUint32 aPaintFlags, PRBool &aResult)
 {
 	NS_ASSERTION(aPaintFlags & NS_VIEW_FLAG_JUST_PAINT, "Only simple painting supported by nsView");
@@ -274,13 +274,13 @@ NS_IMETHODIMP nsView :: Paint(nsIRenderingContext& rc, const nsRect& rect,
     if (nsnull != mClientData) {
       nsCOMPtr<nsIViewObserver> observer;
       if (NS_OK == mViewManager->GetViewObserver(*getter_AddRefs(observer))) {
-        observer->Paint((nsIView *)this, rc, rect);
+        observer->Paint((nsIView *)this, aDrawable, rect);
       }
     }
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: Paint(nsIRenderingContext& rc, const nsIRegion& region,
+NS_IMETHODIMP nsView :: Paint(nsIDrawable* aDrawable, nsIRegion *region,
                               PRUint32 aPaintFlags, PRBool &aResult)
 {
   // XXX apply region to rc
@@ -422,11 +422,10 @@ NS_IMETHODIMP nsView :: SetPosition(gfx_coord aX, gfx_coord aY)
       return NS_OK;
     }
 
-    nsIWindow         *pwidget = nsnull;
+    nsCOMPtr<nsIWindow> pwidget;
     gfx_coord           parx = 0, pary = 0;
   
-    GetOffsetFromWidget(&parx, &pary, pwidget);
-    NS_IF_RELEASE(pwidget);
+    GetOffsetFromWidget(&parx, &pary, getter_AddRefs(pwidget));
     
     mWindow->Move(x + parx, y + pary);
   }
@@ -493,10 +492,10 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
     if (mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_MOVED) {
       // if we just moved do it.
       gfx_coord parx = 0, pary = 0;
-      nsIWindow         *pwidget = nsnull;
+      nsCOMPtr<nsIWindow> pwidget;
 
       GetOffsetFromWidget(&parx, &pary, pwidget);
-      NS_IF_RELEASE(pwidget);
+      pwidget = nsnull;
 
       gfx_coord x = mBounds.x + parx;
       gfx_coord y = mBounds.y + pary;
@@ -845,22 +844,22 @@ NS_IMETHODIMP nsView :: GetChild(PRInt32 index, nsIView *&aChild) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: SetTransform(nsTransform2D &aXForm)
+NS_IMETHODIMP nsView :: SetTransform(nsTransform &aXForm)
 {
   if (nsnull == mXForm)
-    mXForm = new nsTransform2D(&aXForm);
+    mXForm = new nsTransform(aXForm);
   else
     *mXForm = aXForm;
 
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetTransform(nsTransform2D &aXForm) const
+NS_IMETHODIMP nsView :: GetTransform(nsTransform &aXForm) const
 {
   if (nsnull != mXForm)
     aXForm = *mXForm;
   else
-    aXForm.SetToIdentity();
+    aXForm.SetIdentity();
 
   return NS_OK;
 }
@@ -916,7 +915,7 @@ NS_IMETHODIMP nsView :: CreateWidget(const char *contractid)
 
     nsCOMPtr<nsIChildWindow> cw = do_QueryInterface(mWindow, &rv);
     if (NS_SUCCEEDED(rv)) {
-      mWindow->Init(parent, 0, 0, 1, 1);
+      cw->Init(parent, 0, 0, 1, 1);
     } else {
       NS_ASSERTION(PR_FALSE, "nsView used to create something other than a child window :(");
     }
@@ -952,10 +951,10 @@ NS_IMETHODIMP nsView :: SetWidget(nsIWindow *aWidget)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetWidget(nsIWindow *&aWidget) const
+NS_IMETHODIMP nsView :: GetWidget(nsIWindow **aWidget) const
 {
-  NS_IF_ADDREF(mWindow);
-  aWidget = mWindow;
+  *aWidget = mWindow;
+  NS_IF_ADDREF(*aWidget);
   return NS_OK;
 }
 
@@ -985,25 +984,26 @@ NS_IMETHODIMP nsView::List(FILE* out, PRInt32 aIndent) const
   PRInt32 i;
   for (i = aIndent; --i >= 0; ) fputs("  ", out);
   fprintf(out, "%p ", this);
+  // XXX pav
+#if 0
   if (nsnull != mWindow) {
     nsRect windowBounds;
     nsRect nonclientBounds;
-    float p2t;
-    nsIDeviceContext *dx;
-    mViewManager->GetDeviceContext(dx);
-    dx->GetDevUnitsToAppUnits(p2t);
-    NS_RELEASE(dx);
+
     mWindow->GetClientBounds(windowBounds);
-    windowBounds *= p2t;
+
     mWindow->GetBounds(nonclientBounds);
-    nonclientBounds *= p2t;
+
     nsrefcnt widgetRefCnt = mWindow->AddRef() - 1;
+
     mWindow->Release();
+
     fprintf(out, "(widget=%p[%d] pos={%d,%d,%d,%d}) ",
             mWindow, widgetRefCnt,
             nonclientBounds.x, nonclientBounds.y,
             windowBounds.width, windowBounds.height);
   }
+#endif
   nsRect brect;
   GetBounds(brect);
   fprintf(out, "{%d,%d,%d,%d}",
@@ -1040,10 +1040,10 @@ NS_IMETHODIMP nsView :: GetViewFlags(PRUint32 *aFlags) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow *&aWidget)
+NS_IMETHODIMP nsView :: GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow **aWidget)
 {
-  nsIView   *ancestor;
-  aWidget = nsnull;
+  nsIView *ancestor;
+  *aWidget = nsnull;
   
   // XXX aDx and aDy are OUT parameters and so we should initialize them
   // to 0 rather than relying on the caller to do so...
@@ -1051,7 +1051,7 @@ NS_IMETHODIMP nsView :: GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIW
   while (nsnull != ancestor)
   {
     ancestor->GetWidget(aWidget);
-	  if (nsnull != aWidget)
+	  if (nsnull != *aWidget)
 	    return NS_OK;
 
     if ((nsnull != aDx) && (nsnull != aDy))
@@ -1068,12 +1068,12 @@ NS_IMETHODIMP nsView :: GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIW
   }
 
   
-  if (nsnull == aWidget) {
+  if (*nsnull == aWidget) {
        // The root view doesn't have a widget
        // but maybe the view manager does.
     nsCOMPtr<nsIViewManager> vm;
     GetViewManager(*getter_AddRefs(vm));
-    vm->GetWidget(&aWidget);
+    vm->GetWidget(aWidget);
   }
 
   return NS_OK;
@@ -1083,10 +1083,10 @@ NS_IMETHODIMP nsView::GetDirtyRegion(nsIRegion *&aRegion) const
 {
 	if (nsnull == mDirtyRegion) {
 		// The view doesn't have a dirty region so create one
-		nsresult rv = nsComponentManager::CreateInstance(kRegionCID, 
-		                               nsnull, 
-		                               NS_GET_IID(nsIRegion), 
-		                               (void**) &mDirtyRegion);
+		nsresult rv = nsComponentManager::CreateInstance("@mozilla/gfx/region;2",
+                                                     nsnull, 
+                                                     NS_GET_IID(nsIRegion), 
+                                                     (void**) &mDirtyRegion);
 
 		if (NS_FAILED(rv))
 			return rv;

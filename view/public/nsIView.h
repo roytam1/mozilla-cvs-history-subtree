@@ -32,8 +32,8 @@ class nsIWindow;
 class nsIWindow;
 class nsIViewManager;
 class nsIRegion;
-class nsIRenderingContext;
-class nsTransform2D;
+class nsIDrawable;
+class nsTransform;
 class nsIFrame;
 class nsIViewObserver;
 class nsVoidArray;
@@ -124,7 +124,7 @@ public:
    * @param aPaintFlags see nsIView.h for flag definitions
    * @return PR_TRUE if the entire clip region has been eliminated, else PR_FALSE
    */
-  NS_IMETHOD  Paint(nsIRenderingContext& rc, const nsRect& rect,
+  NS_IMETHOD  Paint(nsIDrawable *aDrawable, const nsRect& rect,
                     PRUint32 aPaintFlags, PRBool &aResult) = 0;
 
   /**
@@ -136,7 +136,7 @@ public:
    * @param aPaintFlags see nsIView.h for flag definitions
    * @return PR_TRUE if the entire clip region has been eliminated, else PR_FALSE
    */
-  NS_IMETHOD  Paint(nsIRenderingContext& rc, const nsIRegion& region,
+  NS_IMETHOD  Paint(nsIDrawable* aDrawable, nsIRegion* region,
                     PRUint32 aPaintFlags, PRBool &aResult) = 0;
   
   /**
@@ -347,14 +347,14 @@ public:
    * but probably not rotation for the first pass.
    * @param transform new transformation of view
    */
-  NS_IMETHOD  SetTransform(nsTransform2D &aXForm) = 0;
+  NS_IMETHOD  SetTransform(nsTransform &aXForm) = 0;
 
   /**
    * Note: This didn't exist in 4.0. This transform might include scaling
    * but probably not rotation for the first pass.
    * @result view's transformation
    */
-  NS_IMETHOD  GetTransform(nsTransform2D &aXForm) const = 0;
+  NS_IMETHOD  GetTransform(nsTransform &aXForm) const = 0;
 
   /**
    * Note: This didn't exist in 4.0. Called to set the opacity of a view. 
