@@ -151,7 +151,6 @@ public:
     static PRInt32 getNamespaceID(const txXPathNode& aNode);
     static void getNamespaceURI(const txXPathNode& aNode, nsAString& aURI);
     static PRUint16 getNodeType(const txXPathNode& aNode);
-    static txXPathNode* cloneNode(const txXPathNode& aNode);
     static void getNodeValue(const txXPathNode& aNode, nsAString& aResult);
     static PRBool isWhitespace(const txXPathNode& aNode);
     static PRBool isSameNode(const txXPathNode& aNode,
@@ -238,13 +237,6 @@ inline PRBool
 txXPathTreeWalker::isOnNode(const txXPathNode& aNode) const
 {
     return (mPosition == aNode);
-}
-
-/* static */
-inline txXPathNode*
-txXPathNodeUtils::cloneNode(const txXPathNode& aNode)
-{
-    return new txXPathNode(aNode);
 }
 
 /* static */

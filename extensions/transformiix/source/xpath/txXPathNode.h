@@ -93,9 +93,6 @@ private:
     }
     txXPathNode(const txXPathNode& aNode);
 
-    txXPathNode& operator=(txXPathNode& aNode) const;
-    txXPathNode& operator=(const txXPathNode& aNode) const;
-
     PRBool isDocument() const
     {
         return mIndex == eDocument;
