@@ -42,6 +42,7 @@ var dirTree = 0;
 var abList = 0;
 var gAbResultsTree = null;
 var gAbView = null;
+var gCurDirectory;
 
 var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 var gPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
@@ -699,20 +700,29 @@ function CloseAbView()
   }
 }
 
-function SetAbView(uri, sortColumn, sortDirection)
+function SetAbView(uri, searchView, sortColumn, sortDirection)
 {
-  CloseAbView();
+  var actualSortColumn;
+  if (gAbView && gCurDirectory == GetSelectedDirectory())
+  {
+    // re-init the view
+    actualSortColumn = gAbView.init(uri, searchView, GetAbViewListener(), sortColumn, sortDirection);
+  }
+  else
+	{
+		CloseAbView();
 
-  if (!sortColumn)
-    sortColumn = kDefaultSortColumn;
+			gCurDirectory = GetSelectedDirectory();
+		if (!sortColumn)
+			sortColumn = kDefaultSortColumn;
 
-  if (!sortDirection)
-    sortDirection = kDefaultAscending;
+		if (!sortDirection)
+			sortDirection = kDefaultAscending;
 
-  gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
+		gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
 
-  var actualSortColumn = gAbView.init(uri, GetAbViewListener(), sortColumn, sortDirection);
-  
+		var actualSortColumn = gAbView.init(uri, false, searchView, GetAbViewListener(), sortColumn, sortDirection);
+  }
   var boxObject = GetAbResultsBoxObject();
   boxObject.view = gAbView.QueryInterface(Components.interfaces.nsITreeView);
 

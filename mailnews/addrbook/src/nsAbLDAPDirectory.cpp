@@ -77,6 +77,13 @@ nsAbLDAPDirectory::~nsAbLDAPDirectory()
 }
 
 NS_IMPL_ISUPPORTS_INHERITED3(nsAbLDAPDirectory, nsAbDirectoryRDFResource, nsIAbDirectory, nsIAbDirectoryQuery, nsIAbDirectorySearch)
+
+NS_IMETHODIMP nsAbLDAPDirectory::Init(const char* aURI)
+{
+  mInitialized = PR_FALSE;
+  return nsAbDirectoryRDFResource::Init(aURI);
+}
+
 nsresult nsAbLDAPDirectory::Initiate ()
 {
     if (!mIsQueryURI)
@@ -340,10 +347,10 @@ NS_IMETHODIMP nsAbLDAPDirectory::StartSearch ()
     if (!mIsQueryURI || mQueryString.IsEmpty())
         return NS_OK;
 
-    rv = Initiate ();
+    rv = StopSearch ();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = StopSearch ();
+    rv = Initiate ();
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIAbDirectoryQueryArguments> arguments = do_CreateInstance(NS_ABDIRECTORYQUERYARGUMENTS_CONTRACTID,&rv);
@@ -408,12 +415,17 @@ NS_IMETHODIMP nsAbLDAPDirectory::StopSearch ()
     {
         nsAutoLock lockGuard (mLock);
         if (!mPerformingQuery)
+        {
+            mInitialized = PR_FALSE;
             return NS_OK;
+        }
         mPerformingQuery = PR_FALSE;
     }
     // Exit lock
 
     rv = StopQuery (mContext);
+
+    mInitialized = PR_FALSE; // make us re-init
 
     return rv;
 }
