@@ -241,52 +241,6 @@ function IsSpecialFolderSelected(folderName)
 	return false;
 }
 
-//Called when selection changes in the thread pane.
-function ThreadPaneSelectionChange(fromDeleteOrMoveHandler)
-{
-    // we are batching.  bail out, we'll be back when the batch is over
-    if (gBatching) return;
-
-	var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
-
-	var numSelected = GetNumSelectedMessages();
-    var messageUriToLoad = null;
-
-    if (!gNextMessageAfterDelete && (numSelected == 1) ) {
-        messageUriToLoad =  GetFirstSelectedMessage();
-    }
-
-    // if the message pane isn't collapsed, and we have a message to load
-    // go ahead and load the message
-	if (!collapsed && messageUriToLoad) {
-        LoadMessageByUri(messageUriToLoad);
-	}
-
-    // if gNextMessageAfterDelete is true, we can skip updating the commands because
-    // we'll be coming back to load that message, and we'll update the commands then
-    //
-    // if fromDeleteOrMoveHandler is true, we are calling ThreadPaneSelectionChange after handling
-    // a message delete or message move, so we might need to update the commands.  (see below)
-    //
-    // if gCurrentLoadingFolderURI is non null, we are loading a folder, so we need to update the commands
-    //
-    // if messageUriToLoad is non null, we are loading a message, so we might need to update commmands.  (see below)
-	if (!gNextMessageAfterDelete && (gCurrentLoadingFolderURI || fromDeleteOrMoveHandler || messageUriToLoad)) {
-        // if we are moving or deleting, we'll come in here twice.  once to load the message and once when
-        // we are done moving or deleting.  when we loaded the message the first time, we called updateCommands().
-        // there is no need to do it again.
-        if (fromDeleteOrMoveHandler && messageUriToLoad && (messageUriToLoad == gLastMessageUriToLoad)) {
-            // skip the call to updateCommands()
-        }
-        else {
-		    document.commandDispatcher.updateCommands('threadTree-select');
-        }
-	}
-
-	//remember the last message we loaded
-    gLastMessageUriToLoad = messageUriToLoad;
-}
-
 function GetThreadOutliner()
 {
   if (gThreadOutliner) return gThreadOutliner;

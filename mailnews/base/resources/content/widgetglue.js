@@ -256,7 +256,7 @@ function MsgToggleMessagePane()
 {
 	//OnClickThreadAndMessagePaneSplitter is based on the value before the splitter is toggled.
 	OnClickThreadAndMessagePaneSplitter();
-    MsgToggleSplitter("threadpane-splitter");
+  MsgToggleSplitter("threadpane-splitter");
 }
 
 function MsgToggleFolderPane()
