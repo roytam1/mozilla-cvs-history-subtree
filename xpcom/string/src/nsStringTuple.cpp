@@ -38,7 +38,7 @@
 
 #include "nsStringTuple.h"
 
-  // convert fragment to string
+  // convert fragment to |const string_base_type&|
 #define TO_STRING(_v)                                           \
     ( (ptrdiff_t(_v) & 0x1)                                     \
         ? NS_REINTERPRET_CAST(const abstract_string_type*,      \

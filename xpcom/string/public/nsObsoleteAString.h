@@ -39,11 +39,47 @@
 #ifndef nsObsoleteAString_h___
 #define nsObsoleteAString_h___
 
-/****************************************************************************
+/*
+    STRING INTERNALS
 
-    THIS FILE IS NOT FOR HUMAN CONSUMPTION.  See nsAString instead.
+    This file defines nsObsoleteAString and nsObsoleteACString.  These are
+    abstract classes (interfaces), containing only virtual functions
+    corresponding to the FROZEN nsA[C]String classes.  They exist to provide
+    the new non-abstract nsA[C]String classes with a mechanism to maintain
+    backwards binary compatability.
 
- ****************************************************************************/
+    From a binary point-of-view, the new nsA[C]String classes appear to have a
+    vtable pointer to the vtable of nsObsoleteA[C]StringThunk.
+    nsObsoleteA[C]StringThunk is a subclass of nsObsoleteA[C]String that serves
+    as a simple bridge between the virtual functions that make up the FROZEN
+    nsA[C]String contract and the new ns[C]StringBase, which is now our only
+    subclass of nsA[C]String.
+
+    The methods on the new nsA[C]String are now all non-virtual.  This reduces
+    codesize at the callsite, and reduces the number of memory dereferences and
+    jumps required to invoke a method on nsA[C]String.  The result is improved
+    performance and reduced codesize.  However, to maintain binary
+    compatibility, each method on nsA[C]String must check the value of its
+    vtable to determine if it corresponds to the built-in implementation of
+    nsObsoleteA[C]String (i.e., the address of the canonical vtable).  If it
+    does, then the vtable can be ignored, and the nsA[C]String object (i.e.,
+    |this|) can be cast to ns[C]StringBase directly.  In which case, the
+    nsA[C]String methods can be satisfied by invoking the corresponding methods
+    directly on ns[C]StringBase.  If the vtable address does not correspond to
+    the built-in implementation, then the virtual functions on
+    nsObsoleteA[C]String must be invoked instead.
+
+    So, if a nsA[C]String reference corresponds to an external implementation
+    (such as the old nsEmbed[C]String that shipped with previous versions of
+    Mozilla), then methods invoked on that nsA[C]String will still act like
+    virtual function calls.  This ensures binary compatibility while avoiding
+    virtual function calls in most cases.
+
+    Finally, nsObsoleteA[C]String (i.e., the FROZEN nsA[C]String vtable) is
+    now a DEPRECATED interface.  See nsStringAPI.h and nsEmbedString.h for
+    the new preferred way to access nsA[C]String references in an external
+    component or Gecko embedding application.
+                                                                             */
 
 #ifndef nsStringFwd_h___
 #include "nsStringFwd.h"
