@@ -63,6 +63,37 @@ fp_except_t oldmask = fpsetmask(~allmask);
  * Macros to workaround math-bugs bugs in various platforms
  */
 
+#if __GNUC__ >= 2
+/* This version of the macros is safe for the alias optimizations
+ * that gcc does, but uses gcc-specific extensions.
+ */
+
+typedef union {
+    double value;
+    struct {
+#ifdef IS_BIG_ENDIAN
+        u_int32_t msw;
+        u_int32_t lsw;
+#else
+        u_int32_t lsw;
+        u_int32_t msw;
+#endif
+    } parts;
+} tx_ieee_double_shape_type;
+
+#define TX_DOUBLE_HI32(x) (__extension__ ({ tx_ieee_double_shape_type sh_u; \
+                                            sh_u.value = (x); \
+                                            sh_u.parts.msw; }))
+#define TX_DOUBLE_LO32(x) (__extension__ ({ tx_ieee_double_shape_type sh_u; \
+                                            sh_u.value = (x); \
+                                            sh_u.parts.lsw; }))
+
+#else // __GNUC__
+
+/* We don't know of any non-gcc compilers that perform alias optimization,
+ * so this code should work.
+ */
+
 #ifdef IS_BIG_ENDIAN
 #define TX_DOUBLE_HI32(x)        (((PRUint32 *)&(x))[0])
 #define TX_DOUBLE_LO32(x)        (((PRUint32 *)&(x))[1])
@@ -70,6 +101,8 @@ fp_except_t oldmask = fpsetmask(~allmask);
 #define TX_DOUBLE_HI32(x)        (((PRUint32 *)&(x))[1])
 #define TX_DOUBLE_LO32(x)        (((PRUint32 *)&(x))[0])
 #endif
+
+#endif // __GNUC__
 
 #define TX_DOUBLE_HI32_SIGNBIT   0x80000000
 #define TX_DOUBLE_HI32_EXPMASK   0x7ff00000
