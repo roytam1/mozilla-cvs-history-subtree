@@ -223,7 +223,7 @@ nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, ns
   }
 
   nsAutoString messageId;
-  rv = msgHdr->GetMessageId(messageId);
+  rv = msgHdr->GetMessageId(&messageId);
 
 #ifdef DEBUG_NEWS
   PRUint32 bytes;
@@ -789,7 +789,7 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   if (message) {
     rv = message->GetMessageKey(&key);
     if (NS_FAILED(rv)) return rv;
-    rv = message->GetMessageId(messageId);
+    rv = message->GetMessageId(&messageId);
     if (NS_FAILED(rv)) return rv;
   }
   else {
