@@ -48,7 +48,13 @@ char * gNavCenterDataSources[15] =
  /* "rdf:ldap", */
  "rdf:esftp",
  "rdf:lfs", "rdf:CookieStore",
- "rdf:columns",  "rdf:find", NULL, NULL
+ "rdf:columns",  "rdf:find",
+
+#ifdef	XP_MAC
+	"rdf:appletalk",
+#endif
+ 
+ NULL, NULL
 };
 
 

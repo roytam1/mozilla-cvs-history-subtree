@@ -420,7 +420,10 @@ makeResourceName (RDF_Resource node)
 	}
 	else
 	{
-		name = getResourceDefaultName(node);
+		if ((name = getResourceDefaultName(node)) == NULL)
+		{
+			name = resourceID(node);
+		}
 	}
 	return ((name != NULL) ? copyString(name) : NULL);
 }
@@ -581,9 +584,8 @@ CookieGetSlotValues(RDFT rdf, RDF_Resource u, RDF_Resource s,
 {
 	RDF_Cursor	c = NULL;
 
-	if ((resourceType(u) == COOKIE_RT) &&
-		(s == gNavCenter->RDF_Command) &&
-		(type == RDF_RESOURCE_TYPE) && (tv))
+	if ((resourceType(u) == COOKIE_RT) && (s == gNavCenter->RDF_Command) &&
+		(type == RDF_RESOURCE_TYPE) && (inversep) && (tv))
 	{
 		if ((c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct))) != NULL)
 		{
@@ -606,8 +608,8 @@ CookieGetSlotValues(RDFT rdf, RDF_Resource u, RDF_Resource s,
 
 
 
-#define	COOKIE_CMD_PREFIX	"CookieCommand:"
-#define	COOKIE_CMD_HOSTS	"CookieCommand:TBD"	/* actual cmd name */
+#define	COOKIE_CMD_PREFIX	"Command:Cookie:"
+#define	COOKIE_CMD_HOSTS	"Command:Cookie:TBD"	/* actual cmd name */
 
 void *
 CookieGetNextValue(RDFT rdf, RDF_Cursor c)
@@ -632,7 +634,7 @@ CookieGetNextValue(RDFT rdf, RDF_Cursor c)
 				}
 				break;
 			}
-            c->count++;
+          		c->count++;
 		}
 		else
 		{

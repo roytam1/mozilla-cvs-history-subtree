@@ -2355,6 +2355,7 @@ void
 deleteContainerItem (HT_Resource container, RDF_Resource item)
 {
 	HT_Resource		nc, pr, nx = NULL;
+	HT_Pane			pane;
 
 	nc = container->child;
 	pr = nc;
@@ -2383,11 +2384,16 @@ deleteContainerItem (HT_Resource container, RDF_Resource item)
 	{
 		deleteHTSubtree(nx);
 	}
+	pane = nx->view->pane;
 	deleteHTNode(nx);
 
 	if (gBatchUpdate != true)
 	{
 		refreshItemList(container, HT_EVENT_VIEW_REFRESH);
+	}
+	else
+	{
+		pane->dirty = true;
 	}
 }
 
@@ -4114,6 +4120,7 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 						{
 							RDF_Assert(gNCDB, node->node, gNavCenter->RDF_Command, 
 								menuCommand->graphCommand, RDF_RESOURCE_TYPE);
+							needRefresh = true;
 							break;
 						}
 						menuCommand = menuCommand->next;

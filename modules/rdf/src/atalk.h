@@ -29,6 +29,7 @@
 #include "mcf.h"
 #include "vocab.h"
 #include "utils.h"
+#include "prefapi.h"
 
 
 /* atalk.c data structures and defines */
@@ -38,11 +39,22 @@ extern	int	RDF_AFP_PW_EXPIRED_STR, RDF_AFP_ALREADY_MOUNTED_STR, RDF_AFP_MAX_SERV
 extern	int	RDF_AFP_NOT_RESPONDING_STR, RDF_AFP_SAME_NODE_STR, RDF_AFP_ERROR_NUM_STR;
 extern	int	RDF_VOLUME_DESC_STR, RDF_DIRECTORY_DESC_STR, RDF_FILE_DESC_STR;
 
+#define	ATALK_NOHIERARCHY_PREF	"browser.navcenter.appletalk.zone.nohierarchy"
+
+#define	ATALK_CMD_PREFIX		"Command:at:"
+
 #define	kAppleShareVerGestalt		'afps'
 #define	kAppleShareVer_3_7		0x00000006
 #define	AFPX_PROT_VERSION		0
 #define	BASE_AFPX_OFFSET		30
 #define	BASE_AFP_OFFSET			24
+
+typedef	struct	_ourNBPUserDataStruct
+{
+	RDFT			rdf;
+	char			*parentID;
+} ourNBPUserDataStruct;
+typedef	ourNBPUserDataStruct *ourNBPUserDataPtr;
 
 
 /* atalk.c function prototypes */
@@ -53,11 +65,10 @@ XP_BEGIN_PROTOS
 PRBool		isAFPVolume(short ioVRefNum);
 #endif
 
-void		getZones();
-void		processZones(char *zones, uint16 numZones);
+void		getZones(RDFT rdf);
+void		processZones(RDFT rdf, char *zones, uint16 numZones, XP_Bool noHierarchyFlag);
 void		checkServerLookup (MPPParamBlock *nbp);
-void		getServers(RDF_Resource parent);
-void		setAtalkResourceName(RDF_Resource u);
+void		getServers(RDFT rdf, RDF_Resource parent);
 void		AtalkPossible(RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep);
 RDF_Error	AtalkDestroy (RDFT r);
 PRBool		AtalkHasAssertion (RDFT mcf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType type, PRBool tv);

@@ -34,7 +34,6 @@
 
 
 
-
 RDFT
 MakeRemoteStore (char* url)
 {
@@ -45,7 +44,6 @@ MakeRemoteStore (char* url)
     } else return gRemoteStore;
   } else return NULL;
 }
-
 
 
 
@@ -60,6 +58,7 @@ MakeFileDB (char* url)
     return ntr;
   } else return NULL;
 }
+
 
 
 PRBool
@@ -120,8 +119,8 @@ remoteAssert3 (RDFFile fi, RDFT mcf, RDF_Resource u, RDF_Resource s, void* v,
 void
 remoteStoreflushChildren(RDFT mcf, RDF_Resource parent)
 {
-	RDF_Cursor		c;
-	RDF_Resource		child;
+	RDF_Cursor		c, cc;
+	RDF_Resource		child, s, value;
 
 	if (parent == NULL)	return;
 	if ((c = remoteStoreGetSlotValues (mcf, parent, gCoreVocab->RDF_parent,
@@ -130,7 +129,27 @@ remoteStoreflushChildren(RDFT mcf, RDF_Resource parent)
 		while((child = remoteStoreNextValue (mcf, c)) != NULL)
 		{
 			remoteStoreflushChildren(mcf, child);
+
 			/* XXX should we remove all arcs coming off of this node? */
+#if 0
+			if ((cc = remoteStoreArcLabelsOut(mcf, child)) != NULL)
+			{
+				if ((s = remoteStoreNextValue (mcf, cc)) != NULL)
+				{
+					if (s == gCoreVocab->RDF_name)
+					{
+						value = remoteStoreGetSlotValue (mcf, child, s,
+							RDF_STRING_TYPE, PR_FALSE, PR_TRUE);
+						if (value != NULL)
+						{
+							remoteStoreRemove (mcf, child, s,
+								value, RDF_STRING_TYPE);
+						}
+					}
+				}
+				remoteStoreDisposeCursor(mcf, cc);
+			}
+#endif
 			remoteStoreRemove (mcf, child, gCoreVocab->RDF_parent,
 				parent, RDF_RESOURCE_TYPE);
 		}
@@ -243,6 +262,7 @@ fileReadp (RDFT rdf, char* url, PRBool mark)
   }
   return false;
 }
+
 
 
 static void
@@ -520,6 +540,7 @@ freeSomeRDFSpace (RDF mcf)
 }
 
 
+
 RDFFile
 readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
 {
@@ -558,6 +579,8 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     return newFile;
   }
 }
+
+
 
 void
 possiblyRefreshRDFFiles ()
@@ -598,19 +621,28 @@ SCookPossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool invers
   } */
 }
 
-RDFT NewRemoteStore (char* url) {
-  RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
-  ntr->getSlotValue = remoteStoreGetSlotValue;
-  ntr->getSlotValues = remoteStoreGetSlotValues;
-  ntr->hasAssertion = remoteStoreHasAssertion;
-  ntr->nextValue = remoteStoreNextValue;
-  ntr->disposeCursor = remoteStoreDisposeCursor;
-  ntr->url = copyString(url);
-  ntr->arcLabelsIn = remoteStoreArcLabelsIn;
-  ntr->arcLabelsOut = remoteStoreArcLabelsOut;
-  return ntr;
+
+
+RDFT
+NewRemoteStore (char* url)
+{
+	RDFT		ntr;
+
+	if ((ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct))) != NULL)
+	{
+		ntr->getSlotValue = remoteStoreGetSlotValue;
+		ntr->getSlotValues = remoteStoreGetSlotValues;
+		ntr->hasAssertion = remoteStoreHasAssertion;
+		ntr->nextValue = remoteStoreNextValue;
+		ntr->disposeCursor = remoteStoreDisposeCursor;
+		ntr->url = copyString(url);
+		ntr->arcLabelsIn = remoteStoreArcLabelsIn;
+		ntr->arcLabelsOut = remoteStoreArcLabelsOut;
+	}
+	return(ntr);
 }
-  
+
+
 
 RDFT
 MakeSCookDB (char* url)
