@@ -38,6 +38,7 @@
 
 #include "msgCore.h"    // precompiled header...
 #include "prlog.h"
+#include "nsISupportsObsolete.h"
 
 #include "nsIURL.h"
 #include "nsNntpUrl.h"

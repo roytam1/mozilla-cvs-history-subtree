@@ -97,7 +97,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsMsgIncomingServer)
 
 nsNntpIncomingServer::nsNntpIncomingServer() : nsMsgLineBuffer(nsnull, PR_FALSE)
 {    
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 
   mNewsrcHasChanged = PR_FALSE;
   mGroupsEnumerator = nsnull;
@@ -302,7 +302,8 @@ nsresult nsNntpIncomingServer::SetupNewsrcSaveTimer()
 		mNewsrcSaveTimer->Cancel();
 	}
     mNewsrcSaveTimer = do_CreateInstance("@mozilla.org/timer;1");
-	mNewsrcSaveTimer->Init(OnNewsrcSaveTimer, (void*)this, timeInMSUint32, PR_TRUE, NS_TYPE_REPEATING_SLACK);
+	mNewsrcSaveTimer->InitWithFuncCallback(OnNewsrcSaveTimer, (void*)this, timeInMSUint32,
+                                           nsITimer::TYPE_REPEATING_SLACK);
 
     return NS_OK;
 }
