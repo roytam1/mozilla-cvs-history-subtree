@@ -815,6 +815,14 @@ extensions/transformiix/source/Makefile
 extensions/transformiix/Makefile
 "
 
+MAKEFILES_xre="
+embedding/xre/Makefile
+"
+
+MAKEFILES_minotaur="
+mailnews/app/Makefile
+"
+
 if [ "$MACOSX" ]; then
     MAKEFILES_macmorefiles="
        lib/mac/MoreFiles/Makefile
@@ -1212,6 +1220,14 @@ fi
 
 if test -n "$MOZ_CALENDAR"; then
     add_makefiles "$MAKEFILES_calendar"
+fi
+
+if test -n "$MOZ_MINOTAUR"; then
+    add_makefiles "$MAKEFILES_minotaur"
+fi
+
+if test -n "$MOZ_XRE_APP"; then
+   add makefiles "$MAKEFILES_xre"
 fi
 
 else
