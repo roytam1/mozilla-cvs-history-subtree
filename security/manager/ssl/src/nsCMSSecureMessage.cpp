@@ -96,8 +96,6 @@ GetCertByPrefID(const char *certID, char **_retval)
                           getter_Copies(nickname));
   if (NS_FAILED(rv)) goto done;
 
-printf("Cert Nickname: %s\n", nickname.get());
-
   /* Find a good cert in the user's database */
   cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), (char*)nickname.get(), 
            certUsageEmailRecipient, PR_TRUE, ctx);
