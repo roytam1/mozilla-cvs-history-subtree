@@ -1371,8 +1371,16 @@ nsXULContentBuilder::CreateTemplateContents(nsIContent* aElement,
         element = parent;
     }
 
-    nsTemplateMatch* match;
+    NS_ASSERTION(element != nsnull, "walked off the top of the content tree");
+    if (! element)
+        return NS_ERROR_FAILURE;
+
+    nsTemplateMatch* match = nsnull;
     mContentSupportMap.Get(element, &match);
+
+    NS_ASSERTION(match != nsnull, "no match in the content support map");
+    if (! match)
+        return NS_ERROR_FAILURE;
 
     rv = BuildContentFromTemplate(aTemplateElement, aElement, aElement, PR_FALSE, resource, PR_FALSE,
                                   match, aContainer, aNewIndexInContainer);
