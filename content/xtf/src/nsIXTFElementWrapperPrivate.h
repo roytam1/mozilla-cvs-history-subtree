@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,18 +36,23 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFVisual.idl"
+#ifndef __NS_IXTFELEMENTWRAPPERPRIVATE_H__
+#define __NS_IXTFELEMENTWRAPPERPRIVATE_H__
 
-interface nsIXTFXMLVisualWrapper;
-interface nsIDOMElement;
+#include "nsISupports.h"
 
-[scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
-interface nsIXTFXMLVisual : nsIXTFVisual
+// {599EB85F-ABC0-4B52-A1B0-EA103D48E3AE}
+#define NS_IXTFELEMENTWRAPPERPRIVATE_IID \
+{ 0x599eb85f, 0xabc0, 0x4b52, { 0xa1, 0xb0, 0xea, 0x10, 0x3d, 0x48, 0xe3, 0xae } }
+
+
+class nsIXTFElementWrapperPrivate : public nsISupports
 {
-  // onCreated: Will be called before any notifications are sent to
-  // the xtf element or before the element will be asked for its
-  // visualContent. Parameter 'wrapper' is a weak proxy to the
-  // wrapping element (i.e. it can safely be addrefed by the xtf
-  // element without creating cyclic XPCOM referencing).
-  void onCreated(in nsIXTFXMLVisualWrapper wrapper);
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXTFELEMENTWRAPPERPRIVATE_IID)
+
+  // element type as given in nsIXTFElement:
+  virtual PRUint32 GetElementType() = 0;
 };
+
+#endif // __NS_IXTFELEMENTWRAPPERPRIVATE_H__

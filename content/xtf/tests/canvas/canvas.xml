@@ -1,4 +1,6 @@
 <?xml version="1.0"?>
-<canvas xmlns="urn:mozilla:xtf:tests:canvas">
-  <line/>
-</canvas>
+<doc xmlns="http://www.w3.org/1999/xhtml">
+  <canvas xmlns="urn:mozilla:xtf:tests:canvas">
+    <line/>
+  </canvas>
+</doc>

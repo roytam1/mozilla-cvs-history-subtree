@@ -54,6 +54,7 @@ XPIDLSRCS = \
 	nsIXTFGenericElement.idl \
 	nsIXTFGenericElementWrapper.idl \
 	nsIXTFPrivate.idl \
+	nsIXTFVisual.idl \
 	nsIXTFXMLVisual.idl \
 	nsIXTFXMLVisualWrapper.idl \
 	nsIXTFXULVisual.idl \

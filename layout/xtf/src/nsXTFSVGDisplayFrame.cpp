@@ -43,13 +43,15 @@
 #include "nsISVGChildFrame.h"
 #include "nsISVGContainerFrame.h"
 #include "nsISVGOuterSVGFrame.h"
-
+#include "nsIXTFVisualWrapperPrivate.h"
+#include "nsIAnonymousContentCreator.h"
 
 typedef nsContainerFrame nsXTFSVGDisplayFrameBase;
 
 class nsXTFSVGDisplayFrame : public nsXTFSVGDisplayFrameBase,
                              public nsISVGChildFrame,
-                             public nsISVGContainerFrame
+                             public nsISVGContainerFrame,
+                             public nsIAnonymousContentCreator
 {
   friend nsresult
   NS_NewXTFSVGDisplayFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -111,6 +113,16 @@ public:
   already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
   already_AddRefed<nsSVGCoordCtxProvider> GetCoordContextProvider();
 
+  // nsIAnonymousContentCreator
+  NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
+                                    nsISupportsArray& aAnonymousItems);
+  
+  // If the creator doesn't want to create special frame for frame hierarchy
+  // then it should null out the style content arg and return NS_ERROR_FAILURE
+  NS_IMETHOD CreateFrameFor(nsPresContext*   aPresContext,
+                            nsIContent *      aContent,
+                            nsIFrame**        aFrame) {
+    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
   
 protected:
 };
@@ -155,11 +167,13 @@ nsresult nsXTFSVGDisplayFrame::Init()
 NS_INTERFACE_MAP_BEGIN(nsXTFSVGDisplayFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
+  NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
 NS_INTERFACE_MAP_END_INHERITING(nsXTFSVGDisplayFrameBase)
 
 
 //----------------------------------------------------------------------
 // nsIFrame methods
+  
 NS_IMETHODIMP
 nsXTFSVGDisplayFrame::Init(nsPresContext*  aPresContext,
                            nsIContent*      aContent,
@@ -459,4 +473,16 @@ nsXTFSVGDisplayFrame::GetCoordContextProvider()
   }
 
   return containerFrame->GetCoordContextProvider();  
+}
+
+//----------------------------------------------------------------------
+// nsIAnonymousContentCreator methods:
+
+NS_IMETHODIMP
+nsXTFSVGDisplayFrame::CreateAnonymousContent(nsPresContext* aPresContext,
+                                             nsISupportsArray& aAnonymousItems)
+{
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
+  return visual->CreateAnonymousContent(aPresContext, aAnonymousItems);
 }

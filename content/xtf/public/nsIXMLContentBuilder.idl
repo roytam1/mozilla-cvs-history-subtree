@@ -39,16 +39,38 @@
 #include "nsISupports.idl"
 
 interface nsIDOMElement;
+interface nsIDOMDocument;
 
 [scriptable, uuid(e9c4cd4f-cd41-43d0-bf3b-48abb9cde90f)]
 interface nsIXMLContentBuilder : nsISupports
 {
-  void clear();
+  // (Re-)Initialize this builder. Set 'root' as the new root and
+  // current element. If 'root' is null, the first element built (with
+  // 'beginElement()') will become the new root. Also resets the
+  // element namespace.
+  void clear(in nsIDOMElement root);
+
+  // Set the document which will be used by 'beginElement()' to create
+  // elements. If null, the builder will create a new XML document
+  // internally.
+  void setDocument(in nsIDOMDocument doc);
+  
+  // Set the namespace for all elements built subsequently
   void setElementNamespace(in AString ns);
+
+  // Create an element. The element will become the 'current' element,
+  // i.e. the target for attributes (via 'attrib()') or child content
+  // (via subsequent begin/endElement()-calls), until it is 'closed'
+  // with a call to 'endElement()'.
   void beginElement(in AString tagname);
   void endElement();
+
+  // Set an attribute on the current element
   void attrib(in AString name, in AString value);
+
+  // Create a textNode
   void textNode(in AString text);
+  
   readonly attribute nsIDOMElement root;
   readonly attribute nsIDOMElement current;
 };

@@ -41,12 +41,13 @@
 
 #include "nsXTFElementWrapper.h"
 #include "nsIDOMElement.h"
-#include "nsIAnonymousContentCreator.h"
+#include "nsIXTFVisualWrapperPrivate.h"
+#include "nsIXTFVisual.h"
 
 typedef nsXTFElementWrapper nsXTFVisualWrapperBase;
 
 class nsXTFVisualWrapper : public nsXTFVisualWrapperBase,
-                           public nsIAnonymousContentCreator
+                           public nsIXTFVisualWrapperPrivate
 {
 protected:
   nsXTFVisualWrapper(nsINodeInfo* aNodeInfo);
@@ -55,21 +56,16 @@ public:
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
-  // nsIAnonymousContentCreator
+  // nsIXTFVisualWrapperPrivate
   NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
                                     nsISupportsArray& aAnonymousItems);
-  
-  // If the creator doesn't want to create special frame for frame hierarchy
-  // then it should null out the style content arg and return NS_ERROR_FAILURE
-  NS_IMETHOD CreateFrameFor(nsPresContext*   aPresContext,
-                            nsIContent *      aContent,
-                            nsIFrame**        aFrame) {
-    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
-
+  virtual void DidLayout();
+  virtual void GetInsertionPoint(nsIDOMElement** insertionPoint);
+  virtual PRBool ApplyDocumentStyleSheets();
   
 protected:
   // to be implemented by subclasses:
-  virtual void CreateVisualContent(nsIDOMElement **content)=0;
+  virtual nsIXTFVisual *GetXTFVisual()const = 0;
   
   nsCOMPtr<nsIDOMElement> mVisualContent;
 };

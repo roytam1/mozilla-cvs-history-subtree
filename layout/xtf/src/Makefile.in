@@ -56,11 +56,13 @@ REQUIRES	= xpcom \
 		  pref \
 		  necko \
 		  unicharutil \
+		  webshell \
 		  $(NULL)
 
 CPPSRCS		= \
 		nsXTFSVGDisplayFrame.cpp \
 		nsXTFXULDisplayFrame.cpp \
+		nsXTFXMLDisplayFrame.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -84,5 +86,4 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../../xul/base/src \
 		$(NULL)
 
-
-
+DEFINES += -D_IMPL_NS_LAYOUT

@@ -73,6 +73,8 @@ public:
   NS_DECL_NSIXMLCONTENTBUILDER
 
 private:
+  void EnsureDoc();
+  
   nsCOMPtr<nsIContent> mTop;
   nsCOMPtr<nsIContent> mCurrent;
   nsCOMPtr<nsIDocument> mDocument;
@@ -90,11 +92,7 @@ nsXMLContentBuilder::nsXMLContentBuilder()
 //  printf("nsXMLContentBuilder CTOR\n");
 #endif
 
-  mNamespaceManager = do_CreateInstance(NS_NAMESPACEMANAGER_CONTRACTID);
-
-  mDocument = do_CreateInstance(kXMLDocumentCID);
-  // XXX should probably do some doc initialization here, such as
-  // setting the base url  
+  mNamespaceManager = do_GetService(NS_NAMESPACEMANAGER_CONTRACTID);
 }
 
 nsXMLContentBuilder::~nsXMLContentBuilder()
@@ -124,23 +122,25 @@ NS_IMPL_ISUPPORTS1(nsXMLContentBuilder, nsIXMLContentBuilder);
 //----------------------------------------------------------------------
 // nsIXMLContentBuilder implementation
 
-// /* void clear (); */
-// NS_IMETHODIMP nsXMLContentBuilder::Clear()
-// {
-//   mCurrent = nsnull;
-//   mContent->Clear();
-//   // XXX clear ns mgr?
-//   return NS_OK;
-// }
-
-/* void clear (); */
-NS_IMETHODIMP nsXMLContentBuilder::Clear()
+/* void clear (in nsIDOMElement root); */
+NS_IMETHODIMP nsXMLContentBuilder::Clear(nsIDOMElement *root)
 {
-  mCurrent = nsnull;
-  mTop = nsnull;
+  mCurrent = root;
+  mTop = root;
   if (mNamespaceId != kNameSpaceID_None) {
     mNamespaceId = kNameSpaceID_None;
   }
+  return NS_OK;
+}
+
+/* void setDocument (in nsIDOMDocument doc); */
+NS_IMETHODIMP nsXMLContentBuilder::SetDocument(nsIDOMDocument *doc)
+{
+  mDocument = do_QueryInterface(doc);
+#ifdef DEBUG
+  if (!mDocument)
+    NS_WARNING("null document in nsXMLContentBuilder::SetDocument");
+#endif
   return NS_OK;
 }
 
@@ -156,13 +156,9 @@ NS_IMETHODIMP nsXMLContentBuilder::BeginElement(const nsAString & tagname)
 {
   nsCOMPtr<nsIContent> node;
   {
-    nsCOMPtr<nsINodeInfo> nodeInfo;
-    mDocument->NodeInfoManager()->GetNodeInfo(tagname, nsnull,
-                                              mNamespaceId,
-                                              getter_AddRefs(nodeInfo));
-    NS_ASSERTION(nodeInfo, "could not get node info");
-    
-    NS_NewElement(getter_AddRefs(node), nodeInfo->NamespaceID(), nodeInfo);
+    EnsureDoc();
+    nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(tagname);
+    mDocument->CreateElem(nameAtom, nsnull, mNamespaceId, PR_FALSE, getter_AddRefs(node));
   }
   if (!node) {
     NS_ERROR("could not create node");
@@ -207,6 +203,7 @@ NS_IMETHODIMP nsXMLContentBuilder::Attrib(const nsAString & name, const nsAStrin
 /* void textNode (in AString text); */
 NS_IMETHODIMP nsXMLContentBuilder::TextNode(const nsAString & text)
 {
+  EnsureDoc();
   NS_ASSERTION(mCurrent, "can't append textnode w/o open element");
   nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(mDocument);
   NS_ASSERTION(domDoc, "no dom document");
@@ -239,3 +236,15 @@ NS_IMETHODIMP nsXMLContentBuilder::GetCurrent(nsIDOMElement * *aCurrent)
   return mCurrent->QueryInterface(nsIDOMElement::GetIID(), (void**)aCurrent);
 }
 
+//----------------------------------------------------------------------
+// implementation helpers
+
+void nsXMLContentBuilder::EnsureDoc()
+{
+  if (!mDocument) {
+    mDocument = do_CreateInstance(kXMLDocumentCID);
+    // XXX should probably do some doc initialization here, such as
+    // setting the base url
+  }
+  NS_ASSERTION(mDocument, "null doc");
+}

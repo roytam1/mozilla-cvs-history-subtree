@@ -64,7 +64,7 @@ interface nsIXTFElement : nsISupports
   const unsigned long ELEMENT_TYPE_XUL_VISUAL      = 3;
 
   // elementType identifies the type of wrapper that will be built for
-  // a given xtf element. It must remain constant for the complete
+  // a given xtf element. It must remain constant for the entire
   // lifetime of the xtf element (i.e. before any onCreated()-calls
   // until after onDestroyed()-calls).
   readonly attribute unsigned long elementType;
@@ -73,7 +73,7 @@ interface nsIXTFElement : nsISupports
   // that it wants to manage its own attributes. In this case it needs
   // to implement the nsIXTFAttributeHandler interface in addition to
   // its other interfaces. 'isAttributeHandler' must remain constant
-  // for the complete lifetime of the xtf element (i.e. before any
+  // for the entire lifetime of the xtf element (i.e. before any
   // onCreated()-calls until after onDestroyed()-calls).
   readonly attribute boolean isAttributeHandler;
   
@@ -86,6 +86,8 @@ interface nsIXTFElement : nsISupports
                               [array, size_is(count), retval] out nsIIDPtr array);
 
   // Notification mask constants:
+  // To receive a given event set the corresponding bit in
+  // nsIXTFElementWrapper::notificationMask.
   const unsigned long NOTIFY_WILL_CHANGE_DOCUMENT  = 0x00000001;
   const unsigned long NOTIFY_DOCUMENT_CHANGED      = 0x00000002;
   const unsigned long NOTIFY_WILL_CHANGE_PARENT    = 0x00000004;
@@ -100,12 +102,6 @@ interface nsIXTFElement : nsISupports
   const unsigned long NOTIFY_ATTRIBUTE_SET         = 0x00000800;
   const unsigned long NOTIFY_WILL_REMOVE_ATTRIBUTE = 0x00001000;
   const unsigned long NOTIFY_ATTRIBUTE_REMOVED     = 0x00002000;
-  
-  // Events can be masked out by setting the corresponding bit in
-  // notificationMask to '0'. This attribute must remain constant for
-  // the complete lifetime of the xtf element (i.e. before any
-  // onCreated()-calls until after onDestroyed()-calls).
-  readonly attribute unsigned long notificationMask;
   
   // Event notifications:
 

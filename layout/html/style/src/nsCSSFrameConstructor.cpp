@@ -113,6 +113,9 @@
 #include "nsScrollPortFrame.h"
 #include "nsXULAtoms.h"
 #include "nsBoxFrame.h"
+#ifdef MOZ_ENABLE_CAIRO
+#include "nsCanvasFrame.h"
+#endif
 
 static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
 
@@ -145,8 +148,12 @@ static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
 
 #ifdef MOZ_XTF
 #include "nsIXTFElement.h"
+#include "nsIXTFElementWrapperPrivate.h"
+#include "nsIXTFVisualWrapperPrivate.h"
 nsresult
 NS_NewXTFXULDisplayFrame(nsIPresShell*, nsIFrame**);
+nsresult
+NS_NewXTFXMLDisplayFrame(nsIPresShell*, nsIFrame**);
 #ifdef MOZ_SVG
 nsresult
 NS_NewXTFSVGDisplayFrame(nsIPresShell*, nsIContent*, nsIFrame**);
@@ -157,6 +164,7 @@ NS_NewXTFSVGDisplayFrame(nsIPresShell*, nsIContent*, nsIFrame**);
 #include "nsSVGAtoms.h"
 #include "nsISVGTextContainerFrame.h"
 #include "nsISVGContainerFrame.h"
+#include "nsStyleUtil.h"
 
 nsresult
 NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -190,6 +198,8 @@ nsresult
 NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
 nsresult
 NS_NewSVGDefsFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+PRBool 
+NS_SVG_TestFeatures (const nsAString& value);
 #endif
 
 #include "nsIDocument.h"
@@ -310,6 +320,11 @@ NS_NewListBoxScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 nsresult
 NS_NewTreeBodyFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
+#ifdef MOZ_ENABLE_CAIRO
+nsresult
+NS_NewCanvasXULFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
+#endif
+
 // grid
 nsresult
 NS_NewGridLayout2 ( nsIPresShell* aPresShell, nsIBoxLayout** aNewLayout );
@@ -367,6 +382,47 @@ static PRInt32 FFWC_nextInFlows=0;
 static PRInt32 FFWC_slowSearchForText=0;
 #endif
 
+#ifdef  MOZ_SVG
+
+// Test to see if this language is supported
+static PRBool
+SVG_TestLanguage(const nsSubstring& lstr, const nsSubstring& prefs) 
+{
+  // Compare list to attribute value, which may be a list
+  // According to the SVG 1.1 Spec (at least as I read it), we should take
+  // the first attribute value and check it for any matches in the users
+  // preferences, including any prefix matches.
+  // This algorithm is O(M*N)
+  PRInt32 vbegin = 0;
+  PRInt32 vlen = lstr.Length();
+  while (vbegin < vlen) {
+    PRInt32 vend = lstr.FindChar(PRUnichar(','), vbegin);
+    if (vend == kNotFound) {
+      vend = vlen;
+    }
+    PRInt32 gbegin = 0;
+    PRInt32 glen = prefs.Length();
+    while (gbegin < glen) {
+      PRInt32 gend = prefs.FindChar(PRUnichar(','), gbegin);
+      if (gend == kNotFound) {
+        gend = glen;
+      }
+      const nsDefaultStringComparator defaultComparator;
+      const nsStringComparator& comparator = 
+                  NS_STATIC_CAST(const nsStringComparator&, defaultComparator);
+      if (nsStyleUtil::DashMatchCompare(Substring(lstr, vbegin, vend-vbegin),
+                                        Substring(prefs, gbegin, gend-gbegin),
+                                        comparator)) {
+        return PR_TRUE;
+      }
+      gbegin = gend + 1;
+    }
+    vbegin = vend + 1;
+  }
+  return PR_FALSE;
+}
+#endif
+
 //----------------------------------------------------------------------
 //
 // When inline frames get weird and have block frames in them, we
@@ -386,9 +442,7 @@ GetSpecialSibling(nsFrameManager* aFrameManager, nsIFrame* aFrame, nsIFrame** aR
   // frame in the flow. Walk back to find that frame now.
   aFrame = aFrame->GetFirstInFlow();
 
-  void* value =
-    aFrameManager->GetFrameProperty(aFrame,
-                                    nsLayoutAtoms::IBSplitSpecialSibling, 0);
+  void* value = aFrame->GetProperty(nsLayoutAtoms::IBSplitSpecialSibling);
 
   *aResult = NS_STATIC_CAST(nsIFrame*, value);
 }
@@ -440,9 +494,7 @@ SetFrameIsSpecial(nsFrameManager* aFrameManager, nsIFrame* aFrame, nsIFrame* aSp
 
     // Store the "special sibling" (if we were given one) with the
     // first frame in the flow.
-    aFrameManager->SetFrameProperty(aFrame,
-                                    nsLayoutAtoms::IBSplitSpecialSibling,
-                                    aSpecialSibling, nsnull);
+    aFrame->SetProperty(nsLayoutAtoms::IBSplitSpecialSibling, aSpecialSibling);
   }
 }
 
@@ -573,10 +625,9 @@ MarkIBSpecialPrevSibling(nsPresContext* aPresContext,
                          nsIFrame *aAnonymousFrame,
                          nsIFrame *aSpecialParent)
 {
-  aFrameManager->SetFrameProperty(aAnonymousFrame,
-                                  nsLayoutAtoms::IBSplitSpecialPrevSibling,
-                                  aSpecialParent,
-                                  nsnull);
+  aPresContext->PropertyTable()->SetProperty(aAnonymousFrame,
+                                      nsLayoutAtoms::IBSplitSpecialPrevSibling,
+                                             aSpecialParent, nsnull, nsnull);
 }
 
 // -----------------------------------------------------------
@@ -4751,9 +4802,9 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
         // there is no reasonable way to get the value there.
         // so we store it as a frame property.
         nsCOMPtr<nsIAtom> contentParentAtom = do_GetAtom("contentParent");
-        aState.mFrameManager->SetFrameProperty(newFrame,
-                                               contentParentAtom, 
-                                               aParentFrame, nsnull);
+        aPresContext->PropertyTable()->SetProperty(newFrame, contentParentAtom,
+                                                   aParentFrame, nsnull,
+                                                   nsnull);
       }
     }
   }
@@ -5056,15 +5107,15 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
 {
   nsCOMPtr<nsIAnonymousContentCreator> creator(do_QueryInterface(aParentFrame));
 
-#ifdef MOZ_XTF
-  if (!creator) {
-    // try the content element
-    creator = do_QueryInterface(aParent);
-  }
-#endif
-
   if (!creator)
     return NS_OK;
+
+#ifdef MOZ_XTF
+  PRBool forceBindingParent = PR_FALSE;
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> xtfElem = do_QueryInterface(aParent);
+  if (xtfElem && xtfElem->ApplyDocumentStyleSheets()) 
+    forceBindingParent = PR_TRUE;
+#endif
 
   nsCOMPtr<nsISupportsArray> anonymousItems;
   NS_NewISupportsArray(getter_AddRefs(anonymousItems));
@@ -5126,6 +5177,11 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
         else
           rv = content->SetBindingParent(content);
       }
+      else
+#endif
+#ifdef MOZ_XTF
+      if (forceBindingParent)
+        rv = content->SetBindingParent(aParent);
       else
 #endif
         rv = content->SetBindingParent(content);
@@ -5211,6 +5267,8 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
     if (NS_STYLE_POSITION_ABSOLUTE == display->mPosition)
       isAbsolutelyPositioned = PR_TRUE;
 
+    PRBool mayBeScrollable = PR_FALSE;
+
     if (isXULNS) {
       // First try creating a frame based on the tag
 #ifdef MOZ_XUL
@@ -5221,21 +5279,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewButtonBoxFrame(aPresShell, &newFrame);
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        mayBeScrollable = PR_TRUE;
       } // End of BUTTON CONSTRUCTION logic
       // AUTOREPEATBUTTON CONSTRUCTION
       else if (aTag == nsXULAtoms::autorepeatbutton) {
@@ -5244,70 +5288,28 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewAutoRepeatBoxFrame(aPresShell, &newFrame);
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        mayBeScrollable = PR_TRUE;
       } // End of AUTOREPEATBUTTON CONSTRUCTION logic
 
 
-	   // TITLEBAR CONSTRUCTION
-	   else if (aTag == nsXULAtoms::titlebar) {
+      // TITLEBAR CONSTRUCTION
+      else if (aTag == nsXULAtoms::titlebar) {
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewTitleBarFrame(aPresShell, &newFrame);
 
-		  // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        // Boxes can scroll.
+        mayBeScrollable = PR_TRUE;
       } // End of TITLEBAR CONSTRUCTION logic
 
-	   // RESIZER CONSTRUCTION
-	   else if (aTag == nsXULAtoms::resizer) {
+      // RESIZER CONSTRUCTION
+      else if (aTag == nsXULAtoms::resizer) {
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewResizerFrame(aPresShell, &newFrame);
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        mayBeScrollable = PR_TRUE;
       } // End of RESIZER CONSTRUCTION logic
 
       else if (aTag == nsXULAtoms::image) {
@@ -5328,6 +5330,12 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         rv = NS_NewTreeColFrame(aPresShell, &newFrame);
       }
+#ifdef MOZ_ENABLE_CAIRO
+      else if (aTag == nsXULAtoms::canvas) {
+        isReplaced = PR_TRUE;
+        rv = NS_NewCanvasXULFrame(aPresShell, &newFrame);
+      }
+#endif
       // TEXT CONSTRUCTION
       else if (aTag == nsXULAtoms::text || aTag == nsHTMLAtoms::label ||
                aTag == nsXULAtoms::description) {
@@ -5457,21 +5465,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull);
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        mayBeScrollable = PR_TRUE;
       } // End of BOX CONSTRUCTION logic
 #ifdef MOZ_XUL
       // ------- Begin Grid ---------
@@ -5485,21 +5479,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, layout);
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        mayBeScrollable = PR_TRUE;
       } //------- End Grid ------
 
       // ------- Begin Rows/Columns ---------
@@ -5564,21 +5544,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
           rv = NS_NewGridRowLeafFrame(aPresShell, &newFrame, PR_FALSE, layout);
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        } 
+        mayBeScrollable = PR_TRUE;
       } //------- End Grid ------
       // End of STACK CONSTRUCTION logic
        // DECK CONSTRUCTION
@@ -5594,20 +5560,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         isReplaced = PR_TRUE;
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-        }
+        mayBeScrollable = PR_TRUE;
       } 
       // STACK CONSTRUCTION
       else if (display->mDisplay == NS_STYLE_DISPLAY_STACK ||
@@ -5618,20 +5571,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 
         rv = NS_NewStackFrame(aPresShell, &newFrame);
 
-         if (IsScrollable(aPresContext, display)) {
-
-          // set the top to be the newly created scrollframe
-          BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
-                           aStyleContext, newFrame, aParentFrame, nsnull,
-                           topFrame, aStyleContext);
-
-          // we have a scrollframe so the parent becomes the scroll frame.
-          aParentFrame = newFrame->GetParent();
-          primaryFrameSet = PR_TRUE;
-
-          frameHasBeenInitialized = PR_TRUE;
-
-        }
+        mayBeScrollable = PR_TRUE;
       }
       else if (display->mDisplay == NS_STYLE_DISPLAY_POPUP) {
         // This is its own frame that derives from
@@ -5665,6 +5605,21 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
           isPopup = PR_TRUE;
       } 
 #endif
+    }
+
+    if (mayBeScrollable && IsScrollable(aPresContext, display)) {
+      // set the top to be the newly created scrollframe
+      BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
+                       aStyleContext, newFrame, aParentFrame, nsnull,
+                       topFrame, aStyleContext);
+
+      // we have a scrollframe so the parent becomes the scroll frame.
+      // XXXldb Do we really want to do this?  The one case where it
+      // matters when |frameHasBeenInitialized| is true is one where
+      // I think we'd be better off the other way around.
+      aParentFrame = newFrame->GetParent();
+      primaryFrameSet = PR_TRUE;
+      frameHasBeenInitialized = PR_TRUE;
     }
   }
 
@@ -6574,12 +6529,12 @@ nsCSSFrameConstructor::IsScrollable(nsPresContext*       aPresContext,
   // For the time being it's scrollable if the overflow property is auto or
   // scroll, regardless of whether the width or height is fixed in size
   switch (aDisplay->mOverflow) {
-  	case NS_STYLE_OVERFLOW_SCROLL:
-  	case NS_STYLE_OVERFLOW_AUTO:
-  	case NS_STYLE_OVERFLOW_HIDDEN:
-  	case NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL:
-  	case NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL:
-	    return PR_TRUE;
+    case NS_STYLE_OVERFLOW_SCROLL:
+    case NS_STYLE_OVERFLOW_AUTO:
+    case NS_STYLE_OVERFLOW_HIDDEN:
+    case NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL:
+    case NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL:
+      return PR_TRUE;
   }
   return PR_FALSE;
 }
@@ -6899,11 +6854,9 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
     isFixedPositioned = PR_TRUE;
   }
 
-  nsCOMPtr<nsIXTFElement> xtfElem = do_QueryInterface(aContent);
+  nsCOMPtr<nsIXTFElementWrapperPrivate> xtfElem = do_QueryInterface(aContent);
   NS_ASSERTION(xtfElem, "huh? no xtf element?");
-  PRUint32 elementType=nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT;
-  xtfElem->GetElementType(&elementType);
-  switch(elementType) {
+  switch(xtfElem->GetElementType()) {
     case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
 #ifdef MOZ_SVG
       rv = NS_NewXTFSVGDisplayFrame(aPresShell, aContent, &newFrame);
@@ -6913,7 +6866,10 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
       break;
     case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
       // XXX examine display style
-      rv = NS_NewBlockFrame(aPresShell, &newFrame);
+#ifdef DEBUG
+      printf("creating xtfxmldisplay frame\n");
+#endif
+      rv = NS_NewXTFXMLDisplayFrame(aPresShell, &newFrame);
       break;
     case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
       rv = NS_NewXTFXULDisplayFrame(aPresShell, &newFrame);
@@ -6963,7 +6919,7 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
         }
     }
     
-   // If the frame is absolutely positioned then create a placeholder frame
+    // If the frame is absolutely positioned then create a placeholder frame
     if (isAbsolutelyPositioned || isFixedPositioned) {
       nsIFrame* placeholderFrame;
       
@@ -6991,6 +6947,152 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
 
 // SVG 
 #ifdef MOZ_SVG
+nsresult
+nsCSSFrameConstructor::TestSVGConditions(nsIContent* aContent,
+                                         PRBool&     aHasRequiredExtensions,
+                                         PRBool&     aHasRequiredFeatures,
+                                         PRBool&     aHasSystemLanguage)
+{
+  nsresult rv = NS_OK;
+  nsAutoString value;
+
+  // Only elements can have tests on them
+  if (! aContent->IsContentOfType(nsIContent::eELEMENT)) {
+    aHasRequiredExtensions = PR_FALSE;
+    aHasRequiredFeatures = PR_FALSE;
+    aHasSystemLanguage = PR_FALSE;
+    return rv;
+  }
+
+  // Required Extensions
+  //
+  // The requiredExtensions  attribute defines a list of required language
+  // extensions. Language extensions are capabilities within a user agent that
+  // go beyond the feature set defined in the SVG specification.
+  // Each extension is identified by a URI reference.
+  rv = aContent->GetAttr(kNameSpaceID_None, nsSVGAtoms::requiredExtensions, value);
+  if (NS_FAILED(rv))
+    return rv;
+
+  aHasRequiredExtensions = PR_TRUE;
+  if (NS_CONTENT_ATTR_HAS_VALUE == rv) {
+    // For now, claim that mozilla's SVG implementation supports
+    // no extensions.  So, if extensions are required, we don't have
+    // them available.
+    aHasRequiredExtensions = PR_FALSE;
+  }
+
+  // Required Features
+  aHasRequiredFeatures = PR_TRUE;
+  rv = aContent->GetAttr(kNameSpaceID_None, nsSVGAtoms::requiredFeatures, value);
+  if (NS_FAILED(rv))
+    return rv;
+  if (NS_CONTENT_ATTR_HAS_VALUE == rv) {
+    aHasRequiredFeatures = NS_SVG_TestFeatures(value);
+  }
+
+  // systemLanguage
+  //
+  // Evaluates to "true" if one of the languages indicated by user preferences
+  // exactly equals one of the languages given in the value of this parameter,
+  // or if one of the languages indicated by user preferences exactly equals a
+  // prefix of one of the languages given in the value of this parameter such
+  // that the first tag character following the prefix is "-".
+  aHasSystemLanguage = PR_TRUE;
+  rv = aContent->GetAttr(kNameSpaceID_None, nsSVGAtoms::systemLanguage, value);
+  if (NS_CONTENT_ATTR_HAS_VALUE == rv) {
+    // Get our language preferences
+    nsAutoString langPrefs(nsContentUtils::GetLocalizedStringPref("intl.accept_languages"));
+    if (!langPrefs.IsEmpty()) {
+      langPrefs.StripWhitespace();
+      value.StripWhitespace();
+#ifdef  DEBUG_scooter
+      printf("Calling SVG_TestLanguage('%s','%s')\n", NS_ConvertUCS2toUTF8(value).get(), 
+                                                      NS_ConvertUCS2toUTF8(langPrefs).get());
+#endif
+      aHasSystemLanguage = SVG_TestLanguage(value, langPrefs);
+    } else {
+      // For now, evaluate to true.
+      NS_WARNING("no default language specified for systemLanguage conditional test");
+      aHasSystemLanguage = PR_TRUE;
+    }
+    return NS_OK;
+  }
+  return rv;
+}
+
+nsresult
+nsCSSFrameConstructor::SVGSwitchProcessChildren(nsIPresShell*            aPresShell,
+                                                nsPresContext*           aPresContext,
+                                                nsFrameConstructorState& aState,
+                                                nsIContent*              aContent,
+                                                nsIFrame*                aFrame,
+                                                nsFrameItems&            aFrameItems)
+{
+  nsresult rv = NS_OK;
+  PRBool isFinished = PR_FALSE;
+  PRBool hasRequiredExtensions = PR_FALSE;
+  PRBool hasRequiredFeatures = PR_FALSE;
+  PRBool hasSystemLanguage = PR_FALSE;
+
+  // save the incoming pseudo frame state
+  nsPseudoFrames priorPseudoFrames;
+  aState.mPseudoFrames.Reset(&priorPseudoFrames);
+
+  // The 'switch' element evaluates the requiredFeatures,
+  // requiredExtensions and systemLanguage attributes on its direct child
+  // elements in order, and then processes and renders the first child for
+  // which these attributes evaluate to true. All others will be bypassed and
+  // therefore not rendered.
+  ChildIterator iter, last;
+  for (ChildIterator::Init(aContent, &iter, &last);
+       (iter != last) && (! isFinished);
+       ++iter) {
+
+    nsCOMPtr<nsIContent> child(*iter);
+
+    rv = TestSVGConditions(child,
+                           hasRequiredExtensions,
+                           hasRequiredFeatures,
+                           hasSystemLanguage);
+#ifdef DEBUG_scooter
+    printf("SwitchProcessChildren: Required Extentions = %s, Required Features = %s, System Language = %s\n",
+            hasRequiredExtensions ? "true" : "false",
+            hasRequiredFeatures ? "true" : "false",
+            hasSystemLanguage ? "true" : "false");
+#endif
+    if (NS_FAILED(rv))
+      return rv;
+
+    if (hasRequiredExtensions &&
+        hasRequiredFeatures &&
+        hasSystemLanguage) {
+
+      rv = ConstructFrame(aPresShell, aPresContext, aState,
+                          nsCOMPtr<nsIContent>(*iter),
+                          aFrame, aFrameItems);
+
+      if (NS_FAILED(rv))
+        return rv;
+
+      if (child->IsContentOfType(nsIContent::eELEMENT)) {
+        break;
+      }
+    }
+  }
+
+  // process the current pseudo frame state
+  if (!aState.mPseudoFrames.IsEmpty()) {
+    ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems);
+  }
+
+  // restore the incoming pseudo frame state
+  aState.mPseudoFrames = priorPseudoFrames;
+
+
+  return rv;
+}
+
 nsresult
 nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
                                           nsPresContext*          aPresContext,
@@ -7121,8 +7223,13 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
       // Process the child content if requested
       nsFrameItems childItems;
       if (processChildren) {
-        rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
-                             newFrame, PR_TRUE, childItems, PR_FALSE);
+        if (aTag == nsSVGAtoms::svgSwitch) {
+          rv = SVGSwitchProcessChildren(aPresShell, aPresContext, aState, aContent,
+                                     newFrame, childItems);
+        } else {
+          rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
+                               newFrame, PR_TRUE, childItems, PR_FALSE);
+        }
 
         CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
                               PR_FALSE, childItems);
@@ -7383,11 +7490,9 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
   if (NS_SUCCEEDED(rv) &&
       ((nsnull == aFrameItems.childList) ||
        (lastChild == aFrameItems.lastChild))) {
-    nsCOMPtr<nsIXTFElement> xtfElem = do_QueryInterface(aContent);
+    nsCOMPtr<nsIXTFElementWrapperPrivate> xtfElem = do_QueryInterface(aContent);
     if (xtfElem) {
-      PRUint32 elementType=nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT;
-      xtfElem->GetElementType(&elementType);
-      if (elementType==nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT) {
+      if (xtfElem->GetElementType() == nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT) {
         // we don't build frames for generic elements, only for visuals
         aState.mFrameManager->SetUndisplayedContent(aContent, styleContext);
         return NS_OK;
@@ -7906,12 +8011,9 @@ nsCSSFrameConstructor::IsValidSibling(nsIPresShell&          aPresShell,
       (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == aSiblingDisplay)) {
     // if we haven't already, construct a style context to find the display type of aContent
     if (UNSET_DISPLAY == aDisplay) {
-      nsCOMPtr<nsPresContext> context;
-      aPresShell.GetPresContext(getter_AddRefs(context));
-
-      nsIFrame* parent = aSibling.GetParent();
       nsRefPtr<nsStyleContext> styleContext;
-      styleContext = ResolveStyleContext(context, parent, &aContent);
+      styleContext = ResolveStyleContext(aPresShell.GetPresContext(),
+                                         aSibling.GetParent(), &aContent);
       if (!styleContext) return PR_FALSE;
       const nsStyleDisplay* display = styleContext->GetStyleDisplay();
       aDisplay = display->mDisplay;
@@ -9745,7 +9847,7 @@ UpdateViewsForTree(nsPresContext* aPresContext, nsIFrame* aFrame,
     }
   }
 
-  nsRect bounds = aFrame->GetOutlineRect();
+  nsRect bounds = aFrame->GetOverflowRect();
 
   // now do children of frame
   PRInt32 listIndex = 0;
@@ -9981,18 +10083,20 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
   if (!count)
     return NS_OK;
 
-  nsFrameManager *frameManager = aPresContext->FrameManager();
+  nsPropertyTable *propTable = aPresContext->PropertyTable();
 
   // Mark frames so that we skip frames that die along the way, bug 123049.
   // A frame can be in the list multiple times with different hints. Further
   // optmization is possible if nsStyleChangeList::AppendChange could coalesce
   PRInt32 index = count;
+
   while (0 <= --index) {
     const nsStyleChangeData* changeData;
     aChangeList.ChangeAt(index, &changeData);
     if (changeData->mFrame) {
-      frameManager->SetFrameProperty(changeData->mFrame,
-        nsLayoutAtoms::changeListProperty, nsnull, nsnull);
+      propTable->SetProperty(changeData->mFrame,
+                             nsLayoutAtoms::changeListProperty,
+                             nsnull, nsnull, nsnull);
     }
   }
 
@@ -10007,12 +10111,11 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
     if (frame) {
       nsresult res;
 
-      void* dummy =
-        frameManager->GetFrameProperty(frame,
-                                       nsLayoutAtoms::changeListProperty, 0,
-                                       &res);
+      void* dummy = propTable->GetProperty(frame,
+                                           nsLayoutAtoms::changeListProperty,
+                                           &res);
 
-      if (NS_IFRAME_MGR_PROP_NOT_THERE == res)
+      if (NS_PROPTABLE_PROP_NOT_THERE == res)
         continue;
     }
 
@@ -10048,8 +10151,8 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
     const nsStyleChangeData* changeData;
     aChangeList.ChangeAt(index, &changeData);
     if (changeData->mFrame) {
-      frameManager->RemoveFrameProperty(changeData->mFrame,
-        nsLayoutAtoms::changeListProperty);
+      propTable->DeleteProperty(changeData->mFrame,
+                                nsLayoutAtoms::changeListProperty);
     }
   }
 
@@ -10067,7 +10170,7 @@ nsCSSFrameConstructor::RestyleElement(nsPresContext *aPresContext,
     RecreateFramesForContent(aPresContext, aContent);
   } else if (aPrimaryFrame) {
     nsStyleChangeList changeList;
-    if (aMinHint != NS_STYLE_HINT_NONE) {
+    if (aMinHint) {
       changeList.AppendChange(aPrimaryFrame, aContent, aMinHint);
     }
     nsChangeHint frameChange = aPresContext->GetPresShell()->FrameManager()->
@@ -13489,7 +13592,7 @@ ProcessRestyle(nsISupports* aContent,
   if (aData.mRestyleHint & eReStyle_Self) {
     shell->FrameConstructor()->RestyleElement(context, content, primaryFrame,
                                               aData.mChangeHint);
-  } else if (aData.mChangeHint != NS_STYLE_HINT_NONE &&
+  } else if (aData.mChangeHint &&
              (primaryFrame ||
               (aData.mChangeHint & nsChangeHint_ReconstructFrame))) {
     // Don't need to recompute style; just apply the hint
@@ -13521,7 +13624,7 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
                                         nsReStyleHint aRestyleHint,
                                         nsChangeHint aMinChangeHint)
 {
-  if (aRestyleHint == 0 && aMinChangeHint == NS_STYLE_HINT_NONE) {
+  if (aRestyleHint == 0 && !aMinChangeHint) {
     // Nothing to do here
     return;
   }

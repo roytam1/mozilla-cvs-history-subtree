@@ -65,9 +65,7 @@ var XUL_NS   = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 // ContentBuilder: simple interface to facilitate constructing xml
 // content
 
-var ContentBuilder = makeTemplate("ContentBuilder");
-
-ContentBuilder.mergeTemplate(ErrorTemplate);
+var ContentBuilder = makeTemplate("ContentBuilder", ErrorTemplate);
 
 ContentBuilder.appendInitializer(
   "ContentBuilder",
@@ -77,8 +75,14 @@ ContentBuilder.appendInitializer(
 
 ContentBuilder.addProtoObj(
   "clear",
-  function() {
-    this.builder.clear();
+  function(root) {
+    this.builder.clear(root);
+  });
+
+ContentBuilder.addProtoObj(
+  "setDocument",
+  function(doc) {
+    this.builder.setDocument(doc);
   });
 
 ContentBuilder.addProtoObj(
@@ -90,8 +94,20 @@ ContentBuilder.addProtoObj(
 
 ContentBuilder.addProtoObj(
   "beginElement",
-  function(tagname) {
+  function(tagname /*, [optional] {attribs} */) {
     this.builder.beginElement(tagname);
+    if (arguments[1])
+      this.attribs(arguments[1]);
+    return this;
+  });
+
+ContentBuilder.addProtoObj(
+  "beginElementNS",
+  function(ns, tagname /*, [optional] {attribs} */) {
+    this.builder.setElementNamespace(ns)
+    this.builder.beginElement(tagname);
+    if (arguments[2])
+      this.attribs(arguments[2]);
     return this;
   });
 
@@ -139,10 +155,7 @@ ContentBuilder.addProtoGetter(
 // XTFElement: common base template for XTFGenericElement and
 // XTF visuals
 
-var XTFElement = makeTemplate("XTFElement");
-
-XTFElement.mergeTemplate(ErrorTemplate);
-XTFElement.mergeTemplate(SupportsTemplate);
+var XTFElement = makeTemplate("XTFElement", ErrorTemplate, SupportsTemplate);
 
 XTFElement.appendInitializer(
   "XTFElement",
@@ -184,19 +197,16 @@ XTFElement.addOpsObject(
     this.getProtoObj("_scriptingInterfaces").push(itf);
   });
 
-XTFElement.addProtoGetter(
-  "notificationMask",
-  function() { return this._notificationMask; });
-
 XTFElement.addProtoObj(
-  "_notificationMask",
-  0,
-  { mergeover: function(d,s) { return d|s; } });
-
-XTFElement.addOpsObject(
   "addNotification",
   function(n) {
-    this._proto._notificationMask |= n;
+    this._wrapper.notificationMask |= n;
+  });
+
+XTFElement.addProtoObj(
+  "removeNotification",
+  function(n) {
+    this._wrapper.notificationMask &= ~n;
   });
 
 // onCreated really belongs to sub-interfaces of nsIXMLElement, but it
@@ -220,16 +230,15 @@ XTFElement.addProtoObj(
 //----------------------------------------------------------------------
 // XTFGenericElement
 
-var XTFGenericElement = makeTemplate("XTFGenericElement");
-XTFGenericElement.mergeTemplate(XTFElement);
+var XTFGenericElement = makeTemplate("XTFGenericElement", XTFElement);
 XTFGenericElement.addInterface(Components.interfaces.nsIXTFGenericElement);
 XTFGenericElement.bindInitializer("XTFElement",
   {type: Components.interfaces.nsIXTFElement.ELEMENT_TYPE_GENERIC_ELEMENT});
 
 //----------------------------------------------------------------------
 // XTFVisual: base template for the visuals
-var XTFVisual = makeTemplate("XTFVisual");
-XTFVisual.mergeTemplate(XTFElement);
+var XTFVisual = makeTemplate("XTFVisual", XTFElement);
+XTFVisual.addInterface(Components.interfaces.nsIXTFVisual);
 
 // we generally want visuals to behave like 'normal' dom elements:
 XTFVisual.addScriptingInterface(Components.interfaces.nsIDOMNode);
@@ -240,12 +249,17 @@ XTFVisual.addProtoObj("XTFElement$onCreated",
 XTFVisual.addProtoObj(
   "onCreated",
   function(wrapper) {
+    this.XTFElement$onCreated(wrapper);
     var builder = ContentBuilder.instantiate();
+    // XXX For XUL docs, ownerDocument will be null at this
+    // point. This leads to some XBL subtleties. See
+    // content/xtf/readme.txt for more details.
+    builder.setDocument(this._wrapper.ownerDocument); 
     this._buildVisualContent(builder);
     this._visualContent = builder.root;
-    
-    return this.XTFElement$onCreated(wrapper);
   });
+
+// nsIXTFVisual methods:
 
 XTFVisual.addProtoGetter(
   "visualContent",
@@ -253,6 +267,23 @@ XTFVisual.addProtoGetter(
     return this._visualContent;
   });
 
+// by default we don't support visual child content:
+XTFVisual.addProtoGetter(
+  "insertionPoint",
+  function() {
+    return null;
+  });
+
+// by default we apply doc style sheets:
+XTFVisual.addProtoGetter(
+  "applyDocumentStyleSheets",
+  function() {
+    return true;
+  });
+
+// implementation helpers:
+
+// to be implemented by sub-templates:
 XTFVisual.addProtoObj(
   "_buildVisualContent",
   function(builder) {});
@@ -270,8 +301,7 @@ XTFVisual.addProtoObj(
 //----------------------------------------------------------------------
 // XTFSVGVisual
 
-var XTFSVGVisual = makeTemplate("XTFSVGVisual");
-XTFSVGVisual.mergeTemplate(XTFVisual);
+var XTFSVGVisual = makeTemplate("XTFSVGVisual", XTFVisual);
 XTFSVGVisual.addInterface(Components.interfaces.nsIXTFSVGVisual);
 XTFSVGVisual.bindInitializer("XTFElement",
   {type: Components.interfaces.nsIXTFElement.ELEMENT_TYPE_SVG_VISUAL});
@@ -280,8 +310,7 @@ XTFSVGVisual.bindInitializer("XTFElement",
 //----------------------------------------------------------------------
 // XTFXMLVisual
 
-var XTFXMLVisual = makeTemplate("XTFXMLVisual");
-XTFXMLVisual.mergeTemplate(XTFVisual);
+var XTFXMLVisual = makeTemplate("XTFXMLVisual", XTFVisual);
 XTFXMLVisual.addInterface(Components.interfaces.nsIXTFXMLVisual);
 XTFXMLVisual.bindInitializer("XTFElement",
   {type: Components.interfaces.nsIXTFElement.ELEMENT_TYPE_XML_VISUAL});
@@ -290,8 +319,7 @@ XTFXMLVisual.bindInitializer("XTFElement",
 //----------------------------------------------------------------------
 // XTFXULVisual
 
-var XTFXULVisual = makeTemplate("XTFXULVisual");
-XTFXULVisual.mergeTemplate(XTFVisual);
+var XTFXULVisual = makeTemplate("XTFXULVisual", XTFVisual);
 XTFXULVisual.addInterface(Components.interfaces.nsIXTFXULVisual);
 XTFXULVisual.bindInitializer("XTFElement",
   {type: Components.interfaces.nsIXTFElement.ELEMENT_TYPE_XUL_VISUAL});
@@ -300,8 +328,7 @@ XTFXULVisual.bindInitializer("XTFElement",
 //----------------------------------------------------------------------
 // XTFElementFactory
 
-var XTFElementFactory = makeTemplate("XTFElementFactory");
-XTFElementFactory.mergeTemplate(SupportsTemplate);
+var XTFElementFactory = makeTemplate("XTFElementFactory", SupportsTemplate);
 XTFElementFactory.addInterface(Components.interfaces.nsIXTFElementFactory);
 
 XTFElementFactory.addProtoObj("createElement",
@@ -322,9 +349,7 @@ XTFElementFactory.addOpsObject("addElement",
 //----------------------------------------------------------------------
 // XTFMappedAttributeHandler
 
-var XTFMappedAttributeHandler = makeTemplate("XTFMappedAttributeHandler");
-XTFMappedAttributeHandler.mergeTemplate(ErrorTemplate);
-XTFMappedAttributeHandler.mergeTemplate(SupportsTemplate);
+var XTFMappedAttributeHandler = makeTemplate("XTFMappedAttributeHandler", ErrorTemplate, SupportsTemplate);
 XTFMappedAttributeHandler.addInterface(Components.interfaces.nsIXTFAttributeHandler);
 
 XTFMappedAttributeHandler.addProtoGetter(
@@ -527,8 +552,7 @@ XTFMappedAttributeHandler.addOpsObject("mapAttribute",
 // and 'wrappedJSObject' property, giving access to the underlying JS XTF
 // object via its wrapper.
 
-var XTFUnwrappable = makeTemplate("XTFUnwrappable");
-XTFUnwrappable.mergeTemplate(SupportsTemplate);
+var XTFUnwrappable = makeTemplate("XTFUnwrappable", SupportsTemplate);
 XTFUnwrappable.addInterface(Components.interfaces.nsIXTFPrivate);
 XTFUnwrappable.addProtoGetter("inner",
   function() {

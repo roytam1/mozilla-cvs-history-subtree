@@ -63,6 +63,9 @@ public:
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
+  // nsIXTFElementWrapperPrivate interface
+  virtual PRUint32 GetElementType() { return nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL; }
+  
   // nsIXTFSVGVisualWrapper interface
   NS_DECL_NSIXTFSVGVISUALWRAPPER
   
@@ -71,7 +74,7 @@ public:
 
 private:
   virtual nsIXTFElement *GetXTFElement()const { return mXTFElement; }
-  virtual void CreateVisualContent(nsIDOMElement **content);
+  virtual nsIXTFVisual *GetXTFVisual()const { return mXTFElement; }
   
   nsCOMPtr<nsIXTFSVGVisual> mXTFElement;
 };
@@ -167,10 +170,3 @@ NS_INTERFACE_MAP_END_INHERITING(nsXTFSVGVisualWrapperBase)
 // XXX nothing yet
 
 
-//----------------------------------------------------------------------
-  
-void
-nsXTFSVGVisualWrapper::CreateVisualContent(nsIDOMElement **content)
-{
-  mXTFElement->GetVisualContent(content);
-}

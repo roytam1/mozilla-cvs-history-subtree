@@ -55,11 +55,11 @@ NS_IMPL_ADDREF_INHERITED(nsXTFVisualWrapper,nsXTFVisualWrapperBase)
 NS_IMPL_RELEASE_INHERITED(nsXTFVisualWrapper,nsXTFVisualWrapperBase)
 
 NS_INTERFACE_MAP_BEGIN(nsXTFVisualWrapper)
-  NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
+  NS_INTERFACE_MAP_ENTRY(nsIXTFVisualWrapperPrivate)
 NS_INTERFACE_MAP_END_INHERITING(nsXTFVisualWrapperBase)
 
 //----------------------------------------------------------------------
-// nsIAnonymousContentCreator implementation:
+// nsIXTFVisualWrapperPrivate implementation:
 
 NS_IMETHODIMP
 nsXTFVisualWrapper::CreateAnonymousContent(nsPresContext* aPresContext,
@@ -69,7 +69,7 @@ nsXTFVisualWrapper::CreateAnonymousContent(nsPresContext* aPresContext,
   NS_ASSERTION(doc, "no document; cannot create anonymous content");
 
   if (!mVisualContent) {
-    CreateVisualContent(getter_AddRefs(mVisualContent));
+    GetXTFVisual()->GetVisualContent(getter_AddRefs(mVisualContent));
   }    
   if (!mVisualContent) return NS_OK; // nothing to append
   
@@ -96,3 +96,23 @@ nsXTFVisualWrapper::CreateAnonymousContent(nsPresContext* aPresContext,
   return NS_OK;
 }
 
+void
+nsXTFVisualWrapper::DidLayout()
+{
+  if (mNotificationMask & nsIXTFVisual::NOTIFY_DID_LAYOUT)
+    GetXTFVisual()->DidLayout();
+}
+
+void
+nsXTFVisualWrapper::GetInsertionPoint(nsIDOMElement** insertionPoint)
+{
+  GetXTFVisual()->GetInsertionPoint(insertionPoint);
+}
+
+PRBool
+nsXTFVisualWrapper::ApplyDocumentStyleSheets()
+{
+  PRBool retval = PR_FALSE;
+  GetXTFVisual()->GetApplyDocumentStyleSheets(&retval);
+  return retval;
+}

@@ -59,10 +59,13 @@ protected:
   virtual ~nsXTFGenericElementWrapper();
   nsresult Init();
   
-public:
+public:  
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
+  // nsIXTFElementWrapperPrivate interface
+  virtual PRUint32 GetElementType() { return nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT; }
+  
   // nsIXTFGenericElementWrapper interface
   NS_DECL_NSIXTFGENERICELEMENTWRAPPER
 

@@ -35,8 +35,6 @@ canvasElement.addProtoObj(
     builder.endElement();
   });
 
-canvasElement.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_CHILD_INSERTED);
-canvasElement.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_CHILD_APPENDED);
 
 canvasElement.addProtoObj(
   "childInserted",
@@ -56,12 +54,10 @@ canvasElement.addProtoObj(
   "childAppended",
   function(child) { this.childInserted(child, -1); });
 
-canvasElement.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_DOCUMENT_CHANGED);
-
 canvasElement.addProtoObj(
   "documentChanged",
   function(doc) {
-    this._dump(" documentFrameElement:"+this._wrapper.documentFrameElement);
+    this._dump(" documentChanged: documentFrameElement="+this._wrapper.documentFrameElement);
   });
 
 canvasElement.addProtoObj(
@@ -71,7 +67,11 @@ canvasElement.addProtoObj(
   "onCreated",
   function(wrapper) {
     this._XTFXMLVisual$onCreated(wrapper);
-    this._dump("elementNode:"+this._wrapper.elementNode+" documentFrameElement:"+this._wrapper.documentFrameElement);
+    this.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_CHILD_INSERTED |
+                         Components.interfaces.nsIXTFElement.NOTIFY_CHILD_APPENDED |
+                         Components.interfaces.nsIXTFElement.NOTIFY_DOCUMENT_CHANGED);
+
+    this._dump("onCreated: elementNode="+this._wrapper.elementNode+"\ndocumentFrameElement="+this._wrapper.documentFrameElement+"\nownerDoc="+this._wrapper.ownerDocument+"\nelementNode.ownerDoc="+this._wrapper.elementNode.ownerDocument);
   });
 
 canvasElement.addProtoObj(

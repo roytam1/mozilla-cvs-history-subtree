@@ -48,7 +48,8 @@
 #include "nsHTMLAtoms.h" // XXX only needed for nsHTMLAtoms::id
 
 nsXTFElementWrapper::nsXTFElementWrapper(nsINodeInfo* aNodeInfo)
-    : nsXTFElementWrapperBase(aNodeInfo)
+    : nsXTFElementWrapperBase(aNodeInfo),
+      mNotificationMask(0)
 {
 }
 
@@ -59,7 +60,6 @@ nsXTFElementWrapper::Init()
   GetXTFElement()->GetIsAttributeHandler(&innerHandlesAttribs);
   if (innerHandlesAttribs)
     mAttributeHandler = do_QueryInterface(GetXTFElement());
-  GetXTFElement()->GetNotificationMask(&mNotificationMask);
   return NS_OK;
 }
 
@@ -76,6 +76,11 @@ nsXTFElementWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   
   if(aIID.Equals(NS_GET_IID(nsIClassInfo))) {
     *aInstancePtr = NS_STATIC_CAST(nsIClassInfo*, this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  else if (aIID.Equals(NS_GET_IID(nsIXTFElementWrapperPrivate))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIXTFElementWrapperPrivate*, this);
     NS_ADDREF_THIS();
     return NS_OK;
   }
@@ -485,6 +490,31 @@ nsXTFElementWrapper::GetDocumentFrameElement(nsIDOMElement * *aDocumentFrameElem
   }
   *aDocumentFrameElement = pidomwin->GetFrameElementInternal();
   NS_IF_ADDREF(*aDocumentFrameElement);
+  return NS_OK;
+}
+
+/* readonly attribute nsIDOMDocument ownerDocument; */
+NS_IMETHODIMP
+nsXTFElementWrapper::GetOwnerDocument(nsIDOMDocument * *aOwnerDocument)
+{
+  *aOwnerDocument = nsnull;
+  nsIDocument *doc = GetOwnerDoc();
+  if (doc)
+    doc->QueryInterface(NS_GET_IID(nsIDOMDocument), (void**)aOwnerDocument);
+  return NS_OK;
+}
+
+/* attribute unsigned long notificationMask; */
+NS_IMETHODIMP
+nsXTFElementWrapper::GetNotificationMask(PRUint32 *aNotificationMask)
+{
+  *aNotificationMask = mNotificationMask;
+  return NS_OK;
+}
+NS_IMETHODIMP
+nsXTFElementWrapper::SetNotificationMask(PRUint32 aNotificationMask)
+{
+  mNotificationMask = aNotificationMask;
   return NS_OK;
 }
 

@@ -40,6 +40,7 @@
 #define __NS_XTFELEMENTWRAPPER_H__
 
 #include "nsIXTFElementWrapper.h"
+#include "nsIXTFElementWrapperPrivate.h"
 #include "nsXMLElement.h"
 #include "nsIXTFAttributeHandler.h"
 
@@ -47,8 +48,15 @@ class nsIXTFElement;
 
 typedef nsXMLElement nsXTFElementWrapperBase;
 
+// Pseudo IID for nsXTFElementWrapper
+// {599EB85F-ABC0-4B52-A1B0-EA103D48E3AE}
+#define NS_XTFELEMENTWRAPPER_IID \
+{ 0x599eb85f, 0xabc0, 0x4b52, { 0xa1, 0xb0, 0xea, 0x10, 0x3d, 0x48, 0xe3, 0xae } }
+
+
 class nsXTFElementWrapper : public nsXTFElementWrapperBase,
                             public nsIXTFElementWrapper,
+                            public nsIXTFElementWrapperPrivate,
                             public nsIClassInfo
 {
 protected:
@@ -56,12 +64,18 @@ protected:
   nsresult Init();
   
 public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_XTFELEMENTWRAPPER_IID)
+
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIXTFElementWrapper
   NS_DECL_NSIXTFELEMENTWRAPPER
 
+  // nsIXTFElementWrapperPrivate
+  // to be implemented by subclass
+  // virtual PRUint32 GetElementType() = 0;
+    
   // nsIContent specializations:
   void SetDocument(nsIDocument* aDocument, PRBool aDeep,
                    PRBool aCompileEventHandlers);

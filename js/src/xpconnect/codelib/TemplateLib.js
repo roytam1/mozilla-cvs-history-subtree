@@ -150,7 +150,7 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
         this._protoflags[p] = flags;
       
       var target = this._proto[p];
-      if (target && flags && flags.mergeover) {
+      if (target!=undefined && flags && flags.mergeover!=undefined) {
         if (typeof(flags.mergeover)=="function") {
           this._proto[p] = flags.mergeover(this._proto[p], src._proto[p]);
           continue;
@@ -159,7 +159,11 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
           continue;
         } // else merge forced even though property exists
       }
-      else if (!target && flags && flags.mergenew) {
+      else if (target!=undefined) {
+        // target exists; no mergeflag given -> warn & merge
+        this._warning("Overriding existing target "+p);
+      }
+      else if (target==undefined && flags && flags.mergenew) {
         this._proto[p] = flags.mergenew(src._proto[p]);
         continue;
       }
@@ -182,6 +186,19 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
   return this;
 };
 
+Template.prototype._error = function(message) {
+  throw(this+": "+message);
+};
+
+Template.prototype._assert = function(message) {
+  if (!cond)
+    this._error(message);
+};
+
+Template.prototype._warning = function(message) {
+  dump(this+": WARNING:"+message+"\n");
+};
+
 Template.prototype._docgen_ = function(context) {
   var ctx = { __proto__:context };
   if (!ctx.layout) ctx.layout = "normal";
@@ -190,8 +207,13 @@ Template.prototype._docgen_ = function(context) {
 
   if (ctx.layout == "normal") {
     description += " {";
-    description += "\nPrototype:{\n";
-    
+
+    description += "\nInitializers:{\n";
+    for (var i=0, l=this._initializers.length; i<l; ++i)
+      description += this._initializers[i].name+"\n";
+    description += "}";    
+
+    description += "\nPrototype:{\n";    
     var pctx = {__proto__:context, layout:"brief", ignoreProperties:[/^_/]};
     // 'public' properties:
     description += "//'public':\n";
@@ -203,19 +225,45 @@ Template.prototype._docgen_ = function(context) {
     description += "}";
 
     description += "\nOps:{\n";
+    pctx = {__proto__:context, layout:"brief"};
+    description += IntrospectionLib.describeProperties(this._ops, pctx);    
+    description += "}";
     
-    description += "}";    
     description += "\n}";
   }
 
   return description;
 };
 
+
+
+//----------------------------------------------------------------------
+// Template's template:
+
+// XXX the bootstrapping is more complicated than it needs to. We
+// could start with TemplateTemplate and then just instantiate to get Template.
+
+// var TemplateTemplate = {
+//   name: "TemplateTemplate",
+//   _proto: Template.prototype,
+//   _protoflags: {},
+//   _initializers: [],
+//   _ops: {}
+// };
+
+// TemplateTemplate.__proto__ = Template.prototype;
+
+// TemplateTemplate._proto.__template = TemplateTemplate;
+
+  
 //----------------------------------------------------------------------
 // Global Template functions:
 
-function makeTemplate(name) {
-  return new Template(name);
+function makeTemplate(name /*, [optional] templates to merge */) {
+  var retval = new Template(name);
+  for (var i=1,l=arguments.length;i<l;++i)
+    retval.mergeTemplate(arguments[i]);
+  return retval;
 };
 
 //----------------------------------------------------------------------
@@ -228,54 +276,55 @@ NamedObjectTemplate.appendInitializer("NamedObjectTemplate",
     this._objid = (this.__proto__._objcount)++;
   });
 
-NamedObjectTemplate.addProtoObj("_objcount", 0);
+NamedObjectTemplate.addProtoObj("_objcount", 0, {mergeover: false});
 
 NamedObjectTemplate.addProtoGetter("_objname",
   function() {
     if (this._objid === undefined)
-      return this.__template.name+" prototype";
+      return this.__template.name+" prototype/unnamed"; // called on either prototype or unnamed objects
     else
       return this.__template.name+this._objid;
-  });
+  }, {mergeover: false});
 
 NamedObjectTemplate.addProtoObj("toString",
   function() {
     return "["+this._objname+"]";
-  });
+  }, {mergeover: true}); // need "mergeover: true" here, since toString is present in all objects.
 
 //----------------------------------------------------------------------
 // ErrorTemplate
 
-var ErrorTemplate = makeTemplate("ErrorTemplate");
-
-ErrorTemplate.mergeTemplate(NamedObjectTemplate);
+var ErrorTemplate = makeTemplate("ErrorTemplate", NamedObjectTemplate);
 
 ErrorTemplate.addProtoObj("_error",
   function(message) {
     throw(this+": "+message);
-  });
+  }, {mergeover: false});
 
 ErrorTemplate.addProtoObj("_assert",
   function(cond, message) {
-    if (!cond) this._error;
-  });
+    if (!cond)
+      this._error(message);
+  }, {mergeover: false});
     
 ErrorTemplate.addProtoObj("_warning",
   function(message) {
     dump(this+": WARNING:"+message+"\n");
-  });
+  }, {mergeover: false});
 
 ErrorTemplate.addProtoObj("_dump",
   function(message) {
     dump(this+": "+message+"\n");
-  });
-    
+  }, {mergeover: false});
+
+// Merge the ErrorTemplate into TemplateTemplate, so that we can use
+// things like _warning in ops:
+//TemplateTemplate.mergeTemplate(ErrorTemplate);
+                                
 //----------------------------------------------------------------------
 // nsISupports-implementation template
 
-var SupportsTemplate = makeTemplate("SupportsTemplate");
-
-SupportsTemplate.mergeTemplate(ErrorTemplate);
+var SupportsTemplate = makeTemplate("SupportsTemplate", ErrorTemplate);
 
 SupportsTemplate.addProtoObj("QueryInterface",
   function(iid) {
@@ -289,7 +338,7 @@ SupportsTemplate.addProtoObj("QueryInterface",
     }
     //this._warning("Interface "+Components.interfacesByID[iid]+" ("+iid+") not found");
     throw Components.results.NS_ERROR_NO_INTERFACE;
-  });
+  }, {mergeover: false});
 
 SupportsTemplate.addProtoObj("_interfaces",
                              [Components.interfaces.nsISupports],

@@ -37,12 +37,14 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsBoxFrame.h"
-#include "nsIXTFXULVisual.h"
 #include "nsIDOMElement.h"
+#include "nsIXTFVisualWrapperPrivate.h"
+#include "nsIAnonymousContentCreator.h"
 
 typedef nsBoxFrame nsXTFXULDisplayFrameBase;
 
-class nsXTFXULDisplayFrame : public nsXTFXULDisplayFrameBase
+class nsXTFXULDisplayFrame : public nsXTFXULDisplayFrameBase,
+                             public nsIAnonymousContentCreator
 {
 public:
   friend nsresult
@@ -50,7 +52,28 @@ public:
   
   nsXTFXULDisplayFrame(nsIPresShell* aPresShell);
 
+  // nsISupports interface:
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+private:
+  NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
+  
+public:
+  // nsIFrame
   virtual nsIFrame* GetContentInsertionFrame();
+
+  NS_IMETHOD EndLayout(nsBoxLayoutState& aState);
+  
+  // nsIAnonymousContentCreator
+  NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
+                                    nsISupportsArray& aAnonymousItems);
+  
+  // If the creator doesn't want to create special frame for frame hierarchy
+  // then it should null out the style content arg and return NS_ERROR_FAILURE
+  NS_IMETHOD CreateFrameFor(nsPresContext*   aPresContext,
+                            nsIContent *      aContent,
+                            nsIFrame**        aFrame) {
+    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
   
 private:
   nsIPresShell* mPresShell; // XXX should get rid of this; make
@@ -58,8 +81,8 @@ private:
                             // instead
 };
 
-
 //----------------------------------------------------------------------
+// Implementation
 
 nsresult
 NS_NewXTFXULDisplayFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
@@ -78,14 +101,21 @@ nsXTFXULDisplayFrame::nsXTFXULDisplayFrame(nsIPresShell* aPresShell)
       mPresShell(aPresShell)
 {}
 
+//----------------------------------------------------------------------
+// nsISupports methods
+
+NS_INTERFACE_MAP_BEGIN(nsXTFXULDisplayFrame)
+  NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
+NS_INTERFACE_MAP_END_INHERITING(nsXTFXULDisplayFrameBase)
+
+//----------------------------------------------------------------------
+// nsIFrame mehthods
+
 nsIFrame*
 nsXTFXULDisplayFrame::GetContentInsertionFrame()
 {
-  nsCOMPtr<nsIXTFXULVisual> visual = do_QueryInterface(mContent);
-  if (!visual) {
-    NS_ERROR("xtf element doesn't implement required interface");
-    return nsnull;
-  }
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
   
   nsCOMPtr<nsIDOMElement> childInsertionPoint;
   visual->GetInsertionPoint(getter_AddRefs(childInsertionPoint));
@@ -97,4 +127,27 @@ nsXTFXULDisplayFrame::GetContentInsertionFrame()
   nsIFrame* insertionFrame = nsnull;
   mPresShell->GetPrimaryFrameFor(content, &insertionFrame);
   return insertionFrame;
+}
+
+NS_IMETHODIMP
+nsXTFXULDisplayFrame::EndLayout(nsBoxLayoutState& aState)
+{
+  nsresult rv = nsXTFXULDisplayFrameBase::EndLayout(aState);
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
+  visual->DidLayout();
+  
+  return rv;
+}
+
+//----------------------------------------------------------------------
+// nsIAnonymousContentCreator methods:
+
+NS_IMETHODIMP
+nsXTFXULDisplayFrame::CreateAnonymousContent(nsPresContext* aPresContext,
+                                             nsISupportsArray& aAnonymousItems)
+{
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
+  return visual->CreateAnonymousContent(aPresContext, aAnonymousItems);
 }

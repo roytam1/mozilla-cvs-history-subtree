@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,18 +36,28 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFVisual.idl"
+#ifndef __NS_IXTFVISUALWRAPPERPRIVATE_H__
+#define __NS_IXTFVISUALWRAPPERPRIVATE_H__
 
-interface nsIXTFXMLVisualWrapper;
-interface nsIDOMElement;
+#include "nsISupports.h"
 
-[scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
-interface nsIXTFXMLVisual : nsIXTFVisual
+////////////////////////////////////////////////////////////////////////
+// nsIXTFVisualWrapperPrivate: private interface for visual frames
+
+// {B628361B-4466-407F-AD26-58F282DBB6DD}
+#define NS_IXTFVISUALWRAPPERPRIVATE_IID \
+{ 0xb628361b, 0x4466, 0x407f, { 0xad, 0x26, 0x58, 0xf2, 0x82, 0xdb, 0xb6, 0xdd } }
+
+class nsIXTFVisualWrapperPrivate : public nsISupports
 {
-  // onCreated: Will be called before any notifications are sent to
-  // the xtf element or before the element will be asked for its
-  // visualContent. Parameter 'wrapper' is a weak proxy to the
-  // wrapping element (i.e. it can safely be addrefed by the xtf
-  // element without creating cyclic XPCOM referencing).
-  void onCreated(in nsIXTFXMLVisualWrapper wrapper);
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXTFVISUALWRAPPERPRIVATE_IID)
+
+  NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
+                                    nsISupportsArray& aAnonymousItems) = 0;
+  virtual void DidLayout() = 0;
+  virtual void GetInsertionPoint(nsIDOMElement** insertionPoint) = 0;
+  virtual PRBool ApplyDocumentStyleSheets() = 0;
 };
+
+#endif // __NS_IXTFVISUALWRAPPERPRIVATE_H__

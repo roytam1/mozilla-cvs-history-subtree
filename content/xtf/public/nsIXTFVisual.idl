@@ -36,18 +36,35 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFVisual.idl"
+#include "nsIXTFElement.idl"
 
-interface nsIXTFXMLVisualWrapper;
 interface nsIDOMElement;
 
-[scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
-interface nsIXTFXMLVisual : nsIXTFVisual
+[scriptable, uuid(705e7fc8-6fbb-456e-8d18-fd2dae55d477)]
+interface nsIXTFVisual : nsIXTFElement
 {
-  // onCreated: Will be called before any notifications are sent to
-  // the xtf element or before the element will be asked for its
-  // visualContent. Parameter 'wrapper' is a weak proxy to the
-  // wrapping element (i.e. it can safely be addrefed by the xtf
-  // element without creating cyclic XPCOM referencing).
-  void onCreated(in nsIXTFXMLVisualWrapper wrapper);
+  // The content tree routed in 'visualContent' will be rendered where
+  // the xtf visual is placed into an appropriate context. It can be
+  // dynamically manipulated during the lifetime of the xtf visual.
+  readonly attribute nsIDOMElement visualContent;
+
+  // Children of the xtf visual which are themselves 'visuals'
+  // (i.e. built-ins elements, other xtf visuals or xbl elements with
+  // visual <content>) will be rendered in the context of
+  // 'insertionPoint'. 'insertionPoint' should either be null (in
+  // which case the children will not be automatically rendered) or
+  // point into the 'visualContent' tree.
+  readonly attribute nsIDOMElement insertionPoint;
+
+  // If 'true', document style sheets will apply to the visual
+  // content. If 'false', only UA style sheets will be applied.
+  readonly attribute boolean applyDocumentStyleSheets;
+  
+  // Notification mask constants:
+  // To receive a given event set the corresponding bit in
+  // nsIXTFElementWrapper::notificationMask.
+  const unsigned long NOTIFY_DID_LAYOUT  = 0x00010000;
+
+  // Event notifications:
+  void didLayout();
 };

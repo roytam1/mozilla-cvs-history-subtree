@@ -83,11 +83,11 @@ _describe_context_doc_ = "\
   layout: 'inline'|'brief'|*'normal'*";
 
 function describe(obj, context) {
-  if (obj instanceof Function)
+  if (typeof obj == "function")
     return describeFunction(obj, context);
-  else if (obj instanceof Array)
+  else if (obj instanceof Array) // xxx instanceof not working across contexts??
     return describeArray(obj, context);
-  else if (obj instanceof Object)
+  else if (typeof obj == "object")
     return describeObject(obj, context);
   else
     return describePrimitive(obj, context);
@@ -176,7 +176,7 @@ The optional 'context' parameter is an object containing any of the following pr
 // Function introspection
 
 function isNativeFunction(func) {
-  return ((func instanceof Function) &&
+  return ((typeof func == "function") &&
           func.toString().match(/\[native code\]/)!=null);
 }
 isNativeFunction._doc_ = "Returns true if 'func' is a native function";
@@ -184,10 +184,10 @@ isNativeFunction._doc_ = "Returns true if 'func' is a native function";
 
 function isAnonymousFunction(func) {
   // func.name is not reliable, since the function might contain a variable 'name'
-//  return ((func instanceof Function) &&
+//  return ((typeof func == "function") &&
 //          func.name=="");
-  return ((func instanceof Function) &&
-          (/^\s*function\s*\w+\s*\(/(func.toString())==null));
+  return ((typeof func == "function") &&
+          (/^\s*function\s*\[^\s\(]+\s*\(/(func.toString())==null));
 }
 isAnonymousFunction._doc_ = "Returns true if 'func' is an anonymous function";
 
@@ -207,8 +207,8 @@ function functionSignature(func) {
   if (hasAnyOwnProperties(func.prototype))
     signature += "+proto";
 
-  if (!isAnonymous)
-    signature += " "+/^\s*function\s*(\w+)\s*\(/(func.toString())[1];
+if (!isAnonymous) {
+  signature += " "+/^\s*function\s*([^\s\(]+)\s*\(/(func.toString())[1];}
 
   var arglist = func.toString().match(/\((.*)\)/)[1];
 
