@@ -67,7 +67,10 @@ nsMapiRegistry::~nsMapiRegistry() {
 
 NS_IMETHODIMP
 nsMapiRegistry::GetIsDefaultMailClient(PRBool * retval) {
-    *retval = m_DefaultMailClient;
+    // we need to get the value from registry everytime
+    // because the registry settings can be changed from
+    // other mail applications.
+    *retval = IsDefaultMailClient();
     return NS_OK;
 }
 
@@ -103,7 +106,7 @@ nsMapiRegistry::UnsetDefaultMailClient() {
  * showMapiDialog is set
  */
 NS_IMETHODIMP
-nsMapiRegistry::ShowMailIntegrationDialog() {
+nsMapiRegistry::ShowMailIntegrationDialog(nsIDOMWindow *aParentWindow) {
     nsresult rv;
     if (!m_ShowDialog || !getShowDialog()) return NS_OK;
     nsCOMPtr<nsIPromptService> promptService(do_GetService(
@@ -157,7 +160,7 @@ nsMapiRegistry::ShowMailIntegrationDialog() {
 
         PRBool checkValue = PR_FALSE;
         PRInt32 buttonPressed = 0;
-        rv = promptService->ConfirmEx(nsnull,
+        rv = promptService->ConfirmEx(aParentWindow,
                                       dialogTitle,
                                       dialogText.get(),
                                       (nsIPromptService::BUTTON_TITLE_YES * 

@@ -72,6 +72,7 @@
 #include "nsIMsgComposeService.h"
 #include "nsProxiedService.h"
 #include "nsSpecialSystemDirectory.h"
+#include "nsMsgI18N.h"
 
 #include "msgMapi.h"
 #include "msgMapiHook.h"
@@ -535,8 +536,6 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
                 // filename of the file attachment
                 nsXPIDLString pLeafName ;
                 pFile->GetUnicodeLeafName (getter_Copies(pLeafName)) ;
-                nsAutoString LeafName ;
-                LeafName.Assign (pLeafName.get());
 
                 // dir path of the file attachment
                 nsXPIDLString pPath ;
@@ -544,16 +543,11 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
                 nsAutoString Path ;
                 Path.Assign(pPath.get()) ;
 
+                nsAutoString LeafName ;
+                LeafName.Assign (pLeafName.get());
                 PRInt32 offset = Path.RFind (LeafName) ;
                 Path.SetLength(offset) ;
                 Path.ToLowerCase() ;
-
-               // filename passed for the file attachment
-                nsAutoString RealFileName ;
-                if (aIsUnicode)
-                    RealFileName.Assign (aFiles[i].lpszFileName) ;
-                else
-                    RealFileName.AssignWithConversion ((char *) aFiles[i].lpszFileName) ;
 
                 if (tempPath == Path)
                 {
@@ -568,14 +562,29 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
                         rv = pTempDir->Create(nsIFile::DIRECTORY_TYPE, 777) ;
                         if (NS_FAILED(rv)) return rv ;
                     }
-                    // move to our mapi temp dir with real name
-                    if (LeafName != RealFileName)
-                        rv = pFile->MoveToUnicode(pTempDir, RealFileName.get()) ;
-                    else  // in case if the real filename is same, the real file could be in temp dir
+                    // filename passed for the file attachment
+                    if (aIsUnicode)
+                    {
+                        nsAutoString RealFileName ;
+                        RealFileName.Assign (aFiles[i].lpszFileName) ;
+                        // copy to our mapi temp dir with real name
                         rv = pFile->CopyToUnicode(pTempDir, RealFileName.get()) ;
-                    if (NS_FAILED(rv)) return rv ;
-                    pFile->InitWithUnicodePath(strTempDir.get()) ;
-                    pFile->AppendUnicode (RealFileName.get()) ;
+                        if (NS_FAILED(rv)) return rv ;
+                        pFile->InitWithUnicodePath(strTempDir.get()) ;
+                        pFile->AppendUnicode (RealFileName.get()) ;
+                    }
+                    else
+                    {
+                        nsCAutoString asciiRealFileName ;
+                        asciiRealFileName.Assign((char *) aFiles[i].lpszFileName) ;
+                        nsCAutoString asciiLeafName ;
+                        asciiLeafName.AssignWithConversion (pLeafName.get());
+                        // copy to our mapi temp dir with real name
+                        rv = pFile->CopyTo(pTempDir, asciiRealFileName.get()) ;
+                        if (NS_FAILED(rv)) return rv ;
+                        pFile->InitWithUnicodePath(strTempDir.get()) ;
+                        pFile->Append (asciiRealFileName.get()) ;
+                    }
                     // this one is a temp file
                     bTempFile = PR_TRUE ;
                 }
@@ -668,11 +677,15 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     aCompFields->SetCc (Cc.get()) ;
     aCompFields->SetBcc (Bcc.get()) ;
 
+    nsAutoString platformCharSet;
     // set subject
     if (aMessage->lpszSubject)
     {
         nsAutoString Subject ;
-        Subject.AssignWithConversion ((char *) aMessage->lpszSubject) ;
+        if (platformCharSet.IsEmpty())
+            platformCharSet.Assign(nsMsgI18NFileSystemCharset());
+        rv = ConvertToUnicode(platformCharSet, (char *) aMessage->lpszSubject, Subject);
+        if (NS_FAILED(rv)) return rv ;         
         aCompFields->SetSubject(Subject.get()) ;
     }
 
@@ -684,7 +697,10 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     if (aMessage->lpszNoteText)
     {
         nsAutoString Body ;
-        Body.AssignWithConversion ((char *) aMessage->lpszNoteText) ;
+        if (platformCharSet.IsEmpty())
+            platformCharSet.Assign(nsMsgI18NFileSystemCharset());
+        rv = ConvertToUnicode(platformCharSet, (char *) aMessage->lpszNoteText, Body);
+        if (NS_FAILED(rv)) return rv ;
         rv = aCompFields->SetBody(Body.get()) ;
     }
 

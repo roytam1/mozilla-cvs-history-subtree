@@ -45,18 +45,13 @@
 #include "Registry.h"
 #include "nsString.h"
 
-// This function returns the (fully-qualified) name of this executable.
-static nsCString thisApplication();
-
-// returns the brandName of the current application
-static nsCString brandName();
-
-// returns TRUE if the Mapi32.dll is smart dll.
-static PRBool isSmartDll();
-
 //Sets the registry key for basekey/keyname valuename.
 nsresult SetRegistryKey(HKEY baseKey, const char * keyName, 
                         const char * valueName, char * value);
+
+// Deletes the registry key for base/keyname/valuename
+nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName, 
+                        const char * valueName);
 
 // Gets the current regiistry setting for the key.
 nsCString GetRegistryKey(HKEY baseKey, const char * keyName, 
