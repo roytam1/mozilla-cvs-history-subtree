@@ -104,6 +104,7 @@
                 mBackItem = NSMenuItem; 
                 mCachedBMDS = id; 
                 mContentView = BrowserContentView; 
+                mCopyItem = NSMenuItem; 
                 mForwardItem = NSMenuItem; 
                 mHistoryDataSource = HistoryDataSource; 
                 mImageLinkMenu = NSMenu; 

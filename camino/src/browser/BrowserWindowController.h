@@ -133,6 +133,7 @@ typedef enum
   // Context menu item outlets
   IBOutlet NSMenuItem*          mBackItem;
   IBOutlet NSMenuItem*          mForwardItem;
+  IBOutlet NSMenuItem*          mCopyItem;
   
   NSToolbarItem*                mSidebarToolbarItem;
   NSToolbarItem*                mBookmarkToolbarItem;

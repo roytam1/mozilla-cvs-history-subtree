@@ -1649,8 +1649,9 @@ static NSArray* sToolbarDefaults = nil;
   else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_DOCUMENT) != 0)
   {
     menuPrototype = mPageMenu;
-    [mBackItem setEnabled: [[mBrowserView getBrowserView] canGoBack]];
+    [mBackItem 		setEnabled: [[mBrowserView getBrowserView] canGoBack]];
     [mForwardItem setEnabled: [[mBrowserView getBrowserView] canGoForward]];
+    [mCopyItem		setEnabled: [[mBrowserView getBrowserView] canCopy]];
   }
   
   if (mContextMenuNode)
