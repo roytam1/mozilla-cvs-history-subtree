@@ -577,10 +577,6 @@ void
 nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 {
   nscoord min_result = 0, pref_result = 0;
-
-#error "Handle floats"
-  // XXX Don't forget floats.  They're the hard part.
-
   InlineReflowObjects *iro = nsnull;
 
   PRInt32 lineNumber = 0;
@@ -623,6 +619,14 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 
       line_min = ll.GetLineMaxElementWidth(line);
       line_pref = line->mBounds.XMost();
+
+      // In the intrinsic width pass, we put all floats into
+      // mBelowCurrentLineFloats (simply because the code to do so is
+      // simpler).
+      aLine->AppendFloats(iro->brs.mBelowCurrentLineFloats);
+
+#error "Handle floats"
+      // XXX Don't forget floats.  They're the hard part.
 
       // Mark the line as dirty since we've put in into a fake state.
       // The FrameNeedsReflow call should usually (always?) be a no-op.
@@ -2902,11 +2906,11 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
                                    PRBool* aKeepReflowGoing,
                                    PRUint8* aLineReflowStatus)
 {
-  if (!aLineLayout.GetIntrinsicWidthPass()) {
-    // Forget all of the floats on the line
-    aLine->FreeFloats(aState.mFloatCacheFreeList);
-    aState.mFloatCombinedArea.SetRect(0, 0, 0, 0);
+  // Forget all of the floats on the line
+  aLine->FreeFloats(aState.mFloatCacheFreeList);
+  aState.mFloatCombinedArea.SetRect(0, 0, 0, 0);
 
+  if (!aLineLayout.GetIntrinsicWidthPass()) {
     // Setup initial coordinate system for reflowing the inline frames
     // into. Apply a previous block frame's bottom margin first.
     if (ShouldApplyTopMargin(aState, aLine)) {
