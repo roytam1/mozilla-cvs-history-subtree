@@ -42,7 +42,7 @@
 #include "nsSVGAtoms.h"
 #include "nsIStyleRule.h"
 #include "nsIDOMSVGSVGElement.h"
-#include "nsIRuleWalker.h"
+#include "nsRuleWalker.h"
 #include "nsSVGStyleValue.h"
 
 nsSVGElement::nsSVGElement()
@@ -441,13 +441,13 @@ nsSVGElement::GetID(nsIAtom*& aId)const
 }
 
 NS_IMETHODIMP
-nsSVGElement::WalkContentStyleRules(nsIRuleWalker* aRuleWalker)
+nsSVGElement::WalkContentStyleRules(nsRuleWalker* aRuleWalker)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSVGElement::WalkInlineStyleRules(nsIRuleWalker* aRuleWalker)
+nsSVGElement::WalkInlineStyleRules(nsRuleWalker* aRuleWalker)
 {
   nsCOMPtr<nsIStyleRule> rule;
   mStyle->GetStyleRule(mDocument, getter_AddRefs(rule));
@@ -458,7 +458,7 @@ nsSVGElement::WalkInlineStyleRules(nsIRuleWalker* aRuleWalker)
 }
 
 NS_IMETHODIMP
-nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
                                        PRInt32& aHint) const
 {
   // we don't rely on the cssframeconstructor to map attribute changes

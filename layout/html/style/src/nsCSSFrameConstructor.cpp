@@ -49,7 +49,6 @@
 #include "nsIHTMLAttributes.h"
 #include "nsIStyleRule.h"
 #include "nsIFrame.h"
-#include "nsIStyleContext.h"
 #include "nsHTMLAtoms.h"
 #include "nsIPresContext.h"
 #include "nsILinkHandler.h"
@@ -102,7 +101,7 @@
 #include "nsIDocShell.h"
 #include "nsFormControlHelper.h"
 #include "nsObjectFrame.h"
-#include "nsIRuleNode.h"
+#include "nsRuleNode.h"
 #include "nsIXULDocument.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
@@ -10115,7 +10114,9 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
           // first check if it is a background change: 
           // - if it is then we may need to notify the canvas frame
           //   so it can take care of invalidating the whole canvas
-          if (aAttribute == nsHTMLAtoms::bgcolor || aAttribute == nsHTMLAtoms::background) {
+          if (aAttribute == nsHTMLAtoms::bgcolor ||
+              aAttribute == nsHTMLAtoms::background ||
+              aAttribute == nsHTMLAtoms::style) {
             // see if the content element is the root (HTML) or BODY element
             // NOTE: the assumption here is that the background color or image on
             //       the BODY or HTML element need to have the canvas frame invalidate
@@ -11426,24 +11427,12 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
       // data, we need to blow away our style information if this reframe happened as
       // a result of an inline style attribute changing.
       if (aInlineStyle) {
-        if (aStyleContext) {
-          nsCOMPtr<nsIRuleNode> ruleNode;
-          aStyleContext->GetRuleNode(getter_AddRefs(ruleNode));
-          ruleNode->ClearCachedData(aInlineStyleRule); // XXXdwh.  If we're willing to *really* special case
-                                           // inline style, we could only invalidate the struct data
-                                           // that actually changed.  For example, if someone changes
-                                           // style.left, we really only need to blow away cached
-                                           // data in the position struct.
-        }
+        if (aStyleContext)
+          aStyleContext->ClearCachedDataForRule(aInlineStyleRule);
         else {
-          // Ok, our only option left is to just crawl the entire rule
-          // tree and blow away the data that way.
           nsCOMPtr<nsIStyleSet> set;
           shell->GetStyleSet(getter_AddRefs(set));
-          nsCOMPtr<nsIRuleNode> rootNode;
-          set->GetRuleTree(getter_AddRefs(rootNode));
-          if (rootNode)
-            rootNode->ClearCachedDataInSubtree(aInlineStyleRule);
+          set->ClearCachedDataInRuleTree(aInlineStyleRule);
         }
       }
     

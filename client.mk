@@ -383,12 +383,14 @@ SVG_BRANCH_FILES := \
 	content/shared/public/nsCSSKeywordList.h \
 	content/shared/public/nsCSSPropList.h \
 	content/shared/public/nsCSSProps.h \
+	content/shared/public/nsRuleNode.h \
 	content/shared/public/nsSVGAtomList.h \
 	content/shared/public/nsSVGAtoms.h \
 	content/shared/public/nsStyleStruct.h \
 	content/shared/src/Makefile.in \
 	content/shared/src/makefile.win \
 	content/shared/src/nsCSSProps.cpp \
+	content/shared/src/nsRuleNode.cpp \
 	content/shared/src/nsSVGAtoms.cpp \
 	content/shared/src/nsStyleStruct.cpp \
 	content/shared/src/nsStyleUtil.cpp \
