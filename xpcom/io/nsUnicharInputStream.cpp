@@ -42,11 +42,13 @@
 #include "nsIServiceManager.h"
 #include "nsString.h"
 #include "nsCRT.h"
+#if !defined(WINCE)
 #include <fcntl.h>
 #if defined(NS_WIN32) || defined(XP_OS2_VACPP)
 #include <io.h>
 #else
 #include <unistd.h>
+#endif
 #endif
 
 class StringUnicharInputStream : public nsIUnicharInputStream {

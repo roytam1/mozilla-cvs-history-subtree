@@ -459,7 +459,7 @@ nsresult nsDll::GetModule(nsISupports *servMgr, nsIModule **cobj)
     return rv;
 }
 
-#if defined(DEBUG) && !defined(XP_BEOS)
+#if defined(DEBUG) && !defined(XP_BEOS) && !defined(WINCE)
 #define SHOULD_IMPLEMENT_BREAKAFTERLOAD
 #endif
 

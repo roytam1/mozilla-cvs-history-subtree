@@ -89,7 +89,7 @@ void nsFileSpecHelpers::Canonify(nsSimpleCharString& ioPath, PRBool inMakeDirs)
 
     //
     // WINCE uses full paths all the time.
-    // This may break stuff, may need revisitation rights.
+    // This may break stuff.
     //
 #if !defined(WINCE)
     char buffer[_MAX_PATH];
@@ -826,7 +826,14 @@ PRInt64 nsFileSpec::GetDiskSpaceAvailable() const
     //
     BOOL gotten = GetDiskFreeSpaceEx(NULL, &freeBytesAvailableToCaller, &totalNumberOfBytes, &totalNumberOfFreeBytes);
 
-    return (PRInt64)freeBytesAvailableToCaller.QuadPart;
+    if(FALSE != gotten)
+    {
+        return (PRInt64)freeBytesAvailableToCaller.QuadPart;
+    }
+    else
+    {
+        return 0;
+    }
 #endif
 }
 

@@ -90,6 +90,7 @@ LLIBS = $(SUB_LIBRARIES)               \
         $(NULL)
 
 WIN_LIBS =                             \
+!if "$(OS_TARGET)" != "WINCE"
         shell32.lib                    \
         ole32.lib                      \
 !ifdef GC_LEAK_DETECTOR
@@ -97,6 +98,9 @@ WIN_LIBS =                             \
 !endif
 !if defined(MOZ_DEBUG) || defined(MOZ_TRACE_MALLOC)
         imagehlp.lib                   \
+!endif
+!else
+        ceshell.lib \
 !endif
         $(NULL)
 

@@ -215,7 +215,9 @@ nsProcess::Run(PRBool blocking, const char **args, PRUint32 count, PRUint32 *pid
     my_argv[count+1] = NULL;
 
  #if defined(XP_WIN)
+#if !defined(WINCE)
     STARTUPINFO startupInfo;
+#endif
     PROCESS_INFORMATION procInfo;
     BOOL retVal;
     char *cmdLine;
@@ -225,9 +227,12 @@ nsProcess::Run(PRBool blocking, const char **args, PRUint32 count, PRUint32 *pid
         return NS_ERROR_FILE_EXECUTION_FAILED;    
     }
 
+#if !defined(WINCE)
     ZeroMemory(&startupInfo, sizeof(startupInfo));
     startupInfo.cb = sizeof(startupInfo);
+#endif
 
+#if !defined(WINCE)
     retVal = CreateProcess(NULL,
                            // NS_CONST_CAST(char*, mTargetPath.get()),
                            cmdLine,
@@ -242,6 +247,19 @@ nsProcess::Run(PRBool blocking, const char **args, PRUint32 count, PRUint32 *pid
                            &startupInfo,
                            &procInfo
                           );
+#else
+    retVal = CreateProcessA(NULL,
+                            cmdLine,
+                            NULL,
+                            NULL,
+                            FALSE,
+                            0,
+                            NULL,
+                            NULL,
+                            NULL,
+                            &procInfo
+                            );
+#endif
     PR_FREEIF( cmdLine );
     if (blocking) {
  

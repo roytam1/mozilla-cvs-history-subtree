@@ -121,7 +121,7 @@ PR_STATIC_CALLBACK(PRBool) DeleteSystemDirKeys(nsHashKey *aKey, void *aData, voi
 #define NS_SYSTEMDIR_HASH_NUM (10)
 static nsHashtable *systemDirectoriesLocations = NULL;
 #if defined (XP_WIN)
-typedef BOOL (WINAPI * GetSpecialPathProc) (HWND hwndOwner, LPSTR lpszPath, int nFolder, BOOL fCreate);
+typedef BOOL (WINAPI * GetSpecialPathProc) (HWND hwndOwner, LPTSTR lpszPath, int nFolder, BOOL fCreate);
 GetSpecialPathProc gGetSpecialPathProc = NULL;
 static HINSTANCE gShell32DLLInst = NULL;
 #endif
@@ -135,11 +135,11 @@ NS_COM void StartupSpecialSystemDirectory()
        support the older way of file location lookup on systems that do not have
        IE4. 
     */ 
-    gShell32DLLInst = LoadLibrary("shfolder.dll");
+    gShell32DLLInst = LoadLibrary(_T("shfolder.dll"));
     if(gShell32DLLInst)
     {
         gGetSpecialPathProc  = (GetSpecialPathProc) GetProcAddress(gShell32DLLInst, 
-                                                                   "SHGetSpecialFolderPath");
+                                                                   _T("SHGetSpecialFolderPath"));
     }
     
     if (!gGetSpecialPathProc)
@@ -147,11 +147,11 @@ NS_COM void StartupSpecialSystemDirectory()
         if (gShell32DLLInst)
             FreeLibrary(gShell32DLLInst);
 
-        gShell32DLLInst = LoadLibrary("Shell32.dll");
+        gShell32DLLInst = LoadLibrary(_T("Shell32.dll"));
         if(gShell32DLLInst)
         {
             gGetSpecialPathProc  = (GetSpecialPathProc) GetProcAddress(gShell32DLLInst, 
-                                                                       "SHGetSpecialFolderPath");
+                                                                       _T("SHGetSpecialFolderPath"));
         }
     }
 #endif
@@ -180,36 +180,44 @@ static PRBool gGlobalOSInitialized = PR_FALSE;
 static PRBool gGlobalDBCSEnabledOS = PR_FALSE;
 
 //----------------------------------------------------------------------------------------
-static char* MakeUpperCase(char* aPath)
+static LPTSTR MakeUpperCase(LPTSTR aPath)
 //----------------------------------------------------------------------------------------
 {
   // check if the Windows is DBCSEnabled once.
-  if (PR_FALSE == gGlobalOSInitialized) {
+    if (PR_FALSE == gGlobalOSInitialized) {
+#if !defined(WINCE)
     if (GetSystemMetrics(SM_DBCSENABLED))
       gGlobalDBCSEnabledOS = PR_TRUE;
+#else
+    gGlobalDBCSEnabledOS = PR_TRUE;
+#endif
     gGlobalOSInitialized = PR_TRUE;
   }
 
   // windows does not care about case.  pu sh to uppercase:
-  int length = strlen(aPath);
+  int length = _tcslen(aPath);
   int i = 0; /* C++ portability guide #20 */
   if (!gGlobalDBCSEnabledOS)  {
     // for non-DBCS windows
     for (i = 0; i < length; i++)
-        if (islower(aPath[i]))
-          aPath[i] = _toupper(aPath[i]);
+        if (_istlower(aPath[i]))
+          aPath[i] = _totupper(aPath[i]);
   }
   else {
     // for DBCS windows
     for (i = 0; i < length; i++)  {
+#if !defined(WINCE)
       if (IsDBCSLeadByte(aPath[i])) {
-        // begining of the double bye char
+        // begining of the double byte char
         i++;
       }
       else  {
-        if ( islower(aPath[i]))
-          aPath[i] = _toupper(aPath[i]);
+#endif
+          if ( _istlower(aPath[i]))
+          aPath[i] = _totupper(aPath[i]);
+#if !defined(WINCE)
       }
+#endif
     } //end of for loop
   }
   return aPath;
@@ -228,6 +236,7 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
             return;
 
         // Append the trailing slash
+#if !defined(WINCE)
         int len = PL_strlen(path);
         if (len>1 && path[len-1] != '\\') 
         {
@@ -235,11 +244,25 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
             path[len + 1] = '\0';
         }
         outDirectory = path;
+#else
+        size_t len = _tcslen(path);
+        if (len > 1 && path[len - 1] != _T('\\'))
+        {
+            path[len]   = _T('\\');
+            path[len + 1] = _T('\0');
+        }
+
+        char apath[MAX_PATH];
+        if(0 != WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, path, -1, apath, sizeof(apath), NULL, NULL))
+        {
+            outDirectory = apath;
+        }
+#endif
         return;
     }
 
     LPMALLOC pMalloc = NULL;
-    LPSTR pBuffer = NULL;
+    LPTSTR pBuffer = NULL;
     LPITEMIDLIST pItemIDList = NULL;
     int len;
  
@@ -248,7 +271,7 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
         return;
 
     // Allocate a buffer
-    if ((pBuffer = (LPSTR) pMalloc->Alloc(MAX_PATH + 2)) == NULL) 
+    if ((pBuffer = (LPTSTR) pMalloc->Alloc((MAX_PATH + 2) * sizeof(TCHAR))) == NULL) 
         return; 
  
     // Get the PIDL for the folder. 
@@ -260,9 +283,9 @@ static void GetWindowsFolder(int folder, nsFileSpec& outDirectory)
         goto Clean;
 
     // Append the trailing slash
-    len = PL_strlen(pBuffer);
-    pBuffer[len]   = '\\';
-    pBuffer[len + 1] = '\0';
+    len = _tcslen(pBuffer);
+    pBuffer[len]   = _T('\\');
+    pBuffer[len + 1] = _T('\0');
 
     // Assign the directory
     outDirectory = pBuffer;
@@ -291,12 +314,12 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
 //----------------------------------------------------------------------------------------
 {
 #if defined (XP_WIN)
-    char buf[MAX_PATH];
+    TCHAR buf[MAX_PATH];
     if ( ::GetModuleFileName(0, buf, sizeof(buf)) ) {
-        // chop of the executable name by finding the rightmost backslash
-        char* lastSlash = PL_strrchr(buf, '\\');
+        // chop off the executable name by finding the rightmost backslash
+        TCHAR* lastSlash = _tcsrchr(buf, _T('\\'));
         if (lastSlash)
-            *(lastSlash + 1) = '\0';
+            *(lastSlash + 1) = _T('\0');
 
         aFileSpec = buf;
         return;
@@ -482,7 +505,8 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         case OS_DriveDirectory:
 #if defined (XP_WIN)
         {
-            char path[_MAX_PATH];
+#if !defined(WINCE)
+            TCHAR path[_MAX_PATH];
             PRInt32 len = GetWindowsDirectory( path, _MAX_PATH );
             if (len)
             {
@@ -490,6 +514,10 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                     path[3] = 0;
             }
             *this = MakeUpperCase(path);
+#else
+            // for WinCE, just use root.
+            *this = _T("\\");
+#endif
         }
 #elif defined(XP_OS2)
         {
@@ -518,7 +546,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         case OS_TemporaryDirectory:
 #if defined (XP_WIN)
         {
-            char path[_MAX_PATH];
+            TCHAR path[_MAX_PATH];
             DWORD len = GetTempPath(_MAX_PATH, path);
             *this = MakeUpperCase(path);
         }
@@ -742,7 +770,8 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             
 #if defined (XP_WIN)
         case Win_SystemDirectory:
-        {    
+        {
+#if !defined(WINCE)
             char path[_MAX_PATH];
             PRInt32 len = GetSystemDirectory( path, _MAX_PATH );
         
@@ -753,12 +782,16 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len+1] = '\0';
 
             *this = MakeUpperCase(path);
-
+#else
+            // No system directory per se, just use windows dir.
+            *this = _T("\\WINDOWS\\");
+#endif
             break;
         }
 
         case Win_WindowsDirectory:
         {    
+#if !defined(WINCE)
             char path[_MAX_PATH];
             PRInt32 len = GetWindowsDirectory( path, _MAX_PATH );
             
@@ -770,11 +803,15 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len+1] = '\0';
 
             *this = MakeUpperCase(path);
+#else
+            *this = _T("\\WINDOWS\\");
+#endif
             break;
         }
 
         case Win_HomeDirectory:
         {    
+#if !defined(WINCE)
             char path[_MAX_PATH];
             if (GetEnvironmentVariable(TEXT("HOME"), path, _MAX_PATH) > 0)
             {
@@ -808,6 +845,10 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                 *this = MakeUpperCase(path);
                 break;
             }
+#else
+            GetWindowsFolder(CSIDL_PERSONAL, *this);
+            break;
+#endif
         }
         case Win_Desktop:
         {
@@ -896,32 +937,56 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         }
         case Win_Common_Startmenu:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_STARTMENU, *this);
+#else
+            GetWindowsFolder(CSIDL_STARTMENU, *this);
+#endif
             break;
         }
         case Win_Common_Programs:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_PROGRAMS, *this);
+#else
+            GetWindowsFolder(CSIDL_PROGRAMS, *this);
+#endif
             break;
         }
         case Win_Common_Startup:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_STARTUP, *this);
+#else
+            GetWindowsFolder(CSIDL_STARTUP, *this);
+#endif
             break;
         }
         case Win_Common_Desktopdirectory:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_COMMON_DESKTOPDIRECTORY, *this);
+#else
+            GetWindowsFolder(CSIDL_DESKTOPDIRECTORY, *this);
+#endif
             break;
         }
         case Win_Appdata:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_APPDATA, *this);
+#else
+            GetWindowsFolder(CSIDL_PERSONAL, *this); // my documents for now
+#endif
             break;
         }
         case Win_Printhood:
         {
+#if !defined(WINCE)
             GetWindowsFolder(CSIDL_PRINTHOOD, *this);
+#else
+            GetWindowsFolder(CSIDL_NETHOOD, *this); // network neiborhood for now
+#endif
             break;
         }
 #endif  // XP_WIN

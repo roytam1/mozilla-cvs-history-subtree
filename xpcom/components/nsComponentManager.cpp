@@ -3083,7 +3083,7 @@ nsComponentManagerImpl::AutoRegisterImpl(PRInt32 when,
     nsCOMPtr<nsIFile> dir;
     nsresult rv;
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(WINCE)
     // testing release behaviour
     if (getenv("XPCOM_NO_AUTOREG"))
         return NS_OK;

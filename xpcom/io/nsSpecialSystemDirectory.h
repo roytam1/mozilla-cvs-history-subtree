@@ -144,7 +144,9 @@ class NS_COM nsSpecialSystemDirectory : public nsFileSpec
 
 private:
     void            operator = (const char* inPath) { *(nsFileSpec*)this = inPath; }
-
+#if defined(WINCE)
+    void            operator = (LPCWSTR inPath) { *(nsFileSpec*)this = inPath; }
+#endif // WINCE
 }; // class NS_COM nsSpecialSystemDirectory
 
 
