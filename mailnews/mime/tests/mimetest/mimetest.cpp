@@ -134,8 +134,6 @@ SetupRegistry(void)
   nsComponentManager::RegisterComponent(kXmlEmitterCID,  "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=raw", EMITTER_DLL,  PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kRawEmitterCID,  "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=text/xml", EMITTER_DLL,  PR_FALSE, PR_FALSE);
 
-  nsIMsgCompFields
-
   return NS_OK;
 }
 
@@ -491,7 +489,7 @@ DoRFC822toHTMLConversion(char *filename, int numArgs)
 
   // Set us as the output stream for HTML data from libmime...
   if (numArgs >= 3)
-    rv = mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeMessageDraft, &outFormat, &contentType);
+    rv = mimeParser->SetOutputStream(nsnull, theURI, nsMimeOutput::nsMimeMessageDraftOrTemplate, &outFormat, &contentType);
   else
     rv = mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeUnknown, &outFormat, &contentType);
 
