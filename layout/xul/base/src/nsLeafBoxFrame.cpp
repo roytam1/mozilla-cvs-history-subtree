@@ -356,24 +356,6 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
     aDesiredSize.mOverflowArea = *overflowArea;
   }
 
-  // max sure the max element size reflects
-  // our min width
-  nscoord* maxElementWidth = state.GetMaxElementWidth();
-  if (maxElementWidth)
-  {
-     nsSize minSize(0,0);
-     GetMinSize(state,  minSize);
-
-     if (mRect.width > minSize.width) {
-       if (aReflowState.mComputedWidth == NS_INTRINSICSIZE) {
-         *maxElementWidth = minSize.width;
-       } else {
-         *maxElementWidth = mRect.width;
-       }
-     } else {
-        *maxElementWidth = mRect.width;
-     }
-  }
 #ifdef DO_NOISY_REFLOW
   {
     printf("%p ** nsLBF(done) W:%d H:%d  ", this, aDesiredSize.width, aDesiredSize.height);

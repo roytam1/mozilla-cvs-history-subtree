@@ -879,24 +879,6 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
     aDesiredSize.mOverflowArea = *overflowArea;
   }
 
-  if(aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aDesiredSize.mMaximumWidth = prefSize.width;
-  }
-
-  // max sure the max element size reflects
-  // our min width
-  nscoord* maxElementWidth = state.GetMaxElementWidth();
-  if (maxElementWidth)
-  {
-     nsSize minSize(0,0);
-     GetMinSize(state,  minSize);
-       if (aReflowState.mStylePosition->mWidth.GetUnit() == eStyleUnit_Percent ||
-           (mRect.width > minSize.width &&
-           aReflowState.mComputedWidth == NS_INTRINSICSIZE))
-         *maxElementWidth = minSize.width;
-     else
-       *maxElementWidth = mRect.width;
-  }
 #ifdef DO_NOISY_REFLOW
   {
     printf("%p ** nsBF(done) W:%d H:%d  ", this, aDesiredSize.width, aDesiredSize.height);
