@@ -159,8 +159,8 @@ LIB_ASFILES := $(wildcard *_$(OS_ARCH).s)
 PROG_CFILES = js.c
 
 ifdef USE_MSVC
-LIBRARY = $(OBJDIR)/js32.dll
-SHARED_LIBRARY = $(LIBRARY)
+LIBRARY = $(OBJDIR)/js32.lib
+SHARED_LIBRARY = $(OBJDIR)/js32.dll
 PROGRAM = $(OBJDIR)/js.exe
 else
 LIBRARY = $(OBJDIR)/libjs.a
@@ -175,9 +175,13 @@ include jsconfig.mk
 
 nsinstall-target:
 	cd ../../config; $(MAKE) OBJDIR=$(OBJDIR) OBJDIR_NAME=$(OBJDIR)
-
+ifdef USE_MSVC
+$(PROGRAM): $(PROG_OBJS) $(LIBRARY)
+	link.exe -out:"$@" $(EXE_LINK_FLAGS) $?
+else
 $(PROGRAM): $(PROG_OBJS) $(LIBRARY)
 	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
+endif
 
 $(PROGRAM).pure: $(PROG_OBJS) $(LIBRARY)
 	purify $(PUREFLAGS) \

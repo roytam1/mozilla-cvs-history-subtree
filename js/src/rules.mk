@@ -11,7 +11,8 @@ CFILES = $(LIB_CFILES) $(PROG_CFILES)
 OBJS   = $(LIB_OBJS) $(PROG_OBJS)
 
 ifdef USE_MSVC
-TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
+# TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
+TARGETS = $(SHARED_LIBRARY) $(PROGRAM)   # it is now
 else
 TARGETS = $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM)
 endif
@@ -42,7 +43,7 @@ $(LIBRARY): $(LIB_OBJS)
 	$(RANLIB) $@
 else
 ifdef USE_MSVC
-$(LIBRARY): $(LIB_OBJS)
+$(SHARED_LIBRARY): $(LIB_OBJS)
 	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS)\
 	    /out:"$@" /pdb:"$(OBJDIR)/$(@F:.dll=.pdb)" \
 	    /implib:"$(OBJDIR)/$(@F:.dll=.lib)" $?

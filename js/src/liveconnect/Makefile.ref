@@ -78,8 +78,8 @@ endif
 endif
 
 ifdef USE_MSVC
-LIBRARY = $(OBJDIR)/jsj.dll
-SHARED_LIBRARY = $(LIBRARY)
+LIBRARY = $(OBJDIR)/jsj.lib
+SHARED_LIBRARY = $(OBJDIR)/jsj.dll
 PROGRAM = $(OBJDIR)/jsj.exe
 else
 LIBRARY = $(OBJDIR)/jsj.a
@@ -89,6 +89,14 @@ endif
 
 include $(DEPTH)/rules.mk
 
+ifdef USE_MSVC
+$(OBJDIR)/$(PROG_FILE).obj: ../$(PROG_FILE).c
+	@$(MAKE_OBJDIR)
+	$(CC) -Fo$@ -c $(CFLAGS) -DLIVECONNECT ../$(PROG_FILE).c
+
+$(PROGRAM): $(OBJDIR)/$(PROG_FILE).obj $(LIBRARY)
+	link.exe -out:"$@" $(EXE_LINK_FLAGS) ../$(OBJDIR)/js32.lib $?
+else
 $(OBJDIR)/$(PROG_FILE).o: ../$(PROG_FILE).c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(CFLAGS) -DLIVECONNECT ../$(PROG_FILE).c
@@ -96,3 +104,4 @@ $(OBJDIR)/$(PROG_FILE).o: ../$(PROG_FILE).c
 $(PROGRAM): $(OBJDIR)/$(PROG_FILE).o
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ $(CFLAGS) $+ $(LIBRARY) ../$(OBJDIR)/libjs.a $(LDFLAGS) $(OTHER_LIBS)
+endif

@@ -40,6 +40,10 @@ LIB_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  /subsystem:windows /dll /incremental:yes /debug\
  /machine:I386
 
+EXE_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
+ advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib oldnames.lib /nologo\
+ /subsystem:console /incremental:yes /debug\
+ /machine:I386
 
 ifdef JS_THREADSAFE
 LIB_LINK_FLAGS += $(DIST)/lib/libnspr21.lib
