@@ -31,6 +31,7 @@ en-US.jar:
         locale/en-US/navigator/pageInfo.properties          (resources/locale/en-US/pageInfo.properties)
         locale/en-US/navigator/turboDialog.dtd              (resources/locale/en-US/turboDialog.dtd)
         locale/en-US/navigator/turboMenu.properties         (resources/locale/en-US/turboMenu.properties)
+        locale/en-US/navigator/mainWindow.dtd               (resources/locale/en-US/mainWindow.dtd)
 
 US.jar:
         locale/US/navigator-region/contents.rdf             (resources/locale/en-US/contents-region.rdf)
