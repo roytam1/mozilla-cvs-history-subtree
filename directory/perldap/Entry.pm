@@ -35,7 +35,7 @@ use strict;
 use vars qw($VERSION @ISA);
 
 use overload
-  '""'	=> \&entry2LDIF;
+  '""'	=> \&getLDIFString;
 
 @ISA = ('Tie::StdHash');
 $VERSION = "2.0";
@@ -790,10 +790,10 @@ sub printLDIF
 {
   my ($self) = @_;
 
-  print $self->entry2LDIF(), "\n";
+  print $self->getLDIFString();
 }
 
-sub entry2LDIF
+sub getLDIFString
 {
   my ($self) = @_;
 
