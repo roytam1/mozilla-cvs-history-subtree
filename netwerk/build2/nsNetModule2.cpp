@@ -56,12 +56,14 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       nsGopherHandler::Create
     },
 
+#ifdef USE_DEFAULT_BROWSER
     // from netwerk/protocol/ftp:
     { "The FTP Protocol Handler", 
       NS_FTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "ftp",
       nsFtpProtocolHandlerConstructor
     },
+#endif /* USE_DEFAULT_BROWSER */
 
     // from netwerk/protocol/finger:
     { "The Finger Protocol Handler", 
