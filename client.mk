@@ -64,7 +64,7 @@ MOZ_CO_TAG = SVG_20020806_BRANCH
 # branch maintenance targets below.
 
 # list of modified files
-SVG_BRANCH_MODIFIED_FILES =                               \
+SVG_BRANCH_MODIFIED_FILES = \
 	allmakefiles.sh                                       \
 	client.mk                                             \
 	configure.in                                          \
@@ -140,10 +140,79 @@ SVG_BRANCH_MODIFIED_FILES =                               \
 	layout/svg/base/src/nsSVGPolygonFrame.cpp             \
 	layout/svg/base/src/nsSVGPolylineFrame.cpp            \
 	layout/svg/base/src/nsSVGRectFrame.cpp                \
-	layout/svg/base/src/svg.css
+	layout/svg/base/src/svg.css                           \
+	other-licenses/libart_lgpl/Makefile.in                \
+	other-licenses/libart_lgpl/ChangeLog                  \
+	other-licenses/libart_lgpl/art_affine.c               \
+	other-licenses/libart_lgpl/art_alphagamma.c           \
+	other-licenses/libart_lgpl/art_alphagamma.h           \
+	other-licenses/libart_lgpl/art_bpath.c                \
+	other-licenses/libart_lgpl/art_bpath.h                \
+	other-licenses/libart_lgpl/art_gray_svp.c             \
+	other-licenses/libart_lgpl/art_gray_svp.h             \
+	other-licenses/libart_lgpl/art_misc.c                 \
+	other-licenses/libart_lgpl/art_misc.h                 \
+	other-licenses/libart_lgpl/art_pixbuf.c               \
+	other-licenses/libart_lgpl/art_pixbuf.h               \
+	other-licenses/libart_lgpl/art_rect.c                 \
+	other-licenses/libart_lgpl/art_rect_svp.c             \
+	other-licenses/libart_lgpl/art_rect_svp.h             \
+	other-licenses/libart_lgpl/art_rect_uta.c             \
+	other-licenses/libart_lgpl/art_rect_uta.h             \
+	other-licenses/libart_lgpl/art_render.c               \
+	other-licenses/libart_lgpl/art_render.h               \
+	other-licenses/libart_lgpl/art_render_gradient.c      \
+	other-licenses/libart_lgpl/art_render_gradient.h      \
+	other-licenses/libart_lgpl/art_render_svp.c           \
+	other-licenses/libart_lgpl/art_render_svp.h           \
+	other-licenses/libart_lgpl/art_rgb.c                  \
+	other-licenses/libart_lgpl/art_rgb.h                  \
+	other-licenses/libart_lgpl/art_rgb_a_affine.c         \
+	other-licenses/libart_lgpl/art_rgb_affine.c           \
+	other-licenses/libart_lgpl/art_rgb_affine_private.c   \
+	other-licenses/libart_lgpl/art_rgb_bitmap_affine.c    \
+	other-licenses/libart_lgpl/art_rgb_pixbuf_affine.c    \
+	other-licenses/libart_lgpl/art_rgb_rgba_affine.c      \
+	other-licenses/libart_lgpl/art_rgb_svp.c              \
+	other-licenses/libart_lgpl/art_rgb_svp.h              \
+	other-licenses/libart_lgpl/art_rgba.c                 \
+	other-licenses/libart_lgpl/art_rgba.h                 \
+	other-licenses/libart_lgpl/art_svp.c                  \
+	other-licenses/libart_lgpl/art_svp_intersect.c        \
+	other-licenses/libart_lgpl/art_svp_intersect.h        \
+	other-licenses/libart_lgpl/art_svp_ops.c              \
+	other-licenses/libart_lgpl/art_svp_ops.h              \
+	other-licenses/libart_lgpl/art_svp_point.c            \
+	other-licenses/libart_lgpl/art_svp_point.h            \
+	other-licenses/libart_lgpl/art_svp_render_aa.c        \
+	other-licenses/libart_lgpl/art_svp_render_aa.h        \
+	other-licenses/libart_lgpl/art_svp_vpath.c            \
+	other-licenses/libart_lgpl/art_svp_vpath.h            \
+	other-licenses/libart_lgpl/art_svp_vpath_stroke.c     \
+	other-licenses/libart_lgpl/art_svp_vpath_stroke.h     \
+	other-licenses/libart_lgpl/art_svp_wind.c             \
+	other-licenses/libart_lgpl/art_svp_wind.h             \
+	other-licenses/libart_lgpl/art_uta.c                  \
+	other-licenses/libart_lgpl/art_uta.h                  \
+	other-licenses/libart_lgpl/art_uta_ops.c              \
+	other-licenses/libart_lgpl/art_uta_ops.h              \
+	other-licenses/libart_lgpl/art_uta_rect.c             \
+	other-licenses/libart_lgpl/art_uta_rect.h             \
+	other-licenses/libart_lgpl/art_uta_svp.c              \
+	other-licenses/libart_lgpl/art_uta_svp.h              \
+	other-licenses/libart_lgpl/art_uta_vpath.h            \
+	other-licenses/libart_lgpl/art_vpath.c                \
+	other-licenses/libart_lgpl/art_vpath_bpath.c          \
+	other-licenses/libart_lgpl/art_vpath_bpath.h          \
+	other-licenses/libart_lgpl/art_vpath_dash.c           \
+	other-licenses/libart_lgpl/art_vpath_dash.h           \
+	other-licenses/libart_lgpl/art_vpath_svp.c            \
+	other-licenses/libart_lgpl/art_vpath_svp.h            \
+	other-licenses/libart_lgpl/libart.def                 \
+	other-licenses/libart_lgpl/testart.c
 
 # list of obsolete files
-SVG_BRANCH_OBSOLETE_FILES =                               \
+SVG_BRANCH_OBSOLETE_FILES = \
 	layout/svg/base/src/nsASVGGraphicSource.h             \
 	layout/svg/base/src/nsASVGPathBuilder.h               \
 	layout/svg/base/src/nsISVGFrame.h                     \
@@ -228,8 +297,19 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusPathGeometry.h \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.cpp \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.h  \
-	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp 
-
+	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp \
+	other-licenses/libart_lgpl/Makefile.am \
+	other-licenses/libart_lgpl/acconfig.h \
+	other-licenses/libart_lgpl/art_render_mask.c \
+	other-licenses/libart_lgpl/art_render_mask.h \
+	other-licenses/libart_lgpl/autogen.sh \
+	other-licenses/libart_lgpl/configure.in \
+	other-licenses/libart_lgpl/gen_art_config.c \
+	other-licenses/libart_lgpl/libart-2.0.pc.in \
+	other-licenses/libart_lgpl/libart-config.in \
+	other-licenses/libart_lgpl/libart-features.h.in \
+	other-licenses/libart_lgpl/libartConf.sh.in \
+	other-licenses/libart_lgpl/test_gradient.c 
 
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
