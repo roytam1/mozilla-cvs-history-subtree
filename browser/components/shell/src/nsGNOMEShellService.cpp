@@ -125,7 +125,7 @@ nsGNOMEShellService::Init()
                    getter_AddRefs(appPath));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = appPath->AppendNative(NS_LITERAL_CSTRING("firefox"));
+  rv = appPath->AppendNative(NS_LITERAL_CSTRING(MOZ_APP_NAME));
   NS_ENSURE_SUCCESS(rv, rv);
 
   return appPath->GetNativePath(mAppPath);
