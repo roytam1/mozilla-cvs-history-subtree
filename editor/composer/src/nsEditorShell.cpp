@@ -175,6 +175,11 @@ enum {
   eComposerController
 };
 
+// this is defined while we move into the embedding world.
+// #ifdeffed out code is obsoleted by work done in nsEditingSession
+// and elsewhere.
+#define EDITOR_SHELL_TRANSITION
+
 static eHTMLTags gWatchTags[] = 
 { eHTMLTag_frameset,
   eHTMLTag_iframe,
@@ -340,6 +345,7 @@ nsEditorShell::Shutdown()
 {
   nsresult rv = NS_OK;
   
+#ifndef EDITOR_SHELL_TRANSITION  
   nsCOMPtr<nsIEditor> editor(do_QueryInterface(mEditor));
   if (editor)
   {
@@ -361,6 +367,8 @@ nsEditorShell::Shutdown()
       (void) webProgress->RemoveProgressListener(this);
     }
   }
+
+#endif  // EDITOR_SHELL_TRANSITION
 
   // Remove our document mouse event listener
   if (mMouseListenerP)
@@ -423,6 +431,7 @@ nsEditorShell::ResetEditingState()
   }
   
   nsresult rv;  
+#ifndef EDITOR_SHELL_TRANSITION  
   // now, unregister the selection listener, if there was one
   if (mStateMaintainer)
   {
@@ -436,6 +445,7 @@ nsEditorShell::ResetEditingState()
       NS_IF_RELEASE(mStateMaintainer);
     }
   }
+#endif
 
   // Remove our document mouse event listener
   if (mMouseListenerP)
@@ -449,11 +459,13 @@ nsEditorShell::ResetEditingState()
     }
   }
 
+#ifndef EDITOR_SHELL_TRANSITION  
   // clear this editor out of the controller
   if (mEditorController)
   {
     mEditorController->SetCommandRefCon(nsnull);
   }
+#endif
   
   mEditorType = eUninitializedEditorType;
   mEditor = 0;  // clear out the nsCOMPtr
@@ -518,6 +530,8 @@ nsEditorShell::PrepareDocumentForEditing(nsIDOMWindow* aDOMWindow, nsIURI *aUrl)
     NS_ASSERTION(0, "Failed to get docShell from DOMWindow");
     return NS_ERROR_UNEXPECTED;
   }
+  
+  NS_NOTREACHED("should never get here");
   
   // turn off animated GIFs
   nsCOMPtr<nsIPresContext> presContext;
@@ -787,6 +801,10 @@ nsEditorShell::GetDocShellFromContentWindow(nsIDocShell **aDocShell)
 NS_IMETHODIMP    
 nsEditorShell::SetContentWindow(nsIDOMWindowInternal* aWin)
 {
+#ifdef EDITOR_SHELL_TRANSITION
+	return NS_OK;
+#endif
+
   NS_PRECONDITION(aWin != nsnull, "null ptr");
   if (!aWin)
       return NS_ERROR_NULL_POINTER;
@@ -880,6 +898,10 @@ nsEditorShell::GetContentWindow(nsIDOMWindowInternal * *aContentWindow)
 NS_IMETHODIMP    
 nsEditorShell::SetWebShellWindow(nsIDOMWindowInternal* aWin)
 {
+#ifdef EDITOR_SHELL_TRANSITION
+	return NS_OK;
+#endif
+
   NS_PRECONDITION(aWin != nsnull, "null ptr");
   if (!aWin)
       return NS_ERROR_NULL_POINTER;
@@ -934,8 +956,10 @@ nsEditorShell::GetWebShellWindow(nsIDOMWindowInternal * *aWebShellWindow)
 NS_IMETHODIMP
 nsEditorShell::SetEditorType(const PRUnichar *editorType)
 {  
+#ifndef EDITOR_SHELL_TRANSITION
   if (mEditor)
     return NS_ERROR_ALREADY_INITIALIZED;
+#endif
     
   nsAutoString  theType(editorType);
   theType.ToLowerCase();
@@ -3184,6 +3208,14 @@ nsEditorShell::GetEditor(nsIEditor** aEditor)
 
   *aEditor = nsnull;
   return NS_ERROR_NOT_INITIALIZED;
+}
+
+
+NS_IMETHODIMP
+nsEditorShell::SetEditor(nsIEditor* aEditor)
+{
+  mEditor = do_QueryInterface(aEditor);
+  return NS_OK;
 }
 
 
