@@ -46,5 +46,13 @@ nsAbLDAPCard::~nsAbLDAPCard()
 {
 }
 
+NS_IMETHODIMP nsAbLDAPCard::EditCardToDatabase(const char *aURI)
+{
+  // do nothing, you can't edit LDAP cards.
+  // XXX we shouldn't be getting here, but we are.  fix this later.
+  return NS_OK;
+}
+
+
 NS_IMPL_ISUPPORTS_INHERITED0(nsAbLDAPCard, nsAbCardProperty)
 

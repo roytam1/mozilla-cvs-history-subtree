@@ -250,7 +250,7 @@ static void UnicodeToWord(const PRUnichar *aUnicode, WORD& aWord)
 
 #define PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST "mail.addr_book.lastnamefirst"
 
-NS_IMETHODIMP nsAbOutlookCard::EditCardToDatabase(const char *aUri)
+NS_IMETHODIMP nsAbOutlookCard::EditCardToDatabase(const char *aUru)
 {
     nsresult retCode = NS_OK ;
     nsXPIDLString *properties = nsnull ;
