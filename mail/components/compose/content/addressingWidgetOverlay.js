@@ -1037,9 +1037,12 @@ var gAutomatedAutoCompleteListener = null;
 
 function parseAndAddAddresses(addressText, recipientType)
 {
-  var fullNames;
+  var fullNames = [];
 
-  fullNames = addressText.split(',');
+  var unquotedCommaExpr = /("[^>]*>|[^",]+)(?:, *)?/g; 
+  while (m = unquotedCommaExpr(addressText)) 
+    fullNames.push(m[1]); 
+
   numAddresses = fullNames.length;
 
   for (index in fullNames)
