@@ -1204,26 +1204,6 @@ nsWebShell::CanCopySelection(PRBool* aResult)
 }
 
 NS_IMETHODIMP
-nsWebShell::CanCopyLinkLocation(PRBool* aResult)
-{
-  return IsCommandEnabled ( NS_LITERAL_STRING("cmd_copyLink"), aResult );
-}
-
-NS_IMETHODIMP
-nsWebShell::CanCopyImageLocation(PRBool* aResult)
-{
-  return IsCommandEnabled ( NS_LITERAL_STRING("cmd_copyImageLocation"),
-                            aResult );
-}
-
-NS_IMETHODIMP
-nsWebShell::CanCopyImageContents(PRBool* aResult)
-{
-  return IsCommandEnabled ( NS_LITERAL_STRING("cmd_copyImageContents"),
-                            aResult );
-}
-
-NS_IMETHODIMP
 nsWebShell::CanPaste(PRBool* aResult)
 {
   return IsCommandEnabled ( NS_LITERAL_STRING("cmd_paste"), aResult );
@@ -1245,18 +1225,6 @@ NS_IMETHODIMP
 nsWebShell::CopyLinkLocation(void)
 {
   return DoCommand ( NS_LITERAL_STRING("cmd_copyLink") );
-}
-
-NS_IMETHODIMP
-nsWebShell::CopyImageLocation(void)
-{
-  return DoCommand ( NS_LITERAL_STRING("cmd_copyImageLocation") );
-}
-
-NS_IMETHODIMP
-nsWebShell::CopyImageContents(void)
-{
-  return DoCommand ( NS_LITERAL_STRING("cmd_copyImageContents") );
 }
 
 NS_IMETHODIMP
