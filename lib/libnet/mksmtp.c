@@ -42,12 +42,15 @@
 
 #include "xp_error.h"
 #include "prefapi.h"
+#include "libi18n.h"
 
 #ifdef AUTH_SKEY_DEFINED
 extern int btoa8(char *out, char*in);
 #endif
 
 extern void NET_SetPopPassword2(const char *password);
+extern void net_free_write_post_data_object(struct WritePostDataData *obj);
+MODULE_PRIVATE char* NET_MailRelayHost(MWContext *context);
 
 /* for XP_GetString() */
 #include "xpgetstr.h"
@@ -70,7 +73,7 @@ extern int MK_POP3_USERNAME_UNDEFINED;
 extern int MK_POP3_PASSWORD_UNDEFINED;
 extern int XP_PASSWORD_FOR_POP3_USER;
 extern int XP_RETURN_RECEIPT_NOT_SUPPORT;
-extern int XP_SENDMAIL_BAD_TLS;
+extern int MK_SENDMAIL_BAD_TLS;
 
 #define SMTP_PORT 25
 
@@ -97,7 +100,6 @@ extern int XP_SENDMAIL_BAD_TLS;
 #define SMTP_SEND_AUTH_LOGIN_PASSWORD 17
 #define SMTP_AUTH_LOGIN_RESPONSE      18
 #define SMTP_AUTH_RESPONSE			19
-
 
 HG08747
 
@@ -177,10 +179,10 @@ NET_MailRelayHost(MWContext *context);
 MODULE_PRIVATE char *
 NET_MailRelayHost(MWContext *context)
 {
-    if(net_smtp_relay_host)
-		return(net_smtp_relay_host);
+    if (net_smtp_relay_host)
+		return net_smtp_relay_host;
 	else
-		return("");	/* caller now checks for empty string and returns MK_MSG_NO_SMTP_HOST */
+		return "";	/* caller now checks for empty string and returns MK_MSG_NO_SMTP_HOST */
 }
 
 PUBLIC void
@@ -294,6 +296,7 @@ net_smtp_response (ActiveEntry * cur_entry)
     char * line;
 	char cont_char;
     SMTPConData * cd = (SMTPConData *)cur_entry->con_data;
+	int err = 0;
 
     CE_STATUS = NET_BufferedReadLine(CE_SOCK, &line, &CD_DATA_BUFFER,
                     						&CD_DATA_BUFFER_SIZE, &CD_PAUSE_FOR_READ);
@@ -312,6 +315,7 @@ net_smtp_response (ActiveEntry * cur_entry)
      */
     if(CE_STATUS < 0)
 	  {
+		HG22864
 		CE_URL_S->error_msg =
 		  NET_ExplainErrorDetails(MK_TCP_READ_ERROR, SOCKET_ERRNO);
 
@@ -515,14 +519,16 @@ HG09714
 	if (CD_AUTH_LOGIN_ENABLED) {
 	  /* okay user has set to use skey
 		 let's see does the server have the capability */
-	  CD_AUTH_LOGIN_ENABLED = (NULL != strcasestr(CD_RESPONSE_TXT, "AUTH=LOGIN"));
+	  CD_AUTH_LOGIN_ENABLED = (NULL != strcasestr(CD_RESPONSE_TXT, "AUTH LOGIN"));
+	  if (!CD_AUTH_LOGIN_ENABLED)
+		  CD_AUTH_LOGIN_ENABLED = (NULL != strcasestr(CD_RESPONSE_TXT, "AUTH=LOGIN"));	/* check old style */
 	}
 
-
-HG90967
+	HG90967
+	
 	CD_NEXT_STATE = CD_NEXT_STATE_AFTER_RESPONSE = SMTP_AUTH_RESPONSE;
-
-HG59852
+	
+	HG59852 
 	return (CE_STATUS);
   }
 }
@@ -792,32 +798,40 @@ net_smtp_send_data_response(ActiveEntry *cur_entry)
 #ifdef XP_UNIX
 	{
 	  const char * FE_UsersRealMailAddress(void); /* definition */
-	  const char *real_name = FE_UsersRealMailAddress();
-	  char *s = (real_name ? MSG_MakeFullAddress (NULL, real_name) : 0);
-	  if (real_name && !s)
+	  const char *real_name;
+	  char *s = 0;
+	  XP_Bool suppress_sender_header = FALSE;
+
+	  PREF_GetBoolPref ("mail.suppress_sender_header", &suppress_sender_header);
+	  if (!suppress_sender_header)
+	    {
+	      real_name =  FE_UsersRealMailAddress();
+	      s = (real_name ? MSG_MakeFullAddress (NULL, real_name) : 0);
+	      if (real_name && !s)
 		{
 		  CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
 		  return(MK_OUT_OF_MEMORY);
 		}
-	  if(real_name)
+	      if(real_name)
 		{
-          char buffer[512];
+		  char buffer[512];
 		  PR_snprintf(buffer, sizeof(buffer), "Sender: %.256s" CRLF, real_name);
 		  StrAllocCat(command, buffer);
-	      if(!command)
-	        {
+		  if(!command)
+		    {
 		      CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
 		      return(MK_OUT_OF_MEMORY);
-	        }
+		    }
 		}
-	}
-
-    TRACEMSG(("sending extra unix header: %s", command));
-
-    CE_STATUS = (int) NET_BlockingWrite(CE_SOCK, command, XP_STRLEN(command));   
-	if(CE_STATUS < 0)
-	{
-		TRACEMSG(("Error sending message"));
+	      
+	      TRACEMSG(("sending extra unix header: %s", command));
+	      
+	      CE_STATUS = (int) NET_BlockingWrite(CE_SOCK, command, XP_STRLEN(command));   
+	      if(CE_STATUS < 0)
+		{
+		  TRACEMSG(("Error sending message"));
+		}
+	    }
 	}
 #endif /* XP_UNIX */
 
@@ -974,6 +988,7 @@ net_MailtoLoad (ActiveEntry * cur_entry)
     CE_SOCK = NULL;
 HG61365
 
+	
 	/* make a copy of the address
 	 */
 	if(CE_URL_S->method == URL_POST_METHOD)
@@ -988,7 +1003,7 @@ HG61365
 		   This causes the address list to be parsed twice; this probably
 		   doesn't matter.
 		 */
-		addrs1 = MSG_RemoveDuplicateAddresses (CE_URL_S->address+7, 0);
+		addrs1 = MSG_RemoveDuplicateAddresses (CE_URL_S->address+7, 0, FALSE /*removeAliasesToMe*/);
 
 		/* Extract just the mailboxes from the full RFC822 address list.
 		   This means that people can post to mailto: URLs which contain
@@ -1295,16 +1310,15 @@ HG61365
 /*
 	We have connected to the mail relay and the type of authorization/login required
 	has been established. Before we actually send our name and password check
-	and see if we should do anything else for the selected auth mode.
+	and see if we should or must turn the connection to secure mode.
 */
 
 PRIVATE int
-NET_CheckAuthResponse (ActiveEntry *cur_entry)
+NET_CheckTLSResponse (ActiveEntry *cur_entry)
 {
     SMTPConData * cd = (SMTPConData *)cur_entry->con_data;
 	int err = 0;
-
-HG54978
+	HG54978
 
 	if (CD_AUTH_LOGIN_ENABLED)
 	{
@@ -1567,4 +1581,74 @@ NET_InitMailtoProtocol(void)
 }
 
 #endif /* defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE) */
+
+static void
+MessageSendingDone(URL_Struct* url, int status, MWContext* context)
+{
+    if (status < 0) {
+		char *error_msg = NET_ExplainErrorDetails(status, 0, 0, 0, 0);
+		if (error_msg) {
+			FE_Alert(context, error_msg);
+		}
+		XP_FREEIF(error_msg);
+    }
+    if (url->post_data) {
+		XP_FREE(url->post_data);
+		url->post_data = NULL;
+    }
+    if (url->post_headers) {
+		XP_FREE(url->post_headers);
+		url->post_headers = NULL;
+    }
+    NET_FreeURLStruct(url);
+}
+
+
+
+int
+NET_SendMessageUnattended(MWContext* context, char* to, char* subject,
+						  char* otherheaders, char* body)
+{
+    char* urlstring;
+    URL_Struct* url;
+    int16 win_csid;
+    int16 csid;
+    char* convto;
+    char* convsub;
+
+    win_csid = INTL_DefaultWinCharSetID(context);
+    csid = INTL_DefaultMailCharSetID(win_csid);
+    convto = IntlEncodeMimePartIIStr(to, csid, TRUE);
+    convsub = IntlEncodeMimePartIIStr(subject, csid, TRUE);
+
+    urlstring = PR_smprintf("mailto:%s", convto ? convto : to);
+
+    if (!urlstring) return MK_OUT_OF_MEMORY;
+    url = NET_CreateURLStruct(urlstring, NET_DONT_RELOAD);
+    XP_FREE(urlstring);
+    if (!url) return MK_OUT_OF_MEMORY;
+
+    
+
+    url->post_headers = PR_smprintf("To: %s\n\
+Subject: %s\n\
+%s\n",
+								 convto ? convto : to,
+								 convsub ? convsub : subject,
+								 otherheaders);
+    if (convto) XP_FREE(convto);
+    if (convsub) XP_FREE(convsub);
+    if (!url->post_headers) return MK_OUT_OF_MEMORY;
+	url->post_data = XP_STRDUP(body);
+	if (!url->post_data) return MK_OUT_OF_MEMORY;
+    url->post_data_size = XP_STRLEN(url->post_data);
+    url->post_data_is_file = FALSE;
+    url->method = URL_POST_METHOD;
+    url->internal_url = TRUE;
+    return NET_GetURL(url, FO_PRESENT, context, MessageSendingDone);
+    
+}
+
+
+
 #endif /* defined(MOZILLA_CLIENT) || defined(LIBNET_SMTP) */

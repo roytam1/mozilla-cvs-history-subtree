@@ -929,13 +929,17 @@ net_read_directory_chunk (ActiveEntry * cur_entry)
         XP_STRCPY(full_path, CD_FILENAME);
         XP_STRCAT(full_path, "/");
         XP_STRCAT(full_path, dir_entry->d_name);
-
+		XP_MEMSET(&stat_entry, 0, sizeof(XP_StatStruct));
+		
         if(XP_Stat(full_path, &stat_entry, xpURL) != -1)
           {
             TRACEMSG(("Found stat info for file %s\n",full_path));
 
             if(S_ISDIR(stat_entry.st_mode))
 			  {
+#ifdef XP_MAC
+				stat_entry.st_size = 0;		/* Mac stat gives spurious size data for folders */
+#endif
                 file_entry->special_type = NET_DIRECTORY;
 				StrAllocCat(file_entry->filename, "/");
 			  }

@@ -30,7 +30,9 @@
 #include "libmime.h"
 #include "merrors.h"
 #include "mkimap4.h"
-
+#ifdef XP_MAC
+#include "msg_srch.h"
+#endif
 
 /* for XP_GetString() */
 #include "xpgetstr.h"
@@ -58,6 +60,8 @@ typedef enum _MailboxStates {
 	MAILBOX_COMPRESS_FOLDER,
 	MAILBOX_FINISH_COMPRESS_FOLDER,
 	MAILBOX_BACKGROUND,
+	MAILBOX_NULL,
+	MAILBOX_NULL2,
 	MAILBOX_DELIVER_QUEUED,
 	MAILBOX_FINISH_DELIVER_QUEUED,
 	MAILBOX_DONE,
@@ -117,7 +121,7 @@ net_MailboxLoad (ActiveEntry * ce)
 	char *wholeUrl;
 
 	/* temp, until imap urls have their own identifier */
-	if (!XP_STRNCASECMP(ce->URL_s->address, "mailbox://", 10) )
+	if (!XP_STRNCASECMP(ce->URL_s->address, "IMAP://", 7) )
 		return NET_IMAP4Load(ce);
 
 	if (XP_STRCASECMP(ce->URL_s->address, "mailbox:displayattachments") == 0) {
@@ -145,7 +149,7 @@ net_MailboxLoad (ActiveEntry * ce)
 
 	wholeUrl = XP_STRDUP(ce->URL_s->address);
 
-#ifndef XP_MAC /* #### Giant Evil Mac Pathname Hack */
+#ifndef XP_MAC /* #### Fix Mac Pathname */
 	NET_UnEscape (path);
 	NET_UnEscape (wholeUrl);
 #endif /* !XP_MAC */
@@ -238,6 +242,9 @@ net_MailboxLoad (ActiveEntry * ce)
 	  } else if (ce->URL_s->internal_url &&
 				 XP_STRNCMP(part, "background", 10) == 0) {
 		cd->next_state = MAILBOX_BACKGROUND;
+	  } else if (ce->URL_s->internal_url &&
+				 XP_STRNCMP(part, "null", 10) == 0) {
+		cd->next_state = MAILBOX_NULL;
 	  }
 	  part = amp;
 	}
@@ -379,8 +386,8 @@ net_ProcessMailbox (ActiveEntry *ce)
     MailboxConData * cd = (MailboxConData *)ce->con_data;
 
 	/* temp, until imap urls have their own identifier */
-	if ((!XP_STRNCASECMP(ce->URL_s->address, "mailbox://", 10) ) ||
-		(!XP_STRNCASECMP(ce->URL_s->address, "view-source:mailbox://",22)))
+	if ((!XP_STRNCASECMP(ce->URL_s->address, "IMAP://", 7) ) ||
+		(!XP_STRNCASECMP(ce->URL_s->address, "view-source:IMAP://",19)))
 		return NET_ProcessIMAP4(ce);
 
     cd->pause_for_read = FALSE; /* already paused; reset */
@@ -458,6 +465,7 @@ net_ProcessMailbox (ActiveEntry *ce)
 				 * asking for a message
 			 	 */
             	cd->next_state = MAILBOX_DONE;
+				NET_Progress(ce->window_id, XP_GetString( XP_MAIL_READING_FOLDER_DONE ) );
 			  }
 			else
 			  {
@@ -602,6 +610,16 @@ net_ProcessMailbox (ActiveEntry *ce)
 			} else {
 			  cd->pause_for_read = TRUE;
 			}
+			break;
+
+		case MAILBOX_NULL:
+			ce->status = MK_WAITING_FOR_CONNECTION;
+			cd->next_state = MAILBOX_NULL2;
+			cd->pause_for_read = TRUE;
+			break;
+		case MAILBOX_NULL2:
+			ce->status = MK_CONNECTED;
+			cd->next_state = MAILBOX_DONE;
 			break;
 
 		case MAILBOX_DELIVER_QUEUED:
@@ -763,7 +781,7 @@ net_InterruptMailbox(ActiveEntry * ce)
     MailboxConData * cd = (MailboxConData *)ce->con_data;
 
 	/* temp until imap urls have their own identifier */
-	if (!XP_STRNCASECMP(ce->URL_s->address, "mailbox://", 10) )
+	if (!XP_STRNCASECMP(ce->URL_s->address, "IMAP://", 7) )
 		return NET_InterruptIMAP4(ce);
 
     cd->next_state = MAILBOX_ERROR_DONE;

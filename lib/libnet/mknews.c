@@ -61,6 +61,7 @@
 #include "xp_error.h"
 #include "secnav.h"
 #include "prefapi.h"	
+#include "xplocale.h"
 
 /*#define CACHE_NEWSGRP_PASSWORD*/
 
@@ -178,6 +179,8 @@ PRIVATE XP_List * nntp_connection_list=0;
 
 PRIVATE XP_Bool net_news_last_username_probably_valid=FALSE;
 PRIVATE int32 net_NewsChunkSize=-1;  /* default */
+
+PRIVATE int32 net_news_timeout = 170; /* seconds that an idle NNTP conn can live */
 
 #define PUTSTRING(s)      (*cd->stream->put_block) \
                     (cd->stream, s, XP_STRLEN(s))
@@ -361,9 +364,8 @@ typedef struct _NNTPConnection {
 	XP_Bool default_host;
 	XP_Bool no_xover;       /* xover command is not supported here */
 	XP_Bool secure;         /* is it a secure connection? */
-
     char *current_group;	/* last GROUP command sent on this connection */
-
+	time_t last_used_time;  /* last time this conn was used, for conn aging purposes */
 } NNTPConnection;
 
 
@@ -492,6 +494,24 @@ PUBLIC void NET_CleanTempXOVERCache(void)
 
 
 
+PUBLIC void net_graceful_shutdown(PRFileDesc *sock, XP_Bool isSecure)
+{
+	static int32 int_pref = -1;
+
+	if (int_pref == -1)
+		PREF_GetIntPref("network.socket_shutdown", &int_pref);
+	if (int_pref > 0 && int_pref < 4)
+	{
+		if (isSecure)
+			/* SSL is not working well with socket shutdown. An alternative of
+			 fixing this BSOD problem is to write a zero length data packet to
+			 flush out the queued data. -- jht 5/1/98 */
+			NET_BlockingWrite(sock, "", 0);
+		else
+			XP_SOCK_SHUTDOWN(sock, (int)(int_pref-1));
+	}
+}
+
 static void net_nntp_close (PRFileDesc *sock, int status)
 {
 	if (status != MK_INTERRUPTED)
@@ -502,7 +522,6 @@ static void net_nntp_close (PRFileDesc *sock, int status)
 	}
 	PR_Close(sock);
 }
-
 
 /* user has removed a news host from the UI. 
  * be sure it has also been removed from the
@@ -687,15 +706,7 @@ net_news_response (ActiveEntry * ce)
 
 	if(ce->bytes_received == 0)
 	  {
-		/* this is where kipp says that I can finally query
-         * for the security data.  We can't do it after the
-         * connect since the handshake isn't done yet...
-         */
-        /* clear existing data
-         */
-        FREEIF(ce->URL_s->sec_info);
-        ce->URL_s->sec_info = SECNAV_SSLSocketStatus(ce->socket,
-                                                     &ce->URL_s->security_on);
+		HG47352
 	  }
 
     /* almost correct
@@ -768,6 +779,7 @@ net_news_response (ActiveEntry * ce)
 }
 
 HG40560
+
 
 /* interpret the server response after the connect
  *
@@ -2067,7 +2079,7 @@ PRIVATE int
 net_process_newgroups (ActiveEntry *ce)
 {
     NewsConData * cd = (NewsConData *)ce->con_data;
-	char *line, *s, *s1, *s2, *flag;
+	char *line, *s, *s1=NULL, *s2=NULL, *flag=NULL;
 	int32 oldest, youngest;
 
     ce->status = NET_BufferedReadLine(ce->socket, &line, &cd->data_buf,
@@ -2516,9 +2528,9 @@ net_read_xover (ActiveEntry *ce)
     if(ce->status > 1)
       {
         ce->bytes_received += ce->status;
-/*        FE_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, ce->status,
+        FE_GraphProgress(ce->window_id, ce->URL_s, ce->bytes_received, ce->status,
 						 ce->URL_s->content_length);
-*/
+
 	  }
 
 	ce->status = MSG_ProcessXOVER (cd->pane, line, &cd->xover_parse_state);
@@ -3199,7 +3211,7 @@ net_do_cancel (ActiveEntry *ce)
 	}
 
   /* Now send the data - do it blocking, who cares; the message is known
-	 to be very small.  First suck the whole file into memory.  Then delete
+	 to be very small.  First read the whole file into memory.  Then delete
 	 the file.  Then do a blocking write of the data.
 
 	 (We could use file-posting, maybe, but I couldn't figure out how.)
@@ -4064,6 +4076,26 @@ NET_IsNewsMessageURL (const char *url)
   return result;
 }
 
+XP_Bool 
+NET_IsNewsServerURL( const char *url)
+{
+	  char *host_and_port = 0;
+	XP_Bool secure_p = FALSE;
+	char *group = 0;
+	char *message_id = 0;
+	char *command_specific_data = 0;
+	int status = NET_parse_news_url (url, &host_and_port, &secure_p,
+								   &group, &message_id, &command_specific_data);
+	XP_Bool result = FALSE;
+	if (status >= 0 && host_and_port && !group && !message_id)
+		result = TRUE;
+	FREEIF (host_and_port);
+	FREEIF (group);
+	FREEIF (message_id);
+	FREEIF (command_specific_data);
+	return result;
+}
+
 static XP_Bool nntp_are_connections_available (NNTPConnection *conn)
 {
 	int connCount = 0;
@@ -4091,7 +4123,7 @@ NET_OnlinePrefChangedFunc(const char *pref, void *data);
 
 MODULE_PRIVATE int PR_CALLBACK NET_OnlinePrefChangedFunc(const char *pref, void *data) 
 {
-	int status;
+	int status=0;
 	int32 port=0;
 	char * socksHost = NULL;
 	char text[MAXHOSTNAMELEN + 8];
@@ -4128,7 +4160,7 @@ NET_NewsMaxArticlesChangedFunc(const char *pref, void *data);
 
 MODULE_PRIVATE int PR_CALLBACK NET_NewsMaxArticlesChangedFunc(const char *pref, void *data) 
 {
-	int status;
+	int status=0;
 	if (!XP_STRCASECMP(pref,"news.max_articles")) 
 	{
 		int32 maxArticles;
@@ -4137,6 +4169,11 @@ MODULE_PRIVATE int PR_CALLBACK NET_NewsMaxArticlesChangedFunc(const char *pref, 
 		NET_SetNumberOfNewsArticlesInListing(maxArticles);
 	}
 	return status;
+}
+
+MODULE_PRIVATE int PR_CALLBACK net_news_timeout_changed (const char *pref, void *data)
+{
+	return PREF_GetIntPref ("news.timeout", &net_news_timeout);
 }
 
 MODULE_PRIVATE XP_Bool
@@ -4149,8 +4186,13 @@ NET_IsOffline()
 	{
 		/*int status =*/ PREF_GetBoolPref("network.online", &isOnline);
 		PREF_RegisterCallback("network.online",NET_OnlinePrefChangedFunc, NULL);
+
 		/* because this routine gets called so often, we can register this callback here too. */
 		PREF_RegisterCallback("news.max_articles", NET_NewsMaxArticlesChangedFunc, NULL);
+
+		PREF_GetIntPref ("news.timeout", &net_news_timeout);
+		PREF_RegisterCallback ("news.timeout", net_news_timeout_changed, NULL);
+
 		prefInitialized = TRUE;
 	}
 	return !isOnline;
@@ -4229,15 +4271,21 @@ net_NewsLoad (ActiveEntry *ce)
     NNTP_LOG_NOTE(("NET_NewsLoad: url->msg_pane NULL for URL: %s\n", ce->URL_s->address));
     cd->pane = MSG_FindPane(ce->window_id, MSG_ANYPANE);
   }
-  XP_ASSERT(cd->pane && MSG_GetContext(cd->pane) == ce->window_id);
-  if (!cd->pane) {
+  if (!cd->pane || MSG_GetContext(cd->pane) != ce->window_id)
+  {
+	XP_ASSERT(FALSE);
 	status = -1;				/* ### */
 	goto FAIL;
   }
 
-
-
-  NNTP_LOG_NOTE (("NET_NewsLoad: %s", ce->URL_s->address));
+#ifdef DEBUG
+  {
+	char urlDate[64];
+	time_t now = XP_TIME();
+	XP_StrfTime(ce->window_id, urlDate, sizeof(urlDate), XP_DATE_TIME_FORMAT, localtime(&now));
+	NNTP_LOG_NOTE (("******** Begin loading news URL [ %s ] at %s", ce->URL_s->address, urlDate));
+  }
+#endif
 
   cd->output_buffer = (char *) XP_ALLOC(OUTPUT_BUFFER_SIZE);
   if(!cd->output_buffer)
@@ -4378,6 +4426,7 @@ net_NewsLoad (ActiveEntry *ce)
 		 news://HOST/GROUP
 	   */
 	  if (ce->window_id->type != MWContextNews && ce->window_id->type != MWContextNewsMsg 
+		  && ce->window_id->type != MWContextMailMsg
 		  && ce->window_id->type != MWContextMail && ce->window_id->type != MWContextMailNewsProgress)
 		{
 		  status = -1;
@@ -4449,15 +4498,32 @@ net_NewsLoad (ActiveEntry *ce)
 			 && secure_p == tmp_con->secure
 			 &&!tmp_con->busy)
 			{
-			  cd->control_con = tmp_con;
+			  /* check to see if this connection can be reused, or if it should be aged away */
+			  int32 con_age = XP_TIME() - tmp_con->last_used_time;
+			  if (con_age <= net_news_timeout)
+			  {
+			    cd->control_con = tmp_con;
 
-			  NNTP_LOG_NOTE(("Reusing control_con %08lX for %s", tmp_con, url));
+			    NNTP_LOG_NOTE(("Reusing control_con %08lX (age %ld secs) for %s", tmp_con, con_age, url));
 
-			  /* set select on the control socket */
-			  ce->socket = cd->control_con->csock;
-			  NET_SetReadSelect(ce->window_id, cd->control_con->csock);
-			  cd->control_con->prev_cache = TRUE;  /* this was from the cache */
-			  break;
+			    /* set select on the control socket */
+			    ce->socket = cd->control_con->csock;
+			    NET_SetReadSelect(ce->window_id, cd->control_con->csock);
+			    cd->control_con->prev_cache = TRUE;  /* this was from the cache */
+			    break;
+			  }
+			  else
+			  {
+			    NNTP_LOG_NOTE(("Aging away control_con %08lX (age %ld secs)", tmp_con, con_age));
+
+				/* kill idle conn which has lived too long */
+				list_entry = list_entry->prev ? list_entry->prev : nntp_connection_list;
+                XP_ListRemoveObject(nntp_connection_list, tmp_con);
+                net_nntp_close(tmp_con->csock, ce->status);
+                FREEIF(tmp_con->current_group);
+                FREEIF(tmp_con->hostname);
+                XP_FREE(tmp_con);
+			  }
 			}
 		}
 	}
@@ -4500,6 +4566,8 @@ net_NewsLoad (ActiveEntry *ce)
 	  cd->control_con->prev_cache = FALSE;  /* this wasn't from the cache */
 
 	  cd->control_con->csock = NULL;
+
+	  cd->control_con->last_used_time = XP_TIME();
 
 	  /* define this to test support for older NNTP servers
 	   * that don't support the XOVER command
@@ -5149,6 +5217,7 @@ HG68092
                       {
                         FREEIF(cd->control_con->hostname);
                         FREE(cd->control_con);
+						cd->control_con = NULL;
                       }
                   }
                 break;
@@ -5156,11 +5225,12 @@ HG68092
             case NEWS_FREE:
 
 				  /* do we need to know if we're parsing xover to call finish xover? */
+				/* yes, I think we do! Why did I think we should??? */
 					/* If we've gotten to NEWS_FREE and there is still XOVER
 					   data, there was an error or we were interrupted or
 					   something.  So, tell libmsg there was an abnormal
 					   exit so that it can free its data. */
-/*				if (cd->xover_parse_state != NULL)*/
+				if (cd->xover_parse_state != NULL)
 				{
 					int status;
 /*					XP_ASSERT (ce->status < 0);*/
