@@ -26,7 +26,7 @@ function viewSource(url)
   catch(ex) {
   }
 
-  var docShellElement = document.getElementById("content-frame");
+  var docShellElement = document.getElementById("content");
   var docShell = docShellElement.docShell;
   docShell.viewMode = Components.interfaces.nsIDocShell.viewSource;
   var webNav = docShell.QueryInterface(Components.interfaces.nsIWebNavigation);
