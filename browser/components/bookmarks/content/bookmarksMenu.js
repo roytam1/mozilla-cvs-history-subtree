@@ -168,17 +168,18 @@ var BookmarksMenu = {
   createContextMenu: function (aEvent)
   {
     var target = document.popupNode;
+
+    if (!this.isBTBookmark(target.id)) {
+      target.removeAttribute("open");
+      return false;
+    }
+
     var targettype = BookmarksUtils.resolveType(target.id);
 
     if (targettype == "ImmutableFolder") {
       // no context; see bug#... (popups getting stuck because "open"
       // attribute doesn't get removed)
-      this.removeAttribute("open");
-      return false;
-    }
-
-    if (!this.isBTBookmark(target.id)) {
-      this.removeAttribute("open");
+      target.removeAttribute("open");
       return false;
     }
 
