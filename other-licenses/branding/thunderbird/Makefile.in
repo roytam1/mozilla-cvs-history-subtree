@@ -34,6 +34,10 @@ export::
 	if [ ! -d $(DEPTH)/mail/app/macbuild ] ; then \
 		mkdir $(DEPTH)/mail/app/macbuild; \
 	fi
+	if [ ! -d $(DEPTH)/mail/app/icons/windows ] ; then \
+		mkdir $(DEPTH)/mail/app/icons/windows; \
+	fi
+	cp $(srcdir)/thunderbird.ico  $(DEPTH)/mail/app/icons/windows/messengerWindow.ico
 	cp $(srcdir)/thunderbird.icns $(DEPTH)/mail/app/macbuild/thunderbird.icns
 	cp $(srcdir)/thunderbird.ico $(DEPTH)/toolkit/mozapps/installer/windows/wizard/setuprsc/mail.ico
 	cp $(srcdir)/Header.bmp $(DEPTH)/toolkit/mozapps/installer/windows/wizard/setuprsc/Header.bmp
