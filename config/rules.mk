@@ -1502,18 +1502,33 @@ REGCHROME_INSTALL = $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/add-ch
 # Packaging Manifests
 #############################################################################
 
-$(MANIFEST_DIR)::
+ifneq (,$(PACKAGE_FILE))
+$(PACKAGE_DIR)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
 
-MANIFEST_DEFINES += $(foreach varname,$(MANIFEST_VARS),-D$(varname)=$($(varname)))
+# vars to be passed from the Makefile to the manifest preprocessor
+PACKAGE_VARS +=     \
+	SHARED_LIBRARY		 \
+	OS_ARCH            \
+	MOZ_WIDGET_TOOLKIT
 
-ifneq (,$(MANIFEST_FILES))
-export:: $(patsubst %,$(MANIFEST_DIR)/%,$(MANIFEST_FILES))
+# these are shortened to make manifest files readable
+# for consistency's sake, add the extra . to LIB_SUFFIX
+PACKAGE_DEFINES +=     \
+	-DDLLP=$(DLL_PREFIX)  \
+	-DDLLS=$(DLL_SUFFIX)  \
+	-DLIBP=$(LIB_PREFIX)  \
+	-DLIBS=.$(LIB_SUFFIX) \
+	-DBINS=$(BIN_SUFFIX)
 
-$(MANIFEST_DIR)/%: % $(MANIFEST_DIR)
-	$(PERL) $(MOZILLA_DIR)/config/preprocessor.pl -Fsubstitution $(MANIFEST_DEFINES) $< > $@
+PACKAGE_DEFINES += $(foreach varname,$(PACKAGE_VARS),-D$(varname)=$($(varname)))
 
-GARBAGE += $(patsubst %,$(MANIFEST_DIR)/%,$(MANIFEST_FILES))
+export:: $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
+
+$(PACKAGE_DIR)/%: % $(PACKAGE_DIR) Makefile Makefile.in
+	$(PERL) $(MOZILLA_DIR)/config/preprocessor.pl -Fsubstitution $(PACKAGE_DEFINES) $< > $@
+
+GARBAGE += $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
 endif
 
 #############################################################################
