@@ -779,6 +779,7 @@ nsWindow::nsWindow() : nsBaseWidget()
 	  mIMECompClauseStringSize = 0;
 	  mIMECompClauseStringLength = 0;
 	  mIMEReconvertUnicode = NULL;
+	  mLeadByte = '\0';
 
   static BOOL gbInitGlobalValue = FALSE;
   if(! gbInitGlobalValue) {
@@ -2930,19 +2931,13 @@ BOOL nsWindow::OnKeyUp( UINT aVirtualKeyCode, UINT aScanCode, LPARAM aKeyData)
 BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte )
 {
   wchar_t uniChar;
-  char    charToConvert[2];
+  char    charToConvert[3];
   size_t  length;
 
   if (mIMEIsComposing)  {
     HandleEndComposition();
   }
 
-  {
-    charToConvert[0] = LOBYTE(mbcsCharCode);
-    length=1;
-  }
-
-  
   if(mIsControlDown && (virtualKeyCode <= 0x1A)) // Ctrl+A Ctrl+Z, see Programming Windows 3.1 page 110 for details  
   { 
     // need to account for shift here.  bug 16486 
@@ -2968,6 +2963,20 @@ BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte 
     } 
     else 
     {
+      if (mLeadByte)  { // mLeadByte is used for keeping the lead-byte of CJK char 
+        charToConvert[0] = mLeadByte;
+        charToConvert[1] = LOBYTE(mbcsCharCode);
+        mLeadByte = '\0';
+        length=2;
+      } 
+      else {
+        charToConvert[0] = LOBYTE(mbcsCharCode);
+        if (::IsDBCSLeadByte(charToConvert[0])) {
+          mLeadByte = charToConvert[0];
+          return TRUE;
+        }
+        length=1;
+      }
       ::MultiByteToWideChar(gCurrentKeyboardCP,MB_PRECOMPOSED,charToConvert,length,
 	    &uniChar, 1);
       virtualKeyCode = 0;
@@ -4091,6 +4100,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 					break;
 
 				case WM_IME_CHAR: 
+					// We receive double byte char code. No need to worry about the <Shift>
+					mIsShiftDown = PR_FALSE;
 					result = OnIMEChar((BYTE)(wParam>>8), 
 						(BYTE) (wParam & 0x00FF), 
 						lParam);
@@ -5311,7 +5322,7 @@ NS_METHOD nsWindow::SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight)
 #define ZH_CN_MS_PINYIN_IME_3_0 ((HKL)0xe00e0804L)
 #define ZH_CN_NEIMA_IME ((HKL)0xe0050804L)
 #define USE_OVERTHESPOT_IME(kl) ((nsToolkit::mIsWinXP) \
-          && (ZH_CN_MS_PINYIN_IME_3_0 == (kl)) || (ZH_CN_NEIMA_IME == (kl)))
+          && (ZH_CN_MS_PINYIN_IME_3_0 == (kl)))
 
 void
 nsWindow::HandleTextEvent(HIMC hIMEContext,PRBool aCheckAttr)
@@ -5653,9 +5664,15 @@ BOOL nsWindow::OnIMEChar(BYTE aByte1, BYTE aByte2, LPARAM aKeyState)
   size_t  length;
   int err = 0;
 
-  charToConvert[0] = aByte1;
-  charToConvert[1] = aByte2;
-  length=2;
+  if (aByte1) {
+    charToConvert[0] = aByte1;
+    charToConvert[1] = aByte2;
+    length=2;
+  }
+  else  {
+    charToConvert[0] = aByte2;
+    length=1;
+  }
   err = ::MultiByteToWideChar(gCurrentKeyboardCP, MB_PRECOMPOSED, charToConvert, length,
 	  &uniChar, 1);
 
@@ -6184,7 +6201,7 @@ BOOL nsWindow::OnIMESetContext(BOOL aActive, LPARAM& aISC)
 	if(! aActive)
 		ResetInputState();
 
-	if (USE_OVERTHESPOT_IME(gKeyboardLayout))
+	if (!USE_OVERTHESPOT_IME(gKeyboardLayout))
 		aISC &= ~ ISC_SHOWUICOMPOSITIONWINDOW;
 
 	// We still return false here because we need to pass the 
