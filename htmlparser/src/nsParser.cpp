@@ -2501,7 +2501,7 @@ nsParser::DetectMetaTag(const char* aBytes,
           }
           else if (foundMatch && *ltPos == '>') {
             foundMDC = PR_TRUE; // found comment end delimiter.
-            tagStart = ++ltPos;
+            tagStart = (ltPos != end) ? ++ltPos : ltPos;
           }
           else if (ltPos == end) {
             return PR_FALSE; // Couldn't find --[*s]> in this buffer
