@@ -1212,6 +1212,14 @@ nsHttpHandler::InitUserAgentComponents()
             }
         }
     }
+#elif defined (XP_MACOSX)
+    mOscpu.Adopt(nsCRT::strdup("PPC Mac OS X"));
+#elif defined (XP_MAC)
+    long version;
+    if (::Gestalt(gestaltSystemVersion, &version) == noErr && version >= 0x00001000)
+        mOscpu.Adopt(nsCRT::strdup("PPC Mac OS X"));
+    else
+        mOscpu.Adopt(nsCRT::strdup("PPC"));
 #elif defined (XP_UNIX) || defined (XP_BEOS)
     struct utsname name;
     
@@ -1223,12 +1231,6 @@ nsHttpHandler::InitUserAgentComponents()
         buf += (char*)name.machine;
         mOscpu.Assign(buf);
     }
-#elif defined (XP_MAC)
-    long version;
-    if (::Gestalt(gestaltSystemVersion, &version) == noErr && version >= 0x00001000)
-        mOscpu.Adopt(nsCRT::strdup("PPC Mac OS X"));
-    else
-        mOscpu.Adopt(nsCRT::strdup("PPC"));
 #endif
 
     mUserAgentIsDirty = PR_TRUE;
