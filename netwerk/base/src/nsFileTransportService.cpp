@@ -27,19 +27,19 @@
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsIProgressEventSink.h"
-#include "nsIThreadPool.h"
+//#include "nsIThreadPool.h"
 #include "nsISupportsArray.h"
 #include "nsFileSpec.h"
 #include "nsAutoLock.h"
 
-static NS_DEFINE_CID(kStandardURLCID,            NS_STANDARDURL_CID);
+static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-nsFileTransportService::nsFileTransportService()    :
-    mConnectedTransports (0),
-    mTotalTransports (0),
-    mInUseTransports (0)
+nsFileTransportService::nsFileTransportService()
+    : mConnectedTransports(0)
+    , mTotalTransports(0)
+    , mInUseTransports(0)
 {
     NS_INIT_REFCNT();
 }
@@ -49,12 +49,15 @@ nsFileTransportService::nsFileTransportService()    :
 nsresult
 nsFileTransportService::Init()
 {
+    /*
     nsresult rv;
     rv = NS_NewThreadPool(getter_AddRefs(mPool), 
                           NS_FILE_TRANSPORT_WORKER_COUNT_MIN,
                           NS_FILE_TRANSPORT_WORKER_COUNT_MAX,
                           NS_FILE_TRANSPORT_WORKER_STACK_SIZE);
     return rv;
+    */
+    return NS_OK;
 }
 
 nsFileTransportService::~nsFileTransportService()
@@ -145,7 +148,7 @@ nsFileTransportService::CreateTransportFromStreamIO(nsIStreamIO *io,
 nsresult
 nsFileTransportService::ProcessPendingRequests(void)
 {
-    return mPool->ProcessPendingRequests();
+    return NS_OK; //return mPool->ProcessPendingRequests();
 }
 
 nsresult
@@ -162,13 +165,13 @@ nsFileTransportService::Shutdown(void)
     }
 
     mSuspendedTransportList.Clear();
-    return mPool->Shutdown();
+    return NS_OK; //mPool->Shutdown();
 }
 
 nsresult
 nsFileTransportService::DispatchRequest(nsIRunnable* runnable)
 {
-    return mPool->DispatchRequest(runnable);
+    return NS_OK; //mPool->DispatchRequest(runnable);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -187,7 +190,7 @@ nsFileTransportService::RemoveSuspendedTransport(nsITransport* trans)
 }
 
 NS_IMETHODIMP
-nsFileTransportService::GetTotalTransportCount    (PRUint32 * o_TransCount)
+nsFileTransportService::GetTotalTransportCount(PRUint32 * o_TransCount)
 {
     if (!o_TransCount)
         return NS_ERROR_NULL_POINTER;
@@ -197,7 +200,7 @@ nsFileTransportService::GetTotalTransportCount    (PRUint32 * o_TransCount)
 }
 
 NS_IMETHODIMP
-nsFileTransportService::GetConnectedTransportCount (PRUint32 * o_TransCount)
+nsFileTransportService::GetConnectedTransportCount(PRUint32 * o_TransCount)
 {
     if (!o_TransCount)
         return NS_ERROR_NULL_POINTER;
@@ -207,7 +210,7 @@ nsFileTransportService::GetConnectedTransportCount (PRUint32 * o_TransCount)
 }
 
 NS_IMETHODIMP
-nsFileTransportService::GetInUseTransportCount     (PRUint32 * o_TransCount)
+nsFileTransportService::GetInUseTransportCount(PRUint32 * o_TransCount)
 {
     if (!o_TransCount)
         return NS_ERROR_NULL_POINTER;

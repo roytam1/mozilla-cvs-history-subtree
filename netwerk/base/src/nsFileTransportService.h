@@ -24,7 +24,7 @@
 #define nsFileTransportService_h___
 
 #include "nsIFileTransportService.h"
-#include "nsIThreadPool.h"
+//#include "nsIThreadPool.h"
 #include "nsSupportsArray.h"
 
 #define NS_FILE_TRANSPORT_WORKER_COUNT_MIN  1
@@ -55,7 +55,7 @@ public:
     nsSupportsArray mSuspendedTransportList;
     
 protected:
-    nsCOMPtr<nsIThreadPool>     mPool;
+//    nsCOMPtr<nsIThreadPool>     mPool;
 };
 
 #endif /* nsFileTransportService_h___ */

@@ -24,14 +24,9 @@
 #ifndef nsFileTransport_h__
 #define nsFileTransport_h__
 
+#include "nsFileTransportService.h"
 #include "nsITransport.h"
 #include "nsIRequest.h"
-#include "nsIRunnable.h"
-#include "nsFileSpec.h"
-#include "prlock.h"
-#include "nsIEventQueueService.h"
-#include "nsIPipe.h"
-#include "nsILoadGroup.h"
 #include "nsCOMPtr.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamProvider.h"
@@ -41,26 +36,21 @@
 #include "nsIStreamIO.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIFile.h"
+#include "nsIEventQueue.h"
+#include "plevent.h"
 #include "prlog.h"
-#include "nsFileTransportService.h"
-
-//#define TIMING
-
-class nsIInterfaceRequestor;
 
 class nsFileTransportSourceWrapper;
 class nsFileTransportSinkWrapper;
 
 class nsFileTransport : public nsITransport, 
-                        public nsITransportRequest,
-                        public nsIRunnable
+                        public nsITransportRequest
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSITRANSPORT
     NS_DECL_NSIREQUEST
     NS_DECL_NSITRANSPORTREQUEST
-    NS_DECL_NSIRUNNABLE
 
     nsFileTransport();
     // Always make the destructor virtual: 
@@ -78,9 +68,6 @@ public:
                   const char* contentType,
                   PRInt32 contentLength);
     nsresult Init(nsFileTransportService *aService, nsIStreamIO* io);
-
-    void Process(void);
-    void DoClose(void);
 
     enum XferState {
         CLOSED,
@@ -102,11 +89,19 @@ public:
     };
 
 protected:
+    nsresult Dispatch();
+    void     HandleEvent();
+    PRBool   Process();
+    void     DoClose();
+
+    static void PR_CALLBACK HandlePLEvent(PLEvent *);
+    static void PR_CALLBACK DestroyPLEvent(PLEvent *);
+
+protected:
     nsCOMPtr<nsIProgressEventSink>      mProgress;
     nsCOMPtr<nsIInterfaceRequestor>     mNotificationCallbacks;
     nsCOMPtr<nsIStreamIO>               mStreamIO;
     char                               *mContentType;
-    PRUint32                            mBufferSegmentSize;
     PRUint32                            mBufferMaxSize;
 
     nsCOMPtr<nsISupports>               mContext;
@@ -117,12 +112,6 @@ protected:
     // mRunState is only changed by the user's thread, but looked at by the
     // file transport thread:
     RunState                            mRunState;
-    nsresult                            mCancelStatus;
-    PRInt32                             mSuspendCount;
-    PRLock                             *mLock;
-
-    // The transport is active if it is currently being processed by a thread.
-    PRBool                              mActive;
 
     // state variables:
     nsresult                            mStatus;
@@ -142,12 +131,10 @@ protected:
     nsCString                           mStreamName;
     nsFileTransportService             *mService;
 
-#ifdef TIMING
-    PRIntervalTime mStartTime;
-#endif
+    nsCOMPtr<nsIEventQueue>             mEventQ;
+    PRPackedBool                        mEventPending;
 };
 
-#define NS_FILE_TRANSPORT_DEFAULT_SEGMENT_SIZE   (2*1024)
 #define NS_FILE_TRANSPORT_DEFAULT_BUFFER_SIZE    (8*1024)
 
-#endif // nsFileTransport_h__
+#endif /* !defined(nsFileTransport_h__) */
