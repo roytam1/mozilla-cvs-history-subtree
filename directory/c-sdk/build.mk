@@ -175,6 +175,7 @@ USE_DLL_EXPORTS_FILE	= 1
 endif
 
 ifeq ($(OS_ARCH),OSF1)
+DEFS		+= -DOSF1V4
 DL=
 endif
 
@@ -206,6 +207,9 @@ RPATHFLAG_PREFIX=-Wl,-rpath,
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=-rpath
+
+# allow for unresolved symbols
+DLL_LDFLAGS += -expect_unresolved "*"
 endif # OSF1
 
 ifeq ($(OS_ARCH), AIX)

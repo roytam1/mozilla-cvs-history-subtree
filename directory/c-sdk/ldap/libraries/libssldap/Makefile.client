@@ -63,6 +63,13 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
+ifeq ($(OS_ARCH), OSF1)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -L$(NSCP_DISTDIR)/lib
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -lcxx -lpthread -lrt -lmach -lexc
+endif
+
 ifeq ($(OS_ARCH), AIX)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -L$(NSCP_DISTDIR)/lib
@@ -70,18 +77,6 @@ EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR) -l$(NSS_LIBNAME)
 EXTRA_LIBS += -l$(SSL_LIBNAME) -l $(PRLDAP_LIBNAME)
 EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
 endif
-
-#ifeq ($(OS_ARCH), AIX)
-#    EXTRA_LIBS += $(LIBNSPR) -l$(LDAP_LIBNAME)
-#else
-#ifneq ($(OS_ARCH), OSF1)
-#ifeq ($(OS_ARCH), WINNT)
-#    EXTRA_LIBS = $(LIBNSPR)  -l$(LDAP_LIBNAME)
-#else
-#    EXTRA_LIBS = $(DYNAMICNSPR) -l$(LDAP_LIBNAME)
-#endif
-#endif
-#endif
 
 OBJDEST = $(OBJDIR_NAME)
 
