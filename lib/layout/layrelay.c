@@ -525,7 +525,7 @@ lo_rl_InitDocState( MWContext *context, lo_DocState *state, int32 width, int32 h
 		XP_FREE_BLOCK(state->line_array);
 #ifdef XP_WIN16
 		XP_FREE_BLOCK(state->larray_array);
-#endif  /* XP_WIN16 */
+#endif  */ /* XP_WIN16 */
 		/*
 		XP_DELETE(state->font_stack);
 		*/
