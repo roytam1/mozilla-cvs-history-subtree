@@ -68,7 +68,7 @@ confirm_install=true
 
 [RunApp0]
 Target App Creator Type=MOZZ
-Target Document=:Mozilla Folder:Mozilla Installer
+Target Document=:Mozilla Folder:Mozilla Profile Migration
 
 [LegacyCheck0]
 Filename=:Mozilla Folder:Mozilla
