@@ -557,6 +557,9 @@ nsCommandLine::Run()
 
 struct HelpClosure
 {
+  HelpClosure(nsACString& aText, nsICategoryManager* aCatman) :
+    text(aText), catman(aCatman) { }
+
   nsACString& text;
   nsICategoryManager* catman;
 };
@@ -601,7 +604,7 @@ nsCommandLine::GetHelpText(nsACString& aResult)
   rv = getHandlers(handlers, catman);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  HelpClosure closure = { aResult, catman };
+  HelpClosure closure (aResult, catman);
 
   handlers.EnumerateForwards(EnumHelp, &closure);
   return NS_OK;
