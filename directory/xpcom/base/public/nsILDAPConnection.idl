@@ -94,4 +94,6 @@ interface nsILDAPConnection : nsISupports
      * @return          the error code, as defined in nsILDAPErrors.idl
      */
     long getLdErrno(out AUTF8String matched, out AUTF8String s);
+
+    void close();
 };

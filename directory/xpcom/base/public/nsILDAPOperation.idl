@@ -149,4 +149,9 @@ interface nsILDAPOperation : nsISupports
      * @exception NS_ERROR_UNEXPECTED           internal error
      */
     void abandon();
+
+    /**
+     * Release references that create cycles.
+     */
+    void clear();
 };

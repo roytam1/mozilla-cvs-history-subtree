@@ -71,40 +71,7 @@ nsLDAPConnection::nsLDAPConnection()
 //
 nsLDAPConnection::~nsLDAPConnection()
 {
-  int rc;
-
-  PR_LOG(gLDAPLogModule, PR_LOG_DEBUG, ("unbinding\n"));
-
-  if (mConnectionHandle) {
-      // note that the ldap_unbind() call in the 5.0 version of the LDAP C SDK
-      // appears to be exactly identical to ldap_unbind_s(), so it may in fact
-      // still be synchronous
-      //
-      rc = ldap_unbind(mConnectionHandle);
-#ifdef PR_LOGGING
-      if (rc != LDAP_SUCCESS) {
-          PR_LOG(gLDAPLogModule, PR_LOG_WARNING, 
-                 ("nsLDAPConnection::~nsLDAPConnection: %s\n", 
-                  ldap_err2string(rc)));
-      }
-#endif
-  }
-
-  PR_LOG(gLDAPLogModule, PR_LOG_DEBUG, ("unbound\n"));
-
-  if (mPendingOperations) {
-      delete mPendingOperations;
-  }
-
-  // Cancel the DNS lookup if needed, and also drop the reference to the
-  // Init listener (if still there).
-  //
-  if (mDNSRequest) {
-      mDNSRequest->Cancel();
-      mDNSRequest = 0;
-  }
-  mInitListener = 0;
-
+  Close();
   // Release the reference to the runnable object.
   //
   NS_IF_RELEASE(mRunnable);
@@ -217,6 +184,19 @@ nsLDAPConnection::Init(const char *aHost, PRInt32 aPort, PRBool aSSL,
         return NS_ERROR_FAILURE;
     }
 
+    mConnectionHandle = ldap_init(aHost,
+                                  mPort == -1 ? LDAP_PORT : mPort);
+    // Check that we got a proper connection, and if so, setup the
+    // threading functions for this connection.
+    //
+    if ( !mConnectionHandle ) {
+        rv = NS_ERROR_FAILURE;  // LDAP C SDK API gives no useful error
+    } else {
+#ifdef DEBUG_dmose
+        const int lDebug = 0;
+        ldap_set_option(mConnectionHandle, LDAP_OPT_DEBUG_LEVEL, &lDebug);
+#endif
+    }
     // Do the pre-resolve of the hostname, using the DNS service. This
     // will also initialize the LDAP connection properly, once we have
     // the IPs resolved for the hostname. This includes creating the
@@ -234,7 +214,7 @@ nsLDAPConnection::Init(const char *aHost, PRInt32 aPort, PRBool aSSL,
         return NS_ERROR_FAILURE;
     }
     mDNSHost = aHost;
-
+#if 0
     // if the caller has passed in a space-delimited set of hosts, as the 
     // ldap c-sdk allows, strip off the trailing hosts for now.
     // Soon, we'd like to make multiple hosts work, but now make
@@ -263,7 +243,84 @@ nsLDAPConnection::Init(const char *aHost, PRInt32 aPort, PRBool aSSL,
         }
         mDNSHost.Truncate();
     }
+#endif
+    mRunnable = new nsLDAPConnectionLoop();
+    NS_ADDREF(mRunnable);
+    rv = mRunnable->Init();
+    if (NS_FAILED(rv)) 
+    {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+    }
+    else 
+    {
+        // Here we keep a weak reference in the runnable object to the
+        // nsLDAPConnection ("this"). This avoids the problem where a
+        // connection can't get destructed because of the new thread
+        // keeping a strong reference to it. It also helps us know when
+        // we need to exit the new thread: when we can't convert the weak
+        // reference to a strong ref, we know that the nsLDAPConnection
+        // object is gone, and we need to stop the thread running.
+        //
+        nsCOMPtr<nsILDAPConnection> conn =
+            NS_STATIC_CAST(nsILDAPConnection *, this);
+
+        mRunnable->mWeakConn = do_GetWeakReference(conn);
+
+        // kick off a thread for result listening and marshalling
+        // XXXdmose - should this be JOINABLE?
+        //
+        rv = NS_NewThread(getter_AddRefs(mThread), mRunnable, 0,
+                      PR_UNJOINABLE_THREAD);
+        if (NS_FAILED(rv)) {
+            rv = NS_ERROR_NOT_AVAILABLE;
+        }
+    }
+    mInitListener->OnLDAPInit(this, rv);
+    mInitListener = 0;
+
     return rv;
+}
+
+NS_IMETHODIMP
+nsLDAPConnection::Close()
+{
+  int rc;
+
+  PR_LOG(gLDAPLogModule, PR_LOG_DEBUG, ("unbinding\n"));
+
+  if (mConnectionHandle) {
+      // note that the ldap_unbind() call in the 5.0 version of the LDAP C SDK
+      // appears to be exactly identical to ldap_unbind_s(), so it may in fact
+      // still be synchronous
+      //
+      rc = ldap_unbind(mConnectionHandle);
+#ifdef PR_LOGGING
+      if (rc != LDAP_SUCCESS) {
+          PR_LOG(gLDAPLogModule, PR_LOG_WARNING, 
+                 ("nsLDAPConnection::~nsLDAPConnection: %s\n", 
+                  ldap_err2string(rc)));
+      }
+#endif
+      mConnectionHandle = nsnull;
+  }
+
+  PR_LOG(gLDAPLogModule, PR_LOG_DEBUG, ("unbound\n"));
+
+  if (mPendingOperations) {
+      delete mPendingOperations;
+      mPendingOperations = nsnull;
+  }
+
+  // Cancel the DNS lookup if needed, and also drop the reference to the
+  // Init listener (if still there).
+  //
+  if (mDNSRequest) {
+      mDNSRequest->Cancel();
+      mDNSRequest = 0;
+  }
+  mInitListener = 0;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -507,6 +564,11 @@ nsLDAPConnection::InvokeMessageCallback(LDAPMessage *aMsgHandle,
     // from the connection queue.
     //
     if (aRemoveOpFromConnQ) {
+        nsCOMPtr < nsILDAPOperation> aOperation = getter_AddRefs((nsILDAPOperation *) mPendingOperations->Get(key));
+        // try to break cycles
+        if (aOperation)
+          aOperation->Clear();
+
         rv = mPendingOperations->Remove(key);
         if (NS_FAILED(rv)) {
             NS_ERROR("nsLDAPConnection::InvokeMessageCallback: unable to "
@@ -784,8 +846,10 @@ nsLDAPConnectionLoop::Run(void)
 
         // XXX deal with timeouts better
         //
-        NS_ASSERTION(mRawConn->mConnectionHandle, "nsLDAPConnection::Run(): "
-                     "no connection created.\n");
+        // I've commented this out in case someone closes an LDAP connection while
+        // this thread is running. We need to clean up better in that case.
+//        NS_ASSERTION(mRawConn->mConnectionHandle, "nsLDAPConnection::Run(): "
+//                     "no connection created.\n");
 
         // We can't enumerate over mPendingOperations itself, because the
         // callback needs to modify mPendingOperations.  So we clone it first,
@@ -796,7 +860,7 @@ nsLDAPConnectionLoop::Run(void)
         // only clone if the number of pending operations is non-zero
         // otherwise, put the LDAP connection thread to sleep (briefly)
         // until there is pending operations..
-        if (mRawConn->mPendingOperations->Count()) {
+        if (mRawConn->mPendingOperations && mRawConn->mPendingOperations->Count()) {
           nsHashtable *hashtableCopy = mRawConn->mPendingOperations->Clone();
           if (hashtableCopy) {
             hashtableCopy->Enumerate(CheckLDAPOperationResult, this);

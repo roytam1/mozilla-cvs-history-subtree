@@ -2163,6 +2163,11 @@ function SetContentAndBodyAsUnmodified()
 
 function MsgComposeCloseWindow(recycleIt)
 {
+  for (i=1; i <= awGetMaxRecipients(); i++) 
+    document.getElementById("addressCol2#" + i).removeSession(gLDAPSession);
+  gSessionAdded = false;
+  gLDAPSession = null;  
+  gAutocompleteSession = null;
   if (gMsgCompose)
     gMsgCompose.CloseWindow(recycleIt);
 }

@@ -117,6 +117,15 @@ nsLDAPOperation::GetConnection(nsILDAPConnection* *aConnection)
 }
 
 NS_IMETHODIMP
+nsLDAPOperation::Clear()
+{
+  mMessageListener = nsnull;
+  mClosure = nsnull;
+  mConnection = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsLDAPOperation::GetMessageListener(nsILDAPMessageListener **aMessageListener)
 {
     if (!aMessageListener) {
