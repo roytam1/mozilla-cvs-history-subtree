@@ -4790,10 +4790,10 @@ safer for you to cancel the submission.
 *noPrivacyPolicyDialog.CancelLabelString:  Cancel Submission
 *noPrivacyPolicyDialog*toggle.leftOffset:  100
 *noPrivacyPolicyDialog.selectionLabelString:\
-The information you submit is not governed by a privacy policy.\n\
-The site you're providing information to has not disclosed how\n\
-they will use or sell your information. If you are concerned\n\
-about this, you may want to cancel the submission.
+There is no privacy policy in effect for this form submission.\n\
+This site has not disclosed how the information you are providing\n\
+will be used. If you are concerned by this, you may want to cancel\n\
+this submission.
 
 
 *insecurePostFromInsecureDocDialog_popup.title:	      @NAME@: Security Warning
