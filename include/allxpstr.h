@@ -9251,8 +9251,9 @@ ResDef(REGPACK_PROGRESS_LINE2, (SU_MSG_BASE + 37), "\
 ResDef(SU_NOT_ENOUGH_SPACE, (SU_MSG_BASE + 38), "\
 SmartUpdate failed: There is not enough disk space to complete this operation.")
 
-ResDef(SU_LOW_DISK_SPACE_WARNING, SU_MSG_BASE + 39,"\
-SmartUpdate warning:\n\nYou are running low on disk space.  This install may not complete successfully.  Do you want to continue?")
+ResDef(SU_LOW_DISK_SPACE_WARNING, SU_MSG_BASE + 39, "\
+SmartUpdate warning:\n\nYou are running low on disk space.  This install may \
+not complete successfully.  Do you want to continue?")
 
 END_STR(mcom_include_xp_msg_i_strings)
 
