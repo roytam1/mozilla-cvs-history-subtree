@@ -59,9 +59,7 @@ class XFE_PrefsPageAddress : public XFE_PrefsPage
     Widget m_sort_last_toggle;
 
     XP_List     *m_pLdapServers; /* list of DIR_Servers */
-#ifdef MOZ_MAIL_NEWS
     DIR_Server **m_dirList;      /* array of DIR_Servers */
-#endif
     XmString    *m_dirNames;     /* XmString names of DIR_Servers */
     int          m_dirCount;
     
