@@ -420,7 +420,7 @@ public:
             }
             if (valueStr == nsnull) return;
             printf("RDF %s: datasource=%s\n  subject: %s\n     pred: %s\n    value: %s\n",
-                   msg, dsName, subject, predicate, valueStr);
+                   msg, (const char*) dsName, (const char*) subject, (const char*) predicate, valueStr);
             NS_RELEASE(predRes);
             NS_RELEASE(subRes);
             PR_smprintf_free(valueStr);

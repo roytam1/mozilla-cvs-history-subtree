@@ -302,7 +302,7 @@ FindDataSource::parseResourceIntoFindTokens(nsIRDFResource *u, findTokenPtr toke
 
 	if (NS_FAILED(rv = u->GetValue( getter_Copies(uri) )))	return(rv);
 
-	printf("Find: %s\n", uri);
+	printf("Find: %s\n", (const char*) uri);
 
 	if (!(id = PL_strdup(uri + strlen("find:"))))	return(NS_ERROR_OUT_OF_MEMORY);
 
