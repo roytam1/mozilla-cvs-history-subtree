@@ -314,7 +314,7 @@ className##Module::RegisterSelf(nsIComponentManager *compMgr, \
     if (NS_FAILED(rv)) return rv; \
     /* Register our component. */ \
     rv = compMgr->RegisterComponentSpec( className::GetCID(), #className, \
-                                          progId, path, PR_TRUE, PR_TRUE ); \
+                                          progId, aPath, PR_TRUE, PR_TRUE ); \
     if ( NS_SUCCEEDED( rv ) ) { \
         DEBUG_PRINTF( PR_STDOUT, #className " registration successful\n" ); \
         if ( autoInit ) { \
@@ -361,7 +361,7 @@ className##Module::UnregisterSelf( nsIComponentManager *compMgr, \
     } \
  \
     /* Unregister our component. */ \
-    rv = compMgr->UnregisterComponentSpec( className::GetCID(), path ); \
+    rv = compMgr->UnregisterComponentSpec( className::GetCID(), aPath); \
     if ( NS_SUCCEEDED( rv ) ) { \
         DEBUG_PRINTF( PR_STDOUT, #className " unregistration successful\n" ); \
     } else { \
