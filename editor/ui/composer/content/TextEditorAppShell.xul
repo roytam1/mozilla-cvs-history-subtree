@@ -113,7 +113,7 @@ editor.xul has these - do we need them?
       <menu accesskey="t" id="tasksMenu"/>
 
       <!-- DEBUG only -->
-      <menu id="debugMenu" />
+      <!-- <menu id="debugMenu" /> -->
       <!-- end DEBUG only -->
 
       <!-- help menu filled from globalOverlay -->
