@@ -196,7 +196,7 @@ nsGfxTextControlFrame::nsGfxTextControlFrame()
   mIsProcessing(PR_FALSE),
   mDummyFrame(0), mNeedsStyleInit(PR_TRUE),
   mDummyInitialized(PR_FALSE), // DUMMY
-  mCachedState(nsnull)
+  mCachedState(nsnull),mWeakReferent(this)
 {
 }
 
@@ -1855,7 +1855,6 @@ NS_IMPL_RELEASE(nsEnderKeyListener)
 nsEnderKeyListener::nsEnderKeyListener()
 {
   NS_INIT_REFCNT();
-  mFrame = nsnull;
   mView = nsnull;
 }
 
@@ -1866,10 +1865,10 @@ nsEnderKeyListener::~nsEnderKeyListener()
 NS_IMETHODIMP
 nsEnderKeyListener::SetFrame(nsGfxTextControlFrame *aFrame)
 {
-  mFrame = aFrame;
-  if (mFrame)
+  mFrame.SetReference(aFrame->WeakReferent());
+  if (aFrame)
   {
-    mFrame->GetContent(getter_AddRefs(mContent));
+    aFrame->GetContent(getter_AddRefs(mContent));
   }
   return NS_OK;
 }
@@ -1916,6 +1915,7 @@ nsresult
 nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
 {
   nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  nsGfxTextControlFrame *gfxFrame;
   uiEvent = do_QueryInterface(aKeyEvent);
   if (!uiEvent) { //non-key event passed to keydown.  bad things.
     return NS_OK;
@@ -1923,7 +1923,8 @@ nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
 
   nsresult result = NS_OK;
 
-  if (mFrame && mContent)
+  gfxFrame = mFrame.Reference();
+  if (gfxFrame && mContent)
   {
     nsEventStatus status = nsEventStatus_eIgnore;
     nsKeyEvent event;
@@ -1943,7 +1944,7 @@ nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
     if (NS_SUCCEEDED(result) && manager) 
     {
       //1. Give event to event manager for pre event state changes and generation of synthetic events.
-      result = manager->PreHandleEvent(*mContext, &event, mFrame, status, mView);
+      result = manager->PreHandleEvent(*mContext, &event, gfxFrame, status, mView);
 
       //2. Give event to the DOM for third party and JS use.
       if (NS_SUCCEEDED(result)) {
@@ -1953,8 +1954,9 @@ nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
       //3. In this case, the frame does no processing of the event
 
       //4. Give event to event manager for post event state changes and generation of synthetic events.
+      gfxFrame = mFrame.Reference(); // check for deletion
       if (NS_SUCCEEDED(result)) {
-        result = manager->PostHandleEvent(*mContext, &event, mFrame, status, mView);
+        result = manager->PostHandleEvent(*mContext, &event, gfxFrame, status, mView);
       }
       NS_RELEASE(manager);
     }
@@ -1966,6 +1968,7 @@ nsresult
 nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
 {
   nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  nsGfxTextControlFrame *gfxFrame;
   uiEvent = do_QueryInterface(aKeyEvent);
   if (!uiEvent) { //non-key event passed to keydown.  bad things.
     return NS_OK;
@@ -1973,7 +1976,8 @@ nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
 
   nsresult result = NS_OK;
 
-  if (mFrame && mContent)
+  gfxFrame = mFrame.Reference();
+  if (gfxFrame && mContent)
   {
     nsEventStatus status = nsEventStatus_eIgnore;
     nsKeyEvent event;
@@ -1993,7 +1997,8 @@ nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
     if (NS_SUCCEEDED(result) && manager) 
     {
       //1. Give event to event manager for pre event state changes and generation of synthetic events.
-      result = manager->PreHandleEvent(*mContext, &event, mFrame, status, mView);
+      gfxFrame = mFrame.Reference();
+      result = manager->PreHandleEvent(*mContext, &event, gfxFrame, status, mView);
 
       //2. Give event to the DOM for third party and JS use.
       if (NS_SUCCEEDED(result)) {
@@ -2003,8 +2008,9 @@ nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
       //3. In this case, the frame does no processing of the event
 
       //4. Give event to event manager for post event state changes and generation of synthetic events.
+      gfxFrame = mFrame.Reference(); // check for deletion
       if (NS_SUCCEEDED(result)) {
-        result = manager->PostHandleEvent(*mContext, &event, mFrame, status, mView);
+        result = manager->PostHandleEvent(*mContext, &event, gfxFrame, status, mView);
       }
       NS_RELEASE(manager);
     }
@@ -2016,6 +2022,8 @@ nsresult
 nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
 {
   nsCOMPtr<nsIDOMUIEvent>uiEvent;
+  nsGfxTextControlFrame *gfxFrame;
+
   uiEvent = do_QueryInterface(aKeyEvent);
   if (!uiEvent) { //non-key event passed to keydown.  bad things.
     return NS_OK;
@@ -2023,7 +2031,8 @@ nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
 
   nsresult result = NS_OK;
 
-  if (mFrame && mContent && mContext && mView)
+  gfxFrame = mFrame.Reference();
+  if (gfxFrame && mContent && mContext && mView)
   {
     nsEventStatus status = nsEventStatus_eIgnore;
     nsKeyEvent event;
@@ -2043,7 +2052,7 @@ nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
     if (NS_SUCCEEDED(result) && manager) 
     {
       //1. Give event to event manager for pre event state changes and generation of synthetic events.
-      result = manager->PreHandleEvent(*mContext, &event, mFrame, status, mView);
+      result = manager->PreHandleEvent(*mContext, &event, gfxFrame, status, mView);
 
       //2. Give event to the DOM for third party and JS use.
       if (NS_SUCCEEDED(result)) {
@@ -2051,13 +2060,15 @@ nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
       }
     
       //3. Give event to the frame for browser default processing
+      gfxFrame = mFrame.Reference(); // check for deletion
       if (NS_SUCCEEDED(result)) {
-        result = mFrame->HandleEvent(*mContext, &event, status);
+        result = gfxFrame->HandleEvent(*mContext, &event, status);
       }
 
       //4. Give event to event manager for post event state changes and generation of synthetic events.
+      gfxFrame = mFrame.Reference(); // check for deletion
       if (NS_SUCCEEDED(result)) {
-        result = manager->PostHandleEvent(*mContext, &event, mFrame, status, mView);
+        result = manager->PostHandleEvent(*mContext, &event, gfxFrame, status, mView);
       }
       NS_RELEASE(manager);
     }
