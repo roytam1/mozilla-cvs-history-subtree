@@ -94,6 +94,7 @@ CPPSRCS		= \
 		  MozillaApp.cpp \
 		  NavCenterFrame.cpp \
 		  NavCenterView.cpp \
+		  RDFImage.cpp \
 		  Netcaster.cpp \
 		  NotificationCenter.cpp \
 		  Outliner.cpp \
