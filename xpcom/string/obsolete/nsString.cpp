@@ -832,16 +832,6 @@ void nsCString::AssignWithConversion(PRUnichar aChar) {
   AppendWithConversion(aChar);
 }
 
-#if 0
-void nsCString::do_AppendFromReadable( const nsAReadableCString& aReadable )
-  {
-    if ( SameImplementation( NS_STATIC_CAST(const nsAReadableCString&, *this), aReadable) )
-      StrAppend(*this, NS_STATIC_CAST(const nsCString&, aReadable), 0, aReadable.Length());
-    else
-      nsAWritableCString::do_AppendFromReadable(aReadable);
-  }
-#endif
-
 
 /**
  * append given char to this string
@@ -963,16 +953,6 @@ void nsCString::InsertWithConversion(PRUnichar aChar,PRUint32 anOffset){
   temp.mLength=1;
   StrInsert(*this,anOffset,temp,0,1);
 }
-
-#if 0
-void nsCString::do_InsertFromReadable( const nsAReadableCString& aReadable, PRUint32 atPosition )
-  {
-    if ( SameImplementation( NS_STATIC_CAST(const nsAReadableCString&, *this), aReadable) )
-      StrInsert(*this, atPosition, NS_STATIC_CAST(const nsCString&, aReadable), 0, aReadable.Length());
-    else
-      nsAWritableCString::do_InsertFromReadable(aReadable, atPosition);
-  }
-#endif
 
 
 

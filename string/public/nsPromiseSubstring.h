@@ -54,7 +54,7 @@ class nsPromiseSubstring
 
     protected:
       virtual const CharT* GetReadableFragment( nsReadableFragment<CharT>&, nsFragmentRequest, PRUint32 ) const;
-      virtual const CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 ) { }
+      virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 ) { }
 
     public:
       nsPromiseSubstring( const string_type& aString, PRUint32 aStartPos, PRUint32 aLength )
