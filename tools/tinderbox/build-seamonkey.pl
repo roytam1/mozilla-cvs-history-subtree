@@ -354,7 +354,7 @@ sub run_tests {
         print_log "Running  DomToTextConversionTest ...\n";
         $test_result =
           FileBasedTest("DomToTextConversionTest", $build_dir, $binary_dir,
-                        "TestOutSinks", 15, "FAILED", 0);
+                        "TestOutSinks", 45, "FAILED", 0);
     }
     return $test_result;
 }
