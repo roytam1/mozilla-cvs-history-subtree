@@ -31,6 +31,7 @@ XPIDLSRCS =     .\nsISOAPCall.idl \
 		.\nsISOAPResponseListener.idl \
 		.\nsISOAPService.idl \
 		.\nsISOAPServiceRegistry.idl \
+		.\nsISOAPStruct.idl		\
 		.\nsISOAPTransport.idl \
 		.\nsISOAPTransportListener.idl \
 		.\nsISOAPType.idl \

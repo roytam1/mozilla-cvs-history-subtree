@@ -21,35 +21,35 @@
  */
 
 #include "nsISupports.idl"
-
-[ptr] native JSObjectPtr(JSObject);
-[ptr] native JSContextPtr(JSContext);
-
-/**
- * This interface permits wrapping of JS values.
- */
-
-[uuid(729a7852-1dd2-11b2-99fe-9b6022181691)]
-interface nsISOAPJSValue : nsISupports {
+#include "nsIEnumerator.idl"
+#include "nsISOAPParameter.idl"
 
 /**
- * Before wrapping a JS object, the JS context
- *   must be set.
+ * This interface permits exposing XPCOM objects
+ *   as SOAP structures.
  */
-  attribute JSContextPtr Context;
 
-/**
- * This wraps a JS value and makes it handlable by
- * xpcom.
- */
-  attribute JSObjectPtr object;
+[scriptable, uuid(18417b16-1dd2-11b2-8576-97aa4cf2f901)]
+interface nsISOAPStruct : nsISupports {
+
+  /**
+   * Enumeration of parameter objects which
+   * represent the values of a SOAP struct.
+   * These values are temporary, and must only
+   * be used to get the values of members,
+   * but never to set the values of members.
+   */
+  readonly attribute nsIEnumerator members;
+
+  /**
+   * Get the value of a nsISOAPStruct member
+   * @param member parameter structure used to set the member
+   */
+  nsISOAPParameter getMember(in DOMString name);
+
+  /**
+   * Set the value of a nsISOAPStruct member
+   * @param member parameter structure used to set the member
+   */
+  void setMember(in nsISOAPParameter member);
 };
-
-%{ C++
-#define NS_SOAPJSVALUE_CID                            \
-{ /* 30364bd0-1dd2-11b2-9424-d494b0306ec7 */        \
-  0x30364bd0, 0x1dd2, 0x11b2,                       \
- {0x94, 0x24, 0xd4, 0x94, 0xb0, 0x30, 0x6e, 0xc7} }
-#define NS_SOAPJSVALUE_CONTRACTID \
-"@mozilla.org/xmlextras/soap/jsvalue;1"
-%}
