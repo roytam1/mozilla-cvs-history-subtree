@@ -63,6 +63,7 @@ function DoEnabling()
 
   switch ( radiogroup.value ) {
     case "0":
+    case "4":
       for (i = 0; i < manual.length; i++)
         manual[i].setAttribute( "disabled", "true" );
       for (i = 0; i < auto.length; i++)
