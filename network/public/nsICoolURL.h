@@ -91,6 +91,10 @@ public:
     */
     //NS_IMETHOD          OpenConnection(nsIConnection* o_Connection) = 0;
 
+#ifdef DEBUG
+    NS_IMETHOD          DebugString(const char* *o_URLString) const=0;
+#endif //DEBUG
+
     static const nsIID& IID() { return NS_ICOOLURL_IID; };
 
 };
