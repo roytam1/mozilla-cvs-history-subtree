@@ -37,7 +37,6 @@ public class WrapperFactoryImpl extends WrapperFactory
 
     final String [] stubsImplementedInterfaces = 
         {
-        BrowserControl.PROFILE_MANAGER_NAME
         };
 
 //
