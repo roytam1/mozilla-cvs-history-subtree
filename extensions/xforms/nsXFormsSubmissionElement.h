@@ -36,13 +36,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef nsXFormsSubmissionElement_h_
+#define nsXFormsSubmissionElement_h_
+
 #include "nsIXTFGenericElement.h"
 #include "nsIDOMEventListener.h"
 #include "nsXFormsElement.h"
 
 class nsIInputStream;
 class nsIContent;
-class nsString;
+class nsCString;
 
 class nsXFormsSubmissionElement : public nsXFormsElement,
                                   public nsIXTFGenericElement,
@@ -61,10 +64,14 @@ public:
   NS_HIDDEN_(void)     Submit();
   NS_HIDDEN_(nsresult) SubmitEnd(PRBool succeeded);
   NS_HIDDEN_(void)     GetDefaultInstanceData(nsIDOMNode **result);
-  NS_HIDDEN_(void)     GetSelectedInstanceData(nsIDOMNode **result);
-  NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, nsString &uri, nsIInputStream **);
-  NS_HIDDEN_(void)     AppendDataToURI(nsIDOMNode *data, nsString &uri, const nsString &separator);
-  NS_HIDDEN_(nsresult) SendData(nsString &uri, nsIInputStream *stream);
+  NS_HIDDEN_(nsresult) GetSelectedInstanceData(nsIDOMNode **result);
+  NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **);
+  NS_HIDDEN_(nsresult) SerializeDataXML(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
+  NS_HIDDEN_(nsresult) SerializeDataURLEncoded(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **);
+  NS_HIDDEN_(void)     AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf, const nsCString &sep);
+  NS_HIDDEN_(nsresult) SerializeDataMultipartRelated(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
+  NS_HIDDEN_(nsresult) SerializeDataMultipartFormData(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
+  NS_HIDDEN_(nsresult) SendData(PRUint32 format, const nsCString &uri, nsIInputStream *stream);
 
 private:
   nsIContent *mContent;
@@ -72,3 +79,5 @@ private:
 
 NS_HIDDEN_(nsresult)
 NS_NewXFormsSubmissionElement(nsIXTFElement **aResult);
+
+#endif

@@ -38,26 +38,41 @@
 
 #ifdef DEBUG_darinf
 #include <stdio.h>
+#define LOG(args) printf args
+#else
+#define LOG(args)
 #endif
+
+#include <stdlib.h>
 
 #include "nsXFormsSubmissionElement.h"
 #include "nsXFormsAtoms.h"
+#include "nsIXFormsModelElement.h"
 #include "nsIXTFGenericElementWrapper.h"
+#include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEventListener.h"
-#include "nsIDOMEventTarget.h"
+#include "nsIDOMEventGroup.h"
+#include "nsIDOMEventReceiver.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMDocumentEvent.h"
+#include "nsIDOM3EventTarget.h"
 #include "nsIDOM3Node.h"
+#include "nsIDOMNSUIEvent.h"
 #include "nsIDOMXPathResult.h"
 #include "nsIDOMXPathEvaluator.h"
 #include "nsIDOMXPathNSResolver.h"
 #include "nsIDOMXPathExpression.h"
+#include "nsComponentManagerUtils.h"
 #include "nsIWebNavigation.h"
+#include "nsIStringStream.h"
 #include "nsIInputStream.h"
+#include "nsIMIMEInputStream.h"
 #include "nsINameSpaceManager.h"
 #include "nsIDocument.h"
 #include "nsIContent.h"
+#include "nsLinebreakConverter.h"
+#include "nsEscape.h"
 #include "nsString.h"
 #include "nsMemory.h"
 #include "nsCOMPtr.h"
@@ -67,6 +82,81 @@ static const nsIID sScriptingIIDs[] = {
   NS_IDOMEVENTTARGET_IID,
   NS_IDOM3NODE_IID
 };
+
+// submission methods
+#define METHOD_GET                    0x01
+#define METHOD_POST                   0x02
+#define METHOD_PUT                    0x04
+
+// submission encodings
+#define ENCODING_XML                  0x10    // application/xml
+#define ENCODING_URL                  0x20    // application/x-www-form-urlencoded
+#define ENCODING_MULTIPART_RELATED    0x40    // multipart/related
+#define ENCODING_MULTIPART_FORM_DATA  0x80    // multipart/form-data
+
+struct SubmissionFormat
+{
+  const char *method;
+  PRUint32    format;
+};
+
+static const SubmissionFormat sSubmissionFormats[] = {
+  { "post",            ENCODING_XML                 | METHOD_POST },
+  { "get",             ENCODING_URL                 | METHOD_GET  },
+  { "put",             ENCODING_XML                 | METHOD_PUT  },
+  { "multipart-post",  ENCODING_MULTIPART_RELATED   | METHOD_POST },
+  { "form-data-post",  ENCODING_MULTIPART_FORM_DATA | METHOD_POST },
+  { "urlencoded-post", ENCODING_URL                 | METHOD_POST }
+};
+
+static PRUint32
+GetSubmissionFormat(nsIContent *content)
+{
+  nsAutoString method;
+  content->GetAttr(kNameSpaceID_None, nsXFormsAtoms::method, method);
+
+  NS_ConvertUTF16toUTF8 utf8method(method);
+  for (PRUint32 i=0; i<NS_ARRAY_LENGTH(sSubmissionFormats); ++i)
+  {
+    // XXX case sensitive compare ok?
+    if (utf8method.Equals(sSubmissionFormats[i].method))
+      return sSubmissionFormats[i].format;
+  }
+  return 0;
+}
+
+static void
+MakeMultipartBoundary(nsCString &boundary)
+{
+  boundary.AssignLiteral("---------------------------");
+  boundary.AppendInt(rand());
+  boundary.AppendInt(rand());
+  boundary.AppendInt(rand());
+}
+
+static nsresult
+URLEncode(const nsString &buf, nsCString &result)
+{
+  // 1. convert to UTF-8
+  // 2. normalize newlines to \r\n
+  // 3. escape, converting ' ' to '+'
+
+  NS_ConvertUTF16toUTF8 utf8Buf(buf);
+
+  char *convertedBuf =
+      nsLinebreakConverter::ConvertLineBreaks(utf8Buf.get(),
+                                              nsLinebreakConverter::eLinebreakAny,
+                                              nsLinebreakConverter::eLinebreakNet);
+  NS_ENSURE_TRUE(convertedBuf, NS_ERROR_OUT_OF_MEMORY);
+
+  char *escapedBuf = nsEscape(convertedBuf, url_XPAlphas);
+  nsMemory::Free(convertedBuf);
+
+  NS_ENSURE_TRUE(escapedBuf, NS_ERROR_OUT_OF_MEMORY);
+
+  result.Adopt(escapedBuf);
+  return NS_OK;
+}
 
 // nsISupports
 
@@ -221,15 +311,20 @@ nsXFormsSubmissionElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 
   NS_ASSERTION(mContent, "Wrapper is not an nsIContent, we'll crash soon");
 
-  nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mContent);
-  NS_ASSERTION(target, "Wrapper is not a DOM event target");
+  // We listen on the system event group so that we can check
+  // whether preventDefault() was called by any content listeners.
 
-  nsresult rv = target->AddEventListener(NS_LITERAL_STRING("xforms-submit"),
-                                         this, PR_FALSE);
-#ifdef DEBUG_darinf
-  if (NS_FAILED(rv))
-    printf("+++ AddEventListener failed [rv=%x]\n", rv);
-#endif
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mContent);
+  NS_ASSERTION(receiver, "xml elements must be event receivers");
+
+  nsCOMPtr<nsIDOMEventGroup> systemGroup;
+  receiver->GetSystemEventGroup(getter_AddRefs(systemGroup));
+  NS_ASSERTION(systemGroup, "system event group must exist");
+
+  nsCOMPtr<nsIDOM3EventTarget> target = do_QueryInterface(mContent);
+
+  target->AddGroupedEventListener(NS_LITERAL_STRING("xforms-submit"),
+                                  this, PR_FALSE, systemGroup);
   return NS_OK;
 }
 
@@ -238,6 +333,13 @@ nsXFormsSubmissionElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 NS_IMETHODIMP
 nsXFormsSubmissionElement::HandleEvent(nsIDOMEvent *aEvent)
 {
+  nsCOMPtr<nsIDOMNSUIEvent> evt = do_QueryInterface(aEvent);
+
+  PRBool defaultPrevented;
+  evt->GetPreventDefault(&defaultPrevented);
+  if (defaultPrevented)
+    return NS_OK;
+
   nsAutoString type;
   aEvent->GetType(type);
   if (type.EqualsLiteral("xforms-submit"))
@@ -250,17 +352,14 @@ nsXFormsSubmissionElement::HandleEvent(nsIDOMEvent *aEvent)
 void
 nsXFormsSubmissionElement::Submit()
 {
-#ifdef DEBUG_darinf
-  printf("+++ nsXFormsSubmissionElement::Submit\n");
-#endif
+  LOG(("+++ nsXFormsSubmissionElement::Submit\n"));
 
   // 1. ensure that we are not currently processing a xforms-submit on our model
 
 
   // 2. get selected node from the instance data (use xpath, gives us node iterator)
   nsCOMPtr<nsIDOMNode> data;
-  GetSelectedInstanceData(getter_AddRefs(data));
-  if (!data)
+  if (NS_FAILED(GetSelectedInstanceData(getter_AddRefs(data))) || !data)
   {
     NS_WARNING("could not get selected instance data");
     return;
@@ -275,9 +374,16 @@ nsXFormsSubmissionElement::Submit()
 
   // 4. serialize instance data
 
+  PRUint32 format = GetSubmissionFormat(mContent);
+  if (format == 0)
+  {
+    NS_WARNING("unknown submission format");
+    return;
+  }
+
   nsCOMPtr<nsIInputStream> stream;
-  nsAutoString uri;
-  if (NS_FAILED(SerializeData(data, uri, getter_AddRefs(stream))))
+  nsCAutoString uri;
+  if (NS_FAILED(SerializeData(data, format, uri, getter_AddRefs(stream))))
   {
     NS_WARNING("failed to serialize data");
     return;
@@ -286,7 +392,7 @@ nsXFormsSubmissionElement::Submit()
 
   // 5. dispatch network request
   
-  if (NS_FAILED(SendData(uri, stream)))
+  if (NS_FAILED(SendData(format, uri, stream)))
   {
     NS_WARNING("failed to send data");
     return;
@@ -316,7 +422,7 @@ nsXFormsSubmissionElement::SubmitEnd(PRBool succeeded)
   return target->DispatchEvent(event, &cancelled);
 }
 
-void
+nsresult
 nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
 {
   // XXX need to support 'instance(id)' xpath function.  for now, we assume
@@ -324,11 +430,7 @@ nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
 
   nsCOMPtr<nsIDOMNode> instance;
   GetDefaultInstanceData(getter_AddRefs(instance));
-  if (!instance)
-  {
-    NS_WARNING("model has no instance data!");
-    return;
-  }
+  NS_ENSURE_TRUE(instance, NS_ERROR_UNEXPECTED);
 
   nsAutoString value;
   mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::bind, value);
@@ -336,18 +438,45 @@ nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
   {
     // inspect 'ref' attribute
     mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::ref, value);
-    if (value.IsEmpty())
-    {
-      // select first <instance> element
-      NS_ADDREF(*result = instance);
-      return;
-    }
   }
   else
   {
-    // XXX get bind element, and inspect the 'ref' attribute
-    // XXX or we should be able to 
+    // ok, value contains the 'ID' of a <bind> element.
+    nsCOMPtr<nsIDOMDocument> doc = do_QueryInterface(mContent->GetDocument());
+
+    nsCOMPtr<nsIDOMElement> bindElement;
+    doc->GetElementById(value, getter_AddRefs(bindElement));
+    NS_ENSURE_TRUE(bindElement, NS_ERROR_UNEXPECTED);
+
+    bindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), value);
   }
+
+  if (value.IsEmpty())
+  {
+    // select first <instance> element
+    // instance->GetFirstChild(result);
+    NS_ADDREF(*result = instance);
+    return NS_OK;
+  }
+
+  // evaluate 'value' as an xpath expression
+
+  nsCOMPtr<nsIDOMXPathEvaluator> xpath =
+      do_QueryInterface(mContent->GetDocument());
+  NS_ENSURE_TRUE(xpath, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIDOMXPathNSResolver> resolver;
+  xpath->CreateNSResolver(instance, getter_AddRefs(resolver));
+  NS_ENSURE_TRUE(resolver, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsISupports> xpathResult;
+  xpath->Evaluate(value, instance, resolver,
+                  nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE, nsnull,
+                  getter_AddRefs(xpathResult));
+  nsCOMPtr<nsIDOMXPathResult> nodeset = do_QueryInterface(xpathResult);
+  NS_ENSURE_TRUE(nodeset, NS_ERROR_UNEXPECTED);
+
+  return nodeset->GetSingleNodeValue(result);
 }
 
 void
@@ -368,53 +497,129 @@ nsXFormsSubmissionElement::GetDefaultInstanceData(nsIDOMNode **result)
     return;
   }
 
-  parent->GetFirstChild(getter_AddRefs(node));
-  while (node)
+  nsCOMPtr<nsIXFormsModelElement> model = do_QueryInterface(parent);
+  if (!model)
   {
-    PRUint16 nodeType;
-    node->GetNodeType(&nodeType);
-    if (nodeType == nsIDOMNode::ELEMENT_NODE)
-    {
-      nsAutoString name;
-      node->GetLocalName(name);
-      if (name.EqualsLiteral("instance"))
-      {
-        NS_ADDREF(*result = node);
-        return;
-      }
-    }
-
-    nsIDOMNode *temp = nsnull;
-    node->GetNextSibling(&temp);
-    node.swap(temp);
+    NS_WARNING("parent node is not a model");
+    return;
   }
+
+  nsCOMPtr<nsIDOMDocument> instanceDoc;
+  model->GetInstanceDocument(EmptyString(), getter_AddRefs(instanceDoc));
+
+  nsCOMPtr<nsIDOMElement> instanceDocElem;
+  instanceDoc->GetDocumentElement(getter_AddRefs(instanceDocElem));
+
+  NS_ADDREF(*result = instanceDocElem);
 }
 
 nsresult
-nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data, nsString &uri,
-                                         nsIInputStream **stream)
+nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data, PRUint32 format,
+                                         nsCString &uri, nsIInputStream **stream)
 {
-  uri.Truncate();
-  *stream = nsnull;
-
+  // initialize uri to the given action
   nsAutoString action;
   mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::action, action);
+  CopyUTF16toUTF8(action, uri);
 
-  nsAutoString method;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::method, method);
+  // 'get' method:
+  // The URI is constructed as follows:
+  //  o The submit URI from the action attribute is examined. If it does not
+  //    already contain a ? (question mark) character, one is appended. If it
+  //    does already contain a question mark character, then a separator
+  //    character from the attribute separator is appended.
+  //  o The serialized form data is appended to the URI.
 
-  // XXX case sensistive?
-  if (!method.EqualsLiteral("get"))
+  if (format & ENCODING_XML)
+    return SerializeDataXML(data, format, stream);
+
+  if (format & ENCODING_URL)
+    return SerializeDataURLEncoded(data, format, uri, stream);
+
+  if (format & ENCODING_MULTIPART_RELATED)
+    return SerializeDataMultipartRelated(data, format, stream);
+
+  if (format & ENCODING_MULTIPART_FORM_DATA)
+    return SerializeDataMultipartFormData(data, format, stream);
+
+  NS_WARNING("unsupported submission encoding");
+  return NS_ERROR_UNEXPECTED;
+}
+
+nsresult
+nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
+                                            PRUint32 format,
+                                            nsIInputStream **stream)
+{
+  NS_WARNING("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult
+nsXFormsSubmissionElement::SerializeDataURLEncoded(nsIDOMNode *data,
+                                                   PRUint32 format,
+                                                   nsCString &uri,
+                                                   nsIInputStream **stream)
+{
+  nsCAutoString separator;
   {
-    NS_NOTREACHED("method not implemented");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsAutoString temp;
+    mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::separator, temp);
+    if (temp.IsEmpty())
+    {
+      separator.AssignLiteral(";");
+    }
+    else
+    {
+      // XXX validate input?  take only the first character?
+      CopyUTF16toUTF8(temp, separator);
+    }
   }
 
-  nsAutoString separator;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::separator, separator);
-  if (separator.IsEmpty())
-    separator.AssignLiteral(";");
+  if (format & METHOD_GET)
+  {
+    if (uri.FindChar('?') == kNotFound)
+      uri.Append('?');
+    else
+      uri.Append(separator);
+    AppendDataURLEncoded(data, uri, separator);
 
+    *stream = nsnull;
+  }
+  else if (format & METHOD_POST)
+  {
+    nsCAutoString buf;
+    AppendDataURLEncoded(data, buf, separator);
+
+    nsCOMPtr<nsIInputStream> postBody;
+
+    // make new stream
+    NS_NewCStringInputStream(getter_AddRefs(postBody), buf);
+    NS_ENSURE_TRUE(postBody, NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIMIMEInputStream> mimeStream =
+        do_CreateInstance("@mozilla.org/network/mime-input-stream;1");
+    NS_ENSURE_TRUE(postBody, NS_ERROR_UNEXPECTED);
+
+    mimeStream->AddHeader("Content-Type", "application/x-www-form-urlencoded");
+    mimeStream->SetAddContentLength(PR_TRUE);
+    mimeStream->SetData(postBody);
+
+    NS_ADDREF(*stream = mimeStream);
+  }
+  else
+  {
+    NS_WARNING("unexpected submission format");
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  return NS_OK;
+}
+
+void
+nsXFormsSubmissionElement::AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf,
+                                                const nsCString &separator)
+{
   // 1. Each element node is visited in document order. Each element that has
   //    one text node child is selected for inclusion.
 
@@ -433,74 +638,78 @@ nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data, nsString &uri,
   //    octet value and % is a literal character. Line breaks are represented
   //    as "CR LF" pairs (i.e., %0D%0A).
 
-  // 'get' method:
-  // The URI is constructed as follows:
-  //  o The submit URI from the action attribute is examined. If it does not
-  //    already contain a ? (question mark) character, one is appended. If it
-  //    does already contain a question mark character, then a separator
-  //    character from the attribute separator is appended.
-  //  o The serialized form data is appended to the URI.
+#ifdef DEBUG_darinf
+  nsAutoString nodeName;
+  data->GetNodeName(nodeName);
+  LOG(("+++ AppendDataURLEncoded: inspecting <%s>\n",
+      NS_ConvertUTF16toUTF8(nodeName).get()));
+#endif
 
-  if (action.FindChar(PRUnichar('?')) == kNotFound)
-    action.Append(PRUnichar('?'));
-  else
-    action.Append(separator);
-
-  // recursively build uri
-  AppendDataToURI(data, action, separator);
-
-  uri = action;
-  return NS_OK;
-}
-
-void
-nsXFormsSubmissionElement::AppendDataToURI(nsIDOMNode *data, nsString &uri,
-                                           const nsString &separator)
-{
-  nsCOMPtr<nsIDOMNode> firstChild;
-  data->GetFirstChild(getter_AddRefs(firstChild));
-  if (!firstChild)
+  nsCOMPtr<nsIDOMNode> child;
+  data->GetFirstChild(getter_AddRefs(child));
+  if (!child)
     return;
-  nsCOMPtr<nsIDOMNode> node;
-  data->GetLastChild(getter_AddRefs(node));
-  if (firstChild != node)
+
+  PRUint16 childType;
+  child->GetNodeType(&childType);
+
+  nsCOMPtr<nsIDOMNode> sibling;
+  child->GetNextSibling(getter_AddRefs(sibling));
+
+  if (!sibling && childType == nsIDOMNode::TEXT_NODE)
   {
-    // call AppendDataToURI on each child node
+    nsAutoString localName;
+    data->GetLocalName(localName);
+
+    nsAutoString value;
+    child->GetNodeValue(value);
+    value.ReplaceChar(PRUnichar(' '), PRUnichar('+'));
+
+    LOG(("    appending data for <%s>\n", NS_ConvertUTF16toUTF8(localName).get()));
+
+    nsCString encLocalName, encValue;
+    URLEncode(localName, encLocalName);
+    URLEncode(value, encValue);
+
+    buf.Append(encLocalName + NS_LITERAL_CSTRING("=") + encValue + separator);
+  }
+  else
+  {
+    // call AppendDataURLEncoded on each child node
     do
     {
-      AppendDataToURI(firstChild, uri, separator);
-      firstChild->GetNextSibling(getter_AddRefs(node));
-      firstChild.swap(node);
+      AppendDataURLEncoded(child, buf, separator);
+      child->GetNextSibling(getter_AddRefs(sibling));
+      child.swap(sibling);
     }
-    while (firstChild);
-    return;
+    while (child);
   }
-
-  PRUint16 nodeType;
-  firstChild->GetNodeType(&nodeType);
-  if (nodeType != nsIDOMNode::TEXT_NODE)
-  {
-    AppendDataToURI(firstChild, uri, separator);
-    return;
-  }
-
-  nsAutoString localName;
-  data->GetLocalName(localName);
-
-  nsAutoString value;
-  firstChild->GetNodeValue(value);
-  value.ReplaceChar(PRUnichar(' '), PRUnichar('+'));
-
-  uri.Append(localName + NS_LITERAL_STRING("=") + value + separator);
 }
 
 nsresult
-nsXFormsSubmissionElement::SendData(nsString &uri, nsIInputStream *stream)
+nsXFormsSubmissionElement::SerializeDataMultipartRelated(nsIDOMNode *data,
+                                                         PRUint32 format,
+                                                         nsIInputStream **stream)
 {
-#ifdef DEBUG_darinf
-  printf("+++ sending to uri=%s [stream=%p]\n",
-      NS_ConvertUTF16toUTF8(uri).get(), (void*) stream);
-#endif
+  NS_WARNING("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult
+nsXFormsSubmissionElement::SerializeDataMultipartFormData(nsIDOMNode *data,
+                                                          PRUint32 format,
+                                                          nsIInputStream **stream)
+{
+  NS_WARNING("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult
+nsXFormsSubmissionElement::SendData(PRUint32 format,
+                                    const nsCString &uri,
+                                    nsIInputStream *stream)
+{
+  LOG(("+++ sending to uri=%s [stream=%p]\n", uri.get(), (void*) stream));
 
   // XXX need to properly support the various 'replace' modes and trigger
   //     xforms-submit-done or xforms-submit-error when appropriate.
@@ -525,8 +734,10 @@ nsXFormsSubmissionElement::SendData(nsString &uri, nsIInputStream *stream)
   //     the URI loader can run its DispatchContent algorithm.
   //     see bug 263084.
 
-  return webNav->LoadURI(uri.get(), nsIWebNavigation::LOAD_FLAGS_NONE,
-                         doc->GetDocumentURI(), nsnull, nsnull);
+  NS_ConvertASCIItoUTF16 temp(uri); // XXX hack
+
+  return webNav->LoadURI(temp.get(), nsIWebNavigation::LOAD_FLAGS_NONE,
+                         doc->GetDocumentURI(), stream, nsnull);
 }
 
 // factory constructor
