@@ -2687,7 +2687,7 @@ PRBool nsImapServerResponseParser::msg_fetch_literal(PRBool chunk, PRInt32 origi
   // If we opened a tunnel, finish everything off here.  Otherwise, get everything here.
   // (just like before)
   
-  while (ContinueParse() && (charsReadSoFar < numberOfCharsInThisChunk))
+  while (ContinueParse() && !fServerConnection.DeathSignalReceived() && (charsReadSoFar < numberOfCharsInThisChunk))
   {
     AdvanceToNextLine();
     if (ContinueParse())
