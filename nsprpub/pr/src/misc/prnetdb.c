@@ -419,7 +419,7 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
     if (af == PR_AF_INET6)
     {
         h = gethostbyname2(name, AF_INET6); 
-        if ((NULL == h) && (flags & (PR_AI_V4MAPPED|PR_AI_ALL)))
+        if ((NULL == h) && (flags & PR_AI_V4MAPPED))
         {
             did_af_inet = PR_TRUE;
             h = gethostbyname2(name, AF_INET);
@@ -468,38 +468,38 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
 		freehostent(h);
 #endif
-	}
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
-    if ((flags & PR_AI_ALL) && !did_af_inet &&
-						(h = gethostbyname2(name, AF_INET)) != 0) {
-        /* Append the V4 addresses to the end of the list */
-        PRIntn na, na_old;
-        char **ap;
-        
-        /* Count the addresses, then grow storage for the pointers */
-        for (na_old = 0, ap = hp->h_addr_list; *ap != 0; na_old++, ap++)
-				{;} /* nothing to execute */
-        for (na = na_old + 1, ap = h->h_addr_list; *ap != 0; na++, ap++)
-				{;} /* nothing to execute */
-        new_addr_list = (char**)Alloc(
-            na * sizeof(char*), &buf, &bufsize, sizeof(char**));
-        if (!new_addr_list) return PR_FAILURE;
+		if ((flags & PR_AI_V4MAPPED) && (flags & (PR_AI_ALL|PR_AI_ADDRCONFIG))
+				&& !did_af_inet && (h = gethostbyname2(name, AF_INET)) != 0) {
+			/* Append the V4 addresses to the end of the list */
+			PRIntn na, na_old;
+			char **ap;
+			
+			/* Count the addresses, then grow storage for the pointers */
+			for (na_old = 0, ap = hp->h_addr_list; *ap != 0; na_old++, ap++)
+					{;} /* nothing to execute */
+			for (na = na_old + 1, ap = h->h_addr_list; *ap != 0; na++, ap++)
+					{;} /* nothing to execute */
+			new_addr_list = (char**)Alloc(
+				na * sizeof(char*), &buf, &bufsize, sizeof(char**));
+			if (!new_addr_list) return PR_FAILURE;
 
-        /* Copy the V6 addresses, one at a time */
-        for (na = 0, ap = hp->h_addr_list; *ap != 0; na++, ap++) {
-            new_addr_list[na] = hp->h_addr_list[na];
-        }
-        hp->h_addr_list = new_addr_list;
+			/* Copy the V6 addresses, one at a time */
+			for (na = 0, ap = hp->h_addr_list; *ap != 0; na++, ap++) {
+				new_addr_list[na] = hp->h_addr_list[na];
+			}
+			hp->h_addr_list = new_addr_list;
 
-        /* Copy the V4 addresses, one at a time */
-        for (ap = h->h_addr_list; *ap != 0; na++, ap++) {
-            hp->h_addr_list[na] = Alloc(hp->h_length, &buf, &bufsize, 0);
-            if (!hp->h_addr_list[na]) return PR_FAILURE;
-            MakeIPv4MappedAddr(*ap, hp->h_addr_list[na]);
-        }
-        hp->h_addr_list[na] = 0;
-    }
+			/* Copy the V4 addresses, one at a time */
+			for (ap = h->h_addr_list; *ap != 0; na++, ap++) {
+				hp->h_addr_list[na] = Alloc(hp->h_length, &buf, &bufsize, 0);
+				if (!hp->h_addr_list[na]) return PR_FAILURE;
+				MakeIPv4MappedAddr(*ap, hp->h_addr_list[na]);
+			}
+			hp->h_addr_list[na] = 0;
+		}
 #endif
+	}
 
 	UNLOCK_DNS();
 #ifdef XP_UNIX
