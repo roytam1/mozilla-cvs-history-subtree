@@ -101,12 +101,14 @@ SHARED_LIBRARY_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)winhooks_s.$(LIB_SUFFIX) \
         $(DIST)/lib/$(LIB_PREFIX)alerts_s.$(LIB_SUFFIX) \
 	$(NULL)
-OS_LIBS		+= ole32.lib shell32.lib
 LOCAL_INCLUDES	+= \
 	-I$(srcdir)/../urlwidget \
 	-I$(srcdir)/../winhooks \
         -I$(srcdir)/../alerts/src \
 	$(NULL)
+ifneq ($(OS_TARGET),WINCE)
+OS_LIBS		+= ole32.lib shell32.lib
+endif # WINCE
 endif
 
 EXTRA_DSO_LDOPTS = \

@@ -45,6 +45,10 @@
 class nsIAtom;
 class nsString;
 
+#if defined(WINCE) && defined(small)
+#undef small /* RPCNDR.H defines small as char, ugh */
+#endif /* WINCE */
+
 #define NS_IEDITPROPERTY_IID \
 {/* 9875cd40-ca81-11d2-8f4d-006008159b0c*/ \
 0x9875cd40, 0xca81, 0x11d2, \

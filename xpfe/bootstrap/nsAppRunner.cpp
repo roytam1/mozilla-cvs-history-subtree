@@ -81,8 +81,10 @@
 #include "nsIWindowWatcher.h"
 #include "nsProcess.h"
 
+#if !defined(WINCE)
 #include "InstallCleanupDefines.h"
 #include "nsISoftwareUpdate.h"
+#endif /* WINCE */
 
 // Interfaces Needed
 #include "nsIXULWindow.h"
@@ -1171,6 +1173,7 @@ static void ShowOSAlertFromFile(int argc, char **argv, const char *alert_filenam
 
 static nsresult VerifyInstallation(int argc, char **argv)
 {
+#if !defined(WINCE)
   nsresult rv;
   nsCOMPtr<nsILocalFile> registryFile;
 
@@ -1209,6 +1212,9 @@ static nsresult VerifyInstallation(int argc, char **argv)
     return NS_ERROR_FAILURE;
   }
   return NS_OK;
+#else /* WINCE */
+  return NS_OK;
+#endif /* WINCE */
 }
 
 #ifdef DEBUG_warren
@@ -1250,7 +1256,7 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
 //  _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
 #endif
 
-#ifndef XP_MAC
+#if !defined(XP_MAC) && !defined(WINCE)
   // Unbuffer debug output (necessary for automated QA performance scripts).
   setbuf( stdout, 0 );
 #endif
@@ -1290,8 +1296,14 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
 #endif
 
   NS_TIMELINE_ENTER("setup registry");
+  PRBool needAutoReg = PR_FALSE;
+#if !defined(WINCE)
   // Ask XPInstall if we need to autoregister anything new.
-  PRBool needAutoReg = NS_SoftwareUpdateNeedsAutoReg();
+  needAutoReg = NS_SoftwareUpdateNeedsAutoReg();
+#else /* WINCE */
+  // Just always do this for now.
+  needAutoReg = PR_TRUE;
+#endif /* WINCE */
 
 #ifdef DEBUG
   // _Always_ autoreg if we're in a debug build, under the assumption
@@ -1303,8 +1315,10 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
   if (needAutoReg) {
     nsComponentManager::AutoRegister(nsIComponentManagerObsolete::NS_Startup,
                                      NULL /* default */);
+#if !defined(WINCE)
     // XXX ...and autoreg was successful?
     NS_SoftwareUpdateDidAutoReg();
+#endif /* WINCE */
   }
   NS_TIMELINE_LEAVE("setup registry");
 
@@ -1699,7 +1713,7 @@ int main(int argc, char* argv[])
 {
   NS_TIMELINE_MARK("enter main");
 
-#if defined(DEBUG) && defined(XP_WIN32)
+#if defined(DEBUG) && defined(XP_WIN32) && !defined(WINCE)
   // Disable small heap allocator to get heapwalk() giving us
   // accurate heap numbers. Win2k non-debug does not use small heap allocator.
   // Win2k debug seems to be still using it.
@@ -1819,7 +1833,7 @@ int main(int argc, char* argv[])
 #if defined( XP_PC ) && defined( WIN32 )
 // We need WinMain in order to not be a console app.  This function is
 // unused if we are a console application.
-int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
+int WINAPI WinMain( HINSTANCE, HINSTANCE, LPTSTR args, int )
 {
     // Do the real work.
     return main( __argc, __argv );

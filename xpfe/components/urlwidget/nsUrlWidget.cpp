@@ -106,8 +106,8 @@ nsUrlWidget::SetURLToHiddenControl( char const *aURL, nsIDOMWindowInternal *pare
         // Set this to WS_VISIBLE to debug.
         //visibility = WS_VISIBLE;
 
-        hEdit = ::CreateWindow("Edit",
-                "",
+        hEdit = ::CreateWindow(_T("Edit"),
+                _T(""),
                 WS_CHILD | WS_BORDER | visibility,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,

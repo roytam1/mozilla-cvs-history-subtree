@@ -78,39 +78,39 @@
 #include "nsIFileStream.h"
 #include "nsFileSpec.h"
 
-#define RUNKEY "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+#define RUNKEY _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
 
 // Objects that describe the Windows registry entries that we need to tweak.
 static ProtocolRegistryEntry
-    http( "http" ),
-    https( "https" ),
-    ftp( "ftp" ),
-    chrome( "chrome" ),
-    gopher( "gopher" );
-const char *jpgExts[]  = { ".jpg", ".jpeg", ".jfif", ".pjpeg", ".pjp", 0 };
-const char *gifExts[]  = { ".gif", 0 };
-const char *pngExts[]  = { ".png", 0 };
-const char *mngExts[]  = { ".mng", 0 };
-const char *bmpExts[]  = { ".bmp", 0 };
-const char *icoExts[]  = { ".ico", 0 };
-const char *xmlExts[]  = { ".xml", 0 };
-const char *xhtmExts[] = { ".xht", ".xhtml", 0 };
-const char *xulExts[]  = { ".xul", 0 };
-const char *htmExts[]  = { ".htm", ".html", ".shtml", 0 };
+    http( _T("http") ),
+    https( _T("https") ),
+    ftp( _T("ftp") ),
+    chrome( _T("chrome") ),
+    gopher( _T("gopher") );
+const TCHAR *jpgExts[]  = { _T(".jpg"), _T(".jpeg"), _T(".jfif"), _T(".pjpeg"), _T(".pjp"), 0 };
+const TCHAR *gifExts[]  = { _T(".gif"), 0 };
+const TCHAR *pngExts[]  = { _T(".png"), 0 };
+const TCHAR *mngExts[]  = { _T(".mng"), 0 };
+const TCHAR *bmpExts[]  = { _T(".bmp"), 0 };
+const TCHAR *icoExts[]  = { _T(".ico"), 0 };
+const TCHAR *xmlExts[]  = { _T(".xml"), 0 };
+const TCHAR *xhtmExts[] = { _T(".xht"), _T(".xhtml"), 0 };
+const TCHAR *xulExts[]  = { _T(".xul"), 0 };
+const TCHAR *htmExts[]  = { _T(".htm"), _T(".html"), _T(".shtml"), 0 };
 
 static FileTypeRegistryEntry
-    jpg(   jpgExts,  "MozillaJPEG",  "JPEG Image",          "jpegfile" ),
-    gif(   gifExts,  "MozillaGIF",   "GIF Image",           "giffile" ),
-    png(   pngExts,  "MozillaPNG",   "PNG Image",           "pngfile" ),
-    mng(   mngExts,  "MozillaMNG",   "MNG Image",           ""),
-    bmp(   bmpExts,  "MozillaBMP",   "BMP Image",           "" ),
-    ico(   icoExts,  "MozillaICO",   "Icon",                "icofile" ),
-    xml(   xmlExts,  "MozillaXML",   "XML Document",        "xmlfile" ),
-    xhtml( xhtmExts, "MozillaXHTML", "XHTML Document",      "" ),
-    xul(   xulExts,  "MozillaXUL",   "Mozilla XUL Document", "" );
+    jpg(   jpgExts,  _T("MozillaJPEG"),  _T("JPEG Image"),          _T("jpegfile") ),
+    gif(   gifExts,  _T("MozillaGIF"),   _T("GIF Image"),           _T("giffile") ),
+    png(   pngExts,  _T("MozillaPNG"),   _T("PNG Image"),           _T("pngfile") ),
+    mng(   mngExts,  _T("MozillaMNG"),   _T("MNG Image"),           _T("")),
+    bmp(   bmpExts,  _T("MozillaBMP"),   _T("BMP Image"),           _T("") ),
+    ico(   icoExts,  _T("MozillaICO"),   _T("Icon"),                _T("icofile") ),
+    xml(   xmlExts,  _T("MozillaXML"),   _T("XML Document"),        _T("xmlfile") ),
+    xhtml( xhtmExts, _T("MozillaXHTML"), _T("XHTML Document"),      _T("") ),
+    xul(   xulExts,  _T("MozillaXUL"),   _T("Mozilla XUL Document"), _T("") );
 
 static EditableFileTypeRegistryEntry
-    mozillaMarkup( htmExts, "MozillaHTML", "HTML Document", "htmlfile" );
+    mozillaMarkup( htmExts, _T("MozillaHTML"), _T("HTML Document"), _T("htmlfile") );
 
 // Implementation of the nsIWindowsHooksSettings interface.
 // Use standard implementation of nsISupports stuff.
@@ -198,23 +198,23 @@ nsWindowsHooks::GetSettings( nsWindowsHooksSettings **result ) {
     NS_ADDREF( prefs );
 
     // Get each registry value and copy to prefs structure.
-    prefs->mHandleHTTP   = BoolRegistryEntry( "isHandlingHTTP"   );
-    prefs->mHandleHTTPS  = BoolRegistryEntry( "isHandlingHTTPS"  );
-    prefs->mHandleFTP    = BoolRegistryEntry( "isHandlingFTP"    );
-    prefs->mHandleCHROME = BoolRegistryEntry( "isHandlingCHROME" );
-    prefs->mHandleGOPHER = BoolRegistryEntry( "isHandlingGOPHER" );
-    prefs->mHandleHTML   = BoolRegistryEntry( "isHandlingHTML"   );
-    prefs->mHandleJPEG   = BoolRegistryEntry( "isHandlingJPEG"   );
-    prefs->mHandleGIF    = BoolRegistryEntry( "isHandlingGIF"    );
-    prefs->mHandlePNG    = BoolRegistryEntry( "isHandlingPNG"    );
-    prefs->mHandleMNG    = BoolRegistryEntry( "isHandlingMNG"    );
-    prefs->mHandleBMP    = BoolRegistryEntry( "isHandlingBMP"    );
-    prefs->mHandleICO    = BoolRegistryEntry( "isHandlingICO"    );
-    prefs->mHandleXML    = BoolRegistryEntry( "isHandlingXML"    );
-    prefs->mHandleXHTML  = BoolRegistryEntry( "isHandlingXHTML"  );
-    prefs->mHandleXUL    = BoolRegistryEntry( "isHandlingXUL"    );
-    prefs->mShowDialog   = BoolRegistryEntry( "showDialog"       );
-    prefs->mHaveBeenSet  = BoolRegistryEntry( "haveBeenSet"      );
+    prefs->mHandleHTTP   = BoolRegistryEntry( _T("isHandlingHTTP")   );
+    prefs->mHandleHTTPS  = BoolRegistryEntry( _T("isHandlingHTTPS")  );
+    prefs->mHandleFTP    = BoolRegistryEntry( _T("isHandlingFTP")    );
+    prefs->mHandleCHROME = BoolRegistryEntry( _T("isHandlingCHROME") );
+    prefs->mHandleGOPHER = BoolRegistryEntry( _T("isHandlingGOPHER") );
+    prefs->mHandleHTML   = BoolRegistryEntry( _T("isHandlingHTML")   );
+    prefs->mHandleJPEG   = BoolRegistryEntry( _T("isHandlingJPEG")   );
+    prefs->mHandleGIF    = BoolRegistryEntry( _T("isHandlingGIF")    );
+    prefs->mHandlePNG    = BoolRegistryEntry( _T("isHandlingPNG")    );
+    prefs->mHandleMNG    = BoolRegistryEntry( _T("isHandlingMNG")    );
+    prefs->mHandleBMP    = BoolRegistryEntry( _T("isHandlingBMP")    );
+    prefs->mHandleICO    = BoolRegistryEntry( _T("isHandlingICO")    );
+    prefs->mHandleXML    = BoolRegistryEntry( _T("isHandlingXML")    );
+    prefs->mHandleXHTML  = BoolRegistryEntry( _T("isHandlingXHTML")  );
+    prefs->mHandleXUL    = BoolRegistryEntry( _T("isHandlingXUL")    );
+    prefs->mShowDialog   = BoolRegistryEntry( _T("showDialog")       );
+    prefs->mHaveBeenSet  = BoolRegistryEntry( _T("haveBeenSet")      );
 
 #ifdef DEBUG_law
 NS_WARN_IF_FALSE( NS_SUCCEEDED( rv ), "GetPreferences failed" );
@@ -256,7 +256,7 @@ static PRBool misMatch( const PRBool &flag, const ProtocolRegistryEntry &entry )
 // isAccessRestricted - Returns PR_TRUE iff this user only has restricted access
 // to the registry keys we need to modify.
 static PRBool isAccessRestricted() {
-    char   subKey[] = "Software\\Mozilla - Test Key";
+    TCHAR   subKey[] = _T("Software\\Mozilla - Test Key");
     PRBool result = PR_FALSE;
     DWORD  dwDisp = 0;
     HKEY   key;
@@ -488,14 +488,14 @@ nsWindowsHooks::CheckSettings( nsIDOMWindowInternal *aParent,
                                             // have the effect of setting all the prefs
                                             // *off* if the user says no to the initial
                                             // prompt.
-                                            BoolRegistryEntry( "haveBeenSet" ).set();
+                                            BoolRegistryEntry( _T("haveBeenSet") ).set();
                                             if ( showDialog ) {
-                                                BoolRegistryEntry( "showDialog" ).set();
+                                                BoolRegistryEntry( _T("showDialog") ).set();
                                             } else {
-                                                BoolRegistryEntry( "showDialog" ).reset();
+                                                BoolRegistryEntry( _T("showDialog") ).reset();
                                             }
                                             #ifdef DEBUG_law
-                                                printf( "No, haveBeenSet=1 and showDialog=%d\n", (int)showDialog );
+                                                _tprintf( _T("No, haveBeenSet=1 and showDialog=%d\n"), (int)showDialog );
                                             #endif
                                             break;
 
@@ -503,7 +503,7 @@ nsWindowsHooks::CheckSettings( nsIDOMWindowInternal *aParent,
                                             // User says: I dunno.  Make no changes (which
                                             // should produce the same dialog next time).
                                             #ifdef DEBUG_law
-                                                printf( "Cancel\n" );
+                                                _tprintf( _T("Cancel\n") );
                                             #endif
                                             break;
                                     }
@@ -529,7 +529,7 @@ nsWindowsHooks::CheckSettings( nsIDOMWindowInternal *aParent,
 }
 
 // Utility to set PRBool registry value from getter method.
-nsresult putPRBoolIntoRegistry( const char* valueName,
+nsresult putPRBoolIntoRegistry( LPCTSTR valueName,
                                 nsIWindowsHooksSettings *prefs,
                                 nsWindowsHooksSettings::getter memFun ) {
     // Use getter method to extract attribute from prefs.
@@ -549,25 +549,25 @@ NS_IMETHODIMP
 nsWindowsHooks::SetSettings(nsIWindowsHooksSettings *prefs) {
     nsresult rv = NS_ERROR_FAILURE;
 
-    putPRBoolIntoRegistry( "isHandlingHTTP",   prefs, &nsIWindowsHooksSettings::GetIsHandlingHTTP );
-    putPRBoolIntoRegistry( "isHandlingHTTPS",  prefs, &nsIWindowsHooksSettings::GetIsHandlingHTTPS );
-    putPRBoolIntoRegistry( "isHandlingFTP",    prefs, &nsIWindowsHooksSettings::GetIsHandlingFTP );
-    putPRBoolIntoRegistry( "isHandlingCHROME", prefs, &nsIWindowsHooksSettings::GetIsHandlingCHROME );
-    putPRBoolIntoRegistry( "isHandlingGOPHER", prefs, &nsIWindowsHooksSettings::GetIsHandlingGOPHER );
-    putPRBoolIntoRegistry( "isHandlingHTML",   prefs, &nsIWindowsHooksSettings::GetIsHandlingHTML );
-    putPRBoolIntoRegistry( "isHandlingJPEG",   prefs, &nsIWindowsHooksSettings::GetIsHandlingJPEG );
-    putPRBoolIntoRegistry( "isHandlingGIF",    prefs, &nsIWindowsHooksSettings::GetIsHandlingGIF );
-    putPRBoolIntoRegistry( "isHandlingPNG",    prefs, &nsIWindowsHooksSettings::GetIsHandlingPNG );
-    putPRBoolIntoRegistry( "isHandlingMNG",    prefs, &nsIWindowsHooksSettings::GetIsHandlingMNG );
-    putPRBoolIntoRegistry( "isHandlingBMP",    prefs, &nsIWindowsHooksSettings::GetIsHandlingBMP );
-    putPRBoolIntoRegistry( "isHandlingICO",    prefs, &nsIWindowsHooksSettings::GetIsHandlingICO );
-    putPRBoolIntoRegistry( "isHandlingXML",    prefs, &nsIWindowsHooksSettings::GetIsHandlingXML );
-    putPRBoolIntoRegistry( "isHandlingXHTML",  prefs, &nsIWindowsHooksSettings::GetIsHandlingXHTML );
-    putPRBoolIntoRegistry( "isHandlingXUL",    prefs, &nsIWindowsHooksSettings::GetIsHandlingXUL );
-    putPRBoolIntoRegistry( "showDialog",       prefs, &nsIWindowsHooksSettings::GetShowDialog );
+    putPRBoolIntoRegistry( _T("isHandlingHTTP"),   prefs, &nsIWindowsHooksSettings::GetIsHandlingHTTP );
+    putPRBoolIntoRegistry( _T("isHandlingHTTPS"),  prefs, &nsIWindowsHooksSettings::GetIsHandlingHTTPS );
+    putPRBoolIntoRegistry( _T("isHandlingFTP"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingFTP );
+    putPRBoolIntoRegistry( _T("isHandlingCHROME"), prefs, &nsIWindowsHooksSettings::GetIsHandlingCHROME );
+    putPRBoolIntoRegistry( _T("isHandlingGOPHER"), prefs, &nsIWindowsHooksSettings::GetIsHandlingGOPHER );
+    putPRBoolIntoRegistry( _T("isHandlingHTML"),   prefs, &nsIWindowsHooksSettings::GetIsHandlingHTML );
+    putPRBoolIntoRegistry( _T("isHandlingJPEG"),   prefs, &nsIWindowsHooksSettings::GetIsHandlingJPEG );
+    putPRBoolIntoRegistry( _T("isHandlingGIF"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingGIF );
+    putPRBoolIntoRegistry( _T("isHandlingPNG"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingPNG );
+    putPRBoolIntoRegistry( _T("isHandlingMNG"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingMNG );
+    putPRBoolIntoRegistry( _T("isHandlingBMP"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingBMP );
+    putPRBoolIntoRegistry( _T("isHandlingICO"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingICO );
+    putPRBoolIntoRegistry( _T("isHandlingXML"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingXML );
+    putPRBoolIntoRegistry( _T("isHandlingXHTML"),  prefs, &nsIWindowsHooksSettings::GetIsHandlingXHTML );
+    putPRBoolIntoRegistry( _T("isHandlingXUL"),    prefs, &nsIWindowsHooksSettings::GetIsHandlingXUL );
+    putPRBoolIntoRegistry( _T("showDialog"),       prefs, &nsIWindowsHooksSettings::GetShowDialog );
 
     // Indicate that these settings have indeed been set.
-    BoolRegistryEntry( "haveBeenSet" ).set();
+    BoolRegistryEntry( _T("haveBeenSet") ).set();
 
     rv = SetRegistry();
 
@@ -673,9 +673,11 @@ NS_IMETHODIMP nsWindowsHooks::GetRegistryEntry( PRInt32 aHKEYConstant, const cha
         case HKCR:
             hKey = HKEY_CLASSES_ROOT;
             break;
+#if defined(HKEY_CURRENT_CONFIG)
         case HKCC:
             hKey = HKEY_CURRENT_CONFIG;
             break;
+#endif /* HKEY_CURRENT_CONFIG */
         case HKCU:
             hKey = HKEY_CURRENT_USER;
             break;
@@ -690,7 +692,14 @@ NS_IMETHODIMP nsWindowsHooks::GetRegistryEntry( PRInt32 aHKEYConstant, const cha
     }
 
     // Get requested registry entry.
+#if !defined(UNICODE)
     nsCAutoString entry( RegistryEntry( hKey, aSubKeyName, aValueName, 0 ).currentSetting() );
+#else /* UNICODE */
+    nsAutoString wSubKeyName; wSubKeyName.AssignWithConversion(aSubKeyName);
+    nsAutoString wValueName; wValueName.AssignWithConversion(aValueName);
+
+    nsCAutoString entry; entry.AssignWithConversion( RegistryEntry( hKey, wSubKeyName.get(), wValueName.get(), 0 ).currentSetting() );
+#endif /* UNICODE */
 
     // Copy to result.
     *aResult = PL_strdup( entry.get() );
@@ -717,8 +726,12 @@ NS_IMETHODIMP nsWindowsHooks::GetRegistryEntry( PRInt32 aHKEYConstant, const cha
 NS_IMETHODIMP nsWindowsHooks::IsOptionEnabled(const char* option, PRBool *_retval) { 
     NS_ASSERTION(option, "nsWindowsHooks::IsOptionEnabled requires something like \"-turbo\"");
   	*_retval = PR_FALSE;
-    RegistryEntry startup ( HKEY_CURRENT_USER, RUNKEY, NS_QUICKLAUNCH_RUN_KEY, NULL );
+    RegistryEntry startup ( HKEY_CURRENT_USER, RUNKEY, _T(NS_QUICKLAUNCH_RUN_KEY), NULL );
+#if !defined(UNICODE)
     nsCString cargs = startup.currentSetting();
+#else /* UNICODE */
+    nsCString cargs; cargs.AssignWithConversion(startup.currentSetting());
+#endif /* UNICODE */
     if (cargs.Find(option, PR_TRUE) != kNotFound)
         *_retval = PR_TRUE;
     return NS_OK;
@@ -766,11 +779,19 @@ NS_IMETHODIMP nsWindowsHooks::StartupAddOption(const char* option) {
     IsOptionEnabled(option, &retval);
     if (retval) return NS_OK; //already in there
     
-    RegistryEntry startup ( HKEY_CURRENT_USER, RUNKEY, NS_QUICKLAUNCH_RUN_KEY, NULL );
+    RegistryEntry startup ( HKEY_CURRENT_USER, RUNKEY, _T(NS_QUICKLAUNCH_RUN_KEY), NULL );
+#if !defined(UNICODE)
     nsCString cargs = startup.currentSetting();
+#else /* UNICODE */
+    nsCString cargs; cargs.AssignWithConversion(startup.currentSetting());
+#endif /* UNICODE */
     nsCAutoString newsetting;
     newsetting.Assign('\"');
+#if !defined(UNICODE)
     newsetting.Append(thisApplication());
+#else /* UNICODE */
+    newsetting.AppendWithConversion(thisApplication());
+#endif /* UNICODE */
     newsetting.Append('\"');
     if (!cargs.IsEmpty())
     {
@@ -791,7 +812,11 @@ NS_IMETHODIMP nsWindowsHooks::StartupAddOption(const char* option) {
     }
     newsetting.Append(' ');
     newsetting.Append(option);
+#if !defined(UNICODE)
     startup.setting = newsetting;
+#else /* UNICODE */
+    startup.setting.AssignWithConversion(newsetting.get());
+#endif /* UNICODE */
     startup.set();    
     return NS_OK;
 }
@@ -817,8 +842,12 @@ NS_IMETHODIMP nsWindowsHooks::StartupRemoveOption(const char* option) {
     if ( !startupFound )
         return NS_OK;               // already disabled, no need to do anything
 
-    RegistryEntry startup ( HKEY_CURRENT_USER, RUNKEY, NS_QUICKLAUNCH_RUN_KEY, NULL );
+    RegistryEntry startup ( HKEY_CURRENT_USER, RUNKEY, _T(NS_QUICKLAUNCH_RUN_KEY), NULL );
+#if !defined(UNICODE)
     nsCString cargs = startup.currentSetting();
+#else /* UNICODE */
+    nsCString cargs; cargs.AssignWithConversion(startup.currentSetting());
+#endif /* UNICODE */
     char* args;
     // exploiting the fact that nsString's storage is also a char* buffer.
     // NS_CONST_CAST is safe here because nsCRT::strtok will only modify
@@ -841,11 +870,19 @@ NS_IMETHODIMP nsWindowsHooks::StartupRemoveOption(const char* option) {
     }
     else
     {
+#if !defined(UNICODE)
         nsCAutoString ufileName;
-        ufileName.Assign('\"');
+#else /* UNICODE */
+        nsAutoString ufileName;
+#endif /* UNICODE */
+        ufileName.Assign(_T('\"'));
         ufileName.Append(thisApplication());
-        ufileName.Append('\"');
+        ufileName.Append(_T('\"'));
+#if !defined(UNICODE)
         ufileName.Append(launchcommand);
+#else /* UNICODE */
+        ufileName.AppendWithConversion(launchcommand.get());
+#endif /* UNICODE */
         startup.setting = ufileName;
         startup.set();
     }
@@ -969,10 +1006,14 @@ nsWindowsHooks::SetImageAsWallpaper(nsIDOMElement* aElement, PRBool aUseBackgrou
     return NS_ERROR_FAILURE;
 
   // get the windows directory ('c:\windows' usually)
-  char winDir[256];
-  ::GetWindowsDirectory(winDir, sizeof(winDir));
+  TCHAR winDir[256];
+  ::GetWindowsDirectory(winDir, sizeof(winDir) / sizeof(TCHAR));
   nsAutoString winPath;
+#if !defined(UNICODE)
   winPath.AssignWithConversion(winDir);
+#else /* UNICODE */
+  winPath.Assign(winDir);
+#endif /* UNICODE */
   
   // get the product brand name from localized strings
   nsXPIDLString brandName;

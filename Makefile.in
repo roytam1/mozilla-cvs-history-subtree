@@ -220,7 +220,11 @@ ifdef MOZ_JPROF
 tier_9_dirs        += tools/jprof
 endif
 
-tier_9_dirs	+= xpfe xpinstall
+tier_9_dirs	+= xpfe
+
+ifneq ($(OS_TARGET),WINCE)
+tier_9_dirs	+= xpinstall
+endif # WINCE
 
 ifdef MOZ_LEAKY
 tier_9_dirs        += tools/leaky

@@ -3163,6 +3163,7 @@ nsBookmarksService::ResolveKeyword(const PRUnichar *aUserInput, char **aShortcut
 // Determines the URL for a shortcut file 
 static void ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL)
 {
+#if !defined(WINCE)
 // IUniformResourceLocator isn't supported by VC5 (bless its little heart)
 #if _MSC_VER >= 1200
   HRESULT result;
@@ -3197,6 +3198,7 @@ static void ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL)
     urlLink->Release();
   }
 #endif
+#endif /* WINCE */
 } 
 
 nsresult

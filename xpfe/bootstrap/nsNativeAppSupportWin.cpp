@@ -81,6 +81,12 @@
 #include <io.h>
 #include <fcntl.h>
 
+#if !defined(WINCE)
+#define WANT_DDE 1
+#else /* WINCE */
+#define WANT_DDE 0
+#endif /* WINCE */
+
 #define TURBO_NAVIGATOR 1
 #define TURBO_MAIL 2
 #define TURBO_EDITOR 3
@@ -141,11 +147,12 @@ activateWindow( nsIDOMWindowInternal *win ) {
 
 // Define this macro to 1 to get DDE debugging output.
 #define MOZ_DEBUG_DDE 0
-
+#if WANT_DDE
 #ifdef DEBUG_law
 #undef MOZ_DEBUG_DDE
 #define MOZ_DEBUG_DDE 1
 #endif
+#endif /* WANT_DDE */
 
 class nsSplashScreenWin : public nsISplashScreen {
 public:
@@ -203,7 +210,7 @@ public:
 
 // Simple Win32 mutex wrapper.
 struct Mutex {
-    Mutex( const char *name )
+    Mutex( LPCTSTR name )
         : mName( name ),
           mHandle( 0 ),
           mState( -1 ) {
@@ -249,7 +256,11 @@ struct Mutex {
         }
     }
 private:
+#if !defined(UNICODE)
     nsCString mName;
+#else /* UNICODE */
+    nsString mName;
+#endif /* UNICODE */
     HANDLE    mHandle;
     DWORD     mState;
 };
@@ -346,8 +357,10 @@ public:
     NS_IMETHOD SetIsServerMode( PRBool isServerMode );
     NS_IMETHOD EnsureProfile(nsICmdLineService* args);
 
+#if WANT_DDE
     // The "old" Start method (renamed).
     NS_IMETHOD StartDDE();
+#endif /* WANT_DDE */
 
     // Utility function to handle a Win32-specific command line
     // option: "-console", which dynamically creates a Windows
@@ -355,6 +368,7 @@ public:
     void CheckConsole();
 
 private:
+#if WANT_DDE
     static HDDEDATA CALLBACK HandleDDENotification( UINT     uType,
                                                     UINT     uFmt,
                                                     HCONV    hconv,
@@ -363,13 +377,14 @@ private:
                                                     HDDEDATA hdata,
                                                     ULONG    dwData1,
                                                     ULONG    dwData2 );
-    static void HandleRequest( LPBYTE request, PRBool newWindow = PR_TRUE );
     static nsCString ParseDDEArg( HSZ args, int index );
-    static void ActivateLastWindow();
     static HDDEDATA CreateDDEData( DWORD value );
     static HDDEDATA CreateDDEData( LPBYTE value, DWORD len );
-    static PRBool   InitTopicStrings();
     static int      FindTopic( HSZ topic );
+#endif /* WANT_DDE */
+    static void HandleRequest( LPBYTE request, PRBool newWindow = PR_TRUE );
+    static void ActivateLastWindow();
+    static PRBool   InitTopicStrings();
     static nsresult GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResult );
     static nsresult OpenWindow( const char *urlstr, const char *args );
     static nsresult OpenBrowserWindow( const char *args, PRBool newWindow = PR_TRUE );
@@ -395,13 +410,15 @@ private:
     static NOTIFYICONDATA mIconData;
     static HMENU          mTrayIconMenu;
 
+#if WANT_DDE
     static HSZ   mApplication, mTopics[ topicCount ];
+#endif /* WANT_DDE */
     static DWORD mInstance;
-    static char *mAppName;
+    static LPTSTR mAppName;
     static nsIDOMWindow *mInitialWindow;
     static PRBool mForceProfileStartup;
     static PRBool mSupportingDDEExec;
-    static char mMutexName[];
+    static TCHAR mMutexName[];
     friend struct MessageWindow;
 }; // nsNativeAppSupportWin
 
@@ -456,11 +473,11 @@ nsSplashScreenWin::Hide() {
 void
 nsSplashScreenWin::LoadBitmap() {
     // Check for '<program-name>.bmp" in same directory as executable.
-    char fileName[ _MAX_PATH ];
-    int fileNameLen = ::GetModuleFileName( NULL, fileName, sizeof fileName );
+    TCHAR fileName[ _MAX_PATH ];
+    int fileNameLen = ::GetModuleFileName( NULL, fileName, sizeof fileName / sizeof TCHAR);
     if ( fileNameLen >= 3 ) {
         fileName[ fileNameLen - 3 ] = 0;
-        strcat( fileName, "bmp" );
+        _tcscat( fileName, _T("bmp") );
         // Try to load bitmap from that file.
         HBITMAP bitmap = (HBITMAP)::LoadImage( NULL,
                                                fileName,
@@ -570,6 +587,7 @@ PRBool gAbortServer = PR_FALSE;
 void
 nsNativeAppSupportWin::CheckConsole() {
     for ( int i = 1; i < __argc; i++ ) {
+#if !defined(WINCE)
         if ( strcmp( "-console", __argv[i] ) == 0
              ||
              strcmp( "/console", __argv[i] ) == 0 ) {
@@ -619,7 +637,9 @@ nsNativeAppSupportWin::CheckConsole() {
             }
             // Don't bother doing this more than once.
             break;
-        } else if ( strcmp( "-turbo", __argv[i] ) == 0
+        } else
+#endif /* WINCE */
+        if ( strcmp( "-turbo", __argv[i] ) == 0
                     ||
                     strcmp( "/turbo", __argv[i] ) == 0
                     ||
@@ -647,19 +667,23 @@ nsNativeAppSupportWin::CheckConsole() {
     // the servermoded browser instance.
     if (!mServerMode ) {
         HKEY key;
-        LONG result = ::RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &key );
+        LONG result = ::RegOpenKeyEx( HKEY_CURRENT_USER, _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run"), 0, KEY_QUERY_VALUE, &key );
         if ( result == ERROR_SUCCESS ) {
           BYTE regvalue[_MAX_PATH];
           DWORD type, len = sizeof(regvalue);
-          result = ::RegQueryValueEx( key, NS_QUICKLAUNCH_RUN_KEY, NULL, &type, regvalue, &len);
+          result = ::RegQueryValueEx( key, _T(NS_QUICKLAUNCH_RUN_KEY), NULL, &type, regvalue, &len);
           ::RegCloseKey( key );
           if ( result == ERROR_SUCCESS && len > 0 ) {
               // Make sure the filename in the quicklaunch command matches us
-              char fileName[_MAX_PATH];
-              int rv = ::GetModuleFileName( NULL, fileName, sizeof fileName );
+              TCHAR fileName[_MAX_PATH];
+              int rv = ::GetModuleFileName( NULL, fileName, sizeof fileName / sizeof TCHAR);
+#if !defined(UNICODE)
               nsCAutoString regvalueholder;
-              regvalueholder.Assign((char *) regvalue);
-              if ((regvalueholder.Find(fileName, PR_TRUE) != kNotFound) && (regvalueholder.Find("-turbo", PR_TRUE) != kNotFound) ) {
+#else /* UNICODE */
+              nsAutoString regvalueholder;
+#endif /* UNICODE */
+              regvalueholder.Assign((LPTSTR) regvalue);
+              if ((regvalueholder.Find(fileName, PR_TRUE) != kNotFound) && (regvalueholder.Find(_T("-turbo"), PR_TRUE) != kNotFound) ) {
                   mServerMode = PR_TRUE;
                   mShouldShowUI = PR_TRUE;
               }
@@ -718,8 +742,8 @@ NS_CreateSplashScreen( nsISplashScreen **aResult ) {
 }
 
 // Constants
-#define MOZ_DDE_APPLICATION    "Mozilla"
-#define MOZ_STARTUP_MUTEX_NAME "StartupMutex"
+#define MOZ_DDE_APPLICATION    _T("Mozilla")
+#define MOZ_STARTUP_MUTEX_NAME _T("StartupMutex")
 #define MOZ_DDE_START_TIMEOUT 30000
 #define MOZ_DDE_STOP_TIMEOUT  15000
 #define MOZ_DDE_EXEC_TIMEOUT  15000
@@ -735,8 +759,10 @@ const char * const topicNames[] = { "WWW_OpenURL",
 
 // Static member definitions.
 int   nsNativeAppSupportWin::mConversations = 0;
+#if WANT_DDE
 HSZ   nsNativeAppSupportWin::mApplication   = 0;
 HSZ   nsNativeAppSupportWin::mTopics[nsNativeAppSupportWin::topicCount] = { 0 };
+#endif /* WANT_DDE */
 DWORD nsNativeAppSupportWin::mInstance      = 0;
 nsIDOMWindow* nsNativeAppSupportWin::mInitialWindow = nsnull;
 PRBool nsNativeAppSupportWin::mForceProfileStartup = PR_FALSE;
@@ -751,7 +777,7 @@ NOTIFYICONDATA nsNativeAppSupportWin::mIconData = { sizeof(NOTIFYICONDATA),
                                                     0 };
 HMENU nsNativeAppSupportWin::mTrayIconMenu = 0;
 
-char nsNativeAppSupportWin::mMutexName[ 128 ] = { 0 };
+TCHAR nsNativeAppSupportWin::mMutexName[ 128 ] = { 0 };
 
 
 // Message window encapsulation.
@@ -768,15 +794,15 @@ struct MessageWindow {
     }
 
     // Class name: appName + "MessageWindow"
-    static const char *className() {
-        static char classNameBuffer[128];
-        static char *mClassName = 0;
+    static LPCTSTR className() {
+        static TCHAR classNameBuffer[128];
+        static LPTSTR mClassName = 0;
         if ( !mClassName ) {
-            ::_snprintf( classNameBuffer,
-                         sizeof classNameBuffer,
-                         "%s%s",
+            ::_sntprintf( classNameBuffer,
+                         sizeof classNameBuffer / sizeof TCHAR,
+                         _T("%s%s"),
                          nsNativeAppSupportWin::mAppName,
-                         "MessageWindow" );
+                         _T("MessageWindow") );
             mClassName = classNameBuffer;
         }
         return mClassName;
@@ -817,8 +843,8 @@ struct MessageWindow {
     }
 
     // SendRequest: Pass string via WM_COPYDATA to message window.
-    NS_IMETHOD SendRequest( const char *cmd ) {
-        COPYDATASTRUCT cds = { 0, ::strlen( cmd ) + 1, (void*)cmd };
+    NS_IMETHOD SendRequest( LPCTSTR cmd ) {
+        COPYDATASTRUCT cds = { 0, _tcslen( cmd ) + 1, (void*)cmd };
         HWND newWin = (HWND)::SendMessage( mHandle, WM_COPYDATA, 0, (LPARAM)&cds );
         if ( newWin ) {
             ::SetForegroundWindow( newWin );
@@ -933,6 +959,7 @@ struct MessageWindow {
          (void)nsNativeAppSupportWin::HandleRequest( (LPBYTE)"mozilla" );
      }
      return TRUE;
+#if defined(WM_QUERYENDSESSION)
   } else if ( msg == WM_QUERYENDSESSION ) {
     // Invoke "-killAll" cmd line handler.  That will close all open windows,
     // and display dialog asking whether to save/don't save/cancel.  If the
@@ -955,6 +982,7 @@ struct MessageWindow {
             return TRUE;
         }
     }
+#endif /* WM_QUERYENDSESSION */
   } else if ((nsNativeAppSupportWin::mTrayRestart) && (msg == nsNativeAppSupportWin::mTrayRestart)) {
      //Re-add the icon. The taskbar must have been destroyed and recreated
      ::Shell_NotifyIcon( NIM_ADD, &nsNativeAppSupportWin::mIconData );
@@ -967,8 +995,8 @@ private:
 }; // struct MessageWindow
 
 UINT nsNativeAppSupportWin::mTrayRestart = 0;
-static char nameBuffer[128] = { 0 };
-char *nsNativeAppSupportWin::mAppName = nameBuffer;
+static TCHAR nameBuffer[128] = { 0 };
+LPTSTR nsNativeAppSupportWin::mAppName = nameBuffer;
 
 /* Start: Tries to find the "message window" to determine if it
  *        exists.  If so, then Mozilla is already running.  In that
@@ -999,7 +1027,7 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
     // Grab mutex first.
 	int retval;
 	UINT id = ID_DDE_APPLICATION_NAME;
-	retval = LoadString( (HINSTANCE) NULL, id, (LPTSTR) nameBuffer, sizeof(nameBuffer) );
+	retval = LoadString( (HINSTANCE) NULL, id, (LPTSTR) nameBuffer, sizeof(nameBuffer) / sizeof(TCHAR) );
     if ( retval == 0 ) {
         // No app name; just keep running.
         *aResult = PR_TRUE;
@@ -1007,7 +1035,7 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
     }
 
     // Build mutex name from app name.
-    ::_snprintf( mMutexName, sizeof mMutexName, "%s%s", nameBuffer, MOZ_STARTUP_MUTEX_NAME );
+    ::_sntprintf( mMutexName, sizeof mMutexName / sizeof TCHAR, _T("%s%s"), nameBuffer, MOZ_STARTUP_MUTEX_NAME );
     Mutex startupLock = Mutex( mMutexName );
 
     NS_ENSURE_TRUE( startupLock.Lock( MOZ_DDE_START_TIMEOUT ), NS_ERROR_FAILURE );
@@ -1023,8 +1051,10 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
         if (!gAbortServer) {
             rv = msgWindow.Create();
             if ( NS_SUCCEEDED( rv ) ) {
+#if WANT_DDE
                 // Start up DDE server.
                 this->StartDDE();
+#endif /* WANT_DDE */
                 // Tell caller to spin message loop.
                 *aResult = PR_TRUE;
             }
@@ -1038,14 +1068,17 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
 
 PRBool
 nsNativeAppSupportWin::InitTopicStrings() {
+#if WANT_DDE
     for ( int i = 0; i < topicCount; i++ ) {
         if ( !( mTopics[ i ] = DdeCreateStringHandle( mInstance, topicNames[ i ], CP_WINANSI ) ) ) {
             return PR_FALSE;
         }
     }
+#endif /* WANT_DDE */
     return PR_TRUE;
 }
 
+#if WANT_DDE
 int
 nsNativeAppSupportWin::FindTopic( HSZ topic ) {
     for ( int i = 0; i < topicCount; i++ ) {
@@ -1055,6 +1088,7 @@ nsNativeAppSupportWin::FindTopic( HSZ topic ) {
     }
     return -1;
 }
+#endif /* WANT_DDE */
 
 // Utility function that determines if we're handling http Internet shortcuts.
 static PRBool handlingHTTP() {
@@ -1104,10 +1138,10 @@ static PRBool handlingHTTP() {
 }
 
 // Utility function to delete a registry subkey.
-static DWORD deleteKey( HKEY baseKey, const char *keyName ) {
+static DWORD deleteKey( HKEY baseKey, LPCTSTR keyName ) {
     // Make sure input subkey isn't null.
     DWORD rc;
-    if ( keyName && ::strlen(keyName) ) {
+    if ( keyName && _tcslen(keyName) ) {
         // Open subkey.
         HKEY key;
         rc = ::RegOpenKeyEx( baseKey,
@@ -1117,8 +1151,8 @@ static DWORD deleteKey( HKEY baseKey, const char *keyName ) {
                              &key );
         // Continue till we get an error or are done.
         while ( rc == ERROR_SUCCESS ) {
-            char subkeyName[_MAX_PATH];
-            DWORD len = sizeof subkeyName;
+            TCHAR subkeyName[_MAX_PATH];
+            DWORD len = sizeof subkeyName / sizeof TCHAR;
             // Get first subkey name.  Note that we always get the
             // first one, then delete it.  So we need to get
             // the first one next time, also.
@@ -1147,7 +1181,7 @@ static DWORD deleteKey( HKEY baseKey, const char *keyName ) {
     return rc;
 }
 
-
+#if WANT_DDE
 // Start DDE server.
 //
 // This used to be the Start() method when we were using DDE as the
@@ -1182,6 +1216,7 @@ nsNativeAppSupportWin::StartDDE() {
 
     return NS_OK;
 }
+#endif /* WANT_DDE */
 
 // If no DDE conversations are pending, terminate DDE.
 NS_IMETHODIMP
@@ -1222,9 +1257,10 @@ nsNativeAppSupportWin::Quit() {
 #if MOZ_DEBUG_DDE
             printf( "Deleting ddexec subkey on exit\n" );
 #endif
-            deleteKey( HKEY_CLASSES_ROOT, "http\\shell\\open\\ddeexec" );
+            deleteKey( HKEY_CLASSES_ROOT, _T("http\\shell\\open\\ddeexec") );
         }
 
+#if WANT_DDE
         // Unregister application name.
         DdeNameService( mInstance, mApplication, 0, DNS_UNREGISTER );
         // Clean up strings.
@@ -1239,6 +1275,7 @@ nsNativeAppSupportWin::Quit() {
             }
         }
         DdeUninitialize( mInstance );
+#endif /* WANT_DDE */
         mInstance = 0;
     }
 
@@ -1297,9 +1334,11 @@ static nsCString hszValue( DWORD instance, HSZ hsz ) {
 static nsCString uTypeDesc( UINT ) {
     return nsCString( "?" );
 }
+#if WANT_DDE
 static nsCString hszValue( DWORD, HSZ ) {
     return nsCString( "?" );
 }
+#endif /* WANT_DDE */
 #endif
 
 
@@ -1322,6 +1361,7 @@ static void escapeQuotes( nsAString &aString ) {
     return;
 }
 
+#if WANT_DDE
 HDDEDATA CALLBACK
 nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction type
                                               UINT uFmt,        // clipboard data format
@@ -1576,6 +1616,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
 #endif
     return result;
 }
+#endif /* WANT_DDE */
 
 // Utility function to advance to end of quoted string.
 // p+offset must point to the comma preceding the arg on entry.
@@ -1598,6 +1639,7 @@ static PRInt32 advanceToEndOfQuotedArg( const char *p, PRInt32 offset, PRInt32 l
     return offset;
 }
 
+#if WANT_DDE
 // Utility to parse out argument from a DDE item string.
 nsCString nsNativeAppSupportWin::ParseDDEArg( HSZ args, int index ) {
     nsCString result;
@@ -1644,6 +1686,7 @@ nsCString nsNativeAppSupportWin::ParseDDEArg( HSZ args, int index ) {
     }
     return result;
 }
+#endif /* WANT_DDE */
 
 void nsNativeAppSupportWin::ActivateLastWindow() {
     nsCOMPtr<nsIDOMWindowInternal> navWin;
@@ -1657,6 +1700,7 @@ void nsNativeAppSupportWin::ActivateLastWindow() {
     }
 }
 
+#if WANT_DDE
 HDDEDATA nsNativeAppSupportWin::CreateDDEData( DWORD value ) {
     return CreateDDEData( (LPBYTE)&value, sizeof value );
 }
@@ -1671,6 +1715,7 @@ HDDEDATA nsNativeAppSupportWin::CreateDDEData( LPBYTE value, DWORD len ) {
                                            0 );
     return result;
 }
+#endif /* WANT_DDE */
 
 // Handle DDE request.  The argument is the command line received by the
 // DDE client process.  We convert that string to an nsICmdLineService
@@ -2017,25 +2062,25 @@ nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
 printf( "Setting ddexec subkey entries\n" );
 #endif
       // Set ddeexec default value.
-      const char ddeexec[] = "\"%1\",,-1,0,,,,";
+      const TCHAR ddeexec[] = _T("\"%1\",,-1,0,,,,");
       ::RegSetValue( HKEY_CLASSES_ROOT,
-                     "http\\shell\\open\\ddeexec",
+                     _T("http\\shell\\open\\ddeexec"),
                      REG_SZ,
-                     ddeexec,
+                     (LPBYTE)ddeexec,
                      sizeof ddeexec );
 
       // Set application/topic (while we're running), reset at exit.
       ::RegSetValue( HKEY_CLASSES_ROOT,
-                     "http\\shell\\open\\ddeexec\\application",
+                     _T("http\\shell\\open\\ddeexec\\application"),
                      REG_SZ,
-                     mAppName,
-                     ::strlen( mAppName ) );
+                     (LPBYTE)mAppName,
+                     _tcslen( mAppName ) );
 
-      const char topic[] = "WWW_OpenURL";
+      const TCHAR topic[] = _T("WWW_OpenURL");
       ::RegSetValue( HKEY_CLASSES_ROOT,
-                     "http\\shell\\open\\ddeexec\\topic",
+                     _T("http\\shell\\open\\ddeexec\\topic"),
                      REG_SZ,
-                     topic,
+                     (LPBYTE)topic,
                      sizeof topic );
 
       // Remember we need to undo this.
@@ -2094,7 +2139,7 @@ nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args ) {
   return rv;
 }
 
-static char procPropertyName[] = "MozillaProcProperty";
+static TCHAR procPropertyName[] = _T("MozillaProcProperty");
 
 // Subclass procedure used to filter out WM_SETFOCUS messages while reparenting.
 static LRESULT CALLBACK focusFilterProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
@@ -2103,7 +2148,10 @@ static LRESULT CALLBACK focusFilterProc( HWND hwnd, UINT uMsg, WPARAM wParam, LP
         return 0;
     } else {
         // Pass on all other messages to Mozilla's window proc.
-        HANDLE oldProc = ::GetProp( hwnd, procPropertyName );
+        HANDLE oldProc = NULL;
+#if !defined(WINCE)
+        oldProc = ::GetProp( hwnd, procPropertyName );
+#endif /* WINCE */
         if ( oldProc ) {
             return ::CallWindowProc( (WNDPROC)oldProc, hwnd, uMsg, wParam, lParam );
         } else {
@@ -2153,9 +2201,11 @@ nsNativeAppSupportWin::ReParent( nsISupports *window, HWND newParent ) {
                                    GWL_WNDPROC,
                                    (LONG)(WNDPROC)focusFilterProc );
 
+#if !defined(WINCE)
         // Store old procedure in window so it is available within
         // focusFilterProc.
         ::SetProp( hMainFrame, procPropertyName, (HANDLE)oldProc );
+#endif /* WINCE */
     }
 
     // Reset the parent.
@@ -2164,7 +2214,9 @@ nsNativeAppSupportWin::ReParent( nsISupports *window, HWND newParent ) {
     // Restore old procedure.
     if ( newParent ) {
         ::SetWindowLong( hMainFrame, GWL_WNDPROC, oldProc );
+#if !defined(WINCE)
         ::RemoveProp( hMainFrame, procPropertyName );
+#endif /* WINCE */
     }
 
     return NS_OK;
@@ -2274,11 +2326,15 @@ nsNativeAppSupportWin::OpenBrowserWindow( const char *args, PRBool newWindow ) {
 }
 
 void AppendMenuItem( HMENU& menu, PRInt32 aIdentifier, const nsString& aText ) {
+#if !defined(UNICODE)
   char* ACPText = GetACPString( aText );
   if ( ACPText ) {
     ::AppendMenu( menu, MF_STRING, aIdentifier, ACPText );
     delete [] ACPText;
   }
+#else
+  ::AppendMenu( menu, MF_STRING, aIdentifier, aText.get() );
+#endif
 }
 
 // Utility function that sets up system tray icon.
@@ -2289,12 +2345,16 @@ nsNativeAppSupportWin::SetupSysTrayIcon() {
     mIconData.hWnd  = (HWND)MessageWindow();
 
     // Icon is our default application icon.
+#if defined(IDI_APPLICATION)
     mIconData.hIcon =  (HICON)::LoadImage( ::GetModuleHandle( NULL ),
                                            IDI_APPLICATION,
                                            IMAGE_ICON,
                                            ::GetSystemMetrics( SM_CXSMICON ),
                                            ::GetSystemMetrics( SM_CYSMICON ),
                                            NULL );
+#else
+    mIconData.hIcon = NULL;
+#endif
 
     // Tooltip is the brand short name.
     mIconData.szTip[0] = 0;
@@ -2306,9 +2366,13 @@ nsNativeAppSupportWin::SetupSysTrayIcon() {
         if ( brandBundle ) {
             brandBundle->GetStringFromName( NS_LITERAL_STRING( "brandShortName" ).get(),
                                             getter_Copies( tooltip ) );
-            ::strncpy( mIconData.szTip,
-                       NS_LossyConvertUCS2toASCII(tooltip).get(),
-                       sizeof mIconData.szTip - 1 );
+            _tcsncpy( mIconData.szTip,
+#if !defined(UNICODE)
+                      NS_LossyConvertUCS2toASCII(tooltip).get(),
+#else /* UNICODE */
+                      tooltip.get(),
+#endif /* UNICODE */
+                      sizeof mIconData.szTip / sizeof TCHAR - 1 );
         }
         // Build menu.
         nsCOMPtr<nsIStringBundle> turboBundle;
@@ -2579,16 +2643,21 @@ nsNativeAppSupportWin::OnLastWindowClosing( nsIXULWindow *aWindow ) {
         DWORD rc = ::DestroyWindow( (HWND)MessageWindow() );
     
         // Launch another instance.
-        char buffer[ _MAX_PATH ];
+        TCHAR buffer[ _MAX_PATH ];
         // Same application as this one.
-        ::GetModuleFileName( 0, buffer, sizeof buffer );
+        ::GetModuleFileName( 0, buffer, sizeof buffer / sizeof TCHAR );
         // Clean up name so we don't have to worry about enclosing it in quotes.
-        ::GetShortPathName( buffer, buffer, sizeof buffer );
+        ::GetShortPathName( buffer, buffer, sizeof buffer / sizeof TCHAR);
+#if !defined(UNICODE)
         nsCAutoString cmdLine( buffer );
+#else /* UNICODE */
+        nsAutoString cmdLine( buffer );
+#endif /* UNICODE */
         // The new process must run in turbo mode (no splash screen, no window, etc.).
-        cmdLine.Append( " -turbo" );
+        cmdLine.Append( _T(" -turbo") );
     
         // Now do the Win32 stuff...
+#if !defined(WINCE)
         STARTUPINFO startupInfo;
         ::GetStartupInfo( &startupInfo );
         PROCESS_INFORMATION processInfo;
@@ -2602,6 +2671,19 @@ nsNativeAppSupportWin::OnLastWindowClosing( nsIXULWindow *aWindow ) {
                               0,
                               &startupInfo,
                               &processInfo );
+#else /* WINCE */
+        PROCESS_INFORMATION processInfo;
+        rc = ::CreateProcess( 0,
+                              (LPTSTR)cmdLine.get(),
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              NULL,
+                              &processInfo );
+#endif /* WINCE */
     
         // Turn off turbo mode and quit the application.
         SetIsServerMode( PR_FALSE );

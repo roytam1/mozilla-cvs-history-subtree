@@ -248,7 +248,8 @@ nsresult CMfcEmbedApp::OverrideComponents()
 
 void CMfcEmbedApp::ShowDebugConsole()
 {
-#if defined(_DEBUG) && !defined(WINCE)
+#if !defined(WINCE)
+#if defined(_DEBUG)
     // Show console only in debug mode
 
     if(! AllocConsole())
@@ -286,6 +287,15 @@ void CMfcEmbedApp::ShowDebugConsole()
         setvbuf(stderr, NULL, _IONBF, 0); 
     }
 #endif
+#else /* WINCE */
+    //
+    // Rewrite stdin, stdout, stderr handles to some files we can look at.
+    // Assuming the locations valid.
+    //
+    FILE* redir_stdin = _wfreopen(_T("\\Temp\\stdin.txt"), _T("rb"), stdin);
+    FILE* redir_stdout = _wfreopen(_T("\\Temp\\stdout.txt"), _T("wb"), stdout);
+    FILE* redir_stderr = _wfreopen(_T("\\Temp\\stderr.txt"), _T("wb"), stderr);
+#endif /* WINCE */
 }
 
 // Initialize our MFC application and also init

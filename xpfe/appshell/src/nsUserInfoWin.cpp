@@ -59,6 +59,7 @@ nsUserInfo::GetUsername(char **aUsername)
 {
     *aUsername = nsnull;
 
+#if !defined(WINCE)
     TCHAR username[256];
     DWORD size = 256;
 
@@ -68,6 +69,7 @@ nsUserInfo::GetUsername(char **aUsername)
     *aUsername = nsCRT::strdup(username);
     
     if (*aUsername) return NS_OK;
+#endif /* WINCE */
 
     return NS_ERROR_FAILURE;
 }
