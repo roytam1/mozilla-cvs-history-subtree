@@ -14,6 +14,7 @@
 				F512F52B02D1287F01072C9F,
 				F5A3669702CCFAF601DC3354,
 				F512F52C02D1287F01072C9F,
+				F57BED9603A1822701A9666E,
 				F50D9DE602ECC32301BB4219,
 				F558B1F603107E4A0166970F,
 				F512F52D02D1287F01072C9F,
@@ -560,6 +561,8 @@
 				F53D36BE037843C201A80166,
 				F58DB2D40381FD3301A9666E,
 				F55EBC9C0383665201A80166,
+				F57BED9B03A1824801A9666E,
+				F57BEDA003A1825001A9666E,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -705,6 +708,8 @@
 				F5B63094037A41E301A80166,
 				F58DB2D50381FD3301A9666E,
 				F55EBC9D0383665201A80166,
+				F57BED9803A1824001A9666E,
+				F57BED9F03A1825001A9666E,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5385,6 +5390,89 @@
 			settings = {
 			};
 		};
+		F57BED9603A1822701A9666E = {
+			children = (
+				F57BED9E03A1825001A9666E,
+				F57BED9A03A1824801A9666E,
+				F57BED9D03A1825001A9666E,
+				F57BED9703A1824001A9666E,
+			);
+			isa = PBXGroup;
+			name = Rendezvous;
+			refType = 4;
+		};
+		F57BED9703A1824001A9666E = {
+			isa = PBXFileReference;
+			name = NetworkServices.mm;
+			path = src/rendezvous/NetworkServices.mm;
+			refType = 2;
+		};
+		F57BED9803A1824001A9666E = {
+			fileRef = F57BED9703A1824001A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BED9903A1824001A9666E = {
+			fileRef = F57BED9703A1824001A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BED9A03A1824801A9666E = {
+			isa = PBXFileReference;
+			name = NetworkServices.h;
+			path = src/rendezvous/NetworkServices.h;
+			refType = 2;
+		};
+		F57BED9B03A1824801A9666E = {
+			fileRef = F57BED9A03A1824801A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BED9C03A1824801A9666E = {
+			fileRef = F57BED9A03A1824801A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BED9D03A1825001A9666E = {
+			isa = PBXFileReference;
+			name = DNSUtils.c;
+			path = src/rendezvous/DNSUtils.c;
+			refType = 2;
+		};
+		F57BED9E03A1825001A9666E = {
+			isa = PBXFileReference;
+			name = DNSUtils.h;
+			path = src/rendezvous/DNSUtils.h;
+			refType = 2;
+		};
+		F57BED9F03A1825001A9666E = {
+			fileRef = F57BED9D03A1825001A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BEDA003A1825001A9666E = {
+			fileRef = F57BED9E03A1825001A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BEDA103A1825001A9666E = {
+			fileRef = F57BED9D03A1825001A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F57BEDA203A1825001A9666E = {
+			fileRef = F57BED9E03A1825001A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F57F0F470209DF5301A967DF = {
 			isa = PBXFileReference;
 			name = libxpcom.dylib;
@@ -7209,6 +7297,8 @@
 				F5B63092037A3AAC01A80166,
 				F58DB2D60381FD3301A9666E,
 				F55EBC9E0383665201A80166,
+				F57BED9C03A1824801A9666E,
+				F57BEDA203A1825001A9666E,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7366,6 +7456,8 @@
 				F5B63090037A3A7501A80166,
 				F58DB2D70381FD3301A9666E,
 				F55EBC9F0383665201A80166,
+				F57BED9903A1824001A9666E,
+				F57BEDA103A1825001A9666E,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
