@@ -621,7 +621,7 @@ get_ber_len( BerElement *ber)
       return(LBER_DEFAULT);
     }
     memcpy((char*) &len + sizeof(unsigned long) - noctets, &ber->ber_len_contents[1], noctets);
-    LBER_NTOHL(len);
+    len = LBER_NTOHL(len);
     return(len);
   } else {
     return((unsigned long)(xbyte));
@@ -690,7 +690,7 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 	  if ((tag = get_tag(sb, ber)) == LBER_DEFAULT ) {
 	    return( LBER_DEFAULT );
 	  }
-	  ber->ber_tag_contents[0] = tag;
+	  ber->ber_tag_contents[0] = (char)tag; /* we only handle 1 byte tags */
 	  
 	  /* read the length */
 	  if ((newlen = read_len_in_ber(sb, ber)) == LBER_DEFAULT ) {
