@@ -112,10 +112,6 @@ nsXPInstallManager::nsXPInstallManager()
 
 nsXPInstallManager::~nsXPInstallManager()
 {
-    nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
-    if (os)
-        os->RemoveObserver(this, XPI_PROGRESS_TOPIC);
- 
     if (mTriggers)
         delete mTriggers;
 }
@@ -778,6 +774,10 @@ void nsXPInstallManager::Shutdown()
                     item->mFile->Remove(PR_FALSE);
             }
         }
+
+        nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+        if (os)
+            os->RemoveObserver(this, XPI_PROGRESS_TOPIC);
 
         NS_RELEASE_THIS();
     }
