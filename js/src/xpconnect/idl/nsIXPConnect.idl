@@ -454,7 +454,7 @@ interface nsIXPConnect : nsISupports
 
     /**
     * This only succeeds if the native object is already wrapped by xpconnect. 
-    * A new wrapper is *never* constructed.
+    * A new wrapper is *never* constructed. 
     */
     nsIXPConnectWrappedNative
     getWrappedNativeOfNativeObject(in JSContextPtr aJSContext,
@@ -489,7 +489,7 @@ interface nsIXPConnect : nsISupports
 
     /**
     * XPConnect builds internal objects that parallel, and are one-to-one with,
-    * the JSContexts in the JSRuntime. It builks these objects as needed. 
+    * the JSContexts in the JSRuntime. It builds these objects as needed. 
     * This method tells XPConnect to resynchronize its representations with the
     * list of JSContexts currently 'alive' in the JSRuntime. This allows it
     * to cleanup any representations of JSContexts that are no longer valid.
@@ -536,6 +536,12 @@ interface nsIXPConnect : nsISupports
     nsIXPCFunctionThisTranslator 
     setFunctionThisTranslator(in nsIIDRef aIID,
                               in nsIXPCFunctionThisTranslator aTranslator);
+
+    nsIXPConnectJSObjectHolder
+    reparentWrappedNativeIfFound(in JSContextPtr aJSContext,
+                                 in JSObjectPtr  aScope,
+                                 in JSObjectPtr  aNewParent,
+                                 in nsISupports  aCOMObj);
 };
 
 

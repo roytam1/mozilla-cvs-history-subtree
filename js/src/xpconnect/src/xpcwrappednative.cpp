@@ -626,6 +626,110 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
 
 /***************************************************************************/
 
+// static 
+nsresult
+XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
+                                         XPCWrappedNativeScope* aOldScope,
+                                         XPCWrappedNativeScope* aNewScope,
+                                         JSObject* aNewParent,
+                                         nsISupports* aCOMObj,
+                                         XPCWrappedNative** aWrapper)
+{
+
+    XPCNativeInterface* iface =
+        XPCNativeInterface::GetISupports(ccx);
+
+    if(!iface)
+        return NS_ERROR_FAILURE;
+
+    nsresult rv;
+    XPCWrappedNative* wrapper;
+
+    rv = XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, aOldScope, iface, &wrapper);
+    if(!NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
+
+    if(wrapper && !wrapper->IsValid())
+        NS_RELEASE(wrapper);  // sets wrapper to nsnull (handled below)
+
+    if(!wrapper)
+    {
+        *aWrapper = nsnull;
+        return NS_OK;
+    }
+
+    if(aOldScope != aNewScope)
+    {
+        // Oh, so now we need to move the wrapper to a different scope.
+
+        XPCWrappedNativeProto* oldProto = wrapper->GetProto();
+        XPCWrappedNativeProto* newProto =
+            XPCWrappedNativeProto::GetNewOrUsed(ccx, aNewScope, 
+                                                oldProto->GetClassInfo(),
+                                                oldProto->GetScriptableInfo());
+        if(!newProto)
+        {
+            NS_RELEASE(wrapper);
+            return NS_ERROR_FAILURE;
+        }
+        
+        Native2WrappedNativeMap* oldMap = aOldScope->GetWrappedNativeMap();
+        Native2WrappedNativeMap* newMap = aNewScope->GetWrappedNativeMap();
+    
+        {   // scoped lock
+            XPCAutoLock lock(aOldScope->GetRuntime()->GetMapLock());
+
+            // We only try to fixup the __proto__ JSObject if the wrapper
+            // is directly using that of its XPCWrappedNativeProto.
+
+            if(JS_GetPrototype(ccx, wrapper->GetFlatJSObject()) == 
+               oldProto->GetJSProtoObject())
+            {
+                if(!JS_SetPrototype(ccx, wrapper->GetFlatJSObject(),
+                                    newProto->GetJSProtoObject()))
+                {
+                    // this is bad, very bad
+                    NS_RELEASE(wrapper);
+                    newProto->Release();
+                    return NS_ERROR_FAILURE;
+                }
+            }
+            else
+            {
+                NS_WARNING("Moving XPConnect wrappedNative to new scope, "
+                           "but can't fixup __proto__");    
+            }
+
+            oldMap->Remove(wrapper);
+
+            wrapper->mProto = newProto;
+
+            if(wrapper->mScriptableInfo == oldProto->GetScriptableInfo())
+                wrapper->mScriptableInfo = newProto->GetScriptableInfo();
+
+            oldProto->Release();
+
+#ifdef DEBUG
+            XPCWrappedNative* prevWrapper = newMap->Add(wrapper);
+            NS_ASSERTION(!prevWrapper, "wrapper already in map!");
+#else
+            (void) newMap->Add(wrapper);
+#endif
+        }
+    }        
+
+    // Now we can just fix up the parent and return the wrapper
+
+    if(!JS_SetParent(ccx, wrapper->GetFlatJSObject(), aNewParent))
+    {
+        NS_RELEASE(wrapper);
+        return NS_ERROR_FAILURE;
+    }
+    
+    *aWrapper = wrapper;
+    return NS_OK;
+}
+
 // static
 XPCWrappedNative*
 XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,

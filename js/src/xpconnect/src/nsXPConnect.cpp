@@ -539,21 +539,44 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * a
     XPCWrappedNativeScope* scope =
         XPCWrappedNativeScope::FindInJSObjectScope(ccx, aScope);
     if(!scope)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCNativeInterface* iface =
         XPCNativeInterface::GetNewOrUsed(ccx, &aIID);
     if(!iface)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCWrappedNative* wrapper;
 
     nsresult rv = XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, scope, iface, 
                                                 &wrapper);
-    if(!NS_FAILED(rv) || !wrapper)
-        return NS_ERROR_FAILURE;
+    if(!NS_FAILED(rv))
+        return UnexpectedFailure(NS_ERROR_FAILURE);
     *_retval = NS_STATIC_CAST(nsIXPConnectWrappedNative*, wrapper);
     return NS_OK;
+}
+
+/* nsIXPConnectJSObjectHolder reparentWrappedNativeIfFound (in JSContextPtr aJSContext, in JSObjectPtr aScope, in JSObjectPtr aNewParent, in nsISupports aCOMObj); */
+NS_IMETHODIMP 
+nsXPConnect::ReparentWrappedNativeIfFound(JSContext * aJSContext, JSObject * aScope, JSObject * aNewParent, nsISupports *aCOMObj, nsIXPConnectJSObjectHolder **_retval)
+{
+    XPCCallContext ccx(NATIVE_CALLER, aJSContext);
+    if(!ccx.IsValid())
+        return UnexpectedFailure(NS_ERROR_FAILURE);
+
+    XPCWrappedNativeScope* scope =
+        XPCWrappedNativeScope::FindInJSObjectScope(ccx, aScope);
+    if(!scope)
+        return UnexpectedFailure(NS_ERROR_FAILURE);
+
+    XPCWrappedNativeScope* scope2 =
+        XPCWrappedNativeScope::FindInJSObjectScope(ccx, aNewParent);
+    if(!scope2)
+        return UnexpectedFailure(NS_ERROR_FAILURE);
+
+    return XPCWrappedNative::
+        ReparentWrapperIfFound(ccx, scope, scope2, aNewParent, aCOMObj,
+                               (XPCWrappedNative**) _retval);
 }
 
 /* void setSecurityManagerForJSContext (in JSContextPtr aJSContext, in nsIXPCSecurityManager aManager, in PRUint16 flags); */

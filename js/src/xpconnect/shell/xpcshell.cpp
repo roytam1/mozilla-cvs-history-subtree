@@ -795,6 +795,9 @@ nsXPCFunctionThisTranslator::nsXPCFunctionThisTranslator()
 nsXPCFunctionThisTranslator::~nsXPCFunctionThisTranslator()
 {
   /* destructor code */
+#ifdef DEBUG_jband
+    printf("destroying nsXPCFunctionThisTranslator\n");
+#endif
 }
 
 /* nsISupports TranslateThis (in nsISupports aInitialThis, in nsIInterfaceInfo aInterfaceInfo, in PRUint16 aMethodIndex, out PRBool aHideFirstParamFromJS, out nsIIDPtr aIIDOfResult); */

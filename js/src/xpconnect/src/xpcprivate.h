@@ -2217,6 +2217,14 @@ public:
                                JSObject** pobj2 = nsnull,
                                XPCWrappedNativeTearOff** pTearOff = nsnull);
 
+    static nsresult
+    ReparentWrapperIfFound(XPCCallContext& ccx,
+                           XPCWrappedNativeScope* aOldScope,
+                           XPCWrappedNativeScope* aNewScope,
+                           JSObject* aNewParent,
+                           nsISupports* aCOMObj,
+                           XPCWrappedNative** aWrapper);
+
     XPCWrappedNativeProto* GetProto()          const {return mProto;}
     nsISupports*           GetIdentityObject() const {return mIdentity;}
     JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}

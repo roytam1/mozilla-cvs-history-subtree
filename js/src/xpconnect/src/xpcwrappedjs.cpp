@@ -159,9 +159,10 @@ do_decrement:
                 JS_RemoveRootRT(rt->GetJSRuntime(), &mJSObj);
         }
 
-        // If we are not being used from a weak reference, then this extra
-        // ref is not needed and we can let ourself be deleted.
-        if(!mRoot->HasWeakReferences())
+        // If we are not the root wrapper or if we are not being used from a 
+        // weak reference, then this extra ref is not needed and we can let 
+        // ourself be deleted.
+        if(this != mRoot || !HasWeakReferences())
             goto do_decrement;
     }
     return cnt;
