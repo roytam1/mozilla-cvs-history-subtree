@@ -1511,7 +1511,7 @@ Rights Reserved.
       <toolbarbutton class="toolbarbutton-1" id="button-stop" label="&stopButton.label;" tooltiptext="&stopButton.tooltip;" command="cmd_stop"/>
       <spacer flex="1"/>
             <hbox id="throbber-box" align="center">
-                <button id="navigator-throbber" oncommand="goClickThrobber('messenger.throbber.url')" tooltiptext="&throbber.tooltip;"/>
+                <button id="navigator-throbber" oncommand="loadThrobberUrl('messenger.throbber.url')" tooltiptext="&throbber.tooltip;"/>
             </hbox>
     </hbox>
   </toolbar>

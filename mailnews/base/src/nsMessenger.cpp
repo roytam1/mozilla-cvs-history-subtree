@@ -672,7 +672,8 @@ NS_IMETHODIMP nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *aUrl)
    nsresult rv;      
    nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(aWin, &rv);    
    NS_ENSURE_SUCCESS(rv,rv);                                                    
-   nsCOMPtr <nsIDocShell> docShell;                                             
+   nsCOMPtr <nsIDocShell> docShell; 
+   rv = globalObj->GetDocShell(getter_AddRefs(docShell));  
    NS_ENSURE_SUCCESS(rv,rv);
    if (!docShell)                                                               
      return NS_ERROR_FAILURE;                                                   

@@ -1631,3 +1631,14 @@ function OnMsgLoaded(folder, msgURI)
      }
 }
 
+function loadThrobberUrl(urlPref)
+{
+  var url;
+  try {
+    gPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+    url = pref.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+    messenger.loadURL(window, url);
+  }
+  catch (ex) {}
+
+}
