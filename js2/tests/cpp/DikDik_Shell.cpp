@@ -95,7 +95,7 @@ const bool showTokens = false;
 //#define SHOW_ICODE 1
 
 
-JSValue load(Context *cx, JSValue *argv, uint32 argc)
+JSValue load(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     JSValue result = kUndefinedValue;
     if ((argc >= 1) && (argv[0].isString())) {    
@@ -104,14 +104,14 @@ JSValue load(Context *cx, JSValue *argv, uint32 argc)
     }    
     return result;
 }
-JSValue print(Context *cx, JSValue *argv, uint32 argc)
+JSValue print(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     for (uint32 i = 0; i < argc; i++) {
         stdOut << argv[i] << "\n";
     }
     return kUndefinedValue;
 }
-JSValue debug(Context *cx, JSValue *argv, uint32 argc)
+JSValue debug(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     cx->mDebugFlag = !cx->mDebugFlag;
     return kUndefinedValue;
@@ -127,6 +127,10 @@ static void readEvalPrint(FILE *in, World &world)
 
     JSObject globalObject;
     Context cx(&globalObject, world);
+
+    globalObject.defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
+    globalObject.defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));
+    globalObject.defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
 
     while (promptLine(inReader, line, buffer.empty() ? "dd> " : "> ")) {
         appendChars(buffer, line.data(), line.size());
@@ -161,23 +165,16 @@ static void readEvalPrint(FILE *in, World &world)
 #ifdef INTERPRET_INPUT
 		// Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements
-                globalObject.defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(load, NULL)));
-                globalObject.defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(print, NULL)));
-                globalObject.defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(debug, NULL)));
-
                 cx.buildRuntime(parsedStatements);
-//                stdOut << globalObject;
                 JS2Runtime::ByteCodeModule* bcm = cx.genCode(parsedStatements, ConsoleName);
                 if (bcm) {
 #ifdef SHOW_ICODE
                     stdOut << *bcm;
 #endif
-                    JSValue result = cx.interpret(bcm, JSValueList());
-//                    stdOut << "result = " << result << "\n";
+                    JSValue result = cx.interpret(bcm, NULL, NULL, 0);
                     if (!result.isUndefined())
                         stdOut << result << "\n";
                     delete bcm;
-//                    stdOut << globalObject;
                 }
 #endif
             }
