@@ -190,7 +190,6 @@ PRInt32 nsBufferedStream::Read(PRInt32 *aErrorCode,
         goto done;
     } else if (m_bIsClosed && (0 == m_DataLength)) {
         *aErrorCode = NS_INPUTSTREAM_EOF;
-        bytesRead = -1;
         goto done;
     } else {
         *aErrorCode = 0;
@@ -323,7 +322,6 @@ PRInt32 nsAsyncStream::Read(PRInt32 *aErrorCode,
         goto done;
     } else if (m_bIsClosed && (0 == m_DataLength)) {
         *aErrorCode = NS_INPUTSTREAM_EOF;
-        bytesRead = -1;
         goto done;
     } else {
         *aErrorCode = 0;
@@ -472,7 +470,6 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
         goto done;
     } else if (m_bIsClosed && (0 == m_DataLength)) {
         *aErrorCode = NS_INPUTSTREAM_EOF;
-        bytesRead = -1;
         goto done;
     } else {
         *aErrorCode = 0;
@@ -493,6 +490,14 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
                 /* XXX m_bIsClosed is checked outside of the lock! */
             } while ((aCount > bytesRead) && !m_bIsClosed); 
             LockStream();
+            /* 
+             * It is possible that the stream was closed during 
+             * NET_PollSockets(...)...  In this case, return EOF if no data 
+             * is available...
+             */
+            if ((0 == bytesRead) && m_bIsClosed) {
+                *aErrorCode = NS_INPUTSTREAM_EOF;
+            }
         } else {
             bytesRead = ReadBuffer(aBuf, aCount);
         }
