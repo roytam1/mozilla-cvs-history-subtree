@@ -414,15 +414,14 @@ void nsSVGImageElement::GetSrc(nsAString& src)
 {
   // resolve href attribute
 
-  nsCOMPtr<nsIURI> baseURL;
-  GetBaseURL(getter_AddRefs(baseURL));
+  nsCOMPtr<nsIURI> baseURI = GetBaseURI();
 
-  nsAutoString relURLStr;
-  mHref->GetAnimVal(relURLStr);
-  relURLStr.Trim(" \t\n\r");
+  nsAutoString relURIStr;
+  mHref->GetAnimVal(relURIStr);
+  relURIStr.Trim(" \t\n\r");
 
-  if (baseURL && !relURLStr.IsEmpty()) 
-    NS_MakeAbsoluteURI(src, relURLStr, baseURL);
+  if (baseURI && !relURIStr.IsEmpty()) 
+    NS_MakeAbsoluteURI(src, relURIStr, baseURI);
   else
-    src = relURLStr;
+    src = relURIStr;
 }

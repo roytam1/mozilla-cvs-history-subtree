@@ -552,12 +552,12 @@ nsSVGAttributes::UpdateContentStyleRule()
     return;
   }
   
-  nsIURI* baseURL;
+  nsIURI* baseURI;
   {
     NS_ASSERTION(mContent, "null owner");
     nsCOMPtr<nsIDocument> document = mContent->GetDocument();
     NS_ASSERTION(document, "null document");
-    baseURL = document->GetBaseURL();
+    baseURI = document->GetBaseURI();
   }
 
   nsCOMPtr<nsICSSParser> parser;
@@ -580,7 +580,7 @@ nsSVGAttributes::UpdateContentStyleRule()
     PRBool changed;
     parser->ParseProperty(name,
                           value,
-                          baseURL,
+                          baseURI,
                           declaration,
                           &changed);
   }
@@ -734,10 +734,7 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
 
     if (nsGenericElement::HasMutationListeners(mContent, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
       nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(mContent));
-      nsMutationEvent mutation;
-      mutation.eventStructType = NS_MUTATION_EVENT;
-      mutation.message = NS_MUTATION_ATTRMODIFIED;
-      mutation.mTarget = node;
+      nsMutationEvent mutation(NS_MUTATION_ATTRMODIFIED, node);
 
       CallQueryInterface(attr,
                          NS_STATIC_CAST(nsIDOMNode**,
@@ -806,10 +803,7 @@ nsSVGAttributes::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   
   if (mContent && nsGenericElement::HasMutationListeners(mContent, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(mContent));
-    nsMutationEvent mutation;
-    mutation.eventStructType = NS_MUTATION_EVENT;
-    mutation.message = NS_MUTATION_ATTRMODIFIED;
-    mutation.mTarget = node;
+    nsMutationEvent mutation(NS_MUTATION_ATTRMODIFIED, node);
         
     CallQueryInterface(attr,
                        NS_STATIC_CAST(nsIDOMNode**,
