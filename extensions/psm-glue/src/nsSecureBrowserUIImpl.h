@@ -90,6 +90,7 @@ protected:
     
 
     void GetBundleString(const nsString& name, nsString &outString);
+    nsresult LoadStringBundle();
     
     nsresult CheckProtocolContextSwitch( nsIURI* newURI, nsIURI* oldURI);
     nsresult CheckMixedContext(nsIURI* nextURI);
@@ -99,3 +100,9 @@ protected:
 
 
 #endif /* nsSecureBrowserUIImpl_h_ */
+
+
+
+
+
+
