@@ -671,13 +671,20 @@ function MsgOpenSelectedMessages()
 
 function MsgOpenNewWindowForMessage(messageUri, folderUri)
 {
+    var currentIndex;
+
+    if (!messageUri || !folderUri) {
+        var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+        var outlinerSelection = outlinerView.selection;
+        currentIndex = outlinerSelection.currentIndex;
+    }
+
     if (!messageUri) {
-        messageUri = GetFirstSelectedMessage();
+        messageUri = gDBView.getURIForViewIndex(currentIndex);
     }
 
     if (!folderUri) {
-        dump("need to fix this, need a way to turn messageUri into a msg folder from JS, or fix the caller to pass in the folder uri\n");
-        return;
+        folderUri = gDBView.getFolderForViewIndex(currentIndex).URI;
     }
 
     if (messageUri && folderUri) {
