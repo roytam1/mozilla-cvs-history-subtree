@@ -270,11 +270,13 @@ NS_IMETHODIMP nsMsgLocalMailFolder::AddSubfolder(nsAutoString *name,
   nsCOMPtr <nsIFileSpec> path;
   // need to make sure folder exists...
   (*child)->GetPath(getter_AddRefs(path));
-  PRBool exists;
-  rv = path->Exists(&exists);
-  if (!exists) 
-      rv = path->Touch();
-  
+  if (path)
+  {
+    PRBool exists;
+    rv = path->Exists(&exists);
+    if (!exists) 
+        rv = path->Touch();
+  }
   return rv;
 }
 
@@ -882,7 +884,8 @@ nsMsgLocalMailFolder::CreateSubfolder(const PRUnichar *folderName, nsIMsgWindow 
     nsCOMPtr<nsIMsgDatabase> unusedDB;
     rv = mailDBFactory->OpenFolderDB(child, PR_TRUE, PR_TRUE, getter_AddRefs(unusedDB));
     
-    if ((NS_SUCCEEDED(rv) || rv == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING) && unusedDB)
+    if ((NS_SUCCEEDED(rv) || rv == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING 
+      || rv == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE) && unusedDB)
     {
       //need to set the folder name
       nsCOMPtr<nsIDBFolderInfo> folderInfo;
@@ -3502,13 +3505,15 @@ nsMsgLocalMailFolder::OnMessageClassified(const char *aMsgURI, nsMsgJunkStatus a
 
         nsCOMPtr<nsIMsgFolder> folder;
         rv = GetExistingFolder(mSpamFolderURI.get(), getter_AddRefs(folder));
-        if (NS_SUCCEEDED(rv) && folder) {
+        if (NS_SUCCEEDED(rv) && folder) 
+        {
           rv = folder->SetFlag(MSG_FOLDER_FLAG_JUNK);
           NS_ENSURE_SUCCESS(rv,rv);
           mSpamKeysToMove.Add(msgKey);
           willMoveMessage = PR_TRUE;
         }
-        else {
+        else
+        {
           // XXX TODO
           // JUNK MAIL RELATED
           // the listener should do
