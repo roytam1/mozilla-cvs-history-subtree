@@ -84,7 +84,7 @@ private:
   nsresult newPKCS12FilePassword(SECItem *);
   nsresult inputToDecoder(SEC_PKCS12DecoderContext *, nsILocalFile *);
   void unicodeToItem(PRUnichar *, SECItem *);
-  PRBool handleError();
+  PRBool handleError(int myerr = 0);
 
   // NSPR file I/O for temporary digest file
   PRFileDesc *mTmpFile;
