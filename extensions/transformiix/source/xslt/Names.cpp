@@ -26,6 +26,7 @@
  *    -- Removed the trailing "s" from FOLLOWING_SIBLING_AXIS, and
  *       PRECEDING_SIBLING_AXIS to be compatible with the
  *       W3C XPath 1.0 Recommendation
+ *    -- Added lang attr declaration
  *
  * $Id$
  */
@@ -92,6 +93,7 @@ const String FORMAT_ATTR             = "format";
 const String FROM_ATTR               = "from";
 const String HREF_ATTR               = "href";
 const String INDENT_ATTR             = "indent";
+const String LANG_ATTR               = "xml:lang";
 const String LEVEL_ATTR              = "level";
 const String MATCH_ATTR              = "match";
 const String METHOD_ATTR             = "method";
