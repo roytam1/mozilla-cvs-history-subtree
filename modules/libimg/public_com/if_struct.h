@@ -36,7 +36,6 @@
 #include "prtime.h"
 #include "prlong.h"
 
-#include "dllcompat.h"
 #include "nsIImgDecoder.h"
 
 #include "ntypes.h"             /* typedefs for commonly used Netscape data

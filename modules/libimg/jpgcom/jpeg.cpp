@@ -25,7 +25,6 @@
 
 #include "nsIImgDecoder.h" // include if_struct.h Needs to be first
 #include "nsIImgDCallbk.h"
-//#include "dllcompat.h"
 #include "nsCRT.h"
 #include "nsJPGDecoder.h"
 #include "jpeg.h"
