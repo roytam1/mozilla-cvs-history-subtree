@@ -403,6 +403,15 @@ nsDOMEventRTTearoff::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
     return NS_OK;
   }
+  else if (aIID.Equals(NS_GET_IID(nsIDOM3EventTarget))) {
+    nsIDOM3EventTarget *inst = this;
+
+    NS_ADDREF(inst);
+
+    *aInstancePtr = inst;
+
+    return NS_OK;
+  }
 
   return mContent->QueryInterface(aIID, aInstancePtr);
 }
@@ -410,7 +419,6 @@ nsDOMEventRTTearoff::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
 NS_IMPL_ADDREF(nsDOMEventRTTearoff)
 NS_IMPL_RELEASE_WITH_DESTROY(nsDOMEventRTTearoff, LastRelease())
-
 
 nsDOMEventRTTearoff *
 nsDOMEventRTTearoff::Create(nsIContent *aContent)
@@ -472,6 +480,16 @@ nsDOMEventRTTearoff::GetEventReceiver(nsIDOMEventReceiver **aReceiver)
   return CallQueryInterface(listener_manager, aReceiver);
 }
 
+nsresult
+nsDOMEventRTTearoff::GetDOM3EventTarget(nsIDOM3EventTarget **aTarget)
+{
+  nsCOMPtr<nsIEventListenerManager> listener_manager;
+  nsresult rv = mContent->GetListenerManager(getter_AddRefs(listener_manager));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return CallQueryInterface(listener_manager, aTarget);
+}
+
 NS_IMETHODIMP
 nsDOMEventRTTearoff::AddEventListenerByIID(nsIDOMEventListener *aListener,
                                            const nsIID& aIID)
@@ -510,8 +528,17 @@ nsDOMEventRTTearoff::HandleEvent(nsIDOMEvent *aEvent)
   return event_receiver->HandleEvent(aEvent);
 }
 
-// nsIDOMEventTarget
+NS_IMETHODIMP
+nsDOMEventRTTearoff::GetSystemEventGroup(nsIDOMEventGroup **aGroup)
+{
+  nsCOMPtr<nsIEventListenerManager> manager;
+  if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager))) && manager) {
+    return manager->GetSystemEventGroupLM(aGroup);
+  }
+  return NS_ERROR_FAILURE;
+}
 
+// nsIDOMEventTarget
 NS_IMETHODIMP
 nsDOMEventRTTearoff::AddEventListener(const nsAReadableString& type,
                                       nsIDOMEventListener *listener,
@@ -546,6 +573,44 @@ nsDOMEventRTTearoff::DispatchEvent(nsIDOMEvent *evt, PRBool* _retval)
   return event_receiver->DispatchEvent(evt, _retval);
 }
 
+// nsIDOM3EventTarget
+NS_IMETHODIMP
+nsDOMEventRTTearoff::AddGroupedEventListener(const nsAReadableString& aType,
+                                             nsIDOMEventListener *aListener,
+                                             PRBool aUseCapture,
+                                             nsIDOMEventGroup *aEvtGrp)
+{
+  nsCOMPtr<nsIDOM3EventTarget> event_target;
+  nsresult rv = GetDOM3EventTarget(getter_AddRefs(event_target));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return event_target->AddGroupedEventListener(aType, aListener, aUseCapture, aEvtGrp);
+}
+
+NS_IMETHODIMP
+nsDOMEventRTTearoff::RemoveGroupedEventListener(const nsAReadableString& aType,
+                                                nsIDOMEventListener *aListener,
+                                                PRBool aUseCapture,
+                                                nsIDOMEventGroup *aEvtGrp)
+{
+  nsCOMPtr<nsIDOM3EventTarget> event_target;
+  nsresult rv = GetDOM3EventTarget(getter_AddRefs(event_target));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return event_target->RemoveGroupedEventListener(aType, aListener, aUseCapture, aEvtGrp);
+}
+
+NS_IMETHODIMP
+nsDOMEventRTTearoff::CanTrigger(const nsAString & type, PRBool *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMEventRTTearoff::IsRegisteredHere(const nsAString & type, PRBool *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 //----------------------------------------------------------------------
 
@@ -2562,6 +2627,10 @@ nsGenericElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   } else if (aIID.Equals(NS_GET_IID(nsIDOMEventReceiver)) ||
              aIID.Equals(NS_GET_IID(nsIDOMEventTarget))) {
     inst = NS_STATIC_CAST(nsIDOMEventReceiver *,
+                          nsDOMEventRTTearoff::Create(this));
+    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
+  } else if (aIID.Equals(NS_GET_IID(nsIDOM3EventTarget))) {
+    inst = NS_STATIC_CAST(nsIDOM3EventTarget *,
                           nsDOMEventRTTearoff::Create(this));
     NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
   } else {

@@ -700,6 +700,7 @@ enum nsDragDropEventStatus {
 #define NS_EVENT_FLAG_CANT_BUBBLE         0x0040
 #define NS_PRIV_EVENT_FLAG_SCRIPT         0x0080
 #define NS_EVENT_FLAG_NO_CONTENT_DISPATCH 0x0100
+#define NS_EVENT_FLAG_SYSTEM_EVENT        0x0200
 
 #define NS_APP_EVENT_FLAG_NONE      0x0000
 #define NS_APP_EVENT_FLAG_HANDLED   0x0001 // Similar to NS_EVENT_FLAG_NO_DEFAULT, but it allows focus

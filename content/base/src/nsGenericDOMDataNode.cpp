@@ -178,6 +178,11 @@ NS_INTERFACE_MAP_BEGIN(nsGenericDOMDataNode)
                                     nsDOMEventRTTearoff::Create(this));
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);
   } else
+  if (aIID.Equals(NS_GET_IID(nsIDOM3EventTarget))) {
+    foundInterface = NS_STATIC_CAST(nsIDOM3EventTarget *,
+                                    nsDOMEventRTTearoff::Create(this));
+    NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);
+  } else
   NS_INTERFACE_MAP_ENTRY(nsIContent)
   // No nsITextContent since all subclasses might not want that.
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, nsNode3Tearoff(this))

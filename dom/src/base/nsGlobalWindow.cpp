@@ -251,6 +251,7 @@ NS_INTERFACE_MAP_BEGIN(GlobalWindowImpl)
   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventReceiver)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventTarget)
+  NS_INTERFACE_MAP_ENTRY(nsIDOM3EventTarget)
   NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow)
   NS_INTERFACE_MAP_ENTRY(nsIDOMViewCSS)
   NS_INTERFACE_MAP_ENTRY(nsIDOMAbstractView)
@@ -2959,15 +2960,7 @@ GlobalWindowImpl::AddEventListener(const nsAReadableString& aType,
                                    nsIDOMEventListener* aListener,
                                    PRBool aUseCapture)
 {
-  nsCOMPtr<nsIEventListenerManager> manager;
-
-  if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager)))) {
-    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
-
-    manager->AddEventListenerByType(aListener, aType, flags);
-    return NS_OK;
-  }
-  return NS_ERROR_FAILURE;
+  return AddGroupedEventListener(aType, aListener, aUseCapture, nsnull);
 }
 
 NS_IMETHODIMP
@@ -2975,13 +2968,7 @@ GlobalWindowImpl::RemoveEventListener(const nsAReadableString& aType,
                                       nsIDOMEventListener* aListener,
                                       PRBool aUseCapture)
 {
-  if (mListenerManager) {
-    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
-
-    mListenerManager->RemoveEventListenerByType(aListener, aType, flags);
-    return NS_OK;
-  }
-  return NS_ERROR_FAILURE;
+  return RemoveGroupedEventListener(aType, aListener, aUseCapture, nsnull);
 }
 
 NS_IMETHODIMP
@@ -3010,6 +2997,50 @@ GlobalWindowImpl::DispatchEvent(nsIDOMEvent* aEvent, PRBool* _retval)
     }
   }
   return NS_ERROR_FAILURE;
+}
+
+//*****************************************************************************
+// GlobalWindowImpl::nsIDOM3EventTarget
+//*****************************************************************************
+
+NS_IMETHODIMP
+GlobalWindowImpl::AddGroupedEventListener(const nsAString & aType, nsIDOMEventListener *aListener, 
+                                          PRBool aUseCapture, nsIDOMEventGroup *aEvtGrp)
+{
+  nsCOMPtr<nsIEventListenerManager> manager;
+
+  if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager)))) {
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
+
+    manager->AddEventListenerByType(aListener, aType, flags, aEvtGrp);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::RemoveGroupedEventListener(const nsAString & aType, nsIDOMEventListener *aListener, 
+                                             PRBool aUseCapture, nsIDOMEventGroup *aEvtGrp)
+{
+  if (mListenerManager) {
+    PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
+
+    mListenerManager->RemoveEventListenerByType(aListener, aType, flags, aEvtGrp);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::CanTrigger(const nsAString & type, PRBool *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::IsRegisteredHere(const nsAString & type, PRBool *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 //*****************************************************************************
@@ -3056,18 +3087,21 @@ GlobalWindowImpl::GetListenerManager(nsIEventListenerManager **aResult)
   return CallQueryInterface(mListenerManager, aResult);
 }
 
-//XXX I need another way around the circular link problem.
-NS_IMETHODIMP
-GlobalWindowImpl::GetNewListenerManager(nsIEventListenerManager **aResult)
-{
-  return NS_ERROR_FAILURE;
-}
-
 NS_IMETHODIMP
 GlobalWindowImpl::HandleEvent(nsIDOMEvent *aEvent)
 {
   PRBool noDefault;
   return DispatchEvent(aEvent, &noDefault);
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetSystemEventGroup(nsIDOMEventGroup **aGroup)
+{
+  nsCOMPtr<nsIEventListenerManager> manager;
+  if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager))) && manager) {
+    return manager->GetSystemEventGroupLM(aGroup);
+  }
+  return NS_ERROR_FAILURE;
 }
 
 //*****************************************************************************

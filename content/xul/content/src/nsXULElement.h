@@ -56,6 +56,7 @@
 #include "nsIControllers.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEventReceiver.h"
+#include "nsIDOM3EventTarget.h"
 #include "nsIDOMXULElement.h"
 #include "nsIDOMXULMultSelectCntrlEl.h"
 #include "nsIEventListenerManager.h"
@@ -320,6 +321,7 @@ public:
 class nsXULElement : public nsIXULContent,
                      public nsIDOMXULElement,
                      public nsIDOMEventReceiver,
+                     public nsIDOM3EventTarget,
                      public nsIScriptEventHandlerOwner,
                      public nsIChromeEventHandler
 {
@@ -435,17 +437,17 @@ public:
     NS_DECL_NSIDOMXULELEMENT
 
     // nsIDOMEventTarget interface (from nsIDOMEventReceiver)
-    NS_IMETHOD AddEventListener(const nsAReadableString& aType, nsIDOMEventListener* aListener, 
-                                PRBool aUseCapture);
-    NS_IMETHOD RemoveEventListener(const nsAReadableString& aType, nsIDOMEventListener* aListener, 
-                                   PRBool aUseCapture);
-    NS_IMETHOD DispatchEvent(nsIDOMEvent* aEvent, PRBool* _retval);
+    NS_DECL_NSIDOMEVENTTARGET
+
+    // nsIDOM3EventTarget interface
+    NS_DECL_NSIDOM3EVENTTARGET
 
     // nsIDOMEventReceiver
     NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
     NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
     NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
     NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
+    NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
 
     // nsIScriptEventHandlerOwner
     NS_IMETHOD CompileEventHandler(nsIScriptContext* aContext,

@@ -2440,7 +2440,6 @@ FindCanvasBackground(nsIPresContext* aPresContext,
           nsCOMPtr<nsIDOMHTMLElement> body;
           htmlDoc->GetBody(getter_AddRefs(body));
           nsCOMPtr<nsIContent> bodyContent = do_QueryInterface(body);
-          NS_ASSERTION(bodyContent, "no body node"); // bug 118829
           if (bodyContent) {
             nsCOMPtr<nsIPresShell> shell;
             aPresContext->GetShell(getter_AddRefs(shell));

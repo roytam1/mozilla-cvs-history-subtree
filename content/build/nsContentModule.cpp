@@ -67,6 +67,7 @@
 #include "nsIController.h"
 #include "nsIControllers.h"
 #include "nsIDOMDOMImplementation.h"
+#include "nsIDOMEventGroup.h"
 #include "nsIDOMRange.h"
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
@@ -270,6 +271,7 @@ extern nsresult NS_NewXBLService(nsIXBLService** aResult);
 extern nsresult NS_NewBindingManager(nsIBindingManager** aResult);
 extern nsresult NS_NewNodeInfoManager(nsINodeInfoManager** aResult);
 extern nsresult NS_NewContentPolicy(nsIContentPolicy** aResult);
+extern nsresult NS_NewDOMEventGroup(nsIDOMEventGroup** aResult);
 
 #ifdef MOZ_XUL
 extern nsresult NS_NewXULElementFactory(nsIElementFactory** aResult);
@@ -299,6 +301,7 @@ ctor_(nsISupports* aOuter, REFNSIID aIID, void** aResult) \
 MAKE_CTOR(CreateNameSpaceManager,         nsINameSpaceManager,         NS_NewNameSpaceManager)
 MAKE_CTOR(CreateEventListenerManager,     nsIEventListenerManager,     NS_NewEventListenerManager)
 MAKE_CTOR(CreateEventStateManager,        nsIEventStateManager,        NS_NewEventStateManager)
+MAKE_CTOR(CreateDOMEventGroup,            nsIDOMEventGroup,            NS_NewDOMEventGroup)
 MAKE_CTOR(CreateDocumentViewer,           nsIDocumentViewer,           NS_NewDocumentViewer)
 MAKE_CTOR(CreateHTMLStyleSheet,           nsIHTMLStyleSheet,           NS_NewHTMLStyleSheet)
 MAKE_CTOR(CreateStyleSet,                 nsIStyleSet,                 NS_NewStyleSet)
@@ -464,6 +467,11 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_EVENTSTATEMANAGER_CID,
     nsnull,
     CreateEventStateManager },
+
+  { "DOM Event group",
+    NS_DOMEVENTGROUP_CID,
+    nsnull,
+    CreateDOMEventGroup },
 
   { "Document Viewer",
     NS_DOCUMENT_VIEWER_CID,
