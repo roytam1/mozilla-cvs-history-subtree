@@ -58,9 +58,7 @@
         params.composeFields.characterSet = msgHdr.Charset;
         params.bodyIsLink = true;
 
-        var composeService = Components.classes["@mozilla.org/messengercompose;1"]
-                                       .getService(Components.interfaces.nsIMsgComposeService);
-        if (composeService) {
+        if (msgComposeService) {
           try {
             params.identity = msgComposeService.defaultIdentity;
           }
