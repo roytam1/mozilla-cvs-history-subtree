@@ -19,10 +19,10 @@ publish:
 	$(MAKE) clean
 	mkdir -p SOURCES SRPMS RPMS BUILD
 	(cd $(MOD_DEPTH)/../dist/$(OBJDIR_NAME)/lib && tar cphf - .) \
-	 | (mkdir -p usr/lib/mps/secv1 && cd usr/lib/mps/secv1 && tar xvfBp -)
+	 | (mkdir -p opt/sun/private/lib && cd opt/sun/private/lib && tar xvfBp -)
 	(cd $(MOD_DEPTH)/../dist/$(OBJDIR_NAME)/include && tar cphf - .) \
-	 | (mkdir -p usr/include/mps/nspr && cd usr/include/mps/nspr && tar xvfBp -)
-	tar czvf SOURCES/$(NAME)-$(VERSION).tar.gz usr
+	 | (mkdir -p opt/sun/private/include/nspr && cd opt/sun/private/include/nspr && tar xvfBp -)
+	tar czvf SOURCES/$(NAME)-$(VERSION).tar.gz opt
 	echo "%define name $(NAME)" >$(NAME).spec
 	echo "%define version $(VERSION)" >>$(NAME).spec
 	echo "%define release $(RELEASE)" >>$(NAME).spec
@@ -33,5 +33,5 @@ publish:
 
 clean:
 	rm -rf SOURCES SRPMS RPMS BUILD
-	rm -rf RPMS SRPMS usr
+	rm -rf RPMS SRPMS opt
 	rm -f $(NAME)-$(VERSION).tar.gz
