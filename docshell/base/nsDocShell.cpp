@@ -1117,25 +1117,42 @@ nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
 
         if (linkPref == nsIBrowserDOMWindow::OPEN_NEWTAB) {
 
-            // try to get our tab-opening interface
+            // is it a popup?
 
-            nsCOMPtr<nsIBrowserDOMWindow> bwin;
-
-            nsCOMPtr<nsIDocShellTreeItem> rootItem;
-            GetRootTreeItem(getter_AddRefs(rootItem));
-            nsCOMPtr<nsIDOMWindow> rootWin(do_GetInterface(rootItem));
-
-            if (rootWin) {
-                nsCOMPtr<nsIDOMWindowUtils> utils(do_GetInterface(rootWin));
-                if (utils)
-                    utils->GetBrowserDOMWindow(getter_AddRefs(bwin));
+            PRBool allowTab = PR_TRUE;
+            nsCOMPtr<nsPIDOMWindow> pWindow = do_QueryInterface(mScriptGlobal);
+            if (pWindow) {
+              // skip the window search-by-name of GetOpenAllow
+              // by using _self. we don't care about that at this point.
+              OpenAllowValue allow = pWindow->GetOpenAllow(
+                                      NS_LITERAL_STRING("_self"));
+              if (allow == allowNot || allow == allowSelf)
+                  allowTab = PR_FALSE;
             }
 
-            // open a new tab
-            if (bwin)
-                rv = bwin->OpenURI(0, nsIBrowserDOMWindow::OPEN_NEWTAB,
-                                   nsIBrowserDOMWindow::OPEN_NEW,
-                                   getter_AddRefs(newWindow));
+            // try to get our tab-opening interface
+
+            if (allowTab) {
+                nsCOMPtr<nsIBrowserDOMWindow> bwin;
+
+                nsCOMPtr<nsIDocShellTreeItem> rootItem;
+                GetRootTreeItem(getter_AddRefs(rootItem));
+                nsCOMPtr<nsIDOMWindow> rootWin(do_GetInterface(rootItem));
+
+                if (rootWin) {
+                    nsCOMPtr<nsIDOMWindowUtils> utils(do_GetInterface(rootWin));
+                    if (utils)
+                        utils->GetBrowserDOMWindow(getter_AddRefs(bwin));
+                }
+
+                // open a new tab
+                if (bwin)
+                    rv = bwin->OpenURI(0, nsIBrowserDOMWindow::OPEN_NEWTAB,
+                                      nsIBrowserDOMWindow::OPEN_NEW,
+                                      getter_AddRefs(newWindow));
+            }
+            // else fall through to the normal Open method, from which
+            // the appropriate measures will be taken when the popup fails
         }
 
         if (!newWindow)
