@@ -40,7 +40,7 @@ endif
 ifeq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifndef BUILD_STATIC_LIBS
 ifndef MOZ_TIMELINE
-GRE_BUILD       = 1;
+GRE_BUILD       = 1
 endif
 endif
 endif
@@ -164,7 +164,6 @@ LIBS		+= $(XPCOM_LIBS)
 endif
 
 LIBS		+= \
-		$(MOZ_JS_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
 
