@@ -10,6 +10,7 @@ fi
 
 AC_CONFIG_AUX_DIR(${srcdir}/build/autoconf)
 AC_CANONICAL_SYSTEM
+AC_VALIDATE_CACHED_SYSTEM_TUPLE
 
 dnl Set this define to make fixes w/o breaking anything else.
 AC_DEFINE(USE_AUTOCONF)
@@ -19,16 +20,22 @@ AC_DEFINE(MOZILLA_CLIENT)
 
 dnl ========================================================
 dnl =
-dnl = Dont change the following two lines.  Doing so breaks:
+dnl = Dont change the following lines.  Doing so breaks:
 dnl =
 dnl = CFLAGS="-foo" ./configure
 dnl =
 dnl ========================================================
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
+LDFLAGS="${LDFLAGS=}"
 HOSTCFLAGS="${HOSTCFLAGS=}"
-HOSTCXXFLAGS="${HOSTCXXFLAGS=}"
+HOSTLDFLAGS="${HOSTLDFLAGS=}"
 
+dnl ========================================================
+dnl =
+dnl = Check --enable options that may affect the compiler
+dnl =
+dnl ========================================================
 AC_ARG_ENABLE(pthreads,
     [  --enable-pthreads           Use system pthreads library as thread subsystem],
     [ USE_PTHREADS=1 CLASSIC_NSPR=],
@@ -56,49 +63,95 @@ AC_ARG_ENABLE(pthreads-user,
     PTHREADS_USER=)
 fi
 
-dnl Checks for programs.
-AC_PROG_CC
-AC_PROG_CXX
-AC_PROG_CPP
-AC_PROG_CXXCPP
-AC_PROG_INSTALL
-AC_PROG_LN_S
-AC_PROG_RANLIB
-AC_PATH_PROGS(PERL, perl5 perl, :)
-AC_PATH_PROGS(AR, ar, :)
+AC_ARG_ENABLE(debug,
+    [  --disable-debug             Do not compile in debugging symbols],
+    MOZ_DEBUG=,
+    MOZ_DEBUG=1)
 
-if test "$cross_compiling" = "no"; then
-    if test "$HOSTCC" = ""; then
-	HOSTCC=$CC
+AC_ARG_ENABLE(target,
+    [  --enable-target=\$t         Turn on features for target \$t],
+    MOZ_TARGET=`echo $enableval | tr A-Z a-z`,
+    MOZ_TARGET=)
+
+if test "$MOZ_DEBUG"; then
+    CFLAGS="$CFLAGS -g"
+    CXXFLAGS="$CXXFLAGS -g"
+fi
+
+dnl Checks for programs.
+if test "$target" != "$host"; then
+    echo "cross compiling from $host to $target"
+    cross_compiling=yes
+
+    _SAVE_CC="$CC"
+    _SAVE_CFLAGS="$CFLAGS"
+    _SAVE_LDFLAGS="$LDFLAGS"
+
+    AC_MSG_CHECKING([for host compiler])
+    if test -z "$HOSTCC"; then
+	AC_CHECK_PROGS(HOSTCC, gcc cc /usr/ucb/cc, "")
+	if test -z "$HOSTCC"; then
+	    AC_MSG_ERROR([no acceptable cc found in \$PATH])
+	fi
     fi
-    if test "$HOSTCXX" = ""; then
-	HOSTCXX=$CXX
+    AC_MSG_RESULT([$HOSTCC])
+    if test -z "$HOSTCFLAGS"; then
+	HOSTCFLAGS="$CFLAGS"
     fi
-    if test "$HOSTCFLAGS" = ""; then
-	HOSTCFLAGS=$CFLAGS
+    if test -z "$HOSTLDFLAGS"; then
+	HOSTLDFLAGS="$LDFLAGS"
     fi
-    if test "$HOSTCXXFLAGS" = ""; then
-	HOSTCXXFLAGS=$CXXFLAGS
+
+    CC="$HOSTCC"
+    CFLAGS="$HOSTCFLAGS"
+    LDFLAGS="$HOSTLDFLAGS"
+
+    AC_MSG_CHECKING([whether the host compiler ($HOSTCC $HOSTCFLAGS $HOSTLDFLAGS) works])
+    AC_TRY_COMPILE([], [return(0);], 
+	[ac_cv_prog_hostcc_works=1 AC_MSG_RESULT([yes])],
+	AC_MSG_ERROR([installation or configuration problem: host compiler $HOSTCC cannot create executables.]) )
+    
+    CC=$_SAVE_CC
+    CFLAGS=$_SAVE_CFLAGS
+    LDFLAGS=$_SAVE_LDFLAGS
+
+    if test -z "$CC"; then
+	AC_CHECK_PROGS(CC, "${target_alias}-gcc" "${target}-gcc", :)
+    fi
+    unset ac_cv_prog_CC
+    AC_PROG_CC
+    if test -z "$CXX"; then
+	AC_CHECK_PROGS(CXX, "${target_alias}-g++" "${target}-g++", :)
+    fi
+    unset ac_cv_prog_CXX
+    AC_PROG_CXX
+    if test -z "$RANLIB"; then
+	AC_CHECK_PROGS(RANLIB, "${target_alias}-ranlib" "${target}-ranlib", :)
+    fi
+    if test -z "$AR"; then
+	AC_CHECK_PROGS(AR, "${target_alias}-ar" "${target}-ar", :)
     fi
 else
-# do some stuff
-    dnl We were given the xcompilers, now we need to find the native
-    dnl compilers if they weren't given
-    echo "Cross compiling"
-    if test -z "$HOSTCC" ; then
-	if test -z "$HOSTCFLAGS"; then
-	    HOSTCFLAGS=$CFLAGS
-	fi
+    AC_PROG_CC
+    AC_PROG_CXX
+    AC_PROG_RANLIB
+    AC_PATH_PROGS(AR, ar, :)
+    if test -z "$HOSTCC"; then
+	HOSTCC="$CC"
+    fi
+    if test -z "$HOSTCFLAGS"; then
+	HOSTCFLAGS="$CFLAGS"
     fi
 fi
 
-echo "Using $host $build $target"
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PATH_PROGS(PERL, perl5 perl, :)
+
 case "$host" in
 *-linux*)
     HOSTCFLAGS="$HOSTCFLAGS -DXP_UNIX"
-    HOSTCXXFLAGS="$HOSTCXXFLAGS -DXP_UNIX"
     ;;
-
 esac
 
 case "$target" in
@@ -108,10 +161,11 @@ i?86-*-linux*)
     PR_MD_ASFILES=
     PR_MD_ARCH_DIR=unix
     if test "$USE_PTHREADS" = 1 ; then
-	CFLAGS="$CFLAGS -D_REENTRANT"
+	DEFINES="$DEFINES -D_REENTRANT"
     else
-	CFLAGS="$CFLAGS -D_PR_LOCAL_THREADS_ONLY"
+	DEFINES="$DEFINES -D_PR_LOCAL_THREADS_ONLY"
     fi
+    DEFINES="$DEFINES -DXP_UNIX"
     ;;
 
 alpha-*-linux*)
@@ -120,15 +174,53 @@ alpha-*-linux*)
     PR_MD_ASFILES=
     PR_MD_ARCH_DIR=unix
     if test "$USE_PTHREADS" = 1 ; then
-	CFLAGS="$CFLAGS -D_REENTRANT"
+	DEFINES="$DEFINES -D_REENTRANT"
     else
-	CFLAGS="$CFLAGS -D_PR_LOCAL_THREADS_ONLY"
+	DEFINES="$DEFINES -D_PR_LOCAL_THREADS_ONLY"
     fi
-    CFLAGS="$CFLAGS -D_POSIX_SOURCE -D_BSD_SOURCE -DHAVE_STRERROR"
+    DEFINES="$DEFINES -DXP_UNIX -D_POSIX_SOURCE -D_BSD_SOURCE -DHAVE_STRERROR"
     ;;
 
 *-mingw*)
-    MDCPUCFG_H=_winnt.cfg
+    DEFINES="$DEFINES -DXP_PC"
+    PR_MD_ASFILES=
+    PR_MD_ARCH_DIR=windows
+
+    case "$MOZ_TARGET" in
+    winnt)
+	DEFINES="$DEFINES -DWIN32 -DWINNT"
+	MDCPUCFG_H=_winnt.cfg
+	PR_MD_CSRCS="ntmisc.c ntsem.c ntinrval.c ntgc.c ntio.c ntthread.c ntdllmn.c win32_errors.c w32poll.c"
+	;;
+    win95)
+	DEFINES="$DEFINES -UWINNT -DWIN32 -DWIN95 -D_PR_GLOBAL_THREADS_ONLY"
+	MDCPUCFG_H=_win95.cfg
+	PR_MD_CSRCS="ntmisc.c ntsem.c ntinrval.c ntgc.c w95thred.c w95io.c w95cv.c w95sock.c win32_errors.c w32poll.c w95dllmain.c"
+	;;
+    win16)
+	DEFINES="$DEFINES -UWINNT"
+	MDCPUCFG_H=_win16.cfg
+	PR_MD_CSRCS="w16null.c w16thred.c w16proc.c w16fmem.c w16sock.c w16mem.c w16io.c w16gc.c w16error.c w16stdio.c w16callb.c ntinrval.c"
+	;;
+    *)
+	AC_MSG_ERROR([Missing MOZ_TARGET for ${target}.  Use --enable-target to set.])
+   	;;
+    esac
+
+    case "$target" in
+    i?86-*)
+	DEFINES="$DEFINES -D_X86_"
+        ;;
+    alpha-*)
+	DEFINES="$DEFINES -D_ALPHA_=1"
+   	;;
+    mips-*)
+	DEFINES="$DEFINES -D_MIPS_"
+	;;
+    *)
+	DEFINES="$DEFINES -D_CPU_ARCH_NOT_DEFINED"
+	;;
+    esac
     ;;
 esac
 
@@ -214,19 +306,20 @@ AC_SUBST(CXX)
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
 AC_SUBST(HOSTCC)
-AC_SUBST(HOSTCXX)
 AC_SUBST(HOSTCFLAGS)
-AC_SUBST(HOSTCXXFLAGS)
 
-AC_SUBST(MDCPUCFG_H)
 AC_SUBST(USE_PTHREADS)
 AC_SUBST(USE_BTHREADS)
 AC_SUBST(USE_CPLUS)
 AC_SUBST(USE_IPV6)
+
+AC_SUBST(MDCPUCFG_H)
+AC_SUBST(MOZ_TARGET)
 AC_SUBST(PR_MD_CSRCS)
 AC_SUBST(PR_MD_ASFILES)
 AC_SUBST(PR_MD_ARCH_DIR)
 
+AC_SUBST(DEFINES)
 AC_SUBST(DEFS)
 AC_SUBST(AR)
 AC_SUBST(RANLIB)
