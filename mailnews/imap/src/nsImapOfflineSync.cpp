@@ -810,21 +810,24 @@ nsImapOfflineDownloader::~nsImapOfflineDownloader()
 nsresult nsImapOfflineDownloader::ProcessNextOperation()
 {
   nsresult rv = NS_OK;
-  AdvanceToFirstIMAPFolder();
+  AdvanceToNextFolder();
 	while (m_currentFolder)
 	{
     PRUint32 folderFlags;
 
     m_currentDB = nsnull;
+    nsCOMPtr <nsIMsgImapMailFolder> imapFolder;
+    if (m_currentFolder)
+      imapFolder = do_QueryInterface(m_currentFolder);
     m_currentFolder->GetFlags(&folderFlags);
 		// need to check if folder has offline events, or is configured for offline
-		if (folderFlags & MSG_FOLDER_FLAG_OFFLINE)
+		if (imapFolder && folderFlags & MSG_FOLDER_FLAG_OFFLINE)
       return m_currentFolder->DownloadAllForOffline(this, m_window);
     else
       AdvanceToNextFolder();
   }
-//  if (aListener)
-//    aListener->OnStopRunningUrl(nsnull, NS_OK);
+  if (m_listener)
+    m_listener->OnStopRunningUrl(nsnull, NS_OK);
   return rv;
 }
 

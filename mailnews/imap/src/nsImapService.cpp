@@ -962,6 +962,11 @@ nsImapService::FetchMessage(nsIImapUrl * aImapUrl,
     }
   }
 
+  if (aURL)
+  {
+    *aURL = url;
+    NS_IF_ADDREF(*aURL);
+  }
   nsCAutoString urlSpec;
   rv = SetImapUrlSink(aImapMailFolder, aImapUrl);
 
@@ -3265,6 +3270,7 @@ nsImapService::DownloadMessagesForOffline(const char *messageIds, nsIMsgFolder *
         // need to pass in stream listener in order to get the channel created correctly
         nsCOMPtr<nsIImapMessageSink> imapMessageSink(do_QueryInterface(aFolder, &rv));
         nsCOMPtr<nsIStreamListener> folderStreamListener(do_QueryInterface(aFolder, &rv));
+        // ### need to use peek to fetch messages, because FetchMessage is marking them read.
         rv = FetchMessage(imapUrl, nsImapUrl::nsImapMsgFetch,aFolder, imapMessageSink, 
                             aMsgWindow, getter_AddRefs(runningURI), folderStreamListener, messageIds, PR_TRUE);
         if (runningURI && aUrlListener)
