@@ -187,7 +187,7 @@ function DisplayCardViewPane(card)
 	visible = cvSetCityStateZip(data.cvHomeCityStZip, card.homeCity, card.homeState, card.homeZipCode) || visible;
 	visible = cvSetNode(data.cvHomeCountry, card.homeCountry) || visible;
 
-        visible = HandleLink(data.cvHomeWebPage, card.webPage2, data.cvHomeWebPageBox, "") || visible;
+  visible = HandleLink(data.cvHomeWebPage, card.webPage2, data.cvHomeWebPageBox, "") || visible;
 
 	cvSetVisible(data.cvhHome, visible);
 	cvSetVisible(data.cvbHome, visible);
@@ -202,16 +202,20 @@ function DisplayCardViewPane(card)
 	  visible = cvSetNode(data.cvAddresses, addresses)
 	  cvSetVisible(data.cvhAddresses, visible);
   	cvSetVisible(data.cvbAddresses, visible);
+    
+    // Other section, not shown for mailing lists.
+    cvSetVisible(data.cvhOther, false);
+    cvSetVisible(data.cvbOther, false);
   }
   else {
-	// Other section
-	visible = cvSetNodeWithLabel(data.cvCustom1, zCustom1, card.custom1);
-	visible = cvSetNodeWithLabel(data.cvCustom2, zCustom2, card.custom2) || visible;
-	visible = cvSetNodeWithLabel(data.cvCustom3, zCustom3, card.custom3) || visible;
-	visible = cvSetNodeWithLabel(data.cvCustom4, zCustom4, card.custom4) || visible;
-	visible = cvSetNode(data.cvNotes, card.notes) || visible;
-	cvSetVisible(data.cvhOther, visible);
-	cvSetVisible(data.cvbOther, visible);
+	  // Other section
+  	visible = cvSetNodeWithLabel(data.cvCustom1, zCustom1, card.custom1);
+  	visible = cvSetNodeWithLabel(data.cvCustom2, zCustom2, card.custom2) || visible;
+  	visible = cvSetNodeWithLabel(data.cvCustom3, zCustom3, card.custom3) || visible;
+  	visible = cvSetNodeWithLabel(data.cvCustom4, zCustom4, card.custom4) || visible;
+  	visible = cvSetNode(data.cvNotes, card.notes) || visible;
+  	cvSetVisible(data.cvhOther, visible);
+  	cvSetVisible(data.cvbOther, visible);
 
     // hide description section, not show for non-mailing lists
     cvSetVisible(data.cvhDescription, false);
@@ -221,6 +225,7 @@ function DisplayCardViewPane(card)
     cvSetVisible(data.cvhAddresses, false);
   	cvSetVisible(data.cvbAddresses, false);
   }
+
 	// Phone section
 	visible = cvSetNodeWithLabel(data.cvPhWork, zWork, card.workPhone);
 	visible = cvSetNodeWithLabel(data.cvPhHome, zHome, card.homePhone) || visible;
