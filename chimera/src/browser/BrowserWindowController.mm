@@ -414,7 +414,7 @@ static NSArray* sToolbarDefaults = nil;
 }
 
 
-//#define RESIZE_WINDOW_FOR_DRAWER
+#define RESIZE_WINDOW_FOR_DRAWER
 
 - (void)drawerWillOpen: (NSNotification*)aNotification
 {
@@ -428,13 +428,14 @@ static NSArray* sToolbarDefaults = nil;
   NSSize drawerSize = [mSidebarDrawer contentSize];
   int fudgeFactor = 12; // Not sure how to get the drawer's border info, so we fudge it for now.
   drawerSize.width += fudgeFactor;
+
   if (windowFrame.origin.x + windowFrame.size.width + drawerSize.width >
-       screenFrame.origin.x + screenFrame.size.width) {
+      screenFrame.origin.x + screenFrame.size.width) {
     // We need to adjust the window so that it can fit.
     float shrinkDelta = (windowFrame.size.width + drawerSize.width) - screenFrame.size.width;
     if (shrinkDelta < 0) shrinkDelta = 0;
     float newWidth = (windowFrame.size.width - shrinkDelta);
-    float newPosition = screenFrame.size.width - newWidth - drawerSize.width;
+    float newPosition = screenFrame.size.width - newWidth - drawerSize.width + screenFrame.origin.x;
     if (newPosition < 0) newPosition = 0;
     mCachedFrameBeforeDrawerOpen = windowFrame;
     windowFrame.origin.x = newPosition;
@@ -1008,7 +1009,16 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)toggleSidebar:(id)aSender
 {
+#ifdef RESIZE_WINDOW_FOR_DRAWER
+  // force the sidebar to open on the right side. Having it open on the left throws off
+  // our window-resize calculations.
+  if ( ([mSidebarDrawer state] == NSDrawerClosedState) || ([mSidebarDrawer state] == NSDrawerClosingState) )
+    [mSidebarDrawer openOnEdge: NSMaxXEdge];
+  else
+    [mSidebarDrawer close];
+#else
   [mSidebarDrawer toggle:aSender];
+#endif
 }
 
 // map command-left arrow to 'back'
