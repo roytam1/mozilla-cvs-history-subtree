@@ -37,6 +37,7 @@
   <commands id="commands">
     <commandset id="bookmarksItems">
       <command id="cmd_bm_open"                      oncommand="goDoCommand('cmd_bm_open');"/>
+      <command id="cmd_bm_expandfolder"              oncommand="goDoCommand('cmd_bm_expandfolder');"/>
       <command id="cmd_bm_newfolder"                 oncommand="goDoCommand('cmd_bm_newfolder');"/>
       <command id="cmd_bm_newbookmark"               oncommand="goDoCommand('cmd_bm_newbookmark');"/>
       <command id="cmd_bm_newseparator"              oncommand="goDoCommand('cmd_bm_newseparator');"/>
