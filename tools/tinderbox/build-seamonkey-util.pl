@@ -286,6 +286,11 @@ sub SetupEnv {
     $ENV{DISPLAY} = $Settings::DisplayServer;
     $ENV{MOZCONFIG} = "$Settings::BaseDir/$Settings::MozConfigFileName" 
       if $Settings::MozConfigFileName ne '' and -e $Settings::MozConfigFileName;
+
+	# Security
+	if($Settings::BuildNSS) {
+	  $ENV{MOZ_NSS_AUTOCONF} = "1";
+	}
 }
 
 sub SetupPath {
