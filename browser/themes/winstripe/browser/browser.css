@@ -162,13 +162,15 @@ menuitem.bookmark-item {
 	margin-right: 2px;
 }
 
-.toolbarbutton-1:active,
-.toolbarbutton-1[checked="true"], 
+.toolbarbutton-1:hover:active:not([disabled]),
 .toolbarbutton-1[open="true"], 
-.toolbarbutton-menubutton-button:active,
-.toolbarbutton-menubutton-button[checked="true"], 
+.toolbarbutton-menubutton-button:hover:active:not([disabled]),
 .toolbarbutton-menubutton-button[open="true"] {
-  padding: 6px 4px 4px 6px !important;
+  padding: 5px 4px 5px 6px;
+}
+
+.toolbarbutton-1[checked="true"] {
+  padding: 5px 4px 5px 6px !important;
 }
 
 .toolbarbutton-1[type="menu-button"] {
@@ -295,6 +297,9 @@ toolbar[mode="text"] .toolbarbutton-text {
 #bookmarks-button[disabled="true"] {
   -moz-image-region: rect(48px 192px 72px 168px) !important;
 }
+#bookmarks-button[checked="true"] {
+  -moz-image-region: rect(72px 192px 96px 168px) !important;
+}
 
 /* print button */
 
@@ -398,13 +403,15 @@ toolbar[iconsize="small"] .toolbarbutton-1, toolbar[iconsize="small"] .toolbarbu
 	margin-right: 2px;
 }
 
-toolbar[iconsize="small"] .toolbarbutton-1:active,
-toolbar[iconsize="small"] .toolbarbutton-1[checked="true"], 
+toolbar[iconsize="small"] .toolbarbutton-1:hover:active:not([disabled]),
 toolbar[iconsize="small"] .toolbarbutton-1[open="true"], 
-toolbar[iconsize="small"] .toolbarbutton-menubutton-button:active,
-toolbar[iconsize="small"] .toolbarbutton-menubutton-button[checked="true"], 
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active:not([disabled]),
 toolbar[iconsize="small"] .toolbarbutton-menubutton-button[open="true"] {
-  padding: 4px 2px 2px 4px !important;
+  padding: 3px 2px 3px 4px;
+}
+
+toolbar[iconsize="small"] .toolbarbutton-1[checked="true"] {
+  padding: 3px 2px 3px 4px !important;
 }
 
 toolbar[iconsize="small"] .toolbarbutton-1[type="menu-button"] {
@@ -514,6 +521,9 @@ toolbar[iconsize="small"] #bookmarks-button:hover {
 }
 toolbar[iconsize="small"] #bookmarks-button[disabled="true"] {
   -moz-image-region: rect(32px 128px 48px 112px) !important;
+}
+toolbar[iconsize="small"] #bookmarks-button[checked="true"] {
+  -moz-image-region: rect(48px 128px 64px 112px) !important;
 }
 
 /* print button */
