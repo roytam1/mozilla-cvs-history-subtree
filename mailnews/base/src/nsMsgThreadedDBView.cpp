@@ -213,7 +213,10 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 		{
     	nsCOMPtr <nsIMsgDBHdr> msgHdr;
       PRUint32 numChildren;
-      threadHdr->GetNumChildren(&numChildren);
+      if (unreadOnly)
+        threadHdr->GetNumUnreadChildren(&numChildren);
+      else
+        threadHdr->GetNumChildren(&numChildren);
 			PRUint32 threadFlags;
       threadHdr->GetFlags(&threadFlags);
 			if (numChildren != 0)	// not empty thread

@@ -211,6 +211,7 @@ protected:
   PRBool IsValidIndex(nsMsgViewIndex index);
   nsresult ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState);
   nsresult GetKeyForFirstSelectedMessage(nsMsgKey *key);
+  PRInt32 GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex);
 
   void FreeAll(nsVoidArray *ptrs);
   void ClearHdrCache();

@@ -2862,6 +2862,45 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
   return NS_OK;
 }
 
+PRInt32 nsMsgDBView::GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex)
+{
+  PRBool done = PR_FALSE;
+  PRInt32 levelToAdd = 1;
+  nsCOMPtr <nsIMsgDBHdr> curMsgHdr = msgHdr;
+
+  // look through the ancestors of the passed in msgHdr in turn, looking for them in the view, up to the start of
+  // the thread. If we find an ancestor, then our level is one greater than the level of the ancestor.
+  while (!done)
+  {
+    nsMsgKey parentKey;
+    curMsgHdr->GetThreadParent(&parentKey);
+    if (parentKey != nsMsgKey_None)
+    {
+      nsMsgViewIndex parentIndexInView = nsMsgViewIndex_None;
+        // scan up to find view index of ancestor, if any
+      for (nsMsgViewIndex indexToTry = viewIndex - 1; indexToTry >= startOfThread; indexToTry--)
+      {
+        if (m_keys[indexToTry] == parentKey)
+        {
+          parentIndexInView = indexToTry;
+          break;
+        }
+      }
+      if (parentIndexInView != nsMsgViewIndex_None)
+      {
+        levelToAdd = m_levels[parentIndexInView] + 1;
+        break;
+      }
+    }
+    else
+      break;
+    m_db->GetMsgHdrForKey(parentKey, getter_AddRefs(curMsgHdr));
+    if (curMsgHdr == nsnull)
+      break;
+  }
+  return levelToAdd;
+}
+
 nsresult	nsMsgDBView::ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
 {
   NS_ENSURE_ARG(threadHdr);
@@ -2911,10 +2950,7 @@ nsresult	nsMsgDBView::ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIn
 				  m_keys.InsertAt(viewIndex, msgKey);
           m_flags.InsertAt(viewIndex, msgFlags);
   //					pLevels[i] = msgHdr->GetLevel();
-				  if (levelStack.GetSize() == 0)
-					  levelToAdd = 1;
-				  else
-					  levelToAdd = levelStack.GetAt(levelStack.GetSize() - 1) + 1;
+          levelToAdd = GetLevelInUnreadView(msgHdr, startOfThreadViewIndex, viewIndex);
           m_levels.InsertAt(viewIndex, levelToAdd);
 #ifdef DEBUG_bienvenu
 //					XP_Trace("added at level %d\n", levelToAdd);
