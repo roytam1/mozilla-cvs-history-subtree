@@ -1455,7 +1455,7 @@ nsProfile::AddLevelOfIndirection(nsIFile *aDir)
   rv = aDir->Exists(&exists);
   NS_ENSURE_SUCCESS(rv,rv);
   if (!exists) {
-    rv = aDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+    rv = aDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 	
@@ -1529,7 +1529,7 @@ nsresult nsProfile::SetProfileDir(const PRUnichar *profileName, nsIFile *profile
     PRBool exists;
     rv = profileDir->Exists(&exists);
     if (NS_SUCCEEDED(rv) && !exists)
-        rv = profileDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+        rv = profileDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
     if (NS_FAILED(rv)) 
         return rv;
     
@@ -1591,7 +1591,7 @@ nsProfile::CreateNewProfileWithLocales(const PRUnichar* profileName,
         rv = profileDir->Exists(&exists);
         if (NS_FAILED(rv)) return rv;        
         if (!exists)
-            profileDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+            profileDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
 
         // append profile name
         profileDir->Append(nsDependentString(profileName));
@@ -1610,7 +1610,7 @@ nsProfile::CreateNewProfileWithLocales(const PRUnichar* profileName,
     // Make profile directory unique only when the user 
     // decides to not use an already existing profile directory
     if (!useExistingDir) {
-        rv = profileDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0775);
+        rv = profileDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -1622,7 +1622,7 @@ nsProfile::CreateNewProfileWithLocales(const PRUnichar* profileName,
     if (NS_FAILED(rv)) return rv;        
     if (!exists)
     {
-        rv = profileDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+        rv = profileDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
         if (NS_FAILED(rv)) return rv;
         useExistingDir = PR_FALSE;
     }
@@ -2227,7 +2227,7 @@ nsProfile::MigrateProfile(const PRUnichar* profileName)
     if (NS_FAILED(rv)) 
       return rv;
     
-    rv = newProfDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0775);
+    rv = newProfDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
     if (NS_FAILED(rv)) 
       return rv;
     
@@ -2270,7 +2270,7 @@ nsProfile::RemigrateProfile(const PRUnichar* profileName)
     NS_ENSURE_SUCCESS(rv,rv);
     
     // Create a new directory for the remigrated profile
-    rv = newProfileDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0775);
+    rv = newProfileDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to create new directory for the remigrated profile");
     if (NS_SUCCEEDED(rv)) {
         rv = MigrateProfileInternal(profileName, oldProfileDir, newProfileDir);
@@ -2375,7 +2375,7 @@ NS_IMETHODIMP nsProfile::CloneProfile(const PRUnichar* newProfile)
         destDir->AppendRelativePath(nsDependentString(newProfile));
 
         // Find a unique name in the dest dir
-        rv = destDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0775);
+        rv = destDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
         if (NS_FAILED(rv)) return rv;
         
         rv = RecursiveCopy(currProfileDir, destDir);
