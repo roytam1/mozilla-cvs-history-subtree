@@ -26,8 +26,6 @@
       <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
         <menupopup id="taskPopup">
           <menuitem label="&javaScriptConsoleCmd.label;" accesskey="&javaScriptConsoleCmd.accesskey;" oncommand="toJavaScriptConsole();"/>
-          <menuseparator/>
-          <menuitem id="cmd_switchprofile" label="&switchProfileCmd.label;" accesskey="&switchProfileCmd.accesskey;" oncommand="toProfileManager();"/>
         </menupopup>
       </menu>
 
