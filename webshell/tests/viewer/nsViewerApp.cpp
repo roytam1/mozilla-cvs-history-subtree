@@ -924,8 +924,8 @@ nsViewerApp::CreateRobot(nsBrowserWindow* aWindow)
 static nsBrowserWindow* gWinData;
 static int gTop100Pointer = 0;
 static char * gTop100List[] = {
-   "http://www.yahoo.com",
    "http://www.netscape.com",
+   "http://www.yahoo.com",
    "http://www.microsoft.com",
    "http://www.excite.com",
    "http://www.mckinley.com",
@@ -1164,7 +1164,7 @@ PRBool CreateSiteDialog(nsIWidget * aParent)
     if (mSiteDialog && NS_OK == mSiteDialog->QueryInterface(kIWidgetIID,(void**)&widget))
     {
       widget->Create(aParent, rect, HandleSiteEvent, NULL);
-      mSiteDialog->SetLabel("Top 100 Site Walker");
+      mSiteDialog->SetLabel("Test Sites Walker");
     }
     //mSiteDialog->SetClientData(this);
 
