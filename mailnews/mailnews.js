@@ -71,6 +71,8 @@ pref("mailnews.headers.showUserAgent",       false);
 // is displayed in the message pane or not...
 pref("mailnews.headers.showOrganization",    false);
 
+pref("mailnews.headers.showSender", false);
+
 // Mail server preferences, pop by default
 pref("mail.server_type",	0); 	// 0 pop, 1 imap,
 					// (Unix only:)
@@ -98,6 +100,10 @@ pref("mail.imap.mime_parts_on_demand",      true);
 pref("mail.imap.mime_parts_on_demand_max_depth", 15);
 pref("mail.imap.mime_parts_on_demand_threshold", 30000);
 pref("mail.imap.use_literal_plus",          true);
+// if true, we assume that a user access a folder in the other users namespace
+// is acting as a delegate for that folder, and wishes to use the other users
+// identity when acting on messages in other users folders.
+pref("mail.imap.delegateOtherUsersFolders", false);
 pref("mail.thread_without_re",	            true);
 pref("mail.leave_on_server",                false);
 pref("mail.default_cc",                     "");
