@@ -41,7 +41,11 @@ LINCS = -I$(DIST)\include  \
         -I$(PUBLIC)\ojiimpl
 
 OBJS =  .\$(OBJDIR)\npassoc.obj \
+        .\$(OBJDIR)\nsplugin.obj \
         .\$(OBJDIR)\npglue.obj
 
 include <$(DEPTH)/config/rules.mak>
+
+install:: $(LIBRARY)
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
 

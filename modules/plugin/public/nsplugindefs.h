@@ -161,26 +161,22 @@ struct nsPluginPrintCallbackStruct {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// List of variable names for which NPP_GetValue shall be implemented
+// List of variables which should be implmented by the plugin
 enum nsPluginVariable {
     nsPluginVariable_NameString = 1,
-    nsPluginVariable_DescriptionString,
-    nsPluginVariable_WindowBool,        // XXX go away
-    nsPluginVariable_TransparentBool,   // XXX go away?
-    nsPluginVariable_JavaClass,         // XXX go away
-    nsPluginVariable_WindowSize,
-    nsPluginVariable_TimerInterval
-    // XXX add MIMEDescription (for unix) (but GetValue is on the instance, not the class)
+    nsPluginVariable_DescriptionString
 };
 
-// List of variable names for which NPN_GetValue is implemented by Mozilla
+// List of variables which are implemented by the browser
 enum nsPluginManagerVariable {
     nsPluginManagerVariable_XDisplay = 1,
     nsPluginManagerVariable_XtAppContext,
     nsPluginManagerVariable_NetscapeWindow,
-    nsPluginManagerVariable_JavascriptEnabledBool,      // XXX prefs accessor api
-    nsPluginManagerVariable_ASDEnabledBool,             // XXX prefs accessor api
-    nsPluginManagerVariable_IsOfflineBool               // XXX prefs accessor api
+    nsPluginManagerVariable_WindowBool,
+    nsPluginManagerVariable_TransparentBool,
+    nsPluginManagerVariable_JavaClass,
+    nsPluginManagerVariable_WindowSize,
+    nsPluginManagerVariable_TimerInterval
 };
 
 ////////////////////////////////////////////////////////////////////////////////

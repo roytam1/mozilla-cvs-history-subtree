@@ -74,7 +74,6 @@ public:
     NS_IMETHOD_(nsPluginError)
     SetValue(nsPluginManagerVariable variable, void *value) = 0;
 
-
     // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
     //   notifyData: When present, URLNotify is called passing the notifyData back
     //          to the client. When NULL, this call behaves like NPN_GetURL.

@@ -27,7 +27,7 @@
 #include "npglue.h" 
 
 #ifdef OJI
-#include "nsIPlug.h"
+#include "nsplugin.h"
 #include "jvmmgr.h" 
 #endif
 #include "plstr.h" /* PL_strcasecmp */
@@ -42,7 +42,6 @@
 
 #include "intl_csi.h"
 
-static NS_DEFINE_IID(kIJRIEnvIID, NS_IJRIENV_IID); 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 static NS_DEFINE_IID(kIPluginManager2IID, NS_IPLUGINMANAGER2_IID);
@@ -134,6 +133,29 @@ NS_METHOD_(const char*)
 nsPluginManager::UserAgent(void)
 {
     return npn_useragent(NULL); // we don't really need an npp here
+}
+
+int varMap[] = {
+    (int)NPNVxDisplay,                  // nsPluginManagerVariable_XDisplay = 1,
+    (int)NPNVxtAppContext,              // nsPluginManagerVariable_XtAppContext,
+    (int)NPNVnetscapeWindow,            // nsPluginManagerVariable_NetscapeWindow,
+    (int)NPPVpluginWindowBool,          // nsPluginManagerVariable_WindowBool,
+    (int)NPPVpluginTransparentBool,     // nsPluginManagerVariable_TransparentBool,
+    (int)NPPVjavaClass,                 // nsPluginManagerVariable_JavaClass,
+    (int)NPPVpluginWindowSize,          // nsPluginManagerVariable_WindowSize,
+    (int)NPPVpluginTimerInterval,       // nsPluginManagerVariable_TimerInterval
+};
+
+NS_METHOD_(nsPluginError)
+nsPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
+{
+    return (nsPluginError)npn_getvalue(NULL, (NPNVariable)varMap[(int)variable], value);
+}
+
+NS_METHOD_(nsPluginError)
+nsPluginManager::SetValue(nsPluginManagerVariable variable, void *value)
+{
+    return (nsPluginError)npn_setvalue(NULL, (NPPVariable)varMap[(int)variable], value);
 }
 
 NS_METHOD
@@ -419,18 +441,6 @@ NS_METHOD_(void)
 nsPluginInstancePeer::ShowStatus(const char* message)
 {
     npn_status(npp, message);
-}
-
-NS_METHOD_(nsPluginError)
-nsPluginInstancePeer::GetValue(nsPluginManagerVariable variable, void *value)
-{
-    return (nsPluginError)npn_getvalue(npp, (NPNVariable)variable, value);
-}
-
-NS_METHOD_(nsPluginError)
-nsPluginInstancePeer::SetValue(nsPluginVariable variable, void *value)
-{
-    return (nsPluginError)npn_setvalue(npp, (NPPVariable)variable, value);
 }
 
 NS_METHOD_(void)

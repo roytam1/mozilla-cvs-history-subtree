@@ -304,6 +304,14 @@ public:
     NS_IMETHOD_(const char*)
     UserAgent(void);
 
+    // (Corresponds to NPN_GetValue.)
+    NS_IMETHOD_(nsPluginError)
+    GetValue(nsPluginManagerVariable variable, void *value);
+
+    // (Corresponds to NPN_SetValue.)
+    NS_IMETHOD_(nsPluginError)
+    SetValue(nsPluginManagerVariable variable, void *value);
+
     // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
     NS_IMETHOD_(nsPluginError)
     GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData, 
@@ -415,14 +423,6 @@ public:
     // (Corresponds to NPN_Status.)
     NS_IMETHOD_(void)
     ShowStatus(const char* message);
-
-    // (Corresponds to NPN_GetValue.)
-    NS_IMETHOD_(nsPluginError)
-    GetValue(nsPluginManagerVariable variable, void *value);
-
-    // (Corresponds to NPN_SetValue.)
-    NS_IMETHOD_(nsPluginError)
-    SetValue(nsPluginVariable variable, void *value);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginInstancePeer2:
