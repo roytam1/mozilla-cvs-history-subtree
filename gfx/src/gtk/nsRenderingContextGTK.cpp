@@ -1993,11 +1993,15 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
   nsPoint pt;
   nsRect sr;
 
-  pt = *aDestPoint;
+	pt = *aDestPoint;
   mTranMatrix->TransformCoord(&pt.x, &pt.y);
 
   sr = *aSrcRect;
-  //	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
   nsCOMPtr<nsPIImageContainerXlib> cx(do_QueryInterface(aImage));
   if (!cx) return NS_ERROR_FAILURE;

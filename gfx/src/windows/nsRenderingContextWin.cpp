@@ -3801,7 +3801,11 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
   mTranMatrix->TransformCoord(&pt.x, &pt.y);
 
   sr = *aSrcRect;
-  //	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
   nsCOMPtr<nsPIImageContainerWin> cw(do_QueryInterface(aImage));
   if (!cw) return NS_ERROR_FAILURE;
