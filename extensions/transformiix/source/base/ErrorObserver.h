@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -28,6 +29,7 @@
 
 #include "baseutils.h"
 #include "TxString.h"
+#include "txError.h"
 #include <iostream.h>
 
 /**
@@ -37,23 +39,26 @@ class ErrorObserver {
 
 public:
 
-    enum ErrorLevel {FATAL = 0, NORMAL, WARNING};
-
     /**
      * Default Destructor for ErrorObserver
     **/
     virtual ~ErrorObserver() {};
 
     /**
-     *  Notifies this Error observer of a new error, with default
-     *  level of NORMAL
+     *  Notifies this Error observer of a new error aRes
     **/
-    virtual void recieveError(String& errorMessage) = 0;
+    virtual void receiveError(const String& errorMessage, nsresult aRes) = 0;
 
     /**
-     *  Notifies this Error observer of a new error using the given error level
+     *  Notifies this Error observer of a new error, with default
+     *  error code NS_ERROR_FAILURE
     **/
-    virtual void recieveError(String& errorMessage, ErrorLevel level) = 0;
+    void receiveError(String& errorMessage)
+    {
+        receiveError(errorMessage, NS_ERROR_FAILURE);
+    }
+
+        
 
 }; //-- ErrorObserver
 
@@ -79,15 +84,9 @@ public:
     virtual ~SimpleErrorObserver() {};
 
     /**
-     *  Notifies this Error observer of a new error, with default
-     *  level of NORMAL
+     *  Notifies this Error observer of a new error aRes
     **/
-    virtual void recieveError(String& errorMessage);
-
-    /**
-     *  Notifies this Error observer of a new error using the given error level
-    **/
-    virtual void recieveError(String& errorMessage, ErrorLevel level);
+    void receiveError(const String& errorMessage, nsresult aRes);
 
     virtual void supressWarnings(MBool supress);
 

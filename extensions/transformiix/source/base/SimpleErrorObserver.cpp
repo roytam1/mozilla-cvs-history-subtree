@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -46,38 +47,20 @@ SimpleErrorObserver::SimpleErrorObserver(ostream& errStream) {
 } //-- SimpleErrorObserver
 
 /**
- *  Notifies this Error observer of a new error, with default
- *  level of NORMAL
-**/
-void SimpleErrorObserver::recieveError(String& errorMessage) {
-#ifdef TX_EXE
-    *errStream << "error: " << errorMessage << endl;
-    errStream->flush();
-#endif
-} //-- recieveError
-
-/**
  *  Notifies this Error observer of a new error using the given error level
 **/
-void SimpleErrorObserver::recieveError(String& errorMessage, ErrorLevel level) {
+void SimpleErrorObserver::receiveError(const String& errorMessage,
+                                       nsresult aRes)
+{
 #ifdef TX_EXE
-    switch ( level ) {
-        case ErrorObserver::FATAL :
-            *errStream << "fatal error: ";
-            break;
-        case ErrorObserver::WARNING :
-            if ( hideWarnings ) return;
-            *errStream << "warning: ";
-            break;
-        default:
-            *errStream << "error: ";
-            break;
+    if (NS_FAILED(aRes)) {
+        *errStream << "error: ";
     }
 
     *errStream << errorMessage << endl;
     errStream->flush();
 #endif
-} //-- recieveError
+}
 
 void SimpleErrorObserver::supressWarnings(MBool supress) {
     this->hideWarnings = supress;
