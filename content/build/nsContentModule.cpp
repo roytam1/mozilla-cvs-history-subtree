@@ -62,7 +62,6 @@
 #include "nsIContentIterator.h"
 #include "nsIContentSerializer.h"
 #include "nsIController.h"
-#include "nsIControllerCommand.h"
 #include "nsIControllers.h"
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMRange.h"
@@ -320,7 +319,6 @@ MAKE_CTOR(CreateXULPopupListener,         nsIXULPopupListener,         NS_NewXUL
 // NS_NewXULPrototypeCache
 MAKE_CTOR(CreateXULElementFactory,        nsIElementFactory,           NS_NewXULElementFactory)
 #endif
-MAKE_CTOR(CreateControllerCommandManager, nsIControllerCommandManager, NS_NewControllerCommandManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentHTTPStartup)
 MAKE_CTOR(CreateContentDLF,                nsIDocumentLoaderFactory,   NS_NewContentDocumentLoaderFactory)
 
@@ -723,11 +721,6 @@ static nsModuleComponentInfo gComponents[] = {
     NS_ELEMENT_FACTORY_CONTRACTID_PREFIX "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     CreateXULElementFactory },
 #endif
-
-  { "Controller Command Manager",
-    NS_CONTROLLERCOMMANDMANAGER_CID,
-    "@mozilla.org/content/controller-command-manager;1",
-    CreateControllerCommandManager },
 
   { "Content HTTP Startup Listener",
     NS_CONTENTHTTPSTARTUP_CID,
