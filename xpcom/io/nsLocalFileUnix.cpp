@@ -209,18 +209,14 @@ nsLocalFile::nsLocalFileConstructor(nsISupports *outer, const nsIID &aIID, void 
 NS_IMETHODIMP
 nsLocalFile::Clone(nsIFile **file)
 {
+    nsresult rv;
     NS_ENSURE_ARG(file);
     
     *file = nsnull;
 
-    nsCOMPtr<nsILocalFile> localFile;
-    nsresult rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, 
-                                                     nsnull, 
-                                                     NS_GET_IID(nsILocalFile),
-                                                     getter_AddRefs(localFile));
-    
-    if (NS_FAILED(rv)) 
-        return rv;
+    nsCOMPtr<nsILocalFile> localFile = new nsLocalFile();
+    if (localFile == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
     
     rv = localFile->InitWithPath(mPath);
     

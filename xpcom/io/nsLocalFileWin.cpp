@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -512,16 +512,13 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
 NS_IMETHODIMP  
 nsLocalFile::Clone(nsIFile **file)
 {
+    nsresult rv;
     NS_ENSURE_ARG(file);
     *file = nsnull;
 
-    nsCOMPtr<nsILocalFile> localFile;
-    nsresult rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, 
-                                                     nsnull, 
-                                                     nsCOMTypeInfo<nsILocalFile>::GetIID(), 
-                                                     getter_AddRefs(localFile));
-    if (NS_FAILED(rv)) 
-        return rv;
+    nsCOMPtr<nsILocalFile> localFile = new nsLocalFile();
+    if (localFile == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
     
     char* aFilePath;
     GetPath(&aFilePath);
@@ -824,14 +821,9 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
                     char* target;
                     newParentDir->GetTarget(&target);
 
-                    nsCOMPtr<nsILocalFile> realDest;
-
-                    rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, 
-                                                            nsnull, 
-                                                            nsCOMTypeInfo<nsILocalFile>::GetIID(), 
-                                                            getter_AddRefs(realDest));
-                    if (NS_FAILED(rv)) 
-                        return rv;
+                    nsCOMPtr<nsILocalFile> realDest = new nsLocalFile();
+                    if (realDest == nsnull)
+                        return NS_ERROR_OUT_OF_MEMORY;
 
                     rv = realDest->InitWithPath(target);
                     
