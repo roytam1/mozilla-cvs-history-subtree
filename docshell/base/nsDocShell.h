@@ -314,6 +314,8 @@ protected:
 
     nsresult CheckLoadingPermissions();
 
+    void SetCurrentURI(nsIURI *aURI, nsIRequest *aRequest);
+
 protected:
     nsString                   mName;
     nsString                   mTitle;
