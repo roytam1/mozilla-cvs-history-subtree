@@ -380,8 +380,8 @@ nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, 
 					PRUint8 level = 0;					// levels of other hdrs may have changed!
 					PRUint32	newFlags = msgFlags;
           nsMsgViewIndex insertIndex = 0;
-#ifdef HAVE_PORT
-					 insertIndex = GetInsertInfoForNewHdr(newKey, threadIndex, &level);
+#if 0
+					insertIndex = GetInsertInfoForNewHdr(newKey, threadIndex, &level);
 #endif
 					// this header is the new king! try collapsing the existing thread,
 					// removing it, installing this header as king, and expanding it.
@@ -442,81 +442,98 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
   if (! (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay))
 		return nsMsgDBView::RemoveByIndex(index);
 
-#ifdef HAVE_PORT
-  if ((flags & kIsThread) && !(flags & kElided) && (flags & kHasChildren))
+  if ((flags & MSG_VIEW_FLAG_ISTHREAD) && !(flags & MSG_FLAG_ELIDED) && (flags & MSG_VIEW_FLAG_HASCHILDREN))
 	{
 		// fix flags on thread header...Newly promoted message 
 		// should have flags set correctly
-		nsCOMPtr <nsIMsgThread> threadHdr; = m_db->GetThreadHdrForMsgID(m_idArray[index]);
+		nsCOMPtr <nsIMsgThread> threadHdr; 
+#if 0
+    m_db->GetThreadHdrForMsgID(m_idArray[index]);
+#endif
 		if (threadHdr)
 		{
-			MessageDBView::RemoveByIndex(index);
-			nsCOMPtr <nsIMsgThread> nextThreadHdr = (index < GetSize()) 
-				? m_messageDB->GetNeoThreadHdrForMsgID(m_idArray[index]) : 0;
+			nsMsgDBView::RemoveByIndex(index);
+			nsCOMPtr <nsIMsgThread> nextThreadHdr;
+#if 0
+      if  (index < GetSize()) 
+				m_db->GetThreadHdrForMsgKey(m_keys[index], getter_AddRefs(nextThreadHdr));
+#endif
 			// make sure id of next message is really in the same thread
 			// it might have been deleted from the view but not the db yet.
-			if (threadHdr == nextThreadHdr && threadHdr->GetNumChildren() > 1)
+      PRUint32 numThreadChildren;
+      threadHdr->GetNumChildren(&numThreadChildren);
+			if (threadHdr == nextThreadHdr && numThreadChildren > 1)
 			{
 				// unreadOnly
-				nsCOMPtr <nsIMsgDBHdr> msgHdr = threadHdr->GetChildHdrAt(1);
-				if (msgHdr != NULL)
+				nsCOMPtr <nsIMsgDBHdr> msgHdr;
+        rv = threadHdr->GetChildHdrAt(1, getter_AddRefs(msgHdr));
+				if (msgHdr != nsnull)
 				{
-					char flag = 0;
-					CopyDBFlagsToExtraFlags(msgHdr->GetFlags(), &flag);
-					if (threadHdr->GetNumChildren() > 2)
-						flag |= kIsThread | kHasChildren;
-					m_flags.SetAtGrow(index, (uint8) flag);
+					PRUint32 flag = 0;
+          msgHdr->GetFlags(&flag);
+					if (numThreadChildren > 2)
+						flag |= MSG_VIEW_FLAG_ISTHREAD | MSG_VIEW_FLAG_HASCHILDREN;
+					m_flags.SetAtGrow(index, flag);
 					m_levels.SetAtGrow(index, 0);
 				}
 			}
 		}
-		return err;
+		return rv;
 	}
-	else if (!(flags & kIsThread))
+	else if (!(flags & MSG_VIEW_FLAG_ISTHREAD))
 	{
-		return MessageDBView::RemoveByIndex(index);
+		return nsMsgDBView::RemoveByIndex(index);
 	}
 	// deleting collapsed thread header is special case. Child will be promoted,
 	// so just tell FE that line changed, not that it was deleted
-	nsCOMPtr <nsIMsgThread> threadHdr = m_messageDB->GetNeoThreadHdrForMsgID(m_idArray[index]);
-	if (threadHdr && threadHdr->GetNumChildren() > 1)
+	nsCOMPtr <nsIMsgThread> threadHdr;
+#if 0
+  m_db->GetThreadForMsgKey(m_keys[index], getter_AddRefs(threadHdr));
+#endif
+  PRUint32 numThreadChildren;
+  if (threadHdr)
+    threadHdr->GetNumChildren(&numThreadChildren);
+	if (threadHdr && numThreadChildren > 1)
 	{
 		// change the id array and flags array to reflect the child header.
 		// If we're not deleting the header, we want the second header,
 		// Otherwise, the first one (which just got promoted).
-		nsCOMPtr <nsIMsgDBHdr> msgHdr = threadHdr->GetChildHdrAt(1);
-		if (msgHdr != NULL)
+		nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    rv = threadHdr->GetChildHdrAt(1, getter_AddRefs(msgHdr));
+		if (msgHdr != nsnull)
 		{
-			m_keys.SetAt(index, msgHdr->GetMessageKey());
+      nsMsgKey msgKey;
+      msgHdr->GetMessageKey(&msgKey);
+			m_keys.SetAt(index, msgKey);
 
-			char flag = 0;
-			CopyDBFlagsToExtraFlags(msgHdr->GetFlags(), &flag);
+			PRUint32 flag = 0;
+      msgHdr->GetFlags(&flag);
+//			CopyDBFlagsToExtraFlags(msgHdr->GetFlags(), &flag);
 //			if (msgHdr->GetArticleNum() == msgHdr->GetThreadId())
-				flag |= kIsThread;
+				flag |= MSG_VIEW_FLAG_ISTHREAD;
 
-			if (threadHdr->GetNumChildren() == 2)	// if only hdr in thread (with one about to be deleted)
+			if (numThreadChildren == 2)	// if only hdr in thread (with one about to be deleted)
 													// adjust flags.
 			{
-				flag &=  ~kHasChildren;
-				flag &= ~kElided;
+				flag &=  ~MSG_VIEW_FLAG_HASCHILDREN;
+				flag &= ~MSG_FLAG_ELIDED;
 				// tell FE that thread header needs to be repainted.
 				if (index > 0)
-					NoteChange(index - 1, 0, MSG_NotifyInsertOrDelete);
+					NoteChange(index - 1, 0, nsMsgViewNotificationCode::insertOrDelete);
 			}
 			else
 			{
-				flag |= kHasChildren;
-				flag |= kElided;
+				flag |= MSG_VIEW_FLAG_HASCHILDREN;
+				flag |= MSG_FLAG_ELIDED;
 			}
 			m_flags[index] = flag;
 		}
 		else
-			XP_ASSERT(FALSE);	
-		NoteChange(index, 0, MSG_NotifyInsertOrDelete);	// horrible hack to tell fe that the key has changed
+			NS_ASSERTION(PR_FALSE, "couldn't find thread child");	
+		NoteChange(index, 0, nsMsgViewNotificationCode::insertOrDelete);	// horrible hack to tell fe that the key has changed
 	}
 	else
-		err = MessageDBView::RemoveByIndex(index);
-#endif
+		rv = nsMsgDBView::RemoveByIndex(index);
 	return rv;
 }
 

@@ -318,15 +318,6 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeV
   switch (command)
   {
 
-#if 0  
-	case MSG_MarkMessages:
-	case MSG_UnmarkMessages:
-	case MSG_MarkMessagesRead:
-	case MSG_MarkMessagesUnread:
-	case MSG_ToggleMessageRead:
-	case MSG_DeleteMessage:
-	case MSG_DeleteMessageNoTrash:
-#endif
   case nsMsgViewCommandType::markMessagesRead:
   case nsMsgViewCommandType::markMessagesUnread:
   case nsMsgViewCommandType::toggleMessageRead:
@@ -1410,9 +1401,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 {
 	char			flags = m_flags[index];
 	nsMsgKey		firstIdInThread;
-#ifdef HAVE_PORT
-    nsMsgKey        startMsg = nsMsgKey_None;
-#endif
+  nsMsgKey        startMsg = nsMsgKey_None;
 	nsresult		rv = NS_OK;
 	PRUint32			numExpanded = 0;
 
@@ -2451,31 +2440,136 @@ nsresult nsMsgDBView::SetExtraFlag(nsMsgViewIndex index, PRUint32 extraflag)
 
 nsresult nsMsgDBView::ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState)
 {
-#if 0
-    MsgERR      err;
-    NeoThreadMessageHdr *thread = NULL;
+  nsresult rv = NS_OK;
+  nsCOMPtr <nsIMsgThread> thread;
 
-    if (numIndices == 1)
+  if (numIndices == 1)
+  {
+    nsMsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
+    if (thread)
     {
-        MsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, &thread);
-        if (thread)
-        {
-            err = ToggleThreadIgnored(thread, threadIndex);
-            if (resultToggleState)
-                *resultToggleState = (thread->GetFlags() & kIgnored) ? TRUE : PR_FALSE;
-            thread->unrefer();
-        }
+      rv = ToggleThreadIgnored(thread, threadIndex);
+      if (resultToggleState)
+      {
+        PRUint32 threadFlags;
+        thread->GetFlags(&threadFlags);
+        *resultToggleState = (threadFlags & MSG_FLAG_IGNORED) ? PR_TRUE : PR_FALSE;
+      }
     }
-    else
+  }
+  else
+  {
+    if (numIndices > 1)
+      NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
+    for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
     {
-        if (numIndices > 1)
-            XP_QSORT (indices, numIndices, sizeof(nsMsgViewIndex), MSG_Pane::CompareViewIndices);
-        for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
-        {
-            MsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, &thread);
-        }
+      // here we need to build up the unique threads, and mark them ignored.
+      nsMsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
     }
-    return NS_OK;
-#endif
-    return NS_ERROR_NOT_IMPLEMENTED;
+  }
+  return rv;
 }
+
+nsMsgViewIndex	nsMsgDBView::GetThreadFromMsgIndex(nsMsgViewIndex index, 
+													 nsIMsgThread **threadHdr)
+{
+	nsMsgKey			msgKey = GetAt(index);
+	nsMsgViewIndex		threadIndex;
+
+	NS_ENSURE_ARG(threadHdr);
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsresult rv = m_db->GetMsgHdrForKey(msgKey, getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv,nsMsgViewIndex_None);
+
+	m_db->GetThreadContainingMsgHdr(msgHdr, threadHdr);
+
+	if (*threadHdr == nsnull)
+	{
+		return nsMsgViewIndex_None;
+	}
+  nsMsgKey threadKey;
+  (*threadHdr)->GetThreadKey(&threadKey);
+	if (msgKey !=threadKey)
+		threadIndex = GetIndexOfFirstDisplayedKeyInThread(*threadHdr);
+	else
+		threadIndex = index;
+	return threadIndex;
+}
+
+// ignore handling.
+nsresult nsMsgDBView::ToggleThreadIgnored(nsIMsgThread *thread, nsMsgViewIndex threadIndex)
+
+{
+	nsresult		rv;
+	if (!IsValidIndex(threadIndex))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+  PRUint32 threadFlags;
+  thread->GetFlags(&threadFlags);
+	rv = SetThreadIgnored(thread, threadIndex, !((threadFlags & MSG_FLAG_IGNORED) != 0));
+	return rv;
+}
+
+nsresult nsMsgDBView::ToggleThreadWatched(nsIMsgThread *thread, nsMsgViewIndex index)
+{
+	nsresult		rv;
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+  PRUint32 threadFlags;
+  thread->GetFlags(&threadFlags);
+	rv = SetThreadWatched(thread, index, !((threadFlags & MSG_FLAG_WATCHED) != 0));
+	return rv;
+}
+
+nsresult nsMsgDBView::ToggleWatched( nsMsgViewIndex* indices,	PRInt32 numIndices)
+{
+	nsresult rv;
+	nsCOMPtr <nsIMsgThread> thread;
+
+	if (numIndices == 1)
+	{
+		nsMsgViewIndex	threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
+		if (threadIndex != nsMsgViewIndex_None)
+		{
+			rv = ToggleThreadWatched(thread, threadIndex);
+		}
+	}
+	else
+	{
+		if (numIndices > 1)
+			NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
+		for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
+		{
+		  nsMsgViewIndex	threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
+      // here we need to build up the unique threads, and mark them watched.
+		}
+	}
+	return NS_OK;
+}
+
+nsresult nsMsgDBView::SetThreadIgnored(nsIMsgThread *thread, nsMsgViewIndex threadIndex, PRBool ignored)
+{
+	nsresult rv;
+
+	if (!IsValidIndex(threadIndex))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	rv = m_db->MarkThreadIgnored(thread, m_keys[threadIndex], ignored, this);
+	NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+	if (ignored)
+	{
+		nsMsgKeyArray	idsMarkedRead;
+
+		MarkThreadRead(thread, threadIndex, idsMarkedRead, PR_TRUE);
+	}
+	return rv;
+}
+nsresult nsMsgDBView::SetThreadWatched(nsIMsgThread *thread, nsMsgViewIndex index, PRBool watched)
+{
+	nsresult rv;
+
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	rv = m_db->MarkThreadWatched(thread, m_keys[index], watched, this);
+	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
+	return rv;
+}
+

@@ -125,6 +125,13 @@ protected:
 	virtual nsresult RemoveByIndex(nsMsgViewIndex index);
   virtual void		OnExtraFlagChanged(nsMsgViewIndex /*index*/, PRUint32 /*extraFlag*/) {}
 	virtual void		OnHeaderAddedOrDeleted() {}	
+  nsresult ToggleThreadIgnored(nsIMsgThread *thread, nsMsgViewIndex threadIndex);
+  nsresult ToggleThreadWatched(nsIMsgThread *thread, nsMsgViewIndex index);
+  nsresult ToggleWatched( nsMsgViewIndex* indices,	PRInt32 numIndices);
+  nsresult SetThreadWatched(nsIMsgThread *thread, nsMsgViewIndex index, PRBool watched);
+  nsresult SetThreadIgnored(nsIMsgThread *thread, nsMsgViewIndex threadIndex, PRBool ignored);
+  nsMsgViewIndex	GetThreadFromMsgIndex(nsMsgViewIndex index, 
+													 nsIMsgThread **threadHdr);
 
   // for sorting
   nsresult GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType);
