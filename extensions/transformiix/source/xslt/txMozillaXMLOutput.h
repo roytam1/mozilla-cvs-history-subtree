@@ -50,6 +50,7 @@
 #include "txOutputFormat.h"
 #include "nsCOMArray.h"
 #include "nsICSSLoaderObserver.h"
+#include "nsIDocumentTransformer.h"
 
 class txMozillaXMLOutput : public txIOutputXMLEventHandler,
                            public nsIScriptLoaderObserver,
