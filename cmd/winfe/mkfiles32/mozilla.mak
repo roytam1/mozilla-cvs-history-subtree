@@ -864,8 +864,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\mkmailbx.c
 	$(DEPTH)\lib\libnet\mknews.c  
 	$(DEPTH)\lib\libnet\mknewsgr.c
-	$(DEPTH)\lib\libnet\mkpop3.c  
-	$(DEPTH)\lib\libnet\mksmtp.c  
+	$(DEPTH)\lib\libnet\mkpop3.c 
+	$(DEPTH)\lib\libnet\mksmtp.c 
 !endif
 !if defined(MOZ_JAVA)
 	$(DEPTH)\lib\libnet\mkmarimb.cpp
@@ -968,6 +968,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\compmapi.cpp
 !endif
 !ifdef MOZ_MAIL_NEWS
+	$(DEPTH)\cmd\winfe\abhook.cpp   
+	$(DEPTH)\cmd\winfe\abutils.cpp   
 	$(DEPTH)\cmd\winfe\addrfrm.cpp   
 	$(DEPTH)\cmd\winfe\addrdlg.cpp 
 	$(DEPTH)\cmd\winfe\addrprop.cpp  
