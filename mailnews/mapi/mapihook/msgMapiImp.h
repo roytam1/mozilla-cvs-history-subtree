@@ -60,6 +60,14 @@ public :
                        LOGIN_PW_TYPE aPassWord, unsigned long aFlags,
                        unsigned long *aSessionId);
 
+    STDMETHODIMP SendMail( unsigned long aSession, lpnsMapiMessage aMessage,
+         short aRecipCount, lpnsMapiRecipDesc aRecips , 
+         short aFileCount, lpnsMapiFileDesc aFiles , 
+         unsigned long aFlags, unsigned long aReserved) ;
+
+    STDMETHODIMP SendDocuments( unsigned long aSession, LPTSTR aDelimChar,
+                                LPTSTR aFilePaths, LPTSTR aFileNames, ULONG aFlags);
+
     STDMETHODIMP Initialize();
     STDMETHODIMP Logoff (unsigned long aSession);
     STDMETHODIMP CleanUp();
