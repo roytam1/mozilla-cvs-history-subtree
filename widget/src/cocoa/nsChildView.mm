@@ -581,7 +581,9 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
           }
         }
       } else {
+#ifdef DEBUG
         printf("@@@@ Couldn't get NSWindow for plugin port. @@@@\n");
+#endif
         abort();
       }
 
@@ -2714,7 +2716,12 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   PRBool isKeyEventHandled = PR_FALSE;
   PRBool isChar = PR_FALSE;
   BOOL isARepeat = [theEvent isARepeat];
-  if (!isARepeat) {
+
+  // if we have a dead-key event, we won't get a character
+  // since we have no character, there isn't any point to generating
+  // a gecko event until they have dead key events
+  BOOL nonDeadKeyPress = [[theEvent characters] length] > 0;
+  if (!isARepeat && nonDeadKeyPress) {
     // Fire a key down.
     nsKeyEvent geckoEvent;
     geckoEvent.point.x = geckoEvent.point.y = 0;
@@ -2741,7 +2748,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     return;
   }
   
-  if( ! mInComposition ) {
+  if (!mInComposition && nonDeadKeyPress) {
     // Fire a key press.
     nsKeyEvent geckoEvent;
     geckoEvent.point.x = geckoEvent.point.y = 0;
@@ -2759,7 +2766,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     }
   }
 
-  if (mLastKeyEventWasSentToCocoa || (!isKeyDownEventHandled && !isKeyEventHandled)) {
+  if (!nonDeadKeyPress || mLastKeyEventWasSentToCocoa || (!isKeyDownEventHandled && !isKeyEventHandled)) {
     // XXX hack: we need to have a flag so we call interpretKeyEvents even tho 
     // we've inserted the character(s); if we don't, the system/Cocoa key event 
     // handling code doesn't know that the letters were "composed" or entered
@@ -2773,6 +2780,10 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 
 - (void)keyUp:(NSEvent*)theEvent;
 {
+  // if we don't have any characters we can't generate a keyUp event
+  if (0 == [[theEvent characters] length])
+    return;
+
   // Fire a key up.
   nsKeyEvent geckoEvent;
   geckoEvent.point.x = geckoEvent.point.y = 0;
@@ -2902,9 +2913,13 @@ enum
 
 static PRUint32 ConvertMacToRaptorKeyCode(UInt32 keyCode, nsKeyEvent* aKeyEvent, NSString* characters)
 {
-	PRUint32	raptorKeyCode = 0;
-	PRUint8 charCode = [characters characterAtIndex: 0];
-    
+  PRUint32 raptorKeyCode = 0;
+  PRUint8 charCode;
+  if ([characters length])
+    charCode = [characters characterAtIndex: 0];
+  else
+    charCode = 0;
+
 	switch (keyCode)
 	{
 //	case ??							:				raptorKeyCode = NS_VK_CANCEL;		break;			// don't know what this key means. Nor does joki
