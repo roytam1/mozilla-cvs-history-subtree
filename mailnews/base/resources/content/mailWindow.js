@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributors(s):
+ *   Jan Varga <varga@utcru.sk>
+ *   Hakan Waara <hwaara@chello.se>
  */
 
  //This file stores variables common to mail windows
@@ -495,10 +499,11 @@ function OpenInboxForServer(server)
     try {
         HideAccountCentral();
         OpenTwistyForServer(server);
-        var inboxFolder    = GetInboxFolder(server);
-        var folderTree     = GetFolderTree();
-        var inboxFolderUri = document.getElementById(inboxFolder.URI);
-        ChangeSelection(folderTree, inboxFolderUri);
+        var inboxFolder = GetInboxFolder(server);
+        var folderResource = RDF.GetResource(inboxFolder.URI)
+        var folderIndex = GetFolderIndex(folderResource);
+        var folderOutliner = GetFolderOutliner();
+        ChangeSelection(folderOutliner, folderIndex);
         GetMessagesForInboxOnServer(server);
     }
     catch (ex) {
