@@ -128,8 +128,10 @@ public:
   * @exception
   **/
 
-  void SetTranslation(float tX, float tY) { m20 = tX; m21 = tY;
-                                            type |= MG_2DTRANSLATION; }
+  void SetTranslation(float tX, float tY) {
+    m20 = tX; m21 = tY;
+    type |= MG_2DTRANSLATION;
+  }
 
  /**
   * get the X translation portion of this transform
