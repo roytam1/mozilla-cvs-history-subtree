@@ -278,20 +278,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		}
     } else {
 
-/*
-        // Now that the application palette has been created (if 
-        //   appropriate) we can create the url bar.  The animation 
-        //   might need custom colors so we need the palette to be around
-        //
-		CreateMainToolbar();
-
-		if (!theApp.m_bInGetCriticalFiles) { // if we are here, don't show link bar
-			CreateLocationBar();
-			CreateLinkBar();  
-			GetChrome()->FinishedAddingBrowserToolbars();
-		}
-*/
-
 		LPNSSTATUSBAR pIStatusBar = NULL;
 		GetChrome()->QueryInterface( IID_INSStatusBar, (LPVOID *) &pIStatusBar );
 		if( pIStatusBar ) 
@@ -488,12 +474,17 @@ int CMainFrame::CreateMainToolbar(void)
 
 void CMainFrame::BeginStreamingOfRDFToolbars()
 {
-	//I'm hardcoding string since I don't want it translated.
 	GetChrome()->CreateRDFToolbar("Browser", 5, TRUE);
 
-	//CreateMainToolbar();
-	//CreateLocationBar();
-	//CreateLinkBar();  
+	if (!theApp.m_bInGetCriticalFiles && AllowDocking() && 
+		!theApp.m_ParentAppWindow && !theApp.m_bKioskMode)
+	{
+		// Show the selector if the pref says we should.
+		BOOL bSelVisible;
+		PREF_GetBoolPref(gPrefSelectorVisible, &bSelVisible);
+		if (bSelVisible)
+			theApp.CreateNewNavCenter(this);
+	}
 }
 
 void CMainFrame::OnShowWindow (BOOL bShow, UINT nStatus)
