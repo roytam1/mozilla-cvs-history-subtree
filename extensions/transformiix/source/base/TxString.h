@@ -41,6 +41,9 @@ typedef PRUnichar UNICODE_CHAR;
 #endif
 
 class String
+#ifdef TX_EXE
+: public TxObject
+#endif
 {
 public:
     /*
