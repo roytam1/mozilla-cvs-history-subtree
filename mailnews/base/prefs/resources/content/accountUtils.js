@@ -120,6 +120,7 @@ function showMailIntegrationDialog() {
     }
 }
 
+
 function verifyAccounts(wizardcallback) {
 //check to see if the function is called with the callback and if so set the global variable returnmycall to true
     if(wizardcallback)
