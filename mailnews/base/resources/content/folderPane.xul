@@ -32,6 +32,7 @@
     <text id="foldertooltipText"/>
 </popup>
 
+<!--
   <tree datasources="rdf:null"
         id="folderTree" class="mail-folders"
       onselect="top.FolderPaneSelectionChange();"
@@ -96,5 +97,21 @@
           </treehead>
 
   </tree>
+-->
+
+  <outliner id="folderOutliner" class="mail-folders" flex="1">
+    <outlinercol id="folderNameCol" flex="1" primary="true"/>
+    <outlinerbody id="folderOutlinerBody" flex="1"
+                  datasources="rdf:null"
+                  onselect="top.FolderPaneSelectionChange();">
+      <template>
+        <outlinerrow class="folderTreeItem"
+                     uri="...">
+          <outlinercell ref="folderNameCol"
+                        label="rdf:http://home.netscape.com/NC-rdf#FolderTreeName"/>
+        </outlinerrow>
+      </template>
+    </outlinerbody>
+  </outliner>
 
 </overlay>
