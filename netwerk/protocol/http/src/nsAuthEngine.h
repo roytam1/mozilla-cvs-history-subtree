@@ -24,7 +24,7 @@
 #define _nsAuthEngine_h_
 
 #include "nsCOMPtr.h"
-#include "nsISupportsArray.h"
+#include "nsVoidArray.h"
 #include "nsIIOService.h"
 // Forward Decl
 class nsIURI;
@@ -63,6 +63,16 @@ public:
                         PRInt32 port,
                         const char* i_AuthString);
 
+    // Get an auth string for a particular host/port/realm
+    NS_IMETHOD      GetAuthStringForRealm(nsIURI* i_URI,
+                        const char* i_Realm,
+                        char** o_AuthString);
+
+    // Set an auth string for a particular host/port/realm
+    NS_IMETHOD      SetAuthStringForRealm(nsIURI* i_URI,
+                        const char* i_Realm,
+                        const char* i_AuthString);
+
     /*
        Expire all existing auth list entries including proxy auths. 
     */
@@ -72,11 +82,12 @@ protected:
 
     NS_IMETHOD      SetAuth(nsIURI* i_URI, 
                         const char* i_AuthString, 
+                        const char* i_Realm = nsnull,
                         PRBool bProxyAuth = PR_FALSE);
 
-    nsCOMPtr<nsISupportsArray>  mAuthList; 
+    nsVoidArray                 mAuthList; 
     // this needs to be a list becuz pac can produce more ...
-    nsCOMPtr<nsISupportsArray>  mProxyAuthList; 
+    nsVoidArray                 mProxyAuthList; 
 
     // optimization
     nsCOMPtr<nsIIOService>      mIOService;
@@ -87,6 +98,12 @@ inline nsresult
 nsAuthEngine::SetAuthString(nsIURI* i_URI, const char* i_AuthString)
 {
     return SetAuth(i_URI, i_AuthString);
+}
+
+inline nsresult
+nsAuthEngine::SetAuthStringForRealm(nsIURI* i_URI, const char* i_Realm, const char* i_AuthString)
+{
+    return SetAuth(i_URI, i_AuthString, i_Realm);
 }
 
 #endif /* _nsAuthEngine_h_ */

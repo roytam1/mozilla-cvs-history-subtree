@@ -93,6 +93,7 @@ nsHTTPChannel::nsHTTPChannel(nsIURI* i_URL, nsHTTPHandler* i_Handler):
     mFiredOpenOnStartRequest(PR_FALSE),
     mFiredOpenOnStopRequest (PR_FALSE),
     mAuthTriedWithPrehost(PR_FALSE),
+    mAuthRealm(nsnull),
     mProxy(0),
     mProxyPort(-1),
     mProxyType(nsnull),
@@ -139,6 +140,7 @@ nsHTTPChannel::~nsHTTPChannel()
     mPrompter        = null_nsCOMPtr();
     mResponseContext = null_nsCOMPtr();
     mLoadGroup       = null_nsCOMPtr();
+    CRTFREEIF(mAuthRealm);
     CRTFREEIF(mProxy);
     CRTFREEIF(mProxyType);
 }
@@ -838,13 +840,28 @@ nsHTTPChannel::SetAuthTriedWithPrehost(PRBool iTried)
 NS_IMETHODIMP
 nsHTTPChannel::GetAuthTriedWithPrehost(PRBool* oTried)
 {
-    if (oTried)
-    {
-        *oTried = mAuthTriedWithPrehost;
-        return NS_OK;
-    }
-    else
+    if (!oTried)
         return NS_ERROR_NULL_POINTER;
+    *oTried = mAuthTriedWithPrehost;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTTPChannel::SetAuthRealm(const char* aAuthRealm)
+{
+    CRTFREEIF(mAuthRealm);
+    if (aAuthRealm)
+        mAuthRealm = nsCRT::strdup(aAuthRealm);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTTPChannel::GetAuthRealm(char** aAuthRealm)
+{
+    if (!aAuthRealm)
+        return NS_ERROR_NULL_POINTER;
+    *aAuthRealm = nsCRT::strdup(mAuthRealm);
+    return (*aAuthRealm) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 // nsIInterfaceRequestor method
@@ -2029,7 +2046,7 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
     if (NS_FAILED(rv)) return rv;
 
     //flush out existing records of this URI in authengine-
-    nsAuthEngine* pEngine;
+    nsAuthEngine* pEngine = nsnull;
     if (NS_SUCCEEDED(mHandler->GetAuthEngine(&pEngine))) 
     {
         rv = pEngine->SetAuthString(mURI, 0);
@@ -2067,6 +2084,7 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
     nsXPIDLCString authString;
     nsCAutoString authLine;
     nsCOMPtr<nsIAuthenticator> auth;
+    nsCAutoString authRealm;
 
     // multiple www-auth headers case
     // go thru each to see if we support that. 
@@ -2123,8 +2141,6 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
           Throw a modal dialog box asking for 
           username, password. Prefill (!?!)
         */
-        if (!mPrompter)
-            return NS_ERROR_FAILURE;
         PRBool retval = PR_FALSE;
         
         //TODO localize it!
@@ -2152,6 +2168,9 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
             if (realm != end) {
                 message.AppendWithConversion(realm, end - realm);
                 foundRealm = PR_TRUE;
+
+                // Remember this realm; we will set it as an attribute of the new channel.
+                authRealm.Assign(realm, end - realm);
             }
         }
 
@@ -2159,43 +2178,73 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
         if (!foundRealm)
             message.AppendWithConversion(authLine.GetBuffer());
 
-        // get the hostname
-        nsXPIDLCString hostname;
-        if (NS_SUCCEEDED(mURI->GetHost(getter_Copies(hostname))))
+        // buf, if we did find a realm and this is the first time trying to
+        // authenticate this channel (indicated by mAuthRealm == NULL), then 
+        // lookup the realm in the auth engine and try to authenticate using
+        // the response.
+        else if (!mAuthRealm)
         {
-            // TODO localize
-            message.AppendWithConversion(" at ");
-            message.AppendWithConversion(hostname);
+            // Get the authentication string for the realm.  If not found, then
+            // authString will be NULL, and we will be forced to prompt.
+            if (pEngine)
+                pEngine->GetAuthStringForRealm(mURI, authRealm, getter_Copies(authString));
+
+#ifdef DEBUG_darin
+            fprintf(stderr, "\n>>>>> Authentication for Realm: [realm=%s, auth=%s]\n\n", (const char*) authRealm, (const char*) authString);
+#endif
         }
 
-        // Get url
-        nsXPIDLCString urlCString; 
-        mURI->GetPrePath(getter_Copies(urlCString));
-            
-        nsAutoString prePath; // XXX i18n
-        CopyASCIItoUCS2(nsLiteralCString(
-                    NS_STATIC_CAST(const char*, urlCString)), prePath);
-        rv = mPrompter->PromptUsernameAndPassword(nsnull,
-                message.GetUnicode(),
-                prePath.GetUnicode(),
-                nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
-                getter_Copies(userBuf),
-                getter_Copies(passwdBuf),
-                &retval);
-        if (NS_FAILED(rv) || !retval) // let it go on if we cancelled auth...
+        // Skip prompting if we already have an authentication string.
+        if (!authString || !*authString)
+        {
+            // Delay this check until we absolutely would need the prompter
+            if (!mPrompter) {
+                NS_WARNING("Failed to prompt for username/password: nsHTTPChannel::mPrompter == NULL");
+                return NS_ERROR_FAILURE;
+            }
+
+            // get the hostname
+            nsXPIDLCString hostname;
+            if (NS_SUCCEEDED(mURI->GetHost(getter_Copies(hostname))))
+            {
+                // TODO localize
+                message.Append(NS_LITERAL_STRING(" at "));
+                message.AppendWithConversion(hostname);
+            }
+
+            // Get url
+            nsXPIDLCString urlCString; 
+            mURI->GetPrePath(getter_Copies(urlCString));
+                
+            nsAutoString prePath; // XXX i18n
+            CopyASCIItoUCS2(nsLiteralCString(
+                        NS_STATIC_CAST(const char*, urlCString)), prePath);
+            rv = mPrompter->PromptUsernameAndPassword(nsnull,
+                    message.GetUnicode(),
+                    prePath.GetUnicode(),
+                    nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
+                    getter_Copies(userBuf),
+                    getter_Copies(passwdBuf),
+                    &retval);
+            if (NS_FAILED(rv) || !retval) // let it go on if we cancelled auth...
+                return rv;
+        }
+    }
+
+    // Skip authentication if we already have an authentication string.
+    if (!authString || !*authString)
+    {
+        if (!userBuf && interactionType == nsIAuthenticator::INTERACTION_STANDARD) {
+            /* can't proceed without at least a username, can we? */
+            return NS_ERROR_FAILURE;
+        }
+
+        if (NS_FAILED(rv) ||
+            NS_FAILED(rv = auth->Authenticate(mURI, "http", authLine.GetBuffer(),
+                                              userBuf, passwdBuf, mPrompter,
+                                              getter_Copies(authString))))
             return rv;
     }
-
-    if (!userBuf && interactionType == nsIAuthenticator::INTERACTION_STANDARD) {
-        /* can't proceed without at least a username, can we? */
-        return NS_ERROR_FAILURE;
-    }
-
-    if (NS_FAILED(rv) ||
-        NS_FAILED(rv = auth->Authenticate(mURI, "http", authLine.GetBuffer(),
-                                          userBuf, passwdBuf, mPrompter,
-                                          getter_Copies(authString))))
-        return rv;
 
 #if defined(DEBUG_shaver) || defined(DEBUG_gagan)
     fprintf(stderr, "Auth string: %s\n", (const char *)authString);
@@ -2229,6 +2278,10 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
 
     // Let it know that we have already tried prehost stuff...
     httpChannel->SetAuthTriedWithPrehost(PR_TRUE);
+
+    // Let it know that we are trying to access a realm
+    if (!authRealm.IsEmpty())
+        httpChannel->SetAuthRealm(authRealm);
 
     if (mResponseDataListener)
     {
@@ -2308,40 +2361,49 @@ nsHTTPChannel::ProcessStatusCode(void)
                 pEngine->SetProxyAuthString(
                         mProxy, mProxyPort, authString);
             }
+            if (mAuthTriedWithPrehost) 
+            {
+                if (statusCode != 401)
+                {
+                    rv = GetRequestHeader(nsHTTPAtoms::Authorization,
+                            getter_Copies(authString));
+#ifdef DEBUG_darin
+                    fprintf(stderr, "\n>>>>> Auth Accepted!! [realm=%s, auth=%s]\n\n", mAuthRealm, (const char*) authString);
+#endif
+                    if (mAuthRealm)
+                        pEngine->SetAuthStringForRealm(mURI, mAuthRealm, authString);
+                    else
+                        pEngine->SetAuthString(mURI, authString);
+                }
+                else // clear out entry from single signon and our cache. 
+                {
+#ifdef DEBUG_darin
+                    rv = GetRequestHeader(nsHTTPAtoms::Authorization,
+                            getter_Copies(authString));
+                    fprintf(stderr, "\n>>>>> Auth Rejected!! [realm=%s, auth=%s]\n\n", mAuthRealm, (const char*) authString);
+#endif
+                    pEngine->SetAuthString(mURI, 0);
 
-			if (mAuthTriedWithPrehost) 
-			{
-				if (statusCode != 401)
-				{
-					rv = GetRequestHeader(nsHTTPAtoms::Authorization,
-							getter_Copies(authString));
-					pEngine->SetAuthString(mURI, authString);
-				}
-				else // clear out entry from single signon and our cache. 
-				{
-					pEngine->SetAuthString(mURI, 0);
+                    NS_WITH_SERVICE(nsIWalletService, walletService, 
+                    kWalletServiceCID, &rv);
 
-					NS_WITH_SERVICE(nsIWalletService, walletService, 
-						kWalletServiceCID, &rv);
+                    if (NS_SUCCEEDED(rv))
+                    {
+                        NS_WITH_SERVICE(nsIProxyObjectManager, pom, 
+                        kProxyObjectManagerCID, &rv);
 
-					if (NS_SUCCEEDED(rv))
-					{
-						NS_WITH_SERVICE(nsIProxyObjectManager, pom, 
-							kProxyObjectManagerCID, &rv);
- 
-						nsCOMPtr<nsIWalletService> pWalletService;
-						if (NS_SUCCEEDED(pom->GetProxyForObject(NS_UI_THREAD_EVENTQ, 
-								 NS_GET_IID(nsIWalletService), walletService, 
-								 PROXY_SYNC, getter_AddRefs(pWalletService))))
-						{
-							nsXPIDLCString uri;
-							if (NS_SUCCEEDED(mURI->GetSpec(getter_Copies(uri))))
-								pWalletService->SI_RemoveUser(uri, nsnull);
-						}
-					}
-
-				}
-			}
+                        nsCOMPtr<nsIWalletService> pWalletService;
+                        if (NS_SUCCEEDED(pom->GetProxyForObject(NS_UI_THREAD_EVENTQ, 
+                                NS_GET_IID(nsIWalletService), walletService, 
+                                PROXY_SYNC, getter_AddRefs(pWalletService))))
+                        {
+                            nsXPIDLCString uri;
+                            if (NS_SUCCEEDED(mURI->GetSpec(getter_Copies(uri))))
+                                pWalletService->SI_RemoveUser(uri, nsnull);
+                        }
+                    }
+                }
+            }
         }
     }
 
