@@ -141,7 +141,6 @@ void PyXPCOM_ThreadState_Clear()
 ////////////////////////////////////////////////////////////
 // Lock/exclusion global functions.
 //
-
 void PyXPCOM_AcquireGlobalLock(void)
 {
 	NS_PRECONDITION(g_lockMain != nsnull, "Cant acquire a NULL lock!");
@@ -217,25 +216,3 @@ struct DllInitializer {
 		pyxpcom_destruct();
 	}
 } dll_initializer;
-
-#ifdef XP_WIN
-
-extern "C" __declspec(dllexport)
-BOOL WINAPI DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
-{
-	switch (dwReason) {
-		case DLL_PROCESS_ATTACH: {
-			pyxpcom_construct();
-			break;
-		}
-		case DLL_PROCESS_DETACH: 
-		{
-			pyxpcom_destruct();
-			break;
-		}
-		default:
-			break;
-	}
-	return TRUE;    // ok
-}
-#endif // XP_WIN
