@@ -33,6 +33,7 @@ LIBRARY_NAME	= xpcomio_s
 REQUIRES	= xpcom uconv unicharutil
 
 CPPSRCS		= \
+		nsDirectoryService.cpp \
 		nsEscape.cpp \
 		nsLinebreakConverter.cpp \
 		nsLocalFileUnix.cpp \
@@ -53,6 +54,9 @@ CPPSRCS		= \
 
 EXPORTS		= \
 		nsEscape.h \
+		nsDirectoryService.h \
+		nsLocalFile.h \
+		nsLocalFileUnix.h \
 		nsLinebreakConverter.h \
 		nsFileSpec.h \
 		nsFileSpecStreaming.h \

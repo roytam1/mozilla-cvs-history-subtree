@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <utime.h>
+#include <dirent.h>
 
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
@@ -145,15 +146,17 @@ nsDirEnumeratorUnix::GetNext(nsISupports **_retval)
         return NS_OK;
     }
 
-    nsIFile *file = new nsLocalFile();
+    nsILocalFile *file = new nsLocalFile();
     if (!file)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    if (NS_FAILED(rv = file->AppendPath(mEntry->d_name))) {
+    if (NS_FAILED(rv = file->InitWithPath(mParentPath)) ||
+        NS_FAILED(rv = file->AppendPath(mEntry->d_name))) {
         NS_RELEASE(file);
         return rv;
     }
     *_retval = NS_STATIC_CAST(nsISupports *, file);
+    NS_ADDREF(*_retval);
     return GetNextEntry();
 }
 
@@ -187,7 +190,7 @@ nsLocalFile::~nsLocalFile()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsLocalFile, nsIFile);
+NS_IMPL_ISUPPORTS2(nsLocalFile, nsIFile, nsILocalFile);
 
 nsresult
 nsLocalFile::Create(nsISupports *outer, const nsIID &aIID, void **aInstancePtr)
@@ -318,8 +321,6 @@ nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
 
     return NS_ERROR_FAILURE;
 }
-
-
 
 NS_IMETHODIMP
 nsLocalFile::Create(PRUint32 type, PRUint32 permissions)
