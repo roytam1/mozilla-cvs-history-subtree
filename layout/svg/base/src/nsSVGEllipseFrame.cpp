@@ -150,5 +150,5 @@ void nsSVGEllipseFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
   pathBuilder->Moveto(x-rx, y);
   pathBuilder->Arcto(x+rx, y, rx, ry, 0.0, 0, 0);
   pathBuilder->Arcto(x-rx, y, rx, ry, 0.0, 1, 0);
-  pathBuilder->ClosePath();
+  pathBuilder->ClosePath(&x,&y);
 }

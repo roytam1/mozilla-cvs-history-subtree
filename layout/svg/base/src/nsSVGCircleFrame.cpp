@@ -137,5 +137,5 @@ void nsSVGCircleFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
   pathBuilder->Moveto(x, y-r);
   pathBuilder->Arcto(x-r, y  , r, r, 0.0, 0, 0);
   pathBuilder->Arcto(x  , y-r, r, r, 0.0, 1, 0);
-  pathBuilder->ClosePath();  
+  pathBuilder->ClosePath(&x,&y);  
 }

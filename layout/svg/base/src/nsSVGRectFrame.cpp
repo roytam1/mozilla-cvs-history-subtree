@@ -207,6 +207,6 @@ void nsSVGRectFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
   pathBuilder->Arcto(x, y+height-ry , rx, ry, 0.0, 0, 1);
   pathBuilder->Lineto(x,y+ry);
   pathBuilder->Arcto(x+rx, y, rx, ry, 0.0, 0, 1);
-  pathBuilder->ClosePath();
+  pathBuilder->ClosePath(&x,&y);
 
 }

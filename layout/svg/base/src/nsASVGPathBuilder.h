@@ -31,6 +31,11 @@
 // abstract path builder 'interface' class.
 // XXX one day this will become a proper interface
 
+// Why do we need a virtual class at all???? It provides
+// theoretical flexability (eg we can plug in a postscript renderer)
+// I'm not convinved that the overhead is worth it, though - not all the
+// SVG logic is in this file... - bbaetz
+
 class nsASVGPathBuilder 
 {
 public:
@@ -39,7 +44,7 @@ public:
   virtual void Curveto(float x, float y, float x1, float y1, float x2, float y2)=0;
   virtual void Arcto(float x, float y, float r1, float r2, float angle,
                      PRBool largeArcFlag, PRBool sweepFlag)=0;
-  virtual void ClosePath()=0;    
+  virtual void ClosePath(float *newX, float* newY)=0;    
 };
 
 

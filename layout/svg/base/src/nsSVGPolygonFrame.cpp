@@ -107,5 +107,6 @@ void nsSVGPolygonFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
   }
   // the difference between a polyline and a polygon is that the
   // polygon is closed:
-  pathBuilder->ClosePath();
+  float x,y;
+  pathBuilder->ClosePath(&x,&y);
 }

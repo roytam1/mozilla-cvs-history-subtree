@@ -196,7 +196,7 @@ void nsSVGBPathBuilder::Arcto(float x2, float y2, float rx, float ry, float angl
   }
 }
   
-void nsSVGBPathBuilder::ClosePath()
+void nsSVGBPathBuilder::ClosePath(float *currX, float *currY)
 {
   PRInt32 subpath = GetLastOpenBPath();
   NS_ASSERTION(subpath>=0, "no open subpath");
@@ -209,6 +209,9 @@ void nsSVGBPathBuilder::ClosePath()
   }
 
   mBPath[subpath].code = ART_MOVETO;
+
+  *currX = mBPath[subpath].x3;
+  *currY = mBPath[subpath].y3;
 }
 
 //----------------------------------------------------------------------

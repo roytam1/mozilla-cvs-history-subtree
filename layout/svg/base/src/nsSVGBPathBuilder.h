@@ -44,7 +44,7 @@ public:
   virtual void Curveto(float x, float y, float x1, float y1, float x2, float y2);
   virtual void Arcto(float x, float y, float r1, float r2, float angle,
                      PRBool largeArcFlag, PRBool sweepFlag);
-  virtual void ClosePath();
+  virtual void ClosePath(float *newX, float *newY);
     
 protected:
 

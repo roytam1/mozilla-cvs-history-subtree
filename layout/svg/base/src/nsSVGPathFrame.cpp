@@ -118,7 +118,7 @@ void nsSVGPathFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
     
     switch (type) {
       case nsIDOMSVGPathSeg::PATHSEG_CLOSEPATH:
-        pathBuilder->ClosePath();
+        pathBuilder->ClosePath(&cx,&cy);
         break;
         
       case nsIDOMSVGPathSeg::PATHSEG_MOVETO_ABS:
