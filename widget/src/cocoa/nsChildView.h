@@ -283,6 +283,8 @@ public:
     
   nsPluginPort*     mPluginPort;
 
+  RgnHandle       mVisRgn;
+
   PRBool          mAcceptFocusOnClick;
     
 };
