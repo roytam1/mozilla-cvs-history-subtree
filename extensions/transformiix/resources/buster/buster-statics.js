@@ -37,13 +37,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// priviledge shortcut
-enablePrivilege = netscape.security.PrivilegeManager.enablePrivilege;
-
 // helper function to shortcut component creation
 function doCreate(aContract, aInterface)
 {
-    enablePrivilege('UniversalXPConnect');
     return Components.classes[aContract].createInstance(aInterface);
 }
 
@@ -54,7 +50,6 @@ const SIS_CTRID       = "@mozilla.org/scriptableinputstream;1"
 const nsISIS          = Components.interfaces.nsIScriptableInputStream;
 
 // rdf foo, onload handler
-enablePrivilege('UniversalXPConnect');
 const kRDFSvcContractID = "@mozilla.org/rdf/rdf-service;1";
 const kRDFInMemContractID = 
     "@mozilla.org/rdf/datasource;1?name=in-memory-datasource";
@@ -73,15 +68,23 @@ const nsIRDFService = Components.interfaces.nsIRDFService;
 const nsIRDFDataSource = Components.interfaces.nsIRDFDataSource;
 const nsIRDFResource = Components.interfaces.nsIRDFResource;
 const nsIRDFLiteral = Components.interfaces.nsIRDFLiteral;
+const nsIRDFInt = Components.interfaces.nsIRDFInt;
 const nsIRDFContainerUtils = Components.interfaces.nsIRDFContainerUtils;
 const nsIRDFXMLSerializer = Components.interfaces.nsIRDFXMLSerializer;
 const nsIRDFXMLSource = Components.interfaces.nsIRDFXMLSource;
 const kRDFSvc =
     Components.classes[kRDFSvcContractID].getService(nsIRDFService);
 const krTypeCat = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#category");
+const krTypeFailCount = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#failCount");
 const krTypeName = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#name");
 const krTypeSucc = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#succ");
+const krTypeOrigSucc = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#orig_succ");
+const krTypeOrigFailCount = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#orig_failCount");
+const krTypeOrigSuccCount = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#orig_succCount");
 const krTypePath = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#path");
+const krTypeParent = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#parent");
+const krTypePurp = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#purp");
+const krTypeSuccCount = kRDFSvc.GetResource("http://home.netscape.com/NC-rdf#succCount");
 const kGood  = kRDFSvc.GetLiteral("yes");
 const kBad   = kRDFSvc.GetLiteral("no");
 const kMixed = kRDFSvc.GetLiteral("+-");
@@ -89,7 +92,6 @@ const kContUtils = doCreate(kRDFContUtilsID, nsIRDFContainerUtils);
 
 function doCreateRDFFP(aTitle, aMode)
 {
-    enablePrivilege('UniversalXPConnect');
     var fp = doCreate("@mozilla.org/filepicker;1", nsIFilePicker);
     fp.init(window, aTitle, aMode);
     fp.appendFilter('*.rdf', '*.rdf');
@@ -100,7 +102,6 @@ function doCreateRDFFP(aTitle, aMode)
 function goDoCommand(aCommand)
 {
     try {
-        enablePrivilege('UniversalXPConnect');
         var controller = 
             top.document.commandDispatcher.getControllerForCommand(aCommand);
         if (controller && controller.isCommandEnabled(aCommand))

@@ -64,7 +64,6 @@ var itemCache =
     mArray : new Array(),
     getItem : function(aResource)
     {
-        enablePrivilege('UniversalXPConnect');
         // Directory selected
         if (kContUtils.IsSeq(runItem.prototype.kDatabase, aResource)) {
             var aSeq = kContUtils.MakeSeq(runItem.prototype.kDatabase, aResource);
@@ -113,7 +112,6 @@ var itemCache =
 
 function runItem(aResource)
 {
-  enablePrivilege('UniversalXPConnect');
   this.mResource = aResource;
   // Directory selected
   if (kContUtils.IsSeq(this.kDatabase,this.mResource)) {
@@ -130,7 +128,6 @@ function runItem(aResource)
   }
 }
 
-enablePrivilege('UniversalXPConnect');
 runItem.prototype = 
 {
     // RDF resource associated with this test
@@ -189,16 +186,23 @@ runItem.prototype =
             }
         }
         var refContent = this.loadTextFile(xalan_ref+".out");
+        var iframe;
         if (refContent.match(/^<\?xml/)) {
             this.mRefDoc = parser.parseFromString(refContent, 'text/xml');
         }
         else if (refContent.match(/^\s*<html/gi)) {
             this.mMethod = 'html';
-            var iframe = document.getElementById('hiddenHtml').contentDocument;
+            iframe = document.getElementById('hiddenHtml').contentDocument;
             iframe.documentElement.innerHTML = refContent;
-            //this.mRefDoc = iframe.documentElement.cloneNode(true);
             this.mRefDoc = iframe;
-            DumpDOM(this.mRefDoc)
+        }
+        else {
+            iframe = document.getElementById('hiddenHtml').contentDocument;
+            iframe.documentElement.innerHTML = refContent;
+            if (iframe.documentElement.firstChild) {
+                this.mMethod = 'html';
+                this.mRefDoc = iframe;
+            }
         }
         this.mSourceDoc = document.implementation.createDocument('', '', null);
         this.mSourceDoc.addEventListener("load",this.onload(1),false);
@@ -224,7 +228,6 @@ runItem.prototype =
         if (this.mLoaded < 3) {
             return;
         }
-        enablePrivilege('UniversalXPConnect');
         this.mResDoc = document.implementation.createDocument("", "", null);
         this.kProcessor.transformDocument(this.mSourceDoc,
                                           this.mStyleDoc,
@@ -264,7 +267,6 @@ runItem.prototype =
 
     loadTextFile : function(url)
     {
-        enablePrivilege('UniversalXPConnect');
         var serv = Components.classes[IOSERVICE_CTRID].
             getService(nsIIOService);
         if (!serv) {
